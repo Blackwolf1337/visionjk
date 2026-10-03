@@ -213,6 +213,8 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 	G_ProcessAdminIPBans();
 	JP_HighlanderMapStart();
 
+	WebAdmin_Init();
+
 	G_InitMemory();
 
 	// set some level globals
@@ -469,6 +471,8 @@ void G_ShutdownGame( int restart ) {
 	JP_AntiFakeStore();
 
 //	trap->Print ("==== ShutdownGame ====\n");
+
+	WebAdmin_Shutdown();
 
 	G_CleanAllFakeClients(); //get rid of dynamically allocated fake client structs.
 
@@ -2978,6 +2982,8 @@ void G_RunFrame( int levelTime ) {
 	void		*timer_GameChecks;
 	void		*timer_Queues;
 #endif
+
+	WebAdmin_Frame();
 
 	if (level.gametype == GT_SIEGE &&
 		g_siegeRespawn.integer &&

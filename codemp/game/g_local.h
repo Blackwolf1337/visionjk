@@ -1263,6 +1263,21 @@ int TAG_GetFlags( const char *owner, const char *name );
 
 void TeleportPlayer( gentity_t *player, vec3_t origin, vec3_t angles );
 
+// g_webadmin.c
+void WebAdmin_Init( void );
+void WebAdmin_Frame( void );
+void WebAdmin_Shutdown( void );
+void WebAdmin_EntitySpawned( int entityNum );
+void WebAdmin_EntityFreed( int entityNum );
+
+// g_spawn.c, for the entity editor
+int G_NumSpawnClassnames( void );
+const char *G_SpawnClassname( int index );
+char *G_AddSpawnVarToken( const char *string );
+qboolean G_CallSpawn( gentity_t *ent );
+void G_SpawnGEntityFromSpawnVars( qboolean inSubBSP );
+void SaveRegisteredItems( void );
+
 //
 // g_weapon.c
 //

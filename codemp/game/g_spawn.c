@@ -697,6 +697,15 @@ static int spawncmp( const void *a, const void *b ) {
 	return Q_stricmp( (const char *)a, ((spawn_t*)b)->name );
 }
 
+// for the web admin entity editor
+int G_NumSpawnClassnames( void ) {
+	return ARRAY_LEN( spawns );
+}
+
+const char *G_SpawnClassname( int index ) {
+	return spawns[index].name;
+}
+
 qboolean G_CallSpawn( gentity_t *ent ) {
 	spawn_t	*s;
 	gitem_t	*item;
@@ -945,6 +954,8 @@ void G_SpawnGEntityFromSpawnVars( qboolean inSubBSP ) {
 	// if we didn't get a classname, don't bother spawning anything
 	if ( !G_CallSpawn( ent ) ) {
 		G_FreeEntity( ent );
+	} else if ( ent->inuse ) {
+		WebAdmin_EntitySpawned( ent->s.number );
 	}
 
 	//Tag on the ICARUS scripting information only to valid recipients
@@ -1586,6 +1597,7 @@ void G_SpawnEntitiesFromString( qboolean inSubBSP ) {
 	if (!inSubBSP)
 	{
 		SP_worldspawn();
+		WebAdmin_EntitySpawned( ENTITYNUM_WORLD );
 	}
 	else
 	{

@@ -1,0 +1,2605 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OpenJK Web Admin</title>
+<style>
+:root {
+	--bg: #0d0d0f;
+	--panel: #16161a;
+	--panel2: #1d1d22;
+	--line: #2a2a31;
+	--text: #e4e4e7;
+	--muted: #8b8b94;
+	--accent: #d50c2d;
+	--accent2: #ff2f4f;
+	--red: #e5484d;
+	--blue: #3e8ef7;
+	--green: #30a46c;
+	--yellow: #f5d90a;
+	--top: 44px;
+	--side: 300px;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font: 13px/1.35 -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; overflow: hidden; }
+button, input, select { font: inherit; color: inherit; }
+button { background: var(--panel2); border: 1px solid var(--line); border-radius: 3px; padding: 3px 9px; cursor: pointer; }
+button:hover { border-color: #44444d; background: #24242a; }
+button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+button.primary:hover { background: var(--accent2); }
+button.danger { color: #ff8b8b; }
+button.danger.armed { background: var(--accent); color: #fff; border-color: var(--accent); }
+input, select { background: #0f0f12; border: 1px solid var(--line); border-radius: 3px; padding: 3px 6px; }
+input:focus, select:focus { outline: none; border-color: var(--accent); }
+
+#topbar { position: fixed; inset: 0 0 auto 0; height: var(--top); background: var(--panel); border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: 14px; padding: 0 12px; z-index: 20; }
+#topbar .brand { font-weight: 700; letter-spacing: .3px; display: flex; align-items: center; gap: 8px; }
+#topbar .brand i { width: 10px; height: 10px; background: var(--accent); display: inline-block; border-radius: 2px; }
+#toggleSide { padding: 3px 7px; }
+.meta { color: var(--muted); white-space: nowrap; }
+.meta b { color: var(--text); font-weight: 600; }
+.score { font-weight: 700; padding: 1px 7px; border-radius: 3px; }
+.score.red { background: rgba(229,72,77,.18); color: var(--red); }
+.score.blue { background: rgba(62,142,247,.18); color: var(--blue); }
+#topbar .spacer { flex: 1; }
+#status { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+#status.live { background: var(--green); }
+#status.err { background: var(--accent2); }
+.inline { display: flex; gap: 4px; align-items: center; }
+.inline input { width: 170px; }
+
+#side { position: fixed; top: var(--top); left: 0; bottom: 0; width: var(--side); background: var(--panel); border-right: 1px solid var(--line); z-index: 15; display: flex; flex-direction: column; transition: transform .15s; }
+body.sideClosed #side { transform: translateX(calc(-1 * var(--side))); }
+#side h2 { font-size: 11px; text-transform: uppercase; letter-spacing: .8px; color: var(--muted); margin: 0; padding: 10px 10px 6px; display: flex; justify-content: space-between; }
+#side .scroll { overflow: auto; flex: 1; }
+table { width: 100%; border-collapse: collapse; }
+th, td { padding: 4px 6px; text-align: left; white-space: nowrap; }
+th { color: var(--muted); font-weight: 500; font-size: 11px; border-bottom: 1px solid var(--line); position: sticky; top: 0; background: var(--panel); }
+td { border-bottom: 1px solid #1f1f24; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+tr.player { cursor: pointer; }
+tr.player:hover td { background: #1c1c21; }
+tr.player.sel td { background: rgba(213,12,45,.16); }
+tr.player.dead td { opacity: .5; }
+.team { display: inline-block; width: 7px; height: 7px; border-radius: 1px; margin-right: 5px; vertical-align: 1px; }
+.team.red { background: var(--red); } .team.blue { background: var(--blue); } .team.free { background: var(--yellow); } .team.spectator { background: var(--muted); }
+.tag { font-size: 10px; color: var(--muted); border: 1px solid var(--line); border-radius: 2px; padding: 0 3px; margin-left: 4px; }
+#itemsInfo { padding: 8px 10px; color: var(--muted); border-top: 1px solid var(--line); font-size: 12px; }
+
+#view { position: fixed; top: var(--top); left: var(--side); right: 0; bottom: 0; transition: left .15s; }
+body.sideClosed #view { left: 0; }
+#gl { width: 100%; height: 100%; display: block; cursor: default; }
+#labels { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.label { position: absolute; transform: translate(-50%, -100%); text-align: center; white-space: nowrap; font-size: 12px; text-shadow: 0 1px 2px #000, 0 0 3px #000; }
+.label .bar { width: 46px; height: 4px; background: rgba(0,0,0,.6); margin: 2px auto 0; border-radius: 1px; overflow: hidden; }
+.label .bar i { display: block; height: 100%; background: var(--green); }
+.label .bar.ar i { background: #5aa9ff; }
+.label.sel .nm { outline: 1px solid var(--accent2); outline-offset: 1px; background: rgba(213,12,45,.35); padding: 0 3px; }
+#loading { position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%); color: var(--muted); background: var(--panel); border: 1px solid var(--line); padding: 10px 16px; border-radius: 4px; }
+#help { position: absolute; right: 10px; top: 10px; color: var(--muted); font-size: 11px; background: rgba(13,13,15,.75); border: 1px solid var(--line); padding: 6px 8px; border-radius: 3px; line-height: 1.6; }
+#help kbd { color: var(--text); border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 2px; padding: 0 3px; font-size: 10px; }
+
+#command { position: absolute; left: 12px; right: 12px; bottom: 12px; background: rgba(22,22,26,.96); border: 1px solid var(--line); border-top: 2px solid var(--accent); border-radius: 4px; padding: 10px 12px; display: none; gap: 18px; align-items: flex-start; }
+#command.open { display: flex; }
+#command .who { min-width: 190px; }
+#command .who .nm { font-size: 16px; font-weight: 700; }
+#command .who .sub { color: var(--muted); margin-top: 2px; }
+.stat { margin-top: 6px; }
+.stat .bar { height: 6px; background: #0f0f12; border: 1px solid var(--line); border-radius: 2px; overflow: hidden; width: 180px; }
+.stat .bar i { display: block; height: 100%; }
+.grid { display: grid; grid-template-columns: auto auto auto; gap: 5px 8px; align-items: center; }
+.grid label { color: var(--muted); }
+.grid input[type=number] { width: 70px; }
+.grid input[type=range] { width: 120px; padding: 0; accent-color: var(--accent); }
+.actions { display: flex; flex-wrap: wrap; gap: 5px; max-width: 330px; }
+.hint { color: var(--muted); font-size: 12px; margin-top: 6px; }
+#command .close { margin-left: auto; }
+
+#toasts { position: fixed; right: 12px; top: calc(var(--top) + 10px); z-index: 30; display: flex; flex-direction: column; gap: 6px; }
+.toast { background: var(--panel2); border: 1px solid var(--line); border-left: 3px solid var(--green); padding: 6px 10px; border-radius: 3px; min-width: 200px; }
+.toast.err { border-left-color: var(--accent2); }
+
+#tabs { display: flex; border-bottom: 1px solid var(--line); }
+#tabs button { flex: 1; border: 0; border-radius: 0; background: transparent; padding: 8px; color: var(--muted); border-bottom: 2px solid transparent; }
+#tabs button.on { color: var(--text); border-bottom-color: var(--accent); }
+.pane { display: none; flex: 1; min-height: 0; flex-direction: column; }
+.pane.on { display: flex; }
+.tools { padding: 8px 10px; display: flex; flex-direction: column; gap: 6px; border-bottom: 1px solid var(--line); }
+.tools .inline input { flex: 1; width: auto; }
+.tools .inline a { color: var(--muted); font-size: 12px; text-decoration: none; }
+.tools .inline a:hover { color: var(--text); }
+button.armedPlace { background: var(--accent); border-color: var(--accent); color: #fff; }
+tr.ent td { font-size: 12px; }
+tr.ent .tn { color: var(--muted); }
+tr.ent.ro td:first-child { opacity: .6; }
+#entPanel { position: absolute; left: 12px; bottom: 12px; width: 460px; max-height: calc(100% - 24px); overflow: auto; background: rgba(22,22,26,.96); border: 1px solid var(--line); border-top: 2px solid var(--accent); border-radius: 4px; padding: 10px 12px; display: none; }
+#entPanel.open { display: block; }
+#entPanel .hd { display: flex; align-items: baseline; gap: 8px; margin-bottom: 8px; }
+#entPanel .hd b { font-size: 15px; }
+#entPanel .hd .close { margin-left: auto; }
+#kvTable td { padding: 2px 3px; border: 0; }
+#kvTable input { width: 100%; }
+#kvTable td.k { width: 38%; }
+#kvTable td.x { width: 24px; }
+#kvTable button { padding: 1px 6px; }
+#entPanel .actions { max-width: none; margin-top: 8px; }
+#classPicker { max-height: 260px; overflow: auto; border: 1px solid var(--line); border-radius: 3px; background: #0f0f12; display: none; }
+#classPicker.open { display: block; }
+.cls { padding: 3px 7px; cursor: pointer; display: flex; gap: 7px; align-items: center; font-size: 12px; }
+.cls:hover, .cls.hl { background: rgba(213,12,45,.2); }
+.cls i { width: 8px; height: 8px; border-radius: 2px; flex: none; }
+.cls .ty { margin-left: auto; color: var(--muted); font-size: 10px; }
+#preview { position: fixed; left: calc(var(--side) + 8px); width: 262px; background: var(--panel); border: 1px solid var(--line); border-top: 2px solid var(--accent); border-radius: 4px; padding: 8px; z-index: 25; display: none; pointer-events: none; }
+#preview.open { display: block; }
+#preview canvas { width: 244px; height: 200px; display: block; background: radial-gradient(circle at 50% 40%, #2a2a31, #111114); border-radius: 3px; }
+#preview .pv-name { font-weight: 700; margin-top: 7px; }
+#preview .pv-sub { color: var(--muted); font-size: 12px; margin-top: 2px; }
+#preview .pv-none { height: 200px; display: flex; align-items: center; justify-content: center; color: var(--muted); text-align: center; padding: 20px; background: #111114; border-radius: 3px; }
+#hud { position: absolute; inset: 0; display: none; pointer-events: none; }
+body.fp #hud { display: block; }
+body.fp #help, body.fp #command, body.fp #entPanel { display: none; }
+#hudCanvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+#crosshair { position: absolute; left: 50%; top: 50%; width: 18px; height: 18px; margin: -9px 0 0 -9px; }
+#crosshair::before, #crosshair::after { content: ''; position: absolute; background: rgba(120,255,120,.85); }
+#crosshair::before { left: 8px; top: 0; width: 2px; height: 18px; }
+#crosshair::after { top: 8px; left: 0; height: 2px; width: 18px; }
+.hud-top { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; align-items: center; font-size: 15px; font-weight: 700; text-shadow: 0 1px 3px #000; pointer-events: auto; }
+.hud-bottom { position: absolute; left: 16px; right: 16px; bottom: 14px; display: flex; gap: 22px; align-items: flex-end; text-shadow: 0 1px 3px #000; }
+.hud-bottom b { font-size: 30px; display: block; line-height: 1; }
+.hud-bottom span { color: #ccc; font-size: 11px; text-transform: uppercase; letter-spacing: .8px; }
+.hud-bottom .w { margin-left: auto; font-size: 16px; font-weight: 700; }
+.c0{color:#666}.c1{color:#ff4040}.c2{color:#40ff40}.c3{color:#ffff40}.c4{color:#5a7dff}.c5{color:#40ffff}.c6{color:#ff40ff}.c7{color:#fff}.c8{color:#ff9a30}.c9{color:#aaa}
+</style>
+</head>
+<body>
+<div id="topbar">
+	<button id="toggleSide" title="Player list">&#9776;</button>
+	<div class="brand"><i></i>OpenJK Admin</div>
+	<span class="meta" id="host"></span>
+	<span class="meta">Map <b id="map">-</b></span>
+	<span class="meta"><b id="gametype">-</b></span>
+	<span class="meta">Time <b id="time">-</b></span>
+	<span id="teamScores" class="inline" style="display:none"><span class="score red" id="scoreRed">0</span><span class="score blue" id="scoreBlue">0</span></span>
+	<span class="spacer"></span>
+	<form class="inline" id="sayForm"><input id="sayText" placeholder="Message to all players" maxlength="150"><button>Say</button></form>
+	<form class="inline" id="botForm"><input id="botName" placeholder="Bot name" style="width:100px"><button>Add bot</button></form>
+	<form class="inline" id="mapForm"><input id="mapName" placeholder="mp/ffa3" style="width:100px"><button>Map</button></form>
+	<span id="status" title="Connection"></span>
+</div>
+
+<div id="side">
+	<div id="tabs"><button data-tab="players" class="on">Players</button><button data-tab="world">World</button></div>
+	<div class="pane on" id="pane-players">
+		<h2><span>Players</span><span id="playerCount">0</span></h2>
+		<div class="scroll">
+			<table>
+				<thead><tr><th>Name</th><th class="num">HP</th><th class="num">AR</th><th class="num">Score</th><th class="num">Ping</th></tr></thead>
+				<tbody id="players"></tbody>
+			</table>
+		</div>
+		<div id="itemsInfo"></div>
+	</div>
+	<div class="pane" id="pane-world">
+		<div class="tools">
+			<div class="inline"><input id="newClass" placeholder="Search a class to place" spellcheck="false" autocomplete="off"><button id="placeBtn" title="Then right-click on the map">Place</button></div>
+			<div id="classPicker"></div>
+			<div class="inline"><input id="entFilter" placeholder="Filter by class or targetname" spellcheck="false"><a href="api/export" title="Download the entities as .ent">Export .ent</a></div>
+		</div>
+		<h2><span>Entities</span><span id="entCount">0</span></h2>
+		<div class="scroll">
+			<table>
+				<thead><tr><th class="num">#</th><th>Class</th><th>Targetname</th></tr></thead>
+				<tbody id="entities"></tbody>
+			</table>
+		</div>
+	</div>
+</div>
+
+<div id="view">
+	<canvas id="gl"></canvas>
+	<div id="labels"></div>
+	<div id="loading">Loading map...</div>
+	<div id="hud"><canvas id="hudCanvas"></canvas><div class="hud-top"><span id="hudName"></span><button id="fpExit">Exit (Esc)</button></div></div>
+	<div id="help">
+		<kbd>LMB</kbd> select, drag to pan &nbsp; <kbd>RMB</kbd> teleport selected<br>
+		<kbd>W A S D</kbd> move &nbsp; <kbd>Q E</kbd> / <kbd>MMB</kbd> rotate &nbsp; wheel zoom<br>
+		<kbd>F</kbd> follow selected &nbsp; <kbd>Esc</kbd> deselect &nbsp; <kbd>Del</kbd> delete entity
+	</div>
+	<div id="command">
+		<div class="who">
+			<div class="nm" id="cmdName"></div>
+			<div class="sub" id="cmdSub"></div>
+			<div class="stat">Health <span id="cmdHp"></span><div class="bar"><i id="cmdHpBar" style="background:var(--green)"></i></div></div>
+			<div class="stat">Armor <span id="cmdAr"></span><div class="bar"><i id="cmdArBar" style="background:#5aa9ff"></i></div></div>
+		</div>
+		<div class="grid">
+			<label for="setHp">Health</label><input type="number" id="setHp" min="1" max="999"><button data-set="health" data-input="setHp">Set</button>
+			<label for="setAr">Armor</label><input type="number" id="setAr" min="0" max="999"><button data-set="armor" data-input="setAr">Set</button>
+			<label for="setScale">Size <span id="scaleVal"></span></label><input type="range" id="setScale" min="10" max="500" step="5"><button data-set="scale" data-input="setScale">Set</button>
+			<label for="setTeam">Team</label><select id="setTeam"><option>free</option><option>red</option><option>blue</option><option>spectator</option></select><button data-set="team" data-input="setTeam">Set</button>
+		</div>
+		<div>
+			<div class="actions">
+				<button data-act="god" id="godBtn">God mode</button>
+				<button data-act="kill">Kill</button>
+				<button id="followBtn">Follow</button>
+				<button id="fpBtn" title="Player view (V)">First person</button>
+				<button class="danger" data-act="kick" data-confirm>Kick</button>
+				<button class="danger" data-act="ban" data-confirm>Ban</button>
+			</div>
+			<div class="hint">Right-click on the map to teleport this player there.</div>
+		</div>
+		<button class="close" id="cmdClose" title="Deselect">&#10005;</button>
+	</div>
+	<div id="entPanel">
+		<div class="hd"><b id="entTitle"></b><span class="meta" id="entSub"></span><button class="close" id="entClose" title="Deselect">&#10005;</button></div>
+		<table id="kvTable"><tbody id="kvRows"></tbody></table>
+		<div class="actions">
+			<button id="kvAdd">+ Key</button>
+			<button class="primary" id="entApply">Apply</button>
+			<button id="entRotL" title="Turn left 15&deg;">&#10226; 15&deg;</button>
+			<button id="entRotR" title="Turn right 15&deg;">&#10227; 15&deg;</button>
+			<button id="entDup">Duplicate</button>
+			<button class="danger" id="entDel">Delete</button>
+		</div>
+		<div class="hint" id="entHint">Drag the marker or right-click on the map to move it.</div>
+	</div>
+</div>
+<div id="toasts"></div>
+<div id="preview"><canvas id="previewGl" width="488" height="400"></canvas><div class="pv-none" id="pvNone"></div><div class="pv-name" id="pvName"></div><div class="pv-sub" id="pvSub"></div></div>
+
+<script>
+'use strict';
+
+/* ------------------------------------------------------------------ */
+/* helpers                                                             */
+/* ------------------------------------------------------------------ */
+
+const $ = id => document.getElementById(id);
+const WEAPONS = ['None','Stun baton','Melee','Saber','Bryar pistol','Blaster','Disruptor','Bowcaster','Repeater','DEMP 2','Flechette','Rocket launcher','Thermal','Trip mine','Det pack','Concussion','Bryar old','Emplaced gun','Turret'];
+const ITEM_COLORS = { 1: [1, .8, .2], 2: [.8, .6, .2], 3: [.35, .65, 1], 4: [.3, 1, .4], 5: [1, .3, 1], 6: [.9, .9, .9], 7: [1, .3, 1], 8: [1, 1, 1] };
+const TEAM_COLORS = { red: [.9, .25, .28], blue: [.25, .55, .97], free: [.96, .85, .1], spectator: [.5, .5, .55] };
+
+function escapeHtml(s) {
+	return s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+// Quake color codes (^1red) to HTML
+function colorName(name) {
+	let out = '', color = 7, chunk = '';
+	const flush = () => { if (chunk) out += '<span class="c' + color + '">' + escapeHtml(chunk) + '</span>'; chunk = ''; };
+	for (let i = 0; i < name.length; i++) {
+		if (name[i] === '^' && i + 1 < name.length && name[i + 1] >= '0' && name[i + 1] <= '9') {
+			flush();
+			color = +name[i + 1];
+			i++;
+		} else {
+			chunk += name[i];
+		}
+	}
+	flush();
+	return out;
+}
+
+function plainName(name) { return name.replace(/\^[0-9]/g, ''); }
+
+function toast(msg, ok = true) {
+	const t = document.createElement('div');
+	t.className = 'toast' + (ok ? '' : ' err');
+	t.textContent = msg;
+	$('toasts').appendChild(t);
+	setTimeout(() => t.remove(), 3500);
+}
+
+async function action(params) {
+	try {
+		const res = await fetch('api/action', { method: 'POST', body: new URLSearchParams(params) });
+		const json = await res.json();
+		toast(json.message, json.ok);
+		pollState();
+		return json.ok;
+	} catch (e) {
+		toast('Request failed: ' + e.message, false);
+		return false;
+	}
+}
+
+/* ------------------------------------------------------------------ */
+/* matrices (column major, like GL)                                    */
+/* ------------------------------------------------------------------ */
+
+const M4 = {
+	perspective(fovy, aspect, near, far) {
+		const f = 1 / Math.tan(fovy / 2), nf = 1 / (near - far);
+		return new Float32Array([f / aspect, 0, 0, 0, 0, f, 0, 0, 0, 0, (far + near) * nf, -1, 0, 0, 2 * far * near * nf, 0]);
+	},
+	lookAt(eye, at, up) {
+		let zx = eye[0] - at[0], zy = eye[1] - at[1], zz = eye[2] - at[2];
+		let l = Math.hypot(zx, zy, zz); zx /= l; zy /= l; zz /= l;
+		let xx = up[1] * zz - up[2] * zy, xy = up[2] * zx - up[0] * zz, xz = up[0] * zy - up[1] * zx;
+		l = Math.hypot(xx, xy, xz); xx /= l; xy /= l; xz /= l;
+		const yx = zy * xz - zz * xy, yy = zz * xx - zx * xz, yz = zx * xy - zy * xx;
+		return new Float32Array([xx, yx, zx, 0, xy, yy, zy, 0, xz, yz, zz, 0,
+			-(xx * eye[0] + xy * eye[1] + xz * eye[2]), -(yx * eye[0] + yy * eye[1] + yz * eye[2]), -(zx * eye[0] + zy * eye[1] + zz * eye[2]), 1]);
+	},
+	mul(a, b) {
+		const r = new Float32Array(16);
+		for (let c = 0; c < 4; c++)
+			for (let row = 0; row < 4; row++)
+				r[c * 4 + row] = a[row] * b[c * 4] + a[4 + row] * b[c * 4 + 1] + a[8 + row] * b[c * 4 + 2] + a[12 + row] * b[c * 4 + 3];
+		return r;
+	},
+	invert(m) {
+		const inv = new Float32Array(16);
+		inv[0] = m[5]*m[10]*m[15]-m[5]*m[11]*m[14]-m[9]*m[6]*m[15]+m[9]*m[7]*m[14]+m[13]*m[6]*m[11]-m[13]*m[7]*m[10];
+		inv[4] = -m[4]*m[10]*m[15]+m[4]*m[11]*m[14]+m[8]*m[6]*m[15]-m[8]*m[7]*m[14]-m[12]*m[6]*m[11]+m[12]*m[7]*m[10];
+		inv[8] = m[4]*m[9]*m[15]-m[4]*m[11]*m[13]-m[8]*m[5]*m[15]+m[8]*m[7]*m[13]+m[12]*m[5]*m[11]-m[12]*m[7]*m[9];
+		inv[12] = -m[4]*m[9]*m[14]+m[4]*m[10]*m[13]+m[8]*m[5]*m[14]-m[8]*m[6]*m[13]-m[12]*m[5]*m[10]+m[12]*m[6]*m[9];
+		inv[1] = -m[1]*m[10]*m[15]+m[1]*m[11]*m[14]+m[9]*m[2]*m[15]-m[9]*m[3]*m[14]-m[13]*m[2]*m[11]+m[13]*m[3]*m[10];
+		inv[5] = m[0]*m[10]*m[15]-m[0]*m[11]*m[14]-m[8]*m[2]*m[15]+m[8]*m[3]*m[14]+m[12]*m[2]*m[11]-m[12]*m[3]*m[10];
+		inv[9] = -m[0]*m[9]*m[15]+m[0]*m[11]*m[13]+m[8]*m[1]*m[15]-m[8]*m[3]*m[13]-m[12]*m[1]*m[11]+m[12]*m[3]*m[9];
+		inv[13] = m[0]*m[9]*m[14]-m[0]*m[10]*m[13]-m[8]*m[1]*m[14]+m[8]*m[2]*m[13]+m[12]*m[1]*m[10]-m[12]*m[2]*m[9];
+		inv[2] = m[1]*m[6]*m[15]-m[1]*m[7]*m[14]-m[5]*m[2]*m[15]+m[5]*m[3]*m[14]+m[13]*m[2]*m[7]-m[13]*m[3]*m[6];
+		inv[6] = -m[0]*m[6]*m[15]+m[0]*m[7]*m[14]+m[4]*m[2]*m[15]-m[4]*m[3]*m[14]-m[12]*m[2]*m[7]+m[12]*m[3]*m[6];
+		inv[10] = m[0]*m[5]*m[15]-m[0]*m[7]*m[13]-m[4]*m[1]*m[15]+m[4]*m[3]*m[13]+m[12]*m[1]*m[7]-m[12]*m[3]*m[5];
+		inv[14] = -m[0]*m[5]*m[14]+m[0]*m[6]*m[13]+m[4]*m[1]*m[14]-m[4]*m[2]*m[13]-m[12]*m[1]*m[6]+m[12]*m[2]*m[5];
+		inv[3] = -m[1]*m[6]*m[11]+m[1]*m[7]*m[10]+m[5]*m[2]*m[11]-m[5]*m[3]*m[10]-m[9]*m[2]*m[7]+m[9]*m[3]*m[6];
+		inv[7] = m[0]*m[6]*m[11]-m[0]*m[7]*m[10]-m[4]*m[2]*m[11]+m[4]*m[3]*m[10]+m[8]*m[2]*m[7]-m[8]*m[3]*m[6];
+		inv[11] = -m[0]*m[5]*m[11]+m[0]*m[7]*m[9]+m[4]*m[1]*m[11]-m[4]*m[3]*m[9]-m[8]*m[1]*m[7]+m[8]*m[3]*m[5];
+		inv[15] = m[0]*m[5]*m[10]-m[0]*m[6]*m[9]-m[4]*m[1]*m[10]+m[4]*m[2]*m[9]+m[8]*m[1]*m[6]-m[8]*m[2]*m[5];
+		const det = m[0] * inv[0] + m[1] * inv[4] + m[2] * inv[8] + m[3] * inv[12];
+		for (let i = 0; i < 16; i++) inv[i] /= det;
+		return inv;
+	},
+	transform(m, v) {
+		const x = v[0], y = v[1], z = v[2];
+		return [m[0]*x + m[4]*y + m[8]*z + m[12], m[1]*x + m[5]*y + m[9]*z + m[13], m[2]*x + m[6]*y + m[10]*z + m[14], m[3]*x + m[7]*y + m[11]*z + m[15]];
+	}
+};
+
+/* ------------------------------------------------------------------ */
+/* BSP loading                                                         */
+/* ------------------------------------------------------------------ */
+
+const SURF_SKY = 0x2000, SURF_NODRAW = 0x200000;
+const MST_PLANAR = 1, MST_PATCH = 2, MST_TRIANGLE_SOUP = 3;
+const SKIP_SHADER = /(^|\/)(nodraw|caulk|clip|trigger|hint|skip|areaportal|playerclip|botclip|weapclip|origin)|system\/|skies\//i;
+const VERT_SIZE = 80, SURF_SIZE = 148, SHADER_SIZE = 72;
+
+function parseBsp(buffer) {
+	const dv = new DataView(buffer);
+	const ident = String.fromCharCode(dv.getUint8(0), dv.getUint8(1), dv.getUint8(2), dv.getUint8(3));
+	if (ident !== 'RBSP') throw new Error('not a Jedi Academy map (' + ident + ')');
+	const lump = n => ({ ofs: dv.getInt32(8 + n * 8, true), len: dv.getInt32(12 + n * 8, true) });
+
+	const sl = lump(1), shaders = [];
+	for (let o = sl.ofs; o < sl.ofs + sl.len; o += SHADER_SIZE) {
+		let name = '';
+		for (let i = 0; i < 64; i++) { const ch = dv.getUint8(o + i); if (!ch) break; name += String.fromCharCode(ch); }
+		shaders.push({ name, flags: dv.getInt32(o + 64, true), contents: dv.getInt32(o + 68, true) });
+	}
+
+	const vl = lump(10), numVerts = vl.len / VERT_SIZE;
+	const il = lump(11), indexes = new Int32Array(buffer.slice(il.ofs, il.ofs + il.len));
+	const ml = lump(7);
+	const bounds = { mins: [0, 1, 2].map(i => dv.getFloat32(ml.ofs + i * 4, true)), maxs: [0, 1, 2].map(i => dv.getFloat32(ml.ofs + 12 + i * 4, true)) };
+
+	const vert = i => {
+		const o = vl.ofs + i * VERT_SIZE;
+		return {
+			p: [dv.getFloat32(o, true), dv.getFloat32(o + 4, true), dv.getFloat32(o + 8, true)],
+			st: [dv.getFloat32(o + 12, true), dv.getFloat32(o + 16, true)],
+			lm: [dv.getFloat32(o + 20, true), dv.getFloat32(o + 24, true)],
+			c: [dv.getUint8(o + 64), dv.getUint8(o + 65), dv.getUint8(o + 66), dv.getUint8(o + 67)]
+		};
+	};
+
+	const ll = lump(14), lmSize = 128 * 128 * 3, lightmaps = [];
+	for (let o = ll.ofs; o + lmSize <= ll.ofs + ll.len; o += lmSize) lightmaps.push(new Uint8Array(buffer, o, lmSize));
+
+	// batches per shader + lightmap
+	const batches = new Map();
+	const pickPos = [], pickIdx = [];
+	const sfl = lump(13);
+
+	for (let o = sfl.ofs; o < sfl.ofs + sfl.len; o += SURF_SIZE) {
+		const shaderNum = dv.getInt32(o, true), type = dv.getInt32(o + 8, true);
+		const firstVert = dv.getInt32(o + 12, true), nv = dv.getInt32(o + 16, true);
+		const firstIndex = dv.getInt32(o + 20, true), ni = dv.getInt32(o + 24, true);
+		const lmNum = dv.getInt32(o + 36, true);
+		const pw = dv.getInt32(o + 140, true), ph = dv.getInt32(o + 144, true);
+		const shader = shaders[shaderNum];
+		if (!shader || (shader.flags & (SURF_SKY | SURF_NODRAW)) || SKIP_SHADER.test(shader.name)) continue;
+		if (type !== MST_PLANAR && type !== MST_TRIANGLE_SOUP && type !== MST_PATCH) continue;
+
+		let verts, tris;
+		if (type === MST_PATCH) {
+			[verts, tris] = tessellatePatch(vert, firstVert, pw, ph);
+		} else {
+			verts = [];
+			for (let i = 0; i < nv; i++) verts.push(vert(firstVert + i));
+			tris = Array.from(indexes.subarray(firstIndex, firstIndex + ni));
+		}
+		if (!tris.length) continue;
+
+		const key = shaderNum + ':' + (lmNum >= 0 && lmNum < lightmaps.length ? lmNum : -1);
+		let b = batches.get(key);
+		if (!b) {
+			b = { shader: shaderNum, lightmap: lmNum >= 0 && lmNum < lightmaps.length ? lmNum : -1, pos: [], st: [], lm: [], col: [], idx: [] };
+			batches.set(key, b);
+		}
+		const base = b.pos.length / 3;
+		for (const v of verts) {
+			b.pos.push(v.p[0], v.p[1], v.p[2]);
+			b.st.push(v.st[0], v.st[1]);
+			b.lm.push(v.lm[0], v.lm[1]);
+			b.col.push(v.c[0], v.c[1], v.c[2], v.c[3]);
+		}
+		for (const t of tris) b.idx.push(base + t);
+
+		// solid surfaces for right-click picking
+		const pbase = pickPos.length / 3;
+		for (const v of verts) pickPos.push(v.p[0], v.p[1], v.p[2]);
+		for (const t of tris) pickIdx.push(pbase + t);
+	}
+
+	return { shaders, lightmaps, batches: [...batches.values()], bounds, pick: { pos: new Float32Array(pickPos), idx: new Uint32Array(pickIdx) } };
+}
+
+// quadratic bezier patch, 3x3 control blocks
+function tessellatePatch(vert, firstVert, w, h) {
+	const L = 6, verts = [], tris = [];
+	const lerp3 = (a, b, c, t, f) => {
+		const it = 1 - t;
+		return a.map((_, i) => it * it * f(a, i) + 2 * it * t * f(b, i) + t * t * f(c, i));
+	};
+	const mix = (a, b, c, t) => {
+		const it = 1 - t, k0 = it * it, k1 = 2 * it * t, k2 = t * t;
+		return {
+			p: [0, 1, 2].map(i => k0 * a.p[i] + k1 * b.p[i] + k2 * c.p[i]),
+			st: [0, 1].map(i => k0 * a.st[i] + k1 * b.st[i] + k2 * c.st[i]),
+			lm: [0, 1].map(i => k0 * a.lm[i] + k1 * b.lm[i] + k2 * c.lm[i]),
+			c: [0, 1, 2, 3].map(i => k0 * a.c[i] + k1 * b.c[i] + k2 * c.c[i])
+		};
+	};
+	for (let py = 0; py + 2 < h; py += 2) {
+		for (let px = 0; px + 2 < w; px += 2) {
+			const cp = [];
+			for (let j = 0; j < 3; j++) for (let i = 0; i < 3; i++) cp.push(vert(firstVert + (py + j) * w + px + i));
+			const base = verts.length;
+			for (let j = 0; j <= L; j++) {
+				const v = j / L;
+				const rows = [0, 1, 2].map(r => mix(cp[r], cp[3 + r], cp[6 + r], v));
+				for (let i = 0; i <= L; i++) verts.push(mix(rows[0], rows[1], rows[2], i / L));
+			}
+			for (let j = 0; j < L; j++) {
+				for (let i = 0; i < L; i++) {
+					const a = base + j * (L + 1) + i, b = a + 1, c = a + L + 1, d = c + 1;
+					tris.push(a, c, b, b, c, d);
+				}
+			}
+		}
+	}
+	return [verts, tris];
+}
+
+// minimal TGA decoder: uncompressed and RLE true color
+function decodeTga(buf) {
+	const d = new Uint8Array(buf);
+	const idLen = d[0], type = d[2], w = d[12] | (d[13] << 8), h = d[14] | (d[15] << 8), bpp = d[16], desc = d[17];
+	if ((type !== 2 && type !== 10) || (bpp !== 24 && bpp !== 32)) return null;
+	const px = bpp / 8, out = new Uint8Array(w * h * 4);
+	let p = 18 + idLen + (d[1] ? (d[5] | (d[6] << 8)) * (d[7] >> 3) : 0), n = 0, alpha = false;
+	const put = (o) => {
+		out[n * 4] = d[o + 2]; out[n * 4 + 1] = d[o + 1]; out[n * 4 + 2] = d[o];
+		out[n * 4 + 3] = px === 4 ? d[o + 3] : 255;
+		if (px === 4 && d[o + 3] < 250) alpha = true;
+		n++;
+	};
+	while (n < w * h && p < d.length) {
+		if (type === 2) { put(p); p += px; continue; }
+		const hdr = d[p++], count = (hdr & 127) + 1;
+		if (hdr & 128) { for (let i = 0; i < count && n < w * h; i++) put(p); p += px; }
+		else { for (let i = 0; i < count && n < w * h; i++) { put(p); p += px; } }
+	}
+	// TGA rows go bottom up unless bit 5 of the descriptor is set
+	if (!(desc & 0x20)) {
+		const row = w * 4, tmp = new Uint8Array(row);
+		for (let y = 0; y < h >> 1; y++) {
+			const a = y * row, b = (h - 1 - y) * row;
+			tmp.set(out.subarray(a, a + row)); out.copyWithin(a, b, b + row); out.set(tmp, b);
+		}
+	}
+	return { w, h, data: out, alpha };
+}
+
+/* ------------------------------------------------------------------ */
+/* WebGL                                                               */
+/* ------------------------------------------------------------------ */
+
+const canvas = $('gl');
+const gl = canvas.getContext('webgl2', { antialias: true });
+
+function compile(vs, fs, g = gl) {
+	const gl = g;
+	const p = gl.createProgram();
+	for (const [type, src] of [[gl.VERTEX_SHADER, vs], [gl.FRAGMENT_SHADER, fs]]) {
+		const s = gl.createShader(type);
+		gl.shaderSource(s, src);
+		gl.compileShader(s);
+		if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s));
+		gl.attachShader(p, s);
+	}
+	gl.linkProgram(p);
+	if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(p));
+	const u = {};
+	for (let i = 0, n = gl.getProgramParameter(p, gl.ACTIVE_UNIFORMS); i < n; i++) {
+		const name = gl.getActiveUniform(p, i).name;
+		u[name] = gl.getUniformLocation(p, name);
+	}
+	return { p, u };
+}
+
+const mapProg = compile(`#version 300 es
+layout(location=0) in vec3 aPos; layout(location=1) in vec2 aSt; layout(location=2) in vec2 aLm; layout(location=3) in vec4 aCol;
+uniform mat4 uMvp; uniform vec3 uEye;
+out vec2 vSt; out vec2 vLm; out vec4 vCol; out float vDist;
+void main() { vSt = aSt; vLm = aLm; vCol = aCol; vDist = distance(aPos, uEye); gl_Position = uMvp * vec4(aPos, 1.0); }`,
+`#version 300 es
+precision mediump float;
+in vec2 vSt; in vec2 vLm; in vec4 vCol; in float vDist;
+uniform sampler2D uTex; uniform sampler2D uLm; uniform int uUseLm; uniform int uAlphaTest; uniform float uFogFar;
+out vec4 o;
+void main() {
+	vec4 t = texture(uTex, vSt);
+	if (uAlphaTest == 1 && t.a < 0.5) discard;
+	vec3 light = uUseLm == 1 ? min(texture(uLm, vLm).rgb * 2.0, vec3(1.6)) : vCol.rgb;
+	vec3 c = t.rgb * light;
+	float fog = clamp(vDist / uFogFar, 0.0, 1.0) * 0.55;
+	o = vec4(mix(c, vec3(0.05, 0.05, 0.06), fog), 1.0);
+}`);
+
+const flatProg = compile(`#version 300 es
+layout(location=0) in vec3 aPos; layout(location=1) in vec3 aNorm;
+uniform mat4 uMvp; uniform mat4 uModel;
+out vec3 vNorm;
+void main() { vNorm = mat3(uModel) * aNorm; gl_Position = uMvp * uModel * vec4(aPos, 1.0); }`,
+`#version 300 es
+precision mediump float;
+in vec3 vNorm; uniform vec4 uColor; out vec4 o;
+void main() { float l = 0.55 + 0.45 * max(dot(normalize(vNorm), normalize(vec3(0.4, 0.3, 0.85))), 0.0); o = vec4(uColor.rgb * l, uColor.a); }`);
+
+function makeTexture(w, h, data, opts = {}) {
+	const t = gl.createTexture();
+	gl.bindTexture(gl.TEXTURE_2D, t);
+	gl.texImage2D(gl.TEXTURE_2D, 0, opts.rgb ? gl.RGB8 : gl.RGBA8, w, h, 0, opts.rgb ? gl.RGB : gl.RGBA, gl.UNSIGNED_BYTE, data);
+	if (opts.mip !== false) {
+		gl.generateMipmap(gl.TEXTURE_2D);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+	} else {
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+	}
+	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+	if (opts.clamp) {
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+	}
+	return t;
+}
+
+const grayTex = makeTexture(1, 1, new Uint8Array([150, 150, 150, 255]), { mip: false });
+
+// simple meshes with normals: player body (octagonal prism + cap), facing wedge, item diamond, ring
+function buildMesh(pos, norm, idx) {
+	const vao = gl.createVertexArray();
+	gl.bindVertexArray(vao);
+	const pb = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, pb); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(pos), gl.STATIC_DRAW);
+	gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 0, 0);
+	const nb = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, nb); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(norm), gl.STATIC_DRAW);
+	gl.enableVertexAttribArray(1); gl.vertexAttribPointer(1, 3, gl.FLOAT, false, 0, 0);
+	const ib = gl.createBuffer(); gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ib); gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(idx), gl.STATIC_DRAW);
+	gl.bindVertexArray(null);
+	return { vao, count: idx.length };
+}
+
+function prismMesh(sides, r, z0, z1) {
+	const pos = [], norm = [], idx = [];
+	for (let i = 0; i < sides; i++) {
+		const a0 = i / sides * Math.PI * 2, a1 = (i + 1) / sides * Math.PI * 2, am = (a0 + a1) / 2;
+		const b = pos.length / 3, nx = Math.cos(am), ny = Math.sin(am);
+		pos.push(Math.cos(a0) * r, Math.sin(a0) * r, z0, Math.cos(a1) * r, Math.sin(a1) * r, z0, Math.cos(a1) * r, Math.sin(a1) * r, z1, Math.cos(a0) * r, Math.sin(a0) * r, z1);
+		norm.push(nx, ny, 0, nx, ny, 0, nx, ny, 0, nx, ny, 0);
+		idx.push(b, b + 1, b + 2, b, b + 2, b + 3);
+		const t = pos.length / 3;
+		pos.push(0, 0, z1, Math.cos(a0) * r, Math.sin(a0) * r, z1, Math.cos(a1) * r, Math.sin(a1) * r, z1);
+		norm.push(0, 0, 1, 0, 0, 1, 0, 0, 1);
+		idx.push(t, t + 1, t + 2);
+	}
+	return buildMesh(pos, norm, idx);
+}
+
+const bodyMesh = prismMesh(8, 14, 0, 58);
+const headMesh = prismMesh(8, 8, 58, 72);
+const noseMesh = buildMesh(
+	[22, 0, 46, 10, 6, 46, 10, -6, 46, 22, 0, 52, 10, 6, 52, 10, -6, 52],
+	[1, 0, 0, 0, 1, 0, 0, -1, 0, 1, 0, 0, 0, 1, 0, 0, -1, 0],
+	[0, 1, 4, 0, 4, 3, 0, 2, 5, 0, 5, 3, 3, 4, 5, 0, 1, 2]);
+const diamondMesh = buildMesh(
+	[0, 0, 12, 8, 0, 0, 0, 8, 0, -8, 0, 0, 0, -8, 0, 0, 0, -12],
+	[0, 0, 1, 1, 0, 0, 0, 1, 0, -1, 0, 0, 0, -1, 0, 0, 0, -1],
+	[0, 1, 2, 0, 2, 3, 0, 3, 4, 0, 4, 1, 5, 2, 1, 5, 3, 2, 5, 4, 3, 5, 1, 4]);
+const ringMesh = (() => {
+	const pos = [], norm = [], idx = [], n = 32;
+	for (let i = 0; i <= n; i++) {
+		const a = i / n * Math.PI * 2;
+		pos.push(Math.cos(a) * 26, Math.sin(a) * 26, 1, Math.cos(a) * 32, Math.sin(a) * 32, 1);
+		norm.push(0, 0, 1, 0, 0, 1);
+		if (i < n) { const b = i * 2; idx.push(b, b + 1, b + 3, b, b + 3, b + 2); }
+	}
+	return buildMesh(pos, norm, idx);
+})();
+
+const cubeMesh = (() => {
+	const pos = [], norm = [], idx = [], r = 7;
+	const faces = [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]];
+	for (const n of faces) {
+		const u = n[2] ? [1, 0, 0] : [0, 0, 1], v = [n[1] * u[2] - n[2] * u[1], n[2] * u[0] - n[0] * u[2], n[0] * u[1] - n[1] * u[0]];
+		const b = pos.length / 3;
+		for (const [a, c] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) {
+			pos.push((n[0] + u[0] * a + v[0] * c) * r, (n[1] + u[1] * a + v[1] * c) * r, (n[2] + u[2] * a + v[2] * c) * r);
+			norm.push(n[0], n[1], n[2]);
+		}
+		idx.push(b, b + 1, b + 2, b, b + 2, b + 3);
+	}
+	return buildMesh(pos, norm, idx);
+})();
+
+/* ------------------------------------------------------------------ */
+/* map                                                                 */
+/* ------------------------------------------------------------------ */
+
+let world = null;		// { batches: [{vao, count, tex, lm, alpha}], bounds, pick }
+let loadedMap = '';
+
+async function loadMap(name) {
+	loadedMap = name;
+	$('loading').style.display = '';
+	$('loading').textContent = 'Loading ' + name + '...';
+	world = null;
+	try {
+		const res = await fetch('api/map?name=' + encodeURIComponent(name));
+		if (!res.ok) throw new Error('HTTP ' + res.status);
+		const bsp = parseBsp(await res.arrayBuffer());
+		if (loadedMap !== name) return;
+
+		const lightmapTex = bsp.lightmaps.map(d => makeTexture(128, 128, d, { rgb: true, clamp: true }));
+		const textures = new Map();
+		const batches = bsp.batches.map(b => {
+			const vao = gl.createVertexArray();
+			gl.bindVertexArray(vao);
+			const attr = (loc, data, size, type, normalized) => {
+				const buf = gl.createBuffer();
+				gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+				gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
+				gl.enableVertexAttribArray(loc);
+				gl.vertexAttribPointer(loc, size, type, normalized, 0, 0);
+			};
+			attr(0, new Float32Array(b.pos), 3, gl.FLOAT, false);
+			attr(1, new Float32Array(b.st), 2, gl.FLOAT, false);
+			attr(2, new Float32Array(b.lm), 2, gl.FLOAT, false);
+			attr(3, new Uint8Array(b.col), 4, gl.UNSIGNED_BYTE, true);
+			const ib = gl.createBuffer();
+			gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ib);
+			gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint32Array(b.idx), gl.STATIC_DRAW);
+			gl.bindVertexArray(null);
+			const shaderName = bsp.shaders[b.shader].name;
+			if (!textures.has(shaderName)) textures.set(shaderName, { tex: grayTex, alpha: false });
+			return { vao, count: b.idx.length, shaderName, lm: b.lightmap >= 0 ? lightmapTex[b.lightmap] : null };
+		});
+
+		world = { batches, textures, bounds: bsp.bounds, pick: bsp.pick };
+		resetCamera();
+		$('loading').style.display = 'none';
+		loadTextures([...textures.keys()]);
+	} catch (e) {
+		$('loading').textContent = 'Could not load the map: ' + e.message;
+	}
+}
+
+// fetch the images behind the shader names, 6 at a time
+async function loadTextures(names) {
+	const queue = names.slice(), current = world;
+	const one = async name => {
+		const base = name.replace(/\.(tga|jpg|png)$/i, '');
+		for (const ext of ['.jpg', '.tga', '.png']) {
+			try {
+				const res = await fetch('api/file?name=' + encodeURIComponent(base + ext));
+				if (!res.ok) continue;
+				const data = await res.arrayBuffer();
+				if (world !== current) return;
+				let tex, alpha = false;
+				if (ext === '.tga') {
+					const img = decodeTga(data);
+					if (!img) continue;
+					tex = makeTexture(img.w, img.h, img.data);
+					alpha = img.alpha;
+				} else {
+					const bmp = await createImageBitmap(new Blob([data]));
+					tex = gl.createTexture();
+					gl.bindTexture(gl.TEXTURE_2D, tex);
+					gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, bmp);
+					gl.generateMipmap(gl.TEXTURE_2D);
+					gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+				}
+				current.textures.set(name, { tex, alpha });
+				return;
+			} catch (e) { /* try the next extension */ }
+		}
+	};
+	const worker = async () => { while (queue.length && world === current) await one(queue.shift()); };
+	await Promise.all([1, 2, 3, 4, 5, 6].map(worker));
+}
+
+// ray against the map triangles, returns the hit point or null
+function pickGround(origin, dir) {
+	if (!world) return null;
+	const p = world.pick.pos, idx = world.pick.idx;
+	let best = Infinity;
+	for (let i = 0; i < idx.length; i += 3) {
+		const a = idx[i] * 3, b = idx[i + 1] * 3, c = idx[i + 2] * 3;
+		const e1x = p[b] - p[a], e1y = p[b + 1] - p[a + 1], e1z = p[b + 2] - p[a + 2];
+		const e2x = p[c] - p[a], e2y = p[c + 1] - p[a + 1], e2z = p[c + 2] - p[a + 2];
+		const hx = dir[1] * e2z - dir[2] * e2y, hy = dir[2] * e2x - dir[0] * e2z, hz = dir[0] * e2y - dir[1] * e2x;
+		const det = e1x * hx + e1y * hy + e1z * hz;
+		if (Math.abs(det) < 1e-7) continue;
+		const f = 1 / det, sx = origin[0] - p[a], sy = origin[1] - p[a + 1], sz = origin[2] - p[a + 2];
+		const u = f * (sx * hx + sy * hy + sz * hz);
+		if (u < 0 || u > 1) continue;
+		const qx = sy * e1z - sz * e1y, qy = sz * e1x - sx * e1z, qz = sx * e1y - sy * e1x;
+		const v = f * (dir[0] * qx + dir[1] * qy + dir[2] * qz);
+		if (v < 0 || u + v > 1) continue;
+		const t = f * (e2x * qx + e2y * qy + e2z * qz);
+		if (t > 1 && t < best) best = t;
+	}
+	return best === Infinity ? null : [origin[0] + dir[0] * best, origin[1] + dir[1] * best, origin[2] + dir[2] * best];
+}
+
+/* ------------------------------------------------------------------ */
+/* camera (RTS style, Z up like the game)                              */
+/* ------------------------------------------------------------------ */
+
+const cam = { target: [0, 0, 0], yaw: 45, pitch: 55, dist: 1500, follow: -1 };
+let viewProj = null, invViewProj = null, eye = [0, 0, 0];
+
+function resetCamera() {
+	if (!world) return;
+	const b = world.bounds;
+	cam.target = [(b.mins[0] + b.maxs[0]) / 2, (b.mins[1] + b.maxs[1]) / 2, (b.mins[2] + b.maxs[2]) / 2];
+	cam.dist = Math.max(b.maxs[0] - b.mins[0], b.maxs[1] - b.mins[1]) * 0.75;
+}
+
+function updateCamera() {
+	if (cam.follow >= 0) {
+		const p = players.get(cam.follow);
+		if (p) cam.target = p.draw.slice();
+	}
+	const y = cam.yaw * Math.PI / 180, pt = cam.pitch * Math.PI / 180;
+	eye = [cam.target[0] - Math.cos(y) * Math.cos(pt) * cam.dist, cam.target[1] - Math.sin(y) * Math.cos(pt) * cam.dist, cam.target[2] + Math.sin(pt) * cam.dist];
+	const proj = M4.perspective(55 * Math.PI / 180, canvas.width / canvas.height, 8, 65536);
+	viewProj = M4.mul(proj, M4.lookAt(eye, cam.target, [0, 0, 1]));
+	invViewProj = M4.invert(viewProj);
+}
+
+function screenRay(x, y) {
+	const nx = x / canvas.clientWidth * 2 - 1, ny = 1 - y / canvas.clientHeight * 2;
+	const a = M4.transform(invViewProj, [nx, ny, -1]), b = M4.transform(invViewProj, [nx, ny, 1]);
+	const p0 = [a[0] / a[3], a[1] / a[3], a[2] / a[3]], p1 = [b[0] / b[3], b[1] / b[3], b[2] / b[3]];
+	const d = [p1[0] - p0[0], p1[1] - p0[1], p1[2] - p0[2]], l = Math.hypot(...d);
+	return { origin: p0, dir: d.map(v => v / l) };
+}
+
+function project(p) {
+	const c = M4.transform(viewProj, p);
+	if (c[3] <= 0) return null;
+	return [(c[0] / c[3] * 0.5 + 0.5) * canvas.clientWidth, (0.5 - c[1] / c[3] * 0.5) * canvas.clientHeight];
+}
+
+/* ------------------------------------------------------------------ */
+/* game state                                                          */
+/* ------------------------------------------------------------------ */
+
+let state = null;
+let selected = -1;
+const players = new Map();		// id -> { data, prev, draw, t }
+const labels = new Map();
+let lastPoll = 0, pollInterval = 100;
+
+async function pollState() {
+	try {
+		const res = await fetch('api/state', { cache: 'no-store' });
+		if (!res.ok) throw new Error('HTTP ' + res.status);
+		const s = await res.json();
+		$('status').className = 'live';
+		applyState(s);
+	} catch (e) {
+		$('status').className = 'err';
+	}
+}
+
+function applyState(s) {
+	state = s;
+	const now = performance.now();
+	if (s.map && s.map !== loadedMap) loadMap(s.map);
+
+	const seen = new Set();
+	for (const p of s.players) {
+		seen.add(p.id);
+		const old = players.get(p.id);
+		if (old) {
+			old.prev = old.draw.slice();
+			old.prevYaw = old.data.yaw;
+			old.prevPitch = old.data.pitch;
+			const inst = g2.instances.get(p.id);
+			if (inst) inst.prevSabers = old.data.sabers;
+			old.data = p;
+			old.t = now;
+		} else {
+			players.set(p.id, { data: p, prev: p.pos.slice(), draw: p.pos.slice(), t: now });
+		}
+	}
+	for (const id of [...players.keys()]) {
+		if (!seen.has(id)) {
+			players.delete(id);
+			labels.get(id)?.remove();
+			labels.delete(id);
+		}
+	}
+	if (selected >= 0 && !players.has(selected)) select(-1);
+	lastPoll = now;
+	renderTopbar();
+	renderTable();
+	renderCommand();
+}
+
+function fmtTime(ms) {
+	const s = Math.floor(ms / 1000);
+	return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+}
+
+function renderTopbar() {
+	$('host').innerHTML = colorName(state.host || '');
+	$('map').textContent = state.map;
+	$('gametype').textContent = state.gametypeName || ('Gametype ' + state.gametype);
+	$('time').textContent = fmtTime(state.time) + (state.timelimit ? ' / ' + state.timelimit + ':00' : '');
+	const team = state.gametype >= 6;
+	$('teamScores').style.display = team ? '' : 'none';
+	$('scoreRed').textContent = state.scores.red;
+	$('scoreBlue').textContent = state.scores.blue;
+	const counts = {};
+	for (const it of state.items) counts[it.type] = (counts[it.type] || 0) + 1;
+	$('itemsInfo').textContent = state.items.length + ' items on the map';
+}
+
+function renderTable() {
+	const rows = [...players.values()].map(p => p.data).sort((a, b) => b.score - a.score);
+	$('playerCount').textContent = rows.length + ' / ' + state.maxClients;
+	$('players').innerHTML = rows.map(p =>
+		'<tr class="player' + (p.id === selected ? ' sel' : '') + (p.dead ? ' dead' : '') + '" data-id="' + p.id + '">' +
+		'<td><span class="team ' + p.team + '"></span>' + colorName(p.name) + (p.bot ? '<span class="tag">bot</span>' : '') + (p.god ? '<span class="tag">god</span>' : '') + '</td>' +
+		'<td class="num">' + (p.team === 'spectator' ? '-' : Math.max(p.health, 0)) + '</td>' +
+		'<td class="num">' + (p.team === 'spectator' ? '-' : p.armor) + '</td>' +
+		'<td class="num">' + p.score + '</td>' +
+		'<td class="num">' + (p.bot ? '-' : p.ping) + '</td></tr>').join('');
+}
+
+$('players').addEventListener('click', e => {
+	const tr = e.target.closest('tr.player');
+	if (!tr) return;
+	select(+tr.dataset.id);
+	const p = players.get(selected);
+	if (p) cam.target = p.draw.slice();
+});
+$('players').addEventListener('dblclick', e => {
+	const tr = e.target.closest('tr.player');
+	if (tr) cam.follow = +tr.dataset.id;
+});
+
+/* ------------------------------------------------------------------ */
+/* command panel                                                       */
+/* ------------------------------------------------------------------ */
+
+let editing = false;	// don't overwrite inputs the user is typing in
+
+function select(id) {
+	if (id >= 0) selectEnt(-1);
+	selected = id;
+	editing = false;
+	if (id < 0) cam.follow = -1;
+	disarm();
+	renderCommand(true);
+	if (state) renderTable();
+}
+
+function renderCommand(fillInputs) {
+	const p = selected >= 0 && players.get(selected);
+	$('command').classList.toggle('open', !!p);
+	if (!p) return;
+	const d = p.data;
+	$('cmdName').innerHTML = colorName(d.name);
+	$('cmdSub').innerHTML = '<span class="team ' + d.team + '"></span>' + d.team + (d.bot ? ' &middot; bot' : '') + ' &middot; ' +
+		escapeHtml(WEAPONS[d.weapon] || 'weapon ' + d.weapon) + ' &middot; score ' + d.score + (d.dead ? ' &middot; <b style="color:var(--accent2)">dead</b>' : '');
+	$('cmdHp').textContent = Math.max(d.health, 0) + ' / ' + d.maxHealth;
+	$('cmdAr').textContent = d.armor;
+	$('cmdHpBar').style.width = Math.min(100, Math.max(0, d.health) / Math.max(1, d.maxHealth) * 100) + '%';
+	$('cmdArBar').style.width = Math.min(100, d.armor / Math.max(1, d.maxHealth) * 100) + '%';
+	$('godBtn').classList.toggle('primary', d.god);
+	$('followBtn').classList.toggle('primary', cam.follow === d.id);
+	if (fillInputs || !editing) {
+		$('setHp').value = Math.max(d.health, 1);
+		$('setAr').value = d.armor;
+		$('setScale').value = d.scale;
+		$('scaleVal').textContent = d.scale + '%';
+		$('setTeam').value = d.team;
+	}
+}
+
+for (const id of ['setHp', 'setAr', 'setScale', 'setTeam']) {
+	$(id).addEventListener('focus', () => editing = true);
+	$(id).addEventListener('input', () => { editing = true; if (id === 'setScale') $('scaleVal').textContent = $(id).value + '%'; });
+}
+
+document.querySelectorAll('[data-set]').forEach(b => b.addEventListener('click', async () => {
+	await action({ action: b.dataset.set, id: selected, value: $(b.dataset.input).value });
+	editing = false;
+}));
+
+// dangerous actions need a second click
+let armed = null;
+function disarm() {
+	if (armed) { armed.classList.remove('armed'); armed.textContent = armed.dataset.label; armed = null; }
+}
+document.querySelectorAll('[data-act]').forEach(b => {
+	b.dataset.label = b.textContent;
+	b.addEventListener('click', () => {
+		if (b.hasAttribute('data-confirm') && armed !== b) {
+			disarm();
+			armed = b;
+			b.classList.add('armed');
+			b.textContent = 'Sure? ' + b.dataset.label;
+			setTimeout(() => { if (armed === b) disarm(); }, 3000);
+			return;
+		}
+		disarm();
+		action({ action: b.dataset.act, id: selected });
+	});
+});
+$('followBtn').addEventListener('click', () => { cam.follow = cam.follow === selected ? -1 : selected; renderCommand(); });
+$('cmdClose').addEventListener('click', () => select(-1));
+$('fpBtn').addEventListener('click', () => setFirstPerson(view.id >= 0 ? -1 : selected));
+$('fpExit').addEventListener('click', () => setFirstPerson(-1));
+
+$('sayForm').addEventListener('submit', e => { e.preventDefault(); if ($('sayText').value) action({ action: 'say', value: $('sayText').value }).then(ok => ok && ($('sayText').value = '')); });
+$('botForm').addEventListener('submit', e => { e.preventDefault(); action({ action: 'addbot', value: $('botName').value }); });
+$('mapForm').addEventListener('submit', e => { e.preventDefault(); if ($('mapName').value) action({ action: 'map', value: $('mapName').value }); });
+$('toggleSide').addEventListener('click', () => {
+	document.body.classList.toggle('sideClosed');
+	try { localStorage.setItem('wa.sideClosed', document.body.classList.contains('sideClosed') ? '1' : ''); } catch (e) { /* no storage */ }
+	setTimeout(resize, 200);
+});
+try { if (localStorage.getItem('wa.sideClosed')) document.body.classList.add('sideClosed'); } catch (e) { /* no storage */ }
+
+/* ------------------------------------------------------------------ */
+/* input                                                               */
+/* ------------------------------------------------------------------ */
+
+const keys = new Set();
+let drag = null, marker = null;
+
+function playerAt(x, y) {
+	let best = -1, bestD = 28;
+	for (const [id, p] of players) {
+		if (p.data.team === 'spectator') continue;
+		const s = (p.data.scale || 100) / 100;
+		for (const z of [10, 36 * s, 64 * s]) {
+			const sp = project([p.draw[0], p.draw[1], p.draw[2] - 24 + z]);
+			if (!sp) continue;
+			const d = Math.hypot(sp[0] - x, sp[1] - y);
+			if (d < bestD) { bestD = d; best = id; }
+		}
+	}
+	return best;
+}
+
+canvas.addEventListener('contextmenu', e => e.preventDefault());
+canvas.addEventListener('mousedown', e => {
+	const rect = canvas.getBoundingClientRect(), x = e.clientX - rect.left, y = e.clientY - rect.top;
+	drag = { x: e.clientX, y: e.clientY, button: e.button, moved: false, target: cam.target.slice(), yaw: cam.yaw, pitch: cam.pitch };
+	// grab the selected entity to move it
+	if (mode === 'world' && e.button === 0 && selectedEnt >= 0 && entityAt(x, y) === selectedEnt) {
+		const ent = ents.get(selectedEnt), below = pickGround([ent.pos[0], ent.pos[1], ent.pos[2] + 1], [0, 0, -1]);
+		drag.ent = { id: selectedEnt, height: below ? ent.pos[2] - below[2] : 0 };
+	}
+});
+window.addEventListener('mousemove', e => {
+	if (!drag) return;
+	const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+	if (Math.abs(dx) + Math.abs(dy) > 4) drag.moved = true;
+	if (!drag.moved) return;
+	if (drag.ent) {
+		const rect = canvas.getBoundingClientRect(), ray = screenRay(e.clientX - rect.left, e.clientY - rect.top);
+		const hit = pickGround(ray.origin, ray.dir);
+		if (hit) ghost = { id: drag.ent.id, pos: [hit[0], hit[1], hit[2] + drag.ent.height] };
+	} else if (drag.button === 1 || (drag.button === 0 && e.altKey)) {
+		cam.yaw = drag.yaw - dx * 0.3;
+		cam.pitch = Math.min(89, Math.max(10, drag.pitch + dy * 0.3));
+	} else if (drag.button === 0) {
+		cam.follow = -1;
+		const scale = cam.dist / canvas.clientHeight * 1.1, y = cam.yaw * Math.PI / 180;
+		cam.target[0] = drag.target[0] - (Math.sin(y) * dx - Math.cos(y) * dy / Math.sin(cam.pitch * Math.PI / 180)) * scale;
+		cam.target[1] = drag.target[1] + (Math.cos(y) * dx + Math.sin(y) * dy / Math.sin(cam.pitch * Math.PI / 180)) * scale;
+	}
+});
+window.addEventListener('mouseup', e => {
+	if (!drag) return;
+	const d = drag;
+	drag = null;
+	if (d.ent && d.moved) {
+		if (ghost) moveEntity(d.ent.id, ghost.pos);
+		return;
+	}
+	if (d.moved) return;
+	const rect = canvas.getBoundingClientRect(), x = e.clientX - rect.left, y = e.clientY - rect.top;
+	if (e.target !== canvas) return;
+	if (d.button === 0) {
+		if (mode === 'world') selectEnt(entityAt(x, y));
+		else select(playerAt(x, y));
+		return;
+	}
+	if (d.button !== 2) return;
+	const ray = screenRay(x, y), hit = pickGround(ray.origin, ray.dir);
+	if (mode === 'world' && placing) {
+		if (!hit) { toast('No floor there', false); return; }
+		marker = { pos: hit, t: performance.now() };
+		placeEntity(hit);
+	} else if (mode === 'world' && selectedEnt >= 0) {
+		if (!hit) { toast('No floor there', false); return; }
+		const ent = ents.get(selectedEnt), below = pickGround([ent.pos[0], ent.pos[1], ent.pos[2] + 1], [0, 0, -1]);
+		marker = { pos: hit, t: performance.now() };
+		moveEntity(selectedEnt, [hit[0], hit[1], hit[2] + (below ? ent.pos[2] - below[2] : 0)]);
+	} else if (mode === 'players' && selected >= 0) {
+		if (!hit) { toast('No floor there', false); return; }
+		marker = { pos: hit, t: performance.now() };
+		action({ action: 'teleport', id: selected, x: hit[0].toFixed(1), y: hit[1].toFixed(1), z: hit[2].toFixed(1) });
+	}
+});
+canvas.addEventListener('wheel', e => {
+	e.preventDefault();
+	cam.dist = Math.min(20000, Math.max(80, cam.dist * Math.pow(1.0015, e.deltaY)));
+}, { passive: false });
+window.addEventListener('keydown', e => {
+	if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+	keys.add(e.key.toLowerCase());
+	if (e.key === 'Escape') { if (view.id >= 0) { setFirstPerson(-1); return; } select(-1); selectEnt(-1); setPlacing(false); }
+	if (e.key.toLowerCase() === 'v' && (selected >= 0 || view.id >= 0)) setFirstPerson(view.id >= 0 ? -1 : selected);
+	if ((e.key === 'Delete' || e.key === 'Backspace') && mode === 'world' && selectedEnt >= 0) $('entDel').click();
+	if (e.key.toLowerCase() === 'f' && selected >= 0) { cam.follow = cam.follow === selected ? -1 : selected; renderCommand(); }
+});
+window.addEventListener('keyup', e => keys.delete(e.key.toLowerCase()));
+window.addEventListener('blur', () => keys.clear());
+
+/* ------------------------------------------------------------------ */
+/* render loop                                                         */
+/* ------------------------------------------------------------------ */
+
+function resize() {
+	const dpr = Math.min(window.devicePixelRatio || 1, 2);
+	canvas.width = Math.round(canvas.clientWidth * dpr);
+	canvas.height = Math.round(canvas.clientHeight * dpr);
+}
+window.addEventListener('resize', resize);
+
+function drawMesh(mesh, x, y, z, yaw, scale, color) {
+	const c = Math.cos(yaw), s = Math.sin(yaw);
+	gl.uniformMatrix4fv(flatProg.u.uModel, false, new Float32Array([c * scale, s * scale, 0, 0, -s * scale, c * scale, 0, 0, 0, 0, scale, 0, x, y, z, 1]));
+	gl.uniform4fv(flatProg.u.uColor, color);
+	gl.bindVertexArray(mesh.vao);
+	gl.drawElements(gl.TRIANGLES, mesh.count, gl.UNSIGNED_SHORT, 0);
+}
+
+let lastFrame = performance.now();
+function frame(now) {
+	const dt = Math.min(0.1, (now - lastFrame) / 1000);
+	lastFrame = now;
+
+	// keyboard camera
+	const speed = cam.dist * 1.2 * dt, y = cam.yaw * Math.PI / 180;
+	const fwd = (keys.has('w') || keys.has('arrowup') ? 1 : 0) - (keys.has('s') || keys.has('arrowdown') ? 1 : 0);
+	const right = (keys.has('d') || keys.has('arrowright') ? 1 : 0) - (keys.has('a') || keys.has('arrowleft') ? 1 : 0);
+	if (fwd || right) {
+		cam.follow = -1;
+		cam.target[0] += (Math.cos(y) * fwd + Math.sin(y) * right) * speed;
+		cam.target[1] += (Math.sin(y) * fwd - Math.cos(y) * right) * speed;
+	}
+	if (keys.has('q')) cam.yaw += 90 * dt;
+	if (keys.has('e')) cam.yaw -= 90 * dt;
+
+	// smooth player movement between polls
+	const k = Math.min(1, (now - lastPoll) / pollInterval);
+	for (const p of players.values()) {
+		for (let i = 0; i < 3; i++) p.draw[i] = p.prev[i] + (p.data.pos[i] - p.prev[i]) * k;
+	}
+
+	if (canvas.width !== Math.round(canvas.clientWidth * Math.min(window.devicePixelRatio || 1, 2))) resize();
+	if (view.id < 0 || !firstPersonCamera(now)) updateCamera();
+
+	gl.viewport(0, 0, canvas.width, canvas.height);
+	gl.clearColor(0.05, 0.05, 0.06, 1);
+	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+	gl.enable(gl.DEPTH_TEST);
+
+	if (world) {
+		gl.useProgram(mapProg.p);
+		gl.uniformMatrix4fv(mapProg.u.uMvp, false, viewProj);
+		gl.uniform3fv(mapProg.u.uEye, eye);
+		gl.uniform1f(mapProg.u.uFogFar, Math.max(4000, cam.dist * 3));
+		gl.uniform1i(mapProg.u.uTex, 0);
+		gl.uniform1i(mapProg.u.uLm, 1);
+		gl.disable(gl.CULL_FACE);
+		for (const b of world.batches) {
+			const t = world.textures.get(b.shaderName);
+			gl.activeTexture(gl.TEXTURE0);
+			gl.bindTexture(gl.TEXTURE_2D, t.tex);
+			gl.activeTexture(gl.TEXTURE1);
+			gl.bindTexture(gl.TEXTURE_2D, b.lm || grayTex);
+			gl.uniform1i(mapProg.u.uUseLm, b.lm ? 1 : 0);
+			gl.uniform1i(mapProg.u.uAlphaTest, t.alpha ? 1 : 0);
+			gl.bindVertexArray(b.vao);
+			gl.drawElements(gl.TRIANGLES, b.count, gl.UNSIGNED_INT, 0);
+		}
+	}
+
+	gl.useProgram(flatProg.p);
+	gl.uniformMatrix4fv(flatProg.u.uMvp, false, viewProj);
+
+	if (state) {
+		const spin = now / 600;
+		for (const it of state.items) {
+			// the real item model, spinning like in the game, until it loaded a colored diamond
+			const info = classInfo.get(it.name);
+			const model = info && info.model ? staticNow(info.model) : null;
+			if (model) {
+				const c = Math.cos(spin), sn = Math.sin(spin);
+				drawStatic(model, new Float32Array([c, sn, 0, 0, -sn, c, 0, 0, 0, 0, 1, 0, it.pos[0], it.pos[1], it.pos[2] + 4 + Math.sin(spin + it.id) * 2, 1]));
+				gl.useProgram(flatProg.p);
+				gl.uniformMatrix4fv(flatProg.u.uMvp, false, viewProj);
+			} else {
+				const col = ITEM_COLORS[it.type] || [1, 1, 1];
+				drawMesh(diamondMesh, it.pos[0], it.pos[1], it.pos[2] + 6 + Math.sin(spin + it.id) * 3, spin, 1, [col[0], col[1], col[2], 1]);
+			}
+		}
+	}
+
+	if (mode === 'world') {
+		for (const ent of ents.values()) {
+			if (!entVisible(ent)) continue;
+			const c = entColor(ent.classname), sel = ent.id === selectedEnt;
+			const pos = ghost && ghost.id === ent.id ? ghost.pos : ent.pos;
+			drawMesh(cubeMesh, pos[0], pos[1], pos[2], 0, sel ? 1.6 : 1, sel ? [1, 0.2, 0.3, 1] : [c[0], c[1], c[2], 1]);
+		}
+		if (selectedEnt >= 0 && ents.has(selectedEnt)) {
+			const pos = ghost && ghost.id === selectedEnt ? ghost.pos : ents.get(selectedEnt).pos;
+			drawMesh(ringMesh, pos[0], pos[1], pos[2] - 8, now / 900, 0.6, [1, 0.15, 0.25, 1]);
+		}
+	}
+
+	for (const [id, p] of players) {
+		const d = p.data;
+		if (d.team === 'spectator') continue;
+		const s = (d.scale || 100) / 100, base = p.draw[2] - 24 * s;
+		const col = TEAM_COLORS[d.team] || TEAM_COLORS.free;
+		const c = d.dead ? [0.35, 0.35, 0.38, 1] : [col[0], col[1], col[2], 1];
+		const yaw = d.yaw * Math.PI / 180;
+		const inst = g2Instance(id, d.model, d.team);
+		const ownView = id === view.id && !view.thirdPerson;
+		if (g2Update(inst, d.legsAnim, d.torsoAnim, now)) {
+			if (!ownView) {
+				g2Draw(inst, p.draw[0], p.draw[1], p.draw[2], yaw, s, col, d.dead ? 0.35 : 0.08);
+				drawHeldWeapons(inst, d, entityMatrix(p.draw[0], p.draw[1], p.draw[2], yaw, s));
+			}
+		} else if (ownView) {
+			// nothing to draw from inside the head
+		} else if (d.dead) {
+			drawMesh(bodyMesh, p.draw[0], p.draw[1], base, yaw, s * 0.6, c);
+		} else {
+			drawMesh(bodyMesh, p.draw[0], p.draw[1], base, yaw, s, c);
+			drawMesh(headMesh, p.draw[0], p.draw[1], base, yaw, s, [0.85, 0.75, 0.65, 1]);
+			drawMesh(noseMesh, p.draw[0], p.draw[1], base, yaw, s, d.saberOn ? [0.6, 0.9, 1, 1] : [0.9, 0.9, 0.9, 1]);
+		}
+		if (id === selected && view.id < 0) drawMesh(ringMesh, p.draw[0], p.draw[1], base, now / 900, s, [1, 0.15, 0.25, 1]);
+	}
+
+	// NPCs with their models
+	if (state) {
+		for (const n of state.npcs || []) {
+			const inst = g2Instance(n.id, n.model, '');
+			const sc = (n.scale || 100) / 100;
+			if (g2Update(inst, n.legsAnim, n.torsoAnim, now)) g2Draw(inst, n.pos[0], n.pos[1], n.pos[2], n.yaw * Math.PI / 180, sc, [1, 0.4, 1], 0.05);
+			else drawMesh(bodyMesh, n.pos[0], n.pos[1], n.pos[2] - 24 * sc, n.yaw * Math.PI / 180, sc, [0.9, 0.4, 0.9, 1]);
+		}
+	}
+
+	if (marker) {
+		const age = (now - marker.t) / 1000;
+		if (age > 1.2) marker = null;
+		else drawMesh(ringMesh, marker.pos[0], marker.pos[1], marker.pos[2], 0, 1 - age * 0.6, [0.3, 1, 0.4, 1]);
+	}
+
+	drawBlades();
+	if (view.id >= 0 && players.has(view.id)) {
+		const d = players.get(view.id).data;
+		drawViewWeapon(d);
+		renderHud(d);
+	}
+
+	// name labels above the heads
+	for (const [id, p] of players) {
+		const d = p.data;
+		let el = labels.get(id);
+		const s = (d.scale || 100) / 100;
+		const sp = d.team === 'spectator' || id === view.id ? null : project([p.draw[0], p.draw[1], p.draw[2] - 24 * s + 80 * s]);
+		if (!sp || sp[0] < -50 || sp[1] < -20 || sp[0] > canvas.clientWidth + 50 || sp[1] > canvas.clientHeight + 40) {
+			if (el) el.style.display = 'none';
+			continue;
+		}
+		if (!el) {
+			el = document.createElement('div');
+			el.className = 'label';
+			$('labels').appendChild(el);
+			labels.set(id, el);
+		}
+		const key = d.name + '|' + d.health + '|' + d.armor + '|' + d.maxHealth + '|' + (id === selected) + '|' + d.dead;
+		if (el.dataset.key !== key) {
+			el.dataset.key = key;
+			el.className = 'label' + (id === selected ? ' sel' : '');
+			const hp = Math.max(0, Math.min(100, d.health / Math.max(1, d.maxHealth) * 100));
+			el.innerHTML = '<span class="nm">' + colorName(d.name) + '</span>' + (d.dead ? '' :
+				'<div class="bar"><i style="width:' + hp + '%"></i></div>' + (d.armor > 0 ? '<div class="bar ar"><i style="width:' + Math.min(100, d.armor) + '%"></i></div>' : ''));
+		}
+		el.style.display = '';
+		el.style.left = sp[0] + 'px';
+		el.style.top = sp[1] + 'px';
+	}
+
+	requestAnimationFrame(frame);
+}
+
+/* ------------------------------------------------------------------ */
+/* world editor                                                        */
+/* ------------------------------------------------------------------ */
+
+let mode = 'players', placing = false, selectedEnt = -1, ghost = null, kvDirty = false;
+const ents = new Map();
+
+const ENT_COLORS = [
+	[/^weapon_/, [1, 0.6, 0.15]], [/^(item_|ammo_|holocron)/, [0.3, 0.95, 0.45]], [/^info_/, [0.95, 0.3, 0.3]],
+	[/^npc_/i, [0.95, 0.35, 0.95]], [/^misc_/, [0.75, 0.75, 0.8]], [/^trigger_/, [0.95, 0.9, 0.2]], [/^func_/, [0.3, 0.55, 1]],
+	[/^target_/, [0.3, 0.9, 0.95]], [/^fx_/, [1, 0.85, 0.5]], [/^light/, [1, 1, 0.7]], [/^team_/, [1, 1, 1]]];
+function entColor(cls) {
+	for (const [re, c] of ENT_COLORS) if (re.test(cls)) return c;
+	return [0.8, 0.8, 0.8];
+}
+function entKey(ent, key) {
+	const kv = ent.keys && ent.keys.find(k => k[0].toLowerCase() === key);
+	return kv ? kv[1] : '';
+}
+function entMatches(ent, f) {
+	return !f || ent.classname.toLowerCase().includes(f) || entKey(ent, 'targetname').toLowerCase().includes(f) || String(ent.id) === f;
+}
+function entVisible(ent) { return entMatches(ent, $('entFilter').value.trim().toLowerCase()); }
+
+function setMode(m) {
+	mode = m;
+	document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === m));
+	document.querySelectorAll('.pane').forEach(p => p.classList.toggle('on', p.id === 'pane-' + m));
+	if (m === 'world') { select(-1); pollEntities(); loadClasses(); }
+	else { selectEnt(-1); setPlacing(false); }
+}
+document.querySelectorAll('#tabs button').forEach(b => b.addEventListener('click', () => setMode(b.dataset.tab)));
+
+let classesLoaded = false;
+async function loadClasses() {
+	if (classesLoaded) return;
+	try {
+		const json = await (await fetch('api/classes')).json();
+		allClasses = [...new Set(json.classes)].sort();
+		for (const it of json.items) classInfo.set(it.classname, it);
+		classesLoaded = true;
+		if ($('classPicker').classList.contains('open')) renderPicker();
+	} catch (e) { /* retry next time */ }
+}
+
+async function pollEntities() {
+	if (mode !== 'world') return;
+	try {
+		const json = await (await fetch('api/entities', { cache: 'no-store' })).json();
+		ents.clear();
+		for (const e of json.entities) ents.set(e.id, e);
+		if (selectedEnt >= 0 && !ents.has(selectedEnt)) selectEnt(-1);
+		renderEntityList();
+		if (!kvDirty) renderEntPanel();
+	} catch (e) { /* keep the old list */ }
+}
+
+function renderEntityList() {
+	const f = $('entFilter').value.trim().toLowerCase();
+	const list = [...ents.values()].filter(e => entMatches(e, f));
+	$('entCount').textContent = list.length + (list.length !== ents.size ? ' / ' + ents.size : '');
+	$('entities').innerHTML = list.slice(0, 600).map(e =>
+		'<tr class="player ent' + (e.id === selectedEnt ? ' sel' : '') + (e.keys ? '' : ' ro') + '" data-id="' + e.id + '">' +
+		'<td class="num">' + e.id + '</td><td>' + escapeHtml(e.classname) + '</td><td class="tn">' + escapeHtml(entKey(e, 'targetname')) + '</td></tr>').join('');
+}
+$('entFilter').addEventListener('input', renderEntityList);
+$('entities').addEventListener('click', e => {
+	const tr = e.target.closest('tr.ent');
+	if (!tr) return;
+	selectEnt(+tr.dataset.id);
+	const ent = ents.get(selectedEnt);
+	if (ent) { cam.follow = -1; cam.target = ent.pos.slice(); }
+});
+
+function entityAt(x, y) {
+	let best = -1, bestD = 16;
+	for (const ent of ents.values()) {
+		if (!entVisible(ent)) continue;
+		const sp = project(ent.pos);
+		if (!sp) continue;
+		const d = Math.hypot(sp[0] - x, sp[1] - y);
+		if (d < bestD) { bestD = d; best = ent.id; }
+	}
+	return best;
+}
+
+function selectEnt(id) {
+	selectedEnt = id;
+	kvDirty = false;
+	ghost = null;
+	renderEntPanel();
+	if (mode === 'world') renderEntityList();
+}
+
+function renderEntPanel() {
+	const ent = selectedEnt >= 0 && ents.get(selectedEnt);
+	$('entPanel').classList.toggle('open', !!ent);
+	if (!ent) return;
+	$('entTitle').textContent = ent.classname;
+	$('entSub').textContent = '#' + ent.id + (ent.bmodel ? ' · brush model' : '') + (ent.linked ? '' : ' · not linked');
+	const editable = !!ent.keys;
+	$('kvRows').innerHTML = editable ? ent.keys.map(kvRow).join('') : '<tr><td class="hint">Made by the game code, there are no keys to edit. It can only be deleted.</td></tr>';
+	for (const id of ['kvAdd', 'entApply', 'entRotL', 'entRotR', 'entDup']) $(id).disabled = !editable;
+	$('entHint').style.display = editable ? '' : 'none';
+}
+
+function kvRow(kv) {
+	return '<tr><td class="k"><input value="' + escapeHtml(kv[0]) + '" spellcheck="false"></td><td><input value="' + escapeHtml(kv[1]) + '" spellcheck="false"></td>' +
+		'<td class="x"><button title="Remove key">&#10005;</button></td></tr>';
+}
+$('kvRows').addEventListener('input', () => kvDirty = true);
+$('kvRows').addEventListener('click', e => {
+	if (e.target.tagName === 'BUTTON') { e.target.closest('tr').remove(); kvDirty = true; }
+});
+$('kvAdd').addEventListener('click', () => {
+	$('kvRows').insertAdjacentHTML('beforeend', kvRow(['', '']));
+	kvDirty = true;
+	$('kvRows').lastElementChild.querySelector('input').focus();
+});
+
+function panelKeys() {
+	return [...$('kvRows').querySelectorAll('tr')].map(tr => [...tr.querySelectorAll('input')].map(i => i.value.trim())).filter(kv => kv.length === 2 && kv[0]);
+}
+function keysText(keys) { return keys.map(kv => kv[0] + '=' + kv[1]).join('\n'); }
+function setKey(keys, key, value) {
+	const kv = keys.find(k => k[0].toLowerCase() === key);
+	if (kv) kv[1] = value; else keys.push([key, value]);
+	return keys;
+}
+const fmtVec = v => v.map(n => Math.round(n)).join(' ');
+
+async function entityOp(params, okMessage) {
+	try {
+		const json = await (await fetch('api/entity', { method: 'POST', body: new URLSearchParams(params) })).json();
+		toast(json.ok ? okMessage || json.message : json.message, json.ok);
+		if (json.ok) {
+			kvDirty = false;
+			await pollEntities();
+			selectEnt(params.op === 'delete' ? -1 : json.id);
+		}
+		return json.ok;
+	} catch (e) {
+		toast('Request failed: ' + e.message, false);
+		return false;
+	}
+}
+
+$('entApply').addEventListener('click', () => entityOp({ op: 'update', id: selectedEnt, kv: keysText(panelKeys()) }, 'Applied'));
+$('entDup').addEventListener('click', () => {
+	const ent = ents.get(selectedEnt);
+	if (ent.bmodel) { toast('Brush models can not be duplicated, they use the map geometry', false); return; }
+	const keys = setKey(panelKeys(), 'origin', fmtVec([ent.pos[0] + 48, ent.pos[1], ent.pos[2]]));
+	entityOp({ op: 'spawn', kv: keysText(keys) }, 'Duplicated');
+});
+for (const [id, delta] of [['entRotL', 15], ['entRotR', -15]]) {
+	$(id).addEventListener('click', () => {
+		const keys = panelKeys();
+		const angles = keys.find(k => k[0].toLowerCase() === 'angles');
+		if (angles) {
+			const a = angles[1].split(/\s+/).map(Number);
+			a[1] = (((a[1] || 0) + delta) % 360 + 360) % 360;
+			angles[1] = fmtVec(a);
+		} else {
+			const cur = Number((keys.find(k => k[0].toLowerCase() === 'angle') || [])[1] || 0);
+			setKey(keys, 'angle', String(((cur + delta) % 360 + 360) % 360));
+		}
+		entityOp({ op: 'update', id: selectedEnt, kv: keysText(keys) }, 'Rotated');
+	});
+}
+let delArmed = false;
+function disarmDelete() { delArmed = false; $('entDel').classList.remove('armed'); $('entDel').textContent = 'Delete'; }
+$('entDel').addEventListener('click', () => {
+	if (!delArmed) {
+		delArmed = true;
+		$('entDel').classList.add('armed');
+		$('entDel').textContent = 'Sure? Delete';
+		setTimeout(disarmDelete, 3000);
+		return;
+	}
+	disarmDelete();
+	entityOp({ op: 'delete', id: selectedEnt }, 'Deleted');
+});
+$('entClose').addEventListener('click', () => selectEnt(-1));
+
+// new origin for a moved entity, brush models keep their offset to the map geometry
+function moveEntity(id, pos) {
+	const ent = ents.get(id);
+	ghost = null;
+	if (!ent || !ent.keys) { toast('This entity has no keys, it can not be moved', false); return; }
+	const keys = ent.keys.map(k => k.slice());
+	const cur = (entKey(ent, 'origin') || '0 0 0').split(/\s+/).map(Number);
+	const origin = ent.bmodel ? cur.map((v, i) => v + pos[i] - ent.pos[i]) : pos;
+	entityOp({ op: 'update', id, kv: keysText(setKey(keys, 'origin', fmtVec(origin))) }, 'Moved');
+}
+
+function setPlacing(on) {
+	placing = on && !!$('newClass').value.trim();
+	$('placeBtn').classList.toggle('armedPlace', placing);
+	$('placeBtn').textContent = placing ? 'Right-click map' : 'Place';
+	canvas.style.cursor = placing ? 'crosshair' : 'default';
+}
+$('placeBtn').addEventListener('click', () => {
+	if (!$('newClass').value.trim()) { toast('Pick a classname first', false); $('newClass').focus(); return; }
+	setPlacing(!placing);
+});
+
+function placeEntity(hit) {
+	const cls = $('newClass').value.trim();
+	// items drop to the floor themselves, players and NPCs stand on it
+	const z = /^misc_model/.test(cls) ? 0 : 24;
+	entityOp({ op: 'spawn', kv: keysText([['classname', cls], ['origin', fmtVec([hit[0], hit[1], hit[2] + z])]]) }, 'Placed ' + cls);
+}
+
+setInterval(pollEntities, 1000);
+
+/* ------------------------------------------------------------------ */
+/* Ghoul2 player and NPC models with animation                         */
+/* ------------------------------------------------------------------ */
+
+// GLM with bone weights, LOD 0
+function parseGlmSkinned(buf) {
+	const dv = new DataView(buf);
+	if (readStr(dv, 0, 4) !== '2LGM') return null;
+	const animName = readStr(dv, 72, 64), numSurfaces = dv.getInt32(152, true), ofsLods = dv.getInt32(148, true), hier = 164;
+	const info = [];
+	for (let i = 0; i < numSurfaces; i++) {
+		const e = hier + dv.getInt32(hier + i * 4, true);
+		info.push({ name: readStr(dv, e, 64), flags: dv.getUint32(e + 64, true), shader: readStr(dv, e + 68, 64) });
+	}
+	const surfs = [], tags = {};
+	for (let i = 0; i < numSurfaces; i++) {
+		const s = ofsLods + 4 + dv.getInt32(ofsLods + 4 + i * 4, true);
+		const h = info[dv.getInt32(s + 4, true)] || info[i];
+		const isTag = h.name.startsWith('*');
+		if (!isTag && ((h.flags & 2) || /_off$/i.test(h.name))) continue;
+		const nv = dv.getInt32(s + 12, true), ofsV = dv.getInt32(s + 16, true), nt = dv.getInt32(s + 20, true), ofsT = dv.getInt32(s + 24, true);
+		const nRefs = dv.getInt32(s + 28, true), ofsRefs = dv.getInt32(s + 32, true);
+		const refs = [];
+		for (let r = 0; r < nRefs; r++) refs.push(dv.getInt32(s + ofsRefs + r * 4, true));
+		const pos = new Float32Array(nv * 3), norm = new Float32Array(nv * 3), uv = new Float32Array(nv * 2), idx = new Uint32Array(nt * 3);
+		const bones = new Uint16Array(nv * 4), weights = new Float32Array(nv * 4);
+		for (let v = 0; v < nv; v++) {
+			const b = s + ofsV + v * 32;
+			for (let k = 0; k < 3; k++) { norm[v * 3 + k] = dv.getFloat32(b + k * 4, true); pos[v * 3 + k] = dv.getFloat32(b + 12 + k * 4, true); }
+			const packed = dv.getUint32(b + 24, true), n = (packed >>> 30) + 1;
+			let total = 0;
+			for (let k = 0; k < n; k++) {
+				bones[v * 4 + k] = refs[(packed >>> (5 * k)) & 31] || 0;
+				let w;
+				if (k === n - 1) w = 1 - total;
+				else { w = (dv.getUint8(b + 28 + k) | ((packed >>> (12 + k * 2)) & 0x300)) / 1023; total += w; }
+				weights[v * 4 + k] = w;
+			}
+			const t = s + ofsV + nv * 32 + v * 8;
+			uv[v * 2] = dv.getFloat32(t, true); uv[v * 2 + 1] = dv.getFloat32(t + 4, true);
+		}
+		for (let k = 0; k < nt * 3; k++) idx[k] = dv.getInt32(s + ofsT + k * 4, true);
+		// tag surfaces are attach points: the first three vertices give the matrix
+		if (isTag) { if (nv >= 3) tags[h.name.toLowerCase()] = { pos, bones, weights }; continue; }
+		surfs.push({ name: h.name, shader: h.shader, pos, norm, uv, idx, bones, weights });
+	}
+	return { animName, surfs, tags };
+}
+
+// GLA skeleton and compressed frames
+function parseGla(buf) {
+	const dv = new DataView(buf);
+	if (readStr(dv, 0, 4) !== '2LGA') return null;
+	const numFrames = dv.getInt32(76, true), ofsFrames = dv.getInt32(80, true), numBones = dv.getInt32(84, true);
+	const ofsPool = dv.getInt32(88, true), skelBase = 100;
+	const skel = [];
+	for (let i = 0; i < numBones; i++) {
+		const o = skelBase + dv.getInt32(skelBase + i * 4, true);
+		skel.push({ name: readStr(dv, o, 64), parent: dv.getInt32(o + 68, true) });
+	}
+	// parents first, the file order does not promise that
+	const order = [], seen = new Uint8Array(numBones);
+	const visit = b => {
+		if (seen[b]) return;
+		seen[b] = 1;
+		const p = skel[b].parent;
+		if (p >= 0 && p < numBones) visit(p);
+		order.push(b);
+	};
+	for (let i = 0; i < numBones; i++) visit(i);
+	return { dv, numFrames, ofsFrames, numBones, ofsPool, skel, order };
+}
+
+// one bone of one frame as a 3x4 matrix (row major, like mdxaBone_t)
+function glaBone(gla, frame, bone, out) {
+	const dv = gla.dv, io = gla.ofsFrames + (frame * gla.numBones + bone) * 3;
+	const index = dv.getUint8(io) | (dv.getUint8(io + 1) << 8) | (dv.getUint8(io + 2) << 16);
+	const c = gla.ofsPool + index * 14;
+	const w = dv.getUint16(c, true) / 16383 - 2, x = dv.getUint16(c + 2, true) / 16383 - 2;
+	const y = dv.getUint16(c + 4, true) / 16383 - 2, z = dv.getUint16(c + 6, true) / 16383 - 2;
+	const tx = 2 * x, ty = 2 * y, tz = 2 * z;
+	const twx = tx * w, twy = ty * w, twz = tz * w, txx = tx * x, txy = ty * x, txz = tz * x, tyy = ty * y, tyz = tz * y, tzz = tz * z;
+	out[0] = 1 - (tyy + tzz); out[1] = txy - twz; out[2] = txz + twy; out[3] = dv.getUint16(c + 8, true) / 64 - 512;
+	out[4] = txy + twz; out[5] = 1 - (txx + tzz); out[6] = tyz - twx; out[7] = dv.getUint16(c + 10, true) / 64 - 512;
+	out[8] = txz - twy; out[9] = tyz + twx; out[10] = 1 - (txx + tyy); out[11] = dv.getUint16(c + 12, true) / 64 - 512;
+}
+
+// a * b for 3x4 matrices with an implied 0 0 0 1 row
+function mul34(a, b, out) {
+	for (let r = 0; r < 3; r++) {
+		const a0 = a[r * 4], a1 = a[r * 4 + 1], a2 = a[r * 4 + 2], a3 = a[r * 4 + 3];
+		out[r * 4] = a0 * b[0] + a1 * b[4] + a2 * b[8];
+		out[r * 4 + 1] = a0 * b[1] + a1 * b[5] + a2 * b[9];
+		out[r * 4 + 2] = a0 * b[2] + a1 * b[6] + a2 * b[10];
+		out[r * 4 + 3] = a0 * b[3] + a1 * b[7] + a2 * b[11] + a3;
+	}
+}
+
+// animation.cfg: name -> { first, count, loop, fps }
+function parseAnimCfg(text) {
+	const map = new Map();
+	for (const line of text.split(/\r?\n/)) {
+		const m = line.trim().match(/^([A-Z0-9_]+)\s+(-?\d+)\s+(-?\d+)\s+(-?\d+)\s+(-?[\d.]+)/);
+		if (m) map.set(m[1], { first: +m[2], count: +m[3], loop: +m[4], fps: +m[5] });
+	}
+	return map;
+}
+
+const g2 = { animNames: null, glas: new Map(), cfgs: new Map(), models: new Map(), instances: new Map() };
+
+async function fetchGameFile(path, asText) {
+	const res = await fetch('api/file?name=' + encodeURIComponent(path));
+	if (!res.ok) throw new Error(path + ': HTTP ' + res.status);
+	return asText ? res.text() : res.arrayBuffer();
+}
+
+function cached(map, key, make) {
+	if (!map.has(key)) map.set(key, make().catch(e => { console.warn(e); return null; }));
+	return map.get(key);
+}
+
+// "kyle/default" or a full models/players/x/model.glm path, plus the team for the skin
+function modelKey(model, team) {
+	let dir, skin = 'default';
+	if (/^models\//i.test(model)) {
+		dir = model.replace(/\/[^/]*$/, '');
+	} else {
+		const [m, s] = (model || 'kyle').split('/');
+		dir = 'models/players/' + (m || 'kyle');
+		if (s) skin = s;
+	}
+	if (team === 'red' || team === 'blue') skin = team;
+	return { dir, skin, key: dir + '|' + skin };
+}
+
+async function loadG2Model(dir, skinName) {
+	if (!g2.animNames) g2.animNames = cached(new Map(), 'anims', async () => (await (await fetch('api/anims')).json()).anims);
+	const parsed = parseGlmSkinned(await fetchGameFile(dir + '/model.glm'));
+	if (!parsed) return null;
+	const glaPath = parsed.animName + '.gla';
+	const gla = await cached(g2.glas, glaPath, async () => parseGla(await fetchGameFile(glaPath)));
+	if (!gla) return null;
+	const cfgDir = parsed.animName.replace(/\/[^/]*$/, '');
+	const cfg = await cached(g2.cfgs, cfgDir, async () => parseAnimCfg(await fetchGameFile(cfgDir + '/animation.cfg', true)));
+
+	// skin: surface -> texture, "*off" hides a surface
+	let skin = {};
+	for (const name of [skinName, 'default']) {
+		try {
+			const text = await fetchGameFile(dir + '/model_' + name + '.skin', true);
+			for (const line of text.split(/\r?\n/)) {
+				const [surf, tex] = line.split(',').map(x => x && x.trim());
+				if (surf && tex) skin[surf.toLowerCase()] = tex;
+			}
+			break;
+		} catch (e) { /* try the default skin */ }
+	}
+
+	const surfs = [];
+	for (const s of parsed.surfs) {
+		const tex = skin[s.name.toLowerCase()] || (s.shader !== '[nomaterial]' ? s.shader : '');
+		if (/^\*off$/i.test(tex)) continue;
+		surfs.push({ ...s, texName: tex });
+	}
+
+	// bones that follow the torso animation: lower_lumbar and everything below it in the tree
+	const torso = new Uint8Array(gla.numBones);
+	const lumbar = gla.skel.findIndex(b => b.name.toLowerCase() === 'lower_lumbar');
+	for (let i = 0; i < gla.numBones; i++) {
+		for (let b = i; b >= 0; b = gla.skel[b].parent) if (b === lumbar) { torso[i] = 1; break; }
+	}
+
+	// textures in the main GL context
+	const textures = [];
+	for (const s of surfs) textures.push(s.texName ? await mainTexture(s.texName) : grayTex);
+	return { surfs, textures, gla, cfg: cfg || new Map(), torso, anims: await g2.animNames, tags: parsed.tags };
+}
+
+const mainTextures = new Map();
+function mainTexture(name) {
+	const base = name.replace(/\.(tga|jpg|png)$/i, '');
+	return cached(mainTextures, base, async () => {
+		for (const ext of ['.jpg', '.png', '.tga']) {
+			try {
+				const data = await fetchGameFile(base + ext);
+				if (ext === '.tga') {
+					const img = decodeTga(data);
+					if (img) return makeTexture(img.w, img.h, img.data);
+				} else {
+					const bmp = await createImageBitmap(new Blob([data]));
+					const t = gl.createTexture();
+					gl.bindTexture(gl.TEXTURE_2D, t);
+					gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, bmp);
+					gl.generateMipmap(gl.TEXTURE_2D);
+					gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+					return t;
+				}
+			} catch (e) { /* next extension */ }
+		}
+		return grayTex;
+	}).then(t => t || grayTex);
+}
+
+// per entity: GPU buffers and animation start times
+function g2Instance(id, model, team) {
+	const k = modelKey(model, team);
+	let inst = g2.instances.get(id);
+	if (inst && inst.key === k.key) return inst;
+	inst = { key: k.key, model: null, legs: { anim: -1, start: 0 }, torso: { anim: -1, start: 0 } };
+	g2.instances.set(id, inst);
+	cached(g2.models, k.key, () => loadG2Model(k.dir, k.skin))
+		.then(m => m || cached(g2.models, 'models/players/kyle|default', () => loadG2Model('models/players/kyle', 'default')))
+		.then(m => {
+			if (!m || g2.instances.get(id) !== inst) return;
+			inst.meshes = m.surfs.map((s, i) => {
+				const vao = gl.createVertexArray();
+				gl.bindVertexArray(vao);
+				const posBuf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, posBuf); gl.bufferData(gl.ARRAY_BUFFER, s.pos.byteLength, gl.DYNAMIC_DRAW);
+				gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 0, 0);
+				const normBuf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, normBuf); gl.bufferData(gl.ARRAY_BUFFER, s.norm.byteLength, gl.DYNAMIC_DRAW);
+				gl.enableVertexAttribArray(1); gl.vertexAttribPointer(1, 3, gl.FLOAT, false, 0, 0);
+				const uvBuf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, uvBuf); gl.bufferData(gl.ARRAY_BUFFER, s.uv, gl.STATIC_DRAW);
+				gl.enableVertexAttribArray(2); gl.vertexAttribPointer(2, 2, gl.FLOAT, false, 0, 0);
+				const ib = gl.createBuffer(); gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ib); gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, s.idx, gl.STATIC_DRAW);
+				gl.bindVertexArray(null);
+				return { vao, posBuf, normBuf, count: s.idx.length, tex: m.textures[i], outPos: new Float32Array(s.pos.length), outNorm: new Float32Array(s.norm.length) };
+			});
+			inst.bones = new Float32Array(m.gla.numBones * 12);
+			inst.model = m;
+		});
+	return inst;
+}
+
+// frame of an animation at a time, with the lerp to the next frame
+function animFrame(model, animNum, start, now) {
+	const a = model.cfg.get(model.anims[animNum]) || model.cfg.get('BOTH_STAND1') || { first: 0, count: 1, loop: -1, fps: 20 };
+	const fps = Math.abs(a.fps) || 20;
+	let f = (now - start) / 1000 * fps;
+	if (a.count <= 1) f = 0;
+	else if (f >= a.count - 1) {
+		if (a.loop >= 0 && a.loop < a.count) {
+			const span = a.count - a.loop;
+			f = a.loop + ((f - a.loop) % span + span) % span;
+		} else {
+			f = a.count - 1;
+		}
+	}
+	let i0 = Math.floor(f), t = f - i0, i1 = Math.min(i0 + 1, a.count - 1);
+	if (a.loop >= 0 && i0 === a.count - 1) i1 = a.loop;
+	if (a.fps < 0) { i0 = a.count - 1 - i0; i1 = a.count - 1 - i1; }
+	const max = model.gla.numFrames - 1;
+	return [Math.min(max, a.first + i0), Math.min(max, a.first + i1), t];
+}
+
+const tmpA = new Float32Array(12), tmpB = new Float32Array(12), tmpL = new Float32Array(12);
+const identity34 = new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0]);
+
+// animates and skins one instance, returns false while it is still loading
+function g2Update(inst, legsAnim, torsoAnim, now) {
+	const m = inst.model;
+	if (!m) return false;
+	for (const [part, anim] of [[inst.legs, legsAnim], [inst.torso, torsoAnim]]) {
+		if (part.anim !== anim) { part.anim = anim; part.start = now; }
+	}
+	const legs = animFrame(m, inst.legs.anim, inst.legs.start, now);
+	const torso = animFrame(m, inst.torso.anim, inst.torso.start, now);
+	const gla = m.gla, bones = inst.bones;
+	for (const b of gla.order) {
+		const fr = m.torso[b] ? torso : legs;
+		glaBone(gla, fr[0], b, tmpA);
+		glaBone(gla, fr[1], b, tmpB);
+		for (let k = 0; k < 12; k++) tmpL[k] = tmpA[k] + (tmpB[k] - tmpA[k]) * fr[2];
+		const p = gla.skel[b].parent;
+		mul34(p >= 0 ? bones.subarray(p * 12, p * 12 + 12) : identity34, tmpL, bones.subarray(b * 12, b * 12 + 12));
+	}
+
+	m.surfs.forEach((s, si) => {
+		const mesh = inst.meshes[si], op = mesh.outPos, on = mesh.outNorm;
+		for (let v = 0, n = s.pos.length / 3; v < n; v++) {
+			const x = s.pos[v * 3], y = s.pos[v * 3 + 1], z = s.pos[v * 3 + 2];
+			const nx = s.norm[v * 3], ny = s.norm[v * 3 + 1], nz = s.norm[v * 3 + 2];
+			let px = 0, py = 0, pz = 0, qx = 0, qy = 0, qz = 0;
+			for (let k = 0; k < 4; k++) {
+				const w = s.weights[v * 4 + k];
+				if (!w) continue;
+				const o = s.bones[v * 4 + k] * 12;
+				px += w * (bones[o] * x + bones[o + 1] * y + bones[o + 2] * z + bones[o + 3]);
+				py += w * (bones[o + 4] * x + bones[o + 5] * y + bones[o + 6] * z + bones[o + 7]);
+				pz += w * (bones[o + 8] * x + bones[o + 9] * y + bones[o + 10] * z + bones[o + 11]);
+				qx += w * (bones[o] * nx + bones[o + 1] * ny + bones[o + 2] * nz);
+				qy += w * (bones[o + 4] * nx + bones[o + 5] * ny + bones[o + 6] * nz);
+				qz += w * (bones[o + 8] * nx + bones[o + 9] * ny + bones[o + 10] * nz);
+			}
+			op[v * 3] = px; op[v * 3 + 1] = py; op[v * 3 + 2] = pz;
+			on[v * 3] = qx; on[v * 3 + 1] = qy; on[v * 3 + 2] = qz;
+		}
+		gl.bindBuffer(gl.ARRAY_BUFFER, mesh.posBuf); gl.bufferSubData(gl.ARRAY_BUFFER, 0, op);
+		gl.bindBuffer(gl.ARRAY_BUFFER, mesh.normBuf); gl.bufferSubData(gl.ARRAY_BUFFER, 0, on);
+	});
+	return true;
+}
+
+const skinProg = compile(`#version 300 es
+layout(location=0) in vec3 aPos; layout(location=1) in vec3 aNorm; layout(location=2) in vec2 aUv;
+uniform mat4 uMvp; uniform mat4 uModel; out vec3 vN; out vec2 vUv;
+void main() { vN = mat3(uModel) * aNorm; vUv = aUv; gl_Position = uMvp * uModel * vec4(aPos, 1.0); }`,
+`#version 300 es
+precision mediump float;
+in vec3 vN; in vec2 vUv; uniform sampler2D uTex; uniform vec3 uTint; uniform float uTintAmount; out vec4 o;
+void main() {
+	vec4 t = texture(uTex, vUv);
+	vec3 n = normalize(vN);
+	float l = 0.5 + 0.6 * max(dot(n, normalize(vec3(0.4, 0.3, 0.85))), 0.0);
+	o = vec4(mix(t.rgb * l, uTint, uTintAmount), 1.0);
+}`);
+
+function g2Draw(inst, x, y, z, yaw, scale, tint, tintAmount) {
+	// Ghoul2 models look down -Y, the game's yaw 0 is +X
+	yaw += Math.PI / 2;
+	const c = Math.cos(yaw), s = Math.sin(yaw);
+	gl.useProgram(skinProg.p);
+	gl.uniformMatrix4fv(skinProg.u.uMvp, false, viewProj);
+	gl.uniformMatrix4fv(skinProg.u.uModel, false, new Float32Array([c * scale, s * scale, 0, 0, -s * scale, c * scale, 0, 0, 0, 0, scale, 0, x, y, z, 1]));
+	gl.uniform3fv(skinProg.u.uTint, tint);
+	gl.uniform1f(skinProg.u.uTintAmount, tintAmount);
+	gl.uniform1i(skinProg.u.uTex, 0);
+	gl.activeTexture(gl.TEXTURE0);
+	for (const mesh of inst.meshes) {
+		gl.bindTexture(gl.TEXTURE_2D, mesh.tex);
+		gl.bindVertexArray(mesh.vao);
+		gl.drawElements(gl.TRIANGLES, mesh.count, gl.UNSIGNED_INT, 0);
+	}
+	gl.useProgram(flatProg.p);
+}
+
+
+/* ------------------------------------------------------------------ */
+/* class picker with a rendered preview                                */
+/* ------------------------------------------------------------------ */
+
+let allClasses = [];
+const classInfo = new Map();	// item classname -> { model, view, icon, description, type }
+const ITEM_TYPES = ['', 'Weapon', 'Ammo', 'Armor', 'Health', 'Powerup', 'Holdable', 'Powerup', 'Team item'];
+
+function classCategory(cls) {
+	const it = classInfo.get(cls);
+	if (it) return ITEM_TYPES[it.type] || 'Item';
+	const cats = [[/^npc_/i, 'NPC'], [/^info_player/, 'Spawn point'], [/^info_/, 'Info'], [/^trigger_/, 'Trigger'], [/^func_/, 'Brush'],
+		[/^target_/, 'Target'], [/^misc_model/, 'Model'], [/^misc_/, 'Misc'], [/^fx_/, 'Effect'], [/^light/, 'Light'], [/^team_/, 'Team']];
+	for (const [re, name] of cats) if (re.test(cls)) return name;
+	return '';
+}
+
+let pickerIndex = -1;
+function pickerMatches() {
+	const f = $('newClass').value.trim().toLowerCase();
+	return allClasses.filter(c => !f || c.toLowerCase().includes(f)).slice(0, 400);
+}
+function renderPicker() {
+	const list = pickerMatches();
+	pickerIndex = Math.min(pickerIndex, list.length - 1);
+	$('classPicker').innerHTML = list.map((c, i) => {
+		const col = entColor(c).map(v => Math.round(v * 255)).join(',');
+		return '<div class="cls' + (i === pickerIndex ? ' hl' : '') + '" data-cls="' + escapeHtml(c) + '"><i style="background:rgb(' + col + ')"></i>' +
+			escapeHtml(c) + '<span class="ty">' + escapeHtml(classCategory(c)) + '</span></div>';
+	}).join('') || '<div class="cls">' + (classesLoaded ? 'No class matches' : 'Loading...') + '</div>';
+}
+function openPicker() { $('classPicker').classList.add('open'); renderPicker(); }
+function closePicker() { $('classPicker').classList.remove('open'); hidePreview(); pickerIndex = -1; }
+function choose(cls) {
+	$('newClass').value = cls;
+	closePicker();
+	$('newClass').blur();
+	setPlacing(true);
+	toast('Right-click on the map to place ' + cls);
+}
+
+$('newClass').addEventListener('focus', openPicker);
+$('newClass').addEventListener('input', () => { pickerIndex = -1; openPicker(); setPlacing(false); });
+$('newClass').addEventListener('blur', () => setTimeout(closePicker, 150));
+$('newClass').addEventListener('keydown', e => {
+	const list = pickerMatches();
+	if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+		e.preventDefault();
+		pickerIndex = Math.max(0, Math.min(list.length - 1, pickerIndex + (e.key === 'ArrowDown' ? 1 : -1)));
+		renderPicker();
+		const row = $('classPicker').children[pickerIndex];
+		if (row) { row.scrollIntoView({ block: 'nearest' }); showPreview(list[pickerIndex], row); }
+	} else if (e.key === 'Enter') {
+		e.preventDefault();
+		const cls = pickerIndex >= 0 ? list[pickerIndex] : $('newClass').value.trim();
+		if (cls) choose(cls);
+	} else if (e.key === 'Escape') {
+		closePicker();
+		$('newClass').blur();
+	}
+});
+$('classPicker').addEventListener('mousedown', e => e.preventDefault());	// keep the focus in the input
+$('classPicker').addEventListener('click', e => {
+	const row = e.target.closest('.cls[data-cls]');
+	if (row) choose(row.dataset.cls);
+});
+let hoverTimer = 0;
+$('classPicker').addEventListener('mouseover', e => {
+	const row = e.target.closest('.cls[data-cls]');
+	if (!row) return;
+	clearTimeout(hoverTimer);
+	hoverTimer = setTimeout(() => showPreview(row.dataset.cls, row), 80);
+});
+$('classPicker').addEventListener('mouseleave', () => { clearTimeout(hoverTimer); hidePreview(); });
+
+/* model loading: MD3 and Ghoul2 GLM, first frame / bind pose */
+
+function readStr(dv, o, len) {
+	let s = '';
+	for (let i = 0; i < len; i++) { const c = dv.getUint8(o + i); if (!c) break; s += String.fromCharCode(c); }
+	return s;
+}
+
+function parseMd3(buf) {
+	const dv = new DataView(buf), surfs = [];
+	if (readStr(dv, 0, 4) !== 'IDP3') return null;
+	let o = dv.getInt32(100, true);
+	for (let s = 0, n = dv.getInt32(84, true); s < n; s++) {
+		const name = readStr(dv, o + 4, 64), numShaders = dv.getInt32(o + 76, true), nv = dv.getInt32(o + 80, true), nt = dv.getInt32(o + 84, true);
+		const ofsTri = dv.getInt32(o + 88, true), ofsSh = dv.getInt32(o + 92, true), ofsSt = dv.getInt32(o + 96, true), ofsXyz = dv.getInt32(o + 100, true);
+		const pos = new Float32Array(nv * 3), norm = new Float32Array(nv * 3), uv = new Float32Array(nv * 2), idx = new Uint32Array(nt * 3);
+		for (let v = 0; v < nv; v++) {
+			const b = o + ofsXyz + v * 8;
+			pos[v * 3] = dv.getInt16(b, true) / 64; pos[v * 3 + 1] = dv.getInt16(b + 2, true) / 64; pos[v * 3 + 2] = dv.getInt16(b + 4, true) / 64;
+			const lat = dv.getUint8(b + 7) * Math.PI * 2 / 255, lng = dv.getUint8(b + 6) * Math.PI * 2 / 255;
+			norm[v * 3] = Math.cos(lat) * Math.sin(lng); norm[v * 3 + 1] = Math.sin(lat) * Math.sin(lng); norm[v * 3 + 2] = Math.cos(lng);
+			uv[v * 2] = dv.getFloat32(o + ofsSt + v * 8, true); uv[v * 2 + 1] = dv.getFloat32(o + ofsSt + v * 8 + 4, true);
+		}
+		for (let i = 0; i < nt * 3; i++) idx[i] = dv.getInt32(o + ofsTri + i * 4, true);
+		surfs.push({ name, shader: numShaders ? readStr(dv, o + ofsSh, 64) : '', pos, norm, uv, idx });
+		o += dv.getInt32(o + 104, true);
+	}
+	return surfs;
+}
+
+function parseGlm(buf) {
+	const dv = new DataView(buf), surfs = [];
+	if (readStr(dv, 0, 4) !== '2LGM') return null;
+	const numSurfaces = dv.getInt32(152, true), ofsLods = dv.getInt32(148, true), hier = 164;
+	const info = [];
+	for (let i = 0; i < numSurfaces; i++) {
+		const e = hier + dv.getInt32(hier + i * 4, true);
+		info.push({ name: readStr(dv, e, 64), flags: dv.getUint32(e + 64, true), shader: readStr(dv, e + 68, 64) });
+	}
+	// LOD 0 only
+	for (let i = 0; i < numSurfaces; i++) {
+		const s = ofsLods + 4 + dv.getInt32(ofsLods + 4 + i * 4, true);
+		const h = info[dv.getInt32(s + 4, true)] || info[i];
+		if ((h.flags & 2) || h.name.startsWith('*') || /_off$/i.test(h.name)) continue;
+		const nv = dv.getInt32(s + 12, true), ofsV = dv.getInt32(s + 16, true), nt = dv.getInt32(s + 20, true), ofsT = dv.getInt32(s + 24, true);
+		const pos = new Float32Array(nv * 3), norm = new Float32Array(nv * 3), uv = new Float32Array(nv * 2), idx = new Uint32Array(nt * 3);
+		for (let v = 0; v < nv; v++) {
+			const b = s + ofsV + v * 32;
+			for (let k = 0; k < 3; k++) { norm[v * 3 + k] = dv.getFloat32(b + k * 4, true); pos[v * 3 + k] = dv.getFloat32(b + 12 + k * 4, true); }
+			const t = s + ofsV + nv * 32 + v * 8;
+			uv[v * 2] = dv.getFloat32(t, true); uv[v * 2 + 1] = dv.getFloat32(t + 4, true);
+		}
+		for (let k = 0; k < nt * 3; k++) idx[k] = dv.getInt32(s + ofsT + k * 4, true);
+		surfs.push({ name: h.name, shader: h.shader, pos, norm, uv, idx });
+	}
+	return surfs;
+}
+
+// .skin files: "surface,texture" per line
+async function loadSkin(modelPath) {
+	try {
+		const res = await fetch('api/file?name=' + encodeURIComponent(modelPath.replace(/[^/]*$/, 'model_default.skin')));
+		if (!res.ok) return {};
+		const map = {};
+		for (const line of (await res.text()).split(/\r?\n/)) {
+			const [surf, tex] = line.split(',').map(x => x && x.trim());
+			if (surf && tex) map[surf.toLowerCase()] = tex;
+		}
+		return map;
+	} catch (e) { return {}; }
+}
+
+/* preview renderer, its own WebGL context */
+
+const pv = { gl: null, prog: null, models: new Map(), textures: new Map(), model: null, cls: '', visible: false, t0: 0 };
+
+function pvSetup() {
+	if (pv.gl) return true;
+	const g = $('previewGl').getContext('webgl2', { antialias: true, premultipliedAlpha: false });
+	if (!g) return false;
+	pv.gl = g;
+	pv.prog = compile(`#version 300 es
+layout(location=0) in vec3 aPos; layout(location=1) in vec3 aNorm; layout(location=2) in vec2 aUv;
+uniform mat4 uMvp; uniform mat4 uModel; out vec3 vN; out vec2 vUv;
+void main() { vN = mat3(uModel) * aNorm; vUv = aUv; gl_Position = uMvp * uModel * vec4(aPos, 1.0); }`,
+	`#version 300 es
+precision mediump float;
+in vec3 vN; in vec2 vUv; uniform sampler2D uTex; out vec4 o;
+void main() {
+	// model textures use alpha for shine masks, so no alpha test here
+	vec4 t = texture(uTex, vUv);
+	vec3 n = normalize(vN);
+	float l = 0.45 + 0.65 * max(dot(n, normalize(vec3(0.5, -0.4, 0.75))), 0.0) + 0.2 * max(dot(n, normalize(vec3(-0.6, 0.5, 0.2))), 0.0);
+	o = vec4(t.rgb * l, 1.0);
+}`, g);
+	pv.gray = pvTexture(1, 1, new Uint8Array([170, 170, 170, 255]));
+	return true;
+}
+
+function pvTexture(w, h, data) {
+	const g = pv.gl, t = g.createTexture();
+	g.bindTexture(g.TEXTURE_2D, t);
+	g.texImage2D(g.TEXTURE_2D, 0, g.RGBA8, w, h, 0, g.RGBA, g.UNSIGNED_BYTE, data);
+	g.generateMipmap(g.TEXTURE_2D);
+	g.texParameteri(g.TEXTURE_2D, g.TEXTURE_MIN_FILTER, g.LINEAR_MIPMAP_LINEAR);
+	return t;
+}
+
+async function pvLoadTexture(name) {
+	const base = name.replace(/\.(tga|jpg|png)$/i, '');
+	if (pv.textures.has(base)) return pv.textures.get(base);
+	const g = pv.gl;
+	let tex = pv.gray;
+	for (const ext of ['.jpg', '.png', '.tga']) {
+		try {
+			const res = await fetch('api/file?name=' + encodeURIComponent(base + ext));
+			if (!res.ok) continue;
+			const data = await res.arrayBuffer();
+			if (ext === '.tga') {
+				const img = decodeTga(data);
+				if (!img) continue;
+				tex = pvTexture(img.w, img.h, img.data);
+			} else {
+				const bmp = await createImageBitmap(new Blob([data]));
+				tex = g.createTexture();
+				g.bindTexture(g.TEXTURE_2D, tex);
+				g.texImage2D(g.TEXTURE_2D, 0, g.RGBA8, g.RGBA, g.UNSIGNED_BYTE, bmp);
+				g.generateMipmap(g.TEXTURE_2D);
+				g.texParameteri(g.TEXTURE_2D, g.TEXTURE_MIN_FILTER, g.LINEAR_MIPMAP_LINEAR);
+			}
+			break;
+		} catch (e) { /* next extension */ }
+	}
+	pv.textures.set(base, tex);
+	return tex;
+}
+
+// the best model file of an item: an MD3 if there is one, else the GLM
+function itemModelPath(it) {
+	const md3 = [it.model, it.view].find(m => /\.md3$/i.test(m || ''));
+	return md3 || it.model || it.view || '';
+}
+
+async function pvLoadModel(path) {
+	if (pv.models.has(path)) return pv.models.get(path);
+	const promise = (async () => {
+		const res = await fetch('api/file?name=' + encodeURIComponent(path));
+		if (!res.ok) return null;
+		const buf = await res.arrayBuffer();
+		const surfs = /\.glm$/i.test(path) ? parseGlm(buf) : parseMd3(buf);
+		if (!surfs || !surfs.length) return null;
+		const skin = /\.glm$/i.test(path) ? await loadSkin(path) : {};
+		const g = pv.gl, meshes = [];
+		const mins = [Infinity, Infinity, Infinity], maxs = [-Infinity, -Infinity, -Infinity];
+		for (const s of surfs) {
+			let shader = skin[s.name.toLowerCase()] || s.shader;
+			if (!shader || shader === '[nomaterial]' || /^\*off$/i.test(shader)) {
+				if (skin[s.name.toLowerCase()] === '*off') continue;
+				if (!shader || shader === '[nomaterial]') shader = '';
+			}
+			for (let v = 0; v < s.pos.length; v += 3) for (let k = 0; k < 3; k++) { mins[k] = Math.min(mins[k], s.pos[v + k]); maxs[k] = Math.max(maxs[k], s.pos[v + k]); }
+			const vao = g.createVertexArray();
+			g.bindVertexArray(vao);
+			[[0, s.pos, 3], [1, s.norm, 3], [2, s.uv, 2]].forEach(([loc, data, size]) => {
+				const b = g.createBuffer(); g.bindBuffer(g.ARRAY_BUFFER, b); g.bufferData(g.ARRAY_BUFFER, data, g.STATIC_DRAW);
+				g.enableVertexAttribArray(loc); g.vertexAttribPointer(loc, size, g.FLOAT, false, 0, 0);
+			});
+			const ib = g.createBuffer(); g.bindBuffer(g.ELEMENT_ARRAY_BUFFER, ib); g.bufferData(g.ELEMENT_ARRAY_BUFFER, s.idx, g.STATIC_DRAW);
+			g.bindVertexArray(null);
+			meshes.push({ vao, count: s.idx.length, tex: shader ? await pvLoadTexture(shader) : pv.gray });
+		}
+		const center = mins.map((m, k) => (m + maxs[k]) / 2);
+		const radius = Math.max(1, Math.hypot(maxs[0] - mins[0], maxs[1] - mins[1], maxs[2] - mins[2]) / 2);
+		return { meshes, center, radius };
+	})().catch(() => null);
+	pv.models.set(path, promise);
+	return promise;
+}
+
+async function showPreview(cls, row) {
+	const box = $('preview'), r = row.getBoundingClientRect();
+	box.style.top = Math.max(50, Math.min(window.innerHeight - 290, r.top - 100)) + 'px';
+	box.classList.add('open');
+	pv.cls = cls;
+	pv.model = null;
+	const it = classInfo.get(cls);
+	$('pvName').textContent = cls;
+	$('pvSub').textContent = it ? (ITEM_TYPES[it.type] || 'Item') + (it.quantity ? ' · ' + it.quantity : '') + (it.description && it.description[0] !== '@' ? ' · ' + it.description : '') : (classCategory(cls) || 'Entity');
+	const path = it ? itemModelPath(it) : '';
+	const showNone = text => { $('previewGl').style.display = 'none'; $('pvNone').style.display = ''; $('pvNone').textContent = text; };
+	if (!path || !pvSetup()) {
+		showNone(/^npc_/i.test(cls) ? 'NPC, the model comes from its .npc file' : 'No model, this entity is game logic');
+		return;
+	}
+	$('previewGl').style.display = '';
+	$('pvNone').style.display = 'none';
+	const model = await pvLoadModel(path);
+	if (pv.cls !== cls) return;
+	if (!model) { showNone('Model not found: ' + path); return; }
+	pv.model = model;
+	if (!pv.visible) { pv.visible = true; pv.t0 = performance.now(); requestAnimationFrame(pvFrame); }
+}
+
+function hidePreview() {
+	$('preview').classList.remove('open');
+	pv.cls = '';
+	pv.visible = false;
+}
+
+function pvFrame(now) {
+	if (!pv.visible) return;
+	const g = pv.gl, m = pv.model;
+	g.viewport(0, 0, g.canvas.width, g.canvas.height);
+	g.clearColor(0, 0, 0, 0);
+	g.clear(g.COLOR_BUFFER_BIT | g.DEPTH_BUFFER_BIT);
+	if (m) {
+		g.enable(g.DEPTH_TEST);
+		g.useProgram(pv.prog.p);
+		const r = m.radius, yaw = (now - pv.t0) / 1400;
+		const proj = M4.perspective(32 * Math.PI / 180, g.canvas.width / g.canvas.height, r * 0.1, r * 20);
+		const view = M4.lookAt([r * 2.4, -r * 1.2, r * 1.3], [0, 0, 0], [0, 0, 1]);
+		const c = Math.cos(yaw), s = Math.sin(yaw);
+		// spin around the model's center
+		const model = new Float32Array([c, s, 0, 0, -s, c, 0, 0, 0, 0, 1, 0,
+			-(c * m.center[0] - s * m.center[1]), -(s * m.center[0] + c * m.center[1]), -m.center[2], 1]);
+		g.uniformMatrix4fv(pv.prog.u.uMvp, false, M4.mul(proj, view));
+		g.uniformMatrix4fv(pv.prog.u.uModel, false, model);
+		g.uniform1i(pv.prog.u.uTex, 0);
+		g.activeTexture(g.TEXTURE0);
+		for (const mesh of m.meshes) {
+			g.bindTexture(g.TEXTURE_2D, mesh.tex);
+			g.bindVertexArray(mesh.vao);
+			g.drawElements(g.TRIANGLES, mesh.count, g.UNSIGNED_INT, 0);
+		}
+	}
+	requestAnimationFrame(pvFrame);
+}
+
+
+/* ------------------------------------------------------------------ */
+/* weapons, lightsabers and the first person view                      */
+/* ------------------------------------------------------------------ */
+
+// attach point matrix from a tag triangle, like G2_ProcessSurfaceBolt (3x4, row major)
+function tagMatrix(tag, bones) {
+	const p = [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
+	for (let j = 0; j < 3; j++) {
+		const x = tag.pos[j * 3], y = tag.pos[j * 3 + 1], z = tag.pos[j * 3 + 2];
+		if (!bones) { p[j] = [x, y, z]; continue; }
+		for (let k = 0; k < 4; k++) {
+			const w = tag.weights[j * 4 + k];
+			if (!w) continue;
+			const o = tag.bones[j * 4 + k] * 12;
+			p[j][0] += w * (bones[o] * x + bones[o + 1] * y + bones[o + 2] * z + bones[o + 3]);
+			p[j][1] += w * (bones[o + 4] * x + bones[o + 5] * y + bones[o + 6] * z + bones[o + 7]);
+			p[j][2] += w * (bones[o + 8] * x + bones[o + 9] * y + bones[o + 10] * z + bones[o + 11]);
+		}
+	}
+	const sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+	const norm = v => { const l = Math.hypot(v[0], v[1], v[2]) || 1; return [v[0] / l, v[1] / l, v[2] / l]; };
+	const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+	const longest = sub(p[1], p[0]), shortest = sub(p[0], p[2]);	// sides[0] and sides[2]
+	const a1 = norm(shortest);
+	let a0 = norm(longest);
+	const d = a0[0] * a1[0] + a0[1] * a1[1] + a0[2] * a1[2];
+	a0 = norm([a0[0] - d * a1[0], a0[1] - d * a1[1], a0[2] - d * a1[2]]);
+	const a2 = norm(cross(longest, shortest)), o = p[2];
+	return new Float32Array([a1[0], a0[0], -a2[0], o[0], a1[1], a0[1], -a2[1], o[1], a1[2], a0[2], -a2[2], o[2]]);
+}
+
+// 3x4 row major to 4x4 column major
+const to44 = m => new Float32Array([m[0], m[4], m[8], 0, m[1], m[5], m[9], 0, m[2], m[6], m[10], 0, m[3], m[7], m[11], 1]);
+
+// where a Ghoul2 model stands in the world (it looks down -Y, the game's yaw 0 is +X)
+function entityMatrix(x, y, z, yaw, scale) {
+	const a = yaw + Math.PI / 2, c = Math.cos(a) * scale, s = Math.sin(a) * scale;
+	return new Float32Array([c, s, 0, 0, -s, c, 0, 0, 0, 0, scale, 0, x, y, z, 1]);
+}
+
+// a static model (weapon or saber hilt), GLM or MD3, with its tags
+const staticModels = new Map();
+function loadStaticModel(path) {
+	return cached(staticModels, path, async () => {
+		const buf = await fetchGameFile(path);
+		let surfs, tags = {};
+		if (/\.glm$/i.test(path)) {
+			const parsed = parseGlmSkinned(buf);
+			if (!parsed) return null;
+			surfs = parsed.surfs;
+			tags = parsed.tags;
+		} else {
+			surfs = parseMd3(buf);
+			if (!surfs) return null;
+		}
+		const meshes = [];
+		for (const s of surfs) {
+			const vao = gl.createVertexArray();
+			gl.bindVertexArray(vao);
+			[[0, s.pos, 3], [1, s.norm, 3], [2, s.uv, 2]].forEach(([loc, data, size]) => {
+				const b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b); gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
+				gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, size, gl.FLOAT, false, 0, 0);
+			});
+			const ib = gl.createBuffer(); gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ib); gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, s.idx, gl.STATIC_DRAW);
+			gl.bindVertexArray(null);
+			const shader = s.shader && s.shader !== '[nomaterial]' ? s.shader : '';
+			meshes.push({ vao, count: s.idx.length, tex: shader ? await mainTexture(shader) : grayTex });
+		}
+		const tagMats = {};
+		for (const [name, tag] of Object.entries(tags)) tagMats[name] = tagMatrix(tag, null);
+		return { meshes, tags: tagMats };
+	});
+}
+
+// the model if it is loaded, else starts loading it and returns null
+const staticReady = new Map();
+function staticNow(path) {
+	if (staticReady.has(path)) return staticReady.get(path);
+	if (!staticModels.has(path)) loadStaticModel(path).then(m => staticReady.set(path, m));
+	return null;
+}
+
+// MD3 tags of the first frame: name -> 3x4 matrix
+function md3Tags(buf) {
+	const dv = new DataView(buf), tags = {};
+	const n = dv.getInt32(80, true), o = dv.getInt32(96, true);
+	for (let i = 0; i < n; i++) {
+		const t = o + i * 112, org = [0, 1, 2].map(k => dv.getFloat32(t + 64 + k * 4, true));
+		const ax = [0, 1, 2].map(r => [0, 1, 2].map(k => dv.getFloat32(t + 76 + (r * 3 + k) * 4, true)));
+		// columns are the tag's forward, left, up axes
+		tags[readStr(dv, t, 64).toLowerCase()] = new Float32Array([ax[0][0], ax[1][0], ax[2][0], org[0], ax[0][1], ax[1][1], ax[2][1], org[1], ax[0][2], ax[1][2], ax[2][2], org[2]]);
+	}
+	return tags;
+}
+const handTag = cached(new Map(), 'hand', async () => md3Tags(await fetchGameFile('models/weapons2/stun_baton/baton_hand.md3'))['tag_weapon'] || null);
+
+function drawStatic(model, world) {
+	gl.useProgram(skinProg.p);
+	gl.uniformMatrix4fv(skinProg.u.uMvp, false, viewProj);
+	gl.uniformMatrix4fv(skinProg.u.uModel, false, world);
+	gl.uniform3fv(skinProg.u.uTint, [0, 0, 0]);
+	gl.uniform1f(skinProg.u.uTintAmount, 0);
+	gl.uniform1i(skinProg.u.uTex, 0);
+	gl.activeTexture(gl.TEXTURE0);
+	for (const mesh of model.meshes) {
+		gl.bindTexture(gl.TEXTURE_2D, mesh.tex);
+		gl.bindVertexArray(mesh.vao);
+		gl.drawElements(gl.TRIANGLES, mesh.count, gl.UNSIGNED_INT, 0);
+	}
+	gl.useProgram(flatProg.p);
+}
+
+/* glowing saber blades */
+
+const SABER_COLORS = [[1, 0.15, 0.1], [1, 0.45, 0.05], [1, 0.95, 0.15], [0.15, 1, 0.2], [0.15, 0.4, 1], [0.8, 0.15, 1]];
+const bladeProg = compile(`#version 300 es
+layout(location=0) in vec3 aPos; layout(location=1) in vec2 aUv;
+uniform mat4 uMvp; out vec2 vUv;
+void main() { vUv = aUv; gl_Position = uMvp * vec4(aPos, 1.0); }`,
+`#version 300 es
+precision mediump float;
+in vec2 vUv; uniform vec3 uColor; out vec4 o;
+void main() {
+	float a = 1.0 - abs(vUv.x);
+	float tip = smoothstep(1.0, 0.92, vUv.y);
+	float glow = a * a * tip;
+	float core = smoothstep(0.62, 0.85, a) * tip;
+	o = vec4((uColor * glow * 1.4 + vec3(core)) , 1.0);
+}`);
+const bladeVao = gl.createVertexArray(), bladeBuf = gl.createBuffer();
+gl.bindVertexArray(bladeVao);
+gl.bindBuffer(gl.ARRAY_BUFFER, bladeBuf);
+gl.bufferData(gl.ARRAY_BUFFER, 4 * 5 * 4, gl.DYNAMIC_DRAW);
+gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 20, 0);
+gl.enableVertexAttribArray(1); gl.vertexAttribPointer(1, 2, gl.FLOAT, false, 20, 12);
+gl.bindVertexArray(null);
+
+const blades = [];	// collected while drawing models, drawn after everything opaque
+function drawBlades() {
+	if (!blades.length) return;
+	gl.useProgram(bladeProg.p);
+	gl.uniformMatrix4fv(bladeProg.u.uMvp, false, viewProj);
+	gl.enable(gl.BLEND);
+	gl.blendFunc(gl.ONE, gl.ONE);
+	gl.depthMask(false);
+	gl.bindVertexArray(bladeVao);
+	for (const b of blades) {
+		const mid = [0, 1, 2].map(k => b.org[k] + b.dir[k] * b.len / 2);
+		const toEye = [0, 1, 2].map(k => eye[k] - mid[k]);
+		let side = [b.dir[1] * toEye[2] - b.dir[2] * toEye[1], b.dir[2] * toEye[0] - b.dir[0] * toEye[2], b.dir[0] * toEye[1] - b.dir[1] * toEye[0]];
+		const l = Math.hypot(...side) || 1, w = Math.max(3, b.radius) * 2.2;
+		side = side.map(v => v / l * w);
+		const tip = [0, 1, 2].map(k => b.org[k] + b.dir[k] * b.len);
+		gl.bindBuffer(gl.ARRAY_BUFFER, bladeBuf);
+		gl.bufferSubData(gl.ARRAY_BUFFER, 0, new Float32Array([
+			b.org[0] - side[0], b.org[1] - side[1], b.org[2] - side[2], -1, 0,
+			b.org[0] + side[0], b.org[1] + side[1], b.org[2] + side[2], 1, 0,
+			tip[0] - side[0], tip[1] - side[1], tip[2] - side[2], -1, 1,
+			tip[0] + side[0], tip[1] + side[1], tip[2] + side[2], 1, 1]));
+		gl.uniform3fv(bladeProg.u.uColor, SABER_COLORS[b.color] || SABER_COLORS[4]);
+		gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+	}
+	gl.depthMask(true);
+	gl.disable(gl.BLEND);
+	gl.useProgram(flatProg.p);
+	blades.length = 0;
+}
+
+function weaponModelPath(weapon) {
+	for (const it of classInfo.values()) if (it.type === 1 && it.tag === weapon) return it;
+	return null;
+}
+
+// the weapon or the sabers in the hands of an animated player
+function drawHeldWeapons(inst, d, world) {
+	const m = inst.model;
+	if (!m || d.dead) return;
+	const hands = [m.tags['*r_hand'], m.tags['*l_hand']];
+	if (d.weapon === 3) {
+		(d.sabers || []).forEach((saber, si) => drawSaber(saber, si, d, inst));
+		return;
+	}
+	const it = weaponModelPath(d.weapon);
+	if (!it || !hands[0] || !it.model) return;
+	const w = staticNow(it.model);
+	if (w) drawStatic(w, M4.mul(world, to44(tagMatrix(hands[0], inst.bones))));
+}
+
+// Sabers come from the server's muzzle point and direction, the same numbers the game
+// uses, smoothed between the polls. The hilt sits on the blade's axis below it.
+function drawSaber(saber, si, d, inst) {
+	if (si > 1 || (si === 0 && d.saberInFlight)) return;
+	const h = staticNow(saber.model);
+	const prev = inst.prevSabers && inst.prevSabers[si];
+	const k = Math.min(1, (performance.now() - lastPoll) / pollInterval);
+	saber.blades.forEach((blade, bi) => {
+		const pb = prev && prev.blades[bi];
+		let org = blade.org, dir = blade.dir;
+		if (!dir || (!dir[0] && !dir[1] && !dir[2])) return;
+		if (pb && pb.dir && (pb.dir[0] || pb.dir[1] || pb.dir[2])) {
+			org = org.map((v, i) => pb.org[i] + (v - pb.org[i]) * k);
+			dir = dir.map((v, i) => pb.dir[i] + (v - pb.dir[i]) * k);
+		}
+		const l = Math.hypot(dir[0], dir[1], dir[2]) || 1;
+		dir = dir.map(v => v / l);
+		if (bi === 0 && h) {
+			// hilt: its +Z is the blade axis, the blade tag sits at the muzzle point
+			const tag = h.tags['*blade1'];
+			const tz = tag ? tag[11] : 6;
+			let side = Math.abs(dir[2]) < 0.9 ? [0, 0, 1] : [1, 0, 0];
+			let x = [side[1] * dir[2] - side[2] * dir[1], side[2] * dir[0] - side[0] * dir[2], side[0] * dir[1] - side[1] * dir[0]];
+			const xl = Math.hypot(...x); x = x.map(v => v / xl);
+			const y = [dir[1] * x[2] - dir[2] * x[1], dir[2] * x[0] - dir[0] * x[2], dir[0] * x[1] - dir[1] * x[0]];
+			const o = org.map((v, i) => v - dir[i] * tz);
+			drawStatic(h, new Float32Array([...x, 0, ...y, 0, ...dir, 0, o[0], o[1], o[2], 1]));
+		}
+		// saberHolstered 1 turns off the second blade or the second saber, 2 all of them
+		if (d.saberHolstered === 2 || (d.saberHolstered === 1 && (bi > 0 || si > 0))) return;
+		blades.push({ org, dir, len: blade.length, radius: blade.radius, color: blade.color });
+	});
+}
+
+/* first person / gameplay camera */
+
+const view = { id: -1, yaw: 0, pitch: 0 };
+
+function viewAxes(yaw, pitch) {
+	const y = yaw * Math.PI / 180, p = pitch * Math.PI / 180;
+	const fwd = [Math.cos(p) * Math.cos(y), Math.cos(p) * Math.sin(y), -Math.sin(p)];
+	const left = [-Math.sin(y), Math.cos(y), 0];
+	const up = [fwd[1] * left[2] - fwd[2] * left[1], fwd[2] * left[0] - fwd[0] * left[2], fwd[0] * left[1] - fwd[1] * left[0]];
+	return { fwd, left, up };
+}
+
+function lerpAngle(a, b, t) {
+	let d = ((b - a) % 360 + 540) % 360 - 180;
+	return a + d * t;
+}
+
+function setFirstPerson(id) {
+	view.id = id;
+	document.body.classList.toggle('fp', id >= 0);
+	$('fpBtn').classList.toggle('primary', id >= 0);
+	if (id >= 0) cam.follow = -1;
+}
+
+// camera for the player view: eye at view height, sabers get the game's chase camera
+function firstPersonCamera(now) {
+	const p = players.get(view.id);
+	if (!p || p.data.team === 'spectator') { setFirstPerson(-1); return false; }
+	const d = p.data, k = Math.min(1, (now - lastPoll) / pollInterval);
+	view.yaw = lerpAngle(p.prevYaw ?? d.yaw, d.yaw, k);
+	view.pitch = lerpAngle(p.prevPitch ?? d.pitch, d.pitch, k);
+	const ax = viewAxes(view.yaw, view.pitch);
+	const head = [p.draw[0], p.draw[1], p.draw[2] + (d.viewheight || 36)];
+	view.thirdPerson = d.weapon === 3 || d.dead;
+	if (view.thirdPerson) {
+		// CG_OffsetThirdPersonView: target is the head plus cg_thirdPersonVertOffset 16,
+		// the camera cg_thirdPersonRange 80 behind it along the view, both stop at walls
+		const back = ax.fwd.map(v => -v);
+		let target = [head[0], head[1], head[2] + 16];
+		const up = pickGround(head, [0, 0, 1]);
+		if (up && up[2] - head[2] < 20) target[2] = up[2] - 4;
+		const hit = pickGround(target, back);
+		let dist = 80;
+		if (hit) dist = Math.min(dist, Math.hypot(hit[0] - target[0], hit[1] - target[1], hit[2] - target[2]) - 4);
+		eye = target.map((v, i) => v + back[i] * Math.max(4, dist));
+		viewProj = M4.mul(M4.perspective(fovY(), canvas.width / canvas.height, 4, 65536), M4.lookAt(eye, target, [0, 0, 1]));
+	} else {
+		eye = head;
+		viewProj = M4.mul(M4.perspective(fovY(), canvas.width / canvas.height, 4, 65536), M4.lookAt(eye, head.map((v, i) => v + ax.fwd[i]), ax.up));
+	}
+	invViewProj = M4.invert(viewProj);
+	return true;
+}
+
+// cg_fov 80 is horizontal on the game's 4:3 screen, wider windows see more to the sides
+function fovY() {
+	return 2 * Math.atan(Math.tan(80 * Math.PI / 360) * 0.75);
+}
+
+// the gun in front of the camera: hand at the eye, gun on its tag_weapon
+function drawViewWeapon(d) {
+	if (view.thirdPerson || d.weapon <= 2) return;
+	const it = weaponModelPath(d.weapon);
+	if (!it || !it.view) return;
+	const gun = staticNow(it.view);
+	handTag.then(t => { view.handTag = t; });
+	if (!gun) return;
+	const ax = viewAxes(view.yaw, view.pitch);
+	const camWorld = new Float32Array([...ax.fwd, 0, ...ax.left, 0, ...ax.up, 0, eye[0], eye[1], eye[2], 1]);
+	const world = view.handTag ? M4.mul(camWorld, to44(view.handTag)) : camWorld;
+	gl.clear(gl.DEPTH_BUFFER_BIT);	// the gun is always in front, like RF_DEPTHHACK
+	drawStatic(gun, world);
+}
+
+function renderHud(d) {
+	$('hudName').innerHTML = colorName(d.name);
+	drawHud(d);
+}
+
+/* ------------------------------------------------------------------ */
+/* the game's HUD, from ui/hud.menu and CG_DrawHUD                     */
+/* ------------------------------------------------------------------ */
+
+const hudImages = new Map();
+function hudImage(name) {
+	if (hudImages.has(name)) return hudImages.get(name).img;
+	const entry = { img: null };
+	hudImages.set(name, entry);
+	(async () => {
+		for (const ext of ['.tga', '.png', '.jpg']) {
+			try {
+				const data = await fetchGameFile(name + ext);
+				if (ext === '.tga') {
+					const t = decodeTga(data);
+					if (!t) continue;
+					entry.img = await createImageBitmap(new ImageData(new Uint8ClampedArray(t.data.buffer), t.w, t.h));
+				} else {
+					entry.img = await createImageBitmap(new Blob([data]));
+				}
+				return;
+			} catch (e) { /* next extension */ }
+		}
+	})();
+	return null;
+}
+
+// the number glyphs are white, R_SetColor tints them
+const tinted = new Map();
+function tintedImage(name, color) {
+	const key = name + color.join(',');
+	if (tinted.has(key)) return tinted.get(key);
+	const img = hudImage(name);
+	if (!img) return null;
+	const c = document.createElement('canvas');
+	c.width = img.width; c.height = img.height;
+	const x = c.getContext('2d');
+	x.drawImage(img, 0, 0);
+	x.globalCompositeOperation = 'multiply';
+	x.fillStyle = 'rgb(' + color.map(v => Math.round(v * 255)).join(',') + ')';
+	x.fillRect(0, 0, c.width, c.height);
+	x.globalCompositeOperation = 'destination-in';
+	x.drawImage(img, 0, 0);
+	tinted.set(key, c);
+	return c;
+}
+
+const HUD = {
+	healthTics: [[20, 24, 28, 28], [38, 33, 28, 28], [52, 47, 28, 28], [60, 65, 28, 28]],
+	armorTics: [[9, -6, 56, 56], [34, 3, 56, 56], [54, 24, 56, 56], [63, 48, 56, 56]],
+	forceTics: [[-65, -5, 56, 56], [-89, 4, 56, 56], [-109, 24, 56, 56], [-119, 48, 56, 56]],
+	ammoTics: [[-48, 25, 28, 28], [-66, 33, 28, 28], [-80, 47, 28, 28], [-88, 65, 28, 28]],
+	saberStyles: { fast: [-85, 69, 24, 24, 'saber_fast'], medium: [-70, 43, 26, 26, 'saber_med'], strong: [-49, 24, 26, 26, 'saber_strong'] },
+};
+const DIGITS = ['t_zero', 't_one', 't_two', 't_three', 't_four', 't_five', 't_six', 't_seven', 't_eight', 't_nine', 't_minus'];
+
+function drawHud(d) {
+	const c = $('hudCanvas'), dpr = Math.min(window.devicePixelRatio || 1, 2);
+	const W = Math.round(c.clientWidth * dpr), H = Math.round(c.clientHeight * dpr);
+	if (c.width !== W || c.height !== H) { c.width = W; c.height = H; }
+	const g = c.getContext('2d');
+	g.clearRect(0, 0, W, H);
+	if (!d || d.dead || d.team === 'spectator') return;
+
+	// 640x480 virtual screen: left HUD sticks to the left edge, right HUD to the right edge
+	const s = H / 480;
+	const left = (x, y) => [x * s, y * s];
+	const right = (x, y) => [W - (640 - x) * s, y * s];
+	const pic = (pos, x, y, w, h, name, alpha = 1) => {
+		const img = hudImage(name);
+		if (!img) return;
+		const [px, py] = pos(x, y);
+		g.globalAlpha = alpha;
+		if (w < 0) {
+			g.save();
+			g.translate(px, py);
+			g.scale(-1, 1);
+			g.drawImage(img, 0, 0, -w * s, h * s);
+			g.restore();
+		} else {
+			g.drawImage(img, px, py, w * s, h * s);
+		}
+		g.globalAlpha = 1;
+	};
+	// CG_DrawNumField with NUM_FONT_SMALL, 3 digits right aligned
+	const num = (pos, x, y, value, color) => {
+		let str = String(Math.max(-99, Math.min(999, Math.round(value))));
+		x += 2 + 6 * (3 - str.length);
+		for (const ch of str) {
+			const img = tintedImage('gfx/2d/numbers/' + DIGITS[ch === '-' ? 10 : +ch], color);
+			if (img) { const [px, py] = pos(x, y); g.drawImage(img, px, py, 6 * s, 12 * s); }
+			x += 2 + 6;
+		}
+	};
+	// tics fill from the last one, the partial one fades out
+	const tics = (pos, ox, oy, rects, prefix, value, max) => {
+		const inc = max / 4;
+		let cur = Math.min(value, max);
+		for (let i = 3; i >= 0; i--) {
+			if (cur <= 0) break;
+			const r = rects[i];
+			pic(pos, ox + r[0], oy + r[1], r[2], r[3], 'gfx/hud/' + prefix + (i + 1), cur < inc ? cur / inc : 1);
+			cur -= inc;
+		}
+	};
+
+	// lefthud at 0 368
+	pic(left, 0, 368, 112, 112, 'gfx/hud/hudleft');
+	tics(left, 0, 368, HUD.armorTics, 'armor_tic_', d.armor, d.maxHealth || 100);
+	num(left, 85, 368 + 98, d.armor, [0, 0.613, 0.097]);
+	tics(left, 0, 368, HUD.healthTics, 'health_tic_', Math.max(0, d.health), d.maxHealth || 100);
+	num(left, 59, 368 + 98, d.health, [0.835, 0.015, 0.015]);
+
+	// righthud at 640 368, the frame is the left one mirrored
+	g.font = 'bold ' + Math.round(13 * s) + 'px -apple-system, Helvetica, Arial, sans-serif';
+	g.textAlign = 'right';
+	g.textBaseline = 'top';
+	const [sx, sy] = right(640 - 150, 368 + 92);
+	g.fillStyle = 'rgba(0,0,0,.8)';
+	g.fillText('Score: ' + d.score, sx + s, sy + s);
+	g.fillStyle = '#fff';
+	g.fillText('Score: ' + d.score, sx, sy);
+	pic(right, 640, 368, -112, 112, 'gfx/hud/hudleft');
+	if (d.weapon === 3) {
+		// one icon for the saber style, like CG_DrawSaberStyle
+		const style = { 1: 'fast', 5: 'fast', 2: 'medium', 6: 'medium', 7: 'medium', 3: 'strong', 4: 'strong' }[d.saberStyle];
+		if (style) { const r = HUD.saberStyles[style]; pic(right, 640 + r[0], 368 + r[1], r[2], r[3], 'gfx/hud/' + r[4]); }
+	} else if (d.ammo >= 0 && d.weapon > 0) {
+		if (d.ammoInfinite) {
+			g.fillStyle = 'rgb(255,168,16)';
+			g.textAlign = 'left';
+			const [ix, iy] = right(640 - 75, 368 + 87);
+			g.fillText('--', ix, iy);
+			tics(right, 640, 368, HUD.ammoTics, 'ammo_tic_', 8, 8);
+		} else {
+			num(right, 640 - 83, 368 + 98, d.ammo, d.ammo > 0 ? [1, 0.658, 0.062] : [1, 0, 0]);
+			tics(right, 640, 368, HUD.ammoTics, 'ammo_tic_', d.ammo, d.maxAmmo || 1);
+		}
+	}
+	tics(right, 640, 368, HUD.forceTics, 'force_tic_', d.forcePower, 100);
+	num(right, 640 - 109, 368 + 98, d.forcePower, [0.359, 0.524, 0.722]);
+
+	// cg_drawCrosshair 1, cg_crosshairSize 24, in the middle of the 3D view
+	const ch = hudImage('gfx/2d/crosshaira');
+	if (ch) {
+		const size = 24 * s;
+		g.drawImage(ch, (W - size) / 2, (H - size) / 2, size, size);
+	}
+}
+
+if (!gl) {
+	$('loading').textContent = 'This browser has no WebGL 2.';
+} else {
+	resize();
+	requestAnimationFrame(frame);
+	// faster updates while watching through a player's eyes
+	const poll = () => { pollState(); pollInterval = view.id >= 0 ? 50 : 100; setTimeout(poll, pollInterval); };
+	poll();
+	loadClasses();
+}
+</script>
+</body>
+</html>

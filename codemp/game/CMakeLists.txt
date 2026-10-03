@@ -28,7 +28,7 @@ set(MPGameIncludeDirectories
 	"${CMAKE_BINARY_DIR}/shared"
 	)
 if(WIN32)
-	set(MPGameLibraries "winmm")
+	set(MPGameLibraries "winmm" "ws2_32")
 endif(WIN32)
 set(MPGameDefines ${MPSharedDefines} "_GAME" )
 set(MPGameGameFiles
@@ -82,6 +82,8 @@ set(MPGameGameFiles
 	"${MPDir}/game/g_session.c"
 	"${MPDir}/game/g_spawn.c"
 	"${MPDir}/game/g_svcmds.c"
+	"${MPDir}/game/g_webadmin.c"
+	"${MPDir}/game/webadmin/index.html"
 	"${MPDir}/game/g_syscalls.c"
 	"${MPDir}/game/g_target.c"
 	"${MPDir}/game/g_team.c"
@@ -220,6 +222,15 @@ set(MPGameUiFiles
 	)
 source_group("ui" FILES ${MPGameUiFiles})
 set(MPGameFiles ${MPGameFiles} ${MPGameUiFiles})
+
+# the web admin page is compiled into the module
+add_custom_command(
+	OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/webadmin_html.h"
+	COMMAND ${CMAKE_COMMAND} -DINPUT="${MPDir}/game/webadmin/index.html" -DOUTPUT="${CMAKE_CURRENT_BINARY_DIR}/webadmin_html.h" -DNAME=webadmin_html -P "${CMAKE_SOURCE_DIR}/cmake/Modules/EmbedFile.cmake"
+	DEPENDS "${MPDir}/game/webadmin/index.html" "${CMAKE_SOURCE_DIR}/cmake/Modules/EmbedFile.cmake"
+	COMMENT "Embedding web admin page")
+set(MPGameFiles ${MPGameFiles} "${CMAKE_CURRENT_BINARY_DIR}/webadmin_html.h")
+set(MPGameIncludeDirectories ${MPGameIncludeDirectories} "${CMAKE_CURRENT_BINARY_DIR}")
 
 add_library(${MPGame} SHARED ${MPGameFiles})
 
