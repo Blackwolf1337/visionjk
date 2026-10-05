@@ -2050,6 +2050,13 @@ void CG_JPCameraOrbit( void );
 void CG_JPTwoPlayerAnimCamera( const playerState_t *ps );
 void CG_JPCameraRange( void );
 void CG_JPHookTrail( centity_t *cent, const struct weaponInfo_s *weapon );
+void CG_JPPluginDisable_f( void );
+void CG_JPReloadReplier_f( void );
+void CG_JPShowPlayerID_f( void );
+void CG_JPAdmCycleCmd_f( void );
+void CG_JPAdmCyclePlayer_f( void );
+void CG_JPAdmCmdExe_f( void );
+qboolean CG_JPGunCommand( const char *cmd );
 void FX_ConcussionProjectileThink(  centity_t *cent, const struct weaponInfo_s *weapon );
 void FX_ConcAltShot( vec3_t start, vec3_t end );
 

@@ -370,3 +370,127 @@ void CG_JPCameraRange( void ) {
 	}
 }
 
+/*
+=================
+JA+ client plugin: console commands
+
+pluginDisable, reloadReplier, showPlayerID and the admin gun. With the plugin the admin gun is kept on the client:
+admCmdPrev/admCmdNext pick the command, playerPrev/playerNext the player, admCmdEXE sends it. A command that
+starts with "gun" (gunkick, gunslap, ...) is the admin command for the player in the crosshair.
+=================
+*/
+static const char *jpPluginFeatures[] = {
+	"Plugin_NewDrainEFX_needReconnection",
+	"Plugin_IgnoreAllPlayers_WhenInDuel",
+	"PLugin_EndDuel_Rotation",
+	"Plugin_seeBlackSabers_needUserInfoUpdate",
+	"Plugin_AutoReplier",
+	"Plugin_NewForceEffect",
+	"Plugin_No_NewDeathMessage",
+	"Plugin_NewForceSight_effect",
+	"Plugin_NoAltDim_effect",
+	"Plugin_holsteredSaberBolted",
+	"Plugin_ledgeGrab",
+	"Plugin_NewDFA_PrimAttack",
+	"Plugin_NewDFA_AltAttack",
+	"Plugin_No_SP_Cartwheel",
+	"Plugin_AllowDownloadURL_Redirect",
+};
+
+static const char *jpAdminGunCmds[] = {
+	"amkick", "amban", "amShowMotd", "amorigin", "amslap", "amsleep", "amwake", "amghost", "amdenyvote", "amprotect",
+	"amsilence", "amunsilence", "amUnForceAltDim", "amForceAltDim", "amempower", "ammerc", "ammindtrick",
+};
+
+static int	jpAdminCmd, jpAdminPlayer;
+
+void CG_JPPluginDisable_f( void ) {
+	char	arg[5];
+	int		i, bits = cp_pluginDisable.integer;
+
+	if ( trap->Cmd_Argc() < 2 ) {
+		trap->Print( "Usage: pluginDisable [ID_feature_to_disable]\n^5Id_feature ^7<---->  ^5Feature\n" );
+		for ( i = 0; i < (int)ARRAY_LEN( jpPluginFeatures ); i++ ) {
+			trap->Print( "^5    %i      ^7<---->  ^5%s      ", i, jpPluginFeatures[i] );
+			trap->Print( (bits & (1 << i)) ? "^1Disallowed\n" : "^2Allowed\n" );
+		}
+		return;
+	}
+
+	trap->Cmd_Argv( 1, arg, sizeof( arg ) );
+	i = atoi( arg );
+	if ( i < 0 || i >= (int)ARRAY_LEN( jpPluginFeatures ) )
+		return;
+	bits ^= 1 << i;
+	trap->Cvar_Set( "cp_pluginDisable", va( "%i", bits ) );
+	trap->Print( "^5%s ^7 => ", jpPluginFeatures[i] );
+	trap->Print( (bits & (1 << i)) ? "^1Disallowed\n" : "^2Allowed\n" );
+}
+
+void CG_JPReloadReplier_f( void ) {
+	trap->Print( "^2Reload Auto Replier Messages.\n" );
+	CG_JPAutoReplierInit();
+}
+
+void CG_JPShowPlayerID_f( void ) {
+	int i;
+
+	trap->Print( "^5Real Player ID List:\n" );
+	for ( i = 0; i < cgs.maxclients; i++ ) {
+		if ( cgs.clientinfo[i].infoValid )
+			trap->Print( "\tID ^5%i^7: %s\n", i, cgs.clientinfo[i].name );
+	}
+}
+
+static void CG_JPAdminGunPrint( qboolean always ) {
+	const qboolean valid = jpAdminPlayer >= 0 && jpAdminPlayer < cgs.maxclients && cgs.clientinfo[jpAdminPlayer].infoValid;
+
+	if ( valid || always )
+		trap->Print( "^5%s ^7-> ID ^5%i ^7: %s \n", jpAdminGunCmds[jpAdminCmd], jpAdminPlayer,
+			valid ? cgs.clientinfo[jpAdminPlayer].name : "^1No Player" );
+}
+
+void CG_JPAdmCycleCmd_f( void ) {
+	const int last = ARRAY_LEN( jpAdminGunCmds ) - 1;
+
+	jpAdminCmd += Q_stricmp( CG_Argv( 0 ), "admCmdPrev" ) ? 1 : -1;
+	if ( jpAdminCmd < 0 )
+		jpAdminCmd = last;
+	else if ( jpAdminCmd > last )
+		jpAdminCmd = 0;
+	CG_JPAdminGunPrint( qtrue );
+}
+
+void CG_JPAdmCyclePlayer_f( void ) {
+	const int step = Q_stricmp( CG_Argv( 0 ), "playerPrev" ) ? 1 : -1;
+	int i;
+
+	// on to the next player there is, the plugin calls itself until it has one
+	for ( i = 0; i < cgs.maxclients; i++ ) {
+		jpAdminPlayer += step;
+		if ( jpAdminPlayer < 0 )
+			jpAdminPlayer = cgs.maxclients - 1;
+		else if ( jpAdminPlayer >= cgs.maxclients )
+			jpAdminPlayer = 0;
+		if ( cgs.clientinfo[jpAdminPlayer].infoValid )
+			break;
+	}
+	CG_JPAdminGunPrint( qfalse );
+}
+
+void CG_JPAdmCmdExe_f( void ) {
+	if ( jpAdminPlayer >= 0 && jpAdminPlayer < cgs.maxclients )
+		trap->SendClientCommand( va( "%s %i\n", jpAdminGunCmds[jpAdminCmd], jpAdminPlayer ) );
+}
+
+// CG_ConsoleCommand. Without a drawn crosshair there is no crosshair player, the server looks for the target then.
+qboolean CG_JPGunCommand( const char *cmd ) {
+	if ( strncmp( cmd, "gun", 3 ) )
+		return qfalse;
+
+	if ( !cg_drawCrosshair.integer )
+		trap->SendClientCommand( va( "%s\n", cmd ) );
+	else if ( cg.crosshairClientNum >= 0 && cg.crosshairClientNum < MAX_CLIENTS && cgs.clientinfo[cg.crosshairClientNum].infoValid )
+		trap->SendClientCommand( va( "am%s %i\n", cmd + 3, cg.crosshairClientNum ) );
+	return qtrue;
+}

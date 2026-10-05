@@ -295,6 +295,9 @@ int cmdcmp( const void *a, const void *b ) {
 static consoleCommand_t	commands[] = {
 	{ "+scores",					CG_ScoresDown_f },
 	{ "-scores",					CG_ScoresUp_f },
+	{ "admCmdEXE",					CG_JPAdmCmdExe_f },
+	{ "admCmdNext",					CG_JPAdmCycleCmd_f },
+	{ "admCmdPrev",					CG_JPAdmCycleCmd_f },
 	{ "briefing",					CG_SiegeBriefing_f },
 	{ "clientlist",					CG_ClientList_f },
 	{ "forcenext",					CG_NextForcePower_f },
@@ -305,8 +308,13 @@ static consoleCommand_t	commands[] = {
 	{ "loadhud",					CG_LoadHud_f },
 	{ "nextframe",					CG_TestModelNextFrame_f },
 	{ "nextskin",					CG_TestModelNextSkin_f },
+	{ "playerNext",					CG_JPAdmCyclePlayer_f },
+	{ "playerPrev",					CG_JPAdmCyclePlayer_f },
+	{ "pluginDisable",				CG_JPPluginDisable_f },
 	{ "prevframe",					CG_TestModelPrevFrame_f },
 	{ "prevskin",					CG_TestModelPrevSkin_f },
+	{ "reloadReplier",				CG_JPReloadReplier_f },
+	{ "showPlayerID",				CG_JPShowPlayerID_f },
 	{ "siegeCompleteCvarUpdate",	CG_SiegeCompleteCvarUpdate_f },
 	{ "siegeCvarUpdate",			CG_SiegeCvarUpdate_f },
 	{ "sizedown",					CG_SizeDown_f },
@@ -336,6 +344,10 @@ Cmd_Argc() / Cmd_Argv()
 */
 qboolean CG_ConsoleCommand( void ) {
 	consoleCommand_t	*command = NULL;
+
+	// JA+: admin gun
+	if ( CG_JPGunCommand( CG_Argv( 0 ) ) )
+		return qtrue;
 
 	command = (consoleCommand_t *)Q_LinearSearch( CG_Argv( 0 ), commands, numCommands, sizeof( commands[0] ), cmdcmp );
 
@@ -380,6 +392,19 @@ static const char *gcmds[] = {
 };
 static const size_t numgcmds = ARRAY_LEN( gcmds );
 
+// JA+: the commands of the server module, the client plugin adds them for tab completion
+static const char *jpgcmds[] = {
+	"amAltDim", "amban", "amcolor", "amdenyvote", "amDMGs", "amdropsaber", "amempower", "amForceAltDim", "amforceteam",
+	"amghost", "aminfo", "amkick", "amkillvote", "amknockmedown", "amlockteam", "amlogin", "amlogout", "ammap", "ammerc",
+	"ammindtrick", "ammotd", "ammove", "amorigin", "ampoll", "amprotect", "ampsay", "amrename", "amsay", "amseeGhost",
+	"amShowMotd", "amsilence", "amslap", "amsleep", "amstatus", "amtele", "amtelemark", "amUnForceAltDim", "amunsilence",
+	"amvstr", "amwake", "amwhois", "BlockWallCreate", "BlockWallDel", "BlockWallDraw", "BlockWallGrantEditor",
+	"BlockWallNext", "BlockWallPrev", "BlockWallWrite", "clanpass", "clansay", "clanwhois", "duelWhois",
+	"engage_FullForceDuel", "ignore", "immortal", "jetpack", "refuseTele", "sabercolor", "say_team_mod", "toggleFlame",
+	"ui_macroenable", "ui_macroscan",
+};
+static const size_t numjpgcmds = ARRAY_LEN( jpgcmds );
+
 /*
 =================
 CG_InitConsoleCommands
@@ -400,4 +425,7 @@ void CG_InitConsoleCommands( void ) {
 	//
 	for( i = 0; i < numgcmds; i++ )
 		trap->AddCommand( gcmds[i] );
+
+	for ( i = 0; i < numjpgcmds; i++ )
+		trap->AddCommand( jpgcmds[i] );
 }
