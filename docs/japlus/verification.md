@@ -56,6 +56,15 @@ and with the modules of this tree, and what both hand to the renderer is compare
 | a spectator follows a player | 1530 | equal |
 | players change between the dimensions | 960 | equal |
 
+The menus are compared on a running client, because a menu is not part of a demo: both module sets open the same
+menu and the pictures and texts they draw are compared.
+
+| Menus | Number | Result |
+|-------|--------|--------|
+| main menu: multiplayer, player (2 pages), saber, create server, quick game (2 pages), the rules pages with the moves, controls, setup, demos, quit | 18 | equal |
+| in the game: main bar, player (2 pages), force, saber, moves, call vote, controls, setup, join, about, add bot, leave, the JA+ chat menu `modsay` | 14 | equal |
+| saber menu with two RGB blades, player menu with the second holster selected | 2 | equal |
+
 "Equal" is after the fixes below and without the differences between OpenJK and the 1.01 game code that are
 listed in [differences.md](differences.md). Compared are the camera, every model with its Ghoul2 parts, animations
 and bone angles, saber blades and other beams, lights, HUD pictures and texts.
@@ -76,7 +85,8 @@ Not covered by this comparison:
 
 - sounds, and the commands and cvars the modules set,
 - the prediction of the own movement (a demo is not predicted),
-- the menus beyond the three that were looked at as pictures (player, saber, moves), key handling in menus,
+- the server browser (it would ask the master servers), and everything a menu does when it is used: clicks, keys,
+  sliders, the scripts behind the buttons. The menus were only drawn,
 - team games, CTF (flag shell), siege, vehicles, the duel gametypes,
 - other maps than `mp/ffa3`, and everything a scripted client does not do: aimed attacks, saber locks, grabs and
   kisses with a partner, the flamethrower hitting somebody.

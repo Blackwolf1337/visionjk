@@ -59,6 +59,11 @@ Client (seen when the cgame and ui are compared with the original plugin on the 
 - The server browser filters by the installed mod folders, so `japlus` is one of the entries. The plugin has a
   fixed third entry "JA+ Mod".
 - The ui keeps up to 1024 heads and 256 saber hilts (plugin: 768 and 192).
+- The own player is not drawn while he is a spectator. 1.01 and the plugin show him for the first frames after a
+  join as spectator, until the second snapshot arrives.
+- In the menus: the mouse cursor is 40 pixels wide (1.01: 48), the scrollbar of the head list sits 2 pixels further
+  left, the demo list shows the file names with their ending, and a list item whose cvar has a value outside of its
+  list reads "Custom" (1.01: empty).
 
 ## OpenJK behaviour that was changed
 
