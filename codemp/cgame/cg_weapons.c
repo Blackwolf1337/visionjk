@@ -1984,9 +1984,12 @@ void CG_JPHookTrail( centity_t *cent, const struct weaponInfo_s *weapon )
 	vec3_t forward, hand, pos;
 	mdxaBone_t boltMatrix;
 
-	if ( VectorNormalize2( cent->currentState.pos.trDelta, forward ) == 0.0f )
-		forward[2] = 1.0f;
-	trap->FX_PlayEffectID( cgs.effects.concussionShotEffect, cent->lerpOrigin, forward, -1, -1, qfalse );
+	// only while the hook flies
+	if ( VectorLength( cent->currentState.pos.trDelta ) >= 100.0f ) {
+		if ( VectorNormalize2( cent->currentState.pos.trDelta, forward ) == 0.0f )
+			forward[2] = 1.0f;
+		trap->FX_PlayEffectID( cgs.effects.concussionShotEffect, cent->lerpOrigin, forward, -1, -1, qfalse );
+	}
 
 	if ( owner < 0 || owner >= MAX_CLIENTS )
 		return;

@@ -402,7 +402,7 @@ static const char *jpAdminGunCmds[] = {
 	"amsilence", "amunsilence", "amUnForceAltDim", "amForceAltDim", "amempower", "ammerc", "ammindtrick",
 };
 
-static int	jpAdminCmd, jpAdminPlayer;
+static int	jpAdminCmd = 3, jpAdminPlayer;	// the plugin starts with amorigin
 
 void CG_JPPluginDisable_f( void ) {
 	char	arg[5];

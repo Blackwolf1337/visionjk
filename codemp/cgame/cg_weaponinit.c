@@ -145,23 +145,20 @@ void CG_RegisterWeapon( int weaponNum) {
 
 		if (weaponNum == WP_STUN_BATON)
 		{
-			// JA+ grappling hook: the hook missile is a stun baton missile
-			if ( !cp_hookModel.string[0] || !strcmp( cp_hookModel.string, "1" ) )
+			// JA+ grappling hook: the hook missile is a stun baton missile. cp_hookModel: 0 the grapple of the
+			// base game, 1 or empty the JA+ hook, anything else is the path of a model
+			MAKERGB( weaponInfo->flashDlightColor, 0.6f, 0.6f, 1.0f );
+			if ( !cp_hookModel.string[0] )
 				weaponInfo->missileModel = trap->R_RegisterModel( "models/items/g_hook/hook.md3" );
-			else if ( !strcmp( cp_hookModel.string, "0" ) )
-				weaponInfo->missileModel = trap->R_RegisterModel( "models/items/grapple.md3" );
-			else
+			else if ( cp_hookModel.string[0] < '0' || cp_hookModel.string[0] > '1' )
 				weaponInfo->missileModel = trap->R_RegisterModel( cp_hookModel.string );
+			else if ( cp_hookModel.integer )
+				weaponInfo->missileModel = trap->R_RegisterModel( "models/items/g_hook/hook.md3" );
+			else
+				weaponInfo->missileModel = trap->R_RegisterModel( "models/items/grapple.md3" );
 			weaponInfo->missileTrailFunc = CG_JPHookTrail;
+			// the shot effect of the hook: the plugin registers it with the pistol only
 			cgs.effects.concussionShotEffect = trap->FX_RegisterEffect( "concussion/shot" );
-			cgs.effects.jpRageEffect = trap->FX_RegisterEffect( "effects/force/rage2.efx" );
-			cgs.effects.jpHealEffect = trap->FX_RegisterEffect( "effects/force/heal2.efx" );
-			cgs.effects.jpHealQuickEffect = trap->FX_RegisterEffect( "effects/force/heal.efx" );
-			cgs.effects.jpFlameJet = trap->FX_RegisterEffect( "effects/env/flame_jet.efx" );
-			cgs.effects.jpFire = trap->FX_RegisterEffect( "effects/env/fire.efx" );
-			cgs.effects.jpDrainHand = trap->FX_RegisterEffect( "effects/force/drain_hand.efx" );
-			cgs.effects.jpKothosBeam = trap->FX_RegisterEffect( "effects/force/kothos_beam.efx" );
-			cgs.effects.jpStabee = trap->FX_RegisterEffect( "effects/force2/astabee.efx" );
 
 			trap->S_RegisterSound( "sound/weapons/baton/idle.wav" );
 			weaponInfo->flashSound[0] = trap->S_RegisterSound( "sound/weapons/baton/fire.mp3" );
