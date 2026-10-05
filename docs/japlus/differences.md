@@ -44,6 +44,22 @@ Game:
 - Texts with a typed `\n` (MOTD, welcome, admin messages) are converted in place. The original takes memory from
   the level pool for every such message.
 
+Client (seen when the cgame and ui are compared with the original plugin on the same recorded game, see
+[verification.md](verification.md)):
+
+- `cg_drawCrosshair 1` is the first crosshair picture. 1.01 and the plugin count from 0 and show the second one.
+- The name of the player under the crosshair stays for a second and fades out. 1.01 drops it as soon as the
+  crosshair is on something else.
+- A center print is placed a little higher when its text is long: OpenJK also counts a line for every 50 characters
+  when it centers the block.
+- The number of shots in the HUD has the color of the menu item (orange) and changes it while the weapon fires or
+  is empty. 1.01 draws it in white.
+- The scoreboard writes `BOT` in the ping column of a bot.
+- `cg_thirdPersonRange` and `cg_thirdPersonVertOffset` are no cheat cvars.
+- The server browser filters by the installed mod folders, so `japlus` is one of the entries. The plugin has a
+  fixed third entry "JA+ Mod".
+- The ui keeps up to 1024 heads and 256 saber hilts (plugin: 768 and 192).
+
 ## OpenJK behaviour that was changed
 
 Set back to the original because the client predicts with it or because it changes the game:
@@ -72,6 +88,22 @@ A bug of OpenJK that was fixed:
   corrected by the server. An original plugin on this server ignores the bit.
 - A model without the tags `*back`, `*hip_l` and `*hip_r` is loaded and simply has no saber on the body. The plugin
   refuses such a model.
+
+## Where the client is knowingly not the plugin
+
+- No download over an URL, see [client.md](client.md).
+- The plugin shows the highlander rules on the loading screen of every server, the port only when the server has
+  the key `jp_highlander`.
+- The plugin applies its rule for the pistol hook also to the bryar shots of servers without JA+. The port only on
+  JA+ servers.
+- Prediction of walking through players follows the rules of the server. The plugin predicts wrongly with
+  `jp_DuelAlpha -1` and `jp_altDim` on, and has no rule for ghosts.
+- The player menu of the plugin stops the game with an error when the menu has no model item named `character`.
+  The port does nothing then, so the menus of the base game keep working.
+- The macro scan of the plugin follows `exec` and `vstr` without a limit, a file that executes itself ends in a
+  memory error. The port follows 4 levels and reads 64 KB of a file.
+- The plugin keeps a copy of the saber hilts of every player in his client info to draw them on the body. The port
+  keeps them per player number.
 
 ## Where the original itself depends on the platform
 

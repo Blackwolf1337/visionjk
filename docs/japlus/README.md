@@ -7,7 +7,7 @@ was never released. Everything here was rebuilt from the released binaries:
 - `clientPlugin_v1.4B4.pk3`, the client plugin: `cgamex86.dll` and `uix86.dll` (stripped) plus menus, effects and
   graphics.
 
-The port starts from OpenJK commit 260c59c2 (2026-09-29). All of it is in one commit on top of that history.
+The port starts from OpenJK commit 260c59c2 (2026-09-29) and is the commits on top of that history.
 
 ## Documents
 
@@ -89,9 +89,15 @@ They come from the original JA+ packages and are not part of this repository.
 | `autoreplier.cfg` | `japlus/` on the client | auto replier texts |
 | contents of `clientPlugin_v1.4B4.pk3` without the two DLLs | `japlus/` on the client, as a pk3 | menus, shaders, effects and graphics of the plugin |
 
+The easiest way to get the last file is to delete `cgamex86.dll` and `uix86.dll` from a copy of the plugin pk3. When
+it is packed again from loose files, the folder entries of the original pk3 and their order have to be kept: the
+engine lists a folder of a pk3 only when it has an entry of its own, and the head list of the player menu, and with
+it the model a new player starts with, follows that order.
+
 ## State
 
 The server module was compared against the original function by function and in about 700 random games that both
-modules played side by side, see [verification.md](verification.md). The client side has no such comparison. Parts
-of it were looked at in the game on a local test server, most of it was not. Treat the client features as untested
-unless verification.md says otherwise.
+modules played side by side. For the client every function of the plugin DLLs was compared with the unmodified
+1.01 modules to find what the plugin changed, and what the cgame and ui draw was compared with the original plugin
+on recorded test scenes. Both comparisons, what they found and what they do not cover are in
+[verification.md](verification.md). Little of the client was used by a person in a real game so far.

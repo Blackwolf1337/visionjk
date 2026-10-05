@@ -43,19 +43,32 @@ Things that had to be learned the hard way:
 
 ## Client plugin
 
-There are no names in the two DLLs, so the plugin code was located by what it touches:
+There are no names in the two DLLs, but there are two other binaries to compare them with:
 
-- strings (cvar names, command names, effect and shader paths, bone and tag names),
-- the handles it registers at start (effects, shaders, sounds) and where they are used,
-- the bits of `cp_pluginDisable`, each of which guards one feature,
-- the server info keys it parses (`jp_cinfo`, `jp_DuelAlpha`, `V`).
+- the unmodified `cgamex86.dll` and `uix86.dll` of Jedi Academy 1.01 (in `assets3.pk3` of the game), built with the
+  same compiler as the plugin,
+- the Mac build of the plugin (`clientPlugin_mac.pk3`, 2007), which still has its debug information: function names
+  with source file and line, globals, struct layouts. It is four years older than 1.4 Build 4 and was only used as a
+  dictionary, never as a reference for the behaviour.
 
-Base functions were recognised by their strings and their structure and given the names they have in OpenJK. The
-fields the plugin adds to `clientInfo_t` and `centity_t` were mapped by their offsets. The features were then
-written into the OpenJK cgame by behaviour. Plugin code that has no string, handle or switch of its own could not be
-told apart from base code and was not compared.
+1. Ghidra (headless) exported for every function of all six binaries its calls, strings, constants, struct offsets,
+   data references and hashes of the instructions.
+2. A matcher paired the functions of the plugin with those of 1.01 and of the Mac build (identical code first, then
+   unique strings and constants, the call graph, and the order of the object files, which is alphabetical in the
+   DLL). Every function of the plugin got a status: same as 1.01, same instructions with other numbers, changed, new.
+   cgame: 1664 functions, 427 changed and 78 new. ui: 1579 functions, 229 changed and 627 new, most of the new ones
+   being libcurl and the C runtime.
+3. Globals were named by voting: two functions with the same name use the same globals. That gave `cg`, `cgs`, the
+   cvars and the client info array with their member names.
+4. For every changed function the decompiled C of 1.01 and of the plugin were compared line by line, with the
+   addresses of 1.01 translated to those of the plugin and struct members that moved put back. Both DLLs come from
+   the same compiler, so unchanged code decompiles to the same text and what remains is the change JA+ made, plus
+   noise where the compiler inlined or ordered differently. The noise was checked in the disassembly.
+5. Every difference was read against the port, file by file. Missing things were built, differences fixed. The
+   plugin adds members to `clientInfo_t` (0x174c bytes instead of 0x1710) and `centity_t` (0x77c instead of 0x774),
+   the port keeps the same information in its own members.
 
-## Comparison harness
+## Comparison harness for the server module
 
 The original server module and a 32 bit build of the port are loaded into one process. A small stand in for the
 engine answers their system calls: cvars, config strings, a box world with traces, entity linking, file access to
@@ -72,3 +85,27 @@ the real game data, a simple Ghoul2 with bolts at fixed places. Nothing of the g
 
 Every kind of difference was traced to its cause, in most cases with a debugger on both modules in the same
 process. The causes are either fixed or listed in [differences.md](differences.md).
+
+## Comparison of the client modules
+
+The original cgame and ui are Windows DLLs for the old module interface. They and the Windows modules of the port
+run in the same engine: a 32 bit Windows build of the OpenJK client (mingw) under Wine. OpenJK still loads modules
+with the old interface, so the original DLLs work in it unchanged.
+
+- Input: a demo. Played as a timedemo the engine gives the module every snapshot, config string and server command
+  of the recording, one frame per snapshot. Both modules get the same game at the same times.
+- Output: a renderer that loads the real renderer, passes every call on and writes it to a file: the models of a
+  scene with their Ghoul2 parts, animations and the angles set on bones, sabers and other beams, lights, the
+  camera, 2D pictures, text, and what gets registered.
+- The two files are compared frame by frame and by category. Things that are random are compared loosely or left
+  out (particles, blinking eyes, the strength of a shield flash, camera shake). The same module played twice gives
+  the measure for that.
+- The demos are recorded on a test server from scripted clients: a recorder, actors that run lists of console
+  commands in front of it (saber moves, force powers, taunts, emotes, hook, guns, a duel, the alternate dimension)
+  and admin commands sent to the server at given times.
+
+Not covered this way: sounds, the commands and cvars a module sets, and the prediction, which does not run in a
+demo. The movement code behind the prediction is shared with the server module and compared there.
+
+Pictures of menus and scenes were taken with both module sets the same way (console scripts, engine screenshots)
+and looked at side by side.
