@@ -222,6 +222,9 @@ void CG_DrawInformation( void ) {
 
 	// game type
 	s = BG_GetGametypeString( cgs.gametype );
+	// JA+ client plugin: highlander is a FFA with its own name
+	if ( cgs.gametype == GT_FFA && atoi( Info_ValueForKey( info, "jp_highlander" ) ) )
+		s = "Highlander";
 	CG_DrawProportionalString( 320, y, s, UI_CENTER|UI_INFOFONT|UI_DROPSHADOW, colorWhite );
 	y += iPropHeight;
 

@@ -34,6 +34,10 @@ static vec3_t WHITE={1.0f,1.0f,1.0f};
 
 void FX_DisruptorMainShot( vec3_t start, vec3_t end )
 {
+	// JA+ client plugin: not while in a separated private duel
+	if ( CG_JPInSeparatedDuel() )
+		return;
+
 //	vec3_t	dir;
 //	float	len;
 
@@ -62,6 +66,10 @@ FX_DisruptorAltShot
 */
 void FX_DisruptorAltShot( vec3_t start, vec3_t end, qboolean fullCharge )
 {
+	// JA+ client plugin: not while in a separated private duel
+	if ( CG_JPInSeparatedDuel() )
+		return;
+
 	trap->FX_AddLine( start, end, 0.1f, 10.0f, 0.0f,
 							1.0f, 0.0f, 0.0f,
 							WHITE, WHITE, 0.0f,
@@ -155,6 +163,10 @@ FX_DisruptorHitWall
 
 void FX_DisruptorHitWall( vec3_t origin, vec3_t normal )
 {
+	// JA+ client plugin: not while in a separated private duel
+	if ( CG_JPInSeparatedDuel() )
+		return;
+
 	trap->FX_PlayEffectID( cgs.effects.disruptorWallImpactEffect, origin, normal, -1, -1, qfalse );
 }
 
@@ -166,5 +178,9 @@ FX_DisruptorHitPlayer
 
 void FX_DisruptorHitPlayer( vec3_t origin, vec3_t normal, qboolean humanoid )
 {
+	// JA+ client plugin: not while in a separated private duel
+	if ( CG_JPInSeparatedDuel() )
+		return;
+
 	trap->FX_PlayEffectID( cgs.effects.disruptorFleshImpactEffect, origin, normal, -1, -1, qfalse );
 }

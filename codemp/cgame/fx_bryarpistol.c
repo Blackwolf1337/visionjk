@@ -37,10 +37,23 @@ FX_BryarProjectileThink
 void FX_BryarProjectileThink(  centity_t *cent, const struct weaponInfo_s *weapon )
 {
 	vec3_t forward;
+	const int owner = cent->currentState.otherEntityNum;
 
 	if ( VectorNormalize2( cent->currentState.pos.trDelta, forward ) == 0.0f )
 	{
 		forward[2] = 1.0f;
+	}
+
+	// JA+ client plugin: a JA+ server sends its pistol shots without an owner (-1). A pistol missile that names
+	// a player is the hook of a player without the plugin, one that names client 32 is the second missile of a
+	// hook for plugin clients and is not drawn.
+	if ( cgs.jpVersion > 0.0f && owner >= 0 && owner <= MAX_CLIENTS )
+	{
+		if ( owner == MAX_CLIENTS || !(cg_entities[owner].currentState.eFlags2 & EF2_HOOK) )
+			return;
+		CG_JPHookTrail( cent, weapon );
+		if ( VectorLength( cent->currentState.pos.trDelta ) < 100.0f )
+			return;
 	}
 
 	trap->FX_PlayEffectID( cgs.effects.bryarShotEffect, cent->lerpOrigin, forward, -1, -1, qfalse );
@@ -243,6 +256,10 @@ static vec3_t BRIGHT={0.75f,0.5f,1.0f};
 
 void FX_ConcAltShot( vec3_t start, vec3_t end )
 {
+	// JA+ client plugin: not while in a separated private duel
+	if ( CG_JPInSeparatedDuel() )
+		return;
+
 	//"concussion/beam"
 	trap->FX_AddLine( start, end, 0.1f, 10.0f, 0.0f,
 							1.0f, 0.0f, 0.0f,
