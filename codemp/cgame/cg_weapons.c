@@ -1980,7 +1980,7 @@ JA+ grappling hook: shot effect and a rope from the right hand of the owner to t
 void CG_JPHookTrail( centity_t *cent, const struct weaponInfo_s *weapon )
 {
 	const int owner = cent->currentState.otherEntityNum;
-	const centity_t *oc;
+	centity_t *oc;
 	vec3_t forward, hand, pos;
 	mdxaBone_t boltMatrix;
 
@@ -2015,6 +2015,10 @@ void CG_MissileHitWall(int weapon, int clientNum, vec3_t origin, vec3_t dir, imp
 {
 	int parm;
 	vec3_t up={0,0,1};
+
+	// JA+ client plugin: no impacts while in a separated private duel
+	if ( CG_JPInSeparatedDuel() )
+		return;
 
 	switch( weapon )
 	{
@@ -2123,6 +2127,10 @@ void CG_MissileHitPlayer(int weapon, vec3_t origin, vec3_t dir, int entityNum, q
 {
 	qboolean	humanoid = qtrue;
 	vec3_t up={0,0,1};
+
+	// JA+ client plugin: no impacts while in a separated private duel
+	if ( CG_JPInSeparatedDuel() )
+		return;
 
 	/*
 	// NOTENOTE Non-portable code from single player
