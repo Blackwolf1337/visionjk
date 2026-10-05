@@ -57,6 +57,7 @@ static void	UI_Cache_f( void ) {
 		for ( i=0; i<uiInfo.q3HeadCount; i++ ) {
 			trap->Print( "model %s\n", uiInfo.q3HeadNames[i] );
 		}
+		trap->Print( "Number of Heads Menu Icons:^5%i\n", uiInfo.q3HeadCount );	// JA+
 	}
 }
 
@@ -76,41 +77,183 @@ static void UI_OpenSiegeMenu_f( void ) {
 
 /*
 =================
-JA+ macro scan (the server sets jp_macroScan): key bindings with several commands that contain movement,
-attack, force or turning commands are replaced by "echo illegal macro: <binding>" (; becomes :)
-ui_macroenable puts them back
+JA+ macro scan (the server sets jp_macroScan): key bindings that are macros are replaced by
+"echo illegal macro: <binding>" (; becomes :), ui_macroenable puts them back.
+
+A binding is a macro if
+- it has several commands and one of them moves, attacks, uses the force or changes the turning speed
+- it has one command that changes the turning speed
+- it executes a file (exec) or a cvar (vstr) that holds such commands, also through further files and cvars
 =================
 */
 #define JP_MAX_BINDS		320
 #define JP_MACRO_PREFIX		"echo illegal macro: "
+#define JP_MACRO_MARK		"illegal macro:"
+#define JP_MACRO_MAX_DEPTH	4			// exec and vstr levels that are followed, the plugin has no limit
+#define JP_MACRO_MAX_FILE	0x10000		// bytes of a file that are read
 
-static qboolean UI_JPMacroBinding( const char *bind ) {
-	static const char *const keywords[] = {
-		"+moveup", "+attack", "+forward", "+back", "+movedown", "+speed", "force_absorb", "force_heal", "force_distract",
-		"force_protect", "+force_grip", "+force_drain", "+force_lightning", "force_rage", "force_throw", "force_pull",
-		"force_speed", "force_seeing", "force_forcepowerother", "force_healother", "+button", "+left", "+right",
-		"+moveright", "+moveleft", "+useforce", "+altattack", "sensitivity", "m_yaw", "cl_yawspeed"
-	};
+static const char *const jpMacroTurn[] = {
+	"sensitivity", "m_yaw", "cl_yawspeed"
+};
+
+// in files and cvars
+static const char *const jpMacroScript[] = {
+	"+moveup", "+attack", "+forward", "+back", "+movedown", "+speed", "+button", "+left", "+right", "+moveright",
+	"+moveleft", "+altattack"
+};
+
+// in a binding also these
+static const char *const jpMacroForce[] = {
+	"force_absorb", "force_heal", "force_distract", "force_protect", "+force_grip", "+force_drain",
+	"+force_lightning", "force_rage", "force_throw", "force_pull", "force_speed", "force_seeing",
+	"force_forcepowerother", "force_healother", "+useforce"
+};
+
+static qboolean UI_JPMacroKeyword( const char *text, const char *const *keywords, size_t count ) {
 	size_t i;
 
-	if ( !strchr( bind, ';' ) )
-		return qfalse;
-	for ( i = 0; i < ARRAY_LEN( keywords ); i++ ) {
-		if ( strstr( bind, keywords[i] ) )
+	for ( i = 0; i < count; i++ ) {
+		if ( strstr( text, keywords[i] ) )
 			return qtrue;
 	}
 	return qfalse;
 }
 
+static qboolean UI_JPMacroScript( const char *text ) {
+	return (qboolean)( UI_JPMacroKeyword( text, jpMacroScript, ARRAY_LEN( jpMacroScript ) )
+		|| UI_JPMacroKeyword( text, jpMacroTurn, ARRAY_LEN( jpMacroTurn ) ) );
+}
+
+static qboolean UI_JPMacroCommands( const char *text, qboolean lines, int depth );
+
+// a cvar that is executed with vstr
+static qboolean UI_JPMacroCvar( const char *name, int depth ) {
+	char value[256];
+
+	if ( depth > JP_MACRO_MAX_DEPTH )
+		return qtrue;
+
+	trap->Cvar_VariableStringBuffer( name, value, sizeof( value ) );
+	Q_strlwr( value );
+	if ( UI_JPMacroScript( value ) )
+		return qtrue;
+	return UI_JPMacroCommands( value, qfalse, depth );
+}
+
+// a file that is executed with exec. As in the plugin a file that can not be read counts as a macro.
+static qboolean UI_JPMacroFile( const char *name, int depth ) {
+	char path[MAX_QPATH];
+	fileHandle_t f = 0;
+	char *text;
+	int len;
+	qboolean macro;
+
+	if ( depth > JP_MACRO_MAX_DEPTH )
+		return qtrue;
+
+	Q_strncpyz( path, name, sizeof( path ) );
+	len = trap->FS_Open( path, &f, FS_READ );
+	if ( !f ) {
+		Q_strcat( path, sizeof( path ), ".cfg" );
+		len = trap->FS_Open( path, &f, FS_READ );
+		if ( !f )
+			return qtrue;
+	}
+	len = Com_Clampi( 0, JP_MACRO_MAX_FILE, len );
+
+	text = (char *)BG_TempAlloc( len + 1 );
+	trap->FS_Read( text, len, f );
+	trap->FS_Close( f );
+	text[len] = '\0';
+	Q_strlwr( text );
+
+	macro = (qboolean)( UI_JPMacroScript( text ) || UI_JPMacroCommands( text, qtrue, depth ) );
+	BG_TempFree( len + 1 );
+	return macro;
+}
+
+// the commands of a binding, a cvar or a file (lines: a line end also ends a command), text in lower case:
+// qtrue if one of them executes a file or a cvar that is a macro
+static qboolean UI_JPMacroCommands( const char *text, qboolean lines, int depth ) {
+	char arg[256];
+	const char *p = text;
+
+#define JP_MACRO_EOL( c ) ( lines && ( (c) == '\n' || (c) == '\r' ) )
+	while ( *p ) {
+		qboolean exec, vstr;
+
+		while ( *p == ';' || *p == ' ' || *p == '\t' || JP_MACRO_EOL( *p ) )
+			p++;
+
+		exec = (qboolean)( !Q_strncmp( p, "exec ", 5 ) || !Q_strncmp( p, "exec\t", 5 ) );
+		vstr = (qboolean)( !Q_strncmp( p, "vstr ", 5 ) || !Q_strncmp( p, "vstr\t", 5 ) );
+		if ( exec || vstr ) {
+			size_t len = 0;
+
+			p += 4;
+			while ( *p == ' ' || *p == '\t' )
+				p++;
+
+			if ( *p == '"' ) {
+				for ( p++; *p && *p != '"' && !JP_MACRO_EOL( *p ); p++ ) {
+					if ( len < sizeof( arg ) - 1 )
+						arg[len++] = *p;
+				}
+				if ( *p == '"' )
+					p++;
+			}
+			else {
+				for ( ; *p && *p != ';' && *p != ' ' && *p != '\t' && !JP_MACRO_EOL( *p ); p++ ) {
+					if ( len < sizeof( arg ) - 1 )
+						arg[len++] = *p;
+				}
+			}
+			arg[len] = '\0';
+
+			if ( exec ? UI_JPMacroFile( arg, depth + 1 ) : UI_JPMacroCvar( arg, depth + 1 ) )
+				return qtrue;
+		}
+
+		// the rest of the command, a ; inside quotes does not end it
+		while ( *p && *p != ';' && !JP_MACRO_EOL( *p ) ) {
+			if ( *p++ == '"' ) {
+				while ( *p && *p != '"' && !JP_MACRO_EOL( *p ) )
+					p++;
+				if ( *p == '"' )
+					p++;
+			}
+		}
+	}
+#undef JP_MACRO_EOL
+	return qfalse;
+}
+
+// bind in lower case
+static qboolean UI_JPMacroBinding( const char *bind ) {
+	if ( strchr( bind, ';' ) ) {
+		if ( UI_JPMacroScript( bind ) || UI_JPMacroKeyword( bind, jpMacroForce, ARRAY_LEN( jpMacroForce ) ) )
+			return qtrue;
+		return UI_JPMacroCommands( bind, qfalse, 0 );
+	}
+
+	if ( strstr( bind, JP_MACRO_MARK ) )
+		return qfalse;
+	if ( strstr( bind, "exec " ) || strstr( bind, "exec\t" ) || strstr( bind, "vstr " ) || strstr( bind, "vstr\t" ) )
+		return UI_JPMacroCommands( bind, qfalse, 0 );
+	return UI_JPMacroKeyword( bind, jpMacroTurn, ARRAY_LEN( jpMacroTurn ) );
+}
+
 static void UI_JPMacroScan_f( void ) {
-	char bind[256], text[300];
+	char bind[256], lower[256], text[300];
 	char *c;
 	int key;
 
 	for ( key = 0; key < JP_MAX_BINDS; key++ ) {
 		bind[0] = '\0';
 		trap->Key_GetBindingBuf( key, bind, sizeof( bind ) );
-		if ( !bind[0] || !strncmp( bind, JP_MACRO_PREFIX, strlen( JP_MACRO_PREFIX ) ) || !UI_JPMacroBinding( bind ) )
+		Q_strncpyz( lower, bind, sizeof( lower ) );
+		Q_strlwr( lower );
+		if ( !lower[0] || !UI_JPMacroBinding( lower ) )
 			continue;
 
 		trap->Print( "Illegal binding found.... removing\n" );
@@ -131,7 +274,7 @@ static void UI_JPMacroEnable_f( void ) {
 	for ( key = 0; key < JP_MAX_BINDS; key++ ) {
 		bind[0] = '\0';
 		trap->Key_GetBindingBuf( key, bind, sizeof( bind ) );
-		if ( strncmp( bind, JP_MACRO_PREFIX, strlen( JP_MACRO_PREFIX ) ) )
+		if ( Q_stricmpn( bind, JP_MACRO_PREFIX, strlen( JP_MACRO_PREFIX ) ) )
 			continue;
 		memmove( bind, bind + strlen( JP_MACRO_PREFIX ), strlen( bind + strlen( JP_MACRO_PREFIX ) ) + 1 );
 		for ( c = bind; *c; c++ ) {
