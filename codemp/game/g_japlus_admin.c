@@ -1046,7 +1046,7 @@ static const jpCommand_t jpAdminCommands[] = {
 	{ "ammap",			Cmd_ammap_f,		qtrue },
 	{ "amrename",		Cmd_amrename_f,		qtrue },
 	{ "amvstr",			Cmd_amvstr_f,		qtrue },
-	{ "amorigin",		Cmd_amorigin_f,		qtrue },
+	{ "amorigin",		Cmd_amorigin_f,		qfalse },
 	{ "amtele",			Cmd_amtele_f,		qtrue },
 	{ "amtelemark",		Cmd_amtelemark_f,	qfalse },
 	{ "amempower",		Cmd_amempower_f,	qtrue },
