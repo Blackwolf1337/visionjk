@@ -2052,6 +2052,7 @@ void CG_JPTwoPlayerAnimCamera( const playerState_t *ps );
 void CG_JPCameraRange( void );
 void CG_JPHookTrail( centity_t *cent, const struct weaponInfo_s *weapon );
 qboolean CG_JPDuelIgnoreEvent( int clientNum );
+qboolean CG_JPInSeparatedDuel( void );
 qboolean CG_JPDuelIgnoreExplosion( int effect );
 void CG_JPPluginDisable_f( void );
 void CG_JPReloadReplier_f( void );

@@ -1994,7 +1994,7 @@ void CG_JPHookTrail( centity_t *cent, const struct weaponInfo_s *weapon )
 	if ( owner < 0 || owner >= MAX_CLIENTS )
 		return;
 	oc = &cg_entities[owner];
-	if ( !(oc->currentState.eFlags2 & EF2_HOOK) || !oc->ghoul2 || !cgs.clientinfo[owner].infoValid )
+	if ( !oc->ghoul2 || !cgs.clientinfo[owner].infoValid )
 		return;
 
 	if ( !trap->G2API_GetBoltMatrix( oc->ghoul2, 0, cgs.clientinfo[owner].bolt_rhand, &boltMatrix, oc->turAngles, oc->lerpOrigin, cg.time, cgs.gameModels, oc->modelScale ) )

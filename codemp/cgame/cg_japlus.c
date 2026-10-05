@@ -388,8 +388,14 @@ qboolean CG_JPDuelIgnoreEvent( int clientNum ) {
 		&& cg.snap->ps.duelInProgress && cg.snap->ps.duelIndex != clientNum;
 }
 
+// the local player is in a private duel and the server separates duels: missiles, trip mine lasers and explosions
+// are not drawn at all
+qboolean CG_JPInSeparatedDuel( void ) {
+	return cg.snap && cg.snap->ps.duelInProgress && cgs.jpDuelAlpha >= 0;
+}
+
 qboolean CG_JPDuelIgnoreExplosion( int effect ) {
-	if ( !cg.snap || !cg.snap->ps.duelInProgress || cgs.jpDuelAlpha < 0 )
+	if ( !CG_JPInSeparatedDuel() )
 		return qfalse;
 
 	switch ( effect ) {

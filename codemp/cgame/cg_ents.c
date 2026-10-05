@@ -1786,7 +1786,9 @@ Ghoul2 Insert End
 		}
 	}
 
-	if ( cent->currentState.time == -1 && cent->currentState.weapon == WP_TRIP_MINE && (cent->currentState.eFlags & EF_FIRING) )
+	// JA+ client plugin: no trip mine lasers while in a separated private duel
+	if ( cent->currentState.time == -1 && cent->currentState.weapon == WP_TRIP_MINE && (cent->currentState.eFlags & EF_FIRING)
+		&& !CG_JPInSeparatedDuel() )
 	{ //if force sight is active, render the laser multiple times up to the force sight level to increase visibility
 		if (cent->currentState.bolt2 == 1)
 		{
@@ -2528,6 +2530,10 @@ static void CG_Missile( centity_t *cent ) {
 			return;
 		}
 	}
+	else if ( CG_JPInSeparatedDuel() )
+	{ // JA+ client plugin: no missiles while in a separated private duel
+		return;
+	}
 	else if ( cent->currentState.eFlags & EF_ALT_FIRING )
 	{
 		// add trails
@@ -2633,8 +2639,12 @@ Ghoul2 Insert End
 	}
 
 	// spin as it moves
-	if ( s1->apos.trType != TR_INTERPOLATE )
+	// JA+ client plugin: the hook (a stun baton missile) points along its flight, when it holds away from its owner
+	if ( s1->apos.trType != TR_INTERPOLATE && !(s1->weapon == WP_STUN_BATON && VectorLength( s1->pos.trDelta ) <= 5.0f) )
 	{
+		if ( s1->weapon == WP_STUN_BATON )
+			vectoangles( s1->pos.trDelta, cent->lerpAngles );
+
 		// convert direction of travel into axis
 		if ( VectorNormalize2( s1->pos.trDelta, ent.axis[0] ) == 0 ) {
 			ent.axis[0][2] = 1;
@@ -2666,6 +2676,14 @@ Ghoul2 Insert End
 	}
 	else
 	{
+		if ( s1->weapon == WP_STUN_BATON && s1->otherEntityNum >= 0 && s1->otherEntityNum < MAX_CLIENTS
+			&& (cg_entities[s1->otherEntityNum].currentState.eFlags2 & EF2_HOOK) )
+		{
+			vec3_t dir;
+
+			VectorSubtract( cent->lerpOrigin, cg_entities[s1->otherEntityNum].lerpOrigin, dir );
+			vectoangles( dir, cent->lerpAngles );
+		}
 		AnglesToAxis( cent->lerpAngles, ent.axis );
 	}
 
