@@ -296,7 +296,7 @@ void CG_JPCameraOrbit( void ) {
 			CG_JPSetRange( 80 );
 			jpOrbitActive = qfalse;
 		}
-		else if ( cg_cameraOrbit.integer && cg.time > cg.nextOrbitTime ) {
+		else if ( !jpOrbitActive && cg_cameraOrbit.integer && cg.time > cg.nextOrbitTime ) {
 			// (base game)
 			cg.nextOrbitTime = cg.time + cg_cameraOrbitDelay.integer;
 			cg_thirdPersonAngle.value += cg_cameraOrbit.value;
