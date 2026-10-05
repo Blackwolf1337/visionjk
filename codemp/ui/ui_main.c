@@ -626,6 +626,7 @@ void AssetCache(void) {
 	//}
 	//Com_Printf("Menu Size: %i bytes\n", sizeof(Menus));
 	uiInfo.uiDC.Assets.gradientBar			= trap->R_RegisterShaderNoMip( ASSET_GRADIENTBAR );
+	uiInfo.q3HeadHiddenIcon					= trap->R_RegisterShaderNoMip( "gfx/menus/icon_hidden.jpg" );	// JA+
 	uiInfo.uiDC.Assets.fxBasePic			= trap->R_RegisterShaderNoMip( ART_FX_BASE );
 	uiInfo.uiDC.Assets.fxPic[0]				= trap->R_RegisterShaderNoMip( ART_FX_RED );
 	uiInfo.uiDC.Assets.fxPic[1]				= trap->R_RegisterShaderNoMip( ART_FX_ORANGE );//trap->R_RegisterShaderNoMip( ART_FX_YELLOW );
@@ -5584,6 +5585,66 @@ static void UI_UpdateCharacter( qboolean changedModel )
 
 /*
 ==================
+UI_UpdateNormalMenuCharacter
+
+JA+: puts the model and skin of the "model" cvar on the item "character" of the focused menu, the preview of
+the player menu. qfalse if the model can not be shown.
+==================
+*/
+static qboolean UI_UpdateNormalMenuCharacter( void )
+{
+	menuDef_t *menu;
+	itemDef_t *item;
+	char model[MAX_QPATH];
+	char modelPath[MAX_QPATH];
+	char skinPath[MAX_QPATH];
+	char *skin;
+	int	animRunLength;
+
+	menu = Menu_GetFocused();
+
+	if (!menu)
+	{
+		return qtrue;
+	}
+
+	item = (itemDef_t *) Menu_FindItemByName(menu, "character");
+
+	if (!item)
+	{//the plugin stops with an error here unless in siege, but the menus of the base game have no preview
+		return qtrue;
+	}
+
+	ItemParse_model_g2anim_go( item, ui_char_anim.string );
+
+	trap->Cvar_VariableStringBuffer( "model", model, sizeof(model) );
+	if ( !model[0] )
+	{
+		return qtrue;
+	}
+
+	skin = strchr( model, '/' );
+	if ( skin )
+	{
+		*skin++ = '\0';
+		Com_sprintf( skinPath, sizeof( skinPath ), "models/players/%s/model_%s.skin", model, skin );
+	}
+	else
+	{
+		Com_sprintf( skinPath, sizeof( skinPath ), "models/players/%s/model_default.skin", model );
+	}
+
+	Com_sprintf( modelPath, sizeof( modelPath ), "models/players/%s/model.glm", model );
+	if ( !ItemParse_asset_model_go( item, modelPath, &animRunLength ) )
+	{
+		return qfalse;
+	}
+	ItemParse_model_g2skin_go( item, skinPath );
+	return qtrue;
+}
+
+/*
+==================
 UI_CheckServerName
 ==================
 */
@@ -7306,31 +7367,48 @@ qboolean UI_hasSkinForBase(const char *base, const char *team) {
 
 /*
 ==================
+UI_HeadIsForSkinColor
+
+JA+: the head list shows the skins of the team color, without a team every skin that belongs to no team
+(the base game: only the "/default" skins)
+==================
+*/
+static qboolean UI_HeadIsForSkinColor(const char *name) {
+	qboolean red, blue;
+
+	if (!name[0])
+	{
+		return qfalse;
+	}
+
+	red = (qboolean)(strstr(name, "/red") || strstr(name, "_red"));
+	blue = (qboolean)(strstr(name, "/blue") || strstr(name, "_blue"));
+
+	switch(uiSkinColor)
+	{
+		case TEAM_BLUE:
+			return blue;
+		case TEAM_RED:
+			return red;
+		default:
+			return (qboolean)(!red && !blue);
+	}
+}
+
+/*
+==================
 UI_HeadCountByColor
 ==================
 */
 static int UI_HeadCountByColor(void) {
 	int i, c;
-	char *teamname;
 
 	c = 0;
-
-	switch(uiSkinColor)
-	{
-		case TEAM_BLUE:
-			teamname = "/blue";
-			break;
-		case TEAM_RED:
-			teamname = "/red";
-			break;
-		default:
-			teamname = "/default";
-	}
 
 	// Count each head with this color
 	for (i=0; i<uiInfo.q3HeadCount; i++)
 	{
-		if (uiInfo.q3HeadNames[i][0] && strstr(uiInfo.q3HeadNames[i], teamname))
+		if (UI_HeadIsForSkinColor(uiInfo.q3HeadNames[i]))
 		{
 			c++;
 		}
@@ -8159,27 +8237,13 @@ UI_HeadCountByColor
 ==================
 */
 static const char *UI_SelectedTeamHead(int index, int *actual) {
-	char *teamname;
 	int i,c=0;
-
-	switch(uiSkinColor)
-	{
-		case TEAM_BLUE:
-			teamname = "/blue";
-			break;
-		case TEAM_RED:
-			teamname = "/red";
-			break;
-		default:
-			teamname = "/default";
-			break;
-	}
 
 	// Count each head with this color
 
 	for (i=0; i<uiInfo.q3HeadCount; i++)
 	{
-		if (uiInfo.q3HeadNames[i][0] && strstr(uiInfo.q3HeadNames[i], teamname))
+		if (UI_HeadIsForSkinColor(uiInfo.q3HeadNames[i]))
 		{
 			if (c==index)
 			{
@@ -8861,6 +8925,14 @@ qboolean UI_FeederSelection(float feederFloat, int index, itemDef_t *item)
 			trap->Cvar_Set ( "char_color_red", "255" );			//standard colors
 			trap->Cvar_Set ( "char_color_green", "255" );
 			trap->Cvar_Set ( "char_color_blue", "255" );
+
+			// JA+: show it on the model of the player menu, a head that can not be shown leaves the list
+			if ( !UI_UpdateNormalMenuCharacter() )
+			{
+				uiInfo.q3HeadNames[index][0] = '\0';
+				uiInfo.q3HeadIcons[index] = 0;
+				UI_FeederSelection( feederFloat, uiInfo.q3SelectedHead, item );
+			}
 		}
 	}
 	else if (feederID == FEEDER_MOVES)
@@ -9532,6 +9604,29 @@ static void UI_BuildHolster_List( void )
 	}
 }
 
+static qboolean UI_FileExists( const char *path )
+{
+	fileHandle_t f = 0;
+
+	trap->FS_Open( path, &f, FS_READ );
+	if ( !f )
+	{
+		return qfalse;
+	}
+	trap->FS_Close( f );
+	return qtrue;
+}
+
+// JA+: skins the plugin keeps out of the head list
+static const char *q3HeadsNotForPlayers[] = {
+	"luke/menu",
+	"kyle/menu",
+	"tavion/possessed",
+	"jedi/siege",
+	"jedi/seige",
+	"jedi/siege2",
+};
+
 /*
 =================
 PlayerModel_BuildList
@@ -9566,16 +9661,26 @@ static void UI_BuildQ3Model_List( void )
 		if (!strcmp(dirptr,".") || !strcmp(dirptr,".."))
 			continue;
 
+		// JA+: only models a player can use: no creatures, a model.glm and no animations of its own
+		if (!strcmp(dirptr,"mutant_rancor") || !strcmp(dirptr,"r5d2"))
+			continue;
+
+		if (!UI_FileExists(va("models/players/%s/model.glm",dirptr)) || UI_FileExists(va("models/players/%s/animation.cfg",dirptr)))
+			continue;
 
 		numfiles = trap->FS_GetFileList( va("models/players/%s",dirptr), "skin", filelist, 2048 );
 		fileptr  = filelist;
 		for (j=0; j<numfiles && uiInfo.q3HeadCount < MAX_Q3PLAYERMODELS;j++,fileptr+=filelen+1)
 		{
 			int skinLen = 0;
+			qboolean hasIcon;	// JA+
 
 			filelen = strlen(fileptr);
 
 			COM_StripExtension(fileptr,skinname, sizeof( skinname ) );
+
+			if (!strstr(skinname, "model_"))	// JA+
+				continue;
 
 			skinLen = strlen(skinname);
 			k = 0;
@@ -9604,7 +9709,9 @@ static void UI_BuildQ3Model_List( void )
 			if (f)
 			*/
 			check = &skinname[1];
-			if (bIsImageFile(dirptr, check))
+			hasIcon = bIsImageFile(dirptr, check);
+			// JA+: a skin without icon is listed with the placeholder picture of the plugin, if that is installed
+			if (hasIcon || uiInfo.q3HeadHiddenIcon)
 			{ //if it exists
 				qboolean iconExists = qfalse;
 
@@ -9613,6 +9720,19 @@ static void UI_BuildQ3Model_List( void )
 				if (skinname[0] == '_')
 				{ //change character to append properly
 					skinname[0] = '/';
+				}
+
+				for (s = 0; s < (int)ARRAY_LEN(q3HeadsNotForPlayers); s++)
+				{
+					if (!Q_stricmp(va("%s%s", dirptr, skinname), q3HeadsNotForPlayers[s]))
+					{
+						break;
+					}
+				}
+
+				if (s < (int)ARRAY_LEN(q3HeadsNotForPlayers))
+				{
+					continue;
 				}
 
 				s = 0;
@@ -9633,7 +9753,7 @@ static void UI_BuildQ3Model_List( void )
 				}
 
 				Com_sprintf( uiInfo.q3HeadNames[uiInfo.q3HeadCount], sizeof(uiInfo.q3HeadNames[uiInfo.q3HeadCount]), va("%s%s", dirptr, skinname));
-				uiInfo.q3HeadIcons[uiInfo.q3HeadCount++] = 0;//trap->R_RegisterShaderNoMip(fpath);
+				uiInfo.q3HeadIcons[uiInfo.q3HeadCount++] = hasIcon ? 0 : uiInfo.q3HeadHiddenIcon;//trap->R_RegisterShaderNoMip(fpath);
 				//rww - we are now registering them as they are drawn like the TA feeder, so as to decrease UI load time.
 			}
 

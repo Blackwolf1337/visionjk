@@ -365,6 +365,7 @@ typedef struct uiInfo_s {
 	char					q3HeadNames[MAX_Q3PLAYERMODELS][64];
 	qhandle_t				q3HeadIcons[MAX_Q3PLAYERMODELS];
 	int						q3SelectedHead;
+	qhandle_t				q3HeadHiddenIcon;	// JA+: picture for skins that have no icon
 
 	// JA+: holster models of the player menu
 	int						holsterCount;

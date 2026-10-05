@@ -7115,6 +7115,12 @@ qboolean ItemParse_asset_model_go( itemDef_t *item, const char *name,int *runTim
 					int animIndex;
 					char *slash;
 
+					// JA+: a player model with a skeleton of its own can not play the menu animations
+					if ( name[0] && strstr( name, "models/players/" ) && !strstr( GLAName, "players/_humanoid/" ) )
+					{
+						return qfalse;
+					}
+
 					slash = Q_strrchr( GLAName, '/' );
 
 					if ( slash )
