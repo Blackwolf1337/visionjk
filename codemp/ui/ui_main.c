@@ -5004,6 +5004,7 @@ static void UI_UpdateCharacterCvars ( void )
 	trap->Cvar_Set ( "char_color_green", UI_Cvar_VariableString ( "ui_char_color_green" ) );
 	trap->Cvar_Set ( "char_color_blue", UI_Cvar_VariableString ( "ui_char_color_blue" ) );
 	trap->Cvar_Set ( "ui_selectedModelIndex", "-1");
+	trap->Cvar_Set ( "ui_selectedHolsterIndex", "-1");	// JA+
 
 }
 
@@ -8039,6 +8040,9 @@ static int UI_FeederCount(float feederID)
 		case FEEDER_DEMOS:
 			return uiInfo.demoCount;
 
+		case FEEDER_HOLSTERS:	// JA+
+			return uiInfo.holsterCount;
+
 		case FEEDER_MOVES :
 
 			for (i=0;i<MAX_MOVES;i++)
@@ -8552,6 +8556,25 @@ static qhandle_t UI_FeederItemImage(float feederID, int index) {
 	{
 		return 0;
 	}
+	else if (feederID == FEEDER_HOLSTERS)
+	{// JA+
+		if (index >= 0 && index < uiInfo.holsterCount)
+		{
+			int selHolster = trap->Cvar_VariableValue("ui_selectedHolsterIndex");
+
+			if (selHolster != -1 && uiInfo.holsterSelected != selHolster)
+			{
+				uiInfo.holsterSelected = selHolster;
+				Menu_SetFeederSelection(NULL, FEEDER_HOLSTERS, selHolster, NULL);
+			}
+
+			if (!uiInfo.holsterIcons[index])
+			{
+				uiInfo.holsterIcons[index] = trap->R_RegisterShaderNoMip(va("models/weapons2/holster/%s", uiInfo.holsterNames[index]));
+			}
+			return uiInfo.holsterIcons[index];
+		}
+	}
 	else if (feederID == FEEDER_Q3HEADS)
 	{
 		int actual = 0;
@@ -8808,6 +8831,23 @@ qboolean UI_FeederSelection(float feederFloat, int index, itemDef_t *item)
 	static char info[MAX_STRING_CHARS];
 	const int feederID = feederFloat;
 
+	if (feederID == FEEDER_HOLSTERS)
+	{// JA+: the picture "model<N>" stands for holster model N of cp_holster
+		int holster = 1;
+
+		uiInfo.holsterSelected = index;
+		trap->Cvar_Set("ui_selectedHolsterIndex", va("%i", index));
+		if (index < 0 || index >= uiInfo.holsterCount)
+		{
+			return qtrue;
+		}
+		if (sscanf(uiInfo.holsterNames[index], "model%i", &holster) != 1)
+		{
+			holster = 1;
+		}
+		trap->Cvar_Set("cp_holster", va("%i", holster));
+		return qtrue;
+	}
 	if (feederID == FEEDER_Q3HEADS)
 	{
 		int actual = 0;
@@ -9464,6 +9504,36 @@ static qboolean bIsImageFile(const char* dirptr, const char* skinname)
 
 /*
 =================
+UI_BuildHolster_List
+
+JA+: one entry per picture models/weapons2/holster/model<N>.jpg, "model0" is no holster
+=================
+*/
+static void UI_BuildHolster_List( void )
+{
+	int		numfiles, i;
+	char	filelist[2048];
+	char	*fileptr;
+
+	uiInfo.holsterCount = 0;
+	Q_strncpyz( uiInfo.holsterNames[0], "model0", sizeof( uiInfo.holsterNames[0] ) );
+	uiInfo.holsterIcons[uiInfo.holsterCount++] = 0;
+
+	numfiles = trap->FS_GetFileList( "models/weapons2/holster", "jpg", filelist, sizeof( filelist ) );
+	fileptr = filelist;
+	for ( i = 0; i < numfiles && uiInfo.holsterCount < MAX_HOLSTERS; i++, fileptr += strlen( fileptr ) + 1 )
+	{
+		if ( !strstr( fileptr, "model" ) || strstr( fileptr, "model0" ) )
+		{
+			continue;
+		}
+		COM_StripExtension( fileptr, uiInfo.holsterNames[uiInfo.holsterCount], sizeof( uiInfo.holsterNames[0] ) );
+		uiInfo.holsterIcons[uiInfo.holsterCount++] = 0;
+	}
+}
+
+/*
+=================
 PlayerModel_BuildList
 =================
 */
@@ -10015,6 +10085,7 @@ void UI_Init( qboolean inGameLoad ) {
 	trap->LAN_LoadCachedServers();
 
 	UI_BuildQ3Model_List();
+	UI_BuildHolster_List();	// JA+
 	UI_LoadBots();
 
 	UI_LoadForceConfig_List();

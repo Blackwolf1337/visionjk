@@ -141,6 +141,7 @@ typedef struct playerInfo_s {
 #define MAX_DEMOS				2048 // 256
 #define MAX_MOVIES				2048 // 256
 #define MAX_Q3PLAYERMODELS		1024 //256
+#define MAX_HOLSTERS			32		// JA+
 
 #define DEMO_DIRECTORY "demos"
 #define DEMO_EXTENSION "dm_"
@@ -364,6 +365,12 @@ typedef struct uiInfo_s {
 	char					q3HeadNames[MAX_Q3PLAYERMODELS][64];
 	qhandle_t				q3HeadIcons[MAX_Q3PLAYERMODELS];
 	int						q3SelectedHead;
+
+	// JA+: holster models of the player menu
+	int						holsterCount;
+	char					holsterNames[MAX_HOLSTERS][64];
+	qhandle_t				holsterIcons[MAX_HOLSTERS];
+	int						holsterSelected;
 
 	int						forceConfigCount;
 	int						forceConfigSelected;
