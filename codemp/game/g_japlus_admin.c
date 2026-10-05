@@ -613,6 +613,7 @@ static void Cmd_amsay_f( gentity_t *ent, qboolean rcon ) {
 
 	if ( jp_wordFilter.integer > 0 && (jp_wordFilter.integer & 0x20) && G_WordFilter( ent, text ) )
 		return;
+	WebAdmin_Chat( "admin", ent, NULL, text );
 
 	// only admins and the sender see it
 	for ( i = 0; i < level.maxclients; i++ ) {

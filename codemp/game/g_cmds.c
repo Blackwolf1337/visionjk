@@ -1703,6 +1703,10 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText ) 
 			return;
 	}
 
+	// chat view of the web admin. A tell comes here a second time as the echo to its sender.
+	if ( !(mode == SAY_TELL && target == ent) )
+		WebAdmin_Chat( mode == SAY_TEAM ? "team" : (mode == SAY_TELL ? "tell" : "all"), ent, target, text );
+
 	if ( target ) {
 		G_SayTo( ent, target, mode, color, name, text, locMsg );
 		return;

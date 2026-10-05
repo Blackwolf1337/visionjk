@@ -100,7 +100,7 @@ void JP_ApplyModelScale( gentity_t *ent ) {
 	VectorSet( ent->modelScale, scale, scale, scale );
 }
 
-static void JP_SetModelScale( gentity_t *ent, float scale, const char *userinfo ) {
+void JP_SetModelScale( gentity_t *ent, float scale, const char *userinfo ) {
 	int i;
 
 	ent->client->pers.jp.modelScale = scale;

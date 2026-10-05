@@ -944,7 +944,7 @@ void G_FreeEntity( gentity_t *ed ) {
 		return;
 	}
 
-	WebAdmin_EntityFreed( ed->s.number );
+	WebAdmin_EntityFreed( ed-g_entities );
 
 	trap->UnlinkEntity ((sharedEntity_t *)ed);		// unlink from world
 

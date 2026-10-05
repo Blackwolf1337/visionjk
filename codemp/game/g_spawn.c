@@ -955,7 +955,7 @@ void G_SpawnGEntityFromSpawnVars( qboolean inSubBSP ) {
 	if ( !G_CallSpawn( ent ) ) {
 		G_FreeEntity( ent );
 	} else if ( ent->inuse ) {
-		WebAdmin_EntitySpawned( ent->s.number );
+		WebAdmin_EntitySpawned( ent-g_entities );
 	}
 
 	//Tag on the ICARUS scripting information only to valid recipients

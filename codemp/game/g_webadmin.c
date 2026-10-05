@@ -96,6 +96,26 @@ static char		*mapData;
 static int		mapLen;
 static char		mapDataName[MAX_QPATH];
 
+// the newest chat lines, a ring. Line number n is in chatLines[(n - 1) % WA_MAX_CHAT].
+#define WA_MAX_CHAT		128
+
+typedef struct waChatLine_s {
+	int		seq;
+	char	time[12];				// server clock, HH:MM:SS
+	int		clientNum;				// -1: server console or the panel
+	char	name[MAX_NETNAME];
+	char	team[12];
+	char	to[MAX_NETNAME];		// who a tell went to
+	char	mode[8];				// all, team, tell, clan, admin, server, panel
+	char	text[MAX_SAY_TEXT];
+} waChatLine_t;
+
+static waChatLine_t	chatLines[WA_MAX_CHAT];
+static int			chatSeq;		// number of the newest line, the first one is 1
+static int			chatEpoch;		// start time of this map. The module is loaded again for each one, the numbers start over
+
+static const char *WA_TeamName( team_t team );
+
 /*
 ==============================================================================
 
@@ -307,6 +327,29 @@ static qboolean WA_FormValue( const char *form, const char *key, char *out, int 
 	}
 	out[0] = '\0';
 	return qfalse;
+}
+
+// The page sends UTF-8, the game has one byte per character (Latin-1). What the game can not show becomes '?'.
+static void WA_Utf8ToLatin1( char *s ) {
+	const unsigned char	*in = (const unsigned char *)s;
+	char				*out = s;
+
+	while ( *in ) {
+		if ( *in < 0x80 ) {
+			*out++ = (char)*in++;
+		} else if ( ( *in & 0xE0 ) == 0xC0 && ( in[1] & 0xC0 ) == 0x80 ) {
+			const int cp = ( ( *in & 0x1F ) << 6 ) | ( in[1] & 0x3F );
+			*out++ = ( cp >= 0xA0 && cp <= 0xFF ) ? (char)cp : '?';
+			in += 2;
+		} else {
+			// a longer sequence or a stray byte
+			*out++ = '?';
+			in++;
+			while ( ( *in & 0xC0 ) == 0x80 )
+				in++;
+		}
+	}
+	*out = '\0';
 }
 
 static char *WA_ReadGameFile( const char *path, int *outLen ) {
@@ -563,14 +606,16 @@ static void WA_ApiAction( waConnection_t *c, const char *body ) {
 
 	// actions on the server
 	if ( !strcmp( action, "say" ) ) {
+		WA_Utf8ToLatin1( value );
 		Q_strstrip( value, "\n\r\";", NULL );
 		trap->SendServerCommand( -1, va( "chat \"" S_COLOR_RED "Admin" S_COLOR_WHITE ": %s\"", value ) );
+		WebAdmin_Chat( "panel", NULL, NULL, value );
 		WA_ActionResult( c, qtrue, "message sent" );
 		return;
 	}
 	if ( !strcmp( action, "addbot" ) ) {
 		Q_strstrip( value, "\n\r\";", NULL );
-		trap->SendConsoleCommand( EXEC_APPEND, va( "addbot \"%s\" 3\n", value[0] ? value : "Kyle" ) );
+		trap->SendConsoleCommand( EXEC_APPEND, va( "addbot \"%s\" 3\n", value[0] ? value : "Kyle Katarn" ) );	// JKAdmin says "Kyle", no bot has that name
 		WA_ActionResult( c, qtrue, "bot added" );
 		return;
 	}
@@ -629,12 +674,22 @@ static void WA_ApiAction( waConnection_t *c, const char *body ) {
 		WA_ActionResult( c, qtrue, va( "armor %d", v ) );
 	} else if ( !strcmp( action, "scale" ) ) {
 		const int v = Com_Clampi( 10, 500, atoi( value ) );
-		ent->client->ps.iModelScale = v;
-		VectorSet( ent->modelScale, v / 100.0f, v / 100.0f, v / 100.0f );
+		char userinfo[MAX_INFO_STRING];
+
+		// JA+ keeps the scale in pers.jp.modelScale and applies it again at every spawn
+		trap->GetUserinfo( id, userinfo, sizeof( userinfo ) );
+		JP_SetModelScale( ent, v / 100.0f, userinfo );
 		WA_ActionResult( c, qtrue, va( "scale %d%%", v ) );
 	} else if ( !strcmp( action, "kill" ) ) {
+		const jpClient_t *jp = &ent->client->pers.jp;
+
 		if ( ent->health <= 0 || ent->client->sess.sessionTeam == TEAM_SPECTATOR ) {
 			WA_ActionResult( c, qfalse, "player is not alive" );
+			return;
+		}
+		// JA+: the states the kill command refuses too
+		if ( jp->sleeping || jp->down || jp->isGhost ) {
+			WA_ActionResult( c, qfalse, "player is sleeping, knocked down or a ghost" );
 			return;
 		}
 		ent->flags &= ~FL_GODMODE;
@@ -642,14 +697,34 @@ static void WA_ApiAction( waConnection_t *c, const char *body ) {
 		WA_ActionResult( c, qtrue, "killed" );
 	} else if ( !strcmp( action, "god" ) ) {
 		ent->flags ^= FL_GODMODE;
+		// JA+: like the god cheat, so jp_allowGodTalk does not take it away with the chat bubble
+		ent->client->pers.jp.cheatGod = (qboolean)( ( ent->flags & FL_GODMODE ) != 0 );
 		WA_ActionResult( c, qtrue, ( ent->flags & FL_GODMODE ) ? "god mode on" : "god mode off" );
 	} else if ( !strcmp( action, "team" ) ) {
+		team_t		now;
+		qboolean	ok;
+
 		if ( strcmp( value, "red" ) && strcmp( value, "blue" ) && strcmp( value, "free" ) && strcmp( value, "spectator" ) ) {
 			WA_ActionResult( c, qfalse, "team must be red, blue, free or spectator" );
 			return;
 		}
-		SetTeam( ent, value );
-		WA_ActionResult( c, qtrue, va( "team %s", value ) );
+		// JA+: past the team locks and the team balance, like amforceteam
+		JP_ForceTeam( ent, value );
+
+		now = ent->client->sess.sessionTeam;
+		if ( !strcmp( value, "spectator" ) )
+			ok = (qboolean)( now == TEAM_SPECTATOR );
+		else if ( level.gametype < GT_TEAM )
+			ok = (qboolean)( now == TEAM_FREE );
+		else if ( !strcmp( value, "free" ) )
+			ok = (qboolean)( now == TEAM_RED || now == TEAM_BLUE );		// the game picks a team
+		else
+			ok = (qboolean)!strcmp( WA_TeamName( now ), value );
+		// JA+: with g_teamForceBalance 2 or 3 the spawn in the bigger team can move the player straight back
+		WA_ActionResult( c, ok, ok ? va( "team %s", WA_TeamName( now ) ) :
+			( g_teamForceBalance.integer >= 2 && level.gametype >= GT_TEAM ) ?
+			"the game did not keep the player there (g_teamForceBalance moves players to balance the teams)" :
+			"the game refused the team change" );
 	} else if ( !strcmp( action, "teleport" ) ) {
 		vec3_t origin;
 
@@ -657,15 +732,29 @@ static void WA_ApiAction( waConnection_t *c, const char *body ) {
 			WA_ActionResult( c, qfalse, "player is not alive" );
 			return;
 		}
+		// JA+: the target checks of rcon amtele
+		if ( ent->client->ps.eFlags & EF_ALT_DIM ) {
+			WA_ActionResult( c, qfalse, "player is in the alternate dimension" );
+			return;
+		}
+		if ( BG_InGrappleMove( ent->client->ps.legsAnim ) || BG_InGrappleMove( ent->client->ps.torsoAnim ) ) {
+			WA_ActionResult( c, qfalse, "player is in a grapple move" );
+			return;
+		}
+		if ( ent->client->pers.jp.refuseTele ) {
+			WA_ActionResult( c, qfalse, "this player refuses to be teleported" );
+			return;
+		}
 		if ( !WA_FormValue( body, "x", xs, sizeof( xs ) ) || !WA_FormValue( body, "y", ys, sizeof( ys ) ) ||
 			 !WA_FormValue( body, "z", zs, sizeof( zs ) ) ) {
 			WA_ActionResult( c, qfalse, "no position" );
 			return;
 		}
-		// the page sends the floor point, stand on it
-		VectorSet( origin, atof( xs ), atof( ys ), atof( zs ) - ent->r.mins[2] + 1.0f );
-		TeleportPlayer( ent, origin, ent->client->ps.viewangles );
-		WA_ActionResult( c, qtrue, "teleported" );
+		// the page sends the floor point, stand on it (JP_ManualTeleport lifts it by one unit)
+		VectorSet( origin, atof( xs ), atof( ys ), atof( zs ) - ent->r.mins[2] );
+		// JA+: frees the hook and honours jp_starTrekTeleport, the path of amtele
+		JP_ManualTeleport( ent, origin, ent->client->ps.viewangles );
+		WA_ActionResult( c, qtrue, jp_starTrekTeleport.integer == 1 ? "teleport started" : "teleported" );
 	} else {
 		WA_ActionResult( c, qfalse, "unknown action" );
 	}
@@ -999,6 +1088,78 @@ static void WA_ApiEntity( waConnection_t *c, const char *body ) {
 /*
 ==============================================================================
 
+Chat
+
+Not in JKAdmin. The game hands every chat line that went out to WebAdmin_Chat,
+the page asks for the lines it does not have yet.
+
+==============================================================================
+*/
+
+void WebAdmin_Chat( const char *mode, const gentity_t *from, const gentity_t *to, const char *text ) {
+	waChatLine_t	*line;
+	qtime_t			now;
+
+	if ( listenSocket == WA_INVALID_SOCKET )
+		return;
+
+	line = &chatLines[chatSeq % WA_MAX_CHAT];
+	memset( line, 0, sizeof( *line ) );
+	line->seq = ++chatSeq;
+
+	trap->RealTime( &now );
+	Com_sprintf( line->time, sizeof( line->time ), "%02i:%02i:%02i", now.tm_hour, now.tm_min, now.tm_sec );
+
+	Q_strncpyz( line->mode, mode, sizeof( line->mode ) );
+	Q_strncpyz( line->text, text, sizeof( line->text ) );
+	if ( from && from->client ) {
+		line->clientNum = (int)( from-g_entities );
+		Q_strncpyz( line->name, from->client->pers.netname, sizeof( line->name ) );
+		Q_strncpyz( line->team, WA_TeamName( from->client->sess.sessionTeam ), sizeof( line->team ) );
+	} else {
+		line->clientNum = -1;
+		Q_strncpyz( line->name, !strcmp( mode, "panel" ) ? S_COLOR_RED "Admin" : "server", sizeof( line->name ) );
+	}
+	if ( to && to->client )
+		Q_strncpyz( line->to, to->client->pers.netname, sizeof( line->to ) );
+}
+
+// the lines after ?since=<number of the newest line the page has>&epoch=<the epoch it got them with>
+static void WA_ApiChat( waConnection_t *c, const char *query ) {
+	waBuffer_t	b = { 0 };
+	char		arg[16];
+	int			since = 0, seq;
+
+	if ( WA_FormValue( query, "since", arg, sizeof( arg ) ) )
+		since = atoi( arg );
+	// the numbers started again since the page asked last, it gets everything
+	if ( !WA_FormValue( query, "epoch", arg, sizeof( arg ) ) || atoi( arg ) != chatEpoch || since < 0 || since > chatSeq )
+		since = 0;
+	if ( since < chatSeq - WA_MAX_CHAT )
+		since = chatSeq - WA_MAX_CHAT;
+
+	WA_BufPrintf( &b, "{\"epoch\":%d,\"seq\":%d,\"messages\":[", chatEpoch, chatSeq );
+	for ( seq = since + 1; seq <= chatSeq; seq++ ) {
+		const waChatLine_t *line = &chatLines[( seq - 1 ) % WA_MAX_CHAT];
+
+		WA_BufPrintf( &b, "%s{\"seq\":%d,\"time\":\"%s\",\"id\":%d,\"mode\":\"%s\",\"team\":\"%s\",\"name\":",
+			seq > since + 1 ? "," : "", line->seq, line->time, line->clientNum, line->mode, line->team );
+		WA_BufJsonString( &b, line->name );
+		WA_BufAppend( &b, ",\"to\":", 6 );
+		WA_BufJsonString( &b, line->to );
+		WA_BufAppend( &b, ",\"text\":", 8 );
+		WA_BufJsonString( &b, line->text );
+		WA_BufAppend( &b, "}", 1 );
+	}
+	WA_BufAppend( &b, "]}", 2 );
+
+	WA_RespondJson( c, &b );
+	WA_BufFree( &b );
+}
+
+/*
+==============================================================================
+
 Connections
 
 ==============================================================================
@@ -1065,6 +1226,8 @@ static void WA_HandleRequest( waConnection_t *c, char *head, const char *body ) 
 		WA_ApiClasses( c );
 	} else if ( !strcmp( method, "GET" ) && !strcmp( path, "/api/export" ) ) {
 		WA_ApiExport( c );
+	} else if ( !strcmp( method, "GET" ) && !strcmp( path, "/api/chat" ) ) {
+		WA_ApiChat( c, query );
 	} else if ( !strcmp( method, "POST" ) && !strcmp( path, "/api/entity" ) ) {
 		WA_ApiEntity( c, body );
 	} else {
@@ -1224,6 +1387,11 @@ void WebAdmin_Init( void ) {
 	}
 
 	WA_SetNonBlocking( listenSocket );
+	// the engine loads the module again for every map and map_restart, the chat lines of the last one are gone
+	{
+		qtime_t now;
+		chatEpoch = trap->RealTime( &now );
+	}
 	listenPort = g_webPort.integer;
 	trap->Print( "Web admin listening on http://%s:%d/\n", g_webBind.string[0] ? g_webBind.string : "0.0.0.0", listenPort );
 }

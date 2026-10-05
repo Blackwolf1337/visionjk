@@ -322,6 +322,7 @@ static void Cmd_say_clan_f( gentity_t *ent ) {
 
 	if ( jp_wordFilter.integer > 0 && (jp_wordFilter.integer & 0x10) && G_WordFilter( ent, text ) )
 		return;
+	WebAdmin_Chat( "clan", ent, NULL, text );
 
 	for ( i = 0; i < level.maxclients; i++ ) {
 		const gentity_t *other = &g_entities[i];

@@ -66,6 +66,18 @@ tr.player.dead td { opacity: .5; }
 .team.red { background: var(--red); } .team.blue { background: var(--blue); } .team.free { background: var(--yellow); } .team.spectator { background: var(--muted); }
 .tag { font-size: 10px; color: var(--muted); border: 1px solid var(--line); border-radius: 2px; padding: 0 3px; margin-left: 4px; }
 #itemsInfo { padding: 8px 10px; color: var(--muted); border-top: 1px solid var(--line); font-size: 12px; }
+#chat { flex: none; height: 36%; min-height: 150px; display: flex; flex-direction: column; border-top: 1px solid var(--line); }
+body.chatClosed #chat { height: auto; min-height: 0; }
+body.chatClosed #chatLog, body.chatClosed #sayForm { display: none; }
+#chatHead { cursor: pointer; user-select: none; }
+#chatNew { color: var(--accent2); }
+#chatLog { flex: 1; min-height: 0; overflow-y: auto; padding: 0 10px 4px; font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
+#chatLog .t { color: var(--muted); font-variant-numeric: tabular-nums; margin-right: 5px; }
+#chatLog .k { font-size: 10px; color: var(--muted); border: 1px solid var(--line); border-radius: 2px; padding: 0 3px; margin-right: 5px; }
+#chatLog .sep { color: var(--muted); font-size: 11px; text-align: center; border-top: 1px solid var(--line); margin-top: 4px; padding-top: 2px; }
+#chatLog .none { color: var(--muted); }
+#sayForm { padding: 6px 10px 8px; }
+#sayForm input { flex: 1; width: auto; min-width: 0; }
 
 #view { position: fixed; top: var(--top); left: var(--side); right: 0; bottom: 0; transition: left .15s; }
 body.sideClosed #view { left: 0; }
@@ -162,7 +174,6 @@ body.fp #help, body.fp #command, body.fp #entPanel { display: none; }
 	<span class="meta">Time <b id="time">-</b></span>
 	<span id="teamScores" class="inline" style="display:none"><span class="score red" id="scoreRed">0</span><span class="score blue" id="scoreBlue">0</span></span>
 	<span class="spacer"></span>
-	<form class="inline" id="sayForm"><input id="sayText" placeholder="Message to all players" maxlength="150"><button>Say</button></form>
 	<form class="inline" id="botForm"><input id="botName" placeholder="Bot name" style="width:100px"><button>Add bot</button></form>
 	<form class="inline" id="mapForm"><input id="mapName" placeholder="mp/ffa3" style="width:100px"><button>Map</button></form>
 	<span id="status" title="Connection"></span>
@@ -193,6 +204,11 @@ body.fp #help, body.fp #command, body.fp #entPanel { display: none; }
 				<tbody id="entities"></tbody>
 			</table>
 		</div>
+	</div>
+	<div id="chat">
+		<h2 id="chatHead" title="Show or hide the chat"><span>Chat</span><span id="chatNew"></span></h2>
+		<div id="chatLog"></div>
+		<form class="inline" id="sayForm"><input id="sayText" placeholder="Message to all players" maxlength="150" autocomplete="off"><button>Say</button></form>
 	</div>
 </div>
 
@@ -979,7 +995,7 @@ $('cmdClose').addEventListener('click', () => select(-1));
 $('fpBtn').addEventListener('click', () => setFirstPerson(view.id >= 0 ? -1 : selected));
 $('fpExit').addEventListener('click', () => setFirstPerson(-1));
 
-$('sayForm').addEventListener('submit', e => { e.preventDefault(); if ($('sayText').value) action({ action: 'say', value: $('sayText').value }).then(ok => ok && ($('sayText').value = '')); });
+$('sayForm').addEventListener('submit', e => { e.preventDefault(); if ($('sayText').value) action({ action: 'say', value: $('sayText').value }).then(ok => { if (ok) { $('sayText').value = ''; pollChat(); } }); });
 $('botForm').addEventListener('submit', e => { e.preventDefault(); action({ action: 'addbot', value: $('botName').value }); });
 $('mapForm').addEventListener('submit', e => { e.preventDefault(); if ($('mapName').value) action({ action: 'map', value: $('mapName').value }); });
 $('toggleSide').addEventListener('click', () => {
@@ -988,6 +1004,71 @@ $('toggleSide').addEventListener('click', () => {
 	setTimeout(resize, 200);
 });
 try { if (localStorage.getItem('wa.sideClosed')) document.body.classList.add('sideClosed'); } catch (e) { /* no storage */ }
+
+/* ------------------------------------------------------------------ */
+/* chat (not in JKAdmin)                                               */
+/* ------------------------------------------------------------------ */
+
+const CHAT_MAX_LINES = 400;
+// the colors the game gives the text of each kind of chat
+const CHAT_COLOR = { all: 2, team: 5, tell: 6, clan: 1, admin: 3 };
+let chatSeq = 0, chatEpoch = 0, chatBusy = false, chatUnread = 0;
+
+function chatLine(m) {
+	const kind = m.mode === 'tell' ? 'to ' + plainName(m.to) : (m.mode === 'team' || m.mode === 'clan' || m.mode === 'admin') ? m.mode : '';
+	return '<div><span class="t">' + escapeHtml(m.time) + '</span>' +
+		(kind ? '<span class="k">' + escapeHtml(kind) + '</span>' : '') +
+		(m.team ? '<span class="team ' + escapeHtml(m.team) + '"></span>' : '') +
+		colorName(m.name) + ': ' + colorName('^' + (CHAT_COLOR[m.mode] || 7) + m.text) + '</div>';
+}
+
+async function pollChat() {
+	if (chatBusy) return;
+	chatBusy = true;
+	try {
+		const res = await fetch('api/chat?since=' + chatSeq + '&epoch=' + chatEpoch, { cache: 'no-store' });
+		if (!res.ok) return;
+		const json = await res.json();
+		const log = $('chatLog');
+		const atEnd = log.scrollHeight - log.scrollTop - log.clientHeight < 24;
+		let html = '';
+		// a new map loads the game again, its chat numbers start over
+		if (chatEpoch && json.epoch !== chatEpoch) {
+			html = '<div class="sep">new map</div>';
+			chatSeq = 0;
+		}
+		const fresh = json.messages.filter(m => m.seq > chatSeq);
+		html += fresh.map(chatLine).join('');
+		chatEpoch = json.epoch;
+		chatSeq = json.seq;
+		if (!html) return;
+		const none = log.querySelector('.none');
+		if (none) none.remove();
+		log.insertAdjacentHTML('beforeend', html);
+		while (log.children.length > CHAT_MAX_LINES) log.firstChild.remove();
+		if (atEnd) log.scrollTop = log.scrollHeight;
+		if (document.body.classList.contains('chatClosed')) {
+			chatUnread += fresh.length;
+			$('chatNew').textContent = chatUnread ? chatUnread + ' new' : '';
+		}
+	} catch (e) {
+		/* the state poll shows a lost connection */
+	} finally {
+		chatBusy = false;
+	}
+}
+
+$('chatLog').innerHTML = '<div class="none">Nothing said yet.</div>';
+$('chatHead').addEventListener('click', () => {
+	const closed = document.body.classList.toggle('chatClosed');
+	try { localStorage.setItem('wa.chatClosed', closed ? '1' : ''); } catch (e) { /* no storage */ }
+	chatUnread = 0;
+	$('chatNew').textContent = '';
+	if (!closed) $('chatLog').scrollTop = $('chatLog').scrollHeight;
+});
+try { if (localStorage.getItem('wa.chatClosed')) document.body.classList.add('chatClosed'); } catch (e) { /* no storage */ }
+setInterval(pollChat, 1000);
+pollChat();
 
 /* ------------------------------------------------------------------ */
 /* input                                                               */

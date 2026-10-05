@@ -18,6 +18,7 @@ The port starts from OpenJK commit 260c59c2 (2026-09-29) and is the commits on t
 | [client.md](client.md) | cgame and ui: the plugin features, cvars, prediction |
 | [differences.md](differences.md) | Where the port differs from the original JA+ and where it changes OpenJK |
 | [verification.md](verification.md) | What was compared against the original, what was seen in the game, what is open |
+| [webadmin.md](webadmin.md) | The web admin panel taken from JKAdmin (not a JA+ feature): cvars, requests, JA+ glue, limits |
 
 ## Where the code is
 
@@ -41,6 +42,7 @@ New files, all JA+ code that did not have to live inside a base function:
 | `codemp/game/g_japlus_scale.c` | model scale |
 | `codemp/game/g_japlus_misc.c` | timers, welcome and MOTD, inactivity protection, `jp_cinfo` |
 | `codemp/cgame/cg_japlus.c` | auto replier, cameras, macro scan |
+| `codemp/game/g_webadmin.c`, `codemp/game/webadmin/index.html` | web admin panel from JKAdmin, see [webadmin.md](webadmin.md) |
 
 Changes inside base files carry a comment that starts with `JA+`. The largest ones are in `w_saber.c` (damage
 rules, thrown saber, kicks), `bg_pmove.c` and `bg_saber.c` (new moves, ledge grab, hook pull, freeze), `w_force.c`

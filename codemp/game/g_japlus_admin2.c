@@ -189,6 +189,13 @@ void Cmd_amlockteam_f( gentity_t *ent, qboolean rcon ) {
 	JP_Reply( ent, rcon, JP_TEAMLOCK_USAGE );
 }
 
+// SetTeam past the team locks and the team balance, for amforceteam and the web admin
+void JP_ForceTeam( gentity_t *ent, char *team ) {
+	jpForcingTeam = qtrue;
+	SetTeam( ent, team );
+	jpForcingTeam = qfalse;
+}
+
 void Cmd_amforceteam_f( gentity_t *ent, qboolean rcon ) {
 	char cmd[MAX_TOKEN_CHARS], who[MAX_TOKEN_CHARS], team[MAX_TOKEN_CHARS];
 	int num, first, last, i;
@@ -212,14 +219,12 @@ void Cmd_amforceteam_f( gentity_t *ent, qboolean rcon ) {
 	first = num == -1 ? 0 : num;
 	last = num == -1 ? level.maxclients - 1 : num;
 
-	jpForcingTeam = qtrue;
 	for ( i = first; i <= last; i++ ) {
 		gentity_t *target = JP_ValidPlayer( i );
 
 		if ( target && (rcon || G_ClientAdminCmdAllowedOn( ent, target, qfalse, qfalse )) )
-			SetTeam( target, team );
+			JP_ForceTeam( target, team );
 	}
-	jpForcingTeam = qfalse;
 
 	JP_LogCmd( ent, rcon, cmd, "" );
 }

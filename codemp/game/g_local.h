@@ -1269,6 +1269,7 @@ void WebAdmin_Frame( void );
 void WebAdmin_Shutdown( void );
 void WebAdmin_EntitySpawned( int entityNum );
 void WebAdmin_EntityFreed( int entityNum );
+void WebAdmin_Chat( const char *mode, const gentity_t *from, const gentity_t *to, const char *text );
 
 // g_spawn.c, for the entity editor
 int G_NumSpawnClassnames( void );

@@ -612,6 +612,7 @@ void Svcmd_Say_f( void ) {
 
 	//G_LogPrintf( "say: server: %s\n", text );
 	trap->SendServerCommand( -1, va("print \"server: %s\n\"", text ) );
+	WebAdmin_Chat( "server", NULL, NULL, text );
 }
 
 typedef struct svcmd_s {
