@@ -52,6 +52,12 @@ static qhandle_t blueSaberGlowShader;
 static qhandle_t blueSaberCoreShader;
 static qhandle_t purpleSaberGlowShader;
 static qhandle_t purpleSaberCoreShader;
+// JA+
+static qhandle_t rgbSaberGlowShader;
+static qhandle_t rgbSaberGlow4Shader;
+static qhandle_t rgbSaberCoreShader[SABER_RGB_LAST - SABER_RGB_FIRST + 1];
+static qhandle_t blackSaberGlowShader;
+static qhandle_t blackSaberCoreShader;
 
 void UI_CacheSaberGlowGraphics( void )
 {//FIXME: these get fucked by vid_restarts
@@ -67,6 +73,16 @@ void UI_CacheSaberGlowGraphics( void )
 	blueSaberCoreShader			= trap->R_RegisterShaderNoMip( "gfx/effects/sabers/blue_line" );
 	purpleSaberGlowShader		= trap->R_RegisterShaderNoMip( "gfx/effects/sabers/purple_glow" );
 	purpleSaberCoreShader		= trap->R_RegisterShaderNoMip( "gfx/effects/sabers/purple_line" );
+	// JA+
+	rgbSaberGlowShader			= trap->R_RegisterShaderNoMip( "gfx/effects/sabers/RGBGlow" );
+	rgbSaberGlow4Shader			= trap->R_RegisterShaderNoMip( "gfx/effects/sabers/RGBGlow4" );
+	rgbSaberCoreShader[0]		= trap->R_RegisterShaderNoMip( "gfx/effects/sabers/RGBLine" );
+	rgbSaberCoreShader[1]		= trap->R_RegisterShaderNoMip( "gfx/effects/sabers/RGBcore2" );
+	rgbSaberCoreShader[2]		= trap->R_RegisterShaderNoMip( "gfx/effects/sabers/RGBcore3" );
+	rgbSaberCoreShader[3]		= trap->R_RegisterShaderNoMip( "gfx/effects/sabers/RGBcore4" );
+	rgbSaberCoreShader[4]		= trap->R_RegisterShaderNoMip( "gfx/effects/sabers/RGBcore5" );
+	blackSaberGlowShader		= trap->R_RegisterShaderNoMip( "gfx/effects/sabers/black_glow" );
+	blackSaberCoreShader		= trap->R_RegisterShaderNoMip( "gfx/effects/sabers/black_line" );
 }
 
 qboolean UI_SaberModelForSaber( const char *saberName, char *saberModel )
@@ -241,7 +257,8 @@ void UI_SaberLoadParms( void )
 	WP_SaberLoadParms();
 }
 
-void UI_DoSaber( vec3_t origin, vec3_t dir, float length, float lengthMax, float radius, saber_colors_t color )
+// JA+: saberNum picks the sliders (ui_sbRed1.. or ui_sbRed2..) that color an RGB blade
+void UI_DoSaber( vec3_t origin, vec3_t dir, float length, float lengthMax, float radius, saber_colors_t color, int saberNum )
 {
 	vec3_t		mid, rgb={1,1,1};
 	qhandle_t	blade = 0, glow = 0;
@@ -259,7 +276,7 @@ void UI_DoSaber( vec3_t origin, vec3_t dir, float length, float lengthMax, float
 	// Find the midpoint of the saber for lighting purposes
 	VectorMA( origin, length * 0.5f, dir, mid );
 
-	switch( color )
+	switch( (int)color )
 	{
 		case SABER_RED:
 			glow = redSaberGlowShader;
@@ -290,6 +307,24 @@ void UI_DoSaber( vec3_t origin, vec3_t dir, float length, float lengthMax, float
 			glow = purpleSaberGlowShader;
 			blade = purpleSaberCoreShader;
 			VectorSet( rgb, 0.9f, 0.2f, 1.0f );
+			break;
+		// JA+
+		case SABER_RGB_FIRST:
+		case SABER_RGB_FIRST+1:
+		case SABER_RGB_FIRST+2:
+		case SABER_RGB_FIRST+3:
+		case SABER_RGB_LAST:
+			glow = ( color == SABER_RGB_FIRST+3 ) ? rgbSaberGlow4Shader : rgbSaberGlowShader;
+			blade = rgbSaberCoreShader[color - SABER_RGB_FIRST];
+			if ( saberNum == 0 )
+				VectorSet( rgb, ui_sbRed1.value, ui_sbGreen1.value, ui_sbBlue1.value );
+			else
+				VectorSet( rgb, ui_sbRed2.value, ui_sbGreen2.value, ui_sbBlue2.value );
+			VectorScale( rgb, 1.0f / 255.0f, rgb );
+			break;
+		case SABER_BLACK:
+			glow = blackSaberGlowShader;
+			blade = blackSaberCoreShader;
 			break;
 		default:
 			break;
@@ -323,6 +358,13 @@ void UI_DoSaber( vec3_t origin, vec3_t dir, float length, float lengthMax, float
 	saber.reType = RT_SABER_GLOW;
 	saber.customShader = glow;
 	saber.shaderRGBA[0] = saber.shaderRGBA[1] = saber.shaderRGBA[2] = saber.shaderRGBA[3] = 0xff;
+	if ( (int)color >= SABER_RGB_FIRST && (int)color <= SABER_RGB_LAST )
+	{// JA+: glow and core in the color of the sliders
+		int i;
+
+		for ( i = 0; i < 3; i++ )
+			saber.shaderRGBA[i] = (int)( rgb[i] * 255.0f );
+	}
 	//saber.renderfx = rfx;
 
 	trap->R_AddRefEntityToScene( &saber );
@@ -343,6 +385,7 @@ void UI_SaberDrawBlade( itemDef_t *item, char *saberName, int saberModel, saberT
 {
 	char bladeColorString[MAX_QPATH];
 	saber_colors_t bladeColor;
+	int saberNum;	// JA+
 	float bladeLength,bladeRadius;
 	vec3_t	bladeOrigin={0};
 	matrix3_t	axis;
@@ -358,10 +401,12 @@ void UI_SaberDrawBlade( itemDef_t *item, char *saberName, int saberModel, saberT
 	if ( (item->flags&ITF_ISSABER) && saberModel < 2 )
 	{
 		trap->Cvar_VariableStringBuffer("ui_saber_color", bladeColorString, sizeof(bladeColorString) );
+		saberNum = 0;
 	}
 	else//if ( item->flags&ITF_ISSABER2 ) - presumed
 	{
 		trap->Cvar_VariableStringBuffer("ui_saber2_color", bladeColorString, sizeof(bladeColorString) );
+		saberNum = 1;
 	}
 
 	if ( !trap->G2API_HasGhoul2ModelOnIndex(&(item->ghoul2),saberModel) )
@@ -572,7 +617,7 @@ void UI_SaberDrawBlade( itemDef_t *item, char *saberName, int saberModel, saberT
 		return;
 	}
 
-	UI_DoSaber( bladeOrigin, axis[0], bladeLength, bladeLength, bladeRadius, bladeColor );
+	UI_DoSaber( bladeOrigin, axis[0], bladeLength, bladeLength, bladeRadius, bladeColor, saberNum );
 }
 
 void UI_GetSaberForMenu( char *saber, int saberNum )

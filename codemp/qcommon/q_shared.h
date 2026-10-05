@@ -357,6 +357,11 @@ typedef enum
 	NUM_SABER_COLORS
 } saber_colors_t;
 
+// JA+ saber colors above SABER_PURPLE
+#define SABER_RGB_FIRST		6
+#define SABER_RGB_LAST		10
+#define SABER_BLACK			11
+
 typedef enum
 {
 	FP_FIRST = 0,//marker

@@ -5338,10 +5338,6 @@ int CG_LightVerts( vec3_t normal, int numVerts, polyVert_t *verts )
 	return qtrue;
 }
 
-// JA+ saber colors above SABER_PURPLE
-#define SABER_RGB_FIRST		6
-#define SABER_RGB_LAST		10
-#define SABER_BLACK			11
 static int cg_jpSaberRGB;	// packed RGB of the blade being drawn, set by CG_AddSaberBlade
 
 static qboolean CG_SaberIsRGB( int color )

@@ -180,6 +180,18 @@ saber_colors_t TranslateSaberColor( const char *name ) {
 		return SABER_PURPLE;
 	if ( !Q_stricmp( name, "random" ) )
 		return (saber_colors_t)Q_irand( SABER_ORANGE, SABER_PURPLE );
+#ifdef UI_BUILD
+	// JA+: blade styles "rgb", "rgb2" .. "rgb5" of the saber menu
+	if ( !Q_stricmp( name, "rgb" ) )
+		return (saber_colors_t)SABER_RGB_FIRST;
+	if ( !Q_strncmp( name, "rgb", 3 ) ) {
+		int color = atoi( name + 3 ) + SABER_RGB_FIRST - 1;
+		if ( color >= SABER_RGB_FIRST && color <= SABER_RGB_LAST )
+			return (saber_colors_t)color;
+	}
+#endif
+	if ( !Q_stricmp( name, "black" ) )
+		return (saber_colors_t)SABER_BLACK;
 
 	return SABER_BLUE;
 }
@@ -191,6 +203,11 @@ const char *SaberColorToString( saber_colors_t color ) {
 	if ( color == SABER_GREEN )		return "green";
 	if ( color == SABER_BLUE )		return "blue";
 	if ( color == SABER_PURPLE )	return "purple";
+	// JA+
+	if ( (int)color == SABER_RGB_FIRST )	return "rgb";
+	if ( (int)color > SABER_RGB_FIRST && (int)color <= SABER_RGB_LAST )
+		return va( "rgb%i", (int)color - SABER_RGB_FIRST + 1 );
+	if ( (int)color == SABER_BLACK )	return "black";
 
 	return NULL;
 }

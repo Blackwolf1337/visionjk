@@ -5409,8 +5409,20 @@ static void UI_UpdateSaberHilt( qboolean secondSaber )
 	}
 }
 
+// JA+: while an RGB blade style is selected, cp_sbRGB1/2 carry the sliders of the saber menu to the server
 static void UI_UpdateSaberColor( qboolean secondSaber )
 {
+	(void)secondSaber;	// the plugin sets both on either script
+
+	if ( !Q_strncmp( UI_Cvar_VariableString( "ui_saber_color" ), "rgb", 3 ) )
+		trap->Cvar_Set( "cp_sbRGB1", va( "%i", (ui_sbBlue1.integer << 16) | (ui_sbGreen1.integer << 8) | ui_sbRed1.integer ) );
+	else
+		trap->Cvar_Set( "cp_sbRGB1", "0" );
+
+	if ( !Q_strncmp( UI_Cvar_VariableString( "ui_saber2_color" ), "rgb", 3 ) )
+		trap->Cvar_Set( "cp_sbRGB2", va( "%i", (ui_sbBlue2.integer << 16) | (ui_sbGreen2.integer << 8) | ui_sbRed2.integer ) );
+	else
+		trap->Cvar_Set( "cp_sbRGB2", "0" );
 }
 
 const char *SaberColorToString( saber_colors_t color );
