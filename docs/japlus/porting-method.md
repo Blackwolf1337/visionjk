@@ -101,11 +101,15 @@ with the old interface, so the original DLLs work in it unchanged.
   out (particles, blinking eyes, the strength of a shield flash, camera shake). The same module played twice gives
   the measure for that.
 - The demos are recorded on a test server from scripted clients: a recorder, actors that run lists of console
-  commands in front of it (saber moves, force powers, taunts, emotes, hook, guns, a duel, the alternate dimension)
-  and admin commands sent to the server at given times.
+  commands in front of it (saber moves, force powers, taunts, emotes, hook, guns, a duel, the alternate dimension,
+  a CTF game) and admin commands sent to the server at given times.
 
 Not covered this way: sounds, the commands and cvars a module sets, and the prediction, which does not run in a
 demo. The movement code behind the prediction is shared with the server module and compared there.
+
+A menu is not part of a demo. The menus are compared on a running client: a console script opens one menu after
+the other with both module sets and marks the frames, and the pictures and texts of the marked frames are compared.
+Nothing is clicked that way.
 
 Pictures of menus and scenes were taken with both module sets the same way (console scripts, engine screenshots)
 and looked at side by side.

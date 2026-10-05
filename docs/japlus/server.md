@@ -112,5 +112,4 @@ Game modes and rules
 ## Not done on the server
 
 - The wall flip part of `jp_jk2RedDFA` (the red DFA rule itself is in).
-- Macro scan of binds that run `exec` or `vstr`. Only binds with several commands are checked.
 - `jp_debugClientCMD` has no code in the original either.
