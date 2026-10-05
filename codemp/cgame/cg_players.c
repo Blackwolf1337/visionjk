@@ -1618,7 +1618,11 @@ void CG_NewClientInfo( int clientNum, qboolean entitiesInitialized ) {
 	// JA+ RGB sabers
 	newInfo.sbRGB[0] = atoi( Info_ValueForKey( configstring, "c3" ) );
 	newInfo.sbRGB[1] = atoi( Info_ValueForKey( configstring, "c4" ) );
-	newInfo.holsterModel = atoi( Info_ValueForKey( configstring, "hm" ) );
+	// (the plugin takes model 1 when the server names none)
+	v = Info_ValueForKey( configstring, "hm" );
+	newInfo.holsterModel = v[0] ? atoi( v ) : 1;
+	if ( newInfo.holsterModel < 0 )
+		newInfo.holsterModel = 1;
 
 	// bot skill
 	v = Info_ValueForKey( configstring, "skill" );
@@ -8838,6 +8842,11 @@ static void CG_JPHolsterModel( centity_t *cent, const clientInfo_t *ci, qboolean
 {
 	if ( cent->jpHolster && !trap->G2API_HasGhoul2ModelOnIndex( &cent->ghoul2, cent->jpHolster - 1 ) )
 		cent->jpHolster = 0;	// the model was rebuilt
+	if ( cent->jpHolster && cent->jpHolsterId != ci->holsterModel )
+	{ // the player chose another holster
+		trap->G2API_RemoveGhoul2Model( &cent->ghoul2, cent->jpHolster - 1 );
+		cent->jpHolster = 0;
+	}
 
 	want = want && ci->holsterModel > 0 && !(cp_pluginDisable.integer & (1 << 9));
 	if ( want && !cent->jpHolster )
@@ -8850,6 +8859,7 @@ static void CG_JPHolsterModel( centity_t *cent, const clientInfo_t *ci, qboolean
 		{
 			trap->G2API_SetBoltInfo( cent->ghoul2, index, ci->bolt_back > 0 ? ci->bolt_back : JP_HOLSTER_BOLT );
 			cent->jpHolster = index + 1;
+			cent->jpHolsterId = ci->holsterModel;
 		}
 	}
 	else if ( !want && cent->jpHolster )

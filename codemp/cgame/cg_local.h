@@ -436,6 +436,7 @@ typedef struct centity_s {
 	int				trickAlpha;
 	int				trickAlphaTime;
 	int				jpHolster;			// JA+: ghoul2 model index+1 of the holster on this player, 0 none
+	int				jpHolsterId;		// JA+: which holster model that is (hm of the clientinfo)
 	qboolean		jpPredictIgnore;	// JA+: does not block the predicted move (other duel, other dimension)
 	float			jpModelScale;		// JA+: model scale the saber blades were last scaled with
 
