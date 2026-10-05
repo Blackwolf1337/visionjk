@@ -8628,42 +8628,61 @@ void CG_CheckThirdPersonAlpha( centity_t *cent, refEntity_t *legs )
 
 /*
 =================
+CG_JPOtherDimension
+
+JA+: the player is in the other alternate dimension than the local player (FFA only)
+=================
+*/
+static qboolean CG_JPOtherDimension( int clientNum )
+{
+	const playerState_t *ps = &cg.snap->ps;
+
+	if ( !JP_FEATURE( JPF_ALTDIM ) || cgs.gametype != GT_FFA || clientNum < 0 || clientNum >= MAX_CLIENTS || clientNum == ps->clientNum )
+		return qfalse;
+	return (qboolean)( ((ps->eFlags & EF_ALT_DIM) != 0) != ((cg_entities[clientNum].currentState.eFlags & EF_ALT_DIM) != 0) );
+}
+
+/*
+=================
+CG_JPFadePlayer
+
+JA+: fades a player down to minAlpha the way a mind trick does. qtrue when he has faded out and is not drawn
+=================
+*/
+static qboolean CG_JPFadePlayer( centity_t *cent, int minAlpha )
+{
+	if ( cent->trickAlpha > 1 )
+	{
+		cent->trickAlpha -= (cg.time - cent->trickAlphaTime)*0.5;
+		cent->trickAlphaTime = cg.time;
+
+		if ( cent->trickAlpha < minAlpha )
+		{
+			cent->trickAlpha = minAlpha;
+		}
+		return qfalse;
+	}
+
+	cent->trickAlpha = minAlpha > 1 ? minAlpha : 1;
+	cent->trickAlphaTime = cg.time;
+	return qtrue;
+}
+
+/*
+=================
 CG_JPMinAlpha
 
-JA+: the alpha a player fades to for the local player. Players in another duel
-fade to jp_DuelAlpha, players in the other alternate dimension (FFA only) to cp_altDimAlpha
+JA+: the alpha the sabers on the body of a player are drawn with: jp_DuelAlpha for a player of another duel (40 while
+the local player duels, which is only seen with Plugin_IgnoreAllPlayers_WhenInDuel turned off), cp_altDimAlpha for a
+player of the other dimension
 =================
 */
 static int CG_JPMinAlpha( const centity_t *cent )
 {
-	const playerState_t *ps = &cg.snap->ps;
-	int num = cent->currentState.number;
-
-	if ( num == ps->clientNum || num < 0 || num >= MAX_CLIENTS )
-		return 255;
-
-	if ( cgs.jpDuelAlpha >= 0 )
-	{
-		int alpha = cgs.jpDuelAlpha;
-
-		if ( ps->duelInProgress )
-		{
-			if ( ps->duelIndex != num )
-			{
-				if ( ps->duelInProgress && (cp_pluginDisable.integer & (1 << 1)) )	// Plugin_IgnoreAllPlayers_WhenInDuel
-					alpha = 40;
-				return alpha;
-			}
-			return 255;	// the opponent
-		}
-		if ( cent->currentState.bolt1 )
-			return alpha;
-	}
-
-	if ( JP_FEATURE( JPF_ALTDIM ) && cgs.gametype == GT_FFA
-		&& ((ps->eFlags & EF_ALT_DIM) != 0) != ((cent->currentState.eFlags & EF_ALT_DIM) != 0) )
+	if ( CG_JPOtherDuel( cent->currentState.number ) )
+		return cg.snap->ps.duelInProgress ? 40 : cgs.jpDuelAlpha;
+	if ( CG_JPOtherDimension( cent->currentState.number ) )
 		return cp_altDimAlpha.integer;
-
 	return 255;
 }
 
@@ -9570,38 +9589,39 @@ void CG_Player( centity_t *cent ) {
 			iwantout = 1;
 		}
 	}
+	else if ( CG_JPOtherDuel( cent->currentState.number ) )
+	{ // JA+ (plugin 1.4B4): a player of another duel fades to jp_DuelAlpha. While the local player duels the others
+	  // fade away completely, with Plugin_IgnoreAllPlayers_WhenInDuel turned off to 40
+		int minAlpha = cgs.jpDuelAlpha;
+
+		if ( cg.snap->ps.duelInProgress )
+			minAlpha = (cp_pluginDisable.integer & (1 << 1)) ? 40 : 0;
+		doAlpha = 1;
+		iwantout = CG_JPFadePlayer( cent, minAlpha );
+	}
+	else if ( CG_JPOtherDimension( cent->currentState.number ) )
+	{ // JA+: a player of the other dimension fades to cp_altDimAlpha
+		doAlpha = 1;
+		iwantout = CG_JPFadePlayer( cent, cp_altDimAlpha.integer );
+	}
 	else
 	{
-		int minAlpha = CG_JPMinAlpha( cent );	// JA+: fade other duels and the other dimension
-
-		if (cent->trickAlpha > minAlpha && minAlpha < 255)
-		{
-			cent->trickAlpha -= (cg.time - cent->trickAlphaTime)*0.5;
-			cent->trickAlphaTime = cg.time;
-
-			if (cent->trickAlpha < minAlpha)
-			{
-				cent->trickAlpha = minAlpha;
-			}
-
-			doAlpha = 1;
-		}
-		else if (cent->trickAlpha < minAlpha)
+		if (cent->trickAlpha < 255)
 		{
 			cent->trickAlpha += (cg.time - cent->trickAlphaTime);
 			cent->trickAlphaTime = cg.time;
 
-			if (cent->trickAlpha > minAlpha)
+			if (cent->trickAlpha > 255)
 			{
-				cent->trickAlpha = minAlpha;
+				cent->trickAlpha = 255;
 			}
 
 			doAlpha = 1;
 		}
 		else
 		{
+			cent->trickAlpha = 255;
 			cent->trickAlphaTime = cg.time;
-			doAlpha = (minAlpha < 255);
 		}
 	}
 
