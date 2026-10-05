@@ -1389,6 +1389,7 @@ void CG_EntityEvent( centity_t *cent, vec3_t position ) {
 			cl_ent->numLoopingSounds = 0;
 			//cl_ent->localAnimIndex = 0;
 		}
+		CG_JPReplyClientJoin( es->eventParm );
 		break;
 
 	case EV_FOOTSTEP:
@@ -1603,13 +1604,7 @@ void CG_EntityEvent( centity_t *cent, vec3_t position ) {
 			if ( cg_noTaunt.integer )
 				break;
 
-			if ( cgs.gametype != GT_DUEL
-				&& cgs.gametype != GT_POWERDUEL
-				&& es->eventParm == TAUNT_TAUNT )
-			{//normal taunt
-				soundIndex = CG_CustomSound( es->number, "*taunt.wav" );
-			}
-			else
+			// JA+ client plugin: the taunts of the duel gametypes in every gametype
 			{
 				switch ( es->eventParm )
 				{
@@ -2157,6 +2152,8 @@ void CG_EntityEvent( centity_t *cent, vec3_t position ) {
 			{//custom swing sound
 				swingSound = client->saber[0].swingSound[Q_irand(0,2)];
 			}
+			if ( CG_JPDuelIgnoreEvent( es->number ) )
+				break;
             trap->S_StartSound(es->pos.trBase, es->number, CHAN_WEAPON, swingSound );
 		}
 		break;
@@ -2174,6 +2171,8 @@ void CG_EntityEvent( centity_t *cent, vec3_t position ) {
 				&& es->otherEntityNum2 < ENTITYNUM_NONE )
 			{//we have a specific person who is causing this effect, see if we should override it with any custom saber effects/sounds
 				clientInfo_t *client = NULL;
+				if ( CG_JPDuelIgnoreEvent( es->otherEntityNum2 ) )
+					break;
 				if ( cg_entities[es->otherEntityNum2].currentState.eType == ET_NPC )
 				{
 					client = cg_entities[es->otherEntityNum2].npcClient;
@@ -2314,6 +2313,8 @@ void CG_EntityEvent( centity_t *cent, vec3_t position ) {
 					&& es->otherEntityNum2 < ENTITYNUM_NONE )
 				{//we have a specific person who is causing this effect, see if we should override it with any custom saber effects/sounds
 					clientInfo_t *client = NULL;
+					if ( CG_JPDuelIgnoreEvent( es->otherEntityNum2 ) )
+						break;
 					if ( cg_entities[es->otherEntityNum2].currentState.eType == ET_NPC )
 					{
 						client = cg_entities[es->otherEntityNum2].npcClient;
@@ -2976,6 +2977,8 @@ void CG_EntityEvent( centity_t *cent, vec3_t position ) {
 
 	case EV_PLAY_EFFECT:
 		DEBUGNAME("EV_PLAY_EFFECT");
+		if ( CG_JPDuelIgnoreExplosion( es->eventParm ) )
+			break;
 		switch(es->eventParm)
 		{ //it isn't a hack, it's ingenuity!
 		case EFFECT_SMOKE:
@@ -3436,6 +3439,8 @@ void CG_EntityEvent( centity_t *cent, vec3_t position ) {
 
 	case EV_SHIELD_HIT:
 		DEBUGNAME("EV_SHIELD_HIT");
+		if ( CG_JPDuelIgnoreEvent( es->otherEntityNum ) )
+			break;
 		ByteToDir(es->eventParm, dir);
 		CG_PlayerShieldHit(es->otherEntityNum, dir, es->time2);
 		break;

@@ -112,7 +112,7 @@ static void ReplyTell( int clientNum, const char *tmpl, int nameClient ) {
 void CG_JPReplyDuelEvent( qboolean start ) {
 	if ( start ) {
 		duelOpponent = cg.snap->ps.duelIndex;
-		if ( ReplierAllowed() && cg.snap->ps.duelInProgress )
+		if ( ReplierAllowed() && cg.snap->ps.duelInProgress && !(cg.predictedPlayerState.pm_flags & PMF_FOLLOW) )
 			ReplyTell( duelOpponent, ReplyPick( &replyDuelStart ), duelOpponent );
 	} else {
 		duelEndWindow = cg.time + 2000;
@@ -124,7 +124,7 @@ void CG_JPReplyObituary( int target ) {
 	const playerState_t *ps;
 	const char *tmpl;
 
-	if ( !ReplierAllowed() || duelOpponent < 0 )
+	if ( !ReplierAllowed() || duelOpponent < 0 || (cg.predictedPlayerState.pm_flags & PMF_FOLLOW) )
 		return;
 	ps = &cg.snap->ps;
 	if ( target != ps->clientNum && target != duelOpponent )
@@ -133,8 +133,15 @@ void CG_JPReplyObituary( int target ) {
 		return;
 	duelEndWindow = 0;
 
+	// %s is the name of the opponent in both texts
 	tmpl = target == ps->clientNum ? ReplyPick( &replyDuelLost ) : ReplyPick( &replyDuelWin );
-	ReplyTell( duelOpponent, tmpl, target == ps->clientNum ? ps->clientNum : duelOpponent );
+	ReplyTell( duelOpponent, tmpl, duelOpponent );
+}
+
+// EV_CLIENTJOIN: the next player in this slot gets his reply again
+void CG_JPReplyClientJoin( int clientNum ) {
+	if ( clientNum >= 0 && clientNum < MAX_CLIENTS && joinReplyTime[clientNum] < cg.time )
+		joinReplyTime[clientNum] = 0;
 }
 
 // "print" server command: a player entered the game
@@ -367,6 +374,36 @@ void CG_JPCameraRange( void ) {
 	if ( jpSavedRange == 0.0f ) {
 		jpSavedRange = cg_thirdPersonRange.value;
 		CG_JPSetRange( range );
+	}
+}
+
+/*
+=================
+JA+ client plugin: on a server that separates the private duels (jp_DuelAlpha >= 0) a player in a duel does not
+hear or see the saber swings, hits, blocks and shield hits of players outside of his duel, and no explosions
+=================
+*/
+qboolean CG_JPDuelIgnoreEvent( int clientNum ) {
+	return cg.snap && cg.snap->ps.clientNum != clientNum && cgs.jpDuelAlpha >= 0
+		&& cg.snap->ps.duelInProgress && cg.snap->ps.duelIndex != clientNum;
+}
+
+qboolean CG_JPDuelIgnoreExplosion( int effect ) {
+	if ( !cg.snap || !cg.snap->ps.duelInProgress || cgs.jpDuelAlpha < 0 )
+		return qfalse;
+
+	switch ( effect ) {
+	case EFFECT_EXPLOSION:
+	case EFFECT_EXPLOSION_PAS:
+	case EFFECT_SPARK_EXPLOSION:
+	case EFFECT_EXPLOSION_TRIPMINE:
+	case EFFECT_EXPLOSION_DETPACK:
+	case EFFECT_EXPLOSION_FLECHETTE:
+	case EFFECT_EXPLOSION_DEMP2ALT:
+	case EFFECT_EXPLOSION_TURRET:
+		return qtrue;
+	default:
+		return qfalse;
 	}
 }
 
