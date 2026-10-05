@@ -9282,9 +9282,10 @@ void BG_UpdateLookAngles( int lookingDebounceTime, vec3_t lastHeadAngles, int ti
 }
 
 //for setting visual look (headturn) angles
-static void BG_G2ClientNeckAngles( void *ghoul2, int time, const vec3_t lookAngles, vec3_t headAngles, vec3_t neckAngles, vec3_t thoracicAngles, vec3_t headClampMinAngles, vec3_t headClampMaxAngles )
+static void BG_G2ClientNeckAngles( void *ghoul2, int time, const vec3_t lookAngles, vec3_t headAngles, vec3_t neckAngles, vec3_t thoracicAngles, vec3_t headClampMinAngles, vec3_t headClampMaxAngles, int legsAnim )
 {
 	vec3_t	lA;
+	const qboolean ledge = BG_InLedgeMove( legsAnim );	// JA+: hanging on a ledge the body does not follow the view
 	VectorCopy( lookAngles, lA );
 	//clamp the headangles (which should now be relative to the cervical (neck) angles
 	if ( lA[PITCH] < headClampMinAngles[PITCH] )
@@ -9315,7 +9316,11 @@ static void BG_G2ClientNeckAngles( void *ghoul2, int time, const vec3_t lookAngl
 	}
 
 	//split it up between the neck and cranium
-	if ( thoracicAngles[PITCH] )
+	if ( ledge )
+	{
+		thoracicAngles[PITCH] = 0.0f;
+	}
+	else if ( thoracicAngles[PITCH] )
 	{//already been set above, blend them
 		thoracicAngles[PITCH] = (thoracicAngles[PITCH] + (lA[PITCH] * 0.4)) * 0.5f;
 	}
@@ -9347,6 +9352,12 @@ static void BG_G2ClientNeckAngles( void *ghoul2, int time, const vec3_t lookAngl
 	headAngles[PITCH] = lA[PITCH] * 0.4;
 	headAngles[YAW] = lA[YAW] * 0.6;
 	headAngles[ROLL] = lA[ROLL] * 0.6;
+
+	if ( ledge )
+	{
+		VectorClear( neckAngles );
+		VectorClear( headAngles );
+	}
 
 	/* //non-applicable SP code
 	if ( G_RidingVehicle( cent->gent ) )// && type == VH_SPEEDER ?
@@ -9474,6 +9485,10 @@ static void BG_G2ClientSpineAngles( void *ghoul2, int motionBolt, vec3_t cent_le
 	thoracicAngles[PITCH] = viewAngles[PITCH]*0.20f;
 	llAngles[PITCH] = viewAngles[PITCH]*0.40f;
 	ulAngles[PITCH] = viewAngles[PITCH]*0.40f;
+	if ( BG_InLedgeMove( cent->legsAnim ) )
+	{ // JA+: no bending while hanging on a ledge
+		thoracicAngles[PITCH] = llAngles[PITCH] = ulAngles[PITCH] = 0.0f;
+	}
 
 	thoracicAngles[YAW] = viewAngles[YAW]*0.20f;
 	ulAngles[YAW] = viewAngles[YAW]*0.35f;
@@ -9926,7 +9941,7 @@ void BG_G2PlayerAngles(void *ghoul2, int motionBolt, entityState_t *cent, int ti
 
 	BG_UpdateLookAngles(lookTime, lastHeadAngles, time, lookAngles, lookSpeed, -50.0f, 50.0f, -70.0f, 70.0f, -30.0f, 30.0f);
 
-	BG_G2ClientNeckAngles(ghoul2, time, lookAngles, headAngles, neckAngles, thoracicAngles, headClampMinAngles, headClampMaxAngles);
+	BG_G2ClientNeckAngles(ghoul2, time, lookAngles, headAngles, neckAngles, thoracicAngles, headClampMinAngles, headClampMaxAngles, cent->legsAnim);
 
 #ifdef BONE_BASED_LEG_ANGLES
 	{
