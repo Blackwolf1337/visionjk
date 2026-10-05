@@ -1884,6 +1884,9 @@ void CG_NewClientInfo( int clientNum, qboolean entitiesInitialized ) {
 
 	// replace whatever was there with the new one
 	newInfo.infoValid = qtrue;
+	// JA+ client plugin: the own "sex" follows the model, the server passes it on to the other clients
+	if ( cg.snap && cg.snap->ps.clientNum == clientNum )
+		trap->Cvar_Set( "sex", newInfo.gender == GENDER_FEMALE ? "female" : "male" );
 	if (ci->ghoul2Model &&
 		ci->ghoul2Model != newInfo.ghoul2Model &&
 		trap->G2_HaveWeGhoul2Models(ci->ghoul2Model))
@@ -4503,6 +4506,28 @@ static void CG_PlayerFlag( centity_t *cent, qhandle_t hModel ) {
 	}
 	*/
 	//FIXME: Not doing this at the moment because sorting totally messes up
+
+	// JA+ client plugin: a shell in the color of the flag around it. The own flag is half transparent,
+	// so it does not hide the view in third person.
+	if ( cent->currentState.number == cg.snap->ps.clientNum || ci->infoValid )
+	{
+		const qboolean own = cent->currentState.number == cg.snap->ps.clientNum;
+		refEntity_t shell = ent;
+
+		shell.shaderRGBA[0] = ci->team == TEAM_RED ? 0 : 255;
+		shell.shaderRGBA[1] = 0;
+		shell.shaderRGBA[2] = ci->team == TEAM_RED ? 255 : 0;
+		shell.shaderRGBA[3] = own ? 120 : 254;
+		shell.renderfx = (shell.renderfx & ~(RF_FORCE_ENT_ALPHA|RF_RGB_TINT)) | RF_MINLIGHT;
+		shell.customShader = own ? cgs.media.sightShell : cgs.media.playerShieldDamage;
+		trap->R_AddRefEntityToScene( &shell );
+
+		if ( own )
+		{
+			ent.renderfx |= RF_FORCE_ENT_ALPHA;
+			ent.shaderRGBA[3] = 120;
+		}
+	}
 
 	trap->R_AddRefEntityToScene( &ent );
 }
@@ -11240,7 +11265,10 @@ stillDoSaber:
 		legs.renderfx |= RF_MINLIGHT;
 	}
 
-	if (cg.snap->ps.duelInProgress /*&& cent->currentState.number != cg.snap->ps.clientNum*/)
+	if (cg.snap->ps.duelInProgress && cgs.jpDuelAlpha >= 0)
+	{ // JA+ client plugin: no duel glow and no dark players on a server that separates the duels
+	}
+	else if (cg.snap->ps.duelInProgress /*&& cent->currentState.number != cg.snap->ps.clientNum*/)
 	{ //I guess go ahead and glow your own client too in a duel
 		if (cent->currentState.number != cg.snap->ps.duelIndex &&
 			cent->currentState.number != cg.snap->ps.clientNum)
