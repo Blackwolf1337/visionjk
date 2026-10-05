@@ -6452,7 +6452,8 @@ CheckTrail:
 	//FIXME: if trailStyle is 1, use the motion blur instead
 
 	saberTrail = &client->saber[saberNum].blade[bladeNum].trail;
-	saberTrail->duration = saberMoveData[cent->currentState.saberMove].trailLength;
+	// JA+ client plugin: a saber move the table does not have leaves a short trail
+	saberTrail->duration = cent->currentState.saberMove < LS_MOVE_MAX ? saberMoveData[cent->currentState.saberMove].trailLength : 150;
 
 	trailDur = (saberTrail->duration/5.0f);
 	if (!trailDur)
@@ -6473,7 +6474,7 @@ CheckTrail:
 	{
 		if (!dontDraw)
 		{
-			if ( (BG_SuperBreakWinAnim(cent->currentState.torsoAnim) || saberMoveData[cent->currentState.saberMove].trailLength > 0 || ((cent->currentState.powerups & (1 << PW_SPEED) && cg_speedTrail.integer)) || (cent->currentState.saberInFlight && saberNum == 0)) && cg.time < saberTrail->lastTime + 2000 ) // if we have a stale segment, don't draw until we have a fresh one
+			if ( (BG_SuperBreakWinAnim(cent->currentState.torsoAnim) || saberTrail->duration > 0 || ((cent->currentState.powerups & (1 << PW_SPEED) && cg_speedTrail.integer)) || (cent->currentState.saberInFlight && saberNum == 0)) && cg.time < saberTrail->lastTime + 2000 ) // if we have a stale segment, don't draw until we have a fresh one
 			{
 	#if 0
 				if (cg_saberTrail.integer == 2 && cg_shadows.integer != 2 && cgs.glconfig.stencilBits >= 4)
@@ -6755,6 +6756,10 @@ void CG_DrawPlayerSphere(centity_t *cent, vec3_t origin, float scale, int shader
 	{
 		return;
 	}
+
+	// JA+ client plugin: the sphere has the size of the model
+	if ( cent->currentState.iModelScale > 0 )
+		scale *= cent->currentState.iModelScale / 100.0f;
 
 	memset( &ent, 0, sizeof( ent ) );
 
