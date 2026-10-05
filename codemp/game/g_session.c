@@ -80,7 +80,8 @@ void G_WriteClientSessionData( gclient_t *client )
 	Q_strcat( s, sizeof( s ), va( "%i ", client->sess.duelTeam ) );
 	Q_strcat( s, sizeof( s ), va( "%i ", client->sess.siegeDesiredTeam ) );
 	Q_strcat( s, sizeof( s ), va( "%s ", siegeClass ) );
-	Q_strcat( s, sizeof( s ), va( "%s", IP ) );
+	Q_strcat( s, sizeof( s ), va( "%s ", IP ) );
+	Q_strcat( s, sizeof( s ), va( "%i", client->sess.jpAdminLevel ) );
 
 	var = va( "session%i", client - level.clients );
 
@@ -98,12 +99,12 @@ void G_ReadSessionData( gclient_t *client )
 {
 	char			s[MAX_CVAR_VALUE_STRING] = {0};
 	const char		*var;
-	int			i=0, tempSessionTeam=0, tempSpectatorState, tempTeamLeader;
+	int			i=0, tempSessionTeam=0, tempSpectatorState, tempTeamLeader, tempAdminLevel=0;
 
 	var = va( "session%i", client - level.clients );
 	trap->Cvar_VariableStringBuffer( var, s, sizeof(s) );
 
-	sscanf( s, "%i %i %i %i %i %i %i %i %i %i %i %i %s %s",
+	sscanf( s, "%i %i %i %i %i %i %i %i %i %i %i %i %s %s %i",
 		&tempSessionTeam, //&client->sess.sessionTeam,
 		&client->sess.spectatorNum,
 		&tempSpectatorState, //&client->sess.spectatorState,
@@ -117,12 +118,14 @@ void G_ReadSessionData( gclient_t *client )
 		&client->sess.duelTeam,
 		&client->sess.siegeDesiredTeam,
 		client->sess.siegeClass,
-		client->sess.IP
+		client->sess.IP,
+		&tempAdminLevel
 		);
 
 	client->sess.sessionTeam	= (team_t)tempSessionTeam;
 	client->sess.spectatorState	= (spectatorState_t)tempSpectatorState;
 	client->sess.teamLeader		= (qboolean)tempTeamLeader;
+	client->sess.jpAdminLevel	= (jpAdminLevel_t)tempAdminLevel;
 
 	// convert back to spaces from unused chars, as session data is written that way.
 	for ( i=0; client->sess.siegeClass[i]; i++ )

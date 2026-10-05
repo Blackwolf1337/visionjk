@@ -74,6 +74,75 @@ static void UI_OpenSiegeMenu_f( void ) {
 	}
 }
 
+/*
+=================
+JA+ macro scan (the server sets jp_macroScan): key bindings with several commands that contain movement,
+attack, force or turning commands are replaced by "echo illegal macro: <binding>" (; becomes :)
+ui_macroenable puts them back
+=================
+*/
+#define JP_MAX_BINDS		320
+#define JP_MACRO_PREFIX		"echo illegal macro: "
+
+static qboolean UI_JPMacroBinding( const char *bind ) {
+	static const char *const keywords[] = {
+		"+moveup", "+attack", "+forward", "+back", "+movedown", "+speed", "force_absorb", "force_heal", "force_distract",
+		"force_protect", "+force_grip", "+force_drain", "+force_lightning", "force_rage", "force_throw", "force_pull",
+		"force_speed", "force_seeing", "force_forcepowerother", "force_healother", "+button", "+left", "+right",
+		"+moveright", "+moveleft", "+useforce", "+altattack", "sensitivity", "m_yaw", "cl_yawspeed"
+	};
+	size_t i;
+
+	if ( !strchr( bind, ';' ) )
+		return qfalse;
+	for ( i = 0; i < ARRAY_LEN( keywords ); i++ ) {
+		if ( strstr( bind, keywords[i] ) )
+			return qtrue;
+	}
+	return qfalse;
+}
+
+static void UI_JPMacroScan_f( void ) {
+	char bind[256], text[300];
+	char *c;
+	int key;
+
+	for ( key = 0; key < JP_MAX_BINDS; key++ ) {
+		bind[0] = '\0';
+		trap->Key_GetBindingBuf( key, bind, sizeof( bind ) );
+		if ( !bind[0] || !strncmp( bind, JP_MACRO_PREFIX, strlen( JP_MACRO_PREFIX ) ) || !UI_JPMacroBinding( bind ) )
+			continue;
+
+		trap->Print( "Illegal binding found.... removing\n" );
+		for ( c = bind; *c; c++ ) {
+			if ( *c == ';' )
+				*c = ':';
+		}
+		Com_sprintf( text, sizeof( text ), JP_MACRO_PREFIX "%s", bind );
+		trap->Key_SetBinding( key, text );
+	}
+}
+
+static void UI_JPMacroEnable_f( void ) {
+	char bind[256];
+	char *c;
+	int key;
+
+	for ( key = 0; key < JP_MAX_BINDS; key++ ) {
+		bind[0] = '\0';
+		trap->Key_GetBindingBuf( key, bind, sizeof( bind ) );
+		if ( strncmp( bind, JP_MACRO_PREFIX, strlen( JP_MACRO_PREFIX ) ) )
+			continue;
+		memmove( bind, bind + strlen( JP_MACRO_PREFIX ), strlen( bind + strlen( JP_MACRO_PREFIX ) ) + 1 );
+		for ( c = bind; *c; c++ ) {
+			if ( *c == ':' )
+				*c = ';';
+		}
+		trap->Print( "Recover MAcro bind KEy %i : %s\n", key, bind );
+		trap->Key_SetBinding( key, bind );
+	}
+}
+
 typedef struct consoleCommand_s {
 	const char	*cmd;
 	void		(*func)(void);
@@ -86,6 +155,8 @@ int cmdcmp( const void *a, const void *b ) {
 static consoleCommand_t	commands[] = {
 	{ "ui_cache",			UI_Cache_f },
 	{ "ui_load",			UI_Load },
+	{ "ui_macroenable",		UI_JPMacroEnable_f },
+	{ "ui_macroscan",		UI_JPMacroScan_f },
 	{ "ui_openmenu",		UI_OpenMenu_f },
 	{ "ui_opensiegemenu",	UI_OpenSiegeMenu_f },
 	{ "ui_report",			UI_Report },

@@ -60,8 +60,17 @@ typedef struct ipFilter_s {
 
 #define	MAX_IPFILTERS (1024)
 
-static ipFilter_t	ipFilters[MAX_IPFILTERS];
-static int			numIPFilters;
+typedef struct ipFilterList_s {
+	ipFilter_t	filters[MAX_IPFILTERS];
+	int			num;
+	const char	*cvarName;	// cvar that mirrors the list
+} ipFilterList_t;
+
+static ipFilterList_t	banList = { {{0}}, 0, NULL };	// JA+: kept in banIPs.txt, no cvar
+static ipFilterList_t	adminBanList = { {{0}}, 0, "jp_banAdminIPs" };	// JA+: IPs that may not use amlogin
+
+#define ipFilters	banList.filters
+#define numIPFilters	banList.num
 
 /*
 =================
@@ -115,18 +124,58 @@ static qboolean StringToFilter( char *s, ipFilter_t *f ) {
 UpdateIPBans
 =================
 */
-static void UpdateIPBans( void ) {
+// JA+: the ban list is kept in this file (one address per line), not in the g_banIPs cvar with its 256 characters
+#define JP_BAN_FILE	"banIPs.txt"
+static qboolean	jp_loadingBans;	// the file is being read: no need to write it
+
+static void JP_WriteBanFile( const ipFilterList_t *list ) {
+	byteAlias_t b, m;
+	fileHandle_t f;
+	char line[NET_ADDRSTRMAXLEN];
+	int i, j;
+
+	if ( jp_loadingBans )
+		return;
+	trap->FS_Open( JP_BAN_FILE, &f, FS_WRITE );
+	if ( !f )
+		return;
+	for ( i=0; i<list->num; i++ ) {
+		if ( list->filters[i].compare == 0xFFFFFFFFu )
+			continue;
+
+		b.ui = list->filters[i].compare;
+		m.ui = list->filters[i].mask;
+		line[0] = 0;
+		// (the original writes the four numbers, a subnet comes back as a single address there)
+		for ( j=0; j<4; j++ ) {
+			if ( m.b[j] != 0xFF )
+				Q_strcat( line, sizeof( line ), "*" );
+			else
+				Q_strcat( line, sizeof( line ), va( "%i", b.b[j] ) );
+			Q_strcat( line, sizeof( line ), (j<3) ? "." : "\n" );
+		}
+		trap->FS_Write( line, strlen( line ), f );
+	}
+	trap->FS_Close( f );
+}
+
+static void UpdateIPBans( ipFilterList_t *list ) {
 	byteAlias_t b, m;
 	int i, j;
 	char ip[NET_ADDRSTRMAXLEN], iplist_final[MAX_CVAR_VALUE_STRING];
 
+	if ( list->cvarName == NULL ) {
+		JP_WriteBanFile( list );
+		return;
+	}
+
 	*iplist_final = 0;
-	for ( i=0; i<numIPFilters; i++ ) {
-		if ( ipFilters[i].compare == 0xFFFFFFFFu )
+	for ( i=0; i<list->num; i++ ) {
+		if ( list->filters[i].compare == 0xFFFFFFFFu )
 			continue;
 
-		b.ui = ipFilters[i].compare;
-		m.ui = ipFilters[i].mask;
+		b.ui = list->filters[i].compare;
+		m.ui = list->filters[i].mask;
 		*ip = 0;
 		for ( j=0; j<4; j++ ) {
 			if ( m.b[j] != 0xFF )
@@ -138,27 +187,30 @@ static void UpdateIPBans( void ) {
 		if ( strlen( iplist_final )+strlen( ip ) < MAX_CVAR_VALUE_STRING )
 			Q_strcat( iplist_final, sizeof( iplist_final ), ip );
 		else {
-			Com_Printf( "g_banIPs overflowed at MAX_CVAR_VALUE_STRING\n" );
+			Com_Printf( "%s overflowed at MAX_CVAR_VALUE_STRING\n", list->cvarName );
 			break;
 		}
 	}
 
-	trap->Cvar_Set( "g_banIPs", iplist_final );
+	trap->Cvar_Set( list->cvarName, iplist_final );
 }
 
 /*
 =================
-G_FilterPacket
+FilterMatches
+
+true if the address "from" matches one of the entries of the list
 =================
 */
-qboolean G_FilterPacket( char *from ) {
+static qboolean FilterMatches( const ipFilterList_t *list, const char *from ) {
 	int i;
 	uint32_t in;
 	byteAlias_t m;
-	char *p;
+	const char *p;
 
 	i = 0;
 	p = from;
+	m.ui = 0u;
 	while ( *p && i < 4 ) {
 		m.b[i] = 0;
 		while ( *p >= '0' && *p <= '9' ) {
@@ -172,12 +224,35 @@ qboolean G_FilterPacket( char *from ) {
 
 	in = m.ui;
 
-	for ( i=0; i<numIPFilters; i++ ) {
-		if ( (in & ipFilters[i].mask) == ipFilters[i].compare )
-			return g_filterBan.integer != 0;
+	for ( i=0; i<list->num; i++ ) {
+		if ( (in & list->filters[i].mask) == list->filters[i].compare )
+			return qtrue;
 	}
 
+	return qfalse;
+}
+
+/*
+=================
+G_FilterPacket
+=================
+*/
+qboolean G_FilterPacket( char *from ) {
+	if ( FilterMatches( &banList, from ) )
+		return g_filterBan.integer != 0;
+
 	return g_filterBan.integer == 0;
+}
+
+/*
+=================
+G_AdminFilterPacket
+
+JA+: true if the address is admin-banned (may not use amlogin)
+=================
+*/
+qboolean G_AdminFilterPacket( const char *from ) {
+	return FilterMatches( &adminBanList, from );
 }
 
 /*
@@ -185,38 +260,63 @@ qboolean G_FilterPacket( char *from ) {
 AddIP
 =================
 */
-static void AddIP( char *str ) {
+static void AddIP( ipFilterList_t *list, char *str ) {
 	int i;
 
-	for ( i=0; i<numIPFilters; i++ ) {
-		if ( ipFilters[i].compare == 0xFFFFFFFFu )
+	for ( i=0; i<list->num; i++ ) {
+		if ( list->filters[i].compare == 0xFFFFFFFFu )
 			break; // free spot
 	}
-	if ( i == numIPFilters ) {
-		if ( numIPFilters == MAX_IPFILTERS ) {
-			trap->Print( "IP filter list is full\n" );
+	if ( i == list->num ) {
+		if ( list->num == MAX_IPFILTERS ) {
+			trap->Print( "%sIP filter list is full\n", list == &adminBanList ? "Admin " : "" );
 			return;
 		}
-		numIPFilters++;
+		list->num++;
 	}
 
-	if ( !StringToFilter( str, &ipFilters[i] ) )
-		ipFilters[i].compare = 0xFFFFFFFFu;
+	if ( !StringToFilter( str, &list->filters[i] ) )
+		list->filters[i].compare = 0xFFFFFFFFu;
 
-	UpdateIPBans();
+	UpdateIPBans( list );
 }
 
 /*
 =================
-G_ProcessIPBans
+RemoveIP
 =================
 */
-void G_ProcessIPBans( void ) {
+static qboolean RemoveIP( ipFilterList_t *list, char *str ) {
+	ipFilter_t	f;
+	int			i;
+
+	if ( !StringToFilter( str, &f ) )
+		return qfalse;
+
+	for ( i=0; i<list->num; i++ ) {
+		if ( list->filters[i].mask == f.mask && list->filters[i].compare == f.compare ) {
+			list->filters[i].compare = 0xffffffffu;
+			UpdateIPBans( list );
+			return qtrue;
+		}
+	}
+
+	return qfalse;
+}
+
+/*
+=================
+ProcessIPBans
+
+fills the list from the space separated string held by the cvar
+=================
+*/
+static void ProcessIPBans( ipFilterList_t *list, char *cvarString ) {
 	char *s = NULL, *t = NULL, str[MAX_CVAR_VALUE_STRING] = {0};
 
-	Q_strncpyz( str, g_banIPs.string, sizeof( str ) );
+	Q_strncpyz( str, cvarString, sizeof( str ) );
 
-	for ( t=s=g_banIPs.string; *t; t=s ) {
+	for ( t=s=cvarString; *t; t=s ) {
 		s = strchr( s, ' ' );
 		if ( !s )
 			break;
@@ -225,8 +325,67 @@ void G_ProcessIPBans( void ) {
 			*s++ = 0;
 
 		if ( *t )
-			AddIP( t );
+			AddIP( list, t );
 	}
+}
+
+// JA+: the ban list comes from banIPs.txt, one address per line
+void G_ProcessIPBans( void ) {
+	static char buf[0x8000 + 1];
+	fileHandle_t f;
+	const char *p = buf, *token;
+	int len, n;
+
+	len = trap->FS_Open( JP_BAN_FILE, &f, FS_READ );
+	if ( !f || len < 0 ) {
+		Com_Printf( "NO file %s found!\n", JP_BAN_FILE );
+		return;
+	}
+	if ( len > 0x8000 ) {
+		len = 0x8000;
+		Com_Printf( "IP ban File %s are too large. only first %i caracteres will be read. \n", JP_BAN_FILE, len );
+	}
+	trap->FS_Read( buf, len, f );
+	buf[len] = '\0';
+	trap->FS_Close( f );
+
+	jp_loadingBans = qtrue;
+	COM_BeginParseSession( "banipsinfo" );
+	for ( n = 0; n < 0x800; n++ ) {
+		token = COM_ParseExt( &p, qtrue );
+		if ( !token[0] )
+			break;
+		AddIP( &banList, (char *)token );
+		SkipRestOfLine( &p );
+	}
+	jp_loadingBans = qfalse;
+}
+
+// JA+: admin ban list, see jp_banAdminIPs
+void G_ProcessAdminIPBans( void ) {
+	ProcessIPBans( &adminBanList, jp_banAdminIPs.string );
+}
+
+void G_AdminAddIP( char *str ) {
+	AddIP( &adminBanList, str );
+}
+
+// "all" clears the whole list
+void G_AdminRemoveIP( char *str ) {
+	int i;
+
+	if ( !Q_stricmp( str, "all" ) ) {
+		for ( i=0; i<adminBanList.num; i++ )
+			adminBanList.filters[i].compare = 0xffffffffu;
+		UpdateIPBans( &adminBanList );
+		trap->Print( "Admin-Ban Ips list empty\n" );
+		return;
+	}
+
+	if ( RemoveIP( &adminBanList, str ) )
+		trap->Print( "Removed.\n" );
+	else
+		trap->Print( "Didn't find %s.\n", str );
 }
 
 /*
@@ -245,7 +404,7 @@ void Svcmd_AddIP_f (void)
 
 	trap->Argv( 1, str, sizeof( str ) );
 
-	AddIP( str );
+	AddIP( &banList, str );
 }
 
 /*
@@ -255,8 +414,6 @@ Svcmd_RemoveIP_f
 */
 void Svcmd_RemoveIP_f (void)
 {
-	ipFilter_t	f;
-	int			i;
 	char		str[MAX_TOKEN_CHARS];
 
 	if ( trap->Argc() < 2 ) {
@@ -266,21 +423,10 @@ void Svcmd_RemoveIP_f (void)
 
 	trap->Argv( 1, str, sizeof( str ) );
 
-	if (!StringToFilter (str, &f))
-		return;
-
-	for (i=0 ; i<numIPFilters ; i++) {
-		if (ipFilters[i].mask == f.mask	&&
-			ipFilters[i].compare == f.compare) {
-			ipFilters[i].compare = 0xffffffffu;
-			trap->Print ("Removed.\n");
-
-			UpdateIPBans();
-			return;
-		}
-	}
-
-	trap->Print ( "Didn't find %s.\n", str );
+	if ( RemoveIP( &banList, str ) )
+		trap->Print( "Removed.\n" );
+	else
+		trap->Print( "Didn't find %s.\n", str );
 }
 
 void Svcmd_ListIP_f (void)
@@ -504,6 +650,9 @@ qboolean	ConsoleCommand( void ) {
 	svcmd_t	*command = NULL;
 
 	trap->Argv( 0, cmd, sizeof( cmd ) );
+
+	if ( JP_ConsoleCommand( cmd ) )
+		return qtrue;
 
 	command = (svcmd_t *)Q_LinearSearch( cmd, svcmds, numsvcmds, sizeof( svcmds[0] ), svcmdcmp );
 	if ( !command )

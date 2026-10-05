@@ -210,6 +210,8 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 	G_RegisterCvars();
 
 	G_ProcessIPBans();
+	G_ProcessAdminIPBans();
+	JP_HighlanderMapStart();
 
 	G_InitMemory();
 
@@ -369,6 +371,24 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 		G_LoadArenas();
 	}
 
+	JP_LoadBlockWalls();
+	WP_ModelScaleLoadParms();
+	JP_AntiFakeLoad();
+	JP_AutoQuitInit();
+	if ( jp_DlBaseURL.string[0] )
+		trap->Cvar_Set( "sv_allowDownload", "0" );	// JA+: clients download from the URL instead
+
+	// the JA+ client plugin and the server browsers recognise a JA+ server by these two
+	trap->Cvar_Set( "gamename", JP_GAMENAME );
+	trap->Cvar_Register( NULL, "V", JP_SERVER_VERSION, CVAR_SERVERINFO|CVAR_ROM );
+	trap->Cvar_Set( "V", JP_SERVER_VERSION );
+
+	// the new animations come with japlus_gla_anims.pk3 in base, without it they have no frames
+	if ( jp_newGLAAnims.integer && !bgHumanoidAnimations[BOTH_KISSEE].numFrames )
+		trap->Cvar_Set( "jp_newGLAAnims", "0" );
+	trap->Cvar_Update( &jp_newGLAAnims );
+	JP_UpdateServerInfo();
+
 	if ( level.gametype == GT_DUEL || level.gametype == GT_POWERDUEL )
 	{
 		G_LogPrintf("Duel Tournament Begun: kill limit %d, win limit: %d\n", fraglimit.integer, duel_fraglimit.integer );
@@ -445,6 +465,8 @@ G_ShutdownGame
 void G_ShutdownGame( int restart ) {
 	int i = 0;
 	gentity_t *ent;
+
+	JP_AntiFakeStore();
 
 //	trap->Print ("==== ShutdownGame ====\n");
 
@@ -1047,6 +1069,7 @@ void G_ResetDuelists(void)
 		g_noPDuelCheck = qfalse;
 		trap->UnlinkEntity ((sharedEntity_t *)ent);
 		ClientSpawn(ent);
+		G_SpawnTeleportEffect( ent );
 		i++;
 	}
 }
@@ -1176,7 +1199,8 @@ void CalculateRanks( void ) {
 			trap->SetConfigstring( CS_SCORES2, va("%i", level.clients[ level.sortedClients[1] ].ps.persistant[PERS_SCORE] ) );
 		}
 
-		if (level.gametype != GT_DUEL && level.gametype != GT_POWERDUEL)
+		// JA+ (the original game): in every gametype, the test for the duel games there is always true. OpenJK
+		// skips the duel games.
 		{ //when not in duel, use this configstring to pass the index of the player currently in first place
 			if ( level.numConnectedClients >= 1 )
 			{
@@ -1434,6 +1458,8 @@ extern siegePers_t g_siegePersistant; //g_saga.c
 void ExitLevel (void) {
 	int		i;
 	gclient_t *cl;
+
+	JP_AntiFakeStore();
 
 	// if we are running a tournament map, kick the loser to spectator status,
 	// which will automatically grab the next spectator and restart
@@ -1926,6 +1952,11 @@ void CheckExitRules( void ) {
 
 	if (gDoSlowMoDuel)
 	{ //don't go to intermission while in slow motion
+		return;
+	}
+
+	if ( JP_HighlanderTimelimitHit() )
+	{
 		return;
 	}
 
@@ -2630,8 +2661,17 @@ void CheckVote( void ) {
 	if ( !level.voteTime ) {
 		return;
 	}
-	if ( level.time-level.voteTime >= VOTE_TIME || level.voteYes + level.voteNo == 0 ) {
-		trap->SendServerCommand( -1, va("print \"%s (%s)\n\"", G_GetStringEdString("MP_SVGAME", "VOTEFAILED"), level.voteStringClean) );
+	// JA+: a poll and a killed vote have no vote string, they end without "passed" or "failed" (and a poll starts
+	// without a yes vote). With jp_onlyVotingClients only the votes cast count.
+	if ( level.time-level.voteTime >= VOTE_TIME || (level.voteString[0] && level.voteYes + level.voteNo == 0) ) {
+		if ( !level.voteString[0] )
+			;
+		else if ( jp_onlyVotingClients.integer == 1 && level.voteYes > level.voteNo ) {
+			trap->SendServerCommand( -1, va("print \"%s (%s)\n\"", G_GetStringEdString("MP_SVGAME", "VOTEPASSED"), level.voteStringClean) );
+			level.voteExecuteTime = level.time + level.voteExecuteDelay;
+		}
+		else
+			trap->SendServerCommand( -1, va("print \"%s (%s)\n\"", G_GetStringEdString("MP_SVGAME", "VOTEFAILED"), level.voteStringClean) );
 	}
 	else {
 		if ( level.voteYes > level.numVotingClients/2 ) {
@@ -2647,6 +2687,10 @@ void CheckVote( void ) {
 		else // still waiting for a majority
 			return;
 	}
+	trap->SendServerCommand( -1, va( "print \"^5Vote ^2Yes^7/^1No^7: ^2%i^7/^1%i ^7NonVoting ^1%i\n\"",
+		level.voteYes, level.voteNo, level.numVotingClients - level.voteYes - level.voteNo ) );
+	JP_ClearPluginlessMessages();
+
 	level.voteTime = 0;
 	trap->SetConfigstring( CS_VOTE_TIME, "" );
 }
@@ -2766,7 +2810,10 @@ void CheckTeamVote( int team ) {
 		if ( level.teamVoteYes[cs_offset] > level.numteamVotingClients[cs_offset]/2 ) {
 			// execute the command, then remove the vote
 			trap->SendServerCommand( -1, va("print \"%s (%s)\n\"", G_GetStringEdString("MP_SVGAME", "TEAMVOTEPASSED"), level.teamVoteStringClean[cs_offset]) );
-			level.voteExecuteTime = level.time + 3000;
+			// JA+ (the original game): the command runs at once, a leader vote does nothing. OpenJK started the
+			// timer of the normal votes here, which ran the last normal vote a second time.
+			if ( Q_strncmp( "leader", level.teamVoteString[cs_offset], 6 ) )
+				trap->SendConsoleCommand( EXEC_APPEND, va( "%s\n", level.teamVoteString[cs_offset] ) );
 		}
 
 		// same behavior as a timeout
@@ -3018,6 +3065,7 @@ void G_RunFrame( int levelTime ) {
 	level.framenum++;
 	level.previousTime = level.time;
 	level.time = levelTime;
+	JP_AutoQuitFrame();
 
 	if (g_allowNPC.integer)
 	{
@@ -3266,21 +3314,17 @@ void G_RunFrame( int levelTime ) {
 					ent->client->jetPackDebReduce = level.time + JETPACK_DEFUEL_RATE;
 				}
 			}
-			else if (ent->client->ps.jetpackFuel < 100)
-			{ //recharge jetpack
-				if (ent->client->jetPackDebRecharge < level.time)
-				{
-					ent->client->ps.jetpackFuel++;
-					ent->client->jetPackDebRecharge = level.time + JETPACK_REFUEL_RATE;
-				}
+			else
+			{ //recharge jetpack. JA+: or the hook uses the fuel
+				JP_HookFuelThink( ent );
 			}
 
 #define CLOAK_DEFUEL_RATE		200 //approx. 20 seconds of idle use from a fully charged fuel amt
 #define CLOAK_REFUEL_RATE		150 //seems fair
 			if (ent->client->ps.powerups[PW_CLOAKED])
 			{ //using cloak, drain battery
-				if (ent->client->cloakDebReduce < level.time)
-				{
+				if (ent->client->cloakDebReduce < level.time && !ent->client->pers.jp.stActive && jp_cloakFuel.integer == 1)
+				{ // JA+ jp_cloakFuel: 0 is an infinite cloak, and the star trek teleport costs nothing
 					ent->client->ps.cloakFuel--;
 
 					if (ent->client->ps.cloakFuel <= 0)
@@ -3405,6 +3449,7 @@ void G_RunFrame( int levelTime ) {
 
 	// for tracking changes
 	CheckCvars();
+	JP_UpdateServerInfo();
 
 #ifdef _G_FRAME_PERFANAL
 	iTimer_GameChecks = trap->PrecisionTimer_End(timer_GameChecks);
@@ -3654,7 +3699,8 @@ Q_EXPORT intptr_t vmMain( int command, intptr_t arg0, intptr_t arg1, intptr_t ar
 		return 0;
 
 	case GAME_CLIENT_USERINFO_CHANGED:
-		ClientUserinfoChanged( arg0 );
+		if ( JP_UserinfoMayChange( arg0 ) )
+			ClientUserinfoChanged( arg0 );
 		return 0;
 
 	case GAME_CLIENT_DISCONNECT:

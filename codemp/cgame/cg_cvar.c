@@ -31,6 +31,15 @@ static void CG_SVRunningChange( void ) {
 	cgs.localServer = sv_running.integer;
 }
 
+// shared with bg_*.c (pmove): the plugin knows its own version, the other players are not predicted
+float BG_pluginVersion( int clientNum ) {
+	return 1.4f;
+}
+
+qboolean BG_pluginDisable( int clientNum, int feature ) {
+	return feature >= 0 && feature < 15 && (cp_pluginDisable.integer & (1 << feature)) != 0;
+}
+
 static void CG_ForceModelChange( void ) {
 	int i;
 

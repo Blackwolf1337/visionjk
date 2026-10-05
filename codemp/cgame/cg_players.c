@@ -663,6 +663,13 @@ retryModel:
 	//We need a lower lumbar bolt for footsteps
 	ci->bolt_llumbar = trap->G2API_AddBolt(ci->ghoul2Model, 0, "lower_lumbar");
 
+	// JA+ client plugin: the bolts for the sabers carried on the body. They are made on the model the player
+	// entities are copied from (like the plugin does, same order), so every copy has them at the same index.
+	// (The plugin refuses a model without these tags, here it only has no saber on the body.)
+	ci->bolt_back = trap->G2API_AddBolt(ci->ghoul2Model, 0, "*back");
+	ci->bolt_hipL = trap->G2API_AddBolt(ci->ghoul2Model, 0, "*hip_l");
+	ci->bolt_hipR = trap->G2API_AddBolt(ci->ghoul2Model, 0, "*hip_r");
+
 	if (ci->bolt_rhand == -1 || ci->bolt_lhand == -1 || ci->bolt_head == -1 || ci->bolt_motion == -1 || ci->bolt_llumbar == -1)
 	{
 		badModel = qtrue;
@@ -1309,6 +1316,9 @@ static void CG_CopyClientInfoModel( clientInfo_t *from, clientInfo_t *to )
 	to->bolt_rhand = from->bolt_rhand;
 	to->bolt_motion = from->bolt_motion;
 	to->bolt_llumbar = from->bolt_llumbar;
+	to->bolt_back = from->bolt_back;
+	to->bolt_hipL = from->bolt_hipL;
+	to->bolt_hipR = from->bolt_hipR;
 
 	to->siegeIndex = from->siegeIndex;
 
@@ -1381,6 +1391,9 @@ static qboolean CG_ScanForExistingClientInfo( clientInfo_t *ci, int clientNum ) 
 					ci->bolt_rhand = match->bolt_rhand;
 					ci->bolt_motion = match->bolt_motion;
 					ci->bolt_llumbar = match->bolt_llumbar;
+					ci->bolt_back = match->bolt_back;
+					ci->bolt_hipL = match->bolt_hipL;
+					ci->bolt_hipR = match->bolt_hipR;
 					ci->siegeIndex = match->siegeIndex;
 
 					memcpy( ci->sounds, match->sounds, sizeof( ci->sounds ) );
@@ -1592,11 +1605,20 @@ void CG_NewClientInfo( int clientNum, qboolean entitiesInitialized ) {
 	CG_ColorFromString( v, newInfo.color1 );
 
 	newInfo.icolor1 = atoi(v);
+	if ( newInfo.icolor1 == 11 && (cp_pluginDisable.integer & (1 << 3)) )	// Plugin_seeBlackSabers
+		newInfo.icolor1 = 1;
 
 	v = Info_ValueForKey( configstring, "c2" );
 	CG_ColorFromString( v, newInfo.color2 );
 
 	newInfo.icolor2 = atoi(v);
+	if ( newInfo.icolor2 == 11 && (cp_pluginDisable.integer & (1 << 3)) )
+		newInfo.icolor2 = 1;
+
+	// JA+ RGB sabers
+	newInfo.sbRGB[0] = atoi( Info_ValueForKey( configstring, "c3" ) );
+	newInfo.sbRGB[1] = atoi( Info_ValueForKey( configstring, "c4" ) );
+	newInfo.holsterModel = atoi( Info_ValueForKey( configstring, "hm" ) );
 
 	// bot skill
 	v = Info_ValueForKey( configstring, "skill" );
@@ -4539,6 +4561,32 @@ CG_PlayerFloatSprite
 Float a sprite over the player's head
 ===============
 */
+/*
+===============
+CG_JPOtherDuel
+
+JA+ client plugin: on a server that separates the private duels (jp_DuelAlpha >= 0) the player is in a duel
+the local player is not part of, or the local player duels somebody else
+===============
+*/
+qboolean CG_JPOtherDuel( int clientNum ) {
+	const playerState_t *ps;
+
+	if ( cgs.jpDuelAlpha < 0 || !cg.snap || clientNum < 0 || clientNum >= MAX_CLIENTS )
+		return qfalse;
+	ps = &cg.snap->ps;
+	if ( ps->clientNum == clientNum )
+		return qfalse;
+	if ( ps->duelInProgress )
+		return ps->duelIndex != clientNum;
+	return cg_entities[clientNum].currentState.bolt1 != 0;
+}
+
+// (Plugin_IgnoreAllPlayers_WhenInDuel, cp_pluginDisable bit 1, keeps the small things of those players visible)
+static qboolean CG_JPHideOtherDuel( int clientNum ) {
+	return !(cp_pluginDisable.integer & (1 << 1)) && CG_JPOtherDuel( clientNum );
+}
+
 static void CG_PlayerFloatSprite( centity_t *cent, qhandle_t shader ) {
 	int				rf;
 	refEntity_t		ent;
@@ -4619,6 +4667,10 @@ static void CG_PlayerSprites( centity_t *cent ) {
 		return; //this entity is mind-tricking the current client, so don't render it
 	}
 
+	if ( CG_JPHideOtherDuel( cent->currentState.number ) ) {
+		return;
+	}
+
 	if ( cent->currentState.eFlags & EF_CONNECTION ) {
 		CG_PlayerFloatSprite( cent, cgs.media.connectionShader );
 		return;
@@ -4655,6 +4707,10 @@ static qboolean CG_PlayerShadow( centity_t *cent, float *shadowPlane ) {
 	*shadowPlane = 0;
 
 	if ( cg_shadows.integer == 0 ) {
+		return qfalse;
+	}
+
+	if ( CG_JPHideOtherDuel( cent->currentState.number ) ) {
 		return qfalse;
 	}
 
@@ -5004,6 +5060,11 @@ static void CG_ForcePushBodyBlur( centity_t *cent )
 		return;
 	}
 
+	if ( CG_JPHideOtherDuel( cent->currentState.number ) )
+	{
+		return;
+	}
+
 	if (cg.snap &&
 		CG_IsMindTricked(cent->currentState.trickedentindex,
 		cent->currentState.trickedentindex2,
@@ -5102,6 +5163,11 @@ void CG_AddRefEntityWithPowerups( refEntity_t *ent, entityState_t *state, int te
 		cg.snap->ps.clientNum))
 	{
 		return; //this entity is mind-tricking the current client, so don't render it
+	}
+
+	if ( CG_JPHideOtherDuel( state->number ) )
+	{
+		return;
 	}
 
 	trap->R_AddRefEntityToScene( ent );
@@ -5243,10 +5309,36 @@ int CG_LightVerts( vec3_t normal, int numVerts, polyVert_t *verts )
 	return qtrue;
 }
 
+// JA+ saber colors above SABER_PURPLE
+#define SABER_RGB_FIRST		6
+#define SABER_RGB_LAST		10
+#define SABER_BLACK			11
+static int cg_jpSaberRGB;	// packed RGB of the blade being drawn, set by CG_AddSaberBlade
+
+static qboolean CG_SaberIsRGB( int color )
+{
+	return color >= SABER_RGB_FIRST && color <= SABER_RGB_LAST;
+}
+
+// rgb as 0..255, white if the player has no RGB color
+static void CG_SaberRGBBytes( vec3_t rgb )
+{
+	int c = cg_jpSaberRGB ? cg_jpSaberRGB : 0xffffff;
+
+	VectorSet( rgb, c & 0xff, (c >> 8) & 0xff, (c >> 16) & 0xff );
+}
+
 static void CG_RGBForSaberColor( saber_colors_t color, vec3_t rgb )
 {
-	switch( color )
+	switch( (int)color )
 	{
+		case SABER_BLACK:
+			VectorClear( rgb );
+			break;
+		case SABER_RGB_FIRST: case SABER_RGB_FIRST+1: case SABER_RGB_FIRST+2: case SABER_RGB_FIRST+3: case SABER_RGB_LAST:
+			CG_SaberRGBBytes( rgb );
+			VectorScale( rgb, 1.0f/255.0f, rgb );
+			break;
 		case SABER_RED:
 			VectorSet( rgb, 1.0f, 0.2f, 0.2f );
 			break;
@@ -5374,8 +5466,29 @@ void CG_DoSaber( vec3_t origin, vec3_t dir, float length, float lengthMax, float
 	// Find the midpoint of the saber for lighting purposes
 	VectorMA( origin, length * 0.5f, dir, mid );
 
-	switch( color )
+	switch( (int)color )
 	{
+		case SABER_RGB_FIRST:
+			glow = cgs.media.RGBSaberGlowShader;
+			blade = cgs.media.RGBSaberLineShader;
+			break;
+		case SABER_RGB_FIRST+1:
+		case SABER_RGB_FIRST+2:
+			glow = cgs.media.RGBSaberGlowShader;
+			blade = cgs.media.RGBSaberCoreShader[color - SABER_RGB_FIRST - 1];
+			break;
+		case SABER_RGB_FIRST+3:
+			glow = cgs.media.RGBSaberGlow4Shader;
+			blade = cgs.media.RGBSaberCoreShader[2];
+			break;
+		case SABER_RGB_LAST:
+			glow = cgs.media.RGBSaberGlowShader;
+			blade = cgs.media.RGBSaberCoreShader[3];
+			break;
+		case SABER_BLACK:
+			glow = cgs.media.blackSaberGlowShader;
+			blade = cgs.media.blackSaberLineShader;
+			break;
 		case SABER_RED:
 			glow = cgs.media.redSaberGlowShader;
 			blade = cgs.media.redSaberCoreShader;
@@ -5446,6 +5559,15 @@ void CG_DoSaber( vec3_t origin, vec3_t dir, float length, float lengthMax, float
 	saber.reType = RT_SABER_GLOW;
 	saber.customShader = glow;
 	saber.shaderRGBA[0] = saber.shaderRGBA[1] = saber.shaderRGBA[2] = saber.shaderRGBA[3] = 0xff;
+	if ( CG_SaberIsRGB( color ) )
+	{
+		vec3_t bytes;
+
+		CG_SaberRGBBytes( bytes );
+		saber.shaderRGBA[0] = (byte)bytes[0];
+		saber.shaderRGBA[1] = (byte)bytes[1];
+		saber.shaderRGBA[2] = (byte)bytes[2];
+	}
 	saber.renderfx = rfx;
 
 	trap->R_AddRefEntityToScene( &saber );
@@ -6064,6 +6186,14 @@ void CG_AddSaberBlade( centity_t *cent, centity_t *scent, refEntity_t *saber, in
 		return;
 	}
 
+	// JA+ client plugin: in a private duel the thrown sabers of the players outside of it are not drawn
+	if ( cg.snap && cg.snap->ps.duelInProgress && cgs.jpDuelAlpha >= 0 && !(cp_pluginDisable.integer & (1 << 1))
+		&& cent->currentState.saberInFlight && cent->currentState.number != cg.snap->ps.clientNum
+		&& cg.snap->ps.duelIndex != cent->currentState.number )
+	{
+		return;
+	}
+
 	futureAngles[YAW] = angles[YAW];
 	futureAngles[PITCH] = angles[PITCH];
 	futureAngles[ROLL] = angles[ROLL];
@@ -6153,6 +6283,8 @@ void CG_AddSaberBlade( centity_t *cent, centity_t *scent, refEntity_t *saber, in
 			scolor = SABER_BLUE;
 		}
 	}
+
+	cg_jpSaberRGB = client->sbRGB[saberNum ? 1 : 0];
 
 	if (!cg_saberContact.integer)
 	{ //if we don't have saber contact enabled, just add the blade and don't care what it's touching
@@ -6388,8 +6520,14 @@ CheckTrail:
 						case SABER_PURPLE:
 							VectorSet( rgb1, 220.0f, 0.0f, 255.0f );
 							break;
+						case SABER_BLACK:
+							VectorSet( rgb1, 1.0f, 1.0f, 1.0f );
+							break;
 						default:
-							VectorSet( rgb1, 0.0f, 64.0f, 255.0f );
+							if ( CG_SaberIsRGB( scolor ) )
+								CG_SaberRGBBytes( rgb1 );
+							else
+								VectorSet( rgb1, 0.0f, 64.0f, 255.0f );
 							break;
 					}
 
@@ -6429,6 +6567,15 @@ CheckTrail:
 							else
 							{
 								fx.mShader = cgs.media.saberBlurShader;
+								switch ( scolor )
+								{
+									case SABER_BLACK:			fx.mShader = cgs.media.blackSaberBlurShader;	break;
+									case SABER_RGB_FIRST+1:		fx.mShader = cgs.media.RGBSaberTrailShader[0];	break;
+									case SABER_RGB_FIRST+2:		fx.mShader = cgs.media.RGBSaberTrailShader[1];	break;
+									case SABER_RGB_FIRST+3:		fx.mShader = cgs.media.RGBSaberTrailShader[2];	break;
+									case SABER_RGB_LAST:		fx.mShader = cgs.media.swordTrailShader;		break;
+									default:					break;
+								}
 							}
 							fx.mKillTime = trailDur;
 							fx.mSetFlags = FX_USE_ALPHA;
@@ -8442,6 +8589,506 @@ void CG_CheckThirdPersonAlpha( centity_t *cent, refEntity_t *legs )
 	}
 }
 
+/*
+=================
+CG_JPMinAlpha
+
+JA+: the alpha a player fades to for the local player. Players in another duel
+fade to jp_DuelAlpha, players in the other alternate dimension (FFA only) to cp_altDimAlpha
+=================
+*/
+static int CG_JPMinAlpha( const centity_t *cent )
+{
+	const playerState_t *ps = &cg.snap->ps;
+	int num = cent->currentState.number;
+
+	if ( num == ps->clientNum || num < 0 || num >= MAX_CLIENTS )
+		return 255;
+
+	if ( cgs.jpDuelAlpha >= 0 )
+	{
+		int alpha = cgs.jpDuelAlpha;
+
+		if ( ps->duelInProgress )
+		{
+			if ( ps->duelIndex != num )
+			{
+				if ( ps->duelInProgress && (cp_pluginDisable.integer & (1 << 1)) )	// Plugin_IgnoreAllPlayers_WhenInDuel
+					alpha = 40;
+				return alpha;
+			}
+			return 255;	// the opponent
+		}
+		if ( cent->currentState.bolt1 )
+			return alpha;
+	}
+
+	if ( JP_FEATURE( JPF_ALTDIM ) && cgs.gametype == GT_FFA
+		&& ((ps->eFlags & EF_ALT_DIM) != 0) != ((cent->currentState.eFlags & EF_ALT_DIM) != 0) )
+		return cp_altDimAlpha.integer;
+
+	return 255;
+}
+
+/*
+=================
+JA+ client plugin: sabers carried on the body (Plugin_holsteredSaberBolted, cp_pluginDisable bit 9 turns it off)
+
+A saber that is not in use hangs on the player: on the right hip (the second one on the left hip), a staff
+or a saber with the saber key idleInBack on the back. Sabers with idleInBack also stay there while the saber
+is the weapon but switched off, and come to the hand with the draw animations of the new JA+ animations.
+The holster model of the player (hm of the clientinfo, cp_holster) is shown for sabers with idleInBack 1.
+Rebuilt from cgamex86.dll of the plugin 1.4B4 (end of CG_Player and FUN_3004e2a0).
+=================
+*/
+typedef struct jpHolsterState_s {
+	void		*saberG2[MAX_SABERS];			// copies of the hilts for the body
+	char		saberModel[MAX_SABERS][MAX_QPATH];
+	qhandle_t	saberSkin[MAX_SABERS];
+	qboolean	saberOffHand;					// the first saber was taken out of the hand
+	int			drawAnim, drawAnimTime;			// the running draw or put away animation and when it started
+} jpHolsterState_t;
+
+static jpHolsterState_t jpHolsterState[MAX_CLIENTS];
+
+void CG_JPHolsterShutdown( void )
+{
+	int i, j;
+
+	for ( i = 0; i < MAX_CLIENTS; i++ )
+	{
+		for ( j = 0; j < MAX_SABERS; j++ )
+		{
+			if ( jpHolsterState[i].saberG2[j] && trap->G2_HaveWeGhoul2Models( jpHolsterState[i].saberG2[j] ) )
+				trap->G2API_CleanGhoul2Models( &jpHolsterState[i].saberG2[j] );
+		}
+	}
+	memset( jpHolsterState, 0, sizeof( jpHolsterState ) );
+}
+
+static qboolean CG_JPHolsterClient( const centity_t *cent )
+{
+	return cent->currentState.eType != ET_NPC && cent->currentState.number >= 0 && cent->currentState.number < MAX_CLIENTS;
+}
+
+// remembers when one of the draw or put away animations started
+static void CG_JPHolsterTrackAnim( const centity_t *cent, const clientInfo_t *ci )
+{
+	jpHolsterState_t *hs;
+	const int anim = cent->currentState.torsoAnim;
+
+	if ( !CG_JPHolsterClient( cent ) || !ci->infoValid )
+		return;
+	hs = &jpHolsterState[cent->currentState.number];
+
+	if ( anim < BOTH_STAND1TO2_NEW || anim > BOTH_S1_S6_2ARMS || hs->drawAnim == anim )
+	{
+		if ( hs->drawAnim != anim )
+			hs->drawAnim = 0;
+	}
+	else
+	{
+		hs->drawAnimTime = cg.time;
+		hs->drawAnim = anim;
+	}
+}
+
+// a staff that hangs on the back is not put back into the hand by the saber code
+static qboolean CG_JPStaffOffHand( const centity_t *cent, const clientInfo_t *ci )
+{
+	return JP_FEATURE( JPF_NEWGLAANIMS ) && CG_JPHolsterClient( cent ) && !(cent->currentState.eFlags & EF_DEAD)
+		&& cent->currentState.NPC_class != CLASS_VEHICLE && ci->team != TEAM_SPECTATOR
+		&& ci->saber[0].type == SABER_STAFF && jpHolsterState[cent->currentState.number].saberOffHand;
+}
+
+static qboolean CG_JPSaberOffHand( const centity_t *cent )
+{
+	return CG_JPHolsterClient( cent ) && jpHolsterState[cent->currentState.number].saberOffHand;
+}
+
+// the copy of the hilt for the body, made new when the saber of the player changed
+static void *CG_JPHolsterSaberModel( jpHolsterState_t *hs, const clientInfo_t *ci, int saberNum )
+{
+	const saberInfo_t *saber = &ci->saber[saberNum];
+
+	if ( hs->saberG2[saberNum] && (strcmp( hs->saberModel[saberNum], saber->model ) || hs->saberSkin[saberNum] != saber->skin
+		|| !trap->G2_HaveWeGhoul2Models( hs->saberG2[saberNum] )) )
+	{
+		if ( trap->G2_HaveWeGhoul2Models( hs->saberG2[saberNum] ) )
+			trap->G2API_CleanGhoul2Models( &hs->saberG2[saberNum] );
+		hs->saberG2[saberNum] = NULL;
+	}
+	if ( !hs->saberG2[saberNum] && saber->model[0] )
+	{
+		Q_strncpyz( hs->saberModel[saberNum], saber->model, sizeof( hs->saberModel[saberNum] ) );
+		hs->saberSkin[saberNum] = saber->skin;
+		trap->G2API_InitGhoul2Model( &hs->saberG2[saberNum], saber->model, 0, saber->skin, 0, 0, 0 );
+		if ( hs->saberG2[saberNum] && saber->skin )
+			trap->G2API_SetSkin( hs->saberG2[saberNum], 0, saber->skin, saber->skin );
+	}
+	return hs->saberG2[saberNum];
+}
+
+static void CG_JPDrawHolsteredSaber( centity_t *cent, clientInfo_t *ci, int saberNum, qboolean onHip )
+{
+	jpHolsterState_t *hs = &jpHolsterState[cent->currentState.number];
+	const playerState_t *ps = &cg.snap->ps;
+	const int num = cent->currentState.number;
+	refEntity_t re;
+	mdxaBone_t matrix;
+	matrix3_t offset, boltAxis;
+	vec3_t angles = { 0, 0, 0 };
+	float scale = 1.0f;
+	int bolt, alpha;
+
+	if ( num == ps->clientNum && !cg.renderingThirdPerson )
+		return;
+	bolt = !onHip ? ci->bolt_back : (saberNum == 1 ? ci->bolt_hipL : ci->bolt_hipR);
+	if ( bolt <= 0 || !CG_JPHolsterSaberModel( hs, ci, saberNum ) )
+		return;
+
+	// in a private duel nothing of the players outside of it
+	if ( num != ps->clientNum && cgs.jpDuelAlpha >= 0 && ps->duelInProgress && !(cp_pluginDisable.integer & (1 << 1)) && ps->duelIndex != num )
+		return;
+	alpha = CG_JPMinAlpha( cent );
+	if ( alpha <= 0 )
+		return;
+
+	if ( cent->currentState.iModelScale > 0 )
+		scale = cent->currentState.iModelScale / 100.0f;
+
+	memset( &re, 0, sizeof( re ) );
+	trap->G2API_GetBoltMatrix( cent->ghoul2, 0, bolt, &matrix, cent->turAngles, cent->lerpOrigin, cg.time, cgs.gameModels, cent->modelScale );
+	BG_GiveMeVectorFromMatrix( &matrix, ORIGIN, re.origin );
+	BG_GiveMeVectorFromMatrix( &matrix, POSITIVE_X, boltAxis[0] );
+	BG_GiveMeVectorFromMatrix( &matrix, POSITIVE_Y, boltAxis[1] );
+	BG_GiveMeVectorFromMatrix( &matrix, POSITIVE_Z, boltAxis[2] );
+	if ( !onHip )
+	{ // across the back, the second saber the other way round
+		angles[ROLL] = saberNum == 1 ? -150.0f : 150.0f;
+	}
+	else
+	{ // a bit away from the body
+		VectorMA( re.origin, scale * -5.0f, boltAxis[2], re.origin );
+	}
+	AnglesToAxis( angles, offset );
+	MatrixMultiply( offset, boltAxis, re.axis );
+
+	re.reType = RT_MODEL;
+	re.ghoul2 = hs->saberG2[saberNum];
+	VectorSet( re.modelScale, scale, scale, scale );
+	ScaleModelAxis( &re );
+
+	if ( alpha < 255 )
+	{
+		re.renderfx |= RF_FORCE_ENT_ALPHA;
+		re.shaderRGBA[3] = alpha;
+	}
+	else if ( (cent->currentState.powerups & (1 << PW_CLOAKED))
+		&& (!(ps->fd.forcePowersActive & (1 << FP_SEE)) || ps->clientNum == num) )
+	{ // cloaked like the player
+		if ( cg_shadows.integer != 2 && cgs.glconfig.stencilBits >= 4 && cg_renderToTextureFX.integer )
+		{
+			re.customShader = 2;
+		}
+		else
+		{
+			re.renderfx = 0;
+			re.shaderRGBA[0] = re.shaderRGBA[1] = re.shaderRGBA[2] = re.shaderRGBA[3] = 255;
+			re.customShader = cgs.media.cloakedShader;
+		}
+	}
+	trap->R_AddRefEntityToScene( &re );
+}
+
+#define JP_HOLSTER_BOLT	8	// bolt of the humanoid skeleton the holster model is fixed to without a "*back" tag
+
+// the holster model on the back, for sabers that are drawn from the back
+static void CG_JPHolsterModel( centity_t *cent, const clientInfo_t *ci, qboolean want )
+{
+	if ( cent->jpHolster && !trap->G2API_HasGhoul2ModelOnIndex( &cent->ghoul2, cent->jpHolster - 1 ) )
+		cent->jpHolster = 0;	// the model was rebuilt
+
+	want = want && ci->holsterModel > 0 && !(cp_pluginDisable.integer & (1 << 9));
+	if ( want && !cent->jpHolster )
+	{
+		int index = trap->G2API_InitGhoul2Model( &cent->ghoul2, va( "models/weapons2/holster/model%i.glm", ci->holsterModel ), 0, 0, 0, 0, 0 );
+
+		if ( index < 0 )
+			index = trap->G2API_InitGhoul2Model( &cent->ghoul2, "models/weapons2/holster/model1.glm", 0, 0, 0, 0, 0 );
+		if ( index >= 0 )
+		{
+			trap->G2API_SetBoltInfo( cent->ghoul2, index, ci->bolt_back > 0 ? ci->bolt_back : JP_HOLSTER_BOLT );
+			cent->jpHolster = index + 1;
+		}
+	}
+	else if ( !want && cent->jpHolster )
+	{
+		trap->G2API_RemoveGhoul2Model( &cent->ghoul2, cent->jpHolster - 1 );
+		cent->jpHolster = 0;
+	}
+}
+
+// called at the end of CG_Player
+static void CG_JPHolster( centity_t *cent, clientInfo_t *ci )
+{
+	jpHolsterState_t *hs;
+	const entityState_t *es = &cent->currentState;
+	const int anim = es->torsoAnim;
+	const qboolean saberOut = es->weapon == WP_SABER;
+	qboolean has[MAX_SABERS], inBack[MAX_SABERS], onBody[MAX_SABERS] = { qfalse, qfalse };
+	qboolean showHolster = qfalse;
+	int sinceAnim, i;
+
+	if ( !ci || !ci->infoValid || !CG_JPHolsterClient( cent ) )
+		return;
+	hs = &jpHolsterState[es->number];
+
+	if ( !cent->ghoul2 || (es->eFlags & EF_DEAD) || es->NPC_class == CLASS_VEHICLE || ci->team == TEAM_SPECTATOR
+		|| (es->eFlags & EF_NOT_USED_1) )	// (the server sets this flag for players without a saber)
+	{
+		if ( (es->eFlags & EF_DEAD) || ci->team == TEAM_SPECTATOR )
+			hs->saberOffHand = qfalse;
+		return;
+	}
+
+	sinceAnim = cg.time - hs->drawAnimTime;
+	for ( i = 0; i < MAX_SABERS; i++ )
+	{
+		has[i] = ci->saber[i].model[0] && ci->ghoul2Weapons[i];
+		inBack[i] = (ci->saber[i].saberFlags2 & SFL2_IDLE_IN_BACK) != 0;
+	}
+
+	// the holster model: one of the sabers has idleInBack 1
+	if ( has[0] )
+	{
+		const qboolean first = inBack[0] && !(ci->saber[0].saberFlags2 & SFL2_IDLE_IN_BACK2);
+		const qboolean second = has[1] && inBack[1] && !(ci->saber[1].saberFlags2 & SFL2_IDLE_IN_BACK2);
+
+		if ( !has[1] )
+			showHolster = first;
+		else if ( inBack[0] && inBack[1] && ((ci->saber[0].saberFlags2 & SFL2_IDLE_IN_BACK2) || (ci->saber[1].saberFlags2 & SFL2_IDLE_IN_BACK2)) )
+			showHolster = qfalse;
+		else
+			showHolster = first || second;
+	}
+	CG_JPHolsterModel( cent, ci, showHolster );
+
+	// which saber hangs on the body
+	if ( !has[0] || !has[1] )
+	{
+		onBody[0] = has[0] && !es->saberInFlight
+			&& !(saberOut && es->saberHolstered != 2 && BG_SI_Length( &ci->saber[0] ) > 0.0f);
+	}
+	else if ( !saberOut )
+	{
+		onBody[0] = onBody[1] = qtrue;
+	}
+	else if ( es->saberHolstered == 2 )
+	{
+		onBody[0] = !es->saberInFlight;
+		onBody[1] = qtrue;
+	}
+	else if ( es->saberHolstered == 1 )
+	{
+		onBody[1] = qtrue;
+	}
+
+	// the draw and put away animations: the saber changes its place in the middle of them
+	if ( anim != hs->drawAnim )
+		sinceAnim = INT_MAX;	// (the timers below only count for the running animation)
+	if ( onBody[0] )
+	{
+		if ( (anim == BOTH_STAND2TO1_NEW && sinceAnim < 670) || (anim == BOTH_S7_S1_NEW && sinceAnim < 550) )
+			onBody[0] = qfalse;
+	}
+	else if ( (anim == BOTH_STAND1TO2_NEW && sinceAnim < 400) || (anim == BOTH_STAND2TO1_NEW && sinceAnim > 670)
+		|| (anim == BOTH_S1_S7_NEW && sinceAnim < 500) || (anim == BOTH_S7_S1_NEW && sinceAnim > 550) )
+	{
+		onBody[0] = qtrue;
+	}
+	if ( onBody[1] )
+	{
+		if ( anim == BOTH_S6_S1_LARM && sinceAnim < 550 )
+			onBody[1] = qfalse;
+	}
+	else if ( (anim == BOTH_S1_S6_LARM && sinceAnim < 400) || (anim == BOTH_S6_S1_LARM && sinceAnim > 550) )
+	{
+		onBody[1] = qtrue;
+	}
+	if ( onBody[0] && onBody[1] )
+	{
+		if ( anim == BOTH_S6_S1_2ARMS && sinceAnim < 600 )
+			onBody[0] = onBody[1] = qfalse;
+	}
+	else if ( (anim == BOTH_S1_S6_2ARMS && sinceAnim < 400) || (anim == BOTH_S6_S1_2ARMS && sinceAnim > 600) )
+	{
+		onBody[0] = onBody[1] = qtrue;
+	}
+
+	if ( (cp_pluginDisable.integer & (1 << 9)) || (es->m_iVehicleNum >= MAX_CLIENTS && es->m_iVehicleNum < ENTITYNUM_WORLD) )
+		onBody[0] = onBody[1] = qfalse;
+
+	// first saber. A normal saber only hangs on the hip while another weapon is used
+	if ( has[0] && onBody[0]
+		&& (inBack[0] || !saberOut || (ci->saber[0].type == SABER_STAFF
+			&& (anim == BOTH_S1_S7_NEW || anim == BOTH_S7_S1_NEW || anim == BOTH_STAND2TO1_NEW)))
+		&& CG_JPHolsterSaberModel( hs, ci, 0 ) )
+	{
+		CG_JPDrawHolsteredSaber( cent, ci, 0, !(inBack[0] || ci->saber[0].type == SABER_STAFF) );
+		if ( saberOut && trap->G2API_HasGhoul2ModelOnIndex( &cent->ghoul2, 1 ) )
+		{
+			hs->saberOffHand = qtrue;
+			trap->G2API_RemoveGhoul2Model( &cent->ghoul2, 1 );
+		}
+	}
+	else if ( saberOut && has[0] && !onBody[0] && !trap->G2API_HasGhoul2ModelOnIndex( &cent->ghoul2, 1 ) )
+	{ // back into the hand
+		if ( !es->saberInFlight )
+			trap->G2API_CopySpecificGhoul2Model( ci->ghoul2Weapons[0], 0, cent->ghoul2, 1 );
+		if ( ci->saber[0].type == SABER_STAFF && JP_FEATURE( JPF_NEWGLAANIMS ) && anim == BOTH_S1_S7_NEW )
+			BG_SI_SetLength( &ci->saber[0], 0 );
+		hs->saberOffHand = qfalse;
+	}
+
+	// second saber
+	if ( has[1] && onBody[1] && (inBack[1] || !saberOut) && CG_JPHolsterSaberModel( hs, ci, 1 ) )
+	{
+		CG_JPDrawHolsteredSaber( cent, ci, 1, !(inBack[1] || ci->saber[1].type == SABER_STAFF) );
+		if ( saberOut && trap->G2API_HasGhoul2ModelOnIndex( &cent->ghoul2, 2 ) )
+			trap->G2API_RemoveGhoul2Model( &cent->ghoul2, 2 );
+	}
+	else if ( saberOut && has[1] && !onBody[1] && !trap->G2API_HasGhoul2ModelOnIndex( &cent->ghoul2, 2 ) )
+	{
+		trap->G2API_CopySpecificGhoul2Model( ci->ghoul2Weapons[1], 0, cent->ghoul2, 2 );
+	}
+
+	if ( saberOut && trap->G2API_HasGhoul2ModelOnIndex( &cent->ghoul2, 1 ) )
+		hs->saberOffHand = qfalse;
+}
+
+/*
+=================
+CG_JPForceFxVisible
+
+JA+ client plugin: in a private duel the force effects of the players outside of it are not drawn (with the
+duel isolation of the server, jp_DuelAlpha, and without Plugin_IgnoreAllPlayers_WhenInDuel)
+=================
+*/
+static qboolean CG_JPForceFxVisible( const centity_t *cent )
+{
+	const playerState_t *ps;
+
+	if ( !cg.snap )
+		return qtrue;
+	ps = &cg.snap->ps;
+
+	return ps->clientNum == cent->currentState.number || cgs.jpDuelAlpha < 0 || !ps->duelInProgress
+		|| (cp_pluginDisable.integer & (1 << 1)) || ps->duelIndex == cent->currentState.number;
+}
+
+// half way between the feet and the head bolt
+static void CG_JPBodyCenter( centity_t *cent, const clientInfo_t *ci, vec3_t out )
+{
+	mdxaBone_t matrix;
+	vec3_t head;
+
+	trap->G2API_GetBoltMatrix( cent->ghoul2, 0, ci->bolt_head, &matrix, cent->turAngles, cent->lerpOrigin, cg.time, cgs.gameModels, cent->modelScale );
+	BG_GiveMeVectorFromMatrix( &matrix, ORIGIN, head );
+	VectorSubtract( head, cent->lerpOrigin, out );
+	VectorMA( cent->lerpOrigin, 0.5f, out, out );
+}
+
+/*
+=================
+CG_JPForceEffects
+
+JA+ client plugin: the fire on a player hit by the flamethrower (EF2_BURNING) and, with Plugin_NewForceEffect
+(cp_pluginDisable bit 5 turns it off), the effects of the single player force animations and of the grabs
+=================
+*/
+static void CG_JPForceEffects( centity_t *cent, clientInfo_t *ci )
+{
+	static int nextTime[MAX_GENTITIES];
+	const int anim = cent->currentState.torsoAnim;
+	const int num = cent->currentState.number;
+	mdxaBone_t matrix;
+	matrix3_t axis;
+	vec3_t fAng, org;
+
+	if ( cent->currentState.NPC_class == CLASS_VEHICLE || !cent->ghoul2 || !ci || num < 0 || num >= MAX_GENTITIES
+		|| !CG_JPForceFxVisible( cent ) )
+		return;
+
+	VectorSet( fAng, cent->pe.torso.pitchAngle, cent->pe.torso.yawAngle, 0 );
+	AnglesToAxis( fAng, axis );
+
+	if ( cent->currentState.eFlags2 & EF2_BURNING )
+	{
+		CG_JPBodyCenter( cent, ci, org );
+		trap->FX_PlayEntityEffectID( cgs.effects.jpFire, org, axis, -1, -1, -1, -1 );
+	}
+
+	if ( cp_pluginDisable.integer & (1 << 5) )
+		return;
+
+	switch ( anim )
+	{
+	case BOTH_FORCE_RAGE:
+	case BOTH_FORCEHEAL_START:
+		if ( !ci->infoValid || nextTime[num] >= cg.time )
+			break;
+		nextTime[num] = cg.time + 150;
+		CG_JPBodyCenter( cent, ci, org );
+		trap->FX_PlayEntityEffectID( anim == BOTH_FORCE_RAGE ? cgs.effects.jpRageEffect : cgs.effects.jpHealEffect, org, axis, -1, -1, -1, -1 );
+		break;
+
+	case BOTH_FORCEHEAL_QUICK:
+		trap->G2API_GetBoltMatrix( cent->ghoul2, 0, ci->bolt_lhand, &matrix, cent->turAngles, cent->lerpOrigin, cg.time, cgs.gameModels, cent->modelScale );
+		BG_GiveMeVectorFromMatrix( &matrix, ORIGIN, org );
+		trap->FX_PlayEntityEffectID( cgs.effects.jpHealQuickEffect, org, axis, -1, -1, -1, -1 );
+		break;
+
+	case BOTH_NEW_STABEE:
+		if ( !ci->infoValid || nextTime[num] >= cg.time )
+			break;
+		{
+			vec3_t up = { 0, 0, 1 }, angles;
+			float scale = 1.0f;
+
+			nextTime[num] = cg.time + 150;
+			trap->G2API_GetBoltMatrix( cent->ghoul2, 0, ci->bolt_llumbar, &matrix, cent->turAngles, cent->lerpOrigin, cg.time, cgs.gameModels, cent->modelScale );
+			BG_GiveMeVectorFromMatrix( &matrix, ORIGIN, org );
+			vectoangles( up, angles );
+			AnglesToAxis( angles, axis );
+
+			// the effect grows with the model, a bit less in width for big ones
+			if ( cent->currentState.iModelScale > 0 )
+				scale = cent->currentState.iModelScale / 100.0f;
+			VectorScale( axis[0], scale, axis[0] );
+			if ( scale > 1.4 )
+				scale = scale / 1.3;
+			VectorScale( axis[1], scale, axis[1] );
+			VectorScale( axis[2], scale, axis[2] );
+			trap->FX_PlayEntityEffectID( cgs.effects.jpStabee, org, axis, -1, -1, -1, -1 );
+		}
+		break;
+
+	case BOTH_ALORA_SPIN_THROW:
+		// both hands
+		trap->G2API_GetBoltMatrix( cent->ghoul2, 0, ci->bolt_lhand, &matrix, cent->turAngles, cent->lerpOrigin, cg.time, cgs.gameModels, cent->modelScale );
+		BG_GiveMeVectorFromMatrix( &matrix, ORIGIN, org );
+		trap->FX_PlayEntityEffectID( cgs.effects.jpKothosBeam, org, axis, -1, -1, -1, -1 );
+		trap->G2API_GetBoltMatrix( cent->ghoul2, 0, ci->bolt_rhand, &matrix, cent->turAngles, cent->lerpOrigin, cg.time, cgs.gameModels, cent->modelScale );
+		BG_GiveMeVectorFromMatrix( &matrix, ORIGIN, org );
+		trap->FX_PlayEntityEffectID( cgs.effects.jpKothosBeam, org, axis, -1, -1, -1, -1 );
+		break;
+
+	default:
+		break;
+	}
+}
+
 void CG_Player( centity_t *cent ) {
 	clientInfo_t	*ci;
 	refEntity_t		legs;
@@ -8598,6 +9245,8 @@ void CG_Player( centity_t *cent ) {
 			trap->Error( ERR_DROP, "Bad clientNum on player entity");
 		}
 		ci = &cgs.clientinfo[ clientNum ];
+		if ( ci->infoValid )
+			CG_JPModelScale( cent, ci );
 	}
 	else
 	{
@@ -8660,6 +9309,8 @@ void CG_Player( centity_t *cent ) {
 	if ( !ci->infoValid ) {
 		return;
 	}
+
+	CG_JPHolsterTrackAnim( cent, ci );
 
 	// Add the player to the radar if on the same team and its a team game
 	if (cgs.gametype >= GT_TEAM)
@@ -8752,7 +9403,7 @@ void CG_Player( centity_t *cent ) {
 			trap->G2API_CopySpecificGhoul2Model(cg_g2JetpackInstance, 0, cent->ghoul2, 3);
 		}
 
-		if (cent->currentState.eFlags & EF_JETPACK_ACTIVE)
+		if ((cent->currentState.eFlags & EF_JETPACK_ACTIVE) && CG_JPForceFxVisible( cent ))
 		{
 			mdxaBone_t mat;
 			vec3_t flamePos, flameDir;
@@ -8811,7 +9462,7 @@ void CG_Player( centity_t *cent ) {
 
 	g2HasWeapon = trap->G2API_HasGhoul2ModelOnIndex(&(cent->ghoul2), 1);
 
-	if (!g2HasWeapon)
+	if (!g2HasWeapon && !CG_JPSaberOffHand( cent ))	// JA+ client plugin: not while the saber hangs on the back
 	{ //force a redup of the weapon instance onto the client instance
 		cent->ghoul2weapon = NULL;
 		cent->weapon = 0;
@@ -8878,22 +9529,36 @@ void CG_Player( centity_t *cent ) {
 	}
 	else
 	{
-		if (cent->trickAlpha < 255)
+		int minAlpha = CG_JPMinAlpha( cent );	// JA+: fade other duels and the other dimension
+
+		if (cent->trickAlpha > minAlpha && minAlpha < 255)
+		{
+			cent->trickAlpha -= (cg.time - cent->trickAlphaTime)*0.5;
+			cent->trickAlphaTime = cg.time;
+
+			if (cent->trickAlpha < minAlpha)
+			{
+				cent->trickAlpha = minAlpha;
+			}
+
+			doAlpha = 1;
+		}
+		else if (cent->trickAlpha < minAlpha)
 		{
 			cent->trickAlpha += (cg.time - cent->trickAlphaTime);
 			cent->trickAlphaTime = cg.time;
 
-			if (cent->trickAlpha > 255)
+			if (cent->trickAlpha > minAlpha)
 			{
-				cent->trickAlpha = 255;
+				cent->trickAlpha = minAlpha;
 			}
 
 			doAlpha = 1;
 		}
 		else
 		{
-			cent->trickAlpha = 255;
 			cent->trickAlphaTime = cg.time;
+			doAlpha = (minAlpha < 255);
 		}
 	}
 
@@ -9408,7 +10073,8 @@ void CG_Player( centity_t *cent ) {
 	}
 
 	if (cent->currentState.activeForcePass > FORCE_LEVEL_3
-		&& cent->currentState.NPC_class != CLASS_VEHICLE)
+		&& cent->currentState.NPC_class != CLASS_VEHICLE
+		&& CG_JPForceFxVisible( cent ))
 	{
 		matrix3_t axis;
 		vec3_t tAng, fAng, fxDir;
@@ -9446,7 +10112,11 @@ void CG_Player( centity_t *cent ) {
 
 		AnglesToAxis( fAng, axis );
 
-		if ( realForceLev > FORCE_LEVEL_2 )
+		if ( cent->currentState.torsoAnim == BOTH_FORCE_DRAIN_GRAB_START && !(cp_pluginDisable.integer & (1 << 5)) )
+		{// JA+ client plugin: the drain grab
+			trap->FX_PlayEntityEffectID(cgs.effects.jpDrainHand, efOrg, axis, -1, -1, -1, -1);
+		}
+		else if ( realForceLev > FORCE_LEVEL_2 )
 		{//arc
 			//trap->FX_PlayEffectID( cgs.effects.forceLightningWide, efOrg, fxDir );
 			//trap->FX_PlayEntityEffectID(cgs.effects.forceDrainWide, efOrg, axis, cent->boltInfo, cent->currentState.number, -1, -1);
@@ -9468,7 +10138,9 @@ void CG_Player( centity_t *cent ) {
 		*/
 	}
 	else if ( cent->currentState.activeForcePass
-		&& cent->currentState.NPC_class != CLASS_VEHICLE)
+		&& cent->currentState.activeForcePass <= FORCE_LEVEL_3
+		&& cent->currentState.NPC_class != CLASS_VEHICLE
+		&& CG_JPForceFxVisible( cent ))
 	{//doing the electrocuting
 		matrix3_t axis;
 		vec3_t tAng, fAng, fxDir;
@@ -9493,7 +10165,11 @@ void CG_Player( centity_t *cent ) {
 
 		AnglesToAxis( fAng, axis );
 
-		if ( cent->currentState.activeForcePass > FORCE_LEVEL_2 )
+		if ( cent->currentState.eFlags & EF_FLAME )
+		{// JA+: the flamethrower of the mercs
+			trap->FX_PlayEntityEffectID(cgs.effects.jpFlameJet, efOrg, axis, -1, -1, -1, -1);
+		}
+		else if ( cent->currentState.activeForcePass > FORCE_LEVEL_2 )
 		{//arc
 			//trap->FX_PlayEffectID( cgs.effects.forceLightningWide, efOrg, fxDir );
 			//trap->FX_PlayEntityEffectID(cgs.effects.forceLightningWide, efOrg, axis, cent->boltInfo, cent->currentState.number, -1, -1);
@@ -9651,6 +10327,8 @@ void CG_Player( centity_t *cent ) {
 		trap->S_AddLoopingSound( cent->currentState.number, cg.refdef.vieworg, vec3_origin,
 			trap->S_RegisterSound( "sound/weapons/baton/idle.wav" ) );
 	}
+
+	CG_JPForceEffects( cent, ci );
 
 	//NOTE: All effects that should be visible during mindtrick should go above here
 
@@ -10385,6 +11063,10 @@ stillDoSaber:
 		}
 		*/
 		drawPlayerSaber = qtrue;
+		if ( CG_JPStaffOffHand( cent, ci ) )
+		{ // JA+ client plugin: the staff still hangs on the back
+			drawPlayerSaber = qfalse;
+		}
 	}
 	else if (cent->currentState.weapon == WP_SABER)
 	{
@@ -11118,6 +11800,8 @@ stillDoSaber:
 
 		trap->R_AddRefEntityToScene( &legs );
 	}
+
+	CG_JPHolster( cent, ci );
 #if 0
 endOfCall:
 

@@ -873,6 +873,10 @@ qboolean G_InKnockDown( playerState_t *ps )
 	case BOTH_KNOCKDOWN3:
 	case BOTH_KNOCKDOWN4:
 	case BOTH_KNOCKDOWN5:
+	// JA+ knockdowns of the new kicks
+	case BOTH_BACK_FALLING:
+	case BOTH_BACK_FALLING_GETUP:
+	case BOTH_JUMP_BACKFLIP_ATCKEE_FALL:
 		return qtrue;
 		break;
 	case BOTH_GETUP1:
@@ -2103,6 +2107,9 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 		return;
 	}
 
+	JP_HookFree( self );
+	JP_HighlanderDeath( self, attacker );
+
 	if ( level.intermissiontime ) {
 		return;
 	}
@@ -2421,8 +2428,10 @@ extern void RunEmplacedWeapon( gentity_t *ent, usercmd_t **ucmd );
 
 	self->client->ps.fd.forceDeactivateAll = 1;
 
+	// JA+: MOD_SUICIDE too, a /kill does not take the frag away from the player who pushed or hit last
 	if ((self == attacker || (attacker && !attacker->client)) &&
-		(meansOfDeath == MOD_CRUSH || meansOfDeath == MOD_FALLING || meansOfDeath == MOD_TRIGGER_HURT || meansOfDeath == MOD_UNKNOWN) &&
+		(meansOfDeath == MOD_CRUSH || meansOfDeath == MOD_FALLING || meansOfDeath == MOD_TRIGGER_HURT || meansOfDeath == MOD_UNKNOWN
+			|| meansOfDeath == MOD_SUICIDE) &&
 		self->client->ps.otherKillerTime > level.time)
 	{
 		attacker = &g_entities[self->client->ps.otherKiller];
@@ -2766,6 +2775,28 @@ extern void RunEmplacedWeapon( gentity_t *ent, usercmd_t **ucmd );
 		static int deathAnim;
 
 		anim = G_PickDeathAnim(self, self->pos1, damage, meansOfDeath, HL_NONE);
+
+		// JA+: killed by one of the new kicks, the death fits the kick
+		if ( JP_IsConnectedClient( inflictor ) )
+		{
+			const int kickAnim = inflictor->client->ps.legsAnim;
+
+			if ( kickAnim == BOTH_MELEE_BACKKICK || kickAnim == BOTH_JUMP_BACKKICK_SPIN
+				|| (kickAnim == BOTH_FLIP_STAB && inflictor->client->ps.legsTimer < 696) )
+			{
+				anim = BOTH_DEATH14;
+			}
+			else if ( kickAnim == BOTH_MELEE_SPINKICK )
+			{
+				anim = BOTH_DEATH8;
+			}
+			else if ( kickAnim == BOTH_JUMP_BACKFLIP_ATCK )
+			{
+				const int pick = Q_irand( 0, 9 );
+
+				anim = pick < 4 ? BOTH_DEATH5 : pick < 7 ? BOTH_DEATH_ROLL : BOTH_DEATH16;
+			}
+		}
 
 		if (anim >= 1)
 		{ //Some droids don't have death anims
@@ -4321,15 +4352,17 @@ void G_LocationBasedDamageModifier(gentity_t *ent, vec3_t point, int mod, int df
 		hitLoc = G_GetHitLocation( ent, point );
 	}
 
+	// JA+: the original module (and the x87 builds of the base game) cut the decimals off a product computed
+	// with 64 bits of precision: 30 * 0.7 is 20, with doubles it is 21. long double keeps it that way on x86.
 	switch (hitLoc)
 	{
 	case HL_FOOT_RT:
 	case HL_FOOT_LT:
-		*damage *= 0.5;
+		*damage = (int)((long double)*damage * 0.5);
 		break;
 	case HL_LEG_RT:
 	case HL_LEG_LT:
-		*damage *= 0.7;
+		*damage = (int)((long double)*damage * 0.7);
 		break;
 	case HL_WAIST:
 	case HL_BACK_RT:
@@ -4341,14 +4374,14 @@ void G_LocationBasedDamageModifier(gentity_t *ent, vec3_t point, int mod, int df
 		break; //normal damage
 	case HL_ARM_RT:
 	case HL_ARM_LT:
-		*damage *= 0.85;
+		*damage = (int)((long double)*damage * 0.85);
 		break;
 	case HL_HAND_RT:
 	case HL_HAND_LT:
-		*damage *= 0.6;
+		*damage = (int)((long double)*damage * 0.6);
 		break;
 	case HL_HEAD:
-		*damage *= 1.3;
+		*damage = (int)((long double)*damage * 1.3);
 		break;
 	default:
 		break; //do nothing then
@@ -4537,13 +4570,19 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_
 		}
 	}
 
+	// JA+: ghosts, mindtricked and sleeping players and other dimensions
+	if ( JP_DamageBlocked( targ, attacker ) )
+	{
+		return;
+	}
+
 	if (targ && targ->client && targ->client->ps.duelInProgress)
 	{
 		if (attacker && attacker->client && attacker->s.number != targ->client->ps.duelIndex)
 		{
 			return;
 		}
-		else if (attacker && attacker->client && mod != MOD_SABER)
+		else if (attacker && attacker->client && mod != MOD_SABER && !attacker->client->pers.jp.fullForceDuel)
 		{
 			return;
 		}
@@ -4554,7 +4593,7 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_
 		{
 			return;
 		}
-		else if (targ && targ->client && mod != MOD_SABER)
+		else if (targ && targ->client && mod != MOD_SABER && !targ->client->pers.jp.fullForceDuel)
 		{
 			return;
 		}
@@ -4859,6 +4898,10 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_
 		if (targ && targ->client && (targ->client->ps.eFlags & EF_INVULNERABLE) &&
 			attacker && attacker->client && targ != attacker)
 		{
+			if (targ->client->pers.jp.protectedByAdmin)
+			{ // JA+: amprotect, protected until he attacks himself
+				return;
+			}
 			if (targ->client->invulnerableTimer <= level.time)
 			{
 				targ->client->ps.eFlags &= ~EF_INVULNERABLE;

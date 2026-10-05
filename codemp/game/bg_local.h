@@ -87,6 +87,16 @@ qboolean PM_JumpingAnim( int anim );
 qboolean PM_LandingAnim( int anim );
 qboolean PM_SpinningAnim( int anim );
 qboolean PM_InOnGroundAnim ( int anim );
+qboolean PM_JPBackSaberAnims( void );
+
+// JA+ jp_saberNoForceDrain (the server knows it, the client predicts the drain): 1 the special saber attacks
+// cost no force, 2 the katas neither. The side jump attacks always cost force.
+#ifdef _GAME
+	#define JP_NO_FORCE_DRAIN	jp_saberNoForceDrain.integer
+#else
+	#define JP_NO_FORCE_DRAIN	0
+#endif
+#define JP_SaberAttackDrain( amount )	do { if ( !JP_NO_FORCE_DRAIN ) BG_ForcePowerDrain( pm->ps, FP_GRIP, (amount) ); } while ( 0 )
 qboolean PM_InRollComplete( playerState_t *ps, int anim );
 
 int PM_AnimLength( int index, animNumber_t anim );

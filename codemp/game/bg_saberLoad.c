@@ -1009,6 +1009,11 @@ static void Saber_ParseSwingSound3( saberInfo_t *saber, const char **p ) {
 		return;
 	saber->swingSound[2] = BG_SoundIndex( value );
 }
+// fallSound1..3 are single player keywords (sound of a dropped saber). The saber pack of JA+ sets them, the
+// multiplayer code never used them: skipped without the "unknown keyword" warning the original prints
+static void Saber_ParseSPOnly( saberInfo_t *saber, const char **p ) {
+	SkipRestOfLine( p );
+}
 static void Saber_ParseMoveSpeedScale( saberInfo_t *saber, const char **p ) {
 	float f;
 	if ( COM_ParseFloat( p, &f ) ) {
@@ -1668,6 +1673,17 @@ static void Saber_ParseTransitionDamage2( saberInfo_t *saber, const char **p ) {
 	if ( n )
 		saber->saberFlags2 |= SFL2_TRANSITION_DAMAGE2;
 }
+static void Saber_ParseIdleInBack( saberInfo_t *saber, const char **p ) {
+	int n;
+	if ( COM_ParseInt( p, &n ) ) {
+		SkipRestOfLine( p );
+		return;
+	}
+	if ( n )
+		saber->saberFlags2 |= SFL2_IDLE_IN_BACK;
+	if ( n == 2 )
+		saber->saberFlags2 |= SFL2_IDLE_IN_BACK2;
+}
 static void Saber_ParseSplashRadius2( saberInfo_t *saber, const char **p ) {
 	float f;
 	if ( COM_ParseFloat( p, &f ) ) {
@@ -1901,6 +1917,9 @@ static keywordHash_t saberParseKeywords[] = {
 	{ "swingSound1",			Saber_ParseSwingSound1,			NULL	},
 	{ "swingSound2",			Saber_ParseSwingSound2,			NULL	},
 	{ "swingSound3",			Saber_ParseSwingSound3,			NULL	},
+	{ "fallSound1",				Saber_ParseSPOnly,				NULL	},
+	{ "fallSound2",				Saber_ParseSPOnly,				NULL	},
+	{ "fallSound3",				Saber_ParseSPOnly,				NULL	},
 	{ "moveSpeedScale",			Saber_ParseMoveSpeedScale,		NULL	},
 	{ "animSpeedScale",			Saber_ParseAnimSpeedScale,		NULL	},
 	{ "bounceOnWalls",			Saber_ParseBounceOnWalls,		NULL	},
@@ -1961,6 +1980,7 @@ static keywordHash_t saberParseKeywords[] = {
 	{ "noManualDeactivate2",	Saber_ParseNoManualDeactivate2,	NULL	},
 	{ "transitionDamage",		Saber_ParseTransitionDamage,	NULL	},
 	{ "transitionDamage2",		Saber_ParseTransitionDamage2,	NULL	},
+	{ "idleInBack",				Saber_ParseIdleInBack,			NULL	},
 	{ "splashRadius",			Saber_ParseSplashRadius,		NULL	},
 	{ "splashRadius2",			Saber_ParseSplashRadius2,		NULL	},
 	{ "splashDamage",			Saber_ParseSplashDamage,		NULL	},
@@ -2210,6 +2230,66 @@ void WP_RemoveSaber( saberInfo_t *sabers, int saberNum )
 //	}
 }
 
+/*
+WP_ScaleSaber (JA+ jp_allowModelScale)
+
+the blades follow the model scale of the player, with jp_allowDmgSpeedScale also the damage and the speed of the saber
+*/
+#ifndef UI_BUILD
+void WP_ScaleSaber( int clientNum, saberInfo_t *sabers, int saberNum, const char *saberName )
+{
+	saberInfo_t	*saber;
+	char		value[MAX_QPATH] = {0};
+	double		length = 32.0, damageScale = 1.0, damageScale2 = 1.0, moveSpeedScale = 1.0, animSpeedScale = 1.0;
+	float		scale;
+	int			i;
+
+	if ( !JP_FEATURE( JPF_MODELSCALE ) )
+	{
+		return;
+	}
+	scale = BG_scaleModelFactor( clientNum );
+	if ( !sabers || !saberName || !saberName[0] || scale <= 0.0f
+		|| !Q_stricmp( "none", saberName ) || !Q_stricmp( "remove", saberName ) )
+	{
+		return;
+	}
+	if ( clientNum < MAX_CLIENTS && !WP_SaberValidForPlayerInMP( saberName ) )
+	{
+		saberName = DEFAULT_SABER;
+	}
+
+	if ( WP_SaberParseParm( saberName, "saberLength", value ) )		length = atof( value );
+	if ( WP_SaberParseParm( saberName, "damageScale", value ) )		damageScale = atof( value );
+	if ( WP_SaberParseParm( saberName, "damageScale2", value ) )		damageScale2 = atof( value );
+	if ( WP_SaberParseParm( saberName, "moveSpeedScale", value ) )	moveSpeedScale = atof( value );
+	if ( WP_SaberParseParm( saberName, "animSpeedScale", value ) )	animSpeedScale = atof( value );
+
+	saber = &sabers[saberNum];
+	for ( i = 0; i < saber->numBlades; i++ )
+	{
+		int bladeLength = (int)length;
+
+		if ( WP_SaberParseParm( saberName, va( "saberLength%i", i + 1 ), value ) )
+		{
+			bladeLength = (int)atof( value );
+		}
+		saber->blade[i].lengthMax = bladeLength * scale;
+	}
+
+	if ( JP_FEATURE( JPF_DMGSPEEDSCALE ) )
+	{
+		// all in double like the original (x87), floats give another last bit
+		const double f = ((double)scale - 1.0) / 1.7f + 1.0;
+
+		saber->damageScale = damageScale * f;
+		saber->damageScale2 = damageScale2 * f;
+		saber->moveSpeedScale = moveSpeedScale * f;
+		saber->animSpeedScale = animSpeedScale / f;
+	}
+}
+#endif
+
 void WP_SetSaber( int entNum, saberInfo_t *sabers, int saberNum, const char *saberName )
 {
 	if ( !sabers )
@@ -2234,6 +2314,12 @@ void WP_SetSaber( int entNum, saberInfo_t *sabers, int saberNum, const char *sab
 	{
 		WP_SaberParseParms( saberName, &sabers[saberNum] );//get saber info
 	}
+#ifndef UI_BUILD
+	if ( entNum >= 0 && entNum < MAX_CLIENTS )
+	{
+		WP_ScaleSaber( entNum, sabers, saberNum, saberName );
+	}
+#endif
 	if ((sabers[1].saberFlags&SFL_TWO_HANDED))
 	{//not allowed to use a 2-handed saber as second saber
 		WP_RemoveSaber( sabers, 1 );

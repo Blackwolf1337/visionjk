@@ -194,6 +194,8 @@ TELEPORTERS
 =================================================================================
 */
 
+extern void Jedi_Cloak( gentity_t *self );	// NPC_AI_Jedi.c
+
 void TeleportPlayer( gentity_t *player, vec3_t origin, vec3_t angles ) {
 	gentity_t	*tent;
 	qboolean	isNPC = qfalse;
@@ -207,13 +209,22 @@ void TeleportPlayer( gentity_t *player, vec3_t origin, vec3_t angles ) {
 
 	// use temp events at source and destination to prevent the effect
 	// from getting dropped by a second player event
-	if ( player->client->sess.sessionTeam != TEAM_SPECTATOR ) {
+	if ( jp_starTrekTeleport.integer == 1 && player->client->sess.sessionTeam != TEAM_SPECTATOR ) {
+		// JA+ jp_starTrekTeleport: no teleport effect, the player is cloaked for a moment (see JP_StarTrekSecond)
+		Jedi_Cloak( player );
+		player->client->pers.jp.stCounter = 1;
+		player->client->pers.jp.stDone = qtrue;
+		player->client->pers.jp.stActive = qtrue;
+	}
+	else if ( player->client->sess.sessionTeam != TEAM_SPECTATOR ) {
 		tent = G_TempEntity( player->client->ps.origin, EV_PLAYER_TELEPORT_OUT );
 		tent->s.clientNum = player->s.clientNum;
 
 		tent = G_TempEntity( origin, EV_PLAYER_TELEPORT_IN );
 		tent->s.clientNum = player->s.clientNum;
 	}
+
+	JP_HookFree( player );
 
 	// unlink to make sure it can't possibly interfere with G_KillBox
 	trap->UnlinkEntity ((sharedEntity_t *)player);

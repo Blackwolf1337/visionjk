@@ -813,6 +813,10 @@ void SetTeamQuick(gentity_t *ent, int team, qboolean doBegin)
 {
 	char userinfo[MAX_INFO_STRING];
 
+	// JA+: his explosives and missiles go with him
+	if ( ent->inuse && ent->client && ent->client->pers.connected == CON_CONNECTED )
+		JP_RemovePlayerExplosives( ent );
+
 	trap->GetUserinfo( ent->s.number, userinfo, sizeof( userinfo ) );
 
 	if (level.gametype == GT_SIEGE)
@@ -868,6 +872,7 @@ void SiegeRespawn(gentity_t *ent)
 	else
 	{
 		ClientSpawn(ent);
+		G_SpawnTeleportEffect( ent );
 	}
 }
 
@@ -1369,6 +1374,7 @@ void SiegeItemRemoveOwner(gentity_t *ent, gentity_t *carrier)
 	if (carrier)
 	{
 		carrier->client->holdingObjectiveItem = 0; //The carrier is no longer carrying us
+		carrier->client->pers.jp.siegeItemDeadline = 0;
 		carrier->r.svFlags &= ~SVF_BROADCAST;
 	}
 }
@@ -1455,6 +1461,10 @@ void SiegeItemThink(gentity_t *ent)
 			(carrier->client->ps.pm_flags & PMF_FOLLOW))
 		{ //respawn on the original spot
 			SiegeItemRespawnOnOriginalSpot(ent, NULL);
+		}
+		else if (carrier->client->pers.jp.siegeItemDeadline > 0 && carrier->client->pers.jp.siegeItemDeadline < level.time)
+		{ //JA+ jp_siegeItemTime: carried for too long
+			SiegeItemRespawnOnOriginalSpot(ent, carrier);
 		}
 		else if (carrier->health < 1)
 		{ //The carrier died so pop out where he is (unless in nodrop).
@@ -1587,6 +1597,7 @@ void SiegeItemTouch( gentity_t *self, gentity_t *other, trace_t *trace )
 	self->genericValue2 = 1; //Mark it as picked up.
 
 	other->client->holdingObjectiveItem = self->s.number;
+	other->client->pers.jp.siegeItemDeadline = jp_siegeItemTime.integer > 0 ? level.time + jp_siegeItemTime.integer*60000 : 0;
 	other->r.svFlags |= SVF_BROADCAST; //broadcast player while he carries this
 	self->genericValue8 = other->s.number; //Keep the index so we know who is "carrying" us
 

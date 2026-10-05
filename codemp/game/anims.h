@@ -1756,6 +1756,37 @@ typedef enum //# animNumber_e
 	//cinematic anims
 	//======================================================
 	//# #sep BOTH_ CINEMATIC-ONLY
+	// JA+ animations of japlus_gla_anims.pk3. They sit before the cinematic ones like in JA+, so the numbers on the wire are the same.
+	BOTH_KISSEE,	//# JA+ kiss, the kissed one
+	BOTH_KISSER,	//# JA+ kiss, the kisser
+	BOTH_KISSER1STOP,	//# JA+ the kisser gets slapped
+	BOTH_LEDGE_GRAB,	//# JA+ ledge grab: catch the ledge
+	BOTH_LEDGE_HOLD,	//# JA+ ledge grab: hang
+	BOTH_LEDGE_LEFT,	//# JA+ ledge grab: move left
+	BOTH_LEDGE_RIGHT,	//# JA+ ledge grab: move right
+	BOTH_LEDGE_MERCPULL,	//# JA+ ledge grab: pull up
+	BOTH_MELEE_BACKKICK,	//# JA+ staff kick backwards while moving forward
+	BOTH_MELEE_SPINKICK,	//# JA+ staff spin kick while moving forward
+	TORSO_MAND_FLAME,	//# JA+ flamethrower pose
+	BOTH_STAND1TO2_NEW,	//# JA+ saber draw
+	BOTH_STAND2TO1_NEW,	//# JA+ saber holster
+	BOTH_S1_S7_NEW,	//# JA+ staff draw
+	BOTH_S7_S1_NEW,	//# JA+ staff holster
+	BOTH_S6_S1_LARM,	//# JA+ dual sabers holster, left arm
+	BOTH_S1_S6_LARM,	//# JA+ dual sabers draw, left arm
+	BOTH_S6_S1_2ARMS,	//# JA+ dual sabers holster, both arms
+	BOTH_S1_S6_2ARMS,	//# JA+ dual sabers draw, both arms
+	BOTH_BACK_FALLING,	//# JA+ knocked down backwards
+	BOTH_BACK_FALLING_GETUP,	//# JA+ get up from the back
+	BOTH_BACK_FALLING_GETUP_SLOW,	//# JA+ get up from the back, slow
+	BOTH_JUMP_BACKKICK_SPIN,	//# JA+ jump back kick with a spin
+	BOTH_JUMP_BACKFLIP_ATCK,	//# JA+ combo kick: kick and flip over the enemy
+	BOTH_JUMP_BACKFLIP_ATCKEE,	//# JA+ combo kick: the kicked one staggers
+	BOTH_JUMP_BACKFLIP_ATCKEE_FALL,	//# JA+ combo kick: the kicked one falls
+	BOTH_NEW_STABER,	//# JA+ new stab move, the attacker
+	BOTH_NEW_STABEE,	//# JA+ new stab move, the victim
+	BOTH_FLIP_STAB,	//# JA+ flip and stab down
+	BOTH_JUMP_BACKFLIP_ATCK_MISSED,	//# JA+ combo kick that missed
 	BOTH_CIN_1,		//# Level specific cinematic 1
 	BOTH_CIN_2,		//# Level specific cinematic 2
 	BOTH_CIN_3,		//# Level specific cinematic 3

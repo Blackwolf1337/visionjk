@@ -6182,6 +6182,37 @@ static void UI_RunMenuScript(char **args)
 				//trap->Cmd_ExecuteText( EXEC_APPEND, va("callvote kick \"%s\"\n",uiInfo.playerNames[uiInfo.playerIndex]) );
 				trap->Cmd_ExecuteText( EXEC_APPEND, va("callvote clientkick \"%i\"\n",uiInfo.playerIndexes[uiInfo.playerIndex]) );
 			}
+		} else if (Q_stricmp(name, "voteSleep") == 0 || Q_stricmp(name, "voteSilence") == 0) {
+			// JA+ votes
+			if (uiInfo.playerIndex >= 0 && uiInfo.playerIndex < uiInfo.playerCount) {
+				trap->Cmd_ExecuteText( EXEC_APPEND, va("callvote %s \"%i\"\n", Q_stricmp(name, "voteSleep") == 0 ? "sleep" : "silence", uiInfo.playerIndexes[uiInfo.playerIndex]) );
+			}
+		} else if (Q_stricmp(name, "sendModSayMsg") == 0) {
+			// JA+ mod say: ui_modsay 0 clansay, 1 tell, 2 amsay, 3 ampsay (selected player or everybody)
+			char text[MAX_STRING_CHARS], clean[MAX_STRING_CHARS];
+			char *c;
+			int mode = (int)trap->Cvar_VariableValue( "ui_modsay" );
+			int target = uiInfo.playerIndex >= 0 && uiInfo.playerIndex < uiInfo.playerCount ? uiInfo.playerIndexes[uiInfo.playerIndex] : -1;
+
+			trap->Cvar_VariableStringBuffer( "ui_modSayText", text, sizeof( text ) );
+			Q_strncpyz( clean, text, sizeof( clean ) );
+			for ( c = clean; *c; c++ ) {
+				if ( *c == '"' )
+					*c = '\'';
+			}
+			if ( !clean[0] )
+				return;
+
+			switch ( mode ) {
+			case 0:		trap->Cmd_ExecuteText( EXEC_APPEND, va("clansay \"%s\"\n", clean) );	break;
+			case 1:		if ( target >= 0 )	trap->Cmd_ExecuteText( EXEC_APPEND, va("tell %i \"%s\"\n", target, clean) );	break;
+			case 2:		trap->Cmd_ExecuteText( EXEC_APPEND, va("amsay \"%s\"\n", clean) );	break;
+			default:
+				if ( trap->Cvar_VariableValue( "ui_modsayAllPlayer" ) != 0.0f )
+					target = -1;
+				trap->Cmd_ExecuteText( EXEC_APPEND, va("ampsay %i \"%s\"\n", target, clean) );
+				break;
+			}
 		} else if (Q_stricmp(name, "voteGame") == 0) {
 			if (ui_netGametype.integer >= 0 && ui_netGametype.integer < uiInfo.numGameTypes) {
 				trap->Cmd_ExecuteText( EXEC_APPEND, va("callvote g_gametype %i\n",uiInfo.gameTypes[ui_netGametype.integer].gtEnum) );

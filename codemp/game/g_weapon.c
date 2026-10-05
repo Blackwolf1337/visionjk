@@ -305,6 +305,7 @@ static void WP_FireBryarPistol( gentity_t *ent, qboolean altFire )
 		missile->methodOfDeath = MOD_BRYAR_PISTOL;
 	}
 	missile->clipmask = MASK_SHOT | CONTENTS_LIGHTSABER;
+	missile->s.otherEntityNum = -1;	// JA+
 
 	// we don't want it to bounce forever
 	missile->bounceCount = 8;
@@ -413,6 +414,7 @@ void WP_FireGenericBlasterMissile( gentity_t *ent, vec3_t start, vec3_t dir, qbo
 	missile->dflags = DAMAGE_DEATH_KNOCKBACK;
 	missile->methodOfDeath = mod;
 	missile->clipmask = MASK_SHOT | CONTENTS_LIGHTSABER;
+	missile->s.otherEntityNum = -1;	// JA+
 
 	// we don't want it to bounce forever
 	missile->bounceCount = 8;
@@ -549,6 +551,16 @@ DISRUPTOR
 
 ======================================================================
 */
+// JA+: a shot goes through ghosts, mind tricked and sleeping players and through players of the other dimension
+static qboolean JP_ShotPassesThrough( gentity_t *ent, gentity_t *traceEnt )
+{
+	if ( !traceEnt || !traceEnt->client || traceEnt->client->pers.connected != CON_CONNECTED )
+		return qfalse;
+	if ( traceEnt->client->pers.jp.isGhost || traceEnt->client->pers.jp.mindtricked || traceEnt->client->pers.jp.sleeping )
+		return qtrue;
+	return JP_IsConnectedClient( ent ) && !G_PlInSameDim( ent, traceEnt );
+}
+
 //---------------------------------------------------------
 static void WP_DisruptorMainFire( gentity_t *ent )
 //---------------------------------------------------------
@@ -587,6 +599,7 @@ static void WP_DisruptorMainFire( gentity_t *ent )
 		}
 
 		traceEnt = &g_entities[tr.entityNum];
+		G_WeapCutGrappleRope( ent, start, tr.endpos, 10.0f, qtrue );	// JA+
 
 		if (d_projectileGhoul2Collision.integer && traceEnt->inuse && traceEnt->client)
 		{ //g2 collision checks -rww
@@ -602,8 +615,8 @@ static void WP_DisruptorMainFire( gentity_t *ent )
 			}
 		}
 
-		if (traceEnt && traceEnt->client && traceEnt->client->ps.duelInProgress &&
-			traceEnt->client->ps.duelIndex != ent->s.number)
+		if ((traceEnt && traceEnt->client && traceEnt->client->ps.duelInProgress &&
+			traceEnt->client->ps.duelIndex != ent->s.number) || JP_ShotPassesThrough( ent, traceEnt ))
 		{
 			VectorCopy( tr.endpos, start );
 			ignore = tr.entityNum;
@@ -786,6 +799,7 @@ void WP_DisruptorAltFire( gentity_t *ent )
 		{
 			trap->Trace( &tr, start, NULL, NULL, end, skip, MASK_SHOT, qfalse, 0, 0 );
 		}
+		G_WeapCutGrappleRope( ent, start, tr.endpos, 10.0f, qtrue );	// JA+
 
 		if ( tr.entityNum == ent->s.number )
 		{
@@ -821,8 +835,8 @@ void WP_DisruptorAltFire( gentity_t *ent )
 			render_impact = qfalse;
 		}
 
-		if (traceEnt && traceEnt->client && traceEnt->client->ps.duelInProgress &&
-			traceEnt->client->ps.duelIndex != ent->s.number)
+		if ((traceEnt && traceEnt->client && traceEnt->client->ps.duelInProgress &&
+			traceEnt->client->ps.duelIndex != ent->s.number) || JP_ShotPassesThrough( ent, traceEnt ))
 		{
 			skip = tr.entityNum;
 			VectorCopy(tr.endpos, start);
@@ -1455,7 +1469,8 @@ static void WP_DEMP2_AltFire( gentity_t *ent )
 		damage = 1;
 	}
 
-	trap->Trace( &tr, start, NULL, NULL, end, ent->s.number, MASK_SHOT, qfalse, 0, 0);
+	JP_Trace( &tr, start, NULL, NULL, end, ent->s.number, MASK_SHOT, qfalse, 0, 0);
+	G_WeapCutGrappleRope( ent, start, tr.endpos, 10.0f, qtrue );	// JA+
 
 	missile = G_Spawn();
 	G_SetOrigin(missile, tr.endpos);
@@ -3137,6 +3152,7 @@ static void WP_FireConcussionAlt( gentity_t *ent )
 		{
 			trap->Trace( &tr, start, shot_mins, shot_maxs, end, skip, MASK_SHOT, qfalse, 0, 0 );
 		}
+		G_WeapCutGrappleRope( ent, start, tr.endpos, 10.0f, qtrue );	// JA+
 
 		traceEnt = &g_entities[tr.entityNum];
 
@@ -3234,7 +3250,9 @@ static void WP_FireConcussionAlt( gentity_t *ent )
 						if ( traceEnt->health > 0 )
 						{//alive
 							//if ( G_HasKnockdownAnims( traceEnt ) )
-							if (!noKnockBack && !traceEnt->localAnimIndex && traceEnt->client->ps.forceHandExtend != HANDEXTEND_KNOCKDOWN &&
+							// JA+: only players who can be enemies are knocked down
+							if ((!JP_IsConnectedClient( traceEnt ) || !JP_IsConnectedClient( ent ) || G_CanBeEnemy( ent, traceEnt )) &&
+								!noKnockBack && !traceEnt->localAnimIndex && traceEnt->client->ps.forceHandExtend != HANDEXTEND_KNOCKDOWN &&
 								BG_KnockDownable(&traceEnt->client->ps)) //just check for humanoids..
 							{//knock-downable
 								//G_Knockdown( traceEnt, ent, pushDir, 400, qtrue );
@@ -3437,6 +3455,20 @@ void WP_FireStunBaton( gentity_t *ent, qboolean alt_fire )
 		{
 			return;
 		}
+
+		// JA+: ghosts and mind tricked players neither hit nor get hit, and nobody hits into the other dimension
+		if ( JP_IsConnectedClient( tr_ent ) && (tr_ent->client->pers.jp.isGhost || tr_ent->client->pers.jp.mindtricked) )
+		{
+			return;
+		}
+		if ( JP_IsConnectedClient( ent ) && (ent->client->pers.jp.isGhost || ent->client->pers.jp.mindtricked) )
+		{
+			return;
+		}
+		if ( jp_altDim.integer && JP_IsConnectedClient( tr_ent ) && JP_IsConnectedClient( ent ) && !G_PlInSameDim( ent, tr_ent ) )
+		{
+			return;
+		}
 	}
 
 	if ( tr_ent && tr_ent->takedamage )
@@ -3520,6 +3552,13 @@ void WP_FireMelee( gentity_t *ent, qboolean alt_fire )
 
 		if (tr_ent->takedamage && tr_ent->client)
 		{ //special duel checks
+			// JA+: no punch on a protected player or on one who chats in god mode (jp_allowGodTalk)
+			if ( JP_IsConnectedClient( tr_ent ) && (tr_ent->client->pers.jp.protectedByAdmin
+				|| (jp_allowGodTalk.integer == 1 && (tr_ent->flags & FL_GODMODE) && (tr_ent->client->ps.eFlags & EF_TALK))) )
+			{
+				return;
+			}
+
 			if (tr_ent->client->ps.duelInProgress &&
 				tr_ent->client->ps.duelIndex != ent->s.number)
 			{
@@ -3529,6 +3568,23 @@ void WP_FireMelee( gentity_t *ent, qboolean alt_fire )
 			if (ent->client &&
 				ent->client->ps.duelInProgress &&
 				ent->client->ps.duelIndex != tr_ent->s.number)
+			{
+				return;
+			}
+
+			// JA+: ghosts, mind tricked and sleeping players neither hit nor get hit, and nobody hits into the
+			// other dimension
+			if ( JP_IsConnectedClient( tr_ent ) && (tr_ent->client->pers.jp.isGhost || tr_ent->client->pers.jp.mindtricked
+				|| tr_ent->client->pers.jp.sleeping) )
+			{
+				return;
+			}
+			if ( JP_IsConnectedClient( ent ) && (ent->client->pers.jp.isGhost || ent->client->pers.jp.mindtricked
+				|| ent->client->pers.jp.sleeping) )
+			{
+				return;
+			}
+			if ( jp_altDim.integer && JP_IsConnectedClient( tr_ent ) && JP_IsConnectedClient( ent ) && !G_PlInSameDim( ent, tr_ent ) )
 			{
 				return;
 			}
@@ -4489,6 +4545,10 @@ FireWeapon
 int BG_EmplacedView(vec3_t baseAngles, vec3_t angles, float *newYaw, float constraint);
 
 void FireWeapon( gentity_t *ent, qboolean altFire ) {
+	// JA+: ghosts can not shoot
+	if ( ent->client && ent->s.number < MAX_CLIENTS && ent->client->pers.jp.isGhost )
+		return;
+
 	// track shots taken for accuracy tracking. melee weapons are not tracked.
 	if( ent->s.weapon != WP_SABER && ent->s.weapon != WP_STUN_BATON && ent->s.weapon != WP_MELEE )
 	{
@@ -5024,7 +5084,7 @@ void SP_emplaced_gun( gentity_t *ent )
 
 	if (ent->spawnflags & EMPLACED_CANRESPAWN)
 	{ //make it somewhat easier to kill if it can respawn
-		ent->health *= 0.4;
+		ent->health = (int)((long double)ent->health * 0.4);	// (x87 precision, see G_LocationBasedDamageModifier)
 	}
 
 	ent->maxHealth = ent->health;

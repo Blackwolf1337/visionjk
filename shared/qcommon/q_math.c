@@ -1227,9 +1227,11 @@ qboolean VectorCompare( const vec3_t vec1, const vec3_t vec2 )
 
 qboolean VectorCompare2( const vec3_t v1, const vec3_t v2 )
 {
+	// (the lower bounds of y and z had a plus: equal vectors never compared equal. The original game has minus,
+	// a resting saber blade is then traced from base to tip, see G_SPSaberDamageTraceLerped)
 	if ( v1[0] > (v2[0] + 0.0001f) || v1[0] < (v2[0] - 0.0001f) ||
-			v1[1] > (v2[1] + 0.0001f) || v1[1] < (v2[1] + 0.0001f) ||
-			v1[2] > (v2[2] + 0.0001f) || v1[2] < (v2[2] + 0.0001f) )
+			v1[1] > (v2[1] + 0.0001f) || v1[1] < (v2[1] - 0.0001f) ||
+			v1[2] > (v2[2] + 0.0001f) || v1[2] < (v2[2] - 0.0001f) )
 	{
 		return qfalse;
 	}

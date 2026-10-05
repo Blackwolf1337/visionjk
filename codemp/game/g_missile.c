@@ -430,6 +430,10 @@ void G_MissileImpact( gentity_t *ent, trace_t *trace ) {
 		}
 	}
 
+	// JA+: ghosts, mindtricked and sleeping players and players in the other dimension can not be hit
+	if ( !(other->r.contents & CONTENTS_LIGHTSABER) && !isKnockedSaber && JP_MissileIgnoresTarget( ent, other ) )
+		goto killProj;
+
 	if (other->flags & FL_DMG_BY_HEAVY_WEAP_ONLY)
 	{
 		if (ent->methodOfDeath != MOD_REPEATER_ALT &&
@@ -763,6 +767,10 @@ void G_MissileImpact( gentity_t *ent, trace_t *trace ) {
 		}
 	}
 killProj:
+	// JA+: the grappling hook sticks instead of exploding
+	if ( JP_HookMissileImpact( ent, other, trace ) )
+		return;
+
 	// is it cheaper in bandwidth to just remove this ent and create a new
 	// one, rather than changing the missile into the explosion?
 
@@ -813,7 +821,7 @@ G_RunMissile
 ================
 */
 void G_RunMissile( gentity_t *ent ) {
-	vec3_t		origin, groundSpot;
+	vec3_t		origin, groundSpot, startPos;
 	trace_t		tr;
 	int			passent;
 	qboolean	isKnockedSaber = qfalse;
@@ -823,6 +831,8 @@ void G_RunMissile( gentity_t *ent ) {
 		isKnockedSaber = qtrue;
 		ent->s.pos.trType = TR_GRAVITY;
 	}
+
+	VectorCopy( ent->r.currentOrigin, startPos );
 
 	// get current position
 	BG_EvaluateTrajectory( &ent->s.pos, level.time, origin );
@@ -879,11 +889,34 @@ void G_RunMissile( gentity_t *ent ) {
 		VectorCopy( tr.endpos, ent->r.currentOrigin );
 	}
 
+	// JA+: projectiles cut the rope of grappling hooks
+	if ( !ent->classname || (strcmp( ent->classname, "hook" ) && strcmp( ent->classname, "hook2" )) )
+		G_WeapCutGrappleRope( &g_entities[ent->r.ownerNum], startPos, ent->r.currentOrigin, 10.0f, qtrue );
+
 	if (ent->passThroughNum && tr.entityNum == (ent->passThroughNum-1))
 	{
 		VectorCopy( origin, ent->r.currentOrigin );
 		trap->LinkEntity( (sharedEntity_t *)ent );
 		goto passthrough;
+	}
+
+	// JA+: a missile flies through the players its owner can not interfere with (other duel, other dimension)
+	// and through their sabers
+	if ( tr.fraction != 1.0f && tr.entityNum >= 0 && tr.entityNum < ENTITYNUM_NONE )
+	{
+		int hitClient = -1;
+
+		if ( tr.entityNum < MAX_CLIENTS )
+			hitClient = tr.entityNum;
+		else if ( g_entities[tr.entityNum].r.contents & CONTENTS_LIGHTSABER )
+			hitClient = g_entities[tr.entityNum].r.ownerNum;
+
+		if ( hitClient != -1 && !G_canInterferWith( ent->r.ownerNum, hitClient ) )
+		{
+			VectorCopy( origin, ent->r.currentOrigin );
+			trap->LinkEntity( (sharedEntity_t *)ent );
+			goto passthrough;
+		}
 	}
 
 	trap->LinkEntity( (sharedEntity_t *)ent );
@@ -912,9 +945,10 @@ void G_RunMissile( gentity_t *ent ) {
 	if ( tr.fraction != 1) {
 		// never explode or bounce on sky
 		if ( tr.surfaceFlags & SURF_NOIMPACT ) {
-			// If grapple, reset owner
+			// If grapple, free it
 			if (ent->parent && ent->parent->client && ent->parent->client->hook == ent) {
-				ent->parent->client->hook = NULL;
+				Weapon_HookFree( ent );
+				return;
 			}
 
 			if ((ent->s.weapon == WP_SABER && ent->isSaberEntity) || isKnockedSaber)

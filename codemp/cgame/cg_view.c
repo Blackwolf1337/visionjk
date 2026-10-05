@@ -1588,12 +1588,7 @@ static int CG_CalcViewValues( void ) {
 	}
 	VectorCopy( cg.refdef.viewangles, cg_lastTurretViewAngles );
 
-	if (cg_cameraOrbit.integer) {
-		if (cg.time > cg.nextOrbitTime) {
-			cg.nextOrbitTime = cg.time + cg_cameraOrbitDelay.integer;
-			cg_thirdPersonAngle.value += cg_cameraOrbit.value;
-		}
-	}
+	CG_JPCameraOrbit();	// JA+ client plugin (the orbit of the base game is in there)
 	// add error decay
 	if ( cg_errorDecay.value > 0 ) {
 		int		t;
@@ -1640,6 +1635,8 @@ static int CG_CalcViewValues( void ) {
 			CG_OffsetFirstPersonView();
 		}
 	}
+
+	CG_JPCameraRange();
 
 	// position eye relative to origin
 	AnglesToAxis( cg.refdef.viewangles, cg.refdef.viewaxis );
@@ -2415,6 +2412,8 @@ extern void CG_ActualLoadDeferredPlayers( void );
 static int cg_siegeClassIndex = -2;
 
 void CG_DrawActiveFrame( int serverTime, stereoFrame_t stereoView, qboolean demoPlayback ) {
+	CG_JPReplyFrame();
+	CG_JPMacroScanFrame();
 	int		inwater;
 	const char *cstr;
 	float mSensitivity = cg.zoomSensitivity;

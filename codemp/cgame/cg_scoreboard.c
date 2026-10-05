@@ -177,7 +177,11 @@ static void CG_DrawClientScore( int y, score_t *score, float *color, float fade,
 			}
 			else
 			{
-				CG_Text_Paint (SB_SCORE_X, y, 1.0f * scale, colorWhite, va("%i", score->score),0, 0, ITEM_TEXTSTYLE_OUTLINED, FONT_SMALL );
+				// JA+ client plugin: score/deaths on JA+ servers from 2.1 on
+				if ( cgs.jpVersion >= 2.1f )
+					CG_Text_Paint (SB_SCORE_X, y, 1.0f * scale, colorWhite, va("%i/%i", score->score, score->deaths),0, 0, ITEM_TEXTSTYLE_OUTLINED, FONT_SMALL );
+				else
+					CG_Text_Paint (SB_SCORE_X, y, 1.0f * scale, colorWhite, va("%i", score->score),0, 0, ITEM_TEXTSTYLE_OUTLINED, FONT_SMALL );
 			}
 		}
 

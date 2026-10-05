@@ -223,6 +223,8 @@ typedef struct clientInfo_s {
 
 	int				icolor1;
 	int				icolor2;
+	int				holsterModel;	// JA+ hm of the clientinfo: models/weapons2/holster/model<hm>.glm, 0 none
+	int				sbRGB[2];		// JA+ RGB saber colors (r | g<<8 | b<<16), c3 and c4 of the clientinfo
 
 	int				score;			// updated by score servercmds
 	int				location;		// location index for team mode
@@ -293,6 +295,11 @@ typedef struct clientInfo_s {
 	qhandle_t		bolt_motion;
 
 	qhandle_t		bolt_llumbar;
+
+	// JA+ client plugin: where sabers hang on the body ("*back", "*hip_l", "*hip_r"), -1 without the tag
+	qhandle_t		bolt_back;
+	qhandle_t		bolt_hipL;
+	qhandle_t		bolt_hipR;
 
 	int				siegeIndex;
 	int				siegeDesiredTeam;
@@ -428,6 +435,9 @@ typedef struct centity_s {
 
 	int				trickAlpha;
 	int				trickAlphaTime;
+	int				jpHolster;			// JA+: ghoul2 model index+1 of the holster on this player, 0 none
+	qboolean		jpPredictIgnore;	// JA+: does not block the predicted move (other duel, other dimension)
+	float			jpModelScale;		// JA+: model scale the saber blades were last scaled with
 
 	int				teamPowerEffectTime;
 	int				teamPowerType; //0 regen, 1 heal, 2 drain, 3 absorb
@@ -640,6 +650,7 @@ typedef struct score_s {
 	int				captures;
 	qboolean	perfect;
 	int				team;
+	int				deaths;			// JA+ servers
 } score_t;
 
 
@@ -1141,6 +1152,16 @@ typedef struct cgMedia_s {
 	qhandle_t	purpleSaberCoreShader;
 	qhandle_t	saberBlurShader;
 	qhandle_t	swordTrailShader;
+	// JA+ saber colors: 6 to 10 are RGB blades, 11 is black
+	qhandle_t	RGBSaberGlowShader;
+	qhandle_t	RGBSaberGlow4Shader;
+	qhandle_t	RGBSaberLineShader;
+	qhandle_t	RGBSaberCoreShader[4];		// RGBcore2 .. RGBcore5
+	qhandle_t	RGBSaberTrailShader[3];		// RGBtrail2 .. RGBtrail4
+	qhandle_t	altDimShader;
+	qhandle_t	blackSaberGlowShader;
+	qhandle_t	blackSaberLineShader;
+	qhandle_t	blackSaberBlurShader;
 
 	qhandle_t	yellowDroppedSaberShader;
 
@@ -1198,6 +1219,7 @@ typedef struct cgMedia_s {
 	qhandle_t	forceSightBubble;
 	qhandle_t	forceShell;
 	qhandle_t	sightShell;
+	qhandle_t	jpSense;			// JA+ client plugin: screen overlay while force sight is on
 
 	// Disruptor zoom graphics
 	qhandle_t	disruptorMask;
@@ -1393,6 +1415,14 @@ typedef struct cgMedia_s {
 typedef struct cgEffects_s {
 	//concussion
 	fxHandle_t	concussionShotEffect;
+	fxHandle_t	jpRageEffect;		// JA+ force effects of the single player force animations
+	fxHandle_t	jpHealEffect;
+	fxHandle_t	jpHealQuickEffect;
+	fxHandle_t	jpFlameJet;			// flamethrower (EF_FLAME) instead of the lightning
+	fxHandle_t	jpFire;				// a player set on fire (EF2_BURNING)
+	fxHandle_t	jpDrainHand;		// drain grab
+	fxHandle_t	jpKothosBeam;		// push grab
+	fxHandle_t	jpStabee;			// victim of the stab grab
 	fxHandle_t	concussionImpactEffect;
 
 	// BRYAR PISTOL
@@ -1556,6 +1586,9 @@ typedef struct cgs_s {
 	int				maxclients;
 	qboolean		needpass;
 	qboolean		jediVmerc;
+	float			jpVersion;		// JA+ server version, 0 on other servers
+	qboolean		jpPure;			// sv_pure is 1
+	int				jpDuelAlpha;	// jp_DuelAlpha, -1 if not a JA+ server
 	int				wDisable;
 	int				fDisable;
 
@@ -1845,6 +1878,8 @@ void CG_PositionRotatedEntityOnTag( refEntity_t *entity, const refEntity_t *pare
 Ghoul2 Insert Start
 */
 void ScaleModelAxis(refEntity_t	*ent);
+void CG_JPHolsterShutdown( void );
+qboolean CG_JPOtherDuel( int clientNum );
 /*
 Ghoul2 Insert End
 */
@@ -2003,6 +2038,18 @@ void FX_TurretHitPlayer( vec3_t origin, vec3_t normal, qboolean humanoid );
 
 void FX_ConcussionHitWall( vec3_t origin, vec3_t normal );
 void FX_ConcussionHitPlayer( vec3_t origin, vec3_t normal, qboolean humanoid );
+void CG_JPAutoReplierInit( void );
+void CG_JPReplyDuelEvent( qboolean start );
+void CG_JPReplyObituary( int target );
+void CG_JPReplyPrint( const char *text );
+void CG_JPReplyFrame( void );
+void CG_JPMacroScanFrame( void );
+void CG_JPModelScale( centity_t *cent, clientInfo_t *ci );
+void CG_JPDuelEnded( void );
+void CG_JPCameraOrbit( void );
+void CG_JPTwoPlayerAnimCamera( const playerState_t *ps );
+void CG_JPCameraRange( void );
+void CG_JPHookTrail( centity_t *cent, const struct weaponInfo_s *weapon );
 void FX_ConcussionProjectileThink(  centity_t *cent, const struct weaponInfo_s *weapon );
 void FX_ConcAltShot( vec3_t start, vec3_t end );
 

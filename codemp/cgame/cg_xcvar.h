@@ -34,6 +34,17 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #endif
 
 XCVAR_DEF( bg_fighterAltControl,				"0",					NULL,					CVAR_SYSTEMINFO )
+XCVAR_DEF( cjp_client,							"1.4B4",				NULL,					CVAR_USERINFO|CVAR_ROM )
+XCVAR_DEF( cl_yawspeed,							"140",					NULL,					CVAR_ARCHIVE )	// (engine cvar, read by the JA+ yawspeed check)
+XCVAR_DEF( cp_pluginDisable,						"0",					NULL,					CVAR_USERINFO|CVAR_ARCHIVE )
+XCVAR_DEF( cp_sbRGB1,							"0",					NULL,					CVAR_USERINFO|CVAR_ARCHIVE )
+XCVAR_DEF( cp_sbRGB2,							"0",					NULL,					CVAR_USERINFO|CVAR_ARCHIVE )
+XCVAR_DEF( cp_holster,							"0",					NULL,					CVAR_USERINFO|CVAR_ARCHIVE )
+XCVAR_DEF( cp_login,							"",						NULL,					CVAR_USERINFO|CVAR_ARCHIVE )
+XCVAR_DEF( cp_clanPwd,							"",						NULL,					CVAR_USERINFO|CVAR_ARCHIVE )
+XCVAR_DEF( cp_autoReplierFile,					"autoreplier.cfg",		NULL,					CVAR_ARCHIVE )
+XCVAR_DEF( cp_hookModel,						"1",					NULL,					CVAR_ARCHIVE )
+XCVAR_DEF( cp_altDimAlpha,						"60",					NULL,					CVAR_ARCHIVE )
 XCVAR_DEF( broadsword,							"0",					NULL,					CVAR_ARCHIVE )
 XCVAR_DEF( cg_animBlend,						"1",					NULL,					CVAR_NONE )
 XCVAR_DEF( cg_animSpeed,						"1",					NULL,					CVAR_CHEAT )

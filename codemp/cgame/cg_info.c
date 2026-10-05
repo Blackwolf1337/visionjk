@@ -313,7 +313,11 @@ void CG_DrawInformation( void ) {
 		y += iPropHeight;
 	switch ( cgs.gametype ) {
 	case GT_FFA:
-		CG_DrawProportionalString( 320, y, va( "%s", (char *)CG_GetStringEdString("MP_INGAME", "RULES_FFA_1")), UI_CENTER|UI_INFOFONT|UI_DROPSHADOW, colorWhite );
+		// JA+ client plugin: highlander is a FFA with its own rule
+		if ( atoi( Info_ValueForKey( info, "jp_highlander" ) ) )
+			CG_DrawProportionalString( 320, y, "Rules: Kill all immortals, At the end, there can be only one.", UI_CENTER|UI_INFOFONT|UI_DROPSHADOW, colorWhite );
+		else
+			CG_DrawProportionalString( 320, y, va( "%s", (char *)CG_GetStringEdString("MP_INGAME", "RULES_FFA_1")), UI_CENTER|UI_INFOFONT|UI_DROPSHADOW, colorWhite );
 		y += iPropHeight;
 		break;
 	case GT_HOLOCRON:

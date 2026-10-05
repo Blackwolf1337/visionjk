@@ -2341,6 +2341,14 @@ void RespawnItem( gentity_t *ent ) {
 			;
 	}
 
+	if ( jp_pushAll.integer > 0 ) {
+		// JA+: back to the original spot
+		VectorCopy( ent->jpSpawnOrigin, ent->s.origin );
+		VectorCopy( ent->jpSpawnOrigin, ent->s.pos.trBase );
+		VectorCopy( ent->jpSpawnOrigin, ent->s.apos.trBase );
+		VectorCopy( ent->jpSpawnOrigin, ent->r.currentOrigin );
+	}
+
 	ent->r.contents = CONTENTS_TRIGGER;
 	//ent->s.eFlags &= ~EF_NODRAW;
 	ent->s.eFlags &= ~(EF_NODRAW | EF_ITEMPLACEHOLDER);
@@ -2948,6 +2956,10 @@ void FinishSpawningItem( gentity_t *ent ) {
 	if ( ent->spawnflags & ITMSF_SUSPEND ) {
 		// suspended
 		G_SetOrigin( ent, ent->s.origin );
+		if ( jp_pushAll.integer > 0 && !ent->jpSpawnSet ) {
+			VectorCopy( ent->s.origin, ent->jpSpawnOrigin );
+			ent->jpSpawnSet = qtrue;
+		}
 	} else {
 		// drop to floor
 
@@ -2971,6 +2983,11 @@ void FinishSpawningItem( gentity_t *ent ) {
 		ent->s.groundEntityNum = tr.entityNum;
 
 		G_SetOrigin( ent, tr.endpos );
+		// JA+ jp_pushAll: the place the item goes back to after it was pushed away
+		if ( jp_pushAll.integer > 0 && !ent->jpSpawnSet ) {
+			ent->jpSpawnSet = qtrue;
+			VectorCopy( tr.endpos, ent->jpSpawnOrigin );
+		}
 	}
 
 	// team slaves and targeted items aren't present at start
@@ -3140,6 +3157,12 @@ void G_SpawnItem (gentity_t *ent, gitem_t *item) {
 	RegisterItem( item );
 	if ( G_ItemDisabled(item) )
 		return;
+
+	// JA+ jp_pushAll: an item that is spawned again starts at its first place
+	if ( jp_pushAll.integer > 0 && ent->jpSpawnSet )
+		VectorCopy( ent->jpSpawnOrigin, ent->s.origin );
+	if ( jp_pushAll.integer > 0 )
+		ent->jpItemType = item->giType;
 
 	ent->item = item;
 	// some movers spawn on the second frame, so delay item

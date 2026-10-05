@@ -1063,8 +1063,8 @@ static void PM_Friction( void ) {
 	if ( pm->waterlevel ) {
 		drop += speed*pm_waterfriction*pm->waterlevel*pml.frametime;
 	}
-	// If on a client then there is no friction
-	else if ( pm->ps->groundEntityNum < MAX_CLIENTS )
+	// If on a client then there is no friction (JA+: only with jp_slideOnPlayer)
+	else if ( pm->ps->groundEntityNum < MAX_CLIENTS && JP_FEATURE( JPF_SLIDEONPLAYER ) )
 	{
 		drop = 0;
 	}
@@ -1575,6 +1575,9 @@ static float BG_ForceWallJumpStrength( void )
 
 qboolean PM_AdjustAngleForWallJump( playerState_t *ps, usercmd_t *ucmd, qboolean doMove )
 {
+	if ( BG_InLedgeMove( ps->legsAnim ) )
+		return qfalse;	// JA+ ledge grab has its own handling
+
 	if ( ( ( BG_InReboundJump( ps->legsAnim ) || BG_InReboundHold( ps->legsAnim ) )
 			&& ( BG_InReboundJump( ps->torsoAnim ) || BG_InReboundHold( ps->torsoAnim ) ) )
 		|| (pm->ps->pm_flags&PMF_STUCK_TO_WALL) )
@@ -1582,7 +1585,7 @@ qboolean PM_AdjustAngleForWallJump( playerState_t *ps, usercmd_t *ucmd, qboolean
 		//stick to wall, if there is one
 		vec3_t	checkDir, traceTo, mins, maxs, fwdAngles;
 		trace_t	trace;
-		float	dist = 128.0f, yawAdjust;
+		float	dist = 128.0f;
 
 		VectorSet(mins, pm->mins[0],pm->mins[1],0);
 		VectorSet(maxs, pm->maxs[0],pm->maxs[1],24);
@@ -1593,24 +1596,20 @@ qboolean PM_AdjustAngleForWallJump( playerState_t *ps, usercmd_t *ucmd, qboolean
 		case BOTH_FORCEWALLREBOUND_RIGHT:
 		case BOTH_FORCEWALLHOLD_RIGHT:
 			AngleVectors( fwdAngles, NULL, checkDir, NULL );
-			yawAdjust = -90;
 			break;
 		case BOTH_FORCEWALLREBOUND_LEFT:
 		case BOTH_FORCEWALLHOLD_LEFT:
 			AngleVectors( fwdAngles, NULL, checkDir, NULL );
 			VectorScale( checkDir, -1, checkDir );
-			yawAdjust = 90;
 			break;
 		case BOTH_FORCEWALLREBOUND_FORWARD:
 		case BOTH_FORCEWALLHOLD_FORWARD:
 			AngleVectors( fwdAngles, checkDir, NULL, NULL );
-			yawAdjust = 180;
 			break;
 		case BOTH_FORCEWALLREBOUND_BACK:
 		case BOTH_FORCEWALLHOLD_BACK:
 			AngleVectors( fwdAngles, checkDir, NULL, NULL );
 			VectorScale( checkDir, -1, checkDir );
-			yawAdjust = 0;
 			break;
 		default:
 			//WTF???
@@ -1618,7 +1617,7 @@ qboolean PM_AdjustAngleForWallJump( playerState_t *ps, usercmd_t *ucmd, qboolean
 			return qfalse;
 			break;
 		}
-		if ( pm->debugMelee )
+		if ( pm->debugMelee == 2 )	// JA+: only with g_debugMelee 2
 		{//uber-skillz
 			if ( ucmd->upmove > 0 )
 			{//hold on until you let go manually
@@ -1658,9 +1657,7 @@ qboolean PM_AdjustAngleForWallJump( playerState_t *ps, usercmd_t *ucmd, qboolean
 			{
 				ucmd->upmove = 0;
 			}
-			//align me to the wall
-			ps->viewangles[YAW] = vectoyaw( trace.plane.normal )+yawAdjust;
-			PM_SetPMViewAngle(ps, ps->viewangles, ucmd);
+			// JA+ does not turn the player to the wall, the view stays where it was
 			/*
 			if ( ent->client->ps.viewEntity <= 0 || ent->client->ps.viewEntity >= ENTITYNUM_WORLD )
 			{//don't clamp angles when looking through a viewEntity
@@ -1749,11 +1746,301 @@ void PM_GrabWallForJump( int anim )
 	pm->ps->pm_flags |= PMF_STUCK_TO_WALL;
 }
 
+
+/*
+=============
+JA+ ledge grab (jp_ledgeGrab, needs the new GLA animations of the client plugin)
+=============
+*/
+void BG_LetGoofLedge( playerState_t *ps )
+{
+	ps->pm_flags &= ~PMF_STUCK_TO_WALL;
+	ps->torsoTimer = 0;
+	ps->legsTimer = 0;
+}
+
+// how much of the legs animation is left, 1 .. 0
+// JA+ (Linux, x87) keeps the quotient in extended precision and compares it with double constants,
+// that decides the frames where the timer sits exactly on a threshold (1850 of 2000 is below 0.925)
+static long double BG_GetLegsAnimPoint( playerState_t *ps, int animIndex )
+{
+	const animation_t *anim = &bgAllAnims[animIndex].anims[ps->legsAnim];
+	float animSpeed = 1.0f;
+	double length = fabs( (double)anim->frameLerp ) * anim->numFrames;
+
+	BG_SaberStartTransAnim( ps->clientNum, ps->fd.saberAnimLevel, ps->weapon, ps->legsAnim, &animSpeed, ps->brokenLimbs );
+	length += (int)lrint( -(double)animSpeed * length + length );
+
+	return length > 0.0 ? (long double)ps->legsTimer / (long double)length : 0.0L;
+}
+
+static float PM_LedgeScale( void )
+{
+	return pm->ps->iModelScale > 0 ? pm->ps->iModelScale / 100.0f : 1.0f;
+}
+
+// looks for a ledge in direction dir: out the height of the ledge relative to the player, the
+// distance to the wall and the yaw to face it
+static qboolean LedgeTrace( trace_t *tr, const vec3_t dir, float *height, float *dist, float *yaw )
+{
+	const float scale = PM_LedgeScale();
+	const float zMid = scale*20.0f - 20.0f + pm->ps->origin[2];
+	vec3_t start, end, angles, delta;
+
+	if ( pm->ps->clientNum >= MAX_CLIENTS )
+		return qfalse;
+	if ( PM_GroundDistance() - 20.0f + scale*20.0f < scale*20.0f*2.0f )
+		return qfalse;	// too close to the ground
+	if ( BG_SaberInAttack( pm->ps->saberMove ) || BG_SaberInTransitionAny( pm->ps->saberMove ) )
+		return qfalse;
+
+	VectorSet( start, pm->ps->origin[0], pm->ps->origin[1], zMid + scale*40.0f );
+	VectorSet( end, dir[0]*scale*40.0f + pm->ps->origin[0], dir[1]*scale*40.0f + pm->ps->origin[1], dir[2]*scale*40.0f + zMid + scale*40.0f );
+	pm->trace( tr, start, NULL, NULL, end, pm->ps->clientNum, 0x1011 );
+
+	if ( tr->fraction < 1.0f )
+	{ //something in front of the head, is there a surface on top of it?
+		VectorSet( end, dir[0]*0.5f + tr->endpos[0], dir[1]*0.5f + tr->endpos[1], dir[2]*0.5f + tr->endpos[2] );
+		VectorSet( start, end[0], end[1], scale*30.0f + end[2] );
+		pm->trace( tr, start, NULL, NULL, end, pm->ps->clientNum, 0x1011 );
+		if ( tr->fraction == 1.0f || tr->startsolid )
+			return qfalse;
+	}
+
+	vectoangles( tr->plane.normal, angles );
+	if ( angles[PITCH] > -45.0f )
+		return qfalse;	// the surface is not a floor
+
+	VectorCopy( tr->endpos, end );
+	*height = (tr->endpos[2] - pm->ps->origin[2]) + scale*-52.4f;
+	VectorSet( start, pm->ps->origin[0], pm->ps->origin[1], end[2] - 1.0f );
+	VectorSet( end, end[0], end[1], end[2] - 1.0f );
+	pm->trace( tr, start, NULL, NULL, end, pm->ps->clientNum, 0x1011 );
+	vectoangles( tr->plane.normal, angles );
+	if ( tr->fraction != 1.0f && angles[PITCH] <= 20.0f && angles[PITCH] >= -20.0f )
+	{ //a vertical wall below the ledge
+		VectorSubtract( start, tr->endpos, delta );
+		*dist = VectorLength( delta ) + scale*-22.3f;
+		*yaw = vectoyaw( tr->plane.normal ) + 180.0f;
+		return qtrue;
+	}
+	return qfalse;
+}
+
+static qboolean PM_CheckGrab( void )
+{
+	const float scale = PM_LedgeScale();
+	vec3_t fwd, yawAngles = { 0, 0, 0 }, start, end, hitPos;
+	float height = 0.0f, dist = 0.0f, yaw = 0.0f, headZ;
+	trace_t tr;
+
+	if ( pm->ps->clientNum >= MAX_CLIENTS )
+		return qfalse;
+	if ( BG_InLedgeMove( pm->ps->legsAnim ) || pm->ps->pm_type == PM_SPECTATOR || BG_InSpecialJump( pm->ps->legsAnim ) )
+		return qfalse;
+	if ( !JP_FEATURE( JPF_LEDGEGRAB ) || !JP_FEATURE( JPF_NEWGLAANIMS ) || BG_pluginVersion( pm->ps->clientNum ) < 1.3f
+		|| BG_pluginDisable( pm->ps->clientNum, 10 ) )
+		return qfalse;
+
+	headZ = scale*20.0f - 20.0f + pm->ps->origin[2];
+	yawAngles[YAW] = pm->ps->viewangles[YAW];
+	AngleVectors( yawAngles, fwd, NULL, NULL );
+	fwd[2] = 0.0f;
+	VectorNormalize( fwd );
+
+	if ( VectorCompare( pm->ps->velocity, vec3_origin ) || !LedgeTrace( &tr, fwd, &height, &dist, &yaw ) )
+	{ //not moving into a ledge: look in the direction of the keys
+		if ( !pm->cmd.rightmove && !pm->cmd.forwardmove )
+			return qfalse;
+		if ( !pm->cmd.rightmove )
+		{
+			if ( pm->cmd.forwardmove > 0 )
+				return qfalse;
+			AngleVectors( yawAngles, fwd, NULL, NULL );
+			VectorNegate( fwd, fwd );
+			fwd[2] = 0.0f;
+			VectorNormalize( fwd );
+		}
+		else
+		{
+			AngleVectors( yawAngles, NULL, fwd, NULL );
+			if ( pm->cmd.rightmove < 0 )
+				VectorNegate( fwd, fwd );
+			VectorNormalize( fwd );
+		}
+		if ( !LedgeTrace( &tr, fwd, &height, &dist, &yaw ) )
+			return qfalse;
+	}
+
+	// trace up to the height of the ledge
+	VectorSet( start, pm->ps->origin[0], pm->ps->origin[1], headZ );
+	VectorSet( end, pm->ps->origin[0], pm->ps->origin[1], pm->ps->origin[2] + height );
+	pm->trace( &tr, start, pm->mins, pm->maxs, end, pm->ps->clientNum, 0x1111 );
+
+	VectorCopy( tr.endpos, hitPos );
+	hitPos[2] = scale*-20.0f + 20.0f + tr.endpos[2];
+	pm->ps->saberHolstered = 2;
+	VectorCopy( hitPos, pm->ps->origin );
+	VectorClear( pm->ps->velocity );
+	PM_GrabWallForJump( BOTH_LEDGE_GRAB );
+	pm->ps->weaponTime = pm->ps->legsTimer;
+
+	// move to the wall
+	VectorMA( pm->ps->origin, dist, fwd, end );
+	pm->trace( &tr, pm->ps->origin, pm->mins, pm->maxs, end, pm->ps->clientNum, 0x1111 );
+	VectorCopy( tr.endpos, pm->ps->origin );
+	pm->ps->viewangles[YAW] = yaw;
+	PM_SetPMViewAngle( pm->ps, pm->ps->viewangles, &pm->cmd );
+	pm->cmd.angles[YAW] = ANGLE2SHORT( pm->ps->viewangles[YAW] ) - pm->ps->delta_angles[YAW];
+	return qtrue;
+}
+
+static void PM_SetVelocityforLedgeMove( playerState_t *ps, int anim )
+{
+	const long double point = BG_GetLegsAnimPoint( ps, pm_entSelf->localAnimIndex );
+	const float scale = ps->iModelScale > 0 ? ps->iModelScale / 100.0f : 1.0f;
+	vec3_t yawAngles = { 0, 0, 0 }, fwd, right;
+
+	yawAngles[YAW] = ps->viewangles[YAW];
+	AngleVectors( yawAngles, fwd, right, NULL );
+
+	switch ( anim )
+	{
+	case BOTH_LEDGE_LEFT:	// shimmy left
+		if ( point > 0.333 && point < 0.666 )
+			VectorScale( right, -30.0f, ps->velocity );
+		else
+			VectorClear( ps->velocity );
+		return;
+	case BOTH_LEDGE_RIGHT:	// shimmy right
+		if ( point > 0.333 && point < 0.666 )
+			VectorScale( right, 30.0f, ps->velocity );
+		else
+			VectorClear( ps->velocity );
+		return;
+	case BOTH_LEDGE_MERCPULL:	// climb up
+		VectorClear( ps->velocity );
+		if ( point > 0.8 && point < 0.925 )
+			ps->velocity[2] = scale*77.0f;
+		else if ( point > 0.7 && point < 0.75 )
+			ps->velocity[2] = scale*13.0f;
+		else if ( point > 0.375 && point < 0.7 )
+			ps->velocity[2] = scale*70.0f;
+		else if ( point < 0.375 )
+			VectorScale( fwd, scale*70.0f, ps->velocity );
+		return;
+	default:
+		VectorClear( ps->velocity );
+		return;
+	}
+}
+
+static void PM_AdjustAngleForWallGrap( playerState_t *ps, usercmd_t *ucmd )
+{
+	if ( !(ps->pm_flags & PMF_STUCK_TO_WALL) || !BG_InLedgeMove( ps->legsAnim ) )
+		return;
+
+	if ( ps->legsAnim == BOTH_LEDGE_MERCPULL )
+	{
+		ucmd->angles[YAW] = ANGLE2SHORT( ps->viewangles[YAW] ) - ps->delta_angles[YAW];
+	}
+	else
+	{
+		const float scale = ps->iModelScale > 0 ? ps->iModelScale / 100.0f : 1.0f;
+		vec3_t yawAngles = { 0, 0, 0 }, fwd, start, end;
+		trace_t tr;
+
+		yawAngles[YAW] = ps->viewangles[YAW];
+		AngleVectors( yawAngles, fwd, NULL, NULL );
+		VectorNormalize( fwd );
+
+		VectorSet( start, ps->origin[0], ps->origin[1], 52.4f*scale + (scale*20.0f - 20.0f) + ps->origin[2] - 1.0f );
+		VectorSet( end, fwd[0]*scale*40.0f + ps->origin[0], fwd[1]*scale*40.0f + ps->origin[1], fwd[2]*scale*40.0f + start[2] );
+		pm->trace( &tr, start, NULL, NULL, end, ps->clientNum, 0x1001 );
+		if ( tr.fraction == 1.0f )
+		{ //the wall is gone
+			BG_LetGoofLedge( ps );
+			return;
+		}
+		ps->viewangles[YAW] = vectoyaw( tr.plane.normal ) + 180.0f;
+		ucmd->angles[YAW] = ANGLE2SHORT( ps->viewangles[YAW] ) - ps->delta_angles[YAW];
+	}
+
+	if ( ps->legsTimer < 1 )
+	{
+		if ( ps->legsAnim == BOTH_LEDGE_MERCPULL )
+		{ //climbed up
+			ps->pm_flags &= ~PMF_STUCK_TO_WALL;
+		}
+		else
+		{ //hang on the ledge
+			PM_SetAnim( SETANIM_BOTH, BOTH_LEDGE_HOLD, SETANIM_FLAG_NORMAL );
+			ps->legsTimer = ps->torsoTimer = 100;
+			ps->weaponTime = 100;
+		}
+	}
+	else if ( ps->legsAnim == BOTH_LEDGE_HOLD )
+	{
+		if ( !ucmd->rightmove )
+		{
+			if ( ucmd->forwardmove < 0 )
+				BG_LetGoofLedge( ps );
+			else if ( ucmd->forwardmove == 0 )
+				ps->legsTimer = ps->torsoTimer = ps->weaponTime = 100;
+			else
+			{
+				PM_SetAnim( SETANIM_BOTH, BOTH_LEDGE_MERCPULL, SETANIM_FLAG_OVERRIDE|SETANIM_FLAG_HOLD|SETANIM_FLAG_HOLDLESS );
+				ps->weaponTime = ps->legsTimer;
+			}
+		}
+		else
+		{
+			PM_SetAnim( SETANIM_BOTH, ucmd->rightmove < 0 ? BOTH_LEDGE_LEFT : BOTH_LEDGE_RIGHT, SETANIM_FLAG_OVERRIDE|SETANIM_FLAG_HOLD|SETANIM_FLAG_HOLDLESS|SETANIM_FLAG_RESTART );
+			ps->weaponTime = ps->legsTimer;
+		}
+	}
+
+	PM_SetVelocityforLedgeMove( ps, ps->legsAnim );
+	ucmd->forwardmove = ucmd->rightmove = ucmd->upmove = 0;
+}
+
 /*
 =============
 PM_CheckJump
 =============
 */
+static vec3_t flipKickFwd;
+
+/*
+=================
+JA+ jp_allowflipkick
+
+PM_JPFlipKickReady: the jumping player moves up fast enough and is not far from the ground
+PM_JPCanFlipKick: ghosts, mindtricked and protected players and players on the hook do not kick (the server knows)
+=================
+*/
+static qboolean PM_JPFlipKickReady( void )
+{
+	return pm->ps->velocity[2] > 200 && PM_GroundDistance() <= 80 && !BG_InSpecialJump( pm->ps->legsAnim );
+}
+
+static qboolean PM_JPCanFlipKick( void )
+{
+#ifdef _GAME
+	const gentity_t *ent = &g_entities[pm->ps->clientNum];
+
+	if ( pm->ps->clientNum >= 0 && pm->ps->clientNum < level.maxclients && ent->inuse && ent->client
+		&& ent->client->pers.connected == CON_CONNECTED )
+	{
+		const jpClient_t *jp = &ent->client->pers.jp;
+
+		if ( jp->isGhost || jp->mindtricked || jp->protectedByAdmin || (pm->ps->eFlags2 & EF2_HOOK) || (pm->cmd.buttons & BUTTON_HOOK) )
+			return qfalse;
+	}
+#endif
+	return qtrue;
+}
+
 static qboolean PM_CheckJump( void )
 {
 	qboolean allowFlips = qtrue;
@@ -2201,7 +2488,7 @@ static qboolean PM_CheckJump( void )
 				vec3_t	idealNormal={0}, wallNormal={0};
 				trace_t	trace;
 				qboolean doTrace = qfalse;
-				int contents = MASK_SOLID;//MASK_PLAYERSOLID;
+				int contents = JP_FEATURE( JPF_FLIPKICK ) ? MASK_PLAYERSOLID : MASK_SOLID;	// JA+ jp_allowflipkick: flip off players too
 
 				VectorSet(mins, pm->mins[0],pm->mins[1],0);
 				VectorSet(maxs, pm->maxs[0],pm->maxs[1],24);
@@ -2271,15 +2558,12 @@ static qboolean PM_CheckJump( void )
 							VectorMA( pm->ps->velocity, -150, fwd, pm->ps->velocity );
 						}
 
-						/*
-						if ( doTrace && anim != BOTH_WALL_RUN_LEFT && anim != BOTH_WALL_RUN_RIGHT )
+						// JA+: the side flip off a player kicks him
+						if ( doTrace && (anim == BOTH_WALL_FLIP_LEFT || anim == BOTH_WALL_FLIP_RIGHT)
+							&& trace.entityNum < MAX_CLIENTS && PM_JPCanFlipKick() )
 						{
-							if (trace.entityNum < MAX_CLIENTS)
-							{
-								pm->ps->forceKickFlip = trace.entityNum+1; //let the server know that this person gets kicked by this client
-							}
+							pm->ps->forceKickFlip = trace.entityNum+1; //let the server know that this person gets kicked by this client
 						}
-						*/
 
 						//up
 						if ( vertPush )
@@ -2486,23 +2770,54 @@ static qboolean PM_CheckJump( void )
 			}
 			*/
 			else if ( pm->cmd.forwardmove > 0 //pushing forward
-				&& pm->ps->fd.forceRageRecoveryTime < pm->cmd.serverTime	//not in a force Rage recovery period
 				&& pm->ps->fd.forcePowerLevel[FP_LEVITATION] > FORCE_LEVEL_1
-				&& PM_WalkableGroundDistance() <= 80 //unfortunately we do not have a happy ground timer like SP (this would use up more bandwidth if we wanted prediction workign right), so we'll just use the actual ground distance.
-				&& (pm->ps->legsAnim == BOTH_JUMP1 || pm->ps->legsAnim == BOTH_INAIR1 ) )//not in a flip or spin or anything
+				&& (PM_JPFlipKickReady()	// JA+
+					|| (pm->ps->fd.forceRageRecoveryTime < pm->cmd.serverTime	//not in a force Rage recovery period
+						&& PM_WalkableGroundDistance() <= 80 //unfortunately we do not have a happy ground timer like SP (this would use up more bandwidth if we wanted prediction workign right), so we'll just use the actual ground distance.
+						&& (pm->ps->legsAnim == BOTH_JUMP1 || pm->ps->legsAnim == BOTH_INAIR1 ))) )//not in a flip or spin or anything
 			{//run up wall, flip backwards
-				if ( allowWallRuns )
+				// JA+: first look for a player right in front. With jp_allowflipkick the jumper flips back off him
+				// and kicks him (the JK2 flip kick), a player is never used as a wall.
+				vec3_t kickFwd, kickTo, kickAngles;
+				trace_t kickTrace;
+
+				VectorSet( kickAngles, 0, pm->ps->viewangles[YAW], 0 );
+				AngleVectors( kickAngles, kickFwd, NULL, NULL );
+				VectorMA( pm->ps->origin, 32, kickFwd, kickTo );
+				pm->trace( &kickTrace, pm->ps->origin, pm->mins, pm->maxs, kickTo, pm->ps->clientNum, MASK_PLAYERSOLID );
+
+				if ( kickTrace.fraction >= 1.0f )
+				{
+				}
+				else if ( kickTrace.entityNum < MAX_CLIENTS )
+				{
+					if ( JP_FEATURE( JPF_FLIPKICK ) && PM_JPFlipKickReady() )
+					{
+						pm->ps->velocity[0] = pm->ps->velocity[1] = 0;
+						VectorMA( pm->ps->velocity, -150, kickFwd, pm->ps->velocity );
+						pm->ps->velocity[2] += 128;
+						PM_SetAnim( pm->ps->weaponTime ? SETANIM_LEGS : SETANIM_BOTH, BOTH_WALL_FLIP_BACK1, SETANIM_FLAG_OVERRIDE|SETANIM_FLAG_HOLD );
+						pm->ps->legsTimer -= 600;
+						PM_SetForceJumpZStart( pm->ps->origin[2] );
+						pm->cmd.upmove = 0;
+						pm->ps->fd.forceJumpSound = 1;
+						BG_ForcePowerDrain( pm->ps, FP_LEVITATION, 5 );
+						if ( PM_JPCanFlipKick() )
+							pm->ps->forceKickFlip = kickTrace.entityNum + 1;	// the server kicks that player
+					}
+				}
+				else if ( allowWallRuns )
 				{
 					//FIXME: have to be moving... make sure it's opposite the wall... or at least forward?
 					int wallWalkAnim = BOTH_WALL_FLIP_BACK1;
 					int parts = SETANIM_LEGS;
 					int contents = MASK_SOLID;//MASK_PLAYERSOLID;//CONTENTS_SOLID;
-					//qboolean kick = qtrue;
+					qboolean kick = qfalse;	// JA+ does not kick here, players are handled above
 					if ( pm->ps->fd.forcePowerLevel[FP_LEVITATION] > FORCE_LEVEL_2 )
 					{
 						wallWalkAnim = BOTH_FORCEWALLRUNFLIP_START;
 						parts = SETANIM_BOTH;
-						//kick = qfalse;
+						kick = qfalse;
 					}
 					else
 					{
@@ -2556,12 +2871,10 @@ static qboolean PM_CheckJump( void )
 							BG_ForcePowerDrain( pm->ps, FP_LEVITATION, 5 );
 
 							//kick if jumping off an ent
-							/*
 							if ( kick && traceEnt && (traceEnt->s.eType == ET_PLAYER || traceEnt->s.eType == ET_NPC) )
 							{ //kick that thang!
 								pm->ps->forceKickFlip = traceEnt->s.number+1;
 							}
-							*/
 							pm->cmd.rightmove = pm->cmd.forwardmove= 0;
 						}
 					}
@@ -2582,7 +2895,10 @@ static qboolean PM_CheckJump( void )
 					//&& (pm->ps->legsAnim == BOTH_JUMP1 || pm->ps->legsAnim == BOTH_INAIR1 ) )//not in a flip or spin or anything
 					)
 			{//see if we're pushing at a wall and jump off it if so
-				if ( allowWallGrabs )
+				if ( BG_pluginVersion( pm->ps->clientNum ) >= 1.4f && PM_CheckGrab() )
+				{ //JA+ ledge grab
+				}
+				else if ( allowWallGrabs )
 				{
 					//FIXME: make sure we have enough force power
 					//FIXME: check  to see if we can go any higher
@@ -2651,6 +2967,31 @@ static qboolean PM_CheckJump( void )
 				//FIXME: if in a butterfly, kick people away?
 			}
 			//END NEW JKA
+		}
+	}
+
+	if ( JP_FEATURE( JPF_JK2REDDFA ) && pm->cmd.upmove > 0 && pm->ps->weapon == WP_SABER
+		&& (pm->ps->weaponTime > 0 || (pm->cmd.buttons & BUTTON_ATTACK)) )
+	{ // JA+ jp_jk2RedDFA: jumping at the start of a red stance attack while pushing forward with attack held is a DFA
+		if ( !BG_InRoll( pm->ps, pm->ps->legsAnim ) && !PM_InKnockDown( pm->ps ) && !BG_InDeathAnim( pm->ps->legsAnim )
+			&& !BG_FlippingAnim( pm->ps->legsAnim ) && !PM_SpinningAnim( pm->ps->legsAnim )
+			&& !BG_SaberInSpecialAttack( pm->ps->torsoAnim ) && BG_SaberInAttack( pm->ps->saberMove )
+			&& pm->ps->fd.saberAnimLevel == FORCE_LEVEL_3
+			&& PM_AnimLength( 0, (animNumber_t)pm->ps->torsoAnim ) - pm->ps->torsoTimer < 500
+			&& pm->cmd.forwardmove > 0 && (pm->cmd.buttons & BUTTON_ATTACK)
+			&& PM_GroundDistance() < 32 && !BG_InSpecialJump( pm->ps->legsAnim ) )
+		{
+			saberMoveName_t move = PM_SaberJumpAttackMove();
+
+			if ( move != LS_A_T2B && move != LS_NONE )
+				JP_SaberAttackDrain( 25 );
+			PM_SetSaberMove( move );
+			pml.groundPlane = qfalse;
+			pml.walking = qfalse;
+			pm->ps->pm_flags |= PMF_JUMP_HELD;
+			pm->ps->groundEntityNum = ENTITYNUM_NONE;
+			VectorClear( pml.groundTrace.plane.normal );
+			pm->ps->weaponTime = pm->ps->torsoTimer;
 		}
 	}
 
@@ -3059,6 +3400,9 @@ static void PM_AirMove( void ) {
 	{
 #if METROID_JUMP
 		PM_CheckJump();
+		// JA+ ledge grab for plugins before 1.4 (1.4 checks it in PM_CheckJump). The move goes on after a grab.
+		if ( BG_pluginVersion( pm->ps->clientNum ) < 1.4f )
+			PM_CheckGrab();
 #else
 		if (pm->ps->fd.forceJumpZStart &&
 			pm->ps->forceJumpFlip)
@@ -4287,6 +4631,18 @@ static void PM_SetWaterLevel( void ) {
 
 }
 
+// JA+ dmflag 256: the stand up check and the dual jump attack box of the original game
+#define JP_DF_OLD_COLLISION	256
+
+static int PM_JPDmFlags( void )
+{
+#ifdef _GAME
+	return dmflags.integer;
+#else
+	return cgs.dmflags;
+#endif
+}
+
 qboolean PM_CheckDualForwardJumpDuck( void )
 {
 	qboolean resized = qfalse;
@@ -4298,9 +4654,20 @@ qboolean PM_CheckDualForwardJumpDuck( void )
 			||(pm->ps->legsTimer >= 400
 				&& PM_AnimLength( 0, BOTH_JUMPATTACK6 ) - pm->ps->legsTimer >= 1100 ) )
 		{//in a part of the anim that we're pretty much sideways in, raise up the mins
-			pm->mins[2] = 0;
-			pm->ps->pm_flags |= PMF_FIX_MINS;
-			resized = qtrue;
+			// JA+: only to sail over a player right in front, dmflag 256 gives the old behaviour
+			vec3_t fwd, end, mins;
+			trace_t tr;
+
+			AngleVectors( pm->ps->viewangles, fwd, NULL, NULL );
+			VectorMA( pm->ps->origin, 70.0f, fwd, end );
+			VectorSet( mins, pm->mins[0], pm->mins[1], -48.0f );
+			pm->trace( &tr, pm->ps->origin, mins, pm->maxs, end, pm->ps->clientNum, pm->tracemask );
+			if ( (tr.entityNum < MAX_CLIENTS && tr.entityNum != pm->ps->clientNum) || (PM_JPDmFlags() & JP_DF_OLD_COLLISION) )
+			{
+				pm->mins[2] = 0;
+				pm->ps->pm_flags |= PMF_FIX_MINS;
+				resized = qtrue;
+			}
 		}
 	}
 	return resized;
@@ -4368,36 +4735,63 @@ void PM_CheckFixMins( void )
 	}
 }
 
-static qboolean PM_CanStand ( void )
+/*
+==============
+PM_CheckFixMaxs (JA+)
+
+The ducked or rolling player wants to stand up: checks the room above with the whole box. If the
+head would hit something the player is moved down by that much when there is room below (in the
+air or in water), otherwise he stays down.
+==============
+*/
+static qboolean PM_CheckFixMaxs( void )
 {
-    qboolean canStand = qtrue;
-    float x, y;
-    trace_t trace;
+	trace_t	trace;
+	vec3_t	end, curMins, curMaxs;
+	float	updist;
 
-    const vec3_t lineMins = { -5.0f, -5.0f, -2.5f };
-    const vec3_t lineMaxs = { 5.0f, 5.0f, 0.0f };
-
-    for ( x = pm->mins[0] + 5.0f; canStand && x <= (pm->maxs[0] - 5.0f); x += 10.0f )
-    {
-        for ( y = pm->mins[1] + 5.0f; y <= (pm->maxs[1] - 5.0f); y += 10.0f )
-        {
-			vec3_t start, end;//
-			VectorSet( start, x, y, pm->maxs[2] );
-			VectorSet( end, x, y, pm->ps->standheight );
-
-			VectorAdd (start, pm->ps->origin, start);
-			VectorAdd (end, pm->ps->origin, end);
-
-			pm->trace (&trace, start, lineMins, lineMaxs, end, pm->ps->clientNum, pm->tracemask);
-			if ( trace.allsolid || trace.fraction < 1.0f )
-			{
-				canStand = qfalse;
-				break;
-			}
-		}
+	if ( !(pm->ps->pm_flags & (PMF_DUCKED|PMF_ROLLING)) )
+	{
+		return qfalse;
 	}
 
-    return canStand;
+	VectorSet( end, pm->ps->origin[0], pm->ps->origin[1], pm->ps->origin[2]+pm->ps->standheight );
+	VectorSet( curMins, pm->mins[0], pm->mins[1], MINS_Z );
+	VectorSet( curMaxs, pm->maxs[0], pm->maxs[1], 0 );
+	pm->trace( &trace, pm->ps->origin, curMins, curMaxs, end, pm->ps->clientNum, pm->tracemask );
+	if ( trace.allsolid || trace.startsolid )
+	{
+		return qfalse;
+	}
+	if ( trace.fraction >= 1.0f )
+	{
+		return qtrue;
+	}
+
+	updist = pm->ps->standheight * (1.0f - trace.fraction);
+	VectorSet( end, pm->ps->origin[0], pm->ps->origin[1], pm->ps->origin[2]-updist );
+	curMaxs[2] = pm->ps->crouchheight;
+	pm->trace( &trace, pm->ps->origin, curMins, curMaxs, end, pm->ps->clientNum, pm->tracemask );
+	if ( !trace.allsolid && !trace.startsolid && trace.fraction >= 1.0f )
+	{
+		pm->ps->origin[2] -= updist;
+		return qtrue;
+	}
+	return qfalse;
+}
+
+// JA+ stand up check, with dmflag 256 the one of the original game
+static qboolean PM_JPCanStand( void )
+{
+	trace_t	trace;
+
+	if ( !(PM_JPDmFlags() & JP_DF_OLD_COLLISION) )
+	{
+		return PM_CheckFixMaxs();
+	}
+	pm->maxs[2] = pm->ps->standheight;
+	pm->trace( &trace, pm->ps->origin, pm->mins, pm->maxs, pm->ps->origin, pm->ps->clientNum, pm->tracemask );
+	return !trace.allsolid;
 }
 
 /*
@@ -4498,7 +4892,7 @@ static void PM_CheckDuck (void)
 		}
 		else if (pm->ps->pm_flags & PMF_ROLLING)
 		{
-			if ( PM_CanStand() ) {
+			if ( PM_JPCanStand() ) {
 				pm->maxs[2] = pm->ps->standheight;
 				pm->ps->pm_flags &= ~PMF_ROLLING;
 			}
@@ -4514,7 +4908,7 @@ static void PM_CheckDuck (void)
 		{	// stand up if possible
 			if (pm->ps->pm_flags & PMF_DUCKED)
 			{
-				if ( PM_CanStand() ) {
+				if ( PM_JPCanStand() ) {
 					pm->maxs[2] = pm->ps->standheight;
 					pm->ps->pm_flags &= ~PMF_DUCKED;
 				}
@@ -5178,6 +5572,7 @@ PM_Footsteps
 */
 static void PM_Footsteps( void ) {
 	float		bobmove;
+	double		xyspeed;
 	int			old;
 	int			setAnimFlags = 0;
 
@@ -5200,8 +5595,10 @@ static void PM_Footsteps( void ) {
 	// calculate speed and cycle to be used for
 	// all cyclic walking effects
 	//
-	pm->xyspeed = sqrt( pm->ps->velocity[0] * pm->ps->velocity[0]
-		+  pm->ps->velocity[1] * pm->ps->velocity[1] );
+	// JA+ (x87) compares the unrounded value with 60 and 5 below
+	xyspeed = sqrt( (double)pm->ps->velocity[0] * pm->ps->velocity[0]
+		+  (double)pm->ps->velocity[1] * pm->ps->velocity[1] );
+	pm->xyspeed = xyspeed;
 
 	if (pm->ps->saberMove == LS_SPINATTACK)
 	{
@@ -5212,7 +5609,7 @@ static void PM_Footsteps( void ) {
 		// airborne leaves position in cycle intact, but doesn't advance
 		if ( pm->waterlevel > 1 )
 		{
-			if (pm->xyspeed > 60)
+			if (xyspeed > 60)
 			{
 				PM_ContinueLegsAnim( BOTH_SWIMFORWARD );
 			}
@@ -5225,7 +5622,7 @@ static void PM_Footsteps( void ) {
 	}
 	// if not trying to move
 	else if ( !pm->cmd.forwardmove && !pm->cmd.rightmove ) {
-		if (  pm->xyspeed < 5 ) {
+		if (  xyspeed < 5 ) {
 			pm->ps->bobCycle = 0;	// start at beginning of cycle again
 			if ( pm->ps->clientNum >= MAX_CLIENTS &&
 				pm_entSelf &&
@@ -5319,7 +5716,9 @@ static void PM_Footsteps( void ) {
 
 		bobmove = 0.5;	// ducked characters bob much faster
 
-		if ( ( (PM_RunningAnim( pm->ps->legsAnim )&&VectorLengthSquared(pm->ps->velocity)>=40000/*200*200*/) || PM_CanRollFromSoulCal( pm->ps ) ) &&
+		// JA+: rolls start at a lower speed than in the original (30000 instead of 200*200)
+		if ( ( (PM_RunningAnim( pm->ps->legsAnim ) && (VectorLengthSquared(pm->ps->velocity)>=30000 || JP_FIXROLL() >= 2
+					|| (JP_FIXROLL() == 1 && (pm->ps->fd.forcePowersActive & (1 << FP_GRIP))))) || PM_CanRollFromSoulCal( pm->ps ) ) &&
 			!BG_InRoll(pm->ps, pm->ps->legsAnim) )
 		{//roll!
 			rolled = PM_TryRoll();
@@ -5815,11 +6214,40 @@ void PM_BeginWeaponChange( int weapon ) {
 		pm->ps->zoomTime = pm->ps->commandTime;
 	}
 
+	if ( pm->ps->weapon == WP_SABER && PM_JPBackSaberAnims() )
+	{ // JA+: the saber goes to the back with the new holster animations (saber key idleInBack)
+		const saberInfo_t *saber1 = BG_MySaber( pm->ps->clientNum, 0 ), *saber2 = BG_MySaber( pm->ps->clientNum, 1 );
+		const int level = pm->ps->fd.saberAnimLevel, base = pm->ps->fd.saberAnimLevelBase, holstered = pm->ps->saberHolstered;
+		const qboolean back1 = saber1 && (saber1->saberFlags2 & SFL2_IDLE_IN_BACK), back2 = saber2 && (saber2->saberFlags2 & SFL2_IDLE_IN_BACK);
+		int anim = TORSO_DROPWEAP1;
+
+		if ( level == SS_STAFF && !holstered )
+		{
+			anim = BOTH_S7_S1_NEW;
+		}
+		else if ( level == SS_DUAL && !holstered && saber1 && saber2 )
+		{
+			if ( back1 && back2 )		anim = BOTH_S6_S1_2ARMS;
+			else if ( back1 )			anim = BOTH_STAND2TO1_NEW;
+			else if ( back2 )			anim = BOTH_S6_S1_LARM;
+		}
+		else if ( (base == SS_STAFF && saber1 && saber1->type == SABER_STAFF && holstered == 1 && level != SS_STAFF)
+			|| (base == SS_DUAL && level != SS_DUAL && holstered == 1 && back1)
+			|| (!holstered && base != SS_DUAL && base != SS_STAFF && back1) )
+		{
+			anim = BOTH_STAND2TO1_NEW;
+		}
+		PM_SetAnim(SETANIM_TORSO, anim, SETANIM_FLAG_OVERRIDE);
+		pm->ps->weaponTime += pm_entSelf ? BG_AnimLength( pm_entSelf->localAnimIndex, anim ) : 200;
+	}
+	else
+	{
+		//PM_StartTorsoAnim( TORSO_DROPWEAP1 );
+		PM_SetAnim(SETANIM_TORSO, TORSO_DROPWEAP1, SETANIM_FLAG_OVERRIDE);
+		pm->ps->weaponTime += 200;
+	}
 	PM_AddEventWithParm( EV_CHANGE_WEAPON, weapon );
 	pm->ps->weaponstate = WEAPON_DROPPING;
-	pm->ps->weaponTime += 200;
-	//PM_StartTorsoAnim( TORSO_DROPWEAP1 );
-	PM_SetAnim(SETANIM_TORSO, TORSO_DROPWEAP1, SETANIM_FLAG_OVERRIDE);
 
 	BG_ClearRocketLock( pm->ps );
 }
@@ -6650,6 +7078,30 @@ backAgain:
 }
 
 /*
+JA+: special jumps that do not lock the weapon, so an attack can start in the air
+(jp_jk2RedDFA: back flips and wall flips, jp_improveYellowDFA: back flips of the staff, the long leap,
+cartwheels of a player who turned the single player cartwheel off)
+*/
+qboolean PM_InCartwheel( int anim );
+
+static qboolean PM_JPSpecialJumpFree( void ) {
+	const int anim = pm->ps->legsAnim;
+	const qboolean idle = !BG_SaberInAttack( pm->ps->saberMove ) && !BG_SaberInTransitionAny( pm->ps->saberMove );
+
+	if ( JP_FEATURE( JPF_JK2REDDFA ) && idle
+		&& (BG_InBackFlip( anim ) || anim == BOTH_WALL_FLIP_BACK1 || anim == BOTH_WALL_FLIP_LEFT || anim == BOTH_WALL_FLIP_RIGHT) )
+		return qtrue;
+	if ( anim == BOTH_FORCELONGLEAP_START )
+		return qtrue;
+	if ( JP_FEATURE( JPF_IMPROVEYELLOWDFA ) && idle && BG_InBackFlip( anim )
+		&& pm->ps->fd.saberAnimLevelBase == SS_STAFF && pm->ps->fd.saberAnimLevel == SS_STAFF )
+		return qtrue;
+	if ( PM_InCartwheel( anim ) && BG_pluginVersion( pm->ps->clientNum ) >= 1.3f && BG_pluginDisable( pm->ps->clientNum, 13 ) )
+		return qtrue;
+	return qfalse;
+}
+
+/*
 ==============
 PM_Weapon
 
@@ -6818,6 +7270,9 @@ static void PM_Weapon( void )
 				else
 				{
 					desiredAnim = BOTH_FORCELIGHTNING_HOLD;
+					// JA+ flamethrower pose (japlus_gla_anims, plugin 1.3)
+					if ( JP_FEATURE( JPF_NEWGLAANIMS ) && BG_pluginVersion( pm->ps->clientNum ) >= 1.3f && (pm->ps->eFlags & EF_FLAME) )
+						desiredAnim = TORSO_MAND_FLAME;
 				}
 			}
 			else if ( (pm->ps->fd.forcePowersActive&(1<<FP_DRAIN)) )
@@ -6839,7 +7294,12 @@ static void PM_Weapon( void )
 			desiredAnim = pm->ps->forceDodgeAnim;
 			break;
 		case HANDEXTEND_KNOCKDOWN:
-			if (pm->ps->forceDodgeAnim)
+			if (pm->ps->forceDodgeAnim == 4 || pm->ps->forceDodgeAnim == 5)
+			{ // JA+: knockdowns of the new kicks (G_TossTheMofo)
+				desiredAnim = pm->ps->forceDodgeAnim == 4 ? BOTH_BACK_FALLING : BOTH_JUMP_BACKFLIP_ATCKEE_FALL;
+				playFullBody = qtrue;
+			}
+			else if (pm->ps->forceDodgeAnim)
 			{
 				if (pm->ps->forceDodgeAnim > 4)
 				{ //this means that we want to play a sepereate anim on the torso
@@ -6969,7 +7429,7 @@ static void PM_Weapon( void )
 		return;
 	}
 
-	if (BG_InSpecialJump(pm->ps->legsAnim) ||
+	if ((BG_InSpecialJump(pm->ps->legsAnim) && !PM_JPSpecialJumpFree()) ||
 		BG_InRoll(pm->ps, pm->ps->legsAnim) ||
 		PM_InRollComplete(pm->ps, pm->ps->legsAnim))
 	{
@@ -7209,7 +7669,9 @@ static void PM_Weapon( void )
 	// can't change if weapon is firing, but can change
 	// again if lowering or raising
 	if ( pm->ps->weaponTime <= 0 || pm->ps->weaponstate != WEAPON_FIRING ) {
-		if ( pm->ps->weapon != pm->cmd.weapon ) {
+		// JA+: no weapon change in the middle of a grab move
+		if ( pm->ps->weapon != pm->cmd.weapon
+			&& !BG_InGrappleMove( pm->ps->legsAnim ) && !BG_InGrappleMove( pm->ps->torsoAnim ) ) {
 			PM_BeginWeaponChange( pm->cmd.weapon );
 		}
 	}
@@ -7499,6 +7961,7 @@ static void PM_Weapon( void )
 	#ifdef _GAME
 				if (pm_entSelf)
 				{
+					JP_AttackEndsProtect((gentity_t *)pm_entSelf);
 					if (TryGrapple((gentity_t *)pm_entSelf))
 					{
 						return;
@@ -7512,6 +7975,12 @@ static void PM_Weapon( void )
 			else if (pm->debugMelee &&
 				(pm->cmd.buttons & BUTTON_ALT_ATTACK))
 			{ //kicks
+#ifdef _GAME
+				if (pm_entSelf)
+				{
+					JP_AttackEndsProtect((gentity_t *)pm_entSelf);
+				}
+#endif
 				if (!BG_KickingAnim(pm->ps->torsoAnim) &&
 					!BG_KickingAnim(pm->ps->legsAnim))
 				{
@@ -8218,7 +8687,8 @@ void BG_CmdForRoll( playerState_t *ps, int anim, usercmd_t *pCmd )
 	switch ( (anim) )
 	{
 	case BOTH_ROLL_F:
-		pCmd->forwardmove = 127;
+		if ( JP_FIXROLL() != 3 || pCmd->forwardmove >= 0 )	// JA+: holding back slows the roll
+			pCmd->forwardmove = 127;
 		pCmd->rightmove = 0;
 		break;
 	case BOTH_ROLL_B:
@@ -8381,17 +8851,22 @@ void BG_AdjustClientSpeed(playerState_t *ps, usercmd_t *cmd, int svTime)
 	}
 
 	if (ps->fd.forcePowersActive & (1 << FP_GRIP))
-	{
-		ps->speed *= 0.4f;
+	{ // JA+: jp_gripSpeedScale, between 0.4 and 1.01
+		ps->speed *= Q_min( Q_max( bg_jpGripSpeedScale, 0.4f ), 1.01f );
 	}
 
 	if (ps->fd.forcePowersActive & (1 << FP_SPEED))
 	{
 		ps->speed *= 1.7f;
 	}
-	else if (ps->fd.forcePowersActive & (1 << FP_RAGE))
+
+	// JA+: rage and speed only stack with jp_forceCombo 1, the rage recovery slow down applies with speed too
+	if (ps->fd.forcePowersActive & (1 << FP_RAGE))
 	{
-		ps->speed *= 1.3f;
+		if ( !(ps->fd.forcePowersActive & (1 << FP_SPEED)) || bg_jpForceCombo == 1 )
+		{
+			ps->speed *= 1.3f;
+		}
 	}
 	else if (ps->fd.forceRageRecoveryTime > svTime)
 	{
@@ -8474,9 +8949,11 @@ void BG_AdjustClientSpeed(playerState_t *ps, usercmd_t *cmd, int svTime)
 
 	if ( BG_InRoll( ps, ps->legsAnim ) && ps->speed > 50 )
 	{ //can't roll unless you're able to move normally
+		const int fixRoll = JP_FIXROLL();	// JA+ jp_fixRoll
+
 		if ((ps->legsAnim) == BOTH_ROLL_B)
 		{ //backwards roll is pretty fast, should also be slower
-			if (ps->legsTimer > 800)
+			if (ps->legsTimer > 800 || (fixRoll == 3 && ps->legsTimer > 100))
 			{
 				ps->speed = ps->legsTimer/2.5;
 			}
@@ -8487,16 +8964,22 @@ void BG_AdjustClientSpeed(playerState_t *ps, usercmd_t *cmd, int svTime)
 		}
 		else
 		{
-			if (ps->legsTimer > 800)
+			const qboolean heldBack = pm->cmd.forwardmove < 0;
+
+			if (ps->legsTimer > 800 || (fixRoll == 3 && ps->legsTimer > 100 && !heldBack))
 			{
 				ps->speed = ps->legsTimer/1.5;//450;
+			}
+			else if (fixRoll == 3 && heldBack)
+			{
+				ps->speed = ps->legsTimer/20.0;
 			}
 			else
 			{
 				ps->speed = ps->legsTimer/5.0;//450;
 			}
 		}
-		if (ps->speed > 600)
+		if (fixRoll < 3 && ps->speed > 600)
 		{
 			ps->speed = 600;
 		}
@@ -8534,6 +9017,9 @@ qboolean BG_InKnockDown( int anim )
 {
 	switch ( (anim) )
 	{
+	case BOTH_BACK_FALLING:	// JA+
+	case BOTH_BACK_FALLING_GETUP:
+	case BOTH_JUMP_BACKFLIP_ATCKEE_FALL:
 	case BOTH_KNOCKDOWN1:
 	case BOTH_KNOCKDOWN2:
 	case BOTH_KNOCKDOWN3:
@@ -9541,7 +10027,8 @@ static QINLINE void PM_CmdForSaberMoves(usercmd_t *ucmd)
 					switch ( pm->ps->legsAnim )
 					{
 						case BOTH_BUTTERFLY_LEFT:
-							ucmd->rightmove = -127;
+							if ( pm->ps->fd.saberAnimLevel != SS_STRONG )	// JA+: the red style does it as its new DFA, straight ahead
+								ucmd->rightmove = -127;
 							break;
 						case BOTH_BUTTERFLY_RIGHT:
 							ucmd->rightmove = 127;
@@ -9586,7 +10073,7 @@ static QINLINE void PM_CmdForSaberMoves(usercmd_t *ucmd)
 			}
 		}
 
-		if ( pm->ps->groundEntityNum == ENTITYNUM_NONE )
+		if ( pm->ps->groundEntityNum == ENTITYNUM_NONE && pm->ps->fd.saberAnimLevel != SS_STRONG )
 		{//can only turn when your feet hit the ground
 			if (PM_AdjustAnglesForDualJumpAttack(pm->ps, ucmd))
 			{
@@ -10069,6 +10556,96 @@ void BG_VehicleAdjustBBoxForOrientation( Vehicle_t *veh, vec3_t origin, vec3_t m
 	}
 }
 /*
+===================
+PM_GrappleBodyMove
+
+JA+: legs animation while the grappling hook swings or pulls the player
+===================
+*/
+static void PM_GrappleBodyMove( void ) {
+	vec3_t	yawAngles = { 0.0f, 0.0f, 0.0f }, fwd, right;
+	float	fwdSpeed, rightSpeed;
+	int		anim;
+
+	yawAngles[YAW] = pm->ps->viewangles[YAW];
+	AngleVectors( yawAngles, fwd, right, NULL );
+
+	rightSpeed = DotProduct( right, pm->ps->velocity );
+	fwdSpeed = DotProduct( fwd, pm->ps->velocity );
+
+	if ( fabs( rightSpeed ) <= fabs( fwdSpeed ) * 1.5f ) {
+		if ( fwdSpeed > 150.0f )
+			anim = BOTH_FORCEJUMP1;
+		else if ( fwdSpeed < -150.0f )
+			anim = BOTH_FORCEJUMPBACK1;
+		else
+			return;
+	}
+	else if ( rightSpeed > 150.0f )
+		anim = BOTH_FORCEJUMPRIGHT1;
+	else if ( rightSpeed < -150.0f )
+		anim = BOTH_FORCEJUMPLEFT1;
+	else
+		return;
+
+	PM_SetAnim( SETANIM_LEGS, anim, SETANIM_FLAG_OVERRIDE|SETANIM_FLAG_HOLD );
+}
+
+/*
+===================
+PM_GrappleMove
+
+JA+: the hook pulls the player to the grapple point (ps->lastHitLoc)
+===================
+*/
+static void PM_GrappleMove( void ) {
+	vec3_t	vel;
+	float	vlen, speed;
+
+	VectorMA( pm->ps->lastHitLoc, -16.0f, pml.forward, vel );
+	VectorSubtract( vel, pm->ps->origin, vel );
+	vlen = VectorLength( vel );
+	VectorNormalize( vel );
+
+	speed = (vlen <= 100.0f) ? vlen * 10.0f : 800.0f;
+	VectorScale( vel, speed, pm->ps->velocity );
+
+	pml.groundPlane = qfalse;
+	PM_GrappleBodyMove();
+}
+
+/*
+===================
+PM_GrappleSuspendedMove
+
+JA+: hanging on the hook, the player swings like a pendulum
+===================
+*/
+static void PM_GrappleSuspendedMove( void ) {
+	vec3_t	prevToHook, dir, v;
+	float	vertDist, dist, t, dot;
+
+	VectorSubtract( pm->ps->lastHitLoc, pml.previous_origin, prevToHook );
+	vertDist = fabs( pm->ps->lastHitLoc[2] - pm->ps->origin[2] );
+	dist = VectorLength( prevToHook );
+
+	if ( dist > 0.0f ) {
+		VectorSubtract( pm->ps->lastHitLoc, pm->ps->origin, dir );
+		VectorNormalize( dir );
+
+		t = ((float)pm->ps->gravity * vertDist / dist) * pml.frametime;
+		VectorMA( pm->ps->velocity, t, dir, v );
+
+		// keep only the part of the speed that is perpendicular to the rope
+		dot = DotProduct( dir, v );
+		VectorMA( v, -dot, dir, pm->ps->velocity );
+	}
+
+	pml.groundPlane = qfalse;
+	PM_GrappleBodyMove();
+}
+
+/*
 ================
 PmoveSingle
 
@@ -10164,6 +10741,120 @@ void PM_MoveForKata(usercmd_t *ucmd)
 	}
 }
 
+/*
+JA+ emotes that stay until the player presses a button: PM_JPEmoteHeld tells if the animation is one of them,
+PM_JPEmoteEndAnim gives the animation that ends it, -1 for none
+*/
+static qboolean PM_JPEmoteHeld( int anim ) {
+	switch ( anim ) {
+	case BOTH_MEDITATE: case BOTH_SLEEP6START: case BOTH_SLEEP1: case BOTH_KNEES2: case TORSO_SURRENDER_START:
+	case BOTH_CROUCH3: case BOTH_HIT1: case BOTH_STAND5TOSIT3: case BOTH_SIT6: case BOTH_SIT7: case BOTH_STAND10:
+	case BOTH_DEATH15: case BOTH_STAND5TOSTAND8:
+		return qtrue;
+#ifdef _GAME
+	case BOTH_STAND4:	// amatease, only the server knows about it and freezes the player
+		return pm->ps->clientNum < MAX_CLIENTS;
+#endif
+	}
+	return qfalse;
+}
+
+static int PM_JPEmoteEndAnim( int anim ) {
+	switch ( anim ) {
+	case BOTH_MEDITATE:			return BOTH_MEDITATE_END;
+	case BOTH_SLEEP6START:		return BOTH_SLEEP6STOP;
+	case BOTH_SLEEP1:			return BOTH_SLEEP1GETUP2;
+	case TORSO_SURRENDER_START:	return TORSO_SURRENDER_STOP;
+	case BOTH_CROUCH3:			return BOTH_UNCROUCH3;
+	case BOTH_STAND5TOSIT3:		return BOTH_SIT3TOSTAND5;
+	case BOTH_SIT6:				return BOTH_SIT2TOSTAND5;
+	case BOTH_SIT7:				return BOTH_STANDUP2;
+	case BOTH_STAND10:			return BOTH_STAND10TOSTAND1;
+	case BOTH_HIT1:				return BOTH_FORCE_GETUP_F2;
+	case BOTH_DEATH15:			return BOTH_BACK_FLIP_UP;
+	case BOTH_STAND5TOSTAND8:	return BOTH_STAND8TOSTAND5;
+	case BOTH_KNEES2:			return BOTH_CHOKE1START;
+	}
+	return -1;
+}
+
+/*
+JA+ new kicks (BOTH_JUMP_BACKKICK_SPIN, BOTH_JUMP_BACKFLIP_ATCK, BOTH_FLIP_STAB): the movement during the animation,
+the times are milliseconds since the animation started
+*/
+#define JP_BACKKICK_SPIN_LENGTH	3370
+#define JP_BACKFLIP_ATCK_LENGTH	3125
+#define JP_FLIP_STAB_LENGTH	2000
+
+static qboolean PM_JPMoveInput( void ) {
+	return pm->cmd.forwardmove || pm->cmd.rightmove || pm->cmd.upmove;
+}
+
+static void PM_JPNewKickMove( qboolean *stiffenedUp ) {
+	playerState_t *ps = pm->ps;
+
+	if ( ps->legsAnim == BOTH_JUMP_BACKFLIP_ATCK || ps->torsoAnim == BOTH_JUMP_BACKFLIP_ATCK ) {
+		int t = JP_BACKFLIP_ATCK_LENGTH - ps->legsTimer;
+
+		if ( t >= 551 && t <= 1074 ) {
+			// run at the enemy
+			pm->cmd.forwardmove = 127;
+			pm->cmd.rightmove = 0;
+			pm->cmd.upmove = 0;
+			*stiffenedUp = qfalse;
+		}
+		else if ( t >= 1075 && t <= 2099 ) {
+			pm->cmd.rightmove = 0;
+			pm->cmd.upmove = 0;
+			*stiffenedUp = qfalse;
+		}
+		else if ( t > 2374 && PM_JPMoveInput() ) {
+			// the end of the animation can be cancelled by moving
+			*stiffenedUp = qfalse;
+			ps->legsTimer = 0;
+			ps->torsoTimer = 0;
+			t = JP_BACKFLIP_ATCK_LENGTH;
+		}
+		if ( t > 1957 )
+			PM_SetPMViewAngle( ps, ps->viewangles, &pm->cmd );
+#ifdef _GAME
+		// the first kick did not hit anybody: no flip over the enemy, the move ends
+		if ( t >= 875 && !JP_KickHitSomebody( ps->clientNum ) ) {
+			ps->legsTimer = 0;
+			ps->torsoTimer = 0;
+			PM_SetAnim( SETANIM_BOTH, BOTH_JUMP_BACKFLIP_ATCK_MISSED, SETANIM_FLAG_OVERRIDE|SETANIM_FLAG_HOLD );
+			ps->weaponTime = 500;
+		}
+#endif
+	}
+
+	if ( (ps->legsAnim == BOTH_JUMP_BACKKICK_SPIN || ps->torsoAnim == BOTH_JUMP_BACKKICK_SPIN)
+		&& JP_BACKKICK_SPIN_LENGTH - ps->legsTimer > 2185 && PM_JPMoveInput() )
+	{
+		*stiffenedUp = qfalse;
+		ps->legsTimer = 0;
+		ps->torsoTimer = 0;
+	}
+
+	if ( ps->legsAnim == BOTH_FLIP_STAB || ps->torsoAnim == BOTH_FLIP_STAB ) {
+		const int t = JP_FLIP_STAB_LENGTH - ps->legsTimer;
+
+		if ( t < 661 || t >= 1410 ) {
+			pm->cmd.forwardmove = 127;
+			pm->cmd.rightmove = 0;
+			pm->cmd.upmove = 0;
+			*stiffenedUp = qfalse;
+		}
+		else if ( t >= 1322 ) {
+			// the flip
+			pm->cmd.forwardmove = 127;
+			pm->cmd.rightmove = 0;
+			pm->cmd.upmove = 127;
+			*stiffenedUp = qfalse;
+		}
+	}
+}
+
 void PmoveSingle (pmove_t *pmove) {
 	qboolean stiffenedUp = qfalse;
 	float gDist = 0;
@@ -10182,6 +10873,50 @@ void PmoveSingle (pmove_t *pmove) {
 		pm->cmd.buttons &= ~BUTTON_ALT_ATTACK;
 		pm->cmd.buttons &= ~BUTTON_USE_HOLDABLE;
 	}
+
+#ifdef _GAME
+	// JA+ rcon "freeze": the player starts stiffened up, only the moves below that steer the player themselves undo it
+	stiffenedUp = JP_ClientFrozen( pm->ps->clientNum );
+
+	// JA+: the grab moves of the players run here (in the base game: WP_SaberPositionUpdate)
+	if ( pm->ps->clientNum >= 0 && pm->ps->clientNum < level.maxclients )
+	{
+		gentity_t *self = &g_entities[pm->ps->clientNum];
+
+		if ( self->inuse && self->client && self->client->grappleState )
+		{
+			G_meleeSystem( self );
+		}
+	}
+#endif
+
+	if ( JP_FEATURE( JPF_SPFORCES ) && pm->ps->clientNum < MAX_CLIENTS )
+	{ // JA+ jp_allowSPForces: moving or attacking ends the single player force animations
+		switch ( pm->ps->torsoAnim )
+		{
+		case BOTH_MINDTRICK1: case BOTH_MINDTRICK2: case BOTH_FORCEHEAL_START: case BOTH_FORCEHEAL_STOP: case BOTH_FORCEHEAL_QUICK:
+		case BOTH_FORCE_RAGE: case BOTH_FORCE_ABSORB: case BOTH_FORCE_ABSORB_START: case BOTH_FORCE_ABSORB_END:
+		case BOTH_FORCE_PROTECT: case BOTH_FORCE_PROTECT_FAST:
+		case BOTH_FORCE_DRAIN: case BOTH_FORCE_DRAIN_START: case BOTH_FORCE_DRAIN_HOLD: case BOTH_FORCE_DRAIN_RELEASE:
+			if ( pm->cmd.forwardmove || pm->cmd.rightmove || pm->cmd.upmove || (pm->cmd.buttons & (BUTTON_ALT_ATTACK|BUTTON_ATTACK)) )
+			{
+				pm->ps->forceHandExtendTime = 0;
+				pm->ps->torsoTimer = 0;
+				pm->ps->legsTimer = 0;
+			}
+			break;
+		default:
+			break;
+		}
+	}
+
+#ifdef _GAME
+	// JA+ jp_allowSPForces 2: the force push grab, run by the victim
+	if ( pm->ps->clientNum >= 0 && pm->ps->clientNum < level.maxclients )
+	{
+		JP_PushGrabThink( &g_entities[pm->ps->clientNum] );
+	}
+#endif
 
 	if (pm->ps->emplacedIndex)
 	{
@@ -10247,13 +10982,14 @@ void PmoveSingle (pmove_t *pmove) {
 	else if ( pm->ps->saberMove == LS_A_BACK || pm->ps->saberMove == LS_A_BACK_CR ||
 		pm->ps->saberMove == LS_A_BACKSTAB || pm->ps->saberMove == LS_A_FLIP_STAB ||
 		pm->ps->saberMove == LS_A_FLIP_SLASH || pm->ps->saberMove == LS_A_JUMP_T__B_ ||
-		pm->ps->saberMove == LS_DUAL_LR || pm->ps->saberMove == LS_DUAL_FB)
+		pm->ps->saberMove == LS_DUAL_LR || pm->ps->saberMove == LS_DUAL_FB ||
+		pm->ps->saberMove == LS_SPINATTACK_ALORA || pm->ps->saberMove == LS_JAPLUS_SPINATTACK)	// JA+
 	{
 		if (pm->ps->legsAnim == BOTH_JUMPFLIPSTABDOWN ||
 			pm->ps->legsAnim == BOTH_JUMPFLIPSLASHDOWN1)
 		{ //flipover medium stance attack
-			if (pm->ps->legsTimer < 1600 && pm->ps->legsTimer > 900)
-			{
+			if (pm->ps->legsTimer < 1600 && pm->ps->legsTimer > 900 && !JP_FEATURE(JPF_IMPROVEYELLOWDFA))
+			{ // JA+ jp_improveYellowDFA: no automatic spin
 				pm->ps->viewangles[YAW] += pml.frametime*240.0f;
 				PM_SetPMViewAngle(pm->ps, pm->ps->viewangles, &pm->cmd);
 			}
@@ -10265,7 +11001,9 @@ void PmoveSingle (pmove_t *pmove) {
 		(pm->ps->legsAnim) == (BOTH_CROUCHATTACKBACK1) ||
 		(pm->ps->legsAnim) == (BOTH_FORCELEAP2_T__B_) ||
 		(pm->ps->legsAnim) == (BOTH_JUMPFLIPSTABDOWN) ||
-		(pm->ps->legsAnim) == (BOTH_JUMPFLIPSLASHDOWN1))
+		(pm->ps->legsAnim) == (BOTH_JUMPFLIPSLASHDOWN1) ||
+		(pm->ps->legsAnim) == (BOTH_ALORA_SPIN_SLASH) ||	// JA+ new moves
+		(pm->ps->legsAnim) == (BOTH_FJSS_TR_BL))
 	{
 		stiffenedUp = qtrue;
 	}
@@ -10278,14 +11016,26 @@ void PmoveSingle (pmove_t *pmove) {
 	{
 		stiffenedUp = qtrue;
 	}
+	else if ( pm->ps->legsAnim == BOTH_JUMP_BACKFLIP_ATCK_MISSED || pm->ps->torsoAnim == BOTH_JUMP_BACKFLIP_ATCK_MISSED )
+	{ // JA+: the combo kick missed, keep running forward
+		stiffenedUp = qfalse;
+		pm->cmd.forwardmove = 127;
+		pm->cmd.rightmove = 0;
+		pm->cmd.upmove = 0;
+	}
 	else if (BG_KickMove(pm->ps->saberMove) || BG_KickingAnim(pm->ps->legsAnim))
 	{
 		stiffenedUp = qtrue;
+		PM_JPNewKickMove( &stiffenedUp );
+	}
+	else if ( BG_InLedgeMove( pm->ps->legsAnim ) )
+	{ // JA+ ledge grab: handled in PM_AdjustAngleForWallGrap
 	}
 	else if (BG_InGrappleMove(pm->ps->torsoAnim))
 	{
 		stiffenedUp = qtrue;
 		PM_SetPMViewAngle(pm->ps, pm->ps->viewangles, &pm->cmd);
+		pm->cmd.buttons &= ~(BUTTON_ATTACK|BUTTON_ALT_ATTACK|BUTTON_FORCEGRIP|BUTTON_FORCEPOWER|BUTTON_FORCE_LIGHTNING|BUTTON_HOOK);	// JA+
 	}
 	else if ( pm->ps->saberMove == LS_STABDOWN_DUAL ||
 			pm->ps->saberMove == LS_STABDOWN_STAFF ||
@@ -10317,18 +11067,21 @@ void PmoveSingle (pmove_t *pmove) {
 	else if ( BG_FullBodyTauntAnim( pm->ps->legsAnim )
 		&& BG_FullBodyTauntAnim( pm->ps->torsoAnim ) )
 	{
+		// JA+: the emotes are held until a button is pressed, then the matching get up animation plays
 		if ( (pm->cmd.buttons&BUTTON_ATTACK)
 			|| (pm->cmd.buttons&BUTTON_ALT_ATTACK)
 			|| (pm->cmd.buttons&BUTTON_FORCEPOWER)
 			|| (pm->cmd.buttons&BUTTON_FORCEGRIP)
 			|| (pm->cmd.buttons&BUTTON_FORCE_LIGHTNING)
 			|| (pm->cmd.buttons&BUTTON_FORCE_DRAIN)
+			|| (pm->cmd.buttons&BUTTON_HOOK)
 			|| pm->cmd.upmove )
 		{//stop the anim
-			if ( pm->ps->legsAnim == BOTH_MEDITATE
-				&& pm->ps->torsoAnim == BOTH_MEDITATE )
+			const int endAnim = PM_JPEmoteEndAnim( pm->ps->legsAnim );
+
+			if ( endAnim != -1 && pm->ps->torsoAnim == pm->ps->legsAnim )
 			{
-				PM_SetAnim( SETANIM_BOTH, BOTH_MEDITATE_END, SETANIM_FLAG_OVERRIDE|SETANIM_FLAG_HOLD );
+				PM_SetAnim( SETANIM_BOTH, endAnim, SETANIM_FLAG_OVERRIDE|SETANIM_FLAG_HOLD );
 			}
 			else
 			{
@@ -10341,30 +11094,46 @@ void PmoveSingle (pmove_t *pmove) {
 		}
 		else
 		{
-			if ( pm->ps->legsAnim == BOTH_MEDITATE )
+			qboolean held = qfalse;
+
+			if ( PM_JPEmoteHeld( pm->ps->legsAnim ) )
 			{
-				if ( pm->ps->legsTimer < 100 )
+				held = qtrue;
+				if ( pm->ps->legsTimer < 1000 )
 				{
-					pm->ps->legsTimer = 100;
+					pm->ps->legsTimer = 1000;
 				}
 			}
-			if ( pm->ps->torsoAnim == BOTH_MEDITATE )
+			if ( PM_JPEmoteHeld( pm->ps->torsoAnim ) )
 			{
-				if ( pm->ps->torsoTimer < 100 )
+				held = qtrue;
+				if ( pm->ps->torsoTimer < 1000 )
 				{
-					pm->ps->legsTimer = 100;
+					pm->ps->legsTimer = 1000;
 				}
 				pm->ps->forceHandExtend = HANDEXTEND_TAUNT;
-				pm->ps->forceHandExtendTime = pm->cmd.serverTime + 100;
+				pm->ps->forceHandExtendTime = pm->cmd.serverTime + 1000;
 			}
 			if ( pm->ps->legsTimer > 0 || pm->ps->torsoTimer > 0 )
 			{
+				stiffenedUp = qfalse;
+			}
+			if ( (pm->ps->legsTimer > 0 || pm->ps->torsoTimer > 0)
+				&& (pm->ps->torsoAnim == BOTH_MEDITATE || held) )
+			{
 				stiffenedUp = qtrue;
-				PM_SetPMViewAngle(pm->ps, pm->ps->viewangles, &pm->cmd);
 				pm->cmd.rightmove = 0;
 				pm->cmd.upmove = 0;
 				pm->cmd.forwardmove = 0;
-				pm->cmd.buttons = 0;
+				pm->ps->speed = 0;
+#ifdef _GAME
+				// players without the plugin do not predict the hold, freeze them (jp_fixEmot: only if somebody has no plugin)
+				if ( pm->ps->clientNum < MAX_CLIENTS && pm->ps->torsoAnim != BOTH_MEDITATE
+					&& (pm->ps->torsoAnim == BOTH_STAND4 || !jp_fixEmot.integer || !JP_AllPlayersHavePlugin()) )
+				{
+					pm->ps->pm_type = PM_FREEZE;
+				}
+#endif
 			}
 		}
 	}
@@ -10406,6 +11175,21 @@ void PmoveSingle (pmove_t *pmove) {
 			pm->cmd.forwardmove = 0;
 		}
 		pm->cmd.rightmove = pm->cmd.upmove = 0;
+	}
+
+	// JA+: no moving and no buttons while getting up (ampower, the end of amdie, the highlander quickening)
+	if ( pm->ps->legsAnim == BOTH_FORCE_GETUP_F2 )
+	{
+		stiffenedUp = qtrue;
+		pm->cmd.rightmove = pm->cmd.upmove = pm->cmd.forwardmove = 0;
+		pm->cmd.buttons = 0;
+		pm->ps->speed = 0;
+	}
+	// JA+: knocked down by the combo kick
+	if ( (pm->ps->legsAnim == BOTH_JUMP_BACKFLIP_ATCKEE_FALL || pm->ps->torsoAnim == BOTH_JUMP_BACKFLIP_ATCKEE_FALL)
+		&& pm->cmd.serverTime < pm->ps->forceHandExtendTime )
+	{
+		PM_SetPMViewAngle(pm->ps, pm->ps->viewangles, &pm->cmd);
 	}
 
 #if 0
@@ -10468,6 +11252,11 @@ void PmoveSingle (pmove_t *pmove) {
 		pm->cmd.upmove = 0;
 	}
 
+	if ( pm->ps->forceHandExtend == HANDEXTEND_PRETHROW )
+	{ // JA+
+		pm->cmd.rightmove = 0;
+	}
+
 	if (pm->ps->fd.forceGripCripple)
 	{ //don't let attack or alt attack if being gripped I guess
 		pm->cmd.buttons &= ~BUTTON_ATTACK;
@@ -10494,11 +11283,20 @@ void PmoveSingle (pmove_t *pmove) {
 	}
 
 	// set the talk balloon flag
+#ifdef _GAME
+	JP_GodTalk( pm->ps, (pm->cmd.buttons & BUTTON_TALK) != 0 );
+#endif
 	if ( pm->cmd.buttons & BUTTON_TALK ) {
 		pm->ps->eFlags |= EF_TALK;
 	} else {
 		pm->ps->eFlags &= ~EF_TALK;
 	}
+#ifdef _GAME
+	// JA+ jp_allowGodTalk: no attack starts under the chat bubble
+	if ( jp_allowGodTalk.integer == 1 && (pm->ps->eFlags & EF_TALK) ) {
+		pm->cmd.buttons &= ~(BUTTON_ATTACK|BUTTON_ALT_ATTACK|BUTTON_FORCEGRIP|BUTTON_FORCEPOWER|BUTTON_FORCE_LIGHTNING|BUTTON_FORCE_DRAIN|BUTTON_HOOK);
+	}
+#endif
 
 	pm_cancelOutZoom = qfalse;
 	if (pm->ps->weapon == WP_DISRUPTOR &&
@@ -10616,12 +11414,20 @@ void PmoveSingle (pmove_t *pmove) {
 	PM_AdjustAngleForWallJump( pm->ps, &pm->cmd, qtrue );
 	PM_AdjustAngleForWallRunUp( pm->ps, &pm->cmd, qtrue );
 	PM_AdjustAngleForWallRun( pm->ps, &pm->cmd, qtrue );
+	PM_AdjustAngleForWallGrap( pm->ps, &pm->cmd );
 
 	if (pm->ps->saberMove == LS_A_JUMP_T__B_ || pm->ps->saberMove == LS_A_LUNGE ||
 		pm->ps->saberMove == LS_A_BACK_CR || pm->ps->saberMove == LS_A_BACK ||
 		pm->ps->saberMove == LS_A_BACKSTAB)
 	{
 		PM_SetPMViewAngle(pm->ps, pm->ps->viewangles, &pm->cmd);
+	}
+
+	if ( pm->ps->legsAnim == BOTH_FORCE_GETUP_F2 )
+	{ // JA+, see above
+		pm->cmd.rightmove = pm->cmd.upmove = pm->cmd.forwardmove = 0;
+		pm->cmd.buttons = 0;
+		pm->ps->speed = 0;
 	}
 
 #if 0
@@ -10695,6 +11501,7 @@ void PmoveSingle (pmove_t *pmove) {
 	}
 
 	if (pm->ps->pm_type == PM_FREEZE) {
+		PM_CheckDuck ();	// JA+: a frozen player (held emote) keeps a correct box and view height
 		return;		// no movement at all
 	}
 
@@ -10708,6 +11515,17 @@ void PmoveSingle (pmove_t *pmove) {
 
 	// set mins, maxs, and viewheight
 	PM_CheckDuck ();
+#ifdef _GAME
+	// JA+ model scale: the eye height follows the model size, only on the server like in the original
+	// (truncated, the product in double as the original does it on the x87)
+	pm->ps->viewheight = (int)( (double)pm->ps->viewheight * BG_scaleModelFactor( pm->ps->clientNum ) );
+#endif
+
+	// JA+: no normal attack during the long leap attack
+	if ( pm->ps->legsAnim == BOTH_FORCELONGLEAP_ATTACK || pm->ps->torsoAnim == BOTH_FORCELONGLEAP_ATTACK )
+	{
+		pm->cmd.buttons &= ~BUTTON_ATTACK;
+	}
 
 	if (pm->ps->pm_type == PM_JETPACK)
 	{
@@ -11044,6 +11862,13 @@ void PmoveSingle (pmove_t *pmove) {
 		{
 			if (pm->ps->pm_flags & PMF_TIME_WATERJUMP) {
 				PM_WaterJumpMove();
+			} else if ( pm->ps->pm_flags & PMF_GRAPPLE_PULL ) {
+				// JA+ grappling hook: the rope sets the velocity, the air move moves the player
+				PM_GrappleMove();
+				PM_AirMove();
+			} else if ( pm->ps->eFlags & EF_GRAPPLE_SUSPEND ) {
+				PM_AirMove();
+				PM_GrappleSuspendedMove();
 			} else if ( pm->waterlevel > 1 ) {
 				// swimming
 				PM_WaterMove();

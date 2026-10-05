@@ -197,6 +197,10 @@ int bgForcePowerCost[NUM_FORCE_POWERS][NUM_FORCE_POWER_LEVELS] = //0 == neutral
 	//NUM_FORCE_POWERS
 };
 
+float bg_jpGripSpeedScale = 0.4f;	// jp_gripSpeedScale and jp_forceCombo, game updates them every frame, cgame reads serverinfo
+int bg_jpForceCombo = 0;
+int bg_jpFeatures = 0;	// JA+ jp_cinfo bits
+
 int forcePowerSorted[NUM_FORCE_POWERS] =
 { //rww - always use this order when drawing force powers for any reason
 	FP_TELEPATHY,
@@ -1729,7 +1733,8 @@ qboolean BG_CanUseFPNow(int gametype, playerState_t *ps, int time, forcePowers_t
 		return qfalse;
 	}
 
-	if ( ps->forceRestricted || ps->trueNonJedi )
+	// JA+: a merc (g_jediVmerc) has the flamethrower on force lightning
+	if ( ps->forceRestricted || (ps->trueNonJedi && power != FP_LIGHTNING) )
 	{
 		return qfalse;
 	}
@@ -1746,6 +1751,12 @@ qboolean BG_CanUseFPNow(int gametype, playerState_t *ps, int time, forcePowers_t
 
 	if (ps->duelInProgress)
 	{
+#ifdef _GAME
+		// JA+ engage_FullForceDuel: every power
+		const gentity_t *ent = &g_entities[ps->clientNum];
+
+		if ( !(ent->inuse && ent->client && ent->client->pers.connected == CON_CONNECTED && ent->client->pers.jp.fullForceDuel) )
+#endif
 		if (power != FP_SABER_OFFENSE && power != FP_SABER_DEFENSE && /*power != FP_SABERTHROW &&*/
 			power != FP_LEVITATION)
 		{

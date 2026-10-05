@@ -1487,7 +1487,17 @@ void CG_DrawHUD(centity_t	*cent)
 			CG_DrawForcePower(menuHUD);
 
 			// Draw ammo tics or saber style
-			if ( cent->currentState.weapon == WP_SABER )
+			if ( (cg.snap->ps.eFlags & EF_ALT_DIM) && (focusItem = Menu_FindItemByName(menuHUD, "altdiminfo")) != NULL )
+			{ // JA+ alternate dimension: the ammo is replaced by this text
+				CG_DrawScaledProportionalString(
+					focusItem->window.rect.x,
+					focusItem->window.rect.y,
+					"[Alt-Dim]",
+					UI_RIGHT|UI_DROPSHADOW,
+					focusItem->window.foreColor,
+					0.7f);
+			}
+			else if ( cent->currentState.weapon == WP_SABER )
 			{
 				CG_DrawSaberStyle(cent,menuHUD);
 			}
@@ -5740,6 +5750,10 @@ static void CG_DrawActivePowers(void)
 		if ((cg.snap->ps.fd.forcePowersActive & (1 << forcePowerSorted[i])) &&
 			CG_IsDurationPower(forcePowerSorted[i]))
 		{
+			if ( forcePowerSorted[i] == FP_SEE && !(cp_pluginDisable.integer & (1 << 7)) )
+			{ // JA+ client plugin: Plugin_NewForceSight_effect
+				CG_DrawPic( 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, cgs.media.jpSense );
+			}
 			CG_DrawPic( startx, starty, endx, endy, cgs.media.forcePowerIcons[forcePowerSorted[i]]);
 			startx += (icon_size+2); //+2 for spacing
 			if ((startx+icon_size) >= SCREEN_WIDTH-80)
@@ -6235,7 +6249,10 @@ static void CG_ScanForCrosshairEntity( void ) {
 			cg_entities[trace.entityNum].currentState.trickedentindex2,
 			cg_entities[trace.entityNum].currentState.trickedentindex3,
 			cg_entities[trace.entityNum].currentState.trickedentindex4,
-			cg.snap->ps.clientNum))
+			cg.snap->ps.clientNum)
+			// JA+ client plugin: nor a player of another private duel, unless he is drawn
+			|| (((cg.snap->ps.duelInProgress && !(cp_pluginDisable.integer & (1 << 1))) || cgs.jpDuelAlpha == 0)
+				&& CG_JPOtherDuel( trace.entityNum )))
 		{
 			if (cg.crosshairClientNum == trace.entityNum)
 			{
@@ -7532,6 +7549,11 @@ static void CG_Draw2DScreenTints( void )
 	vec4_t			hcolor;
 	if (cgs.clientinfo[cg.snap->ps.clientNum].team != TEAM_SPECTATOR)
 	{
+		if ( (cg.snap->ps.eFlags & EF_ALT_DIM) && (cp_pluginDisable.integer & (1 << 8)) )
+		{ // Plugin_NoAltDim_effect: plain full screen overlay in the alternate dimension
+			trap->R_SetColor( NULL );
+			CG_DrawPic( 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, cgs.media.altDimShader );
+		}
 		if (cg.snap->ps.fd.forcePowersActive & (1 << FP_RAGE))
 		{
 			if (!cgRageTime)

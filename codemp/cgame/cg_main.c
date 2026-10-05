@@ -640,6 +640,20 @@ static void CG_RegisterSounds( void ) {
 	cgs.media.purpleSaberCoreShader		= trap->R_RegisterShader( "gfx/effects/sabers/purple_line" );
 	cgs.media.saberBlurShader			= trap->R_RegisterShader( "gfx/effects/sabers/saberBlur" );
 	cgs.media.swordTrailShader			= trap->R_RegisterShader( "gfx/effects/sabers/swordTrail" );
+	cgs.media.RGBSaberGlowShader		= trap->R_RegisterShader( "gfx/effects/sabers/RGBGlow" );
+	cgs.media.RGBSaberGlow4Shader		= trap->R_RegisterShader( "gfx/effects/sabers/RGBGlow4" );
+	cgs.media.RGBSaberLineShader		= trap->R_RegisterShader( "gfx/effects/sabers/RGBLine" );
+	cgs.media.RGBSaberCoreShader[0]		= trap->R_RegisterShader( "gfx/effects/sabers/RGBcore2" );
+	cgs.media.RGBSaberCoreShader[1]		= trap->R_RegisterShader( "gfx/effects/sabers/RGBcore3" );
+	cgs.media.RGBSaberCoreShader[2]		= trap->R_RegisterShader( "gfx/effects/sabers/RGBcore4" );
+	cgs.media.RGBSaberCoreShader[3]		= trap->R_RegisterShader( "gfx/effects/sabers/RGBcore5" );
+	cgs.media.RGBSaberTrailShader[0]	= trap->R_RegisterShader( "gfx/effects/sabers/RGBtrail2" );
+	cgs.media.RGBSaberTrailShader[1]	= trap->R_RegisterShader( "gfx/effects/sabers/RGBtrail3" );
+	cgs.media.RGBSaberTrailShader[2]	= trap->R_RegisterShader( "gfx/effects/sabers/RGBtrail4" );
+	cgs.media.altDimShader				= trap->R_RegisterShaderNoMip( "gfx/2d/altdim" );
+	cgs.media.blackSaberGlowShader		= trap->R_RegisterShader( "gfx/effects/sabers/black_glow" );
+	cgs.media.blackSaberLineShader		= trap->R_RegisterShader( "gfx/effects/sabers/black_line" );
+	cgs.media.blackSaberBlurShader		= trap->R_RegisterShader( "gfx/effects/sabers/blacksaberBlur" );
 
 	cgs.media.forceCoronaShader			= trap->R_RegisterShaderNoMip( "gfx/hud/force_swirl" );
 
@@ -1189,7 +1203,8 @@ static void CG_RegisterGraphics( void ) {
 	cgs.effects.forceLightning		= trap->FX_RegisterEffect( "effects/force/lightning.efx" );
 	cgs.effects.forceLightningWide	= trap->FX_RegisterEffect( "effects/force/lightningwide.efx" );
 	cgs.effects.forceDrain		= trap->FX_RegisterEffect( "effects/mp/drain.efx" );
-	cgs.effects.forceDrainWide	= trap->FX_RegisterEffect( "effects/mp/drainwide.efx" );
+	// JA+ client plugin: Plugin_NewDrainEFX (cp_pluginDisable bit 0 turns it off)
+	cgs.effects.forceDrainWide	= trap->FX_RegisterEffect( (cp_pluginDisable.integer & (1 << 0)) ? "effects/mp/drainwide.efx" : "effects/mp/drainwide_new.efx" );
 	cgs.effects.forceDrained	= trap->FX_RegisterEffect( "effects/mp/drainhit.efx");
 
 	cgs.effects.mDisruptorDeathSmoke = trap->FX_RegisterEffect("disruptor/death_smoke");
@@ -1213,6 +1228,7 @@ static void CG_RegisterGraphics( void ) {
 	cgs.media.forceSightBubble = trap->R_RegisterShader("gfx/misc/sightbubble");
 	cgs.media.forceShell = trap->R_RegisterShader("powerups/forceshell");
 	cgs.media.sightShell = trap->R_RegisterShader("powerups/sightshell");
+	cgs.media.jpSense = trap->R_RegisterShaderNoMip("gfx/2d/jsense");
 
 	cgs.media.itemHoloModel = trap->R_RegisterModel("models/map_objects/mp/holo.md3");
 
@@ -2573,6 +2589,7 @@ Ghoul2 Insert End
 	cgs.levelStartTime = atoi( s );
 
 	CG_ParseServerinfo();
+	CG_JPAutoReplierInit();
 
 	// load the new map
 //	CG_LoadingString( "collision map" );
@@ -2664,6 +2681,7 @@ void CG_DestroyAllGhoul2(void)
 
 	//Clean the weapon instances
 	CG_ShutDownG2Weapons();
+	CG_JPHolsterShutdown();
 
 	i = 0;
 	while (i < MAX_ITEMS)

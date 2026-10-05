@@ -91,6 +91,10 @@ qboolean BG_InSpecialJump( int anim )
 {
 	switch ( (anim) )
 	{
+	case BOTH_ALORA_SPIN_SLASH:	// JA+
+	case BOTH_JUMP_BACKKICK_SPIN:
+	case BOTH_JUMP_BACKFLIP_ATCK:
+	case BOTH_FLIP_STAB:
 	case BOTH_WALL_RUN_RIGHT:
 	case BOTH_WALL_RUN_RIGHT_STOP:
 	case BOTH_WALL_RUN_RIGHT_FLIP:
@@ -251,6 +255,12 @@ qboolean BG_SaberInAttack( int move )
 	}
 	switch ( move )
 	{
+	case LS_JAPLUS_SPINATTACK:
+	case LS_STF_NEWANIM_BACKKICK_FWD:
+	case LS_STF_NEWANIM_SPINKICK_FWD:
+	case LS_NEWANIM_JUMPBACKKICK_SPIN:
+	case LS_NEWANIM_JUMPBACKKICK_FLIP:
+	case LS_NEWANIM_FLIPSABERSTAB:
 	case LS_A_BACK:
 	case LS_A_BACK_CR:
 	case LS_A_BACKSTAB:
@@ -390,6 +400,12 @@ qboolean BG_SaberInSpecial( int move )
 	case LS_SPINATTACK_ALORA:
 	case LS_DUAL_FB:
 	case LS_DUAL_LR:
+	case LS_JAPLUS_SPINATTACK:
+	case LS_STF_NEWANIM_BACKKICK_FWD:
+	case LS_STF_NEWANIM_SPINKICK_FWD:
+	case LS_NEWANIM_JUMPBACKKICK_SPIN:
+	case LS_NEWANIM_JUMPBACKKICK_FLIP:
+	case LS_NEWANIM_FLIPSABERSTAB:
 	case LS_HILT_BASH:
 		return qtrue;
 	}
@@ -411,8 +427,15 @@ qboolean BG_KickMove( int move )
 	case LS_KICK_B_AIR:
 	case LS_KICK_R_AIR:
 	case LS_KICK_L_AIR:
+	case LS_STF_NEWANIM_BACKKICK_FWD:
+	case LS_STF_NEWANIM_SPINKICK_FWD:
+	case LS_NEWANIM_JUMPBACKKICK_SPIN:
+	case LS_NEWANIM_JUMPBACKKICK_FLIP:
+	case LS_NEWANIM_FLIPSABERSTAB:
 	case LS_HILT_BASH:
 		return qtrue;
+	case LS_A_BACKFLIP_ATK:
+		return JP_FEATURE( JPF_NEWDFA );	// JA+ jp_allowNewDFA: the staff spin DFA kicks
 	}
 	return qfalse;
 }
@@ -453,6 +476,8 @@ qboolean BG_FlippingAnim( int anim )
 {
 	switch ( anim )
 	{
+	case BOTH_FJSS_TR_BL:	// JA+
+	case BOTH_ALORA_SPIN_SLASH:
 	case BOTH_FLIP_F:			//# Flip forward
 	case BOTH_FLIP_B:			//# Flip backwards
 	case BOTH_FLIP_L:			//# Flip left
@@ -499,6 +524,7 @@ qboolean BG_SpinningSaberAnim( int anim )
 {
 	switch ( anim )
 	{
+	case BOTH_ALORA_SPIN_SLASH:	// JA+
 	//level 1 - FIXME: level 1 will have *no* spins
 	case BOTH_T1_BR_BL:
 	case BOTH_T1__R__L:
@@ -607,6 +633,12 @@ qboolean BG_SaberInSpecialAttack( int anim )
 {
 	switch ( anim )
 	{
+	case BOTH_MELEE_BACKKICK:	// JA+
+	case BOTH_MELEE_SPINKICK:
+	case BOTH_BACK_FALLING_GETUP:
+	case BOTH_JUMP_BACKKICK_SPIN:
+	case BOTH_JUMP_BACKFLIP_ATCK:
+	case BOTH_FLIP_STAB:
 	case BOTH_A2_STABBACK1:
 	case BOTH_ATTACK_BACK:
 	case BOTH_CROUCHATTACKBACK1:
@@ -677,6 +709,13 @@ qboolean BG_KickingAnim( int anim )
 	case BOTH_A7_KICK_R_AIR:
 	case BOTH_A7_KICK_L_AIR:
 	case BOTH_A7_HILT:
+	// JA+ new kicks
+	case BOTH_MELEE_BACKKICK:
+	case BOTH_MELEE_SPINKICK:
+	case BOTH_BACK_FALLING_GETUP:
+	case BOTH_JUMP_BACKKICK_SPIN:
+	case BOTH_JUMP_BACKFLIP_ATCK:
+	case BOTH_FLIP_STAB:
 	//NOT kicks, but do kick traces anyway
 	case BOTH_GETUP_BROLL_B:
 	case BOTH_GETUP_BROLL_F:
@@ -684,6 +723,8 @@ qboolean BG_KickingAnim( int anim )
 	case BOTH_GETUP_FROLL_F:
 		return qtrue;
 		break;
+	case BOTH_JUMPATTACK7:
+		return JP_FEATURE( JPF_NEWDFA );	// JA+ jp_allowNewDFA: the staff spin DFA kicks
 	}
 	return qfalse;
 }
@@ -697,10 +738,30 @@ int BG_InGrappleMove(int anim)
 		return 1; //grabbing at someone
 	case BOTH_KYLE_PA_1:
 	case BOTH_KYLE_PA_2:
+	// JA+: the third melee move, amfinishinghim, the force grabs of jp_allowSPForces 2, the kiss, the new stab
+	case BOTH_KYLE_PA_3:
+	case BOTH_SABERKILLER1:
+	case BOTH_ALORA_SPIN_THROW:
+	case BOTH_FORCE_DRAIN_GRAB_START:
+	case BOTH_FORCE_DRAIN_GRAB_HOLD:
+	case BOTH_KISSER:
+	case BOTH_NEW_STABER:
 		return 2; //beating the shit out of someone
 	case BOTH_PLAYER_PA_1:
 	case BOTH_PLAYER_PA_2:
 	case BOTH_PLAYER_PA_FLY:
+	// JA+: the victims of the moves above, of the combo kick and of the force pull grab
+	case BOTH_PLAYER_PA_3:
+	case BOTH_PLAYER_PA_3_FLY:
+	case BOTH_SABERKILLEE1:
+	case BOTH_PULLED_INAIR_B:
+	case BOTH_PULLED_INAIR_F:
+	case BOTH_FORCE_DRAIN_GRABBED:
+	case BOTH_COWER1_START:
+	case BOTH_SONICPAIN_START:
+	case BOTH_KISSEE:
+	case BOTH_JUMP_BACKFLIP_ATCKEE:
+	case BOTH_NEW_STABEE:
 		return 3; //getting the shit beaten out of you
 		break;
 	}
@@ -950,6 +1011,8 @@ qboolean BG_InKnockDownOnly( int anim )
 {
 	switch ( anim )
 	{
+	case BOTH_BACK_FALLING:	// JA+
+	case BOTH_JUMP_BACKFLIP_ATCKEE_FALL:
 	case BOTH_KNOCKDOWN1:
 	case BOTH_KNOCKDOWN2:
 	case BOTH_KNOCKDOWN3:
@@ -1241,8 +1304,11 @@ qboolean PM_InKnockDown( playerState_t *ps )
 	case BOTH_KNOCKDOWN3:
 	case BOTH_KNOCKDOWN4:
 	case BOTH_KNOCKDOWN5:
+	case BOTH_BACK_FALLING:					// JA+
+	case BOTH_JUMP_BACKFLIP_ATCKEE_FALL:	// JA+
 		return qtrue;
 		break;
+	case BOTH_BACK_FALLING_GETUP:			// JA+
 	case BOTH_GETUP1:
 	case BOTH_GETUP2:
 	case BOTH_GETUP3:
@@ -1304,6 +1370,9 @@ qboolean PM_JumpingAnim( int anim )
 {
 	switch ( (anim) )
 	{
+		case BOTH_FORCELONGLEAP_START:	// JA+
+		case BOTH_FORCELONGLEAP_ATTACK:
+		case BOTH_FORCELONGLEAP_LAND:
 		case BOTH_JUMP1:				//# Jump - wind-up and leave ground
 		case BOTH_INAIR1:			//# In air loop (from jump)
 		case BOTH_LAND1:				//# Landing (from in air loop)
@@ -1371,6 +1440,9 @@ qboolean PM_InOnGroundAnim ( int anim )
 {
 	switch( anim )
 	{
+	case BOTH_BACK_FALLING:	// JA+
+	case BOTH_BACK_FALLING_GETUP:
+	case BOTH_JUMP_BACKFLIP_ATCKEE_FALL:
 	case BOTH_DEAD1:
 	case BOTH_DEAD2:
 	case BOTH_DEAD3:
@@ -1573,6 +1645,20 @@ qboolean BG_FullBodyTauntAnim( int anim )
 	case BOTH_VICTORY_STRONG:
 	case BOTH_VICTORY_DUAL:
 	case BOTH_VICTORY_STAFF:
+	// JA+ emotes
+	case BOTH_DEATH15:
+	case BOTH_STAND4:
+	case BOTH_STAND5TOSIT3:
+	case BOTH_STAND5TOSTAND8:
+	case BOTH_CROUCH3:
+	case BOTH_KNEES2:
+	case BOTH_HIT1:
+	case BOTH_SLEEP1:
+	case BOTH_SLEEP6START:
+	case BOTH_STAND10:
+	case BOTH_SIT6:
+	case BOTH_SIT7:
+	case TORSO_SURRENDER_START:
 		return qtrue;
 		break;
 	}
@@ -2796,7 +2882,8 @@ void BG_SetAnimFinal(playerState_t *ps, animation_t *animations,
 				int speedDif;
 
 				dur = (animations[anim].numFrames-1) * fabs((float)(animations[anim].frameLerp));
-				speedDif = dur - (dur * editAnimSpeed);
+				// in double: as a float the product can round up to the next whole number (the original used the x87)
+				speedDif = dur - ((double)dur * editAnimSpeed);
 				dur += speedDif;
 				if (dur > 1)
 				{
@@ -2844,7 +2931,7 @@ setAnimLegs:
 				int speedDif;
 
 				dur = (animations[anim].numFrames-1) * fabs((float)(animations[anim].frameLerp));
-				speedDif = dur - (dur * editAnimSpeed);
+				speedDif = dur - ((double)dur * editAnimSpeed);
 				dur += speedDif;
 				if (dur > 1)
 				{
@@ -2994,3 +3081,15 @@ void PM_SetAnim(int setAnimParts,int anim,int setAnimFlags)
 	BG_SetAnim(pm->ps, pm->animations, setAnimParts, anim, setAnimFlags);
 }
 
+
+// JA+ ledge grab animations (BOTH_LEDGE_GRAB .. BOTH_LEDGE_MERCPULL)
+qboolean BG_InLedgeMove( int anim )
+{
+	return anim >= BOTH_LEDGE_GRAB && anim <= BOTH_LEDGE_MERCPULL;
+}
+
+// hanging on the ledge, not moving
+qboolean In_LedgeIdle( int anim )
+{
+	return anim == BOTH_LEDGE_GRAB || anim == BOTH_LEDGE_HOLD;
+}

@@ -275,6 +275,7 @@ void Remote_Fire (void)
 	missile->dflags = DAMAGE_DEATH_KNOCKBACK;
 	missile->methodOfDeath = MOD_BRYAR_PISTOL;
 	missile->clipmask = MASK_SHOT | CONTENTS_LIGHTSABER;
+	missile->s.otherEntityNum = -1;	// JA+
 
 }
 

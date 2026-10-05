@@ -829,6 +829,10 @@ void Jedi_Decloak( gentity_t *self )
 		{
 			if ( self->client->ps.powerups[PW_CLOAKED] )
 			{//Uncloak
+				if ( self->client->pers.jp.stActive )
+				{ // JA+: the cloak of the star trek teleport stays until it is over
+					return;
+				}
 				self->client->ps.powerups[PW_CLOAKED] = 0;
 
 				G_Sound( self, CHAN_ITEM, G_SoundIndex("sound/chars/shadowtrooper/decloak.wav") );

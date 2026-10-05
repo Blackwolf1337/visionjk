@@ -277,6 +277,39 @@ extern vec3_t WP_MuzzlePoint[WP_NUM_WEAPONS];
 
 extern int forcePowerSorted[NUM_FORCE_POWERS];
 
+// JA+ server settings the client needs for prediction, sent in the jp_cinfo cvar
+#define JPF_FLIPKICK		(1<<0)
+#define JPF_FIXROLL1		(1<<1)	// jp_fixRoll > 0
+#define JPF_FIXROLL2		(1<<2)	// jp_fixRoll > 1
+#define JPF_FIXROLL3		(1<<3)	// jp_fixRoll > 2
+#define JPF_IMPROVEYELLOWDFA	(1<<4)
+#define JPF_SLIDEONPLAYER	(1<<5)
+#define JPF_SPATTACKS		(1<<6)
+#define JPF_NEWDFA			(1<<7)
+#define JPF_MODELSCALE		(1<<8)
+#define JPF_DMGSPEEDSCALE	(1<<9)
+#define JPF_MACROSCAN		(1<<10)
+#define JPF_MACROSCAN_ALL	(1<<11)
+#define JPF_JK2REDDFA		(1<<12)
+#define JPF_NOKATA			(1<<13)
+#define JPF_NOAUTOREPLIER	(1<<14)
+#define JPF_NEWGLAANIMS		(1<<15)
+#define JPF_LEDGEGRAB		(1<<16)
+#define JPF_ALTDIM			(1<<17)
+#define JPF_SPFORCES		(1<<18)	// jp_allowSPForces > 0
+
+extern int bg_jpFeatures;
+extern float bg_jpGripSpeedScale;
+extern int bg_jpForceCombo;
+float BG_scaleModelFactor( int clientNum );	// jp_allowModelScale: scale of the player model, 1 is the normal size
+struct saberInfo_s;
+void WP_ScaleSaber( int clientNum, struct saberInfo_s *sabers, int saberNum, const char *saberName );
+float BG_pluginVersion( int clientNum );
+qboolean BG_pluginDisable( int clientNum, int feature );	// the player turned a plugin feature off (cp_pluginDisable bit)	// version of the JA+ client plugin of the player (game and cgame)
+// jp_fixRoll level 0..3 from the jp_cinfo bits
+#define JP_FIXROLL()		(JP_FEATURE(JPF_FIXROLL1) + JP_FEATURE(JPF_FIXROLL2) + JP_FEATURE(JPF_FIXROLL3))
+#define JP_FEATURE( f )		((bg_jpFeatures & (f)) != 0)
+
 typedef enum saberLockType_e
 {
 	SABERLOCK_TOP,
@@ -478,6 +511,7 @@ extern int bgForcePowerCost[NUM_FORCE_POWERS][NUM_FORCE_POWER_LEVELS];
 #define PMF_FOLLOW			4096	// spectate following another player
 #define PMF_SCOREBOARD		8192	// spectate as a scoreboard
 #define PMF_STUCK_TO_WALL	16384	// grabbing a wall
+#define PMF_GRAPPLE_PULL	32768	// JA+: the grappling hook pulls the player
 
 #define	PMF_ALL_TIMES	(PMF_TIME_WATERJUMP|PMF_TIME_LAND|PMF_TIME_KNOCKBACK)
 
@@ -653,11 +687,11 @@ typedef enum {
 
 #define	EF_TALK					(1<<13)		// draw a talk balloon
 #define	EF_CONNECTION			(1<<14)		// draw a connection trouble sprite
-#define	EF_NOT_USED_6			(1<<15)		// not used
+#define	EF_ALT_DIM				(1<<15)		// JA+: player is in the alternate dimension
 
-#define	EF_NOT_USED_2			(1<<16)		// not used
-#define	EF_NOT_USED_3			(1<<17)		// not used
-#define	EF_NOT_USED_4			(1<<18)		// not used
+#define	EF_GRAPPLE_SUSPEND		(1<<16)		// JA+: hanging on the grappling hook
+#define	EF_FLAME				(1<<17)		// JA+: the flamethrower is on (instead of force lightning)
+#define	EF_PASS_PLAYERS			(1<<18)		// port of JA+: the player walks through other players (ghost, after a duel), so the client can predict it
 
 #define	EF_BODYPUSH				(1<<19)		//rww - claiming this for fullbody push effect
 
@@ -687,7 +721,8 @@ typedef enum {
 #define	EF2_HYPERSPACE			(1<<5)		// Used to both start the hyperspace effect on the predicted client and to let the vehicle know it can now jump into hyperspace (after turning to face the proper angle)
 #define	EF2_BRACKET_ENTITY		(1<<6)		// Draw as bracketed
 #define	EF2_SHIP_DEATH			(1<<7)		// "died in ship" mode
-#define	EF2_NOT_USED_1			(1<<8)		// not used
+#define	EF2_BURNING				(1<<8)		// JA+: was hit by the flamethrower
+#define	EF2_HOOK				(1<<9)		// JA+: the grappling hook is out
 
 
 typedef enum {
@@ -1468,6 +1503,14 @@ typedef enum {
 	LS_REFLECT_LR,
 	LS_REFLECT_LL,
 
+	// JA+ moves
+	LS_JAPLUS_SPINATTACK,
+	LS_STF_NEWANIM_BACKKICK_FWD,
+	LS_STF_NEWANIM_SPINKICK_FWD,
+	LS_NEWANIM_JUMPBACKKICK_SPIN,
+	LS_NEWANIM_JUMPBACKKICK_FLIP,
+	LS_NEWANIM_FLIPSABERSTAB,
+
 	LS_MOVE_MAX//
 } saberMoveName_t;
 
@@ -1606,6 +1649,9 @@ typedef enum saber_styles_e {
 #define SFL2_ALWAYS_BLOCK2			(1<<15)//if set, the blades will always be blocking (good for things like shields that should always block)
 #define SFL2_NO_MANUAL_DEACTIVATE2	(1<<16)//if set, the blades cannot manually be toggled on and off
 #define SFL2_TRANSITION_DAMAGE2		(1<<17)//if set, the blade does damage in start, transition and return anims (like strong style does)
+// JA+ saber key "idleInBack": the holstered saber is carried on the back and drawn with the new JA+ animations, 2 sets both
+#define SFL2_IDLE_IN_BACK			(1<<18)
+#define SFL2_IDLE_IN_BACK2			(1<<19)
 
 #define SABER_NAME_LENGTH (64)
 typedef struct saberInfo_s {
@@ -1707,6 +1753,10 @@ void BG_G2ATSTAngles(void *ghoul2, int time, vec3_t cent_lerpAngles );
 
 int BG_AnimLength( int index, animNumber_t anim );
 
+qboolean BG_SaberInTransitionAny( int move );
+qboolean BG_InLedgeMove( int anim );
+qboolean In_LedgeIdle( int anim );
+void BG_LetGoofLedge( playerState_t *ps );
 qboolean BG_InSpecialJump( int anim );
 qboolean BG_InSaberStandAnim( int anim );
 qboolean BG_InReboundJump( int anim );

@@ -38,8 +38,9 @@ CG_ParseScores
 
 =================
 */
-#define SCORE_OFFSET (14)
 static void CG_ParseScores( void ) {
+	// JA+ servers from 2.1 on send the deaths as one more value per player (to clients with the plugin)
+	const int SCORE_OFFSET = cgs.jpVersion >= 2.1f ? 15 : 14;
 	int i, powerups, readScores;
 
 	cg.numScores = atoi( CG_Argv( 1 ) );
@@ -73,6 +74,7 @@ static void CG_ParseScores( void ) {
 		cg.scores[i].assistCount		= atoi( CG_Argv( i*SCORE_OFFSET + 15 ) );
 		cg.scores[i].perfect			= atoi( CG_Argv( i*SCORE_OFFSET + 16 ) );
 		cg.scores[i].captures			= atoi( CG_Argv( i*SCORE_OFFSET + 17 ) );
+		cg.scores[i].deaths				= SCORE_OFFSET == 15 ? atoi( CG_Argv( i*SCORE_OFFSET + 18 ) ) : 0;
 
 		if ( cg.scores[i].client < 0 || cg.scores[i].client >= MAX_CLIENTS )
 			cg.scores[i].client = 0;
@@ -148,6 +150,24 @@ void CG_ParseServerinfo( void ) {
 	cgs.needpass = atoi( Info_ValueForKey( info, "g_needpass" ) );
 	cgs.jediVmerc = atoi( Info_ValueForKey( info, "g_jediVmerc" ) );
 
+	// JA+ servers send V "2.4B7", older ones only have the version in the gamename
+	{
+		const char *v = Info_ValueForKey( info, "V" );
+		float build = 0.0f;
+
+		cgs.jpVersion = 0.0f;
+		if ( sscanf( v, "%fB%f", &cgs.jpVersion, &build ) != 2 && sscanf( v, "%f", &cgs.jpVersion ) != 1 )
+			cgs.jpVersion = 0.0f;
+		if ( cgs.jpVersion == 0.0f && sscanf( Info_ValueForKey( info, "gamename" ), "JA+ Mod v%f", &cgs.jpVersion ) != 1 )
+			cgs.jpVersion = 0.0f;
+	}
+	// jp_cinfo: which settings of the server the prediction needs. Read from the server info like the plugin does:
+	// a server cvar is only visible as a cvar of the client on a listen server
+	bg_jpFeatures = cgs.jpVersion > 0.0f ? atoi( Info_ValueForKey( info, "jp_cinfo" ) ) : 0;
+	bg_jpGripSpeedScale = cgs.jpVersion > 0.0f ? atof( Info_ValueForKey( info, "jp_gripSpeedScale" ) ) : 0.4f;
+	bg_jpForceCombo = atoi( Info_ValueForKey( info, "jp_forceCombo" ) );
+	cgs.jpDuelAlpha = cgs.jpVersion >= 2.0f ? atoi( Info_ValueForKey( info, "jp_DuelAlpha" ) ) : -1;
+
 	// this changes on map_restart, attempt to precache weapons
 	value = atoi( Info_ValueForKey( info, "g_weaponDisable" ) );
 	if ( cgs.wDisable != value ) {
@@ -167,6 +187,7 @@ void CG_ParseServerinfo( void ) {
 
 	cgs.fDisable = atoi( Info_ValueForKey( info, "g_forcePowerDisable" ) );
 	cgs.dmflags = atoi( Info_ValueForKey( info, "dmflags" ) );
+	cgs.jpPure = atoi( Info_ValueForKey( CG_ConfigString( CS_SYSTEMINFO ), "sv_pure" ) ) == 1;
 	cgs.duel_fraglimit = atoi( Info_ValueForKey( info, "duel_fraglimit" ) );
 	cgs.capturelimit = atoi( Info_ValueForKey( info, "capturelimit" ) );
 
@@ -1498,6 +1519,7 @@ static void CG_Print_f( void ) {
 
 	CG_CheckSVStringEdRef( strEd, CG_Argv( 1 ) );
 	trap->Print( "%s", strEd );
+	CG_JPReplyPrint( strEd );
 }
 
 void CG_ChatBox_AddString(char *chatStr);

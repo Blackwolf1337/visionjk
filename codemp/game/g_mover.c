@@ -119,7 +119,8 @@ gentity_t	*G_TestEntityPosition( gentity_t *ent ) {
 		{
 			vMax[2] = 1;
 		}
-		trap->Trace( &tr, ent->client->ps.origin, ent->r.mins, vMax, ent->client->ps.origin, ent->s.number, mask, qfalse, 0, 0 );
+		// JA+: not against the players the client can not touch (duels, the other dimension)
+		JP_Trace( &tr, ent->client->ps.origin, ent->r.mins, vMax, ent->client->ps.origin, ent->s.number, mask, qfalse, 0, 0 );
 	} else {
 		trap->Trace( &tr, ent->s.pos.trBase, ent->r.mins, ent->r.maxs, ent->s.pos.trBase, ent->s.number, mask, qfalse, 0, 0 );
 	}

@@ -329,6 +329,7 @@ void ImperialProbe_FireBlaster(void)
 	missile->dflags = DAMAGE_DEATH_KNOCKBACK;
 	missile->methodOfDeath = MOD_UNKNOWN;
 	missile->clipmask = MASK_SHOT | CONTENTS_LIGHTSABER;
+	missile->s.otherEntityNum = -1;	// JA+
 
 }
 

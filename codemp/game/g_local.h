@@ -34,6 +34,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 typedef struct gentity_s gentity_t;
 typedef struct gclient_s gclient_t;
 
+#include "g_japlus.h"
+
 //npc stuff
 #include "b_public.h"
 
@@ -401,6 +403,11 @@ struct gentity_s {
 
 	// OpenJK add
 	int			useDebounceTime;	// for cultist_destroyer
+
+	// JA+ jp_pushAll: items that can be moved with force push and pull go back here when they respawn
+	vec3_t		jpSpawnOrigin;
+	qboolean	jpSpawnSet;
+	int			jpItemType;		// giType of the item, set when it spawns with jp_pushAll on
 };
 
 #define DAMAGEREDIRECT_HEAD		1
@@ -466,6 +473,7 @@ typedef struct clientSession_s {
 	char		siegeClass[64];
 	int			duelTeam;
 	int			siegeDesiredTeam;
+	jpAdminLevel_t	jpAdminLevel;		// JA+ admin rank, kept across map changes
 
 	char		IP[NET_ADDRSTRMAXLEN];
 } clientSession_t;
@@ -502,6 +510,8 @@ typedef struct clientPersistant_s {
 	int			vote, teamvote; // 0 = none, 1 = yes, 2 = no
 
 	char		guid[33];
+
+	jpClient_t	jp;					// JA+ additions
 } clientPersistant_t;
 
 typedef struct renderInfo_s
@@ -1414,6 +1424,9 @@ void WP_SaberPositionUpdate( gentity_t *self, usercmd_t *ucmd );
 int WP_SaberCanBlock(gentity_t *self, vec3_t point, int dflags, int mod, qboolean projectile, int attackStr);
 void WP_SaberInitBladeData( gentity_t *ent );
 void WP_InitForcePowers( gentity_t *ent );
+qboolean G_UpdateSaberFromUserinfo( gentity_t *ent, char *userinfo );
+void G_ClampSaberLevel( gentity_t *ent );
+void G_SpawnTeleportEffect( gentity_t *ent );
 void WP_SpawnInitForcePowers( gentity_t *ent );
 void WP_ForcePowersUpdate( gentity_t *self, usercmd_t *ucmd );
 int ForcePowerUsableOn(gentity_t *attacker, gentity_t *other, forcePowers_t forcePower);
@@ -1519,6 +1532,7 @@ void Svcmd_ToggleAllowVote_f( void );
 // g_cvar.c
 #define XCVAR_PROTO
 	#include "g_xcvar.h"
+	#include "g_japlus_xcvar.h"
 #undef XCVAR_PROTO
 void G_RegisterCvars( void );
 void G_UpdateCvars( void );

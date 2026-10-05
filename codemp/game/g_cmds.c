@@ -34,6 +34,7 @@ int AcceptBotCommand(char *cmd, gentity_t *pl);
 void WP_SetSaber( int entNum, saberInfo_t *sabers, int saberNum, const char *saberName );
 
 void Cmd_NPC_f( gentity_t *ent );
+void Cmd_EngageFullForceDuel_f( gentity_t *ent );
 void SetTeamQuick(gentity_t *ent, int team, qboolean doBegin);
 
 /*
@@ -68,6 +69,7 @@ void DeathmatchScoreboardMessage( gentity_t *ent ) {
 
 	for (i=0 ; i < numSorted ; i++) {
 		int		ping;
+		static int lastPing;
 
 		cl = &level.clients[level.sortedClients[i]];
 
@@ -75,6 +77,9 @@ void DeathmatchScoreboardMessage( gentity_t *ent ) {
 			ping = -1;
 		} else {
 			ping = cl->ps.ping < 999 ? cl->ps.ping : 999;
+			if ( jp_fakeClients.string[0] && (g_entities[level.sortedClients[i]].r.svFlags & SVF_BOT) )
+				ping = JP_FakeClientPing( i, i ? lastPing : 0 );	// JA+: bots look like players
+			lastPing = ping;
 		}
 
 		if( cl->accuracy_shots ) {
@@ -96,6 +101,9 @@ void DeathmatchScoreboardMessage( gentity_t *ent ) {
 			cl->ps.persistant[PERS_ASSIST_COUNT],
 			perfect,
 			cl->ps.persistant[PERS_CAPTURES]);
+		// JA+: a client with the plugin (1.1 or newer) gets the deaths of every player as one more value
+		if ( ent && ent->inuse && ent->client && ent->client->pers.connected == CON_CONNECTED && ent->client->pers.jp.pluginVersion >= 1.1f )
+			j += Com_sprintf( entry + j, sizeof(entry) - j, " %i", cl->ps.persistant[PERS_KILLED] );
 
 		if (stringlength + j + prefix >= sizeof(string))
 			break;
@@ -405,6 +413,7 @@ void Cmd_God_f( gentity_t *ent ) {
 	char *msg = NULL;
 
 	ent->flags ^= FL_GODMODE;
+	ent->client->pers.jp.cheatGod = !ent->client->pers.jp.cheatGod;	// JA+: jp_allowGodTalk leaves this god mode alone
 	if ( !(ent->flags & FL_GODMODE) )
 		msg = "godmode OFF";
 	else
@@ -485,12 +494,11 @@ void Cmd_LevelShot_f( gentity_t *ent )
 	trap->SendServerCommand( ent-g_entities, "clientLevelShot" );
 }
 
-#if 0
 /*
 ==================
 Cmd_TeamTask_f
 
-From TA.
+From TA. OpenJK took it out, JA+ (the base game) has it: the task goes into the client info (tt).
 ==================
 */
 void Cmd_TeamTask_f( gentity_t *ent ) {
@@ -510,7 +518,10 @@ void Cmd_TeamTask_f( gentity_t *ent ) {
 	trap->SetUserinfo(client, userinfo);
 	ClientUserinfoChanged(client);
 }
-#endif
+
+// "stats" of the base game: known, does nothing
+static void Cmd_Stats_f( gentity_t *ent ) {
+}
 
 void G_Kill( gentity_t *ent ) {
 	if ((level.gametype == GT_DUEL || level.gametype == GT_POWERDUEL) &&
@@ -534,7 +545,33 @@ Cmd_Kill_f
 =================
 */
 void Cmd_Kill_f( gentity_t *ent ) {
+	const jpClient_t *jp = &ent->client->pers.jp;
+
+	// JA+: no suicide for sleeping, ghosted or dueling players, silenced players in FFA, no team kill
+	if ( jp->sleeping || jp->down || jp->isGhost || ent->client->ps.duelInProgress
+		|| (jp->silenced && level.gametype == GT_FFA) )
+		return;
+	if ( !jp_allowTeamKill.integer && level.gametype >= GT_TEAM )
+		return;
+
 	G_Kill( ent );
+}
+
+// JA+: admins with the npc command in their rank may spawn NPCs without cheats
+static void JP_Cmd_NPC_f( gentity_t *ent ) {
+	if ( !G_ClientAdminCmdAllowed( ent, "npc", qfalse ) ) {
+		if ( !g_allowNPC.integer ) {
+			trap->SendServerCommand( ent-g_entities, "print \"g_allowNPC is 0 on this server!! Must be 1 to use NPC if your admin Rank doesn't allow you NPC cmd.\n\"" );
+			return;
+		}
+		// (CheatsOk of the original: cheats on and alive)
+		if ( !sv_cheats.integer || ent->health <= 0 ) {
+			trap->SendServerCommand( ent-g_entities, va( "print \"%s\n\"", G_GetStringEdString( "MP_SVGAME", sv_cheats.integer ? "MUSTBEALIVE" : "NOCHEATS" ) ) );
+			trap->SendServerCommand( ent-g_entities, "print \"You are not allowed to use NPC cmd with your admin Rank\n\"" );
+			return;
+		}
+	}
+	Cmd_NPC_f( ent );
 }
 
 void Cmd_KillOther_f( gentity_t *ent )
@@ -594,7 +631,8 @@ void BroadcastTeamChange( gclient_t *client, int oldTeam )
 	} else if ( client->sess.sessionTeam == TEAM_SPECTATOR && oldTeam != TEAM_SPECTATOR ) {
 		trap->SendServerCommand( -1, va("cp \"%s" S_COLOR_WHITE " %s\n\"",
 		client->pers.netname, G_GetStringEdString("MP_SVGAME", "JOINEDTHESPECTATORS")));
-	} else if ( client->sess.sessionTeam == TEAM_FREE ) {
+	} else if ( client->sess.sessionTeam == TEAM_FREE && level.gametype != GT_DUEL && level.gametype != GT_POWERDUEL ) {
+		// (not in the duel games, like the original)
 		trap->SendServerCommand( -1, va("cp \"%s" S_COLOR_WHITE " %s\n\"",
 		client->pers.netname, G_GetStringEdString("MP_SVGAME", "JOINEDTHEBATTLE")));
 	}
@@ -634,8 +672,10 @@ SetTeam
 */
 qboolean g_dontPenalizeTeam = qfalse;
 qboolean g_preventTeamBegin = qfalse;
+extern qboolean WP_HasForcePowers( const playerState_t *ps );
 void SetTeam( gentity_t *ent, char *s ) {
 	int					team, oldTeam;
+	qboolean			autoPick = qfalse;
 	gclient_t			*client;
 	int					clientNum;
 	spectatorState_t	specState;
@@ -652,6 +692,10 @@ void SetTeam( gentity_t *ent, char *s ) {
 	// see what change is requested
 	//
 	client = ent->client;
+	JP_HookFree( ent );
+	// JA+: his explosives and missiles go with him
+	if ( client->pers.connected == CON_CONNECTED )
+		JP_RemovePlayerExplosives( ent );
 
 	clientNum = client - level.clients;
 	specClient = 0;
@@ -678,6 +722,7 @@ void SetTeam( gentity_t *ent, char *s ) {
 		} else if ( !Q_stricmp( s, "blue" ) || !Q_stricmp( s, "b" ) ) {
 			team = TEAM_BLUE;
 		} else {
+			autoPick = qtrue;
 			// pick the team with the least number of players
 			//For now, don't do this. The legalize function will set powers properly now.
 			/*
@@ -699,15 +744,20 @@ void SetTeam( gentity_t *ent, char *s ) {
 			//}
 		}
 
-		if ( g_teamForceBalance.integer && !g_jediVmerc.integer ) {
+		// JA+ team locks
+		if ( JP_TeamLockRefused( ent, (team_t *)&team, autoPick ) )
+			return;
+
+		// JA+: not for a player the server balances at his next spawn, and nobody may join the bigger team
+		if ( g_teamForceBalance.integer && !g_jediVmerc.integer && !client->pers.jp.balanceSpawn && JP_TeamBalanceApplies() ) {
 			int		counts[TEAM_NUM_TEAMS];
 
 			//JAC: Invalid clientNum was being used
 			counts[TEAM_BLUE] = TeamCount( ent-g_entities, TEAM_BLUE );
 			counts[TEAM_RED] = TeamCount( ent-g_entities, TEAM_RED );
 
-			// We allow a spread of two
-			if ( team == TEAM_RED && counts[TEAM_RED] - counts[TEAM_BLUE] > 1 ) {
+			// We allow a spread of two (JA+: of one)
+			if ( team == TEAM_RED && counts[TEAM_RED] - counts[TEAM_BLUE] > 0 ) {
 				//For now, don't do this. The legalize function will set powers properly now.
 				/*
 				if (g_forceBasedTeams.integer && ent->client->ps.fd.forceSide == FORCE_DARKSIDE)
@@ -724,7 +774,7 @@ void SetTeam( gentity_t *ent, char *s ) {
 				}
 				return; // ignore the request
 			}
-			if ( team == TEAM_BLUE && counts[TEAM_BLUE] - counts[TEAM_RED] > 1 ) {
+			if ( team == TEAM_BLUE && counts[TEAM_BLUE] - counts[TEAM_RED] > 0 ) {
 				//For now, don't do this. The legalize function will set powers properly now.
 				/*
 				if (g_forceBasedTeams.integer && ent->client->ps.fd.forceSide == FORCE_LIGHTSIDE)
@@ -743,6 +793,16 @@ void SetTeam( gentity_t *ent, char *s ) {
 			}
 
 			// It's ok, the team we are switching to has less or same number of players
+		}
+
+		// JA+ jedi vs merc with teams: the jedi are the blue team, the side is chosen with the force profile
+		if ( (level.gametype == GT_TEAM || level.gametype == GT_CTF) && g_jediVmerc.integer && level.numPlayingClients > 0 ) {
+			const qboolean isJedi = WP_HasForcePowers( &client->ps ) && client->ps.fd.forcePowerLevel[FP_SABER_OFFENSE] > 0;
+
+			if ( isJedi != (team == TEAM_BLUE) ) {
+				trap->SendServerCommand( ent-g_entities, "print \"^7Sorry, in ^4Jedi Vs Merc mod^7 you can change team by changing your status in your profile menu.!\n   ** to be ^5Merc^7: put Saber attack force to level 0 and put Merc on and then go to spectator and join the merc team.\n   ** to be ^5Jedi^7: put saber level attack to minimum level 1 and jedi on then go to spectator and joint the JEdi team\n\"" );
+				return;
+			}
 		}
 
 		//For now, don't do this. The legalize function will set powers properly now.
@@ -766,6 +826,10 @@ void SetTeam( gentity_t *ent, char *s ) {
 		// force them to spectators if there aren't any spots free
 		team = TEAM_FREE;
 	}
+
+	// JA+ team locks for spectators and free for all
+	if ( (level.gametype < GT_TEAM || team == TEAM_SPECTATOR) && JP_TeamLockRefused( ent, (team_t *)&team, qfalse ) )
+		return;
 
 	oldTeam = client->sess.sessionTeam;
 
@@ -1025,9 +1089,9 @@ void Cmd_Team_f( gentity_t *ent ) {
 
 	SetTeam( ent, s );
 
-	// fix: update team switch time only if team change really happend
-	if (oldTeam != ent->client->sess.sessionTeam)
-		ent->client->switchTeamTime = level.time + 5000;
+	// JA+ (like the base game): every team command starts the 5 seconds, also when the team did not change.
+	// With jp_highlander a waiting player stays a spectator, he must not be able to join again and again.
+	ent->client->switchTeamTime = level.time + 5000;
 }
 
 /*
@@ -1288,9 +1352,10 @@ void Cmd_ForceChanged_f( gentity_t *ent )
 
 	buf = G_GetStringEdString("MP_SVGAME", "FORCEPOWERCHANGED");
 
-	strcpy(fpChStr, buf);
+	Q_strncpyz(fpChStr, buf, sizeof(fpChStr));
 
-	trap->SendServerCommand( ent-g_entities, va("print \"%s%s\n\"", S_COLOR_GREEN, fpChStr) );
+	// (two line breaks like the original game, the JA+ module sends the same)
+	trap->SendServerCommand( ent-g_entities, va("print \"%s%s\n\n\"", S_COLOR_GREEN, fpChStr) );
 
 	ent->client->ps.fd.forceDoInit = 1;
 argCheck:
@@ -1537,6 +1602,10 @@ static void G_SayTo( gentity_t *ent, gentity_t *other, int mode, int color, cons
 	if ( mode == SAY_TEAM  && !OnSameTeam(ent, other) ) {
 		return;
 	}
+	// JA+: the player ignores what ent says
+	if ( JP_ChatIgnored( ent, other ) ) {
+		return;
+	}
 	/*
 	// no chatting to players in tournaments
 	if ( (level.gametype == GT_DUEL || level.gametype == GT_POWERDUEL)
@@ -1626,6 +1695,14 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText ) 
 		break;
 	}
 
+	// JA+: word filter, bits of jp_wordFilter: say 2, say_team 4, tell 8 (like the original after the log line)
+	if ( jp_wordFilter.integer > 0 ) {
+		const int bit = (mode == SAY_TEAM) ? 4 : (mode == SAY_TELL) ? 8 : 2;
+
+		if ( (jp_wordFilter.integer & bit) && !(mode == SAY_TELL && ent == target) && G_WordFilter( ent, text ) )
+			return;
+	}
+
 	if ( target ) {
 		G_SayTo( ent, target, mode, color, name, text, locMsg );
 		return;
@@ -1652,6 +1729,10 @@ Cmd_Say_f
 static void Cmd_Say_f( gentity_t *ent ) {
 	char *p = NULL;
 
+	// JA+: silenced players can not talk (the fixed texts of gc still work)
+	if ( ent->client->pers.jp.silenced )
+		return;
+
 	if ( trap->Argc () < 2 )
 		return;
 
@@ -1672,6 +1753,9 @@ Cmd_SayTeam_f
 */
 static void Cmd_SayTeam_f( gentity_t *ent ) {
 	char *p = NULL;
+
+	if ( ent->client->pers.jp.silenced )
+		return;
 
 	if ( trap->Argc () < 2 )
 		return;
@@ -1697,14 +1781,18 @@ static void Cmd_Tell_f( gentity_t *ent ) {
 	char		*p;
 	char		arg[MAX_TOKEN_CHARS];
 
-	if ( trap->Argc () < 3 ) {
-		trap->SendServerCommand( ent-g_entities, "print \"Usage: tell <player id> <message>\n\"" );
+	if ( ent->client->pers.jp.silenced )
+		return;
+
+	// JA+: the player is given by number or by a part of his name
+	if ( trap->Argc () < 2 ) {
+		trap->SendServerCommand( ent-g_entities, "print \"usage: tell [ID_Player or partial player names]  [message]\n\"" );
 		return;
 	}
 
 	trap->Argv( 1, arg, sizeof( arg ) );
-	targetNum = ClientNumberFromString( ent, arg, qfalse );
-	if ( targetNum == -1 ) {
+	targetNum = G_getClientNumberForString( arg );
+	if ( targetNum < 0 || targetNum >= level.maxclients ) {
 		return;
 	}
 
@@ -2083,6 +2171,83 @@ qboolean G_VoteWarmup( gentity_t *ent, int numArgs, const char *arg1, const char
 	return qtrue;
 }
 
+/*
+=================
+JA+ votes: sleep and silence a player
+=================
+*/
+static qboolean JP_VotePlayerEffect( gentity_t *ent, const char *arg1, const char *arg2, const char *title ) {
+	int n = G_getClientNumberForString( arg2 );
+
+	if ( n < 0 || n >= MAX_CLIENTS ) {
+		trap->SendServerCommand( ent-g_entities, va( "print \"invalid client number %d.\n\"", n ) );
+		return qfalse;
+	}
+	if ( !g_entities[n].inuse || !g_entities[n].client || g_entities[n].client->pers.connected == CON_DISCONNECTED ) {
+		trap->SendServerCommand( ent-g_entities, va( "print \"there is no client with the client number %d.\n\"", n ) );
+		return qfalse;
+	}
+
+	Com_sprintf( level.voteString, sizeof( level.voteString ), "am%s %i", arg1, n );
+	Com_sprintf( level.voteDisplayString, sizeof( level.voteDisplayString ), "%s %s", arg1, g_entities[n].client->pers.netname );
+	Q_strncpyz( level.voteStringClean, level.voteDisplayString, sizeof( level.voteStringClean ) );
+	trap->SendServerCommand( -1, va( "print \"CallVote ^5%s^7 %s\n\"", title, g_entities[n].client->pers.netname ) );
+	JP_ShowMessage( va( "CallVote ^5%s^7\n %s", title, g_entities[n].client->pers.netname ), 30, qtrue );
+	return qtrue;
+}
+
+qboolean G_VoteSleep( gentity_t *ent, int numArgs, const char *arg1, const char *arg2 ) {
+	return JP_VotePlayerEffect( ent, arg1, arg2, "Sleep" );
+}
+
+qboolean G_VoteSilence( gentity_t *ent, int numArgs, const char *arg1, const char *arg2 ) {
+	return JP_VotePlayerEffect( ent, arg1, arg2, "Silence" );
+}
+
+// bit of the vote type in jp_votesDisable, 0 if the vote can not be disabled
+static int JP_VoteDisableBit( const char *vote ) {
+	static const struct { const char *name; int bit; } bits[] = {
+		{ "map_restart", 1 }, { "nextmap", 2 }, { "map", 3 }, { "g_gametype", 4 }, { "kick", 5 },
+		{ "clientkick", 5 }, { "g_doWarmup", 6 }, { "timelimit", 7 }, { "fraglimit", 8 }, { "sleep", 9 }, { "silence", 11 }
+	};
+	int i;
+
+	for ( i = 0; i < (int)ARRAY_LEN( bits ); i++ ) {
+		if ( !Q_stricmp( vote, bits[i].name ) )
+			return bits[i].bit;
+	}
+	return 0;
+}
+
+// JA+ vote restrictions, returns qtrue if the vote must be refused (the player was told why)
+static qboolean JP_CallVoteRefused( gentity_t *ent ) {
+	const int clientNum = ent - g_entities;
+	jpClient_t *jp = &ent->client->pers.jp;
+
+	if ( jp->denyVote ) {
+		trap->SendServerCommand( clientNum, "print \"You are not allowed to callVote\n\"" );
+		return qtrue;
+	}
+
+	if ( jp_startMapVoteTimer.integer > 0 && level.time - level.startTime < jp_startMapVoteTimer.integer * 1000 ) {
+		const int left = (jp_startMapVoteTimer.integer * 1000 - (level.time - level.startTime)) / 1000;
+
+		trap->SendServerCommand( clientNum, va( "print \"^1ANTI VOTE SPAM AT LEVEL START :^7You are not allowed to callVote during: ^5%i:%i:%i\n\"",
+			left / 3600, (left / 60) % 60, left % 60 ) );
+		return qtrue;
+	}
+
+	if ( jp_voteTimer.integer > 0 && level.time < jp->voteTime ) {
+		const int left = (jp->voteTime - level.time) / 1000;
+
+		trap->SendServerCommand( clientNum, va( "print \"^1ANTI VOTE SPAM :^7You are not allowed to callVote during: ^5%i:%i:%i\n\"",
+			left / 3600, (left / 60) % 60, left % 60 ) );
+		return qtrue;
+	}
+
+	return qfalse;
+}
+
 typedef struct voteString_s {
 	const char	*string;
 	const char	*aliases;	// space delimited list of aliases, will always show the real vote string
@@ -2105,6 +2270,8 @@ static voteString_t validVoteStrings[] = {
 	{	"map_restart",			"restart",			G_VoteMapRestart,		0,		GTB_ALL,								qtrue,			"<optional delay>" },
 	{	"nextmap",				NULL,				G_VoteNextmap,			0,		GTB_ALL,								qtrue,			NULL },
 	{	"timelimit",			"time",				G_VoteTimelimit,		1,		GTB_ALL &~GTB_SIEGE,					qtrue,			"<num>" },
+	{	"sleep",				NULL,				G_VoteSleep,			1,		GTB_FFA,								qfalse,			"<clientnum or name>" },
+	{	"silence",				NULL,				G_VoteSilence,			1,		GTB_ALL,								qfalse,			"<clientnum or name>" },
 };
 static const int validVoteStringsSize = ARRAY_LEN( validVoteStrings );
 
@@ -2141,6 +2308,9 @@ void Cmd_CallVote_f( gentity_t *ent ) {
 	char			arg1[MAX_CVAR_VALUE_STRING] = {0};
 	char			arg2[MAX_CVAR_VALUE_STRING] = {0};
 	voteString_t	*vote = NULL;
+
+	if ( JP_CallVoteRefused( ent ) )
+		return;
 
 	// not allowed to vote at all
 	if ( !g_allowVote.integer ) {
@@ -2226,6 +2396,14 @@ void Cmd_CallVote_f( gentity_t *ent ) {
 
 validVote:
 	vote = &validVoteStrings[i];
+	{
+		const int disableBit = JP_VoteDisableBit( vote->string );
+
+		if ( disableBit && G_CmdBitAllowed( jp_votesDisable.integer, disableBit ) ) {
+			trap->SendServerCommand( ent-g_entities, va( "print \"^1Vote %s ^7: This vote type is not allowed.\n\"", vote->string ) );
+			return;
+		}
+	}
 	if ( !(vote->validGT & (1<<level.gametype)) ) {
 		trap->SendServerCommand( ent-g_entities, va( "print \"%s is not applicable in this gametype.\n\"", arg1 ) );
 		return;
@@ -2278,6 +2456,9 @@ validVote:
 	trap->SetConfigstring( CS_VOTE_STRING,	level.voteDisplayString );
 	trap->SetConfigstring( CS_VOTE_YES,		va( "%i", level.voteYes ) );
 	trap->SetConfigstring( CS_VOTE_NO,		va( "%i", level.voteNo ) );
+
+	if ( jp_voteTimer.integer > 0 )
+		ent->client->pers.jp.voteTime = level.time + jp_voteTimer.integer * 60000;
 }
 
 /*
@@ -2698,6 +2879,13 @@ void Cmd_ToggleSaber_f(gentity_t *ent)
 		return;
 	}
 
+	// JA+: not while the new draw and holster animations of the saber play
+	if ( (ent->client->ps.legsAnim >= BOTH_STAND1TO2_NEW && ent->client->ps.legsAnim <= BOTH_S1_S6_2ARMS)
+		|| (ent->client->ps.torsoAnim >= BOTH_STAND1TO2_NEW && ent->client->ps.torsoAnim <= BOTH_S1_S6_2ARMS) )
+	{
+		return;
+	}
+
 	if (ent->client->ps.weapon != WP_SABER)
 	{
 		return;
@@ -2993,10 +3181,82 @@ qboolean G_OtherPlayersDueling(void)
 	return qfalse;
 }
 
+// JA+: the duel invitation can also be an invitation to the other dimension
+static void JP_DuelDimensionAnswer( gentity_t *ent, gentity_t *challenged )
+{
+	const int clientNum = ent-g_entities;
+	gclient_t *client = ent->client;
+
+	challenged->client->ps.duelIndex = ENTITYNUM_NONE;
+	client->ps.duelTime = level.time + 2000;
+
+	if ( !(client->ps.eFlags & EF_ALT_DIM) )
+	{
+		if ( G_TouchOtherPlayer( ent ) )
+		{
+			trap->SendServerCommand( clientNum, "print \"^1You can't change your dimension beeing inside another player!.\n\"" );
+			return;
+		}
+		trap->SendServerCommand( -1, va( "print \"%s ^2accepts the invitation to join the ^5%s!\n\"", client->pers.netname, jp_altDimName.string ) );
+		trap->SendServerCommand( clientNum, "print \"^2You can use the ^5/amAltDim ^2cmd to switch dimensions!\n\"" );
+		G_GoInAltDim( ent, 1 );
+		return;
+	}
+
+	if ( client->pers.jp.dimension == 2 )
+	{
+		trap->SendServerCommand( clientNum, va( "print \"^1You were forced to stay in the ^5%s!\n\"", jp_altDimName.string ) );
+		return;
+	}
+	if ( G_TouchOtherPlayer( ent ) )
+	{
+		trap->SendServerCommand( clientNum, "print \"^1You can't change your dimension beeing inside another player!.\n\"" );
+		return;
+	}
+	trap->SendServerCommand( -1, va( "print \"%s ^2accepts the invitation to join the ^5%s!\n\"", client->pers.netname, jp_primDimName.string ) );
+	trap->SendServerCommand( clientNum, "print \"^2You can use the ^5/amAltDim ^2cmd to switch dimensions!\n\"" );
+	G_GoInAltDim( ent, 0 );
+}
+
+// holsters the saber until the duel starts
+static void JP_DuelHolster( gentity_t *ent )
+{
+	if ( !ent->client->ps.saberHolstered )
+	{
+		if ( ent->client->saber[0].soundOff )
+			G_Sound( ent, CHAN_AUTO, ent->client->saber[0].soundOff );
+		if ( ent->client->saber[1].soundOff && ent->client->saber[1].model[0] )
+			G_Sound( ent, CHAN_AUTO, ent->client->saber[1].soundOff );
+		ent->client->ps.weaponTime = 400;
+		ent->client->ps.saberHolstered = 2;
+	}
+}
+
 void Cmd_EngageDuel_f(gentity_t *ent)
 {
 	trace_t tr;
 	vec3_t forward, fwdOrg;
+	char cmd[MAX_TOKEN_CHARS];
+	const int clientNum = ent-g_entities;
+
+	if ( ent->client->ps.stats[STAT_HOLDABLE_ITEMS] & (1 << HI_JETPACK) )
+	{
+		trap->SendServerCommand( clientNum, "print \"You have to disable your jetpack in order to duel.\n\"" );
+		return;
+	}
+	if ( ent->client->ps.powerups[PW_CLOAKED] )
+	{
+		trap->SendServerCommand( clientNum, "print \"You have to disable your Cloak item in order to duel.\n\"" );
+		return;
+	}
+	if ( BG_InGrappleMove( ent->client->ps.legsAnim ) || BG_InGrappleMove( ent->client->ps.torsoAnim ) )
+	{
+		return;
+	}
+	if ( ent->client->sess.sessionTeam == TEAM_SPECTATOR || ent->client->pers.jp.sleeping )
+	{
+		return;
+	}
 
 	if (!g_privateDuel.integer)
 	{
@@ -3005,36 +3265,18 @@ void Cmd_EngageDuel_f(gentity_t *ent)
 
 	if (level.gametype == GT_DUEL || level.gametype == GT_POWERDUEL)
 	{ //rather pointless in this mode..
-		trap->SendServerCommand( ent-g_entities, va("print \"%s\n\"", G_GetStringEdString("MP_SVGAME", "NODUEL_GAMETYPE")) );
+		trap->SendServerCommand( clientNum, va("print \"%s\n\"", G_GetStringEdString("MP_SVGAME", "NODUEL_GAMETYPE")) );
 		return;
 	}
 
-	//if (level.gametype >= GT_TEAM && level.gametype != GT_SIEGE)
-	if (level.gametype >= GT_TEAM)
-	{ //no private dueling in team modes
-		trap->SendServerCommand( ent-g_entities, va("print \"%s\n\"", G_GetStringEdString("MP_SVGAME", "NODUEL_GAMETYPE")) );
+	// JA+: team deathmatch is allowed with jp_allowTeamDuel
+	if ( level.gametype > GT_TEAM || (level.gametype == GT_TEAM && !jp_allowTeamDuel.integer) )
+	{
+		trap->SendServerCommand( clientNum, va("print \"%s\n\"", G_GetStringEdString("MP_SVGAME", "NODUEL_GAMETYPE")) );
 		return;
 	}
 
 	if (ent->client->ps.duelTime >= level.time)
-	{
-		return;
-	}
-
-	if (ent->client->ps.weapon != WP_SABER)
-	{
-		return;
-	}
-
-	/*
-	if (!ent->client->ps.saberHolstered)
-	{ //must have saber holstered at the start of the duel
-		return;
-	}
-	*/
-	//NOTE: No longer doing this..
-
-	if (ent->client->ps.saberInFlight)
 	{
 		return;
 	}
@@ -3044,18 +3286,11 @@ void Cmd_EngageDuel_f(gentity_t *ent)
 		return;
 	}
 
-	//New: Don't let a player duel if he just did and hasn't waited 10 seconds yet (note: If someone challenges him, his duel timer will reset so he can accept)
-	/*if (ent->client->ps.fd.privateDuelTime > level.time)
+	if ( level.time < ent->client->ps.fd.privateDuelTime )
 	{
-		trap->SendServerCommand( ent-g_entities, va("print \"%s\n\"", G_GetStringEdString("MP_SVGAME", "CANTDUEL_JUSTDID")) );
+		trap->SendServerCommand( clientNum, va("print \"%s\n\"", G_GetStringEdString("MP_SVGAME", "CANTDUEL_JUSTDID")) );
 		return;
 	}
-
-	if (G_OtherPlayersDueling())
-	{
-		trap->SendServerCommand( ent-g_entities, va("print \"%s\n\"", G_GetStringEdString("MP_SVGAME", "CANTDUEL_BUSY")) );
-		return;
-	}*/
 
 	AngleVectors( ent->client->ps.viewangles, forward, NULL, NULL );
 
@@ -3063,7 +3298,7 @@ void Cmd_EngageDuel_f(gentity_t *ent)
 	fwdOrg[1] = ent->client->ps.origin[1] + forward[1]*256;
 	fwdOrg[2] = (ent->client->ps.origin[2]+ent->client->ps.viewheight) + forward[2]*256;
 
-	trap->Trace(&tr, ent->client->ps.origin, NULL, NULL, fwdOrg, ent->s.number, MASK_PLAYERSOLID, qfalse, 0, 0);
+	trap->Trace(&tr, ent->client->ps.origin, NULL, NULL, fwdOrg, ent->s.number, 0x1111, qfalse, 0, 0);
 
 	if (tr.fraction != 1 && tr.entityNum < MAX_CLIENTS)
 	{
@@ -3071,8 +3306,7 @@ void Cmd_EngageDuel_f(gentity_t *ent)
 
 		if (!challenged || !challenged->client || !challenged->inuse ||
 			challenged->health < 1 || challenged->client->ps.stats[STAT_HEALTH] < 1 ||
-			challenged->client->ps.weapon != WP_SABER || challenged->client->ps.duelInProgress ||
-			challenged->client->ps.saberInFlight)
+			challenged->client->ps.duelInProgress)
 		{
 			return;
 		}
@@ -3082,12 +3316,45 @@ void Cmd_EngageDuel_f(gentity_t *ent)
 			return;
 		}
 
+		// engage_FullForceDuel: force powers hurt in this duel
+		trap->Argv( 0, cmd, sizeof( cmd ) );
+		if ( Q_stricmp( cmd, "engage_FullForceDuel" ) )
+			ent->client->pers.jp.fullForceDuel = qfalse;
+
 		if (challenged->client->ps.duelIndex == ent->s.number && challenged->client->ps.duelTime >= level.time)
 		{
-			trap->SendServerCommand( /*challenged-g_entities*/-1, va("print \"%s %s %s!\n\"", challenged->client->pers.netname, G_GetStringEdString("MP_SVGAME", "PLDUELACCEPT"), ent->client->pers.netname) );
+			if ( jp_altDim.integer && level.gametype == GT_FFA && !G_PlInSameDim( ent, challenged ) )
+			{ //the challenge was an invitation to the other dimension
+				JP_DuelDimensionAnswer( ent, challenged );
+				return;
+			}
+
+			if ( ent->client->ps.weapon != WP_SABER || ent->client->ps.saberInFlight
+				|| challenged->client->ps.weapon != WP_SABER || challenged->client->ps.saberInFlight
+				|| (challenged->client->ps.stats[STAT_HOLDABLE_ITEMS] & (1 << HI_JETPACK)) )
+			{
+				return;
+			}
+
+			trap->SendServerCommand( -1, va("print \"%s %s %s!\n\"", challenged->client->pers.netname, G_GetStringEdString("MP_SVGAME", "PLDUELACCEPT"), ent->client->pers.netname) );
 
 			ent->client->ps.duelInProgress = qtrue;
 			challenged->client->ps.duelInProgress = qtrue;
+
+			if ( ent->client->pers.jp.empowered )
+			{
+				ent->client->pers.jp.empowered = qfalse;
+				ent->client->ps.eFlags &= ~EF_BODYPUSH;
+				WP_InitForcePowers( ent );
+			}
+			if ( challenged->client->pers.jp.empowered )
+			{
+				challenged->client->pers.jp.empowered = qfalse;
+				challenged->client->ps.eFlags &= ~EF_BODYPUSH;
+				WP_InitForcePowers( challenged );
+			}
+
+			ent->client->pers.jp.fullForceDuel = challenged->client->pers.jp.fullForceDuel;
 
 			ent->client->ps.duelTime = level.time + 2000;
 			challenged->client->ps.duelTime = level.time + 2000;
@@ -3095,52 +3362,77 @@ void Cmd_EngageDuel_f(gentity_t *ent)
 			G_AddEvent(ent, EV_PRIVATE_DUEL, 1);
 			G_AddEvent(challenged, EV_PRIVATE_DUEL, 1);
 
-			//Holster their sabers now, until the duel starts (then they'll get auto-turned on to look cool)
+			// both start with full health and force and the armor of jp_duelStartArmor
+			ent->health = ent->client->ps.stats[STAT_HEALTH] = 100;
+			challenged->health = challenged->client->ps.stats[STAT_HEALTH] = 100;
+			ent->client->ps.stats[STAT_ARMOR] = jp_duelStartArmor.integer;
+			challenged->client->ps.stats[STAT_ARMOR] = jp_duelStartArmor.integer;
+			ent->client->ps.fd.forcePower = ent->client->ps.fd.forcePowerMax;
+			challenged->client->ps.fd.forcePower = challenged->client->ps.fd.forcePowerMax;
 
-			if (!ent->client->ps.saberHolstered)
+			//Holster their sabers now, until the duel starts (then they'll get auto-turned on to look cool)
+			JP_DuelHolster( ent );
+			JP_DuelHolster( challenged );
+
+			if ( jp_autoDuelBOW.integer == 1 )
 			{
-				if (ent->client->saber[0].soundOff)
-				{
-					G_Sound(ent, CHAN_AUTO, ent->client->saber[0].soundOff);
-				}
-				if (ent->client->saber[1].soundOff &&
-					ent->client->saber[1].model[0])
-				{
-					G_Sound(ent, CHAN_AUTO, ent->client->saber[1].soundOff);
-				}
-				ent->client->ps.weaponTime = 400;
-				ent->client->ps.saberHolstered = 2;
+				ent->client->ps.forceHandExtend = HANDEXTEND_TAUNT;
+				ent->client->ps.forceDodgeAnim = BOTH_BOW;
+				ent->client->ps.forceHandExtendTime = level.time + BG_AnimLength( ent->localAnimIndex, BOTH_BOW );
+				challenged->client->ps.forceHandExtend = HANDEXTEND_TAUNT;
+				challenged->client->ps.forceDodgeAnim = BOTH_BOW;
+				challenged->client->ps.forceHandExtendTime = level.time + BG_AnimLength( challenged->localAnimIndex, BOTH_BOW );
 			}
-			if (!challenged->client->ps.saberHolstered)
+			else
 			{
-				if (challenged->client->saber[0].soundOff)
-				{
-					G_Sound(challenged, CHAN_AUTO, challenged->client->saber[0].soundOff);
-				}
-				if (challenged->client->saber[1].soundOff &&
-					challenged->client->saber[1].model[0])
-				{
-					G_Sound(challenged, CHAN_AUTO, challenged->client->saber[1].soundOff);
-				}
-				challenged->client->ps.weaponTime = 400;
-				challenged->client->ps.saberHolstered = 2;
+				ent->client->ps.forceHandExtend = HANDEXTEND_DUELCHALLENGE;
+				ent->client->ps.forceHandExtendTime = level.time + 1000;
 			}
 		}
 		else
 		{
-			//Print the message that a player has been challenged in private, only announce the actual duel initiation in private
-			trap->SendServerCommand( challenged-g_entities, va("cp \"%s %s\n\"", ent->client->pers.netname, G_GetStringEdString("MP_SVGAME", "PLDUELCHALLENGE")) );
-			trap->SendServerCommand( ent-g_entities, va("cp \"%s %s\n\"", G_GetStringEdString("MP_SVGAME", "PLDUELCHALLENGED"), challenged->client->pers.netname) );
+			// (JA+: a challenge with any weapon, the saber is only needed to accept)
+			if ( !jp_altDim.integer || level.gametype != GT_FFA || G_PlInSameDim( ent, challenged ) )
+			{
+				if ( !ent->client->pers.jp.fullForceDuel )
+				{
+					//Print the message that a player has been challenged in private, only announce the actual duel initiation in private
+					trap->SendServerCommand( challenged-g_entities, va("cp \"%s %s\n\"", ent->client->pers.netname, G_GetStringEdString("MP_SVGAME", "PLDUELCHALLENGE")) );
+					trap->SendServerCommand( clientNum, va("cp \"%s %s\n\"", G_GetStringEdString("MP_SVGAME", "PLDUELCHALLENGED"), challenged->client->pers.netname) );
+				}
+				else
+				{
+					trap->SendServerCommand( challenged-g_entities, va("cp \"%s \n^7 is challenging you in ^5Full Force\n\"", ent->client->pers.netname) );
+					trap->SendServerCommand( clientNum, va("cp \"^7Asking ^5Full Force ^7Duel to\n %s\n\"", challenged->client->pers.netname) );
+				}
+			}
+			else
+			{
+				const char *dim = (ent->client->ps.eFlags & EF_ALT_DIM) ? "Alternate dimension" : "1st dimension";
+
+				trap->SendServerCommand( challenged-g_entities, va("cp \"%s \n^7 is inviting you to join \n the ^5%s\n\"", ent->client->pers.netname, dim) );
+				trap->SendServerCommand( clientNum, va("cp \"^7Asking to join \nthe ^5%s to\n %s\n\"", dim, challenged->client->pers.netname) );
+			}
+
+			ent->client->ps.forceHandExtend = HANDEXTEND_DUELCHALLENGE;
+			ent->client->ps.forceHandExtendTime = level.time + 1000;
 		}
 
 		challenged->client->ps.fd.privateDuelTime = 0; //reset the timer in case this player just got out of a duel. He should still be able to accept the challenge.
 
-		ent->client->ps.forceHandExtend = HANDEXTEND_DUELCHALLENGE;
-		ent->client->ps.forceHandExtendTime = level.time + 1000;
-
 		ent->client->ps.duelIndex = challenged->s.number;
 		ent->client->ps.duelTime = level.time + 5000;
 	}
+}
+
+// JA+ /engage_FullForceDuel: a duel where force powers hurt
+void Cmd_EngageFullForceDuel_f( gentity_t *ent )
+{
+	if ( !ent->client || ent->client->ps.duelInProgress )
+		return;
+
+	ent->client->pers.jp.fullForceDuel = qtrue;
+	Cmd_EngageDuel_f( ent );
 }
 
 #ifndef FINAL_BUILD
@@ -3213,6 +3505,32 @@ void Cmd_DebugSetBodyAnim_f(gentity_t *self)
 }
 #endif
 
+// the JA+ module has this debug command of the base game (cheats only)
+extern stringID_table_t animTable[MAX_ANIMATIONS+1];
+static void JP_Cmd_DebugSetBodyAnim_f( gentity_t *self )
+{
+	char arg[MAX_STRING_CHARS];
+	int i;
+
+	if ( trap->Argc() < 2 )
+		return;
+	trap->Argv( 1, arg, sizeof( arg ) );
+	if ( !arg[0] )
+		return;
+
+	for ( i = 0; i < MAX_ANIMATIONS; i++ )
+	{
+		if ( !Q_stricmp( arg, animTable[i].name ) )
+			break;
+	}
+	if ( i == MAX_ANIMATIONS )
+	{
+		Com_Printf( "Animation '%s' does not exist\n", arg );
+		return;
+	}
+	G_SetAnim( self, NULL, SETANIM_BOTH, i, SETANIM_FLAG_OVERRIDE|SETANIM_FLAG_HOLD, 0 );
+}
+
 void StandardSetBodyAnim(gentity_t *self, int anim, int flags)
 {
 	G_SetAnim(self, NULL, SETANIM_BOTH, anim, flags, 0);
@@ -3229,6 +3547,10 @@ extern void G_SetVehDamageFlags( gentity_t *veh, int shipSurf, int damageLevel )
 
 qboolean TryGrapple(gentity_t *ent)
 {
+	if (ent->client->ps.eFlags2 & EF2_HOOK)
+	{ // JA+: not while the grappling hook is out
+		return qfalse;
+	}
 	if (ent->client->ps.weaponTime > 0)
 	{ //weapon busy
 		return qfalse;
@@ -3293,8 +3615,11 @@ void Cmd_TargetUse_f( gentity_t *ent )
 }
 
 void Cmd_TheDestroyer_f( gentity_t *ent ) {
-	if ( !ent->client->ps.saberHolstered || ent->client->ps.weapon != WP_SABER )
+	if ( !ent->client->ps.saberHolstered || ent->client->ps.weapon != WP_SABER ) {
+		// the original command list has no other entry for it
+		trap->SendServerCommand( ent - g_entities, "print \"unknown cmd thedestroyer\n\"" );
 		return;
+	}
 
 	Cmd_ToggleSaber_f( ent );
 }
@@ -3378,6 +3703,7 @@ ClientCommand
 #define CMD_NOINTERMISSION		(1<<0)
 #define CMD_CHEAT				(1<<1)
 #define CMD_ALIVE				(1<<2)
+#define CMD_UNKNOWN_IF_DENIED	(1<<3)	// JA+ (like the base game): a failed cheat check falls through to "unknown cmd"
 
 typedef struct command_s {
 	const char	*name;
@@ -3393,11 +3719,13 @@ command_t commands[] = {
 	{ "addbot",				Cmd_AddBot_f,				0 },
 	{ "callteamvote",		Cmd_CallTeamVote_f,			CMD_NOINTERMISSION },
 	{ "callvote",			Cmd_CallVote_f,				CMD_NOINTERMISSION },
-	{ "debugBMove_Back",	Cmd_BotMoveBack_f,			CMD_CHEAT|CMD_ALIVE },
-	{ "debugBMove_Forward",	Cmd_BotMoveForward_f,		CMD_CHEAT|CMD_ALIVE },
-	{ "debugBMove_Left",	Cmd_BotMoveLeft_f,			CMD_CHEAT|CMD_ALIVE },
-	{ "debugBMove_Right",	Cmd_BotMoveRight_f,			CMD_CHEAT|CMD_ALIVE },
-	{ "debugBMove_Up",		Cmd_BotMoveUp_f,			CMD_CHEAT|CMD_ALIVE },
+	{ "debugBMove_Back",	Cmd_BotMoveBack_f,			CMD_CHEAT|CMD_ALIVE|CMD_UNKNOWN_IF_DENIED },
+	{ "debugBMove_Forward",	Cmd_BotMoveForward_f,		CMD_CHEAT|CMD_ALIVE|CMD_UNKNOWN_IF_DENIED },
+	{ "debugBMove_Left",	Cmd_BotMoveLeft_f,			CMD_CHEAT|CMD_ALIVE|CMD_UNKNOWN_IF_DENIED },
+	{ "debugBMove_Right",	Cmd_BotMoveRight_f,			CMD_CHEAT|CMD_ALIVE|CMD_UNKNOWN_IF_DENIED },
+	{ "debugBMove_Up",		Cmd_BotMoveUp_f,			CMD_CHEAT|CMD_ALIVE|CMD_UNKNOWN_IF_DENIED },
+	{ "debugSetBodyAnim",	JP_Cmd_DebugSetBodyAnim_f,	CMD_CHEAT|CMD_ALIVE|CMD_UNKNOWN_IF_DENIED },
+	{ "engage_FullForceDuel",	Cmd_EngageFullForceDuel_f,	CMD_NOINTERMISSION },
 	{ "duelteam",			Cmd_DuelTeam_f,				CMD_NOINTERMISSION },
 	{ "follow",				Cmd_Follow_f,				CMD_NOINTERMISSION },
 	{ "follownext",			Cmd_FollowNext_f,			CMD_NOINTERMISSION },
@@ -3414,18 +3742,19 @@ command_t commands[] = {
 	{ "maplist",			Cmd_MapList_f,				CMD_NOINTERMISSION },
 	{ "noclip",				Cmd_Noclip_f,				CMD_CHEAT|CMD_ALIVE|CMD_NOINTERMISSION },
 	{ "notarget",			Cmd_Notarget_f,				CMD_CHEAT|CMD_ALIVE|CMD_NOINTERMISSION },
-	{ "npc",				Cmd_NPC_f,					CMD_CHEAT|CMD_ALIVE },
+	{ "npc",				JP_Cmd_NPC_f,					0 },
 	{ "say",				Cmd_Say_f,					0 },
 	{ "say_team",			Cmd_SayTeam_f,				0 },
 	{ "score",				Cmd_Score_f,				0 },
 	{ "setviewpos",			Cmd_SetViewpos_f,			CMD_CHEAT|CMD_NOINTERMISSION },
 	{ "siegeclass",			Cmd_SiegeClass_f,			CMD_NOINTERMISSION },
+	{ "stats",				Cmd_Stats_f,				0 },
 	{ "team",				Cmd_Team_f,					CMD_NOINTERMISSION },
-//	{ "teamtask",			Cmd_TeamTask_f,				CMD_NOINTERMISSION },
+	{ "teamtask",			Cmd_TeamTask_f,				CMD_NOINTERMISSION },
 	{ "teamvote",			Cmd_TeamVote_f,				CMD_NOINTERMISSION },
 	{ "tell",				Cmd_Tell_f,					0 },
-	{ "thedestroyer",		Cmd_TheDestroyer_f,			CMD_CHEAT|CMD_ALIVE|CMD_NOINTERMISSION },
-	{ "t_use",				Cmd_TargetUse_f,			CMD_CHEAT|CMD_ALIVE },
+	{ "thedestroyer",		Cmd_TheDestroyer_f,			CMD_CHEAT|CMD_ALIVE|CMD_NOINTERMISSION|CMD_UNKNOWN_IF_DENIED },
+	{ "t_use",				Cmd_TargetUse_f,			CMD_CHEAT|CMD_ALIVE|CMD_UNKNOWN_IF_DENIED },
 	{ "voice_cmd",			Cmd_VoiceCommand_f,			CMD_NOINTERMISSION },
 	{ "vote",				Cmd_Vote_f,					CMD_NOINTERMISSION },
 	{ "where",				Cmd_Where_f,				CMD_NOINTERMISSION },
@@ -3450,10 +3779,16 @@ void ClientCommand( int clientNum ) {
 		return;
 	//end rww
 
+	if ( JP_ClientCommand( ent, cmd ) )
+		return;
+
 	command = (command_t *)Q_LinearSearch( cmd, commands, numCommands, sizeof( commands[0] ), cmdcmp );
+	// JA+: there is no kill command in the highlander game
+	if ( command && level.gametype == GT_FFA && jp_highlander.integer == 1 && !Q_stricmp( cmd, "kill" ) )
+		command = NULL;
 	if ( !command )
 	{
-		trap->SendServerCommand( clientNum, va( "print \"Unknown command %s\n\"", cmd ) );
+		trap->SendServerCommand( clientNum, va( "print \"unknown cmd %s\n\"", cmd ) );	// the text of the original
 		return;
 	}
 
@@ -3468,15 +3803,21 @@ void ClientCommand( int clientNum ) {
 		&& !sv_cheats.integer )
 	{
 		trap->SendServerCommand( clientNum, va( "print \"%s\n\"", G_GetStringEdString( "MP_SVGAME", "NOCHEATS" ) ) );
+		if ( command->flags & CMD_UNKNOWN_IF_DENIED )
+			trap->SendServerCommand( clientNum, va( "print \"unknown cmd %s\n\"", cmd ) );
 		return;
 	}
 
+	// JA+ CheatsOk: the cheats only look at the health, spectators may use them
 	else if ( (command->flags & CMD_ALIVE)
 		&& (ent->health <= 0
-			|| ent->client->tempSpectate >= level.time
-			|| ent->client->sess.sessionTeam == TEAM_SPECTATOR) )
+			|| (!(command->flags & CMD_CHEAT)
+				&& (ent->client->tempSpectate >= level.time
+				|| ent->client->sess.sessionTeam == TEAM_SPECTATOR))) )
 	{
 		trap->SendServerCommand( clientNum, va( "print \"%s\n\"", G_GetStringEdString( "MP_SVGAME", "MUSTBEALIVE" ) ) );
+		if ( command->flags & CMD_UNKNOWN_IF_DENIED )
+			trap->SendServerCommand( clientNum, va( "print \"unknown cmd %s\n\"", cmd ) );
 		return;
 	}
 

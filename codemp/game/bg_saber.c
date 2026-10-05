@@ -52,6 +52,10 @@ int PM_irand_timesync(int val1, int val2)
 	return i;
 }
 
+#define SABER_ALT_ATTACK_POWER		50//75?
+#define SABER_ALT_ATTACK_POWER_LR	10//30?
+#define SABER_ALT_ATTACK_POWER_FB	25//30/50?
+
 void BG_ForcePowerDrain( playerState_t *ps, forcePowers_t forcePower, int overrideAmt )
 {
 	//take away the power
@@ -346,6 +350,13 @@ saberMoveData_t	saberMoveData[LS_MOVE_MAX] = {//							NB:randomized
 	{"Reflect UL",	BOTH_P1_S1_TR,		Q_R,	Q_TL,	AFLAG_ACTIVE,	50,		BLK_WIDE,	LS_R_BL2TR,		LS_A_TR2BL,		300	},	// LS_PARRY_UL,
 	{"Reflect LR",	BOTH_P1_S1_BR,		Q_R,	Q_BL,	AFLAG_ACTIVE,	50,		BLK_WIDE,	LS_R_TR2BL,		LS_A_BL2TR,		300	},	// LS_PARRY_LR
 	{"Reflect LL",	BOTH_P1_S1_BL,		Q_R,	Q_BR,	AFLAG_ACTIVE,	50,		BLK_WIDE,	LS_R_TL2BR,		LS_A_BR2TL,		300	},	// LS_PARRY_LL,
+	// JA+ moves
+	{"JaPlusSpinAtk",			BOTH_FJSS_TR_BL,	Q_R,	Q_R,	AFLAG_ACTIVE,	100,	BLK_TIGHT,	LS_READY,	LS_READY,	200	},	// LS_JAPLUS_SPINATTACK
+	{"StfNewAnimBackKickFwd",	BOTH_MELEE_BACKKICK,			Q_R,	Q_R,	AFLAG_ACTIVE,	100,	BLK_TIGHT,	LS_READY,	LS_S_R2L,	200	},	// LS_STF_NEWANIM_BACKKICK_FWD
+	{"StfNewAnimSpinKickFwd",	BOTH_MELEE_SPINKICK,		Q_R,	Q_R,	AFLAG_ACTIVE,	100,	BLK_TIGHT,	LS_READY,	LS_S_R2L,	200	},	// LS_STF_NEWANIM_SPINKICK_FWD
+	{"NewAnimJumpBackKickSpin",	BOTH_JUMP_BACKKICK_SPIN,		Q_R,	Q_R,	AFLAG_ACTIVE,	100,	BLK_TIGHT,	LS_READY,	LS_READY,	1000},	// LS_NEWANIM_JUMPBACKKICK_SPIN
+	{"NewAnimJumpBackKickFlip",	BOTH_JUMP_BACKFLIP_ATCK,		Q_R,	Q_R,	AFLAG_ACTIVE,	100,	BLK_TIGHT,	LS_READY,	LS_READY,	1000},	// LS_NEWANIM_JUMPBACKKICK_FLIP
+	{"NewAnimFlipSaberStab",	BOTH_FLIP_STAB,		Q_R,	Q_R,	AFLAG_ACTIVE,	100,	BLK_TIGHT,	LS_READY,	LS_READY,	850	},	// LS_NEWANIM_FLIPSABERSTAB
 };
 
 void BG_FixSaberMoveData(void) {
@@ -1635,7 +1646,8 @@ saberMoveName_t PM_SaberFlipOverAttackMove(void)
 	VectorCopy( pm->ps->viewangles, fwdAngles );
 	fwdAngles[PITCH] = fwdAngles[ROLL] = 0;
 	AngleVectors( fwdAngles, jumpFwd, NULL, NULL );
-	VectorScale( jumpFwd, 150, pm->ps->velocity );//was 50
+	// JA+ jp_improveYellowDFA: slower forward, the attack lands closer
+	VectorScale( jumpFwd, JP_FEATURE( JPF_IMPROVEYELLOWDFA ) ? 60 : 150, pm->ps->velocity );//was 50
 	pm->ps->velocity[2] = 400;
 
 	/*
@@ -1726,13 +1738,38 @@ int PM_SaberBackflipAttackMove( void )
 		return LS_A_T2B;//LS_NONE;
 	}
 	//just do it
+#ifdef _GAME
+	// JA+ jp_allowNewDFA: the staff back flip starts with a kick at whoever stands in front
+	if ( JP_FEATURE( JPF_NEWDFA ) && pm->ps->clientNum < MAX_CLIENTS )
+	{
+		JP_BackflipKick( pm->ps->clientNum );
+	}
+#endif
 	pm->cmd.upmove = 127;
 	pm->ps->velocity[2] = 500;
 	return LS_A_BACKFLIP_ATK;
 }
 
+static qboolean PM_CheckEnemyPresence( int dir, float radius );
+
 int PM_SaberDualJumpAttackMove( void )
 {
+	// JA+ jp_allowNewDFA: with an enemy right in front the dual jump attack becomes a spin attack
+	if ( !BG_pluginDisable( pm->ps->clientNum, 11 ) && JP_FEATURE( JPF_NEWDFA )
+		&& pm->ps->saberMove != LS_JUMPATTACK_DUAL && PM_CheckEnemyPresence( DIR_FRONT, 100.0f ) )
+	{
+		vec3_t yawAngles = { 0.0f, 0.0f, 0.0f }, fwd;
+
+		yawAngles[YAW] = pm->ps->viewangles[YAW];
+		AngleVectors( yawAngles, fwd, NULL, NULL );
+		VectorScale( fwd, 60.0f, pm->ps->velocity );
+		pm->ps->velocity[2] = 200.0f;
+		PM_SetForceJumpZStart( pm->ps->origin[2] );
+		PM_AddEvent( EV_JUMP );
+		pm->ps->fd.forceJumpSound = 1;
+		pm->cmd.upmove = 0;
+		return LS_SPINATTACK_ALORA;
+	}
 	//FIXME: to make this move easier to execute, should be allowed to do it
 	//		after you've already started your jump... but jump is delayed in
 	//		this anim, so how do we undo the jump?
@@ -1829,6 +1866,8 @@ saberMoveName_t PM_SaberLungeAttackMove( qboolean noSpecials )
 	return LS_A_T2B;
 }
 
+static qboolean PM_CheckEnemyPresence( int dir, float radius );
+
 saberMoveName_t PM_SaberJumpAttackMove2( void )
 {
 	saberInfo_t *saber1 = BG_MySaber( pm->ps->clientNum, 0 );
@@ -1868,6 +1907,23 @@ saberMoveName_t PM_SaberJumpAttackMove2( void )
 	}
 	else
 	{
+		// JA+ (jp_allowNewDFA): staff jump attack turns into a spin attack when an enemy is in front
+		if ( !BG_pluginDisable( pm->ps->clientNum, 11 ) && JP_FEATURE( JPF_NEWDFA )
+			&& pm->ps->saberMove != LS_JUMPATTACK_STAFF_RIGHT && PM_CheckEnemyPresence( DIR_FRONT, 100.0f ) )
+		{
+			vec3_t yawAngles = { 0.0f, 0.0f, 0.0f }, fwd;
+
+			yawAngles[YAW] = pm->ps->viewangles[YAW];
+			AngleVectors( yawAngles, fwd, NULL, NULL );
+			VectorScale( fwd, 60.0f, pm->ps->velocity );
+			pm->ps->velocity[2] = 200.0f;
+			PM_SetForceJumpZStart( pm->ps->origin[2] );
+			PM_AddEvent( EV_JUMP );
+			pm->ps->fd.forceJumpSound = 1;
+			pm->cmd.upmove = 0;
+			return LS_JAPLUS_SPINATTACK;
+		}
+
 		//rwwFIXMEFIXME I don't like randomness for this sort of thing, gives people reason to
 		//complain combat is unpredictable. Maybe do something more clever to determine
 		//if we should do a left or right?
@@ -1922,6 +1978,20 @@ saberMoveName_t PM_SaberJumpAttackMove( void )
 	VectorCopy( pm->ps->viewangles, fwdAngles );
 	fwdAngles[PITCH] = fwdAngles[ROLL] = 0;
 	AngleVectors( fwdAngles, jumpFwd, NULL, NULL );
+
+	// JA+ (jp_allowNewDFA): with an enemy right in front the red DFA becomes a butterfly attack
+	if ( !BG_pluginDisable( pm->ps->clientNum, 11 ) && JP_FEATURE( JPF_NEWDFA )
+		&& pm->ps->saberMove != LS_A_JUMP_T__B_ && PM_CheckEnemyPresence( DIR_FRONT, 100.0f ) )
+	{
+		VectorScale( jumpFwd, 60, pm->ps->velocity );
+		pm->ps->velocity[2] = 300;
+		PM_SetForceJumpZStart(pm->ps->origin[2]);
+		PM_AddEvent( EV_JUMP );
+		pm->ps->fd.forceJumpSound = 1;
+		pm->cmd.upmove = 0;
+		return LS_BUTTERFLY_LEFT;
+	}
+
 	VectorScale( jumpFwd, 300, pm->ps->velocity );
 	pm->ps->velocity[2] = 280;
 	PM_SetForceJumpZStart(pm->ps->origin[2]);//so we don't take damage if we land at same height
@@ -2050,119 +2120,55 @@ static qboolean PM_CheckEnemyPresence( int dir, float radius )
 	return qfalse;
 }
 
-#define SABER_ALT_ATTACK_POWER		50//75?
-#define SABER_ALT_ATTACK_POWER_LR	10//30?
-#define SABER_ALT_ATTACK_POWER_FB	25//30/50?
 
 extern qboolean PM_SaberInReturn( int move ); //bg_panimate.c
+/*
+PM_CheckPullAttack
+
+disabled in the base game. JA+: while the force pull of the player is going on (the two powerup timers ForceThrow
+sets), attack + back is the pull attack of single player (jp_allowSPattacks), attack without back is the saber
+stab grab on somebody right in front (jp_allowNewDFA, server only: G_CheckNewStabMove).
+*/
 saberMoveName_t PM_CheckPullAttack( void )
 {
-#if 0 //disabling these for MP, they aren't useful
 	if (!(pm->cmd.buttons & BUTTON_ATTACK))
 	{
 		return LS_NONE;
 	}
 
-	if ( (pm->ps->saberMove == LS_READY||PM_SaberInReturn(pm->ps->saberMove)||PM_SaberInReflect(pm->ps->saberMove))//ready
-		//&& (pm->ps->clientNum < MAX_CLIENTS||PM_ControlledByPlayer())//PLAYER ONLY
-		&& pm->ps->fd.saberAnimLevel >= SS_FAST//single saber styles - FIXME: Tavion?
-		&& pm->ps->fd.saberAnimLevel <= SS_STRONG//single saber styles - FIXME: Tavion?
-		//&& G_TryingPullAttack( pm->gent, &pm->cmd, qfalse )
-		//&& pm->ps->fd.forcePowerLevel[FP_PULL]
-		//rwwFIXMEFIXME: rick has the damn msg.cpp file checked out exclusively so I can't update the bloody psf to send this for prediction
-		&& pm->ps->powerups[PW_DISINT_4] > pm->cmd.serverTime
-		&& !(pm->ps->fd.forcePowersActive & (1<<FP_GRIP))
-		&& pm->ps->powerups[PW_PULL] > pm->cmd.serverTime
-		//&& pm->cmd.forwardmove<0//pulling back
-		&& (pm->cmd.buttons&BUTTON_ATTACK)//attacking
-		&& BG_EnoughForcePowerForMove( SABER_ALT_ATTACK_POWER_FB ) )//pm->ps->forcePower >= SABER_ALT_ATTACK_POWER_FB//have enough power
-	{//FIXME: some NPC logic to do this?
-		qboolean doMove = qtrue;
-//		if ( g_saberNewControlScheme->integer
-//			|| g_crosshairEntNum < ENTITYNUM_WORLD )//in old control scheme, there has to be someone there
-		{
-			saberMoveName_t pullAttackMove = LS_NONE;
-			if ( pm->ps->fd.saberAnimLevel == SS_FAST )
-			{
-				pullAttackMove = LS_PULL_ATTACK_STAB;
-			}
-			else
-			{
-				pullAttackMove = LS_PULL_ATTACK_SWING;
-			}
-
-			/*
-			if ( g_crosshairEntNum < ENTITYNUM_WORLD
-				&& pm->gent && pm->gent->client )
-			{
-				gentity_t *targEnt = &g_entities[g_crosshairEntNum];
-				if ( targEnt->client
-					&& targEnt->health > 0
-					//FIXME: check other things like in knockdown, saberlock, uninterruptable anims, etc.
-					&& !PM_InOnGroundAnim( &targEnt->client->ps )
-					&& !PM_LockedAnim( targEnt->client->ps.legsAnim )
-					&& !PM_SuperBreakLoseAnim( targEnt->client->ps.legsAnim )
-					&& !PM_SuperBreakWinAnim( targEnt->client->ps.legsAnim )
-					&& targEnt->client->ps.saberLockTime <= 0
-					&& WP_ForceThrowable( targEnt, targEnt, pm->gent, qtrue, 1.0f, 0.0f, NULL ) )
-				{
-					if ( !g_saberNewControlScheme->integer )
-					{//in old control scheme, make sure they're close or far enough away for the move we'll be doing
-						float targDist = Distance( targEnt->currentOrigin, pm->ps->origin );
-						if ( pullAttackMove == LS_PULL_ATTACK_STAB )
-						{//must be closer than 512
-							if ( targDist > 384.0f )
-							{
-								return LS_NONE;
-							}
-						}
-						else//if ( pullAttackMove == LS_PULL_ATTACK_SWING )
-						{//must be farther than 256
-							if ( targDist > 512.0f )
-							{
-								return LS_NONE;
-							}
-							if ( targDist < 192.0f )
-							{
-								return LS_NONE;
-							}
-						}
-					}
-
-					vec3_t targAngles = {0,targEnt->client->ps.viewangles[YAW],0};
-					if ( InFront( pm->ps->origin, targEnt->currentOrigin, targAngles ) )
-					{
-						NPC_SetAnim( targEnt, SETANIM_BOTH, BOTH_PULLED_INAIR_F, SETANIM_FLAG_OVERRIDE, SETANIM_FLAG_HOLD );
-					}
-					else
-					{
-						NPC_SetAnim( targEnt, SETANIM_BOTH, BOTH_PULLED_INAIR_B, SETANIM_FLAG_OVERRIDE, SETANIM_FLAG_HOLD );
-					}
-					//hold the anim until I'm with done pull anim
-					targEnt->client->ps.legsAnimTimer = targEnt->client->ps.torsoAnimTimer = PM_AnimLength( pm->gent->client->clientInfo.animFileIndex, (animNumber_t)saberMoveData[pullAttackMove].animToUse );
-					//set pullAttackTime
-					pm->gent->client->ps.pullAttackTime = targEnt->client->ps.pullAttackTime = level.time+targEnt->client->ps.legsAnimTimer;
-					//make us know about each other
-					pm->gent->client->ps.pullAttackEntNum = g_crosshairEntNum;
-					targEnt->client->ps.pullAttackEntNum = pm->ps->clientNum;
-					//do effect and sound on me
-					pm->ps->powerups[PW_FORCE_PUSH] = level.time + 1000;
-					if ( pm->gent )
-					{
-						G_Sound( pm->gent, G_SoundIndex( "sound/weapons/force/pull.wav" ) );
-					}
-					doMove = qtrue;
-				}
-			}
-			*/
-			if ( doMove )
-			{
-				BG_ForcePowerDrain(pm->ps, FP_GRIP, SABER_ALT_ATTACK_POWER_FB );
-				return pullAttackMove;
-			}
-		}
+	if ( !(pm->ps->saberMove == LS_READY||PM_SaberInReturn(pm->ps->saberMove)||PM_SaberInReflect(pm->ps->saberMove))//ready
+		|| pm->ps->powerups[PW_DISINT_4] <= pm->cmd.serverTime
+		|| (pm->ps->fd.forcePowersActive & (1<<FP_GRIP))
+		|| pm->ps->powerups[PW_PULL] <= pm->cmd.serverTime )
+	{
+		return LS_NONE;
 	}
+
+	if ( pm->cmd.forwardmove < 0 )
+	{//pulling back
+		if ( pm->ps->fd.saberAnimLevel >= SS_FAST && pm->ps->fd.saberAnimLevel <= SS_STRONG//single saber styles
+			&& BG_EnoughForcePowerForMove( SABER_ALT_ATTACK_POWER_FB )
+			&& JP_FEATURE( JPF_SPATTACKS ) )
+		{
+			JP_SaberAttackDrain( SABER_ALT_ATTACK_POWER_FB );
+			return ( pm->ps->fd.saberAnimLevel == SS_FAST ) ? LS_PULL_ATTACK_STAB : LS_PULL_ATTACK_SWING;
+		}
+		return LS_NONE;
+	}
+
+	if ( BG_EnoughForcePowerForMove( SABER_ALT_ATTACK_POWER_FB )
+		&& JP_FEATURE( JPF_NEWDFA ) && JP_FEATURE( JPF_NEWGLAANIMS ) && pm->ps->clientNum < MAX_CLIENTS
+		&& BG_pluginVersion( pm->ps->clientNum ) >= 1.3f )
+	{
+#ifdef _GAME
+		gentity_t *self = &g_entities[pm->ps->clientNum];
+
+		if ( self->inuse && self->client && self->client->pers.connected == CON_CONNECTED && G_CheckNewStabMove( self ) )
+		{
+			JP_SaberAttackDrain( SABER_ALT_ATTACK_POWER_FB );
+		}
 #endif
+	}
 	return LS_NONE;
 }
 
@@ -2265,6 +2271,10 @@ saberMoveName_t PM_SaberAttackForMovement(saberMoveName_t curmove)
 			{//overridden with another move
 				return overrideJumpRightAttackMove;
 			}
+			else if ( JP_FEATURE( JPF_JK2REDDFA )
+				&& (pm->ps->legsAnim == BOTH_WALL_FLIP_LEFT || pm->ps->legsAnim == BOTH_WALL_FLIP_RIGHT) )
+			{// JA+ jp_jk2RedDFA: no cartwheel or butterfly out of a wall flip, a normal attack starts instead
+			}
 			else
 			{
 				vec3_t right, fwdAngles;
@@ -2326,6 +2336,10 @@ saberMoveName_t PM_SaberAttackForMovement(saberMoveName_t curmove)
 			if ( overrideJumpLeftAttackMove != LS_INVALID )
 			{//overridden with another move
 				return overrideJumpLeftAttackMove;
+			}
+			else if ( JP_FEATURE( JPF_JK2REDDFA )
+				&& (pm->ps->legsAnim == BOTH_WALL_FLIP_LEFT || pm->ps->legsAnim == BOTH_WALL_FLIP_RIGHT) )
+			{// JA+ jp_jk2RedDFA: no cartwheel or butterfly out of a wall flip, a normal attack starts instead
 			}
 			else
 			{
@@ -2394,7 +2408,7 @@ saberMoveName_t PM_SaberAttackForMovement(saberMoveName_t curmove)
 				if ( newmove != LS_A_T2B
 					&& newmove != LS_NONE )
 				{
-					BG_ForcePowerDrain(pm->ps, FP_GRIP, SABER_ALT_ATTACK_POWER_FB);
+					JP_SaberAttackDrain( SABER_ALT_ATTACK_POWER_FB );
 				}
 			}
 			else if (!noSpecials&&
@@ -2413,7 +2427,7 @@ saberMoveName_t PM_SaberAttackForMovement(saberMoveName_t curmove)
 					if ( newmove != LS_A_T2B
 						&& newmove != LS_NONE )
 					{
-						BG_ForcePowerDrain(pm->ps, FP_GRIP, SABER_ALT_ATTACK_POWER_FB);
+						JP_SaberAttackDrain( SABER_ALT_ATTACK_POWER_FB );
 					}
 				}
 			}
@@ -2425,15 +2439,19 @@ saberMoveName_t PM_SaberAttackForMovement(saberMoveName_t curmove)
 				!BG_SaberInSpecialAttack(pm->ps->torsoAnim)&&
 				BG_EnoughForcePowerForMove( SABER_ALT_ATTACK_POWER_FB ))
 			{ //DFA
-				//trace_t tr;
+				trace_t tr;
 
-				//if (PM_SomeoneInFront(&tr))
+				if ( JP_FEATURE( JPF_JK2REDDFA ) && !(JP_FEATURE( JPF_NEWDFA ) && PM_SomeoneInFront( &tr )) )
+				{ //JA+ jp_jk2RedDFA: without an enemy in front this is a plain overhead attack
+					newmove = LS_A_T2B;
+				}
+				else
 				{
 					newmove = PM_SaberJumpAttackMove();
 					if ( newmove != LS_A_T2B
 						&& newmove != LS_NONE )
 					{
-						BG_ForcePowerDrain(pm->ps, FP_GRIP, SABER_ALT_ATTACK_POWER_FB);
+						JP_SaberAttackDrain( SABER_ALT_ATTACK_POWER_FB );
 					}
 				}
 			}
@@ -2448,7 +2466,7 @@ saberMoveName_t PM_SaberAttackForMovement(saberMoveName_t curmove)
 				if ( newmove != LS_A_T2B
 					&& newmove != LS_NONE )
 				{
-					BG_ForcePowerDrain(pm->ps, FP_GRIP, SABER_ALT_ATTACK_POWER_FB);
+					JP_SaberAttackDrain( SABER_ALT_ATTACK_POWER_FB );
 				}
 			}
 			else if ( !noSpecials )
@@ -2458,7 +2476,7 @@ saberMoveName_t PM_SaberAttackForMovement(saberMoveName_t curmove)
 					&& BG_EnoughForcePowerForMove(SABER_ALT_ATTACK_POWER_FB) )
 				{
 					newmove = stabDownMove;
-					BG_ForcePowerDrain(pm->ps, FP_GRIP, SABER_ALT_ATTACK_POWER_FB);
+					JP_SaberAttackDrain( SABER_ALT_ATTACK_POWER_FB );
 				}
 				else
 				{
@@ -2562,6 +2580,16 @@ int PM_KickMoveForConditions(void)
 {
 	int kickMove = -1;
 
+	// JA+: forward + sideways kicks, only with the new animations
+	if ( JP_FEATURE( JPF_NEWDFA ) && JP_FEATURE( JPF_NEWGLAANIMS ) && BG_pluginVersion( pm->ps->clientNum ) >= 1.3f
+		&& pm->cmd.forwardmove > 0 && pm->cmd.rightmove != 0 )
+	{
+		kickMove = (pm->cmd.rightmove > 0) ? LS_STF_NEWANIM_BACKKICK_FWD : LS_STF_NEWANIM_SPINKICK_FWD;
+		pm->cmd.forwardmove = 0;
+		pm->cmd.rightmove = 0;
+		return kickMove;
+	}
+
 	//FIXME: only if FP_SABER_OFFENSE >= 3
 	if ( pm->cmd.rightmove )
 	{//kick to side
@@ -2579,14 +2607,13 @@ int PM_KickMoveForConditions(void)
 	{//kick front/back
 		if ( pm->cmd.forwardmove > 0 )
 		{//kick fwd
-			/*
-			if (pm->ps->groundEntityNum != ENTITYNUM_NONE &&
-				PM_CheckEnemyPresence( DIR_FRONT, 64.0f ))
+			// JA+ (jp_allowSPattacks): hilt bash if an enemy is right in front
+			if ( JP_FEATURE( JPF_SPATTACKS ) && pm->ps->groundEntityNum != ENTITYNUM_NONE
+				&& PM_CheckEnemyPresence( DIR_FRONT, 64.0f ) )
 			{
 				kickMove = LS_HILT_BASH;
 			}
 			else
-			*/
 			{
 				kickMove = LS_KICK_F;
 			}
@@ -2598,34 +2625,31 @@ int PM_KickMoveForConditions(void)
 		pm->cmd.forwardmove = 0;
 	}
 	else
-	{
-		//if (pm->cmd.buttons & BUTTON_ATTACK)
-		//if (pm->ps->pm_flags & PMF_JUMP_HELD)
-		if (0)
-		{ //ok, let's try some fancy kicks
-			//qboolean is actually of type int anyway, but just for safeness.
-			int front = (int)PM_CheckEnemyPresence( DIR_FRONT, 100.0f );
-			int back = (int)PM_CheckEnemyPresence( DIR_BACK, 100.0f );
-			int right = (int)PM_CheckEnemyPresence( DIR_RIGHT, 100.0f );
-			int left = (int)PM_CheckEnemyPresence( DIR_LEFT, 100.0f );
-			int numEnemy = front+back+right+left;
+	{ //no direction: kick depending on the enemies around
+		int front = (int)PM_CheckEnemyPresence( DIR_FRONT, 100.0f );
+		int back = (int)PM_CheckEnemyPresence( DIR_BACK, 100.0f );
+		int right = (int)PM_CheckEnemyPresence( DIR_RIGHT, 100.0f );
+		int left = (int)PM_CheckEnemyPresence( DIR_LEFT, 100.0f );
+		int numEnemy = front+back+right+left;
 
-			if (numEnemy >= 3 ||
-				((!right || !left) && numEnemy >= 2))
-			{ //> 2 enemies near, or, >= 2 enemies near and they are not to the right and left.
-                kickMove = LS_KICK_S;
-			}
-			else if (right && left)
-			{ //enemies on both sides
-				kickMove = LS_KICK_RL;
-			}
-			else
-			{ //oh well, just do a forward kick
-				kickMove = LS_KICK_F;
-			}
-
-			pm->cmd.upmove = 0;
+		if ( JP_FEATURE( JPF_SPATTACKS ) && front && back )
+		{ //enemies in front and behind
+			kickMove = LS_KICK_BF;
 		}
+		else if ( JP_FEATURE( JPF_SPATTACKS ) && right && left )
+		{ //enemies on both sides
+			kickMove = LS_KICK_RL;
+		}
+		else if ( JP_FEATURE( JPF_SPATTACKS ) && (numEnemy > 2 || ((!right || !left) && numEnemy > 1)) )
+		{ //> 2 enemies near, or, >= 2 enemies near and they are not to the right and left.
+			kickMove = LS_KICK_S;
+		}
+		else
+		{ //oh well, just do a forward kick
+			kickMove = LS_KICK_F;
+		}
+
+		pm->cmd.upmove = 0;
 	}
 
 	return kickMove;
@@ -2649,8 +2673,8 @@ qboolean PM_SaberMoveOkayForKata( void )
 
 qboolean PM_CanDoKata( void )
 {
-	if ( PM_InSecondaryStyle() )
-	{
+	if ( PM_InSecondaryStyle() || JP_FEATURE( JPF_NOKATA ) )
+	{ // JA+ jp_noKATA
 		return qfalse;
 	}
 
@@ -2774,6 +2798,104 @@ qboolean PM_SwimmingAnim( int anim );
 int PM_SaberBounceForAttack( int move );
 qboolean BG_SuperBreakLoseAnim( int anim );
 qboolean BG_SuperBreakWinAnim( int anim );
+/*
+==============
+PM_JPNewSaberAttack
+
+JA+ (jp_allowNewDFA, needs the new GLA animations): jump + alt attack + forward starts one of
+three new moves. Returns qtrue if one was started. The checks run in the order of the original,
+so the "no force" event comes even when the moves are turned off.
+==============
+*/
+static qboolean PM_JPNewAttackReady( int cost )
+{
+	if ( pm->ps->groundEntityNum == ENTITYNUM_NONE && PM_GroundDistance() > 40.0f )
+		return qfalse;
+	if ( pm->ps->velocity[2] < 0.0f )
+		return qfalse;
+	if ( pm->cmd.upmove <= 0 && !(pm->ps->pm_flags & PMF_JUMP_HELD) )
+		return qfalse;
+	if ( BG_InSpecialJump( pm->ps->legsAnim ) || BG_SaberInAttack( pm->ps->saberMove ) || BG_SaberInTransitionAny( pm->ps->saberMove ) )
+		return qfalse;
+	if ( pm->ps->fd.forcePower < cost )
+	{
+		PM_AddEvent( EV_NOAMMO );
+		return qfalse;
+	}
+	if ( BG_KickingAnim( pm->ps->torsoAnim ) || BG_KickingAnim( pm->ps->legsAnim ) || BG_InRoll( pm->ps, pm->ps->legsAnim ) )
+		return qfalse;
+	if ( (pm->ps->pm_flags & PMF_DUCKED) || pm->ps->saberInFlight )
+		return qfalse;
+	if ( !JP_FEATURE( JPF_NEWDFA ) || !JP_FEATURE( JPF_NEWGLAANIMS ) )
+		return qfalse;
+	if ( BG_pluginVersion( pm->ps->clientNum ) < 1.3f || BG_pluginDisable( pm->ps->clientNum, 12 ) )
+		return qfalse;
+	return qtrue;
+}
+
+static void PM_JPNewAttackJump( float forward, float up )
+{
+	vec3_t yawAngles = { 0.0f, 0.0f, 0.0f }, fwd;
+
+	yawAngles[YAW] = pm->ps->viewangles[YAW];
+	AngleVectors( yawAngles, fwd, NULL, NULL );
+	VectorScale( fwd, forward, pm->ps->velocity );
+	pm->ps->velocity[2] = up;
+	PM_SetForceJumpZStart( pm->ps->origin[2] );
+	PM_AddEvent( EV_JUMP );
+	pm->ps->fd.forceJumpSound = 1;
+}
+
+static qboolean PM_JPNewSaberAttack( void )
+{
+	const int level = pm->ps->fd.saberAnimLevel, base = pm->ps->fd.saberAnimLevelBase;
+	const qboolean forward = pm->cmd.forwardmove > 0;
+	vec3_t dist;
+	trace_t tr;
+
+	if ( !(pm->cmd.buttons & BUTTON_ALT_ATTACK) )
+		return qfalse;
+
+	// red stance: flip and stab down
+	if ( forward && base != SS_DUAL && base != SS_STAFF && level == SS_STRONG && PM_JPNewAttackReady( 25 ) )
+	{
+		JP_SaberAttackDrain( 25 );
+		pm->ps->velocity[2] = -150.0f;
+		pm->cmd.upmove = 0;
+		PM_SetSaberMove( LS_NEWANIM_FLIPSABERSTAB );
+		return qtrue;
+	}
+
+	// staff, or dual sabers used as one saber: jump back kick with a spin
+	if ( forward && ((base == SS_DUAL && level != SS_DUAL) || (base != SS_DUAL && level == SS_STAFF)) && PM_JPNewAttackReady( 25 ) )
+	{
+		JP_SaberAttackDrain( 25 );
+		PM_JPNewAttackJump( 150.0f, 280.0f );
+		pm->cmd.upmove = 0;
+		PM_SetSaberMove( LS_NEWANIM_JUMPBACKKICK_SPIN );
+		return qtrue;
+	}
+
+	// medium stance or dual sabers: the combo kick, needs somebody right in front (the distance limit came with plugin 1.4)
+	if ( !PM_SomeoneInFront( &tr ) )
+		return qfalse;
+	VectorSubtract( tr.endpos, pm->ps->origin, dist );
+	if ( VectorLength( dist ) > 62.0f && BG_pluginVersion( pm->ps->clientNum ) > 1.3f )
+		return qfalse;
+	if ( forward && ((level == SS_MEDIUM && base != SS_STAFF) || (base == SS_DUAL && level == SS_DUAL)) && PM_JPNewAttackReady( 30 ) )
+	{
+		PM_JPNewAttackJump( 75.0f, 140.0f );
+		JP_SaberAttackDrain( 30 );
+		pm->cmd.upmove = 0;
+		PM_SetSaberMove( LS_NEWANIM_JUMPBACKKICK_FLIP );
+#ifdef _GAME
+		JP_FlipKickStun( pm->ps->clientNum );
+#endif
+		return qtrue;
+	}
+	return qfalse;
+}
+
 void PM_WeaponLightsaber(void)
 {
 	int			addTime;
@@ -2808,7 +2930,7 @@ void PM_WeaponLightsaber(void)
 							PM_AddEvent(EV_SABER_UNHOLSTER);
 						}
 						PM_SetSaberMove( LS_ROLL_STAB );
-						BG_ForcePowerDrain(pm->ps, FP_GRIP, SABER_ALT_ATTACK_POWER_FB);
+						JP_SaberAttackDrain( SABER_ALT_ATTACK_POWER_FB );
 					}
 				}
 			}
@@ -2965,6 +3087,11 @@ void PM_WeaponLightsaber(void)
 		pm->cmd.buttons &= ~BUTTON_ALT_ATTACK;
 	}
 
+	if ( PM_JPNewSaberAttack() )
+	{ //JA+ new jump attacks (jump + forward + alt attack), checked before the kick and the saber throw like in the original
+		return;
+	}
+
 	if ( (pm->cmd.buttons & BUTTON_ALT_ATTACK) )
 	{ //might as well just check for a saber throw right here
 		if (pm->ps->fd.saberAnimLevel == SS_STAFF)
@@ -2996,7 +3123,13 @@ void PM_WeaponLightsaber(void)
 				!BG_HasYsalamiri(pm->gametype, pm->ps) &&
 				BG_CanUseFPNow(pm->gametype, pm->ps, pm->cmd.serverTime, FP_SABERTHROW) &&
 				pm->ps->fd.forcePowerLevel[FP_SABERTHROW] > 0 &&
-				PM_SaberPowerCheck() )
+				PM_SaberPowerCheck()
+#ifdef _GAME
+				// JA+ (BG_isGhosted): a ghost does not throw his saber
+				&& !(pm->ps->clientNum >= 0 && pm->ps->clientNum < level.maxclients && JP_IsConnectedClient( &g_entities[pm->ps->clientNum] )
+					&& g_entities[pm->ps->clientNum].client->pers.jp.isGhost)
+#endif
+				)
 		{
 			trace_t sabTr;
 			vec3_t	fwd, minFwd, sabMins, sabMaxs;
@@ -3342,13 +3475,15 @@ weapChecks:
 			}
 			pm->ps->weaponstate = WEAPON_FIRING;
 			//G_DrainPowerForSpecialMove( pm->gent, FP_SABER_OFFENSE, SABER_ALT_ATTACK_POWER );//FP_SPEED, SINGLE_SPECIAL_POWER );
-			BG_ForcePowerDrain(pm->ps, FP_GRIP, SABER_ALT_ATTACK_POWER);
+			if ( JP_NO_FORCE_DRAIN < 2 )
+				BG_ForcePowerDrain(pm->ps, FP_GRIP, SABER_ALT_ATTACK_POWER);
 		}
 		else if ( overrideMove != LS_NONE )
 		{
 			PM_SetSaberMove( overrideMove );
 			pm->ps->weaponstate = WEAPON_FIRING;
-			BG_ForcePowerDrain(pm->ps, FP_GRIP, SABER_ALT_ATTACK_POWER);
+			if ( JP_NO_FORCE_DRAIN < 2 )
+				BG_ForcePowerDrain(pm->ps, FP_GRIP, SABER_ALT_ATTACK_POWER);
 		}
 		if ( overrideMove != LS_NONE )
 		{//not cancelled
@@ -3738,6 +3873,16 @@ weapChecks:
 	pm->ps->weaponTime = addTime;
 }
 
+/*
+JA+: the player sees the new draw and holster animations (new GLA animations on, plugin 1.3,
+"holsteredSaberBolted" not turned off in cp_pluginDisable)
+*/
+qboolean PM_JPBackSaberAnims( void )
+{
+	return pm->ps->clientNum < MAX_CLIENTS && JP_FEATURE( JPF_NEWGLAANIMS )
+		&& BG_pluginVersion( pm->ps->clientNum ) >= 1.3f && !BG_pluginDisable( pm->ps->clientNum, 9 );
+}
+
 void PM_SetSaberMove(short newMove)
 {
 	unsigned int setflags = saberMoveData[newMove].animSetFlags;
@@ -3774,11 +3919,23 @@ void PM_SetSaberMove(short newMove)
 		}
 		else if ( pm->ps->fd.saberAnimLevel == SS_STAFF )
 		{
-			anim = BOTH_S1_S7;
+			anim = PM_JPBackSaberAnims() ? BOTH_S1_S7_NEW : BOTH_S1_S7;
 		}
 		else if ( pm->ps->fd.saberAnimLevel == SS_DUAL )
 		{
 			anim = BOTH_S1_S6;
+			if ( PM_JPBackSaberAnims() && saber1 && saber2 )
+			{ // JA+: sabers carried on the back (idleInBack) are drawn from there
+				const qboolean back1 = (saber1->saberFlags2 & SFL2_IDLE_IN_BACK) != 0, back2 = (saber2->saberFlags2 & SFL2_IDLE_IN_BACK) != 0;
+
+				if ( back1 && back2 )		anim = BOTH_S1_S6_2ARMS;
+				else if ( back1 )			anim = BOTH_STAND1TO2_NEW;
+				else if ( back2 )			anim = BOTH_S1_S6_LARM;
+			}
+		}
+		else if ( PM_JPBackSaberAnims() && saber1 && (saber1->saberFlags2 & SFL2_IDLE_IN_BACK) )
+		{
+			anim = BOTH_STAND1TO2_NEW;
 		}
 	}
 	else if ( newMove == LS_PUTAWAY )
@@ -3933,6 +4090,9 @@ void PM_SetSaberMove(short newMove)
 				|| newMove == LS_UPSIDE_DOWN_ATTACK
 				|| newMove == LS_PULL_ATTACK_STAB
 				|| newMove == LS_PULL_ATTACK_SWING
+				|| newMove == LS_SPINATTACK_ALORA	// JA+
+				|| newMove == LS_BUTTERFLY_LEFT		// JA+
+				|| newMove == LS_JAPLUS_SPINATTACK	// JA+
 				|| BG_KickMove( newMove ) )
 		{
 			parts = SETANIM_BOTH;

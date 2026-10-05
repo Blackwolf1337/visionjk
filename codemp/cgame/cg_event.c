@@ -141,6 +141,7 @@ static void CG_Obituary( entityState_t *ent ) {
 		trap->Error( ERR_DROP, "CG_Obituary: target out of range" );
 	}
 	ci = &cgs.clientinfo[target];
+	CG_JPReplyObituary( target );
 
 	if ( attacker < 0 || attacker >= MAX_CLIENTS ) {
 		attacker = ENTITYNUM_WORLD;
@@ -174,6 +175,19 @@ static void CG_Obituary( entityState_t *ent ) {
 	default:
 		message = NULL;
 		break;
+	}
+
+	if ( cp_pluginDisable.integer & (1 << 6) )
+	{ // JA+ Plugin_No_NewDeathMessage turned off: the specific environment messages
+		switch ( mod )
+		{
+		case MOD_WATER:		message = "DIED_WATER";		break;
+		case MOD_SLIME:		message = "DIED_SLIME";		break;
+		case MOD_LAVA:		message = "DIED_LAVA";		break;
+		case MOD_CRUSH:		message = "DIED_CRUSH";		break;
+		case MOD_FALLING:	message = "DIED_FALLING";	break;
+		default:			break;
+		}
 	}
 
 	// Attacker killed themselves.  Ridicule them for it.
@@ -1540,6 +1554,7 @@ void CG_EntityEvent( centity_t *cent, vec3_t position ) {
 		{ //starting the duel
 			if (es->eventParm == 2)
 			{
+				CG_JPReplyDuelEvent( qtrue );
 				CG_CenterPrint( CG_GetStringEdString("MP_SVGAME", "BEGIN_DUEL"), 120, GIANTCHAR_WIDTH*2 );
 				trap->S_StartLocalSound( cgs.media.countFightSound, CHAN_ANNOUNCER );
 			}
@@ -1550,7 +1565,9 @@ void CG_EntityEvent( centity_t *cent, vec3_t position ) {
 		}
 		else
 		{ //ending the duel
+			CG_JPReplyDuelEvent( qfalse );
 			CG_StartMusic(qtrue);
+			CG_JPDuelEnded();
 		}
 		break;
 

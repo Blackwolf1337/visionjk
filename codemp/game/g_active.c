@@ -686,7 +686,7 @@ void G_MoverTouchPushTriggers( gentity_t *ent, vec3_t oldOrg )
 }
 
 static void SV_PMTrace( trace_t *results, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int passEntityNum, int contentMask ) {
-	trap->Trace( results, start, mins, maxs, end, passEntityNum, contentMask, qfalse, 0, 10 );
+	JP_Trace( results, start, mins, maxs, end, passEntityNum, contentMask, qfalse, 0, 10 );
 }
 
 /*
@@ -717,6 +717,8 @@ void SpectatorThink( gentity_t *ent, usercmd_t *ucmd ) {
 		pmove.ps = &client->ps;
 		pmove.cmd = *ucmd;
 		pmove.tracemask = MASK_PLAYERSOLID & ~CONTENTS_BODY;	// spectators can fly through bodies
+		if ( client->pers.jp.blockEditor )
+			pmove.tracemask = 0;	// JA+: the editor of the blocking walls flies through everything
 		pmove.trace = SV_PMTrace;
 		pmove.pointcontents = trap->PointContents;
 
@@ -770,23 +772,19 @@ Returns qfalse if the client is dropped
 =================
 */
 qboolean ClientInactivityTimer( gclient_t *client ) {
-	if ( ! g_inactivity.integer ) {
-		// give everyone some time, so if the operator sets g_inactivity during
-		// gameplay, everyone isn't kicked
-		client->inactivityTime = level.time + 60 * 1000;
+	// JA+: inactivityTime is the time of the last input, other code (amAltDim) reads it too
+	if ( client->pers.cmd.forwardmove || client->pers.cmd.rightmove || client->pers.cmd.upmove
+		|| (client->pers.cmd.buttons & (BUTTON_ATTACK|BUTTON_ALT_ATTACK)) ) {
 		client->inactivityWarning = qfalse;
-	} else if ( client->pers.cmd.forwardmove ||
-		client->pers.cmd.rightmove ||
-		client->pers.cmd.upmove ||
-		(client->pers.cmd.buttons & (BUTTON_ATTACK|BUTTON_ALT_ATTACK)) ) {
-		client->inactivityTime = level.time + g_inactivity.integer * 1000;
-		client->inactivityWarning = qfalse;
-	} else if ( !client->pers.localClient ) {
-		if ( level.time > client->inactivityTime ) {
+		client->inactivityTime = level.time;
+	} else if ( g_inactivity.integer && !client->pers.localClient ) {
+		const int idle = level.time - client->inactivityTime;
+
+		if ( idle > g_inactivity.integer * 1000 ) {
 			trap->DropClient( client - level.clients, "Dropped due to inactivity" );
 			return qfalse;
 		}
-		if ( level.time > client->inactivityTime - 10000 && !client->inactivityWarning ) {
+		if ( idle > g_inactivity.integer * 1000 - 10000 && !client->inactivityWarning ) {
 			client->inactivityWarning = qtrue;
 			trap->SendServerCommand( client - level.clients, "cp \"Ten seconds until inactivity drop!\n\"" );
 		}
@@ -820,6 +818,8 @@ void ClientTimerActions( gentity_t *ent, int msec ) {
 		if ( client->ps.stats[STAT_ARMOR] > client->ps.stats[STAT_MAX_HEALTH] ) {
 			client->ps.stats[STAT_ARMOR]--;
 		}
+
+		JP_ClientSecondActions( ent );
 	}
 }
 
@@ -906,12 +906,14 @@ void G_CheapWeaponFire(int entNum, int ev)
 			ent->client->dangerTime = level.time;
 			ent->client->ps.eFlags &= ~EF_INVULNERABLE;
 			ent->client->invulnerableTimer = 0;
+			ent->client->pers.jp.protectedByAdmin = qfalse; // JA+: attacking ends amprotect
 			break;
 		case EV_ALT_FIRE:
 			FireWeapon( ent, qtrue );
 			ent->client->dangerTime = level.time;
 			ent->client->ps.eFlags &= ~EF_INVULNERABLE;
 			ent->client->invulnerableTimer = 0;
+			ent->client->pers.jp.protectedByAdmin = qfalse; // JA+: attacking ends amprotect
 			break;
 	}
 }
@@ -1015,6 +1017,7 @@ void ClientEvents( gentity_t *ent, int oldEventSequence ) {
 			ent->client->dangerTime = level.time;
 			ent->client->ps.eFlags &= ~EF_INVULNERABLE;
 			ent->client->invulnerableTimer = 0;
+			ent->client->pers.jp.protectedByAdmin = qfalse; // JA+: attacking ends amprotect
 			break;
 
 		case EV_ALT_FIRE:
@@ -1022,12 +1025,14 @@ void ClientEvents( gentity_t *ent, int oldEventSequence ) {
 			ent->client->dangerTime = level.time;
 			ent->client->ps.eFlags &= ~EF_INVULNERABLE;
 			ent->client->invulnerableTimer = 0;
+			ent->client->pers.jp.protectedByAdmin = qfalse; // JA+: attacking ends amprotect
 			break;
 
 		case EV_SABER_ATTACK:
 			ent->client->dangerTime = level.time;
 			ent->client->ps.eFlags &= ~EF_INVULNERABLE;
 			ent->client->invulnerableTimer = 0;
+			ent->client->pers.jp.protectedByAdmin = qfalse; // JA+: attacking ends amprotect
 			break;
 
 		//rww - Note that these must be in the same order (ITEM#-wise) as they are in holdable_t
@@ -2054,6 +2059,8 @@ void ClientThink_real( gentity_t *ent ) {
 		}
 	}
 
+	JP_ClanTagThink( ent );
+
 	// spectators don't do much
 	if ( client->sess.sessionTeam == TEAM_SPECTATOR || client->tempSpectate >= level.time ) {
 		if ( client->sess.spectatorState == SPECTATOR_SCOREBOARD ) {
@@ -2064,8 +2071,8 @@ void ClientThink_real( gentity_t *ent ) {
 	}
 
 	if (ent && ent->client && (ent->client->ps.eFlags & EF_INVULNERABLE))
-	{
-		if (ent->client->invulnerableTimer <= level.time)
+	{ // JA+: stays on while the admin protection or the inactivity protection is active
+		if (ent->client->invulnerableTimer <= level.time && !ent->client->pers.jp.protectedByAdmin)
 		{
 			ent->client->ps.eFlags &= ~EF_INVULNERABLE;
 		}
@@ -2077,6 +2084,7 @@ void ClientThink_real( gentity_t *ent ) {
 		if ( !ClientInactivityTimer( client ) ) {
 			return;
 		}
+		JP_InactivityProtect( ent );
 	}
 
 	//Check if we should have a fullbody push effect around the player
@@ -2084,8 +2092,8 @@ void ClientThink_real( gentity_t *ent ) {
 	{
 		client->ps.eFlags |= EF_BODYPUSH;
 	}
-	else if (client->pushEffectTime)
-	{
+	else if (client->pushEffectTime && !client->pers.jp.empowered)
+	{ // JA+: an empowered player keeps the effect, it is his glow
 		client->pushEffectTime = 0;
 		client->ps.eFlags &= ~EF_BODYPUSH;
 	}
@@ -2364,7 +2372,7 @@ void ClientThink_real( gentity_t *ent ) {
 
 		if (client->bodyGrabIndex != ENTITYNUM_NONE)
 		{ //can't go nearly as fast when dragging a body around
-			client->ps.speed *= 0.2f;
+			client->ps.speed = (int)((long double)client->ps.speed * 0.2f);
 		}
 
 		client->ps.basespeed = client->ps.speed;
@@ -2409,7 +2417,7 @@ void ClientThink_real( gentity_t *ent ) {
 		//Keep the time updated, so once this duel ends this player can't engage in a duel for another
 		//10 seconds. This will give other people a chance to engage in duels in case this player wants
 		//to engage again right after he's done fighting and someone else is waiting.
-		ent->client->ps.fd.privateDuelTime = level.time + 10000;
+		ent->client->ps.fd.privateDuelTime = level.time + 2000;	// JA+: shorter pause between duels
 
 		if (ent->client->ps.duelTime < level.time)
 		{
@@ -2417,18 +2425,7 @@ void ClientThink_real( gentity_t *ent ) {
 			if (ent->client->ps.weapon == WP_SABER
 				&& ent->client->ps.saberHolstered
 				&& ent->client->ps.duelTime )
-			{
-				ent->client->ps.saberHolstered = 0;
-
-				if (ent->client->saber[0].soundOn)
-				{
-					G_Sound(ent, CHAN_AUTO, ent->client->saber[0].soundOn);
-				}
-				if (ent->client->saber[1].soundOn)
-				{
-					G_Sound(ent, CHAN_AUTO, ent->client->saber[1].soundOn);
-				}
-
+			{ // JA+: the sabers stay off, the duelists ignite them themselves
 				G_AddEvent(ent, EV_PRIVATE_DUEL, 2);
 
 				ent->client->ps.duelTime = 0;
@@ -2441,17 +2438,6 @@ void ClientThink_real( gentity_t *ent ) {
 				&& duelAgainst->client->ps.saberHolstered
 				&& duelAgainst->client->ps.duelTime)
 			{
-				duelAgainst->client->ps.saberHolstered = 0;
-
-				if (duelAgainst->client->saber[0].soundOn)
-				{
-					G_Sound(duelAgainst, CHAN_AUTO, duelAgainst->client->saber[0].soundOn);
-				}
-				if (duelAgainst->client->saber[1].soundOn)
-				{
-					G_Sound(duelAgainst, CHAN_AUTO, duelAgainst->client->saber[1].soundOn);
-				}
-
 				G_AddEvent(duelAgainst, EV_PRIVATE_DUEL, 2);
 
 				duelAgainst->client->ps.duelTime = 0;
@@ -2470,19 +2456,53 @@ void ClientThink_real( gentity_t *ent ) {
 			duelAgainst->client->ps.duelIndex != ent->s.number)
 		{
 			ent->client->ps.duelInProgress = 0;
+			ent->client->pers.jp.fullForceDuel = qfalse;
 			G_AddEvent(ent, EV_PRIVATE_DUEL, 0);
+			if ( jp_DuelAlpha.integer >= 0 )
+				ent->client->pers.jp.duelEndTime = level.time + 3000;
 		}
 		else if (duelAgainst->health < 1 || duelAgainst->client->ps.stats[STAT_HEALTH] < 1)
 		{
+			const qboolean fullForce = ent->client->pers.jp.fullForceDuel;
+
 			ent->client->ps.duelInProgress = 0;
 			duelAgainst->client->ps.duelInProgress = 0;
+			ent->client->pers.jp.fullForceDuel = qfalse;
+			duelAgainst->client->pers.jp.fullForceDuel = qfalse;
 
 			G_AddEvent(ent, EV_PRIVATE_DUEL, 0);
 			G_AddEvent(duelAgainst, EV_PRIVATE_DUEL, 0);
 
-			//Winner gets full health.. providing he's still alive
+			//Private duel announcements are now made globally because we only want one duel at a time.
 			if (ent->health > 0 && ent->client->ps.stats[STAT_HEALTH] > 0)
 			{
+				// JA+: announcement with the health and armor left, see jp_endDuelBroadcastMSG (0: no announcement)
+				const char *winner = G_GetStringEdString("MP_SVGAME", "PLDUELWINNER");
+				const char *left = va( "%s %s %s! ==>  ^5%i ^7Health ^5%i ^7Armor left for winner", ent->client->pers.netname, winner, duelAgainst->client->pers.netname,
+					ent->client->ps.stats[STAT_HEALTH], ent->client->ps.stats[STAT_ARMOR] );
+
+				if ( jp_DuelAlpha.integer >= 0 )
+					ent->client->pers.jp.duelEndTime = level.time + 3000;
+
+				if ( jp_endDuelBroadcastMSG.integer > 0 )
+				{
+					const char *centerMsg = va( "cp \"%s %s %s!\n^5%i ^7Health ^5%i ^7Armor\"", ent->client->pers.netname, winner, duelAgainst->client->pers.netname,
+						ent->client->ps.stats[STAT_HEALTH], ent->client->ps.stats[STAT_ARMOR] );
+
+					trap->SendServerCommand( ent-g_entities, centerMsg );
+					trap->SendServerCommand( duelAgainst-g_entities, centerMsg );
+					if ( jp_endDuelBroadcastMSG.integer == 1 )
+						trap->SendServerCommand( -1, va( "print \"%s\n\"", left ) );
+					else
+					{
+						trap->SendServerCommand( ent-g_entities, va( "print \"%s\n\"", left ) );
+						trap->SendServerCommand( duelAgainst-g_entities, va( "print \"%s\n\"", left ) );
+					}
+				}
+
+				G_LogPrintf( "%sDUEL END: %s\n", fullForce ? "FULL FORCE " : "", left );
+
+				//Winner gets full health.. providing he's still alive
 				if (ent->health < ent->client->ps.stats[STAT_MAX_HEALTH])
 				{
 					ent->client->ps.stats[STAT_HEALTH] = ent->health = ent->client->ps.stats[STAT_MAX_HEALTH];
@@ -2493,16 +2513,7 @@ void ClientThink_real( gentity_t *ent ) {
 					ent->client->ps.eFlags |= EF_INVULNERABLE;
 					ent->client->invulnerableTimer = level.time + g_spawnInvulnerability.integer;
 				}
-			}
-
-			/*
-			trap->SendServerCommand( ent-g_entities, va("print \"%s %s\n\"", ent->client->pers.netname, G_GetStringEdString("MP_SVGAME", "PLDUELWINNER")) );
-			trap->SendServerCommand( duelAgainst-g_entities, va("print \"%s %s\n\"", ent->client->pers.netname, G_GetStringEdString("MP_SVGAME", "PLDUELWINNER")) );
-			*/
-			//Private duel announcements are now made globally because we only want one duel at a time.
-			if (ent->health > 0 && ent->client->ps.stats[STAT_HEALTH] > 0)
-			{
-				trap->SendServerCommand( -1, va("cp \"%s %s %s!\n\"", ent->client->pers.netname, G_GetStringEdString("MP_SVGAME", "PLDUELWINNER"), duelAgainst->client->pers.netname) );
+				ent->client->ps.stats[STAT_ARMOR] = 25;
 			}
 			else
 			{ //it was a draw, because we both managed to die in the same frame
@@ -2517,10 +2528,14 @@ void ClientThink_real( gentity_t *ent ) {
 			VectorSubtract(ent->client->ps.origin, duelAgainst->client->ps.origin, vSub);
 			subLen = VectorLength(vSub);
 
-			if (subLen >= 1024)
+			if (subLen >= 1024 && !jp_removeDistanceDuelLimit.integer)
 			{
 				ent->client->ps.duelInProgress = 0;
 				duelAgainst->client->ps.duelInProgress = 0;
+				ent->client->pers.jp.fullForceDuel = qfalse;
+				duelAgainst->client->pers.jp.fullForceDuel = qfalse;
+				if ( jp_DuelAlpha.integer >= 0 )
+					ent->client->pers.jp.duelEndTime = duelAgainst->client->pers.jp.duelEndTime = level.time + 3000;
 
 				G_AddEvent(ent, EV_PRIVATE_DUEL, 0);
 				G_AddEvent(duelAgainst, EV_PRIVATE_DUEL, 0);
@@ -2820,11 +2835,18 @@ void ClientThink_real( gentity_t *ent ) {
 
 	pmove.ps = &client->ps;
 	pmove.cmd = *ucmd;
+	client->ps.eFlags &= ~EF_PASS_PLAYERS;
 	if ( pmove.ps->pm_type == PM_DEAD ) {
 		pmove.tracemask = MASK_PLAYERSOLID & ~CONTENTS_BODY;
 	}
 	else if ( ent->r.svFlags & SVF_BOT ) {
 		pmove.tracemask = MASK_PLAYERSOLID | CONTENTS_MONSTERCLIP;
+	}
+	else if ( client->pers.connected == CON_CONNECTED && (client->pers.jp.isGhost || client->pers.jp.duelEndTime > level.time) ) {
+		// JA+: ghosts, and for 3 seconds the players of a duel that just ended, walk through players and player clips.
+		// (The flag is not in the original: the client of the port predicts the move with it, see cg_predict.c.)
+		pmove.tracemask = CONTENTS_SOLID | CONTENTS_TERRAIN;
+		client->ps.eFlags |= EF_PASS_PLAYERS;
 	}
 	else {
 		pmove.tracemask = MASK_PLAYERSOLID;
@@ -3049,6 +3071,11 @@ void ClientThink_real( gentity_t *ent ) {
 #endif
 	}
 
+	// JA+: players in other dimensions / other duels do not block this player
+	if ( ((level.gametype == GT_TEAM || level.gametype == GT_FFA) && jp_DuelAlpha.integer >= 0) || (level.gametype == GT_FFA && jp_altDim.integer) )
+		G_TempUnlink( ent->s.number );
+	if ( ent->s.eType != ET_NPC )
+		JP_KissSlap( ent, &pmove.cmd );
 	Pmove (&pmove);
 
 	if (ent->client->solidHack)
@@ -3345,6 +3372,11 @@ void ClientThink_real( gentity_t *ent ) {
 	// use the snapped origin for linking so it matches client predicted versions
 	VectorCopy( ent->s.pos.trBase, ent->r.currentOrigin );
 
+	// JA+: the grappling hook, at the new place of the player. The original reads the buttons of the
+	// command Pmove worked on (walking is cleared there when running, everything when stiffened up)
+	JP_HookClientThink( ent, &pmove.cmd );
+	JP_BurnThink( ent );
+
 	if (ent->s.eType != ET_NPC ||
 		ent->s.NPC_class != CLASS_VEHICLE ||
 		!ent->m_pVehicle ||
@@ -3403,7 +3435,9 @@ void ClientThink_real( gentity_t *ent ) {
 	{
 		gentity_t *faceKicked = &g_entities[client->ps.forceKickFlip-1];
 
-		if (faceKicked && faceKicked->client && (!OnSameTeam(ent, faceKicked) || g_friendlyFire.integer) &&
+		if (faceKicked && faceKicked->client && G_canInterferWith( ent->s.number, faceKicked->s.number )
+			&& !faceKicked->client->pers.jp.protectedByAdmin && !faceKicked->client->pers.jp.isGhost
+			&& (!OnSameTeam(ent, faceKicked) || g_friendlyFire.integer) &&
 			(!faceKicked->client->ps.duelInProgress || faceKicked->client->ps.duelIndex == ent->s.number) &&
 			(!ent->client->ps.duelInProgress || ent->client->ps.duelIndex == faceKicked->s.number))
 		{
@@ -3413,6 +3447,9 @@ void ClientThink_real( gentity_t *ent ) {
 				int strength = (int)VectorNormalize2( client->ps.velocity, oppDir );
 
 				strength *= 0.05;
+				if ( jp_allowModelScale.integer == 1 && jp_allowDmgSpeedScale.integer == 1 )
+					strength = (int)(strength * BG_scaleModelFactor( ent->s.number ));
+				strength = (int)(strength * jp_flipkickScaleDMG.value);	// JA+
 
 				VectorScale( oppDir, -1, oppDir );
 

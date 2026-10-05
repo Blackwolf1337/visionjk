@@ -229,6 +229,49 @@ CG_ClipMoveToEntities
 extern void BG_VehicleAdjustBBoxForOrientation( Vehicle_t *veh, vec3_t origin, vec3_t mins, vec3_t maxs,
 										int clientNum, int tracemask,
 										void (*localTrace)(trace_t *results, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int passEntityNum, int contentMask)); // bg_pmove.c
+/*
+====================
+CG_JPNonInterference
+
+JA+ client plugin: the server lets a player walk through players who are in a private duel with somebody
+else (jp_DuelAlpha >= 0) and through players of the other dimension. The prediction has to ignore the same
+players, they are marked for the time of the Pmove (rules like G_TempUnlink of the game module).
+====================
+*/
+static void CG_JPNonInterference( qboolean mark ) {
+	const playerState_t *ps;
+	qboolean altDim;
+	int i;
+
+	if ( !mark ) {
+		for ( i = 0; i < MAX_CLIENTS; i++ )
+			cg_entities[i].jpPredictIgnore = qfalse;
+		return;
+	}
+	if ( !cg.snap )
+		return;
+	altDim = JP_FEATURE( JPF_ALTDIM ) && cgs.gametype == GT_FFA;
+	if ( cgs.jpDuelAlpha < 0 && !altDim )
+		return;
+
+	ps = &cg.snap->ps;
+	for ( i = 0; i < MAX_CLIENTS; i++ ) {
+		centity_t *cent = &cg_entities[i];
+		const qboolean otherDueling = cent->currentState.bolt1 != 0;
+		qboolean ignore;
+
+		if ( i == ps->clientNum )
+			continue;
+		if ( ps->duelInProgress )
+			ignore = cgs.jpDuelAlpha >= 0 && (!otherDueling || ps->duelIndex != i);
+		else
+			ignore = cgs.jpDuelAlpha >= 0 && otherDueling;
+		if ( altDim && ((ps->eFlags & EF_ALT_DIM) != 0) != ((cent->currentState.eFlags & EF_ALT_DIM) != 0) )
+			ignore = qtrue;
+		cent->jpPredictIgnore = ignore;
+	}
+}
+
 static void CG_ClipMoveToEntities ( const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end,
 							int skipNumber, int mask, trace_t *tr, qboolean g2Check ) {
 	int			i, x, zd, zu;
@@ -250,6 +293,10 @@ static void CG_ClipMoveToEntities ( const vec3_t start, const vec3_t mins, const
 		ent = &cent->currentState;
 
 		if ( ent->number == skipNumber ) {
+			continue;
+		}
+
+		if ( cent->jpPredictIgnore ) {
 			continue;
 		}
 
@@ -1007,6 +1054,10 @@ void CG_PredictPlayerState( void ) {
 	if ( cg.snap->ps.persistant[PERS_TEAM] == TEAM_SPECTATOR || cg.snap->ps.pm_type == PM_SPECTATOR ) {
 		cg_pmove.tracemask &= ~CONTENTS_BODY;	// spectators can fly through bodies
 	}
+	else if ( cg_pmove.ps->pm_type != PM_DEAD && (cg_pmove.ps->eFlags & EF_PASS_PLAYERS) ) {
+		// JA+: a ghost, and a player whose duel just ended, walks through players and player clips (see ClientThink_real)
+		cg_pmove.tracemask = CONTENTS_SOLID | CONTENTS_TERRAIN;
+	}
 	cg_pmove.noFootsteps = ( cgs.dmflags & DF_NO_FOOTSTEPS ) > 0;
 
 	// save the state before the pmove so we can detect transitions
@@ -1278,7 +1329,9 @@ void CG_PredictPlayerState( void ) {
 			}
 		}
 
+		CG_JPNonInterference( qtrue );
 		Pmove (&cg_pmove);
+		CG_JPNonInterference( qfalse );
 
 		if (CG_Piloting(cg.predictedPlayerState.m_iVehicleNum) &&
 			cg.predictedPlayerState.pm_type != PM_INTERMISSION)
@@ -1424,6 +1477,8 @@ void CG_PredictPlayerState( void ) {
 			trap->Print("WARNING: dropped event\n");
 		}
 	}
+
+	CG_JPTwoPlayerAnimCamera( &cg.predictedPlayerState );	// JA+ client plugin
 
 	// fire events and other transition triggered things
 	CG_TransitionPlayerState( &cg.predictedPlayerState, &oldPlayerState );

@@ -1972,6 +1972,37 @@ qboolean CG_VehicleWeaponImpact( centity_t *cent )
 
 /*
 =================
+CG_JPHookTrail
+
+JA+ grappling hook: shot effect and a rope from the right hand of the owner to the hook
+=================
+*/
+void CG_JPHookTrail( centity_t *cent, const struct weaponInfo_s *weapon )
+{
+	const int owner = cent->currentState.otherEntityNum;
+	const centity_t *oc;
+	vec3_t forward, hand, pos;
+	mdxaBone_t boltMatrix;
+
+	if ( VectorNormalize2( cent->currentState.pos.trDelta, forward ) == 0.0f )
+		forward[2] = 1.0f;
+	trap->FX_PlayEffectID( cgs.effects.concussionShotEffect, cent->lerpOrigin, forward, -1, -1, qfalse );
+
+	if ( owner < 0 || owner >= MAX_CLIENTS )
+		return;
+	oc = &cg_entities[owner];
+	if ( !(oc->currentState.eFlags2 & EF2_HOOK) || !oc->ghoul2 || !cgs.clientinfo[owner].infoValid )
+		return;
+
+	if ( !trap->G2API_GetBoltMatrix( oc->ghoul2, 0, cgs.clientinfo[owner].bolt_rhand, &boltMatrix, oc->turAngles, oc->lerpOrigin, cg.time, cgs.gameModels, oc->modelScale ) )
+		return;
+	BG_GiveMeVectorFromMatrix( &boltMatrix, ORIGIN, hand );
+	BG_EvaluateTrajectory( &cent->currentState.pos, cg.time, pos );
+	CG_TestLine( hand, pos, 1, 0x30000, 1 );
+}
+
+/*
+=================
 CG_MissileHitWall
 
 Caused by an EV_MISSILE_MISS event, or directly by local bullet tracing
