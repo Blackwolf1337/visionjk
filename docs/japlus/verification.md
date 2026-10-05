@@ -55,6 +55,7 @@ and with the modules of this tree, and what both hand to the renderer is compare
 | a private duel next to a third player, ended by a death | 860 | equal |
 | a spectator follows a player | 1530 | equal |
 | players change between the dimensions | 960 | equal |
+| CTF on `mp/ctf3`: a team mate and an enemy carry the flags, the recording player takes a flag and captures it, a carrier leaves and drops his flag | 1050 | equal |
 
 The menus are compared on a running client, because a menu is not part of a demo: both module sets open the same
 menu and the pictures and texts they draw are compared.
@@ -87,8 +88,8 @@ Not covered by this comparison:
 - the prediction of the own movement (a demo is not predicted),
 - the server browser (it would ask the master servers), and everything a menu does when it is used: clicks, keys,
   sliders, the scripts behind the buttons. The menus were only drawn,
-- team games, CTF (flag shell), siege, vehicles, the duel gametypes,
-- other maps than `mp/ffa3`, and everything a scripted client does not do: aimed attacks, saber locks, grabs and
+- team FFA, siege, vehicles, the duel gametypes,
+- other maps than `mp/ffa3` and `mp/ctf3`, and everything a scripted client does not do: aimed attacks, saber locks, grabs and
   kisses with a partner, the flamethrower hitting somebody.
 
 ## Seen in the game

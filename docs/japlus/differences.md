@@ -59,6 +59,10 @@ Client (seen when the cgame and ui are compared with the original plugin on the 
 - The server browser filters by the installed mod folders, so `japlus` is one of the entries. The plugin has a
   fixed third entry "JA+ Mod".
 - The ui keeps up to 1024 heads and 256 saber hilts (plugin: 768 and 192).
+- In team games the HUD is not tinted in the color of the team. OpenJK took that out, 1.01 and the plugin draw
+  the frames and ticks in light red or light blue.
+- Static models of a map (`misc_model_static`, for example the flag stands of `mp/ctf3`) are only added to the
+  scene when they are in the view, and cast no stencil shadow.
 - The own player is not drawn while he is a spectator. 1.01 and the plugin show him for the first frames after a
   join as spectator, until the second snapshot arrives.
 - In the menus: the mouse cursor is 40 pixels wide (1.01: 48), the scrollbar of the head list sits 2 pixels further
