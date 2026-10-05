@@ -1392,6 +1392,22 @@ void CG_DrawHUD(centity_t	*cent)
 
 			CG_DrawArmor(menuHUD);
 			CG_DrawHealth(menuHUD);
+
+			// JA+ client plugin: alternate dimension (FFA only)
+			if ( cgs.gametype == GT_FFA && (cg.snap->ps.eFlags & EF_ALT_DIM) )
+			{
+				focusItem = Menu_FindItemByName(menuHUD, "altdiminfo");
+				if (focusItem)
+				{
+					CG_DrawScaledProportionalString(
+						focusItem->window.rect.x,
+						focusItem->window.rect.y,
+						"[Alt-Dim]",
+						UI_RIGHT|UI_DROPSHADOW,
+						focusItem->window.foreColor,
+						0.7f);
+				}
+			}
 		}
 		else
 		{
@@ -1487,17 +1503,7 @@ void CG_DrawHUD(centity_t	*cent)
 			CG_DrawForcePower(menuHUD);
 
 			// Draw ammo tics or saber style
-			if ( (cg.snap->ps.eFlags & EF_ALT_DIM) && (focusItem = Menu_FindItemByName(menuHUD, "altdiminfo")) != NULL )
-			{ // JA+ alternate dimension: the ammo is replaced by this text
-				CG_DrawScaledProportionalString(
-					focusItem->window.rect.x,
-					focusItem->window.rect.y,
-					"[Alt-Dim]",
-					UI_RIGHT|UI_DROPSHADOW,
-					focusItem->window.foreColor,
-					0.7f);
-			}
-			else if ( cent->currentState.weapon == WP_SABER )
+			if ( cent->currentState.weapon == WP_SABER )
 			{
 				CG_DrawSaberStyle(cent,menuHUD);
 			}
