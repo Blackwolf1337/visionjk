@@ -1623,6 +1623,11 @@ void CG_NewClientInfo( int clientNum, qboolean entitiesInitialized ) {
 	newInfo.holsterModel = v[0] ? atoi( v ) : 1;
 	if ( newInfo.holsterModel < 0 )
 		newInfo.holsterModel = 1;
+	// as in the plugin a new holster of another player waits for CG_ActualLoadDeferredPlayers, and the own one for
+	// the first snapshot
+	newInfo.holsterLoaded = ci->holsterLoaded;
+	if ( cg.snap && cg.snap->ps.clientNum == clientNum )
+		newInfo.holsterLoaded = newInfo.holsterModel;
 
 	// bot skill
 	v = Info_ValueForKey( configstring, "skill" );
@@ -2040,6 +2045,8 @@ void CG_ActualLoadDeferredPlayers( void )
 			CG_LoadClientInfo( ci );
 //			break;
 		}
+		if ( ci->infoValid )
+			ci->holsterLoaded = ci->holsterModel;	// JA+
 	}
 }
 
@@ -8838,16 +8845,16 @@ static void CG_JPHolsterModel( centity_t *cent, const clientInfo_t *ci, qboolean
 {
 	if ( cent->jpHolster && !trap->G2API_HasGhoul2ModelOnIndex( &cent->ghoul2, cent->jpHolster - 1 ) )
 		cent->jpHolster = 0;	// the model was rebuilt
-	if ( cent->jpHolster && cent->jpHolsterId != ci->holsterModel )
+	if ( cent->jpHolster && cent->jpHolsterId != ci->holsterLoaded )
 	{ // the player chose another holster
 		trap->G2API_RemoveGhoul2Model( &cent->ghoul2, cent->jpHolster - 1 );
 		cent->jpHolster = 0;
 	}
 
-	want = want && ci->holsterModel > 0 && !(cp_pluginDisable.integer & (1 << 9));
+	want = want && ci->holsterLoaded > 0 && !(cp_pluginDisable.integer & (1 << 9));
 	if ( want && !cent->jpHolster )
 	{
-		int index = trap->G2API_InitGhoul2Model( &cent->ghoul2, va( "models/weapons2/holster/model%i.glm", ci->holsterModel ), 0, 0, 0, 0, 0 );
+		int index = trap->G2API_InitGhoul2Model( &cent->ghoul2, va( "models/weapons2/holster/model%i.glm", ci->holsterLoaded ), 0, 0, 0, 0, 0 );
 
 		if ( index < 0 )
 			index = trap->G2API_InitGhoul2Model( &cent->ghoul2, "models/weapons2/holster/model1.glm", 0, 0, 0, 0, 0 );
@@ -8855,7 +8862,7 @@ static void CG_JPHolsterModel( centity_t *cent, const clientInfo_t *ci, qboolean
 		{
 			trap->G2API_SetBoltInfo( cent->ghoul2, index, ci->bolt_back > 0 ? ci->bolt_back : JP_HOLSTER_BOLT );
 			cent->jpHolster = index + 1;
-			cent->jpHolsterId = ci->holsterModel;
+			cent->jpHolsterId = ci->holsterLoaded;
 		}
 	}
 	else if ( !want && cent->jpHolster )

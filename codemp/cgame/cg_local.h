@@ -224,6 +224,8 @@ typedef struct clientInfo_s {
 	int				icolor1;
 	int				icolor2;
 	int				holsterModel;	// JA+ hm of the clientinfo: models/weapons2/holster/model<hm>.glm, 0 none
+	int				holsterLoaded;	// JA+: the holster model that is drawn. Follows holsterModel at once for the own player,
+									// for the others when the deferred players are loaded (scoreboard, own death)
 	int				sbRGB[2];		// JA+ RGB saber colors (r | g<<8 | b<<16), c3 and c4 of the clientinfo
 
 	int				score;			// updated by score servercmds
