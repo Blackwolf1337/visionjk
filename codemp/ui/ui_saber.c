@@ -758,6 +758,11 @@ void UI_SaberAttachToChar( itemDef_t *item )
 		trap->G2API_RemoveGhoul2Model(&(item->ghoul2), 1);
 	}
 
+	if ( uiInfo.movesTitleIndex >= 6 /*MD_MELEE*/ )
+	{// JA+: the melee moves are shown without saber
+		return;
+	}
+
 	if ( uiInfo.movesTitleIndex == 4 /*MD_DUAL_SABERS*/ )
 	{
 		numSabers = 2;

@@ -5290,6 +5290,16 @@ void Item_Model_Paint(itemDef_t *item)
 				ItemParse_asset_model_go( item, modelPath, &uiInfo.moveAnimTime );
 				uiInfo.moveAnimTime += uiInfo.uiDC.realTime;
 				break;
+			case BOTH_A3_TL_BR:	// JA+: melee throw
+				ItemParse_model_g2anim_go( item, animTable[BOTH_D3_TL___].name );
+				ItemParse_asset_model_go( item, modelPath, &uiInfo.moveAnimTime );
+				uiInfo.moveAnimTime += uiInfo.uiDC.realTime;
+				break;
+			case BOTH_FORCE_DRAIN_GRAB_START:	// JA+: sith kiss
+				ItemParse_model_g2anim_go( item, animTable[BOTH_FORCE_DRAIN_GRAB_END].name );
+				ItemParse_asset_model_go( item, modelPath, &uiInfo.moveAnimTime );
+				uiInfo.moveAnimTime += uiInfo.uiDC.realTime;
+				break;
 			case BOTH_KNOCKDOWN3://on front - into force getup
 				trap->S_StartLocalSound( uiInfo.uiDC.Assets.moveJumpSound, CHAN_LOCAL );
 				ItemParse_model_g2anim_go( item, animTable[BOTH_FORCE_GETUP_F1].name );

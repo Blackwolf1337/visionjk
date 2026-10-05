@@ -89,6 +89,7 @@ enum
 	MD_SINGLE_STRONG,
 	MD_DUAL_SABERS,
 	MD_SABER_STAFF,
+	MD_MELEE,	// JA+: moves without saber, texts as in the plugin (not in the string files)
 	MD_MOVE_TITLE_MAX
 };
 
@@ -102,6 +103,7 @@ const char *datapadMoveTitleData[MD_MOVE_TITLE_MAX] =
 "@MENUS_SINGLE_STRONG",
 "@MENUS_DUAL_SABERS",
 "@MENUS_SABER_STAFF",
+"Melee & other attacks",
 };
 
 const char *datapadMoveTitleBaseAnims[MD_MOVE_TITLE_MAX] =
@@ -112,6 +114,7 @@ const char *datapadMoveTitleBaseAnims[MD_MOVE_TITLE_MAX] =
 "BOTH_SABERSLOW_STANCE",
 "BOTH_SABERDUAL_STANCE",
 "BOTH_SABERSTAFF_STANCE",
+"BOTH_WALK1",
 };
 
 #define MAX_MOVES 16
@@ -137,7 +140,7 @@ static datpadmovedata_t datapadMoveData[MD_MOVE_TITLE_MAX][MAX_MOVES] = {
 		{ "@MENUS_JUMPUP_FROM_KNOCKDOWN",	"@MENUS_JUMPUP_FROM_KNOCKDOWN_DESC",	"BOTH_KNOCKDOWN3",				MDS_NONE },
 		{ "@MENUS_JUMPKICK_FROM_KNOCKDOWN",	"@MENUS_JUMPKICK_FROM_KNOCKDOWN_DESC",	"BOTH_KNOCKDOWN2",				MDS_NONE },
 		{ "@MENUS_ROLL_FROM_KNOCKDOWN",		"@MENUS_ROLL_FROM_KNOCKDOWN_DESC",		"BOTH_KNOCKDOWN1",				MDS_NONE },
-		{ NULL,								NULL,									NULL,							MDS_NONE },
+		{ "@MENUS_LONG_JUMP",	"@MENUS_LONG_JUMP_DESC",	"BOTH_FORCELONGLEAP_START",	MDS_FORCE_JUMP },
 		{ NULL,								NULL,									NULL,							MDS_NONE },
 		{ NULL,								NULL,									NULL,							MDS_NONE },
 		{ NULL,								NULL,									NULL,							MDS_NONE },
@@ -150,7 +153,7 @@ static datpadmovedata_t datapadMoveData[MD_MOVE_TITLE_MAX][MAX_MOVES] = {
 		{ "@MENUS_ATTACK_ENEMYONGROUND",	"@MENUS_ATTACK_ENEMYONGROUND_DESC",		"BOTH_STABDOWN",				MDS_FORCE_JUMP },
 		{ "@MENUS_CARTWHEEL",				"@MENUS_CARTWHEEL_DESC",				"BOTH_ARIAL_RIGHT",				MDS_FORCE_JUMP },
 		{ "@MENUS_BOTH_ROLL_STAB",			"@MENUS_BOTH_ROLL_STAB2_DESC",			"BOTH_ROLL_STAB",				MDS_SABER },
-		{ NULL,								NULL,									NULL,							MDS_NONE },
+		{ "@MENUS_FORCE_PULL_IMPALE",	"@MENUS_FORCE_PULL_IMPALE_DESC",	"BOTH_PULL_IMPALE_STAB",	MDS_SABER },
 		{ NULL,								NULL,									NULL,							MDS_NONE },
 		{ NULL,								NULL,									NULL,							MDS_NONE },
 		{ NULL,								NULL,									NULL,							MDS_NONE },
@@ -168,8 +171,8 @@ static datpadmovedata_t datapadMoveData[MD_MOVE_TITLE_MAX][MAX_MOVES] = {
 		{ "@MENUS_ATTACK_ENEMYONGROUND",	"@MENUS_ATTACK_ENEMYONGROUND_DESC",		"BOTH_STABDOWN",				MDS_FORCE_JUMP },
 		{ "@MENUS_CARTWHEEL",				"@MENUS_CARTWHEEL_DESC",				"BOTH_ARIAL_RIGHT",				MDS_FORCE_JUMP },
 		{ "@MENUS_BOTH_ROLL_STAB",			"@MENUS_BOTH_ROLL_STAB2_DESC",			"BOTH_ROLL_STAB",				MDS_SABER },
-		{ NULL,								NULL,									NULL,							MDS_NONE },
-		{ NULL,								NULL,									NULL,							MDS_NONE },
+		{ "@MENUS_FORCE_PULL_SLASH",	"@MENUS_FORCE_PULL_SLASH_DESC",	"BOTH_PULL_IMPALE_SWING",	MDS_SABER },
+		{ "Jump Grab Back Kick",	"Forward + Jump + Alt attack when you are in front of you ennemy",	"BOTH_JUMP_BACKFLIP_ATCK",	MDS_FORCE_JUMP },
 		{ NULL,								NULL,									NULL,							MDS_NONE },
 		{ NULL,								NULL,									NULL,							MDS_NONE },
 		{ NULL,								NULL,									NULL,							MDS_NONE },
@@ -186,10 +189,10 @@ static datpadmovedata_t datapadMoveData[MD_MOVE_TITLE_MAX][MAX_MOVES] = {
 		{ "@MENUS_ATTACK_ENEMYONGROUND",	"@MENUS_ATTACK_ENEMYONGROUND_DESC",		"BOTH_STABDOWN",				MDS_FORCE_JUMP },
 		{ "@MENUS_CARTWHEEL",				"@MENUS_CARTWHEEL_DESC",				"BOTH_ARIAL_RIGHT",				MDS_FORCE_JUMP },
 		{ "@MENUS_BOTH_ROLL_STAB",			"@MENUS_BOTH_ROLL_STAB2_DESC",			"BOTH_ROLL_STAB",				MDS_SABER },
-		{ NULL,								NULL,									NULL,							MDS_NONE },
-		{ NULL,								NULL,									NULL,							MDS_NONE },
-		{ NULL,								NULL,									NULL,							MDS_NONE },
-		{ NULL,								NULL,									NULL,							MDS_NONE },
+		{ "@MENUS_FORCE_PULL_SLASH",	"@MENUS_FORCE_PULL_SLASH_DESC",	"BOTH_PULL_IMPALE_SWING",	MDS_SABER },
+		{ "New Spin Attack",	"JUMP + FORWARD + ATTACK\nWhen you are in front of your ennemy",	"BOTH_BUTTERFLY_LEFT",	MDS_FORCE_JUMP },
+		{ "New Saber Flip stab",	"Forward + Jump + Alt attack",	"BOTH_FLIP_STAB",	MDS_SABER },
+		{ "New Pull Impale attack",	"while Pulling in front of an enemy, press attack",	"BOTH_NEW_STABER",	MDS_SABER },
 		{ NULL,								NULL,									NULL,							MDS_NONE },
 		{ NULL,								NULL,									NULL,							MDS_NONE },
 		{ NULL,								NULL,									NULL,							MDS_NONE },
@@ -207,10 +210,10 @@ static datpadmovedata_t datapadMoveData[MD_MOVE_TITLE_MAX][MAX_MOVES] = {
 		{ "@MENUS_DUAL_STAB_LEFT_RIGHT",	"@MENUS_DUAL_STAB_LEFT_RIGHT_DESC",		"BOTH_A6_LR",					MDS_SABER },
 		{ "@MENUS_CARTWHEEL",				"@MENUS_CARTWHEEL_DESC",				"BOTH_ARIAL_RIGHT",				MDS_FORCE_JUMP },
 		{ "@MENUS_BOTH_ROLL_STAB",			"@MENUS_BOTH_ROLL_STAB_DESC",			"BOTH_ROLL_STAB",				MDS_SABER },
-		{ NULL,								NULL,									NULL,							MDS_NONE },
-		{ NULL,								NULL,									NULL,							MDS_NONE },
-		{ NULL,								NULL,									NULL,							MDS_NONE },
-		{ NULL,								NULL,									NULL,							MDS_NONE },
+		{ "New Spin Attack",	"JUMP + FORWARD + ATTACK\nWhen you are in front of your ennemy",	"BOTH_ALORA_SPIN_SLASH",	MDS_FORCE_JUMP },
+		{ "Jump Spin Back Kick",	"Forward + Jump + Alt attack using single saber style",	"BOTH_JUMP_BACKKICK_SPIN",	MDS_FORCE_JUMP },
+		{ "Jump Grab Back Kick",	"Forward + Jump + Alt attack using dual stance when you are in front of you ennemy",	"BOTH_JUMP_BACKFLIP_ATCK",	MDS_FORCE_JUMP },
+		{ "New Pull Impale attack",	"while Pulling in front of an enemy, press attack",	"BOTH_NEW_STABER",	MDS_SABER },
 		{ NULL,								NULL,									NULL,							MDS_NONE },
 		{ NULL,								NULL,									NULL,							MDS_NONE },
 		{ NULL,								NULL,									NULL,							MDS_NONE },
@@ -225,13 +228,31 @@ static datpadmovedata_t datapadMoveData[MD_MOVE_TITLE_MAX][MAX_MOVES] = {
 		{ "@MENUS_JUMP_KICK",				"@MENUS_JUMP_KICK_DESC",				"BOTH_A7_KICK_F_AIR",			MDS_FORCE_JUMP },
 		{ "@MENUS_BUTTERFLY_ATTACK",		"@MENUS_BUTTERFLY_ATTACK_DESC",			"BOTH_BUTTERFLY_FR1",			MDS_SABER },
 		{ "@MENUS_BOTH_ROLL_STAB",			"@MENUS_BOTH_ROLL_STAB2_DESC",			"BOTH_ROLL_STAB",				MDS_SABER },
+		{ "@MENUS_SPLIT_KICK",	"@MENUS_SPLIT_KICK_DESC",	"BOTH_A7_KICK_RL",	MDS_FORCE_JUMP },
+		{ "@MENUS_SPIN_KICK",	"@MENUS_SPIN_KICK_DESC",	"BOTH_A7_KICK_S",	MDS_FORCE_JUMP },
+		{ "@MENUS_FLIP_KICK",	"@MENUS_FLIP_KICK_DESC",	"BOTH_A7_KICK_BF",	MDS_FORCE_JUMP },
+		{ "New Spin Attack",	"JUMP + FORWARD + ATTACK\nWhen you are in front of your ennemy",	"BOTH_FJSS_TR_BL",	MDS_FORCE_JUMP },
+		{ "New Kick Forward",	"FORWARD + ALT ATTACK\nWhen you are in front of your ennemy",	"BOTH_A7_HILT",	MDS_SABER },
+		{ "Jump Spin Back Kick",	"Forward + Jump + Alt attack",	"BOTH_JUMP_BACKKICK_SPIN",	MDS_FORCE_JUMP },
+		{ "New Pull Impale attack",	"while Pulling in front of an enemy, press attack",	"BOTH_NEW_STABER",	MDS_SABER },
+	},
+	{// JA+: Melee & other attacks
+		{ "Melee Punch",	"Weapon melee + attack + alt attack + forward\nin front for your ennemy",	"BOTH_KYLE_PA_1",	MDS_NONE },
+		{ "Melee kick, knee",	"Weapon melee + attack + alt attack + backward\nin front for your ennemy",	"BOTH_KYLE_PA_2",	MDS_NONE },
+		{ "Melee  throttling",	"Weapon melee + attack + alt attack \nin front for your ennemy",	"BOTH_KYLE_PA_3",	MDS_NONE },
+		{ "Melee throw",	"Weapon melee + attack + alt attack + right\nin front for your ennemy",	"BOTH_A3_TL_BR",	MDS_NONE },
+		{ "Sith Kiss",	"Weapon Melee + DRAIN level 2 minimum\nin front of your ennemy",	"BOTH_FORCE_DRAIN_GRAB_START",	MDS_NONE },
+		{ "Jedi Tornado",	"Weapon Melee + PUSH level 2 minimum\n in front of your ennemy\n only for jedi",	"BOTH_ALORA_SPIN_THROW",	MDS_NONE },
+		{ "Back Kick",	"Weapon Melee or Staff + forward + right + alt attack",	"BOTH_MELEE_BACKKICK",	MDS_SABER },
+		{ "Spin kick",	"Weapon Melee or Staff + forward + left + alt attack",	"BOTH_MELEE_SPINKICK",	MDS_SABER },
 		{ NULL,								NULL,									NULL,							MDS_NONE },
 		{ NULL,								NULL,									NULL,							MDS_NONE },
 		{ NULL,								NULL,									NULL,							MDS_NONE },
 		{ NULL,								NULL,									NULL,							MDS_NONE },
 		{ NULL,								NULL,									NULL,							MDS_NONE },
 		{ NULL,								NULL,									NULL,							MDS_NONE },
-		{ NULL,								NULL,									NULL,							MDS_NONE }
+		{ NULL,								NULL,									NULL,							MDS_NONE },
+		{ NULL,								NULL,									NULL,							MDS_NONE },
 	}
 };
 
