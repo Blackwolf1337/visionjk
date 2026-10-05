@@ -2009,7 +2009,6 @@ static void PM_AdjustAngleForWallGrap( playerState_t *ps, usercmd_t *ucmd )
 PM_CheckJump
 =============
 */
-static vec3_t flipKickFwd;
 
 /*
 =================
