@@ -39,9 +39,14 @@ any user name and the password (HTTP basic auth).
   Right click on the map teleports the selected player.
 - World: all entities with their spawn keys. Edit keys and apply, drag or right click to move, rotate, duplicate,
   delete, place new ones with a model preview, export the layout as `.ent`.
+- JA+ admin commands for the selected player: sleep and wake, protect, empower, merc, mindtrick, ghost, silence
+  and unsilence, force and unforce the alternate dimension, deny vote, freeze, slap, show the MOTD, rename, a
+  message on his screen (ampsay) and his admin rank (admGrant). A button is lit while its state is on.
 - Chat, at the bottom of the side bar: what the players say, with the time, the team of the speaker and a tag for
   team chat, tells (with the receiver), clan chat and admin chat. Below it the field for a message to all players.
   A click on the title folds it away, new lines are counted there meanwhile.
+- Gravity: a field in the top bar for everybody (`g_gravity`, 800 is normal, the field shows the current value),
+  and a field in the player panel for a gravity only that player has. Empty there means the gravity of the server.
 - Top bar: add bots, change map.
 
 ## How it works
@@ -71,7 +76,7 @@ the answer tells the page that the numbers started over.
 | `GET /api/entities` | the entities with their keys |
 | `GET /api/export` | the entities in `.ent` format |
 | `GET /api/chat?since=&epoch=` | chat lines after number `since`. Everything if `epoch` is not the current one |
-| `POST /api/action` | `action`, `id`, `value`: say, addbot, map, kick, ban, health, armor, scale, kill, god, team, teleport |
+| `POST /api/action` | `action`, `id`, `value`: say, addbot, map, kick, ban, health, armor, scale, kill, god, noclip, gravity (no `id`), playergravity, team, teleport, and the JA+ ones: amsleep, amwake, amprotect, amempower, ammerc, ammindtrick, amghost, amsilence, amunsilence, amslap, amForceAltDim, amUnForceAltDim, amdenyvote, amShowMotd, amrename, ampsay, admgrant, freeze |
 | `POST /api/entity` | `op` spawn, update or delete, with `id` and `kv` (one `key=value` per line) |
 
 ## Where it differs from JKAdmin
@@ -95,6 +100,19 @@ Also changed:
   script section are marked "not in JKAdmin". The rest of the page is JKAdmin's.
 - A message typed in the panel is turned from UTF-8 into the one byte per character the game uses (Latin-1), so
   umlauts arrive. Characters the game does not have become `?`.
+- New: the JA+ admin commands that work on a player (`WA_JpAction`). The panel does not copy them, it sends the
+  same line an rcon admin would type on the server console (`amsleep 3`, `amrename 3 "name"`), so the rules,
+  texts and logs are those of JA+. The command runs in the next frame, the answer of the panel only says it was
+  sent, what happened shows in the state (`jp` object of a player: admin rank and the JA+ flags). `freeze` has no
+  console command in JA+ and toggles the flag directly. Left out: `amplayefx` and `amtest`, which JA+ does not
+  offer on the console. Kick, ban, team and teleport were there already. Added without a test run.
+- New: gravity. `gravity` sets `g_gravity` for everybody, between -2000 and 5000. The map sets it again at its
+  next start (worldspawn key `gravity`). `playergravity` gives one player a gravity of his own: `ClientThink_real`
+  in `g_active.c` asks `WebAdmin_ClientGravity` where it used `g_gravity` (not in space, on a vehicle or as an NPC
+  with its own gravity). It survives a respawn and is gone when the player leaves or the map changes. The state
+  has `gravity` for the server and `gravity` and `ownGravity` for each player.
+- New player action noclip: a button next to god mode toggles `client->noclip` like the `noclip` cheat, for a
+  living player. The state has a `noclip` field, the list shows a tag. Added without a test run.
 - "Add bot" with an empty name adds `Kyle Katarn`. JKAdmin asks for `Kyle`, a bot the game does not have, so
   nothing happened there.
 - The two entity hooks pass `ent-g_entities` instead of `ent->s.number`.

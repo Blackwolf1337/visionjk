@@ -2404,7 +2404,8 @@ void ClientThink_real( gentity_t *ent ) {
 				}
 				else
 				{
-					client->ps.gravity = g_gravity.value;
+					// web admin: the panel can give a player a gravity of his own
+					client->ps.gravity = WebAdmin_ClientGravity( ent, g_gravity.value );
 				}
 			}
 		}

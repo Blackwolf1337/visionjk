@@ -63,6 +63,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define WA_TIMEOUT_MS		15000
 #define WA_MAX_FILE			( 64 * 1024 * 1024 )
 
+#define WA_BOOL( x )		( ( x ) ? "true" : "false" )
+
 extern void G_Kill( gentity_t *ent );
 extern stringID_table_t animTable[MAX_ANIMATIONS + 1];
 
@@ -113,6 +115,13 @@ typedef struct waChatLine_s {
 static waChatLine_t	chatLines[WA_MAX_CHAT];
 static int			chatSeq;		// number of the newest line, the first one is 1
 static int			chatEpoch;		// start time of this map. The module is loaded again for each one, the numbers start over
+
+// a gravity of his own for a player, set in the panel. Not in JKAdmin. Gone with the map like the chat lines.
+#define WA_MIN_GRAVITY	-2000
+#define WA_MAX_GRAVITY	5000
+
+static qboolean	clientGravitySet[MAX_CLIENTS];
+static float	clientGravity[MAX_CLIENTS];
 
 static const char *WA_TeamName( team_t team );
 
@@ -408,6 +417,7 @@ static void WA_ApiState( waConnection_t *c ) {
 	WA_BufJsonString( &b, mapname );
 	WA_BufAppend( &b, ",\"host\":", 8 );
 	WA_BufJsonString( &b, hostname );
+	WA_BufPrintf( &b, ",\"gravity\":%d", (int)g_gravity.value );		// not in JKAdmin
 	WA_BufPrintf( &b, ",\"gametype\":%d,\"gametypeName\":\"%s\",\"time\":%d,\"timelimit\":%d,\"fraglimit\":%d,\"capturelimit\":%d,"
 		"\"scores\":{\"red\":%d,\"blue\":%d},\"maxClients\":%d,\"players\":[",
 		level.gametype, BG_GetGametypeString( level.gametype ), level.time - level.startTime, timelimit.integer,
@@ -440,6 +450,18 @@ static void WA_ApiState( waConnection_t *c ) {
 		WA_AppendVec( &b, ps->origin );
 		WA_BufAppend( &b, ",\"vel\":", 7 );
 		WA_AppendVec( &b, ps->velocity );
+		WA_BufPrintf( &b, ",\"noclip\":%s", cl->noclip ? "true" : "false" );		// not in JKAdmin
+		WA_BufPrintf( &b, ",\"gravity\":%d,\"ownGravity\":%s", ps->gravity, WA_BOOL( clientGravitySet[i] ) );	// not in JKAdmin
+		{
+			// not in JKAdmin: what the JA+ buttons of the page show. admin is jpAdminLevel_t, altDim 2 is forced.
+			const jpClient_t *jp = &cl->pers.jp;
+
+			WA_BufPrintf( &b, ",\"jp\":{\"admin\":%d,\"sleep\":%s,\"protect\":%s,\"empower\":%s,\"merc\":%s,\"mindtrick\":%s,"
+				"\"ghost\":%s,\"silence\":%s,\"altDim\":%d,\"denyVote\":%s,\"frozen\":%s}",
+				(int)cl->sess.jpAdminLevel, WA_BOOL( jp->sleeping ), WA_BOOL( jp->protectedByAdmin ), WA_BOOL( jp->empowered ),
+				WA_BOOL( jp->merc ), WA_BOOL( jp->mindtricked ), WA_BOOL( jp->isGhost ), WA_BOOL( jp->silenced ), jp->dimension,
+				WA_BOOL( jp->denyVote ), WA_BOOL( jp->frozen ) );
+		}
 		WA_BufPrintf( &b, ",\"yaw\":%.1f,\"pitch\":%.1f,\"legsAnim\":%d,\"torsoAnim\":%d,\"viewheight\":%d,"
 			"\"saberHolstered\":%d,\"saberInFlight\":%s,",
 			ps->viewangles[YAW], ps->viewangles[PITCH], ps->legsAnim, ps->torsoAnim, ps->viewheight,
@@ -596,6 +618,68 @@ static void WA_ActionResult( waConnection_t *c, qboolean ok, const char *msg ) {
 	WA_BufFree( &b );
 }
 
+/*
+=================
+WA_JpAction
+
+Not in JKAdmin: the JA+ admin commands that work on a player. They run as typed on the server console
+(<command> <player number> [text]), so the rules, messages and logs are those of JA+. The command runs in the
+next frame, the answer only says that it was sent. Returns qfalse if the action is none of them.
+=================
+*/
+static qboolean WA_JpAction( waConnection_t *c, const char *action, int id, char *value ) {
+	static const struct {
+		const char	*name;
+		qboolean	text;		// the value goes along as text
+	} cmds[] = {
+		{ "amsleep", qfalse },			{ "amwake", qfalse },			{ "amprotect", qfalse },
+		{ "amempower", qfalse },		{ "ammerc", qfalse },			{ "ammindtrick", qfalse },
+		{ "amghost", qfalse },			{ "amsilence", qfalse },		{ "amunsilence", qfalse },
+		{ "amslap", qfalse },			{ "amForceAltDim", qfalse },	{ "amUnForceAltDim", qfalse },
+		{ "amdenyvote", qfalse },		{ "amShowMotd", qfalse },		{ "amrename", qtrue },
+		{ "ampsay", qtrue },
+	};
+	gclient_t	*client = g_entities[id].client;
+	size_t		i;
+
+	if ( !strcmp( action, "freeze" ) ) {
+		// in JA+ a client command of the rcon admins, there is no console command for it
+		client->pers.jp.frozen = (qboolean)!client->pers.jp.frozen;
+		WA_ActionResult( c, qtrue, client->pers.jp.frozen ? "frozen" : "not frozen any more" );
+		return qtrue;
+	}
+
+	if ( !strcmp( action, "admgrant" ) ) {
+		if ( strcmp( value, "council" ) && strcmp( value, "knight" ) && strcmp( value, "instructor" ) && strcmp( value, "no" ) ) {
+			WA_ActionResult( c, qfalse, "rank must be council, knight, instructor or no" );
+			return qtrue;
+		}
+		trap->SendConsoleCommand( EXEC_APPEND, va( "admGrant %d %s\n", id, value ) );
+		WA_ActionResult( c, qtrue, va( "admGrant %s sent", value ) );
+		return qtrue;
+	}
+
+	for ( i = 0; i < ARRAY_LEN( cmds ); i++ ) {
+		if ( strcmp( action, cmds[i].name ) )
+			continue;
+
+		if ( cmds[i].text ) {
+			WA_Utf8ToLatin1( value );
+			Q_strstrip( value, "\n\r\";", NULL );
+			if ( !value[0] ) {
+				WA_ActionResult( c, qfalse, "no text" );
+				return qtrue;
+			}
+			trap->SendConsoleCommand( EXEC_APPEND, va( "%s %d \"%s\"\n", cmds[i].name, id, value ) );
+		} else {
+			trap->SendConsoleCommand( EXEC_APPEND, va( "%s %d\n", cmds[i].name, id ) );
+		}
+		WA_ActionResult( c, qtrue, va( "%s sent", cmds[i].name ) );
+		return qtrue;
+	}
+	return qfalse;
+}
+
 static void WA_ApiAction( waConnection_t *c, const char *body ) {
 	char		action[32], idStr[16], value[256], xs[32], ys[32], zs[32];
 	gentity_t	*ent = NULL;
@@ -627,6 +711,22 @@ static void WA_ApiAction( waConnection_t *c, const char *body ) {
 		}
 		trap->SendConsoleCommand( EXEC_APPEND, va( "map \"%s\"\n", value ) );
 		WA_ActionResult( c, qtrue, "changing map" );
+		return;
+	}
+
+	if ( !strcmp( action, "gravity" ) ) {
+		// not in JKAdmin: g_gravity for everybody. The map sets it again at its next start (worldspawn key "gravity").
+		if ( !value[0] ) {
+			WA_ActionResult( c, qfalse, "no gravity value" );
+			return;
+		}
+		{
+			const int v = Com_Clampi( WA_MIN_GRAVITY, WA_MAX_GRAVITY, atoi( value ) );
+
+			trap->Cvar_Set( "g_gravity", va( "%d", v ) );
+			trap->Cvar_Update( &g_gravity );
+			WA_ActionResult( c, qtrue, va( "gravity %d", v ) );
+		}
 		return;
 	}
 
@@ -700,6 +800,14 @@ static void WA_ApiAction( waConnection_t *c, const char *body ) {
 		// JA+: like the god cheat, so jp_allowGodTalk does not take it away with the chat bubble
 		ent->client->pers.jp.cheatGod = (qboolean)( ( ent->flags & FL_GODMODE ) != 0 );
 		WA_ActionResult( c, qtrue, ( ent->flags & FL_GODMODE ) ? "god mode on" : "god mode off" );
+	} else if ( !strcmp( action, "noclip" ) ) {
+		// not in JKAdmin: the noclip cheat for the selected player
+		if ( ent->health <= 0 || ent->client->sess.sessionTeam == TEAM_SPECTATOR ) {
+			WA_ActionResult( c, qfalse, "player is not alive" );
+			return;
+		}
+		ent->client->noclip = (qboolean)!ent->client->noclip;
+		WA_ActionResult( c, qtrue, ent->client->noclip ? "noclip on" : "noclip off" );
 	} else if ( !strcmp( action, "team" ) ) {
 		team_t		now;
 		qboolean	ok;
@@ -755,7 +863,19 @@ static void WA_ApiAction( waConnection_t *c, const char *body ) {
 		// JA+: frees the hook and honours jp_starTrekTeleport, the path of amtele
 		JP_ManualTeleport( ent, origin, ent->client->ps.viewangles );
 		WA_ActionResult( c, qtrue, jp_starTrekTeleport.integer == 1 ? "teleport started" : "teleported" );
-	} else {
+	} else if ( !strcmp( action, "playergravity" ) ) {
+		// not in JKAdmin: a gravity of his own. An empty value gives him the gravity of the server again.
+		if ( !value[0] ) {
+			clientGravitySet[id] = qfalse;
+			WA_ActionResult( c, qtrue, "gravity of the server" );
+		} else {
+			const int v = Com_Clampi( WA_MIN_GRAVITY, WA_MAX_GRAVITY, atoi( value ) );
+
+			clientGravity[id] = (float)v;
+			clientGravitySet[id] = qtrue;
+			WA_ActionResult( c, qtrue, va( "own gravity %d", v ) );
+		}
+	} else if ( !WA_JpAction( c, action, id, value ) ) {
 		WA_ActionResult( c, qfalse, "unknown action" );
 	}
 }
@@ -1396,12 +1516,32 @@ void WebAdmin_Init( void ) {
 	trap->Print( "Web admin listening on http://%s:%d/\n", g_webBind.string[0] ? g_webBind.string : "0.0.0.0", listenPort );
 }
 
+/*
+=================
+WebAdmin_ClientGravity
+
+Not in JKAdmin. ClientThink_real asks here for the gravity of a player: his own one if the panel gave him
+one, else the gravity it passes in.
+=================
+*/
+float WebAdmin_ClientGravity( const gentity_t *ent, float gravity ) {
+	const int num = (int)( ent-g_entities );
+
+	return ( num >= 0 && num < MAX_CLIENTS && clientGravitySet[num] ) ? clientGravity[num] : gravity;
+}
+
 void WebAdmin_Frame( void ) {
 	const int	now = trap->Milliseconds();
 	int			i;
 
 	if ( listenSocket == WA_INVALID_SOCKET )
 		return;
+
+	// the own gravity goes with the player, the next one in his slot starts without
+	for ( i = 0; i < level.maxclients; i++ ) {
+		if ( clientGravitySet[i] && level.clients[i].pers.connected == CON_DISCONNECTED )
+			clientGravitySet[i] = qfalse;
+	}
 
 	WA_Accept();
 
