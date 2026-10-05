@@ -8707,9 +8707,25 @@ typedef struct jpHolsterState_s {
 
 static jpHolsterState_t jpHolsterState[MAX_CLIENTS];
 
+#define JP_MAX_HOLSTER_MODELS	16
+
+typedef struct jpHolsterModel_s {
+	int		id;			// cp_holster of a player, 0: free
+	void	*ghoul2;	// NULL if the model could not be loaded
+} jpHolsterModel_t;
+
+static jpHolsterModel_t jpHolsterModels[JP_MAX_HOLSTER_MODELS];
+
 void CG_JPHolsterShutdown( void )
 {
 	int i, j;
+
+	for ( i = 0; i < JP_MAX_HOLSTER_MODELS; i++ )
+	{
+		if ( jpHolsterModels[i].ghoul2 && trap->G2_HaveWeGhoul2Models( jpHolsterModels[i].ghoul2 ) )
+			trap->G2API_CleanGhoul2Models( &jpHolsterModels[i].ghoul2 );
+	}
+	memset( jpHolsterModels, 0, sizeof( jpHolsterModels ) );
 
 	for ( i = 0; i < MAX_CLIENTS; i++ )
 	{
@@ -8857,37 +8873,61 @@ static void CG_JPDrawHolsteredSaber( centity_t *cent, clientInfo_t *ci, int sabe
 	trap->R_AddRefEntityToScene( &re );
 }
 
-#define JP_HOLSTER_BOLT	8	// bolt of the humanoid skeleton the holster model is fixed to without a "*back" tag
+#define JP_HOLSTER_BOLT		8	// bolt of the humanoid skeleton the holster model is fixed to without a "*back" tag
+#define JP_HOLSTER_G2INDEX	4	// model index of the holster in the Ghoul2 instance of a player, as in the plugin
+								// (1 and 2 are the sabers or the weapon, 3 is the jetpack)
+
+// the Ghoul2 instance of holster model <id> the players get their copy from, model 1 if there is no such model
+static void *CG_JPHolsterG2( int id )
+{
+	jpHolsterModel_t *hm;
+	int i;
+
+	for ( i = 0, hm = jpHolsterModels; i < JP_MAX_HOLSTER_MODELS; i++, hm++ )
+	{
+		if ( hm->id == id )
+			return hm->ghoul2;
+		if ( !hm->id )
+			break;
+	}
+	if ( i == JP_MAX_HOLSTER_MODELS )
+		return NULL;
+
+	hm->id = id;
+	trap->G2API_InitGhoul2Model( &hm->ghoul2, va( "models/weapons2/holster/model%i.glm", id ), 0, 0, 0, 0, 0 );
+	if ( !hm->ghoul2 || !trap->G2_HaveWeGhoul2Models( hm->ghoul2 ) )
+		trap->G2API_InitGhoul2Model( &hm->ghoul2, "models/weapons2/holster/model1.glm", 0, 0, 0, 0, 0 );
+	if ( hm->ghoul2 && !trap->G2_HaveWeGhoul2Models( hm->ghoul2 ) )
+		hm->ghoul2 = NULL;
+	return hm->ghoul2;
+}
 
 // the holster model on the back, for sabers that are drawn from the back
 static void CG_JPHolsterModel( centity_t *cent, const clientInfo_t *ci, qboolean want )
 {
-	if ( cent->jpHolster && !trap->G2API_HasGhoul2ModelOnIndex( &cent->ghoul2, cent->jpHolster - 1 ) )
-		cent->jpHolster = 0;	// the model was rebuilt
-	if ( cent->jpHolster && cent->jpHolsterId != ci->holsterLoaded )
+	qboolean has = trap->G2API_HasGhoul2ModelOnIndex( &cent->ghoul2, JP_HOLSTER_G2INDEX );
+
+	if ( has && cent->jpHolsterId != ci->holsterLoaded )
 	{ // the player chose another holster
-		trap->G2API_RemoveGhoul2Model( &cent->ghoul2, cent->jpHolster - 1 );
-		cent->jpHolster = 0;
+		trap->G2API_RemoveGhoul2Model( &cent->ghoul2, JP_HOLSTER_G2INDEX );
+		has = qfalse;
 	}
 
 	want = want && ci->holsterLoaded > 0 && !(cp_pluginDisable.integer & (1 << 9));
-	if ( want && !cent->jpHolster )
+	if ( want && !has )
 	{
-		int index = trap->G2API_InitGhoul2Model( &cent->ghoul2, va( "models/weapons2/holster/model%i.glm", ci->holsterLoaded ), 0, 0, 0, 0, 0 );
+		void *holster = CG_JPHolsterG2( ci->holsterLoaded );
 
-		if ( index < 0 )
-			index = trap->G2API_InitGhoul2Model( &cent->ghoul2, "models/weapons2/holster/model1.glm", 0, 0, 0, 0, 0 );
-		if ( index >= 0 )
+		if ( holster )
 		{
-			trap->G2API_SetBoltInfo( cent->ghoul2, index, ci->bolt_back > 0 ? ci->bolt_back : JP_HOLSTER_BOLT );
-			cent->jpHolster = index + 1;
+			trap->G2API_CopySpecificGhoul2Model( holster, 0, cent->ghoul2, JP_HOLSTER_G2INDEX );
+			trap->G2API_SetBoltInfo( cent->ghoul2, JP_HOLSTER_G2INDEX, ci->bolt_back > 0 ? ci->bolt_back : JP_HOLSTER_BOLT );
 			cent->jpHolsterId = ci->holsterLoaded;
 		}
 	}
-	else if ( !want && cent->jpHolster )
+	else if ( !want && has )
 	{
-		trap->G2API_RemoveGhoul2Model( &cent->ghoul2, cent->jpHolster - 1 );
-		cent->jpHolster = 0;
+		trap->G2API_RemoveGhoul2Model( &cent->ghoul2, JP_HOLSTER_G2INDEX );
 	}
 }
 
