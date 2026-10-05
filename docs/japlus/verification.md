@@ -50,15 +50,16 @@ On a local test server (64 bit Linux, dedicated) with a 64 bit client of this tr
 - a client joins, is detected as plugin 1.4, gets welcome text and MOTD,
 - RGB saber, alternate dimension, hook and flip kick,
 - sabers on the body: a saber with `idleInBack` hangs across the back, two sabers hang on the hips while the fists
-  are out, also after the saber was changed with `/saber`. Looked at with engine screenshots of a second client.
+  are out, also after the saber was changed with `/saber`. Looked at with engine screenshots of a second client,
+- walking through players of the other dimension and through players as a ghost is predicted without errors
+  (reading `jp_cinfo` from the server info, `EF_PASS_PLAYERS`).
 
 ## Never seen in the game
 
 - Flamethrower, jetpack, ledge grab, the new saber moves, the two force grabs.
 - Of the client: the holster model, the draw animations of sabers on the back, staffs on the back, the duel end
   camera, the fire and force effects, the fading of other duels.
-- The prediction changes (reading `jp_cinfo` from the server info, `EF_PASS_PLAYERS`) were made after a report of
-  prediction errors in the alternate dimension and as a ghost. They were not measured.
+- Walking through players in the 3 seconds after a duel (the other use of `EF_PASS_PLAYERS`).
 - The 32 bit Linux and the Windows modules were only built, never loaded into a game.
 - A client with the original plugin on this server, and this client on an original JA+ server.
 
