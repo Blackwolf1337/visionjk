@@ -6418,6 +6418,13 @@ static void CG_DrawCrosshairNames( void ) {
 		baseColor = CT_BLACK;
 	}
 
+	// JA+ client plugin: in FFA the name is shown in its own colors
+	if ( cgs.gametype == GT_FFA )
+	{
+		baseColor = CT_WHITE;
+		name = cgs.clientinfo[ cg.crosshairClientNum ].name;
+	}
+
 	tcolor[0] = colorTable[baseColor][0];
 	tcolor[1] = colorTable[baseColor][1];
 	tcolor[2] = colorTable[baseColor][2];
@@ -6572,9 +6579,22 @@ static void CG_DrawVote(void) {
 		trap->SE_GetStringTextString( "MENUS_KICK_PLAYER", sCmd, sizeof( sCmd ) );
 		sParm = cgs.voteString+5;
 	}
+	// JA+ client plugin: the votes of the JA+ server
+	else if ( !Q_strncmp( cgs.voteString, "sleep", 5 ) ) {
+		Q_strncpyz( sCmd, "sleep", sizeof( sCmd ) );
+		sParm = cgs.voteString+6;
+	}
+	else if ( !Q_strncmp( cgs.voteString, "silence", 7 ) ) {
+		Q_strncpyz( sCmd, "silence", sizeof( sCmd ) );
+		sParm = cgs.voteString+8;
+	}
+	else if ( !Q_strncmp( cgs.voteString, "poll", 4 ) ) {
+		Q_strncpyz( sCmd, "Poll By", sizeof( sCmd ) );
+		sParm = cgs.voteString+5;
+	}
 	else
 	{// custom votes like ampoll, cointoss, etc
-		sParm = cgs.voteString;
+		Q_strncpyz( sCmd, cgs.voteString, sizeof( sCmd ) );
 	}
 
 
