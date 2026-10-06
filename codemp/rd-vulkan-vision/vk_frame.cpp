@@ -62,7 +62,6 @@ void VK_InitFrames( void ) {
 		VK_CHECK( qvkAllocateCommandBuffers( vk.device, &alloc, &frame->cmd ) );
 		VK_CHECK( qvkCreateFence( vk.device, &fence, NULL, &frame->fence ) );
 		VK_CHECK( qvkCreateSemaphore( vk.device, &semaphore, NULL, &frame->acquired ) );
-		VK_CHECK( qvkCreateSemaphore( vk.device, &semaphore, NULL, &frame->rendered ) );
 		VK_CreateBuffer( &frame->vertexes, VK_VERTEX_BYTES, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, qtrue );
 		VK_CreateBuffer( &frame->indexes, VK_INDEX_BYTES, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, qtrue );
 		VK_CreateBuffer( &frame->globals, sizeof( vkGlobals_t ), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, qtrue );
@@ -98,7 +97,6 @@ void VK_ShutdownFrames( void ) {
 
 		qvkDestroyFence( vk.device, frame->fence, NULL );
 		qvkDestroySemaphore( vk.device, frame->acquired, NULL );
-		qvkDestroySemaphore( vk.device, frame->rendered, NULL );
 		VK_DestroyBuffer( &frame->vertexes );
 		VK_DestroyBuffer( &frame->indexes );
 		VK_DestroyBuffer( &frame->globals );
@@ -301,7 +299,16 @@ void VK_BeginFrame( void ) {
 	VK_SetViewport( 0, 0, vk.width, vk.height, 0.0f, 1.0f );
 }
 
-// the swapchain image the frame goes to, qfalse when there is none right now (minimized, window changing)
+// How long a frame waits for an image of the swapchain, in nanoseconds. With r_swapInterval 1 that wait is what
+// keeps the game in step with the display, so it is longer than a frame of a slow display. It must have an end:
+// a window nobody sees (other workspace, minimized) gets its images back late or not at all, and the game has to
+// go on then, with the server among other things. Seen with the NVIDIA driver, under Wayland and with its X11
+// surface under Xwayland. After a wait that ran out the frames do not wait at all for VK_ACQUIRE_RETRY_MSEC, they
+// are shown when an image happens to be free.
+#define VK_ACQUIRE_TIMEOUT		50000000ull
+#define VK_ACQUIRE_RETRY_MSEC	1000
+
+// the swapchain image the frame goes to, qfalse when there is none right now (minimized, window changing, not shown)
 static qboolean VK_AcquireImage( vkFrame_t *frame, uint32_t *imageIndex ) {
 	for ( int attempt = 0; attempt < 2; attempt++ ) {
 		VkResult result;
@@ -313,9 +320,23 @@ static qboolean VK_AcquireImage( vkFrame_t *frame, uint32_t *imageIndex ) {
 				return qfalse;
 			}
 		}
-		result = qvkAcquireNextImageKHR( vk.device, vk.swapchain, UINT64_MAX, frame->acquired, VK_NULL_HANDLE, imageIndex );
+		const int now = ri.Milliseconds();
+		const qboolean wait = (qboolean)( !vk.swapStallTime || now - vk.swapStallTime >= VK_ACQUIRE_RETRY_MSEC );
+
+		result = qvkAcquireNextImageKHR( vk.device, vk.swapchain, wait ? VK_ACQUIRE_TIMEOUT : 0, frame->acquired, VK_NULL_HANDLE,
+			imageIndex );
 		if ( result == VK_SUCCESS || result == VK_SUBOPTIMAL_KHR ) {
+			if ( wait ) {
+				vk.swapStallTime = 0;
+			}
 			return qtrue;
+		}
+		if ( result == VK_TIMEOUT || result == VK_NOT_READY ) {
+			// the frame is drawn all the same, a screenshot or a video frame is read from the targets
+			if ( wait ) {
+				vk.swapStallTime = now ? now : 1;
+			}
+			return qfalse;
 		}
 		if ( result != VK_ERROR_OUT_OF_DATE_KHR ) {
 			VK_Fatal( "vkAcquireNextImageKHR", result );
@@ -383,6 +404,8 @@ void VK_EndFrame( void ) {
 			VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &blit, sameSize ? VK_FILTER_NEAREST : VK_FILTER_LINEAR );
 		VK_SetLayout( cmd, vk.swapImages[imageIndex], VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 			VK_IMAGE_LAYOUT_PRESENT_SRC_KHR );
+	} else {
+		vk.statFramesNotShown++;
 	}
 	VK_CHECK( qvkEndCommandBuffer( cmd ) );
 
@@ -397,7 +420,7 @@ void VK_EndFrame( void ) {
 		submit.pWaitSemaphores = &frame->acquired;
 		submit.pWaitDstStageMask = &waitStage;
 		submit.signalSemaphoreCount = 1;
-		submit.pSignalSemaphores = &frame->rendered;
+		submit.pSignalSemaphores = &vk.swapReady[imageIndex];
 	}
 	VK_CHECK( qvkQueueSubmit( vk.queue, 1, &submit, frame->fence ) );
 
@@ -406,7 +429,7 @@ void VK_EndFrame( void ) {
 		VkResult result;
 
 		info.waitSemaphoreCount = 1;
-		info.pWaitSemaphores = &frame->rendered;
+		info.pWaitSemaphores = &vk.swapReady[imageIndex];
 		info.swapchainCount = 1;
 		info.pSwapchains = &vk.swapchain;
 		info.pImageIndices = &imageIndex;

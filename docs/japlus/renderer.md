@@ -45,7 +45,7 @@ indexing ends in an error that names `rd-vanilla`.
 | `r_vkDebug 1` | validation layer and its messages in the console, if the layer is installed (latched) |
 | `r_ext_multisample 2`, `4`, `8` | anti aliasing with that many samples a pixel, the cvar `rd-vanilla` uses for it (latched) |
 | `r_vkStatic 0` | cheat: nothing from the device buffers, every vertex through the CPU as in `rd-vanilla`. For telling a fault of the buffers from a fault of the shading |
-| `gfxinfo` | device, memory, what the last frame was made of (draws, triangles, transforms, bones) and the shaders whose batches were still built on the CPU |
+| `gfxinfo` | device, memory, what the last frame was made of (draws, triangles, transforms, bones), the shaders whose batches were still built on the CPU, how many swapchains the window has had and how many frames found no image to be shown in |
 
 The cvars of `rd-vanilla` keep their names and meaning (`r_gamma`, `r_textureMode`, `r_picmip`,
 `r_DynamicGlow` and its parameters, `r_dynamiclight`, `r_drawfog`, `r_fastsky`, `r_surfaceSprites`, ...). The ones
@@ -124,6 +124,12 @@ saber marks on models (the model itself is on the device, the few vertices a mar
 the CPU), all effects the game hands over as polygons, sprites, beams and lines, marks on walls, the weather,
 surface sprites, the HUD.
 
+MD3 with several frames stay there on purpose. Of the 604 MD3 files of the base game and of JA+ 42 have more
+than one frame. 19 of those are the hand models of the weapons, which have tags and not a single vertex (the
+weapon in the hand is a model with one frame). Most of the others are objects of single player levels. What is
+left for a multiplayer game are the flags (151 vertices each), the shell of force push (20) and an explosion
+(29). A vertex program and buffers of their own for blending two frames would not pay for those.
+
 A frame on mp/ffa3, 1280x720, from `gfxinfo`: as a spectator at the first spawn point 4551 triangles come from
 device buffers and 1144 vertices from the CPU. Following a bot in a fight about 4600 triangles from device
 buffers and 1500 vertices from the CPU. Before the device buffers that scene had 8000 to 10000 vertices from the
@@ -175,7 +181,17 @@ culling, but no level of the base game has one, so that was never seen. The same
 
 ## Checked
 
-2026-10-06, RTX 4070 SUPER, Linux, NVIDIA 615.71. Every run with the validation layer, no message in any of them.
+2026-10-06, RTX 4070 SUPER, Linux, NVIDIA 615.71. Every run with the validation layer.
+
+Until the evening of that day the messages of the layer that are errors never reached the log: the renderer
+printed them with `PRINT_ERROR`, a level `CL_RefPrintf()` of the engine drops. Only warnings would have shown,
+and there were none. With that fixed the layer named two faults, both fixed since. The fragment shaders need the
+device feature `shaderDemoteToHelperInvocation` (glslc turns `discard` into it for Vulkan 1.3), which was not
+switched on. And with `r_swapInterval 1` the semaphore a present waits for was one of the frame, where it has to
+be one of the swapchain image. After that these runs were repeated and have no message: the pairs of mp/ffa3
+with glow and of the player, the 23 levels, the fight demo (plain, with glow and four samples, with stencil
+shadows, as a video), the shadows, the automap, `r_showtris`, `r_showImages` and the window tests below. `gfxinfo`
+prints how many messages the layer had, that number is the thing to look at.
 
 Views are compared as pairs: one session, the camera placed as a spectator with `setviewpos`, a screenshot with
 `rd-vanilla`, `cl_renderer rd-vulkan-vision; vid_restart`, a screenshot from the very same spot, and back.
@@ -223,6 +239,19 @@ same picture as in `rd-vanilla`.
 Recording to AVI (`video` while a demo plays): a demo recorded on mp/ffa3, written as Motion JPEG and as raw
 frames (`cl_aviMotionJpeg 0`). Both files hold the same picture for a frame, upright and with the right
 colors, and the file `rd-vanilla` writes from the same demo differs from it in 0.6 % of the pixels.
+
+The window. `r_mode -1` with a size the console can not draw in (`r_customwidth 0`, or less than 22 pixels) ended
+the game with the fatal error "Con_CheckResize: Window too small to draw a console", with both renderers. The
+engine now refuses such a size like any other mode that does not exist and falls back on mode 4 (800 x 600),
+at the start and at a `vid_restart`. A window of 22 x 1 runs. The window resized from outside while a level is
+drawn (900 x 500, 1600 x 900, 300 x 200 and back, under X11 through Xwayland, with and without
+`r_swapInterval 1`): a new swapchain each time, the frame is stretched into it. Under Wayland the compositor
+left the window of the game at its size. `r_swapInterval 1` in a window nobody sees: the images of the swapchain
+come back late or not at all, under Wayland and under X11. A frame waits 50 ms for one at most, and after a
+wait that ran out the frames of the next second do not wait at all and are shown when an image happens to be
+free, so the game and its connection go on at their speed (`gfxinfo` counts the frames that were not shown).
+Before that a frame waited without end, and under X11 the game stood still. Fullscreen and a minimized window
+were not tried.
 
 What is left are animated shaders (the two pictures are seconds apart), the snow and the swaying grass, the
 patches, and texture filter noise. Also seen without a number: main menu and console, a fight of bots with

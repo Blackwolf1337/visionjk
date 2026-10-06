@@ -171,7 +171,6 @@ typedef struct vkFrame_s {
 	VkCommandBuffer	cmd;
 	VkFence			fence;
 	VkSemaphore		acquired;
-	VkSemaphore		rendered;
 	VkDescriptorSet	set;			// globals, transforms and draws of this frame
 
 	vkBuffer_t		vertexes;
@@ -228,7 +227,11 @@ typedef struct vkState_s {
 	VkExtent2D					swapExtent;
 	uint32_t					numSwapImages;
 	VkImage						swapImages[VK_MAX_SWAP_IMAGES];
+	// signaled when the image of that number can be shown. One for an image and not one for a frame: the swapchain
+	// may hold on to it until that image is acquired again.
+	VkSemaphore					swapReady[VK_MAX_SWAP_IMAGES];
 	int							swapInterval;		// what the swapchain was made for
+	int							swapStallTime;		// ri.Milliseconds() when a frame waited for an image in vain, 0: the last wait got one
 
 	int							width, height;		// size of the frame, glConfig.vidWidth and vidHeight
 	vkTarget_t					color;				// the frame as the game draws it
@@ -300,6 +303,8 @@ typedef struct vkState_s {
 	qboolean					overflowed;			// this frame has more geometry than fits, said once
 
 	// what the frame was made of, for gfxinfo: [0] the frame being recorded, [1] the last finished one
+	int							statSwapchains;		// how many swapchains this window has had
+	int							statFramesNotShown;	// frames that found no image of the swapchain to go to
 	int							statDraws[2];
 	int							statTransforms[2];
 	int							statBones[2];

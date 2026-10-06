@@ -43,8 +43,9 @@ qboolean VK_SwapIntervalChanged( void ) {
 static VKAPI_ATTR VkBool32 VKAPI_CALL VK_DebugMessage( VkDebugUtilsMessageSeverityFlagBitsEXT severity,
 	VkDebugUtilsMessageTypeFlagsEXT types, const VkDebugUtilsMessengerCallbackDataEXT *data, void *user ) {
 	vk.validationMessages++;
-	ri.Printf( ( severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT ) ? PRINT_ERROR : PRINT_WARNING,
-		"VULKAN: %s\n", data->pMessage );
+	// not with PRINT_ERROR: CL_RefPrintf() of the engine knows three levels and drops every other one
+	ri.Printf( PRINT_ALL, "%sVULKAN: %s\n",
+		( severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT ) ? S_COLOR_RED : S_COLOR_YELLOW, data->pMessage );
 	return VK_FALSE;
 }
 
@@ -185,7 +186,8 @@ static qboolean VK_DeviceUsable( VkPhysicalDevice device, uint32_t *queueFamily 
 		return qfalse;
 	}
 	qvkGetPhysicalDeviceFeatures2( device, &features );
-	if ( !features.features.shaderClipDistance || !f13.dynamicRendering || !f12.runtimeDescriptorArray || !f12.shaderSampledImageArrayNonUniformIndexing
+	if ( !features.features.shaderClipDistance || !f13.dynamicRendering || !f13.shaderDemoteToHelperInvocation
+		|| !f12.runtimeDescriptorArray || !f12.shaderSampledImageArrayNonUniformIndexing
 		|| !f12.descriptorBindingPartiallyBound || !f12.descriptorBindingSampledImageUpdateAfterBind
 		|| !f12.descriptorBindingUpdateUnusedWhilePending ) {
 		return qfalse;
@@ -250,6 +252,8 @@ static void VK_CreateDevice( void ) {
 	vk.wireframe = (qboolean)( available.fillModeNonSolid != VK_FALSE );
 	features.features.shaderClipDistance = VK_TRUE;
 	f13.dynamicRendering = VK_TRUE;
+	// glslc turns the discard of a fragment shader into this for Vulkan 1.3
+	f13.shaderDemoteToHelperInvocation = VK_TRUE;
 	f12.runtimeDescriptorArray = VK_TRUE;
 	f12.shaderSampledImageArrayNonUniformIndexing = VK_TRUE;
 	f12.descriptorBindingPartiallyBound = VK_TRUE;
@@ -270,6 +274,15 @@ static void VK_CreateDevice( void ) {
 	pool.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
 	pool.queueFamilyIndex = vk.queueFamily;
 	VK_CHECK( qvkCreateCommandPool( vk.device, &pool, NULL, &vk.commandPool ) );
+}
+
+static void VK_DestroySwapSemaphores( void ) {
+	for ( uint32_t i = 0; i < VK_MAX_SWAP_IMAGES; i++ ) {
+		if ( vk.swapReady[i] ) {
+			qvkDestroySemaphore( vk.device, vk.swapReady[i], NULL );
+			vk.swapReady[i] = VK_NULL_HANDLE;
+		}
+	}
 }
 
 /*
@@ -353,12 +366,23 @@ void VK_CreateSwapchain( void ) {
 	if ( old ) {
 		qvkDestroySwapchainKHR( vk.device, old, NULL );
 	}
+	// only now, the old swapchain may have held on to them
+	VK_DestroySwapSemaphores();
 	vk.swapFormat = info.imageFormat;
 	vk.swapExtent = info.imageExtent;
 	vk.numSwapImages = 0;
+	vk.swapStallTime = 0;
+	vk.statSwapchains++;
+	ri.Printf( PRINT_DEVELOPER, "swapchain: %i x %i, present mode %i\n", (int)info.imageExtent.width, (int)info.imageExtent.height,
+		(int)info.presentMode );
 	if ( vk.swapchain ) {
+		const VkSemaphoreCreateInfo semaphore = { VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
+
 		vk.numSwapImages = VK_MAX_SWAP_IMAGES;
 		VK_CHECK( qvkGetSwapchainImagesKHR( vk.device, vk.swapchain, &vk.numSwapImages, vk.swapImages ) );
+		for ( uint32_t i = 0; i < vk.numSwapImages; i++ ) {
+			VK_CHECK( qvkCreateSemaphore( vk.device, &semaphore, NULL, &vk.swapReady[i] ) );
+		}
 	}
 }
 
@@ -367,6 +391,7 @@ void VK_DestroySwapchain( void ) {
 		qvkDestroySwapchainKHR( vk.device, vk.swapchain, NULL );
 		vk.swapchain = VK_NULL_HANDLE;
 	}
+	VK_DestroySwapSemaphores();
 }
 
 static VkFormat VK_DepthFormat( void ) {
@@ -561,6 +586,7 @@ void VK_GfxInfo_f( void ) {
 	ri.Printf( PRINT_ALL, "driver: %s\n", vk_driverString );
 	ri.Printf( PRINT_ALL, "frame: %i x %i with %i samples a pixel, window surface: %i x %i, %i images, swap interval %i\n", vk.width, vk.height,
 		(int)vk.samples, (int)vk.swapExtent.width, (int)vk.swapExtent.height, (int)vk.numSwapImages, vk.swapInterval );
+	ri.Printf( PRINT_ALL, "swapchains made: %i, frames that were not shown: %i\n", vk.statSwapchains, vk.statFramesNotShown );
 	ri.Printf( PRINT_ALL, "textures: %i of %i, pipelines: %i, samplers: %i\n", numImages, VK_MAX_IMAGES, vk.numPipelines,
 		vk.numSamplers );
 	ri.Printf( PRINT_ALL, "last frame: %i draws, %i triangles from buffers on the device, %i triangles and %i vertices built on the CPU\n",
