@@ -82,6 +82,11 @@ uint32_t VK_CurrentTransform( void ) {
 		}
 		t.model[15] = 1.0f;
 		VectorCopy( backEnd.ori.viewOrigin, t.viewOrigin );
+		if ( backEnd.viewParms.isPortal && !backEnd.projection2D ) {
+			// glClipPlane of rd-vanilla: clip anything behind the portal surface
+			VectorCopy( backEnd.viewParms.portalPlane.normal, t.clipPlane );
+			t.clipPlane[3] = backEnd.viewParms.portalPlane.dist;
+		}
 		if ( ent ) {
 			VectorCopy( ent->lightDir, t.lightDir );
 			VectorScale( ent->ambientLight, 1.0f / 255.0f, t.ambientLight );

@@ -136,7 +136,7 @@ static qboolean VK_DeviceUsable( VkPhysicalDevice device, uint32_t *queueFamily 
 		return qfalse;
 	}
 	vkGetPhysicalDeviceFeatures2( device, &features );
-	if ( !f13.dynamicRendering || !f12.runtimeDescriptorArray || !f12.shaderSampledImageArrayNonUniformIndexing
+	if ( !features.features.shaderClipDistance || !f13.dynamicRendering || !f12.runtimeDescriptorArray || !f12.shaderSampledImageArrayNonUniformIndexing
 		|| !f12.descriptorBindingPartiallyBound || !f12.descriptorBindingSampledImageUpdateAfterBind
 		|| !f12.descriptorBindingUpdateUnusedWhilePending ) {
 		return qfalse;
@@ -198,6 +198,7 @@ static void VK_CreateDevice( void ) {
 	vkGetPhysicalDeviceFeatures( vk.physicalDevice, &available );
 	features.features.samplerAnisotropy = available.samplerAnisotropy;
 	features.features.fillModeNonSolid = available.fillModeNonSolid;
+	features.features.shaderClipDistance = VK_TRUE;
 	f13.dynamicRendering = VK_TRUE;
 	f12.runtimeDescriptorArray = VK_TRUE;
 	f12.shaderSampledImageArrayNonUniformIndexing = VK_TRUE;

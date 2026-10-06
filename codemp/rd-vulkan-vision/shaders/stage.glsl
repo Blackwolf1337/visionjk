@@ -55,6 +55,9 @@ void StageVertex( StageInput v ) {
 
 	gl_Position = t.mvp * vec4( v.position, 1.0 );
 	v_position = v.position;
+	// the view through a portal or mirror must not show what lies between the eye and the portal
+	gl_ClipDistance[0] = ( t.clipPlane.xyz == vec3( 0.0 ) ) ? 1.0
+		: dot( ( t.model * vec4( v.position, 1.0 ) ).xyz, t.clipPlane.xyz ) - t.clipPlane.w;
 	v_depth = gl_Position.w;
 	// the depth range of OpenGL is -w to w, the one of Vulkan 0 to w
 	gl_Position.z = ( gl_Position.z + gl_Position.w ) * 0.5;

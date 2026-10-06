@@ -56,6 +56,7 @@ typedef struct vkTransform_s {	// once per view and entity
 	float		lightDir[4];		// in model space, entity lighting
 	float		ambientLight[4];
 	float		directedLight[4];
+	float		clipPlane[4];		// in world space, for the view through a portal or mirror: xyz normal, w distance. Zero: none
 } vkTransform_t;
 
 #define VKD_ATEST_MASK		0x00000007u		// 0 none, 1 GT_0, 2 LT_80, 3 GE_80, 4 GE_C0

@@ -10,6 +10,7 @@ struct Transform {
 	vec4	lightDir;		// in model space
 	vec4	ambientLight;
 	vec4	directedLight;
+	vec4	clipPlane;		// in world space, xyz normal, w distance. Zero: nothing is clipped
 };
 
 struct Draw {

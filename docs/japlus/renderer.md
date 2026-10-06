@@ -112,13 +112,18 @@ CPU.
   into a texture for each such entity, here the whole frame is copied and the draw is told where its square is.
   The picture is the same.
 - Screenshots hold the frame after the gamma pass.
+- Textures are not compressed (32 bit with mip levels). mp/ffa3 takes about 550 MB of device memory, 180 MB of
+  that are the buffers and targets the renderer always has.
 
 ## Not done
 
 The stencil variant of refraction (surfaces with the internal distortion shader, the alternate saber trail:
-they are not drawn at all for now), portals and mirrors, stencil and projection shadows (`cg_shadows 2` and `3`), flares, the vertex deform of disintegration, recording
+they are not drawn at all for now), stencil and projection shadows (`cg_shadows 2` and `3`), flares, the vertex deform of disintegration, recording
 to AVI, the automap, `r_showtris`, `r_shownormals`, `r_showImages`, anti aliasing. A build for Windows or macOS
 was not tried.
+
+Portals and mirrors have their clip plane (`gl_ClipDistance` from a plane in the transform) and the flipped
+culling, but no level of the base game has one, so that was never seen.
 
 ## Checked
 
@@ -138,6 +143,12 @@ difference side by side.
 | mp/ctf2, three views (global fog, snow) | 0.1 to 0.5 % |
 | mp/ctf3, four views (grass sprites) | 0.1 to 1.3 % |
 | the player from the front with HUD | 0.2 to 0.4 % |
+
+All 23 levels of `maps/mp`, two views each (`tools/rdsmoke.sh`): no crash, no error, no message of the
+validation layer, 0.1 to 3.1 % of the pixels off, one view of mp/ffa5 with 10.5 % (a column of flowing lava).
+Three of those levels have a sky portal. Five levels one after the other and a `vid_restart` in one session:
+the device memory in use goes up and down with the level (400 to 570 MB) and is the same when a level comes
+again.
 
 What is left are animated shaders (the two pictures are seconds apart), the snow and the swaying grass, the
 patches, and texture filter noise. Also seen without a number: main menu and console, a fight of bots with
