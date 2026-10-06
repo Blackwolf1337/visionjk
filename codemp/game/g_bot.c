@@ -1245,8 +1245,9 @@ static void G_LoadBots( void ) {
 	dirptr  = dirlist;
 	for (i = 0; i < numdirs; i++, dirptr += dirlen+1) {
 		dirlen = strlen(dirptr);
-		strcpy(filename, "scripts/");
-		strcat(filename, dirptr);
+		// a .bot name from a pk3 could be longer than filename[128]: build it bounded and skip it if it does not fit
+		if ( Com_sprintf(filename, sizeof(filename), "scripts/%s", dirptr) >= (int)sizeof(filename) )
+			continue;
 		G_LoadBotsFromFile(filename);
 	}
 //	trap->Print( "%i bots parsed\n", level.bots.num );
