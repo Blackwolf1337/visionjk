@@ -124,6 +124,16 @@ Also changed:
 - Fixed in the page: the key fields of an entity lost the focus about once a second. JKAdmin builds the key
   table again with every poll of the entities unless something was typed. Here it is only built again when the
   entity or its keys changed, and never while the cursor is in one of its fields.
+- New entity `misc_ball` (`codemp/game/g_ball.c`), placed in the World tab like the black hole. A ball with
+  physics of its own: gravity, bounces that keep part of the speed, rolling with resistance, rolling down slopes,
+  coming to rest. Players and NPCs kick it by running into it (it bounces off them like off something much
+  heavier that moves), force push and pull throw it (a call in `ForceThrow` of `w_force.c`), shots, sabers and
+  explosions knock it away from the point they hit. It is server side only: a plain model entity (`ET_GENERAL`,
+  the ball of the training remote scaled up) on a linear trajectory the server renews every frame, with a second
+  one for the turning. Its contents are those of a corpse, so shots hit it and players are not blocked. Keys:
+  `radius` 18, `modelscale` 600, `bounce` 0.7, `friction` 90, `mass` 1, `kick` 1, `model`. A use, falling out of
+  the world or getting stuck brings it back to where it was placed. Balls do not collide with each other, lifts do
+  not carry it, and the black hole does not pull it. Added without a test run.
 - New entity `misc_blackhole` (`codemp/game/g_blackhole.c`), made to be placed in the World tab: it is in the
   spawn table, so it shows up in the class list. It pulls players and NPCs towards itself, stronger the closer
   they are, and crushes what reaches its core. It is server side only: for the client it is a stock looping effect

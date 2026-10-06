@@ -305,6 +305,7 @@ void SP_misc_weather_zone( gentity_t *ent );
 
 void SP_misc_bsp (gentity_t *ent);
 void SP_misc_blackhole( gentity_t *ent );	// g_blackhole.c
+void SP_misc_ball( gentity_t *ent );		// g_ball.c
 void SP_terrain (gentity_t *ent);
 void SP_misc_skyportal_orient (gentity_t *ent);
 void SP_misc_skyportal (gentity_t *ent);
@@ -538,6 +539,7 @@ spawn_t	spawns[] = {
 	{ "item_botroam",						SP_item_botroam },
 	{ "light",								SP_light },
 	{ "misc_ammo_floor_unit",				SP_misc_ammo_floor_unit },
+	{ "misc_ball",							SP_misc_ball },
 	{ "misc_blackhole",						SP_misc_blackhole },
 	{ "misc_bsp",							SP_misc_bsp },
 	{ "misc_cubemap",						SP_misc_cubemap },
