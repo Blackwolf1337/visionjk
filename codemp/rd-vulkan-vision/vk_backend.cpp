@@ -579,6 +579,8 @@ static const void *RB_SwapBuffers( const void *data ) {
 		VK_ShowImages();
 	}
 	VK_EndFrame();
+	// recording to a file: now the frame has a picture
+	VK_WriteVideoFrame();
 	backEnd.projection2D = qfalse;
 	tess.shader = NULL;
 	return (const void *)( cmd + 1 );

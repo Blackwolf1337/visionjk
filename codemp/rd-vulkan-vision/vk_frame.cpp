@@ -660,13 +660,64 @@ byte *RB_ReadPixels( int x, int y, int width, int height, size_t *offset, int *p
 	return buffer;
 }
 
+static videoFrameCommand_t	vk_videoFrame;		// width 0: none asked for
+
 /*
 ===============
 RB_TakeVideoFrameCmd
 
-Recording to an AVI file: not done in this renderer yet
+Recording to an AVI file. The frame this command belongs to does not exist yet, its commands are still being
+recorded. The picture is taken when the frame has gone to the device, see VK_WriteVideoFrame().
 ===============
 */
 const void *RB_TakeVideoFrameCmd( const void *data ) {
-	return (const void *)( (const videoFrameCommand_t *)data + 1 );
+	const videoFrameCommand_t *cmd = (const videoFrameCommand_t *)data;
+
+	vk_videoFrame = *cmd;
+	return (const void *)( cmd + 1 );
+}
+
+/*
+===============
+VK_WriteVideoFrame
+
+After a frame: its picture goes to the client, packed as RB_TakeVideoFrameCmd() of rd-vanilla packs it
+===============
+*/
+void VK_WriteVideoFrame( void ) {
+	const videoFrameCommand_t *cmd = &vk_videoFrame;
+	const size_t linelen = (size_t)cmd->width * 3;
+	size_t offset = 0;
+	int padlen;
+	byte *pixels;
+
+	if ( !cmd->width ) {
+		return;
+	}
+	pixels = RB_ReadPixels( 0, 0, cmd->width, cmd->height, &offset, &padlen );
+	if ( cmd->motionJpeg ) {
+		const size_t size = RE_SaveJPGToBuffer( cmd->encodeBuffer, linelen * cmd->height, r_aviMotionJpegQuality->integer,
+			cmd->width, cmd->height, pixels, padlen );
+
+		ri.CL_WriteAVIVideoFrame( cmd->encodeBuffer, (int)size );
+	} else {
+		const size_t avipadwidth = PAD( linelen, AVI_LINE_PADDING );
+		const size_t avipadlen = avipadwidth - linelen;
+		const byte *in = pixels;
+		byte *out = cmd->encodeBuffer;
+
+		// blue first, and the lines as long as AVI wants them
+		for ( int row = 0; row < cmd->height; row++ ) {
+			for ( int i = 0; i < cmd->width; i++, in += 3 ) {
+				*out++ = in[2];
+				*out++ = in[1];
+				*out++ = in[0];
+			}
+			memset( out, 0, avipadlen );
+			out += avipadlen;
+		}
+		ri.CL_WriteAVIVideoFrame( cmd->encodeBuffer, (int)( avipadwidth * cmd->height ) );
+	}
+	Hunk_FreeTempMemory( pixels );
+	vk_videoFrame.width = 0;
 }

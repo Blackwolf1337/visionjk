@@ -350,6 +350,7 @@ qboolean	VK_UploadSkinnedBatch( CBoneCache *boneCache, uint32_t *bones );
 
 // vk_shade.cpp
 extern bool	g_bRenderGlowingObjects;	// the pass that draws only the stages that glow
+extern cvar_t	*r_aviMotionJpegQuality;	// tr_init.cpp
 extern bool	g_bDynamicGlowSupported;
 void		VK_InvalidateTransform( void );
 void		VK_TransformChanged( void );
@@ -363,6 +364,7 @@ void		VK_ShutdownPost( void );
 void		VK_BeginGlow( void );
 void		VK_EndGlow( void );
 void		VK_CaptureFrame( void );
+void		VK_WriteVideoFrame( void );
 void		VK_ClearFlares( void );
 void		VK_CopyProbes( void );
 void		VK_ReadProbes( vkFrame_t *frame );

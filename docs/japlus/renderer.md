@@ -82,7 +82,7 @@ library. The other renderers do not use them.
 | `vk_memory.cpp` | device memory in 64 MB blocks with free lists, buffers |
 | `vk_image.cpp` | the texture table, uploads batched in one command buffer, samplers, render targets |
 | `vk_pipeline.cpp` | descriptor layouts, shader modules, pipelines |
-| `vk_frame.cpp` | a frame: targets, gamma pass, copy to the window, buffers per frame, screenshots |
+| `vk_frame.cpp` | a frame: targets, gamma pass, copy to the window, buffers per frame, screenshots, video frames |
 | `vk_shade.cpp` | a batch with a `.shader` script becomes draws: colors, tcMods, fog, dynamic lights |
 | `vk_backend.cpp` | the render commands: pictures, views, entities, draw order |
 | `vk_world.cpp` | the level in a device buffer, which batches can use it |
@@ -146,8 +146,7 @@ left in these views are the effects of the game (flames, smoke, light cones) and
 
 ## Not done
 
-Stencil and projection shadows (`cg_shadows 2` and `3`), recording to AVI, the automap, `r_shownormals`,
-anti aliasing.
+Stencil and projection shadows (`cg_shadows 2` and `3`), the automap, `r_shownormals`, anti aliasing.
 
 Surfaces with the shader `internal_distortion` are left out. `rd-vanilla` cuts them into the stencil buffer and
 fills the hole with a stretched copy of the screen, but nothing in the game code or the data of the base game
@@ -184,6 +183,10 @@ validation layer, 0.1 to 3.1 % of the pixels off, one view of mp/ffa5 with 10.5 
 Three of those levels have a sky portal. Five levels one after the other and a `vid_restart` in one session:
 the device memory in use goes up and down with the level (400 to 570 MB) and is the same when a level comes
 again.
+
+Recording to AVI (`video` while a demo plays): a demo recorded on mp/ffa3, written as Motion JPEG and as raw
+frames (`cl_aviMotionJpeg 0`). Both files hold the same picture for a frame, upright and with the right
+colors, and the file `rd-vanilla` writes from the same demo differs from it in 0.6 % of the pixels.
 
 What is left are animated shaders (the two pictures are seconds apart), the snow and the swaying grass, the
 patches, and texture filter noise. Also seen without a number: main menu and console, a fight of bots with
