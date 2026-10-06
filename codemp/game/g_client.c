@@ -1728,7 +1728,9 @@ void SetupGameGhoul2Model(gentity_t *ent, char *modelname, char *skinName)
 				skinHandle = trap->R_RegisterSkin(useSkinName);
 			}
 
-			strcpy(modelFullPath, va("models/players/%s/model.glm", truncModelName));
+			// bounded: "models/players/" + a MAX_QPATH model name + "/model.glm" does not fit MAX_QPATH. A name too
+			// long to fit makes the model fail to load and fall back to the default, which is safe.
+			Com_sprintf(modelFullPath, sizeof(modelFullPath), "models/players/%s/model.glm", truncModelName);
 			handle = trap->G2API_InitGhoul2Model(&ent->ghoul2, modelFullPath, 0, skinHandle, -20, 0, 0);
 
 			if (handle<0)
@@ -1761,7 +1763,7 @@ void SetupGameGhoul2Model(gentity_t *ent, char *modelname, char *skinName)
 
 					if (skin[0])
 					{ //append it after a *
-						strcat( modelFullPath, va("*%s", skin) );
+						Q_strcat( modelFullPath, sizeof( modelFullPath ), va("*%s", skin) );
 					}
 
 					if ( ent->client->NPC_class == CLASS_VEHICLE )
