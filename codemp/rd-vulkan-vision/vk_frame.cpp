@@ -27,6 +27,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include "vk_local.h"
 
+static vkBuffer_t	vk_readback;		// where the device copies a finished frame for the CPU to read
+
 void VK_InitFrames( void ) {
 	VkCommandBufferAllocateInfo alloc = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
 	VkFenceCreateInfo fence = { VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
@@ -94,6 +96,7 @@ void VK_ShutdownFrames( void ) {
 		VK_DestroyBuffer( &frame->draws );
 		VK_DestroyBuffer( &frame->bones );
 	}
+	VK_DestroyBuffer( &vk_readback );
 	vk.frame = NULL;
 }
 
@@ -622,7 +625,7 @@ the lowest row first. Free the result with Hunk_FreeTempMemory().
 byte *RB_ReadPixels( int x, int y, int width, int height, size_t *offset, int *padlen ) {
 	byte *buffer = (byte *)Hunk_AllocateTempMemory( width * height * 3 + (int)*offset );
 	byte *out = buffer + *offset;
-	vkBuffer_t readback;
+	const VkDeviceSize frameBytes = (VkDeviceSize)vk.width * vk.height * 4;
 	VkBufferImageCopy region;
 	VkCommandBuffer cmd;
 
@@ -634,7 +637,11 @@ byte *RB_ReadPixels( int x, int y, int width, int height, size_t *offset, int *p
 
 	VK_FlushUploads();
 	qvkDeviceWaitIdle( vk.device );
-	VK_CreateBuffer( &readback, (VkDeviceSize)width * height * 4, VK_BUFFER_USAGE_TRANSFER_DST_BIT, qtrue );
+	// the buffer stays for the next picture: a video asks for one every frame
+	if ( vk_readback.size < frameBytes ) {
+		VK_DestroyBuffer( &vk_readback );
+		VK_CreateBuffer( &vk_readback, frameBytes, VK_BUFFER_USAGE_TRANSFER_DST_BIT, qtrue );
+	}
 	memset( &region, 0, sizeof( region ) );
 	region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 	region.imageSubresource.layerCount = 1;
@@ -644,11 +651,11 @@ byte *RB_ReadPixels( int x, int y, int width, int height, size_t *offset, int *p
 	region.imageExtent.height = (uint32_t)height;
 	region.imageExtent.depth = 1;
 	cmd = VK_UploadCmd();
-	qvkCmdCopyImageToBuffer( cmd, vk.final.image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, readback.buffer, 1, &region );
+	qvkCmdCopyImageToBuffer( cmd, vk.final.image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, vk_readback.buffer, 1, &region );
 	VK_FlushUploads();
 
 	for ( int row = 0; row < height; row++ ) {
-		const byte *in = readback.mapped + (size_t)( height - 1 - row ) * width * 4;
+		const byte *in = vk_readback.mapped + (size_t)( height - 1 - row ) * width * 4;
 
 		for ( int i = 0; i < width; i++, in += 4, out += 3 ) {
 			out[0] = in[0];
@@ -656,7 +663,6 @@ byte *RB_ReadPixels( int x, int y, int width, int height, size_t *offset, int *p
 			out[2] = in[2];
 		}
 	}
-	VK_DestroyBuffer( &readback );
 	return buffer;
 }
 

@@ -218,6 +218,7 @@ VkDeviceMemory VK_MemoryOf( const vkAlloc_t *alloc ) {
 
 void VK_CreateBuffer( vkBuffer_t *buf, VkDeviceSize size, VkBufferUsageFlags usage, qboolean hostVisible ) {
 	VkBufferCreateInfo info = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
+	VkMemoryPropertyFlags flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 	VkMemoryRequirements req;
 
 	memset( buf, 0, sizeof( *buf ) );
@@ -226,8 +227,16 @@ void VK_CreateBuffer( vkBuffer_t *buf, VkDeviceSize size, VkBufferUsageFlags usa
 	info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 	VK_CHECK( qvkCreateBuffer( vk.device, &info, NULL, &buf->buffer ) );
 	qvkGetBufferMemoryRequirements( vk.device, buf->buffer, &req );
-	VK_AllocMemory( &req, hostVisible ? ( VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT )
-		: VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &buf->alloc );
+	if ( !hostVisible ) {
+		flags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+	} else if ( usage == VK_BUFFER_USAGE_TRANSFER_DST_BIT
+		&& VK_MemoryType( req.memoryTypeBits, flags | VK_MEMORY_PROPERTY_HOST_CACHED_BIT ) >= 0 ) {
+		// A buffer the device only copies into is one the CPU reads (screenshots, video frames, the depth under a
+		// flare). Memory that is merely host visible may be write combined, and reading that is a hundred times
+		// slower: a frame of 1280 x 720 took a quarter of a second.
+		flags |= VK_MEMORY_PROPERTY_HOST_CACHED_BIT;
+	}
+	VK_AllocMemory( &req, flags, &buf->alloc );
 	VK_CHECK( qvkBindBufferMemory( vk.device, buf->buffer, VK_MemoryOf( &buf->alloc ), buf->alloc.offset ) );
 	buf->size = size;
 	if ( hostVisible ) {
