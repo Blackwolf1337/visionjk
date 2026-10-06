@@ -280,6 +280,7 @@ typedef struct vkState_s {
 	vkStatShader_t				statCpuShaders[2][VK_MAX_STAT_SHADERS];	// whose batches were built on the CPU
 	int							statNumCpuShaders[2];
 
+	qboolean					wireframe;			// the device can draw triangles as lines (r_showtris)
 	qboolean					validation;
 	int							validationMessages;
 } vkState_t;

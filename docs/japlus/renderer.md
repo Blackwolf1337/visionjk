@@ -137,14 +137,19 @@ left in these views are the effects of the game (flames, smoke, light cones) and
   whether something covers it. Here that pixel is copied at the end of the view and read when the frame has
   run on the device, so a flare shows up and goes away two frames late. Its place and size are the same.
 - Screenshots hold the frame after the gamma pass.
+- `r_showImages`: `rd-vanilla` sizes the tiles by the width of the window but draws them in the 640 x 480 of
+  the menus, so most are outside of a large window. Here all of them are on the screen.
 - Textures are not compressed (32 bit with mip levels). mp/ffa3 takes about 550 MB of device memory, 180 MB of
   that are the buffers and targets the renderer always has.
 
 ## Not done
 
-The stencil variant of refraction (surfaces with the internal distortion shader, the alternate saber trail:
-they are not drawn at all for now), stencil and projection shadows (`cg_shadows 2` and `3`), the vertex deform
-of disintegration, recording to AVI, the automap, `r_showtris`, `r_shownormals`, `r_showImages`, anti aliasing.
+Stencil and projection shadows (`cg_shadows 2` and `3`), the vertex deform of disintegration, recording to AVI,
+the automap, `r_shownormals`, anti aliasing.
+
+Surfaces with the shader `internal_distortion` are left out. `rd-vanilla` cuts them into the stencil buffer and
+fills the hole with a stretched copy of the screen, but nothing in the game code or the data of the base game
+and of JA+ asks for that shader.
 
 The Windows DLL builds with mingw-w64 for 32 and 64 bit and has no import but the C runtime. It was never
 loaded into a game. macOS was not tried, it would need MoltenVK.

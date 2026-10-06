@@ -289,7 +289,7 @@ VkPipeline VK_CreatePipeline( VkShaderModule vertex, VkShaderModule fragment, ui
 	assembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 	viewport.viewportCount = 1;
 	viewport.scissorCount = 1;
-	raster.polygonMode = ( !post && ( stateBits & GLS_POLYMODE_LINE ) ) ? VK_POLYGON_MODE_LINE : VK_POLYGON_MODE_FILL;
+	raster.polygonMode = ( !post && vk.wireframe && ( stateBits & GLS_POLYMODE_LINE ) ) ? VK_POLYGON_MODE_LINE : VK_POLYGON_MODE_FILL;
 	raster.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;		// as in OpenGL, the viewport is flipped to match
 	raster.lineWidth = 1.0f;
 	multisample.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;

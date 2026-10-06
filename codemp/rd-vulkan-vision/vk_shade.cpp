@@ -864,6 +864,19 @@ void RB_StageIteratorGeneric( void ) {
 		&& shader->fogPass ) {
 		VK_FogPass( transform, cullMode, program, bones );
 	}
+	// draw debugging stuff: the triangles of the batch as white lines over everything (DrawTris of rd-vanilla)
+	if ( r_showtris->integer && vk.wireframe ) {
+		vkDraw_t draw;
+
+		memset( &draw, 0, sizeof( draw ) );
+		draw.transform = transform;
+		draw.bones = bones;
+		draw.tex0 = draw.tex1 = tr.whiteImage->texnum;
+		VectorSet4( draw.baseColor, 1.0f, 1.0f, 1.0f, 1.0f );
+		VK_SetDepthRange( 0.0f, 0.0f );
+		VK_DrawTess( &draw, program, GLS_POLYMODE_LINE | GLS_DEPTHMASK_TRUE, cullMode, qfalse );
+		VK_SetDepthRange( 0.0f, 1.0f );
+	}
 	// Now check for surfacesprites: grass and the like that tr_surfacesprites.cpp grows on the triangles of the
 	// batch. It hands quads to tr_quicksprite.cpp, which draws them through vk_gl.cpp.
 	if ( r_surfaceSprites->integer && !isStatic ) {
@@ -924,9 +937,9 @@ void RB_EndSurface( void ) {
 		tess.numIndexes = 0;
 		return;
 	}
-	// Surfaces with the internal distortion shader cut a hole into the stencil buffer that is filled with a
-	// stretched copy of the screen afterwards (the alternate saber trail). Not done in this renderer: as plain
-	// surfaces they would be white shapes, so they are left out.
+	// Surfaces with the internal distortion shader cut a hole into the stencil buffer of rd-vanilla that is filled
+	// with a stretched copy of the screen afterwards. Nothing in the game or its data asks for that shader, so
+	// this was not built. As plain surfaces they would be white shapes: they are left out.
 	if ( tess.shader == tr.distortionShader ) {
 		tess.numIndexes = 0;
 		return;

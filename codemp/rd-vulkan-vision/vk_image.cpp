@@ -488,7 +488,8 @@ void VK_ShutdownImages( void ) {
 ===============
 RB_ShowImages
 
-r_showImages draws every texture as a tile. Not done in this renderer.
+RE_EndRegistration() calls this in rd-vanilla to touch every texture, so that OpenGL has them all in memory.
+Here they are on the device once they are uploaded. The tiles of r_showImages are VK_ShowImages().
 ===============
 */
 void RB_ShowImages( void ) {

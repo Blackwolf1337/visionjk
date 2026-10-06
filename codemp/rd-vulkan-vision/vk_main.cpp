@@ -246,6 +246,7 @@ static void VK_CreateDevice( void ) {
 	qvkGetPhysicalDeviceFeatures( vk.physicalDevice, &available );
 	features.features.samplerAnisotropy = available.samplerAnisotropy;
 	features.features.fillModeNonSolid = available.fillModeNonSolid;
+	vk.wireframe = (qboolean)( available.fillModeNonSolid != VK_FALSE );
 	features.features.shaderClipDistance = VK_TRUE;
 	f13.dynamicRendering = VK_TRUE;
 	f12.runtimeDescriptorArray = VK_TRUE;

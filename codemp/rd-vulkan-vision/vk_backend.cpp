@@ -523,6 +523,50 @@ static const void *RB_DrawBuffer( const void *data ) {
 	return (const void *)( cmd + 1 );
 }
 
+/*
+===============
+VK_ShowImages
+
+r_showImages: all the images on the screen, on top of whatever was there. 2: in proportional size.
+rd-vanilla sizes the tiles by the width of the window but draws them in the 640 x 480 of the menus, so in a large
+window most of them are outside. Here they are sized for the 640 x 480 and all can be seen.
+===============
+*/
+static void VK_ShowImages( void ) {
+	image_t *image;
+	int i = 0;
+
+	if ( !backEnd.projection2D ) {
+		RB_SetGL2D();
+	}
+	GL_State( GLS_DEPTHTEST_DISABLE | GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA );
+	qglColor4f( 1.0f, 1.0f, 1.0f, 1.0f );
+	R_Images_StartIteration();
+	while ( ( image = R_Images_GetNextIteration() ) != NULL ) {
+		float w = SCREEN_WIDTH / 20.0f;
+		float h = SCREEN_HEIGHT / 15.0f;
+		const float x = i % 20 * w;
+		const float y = i / 20 % 15 * h;
+
+		if ( r_showImages->integer == 2 ) {
+			w *= image->width / 512.0f;
+			h *= image->height / 512.0f;
+		}
+		GL_Bind( image );
+		qglBegin( GL_QUADS );
+		qglTexCoord2f( 0.0f, 0.0f );
+		qglVertex3f( x, y, 0.0f );
+		qglTexCoord2f( 1.0f, 0.0f );
+		qglVertex3f( x + w, y, 0.0f );
+		qglTexCoord2f( 1.0f, 1.0f );
+		qglVertex3f( x + w, y + h, 0.0f );
+		qglTexCoord2f( 0.0f, 1.0f );
+		qglVertex3f( x, y + h, 0.0f );
+		qglEnd();
+		i++;
+	}
+}
+
 static const void *RB_SwapBuffers( const void *data ) {
 	const swapBuffersCommand_t *cmd = (const swapBuffersCommand_t *)data;
 
@@ -530,6 +574,9 @@ static const void *RB_SwapBuffers( const void *data ) {
 	// finish any 2D drawing if needed
 	if ( tess.numIndexes ) {
 		RB_EndSurface();
+	}
+	if ( r_showImages->integer ) {
+		VK_ShowImages();
 	}
 	VK_EndFrame();
 	backEnd.projection2D = qfalse;
