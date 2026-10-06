@@ -48,6 +48,10 @@ if(BuildMPRend2)
 	add_subdirectory("${MPDir}/rd-rend2")
 endif(BuildMPRend2)
 
+if(BuildMPRdVulkanVision)
+	add_subdirectory("${MPDir}/rd-vulkan-vision")
+endif(BuildMPRdVulkanVision)
+
 #    Common things between Engine and Dedicated Server
 if(BuildMPEngine OR BuildMPDed)
 
