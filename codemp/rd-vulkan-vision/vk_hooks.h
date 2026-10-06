@@ -33,6 +33,9 @@ void VK_GfxInfo_f( void );
 byte *RB_ReadPixels( int x, int y, int width, int height, size_t *offset, int *padlen );
 const void *RB_TakeVideoFrameCmd( const void *data );
 
+// tr_ghoul2.cpp, for vk_model.cpp: the bone cache is a class of that file
+int G2_BoneMatrices( CBoneCache *boneCache, float *out, int maxBones );
+
 // vk_image.cpp: the upload of one texture as tr_image.cpp drives it. GL_Bind() picks the image, the levels
 // follow, the parameters pick its sampler.
 void VK_ImageLevel( int level, int width, int height, const byte *rgba );

@@ -43,8 +43,8 @@ void VK_InitFrames( void ) {
 
 	for ( int i = 0; i < VK_FRAMES; i++ ) {
 		vkFrame_t *frame = &vk.frames[i];
-		VkDescriptorBufferInfo buffers[3];
-		VkWriteDescriptorSet writes[3];
+		VkDescriptorBufferInfo buffers[4];
+		VkWriteDescriptorSet writes[4];
 
 		VK_CHECK( vkAllocateCommandBuffers( vk.device, &alloc, &frame->cmd ) );
 		VK_CHECK( vkCreateFence( vk.device, &fence, NULL, &frame->fence ) );
@@ -55,13 +55,15 @@ void VK_InitFrames( void ) {
 		VK_CreateBuffer( &frame->globals, sizeof( vkGlobals_t ), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, qtrue );
 		VK_CreateBuffer( &frame->transforms, sizeof( vkTransform_t ) * VK_MAX_TRANSFORMS, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, qtrue );
 		VK_CreateBuffer( &frame->draws, sizeof( vkDraw_t ) * VK_MAX_DRAWS, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, qtrue );
+		VK_CreateBuffer( &frame->bones, sizeof( float ) * 12 * VK_MAX_BONES, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, qtrue );
 
 		VK_CHECK( vkAllocateDescriptorSets( vk.device, &set, &frame->set ) );
 		buffers[0].buffer = frame->globals.buffer;
 		buffers[1].buffer = frame->transforms.buffer;
 		buffers[2].buffer = frame->draws.buffer;
+		buffers[3].buffer = frame->bones.buffer;
 		memset( writes, 0, sizeof( writes ) );
-		for ( uint32_t j = 0; j < 3; j++ ) {
+		for ( uint32_t j = 0; j < 4; j++ ) {
 			buffers[j].offset = 0;
 			buffers[j].range = VK_WHOLE_SIZE;
 			writes[j].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -71,7 +73,7 @@ void VK_InitFrames( void ) {
 			writes[j].descriptorType = j ? VK_DESCRIPTOR_TYPE_STORAGE_BUFFER : VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 			writes[j].pBufferInfo = &buffers[j];
 		}
-		vkUpdateDescriptorSets( vk.device, 3, writes, 0, NULL );
+		vkUpdateDescriptorSets( vk.device, 4, writes, 0, NULL );
 	}
 }
 
@@ -87,6 +89,7 @@ void VK_ShutdownFrames( void ) {
 		VK_DestroyBuffer( &frame->globals );
 		VK_DestroyBuffer( &frame->transforms );
 		VK_DestroyBuffer( &frame->draws );
+		VK_DestroyBuffer( &frame->bones );
 	}
 	vk.frame = NULL;
 }
@@ -216,6 +219,8 @@ void VK_BeginFrame( void ) {
 	frame->indexUsed = 0;
 	frame->numTransforms = 0;
 	frame->numDraws = 0;
+	frame->numBones = 0;
+	VK_ModelsBeginFrame();
 
 	globals = (vkGlobals_t *)frame->globals.mapped;
 	memset( globals, 0, sizeof( *globals ) );
@@ -448,11 +453,11 @@ qboolean VK_UploadGeometry( const vec4_t *xyz, const vec4_t *normal, const vec2_
 ===============
 VK_UploadIndexes
 
-Indexes into vertices that are in a buffer on the device already: offsets are where xyz, normal, texCoords
-and colors start in it
+Indexes into vertices that are in a buffer on the device already: offsets are where its vertex streams start
+(xyz, normal, texCoords and colors of the level, the one stream of the models)
 ===============
 */
-qboolean VK_UploadIndexes( VkBuffer vertexBuffer, const VkDeviceSize *offsets, const glIndex_t *indexes, int numIndexes ) {
+qboolean VK_UploadIndexes( VkBuffer vertexBuffer, const VkDeviceSize *offsets, int numBindings, const glIndex_t *indexes, int numIndexes ) {
 	vkFrame_t *frame = vk.frame;
 	const VkDeviceSize indexBytes = (VkDeviceSize)numIndexes * sizeof( glIndex_t );
 	const VkBuffer buffers[4] = { vertexBuffer, vertexBuffer, vertexBuffer, vertexBuffer };
@@ -461,7 +466,7 @@ qboolean VK_UploadIndexes( VkBuffer vertexBuffer, const VkDeviceSize *offsets, c
 		return qfalse;
 	}
 	memcpy( frame->indexes.mapped + frame->indexUsed, indexes, (size_t)indexBytes );
-	vkCmdBindVertexBuffers( frame->cmd, 0, 4, buffers, offsets );
+	vkCmdBindVertexBuffers( frame->cmd, 0, (uint32_t)numBindings, buffers, offsets );
 	vkCmdBindIndexBuffer( frame->cmd, frame->indexes.buffer, frame->indexUsed, VK_INDEX_TYPE_UINT32 );
 	frame->indexUsed += indexBytes;
 	vk.numBoundIndexes = numIndexes;

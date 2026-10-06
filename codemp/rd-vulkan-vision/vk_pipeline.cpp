@@ -32,6 +32,9 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 static const uint32_t vk_genericVert[] =
 #include "shaders/generic_vert.inc"
 ;
+static const uint32_t vk_skinnedVert[] =
+#include "shaders/skinned_vert.inc"
+;
 static const uint32_t vk_genericFrag[] =
 #include "shaders/generic_frag.inc"
 ;
@@ -53,7 +56,7 @@ static VkShaderModule VK_CreateShader( const uint32_t *code, size_t size ) {
 }
 
 static void VK_CreateLayouts( void ) {
-	VkDescriptorSetLayoutBinding frame[3];
+	VkDescriptorSetLayoutBinding frame[4];
 	VkDescriptorSetLayoutBinding texture;
 	VkDescriptorSetLayoutBinding post;
 	VkDescriptorBindingFlags textureFlags = VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT
@@ -68,15 +71,15 @@ static void VK_CreateLayouts( void ) {
 	VkDescriptorSetAllocateInfo alloc = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO };
 	VkSamplerCreateInfo sampler = { VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO };
 
-	// set 0: globals, transforms and draws of the frame
+	// set 0: globals, transforms, draws and bones of the frame
 	memset( frame, 0, sizeof( frame ) );
-	for ( uint32_t i = 0; i < 3; i++ ) {
+	for ( uint32_t i = 0; i < 4; i++ ) {
 		frame[i].binding = i;
 		frame[i].descriptorType = i ? VK_DESCRIPTOR_TYPE_STORAGE_BUFFER : VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 		frame[i].descriptorCount = 1;
 		frame[i].stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
 	}
-	info.bindingCount = 3;
+	info.bindingCount = 4;
 	info.pBindings = frame;
 	VK_CHECK( vkCreateDescriptorSetLayout( vk.device, &info, NULL, &vk.frameSetLayout ) );
 
@@ -106,7 +109,7 @@ static void VK_CreateLayouts( void ) {
 	sizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 	sizes[0].descriptorCount = VK_FRAMES;
 	sizes[1].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-	sizes[1].descriptorCount = VK_FRAMES * 2;
+	sizes[1].descriptorCount = VK_FRAMES * 3;
 	sizes[2].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 	sizes[2].descriptorCount = VK_MAX_IMAGES + 1;
 	pool.flags = VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT;
@@ -193,7 +196,7 @@ VK_CreatePipeline
 post: a pass over the whole target without vertices (the gamma pass), everything else draws the tess arrays
 ===============
 */
-static VkPipeline VK_CreatePipeline( VkShaderModule vertex, VkShaderModule fragment, uint32_t stateBits, qboolean post ) {
+static VkPipeline VK_CreatePipeline( VkShaderModule vertex, VkShaderModule fragment, uint32_t stateBits, qboolean post, qboolean skinned ) {
 	VkPipelineShaderStageCreateInfo stages[2];
 	VkVertexInputBindingDescription bindings[4];
 	VkVertexInputAttributeDescription attributes[8];
@@ -222,7 +225,30 @@ static VkPipeline VK_CreatePipeline( VkShaderModule vertex, VkShaderModule fragm
 	stages[1].module = fragment;
 	stages[1].pName = "main";
 
-	if ( !post ) {
+	if ( skinned ) {
+		// vkSkinVertex_t
+		memset( bindings, 0, sizeof( bindings ) );
+		memset( attributes, 0, sizeof( attributes ) );
+		bindings[0].stride = sizeof( vkSkinVertex_t );
+		bindings[0].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+		for ( uint32_t i = 0; i < 5; i++ ) {
+			attributes[i].location = i;
+		}
+		attributes[0].format = VK_FORMAT_R32G32B32_SFLOAT;
+		attributes[0].offset = offsetof( vkSkinVertex_t, xyz );
+		attributes[1].format = VK_FORMAT_R32G32B32_SFLOAT;
+		attributes[1].offset = offsetof( vkSkinVertex_t, normal );
+		attributes[2].format = VK_FORMAT_R32G32_SFLOAT;
+		attributes[2].offset = offsetof( vkSkinVertex_t, st );
+		attributes[3].format = VK_FORMAT_R8G8B8A8_UINT;
+		attributes[3].offset = offsetof( vkSkinVertex_t, bones );
+		attributes[4].format = VK_FORMAT_R16G16B16A16_UNORM;
+		attributes[4].offset = offsetof( vkSkinVertex_t, weights );
+		input.vertexBindingDescriptionCount = 1;
+		input.pVertexBindingDescriptions = bindings;
+		input.vertexAttributeDescriptionCount = 5;
+		input.pVertexAttributeDescriptions = attributes;
+	} else if ( !post ) {
 		// the arrays of shaderCommands_t, one binding each: xyz, normal, texCoords, vertexColors
 		const uint32_t strides[4] = { sizeof( vec4_t ), sizeof( vec4_t ), sizeof( vec2_t ) * NUM_TEX_COORDS, 4 };
 
@@ -316,7 +342,7 @@ VkPipeline VK_FindPipeline( vkProgram_t program, uint32_t stateBits ) {
 	}
 	vk.pipelines[vk.numPipelines].key = key;
 	vk.pipelines[vk.numPipelines].pipeline = VK_CreatePipeline( vk.vertexShaders[program], vk.fragmentShaders[program],
-		stateBits, qfalse );
+		stateBits, qfalse, (qboolean)( program == VKP_SKINNED ) );
 	return vk.pipelines[vk.numPipelines++].pipeline;
 }
 
@@ -324,9 +350,11 @@ void VK_InitPipelines( void ) {
 	VK_CreateLayouts();
 	vk.vertexShaders[VKP_GENERIC] = VK_CreateShader( vk_genericVert, sizeof( vk_genericVert ) );
 	vk.fragmentShaders[VKP_GENERIC] = VK_CreateShader( vk_genericFrag, sizeof( vk_genericFrag ) );
+	vk.vertexShaders[VKP_SKINNED] = VK_CreateShader( vk_skinnedVert, sizeof( vk_skinnedVert ) );
+	vk.fragmentShaders[VKP_SKINNED] = VK_CreateShader( vk_genericFrag, sizeof( vk_genericFrag ) );
 	vk.postVertexShader = VK_CreateShader( vk_postVert, sizeof( vk_postVert ) );
 	vk.gammaFragmentShader = VK_CreateShader( vk_gammaFrag, sizeof( vk_gammaFrag ) );
-	vk.gammaPipeline = VK_CreatePipeline( vk.postVertexShader, vk.gammaFragmentShader, 0, qtrue );
+	vk.gammaPipeline = VK_CreatePipeline( vk.postVertexShader, vk.gammaFragmentShader, 0, qtrue, qfalse );
 }
 
 void VK_ShutdownPipelines( void ) {

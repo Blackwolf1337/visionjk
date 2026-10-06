@@ -567,7 +567,7 @@ One more pass over the batch for every dynamic light that reaches it. The light 
 generic.frag and added to what the stages left there, times the texture of the surface.
 ===============
 */
-static void VK_DynamicLights( uint32_t transform, int cullMode ) {
+static void VK_DynamicLights( uint32_t transform, int cullMode, vkProgram_t program, uint32_t bones ) {
 	const shader_t *shader = tess.shader;
 	const shaderStage_t *textured = NULL;
 	const textureBundle_t *bundle = NULL;
@@ -603,6 +603,7 @@ static void VK_DynamicLights( uint32_t transform, int cullMode ) {
 		}
 		memset( &draw, 0, sizeof( draw ) );
 		draw.transform = transform;
+		draw.bones = bones;
 		draw.flags = VKD_DLIGHT;
 		VK_IdentityTexCoords( &draw );
 		draw.tex0 = bundle ? VK_BundleTexture( bundle ) : tr.whiteImage->texnum;
@@ -610,7 +611,7 @@ static void VK_DynamicLights( uint32_t transform, int cullMode ) {
 		VectorCopy( dl->color, draw.baseColor );
 		VectorCopy( dl->transformed, draw.parm );
 		draw.parm[3] = dl->radius;
-		VK_DrawTess( &draw, VKP_GENERIC, ( textured ? ( GLS_SRCBLEND_ONE | GLS_DSTBLEND_ONE ) : ( GLS_SRCBLEND_DST_COLOR | GLS_DSTBLEND_ONE ) )
+		VK_DrawTess( &draw, program, ( textured ? ( GLS_SRCBLEND_ONE | GLS_DSTBLEND_ONE ) : ( GLS_SRCBLEND_DST_COLOR | GLS_DSTBLEND_ONE ) )
 			| GLS_DEPTHFUNC_EQUAL, cullMode, (qboolean)shader->polygonOffset );
 	}
 }
@@ -653,13 +654,19 @@ void RB_StageIteratorGeneric( void ) {
 
 	const qboolean isStatic = VK_BatchIsStatic();
 	float colorScale[3] = { 1.0f, 1.0f, 1.0f };
+	vkProgram_t program = VKP_GENERIC;
+	uint32_t bones = 0;
 
 	if ( isStatic ) {
 		// surfaces of the level whose vertices are on the device, see vk_world.cpp
-		if ( !VK_UploadStaticBatch() ) {
+		if ( !VK_UploadStaticBatch( &bones ) ) {
 			return;
 		}
-		VK_StaticColorScale( colorScale );
+		if ( VK_BatchIsSkinned() ) {
+			program = VKP_SKINNED;
+		} else {
+			VK_StaticColorScale( colorScale );
+		}
 	} else {
 		RB_DeformTessGeometry();
 		if ( !VK_UploadTess() ) {
@@ -704,6 +711,7 @@ void RB_StageIteratorGeneric( void ) {
 
 		memset( &draw, 0, sizeof( draw ) );
 		draw.transform = transform;
+		draw.bones = bones;
 		draw.parm[0] = shader->portalRange;
 		draw.parm[1] = tess.shaderTime;
 		if ( !tess.fading ) {
@@ -751,7 +759,7 @@ void RB_StageIteratorGeneric( void ) {
 		if ( cpuColors ) {
 			VK_TessColors( tess.svars.colors );
 		}
-		VK_DrawTess( &draw, VKP_GENERIC, stateBits, cullMode, (qboolean)shader->polygonOffset );
+		VK_DrawTess( &draw, program, stateBits, cullMode, (qboolean)shader->polygonOffset );
 		if ( cpuColors ) {
 			VK_TessColors( NULL );
 		}
@@ -760,7 +768,7 @@ void RB_StageIteratorGeneric( void ) {
 	// now do any dynamic lighting needed
 	if ( tess.dlightBits && shader->sort <= SS_OPAQUE && !( shader->surfaceFlags & ( SURF_NODLIGHT | SURF_SKY ) )
 		&& !g_bRenderGlowingObjects ) {
-		VK_DynamicLights( transform, cullMode );
+		VK_DynamicLights( transform, cullMode, program, bones );
 	}
 	// now do fog
 	if ( tr.world && ( tess.fogNum != tr.world->globalFog || r_drawfog->value != 2 ) && r_drawfog->value && tess.fogNum

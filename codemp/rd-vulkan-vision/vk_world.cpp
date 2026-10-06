@@ -40,15 +40,22 @@ static std::unordered_map<const void *, int>	vk_firstVertex;		// of a surface in
 static vkBuffer_t		vk_worldVertexes;
 static VkDeviceSize		vk_worldOffsets[4];			// where xyz, normal, texCoords and colors start in it
 static qboolean			vk_worldValid;
-static qboolean			vk_batchStatic;				// the batch in tess is indexes into the buffer only
+// the batch in tess: 0: vertices and indexes in the tess arrays, 1: indexes into the buffer of the level,
+// 2: indexes into the buffer of the Ghoul2 models (vk_model.cpp), all of one skeleton
+static int				vk_batchMode;
+static CBoneCache		*vk_batchBones;
 
 qboolean VK_BatchIsStatic( void ) {
-	return vk_batchStatic;
+	return (qboolean)( vk_batchMode != 0 );
+}
+
+qboolean VK_BatchIsSkinned( void ) {
+	return (qboolean)( vk_batchMode == 2 );
 }
 
 // RB_BeginSurface(): the first surface of the batch decides again
 void VK_BatchBegin( void ) {
-	vk_batchStatic = qfalse;
+	vk_batchMode = 0;
 }
 
 /*
@@ -226,15 +233,55 @@ surface functions of tr_surface.cpp into the tess arrays
 ===============
 */
 void VK_AddSurface( surfaceType_t *surface ) {
+	if ( *surface == SF_MDX ) {
+		CRenderableSurface *rs = (CRenderableSurface *)surface;
+
+		// gore on a model needs its vertices on the CPU
+		if ( rs->boneCache && rs->surfaceData && !rs->alternateTex && !rs->goreChain ) {
+			if ( !tess.numIndexes && !tess.numVertexes ) {
+				vk_batchMode = VK_ShaderIsStatic() ? 2 : 0;
+				vk_batchBones = rs->boneCache;
+			} else if ( vk_batchMode == 2 && vk_batchBones != rs->boneCache ) {
+				// a batch has the bones of one skeleton
+				shader_t *shader = tess.shader;
+				const int fogNum = tess.fogNum;
+
+				RB_EndSurface();
+				RB_BeginSurface( shader, fogNum );
+				vk_batchMode = 2;
+				vk_batchBones = rs->boneCache;
+			}
+			if ( vk_batchMode == 2 ) {
+				const mdxmSurface_t *mesh = rs->surfaceData;
+				const int first = VK_SkinnedSurface( mesh );
+
+				if ( first >= 0 ) {
+					const int *triangles = (const int *)( (const byte *)mesh + mesh->ofsTriangles );
+					const int numIndexes = mesh->numTriangles * 3;
+					glIndex_t *out;
+
+					RB_CHECKOVERFLOW( 0, numIndexes );
+					vk_batchMode = 2;		// an overflow began a new batch
+					vk_batchBones = rs->boneCache;
+					out = tess.indexes + tess.numIndexes;
+					for ( int i = 0; i < numIndexes; i++ ) {
+						out[i] = triangles[i] + first;
+					}
+					tess.numIndexes += numIndexes;
+					return;
+				}
+			}
+		}
+	}
 	if ( ( *surface == SF_FACE || *surface == SF_TRIANGLES || *surface == SF_GRID ) && tr.world
 		&& !( backEnd.refdef.rdflags & RDF_NOWORLDMODEL ) ) {
 		if ( !vk_worldValid ) {
 			VK_BuildWorld();
 		}
 		if ( !tess.numIndexes && !tess.numVertexes ) {
-			vk_batchStatic = VK_ShaderIsStatic();
+			vk_batchMode = VK_ShaderIsStatic() ? 1 : 0;
 		}
-		if ( vk_batchStatic ) {
+		if ( vk_batchMode == 1 ) {
 			const auto found = vk_firstVertex.find( surface );
 
 			if ( found != vk_firstVertex.end() ) {
@@ -246,7 +293,7 @@ void VK_AddSurface( surfaceType_t *surface ) {
 					const unsigned int *indices = (const unsigned int *)( (const char *)face + face->ofsIndices );
 
 					RB_CHECKOVERFLOW( 0, face->numIndices );
-					vk_batchStatic = qtrue;		// an overflow began a new batch
+					vk_batchMode = 1;		// an overflow began a new batch
 					out = tess.indexes + tess.numIndexes;
 					for ( int i = 0; i < face->numIndices; i++ ) {
 						out[i] = indices[i] + first;
@@ -259,7 +306,7 @@ void VK_AddSurface( surfaceType_t *surface ) {
 					// two triangles per cell, in the order RB_SurfaceGrid() has them
 					for ( int row = 0; row < grid->height - 1; row++ ) {
 						RB_CHECKOVERFLOW( 0, ( grid->width - 1 ) * 6 );
-						vk_batchStatic = qtrue;
+						vk_batchMode = 1;
 						out = tess.indexes + tess.numIndexes;
 						for ( int col = 0; col < grid->width - 1; col++, out += 6 ) {
 							const int v1 = first + row * grid->width + col + 1;
@@ -281,7 +328,7 @@ void VK_AddSurface( surfaceType_t *surface ) {
 					srfTriangles_t *tri = (srfTriangles_t *)surface;
 
 					RB_CHECKOVERFLOW( 0, tri->numIndexes );
-					vk_batchStatic = qtrue;
+					vk_batchMode = 1;
 					out = tess.indexes + tess.numIndexes;
 					for ( int i = 0; i < tri->numIndexes; i++ ) {
 						out[i] = tri->indexes[i] + first;
@@ -293,7 +340,7 @@ void VK_AddSurface( surfaceType_t *surface ) {
 			}
 		}
 	}
-	if ( vk_batchStatic && tess.numIndexes ) {
+	if ( vk_batchMode && tess.numIndexes ) {
 		// a surface that needs the tess arrays in a batch that has none: draw what is there and go on
 		shader_t *shader = tess.shader;
 		const int fogNum = tess.fogNum;
@@ -301,7 +348,7 @@ void VK_AddSurface( surfaceType_t *surface ) {
 		RB_EndSurface();
 		RB_BeginSurface( shader, fogNum );
 	}
-	vk_batchStatic = qfalse;
+	vk_batchMode = 0;
 	rb_surfaceTable[*surface]( surface );
 }
 
@@ -309,9 +356,13 @@ void VK_AddSurface( surfaceType_t *surface ) {
 ===============
 VK_UploadStaticBatch
 
-The indexes of a static batch into the frame, the vertices are the ones of the level
+The indexes of a static batch into the frame, the vertices are the ones of the level or of the models.
+bones: for a batch of a model, where its skeleton is in the frame
 ===============
 */
-qboolean VK_UploadStaticBatch( void ) {
-	return VK_UploadIndexes( vk_worldVertexes.buffer, vk_worldOffsets, tess.indexes, tess.numIndexes );
+qboolean VK_UploadStaticBatch( uint32_t *bones ) {
+	if ( vk_batchMode == 2 ) {
+		return VK_UploadSkinnedBatch( vk_batchBones, bones );
+	}
+	return VK_UploadIndexes( vk_worldVertexes.buffer, vk_worldOffsets, 4, tess.indexes, tess.numIndexes );
 }

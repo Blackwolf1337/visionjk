@@ -47,6 +47,7 @@ set(MPVulkanVisionFiles
 	"${MPDir}/rd-vulkan-vision/vk_image.cpp"
 	"${MPDir}/rd-vulkan-vision/vk_main.cpp"
 	"${MPDir}/rd-vulkan-vision/vk_memory.cpp"
+	"${MPDir}/rd-vulkan-vision/vk_model.cpp"
 	"${MPDir}/rd-vulkan-vision/vk_pipeline.cpp"
 	"${MPDir}/rd-vulkan-vision/vk_shade.cpp"
 	"${MPDir}/rd-vulkan-vision/vk_stubs.cpp"
@@ -121,6 +122,7 @@ set(MPVulkanVisionFiles ${MPVulkanVisionFiles} ${MPVulkanVisionCommonFiles} ${Sh
 # build machine, so this also works when cross compiling.
 set(MPVulkanVisionShaders
 	generic.vert
+	skinned.vert
 	generic.frag
 	post.vert
 	gamma.frag
@@ -134,7 +136,7 @@ foreach(shader ${MPVulkanVisionShaders})
 		OUTPUT ${shaderOut}
 		COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/shaders"
 		COMMAND ${GLSLC} --target-env=vulkan1.3 -O -mfmt=c -I "${MPDir}/rd-vulkan-vision/shaders" -o ${shaderOut} ${shaderIn}
-		DEPENDS ${shaderIn} "${MPDir}/rd-vulkan-vision/shaders/common.glsl"
+		DEPENDS ${shaderIn} "${MPDir}/rd-vulkan-vision/shaders/common.glsl" "${MPDir}/rd-vulkan-vision/shaders/stage.glsl"
 		COMMENT "glslc ${shader}"
 		VERBATIM)
 	list(APPEND MPVulkanVisionShaderOutputs ${shaderOut})

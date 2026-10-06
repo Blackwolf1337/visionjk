@@ -27,6 +27,8 @@ struct Draw {
 	vec4	parm;			// x: portal range, y: time of the shader. Dynamic light: origin in model space, w: radius
 	vec4	fogColor;
 	vec4	fogParm;		// exp2: x: density. linear: x: start, y: end
+	uint	bones;			// skinned: where the skeleton starts in the bones of the frame, in rows
+	uint	unused0, unused1, unused2;
 };
 
 layout( set = 0, binding = 0 ) uniform Globals {

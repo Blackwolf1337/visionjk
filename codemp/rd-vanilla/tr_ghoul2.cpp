@@ -4905,3 +4905,24 @@ qboolean R_LoadMDXA( model_t *mod, void *buffer, const char *mod_name, qboolean 
 
 
 
+
+#ifdef RD_VULKAN_VISION
+/*
+==============
+G2_BoneMatrices
+
+rd-vulkan-vision skins in the vertex shader and needs all bones of a skeleton as they are for this frame:
+12 floats a bone, out has room for maxBones. Returns the number of bones.
+==============
+*/
+int G2_BoneMatrices( CBoneCache *boneCache, float *out, int maxBones )
+{
+	const int numBones = Q_min( boneCache->header->numBones, maxBones );
+
+	for ( int i = 0; i < numBones; i++ )
+	{
+		memcpy( out + i * 12, &boneCache->EvalRender( i ), sizeof( mdxaBone_t ) );
+	}
+	return numBones;
+}
+#endif

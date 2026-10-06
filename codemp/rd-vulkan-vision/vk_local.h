@@ -37,6 +37,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define VK_STAGING_BYTES	( 32 << 20 )
 #define VK_MAX_SAMPLERS		32
 #define VK_MAX_PIPELINES	256
+#define VK_MAX_BONES		16384		// bones of all skeletons of one frame
+#define VK_MODEL_BYTES		( 32 << 20 )	// vertices of the Ghoul2 models of a level
 
 // ------------------------------------------------------------------------------------------------------------
 // what the shaders read, shaders/common.glsl has the same layout (std430)
@@ -84,7 +86,18 @@ typedef struct vkDraw_s {		// once per draw
 	float		parm[4];			// x: portal range, y: time of the shader. Dynamic light: its origin in model space, w: radius
 	float		fogColor[4];
 	float		fogParm[4];			// exp2: x: density. linear: x: start, y: end
+	uint32_t	bones;				// skinned: where the skeleton starts in the bones of the frame, in rows
+	uint32_t	unused[3];
 } vkDraw_t;
+
+typedef struct vkSkinVertex_s {	// a vertex of a Ghoul2 surface as it lies on the device, shaders/skinned.vert
+	float		xyz[3];
+	float		normal[3];
+	float		st[2];
+	byte		bones[4];			// numbers of the bones in the skeleton
+	uint16_t	weights[4];			// 65535 is all of it
+	uint32_t	unused;
+} vkSkinVertex_t;
 
 // ------------------------------------------------------------------------------------------------------------
 
@@ -133,15 +146,18 @@ typedef struct vkFrame_s {
 	vkBuffer_t		globals;
 	vkBuffer_t		transforms;
 	vkBuffer_t		draws;
+	vkBuffer_t		bones;
 
 	VkDeviceSize	vertexUsed;
 	VkDeviceSize	indexUsed;
 	int				numTransforms;
 	int				numDraws;
+	int				numBones;
 } vkFrame_t;
 
 typedef enum {
-	VKP_GENERIC,					// vertices from the tess arrays, one shader stage
+	VKP_GENERIC,					// vertices in the layout of the tess arrays, one shader stage
+	VKP_SKINNED,					// vertices of a Ghoul2 surface, moved by their bones in the vertex shader
 	VKP_NUM_PROGRAMS
 } vkProgram_t;
 
@@ -255,6 +271,7 @@ void		VK_InitImages( void );
 void		VK_ShutdownImages( void );
 void		VK_FlushUploads( void );
 VkCommandBuffer VK_UploadCmd( void );
+byte		*VK_Stage( VkDeviceSize size, VkDeviceSize *offset );
 void		VK_UpdateImage( image_t *image, int width, int height, const byte *rgba );
 void		VK_CreateTarget( vkTarget_t *target, VkFormat format, VkImageUsageFlags usage, VkImageAspectFlags aspect );
 void		VK_DestroyTarget( vkTarget_t *target );
@@ -275,9 +292,18 @@ void		VK_WorldChanged( void );
 void		VK_ShutdownWorld( void );
 void		VK_BatchBegin( void );
 qboolean	VK_BatchIsStatic( void );
+qboolean	VK_BatchIsSkinned( void );
 void		VK_AddSurface( surfaceType_t *surface );
-qboolean	VK_UploadStaticBatch( void );
+qboolean	VK_UploadStaticBatch( uint32_t *bones );
 void		VK_StaticColorScale( float *scale );
+
+// vk_model.cpp
+void		VK_ModelsChanged( void );
+void		VK_InitModels( void );
+void		VK_ShutdownModels( void );
+void		VK_ModelsBeginFrame( void );
+int			VK_SkinnedSurface( const mdxmSurface_t *surface );
+qboolean	VK_UploadSkinnedBatch( CBoneCache *boneCache, uint32_t *bones );
 
 // vk_shade.cpp
 extern bool	g_bRenderGlowingObjects;	// the pass that draws only the stages that glow
@@ -299,7 +325,7 @@ int			VK_AddTransform( const vkTransform_t *transform );
 void		VK_SetDepthRange( float minDepth, float maxDepth );
 qboolean	VK_UploadGeometry( const vec4_t *xyz, const vec4_t *normal, const vec2_t ( *texCoords )[NUM_TEX_COORDS],
 				const color4ub_t *colors, int numVerts, const glIndex_t *indexes, int numIndexes );
-qboolean	VK_UploadIndexes( VkBuffer vertexBuffer, const VkDeviceSize *offsets, const glIndex_t *indexes, int numIndexes );
+qboolean	VK_UploadIndexes( VkBuffer vertexBuffer, const VkDeviceSize *offsets, int numBindings, const glIndex_t *indexes, int numIndexes );
 qboolean	VK_UploadTess( void );
 void		VK_TessColors( const color4ub_t *colors );
 void		VK_TessTexCoords( const vec2_t *st );

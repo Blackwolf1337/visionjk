@@ -344,8 +344,9 @@ void VK_InitVulkan( void ) {
 	r_vkDebug = ri.Cvar_Get( "r_vkDebug", "0", CVAR_ARCHIVE_ND | CVAR_LATCH, "Vulkan validation layer and its messages" );
 	r_swapIntervalVk = ri.Cvar_Get( "r_swapInterval", "0", CVAR_ARCHIVE_ND, "" );
 
-	// the buffers of the level are made again when it is first drawn
+	// the buffers of the level and of the models are filled again when they are first drawn
 	VK_WorldChanged();
+	VK_ModelsChanged();
 	if ( glConfig.vidWidth ) {
 		return;
 	}
@@ -378,6 +379,7 @@ void VK_InitVulkan( void ) {
 	VK_InitPipelines();
 	VK_InitFrames();
 	VK_InitImages();
+	VK_InitModels();
 
 	// what the engine, cgame and ui want to know about the renderer
 	Com_sprintf( vk_versionString, sizeof( vk_versionString ), "Vulkan %i.%i.%i", VK_API_VERSION_MAJOR( vk.properties.apiVersion ),
@@ -423,6 +425,7 @@ void VK_ShutdownVulkan( qboolean destroyWindow ) {
 	}
 
 	VK_ShutdownWorld();
+	VK_ShutdownModels();
 	VK_ShutdownImages();
 	VK_ShutdownFrames();
 	VK_ShutdownPipelines();

@@ -158,7 +158,7 @@ void VK_FlushUploads( void ) {
 }
 
 // room for size bytes in the staging buffer, the copy command that reads them has to go into VK_UploadCmd()
-static byte *VK_Stage( VkDeviceSize size, VkDeviceSize *offset ) {
+byte *VK_Stage( VkDeviceSize size, VkDeviceSize *offset ) {
 	if ( vk.stagingUsed + size > vk.staging.size ) {
 		VK_FlushUploads();
 		if ( size > vk.staging.size ) {
