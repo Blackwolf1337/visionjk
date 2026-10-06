@@ -2381,8 +2381,27 @@ void CG_Init_CGents(void)
 }
 
 
+// gives the Ghoul2 instances of the items back
+static void CG_FreeItemG2( void )
+{
+	int i, j;
+
+	for ( i = 0; i < MAX_ITEMS; i++ )
+	{
+		for ( j = 0; j < MAX_ITEM_MODELS; j++ )
+		{
+			if ( cg_items[i].g2Models[j] )
+				trap->G2API_CleanGhoul2Models( &cg_items[i].g2Models[j] );
+		}
+	}
+}
+
+// On a server with g_weaponDisable CG_ParseServerinfo() has registered every weapon before this is called, with
+// a Ghoul2 instance each. Clearing the table without giving them back cost 18 of the 1024 slots of the engine with
+// every map load on such a server, and after 50 loads the client stopped with "Out of ghoul2 info slots".
 void CG_InitItems(void)
 {
+	CG_FreeItemG2();
 	memset( cg_items, 0, sizeof( cg_items ) );
 }
 
@@ -2679,7 +2698,6 @@ void CG_KillCEntityG2(int entNum);
 void CG_DestroyAllGhoul2(void)
 {
 	int i = 0;
-	int j;
 
 //	Com_Printf("... CGameside GHOUL2 Cleanup\n");
 	while (i < MAX_GENTITIES)
@@ -2692,21 +2710,8 @@ void CG_DestroyAllGhoul2(void)
 	CG_ShutDownG2Weapons();
 	CG_JPHolsterShutdown();
 
-	i = 0;
-	while (i < MAX_ITEMS)
-	{ //and now for items
-		j = 0;
-		while (j < MAX_ITEM_MODELS)
-		{
-			if (cg_items[i].g2Models[j] && trap->G2_HaveWeGhoul2Models(cg_items[i].g2Models[j]))
-			{
-				trap->G2API_CleanGhoul2Models(&cg_items[i].g2Models[j]);
-				cg_items[i].g2Models[j] = NULL;
-			}
-			j++;
-		}
-		i++;
-	}
+	//and now for items
+	CG_FreeItemG2();
 
 	//Clean the global jetpack instance
 	CG_CleanJetpackGhoul2();

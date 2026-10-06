@@ -8722,7 +8722,7 @@ void CG_JPHolsterShutdown( void )
 
 	for ( i = 0; i < JP_MAX_HOLSTER_MODELS; i++ )
 	{
-		if ( jpHolsterModels[i].ghoul2 && trap->G2_HaveWeGhoul2Models( jpHolsterModels[i].ghoul2 ) )
+		if ( jpHolsterModels[i].ghoul2 )
 			trap->G2API_CleanGhoul2Models( &jpHolsterModels[i].ghoul2 );
 	}
 	memset( jpHolsterModels, 0, sizeof( jpHolsterModels ) );
@@ -8731,7 +8731,7 @@ void CG_JPHolsterShutdown( void )
 	{
 		for ( j = 0; j < MAX_SABERS; j++ )
 		{
-			if ( jpHolsterState[i].saberG2[j] && trap->G2_HaveWeGhoul2Models( jpHolsterState[i].saberG2[j] ) )
+			if ( jpHolsterState[i].saberG2[j] )
 				trap->G2API_CleanGhoul2Models( &jpHolsterState[i].saberG2[j] );
 		}
 	}
@@ -8778,25 +8778,28 @@ static qboolean CG_JPSaberOffHand( const centity_t *cent )
 	return CG_JPHolsterClient( cent ) && jpHolsterState[cent->currentState.number].saberOffHand;
 }
 
-// the copy of the hilt for the body, made new when the saber of the player changed
+// The copy of the hilt for the body, made new when the saber of the player changed. NULL if the hilt cannot be
+// loaded. An instance takes one of the 1024 slots of the engine even if its model could not be loaded, and
+// G2_HaveWeGhoul2Models() is false for it: it has to be given back all the same, and the model is tried once for
+// a saber and not again with every frame, or the client is out of slots within a second.
 static void *CG_JPHolsterSaberModel( jpHolsterState_t *hs, const clientInfo_t *ci, int saberNum )
 {
 	const saberInfo_t *saber = &ci->saber[saberNum];
 
-	if ( hs->saberG2[saberNum] && (strcmp( hs->saberModel[saberNum], saber->model ) || hs->saberSkin[saberNum] != saber->skin
-		|| !trap->G2_HaveWeGhoul2Models( hs->saberG2[saberNum] )) )
+	if ( strcmp( hs->saberModel[saberNum], saber->model ) || hs->saberSkin[saberNum] != saber->skin )
 	{
-		if ( trap->G2_HaveWeGhoul2Models( hs->saberG2[saberNum] ) )
+		if ( hs->saberG2[saberNum] )
 			trap->G2API_CleanGhoul2Models( &hs->saberG2[saberNum] );
-		hs->saberG2[saberNum] = NULL;
-	}
-	if ( !hs->saberG2[saberNum] && saber->model[0] )
-	{
 		Q_strncpyz( hs->saberModel[saberNum], saber->model, sizeof( hs->saberModel[saberNum] ) );
 		hs->saberSkin[saberNum] = saber->skin;
-		trap->G2API_InitGhoul2Model( &hs->saberG2[saberNum], saber->model, 0, saber->skin, 0, 0, 0 );
-		if ( hs->saberG2[saberNum] && saber->skin )
-			trap->G2API_SetSkin( hs->saberG2[saberNum], 0, saber->skin, saber->skin );
+		if ( saber->model[0] )
+		{
+			trap->G2API_InitGhoul2Model( &hs->saberG2[saberNum], saber->model, 0, saber->skin, 0, 0, 0 );
+			if ( hs->saberG2[saberNum] && !trap->G2_HaveWeGhoul2Models( hs->saberG2[saberNum] ) )
+				trap->G2API_CleanGhoul2Models( &hs->saberG2[saberNum] );
+			if ( hs->saberG2[saberNum] && saber->skin )
+				trap->G2API_SetSkin( hs->saberG2[saberNum], 0, saber->skin, saber->skin );
+		}
 	}
 	return hs->saberG2[saberNum];
 }
@@ -8898,7 +8901,7 @@ static void *CG_JPHolsterG2( int id )
 	if ( !hm->ghoul2 || !trap->G2_HaveWeGhoul2Models( hm->ghoul2 ) )
 		trap->G2API_InitGhoul2Model( &hm->ghoul2, "models/weapons2/holster/model1.glm", 0, 0, 0, 0, 0 );
 	if ( hm->ghoul2 && !trap->G2_HaveWeGhoul2Models( hm->ghoul2 ) )
-		hm->ghoul2 = NULL;
+		trap->G2API_CleanGhoul2Models( &hm->ghoul2 );	// (it has a slot of the engine without a model too)
 	return hm->ghoul2;
 }
 

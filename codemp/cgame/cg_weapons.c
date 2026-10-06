@@ -89,8 +89,8 @@ Ghoul2 Insert Start
 	{
 		handle = trap->G2API_InitGhoul2Model(&itemInfo->g2Models[0], item->world_model[0], 0 , 0, 0, 0, 0);
 		if (handle<0)
-		{
-			itemInfo->g2Models[0] = NULL;
+		{ // (an instance without a model has a slot of the engine too)
+			trap->G2API_CleanGhoul2Models(&itemInfo->g2Models[0]);
 		}
 		else
 		{
