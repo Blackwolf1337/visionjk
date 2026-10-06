@@ -163,8 +163,9 @@ void UI_LoadArenas( void ) {
 	dirptr  = dirlist;
 	for (i = 0; i < numdirs; i++, dirptr += dirlen+1) {
 		dirlen = strlen(dirptr);
-		strcpy(filename, "scripts/");
-		strcat(filename, dirptr);
+		// a name from a pk3 could be longer than filename: build it bounded and skip it if it does not fit
+		if ( Com_sprintf(filename, sizeof(filename), "scripts/%s", dirptr) >= (int)sizeof(filename) )
+			continue;
 		UI_LoadArenasFromFile(filename);
 	}
 //	trap->Print( "%i arenas parsed\n", ui_numArenas );
@@ -306,8 +307,8 @@ void UI_LoadBots( void ) {
 	dirptr  = dirlist;
 	for (i = 0; i < numdirs; i++, dirptr += dirlen+1) {
 		dirlen = strlen(dirptr);
-		strcpy(filename, "scripts/");
-		strcat(filename, dirptr);
+		if ( Com_sprintf(filename, sizeof(filename), "scripts/%s", dirptr) >= (int)sizeof(filename) )
+			continue;
 		UI_LoadBotsFromFile(filename);
 	}
 //	trap->Print( "%i bots parsed\n", ui_numBots );
