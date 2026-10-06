@@ -38,6 +38,7 @@ qboolean VK_FlareVisible( const float *point, int x, int y, float eyeZ );
 
 // tr_ghoul2.cpp, for vk_model.cpp: the bone cache is a class of that file
 int G2_BoneMatrices( CBoneCache *boneCache, float *out, int maxBones );
+void G2_SkinGore( CRenderableSurface *surf );
 
 // vk_image.cpp: the upload of one texture as tr_image.cpp drives it. GL_Bind() picks the image, the levels
 // follow, the parameters pick its sampler.

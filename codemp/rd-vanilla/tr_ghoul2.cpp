@@ -4925,4 +4925,59 @@ int G2_BoneMatrices( CBoneCache *boneCache, float *out, int maxBones )
 	}
 	return numBones;
 }
+
+/*
+==============
+G2_SkinGore
+
+Saber marks on a model are gore surfaces: each takes some vertices of the surface it lies on, and RB_SurfaceGhoul()
+hands them over when it has moved that surface by its bones. rd-vulkan-vision draws the surface from a buffer on
+the device and moves it in the vertex shader. So only the vertices the gore wants are moved here, the same way.
+==============
+*/
+void G2_SkinGore( CRenderableSurface *surf )
+{
+	const mdxmSurface_t *surface = surf->surfaceData;
+	CBoneCache *bones = surf->boneCache;
+	const int *piBoneReferences = (const int *)( (const byte *)surface + surface->ofsBoneReferences );
+	const mdxmVertex_t *verts = (const mdxmVertex_t *)( (const byte *)surface + surface->ofsVerts );
+
+	while ( surf->goreChain )
+	{
+		surf = (CRenderableSurface *)surf->goreChain;
+		if ( !surf->alternateTex )
+		{
+			continue;
+		}
+		// number of vertices, number of triangles, which vertices of the surface, room for their positions and normals
+		int *data = (int *)surf->alternateTex;
+		const int gnumVerts = *data++;
+		data++;
+		float *xyz = (float *)data + gnumVerts;
+		float *normal = xyz + gnumVerts * 4;
+
+		for ( int j = 0; j < gnumVerts; j++, xyz += 4, normal += 4 )
+		{
+			const mdxmVertex_t *v = &verts[data[j]];
+			const int iNumWeights = G2_GetVertWeights( v );
+			const mdxaBone_t *bone = &bones->EvalRender( piBoneReferences[G2_GetVertBoneIndex( v, 0 )] );
+			float fTotalWeight = 0.0f;
+
+			// the normal follows the first bone
+			normal[0] = DotProduct( bone->matrix[0], v->normal );
+			normal[1] = DotProduct( bone->matrix[1], v->normal );
+			normal[2] = DotProduct( bone->matrix[2], v->normal );
+			VectorClear( xyz );
+			for ( int k = 0; k < iNumWeights; k++ )
+			{
+				const float fBoneWeight = G2_GetVertBoneWeight( v, k, fTotalWeight, iNumWeights );
+
+				bone = &bones->EvalRender( piBoneReferences[G2_GetVertBoneIndex( v, k )] );
+				xyz[0] += fBoneWeight * ( DotProduct( bone->matrix[0], v->vertCoords ) + bone->matrix[0][3] );
+				xyz[1] += fBoneWeight * ( DotProduct( bone->matrix[1], v->vertCoords ) + bone->matrix[1][3] );
+				xyz[2] += fBoneWeight * ( DotProduct( bone->matrix[2], v->vertCoords ) + bone->matrix[2][3] );
+			}
+		}
+	}
+}
 #endif

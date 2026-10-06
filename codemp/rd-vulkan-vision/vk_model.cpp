@@ -26,7 +26,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // bones of a skeleton are copied into the frame, shaders/skinned.vert does the rest. The bones themselves still
 // come from the bone cache of tr_ghoul2.cpp, so animation, bolts and collision are what they always were.
 //
-// Surfaces with gore on them keep the old way: the gore needs the moved vertices on the CPU.
+// Saber marks on a model (gore) take a few vertices of the surface they lie on as the bones move them. Those
+// are worked out on the CPU (G2_SkinGore in tr_ghoul2.cpp), the surface itself is drawn from the device.
 //
 // An MD3 model with one frame (items, weapons, most models of a level) goes the same way: its vertices are put
 // into the same buffer with one bone that leaves them where they are. MD3 models with more frames are still

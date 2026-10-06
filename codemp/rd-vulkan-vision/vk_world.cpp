@@ -286,9 +286,13 @@ void VK_AddSurface( surfaceType_t *surface ) {
 		CRenderableSurface *rs = (CRenderableSurface *)surface;
 		const mdxmSurface_t *mesh = rs->surfaceData;
 
-		// gore on a model needs its vertices on the CPU
-		if ( rs->boneCache && mesh && !rs->alternateTex && !rs->goreChain
+		// a gore surface (alternateTex) is a few triangles that were made for this frame, it takes the tess arrays
+		if ( rs->boneCache && mesh && !rs->alternateTex
 			&& VK_AddDeviceMesh( rs->boneCache, mesh, qfalse, mesh->numTriangles * 3 ) ) {
+			// the marks on this surface want some of its vertices as the bones move them
+			if ( rs->goreChain ) {
+				G2_SkinGore( rs );
+			}
 			// R_AddGhoulSurfaces() made this object for the frame and RB_SurfaceGhoul() frees it, which is not
 			// called on this way. It stays if the glow pass draws the surface a second time.
 			if ( !tess.shader->hasGlow || g_bRenderGlowingObjects || !g_bDynamicGlowSupported || !r_DynamicGlow->integer ) {
