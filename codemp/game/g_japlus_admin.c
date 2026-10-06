@@ -335,15 +335,31 @@ G_amlogin
 checks the password against the three admin passwords, returns the admin level
 =================
 */
+// not in JA+: slow down guessing the admin passwords. After JP_LOGIN_TRIES wrong tries a player has to wait,
+// the wait doubles. Static arrays by client number, reset when the module is loaded again (every map).
+#define JP_LOGIN_TRIES		3
+#define JP_LOGIN_BASE_MS	30000
+#define JP_LOGIN_MAX_MS		1800000
+
+static int jpLoginFails[MAX_CLIENTS];
+static int jpLoginUntil[MAX_CLIENTS];
+
 int G_amlogin( gentity_t *ent, const char *password, qboolean notify ) {
 	gclient_t *client = ent->client;
 	char msg[MAX_STRING_CHARS];
 	const char *loginMsg = NULL, *rank = NULL;
+	const int clientNum = ent - g_entities;
 
 	if ( G_AdminFilterPacket( client->sess.IP ) ) {
 		client->sess.jpAdminLevel = JPADM_NONE;
 		if ( notify )
 			trap->SendServerCommand( ent-g_entities, "print \"^3 You are admin-banned ! \n\"" );
+		return client->sess.jpAdminLevel;
+	}
+
+	if ( clientNum >= 0 && clientNum < MAX_CLIENTS && jpLoginUntil[clientNum] > level.time ) {
+		if ( notify )
+			trap->SendServerCommand( clientNum, "print \"^3 Too many wrong passwords, wait a moment. \n\"" );
 		return client->sess.jpAdminLevel;
 	}
 
@@ -364,9 +380,28 @@ int G_amlogin( gentity_t *ent, const char *password, qboolean notify ) {
 	}
 	else {
 		client->sess.jpAdminLevel = JPADM_NONE;
+		if ( clientNum >= 0 && clientNum < MAX_CLIENTS ) {
+			jpLoginFails[clientNum]++;
+			if ( jpLoginFails[clientNum] >= JP_LOGIN_TRIES ) {
+				const int steps = jpLoginFails[clientNum] - JP_LOGIN_TRIES;
+				int wait = JP_LOGIN_BASE_MS;
+
+				if ( steps < 16 )
+					wait <<= steps;
+				if ( wait > JP_LOGIN_MAX_MS || wait <= 0 )
+					wait = JP_LOGIN_MAX_MS;
+				jpLoginUntil[clientNum] = level.time + wait;
+			}
+			G_SecurityLogPrintf( "amlogin: wrong password from %s [%s]\n", client->pers.netname, client->sess.IP );
+		}
 		if ( notify )
 			trap->SendServerCommand( ent-g_entities, "print \"^3 Bad Password ! \n\"" );
 		return client->sess.jpAdminLevel;
+	}
+
+	if ( clientNum >= 0 && clientNum < MAX_CLIENTS ) {
+		jpLoginFails[clientNum] = 0;
+		jpLoginUntil[clientNum] = 0;
 	}
 
 	if ( notify ) {
