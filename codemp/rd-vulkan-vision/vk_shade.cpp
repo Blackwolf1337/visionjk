@@ -1042,8 +1042,9 @@ void RB_EndSurface( void ) {
 		Com_Error( ERR_DROP, "RB_EndSurface() - SHADER_MAX_VERTEXES hit" );
 	}
 
-	// stencil shadows are not done in this renderer yet
+	// the volume a model throws its shadow through goes into the stencil buffer (tr_shadows.cpp of rd-vanilla)
 	if ( tess.shader == tr.shadowShader ) {
+		RB_ShadowTessEnd();
 		tess.numIndexes = 0;
 		return;
 	}
@@ -1086,5 +1087,3 @@ void RB_EndSurface( void ) {
 	tess.numIndexes = 0;
 }
 
-void RB_ProjectionShadowDeform( void ) {
-}

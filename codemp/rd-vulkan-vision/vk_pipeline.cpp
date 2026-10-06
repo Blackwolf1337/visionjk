@@ -216,7 +216,8 @@ VkPipeline VK_CreatePipeline( VkShaderModule vertex, VkShaderModule fragment, ui
 	VkPipelineColorBlendStateCreateInfo blend = { VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO };
 	const VkDynamicState dynamicStates[] = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR, VK_DYNAMIC_STATE_CULL_MODE,
 		VK_DYNAMIC_STATE_DEPTH_TEST_ENABLE, VK_DYNAMIC_STATE_DEPTH_WRITE_ENABLE,
-		VK_DYNAMIC_STATE_DEPTH_COMPARE_OP, VK_DYNAMIC_STATE_DEPTH_BIAS_ENABLE, VK_DYNAMIC_STATE_DEPTH_BIAS };
+		VK_DYNAMIC_STATE_DEPTH_COMPARE_OP, VK_DYNAMIC_STATE_DEPTH_BIAS_ENABLE, VK_DYNAMIC_STATE_DEPTH_BIAS,
+		VK_DYNAMIC_STATE_STENCIL_TEST_ENABLE, VK_DYNAMIC_STATE_STENCIL_OP, VK_DYNAMIC_STATE_STENCIL_REFERENCE };
 	VkPipelineDynamicStateCreateInfo dynamic = { VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO };
 	VkPipelineRenderingCreateInfo rendering = { VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO };
 	VkGraphicsPipelineCreateInfo info = { VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO, &rendering };
@@ -294,6 +295,9 @@ VkPipeline VK_CreatePipeline( VkShaderModule vertex, VkShaderModule fragment, ui
 	// what goes into the frame of the game has its number of samples, the passes into targets of their own have one
 	multisample.rasterizationSamples = ( post == 1 ) ? VK_SAMPLE_COUNT_1_BIT : vk.samples;
 	depth.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
+	// the stencil test of the shadows is dynamic state, all bits take part
+	depth.front.compareMask = depth.back.compareMask = 0xff;
+	depth.front.writeMask = depth.back.writeMask = 0xff;
 
 	memset( &attachment, 0, sizeof( attachment ) );
 	attachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;

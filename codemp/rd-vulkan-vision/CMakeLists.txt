@@ -106,6 +106,7 @@ set(MPVulkanVisionVanillaFiles
 	"${MPDir}/rd-vanilla/tr_quicksprite.h"
 	"${MPDir}/rd-vanilla/tr_subs.cpp"
 	"${MPDir}/rd-vanilla/tr_surface.cpp"
+	"${MPDir}/rd-vanilla/tr_shadows.cpp"
 	"${MPDir}/rd-vanilla/tr_surfacesprites.cpp"
 	"${MPDir}/rd-vanilla/tr_world.cpp"
 	"${MPDir}/rd-vanilla/tr_WorldEffects.cpp"

@@ -81,6 +81,11 @@ void VK_GL_Pointer( int which, int stride, const void *data );
 void VK_GL_ClientState( int which, int on );
 void VK_GL_DrawArrays( int mode, int first, int count );
 void VK_GL_Enable( int cap, int on );
+void VK_GL_Flush( void );
+void VK_GL_StencilFunc( int func, int ref );
+void VK_GL_StencilOp( int face, int fail, int zfail, int zpass );
+void VK_GL_ColorMask( int on );
+void VK_GL_DepthFunc( int func );
 void VK_GL_Fogf( int name, float value );
 void VK_GL_Fogfv( int name, const float *value );
 static void ( * const vk_glNoLockArrays )( int, int ) = 0;
@@ -137,8 +142,23 @@ static void ( * const vk_glNoUnlockArrays )( void ) = 0;
 #undef qglTranslatef
 #define qglTranslatef( x, y, z )	VK_GL_Translate( x, y, z )
 
-// What is left has no meaning here (of glEnable only the fog has): line width and display lists, the stencil setup of the overdraw counter and
-// the error check (tr_cmds.cpp), the depth read of a flare (tr_surface.cpp), the level shot (tr_init.cpp)
+// stencil shadows (tr_shadows.cpp): the volume of a model is drawn into the stencil buffer without color, then one
+// quad darkens the frame where the buffer is not zero
+#undef qglStencilFunc
+#define qglStencilFunc( func, ref, mask )	VK_GL_StencilFunc( func, ref )
+#undef qglStencilOp
+#define qglStencilOp( fail, zfail, zpass )	VK_GL_StencilOp( GL_FRONT_AND_BACK, fail, zfail, zpass )
+#undef qglStencilOpSeparate
+#define qglStencilOpSeparate( face, fail, zfail, zpass )	VK_GL_StencilOp( face, fail, zfail, zpass )
+#undef qglColorMask
+#define qglColorMask( r, g, b, a )		VK_GL_ColorMask( r )
+#undef qglDepthFunc
+#define qglDepthFunc( func )			VK_GL_DepthFunc( func )
+#undef qglIsEnabled
+#define qglIsEnabled( cap )			0
+
+// What is left has no meaning here (of glEnable the fog and the stencil test have): line width and display lists,
+// the stencil mask and clear of the overdraw counter and the error check (tr_cmds.cpp), the level shot (tr_init.cpp)
 #undef qglLineWidth
 #define qglLineWidth( ... )			((void)0)
 #undef qglMatrixMode
@@ -153,10 +173,6 @@ static void ( * const vk_glNoUnlockArrays )( void ) = 0;
 #define qglStencilMask( ... )		((void)0)
 #undef qglClearStencil
 #define qglClearStencil( ... )		((void)0)
-#undef qglStencilFunc
-#define qglStencilFunc( ... )		((void)0)
-#undef qglStencilOp
-#define qglStencilOp( ... )			((void)0)
 #undef qglPixelStorei
 #define qglPixelStorei( ... )		((void)0)
 #undef qglReadPixels

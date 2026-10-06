@@ -608,11 +608,40 @@ void VK_TessColors( const color4ub_t *colors ) {
 	qvkCmdBindVertexBuffers( frame->cmd, 3, 1, &frame->vertexes.buffer, &offset );
 }
 
+// the stencil state of OpenGL in the words of Vulkan
+static VkStencilOp VK_StencilOp( int op ) {
+	switch ( op ) {
+	case GL_ZERO:		return VK_STENCIL_OP_ZERO;
+	case GL_REPLACE:	return VK_STENCIL_OP_REPLACE;
+	case GL_INCR:		return VK_STENCIL_OP_INCREMENT_AND_CLAMP;
+	case GL_DECR:		return VK_STENCIL_OP_DECREMENT_AND_CLAMP;
+	case GL_INCR_WRAP:	return VK_STENCIL_OP_INCREMENT_AND_WRAP;
+	case GL_DECR_WRAP:	return VK_STENCIL_OP_DECREMENT_AND_WRAP;
+	case GL_INVERT:		return VK_STENCIL_OP_INVERT;
+	default:			return VK_STENCIL_OP_KEEP;
+	}
+}
+
+static VkCompareOp VK_StencilFunc( int func ) {
+	switch ( func ) {
+	case GL_NEVER:		return VK_COMPARE_OP_NEVER;
+	case GL_LESS:		return VK_COMPARE_OP_LESS;
+	case GL_EQUAL:		return VK_COMPARE_OP_EQUAL;
+	case GL_LEQUAL:		return VK_COMPARE_OP_LESS_OR_EQUAL;
+	case GL_GREATER:	return VK_COMPARE_OP_GREATER;
+	case GL_NOTEQUAL:	return VK_COMPARE_OP_NOT_EQUAL;
+	case GL_GEQUAL:		return VK_COMPARE_OP_GREATER_OR_EQUAL;
+	default:			return VK_COMPARE_OP_ALWAYS;
+	}
+}
+
 // dynamic state as one word, so that a draw only sets what differs from the draw before it
 #define VKS_DEPTH_TEST		0x01u
 #define VKS_DEPTH_WRITE		0x02u
 #define VKS_DEPTH_EQUAL		0x04u
 #define VKS_OFFSET			0x08u
+#define VKS_DEPTH_LESS		0x40u
+#define VKS_STENCIL			0x80u
 #define VKS_CULL_SHIFT		4		// VkCullModeFlags, 2 bits
 
 /*
@@ -652,6 +681,12 @@ void VK_DrawTess( const vkDraw_t *draw, vkProgram_t program, uint32_t stateBits,
 	if ( polygonOffset ) {
 		state |= VKS_OFFSET;
 	}
+	if ( vk.stencil && vk.stencil->depthLess ) {
+		state |= VKS_DEPTH_LESS;
+	}
+	if ( vk.stencil && vk.stencil->test ) {
+		state |= VKS_STENCIL;
+	}
 	changed = vk.stateValid ? ( state ^ vk.boundState ) : ~0u;
 	if ( changed & ( 3u << VKS_CULL_SHIFT ) ) {
 		qvkCmdSetCullMode( cmd, (VkCullModeFlags)cullMode );
@@ -662,8 +697,20 @@ void VK_DrawTess( const vkDraw_t *draw, vkProgram_t program, uint32_t stateBits,
 	if ( changed & VKS_DEPTH_WRITE ) {
 		qvkCmdSetDepthWriteEnable( cmd, ( state & VKS_DEPTH_WRITE ) ? VK_TRUE : VK_FALSE );
 	}
-	if ( changed & VKS_DEPTH_EQUAL ) {
-		qvkCmdSetDepthCompareOp( cmd, ( state & VKS_DEPTH_EQUAL ) ? VK_COMPARE_OP_EQUAL : VK_COMPARE_OP_LESS_OR_EQUAL );
+	if ( changed & ( VKS_DEPTH_EQUAL | VKS_DEPTH_LESS ) ) {
+		qvkCmdSetDepthCompareOp( cmd, ( state & VKS_DEPTH_EQUAL ) ? VK_COMPARE_OP_EQUAL
+			: ( ( state & VKS_DEPTH_LESS ) ? VK_COMPARE_OP_LESS : VK_COMPARE_OP_LESS_OR_EQUAL ) );
+	}
+	if ( changed & VKS_STENCIL ) {
+		qvkCmdSetStencilTestEnable( cmd, ( state & VKS_STENCIL ) ? VK_TRUE : VK_FALSE );
+	}
+	if ( state & VKS_STENCIL ) {
+		// only the shadows come here: what the test does is set every time
+		for ( int face = 0; face < 2; face++ ) {
+			qvkCmdSetStencilOp( cmd, face ? VK_STENCIL_FACE_BACK_BIT : VK_STENCIL_FACE_FRONT_BIT, VK_StencilOp( vk.stencil->ops[face][0] ),
+				VK_StencilOp( vk.stencil->ops[face][2] ), VK_StencilOp( vk.stencil->ops[face][1] ), VK_StencilFunc( vk.stencil->func ) );
+		}
+		qvkCmdSetStencilReference( cmd, VK_STENCIL_FACE_FRONT_AND_BACK, (uint32_t)vk.stencil->ref );
 	}
 	if ( changed & VKS_OFFSET ) {
 		qvkCmdSetDepthBiasEnable( cmd, ( state & VKS_OFFSET ) ? VK_TRUE : VK_FALSE );

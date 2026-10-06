@@ -521,6 +521,7 @@ void RB_ProjectionShadowDeform( void ) {
 	}
 }
 
+#ifndef RD_VULKAN_VISION
 //update tr.screenImage
 void RB_CaptureScreenImage(void)
 {
@@ -720,4 +721,4 @@ void RB_DistortionFill(void)
 
 	qglDisable( GL_STENCIL_TEST );
 }
-
+#endif

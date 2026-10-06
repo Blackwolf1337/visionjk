@@ -492,6 +492,7 @@ void VK_InitVulkan( void ) {
 	// gamma and overbright are one pass over the finished frame (shaders/gamma.frag), not a ramp of the display
 	glConfig.deviceSupportsGamma = qfalse;
 	glConfigExt.doGammaCorrectionWithShaders = qtrue;
+	glConfigExt.doStencilShadowsInOneDrawcall = qtrue;	// front and back faces have stencil operations of their own
 
 	ri.Printf( PRINT_ALL, "Vulkan device: %s, %s\n", vk.properties.deviceName, vk_versionString );
 }

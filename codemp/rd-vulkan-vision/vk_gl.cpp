@@ -37,9 +37,16 @@ static glIndex_t	gl_indexes[VK_GL_MAX_VERTS * 3];
 
 static int			gl_mode;
 static int			gl_numVerts;
+static int			gl_primStart;			// the first vertex of the primitive between glBegin() and glEnd()
+static int			gl_numIndexes;			// of the primitives that wait to be drawn
 static float		gl_texCoord[2];
 static float		gl_color[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
 static uint32_t		gl_stateBits;
+
+// Stencil shadows (tr_shadows.cpp). While the color mask is off, glEnd() does not draw but collects: the volume
+// of a model comes as one glBegin() to glEnd() per edge, and it becomes one draw.
+static vkStencil_t	gl_stencil;
+static qboolean		gl_colorMask = qtrue;
 
 // glFog over what is drawn here
 static qboolean		gl_fog;
@@ -65,6 +72,9 @@ The state of the next glBegin() to glEnd(). Batches of the tess arrays take the 
 ===============
 */
 void GL_State( uint32_t stateBits ) {
+	if ( stateBits != gl_stateBits ) {
+		VK_GL_Flush();
+	}
 	gl_stateBits = stateBits;
 }
 
@@ -147,8 +157,12 @@ void VK_GL_TexCoord( float s, float t ) {
 }
 
 void VK_GL_Begin( int mode ) {
+	// room for a primitive of the size the shadow volumes have
+	if ( gl_numVerts > VK_GL_MAX_VERTS - 64 ) {
+		VK_GL_Flush();
+	}
 	gl_mode = mode;
-	gl_numVerts = 0;
+	gl_primStart = gl_numVerts;
 }
 
 void VK_GL_Vertex( float x, float y, float z ) {
@@ -160,6 +174,7 @@ void VK_GL_Vertex( float x, float y, float z ) {
 			return;
 		}
 		VK_GL_End();
+		VK_GL_Flush();
 		gl_mode = mode;
 	}
 	VectorSet( gl_xyz[gl_numVerts], x, y, z );
@@ -171,37 +186,42 @@ void VK_GL_Vertex( float x, float y, float z ) {
 	gl_numVerts++;
 }
 
-void VK_GL_End( void ) {
-	int numIndexes = 0;
-	const image_t *image = vk.boundImage;
-	vkDraw_t draw;
+/*
+===============
+VK_GL_End
 
-	// triangles out of whatever the vertices were meant as. Lines are not drawn: they are debug output only.
+Triangles out of whatever the vertices were meant as. Lines are not drawn: they are debug output only.
+===============
+*/
+void VK_GL_End( void ) {
+	const int first = gl_primStart;
+	int numIndexes = gl_numIndexes;
+
 	switch ( gl_mode ) {
 	case GL_TRIANGLES:
-		for ( int i = 0; i + 2 < gl_numVerts; i += 3 ) {
+		for ( int i = first; i + 2 < gl_numVerts; i += 3 ) {
 			gl_indexes[numIndexes++] = i;
 			gl_indexes[numIndexes++] = i + 1;
 			gl_indexes[numIndexes++] = i + 2;
 		}
 		break;
 	case GL_TRIANGLE_STRIP:
-		for ( int i = 0; i + 2 < gl_numVerts; i++ ) {
-			gl_indexes[numIndexes++] = ( i & 1 ) ? i + 1 : i;
-			gl_indexes[numIndexes++] = ( i & 1 ) ? i : i + 1;
+		for ( int i = first; i + 2 < gl_numVerts; i++ ) {
+			gl_indexes[numIndexes++] = ( ( i - first ) & 1 ) ? i + 1 : i;
+			gl_indexes[numIndexes++] = ( ( i - first ) & 1 ) ? i : i + 1;
 			gl_indexes[numIndexes++] = i + 2;
 		}
 		break;
 	case GL_TRIANGLE_FAN:
 	case GL_POLYGON:
-		for ( int i = 1; i + 1 < gl_numVerts; i++ ) {
-			gl_indexes[numIndexes++] = 0;
+		for ( int i = first + 1; i + 1 < gl_numVerts; i++ ) {
+			gl_indexes[numIndexes++] = first;
 			gl_indexes[numIndexes++] = i;
 			gl_indexes[numIndexes++] = i + 1;
 		}
 		break;
 	case GL_QUADS:
-		for ( int i = 0; i + 3 < gl_numVerts; i += 4 ) {
+		for ( int i = first; i + 3 < gl_numVerts; i += 4 ) {
 			gl_indexes[numIndexes++] = i;
 			gl_indexes[numIndexes++] = i + 1;
 			gl_indexes[numIndexes++] = i + 2;
@@ -213,8 +233,28 @@ void VK_GL_End( void ) {
 	default:
 		break;
 	}
-	if ( !numIndexes || !VK_UploadGeometry( gl_xyz, gl_normal, gl_texCoords, gl_colors, gl_numVerts, gl_indexes, numIndexes ) ) {
-		gl_numVerts = 0;
+	gl_numIndexes = numIndexes;
+	gl_primStart = gl_numVerts;
+	if ( gl_colorMask ) {
+		VK_GL_Flush();
+	}
+}
+
+/*
+===============
+VK_GL_Flush
+
+Draws the primitives that were specified
+===============
+*/
+void VK_GL_Flush( void ) {
+	const int numVerts = gl_numVerts, numIndexes = gl_numIndexes;
+	const image_t *image = vk.boundImage;
+	uint32_t stateBits = gl_stateBits;
+	vkDraw_t draw;
+
+	gl_numVerts = gl_primStart = gl_numIndexes = 0;
+	if ( !numIndexes || !VK_UploadGeometry( gl_xyz, gl_normal, gl_texCoords, gl_colors, numVerts, gl_indexes, numIndexes ) ) {
 		return;
 	}
 
@@ -235,10 +275,52 @@ void VK_GL_End( void ) {
 		draw.fogParm[0] = gl_fogDensity;
 		VectorCopy( gl_fogColor, draw.fogColor );
 	}
-	draw.flags |= ( gl_stateBits & GLS_ATEST_BITS ) == GLS_ATEST_GT_0 ? 1u : ( gl_stateBits & GLS_ATEST_BITS ) == GLS_ATEST_LT_80 ? 2u
-		: ( gl_stateBits & GLS_ATEST_BITS ) == GLS_ATEST_GE_80 ? 3u : ( gl_stateBits & GLS_ATEST_BITS ) == GLS_ATEST_GE_C0 ? 4u : 0u;
-	VK_DrawTess( &draw, VKP_GENERIC, gl_stateBits, VK_CULL_MODE_NONE, qfalse );
-	gl_numVerts = 0;
+	draw.flags |= ( stateBits & GLS_ATEST_BITS ) == GLS_ATEST_GT_0 ? 1u : ( stateBits & GLS_ATEST_BITS ) == GLS_ATEST_LT_80 ? 2u
+		: ( stateBits & GLS_ATEST_BITS ) == GLS_ATEST_GE_80 ? 3u : ( stateBits & GLS_ATEST_BITS ) == GLS_ATEST_GE_C0 ? 4u : 0u;
+	if ( !gl_colorMask ) {
+		// nothing is to reach the color: a blend that leaves what is there does it without another pipeline state
+		stateBits = ( stateBits & ~( GLS_SRCBLEND_BITS | GLS_DSTBLEND_BITS ) ) | GLS_SRCBLEND_ZERO | GLS_DSTBLEND_ONE;
+	}
+	vk.stencil = ( gl_stencil.test || gl_stencil.depthLess ) ? &gl_stencil : NULL;
+	VK_DrawTess( &draw, VKP_GENERIC, stateBits, VK_CULL_MODE_NONE, qfalse );
+	vk.stencil = NULL;
+}
+
+/*
+===============================================================================
+
+STENCIL
+
+What tr_shadows.cpp sets before it draws. A change draws first what was collected with the state before it.
+
+===============================================================================
+*/
+
+void VK_GL_StencilFunc( int func, int ref ) {
+	VK_GL_Flush();
+	gl_stencil.func = func;
+	gl_stencil.ref = ref;
+}
+
+void VK_GL_StencilOp( int face, int fail, int zfail, int zpass ) {
+	VK_GL_Flush();
+	for ( int i = 0; i < 2; i++ ) {
+		if ( face == GL_FRONT_AND_BACK || face == ( i ? GL_BACK : GL_FRONT ) ) {
+			gl_stencil.ops[i][0] = fail;
+			gl_stencil.ops[i][1] = zfail;
+			gl_stencil.ops[i][2] = zpass;
+		}
+	}
+}
+
+void VK_GL_ColorMask( int on ) {
+	VK_GL_Flush();
+	gl_colorMask = (qboolean)( on != 0 );
+}
+
+void VK_GL_DepthFunc( int func ) {
+	VK_GL_Flush();
+	gl_stencil.depthLess = (qboolean)( func == GL_LESS );
 }
 
 /*
@@ -297,10 +379,13 @@ void VK_GL_DrawArrays( int mode, int first, int count ) {
 	VectorCopy4( color, gl_color );
 }
 
-// of everything glEnable() can switch only the fog means something here
+// of everything glEnable() can switch the fog and the stencil test mean something here
 void VK_GL_Enable( int cap, int on ) {
 	if ( cap == GL_FOG ) {
 		gl_fog = (qboolean)( on != 0 );
+	} else if ( cap == GL_STENCIL_TEST ) {
+		VK_GL_Flush();
+		gl_stencil.test = (qboolean)( on != 0 );
 	}
 }
 

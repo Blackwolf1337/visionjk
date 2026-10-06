@@ -82,6 +82,9 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 	X( vkCmdSetDepthTestEnable ) \
 	X( vkCmdSetDepthWriteEnable ) \
 	X( vkCmdSetScissor ) \
+	X( vkCmdSetStencilOp ) \
+	X( vkCmdSetStencilReference ) \
+	X( vkCmdSetStencilTestEnable ) \
 	X( vkCmdSetViewport ) \
 	X( vkCreateBuffer ) \
 	X( vkCreateCommandPool ) \

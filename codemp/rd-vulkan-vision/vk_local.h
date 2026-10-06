@@ -148,6 +148,13 @@ typedef struct vkTarget_s {		// something to render into
 
 #define VK_MAX_FLARES		256
 
+typedef struct vkStencil_s {	// what the draws of stencil shadows need beyond the state bits, in the words of OpenGL
+	qboolean	test;				// GL_STENCIL_TEST
+	int			func, ref;			// glStencilFunc
+	int			ops[2][3];			// front and back: when the stencil test fails, when the depth test fails, when both pass
+	qboolean	depthLess;			// glDepthFunc( GL_LESS )
+} vkStencil_t;
+
 typedef struct vkIndexRange_s {	// a run of indexes in a buffer on the device
 	uint32_t	first;
 	uint32_t	count;
@@ -286,6 +293,7 @@ typedef struct vkState_s {
 	int							numBoundIndexes;	// the batch that was set up last: that many indexes
 	uint32_t					firstIndex;			// from here in the index buffer
 	int32_t						vertexOffset;		// counted from this vertex
+	const vkStencil_t			*stencil;			// of the draws that follow, NULL: no stencil test, depth as the state bits say
 	const vkIndexRange_t		*ranges;			// or, for surfaces of models, the runs of indexes to draw
 	int							numRanges;			// 0: numBoundIndexes from firstIndex
 	int							viewport[4];		// x, y, width, height as OpenGL counts them

@@ -338,6 +338,8 @@ static void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 	unsigned int oldSort = (unsigned int)-1;
 	const float originalTime = backEnd.refdef.floatTime;	// save original time for entity shader offsets
 	drawSurf_t *drawSurf = drawSurfs;
+	// the stencil shadows are darkened once, and not in the glow pass
+	qboolean didShadowPass = (qboolean)g_bRenderGlowingObjects;
 
 	RB_BeginDrawingView();
 	if ( backEnd.isHyperspace ) {
@@ -390,6 +392,12 @@ static void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 			|| ( entityNum != oldEntityNum && !shader->entityMergable ) ) {
 			if ( oldShader != NULL ) {
 				RB_EndSurface();
+				// the shadow volumes come with the sort of banners: when they are through, darken the frame
+				// where they left a mark in the stencil buffer, before anything transparent is drawn
+				if ( !didShadowPass && shader->sort > SS_BANNER ) {
+					RB_ShadowFinish();
+					didShadowPass = qtrue;
+				}
 			}
 			RB_BeginSurface( shader, fogNum );
 			oldShader = shader;
@@ -444,6 +452,10 @@ static void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 	VK_InvalidateTransform();
 	if ( depthRange ) {
 		RB_SetDepthRange( 0 );
+	}
+	if ( !didShadowPass ) {
+		// darken down any stencil shadows
+		RB_ShadowFinish();
 	}
 }
 

@@ -178,6 +178,10 @@ static qboolean VK_ShaderIsStatic( void ) {
 	if ( !r_vkStatic->integer ) {
 		return qfalse;
 	}
+	// a shadow volume is built from the vertices as the bones have moved them
+	if ( shader == tr.shadowShader ) {
+		return qfalse;
+	}
 	if ( shader->sky || !VK_DeformOnDevice( shader ) || r_fullbright->integer || tess.fading ) {
 		return qfalse;
 	}

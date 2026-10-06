@@ -57,11 +57,12 @@ The renderer does not copy the parts of `rd-vanilla` that are not graphics code.
 from `codemp/rd-vanilla/` with `RD_VULKAN_VISION` defined: the BSP and model loaders, the `.shader` parser,
 Ghoul2 with bones, bolts and collision, skins, marks, the light grid, the scene with PVS and culling, the cvars
 and the export table, the image code up to the upload, the sky geometry, the surface functions for sprites,
-beams and the like, the weather particles and the surface sprites.
+beams and the like, the weather particles, the surface sprites and the shadows (`cg_shadows 2` and `3`).
 
 What that needs in `rd-vanilla`: `#ifndef RD_VULKAN_VISION` around the OpenGL-only functions of `tr_init.cpp`
-and `tr_image.cpp`, one function in `tr_ghoul2.cpp` that hands out the bone matrices, the depth test of a flare
-in `tr_surface.cpp`, and one include at the end of `tr_local.h`. Without the macro the files are byte for byte the same after the preprocessor, that was checked
+and `tr_image.cpp` and around the two functions of `tr_shadows.cpp` that are not about shadows, two functions in
+`tr_ghoul2.cpp` (the bone matrices, the vertices of saber marks), the depth test of a flare in `tr_surface.cpp`,
+and one include at the end of `tr_local.h`. Without the macro the files are byte for byte the same after the preprocessor, that was checked
 with `g++ -E -P` against `master`. The target links with `-Wl,-z,defs` and without libGL, so an OpenGL call that
 is left in a shared file fails the build.
 
@@ -71,7 +72,10 @@ is left in a shared file fails the build.
 - drawing with `glBegin`/`glEnd`, client arrays, the matrix calls, `glDepthRange` and `glFog` go to `vk_gl.cpp`,
   which collects the vertices and draws them like everything else. That is how the sky box, the weather and the
   surface sprites work without a change to their files
-- the rest (stencil setup of the overdraw counter, line width, display lists) is nothing
+- the stencil calls of the shadows go there too. The volume of a model comes as one `glBegin` to `glEnd` per
+  edge: while the color mask is off they are collected and become one draw, with the stencil test as dynamic
+  state
+- the rest (line width, display lists) is nothing
 
 The engine got a window type for Vulkan (`GRAPHICS_API_VULKAN`, `SDL_WINDOW_VULKAN`) and three functions at the
 end of `refimport_t`: the instance extensions the window needs, the surface, and the entry point of the Vulkan
@@ -155,7 +159,7 @@ left in these views are the effects of the game (flames, smoke, light cones) and
 
 ## Not done
 
-Stencil and projection shadows (`cg_shadows 2` and `3`), the automap, `r_shownormals`.
+The automap and `r_shownormals`.
 
 Surfaces with the shader `internal_distortion` are left out. `rd-vanilla` cuts them into the stencil buffer and
 fills the hole with a stretched copy of the screen, but nothing in the game code or the data of the base game
@@ -204,6 +208,12 @@ is 40 ms of the demo, so both show the same moments. 75 frames out of 747: 2.1 t
 more than 16. What differs are the sparks (random numbers), the fine grating of the floor and the noise of
 Motion JPEG. The file of `rd-vanilla` is three frames behind: it reads the frame buffer before the frame the
 video command belongs to is drawn, and what is in the buffer then is that old on this machine.
+
+Shadows: the player on a bright floor of mp/ctf2 from above, with `cg_shadows 1`, `2` and `3`, next to
+`rd-vanilla`: the blob, the stencil shadow and the projected shadow have the same shape and place. The fight
+demo recorded with `cg_shadows 2` by both renderers: 2.2 to 3.8 % as without. Stencil shadows take most of the
+speed of both: the volumes are built on the CPU by the same code. The timedemo below runs at 165 and 165 frames
+a second in `rd-vanilla` with them, at 193 and 200 here.
 
 Recording to AVI (`video` while a demo plays): a demo recorded on mp/ffa3, written as Motion JPEG and as raw
 frames (`cl_aviMotionJpeg 0`). Both files hold the same picture for a frame, upright and with the right
