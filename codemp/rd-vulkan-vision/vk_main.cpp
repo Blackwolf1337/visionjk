@@ -250,6 +250,8 @@ static void VK_CreateDevice( void ) {
 	features.features.samplerAnisotropy = available.samplerAnisotropy;
 	features.features.fillModeNonSolid = available.fillModeNonSolid;
 	vk.wireframe = (qboolean)( available.fillModeNonSolid != VK_FALSE );
+	features.features.textureCompressionBC = available.textureCompressionBC;
+	vk.bcTextures = (qboolean)( available.textureCompressionBC != VK_FALSE && r_ext_compressed_textures->integer );
 	features.features.shaderClipDistance = VK_TRUE;
 	f13.dynamicRendering = VK_TRUE;
 	// glslc turns the discard of a fragment shader into this for Vulkan 1.3
@@ -511,7 +513,8 @@ void VK_InitVulkan( void ) {
 	glConfig.colorBits = 32;
 	glConfig.depthBits = 24;
 	glConfig.stencilBits = 8;
-	glConfig.textureCompression = TC_NONE;
+	// tr_image.cpp then asks for the formats of GL_EXT_texture_compression_s3tc, see VK_ImageLevel()
+	glConfig.textureCompression = vk.bcTextures ? TC_S3TC_DXT : TC_NONE;
 	glConfig.textureEnvAddAvailable = qtrue;
 	glConfig.clampToEdgeAvailable = qtrue;
 	glConfig.stereoEnabled = qfalse;
@@ -577,11 +580,14 @@ VK_GfxInfo_f
 ===============
 */
 void VK_GfxInfo_f( void ) {
-	int numImages = 0;
+	int numImages = 0, numBlockImages = 0;
 
 	for ( int i = 0; i < VK_MAX_IMAGES; i++ ) {
 		if ( vk.images[i].owner ) {
 			numImages++;
+			if ( vk.images[i].format == VK_FORMAT_BC1_RGB_UNORM_BLOCK || vk.images[i].format == VK_FORMAT_BC3_UNORM_BLOCK ) {
+				numBlockImages++;
+			}
 		}
 	}
 	ri.Printf( PRINT_ALL, "\nrd-vulkan-vision\n" );
@@ -594,8 +600,12 @@ void VK_GfxInfo_f( void ) {
 	// they are kept over a restart of the renderer: a number that grows with every map is a leak
 	ri.Printf( PRINT_ALL, "ghoul2 instances: %i of 1024 slots in use, %i of them without a model\n", G2API_SlotsInUse(),
 		G2API_ListSlots( (qboolean)( ri.Cvar_VariableIntegerValue( "developer" ) != 0 ) ) );
-	ri.Printf( PRINT_ALL, "textures: %i of %i, pipelines: %i, samplers: %i\n", numImages, VK_MAX_IMAGES, vk.numPipelines,
-		vk.numSamplers );
+	ri.Printf( PRINT_ALL, "textures: %i of %i, %i of them compressed, pipelines: %i, samplers: %i\n", numImages, VK_MAX_IMAGES,
+		numBlockImages, vk.numPipelines, vk.numSamplers );
+	if ( vk.bcTextures ) {
+		ri.Printf( PRINT_ALL, "  packed into blocks since the window was made: %.1f million pixels in %.2f s\n", vk.statBcPixels * 1e-6,
+			vk.statBcSeconds );
+	}
 	ri.Printf( PRINT_ALL, "last frame: %i draws, %i triangles from buffers on the device, %i triangles and %i vertices built on the CPU\n",
 		vk.statDraws[1], vk.statStaticIndexes[1] / 3, vk.statCpuIndexes[1] / 3, vk.statCpuVertexes[1] );
 	ri.Printf( PRINT_ALL, "  %i of %i transforms, %i of %i bones\n", vk.statTransforms[1], VK_MAX_TRANSFORMS, vk.statBones[1], VK_MAX_BONES );

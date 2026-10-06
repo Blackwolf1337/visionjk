@@ -26,6 +26,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // filter and wrap mode, see vk_hooks.h.
 
 #include "vk_local.h"
+#include <chrono>
 
 /*
 ===============
@@ -282,13 +283,13 @@ static vkImage_t *VK_NewSlot( image_t *image ) {
 	return NULL;
 }
 
-static void VK_CreateSlotImage( vkImage_t *vi, int width, int height, int mipLevels ) {
+static void VK_CreateSlotImage( vkImage_t *vi, int width, int height, int mipLevels, VkFormat format ) {
 	VkImageCreateInfo info = { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
 	VkImageViewCreateInfo view = { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
 	VkMemoryRequirements req;
 
 	info.imageType = VK_IMAGE_TYPE_2D;
-	info.format = VK_FORMAT_R8G8B8A8_UNORM;
+	info.format = format;
 	info.extent.width = (uint32_t)width;
 	info.extent.height = (uint32_t)height;
 	info.extent.depth = 1;
@@ -313,7 +314,37 @@ static void VK_CreateSlotImage( vkImage_t *vi, int width, int height, int mipLev
 	vi->width = width;
 	vi->height = height;
 	vi->mipLevels = mipLevels;
+	vi->format = format;
 	vi->uploaded = qfalse;
+}
+
+/*
+===============
+VK_LevelFormat
+
+tr_image.cpp names a compressed format for the images that may be compressed when glConfig.textureCompression
+says so (r_ext_compress_textures; lightmaps only with r_ext_compress_lightmaps, shaders with noTC never). It
+asks for the one with alpha when an image has none too, unless r_texturebits is 16. The colors are stored the
+same way in both, so here an image without alpha takes the format without, which is half the size.
+===============
+*/
+static VkFormat VK_LevelFormat( image_t *image, int internalFormat, int width, int height, const byte *rgba ) {
+	if ( !vk.bcTextures || ( internalFormat != GL_COMPRESSED_RGB_S3TC_DXT1_EXT && internalFormat != GL_COMPRESSED_RGBA_S3TC_DXT5_EXT ) ) {
+		return VK_FORMAT_R8G8B8A8_UNORM;
+	}
+	// what imagelist prints
+	if ( width < 4 || height < 4 ) {
+		image->internalFormat = GL_RGBA8;
+		return VK_FORMAT_R8G8B8A8_UNORM;
+	}
+	for ( int i = 0; i < width * height; i++ ) {
+		if ( rgba[i * 4 + 3] != 255 ) {
+			image->internalFormat = GL_COMPRESSED_RGBA_S3TC_DXT5_EXT;
+			return VK_FORMAT_BC3_UNORM_BLOCK;
+		}
+	}
+	image->internalFormat = GL_COMPRESSED_RGB_S3TC_DXT1_EXT;
+	return VK_FORMAT_BC1_RGB_UNORM_BLOCK;
 }
 
 /*
@@ -335,21 +366,22 @@ void GL_SelectTexture( int unit ) {
 VK_ImageLevel
 
 One mip level of the bound image, 32 bit RGBA. Level 0 comes first and makes the texture, with all levels if
-the image is mip mapped: Upload32() then sends every level down to 1 x 1.
+the image is mip mapped: Upload32() then sends every level down to 1 x 1. internalFormat is what OpenGL was to
+store it as.
 ===============
 */
-void VK_ImageLevel( int level, int width, int height, const byte *rgba ) {
+void VK_ImageLevel( int level, int internalFormat, int width, int height, const byte *rgba ) {
 	image_t *image = vk.boundImage;
 	vkImage_t *vi = VK_SlotOf( image );
 	VkBufferImageCopy region;
-	VkDeviceSize offset;
-	const VkDeviceSize size = (VkDeviceSize)width * height * 4;
+	VkDeviceSize offset, size;
 	VkCommandBuffer cmd;
 
 	if ( !image ) {
 		return;
 	}
 	if ( level == 0 ) {
+		const VkFormat format = VK_LevelFormat( image, internalFormat, width, height, rgba );
 		int mipLevels = 1;
 
 		if ( image->mipmap ) {
@@ -357,7 +389,7 @@ void VK_ImageLevel( int level, int width, int height, const byte *rgba ) {
 				mipLevels++;
 			}
 		}
-		if ( vi && ( vi->width != width || vi->height != height || vi->mipLevels != mipLevels ) ) {
+		if ( vi && ( vi->width != width || vi->height != height || vi->mipLevels != mipLevels || vi->format != format ) ) {
 			// new contents of another size, keep the slot and the sampler parameters
 			vkImage_t keep = *vi;
 
@@ -373,7 +405,7 @@ void VK_ImageLevel( int level, int width, int height, const byte *rgba ) {
 			vi = VK_NewSlot( image );
 		}
 		if ( !vi->image ) {
-			VK_CreateSlotImage( vi, width, height, mipLevels );
+			VK_CreateSlotImage( vi, width, height, mipLevels, format );
 			VK_SetLayout( VK_UploadCmd(), vi->image, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
 				VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL );
 		} else {
@@ -386,7 +418,17 @@ void VK_ImageLevel( int level, int width, int height, const byte *rgba ) {
 		return;
 	}
 
-	memcpy( VK_Stage( size, &offset ), rgba, (size_t)size );
+	if ( vi->format == VK_FORMAT_R8G8B8A8_UNORM ) {
+		size = (VkDeviceSize)width * height * 4;
+		memcpy( VK_Stage( size, &offset ), rgba, (size_t)size );
+	} else {
+		const std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
+
+		size = VK_BC_Size( vi->format, width, height );
+		VK_BC_Compress( vi->format, rgba, width, height, VK_Stage( size, &offset ) );
+		vk.statBcPixels += (double)width * height;
+		vk.statBcSeconds += std::chrono::duration<double>( std::chrono::steady_clock::now() - start ).count();
+	}
 	cmd = VK_UploadCmd();		// VK_Stage() may have flushed
 	memset( &region, 0, sizeof( region ) );
 	region.bufferOffset = offset;
@@ -455,7 +497,7 @@ void VK_UpdateImage( image_t *image, int width, int height, const byte *rgba ) {
 	vk.boundImage = image;
 	image->width = width;
 	image->height = height;
-	VK_ImageLevel( 0, width, height, rgba );
+	VK_ImageLevel( 0, GL_RGBA8, width, height, rgba );
 	vk.boundImage = bound;
 }
 
@@ -467,10 +509,14 @@ void VK_InitImages( void ) {
 	alloc.commandBufferCount = 1;
 	VK_CHECK( qvkAllocateCommandBuffers( vk.device, &alloc, &vk.uploadCmd ) );
 	VK_CreateBuffer( &vk.staging, VK_STAGING_BYTES, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, qtrue );
+	if ( vk.bcTextures ) {
+		VK_BC_Init();
+	}
 }
 
 void VK_ShutdownImages( void ) {
 	VK_FlushUploads();
+	VK_BC_Shutdown();
 	for ( int i = 0; i < VK_MAX_IMAGES; i++ ) {
 		if ( vk.images[i].image ) {
 			qvkDestroyImageView( vk.device, vk.images[i].view, NULL );

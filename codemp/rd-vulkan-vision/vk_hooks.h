@@ -42,7 +42,7 @@ void G2_SkinGore( CRenderableSurface *surf );
 
 // vk_image.cpp: the upload of one texture as tr_image.cpp drives it. GL_Bind() picks the image, the levels
 // follow, the parameters pick its sampler.
-void VK_ImageLevel( int level, int width, int height, const byte *rgba );
+void VK_ImageLevel( int level, int internalFormat, int width, int height, const byte *rgba );
 void VK_ImageParm( int name, int value );
 void VK_ImageDelete( unsigned int texnum );
 
@@ -50,7 +50,7 @@ void VK_ImageDelete( unsigned int texnum );
 // tr_image.cpp Upload32, R_CreateImage, GL_TextureMode, R_Images_DeleteImageContents
 #undef qglTexImage2D
 #define qglTexImage2D( target, level, internalFormat, width, height, border, format, type, data ) \
-	VK_ImageLevel( level, width, height, (const byte *)(data) )
+	VK_ImageLevel( level, internalFormat, width, height, (const byte *)(data) )
 #undef qglTexParameterf
 #define qglTexParameterf( target, name, value )		VK_ImageParm( name, (int)(value) )
 #undef qglTexParameterfv

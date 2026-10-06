@@ -135,6 +135,7 @@ typedef struct vkImage_s {		// one entry of the texture table
 	vkAlloc_t		alloc;
 	int				width, height;
 	int				mipLevels;
+	VkFormat		format;			// 32 bit RGBA, or blocks: BC1 without alpha, BC3 with
 	int				minFilter, magFilter, wrap;		// OpenGL names, as tr_image.cpp hands them over
 	float			anisotropy;
 	qboolean		uploaded;		// all levels are there and the layout is the one for sampling
@@ -318,6 +319,9 @@ typedef struct vkState_s {
 	int							statNumCpuShaders[2];
 
 	qboolean					wireframe;			// the device can draw triangles as lines (r_showtris)
+	qboolean					bcTextures;			// r_ext_compress_textures on a device that takes BC1 and BC3 blocks
+	double						statBcPixels;		// what packing textures into blocks has cost since the window was made
+	double						statBcSeconds;
 	qboolean					validation;
 	int							validationMessages;
 } vkState_t;
@@ -356,6 +360,12 @@ void		VK_CreateTarget( vkTarget_t *target, int width, int height, VkFormat forma
 void		VK_DestroyTarget( vkTarget_t *target );
 void		VK_SetLayout( VkCommandBuffer cmd, VkImage image, VkImageAspectFlags aspect, VkImageLayout from, VkImageLayout to );
 void		VK_TargetLayout( VkCommandBuffer cmd, vkTarget_t *target, VkImageLayout to );
+
+// vk_bc.cpp
+void		VK_BC_Init( void );
+void		VK_BC_Shutdown( void );
+VkDeviceSize VK_BC_Size( VkFormat format, int width, int height );
+void		VK_BC_Compress( VkFormat format, const byte *rgba, int width, int height, byte *out );
 
 // vk_pipeline.cpp
 void		VK_InitPipelines( void );

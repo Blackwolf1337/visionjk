@@ -44,9 +44,10 @@ indexing ends in an error that names `rd-vanilla`.
 |------|---------|
 | `r_vkDebug 1` | validation layer and its messages in the console, if the layer is installed (latched) |
 | `r_ext_multisample 2`, `4`, `8` | anti aliasing with that many samples a pixel, the cvar `rd-vanilla` uses for it (latched) |
+| `r_ext_compress_textures 0` | textures as 32 bit and not packed into blocks, the cvar `rd-vanilla` uses for it (latched, the default is 1) |
 | `r_vkStatic 0` | cheat: nothing from the device buffers, every vertex through the CPU as in `rd-vanilla`. For telling a fault of the buffers from a fault of the shading |
 | `r_vkMerge 0` | cheat: a batch ends with its entity as in `rd-vanilla`, the sprites of an effect are a draw each again |
-| `gfxinfo` | device, memory, what the last frame was made of (draws, triangles, transforms, bones), the shaders whose batches were still built on the CPU, how many swapchains the window has had and how many frames found no image to be shown in, how many of the 1024 Ghoul2 instances of the engine are taken and how many of those hold no model (with `developer 1` a line for each model that is held; the same list is printed when the engine stops with "Out of ghoul2 info slots"). The count has to be 0 in the menu after leaving a server, apart from the models the menu shows itself |
+| `gfxinfo` | device, memory, how many textures are compressed and how long packing them took, what the last frame was made of (draws, triangles, transforms, bones), the shaders whose batches were still built on the CPU, how many swapchains the window has had and how many frames found no image to be shown in, how many of the 1024 Ghoul2 instances of the engine are taken and how many of those hold no model (with `developer 1` a line for each model that is held; the same list is printed when the engine stops with "Out of ghoul2 info slots"). The count has to be 0 in the menu after leaving a server, apart from the models the menu shows itself |
 
 The cvars of `rd-vanilla` keep their names and meaning (`r_gamma`, `r_textureMode`, `r_picmip`,
 `r_DynamicGlow` and its parameters, `r_dynamiclight`, `r_drawfog`, `r_fastsky`, `r_surfaceSprites`, ...). The ones
@@ -90,6 +91,7 @@ library. The other renderers do not use them.
 | `vk_main.cpp`, `vk_funcs.h` | the functions of Vulkan, instance, device, swapchain, start and shutdown, `gfxinfo` |
 | `vk_memory.cpp` | device memory in 64 MB blocks with free lists, buffers |
 | `vk_image.cpp` | the texture table, uploads batched in one command buffer, samplers, render targets |
+| `vk_bc.cpp` | textures packed into BC1 and BC3 blocks, the worker threads that do it |
 | `vk_pipeline.cpp` | descriptor layouts, shader modules, pipelines |
 | `vk_frame.cpp` | a frame: targets, gamma pass, copy to the window, buffers per frame, screenshots, video frames |
 | `vk_shade.cpp` | a batch with a `.shader` script becomes draws: colors, tcMods, fog, dynamic lights |
@@ -168,8 +170,19 @@ left in these views are the effects of the game (flames, smoke, light cones) and
   device buffers, as with `r_vkStatic 0`.
 - Anti aliasing costs memory for three more targets with that many samples a pixel: about 44 MB at 1280x720
   with four samples, about 400 MB at 3840x2160.
-- Textures are not compressed (32 bit with mip levels). mp/ffa3 takes about 550 MB of device memory, 180 MB of
-  that are the buffers and targets the renderer always has.
+- Compressed textures (`r_ext_compress_textures 1`, the default of the engine): `rd-vanilla` names a compressed
+  format and the OpenGL driver packs the texture. Vulkan takes the blocks as they are stored, so this renderer
+  packs them itself (`vk_bc.cpp`): BC1 for a texture without alpha, BC3 for one with. `rd-vanilla` asks for the
+  format with alpha for both unless `r_texturebits` is 16, the colors are stored the same way in the two, so a
+  texture without alpha is half the size here. The pixels are not the ones the driver would make. Which images
+  are compressed is decided by the code of `rd-vanilla`: not the lightmaps (unless `r_ext_compress_lightmaps`),
+  not the images of a shader with `noTC`, not the ones the renderer makes itself. An image with less than 4
+  pixels in a direction stays as it is. `imagelist` shows the format of each.
+- Device memory: mp/ffa3 takes 282 MB with compressed textures and 581 MB without. About 200 MB of that are the
+  buffers and targets the renderer always has at 1280x720.
+- Packing is work at every level load: 96 million pixels for mp/ffa3. Up to seven worker threads share it with
+  the main thread, which goes on when a texture is done: 0.47 s for that level on this machine, 1.5 s on one
+  core. The workers do nothing else and sleep while the game runs.
 
 ## Not done
 
@@ -222,6 +235,14 @@ the blades on the floor is the same) were made with them.
 Three of those levels have a sky portal. Five levels one after the other and a `vid_restart` in one session:
 the device memory in use goes up and down with the level (400 to 570 MB) and is the same when a level comes
 again.
+
+Compressed textures (2026-10-07). The packing was run outside of the game over 35 textures of the base game,
+unpacked again by a decoder written from the description of the formats and compared with the original: 32 to
+45 dB for the colors of walls, skins and weapons, 43 to 50 dB for the alpha of fonts and HUD pictures, a block
+of one color is off by 1 of 255 at most. With the worker threads the numbers are the same. In the game, both
+renderers with their compressed textures: the two views of mp/ffa3 0.1 and 0.3 %, the player from the front
+with the HUD 0.1 %, no message of the validation layer, also not over the restarts of the renderer in between
+(the workers are started and ended with it). The Windows DLL still builds and imports what it did.
 
 Anti aliasing, `r_ext_multisample 4` in both renderers: mp/ffa3 0.2 and 0.4 %, with `r_DynamicGlow 1` 0.1 and
 0.3 %, mp/ffa4 with its flares 0.1 and 0.1 %. Edges are smooth where `rd-vanilla` has them smooth. A fight with

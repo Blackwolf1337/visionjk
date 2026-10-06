@@ -62,6 +62,7 @@ set(MPVulkanVisionFiles
 	"${MPDir}/rd-vulkan-vision/vk_hooks.h"
 	"${MPDir}/rd-vulkan-vision/vk_local.h"
 	"${MPDir}/rd-vulkan-vision/vk_backend.cpp"
+	"${MPDir}/rd-vulkan-vision/vk_bc.cpp"
 	"${MPDir}/rd-vulkan-vision/vk_frame.cpp"
 	"${MPDir}/rd-vulkan-vision/vk_gl.cpp"
 	"${MPDir}/rd-vulkan-vision/vk_image.cpp"
@@ -181,6 +182,10 @@ list(APPEND MPVulkanVisionIncludeDirectories ${ZLIB_INCLUDE_DIR})
 list(APPEND MPVulkanVisionLibraries          ${ZLIB_LIBRARIES})
 list(APPEND MPVulkanVisionIncludeDirectories ${MINIZIP_INCLUDE_DIRS})
 list(APPEND MPVulkanVisionLibraries          ${MINIZIP_LIBRARIES})
+
+# the worker threads that pack textures into blocks (vk_bc.cpp)
+find_package(Threads REQUIRED)
+list(APPEND MPVulkanVisionLibraries Threads::Threads)
 
 # tr_local.h of rd-vanilla pulls in the OpenGL headers for its types. Nothing of OpenGL is linked.
 find_package(OpenGL REQUIRED)
