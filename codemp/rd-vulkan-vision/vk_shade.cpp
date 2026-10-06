@@ -586,6 +586,117 @@ static uint32_t VK_AlphaTest( uint32_t stateBits ) {
 	}
 }
 
+/*
+===============================================================================
+
+DEFORMVERTEXES
+
+A shader may move the vertices of its surfaces: deformVertexes. rd-vanilla does that in the tess arrays before
+the stages (RB_DeformTessGeometry). For a batch whose vertices are on the device stage.glsl does the three kinds
+that are a formula per vertex, if the shader has just one of them: wave, bulge and move. The shells around a
+player (shield, lightning, ysalamiri) are such shaders on a whole Ghoul2 model. Everything else (autosprite,
+text, normals, several deforms at once) keeps the tess arrays.
+
+===============================================================================
+*/
+
+static struct {
+	uint32_t	flags;				// VKD_DEFORM_SHIFT
+	float		wave[4];
+	float		vec[4];
+} vk_deform;						// of the batch that is drawn
+
+qboolean VK_DeformOnDevice( const shader_t *shader ) {
+	const deformStage_t *ds = shader->deforms[0];
+
+	if ( !shader->numDeforms ) {
+		return qtrue;
+	}
+	if ( shader->numDeforms > 1 ) {
+		return qfalse;
+	}
+	switch ( ds->deformation ) {
+	case DEFORM_BULGE:
+	case DEFORM_MOVE:
+		return qtrue;
+	case DEFORM_WAVE:
+		// a wave that runs over the surface has to be one of the table functions
+		return (qboolean)( ds->deformationWave.frequency == 0
+			|| ( ds->deformationWave.func >= GF_SIN && ds->deformationWave.func <= GF_INVERSE_SAWTOOTH ) );
+	default:
+		return qfalse;
+	}
+}
+
+/*
+===============
+VK_BatchDeform
+
+The numbers of the deform for the draws of this batch
+===============
+*/
+static void VK_BatchDeform( void ) {
+	const shader_t *shader = tess.shader;
+	const deformStage_t *ds = shader->deforms[0];
+
+	memset( &vk_deform, 0, sizeof( vk_deform ) );
+	if ( !shader->numDeforms || !VK_BatchIsStatic() ) {
+		return;		// none, or RB_DeformTessGeometry() moved the vertices in the tess arrays
+	}
+	if ( ds->deformation == DEFORM_WAVE && ds->deformationWave.frequency != 0 ) {
+		// a wave that runs over the surface
+		const double phase = (double)ds->deformationWave.phase + (double)tess.shaderTime * ds->deformationWave.frequency;
+
+		vk_deform.flags = 1u << VKD_DEFORM_SHIFT;
+		vk_deform.wave[0] = ds->deformationWave.base;
+		vk_deform.wave[1] = ds->deformationWave.amplitude;
+		vk_deform.wave[2] = (float)( phase - floor( phase ) );
+		vk_deform.wave[3] = (float)ds->deformationWave.func;
+		vk_deform.vec[0] = vk_deform.vec[1] = vk_deform.vec[2] = ds->deformationSpread;
+	} else if ( ds->deformation == DEFORM_BULGE && ( ds->bulgeSpeed != 0.0f || ds->bulgeWidth != 0.0f ) ) {
+		// a sine along the s of the texture
+		const double phase = backEnd.refdef.time * (double)ds->bulgeSpeed * 0.001 / ( 2.0 * M_PI );
+
+		vk_deform.flags = 1u << VKD_DEFORM_SHIFT;
+		vk_deform.wave[1] = ds->bulgeHeight;
+		vk_deform.wave[2] = (float)( phase - floor( phase ) );
+		vk_deform.wave[3] = (float)GF_SIN;
+		vk_deform.vec[3] = ds->bulgeWidth / ( 2.0f * M_PI );
+	} else {
+		// Every vertex alike: one vertex at the origin with its normal along x goes through the function of
+		// rd-vanilla, and what that does to it is what the shader has to do to all of them.
+		const int numVertexes = tess.numVertexes;
+		vec4_t xyz, normal;
+
+		VectorCopy4( tess.xyz[0], xyz );
+		VectorCopy4( tess.normal[0], normal );
+		VectorSet4( tess.xyz[0], 0.0f, 0.0f, 0.0f, 0.0f );
+		VectorSet4( tess.normal[0], 1.0f, 0.0f, 0.0f, 0.0f );
+		tess.numVertexes = 1;
+		RB_DeformTessGeometry();
+		if ( ds->deformation == DEFORM_MOVE ) {
+			vk_deform.flags = 2u << VKD_DEFORM_SHIFT;
+			VectorCopy( tess.xyz[0], vk_deform.vec );
+		} else {
+			vk_deform.flags = 1u << VKD_DEFORM_SHIFT;
+			vk_deform.wave[0] = tess.xyz[0][0];
+		}
+		tess.numVertexes = numVertexes;
+		VectorCopy4( xyz, tess.xyz[0] );
+		VectorCopy4( normal, tess.normal[0] );
+	}
+}
+
+// every draw of a batch starts like this
+static void VK_InitDraw( vkDraw_t *draw, uint32_t transform, uint32_t bones ) {
+	memset( draw, 0, sizeof( *draw ) );
+	draw->transform = transform;
+	draw->bones = bones;
+	draw->flags = vk_deform.flags;
+	VectorCopy4( vk_deform.wave, draw->deformWave );
+	VectorCopy4( vk_deform.vec, draw->deformVec );
+}
+
 static void VK_IdentityTexCoords( vkDraw_t *draw ) {
 	draw->flags |= (uint32_t)TCGEN_TEXTURE << VKD_TCGEN0_SHIFT;
 	draw->texMat0[0] = draw->texMat0[5] = 1.0f;
@@ -677,10 +788,8 @@ static void VK_DynamicLights( uint32_t transform, int cullMode, vkProgram_t prog
 		if ( !( tess.dlightBits & ( 1 << l ) ) ) {
 			continue;	// this surface definately doesn't have any of this light
 		}
-		memset( &draw, 0, sizeof( draw ) );
-		draw.transform = transform;
-		draw.bones = bones;
-		draw.flags = VKD_DLIGHT;
+		VK_InitDraw( &draw, transform, bones );
+		draw.flags |= VKD_DLIGHT;
 		VK_IdentityTexCoords( &draw );
 		draw.tex0 = bundle ? VK_BundleTexture( bundle ) : tr.whiteImage->texnum;
 		draw.tex1 = tr.dlightImage->texnum;
@@ -704,10 +813,8 @@ static void VK_FogPass( uint32_t transform, int cullMode, vkProgram_t program, u
 	const fog_t *fog = tr.world->fogs + tess.fogNum;
 	vkDraw_t draw;
 
-	memset( &draw, 0, sizeof( draw ) );
-	draw.transform = transform;
-	draw.bones = bones;
-	draw.flags = (uint32_t)TCGEN_FOG << VKD_TCGEN0_SHIFT;
+	VK_InitDraw( &draw, transform, bones );
+	draw.flags |= (uint32_t)TCGEN_FOG << VKD_TCGEN0_SHIFT;
 	draw.texMat0[0] = draw.texMat0[5] = 1.0f;
 	VK_FogVectors( &draw );
 	draw.tex0 = draw.tex1 = tr.fogImage->texnum;
@@ -757,6 +864,7 @@ void RB_StageIteratorGeneric( void ) {
 	}
 	transform = VK_CurrentTransform();
 	cullMode = VK_CullMode( shader->cullType );
+	VK_BatchDeform();
 	const qboolean refract = (qboolean)( vk_refraction && tr.screenImage && ( backEnd.currentEntity->e.renderfx & RF_DISTORTION ) );
 
 	for ( int stage = 0; stage < shader->numUnfoggedPasses; stage++ ) {
@@ -792,9 +900,7 @@ void RB_StageIteratorGeneric( void ) {
 			forceRGBGen = CGEN_ENTITY;
 		}
 
-		memset( &draw, 0, sizeof( draw ) );
-		draw.transform = transform;
-		draw.bones = bones;
+		VK_InitDraw( &draw, transform, bones );
 		draw.parm[0] = shader->portalRange;
 		draw.parm[1] = tess.shaderTime;
 		if ( !tess.fading ) {
@@ -874,9 +980,7 @@ void RB_StageIteratorGeneric( void ) {
 	if ( r_showtris->integer && vk.wireframe ) {
 		vkDraw_t draw;
 
-		memset( &draw, 0, sizeof( draw ) );
-		draw.transform = transform;
-		draw.bones = bones;
+		VK_InitDraw( &draw, transform, bones );
 		draw.tex0 = draw.tex1 = tr.whiteImage->texnum;
 		VectorSet4( draw.baseColor, 1.0f, 1.0f, 1.0f, 1.0f );
 		VK_SetDepthRange( 0.0f, 0.0f );

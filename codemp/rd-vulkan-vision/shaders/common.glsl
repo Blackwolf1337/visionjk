@@ -29,6 +29,8 @@ struct Draw {
 	vec4	fogColor;
 	vec4	fogParm;		// exp2: x: density. linear: x: start, y: end. z: fog volume, where the eye is
 	vec4	fogVec[2];		// fog volume: distance and depth vector
+	vec4	deformWave;		// deformVertexes along the normal: x + y * wave( z + dot( deformVec.xyz, position ) + deformVec.w * s ), w: which wave
+	vec4	deformVec;		// for a move, xyz: by how much
 	uint	bones;			// skinned: where the skeleton starts in the bones of the frame, in rows
 	uint	unused0, unused1, unused2;
 };
@@ -60,6 +62,7 @@ layout( push_constant ) uniform Push {
 #define DLIGHT( flags )		( ( ( flags ) & 0x80000u ) != 0u )
 #define FOG( flags )		( ( ( flags ) >> 20 ) & 3u )
 #define ACFF( flags )		( ( ( flags ) >> 22 ) & 3u )
+#define DEFORM( flags )		( ( ( flags ) >> 24 ) & 3u )
 
 // texCoordGen_t
 #define TCGEN_IDENTITY		1u

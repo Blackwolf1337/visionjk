@@ -19,6 +19,40 @@ layout( location = 4 ) out float v_depth;		// distance in front of the eye
 
 const float TWO_PI = 6.28318530718;
 
+// The wave functions of a .shader script, x counted in periods. rd-vanilla reads them from tables of 1024 steps
+// (genFunc_t: 1 sin, 2 square, 3 triangle, 4 sawtooth, 5 inverse sawtooth).
+float Wave( uint func, float x ) {
+	float f = fract( x );
+
+	switch ( func ) {
+	case 1u:	return sin( f * TWO_PI );
+	case 2u:	return ( f < 0.5 ) ? 1.0 : -1.0;
+	case 3u:	return ( f < 0.25 ) ? f * 4.0 : ( ( f < 0.75 ) ? 2.0 - f * 4.0 : f * 4.0 - 4.0 );
+	case 4u:	return f;
+	case 5u:	return 1.0 - f;
+	default:	return 0.0;
+	}
+}
+
+// deformVertexes of a shader that has one of them: wave and bulge move a vertex along its normal, move shifts
+// all of them (RB_CalcDeformVertexes, RB_CalcBulgeVertexes, RB_CalcMoveVertexes of rd-vanilla)
+vec3 Deform( Draw d, StageInput v ) {
+	uint kind = DEFORM( d.flags );
+
+	if ( kind == 1u ) {
+		float scale = d.deformWave.x;
+
+		if ( d.deformWave.y != 0.0 ) {
+			scale += d.deformWave.y * Wave( uint( d.deformWave.w ), d.deformWave.z + dot( d.deformVec.xyz, v.position ) + d.deformVec.w * v.texCoord.x );
+		}
+		return v.position + v.normal * scale;
+	}
+	if ( kind == 2u ) {
+		return v.position + d.deformVec.xyz;
+	}
+	return v.position;
+}
+
 // Where a vertex is in a fog volume, as coordinates into the fog image: s grows with the distance from the eye,
 // t says how much of the way lies in the fog (RB_CalcFogTexCoords of rd-vanilla)
 vec2 FogCoords( vec3 position, vec4 vectors[2], float eyeT ) {
@@ -82,6 +116,7 @@ void StageVertex( StageInput v ) {
 	Draw d = draws[push.draw];
 	Transform t = transforms[d.transform];
 
+	v.position = Deform( d, v );
 	gl_Position = t.mvp * vec4( v.position, 1.0 );
 	v_position = v.position;
 	// the view through a portal or mirror must not show what lies between the eye and the portal

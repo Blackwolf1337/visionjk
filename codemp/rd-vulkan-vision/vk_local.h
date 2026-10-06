@@ -75,6 +75,7 @@ typedef struct vkTransform_s {	// once per view and entity
 #define VKD_DLIGHT			0x00080000u		// the pass that adds one dynamic light, see generic.frag
 #define VKD_FOG_SHIFT		20				// fog over the whole stage as glFog did it: 0 none, 1 exp2, 2 linear
 #define VKD_ACFF_SHIFT		22				// acff_t: the color fades with the way through a fog volume
+#define VKD_DEFORM_SHIFT	24				// deformVertexes: 0 none, 1 along the normal, 2 all vertices by one vector
 
 typedef struct vkDraw_s {		// once per draw
 	uint32_t	transform;			// index into the transforms of the frame
@@ -92,6 +93,8 @@ typedef struct vkDraw_s {		// once per draw
 	float		fogColor[4];
 	float		fogParm[4];			// exp2: x: density. linear: x: start, y: end. z: fog volume, where the eye is (eyeT)
 	float		fogVec[8];			// fog volume: the distance and the depth vector of RB_CalcFogTexCoords()
+	float		deformWave[4];		// along the normal by x + y * wave( z + dot( deformVec.xyz, position ) + deformVec.w * s ), w: genFunc_t
+	float		deformVec[4];		// for a move, xyz: by how much
 	uint32_t	bones;				// skinned: where the skeleton starts in the bones of the frame, in rows
 	uint32_t	unused[3];
 } vkDraw_t;
@@ -334,6 +337,7 @@ void		VK_WorldChanged( void );
 void		VK_ShutdownWorld( void );
 void		VK_BatchBegin( void );
 qboolean	VK_BatchIsStatic( void );
+qboolean	VK_DeformOnDevice( const shader_t *shader );
 qboolean	VK_BatchIsSkinned( void );
 void		VK_AddSurface( surfaceType_t *surface );
 qboolean	VK_UploadStaticBatch( uint32_t *bones );

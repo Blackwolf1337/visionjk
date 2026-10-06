@@ -100,6 +100,7 @@ library. The other renderers do not use them.
 | MD3 with one frame | decoded and copied every frame | same device buffer, one identity bone |
 | tcMod, tcGen, rgbGen, alphaGen | per vertex on the CPU | one matrix and two colors per draw, the rest in `stage.glsl` |
 | rgbGen lightingDiffuse, alphaGen lightingSpecular and portal | per vertex on the CPU | vertex shader |
+| deformVertexes wave, bulge, move | per vertex on the CPU | vertex shader, for a shader with one of them |
 | Dynamic lights | per triangle on the CPU, one pass per light | per pixel in `generic.frag`, one pass per light |
 | Global fog | fixed function fog | per pixel in `generic.frag` |
 | Fog volumes | fog pass with coordinates per vertex on the CPU, color fade per vertex on the CPU | the same pass, coordinates and fade in `stage.glsl` from two vectors per draw |
@@ -107,7 +108,8 @@ library. The other renderers do not use them.
 | State of a stage | set per stage | only the blend function needs a pipeline, depth, cull and offset are dynamic state |
 | Gamma, overbright | ramp of the display or baked into textures | one pass over the finished frame |
 
-Still on the CPU, through the tess arrays as in `rd-vanilla`: the sky, shaders with `deformVertexes`,
+Still on the CPU, through the tess arrays as in `rd-vanilla`: the sky, shaders with the other kinds of
+`deformVertexes` (autosprite, text, normals) or with more than one of them,
 `alphaGen blend` (terrain), vertex lit surfaces with more than one light style, models with gore on them, MD3 with several frames, all
 effects the game hands over as polygons, sprites, beams and lines, marks, the weather, surface sprites, the HUD.
 
@@ -184,6 +186,13 @@ Three of those levels have a sky portal. Five levels one after the other and a `
 the device memory in use goes up and down with the level (400 to 570 MB) and is the same when a level comes
 again.
 
+A fight, frame by frame: the first 30 seconds of that demo recorded to AVI by both renderers
+(`tools/clienttests/rd_benchvideo.cfg`) and compared with `tools/rdvideodiff.py`. Every frame of such a file
+is 40 ms of the demo, so both show the same moments. 30 frames out of 747: 2.2 to 3.8 % of the pixels off by
+more than 16. What differs are the sparks (random numbers), the fine grating of the floor and the noise of
+Motion JPEG. The file of `rd-vanilla` is three frames behind: it reads the frame buffer before the frame the
+video command belongs to is drawn, and what is in the buffer then is that old on this machine.
+
 Recording to AVI (`video` while a demo plays): a demo recorded on mp/ffa3, written as Motion JPEG and as raw
 frames (`cl_aviMotionJpeg 0`). Both files hold the same picture for a frame, upright and with the right
 colors, and the file `rd-vanilla` writes from the same demo differs from it in 0.6 % of the pixels.
@@ -194,10 +203,28 @@ blades, glow, marks and the light of the blades on the walls, the wave of a forc
 `rd-vanilla`, `vid_restart` between the two renderers in both
 directions (13 renderer starts in one session).
 
-Speed, one run, six bots asked for and three in the game, the client follows one, `com_maxfps 0`: the engine
-allows 1000 frames a second. `rd-vanilla` reached a median of 725, `rd-vulkan-vision` 967. In an earlier run of
-the same script both were at 1000. The two renderers do not see the same moments of the fight, so this is a
-hint, not a measurement. See [threading.md](threading.md) for why neither is the limit at 60 or 125 frames a
-second on this machine.
+Speed: a demo of 90 seconds, 17 bots fighting on mp/duel1, seen by a spectator from a fixed place, played as a
+`timedemo` (1729 frames, the same ones for both renderers), 1280x720, three runs each, validation layer off.
+
+| | frames a second | a frame |
+|---|---|---|
+| `rd-vanilla` | 362, 355, 357 | 2.8 ms |
+| `rd-vulkan-vision` | 648, 646, 655 | 1.5 ms |
+
+With `r_skipBackEnd 1` both play the demo at the 1000 frames a second the engine allows (997 and 996): the
+game, the cgame and the front end of the renderer need less than a millisecond for a frame together, and they
+are the same code for both. So the difference is all back end: the one of `rd-vulkan-vision` takes 1.2 ms less
+for a frame of this scene. How long each back end takes by itself can not be read from this, only that it is
+more than 1.8 ms in `rd-vanilla` and more than 0.6 ms here.
+
+A frame of that demo has about 2000 draws, 33000 to 56000 triangles from device buffers and 8000 to 15000 built
+on the CPU: saber marks, sparks, saber glow, and models with gore on them. Before `deformVertexes` was in the
+vertex shader it was 11000 to 27000, and the timedemo ran at 659, 635 and 611 frames a second: the shells
+around a player (shield, lightning, ysalamiri) are the whole model drawn once more with such a shader.
+
+In a view without a crowd both renderers reach the 1000 frames a second the engine allows (a frame lasts at
+least 1 ms, in a `timedemo` too), so there is nothing to measure there. See [threading.md](threading.md) for why
+neither renderer is the limit at 60 or 125 frames a second on this machine. `tools/clienttests/rd_benchrec.cfg`
+records such a demo, `rd_bench.cfg` plays it.
 
 Not checked: other graphics cards and drivers, Windows at run time, macOS, a long game session, play by a person.

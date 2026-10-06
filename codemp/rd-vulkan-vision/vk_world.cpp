@@ -26,7 +26,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // only collects their indexes each frame, the vertices are never touched again.
 //
 // Not every batch can be drawn that way. What still needs the vertices on the CPU goes through the tess arrays
-// as before: sky, deformVertexes, surface sprites, color generators that are not in the vertex shader, vertex
+// as before: sky, the deformVertexes stage.glsl does not do, surface sprites, alphaGen blend, vertex
 // lit surfaces with more than one light style.
 //
 // Patches are drawn with all the rows and columns they were subdivided into. rd-vanilla leaves rows and columns
@@ -177,7 +177,7 @@ static qboolean VK_ShaderIsStatic( void ) {
 	if ( !r_vkStatic->integer ) {
 		return qfalse;
 	}
-	if ( shader->sky || shader->numDeforms || r_fullbright->integer || tess.fading ) {
+	if ( shader->sky || !VK_DeformOnDevice( shader ) || r_fullbright->integer || tess.fading ) {
 		return qfalse;
 	}
 	// rd-vanilla adds up the colors of all light styles of a vertex lit surface, the buffer has the first
