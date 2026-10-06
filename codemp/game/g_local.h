@@ -1283,6 +1283,8 @@ void G_PropClipMove( trace_t *results, const vec3_t start, const vec3_t mins, co
 	int passEntityNum, int contentMask );
 qboolean G_PropCarried( int clientNum );
 void Svcmd_Props_f( void );
+qboolean G_PropIs( const gentity_t *ent );
+void G_PropPull( gentity_t *ent, const vec3_t dir, float accel, float dt );
 void G_PropForceThrow( gentity_t *self, qboolean pull );
 float G_PropPlayerSpeed( const gentity_t *ent );
 

@@ -208,6 +208,12 @@ Also changed:
   the next start of any map, so it can not come back later. An entity of the map that was edited in the panel
   is not kept, the map has it as it was. Tried once on the running server: nine placed objects before and
   after, the file gone.
+- New: `misc_blackhole` pulls the props too (`misc_prop`, `misc_cube`, `misc_ball`): by the middle of their
+  bodies, with the strength it has for players, whatever their mass (`G_PropPull` in `g_props.c`, called from
+  `blackhole_think`). The core does nothing to them: they do not break, and damage would knock them out of the
+  hole. A prop that lies still is only woken where the pull is half the gravity or more (with the defaults
+  within about 350 of the 600 units of reach), a weaker pull would not move it and everything in reach would
+  stay awake. Added without a test run.
 - New: props have the shape of their model, players stand on them, and a prop that is thrown at somebody hurts
   (`codemp/game/bg_props.c`, shared by the game and the cgame, and `g_props.c`).
   - The shape. `misc_prop` has a key `shape`: `model` (the default now), `box` or `ball`. `model` is the convex

@@ -2141,6 +2141,29 @@ void G_PropForceThrow( gentity_t *self, qboolean pull ) {
 	}
 }
 
+// for the code that pulls things in or pushes them about and is not in this file: is this one of the props
+qboolean G_PropIs( const gentity_t *ent ) {
+	return Prop_Is( ent );
+}
+
+/*
+=================
+G_PropPull
+
+For what pulls things in (misc_blackhole): a prop gains speed along dir, accel units a second every second,
+whatever its mass, as with gravity. One that lies still is only woken by a pull of half the gravity or more: a
+weaker one does not move it off the ground, and everything in reach of a hole would be awake for good.
+=================
+*/
+void G_PropPull( gentity_t *ent, const vec3_t dir, float accel, float dt ) {
+	if ( ent->genericValue2 ) {
+		if ( accel < 0.5f * g_gravity.value )
+			return;
+		Prop_Wake( ent );
+	}
+	VectorMA( ent->movedir, accel * dt, dir, ent->movedir );
+}
+
 /*
 =================
 Svcmd_Props_f

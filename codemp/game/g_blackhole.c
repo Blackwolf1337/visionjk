@@ -1,5 +1,5 @@
 /*
-misc_blackhole: a point that pulls players and NPCs in and crushes what reaches its core.
+misc_blackhole: a point that pulls players, NPCs and the props of g_props.c in and crushes who reaches its core.
 
 Server side only, no client code knows about it. What the client shows are stock entity features: the entity
 is an ET_FX one like fx_runner (the client plays its effect in a loop), and it carries a looping sound and a
@@ -38,23 +38,39 @@ static void blackhole_think( gentity_t *self ) {
 	for ( i = 0; i < level.num_entities; i++ ) {
 		gentity_t	*other = &g_entities[i];
 		gclient_t	*client = other->client;
+		const float	*origin;
 		vec3_t		dir;
 		float		dist, pull;
 
-		if ( !other->inuse || !client || client->noclip )
+		if ( !other->inuse )
 			continue;
-		// of the players only those in the game. NPCs have a client too and are pulled like them.
-		if ( i < MAX_CLIENTS && ( client->pers.connected != CON_CONNECTED || client->sess.sessionTeam == TEAM_SPECTATOR
-			|| client->tempSpectate >= level.time ) )
+		if ( client ) {
+			if ( client->noclip )
+				continue;
+			// of the players only those in the game. NPCs have a client too and are pulled like them.
+			if ( i < MAX_CLIENTS && ( client->pers.connected != CON_CONNECTED || client->sess.sessionTeam == TEAM_SPECTATOR
+				|| client->tempSpectate >= level.time ) )
+				continue;
+			origin = client->ps.origin;
+		} else if ( G_PropIs( other ) ) {
+			// balls, cubes and props: pulled like the players, by the middle of their bodies
+			origin = other->r.currentOrigin;
+		} else {
 			continue;
+		}
 
-		VectorSubtract( self->r.currentOrigin, client->ps.origin, dir );
+		VectorSubtract( self->r.currentOrigin, origin, dir );
 		dist = VectorNormalize( dir );
 		if ( dist >= self->radius )
 			continue;
 
 		// nothing at the edge, the full strength at the core, in between with the square
 		pull = 1.0f - dist / self->radius;
+		if ( !client ) {
+			// a prop does not break, so the core does nothing to it. Damage would knock it out of the hole.
+			G_PropPull( other, dir, self->speed * pull * pull, dt );
+			continue;
+		}
 		VectorMA( client->ps.velocity, self->speed * pull * pull * dt, dir, client->ps.velocity );
 
 		if ( hurt && dist <= self->splashRadius && other->health > 0 )
@@ -85,8 +101,9 @@ static void blackhole_use( gentity_t *self, gentity_t *other, gentity_t *activat
 }
 
 /*QUAKED misc_blackhole (0.4 0.1 0.9) (-8 -8 -8) (8 8 8) START_OFF
-Pulls players and NPCs towards itself and crushes what reaches its core. Players in noclip and spectators are
-left alone. Using it (targetname) turns it on and off.
+Pulls players and NPCs towards itself and crushes who reaches its core. Players in noclip and spectators are
+left alone. The props with physics (misc_prop, misc_cube, misc_ball) are pulled in the same way, whatever their
+mass, and are not hurt by the core. Using it (targetname) turns it on and off.
 
 "radius"		reach of the pull, default 600
 "strength"		pull at the core in units per second squared, default 2400 (the normal gravity is 800). It falls
