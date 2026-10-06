@@ -115,6 +115,7 @@ XCVAR_DEF( g_jediVmerc,					"0",			NULL,						CVAR_SERVERINFO|CVAR_LATCH|CVAR_AR
 XCVAR_DEF( g_knockback,					"1000",			NULL,						CVAR_NONE,										qtrue )
 XCVAR_DEF( g_locationBasedDamage,		"1",			NULL,						CVAR_NONE,										qtrue )
 XCVAR_DEF( g_log,						"games.log",	NULL,						CVAR_ARCHIVE,									qfalse )
+XCVAR_DEF( g_logClientCmds,				"1",			NULL,						CVAR_ARCHIVE,									qfalse )
 XCVAR_DEF( g_logClientInfo,				"0",			NULL,						CVAR_ARCHIVE,									qtrue )
 XCVAR_DEF( g_logSync,					"0",			NULL,						CVAR_ARCHIVE,									qfalse )
 XCVAR_DEF( g_maxConnPerIP,				"3",			NULL,						CVAR_ARCHIVE,									qfalse )

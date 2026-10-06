@@ -2118,6 +2118,61 @@ char *G_ValidateUserinfo( const char *userinfo ) {
 	return NULL;
 }
 
+/*
+=================
+G_LogOddUserinfo
+
+Not in JA+ and not in OpenJK. A userinfo with control characters in it, or one close to the size limit, is what
+an attack on the server or on the other clients looks like, and nothing kept it. It goes into the security log
+key by key, control characters as \xNN, the values of the keys that carry a password left out.
+=================
+*/
+static void G_LogOddUserinfo( int clientNum, const char *userinfo ) {
+	static const char *const secret[] = { "password", "cp_login", "cp_clanPwd" };
+	char		key[BIG_INFO_KEY], value[BIG_INFO_VALUE], out[900];
+	const char	*s;
+	qboolean	odd = (qboolean)( strlen( userinfo ) > 800 );
+	size_t		n = 0, i;
+
+	for ( s = userinfo; *s && !odd; s++ ) {
+		if ( (unsigned char)*s < ' ' || *s == 127 )
+			odd = qtrue;
+	}
+	if ( !odd )
+		return;
+
+	s = userinfo;
+	while ( s && n < sizeof( out ) - 8 ) {
+		const char *part[2];
+		int			p;
+
+		Info_NextPair( &s, key, value );
+		if ( !key[0] )
+			break;
+		for ( i = 0; i < ARRAY_LEN( secret ); i++ ) {
+			if ( !Q_stricmp( key, secret[i] ) )
+				Q_strncpyz( value, "<hidden>", sizeof( value ) );
+		}
+		part[0] = key;
+		part[1] = value;
+		for ( p = 0; p < 2; p++ ) {
+			const char *c;
+
+			out[n++] = '\\';
+			for ( c = part[p]; *c && n < sizeof( out ) - 8; c++ ) {
+				if ( (unsigned char)*c < ' ' || *c == 127 )
+					n += Com_sprintf( out + n, sizeof( out ) - n, "\\x%02X", (unsigned char)*c );
+				else
+					out[n++] = *c;
+			}
+		}
+	}
+	out[n] = '\0';
+
+	G_SecurityLogPrintf( "Odd userinfo: %i [%s] %i bytes: %s\n", clientNum, g_entities[clientNum].client->sess.IP,
+		(int)strlen( userinfo ), out );
+}
+
 qboolean ClientUserinfoChanged( int clientNum ) {
 	gentity_t *ent = g_entities + clientNum;
 	gclient_t *client = ent->client;
@@ -2129,6 +2184,7 @@ qboolean ClientUserinfoChanged( int clientNum ) {
 	gender_t gender = GENDER_MALE;
 
 	trap->GetUserinfo( clientNum, userinfo, sizeof( userinfo ) );
+	G_LogOddUserinfo( clientNum, userinfo );
 
 	// check for malformed or illegal info strings
 	s = G_ValidateUserinfo( userinfo );

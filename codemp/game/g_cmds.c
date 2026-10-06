@@ -2442,6 +2442,9 @@ validVote:
 	Q_strstrip( level.voteStringClean, "\"\n\r", NULL );
 
 	trap->SendServerCommand( -1, va( "print \"%s^7 %s (%s)\n\"", ent->client->pers.netname, G_GetStringEdString( "MP_SVGAME", "PLCALLEDVOTE" ), level.voteStringClean ) );
+	// the line the console runs when the vote passes, and who asked for it
+	G_SecurityLogPrintf( "CallVote: %i [%s] \"%s^7\": %s\n", (int)( ent-g_entities ), ent->client->sess.IP, ent->client->pers.netname,
+		level.voteString );
 
 	// start the voting, the caller automatically votes yes
 	level.voteTime = level.time;
@@ -3765,6 +3768,46 @@ command_t commands[] = {
 };
 static const size_t numCommands = ARRAY_LEN( commands );
 
+/*
+=================
+G_LogClientCommand
+
+Not in JA+ and not in OpenJK. Writes what a player sends into the security log: his number, address and name
+and the command with its arguments, one line each. Without it nothing on the server shows what a player typed
+or what a tool sent in his place. Chat is left out (the game log has it) and so is the scoreboard request every
+client sends. Commands that carry a password are logged without their arguments. g_logClientCmds 0 turns it off.
+=================
+*/
+static void G_LogClientCommand( const gentity_t *ent, const char *cmd ) {
+	static const char *const skip[] = { "say", "say_team", "tell", "score" };
+	static const char *const secret[] = { "amlogin", "clanpass" };
+	char	name[64], args[200];
+	size_t	i;
+
+	if ( !g_logClientCmds.integer || (ent->r.svFlags & SVF_BOT) )
+		return;
+	for ( i = 0; i < ARRAY_LEN( skip ); i++ ) {
+		if ( !Q_stricmp( cmd, skip[i] ) )
+			return;
+	}
+
+	args[0] = '\0';
+	for ( i = 0; i < ARRAY_LEN( secret ); i++ ) {
+		if ( !Q_stricmp( cmd, secret[i] ) )
+			Q_strncpyz( args, "<hidden>", sizeof( args ) );
+	}
+	if ( !args[0] && trap->Argc() > 1 )
+		Q_strncpyz( args, ConcatArgs( 1 ), sizeof( args ) );
+
+	// one line per command, whatever is in it
+	Q_strncpyz( name, cmd, sizeof( name ) );
+	Q_strstrip( name, "\n\r", "  " );
+	Q_strstrip( args, "\n\r", "  " );
+
+	G_SecurityLogPrintf( "ClientCommand: %i [%s] \"%s^7\": %s %s\n", (int)( ent-g_entities ), ent->client->sess.IP,
+		ent->client->pers.netname, name, args );
+}
+
 void ClientCommand( int clientNum ) {
 	gentity_t	*ent = NULL;
 	char		cmd[MAX_TOKEN_CHARS] = {0};
@@ -3777,6 +3820,7 @@ void ClientCommand( int clientNum ) {
 	}
 
 	trap->Argv( 0, cmd, sizeof( cmd ) );
+	G_LogClientCommand( ent, cmd );
 
 	//rww - redirect bot commands
 	if ( strstr( cmd, "bot_" ) && AcceptBotCommand( cmd, ent ) )

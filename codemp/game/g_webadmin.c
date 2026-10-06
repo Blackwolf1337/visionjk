@@ -269,6 +269,23 @@ Request helpers
 ==============================================================================
 */
 
+// the address of a peer as text, for the security log
+static const char *WA_AddrText( const waConnection_t *c ) {
+	const unsigned char *b = (const unsigned char *)&c->addr;		// network order: the bytes as they are written
+
+	return va( "%u.%u.%u.%u", b[0], b[1], b[2], b[3] );
+}
+
+// Not in JKAdmin: what was done through the panel and from where, one line in the security log. The panel
+// changes the game with the rights of an admin, and without this nothing on the server showed that it was used.
+static void WA_LogUse( const waConnection_t *c, const char *what ) {
+	char line[320];
+
+	Com_sprintf( line, sizeof( line ), "Web admin: %s: %.280s", WA_AddrText( c ), what );
+	Q_strstrip( line, "\n\r", "  " );
+	G_SecurityLogPrintf( "%s\n", line );
+}
+
 static int WA_Base64Value( char c ) {
 	if ( c >= 'A' && c <= 'Z' ) return c - 'A';
 	if ( c >= 'a' && c <= 'z' ) return c - 'a' + 26;
@@ -868,6 +885,8 @@ static void WA_ApiAction( waConnection_t *c, const char *body ) {
 
 	WA_FormValue( body, "action", action, sizeof( action ) );
 	WA_FormValue( body, "value", value, sizeof( value ) );
+	WA_FormValue( body, "id", idStr, sizeof( idStr ) );
+	WA_LogUse( c, va( "action %s id %s value \"%.100s\"", action, idStr[0] ? idStr : "-", value ) );
 
 	// actions on the server
 	if ( !strcmp( action, "say" ) ) {
@@ -1370,6 +1389,7 @@ static void WA_ApiEntity( waConnection_t *c, const char *body ) {
 	WA_FormValue( body, "kv", kv, sizeof( kv ) );
 	if ( WA_FormValue( body, "id", idStr, sizeof( idStr ) ) )
 		id = atoi( idStr );
+	WA_LogUse( c, va( "entity %s id %i keys %.200s", op, id, kv ) );
 
 	if ( !strcmp( op, "spawn" ) ) {
 		newId = WA_SpawnFromText( kv, err, sizeof( err ) );
@@ -1511,8 +1531,7 @@ static void WA_HandleRequest( waConnection_t *c, char *head, const char *body ) 
 		// only count a wrong password, not the first request a browser sends without one
 		if ( tried ) {
 			WA_AuthResult( c->addr, qfalse );
-			G_SecurityLogPrintf( "Web admin: wrong password from %u.%u.%u.%u\n",
-				c->addr & 0xff, ( c->addr >> 8 ) & 0xff, ( c->addr >> 16 ) & 0xff, ( c->addr >> 24 ) & 0xff );
+			WA_LogUse( c, "wrong password" );
 		}
 		WA_Respond( c, 401, "Unauthorized", "text/plain", "WWW-Authenticate: Basic realm=\"OpenJK web admin\"\r\n",
 			"login required", 14 );
