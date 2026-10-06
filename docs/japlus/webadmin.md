@@ -106,6 +106,13 @@ Also changed:
   sent, what happened shows in the state (`jp` object of a player: admin rank and the JA+ flags). `freeze` has no
   console command in JA+ and toggles the flag directly. Left out: `amplayefx` and `amtest`, which JA+ does not
   offer on the console. Kick, ban, team and teleport were there already. Added without a test run.
+- New entity `misc_blackhole` (`codemp/game/g_blackhole.c`), made to be placed in the World tab: it is in the
+  spawn table, so it shows up in the class list. It pulls players and NPCs towards itself, stronger the closer
+  they are, and crushes what reaches its core. It is server side only: for the client it is a stock looping effect
+  entity (`ET_FX`, like `fx_runner`) with a looping sound and a light. Keys: `radius` 600, `strength` 2400 (the
+  gravity is 800), `coreradius` 48, `dmg` 1000, `fxFile`, `delay`, `noise`, `light`, spawnflag 1 for off at the
+  start. The page places it 72 units above the floor and gives it the first four keys, so they are there to edit.
+  Players in noclip and spectators are left alone. Added without a test run.
 - New: gravity. `gravity` sets `g_gravity` for everybody, between -2000 and 5000. The map sets it again at its
   next start (worldspawn key `gravity`). `playergravity` gives one player a gravity of his own: `ClientThink_real`
   in `g_active.c` asks `WebAdmin_ClientGravity` where it used `g_gravity` (not in space, on a vehicle or as an NPC

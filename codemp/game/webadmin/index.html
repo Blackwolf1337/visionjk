@@ -1617,11 +1617,17 @@ $('placeBtn').addEventListener('click', () => {
 	setPlacing(!placing);
 });
 
+// not in JKAdmin: keys a class gets when it is placed, so they are there to edit, and its height above the floor
+const PLACE_KEYS = {
+	misc_blackhole: [['radius', '600'], ['strength', '2400'], ['coreradius', '48'], ['dmg', '1000']],
+};
+const PLACE_HEIGHT = { misc_blackhole: 72 };
+
 function placeEntity(hit) {
 	const cls = $('newClass').value.trim();
 	// items drop to the floor themselves, players and NPCs stand on it
-	const z = /^misc_model/.test(cls) ? 0 : 24;
-	entityOp({ op: 'spawn', kv: keysText([['classname', cls], ['origin', fmtVec([hit[0], hit[1], hit[2] + z])]]) }, 'Placed ' + cls);
+	const z = cls in PLACE_HEIGHT ? PLACE_HEIGHT[cls] : /^misc_model/.test(cls) ? 0 : 24;
+	entityOp({ op: 'spawn', kv: keysText([['classname', cls], ['origin', fmtVec([hit[0], hit[1], hit[2] + z])]].concat(PLACE_KEYS[cls] || [])) }, 'Placed ' + cls);
 }
 
 setInterval(pollEntities, 1000);
