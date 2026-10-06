@@ -279,13 +279,14 @@ static int WA_Base64Value( char c ) {
 }
 
 static int WA_Base64Decode( const char *in, char *out, int outSize ) {
-	int bits = 0, value = 0, len = 0;
+	int bits = 0, len = 0;
+	unsigned int value = 0;		// unsigned: the running bits shift left without signed overflow
 
 	for ( ; *in && *in != '\r' && *in != '\n' && *in != '='; in++ ) {
 		const int v = WA_Base64Value( *in );
 		if ( v < 0 )
 			return -1;
-		value = ( value << 6 ) | v;
+		value = ( value << 6 ) | (unsigned int)v;
 		bits += 6;
 		if ( bits >= 8 ) {
 			bits -= 8;
