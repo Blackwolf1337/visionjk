@@ -83,7 +83,7 @@ end of `refimport_t` for the instance extensions and the surface. The other rend
 | Ghoul2 models | every vertex moved by its bones on the CPU | vertices in a device buffer, bones per skeleton per frame, skinning in `skinned.vert` |
 | MD3 with one frame | decoded and copied every frame | same device buffer, one identity bone |
 | tcMod, tcGen, rgbGen, alphaGen | per vertex on the CPU | one matrix and two colors per draw, the rest in `stage.glsl` |
-| rgbGen lightingDiffuse | per vertex on the CPU | vertex shader |
+| rgbGen lightingDiffuse, alphaGen lightingSpecular and portal | per vertex on the CPU | vertex shader |
 | Dynamic lights | per triangle on the CPU, one pass per light | per pixel in `generic.frag`, one pass per light |
 | Global fog | fixed function fog | per pixel in `generic.frag` |
 | Fog volumes | fog pass with coordinates per vertex on the CPU, color fade per vertex on the CPU | the same pass, coordinates and fade in `stage.glsl` from two vectors per draw |
@@ -92,7 +92,7 @@ end of `refimport_t` for the instance extensions and the surface. The other rend
 | Gamma, overbright | ramp of the display or baked into textures | one pass over the finished frame |
 
 Still on the CPU, through the tess arrays as in `rd-vanilla`: the sky, shaders with `deformVertexes`,
-`alphaGen lightingSpecular`, `portal` and `blend`, vertex lit surfaces with more than one light style, models with gore on them, MD3 with several frames, all
+`alphaGen blend` (terrain), vertex lit surfaces with more than one light style, models with gore on them, MD3 with several frames, all
 effects the game hands over as polygons, sprites, beams and lines, marks, the weather, surface sprites, the HUD.
 
 A frame on mp/ffa3, 1280x720, from `gfxinfo`: as a spectator at the first spawn point 4551 triangles come from
@@ -102,7 +102,9 @@ CPU.
 
 mp/ffa4, a level that lies in a fog volume, two views as a spectator: 4018 and 5271 triangles from device
 buffers, 548 and 436 built on the CPU. While the fog pass still took its coordinates from the CPU it was 3458
-and 4170 against 1108 and 1537.
+and 4170 against 1108 and 1537. mp/ffa2, two views: 624 and 540 triangles from the CPU, 1701 and 1609 while
+`alphaGen lightingSpecular` still was CPU work (one weapon model with such a stage had 1077 of them). What is
+left in these views are the effects of the game (flames, smoke, light cones) and the HUD.
 
 ## Differences to rd-vanilla
 
@@ -127,7 +129,7 @@ to AVI, the automap, `r_showtris`, `r_shownormals`, `r_showImages`, anti aliasin
 was not tried.
 
 Portals and mirrors have their clip plane (`gl_ClipDistance` from a plane in the transform) and the flipped
-culling, but no level of the base game has one, so that was never seen.
+culling, but no level of the base game has one, so that was never seen. The same goes for `alphaGen portal`.
 
 ## Checked
 
@@ -143,7 +145,8 @@ difference side by side.
 |-------|----------------------------|
 | mp/ffa3, six views (sky box, lightmaps, patches, models) | 0.1 to 1.2 % |
 | mp/ffa3 with `r_DynamicGlow 1` in both | the same |
-| mp/ffa2, three views (fog volumes) | 0.0 to 0.2 % |
+| mp/ffa2, five views (fog volumes, items with a specular stage) | 0.0 to 0.2 % |
+| mp/ffa4, five views (the level lies in a fog volume) | 0.2 to 0.4 %, one view 1.5 % (the flare of a lamp, see Not done) |
 | mp/ctf2, three views (global fog, snow) | 0.1 to 0.5 % |
 | mp/ctf3, four views (grass sprites) | 0.1 to 1.3 % |
 | the player from the front with HUD | 0.2 to 0.4 % |

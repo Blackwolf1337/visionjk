@@ -193,8 +193,7 @@ static qboolean VK_ShaderIsStatic( void ) {
 		if ( !pStage->active ) {
 			break;
 		}
-		if ( pStage->ss || pStage->alphaGen == AGEN_LIGHTING_SPECULAR || pStage->alphaGen == AGEN_PORTAL
-			|| pStage->alphaGen == AGEN_BLEND ) {
+		if ( pStage->ss || pStage->alphaGen == AGEN_BLEND ) {
 			return qfalse;
 		}
 	}

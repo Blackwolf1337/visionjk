@@ -104,6 +104,21 @@ void StageVertex( StageInput v ) {
 		v_color = clamp( d.baseColor + d.vertColor * v.color, 0.0, 1.0 );
 	}
 
+	uint agen = AGEN( d.flags );
+	if ( agen == 1u ) {
+		// alphaGen lightingSpecular (RB_CalcSpecularAlpha of rd-vanilla): how much of the light is thrown at the
+		// eye. A model takes the direction its entity is lit from, everything else one fixed lamp of the level.
+		vec3 lightDir = ( t.lightDir.w != 0.0 ) ? t.lightDir.xyz : normalize( vec3( -960.0, 1980.0, 96.0 ) - v.position );
+		vec3 reflected = v.normal * ( 2.0 * dot( v.normal, lightDir ) ) - lightDir;
+		vec3 viewer = t.viewOrigin.xyz - v.position;
+		float l = dot( reflected, viewer ) * inversesqrt( dot( viewer, viewer ) );
+
+		v_color.a = ( l < 0.0 ) ? 0.0 : min( l * l * l * l, 1.0 );
+	} else if ( agen == 2u ) {
+		// alphaGen portal: nothing at the eye, all of it from the portal range on
+		v_color.a = clamp( length( v.position - t.viewOrigin.xyz ) / d.parm.x, 0.0, 1.0 );
+	}
+
 	// a stage in a fog volume may ask to fade with the fog instead of getting a fog pass (adjustColorsForFog)
 	uint acff = ACFF( d.flags );
 	if ( acff != 0u ) {

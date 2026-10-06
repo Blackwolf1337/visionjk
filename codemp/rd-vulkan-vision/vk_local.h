@@ -53,7 +53,7 @@ typedef struct vkTransform_s {	// once per view and entity
 	float		mvp[16];			// OpenGL clip space, the vertex shader turns it into the one of Vulkan
 	float		model[16];			// model to world
 	float		viewOrigin[4];		// in model space
-	float		lightDir[4];		// in model space, entity lighting
+	float		lightDir[4];		// in model space, entity lighting. w: 1 for a model, else 0
 	float		ambientLight[4];
 	float		directedLight[4];
 	float		clipPlane[4];		// in world space, for the view through a portal or mirror: xyz normal, w distance. Zero: none
@@ -67,7 +67,7 @@ typedef struct vkTransform_s {	// once per view and entity
 #define VKD_TCGEN_MASK		0xfu
 #define VKD_RGBGEN_SHIFT	14				// 0: base + vertex, 1: diffuse light, 2: diffuse light times entity
 #define VKD_RGBGEN_MASK		0x3u
-#define VKD_AGEN_SHIFT		16				// 0: base + vertex, 1: specular, 2: portal, 3: dot, 4: one minus dot
+#define VKD_AGEN_SHIFT		16				// 0: base + vertex, 1: specular, 2: portal
 #define VKD_AGEN_MASK		0x7u
 #define VKD_DLIGHT			0x00080000u		// the pass that adds one dynamic light, see generic.frag
 #define VKD_FOG_SHIFT		20				// fog over the whole stage as glFog did it: 0 none, 1 exp2, 2 linear

@@ -89,6 +89,8 @@ uint32_t VK_CurrentTransform( void ) {
 		}
 		if ( ent ) {
 			VectorCopy( ent->lightDir, t.lightDir );
+			// alphaGen lightingSpecular: only a model has a light direction of its own
+			t.lightDir[3] = ( ent->e.hModel || ent->e.ghoul2 ) ? 1.0f : 0.0f;
 			VectorScale( ent->ambientLight, 1.0f / 255.0f, t.ambientLight );
 			VectorScale( ent->directedLight, 1.0f / 255.0f, t.directedLight );
 		}
@@ -262,8 +264,9 @@ COLOR OF A STAGE
 
 color = baseColor + vertColor * vertex color covers every rgbGen and alphaGen that is the same for the whole
 batch or a multiple of the vertex color. The generators that need more per vertex (diffuse light, specular,
-portal distance, the alphas of terrain) are still computed on the CPU with the functions of tr_shade_calc.cpp and
-then go in as vertex colors.
+portal distance, the fade in a fog volume) are flags for stage.glsl. Only the colors of an entity that
+disintegrates and the alphas of terrain (alphaGen blend) are still computed on the CPU and go in as vertex
+colors.
 
 ===============================================================================
 */
@@ -331,6 +334,7 @@ static qboolean VK_StageColors( const shaderStage_t *pStage, int forceRGBGen, vk
 	float *base = draw->baseColor, *vert = draw->vertColor;
 	const float il = tr.identityLight;
 	qboolean perVertexRGB = qfalse, perVertexAlpha = qfalse, perVertexFog;
+	uint32_t shaderAlpha = 0;		// an alpha stage.glsl works out per vertex
 	const qboolean killGen = (qboolean)( tess.shader != tr.projectionShadowShader && tess.shader != tr.shadowShader
 		&& ( ent->e.renderfx & ( RF_DISINTEGRATE1 | RF_DISINTEGRATE2 | RF_VOLUMETRIC ) ) );
 
@@ -438,8 +442,10 @@ static qboolean VK_StageColors( const shaderStage_t *pStage, int forceRGBGen, vk
 		vert[3] = -1.0f;
 		break;
 	case AGEN_LIGHTING_SPECULAR:
+		shaderAlpha = 1;
+		break;
 	case AGEN_PORTAL:
-		perVertexAlpha = qtrue;
+		shaderAlpha = 2;			// with the portal range in parm
 		break;
 	case AGEN_BLEND:
 		if ( rgbGen != CGEN_VERTEX ) {
@@ -460,6 +466,7 @@ static qboolean VK_StageColors( const shaderStage_t *pStage, int forceRGBGen, vk
 		if ( perVertexRGB ) {
 			draw->flags |= ( rgbGen == CGEN_LIGHTING_DIFFUSE_ENTITY ? 2u : 1u ) << VKD_RGBGEN_SHIFT;
 		}
+		draw->flags |= shaderAlpha << VKD_AGEN_SHIFT;
 		return qfalse;
 	}
 
@@ -493,27 +500,9 @@ static qboolean VK_StageColors( const shaderStage_t *pStage, int forceRGBGen, vk
 		} else if ( rgbGen == CGEN_LIGHTING_DIFFUSE_ENTITY ) {
 			RB_CalcDiffuseEntityColor( (unsigned char *)colors );
 		}
-		if ( perVertexRGB && alphaGen != AGEN_SKIP && !perVertexAlpha ) {
-			// the diffuse functions write all four components, the alpha of the stage comes after them
-			for ( int i = 0; i < tess.numVertexes; i++ ) {
-				colors[i][3] = (byte)Com_Clampi( 0, 255, (int)( ( base[3] + vert[3] * tess.vertexColors[i][3] / 255.0f ) * 255.0f + 0.5f ) );
-			}
-		}
-		if ( alphaGen == AGEN_LIGHTING_SPECULAR ) {
-			RB_CalcSpecularAlpha( (unsigned char *)colors );
-		} else if ( alphaGen == AGEN_PORTAL ) {
-			for ( int i = 0; i < tess.numVertexes; i++ ) {
-				vec3_t v;
-				float len;
-
-				VectorSubtract( tess.xyz[i], backEnd.viewParms.ori.origin, v );
-				len = VectorLength( v ) / tess.shader->portalRange;
-				colors[i][3] = (byte)( Com_Clamp( 0.0f, 1.0f, len ) * 255.0f );
-			}
-		} else if ( alphaGen == AGEN_BLEND && perVertexAlpha ) {
-			for ( int i = 0; i < tess.numVertexes; i++ ) {
-				colors[i][3] = tess.vertexAlphas[i][pStage->index];
-			}
+		// what is left for this way is alphaGen blend, the alphas of terrain
+		for ( int i = 0; i < tess.numVertexes; i++ ) {
+			colors[i][3] = tess.vertexAlphas[i][pStage->index];
 		}
 	}
 	if ( perVertexFog ) {

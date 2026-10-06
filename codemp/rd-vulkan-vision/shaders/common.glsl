@@ -7,7 +7,7 @@ struct Transform {
 	mat4	mvp;			// OpenGL clip space
 	mat4	model;			// model to world
 	vec4	viewOrigin;		// in model space
-	vec4	lightDir;		// in model space
+	vec4	lightDir;		// in model space. w: 1 for a model, 0 for the level and everything without light of its own
 	vec4	ambientLight;
 	vec4	directedLight;
 	vec4	clipPlane;		// in world space, xyz normal, w distance. Zero: nothing is clipped
