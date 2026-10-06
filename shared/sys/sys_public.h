@@ -162,6 +162,9 @@ typedef enum graphicsApi_e
 
 	// Only OpenGL needs special treatment..
 	GRAPHICS_API_OPENGL,
+
+	// ..and Vulkan a window that can carry a surface (rd-vulkan-vision)
+	GRAPHICS_API_VULKAN,
 } graphicsApi_t;
 
 // Graphics API
@@ -204,5 +207,7 @@ void		WIN_SetGamma( glconfig_t *glConfig, byte red[256], byte green[256], byte b
 void		WIN_Shutdown( void );
 void *		WIN_GL_GetProcAddress( const char *proc );
 qboolean	WIN_GL_ExtensionSupported( const char *extension );
+int			WIN_VK_InstanceExtensions( const char **names, int maxNames );
+qboolean	WIN_VK_CreateSurface( void *instance, void *surface );
 
 uint8_t ConvertUTF32ToExpectedCharset( uint32_t utf32 );

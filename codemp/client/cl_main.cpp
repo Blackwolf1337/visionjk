@@ -2515,6 +2515,8 @@ void CL_InitRef( void ) {
 	ri.WIN_SetGamma = WIN_SetGamma;
     ri.WIN_Shutdown = WIN_Shutdown;
     ri.WIN_Present = WIN_Present;
+	ri.WIN_VK_InstanceExtensions = WIN_VK_InstanceExtensions;
+	ri.WIN_VK_CreateSurface = WIN_VK_CreateSurface;
 	ri.GL_GetProcAddress = WIN_GL_GetProcAddress;
 	ri.GL_ExtensionSupported = WIN_GL_ExtensionSupported;
 

@@ -21,6 +21,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include <SDL.h>
 #include <SDL_syswm.h>
+#include <SDL_vulkan.h>
 #include "qcommon/qcommon.h"
 #include "rd-common/tr_types.h"
 #include "sys/sys_local.h"
@@ -330,6 +331,10 @@ static rserr_t GLimp_SetMode(glconfig_t *glConfig, const windowDesc_t *windowDes
 	if ( windowDesc->api == GRAPHICS_API_OPENGL )
 	{
 		flags |= SDL_WINDOW_OPENGL;
+	}
+	else if ( windowDesc->api == GRAPHICS_API_VULKAN )
+	{
+		flags |= SDL_WINDOW_VULKAN;
 	}
 
 	Com_Printf( "Initializing display\n");
@@ -897,4 +902,45 @@ void *WIN_GL_GetProcAddress( const char *proc )
 qboolean WIN_GL_ExtensionSupported( const char *extension )
 {
 	return SDL_GL_ExtensionSupported( extension ) == SDL_TRUE ? qtrue : qfalse;
+}
+
+/*
+===============
+WIN_VK_InstanceExtensions
+
+The instance extensions SDL needs to put a surface on the window. Returns how many there are, 0 on failure.
+The names stay valid as long as the window lives.
+===============
+*/
+int WIN_VK_InstanceExtensions( const char **names, int maxNames )
+{
+	unsigned int count = 0;
+
+	if ( !screen || !SDL_Vulkan_GetInstanceExtensions( screen, &count, NULL ) || (int)count > maxNames )
+	{
+		Com_Printf( "SDL_Vulkan_GetInstanceExtensions failed: %s\n", SDL_GetError() );
+		return 0;
+	}
+	if ( !SDL_Vulkan_GetInstanceExtensions( screen, &count, names ) )
+	{
+		return 0;
+	}
+	return (int)count;
+}
+
+/*
+===============
+WIN_VK_CreateSurface
+
+instance is a VkInstance, surface points to the VkSurfaceKHR to fill in
+===============
+*/
+qboolean WIN_VK_CreateSurface( void *instance, void *surface )
+{
+	if ( !screen || !SDL_Vulkan_CreateSurface( screen, (VkInstance)instance, (VkSurfaceKHR *)surface ) )
+	{
+		Com_Printf( "SDL_Vulkan_CreateSurface failed: %s\n", SDL_GetError() );
+		return qfalse;
+	}
+	return qtrue;
 }

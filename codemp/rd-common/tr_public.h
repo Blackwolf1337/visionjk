@@ -346,6 +346,11 @@ typedef struct refimport_s {
 	// Persistent data store
 	bool			(*PD_Store)							( const char *name, const void *data, size_t size );
 	const void *	(*PD_Load)							( const char *name, size_t *size );
+
+	// rd-vulkan-vision: the window belongs to the engine, the renderer asks it for what Vulkan needs from it.
+	// At the end of the table, the other renderers do not know them.
+	int				(*WIN_VK_InstanceExtensions)		( const char **names, int maxNames );
+	qboolean		(*WIN_VK_CreateSurface)				( void *instance, void *surface );
 } refimport_t;
 
 // this is the only function actually exported at the linker level
