@@ -41,7 +41,7 @@ static vkBuffer_t		vk_worldVertexes;
 static VkDeviceSize		vk_worldOffsets[4];			// where xyz, normal, texCoords and colors start in it
 static qboolean			vk_worldValid;
 // the batch in tess: 0: vertices and indexes in the tess arrays, 1: indexes into the buffer of the level,
-// 2: indexes into the buffer of the Ghoul2 models (vk_model.cpp), all of one skeleton
+// 2: indexes into the buffer of the models (vk_model.cpp), all of one skeleton (NULL: MD3 meshes with one frame)
 static int				vk_batchMode;
 static CBoneCache		*vk_batchBones;
 
@@ -226,6 +226,50 @@ void VK_StaticColorScale( float *scale ) {
 
 /*
 ===============
+VK_AddDeviceMesh
+
+A surface of a model whose vertices are in the buffer of the models (vk_model.cpp) into the batch: a Ghoul2
+surface with the bones of its skeleton, or an MD3 surface with one frame (bones NULL: it stays where it is).
+qfalse: it has to take the way through the tess arrays.
+===============
+*/
+static qboolean VK_AddDeviceMesh( CBoneCache *bones, const void *mesh, qboolean md3, const int *triangles, int numIndexes ) {
+	glIndex_t *out;
+	int first;
+
+	if ( !tess.numIndexes && !tess.numVertexes ) {
+		vk_batchMode = VK_ShaderIsStatic() ? 2 : 0;
+		vk_batchBones = bones;
+	} else if ( vk_batchMode == 2 && vk_batchBones != bones ) {
+		// a batch has the bones of one skeleton
+		shader_t *shader = tess.shader;
+		const int fogNum = tess.fogNum;
+
+		RB_EndSurface();
+		RB_BeginSurface( shader, fogNum );
+		vk_batchMode = 2;
+		vk_batchBones = bones;
+	}
+	if ( vk_batchMode != 2 ) {
+		return qfalse;
+	}
+	first = md3 ? VK_StaticMeshSurface( (const md3Surface_t *)mesh ) : VK_SkinnedSurface( (const mdxmSurface_t *)mesh );
+	if ( first < 0 ) {
+		return qfalse;
+	}
+	RB_CHECKOVERFLOW( 0, numIndexes );
+	vk_batchMode = 2;		// an overflow began a new batch
+	vk_batchBones = bones;
+	out = tess.indexes + tess.numIndexes;
+	for ( int i = 0; i < numIndexes; i++ ) {
+		out[i] = triangles[i] + first;
+	}
+	tess.numIndexes += numIndexes;
+	return qtrue;
+}
+
+/*
+===============
 VK_AddSurface
 
 A surface of the draw list into the batch: its indexes only if the batch can be static, else through the
@@ -235,42 +279,20 @@ surface functions of tr_surface.cpp into the tess arrays
 void VK_AddSurface( surfaceType_t *surface ) {
 	if ( *surface == SF_MDX ) {
 		CRenderableSurface *rs = (CRenderableSurface *)surface;
+		const mdxmSurface_t *mesh = rs->surfaceData;
 
 		// gore on a model needs its vertices on the CPU
-		if ( rs->boneCache && rs->surfaceData && !rs->alternateTex && !rs->goreChain ) {
-			if ( !tess.numIndexes && !tess.numVertexes ) {
-				vk_batchMode = VK_ShaderIsStatic() ? 2 : 0;
-				vk_batchBones = rs->boneCache;
-			} else if ( vk_batchMode == 2 && vk_batchBones != rs->boneCache ) {
-				// a batch has the bones of one skeleton
-				shader_t *shader = tess.shader;
-				const int fogNum = tess.fogNum;
+		if ( rs->boneCache && mesh && !rs->alternateTex && !rs->goreChain
+			&& VK_AddDeviceMesh( rs->boneCache, mesh, qfalse, (const int *)( (const byte *)mesh + mesh->ofsTriangles ), mesh->numTriangles * 3 ) ) {
+			return;
+		}
+	} else if ( *surface == SF_MD3 ) {
+		const md3Surface_t *mesh = (const md3Surface_t *)surface;
 
-				RB_EndSurface();
-				RB_BeginSurface( shader, fogNum );
-				vk_batchMode = 2;
-				vk_batchBones = rs->boneCache;
-			}
-			if ( vk_batchMode == 2 ) {
-				const mdxmSurface_t *mesh = rs->surfaceData;
-				const int first = VK_SkinnedSurface( mesh );
-
-				if ( first >= 0 ) {
-					const int *triangles = (const int *)( (const byte *)mesh + mesh->ofsTriangles );
-					const int numIndexes = mesh->numTriangles * 3;
-					glIndex_t *out;
-
-					RB_CHECKOVERFLOW( 0, numIndexes );
-					vk_batchMode = 2;		// an overflow began a new batch
-					vk_batchBones = rs->boneCache;
-					out = tess.indexes + tess.numIndexes;
-					for ( int i = 0; i < numIndexes; i++ ) {
-						out[i] = triangles[i] + first;
-					}
-					tess.numIndexes += numIndexes;
-					return;
-				}
-			}
+		// a model with one frame is a mesh that does not move. With more frames it is blended on the CPU.
+		if ( mesh->numFrames == 1
+			&& VK_AddDeviceMesh( NULL, mesh, qtrue, (const int *)( (const byte *)mesh + mesh->ofsTriangles ), mesh->numTriangles * 3 ) ) {
+			return;
 		}
 	}
 	if ( ( *surface == SF_FACE || *surface == SF_TRIANGLES || *surface == SF_GRID ) && tr.world

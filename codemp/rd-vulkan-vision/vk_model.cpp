@@ -18,7 +18,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 ===========================================================================
 */
 
-// vk_model.cpp: Ghoul2 models skinned on the device
+// vk_model.cpp: Ghoul2 models skinned on the device, and MD3 models with one frame
 //
 // rd-vanilla moves every vertex of a player model by its bones on the CPU each frame (RB_SurfaceGhoul). Here
 // the vertices of a Ghoul2 surface go into a buffer on the device the first time the surface is drawn, as they
@@ -27,12 +27,16 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // come from the bone cache of tr_ghoul2.cpp, so animation, bolts and collision are what they always were.
 //
 // Surfaces with gore on them keep the old way: the gore needs the moved vertices on the CPU.
+//
+// An MD3 model with one frame (items, weapons, most models of a level) goes the same way: its vertices are put
+// into the same buffer with one bone that leaves them where they are. MD3 models with more frames are still
+// blended on the CPU.
 
 #include "vk_local.h"
 
 #include <unordered_map>
 
-static std::unordered_map<const mdxmSurface_t *, int>	vk_skinFirstVertex;
+static std::unordered_map<const void *, int>	vk_skinFirstVertex;		// of an mdxmSurface_t or md3Surface_t
 static vkBuffer_t		vk_modelVertexes;			// vkSkinVertex_t, filled from the front
 static VkDeviceSize		vk_modelUsed;
 
@@ -43,6 +47,7 @@ static struct {
 	uint32_t			base;
 } vk_frameSkeletons[VK_MAX_FRAME_SKELETONS];
 static int				vk_numFrameSkeletons;
+static int				vk_identityBone;			// where the bone that does nothing is in the frame, -1: not yet
 
 void VK_InitModels( void ) {
 	VK_CreateBuffer( &vk_modelVertexes, VK_MODEL_BYTES, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, qfalse );
@@ -73,6 +78,7 @@ void VK_ModelsChanged( void ) {
 
 void VK_ModelsBeginFrame( void ) {
 	vk_numFrameSkeletons = 0;
+	vk_identityBone = -1;
 }
 
 // the weight of one of the first bones of a vertex: ten bits, eight of them in BoneWeightings (the function of
@@ -148,10 +154,61 @@ int VK_SkinnedSurface( const mdxmSurface_t *surface ) {
 
 /*
 ===============
+VK_StaticMeshSurface
+
+The same for a surface of an MD3 model with one frame: its vertices as LerpMeshVertexes() of rd-vanilla
+decodes them, hung on one bone
+===============
+*/
+int VK_StaticMeshSurface( const md3Surface_t *surface ) {
+	const auto found = vk_skinFirstVertex.find( surface );
+	const VkDeviceSize size = (VkDeviceSize)surface->numVerts * sizeof( vkSkinVertex_t );
+	const short *xyz = (const short *)( (const byte *)surface + surface->ofsXyzNormals );
+	const float *st = (const float *)( (const byte *)surface + surface->ofsSt );
+	VkDeviceSize staged;
+	VkBufferCopy region;
+	vkSkinVertex_t *out;
+	int first;
+
+	if ( found != vk_skinFirstVertex.end() ) {
+		return found->second;
+	}
+	if ( !vk_modelVertexes.buffer || vk_modelUsed + size > VK_MODEL_BYTES ) {
+		return -1;
+	}
+	out = (vkSkinVertex_t *)VK_Stage( size, &staged );
+	memset( out, 0, (size_t)size );
+	for ( int i = 0; i < surface->numVerts; i++, xyz += 4, out++ ) {
+		// the normal is two angles in a short
+		const unsigned lat = ( ( xyz[3] >> 8 ) & 0xff ) * ( FUNCTABLE_SIZE / 256 );
+		const unsigned lng = ( xyz[3] & 0xff ) * ( FUNCTABLE_SIZE / 256 );
+
+		VectorSet( out->xyz, xyz[0] * MD3_XYZ_SCALE, xyz[1] * MD3_XYZ_SCALE, xyz[2] * MD3_XYZ_SCALE );
+		out->normal[0] = tr.sinTable[( lat + ( FUNCTABLE_SIZE / 4 ) ) & FUNCTABLE_MASK] * tr.sinTable[lng];
+		out->normal[1] = tr.sinTable[lat] * tr.sinTable[lng];
+		out->normal[2] = tr.sinTable[( lng + ( FUNCTABLE_SIZE / 4 ) ) & FUNCTABLE_MASK];
+		out->st[0] = st[i * 2];
+		out->st[1] = st[i * 2 + 1];
+		out->weights[0] = 65535;
+	}
+
+	region.srcOffset = staged;
+	region.dstOffset = vk_modelUsed;
+	region.size = size;
+	vkCmdCopyBuffer( VK_UploadCmd(), vk.staging.buffer, vk_modelVertexes.buffer, 1, &region );
+	first = (int)( vk_modelUsed / sizeof( vkSkinVertex_t ) );
+	vk_modelUsed += size;
+	vk_skinFirstVertex[surface] = first;
+	return first;
+}
+
+/*
+===============
 VK_UploadSkinnedBatch
 
 The indexes of a batch of Ghoul2 surfaces into the frame, and the bones of their skeleton if they are not there
-yet. bones: where the skeleton starts, counted in rows of the bone buffer.
+yet. boneCache NULL: meshes that do not move, they get one bone that leaves them where they are.
+bones: where the skeleton starts, counted in rows of the bone buffer.
 ===============
 */
 qboolean VK_UploadSkinnedBatch( CBoneCache *boneCache, uint32_t *bones ) {
@@ -159,8 +216,22 @@ qboolean VK_UploadSkinnedBatch( CBoneCache *boneCache, uint32_t *bones ) {
 	const VkDeviceSize offset = 0;
 	int i;
 
-	if ( !frame || !boneCache ) {
+	if ( !frame ) {
 		return qfalse;
+	}
+	if ( !boneCache ) {
+		if ( vk_identityBone < 0 ) {
+			static const float identity[12] = { 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0 };
+
+			if ( frame->numBones + 1 > VK_MAX_BONES ) {
+				return qfalse;
+			}
+			memcpy( frame->bones.mapped + sizeof( identity ) * frame->numBones, identity, sizeof( identity ) );
+			vk_identityBone = frame->numBones * 3;
+			frame->numBones++;
+		}
+		*bones = (uint32_t)vk_identityBone;
+		return VK_UploadIndexes( vk_modelVertexes.buffer, &offset, 1, tess.indexes, tess.numIndexes );
 	}
 	for ( i = 0; i < vk_numFrameSkeletons; i++ ) {
 		if ( vk_frameSkeletons[i].cache == boneCache ) {
