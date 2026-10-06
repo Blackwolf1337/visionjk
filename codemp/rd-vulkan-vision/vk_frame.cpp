@@ -56,6 +56,8 @@ void VK_InitFrames( void ) {
 		VK_CreateBuffer( &frame->transforms, sizeof( vkTransform_t ) * VK_MAX_TRANSFORMS, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, qtrue );
 		VK_CreateBuffer( &frame->draws, sizeof( vkDraw_t ) * VK_MAX_DRAWS, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, qtrue );
 		VK_CreateBuffer( &frame->bones, sizeof( float ) * 12 * VK_MAX_BONES, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, qtrue );
+		VK_CreateBuffer( &frame->probes, sizeof( uint32_t ) * VK_MAX_FLARES, VK_BUFFER_USAGE_TRANSFER_DST_BIT, qtrue );
+		frame->numProbes = frame->numProbesCopied = 0;
 
 		VK_CHECK( vkAllocateDescriptorSets( vk.device, &set, &frame->set ) );
 		buffers[0].buffer = frame->globals.buffer;
@@ -88,6 +90,7 @@ void VK_ShutdownFrames( void ) {
 		VK_DestroyBuffer( &frame->indexes );
 		VK_DestroyBuffer( &frame->globals );
 		VK_DestroyBuffer( &frame->transforms );
+		VK_DestroyBuffer( &frame->probes );
 		VK_DestroyBuffer( &frame->draws );
 		VK_DestroyBuffer( &frame->bones );
 	}
@@ -229,6 +232,8 @@ void VK_BeginFrame( void ) {
 	}
 	frame = &vk.frames[vk.frameIndex];
 	VK_CHECK( vkWaitForFences( vk.device, 1, &frame->fence, VK_TRUE, UINT64_MAX ) );
+	// what the device wrote when these commands ran last can be read now
+	VK_ReadProbes( frame );
 	frame->vertexUsed = 0;
 	frame->indexUsed = 0;
 	frame->numTransforms = 0;

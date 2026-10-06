@@ -458,6 +458,8 @@ static const void *RB_DrawSurfs( const void *data ) {
 	backEnd.refdef = cmd->refdef;
 	backEnd.viewParms = cmd->viewParms;
 	RB_RenderDrawSurfList( cmd->drawSurfs, cmd->numDrawSurfs );
+	// the flares of this view want to know what the depth is where they are, before the next view clears it
+	VK_CopyProbes();
 	// the stages that glow once more, into a buffer that is blurred and added to the scene (vk_post.cpp)
 	if ( !( backEnd.refdef.rdflags & RDF_NOWORLDMODEL ) && r_DynamicGlow->integer ) {
 		VK_BeginGlow();

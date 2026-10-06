@@ -351,6 +351,7 @@ void VK_InitVulkan( void ) {
 	// the buffers of the level and of the models are filled again when they are first drawn
 	VK_WorldChanged();
 	VK_ModelsChanged();
+	VK_ClearFlares();
 	if ( glConfig.vidWidth ) {
 		return;
 	}
@@ -378,7 +379,8 @@ void VK_InitVulkan( void ) {
 		VK_IMAGE_ASPECT_COLOR_BIT );
 	VK_CreateTarget( &vk.final, vk.width, vk.height, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
 		VK_IMAGE_ASPECT_COLOR_BIT );
-	VK_CreateTarget( &vk.depth, vk.width, vk.height, VK_DepthFormat(), VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+	VK_CreateTarget( &vk.depth, vk.width, vk.height, VK_DepthFormat(),
+		VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
 		VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT );
 
 	VK_InitPipelines();

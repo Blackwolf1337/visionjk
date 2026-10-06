@@ -1686,6 +1686,11 @@ static bool RB_TestZFlare( vec3_t point) {
 		return qfalse;	// shouldn't happen, since we check the clip[] above, except for FP rounding
 	}
 
+#ifdef RD_VULKAN_VISION
+	// the depth of a frame that is still being recorded can not be read: the test an earlier frame made
+	return r_flares->integer != 1 || VK_FlareVisible( point, (int)( backEnd.viewParms.viewportX + window[0] ),
+		(int)( backEnd.viewParms.viewportY + window[1] ), -eye[2] );
+#else
 //do test
 	float			depth = 0.0f;
 	bool			visible;
@@ -1705,6 +1710,7 @@ static bool RB_TestZFlare( vec3_t point) {
 
 	visible = ( -eye[2] - -screenZ ) < 24;
 	return visible;
+#endif
 }
 
 void RB_SurfaceFlare( srfFlare_t *surf ) {

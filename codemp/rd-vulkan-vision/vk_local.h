@@ -138,6 +138,15 @@ typedef struct vkTarget_s {		// something to render into
 	int				width, height;
 } vkTarget_t;
 
+#define VK_MAX_FLARES		256
+
+typedef struct vkProbe_s {		// one pixel of the depth of a frame that is read back for a flare
+	int			flare;				// which one
+	int			x, y;				// in the depth target
+	float		eyeZ;				// how far in front of the eye the flare was
+	float		projection[3];		// [10], [11] and [14] of the projection matrix of that view
+} vkProbe_t;
+
 typedef struct vkFrame_s {
 	VkCommandBuffer	cmd;
 	VkFence			fence;
@@ -151,12 +160,16 @@ typedef struct vkFrame_s {
 	vkBuffer_t		transforms;
 	vkBuffer_t		draws;
 	vkBuffer_t		bones;
+	vkBuffer_t		probes;			// 4 bytes of depth per probe, written by the device
 
 	VkDeviceSize	vertexUsed;
 	VkDeviceSize	indexUsed;
 	int				numTransforms;
 	int				numDraws;
 	int				numBones;
+	vkProbe_t		probe[VK_MAX_FLARES];
+	int				numProbes;
+	int				numProbesCopied;	// that many have their copy in the commands of the frame
 } vkFrame_t;
 
 typedef enum {
@@ -346,6 +359,9 @@ void		VK_ShutdownPost( void );
 void		VK_BeginGlow( void );
 void		VK_EndGlow( void );
 void		VK_CaptureFrame( void );
+void		VK_ClearFlares( void );
+void		VK_CopyProbes( void );
+void		VK_ReadProbes( vkFrame_t *frame );
 
 // vk_frame.cpp
 void		VK_BeginTarget( VkCommandBuffer cmd, vkTarget_t *color, vkTarget_t *depth, int colorLoad, qboolean depthLoad );

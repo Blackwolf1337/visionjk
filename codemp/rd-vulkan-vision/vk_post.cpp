@@ -18,7 +18,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 ===========================================================================
 */
 
-// vk_post.cpp: the glow of r_DynamicGlow, and the copy of the frame for refraction
+// vk_post.cpp: the glow of r_DynamicGlow, the copy of the frame for refraction, and the depth test of flares
 //
 // The basic idea, as in rd-vanilla: render the glowing parts of the scene to a buffer of their own, blur that
 // buffer, and add it back to the scene. The glowing parts are the stages of shaders that carry the "glow"
@@ -215,4 +215,152 @@ void VK_CaptureFrame( void ) {
 	VK_BeginTarget( cmd, &vk.color, &vk.depth, 2, qtrue );
 	vk.boundPipeline = VK_NULL_HANDLE;
 	vk.stateValid = qfalse;
+}
+
+/*
+===============================================================================
+
+FLARES
+
+A flare (the shine around a lamp) is drawn when nothing is in front of its point. rd-vanilla finds that out by
+reading one pixel of the depth buffer while it draws. The commands of a frame are only recorded here, their
+depth does not exist yet. So the pixel is copied to a buffer at the end of the view, and the answer is there
+when the commands of that frame have run: two frames later, when its buffers are used again. Until then the
+flare keeps the answer it had. A flare shows up or goes away two frames late.
+
+===============================================================================
+*/
+
+typedef struct vkFlare_s {
+	const void	*key;				// the origin of the flare surface in the level data
+	qboolean	visible;			// the last answer
+	int			asked;				// vk_flareFrame of the last question, the oldest one is given up
+	int			probed;				// vk_flareFrame of the last probe: one in a frame is enough
+} vkFlare_t;
+
+static vkFlare_t	vk_flares[VK_MAX_FLARES];
+static int			vk_numFlares;
+static int			vk_flareFrame = 1;
+
+// the level changed, the keys mean nothing any more
+void VK_ClearFlares( void ) {
+	vk_numFlares = 0;
+	for ( int i = 0; i < VK_FRAMES; i++ ) {
+		vk.frames[i].numProbes = vk.frames[i].numProbesCopied = 0;
+	}
+}
+
+/*
+===============
+VK_FlareVisible
+
+x, y: the pixel of the flare as OpenGL counts, y up. eyeZ: how far in front of the eye it is.
+===============
+*/
+qboolean VK_FlareVisible( const float *point, int x, int y, float eyeZ ) {
+	vkFrame_t *frame = vk.frame;
+	vkFlare_t *flare = NULL;
+
+	for ( int i = 0; i < vk_numFlares; i++ ) {
+		if ( vk_flares[i].key == point ) {
+			flare = &vk_flares[i];
+			break;
+		}
+	}
+	if ( !flare ) {
+		if ( vk_numFlares < VK_MAX_FLARES ) {
+			flare = &vk_flares[vk_numFlares++];
+		} else {
+			flare = &vk_flares[0];
+			for ( int i = 1; i < VK_MAX_FLARES; i++ ) {
+				if ( vk_flares[i].asked < flare->asked ) {
+					flare = &vk_flares[i];
+				}
+			}
+		}
+		flare->key = point;
+		flare->visible = qfalse;
+		flare->probed = 0;
+	}
+	flare->asked = vk_flareFrame;
+
+	// the glow pass draws over the same depth
+	if ( frame && !g_bRenderGlowingObjects && flare->probed != vk_flareFrame && frame->numProbes < VK_MAX_FLARES ) {
+		vkProbe_t *probe = &frame->probe[frame->numProbes++];
+
+		probe->flare = (int)( flare - vk_flares );
+		probe->x = Com_Clampi( 0, vk.width - 1, x );
+		probe->y = Com_Clampi( 0, vk.height - 1, vk.height - 1 - y );
+		probe->eyeZ = eyeZ;
+		probe->projection[0] = backEnd.viewParms.projectionMatrix[10];
+		probe->projection[1] = backEnd.viewParms.projectionMatrix[11];
+		probe->projection[2] = backEnd.viewParms.projectionMatrix[14];
+		flare->probed = vk_flareFrame;
+	}
+	return flare->visible;
+}
+
+/*
+===============
+VK_CopyProbes
+
+The end of a view: the pixels of the depth its flares asked for go into the buffer of the frame
+===============
+*/
+void VK_CopyProbes( void ) {
+	static VkBufferImageCopy regions[VK_MAX_FLARES];
+	vkFrame_t *frame = vk.frame;
+	VkCommandBuffer cmd;
+	uint32_t count = 0;
+
+	if ( !frame || frame->numProbesCopied == frame->numProbes ) {
+		return;
+	}
+	cmd = frame->cmd;
+	memset( regions, 0, sizeof( regions[0] ) * ( frame->numProbes - frame->numProbesCopied ) );
+	for ( int i = frame->numProbesCopied; i < frame->numProbes; i++, count++ ) {
+		regions[count].bufferOffset = sizeof( uint32_t ) * i;
+		regions[count].imageSubresource.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+		regions[count].imageSubresource.layerCount = 1;
+		regions[count].imageOffset.x = frame->probe[i].x;
+		regions[count].imageOffset.y = frame->probe[i].y;
+		regions[count].imageExtent.width = regions[count].imageExtent.height = regions[count].imageExtent.depth = 1;
+	}
+	frame->numProbesCopied = frame->numProbes;
+
+	vkCmdEndRendering( cmd );
+	VK_TargetLayout( cmd, &vk.depth, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL );
+	vkCmdCopyImageToBuffer( cmd, vk.depth.image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, frame->probes.buffer, count, regions );
+	VK_TargetLayout( cmd, &vk.depth, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL );
+	VK_BeginTarget( cmd, &vk.color, &vk.depth, 2, qtrue );
+	vk.boundPipeline = VK_NULL_HANDLE;
+	vk.stateValid = qfalse;
+}
+
+/*
+===============
+VK_ReadProbes
+
+The commands this frame recorded last have run. What they copied is the answer for the flares, with the test
+RB_TestZFlare() of rd-vanilla makes.
+===============
+*/
+void VK_ReadProbes( vkFrame_t *frame ) {
+	const uint32_t *words = (const uint32_t *)frame->probes.mapped;
+
+	for ( int i = 0; i < frame->numProbesCopied; i++ ) {
+		const vkProbe_t *probe = &frame->probe[i];
+		float depth, screenZ;
+
+		// the depth aspect of a format with 24 bits comes in the low bits of a word, the other one as a float
+		if ( vk.depth.format == VK_FORMAT_D24_UNORM_S8_UINT ) {
+			depth = ( words[i] & 0xffffff ) / 16777215.0f;
+		} else {
+			memcpy( &depth, &words[i], sizeof( depth ) );
+		}
+		screenZ = probe->projection[2] / ( ( 2.0f * depth - 1.0f ) * probe->projection[1] - probe->projection[0] );
+		vk_flares[probe->flare].visible = (qboolean)( probe->eyeZ + screenZ < 24.0f );
+	}
+	frame->numProbes = frame->numProbesCopied = 0;
+	vk_flareFrame++;
 }

@@ -44,8 +44,8 @@ and the export table, the image code up to the upload, the sky geometry, the sur
 beams and the like, the weather particles and the surface sprites.
 
 What that needs in `rd-vanilla`: `#ifndef RD_VULKAN_VISION` around the OpenGL-only functions of `tr_init.cpp`
-and `tr_image.cpp`, one function in `tr_ghoul2.cpp` that hands out the bone matrices, and one include at the end
-of `tr_local.h`. Without the macro the files are byte for byte the same after the preprocessor, that was checked
+and `tr_image.cpp`, one function in `tr_ghoul2.cpp` that hands out the bone matrices, the depth test of a flare
+in `tr_surface.cpp`, and one include at the end of `tr_local.h`. Without the macro the files are byte for byte the same after the preprocessor, that was checked
 with `g++ -E -P` against `master`. The target links with `-Wl,-z,defs` and without libGL, so an OpenGL call that
 is left in a shared file fails the build.
 
@@ -71,7 +71,7 @@ end of `refimport_t` for the instance extensions and the surface. The other rend
 | `vk_backend.cpp` | the render commands: pictures, views, entities, draw order |
 | `vk_world.cpp` | the level in a device buffer, which batches can use it |
 | `vk_model.cpp` | Ghoul2 and MD3 vertices in a device buffer, bones per frame |
-| `vk_post.cpp` | dynamic glow, the copy of the frame for refraction |
+| `vk_post.cpp` | dynamic glow, the copy of the frame for refraction, the depth test of flares |
 | `vk_gl.cpp` | the immediate mode drawing of the shared files |
 | `shaders/` | `stage.glsl` (one stage of a script on a vertex), `generic.vert`, `skinned.vert`, `generic.frag`, `post.vert`, `gamma.frag`, `blur.frag`, `copy.frag`. `glslc -mfmt=c` turns them into headers while building |
 
@@ -117,6 +117,9 @@ left in these views are the effects of the game (flames, smoke, light cones) and
 - Refraction (the wave of force push, entities with `RF_DISTORTION`): `rd-vanilla` copies a square of the screen
   into a texture for each such entity, here the whole frame is copied and the draw is told where its square is.
   The picture is the same.
+- Flares (the shine around a lamp): `rd-vanilla` reads the depth buffer under the flare while it draws, to see
+  whether something covers it. Here that pixel is copied at the end of the view and read when the frame has
+  run on the device, so a flare shows up and goes away two frames late. Its place and size are the same.
 - Screenshots hold the frame after the gamma pass.
 - Textures are not compressed (32 bit with mip levels). mp/ffa3 takes about 550 MB of device memory, 180 MB of
   that are the buffers and targets the renderer always has.
@@ -124,8 +127,8 @@ left in these views are the effects of the game (flames, smoke, light cones) and
 ## Not done
 
 The stencil variant of refraction (surfaces with the internal distortion shader, the alternate saber trail:
-they are not drawn at all for now), stencil and projection shadows (`cg_shadows 2` and `3`), flares, the vertex deform of disintegration, recording
-to AVI, the automap, `r_showtris`, `r_shownormals`, `r_showImages`, anti aliasing. A build for Windows or macOS
+they are not drawn at all for now), stencil and projection shadows (`cg_shadows 2` and `3`), the vertex deform
+of disintegration, recording to AVI, the automap, `r_showtris`, `r_shownormals`, `r_showImages`, anti aliasing. A build for Windows or macOS
 was not tried.
 
 Portals and mirrors have their clip plane (`gl_ClipDistance` from a plane in the transform) and the flipped
@@ -146,7 +149,7 @@ difference side by side.
 | mp/ffa3, six views (sky box, lightmaps, patches, models) | 0.1 to 1.2 % |
 | mp/ffa3 with `r_DynamicGlow 1` in both | the same |
 | mp/ffa2, five views (fog volumes, items with a specular stage) | 0.0 to 0.2 % |
-| mp/ffa4, five views (the level lies in a fog volume) | 0.2 to 0.4 %, one view 1.5 % (the flare of a lamp, see Not done) |
+| mp/ffa4, five views (the level lies in a fog volume, lamps with flares) | 0.0 to 0.3 % |
 | mp/ctf2, three views (global fog, snow) | 0.1 to 0.5 % |
 | mp/ctf3, four views (grass sprites) | 0.1 to 1.3 % |
 | the player from the front with HUD | 0.2 to 0.4 % |
