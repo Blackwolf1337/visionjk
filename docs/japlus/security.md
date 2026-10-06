@@ -39,7 +39,25 @@ Each line is one commit on the branch `security/hardening`.
 | `g_bot.c`, `ui/ui_gameinfo.c` | `.bot`/`.arena` file names from the pk3 list `strcpy`/`strcat`'d into 128 byte buffers. | `Com_sprintf`, skip a name that does not fit. |
 | ban paths (`g_webadmin.c`, `g_japlus_admin.c`) | The IP went into an `addip` console line unchecked. The IP is already the real one (the engine prepends it and wins the lookup, and `g_userinfoValidate` rejects a client `ip`), but a relaxed validation could let a newline or `;` through. | `G_CleanIP` keeps only the characters of an address before the console line. |
 | `client/cl_parse.cpp` `CL_ParseSetGame` | Off by one: a server filling the name wrote the terminating zero one past `newGameDir[MAX_QPATH]`. | Loop to `MAX_QPATH-1`. |
+| `bg_pmove.c` `PmoveSingle`, `w_force.c` `WP_InitForcePowers` | `forcesel` and `invensel` of the usercmd were tested with `1 << value`. A shift by 32 or more wraps on x86, so `forcesel` 32+n passed for power n and became `forcePowerSelected`, an index into the force arrays. The engine clears such values only while `sv_legacyFixes` is on. | Both have to be below `NUM_FORCE_POWERS` and `HI_NUM_HOLDABLE`; the init checks the range before it shifts. |
 | `cgame/cg_japlus.c` auto replier | Builds `tell`/`say` with another player's name and sends it through the console; quotes and `%` were dropped but not a newline or `;`, so a crafted name ran as its own console command. | `FormatReply` drops control characters and `;` too. |
+
+## Logging
+
+Added after a reported attack that the logs could neither confirm nor rule out: nothing on the server recorded
+what a player sent or what was done through the panel. `security.log` (and the console of a dedicated server)
+now has one line for each of these:
+
+| Line | When |
+|------|------|
+| `ClientCommand: <n> [<ip>] "<name>": <command> <arguments>` | every client command. Not `say`, `say_team`, `tell` (the game log has them) and `score`. `amlogin` and `clanpass` with `<hidden>` for the arguments. Arguments cut to 200 characters. Off with `g_logClientCmds 0` |
+| `CallVote: <n> [<ip>] "<name>": <console line>` | a vote starts: the line the console runs if it passes |
+| `Web admin: <ip>: action ...` / `entity ...` / `wrong password` | every action and entity edit of the panel, and every wrong password |
+| `amlogin: wrong password from <name> [<ip>]` | a wrong admin password |
+| `Odd userinfo: <n> [<ip>] <bytes> bytes: ...` | a userinfo with control characters or of more than 800 bytes, the control characters as `\xNN`, the values of `password`, `cp_login` and `cp_clanPwd` left out |
+
+The file is buffered and written when the buffer is full or the map ends. `seta g_securityLog 2` writes every
+line at once, which is what a server under watch should use.
 
 ## Build hardening
 
@@ -77,6 +95,9 @@ Off when a sanitizer build is configured.
 
 ```
 seta g_userinfoValidate "25165823"   // leave on: rejects a client ip field and control characters in userinfo
+seta sv_legacyFixes "1"              // leave on: the engine clears out of range selections in the usercmd
+seta g_securityLog "2"               // security.log written line by line
+seta g_logClientCmds "1"             // client commands in security.log
 seta sv_maxOOBRateIP "1"             // the per address rate limit on connectionless packets and rcon
 seta g_webBind ""                    // localhost only; set 0.0.0.0 only behind a proxy or a firewall
 seta g_webPassword "<long random>"   // the panel is off without it
@@ -97,6 +118,12 @@ server on 127.0.0.1 (own port, own `fs_homepath`, master servers off), the publi
   packets; the server stayed up and answered a valid `getinfo` at the end.
 - No AddressSanitizer memory error over the whole run. The one UBSan note that was mine (the base64 shift) is
   fixed.
+
+A scripted client that is not logged in sent all 38 JA+ admin commands, the rcon rank commands, the admin gun
+and cycle commands, the blocking wall commands and the cheats of the base game (59 commands,
+`japlus_port/tools/clienttests/noadmin.cfg`): every one was refused and none had an effect on the server. A second
+script (`seclog.cfg`) and three panel requests checked the log lines above and that the two passwords it sent
+appear in no log.
 
 `cppcheck` and `gcc -fanalyzer` on the changed and new files showed nothing. All four shipping configurations
 build. The JA+ regression (`tools/smoke_test.sh`, `tools/gcheck.sh`) was run to confirm the mod side still works.
