@@ -25,6 +25,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // cg_ents.c -- present snapshot entities, happens every single frame
 
 #include "cg_local.h"
+#include "game/bg_props.h"
 /*
 Ghoul2 Insert Start
 */
@@ -3265,6 +3266,65 @@ static void CG_CarriedLerp( centity_t *cent ) {
 	VectorCopy( cent->lerpOrigin, cent->beamEnd );
 }
 
+/*
+===============
+CG_PhysgunBeam
+
+Port, not in the original: the beam of a physgun (g_props.c of the game). The entity names the player who
+holds it and the prop or the player in it, a line is drawn from his weapon to the middle of that. For the one
+who looks through his own eyes it starts a bit to the right under them.
+===============
+*/
+static void CG_PhysgunBeam( centity_t *cent ) {
+	static qhandle_t	shader;
+	const int			holderNum = cent->currentState.otherEntityNum, targetNum = cent->currentState.otherEntityNum2;
+	centity_t			*holder, *target;
+	refEntity_t			beam;
+	vec3_t				angles, fwd;
+
+	if ( holderNum < 0 || holderNum >= MAX_CLIENTS || targetNum < 0 || targetNum >= ENTITYNUM_WORLD )
+		return;
+	holder = &cg_entities[holderNum];
+	target = &cg_entities[targetNum];
+	if ( !target->currentValid && targetNum != cg.predictedPlayerState.clientNum )
+		return;
+	if ( !shader )
+		shader = trap->R_RegisterShader( "gfx/effects/blueLine" );
+
+	memset( &beam, 0, sizeof( beam ) );
+	if ( holderNum == cg.predictedPlayerState.clientNum && !cg.renderingThirdPerson ) {
+		VectorMA( cg.refdef.vieworg, 14.0f, cg.refdef.viewaxis[0], beam.origin );
+		VectorMA( beam.origin, -6.0f, cg.refdef.viewaxis[1], beam.origin );
+		VectorMA( beam.origin, -7.0f, cg.refdef.viewaxis[2], beam.origin );
+	} else {
+		if ( !holder->currentValid && holderNum != cg.predictedPlayerState.clientNum )
+			return;
+		VectorSet( angles, 0.0f, holder->lerpAngles[YAW], 0.0f );
+		AngleVectors( angles, fwd, NULL, NULL );
+		VectorMA( holder->lerpOrigin, 16.0f, fwd, beam.origin );
+		beam.origin[2] += 20.0f;
+	}
+
+	// where the other end is drawn in this frame, whichever of the two entities comes first in the list
+	if ( targetNum != cg.predictedPlayerState.clientNum ) {
+		CG_CalcEntityLerpPositions( target );
+		CG_CarriedLerp( target );
+	}
+	if ( targetNum < MAX_CLIENTS ) {
+		VectorCopy( target->lerpOrigin, beam.oldorigin );
+		beam.oldorigin[2] += 8.0f;
+	} else {
+		CG_PropMiddle( target, beam.oldorigin );
+	}
+
+	beam.reType = RT_LINE;
+	beam.radius = 2.5f;
+	beam.customShader = shader;
+	beam.shaderTexCoord[0] = beam.shaderTexCoord[1] = 1.0f;
+	beam.shaderRGBA[0] = beam.shaderRGBA[1] = beam.shaderRGBA[2] = beam.shaderRGBA[3] = 0xff;
+	trap->R_AddRefEntityToScene( &beam );
+}
+
 void CG_G2Animated( centity_t *cent );
 
 static void CG_FX( centity_t *cent )
@@ -3407,6 +3467,9 @@ Ghoul2 Insert End
 		break;
 
 	case ET_INVISIBLE:
+		if ( cent->currentState.generic1 == PROP_BEAM )
+			CG_PhysgunBeam( cent );
+		break;
 	case ET_PUSH_TRIGGER:
 	case ET_TELEPORT_TRIGGER:
 	case ET_TERRAIN:

@@ -1837,6 +1837,7 @@ void CG_PlayerShieldHit(int entitynum, vec3_t angles, int amount);
 // cg_predict.c
 //
 void CG_BuildSolidList( void );
+void CG_PropMiddle( centity_t *cent, vec3_t middle );
 int	CG_PointContents( const vec3_t point, int passEntityNum );
 void CG_Trace( trace_t *result, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end,
 					 int skipNumber, int mask );

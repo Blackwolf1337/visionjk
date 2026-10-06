@@ -1379,6 +1379,22 @@ void CG_DrawWeaponSelect( void ) {
 
 /*
 ===============
+CG_PhysgunWheel
+
+Port, not in the original: with a prop in the beam of the physgun (g_props.c of the game) the keys for the next
+and the previous weapon do not change the weapon, they move the prop along the beam. The server reads +button14
+(away) and +button15 (closer) for that, pressed here for one command. qfalse: no prop in the beam.
+===============
+*/
+static qboolean CG_PhysgunWheel( qboolean away ) {
+	if ( !cg.snap || !(cg.predictedPlayerState.stats[STAT_CARRY] & CARRY_GUNHOLD) || cg.predictedPlayerState.weapon != WP_STUN_BATON )
+		return qfalse;
+	trap->SendConsoleCommand( away ? "+button14\n-button14\n" : "+button15\n-button15\n" );
+	return qtrue;
+}
+
+/*
+===============
 CG_NextWeapon_f
 ===============
 */
@@ -1387,6 +1403,9 @@ void CG_NextWeapon_f( void ) {
 	int		original;
 
 	if ( !cg.snap ) {
+		return;
+	}
+	if ( CG_PhysgunWheel( qfalse ) ) {
 		return;
 	}
 	if ( cg.snap->ps.pm_flags & PMF_FOLLOW ) {
@@ -1453,6 +1472,9 @@ void CG_PrevWeapon_f( void ) {
 	int		original;
 
 	if ( !cg.snap ) {
+		return;
+	}
+	if ( CG_PhysgunWheel( qtrue ) ) {
 		return;
 	}
 	if ( cg.snap->ps.pm_flags & PMF_FOLLOW ) {

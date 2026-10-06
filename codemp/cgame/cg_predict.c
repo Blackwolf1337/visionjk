@@ -130,6 +130,23 @@ static const propBrush_t *CG_PropBrush( const entityState_t *es, const propShape
 	return &b->brush;
 }
 
+// the middle of a prop that is drawn at lerpOrigin, which is where the origin of its model is
+void CG_PropMiddle( centity_t *cent, vec3_t middle ) {
+	const entityState_t	*es = &cent->currentState;
+	const propShape_t	*shape = NULL;
+	matrix3_t			axis;
+	int					k;
+
+	VectorCopy( cent->lerpOrigin, middle );
+	if ( es->eType == ET_GENERAL && es->modelindex && ( es->generic1 == PROP_SOLID_HULL || es->generic1 == PROP_SOLID_BOX ) )
+		shape = CG_PropShape( es );
+	if ( !shape )
+		return;
+	AnglesToAxis( cent->lerpAngles, axis );
+	for ( k = 0; k < 3; k++ )
+		VectorMA( middle, shape->centre[k], axis[k], middle );
+}
+
 /*
 ====================
 CG_ClipMoveToProps

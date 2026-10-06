@@ -522,6 +522,13 @@ void CG_TransitionPlayerState( playerState_t *ps, playerState_t *ops ) {
 		CG_Respawn();
 	}
 
+	// Port, not in the original: amphysgun gave him the physgun, which is the stun baton. It has no number to
+	// pick it with, so it is taken out for him.
+	if ( (ps->stats[STAT_CARRY] & CARRY_PHYSGUN) && !(ops->stats[STAT_CARRY] & CARRY_PHYSGUN)
+		&& (ps->stats[STAT_WEAPONS] & (1 << WP_STUN_BATON)) ) {
+		cg.weaponSelect = WP_STUN_BATON;
+	}
+
 	if ( cg.mapRestart ) {
 		CG_Respawn();
 		cg.mapRestart = qfalse;
