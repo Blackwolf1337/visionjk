@@ -27,7 +27,7 @@ seta g_webBind ""
 |------|---------|---------|
 | `g_webPassword` | empty | password of the panel. Empty: the panel is off |
 | `g_webPort` | 80 | TCP port. Below 1024 needs root on Linux |
-| `g_webBind` | empty | IPv4 address to listen on. Empty: all addresses |
+| `g_webBind` | empty | IPv4 address to listen on. Empty: 127.0.0.1 only. Set `0.0.0.0` to reach it from the network |
 | `g_webRoot` | empty | folder with an `index.html` that is served instead of the built in page, for working on the page |
 
 The first three are latched, they take effect at the next map start. Open `http://server:8080/` and log in with
@@ -218,10 +218,8 @@ To take a later JKAdmin commit: apply its diff and keep the `JA+` blocks in `WA_
   without a `lightningfx` key. Brush classes (`trigger_`, `func_`) without a valid `model` key are expected to do
   the same. A restart script or care in the World tab is needed until placing is guarded.
 - Plain HTTP with basic auth. Put it behind a reverse proxy with HTTPS before it is reachable from outside, or
-  bind it to 127.0.0.1 and use an SSH tunnel.
-- `POST` requests are not checked for their origin. A hostile web page opened in the browser that is logged in to
-  the panel could send actions.
-- The password compare is not constant time.
+  leave `g_webBind` empty (127.0.0.1) and use an SSH tunnel. Since the security pass the default bind is localhost,
+  not every interface.
 - `g_webPassword` is an archived cvar. The server writes it in clear text into `openjk_server.cfg` in its home
   path, and it shows in the process list when it is given on the command line.
 - Whoever can connect can occupy the 32 connections, then the panel does not answer until they time out. The game
@@ -232,6 +230,12 @@ To take a later JKAdmin commit: apply its diff and keep the `JA+` blocks in `WA_
   them, and the JA+ code is not told about it.
 - The chat view shows team chat, tells, clan chat and admin chat too, like `games.log` does. The server keeps 128
   lines and only those of the current map.
+
+The panel went through the security pass in [security.md](security.md). Fixed there: the `Content-Length`
+overflow, requests from other sites (an `Origin` check on every POST), the password compare (now constant time)
+and a wait after wrong passwords, guarded allocations, the base64 decoder, and the localhost default bind. The IP
+of a ban is checked before it goes into a console line. Open items above (plain HTTP, the editor ending the
+server) stand.
 
 ## What was tested
 

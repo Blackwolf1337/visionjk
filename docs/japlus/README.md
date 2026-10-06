@@ -19,6 +19,7 @@ The port starts from OpenJK commit 260c59c2 (2026-09-29) and is the commits on t
 | [differences.md](differences.md) | Where the port differs from the original JA+ and where it changes OpenJK |
 | [verification.md](verification.md) | What was compared against the original, what was seen in the game, what is open |
 | [webadmin.md](webadmin.md) | The web admin panel taken from JKAdmin (not a JA+ feature): cvars, requests, JA+ glue, limits |
+| [security.md](security.md) | Security pass over `codemp/`: findings, fixes, build hardening, what stays, server settings |
 
 ## Where the code is
 
