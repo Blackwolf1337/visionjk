@@ -26,8 +26,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // only collects their indexes each frame, the vertices are never touched again.
 //
 // Not every batch can be drawn that way. What still needs the vertices on the CPU goes through the tess arrays
-// as before: sky, deformVertexes, surface sprites, the fog pass of a fog volume, color generators that are not
-// in the vertex shader, vertex lit surfaces with more than one light style.
+// as before: sky, deformVertexes, surface sprites, color generators that are not in the vertex shader, vertex
+// lit surfaces with more than one light style.
 //
 // Patches are drawn with all the rows and columns they were subdivided into. rd-vanilla leaves rows and columns
 // out with the distance (r_lodCurveError), so a patch far away is a little rounder here than there.
@@ -173,7 +173,6 @@ Whether the stages of the shader of the batch can be drawn without the vertices 
 */
 static qboolean VK_ShaderIsStatic( void ) {
 	const shader_t *shader = tess.shader;
-	const int fogNum = tess.fogNum;
 
 	if ( !r_vkStatic->integer ) {
 		return qfalse;
@@ -183,10 +182,6 @@ static qboolean VK_ShaderIsStatic( void ) {
 	}
 	// rd-vanilla adds up the colors of all light styles of a vertex lit surface, the buffer has the first
 	if ( shader->lightmapIndex[0] == LIGHTMAP_BY_VERTEX && shader->styles[0] < LS_UNUSED && shader->styles[1] < LS_UNUSED ) {
-		return qfalse;
-	}
-	// the fog pass of a fog volume computes its texture coordinates on the CPU
-	if ( tr.world && fogNum && shader->fogPass && r_drawfog->value && ( fogNum != tr.world->globalFog || r_drawfog->value != 2 ) ) {
 		return qfalse;
 	}
 	if ( backEnd.currentEntity->e.renderfx & ( RF_DISINTEGRATE1 | RF_DISINTEGRATE2 | RF_VOLUMETRIC ) ) {
@@ -199,7 +194,7 @@ static qboolean VK_ShaderIsStatic( void ) {
 			break;
 		}
 		if ( pStage->ss || pStage->alphaGen == AGEN_LIGHTING_SPECULAR || pStage->alphaGen == AGEN_PORTAL
-			|| pStage->alphaGen == AGEN_BLEND || ( fogNum && pStage->adjustColorsForFog != ACFF_NONE ) ) {
+			|| pStage->alphaGen == AGEN_BLEND ) {
 			return qfalse;
 		}
 	}

@@ -19,6 +19,34 @@ layout( location = 4 ) out float v_depth;		// distance in front of the eye
 
 const float TWO_PI = 6.28318530718;
 
+// Where a vertex is in a fog volume, as coordinates into the fog image: s grows with the distance from the eye,
+// t says how much of the way lies in the fog (RB_CalcFogTexCoords of rd-vanilla)
+vec2 FogCoords( vec3 position, vec4 vectors[2], float eyeT ) {
+	float s = dot( position, vectors[0].xyz ) + vectors[0].w;
+	float t = dot( position, vectors[1].xyz ) + vectors[1].w;
+
+	if ( eyeT < 0.0 ) {
+		// the eye is outside: cut the distance at the fog plane
+		t = ( t < 1.0 ) ? 1.0 / 32.0 : 1.0 / 32.0 + 30.0 / 32.0 * t / ( t - eyeT );
+	} else {
+		t = ( t < 0.0 ) ? 1.0 / 32.0 : 31.0 / 32.0;
+	}
+	return vec2( s, t );
+}
+
+// how much fog there is at those coordinates, what the fog image holds (R_FogFactor)
+float FogFactor( vec2 st ) {
+	float s = st.x - 1.0 / 512.0;
+
+	if ( s < 0.0 || st.y < 1.0 / 32.0 ) {
+		return 0.0;
+	}
+	if ( st.y < 31.0 / 32.0 ) {
+		s *= ( st.y - 1.0 / 32.0 ) / ( 30.0 / 32.0 );
+	}
+	return sqrt( min( s * 8.0, 1.0 ) );
+}
+
 vec2 GenTexCoord( uint gen, vec4 vectors[2], vec3 viewOrigin, StageInput v ) {
 	switch ( gen ) {
 	case TCGEN_LIGHTMAP:	return v.lightmap0;
@@ -33,6 +61,7 @@ vec2 GenTexCoord( uint gen, vec4 vectors[2], vec3 viewOrigin, StageInput v ) {
 		return vec2( 0.5 + reflected.y * 0.5, 0.5 - reflected.z * 0.5 );
 	}
 	case TCGEN_VECTOR:		return vec2( dot( v.position, vectors[0].xyz ), dot( v.position, vectors[1].xyz ) );
+	case TCGEN_FOG:			return FogCoords( v.position, draws[push.draw].fogVec, draws[push.draw].fogParm.z );
 	default:				return vec2( 0.0 );
 	}
 }
@@ -73,5 +102,20 @@ void StageVertex( StageInput v ) {
 		v_color = vec4( light * d.baseColor.rgb, clamp( d.baseColor.a + d.vertColor.a * v.color.a, 0.0, 1.0 ) );
 	} else {
 		v_color = clamp( d.baseColor + d.vertColor * v.color, 0.0, 1.0 );
+	}
+
+	// a stage in a fog volume may ask to fade with the fog instead of getting a fog pass (adjustColorsForFog)
+	uint acff = ACFF( d.flags );
+	if ( acff != 0u ) {
+		float f = 1.0 - FogFactor( FogCoords( v.position, d.fogVec, d.fogParm.z ) );
+
+		// the values of acff_t
+		if ( acff == 1u ) {
+			v_color.rgb *= f;
+		} else if ( acff == 2u ) {
+			v_color *= f;
+		} else {
+			v_color.a *= f;
+		}
 	}
 }

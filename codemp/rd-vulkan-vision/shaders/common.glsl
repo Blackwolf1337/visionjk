@@ -27,7 +27,8 @@ struct Draw {
 	vec4	tcGenVec1[2];
 	vec4	parm;			// x: portal range, y: time of the shader. Dynamic light: origin in model space, w: radius
 	vec4	fogColor;
-	vec4	fogParm;		// exp2: x: density. linear: x: start, y: end
+	vec4	fogParm;		// exp2: x: density. linear: x: start, y: end. z: fog volume, where the eye is
+	vec4	fogVec[2];		// fog volume: distance and depth vector
 	uint	bones;			// skinned: where the skeleton starts in the bones of the frame, in rows
 	uint	unused0, unused1, unused2;
 };
@@ -58,6 +59,7 @@ layout( push_constant ) uniform Push {
 #define AGEN( flags )		( ( ( flags ) >> 16 ) & 7u )
 #define DLIGHT( flags )		( ( ( flags ) & 0x80000u ) != 0u )
 #define FOG( flags )		( ( ( flags ) >> 20 ) & 3u )
+#define ACFF( flags )		( ( ( flags ) >> 22 ) & 3u )
 
 // texCoordGen_t
 #define TCGEN_IDENTITY		1u

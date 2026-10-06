@@ -262,8 +262,8 @@ COLOR OF A STAGE
 
 color = baseColor + vertColor * vertex color covers every rgbGen and alphaGen that is the same for the whole
 batch or a multiple of the vertex color. The generators that need more per vertex (diffuse light, specular,
-portal distance, fog) are still computed on the CPU with the functions of tr_shade_calc.cpp and then go in as
-vertex colors.
+portal distance, the alphas of terrain) are still computed on the CPU with the functions of tr_shade_calc.cpp and
+then go in as vertex colors.
 
 ===============================================================================
 */
@@ -281,6 +281,40 @@ static float VK_WaveValue( const waveForm_t *wf, qboolean alpha ) {
 	}
 	tess.numVertexes = numVertexes;
 	return ( alpha ? color[3] : color[0] ) / 255.0f;
+}
+
+/*
+===============
+VK_FogVectors
+
+What the vertex shader needs to know where a vertex of the batch is in its fog volume: the two vectors
+RB_CalcFogTexCoords() of rd-vanilla sets up before it walks the vertices, and where the eye is
+===============
+*/
+static void VK_FogVectors( vkDraw_t *draw ) {
+	const fog_t *fog = tr.world->fogs + tess.fogNum;
+	float *distance = draw->fogVec, *depth = draw->fogVec + 4;
+	vec3_t local;
+
+	// all fogging distance is based on world Z units
+	VectorSubtract( backEnd.ori.origin, backEnd.viewParms.ori.origin, local );
+	distance[0] = -backEnd.ori.modelMatrix[2] * fog->tcScale;
+	distance[1] = -backEnd.ori.modelMatrix[6] * fog->tcScale;
+	distance[2] = -backEnd.ori.modelMatrix[10] * fog->tcScale;
+	distance[3] = DotProduct( local, backEnd.viewParms.ori.axis[0] ) * fog->tcScale + 1.0f / 512;
+
+	// rotate the gradient vector for this orientation
+	if ( fog->hasSurface ) {
+		depth[0] = DotProduct( fog->surface, backEnd.ori.axis[0] );
+		depth[1] = DotProduct( fog->surface, backEnd.ori.axis[1] );
+		depth[2] = DotProduct( fog->surface, backEnd.ori.axis[2] );
+		depth[3] = -fog->surface[3] + DotProduct( backEnd.ori.origin, fog->surface );
+		draw->fogParm[2] = DotProduct( backEnd.ori.viewOrigin, depth ) + depth[3];
+	} else {
+		// non-surface fog always has eye inside
+		VectorSet4( depth, 0.0f, 0.0f, 0.0f, 1.0f );
+		draw->fogParm[2] = 1.0f;
+	}
 }
 
 static void VK_ByteColor( const byte *in, float *out ) {
@@ -412,8 +446,13 @@ static qboolean VK_StageColors( const shaderStage_t *pStage, int forceRGBGen, vk
 		break;
 	}
 
-	perVertexFog = (qboolean)( tess.fogNum && pStage->adjustColorsForFog != ACFF_NONE );
-	if ( ( !killGen && !perVertexAlpha && !perVertexFog ) || VK_BatchIsStatic() ) {
+	perVertexFog = (qboolean)( tess.fogNum && tr.world && pStage->adjustColorsForFog != ACFF_NONE );
+	if ( ( !killGen && !perVertexAlpha ) || VK_BatchIsStatic() ) {
+		if ( perVertexFog ) {
+			// the stage fades with the way through its fog volume, worked out in stage.glsl
+			draw->flags |= (uint32_t)pStage->adjustColorsForFog << VKD_ACFF_SHIFT;
+			VK_FogVectors( draw );
+		}
 		if ( perVertexRGB ) {
 			draw->flags |= ( rgbGen == CGEN_LIGHTING_DIFFUSE_ENTITY ? 2u : 1u ) << VKD_RGBGEN_SHIFT;
 		}
@@ -665,23 +704,23 @@ static void VK_DynamicLights( uint32_t transform, int cullMode, vkProgram_t prog
 VK_FogPass
 
 A surface inside a fog volume gets the fog as one more pass: the fog color, with an alpha that grows with the
-way through the fog. The alpha comes from the fog image, the coordinates into it are still computed on the CPU.
+way through the fog. The alpha comes from the fog image, the coordinates into it from stage.glsl.
 ===============
 */
-static void VK_FogPass( uint32_t transform, int cullMode ) {
+static void VK_FogPass( uint32_t transform, int cullMode, vkProgram_t program, uint32_t bones ) {
 	const fog_t *fog = tr.world->fogs + tess.fogNum;
 	vkDraw_t draw;
 
-	RB_CalcFogTexCoords( (float *)tess.svars.texcoords[0] );
-	VK_TessTexCoords( tess.svars.texcoords[0] );
 	memset( &draw, 0, sizeof( draw ) );
 	draw.transform = transform;
-	VK_IdentityTexCoords( &draw );
+	draw.bones = bones;
+	draw.flags = (uint32_t)TCGEN_FOG << VKD_TCGEN0_SHIFT;
+	draw.texMat0[0] = draw.texMat0[5] = 1.0f;
+	VK_FogVectors( &draw );
 	draw.tex0 = draw.tex1 = tr.fogImage->texnum;
 	VK_ByteColor( (const byte *)&fog->colorInt, draw.baseColor );
-	VK_DrawTess( &draw, VKP_GENERIC, GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA
+	VK_DrawTess( &draw, program, GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA
 		| ( tess.shader->fogPass == FP_EQUAL ? GLS_DEPTHFUNC_EQUAL : 0 ), cullMode, (qboolean)tess.shader->polygonOffset );
-	VK_TessTexCoords( NULL );
 }
 
 /*
@@ -830,7 +869,7 @@ void RB_StageIteratorGeneric( void ) {
 	// now do fog
 	if ( tr.world && ( tess.fogNum != tr.world->globalFog || r_drawfog->value != 2 ) && r_drawfog->value && tess.fogNum
 		&& shader->fogPass ) {
-		VK_FogPass( transform, cullMode );
+		VK_FogPass( transform, cullMode, program, bones );
 	}
 	// Now check for surfacesprites: grass and the like that tr_surfacesprites.cpp grows on the triangles of the
 	// batch. It hands quads to tr_quicksprite.cpp, which draws them through vk_gl.cpp.

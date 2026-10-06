@@ -86,19 +86,23 @@ end of `refimport_t` for the instance extensions and the surface. The other rend
 | rgbGen lightingDiffuse | per vertex on the CPU | vertex shader |
 | Dynamic lights | per triangle on the CPU, one pass per light | per pixel in `generic.frag`, one pass per light |
 | Global fog | fixed function fog | per pixel in `generic.frag` |
+| Fog volumes | fog pass with coordinates per vertex on the CPU, color fade per vertex on the CPU | the same pass, coordinates and fade in `stage.glsl` from two vectors per draw |
 | Textures | bound per stage | one table of all textures, indexed in the shader |
 | State of a stage | set per stage | only the blend function needs a pipeline, depth, cull and offset are dynamic state |
 | Gamma, overbright | ramp of the display or baked into textures | one pass over the finished frame |
 
-Still on the CPU, through the tess arrays as in `rd-vanilla`: the sky, shaders with `deformVertexes`, surfaces
-in a fog volume (the fog pass), `alphaGen lightingSpecular`, `portal` and `blend`, fog color adjustment,
-vertex lit surfaces with more than one light style, models with gore on them, MD3 with several frames, all
+Still on the CPU, through the tess arrays as in `rd-vanilla`: the sky, shaders with `deformVertexes`,
+`alphaGen lightingSpecular`, `portal` and `blend`, vertex lit surfaces with more than one light style, models with gore on them, MD3 with several frames, all
 effects the game hands over as polygons, sprites, beams and lines, marks, the weather, surface sprites, the HUD.
 
 A frame on mp/ffa3, 1280x720, from `gfxinfo`: as a spectator at the first spawn point 4551 triangles come from
 device buffers and 1144 vertices from the CPU. Following a bot in a fight about 4600 triangles from device
 buffers and 1500 vertices from the CPU. Before the device buffers that scene had 8000 to 10000 vertices from the
 CPU.
+
+mp/ffa4, a level that lies in a fog volume, two views as a spectator: 4018 and 5271 triangles from device
+buffers, 548 and 436 built on the CPU. While the fog pass still took its coordinates from the CPU it was 3458
+and 4170 against 1108 and 1537.
 
 ## Differences to rd-vanilla
 
