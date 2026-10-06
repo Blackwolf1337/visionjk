@@ -77,7 +77,7 @@ the answer tells the page that the numbers started over.
 | `GET /api/export` | the entities in `.ent` format |
 | `GET /api/chat?since=&epoch=` | chat lines after number `since`. Everything if `epoch` is not the current one |
 | `POST /api/action` | `action`, `id`, `value`: say, addbot, map, kick, ban, health, armor, scale, kill, god, noclip, schizo, flatulence, disorient, poop, gravity (no `id`), reload (no `id`), playergravity, team, teleport, and the JA+ ones: amsleep, amwake, amprotect, amempower, ammerc, ammindtrick, amghost, amsilence, amunsilence, amslap, amForceAltDim, amUnForceAltDim, amdenyvote, amShowMotd, amrename, ampsay, admgrant, freeze |
-| `POST /api/entity` | `op` spawn, update or delete, with `id` and `kv` (one `key=value` per line) |
+| `POST /api/entity` | `op` spawn, update or delete, with `id` and `kv` (one `key=value` per line). `op` clear with `kv` `classname=<class>` deletes every entity of that class that was placed through the panel |
 | `GET /api/config` | the text of `server.cfg`, as UTF-8 |
 | `POST /api/config`, `POST /api/config?exec=1` | the body is the new text of `server.cfg` (plain text, not a form). With `exec=1` the server runs `exec server.cfg` afterwards |
 | `GET /api/models` | every `.md3` and `.glm` under `models/`. The server reads the folders a few at a frame: `done` says whether the list is complete, the page asks again until it is |
@@ -208,6 +208,10 @@ Also changed:
   the next start of any map, so it can not come back later. An entity of the map that was edited in the panel
   is not kept, the map has it as it was. Tried once on the running server: nine placed objects before and
   after, the file gone.
+- New: the button "Delete all props" under the list of the tab "Models" (second click within three seconds, as
+  for the other deletes): every `misc_prop` that was placed through the panel goes, with one request (`op`
+  clear). Props of the map stay, and so do the balls and cubes of the World tab. The buttons that need a second
+  click share one helper on the page now (`confirmed`). Added without a test run.
 - New: the tab "Models" and the entity `misc_prop` (`codemp/game/g_props.c`): any model of the game as a thing
   with the physics of the cube. The tab lists every `.md3` and `.glm` of the game (748 with the base game and
   JA+), with a search and the turning preview the class list has. Pick one, set scale, mass and shape if they

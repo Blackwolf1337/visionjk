@@ -246,6 +246,7 @@ body.fp #help, body.fp #command, body.fp #entPanel { display: none; }
 			<div class="hint" id="mdlPicked" style="padding:0">Pick a model, then right-click on the map.</div>
 		</div>
 		<div id="mdlList"></div>
+		<div class="tools"><button class="danger" id="mdlClear" title="Deletes every misc_prop that was placed through the panel. The ones of the map stay, and so do the balls and cubes of the World tab.">Delete all props</button></div>
 		<div class="hint" style="padding-top:6px">Every model is placed as a misc_prop with the physics of the cube: a box the size of the model that falls, tips, can be shoved, thrown and stacked. It is in the list of the World tab afterwards.</div>
 	</div>
 	<div class="pane" id="pane-config">
@@ -1111,18 +1112,22 @@ let armed = null;
 function disarm() {
 	if (armed) { armed.classList.remove('armed'); armed.textContent = armed.dataset.label; armed = null; }
 }
-document.querySelectorAll('[data-act]').forEach(b => {
+// false on the first click of a button, which arms it for three seconds, true on the second one
+function confirmed(b) {
+	const again = armed === b;
+	disarm();
+	if (again) return true;
+	armed = b;
 	b.dataset.label = b.textContent;
+	b.classList.add('armed');
+	b.textContent = 'Sure? ' + b.dataset.label;
+	setTimeout(() => { if (armed === b) disarm(); }, 3000);
+	return false;
+}
+document.querySelectorAll('[data-act]').forEach(b => {
 	b.addEventListener('click', () => {
-		if (b.hasAttribute('data-confirm') && armed !== b) {
-			disarm();
-			armed = b;
-			b.classList.add('armed');
-			b.textContent = 'Sure? ' + b.dataset.label;
-			setTimeout(() => { if (armed === b) disarm(); }, 3000);
-			return;
-		}
-		disarm();
+		if (!b.hasAttribute('data-confirm')) disarm();
+		else if (!confirmed(b)) return;
 		action({ action: b.dataset.act, id: selected });
 	});
 });
@@ -1610,6 +1615,9 @@ async function mdlPlaceAt(hit) {
 	entityOp({ op: 'spawn', kv: keysText(keys) }, 'Placed ' + mdlName(path));
 }
 
+$('mdlClear').addEventListener('click', () => {
+	if (confirmed($('mdlClear'))) entityOp({ op: 'clear', kv: 'classname=misc_prop' });
+});
 $('mdlFilter').addEventListener('input', mdlRender);
 $('mdlPlace').addEventListener('click', () => {
 	if (!mdlPath) { toast('Pick a model first', false); return; }
@@ -2072,18 +2080,8 @@ for (const [id, delta] of [['entRotL', 15], ['entRotR', -15]]) {
 		entityOp({ op: 'update', id: selectedEnt, kv: keysText(keys) }, 'Rotated');
 	});
 }
-let delArmed = false;
-function disarmDelete() { delArmed = false; $('entDel').classList.remove('armed'); $('entDel').textContent = 'Delete'; }
 $('entDel').addEventListener('click', () => {
-	if (!delArmed) {
-		delArmed = true;
-		$('entDel').classList.add('armed');
-		$('entDel').textContent = 'Sure? Delete';
-		setTimeout(disarmDelete, 3000);
-		return;
-	}
-	disarmDelete();
-	entityOp({ op: 'delete', id: selectedEnt }, 'Deleted');
+	if (confirmed($('entDel'))) entityOp({ op: 'delete', id: selectedEnt }, 'Deleted');
 });
 $('entClose').addEventListener('click', () => selectEnt(-1));
 

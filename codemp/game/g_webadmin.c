@@ -1522,6 +1522,24 @@ static void WA_ApiEntity( waConnection_t *c, const char *body ) {
 		return;
 	}
 
+	if ( !strcmp( op, "clear" ) ) {
+		// the keys are "classname=<class>": every entity of that class that was placed through the panel goes,
+		// the ones of the map stay
+		const char	*classname = Q_stricmpn( kv, "classname=", 10 ) ? "" : kv + 10;
+		int			i, count = 0;
+
+		for ( i = MAX_CLIENTS; classname[0] && i < level.num_entities; i++ ) {
+			gentity_t *ent = &g_entities[i];
+
+			if ( entityPlaced[i] && WA_ListedEntity( ent ) && !Q_stricmp( ent->classname, classname ) ) {
+				G_FreeEntity( ent );
+				count++;
+			}
+		}
+		WA_EntityResult( c, qtrue, va( "%i deleted", count ), -1 );
+		return;
+	}
+
 	if ( id < 0 || id >= MAX_GENTITIES || !WA_ListedEntity( &g_entities[id] ) ) {
 		WA_EntityResult( c, qfalse, "no such entity", id );
 		return;
