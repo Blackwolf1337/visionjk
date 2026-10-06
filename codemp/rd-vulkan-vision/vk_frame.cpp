@@ -382,7 +382,9 @@ void VK_EndFrame( void ) {
 	vk.statCpuVertexes[1] = vk.statCpuVertexes[0];
 	vk.statCpuIndexes[1] = vk.statCpuIndexes[0];
 	vk.statStaticIndexes[1] = vk.statStaticIndexes[0];
-	vk.statCpuVertexes[0] = vk.statCpuIndexes[0] = vk.statStaticIndexes[0] = 0;
+	vk.statNumCpuShaders[1] = vk.statNumCpuShaders[0];
+	memcpy( vk.statCpuShaders[1], vk.statCpuShaders[0], sizeof( vk.statCpuShaders[0][0] ) * vk.statNumCpuShaders[0] );
+	vk.statCpuVertexes[0] = vk.statCpuIndexes[0] = vk.statStaticIndexes[0] = vk.statNumCpuShaders[0] = 0;
 
 	vk.finalValid = qtrue;
 	vk.frame = NULL;
@@ -486,6 +488,21 @@ qboolean VK_UploadIndexes( VkBuffer vertexBuffer, const VkDeviceSize *offsets, i
 
 // the batch in the tess arrays
 qboolean VK_UploadTess( void ) {
+	vkStatShader_t *stat = vk.statCpuShaders[0];
+	int i;
+
+	// for gfxinfo: which shaders still take this way
+	for ( i = 0; i < vk.statNumCpuShaders[0] && stat[i].shader != tess.shader; i++ ) {
+	}
+	if ( i < VK_MAX_STAT_SHADERS ) {
+		if ( i == vk.statNumCpuShaders[0] ) {
+			stat[i].shader = tess.shader;
+			Q_strncpyz( stat[i].name, tess.shader->name, sizeof( stat[i].name ) );
+			stat[i].indexes = 0;
+			vk.statNumCpuShaders[0]++;
+		}
+		stat[i].indexes += tess.numIndexes;
+	}
 	return VK_UploadGeometry( tess.xyz, tess.normal, tess.texCoords, tess.vertexColors, tess.numVertexes,
 		tess.indexes, tess.numIndexes );
 }

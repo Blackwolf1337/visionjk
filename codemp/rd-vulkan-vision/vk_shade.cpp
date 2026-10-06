@@ -349,6 +349,10 @@ static qboolean VK_StageColors( const shaderStage_t *pStage, int forceRGBGen, vk
 		// the light of the entity on the normal, times baseColor (generic.vert)
 		perVertexRGB = qtrue;
 		VectorSet4( base, 1.0f, 1.0f, 1.0f, 1.0f );
+		// RB_CalcDiffuseColor() also leaves an alpha: the one of the packed ambient color, which is 255 for an
+		// entity that got its light and 0 for the world. Level surfaces with rgbGen lightingDiffuse and a blend
+		// on alpha are not seen in rd-vanilla for that reason (the lamp pillars of mp/ffa4).
+		base[3] = ( (const byte *)&ent->ambientLightInt )[3] / 255.0f;
 		break;
 	case CGEN_LIGHTING_DIFFUSE_ENTITY:
 		perVertexRGB = qtrue;

@@ -29,7 +29,7 @@ indexing ends in an error that names `rd-vanilla`.
 |------|---------|
 | `r_vkDebug 1` | validation layer and its messages in the console, if the layer is installed (latched) |
 | `r_vkStatic 0` | cheat: nothing from the device buffers, every vertex through the CPU as in `rd-vanilla`. For telling a fault of the buffers from a fault of the shading |
-| `gfxinfo` | device, memory, and what the last frame was made of |
+| `gfxinfo` | device, memory, what the last frame was made of and the shaders whose batches were still built on the CPU |
 
 The cvars of `rd-vanilla` keep their names and meaning (`r_gamma`, `r_textureMode`, `r_picmip`,
 `r_DynamicGlow` and its parameters, `r_dynamiclight`, `r_drawfog`, `r_fastsky`, `r_surfaceSprites`, ...). The ones

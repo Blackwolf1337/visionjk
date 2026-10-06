@@ -170,6 +170,14 @@ typedef struct vkPipeline_s {
 	VkPipeline		pipeline;
 } vkPipeline_t;
 
+#define VK_MAX_STAT_SHADERS	64
+
+typedef struct vkStatShader_s {
+	const shader_t	*shader;			// only compared, it may be gone when the name is printed
+	char			name[MAX_QPATH];
+	int				indexes;
+} vkStatShader_t;
+
 typedef struct vkState_s {
 	VkInstance					instance;
 	VkDebugUtilsMessengerEXT	messenger;
@@ -253,6 +261,8 @@ typedef struct vkState_s {
 	int							statCpuVertexes[2];	// vertices that were built on the CPU and uploaded
 	int							statCpuIndexes[2];
 	int							statStaticIndexes[2];	// indexes into vertices that are on the device
+	vkStatShader_t				statCpuShaders[2][VK_MAX_STAT_SHADERS];	// whose batches were built on the CPU
+	int							statNumCpuShaders[2];
 
 	qboolean					validation;
 	int							validationMessages;
