@@ -2985,6 +2985,7 @@ void G_RunFrame( int levelTime ) {
 
 	WebAdmin_Frame();
 	G_SchizoFrame();
+	G_FlatulenceFrame();
 
 	if (level.gametype == GT_SIEGE &&
 		g_siegeRespawn.integer &&

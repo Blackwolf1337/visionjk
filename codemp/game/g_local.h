@@ -1284,6 +1284,12 @@ qboolean G_SchizoActive( int clientNum );
 void G_SchizoFrame( void );
 void Svcmd_Schizo_f( void );
 
+// g_flatulence.c: a player who breaks wind all the time
+qboolean G_FlatulenceToggle( gentity_t *ent );
+qboolean G_FlatulenceActive( int clientNum );
+void G_FlatulenceFrame( void );
+void Svcmd_Flatulence_f( void );
+
 // g_spawn.c, for the entity editor
 int G_NumSpawnClassnames( void );
 const char *G_SpawnClassname( int index );

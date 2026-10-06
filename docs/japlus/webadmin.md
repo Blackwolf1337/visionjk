@@ -76,7 +76,7 @@ the answer tells the page that the numbers started over.
 | `GET /api/entities` | the entities with their keys |
 | `GET /api/export` | the entities in `.ent` format |
 | `GET /api/chat?since=&epoch=` | chat lines after number `since`. Everything if `epoch` is not the current one |
-| `POST /api/action` | `action`, `id`, `value`: say, addbot, map, kick, ban, health, armor, scale, kill, god, noclip, schizo, gravity (no `id`), playergravity, team, teleport, and the JA+ ones: amsleep, amwake, amprotect, amempower, ammerc, ammindtrick, amghost, amsilence, amunsilence, amslap, amForceAltDim, amUnForceAltDim, amdenyvote, amShowMotd, amrename, ampsay, admgrant, freeze |
+| `POST /api/action` | `action`, `id`, `value`: say, addbot, map, kick, ban, health, armor, scale, kill, god, noclip, schizo, flatulence, gravity (no `id`), playergravity, team, teleport, and the JA+ ones: amsleep, amwake, amprotect, amempower, ammerc, ammindtrick, amghost, amsilence, amunsilence, amslap, amForceAltDim, amUnForceAltDim, amdenyvote, amShowMotd, amrename, ampsay, admgrant, freeze |
 | `POST /api/entity` | `op` spawn, update or delete, with `id` and `kv` (one `key=value` per line) |
 
 ## Where it differs from JKAdmin
@@ -124,6 +124,12 @@ Also changed:
 - Fixed in the page: the key fields of an entity lost the focus about once a second. JKAdmin builds the key
   table again with every poll of the entities unless something was typed. Here it is only built again when the
   entity or its keys changed, and never while the cursor is in one of its fields.
+- New: flatulence for one player (`codemp/game/g_flatulence.c`), the "Flatulence" button in the player panel,
+  action `flatulence`, also the server console command `flatulence <player>`. Every 1.5 to 6 seconds he breaks
+  wind: a sound everybody near him hears (the snorts of the rancor, the talk of the gonk droid, an air burst)
+  and a green cloud behind him (the gas cloud of the noghri stick). One in six is a big one with three clouds
+  that shoves him forward, not in a duel. Server side only, stock sound and effect events. Gone when he leaves or
+  the map changes. Added without a test run.
 - New entity `misc_ball` (`codemp/game/g_ball.c`), placed in the World tab like the black hole. A ball with
   physics of its own: gravity, bounces that keep part of the speed, rolling with resistance, rolling down slopes,
   coming to rest. Players and NPCs kick it by running into it (it bounces off them like off something much
