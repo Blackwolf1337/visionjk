@@ -84,6 +84,8 @@ set(MPVulkanVisionVanillaFiles
 	"${MPDir}/rd-vanilla/tr_subs.cpp"
 	"${MPDir}/rd-vanilla/tr_surface.cpp"
 	"${MPDir}/rd-vanilla/tr_world.cpp"
+	"${MPDir}/rd-vanilla/tr_WorldEffects.cpp"
+	"${MPDir}/rd-vanilla/tr_WorldEffects.h"
 	)
 source_group("rd-vanilla" FILES ${MPVulkanVisionVanillaFiles})
 set(MPVulkanVisionFiles ${MPVulkanVisionFiles} ${MPVulkanVisionVanillaFiles})

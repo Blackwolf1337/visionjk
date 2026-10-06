@@ -213,6 +213,21 @@ static void RB_BeginDrawingView( void ) {
 	backEnd.skyRenderedThisView = qfalse;
 }
 
+/*
+===============
+SetViewportAndScissor
+
+The viewport and the projection of the view again, for code of the shared files that draws after the scene
+(the weather)
+===============
+*/
+void SetViewportAndScissor( void ) {
+	const viewParms_t *view = &backEnd.viewParms;
+
+	VK_SetViewport( view->viewportX, view->viewportY, view->viewportWidth, view->viewportHeight, 0.0f, 1.0f );
+	VK_SetProjection( view->projectionMatrix );
+}
+
 // the part of the depth buffer an entity is drawn into: all of it, the front for the view weapon, none
 static void RB_SetDepthRange( int depthRange ) {
 	const viewParms_t *view = &backEnd.viewParms;
@@ -347,6 +362,31 @@ static const void *RB_DrawSurfs( const void *data ) {
 	return (const void *)( cmd + 1 );
 }
 
+/*
+===============
+RB_WorldEffects
+
+Rain and snow over the view that was just drawn. The particles are moved and drawn by tr_WorldEffects.cpp of
+rd-vanilla, its drawing goes through vk_gl.cpp.
+===============
+*/
+void RB_RenderWorldEffects( void );
+
+static const void *RB_WorldEffects( const void *data ) {
+	const drawBufferCommand_t *cmd = (const drawBufferCommand_t *)data;
+
+	VK_BeginFrame();
+	// Always flush the tess buffer
+	if ( tess.shader && tess.numIndexes ) {
+		RB_EndSurface();
+	}
+	RB_RenderWorldEffects();
+	if ( tess.shader ) {
+		RB_BeginSurface( tess.shader, tess.fogNum );
+	}
+	return (const void *)( cmd + 1 );
+}
+
 static const void *RB_DrawBuffer( const void *data ) {
 	const drawBufferCommand_t *cmd = (const drawBufferCommand_t *)data;
 
@@ -423,8 +463,10 @@ void RB_ExecuteRenderCommands( const void *data ) {
 			data = RB_TakeVideoFrameCmd( data );
 			break;
 		case RC_WORLD_EFFECTS:
+			data = RB_WorldEffects( data );
+			break;
 		case RC_AUTO_MAP:
-			// weather and the automap are not drawn by this renderer yet
+			// the automap is not drawn by this renderer yet
 			data = (const void *)( (const drawBufferCommand_t *)data + 1 );
 			break;
 		case RC_END_OF_LIST:

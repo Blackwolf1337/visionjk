@@ -27,7 +27,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include "vk_local.h"
 
-#define VK_GL_MAX_VERTS		4096
+#define VK_GL_MAX_VERTS		6000		// a multiple of 3 and of 4: a full buffer ends on a whole triangle or quad
 
 static vec4_t		gl_xyz[VK_GL_MAX_VERTS];
 static vec4_t		gl_normal[VK_GL_MAX_VERTS];			// stays zero
@@ -142,7 +142,14 @@ void VK_GL_Begin( int mode ) {
 
 void VK_GL_Vertex( float x, float y, float z ) {
 	if ( gl_numVerts == VK_GL_MAX_VERTS ) {
-		return;
+		// the particles of the weather are more than fit: draw what is there and go on
+		const int mode = gl_mode;
+
+		if ( mode != GL_TRIANGLES && mode != GL_QUADS ) {
+			return;
+		}
+		VK_GL_End();
+		gl_mode = mode;
 	}
 	VectorSet( gl_xyz[gl_numVerts], x, y, z );
 	gl_texCoords[gl_numVerts][0][0] = gl_texCoord[0];

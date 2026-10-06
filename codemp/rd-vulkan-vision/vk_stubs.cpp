@@ -20,25 +20,10 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 // vk_stubs.cpp: what the shared files call and this renderer does not do yet
 //
-// Weather (tr_WorldEffects.cpp of rd-vanilla) and the programs of the glow pass (tr_arb.cpp) are OpenGL code.
-// Until this renderer has its own, the calls end here and nothing is drawn for them.
+// The programs of the glow pass (tr_arb.cpp of rd-vanilla) are OpenGL code. Until this renderer has its own
+// glow, the call ends here.
 
 #include "vk_local.h"
-
-void R_InitWorldEffects( void ) {
-}
-
-void R_ShutdownWorldEffects( void ) {
-}
-
-void RE_WorldEffectCommand( const char *command ) {
-}
-
-void R_WorldEffect_f( void ) {
-}
-
-void RE_AddWeatherZone( vec3_t mins, vec3_t maxs ) {
-}
 
 void ARB_InitGPUShaders( void ) {
 }

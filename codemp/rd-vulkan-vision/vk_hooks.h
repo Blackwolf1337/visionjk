@@ -60,8 +60,8 @@ void VK_ImageDelete( unsigned int texnum );
 
 // vk_gl.cpp: the drawing rd-vanilla does in the shared files with immediate mode and with state and matrices
 // of its own: the sides of the sky box and the sun (tr_sky.cpp), the beam and axis surfaces (tr_surface.cpp),
-// debug polygons (tr_main.cpp), the automap (tr_world.cpp). The calls collect vertices and state, glEnd()
-// draws them like any other geometry.
+// debug polygons (tr_main.cpp), the automap (tr_world.cpp), the particles of the weather (tr_WorldEffects.cpp).
+// The calls collect vertices and state, glEnd() draws them like any other geometry.
 void VK_GL_Begin( int mode );
 void VK_GL_End( void );
 void VK_GL_Vertex( float x, float y, float z );
@@ -83,6 +83,8 @@ void VK_GL_Translate( float x, float y, float z );
 #define qglVertex3fv( v )			VK_GL_Vertex( ( v )[0], ( v )[1], ( v )[2] )
 #undef qglTexCoord2fv
 #define qglTexCoord2fv( st )		VK_GL_TexCoord( ( st )[0], ( st )[1] )
+#undef qglTexCoord2f
+#define qglTexCoord2f( s, t )		VK_GL_TexCoord( s, t )
 #undef qglColor3f
 #define qglColor3f( r, g, b )		VK_GL_Color( r, g, b, 1.0f )
 #undef qglColor4f
@@ -104,6 +106,8 @@ void VK_GL_Translate( float x, float y, float z );
 // the error check (tr_cmds.cpp), the depth read of a flare (tr_surface.cpp), the level shot (tr_init.cpp)
 #undef qglLineWidth
 #define qglLineWidth( ... )			((void)0)
+#undef qglMatrixMode
+#define qglMatrixMode( ... )		((void)0)
 #undef qglCallList
 #define qglCallList( ... )			((void)0)
 #undef qglEnable
