@@ -4,8 +4,9 @@ misc_ball and misc_cube: two props with physics of their own.
 The ball falls, bounces, rolls down slopes and comes to rest. The cube is a rigid body with corners and edges:
 it lands on them, tips over, tumbles and slides to a stop on one of its faces. Players kick the ball by running
 into it and shove the cube, which is heavy and slows them down. Force push and pull throw both, shots, sabers
-and explosions knock them away. With +button13 a player takes the one he looks at: it hangs from a point in
-front of his eyes by the spot he took it at, the cube by a corner, and swings there until he lets go.
+and explosions knock them away. They collide with each other, each by its mass, so cubes can be pushed with
+cubes and stacked. With +button13 a player takes the one he looks at: it hangs from a point in front of his
+eyes by the spot he took it at, the cube by a corner, and swings there until he lets go.
 
 Server side only, no client code knows about them. For the client they are plain model entities (ET_GENERAL)
 whose place and angles the server renews every frame. Players are not blocked by them: their contents are those
@@ -27,6 +28,8 @@ Not from JA+ and not from JKAdmin.
 #define PROP_LOUD			140.0f		// faster into something than this and it is heard
 #define PROP_STUCK_FRAMES	40			// that long inside something solid and it goes home
 #define PROP_SOUND_MSEC		150
+#define PROP_WAKE_SPEED		60.0f		// a prop that lies still is a wall for the others until one hits it faster
+#define PROP_WAKE_DEPTH		4.0f		//	than this or is pushed this deep into it
 
 #define BALL_REST_SPEED		8.0f		// slower than this on flat ground and it lies still
 #define BALL_FLAT			0.98f		// z of the normal of ground it can lie on
@@ -34,7 +37,9 @@ Not from JA+ and not from JKAdmin.
 #define BODY_STEP			0.0125f		// longest step of the rigid body in seconds, a server frame is cut into these
 #define BODY_MAX_STEPS		8
 #define BODY_ROUNDS			6			// times the contacts are gone through in a step
-#define BODY_MAX_CONTACTS	26			// the spots looked at: 8 corners, the middles of 12 edges and 6 faces
+#define BODY_SPOTS			27			// the spots of a cube that are looked at: 8 corners, the middles of 12 edges and
+#define BODY_SPOT_MIDDLE	13			//	6 faces. With its middle, which is left out, three by three by three.
+#define BODY_MAX_CONTACTS	96			// 26 against the world, the rest against other props
 #define BODY_SKIN			1.0f		// this close to a surface a spot counts as touching it
 #define BODY_SLOP			0.05f		// this deep in a surface is left alone
 #define BODY_CORE			0.55f		// part of the smallest half edge: a box in the middle nothing gets into
@@ -81,11 +86,14 @@ typedef struct prop_s {
 	int			calmTime;		// since when it hardly moves, 0: it moves
 } prop_t;
 
-// a spot of the cube at a surface
+// a spot of the cube at a surface of the world or of another prop
 typedef struct contact_s {
 	vec3_t		r;				// from the middle of the cube to the spot
-	vec3_t		normal;			// of the surface
+	vec3_t		normal;			// of the surface, towards the cube
 	float		sep;			// above 0: a gap, below: it is in that deep
+	gentity_t	*other;			// the prop it touches there. NULL: the world, or a prop that counts as world
+	vec3_t		r2;				// from the middle of that prop to the spot
+	float		ratio;			// mass of the cube over the mass of that prop: its part of an impulse
 	float		kn;				// what an impulse of 1 along the normal does to the speed of the spot
 	float		want;			// speed along the normal the spot has to have at least
 	float		jn;				// impulse along the normal so far
@@ -108,8 +116,49 @@ static qboolean Prop_Is( const gentity_t *ent ) {
 }
 
 static void Prop_Wake( gentity_t *self ) {
+	const qboolean	slept = self->genericValue2 ? qtrue : qfalse;
+	int				i;
+
 	self->genericValue2 = 0;
 	Prop_State( self )->calmTime = 0;
+	if ( !slept )
+		return;
+
+	// it lay still and may have carried others: what lies still next to it is woken too, down the whole pile
+	for ( i = MAX_CLIENTS; i < level.num_entities; i++ ) {
+		gentity_t	*other = &g_entities[i];
+		float		reach;
+
+		if ( other == self || !Prop_Is( other ) || !other->genericValue2 )
+			continue;
+		reach = self->radius + other->radius + 2.0f;
+		if ( DistanceSquared( self->r.currentOrigin, other->r.currentOrigin ) <= reach * reach )
+			Prop_Wake( other );
+	}
+}
+
+/*
+=================
+Prop_Fixed
+
+Does another prop count as part of the world for a contact? It does while it lies still, and while it rests on
+something and carries the one that asks (normal: from it to that one). That is what lets a pile come to rest.
+A hit that is hard for its mass or a push deep into it wakes it, then it takes its part of the impulse.
+
+into: how fast they come together, ratio: mass of the one that asks over its mass
+=================
+*/
+static qboolean Prop_Fixed( gentity_t *other, const prop_t *q, const vec3_t normal, float into, float sep, float ratio ) {
+	const qboolean carries = ( normal[2] > BODY_GROUND ) ? qtrue : qfalse;
+
+	if ( !other->genericValue2 && !( q->calmTime && carries ) )
+		return qfalse;
+	// what lies on it does not wake it with its weight, whatever that is
+	if ( into * ( carries ? 1.0f : ratio ) > PROP_WAKE_SPEED || sep < -PROP_WAKE_DEPTH ) {
+		Prop_Wake( other );
+		return qfalse;
+	}
+	return qtrue;
 }
 
 static void Prop_BounceSound( gentity_t *self ) {
@@ -144,8 +193,17 @@ static void Body_ToWorld( const prop_t *p, const vec3_t local, vec3_t out ) {
 	VectorMA( out, local[2], p->axis[2], out );
 }
 
+// does it turn for real: a cube, or a ball in a hand. A free ball only shows a roll.
+static qboolean Prop_Turns( const prop_t *p ) {
+	return ( p->box || p->holder ) ? qtrue : qfalse;
+}
+
 // how fast the spot at the offset r from the middle moves
 static void Body_SpeedAt( const gentity_t *self, const prop_t *p, const vec3_t r, vec3_t out ) {
+	if ( !Prop_Turns( p ) ) {
+		VectorCopy( self->movedir, out );
+		return;
+	}
 	CrossProduct( p->spin, r, out );
 	VectorAdd( out, self->movedir, out );
 }
@@ -155,8 +213,47 @@ static void Body_Push( gentity_t *self, prop_t *p, const vec3_t r, const vec3_t 
 	vec3_t turn;
 
 	VectorAdd( self->movedir, impulse, self->movedir );
+	if ( !Prop_Turns( p ) )
+		return;
 	CrossProduct( r, impulse, turn );
 	VectorMA( p->spin, 1.0f / p->inertia, turn, p->spin );
+}
+
+// what an impulse of 1 along dir at the offset r does to the speed of that spot along dir
+static float Body_Give( const prop_t *p, const vec3_t r, const vec3_t dir ) {
+	vec3_t cross;
+
+	if ( !Prop_Turns( p ) )
+		return 1.0f;
+	CrossProduct( r, dir, cross );
+	return 1.0f + VectorLengthSquared( cross ) / p->inertia;
+}
+
+// one of the spots of the cube, as an offset from its middle in the world
+static void Body_Spot( const prop_t *p, int n, vec3_t out ) {
+	vec3_t local;
+
+	VectorSet( local, ( n % 3 - 1 ) * p->half[0], ( n / 3 % 3 - 1 ) * p->half[1], ( n / 9 - 1 ) * p->half[2] );
+	Body_ToWorld( p, local, out );
+}
+
+// how far the cube reaches from its middle along a direction
+static float Body_Reach( const prop_t *p, const vec3_t dir ) {
+	return fabsf( DotProduct( dir, p->axis[0] ) ) * p->half[0] + fabsf( DotProduct( dir, p->axis[1] ) ) * p->half[1]
+		+ fabsf( DotProduct( dir, p->axis[2] ) ) * p->half[2];
+}
+
+// is a point in the cube or within BODY_SKIN of it
+static qboolean Body_Holds( const gentity_t *ent, const prop_t *p, const vec3_t point ) {
+	vec3_t	rel;
+	int		k;
+
+	VectorSubtract( point, ent->r.currentOrigin, rel );
+	for ( k = 0; k < 3; k++ ) {
+		if ( fabsf( DotProduct( rel, p->axis[k] ) ) > p->half[k] + BODY_SKIN )
+			return qfalse;
+	}
+	return qtrue;
 }
 
 // the spot of the cube next to an offset from its middle. Returns how far the offset is from it, 0 inside.
@@ -776,6 +873,105 @@ static void Ball_Move( gentity_t *self, float dt ) {
 }
 
 /*
+=================
+Ball_Props
+
+The ball against the other balls and the cubes: they bounce off each other, each by its mass, and are put
+apart. A cube that lies still is a wall for the ball until it is hit hard. On top of a cube the ball rolls out
+like on the ground.
+=================
+*/
+static void Ball_Props( gentity_t *self, float dt ) {
+	int i;
+
+	for ( i = MAX_CLIENTS; i < level.num_entities; i++ ) {
+		gentity_t	*other = &g_entities[i];
+		prop_t		*q = &props[i];
+		const float	reach = self->radius + other->radius;
+		vec3_t		rel, normal, r2, speed, out;
+		float		depth, into, ratio, len;
+		qboolean	fixed;
+		trace_t		tr;
+
+		if ( other == self || !Prop_Is( other ) )
+			continue;
+		VectorSubtract( self->r.currentOrigin, other->r.currentOrigin, rel );
+		if ( VectorLengthSquared( rel ) >= reach * reach )
+			continue;
+
+		if ( q->box ) {
+			// from the spot of the cube next to the middle of the ball
+			depth = self->radius - Body_Nearest( q, rel, r2 );
+			if ( depth <= 0.0f )
+				continue;
+			VectorSubtract( rel, r2, normal );
+		} else {
+			depth = reach - VectorLength( rel );
+			VectorCopy( rel, normal );
+		}
+		if ( VectorNormalize( normal ) < 0.1f ) {
+			// the middle of the ball is in it: out the way their middles lie, or up
+			VectorCopy( rel, normal );
+			if ( VectorNormalize( normal ) < 0.1f )
+				VectorSet( normal, 0, 0, 1 );
+		}
+		if ( !q->box )
+			VectorScale( normal, other->radius, r2 );
+
+		// how fast they come together
+		Body_SpeedAt( other, q, r2, speed );
+		VectorSubtract( self->movedir, speed, speed );
+		into = -DotProduct( speed, normal );
+		fixed = Prop_Fixed( other, q, normal, into, -depth, self->mass / other->mass );
+		ratio = fixed ? 0.0f : self->mass / other->mass;
+
+		if ( into > 0.0f ) {
+			const float	softer = ( other->physicsBounce < self->physicsBounce ) ? other->physicsBounce : self->physicsBounce;
+			const float	bounce = ( into > PROP_MIN_BOUNCE ) ? softer : 0.0f;
+			vec3_t		impulse;
+
+			VectorScale( normal, ( 1.0f + bounce ) * into / ( 1.0f + ratio * Body_Give( q, r2, normal ) ), impulse );
+			VectorAdd( self->movedir, impulse, self->movedir );
+			if ( !fixed ) {
+				VectorScale( impulse, -ratio, impulse );
+				Body_Push( other, q, r2, impulse );
+			}
+			if ( into > PROP_LOUD )
+				Prop_BounceSound( self );
+			self->genericValue2 = 0;
+		}
+
+		if ( normal[2] > BODY_GROUND ) {
+			// rolling resistance against its speed along the surface, seen from the other
+			Body_SpeedAt( other, q, r2, speed );
+			VectorSubtract( self->movedir, speed, speed );
+			VectorMA( speed, -DotProduct( speed, normal ), normal, speed );
+			len = VectorLength( speed );
+			if ( len > 0.0f ) {
+				const float slower = ( self->random * dt < len ) ? self->random * dt : len;
+
+				VectorMA( self->movedir, -slower / len, speed, self->movedir );
+			}
+		}
+
+		// apart, as far as the world lets them. The lighter one goes more of the way.
+		if ( depth > 0.5f )
+			self->genericValue2 = 0;
+		VectorMA( self->r.currentOrigin, depth / ( 1.0f + ratio ), normal, out );
+		trap->Trace( &tr, self->r.currentOrigin, self->r.mins, self->r.maxs, out, self->s.number, MASK_SOLID, qfalse, 0, 0 );
+		if ( !tr.startsolid && !tr.allsolid )
+			VectorCopy( tr.endpos, self->r.currentOrigin );
+		// a cube finds the ball in its own step and goes its part there
+		if ( !fixed && !q->box ) {
+			VectorMA( other->r.currentOrigin, -depth * ratio / ( 1.0f + ratio ), normal, out );
+			trap->Trace( &tr, other->r.currentOrigin, other->r.mins, other->r.maxs, out, other->s.number, MASK_SOLID, qfalse, 0, 0 );
+			if ( !tr.startsolid && !tr.allsolid )
+				VectorCopy( tr.endpos, other->r.currentOrigin );
+		}
+	}
+}
+
+/*
 ===============================================================================
 
 The cube, and either prop in a hand
@@ -785,47 +981,197 @@ The cube, and either prop in a hand
 
 /*
 =================
-Body_Contacts
+Contact_Add
 
-Where the cube touches the world. The engine only traces boxes that are not turned, so 26 spots of the cube
-are looked at one by one: its corners and the middles of its edges and faces. A line from the middle of the
-cube through each spot finds the surface the spot is in or close to.
+A contact of the cube with another prop. Whether that one takes its part of the impulses is decided here
+(Prop_Fixed), from how fast the two come together at the spot.
 =================
 */
-static int Body_Contacts( gentity_t *self, const prop_t *p, contact_t *list ) {
-	int count = 0, x, y, z;
+static int Contact_Add( gentity_t *self, const prop_t *p, gentity_t *other, const prop_t *q, contact_t *list, int count,
+		const vec3_t r, const vec3_t r2, const vec3_t normal, float sep ) {
+	const float	ratio = self->mass / other->mass;
+	contact_t	*c;
+	vec3_t		mine, theirs;
 
-	for ( x = -1; x <= 1; x++ ) {
-		for ( y = -1; y <= 1; y++ ) {
-			for ( z = -1; z <= 1; z++ ) {
-				contact_t	*c = &list[count];
-				vec3_t		local, spot;
-				float		len;
-				trace_t		tr;
+	if ( count >= BODY_MAX_CONTACTS )
+		return count;
 
-				if ( !x && !y && !z )
-					continue;
+	c = &list[count];
+	VectorCopy( r, c->r );
+	VectorCopy( r2, c->r2 );
+	VectorCopy( normal, c->normal );
+	c->sep = sep;
 
-				VectorSet( local, x * p->half[0], y * p->half[1], z * p->half[2] );
-				Body_ToWorld( p, local, c->r );
-				len = VectorLength( c->r );
-				VectorMA( self->r.currentOrigin, ( len + BODY_SKIN ) / len, c->r, spot );
-				trap->Trace( &tr, self->r.currentOrigin, NULL, NULL, spot, self->s.number, MASK_SOLID, qfalse, 0, 0 );
-				// the middle is inside something: Body_Step deals with that
-				if ( tr.startsolid || tr.allsolid )
-					return 0;
-				if ( tr.fraction >= 1.0f || VectorLengthSquared( tr.plane.normal ) < 0.5f )
-					continue;
+	Body_SpeedAt( self, p, r, mine );
+	Body_SpeedAt( other, q, r2, theirs );
+	VectorSubtract( mine, theirs, mine );
+	if ( Prop_Fixed( other, q, normal, -DotProduct( mine, normal ), sep, ratio ) ) {
+		c->other = NULL;
+		c->ratio = 0.0f;
+	} else {
+		c->other = other;
+		c->ratio = ratio;
+	}
+	return count + 1;
+}
 
-				VectorCopy( tr.plane.normal, c->normal );
-				VectorAdd( self->r.currentOrigin, c->r, spot );
-				VectorSubtract( spot, tr.endpos, spot );
-				c->sep = DotProduct( spot, c->normal );
-				count++;
-			}
+/*
+=================
+Cube_Cube
+
+Where this cube touches another one. First the direction they are pushed apart along: of the six directions
+their faces look into, the one along which they overlap least. Without an overlap along one of them they do
+not touch. Then every spot of one that is in the other is a contact.
+=================
+*/
+static int Cube_Cube( gentity_t *self, const prop_t *p, gentity_t *other, const prop_t *q, contact_t *list, int count ) {
+	vec3_t	apart, normal, r, r2, point;
+	float	least = 0.0f, reachSelf = 0.0f, reachOther = 0.0f;
+	int		k, n;
+
+	VectorSubtract( self->r.currentOrigin, other->r.currentOrigin, apart );
+	VectorClear( normal );
+	for ( k = 0; k < 6; k++ ) {
+		const float	*dir = ( k < 3 ) ? q->axis[k] : p->axis[k - 3];
+		const float	dist = DotProduct( apart, dir );
+		const float	mine = Body_Reach( p, dir ), theirs = Body_Reach( q, dir );
+		const float	overlap = mine + theirs - fabsf( dist );
+
+		if ( overlap < -BODY_SKIN )
+			return count;
+		if ( !k || overlap < least ) {
+			// from the other one to this one
+			least = overlap;
+			VectorScale( dir, ( dist < 0.0f ) ? -1.0f : 1.0f, normal );
+			reachSelf = mine;
+			reachOther = theirs;
+		}
+	}
+
+	for ( n = 0; n < BODY_SPOTS; n++ ) {
+		if ( n == BODY_SPOT_MIDDLE )
+			continue;
+
+		// a spot of this cube in the other one: how far it is under the face of the other one
+		Body_Spot( p, n, r );
+		VectorAdd( self->r.currentOrigin, r, point );
+		if ( Body_Holds( other, q, point ) ) {
+			VectorSubtract( point, other->r.currentOrigin, r2 );
+			count = Contact_Add( self, p, other, q, list, count, r, r2, normal, DotProduct( normal, r2 ) - reachOther );
+		}
+
+		// and the same spot of the other one in this cube
+		Body_Spot( q, n, r2 );
+		VectorAdd( other->r.currentOrigin, r2, point );
+		if ( Body_Holds( self, p, point ) ) {
+			VectorSubtract( point, self->r.currentOrigin, r );
+			count = Contact_Add( self, p, other, q, list, count, r, r2, normal, -DotProduct( normal, r ) - reachSelf );
 		}
 	}
 	return count;
+}
+
+// where this cube touches a ball: at its spot next to the middle of the ball
+static int Cube_Ball( gentity_t *self, const prop_t *p, gentity_t *other, const prop_t *q, contact_t *list, int count ) {
+	vec3_t	rel, r, r2, normal;
+	float	dist;
+
+	VectorSubtract( other->r.currentOrigin, self->r.currentOrigin, rel );
+	dist = Body_Nearest( p, rel, r );
+	if ( dist > other->radius + BODY_SKIN )
+		return count;
+
+	// from the ball to the cube
+	VectorSubtract( r, rel, normal );
+	if ( VectorNormalize( normal ) < 0.1f ) {
+		// the middle of the ball is in the cube: the way their middles lie, or up
+		VectorNegate( rel, normal );
+		if ( VectorNormalize( normal ) < 0.1f )
+			VectorSet( normal, 0, 0, 1 );
+	}
+	VectorScale( normal, other->radius, r2 );
+	return Contact_Add( self, p, other, q, list, count, r, r2, normal, dist - other->radius );
+}
+
+/*
+=================
+Body_Contacts
+
+Where the cube touches the world and the other props.
+
+The world: the engine only traces boxes that are not turned, so the spots of the cube are looked at one by
+one: its corners and the middles of its edges and faces. A line from the middle of the cube through each spot
+finds the surface the spot is in or close to.
+
+Props: they are not in those traces (shots and players have to get through them), their shapes are known here.
+=================
+*/
+static int Body_Contacts( gentity_t *self, const prop_t *p, contact_t *list ) {
+	int count = 0, n;
+
+	for ( n = 0; n < BODY_SPOTS; n++ ) {
+		contact_t	*c = &list[count];
+		vec3_t		spot;
+		float		len;
+		trace_t		tr;
+
+		if ( n == BODY_SPOT_MIDDLE )
+			continue;
+
+		Body_Spot( p, n, c->r );
+		len = VectorLength( c->r );
+		VectorMA( self->r.currentOrigin, ( len + BODY_SKIN ) / len, c->r, spot );
+		trap->Trace( &tr, self->r.currentOrigin, NULL, NULL, spot, self->s.number, MASK_SOLID, qfalse, 0, 0 );
+		// the middle is inside something: Body_Step deals with that
+		if ( tr.startsolid || tr.allsolid )
+			return 0;
+		if ( tr.fraction >= 1.0f || VectorLengthSquared( tr.plane.normal ) < 0.5f )
+			continue;
+
+		VectorCopy( tr.plane.normal, c->normal );
+		VectorAdd( self->r.currentOrigin, c->r, spot );
+		VectorSubtract( spot, tr.endpos, spot );
+		c->sep = DotProduct( spot, c->normal );
+		c->other = NULL;
+		c->ratio = 0.0f;
+		count++;
+	}
+
+	for ( n = MAX_CLIENTS; n < level.num_entities && count < BODY_MAX_CONTACTS; n++ ) {
+		gentity_t		*other = &g_entities[n];
+		const prop_t	*q = &props[n];
+		float			reach;
+
+		if ( other == self || !Prop_Is( other ) )
+			continue;
+		reach = self->radius + other->radius + BODY_SKIN;
+		if ( DistanceSquared( self->r.currentOrigin, other->r.currentOrigin ) > reach * reach )
+			continue;
+		count = q->box ? Cube_Cube( self, p, other, q, list, count ) : Cube_Ball( self, p, other, q, list, count );
+	}
+	return count;
+}
+
+// how fast the cube moves at a contact, seen from what it touches there
+static void Contact_Speed( const gentity_t *self, const prop_t *p, const contact_t *c, vec3_t out ) {
+	Body_SpeedAt( self, p, c->r, out );
+	if ( c->other ) {
+		vec3_t theirs;
+
+		Body_SpeedAt( c->other, Prop_State( c->other ), c->r2, theirs );
+		VectorSubtract( out, theirs, out );
+	}
+}
+
+// an impulse at a contact: the cube gets it, a prop it touches there gets its part the other way
+static void Contact_Push( gentity_t *self, prop_t *p, const contact_t *c, const vec3_t impulse ) {
+	Body_Push( self, p, c->r, impulse );
+	if ( c->other ) {
+		vec3_t back;
+
+		VectorScale( impulse, -c->ratio, back );
+		Body_Push( c->other, Prop_State( c->other ), c->r2, back );
+	}
 }
 
 // does it lie on something: three spots that are not in one line, on ground that carries
@@ -877,7 +1223,8 @@ Body_Step
 
 One step of the rigid body. Gravity first. Then the speeds are put right by impulses, a few rounds until they
 agree: the hand pulls the spot it holds along, and every spot at a surface loses its speed into the surface
-(or bounces off it) and is rubbed by it, no harder than the grip times what presses it on. Then the body goes
+(or bounces off it) and is rubbed by it, no harder than the grip times what presses it on. Where the surface
+is another prop that can move, that one gets the same impulse the other way, by its mass. Then the body goes
 its way and turns.
 
 Returns qfalse when it went home or is inside something, the frame ends there.
@@ -902,16 +1249,17 @@ static qboolean Body_Step( gentity_t *self, prop_t *p, float dt, const vec3_t ha
 
 	for ( i = 0; i < count; i++ ) {
 		contact_t	*c = &contacts[i];
-		vec3_t		rn, speed;
+		vec3_t		speed;
 		float		into;
 
-		CrossProduct( c->r, c->normal, rn );
-		c->kn = 1.0f + VectorLengthSquared( rn ) / p->inertia;
+		c->kn = Body_Give( p, c->r, c->normal );
+		if ( c->other )
+			c->kn += c->ratio * Body_Give( Prop_State( c->other ), c->r2, c->normal );
 		c->jn = 0.0f;
 		VectorClear( c->jt );
 
 		// a spot over the surface may close the gap, one in it has to stop, a fast one bounces
-		Body_SpeedAt( self, p, c->r, speed );
+		Contact_Speed( self, p, c, speed );
 		into = -DotProduct( speed, c->normal );
 		c->want = ( c->sep > 0.0f ) ? -c->sep / dt : 0.0f;
 		if ( into > PROP_MIN_BOUNCE && into * self->physicsBounce > c->want )
@@ -947,33 +1295,35 @@ static qboolean Body_Step( gentity_t *self, prop_t *p, float dt, const vec3_t ha
 
 		for ( i = 0; i < count; i++ ) {
 			contact_t	*c = &contacts[i];
-			vec3_t		speed, slide, rt, total;
-			float		old, limit;
+			vec3_t		speed, slide, total;
+			float		old, limit, give;
 
 			// along the normal: it only ever pushes, never holds on
-			Body_SpeedAt( self, p, c->r, speed );
+			Contact_Speed( self, p, c, speed );
 			old = c->jn;
 			c->jn = old + ( c->want - DotProduct( speed, c->normal ) ) / c->kn;
 			if ( c->jn < 0.0f )
 				c->jn = 0.0f;
 			VectorScale( c->normal, c->jn - old, total );
-			Body_Push( self, p, c->r, total );
+			Contact_Push( self, p, c, total );
 
 			// friction: against the speed along the surface
-			Body_SpeedAt( self, p, c->r, speed );
+			Contact_Speed( self, p, c, speed );
 			VectorMA( speed, -DotProduct( speed, c->normal ), c->normal, slide );
 			len = VectorNormalize( slide );
 			if ( len < 0.01f )
 				continue;
-			CrossProduct( c->r, slide, rt );
-			VectorMA( c->jt, -len / ( 1.0f + VectorLengthSquared( rt ) / p->inertia ), slide, total );
+			give = Body_Give( p, c->r, slide );
+			if ( c->other )
+				give += c->ratio * Body_Give( Prop_State( c->other ), c->r2, slide );
+			VectorMA( c->jt, -len / give, slide, total );
 			limit = self->random * c->jn;
 			len = VectorLength( total );
 			if ( len > limit )
 				VectorScale( total, limit / len, total );
 			VectorSubtract( total, c->jt, slide );
 			VectorCopy( total, c->jt );
-			Body_Push( self, p, c->r, slide );
+			Contact_Push( self, p, c, slide );
 		}
 	}
 
@@ -986,11 +1336,13 @@ static qboolean Body_Step( gentity_t *self, prop_t *p, float dt, const vec3_t ha
 		return qfalse;
 	}
 
-	// out of what it is in: along the normals, every surface only as far as the ones before left it in
+	// out of what it is in: along the normals, every surface only as far as the ones before left it in. Out of
+	// a prop that can move it only goes its part of the way, the lighter one more, the other goes the rest itself.
 	VectorClear( corr );
 	for ( i = 0; i < count; i++ ) {
 		const contact_t	*c = &contacts[i];
-		const float		need = ( -c->sep - BODY_SLOP ) * 0.8f - DotProduct( corr, c->normal );
+		const float		part = c->other ? 1.0f / ( 1.0f + c->ratio ) : 1.0f;
+		const float		need = ( -c->sep - BODY_SLOP ) * 0.8f * part - DotProduct( corr, c->normal );
 
 		if ( need > 0.0f )
 			VectorMA( corr, need, c->normal, corr );
@@ -1184,9 +1536,12 @@ static void prop_think( gentity_t *self ) {
 
 	if ( p->box || p->holder ) {
 		Body_Move( self, p, dt );
+		if ( !p->box )
+			Ball_Props( self, dt );
 		Body_Net( self, p );
 	} else {
 		Ball_Move( self, dt );
+		Ball_Props( self, dt );
 		Ball_Net( self );
 	}
 }
@@ -1406,7 +1761,8 @@ static qboolean Prop_Spawn( gentity_t *ent, const char *model, int scale, float 
 
 /*QUAKED misc_ball (0.9 0.6 0.1) (-18 -18 -18) (18 18 18)
 A ball. It falls, bounces and rolls, players kick it by running into it, force push and pull throw it, shots,
-sabers and explosions knock it away. Players are not blocked by it. A player who looks at it takes it with
+sabers and explosions knock it away. It bounces off other balls and off cubes. Players are not blocked by it. A
+player who looks at it takes it with
 +button13 and holds it until he lets go of the button. Using it (targetname) brings it back to where it was
 spawned, so does falling out of the world or getting stuck.
 
@@ -1443,7 +1799,8 @@ void SP_misc_ball( gentity_t *ent ) {
 /*QUAKED misc_cube (0.9 0.6 0.1) (-16 -16 -16) (16 16 16)
 A cube with corners and edges. It falls, lands on a corner or an edge, tips over, tumbles and slides to a stop
 on one of its faces. It is heavy: players shove it slowly instead of kicking it away, force push and pull make
-it tumble, shots turn it when they hit off its middle. Players are not blocked by it. A player who looks at it
+it tumble, shots turn it when they hit off its middle. Cubes push each other and can be stacked, balls bounce
+off them. Players are not blocked by it. A player who looks at it
 takes it with +button13 at the corner next to his line of sight, it hangs from there and swings until he lets
 go of the button. Using it (targetname) brings it back to where it was spawned, so does falling out of the
 world or getting stuck.

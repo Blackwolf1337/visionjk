@@ -153,9 +153,23 @@ Also changed:
   slanted upper edges, the physics use the full box around it. That box is read from the bounds in the md3 when
   the cube spawns, so the physics fit whatever `model` is set, cubes or not. Keys: `size` 32 (its longest edge,
   the model is scaled to it), `bounce` 0.25, `friction` 0.7 (grip on the ground, not the rolling resistance of
-  the ball), `mass` 4, `kick` 1, `model`, `angles`. The page places it 48 units above the floor. Cubes do not
-  collide with each other or with balls, nobody can stand on one, lifts do not carry it. Added without a test
-  run.
+  the ball), `mass` 4, `kick` 1, `model`, `angles`. The page places it 48 units above the floor. Nobody can
+  stand on one, lifts do not carry it. Added without a test run.
+- New: balls and cubes collide with each other, so cubes can be pushed with cubes and stacked. The traces of
+  the engine do not see them (shots and players have to get through), so this is worked out from their shapes.
+  Cube against cube: of the six directions their faces look into, the one along which they overlap least is
+  the direction they are pushed apart along, and every spot of one that is in the other is a contact in the
+  same solver that handles the world. Both get the impulse, each by its mass, friction included, so a cube that
+  is pushed takes the one on top of it along. Cube against ball: one contact at the spot of the cube next to
+  the ball. Ball against ball and ball against cube are also handled in the think of the ball: they bounce
+  off each other by their masses and are put apart, and a ball on top of a cube rolls out like on the ground. A
+  prop that lies still counts as part of the world for the others, and so does one that rests on something
+  for what lies on top of it. That is what lets a pile come to rest, from the bottom up. A hit faster than 60
+  units per second (weighed by the masses for a hit from the side) or a push more than 4 units into it wakes
+  it, and a prop that wakes up wakes the ones that lie still next to it, so a pile falls when its base is
+  taken away. Limits: edges that cross without a spot of one cube in the other are not seen, a ball can not
+  come to rest on a cube without thinking every frame (it does), and a pile is only as calm as the solver.
+  Added without a test run.
 - New: taking a ball or a cube into the hand with `+button13` (for example `bind g +button13`). The button
   bits of the base game end at 2048, JA+ has 4096 (`+button12`) for the hook, `+button13` to `+button15` (8192,
   16384, 32768) are free and all 16 bits reach the server. No client change: the stock client and the JA+
@@ -174,8 +188,8 @@ Also changed:
   the ball of the training remote scaled up) on a linear trajectory the server renews every frame, with a second
   one for the turning. Its contents are those of a corpse, so shots hit it and players are not blocked. Keys:
   `radius` 18, `modelscale` 600, `bounce` 0.7, `friction` 90, `mass` 1, `kick` 1, `model`. A use, falling out of
-  the world or getting stuck brings it back to where it was placed. Balls do not collide with each other, lifts do
-  not carry it, and the black hole does not pull it. Added without a test run.
+  the world or getting stuck brings it back to where it was placed. Lifts do not carry it, and the black hole
+  does not pull it. Added without a test run.
 - New entity `misc_blackhole` (`codemp/game/g_blackhole.c`), made to be placed in the World tab: it is in the
   spawn table, so it shows up in the class list. It pulls players and NPCs towards itself, stronger the closer
   they are, and crushes what reaches its core. It is server side only: for the client it is a stock looping effect
