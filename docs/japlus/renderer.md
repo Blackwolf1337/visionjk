@@ -137,6 +137,8 @@ left in these views are the effects of the game (flames, smoke, light cones) and
   whether something covers it. Here that pixel is copied at the end of the view and read when the frame has
   run on the device, so a flare shows up and goes away two frames late. Its place and size are the same.
 - Screenshots hold the frame after the gamma pass.
+- A body that burns away (disruptor) swells along the line of the fire. `rd-vanilla` moves the vertices again
+  before every stage of the shader, here all stages use what the first one has. This was not seen in the game.
 - `r_showImages`: `rd-vanilla` sizes the tiles by the width of the window but draws them in the 640 x 480 of
   the menus, so most are outside of a large window. Here all of them are on the screen.
 - Textures are not compressed (32 bit with mip levels). mp/ffa3 takes about 550 MB of device memory, 180 MB of
@@ -144,8 +146,8 @@ left in these views are the effects of the game (flames, smoke, light cones) and
 
 ## Not done
 
-Stencil and projection shadows (`cg_shadows 2` and `3`), the vertex deform of disintegration, recording to AVI,
-the automap, `r_shownormals`, anti aliasing.
+Stencil and projection shadows (`cg_shadows 2` and `3`), recording to AVI, the automap, `r_shownormals`,
+anti aliasing.
 
 Surfaces with the shader `internal_distortion` are left out. `rd-vanilla` cuts them into the stencil buffer and
 fills the hole with a stretched copy of the screen, but nothing in the game code or the data of the base game

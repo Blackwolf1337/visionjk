@@ -745,6 +745,12 @@ void RB_StageIteratorGeneric( void ) {
 		}
 	} else {
 		RB_DeformTessGeometry();
+		// A body that burns away swells along the line of the fire. rd-vanilla moves the vertices again before
+		// every stage, so a second stage lies a little further out. Here all stages share what the first one has.
+		if ( shader != tr.projectionShadowShader && shader != tr.shadowShader
+			&& ( backEnd.currentEntity->e.renderfx & ( RF_DISINTEGRATE1 | RF_DISINTEGRATE2 ) ) ) {
+			RB_CalcDisintegrateVertDeform();
+		}
 		if ( !VK_UploadTess() ) {
 			return;
 		}
