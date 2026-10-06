@@ -291,7 +291,8 @@ VkPipeline VK_CreatePipeline( VkShaderModule vertex, VkShaderModule fragment, ui
 	raster.polygonMode = ( !post && vk.wireframe && ( stateBits & GLS_POLYMODE_LINE ) ) ? VK_POLYGON_MODE_LINE : VK_POLYGON_MODE_FILL;
 	raster.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;		// as in OpenGL, the viewport is flipped to match
 	raster.lineWidth = 1.0f;
-	multisample.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+	// what goes into the frame of the game has its number of samples, the passes into targets of their own have one
+	multisample.rasterizationSamples = ( post == 1 ) ? VK_SAMPLE_COUNT_1_BIT : vk.samples;
 	depth.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
 
 	memset( &attachment, 0, sizeof( attachment ) );

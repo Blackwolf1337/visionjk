@@ -43,6 +43,7 @@ indexing ends in an error that names `rd-vanilla`.
 | Cvar | Meaning |
 |------|---------|
 | `r_vkDebug 1` | validation layer and its messages in the console, if the layer is installed (latched) |
+| `r_ext_multisample 2`, `4`, `8` | anti aliasing with that many samples a pixel, the cvar `rd-vanilla` uses for it (latched) |
 | `r_vkStatic 0` | cheat: nothing from the device buffers, every vertex through the CPU as in `rd-vanilla`. For telling a fault of the buffers from a fault of the shading |
 | `gfxinfo` | device, memory, what the last frame was made of (draws, triangles, transforms, bones) and the shaders whose batches were still built on the CPU |
 
@@ -108,6 +109,7 @@ library. The other renderers do not use them.
 | State of a stage | set per stage | only the blend function needs a pipeline, depth, cull and offset are dynamic state |
 | A draw | arrays set up and `glDrawElements` per stage | one indexed draw per stage. Which draw it is comes as its instance number, the vertex streams of the frame are bound once and a batch names its first vertex, model triangles are runs in an index buffer on the device |
 | Gamma, overbright | ramp of the display or baked into textures | one pass over the finished frame |
+| Anti aliasing | a window with several samples a pixel | the scene and its glow go into targets with several samples, each pass ends by resolving them into the plain targets the other passes read |
 
 Still on the CPU, through the tess arrays as in `rd-vanilla`: the sky, shaders with the other kinds of
 `deformVertexes` (autosprite, text, normals) or with more than one of them,
@@ -146,12 +148,14 @@ left in these views are the effects of the game (flames, smoke, light cones) and
   before every stage of the shader, here all stages use what the first one has. This was not seen in the game.
 - `r_showImages`: `rd-vanilla` sizes the tiles by the width of the window but draws them in the 640 x 480 of
   the menus, so most are outside of a large window. Here all of them are on the screen.
+- Anti aliasing costs memory for three more targets with that many samples a pixel: about 44 MB at 1280x720
+  with four samples, about 400 MB at 3840x2160.
 - Textures are not compressed (32 bit with mip levels). mp/ffa3 takes about 550 MB of device memory, 180 MB of
   that are the buffers and targets the renderer always has.
 
 ## Not done
 
-Stencil and projection shadows (`cg_shadows 2` and `3`), the automap, `r_shownormals`, anti aliasing.
+Stencil and projection shadows (`cg_shadows 2` and `3`), the automap, `r_shownormals`.
 
 Surfaces with the shader `internal_distortion` are left out. `rd-vanilla` cuts them into the stencil buffer and
 fills the hole with a stretched copy of the screen, but nothing in the game code or the data of the base game
@@ -189,9 +193,14 @@ Three of those levels have a sky portal. Five levels one after the other and a `
 the device memory in use goes up and down with the level (400 to 570 MB) and is the same when a level comes
 again.
 
+Anti aliasing, `r_ext_multisample 4` in both renderers: mp/ffa3 0.2 and 0.4 %, with `r_DynamicGlow 1` 0.1 and
+0.3 %, mp/ffa4 with its flares 0.1 and 0.1 %. Edges are smooth where `rd-vanilla` has them smooth. A fight with
+glow and four samples was looked at as a picture. In the timedemo below four samples cost little: 673 and 673
+frames a second against 707, 674 and 688 without, both measured while another test ran on the machine.
+
 A fight, frame by frame: the first 30 seconds of that demo recorded to AVI by both renderers
 (`tools/clienttests/rd_benchvideo.cfg`) and compared with `tools/rdvideodiff.py`. Every frame of such a file
-is 40 ms of the demo, so both show the same moments. 30 frames out of 747: 2.2 to 3.8 % of the pixels off by
+is 40 ms of the demo, so both show the same moments. 75 frames out of 747: 2.1 to 3.7 % of the pixels off by
 more than 16. What differs are the sparks (random numbers), the fine grating of the floor and the noise of
 Motion JPEG. The file of `rd-vanilla` is three frames behind: it reads the frame buffer before the frame the
 video command belongs to is drawn, and what is in the buffer then is that old on this machine.

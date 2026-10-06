@@ -119,6 +119,15 @@ void VK_BeginTarget( VkCommandBuffer cmd, vkTarget_t *color, vkTarget_t *depth, 
 
 	colorInfo.imageView = color->view;
 	colorInfo.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+	// Anti aliasing: the scene and its glow are drawn into targets with several samples a pixel. The end of the
+	// pass puts their average into the plain target, which is what everything else reads (the gamma pass, the
+	// copy for refraction, the blur of the glow).
+	if ( vk.samples > VK_SAMPLE_COUNT_1_BIT && ( color == &vk.color || color == &vk.glow ) ) {
+		colorInfo.imageView = ( color == &vk.color ) ? vk.colorMS.view : vk.glowMS.view;
+		colorInfo.resolveMode = VK_RESOLVE_MODE_AVERAGE_BIT;
+		colorInfo.resolveImageView = color->view;
+		colorInfo.resolveImageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+	}
 	colorInfo.loadOp = ( colorLoad == 1 ) ? VK_ATTACHMENT_LOAD_OP_CLEAR : ( colorLoad == 2 ? VK_ATTACHMENT_LOAD_OP_LOAD : VK_ATTACHMENT_LOAD_OP_DONT_CARE );
 	colorInfo.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 	info.renderArea.extent.width = (uint32_t)color->width;
@@ -129,6 +138,13 @@ void VK_BeginTarget( VkCommandBuffer cmd, vkTarget_t *color, vkTarget_t *depth, 
 	if ( depth ) {
 		depthInfo.imageView = depth->view;
 		depthInfo.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+		if ( vk.samples > VK_SAMPLE_COUNT_1_BIT && depth == &vk.depth ) {
+			// the plain depth gets the first sample of every pixel: the flares read it
+			depthInfo.imageView = vk.depthMS.view;
+			depthInfo.resolveMode = VK_RESOLVE_MODE_SAMPLE_ZERO_BIT;
+			depthInfo.resolveImageView = depth->view;
+			depthInfo.resolveImageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+		}
 		depthInfo.loadOp = depthLoad ? VK_ATTACHMENT_LOAD_OP_LOAD : VK_ATTACHMENT_LOAD_OP_CLEAR;
 		// the glow pass draws over the depth of the scene
 		depthInfo.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
@@ -268,6 +284,10 @@ void VK_BeginFrame( void ) {
 	VK_CHECK( qvkBeginCommandBuffer( frame->cmd, &begin ) );
 	VK_TargetLayout( frame->cmd, &vk.color, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
 	VK_TargetLayout( frame->cmd, &vk.depth, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL );
+	if ( vk.samples > VK_SAMPLE_COUNT_1_BIT ) {
+		VK_TargetLayout( frame->cmd, &vk.colorMS, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
+		VK_TargetLayout( frame->cmd, &vk.depthMS, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL );
+	}
 	VK_BeginTarget( frame->cmd, &vk.color, &vk.depth, 1, qfalse );
 
 	vk.frame = frame;

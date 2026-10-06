@@ -226,6 +226,8 @@ typedef struct vkState_s {
 	int							width, height;		// size of the frame, glConfig.vidWidth and vidHeight
 	vkTarget_t					color;				// the frame as the game draws it
 	vkTarget_t					depth;
+	VkSampleCountFlagBits		samples;			// r_ext_multisample. More than one: the scene is drawn into the three targets below
+	vkTarget_t					colorMS, depthMS, glowMS;	// and each pass ends by resolving them into color, depth and glow
 	vkTarget_t					final;				// after gamma, what goes to the window and into screenshots
 	vkTarget_t					screen;				// a copy of the frame as it was a moment ago, for surfaces that bend what is behind them
 	int							screenSlot;			// the entry of the texture table that shows it, -1: none yet
@@ -333,7 +335,8 @@ void		VK_FlushUploads( void );
 VkCommandBuffer VK_UploadCmd( void );
 byte		*VK_Stage( VkDeviceSize size, VkDeviceSize *offset );
 void		VK_UpdateImage( image_t *image, int width, int height, const byte *rgba );
-void		VK_CreateTarget( vkTarget_t *target, int width, int height, VkFormat format, VkImageUsageFlags usage, VkImageAspectFlags aspect );
+void		VK_CreateTarget( vkTarget_t *target, int width, int height, VkFormat format, VkImageUsageFlags usage, VkImageAspectFlags aspect,
+				VkSampleCountFlagBits samples );
 void		VK_DestroyTarget( vkTarget_t *target );
 void		VK_SetLayout( VkCommandBuffer cmd, VkImage image, VkImageAspectFlags aspect, VkImageLayout from, VkImageLayout to );
 void		VK_TargetLayout( VkCommandBuffer cmd, vkTarget_t *target, VkImageLayout to );

@@ -64,7 +64,7 @@ void VK_SetLayout( VkCommandBuffer cmd, VkImage image, VkImageAspectFlags aspect
 }
 
 void VK_TargetLayout( VkCommandBuffer cmd, vkTarget_t *target, VkImageLayout to ) {
-	const VkImageAspectFlags aspect = ( target == &vk.depth )
+	const VkImageAspectFlags aspect = ( target == &vk.depth || target == &vk.depthMS )
 		? ( VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT ) : VK_IMAGE_ASPECT_COLOR_BIT;
 
 	VK_SetLayout( cmd, target->image, aspect, target->layout, to );
@@ -78,7 +78,8 @@ VK_CreateTarget
 An image to render into
 ===============
 */
-void VK_CreateTarget( vkTarget_t *target, int width, int height, VkFormat format, VkImageUsageFlags usage, VkImageAspectFlags aspect ) {
+void VK_CreateTarget( vkTarget_t *target, int width, int height, VkFormat format, VkImageUsageFlags usage, VkImageAspectFlags aspect,
+	VkSampleCountFlagBits samples ) {
 	VkImageCreateInfo info = { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
 	VkImageViewCreateInfo view = { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
 	VkMemoryRequirements req;
@@ -91,7 +92,7 @@ void VK_CreateTarget( vkTarget_t *target, int width, int height, VkFormat format
 	info.extent.depth = 1;
 	info.mipLevels = 1;
 	info.arrayLayers = 1;
-	info.samples = VK_SAMPLE_COUNT_1_BIT;
+	info.samples = samples;
 	info.tiling = VK_IMAGE_TILING_OPTIMAL;
 	info.usage = usage;
 	info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;

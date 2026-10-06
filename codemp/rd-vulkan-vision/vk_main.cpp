@@ -26,6 +26,7 @@ vkState_t	vk;
 
 static cvar_t	*r_vkDebug;			// 1: validation layer and its messages, if the layer is installed
 static cvar_t	*r_swapIntervalVk;	// r_swapInterval of the engine
+static cvar_t	*r_multisampleVk;	// r_ext_multisample of the engine
 
 static char		vk_versionString[64];
 static char		vk_driverString[64];
@@ -385,6 +386,26 @@ static VkFormat VK_DepthFormat( void ) {
 
 /*
 ===============
+VK_SampleCount
+
+r_ext_multisample as the engine has it for OpenGL windows: 0 or 1 none, else the largest of 2, 4 and 8 samples
+a pixel that is not more than asked for and that the device can do for color and depth
+===============
+*/
+static VkSampleCountFlagBits VK_SampleCount( void ) {
+	const VkSampleCountFlags supported = vk.properties.limits.framebufferColorSampleCounts
+		& vk.properties.limits.framebufferDepthSampleCounts & vk.properties.limits.framebufferStencilSampleCounts;
+
+	for ( int samples = 8; samples > 1; samples >>= 1 ) {
+		if ( r_multisampleVk->integer >= samples && ( supported & (VkSampleCountFlags)samples ) ) {
+			return (VkSampleCountFlagBits)samples;		// the bits are the counts
+		}
+	}
+	return VK_SAMPLE_COUNT_1_BIT;
+}
+
+/*
+===============
 VK_InitVulkan
 
 Called by R_Init() in the place of InitOpenGL(). The window and everything on the device live until the
@@ -394,6 +415,7 @@ window is destroyed (vid_restart), a map change keeps them.
 void VK_InitVulkan( void ) {
 	r_vkDebug = ri.Cvar_Get( "r_vkDebug", "0", CVAR_ARCHIVE_ND | CVAR_LATCH, "Vulkan validation layer and its messages" );
 	r_swapIntervalVk = ri.Cvar_Get( "r_swapInterval", "0", CVAR_ARCHIVE_ND, "" );
+	r_multisampleVk = ri.Cvar_Get( "r_ext_multisample", "0", CVAR_ARCHIVE_ND | CVAR_LATCH, "" );
 	r_vkStatic = ri.Cvar_Get( "r_vkStatic", "1", CVAR_CHEAT, "Level and models from buffers on the device. 0: all vertices are built on the CPU every frame" );
 
 	// the builtin images are made again, the copy of the frame has to be put into the texture table again
@@ -426,12 +448,20 @@ void VK_InitVulkan( void ) {
 
 	VK_CreateTarget( &vk.color, vk.width, vk.height, VK_FORMAT_R8G8B8A8_UNORM,
 		VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
-		VK_IMAGE_ASPECT_COLOR_BIT );
+		VK_IMAGE_ASPECT_COLOR_BIT, VK_SAMPLE_COUNT_1_BIT );
 	VK_CreateTarget( &vk.final, vk.width, vk.height, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
-		VK_IMAGE_ASPECT_COLOR_BIT );
+		VK_IMAGE_ASPECT_COLOR_BIT, VK_SAMPLE_COUNT_1_BIT );
 	VK_CreateTarget( &vk.depth, vk.width, vk.height, VK_DepthFormat(),
 		VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
-		VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT );
+		VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT, VK_SAMPLE_COUNT_1_BIT );
+	// anti aliasing: the scene goes into targets with several samples a pixel, see VK_BeginTarget()
+	vk.samples = VK_SampleCount();
+	if ( vk.samples > VK_SAMPLE_COUNT_1_BIT ) {
+		VK_CreateTarget( &vk.colorMS, vk.width, vk.height, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+			VK_IMAGE_ASPECT_COLOR_BIT, vk.samples );
+		VK_CreateTarget( &vk.depthMS, vk.width, vk.height, VK_DepthFormat(), VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+			VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT, vk.samples );
+	}
 
 	VK_InitPipelines();
 	VK_InitPost();
@@ -491,6 +521,8 @@ void VK_ShutdownVulkan( qboolean destroyWindow ) {
 	VK_DestroyTarget( &vk.color );
 	VK_DestroyTarget( &vk.final );
 	VK_DestroyTarget( &vk.depth );
+	VK_DestroyTarget( &vk.colorMS );
+	VK_DestroyTarget( &vk.depthMS );
 	VK_DestroySwapchain();
 	VK_ShutdownMemory();
 	qvkDestroyCommandPool( vk.device, vk.commandPool, NULL );
@@ -526,8 +558,8 @@ void VK_GfxInfo_f( void ) {
 	ri.Printf( PRINT_ALL, "device: %s\n", vk.properties.deviceName );
 	ri.Printf( PRINT_ALL, "version: %s\n", vk_versionString );
 	ri.Printf( PRINT_ALL, "driver: %s\n", vk_driverString );
-	ri.Printf( PRINT_ALL, "frame: %i x %i, window surface: %i x %i, %i images, swap interval %i\n", vk.width, vk.height,
-		(int)vk.swapExtent.width, (int)vk.swapExtent.height, (int)vk.numSwapImages, vk.swapInterval );
+	ri.Printf( PRINT_ALL, "frame: %i x %i with %i samples a pixel, window surface: %i x %i, %i images, swap interval %i\n", vk.width, vk.height,
+		(int)vk.samples, (int)vk.swapExtent.width, (int)vk.swapExtent.height, (int)vk.numSwapImages, vk.swapInterval );
 	ri.Printf( PRINT_ALL, "textures: %i of %i, pipelines: %i, samplers: %i\n", numImages, VK_MAX_IMAGES, vk.numPipelines,
 		vk.numSamplers );
 	ri.Printf( PRINT_ALL, "last frame: %i draws, %i triangles from buffers on the device, %i triangles and %i vertices built on the CPU\n",

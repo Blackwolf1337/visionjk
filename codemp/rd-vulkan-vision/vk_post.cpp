@@ -48,12 +48,16 @@ void VK_InitPost( void ) {
 	VkDescriptorSet *sets[3] = { &vk.glowSet, &vk.blurSets[0], &vk.blurSets[1] };
 	vkTarget_t *targets[3] = { &vk.glow, &vk.blur[0], &vk.blur[1] };
 
-	VK_CreateTarget( &vk.glow, vk.width, vk.height, VK_FORMAT_R8G8B8A8_UNORM, usage, VK_IMAGE_ASPECT_COLOR_BIT );
+	VK_CreateTarget( &vk.glow, vk.width, vk.height, VK_FORMAT_R8G8B8A8_UNORM, usage, VK_IMAGE_ASPECT_COLOR_BIT, VK_SAMPLE_COUNT_1_BIT );
+	if ( vk.samples > VK_SAMPLE_COUNT_1_BIT ) {
+		// the glowing stages are drawn over the depth of the scene, so with as many samples
+		VK_CreateTarget( &vk.glowMS, vk.width, vk.height, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_IMAGE_ASPECT_COLOR_BIT, vk.samples );
+	}
 	VK_CreateTarget( &vk.screen, vk.width, vk.height, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-		VK_IMAGE_ASPECT_COLOR_BIT );
+		VK_IMAGE_ASPECT_COLOR_BIT, VK_SAMPLE_COUNT_1_BIT );
 	vk.screenSlot = -1;
-	VK_CreateTarget( &vk.blur[0], width, height, VK_FORMAT_R8G8B8A8_UNORM, usage, VK_IMAGE_ASPECT_COLOR_BIT );
-	VK_CreateTarget( &vk.blur[1], width, height, VK_FORMAT_R8G8B8A8_UNORM, usage, VK_IMAGE_ASPECT_COLOR_BIT );
+	VK_CreateTarget( &vk.blur[0], width, height, VK_FORMAT_R8G8B8A8_UNORM, usage, VK_IMAGE_ASPECT_COLOR_BIT, VK_SAMPLE_COUNT_1_BIT );
+	VK_CreateTarget( &vk.blur[1], width, height, VK_FORMAT_R8G8B8A8_UNORM, usage, VK_IMAGE_ASPECT_COLOR_BIT, VK_SAMPLE_COUNT_1_BIT );
 
 	sampler.magFilter = sampler.minFilter = VK_FILTER_LINEAR;
 	sampler.addressModeU = sampler.addressModeV = sampler.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
@@ -70,6 +74,7 @@ void VK_InitPost( void ) {
 
 void VK_ShutdownPost( void ) {
 	VK_DestroyTarget( &vk.glow );
+	VK_DestroyTarget( &vk.glowMS );
 	VK_DestroyTarget( &vk.screen );
 	VK_DestroyTarget( &vk.blur[0] );
 	VK_DestroyTarget( &vk.blur[1] );
@@ -93,6 +98,9 @@ void VK_BeginGlow( void ) {
 	cmd = vk.frame->cmd;
 	qvkCmdEndRendering( cmd );
 	VK_TargetLayout( cmd, &vk.glow, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
+	if ( vk.samples > VK_SAMPLE_COUNT_1_BIT ) {
+		VK_TargetLayout( cmd, &vk.glowMS, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
+	}
 	VK_BeginTarget( cmd, &vk.glow, &vk.depth, 1, qtrue );
 	vk.boundPipeline = VK_NULL_HANDLE;
 	vk.stateValid = qfalse;
