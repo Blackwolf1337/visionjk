@@ -90,6 +90,11 @@ static const int	s_numVidModes = ARRAY_LEN( r_vidModes );
 
 #define R_MODE_FALLBACK (4) // 640x480
 
+// The smallest size r_mode -1 takes from r_customwidth and r_customheight. Con_CheckResize() ends with a fatal error
+// when the console has less than 22 pixels for a line, and a height of 0 is no window at all.
+#define R_MIN_CUSTOM_WIDTH (22)
+#define R_MIN_CUSTOM_HEIGHT (1)
+
 qboolean R_GetModeInfo( int *width, int *height, int mode ) {
 	const vidmode_t	*vm;
 
@@ -103,6 +108,11 @@ qboolean R_GetModeInfo( int *width, int *height, int mode ) {
 	if ( mode == -1 ) {
 		*width = r_customwidth->integer;
 		*height = r_customheight->integer;
+		if ( *width < R_MIN_CUSTOM_WIDTH || *height < R_MIN_CUSTOM_HEIGHT ) {
+			// the caller falls back on R_MODE_FALLBACK, as for any other mode that does not exist
+			Com_Printf( " r_customwidth %d and r_customheight %d are too small,", *width, *height );
+			return qfalse;
+		}
 		return qtrue;
 	}
 
