@@ -44,6 +44,12 @@ static const uint32_t vk_postVert[] =
 static const uint32_t vk_gammaFrag[] =
 #include "shaders/gamma_frag.inc"
 ;
+static const uint32_t vk_blurFrag[] =
+#include "shaders/blur_frag.inc"
+;
+static const uint32_t vk_copyFrag[] =
+#include "shaders/copy_frag.inc"
+;
 
 static VkShaderModule VK_CreateShader( const uint32_t *code, size_t size ) {
 	VkShaderModuleCreateInfo info = { VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO };
@@ -111,9 +117,9 @@ static void VK_CreateLayouts( void ) {
 	sizes[1].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
 	sizes[1].descriptorCount = VK_FRAMES * 3;
 	sizes[2].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	sizes[2].descriptorCount = VK_MAX_IMAGES + 1;
+	sizes[2].descriptorCount = VK_MAX_IMAGES + 4;
 	pool.flags = VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT;
-	pool.maxSets = VK_FRAMES + 2;
+	pool.maxSets = VK_FRAMES + 5;
 	pool.poolSizeCount = 3;
 	pool.pPoolSizes = sizes;
 	VK_CHECK( vkCreateDescriptorPool( vk.device, &pool, NULL, &vk.descriptorPool ) );
@@ -193,10 +199,11 @@ static VkBlendFactor VK_DstBlend( uint32_t stateBits ) {
 ===============
 VK_CreatePipeline
 
-post: a pass over the whole target without vertices (the gamma pass), everything else draws the tess arrays
+post: 0 geometry. 1 a pass over a whole target of its own without vertices (gamma, blur). 2 such a pass onto the
+frame while it is being drawn, blended as the state bits say (the glow).
 ===============
 */
-static VkPipeline VK_CreatePipeline( VkShaderModule vertex, VkShaderModule fragment, uint32_t stateBits, qboolean post, qboolean skinned ) {
+VkPipeline VK_CreatePipeline( VkShaderModule vertex, VkShaderModule fragment, uint32_t stateBits, int post, qboolean skinned ) {
 	VkPipelineShaderStageCreateInfo stages[2];
 	VkVertexInputBindingDescription bindings[4];
 	VkVertexInputAttributeDescription attributes[8];
@@ -290,7 +297,7 @@ static VkPipeline VK_CreatePipeline( VkShaderModule vertex, VkShaderModule fragm
 
 	memset( &attachment, 0, sizeof( attachment ) );
 	attachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-	if ( !post && ( stateBits & ( GLS_SRCBLEND_BITS | GLS_DSTBLEND_BITS ) ) ) {
+	if ( post != 1 && ( stateBits & ( GLS_SRCBLEND_BITS | GLS_DSTBLEND_BITS ) ) ) {
 		attachment.blendEnable = VK_TRUE;
 		attachment.srcColorBlendFactor = attachment.srcAlphaBlendFactor = VK_SrcBlend( stateBits );
 		attachment.dstColorBlendFactor = attachment.dstAlphaBlendFactor = VK_DstBlend( stateBits );
@@ -303,8 +310,8 @@ static VkPipeline VK_CreatePipeline( VkShaderModule vertex, VkShaderModule fragm
 	dynamic.pDynamicStates = dynamicStates;
 
 	rendering.colorAttachmentCount = 1;
-	rendering.pColorAttachmentFormats = post ? &vk.final.format : &vk.color.format;
-	if ( !post ) {
+	rendering.pColorAttachmentFormats = ( post == 1 ) ? &vk.final.format : &vk.color.format;
+	if ( post != 1 ) {
 		rendering.depthAttachmentFormat = vk.depth.format;
 		rendering.stencilAttachmentFormat = vk.depth.format;
 	}
@@ -354,7 +361,12 @@ void VK_InitPipelines( void ) {
 	vk.fragmentShaders[VKP_SKINNED] = VK_CreateShader( vk_genericFrag, sizeof( vk_genericFrag ) );
 	vk.postVertexShader = VK_CreateShader( vk_postVert, sizeof( vk_postVert ) );
 	vk.gammaFragmentShader = VK_CreateShader( vk_gammaFrag, sizeof( vk_gammaFrag ) );
-	vk.gammaPipeline = VK_CreatePipeline( vk.postVertexShader, vk.gammaFragmentShader, 0, qtrue, qfalse );
+	vk.gammaPipeline = VK_CreatePipeline( vk.postVertexShader, vk.gammaFragmentShader, 0, 1, qfalse );
+	vk.blurFragmentShader = VK_CreateShader( vk_blurFrag, sizeof( vk_blurFrag ) );
+	vk.copyFragmentShader = VK_CreateShader( vk_copyFrag, sizeof( vk_copyFrag ) );
+	vk.blurPipeline = VK_CreatePipeline( vk.postVertexShader, vk.blurFragmentShader, 0, 1, qfalse );
+	vk.glowPipelines[0] = VK_CreatePipeline( vk.postVertexShader, vk.copyFragmentShader, GLS_SRCBLEND_ONE | GLS_DSTBLEND_ONE, 2, qfalse );
+	vk.glowPipelines[1] = VK_CreatePipeline( vk.postVertexShader, vk.copyFragmentShader, GLS_SRCBLEND_ONE | GLS_DSTBLEND_ONE_MINUS_SRC_COLOR, 2, qfalse );
 }
 
 void VK_ShutdownPipelines( void ) {
@@ -363,6 +375,11 @@ void VK_ShutdownPipelines( void ) {
 	}
 	vk.numPipelines = 0;
 	vkDestroyPipeline( vk.device, vk.gammaPipeline, NULL );
+	vkDestroyPipeline( vk.device, vk.blurPipeline, NULL );
+	vkDestroyPipeline( vk.device, vk.glowPipelines[0], NULL );
+	vkDestroyPipeline( vk.device, vk.glowPipelines[1], NULL );
+	vkDestroyShaderModule( vk.device, vk.blurFragmentShader, NULL );
+	vkDestroyShaderModule( vk.device, vk.copyFragmentShader, NULL );
 	for ( int i = 0; i < VKP_NUM_PROGRAMS; i++ ) {
 		vkDestroyShaderModule( vk.device, vk.vertexShaders[i], NULL );
 		vkDestroyShaderModule( vk.device, vk.fragmentShaders[i], NULL );

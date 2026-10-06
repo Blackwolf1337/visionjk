@@ -132,6 +132,7 @@ typedef struct vkTarget_s {		// something to render into
 	vkAlloc_t		alloc;
 	VkFormat		format;
 	VkImageLayout	layout;
+	int				width, height;
 } vkTarget_t;
 
 typedef struct vkFrame_s {
@@ -189,6 +190,8 @@ typedef struct vkState_s {
 	vkTarget_t					color;				// the frame as the game draws it
 	vkTarget_t					depth;
 	vkTarget_t					final;				// after gamma, what goes to the window and into screenshots
+	vkTarget_t					glow;				// r_DynamicGlow: the stages that glow, drawn again over the depth of the scene
+	vkTarget_t					blur[2];			// and blurred, r_DynamicGlowWidth x r_DynamicGlowHeight
 	qboolean					finalValid;			// a frame has been rendered into it
 
 	VkDescriptorPool			descriptorPool;
@@ -200,12 +203,19 @@ typedef struct vkState_s {
 	VkDescriptorSet				textureSet;
 	VkDescriptorSet				postSet;
 	VkSampler					postSampler;
+	VkDescriptorSet				glowSet;
+	VkDescriptorSet				blurSets[2];
+	VkSampler					linearSampler;
 
 	VkShaderModule				vertexShaders[VKP_NUM_PROGRAMS];
 	VkShaderModule				fragmentShaders[VKP_NUM_PROGRAMS];
 	VkShaderModule				postVertexShader;
 	VkShaderModule				gammaFragmentShader;
 	VkPipeline					gammaPipeline;
+	VkShaderModule				blurFragmentShader;
+	VkShaderModule				copyFragmentShader;
+	VkPipeline					blurPipeline;
+	VkPipeline					glowPipelines[2];	// the blurred glow onto the frame: added, or added softly
 	vkPipeline_t				pipelines[VK_MAX_PIPELINES];
 	int							numPipelines;
 
@@ -273,7 +283,7 @@ void		VK_FlushUploads( void );
 VkCommandBuffer VK_UploadCmd( void );
 byte		*VK_Stage( VkDeviceSize size, VkDeviceSize *offset );
 void		VK_UpdateImage( image_t *image, int width, int height, const byte *rgba );
-void		VK_CreateTarget( vkTarget_t *target, VkFormat format, VkImageUsageFlags usage, VkImageAspectFlags aspect );
+void		VK_CreateTarget( vkTarget_t *target, int width, int height, VkFormat format, VkImageUsageFlags usage, VkImageAspectFlags aspect );
 void		VK_DestroyTarget( vkTarget_t *target );
 void		VK_SetLayout( VkCommandBuffer cmd, VkImage image, VkImageAspectFlags aspect, VkImageLayout from, VkImageLayout to );
 void		VK_TargetLayout( VkCommandBuffer cmd, vkTarget_t *target, VkImageLayout to );
@@ -288,6 +298,7 @@ const float *VK_GL_ModelView( void );
 void		VK_GL_ResetMatrix( void );
 
 // vk_world.cpp
+extern cvar_t	*r_vkStatic;
 void		VK_WorldChanged( void );
 void		VK_ShutdownWorld( void );
 void		VK_BatchBegin( void );
@@ -314,7 +325,15 @@ void		VK_TransformChanged( void );
 uint32_t	VK_CurrentTransform( void );
 void		VK_SetProjection( const float *projection );
 
+// vk_post.cpp
+void		VK_InitPost( void );
+void		VK_ShutdownPost( void );
+void		VK_BeginGlow( void );
+void		VK_EndGlow( void );
+
 // vk_frame.cpp
+void		VK_BeginTarget( VkCommandBuffer cmd, vkTarget_t *color, vkTarget_t *depth, int colorLoad, qboolean depthLoad );
+void		VK_BindFrameSets( void );
 void		VK_InitFrames( void );
 void		VK_ShutdownFrames( void );
 void		VK_BeginFrame( void );

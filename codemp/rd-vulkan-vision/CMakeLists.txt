@@ -49,6 +49,7 @@ set(MPVulkanVisionFiles
 	"${MPDir}/rd-vulkan-vision/vk_memory.cpp"
 	"${MPDir}/rd-vulkan-vision/vk_model.cpp"
 	"${MPDir}/rd-vulkan-vision/vk_pipeline.cpp"
+	"${MPDir}/rd-vulkan-vision/vk_post.cpp"
 	"${MPDir}/rd-vulkan-vision/vk_shade.cpp"
 	"${MPDir}/rd-vulkan-vision/vk_stubs.cpp"
 	"${MPDir}/rd-vulkan-vision/vk_world.cpp"
@@ -131,6 +132,8 @@ set(MPVulkanVisionShaders
 	generic.frag
 	post.vert
 	gamma.frag
+	blur.frag
+	copy.frag
 	)
 set(MPVulkanVisionShaderOutputs)
 foreach(shader ${MPVulkanVisionShaders})

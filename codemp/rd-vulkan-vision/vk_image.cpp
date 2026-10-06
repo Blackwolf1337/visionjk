@@ -75,10 +75,10 @@ void VK_TargetLayout( VkCommandBuffer cmd, vkTarget_t *target, VkImageLayout to 
 ===============
 VK_CreateTarget
 
-An image of the size of the frame to render into
+An image to render into
 ===============
 */
-void VK_CreateTarget( vkTarget_t *target, VkFormat format, VkImageUsageFlags usage, VkImageAspectFlags aspect ) {
+void VK_CreateTarget( vkTarget_t *target, int width, int height, VkFormat format, VkImageUsageFlags usage, VkImageAspectFlags aspect ) {
 	VkImageCreateInfo info = { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
 	VkImageViewCreateInfo view = { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
 	VkMemoryRequirements req;
@@ -86,8 +86,8 @@ void VK_CreateTarget( vkTarget_t *target, VkFormat format, VkImageUsageFlags usa
 	memset( target, 0, sizeof( *target ) );
 	info.imageType = VK_IMAGE_TYPE_2D;
 	info.format = format;
-	info.extent.width = (uint32_t)vk.width;
-	info.extent.height = (uint32_t)vk.height;
+	info.extent.width = (uint32_t)width;
+	info.extent.height = (uint32_t)height;
 	info.extent.depth = 1;
 	info.mipLevels = 1;
 	info.arrayLayers = 1;
@@ -109,6 +109,8 @@ void VK_CreateTarget( vkTarget_t *target, VkFormat format, VkImageUsageFlags usa
 	VK_CHECK( vkCreateImageView( vk.device, &view, NULL, &target->view ) );
 	target->format = format;
 	target->layout = VK_IMAGE_LAYOUT_UNDEFINED;
+	target->width = width;
+	target->height = height;
 }
 
 void VK_DestroyTarget( vkTarget_t *target ) {

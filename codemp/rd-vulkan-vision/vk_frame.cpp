@@ -94,25 +94,27 @@ void VK_ShutdownFrames( void ) {
 	vk.frame = NULL;
 }
 
-static void VK_BeginTarget( VkCommandBuffer cmd, vkTarget_t *color, vkTarget_t *depth, qboolean clear ) {
+// colorLoad: 0 what is in the target does not matter, 1 clear it, 2 keep it. depthLoad: keep the depth too.
+void VK_BeginTarget( VkCommandBuffer cmd, vkTarget_t *color, vkTarget_t *depth, int colorLoad, qboolean depthLoad ) {
 	VkRenderingAttachmentInfo colorInfo = { VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO };
 	VkRenderingAttachmentInfo depthInfo = { VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO };
 	VkRenderingInfo info = { VK_STRUCTURE_TYPE_RENDERING_INFO };
 
 	colorInfo.imageView = color->view;
 	colorInfo.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-	colorInfo.loadOp = clear ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+	colorInfo.loadOp = ( colorLoad == 1 ) ? VK_ATTACHMENT_LOAD_OP_CLEAR : ( colorLoad == 2 ? VK_ATTACHMENT_LOAD_OP_LOAD : VK_ATTACHMENT_LOAD_OP_DONT_CARE );
 	colorInfo.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-	info.renderArea.extent.width = (uint32_t)vk.width;
-	info.renderArea.extent.height = (uint32_t)vk.height;
+	info.renderArea.extent.width = (uint32_t)color->width;
+	info.renderArea.extent.height = (uint32_t)color->height;
 	info.layerCount = 1;
 	info.colorAttachmentCount = 1;
 	info.pColorAttachments = &colorInfo;
 	if ( depth ) {
 		depthInfo.imageView = depth->view;
 		depthInfo.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-		depthInfo.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-		depthInfo.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+		depthInfo.loadOp = depthLoad ? VK_ATTACHMENT_LOAD_OP_LOAD : VK_ATTACHMENT_LOAD_OP_CLEAR;
+		// the glow pass draws over the depth of the scene
+		depthInfo.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 		depthInfo.clearValue.depthStencil.depth = 1.0f;
 		info.pDepthAttachment = &depthInfo;
 		info.pStencilAttachment = &depthInfo;
@@ -199,6 +201,19 @@ void VK_ClearColor( int x, int y, int width, int height, const float *color ) {
 	VK_ClearRect( x, y, width, height, &attachment );
 }
 
+// the buffers of the frame and the texture table for the shaders that draw geometry. Again after a pass over
+// a whole target, which has a layout of its own.
+void VK_BindFrameSets( void ) {
+	VkDescriptorSet sets[2];
+
+	if ( !vk.frame ) {
+		return;
+	}
+	sets[0] = vk.frame->set;
+	sets[1] = vk.textureSet;
+	vkCmdBindDescriptorSets( vk.frame->cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.pipelineLayout, 0, 2, sets, 0, NULL );
+}
+
 /*
 ===============
 VK_BeginFrame
@@ -206,7 +221,6 @@ VK_BeginFrame
 */
 void VK_BeginFrame( void ) {
 	VkCommandBufferBeginInfo begin = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
-	VkDescriptorSet sets[2];
 	vkFrame_t *frame;
 	vkGlobals_t *globals;
 
@@ -235,13 +249,10 @@ void VK_BeginFrame( void ) {
 	VK_CHECK( vkBeginCommandBuffer( frame->cmd, &begin ) );
 	VK_TargetLayout( frame->cmd, &vk.color, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
 	VK_TargetLayout( frame->cmd, &vk.depth, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL );
-	VK_BeginTarget( frame->cmd, &vk.color, &vk.depth, qtrue );
-
-	sets[0] = frame->set;
-	sets[1] = vk.textureSet;
-	vkCmdBindDescriptorSets( frame->cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.pipelineLayout, 0, 2, sets, 0, NULL );
+	VK_BeginTarget( frame->cmd, &vk.color, &vk.depth, 1, qfalse );
 
 	vk.frame = frame;
+	VK_BindFrameSets();
 	vk.rendering = qtrue;
 	vk.boundPipeline = VK_NULL_HANDLE;
 	vk.stateValid = qfalse;
@@ -301,7 +312,7 @@ void VK_EndFrame( void ) {
 
 	VK_TargetLayout( cmd, &vk.color, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
 	VK_TargetLayout( cmd, &vk.final, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
-	VK_BeginTarget( cmd, &vk.final, NULL, qfalse );
+	VK_BeginTarget( cmd, &vk.final, NULL, 0, qfalse );
 	vkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.gammaPipeline );
 	vkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.postPipelineLayout, 0, 1, &vk.postSet, 0, NULL );
 	vkCmdPushConstants( cmd, vk.postPipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof( gamma ), gamma );

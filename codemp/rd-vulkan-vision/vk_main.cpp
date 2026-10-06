@@ -343,6 +343,7 @@ window is destroyed (vid_restart), a map change keeps them.
 void VK_InitVulkan( void ) {
 	r_vkDebug = ri.Cvar_Get( "r_vkDebug", "0", CVAR_ARCHIVE_ND | CVAR_LATCH, "Vulkan validation layer and its messages" );
 	r_swapIntervalVk = ri.Cvar_Get( "r_swapInterval", "0", CVAR_ARCHIVE_ND, "" );
+	r_vkStatic = ri.Cvar_Get( "r_vkStatic", "1", CVAR_CHEAT, "Level and models from buffers on the device. 0: all vertices are built on the CPU every frame" );
 
 	// the buffers of the level and of the models are filled again when they are first drawn
 	VK_WorldChanged();
@@ -369,14 +370,15 @@ void VK_InitVulkan( void ) {
 	VK_InitMemory();
 	VK_CreateSwapchain();
 
-	VK_CreateTarget( &vk.color, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+	VK_CreateTarget( &vk.color, vk.width, vk.height, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
 		VK_IMAGE_ASPECT_COLOR_BIT );
-	VK_CreateTarget( &vk.final, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
+	VK_CreateTarget( &vk.final, vk.width, vk.height, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
 		VK_IMAGE_ASPECT_COLOR_BIT );
-	VK_CreateTarget( &vk.depth, VK_DepthFormat(), VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+	VK_CreateTarget( &vk.depth, vk.width, vk.height, VK_DepthFormat(), VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
 		VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT );
 
 	VK_InitPipelines();
+	VK_InitPost();
 	VK_InitFrames();
 	VK_InitImages();
 	VK_InitModels();
@@ -428,6 +430,7 @@ void VK_ShutdownVulkan( qboolean destroyWindow ) {
 	VK_ShutdownModels();
 	VK_ShutdownImages();
 	VK_ShutdownFrames();
+	VK_ShutdownPost();
 	VK_ShutdownPipelines();
 	VK_DestroyTarget( &vk.color );
 	VK_DestroyTarget( &vk.final );

@@ -43,6 +43,8 @@ static qboolean			vk_worldValid;
 // the batch in tess: 0: vertices and indexes in the tess arrays, 1: indexes into the buffer of the level,
 // 2: indexes into the buffer of the models (vk_model.cpp), all of one skeleton (NULL: MD3 meshes with one frame)
 static int				vk_batchMode;
+
+cvar_t	*r_vkStatic;		// 0: nothing from buffers on the device, every vertex through the tess arrays as in rd-vanilla
 static CBoneCache		*vk_batchBones;
 
 qboolean VK_BatchIsStatic( void ) {
@@ -173,6 +175,9 @@ static qboolean VK_ShaderIsStatic( void ) {
 	const shader_t *shader = tess.shader;
 	const int fogNum = tess.fogNum;
 
+	if ( !r_vkStatic->integer ) {
+		return qfalse;
+	}
 	if ( shader->sky || shader->numDeforms || r_fullbright->integer || tess.fading ) {
 		return qfalse;
 	}

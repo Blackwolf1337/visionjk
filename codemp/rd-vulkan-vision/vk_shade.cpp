@@ -31,7 +31,7 @@ shaderCommands_t	tess;
 color4ub_t			styleColors[MAX_LIGHT_STYLES];
 
 bool g_bRenderGlowingObjects = false;
-bool g_bDynamicGlowSupported = false;
+bool g_bDynamicGlowSupported = true;
 
 extern int skyboxportal;
 extern int drawskyboxportal;
