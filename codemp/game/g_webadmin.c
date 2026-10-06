@@ -149,19 +149,31 @@ Buffers
 ==============================================================================
 */
 
-static void WA_BufReserve( waBuffer_t *b, int extra ) {
-	if ( b->len + extra + 1 <= b->size )
-		return;
+// grows the buffer to hold extra more bytes and a zero. qfalse if it is out of memory or the size would wrap;
+// the buffer is left as it was, so a caller that checks the result leaves a short response instead of crashing.
+static qboolean WA_BufReserve( waBuffer_t *b, int extra ) {
+	int		newSize;
+	char	*grown;
 
-	int newSize = b->size ? b->size : 4096;
+	if ( extra < 0 || b->len > WA_MAX_FILE || extra > WA_MAX_FILE )
+		return qfalse;
+	if ( b->len + extra + 1 <= b->size )
+		return qtrue;
+
+	newSize = b->size ? b->size : 4096;
 	while ( newSize < b->len + extra + 1 )
 		newSize *= 2;
-	b->data = (char *)realloc( b->data, newSize );
+	grown = (char *)realloc( b->data, newSize );
+	if ( !grown )
+		return qfalse;
+	b->data = grown;
 	b->size = newSize;
+	return qtrue;
 }
 
 static void WA_BufAppend( waBuffer_t *b, const void *data, int len ) {
-	WA_BufReserve( b, len );
+	if ( len <= 0 || !WA_BufReserve( b, len ) )
+		return;
 	memcpy( b->data + b->len, data, len );
 	b->len += len;
 	b->data[b->len] = '\0';
@@ -176,12 +188,15 @@ static void WA_BufPrintf( waBuffer_t *b, const char *fmt, ... ) {
 	len = Q_vsnprintf( small, sizeof( small ), fmt, ap );
 	va_end( ap );
 
+	if ( len < 0 )
+		return;
 	if ( len < (int)sizeof( small ) ) {
 		WA_BufAppend( b, small, len );
 		return;
 	}
 
-	WA_BufReserve( b, len );
+	if ( !WA_BufReserve( b, len ) )
+		return;
 	va_start( ap, fmt );
 	Q_vsnprintf( b->data + b->len, len + 1, fmt, ap );
 	va_end( ap );
@@ -536,6 +551,10 @@ static char *WA_ReadGameFile( const char *path, int *outLen ) {
 	}
 
 	data = (char *)malloc( len );
+	if ( !data ) {
+		trap->FS_Close( f );
+		return NULL;
+	}
 	trap->FS_Read( data, len, f );
 	trap->FS_Close( f );
 	*outLen = len;
@@ -1711,8 +1730,10 @@ void WebAdmin_Init( void ) {
 	memset( &addr, 0, sizeof( addr ) );
 	addr.sin_family = AF_INET;
 	addr.sin_port = htons( (unsigned short)g_webPort.integer );
+	// default to localhost, not every interface: the panel is plain HTTP, reaching it from outside should be a
+	// choice (g_webBind 0.0.0.0, or a reverse proxy). An unset or unparseable g_webBind binds to 127.0.0.1.
 	if ( !g_webBind.string[0] || inet_pton( AF_INET, g_webBind.string, &addr.sin_addr ) != 1 )
-		addr.sin_addr.s_addr = htonl( INADDR_ANY );
+		inet_pton( AF_INET, "127.0.0.1", &addr.sin_addr );
 
 	if ( bind( listenSocket, (struct sockaddr *)&addr, sizeof( addr ) ) != 0 || listen( listenSocket, 16 ) != 0 ) {
 		trap->Print( S_COLOR_YELLOW "Web admin: could not listen on %s:%d (port in use, or below 1024 without root?)\n",
