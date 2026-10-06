@@ -697,6 +697,9 @@ static void SV_PMTrace( trace_t *results, const vec3_t start, const vec3_t mins,
 	JP_Trace( results, start, mins, maxs, end, passEntityNum, contentMask, qfalse, 0, 10 );
 	if ( mate )
 		mate->r.contents = contents;
+
+	// and the props are in the way, with shapes the engine does not know
+	G_PropClipMove( results, start, mins, maxs, end, passEntityNum, contentMask );
 }
 
 /*

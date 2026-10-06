@@ -241,13 +241,13 @@ body.fp #help, body.fp #command, body.fp #entPanel { display: none; }
 			<div id="mdlOpts">
 				<label title="Size of the model in percent. The server changes it if the longest edge would be under 8 or over 384 units.">Scale<input type="number" id="mdlScale" min="1" max="1023" value="100"></label>
 				<label title="Empty: from the size of the model. A box of 32 units has 4.">Mass<input type="number" id="mdlMass" min="0.1" max="100" step="0.1" placeholder="auto"></label>
-				<label title="A box the size of the model, or a ball as wide as it for something round">Shape<select id="mdlShape"><option>box</option><option>ball</option></select></label>
+				<label title="model: the hull around the model, what it really looks like from outside. box: the box around it. ball: a ball as wide as it, for something round that is to roll">Shape<select id="mdlShape"><option>model</option><option>box</option><option>ball</option></select></label>
 			</div>
 			<div class="hint" id="mdlPicked" style="padding:0">Pick a model, then right-click on the map.</div>
 		</div>
 		<div id="mdlList"></div>
 		<div class="tools"><button class="danger" id="mdlClear" title="Deletes every misc_prop that was placed through the panel. The ones of the map stay, and so do the balls and cubes of the World tab.">Delete all props</button></div>
-		<div class="hint" style="padding-top:6px">Every model is placed as a misc_prop with the physics of the cube: a box the size of the model that falls, tips, can be shoved, thrown and stacked. It is in the list of the World tab afterwards.</div>
+		<div class="hint" style="padding-top:6px">Every model is placed as a misc_prop with physics of its own: a body with the shape of the model that falls, tips, can be shoved, thrown, stacked and stood on. Thrown hard at somebody it hurts. It is in the list of the World tab afterwards.</div>
 	</div>
 	<div class="pane" id="pane-config">
 		<h2><span>server.cfg</span><span id="cfgSize"></span></h2>
@@ -1610,7 +1610,7 @@ async function mdlPlaceAt(hit) {
 	const model = pvSetup() ? await pvLoadModel(path) : null;
 	const height = model ? model.size[2] * scale / 100 : 64;
 	const keys = [['classname', 'misc_prop'], ['origin', fmtVec([hit[0], hit[1], hit[2] + height / 2 + 8])], ['model', path], ['scale', String(scale)]];
-	if ($('mdlShape').value === 'ball') keys.push(['shape', 'ball']);
+	if ($('mdlShape').value !== 'model') keys.push(['shape', $('mdlShape').value]);
 	if (+$('mdlMass').value > 0) keys.push(['mass', String(+$('mdlMass').value)]);
 	entityOp({ op: 'spawn', kv: keysText(keys) }, 'Placed ' + mdlName(path));
 }

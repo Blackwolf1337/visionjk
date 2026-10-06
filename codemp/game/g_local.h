@@ -1279,7 +1279,10 @@ qboolean G_CleanIP( const char *in, char *out, int outSize );
 // g_props.c: the entities misc_ball and misc_cube
 void G_PropFrame( void );
 gentity_t *G_PropMate( int clientNum );
+void G_PropClipMove( trace_t *results, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end,
+	int passEntityNum, int contentMask );
 qboolean G_PropCarried( int clientNum );
+void Svcmd_Props_f( void );
 void G_PropForceThrow( gentity_t *self, qboolean pull );
 float G_PropPlayerSpeed( const gentity_t *ent );
 

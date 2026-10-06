@@ -27,6 +27,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // It also handles local physics interaction, like fragments bouncing off walls
 
 #include "cg_local.h"
+#include "game/bg_props.h"
 
 static	pmove_t		cg_pmove;
 
@@ -34,6 +35,130 @@ static	int			cg_numSolidEntities;
 static	centity_t	*cg_solidEntities[MAX_ENTITIES_IN_SNAPSHOT];
 static	int			cg_numTriggerEntities;
 static	centity_t	*cg_triggerEntities[MAX_ENTITIES_IN_SNAPSHOT];
+
+// Port, not in the original: the props of the game that are in the way of players (g_props.c). Each has the
+// shape of its model, turned as it lies, which no box of the engine can be. The server cuts the moves of the
+// players against those shapes (G_PropClipMove) and this does the same with the same code, so the prediction
+// agrees with it. The shape is made from the model file once and kept, the planes of a prop for where it stands
+// are kept too.
+#define CG_PROP_SHAPES		32
+#define CG_PROP_BRUSHES		16
+
+typedef struct cgPropShape_s {
+	int			modelindex;		// 0: free
+	int			scale, kind;
+	qboolean	ok;				// the model could be read
+	propShape_t	shape;
+} cgPropShape_t;
+
+typedef struct cgPropBrush_s {
+	int					number;		// of the entity
+	const propShape_t	*shape;
+	vec3_t				origin, angles;
+	propBrush_t			brush;
+} cgPropBrush_t;
+
+static	int				cg_numPropEntities;
+static	centity_t		*cg_propEntities[MAX_ENTITIES_IN_SNAPSHOT];
+static	cgPropShape_t	cg_propShapes[CG_PROP_SHAPES];
+static	int				cg_propShapeNext;
+static	cgPropBrush_t	cg_propBrushes[CG_PROP_BRUSHES];
+static	int				cg_propBrushNext;
+
+// the shape of a prop, NULL if this client can not read its model
+static const propShape_t *CG_PropShape( const entityState_t *es ) {
+	cgPropShape_t	*s;
+	propCloud_t		cloud;
+	int				i;
+
+	for ( i = 0; i < CG_PROP_SHAPES; i++ ) {
+		s = &cg_propShapes[i];
+		if ( s->modelindex == es->modelindex && s->scale == es->iModelScale && s->kind == es->generic1 )
+			return s->ok ? &s->shape : NULL;
+	}
+
+	s = &cg_propShapes[cg_propShapeNext];
+	cg_propShapeNext = ( cg_propShapeNext + 1 ) % CG_PROP_SHAPES;
+	// the planes that were made of the shape that was here are of no use any more
+	for ( i = 0; i < CG_PROP_BRUSHES; i++ ) {
+		if ( cg_propBrushes[i].shape == &s->shape )
+			cg_propBrushes[i].shape = NULL;
+	}
+	s->modelindex = es->modelindex;
+	s->scale = es->iModelScale;
+	s->kind = es->generic1;
+	s->ok = BG_PropCloudFromModel( CG_ConfigString( CS_MODELS + es->modelindex ), &cloud );
+	if ( s->ok ) {
+		BG_PropShapeOfKind( &cloud, s->kind, s->scale / 100.0f, &s->shape );
+		BG_PropCloudFree( &cloud );
+	}
+	return s->ok ? &s->shape : NULL;
+}
+
+// the planes of a prop for where the server last said it stands
+static const propBrush_t *CG_PropBrush( const entityState_t *es, const propShape_t *shape ) {
+	cgPropBrush_t	*b = NULL;
+	vec3_t			origin, angles, middle;
+	matrix3_t		axis;
+	int				i, k;
+
+	BG_EvaluateTrajectory( &es->pos, cg.physicsTime, origin );
+	BG_EvaluateTrajectory( &es->apos, cg.physicsTime, angles );
+	for ( i = 0; i < CG_PROP_BRUSHES; i++ ) {
+		if ( cg_propBrushes[i].shape != shape || cg_propBrushes[i].number != es->number )
+			continue;
+		b = &cg_propBrushes[i];
+		if ( VectorCompare( b->origin, origin ) && VectorCompare( b->angles, angles ) )
+			return &b->brush;
+		break;
+	}
+	if ( !b ) {
+		b = &cg_propBrushes[cg_propBrushNext];
+		cg_propBrushNext = ( cg_propBrushNext + 1 ) % CG_PROP_BRUSHES;
+	}
+	b->number = es->number;
+	b->shape = shape;
+	VectorCopy( origin, b->origin );
+	VectorCopy( angles, b->angles );
+
+	// the entity is where the origin of the model is, the shape is around its middle
+	AnglesToAxis( angles, axis );
+	VectorCopy( origin, middle );
+	for ( k = 0; k < 3; k++ )
+		VectorMA( middle, shape->centre[k], axis[k], middle );
+	BG_PropBrush( shape, middle, axis, &b->brush );
+	return &b->brush;
+}
+
+/*
+====================
+CG_ClipMoveToProps
+
+Cuts a trace against the props that are in the way of players. They count as bodies for the mask, as on the
+server: who walks through players walks through them. skipNumber: the one who makes the move, a prop in his hand
+is not in his way.
+====================
+*/
+static void CG_ClipMoveToProps( const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int skipNumber,
+		int mask, trace_t *tr ) {
+	int i;
+
+	if ( !cg_numPropEntities || !(mask & CONTENTS_BODY) || tr->allsolid )
+		return;
+	if ( !mins )
+		mins = vec3_origin;
+	if ( !maxs )
+		maxs = vec3_origin;
+
+	for ( i = 0; i < cg_numPropEntities; i++ ) {
+		const entityState_t	*es = &cg_propEntities[i]->currentState;
+		const propShape_t	*shape;
+
+		if ( es->otherEntityNum == skipNumber || !( shape = CG_PropShape( es ) ) )
+			continue;
+		BG_PropClipBox( tr, start, mins, maxs, end, CG_PropBrush( es, shape ) );
+	}
+}
 
 //is this client piloting this veh?
 static QINLINE qboolean CG_Piloting(int vehNum)
@@ -75,6 +200,7 @@ void CG_BuildSolidList( void ) {
 
 	cg_numSolidEntities = 0;
 	cg_numTriggerEntities = 0;
+	cg_numPropEntities = 0;
 
 	if ( cg.nextSnap && !cg.nextFrameTeleport && !cg.thisFrameTeleport ) {
 		snap = cg.nextSnap;
@@ -92,6 +218,14 @@ void CG_BuildSolidList( void ) {
 		if ( ent->eType == ET_ITEM || ent->eType == ET_PUSH_TRIGGER || ent->eType == ET_TELEPORT_TRIGGER ) {
 			cg_triggerEntities[cg_numTriggerEntities] = cent;
 			cg_numTriggerEntities++;
+			continue;
+		}
+
+		// Port: a prop that is in the way of players has its own list. The box it brings along as every solid
+		// entity does is for clients that do not know its shape.
+		if ( ent->eType == ET_GENERAL && ent->modelindex && ( ent->generic1 == PROP_SOLID_HULL || ent->generic1 == PROP_SOLID_BOX ) ) {
+			cg_propEntities[cg_numPropEntities] = cent;
+			cg_numPropEntities++;
 			continue;
 		}
 
@@ -429,6 +563,7 @@ void	CG_Trace( trace_t *result, const vec3_t start, const vec3_t mins, const vec
 	t.entityNum = t.fraction != 1.0 ? ENTITYNUM_WORLD : ENTITYNUM_NONE;
 	// check all other solid models
 	CG_ClipMoveToEntities (start, mins, maxs, end, skipNumber, mask, &t, qfalse);
+	CG_ClipMoveToProps( start, mins, maxs, end, skipNumber, mask, &t );
 
 	*result = t;
 }
@@ -446,6 +581,7 @@ void	CG_G2Trace( trace_t *result, const vec3_t start, const vec3_t mins, const v
 	t.entityNum = t.fraction != 1.0 ? ENTITYNUM_WORLD : ENTITYNUM_NONE;
 	// check all other solid models
 	CG_ClipMoveToEntities (start, mins, maxs, end, skipNumber, mask, &t, qtrue);
+	CG_ClipMoveToProps( start, mins, maxs, end, skipNumber, mask, &t );
 
 	*result = t;
 }

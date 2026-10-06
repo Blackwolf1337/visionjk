@@ -208,6 +208,61 @@ Also changed:
   the next start of any map, so it can not come back later. An entity of the map that was edited in the panel
   is not kept, the map has it as it was. Tried once on the running server: nine placed objects before and
   after, the file gone.
+- New: props have the shape of their model, players stand on them, and a prop that is thrown at somebody hurts
+  (`codemp/game/bg_props.c`, shared by the game and the cgame, and `g_props.c`).
+  - The shape. `misc_prop` has a key `shape`: `model` (the default now), `box` or `ball`. `model` is the convex
+    hull of the model: its furthest vertex along each of 26 directions, then the vertex that sticks out of the
+    hull of those furthest, one at a time, until nothing sticks out by more than half a percent of the size of
+    the model or 32 corners are used (60 faces at most). The first step alone was not enough: a crate with
+    slanted shoulders lost its flat top, none of its corners is the furthest along one of the 26. A hull has no
+    holes: what is hollow in a model is filled, a ring is a disc, a table a block with the outline of its top
+    and its feet. A model that is flat or thinner than 4 units somewhere gets the box of its bounds. `misc_cube`
+    stays a box, taken from the vertices of its model now.
+  - The physics is the one of the cube with a hull in the place of the box: the spots that are asked about the
+    world are the corners of the hull, then the middles of its faces and edges (64 at most, 26 for a box), two
+    bodies are pushed apart along the direction of the face of either that they overlap least along, and every
+    spot of one in the other is a contact. The middle of a body is the centre of mass of the hull. Mass and
+    inertia still come from the box around it.
+  - Players. A body is in the way of the moves of players: `SV_PMTrace` cuts every trace of a move against
+    the bodies it comes near (`G_PropClipMove`). The engine could not do that, an entity is a box that is not
+    turned for it. `BG_PropBrush` makes planes in the world of a shape where it lies, as a brush of a map has
+    them (its faces, the six sides of the box around it, and six planes for each of its edges, where an edge
+    of the box of a player slides past an edge of the shape), and `BG_PropClipBox` is the trace of a brush. So
+    a player stands on top of a prop, walks on its slopes, falls off beside a turned crate where the box around
+    it would still carry him. What is hit counts as world. Props count as bodies for the mask: ghosts,
+    spectators and corpses pass. A player who is in a prop (it fell on him) is not stopped by it and walks
+    out, and it is pushed out of him. The one who holds a prop is not stopped by it. A ball is in nobody's way.
+    A player shoves a body by walking against it: he is stopped at its face, so it is the speed he asks for
+    with his keys that counts for the shove, not the speed he has. A body somebody stands on is left asleep.
+    He is not weight on it and is not carried along when it moves.
+  - Clients. The cgame of the port makes the same shape from the model file (`generic1` of the entity says
+    how, `otherEntityNum` who holds it) and cuts its predicted moves against it with the same code
+    (`CG_ClipMoveToProps`), so standing on a prop that lies still is predicted right. While a prop moves the
+    client has it where the last snapshot had it, as with every mover. A client that does not know any of this
+    gets a box in `s.solid`, which is all such a client can predict with: not turned, as wide as it is long,
+    around the origin of the model. For such a client a crate on its face is about right and everything else
+    jerks at its edges.
+  - Damage. A prop that comes at a player or an NPC faster than 320 units a second hurts him: 1 + (speed - 320)
+    * 0.03 * mass, 150 at most, once in half a second, as `MOD_CRUSH`. What counts is how fast the middle of
+    the prop comes at him, also for one that will only reach him when the frame is over (a fast one is in him
+    before it was seen next to him). Who held, shoved, pushed or shot it in the five seconds before is the
+    attacker, and is not hurt by it himself in the first 0.4 seconds. A crate of mass 6 at 600 units a second
+    does about 50.
+  - New server command `props`: lists the props with their corners, faces, mass, place, lowest and highest
+    corner and whether they lie still. `props <number>`: what that body touches.
+  - Checked before the user asked me to stop testing and build it: `bg_props.c` alone in a small program (300
+    clouds of points give sound hulls, a nearest spot is off by 1.3 units at most where a face has no width,
+    4000 moves of a box against turned shapes stop where stepping along the way says they should, 0.3 units
+    early at most). On a private server with the first version of the hull, before the corners that stick out
+    were added: 78 models dropped onto a floor all came to rest with their lowest corner on it, 4 of them did
+    not fall asleep (two of those are boxes, as before). With the hull as it is now: a frozen bot dropped onto
+    a cube stands on its top and the cube stays asleep, beside a cube turned by 45 degrees but inside the box
+    around it he falls to the floor, he stands on the flat top of the crate model and on its slanted shoulder,
+    a cube he is put into is pushed out of him and he is not stuck, a cube that falls 290 units onto him takes
+    37 off him and one let go just above his head nothing.
+    Not checked: the prediction of the cgame (not at all, it shares the code of the trace), shoving by walking,
+    a prop thrown with +button13 at a player, stacks and piles after the last change of the hull, a client
+    without the new cgame. Built for Linux and Windows.
 - New: `+button13` takes players too, for admins only (`Prop_CarryPlayer` in `codemp/game/g_props.c`): who is
   logged in as an admin of JA+, with any rank. Everybody else takes props with it as before. The ranks are not
   compared and `jp_admUsableOn` is not looked at, any admin takes any player. He takes the player he looks at

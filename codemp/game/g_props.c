@@ -1,26 +1,29 @@
 /*
 misc_ball, misc_cube and misc_prop: props with physics of their own. misc_prop is the general one, any model of
-the game as a box or a ball of its size. The other two are a ball and a crate with numbers that suit them.
+the game with the shape of that model, or as a box or a ball of its size. The other two are a ball and a crate
+with numbers that suit them.
 
-The ball falls, bounces, rolls down slopes and comes to rest. The cube is a rigid body with corners and edges:
-it lands on them, tips over, tumbles and slides to a stop on one of its faces. Players kick the ball by running
-into it and shove the cube, which is heavy and slows them down. Force push and pull throw both, shots, sabers
-and explosions knock them away. They collide with each other, each by its mass, so cubes can be pushed with
-cubes and stacked. With +button13 a player takes the one he looks at: it hangs from a point in front of his
-eyes by the spot he took it at, the cube by a corner, and swings there until he lets go. An admin takes another
+The ball falls, bounces, rolls down slopes and comes to rest. Everything else is a rigid body with corners,
+edges and faces (the hull of its model, bg_props.c, or a box): it lands on them, tips over, tumbles and slides
+to a stop on one of its faces. Players kick the ball by running into it and shove a body, which is heavy and
+slows them down. Force push and pull throw both, shots, sabers and explosions knock them away. They collide
+with each other, each by its mass, so bodies can be pushed with bodies and stacked. With +button13 a player
+takes the one he looks at: it hangs from a point in front of his eyes by the spot he took it at, a body by a
+corner, and swings there until he lets go. A prop that comes at a player fast hurts him. An admin takes another
 player the same way and carries him in the hug of amhug, right in front of him, until he lets go.
 
-Server side only, no client code knows about them. For the client they are plain model entities (ET_GENERAL)
-whose place and angles the server renews every frame. Players are not blocked by them: their contents are those
-of a corpse, which shots hit and players walk through, and what a player does to them is worked out here.
+For the client they are plain model entities (ET_GENERAL) whose place and angles the server renews every frame.
+For the engine their contents are those of a corpse, which shots hit and nothing is stopped by: an entity is a
+box that is not turned there. So what a player does to them is worked out here, and a body is put in the way
+of the moves of players here too (G_PropClipMove), with its real shape, so they stand and walk on it. The cgame
+of the port predicts that with the same code. A ball is in nobody's way.
 
 Not from JA+ and not from JKAdmin.
 */
 
 #include "g_local.h"
 #include "b_local.h"				// G_BoundsOverlap
-#include "qcommon/qfiles.h"			// the header of an md3, for the bounds of the model of a box
-#include "rd-common/mdx_format.h"	// and what a Ghoul2 model is made of, for the same
+#include "bg_props.h"				// the shape of a body: the hull of its model
 
 // +button13. The base game uses the button bits up to 2048 and JA+ takes 4096 (+button12) for the hook. 8192,
 // 16384 and 32768 (+button13 to +button15) are free, and all 16 bits of the buttons reach the server.
@@ -41,12 +44,12 @@ Not from JA+ and not from JKAdmin.
 #define BODY_STEP			0.0125f		// longest step of the rigid body in seconds, a server frame is cut into these
 #define BODY_MAX_STEPS		8
 #define BODY_ROUNDS			6			// times the contacts are gone through in a step
-#define BODY_SPOTS			27			// the spots of a cube that are looked at: 8 corners, the middles of 12 edges and
-#define BODY_SPOT_MIDDLE	13			//	6 faces. With its middle, which is left out, three by three by three.
-#define BODY_MAX_CONTACTS	96			// 26 against the world, the rest against other props
+#define BODY_MAX_SPOTS		64			// the spots of a body that are looked at: its corners, the middles of its faces
+										//	and of its edges, as many as there is room for. A box has 26.
+#define BODY_MAX_CONTACTS	128			// its spots against the world, the rest against other props
 #define BODY_SKIN			1.0f		// this close to a surface a spot counts as touching it
 #define BODY_SLOP			0.05f		// this deep in a surface is left alone
-#define BODY_CORE			0.55f		// part of the smallest half edge: a box in the middle nothing gets into
+#define BODY_CORE			0.55f		// part of the way from its middle to its nearest face: a box in it nothing gets into
 #define BODY_GROUND			0.7f		// z of the normal of a surface that carries it
 #define BODY_MAX_SPEED		3000.0f
 #define BODY_MAX_SPIN		30.0f		// radians per second
@@ -69,9 +72,18 @@ Not from JA+ and not from JKAdmin.
 
 #define SHOVE_SLOW_MSEC		150			// a player who shoves a cube is slowed for that long
 
+#define PROP_PLAYER_TOUCH	8.0f		// a body stops a player at his box, which reaches this much further than
+										//	PROP_PLAYER_RADIUS at its corners: within that he touches it
+#define PROP_BRUSHES		24			// bodies whose planes for the moves of players are kept
+#define PROP_HURT_SPEED		320.0f		// a prop that comes at a player faster than this hurts him:
+#define PROP_HURT_SCALE		0.03f		//	this much for every unit a second above it, times its mass,
+#define PROP_HURT_MAX		150			//	no more than this,
+#define PROP_HURT_MSEC		500			//	and not again within this time
+#define PROP_THROW_MSEC		5000		// that long after a player had his hands on it what it hurts is his doing
+#define PROP_THROW_SAFE		400			//	and that long it does not hurt him himself
+
 #define MODEL_MIN_EDGE		8.0f		// the longest edge of the box of a misc_prop: its model is scaled into these
 #define MODEL_MAX_EDGE		384.0f
-#define MODEL_MAX_BYTES		( 32 * 1024 * 1024 )	// of a Ghoul2 model that is read for its bounds
 
 // gentity_t fields in use:
 //	radius			ball: its size. cube: from its middle to a corner
@@ -89,17 +101,30 @@ Not from JA+ and not from JKAdmin.
 // what does not fit into a gentity_t, by entity number. Of a player (the numbers below MAX_CLIENTS) only holder
 // and hand are in use: who carries him, and where his place in front of that one was in the last frame.
 typedef struct prop_s {
-	qboolean	box;			// a cube, else a ball
+	qboolean	box;			// a body with corners and faces, else a ball
 	matrix3_t	axis;			// how it is turned: forward, left, up
 	vec3_t		spin;			// angular velocity in the world, radians per second
-	vec3_t		half;			// cube: half its edges
-	vec3_t		centre;			// cube: from the origin of the model to its middle, in the model
+	propShape_t	shape;			// body: its corners and faces, the hull of its model or a box
+	int			numSpots;		// body: the spots it is asked about, from its middle, in the model
+	vec3_t		spots[BODY_MAX_SPOTS];
 	float		inertia;		// moment of inertia of a mass of 1
 	gentity_t	*holder;		// who has it in his hand
 	vec3_t		grab;			// the spot he holds it at, in the prop
 	vec3_t		hand;			// where his hand was in the last frame
 	int			calmTime;		// since when it hardly moves, 0: it moves
+	int			solid;			// body: a player can stand on it, PROP_SOLID_ says how its shape is made of its model
+	gentity_t	*thrower;		// the player who threw, shoved or shot it last
+	int			throwTime;		//	and when
+	int			hurtTime;		// it does not hurt anybody before
 } prop_t;
+
+// a body as the planes the move of a player is cut against, for where it stands now
+typedef struct propSolid_s {
+	int			number;			// of its entity, 0: free
+	vec3_t		origin;
+	matrix3_t	axis;
+	propBrush_t	brush;
+} propSolid_t;
 
 // a spot of the cube at a surface of the world or of another prop
 typedef struct contact_s {
@@ -120,6 +145,10 @@ static qboolean	grabDown[MAX_CLIENTS];		// the grab button in the last frame
 static gentity_t	*mates[MAX_CLIENTS];	// the other one of his hug, and after it until the two are out of each other
 static int		shoveTime[MAX_CLIENTS];		// he shoves a cube until then
 static float	shoveScale[MAX_CLIENTS];	//	and that much of his speed is left
+static short	propList[MAX_GENTITIES];	// the numbers of the props, made anew every frame
+static int		propCount;
+static propSolid_t	propSolids[PROP_BRUSHES];
+static int		propSolidNext;
 
 static void prop_pain( gentity_t *self, gentity_t *attacker, int damage );
 
@@ -184,14 +213,9 @@ static void Prop_BounceSound( gentity_t *self ) {
 	G_Sound( self, CHAN_AUTO, self->genericValue3 );
 }
 
+// from the middle of a body to its nearest face
 static float Prop_MinHalf( const prop_t *p ) {
-	float least = p->half[0];
-
-	if ( p->half[1] < least )
-		least = p->half[1];
-	if ( p->half[2] < least )
-		least = p->half[2];
-	return least;
+	return p->shape.inner;
 }
 
 /*
@@ -245,57 +269,57 @@ static float Body_Give( const prop_t *p, const vec3_t r, const vec3_t dir ) {
 	return 1.0f + VectorLengthSquared( cross ) / p->inertia;
 }
 
-// one of the spots of the cube, as an offset from its middle in the world
+// a direction or an offset in the world as the body has it: along its own axes
+static void Body_ToLocal( const prop_t *p, const vec3_t world, vec3_t out ) {
+	VectorSet( out, DotProduct( world, p->axis[0] ), DotProduct( world, p->axis[1] ), DotProduct( world, p->axis[2] ) );
+}
+
+// one of the spots of the body, as an offset from its middle in the world
 static void Body_Spot( const prop_t *p, int n, vec3_t out ) {
+	Body_ToWorld( p, p->spots[n], out );
+}
+
+// how far the body reaches from its middle along a direction
+static float Body_Reach( const prop_t *p, const vec3_t dir ) {
 	vec3_t local;
 
-	VectorSet( local, ( n % 3 - 1 ) * p->half[0], ( n / 3 % 3 - 1 ) * p->half[1], ( n / 9 - 1 ) * p->half[2] );
-	Body_ToWorld( p, local, out );
+	Body_ToLocal( p, dir, local );
+	return BG_PropReach( &p->shape, local );
 }
 
-// how far the cube reaches from its middle along a direction
-static float Body_Reach( const prop_t *p, const vec3_t dir ) {
-	return fabsf( DotProduct( dir, p->axis[0] ) ) * p->half[0] + fabsf( DotProduct( dir, p->axis[1] ) ) * p->half[1]
-		+ fabsf( DotProduct( dir, p->axis[2] ) ) * p->half[2];
-}
-
-// is a point in the cube or within BODY_SKIN of it
+// is a point in the body or within BODY_SKIN of it
 static qboolean Body_Holds( const gentity_t *ent, const prop_t *p, const vec3_t point ) {
-	vec3_t	rel;
-	int		k;
+	vec3_t rel, local;
 
 	VectorSubtract( point, ent->r.currentOrigin, rel );
-	for ( k = 0; k < 3; k++ ) {
-		if ( fabsf( DotProduct( rel, p->axis[k] ) ) > p->half[k] + BODY_SKIN )
-			return qfalse;
-	}
-	return qtrue;
+	Body_ToLocal( p, rel, local );
+	return BG_PropHolds( &p->shape, local, BODY_SKIN );
 }
 
-// the spot of the cube next to an offset from its middle. Returns how far the offset is from it, 0 inside.
+// the spot of the body next to an offset from its middle. Returns how far the offset is from it, 0 inside.
 static float Body_Nearest( const prop_t *p, const vec3_t rel, vec3_t out ) {
-	vec3_t	local;
+	vec3_t		local, spot;
+	const float	dist = ( Body_ToLocal( p, rel, local ), BG_PropNearest( &p->shape, local, spot ) );
+
+	Body_ToWorld( p, spot, out );
+	return dist;
+}
+
+// the box in the world the turned body fits in, a unit smaller
+static void Body_Bounds( const prop_t *p, vec3_t mins, vec3_t maxs ) {
+	vec3_t	dir;
 	int		k;
 
-	for ( k = 0; k < 3; k++ )
-		local[k] = Com_Clamp( -p->half[k], p->half[k], DotProduct( rel, p->axis[k] ) );
-	Body_ToWorld( p, local, out );
-	return Distance( rel, out );
-}
-
-// the box in the world the turned cube fits in, a unit smaller
-static void Body_Bounds( const prop_t *p, vec3_t mins, vec3_t maxs ) {
-	int k, j;
-
 	for ( k = 0; k < 3; k++ ) {
-		float reach = -1.0f;
-
-		for ( j = 0; j < 3; j++ )
-			reach += fabsf( p->axis[j][k] ) * p->half[j];
-		if ( reach < 1.0f )
-			reach = 1.0f;
-		mins[k] = -reach;
-		maxs[k] = reach;
+		VectorClear( dir );
+		dir[k] = 1.0f;
+		maxs[k] = Body_Reach( p, dir ) - 1.0f;
+		dir[k] = -1.0f;
+		mins[k] = -( Body_Reach( p, dir ) - 1.0f );
+		if ( maxs[k] < 1.0f )
+			maxs[k] = 1.0f;
+		if ( mins[k] > -1.0f )
+			mins[k] = -1.0f;
 	}
 }
 
@@ -408,7 +432,7 @@ static void Body_Net( gentity_t *self, const prop_t *p ) {
 	// the origin of a model is not always its middle
 	VectorCopy( self->r.currentOrigin, org );
 	for ( k = 0; k < 3; k++ )
-		VectorMA( org, -p->centre[k], p->axis[k], org );
+		VectorMA( org, -p->shape.centre[k], p->axis[k], org );
 	Body_Angles( p, angles );
 
 	VectorCopy( org, self->s.pos.trBase );
@@ -426,13 +450,39 @@ static void Body_Net( gentity_t *self, const prop_t *p ) {
 	// What shots, sabers and explosions are traced against. An entity has a box that does not turn, so it is the
 	// one the turned body just fits in: right for a crate on its face, generous at the ends of a beam that lies
 	// across the axes.
-	Body_Bounds( p, self->r.mins, self->r.maxs );
-	for ( k = 0; k < 3; k++ ) {
-		self->r.mins[k] -= 1.0f;
-		self->r.maxs[k] += 1.0f;
+	// A ball in a hand comes through here too and keeps the box of its radius.
+	if ( p->box ) {
+		Body_Bounds( p, self->r.mins, self->r.maxs );
+		for ( k = 0; k < 3; k++ ) {
+			self->r.mins[k] -= 1.0f;
+			self->r.maxs[k] += 1.0f;
+		}
 	}
 
+	// For the clients, who predict the moves of their players. The one of the port makes the shape from the
+	// model itself, as the server did: generic1 says how, and who holds it walks through it.
+	self->s.generic1 = p->solid;
+	self->s.otherEntityNum = p->holder ? p->holder->s.number : ENTITYNUM_NONE;
+
 	trap->LinkEntity( (sharedEntity_t *)self );
+
+	// A client that knows nothing of that predicts with the box every solid entity has for it: not turned, as
+	// wide as it is long, around the origin of the model. The link took it away (the contents of a prop are not
+	// solid for the engine), so it is set here: the box around the body as well as such a box can be. Not while
+	// somebody carries it, he would run into it.
+	if ( p->solid && !p->holder ) {
+		vec3_t	lo, hi;
+		int		x, down, up;
+
+		VectorAdd( self->r.currentOrigin, self->r.mins, lo );
+		VectorSubtract( lo, org, lo );
+		VectorAdd( self->r.currentOrigin, self->r.maxs, hi );
+		VectorSubtract( hi, org, hi );
+		x = Com_Clampi( 1, 255, (int)( ( fabsf( lo[0] ) + fabsf( hi[0] ) + fabsf( lo[1] ) + fabsf( hi[1] ) ) * 0.25f ) );
+		down = Com_Clampi( 1, 255, (int)-lo[2] );
+		up = Com_Clampi( 1, 255, (int)hi[2] + 32 );
+		self->s.solid = ( up << 16 ) | ( down << 8 ) | x;
+	}
 }
 
 static void Prop_Home( gentity_t *self ) {
@@ -501,13 +551,84 @@ static void Prop_PlayerSpot( const gentity_t *other, float height, vec3_t spot )
 
 /*
 =================
+Prop_PlayerPush
+
+How fast a player goes towards a prop: his speed, or along normal (from him to it) the speed he asks for with
+his keys if that is more. A body is in his way and stops him, so his own speed says nothing about how hard he
+pushes against it.
+=================
+*/
+static void Prop_PlayerPush( const gentity_t *other, const vec3_t normal, vec3_t vel ) {
+	const gclient_t	*client = other->client;
+	const usercmd_t	*cmd = &client->pers.cmd;
+	vec3_t			angles, fwd, right, wish;
+	float			keys, more;
+
+	VectorCopy( client->ps.velocity, vel );
+	if ( other - g_entities >= MAX_CLIENTS || ( !cmd->forwardmove && !cmd->rightmove ) )
+		return;
+
+	VectorSet( angles, 0.0f, client->ps.viewangles[YAW], 0.0f );
+	AngleVectors( angles, fwd, right, NULL );
+	VectorScale( fwd, cmd->forwardmove, wish );
+	VectorMA( wish, cmd->rightmove, right, wish );
+	keys = VectorNormalize( wish );
+	VectorScale( wish, client->ps.speed * ( keys < 127.0f ? keys / 127.0f : 1.0f ), wish );
+	more = DotProduct( wish, normal ) - DotProduct( vel, normal );
+	if ( more > 0.0f )
+		VectorMA( vel, more, normal, vel );
+}
+
+/*
+=================
+Prop_Hurt
+
+A prop touches a player or an NPC (spot: the point of him next to it) or will when this frame is over: if it
+comes at him fast enough it hurts him, the more the heavier it is. Who threw, shoved or shot it a moment ago
+did that to him, and is not hurt by it himself right away.
+=================
+*/
+static void Prop_Hurt( gentity_t *self, prop_t *p, gentity_t *other, const vec3_t spot ) {
+	const qboolean	thrown = ( p->thrower && p->thrower->inuse && p->thrower->client
+						&& level.time - p->throwTime < PROP_THROW_MSEC ) ? qtrue : qfalse;
+	vec3_t			dir;
+	float			hit;
+	int				damage;
+
+	// how fast its middle comes at him. Not along the face that touches him: a fast one is deep in him by the
+	// time it is seen, and what is next to him then is some side of it.
+	VectorSubtract( spot, self->r.currentOrigin, dir );
+	VectorNormalize( dir );
+	hit = DotProduct( self->movedir, dir );
+	if ( hit < PROP_HURT_SPEED || level.time < p->hurtTime )
+		return;
+	if ( thrown && other == p->thrower && level.time - p->throwTime < PROP_THROW_SAFE )
+		return;
+	p->hurtTime = level.time + PROP_HURT_MSEC;
+
+	damage = 1 + (int)( ( hit - PROP_HURT_SPEED ) * PROP_HURT_SCALE * self->mass );
+	if ( damage > PROP_HURT_MAX )
+		damage = PROP_HURT_MAX;
+	G_Damage( other, self, thrown ? p->thrower : self, dir, other->r.currentOrigin, damage, 0, MOD_CRUSH );
+}
+
+// a player had his hands on it: what it hits now is his doing
+static void Prop_Thrown( prop_t *p, gentity_t *by ) {
+	if ( by && by->client ) {
+		p->thrower = by;
+		p->throwTime = level.time;
+	}
+}
+
+/*
+=================
 Ball_Players
 
 A player or NPC who touches the ball kicks it: the ball bounces off him like off something much heavier
-that moves, and it is put outside of him.
+that moves, and it is put outside of him. A ball that comes at him fast hurts him.
 =================
 */
-static void Ball_Players( gentity_t *self, const prop_t *p ) {
+static void Ball_Players( gentity_t *self, prop_t *p, float dt ) {
 	const float	reach = self->radius + PROP_PLAYER_RADIUS;
 	int			i;
 
@@ -523,12 +644,18 @@ static void Ball_Players( gentity_t *self, const prop_t *p ) {
 			continue;
 		Prop_PlayerSpot( other, self->r.currentOrigin[2], spot );
 
+		// a fast one is past him before it was ever seen next to him: where it will be when this frame is over
+		VectorMA( self->r.currentOrigin, dt, self->movedir, out );
+		if ( Distance( out, spot ) < reach )
+			Prop_Hurt( self, p, other, spot );
+
 		VectorSubtract( self->r.currentOrigin, spot, normal );
 		dist = VectorNormalize( normal );
 		if ( dist >= reach )
 			continue;
 		if ( dist < 0.1f )
 			VectorSet( normal, 0, 0, 1 );
+		Prop_Hurt( self, p, other, spot );
 
 		// how fast they come together
 		VectorSubtract( self->movedir, client->ps.velocity, rel );
@@ -539,6 +666,7 @@ static void Ball_Players( gentity_t *self, const prop_t *p ) {
 			self->movedir[2] += -into * 0.15f * self->speed / self->mass;
 			if ( -into > PROP_LOUD )
 				Prop_BounceSound( self );
+			Prop_Thrown( p, other );
 		}
 		Prop_Wake( self );
 
@@ -554,19 +682,23 @@ static void Ball_Players( gentity_t *self, const prop_t *p ) {
 =================
 Cube_Players
 
-A player or NPC who walks into the cube shoves it: an impulse at the spot of the cube next to him, which turns
-it too when that spot is off its middle, and the cube is put outside of him. It is heavy: only part of his
-speed gets into it, and he is slowed down while he shoves (G_PropPlayerSpeed).
+A player or NPC who walks against the body shoves it: an impulse at the spot of the body next to him, which
+turns it too when that spot is off its middle. It is heavy: only part of his speed gets into it, and he is
+slowed down while he shoves (G_PropPlayerSpeed). A body that comes at him fast hurts him.
+
+The body is in the way of a player (G_PropClipMove), so he stops at its faces with his box and shoves from
+there. Should he be in it all the same, because it fell on him or was thrown at him, it is put outside of him.
 =================
 */
-static void Cube_Players( gentity_t *self, prop_t *p ) {
-	vec3_t	mins, maxs;
-	int		i;
+static void Cube_Players( gentity_t *self, prop_t *p, float dt ) {
+	const qboolean	fast = ( VectorLengthSquared( self->movedir ) * dt * dt > PROP_PLAYER_TOUCH * PROP_PLAYER_TOUCH ) ? qtrue : qfalse;
+	vec3_t			mins, maxs;
+	int				i;
 
 	for ( i = 0; i < level.num_entities; i++ ) {
 		gentity_t	*other = &g_entities[i];
 		gclient_t	*client = other->client;
-		vec3_t		spot, rel, r, normal, speed, out;
+		vec3_t		spot, rel, r, normal, speed, vel, out;
 		float		dist, depth, into;
 		trace_t		tr;
 
@@ -575,16 +707,23 @@ static void Cube_Players( gentity_t *self, prop_t *p ) {
 		Prop_PlayerSpot( other, self->r.currentOrigin[2], spot );
 
 		VectorSubtract( spot, self->r.currentOrigin, rel );
+		// a fast one is in him before it was ever seen next to him: where it will be when this frame is over
+		if ( fast ) {
+			VectorMA( rel, -dt, self->movedir, out );
+			if ( Body_Nearest( p, out, r ) < PROP_PLAYER_RADIUS )
+				Prop_Hurt( self, p, other, spot );
+		}
 		dist = Body_Nearest( p, rel, r );
-		if ( dist >= PROP_PLAYER_RADIUS )
+		if ( dist >= PROP_PLAYER_RADIUS + PROP_PLAYER_TOUCH )
 			continue;
+		Prop_Hurt( self, p, other, spot );
 		if ( dist > 0.1f ) {
-			// from him to the cube
+			// from him to the body
 			VectorSubtract( r, rel, normal );
 			VectorScale( normal, 1.0f / dist, normal );
 			depth = PROP_PLAYER_RADIUS - dist;
 		} else {
-			// he is in the cube: out to the side he is not on, a bit in every frame
+			// he is in the body: out to the side he is not on, a bit in every frame
 			VectorSet( normal, -rel[0], -rel[1], 0.0f );
 			if ( VectorNormalize( normal ) < 1.0f ) {
 				const float yaw = DEG2RAD( client->ps.viewangles[YAW] );
@@ -597,9 +736,10 @@ static void Cube_Players( gentity_t *self, prop_t *p ) {
 
 		// how fast they come together at that spot
 		Body_SpeedAt( self, p, r, speed );
-		VectorSubtract( speed, client->ps.velocity, speed );
+		Prop_PlayerPush( other, normal, vel );
+		VectorSubtract( speed, vel, speed );
 		into = DotProduct( speed, normal );
-		if ( into < 0.0f ) {
+		if ( into < -1.0f ) {
 			vec3_t rn, impulse;
 
 			CrossProduct( r, normal, rn );
@@ -608,18 +748,21 @@ static void Cube_Players( gentity_t *self, prop_t *p ) {
 			Body_Push( self, p, r, impulse );
 			if ( -into > PROP_LOUD )
 				Prop_BounceSound( self );
+			Prop_Thrown( p, other );
+			Prop_Wake( self );
 
 			// shoving it is work
-			if ( i < MAX_CLIENTS && DotProduct( client->ps.velocity, normal ) > 10.0f ) {
+			if ( i < MAX_CLIENTS && DotProduct( vel, normal ) > 10.0f ) {
 				shoveTime[i] = level.time + SHOVE_SLOW_MSEC;
 				shoveScale[i] = Com_Clamp( 0.25f, 1.0f, 1.0f / ( 1.0f + 0.2f * self->mass ) );
 			}
 		}
-		Prop_Wake( self );
 
-		// he stands on it: there is nowhere to put it but into the ground
-		if ( normal[2] < -0.5f )
+		// He touches it and no more, or he stands on it: there is nowhere to put it then but into the ground.
+		// A body a player stands on is left asleep, it does not shake under him.
+		if ( depth <= 0.0f || normal[2] < -0.5f )
 			continue;
+		Prop_Wake( self );
 
 		// out of him, as far as the world lets it
 		Body_Bounds( p, mins, maxs );
@@ -706,7 +849,9 @@ static void Prop_HugSpot( const gentity_t *holder, vec3_t spot ) {
 }
 
 static void Prop_Release( gentity_t *self ) {
-	Prop_State( self )->holder = NULL;
+	prop_t *p = Prop_State( self );
+
+	p->holder = NULL;
 	Prop_Wake( self );
 }
 
@@ -789,12 +934,10 @@ static void Prop_Grab( gentity_t *ent ) {
 		} else if ( p->box ) {
 			int c;
 
-			for ( c = 0; c < 8; c++ ) {
-				vec3_t	local, corner;
+			for ( c = 0; c < p->shape.numVerts; c++ ) {
+				vec3_t corner;
 
-				VectorSet( local, ( c & 1 ) ? p->half[0] : -p->half[0], ( c & 2 ) ? p->half[1] : -p->half[1],
-					( c & 4 ) ? p->half[2] : -p->half[2] );
-				Body_ToWorld( p, local, corner );
+				Body_ToWorld( p, p->shape.verts[c], corner );
 				VectorAdd( corner, prop->r.currentOrigin, corner );
 				Prop_AimBetter( eye, fwd, corner, &score, spot );
 			}
@@ -963,6 +1106,78 @@ static void Prop_CarryPlayer( gentity_t *victim, float dt ) {
 	ps->otherKillerDebounceTime = level.time + 100;
 }
 
+// the planes of a body for where it stands now. Kept for a few of them: a player makes many moves a frame
+// against the same ones, and most bodies lie still.
+static const propBrush_t *Prop_Brush( const gentity_t *ent, const prop_t *p ) {
+	propSolid_t	*solid = NULL;
+	int			i;
+
+	for ( i = 0; i < PROP_BRUSHES; i++ ) {
+		if ( propSolids[i].number != ent->s.number )
+			continue;
+		solid = &propSolids[i];
+		if ( VectorCompare( solid->origin, ent->r.currentOrigin ) && !memcmp( solid->axis, p->axis, sizeof( solid->axis ) ) )
+			return &solid->brush;
+		break;
+	}
+	if ( !solid ) {
+		solid = &propSolids[propSolidNext];
+		propSolidNext = ( propSolidNext + 1 ) % PROP_BRUSHES;
+	}
+	solid->number = ent->s.number;
+	VectorCopy( ent->r.currentOrigin, solid->origin );
+	memcpy( solid->axis, p->axis, sizeof( solid->axis ) );
+	BG_PropBrush( &p->shape, ent->r.currentOrigin, solid->axis, &solid->brush );
+	return &solid->brush;
+}
+
+/*
+=================
+G_PropClipMove
+
+For the movement trace of the server (SV_PMTrace), after the engine made it: the bodies are in the way of
+players too. The engine can not do that, an entity is a box that is not turned for it, so the move is cut
+here against the shape of every body it comes near (BG_PropClipBox), turned as it is. The cgame does the same
+with the same code when it predicts.
+
+They count as bodies for the mask: who walks through players (a ghost, a spectator, a corpse) walks through
+props. A body is not in the way of the one who holds it, and the moves of a player who is in one are not cut
+by it: he walks out.
+=================
+*/
+void G_PropClipMove( trace_t *results, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end,
+		int passEntityNum, int contentMask ) {
+	vec3_t	lo, hi;
+	int		i, k;
+
+	if ( !propCount || !(contentMask & CONTENTS_BODY) || results->allsolid )
+		return;
+	if ( !mins )
+		mins = vec3_origin;
+	if ( !maxs )
+		maxs = vec3_origin;
+	for ( k = 0; k < 3; k++ ) {
+		lo[k] = ( start[k] < end[k] ? start[k] : end[k] ) + mins[k] - 1.0f;
+		hi[k] = ( start[k] > end[k] ? start[k] : end[k] ) + maxs[k] + 1.0f;
+	}
+
+	for ( i = 0; i < propCount; i++ ) {
+		const gentity_t	*ent = &g_entities[propList[i]];
+		const prop_t	*p = &props[propList[i]];
+
+		// the list is of the start of the frame
+		if ( !Prop_Is( ent ) || !p->solid || ( p->holder && p->holder->s.number == passEntityNum ) )
+			continue;
+		for ( k = 0; k < 3; k++ ) {
+			if ( ent->r.currentOrigin[k] + ent->radius < lo[k] || ent->r.currentOrigin[k] - ent->radius > hi[k] )
+				break;
+		}
+		if ( k < 3 )
+			continue;
+		BG_PropClipBox( results, start, mins, maxs, end, Prop_Brush( ent, p ) );
+	}
+}
+
 /*
 =================
 G_PropCarried
@@ -1005,6 +1220,14 @@ void G_PropFrame( void ) {
 	int			i;
 
 	lastTime = level.time;
+
+	// the props there are, for the moves of the players (G_PropClipMove)
+	propCount = 0;
+	for ( i = MAX_CLIENTS; i < level.num_entities; i++ ) {
+		if ( Prop_Is( &g_entities[i] ) )
+			propList[propCount++] = i;
+	}
+
 	for ( i = 0; i < level.maxclients; i++ ) {
 		gentity_t		*ent = &g_entities[i];
 		const qboolean	down = ( ent->inuse && ent->client && (ent->client->pers.cmd.buttons & BUTTON_GRAB) ) ? qtrue : qfalse;
@@ -1280,50 +1503,55 @@ static int Contact_Add( gentity_t *self, const prop_t *p, gentity_t *other, cons
 
 /*
 =================
-Cube_Cube
+Body_Body
 
-Where this cube touches another one. First the direction they are pushed apart along: of the six directions
-their faces look into, the one along which they overlap least. Without an overlap along one of them they do
-not touch. Then every spot of one that is in the other is a contact.
+Where this body touches another one. First the direction they are pushed apart along: of the directions the
+faces of the two look into, the one along which they overlap least. Without an overlap along one of them they
+do not touch. Then every spot of one that is in the other is a contact.
 =================
 */
-static int Cube_Cube( gentity_t *self, const prop_t *p, gentity_t *other, const prop_t *q, contact_t *list, int count ) {
-	vec3_t	apart, normal, r, r2, point;
-	float	least = 0.0f, reachSelf = 0.0f, reachOther = 0.0f;
-	int		k, n;
+static int Body_Body( gentity_t *self, const prop_t *p, gentity_t *other, const prop_t *q, contact_t *list, int count ) {
+	vec3_t		apart, normal, dir, back, r, r2, point;
+	float		least = 0.0f, reachSelf, reachOther;
+	qboolean	found = qfalse;
+	int			n;
 
 	VectorSubtract( self->r.currentOrigin, other->r.currentOrigin, apart );
 	VectorClear( normal );
-	for ( k = 0; k < 6; k++ ) {
-		const float	*dir = ( k < 3 ) ? q->axis[k] : p->axis[k - 3];
-		const float	dist = DotProduct( apart, dir );
-		const float	mine = Body_Reach( p, dir ), theirs = Body_Reach( q, dir );
-		const float	overlap = mine + theirs - fabsf( dist );
+	for ( n = 0; n < q->shape.numPlanes + p->shape.numPlanes; n++ ) {
+		const qboolean	theirs = ( n < q->shape.numPlanes ) ? qtrue : qfalse;
+		const prop_t	*owner = theirs ? q : p, *facing = theirs ? p : q;
+		const float		*plane = owner->shape.planes[theirs ? n : n - q->shape.numPlanes];
+		float			gap;
 
-		if ( overlap < -BODY_SKIN )
+		// how far the one this face looks at is in front of it
+		Body_ToWorld( owner, plane, dir );
+		VectorNegate( dir, back );
+		gap = ( theirs ? 1.0f : -1.0f ) * DotProduct( apart, dir ) - Body_Reach( facing, back ) - plane[3];
+		if ( gap > BODY_SKIN )
 			return count;
-		if ( !k || overlap < least ) {
+		if ( !found || -gap < least ) {
 			// from the other one to this one
-			least = overlap;
-			VectorScale( dir, ( dist < 0.0f ) ? -1.0f : 1.0f, normal );
-			reachSelf = mine;
-			reachOther = theirs;
+			found = qtrue;
+			least = -gap;
+			VectorScale( dir, theirs ? 1.0f : -1.0f, normal );
 		}
 	}
+	reachOther = Body_Reach( q, normal );
+	VectorNegate( normal, back );
+	reachSelf = Body_Reach( p, back );
 
-	for ( n = 0; n < BODY_SPOTS; n++ ) {
-		if ( n == BODY_SPOT_MIDDLE )
-			continue;
-
-		// a spot of this cube in the other one: how far it is under the face of the other one
+	for ( n = 0; n < p->numSpots; n++ ) {
+		// a spot of this body in the other one: how far it is under the other one along that direction
 		Body_Spot( p, n, r );
 		VectorAdd( self->r.currentOrigin, r, point );
 		if ( Body_Holds( other, q, point ) ) {
 			VectorSubtract( point, other->r.currentOrigin, r2 );
 			count = Contact_Add( self, p, other, q, list, count, r, r2, normal, DotProduct( normal, r2 ) - reachOther );
 		}
-
-		// and the same spot of the other one in this cube
+	}
+	for ( n = 0; n < q->numSpots; n++ ) {
+		// and a spot of the other one in this body
 		Body_Spot( q, n, r2 );
 		VectorAdd( other->r.currentOrigin, r2, point );
 		if ( Body_Holds( self, p, point ) ) {
@@ -1360,10 +1588,10 @@ static int Cube_Ball( gentity_t *self, const prop_t *p, gentity_t *other, const 
 =================
 Body_Contacts
 
-Where the cube touches the world and the other props.
+Where the body touches the world and the other props.
 
-The world: the engine only traces boxes that are not turned, so the spots of the cube are looked at one by
-one: its corners and the middles of its edges and faces. A line from the middle of the cube through each spot
+The world: the engine only traces boxes that are not turned, so the spots of the body are looked at one by
+one: its corners and the middles of its faces and edges. A line from the middle of the body through each spot
 finds the surface the spot is in or close to.
 
 Props: they are not in those traces (shots and players have to get through them), their shapes are known here.
@@ -1372,14 +1600,11 @@ Props: they are not in those traces (shots and players have to get through them)
 static int Body_Contacts( gentity_t *self, const prop_t *p, contact_t *list ) {
 	int count = 0, n;
 
-	for ( n = 0; n < BODY_SPOTS; n++ ) {
+	for ( n = 0; n < p->numSpots && count < BODY_MAX_CONTACTS; n++ ) {
 		contact_t	*c = &list[count];
 		vec3_t		spot;
 		float		len;
 		trace_t		tr;
-
-		if ( n == BODY_SPOT_MIDDLE )
-			continue;
 
 		Body_Spot( p, n, c->r );
 		len = VectorLength( c->r );
@@ -1410,7 +1635,7 @@ static int Body_Contacts( gentity_t *self, const prop_t *p, contact_t *list ) {
 		reach = self->radius + other->radius + BODY_SKIN;
 		if ( DistanceSquared( self->r.currentOrigin, other->r.currentOrigin ) > reach * reach )
 			continue;
-		count = q->box ? Cube_Cube( self, p, other, q, list, count ) : Cube_Ball( self, p, other, q, list, count );
+		count = q->box ? Body_Body( self, p, other, q, list, count ) : Cube_Ball( self, p, other, q, list, count );
 	}
 	return count;
 }
@@ -1681,6 +1906,7 @@ static void Body_Move( gentity_t *self, prop_t *p, float dt ) {
 	VectorClear( handVel );
 	VectorClear( way );
 	if ( p->holder ) {
+		Prop_Thrown( p, p->holder );
 		// where his hand is now and how fast it got there
 		Prop_Hand( p->holder, hand );
 		VectorSubtract( hand, p->hand, way );
@@ -1782,9 +2008,9 @@ static void prop_think( gentity_t *self ) {
 		Prop_Release( self );
 
 	if ( p->box )
-		Cube_Players( self, p );
+		Cube_Players( self, p, dt );
 	else
-		Ball_Players( self, p );
+		Ball_Players( self, p, dt );
 
 	if ( self->genericValue2 ) {
 		// it lies still. Now and then: is the ground still there?
@@ -1818,10 +2044,11 @@ itself pushes along the shot at the spot it hit, which makes it spin when that s
 =================
 */
 static void prop_pain( gentity_t *self, gentity_t *attacker, int damage ) {
-	const prop_t	*p = Prop_State( self );
-	vec3_t			at, dir, spot;
+	prop_t	*p = Prop_State( self );
+	vec3_t	at, dir, spot;
 
 	self->health = PROP_HEALTH;
+	Prop_Thrown( p, attacker );
 
 	VectorSubtract( gPainPoint, self->r.currentOrigin, at );
 	VectorNegate( at, dir );
@@ -1900,6 +2127,7 @@ void G_PropForceThrow( gentity_t *self, qboolean pull ) {
 
 		if ( p->holder == self )
 			Prop_Release( prop );
+		Prop_Thrown( p, self );
 
 		// the cube is taken a bit above its middle, that makes it tumble
 		VectorSet( at, 0, 0, p->box ? 0.4f * Prop_MinHalf( p ) : 0.0f );
@@ -1914,6 +2142,72 @@ void G_PropForceThrow( gentity_t *self, qboolean pull ) {
 }
 
 /*
+=================
+Svcmd_Props_f
+
+props: lists the props of the map with what the physics knows of them. props <number>: what that body touches.
+=================
+*/
+void Svcmd_Props_f( void ) {
+	char	arg[16];
+	int		i, m, count = 0;
+
+	// with the number of a body: what it touches now
+	trap->Argv( 1, arg, sizeof( arg ) );
+	i = atoi( arg );
+	if ( arg[0] && i >= MAX_CLIENTS && i < level.num_entities && Prop_Is( &g_entities[i] ) && props[i].box ) {
+		contact_t		contacts[BODY_MAX_CONTACTS];
+		gentity_t		*ent = &g_entities[i];
+		const prop_t	*p = &props[i];
+		vec3_t			angles;
+
+		count = Body_Contacts( ent, p, contacts );
+		Body_Angles( p, angles );
+		trap->Print( "%i: angles %.1f %.1f %.1f, spin %.2f %.2f %.2f, speed %.1f %.1f %.1f, %i contacts, carried %i\n", i, angles[0], angles[1],
+			angles[2], p->spin[0], p->spin[1], p->spin[2], ent->movedir[0], ent->movedir[1], ent->movedir[2], count,
+			Body_Carried( p, contacts, count ) );
+		for ( m = 0; m < count; m++ ) {
+			const contact_t *c = &contacts[m];
+
+			trap->Print( "  at %6.1f %6.1f %6.1f  normal %5.2f %5.2f %5.2f  sep %6.2f  %s\n", c->r[0], c->r[1], c->r[2], c->normal[0],
+				c->normal[1], c->normal[2], c->sep, c->other ? va( "prop %i", c->other->s.number ) : "world or a prop that lies still" );
+		}
+		return;
+	}
+
+	for ( i = MAX_CLIENTS; i < level.num_entities; i++ ) {
+		const gentity_t	*ent = &g_entities[i];
+		const prop_t	*p = &props[i];
+		float			lowest = ent->r.currentOrigin[2] - ent->radius, highest = ent->r.currentOrigin[2] + ent->radius;
+		char			shape[64];
+
+		if ( !Prop_Is( ent ) )
+			continue;
+		if ( p->box ) {
+			// its lowest corner: on a floor that is where the floor is
+			for ( m = 0; m < p->shape.numVerts; m++ ) {
+				vec3_t corner;
+
+				Body_ToWorld( p, p->shape.verts[m], corner );
+				if ( !m || ent->r.currentOrigin[2] + corner[2] < lowest )
+					lowest = ent->r.currentOrigin[2] + corner[2];
+				if ( !m || ent->r.currentOrigin[2] + corner[2] > highest )
+					highest = ent->r.currentOrigin[2] + corner[2];
+			}
+			Com_sprintf( shape, sizeof( shape ), "%i corners %i faces %i edges %i spots", p->shape.numVerts, p->shape.numPlanes,
+				p->shape.numEdges, p->numSpots );
+		} else {
+			Com_sprintf( shape, sizeof( shape ), "ball of %.1f", ent->radius );
+		}
+		trap->Print( "%4i %s: %s, mass %.1f, at %.1f %.1f %.1f, lowest %.2f, highest %.2f, speed %.0f%s%s\n", i, ent->classname, shape,
+			ent->mass, ent->r.currentOrigin[0], ent->r.currentOrigin[1], ent->r.currentOrigin[2], lowest, highest, VectorLength( ent->movedir ),
+			ent->genericValue2 ? ", lies still" : "", p->holder ? ", in a hand" : "" );
+		count++;
+	}
+	trap->Print( "%i props\n", count );
+}
+
+/*
 ===============================================================================
 
 Spawning
@@ -1921,152 +2215,10 @@ Spawning
 ===============================================================================
 */
 
-/*
-=================
-Prop_ModelBounds
-
-The box a model fills: the bounds of the first frame of the md3. The server does not load models, so the file
-is read here. With it the cube of the physics is the one the client draws, whatever the model.
-=================
-*/
-static qboolean Prop_ModelBounds( const char *model, vec3_t mins, vec3_t maxs ) {
-	const int		need = sizeof( md3Header_t ) + sizeof( md3Frame_t );
-	md3Header_t		header;
-	md3Frame_t		frame;
-	fileHandle_t	f = NULL_FILE;
-	const int		len = trap->FS_Open( model, &f, FS_READ );
-	qboolean		ok = qfalse;
-	int				skip, k;
-
-	if ( !f )
-		return qfalse;
-
-	if ( len >= need ) {
-		trap->FS_Read( &header, sizeof( header ), f );
-		// the frames follow the header in every md3 of the game. There is no seek here: a short gap is read over.
-		skip = LittleLong( header.ofsFrames ) - (int)sizeof( header );
-		if ( LittleLong( header.ident ) == MD3_IDENT && LittleLong( header.numFrames ) >= 1
-			&& skip >= 0 && skip <= 4096 && skip <= len - need ) {
-			while ( skip > 0 ) {
-				const int part = ( skip < (int)sizeof( frame ) ) ? skip : (int)sizeof( frame );
-
-				trap->FS_Read( &frame, part, f );
-				skip -= part;
-			}
-			trap->FS_Read( &frame, sizeof( frame ), f );
-
-			ok = qtrue;
-			for ( k = 0; k < 3; k++ ) {
-				mins[k] = LittleFloat( frame.bounds[0][k] );
-				maxs[k] = LittleFloat( frame.bounds[1][k] );
-				if ( !isfinite( mins[k] ) || !isfinite( maxs[k] ) || maxs[k] - mins[k] < 0.5f )
-					ok = qfalse;
-			}
-		}
-	}
-	trap->FS_Close( f );
-	return ok;
-}
-
-/*
-=================
-Prop_GlmBounds
-
-The same for a Ghoul2 model, which has no bounds in its file: the box around the vertices of its first level of
-detail as they stand in the file, which is how the client shows it without an animation. Surfaces that are
-switched off are left out, the client does not draw them either. Every offset is checked against the size of
-the file.
-=================
-*/
-static qboolean Prop_GlmBounds( const char *model, vec3_t mins, vec3_t maxs ) {
-	fileHandle_t		f = NULL_FILE;
-	const int			len = trap->FS_Open( model, &f, FS_READ );
-	byte				*data;
-	const mdxmHeader_t	*header;
-	// the offsets of the entries of the surface hierarchy follow the header, and count from there
-	const int			ofsHier = (int)sizeof( mdxmHeader_t );
-	int					numSurfaces, ofsLODs, i, k, numVerts = 0;
-	qboolean			ok = qfalse;
-
-	if ( !f )
-		return qfalse;
-	if ( len < (int)sizeof( mdxmHeader_t ) || len > MODEL_MAX_BYTES || !( data = (byte *)malloc( len ) ) ) {
-		trap->FS_Close( f );
-		return qfalse;
-	}
-	trap->FS_Read( data, len, f );
-	trap->FS_Close( f );
-
-	header = (const mdxmHeader_t *)data;
-	numSurfaces = LittleLong( header->numSurfaces );
-	ofsLODs = LittleLong( header->ofsLODs );
-	ClearBounds( mins, maxs );
-	// the offsets of the surfaces of the first level of detail follow its mdxmLOD_t, and count from there
-	if ( LittleLong( header->ident ) == MDXM_IDENT && LittleLong( header->numLODs ) >= 1
-		&& numSurfaces >= 1 && numSurfaces <= 4096
-		&& ofsLODs >= (int)sizeof( mdxmHeader_t ) && ofsLODs <= len - (int)sizeof( mdxmLOD_t ) - numSurfaces * 4
-		&& ofsHier <= len - numSurfaces * 4 ) {
-		const int base = ofsLODs + (int)sizeof( mdxmLOD_t );
-
-		ok = qtrue;
-		for ( i = 0; i < numSurfaces && ok; i++ ) {
-			int						ofsSurf, ofsVerts, count, index, ofsInfo;
-			const mdxmSurface_t		*surf;
-			const mdxmVertex_t		*v;
-
-			memcpy( &ofsSurf, data + base + i * 4, 4 );
-			ofsSurf = base + LittleLong( ofsSurf );
-			if ( ofsSurf < base || ofsSurf > len - (int)sizeof( mdxmSurface_t ) ) {
-				ok = qfalse;
-				break;
-			}
-			surf = (const mdxmSurface_t *)( data + ofsSurf );
-			count = LittleLong( surf->numVerts );
-			ofsVerts = ofsSurf + LittleLong( surf->ofsVerts );
-			if ( count < 0 || count > 65536 || ofsVerts < ofsSurf || ofsVerts > len - count * (int)sizeof( mdxmVertex_t ) ) {
-				ok = qfalse;
-				break;
-			}
-
-			// its entry in the hierarchy says whether it is drawn
-			index = LittleLong( surf->thisSurfaceIndex );
-			if ( index >= 0 && index < numSurfaces ) {
-				memcpy( &ofsInfo, data + ofsHier + index * 4, 4 );
-				ofsInfo = ofsHier + LittleLong( ofsInfo );
-				if ( ofsInfo >= ofsHier && ofsInfo <= len - (int)sizeof( mdxmSurfHierarchy_t ) ) {
-					const mdxmSurfHierarchy_t *info = (const mdxmSurfHierarchy_t *)( data + ofsInfo );
-
-					if ( LittleLong( info->flags ) & G2SURFACEFLAG_OFF )
-						continue;
-				}
-			}
-
-			v = (const mdxmVertex_t *)( data + ofsVerts );
-			for ( k = 0; k < count; k++, v++ ) {
-				vec3_t point;
-
-				VectorSet( point, LittleFloat( v->vertCoords[0] ), LittleFloat( v->vertCoords[1] ), LittleFloat( v->vertCoords[2] ) );
-				if ( !isfinite( point[0] ) || !isfinite( point[1] ) || !isfinite( point[2] ) ) {
-					ok = qfalse;
-					break;
-				}
-				AddPointToBounds( point, mins, maxs );
-			}
-			numVerts += count;
-		}
-	}
-	free( data );
-
-	for ( k = 0; k < 3 && ok; k++ ) {
-		if ( !numVerts || maxs[k] - mins[k] < 0.5f )
-			ok = qfalse;
-	}
-	return ok;
-}
-
 // what the ball and the cube share when they spawn. qfalse: it can not be shown and is gone.
 static qboolean Prop_Spawn( gentity_t *ent, const char *model, int scale, float bound, const char *sound ) {
-	prop_t *p = Prop_State( ent );
+	prop_t	*p = Prop_State( ent );
+	int		k;
 
 	// without room for the model in the table of the map there is nothing to show
 	ent->s.modelindex = G_TryConfigstringIndex( model, CS_MODELS, MAX_MODELS );
@@ -2098,6 +2250,12 @@ static qboolean Prop_Spawn( gentity_t *ent, const char *model, int scale, float 
 	VectorClear( ent->movedir );
 	AnglesToAxis( ent->s.angles, p->axis );
 
+	// the planes that are kept for the moves of players are those of what had this number before
+	for ( k = 0; k < PROP_BRUSHES; k++ ) {
+		if ( propSolids[k].number == ent->s.number )
+			propSolids[k].number = 0;
+	}
+
 	ent->genericValue1 = level.time;
 	ent->genericValue2 = 0;
 	ent->genericValue3 = G_TryConfigstringIndex( sound, CS_SOUNDS, MAX_SOUNDS );
@@ -2120,7 +2278,8 @@ static qboolean Prop_Spawn( gentity_t *ent, const char *model, int scale, float 
 
 /*QUAKED misc_ball (0.9 0.6 0.1) (-18 -18 -18) (18 18 18)
 A ball. It falls, bounces and rolls, players kick it by running into it, force push and pull throw it, shots,
-sabers and explosions knock it away. It bounces off other balls and off cubes. Players are not blocked by it. A
+sabers and explosions knock it away. It bounces off other balls and off cubes. Players are not blocked by it and
+it hurts who it hits fast. A
 player who looks at it takes it with
 +button13 and holds it until he lets go of the button. Using it (targetname) brings it back to where it was
 spawned, so does falling out of the world or getting stuck.
@@ -2155,36 +2314,57 @@ void SP_misc_ball( gentity_t *ent ) {
 	Prop_Spawn( ent, model, scale, ent->radius, "sound/weapons/thermal/bounce1.mp3" );
 }
 
-// A rigid body the size of the bounds of a model, scale in percent. What misc_cube and misc_prop share.
-// qfalse: it can not be shown and is gone.
-static qboolean Prop_SpawnBox( gentity_t *ent, const char *model, const vec3_t mins, const vec3_t maxs, int scale ) {
-	prop_t	*p = Prop_State( ent );
-	float	bound = 0.0f;
-	int		k;
+/*
+=================
+Prop_SpawnBody
 
-	memset( p, 0, sizeof( *p ) );
+A rigid body with the shape that is in its state already (the caller cleared the state and made the shape), for
+a model at a scale in percent. What misc_cube and misc_prop share. qfalse: it can not be shown and is gone.
+=================
+*/
+static qboolean Prop_SpawnBody( gentity_t *ent, const char *model, int scale ) {
+	prop_t				*p = Prop_State( ent );
+	const propShape_t	*shape = &p->shape;
+	vec3_t				half;
+	int					n, m;
+
 	p->box = qtrue;
-	for ( k = 0; k < 3; k++ ) {
-		p->half[k] = ( maxs[k] - mins[k] ) * 0.5f * scale / 100.0f;
-		if ( p->half[k] < 2.0f )
-			p->half[k] = 2.0f;
-		p->centre[k] = ( maxs[k] + mins[k] ) * 0.5f * scale / 100.0f;
-		if ( p->half[k] > bound )
-			bound = p->half[k];
+
+	// The spots it is asked about: its corners, then the middles of its faces, then those of its edges. A world
+	// that has edges of its own gets into a body between its corners.
+	for ( n = 0; n < shape->numVerts && p->numSpots < BODY_MAX_SPOTS; n++ )
+		VectorCopy( shape->verts[n], p->spots[p->numSpots++] );
+	for ( n = 0; n < shape->numPlanes && p->numSpots < BODY_MAX_SPOTS; n++ ) {
+		float *spot = p->spots[p->numSpots++];
+
+		VectorClear( spot );
+		for ( m = 0; m < shape->loopCount[n]; m++ )
+			VectorAdd( spot, shape->verts[shape->loop[shape->loopStart[n] + m]], spot );
+		VectorScale( spot, 1.0f / shape->loopCount[n], spot );
 	}
-	// a solid box, with the mean of its three moments so one number does for every axis. For a cube that is exact.
-	p->inertia = ( 2.0f / 9.0f ) * VectorLengthSquared( p->half );
-	ent->radius = VectorLength( p->half );
+	for ( n = 0; n < shape->numEdges && p->numSpots < BODY_MAX_SPOTS; n++ ) {
+		float *spot = p->spots[p->numSpots++];
+
+		VectorAdd( shape->verts[shape->edges[n][0]], shape->verts[shape->edges[n][1]], spot );
+		VectorScale( spot, 0.5f, spot );
+	}
+
+	// A solid box of the size of the bounds, with the mean of its three moments so one number does for every
+	// axis. For a cube that is exact.
+	VectorSubtract( shape->maxs, shape->mins, half );
+	VectorScale( half, 0.5f, half );
+	p->inertia = ( 2.0f / 9.0f ) * VectorLengthSquared( half );
+	ent->radius = shape->radius;
 
 	// Body_Net() sets the box shots are traced against, this one is only there until it has
-	return Prop_Spawn( ent, model, scale, bound, "sound/effects/metal_bounce.mp3" );
+	return Prop_Spawn( ent, model, scale, shape->radius, "sound/effects/metal_bounce.mp3" );
 }
 
 /*QUAKED misc_cube (0.9 0.6 0.1) (-16 -16 -16) (16 16 16)
 A cube with corners and edges. It falls, lands on a corner or an edge, tips over, tumbles and slides to a stop
 on one of its faces. It is heavy: players shove it slowly instead of kicking it away, force push and pull make
 it tumble, shots turn it when they hit off its middle. Cubes push each other and can be stacked, balls bounce
-off them. Players are not blocked by it. A player who looks at it
+off them. It is in the way of players, they stand and walk on it. A player who looks at it
 takes it with +button13 at the corner next to his line of sight, it hangs from there and swings until he lets
 go of the button. Using it (targetname) brings it back to where it was spawned, so does falling out of the
 world or getting stuck.
@@ -2200,10 +2380,12 @@ world or getting stuck.
 "angles"		how it is turned when it spawns
 */
 void SP_misc_cube( gentity_t *ent ) {
-	char	*model;
-	vec3_t	mins, maxs;
-	float	size, longest = 0.0f;
-	int		scale = 100, k;
+	prop_t		*p = Prop_State( ent );
+	propCloud_t	cloud;
+	char		*model;
+	vec3_t		mins, maxs;
+	float		size, longest = 0.0f;
+	int			scale = 100, solid = 0, k;
 
 	G_SpawnString( "model", "models/map_objects/cairn/cargo_sm.md3", &model );
 	G_SpawnFloat( "size", "32", &size );
@@ -2215,12 +2397,17 @@ void SP_misc_cube( gentity_t *ent ) {
 	size = Com_Clamp( 8.0f, 256.0f, size );
 	ent->random = Com_Clamp( 0.0f, 2.0f, ent->random );
 
-	if ( Prop_ModelBounds( model, mins, maxs ) ) {
+	BG_PropCloudClear( &cloud );
+	if ( BG_PropCloudFromModel( model, &cloud ) ) {
+		VectorCopy( cloud.mins, mins );
+		VectorCopy( cloud.maxs, maxs );
 		for ( k = 0; k < 3; k++ ) {
 			if ( maxs[k] - mins[k] > longest )
 				longest = maxs[k] - mins[k];
 		}
 		scale = Com_Clampi( 1, 1023, (int)( size / longest * 100.0f + 0.5f ) );
+		// players stand on it. Its box is made the way the client makes it for that.
+		solid = PROP_SOLID_BOX;
 	} else {
 		// not an md3 or none the server finds: a cube of that size around the origin of the model as it is
 		Com_Printf( S_COLOR_YELLOW "misc_cube: no bounds in %s, taking a cube of %g\n", model, size );
@@ -2228,40 +2415,48 @@ void SP_misc_cube( gentity_t *ent ) {
 		VectorSet( maxs, 0.5f * size, 0.5f * size, 0.5f * size );
 	}
 
-	Prop_SpawnBox( ent, model, mins, maxs, scale );
+	memset( p, 0, sizeof( *p ) );
+	p->solid = solid;
+	BG_PropShapeBox( mins, maxs, scale / 100.0f, &p->shape );
+	BG_PropCloudFree( &cloud );
+	Prop_SpawnBody( ent, model, scale );
 }
 
 /*QUAKED misc_prop (0.9 0.6 0.1) (-16 -16 -16) (16 16 16)
-Any model of the game as a thing with the physics of misc_cube or misc_ball. It has the size of its model: the
-box of the physics is the box around the model, edge by edge, so a bench is long and low and tips over its long
-edge. Props collide with each other, with balls and with cubes, each by its mass, they can be pushed, stacked,
-thrown with force push and pull and taken with +button13. Players are not blocked by it.
+Any model of the game as a thing with physics. Its shape is taken from the model itself: the hull around it, a
+body with up to 26 corners that lies on the faces the model has, rolls over the edges it has and is caught by
+what sticks out of it. A hull has no holes: what is hollow in the model is filled. Props collide with each
+other, with balls and with cubes, each by its mass, they can be pushed, stacked, thrown with force push and
+pull and taken with +button13.
 
 "model"			an md3 or a glm (a Ghoul2 model stands as it is in its file, without an animation)
-"scale"			size of the model in percent, default 100. It is changed if the longest edge of the box would
-				be under 8 or over 384 units
-"shape"			"box" (default), or "ball" for something round: a ball as wide as the model that rolls. The
-				middle of the ball is the origin of the model, so that fits models that are built around it
+"scale"			size of the model in percent, default 100. It is changed if the longest edge of the box around
+				it would be under 8 or over 384 units
+"shape"			"model" (default): the hull of the model. "box": the box around the model, edge by edge. "ball"
+				for something round: a ball as wide as the model that rolls, its middle is the origin of the
+				model, so that fits models that are built around it. A model that is flat or thinner than 4
+				units somewhere gets the box.
 "mass"			the heavier, the less a shove, a push or a hit moves it. Default 0: from its size. A box of 32
-				units has 4 like the cube, and the mass grows with the surface of the box, not with its volume:
-				models are shells and not solid blocks, and a big one stays something a player can move
+				units has 4 like the cube, and the mass grows with the surface of the box around the model, not
+				with its volume: models are shells and not solid blocks, and a big one stays something a player
+				can move
 "bounce"		part of its speed it keeps when it hits something, 0 to 0.95, default 0.25 (ball 0.7)
-"friction"		box: how well it grips the ground, 0 to 2, default 0.7. Ball: how fast it slows down when it
-				rolls, units per second squared, default 90
+"friction"		how well it grips the ground, 0 to 2, default 0.7. Ball: how fast it slows down when it rolls,
+				units per second squared, default 90
 "kick"			how hard players shove it, default 1
 "angles"		how it is turned when it spawns
-The origin is where the middle of the box is to be.
+The origin is where its middle is to be: the centre of mass of the hull or the box.
 */
 void SP_misc_prop( gentity_t *ent ) {
 	prop_t		*p = Prop_State( ent );
+	propCloud_t	cloud;
 	char		*model, *shape;
-	vec3_t		mins, maxs;
 	float		longest = 0.0f, volume = 8.0f, fscale;
 	qboolean	glm, ball;
 	int			scale, k;
 
 	G_SpawnString( "model", "", &model );
-	G_SpawnString( "shape", "box", &shape );
+	G_SpawnString( "shape", "model", &shape );
 	G_SpawnInt( "scale", "100", &scale );
 	G_SpawnFloat( "mass", "0", &ent->mass );
 	G_SpawnFloat( "kick", "1", &ent->speed );
@@ -2270,7 +2465,7 @@ void SP_misc_prop( gentity_t *ent ) {
 	G_SpawnFloat( "friction", ball ? "90" : "0.7", &ent->random );
 
 	glm = (qboolean)!Q_stricmp( COM_GetExtension( model ), "glm" );
-	if ( !model[0] || !( glm ? Prop_GlmBounds( model, mins, maxs ) : Prop_ModelBounds( model, mins, maxs ) ) ) {
+	if ( !model[0] || !BG_PropCloudFromModel( model, &cloud ) ) {
 		Com_Printf( S_COLOR_YELLOW "misc_prop: \"%s\" is not a model the server can read (an md3 or a glm)\n", model );
 		G_FreeEntity( ent );
 		return;
@@ -2278,15 +2473,15 @@ void SP_misc_prop( gentity_t *ent ) {
 
 	// into the sizes the physics is made for
 	for ( k = 0; k < 3; k++ ) {
-		if ( maxs[k] - mins[k] > longest )
-			longest = maxs[k] - mins[k];
+		if ( cloud.maxs[k] - cloud.mins[k] > longest )
+			longest = cloud.maxs[k] - cloud.mins[k];
 	}
 	fscale = Com_Clamp( 1.0f, 1023.0f, (float)scale );
 	fscale = Com_Clamp( MODEL_MIN_EDGE / longest * 100.0f, MODEL_MAX_EDGE / longest * 100.0f, fscale );
 	scale = Com_Clampi( 1, 1023, (int)( fscale + 0.5f ) );
 
 	for ( k = 0; k < 3; k++ ) {
-		const float edge = ( maxs[k] - mins[k] ) * scale / 100.0f;
+		const float edge = ( cloud.maxs[k] - cloud.mins[k] ) * scale / 100.0f;
 
 		volume *= ( edge < 4.0f ? 4.0f : edge ) * 0.5f;
 	}
@@ -2295,16 +2490,21 @@ void SP_misc_prop( gentity_t *ent ) {
 		ent->mass = 4.0f * powf( volume / 32768.0f, 2.0f / 3.0f );
 	}
 
+	memset( p, 0, sizeof( *p ) );
 	if ( ball ) {
-		ent->radius = Com_Clamp( 4.0f, 128.0f, ( ( maxs[0] - mins[0] ) + ( maxs[1] - mins[1] ) + ( maxs[2] - mins[2] ) ) / 6.0f * scale / 100.0f );
+		ent->radius = Com_Clamp( 4.0f, 128.0f, ( ( cloud.maxs[0] - cloud.mins[0] ) + ( cloud.maxs[1] - cloud.mins[1] )
+			+ ( cloud.maxs[2] - cloud.mins[2] ) ) / 6.0f * scale / 100.0f );
 		ent->random = Com_Clamp( 0.0f, 2000.0f, ent->random );
-		memset( p, 0, sizeof( *p ) );
 		p->inertia = 0.4f * ent->radius * ent->radius;
+		BG_PropCloudFree( &cloud );
 		if ( !Prop_Spawn( ent, model, scale, ent->radius, "sound/weapons/thermal/bounce1.mp3" ) )
 			return;
 	} else {
 		ent->random = Com_Clamp( 0.0f, 2.0f, ent->random );
-		if ( !Prop_SpawnBox( ent, model, mins, maxs, scale ) )
+		p->solid = Q_stricmp( shape, "box" ) ? PROP_SOLID_HULL : PROP_SOLID_BOX;
+		BG_PropShapeOfKind( &cloud, p->solid, scale / 100.0f, &p->shape );
+		BG_PropCloudFree( &cloud );
+		if ( !Prop_SpawnBody( ent, model, scale ) )
 			return;
 	}
 
