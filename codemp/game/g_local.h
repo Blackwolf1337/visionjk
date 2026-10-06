@@ -1284,6 +1284,11 @@ qboolean G_SchizoActive( int clientNum );
 void G_SchizoFrame( void );
 void Svcmd_Schizo_f( void );
 
+// g_poop.c and g_japlus_cmds.c: the emote ampoop
+void JP_EmotePoop( gentity_t *ent );
+int G_PoopStart( gentity_t *ent );
+void G_PoopFrame( void );
+
 // g_flatulence.c: a player who breaks wind all the time
 qboolean G_FlatulenceToggle( gentity_t *ent );
 qboolean G_FlatulenceActive( int clientNum );

@@ -53,6 +53,7 @@ set(MPGameGameFiles
 	"${MPDir}/game/g_bot.c"
 	"${MPDir}/game/g_client.c"
 	"${MPDir}/game/g_flatulence.c"
+	"${MPDir}/game/g_poop.c"
 	"${MPDir}/game/g_cmds.c"
 	"${MPDir}/game/g_combat.c"
 	"${MPDir}/game/g_cvar.c"

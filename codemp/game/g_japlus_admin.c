@@ -782,7 +782,7 @@ static void Cmd_aminfo_f( gentity_t *ent, qboolean rcon ) {
 	trap->SendServerCommand( clientNum, "print \"\n\t^3Speak Mod Cmd: ^7say_team_mod, clanpass, clanwhois, amsay, clansay, ignore, tell\"" );
 	trap->SendServerCommand( clientNum, "print \"\n\t^3Vote Cmds: ^7callvote\"" );
 	trap->SendServerCommand( clientNum, "print \"\n\t^3Action Cmds: ^7engage_FullForceDuel, saber, jetpack, amknockmedown, amdropsaber, toggleFlame, +button12 ^2(grapple hook)^7\"" );
-	trap->SendServerCommand( clientNum, "print \"\n\t^3Emot Cmds: ^7taunt ,meditate, bow, gloat, flourish, amkneel, amdie, amdie2, amfinishinghim, ampower, amflip, amnod, amshake, amhiltThrow1, amhiltThrow2, amcomeon, amwon, amhello, amhug, sleep, amatease, amsurrender, amsit, amsit2, amsit3, amsit4, ambeg, amwait, amhips, amvictory, amneo, ambreakdance, ambreakdance2, amnoisy, amkiss\"" );
+	trap->SendServerCommand( clientNum, "print \"\n\t^3Emot Cmds: ^7taunt ,meditate, bow, gloat, flourish, amkneel, amdie, amdie2, amfinishinghim, ampower, amflip, amnod, amshake, amhiltThrow1, amhiltThrow2, amcomeon, amwon, amhello, amhug, sleep, amatease, amsurrender, amsit, amsit2, amsit3, amsit4, ambeg, amwait, amhips, amvictory, amneo, ambreakdance, ambreakdance2, amnoisy, amkiss, ampoop\"" );
 	trap->SendServerCommand( clientNum, "print \"\n\t^3Other Cmds: ^7refuseTele, amAltDim, ammotd, amcolor, sabercolor, immortal, duelWhois\n\"" );
 	// (no closing quote in the original either)
 	trap->SendServerCommand( clientNum, "print \"\t^3Client PLugin Cmds: ^7pluginDisable, reloadReplier, showPlayerID\n" );

@@ -204,6 +204,32 @@ static gentity_t *JP_EmotePartner( gentity_t *ent, int bit, float range ) {
 	return other;
 }
 
+/*
+=================
+ampoop: not from JA+. He sits down in the air, moans and leaves a small rock behind, see g_poop.c. An emote
+like the others: jp_emotDisallow has a bit for it and the same rules decide whether he can do it now.
+=================
+*/
+#define JP_EMOTE_BIT_POOP	30
+
+void JP_EmotePoop( gentity_t *ent ) {
+	gclient_t *client = ent->client;
+
+	if ( !client || !JP_EmoteAlive( ent ) || client->ps.duelInProgress )
+		return;
+	// while he moves the legs would walk on and only the upper body would sit
+	if ( client->ps.groundEntityNum == ENTITYNUM_NONE || VectorLengthSquared( client->ps.velocity ) > 20.0f * 20.0f ) {
+		trap->SendServerCommand( ent-g_entities, "print \"Stand still for that.\n\"" );
+		return;
+	}
+
+	JP_Emote( ent, BOTH_SIT3, JP_EMOTE_BIT_POOP );
+
+	// JP_Emote let it through: he sits for as long as it takes, not only for the length of the animation
+	if ( client->ps.forceHandExtend == HANDEXTEND_TAUNT && client->ps.forceDodgeAnim == BOTH_SIT3 )
+		client->ps.forceHandExtendTime = level.time + G_PoopStart( ent );
+}
+
 static void Cmd_amhug_f( gentity_t *ent ) {
 	gentity_t *other = JP_EmotePartner( ent, JP_EMOTE_BIT_HUG, 40.0f );
 	gentity_t *pair[2];
@@ -766,7 +792,8 @@ void JP_ForceFlame( gentity_t *self ) {
 
 static const char *jpPlayerCommands[] = {
 	"amcolor", "sabercolor", "saber", "amflip", "amknockmedown", "amdropsaber", "BlockWallCreate", "BlockWallDel",
-	"BlockWallNext", "BlockWallPrev", "amAltDim", "toggleFlame", "jetpack", "amhug", "amkiss", "engage_FullForceDuel"
+	"BlockWallNext", "BlockWallPrev", "amAltDim", "toggleFlame", "jetpack", "amhug", "amkiss", "engage_FullForceDuel",
+	"ampoop"
 };
 
 qboolean JP_IsPlayerCommand( const char *cmd ) {
@@ -817,6 +844,7 @@ qboolean JP_PlayerCommand( gentity_t *ent, const char *cmd ) {
 
 	if ( !Q_stricmp( cmd, "amhug" ) )			{ Cmd_amhug_f( ent );			return qtrue; }
 	if ( !Q_stricmp( cmd, "amkiss" ) )			{ Cmd_amkiss_f( ent );			return qtrue; }
+	if ( !Q_stricmp( cmd, "ampoop" ) )			{ JP_EmotePoop( ent );			return qtrue; }
 	if ( !Q_stricmp( cmd, "amcolor" ) )			{ Cmd_amcolor_f( ent );			return qtrue; }
 	if ( !Q_stricmp( cmd, "sabercolor" ) )		{ Cmd_sabercolor_f( ent );		return qtrue; }
 	if ( !Q_stricmp( cmd, "saber" ) ) {

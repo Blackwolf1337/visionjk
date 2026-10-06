@@ -76,7 +76,7 @@ the answer tells the page that the numbers started over.
 | `GET /api/entities` | the entities with their keys |
 | `GET /api/export` | the entities in `.ent` format |
 | `GET /api/chat?since=&epoch=` | chat lines after number `since`. Everything if `epoch` is not the current one |
-| `POST /api/action` | `action`, `id`, `value`: say, addbot, map, kick, ban, health, armor, scale, kill, god, noclip, schizo, flatulence, gravity (no `id`), playergravity, team, teleport, and the JA+ ones: amsleep, amwake, amprotect, amempower, ammerc, ammindtrick, amghost, amsilence, amunsilence, amslap, amForceAltDim, amUnForceAltDim, amdenyvote, amShowMotd, amrename, ampsay, admgrant, freeze |
+| `POST /api/action` | `action`, `id`, `value`: say, addbot, map, kick, ban, health, armor, scale, kill, god, noclip, schizo, flatulence, poop, gravity (no `id`), playergravity, team, teleport, and the JA+ ones: amsleep, amwake, amprotect, amempower, ammerc, ammindtrick, amghost, amsilence, amunsilence, amslap, amForceAltDim, amUnForceAltDim, amdenyvote, amShowMotd, amrename, ampsay, admgrant, freeze |
 | `POST /api/entity` | `op` spawn, update or delete, with `id` and `kv` (one `key=value` per line) |
 
 ## Where it differs from JKAdmin
@@ -124,6 +124,13 @@ Also changed:
 - Fixed in the page: the key fields of an entity lost the focus about once a second. JKAdmin builds the key
   table again with every poll of the entities unless something was typed. Here it is only built again when the
   entity or its keys changed, and never while the cursor is in one of its fields.
+- New emote `ampoop` (`codemp/game/g_poop.c`, the command with the other emotes in `g_japlus_cmds.c`). A player
+  types it or binds it like `amsit`: he sits down in the air (animation `BOTH_SIT3`), moans three times (the
+  pain sounds of his own model), and a small rock lands on the floor under him with a splat and a sigh. The
+  rock is a plain model entity (a chunk of the rock debris), lies there for 90 seconds, at most 24 on the map.
+  The rules of the emotes apply (`JP_Emote`), bit 30 of `jp_emotDisallow` turns it off, he has to stand still
+  and it is not for duels. It is in the emote list the server prints. In the panel the "Poop" button sends it
+  for the selected player (action `poop`). Server side only. Added without a test run.
 - New: flatulence for one player (`codemp/game/g_flatulence.c`), the "Flatulence" button in the player panel,
   action `flatulence`, also the server console command `flatulence <player>`. Every 1.5 to 6 seconds he breaks
   wind: a sound everybody near him hears (the snorts of the rancor, the talk of the gonk droid, an air burst)

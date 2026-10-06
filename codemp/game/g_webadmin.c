@@ -868,6 +868,10 @@ static void WA_ApiAction( waConnection_t *c, const char *body ) {
 	} else if ( !strcmp( action, "schizo" ) ) {
 		// not in JKAdmin: hallucinations only this player gets, see g_schizo.c
 		WA_ActionResult( c, qtrue, G_SchizoToggle( ent ) ? "schizophrenia on" : "schizophrenia off" );
+	} else if ( !strcmp( action, "poop" ) ) {
+		// not in JKAdmin: the emote ampoop for him, see g_poop.c. The rules of the emote still decide.
+		JP_EmotePoop( ent );
+		WA_ActionResult( c, qtrue, "ampoop sent" );
 	} else if ( !strcmp( action, "flatulence" ) ) {
 		// not in JKAdmin: he breaks wind all the time, see g_flatulence.c
 		WA_ActionResult( c, qtrue, G_FlatulenceToggle( ent ) ? "flatulence on" : "flatulence off" );

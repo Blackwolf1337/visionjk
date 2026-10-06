@@ -46,6 +46,7 @@ New files, all JA+ code that did not have to live inside a base function:
 | `codemp/game/g_blackhole.c` | the entity `misc_blackhole`, not from JA+, see [webadmin.md](webadmin.md) |
 | `codemp/game/g_schizo.c` | hallucinations only one player gets, not from JA+, see [webadmin.md](webadmin.md) |
 | `codemp/game/g_ball.c` | the entity `misc_ball`, a ball with physics, not from JA+, see [webadmin.md](webadmin.md) |
+| `codemp/game/g_poop.c` | the emote `ampoop`, not from JA+, see [webadmin.md](webadmin.md) |
 | `codemp/game/g_flatulence.c` | a player who breaks wind all the time, not from JA+, see [webadmin.md](webadmin.md) |
 
 Changes inside base files carry a comment that starts with `JA+`. The largest ones are in `w_saber.c` (damage
