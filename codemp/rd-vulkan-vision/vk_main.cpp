@@ -567,6 +567,9 @@ void VK_ShutdownVulkan( qboolean destroyWindow ) {
 	memset( &vk, 0, sizeof( vk ) );
 	memset( &glConfig, 0, sizeof( glConfig ) );
 }
+int G2API_SlotsInUse( void );		// rd-vanilla/G2_API.cpp
+int G2API_ListSlots( qboolean print );
+
 
 /*
 ===============
@@ -588,6 +591,9 @@ void VK_GfxInfo_f( void ) {
 	ri.Printf( PRINT_ALL, "frame: %i x %i with %i samples a pixel, window surface: %i x %i, %i images, swap interval %i\n", vk.width, vk.height,
 		(int)vk.samples, (int)vk.swapExtent.width, (int)vk.swapExtent.height, (int)vk.numSwapImages, vk.swapInterval );
 	ri.Printf( PRINT_ALL, "swapchains made: %i, frames that were not shown: %i\n", vk.statSwapchains, vk.statFramesNotShown );
+	// they are kept over a restart of the renderer: a number that grows with every map is a leak
+	ri.Printf( PRINT_ALL, "ghoul2 instances: %i of 1024 slots in use, %i of them without a model\n", G2API_SlotsInUse(),
+		G2API_ListSlots( (qboolean)( ri.Cvar_VariableIntegerValue( "developer" ) != 0 ) ) );
 	ri.Printf( PRINT_ALL, "textures: %i of %i, pipelines: %i, samplers: %i\n", numImages, VK_MAX_IMAGES, vk.numPipelines,
 		vk.numSamplers );
 	ri.Printf( PRINT_ALL, "last frame: %i draws, %i triangles from buffers on the device, %i triangles and %i vertices built on the CPU\n",
