@@ -1367,6 +1367,24 @@ static void WA_HandleRequest( waConnection_t *c, char *head, const char *body ) 
 	}
 }
 
+// A Content-Length: only digits, and nothing a request can not be. JKAdmin read it with atoi and then checked
+// headLen + bodyLen, which wraps for a length near INT_MAX: the check passed and the terminating zero of the
+// body was written about 2 GB in front of the request buffer, before any login. Returns -1 for a bad value.
+static int WA_ParseLength( const char *s ) {
+	int len = 0, digits = 0;
+
+	for ( ; *s >= '0' && *s <= '9'; s++, digits++ ) {
+		len = len * 10 + ( *s - '0' );
+		if ( len > WA_MAX_REQUEST )
+			return -1;
+	}
+	while ( *s == ' ' || *s == '\t' )
+		s++;
+	if ( !digits || ( *s && *s != '\r' && *s != '\n' ) )
+		return -1;
+	return len;
+}
+
 static void WA_ReadRequest( waConnection_t *c ) {
 	char		*headEnd;
 	const char	*lenHeader;
@@ -1395,10 +1413,11 @@ static void WA_ReadRequest( waConnection_t *c ) {
 	*headEnd = '\0';
 	lenHeader = WA_FindHeader( c->request, "Content-Length" );
 	if ( lenHeader )
-		bodyLen = atoi( lenHeader );
+		bodyLen = WA_ParseLength( lenHeader );
 	*headEnd = '\r';
 
-	if ( bodyLen < 0 || headLen + bodyLen > WA_MAX_REQUEST ) {
+	// (headLen is at most WA_MAX_REQUEST, the subtraction can not wrap)
+	if ( bodyLen < 0 || bodyLen > WA_MAX_REQUEST - headLen ) {
 		WA_CloseConnection( c );
 		return;
 	}
