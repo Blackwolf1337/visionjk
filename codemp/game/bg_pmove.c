@@ -10890,7 +10890,9 @@ void PmoveSingle (pmove_t *pmove) {
 
 #ifdef _GAME
 	// JA+ rcon "freeze": the player starts stiffened up, only the moves below that steer the player themselves undo it
-	stiffenedUp = JP_ClientFrozen( pm->ps->clientNum );
+	// Not from JA+: so does a player who is carried with +button13 (g_props.c). Without his own moves he does not
+	// jump either, so he can not flip kick off the one who holds him.
+	stiffenedUp = ( JP_ClientFrozen( pm->ps->clientNum ) || G_PropCarried( pm->ps->clientNum ) ) ? qtrue : qfalse;
 
 	// JA+: the grab moves of the players run here (in the base game: WP_SaberPositionUpdate)
 	if ( pm->ps->clientNum >= 0 && pm->ps->clientNum < level.maxclients )

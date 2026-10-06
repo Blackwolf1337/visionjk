@@ -1278,6 +1278,8 @@ qboolean G_CleanIP( const char *in, char *out, int outSize );
 
 // g_props.c: the entities misc_ball and misc_cube
 void G_PropFrame( void );
+gentity_t *G_PropMate( int clientNum );
+qboolean G_PropCarried( int clientNum );
 void G_PropForceThrow( gentity_t *self, qboolean pull );
 float G_PropPlayerSpeed( const gentity_t *ent );
 
@@ -1286,6 +1288,11 @@ qboolean G_SchizoToggle( gentity_t *ent );
 qboolean G_SchizoActive( int clientNum );
 void G_SchizoFrame( void );
 void Svcmd_Schizo_f( void );
+
+// g_japlus_cmds.c: the parts of amhug, for the player who is carried with +button13 (g_props.c)
+void JP_HolsterNow( gentity_t *ent );
+qboolean JP_HolsterPair( gentity_t *ent, gentity_t *other );
+void JP_Hug( gentity_t *ent, gentity_t *other, int parts );
 
 // g_poop.c and g_japlus_cmds.c: the emote ampoop
 void JP_EmotePoop( gentity_t *ent );

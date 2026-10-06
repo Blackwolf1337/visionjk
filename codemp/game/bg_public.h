@@ -628,8 +628,16 @@ typedef enum {
 	STAT_ARMOR,
 	STAT_DEAD_YAW,					// look this direction when dead (FIXME: get rid of?)
 	STAT_CLIENTS_READY,				// bit mask of clients wishing to exit the intermission (FIXME: configstring?)
-	STAT_MAX_HEALTH					// health / armor limit, changable by handicap
+	STAT_MAX_HEALTH,				// health / armor limit, changable by handicap
+	STAT_CARRY						// not from JA+: the other one of a hug with +button13, see CARRY_ below
 } statIndex_t;
+
+// stats[STAT_CARRY]: the client number of the other player plus one (0: nobody) and what he is to this one.
+// With neither bit the hug is over and the two are not out of each other yet. Set in G_PropFrame (g_props.c),
+// a client that does not know it loses nothing but smoothness.
+#define CARRY_NUM_MASK		63
+#define CARRY_HOLDS			64		// this player carries him
+#define CARRY_HELD			128		// this player is carried by him
 
 
 // playerState_t->persistant[] indexes

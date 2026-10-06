@@ -161,6 +161,26 @@ static qboolean JP_EmoteAlive( const gentity_t *ent ) {
 	return ent->client->sess.sessionTeam != TEAM_SPECTATOR && ent->health > 0 && ent->client->ps.stats[STAT_HEALTH] > 0;
 }
 
+// his saber goes away now, in the middle of a swing too, where the command alone refuses
+void JP_HolsterNow( gentity_t *ent ) {
+	playerState_t *ps = &ent->client->ps;
+
+	if ( !JP_SaberOut( ps ) || ps->saberInFlight )
+		return;
+	JP_ClearSaberMove( ps );
+	ps->weaponTime = 0;
+	Cmd_ToggleSaber_f( ent );
+}
+
+// puts the sabers of both away, qfalse if one of them stays out
+qboolean JP_HolsterPair( gentity_t *ent, gentity_t *other ) {
+	if ( JP_SaberOut( &ent->client->ps ) )
+		Cmd_ToggleSaber_f( ent );
+	if ( JP_SaberOut( &other->client->ps ) )
+		Cmd_ToggleSaber_f( other );
+	return ( JP_SaberOut( &ent->client->ps ) || JP_SaberOut( &other->client->ps ) ) ? qfalse : qtrue;
+}
+
 // the partner for amhug and amkiss within range units, NULL if the emote can not be done, both sabers get holstered
 static gentity_t *JP_EmotePartner( gentity_t *ent, int bit, float range ) {
 	gclient_t *client = ent->client;
@@ -195,13 +215,7 @@ static gentity_t *JP_EmotePartner( gentity_t *ent, int bit, float range ) {
 	if ( !G_PlInSameDim( ent, other ) || other->client->ps.duelInProgress || client->ps.duelInProgress )
 		return NULL;
 
-	if ( JP_SaberOut( &client->ps ) )
-		Cmd_ToggleSaber_f( ent );
-	if ( JP_SaberOut( &other->client->ps ) )
-		Cmd_ToggleSaber_f( other );
-	if ( JP_SaberOut( &client->ps ) || JP_SaberOut( &other->client->ps ) )
-		return NULL;
-	return other;
+	return JP_HolsterPair( ent, other ) ? other : NULL;
 }
 
 /*
@@ -230,13 +244,19 @@ void JP_EmotePoop( gentity_t *ent ) {
 		client->ps.forceHandExtendTime = level.time + G_PoopStart( ent );
 }
 
-static void Cmd_amhug_f( gentity_t *ent ) {
-	gentity_t *other = JP_EmotePartner( ent, JP_EMOTE_BIT_HUG, 40.0f );
+/*
+=================
+JP_Hug
+
+The two turn to each other and start the animations of amhug, ent is the one who hugs. parts is SETANIM_BOTH
+for the emote. An admin who takes a player with +button13 carries him like this, with the animations on the
+upper bodies only so the legs can walk, see Prop_Grab in g_props.c.
+=================
+*/
+void JP_Hug( gentity_t *ent, gentity_t *other, int parts ) {
 	gentity_t *pair[2];
 	int i;
 
-	if ( !other )
-		return;
 	pair[0] = ent;
 	pair[1] = other;
 	for ( i = 0; i < 2; i++ ) {
@@ -247,9 +267,16 @@ static void Cmd_amhug_f( gentity_t *ent ) {
 		VectorCopy( self->client->ps.viewangles, angles );
 		angles[YAW] = vectoyaw( dir );
 		SetClientViewAngle( self, angles );
-		G_SetAnim( self, NULL, SETANIM_BOTH, i ? BOTH_HUGGEE1 : BOTH_HUGGER1, SETANIM_FLAG_OVERRIDE|SETANIM_FLAG_HOLD|SETANIM_FLAG_HOLDLESS, 0 );
+		G_SetAnim( self, NULL, parts, i ? BOTH_HUGGEE1 : BOTH_HUGGER1, SETANIM_FLAG_OVERRIDE|SETANIM_FLAG_HOLD|SETANIM_FLAG_HOLDLESS, 0 );
 		JP_ClearSaberMove( &self->client->ps );
 	}
+}
+
+static void Cmd_amhug_f( gentity_t *ent ) {
+	gentity_t *other = JP_EmotePartner( ent, JP_EMOTE_BIT_HUG, 40.0f );
+
+	if ( other )
+		JP_Hug( ent, other, SETANIM_BOTH );
 }
 
 static void Cmd_amkiss_f( gentity_t *ent ) {

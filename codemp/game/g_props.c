@@ -7,7 +7,8 @@ it lands on them, tips over, tumbles and slides to a stop on one of its faces. P
 into it and shove the cube, which is heavy and slows them down. Force push and pull throw both, shots, sabers
 and explosions knock them away. They collide with each other, each by its mass, so cubes can be pushed with
 cubes and stacked. With +button13 a player takes the one he looks at: it hangs from a point in front of his
-eyes by the spot he took it at, the cube by a corner, and swings there until he lets go.
+eyes by the spot he took it at, the cube by a corner, and swings there until he lets go. An admin takes another
+player the same way and carries him in the hug of amhug, right in front of him, until he lets go.
 
 Server side only, no client code knows about them. For the client they are plain model entities (ET_GENERAL)
 whose place and angles the server renews every frame. Players are not blocked by them: their contents are those
@@ -17,6 +18,7 @@ Not from JA+ and not from JKAdmin.
 */
 
 #include "g_local.h"
+#include "b_local.h"				// G_BoundsOverlap
 #include "qcommon/qfiles.h"			// the header of an md3, for the bounds of the model of a box
 #include "rd-common/mdx_format.h"	// and what a Ghoul2 model is made of, for the same
 
@@ -59,6 +61,12 @@ Not from JA+ and not from JKAdmin.
 #define GRAB_MAX_SPEED		900.0f
 #define GRAB_BREAK			144.0f		// further from the hand than this and it is let go
 
+#define GRAB_PLAYER_LIFT	4.0f		// a player who is carried: that far off the ground of the one who carries him,
+#define GRAB_PLAYER_SPEED	600.0f		//	is never moved faster than this, so not thrown faster either,
+#define GRAB_PLAYER_BREAK	128.0f		//	and is let go further from his place than this
+#define GRAB_LIMP_MSEC		150			// he has no grip on the ground for that long, renewed every frame
+#define GRAB_ANIM_MSEC		300			//	and the animations of the hug have at least that long to go
+
 #define SHOVE_SLOW_MSEC		150			// a player who shoves a cube is slowed for that long
 
 #define MODEL_MIN_EDGE		8.0f		// the longest edge of the box of a misc_prop: its model is scaled into these
@@ -78,7 +86,8 @@ Not from JA+ and not from JKAdmin.
 //	genericValue5	time of the next look at the ground while it lies still
 //	genericValue6	frames in a row inside something solid
 
-// what does not fit into a gentity_t, by entity number
+// what does not fit into a gentity_t, by entity number. Of a player (the numbers below MAX_CLIENTS) only holder
+// and hand are in use: who carries him, and where his place in front of that one was in the last frame.
 typedef struct prop_s {
 	qboolean	box;			// a cube, else a ball
 	matrix3_t	axis;			// how it is turned: forward, left, up
@@ -108,6 +117,7 @@ typedef struct contact_s {
 
 static prop_t	props[MAX_GENTITIES];
 static qboolean	grabDown[MAX_CLIENTS];		// the grab button in the last frame
+static gentity_t	*mates[MAX_CLIENTS];	// the other one of his hug, and after it until the two are out of each other
 static int		shoveTime[MAX_CLIENTS];		// he shoves a cube until then
 static float	shoveScale[MAX_CLIENTS];	//	and that much of his speed is left
 
@@ -644,14 +654,32 @@ The hand: +button13 takes the prop he looks at
 ===============================================================================
 */
 
-static qboolean Prop_HolderOK( const gentity_t *holder ) {
-	const gclient_t *client = holder->client;
+// in the game and alive
+static qboolean Prop_PlayerOK( const gentity_t *ent ) {
+	const gclient_t *client = ent->client;
 
-	if ( !holder->inuse || !client || client->pers.connected != CON_CONNECTED || holder->health <= 0 )
+	if ( !ent->inuse || !client || client->pers.connected != CON_CONNECTED || ent->health <= 0 )
 		return qfalse;
 	if ( client->sess.sessionTeam == TEAM_SPECTATOR || client->tempSpectate >= level.time )
 		return qfalse;
-	return ( client->pers.cmd.buttons & BUTTON_GRAB ) ? qtrue : qfalse;
+	return qtrue;
+}
+
+static qboolean Prop_HolderOK( const gentity_t *holder ) {
+	return ( Prop_PlayerOK( holder ) && (holder->client->pers.cmd.buttons & BUTTON_GRAB) ) ? qtrue : qfalse;
+}
+
+// may carry a player and be carried by one: duels are left alone, and so is who sits in a vehicle or flies
+// through the walls
+static qboolean Prop_PlayerFree( const gentity_t *ent ) {
+	const gclient_t *client = ent->client;
+
+	return ( client->ps.duelInProgress || client->ps.m_iVehicleNum || client->noclip ) ? qfalse : qtrue;
+}
+
+// taking players is for the admins, of any rank of JA+
+static qboolean Prop_Carrier( const gentity_t *ent ) {
+	return ( ent->client->sess.jpAdminLevel != JPADM_NONE && Prop_PlayerFree( ent ) ) ? qtrue : qfalse;
 }
 
 // the point in front of his eyes he holds things at, not behind a wall
@@ -665,6 +693,16 @@ static void Prop_Hand( const gentity_t *holder, vec3_t hand ) {
 	VectorMA( eye, GRAB_HOLD, fwd, hand );
 	trap->Trace( &tr, eye, NULL, NULL, hand, holder - g_entities, MASK_SOLID, qfalse, 0, 0 );
 	VectorCopy( tr.endpos, hand );
+}
+
+// where a player is carried: right in front of the one who took him, on his level and a bit off the ground
+static void Prop_HugSpot( const gentity_t *holder, vec3_t spot ) {
+	vec3_t angles, fwd;
+
+	VectorSet( angles, 0.0f, holder->client->ps.viewangles[YAW], 0.0f );
+	AngleVectors( angles, fwd, NULL, NULL );
+	VectorMA( holder->client->ps.origin, Com_Clamp( 0.0f, 64.0f, g_grabHugDist.value ), fwd, spot );
+	spot[2] += GRAB_PLAYER_LIFT;
 }
 
 static void Prop_Release( gentity_t *self ) {
@@ -689,15 +727,29 @@ static float Prop_AimScore( const vec3_t eye, const vec3_t fwd, const vec3_t spo
 	return off + 0.25f * along;
 }
 
+// a spot that lies better on his line of sight than the best one so far takes its place
+static void Prop_AimBetter( const vec3_t eye, const vec3_t fwd, const vec3_t spot, float *score, vec3_t best ) {
+	const float s = Prop_AimScore( eye, fwd, spot );
+
+	if ( s >= 0.0f && ( *score < 0.0f || s < *score ) ) {
+		*score = s;
+		VectorCopy( spot, best );
+	}
+}
+
 /*
 =================
 Prop_Grab
 
-The player pressed the button: of the props in front of him he takes the one with the spot closest to his line
-of sight. A cube is taken at a corner, a ball at the spot next to his eye.
+The player pressed the button: of the props in front of him, and of the players if he is an admin, he takes
+the one with the spot closest to his line of sight. A cube is taken at a corner, a ball at the spot next to his
+eye. A player is looked for at his legs, his chest and his head. Wherever that was, he is hugged and carried
+(Prop_CarryPlayer).
 =================
 */
 static void Prop_Grab( gentity_t *ent ) {
+	// who is carried takes no player himself: two who hold each other would lift each other off the ground.
+	const qboolean	players = ( Prop_Carrier( ent ) && !Prop_State( ent )->holder ) ? qtrue : qfalse;
 	gentity_t	*best = NULL;
 	vec3_t		eye, fwd, bestSpot, rel;
 	float		bestScore = 0.0f;
@@ -709,35 +761,42 @@ static void Prop_Grab( gentity_t *ent ) {
 	AngleVectors( ent->client->ps.viewangles, fwd, NULL, NULL );
 	VectorClear( bestSpot );
 
-	for ( i = MAX_CLIENTS; i < level.num_entities; i++ ) {
+	for ( i = 0; i < level.num_entities; i++ ) {
 		gentity_t	*prop = &g_entities[i];
 		vec3_t		spot;
 		float		score = -1.0f;
 		trace_t		tr;
 
 		p = &props[i];
-		if ( !Prop_Is( prop ) || p->holder )
-			continue;
-		if ( Distance( prop->r.currentOrigin, eye ) > GRAB_REACH + prop->radius )
-			continue;
-
 		VectorClear( spot );
-		if ( p->box ) {
+		if ( i < MAX_CLIENTS ) {
+			int h;
+
+			// and a hug is for two: who was in one with somebody else and is not out of him yet waits
+			if ( !players || prop == ent || p->holder || !Prop_PlayerOK( prop ) || !Prop_PlayerFree( prop )
+				|| ( mates[ent->s.number] && mates[ent->s.number] != prop ) || ( mates[i] && mates[i] != ent ) )
+				continue;
+			for ( h = 1; h <= 3; h++ ) {
+				vec3_t at;
+
+				VectorCopy( prop->client->ps.origin, at );
+				at[2] += prop->r.mins[2] + 0.25f * h * ( prop->r.maxs[2] - prop->r.mins[2] );
+				Prop_AimBetter( eye, fwd, at, &score, spot );
+			}
+		} else if ( !Prop_Is( prop ) || p->holder
+			|| Distance( prop->r.currentOrigin, eye ) > GRAB_REACH + prop->radius ) {
+			continue;
+		} else if ( p->box ) {
 			int c;
 
 			for ( c = 0; c < 8; c++ ) {
 				vec3_t	local, corner;
-				float	s;
 
 				VectorSet( local, ( c & 1 ) ? p->half[0] : -p->half[0], ( c & 2 ) ? p->half[1] : -p->half[1],
 					( c & 4 ) ? p->half[2] : -p->half[2] );
 				Body_ToWorld( p, local, corner );
 				VectorAdd( corner, prop->r.currentOrigin, corner );
-				s = Prop_AimScore( eye, fwd, corner );
-				if ( s >= 0.0f && ( score < 0.0f || s < score ) ) {
-					score = s;
-					VectorCopy( corner, spot );
-				}
+				Prop_AimBetter( eye, fwd, corner, &score, spot );
 			}
 		} else {
 			VectorSubtract( eye, prop->r.currentOrigin, spot );
@@ -761,6 +820,14 @@ static void Prop_Grab( gentity_t *ent ) {
 		return;
 
 	p = Prop_State( best );
+	p->holder = ent;
+	if ( best->client ) {
+		// the two of amhug, with their sabers away as for the emote. It goes on if one of them stays out.
+		JP_HolsterPair( ent, best );
+		JP_Hug( ent, best, SETANIM_TORSO );
+		Prop_HugSpot( ent, p->hand );
+		return;
+	}
 	if ( !p->box ) {
 		// a free ball only shows a roll. In the hand it turns for real, from what the client sees of it now.
 		vec3_t angles;
@@ -772,22 +839,172 @@ static void Prop_Grab( gentity_t *ent ) {
 	VectorSubtract( bestSpot, best->r.currentOrigin, rel );
 	for ( k = 0; k < 3; k++ )
 		p->grab[k] = DotProduct( rel, p->axis[k] );
-	p->holder = ent;
 	Prop_Hand( ent, p->hand );
 	Prop_Wake( best );
+}
+
+// Keeps an animation of the hug on a part of him: the upper body of the one who hugs, whose legs go on walking,
+// and the legs of the one who is hugged. It is started again if something else took its place, and its timer
+// is kept from running out: it does not loop, so that holds its last frame.
+static void Prop_HugAnim( gentity_t *ent, int part, int anim ) {
+	playerState_t	*ps = &ent->client->ps;
+	int				*timer = ( part == SETANIM_TORSO ) ? &ps->torsoTimer : &ps->legsTimer;
+
+	G_SetAnim( ent, NULL, part, anim, SETANIM_FLAG_OVERRIDE|SETANIM_FLAG_HOLD|SETANIM_FLAG_HOLDLESS, 0 );
+	if ( *timer < GRAB_ANIM_MSEC )
+		*timer = GRAB_ANIM_MSEC;
+}
+
+// The one who is hugged has the animation of his upper body as a hand extend, the way a taunt is played. While
+// it lasts he can not attack, not use the Force with his hands and not take out his saber, which is put away.
+// Whatever else has his hands (he lies on the ground, he is choked) is left to run out first.
+static void Prop_HugHands( gentity_t *victim ) {
+	playerState_t *ps = &victim->client->ps;
+
+	if ( ps->forceHandExtend != HANDEXTEND_NONE && ps->forceHandExtend != HANDEXTEND_WEAPONREADY
+		&& ps->forceHandExtend != HANDEXTEND_TAUNT )
+		return;
+
+	// the command that puts a saber away refuses with a hand extend
+	ps->forceHandExtend = HANDEXTEND_NONE;
+	JP_HolsterNow( victim );
+	ps->forceHandExtend = HANDEXTEND_TAUNT;
+	ps->forceDodgeAnim = BOTH_HUGGEE1;
+	ps->forceHandExtendTime = level.time + GRAB_ANIM_MSEC;
+}
+
+// the hug is over, the animations end where they are. He keeps the speed he has, so he can be thrown.
+static void Prop_DropPlayer( gentity_t *victim ) {
+	prop_t			*p = Prop_State( victim );
+	playerState_t	*ps = &victim->client->ps, *arms = &p->holder->client->ps;
+
+	if ( arms->torsoAnim == BOTH_HUGGER1 )
+		arms->torsoTimer = 0;
+	if ( ps->legsAnim == BOTH_HUGGEE1 )
+		ps->legsTimer = 0;
+	if ( ps->forceHandExtend == HANDEXTEND_TAUNT && ps->forceDodgeAnim == BOTH_HUGGEE1 )
+		ps->forceHandExtendTime = 0;
+	p->holder = NULL;
+}
+
+/*
+=================
+Prop_CarryPlayer
+
+A server frame of a player in the arms of another one. He is no body the physics here could move, so he is
+given a speed: the one that takes him to his place in front of the other and goes along with it. His own
+movement code takes him there and stops him at walls. He is turned to the one who carries him, and both keep
+the animations of amhug for as long as it lasts: he with all of his body, the one who carries him with his
+upper body only, his legs walk.
+
+For the hug to fit the two stand closer than their boxes allow. So neither is there for the moves of the
+other while it lasts, see G_PropMate.
+=================
+*/
+static void Prop_CarryPlayer( gentity_t *victim, float dt ) {
+	prop_t			*p = Prop_State( victim );
+	gentity_t		*holder = p->holder;
+	playerState_t	*ps;
+	vec3_t			spot, want, way, angles;
+	float			len;
+
+	// the button was let go, one of them died, left or went into a duel, the admin logged out
+	if ( !Prop_HolderOK( holder ) || !Prop_Carrier( holder ) || !Prop_PlayerOK( victim ) || !Prop_PlayerFree( victim ) ) {
+		Prop_DropPlayer( victim );
+		return;
+	}
+	ps = &victim->client->ps;
+
+	Prop_HugSpot( holder, spot );
+	VectorSubtract( spot, ps->origin, want );
+	// caught on something, or one of them was taken somewhere else
+	if ( VectorLength( want ) > GRAB_PLAYER_BREAK ) {
+		Prop_DropPlayer( victim );
+		return;
+	}
+
+	// the way his place went since the last frame
+	VectorSubtract( spot, p->hand, way );
+	VectorCopy( spot, p->hand );
+
+	VectorCopy( ps->viewangles, angles );
+	angles[YAW] = AngleNormalize180( holder->client->ps.viewangles[YAW] + 180.0f );
+	SetClientViewAngle( victim, angles );
+	Prop_HugAnim( holder, SETANIM_TORSO, BOTH_HUGGER1 );
+	Prop_HugAnim( victim, SETANIM_LEGS, BOTH_HUGGEE1 );
+	Prop_HugHands( victim );
+
+	if ( dt < 0.001f )
+		return;
+
+	// The speed is set once a frame, to what has him at his place when the next snapshot is made: that is where
+	// a client sees the two together. A bot makes its move later in this frame, so the way to his place is all.
+	// A human makes his with the commands that come in until the next frame, and by then the place has gone on,
+	// about as far as it did since the last one.
+	VectorScale( want, 1.0f / dt, want );
+	if ( !(victim->r.svFlags & SVF_BOT) )
+		VectorMA( want, 1.0f / dt, way, want );
+	len = VectorLength( want );
+	if ( len > GRAB_PLAYER_SPEED )
+		VectorScale( want, GRAB_PLAYER_SPEED / len, want );
+	// and what gravity takes of it until then, he hangs in the air
+	want[2] += 0.5f * g_gravity.value * dt;
+	VectorCopy( want, ps->velocity );
+
+	// he has no grip on the ground and no say in where he goes, the way G_Damage does it for a hit
+	if ( !ps->pm_time || (ps->pm_flags & PMF_TIME_KNOCKBACK) ) {
+		ps->pm_time = GRAB_LIMP_MSEC;
+		ps->pm_flags |= PMF_TIME_KNOCKBACK;
+	}
+
+	// who throws him into a pit gets the kill, as with force push and grip
+	ps->otherKiller = holder->s.number;
+	ps->otherKillerTime = level.time + 5000;
+	ps->otherKillerDebounceTime = level.time + 100;
+}
+
+/*
+=================
+G_PropCarried
+
+For the movement code of the server: this player is in the arms of another one. His own moves are taken from
+him there, as for a player the admin froze: no walking, and no jump, with which he could kick off the one who
+holds him.
+=================
+*/
+qboolean G_PropCarried( int clientNum ) {
+	return ( clientNum >= 0 && clientNum < MAX_CLIENTS && props[clientNum].holder ) ? qtrue : qfalse;
+}
+
+/*
+=================
+G_PropMate
+
+For the movement trace of the server (SV_PMTrace): the other one of the hug this player is in, who is not
+there for his moves, NULL without one. The two stand in each other. It goes on after the hug until they are
+out of each other, or they would be stuck.
+=================
+*/
+gentity_t *G_PropMate( int clientNum ) {
+	return ( clientNum >= 0 && clientNum < MAX_CLIENTS ) ? mates[clientNum] : NULL;
 }
 
 /*
 =================
 G_PropFrame
 
-Once per server frame: who pressed the grab button since the last one takes the prop he looks at. Letting go
-is the business of the prop, it looks at the button of its holder in its think.
+Once per server frame: who pressed the grab button since the last one takes the prop or the player he looks
+at. Letting go is the business of the prop, it looks at the button of its holder in its think. A player has no
+think of that kind, the ones who are carried are moved from here.
 =================
 */
 void G_PropFrame( void ) {
-	int i;
+	static int	lastTime;
+	// the time since the last frame, capped for a server that hitched
+	const float	dt = Com_Clamp( 0.0f, 0.1f, ( level.time - lastTime ) * 0.001f );
+	int			i;
 
+	lastTime = level.time;
 	for ( i = 0; i < level.maxclients; i++ ) {
 		gentity_t		*ent = &g_entities[i];
 		const qboolean	down = ( ent->inuse && ent->client && (ent->client->pers.cmd.buttons & BUTTON_GRAB) ) ? qtrue : qfalse;
@@ -795,6 +1012,37 @@ void G_PropFrame( void ) {
 		if ( down && !grabDown[i] && Prop_HolderOK( ent ) )
 			Prop_Grab( ent );
 		grabDown[i] = down;
+	}
+	for ( i = 0; i < level.maxclients; i++ ) {
+		if ( props[i].holder )
+			Prop_CarryPlayer( &g_entities[i], dt );
+		// still in his arms after that
+		if ( props[i].holder ) {
+			mates[i] = props[i].holder;
+			mates[props[i].holder - g_entities] = &g_entities[i];
+		}
+	}
+
+	// Who is whose, for the moves (G_PropMate) and for the clients of the two: STAT_CARRY lets them leave the
+	// other one out of their prediction and draw him where he belongs. After a hug the two stay a pair until
+	// their boxes are apart.
+	for ( i = 0; i < level.maxclients; i++ ) {
+		gentity_t	*ent = &g_entities[i], *mate = mates[i];
+		int			carry = 0;
+
+		if ( mate && !props[i].holder && Prop_State( mate )->holder != ent
+			&& ( !Prop_PlayerOK( ent ) || !Prop_PlayerOK( mate )
+				|| !G_BoundsOverlap( ent->r.absmin, ent->r.absmax, mate->r.absmin, mate->r.absmax ) ) )
+			mate = mates[i] = NULL;
+		if ( mate ) {
+			carry = mate->s.number + 1;
+			if ( props[i].holder )
+				carry |= CARRY_HELD;
+			else if ( Prop_State( mate )->holder == ent )
+				carry |= CARRY_HOLDS;
+		}
+		if ( ent->inuse && ent->client )
+			ent->client->ps.stats[STAT_CARRY] = carry;
 	}
 }
 

@@ -686,7 +686,17 @@ void G_MoverTouchPushTriggers( gentity_t *ent, vec3_t oldOrg )
 }
 
 static void SV_PMTrace( trace_t *results, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int passEntityNum, int contentMask ) {
+	// Not from JA+: the two of a hug with +button13 stand in each other, so neither is there for the moves of
+	// the other (g_props.c). Whatever mask a trace of the move has: the wall jump that kicks off a player asks
+	// with one of its own.
+	gentity_t	*mate = G_PropMate( passEntityNum );
+	const int	contents = mate ? mate->r.contents : 0;
+
+	if ( mate )
+		mate->r.contents = 0;
 	JP_Trace( results, start, mins, maxs, end, passEntityNum, contentMask, qfalse, 0, 10 );
+	if ( mate )
+		mate->r.contents = contents;
 }
 
 /*

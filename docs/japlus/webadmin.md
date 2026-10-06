@@ -208,6 +208,71 @@ Also changed:
   the next start of any map, so it can not come back later. An entity of the map that was edited in the panel
   is not kept, the map has it as it was. Tried once on the running server: nine placed objects before and
   after, the file gone.
+- New: `+button13` takes players too, for admins only (`Prop_CarryPlayer` in `codemp/game/g_props.c`): who is
+  logged in as an admin of JA+, with any rank. Everybody else takes props with it as before. The ranks are not
+  compared and `jp_admUsableOn` is not looked at, any admin takes any player. He takes the player he looks at
+  within 96 units (his legs, his chest or his head within 32 units of the line of sight, not through a wall)
+  and carries him in the hug of `amhug` while the button is held:
+  - Both play the animations of the emote (`BOTH_HUGGER1` the admin, `BOTH_HUGGEE1` the other one). The admin
+    has it on his upper body only, his legs go on walking. The one who is carried has it on all of his body.
+    The animations do not loop, so keeping their timers from running out holds the last frame, the embrace.
+    When it is over the normal animations come back.
+  - The admin has his as a plain animation of the torso that the server keeps alive and starts again if
+    something else takes its place. He can still attack. The legs of the other one are kept the same way.
+  - The upper body of the one who is carried has it as a hand extend (`HANDEXTEND_TAUNT` with `forceDodgeAnim`, the way a taunt
+    is played, renewed every frame). That is what the game uses to say that the hands are busy, and every
+    client predicts it: he can not attack with any weapon, not use the Force powers that need a hand and not
+    switch his saber on. His saber is switched off when he is taken, in the middle of a swing too, and again
+    should it come back on (a thrown one that returns). The sabers of both are put away at the start as for
+    the emote. If something else has his hands when he is taken (he lies on the ground, he is choked) that
+    runs out first.
+  - The one who is carried is right in front of the admin, turned to him (his yaw is set every frame, his
+    pitch is his own), 4 units off the ground, `g_grabHugDist` units away (default 10, 0 to 64). The emote
+    itself can not have two players closer than 30 units, their boxes are 30 wide, and at that distance the
+    arms do not reach. So the two of a hug stand in each other, and neither is there for the moves of the
+    other: the server takes the other one out of every trace of the move (`SV_PMTrace`, `G_PropMate`). That
+    is for these two only, everybody else and every wall, the invisible ones too, blocks them as always, and
+    shots and sabers still hit both. A wall jump off the other one, which is what a flip kick is, finds nobody
+    either. After the hug the two stay a pair until their boxes are apart, or they would be stuck in each
+    other, and nobody else takes one of them before that.
+    (The first version gave both the flag of the ghosts, `EF_PASS_PLAYERS`. That let them through every
+    player and through player clips, the invisible walls, and the wall jump asks with a mask of its own, so
+    the admin could still flip kick the one he carried. And a bot never got it, the mask of a bot is chosen
+    first.)
+  - The clients of the two are told about each other in `stats[STAT_CARRY]` of their player states (the
+    number of the other one plus one, `CARRY_HOLDS` or `CARRY_HELD`, `bg_public.h`). Nobody else gets it, and
+    a client that does not know it loses nothing but smoothness. The client of the port does three things
+    with it:
+    - `CG_BuildSolidList` leaves the other one out, so the prediction of the move does not run into him.
+    - The one who carries: `CG_CarriedLerp` (`cg_ents.c`). He is predicted to where he is now, the player in
+      his arms comes out of the snapshots like every other player and would be drawn where he was 100 to 150
+      ms ago (at `sv_fps 20`: a server frame, the interpolation between two snapshots and the ping), 25 to 35
+      units behind at a run. So that player is drawn at the place he had in those snapshots as seen from
+      where the server had the carrier then, moved and turned to where the carrier is now. He does not trail
+      any more and turns with the mouse at once.
+    - The one who is carried: `CG_PredictPlayerState` does not predict him but takes him out of the snapshots
+      too (`CG_InterpolatePlayerState`, what a spectator who follows somebody gets), so he sees himself
+      where the one who carries him has him.
+    For everybody who watches nothing changes, both come out of the same snapshots for them.
+  - The one who is carried has no moves of his own: the server drops his walking and jumping the way it does
+    for a player the admin froze (`stiffenedUp` in `PmoveSingle`, server side only). So he can not jump off
+    the one who holds him, which is what a flip kick is. His client does not know that and may show the start
+    of a jump for a frame before the next snapshot puts it right.
+  - A player is no body of the physics there, so the server sets his speed once a frame, to what has him at
+    his place when the next snapshot is made (600 units a second at most), and his own movement code takes him
+    there and stops him at walls. A bot makes its move later in the same frame, so the way to its place is
+    all. A human makes his with the commands that come in until the next frame, for him the way the place
+    went since the last frame is added. He has no grip on the ground (the knockback time of a hit, renewed
+    every frame). Let go, he keeps the speed he had, so he can be thrown, and for five seconds a fall to death
+    counts for the one who threw him, as with force push.
+  He is let go when the button is let go, when one of the two dies, leaves, starts a duel, enters a vehicle or
+  he gets more than 128 units from his place, and when the admin logs out. Not taken: spectators, players in a
+  duel, in a vehicle or in noclip, and nobody who is carried takes a player himself (two who hold each other
+  would lift each other off the ground). Bots can be taken. Of a prop and a player in front of him he takes
+  what is closer to his line of sight. The default of 10 units is what the user chose in the game, `g_grabHugDist`
+  sets it while the server runs. A stock client knows nothing of `STAT_CARRY`: for somebody who plays with
+  one, carrying and being carried jerks, his prediction runs into the other one. Built for Linux and
+  Windows, not tried in the game by me.
 - New: the button "Delete all props" under the list of the tab "Models" (second click within three seconds, as
   for the other deletes): every `misc_prop` that was placed through the panel goes, with one request (`op`
   clear). Props of the map stay, and so do the balls and cubes of the World tab. The buttons that need a second
