@@ -408,7 +408,9 @@ void WP_InitForcePowers( gentity_t *ent ) {
 	if ( ent->client->ps.fd.forcePowersKnown & ent->client->sess.selectedFP )
 		ent->client->ps.fd.forcePowerSelected = ent->client->sess.selectedFP;
 
-	if ( !(ent->client->ps.fd.forcePowersKnown & (1 << ent->client->ps.fd.forcePowerSelected)) ) {
+	// (forcePowerSelected starts as -1 here, a shift by that is undefined)
+	if ( ent->client->ps.fd.forcePowerSelected < 0 || ent->client->ps.fd.forcePowerSelected >= NUM_FORCE_POWERS
+		|| !(ent->client->ps.fd.forcePowersKnown & (1 << ent->client->ps.fd.forcePowerSelected)) ) {
 		if ( lastFPKnown != -1 )
 			ent->client->ps.fd.forcePowerSelected = lastFPKnown;
 		else

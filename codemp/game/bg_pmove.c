@@ -11908,11 +11908,15 @@ void PmoveSingle (pmove_t *pmove) {
 		PM_HoverTrace();
 	}
 	PM_SetWaterLevel();
-	if (pm->cmd.forcesel != (byte)-1 && (pm->ps->fd.forcePowersKnown & (1 << pm->cmd.forcesel)))
+	// forcesel and invensel are bytes the client sends. Only a number below the count is a selection: a shift
+	// by 32 or more is undefined and wraps on x86, so forcesel 32+n passed the "known" test for power n and
+	// ended up as forcePowerSelected, which indexes the force arrays. The engine clears such values while
+	// sv_legacyFixes is on, this holds without it.
+	if (pm->cmd.forcesel < NUM_FORCE_POWERS && (pm->ps->fd.forcePowersKnown & (1 << pm->cmd.forcesel)))
 	{
 		pm->ps->fd.forcePowerSelected = pm->cmd.forcesel;
 	}
-	if (pm->cmd.invensel != (byte)-1 && (pm->ps->stats[STAT_HOLDABLE_ITEMS] & (1 << pm->cmd.invensel)))
+	if (pm->cmd.invensel < HI_NUM_HOLDABLE && (pm->ps->stats[STAT_HOLDABLE_ITEMS] & (1 << pm->cmd.invensel)))
 	{
 		pm->ps->stats[STAT_HOLDABLE_ITEM] = BG_GetItemIndexByTag(pm->cmd.invensel, IT_HOLDABLE);
 	}
