@@ -75,14 +75,30 @@ typedef struct waBuffer_s {
 } waBuffer_t;
 
 typedef struct waConnection_s {
-	qboolean	inUse;
-	waSocket_t	sock;
+	qboolean		inUse;
+	waSocket_t		sock;
+	unsigned int	addr;			// IPv4 of the peer, for the login throttle
 	char		request[WA_MAX_REQUEST + 1];
 	int			requestLen;
 	waBuffer_t	response;
 	int			sent;
 	int			lastActive;		// trap->Milliseconds()
 } waConnection_t;
+
+// login throttle: after WA_AUTH_TRIES wrong passwords an address waits, the wait doubles from WA_AUTH_BASE_MS
+#define WA_AUTH_TRIES		5
+#define WA_AUTH_BASE_MS		30000
+#define WA_AUTH_MAX_MS		1800000
+#define WA_AUTH_SLOTS		64
+
+typedef struct waAuthFail_s {
+	unsigned int	addr;
+	int				fails;
+	int				until;		// blocked while trap->Milliseconds() < until
+	int				seen;		// last time this slot was touched, for reuse
+} waAuthFail_t;
+
+static waAuthFail_t	authFails[WA_AUTH_SLOTS];
 
 static waSocket_t		listenSocket = WA_INVALID_SOCKET;
 static waConnection_t	connections[WA_MAX_CONNECTIONS];
@@ -357,7 +373,86 @@ static qboolean WA_CheckAuth( const char *head ) {
 		return qfalse;
 
 	pass = strchr( decoded, ':' );
-	return (qboolean)( pass && g_webPassword.string[0] && !strcmp( pass + 1, g_webPassword.string ) );
+	if ( !pass || !g_webPassword.string[0] )
+		return qfalse;
+
+	// constant time: the time it takes does not tell how much of the password is right
+	{
+		const char	*a = pass + 1, *b = g_webPassword.string;
+		const int	la = (int)strlen( a ), lb = (int)strlen( b );
+		int			diff = la ^ lb, i;
+
+		for ( i = 0; i < la; i++ )
+			diff |= a[i] ^ b[i % lb];
+		return (qboolean)( diff == 0 );
+	}
+}
+
+/*
+=================
+WA_AuthThrottle
+
+Not in JKAdmin. Slows down guessing the panel password: after WA_AUTH_TRIES wrong tries an address has to wait,
+and the wait doubles each time. WA_AuthThrottle tells if an address is waiting right now, WA_AuthResult records
+how a try went. A small table of addresses, the slot not seen for the longest is reused when it is full.
+=================
+*/
+static waAuthFail_t *WA_AuthSlot( unsigned int addr, qboolean create ) {
+	const int	now = trap->Milliseconds();
+	int			i, oldest = 0;
+
+	for ( i = 0; i < WA_AUTH_SLOTS; i++ ) {
+		if ( authFails[i].fails && authFails[i].addr == addr )
+			return &authFails[i];
+	}
+	if ( !create )
+		return NULL;
+	for ( i = 0; i < WA_AUTH_SLOTS; i++ ) {
+		if ( !authFails[i].fails )
+			return &authFails[i];		// a free slot
+		if ( authFails[i].seen < authFails[oldest].seen )
+			oldest = i;
+	}
+	// full: take the slot not used for the longest, but not one still blocking
+	if ( authFails[oldest].until > now )
+		return NULL;
+	memset( &authFails[oldest], 0, sizeof( authFails[oldest] ) );
+	return &authFails[oldest];
+}
+
+static qboolean WA_AuthThrottle( unsigned int addr ) {
+	waAuthFail_t	*slot = WA_AuthSlot( addr, qfalse );
+	const int		now = trap->Milliseconds();
+
+	return (qboolean)( slot && slot->until > now );
+}
+
+static void WA_AuthResult( unsigned int addr, qboolean ok ) {
+	const int		now = trap->Milliseconds();
+	waAuthFail_t	*slot;
+
+	if ( ok ) {
+		if ( (slot = WA_AuthSlot( addr, qfalse )) )
+			memset( slot, 0, sizeof( *slot ) );
+		return;
+	}
+	if ( !(slot = WA_AuthSlot( addr, qtrue )) )
+		return;
+
+	slot->addr = addr;
+	slot->seen = now;
+	slot->fails++;
+	if ( slot->fails >= WA_AUTH_TRIES ) {
+		const int steps = slot->fails - WA_AUTH_TRIES;
+		int wait = WA_AUTH_BASE_MS;
+
+		// double the wait for each try past the limit, capped (steps stays small, no overflow)
+		if ( steps < 16 )
+			wait <<= steps;
+		if ( wait > WA_AUTH_MAX_MS || wait <= 0 )
+			wait = WA_AUTH_MAX_MS;
+		slot->until = now + wait;
+	}
 }
 
 static void WA_UrlDecode( char *s ) {
@@ -1379,11 +1474,24 @@ static void WA_HandleRequest( waConnection_t *c, char *head, const char *body ) 
 		return;
 	}
 
+	if ( WA_AuthThrottle( c->addr ) ) {
+		WA_Respond( c, 429, "Too Many Requests", "text/plain", "Retry-After: 30\r\n", "too many wrong passwords, wait", 30 );
+		return;
+	}
 	if ( !WA_CheckAuth( head ) ) {
+		const qboolean tried = ( WA_FindHeader( head, "Authorization" ) != NULL );
+
+		// only count a wrong password, not the first request a browser sends without one
+		if ( tried ) {
+			WA_AuthResult( c->addr, qfalse );
+			G_SecurityLogPrintf( "Web admin: wrong password from %u.%u.%u.%u\n",
+				c->addr & 0xff, ( c->addr >> 8 ) & 0xff, ( c->addr >> 16 ) & 0xff, ( c->addr >> 24 ) & 0xff );
+		}
 		WA_Respond( c, 401, "Unauthorized", "text/plain", "WWW-Authenticate: Basic realm=\"OpenJK web admin\"\r\n",
 			"login required", 14 );
 		return;
 	}
+	WA_AuthResult( c->addr, qtrue );
 
 	if ( !strcmp( method, "POST" ) && !WA_SameOrigin( head ) ) {
 		WA_RespondText( c, 403, "Forbidden", "request from another site refused" );
@@ -1551,6 +1659,7 @@ static void WA_Accept( void ) {
 		memset( &connections[i], 0, sizeof( connections[i] ) );
 		connections[i].inUse = qtrue;
 		connections[i].sock = s;
+		connections[i].addr = (unsigned int)from.sin_addr.s_addr;	// network order, only compared and printed
 		connections[i].lastActive = trap->Milliseconds();
 	}
 }
