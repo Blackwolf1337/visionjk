@@ -1298,6 +1298,12 @@ qboolean G_FlatulenceActive( int clientNum );
 void G_FlatulenceFrame( void );
 void Svcmd_Flatulence_f( void );
 
+// g_disorient.c: a player whose view sways and is thrown around
+qboolean G_DisorientToggle( gentity_t *ent );
+qboolean G_DisorientActive( int clientNum );
+void G_DisorientFrame( void );
+void Svcmd_Disorient_f( void );
+
 // g_spawn.c, for the entity editor
 int G_NumSpawnClassnames( void );
 const char *G_SpawnClassname( int index );

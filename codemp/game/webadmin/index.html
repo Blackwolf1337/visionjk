@@ -247,6 +247,7 @@ body.fp #help, body.fp #command, body.fp #entPanel { display: none; }
 				<button data-act="poop" title="The emote ampoop for him: he sits down, moans and leaves a small rock. He has to stand still.">Poop</button>
 				<button data-act="flatulence" id="flatulenceBtn" title="He breaks wind every few seconds: a sound and a green cloud for everybody near him">Flatulence</button>
 				<button data-act="schizo" id="schizoBtn" title="He hears and sees things nobody else does: shots, steps, voices, chat lines">Schizophrenia</button>
+				<button data-act="disorient" id="disorientBtn" title="The view sways, every few seconds it is thrown around with a shake and a stumble, now and then the world turns">Disorient</button>
 				<button data-act="kill">Kill</button>
 				<button id="followBtn">Follow</button>
 				<button id="fpBtn" title="Player view (V)">First person</button>
@@ -934,7 +935,7 @@ function renderTable() {
 	$('playerCount').textContent = rows.length + ' / ' + state.maxClients;
 	$('players').innerHTML = rows.map(p =>
 		'<tr class="player' + (p.id === selected ? ' sel' : '') + (p.dead ? ' dead' : '') + '" data-id="' + p.id + '">' +
-		'<td><span class="team ' + p.team + '"></span>' + colorName(p.name) + (p.bot ? '<span class="tag">bot</span>' : '') + (p.god ? '<span class="tag">god</span>' : '') + (p.noclip ? '<span class="tag">noclip</span>' : '') + (p.schizo ? '<span class="tag">schizo</span>' : '') + (p.flatulence ? '<span class="tag">gas</span>' : '') + (p.jp && p.jp.admin ? '<span class="tag">' + (JP_RANKS[p.jp.admin] || 'admin') + '</span>' : '') + '</td>' +
+		'<td><span class="team ' + p.team + '"></span>' + colorName(p.name) + (p.bot ? '<span class="tag">bot</span>' : '') + (p.god ? '<span class="tag">god</span>' : '') + (p.noclip ? '<span class="tag">noclip</span>' : '') + (p.schizo ? '<span class="tag">schizo</span>' : '') + (p.flatulence ? '<span class="tag">gas</span>' : '') + (p.disorient ? '<span class="tag">dizzy</span>' : '') + (p.jp && p.jp.admin ? '<span class="tag">' + (JP_RANKS[p.jp.admin] || 'admin') + '</span>' : '') + '</td>' +
 		'<td class="num">' + (p.team === 'spectator' ? '-' : Math.max(p.health, 0)) + '</td>' +
 		'<td class="num">' + (p.team === 'spectator' ? '-' : p.armor) + '</td>' +
 		'<td class="num">' + p.score + '</td>' +
@@ -985,6 +986,7 @@ function renderCommand(fillInputs) {
 	$('noclipBtn').classList.toggle('primary', !!d.noclip);
 	$('schizoBtn').classList.toggle('primary', !!d.schizo);
 	$('flatulenceBtn').classList.toggle('primary', !!d.flatulence);
+	$('disorientBtn').classList.toggle('primary', !!d.disorient);
 	$('followBtn').classList.toggle('primary', cam.follow === d.id);
 	if (d.jp) {
 		document.querySelectorAll('[data-jpstate]').forEach(b => b.classList.toggle('primary', jpState(d.jp, b.dataset.jpstate)));

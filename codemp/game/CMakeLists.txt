@@ -51,6 +51,7 @@ set(MPGameGameFiles
 	"${MPDir}/game/g_blackhole.c"
 	"${MPDir}/game/g_bot.c"
 	"${MPDir}/game/g_client.c"
+	"${MPDir}/game/g_disorient.c"
 	"${MPDir}/game/g_flatulence.c"
 	"${MPDir}/game/g_poop.c"
 	"${MPDir}/game/g_props.c"

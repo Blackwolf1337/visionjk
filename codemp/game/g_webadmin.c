@@ -650,6 +650,7 @@ static void WA_ApiState( waConnection_t *c ) {
 		WA_BufPrintf( &b, ",\"gravity\":%d,\"ownGravity\":%s", ps->gravity, WA_BOOL( clientGravitySet[i] ) );	// not in JKAdmin
 		WA_BufPrintf( &b, ",\"schizo\":%s", WA_BOOL( G_SchizoActive( i ) ) );		// not in JKAdmin, g_schizo.c
 		WA_BufPrintf( &b, ",\"flatulence\":%s", WA_BOOL( G_FlatulenceActive( i ) ) );	// not in JKAdmin, g_flatulence.c
+		WA_BufPrintf( &b, ",\"disorient\":%s", WA_BOOL( G_DisorientActive( i ) ) );	// not in JKAdmin, g_disorient.c
 		{
 			// not in JKAdmin: what the JA+ buttons of the page show. admin is jpAdminLevel_t, altDim 2 is forced.
 			const jpClient_t *jp = &cl->pers.jp;
@@ -1080,6 +1081,9 @@ static void WA_ApiAction( waConnection_t *c, const char *body ) {
 	} else if ( !strcmp( action, "flatulence" ) ) {
 		// not in JKAdmin: he breaks wind all the time, see g_flatulence.c
 		WA_ActionResult( c, qtrue, G_FlatulenceToggle( ent ) ? "flatulence on" : "flatulence off" );
+	} else if ( !strcmp( action, "disorient" ) ) {
+		// not in JKAdmin: the view sways and is thrown around, see g_disorient.c
+		WA_ActionResult( c, qtrue, G_DisorientToggle( ent ) ? "disorientation on" : "disorientation off" );
 	} else if ( !strcmp( action, "playergravity" ) ) {
 		// not in JKAdmin: a gravity of his own. An empty value gives him the gravity of the server again.
 		if ( !value[0] ) {

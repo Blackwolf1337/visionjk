@@ -51,6 +51,7 @@ New files, all JA+ code that did not have to live inside a base function:
 | `codemp/game/g_props.c` | the entities `misc_ball` and `misc_cube` with physics, taking them with `+button13`, not from JA+, see [webadmin.md](webadmin.md) |
 | `codemp/game/g_poop.c` | the emote `ampoop`, not from JA+, see [webadmin.md](webadmin.md) |
 | `codemp/game/g_flatulence.c` | a player who breaks wind all the time, not from JA+, see [webadmin.md](webadmin.md) |
+| `codemp/game/g_disorient.c` | a player whose view sways and is thrown around, not from JA+, see [webadmin.md](webadmin.md) |
 
 Changes inside base files carry a comment that starts with `JA+`. The largest ones are in `w_saber.c` (damage
 rules, thrown saber, kicks), `bg_pmove.c` and `bg_saber.c` (new moves, ledge grab, hook pull, freeze), `w_force.c`

@@ -629,6 +629,7 @@ svcmd_t svcmds[] = {
 	{ "addbot",						Svcmd_AddBot_f,						qfalse },
 	{ "addip",						Svcmd_AddIP_f,						qfalse },
 	{ "botlist",					Svcmd_BotList_f,					qfalse },
+	{ "disorient",					Svcmd_Disorient_f,					qfalse },
 	{ "entitylist",					Svcmd_EntityList_f,					qfalse },
 	{ "flatulence",					Svcmd_Flatulence_f,					qfalse },
 	{ "forceteam",					Svcmd_ForceTeam_f,					qfalse },

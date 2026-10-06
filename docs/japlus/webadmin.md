@@ -76,7 +76,7 @@ the answer tells the page that the numbers started over.
 | `GET /api/entities` | the entities with their keys |
 | `GET /api/export` | the entities in `.ent` format |
 | `GET /api/chat?since=&epoch=` | chat lines after number `since`. Everything if `epoch` is not the current one |
-| `POST /api/action` | `action`, `id`, `value`: say, addbot, map, kick, ban, health, armor, scale, kill, god, noclip, schizo, flatulence, poop, gravity (no `id`), playergravity, team, teleport, and the JA+ ones: amsleep, amwake, amprotect, amempower, ammerc, ammindtrick, amghost, amsilence, amunsilence, amslap, amForceAltDim, amUnForceAltDim, amdenyvote, amShowMotd, amrename, ampsay, admgrant, freeze |
+| `POST /api/action` | `action`, `id`, `value`: say, addbot, map, kick, ban, health, armor, scale, kill, god, noclip, schizo, flatulence, disorient, poop, gravity (no `id`), playergravity, team, teleport, and the JA+ ones: amsleep, amwake, amprotect, amempower, ammerc, ammindtrick, amghost, amsilence, amunsilence, amslap, amForceAltDim, amUnForceAltDim, amdenyvote, amShowMotd, amrename, ampsay, admgrant, freeze |
 | `POST /api/entity` | `op` spawn, update or delete, with `id` and `kv` (one `key=value` per line) |
 
 ## Where it differs from JKAdmin
@@ -137,6 +137,16 @@ Also changed:
   and a green cloud behind him (the gas cloud of the noghri stick). One in six is a big one with three clouds
   that shoves him forward, not in a duel. Server side only, stock sound and effect events. Gone when he leaves or
   the map changes. Added without a test run.
+- New: disorientation for one player (`codemp/game/g_disorient.c`), the "Disorient" button in the player panel,
+  action `disorient`, also the server console command `disorient <player>`. The view sways all the time (pitch,
+  yaw and roll, two sines each with periods that do not fit together). Every 3.5 to 9 seconds it is thrown around
+  by 70 to 200 degrees with a screen shake only this client gets, and the player stumbles a step to the side (not
+  in a duel, not in the air). One in four of those is a whirl instead: the view turns once or twice around. All
+  of it goes through `ps.delta_angles`, the offset the server adds to the view angles of a client, so the client
+  predicts it and the movement and the aim follow the view. The roll shows in the first person view only (the
+  third person camera has none). Not while dead, a spectator or in a vehicle. Bots are not bothered, they turn
+  to where they want to look. Server side only. Gone when the player leaves or the map changes. Added without a
+  test run.
 - New entity `misc_cube` (`codemp/game/g_props.c`, next to the ball), placed in the World tab like the ball. A
   cube with corners and edges that is a rigid body: it falls, lands on a corner or an edge, tips over, tumbles
   and slides to a stop on one of its faces. It is heavy. Players and NPCs shove it instead of kicking it away:
