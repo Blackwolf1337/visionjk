@@ -1274,6 +1274,7 @@ float WebAdmin_ClientGravity( const gentity_t *ent, float gravity );
 
 // g_utils.c
 int G_TryConfigstringIndex( const char *name, int start, int max );
+qboolean G_CleanIP( const char *in, char *out, int outSize );
 
 // g_props.c: the entities misc_ball and misc_cube
 void G_PropFrame( void );

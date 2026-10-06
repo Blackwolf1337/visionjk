@@ -910,13 +910,20 @@ static void WA_ApiAction( waConnection_t *c, const char *body ) {
 	} else if ( !strcmp( action, "ban" ) ) {
 		char userinfo[MAX_INFO_STRING], ip[64], *port;
 
+		char raw[64];
+
+		// the stored IP is already the real one the engine set, this only keeps a console line clean
 		trap->GetUserinfo( id, userinfo, sizeof( userinfo ) );
-		Q_strncpyz( ip, Info_ValueForKey( userinfo, "ip" ), sizeof( ip ) );
-		port = strchr( ip, ':' );
+		Q_strncpyz( raw, Info_ValueForKey( userinfo, "ip" ), sizeof( raw ) );
+		port = strchr( raw, ':' );
 		if ( port )
 			*port = '\0';
-		if ( !ip[0] || !Q_stricmp( ip, "localhost" ) || !Q_stricmp( ip, "bot" ) ) {
+		if ( !raw[0] || !Q_stricmp( raw, "localhost" ) || !Q_stricmp( raw, "bot" ) ) {
 			WA_ActionResult( c, qfalse, "this player has no IP to ban" );
+			return;
+		}
+		if ( !G_CleanIP( raw, ip, sizeof( ip ) ) ) {
+			WA_ActionResult( c, qfalse, "this player's IP is not a plain address" );
 			return;
 		}
 		trap->SendConsoleCommand( EXEC_APPEND, va( "addip %s\nclientkick %d\n", ip, id ) );

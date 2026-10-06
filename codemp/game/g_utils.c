@@ -58,6 +58,36 @@ void AddRemap(const char *oldShader, const char *newShader, float timeOffset) {
 	}
 }
 
+/*
+=================
+G_CleanIP
+
+Not in JA+. Checks that a string is a plain IPv4 or IPv6 address (digits, a-f, dots, colons, and the [] of an
+IPv6 address, with a /mask the ban list allows) and copies it to out. Returns qfalse for an empty string, one
+that does not fit, or one with any other character. Used before an IP is put into an "addip" console line, so
+a relaxed g_userinfoValidate can not let a newline or a semicolon through into a command.
+=================
+*/
+qboolean G_CleanIP( const char *in, char *out, int outSize ) {
+	int n = 0;
+
+	if ( !in || !out || outSize < 2 )
+		return qfalse;
+	for ( ; *in; in++ ) {
+		const char c = *in;
+		const qboolean ok = ( c >= '0' && c <= '9' ) || ( c >= 'a' && c <= 'f' ) || ( c >= 'A' && c <= 'F' )
+			|| c == '.' || c == ':' || c == '[' || c == ']' || c == '/' || c == '*';
+
+		if ( !ok )
+			return qfalse;
+		if ( n >= outSize - 1 )
+			return qfalse;
+		out[n++] = c;
+	}
+	out[n] = '\0';
+	return (qboolean)( n > 0 );
+}
+
 const char *BuildShaderStateConfig(void) {
 	static char	buff[MAX_STRING_CHARS*4];
 	char out[(MAX_QPATH * 2) + 5];

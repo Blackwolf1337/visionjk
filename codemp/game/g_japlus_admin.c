@@ -535,8 +535,13 @@ static void Cmd_amban_f( gentity_t *ent, qboolean rcon ) {
 		return;
 
 	ip = target->client->sess.IP;
-	if ( ip[0] && !G_FilterPacket( (char *)ip ) )
-		trap->SendConsoleCommand( EXEC_APPEND, va( "addip %s\n", ip ) );
+	{
+		// the stored IP is already the real one, this only keeps the console line clean
+		char clean[NET_ADDRSTRMAXLEN];
+
+		if ( ip[0] && G_CleanIP( ip, clean, sizeof( clean ) ) && !G_FilterPacket( clean ) )
+			trap->SendConsoleCommand( EXEC_APPEND, va( "addip %s\n", clean ) );
+	}
 
 	JP_LogAdminCmd( ent, rcon, call.cmd );
 	trap->SendConsoleCommand( EXEC_APPEND, va( "clientkick %i\n", call.target ) );
