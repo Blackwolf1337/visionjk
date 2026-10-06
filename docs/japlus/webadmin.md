@@ -76,7 +76,7 @@ the answer tells the page that the numbers started over.
 | `GET /api/entities` | the entities with their keys |
 | `GET /api/export` | the entities in `.ent` format |
 | `GET /api/chat?since=&epoch=` | chat lines after number `since`. Everything if `epoch` is not the current one |
-| `POST /api/action` | `action`, `id`, `value`: say, addbot, map, kick, ban, health, armor, scale, kill, god, noclip, schizo, flatulence, disorient, poop, gravity (no `id`), playergravity, team, teleport, and the JA+ ones: amsleep, amwake, amprotect, amempower, ammerc, ammindtrick, amghost, amsilence, amunsilence, amslap, amForceAltDim, amUnForceAltDim, amdenyvote, amShowMotd, amrename, ampsay, admgrant, freeze |
+| `POST /api/action` | `action`, `id`, `value`: say, addbot, map, kick, ban, health, armor, scale, kill, god, noclip, schizo, flatulence, disorient, poop, gravity (no `id`), reload (no `id`), playergravity, team, teleport, and the JA+ ones: amsleep, amwake, amprotect, amempower, ammerc, ammindtrick, amghost, amsilence, amunsilence, amslap, amForceAltDim, amUnForceAltDim, amdenyvote, amShowMotd, amrename, ampsay, admgrant, freeze |
 | `POST /api/entity` | `op` spawn, update or delete, with `id` and `kv` (one `key=value` per line) |
 | `GET /api/config` | the text of `server.cfg`, as UTF-8 |
 | `POST /api/config`, `POST /api/config?exec=1` | the body is the new text of `server.cfg` (plain text, not a form). With `exec=1` the server runs `exec server.cfg` afterwards |
@@ -194,6 +194,19 @@ Also changed:
   rename and delete, a link to `/etc` inside the folder, the game module, and the plain operations on scratch
   files with text in Latin-1 and an upload in two pieces. Everything was refused that has to be and nothing
   was written outside. The page itself was not seen in a browser. The Windows module builds, it was not run.
+- New: action `reload`, the running map again (`WA_ReloadMap` in `g_webadmin.c`). The engine looks through its
+  folders for pk3 files when a map starts and at no other time (`FS_Restart` in `SV_SpawnServer`), so this is
+  what makes the server find a pk3 that was uploaded. A restart of the server process is not needed for that,
+  and the panel could not start the process again. The players stay connected. With cheats on it is `devmap`,
+  so they stay on. In the Files tab the page asks for it after an upload with a `.pk3` in it, and there is the
+  button "Reload map".
+  A start of the map removes what was spawned through the panel and loads the module anew. So the entities
+  that were spawned through the panel (`entityPlaced`, the list of `/api/entities` has `placed`) are written
+  to `webadmin_reload.dat` in the home path first, with their keys and the place they are at now, and the new
+  map spawns them 1.5 seconds after its start and removes the file. The file names its map and is removed at
+  the next start of any map, so it can not come back later. An entity of the map that was edited in the panel
+  is not kept, the map has it as it was. Tried once on the running server: nine placed objects before and
+  after, the file gone.
 - New entity `misc_cube` (`codemp/game/g_props.c`, next to the ball), placed in the World tab like the ball. A
   cube with corners and edges that is a rigid body: it falls, lands on a corner or an edge, tips over, tumbles
   and slides to a stop on one of its faces. It is heavy. Players and NPCs shove it instead of kicking it away:

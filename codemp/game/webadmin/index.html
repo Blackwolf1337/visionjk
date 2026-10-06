@@ -247,6 +247,7 @@ body.fp #help, body.fp #command, body.fp #entPanel { display: none; }
 			<button id="fsRefresh">Refresh</button>
 			<button id="fsMkdir">New folder</button>
 			<button id="fsUpload" class="primary" title="Into the folder that is shown">Upload</button>
+			<button id="fsReload" title="Starts the running map again. The server looks for pk3 files when a map starts, so that is how it finds one that was added. The players stay connected, what was placed in the World tab is put back where it is.">Reload map</button>
 			<input type="file" id="fsFile" multiple hidden>
 		</div>
 		<div class="hint" id="fsPath"></div>
@@ -1728,6 +1729,7 @@ async function fsMkdir() {
 // a file goes up in pieces, one after the other: each names where it begins, the last one puts the file in its place
 async function fsUploadFiles(files) {
 	const dir = fsPath;
+	let pk3 = false;
 	for (const file of files) {
 		if (fsEntries.some(e => e.name === file.name) && !confirm(file.name + ' is there already. Replace it?')) continue;
 		let offset = 0, ok = true;
@@ -1739,9 +1741,14 @@ async function fsUploadFiles(files) {
 			offset += piece.size;
 		} while (offset < file.size);
 		if (ok) toast(file.name + ' uploaded');
+		if (ok && fsExt(file.name) === 'pk3') pk3 = true;
 	}
 	$('fsProgress').textContent = '';
 	fsList();
+	if (pk3) fsReloadMap('A pk3 was uploaded. The server only looks for pk3 files when a map starts.\n\n');
+}
+function fsReloadMap(why = '') {
+	if (confirm(why + 'Start the running map again now? The players stay connected, what was placed in the World tab is put back where it is.')) action({ action: 'reload' });
 }
 
 async function fsOpenText(path) {
@@ -1810,6 +1817,7 @@ $('fsUp').addEventListener('click', () => fsList(fsPath.includes('/') ? fsPath.s
 $('fsRefresh').addEventListener('click', () => fsList());
 $('fsMkdir').addEventListener('click', fsMkdir);
 $('fsUpload').addEventListener('click', () => $('fsFile').click());
+$('fsReload').addEventListener('click', () => fsReloadMap());
 $('fsFile').addEventListener('change', () => { const files = [...$('fsFile').files]; $('fsFile').value = ''; if (files.length) fsUploadFiles(files); });
 $('fsText').addEventListener('input', fsShowEdit);
 $('fsText').addEventListener('scroll', () => codeScroll('fsText', 'fsHi'));

@@ -144,7 +144,13 @@ static int			chatEpoch;		// start time of this map. The module is loaded again f
 static qboolean	clientGravitySet[MAX_CLIENTS];
 static float	clientGravity[MAX_CLIENTS];
 
+// entities that were spawned through the panel: WA_ReloadMap() puts these back after the map has started again
+static qboolean	entityPlaced[MAX_GENTITIES];
+// what WA_ReloadMap() left for this start of the map, the entities one after the other. NULL: nothing.
+static char		*reloadText;
+
 static const char *WA_TeamName( team_t team );
+static void WA_ReloadMap( waConnection_t *c );
 
 /*
 ==============================================================================
@@ -1020,6 +1026,12 @@ static void WA_ApiAction( waConnection_t *c, const char *body ) {
 		return;
 	}
 
+	if ( !strcmp( action, "reload" ) ) {
+		// not in JKAdmin: the running map again, so the engine finds a pk3 that was uploaded
+		WA_ReloadMap( c );
+		return;
+	}
+
 	if ( !strcmp( action, "gravity" ) ) {
 		// not in JKAdmin: g_gravity for everybody. The map sets it again at its next start (worldspawn key "gravity").
 		if ( !value[0] ) {
@@ -1223,6 +1235,7 @@ void WebAdmin_EntitySpawned( int entityNum ) {
 		return;
 
 	free( entityVars[entityNum] );
+	entityPlaced[entityNum] = qfalse;
 	for ( i = 0; i < level.numSpawnVars; i++ )
 		len += (int)strlen( level.spawnVars[i][0] ) + (int)strlen( level.spawnVars[i][1] ) + 2;
 
@@ -1243,6 +1256,7 @@ void WebAdmin_EntityFreed( int entityNum ) {
 	free( entityVars[entityNum] );
 	entityVars[entityNum] = NULL;
 	entityVarsLen[entityNum] = 0;
+	entityPlaced[entityNum] = qfalse;
 }
 
 // entities the editor shows: no players, temp entities or saber helpers
@@ -1281,8 +1295,8 @@ static void WA_ApiEntities( waConnection_t *c ) {
 		WA_EntityPosition( ent, pos );
 		WA_BufPrintf( &b, "{\"id\":%d,\"classname\":", i );
 		WA_BufJsonString( &b, ent->classname );
-		WA_BufPrintf( &b, ",\"type\":%d,\"bmodel\":%s,\"linked\":%s,\"pos\":", ent->s.eType, ent->r.bmodel ? "true" : "false",
-			ent->r.linked ? "true" : "false" );
+		WA_BufPrintf( &b, ",\"type\":%d,\"bmodel\":%s,\"linked\":%s,\"placed\":%s,\"pos\":", ent->s.eType, ent->r.bmodel ? "true" : "false",
+			ent->r.linked ? "true" : "false", WA_BOOL( entityPlaced[i] ) );
 		WA_AppendVec( &b, pos );
 
 		if ( entityVars[i] ) {
@@ -1502,6 +1516,8 @@ static void WA_ApiEntity( waConnection_t *c, const char *body ) {
 
 	if ( !strcmp( op, "spawn" ) ) {
 		newId = WA_SpawnFromText( kv, err, sizeof( err ) );
+		if ( newId >= 0 )
+			entityPlaced[newId] = qtrue;
 		WA_EntityResult( c, newId >= 0, newId >= 0 ? "spawned" : err, newId );
 		return;
 	}
@@ -1525,6 +1541,8 @@ static void WA_ApiEntity( waConnection_t *c, const char *body ) {
 			WA_EntityResult( c, qfalse, err, id );
 			return;
 		}
+		// an entity of the map that was edited is still one of the map: the next start of the map has it as it was
+		entityPlaced[newId] = entityPlaced[id];
 		G_FreeEntity( &g_entities[id] );
 		WA_EntityResult( c, qtrue, "updated", newId );
 	} else {
@@ -2142,6 +2160,138 @@ static void WA_ApiFsMkdir( waConnection_t *c, const char *query ) {
 /*
 ==============================================================================
 
+Map reload
+
+Not in JKAdmin. The engine looks through its folders for pk3 files whenever a map starts (FS_Restart in
+SV_SpawnServer) and at no other time, so starting the running map again is what makes it find a pk3 that was
+uploaded. The players stay connected.
+
+A start of the map also removes what was spawned through the panel, and the module is loaded anew with
+nothing it remembered. So the placed entities are written to a file first, with the keys they were spawned
+with and the place they are at now, and the new map spawns them again and removes the file.
+
+==============================================================================
+*/
+
+#define WA_RELOAD_FILE		"webadmin_reload.dat"
+#define WA_RELOAD_DELAY		1500		// msec after the start of the map
+
+static void WA_ReloadMap( waConnection_t *c ) {
+	waBuffer_t	b = { 0 };
+	char		mapname[MAX_QPATH];
+	int			i, count = 0;
+
+	trap->Cvar_VariableStringBuffer( "mapname", mapname, sizeof( mapname ) );
+	Q_strstrip( mapname, "\n\r\";", NULL );
+	if ( !mapname[0] ) {
+		WA_ActionResult( c, qfalse, "no map is running" );
+		return;
+	}
+
+	// the first line names the map, then a block of key=value lines for each entity
+	WA_BufPrintf( &b, "map=%s\n", mapname );
+	for ( i = MAX_CLIENTS; i < level.num_entities; i++ ) {
+		const gentity_t	*ent = &g_entities[i];
+		const char		*key, *end;
+
+		if ( !entityPlaced[i] || !entityVars[i] || !WA_ListedEntity( ent ) )
+			continue;
+		WA_BufAppend( &b, "{\n", 2 );
+		for ( key = entityVars[i], end = key + entityVarsLen[i]; key < end; ) {
+			const char *value = key + strlen( key ) + 1;
+
+			if ( !Q_stricmp( key, "origin" ) && !ent->r.bmodel ) {
+				// where it is now, not where it was put: a ball rolls
+				WA_BufPrintf( &b, "origin=%.1f %.1f %.1f\n", ent->r.currentOrigin[0], ent->r.currentOrigin[1], ent->r.currentOrigin[2] );
+			} else {
+				WA_BufPrintf( &b, "%s=%s\n", key, value );
+			}
+			key = value + strlen( value ) + 1;
+		}
+		WA_BufAppend( &b, "}\n", 2 );
+		count++;
+	}
+	if ( !WA_WriteGameFile( WA_RELOAD_FILE, b.data, b.len ) ) {
+		WA_BufFree( &b );
+		WA_ActionResult( c, qfalse, "could not write " WA_RELOAD_FILE ", the map is not started again" );
+		return;
+	}
+	WA_BufFree( &b );
+
+	// devmap keeps the cheats on if they are
+	trap->SendConsoleCommand( EXEC_APPEND, va( "%s \"%s\"\n", trap->Cvar_VariableIntegerValue( "sv_cheats" ) ? "devmap" : "map", mapname ) );
+	WA_ActionResult( c, qtrue, va( "starting %s again, %d placed objects come back", mapname, count ) );
+}
+
+// At the start of a map: takes what WA_ReloadMap() left. The file is for the start that follows it and for no
+// other, so it is removed whatever is in it.
+static void WA_ReloadRead( void ) {
+	char		path[MAX_OSPATH], mapname[MAX_QPATH];
+	qboolean	exists, isDir;
+	double		size;
+	FILE		*f;
+	char		*text, *body;
+	int			len;
+
+	free( reloadText );
+	reloadText = NULL;
+	if ( !WA_FsResolve( qfalse, WA_RELOAD_FILE, qfalse, path, sizeof( path ), &exists )
+		|| !WA_FsStat( path, &isDir, &size, NULL ) || isDir )
+		return;
+	len = ( size < 4 * 1024 * 1024 ) ? (int)size : 0;
+	f = fopen( path, "rb" );
+	text = f ? (char *)malloc( len + 1 ) : NULL;
+	if ( text )
+		len = (int)fread( text, 1, len, f );
+	if ( f )
+		fclose( f );
+	remove( path );
+	if ( !text )
+		return;
+	text[len] = '\0';
+
+	trap->Cvar_VariableStringBuffer( "mapname", mapname, sizeof( mapname ) );
+	body = strchr( text, '\n' );
+	if ( !body || strncmp( text, "map=", 4 ) || (int)( body - text ) - 4 != (int)strlen( mapname )
+		|| strncmp( text + 4, mapname, strlen( mapname ) ) ) {
+		free( text );		// it was left for another map
+		return;
+	}
+	memmove( text, body + 1, strlen( body + 1 ) + 1 );
+	reloadText = text;
+}
+
+// spawns what WA_ReloadRead() took, when the map has run for a moment
+static void WA_ReloadSpawn( void ) {
+	char	*block = reloadText, err[128];
+	int		count = 0, lost = 0;
+
+	while ( ( block = strstr( block, "{\n" ) ) != NULL ) {
+		char *end = strstr( block, "\n}\n" );
+
+		if ( !end )
+			break;
+		end[1] = '\0';
+		{
+			const int id = WA_SpawnFromText( block + 2, err, sizeof( err ) );
+
+			if ( id >= 0 ) {
+				entityPlaced[id] = qtrue;
+				count++;
+			} else {
+				lost++;
+			}
+		}
+		block = end + 3;
+	}
+	free( reloadText );
+	reloadText = NULL;
+	trap->Print( "Web admin: %d placed objects are back after the map reload%s\n", count, lost ? va( ", %d did not spawn", lost ) : "" );
+}
+
+/*
+==============================================================================
+
 Connections
 
 ==============================================================================
@@ -2393,6 +2543,9 @@ void WebAdmin_Init( void ) {
 	for ( i = 0; i < WA_MAX_CONNECTIONS; i++ )
 		connections[i].sock = WA_INVALID_SOCKET;
 
+	// before anything can keep the panel off: the file of a reload must not wait for a later start of this map
+	WA_ReloadRead();
+
 	if ( !g_webPassword.string[0] ) {
 		if ( g_webPort.integer > 0 )
 			trap->Print( "Web admin is off, set g_webPassword to start it\n" );
@@ -2459,6 +2612,9 @@ void WebAdmin_Frame( void ) {
 	const int	now = trap->Milliseconds();
 	int			i;
 
+	if ( reloadText && level.time - level.startTime >= WA_RELOAD_DELAY )
+		WA_ReloadSpawn();
+
 	if ( listenSocket == WA_INVALID_SOCKET )
 		return;
 
@@ -2507,4 +2663,6 @@ void WebAdmin_Shutdown( void ) {
 	mapData = NULL;
 	mapLen = 0;
 	mapDataName[0] = '\0';
+	free( reloadText );
+	reloadText = NULL;
 }
