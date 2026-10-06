@@ -535,6 +535,8 @@ static const void *RB_DrawBuffer( const void *data ) {
 	return (const void *)( cmd + 1 );
 }
 
+const void *R_DrawWireframeAutomap( const void *data );		// tr_world.cpp
+
 /*
 ===============
 VK_ShowImages
@@ -638,8 +640,15 @@ void RB_ExecuteRenderCommands( const void *data ) {
 			data = RB_WorldEffects( data );
 			break;
 		case RC_AUTO_MAP:
-			// the automap is not drawn by this renderer yet
-			data = (const void *)( (const drawBufferCommand_t *)data + 1 );
+			// the level as colored triangles or lines for the radar (r_autoMap). tr_world.cpp draws it with one
+			// glBegin() per surface, over the scene the game has set up for it.
+			VK_BeginFrame();
+			if ( tess.numIndexes ) {
+				RB_EndSurface();
+			}
+			VK_GL_Collect( qtrue );
+			data = R_DrawWireframeAutomap( data );
+			VK_GL_Collect( qfalse );
 			break;
 		case RC_END_OF_LIST:
 		default:

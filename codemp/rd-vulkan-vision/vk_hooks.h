@@ -82,6 +82,7 @@ void VK_GL_ClientState( int which, int on );
 void VK_GL_DrawArrays( int mode, int first, int count );
 void VK_GL_Enable( int cap, int on );
 void VK_GL_Flush( void );
+void VK_GL_Collect( qboolean on );
 void VK_GL_StencilFunc( int func, int ref );
 void VK_GL_StencilOp( int face, int fail, int zfail, int zpass );
 void VK_GL_ColorMask( int on );

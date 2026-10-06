@@ -72,6 +72,8 @@ is left in a shared file fails the build.
 - drawing with `glBegin`/`glEnd`, client arrays, the matrix calls, `glDepthRange` and `glFog` go to `vk_gl.cpp`,
   which collects the vertices and draws them like everything else. That is how the sky box, the weather and the
   surface sprites work without a change to their files
+- the automap of `tr_world.cpp` (`r_autoMap`) is drawn the same way, one `glBegin` per surface of the level,
+  collected into a few draws
 - the stencil calls of the shadows go there too. The volume of a model comes as one `glBegin` to `glEnd` per
   edge: while the color mask is off they are collected and become one draw, with the stencil test as dynamic
   state
@@ -159,7 +161,7 @@ left in these views are the effects of the game (flames, smoke, light cones) and
 
 ## Not done
 
-The automap and `r_shownormals`.
+`r_shownormals` (it draws lines, and lines are not drawn).
 
 Surfaces with the shader `internal_distortion` are left out. `rd-vanilla` cuts them into the stencil buffer and
 fills the hole with a stretched copy of the screen, but nothing in the game code or the data of the base game
@@ -214,6 +216,9 @@ Shadows: the player on a bright floor of mp/ctf2 from above, with `cg_shadows 1`
 demo recorded with `cg_shadows 2` by both renderers: 2.2 to 3.8 % as without. Stencil shadows take most of the
 speed of both: the volumes are built on the CPU by the same code. The timedemo below runs at 165 and 165 frames
 a second in `rd-vanilla` with them, at 193 and 200 here.
+
+The automap (`r_autoMap 1` and `2`, a team game on mp/ffa3, `r_autoMapDisable 0`): filled and as lines it is the
+same picture as in `rd-vanilla`.
 
 Recording to AVI (`video` while a demo plays): a demo recorded on mp/ffa3, written as Motion JPEG and as raw
 frames (`cl_aviMotionJpeg 0`). Both files hold the same picture for a frame, upright and with the right

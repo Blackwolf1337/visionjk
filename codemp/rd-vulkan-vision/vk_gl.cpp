@@ -47,6 +47,8 @@ static uint32_t		gl_stateBits;
 // of a model comes as one glBegin() to glEnd() per edge, and it becomes one draw.
 static vkStencil_t	gl_stencil;
 static qboolean		gl_colorMask = qtrue;
+static qboolean		gl_collect;				// the automap is one glBegin() to glEnd() per surface of the level: collected as well
+static qboolean		gl_texture = qtrue;		// GL_TEXTURE_2D: off means no texture, which is the white one
 
 // glFog over what is drawn here
 static qboolean		gl_fog;
@@ -107,6 +109,7 @@ void VK_GL_PushMatrix( void ) {
 }
 
 void VK_GL_PopMatrix( void ) {
+	VK_GL_Flush();
 	memcpy( gl_matrix, gl_savedMatrix, sizeof( gl_matrix ) );
 	gl_matrixSet = gl_savedMatrixSet;
 	VK_TransformChanged();
@@ -114,6 +117,7 @@ void VK_GL_PopMatrix( void ) {
 
 // NULL: identity
 void VK_GL_LoadMatrix( const float *m ) {
+	VK_GL_Flush();
 	if ( m ) {
 		memcpy( gl_matrix, m, sizeof( gl_matrix ) );
 	} else {
@@ -125,6 +129,7 @@ void VK_GL_LoadMatrix( const float *m ) {
 }
 
 void VK_GL_Translate( float x, float y, float z ) {
+	VK_GL_Flush();
 	if ( !gl_matrixSet ) {
 		memcpy( gl_matrix, backEnd.ori.modelMatrix, sizeof( gl_matrix ) );
 		gl_matrixSet = qtrue;
@@ -235,7 +240,7 @@ void VK_GL_End( void ) {
 	}
 	gl_numIndexes = numIndexes;
 	gl_primStart = gl_numVerts;
-	if ( gl_colorMask ) {
+	if ( gl_colorMask && !gl_collect ) {
 		VK_GL_Flush();
 	}
 }
@@ -261,7 +266,7 @@ void VK_GL_Flush( void ) {
 	memset( &draw, 0, sizeof( draw ) );
 	draw.transform = VK_CurrentTransform();
 	// the texture GL_Bind() chose, if it is one that is on the device
-	if ( image && image->texnum < VK_MAX_IMAGES && vk.images[image->texnum].owner == image && vk.images[image->texnum].uploaded ) {
+	if ( gl_texture && image && image->texnum < VK_MAX_IMAGES && vk.images[image->texnum].owner == image && vk.images[image->texnum].uploaded ) {
 		draw.tex0 = image->texnum;
 	} else {
 		draw.tex0 = tr.whiteImage->texnum;
@@ -379,14 +384,30 @@ void VK_GL_DrawArrays( int mode, int first, int count ) {
 	VectorCopy4( color, gl_color );
 }
 
-// of everything glEnable() can switch the fog and the stencil test mean something here
+// of everything glEnable() can switch the fog, the stencil test and the texture mean something here
 void VK_GL_Enable( int cap, int on ) {
 	if ( cap == GL_FOG ) {
 		gl_fog = (qboolean)( on != 0 );
 	} else if ( cap == GL_STENCIL_TEST ) {
 		VK_GL_Flush();
 		gl_stencil.test = (qboolean)( on != 0 );
+	} else if ( cap == GL_TEXTURE_2D ) {
+		VK_GL_Flush();
+		gl_texture = (qboolean)( on != 0 );
 	}
+}
+
+/*
+===============
+VK_GL_Collect
+
+On: glEnd() does not draw, the primitives wait until the state changes or this is switched off. For code that
+draws a great many small primitives with one state, like the automap.
+===============
+*/
+void VK_GL_Collect( qboolean on ) {
+	VK_GL_Flush();
+	gl_collect = on;
 }
 
 void VK_GL_Fogf( int name, float value ) {
