@@ -111,6 +111,19 @@ body.sideClosed #view { left: 0; }
 .hint { color: var(--muted); font-size: 12px; margin-top: 6px; }
 #command .close { margin-left: auto; }
 
+#cfgView { position: fixed; top: var(--top); left: var(--side); right: 0; bottom: 0; z-index: 14; display: none; background: var(--panel); transition: left .15s; }
+body.sideClosed #cfgView { left: 0; }
+body.cfgOpen #cfgView { display: block; }
+/* the colored text lies under a text field whose own letters are not drawn: both must set every letter alike */
+.codeHi, .codeText { position: absolute; inset: 0; margin: 0; border: 0; padding: 10px 12px; font: 12px/1.45 ui-monospace, Menlo, Consolas, monospace; letter-spacing: 0; font-variant-ligatures: none; white-space: pre; tab-size: 4; }
+.codeHi { overflow: hidden; padding-right: 60px; padding-bottom: 60px; color: var(--text); pointer-events: none; }
+.codeText { width: 100%; height: 100%; overflow: auto; resize: none; outline: 0; background: transparent; color: transparent; caret-color: var(--text); }
+.codeText::selection { background: rgba(62, 142, 247, .35); color: transparent; }
+#pane-config .tools { display: flex; flex-wrap: wrap; gap: 5px; padding: 10px; }
+#pane-config .hint { padding: 0 10px; }
+#cfgState { padding: 0 10px 8px; font-size: 12px; color: var(--muted); }
+#cfgState.dirty { color: var(--accent2); }
+
 #toasts { position: fixed; right: 12px; top: calc(var(--top) + 10px); z-index: 30; display: flex; flex-direction: column; gap: 6px; }
 .toast { background: var(--panel2); border: 1px solid var(--line); border-left: 3px solid var(--green); padding: 6px 10px; border-radius: 3px; min-width: 200px; }
 .toast.err { border-left-color: var(--accent2); }
@@ -184,7 +197,7 @@ body.fp #help, body.fp #command, body.fp #entPanel { display: none; }
 </div>
 
 <div id="side">
-	<div id="tabs"><button data-tab="players" class="on">Players</button><button data-tab="world">World</button></div>
+	<div id="tabs"><button data-tab="players" class="on">Players</button><button data-tab="world">World</button><button data-tab="config">Config</button></div>
 	<div class="pane on" id="pane-players">
 		<h2><span>Players</span><span id="playerCount">0</span></h2>
 		<div class="scroll">
@@ -194,6 +207,18 @@ body.fp #help, body.fp #command, body.fp #entPanel { display: none; }
 			</table>
 		</div>
 		<div id="itemsInfo"></div>
+	</div>
+	<div class="pane" id="pane-config">
+		<h2><span>server.cfg</span><span id="cfgSize"></span></h2>
+		<div class="tools">
+			<button id="cfgSave" class="primary" title="Writes the file. Nothing on the server changes until it is executed.">Save</button>
+			<button id="cfgRun" title="Writes the file and runs it on the server console: exec server.cfg">Save and execute</button>
+			<button id="cfgLoad" title="Reads the file from the server again, what was typed here is dropped">Reload</button>
+		</div>
+		<div id="cfgState"></div>
+		<div class="hint">The first save puts the file into the home path of the server (fs_homepath/&lt;game&gt;/server.cfg), which the engine reads before the one of the installation. The text before a save is kept as server.cfg.bak.</div>
+		<div class="hint">Executing sets the cvars of the file at once. Latched ones (most g_web*, sv_maxclients, the game type) take effect with the next map, and a line that changes the map does so.</div>
+		<div class="hint">The passwords in the file are shown as they are.</div>
 	</div>
 	<div class="pane" id="pane-world">
 		<div class="tools">
@@ -294,6 +319,7 @@ body.fp #help, body.fp #command, body.fp #entPanel { display: none; }
 		<div class="hint" id="entHint">Drag the marker or right-click on the map to move it.</div>
 	</div>
 </div>
+<div id="cfgView"><pre id="cfgHi" class="codeHi" aria-hidden="true"></pre><textarea id="cfgText" class="codeText" spellcheck="false" autocomplete="off" autocapitalize="off" wrap="off"></textarea></div>
 <div id="toasts"></div>
 <div id="preview"><canvas id="previewGl" width="488" height="400"></canvas><div class="pv-none" id="pvNone"></div><div class="pv-name" id="pvName"></div><div class="pv-sub" id="pvSub"></div></div>
 
@@ -1222,7 +1248,7 @@ canvas.addEventListener('wheel', e => {
 	cam.dist = Math.min(20000, Math.max(80, cam.dist * Math.pow(1.0015, e.deltaY)));
 }, { passive: false });
 window.addEventListener('keydown', e => {
-	if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+	if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') return;
 	keys.add(e.key.toLowerCase());
 	if (e.key === 'Escape') { if (view.id >= 0) { setFirstPerson(-1); return; } select(-1); selectEnt(-1); setPlacing(false); }
 	if (e.key.toLowerCase() === 'v' && (selected >= 0 || view.id >= 0)) setFirstPerson(view.id >= 0 ? -1 : selected);
@@ -1448,7 +1474,125 @@ function setMode(m) {
 	document.querySelectorAll('.pane').forEach(p => p.classList.toggle('on', p.id === 'pane-' + m));
 	if (m === 'world') { select(-1); pollEntities(); loadClasses(); }
 	else { selectEnt(-1); setPlacing(false); }
+	document.body.classList.toggle('cfgOpen', m === 'config');
+	if (m === 'config') { select(-1); if (!cfgLoaded) loadConfig(); }
 }
+
+/* ------------------------------------------------------------------ */
+/* the server config                                                   */
+/* ------------------------------------------------------------------ */
+
+// the server takes a request of 64 KB at most, head and body
+const CFG_MAX_BYTES = 60000;
+let cfgLoaded = false, cfgSaved = '';
+
+function cfgBytes(text) { return new TextEncoder().encode(text).length; }
+
+// Colors for the text of a config. A line is statements with ; between them, a statement is words with blanks
+// between them, "..." is one word, // begins a comment. Neither ; nor // count inside quotes.
+// Words that are commands of the console. Any other first word is a cvar that is set by its name.
+const CFG_COMMANDS = new Set(['set', 'seta', 'sets', 'setu', 'reset', 'toggle', 'bind', 'unbind', 'unbindall', 'exec', 'vstr', 'wait', 'echo',
+	'map', 'devmap', 'map_restart', 'addbot', 'kick', 'clientkick', 'banuser', 'addip', 'removeip', 'say', 'svsay', 'writeconfig', 'killserver', 'rehashbans']);
+const CFG_SETTERS = new Set(['set', 'seta', 'sets', 'setu', 'reset', 'toggle']);
+
+// a quoted word. The color codes of the game stay to be read and color what follows them as the game would.
+function cfgString(s) {
+	let out = '', cls = 'cfg-s', chunk = '';
+	const flush = () => { if (chunk) out += '<span class="' + cls + '">' + escapeHtml(chunk) + '</span>'; chunk = ''; };
+	for (let i = 0; i < s.length; i++) {
+		if (s[i] === '^' && s[i + 1] >= '0' && s[i + 1] <= '9') {
+			flush();
+			out += '<span class="cfg-code">' + s[i] + s[i + 1] + '</span>';
+			cls = 'c' + s[i + 1];
+			i++;
+		} else {
+			chunk += s[i];
+		}
+	}
+	flush();
+	return out;
+}
+function cfgLine(line) {
+	let out = '', i = 0, word = 0, setter = false;
+	const span = (cls, s) => '<span class="' + cls + '">' + escapeHtml(s) + '</span>';
+	while (i < line.length) {
+		const ch = line[i];
+		if (ch === '/' && line[i + 1] === '/') { out += span('cfg-c', line.slice(i)); break; }
+		if (ch === ' ' || ch === '\t') { out += ch; i++; continue; }
+		if (ch === ';') { out += span('cfg-p', ch); i++; word = 0; setter = false; continue; }
+		let j = i;
+		if (ch === '"') {
+			j = line.indexOf('"', i + 1);
+			j = j < 0 ? line.length : j + 1;
+			out += cfgString(line.slice(i, j));
+		} else {
+			while (j < line.length && !' \t;"'.includes(line[j]) && !(line[j] === '/' && line[j + 1] === '/')) j++;
+			const tok = line.slice(i, j), low = tok.toLowerCase();
+			let cls = '';
+			if (word === 0) { cls = CFG_COMMANDS.has(low) ? 'cfg-k' : 'cfg-v'; setter = CFG_SETTERS.has(low); }
+			else if (word === 1 && setter) cls = 'cfg-v';
+			else if (/^-?(\d+\.?\d*|\.\d+)$/.test(tok)) cls = 'cfg-n';
+			out += cls ? span(cls, tok) : escapeHtml(tok);
+		}
+		i = j;
+		word++;
+	}
+	return out;
+}
+// the text of a field into the layer under it, with the colors of a config or plain
+function codePaint(textId, hiId, colored) {
+	// the line after the last line break has to be there too, or the last line of the field has nothing under it
+	$(hiId).innerHTML = $(textId).value.split('\n').map(colored ? cfgLine : escapeHtml).join('\n') + '\n';
+	codeScroll(textId, hiId);
+}
+function codeScroll(textId, hiId) {
+	$(hiId).scrollTop = $(textId).scrollTop;
+	$(hiId).scrollLeft = $(textId).scrollLeft;
+}
+function cfgPaint() { codePaint('cfgText', 'cfgHi', true); }
+function cfgScroll() { codeScroll('cfgText', 'cfgHi'); }
+function cfgShowState() {
+	const text = $('cfgText').value, dirty = cfgLoaded && text !== cfgSaved;
+	cfgPaint();
+	$('cfgSize').textContent = cfgLoaded ? cfgBytes(text) + ' bytes' : '';
+	$('cfgState').textContent = !cfgLoaded ? 'not loaded' : dirty ? 'changed, not saved' : 'as on the server';
+	$('cfgState').classList.toggle('dirty', dirty);
+}
+async function loadConfig() {
+	try {
+		const res = await fetch('api/config', { cache: 'no-store' });
+		if (!res.ok) throw new Error('HTTP ' + res.status);
+		cfgSaved = $('cfgText').value = await res.text();
+		cfgLoaded = true;
+	} catch (e) {
+		toast('Could not read the config: ' + e.message, false);
+	}
+	cfgShowState();
+}
+async function saveConfig(run) {
+	// the server stores the lines with LF only
+	const text = $('cfgText').value.replace(/\r/g, '');
+	if (!cfgLoaded) { toast('The config was never loaded, nothing to save', false); return; }
+	if (cfgBytes(text) > CFG_MAX_BYTES) { toast('The config is larger than ' + CFG_MAX_BYTES + ' bytes, the server does not take it', false); return; }
+	if (run && !confirm('Save server.cfg and execute it on the server now?')) return;
+	try {
+		const res = await fetch('api/config' + (run ? '?exec=1' : ''), { method: 'POST', body: text });
+		const json = await res.json();
+		toast(json.message, json.ok);
+		if (json.ok) cfgSaved = text;
+	} catch (e) {
+		toast('Request failed: ' + e.message, false);
+	}
+	cfgShowState();
+}
+$('cfgText').addEventListener('input', cfgShowState);
+$('cfgText').addEventListener('scroll', cfgScroll);
+$('cfgSave').addEventListener('click', () => saveConfig(false));
+$('cfgRun').addEventListener('click', () => saveConfig(true));
+$('cfgLoad').addEventListener('click', () => {
+	if ($('cfgText').value === cfgSaved || confirm('Drop what was changed here and read the file again?')) loadConfig();
+});
+window.addEventListener('beforeunload', e => { if (cfgLoaded && $('cfgText').value !== cfgSaved) e.preventDefault(); });
 document.querySelectorAll('#tabs button').forEach(b => b.addEventListener('click', () => setMode(b.dataset.tab)));
 
 let classesLoaded = false;

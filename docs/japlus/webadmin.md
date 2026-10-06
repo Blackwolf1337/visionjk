@@ -78,6 +78,8 @@ the answer tells the page that the numbers started over.
 | `GET /api/chat?since=&epoch=` | chat lines after number `since`. Everything if `epoch` is not the current one |
 | `POST /api/action` | `action`, `id`, `value`: say, addbot, map, kick, ban, health, armor, scale, kill, god, noclip, schizo, flatulence, disorient, poop, gravity (no `id`), playergravity, team, teleport, and the JA+ ones: amsleep, amwake, amprotect, amempower, ammerc, ammindtrick, amghost, amsilence, amunsilence, amslap, amForceAltDim, amUnForceAltDim, amdenyvote, amShowMotd, amrename, ampsay, admgrant, freeze |
 | `POST /api/entity` | `op` spawn, update or delete, with `id` and `kv` (one `key=value` per line) |
+| `GET /api/config` | the text of `server.cfg`, as UTF-8 |
+| `POST /api/config`, `POST /api/config?exec=1` | the body is the new text of `server.cfg` (plain text, not a form). With `exec=1` the server runs `exec server.cfg` afterwards |
 
 ## Where it differs from JKAdmin
 
@@ -147,6 +149,22 @@ Also changed:
   third person camera has none). Not while dead, a spectator or in a vehicle. Bots are not bothered, they turn
   to where they want to look. Server side only. Gone when the player leaves or the map changes. Added without a
   test run.
+- New: the tab "Config" edits `server.cfg` (`WA_ApiConfigGet`, `WA_ApiConfigSet` in `g_webadmin.c`). It is that
+  one file, the request names none. The text field lies over the map view, the buttons are "Save", "Save and
+  execute" (`exec server.cfg` on the server console) and "Reload". The engine reads a file from the home path
+  first and writes only there, so the first save makes `fs_homepath/<game>/server.cfg` and the file of the
+  installation stays as it is. What was there before a save is kept as `server.cfg.bak`. An empty text is not
+  saved. The file is Latin-1 on disk and UTF-8 on the page, a character the game does not have becomes `?`.
+  A request may be 64 KB now (16 KB before), the page refuses a text over 60000 bytes. The passwords in the
+  file are shown as they are, and whoever can log in can change them: the panel is only as safe as
+  `g_webPassword`. The security log gets "config saved" with the size, never the text. Executing sets cvars at
+  once, latched ones wait for the next map, and a line that changes the map changes the map. Added without a
+  test run (the read was called once after the deploy, nothing was saved).
+  The text has colors: commands of the console, cvar names, quoted text, numbers and comments, and inside
+  quotes the color codes of the game color what follows them as the game would (a `sv_hostname` reads as on the
+  server list). It is a second layer under the text field, whose own letters are not drawn (`cfgLine`,
+  `cfgString`, `cfgPaint` in the page), no library. Checked with node that every line of the config reads
+  the same colored and plain, not seen in a browser.
 - New entity `misc_cube` (`codemp/game/g_props.c`, next to the ball), placed in the World tab like the ball. A
   cube with corners and edges that is a rigid body: it falls, lands on a corner or an edge, tips over, tumbles
   and slides to a stop on one of its faces. It is heavy. Players and NPCs shove it instead of kicking it away:

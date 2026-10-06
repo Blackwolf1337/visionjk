@@ -59,7 +59,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "webadmin_html.h"
 
 #define WA_MAX_CONNECTIONS	32
-#define WA_MAX_REQUEST		16384
+#define WA_MAX_REQUEST		65536		// head and body. The largest body is the text of the server config.
 #define WA_TIMEOUT_MS		15000
 #define WA_MAX_FILE			( 64 * 1024 * 1024 )
 
@@ -819,6 +819,106 @@ static void WA_ActionResult( waConnection_t *c, qboolean ok, const char *msg ) {
 
 /*
 =================
+WA_ApiConfigGet, WA_ApiConfigSet
+
+Not in JKAdmin: the server config in the panel. It is this one file and no other, the request names none.
+
+The engine looks for a file in the home path first (fs_homepath/<game>/server.cfg) and then in the base path,
+and it only ever writes to the home path. So the first save puts the edited text into the home path, and that
+is the file "exec server.cfg" takes from then on. The one in the base path, the installation, is not touched.
+What was there before a save is kept as server.cfg.bak next to it.
+
+The file has one byte per character like everything in the game (Latin-1), the page gets and sends UTF-8.
+The passwords in it are shown as they are: who can log into the panel can do everything on the server anyway.
+=================
+*/
+#define WA_CONFIG_FILE		"server.cfg"
+#define WA_CONFIG_BACKUP	"server.cfg.bak"
+
+// text of the game, one byte per character, as the UTF-8 the page reads
+static void WA_BufLatin1AsUtf8( waBuffer_t *b, const char *text, int len ) {
+	int i;
+
+	for ( i = 0; i < len; i++ ) {
+		const unsigned char ch = (unsigned char)text[i];
+
+		if ( ch < 0x80 ) {
+			WA_BufAppend( b, &text[i], 1 );
+		} else {
+			const char utf8[2] = { (char)( 0xC0 | ( ch >> 6 ) ), (char)( 0x80 | ( ch & 0x3F ) ) };
+
+			WA_BufAppend( b, utf8, 2 );
+		}
+	}
+}
+
+// Text the page sends as the body of a request, changed in place into what goes into a file: one byte per
+// character and LF at the end of a line (a browser sends the lines of a text field with CR LF). Returns its length.
+static int WA_TextBody( char *text ) {
+	char *in, *out;
+
+	WA_Utf8ToLatin1( text );
+	for ( in = out = text; *in; in++ ) {
+		if ( *in != '\r' )
+			*out++ = *in;
+	}
+	*out = '\0';
+	return (int)( out - text );
+}
+
+static void WA_ApiConfigGet( waConnection_t *c ) {
+	waBuffer_t	b = { 0 };
+	int			len = 0;
+	char		*text = WA_ReadGameFile( WA_CONFIG_FILE, &len );
+
+	WA_BufLatin1AsUtf8( &b, text, len );
+	free( text );
+	// no file yet is an empty text
+	WA_Respond( c, 200, "OK", "text/plain; charset=utf-8", "Cache-Control: no-store\r\n", b.data, b.len );
+	WA_BufFree( &b );
+}
+
+static qboolean WA_WriteGameFile( const char *path, const char *data, int len ) {
+	fileHandle_t f = 0;
+
+	trap->FS_Open( path, &f, FS_WRITE );
+	if ( !f )
+		return qfalse;
+	trap->FS_Write( data, len, f );
+	trap->FS_Close( f );
+	return qtrue;
+}
+
+// text is the body of the request and is changed in place. run: also execute the file.
+static void WA_ApiConfigSet( waConnection_t *c, char *text, qboolean run ) {
+	char		*old;
+	int			oldLen = 0;
+	const int	len = WA_TextBody( text );
+
+	if ( !len ) {
+		// an empty file is more likely a page that did not load the text than a wish
+		WA_ActionResult( c, qfalse, "an empty config is not saved" );
+		return;
+	}
+
+	old = WA_ReadGameFile( WA_CONFIG_FILE, &oldLen );
+	if ( old ) {
+		WA_WriteGameFile( WA_CONFIG_BACKUP, old, oldLen );
+		free( old );
+	}
+	if ( !WA_WriteGameFile( WA_CONFIG_FILE, text, len ) ) {
+		WA_ActionResult( c, qfalse, "could not write " WA_CONFIG_FILE );
+		return;
+	}
+	// what is in it stays out of the log
+	WA_LogUse( c, va( "config saved, %d bytes%s", len, run ? ", executed" : "" ) );
+	if ( run )
+		trap->SendConsoleCommand( EXEC_APPEND, "exec " WA_CONFIG_FILE "\n" );
+	WA_ActionResult( c, qtrue, run ? "saved and executed" : "saved, not executed yet" );
+}
+
+/*
+=================
 WA_JpAction
 
 Not in JKAdmin: the JA+ admin commands that work on a player. They run as typed on the server console
@@ -1516,7 +1616,7 @@ static void WA_CloseConnection( waConnection_t *c ) {
 }
 
 // Handles a complete request. The response goes into c->response.
-static void WA_HandleRequest( waConnection_t *c, char *head, const char *body ) {
+static void WA_HandleRequest( waConnection_t *c, char *head, char *body ) {
 	char	method[8], path[512];
 	char	*query;
 
@@ -1589,6 +1689,13 @@ static void WA_HandleRequest( waConnection_t *c, char *head, const char *body ) 
 		WA_ApiChat( c, query );
 	} else if ( !strcmp( method, "POST" ) && !strcmp( path, "/api/entity" ) ) {
 		WA_ApiEntity( c, body );
+	} else if ( !strcmp( method, "GET" ) && !strcmp( path, "/api/config" ) ) {
+		WA_ApiConfigGet( c );
+	} else if ( !strcmp( method, "POST" ) && !strcmp( path, "/api/config" ) ) {
+		char run[4];
+
+		WA_FormValue( query, "exec", run, sizeof( run ) );
+		WA_ApiConfigSet( c, body, (qboolean)( run[0] == '1' ) );
 	} else {
 		WA_RespondText( c, 404, "Not Found", "not found" );
 	}
