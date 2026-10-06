@@ -4,8 +4,9 @@ The question was how to spread the game over several threads, starting at the en
 that server and client run in one process, one after the other. This document records how a frame runs, why the
 two halves do not go onto two threads, what was measured and what follows from it.
 
-Result: nothing was built. On current hardware no part of the frame is limited by the CPU, the process waits for
-94 to 96 % of every frame. The one stage that would be the first candidate is described at the end.
+Result: nothing was built. On the hardware it was measured on, no part of the frame comes near the frame time: a
+dedicated server with 29 bots uses about 6 % of one core, a client 12 %, and up to half of that is the wait loop
+itself. The one stage that would be the first candidate is described at the end.
 
 ## How a frame runs
 
@@ -55,8 +56,10 @@ per client snapshots on the server and the renderer back end on the client.
 
 ## Measured
 
-2026-10-06, `com_speeds 1`, about a minute per run, local instances on 127.0.0.1, Ryzen 9 5900X, map mp/ffa3.
-`com_speeds` prints one line per frame:
+2026-10-06, local instances on 127.0.0.1, Ryzen 9 5900X, map mp/ffa3, `sv_fps 20`, windows of 30 to 45 seconds.
+The dedicated server had 31 bots added, 29 of them stay. Two instruments:
+
+`com_speeds 1` prints one line per frame:
 
 ```
 frame:812 all:  2 sv:  0 ev: 48 cl:  0 gm:  2 rf:  0 bk:  0
@@ -64,37 +67,53 @@ frame:812 all:  2 sv:  0 ev: 48 cl:  0 gm:  2 rf:  0 bk:  0
 
 `all` is the frame without the wait, `sv` is `SV_Frame` without `gm`, `ev` the event loops including the wait
 in `NET_Sleep`, `cl` is `CL_Frame` without the renderer, `gm` the bot frame and the game module, `rf` and `bk`
-the renderer front end and back end. The counter is `Sys_Milliseconds`, so a value below 1 ms only means
-something as the mean over many frames.
+the renderer front end and back end. The counter is `Sys_Milliseconds`, whole milliseconds, and a frame starts
+right on a tick, because the wait loop of `Com_Frame` polls until the counter moves. So whatever runs first in a
+frame and is done within that millisecond reads 0 every time, `all` reads low by up to 1 ms, and the split
+between two short stages is not reliable.
 
-Mean per frame in ms:
+The CPU time of the process (`utime + stime` in `/proc/<pid>/stat`) over the same window. It is exact, but it
+includes the wait loop: the last millisecond before a frame is a poll with `NET_Sleep( 0 )`, up to 1 ms of CPU
+per frame.
 
-| Run | Frames | Frame | `gm` | `sv` | `cl` | `rf` | `bk` | Waiting |
-|-----|--------|-------|------|------|------|------|------|---------|
-| a: dedicated, 31 bots, `sv_fps 20` | 1280 | 50 | 1.97 | 0.085 | | | | 96 % |
-| a2: the same with one real client | 834 | 50 | 1.62 | 0.104 | | | | 97 % |
-| c: that client, 60 fps | 2500 | 16 | | | 0.00 | 0.00 | 0.70 | 96 % |
-| b: listen server, 3 bots, 125 fps | 2650 | 7.9 | 0.00 | 0.00 | 0.00 | 0.00 | 0.47 | 94 % |
+The work of a frame lies between `all` and the CPU time per frame.
 
-Longest single frame: 4 ms (a), 3 ms (c), 2 ms (b).
+| Run | Frame | `all` | Of that | CPU of the process | CPU per frame |
+|-----|-------|-------|---------|--------------------|---------------|
+| a: dedicated, 29 bots | 50 ms | 1.96 ms | `gm` 1.88, `sv` 0.08 | 5.8 % of a core | 2.9 ms |
+| g2: a with one real client that follows bots | 50 ms | 1.77 ms | `gm` 1.61, `sv` 0.17 | 6.3 % | 3.1 ms |
+| d: a with a server demo of every bot | 50 ms | 2.49 ms | `gm` 2.07, `sv` 0.41 | 6.8 % | 3.4 ms |
+| d2: d with one real client | 50 ms | 2.16 ms | `gm` 1.49, `sv` 0.67 | 7.1 % | 3.6 ms |
+| g: the client of g2, follows bots through saber fights, 800x600, 60 fps | 16 ms | 0.87 ms | `bk` 0.86 | 11.5 % | 1.8 ms |
+| h: listen server, 3 bots, the local player in the game, 1280x720, 125 fps | 8 ms | 0.01 ms | | 12.2 % | 1.0 ms |
+
+Run d stands in for a server full of real players. A bot gets no encoded snapshot, `SV_SendClientSnapshot`
+returns after the build. With `sv_autoDemo 1` and `sv_autoDemoBots 1` every bot records a server demo and then
+runs the complete path: delta against its last frame, Huffman, and the write to the demo file. Only the `sendto`
+is missing.
 
 What it says:
 
-- Snapshots in parallel would spread `sv`. That is the whole engine side of the server with the snapshot build
-  for 31 clients: 0.1 ms of a 50 ms tick, 0.2 % of one core. A bot gets no encoded snapshot, only the built
-  one. The one real client raised `sv` by about 0.02 ms; 32 real players stay below 1 ms a tick. Waking a pool
-  of workers and collecting them again costs the same order.
-- A render thread lets front end and back end overlap. Front end and cgame together are below what the counter
-  shows, so there is nothing to overlap.
-- The only part with weight is the game module, 4 % of a core with 31 bots, and it is the part that can not
-  run in parallel: entities act on each other through traces and damage, every bot calls traces and the botlib
-  with shared state.
+- A server tick is 2 to 3 ms of work in 50 ms, nearly all of it bot AI and the game module. That part moves
+  by half a millisecond from run to run with what the bots do.
+- The snapshot path for a full server is the difference between a, g2 and d, d2: 0.3 to 0.6 ms a tick in
+  `sv`, about 1 % of a core in CPU time, close to the noise between runs. That and 32 `sendto` is all that
+  threads could spread. Waking a pool of workers and collecting them again every tick costs a good part of it.
+- The client needs 0.9 to 1.8 ms of a 16 ms frame while it watches saber fights, and the listen server run
+  finishes the whole frame, server tick included, within the first millisecond in 99 of 100 frames. A render
+  thread lets front end and back end overlap, it can save the smaller of the two at best, some tenths of a
+  millisecond.
+- The only part with weight is the game module, and it is the part that can not run in parallel: entities act
+  on each other through traces and damage, every bot calls traces and the botlib with shared state.
 
-Limits: the test client stood still on a hidden workspace, a fight with many players in view costs more. Ten
-times as much would still be 7 ms. Not measured: other hardware, a server with 32 real players.
+Limits: the clients ran on a hidden workspace in small windows, on a GPU that is not the limit at these sizes.
+Not measured: the resolution and settings of a real session, a server with 32 real players over a real network,
+other hardware, the Windows builds.
 
-To repeat: start any instance with `+set com_speeds 1` (or type `com_speeds 1` in the console) and average the
-lines of the log.
+To repeat: start an instance with `+set com_speeds 1` (or type `com_speeds 1` in the console), average the
+lines of the log and read the CPU time of the process over the same time. A scripted client needs a check that
+it really is in the game, a `status` on the server or a `screenshot`. On a client a `wait` in a script counts
+twice a frame, `Cbuf_Execute` runs before the server half and before the client half.
 
 ## The first candidate, if a load ever needs it
 
