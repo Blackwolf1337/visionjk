@@ -316,6 +316,28 @@ elseif (("${CMAKE_C_COMPILER_ID}" STREQUAL "GNU") OR ("${CMAKE_C_COMPILER_ID}" M
 		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-invalid-offsetof")
 		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsigned-char")
 	endif()
+
+	# Security hardening. Not with the sanitizers, which bring their own checks and clash with _FORTIFY_SOURCE.
+	if(NOT UseAddressSanitizer AND NOT UseUndefinedSanitizer)
+		# warn about format strings that are not constant, on every platform (compile only, no new dependency)
+		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wformat -Wformat-security")
+		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wformat -Wformat-security")
+		if(WIN32)
+			# the PE flags: data execution prevention and address space layout randomisation. No stack protector
+			# here: on mingw it would pull in libssp-0.dll, a new runtime file the modules must not depend on.
+			add_link_options(-Wl,--nxcompat -Wl,--dynamicbase)
+		else()
+			# a canary on functions with buffers (the runtime is in libc, no new dependency), checked libc calls
+			# (needs optimisation, so only in the optimised configs), and a read-only GOT bound at start
+			set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fstack-protector-strong")
+			set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fstack-protector-strong")
+			set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -D_FORTIFY_SOURCE=2")
+			set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -D_FORTIFY_SOURCE=2")
+			set(CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO} -D_FORTIFY_SOURCE=2")
+			set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} -D_FORTIFY_SOURCE=2")
+			add_link_options(-Wl,-z,relro -Wl,-z,now)
+		endif()
+	endif()
 else()
 	message(ERROR "Unsupported compiler")
 endif()
