@@ -23,6 +23,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 */
 
 #include "g_local.h"
+#include "bg_props.h"
 #include "bg_saga.h"
 
 extern void Jedi_Cloak( gentity_t *self );
@@ -3448,6 +3449,10 @@ void ClientThink_real( gentity_t *ent ) {
 //	G_VehicleAttachDroidUnit( ent );
 
 	// Did we kick someone in our pmove sequence?
+	// not from JA+: he flipped off a prop, it is kicked away (g_props.c). What follows finds no player then.
+	if ( client->ps.forceKickFlip == PROP_KICK_FLIP )
+		G_PropFlipKick( ent );
+
 	if (client->ps.forceKickFlip)
 	{
 		gentity_t *faceKicked = &g_entities[client->ps.forceKickFlip-1];

@@ -21,6 +21,8 @@ of the players, which the client predicts. Not from JA+.
 // A trace of a move that ended at a prop names the world as what it hit, with the contents of a body, which
 // the world never has: that is how the code of the moves tells a prop from a wall.
 #define BG_PropHit( tr )	( (tr)->fraction < 1.0f && (tr)->entityNum == ENTITYNUM_WORLD && ( (tr)->contents & CONTENTS_BODY ) )
+// playerState_t.forceKickFlip after a flip off a prop, where a flip off a player has his number plus one
+#define PROP_KICK_FLIP		( ENTITYNUM_WORLD + 1 )
 
 #define PROP_MIN_HALF		2.0f	// nothing is thinner than twice this
 #define PROP_MODEL_BYTES	( 32 * 1024 * 1024 )	// of a model file that is read for its corners

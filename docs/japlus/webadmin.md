@@ -208,6 +208,15 @@ Also changed:
   the next start of any map, so it can not come back later. An entity of the map that was edited in the panel
   is not kept, the map has it as it was. Tried once on the running server: nine placed objects before and
   after, the file gone.
+- New: a flip off a prop kicks it. A trace of a move that ends at a prop names the world with the contents of
+  a body (`BG_PropHit`), so the code of the moves can tell a prop from a wall: in the air with a prop right in
+  front the player flips back off it as off a player (`bg_pmove.c`, next to the JA+ flip kick), the wall flips
+  from the ground do the same, and `forceKickFlip` gets `PROP_KICK_FLIP`. The server then kicks the body that
+  is closest on the side he pushed off (`G_PropFlipKick` in `g_props.c`): back along the way he flies now, so
+  to his side after a side flip and in front of him after a back flip. It gets 900 over its mass that way and
+  a bit up, at the spot next to him, so a kick near the top of a crate knocks it over. (The first version
+  looked for the prop in front of him and kicked along his view, which was wrong for the flips to the side.) What it hits afterwards
+  counts for him. Added without a test run, and built for Linux only.
 - New: `misc_blackhole` pulls the props too (`misc_prop`, `misc_cube`, `misc_ball`): by the middle of their
   bodies, with the strength it has for players, whatever their mass (`G_PropPull` in `g_props.c`, called from
   `blackhole_think`). The core does nothing to them: they do not break, and damage would knock them out of the

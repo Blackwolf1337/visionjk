@@ -27,6 +27,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "qcommon/q_shared.h"
 #include "bg_public.h"
 #include "bg_local.h"
+#include "bg_props.h"
 #include "ghoul2/G2.h"
 
 #ifdef _GAME
@@ -2563,6 +2564,11 @@ static qboolean PM_CheckJump( void )
 						{
 							pm->ps->forceKickFlip = trace.entityNum+1; //let the server know that this person gets kicked by this client
 						}
+						// not from JA+: a flip off a prop kicks it, the server does that (G_PropFlipKick)
+						if ( doTrace && BG_PropHit( &trace ) )
+						{
+							pm->ps->forceKickFlip = PROP_KICK_FLIP;
+						}
 
 						//up
 						if ( vertPush )
@@ -2804,6 +2810,21 @@ static qboolean PM_CheckJump( void )
 						if ( PM_JPCanFlipKick() )
 							pm->ps->forceKickFlip = kickTrace.entityNum + 1;	// the server kicks that player
 					}
+				}
+				else if ( BG_PropHit( &kickTrace ) )
+				{
+					// Not from JA+: a prop right in front (g_props.c). He flips back off it as off a player, and the
+					// server kicks it away (G_PropFlipKick). A prop is not run up like a wall.
+					pm->ps->velocity[0] = pm->ps->velocity[1] = 0;
+					VectorMA( pm->ps->velocity, -150, kickFwd, pm->ps->velocity );
+					pm->ps->velocity[2] += 128;
+					PM_SetAnim( pm->ps->weaponTime ? SETANIM_LEGS : SETANIM_BOTH, BOTH_WALL_FLIP_BACK1, SETANIM_FLAG_OVERRIDE|SETANIM_FLAG_HOLD );
+					pm->ps->legsTimer -= 600;
+					PM_SetForceJumpZStart( pm->ps->origin[2] );
+					pm->cmd.upmove = 0;
+					pm->ps->fd.forceJumpSound = 1;
+					BG_ForcePowerDrain( pm->ps, FP_LEVITATION, 5 );
+					pm->ps->forceKickFlip = PROP_KICK_FLIP;
 				}
 				else if ( allowWallRuns )
 				{

@@ -82,6 +82,9 @@ Not from JA+ and not from JKAdmin.
 #define PROP_THROW_MSEC		5000		// that long after a player had his hands on it what it hurts is his doing
 #define PROP_THROW_SAFE		400			//	and that long it does not hurt him himself
 
+#define PROP_KICK_REACH		60.0f		// a body this close in front of a player who flips off one is the one he kicked
+#define PROP_KICK_SPEED		900.0f		// how hard that is: the speed a body of mass 1 gets
+
 #define MODEL_MIN_EDGE		8.0f		// the longest edge of the box of a misc_prop: its model is scaled into these
 #define MODEL_MAX_EDGE		384.0f
 
@@ -2139,6 +2142,63 @@ void G_PropForceThrow( gentity_t *self, qboolean pull ) {
 		}
 		prop->movedir[2] += 80.0f / prop->mass;
 	}
+}
+
+/*
+=================
+G_PropFlipKick
+
+For ClientThink_real: this player flipped off a prop, the code of the moves said so in forceKickFlip
+(PROP_KICK_FLIP). He pushed himself off it, so it lies where he comes from: back along the way he flies now,
+which is behind him after a flip to the side and in front of him after a flip backwards. The body that is
+closest there gets his kick at the spot next to him, that way and a bit up: off its middle that turns it, a
+kick near the top of a crate knocks it over.
+=================
+*/
+void G_PropFlipKick( gentity_t *ent ) {
+	const playerState_t	*ps = &ent->client->ps;
+	gentity_t			*best = NULL;
+	vec3_t				angles, away, at, dir;
+	float				bestDist = PROP_KICK_REACH;
+	int					i;
+
+	VectorSet( away, -ps->velocity[0], -ps->velocity[1], 0.0f );
+	if ( VectorNormalize( away ) < 1.0f ) {
+		// he does not move sideways at all: where he looks then
+		VectorSet( angles, 0.0f, ps->viewangles[YAW], 0.0f );
+		AngleVectors( angles, away, NULL, NULL );
+	}
+	VectorClear( at );
+
+	for ( i = 0; i < propCount; i++ ) {
+		gentity_t		*prop = &g_entities[propList[i]];
+		const prop_t	*p = &props[propList[i]];
+		vec3_t			rel, r;
+		float			dist;
+
+		if ( !Prop_Is( prop ) || !p->solid || p->holder == ent )
+			continue;
+		VectorSubtract( ps->origin, prop->r.currentOrigin, rel );
+		if ( VectorLength( rel ) > prop->radius + bestDist )
+			continue;
+		dist = Body_Nearest( p, rel, r );
+		// from him to that spot: it has to lie on the side he pushed off
+		VectorSubtract( r, rel, dir );
+		if ( dist >= bestDist || DotProduct( dir, away ) <= 0.0f )
+			continue;
+		best = prop;
+		bestDist = dist;
+		VectorCopy( r, at );
+	}
+	if ( !best )
+		return;
+
+	VectorCopy( away, dir );
+	dir[2] = 0.25f;
+	VectorNormalize( dir );
+	Prop_Thrown( Prop_State( best ), ent );
+	Prop_Impulse( best, dir, PROP_KICK_SPEED, at );
+	G_Sound( best, CHAN_AUTO, G_SoundIndex( va( "sound/weapons/melee/punch%d", Q_irand( 1, 4 ) ) ) );
 }
 
 // for the code that pulls things in or pushes them about and is not in this file: is this one of the props
