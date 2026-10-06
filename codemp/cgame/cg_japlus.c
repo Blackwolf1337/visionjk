@@ -73,7 +73,14 @@ static qboolean ReplierAllowed( void ) {
 	return !JP_FEATURE( JPF_NOAUTOREPLIER ) && !(cp_pluginDisable.integer & (1 << 4)) && cg.snap;
 }
 
-// tmpl with its first %s replaced by name, other % and quotes dropped so the text can not break the command
+// a character that must not reach the console line this reply builds: a quote or percent would break the
+// format, a newline, a return or a semicolon would end the command and let the rest run as its own. The name
+// comes from another player through the server, so it is the part that could carry them.
+static qboolean ReplyBadChar( char c ) {
+	return (qboolean)( c == '"' || c == '%' || c == ';' || (unsigned char)c < ' ' );
+}
+
+// tmpl with its first %s replaced by name, the characters above dropped so the text can not break the command
 static void FormatReply( const char *tmpl, const char *name, char *out, size_t size ) {
 	qboolean named = qfalse;
 	size_t n = 0;
@@ -83,10 +90,10 @@ static void FormatReply( const char *tmpl, const char *name, char *out, size_t s
 			named = qtrue;
 			tmpl++;
 			for ( ; *name && n < size - 1; name++ ) {
-				if ( *name != '"' && *name != '%' )
+				if ( !ReplyBadChar( *name ) )
 					out[n++] = *name;
 			}
-		} else if ( *tmpl != '"' && *tmpl != '%' ) {
+		} else if ( !ReplyBadChar( *tmpl ) ) {
 			out[n++] = *tmpl;
 		}
 	}
