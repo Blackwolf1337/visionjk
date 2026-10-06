@@ -362,6 +362,12 @@ void VK_EndFrame( void ) {
 		}
 	}
 
+	vk.statDraws[1] = frame->numDraws;
+	vk.statCpuVertexes[1] = vk.statCpuVertexes[0];
+	vk.statCpuIndexes[1] = vk.statCpuIndexes[0];
+	vk.statStaticIndexes[1] = vk.statStaticIndexes[0];
+	vk.statCpuVertexes[0] = vk.statCpuIndexes[0] = vk.statStaticIndexes[0] = 0;
+
 	vk.finalValid = qtrue;
 	vk.frame = NULL;
 	vk.frameIndex = ( vk.frameIndex + 1 ) % VK_FRAMES;
@@ -433,6 +439,8 @@ qboolean VK_UploadGeometry( const vec4_t *xyz, const vec4_t *normal, const vec2_
 	vkCmdBindIndexBuffer( frame->cmd, frame->indexes.buffer, frame->indexUsed, VK_INDEX_TYPE_UINT32 );
 	frame->indexUsed += indexBytes;
 	vk.numBoundIndexes = numIndexes;
+	vk.statCpuVertexes[0] += numVerts;
+	vk.statCpuIndexes[0] += numIndexes;
 	return qtrue;
 }
 
@@ -457,6 +465,7 @@ qboolean VK_UploadIndexes( VkBuffer vertexBuffer, const VkDeviceSize *offsets, c
 	vkCmdBindIndexBuffer( frame->cmd, frame->indexes.buffer, frame->indexUsed, VK_INDEX_TYPE_UINT32 );
 	frame->indexUsed += indexBytes;
 	vk.numBoundIndexes = numIndexes;
+	vk.statStaticIndexes[0] += numIndexes;
 	return qtrue;
 }
 

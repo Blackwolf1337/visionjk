@@ -218,6 +218,12 @@ typedef struct vkState_s {
 	int							viewport[4];		// x, y, width, height as OpenGL counts them
 	qboolean					overflowed;			// this frame has more geometry than fits, said once
 
+	// what the frame was made of, for gfxinfo: [0] the frame being recorded, [1] the last finished one
+	int							statDraws[2];
+	int							statCpuVertexes[2];	// vertices that were built on the CPU and uploaded
+	int							statCpuIndexes[2];
+	int							statStaticIndexes[2];	// indexes into vertices that are on the device
+
 	qboolean					validation;
 	int							validationMessages;
 } vkState_t;

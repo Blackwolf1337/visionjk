@@ -468,6 +468,8 @@ void VK_GfxInfo_f( void ) {
 		(int)vk.swapExtent.width, (int)vk.swapExtent.height, (int)vk.numSwapImages, vk.swapInterval );
 	ri.Printf( PRINT_ALL, "textures: %i of %i, pipelines: %i, samplers: %i\n", numImages, VK_MAX_IMAGES, vk.numPipelines,
 		vk.numSamplers );
+	ri.Printf( PRINT_ALL, "last frame: %i draws, %i triangles from buffers on the device, %i triangles and %i vertices built on the CPU\n",
+		vk.statDraws[1], vk.statStaticIndexes[1] / 3, vk.statCpuIndexes[1] / 3, vk.statCpuVertexes[1] );
 	VK_MemoryInfo_f();
 	ri.Printf( PRINT_ALL, "validation layer: %s", vk.validation ? "on" : "off" );
 	if ( vk.validation ) {

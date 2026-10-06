@@ -18,17 +18,19 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 ===========================================================================
 */
 
-// vk_world.cpp: the faces and triangle meshes of the level in buffers on the device
+// vk_world.cpp: the faces, triangle meshes and patches of the level in buffers on the device
 //
 // rd-vanilla copies every visible surface of the level into the tess arrays each frame, vertex by vertex
-// (RB_SurfaceFace, RB_SurfaceTriangles). Here the vertices of those surfaces are put into one buffer on the
+// (RB_SurfaceFace, RB_SurfaceTriangles, RB_SurfaceGrid). Here the vertices of those surfaces are put into one buffer on the
 // device when the level is first drawn, in the layout of the tess arrays. A batch that is made of such surfaces
 // only collects their indexes each frame, the vertices are never touched again.
 //
 // Not every batch can be drawn that way. What still needs the vertices on the CPU goes through the tess arrays
 // as before: sky, deformVertexes, surface sprites, the fog pass of a fog volume, color generators that are not
-// in the vertex shader, vertex lit surfaces with more than one light style, patches (their detail depends on
-// the distance).
+// in the vertex shader, vertex lit surfaces with more than one light style.
+//
+// Patches are drawn with all the rows and columns they were subdivided into. rd-vanilla leaves rows and columns
+// out with the distance (r_lodCurveError), so a patch far away is a little rounder here than there.
 
 #include "vk_local.h"
 
@@ -84,6 +86,8 @@ static void VK_BuildWorld( void ) {
 			numVertexes += ( (const srfSurfaceFace_t *)data )->numPoints;
 		} else if ( *data == SF_TRIANGLES ) {
 			numVertexes += ( (const srfTriangles_t *)data )->numVerts;
+		} else if ( *data == SF_GRID ) {
+			numVertexes += ( (const srfGridMesh_t *)data )->width * ( (const srfGridMesh_t *)data )->height;
 		}
 	}
 	if ( !numVertexes ) {
@@ -122,12 +126,14 @@ static void VK_BuildWorld( void ) {
 				// the colors of the first light style, see VK_StaticColorScale() for the rest
 				memcpy( colors[vertex], &v[VERTEX_COLOR], 4 );
 			}
-		} else if ( *data == SF_TRIANGLES ) {
-			const srfTriangles_t *tri = (const srfTriangles_t *)data;
-			const drawVert_t *dv = tri->verts;
+		} else if ( *data == SF_TRIANGLES || *data == SF_GRID ) {
+			// both are an array of drawVert_t, the patch row by row
+			const drawVert_t *dv = ( *data == SF_GRID ) ? ( (const srfGridMesh_t *)data )->verts : ( (const srfTriangles_t *)data )->verts;
+			const int count = ( *data == SF_GRID ) ? ( (const srfGridMesh_t *)data )->width * ( (const srfGridMesh_t *)data )->height
+				: ( (const srfTriangles_t *)data )->numVerts;
 
 			vk_firstVertex[data] = vertex;
-			for ( int j = 0; j < tri->numVerts; j++, dv++, vertex++ ) {
+			for ( int j = 0; j < count; j++, dv++, vertex++ ) {
 				VectorCopy( dv->xyz, xyz[vertex] );
 				VectorCopy( dv->normal, normal[vertex] );
 				VectorSet2( texCoords[vertex][0], dv->st[0], dv->st[1] );
@@ -220,7 +226,8 @@ surface functions of tr_surface.cpp into the tess arrays
 ===============
 */
 void VK_AddSurface( surfaceType_t *surface ) {
-	if ( ( *surface == SF_FACE || *surface == SF_TRIANGLES ) && tr.world && !( backEnd.refdef.rdflags & RDF_NOWORLDMODEL ) ) {
+	if ( ( *surface == SF_FACE || *surface == SF_TRIANGLES || *surface == SF_GRID ) && tr.world
+		&& !( backEnd.refdef.rdflags & RDF_NOWORLDMODEL ) ) {
 		if ( !vk_worldValid ) {
 			VK_BuildWorld();
 		}
@@ -246,6 +253,30 @@ void VK_AddSurface( surfaceType_t *surface ) {
 					}
 					tess.numIndexes += face->numIndices;
 					tess.dlightBits |= face->dlightBits;
+				} else if ( *surface == SF_GRID ) {
+					srfGridMesh_t *grid = (srfGridMesh_t *)surface;
+
+					// two triangles per cell, in the order RB_SurfaceGrid() has them
+					for ( int row = 0; row < grid->height - 1; row++ ) {
+						RB_CHECKOVERFLOW( 0, ( grid->width - 1 ) * 6 );
+						vk_batchStatic = qtrue;
+						out = tess.indexes + tess.numIndexes;
+						for ( int col = 0; col < grid->width - 1; col++, out += 6 ) {
+							const int v1 = first + row * grid->width + col + 1;
+							const int v2 = v1 - 1;
+							const int v3 = v2 + grid->width;
+							const int v4 = v3 + 1;
+
+							out[0] = v2;
+							out[1] = v3;
+							out[2] = v1;
+							out[3] = v1;
+							out[4] = v3;
+							out[5] = v4;
+						}
+						tess.numIndexes += ( grid->width - 1 ) * 6;
+					}
+					tess.dlightBits |= grid->dlightBits;
 				} else {
 					srfTriangles_t *tri = (srfTriangles_t *)surface;
 
