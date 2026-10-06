@@ -1319,6 +1319,7 @@ void R_CreateBuiltinImages( void ) {
 
 	tr.screenImage = R_CreateImage("*screen", (byte *)data, 8, 8, GL_RGBA, qfalse, qfalse, qfalse, GL_REPEAT );
 
+#ifndef RD_VULKAN_VISION	// rectangle and 3D textures of the glow and gamma passes, rd-vulkan-vision has render targets for that
 	// Create the scene glow image. - AReis
 	tr.screenGlow = 1024 + giTextureBindNum++;
 	qglDisable( GL_TEXTURE_2D );
@@ -1372,6 +1373,7 @@ void R_CreateBuiltinImages( void ) {
 	}
 
 	qglEnable(GL_TEXTURE_2D);
+#endif
 
 	// with overbright bits active, we need an image which is some fraction of full color,
 	// for default lightmaps, etc
@@ -1481,6 +1483,7 @@ void R_SetColorMappings( void ) {
 
 void R_SetGammaCorrectionLUT()
 {
+#ifndef RD_VULKAN_VISION
 	if ( glConfigExt.doGammaCorrectionWithShaders )
 	{
 		int inf;
@@ -1523,6 +1526,7 @@ void R_SetGammaCorrectionLUT()
 
 		ri.Hunk_FreeTempMemory(lutTable);
 	}
+#endif
 }
 
 /*

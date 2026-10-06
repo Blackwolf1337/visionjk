@@ -1906,3 +1906,9 @@ void R_AddDecals( void );
 void RB_DrawSurfaceSprites( shaderStage_t *stage, shaderCommands_t *input);
 
 qboolean ShaderHashTableExists(void);
+
+#ifdef RD_VULKAN_VISION
+// rd-vulkan-vision compiles the files of this renderer that hold no graphics code. This is what they call where
+// this renderer calls OpenGL.
+#include "../rd-vulkan-vision/vk_hooks.h"
+#endif

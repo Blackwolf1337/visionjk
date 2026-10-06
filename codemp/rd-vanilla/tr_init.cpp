@@ -218,6 +218,7 @@ cvar_t *r_screenshotJpegQuality;
 
 cvar_t	*r_patchStitching;
 
+#ifndef RD_VULKAN_VISION	// OpenGL only: rd-vulkan-vision compiles this file too and has its own in vk_*.cpp
 #if !defined(__APPLE__)
 PFNGLSTENCILOPSEPARATEPROC qglStencilOpSeparate;
 #endif
@@ -267,12 +268,14 @@ PFNGLISPROGRAMARBPROC qglIsProgramARB;
 
 PFNGLLOCKARRAYSEXTPROC qglLockArraysEXT;
 PFNGLUNLOCKARRAYSEXTPROC qglUnlockArraysEXT;
+#endif
 
 bool g_bTextureRectangleHack = false;
 
 void RE_SetLightStyle(int style, int color);
 void RE_GetBModelVerts( int bmodelIndex, vec3_t *verts, vec3_t normal );
 
+#ifndef RD_VULKAN_VISION
 void R_Splash()
 {
 	image_t *pImage;
@@ -876,6 +879,7 @@ void GL_CheckErrors( void ) {
     Com_Error( ERR_FATAL, "GL_CheckErrors: %s", s );
 #endif
 }
+#endif // !RD_VULKAN_VISION
 
 /*
 ==============================================================================
@@ -902,6 +906,7 @@ Return value must be freed with Hunk_FreeTempMemory()
 ==================
 */
 
+#ifndef RD_VULKAN_VISION
 byte *RB_ReadPixels(int x, int y, int width, int height, size_t *offset, int *padlen)
 {
 	byte *buffer, *bufstart;
@@ -924,6 +929,7 @@ byte *RB_ReadPixels(int x, int y, int width, int height, size_t *offset, int *pa
 
 	return buffer;
 }
+#endif
 
 /*
 ==================
@@ -1224,6 +1230,7 @@ void R_ScreenShot_f (void) {
 		ri.Printf( PRINT_ALL, "[skipnotify]Wrote %s\n", checkname );
 }
 
+#ifndef RD_VULKAN_VISION
 /*
 ==================
 RB_TakeVideoFrameCmd
@@ -1348,6 +1355,8 @@ void GL_SetDefaultState( void )
 	qglDisable( GL_BLEND );
 }
 
+#endif // !RD_VULKAN_VISION
+
 /*
 ================
 R_PrintLongString
@@ -1391,6 +1400,7 @@ void R_PrintLongString(const char *string)
 GfxInfo_f
 ================
 */
+#ifndef RD_VULKAN_VISION
 extern bool g_bTextureRectangleHack;
 void GfxInfo_f( void )
 {
@@ -1515,6 +1525,12 @@ void GfxInfo_f( void )
 		ri.Printf( PRINT_ALL, "Light Grid size set to (%.2f %.2f %.2f)\n", tr.world->lightGridSize[0], tr.world->lightGridSize[1], tr.world->lightGridSize[2] );
 	}
 }
+#else
+void GfxInfo_f( void )
+{
+	VK_GfxInfo_f();
+}
+#endif
 
 void R_AtiHackToggle_f(void)
 {
@@ -1783,7 +1799,11 @@ void R_Init( void ) {
 	{
 		RE_SetLightStyle(i, -1);
 	}
+#ifdef RD_VULKAN_VISION
+	VK_InitVulkan();
+#else
 	InitOpenGL();
+#endif
 
 	R_InitImages();
 	R_InitShaders(qfalse);
@@ -1797,7 +1817,7 @@ void R_Init( void ) {
 
 	R_InitWorldEffects();
 
-#if defined(_DEBUG)
+#if defined(_DEBUG) && !defined(RD_VULKAN_VISION)
 	int	err = qglGetError();
 	if ( err != GL_NO_ERROR )
 		ri.Printf( PRINT_ALL,  "glGetError() = 0x%x\n", err);
@@ -1822,6 +1842,7 @@ void RE_Shutdown( qboolean destroyWindow, qboolean restarting ) {
 	for ( size_t i = 0; i < numCommands; i++ )
 		ri.Cmd_RemoveCommand( commands[i].cmd );
 
+#ifndef RD_VULKAN_VISION
 	if ( r_DynamicGlow && r_DynamicGlow->integer )
 	{
 		// Release the Glow Vertex Shader.
@@ -1866,6 +1887,7 @@ void RE_Shutdown( qboolean destroyWindow, qboolean restarting ) {
 		// Release the blur texture.
 		qglDeleteTextures( 1, &tr.blurImage );
 	}
+#endif
 
 	R_ShutdownWorldEffects();
 	R_ShutdownFonts();
@@ -1883,6 +1905,9 @@ void RE_Shutdown( qboolean destroyWindow, qboolean restarting ) {
 	}
 
 	// shut down platform specific OpenGL stuff
+#ifdef RD_VULKAN_VISION
+	VK_ShutdownVulkan( destroyWindow );
+#endif
 	if ( destroyWindow ) {
 		ri.WIN_Shutdown();
 	}
