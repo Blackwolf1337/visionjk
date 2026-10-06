@@ -44,7 +44,7 @@ indexing ends in an error that names `rd-vanilla`.
 |------|---------|
 | `r_vkDebug 1` | validation layer and its messages in the console, if the layer is installed (latched) |
 | `r_vkStatic 0` | cheat: nothing from the device buffers, every vertex through the CPU as in `rd-vanilla`. For telling a fault of the buffers from a fault of the shading |
-| `gfxinfo` | device, memory, what the last frame was made of and the shaders whose batches were still built on the CPU |
+| `gfxinfo` | device, memory, what the last frame was made of (draws, triangles, transforms, bones) and the shaders whose batches were still built on the CPU |
 
 The cvars of `rd-vanilla` keep their names and meaning (`r_gamma`, `r_textureMode`, `r_picmip`,
 `r_DynamicGlow` and its parameters, `r_dynamiclight`, `r_drawfog`, `r_fastsky`, `r_surfaceSprites`, ...). The ones
@@ -96,7 +96,7 @@ library. The other renderers do not use them.
 | | rd-vanilla | rd-vulkan-vision |
 |---|-----------|------------------|
 | Level faces, meshes, patches | copied into the tess arrays every frame | one device buffer, per frame only indexes |
-| Ghoul2 models | every vertex moved by its bones on the CPU | vertices in a device buffer, bones per skeleton per frame, skinning in `skinned.vert` |
+| Ghoul2 models | every vertex moved by its bones on the CPU | vertices and triangles in device buffers, bones per skeleton per frame, skinning in `skinned.vert` |
 | MD3 with one frame | decoded and copied every frame | same device buffer, one identity bone |
 | tcMod, tcGen, rgbGen, alphaGen | per vertex on the CPU | one matrix and two colors per draw, the rest in `stage.glsl` |
 | rgbGen lightingDiffuse, alphaGen lightingSpecular and portal | per vertex on the CPU | vertex shader |
@@ -106,12 +106,15 @@ library. The other renderers do not use them.
 | Fog volumes | fog pass with coordinates per vertex on the CPU, color fade per vertex on the CPU | the same pass, coordinates and fade in `stage.glsl` from two vectors per draw |
 | Textures | bound per stage | one table of all textures, indexed in the shader |
 | State of a stage | set per stage | only the blend function needs a pipeline, depth, cull and offset are dynamic state |
+| A draw | arrays set up and `glDrawElements` per stage | one indexed draw per stage. Which draw it is comes as its instance number, the vertex streams of the frame are bound once and a batch names its first vertex, model triangles are runs in an index buffer on the device |
 | Gamma, overbright | ramp of the display or baked into textures | one pass over the finished frame |
 
 Still on the CPU, through the tess arrays as in `rd-vanilla`: the sky, shaders with the other kinds of
 `deformVertexes` (autosprite, text, normals) or with more than one of them,
-`alphaGen blend` (terrain), vertex lit surfaces with more than one light style, models with gore on them, MD3 with several frames, all
-effects the game hands over as polygons, sprites, beams and lines, marks, the weather, surface sprites, the HUD.
+`alphaGen blend` (terrain), vertex lit surfaces with more than one light style, MD3 with several frames, the
+saber marks on models (the model itself is on the device, the few vertices a mark takes from it are moved on
+the CPU), all effects the game hands over as polygons, sprites, beams and lines, marks on walls, the weather,
+surface sprites, the HUD.
 
 A frame on mp/ffa3, 1280x720, from `gfxinfo`: as a spectator at the first spawn point 4551 triangles come from
 device buffers and 1144 vertices from the CPU. Following a bot in a fight about 4600 triangles from device
@@ -209,18 +212,31 @@ Speed: a demo of 90 seconds, 17 bots fighting on mp/duel1, seen by a spectator f
 | | frames a second | a frame |
 |---|---|---|
 | `rd-vanilla` | 362, 355, 357 | 2.8 ms |
-| `rd-vulkan-vision` | 648, 646, 655 | 1.5 ms |
+| `rd-vulkan-vision` | 736, 707, 725 | 1.4 ms |
 
 With `r_skipBackEnd 1` both play the demo at the 1000 frames a second the engine allows (997 and 996): the
 game, the cgame and the front end of the renderer need less than a millisecond for a frame together, and they
-are the same code for both. So the difference is all back end: the one of `rd-vulkan-vision` takes 1.2 ms less
+are the same code for both. So the difference is all back end: the one of `rd-vulkan-vision` takes 1.4 ms less
 for a frame of this scene. How long each back end takes by itself can not be read from this, only that it is
-more than 1.8 ms in `rd-vanilla` and more than 0.6 ms here.
+more than 1.8 ms in `rd-vanilla` and more than 0.4 ms here.
 
-A frame of that demo has about 2000 draws, 33000 to 56000 triangles from device buffers and 8000 to 15000 built
-on the CPU: saber marks, sparks, saber glow, and models with gore on them. Before `deformVertexes` was in the
-vertex shader it was 11000 to 27000, and the timedemo ran at 659, 635 and 611 frames a second: the shells
-around a player (shield, lightning, ysalamiri) are the whole model drawn once more with such a shader.
+A frame of that demo has about 2000 draws, 35000 to 62000 triangles from device buffers and 7100 to 8000 built
+on the CPU. Those are all effects of the game: saber marks on walls, sparks, saber glow. How the number came
+down, each step measured with the same demo:
+
+| Step | Triangles from the CPU in a frame | Timedemo |
+|------|-----------------------------------|----------|
+| first measurement | 11000 to 27000 | 659, 635, 611 |
+| `deformVertexes` in the vertex shader: the shells around a player (shield, lightning, ysalamiri) are the whole model drawn once more with such a shader | 8000 to 15000 | 648, 646, 655 |
+| less work per batch and per draw (streams bound once, draw number as instance, index buffer for models) | the same | 689, 691, 673 |
+| models with saber marks on them from the device, only the vertices of the marks on the CPU | 7100 to 8000 | 736, 707, 725 |
+
+Where a frame of that demo goes, counted in instructions with callgrind (`tools/rdprof.sh`, not a measure of
+time): 53 % are the cgame (31 % its player code, 9 % the saber marks it puts on walls, 8 % the front end of the
+renderer it calls), 44 % the back end. Before the last three steps the back end had 54 % and a third more
+instructions. What it still spends them on: the draw calls 9 %, the bones of the skeletons 5 %, copying the
+geometry of effects 5 %, building sprites and beams 4 %, the transforms 3 %, the vertices of saber marks on
+models 3 %.
 
 In a view without a crowd both renderers reach the 1000 frames a second the engine allows (a frame lasts at
 least 1 ms, in a `timedemo` too), so there is nothing to measure there. See [threading.md](threading.md) for why
