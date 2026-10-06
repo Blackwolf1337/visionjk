@@ -63,6 +63,7 @@ beams and the like, the weather particles, the surface sprites and the shadows (
 What that needs in `rd-vanilla`: `#ifndef RD_VULKAN_VISION` around the OpenGL-only functions of `tr_init.cpp`
 and `tr_image.cpp` and around the two functions of `tr_shadows.cpp` that are not about shadows, two functions in
 `tr_ghoul2.cpp` (the bone matrices, the vertices of saber marks), the depth test of a flare in `tr_surface.cpp`,
+an early way out for triangles a mark does not reach in `tr_marks.cpp` (see the speed steps below),
 and one include at the end of `tr_local.h`. Without the macro the files are byte for byte the same after the preprocessor, that was checked
 with `g++ -E -P` against `master`. The target links with `-Wl,-z,defs` and without libGL, so an OpenGL call that
 is left in a shared file fails the build.
@@ -212,7 +213,11 @@ difference side by side.
 | the player from the front with HUD | 0.2 to 0.4 % |
 
 All 23 levels of `maps/mp`, two views each (`tools/rdsmoke.sh`): no crash, no error, no message of the
-validation layer, 0.1 to 3.1 % of the pixels off, one view of mp/ffa5 with 10.5 % (a column of flowing lava).
+validation layer, 0.1 to 3.2 % of the pixels off, one view of mp/ffa5 with 10.6 % (a column of flowing lava).
+From noon to the evening of that day the test profile had `r_dynamiclight 0` stored (see the speed section), so
+the runs in between had no dynamic lights in either renderer. The last run of the 23 levels, the validation
+series and a video of the fight demo by both renderers (2.2 to 3.8 % of the pixels of a frame off, the light of
+the blades on the floor is the same) were made with them.
 Three of those levels have a sky portal. Five levels one after the other and a `vid_restart` in one session:
 the device memory in use goes up and down with the level (400 to 570 MB) and is the same when a level comes
 again.
@@ -262,18 +267,25 @@ blades, glow, marks and the light of the blades on the walls, the wave of a forc
 directions (13 renderer starts in one session).
 
 Speed: a demo of 90 seconds, 17 bots fighting on mp/duel1, seen by a spectator from a fixed place, played as a
-`timedemo` (1729 frames, the same ones for both renderers), 1280x720, three runs each, validation layer off.
+`timedemo` (1729 frames, the same ones for both renderers), 1280x720, validation layer off, every run from the
+defaults of the engine (dynamic lights on, `cg_shadows 1`, no glow), the renderers by turns in one profile.
 
 | | frames a second | a frame |
 |---|---|---|
-| `rd-vanilla` | 365, 355 | 2.8 ms |
-| `rd-vulkan-vision` | 859, 817, 867, 837, 868, 866, 829, 867 (median 862) | 1.2 ms |
+| `rd-vanilla` | 335, 341, 339, 325 (median 337) | 3.0 ms |
+| `rd-vulkan-vision` | 876, 884, 884, 891, 880, 879, 877, 866 (median 880) | 1.1 ms |
 
 With `r_skipBackEnd 1` both play the demo at the 1000 frames a second the engine allows (997 and 996): the
-game, the cgame and the front end of the renderer need less than a millisecond for a frame together, and they
-are the same code for both. So the difference is all back end: the one of `rd-vulkan-vision` takes 1.6 ms less
-for a frame of this scene. How long each back end takes by itself can not be read from this, only that it is
-more than 1.8 ms in `rd-vanilla` and more than 0.15 ms here.
+game, the cgame and the front end of the renderer need less than a millisecond for a frame together. So the
+difference is nearly all back end: `rd-vulkan-vision` takes 1.8 ms less for a frame of this scene. How long each
+back end takes by itself can not be read from this, only that it is more than 1.9 ms in `rd-vanilla` and more
+than 0.1 ms here.
+
+Single runs scatter by a few percent and a whole series by as much from one hour to the next, so a step is
+judged by two builds run by turns in the same profile, eight runs each, and their medians. An earlier version of
+this section had numbers from two test profiles of which one had `r_dynamiclight 0` stored from a single
+diagnostic run. That made `rd-vanilla` 6 % faster there and showed a gain for a step that was a loss (the
+sixth row of the table below). The start script of the tests deletes the stored config before every run now.
 
 A frame of that demo has 600 to 850 draws, 35000 to 62000 triangles from device buffers and 6300 to 8200 built
 on the CPU. Those are all effects of the game: saber marks on walls, sparks, saber glow. How the numbers came
@@ -285,8 +297,14 @@ down, each step measured with the same demo:
 | `deformVertexes` in the vertex shader: the shells around a player (shield, lightning, ysalamiri) are the whole model drawn once more with such a shader | 8000 to 15000 | 648, 646, 655 |
 | less work per batch and per draw (streams bound once, draw number as instance, index buffer for models) | the same | 689, 691, 673 |
 | models with saber marks on them from the device, only the vertices of the marks on the CPU | 7100 to 8000 | 736, 707, 725 |
-| effects in one batch: a fight has about 1360 entities in a frame that are one sprite or one line each, and each was a batch and a draw (`r_vkMerge 0` is that state: 683, 714, 714 on the day of this step). Now they share a batch where the shader takes nothing from its entity. 2200 to 2400 draws become 600 to 850 | the same | 859, 853, 807 |
-| a vertex from the CPU without what no stage reads: 28 bytes instead of 76 for a sprite (no normals, no lightmap coordinates) | the same | median of eight runs by turns: 862 against 832 |
+| effects in one batch: a fight has about 1360 entities in a frame that are one sprite or one line each, and each was a batch and a draw. Now they share a batch where the shader takes nothing from its entity. 2200 to 2400 draws become 600 to 850 | the same | 880 against 736 with `r_vkMerge 0` (medians, the build of the table above) |
+| tried and taken out: only the first set of texture coordinates of a vertex written where no stage reads the others. Four tenths less to copy, but piece by piece into the memory of the device | the same | 803 against 848, a loss of 5 % |
+| the normals of a vertex left out of the copy where no stage reads them | the same | 900 against 863 |
+| marks: a triangle the planes of a mark leave nothing of is passed over before it is copied and chopped (`tr_marks.cpp`, for this renderer only). The game asks for the shadow mark of every player in every frame, and a floor that is a patch gave it 150 triangles a call | the same | 863 against 803 |
+
+The first four rows were measured without dynamic lights (the stored cvar named above), the others with the
+defaults. The pairs of numbers in the last four rows are medians of eight runs by turns of two builds that
+differ in that step alone.
 
 Where a frame of that demo goes, counted in instructions with callgrind (`tools/rdprof.sh`, not a measure of
 time), after the effects went into shared batches: 62 % are the cgame (36 % its player code, 12 % the saber

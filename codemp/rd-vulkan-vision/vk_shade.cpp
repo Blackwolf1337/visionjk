@@ -1021,7 +1021,7 @@ static void VK_DrawNormals( void ) {
 		indexes[i * 2] = (glIndex_t)( i * 2 );
 		indexes[i * 2 + 1] = (glIndex_t)( i * 2 + 1 );
 	}
-	if ( !VK_UploadGeometry( xyz, NULL, texCoords, colors, numVerts, indexes, numVerts, qfalse ) ) {
+	if ( !VK_UploadGeometry( xyz, NULL, texCoords, colors, numVerts, indexes, numVerts ) ) {
 		return;
 	}
 	memset( &draw, 0, sizeof( draw ) );

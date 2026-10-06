@@ -258,7 +258,7 @@ void VK_GL_Flush( void ) {
 	vkDraw_t draw;
 
 	gl_numVerts = gl_primStart = gl_numIndexes = 0;
-	if ( !numIndexes || !VK_UploadGeometry( gl_xyz, NULL, gl_texCoords, gl_colors, numVerts, gl_indexes, numIndexes, qfalse ) ) {
+	if ( !numIndexes || !VK_UploadGeometry( gl_xyz, NULL, gl_texCoords, gl_colors, numVerts, gl_indexes, numIndexes ) ) {
 		return;
 	}
 
