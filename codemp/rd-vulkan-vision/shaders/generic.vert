@@ -14,7 +14,6 @@ layout( location = 4 ) in vec2 a_lightmap1;
 layout( location = 5 ) in vec2 a_lightmap2;
 layout( location = 6 ) in vec2 a_lightmap3;
 layout( location = 7 ) in vec4 a_color;
-layout( location = 8 ) in vec4 a_alphas;
 
 layout( location = 0 ) out vec2 v_texCoord0;
 layout( location = 1 ) out vec2 v_texCoord1;

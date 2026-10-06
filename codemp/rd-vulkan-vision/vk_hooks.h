@@ -55,25 +55,50 @@ void VK_ImageDelete( unsigned int texnum );
 // two textures in one stage: always there (tr_shader.cpp CollapseMultitexture, tr_image.cpp)
 #define qglActiveTextureARB							true
 
-// Drawing with immediate mode and with state of its own: debug polygons (tr_main.cpp), the automap (tr_world.cpp),
-// the overdraw counter and the error check (tr_cmds.cpp), the axis and beam surfaces, the display list and the
-// depth read of a flare (tr_surface.cpp), the sides of the sky box and the sun (tr_sky.cpp), the level shot
-// (tr_init.cpp). None of it reaches the screen here. What of it the game needs is drawn by the back end of this
-// renderer in its own way.
+// vk_gl.cpp: the drawing rd-vanilla does in the shared files with immediate mode and with state and matrices
+// of its own: the sides of the sky box and the sun (tr_sky.cpp), the beam and axis surfaces (tr_surface.cpp),
+// debug polygons (tr_main.cpp), the automap (tr_world.cpp). The calls collect vertices and state, glEnd()
+// draws them like any other geometry.
+void VK_GL_Begin( int mode );
+void VK_GL_End( void );
+void VK_GL_Vertex( float x, float y, float z );
+void VK_GL_TexCoord( float s, float t );
+void VK_GL_Color( float r, float g, float b, float a );
+void VK_GL_DepthRange( float zNear, float zFar );
+void VK_GL_PushMatrix( void );
+void VK_GL_PopMatrix( void );
+void VK_GL_LoadMatrix( const float *m );
+void VK_GL_Translate( float x, float y, float z );
+
 #undef qglBegin
-#define qglBegin( ... )				((void)0)
+#define qglBegin( mode )			VK_GL_Begin( mode )
 #undef qglEnd
-#define qglEnd( ... )				((void)0)
+#define qglEnd()					VK_GL_End()
 #undef qglVertex3f
-#define qglVertex3f( ... )			((void)0)
+#define qglVertex3f( x, y, z )		VK_GL_Vertex( x, y, z )
 #undef qglVertex3fv
-#define qglVertex3fv( ... )			((void)0)
+#define qglVertex3fv( v )			VK_GL_Vertex( ( v )[0], ( v )[1], ( v )[2] )
 #undef qglTexCoord2fv
-#define qglTexCoord2fv( ... )		((void)0)
+#define qglTexCoord2fv( st )		VK_GL_TexCoord( ( st )[0], ( st )[1] )
 #undef qglColor3f
-#define qglColor3f( ... )			((void)0)
+#define qglColor3f( r, g, b )		VK_GL_Color( r, g, b, 1.0f )
 #undef qglColor4f
-#define qglColor4f( ... )			((void)0)
+#define qglColor4f( r, g, b, a )	VK_GL_Color( r, g, b, a )
+#undef qglDepthRange
+#define qglDepthRange( n, f )		VK_GL_DepthRange( n, f )
+#undef qglPushMatrix
+#define qglPushMatrix()				VK_GL_PushMatrix()
+#undef qglPopMatrix
+#define qglPopMatrix()				VK_GL_PopMatrix()
+#undef qglLoadMatrixf
+#define qglLoadMatrixf( m )			VK_GL_LoadMatrix( m )
+#undef qglLoadIdentity
+#define qglLoadIdentity()			VK_GL_LoadMatrix( NULL )
+#undef qglTranslatef
+#define qglTranslatef( x, y, z )	VK_GL_Translate( x, y, z )
+
+// What is left has no meaning here: line width and display lists, the stencil setup of the overdraw counter and
+// the error check (tr_cmds.cpp), the depth read of a flare (tr_surface.cpp), the level shot (tr_init.cpp)
 #undef qglLineWidth
 #define qglLineWidth( ... )			((void)0)
 #undef qglCallList
@@ -82,18 +107,6 @@ void VK_ImageDelete( unsigned int texnum );
 #define qglEnable( ... )			((void)0)
 #undef qglDisable
 #define qglDisable( ... )			((void)0)
-#undef qglDepthRange
-#define qglDepthRange( ... )		((void)0)
-#undef qglLoadIdentity
-#define qglLoadIdentity( ... )		((void)0)
-#undef qglLoadMatrixf
-#define qglLoadMatrixf( ... )		((void)0)
-#undef qglPushMatrix
-#define qglPushMatrix( ... )		((void)0)
-#undef qglPopMatrix
-#define qglPopMatrix( ... )			((void)0)
-#undef qglTranslatef
-#define qglTranslatef( ... )		((void)0)
 #undef qglStencilMask
 #define qglStencilMask( ... )		((void)0)
 #undef qglClearStencil

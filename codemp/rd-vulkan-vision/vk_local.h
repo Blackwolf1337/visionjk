@@ -209,6 +209,8 @@ typedef struct vkState_s {
 	uint32_t					boundState;			// the dynamic state that is set, see VK_DrawTess()
 	qboolean					stateValid;
 	VkDeviceSize				tessColorOffset;	// where VK_UploadTess() put the vertex colors of the batch
+	int							numBoundIndexes;	// of the geometry that was uploaded last
+	int							viewport[4];		// x, y, width, height as OpenGL counts them
 	qboolean					overflowed;			// this frame has more geometry than fits, said once
 
 	qboolean					validation;
@@ -253,10 +255,15 @@ void		VK_InitPipelines( void );
 void		VK_ShutdownPipelines( void );
 VkPipeline	VK_FindPipeline( vkProgram_t program, uint32_t stateBits );
 
+// vk_gl.cpp
+const float *VK_GL_ModelView( void );
+void		VK_GL_ResetMatrix( void );
+
 // vk_shade.cpp
 extern bool	g_bRenderGlowingObjects;	// the pass that draws only the stages that glow
 extern bool	g_bDynamicGlowSupported;
 void		VK_InvalidateTransform( void );
+void		VK_TransformChanged( void );
 uint32_t	VK_CurrentTransform( void );
 void		VK_SetProjection( const float *projection );
 
@@ -269,6 +276,9 @@ void		VK_SetViewport( int x, int y, int width, int height, float minDepth, float
 void		VK_ClearDepth( int x, int y, int width, int height );
 void		VK_ClearColor( int x, int y, int width, int height, const float *color );
 int			VK_AddTransform( const vkTransform_t *transform );
+void		VK_SetDepthRange( float minDepth, float maxDepth );
+qboolean	VK_UploadGeometry( const vec4_t *xyz, const vec4_t *normal, const vec2_t ( *texCoords )[NUM_TEX_COORDS],
+				const color4ub_t *colors, int numVerts, const glIndex_t *indexes, int numIndexes );
 qboolean	VK_UploadTess( void );
 void		VK_TessColors( const color4ub_t *colors );
 void		VK_DrawTess( const vkDraw_t *draw, vkProgram_t program, uint32_t stateBits, int cullType, qboolean polygonOffset );

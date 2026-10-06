@@ -135,6 +135,10 @@ void VK_SetViewport( int x, int y, int width, int height, float minDepth, float 
 	if ( !vk.frame ) {
 		return;
 	}
+	vk.viewport[0] = x;
+	vk.viewport[1] = y;
+	vk.viewport[2] = width;
+	vk.viewport[3] = height;
 	viewport.x = (float)x;
 	viewport.y = (float)( top + height );
 	viewport.width = (float)width;
@@ -147,6 +151,11 @@ void VK_SetViewport( int x, int y, int width, int height, float minDepth, float 
 	scissor.extent.height = (uint32_t)Q_max( down - up, 0 );
 	vkCmdSetViewport( vk.frame->cmd, 0, 1, &viewport );
 	vkCmdSetScissor( vk.frame->cmd, 0, 1, &scissor );
+}
+
+// glDepthRange: the part of the depth buffer the following draws land in
+void VK_SetDepthRange( float minDepth, float maxDepth ) {
+	VK_SetViewport( vk.viewport[0], vk.viewport[1], vk.viewport[2], vk.viewport[3], minDepth, maxDepth );
 }
 
 static void VK_ClearRect( int x, int y, int width, int height, const VkClearAttachment *attachment ) {
@@ -380,48 +389,56 @@ int VK_AddTransform( const vkTransform_t *transform ) {
 
 /*
 ===============
-VK_UploadTess
+VK_UploadGeometry
 
-Copies the vertices and indexes of the tess arrays into the buffers of the frame and binds them. The stages
-of the shader are then drawn from there with VK_DrawTess(). qfalse: no room, nothing to draw.
+Copies vertices and indexes into the buffers of the frame and binds them. The arrays have the layout of the
+tess arrays. What is drawn with VK_DrawTess() after this comes from there. qfalse: no room, nothing to draw.
 ===============
 */
-qboolean VK_UploadTess( void ) {
+qboolean VK_UploadGeometry( const vec4_t *xyz, const vec4_t *normal, const vec2_t ( *texCoords )[NUM_TEX_COORDS],
+	const color4ub_t *colors, int numVerts, const glIndex_t *indexes, int numIndexes ) {
 	vkFrame_t *frame = vk.frame;
-	const VkDeviceSize numVertexes = (VkDeviceSize)tess.numVertexes;
-	const VkDeviceSize sizes[5] = { numVertexes * sizeof( vec4_t ), numVertexes * sizeof( vec4_t ),
-		numVertexes * sizeof( vec2_t ) * NUM_TEX_COORDS, numVertexes * 4, numVertexes * 4 };
-	const void *sources[5] = { tess.xyz, tess.normal, tess.texCoords, tess.vertexColors, tess.vertexAlphas };
-	const VkDeviceSize indexBytes = (VkDeviceSize)tess.numIndexes * sizeof( glIndex_t );
+	const VkDeviceSize numVertexes = (VkDeviceSize)numVerts;
+	const VkDeviceSize sizes[4] = { numVertexes * sizeof( vec4_t ), numVertexes * sizeof( vec4_t ),
+		numVertexes * sizeof( vec2_t ) * NUM_TEX_COORDS, numVertexes * 4 };
+	const void *sources[4] = { xyz, normal, texCoords, colors };
+	const VkDeviceSize indexBytes = (VkDeviceSize)numIndexes * sizeof( glIndex_t );
 	VkDeviceSize vertexBytes = 0;
-	VkBuffer buffers[5];
-	VkDeviceSize offsets[5];
+	VkBuffer buffers[4];
+	VkDeviceSize offsets[4];
 
-	if ( !frame || !tess.numIndexes || !tess.numVertexes ) {
+	if ( !frame || !numIndexes || !numVerts ) {
 		return qfalse;
 	}
-	for ( int i = 0; i < 5; i++ ) {
+	for ( int i = 0; i < 4; i++ ) {
 		vertexBytes += ( sizes[i] + 15 ) & ~(VkDeviceSize)15;
 	}
 	if ( frame->vertexUsed + vertexBytes > VK_VERTEX_BYTES || frame->indexUsed + indexBytes > VK_INDEX_BYTES ) {
 		if ( !vk.overflowed ) {
 			vk.overflowed = qtrue;
-			ri.Printf( PRINT_DEVELOPER, "VK_UploadTess: the frame has more geometry than fits, the rest is not drawn\n" );
+			ri.Printf( PRINT_DEVELOPER, "VK_UploadGeometry: the frame has more geometry than fits, the rest is not drawn\n" );
 		}
 		return qfalse;
 	}
-	for ( int i = 0; i < 5; i++ ) {
+	for ( int i = 0; i < 4; i++ ) {
 		memcpy( frame->vertexes.mapped + frame->vertexUsed, sources[i], (size_t)sizes[i] );
 		buffers[i] = frame->vertexes.buffer;
 		offsets[i] = frame->vertexUsed;
 		frame->vertexUsed += ( sizes[i] + 15 ) & ~(VkDeviceSize)15;
 	}
-	memcpy( frame->indexes.mapped + frame->indexUsed, tess.indexes, (size_t)indexBytes );
+	memcpy( frame->indexes.mapped + frame->indexUsed, indexes, (size_t)indexBytes );
 	vk.tessColorOffset = offsets[3];
-	vkCmdBindVertexBuffers( frame->cmd, 0, 5, buffers, offsets );
+	vkCmdBindVertexBuffers( frame->cmd, 0, 4, buffers, offsets );
 	vkCmdBindIndexBuffer( frame->cmd, frame->indexes.buffer, frame->indexUsed, VK_INDEX_TYPE_UINT32 );
 	frame->indexUsed += indexBytes;
+	vk.numBoundIndexes = numIndexes;
 	return qtrue;
+}
+
+// the batch in the tess arrays
+qboolean VK_UploadTess( void ) {
+	return VK_UploadGeometry( tess.xyz, tess.normal, tess.texCoords, tess.vertexColors, tess.numVertexes,
+		tess.indexes, tess.numIndexes );
 }
 
 /*
@@ -462,7 +479,7 @@ void VK_TessColors( const color4ub_t *colors ) {
 ===============
 VK_DrawTess
 
-One stage of a shader on the geometry VK_UploadTess() bound. cullMode is a VkCullModeFlags value.
+One stage of a shader on the geometry that was uploaded last. cullMode is a VkCullModeFlags value.
 ===============
 */
 void VK_DrawTess( const vkDraw_t *draw, vkProgram_t program, uint32_t stateBits, int cullMode, qboolean polygonOffset ) {
@@ -520,7 +537,7 @@ void VK_DrawTess( const vkDraw_t *draw, vkProgram_t program, uint32_t stateBits,
 	memcpy( frame->draws.mapped + sizeof( vkDraw_t ) * drawIndex, draw, sizeof( *draw ) );
 	vkCmdPushConstants( cmd, vk.pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0,
 		sizeof( drawIndex ), &drawIndex );
-	vkCmdDrawIndexed( cmd, (uint32_t)tess.numIndexes, 1, 0, 0, 0 );
+	vkCmdDrawIndexed( cmd, (uint32_t)vk.numBoundIndexes, 1, 0, 0, 0 );
 }
 
 /*

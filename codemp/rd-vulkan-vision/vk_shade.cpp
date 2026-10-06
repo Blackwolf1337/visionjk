@@ -51,13 +51,20 @@ The matrices of the entity being drawn. Added to the frame the first time a draw
 static float	vk_projection[16];
 static int		vk_transform = -1;
 
+// the entity or the view changed
 void VK_InvalidateTransform( void ) {
+	vk_transform = -1;
+	VK_GL_ResetMatrix();
+}
+
+// the same entity, but the matrices are not the ones that were added
+void VK_TransformChanged( void ) {
 	vk_transform = -1;
 }
 
 void VK_SetProjection( const float *projection ) {
 	memcpy( vk_projection, projection, sizeof( vk_projection ) );
-	vk_transform = -1;
+	VK_InvalidateTransform();
 }
 
 uint32_t VK_CurrentTransform( void ) {
@@ -66,7 +73,7 @@ uint32_t VK_CurrentTransform( void ) {
 		const trRefEntity_t *ent = backEnd.currentEntity;
 
 		memset( &t, 0, sizeof( t ) );
-		myGlMultMatrix( backEnd.ori.modelMatrix, vk_projection, t.mvp );
+		myGlMultMatrix( VK_GL_ModelView(), vk_projection, t.mvp );
 		for ( int i = 0; i < 3; i++ ) {
 			t.model[i * 4 + 0] = backEnd.ori.axis[i][0];
 			t.model[i * 4 + 1] = backEnd.ori.axis[i][1];

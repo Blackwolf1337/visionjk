@@ -195,8 +195,8 @@ post: a pass over the whole target without vertices (the gamma pass), everything
 */
 static VkPipeline VK_CreatePipeline( VkShaderModule vertex, VkShaderModule fragment, uint32_t stateBits, qboolean post ) {
 	VkPipelineShaderStageCreateInfo stages[2];
-	VkVertexInputBindingDescription bindings[5];
-	VkVertexInputAttributeDescription attributes[9];
+	VkVertexInputBindingDescription bindings[4];
+	VkVertexInputAttributeDescription attributes[8];
 	VkPipelineVertexInputStateCreateInfo input = { VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO };
 	VkPipelineInputAssemblyStateCreateInfo assembly = { VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO };
 	VkPipelineViewportStateCreateInfo viewport = { VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO };
@@ -223,17 +223,17 @@ static VkPipeline VK_CreatePipeline( VkShaderModule vertex, VkShaderModule fragm
 	stages[1].pName = "main";
 
 	if ( !post ) {
-		// the arrays of shaderCommands_t, one binding each: xyz, normal, texCoords, vertexColors, vertexAlphas
-		const uint32_t strides[5] = { sizeof( vec4_t ), sizeof( vec4_t ), sizeof( vec2_t ) * NUM_TEX_COORDS, 4, 4 };
+		// the arrays of shaderCommands_t, one binding each: xyz, normal, texCoords, vertexColors
+		const uint32_t strides[4] = { sizeof( vec4_t ), sizeof( vec4_t ), sizeof( vec2_t ) * NUM_TEX_COORDS, 4 };
 
 		memset( bindings, 0, sizeof( bindings ) );
 		memset( attributes, 0, sizeof( attributes ) );
-		for ( uint32_t i = 0; i < 5; i++ ) {
+		for ( uint32_t i = 0; i < 4; i++ ) {
 			bindings[i].binding = i;
 			bindings[i].stride = strides[i];
 			bindings[i].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 		}
-		for ( uint32_t i = 0; i < 9; i++ ) {
+		for ( uint32_t i = 0; i < 8; i++ ) {
 			attributes[i].location = i;
 		}
 		attributes[0].binding = 0;
@@ -247,11 +247,9 @@ static VkPipeline VK_CreatePipeline( VkShaderModule vertex, VkShaderModule fragm
 		}
 		attributes[7].binding = 3;
 		attributes[7].format = VK_FORMAT_R8G8B8A8_UNORM;
-		attributes[8].binding = 4;
-		attributes[8].format = VK_FORMAT_R8G8B8A8_UNORM;
-		input.vertexBindingDescriptionCount = 5;
+		input.vertexBindingDescriptionCount = 4;
 		input.pVertexBindingDescriptions = bindings;
-		input.vertexAttributeDescriptionCount = 9;
+		input.vertexAttributeDescriptionCount = 8;
 		input.pVertexAttributeDescriptions = attributes;
 	}
 

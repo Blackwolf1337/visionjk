@@ -34,17 +34,6 @@ float		tr_distortionStretch = 0.0f;	// no stretch override
 qboolean	tr_distortionPrePost = qfalse;	// capture before postrender phase?
 qboolean	tr_distortionNegate = qfalse;	// negative blend mode
 
-// State changes that rd-vanilla makes in the shared files next to its immediate mode drawing. This renderer sets
-// the state of a draw with the draw (VK_DrawTess).
-void GL_State( uint32_t stateBits ) {
-}
-
-void GL_Cull( int cullType ) {
-}
-
-void GL_CheckErrors( void ) {
-}
-
 /*
 ===============
 RB_SetGL2D

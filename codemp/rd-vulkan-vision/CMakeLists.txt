@@ -43,6 +43,7 @@ set(MPVulkanVisionFiles
 	"${MPDir}/rd-vulkan-vision/vk_local.h"
 	"${MPDir}/rd-vulkan-vision/vk_backend.cpp"
 	"${MPDir}/rd-vulkan-vision/vk_frame.cpp"
+	"${MPDir}/rd-vulkan-vision/vk_gl.cpp"
 	"${MPDir}/rd-vulkan-vision/vk_image.cpp"
 	"${MPDir}/rd-vulkan-vision/vk_main.cpp"
 	"${MPDir}/rd-vulkan-vision/vk_memory.cpp"
