@@ -40,6 +40,9 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define VK_STAGING_BYTES	( 32 << 20 )
 #define VK_MAX_SAMPLERS		32
 #define VK_MAX_PIPELINES	256
+
+// a state bit next to the GLS_* ones of rd-vanilla, which have no such thing: the indexes are pairs, each a line
+#define VK_GLS_LINES		0x00002000
 #define VK_MAX_BONES		16384		// bones of all skeletons of one frame
 #define VK_MODEL_BYTES		( 32 << 20 )	// vertices of the Ghoul2 models of a level
 #define VK_MODEL_INDEX_BYTES	( 16 << 20 )	// and their triangles

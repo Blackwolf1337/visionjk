@@ -162,14 +162,14 @@ left in these views are the effects of the game (flames, smoke, light cones) and
   before every stage of the shader, here all stages use what the first one has. This was not seen in the game.
 - `r_showImages`: `rd-vanilla` sizes the tiles by the width of the window but draws them in the 640 x 480 of
   the menus, so most are outside of a large window. Here all of them are on the screen.
+- `r_shownormals`: the lines are made from the vertices of a batch, so while it is set nothing comes from the
+  device buffers, as with `r_vkStatic 0`.
 - Anti aliasing costs memory for three more targets with that many samples a pixel: about 44 MB at 1280x720
   with four samples, about 400 MB at 3840x2160.
 - Textures are not compressed (32 bit with mip levels). mp/ffa3 takes about 550 MB of device memory, 180 MB of
   that are the buffers and targets the renderer always has.
 
 ## Not done
-
-`r_shownormals` (it draws lines, and lines are not drawn).
 
 Surfaces with the shader `internal_distortion` are left out. `rd-vanilla` cuts them into the stencil buffer and
 fills the hole with a stretched copy of the screen, but nothing in the game code or the data of the base game

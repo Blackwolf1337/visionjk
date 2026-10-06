@@ -192,7 +192,7 @@ static VkBlendFactor VK_DstBlend( uint32_t stateBits ) {
 }
 
 // the part of the state bits that needs a pipeline of its own
-#define VK_PIPELINE_BITS	( GLS_SRCBLEND_BITS | GLS_DSTBLEND_BITS | GLS_POLYMODE_LINE )
+#define VK_PIPELINE_BITS	( GLS_SRCBLEND_BITS | GLS_DSTBLEND_BITS | GLS_POLYMODE_LINE | VK_GLS_LINES )
 
 /*
 ===============
@@ -286,7 +286,7 @@ VkPipeline VK_CreatePipeline( VkShaderModule vertex, VkShaderModule fragment, ui
 		input.pVertexAttributeDescriptions = attributes;
 	}
 
-	assembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+	assembly.topology = ( !post && ( stateBits & VK_GLS_LINES ) ) ? VK_PRIMITIVE_TOPOLOGY_LINE_LIST : VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 	viewport.viewportCount = 1;
 	viewport.scissorCount = 1;
 	raster.polygonMode = ( !post && vk.wireframe && ( stateBits & GLS_POLYMODE_LINE ) ) ? VK_POLYGON_MODE_LINE : VK_POLYGON_MODE_FILL;

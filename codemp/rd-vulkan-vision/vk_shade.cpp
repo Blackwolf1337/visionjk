@@ -1000,6 +1000,41 @@ void RB_StageIteratorGeneric( void ) {
 
 /*
 ===============
+VK_DrawNormals
+
+r_shownormals: the normal of every vertex of the batch as a white line of two units that nothing covers (DrawNormals
+of rd-vanilla). The vertices are the ones of the tess arrays, VK_ShaderIsStatic() keeps every batch there while the
+cvar is set.
+===============
+*/
+static void VK_DrawNormals( void ) {
+	static vec4_t xyz[SHADER_MAX_VERTEXES * 2];
+	static vec2_t texCoords[SHADER_MAX_VERTEXES * 2][NUM_TEX_COORDS];	// stay zero, the texture is white
+	static color4ub_t colors[SHADER_MAX_VERTEXES * 2];					// stay zero, the color is the one of the draw
+	static glIndex_t indexes[SHADER_MAX_VERTEXES * 2];
+	const int numVerts = tess.numVertexes * 2;
+	vkDraw_t draw;
+
+	for ( int i = 0; i < tess.numVertexes; i++ ) {
+		VectorCopy( tess.xyz[i], xyz[i * 2] );
+		VectorMA( tess.xyz[i], 2.0f, tess.normal[i], xyz[i * 2 + 1] );
+		indexes[i * 2] = (glIndex_t)( i * 2 );
+		indexes[i * 2 + 1] = (glIndex_t)( i * 2 + 1 );
+	}
+	if ( !VK_UploadGeometry( xyz, NULL, texCoords, colors, numVerts, indexes, numVerts, qfalse ) ) {
+		return;
+	}
+	memset( &draw, 0, sizeof( draw ) );
+	draw.transform = VK_CurrentTransform();
+	draw.tex0 = draw.tex1 = tr.whiteImage->texnum;
+	VectorSet4( draw.baseColor, 1.0f, 1.0f, 1.0f, 1.0f );
+	VK_SetDepthRange( 0.0f, 0.0f );
+	VK_DrawTess( &draw, VKP_GENERIC, VK_GLS_LINES | GLS_DEPTHMASK_TRUE, VK_CULL_MODE_NONE, qfalse );
+	VK_SetDepthRange( 0.0f, 1.0f );
+}
+
+/*
+===============
 RB_BeginSurface
 
 We must set some things up before beginning any tesselation, because a surface may be forced to perform a
@@ -1082,6 +1117,11 @@ void RB_EndSurface( void ) {
 	backEnd.pc.c_totalIndexes += tess.numIndexes * tess.numPasses;
 
 	tess.currentStageIteratorFunc();
+
+	// draw debugging stuff
+	if ( r_shownormals->integer ) {
+		VK_DrawNormals();
+	}
 
 	// clear shader so we can tell we don't have any unclosed surfaces
 	tess.numIndexes = 0;

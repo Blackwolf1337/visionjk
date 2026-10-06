@@ -182,6 +182,10 @@ static qboolean VK_ShaderIsStatic( void ) {
 	if ( shader == tr.shadowShader ) {
 		return qfalse;
 	}
+	// the lines of the normals are made from the vertices of the batch
+	if ( r_shownormals->integer ) {
+		return qfalse;
+	}
 	if ( shader->sky || !VK_DeformOnDevice( shader ) || r_fullbright->integer || tess.fading ) {
 		return qfalse;
 	}
