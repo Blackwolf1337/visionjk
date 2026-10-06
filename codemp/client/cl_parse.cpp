@@ -373,7 +373,8 @@ void CL_ParseSetGame( msg_t *msg )
 	int i = 0;
 	char next;
 
-	while (i < MAX_QPATH)
+	// MAX_QPATH-1 so the terminating zero below lands inside the array even when the server fills it
+	while (i < MAX_QPATH - 1)
 	{
 		next = MSG_ReadByte( msg );
 
