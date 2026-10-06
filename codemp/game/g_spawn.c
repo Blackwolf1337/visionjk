@@ -307,6 +307,7 @@ void SP_misc_bsp (gentity_t *ent);
 void SP_misc_blackhole( gentity_t *ent );	// g_blackhole.c
 void SP_misc_ball( gentity_t *ent );		// g_props.c
 void SP_misc_cube( gentity_t *ent );		// g_props.c
+void SP_misc_prop( gentity_t *ent );		// g_props.c
 void SP_terrain (gentity_t *ent);
 void SP_misc_skyportal_orient (gentity_t *ent);
 void SP_misc_skyportal (gentity_t *ent);
@@ -557,6 +558,7 @@ spawn_t	spawns[] = {
 	{ "misc_model_static",					SP_misc_model_static },
 	{ "misc_portal_camera",					SP_misc_portal_camera },
 	{ "misc_portal_surface",				SP_misc_portal_surface },
+	{ "misc_prop",							SP_misc_prop },
 	{ "misc_shield_floor_unit",				SP_misc_shield_floor_unit },
 	{ "misc_siege_item",					SP_misc_siege_item },
 	{ "misc_skyportal",						SP_misc_skyportal },

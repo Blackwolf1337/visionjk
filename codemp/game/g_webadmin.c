@@ -2292,6 +2292,137 @@ static void WA_ReloadSpawn( void ) {
 /*
 ==============================================================================
 
+Model list
+
+Not in JKAdmin: every md3 and glm under models/, for the tab that places them as misc_prop.
+
+The file system of the engine lists one folder at a call and goes through all pk3 files for it. The models are
+in a few hundred folders, so that is some hundred calls, and they are not made in one frame: WebAdmin_Frame()
+takes folders for a few milliseconds a frame until all are done, and the page asks again until the list is
+complete. The list stays until the module is loaded anew, which is when the pk3 files may have changed.
+
+==============================================================================
+*/
+
+#define WA_MODEL_MSEC		3		// of a server frame for the search
+#define WA_MODEL_MAX		8000	// files
+#define WA_MODEL_DEPTH		6		// folders below models/
+
+static waBuffer_t	modelQueue;		// the folders that were found, one after the other with a 0 after each
+static int			modelQueueNext;	// where the next one to look into begins
+static waBuffer_t	modelNames;		// the files so far: JSON strings with commas between them
+static int			modelCount;
+static int			modelScan;		// 0: not begun, 1: running, 2: complete
+
+// The engine names a file once for every place it finds it in, and a folder with a / at its end from a pk3 and
+// without one from the disk. qtrue: name stands in the list before this place already.
+static qboolean WA_ModelListedBefore( const char *list, const char *name ) {
+	const char *p;
+
+	for ( p = list; p < name; p += strlen( p ) + 1 ) {
+		if ( !Q_stricmp( p, name ) )
+			return qtrue;
+	}
+	return qfalse;
+}
+
+// qtrue: the folder is in the queue, looked into or not
+static qboolean WA_ModelQueued( const char *path ) {
+	const char *p, *end = modelQueue.data + modelQueue.len;
+
+	for ( p = modelQueue.data; p && p < end; p += strlen( p ) + 1 ) {
+		if ( !Q_stricmp( p, path ) )
+			return qtrue;
+	}
+	return qfalse;
+}
+
+static void WA_ModelScanFolder( const char *dir ) {
+	static const char *const	extensions[] = { ".md3", ".glm" };
+	static char					list[32768];
+	char						path[MAX_QPATH];
+	const char					*name;
+	int							i, n, depth = 0;
+	size_t						e;
+
+	for ( name = dir; *name; name++ ) {
+		if ( *name == '/' )
+			depth++;
+	}
+	if ( depth < WA_MODEL_DEPTH ) {
+		n = trap->FS_GetFileList( dir, "/", list, sizeof( list ) );
+		for ( i = 0, name = list; i < n; i++, name += strlen( name ) + 1 ) {
+			int len = (int)strlen( name );
+
+			// the engine names a folder with or without a / at its end, and itself and the one above among them
+			if ( len && name[len - 1] == '/' )
+				len--;
+			if ( !len || name[0] == '.' || strlen( dir ) + len + 2 > sizeof( path ) )
+				continue;
+			Com_sprintf( path, sizeof( path ), "%s/%.*s", dir, len, name );
+			if ( !WA_ModelQueued( path ) )
+				WA_BufAppend( &modelQueue, path, (int)strlen( path ) + 1 );
+		}
+	}
+	for ( e = 0; e < ARRAY_LEN( extensions ); e++ ) {
+		n = trap->FS_GetFileList( dir, extensions[e], list, sizeof( list ) );
+		for ( i = 0, name = list; i < n && modelCount < WA_MODEL_MAX; i++, name += strlen( name ) + 1 ) {
+			// The engine also names the files of the folders one and two levels further down, with the folder in
+			// front of the name. Those are taken when their own folder is looked into, or they would be here thrice.
+			if ( !name[0] || strchr( name, '/' ) || strlen( dir ) + strlen( name ) + 2 > sizeof( path )
+				|| WA_ModelListedBefore( list, name ) )
+				continue;
+			Com_sprintf( path, sizeof( path ), "%s/%s", dir, name );
+			if ( modelCount )
+				WA_BufAppend( &modelNames, ",", 1 );
+			WA_BufJsonString( &modelNames, path );
+			modelCount++;
+		}
+	}
+}
+
+// once a frame while the search runs
+static void WA_ModelScanFrame( void ) {
+	const int start = trap->Milliseconds();
+
+	while ( modelScan == 1 ) {
+		char dir[MAX_QPATH];
+
+		// the queue is kept to the end, a folder that was looked into must not come in again
+		if ( modelQueueNext >= modelQueue.len ) {
+			modelScan = 2;
+			WA_BufFree( &modelQueue );
+			modelQueueNext = 0;
+			break;
+		}
+		// a copy: what is found is put at the end of the queue, which may move it
+		Q_strncpyz( dir, modelQueue.data + modelQueueNext, sizeof( dir ) );
+		modelQueueNext += (int)strlen( modelQueue.data + modelQueueNext ) + 1;
+		WA_ModelScanFolder( dir );
+		if ( trap->Milliseconds() - start >= WA_MODEL_MSEC )
+			break;
+	}
+}
+
+// GET /api/models: the list as far as it is, done says whether that is all
+static void WA_ApiModels( waConnection_t *c ) {
+	waBuffer_t b = { 0 };
+
+	if ( !modelScan ) {
+		modelScan = 1;
+		WA_BufAppend( &modelQueue, "models", 7 );
+	}
+	WA_BufPrintf( &b, "{\"done\":%s,\"count\":%d,\"models\":[", WA_BOOL( modelScan == 2 ), modelCount );
+	if ( modelNames.len )
+		WA_BufAppend( &b, modelNames.data, modelNames.len );
+	WA_BufAppend( &b, "]}", 2 );
+	WA_RespondJson( c, &b );
+	WA_BufFree( &b );
+}
+
+/*
+==============================================================================
+
 Connections
 
 ==============================================================================
@@ -2391,6 +2522,8 @@ static void WA_HandleRequest( waConnection_t *c, char *head, char *body, int bod
 
 		WA_FormValue( query, "exec", run, sizeof( run ) );
 		WA_ApiConfigSet( c, body, (qboolean)( run[0] == '1' ) );
+	} else if ( !strcmp( method, "GET" ) && !strcmp( path, "/api/models" ) ) {
+		WA_ApiModels( c );
 	} else if ( !strcmp( method, "GET" ) && !strcmp( path, "/api/fs/list" ) ) {
 		WA_ApiFsList( c, query );
 	} else if ( !strcmp( method, "GET" ) && !strcmp( path, "/api/fs/get" ) ) {
@@ -2618,6 +2751,9 @@ void WebAdmin_Frame( void ) {
 	if ( listenSocket == WA_INVALID_SOCKET )
 		return;
 
+	if ( modelScan == 1 )
+		WA_ModelScanFrame();
+
 	// the own gravity goes with the player, the next one in his slot starts without
 	for ( i = 0; i < level.maxclients; i++ ) {
 		if ( clientGravitySet[i] && level.clients[i].pers.connected == CON_DISCONNECTED )
@@ -2665,4 +2801,7 @@ void WebAdmin_Shutdown( void ) {
 	mapDataName[0] = '\0';
 	free( reloadText );
 	reloadText = NULL;
+	WA_BufFree( &modelQueue );
+	WA_BufFree( &modelNames );
+	modelQueueNext = modelCount = modelScan = 0;
 }

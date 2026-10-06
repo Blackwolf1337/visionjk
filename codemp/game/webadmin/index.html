@@ -173,6 +173,13 @@ tr.ent.ro td:first-child { opacity: .6; }
 #entPanel .actions { max-width: none; margin-top: 8px; }
 #classPicker { max-height: 260px; overflow: auto; border: 1px solid var(--line); border-radius: 3px; background: #0f0f12; display: none; }
 #classPicker.open { display: block; }
+#pane-models .tools { padding: 10px; display: flex; flex-direction: column; gap: 6px; }
+#pane-models .hint { padding: 0 10px 6px; }
+#mdlOpts { display: flex; flex-wrap: wrap; gap: 8px; }
+#mdlOpts label { display: flex; align-items: center; gap: 4px; font-size: 12px; color: var(--muted); }
+#mdlOpts input { width: 58px; }
+#mdlPicked { word-break: break-all; }
+#mdlList { flex: 1; min-height: 0; overflow: auto; border-top: 1px solid var(--line); background: #0f0f12; }
 .cls { padding: 3px 7px; cursor: pointer; display: flex; gap: 7px; align-items: center; font-size: 12px; }
 .cls:hover, .cls.hl { background: rgba(213,12,45,.2); }
 .cls i { width: 8px; height: 8px; border-radius: 2px; flex: none; }
@@ -216,7 +223,7 @@ body.fp #help, body.fp #command, body.fp #entPanel { display: none; }
 </div>
 
 <div id="side">
-	<div id="tabs"><button data-tab="players" class="on">Players</button><button data-tab="world">World</button><button data-tab="config">Config</button><button data-tab="files">Files</button></div>
+	<div id="tabs"><button data-tab="players" class="on">Players</button><button data-tab="world">World</button><button data-tab="models">Models</button><button data-tab="config">Config</button><button data-tab="files">Files</button></div>
 	<div class="pane on" id="pane-players">
 		<h2><span>Players</span><span id="playerCount">0</span></h2>
 		<div class="scroll">
@@ -226,6 +233,20 @@ body.fp #help, body.fp #command, body.fp #entPanel { display: none; }
 			</table>
 		</div>
 		<div id="itemsInfo"></div>
+	</div>
+	<div class="pane" id="pane-models">
+		<h2><span>Models</span><span id="mdlCount"></span></h2>
+		<div class="tools">
+			<div class="inline"><input id="mdlFilter" placeholder="Search a model" spellcheck="false" autocomplete="off"><button id="mdlPlace" title="Then right-click on the map">Place</button></div>
+			<div id="mdlOpts">
+				<label title="Size of the model in percent. The server changes it if the longest edge would be under 8 or over 384 units.">Scale<input type="number" id="mdlScale" min="1" max="1023" value="100"></label>
+				<label title="Empty: from the size of the model. A box of 32 units has 4.">Mass<input type="number" id="mdlMass" min="0.1" max="100" step="0.1" placeholder="auto"></label>
+				<label title="A box the size of the model, or a ball as wide as it for something round">Shape<select id="mdlShape"><option>box</option><option>ball</option></select></label>
+			</div>
+			<div class="hint" id="mdlPicked" style="padding:0">Pick a model, then right-click on the map.</div>
+		</div>
+		<div id="mdlList"></div>
+		<div class="hint" style="padding-top:6px">Every model is placed as a misc_prop with the physics of the cube: a box the size of the model that falls, tips, can be shoved, thrown and stacked. It is in the list of the World tab afterwards.</div>
 	</div>
 	<div class="pane" id="pane-config">
 		<h2><span>server.cfg</span><span id="cfgSize"></span></h2>
@@ -1276,6 +1297,10 @@ window.addEventListener('mouseup', e => {
 		if (!hit) { toast('No floor there', false); return; }
 		marker = { pos: hit, t: performance.now() };
 		placeEntity(hit);
+	} else if (mode === 'models' && mdlPlacing) {
+		if (!hit) { toast('No floor there', false); return; }
+		marker = { pos: hit, t: performance.now() };
+		mdlPlaceAt(hit);
 	} else if (mode === 'world' && selectedEnt >= 0) {
 		if (!hit) { toast('No floor there', false); return; }
 		const ent = ents.get(selectedEnt), below = pickGround([ent.pos[0], ent.pos[1], ent.pos[2] + 1], [0, 0, -1]);
@@ -1514,6 +1539,7 @@ function entVisible(ent) { return entMatches(ent, $('entFilter').value.trim().to
 
 function setMode(m) {
 	mode = m;
+	if (m !== 'models') { mdlSetPlacing(false); hidePreview(); }
 	document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === m));
 	document.querySelectorAll('.pane').forEach(p => p.classList.toggle('on', p.id === 'pane-' + m));
 	if (m === 'world') { select(-1); pollEntities(); loadClasses(); }
@@ -1522,7 +1548,84 @@ function setMode(m) {
 	document.body.classList.toggle('fsOpen', m === 'files');
 	if (m === 'config') { select(-1); if (!cfgLoaded) loadConfig(); }
 	if (m === 'files') { select(-1); if (!fsEdit) fsList(); }
+	if (m === 'models') { select(-1); if (!mdlAsked) mdlLoad(); mdlSetPlacing(!!mdlPath); }
 }
+
+/* ------------------------------------------------------------------ */
+/* the models of the game as props                                     */
+/* ------------------------------------------------------------------ */
+
+let mdlAll = [], mdlDone = false, mdlAsked = false, mdlPath = '', mdlPlacing = false, mdlHover = 0;
+
+// the server reads the folders of the game a few at a frame, so the list comes in parts
+async function mdlLoad() {
+	mdlAsked = true;
+	try {
+		const json = await (await fetch('api/models', { cache: 'no-store' })).json();
+		mdlAll = [...new Set(json.models)].sort();
+		mdlDone = json.done;
+		mdlRender();
+		if (!mdlDone) setTimeout(mdlLoad, 700);
+	} catch (e) {
+		toast('Could not read the list of models: ' + e.message, false);
+		mdlAsked = false;
+	}
+}
+function mdlMatches() {
+	const words = $('mdlFilter').value.trim().toLowerCase().split(/\s+/).filter(Boolean);
+	return mdlAll.filter(p => { const low = p.toLowerCase(); return words.every(w => low.includes(w)); });
+}
+function mdlName(path) { return path.slice(path.lastIndexOf('/') + 1); }
+function mdlRender() {
+	const list = mdlMatches(), shown = list.slice(0, 500);
+	$('mdlCount').textContent = (mdlDone ? '' : 'reading, ') + list.length + (list.length < mdlAll.length ? ' of ' + mdlAll.length : '');
+	// "models/" is in front of all of them
+	let html = shown.map(p => '<div class="cls' + (p === mdlPath ? ' hl' : '') + '" data-path="' + escapeHtml(p) + '">' + escapeHtml(mdlName(p)) +
+		'<span class="ty">' + escapeHtml(p.slice(7, Math.max(7, p.lastIndexOf('/')))) + '</span></div>').join('');
+	if (list.length > shown.length) html += '<div class="cls">' + (list.length - shown.length) + ' more, narrow the search</div>';
+	$('mdlList').innerHTML = html || '<div class="cls">' + (mdlDone ? 'No model matches' : 'Reading the folders of the game...') + '</div>';
+}
+function mdlSetPlacing(on) {
+	mdlPlacing = on && !!mdlPath;
+	$('mdlPlace').classList.toggle('armedPlace', mdlPlacing);
+	$('mdlPlace').textContent = mdlPlacing ? 'Right-click map' : 'Place';
+	if (mode === 'models') canvas.style.cursor = mdlPlacing ? 'crosshair' : 'default';
+}
+function mdlPick(path) {
+	mdlPath = path;
+	$('mdlPicked').textContent = path;
+	mdlRender();
+	mdlSetPlacing(true);
+	toast('Right-click on the map to place ' + mdlName(path));
+}
+async function mdlPlaceAt(hit) {
+	const path = mdlPath, scale = Math.max(1, Math.min(1023, Math.round(+$('mdlScale').value) || 100));
+	// The origin of a misc_prop is the middle of its box. It goes half the height of the model above the floor
+	// and a bit, and drops from there. Without the model at hand a guess does.
+	const model = pvSetup() ? await pvLoadModel(path) : null;
+	const height = model ? model.size[2] * scale / 100 : 64;
+	const keys = [['classname', 'misc_prop'], ['origin', fmtVec([hit[0], hit[1], hit[2] + height / 2 + 8])], ['model', path], ['scale', String(scale)]];
+	if ($('mdlShape').value === 'ball') keys.push(['shape', 'ball']);
+	if (+$('mdlMass').value > 0) keys.push(['mass', String(+$('mdlMass').value)]);
+	entityOp({ op: 'spawn', kv: keysText(keys) }, 'Placed ' + mdlName(path));
+}
+
+$('mdlFilter').addEventListener('input', mdlRender);
+$('mdlPlace').addEventListener('click', () => {
+	if (!mdlPath) { toast('Pick a model first', false); return; }
+	mdlSetPlacing(!mdlPlacing);
+});
+$('mdlList').addEventListener('click', e => {
+	const row = e.target.closest('.cls[data-path]');
+	if (row) mdlPick(row.dataset.path);
+});
+$('mdlList').addEventListener('mouseover', e => {
+	const row = e.target.closest('.cls[data-path]');
+	if (!row) return;
+	clearTimeout(mdlHover);
+	mdlHover = setTimeout(() => pvShowPath(row.dataset.path, row, mdlName(row.dataset.path), row.dataset.path, row.dataset.path, 'No preview here'), 80);
+});
+$('mdlList').addEventListener('mouseleave', () => { clearTimeout(mdlHover); hidePreview(); });
 
 /* ------------------------------------------------------------------ */
 /* the server config                                                   */
@@ -2011,8 +2114,9 @@ const PLACE_KEYS = {
 	misc_blackhole: [['radius', '600'], ['strength', '2400'], ['coreradius', '48'], ['dmg', '1000']],
 	misc_ball: [['radius', '18'], ['modelscale', '600'], ['bounce', '0.7'], ['friction', '90'], ['mass', '1'], ['kick', '1']],
 	misc_cube: [['size', '32'], ['bounce', '0.25'], ['friction', '0.7'], ['mass', '4'], ['kick', '1']],
+	misc_prop: [['model', 'models/map_objects/cairn/cargo_sm.md3'], ['scale', '100']],
 };
-const PLACE_HEIGHT = { misc_blackhole: 72, misc_ball: 64, misc_cube: 48 };
+const PLACE_HEIGHT = { misc_blackhole: 72, misc_ball: 64, misc_cube: 48, misc_prop: 48 };
 
 function placeEntity(hit) {
 	const cls = $('newClass').value.trim();
@@ -2607,34 +2711,39 @@ async function pvLoadModel(path) {
 		}
 		const center = mins.map((m, k) => (m + maxs[k]) / 2);
 		const radius = Math.max(1, Math.hypot(maxs[0] - mins[0], maxs[1] - mins[1], maxs[2] - mins[2]) / 2);
-		return { meshes, center, radius };
+		return { meshes, center, radius, size: maxs.map((m, k) => m - mins[k]) };
 	})().catch(() => null);
 	pv.models.set(path, promise);
 	return promise;
 }
 
-async function showPreview(cls, row) {
+// The preview box next to a row: the model at path, or a line that says why there is none. token tells the
+// call that is shown from one that came later.
+async function pvShowPath(token, row, name, subText, path, none) {
 	const box = $('preview'), r = row.getBoundingClientRect();
 	box.style.top = Math.max(50, Math.min(window.innerHeight - 290, r.top - 100)) + 'px';
 	box.classList.add('open');
-	pv.cls = cls;
+	pv.cls = token;
 	pv.model = null;
-	const it = classInfo.get(cls);
-	$('pvName').textContent = cls;
-	$('pvSub').textContent = it ? (ITEM_TYPES[it.type] || 'Item') + (it.quantity ? ' · ' + it.quantity : '') + (it.description && it.description[0] !== '@' ? ' · ' + it.description : '') : (classCategory(cls) || 'Entity');
-	const path = it ? itemModelPath(it) : '';
+	$('pvName').textContent = name;
+	$('pvSub').textContent = subText;
 	const showNone = text => { $('previewGl').style.display = 'none'; $('pvNone').style.display = ''; $('pvNone').textContent = text; };
 	if (!path || !pvSetup()) {
-		showNone(/^npc_/i.test(cls) ? 'NPC, the model comes from its .npc file' : 'No model, this entity is game logic');
+		showNone(none);
 		return;
 	}
 	$('previewGl').style.display = '';
 	$('pvNone').style.display = 'none';
 	const model = await pvLoadModel(path);
-	if (pv.cls !== cls) return;
+	if (pv.cls !== token) return;
 	if (!model) { showNone('Model not found: ' + path); return; }
 	pv.model = model;
 	if (!pv.visible) { pv.visible = true; pv.t0 = performance.now(); requestAnimationFrame(pvFrame); }
+}
+function showPreview(cls, row) {
+	const it = classInfo.get(cls);
+	return pvShowPath(cls, row, cls, it ? (ITEM_TYPES[it.type] || 'Item') + (it.quantity ? ' · ' + it.quantity : '') + (it.description && it.description[0] !== '@' ? ' · ' + it.description : '') : (classCategory(cls) || 'Entity'), it ? itemModelPath(it) : '',
+		/^npc_/i.test(cls) ? 'NPC, the model comes from its .npc file' : 'No model, this entity is game logic');
 }
 
 function hidePreview() {

@@ -80,6 +80,7 @@ the answer tells the page that the numbers started over.
 | `POST /api/entity` | `op` spawn, update or delete, with `id` and `kv` (one `key=value` per line) |
 | `GET /api/config` | the text of `server.cfg`, as UTF-8 |
 | `POST /api/config`, `POST /api/config?exec=1` | the body is the new text of `server.cfg` (plain text, not a form). With `exec=1` the server runs `exec server.cfg` afterwards |
+| `GET /api/models` | every `.md3` and `.glm` under `models/`. The server reads the folders a few at a frame: `done` says whether the list is complete, the page asks again until it is |
 | `GET /api/fs/list?root=&path=` | the files of a folder. `root` is `home` (the game folder in the home path of the server) or `install` (the one of the installation, read only) |
 | `GET /api/fs/get?root=&path=[&text=1]` | a file as a download, or as UTF-8 text for the editor |
 | `POST /api/fs/put?path=&offset=[&last=1][&text=1]` | the body is the next piece of a file (a request is 64 KB at most). `last=1` puts the file in its place |
@@ -207,6 +208,40 @@ Also changed:
   the next start of any map, so it can not come back later. An entity of the map that was edited in the panel
   is not kept, the map has it as it was. Tried once on the running server: nine placed objects before and
   after, the file gone.
+- New: the tab "Models" and the entity `misc_prop` (`codemp/game/g_props.c`): any model of the game as a thing
+  with the physics of the cube. The tab lists every `.md3` and `.glm` of the game (748 with the base game and
+  JA+), with a search and the turning preview the class list has. Pick one, set scale, mass and shape if they
+  are not to be the defaults, and right-click on the map: it is spawned as a `misc_prop` half its height above
+  the floor and drops. It is in the list of the World tab afterwards and comes back after a map reload of the
+  panel like everything that was placed.
+  `misc_prop` is the general prop, `misc_ball` and `misc_cube` stay as the ball and the crate with numbers that
+  suit them. Keys: `model`, `scale` (percent, default 100), `shape` (`box`, or `ball` for something round),
+  `mass`, `bounce`, `friction`, `kick`, `angles`.
+  - The box of the physics is the box around the model, edge by edge: the bounds of the first frame of an md3,
+    and for a Ghoul2 model, which has none in its file, the box around the vertices of its first level of
+    detail without the surfaces that are switched off. So a bench is long and low and tips over its long edge.
+    It is the rigid body of the cube: it lands on corners and edges, tumbles, slides, collides with other
+    props, balls and cubes by mass, is shoved by players, thrown by force push and pull and taken with
+    `+button13`. Players are not blocked by it, as with the cube.
+  - The longest edge is kept between 8 and 384 units, the scale is changed for that.
+  - Mass without a `mass` key: 4 for a box of 32 units like the cube, and it grows with the surface of the box,
+    not with its volume (`4 * (volume / 32768) ^ (2/3)`): models are shells and not solid blocks, and a big one
+    stays something a player can move. The cargo crate at full size (40 units) has 6.2, the model of a player
+    3.6, a small crystal 1.1, a box of 100 units 39. The limit is 100.
+  - What shots, sabers and explosions hit is the box that the turned body just fits in, for cubes too now (it
+    was a fixed cube before). An entity can only have a box that does not turn, so it is generous at the ends
+    of a long thing that lies across the axes.
+  - A Ghoul2 model stands as it is in its file, without an animation: a player model in the pose it was built
+    in. The client makes the model itself and looks for its default skin (stock code for a general entity
+    with `modelGhoul2`).
+  - The body touches the world at 27 spots (corners, middles of edges and faces) and with a box in its middle.
+    On a long thin model those are far apart, something thinner than the gaps can pass between them.
+  The list of models is built by the server from the file system of the engine, a few folders a frame for 3
+  ms at most, so the game does not stop for it: about 7 seconds once after every start of a map.
+  Checked on the running server: the list is exactly the md3 and glm files of the pk3 files (748 of 748), and
+  props dropped onto a floor come to rest with their middle half their height above it (a crate, a crystal, a
+  player model, a weapon model at 300 percent, a ball), two crates stack. The user placed props through the
+  page. How the models look in the game was not seen by me.
 - New entity `misc_cube` (`codemp/game/g_props.c`, next to the ball), placed in the World tab like the ball. A
   cube with corners and edges that is a rigid body: it falls, lands on a corner or an edge, tips over, tumbles
   and slides to a stop on one of its faces. It is heavy. Players and NPCs shove it instead of kicking it away:

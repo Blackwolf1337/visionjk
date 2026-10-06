@@ -1,5 +1,6 @@
 /*
-misc_ball and misc_cube: two props with physics of their own.
+misc_ball, misc_cube and misc_prop: props with physics of their own. misc_prop is the general one, any model of
+the game as a box or a ball of its size. The other two are a ball and a crate with numbers that suit them.
 
 The ball falls, bounces, rolls down slopes and comes to rest. The cube is a rigid body with corners and edges:
 it lands on them, tips over, tumbles and slides to a stop on one of its faces. Players kick the ball by running
@@ -16,7 +17,8 @@ Not from JA+ and not from JKAdmin.
 */
 
 #include "g_local.h"
-#include "qcommon/qfiles.h"		// the header of an md3, for the bounds of the model of the cube
+#include "qcommon/qfiles.h"			// the header of an md3, for the bounds of the model of a box
+#include "rd-common/mdx_format.h"	// and what a Ghoul2 model is made of, for the same
 
 // +button13. The base game uses the button bits up to 2048 and JA+ takes 4096 (+button12) for the hook. 8192,
 // 16384 and 32768 (+button13 to +button15) are free, and all 16 bits of the buttons reach the server.
@@ -58,6 +60,10 @@ Not from JA+ and not from JKAdmin.
 #define GRAB_BREAK			144.0f		// further from the hand than this and it is let go
 
 #define SHOVE_SLOW_MSEC		150			// a player who shoves a cube is slowed for that long
+
+#define MODEL_MIN_EDGE		8.0f		// the longest edge of the box of a misc_prop: its model is scaled into these
+#define MODEL_MAX_EDGE		384.0f
+#define MODEL_MAX_BYTES		( 32 * 1024 * 1024 )	// of a Ghoul2 model that is read for its bounds
 
 // gentity_t fields in use:
 //	radius			ball: its size. cube: from its middle to a corner
@@ -406,6 +412,15 @@ static void Body_Net( gentity_t *self, const prop_t *p ) {
 	self->s.apos.trType = type;
 	self->s.apos.trTime = level.time;
 	self->s.apos.trDuration = 0;
+
+	// What shots, sabers and explosions are traced against. An entity has a box that does not turn, so it is the
+	// one the turned body just fits in: right for a crate on its face, generous at the ends of a beam that lies
+	// across the axes.
+	Body_Bounds( p, self->r.mins, self->r.maxs );
+	for ( k = 0; k < 3; k++ ) {
+		self->r.mins[k] -= 1.0f;
+		self->r.maxs[k] += 1.0f;
+	}
 
 	trap->LinkEntity( (sharedEntity_t *)self );
 }
@@ -1705,6 +1720,102 @@ static qboolean Prop_ModelBounds( const char *model, vec3_t mins, vec3_t maxs ) 
 	return ok;
 }
 
+/*
+=================
+Prop_GlmBounds
+
+The same for a Ghoul2 model, which has no bounds in its file: the box around the vertices of its first level of
+detail as they stand in the file, which is how the client shows it without an animation. Surfaces that are
+switched off are left out, the client does not draw them either. Every offset is checked against the size of
+the file.
+=================
+*/
+static qboolean Prop_GlmBounds( const char *model, vec3_t mins, vec3_t maxs ) {
+	fileHandle_t		f = NULL_FILE;
+	const int			len = trap->FS_Open( model, &f, FS_READ );
+	byte				*data;
+	const mdxmHeader_t	*header;
+	// the offsets of the entries of the surface hierarchy follow the header, and count from there
+	const int			ofsHier = (int)sizeof( mdxmHeader_t );
+	int					numSurfaces, ofsLODs, i, k, numVerts = 0;
+	qboolean			ok = qfalse;
+
+	if ( !f )
+		return qfalse;
+	if ( len < (int)sizeof( mdxmHeader_t ) || len > MODEL_MAX_BYTES || !( data = (byte *)malloc( len ) ) ) {
+		trap->FS_Close( f );
+		return qfalse;
+	}
+	trap->FS_Read( data, len, f );
+	trap->FS_Close( f );
+
+	header = (const mdxmHeader_t *)data;
+	numSurfaces = LittleLong( header->numSurfaces );
+	ofsLODs = LittleLong( header->ofsLODs );
+	ClearBounds( mins, maxs );
+	// the offsets of the surfaces of the first level of detail follow its mdxmLOD_t, and count from there
+	if ( LittleLong( header->ident ) == MDXM_IDENT && LittleLong( header->numLODs ) >= 1
+		&& numSurfaces >= 1 && numSurfaces <= 4096
+		&& ofsLODs >= (int)sizeof( mdxmHeader_t ) && ofsLODs <= len - (int)sizeof( mdxmLOD_t ) - numSurfaces * 4
+		&& ofsHier <= len - numSurfaces * 4 ) {
+		const int base = ofsLODs + (int)sizeof( mdxmLOD_t );
+
+		ok = qtrue;
+		for ( i = 0; i < numSurfaces && ok; i++ ) {
+			int						ofsSurf, ofsVerts, count, index, ofsInfo;
+			const mdxmSurface_t		*surf;
+			const mdxmVertex_t		*v;
+
+			memcpy( &ofsSurf, data + base + i * 4, 4 );
+			ofsSurf = base + LittleLong( ofsSurf );
+			if ( ofsSurf < base || ofsSurf > len - (int)sizeof( mdxmSurface_t ) ) {
+				ok = qfalse;
+				break;
+			}
+			surf = (const mdxmSurface_t *)( data + ofsSurf );
+			count = LittleLong( surf->numVerts );
+			ofsVerts = ofsSurf + LittleLong( surf->ofsVerts );
+			if ( count < 0 || count > 65536 || ofsVerts < ofsSurf || ofsVerts > len - count * (int)sizeof( mdxmVertex_t ) ) {
+				ok = qfalse;
+				break;
+			}
+
+			// its entry in the hierarchy says whether it is drawn
+			index = LittleLong( surf->thisSurfaceIndex );
+			if ( index >= 0 && index < numSurfaces ) {
+				memcpy( &ofsInfo, data + ofsHier + index * 4, 4 );
+				ofsInfo = ofsHier + LittleLong( ofsInfo );
+				if ( ofsInfo >= ofsHier && ofsInfo <= len - (int)sizeof( mdxmSurfHierarchy_t ) ) {
+					const mdxmSurfHierarchy_t *info = (const mdxmSurfHierarchy_t *)( data + ofsInfo );
+
+					if ( LittleLong( info->flags ) & G2SURFACEFLAG_OFF )
+						continue;
+				}
+			}
+
+			v = (const mdxmVertex_t *)( data + ofsVerts );
+			for ( k = 0; k < count; k++, v++ ) {
+				vec3_t point;
+
+				VectorSet( point, LittleFloat( v->vertCoords[0] ), LittleFloat( v->vertCoords[1] ), LittleFloat( v->vertCoords[2] ) );
+				if ( !isfinite( point[0] ) || !isfinite( point[1] ) || !isfinite( point[2] ) ) {
+					ok = qfalse;
+					break;
+				}
+				AddPointToBounds( point, mins, maxs );
+			}
+			numVerts += count;
+		}
+	}
+	free( data );
+
+	for ( k = 0; k < 3 && ok; k++ ) {
+		if ( !numVerts || maxs[k] - mins[k] < 0.5f )
+			ok = qfalse;
+	}
+	return ok;
+}
+
 // what the ball and the cube share when they spawn. qfalse: it can not be shown and is gone.
 static qboolean Prop_Spawn( gentity_t *ent, const char *model, int scale, float bound, const char *sound ) {
 	prop_t *p = Prop_State( ent );
@@ -1796,6 +1907,31 @@ void SP_misc_ball( gentity_t *ent ) {
 	Prop_Spawn( ent, model, scale, ent->radius, "sound/weapons/thermal/bounce1.mp3" );
 }
 
+// A rigid body the size of the bounds of a model, scale in percent. What misc_cube and misc_prop share.
+// qfalse: it can not be shown and is gone.
+static qboolean Prop_SpawnBox( gentity_t *ent, const char *model, const vec3_t mins, const vec3_t maxs, int scale ) {
+	prop_t	*p = Prop_State( ent );
+	float	bound = 0.0f;
+	int		k;
+
+	memset( p, 0, sizeof( *p ) );
+	p->box = qtrue;
+	for ( k = 0; k < 3; k++ ) {
+		p->half[k] = ( maxs[k] - mins[k] ) * 0.5f * scale / 100.0f;
+		if ( p->half[k] < 2.0f )
+			p->half[k] = 2.0f;
+		p->centre[k] = ( maxs[k] + mins[k] ) * 0.5f * scale / 100.0f;
+		if ( p->half[k] > bound )
+			bound = p->half[k];
+	}
+	// a solid box, with the mean of its three moments so one number does for every axis. For a cube that is exact.
+	p->inertia = ( 2.0f / 9.0f ) * VectorLengthSquared( p->half );
+	ent->radius = VectorLength( p->half );
+
+	// Body_Net() sets the box shots are traced against, this one is only there until it has
+	return Prop_Spawn( ent, model, scale, bound, "sound/effects/metal_bounce.mp3" );
+}
+
 /*QUAKED misc_cube (0.9 0.6 0.1) (-16 -16 -16) (16 16 16)
 A cube with corners and edges. It falls, lands on a corner or an edge, tips over, tumbles and slides to a stop
 on one of its faces. It is heavy: players shove it slowly instead of kicking it away, force push and pull make
@@ -1816,10 +1952,9 @@ world or getting stuck.
 "angles"		how it is turned when it spawns
 */
 void SP_misc_cube( gentity_t *ent ) {
-	prop_t	*p = Prop_State( ent );
 	char	*model;
 	vec3_t	mins, maxs;
-	float	size, longest = 0.0f, bound = 0.0f;
+	float	size, longest = 0.0f;
 	int		scale = 100, k;
 
 	G_SpawnString( "model", "models/map_objects/cairn/cargo_sm.md3", &model );
@@ -1845,20 +1980,90 @@ void SP_misc_cube( gentity_t *ent ) {
 		VectorSet( maxs, 0.5f * size, 0.5f * size, 0.5f * size );
 	}
 
-	memset( p, 0, sizeof( *p ) );
-	p->box = qtrue;
-	for ( k = 0; k < 3; k++ ) {
-		p->half[k] = ( maxs[k] - mins[k] ) * 0.5f * scale / 100.0f;
-		if ( p->half[k] < 2.0f )
-			p->half[k] = 2.0f;
-		p->centre[k] = ( maxs[k] + mins[k] ) * 0.5f * scale / 100.0f;
-		if ( p->half[k] > bound )
-			bound = p->half[k];
-	}
-	// a solid box, with the mean of its three moments so one number does for every axis. For a cube that is exact.
-	p->inertia = ( 2.0f / 9.0f ) * VectorLengthSquared( p->half );
-	ent->radius = VectorLength( p->half );
+	Prop_SpawnBox( ent, model, mins, maxs, scale );
+}
 
-	// the box shots are traced against does not turn: a bit more than a face, less than a corner
-	Prop_Spawn( ent, model, scale, 1.2f * bound, "sound/effects/metal_bounce.mp3" );
+/*QUAKED misc_prop (0.9 0.6 0.1) (-16 -16 -16) (16 16 16)
+Any model of the game as a thing with the physics of misc_cube or misc_ball. It has the size of its model: the
+box of the physics is the box around the model, edge by edge, so a bench is long and low and tips over its long
+edge. Props collide with each other, with balls and with cubes, each by its mass, they can be pushed, stacked,
+thrown with force push and pull and taken with +button13. Players are not blocked by it.
+
+"model"			an md3 or a glm (a Ghoul2 model stands as it is in its file, without an animation)
+"scale"			size of the model in percent, default 100. It is changed if the longest edge of the box would
+				be under 8 or over 384 units
+"shape"			"box" (default), or "ball" for something round: a ball as wide as the model that rolls. The
+				middle of the ball is the origin of the model, so that fits models that are built around it
+"mass"			the heavier, the less a shove, a push or a hit moves it. Default 0: from its size. A box of 32
+				units has 4 like the cube, and the mass grows with the surface of the box, not with its volume:
+				models are shells and not solid blocks, and a big one stays something a player can move
+"bounce"		part of its speed it keeps when it hits something, 0 to 0.95, default 0.25 (ball 0.7)
+"friction"		box: how well it grips the ground, 0 to 2, default 0.7. Ball: how fast it slows down when it
+				rolls, units per second squared, default 90
+"kick"			how hard players shove it, default 1
+"angles"		how it is turned when it spawns
+The origin is where the middle of the box is to be.
+*/
+void SP_misc_prop( gentity_t *ent ) {
+	prop_t		*p = Prop_State( ent );
+	char		*model, *shape;
+	vec3_t		mins, maxs;
+	float		longest = 0.0f, volume = 8.0f, fscale;
+	qboolean	glm, ball;
+	int			scale, k;
+
+	G_SpawnString( "model", "", &model );
+	G_SpawnString( "shape", "box", &shape );
+	G_SpawnInt( "scale", "100", &scale );
+	G_SpawnFloat( "mass", "0", &ent->mass );
+	G_SpawnFloat( "kick", "1", &ent->speed );
+	ball = (qboolean)!Q_stricmp( shape, "ball" );
+	G_SpawnFloat( "bounce", ball ? "0.7" : "0.25", &ent->physicsBounce );
+	G_SpawnFloat( "friction", ball ? "90" : "0.7", &ent->random );
+
+	glm = (qboolean)!Q_stricmp( COM_GetExtension( model ), "glm" );
+	if ( !model[0] || !( glm ? Prop_GlmBounds( model, mins, maxs ) : Prop_ModelBounds( model, mins, maxs ) ) ) {
+		Com_Printf( S_COLOR_YELLOW "misc_prop: \"%s\" is not a model the server can read (an md3 or a glm)\n", model );
+		G_FreeEntity( ent );
+		return;
+	}
+
+	// into the sizes the physics is made for
+	for ( k = 0; k < 3; k++ ) {
+		if ( maxs[k] - mins[k] > longest )
+			longest = maxs[k] - mins[k];
+	}
+	fscale = Com_Clamp( 1.0f, 1023.0f, (float)scale );
+	fscale = Com_Clamp( MODEL_MIN_EDGE / longest * 100.0f, MODEL_MAX_EDGE / longest * 100.0f, fscale );
+	scale = Com_Clampi( 1, 1023, (int)( fscale + 0.5f ) );
+
+	for ( k = 0; k < 3; k++ ) {
+		const float edge = ( maxs[k] - mins[k] ) * scale / 100.0f;
+
+		volume *= ( edge < 4.0f ? 4.0f : edge ) * 0.5f;
+	}
+	if ( ent->mass <= 0.0f ) {
+		// see above. volume is that of the box, 32 * 32 * 32 is the cube.
+		ent->mass = 4.0f * powf( volume / 32768.0f, 2.0f / 3.0f );
+	}
+
+	if ( ball ) {
+		ent->radius = Com_Clamp( 4.0f, 128.0f, ( ( maxs[0] - mins[0] ) + ( maxs[1] - mins[1] ) + ( maxs[2] - mins[2] ) ) / 6.0f * scale / 100.0f );
+		ent->random = Com_Clamp( 0.0f, 2000.0f, ent->random );
+		memset( p, 0, sizeof( *p ) );
+		p->inertia = 0.4f * ent->radius * ent->radius;
+		if ( !Prop_Spawn( ent, model, scale, ent->radius, "sound/weapons/thermal/bounce1.mp3" ) )
+			return;
+	} else {
+		ent->random = Com_Clamp( 0.0f, 2.0f, ent->random );
+		if ( !Prop_SpawnBox( ent, model, mins, maxs, scale ) )
+			return;
+	}
+
+	if ( glm ) {
+		// the client makes a Ghoul2 model of the model the entity names and looks for its default skin
+		ent->s.modelGhoul2 = 1;
+		ent->s.g2radius = Com_Clampi( 8, 255, (int)( longest * scale / 100.0f ) );
+		trap->LinkEntity( (sharedEntity_t *)ent );
+	}
 }
