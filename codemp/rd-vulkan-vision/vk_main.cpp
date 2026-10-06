@@ -344,6 +344,8 @@ void VK_InitVulkan( void ) {
 	r_vkDebug = ri.Cvar_Get( "r_vkDebug", "0", CVAR_ARCHIVE_ND | CVAR_LATCH, "Vulkan validation layer and its messages" );
 	r_swapIntervalVk = ri.Cvar_Get( "r_swapInterval", "0", CVAR_ARCHIVE_ND, "" );
 
+	// the buffers of the level are made again when it is first drawn
+	VK_WorldChanged();
 	if ( glConfig.vidWidth ) {
 		return;
 	}
@@ -420,6 +422,7 @@ void VK_ShutdownVulkan( qboolean destroyWindow ) {
 		return;
 	}
 
+	VK_ShutdownWorld();
 	VK_ShutdownImages();
 	VK_ShutdownFrames();
 	VK_ShutdownPipelines();

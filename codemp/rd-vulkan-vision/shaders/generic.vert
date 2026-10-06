@@ -65,5 +65,14 @@ void main() {
 
 	v_texCoord0 = ModTexCoord( GenTexCoord( TCGEN0( d.flags ), d.tcGenVec0, t.viewOrigin.xyz ), d.texMat0, d.texTurb0 );
 	v_texCoord1 = ModTexCoord( GenTexCoord( TCGEN1( d.flags ), d.tcGenVec1, t.viewOrigin.xyz ), d.texMat1, d.texTurb1 );
-	v_color = clamp( d.baseColor + d.vertColor * a_color, 0.0, 1.0 );
+	if ( RGBGEN( d.flags ) != 0u ) {
+		// rgbGen lightingDiffuse: the light of the entity on the normal, times the color of the entity for
+		// lightingDiffuseEntity (RB_CalcDiffuseColor and RB_CalcDiffuseEntityColor of rd-vanilla)
+		float incoming = max( dot( a_normal, t.lightDir.xyz ), 0.0 );
+		vec3 light = min( t.ambientLight.rgb + incoming * t.directedLight.rgb, vec3( 1.0 ) );
+
+		v_color = vec4( light * d.baseColor.rgb, clamp( d.baseColor.a + d.vertColor.a * a_color.a, 0.0, 1.0 ) );
+	} else {
+		v_color = clamp( d.baseColor + d.vertColor * a_color, 0.0, 1.0 );
+	}
 }

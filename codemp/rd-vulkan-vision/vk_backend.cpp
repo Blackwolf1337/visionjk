@@ -246,7 +246,7 @@ static void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 	for ( int i = 0; i < numDrawSurfs; i++, drawSurf++ ) {
 		if ( drawSurf->sort == oldSort ) {
 			// fast path, same as previous sort
-			rb_surfaceTable[*drawSurf->surface]( drawSurf->surface );
+			VK_AddSurface( drawSurf->surface );
 			continue;
 		}
 		R_DecomposeSort( drawSurf->sort, &entityNum, &shader, &fogNum, &dlighted );
@@ -313,7 +313,7 @@ static void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 		}
 
 		// add the triangles for this surface
-		rb_surfaceTable[*drawSurf->surface]( drawSurf->surface );
+		VK_AddSurface( drawSurf->surface );
 	}
 	backEnd.refdef.floatTime = originalTime;
 

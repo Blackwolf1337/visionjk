@@ -264,6 +264,15 @@ VkPipeline	VK_FindPipeline( vkProgram_t program, uint32_t stateBits );
 const float *VK_GL_ModelView( void );
 void		VK_GL_ResetMatrix( void );
 
+// vk_world.cpp
+void		VK_WorldChanged( void );
+void		VK_ShutdownWorld( void );
+void		VK_BatchBegin( void );
+qboolean	VK_BatchIsStatic( void );
+void		VK_AddSurface( surfaceType_t *surface );
+qboolean	VK_UploadStaticBatch( void );
+void		VK_StaticColorScale( float *scale );
+
 // vk_shade.cpp
 extern bool	g_bRenderGlowingObjects;	// the pass that draws only the stages that glow
 extern bool	g_bDynamicGlowSupported;
@@ -284,6 +293,7 @@ int			VK_AddTransform( const vkTransform_t *transform );
 void		VK_SetDepthRange( float minDepth, float maxDepth );
 qboolean	VK_UploadGeometry( const vec4_t *xyz, const vec4_t *normal, const vec2_t ( *texCoords )[NUM_TEX_COORDS],
 				const color4ub_t *colors, int numVerts, const glIndex_t *indexes, int numIndexes );
+qboolean	VK_UploadIndexes( VkBuffer vertexBuffer, const VkDeviceSize *offsets, const glIndex_t *indexes, int numIndexes );
 qboolean	VK_UploadTess( void );
 void		VK_TessColors( const color4ub_t *colors );
 void		VK_TessTexCoords( const vec2_t *st );

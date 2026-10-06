@@ -50,6 +50,7 @@ set(MPVulkanVisionFiles
 	"${MPDir}/rd-vulkan-vision/vk_pipeline.cpp"
 	"${MPDir}/rd-vulkan-vision/vk_shade.cpp"
 	"${MPDir}/rd-vulkan-vision/vk_stubs.cpp"
+	"${MPDir}/rd-vulkan-vision/vk_world.cpp"
 	)
 source_group("renderer" FILES ${MPVulkanVisionFiles})
 

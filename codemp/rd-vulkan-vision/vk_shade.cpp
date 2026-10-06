@@ -295,10 +295,13 @@ static qboolean VK_StageColors( const shaderStage_t *pStage, int forceRGBGen, vk
 		VectorSet4( base, il, il, il, il );
 		break;
 	case CGEN_LIGHTING_DIFFUSE:
+		// the light of the entity on the normal, times baseColor (generic.vert)
 		perVertexRGB = qtrue;
+		VectorSet4( base, 1.0f, 1.0f, 1.0f, 1.0f );
 		break;
 	case CGEN_LIGHTING_DIFFUSE_ENTITY:
 		perVertexRGB = qtrue;
+		VK_ByteColor( ent->e.shaderRGBA, base );
 		if ( alphaGen == AGEN_IDENTITY && ent->e.shaderRGBA[3] == 0xff ) {
 			alphaGen = AGEN_SKIP;	// already got it in this set since it does all 4 components
 		}
@@ -393,7 +396,10 @@ static qboolean VK_StageColors( const shaderStage_t *pStage, int forceRGBGen, vk
 	}
 
 	perVertexFog = (qboolean)( tess.fogNum && pStage->adjustColorsForFog != ACFF_NONE );
-	if ( !killGen && !perVertexRGB && !perVertexAlpha && !perVertexFog ) {
+	if ( ( !killGen && !perVertexAlpha && !perVertexFog ) || VK_BatchIsStatic() ) {
+		if ( perVertexRGB ) {
+			draw->flags |= ( rgbGen == CGEN_LIGHTING_DIFFUSE_ENTITY ? 2u : 1u ) << VKD_RGBGEN_SHIFT;
+		}
 		return qfalse;
 	}
 
@@ -645,9 +651,20 @@ void RB_StageIteratorGeneric( void ) {
 	uint32_t transform;
 	int cullMode;
 
-	RB_DeformTessGeometry();
-	if ( !VK_UploadTess() ) {
-		return;
+	const qboolean isStatic = VK_BatchIsStatic();
+	float colorScale[3] = { 1.0f, 1.0f, 1.0f };
+
+	if ( isStatic ) {
+		// surfaces of the level whose vertices are on the device, see vk_world.cpp
+		if ( !VK_UploadStaticBatch() ) {
+			return;
+		}
+		VK_StaticColorScale( colorScale );
+	} else {
+		RB_DeformTessGeometry();
+		if ( !VK_UploadTess() ) {
+			return;
+		}
 	}
 	transform = VK_CurrentTransform();
 	cullMode = VK_CullMode( shader->cullType );
@@ -691,6 +708,9 @@ void RB_StageIteratorGeneric( void ) {
 		draw.parm[1] = tess.shaderTime;
 		if ( !tess.fading ) {
 			cpuColors = VK_StageColors( pStage, forceRGBGen, &draw );
+			for ( int i = 0; i < 3; i++ ) {
+				draw.vertColor[i] *= colorScale[i];
+			}
 		} else {
 			// a surface that fades out brings its colors in tess.svars.colors
 			draw.vertColor[0] = draw.vertColor[1] = draw.vertColor[2] = draw.vertColor[3] = 1.0f;
@@ -703,7 +723,7 @@ void RB_StageIteratorGeneric( void ) {
 			draw.tex0 = VK_BundleTexture( &pStage->bundle[0] );
 		}
 		VK_BundleTexCoords( &pStage->bundle[0], draw.texMat0, draw.texTurb0 );
-		draw.flags = VK_BundleTcGen( &pStage->bundle[0], draw.tcGenVec0 ) << VKD_TCGEN0_SHIFT;
+		draw.flags |= VK_BundleTcGen( &pStage->bundle[0], draw.tcGenVec0 ) << VKD_TCGEN0_SHIFT;
 		draw.tex1 = draw.tex0;
 		if ( pStage->bundle[1].image ) {
 			draw.tex1 = VK_BundleTexture( &pStage->bundle[1] );
@@ -774,6 +794,7 @@ void RB_BeginSurface( shader_t *shader, int fogNum ) {
 	}
 	tess.fading = false;
 	tess.registration++;
+	VK_BatchBegin();
 }
 
 /*

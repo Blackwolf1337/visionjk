@@ -436,6 +436,30 @@ qboolean VK_UploadGeometry( const vec4_t *xyz, const vec4_t *normal, const vec2_
 	return qtrue;
 }
 
+/*
+===============
+VK_UploadIndexes
+
+Indexes into vertices that are in a buffer on the device already: offsets are where xyz, normal, texCoords
+and colors start in it
+===============
+*/
+qboolean VK_UploadIndexes( VkBuffer vertexBuffer, const VkDeviceSize *offsets, const glIndex_t *indexes, int numIndexes ) {
+	vkFrame_t *frame = vk.frame;
+	const VkDeviceSize indexBytes = (VkDeviceSize)numIndexes * sizeof( glIndex_t );
+	const VkBuffer buffers[4] = { vertexBuffer, vertexBuffer, vertexBuffer, vertexBuffer };
+
+	if ( !frame || !numIndexes || !vertexBuffer || frame->indexUsed + indexBytes > VK_INDEX_BYTES ) {
+		return qfalse;
+	}
+	memcpy( frame->indexes.mapped + frame->indexUsed, indexes, (size_t)indexBytes );
+	vkCmdBindVertexBuffers( frame->cmd, 0, 4, buffers, offsets );
+	vkCmdBindIndexBuffer( frame->cmd, frame->indexes.buffer, frame->indexUsed, VK_INDEX_TYPE_UINT32 );
+	frame->indexUsed += indexBytes;
+	vk.numBoundIndexes = numIndexes;
+	return qtrue;
+}
+
 // the batch in the tess arrays
 qboolean VK_UploadTess( void ) {
 	return VK_UploadGeometry( tess.xyz, tess.normal, tess.texCoords, tess.vertexColors, tess.numVertexes,
