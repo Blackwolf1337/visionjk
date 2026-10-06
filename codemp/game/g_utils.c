@@ -116,6 +116,42 @@ static int G_FindConfigstringIndex( const char *name, int start, int max, qboole
 }
 
 /*
+================
+G_TryConfigstringIndex
+
+For things added while the map runs that the game can do without. The number G_SoundIndex, G_EffectIndex and
+G_ModelIndex would give (start CS_SOUNDS, CS_EFFECTS, CS_MODELS), but 0 when the table is full. Those raise an
+error then, and an error ends a dedicated server.
+================
+*/
+int G_TryConfigstringIndex( const char *name, int start, int max ) {
+	int		i;
+	char	s[MAX_STRING_CHARS];
+
+	if ( !VALIDSTRING( name ) ) {
+		return 0;
+	}
+
+	for ( i=1 ; i<max ; i++ ) {
+		trap->GetConfigstring( start + i, s, sizeof( s ) );
+		if ( !s[0] ) {
+			break;
+		}
+		if ( !strcmp( s, name ) ) {
+			return i;
+		}
+	}
+
+	if ( i == max ) {
+		return 0;
+	}
+
+	trap->SetConfigstring( start + i, name );
+
+	return i;
+}
+
+/*
 Ghoul2 Insert Start
 */
 

@@ -1272,6 +1272,9 @@ void WebAdmin_EntityFreed( int entityNum );
 void WebAdmin_Chat( const char *mode, const gentity_t *from, const gentity_t *to, const char *text );
 float WebAdmin_ClientGravity( const gentity_t *ent, float gravity );
 
+// g_utils.c
+int G_TryConfigstringIndex( const char *name, int start, int max );
+
 // g_spawn.c, for the entity editor
 int G_NumSpawnClassnames( void );
 const char *G_SpawnClassname( int index );
