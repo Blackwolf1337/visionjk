@@ -45,7 +45,7 @@ New files, all JA+ code that did not have to live inside a base function:
 | `codemp/game/g_webadmin.c`, `codemp/game/webadmin/index.html` | web admin panel from JKAdmin, see [webadmin.md](webadmin.md) |
 | `codemp/game/g_blackhole.c` | the entity `misc_blackhole`, not from JA+, see [webadmin.md](webadmin.md) |
 | `codemp/game/g_schizo.c` | hallucinations only one player gets, not from JA+, see [webadmin.md](webadmin.md) |
-| `codemp/game/g_ball.c` | the entity `misc_ball`, a ball with physics, not from JA+, see [webadmin.md](webadmin.md) |
+| `codemp/game/g_props.c` | the entities `misc_ball` and `misc_cube` with physics, taking them with `+button13`, not from JA+, see [webadmin.md](webadmin.md) |
 | `codemp/game/g_poop.c` | the emote `ampoop`, not from JA+, see [webadmin.md](webadmin.md) |
 | `codemp/game/g_flatulence.c` | a player who breaks wind all the time, not from JA+, see [webadmin.md](webadmin.md) |
 

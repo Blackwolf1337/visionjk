@@ -1275,8 +1275,10 @@ float WebAdmin_ClientGravity( const gentity_t *ent, float gravity );
 // g_utils.c
 int G_TryConfigstringIndex( const char *name, int start, int max );
 
-// g_ball.c: the entity misc_ball
-void G_BallForceThrow( gentity_t *self, qboolean pull );
+// g_props.c: the entities misc_ball and misc_cube
+void G_PropFrame( void );
+void G_PropForceThrow( gentity_t *self, qboolean pull );
+float G_PropPlayerSpeed( const gentity_t *ent );
 
 // g_schizo.c: hallucinations only one player gets
 qboolean G_SchizoToggle( gentity_t *ent );

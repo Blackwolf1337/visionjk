@@ -305,7 +305,8 @@ void SP_misc_weather_zone( gentity_t *ent );
 
 void SP_misc_bsp (gentity_t *ent);
 void SP_misc_blackhole( gentity_t *ent );	// g_blackhole.c
-void SP_misc_ball( gentity_t *ent );		// g_ball.c
+void SP_misc_ball( gentity_t *ent );		// g_props.c
+void SP_misc_cube( gentity_t *ent );		// g_props.c
 void SP_terrain (gentity_t *ent);
 void SP_misc_skyportal_orient (gentity_t *ent);
 void SP_misc_skyportal (gentity_t *ent);
@@ -542,6 +543,7 @@ spawn_t	spawns[] = {
 	{ "misc_ball",							SP_misc_ball },
 	{ "misc_blackhole",						SP_misc_blackhole },
 	{ "misc_bsp",							SP_misc_bsp },
+	{ "misc_cube",							SP_misc_cube },
 	{ "misc_cubemap",						SP_misc_cubemap },
 	{ "misc_faller",						SP_misc_faller },
 	{ "misc_G2model",						SP_misc_G2model },

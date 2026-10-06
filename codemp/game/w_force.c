@@ -3542,8 +3542,8 @@ void ForceThrow( gentity_t *self, qboolean pull )
 		self->client->ps.powerups[PW_PULL] = 0;
 	}
 
-	// misc_ball of g_ball.c: the push or pull throws the balls in front of him too
-	G_BallForceThrow( self, pull );
+	// misc_ball and misc_cube of g_props.c: the push or pull throws the ones in front of him too
+	G_PropForceThrow( self, pull );
 
 	VectorCopy( self->client->ps.viewangles, fwdangles );
 	AngleVectors( fwdangles, forward, right, NULL );

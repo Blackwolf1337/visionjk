@@ -2375,6 +2375,9 @@ void ClientThink_real( gentity_t *ent ) {
 			client->ps.speed = (int)((long double)client->ps.speed * 0.2f);
 		}
 
+		// shoving a cube of g_props.c is slow work
+		client->ps.speed *= G_PropPlayerSpeed( ent );
+
 		client->ps.basespeed = client->ps.speed;
 	}
 

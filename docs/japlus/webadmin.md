@@ -137,7 +137,36 @@ Also changed:
   and a green cloud behind him (the gas cloud of the noghri stick). One in six is a big one with three clouds
   that shoves him forward, not in a duel. Server side only, stock sound and effect events. Gone when he leaves or
   the map changes. Added without a test run.
-- New entity `misc_ball` (`codemp/game/g_ball.c`), placed in the World tab like the black hole. A ball with
+- New entity `misc_cube` (`codemp/game/g_props.c`, next to the ball), placed in the World tab like the ball. A
+  cube with corners and edges that is a rigid body: it falls, lands on a corner or an edge, tips over, tumbles
+  and slides to a stop on one of its faces. It is heavy. Players and NPCs shove it instead of kicking it away:
+  only part of their speed gets into it, off its middle the shove turns it, and the player is slowed down while
+  he shoves (`G_PropPlayerSpeed` in `ClientThink_real` of `g_active.c` scales `ps.speed`, which the client
+  predicts). Force push and pull take it above its middle, so it tumbles. A shot pushes along its line at the
+  spot it hit, so a hit off the middle spins the cube. The engine only traces boxes that are not turned, so the
+  cube looks at 26 spots of itself in every step (corners, middles of edges and faces) with a line from its
+  middle, and takes the speed into the surfaces away with impulses, friction included. A server frame is cut
+  into steps of 12.5 ms for that. A small box in its middle is traced as well, so nothing thin gets through it.
+  Once it hardly moves on three spots that carry it, it lies still and costs nothing. For the client it is a
+  model entity whose place and angles change every frame (`TR_INTERPOLATE`, like players). The model is
+  `models/map_objects/cairn/cargo_sm.md3`, a small cargo crate. The base game has no plain cube, this one has
+  slanted upper edges, the physics use the full box around it. That box is read from the bounds in the md3 when
+  the cube spawns, so the physics fit whatever `model` is set, cubes or not. Keys: `size` 32 (its longest edge,
+  the model is scaled to it), `bounce` 0.25, `friction` 0.7 (grip on the ground, not the rolling resistance of
+  the ball), `mass` 4, `kick` 1, `model`, `angles`. The page places it 48 units above the floor. Cubes do not
+  collide with each other or with balls, nobody can stand on one, lifts do not carry it. Added without a test
+  run.
+- New: taking a ball or a cube into the hand with `+button13` (for example `bind g +button13`). The button
+  bits of the base game end at 2048, JA+ has 4096 (`+button12`) for the hook, `+button13` to `+button15` (8192,
+  16384, 32768) are free and all 16 bits reach the server. No client change: the stock client and the JA+
+  plugin already have the command. The player takes the prop he looks at, within 96 units: a cube at the corner
+  next to his line of sight, a ball at the spot next to his eye. While he holds the button that spot is pulled
+  to a point 48 units in front of his eyes and the rest hangs from it and swings, a pendulum on one point. It
+  follows when he turns and walks, heavy props lag more. It still bumps into the world. He lets go by letting go
+  of the button, it keeps the speed it had, so it can be flung. A force push throws it out of the hand. It is
+  also let go when he dies, leaves, or it gets more than 144 units away from the hand (caught behind a wall,
+  teleport). The one who holds it does not kick it. Added without a test run.
+- New entity `misc_ball` (`codemp/game/g_props.c`), placed in the World tab like the black hole. A ball with
   physics of its own: gravity, bounces that keep part of the speed, rolling with resistance, rolling down slopes,
   coming to rest. Players and NPCs kick it by running into it (it bounces off them like off something much
   heavier that moves), force push and pull throw it (a call in `ForceThrow` of `w_force.c`), shots, sabers and
