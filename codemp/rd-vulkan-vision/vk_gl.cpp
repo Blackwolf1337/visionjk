@@ -41,6 +41,17 @@ static float		gl_texCoord[2];
 static float		gl_color[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
 static uint32_t		gl_stateBits;
 
+// glFog over what is drawn here
+static qboolean		gl_fog;
+static float		gl_fogDensity;
+static float		gl_fogColor[4];
+
+// client arrays
+static const float	*gl_vertexArray, *gl_texCoordArray;
+static const byte	*gl_colorArray;
+static int			gl_vertexStride, gl_texCoordStride, gl_colorStride;
+static qboolean		gl_colorArrayOn;
+
 static float		gl_matrix[16];
 static qboolean		gl_matrixSet;			// qfalse: the modelview matrix is the one of the entity
 static float		gl_savedMatrix[16];
@@ -219,6 +230,88 @@ void VK_GL_End( void ) {
 	draw.flags = (uint32_t)TCGEN_TEXTURE << VKD_TCGEN0_SHIFT;
 	draw.vertColor[0] = draw.vertColor[1] = draw.vertColor[2] = draw.vertColor[3] = 1.0f;
 	draw.texMat0[0] = draw.texMat0[5] = 1.0f;
+	if ( gl_fog ) {
+		draw.flags |= 1u << VKD_FOG_SHIFT;
+		draw.fogParm[0] = gl_fogDensity;
+		VectorCopy( gl_fogColor, draw.fogColor );
+	}
+	draw.flags |= ( gl_stateBits & GLS_ATEST_BITS ) == GLS_ATEST_GT_0 ? 1u : ( gl_stateBits & GLS_ATEST_BITS ) == GLS_ATEST_LT_80 ? 2u
+		: ( gl_stateBits & GLS_ATEST_BITS ) == GLS_ATEST_GE_80 ? 3u : ( gl_stateBits & GLS_ATEST_BITS ) == GLS_ATEST_GE_C0 ? 4u : 0u;
 	VK_DrawTess( &draw, VKP_GENERIC, gl_stateBits, VK_CULL_MODE_NONE, qfalse );
 	gl_numVerts = 0;
+}
+
+/*
+===============================================================================
+
+CLIENT ARRAYS AND FOG
+
+The sprites on surfaces (tr_quicksprite.cpp) hand over arrays of quads and switch glFog on for them
+
+===============================================================================
+*/
+
+void VK_GL_Pointer( int which, int stride, const void *data ) {
+	switch ( which ) {
+	case GL_VERTEX_ARRAY:
+		gl_vertexArray = (const float *)data;
+		gl_vertexStride = stride ? stride : (int)sizeof( float ) * 3;
+		break;
+	case GL_TEXTURE_COORD_ARRAY:
+		gl_texCoordArray = (const float *)data;
+		gl_texCoordStride = stride ? stride : (int)sizeof( float ) * 2;
+		break;
+	case GL_COLOR_ARRAY:
+		gl_colorArray = (const byte *)data;
+		gl_colorStride = stride ? stride : 4;
+		break;
+	}
+}
+
+void VK_GL_ClientState( int which, int on ) {
+	if ( which == GL_COLOR_ARRAY ) {
+		gl_colorArrayOn = (qboolean)( on != 0 );
+	}
+}
+
+void VK_GL_DrawArrays( int mode, int first, int count ) {
+	const float color[4] = { gl_color[0], gl_color[1], gl_color[2], gl_color[3] };
+
+	if ( !gl_vertexArray || !gl_texCoordArray ) {
+		return;
+	}
+	VK_GL_Begin( mode );
+	for ( int i = first; i < first + count; i++ ) {
+		const float *xyz = (const float *)( (const byte *)gl_vertexArray + (size_t)i * gl_vertexStride );
+		const float *st = (const float *)( (const byte *)gl_texCoordArray + (size_t)i * gl_texCoordStride );
+
+		if ( gl_colorArrayOn && gl_colorArray ) {
+			const byte *c = gl_colorArray + (size_t)i * gl_colorStride;
+
+			VK_GL_Color( c[0] / 255.0f, c[1] / 255.0f, c[2] / 255.0f, c[3] / 255.0f );
+		}
+		VK_GL_TexCoord( st[0], st[1] );
+		VK_GL_Vertex( xyz[0], xyz[1], xyz[2] );
+	}
+	VK_GL_End();
+	VectorCopy4( color, gl_color );
+}
+
+// of everything glEnable() can switch only the fog means something here
+void VK_GL_Enable( int cap, int on ) {
+	if ( cap == GL_FOG ) {
+		gl_fog = (qboolean)( on != 0 );
+	}
+}
+
+void VK_GL_Fogf( int name, float value ) {
+	if ( name == GL_FOG_DENSITY ) {
+		gl_fogDensity = value;
+	}
+}
+
+void VK_GL_Fogfv( int name, const float *value ) {
+	if ( name == GL_FOG_COLOR ) {
+		VectorCopy( value, gl_fogColor );
+	}
 }

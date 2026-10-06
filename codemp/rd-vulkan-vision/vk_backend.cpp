@@ -236,6 +236,58 @@ static void RB_SetDepthRange( int depthRange ) {
 		depthRange == 1 ? 0.3f : ( depthRange == 2 ? 0.0f : 1.0f ) );
 }
 
+// entities that have to be drawn after everything else: the ones that fade (RF_FORCE_ENT_ALPHA), the ones that
+// ask for it (RF_FORCEPOST) and the ones that bend the screen (RF_DISTORTION)
+#define MAX_POST_RENDERS	128
+
+typedef struct postRender_s {
+	int			fogNum;
+	int			entNum;
+	int			dlighted;
+	int			depthRange;
+	drawSurf_t	*drawSurf;
+	shader_t	*shader;
+} postRender_t;
+
+static postRender_t	g_postRenders[MAX_POST_RENDERS];
+static int			g_numPostRenders;
+
+// makes the entity the one that is drawn: its time, its matrices, its lights. Returns its depth range.
+static int RB_SetEntity( int entityNum, float originalTime ) {
+	int depthRange = 0;
+
+	if ( entityNum != REFENTITYNUM_WORLD ) {
+		backEnd.currentEntity = &backEnd.refdef.entities[entityNum];
+		backEnd.refdef.floatTime = originalTime - backEnd.currentEntity->e.shaderTime;
+		// we have to reset the shaderTime as well otherwise image animations start from the wrong frame
+		tess.shaderTime = backEnd.refdef.floatTime - tess.shader->timeOffset;
+
+		// set up the transformation matrix
+		R_RotateForEntity( backEnd.currentEntity, &backEnd.viewParms, &backEnd.ori );
+		// set up the dynamic lighting if needed
+		if ( backEnd.currentEntity->needDlights ) {
+			R_TransformDlights( backEnd.refdef.num_dlights, backEnd.refdef.dlights, &backEnd.ori );
+		}
+		if ( backEnd.currentEntity->e.renderfx & RF_NODEPTH ) {
+			// No depth at all, very rare but some things for seeing through walls
+			depthRange = 2;
+		} else if ( backEnd.currentEntity->e.renderfx & RF_DEPTHHACK ) {
+			// hack the depth range to prevent view model from poking into walls
+			depthRange = 1;
+		}
+	} else {
+		backEnd.currentEntity = &tr.worldEntity;
+		backEnd.refdef.floatTime = originalTime;
+		backEnd.ori = backEnd.viewParms.world;
+		// we have to reset the shaderTime as well otherwise image animations on the world (like water)
+		// continue with the wrong frame
+		tess.shaderTime = backEnd.refdef.floatTime - tess.shader->timeOffset;
+		R_TransformDlights( backEnd.refdef.num_dlights, backEnd.refdef.dlights, &backEnd.ori );
+	}
+	VK_InvalidateTransform();
+	return depthRange;
+}
+
 /*
 ===============
 RB_RenderDrawSurfList
@@ -275,6 +327,27 @@ static void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 		}
 		oldSort = drawSurf->sort;
 
+		if ( entityNum != REFENTITYNUM_WORLD && g_numPostRenders < MAX_POST_RENDERS
+			&& ( backEnd.refdef.entities[entityNum].e.renderfx & ( RF_DISTORTION | RF_FORCEPOST | RF_FORCE_ENT_ALPHA ) ) ) {
+			// must render last
+			const trRefEntity_t *ent = &backEnd.refdef.entities[entityNum];
+			postRender_t *post = &g_postRenders[g_numPostRenders++];
+
+			post->depthRange = ( ent->e.renderfx & RF_NODEPTH ) ? 2 : ( ( ent->e.renderfx & RF_DEPTHHACK ) ? 1 : 0 );
+			post->entNum = entityNum;
+			post->drawSurf = drawSurf;
+			post->dlighted = dlighted;
+			post->fogNum = fogNum;
+			post->shader = shader;
+
+			shader = oldShader;
+			entityNum = oldEntityNum;
+			fogNum = oldFogNum;
+			dlighted = oldDlighted;
+			oldSort = (unsigned int)-20;	// invalidate this thing, cause we may want to postrender more surfs of the same sort
+			continue;
+		}
+
 		// change the tess parameters if needed. A "entityMergable" shader is a shader that can have surfaces
 		// from separate entities merged into a single batch, like smoke and blood puff sprites
 		if ( shader != oldShader || fogNum != oldFogNum || dlighted != oldDlighted
@@ -290,36 +363,7 @@ static void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 
 		// change the modelview matrix if needed
 		if ( entityNum != oldEntityNum ) {
-			depthRange = 0;
-			if ( entityNum != REFENTITYNUM_WORLD ) {
-				backEnd.currentEntity = &backEnd.refdef.entities[entityNum];
-				backEnd.refdef.floatTime = originalTime - backEnd.currentEntity->e.shaderTime;
-				// we have to reset the shaderTime as well otherwise image animations start from the wrong frame
-				tess.shaderTime = backEnd.refdef.floatTime - tess.shader->timeOffset;
-
-				// set up the transformation matrix
-				R_RotateForEntity( backEnd.currentEntity, &backEnd.viewParms, &backEnd.ori );
-				// set up the dynamic lighting if needed
-				if ( backEnd.currentEntity->needDlights ) {
-					R_TransformDlights( backEnd.refdef.num_dlights, backEnd.refdef.dlights, &backEnd.ori );
-				}
-				if ( backEnd.currentEntity->e.renderfx & RF_NODEPTH ) {
-					// No depth at all, very rare but some things for seeing through walls
-					depthRange = 2;
-				} else if ( backEnd.currentEntity->e.renderfx & RF_DEPTHHACK ) {
-					// hack the depth range to prevent view model from poking into walls
-					depthRange = 1;
-				}
-			} else {
-				backEnd.currentEntity = &tr.worldEntity;
-				backEnd.refdef.floatTime = originalTime;
-				backEnd.ori = backEnd.viewParms.world;
-				// we have to reset the shaderTime as well otherwise image animations on the world (like water)
-				// continue with the wrong frame
-				tess.shaderTime = backEnd.refdef.floatTime - tess.shader->timeOffset;
-				R_TransformDlights( backEnd.refdef.num_dlights, backEnd.refdef.dlights, &backEnd.ori );
-			}
-			VK_InvalidateTransform();
+			depthRange = RB_SetEntity( entityNum, originalTime );
 			if ( oldDepthRange != depthRange ) {
 				RB_SetDepthRange( depthRange );
 				oldDepthRange = depthRange;
@@ -336,6 +380,19 @@ static void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 	if ( oldShader != NULL ) {
 		RB_EndSurface();
 	}
+
+	// what was put off to the end, the last first as rd-vanilla has it
+	while ( g_numPostRenders > 0 ) {
+		const postRender_t *post = &g_postRenders[--g_numPostRenders];
+
+		RB_BeginSurface( post->shader, post->fogNum );
+		depthRange = RB_SetEntity( post->entNum, originalTime );
+		RB_SetDepthRange( post->depthRange );
+		depthRange = post->depthRange;
+		VK_AddSurface( post->drawSurf->surface );
+		RB_EndSurface();
+	}
+	backEnd.refdef.floatTime = originalTime;
 
 	// go back to the world modelview matrix
 	backEnd.currentEntity = &tr.worldEntity;

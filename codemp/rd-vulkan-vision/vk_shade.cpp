@@ -142,6 +142,18 @@ static uint32_t VK_BundleTexture( const textureBundle_t *bundle ) {
 
 /*
 ===============
+R_BindAnimatedImage
+
+For the shared files that draw on their own (tr_quicksprite.cpp): the texture of the bundle for what they
+draw next
+===============
+*/
+void R_BindAnimatedImage( textureBundle_t *bundle ) {
+	GL_Bind( vk.images[VK_BundleTexture( bundle )].owner );
+}
+
+/*
+===============
 VK_BundleTexCoords
 
 The tcMods of a bundle as one matrix. All of them but the turbulence move every point the same way, so the
@@ -775,6 +787,15 @@ void RB_StageIteratorGeneric( void ) {
 		&& shader->fogPass ) {
 		VK_FogPass( transform, cullMode );
 	}
+	// Now check for surfacesprites: grass and the like that tr_surfacesprites.cpp grows on the triangles of the
+	// batch. It hands quads to tr_quicksprite.cpp, which draws them through vk_gl.cpp.
+	if ( r_surfaceSprites->integer && !isStatic ) {
+		for ( int stage = 1; stage < shader->numUnfoggedPasses; stage++ ) {
+			if ( tess.xstages[stage].ss && tess.xstages[stage].ss->surfaceSpriteType ) {
+				RB_DrawSurfaceSprites( &tess.xstages[stage], &tess );
+			}
+		}
+	}
 }
 
 /*
@@ -823,6 +844,12 @@ void RB_EndSurface( void ) {
 
 	// stencil shadows are not done in this renderer yet
 	if ( tess.shader == tr.shadowShader ) {
+		tess.numIndexes = 0;
+		return;
+	}
+	// The refraction of force push and the like bends a copy of the screen. This renderer has no such copy yet,
+	// and drawn as plain surfaces these would be white shapes: leave them out.
+	if ( tess.shader == tr.distortionShader || ( backEnd.currentEntity && ( backEnd.currentEntity->e.renderfx & RF_DISTORTION ) ) ) {
 		tess.numIndexes = 0;
 		return;
 	}

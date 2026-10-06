@@ -72,6 +72,15 @@ void VK_GL_PushMatrix( void );
 void VK_GL_PopMatrix( void );
 void VK_GL_LoadMatrix( const float *m );
 void VK_GL_Translate( float x, float y, float z );
+// the sprites that grow on surfaces (tr_quicksprite.cpp) come as arrays of quads, with glFog over them
+void VK_GL_Pointer( int which, int stride, const void *data );
+void VK_GL_ClientState( int which, int on );
+void VK_GL_DrawArrays( int mode, int first, int count );
+void VK_GL_Enable( int cap, int on );
+void VK_GL_Fogf( int name, float value );
+void VK_GL_Fogfv( int name, const float *value );
+static void ( * const vk_glNoLockArrays )( int, int ) = 0;
+static void ( * const vk_glNoUnlockArrays )( void ) = 0;
 
 #undef qglBegin
 #define qglBegin( mode )			VK_GL_Begin( mode )
@@ -89,6 +98,28 @@ void VK_GL_Translate( float x, float y, float z );
 #define qglColor3f( r, g, b )		VK_GL_Color( r, g, b, 1.0f )
 #undef qglColor4f
 #define qglColor4f( r, g, b, a )	VK_GL_Color( r, g, b, a )
+#undef qglColor4ub
+#define qglColor4ub( r, g, b, a )	VK_GL_Color( ( r ) / 255.0f, ( g ) / 255.0f, ( b ) / 255.0f, ( a ) / 255.0f )
+#undef qglColor4ubv
+#define qglColor4ubv( c )			VK_GL_Color( ( c )[0] / 255.0f, ( c )[1] / 255.0f, ( c )[2] / 255.0f, ( c )[3] / 255.0f )
+#undef qglVertexPointer
+#define qglVertexPointer( size, type, stride, data )		VK_GL_Pointer( GL_VERTEX_ARRAY, stride, data )
+#undef qglTexCoordPointer
+#define qglTexCoordPointer( size, type, stride, data )	VK_GL_Pointer( GL_TEXTURE_COORD_ARRAY, stride, data )
+#undef qglColorPointer
+#define qglColorPointer( size, type, stride, data )		VK_GL_Pointer( GL_COLOR_ARRAY, stride, data )
+#undef qglEnableClientState
+#define qglEnableClientState( which )	VK_GL_ClientState( which, 1 )
+#undef qglDisableClientState
+#define qglDisableClientState( which )	VK_GL_ClientState( which, 0 )
+#undef qglDrawArrays
+#define qglDrawArrays( mode, first, count )	VK_GL_DrawArrays( mode, first, count )
+#undef qglFogf
+#define qglFogf( name, value )		VK_GL_Fogf( name, value )
+#undef qglFogfv
+#define qglFogfv( name, value )		VK_GL_Fogfv( name, value )
+#define qglLockArraysEXT			vk_glNoLockArrays
+#define qglUnlockArraysEXT			vk_glNoUnlockArrays
 #undef qglDepthRange
 #define qglDepthRange( n, f )		VK_GL_DepthRange( n, f )
 #undef qglPushMatrix
@@ -102,7 +133,7 @@ void VK_GL_Translate( float x, float y, float z );
 #undef qglTranslatef
 #define qglTranslatef( x, y, z )	VK_GL_Translate( x, y, z )
 
-// What is left has no meaning here: line width and display lists, the stencil setup of the overdraw counter and
+// What is left has no meaning here (of glEnable only the fog has): line width and display lists, the stencil setup of the overdraw counter and
 // the error check (tr_cmds.cpp), the depth read of a flare (tr_surface.cpp), the level shot (tr_init.cpp)
 #undef qglLineWidth
 #define qglLineWidth( ... )			((void)0)
@@ -111,9 +142,9 @@ void VK_GL_Translate( float x, float y, float z );
 #undef qglCallList
 #define qglCallList( ... )			((void)0)
 #undef qglEnable
-#define qglEnable( ... )			((void)0)
+#define qglEnable( cap )			VK_GL_Enable( cap, 1 )
 #undef qglDisable
-#define qglDisable( ... )			((void)0)
+#define qglDisable( cap )			VK_GL_Enable( cap, 0 )
 #undef qglStencilMask
 #define qglStencilMask( ... )		((void)0)
 #undef qglClearStencil
