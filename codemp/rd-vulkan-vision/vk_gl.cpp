@@ -30,7 +30,6 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define VK_GL_MAX_VERTS		6000		// a multiple of 3 and of 4: a full buffer ends on a whole triangle or quad
 
 static vec4_t		gl_xyz[VK_GL_MAX_VERTS];
-static vec4_t		gl_normal[VK_GL_MAX_VERTS];			// stays zero
 static vec2_t		gl_texCoords[VK_GL_MAX_VERTS][NUM_TEX_COORDS];
 static color4ub_t	gl_colors[VK_GL_MAX_VERTS];
 static glIndex_t	gl_indexes[VK_GL_MAX_VERTS * 3];
@@ -259,7 +258,7 @@ void VK_GL_Flush( void ) {
 	vkDraw_t draw;
 
 	gl_numVerts = gl_primStart = gl_numIndexes = 0;
-	if ( !numIndexes || !VK_UploadGeometry( gl_xyz, gl_normal, gl_texCoords, gl_colors, numVerts, gl_indexes, numIndexes ) ) {
+	if ( !numIndexes || !VK_UploadGeometry( gl_xyz, NULL, gl_texCoords, gl_colors, numVerts, gl_indexes, numIndexes, qfalse ) ) {
 		return;
 	}
 

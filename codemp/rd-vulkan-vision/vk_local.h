@@ -365,6 +365,7 @@ void		VK_GL_ResetMatrix( void );
 
 // vk_world.cpp
 extern cvar_t	*r_vkStatic;
+extern cvar_t	*r_vkMerge;
 void		VK_WorldChanged( void );
 void		VK_ShutdownWorld( void );
 void		VK_BatchBegin( void );
@@ -422,7 +423,7 @@ void		VK_SetDepthRange( float minDepth, float maxDepth );
 void		VK_BindVertexBuffer( VkBuffer buffer, const VkDeviceSize *offsets, int numBindings );
 void		VK_BindIndexBuffer( VkBuffer buffer );
 qboolean	VK_UploadGeometry( const vec4_t *xyz, const vec4_t *normal, const vec2_t ( *texCoords )[NUM_TEX_COORDS],
-				const color4ub_t *colors, int numVerts, const glIndex_t *indexes, int numIndexes );
+				const color4ub_t *colors, int numVerts, const glIndex_t *indexes, int numIndexes, qboolean lightmapCoords );
 qboolean	VK_UploadIndexes( VkBuffer vertexBuffer, const VkDeviceSize *offsets, int numBindings, const glIndex_t *indexes, int numIndexes );
 qboolean	VK_UploadTess( void );
 void		VK_TessColors( const color4ub_t *colors );

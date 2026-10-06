@@ -519,10 +519,15 @@ VK_UploadGeometry
 
 Copies vertices and indexes into the buffers of the frame and binds them. The arrays have the layout of the
 tess arrays. What is drawn with VK_DrawTess() after this comes from there. qfalse: no room, nothing to draw.
+A vertex of the tess arrays is 76 bytes, and an effect sprite needs 28 of them. So what no stage of the batch
+reads is left out, the buffer keeps what it had in its place:
+normal NULL: the normals (stage.glsl reads them for tcGen environment, rgbGen lightingDiffuse and alphaGen
+lightingSpecular, and for deforms, which only batches from the device have there).
+lightmapCoords qfalse: the texture coordinates after the first set.
 ===============
 */
 qboolean VK_UploadGeometry( const vec4_t *xyz, const vec4_t *normal, const vec2_t ( *texCoords )[NUM_TEX_COORDS],
-	const color4ub_t *colors, int numVerts, const glIndex_t *indexes, int numIndexes ) {
+	const color4ub_t *colors, int numVerts, const glIndex_t *indexes, int numIndexes, qboolean lightmapCoords ) {
 	vkFrame_t *frame = vk.frame;
 	const void *sources[4] = { xyz, normal, texCoords, colors };
 	const VkDeviceSize indexBytes = (VkDeviceSize)numIndexes * sizeof( glIndex_t );
@@ -538,8 +543,21 @@ qboolean VK_UploadGeometry( const vec4_t *xyz, const vec4_t *normal, const vec2_
 		return qfalse;
 	}
 	for ( int i = 0; i < 4; i++ ) {
-		memcpy( frame->vertexes.mapped + vk_streamOffset[i] + frame->numVertexes * vk_streamStride[i], sources[i],
-			(size_t)( numVerts * vk_streamStride[i] ) );
+		byte *out = frame->vertexes.mapped + vk_streamOffset[i] + frame->numVertexes * vk_streamStride[i];
+
+		if ( i == 1 && !normal ) {
+			continue;
+		}
+		if ( i == 2 && !lightmapCoords ) {
+			vec2_t ( *st )[NUM_TEX_COORDS] = ( vec2_t ( * )[NUM_TEX_COORDS] )out;
+
+			for ( int v = 0; v < numVerts; v++ ) {
+				st[v][0][0] = texCoords[v][0][0];
+				st[v][0][1] = texCoords[v][0][1];
+			}
+			continue;
+		}
+		memcpy( out, sources[i], (size_t)( numVerts * vk_streamStride[i] ) );
 	}
 	memcpy( frame->indexes.mapped + frame->indexUsed, indexes, (size_t)indexBytes );
 	VK_BindVertexBuffer( frame->vertexes.buffer, vk_streamOffset, 4 );
@@ -599,8 +617,28 @@ qboolean VK_UploadTess( void ) {
 		}
 		stat[i].indexes += tess.numIndexes;
 	}
-	return VK_UploadGeometry( tess.xyz, tess.normal, tess.texCoords, tess.vertexColors, tess.numVertexes,
-		tess.indexes, tess.numIndexes );
+	// the normals and the other sets of texture coordinates only for a stage that takes them, see VK_UploadGeometry()
+	qboolean normals = qfalse, lightmapCoords = qfalse;
+
+	for ( i = 0; i < tess.shader->numUnfoggedPasses && tess.xstages[i].active; i++ ) {
+		const shaderStage_t *pStage = &tess.xstages[i];
+
+		if ( pStage->rgbGen == CGEN_LIGHTING_DIFFUSE || pStage->rgbGen == CGEN_LIGHTING_DIFFUSE_ENTITY
+			|| pStage->alphaGen == AGEN_LIGHTING_SPECULAR ) {
+			normals = qtrue;
+		}
+		for ( int b = 0; b < NUM_TEXTURE_BUNDLES; b++ ) {
+			const int tcGen = pStage->bundle[b].tcGen;
+
+			if ( tcGen >= TCGEN_LIGHTMAP && tcGen <= TCGEN_LIGHTMAP3 ) {
+				lightmapCoords = qtrue;
+			} else if ( tcGen == TCGEN_ENVIRONMENT_MAPPED ) {
+				normals = qtrue;
+			}
+		}
+	}
+	return VK_UploadGeometry( tess.xyz, normals ? tess.normal : NULL, tess.texCoords, tess.vertexColors, tess.numVertexes,
+		tess.indexes, tess.numIndexes, lightmapCoords );
 }
 
 /*

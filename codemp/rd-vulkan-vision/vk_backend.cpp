@@ -290,6 +290,143 @@ static int RB_SetEntity( int entityNum, float originalTime ) {
 
 /*
 ===============
+VK_ShaderMergesEntities, VK_EntitiesMerge
+
+An effect of the game is many entities that are one sprite or one line each (a fight has more than a thousand of
+them in a frame), and a batch ends where the entity changes. rd-vanilla only lets it go on for a shader that
+says entityMergable. Here it also goes on when that changes nothing in the picture.
+
+The vertices and their colors are made for each surface with its own entity. What a batch takes from an entity
+when it is drawn: its matrices (all entities that are not models have the ones of the level), the time of its
+shader, its color for rgbGen and alphaGen entity, its light, its texture offset for tcMod entityTranslate, the
+frame of an animMap, and what some render flags ask for (depth range, forced alpha, tint, burning away). So the
+shader must take none of that, or it must be the same for both entities.
+
+VK_ShaderMergesEntities: 0 the shader takes something from its entity, 1 it takes nothing, 2 only the time.
+===============
+*/
+cvar_t	*r_vkMerge;		// 0: a batch ends with its entity, as in rd-vanilla
+
+// the render flags that change how a batch is drawn
+#define VK_RF_BATCH	( RF_DEPTHHACK | RF_NODEPTH | RF_VOLUMETRIC | RF_FORCE_ENT_ALPHA | RF_RGB_TINT | RF_DISTORTION \
+	| RF_DISINTEGRATE1 | RF_DISINTEGRATE2 | RF_SETANIMINDEX | RF_ALPHA_DEPTH | RF_FORCEPOST )
+
+static int VK_ShaderMergesEntities( const shader_t *shader ) {
+	int result = 1;
+
+	if ( shader->sky || shader == tr.shadowShader || shader == tr.projectionShadowShader ) {
+		return 0;
+	}
+	for ( int i = 0; i < shader->numDeforms; i++ ) {
+		switch ( shader->deforms[i]->deformation ) {
+		case DEFORM_WAVE:
+		case DEFORM_NORMALS:
+		case DEFORM_BULGE:
+		case DEFORM_MOVE:
+			result = 2;
+			break;
+		case DEFORM_PROJECTION_SHADOW:
+			return 0;
+		default:
+			// the sprites and the texts are made vertex by vertex from the view
+			break;
+		}
+	}
+	for ( int i = 0; i < shader->numUnfoggedPasses; i++ ) {
+		const shaderStage_t *pStage = &shader->stages[i];
+
+		if ( !pStage->active ) {
+			break;
+		}
+		if ( pStage->ss ) {
+			return 0;
+		}
+		switch ( pStage->rgbGen ) {
+		case CGEN_IDENTITY:
+		case CGEN_IDENTITY_LIGHTING:
+		case CGEN_EXACT_VERTEX:
+		case CGEN_VERTEX:
+		case CGEN_ONE_MINUS_VERTEX:
+		case CGEN_CONST:
+		case CGEN_FOG:
+		case CGEN_LIGHTMAPSTYLE:
+			break;
+		case CGEN_WAVEFORM:
+			result = 2;
+			break;
+		default:
+			return 0;
+		}
+		switch ( pStage->alphaGen ) {
+		case AGEN_IDENTITY:
+		case AGEN_SKIP:
+		case AGEN_VERTEX:
+		case AGEN_ONE_MINUS_VERTEX:
+		case AGEN_CONST:
+		case AGEN_PORTAL:
+			break;
+		case AGEN_WAVEFORM:
+			result = 2;
+			break;
+		default:
+			return 0;
+		}
+		for ( int b = 0; b < NUM_TEXTURE_BUNDLES; b++ ) {
+			const textureBundle_t *bundle = &pStage->bundle[b];
+
+			if ( bundle->numImageAnimations > 1 ) {
+				result = 2;
+			}
+			for ( int k = 0; k < bundle->numTexMods; k++ ) {
+				switch ( bundle->texMods[k].type ) {
+				case TMOD_NONE:
+				case TMOD_TRANSFORM:
+				case TMOD_SCALE:
+					break;
+				case TMOD_ENTITY_TRANSLATE:
+					return 0;
+				default:
+					result = 2;
+					break;
+				}
+			}
+		}
+	}
+	return result;
+}
+
+// qtrue: the surfaces of entity b can go into the batch of this shader that has surfaces of entity a
+static qboolean VK_EntitiesMerge( int shaderMerges, int a, int b ) {
+	const trRefEntity_t *ea, *eb;
+
+	if ( !shaderMerges || a < 0 || a == REFENTITYNUM_WORLD || b == REFENTITYNUM_WORLD ) {
+		return qfalse;
+	}
+	ea = &backEnd.refdef.entities[a];
+	eb = &backEnd.refdef.entities[b];
+	// a model has matrices of its own
+	if ( ea->e.reType == RT_MODEL || eb->e.reType == RT_MODEL ) {
+		return qfalse;
+	}
+	if ( ( ea->e.renderfx | eb->e.renderfx ) & VK_RF_BATCH ) {
+		return qfalse;
+	}
+	// deformVertexes autosprite sizes its sprites by such axes
+	if ( ea->e.nonNormalizedAxes || eb->e.nonNormalizedAxes ) {
+		return qfalse;
+	}
+	// RB_SetEntity() moves the lights for an entity that needs them
+	if ( ea->needDlights != eb->needDlights ) {
+		return qfalse;
+	}
+	if ( shaderMerges == 2 && ea->e.shaderTime != eb->e.shaderTime ) {
+		return qfalse;
+	}
+	return qtrue;
+}
+
+/*
+===============
 RB_CaptureForEntity
 
 An entity that bends the screen behind it: copy the frame and tell the stages which square of it is theirs.
@@ -340,6 +477,11 @@ static void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 	drawSurf_t *drawSurf = drawSurfs;
 	// the stencil shadows are darkened once, and not in the glow pass
 	qboolean didShadowPass = (qboolean)g_bRenderGlowingObjects;
+	// what VK_ShaderMergesEntities() says about a shader, asked once for a run of surfaces
+	const shader_t *mergeShader = NULL;
+	int shaderMerges = 0;
+	// the entity came into a batch that was begun, RB_SetEntity() has not run for it
+	qboolean mergedEntity = qfalse;
 
 	RB_BeginDrawingView();
 	if ( backEnd.isHyperspace ) {
@@ -386,10 +528,22 @@ static void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 			continue;
 		}
 
+		// the sprites of an effect are an entity each: they stay one batch where that changes nothing
+		qboolean merge = qfalse;
+
+		if ( entityNum != oldEntityNum && shader == oldShader && fogNum == oldFogNum && dlighted == oldDlighted
+			&& !shader->entityMergable && r_vkMerge->integer ) {
+			if ( shader != mergeShader ) {
+				mergeShader = shader;
+				shaderMerges = VK_ShaderMergesEntities( shader );
+			}
+			merge = VK_EntitiesMerge( shaderMerges, oldEntityNum, entityNum );
+		}
+
 		// change the tess parameters if needed. A "entityMergable" shader is a shader that can have surfaces
 		// from separate entities merged into a single batch, like smoke and blood puff sprites
 		if ( shader != oldShader || fogNum != oldFogNum || dlighted != oldDlighted
-			|| ( entityNum != oldEntityNum && !shader->entityMergable ) ) {
+			|| ( entityNum != oldEntityNum && !shader->entityMergable && !merge ) ) {
 			if ( oldShader != NULL ) {
 				RB_EndSurface();
 				// the shadow volumes come with the sort of banners: when they are through, darken the frame
@@ -406,7 +560,13 @@ static void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 		}
 
 		// change the modelview matrix if needed
-		if ( entityNum != oldEntityNum ) {
+		if ( merge ) {
+			// the surface is made with its entity, everything else the batch has already
+			backEnd.currentEntity = &backEnd.refdef.entities[entityNum];
+			oldEntityNum = entityNum;
+			mergedEntity = qtrue;
+		} else if ( entityNum != oldEntityNum || mergedEntity ) {
+			mergedEntity = qfalse;
 			depthRange = RB_SetEntity( entityNum, originalTime );
 			if ( oldDepthRange != depthRange ) {
 				RB_SetDepthRange( depthRange );

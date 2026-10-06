@@ -45,6 +45,7 @@ indexing ends in an error that names `rd-vanilla`.
 | `r_vkDebug 1` | validation layer and its messages in the console, if the layer is installed (latched) |
 | `r_ext_multisample 2`, `4`, `8` | anti aliasing with that many samples a pixel, the cvar `rd-vanilla` uses for it (latched) |
 | `r_vkStatic 0` | cheat: nothing from the device buffers, every vertex through the CPU as in `rd-vanilla`. For telling a fault of the buffers from a fault of the shading |
+| `r_vkMerge 0` | cheat: a batch ends with its entity as in `rd-vanilla`, the sprites of an effect are a draw each again |
 | `gfxinfo` | device, memory, what the last frame was made of (draws, triangles, transforms, bones), the shaders whose batches were still built on the CPU, how many swapchains the window has had and how many frames found no image to be shown in |
 
 The cvars of `rd-vanilla` keep their names and meaning (`r_gamma`, `r_textureMode`, `r_picmip`,
@@ -114,6 +115,7 @@ library. The other renderers do not use them.
 | Textures | bound per stage | one table of all textures, indexed in the shader |
 | State of a stage | set per stage | only the blend function needs a pipeline, depth, cull and offset are dynamic state |
 | A draw | arrays set up and `glDrawElements` per stage | one indexed draw per stage. Which draw it is comes as its instance number, the vertex streams of the frame are bound once and a batch names its first vertex, model triangles are runs in an index buffer on the device |
+| Effects (sparks, glows, lines: one entity for each) | a batch and a draw for every entity, unless the shader says `entityMergable` | one batch for all entities in a row that have the same shader, where the shader takes nothing from its entity but the vertices |
 | Gamma, overbright | ramp of the display or baked into textures | one pass over the finished frame |
 | Anti aliasing | a window with several samples a pixel | the scene and its glow go into targets with several samples, each pass ends by resolving them into the plain targets the other passes read |
 
@@ -264,17 +266,17 @@ Speed: a demo of 90 seconds, 17 bots fighting on mp/duel1, seen by a spectator f
 
 | | frames a second | a frame |
 |---|---|---|
-| `rd-vanilla` | 362, 355, 357 | 2.8 ms |
-| `rd-vulkan-vision` | 736, 707, 725 | 1.4 ms |
+| `rd-vanilla` | 365, 355 | 2.8 ms |
+| `rd-vulkan-vision` | 859, 817, 867, 837, 868, 866, 829, 867 (median 862) | 1.2 ms |
 
 With `r_skipBackEnd 1` both play the demo at the 1000 frames a second the engine allows (997 and 996): the
 game, the cgame and the front end of the renderer need less than a millisecond for a frame together, and they
-are the same code for both. So the difference is all back end: the one of `rd-vulkan-vision` takes 1.4 ms less
+are the same code for both. So the difference is all back end: the one of `rd-vulkan-vision` takes 1.6 ms less
 for a frame of this scene. How long each back end takes by itself can not be read from this, only that it is
-more than 1.8 ms in `rd-vanilla` and more than 0.4 ms here.
+more than 1.8 ms in `rd-vanilla` and more than 0.15 ms here.
 
-A frame of that demo has about 2000 draws, 35000 to 62000 triangles from device buffers and 7100 to 8000 built
-on the CPU. Those are all effects of the game: saber marks on walls, sparks, saber glow. How the number came
+A frame of that demo has 600 to 850 draws, 35000 to 62000 triangles from device buffers and 6300 to 8200 built
+on the CPU. Those are all effects of the game: saber marks on walls, sparks, saber glow. How the numbers came
 down, each step measured with the same demo:
 
 | Step | Triangles from the CPU in a frame | Timedemo |
@@ -283,13 +285,16 @@ down, each step measured with the same demo:
 | `deformVertexes` in the vertex shader: the shells around a player (shield, lightning, ysalamiri) are the whole model drawn once more with such a shader | 8000 to 15000 | 648, 646, 655 |
 | less work per batch and per draw (streams bound once, draw number as instance, index buffer for models) | the same | 689, 691, 673 |
 | models with saber marks on them from the device, only the vertices of the marks on the CPU | 7100 to 8000 | 736, 707, 725 |
+| effects in one batch: a fight has about 1360 entities in a frame that are one sprite or one line each, and each was a batch and a draw (`r_vkMerge 0` is that state: 683, 714, 714 on the day of this step). Now they share a batch where the shader takes nothing from its entity. 2200 to 2400 draws become 600 to 850 | the same | 859, 853, 807 |
+| a vertex from the CPU without what no stage reads: 28 bytes instead of 76 for a sprite (no normals, no lightmap coordinates) | the same | median of eight runs by turns: 862 against 832 |
 
 Where a frame of that demo goes, counted in instructions with callgrind (`tools/rdprof.sh`, not a measure of
-time): 53 % are the cgame (31 % its player code, 9 % the saber marks it puts on walls, 8 % the front end of the
-renderer it calls), 44 % the back end. Before the last three steps the back end had 54 % and a third more
-instructions. What it still spends them on: the draw calls 9 %, the bones of the skeletons 5 %, copying the
-geometry of effects 5 %, building sprites and beams 4 %, the transforms 3 %, the vertices of saber marks on
-models 3 %.
+time), after the effects went into shared batches: 62 % are the cgame (36 % its player code, 12 % the saber
+marks it puts on walls, 10 % the front end of the renderer it calls), 36 % the back end. Before that step the
+back end had 45 % and half as many instructions again, before the three steps ahead of it 54 %. What it still
+spends them on: the bones of the skeletons 7 %, the draw calls 6 %, building sprites and beams 5 %, the
+vertices of saber marks on models 4 %. The profile counts every byte of a large copy as an instruction, so it
+says nothing about the copies.
 
 In a view without a crowd both renderers reach the 1000 frames a second the engine allows (a frame lasts at
 least 1 ms, in a `timedemo` too), so there is nothing to measure there. See [threading.md](threading.md) for why
