@@ -489,6 +489,33 @@ THE BATCH
 ===============================================================================
 */
 
+/*
+===============================================================================
+
+REFRACTION
+
+An entity with RF_DISTORTION (the wave of force push, the orb of the repeater) is drawn with a square of the
+screen behind it as its texture, in the place of the texture of its stage. The model has texture coordinates
+that bend that square.
+
+===============================================================================
+*/
+
+static qboolean	vk_refraction;
+static float	vk_refractionScale[2], vk_refractionOffset[2];
+
+// x, y: the lower left corner of the square in the frame as OpenGL counts, size: its edge in pixels
+void VK_SetRefraction( qboolean on, int x, int y, int size ) {
+	vk_refraction = on;
+	if ( on ) {
+		// the copy of the frame has its first row at the top
+		vk_refractionScale[0] = (float)size / vk.width;
+		vk_refractionOffset[0] = (float)x / vk.width;
+		vk_refractionScale[1] = -(float)size / vk.height;
+		vk_refractionOffset[1] = 1.0f - (float)y / vk.height;
+	}
+}
+
 // which side OpenGL culls for the shader: Quake has clockwise front faces
 static int VK_CullMode( cullType_t type ) {
 	qboolean front = (qboolean)( type == CT_FRONT_SIDED );
@@ -687,6 +714,7 @@ void RB_StageIteratorGeneric( void ) {
 	}
 	transform = VK_CurrentTransform();
 	cullMode = VK_CullMode( shader->cullType );
+	const qboolean refract = (qboolean)( vk_refraction && tr.screenImage && ( backEnd.currentEntity->e.renderfx & RF_DISTORTION ) );
 
 	for ( int stage = 0; stage < shader->numUnfoggedPasses; stage++ ) {
 		const shaderStage_t *pStage = &tess.xstages[stage];
@@ -743,6 +771,17 @@ void RB_StageIteratorGeneric( void ) {
 			draw.tex0 = VK_BundleTexture( &pStage->bundle[0] );
 		}
 		VK_BundleTexCoords( &pStage->bundle[0], draw.texMat0, draw.texTurb0 );
+		if ( refract && !pStage->bundle[1].image ) {
+			// special distortion effect -rww: the screen behind the surface instead of its texture
+			draw.tex0 = tr.screenImage->texnum;
+			for ( int i = 0; i < 2; i++ ) {
+				for ( int j = 0; j < 3; j++ ) {
+					draw.texMat0[i * 4 + j] *= vk_refractionScale[i];
+				}
+				draw.texMat0[i * 4 + 2] += vk_refractionOffset[i];
+			}
+			VectorScale4( draw.texTurb0, 0.0f, draw.texTurb0 );
+		}
 		draw.flags |= VK_BundleTcGen( &pStage->bundle[0], draw.tcGenVec0 ) << VKD_TCGEN0_SHIFT;
 		draw.tex1 = draw.tex0;
 		if ( pStage->bundle[1].image ) {
@@ -771,7 +810,8 @@ void RB_StageIteratorGeneric( void ) {
 		if ( cpuColors ) {
 			VK_TessColors( tess.svars.colors );
 		}
-		VK_DrawTess( &draw, program, stateBits, cullMode, (qboolean)shader->polygonOffset );
+		VK_DrawTess( &draw, program, stateBits, ( refract && !pStage->bundle[1].image ) ? VK_CULL_MODE_NONE : cullMode,
+			(qboolean)shader->polygonOffset );
 		if ( cpuColors ) {
 			VK_TessColors( NULL );
 		}
@@ -847,9 +887,10 @@ void RB_EndSurface( void ) {
 		tess.numIndexes = 0;
 		return;
 	}
-	// The refraction of force push and the like bends a copy of the screen. This renderer has no such copy yet,
-	// and drawn as plain surfaces these would be white shapes: leave them out.
-	if ( tess.shader == tr.distortionShader || ( backEnd.currentEntity && ( backEnd.currentEntity->e.renderfx & RF_DISTORTION ) ) ) {
+	// Surfaces with the internal distortion shader cut a hole into the stencil buffer that is filled with a
+	// stretched copy of the screen afterwards (the alternate saber trail). Not done in this renderer: as plain
+	// surfaces they would be white shapes, so they are left out.
+	if ( tess.shader == tr.distortionShader ) {
 		tess.numIndexes = 0;
 		return;
 	}

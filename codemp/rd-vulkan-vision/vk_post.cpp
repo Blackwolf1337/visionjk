@@ -18,7 +18,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 ===========================================================================
 */
 
-// vk_post.cpp: the glow of r_DynamicGlow
+// vk_post.cpp: the glow of r_DynamicGlow, and the copy of the frame for refraction
 //
 // The basic idea, as in rd-vanilla: render the glowing parts of the scene to a buffer of their own, blur that
 // buffer, and add it back to the scene. The glowing parts are the stages of shaders that carry the "glow"
@@ -49,6 +49,9 @@ void VK_InitPost( void ) {
 	vkTarget_t *targets[3] = { &vk.glow, &vk.blur[0], &vk.blur[1] };
 
 	VK_CreateTarget( &vk.glow, vk.width, vk.height, VK_FORMAT_R8G8B8A8_UNORM, usage, VK_IMAGE_ASPECT_COLOR_BIT );
+	VK_CreateTarget( &vk.screen, vk.width, vk.height, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+		VK_IMAGE_ASPECT_COLOR_BIT );
+	vk.screenSlot = -1;
 	VK_CreateTarget( &vk.blur[0], width, height, VK_FORMAT_R8G8B8A8_UNORM, usage, VK_IMAGE_ASPECT_COLOR_BIT );
 	VK_CreateTarget( &vk.blur[1], width, height, VK_FORMAT_R8G8B8A8_UNORM, usage, VK_IMAGE_ASPECT_COLOR_BIT );
 
@@ -67,6 +70,7 @@ void VK_InitPost( void ) {
 
 void VK_ShutdownPost( void ) {
 	VK_DestroyTarget( &vk.glow );
+	VK_DestroyTarget( &vk.screen );
 	VK_DestroyTarget( &vk.blur[0] );
 	VK_DestroyTarget( &vk.blur[1] );
 	vkDestroySampler( vk.device, vk.linearSampler, NULL );
@@ -161,4 +165,54 @@ void VK_EndGlow( void ) {
 	vk.boundPipeline = VK_NULL_HANDLE;
 	vk.stateValid = qfalse;
 	VK_SetViewport( vk.viewport[0], vk.viewport[1], vk.viewport[2], vk.viewport[3], 0.0f, 1.0f );
+}
+
+/*
+===============
+VK_CaptureFrame
+
+Copies the frame as it is right now into vk.screen, which the stages of refraction surfaces then read through
+the texture table in the place of tr.screenImage. rd-vanilla copies a square of the screen into that image
+(glCopyTexImage2D), here the whole frame is copied and the draw is told where its square is.
+===============
+*/
+void VK_CaptureFrame( void ) {
+	VkCommandBuffer cmd;
+	VkImageCopy region;
+
+	if ( !vk.frame || !tr.screenImage ) {
+		return;
+	}
+	cmd = vk.frame->cmd;
+	vkCmdEndRendering( cmd );
+
+	memset( &region, 0, sizeof( region ) );
+	region.srcSubresource.aspectMask = region.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	region.srcSubresource.layerCount = region.dstSubresource.layerCount = 1;
+	region.extent.width = (uint32_t)vk.width;
+	region.extent.height = (uint32_t)vk.height;
+	region.extent.depth = 1;
+	VK_TargetLayout( cmd, &vk.color, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL );
+	VK_TargetLayout( cmd, &vk.screen, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL );
+	vkCmdCopyImage( cmd, vk.color.image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, vk.screen.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region );
+	VK_TargetLayout( cmd, &vk.screen, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
+	VK_TargetLayout( cmd, &vk.color, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
+
+	// the entry of tr.screenImage in the texture table shows the copy from now on
+	if ( vk.screenSlot != (int)tr.screenImage->texnum ) {
+		VkDescriptorImageInfo image = { vk.linearSampler, vk.screen.view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
+		VkWriteDescriptorSet write = { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
+
+		vk.screenSlot = (int)tr.screenImage->texnum;
+		write.dstSet = vk.textureSet;
+		write.dstArrayElement = (uint32_t)vk.screenSlot;
+		write.descriptorCount = 1;
+		write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		write.pImageInfo = &image;
+		vkUpdateDescriptorSets( vk.device, 1, &write, 0, NULL );
+	}
+
+	VK_BeginTarget( cmd, &vk.color, &vk.depth, 2, qtrue );
+	vk.boundPipeline = VK_NULL_HANDLE;
+	vk.stateValid = qfalse;
 }

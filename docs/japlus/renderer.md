@@ -71,7 +71,7 @@ end of `refimport_t` for the instance extensions and the surface. The other rend
 | `vk_backend.cpp` | the render commands: pictures, views, entities, draw order |
 | `vk_world.cpp` | the level in a device buffer, which batches can use it |
 | `vk_model.cpp` | Ghoul2 and MD3 vertices in a device buffer, bones per frame |
-| `vk_post.cpp` | dynamic glow |
+| `vk_post.cpp` | dynamic glow, the copy of the frame for refraction |
 | `vk_gl.cpp` | the immediate mode drawing of the shared files |
 | `shaders/` | `stage.glsl` (one stage of a script on a vertex), `generic.vert`, `skinned.vert`, `generic.frag`, `post.vert`, `gamma.frag`, `blur.frag`, `copy.frag`. `glslc -mfmt=c` turns them into headers while building |
 
@@ -108,12 +108,15 @@ CPU.
   inside a model) this renderer shows black, `rd-vanilla` shows what the last frame left there.
 - Dynamic lights are evaluated per pixel with the same formula, not per triangle.
 - The glow buffers have 8 bits per channel, `rd-vanilla` asks for 16.
+- Refraction (the wave of force push, entities with `RF_DISTORTION`): `rd-vanilla` copies a square of the screen
+  into a texture for each such entity, here the whole frame is copied and the draw is told where its square is.
+  The picture is the same.
 - Screenshots hold the frame after the gamma pass.
 
 ## Not done
 
-Refraction (force push, `RF_DISTORTION`: those surfaces are not drawn at all for now), portals and mirrors,
-stencil and projection shadows (`cg_shadows 2` and `3`), flares, the vertex deform of disintegration, recording
+The stencil variant of refraction (surfaces with the internal distortion shader, the alternate saber trail:
+they are not drawn at all for now), portals and mirrors, stencil and projection shadows (`cg_shadows 2` and `3`), flares, the vertex deform of disintegration, recording
 to AVI, the automap, `r_showtris`, `r_shownormals`, `r_showImages`, anti aliasing. A build for Windows or macOS
 was not tried.
 
@@ -138,7 +141,8 @@ difference side by side.
 
 What is left are animated shaders (the two pictures are seconds apart), the snow and the swaying grass, the
 patches, and texture filter noise. Also seen without a number: main menu and console, a fight of bots with
-blades, glow, marks and the light of the blades on the walls, `vid_restart` between the two renderers in both
+blades, glow, marks and the light of the blades on the walls, the wave of a force push next to the one of
+`rd-vanilla`, `vid_restart` between the two renderers in both
 directions (13 renderer starts in one session).
 
 Speed, one run, six bots asked for and three in the game, the client follows one, `com_maxfps 0`: the engine

@@ -345,6 +345,8 @@ void VK_InitVulkan( void ) {
 	r_swapIntervalVk = ri.Cvar_Get( "r_swapInterval", "0", CVAR_ARCHIVE_ND, "" );
 	r_vkStatic = ri.Cvar_Get( "r_vkStatic", "1", CVAR_CHEAT, "Level and models from buffers on the device. 0: all vertices are built on the CPU every frame" );
 
+	// the builtin images are made again, the copy of the frame has to be put into the texture table again
+	vk.screenSlot = -1;
 	// the buffers of the level and of the models are filled again when they are first drawn
 	VK_WorldChanged();
 	VK_ModelsChanged();
@@ -370,7 +372,8 @@ void VK_InitVulkan( void ) {
 	VK_InitMemory();
 	VK_CreateSwapchain();
 
-	VK_CreateTarget( &vk.color, vk.width, vk.height, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+	VK_CreateTarget( &vk.color, vk.width, vk.height, VK_FORMAT_R8G8B8A8_UNORM,
+		VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
 		VK_IMAGE_ASPECT_COLOR_BIT );
 	VK_CreateTarget( &vk.final, vk.width, vk.height, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
 		VK_IMAGE_ASPECT_COLOR_BIT );

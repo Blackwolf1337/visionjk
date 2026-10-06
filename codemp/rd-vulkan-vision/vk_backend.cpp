@@ -290,6 +290,42 @@ static int RB_SetEntity( int entityNum, float originalTime ) {
 
 /*
 ===============
+RB_CaptureForEntity
+
+An entity that bends the screen behind it: copy the frame and tell the stages which square of it is theirs.
+The square is e.radius pixels wide and lies around the origin of the entity on the screen.
+===============
+*/
+static void RB_CaptureForEntity( const trRefEntity_t *ent ) {
+	const int xcenter = glConfig.vidWidth / 2, ycenter = glConfig.vidHeight / 2;
+	const int rad = (int)ent->e.radius;
+	vec3_t local;
+	float left, up, forward;
+	int x, y, cX, cY;
+
+	VectorSubtract( ent->e.origin, backEnd.refdef.vieworg, local );
+	left = DotProduct( local, backEnd.refdef.viewaxis[1] );
+	up = DotProduct( local, backEnd.refdef.viewaxis[2] );
+	forward = DotProduct( local, backEnd.refdef.viewaxis[0] );
+	if ( forward < 0.01f || rad <= 0 ) {
+		// behind the view: what was captured last stays
+		return;
+	}
+	// as R_WorldCoordToScreenCoord() of rd-vanilla has it: x counts from the right edge, y from the top
+	x = (int)( xcenter + xcenter / forward * ( 90.0f / backEnd.refdef.fov_x ) * left );
+	y = (int)( ycenter - ycenter / forward * ( 90.0f / backEnd.refdef.fov_y ) * up );
+	cX = glConfig.vidWidth - x - rad / 2;
+	cY = glConfig.vidHeight - y - rad / 2;
+	// would it go off screen? cap it off at 0
+	cX = ( cX + rad > glConfig.vidWidth ) ? glConfig.vidWidth - rad : ( cX < 0 ? 0 : cX );
+	cY = ( cY + rad > glConfig.vidHeight ) ? glConfig.vidHeight - rad : ( cY < 0 ? 0 : cY );
+
+	VK_CaptureFrame();
+	VK_SetRefraction( qtrue, cX, cY, rad );
+}
+
+/*
+===============
 RB_RenderDrawSurfList
 ===============
 */
@@ -382,16 +418,24 @@ static void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 	}
 
 	// what was put off to the end, the last first as rd-vanilla has it
+	int lastPostEnt = -1;
+
 	while ( g_numPostRenders > 0 ) {
 		const postRender_t *post = &g_postRenders[--g_numPostRenders];
 
 		RB_BeginSurface( post->shader, post->fogNum );
 		depthRange = RB_SetEntity( post->entNum, originalTime );
+		if ( ( backEnd.currentEntity->e.renderfx & RF_DISTORTION ) && lastPostEnt != post->entNum ) {
+			// do the capture now, we only need to do it once per ent
+			RB_CaptureForEntity( backEnd.currentEntity );
+			lastPostEnt = post->entNum;
+		}
 		RB_SetDepthRange( post->depthRange );
 		depthRange = post->depthRange;
 		VK_AddSurface( post->drawSurf->surface );
 		RB_EndSurface();
 	}
+	VK_SetRefraction( qfalse, 0, 0, 0 );
 	backEnd.refdef.floatTime = originalTime;
 
 	// go back to the world modelview matrix

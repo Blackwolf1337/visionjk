@@ -190,6 +190,8 @@ typedef struct vkState_s {
 	vkTarget_t					color;				// the frame as the game draws it
 	vkTarget_t					depth;
 	vkTarget_t					final;				// after gamma, what goes to the window and into screenshots
+	vkTarget_t					screen;				// a copy of the frame as it was a moment ago, for surfaces that bend what is behind them
+	int							screenSlot;			// the entry of the texture table that shows it, -1: none yet
 	vkTarget_t					glow;				// r_DynamicGlow: the stages that glow, drawn again over the depth of the scene
 	vkTarget_t					blur[2];			// and blurred, r_DynamicGlowWidth x r_DynamicGlowHeight
 	qboolean					finalValid;			// a frame has been rendered into it
@@ -323,6 +325,7 @@ extern bool	g_bDynamicGlowSupported;
 void		VK_InvalidateTransform( void );
 void		VK_TransformChanged( void );
 uint32_t	VK_CurrentTransform( void );
+void		VK_SetRefraction( qboolean on, int x, int y, int size );
 void		VK_SetProjection( const float *projection );
 
 // vk_post.cpp
@@ -330,6 +333,7 @@ void		VK_InitPost( void );
 void		VK_ShutdownPost( void );
 void		VK_BeginGlow( void );
 void		VK_EndGlow( void );
+void		VK_CaptureFrame( void );
 
 // vk_frame.cpp
 void		VK_BeginTarget( VkCommandBuffer cmd, vkTarget_t *color, vkTarget_t *depth, int colorLoad, qboolean depthLoad );
