@@ -3221,6 +3221,50 @@ void CG_CalcEntityLerpPositions( centity_t *cent ) {
 	}
 }
 
+/*
+===============
+CG_CarriedLerp
+
+Port, not in the original: the player I carry with +button13 (g_props.c of the game). He comes out of the
+snapshots like every other player, so he is drawn where he was a snapshot or two ago, while I am predicted to
+where I am now: he would trail behind me. So he is put where he was for me in those snapshots: his place of
+then, seen from where the server had me then, moved and turned to where I am now.
+
+Nothing to do for the hugs of others, both of them come out of the same snapshots.
+===============
+*/
+static void CG_CarriedLerp( centity_t *cent ) {
+	const playerState_t	*ps = &cg.predictedPlayerState;
+	const int			carry = ps->stats[STAT_CARRY];
+	vec3_t				then, offset;
+	float				yawThen, turn, s, c;
+
+	if ( !(carry & CARRY_HOLDS) || cent->currentState.number != (carry & CARRY_NUM_MASK) - 1 )
+		return;
+
+	// where the server had me at the time he is drawn for
+	VectorCopy( cg.snap->ps.origin, then );
+	yawThen = cg.snap->ps.viewangles[YAW];
+	if ( cent->interpolate && cg.nextSnap && !cg.nextFrameTeleport ) {
+		VectorSubtract( cg.nextSnap->ps.origin, then, offset );
+		VectorMA( then, cg.frameInterpolation, offset, then );
+		yawThen = LerpAngle( yawThen, cg.nextSnap->ps.viewangles[YAW], cg.frameInterpolation );
+	}
+
+	VectorSubtract( cent->lerpOrigin, then, offset );
+	turn = AngleSubtract( ps->viewangles[YAW], yawThen );
+	s = sinf( DEG2RAD( turn ) );
+	c = cosf( DEG2RAD( turn ) );
+	cent->lerpOrigin[0] = ps->origin[0] + c * offset[0] - s * offset[1];
+	cent->lerpOrigin[1] = ps->origin[1] + s * offset[0] + c * offset[1];
+	cent->lerpOrigin[2] = ps->origin[2] + offset[2];
+	cent->lerpAngles[YAW] = AngleNormalize360( cent->lerpAngles[YAW] + turn );
+
+	// CG_Player smooths the place of a player towards where it had him in the last frame (cg_smoothClients),
+	// that would let him trail again
+	VectorCopy( cent->lerpOrigin, cent->beamEnd );
+}
+
 void CG_G2Animated( centity_t *cent );
 
 static void CG_FX( centity_t *cent )
@@ -3332,6 +3376,7 @@ static void CG_AddCEntity( centity_t *cent ) {
 
 	// calculate the current origin
 	CG_CalcEntityLerpPositions( cent );
+	CG_CarriedLerp( cent );
 
 	// add automatic effects
 	CG_EntityEffects( cent );

@@ -71,6 +71,7 @@ void CG_BuildSolidList( void ) {
 	entityState_t	*ent;
 	vec3_t			difference;
 	float			dsquared;
+	int				mate;
 
 	cg_numSolidEntities = 0;
 	cg_numTriggerEntities = 0;
@@ -80,6 +81,9 @@ void CG_BuildSolidList( void ) {
 	} else {
 		snap = cg.snap;
 	}
+	// Port, not in the original: the other one of a hug with +button13 is not there for my moves, the server
+	// leaves him out of them too (SV_PMTrace). -1 without one.
+	mate = ( snap->ps.stats[STAT_CARRY] & CARRY_NUM_MASK ) - 1;
 
 	for ( i = 0 ; i < snap->numEntities ; i++ ) {
 		cent = &cg_entities[ snap->entities[ i ].number ];
@@ -91,7 +95,7 @@ void CG_BuildSolidList( void ) {
 			continue;
 		}
 
-		if ( cent->nextState.solid ) {
+		if ( cent->nextState.solid && snap->entities[ i ].number != mate ) {
 			cg_solidEntities[cg_numSolidEntities] = cent;
 			cg_numSolidEntities++;
 			continue;
@@ -1012,6 +1016,13 @@ void CG_PredictPlayerState( void ) {
 		{
 			CG_InterpolateVehiclePlayerState(qtrue);
 		}
+		return;
+	}
+
+	// Port, not in the original: carried with +button13 I have no moves of my own (the server drops them), and
+	// the one who carries me is drawn from the snapshots. So am I then, predicted I would be ahead of him.
+	if ( cg.snap->ps.stats[STAT_CARRY] & CARRY_HELD ) {
+		CG_InterpolatePlayerState( qtrue );
 		return;
 	}
 
