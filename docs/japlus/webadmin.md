@@ -80,6 +80,10 @@ the answer tells the page that the numbers started over.
 | `POST /api/entity` | `op` spawn, update or delete, with `id` and `kv` (one `key=value` per line) |
 | `GET /api/config` | the text of `server.cfg`, as UTF-8 |
 | `POST /api/config`, `POST /api/config?exec=1` | the body is the new text of `server.cfg` (plain text, not a form). With `exec=1` the server runs `exec server.cfg` afterwards |
+| `GET /api/fs/list?root=&path=` | the files of a folder. `root` is `home` (the game folder in the home path of the server) or `install` (the one of the installation, read only) |
+| `GET /api/fs/get?root=&path=[&text=1]` | a file as a download, or as UTF-8 text for the editor |
+| `POST /api/fs/put?path=&offset=[&last=1][&text=1]` | the body is the next piece of a file (a request is 64 KB at most). `last=1` puts the file in its place |
+| `POST /api/fs/delete?path=`, `/api/fs/rename?path=&to=`, `/api/fs/mkdir?path=` | in the home path only |
 
 ## Where it differs from JKAdmin
 
@@ -165,6 +169,31 @@ Also changed:
   server list). It is a second layer under the text field, whose own letters are not drawn (`cfgLine`,
   `cfgString`, `cfgPaint` in the page), no library. Checked with node that every line of the config reads
   the same colored and plain, not seen in a browser.
+- New: the tab "Files", a file manager for the game folder and nothing above it (`WA_ApiFs*` in
+  `g_webadmin.c`). It shows two folders: the game folder in the home path of the server
+  (`fs_homepath/<fs_game>`: logs, the stored config, what the panel saved), which can be changed, and the game
+  folder of the installation (`fs_basepath/<fs_game>`), which can only be read. A click opens a folder or a
+  text file (in a text field as in the Config tab, with the colors for a `.cfg`), any other file is
+  downloaded. In the server folder: upload (in pieces of 48 KB, several files, 512 MB at most), new folder,
+  rename (also into another folder), delete (a folder only when it is empty). A text file of the installation
+  is saved into the server folder under the same name, where the engine looks first.
+  How it is kept inside the folder:
+  - a path is checked letter by letter: names of letters, digits, blank and `_-.()+,` with `/` between them,
+    none that begins with a dot. That leaves no `..`, no absolute path, no backslash, no drive letter. A file
+    with another kind of name is listed and can not be touched.
+  - the system then resolves the path (`realpath`), and the result has to lie inside the folder. A symbolic
+    link is shown as one and neither followed nor touched (on Windows a junction is not looked for).
+  - nothing is written, renamed or deleted that could be run: `.so`, `.dll`, `.exe`, scripts and the like,
+    wherever in the name the extension is. A game module with another content would be loaded with the next
+    map, so the modules can only be downloaded.
+  - a file comes in as `<name>.part` and takes its place with the last piece, so a file that is there is
+    replaced in one go or not at all. A rename never goes onto something that is there.
+  - an address that does not fit the buffer of the request line is refused (414), not cut.
+  Every change and every file that is read goes to the security log with its path. Checked on the running
+  server with a script: 27 paths that try to leave the folder for list and get, four more for put, mkdir,
+  rename and delete, a link to `/etc` inside the folder, the game module, and the plain operations on scratch
+  files with text in Latin-1 and an upload in two pieces. Everything was refused that has to be and nothing
+  was written outside. The page itself was not seen in a browser. The Windows module builds, it was not run.
 - New entity `misc_cube` (`codemp/game/g_props.c`, next to the ball), placed in the World tab like the ball. A
   cube with corners and edges that is a rigid body: it falls, lands on a corner or an edge, tips over, tumbles
   and slides to a stop on one of its faces. It is heavy. Players and NPCs shove it instead of kicking it away:
