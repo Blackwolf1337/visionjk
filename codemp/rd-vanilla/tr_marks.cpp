@@ -253,6 +253,40 @@ R_MarkFragments
 
 =================
 */
+#ifdef RD_VULKAN_VISION
+/*
+=================
+R_MarkCornersBehind
+
+rd-vulkan-vision: qtrue when the planes around a mark leave nothing of a polygon with these corners.
+
+R_ChopPolyBehindPlane() only lets a polygon through if one of its points is more than its epsilon of 0.5 in front
+of the plane, and what the chops before it left are points between the corners. So if no corner is in front of
+one of the planes, R_AddMarkFragments() ends with nothing, after it has copied and chopped. That is the case for
+nearly every triangle here: the game asks for the shadow mark of every player in every frame, and all triangles of
+every patch and mesh near it are tried, hundreds for a floor that is a patch. In a fight this was a tenth of all
+the work of a frame.
+
+0.375 and not 0.5: a corner that close to the limit goes the long way, so rounding decides nothing here.
+=================
+*/
+static qboolean R_MarkCornersBehind( int numCorners, vec3_t *corners, int numPlanes, vec3_t *normals, const float *dists ) {
+	for ( int i = 0; i < numPlanes; i++ ) {
+		int k;
+
+		for ( k = 0; k < numCorners; k++ ) {
+			if ( DotProduct( corners[k], normals[i] ) - dists[i] > 0.375f ) {
+				break;
+			}
+		}
+		if ( k == numCorners ) {
+			return qtrue;
+		}
+	}
+	return qfalse;
+}
+#endif
+
 int R_MarkFragments( int numPoints, const vec3_t *points, const vec3_t projection,
 				   int maxPoints, vec3_t pointBuffer, int maxFragments, markFragment_t *fragmentBuffer ) {
 	int				numsurfaces, numPlanes;
@@ -349,6 +383,20 @@ int R_MarkFragments( int numPoints, const vec3_t *points, const vec3_t projectio
 
 					dv = cv->verts + m * cv->width + n;
 
+#ifdef RD_VULKAN_VISION
+					{
+						// the four corners of the cell as its two triangles have them below
+						vec3_t corners[4];
+
+						VectorMA( dv[0].xyz, MARKER_OFFSET, dv[0].normal, corners[0] );
+						VectorMA( dv[1].xyz, MARKER_OFFSET, dv[1].normal, corners[1] );
+						VectorMA( dv[cv->width].xyz, MARKER_OFFSET, dv[cv->width].normal, corners[2] );
+						VectorMA( dv[cv->width + 1].xyz, MARKER_OFFSET, dv[cv->width + 1].normal, corners[3] );
+						if ( R_MarkCornersBehind( 4, corners, numPlanes, normals, dists ) ) {
+							continue;
+						}
+					}
+#endif
 					VectorCopy(dv[0].xyz, clipPoints[0][0]);
 					VectorMA(clipPoints[0][0], MARKER_OFFSET, dv[0].normal, clipPoints[0][0]);
 					VectorCopy(dv[cv->width].xyz, clipPoints[0][1]);
@@ -413,6 +461,11 @@ int R_MarkFragments( int numPoints, const vec3_t *points, const vec3_t projectio
 					v = surf->points[0] + VERTEXSIZE * indexes[k+j];;
 					VectorMA( v, MARKER_OFFSET, surf->plane.normal, clipPoints[0][j] );
 				}
+#ifdef RD_VULKAN_VISION
+				if ( R_MarkCornersBehind( 3, clipPoints[0], numPlanes, normals, dists ) ) {
+					continue;
+				}
+#endif
 				// add the fragments of this face
 				R_AddMarkFragments( 3 , clipPoints,
 								   numPlanes, normals, dists,
@@ -436,6 +489,11 @@ int R_MarkFragments( int numPoints, const vec3_t *points, const vec3_t projectio
 					v = surf->verts[surf->indexes[k + j]].xyz;
 					VectorMA(v, MARKER_OFFSET, surf->verts[surf->indexes[k + j]].normal, clipPoints[0][j]);
 				}
+#ifdef RD_VULKAN_VISION
+				if ( R_MarkCornersBehind( 3, clipPoints[0], numPlanes, normals, dists ) ) {
+					continue;
+				}
+#endif
 
 				// add the fragments of this face
 				R_AddMarkFragments(3, clipPoints,
