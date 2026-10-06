@@ -70,7 +70,7 @@ a surface holds any more
 */
 void VK_ModelsChanged( void ) {
 	if ( vk.device ) {
-		vkDeviceWaitIdle( vk.device );
+		qvkDeviceWaitIdle( vk.device );
 	}
 	vk_skinFirstVertex.clear();
 	vk_modelUsed = 0;
@@ -145,7 +145,7 @@ int VK_SkinnedSurface( const mdxmSurface_t *surface ) {
 	region.srcOffset = staged;
 	region.dstOffset = vk_modelUsed;
 	region.size = size;
-	vkCmdCopyBuffer( VK_UploadCmd(), vk.staging.buffer, vk_modelVertexes.buffer, 1, &region );
+	qvkCmdCopyBuffer( VK_UploadCmd(), vk.staging.buffer, vk_modelVertexes.buffer, 1, &region );
 	first = (int)( vk_modelUsed / sizeof( vkSkinVertex_t ) );
 	vk_modelUsed += size;
 	vk_skinFirstVertex[surface] = first;
@@ -195,7 +195,7 @@ int VK_StaticMeshSurface( const md3Surface_t *surface ) {
 	region.srcOffset = staged;
 	region.dstOffset = vk_modelUsed;
 	region.size = size;
-	vkCmdCopyBuffer( VK_UploadCmd(), vk.staging.buffer, vk_modelVertexes.buffer, 1, &region );
+	qvkCmdCopyBuffer( VK_UploadCmd(), vk.staging.buffer, vk_modelVertexes.buffer, 1, &region );
 	first = (int)( vk_modelUsed / sizeof( vkSkinVertex_t ) );
 	vk_modelUsed += size;
 	vk_skinFirstVertex[surface] = first;

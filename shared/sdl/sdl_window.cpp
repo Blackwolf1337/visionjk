@@ -944,3 +944,16 @@ qboolean WIN_VK_CreateSurface( void *instance, void *surface )
 	}
 	return qtrue;
 }
+
+/*
+===============
+WIN_VK_GetInstanceProcAddr
+
+The vkGetInstanceProcAddr of the Vulkan library SDL loaded for the window, NULL if there is none. The renderer
+asks it for every other function and does not link the library itself.
+===============
+*/
+void *WIN_VK_GetInstanceProcAddr( void )
+{
+	return SDL_Vulkan_GetVkGetInstanceProcAddr();
+}

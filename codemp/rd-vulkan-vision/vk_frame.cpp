@@ -46,10 +46,10 @@ void VK_InitFrames( void ) {
 		VkDescriptorBufferInfo buffers[4];
 		VkWriteDescriptorSet writes[4];
 
-		VK_CHECK( vkAllocateCommandBuffers( vk.device, &alloc, &frame->cmd ) );
-		VK_CHECK( vkCreateFence( vk.device, &fence, NULL, &frame->fence ) );
-		VK_CHECK( vkCreateSemaphore( vk.device, &semaphore, NULL, &frame->acquired ) );
-		VK_CHECK( vkCreateSemaphore( vk.device, &semaphore, NULL, &frame->rendered ) );
+		VK_CHECK( qvkAllocateCommandBuffers( vk.device, &alloc, &frame->cmd ) );
+		VK_CHECK( qvkCreateFence( vk.device, &fence, NULL, &frame->fence ) );
+		VK_CHECK( qvkCreateSemaphore( vk.device, &semaphore, NULL, &frame->acquired ) );
+		VK_CHECK( qvkCreateSemaphore( vk.device, &semaphore, NULL, &frame->rendered ) );
 		VK_CreateBuffer( &frame->vertexes, VK_VERTEX_BYTES, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, qtrue );
 		VK_CreateBuffer( &frame->indexes, VK_INDEX_BYTES, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, qtrue );
 		VK_CreateBuffer( &frame->globals, sizeof( vkGlobals_t ), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, qtrue );
@@ -59,7 +59,7 @@ void VK_InitFrames( void ) {
 		VK_CreateBuffer( &frame->probes, sizeof( uint32_t ) * VK_MAX_FLARES, VK_BUFFER_USAGE_TRANSFER_DST_BIT, qtrue );
 		frame->numProbes = frame->numProbesCopied = 0;
 
-		VK_CHECK( vkAllocateDescriptorSets( vk.device, &set, &frame->set ) );
+		VK_CHECK( qvkAllocateDescriptorSets( vk.device, &set, &frame->set ) );
 		buffers[0].buffer = frame->globals.buffer;
 		buffers[1].buffer = frame->transforms.buffer;
 		buffers[2].buffer = frame->draws.buffer;
@@ -75,7 +75,7 @@ void VK_InitFrames( void ) {
 			writes[j].descriptorType = j ? VK_DESCRIPTOR_TYPE_STORAGE_BUFFER : VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 			writes[j].pBufferInfo = &buffers[j];
 		}
-		vkUpdateDescriptorSets( vk.device, 4, writes, 0, NULL );
+		qvkUpdateDescriptorSets( vk.device, 4, writes, 0, NULL );
 	}
 }
 
@@ -83,9 +83,9 @@ void VK_ShutdownFrames( void ) {
 	for ( int i = 0; i < VK_FRAMES; i++ ) {
 		vkFrame_t *frame = &vk.frames[i];
 
-		vkDestroyFence( vk.device, frame->fence, NULL );
-		vkDestroySemaphore( vk.device, frame->acquired, NULL );
-		vkDestroySemaphore( vk.device, frame->rendered, NULL );
+		qvkDestroyFence( vk.device, frame->fence, NULL );
+		qvkDestroySemaphore( vk.device, frame->acquired, NULL );
+		qvkDestroySemaphore( vk.device, frame->rendered, NULL );
 		VK_DestroyBuffer( &frame->vertexes );
 		VK_DestroyBuffer( &frame->indexes );
 		VK_DestroyBuffer( &frame->globals );
@@ -122,7 +122,7 @@ void VK_BeginTarget( VkCommandBuffer cmd, vkTarget_t *color, vkTarget_t *depth, 
 		info.pDepthAttachment = &depthInfo;
 		info.pStencilAttachment = &depthInfo;
 	}
-	vkCmdBeginRendering( cmd, &info );
+	qvkCmdBeginRendering( cmd, &info );
 }
 
 /*
@@ -157,8 +157,8 @@ void VK_SetViewport( int x, int y, int width, int height, float minDepth, float 
 	scissor.offset.y = up;
 	scissor.extent.width = (uint32_t)Q_max( right - left, 0 );
 	scissor.extent.height = (uint32_t)Q_max( down - up, 0 );
-	vkCmdSetViewport( vk.frame->cmd, 0, 1, &viewport );
-	vkCmdSetScissor( vk.frame->cmd, 0, 1, &scissor );
+	qvkCmdSetViewport( vk.frame->cmd, 0, 1, &viewport );
+	qvkCmdSetScissor( vk.frame->cmd, 0, 1, &scissor );
 }
 
 // glDepthRange: the part of the depth buffer the following draws land in
@@ -181,7 +181,7 @@ static void VK_ClearRect( int x, int y, int width, int height, const VkClearAtta
 	rect.rect.extent.height = (uint32_t)( down - up );
 	rect.baseArrayLayer = 0;
 	rect.layerCount = 1;
-	vkCmdClearAttachments( vk.frame->cmd, 1, attachment, 1, &rect );
+	qvkCmdClearAttachments( vk.frame->cmd, 1, attachment, 1, &rect );
 }
 
 void VK_ClearDepth( int x, int y, int width, int height ) {
@@ -214,7 +214,7 @@ void VK_BindFrameSets( void ) {
 	}
 	sets[0] = vk.frame->set;
 	sets[1] = vk.textureSet;
-	vkCmdBindDescriptorSets( vk.frame->cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.pipelineLayout, 0, 2, sets, 0, NULL );
+	qvkCmdBindDescriptorSets( vk.frame->cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.pipelineLayout, 0, 2, sets, 0, NULL );
 }
 
 /*
@@ -231,7 +231,7 @@ void VK_BeginFrame( void ) {
 		return;
 	}
 	frame = &vk.frames[vk.frameIndex];
-	VK_CHECK( vkWaitForFences( vk.device, 1, &frame->fence, VK_TRUE, UINT64_MAX ) );
+	VK_CHECK( qvkWaitForFences( vk.device, 1, &frame->fence, VK_TRUE, UINT64_MAX ) );
 	// what the device wrote when these commands ran last can be read now
 	VK_ReadProbes( frame );
 	frame->vertexUsed = 0;
@@ -250,8 +250,8 @@ void VK_BeginFrame( void ) {
 	globals->screen[1] = (float)vk.height;
 
 	begin.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-	VK_CHECK( vkResetCommandBuffer( frame->cmd, 0 ) );
-	VK_CHECK( vkBeginCommandBuffer( frame->cmd, &begin ) );
+	VK_CHECK( qvkResetCommandBuffer( frame->cmd, 0 ) );
+	VK_CHECK( qvkBeginCommandBuffer( frame->cmd, &begin ) );
 	VK_TargetLayout( frame->cmd, &vk.color, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
 	VK_TargetLayout( frame->cmd, &vk.depth, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL );
 	VK_BeginTarget( frame->cmd, &vk.color, &vk.depth, 1, qfalse );
@@ -271,20 +271,20 @@ static qboolean VK_AcquireImage( vkFrame_t *frame, uint32_t *imageIndex ) {
 		VkResult result;
 
 		if ( !vk.swapchain || VK_SwapIntervalChanged() ) {
-			vkDeviceWaitIdle( vk.device );
+			qvkDeviceWaitIdle( vk.device );
 			VK_CreateSwapchain();
 			if ( !vk.swapchain ) {
 				return qfalse;
 			}
 		}
-		result = vkAcquireNextImageKHR( vk.device, vk.swapchain, UINT64_MAX, frame->acquired, VK_NULL_HANDLE, imageIndex );
+		result = qvkAcquireNextImageKHR( vk.device, vk.swapchain, UINT64_MAX, frame->acquired, VK_NULL_HANDLE, imageIndex );
 		if ( result == VK_SUCCESS || result == VK_SUBOPTIMAL_KHR ) {
 			return qtrue;
 		}
 		if ( result != VK_ERROR_OUT_OF_DATE_KHR ) {
 			VK_Fatal( "vkAcquireNextImageKHR", result );
 		}
-		vkDeviceWaitIdle( vk.device );
+		qvkDeviceWaitIdle( vk.device );
 		VK_CreateSwapchain();
 	}
 	return qfalse;
@@ -312,19 +312,19 @@ void VK_EndFrame( void ) {
 		return;
 	}
 	cmd = frame->cmd;
-	vkCmdEndRendering( cmd );
+	qvkCmdEndRendering( cmd );
 	vk.rendering = qfalse;
 
 	VK_TargetLayout( cmd, &vk.color, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
 	VK_TargetLayout( cmd, &vk.final, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
 	VK_BeginTarget( cmd, &vk.final, NULL, 0, qfalse );
-	vkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.gammaPipeline );
-	vkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.postPipelineLayout, 0, 1, &vk.postSet, 0, NULL );
-	vkCmdPushConstants( cmd, vk.postPipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof( gamma ), gamma );
-	vkCmdSetViewport( cmd, 0, 1, &viewport );
-	vkCmdSetScissor( cmd, 0, 1, &scissor );
-	vkCmdDraw( cmd, 3, 1, 0, 0 );
-	vkCmdEndRendering( cmd );
+	qvkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.gammaPipeline );
+	qvkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.postPipelineLayout, 0, 1, &vk.postSet, 0, NULL );
+	qvkCmdPushConstants( cmd, vk.postPipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof( gamma ), gamma );
+	qvkCmdSetViewport( cmd, 0, 1, &viewport );
+	qvkCmdSetScissor( cmd, 0, 1, &scissor );
+	qvkCmdDraw( cmd, 3, 1, 0, 0 );
+	qvkCmdEndRendering( cmd );
 	VK_TargetLayout( cmd, &vk.final, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL );
 
 	present = VK_AcquireImage( frame, &imageIndex );
@@ -343,17 +343,17 @@ void VK_EndFrame( void ) {
 		blit.dstOffsets[1].z = 1;
 		VK_SetLayout( cmd, vk.swapImages[imageIndex], VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
 			VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL );
-		vkCmdBlitImage( cmd, vk.final.image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, vk.swapImages[imageIndex],
+		qvkCmdBlitImage( cmd, vk.final.image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, vk.swapImages[imageIndex],
 			VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &blit, sameSize ? VK_FILTER_NEAREST : VK_FILTER_LINEAR );
 		VK_SetLayout( cmd, vk.swapImages[imageIndex], VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 			VK_IMAGE_LAYOUT_PRESENT_SRC_KHR );
 	}
-	VK_CHECK( vkEndCommandBuffer( cmd ) );
+	VK_CHECK( qvkEndCommandBuffer( cmd ) );
 
 	// textures this frame draws with have to be on the device before it runs
 	VK_FlushUploads();
 
-	VK_CHECK( vkResetFences( vk.device, 1, &frame->fence ) );
+	VK_CHECK( qvkResetFences( vk.device, 1, &frame->fence ) );
 	submit.commandBufferCount = 1;
 	submit.pCommandBuffers = &cmd;
 	if ( present ) {
@@ -363,7 +363,7 @@ void VK_EndFrame( void ) {
 		submit.signalSemaphoreCount = 1;
 		submit.pSignalSemaphores = &frame->rendered;
 	}
-	VK_CHECK( vkQueueSubmit( vk.queue, 1, &submit, frame->fence ) );
+	VK_CHECK( qvkQueueSubmit( vk.queue, 1, &submit, frame->fence ) );
 
 	if ( present ) {
 		VkPresentInfoKHR info = { VK_STRUCTURE_TYPE_PRESENT_INFO_KHR };
@@ -374,9 +374,9 @@ void VK_EndFrame( void ) {
 		info.swapchainCount = 1;
 		info.pSwapchains = &vk.swapchain;
 		info.pImageIndices = &imageIndex;
-		result = vkQueuePresentKHR( vk.queue, &info );
+		result = qvkQueuePresentKHR( vk.queue, &info );
 		if ( result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR ) {
-			vkDeviceWaitIdle( vk.device );
+			qvkDeviceWaitIdle( vk.device );
 			VK_CreateSwapchain();
 		} else if ( result != VK_SUCCESS ) {
 			VK_Fatal( "vkQueuePresentKHR", result );
@@ -457,8 +457,8 @@ qboolean VK_UploadGeometry( const vec4_t *xyz, const vec4_t *normal, const vec2_
 	}
 	memcpy( frame->indexes.mapped + frame->indexUsed, indexes, (size_t)indexBytes );
 	vk.tessColorOffset = offsets[3];
-	vkCmdBindVertexBuffers( frame->cmd, 0, 4, buffers, offsets );
-	vkCmdBindIndexBuffer( frame->cmd, frame->indexes.buffer, frame->indexUsed, VK_INDEX_TYPE_UINT32 );
+	qvkCmdBindVertexBuffers( frame->cmd, 0, 4, buffers, offsets );
+	qvkCmdBindIndexBuffer( frame->cmd, frame->indexes.buffer, frame->indexUsed, VK_INDEX_TYPE_UINT32 );
 	frame->indexUsed += indexBytes;
 	vk.numBoundIndexes = numIndexes;
 	vk.statCpuVertexes[0] += numVerts;
@@ -483,8 +483,8 @@ qboolean VK_UploadIndexes( VkBuffer vertexBuffer, const VkDeviceSize *offsets, i
 		return qfalse;
 	}
 	memcpy( frame->indexes.mapped + frame->indexUsed, indexes, (size_t)indexBytes );
-	vkCmdBindVertexBuffers( frame->cmd, 0, (uint32_t)numBindings, buffers, offsets );
-	vkCmdBindIndexBuffer( frame->cmd, frame->indexes.buffer, frame->indexUsed, VK_INDEX_TYPE_UINT32 );
+	qvkCmdBindVertexBuffers( frame->cmd, 0, (uint32_t)numBindings, buffers, offsets );
+	qvkCmdBindIndexBuffer( frame->cmd, frame->indexes.buffer, frame->indexUsed, VK_INDEX_TYPE_UINT32 );
 	frame->indexUsed += indexBytes;
 	vk.numBoundIndexes = numIndexes;
 	vk.statStaticIndexes[0] += numIndexes;
@@ -536,7 +536,7 @@ void VK_TessColors( const color4ub_t *colors ) {
 		memcpy( frame->vertexes.mapped + offset, colors, (size_t)size );
 		frame->vertexUsed += ( size + 15 ) & ~(VkDeviceSize)15;
 	}
-	vkCmdBindVertexBuffers( frame->cmd, 3, 1, &frame->vertexes.buffer, &offset );
+	qvkCmdBindVertexBuffers( frame->cmd, 3, 1, &frame->vertexes.buffer, &offset );
 }
 
 // dynamic state as one word, so that a draw only sets what differs from the draw before it
@@ -566,7 +566,7 @@ void VK_DrawTess( const vkDraw_t *draw, vkProgram_t program, uint32_t stateBits,
 
 	pipeline = VK_FindPipeline( program, stateBits );
 	if ( pipeline != vk.boundPipeline ) {
-		vkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline );
+		qvkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline );
 		vk.boundPipeline = pipeline;
 	}
 
@@ -585,30 +585,30 @@ void VK_DrawTess( const vkDraw_t *draw, vkProgram_t program, uint32_t stateBits,
 	}
 	changed = vk.stateValid ? ( state ^ vk.boundState ) : ~0u;
 	if ( changed & ( 3u << VKS_CULL_SHIFT ) ) {
-		vkCmdSetCullMode( cmd, (VkCullModeFlags)cullMode );
+		qvkCmdSetCullMode( cmd, (VkCullModeFlags)cullMode );
 	}
 	if ( changed & VKS_DEPTH_TEST ) {
-		vkCmdSetDepthTestEnable( cmd, ( state & VKS_DEPTH_TEST ) ? VK_TRUE : VK_FALSE );
+		qvkCmdSetDepthTestEnable( cmd, ( state & VKS_DEPTH_TEST ) ? VK_TRUE : VK_FALSE );
 	}
 	if ( changed & VKS_DEPTH_WRITE ) {
-		vkCmdSetDepthWriteEnable( cmd, ( state & VKS_DEPTH_WRITE ) ? VK_TRUE : VK_FALSE );
+		qvkCmdSetDepthWriteEnable( cmd, ( state & VKS_DEPTH_WRITE ) ? VK_TRUE : VK_FALSE );
 	}
 	if ( changed & VKS_DEPTH_EQUAL ) {
-		vkCmdSetDepthCompareOp( cmd, ( state & VKS_DEPTH_EQUAL ) ? VK_COMPARE_OP_EQUAL : VK_COMPARE_OP_LESS_OR_EQUAL );
+		qvkCmdSetDepthCompareOp( cmd, ( state & VKS_DEPTH_EQUAL ) ? VK_COMPARE_OP_EQUAL : VK_COMPARE_OP_LESS_OR_EQUAL );
 	}
 	if ( changed & VKS_OFFSET ) {
-		vkCmdSetDepthBiasEnable( cmd, ( state & VKS_OFFSET ) ? VK_TRUE : VK_FALSE );
+		qvkCmdSetDepthBiasEnable( cmd, ( state & VKS_OFFSET ) ? VK_TRUE : VK_FALSE );
 		// glPolygonOffset( factor, units ): the factor scales the slope, the units are the constant part
-		vkCmdSetDepthBias( cmd, r_offsetUnits->value, 0.0f, r_offsetFactor->value );
+		qvkCmdSetDepthBias( cmd, r_offsetUnits->value, 0.0f, r_offsetFactor->value );
 	}
 	vk.boundState = state;
 	vk.stateValid = qtrue;
 
 	drawIndex = (uint32_t)frame->numDraws++;
 	memcpy( frame->draws.mapped + sizeof( vkDraw_t ) * drawIndex, draw, sizeof( *draw ) );
-	vkCmdPushConstants( cmd, vk.pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0,
+	qvkCmdPushConstants( cmd, vk.pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0,
 		sizeof( drawIndex ), &drawIndex );
-	vkCmdDrawIndexed( cmd, (uint32_t)vk.numBoundIndexes, 1, 0, 0, 0 );
+	qvkCmdDrawIndexed( cmd, (uint32_t)vk.numBoundIndexes, 1, 0, 0, 0 );
 }
 
 /*
@@ -633,7 +633,7 @@ byte *RB_ReadPixels( int x, int y, int width, int height, size_t *offset, int *p
 	}
 
 	VK_FlushUploads();
-	vkDeviceWaitIdle( vk.device );
+	qvkDeviceWaitIdle( vk.device );
 	VK_CreateBuffer( &readback, (VkDeviceSize)width * height * 4, VK_BUFFER_USAGE_TRANSFER_DST_BIT, qtrue );
 	memset( &region, 0, sizeof( region ) );
 	region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -644,7 +644,7 @@ byte *RB_ReadPixels( int x, int y, int width, int height, size_t *offset, int *p
 	region.imageExtent.height = (uint32_t)height;
 	region.imageExtent.depth = 1;
 	cmd = VK_UploadCmd();
-	vkCmdCopyImageToBuffer( cmd, vk.final.image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, readback.buffer, 1, &region );
+	qvkCmdCopyImageToBuffer( cmd, vk.final.image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, readback.buffer, 1, &region );
 	VK_FlushUploads();
 
 	for ( int row = 0; row < height; row++ ) {

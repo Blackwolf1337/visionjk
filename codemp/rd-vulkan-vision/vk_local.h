@@ -25,7 +25,10 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include "tr_local.h"
 
+// no prototypes: the functions are pointers that are filled at run time, see vk_funcs.h
+#define VK_NO_PROTOTYPES
 #include <vulkan/vulkan.h>
+#include "vk_funcs.h"
 
 #define VK_MAX_IMAGES		4096		// size of the texture table the shaders index, image_t::texnum is the index
 #define VK_FRAMES			2			// frames in flight

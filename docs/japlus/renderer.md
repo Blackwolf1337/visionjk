@@ -15,8 +15,23 @@ cmake -S . -B build64 -DBuildMPRdVulkanVision=ON
 cmake --build build64 -j$(nproc)
 ```
 
-Needs the Vulkan headers and loader and `glslc` (package `shaderc`) on the build machine. The result is
-`codemp/rd-vulkan-vision/rd-vulkan-vision_x86_64.so`, it has to lie next to the engine binary. In the game:
+Needs the Vulkan headers and `glslc` (package `shaderc`) on the build machine. The Vulkan library is not linked:
+SDL loads it for the window, the engine hands its `vkGetInstanceProcAddr` to the renderer, and the renderer asks
+that for every function it calls (`vk_funcs.h`, pointers named `qvk...` as `qgl...` in `rd-vanilla`). The result
+is `codemp/rd-vulkan-vision/rd-vulkan-vision_x86_64.so`, it has to lie next to the engine binary.
+
+The Windows DLL is cross compiled with mingw-w64 like the rest, with the same option:
+
+```
+cmake -S . -B buildwin32cl -DCMAKE_TOOLCHAIN_FILE=cmake/Toolchains/i686-w64-mingw32.cmake -DCMAKE_BUILD_TYPE=Release -DBuildMPRdVulkanVision=ON -DBuildMPDed=OFF -DBuildMPRend2=OFF -DBuildSPEngine=OFF -DBuildSPGame=OFF -DBuildSPRdVanilla=OFF
+cmake --build buildwin32cl -j$(nproc)
+```
+
+mingw has no Vulkan headers of its own. They are the same on every platform, so the build copies the two
+header directories of the host (`vulkan`, `vk_video`) into the build directory for the cross compiler.
+`-DVulkanHeadersDir=` names another place. The result is `rd-vulkan-vision_x86.dll` next to `openjk.x86.exe`.
+
+In the game:
 
 ```
 cl_renderer rd-vulkan-vision; vid_restart
@@ -57,12 +72,13 @@ is left in a shared file fails the build.
   surface sprites work without a change to their files
 - the rest (stencil setup of the overdraw counter, line width, display lists) is nothing
 
-The engine got a window type for Vulkan (`GRAPHICS_API_VULKAN`, `SDL_WINDOW_VULKAN`) and two functions at the
-end of `refimport_t` for the instance extensions and the surface. The other renderers do not use them.
+The engine got a window type for Vulkan (`GRAPHICS_API_VULKAN`, `SDL_WINDOW_VULKAN`) and three functions at the
+end of `refimport_t`: the instance extensions the window needs, the surface, and the entry point of the Vulkan
+library. The other renderers do not use them.
 
 | File | Content |
 |------|---------|
-| `vk_main.cpp` | instance, device, swapchain, start and shutdown, `gfxinfo` |
+| `vk_main.cpp`, `vk_funcs.h` | the functions of Vulkan, instance, device, swapchain, start and shutdown, `gfxinfo` |
 | `vk_memory.cpp` | device memory in 64 MB blocks with free lists, buffers |
 | `vk_image.cpp` | the texture table, uploads batched in one command buffer, samplers, render targets |
 | `vk_pipeline.cpp` | descriptor layouts, shader modules, pipelines |
@@ -128,8 +144,10 @@ left in these views are the effects of the game (flames, smoke, light cones) and
 
 The stencil variant of refraction (surfaces with the internal distortion shader, the alternate saber trail:
 they are not drawn at all for now), stencil and projection shadows (`cg_shadows 2` and `3`), the vertex deform
-of disintegration, recording to AVI, the automap, `r_showtris`, `r_shownormals`, `r_showImages`, anti aliasing. A build for Windows or macOS
-was not tried.
+of disintegration, recording to AVI, the automap, `r_showtris`, `r_shownormals`, `r_showImages`, anti aliasing.
+
+The Windows DLL builds with mingw-w64 for 32 and 64 bit and has no import but the C runtime. It was never
+loaded into a game. macOS was not tried, it would need MoltenVK.
 
 Portals and mirrors have their clip plane (`gl_ClipDistance` from a plane in the transform) and the flipped
 culling, but no level of the base game has one, so that was never seen. The same goes for `alphaGen portal`.
@@ -172,4 +190,4 @@ the same script both were at 1000. The two renderers do not see the same moments
 hint, not a measurement. See [threading.md](threading.md) for why neither is the limit at 60 or 125 frames a
 second on this machine.
 
-Not checked: other graphics cards and drivers, Windows, macOS, a long game session, play by a person.
+Not checked: other graphics cards and drivers, Windows at run time, macOS, a long game session, play by a person.

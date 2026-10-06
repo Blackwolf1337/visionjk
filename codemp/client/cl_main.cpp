@@ -2517,6 +2517,7 @@ void CL_InitRef( void ) {
     ri.WIN_Present = WIN_Present;
 	ri.WIN_VK_InstanceExtensions = WIN_VK_InstanceExtensions;
 	ri.WIN_VK_CreateSurface = WIN_VK_CreateSurface;
+	ri.WIN_VK_GetInstanceProcAddr = WIN_VK_GetInstanceProcAddr;
 	ri.GL_GetProcAddress = WIN_GL_GetProcAddress;
 	ri.GL_ExtensionSupported = WIN_GL_ExtensionSupported;
 

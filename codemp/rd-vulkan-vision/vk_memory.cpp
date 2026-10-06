@@ -78,7 +78,7 @@ void VK_InitMemory( void ) {
 void VK_ShutdownMemory( void ) {
 	for ( int i = 0; i < VK_MAX_BLOCKS; i++ ) {
 		if ( vk_blocks[i].memory ) {
-			vkFreeMemory( vk.device, vk_blocks[i].memory, NULL );
+			qvkFreeMemory( vk.device, vk_blocks[i].memory, NULL );
 		}
 	}
 	memset( vk_blocks, 0, sizeof( vk_blocks ) );
@@ -158,14 +158,14 @@ void VK_AllocMemory( const VkMemoryRequirements *req, VkMemoryPropertyFlags flag
 
 	info.allocationSize = req->size > VK_BLOCK_SIZE ? req->size : VK_BLOCK_SIZE;
 	info.memoryTypeIndex = (uint32_t)type;
-	VK_CHECK( vkAllocateMemory( vk.device, &info, NULL, &block->memory ) );
+	VK_CHECK( qvkAllocateMemory( vk.device, &info, NULL, &block->memory ) );
 	block->size = info.allocationSize;
 	block->type = (uint32_t)type;
 	block->hostVisible = hostVisible;
 	block->mapped = NULL;
 	block->free = VK_NewRange( 0, block->size, NULL );
 	if ( hostVisible ) {
-		VK_CHECK( vkMapMemory( vk.device, block->memory, 0, VK_WHOLE_SIZE, 0, &block->mapped ) );
+		VK_CHECK( qvkMapMemory( vk.device, block->memory, 0, VK_WHOLE_SIZE, 0, &block->mapped ) );
 	}
 	if ( !VK_AllocFromBlock( unused, req->size, req->alignment, alloc ) ) {
 		Com_Error( ERR_FATAL, "VK_AllocMemory: a new block is too small" );
@@ -205,7 +205,7 @@ void VK_FreeMemory( vkAlloc_t *alloc ) {
 	// a block nobody uses any more goes back to the driver
 	if ( block->free && !block->free->next && block->free->size == block->size ) {
 		VK_UnuseRange( block->free );
-		vkFreeMemory( vk.device, block->memory, NULL );		// unmaps it too
+		qvkFreeMemory( vk.device, block->memory, NULL );		// unmaps it too
 		memset( block, 0, sizeof( *block ) );
 	}
 	alloc->block = -1;
@@ -224,11 +224,11 @@ void VK_CreateBuffer( vkBuffer_t *buf, VkDeviceSize size, VkBufferUsageFlags usa
 	info.size = size;
 	info.usage = usage;
 	info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-	VK_CHECK( vkCreateBuffer( vk.device, &info, NULL, &buf->buffer ) );
-	vkGetBufferMemoryRequirements( vk.device, buf->buffer, &req );
+	VK_CHECK( qvkCreateBuffer( vk.device, &info, NULL, &buf->buffer ) );
+	qvkGetBufferMemoryRequirements( vk.device, buf->buffer, &req );
 	VK_AllocMemory( &req, hostVisible ? ( VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT )
 		: VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &buf->alloc );
-	VK_CHECK( vkBindBufferMemory( vk.device, buf->buffer, VK_MemoryOf( &buf->alloc ), buf->alloc.offset ) );
+	VK_CHECK( qvkBindBufferMemory( vk.device, buf->buffer, VK_MemoryOf( &buf->alloc ), buf->alloc.offset ) );
 	buf->size = size;
 	if ( hostVisible ) {
 		buf->mapped = (byte *)vk_blocks[buf->alloc.block].mapped + buf->alloc.offset;
@@ -237,7 +237,7 @@ void VK_CreateBuffer( vkBuffer_t *buf, VkDeviceSize size, VkBufferUsageFlags usa
 
 void VK_DestroyBuffer( vkBuffer_t *buf ) {
 	if ( buf->buffer ) {
-		vkDestroyBuffer( vk.device, buf->buffer, NULL );
+		qvkDestroyBuffer( vk.device, buf->buffer, NULL );
 		VK_FreeMemory( &buf->alloc );
 	}
 	memset( buf, 0, sizeof( *buf ) );

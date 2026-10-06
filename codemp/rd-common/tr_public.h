@@ -351,6 +351,7 @@ typedef struct refimport_s {
 	// At the end of the table, the other renderers do not know them.
 	int				(*WIN_VK_InstanceExtensions)		( const char **names, int maxNames );
 	qboolean		(*WIN_VK_CreateSurface)				( void *instance, void *surface );
+	void *			(*WIN_VK_GetInstanceProcAddr)		( void );
 } refimport_t;
 
 // this is the only function actually exported at the linker level

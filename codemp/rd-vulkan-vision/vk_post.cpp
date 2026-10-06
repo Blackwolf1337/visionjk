@@ -36,7 +36,7 @@ static void VK_WritePostSet( VkDescriptorSet set, VkImageView view ) {
 	write.descriptorCount = 1;
 	write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 	write.pImageInfo = &image;
-	vkUpdateDescriptorSets( vk.device, 1, &write, 0, NULL );
+	qvkUpdateDescriptorSets( vk.device, 1, &write, 0, NULL );
 }
 
 void VK_InitPost( void ) {
@@ -57,13 +57,13 @@ void VK_InitPost( void ) {
 
 	sampler.magFilter = sampler.minFilter = VK_FILTER_LINEAR;
 	sampler.addressModeU = sampler.addressModeV = sampler.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-	VK_CHECK( vkCreateSampler( vk.device, &sampler, NULL, &vk.linearSampler ) );
+	VK_CHECK( qvkCreateSampler( vk.device, &sampler, NULL, &vk.linearSampler ) );
 
 	alloc.descriptorPool = vk.descriptorPool;
 	alloc.descriptorSetCount = 1;
 	alloc.pSetLayouts = &vk.postSetLayout;
 	for ( int i = 0; i < 3; i++ ) {
-		VK_CHECK( vkAllocateDescriptorSets( vk.device, &alloc, sets[i] ) );
+		VK_CHECK( qvkAllocateDescriptorSets( vk.device, &alloc, sets[i] ) );
 		VK_WritePostSet( *sets[i], targets[i]->view );
 	}
 }
@@ -73,7 +73,7 @@ void VK_ShutdownPost( void ) {
 	VK_DestroyTarget( &vk.screen );
 	VK_DestroyTarget( &vk.blur[0] );
 	VK_DestroyTarget( &vk.blur[1] );
-	vkDestroySampler( vk.device, vk.linearSampler, NULL );
+	qvkDestroySampler( vk.device, vk.linearSampler, NULL );
 }
 
 /*
@@ -91,7 +91,7 @@ void VK_BeginGlow( void ) {
 		return;
 	}
 	cmd = vk.frame->cmd;
-	vkCmdEndRendering( cmd );
+	qvkCmdEndRendering( cmd );
 	VK_TargetLayout( cmd, &vk.glow, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
 	VK_BeginTarget( cmd, &vk.glow, &vk.depth, 1, qtrue );
 	vk.boundPipeline = VK_NULL_HANDLE;
@@ -102,8 +102,8 @@ static void VK_FullTarget( VkCommandBuffer cmd, const vkTarget_t *target ) {
 	const VkViewport viewport = { 0.0f, 0.0f, (float)target->width, (float)target->height, 0.0f, 1.0f };
 	const VkRect2D scissor = { { 0, 0 }, { (uint32_t)target->width, (uint32_t)target->height } };
 
-	vkCmdSetViewport( cmd, 0, 1, &viewport );
-	vkCmdSetScissor( cmd, 0, 1, &scissor );
+	qvkCmdSetViewport( cmd, 0, 1, &viewport );
+	qvkCmdSetScissor( cmd, 0, 1, &scissor );
 }
 
 /*
@@ -124,10 +124,10 @@ void VK_EndGlow( void ) {
 		return;
 	}
 	cmd = vk.frame->cmd;
-	vkCmdEndRendering( cmd );
+	qvkCmdEndRendering( cmd );
 	VK_TargetLayout( cmd, &vk.glow, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
 
-	vkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.blurPipeline );
+	qvkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.blurPipeline );
 	for ( int i = 0; i < passes; i++ ) {
 		vkTarget_t *target = &vk.blur[i & 1];
 		const float parm[4] = { offset / source->width, offset / source->height, r_DynamicGlowIntensity->value * 0.25f, 0.0f };
@@ -135,10 +135,10 @@ void VK_EndGlow( void ) {
 		VK_TargetLayout( cmd, target, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
 		VK_BeginTarget( cmd, target, NULL, 0, qfalse );
 		VK_FullTarget( cmd, target );
-		vkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.postPipelineLayout, 0, 1, &sourceSet, 0, NULL );
-		vkCmdPushConstants( cmd, vk.postPipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof( parm ), parm );
-		vkCmdDraw( cmd, 3, 1, 0, 0 );
-		vkCmdEndRendering( cmd );
+		qvkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.postPipelineLayout, 0, 1, &sourceSet, 0, NULL );
+		qvkCmdPushConstants( cmd, vk.postPipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof( parm ), parm );
+		qvkCmdDraw( cmd, 3, 1, 0, 0 );
+		qvkCmdEndRendering( cmd );
 		VK_TargetLayout( cmd, target, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
 
 		source = target;
@@ -155,10 +155,10 @@ void VK_EndGlow( void ) {
 
 		VK_ClearColor( 0, 0, vk.width, vk.height, black );
 	}
-	vkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.glowPipelines[r_DynamicGlowSoft->integer ? 1 : 0] );
-	vkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.postPipelineLayout, 0, 1, &sourceSet, 0, NULL );
+	qvkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.glowPipelines[r_DynamicGlowSoft->integer ? 1 : 0] );
+	qvkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.postPipelineLayout, 0, 1, &sourceSet, 0, NULL );
 	VK_FullTarget( cmd, &vk.color );
-	vkCmdDraw( cmd, 3, 1, 0, 0 );
+	qvkCmdDraw( cmd, 3, 1, 0, 0 );
 
 	// the shaders that draw geometry have other sets and other state
 	VK_BindFrameSets();
@@ -184,7 +184,7 @@ void VK_CaptureFrame( void ) {
 		return;
 	}
 	cmd = vk.frame->cmd;
-	vkCmdEndRendering( cmd );
+	qvkCmdEndRendering( cmd );
 
 	memset( &region, 0, sizeof( region ) );
 	region.srcSubresource.aspectMask = region.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -194,7 +194,7 @@ void VK_CaptureFrame( void ) {
 	region.extent.depth = 1;
 	VK_TargetLayout( cmd, &vk.color, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL );
 	VK_TargetLayout( cmd, &vk.screen, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL );
-	vkCmdCopyImage( cmd, vk.color.image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, vk.screen.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region );
+	qvkCmdCopyImage( cmd, vk.color.image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, vk.screen.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region );
 	VK_TargetLayout( cmd, &vk.screen, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
 	VK_TargetLayout( cmd, &vk.color, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
 
@@ -209,7 +209,7 @@ void VK_CaptureFrame( void ) {
 		write.descriptorCount = 1;
 		write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 		write.pImageInfo = &image;
-		vkUpdateDescriptorSets( vk.device, 1, &write, 0, NULL );
+		qvkUpdateDescriptorSets( vk.device, 1, &write, 0, NULL );
 	}
 
 	VK_BeginTarget( cmd, &vk.color, &vk.depth, 2, qtrue );
@@ -328,9 +328,9 @@ void VK_CopyProbes( void ) {
 	}
 	frame->numProbesCopied = frame->numProbes;
 
-	vkCmdEndRendering( cmd );
+	qvkCmdEndRendering( cmd );
 	VK_TargetLayout( cmd, &vk.depth, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL );
-	vkCmdCopyImageToBuffer( cmd, vk.depth.image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, frame->probes.buffer, count, regions );
+	qvkCmdCopyImageToBuffer( cmd, vk.depth.image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, frame->probes.buffer, count, regions );
 	VK_TargetLayout( cmd, &vk.depth, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL );
 	VK_BeginTarget( cmd, &vk.color, &vk.depth, 2, qtrue );
 	vk.boundPipeline = VK_NULL_HANDLE;

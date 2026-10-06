@@ -57,7 +57,7 @@ static VkShaderModule VK_CreateShader( const uint32_t *code, size_t size ) {
 
 	info.codeSize = size;
 	info.pCode = code;
-	VK_CHECK( vkCreateShaderModule( vk.device, &info, NULL, &module ) );
+	VK_CHECK( qvkCreateShaderModule( vk.device, &info, NULL, &module ) );
 	return module;
 }
 
@@ -87,7 +87,7 @@ static void VK_CreateLayouts( void ) {
 	}
 	info.bindingCount = 4;
 	info.pBindings = frame;
-	VK_CHECK( vkCreateDescriptorSetLayout( vk.device, &info, NULL, &vk.frameSetLayout ) );
+	VK_CHECK( qvkCreateDescriptorSetLayout( vk.device, &info, NULL, &vk.frameSetLayout ) );
 
 	// set 1: the texture table. Entries are written while frames that use other entries are still on their way.
 	memset( &texture, 0, sizeof( texture ) );
@@ -100,7 +100,7 @@ static void VK_CreateLayouts( void ) {
 	info.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT;
 	info.bindingCount = 1;
 	info.pBindings = &texture;
-	VK_CHECK( vkCreateDescriptorSetLayout( vk.device, &info, NULL, &vk.textureSetLayout ) );
+	VK_CHECK( qvkCreateDescriptorSetLayout( vk.device, &info, NULL, &vk.textureSetLayout ) );
 
 	// the frame as a texture for the gamma pass
 	memset( &post, 0, sizeof( post ) );
@@ -110,7 +110,7 @@ static void VK_CreateLayouts( void ) {
 	info.pNext = NULL;
 	info.flags = 0;
 	info.pBindings = &post;
-	VK_CHECK( vkCreateDescriptorSetLayout( vk.device, &info, NULL, &vk.postSetLayout ) );
+	VK_CHECK( qvkCreateDescriptorSetLayout( vk.device, &info, NULL, &vk.postSetLayout ) );
 
 	sizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 	sizes[0].descriptorCount = VK_FRAMES;
@@ -122,7 +122,7 @@ static void VK_CreateLayouts( void ) {
 	pool.maxSets = VK_FRAMES + 5;
 	pool.poolSizeCount = 3;
 	pool.pPoolSizes = sizes;
-	VK_CHECK( vkCreateDescriptorPool( vk.device, &pool, NULL, &vk.descriptorPool ) );
+	VK_CHECK( qvkCreateDescriptorPool( vk.device, &pool, NULL, &vk.descriptorPool ) );
 
 	// the index of the draw is all that changes from one draw to the next
 	push.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
@@ -134,25 +134,25 @@ static void VK_CreateLayouts( void ) {
 	layout.pSetLayouts = sets;
 	layout.pushConstantRangeCount = 1;
 	layout.pPushConstantRanges = &push;
-	VK_CHECK( vkCreatePipelineLayout( vk.device, &layout, NULL, &vk.pipelineLayout ) );
+	VK_CHECK( qvkCreatePipelineLayout( vk.device, &layout, NULL, &vk.pipelineLayout ) );
 
 	push.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 	push.size = sizeof( float ) * 4;
 	layout.setLayoutCount = 1;
 	layout.pSetLayouts = &vk.postSetLayout;
-	VK_CHECK( vkCreatePipelineLayout( vk.device, &layout, NULL, &vk.postPipelineLayout ) );
+	VK_CHECK( qvkCreatePipelineLayout( vk.device, &layout, NULL, &vk.postPipelineLayout ) );
 
 	alloc.descriptorPool = vk.descriptorPool;
 	alloc.descriptorSetCount = 1;
 	alloc.pSetLayouts = &vk.textureSetLayout;
-	VK_CHECK( vkAllocateDescriptorSets( vk.device, &alloc, &vk.textureSet ) );
+	VK_CHECK( qvkAllocateDescriptorSets( vk.device, &alloc, &vk.textureSet ) );
 	alloc.pSetLayouts = &vk.postSetLayout;
-	VK_CHECK( vkAllocateDescriptorSets( vk.device, &alloc, &vk.postSet ) );
+	VK_CHECK( qvkAllocateDescriptorSets( vk.device, &alloc, &vk.postSet ) );
 
 	// the gamma pass reads the frame pixel for pixel
 	sampler.magFilter = sampler.minFilter = VK_FILTER_NEAREST;
 	sampler.addressModeU = sampler.addressModeV = sampler.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-	VK_CHECK( vkCreateSampler( vk.device, &sampler, NULL, &vk.postSampler ) );
+	VK_CHECK( qvkCreateSampler( vk.device, &sampler, NULL, &vk.postSampler ) );
 	{
 		VkDescriptorImageInfo image = { vk.postSampler, vk.color.view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
 		VkWriteDescriptorSet write = { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
@@ -161,7 +161,7 @@ static void VK_CreateLayouts( void ) {
 		write.descriptorCount = 1;
 		write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 		write.pImageInfo = &image;
-		vkUpdateDescriptorSets( vk.device, 1, &write, 0, NULL );
+		qvkUpdateDescriptorSets( vk.device, 1, &write, 0, NULL );
 	}
 }
 
@@ -327,7 +327,7 @@ VkPipeline VK_CreatePipeline( VkShaderModule vertex, VkShaderModule fragment, ui
 	info.pColorBlendState = &blend;
 	info.pDynamicState = &dynamic;
 	info.layout = post ? vk.postPipelineLayout : vk.pipelineLayout;
-	VK_CHECK( vkCreateGraphicsPipelines( vk.device, VK_NULL_HANDLE, 1, &info, NULL, &pipeline ) );
+	VK_CHECK( qvkCreateGraphicsPipelines( vk.device, VK_NULL_HANDLE, 1, &info, NULL, &pipeline ) );
 	return pipeline;
 }
 
@@ -371,26 +371,26 @@ void VK_InitPipelines( void ) {
 
 void VK_ShutdownPipelines( void ) {
 	for ( int i = 0; i < vk.numPipelines; i++ ) {
-		vkDestroyPipeline( vk.device, vk.pipelines[i].pipeline, NULL );
+		qvkDestroyPipeline( vk.device, vk.pipelines[i].pipeline, NULL );
 	}
 	vk.numPipelines = 0;
-	vkDestroyPipeline( vk.device, vk.gammaPipeline, NULL );
-	vkDestroyPipeline( vk.device, vk.blurPipeline, NULL );
-	vkDestroyPipeline( vk.device, vk.glowPipelines[0], NULL );
-	vkDestroyPipeline( vk.device, vk.glowPipelines[1], NULL );
-	vkDestroyShaderModule( vk.device, vk.blurFragmentShader, NULL );
-	vkDestroyShaderModule( vk.device, vk.copyFragmentShader, NULL );
+	qvkDestroyPipeline( vk.device, vk.gammaPipeline, NULL );
+	qvkDestroyPipeline( vk.device, vk.blurPipeline, NULL );
+	qvkDestroyPipeline( vk.device, vk.glowPipelines[0], NULL );
+	qvkDestroyPipeline( vk.device, vk.glowPipelines[1], NULL );
+	qvkDestroyShaderModule( vk.device, vk.blurFragmentShader, NULL );
+	qvkDestroyShaderModule( vk.device, vk.copyFragmentShader, NULL );
 	for ( int i = 0; i < VKP_NUM_PROGRAMS; i++ ) {
-		vkDestroyShaderModule( vk.device, vk.vertexShaders[i], NULL );
-		vkDestroyShaderModule( vk.device, vk.fragmentShaders[i], NULL );
+		qvkDestroyShaderModule( vk.device, vk.vertexShaders[i], NULL );
+		qvkDestroyShaderModule( vk.device, vk.fragmentShaders[i], NULL );
 	}
-	vkDestroyShaderModule( vk.device, vk.postVertexShader, NULL );
-	vkDestroyShaderModule( vk.device, vk.gammaFragmentShader, NULL );
-	vkDestroySampler( vk.device, vk.postSampler, NULL );
-	vkDestroyPipelineLayout( vk.device, vk.pipelineLayout, NULL );
-	vkDestroyPipelineLayout( vk.device, vk.postPipelineLayout, NULL );
-	vkDestroyDescriptorSetLayout( vk.device, vk.frameSetLayout, NULL );
-	vkDestroyDescriptorSetLayout( vk.device, vk.textureSetLayout, NULL );
-	vkDestroyDescriptorSetLayout( vk.device, vk.postSetLayout, NULL );
-	vkDestroyDescriptorPool( vk.device, vk.descriptorPool, NULL );
+	qvkDestroyShaderModule( vk.device, vk.postVertexShader, NULL );
+	qvkDestroyShaderModule( vk.device, vk.gammaFragmentShader, NULL );
+	qvkDestroySampler( vk.device, vk.postSampler, NULL );
+	qvkDestroyPipelineLayout( vk.device, vk.pipelineLayout, NULL );
+	qvkDestroyPipelineLayout( vk.device, vk.postPipelineLayout, NULL );
+	qvkDestroyDescriptorSetLayout( vk.device, vk.frameSetLayout, NULL );
+	qvkDestroyDescriptorSetLayout( vk.device, vk.textureSetLayout, NULL );
+	qvkDestroyDescriptorSetLayout( vk.device, vk.postSetLayout, NULL );
+	qvkDestroyDescriptorPool( vk.device, vk.descriptorPool, NULL );
 }

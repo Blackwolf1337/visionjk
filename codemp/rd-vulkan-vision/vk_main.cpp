@@ -52,6 +52,50 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL VK_DebugMessage( VkDebugUtilsMessageSeveri
 VK_CreateInstance
 ===============
 */
+/*
+===============================================================================
+
+THE FUNCTIONS OF VULKAN
+
+===============================================================================
+*/
+
+#define X( name )	PFN_##name q##name;
+VK_FUNCTIONS_GLOBAL( X )
+VK_FUNCTIONS_INSTANCE( X )
+VK_FUNCTIONS_DEVICE( X )
+#undef X
+PFN_vkGetInstanceProcAddr		qvkGetInstanceProcAddr;
+PFN_vkEnumerateInstanceVersion	qvkEnumerateInstanceVersion;
+
+static void VK_MissingFunction( const char *name ) {
+	Com_Error( ERR_FATAL, "Vulkan: the library has no %s.\nSet cl_renderer to rd-vanilla.", name );
+}
+
+// the window is there, so its library of Vulkan is loaded
+static void VK_LoadGlobalFunctions( void ) {
+	qvkGetInstanceProcAddr = (PFN_vkGetInstanceProcAddr)ri.WIN_VK_GetInstanceProcAddr();
+	if ( !qvkGetInstanceProcAddr ) {
+		Com_Error( ERR_FATAL, "Vulkan: no library of Vulkan was loaded for the window.\nSet cl_renderer to rd-vanilla." );
+	}
+#define X( name )	q##name = (PFN_##name)qvkGetInstanceProcAddr( VK_NULL_HANDLE, #name ); if ( !q##name ) { VK_MissingFunction( #name ); }
+	VK_FUNCTIONS_GLOBAL( X )
+#undef X
+	qvkEnumerateInstanceVersion = (PFN_vkEnumerateInstanceVersion)qvkGetInstanceProcAddr( VK_NULL_HANDLE, "vkEnumerateInstanceVersion" );
+}
+
+static void VK_LoadInstanceFunctions( void ) {
+#define X( name )	q##name = (PFN_##name)qvkGetInstanceProcAddr( vk.instance, #name ); if ( !q##name ) { VK_MissingFunction( #name ); }
+	VK_FUNCTIONS_INSTANCE( X )
+#undef X
+}
+
+static void VK_LoadDeviceFunctions( void ) {
+#define X( name )	q##name = (PFN_##name)qvkGetDeviceProcAddr( vk.device, #name ); if ( !q##name ) { VK_MissingFunction( #name ); }
+	VK_FUNCTIONS_DEVICE( X )
+#undef X
+}
+
 static void VK_CreateInstance( void ) {
 	const char *extensions[16];
 	const char *layers[1];
@@ -60,7 +104,10 @@ static void VK_CreateInstance( void ) {
 	VkApplicationInfo app = { VK_STRUCTURE_TYPE_APPLICATION_INFO };
 	VkInstanceCreateInfo info = { VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO };
 
-	vkEnumerateInstanceVersion( &version );
+	VK_LoadGlobalFunctions();
+	if ( qvkEnumerateInstanceVersion ) {
+		qvkEnumerateInstanceVersion( &version );
+	}
 	if ( version < VK_API_VERSION_1_3 ) {
 		Com_Error( ERR_FATAL, "rd-vulkan-vision needs Vulkan 1.3, this system has %i.%i.\n"
 			"Set cl_renderer to rd-vanilla.", VK_API_VERSION_MAJOR( version ), VK_API_VERSION_MINOR( version ) );
@@ -76,7 +123,7 @@ static void VK_CreateInstance( void ) {
 		VkLayerProperties available[64];
 
 		count = ARRAY_LEN( available );
-		vkEnumerateInstanceLayerProperties( &count, available );
+		qvkEnumerateInstanceLayerProperties( &count, available );
 		for ( uint32_t i = 0; i < count; i++ ) {
 			if ( !strcmp( available[i].layerName, "VK_LAYER_KHRONOS_validation" ) ) {
 				vk.validation = qtrue;
@@ -98,12 +145,13 @@ static void VK_CreateInstance( void ) {
 	info.ppEnabledExtensionNames = extensions;
 	info.enabledLayerCount = (uint32_t)numLayers;
 	info.ppEnabledLayerNames = layers;
-	VK_CHECK( vkCreateInstance( &info, NULL, &vk.instance ) );
+	VK_CHECK( qvkCreateInstance( &info, NULL, &vk.instance ) );
+	VK_LoadInstanceFunctions();
 
 	if ( vk.validation ) {
 		VkDebugUtilsMessengerCreateInfoEXT debug = { VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT };
 		PFN_vkCreateDebugUtilsMessengerEXT create = (PFN_vkCreateDebugUtilsMessengerEXT)
-			vkGetInstanceProcAddr( vk.instance, "vkCreateDebugUtilsMessengerEXT" );
+			qvkGetInstanceProcAddr( vk.instance, "vkCreateDebugUtilsMessengerEXT" );
 
 		debug.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
 		debug.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT
@@ -131,21 +179,21 @@ static qboolean VK_DeviceUsable( VkPhysicalDevice device, uint32_t *queueFamily 
 	VkPhysicalDeviceVulkan12Features f12 = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES, &f13 };
 	VkPhysicalDeviceFeatures2 features = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2, &f12 };
 
-	vkGetPhysicalDeviceProperties( device, &props );
+	qvkGetPhysicalDeviceProperties( device, &props );
 	if ( props.apiVersion < VK_API_VERSION_1_3 ) {
 		return qfalse;
 	}
-	vkGetPhysicalDeviceFeatures2( device, &features );
+	qvkGetPhysicalDeviceFeatures2( device, &features );
 	if ( !features.features.shaderClipDistance || !f13.dynamicRendering || !f12.runtimeDescriptorArray || !f12.shaderSampledImageArrayNonUniformIndexing
 		|| !f12.descriptorBindingPartiallyBound || !f12.descriptorBindingSampledImageUpdateAfterBind
 		|| !f12.descriptorBindingUpdateUnusedWhilePending ) {
 		return qfalse;
 	}
-	vkGetPhysicalDeviceQueueFamilyProperties( device, &count, families );
+	qvkGetPhysicalDeviceQueueFamilyProperties( device, &count, families );
 	for ( uint32_t i = 0; i < count; i++ ) {
 		VkBool32 present = VK_FALSE;
 
-		vkGetPhysicalDeviceSurfaceSupportKHR( device, i, vk.surface, &present );
+		qvkGetPhysicalDeviceSurfaceSupportKHR( device, i, vk.surface, &present );
 		if ( present && ( families[i].queueFlags & VK_QUEUE_GRAPHICS_BIT ) ) {
 			*queueFamily = i;
 			return qtrue;
@@ -159,13 +207,13 @@ static void VK_PickDevice( void ) {
 	uint32_t count = ARRAY_LEN( devices );
 	uint32_t family = 0;
 
-	vkEnumeratePhysicalDevices( vk.instance, &count, devices );
+	qvkEnumeratePhysicalDevices( vk.instance, &count, devices );
 	vk.physicalDevice = VK_NULL_HANDLE;
 	for ( int pass = 0; pass < 2 && !vk.physicalDevice; pass++ ) {
 		for ( uint32_t i = 0; i < count; i++ ) {
 			VkPhysicalDeviceProperties props;
 
-			vkGetPhysicalDeviceProperties( devices[i], &props );
+			qvkGetPhysicalDeviceProperties( devices[i], &props );
 			if ( pass == 0 && props.deviceType != VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU ) {
 				continue;
 			}
@@ -180,8 +228,8 @@ static void VK_PickDevice( void ) {
 		Com_Error( ERR_FATAL, "rd-vulkan-vision found no graphics device with Vulkan 1.3 and descriptor indexing.\n"
 			"Set cl_renderer to rd-vanilla." );
 	}
-	vkGetPhysicalDeviceProperties( vk.physicalDevice, &vk.properties );
-	vkGetPhysicalDeviceMemoryProperties( vk.physicalDevice, &vk.memoryProperties );
+	qvkGetPhysicalDeviceProperties( vk.physicalDevice, &vk.properties );
+	qvkGetPhysicalDeviceMemoryProperties( vk.physicalDevice, &vk.memoryProperties );
 }
 
 static void VK_CreateDevice( void ) {
@@ -195,7 +243,7 @@ static void VK_CreateDevice( void ) {
 	VkDeviceCreateInfo info = { VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO, &features };
 	VkCommandPoolCreateInfo pool = { VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO };
 
-	vkGetPhysicalDeviceFeatures( vk.physicalDevice, &available );
+	qvkGetPhysicalDeviceFeatures( vk.physicalDevice, &available );
 	features.features.samplerAnisotropy = available.samplerAnisotropy;
 	features.features.fillModeNonSolid = available.fillModeNonSolid;
 	features.features.shaderClipDistance = VK_TRUE;
@@ -213,12 +261,13 @@ static void VK_CreateDevice( void ) {
 	info.pQueueCreateInfos = &queue;
 	info.enabledExtensionCount = ARRAY_LEN( extensions );
 	info.ppEnabledExtensionNames = extensions;
-	VK_CHECK( vkCreateDevice( vk.physicalDevice, &info, NULL, &vk.device ) );
-	vkGetDeviceQueue( vk.device, vk.queueFamily, 0, &vk.queue );
+	VK_CHECK( qvkCreateDevice( vk.physicalDevice, &info, NULL, &vk.device ) );
+	VK_LoadDeviceFunctions();
+	qvkGetDeviceQueue( vk.device, vk.queueFamily, 0, &vk.queue );
 
 	pool.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
 	pool.queueFamilyIndex = vk.queueFamily;
-	VK_CHECK( vkCreateCommandPool( vk.device, &pool, NULL, &vk.commandPool ) );
+	VK_CHECK( qvkCreateCommandPool( vk.device, &pool, NULL, &vk.commandPool ) );
 }
 
 /*
@@ -237,9 +286,9 @@ void VK_CreateSwapchain( void ) {
 	VkSwapchainCreateInfoKHR info = { VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR };
 	VkSwapchainKHR old = vk.swapchain;
 
-	VK_CHECK( vkGetPhysicalDeviceSurfaceCapabilitiesKHR( vk.physicalDevice, vk.surface, &caps ) );
-	vkGetPhysicalDeviceSurfaceFormatsKHR( vk.physicalDevice, vk.surface, &numFormats, formats );
-	vkGetPhysicalDeviceSurfacePresentModesKHR( vk.physicalDevice, vk.surface, &numModes, modes );
+	VK_CHECK( qvkGetPhysicalDeviceSurfaceCapabilitiesKHR( vk.physicalDevice, vk.surface, &caps ) );
+	qvkGetPhysicalDeviceSurfaceFormatsKHR( vk.physicalDevice, vk.surface, &numFormats, formats );
+	qvkGetPhysicalDeviceSurfacePresentModesKHR( vk.physicalDevice, vk.surface, &numModes, modes );
 	if ( !numFormats ) {
 		Com_Error( ERR_FATAL, "Vulkan: the window surface has no formats" );
 	}
@@ -297,23 +346,23 @@ void VK_CreateSwapchain( void ) {
 		// minimized, there is nothing to present to
 		vk.swapchain = VK_NULL_HANDLE;
 	} else {
-		VK_CHECK( vkCreateSwapchainKHR( vk.device, &info, NULL, &vk.swapchain ) );
+		VK_CHECK( qvkCreateSwapchainKHR( vk.device, &info, NULL, &vk.swapchain ) );
 	}
 	if ( old ) {
-		vkDestroySwapchainKHR( vk.device, old, NULL );
+		qvkDestroySwapchainKHR( vk.device, old, NULL );
 	}
 	vk.swapFormat = info.imageFormat;
 	vk.swapExtent = info.imageExtent;
 	vk.numSwapImages = 0;
 	if ( vk.swapchain ) {
 		vk.numSwapImages = VK_MAX_SWAP_IMAGES;
-		VK_CHECK( vkGetSwapchainImagesKHR( vk.device, vk.swapchain, &vk.numSwapImages, vk.swapImages ) );
+		VK_CHECK( qvkGetSwapchainImagesKHR( vk.device, vk.swapchain, &vk.numSwapImages, vk.swapImages ) );
 	}
 }
 
 void VK_DestroySwapchain( void ) {
 	if ( vk.swapchain ) {
-		vkDestroySwapchainKHR( vk.device, vk.swapchain, NULL );
+		qvkDestroySwapchainKHR( vk.device, vk.swapchain, NULL );
 		vk.swapchain = VK_NULL_HANDLE;
 	}
 }
@@ -324,7 +373,7 @@ static VkFormat VK_DepthFormat( void ) {
 	for ( size_t i = 0; i < ARRAY_LEN( candidates ); i++ ) {
 		VkFormatProperties props;
 
-		vkGetPhysicalDeviceFormatProperties( vk.physicalDevice, candidates[i], &props );
+		qvkGetPhysicalDeviceFormatProperties( vk.physicalDevice, candidates[i], &props );
 		if ( props.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT ) {
 			return candidates[i];
 		}
@@ -427,7 +476,7 @@ void VK_ShutdownVulkan( qboolean destroyWindow ) {
 	if ( !vk.device ) {
 		return;
 	}
-	vkDeviceWaitIdle( vk.device );
+	qvkDeviceWaitIdle( vk.device );
 	if ( !destroyWindow ) {
 		return;
 	}
@@ -443,18 +492,18 @@ void VK_ShutdownVulkan( qboolean destroyWindow ) {
 	VK_DestroyTarget( &vk.depth );
 	VK_DestroySwapchain();
 	VK_ShutdownMemory();
-	vkDestroyCommandPool( vk.device, vk.commandPool, NULL );
-	vkDestroyDevice( vk.device, NULL );
-	vkDestroySurfaceKHR( vk.instance, vk.surface, NULL );
+	qvkDestroyCommandPool( vk.device, vk.commandPool, NULL );
+	qvkDestroyDevice( vk.device, NULL );
+	qvkDestroySurfaceKHR( vk.instance, vk.surface, NULL );
 	if ( vk.messenger ) {
 		PFN_vkDestroyDebugUtilsMessengerEXT destroy = (PFN_vkDestroyDebugUtilsMessengerEXT)
-			vkGetInstanceProcAddr( vk.instance, "vkDestroyDebugUtilsMessengerEXT" );
+			qvkGetInstanceProcAddr( vk.instance, "vkDestroyDebugUtilsMessengerEXT" );
 
 		if ( destroy ) {
 			destroy( vk.instance, vk.messenger, NULL );
 		}
 	}
-	vkDestroyInstance( vk.instance, NULL );
+	qvkDestroyInstance( vk.instance, NULL );
 	memset( &vk, 0, sizeof( vk ) );
 	memset( &glConfig, 0, sizeof( glConfig ) );
 }

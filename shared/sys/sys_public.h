@@ -209,5 +209,6 @@ void *		WIN_GL_GetProcAddress( const char *proc );
 qboolean	WIN_GL_ExtensionSupported( const char *extension );
 int			WIN_VK_InstanceExtensions( const char **names, int maxNames );
 qboolean	WIN_VK_CreateSurface( void *instance, void *surface );
+void *		WIN_VK_GetInstanceProcAddr( void );
 
 uint8_t ConvertUTF32ToExpectedCharset( uint32_t utf32 );

@@ -59,7 +59,7 @@ void VK_SetLayout( VkCommandBuffer cmd, VkImage image, VkImageAspectFlags aspect
 	barrier.subresourceRange.aspectMask = aspect;
 	barrier.subresourceRange.levelCount = VK_REMAINING_MIP_LEVELS;
 	barrier.subresourceRange.layerCount = 1;
-	vkCmdPipelineBarrier( cmd, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0,
+	qvkCmdPipelineBarrier( cmd, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0,
 		0, NULL, 0, NULL, 1, &barrier );
 }
 
@@ -95,10 +95,10 @@ void VK_CreateTarget( vkTarget_t *target, int width, int height, VkFormat format
 	info.tiling = VK_IMAGE_TILING_OPTIMAL;
 	info.usage = usage;
 	info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-	VK_CHECK( vkCreateImage( vk.device, &info, NULL, &target->image ) );
-	vkGetImageMemoryRequirements( vk.device, target->image, &req );
+	VK_CHECK( qvkCreateImage( vk.device, &info, NULL, &target->image ) );
+	qvkGetImageMemoryRequirements( vk.device, target->image, &req );
 	VK_AllocMemory( &req, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &target->alloc );
-	VK_CHECK( vkBindImageMemory( vk.device, target->image, VK_MemoryOf( &target->alloc ), target->alloc.offset ) );
+	VK_CHECK( qvkBindImageMemory( vk.device, target->image, VK_MemoryOf( &target->alloc ), target->alloc.offset ) );
 
 	view.image = target->image;
 	view.viewType = VK_IMAGE_VIEW_TYPE_2D;
@@ -106,7 +106,7 @@ void VK_CreateTarget( vkTarget_t *target, int width, int height, VkFormat format
 	view.subresourceRange.aspectMask = aspect;
 	view.subresourceRange.levelCount = 1;
 	view.subresourceRange.layerCount = 1;
-	VK_CHECK( vkCreateImageView( vk.device, &view, NULL, &target->view ) );
+	VK_CHECK( qvkCreateImageView( vk.device, &view, NULL, &target->view ) );
 	target->format = format;
 	target->layout = VK_IMAGE_LAYOUT_UNDEFINED;
 	target->width = width;
@@ -115,8 +115,8 @@ void VK_CreateTarget( vkTarget_t *target, int width, int height, VkFormat format
 
 void VK_DestroyTarget( vkTarget_t *target ) {
 	if ( target->image ) {
-		vkDestroyImageView( vk.device, target->view, NULL );
-		vkDestroyImage( vk.device, target->image, NULL );
+		qvkDestroyImageView( vk.device, target->view, NULL );
+		qvkDestroyImage( vk.device, target->image, NULL );
 		VK_FreeMemory( &target->alloc );
 	}
 	memset( target, 0, sizeof( *target ) );
@@ -138,7 +138,7 @@ VkCommandBuffer VK_UploadCmd( void ) {
 		VkCommandBufferBeginInfo begin = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
 
 		begin.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-		VK_CHECK( vkBeginCommandBuffer( vk.uploadCmd, &begin ) );
+		VK_CHECK( qvkBeginCommandBuffer( vk.uploadCmd, &begin ) );
 		vk.uploadOpen = qtrue;
 	}
 	return vk.uploadCmd;
@@ -150,11 +150,11 @@ void VK_FlushUploads( void ) {
 	if ( !vk.uploadOpen ) {
 		return;
 	}
-	VK_CHECK( vkEndCommandBuffer( vk.uploadCmd ) );
+	VK_CHECK( qvkEndCommandBuffer( vk.uploadCmd ) );
 	submit.commandBufferCount = 1;
 	submit.pCommandBuffers = &vk.uploadCmd;
-	VK_CHECK( vkQueueSubmit( vk.queue, 1, &submit, VK_NULL_HANDLE ) );
-	VK_CHECK( vkQueueWaitIdle( vk.queue ) );
+	VK_CHECK( qvkQueueSubmit( vk.queue, 1, &submit, VK_NULL_HANDLE ) );
+	VK_CHECK( qvkQueueWaitIdle( vk.queue ) );
 	vk.uploadOpen = qfalse;
 	vk.stagingUsed = 0;
 }
@@ -207,7 +207,7 @@ static VkSampler VK_FindSampler( int minFilter, int magFilter, int wrap, float a
 		info.anisotropyEnable = VK_TRUE;
 		info.maxAnisotropy = Q_min( anisotropy, vk.properties.limits.maxSamplerAnisotropy );
 	}
-	VK_CHECK( vkCreateSampler( vk.device, &info, NULL, &vk.samplers[vk.numSamplers] ) );
+	VK_CHECK( qvkCreateSampler( vk.device, &info, NULL, &vk.samplers[vk.numSamplers] ) );
 	memcpy( vk.samplerKeys[vk.numSamplers], key, sizeof( key ) );
 	return vk.samplers[vk.numSamplers++];
 }
@@ -227,7 +227,7 @@ static void VK_WriteTexture( int slot ) {
 	write.descriptorCount = 1;
 	write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 	write.pImageInfo = &image;
-	vkUpdateDescriptorSets( vk.device, 1, &write, 0, NULL );
+	qvkUpdateDescriptorSets( vk.device, 1, &write, 0, NULL );
 }
 
 /*
@@ -249,9 +249,9 @@ static vkImage_t *VK_SlotOf( const image_t *image ) {
 static void VK_FreeSlot( vkImage_t *vi ) {
 	if ( vi->image ) {
 		// nothing that was submitted may still read it
-		vkDeviceWaitIdle( vk.device );
-		vkDestroyImageView( vk.device, vi->view, NULL );
-		vkDestroyImage( vk.device, vi->image, NULL );
+		qvkDeviceWaitIdle( vk.device );
+		qvkDestroyImageView( vk.device, vi->view, NULL );
+		qvkDestroyImage( vk.device, vi->image, NULL );
 		VK_FreeMemory( &vi->alloc );
 	}
 	memset( vi, 0, sizeof( *vi ) );
@@ -297,10 +297,10 @@ static void VK_CreateSlotImage( vkImage_t *vi, int width, int height, int mipLev
 	info.tiling = VK_IMAGE_TILING_OPTIMAL;
 	info.usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 	info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-	VK_CHECK( vkCreateImage( vk.device, &info, NULL, &vi->image ) );
-	vkGetImageMemoryRequirements( vk.device, vi->image, &req );
+	VK_CHECK( qvkCreateImage( vk.device, &info, NULL, &vi->image ) );
+	qvkGetImageMemoryRequirements( vk.device, vi->image, &req );
 	VK_AllocMemory( &req, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &vi->alloc );
-	VK_CHECK( vkBindImageMemory( vk.device, vi->image, VK_MemoryOf( &vi->alloc ), vi->alloc.offset ) );
+	VK_CHECK( qvkBindImageMemory( vk.device, vi->image, VK_MemoryOf( &vi->alloc ), vi->alloc.offset ) );
 
 	view.image = vi->image;
 	view.viewType = VK_IMAGE_VIEW_TYPE_2D;
@@ -308,7 +308,7 @@ static void VK_CreateSlotImage( vkImage_t *vi, int width, int height, int mipLev
 	view.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 	view.subresourceRange.levelCount = (uint32_t)mipLevels;
 	view.subresourceRange.layerCount = 1;
-	VK_CHECK( vkCreateImageView( vk.device, &view, NULL, &vi->view ) );
+	VK_CHECK( qvkCreateImageView( vk.device, &view, NULL, &vi->view ) );
 	vi->width = width;
 	vi->height = height;
 	vi->mipLevels = mipLevels;
@@ -361,9 +361,9 @@ void VK_ImageLevel( int level, int width, int height, const byte *rgba ) {
 			vkImage_t keep = *vi;
 
 			VK_FlushUploads();
-			vkDeviceWaitIdle( vk.device );
-			vkDestroyImageView( vk.device, vi->view, NULL );
-			vkDestroyImage( vk.device, vi->image, NULL );
+			qvkDeviceWaitIdle( vk.device );
+			qvkDestroyImageView( vk.device, vi->view, NULL );
+			qvkDestroyImage( vk.device, vi->image, NULL );
 			VK_FreeMemory( &vi->alloc );
 			keep.image = VK_NULL_HANDLE;
 			*vi = keep;
@@ -395,7 +395,7 @@ void VK_ImageLevel( int level, int width, int height, const byte *rgba ) {
 	region.imageExtent.width = (uint32_t)width;
 	region.imageExtent.height = (uint32_t)height;
 	region.imageExtent.depth = 1;
-	vkCmdCopyBufferToImage( cmd, vk.staging.buffer, vi->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region );
+	qvkCmdCopyBufferToImage( cmd, vk.staging.buffer, vi->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region );
 
 	if ( level == vi->mipLevels - 1 ) {
 		VK_SetLayout( cmd, vi->image, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
@@ -464,7 +464,7 @@ void VK_InitImages( void ) {
 	alloc.commandPool = vk.commandPool;
 	alloc.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 	alloc.commandBufferCount = 1;
-	VK_CHECK( vkAllocateCommandBuffers( vk.device, &alloc, &vk.uploadCmd ) );
+	VK_CHECK( qvkAllocateCommandBuffers( vk.device, &alloc, &vk.uploadCmd ) );
 	VK_CreateBuffer( &vk.staging, VK_STAGING_BYTES, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, qtrue );
 }
 
@@ -472,13 +472,13 @@ void VK_ShutdownImages( void ) {
 	VK_FlushUploads();
 	for ( int i = 0; i < VK_MAX_IMAGES; i++ ) {
 		if ( vk.images[i].image ) {
-			vkDestroyImageView( vk.device, vk.images[i].view, NULL );
-			vkDestroyImage( vk.device, vk.images[i].image, NULL );
+			qvkDestroyImageView( vk.device, vk.images[i].view, NULL );
+			qvkDestroyImage( vk.device, vk.images[i].image, NULL );
 		}
 	}
 	memset( vk.images, 0, sizeof( vk.images ) );
 	for ( int i = 0; i < vk.numSamplers; i++ ) {
-		vkDestroySampler( vk.device, vk.samplers[i], NULL );
+		qvkDestroySampler( vk.device, vk.samplers[i], NULL );
 	}
 	vk.numSamplers = 0;
 	VK_DestroyBuffer( &vk.staging );

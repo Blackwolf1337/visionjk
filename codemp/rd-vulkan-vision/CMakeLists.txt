@@ -21,7 +21,26 @@ if(NOT InOpenJK)
 	message(FATAL_ERROR "Use the top-level cmake script!")
 endif(NOT InOpenJK)
 
-find_package(Vulkan REQUIRED)
+# Only the headers of Vulkan are needed: the library is loaded by the window code at run time (vk_funcs.h).
+# -DVulkanHeadersDir=<dir with vulkan/vulkan.h> names where they are if they are not found.
+find_path(VulkanHeadersDir vulkan/vulkan.h)
+if(NOT VulkanHeadersDir AND CMAKE_CROSSCOMPILING AND EXISTS "/usr/include/vulkan/vulkan.h")
+	set(VulkanHeadersDir "/usr/include" CACHE PATH "Vulkan headers" FORCE)
+endif()
+if(NOT VulkanHeadersDir)
+	message(FATAL_ERROR "rd-vulkan-vision needs the Vulkan headers (vulkan/vulkan.h), set VulkanHeadersDir")
+endif()
+if(CMAKE_CROSSCOMPILING)
+	# The headers are the same for every platform, so the ones of the host do. But their directory may be the
+	# include directory of the host, which a cross compiler must not see: it gets a copy of the two directories.
+	file(COPY "${VulkanHeadersDir}/vulkan" DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/vulkan-headers")
+	if(EXISTS "${VulkanHeadersDir}/vk_video")
+		file(COPY "${VulkanHeadersDir}/vk_video" DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/vulkan-headers")
+	endif()
+	set(MPVulkanVisionVulkanHeaders "${CMAKE_CURRENT_BINARY_DIR}/vulkan-headers")
+else()
+	set(MPVulkanVisionVulkanHeaders "${VulkanHeadersDir}")
+endif()
 find_program(GLSLC glslc)
 if(NOT GLSLC)
 	message(FATAL_ERROR "rd-vulkan-vision needs glslc (package shaderc) to compile its shaders")
@@ -34,11 +53,12 @@ set(MPVulkanVisionIncludeDirectories
 	"${MPDir}/rd-vanilla"
 	"${GSLIncludeDirectory}"
 	"${CMAKE_CURRENT_BINARY_DIR}"
-	${Vulkan_INCLUDE_DIRS}
+	${MPVulkanVisionVulkanHeaders}
 	)
 
 # everything that touches the GPU
 set(MPVulkanVisionFiles
+	"${MPDir}/rd-vulkan-vision/vk_funcs.h"
 	"${MPDir}/rd-vulkan-vision/vk_hooks.h"
 	"${MPDir}/rd-vulkan-vision/vk_local.h"
 	"${MPDir}/rd-vulkan-vision/vk_backend.cpp"
@@ -164,7 +184,6 @@ list(APPEND MPVulkanVisionLibraries          ${MINIZIP_LIBRARIES})
 # tr_local.h of rd-vanilla pulls in the OpenGL headers for its types. Nothing of OpenGL is linked.
 find_package(OpenGL REQUIRED)
 list(APPEND MPVulkanVisionIncludeDirectories ${OPENGL_INCLUDE_DIR} ${OpenJKLibDir})
-list(APPEND MPVulkanVisionLibraries          ${Vulkan_LIBRARIES})
 
 add_library(${MPVulkanVisionRenderer} SHARED ${MPVulkanVisionFiles})
 

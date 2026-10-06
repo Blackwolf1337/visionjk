@@ -84,7 +84,7 @@ static void VK_BuildWorld( void ) {
 	vkBuffer_t staging;
 	VkBufferCopy region;
 
-	vkDeviceWaitIdle( vk.device );
+	qvkDeviceWaitIdle( vk.device );
 	VK_ShutdownWorld();
 	vk_worldValid = qtrue;
 
@@ -157,7 +157,7 @@ static void VK_BuildWorld( void ) {
 	VK_CreateBuffer( &vk_worldVertexes, total, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, qfalse );
 	region.srcOffset = region.dstOffset = 0;
 	region.size = total;
-	vkCmdCopyBuffer( VK_UploadCmd(), staging.buffer, vk_worldVertexes.buffer, 1, &region );
+	qvkCmdCopyBuffer( VK_UploadCmd(), staging.buffer, vk_worldVertexes.buffer, 1, &region );
 	VK_FlushUploads();
 	VK_DestroyBuffer( &staging );
 	ri.Printf( PRINT_DEVELOPER, "rd-vulkan-vision: %i vertices of %i surfaces of the level on the device, %i KB\n",
