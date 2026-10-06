@@ -76,7 +76,7 @@ the answer tells the page that the numbers started over.
 | `GET /api/entities` | the entities with their keys |
 | `GET /api/export` | the entities in `.ent` format |
 | `GET /api/chat?since=&epoch=` | chat lines after number `since`. Everything if `epoch` is not the current one |
-| `POST /api/action` | `action`, `id`, `value`: say, addbot, map, kick, ban, health, armor, scale, kill, god, noclip, gravity (no `id`), playergravity, team, teleport, and the JA+ ones: amsleep, amwake, amprotect, amempower, ammerc, ammindtrick, amghost, amsilence, amunsilence, amslap, amForceAltDim, amUnForceAltDim, amdenyvote, amShowMotd, amrename, ampsay, admgrant, freeze |
+| `POST /api/action` | `action`, `id`, `value`: say, addbot, map, kick, ban, health, armor, scale, kill, god, noclip, schizo, gravity (no `id`), playergravity, team, teleport, and the JA+ ones: amsleep, amwake, amprotect, amempower, ammerc, ammindtrick, amghost, amsilence, amunsilence, amslap, amForceAltDim, amUnForceAltDim, amdenyvote, amShowMotd, amrename, ampsay, admgrant, freeze |
 | `POST /api/entity` | `op` spawn, update or delete, with `id` and `kv` (one `key=value` per line) |
 
 ## Where it differs from JKAdmin
@@ -106,6 +106,21 @@ Also changed:
   sent, what happened shows in the state (`jp` object of a player: admin rank and the JA+ flags). `freeze` has no
   console command in JA+ and toggles the flag directly. Left out: `amplayefx` and `amtest`, which JA+ does not
   offer on the console. Kick, ban, team and teleport were there already. Added without a test run.
+- New: hallucinations for one player (`codemp/game/g_schizo.c`), the "Schizophrenia" button in the player panel,
+  action `schizo`, also the server console command `schizo <player>`. Every few seconds something happens that
+  only he gets: blaster bolts pass him, a saber is switched on behind him, steps come closer, voices, breathing
+  and screams, a detonator beeps and goes off, the lock tone of a rocket launcher, thunder with a shaking view,
+  chat lines other players never wrote, text on his screen, a kill message between two other players, a hit from
+  nowhere. Two things are real: his saber goes off and his legs jump. It is server side only. The sounds, effects
+  and the kill message are temporary event entities flagged for that one client (`SVF_SINGLECLIENT`), the bolts
+  are missiles with that flag that have no damage and only hit the world, the texts are server commands. A
+  spectator who follows him gets them too. Gone when he leaves or the map changes. Added without a test run.
+  He also gets a stalker: a real NPC (type `ragnos`, the ghost of the single player game, `prisoner` if that one
+  does not spawn) that is only sent to him. It appears behind him, stares at him and walks after him with the
+  stock follow behaviour, is gone when he walks into it or after 8 to 18 seconds, and is put behind him again when
+  he left it behind and does not look. For everybody else it does not exist: not sent, not solid (spawn flag 64,
+  which also keeps `NPC_Begin` from killing whoever stands at the spot), no damage, no weapon, no enemies. One NPC
+  per player is spawned once and then hidden and moved, not spawned again each time. Also without a test run.
 - Fixed in the page: the key fields of an entity lost the focus about once a second. JKAdmin builds the key
   table again with every poll of the entities unless something was typed. Here it is only built again when the
   entity or its keys changed, and never while the cursor is in one of its fields.

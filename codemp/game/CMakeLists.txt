@@ -80,6 +80,7 @@ set(MPGameGameFiles
 	"${MPDir}/game/g_navnew.c"
 	"${MPDir}/game/g_object.c"
 	"${MPDir}/game/g_saga.c"
+	"${MPDir}/game/g_schizo.c"
 	"${MPDir}/game/g_session.c"
 	"${MPDir}/game/g_spawn.c"
 	"${MPDir}/game/g_svcmds.c"

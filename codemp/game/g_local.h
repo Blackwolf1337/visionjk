@@ -1275,6 +1275,12 @@ float WebAdmin_ClientGravity( const gentity_t *ent, float gravity );
 // g_utils.c
 int G_TryConfigstringIndex( const char *name, int start, int max );
 
+// g_schizo.c: hallucinations only one player gets
+qboolean G_SchizoToggle( gentity_t *ent );
+qboolean G_SchizoActive( int clientNum );
+void G_SchizoFrame( void );
+void Svcmd_Schizo_f( void );
+
 // g_spawn.c, for the entity editor
 int G_NumSpawnClassnames( void );
 const char *G_SpawnClassname( int index );

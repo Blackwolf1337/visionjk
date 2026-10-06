@@ -635,6 +635,7 @@ svcmd_t svcmds[] = {
 	{ "listip",						Svcmd_ListIP_f,						qfalse },
 	{ "removeip",					Svcmd_RemoveIP_f,					qfalse },
 	{ "say",						Svcmd_Say_f,						qtrue },
+	{ "schizo",						Svcmd_Schizo_f,						qfalse },
 	{ "toggleallowvote",			Svcmd_ToggleAllowVote_f,			qfalse },
 	{ "toggleuserinfovalidation",	Svcmd_ToggleUserinfoValidation_f,	qfalse },
 };
