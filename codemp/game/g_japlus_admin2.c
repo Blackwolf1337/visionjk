@@ -90,7 +90,10 @@ amvstr <cvar>: executes the vstr of a cvar, not the passwords
 */
 void Cmd_amvstr_f( gentity_t *ent, qboolean rcon ) {
 	char cmd[MAX_TOKEN_CHARS], name[MAX_TOKEN_CHARS];
-	static const char *const secret[] = { "rconpassword", "sv_privatePassword", "jp_councilPass", "jp_knightPass", "jp_instructorPass" };
+	// cvars an admin may not vstr: passwords, and the session cvars, which hold the IP and admin level of every
+	// player. g_webPassword and jp_clanPass were missing, session<n> is matched by its prefix.
+	static const char *const secret[] = { "rconpassword", "sv_privatePassword", "jp_councilPass", "jp_knightPass",
+		"jp_instructorPass", "jp_clanPass", "g_password", "g_webPassword" };
 	int i;
 
 	if ( trap->Argc() < 2 )
@@ -104,6 +107,8 @@ void Cmd_amvstr_f( gentity_t *ent, qboolean rcon ) {
 		JP_Reply( ent, rcon, "Invalid string.\n" );
 		return;
 	}
+	if ( !Q_stricmpn( name, "session", 7 ) )
+		return;
 	for ( i = 0; i < (int)ARRAY_LEN( secret ); i++ ) {
 		if ( !Q_stricmp( name, secret[i] ) )
 			return;
