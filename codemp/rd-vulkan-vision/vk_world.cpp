@@ -283,6 +283,11 @@ void VK_AddSurface( surfaceType_t *surface ) {
 		// gore on a model needs its vertices on the CPU
 		if ( rs->boneCache && mesh && !rs->alternateTex && !rs->goreChain
 			&& VK_AddDeviceMesh( rs->boneCache, mesh, qfalse, (const int *)( (const byte *)mesh + mesh->ofsTriangles ), mesh->numTriangles * 3 ) ) {
+			// R_AddGhoulSurfaces() made this object for the frame and RB_SurfaceGhoul() frees it, which is not
+			// called on this way. It stays if the glow pass draws the surface a second time.
+			if ( !tess.shader->hasGlow || g_bRenderGlowingObjects || !g_bDynamicGlowSupported || !r_DynamicGlow->integer ) {
+				delete rs;
+			}
 			return;
 		}
 	} else if ( *surface == SF_MD3 ) {
