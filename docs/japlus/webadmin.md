@@ -106,6 +106,9 @@ Also changed:
   sent, what happened shows in the state (`jp` object of a player: admin rank and the JA+ flags). `freeze` has no
   console command in JA+ and toggles the flag directly. Left out: `amplayefx` and `amtest`, which JA+ does not
   offer on the console. Kick, ban, team and teleport were there already. Added without a test run.
+- Fixed in the page: the key fields of an entity lost the focus about once a second. JKAdmin builds the key
+  table again with every poll of the entities unless something was typed. Here it is only built again when the
+  entity or its keys changed, and never while the cursor is in one of its fields.
 - New entity `misc_blackhole` (`codemp/game/g_blackhole.c`), made to be placed in the World tab: it is in the
   spawn table, so it shows up in the class list. It pulls players and NPCs towards itself, stronger the closer
   they are, and crushes what reaches its core. It is server side only: for the client it is a stock looping effect

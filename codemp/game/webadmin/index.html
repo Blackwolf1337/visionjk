@@ -1415,7 +1415,7 @@ function frame(now) {
 /* world editor                                                        */
 /* ------------------------------------------------------------------ */
 
-let mode = 'players', placing = false, selectedEnt = -1, ghost = null, kvDirty = false;
+let mode = 'players', placing = false, selectedEnt = -1, ghost = null, kvDirty = false, kvShown = '';
 const ents = new Map();
 
 const ENT_COLORS = [
@@ -1464,7 +1464,8 @@ async function pollEntities() {
 		for (const e of json.entities) ents.set(e.id, e);
 		if (selectedEnt >= 0 && !ents.has(selectedEnt)) selectEnt(-1);
 		renderEntityList();
-		if (!kvDirty) renderEntPanel();
+		// not while the cursor is in a key field: a rebuilt table takes the focus away
+		if (!kvDirty && !$('kvRows').contains(document.activeElement)) renderEntPanel();
 	} catch (e) { /* keep the old list */ }
 }
 
@@ -1501,10 +1502,13 @@ function selectEnt(id) {
 	selectedEnt = id;
 	kvDirty = false;
 	ghost = null;
+	kvShown = '';
 	renderEntPanel();
 	if (mode === 'world') renderEntityList();
 }
 
+// kvShown is what the key table shows: the entity and its keys. The poll comes every second, the table is only
+// built again when this changed, so fields keep focus, cursor and selection (JKAdmin rebuilds it every time).
 function renderEntPanel() {
 	const ent = selectedEnt >= 0 && ents.get(selectedEnt);
 	$('entPanel').classList.toggle('open', !!ent);
@@ -1512,7 +1516,11 @@ function renderEntPanel() {
 	$('entTitle').textContent = ent.classname;
 	$('entSub').textContent = '#' + ent.id + (ent.bmodel ? ' · brush model' : '') + (ent.linked ? '' : ' · not linked');
 	const editable = !!ent.keys;
-	$('kvRows').innerHTML = editable ? ent.keys.map(kvRow).join('') : '<tr><td class="hint">Made by the game code, there are no keys to edit. It can only be deleted.</td></tr>';
+	const shown = ent.id + '|' + JSON.stringify(ent.keys || null);
+	if (shown !== kvShown) {
+		kvShown = shown;
+		$('kvRows').innerHTML = editable ? ent.keys.map(kvRow).join('') : '<tr><td class="hint">Made by the game code, there are no keys to edit. It can only be deleted.</td></tr>';
+	}
 	for (const id of ['kvAdd', 'entApply', 'entRotL', 'entRotR', 'entDup']) $(id).disabled = !editable;
 	$('entHint').style.display = editable ? '' : 'none';
 }
