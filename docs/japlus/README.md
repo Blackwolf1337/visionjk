@@ -21,6 +21,7 @@ The port starts from OpenJK commit 260c59c2 (2026-09-29) and is the commits on t
 | [webadmin.md](webadmin.md) | The web admin panel taken from JKAdmin (not a JA+ feature): cvars, requests, JA+ glue, limits |
 | [security.md](security.md) | Security pass over `codemp/`: findings, fixes, build hardening, what stays, server settings |
 | [threading.md](threading.md) | The frame loop from `main`, why server and client share one thread, timing numbers, what was not built |
+| [renderer.md](renderer.md) | rd-vulkan-vision, a Vulkan renderer next to rd-vanilla (not a JA+ feature): how it is built, what runs on the GPU, differences, what is missing |
 
 ## Where the code is
 

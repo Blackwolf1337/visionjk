@@ -1,0 +1,150 @@
+# rd-vulkan-vision: the Vulkan renderer
+
+A second renderer for the OpenJK client next to `rd-vanilla`. It draws with Vulkan 1.3, keeps the level and the
+models in buffers on the graphics card and does in shaders what `rd-vanilla` computes per vertex on the CPU every
+frame. It is not a JA+ feature and it does not touch the server, the protocol or the game modules.
+
+State: work in progress on the branch `feature/rd-vulkan-vision`. It runs the menu, the levels, players, effects
+and the HUD. What is missing is listed below. `rd-vanilla` stays the default, and the fallback when the library
+does not load.
+
+## Building and switching
+
+```
+cmake -S . -B build64 -DBuildMPRdVulkanVision=ON
+cmake --build build64 -j$(nproc)
+```
+
+Needs the Vulkan headers and loader and `glslc` (package `shaderc`) on the build machine. The result is
+`codemp/rd-vulkan-vision/rd-vulkan-vision_x86_64.so`, it has to lie next to the engine binary. In the game:
+
+```
+cl_renderer rd-vulkan-vision; vid_restart
+```
+
+and `cl_renderer rd-vanilla; vid_restart` to go back. A graphics card without Vulkan 1.3 or without descriptor
+indexing ends in an error that names `rd-vanilla`.
+
+| Cvar | Meaning |
+|------|---------|
+| `r_vkDebug 1` | validation layer and its messages in the console, if the layer is installed (latched) |
+| `r_vkStatic 0` | cheat: nothing from the device buffers, every vertex through the CPU as in `rd-vanilla`. For telling a fault of the buffers from a fault of the shading |
+| `gfxinfo` | device, memory, and what the last frame was made of |
+
+The cvars of `rd-vanilla` keep their names and meaning (`r_gamma`, `r_textureMode`, `r_picmip`,
+`r_DynamicGlow` and its parameters, `r_dynamiclight`, `r_drawfog`, `r_fastsky`, `r_surfaceSprites`, ...). The ones
+that only make sense for OpenGL extensions are registered and ignored.
+
+## How it is built
+
+The renderer does not copy the parts of `rd-vanilla` that are not graphics code. Its CMake target compiles them
+from `codemp/rd-vanilla/` with `RD_VULKAN_VISION` defined: the BSP and model loaders, the `.shader` parser,
+Ghoul2 with bones, bolts and collision, skins, marks, the light grid, the scene with PVS and culling, the cvars
+and the export table, the image code up to the upload, the sky geometry, the surface functions for sprites,
+beams and the like, the weather particles and the surface sprites.
+
+What that needs in `rd-vanilla`: `#ifndef RD_VULKAN_VISION` around the OpenGL-only functions of `tr_init.cpp`
+and `tr_image.cpp`, one function in `tr_ghoul2.cpp` that hands out the bone matrices, and one include at the end
+of `tr_local.h`. Without the macro the files are byte for byte the same after the preprocessor, that was checked
+with `g++ -E -P` against `master`. The target links with `-Wl,-z,defs` and without libGL, so an OpenGL call that
+is left in a shared file fails the build.
+
+`rd-vulkan-vision/vk_hooks.h` is what the shared files see in the place of OpenGL:
+
+- the texture upload calls of `tr_image.cpp` go to the texture table (`vk_image.cpp`)
+- drawing with `glBegin`/`glEnd`, client arrays, the matrix calls, `glDepthRange` and `glFog` go to `vk_gl.cpp`,
+  which collects the vertices and draws them like everything else. That is how the sky box, the weather and the
+  surface sprites work without a change to their files
+- the rest (stencil setup of the overdraw counter, line width, display lists) is nothing
+
+The engine got a window type for Vulkan (`GRAPHICS_API_VULKAN`, `SDL_WINDOW_VULKAN`) and two functions at the
+end of `refimport_t` for the instance extensions and the surface. The other renderers do not use them.
+
+| File | Content |
+|------|---------|
+| `vk_main.cpp` | instance, device, swapchain, start and shutdown, `gfxinfo` |
+| `vk_memory.cpp` | device memory in 64 MB blocks with free lists, buffers |
+| `vk_image.cpp` | the texture table, uploads batched in one command buffer, samplers, render targets |
+| `vk_pipeline.cpp` | descriptor layouts, shader modules, pipelines |
+| `vk_frame.cpp` | a frame: targets, gamma pass, copy to the window, buffers per frame, screenshots |
+| `vk_shade.cpp` | a batch with a `.shader` script becomes draws: colors, tcMods, fog, dynamic lights |
+| `vk_backend.cpp` | the render commands: pictures, views, entities, draw order |
+| `vk_world.cpp` | the level in a device buffer, which batches can use it |
+| `vk_model.cpp` | Ghoul2 and MD3 vertices in a device buffer, bones per frame |
+| `vk_post.cpp` | dynamic glow |
+| `vk_gl.cpp` | the immediate mode drawing of the shared files |
+| `shaders/` | `stage.glsl` (one stage of a script on a vertex), `generic.vert`, `skinned.vert`, `generic.frag`, `post.vert`, `gamma.frag`, `blur.frag`, `copy.frag`. `glslc -mfmt=c` turns them into headers while building |
+
+## What runs where
+
+| | rd-vanilla | rd-vulkan-vision |
+|---|-----------|------------------|
+| Level faces, meshes, patches | copied into the tess arrays every frame | one device buffer, per frame only indexes |
+| Ghoul2 models | every vertex moved by its bones on the CPU | vertices in a device buffer, bones per skeleton per frame, skinning in `skinned.vert` |
+| MD3 with one frame | decoded and copied every frame | same device buffer, one identity bone |
+| tcMod, tcGen, rgbGen, alphaGen | per vertex on the CPU | one matrix and two colors per draw, the rest in `stage.glsl` |
+| rgbGen lightingDiffuse | per vertex on the CPU | vertex shader |
+| Dynamic lights | per triangle on the CPU, one pass per light | per pixel in `generic.frag`, one pass per light |
+| Global fog | fixed function fog | per pixel in `generic.frag` |
+| Textures | bound per stage | one table of all textures, indexed in the shader |
+| State of a stage | set per stage | only the blend function needs a pipeline, depth, cull and offset are dynamic state |
+| Gamma, overbright | ramp of the display or baked into textures | one pass over the finished frame |
+
+Still on the CPU, through the tess arrays as in `rd-vanilla`: the sky, shaders with `deformVertexes`, surfaces
+in a fog volume (the fog pass), `alphaGen lightingSpecular`, `portal` and `blend`, fog color adjustment,
+vertex lit surfaces with more than one light style, models with gore on them, MD3 with several frames, all
+effects the game hands over as polygons, sprites, beams and lines, marks, the weather, surface sprites, the HUD.
+
+A frame on mp/ffa3, 1280x720, from `gfxinfo`: as a spectator at the first spawn point 4551 triangles come from
+device buffers and 1144 vertices from the CPU. Following a bot in a fight about 4600 triangles from device
+buffers and 1500 vertices from the CPU. Before the device buffers that scene had 8000 to 10000 vertices from the
+CPU.
+
+## Differences to rd-vanilla
+
+- Patches are drawn with all the rows and columns they were subdivided into. `rd-vanilla` leaves some out with
+  the distance (`r_lodCurveError`), so a patch far away is a little rounder here.
+- The frame is cleared at its start. Where nothing of the level is drawn (looking out of the world, the camera
+  inside a model) this renderer shows black, `rd-vanilla` shows what the last frame left there.
+- Dynamic lights are evaluated per pixel with the same formula, not per triangle.
+- The glow buffers have 8 bits per channel, `rd-vanilla` asks for 16.
+- Screenshots hold the frame after the gamma pass.
+
+## Not done
+
+Refraction (force push, `RF_DISTORTION`: those surfaces are not drawn at all for now), portals and mirrors,
+stencil and projection shadows (`cg_shadows 2` and `3`), flares, the vertex deform of disintegration, recording
+to AVI, the automap, `r_showtris`, `r_shownormals`, `r_showImages`, anti aliasing. A build for Windows or macOS
+was not tried.
+
+## Checked
+
+2026-10-06, RTX 4070 SUPER, Linux, NVIDIA 615.71. Every run with the validation layer, no message in any of them.
+
+Views are compared as pairs: one session, the camera placed as a spectator with `setviewpos`, a screenshot with
+`rd-vanilla`, `cl_renderer rd-vulkan-vision; vid_restart`, a screenshot from the very same spot, and back.
+`japlus_port/tools/rdshot.sh` runs such a script, `rdviews.py` writes one for any map from its spawn points,
+`rddiff.py` counts the pixels that differ by more than 16 in a channel and writes both pictures and their
+difference side by side.
+
+| Scene | Pixels off by more than 16 |
+|-------|----------------------------|
+| mp/ffa3, six views (sky box, lightmaps, patches, models) | 0.1 to 1.2 % |
+| mp/ffa3 with `r_DynamicGlow 1` in both | the same |
+| mp/ffa2, three views (fog volumes) | 0.0 to 0.2 % |
+| mp/ctf2, three views (global fog, snow) | 0.1 to 0.5 % |
+| mp/ctf3, four views (grass sprites) | 0.1 to 1.3 % |
+| the player from the front with HUD | 0.2 to 0.4 % |
+
+What is left are animated shaders (the two pictures are seconds apart), the snow and the swaying grass, the
+patches, and texture filter noise. Also seen without a number: main menu and console, a fight of bots with
+blades, glow, marks and the light of the blades on the walls, `vid_restart` between the two renderers in both
+directions (13 renderer starts in one session).
+
+Speed, one run, six bots asked for and three in the game, the client follows one, `com_maxfps 0`: the engine
+allows 1000 frames a second. `rd-vanilla` reached a median of 725, `rd-vulkan-vision` 967. In an earlier run of
+the same script both were at 1000. The two renderers do not see the same moments of the fight, so this is a
+hint, not a measurement. See [threading.md](threading.md) for why neither is the limit at 60 or 125 frames a
+second on this machine.
+
+Not checked: other graphics cards and drivers, Windows, macOS, a long game session, play by a person.
