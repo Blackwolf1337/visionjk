@@ -16,6 +16,9 @@ layout( location = 1 ) out vec2 v_texCoord1;
 layout( location = 2 ) out vec4 v_color;
 layout( location = 3 ) out vec3 v_position;		// in model space
 layout( location = 4 ) out float v_depth;		// distance in front of the eye
+layout( location = 5 ) flat out uint v_draw;	// index into draws
+
+#define DRAW	uint( gl_InstanceIndex )
 
 const float TWO_PI = 6.28318530718;
 
@@ -95,7 +98,7 @@ vec2 GenTexCoord( uint gen, vec4 vectors[2], vec3 viewOrigin, StageInput v ) {
 		return vec2( 0.5 + reflected.y * 0.5, 0.5 - reflected.z * 0.5 );
 	}
 	case TCGEN_VECTOR:		return vec2( dot( v.position, vectors[0].xyz ), dot( v.position, vectors[1].xyz ) );
-	case TCGEN_FOG:			return FogCoords( v.position, draws[push.draw].fogVec, draws[push.draw].fogParm.z );
+	case TCGEN_FOG:			return FogCoords( v.position, draws[DRAW].fogVec, draws[DRAW].fogParm.z );
 	default:				return vec2( 0.0 );
 	}
 }
@@ -113,9 +116,10 @@ vec2 ModTexCoord( vec2 st, vec4 mat[2], vec4 turb, StageInput v ) {
 }
 
 void StageVertex( StageInput v ) {
-	Draw d = draws[push.draw];
+	Draw d = draws[DRAW];
 	Transform t = transforms[d.transform];
 
+	v_draw = DRAW;
 	v.position = Deform( d, v );
 	gl_Position = t.mvp * vec4( v.position, 1.0 );
 	v_position = v.position;

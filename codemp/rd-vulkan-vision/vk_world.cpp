@@ -58,6 +58,7 @@ qboolean VK_BatchIsSkinned( void ) {
 // RB_BeginSurface(): the first surface of the batch decides again
 void VK_BatchBegin( void ) {
 	vk_batchMode = 0;
+	VK_ModelBatchBegin();
 }
 
 /*
@@ -223,6 +224,17 @@ void VK_StaticColorScale( float *scale ) {
 	}
 }
 
+// ends the batch and begins another one of the same shader for surfaces on the bones
+static void VK_NewModelBatch( CBoneCache *bones ) {
+	shader_t *shader = tess.shader;
+	const int fogNum = tess.fogNum;
+
+	RB_EndSurface();
+	RB_BeginSurface( shader, fogNum );
+	vk_batchMode = 2;
+	vk_batchBones = bones;
+}
+
 /*
 ===============
 VK_AddDeviceMesh
@@ -232,8 +244,7 @@ surface with the bones of its skeleton, or an MD3 surface with one frame (bones 
 qfalse: it has to take the way through the tess arrays.
 ===============
 */
-static qboolean VK_AddDeviceMesh( CBoneCache *bones, const void *mesh, qboolean md3, const int *triangles, int numIndexes ) {
-	glIndex_t *out;
+static qboolean VK_AddDeviceMesh( CBoneCache *bones, const void *mesh, qboolean md3, int numIndexes ) {
 	int first;
 
 	if ( !tess.numIndexes && !tess.numVertexes ) {
@@ -241,13 +252,7 @@ static qboolean VK_AddDeviceMesh( CBoneCache *bones, const void *mesh, qboolean 
 		vk_batchBones = bones;
 	} else if ( vk_batchMode == 2 && vk_batchBones != bones ) {
 		// a batch has the bones of one skeleton
-		shader_t *shader = tess.shader;
-		const int fogNum = tess.fogNum;
-
-		RB_EndSurface();
-		RB_BeginSurface( shader, fogNum );
-		vk_batchMode = 2;
-		vk_batchBones = bones;
+		VK_NewModelBatch( bones );
 	}
 	if ( vk_batchMode != 2 ) {
 		return qfalse;
@@ -256,12 +261,13 @@ static qboolean VK_AddDeviceMesh( CBoneCache *bones, const void *mesh, qboolean 
 	if ( first < 0 ) {
 		return qfalse;
 	}
+	// the indexes stay on the device, but the batch still counts them
 	RB_CHECKOVERFLOW( 0, numIndexes );
 	vk_batchMode = 2;		// an overflow began a new batch
 	vk_batchBones = bones;
-	out = tess.indexes + tess.numIndexes;
-	for ( int i = 0; i < numIndexes; i++ ) {
-		out[i] = triangles[i] + first;
+	if ( !VK_ModelBatchAdd( first, numIndexes ) ) {
+		VK_NewModelBatch( bones );
+		VK_ModelBatchAdd( first, numIndexes );
 	}
 	tess.numIndexes += numIndexes;
 	return qtrue;
@@ -282,7 +288,7 @@ void VK_AddSurface( surfaceType_t *surface ) {
 
 		// gore on a model needs its vertices on the CPU
 		if ( rs->boneCache && mesh && !rs->alternateTex && !rs->goreChain
-			&& VK_AddDeviceMesh( rs->boneCache, mesh, qfalse, (const int *)( (const byte *)mesh + mesh->ofsTriangles ), mesh->numTriangles * 3 ) ) {
+			&& VK_AddDeviceMesh( rs->boneCache, mesh, qfalse, mesh->numTriangles * 3 ) ) {
 			// R_AddGhoulSurfaces() made this object for the frame and RB_SurfaceGhoul() frees it, which is not
 			// called on this way. It stays if the glow pass draws the surface a second time.
 			if ( !tess.shader->hasGlow || g_bRenderGlowingObjects || !g_bDynamicGlowSupported || !r_DynamicGlow->integer ) {
@@ -295,7 +301,7 @@ void VK_AddSurface( surfaceType_t *surface ) {
 
 		// a model with one frame is a mesh that does not move. With more frames it is blended on the CPU.
 		if ( mesh->numFrames == 1
-			&& VK_AddDeviceMesh( NULL, mesh, qtrue, (const int *)( (const byte *)mesh + mesh->ofsTriangles ), mesh->numTriangles * 3 ) ) {
+			&& VK_AddDeviceMesh( NULL, mesh, qtrue, mesh->numTriangles * 3 ) ) {
 			return;
 		}
 	}

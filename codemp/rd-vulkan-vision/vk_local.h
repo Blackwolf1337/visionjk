@@ -42,6 +42,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define VK_MAX_PIPELINES	256
 #define VK_MAX_BONES		16384		// bones of all skeletons of one frame
 #define VK_MODEL_BYTES		( 32 << 20 )	// vertices of the Ghoul2 models of a level
+#define VK_MODEL_INDEX_BYTES	( 16 << 20 )	// and their triangles
+#define VK_MAX_BATCH_RANGES	64				// runs of indexes a batch of model surfaces can have
 
 // ------------------------------------------------------------------------------------------------------------
 // what the shaders read, shaders/common.glsl has the same layout (std430)
@@ -146,6 +148,11 @@ typedef struct vkTarget_s {		// something to render into
 
 #define VK_MAX_FLARES		256
 
+typedef struct vkIndexRange_s {	// a run of indexes in a buffer on the device
+	uint32_t	first;
+	uint32_t	count;
+} vkIndexRange_t;
+
 typedef struct vkProbe_s {		// one pixel of the depth of a frame that is read back for a flare
 	int			flare;				// which one
 	int			x, y;				// in the depth target
@@ -168,7 +175,7 @@ typedef struct vkFrame_s {
 	vkBuffer_t		bones;
 	vkBuffer_t		probes;			// 4 bytes of depth per probe, written by the device
 
-	VkDeviceSize	vertexUsed;
+	int				numVertexes;		// in the four streams of vertices built on the CPU
 	VkDeviceSize	indexUsed;
 	int				numTransforms;
 	int				numDraws;
@@ -250,6 +257,8 @@ typedef struct vkState_s {
 	VkPipeline					glowPipelines[2];	// the blurred glow onto the frame: added, or added softly
 	vkPipeline_t				pipelines[VK_MAX_PIPELINES];
 	int							numPipelines;
+	uint32_t					lastPipelineKey;	// what VK_FindPipeline() was asked last and what it answered
+	VkPipeline					lastPipeline;
 
 	vkImage_t					images[VK_MAX_IMAGES];
 	image_t						*boundImage;		// GL_Bind(), the image tr_image.cpp is uploading
@@ -270,13 +279,20 @@ typedef struct vkState_s {
 	VkPipeline					boundPipeline;
 	uint32_t					boundState;			// the dynamic state that is set, see VK_DrawTess()
 	qboolean					stateValid;
-	VkDeviceSize				tessColorOffset;	// where VK_UploadTess() put the vertex colors of the batch
-	int							numBoundIndexes;	// of the geometry that was uploaded last
+	VkBuffer					boundVertexBuffer;	// what the draws read: the streams of the frame, the level or the models
+	VkBuffer					boundIndexBuffer;
+	int							numBoundIndexes;	// the batch that was set up last: that many indexes
+	uint32_t					firstIndex;			// from here in the index buffer
+	int32_t						vertexOffset;		// counted from this vertex
+	const vkIndexRange_t		*ranges;			// or, for surfaces of models, the runs of indexes to draw
+	int							numRanges;			// 0: numBoundIndexes from firstIndex
 	int							viewport[4];		// x, y, width, height as OpenGL counts them
 	qboolean					overflowed;			// this frame has more geometry than fits, said once
 
 	// what the frame was made of, for gfxinfo: [0] the frame being recorded, [1] the last finished one
 	int							statDraws[2];
+	int							statTransforms[2];
+	int							statBones[2];
 	int							statCpuVertexes[2];	// vertices that were built on the CPU and uploaded
 	int							statCpuIndexes[2];
 	int							statStaticIndexes[2];	// indexes into vertices that are on the device
@@ -350,6 +366,8 @@ void		VK_ShutdownModels( void );
 void		VK_ModelsBeginFrame( void );
 int			VK_SkinnedSurface( const mdxmSurface_t *surface );
 int			VK_StaticMeshSurface( const md3Surface_t *surface );
+void		VK_ModelBatchBegin( void );
+qboolean	VK_ModelBatchAdd( int firstIndex, int numIndexes );
 qboolean	VK_UploadSkinnedBatch( CBoneCache *boneCache, uint32_t *bones );
 
 // vk_shade.cpp
@@ -385,6 +403,8 @@ void		VK_ClearDepth( int x, int y, int width, int height );
 void		VK_ClearColor( int x, int y, int width, int height, const float *color );
 int			VK_AddTransform( const vkTransform_t *transform );
 void		VK_SetDepthRange( float minDepth, float maxDepth );
+void		VK_BindVertexBuffer( VkBuffer buffer, const VkDeviceSize *offsets, int numBindings );
+void		VK_BindIndexBuffer( VkBuffer buffer );
 qboolean	VK_UploadGeometry( const vec4_t *xyz, const vec4_t *normal, const vec2_t ( *texCoords )[NUM_TEX_COORDS],
 				const color4ub_t *colors, int numVerts, const glIndex_t *indexes, int numIndexes );
 qboolean	VK_UploadIndexes( VkBuffer vertexBuffer, const VkDeviceSize *offsets, int numBindings, const glIndex_t *indexes, int numIndexes );

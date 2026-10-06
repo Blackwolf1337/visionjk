@@ -48,9 +48,8 @@ layout( set = 0, binding = 2, std430 ) readonly buffer Draws {
 	Draw		draws[];
 };
 
-layout( push_constant ) uniform Push {
-	uint	draw;
-} push;
+// Which of the draws a draw call is comes as its first instance: gl_InstanceIndex in the vertex shaders (DRAW in
+// stage.glsl), which hand it on to the fragment shader as v_draw. That costs no call of its own per draw.
 
 // Draw.flags
 #define ATEST( flags )		( ( flags ) & 7u )

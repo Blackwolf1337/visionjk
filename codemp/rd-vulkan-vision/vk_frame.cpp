@@ -29,6 +29,17 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 static vkBuffer_t	vk_readback;		// where the device copies a finished frame for the CPU to read
 
+// The vertices that are built on the CPU go into four streams of the frame, as the tess arrays have them:
+// positions, normals, texture coordinates, colors. A vertex has the same number in all four. So the streams are
+// bound once, and a batch says with the vertex offset of its draw calls where its vertices begin: hundreds of
+// small batches a frame (every spark is one) then need no bind calls.
+#define VK_STREAM_BYTES		( sizeof( vec4_t ) * 2 + sizeof( vec2_t ) * NUM_TEX_COORDS + sizeof( color4ub_t ) )
+#define VK_STREAM_VERTEXES	( ( VK_VERTEX_BYTES / VK_STREAM_BYTES ) & ~(size_t)3 )
+
+static const VkDeviceSize	vk_streamStride[4] = { sizeof( vec4_t ), sizeof( vec4_t ), sizeof( vec2_t ) * NUM_TEX_COORDS, sizeof( color4ub_t ) };
+static const VkDeviceSize	vk_streamOffset[4] = { 0, VK_STREAM_VERTEXES * sizeof( vec4_t ), VK_STREAM_VERTEXES * sizeof( vec4_t ) * 2,
+	VK_STREAM_VERTEXES * ( sizeof( vec4_t ) * 2 + sizeof( vec2_t ) * NUM_TEX_COORDS ) };
+
 void VK_InitFrames( void ) {
 	VkCommandBufferAllocateInfo alloc = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
 	VkFenceCreateInfo fence = { VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
@@ -237,7 +248,7 @@ void VK_BeginFrame( void ) {
 	VK_CHECK( qvkWaitForFences( vk.device, 1, &frame->fence, VK_TRUE, UINT64_MAX ) );
 	// what the device wrote when these commands ran last can be read now
 	VK_ReadProbes( frame );
-	frame->vertexUsed = 0;
+	frame->numVertexes = 0;
 	frame->indexUsed = 0;
 	frame->numTransforms = 0;
 	frame->numDraws = 0;
@@ -265,6 +276,8 @@ void VK_BeginFrame( void ) {
 	vk.boundPipeline = VK_NULL_HANDLE;
 	vk.stateValid = qfalse;
 	vk.overflowed = qfalse;
+	vk.numRanges = 0;
+	vk.boundVertexBuffer = vk.boundIndexBuffer = VK_NULL_HANDLE;
 	VK_SetViewport( 0, 0, vk.width, vk.height, 0.0f, 1.0f );
 }
 
@@ -387,6 +400,8 @@ void VK_EndFrame( void ) {
 	}
 
 	vk.statDraws[1] = frame->numDraws;
+	vk.statTransforms[1] = frame->numTransforms;
+	vk.statBones[1] = frame->numBones;
 	vk.statCpuVertexes[1] = vk.statCpuVertexes[0];
 	vk.statCpuIndexes[1] = vk.statCpuIndexes[0];
 	vk.statStaticIndexes[1] = vk.statStaticIndexes[0];
@@ -407,16 +422,52 @@ Returns the index the draws refer to
 ===============
 */
 int VK_AddTransform( const vkTransform_t *transform ) {
+	// what was added last, as a copy that is cheap to read: the buffer of the frame is for writing
+	static vkTransform_t last;
+	static int lastIndex = -1;
 	vkFrame_t *frame = vk.frame;
 
 	if ( !frame ) {
 		return 0;
 	}
+	// Sprites, sparks and other effects are an entity each and come by the hundred, all with the matrices of
+	// the world. They share one entry. An index that is not below numTransforms is one of an older frame.
+	if ( lastIndex >= 0 && lastIndex < frame->numTransforms && !memcmp( transform, &last, sizeof( last ) ) ) {
+		return lastIndex;
+	}
 	if ( frame->numTransforms == VK_MAX_TRANSFORMS ) {
 		return VK_MAX_TRANSFORMS - 1;
 	}
 	memcpy( frame->transforms.mapped + sizeof( vkTransform_t ) * frame->numTransforms, transform, sizeof( *transform ) );
+	last = *transform;
+	lastIndex = frame->numTransforms;
 	return frame->numTransforms++;
+}
+
+/*
+===============
+VK_BindVertexBuffer, VK_BindIndexBuffer
+
+Bind only when something else is bound: most batches follow one of their own kind. A vertex buffer is always
+bound with the same offsets (the streams of the frame, the level, the models).
+===============
+*/
+void VK_BindVertexBuffer( VkBuffer buffer, const VkDeviceSize *offsets, int numBindings ) {
+	const VkBuffer buffers[4] = { buffer, buffer, buffer, buffer };
+
+	if ( vk.boundVertexBuffer == buffer ) {
+		return;
+	}
+	qvkCmdBindVertexBuffers( vk.frame->cmd, 0, (uint32_t)numBindings, buffers, offsets );
+	vk.boundVertexBuffer = buffer;
+}
+
+void VK_BindIndexBuffer( VkBuffer buffer ) {
+	if ( vk.boundIndexBuffer == buffer ) {
+		return;
+	}
+	qvkCmdBindIndexBuffer( vk.frame->cmd, buffer, 0, VK_INDEX_TYPE_UINT32 );
+	vk.boundIndexBuffer = buffer;
 }
 
 /*
@@ -430,22 +481,13 @@ tess arrays. What is drawn with VK_DrawTess() after this comes from there. qfals
 qboolean VK_UploadGeometry( const vec4_t *xyz, const vec4_t *normal, const vec2_t ( *texCoords )[NUM_TEX_COORDS],
 	const color4ub_t *colors, int numVerts, const glIndex_t *indexes, int numIndexes ) {
 	vkFrame_t *frame = vk.frame;
-	const VkDeviceSize numVertexes = (VkDeviceSize)numVerts;
-	const VkDeviceSize sizes[4] = { numVertexes * sizeof( vec4_t ), numVertexes * sizeof( vec4_t ),
-		numVertexes * sizeof( vec2_t ) * NUM_TEX_COORDS, numVertexes * 4 };
 	const void *sources[4] = { xyz, normal, texCoords, colors };
 	const VkDeviceSize indexBytes = (VkDeviceSize)numIndexes * sizeof( glIndex_t );
-	VkDeviceSize vertexBytes = 0;
-	VkBuffer buffers[4];
-	VkDeviceSize offsets[4];
 
 	if ( !frame || !numIndexes || !numVerts ) {
 		return qfalse;
 	}
-	for ( int i = 0; i < 4; i++ ) {
-		vertexBytes += ( sizes[i] + 15 ) & ~(VkDeviceSize)15;
-	}
-	if ( frame->vertexUsed + vertexBytes > VK_VERTEX_BYTES || frame->indexUsed + indexBytes > VK_INDEX_BYTES ) {
+	if ( frame->numVertexes + numVerts > (int)VK_STREAM_VERTEXES || frame->indexUsed + indexBytes > VK_INDEX_BYTES ) {
 		if ( !vk.overflowed ) {
 			vk.overflowed = qtrue;
 			ri.Printf( PRINT_DEVELOPER, "VK_UploadGeometry: the frame has more geometry than fits, the rest is not drawn\n" );
@@ -453,17 +495,18 @@ qboolean VK_UploadGeometry( const vec4_t *xyz, const vec4_t *normal, const vec2_
 		return qfalse;
 	}
 	for ( int i = 0; i < 4; i++ ) {
-		memcpy( frame->vertexes.mapped + frame->vertexUsed, sources[i], (size_t)sizes[i] );
-		buffers[i] = frame->vertexes.buffer;
-		offsets[i] = frame->vertexUsed;
-		frame->vertexUsed += ( sizes[i] + 15 ) & ~(VkDeviceSize)15;
+		memcpy( frame->vertexes.mapped + vk_streamOffset[i] + frame->numVertexes * vk_streamStride[i], sources[i],
+			(size_t)( numVerts * vk_streamStride[i] ) );
 	}
 	memcpy( frame->indexes.mapped + frame->indexUsed, indexes, (size_t)indexBytes );
-	vk.tessColorOffset = offsets[3];
-	qvkCmdBindVertexBuffers( frame->cmd, 0, 4, buffers, offsets );
-	qvkCmdBindIndexBuffer( frame->cmd, frame->indexes.buffer, frame->indexUsed, VK_INDEX_TYPE_UINT32 );
-	frame->indexUsed += indexBytes;
+	VK_BindVertexBuffer( frame->vertexes.buffer, vk_streamOffset, 4 );
+	VK_BindIndexBuffer( frame->indexes.buffer );
+	vk.firstIndex = (uint32_t)( frame->indexUsed / sizeof( glIndex_t ) );
+	vk.vertexOffset = frame->numVertexes;
 	vk.numBoundIndexes = numIndexes;
+	vk.numRanges = 0;
+	frame->numVertexes += numVerts;
+	frame->indexUsed += indexBytes;
 	vk.statCpuVertexes[0] += numVerts;
 	vk.statCpuIndexes[0] += numIndexes;
 	return qtrue;
@@ -480,16 +523,18 @@ Indexes into vertices that are in a buffer on the device already: offsets are wh
 qboolean VK_UploadIndexes( VkBuffer vertexBuffer, const VkDeviceSize *offsets, int numBindings, const glIndex_t *indexes, int numIndexes ) {
 	vkFrame_t *frame = vk.frame;
 	const VkDeviceSize indexBytes = (VkDeviceSize)numIndexes * sizeof( glIndex_t );
-	const VkBuffer buffers[4] = { vertexBuffer, vertexBuffer, vertexBuffer, vertexBuffer };
 
 	if ( !frame || !numIndexes || !vertexBuffer || frame->indexUsed + indexBytes > VK_INDEX_BYTES ) {
 		return qfalse;
 	}
 	memcpy( frame->indexes.mapped + frame->indexUsed, indexes, (size_t)indexBytes );
-	qvkCmdBindVertexBuffers( frame->cmd, 0, (uint32_t)numBindings, buffers, offsets );
-	qvkCmdBindIndexBuffer( frame->cmd, frame->indexes.buffer, frame->indexUsed, VK_INDEX_TYPE_UINT32 );
-	frame->indexUsed += indexBytes;
+	VK_BindVertexBuffer( vertexBuffer, offsets, numBindings );
+	VK_BindIndexBuffer( frame->indexes.buffer );
+	vk.firstIndex = (uint32_t)( frame->indexUsed / sizeof( glIndex_t ) );
+	vk.vertexOffset = 0;
 	vk.numBoundIndexes = numIndexes;
+	vk.numRanges = 0;
+	frame->indexUsed += indexBytes;
 	vk.statStaticIndexes[0] += numIndexes;
 	return qtrue;
 }
@@ -525,19 +570,20 @@ to the vertex colors VK_UploadTess() put there.
 */
 void VK_TessColors( const color4ub_t *colors ) {
 	vkFrame_t *frame = vk.frame;
-	const VkDeviceSize size = (VkDeviceSize)tess.numVertexes * 4;
-	VkDeviceSize offset = vk.tessColorOffset;
+	VkDeviceSize offset = vk_streamOffset[3];
 
 	if ( !frame ) {
 		return;
 	}
 	if ( colors ) {
-		if ( frame->vertexUsed + size > VK_VERTEX_BYTES ) {
+		if ( frame->numVertexes + tess.numVertexes > (int)VK_STREAM_VERTEXES ) {
 			return;
 		}
-		offset = frame->vertexUsed;
-		memcpy( frame->vertexes.mapped + offset, colors, (size_t)size );
-		frame->vertexUsed += ( size + 15 ) & ~(VkDeviceSize)15;
+		// the colors take a run of vertices of their own. The draws of the batch count from its first vertex, so
+		// the stream is bound as far ahead as that run lies behind the batch.
+		memcpy( frame->vertexes.mapped + offset + frame->numVertexes * sizeof( color4ub_t ), colors, (size_t)tess.numVertexes * sizeof( color4ub_t ) );
+		offset += (VkDeviceSize)( frame->numVertexes - vk.vertexOffset ) * sizeof( color4ub_t );
+		frame->numVertexes += tess.numVertexes;
 	}
 	qvkCmdBindVertexBuffers( frame->cmd, 3, 1, &frame->vertexes.buffer, &offset );
 }
@@ -609,9 +655,15 @@ void VK_DrawTess( const vkDraw_t *draw, vkProgram_t program, uint32_t stateBits,
 
 	drawIndex = (uint32_t)frame->numDraws++;
 	memcpy( frame->draws.mapped + sizeof( vkDraw_t ) * drawIndex, draw, sizeof( *draw ) );
-	qvkCmdPushConstants( cmd, vk.pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0,
-		sizeof( drawIndex ), &drawIndex );
-	qvkCmdDrawIndexed( cmd, (uint32_t)vk.numBoundIndexes, 1, 0, 0, 0 );
+	// the shaders learn which draw this is from the first instance of the call
+	if ( vk.numRanges ) {
+		// surfaces of models: their triangles are in an index buffer on the device
+		for ( int i = 0; i < vk.numRanges; i++ ) {
+			qvkCmdDrawIndexed( cmd, vk.ranges[i].count, 1, vk.ranges[i].first, 0, drawIndex );
+		}
+	} else {
+		qvkCmdDrawIndexed( cmd, (uint32_t)vk.numBoundIndexes, 1, vk.firstIndex, vk.vertexOffset, drawIndex );
+	}
 }
 
 /*

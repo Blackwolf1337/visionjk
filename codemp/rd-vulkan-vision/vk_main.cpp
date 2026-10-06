@@ -532,6 +532,7 @@ void VK_GfxInfo_f( void ) {
 		vk.numSamplers );
 	ri.Printf( PRINT_ALL, "last frame: %i draws, %i triangles from buffers on the device, %i triangles and %i vertices built on the CPU\n",
 		vk.statDraws[1], vk.statStaticIndexes[1] / 3, vk.statCpuIndexes[1] / 3, vk.statCpuVertexes[1] );
+	ri.Printf( PRINT_ALL, "  %i of %i transforms, %i of %i bones\n", vk.statTransforms[1], VK_MAX_TRANSFORMS, vk.statBones[1], VK_MAX_BONES );
 	// the shaders with the most triangles from the CPU
 	for ( int n = 0; n < 8; n++ ) {
 		vkStatShader_t *most = NULL;

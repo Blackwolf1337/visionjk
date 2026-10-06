@@ -16,7 +16,7 @@ layout( location = 3 ) in uvec4 a_bones;
 layout( location = 4 ) in vec4 a_weights;
 
 void main() {
-	uint base = draws[push.draw].bones;
+	uint base = draws[DRAW].bones;
 	vec3 position = vec3( 0.0 );
 	vec3 normal = vec3( 0.0 );
 

@@ -9,6 +9,7 @@ layout( location = 1 ) in vec2 v_texCoord1;
 layout( location = 2 ) in vec4 v_color;
 layout( location = 3 ) in vec3 v_position;
 layout( location = 4 ) in float v_depth;
+layout( location = 5 ) flat in uint v_draw;
 
 layout( location = 0 ) out vec4 o_color;
 
@@ -44,7 +45,7 @@ vec4 DynamicLight( Draw d ) {
 }
 
 void main() {
-	Draw d = draws[push.draw];
+	Draw d = draws[v_draw];
 
 	if ( DLIGHT( d.flags ) ) {
 		o_color = DynamicLight( d );

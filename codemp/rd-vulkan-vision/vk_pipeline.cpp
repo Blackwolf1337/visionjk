@@ -124,22 +124,21 @@ static void VK_CreateLayouts( void ) {
 	pool.pPoolSizes = sizes;
 	VK_CHECK( qvkCreateDescriptorPool( vk.device, &pool, NULL, &vk.descriptorPool ) );
 
-	// the index of the draw is all that changes from one draw to the next
-	push.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
-	push.offset = 0;
-	push.size = sizeof( uint32_t );
+	// the index of the draw is all that changes from one draw to the next, and that is the instance of the draw call
 	sets[0] = vk.frameSetLayout;
 	sets[1] = vk.textureSetLayout;
 	layout.setLayoutCount = 2;
 	layout.pSetLayouts = sets;
-	layout.pushConstantRangeCount = 1;
-	layout.pPushConstantRanges = &push;
 	VK_CHECK( qvkCreatePipelineLayout( vk.device, &layout, NULL, &vk.pipelineLayout ) );
 
+	// the passes over the finished frame get four numbers each
 	push.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+	push.offset = 0;
 	push.size = sizeof( float ) * 4;
 	layout.setLayoutCount = 1;
 	layout.pSetLayouts = &vk.postSetLayout;
+	layout.pushConstantRangeCount = 1;
+	layout.pPushConstantRanges = &push;
 	VK_CHECK( qvkCreatePipelineLayout( vk.device, &layout, NULL, &vk.postPipelineLayout ) );
 
 	alloc.descriptorPool = vk.descriptorPool;
@@ -339,9 +338,14 @@ VK_FindPipeline
 VkPipeline VK_FindPipeline( vkProgram_t program, uint32_t stateBits ) {
 	const uint32_t key = ( stateBits & VK_PIPELINE_BITS ) | ( (uint32_t)program << 24 );
 
+	// most draws want what the draw before them had
+	if ( vk.lastPipeline && key == vk.lastPipelineKey ) {
+		return vk.lastPipeline;
+	}
 	for ( int i = 0; i < vk.numPipelines; i++ ) {
 		if ( vk.pipelines[i].key == key ) {
-			return vk.pipelines[i].pipeline;
+			vk.lastPipelineKey = key;
+			return vk.lastPipeline = vk.pipelines[i].pipeline;
 		}
 	}
 	if ( vk.numPipelines == VK_MAX_PIPELINES ) {
@@ -350,7 +354,8 @@ VkPipeline VK_FindPipeline( vkProgram_t program, uint32_t stateBits ) {
 	vk.pipelines[vk.numPipelines].key = key;
 	vk.pipelines[vk.numPipelines].pipeline = VK_CreatePipeline( vk.vertexShaders[program], vk.fragmentShaders[program],
 		stateBits, qfalse, (qboolean)( program == VKP_SKINNED ) );
-	return vk.pipelines[vk.numPipelines++].pipeline;
+	vk.lastPipelineKey = key;
+	return vk.lastPipeline = vk.pipelines[vk.numPipelines++].pipeline;
 }
 
 void VK_InitPipelines( void ) {
@@ -374,6 +379,7 @@ void VK_ShutdownPipelines( void ) {
 		qvkDestroyPipeline( vk.device, vk.pipelines[i].pipeline, NULL );
 	}
 	vk.numPipelines = 0;
+	vk.lastPipeline = VK_NULL_HANDLE;
 	qvkDestroyPipeline( vk.device, vk.gammaPipeline, NULL );
 	qvkDestroyPipeline( vk.device, vk.blurPipeline, NULL );
 	qvkDestroyPipeline( vk.device, vk.glowPipelines[0], NULL );
