@@ -104,7 +104,8 @@ void G_ReadSessionData( gclient_t *client )
 	var = va( "session%i", client - level.clients );
 	trap->Cvar_VariableStringBuffer( var, s, sizeof(s) );
 
-	sscanf( s, "%i %i %i %i %i %i %i %i %i %i %i %i %s %s %i",
+	// widths for the two strings so a hand edited session<n> cvar can not overflow siegeClass[64] and IP[48]
+	sscanf( s, "%i %i %i %i %i %i %i %i %i %i %i %i %63s %47s %i",
 		&tempSessionTeam, //&client->sess.sessionTeam,
 		&client->sess.spectatorNum,
 		&tempSpectatorState, //&client->sess.spectatorState,
