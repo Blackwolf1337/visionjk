@@ -428,6 +428,7 @@ qboolean VK_UploadGeometry( const vec4_t *xyz, const vec4_t *normal, const vec2_
 	}
 	memcpy( frame->indexes.mapped + frame->indexUsed, indexes, (size_t)indexBytes );
 	vk.tessColorOffset = offsets[3];
+	vk.tessTexCoordOffset = offsets[2];
 	vkCmdBindVertexBuffers( frame->cmd, 0, 4, buffers, offsets );
 	vkCmdBindIndexBuffer( frame->cmd, frame->indexes.buffer, frame->indexUsed, VK_INDEX_TYPE_UINT32 );
 	frame->indexUsed += indexBytes;
@@ -466,6 +467,40 @@ void VK_TessColors( const color4ub_t *colors ) {
 		frame->vertexUsed += ( size + 15 ) & ~(VkDeviceSize)15;
 	}
 	vkCmdBindVertexBuffers( frame->cmd, 3, 1, &frame->vertexes.buffer, &offset );
+}
+
+/*
+===============
+VK_TessTexCoords
+
+A pass whose texture coordinates were computed on the CPU (the fog pass) draws with them as the first set.
+NULL: back to the ones VK_UploadTess() put there.
+===============
+*/
+void VK_TessTexCoords( const vec2_t *st ) {
+	vkFrame_t *frame = vk.frame;
+	const VkDeviceSize size = (VkDeviceSize)tess.numVertexes * sizeof( vec2_t ) * NUM_TEX_COORDS;
+	VkDeviceSize offset = vk.tessTexCoordOffset;
+
+	if ( !frame ) {
+		return;
+	}
+	if ( st ) {
+		float *out;
+
+		if ( frame->vertexUsed + size > VK_VERTEX_BYTES ) {
+			return;
+		}
+		offset = frame->vertexUsed;
+		out = (float *)( frame->vertexes.mapped + offset );
+		memset( out, 0, (size_t)size );
+		for ( int i = 0; i < tess.numVertexes; i++ ) {
+			out[i * NUM_TEX_COORDS * 2] = st[i][0];
+			out[i * NUM_TEX_COORDS * 2 + 1] = st[i][1];
+		}
+		frame->vertexUsed += ( size + 15 ) & ~(VkDeviceSize)15;
+	}
+	vkCmdBindVertexBuffers( frame->cmd, 2, 1, &frame->vertexes.buffer, &offset );
 }
 
 // dynamic state as one word, so that a draw only sets what differs from the draw before it

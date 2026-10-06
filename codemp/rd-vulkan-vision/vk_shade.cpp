@@ -504,6 +504,135 @@ static uint32_t VK_AlphaTest( uint32_t stateBits ) {
 	}
 }
 
+static void VK_IdentityTexCoords( vkDraw_t *draw ) {
+	draw->flags |= (uint32_t)TCGEN_TEXTURE << VKD_TCGEN0_SHIFT;
+	draw->texMat0[0] = draw->texMat0[5] = 1.0f;
+}
+
+/*
+===============
+VK_GlobalFog
+
+Fog that lies over the whole level (and the special fog of a level) is not a pass of its own: every stage of a
+surface in it fades to the fog color with the distance, the way glFog did it for rd-vanilla. Fills the fog
+part of the draw, qfalse: this batch has no such fog.
+===============
+*/
+static qboolean VK_GlobalFog( vkDraw_t *draw ) {
+	// exp( -( density * depth ) ^ 2 ) is 1 / 255 at depthForOpaque
+	static const float logtestExp2 = sqrtf( -logf( 1.0f / 255.0f ) );
+	const fog_t *fog;
+
+	if ( !tr.world || !tess.fogNum || !tess.shader->fogPass || r_drawfog->value != 2
+		|| ( tess.fogNum != tr.world->globalFog && tess.fogNum != tr.world->numfogs ) ) {
+		return qfalse;
+	}
+	fog = tr.world->fogs + tess.fogNum;
+	if ( tr.rangedFog ) {
+		// ranged fog, used for sniper scope
+		float start = fog->parms.depthForOpaque;
+
+		if ( tr.rangedFog < 0.0f ) {
+			// special designer override
+			start = -tr.rangedFog;
+		} else if ( ( tr.distanceCull - start ) < tr.rangedFog ) {
+			// assure a minimum range between fog beginning and cutoff distance
+			start = Q_max( tr.distanceCull - tr.rangedFog, 16.0f );
+		}
+		draw->flags |= 2u << VKD_FOG_SHIFT;
+		draw->fogParm[0] = start;
+		draw->fogParm[1] = tr.distanceCull;
+	} else {
+		draw->flags |= 1u << VKD_FOG_SHIFT;
+		draw->fogParm[0] = logtestExp2 / fog->parms.depthForOpaque;
+	}
+	// in the glow pass the fog is black: what is far away glows less
+	if ( !g_bRenderGlowingObjects ) {
+		VectorCopy( fog->parms.color, draw->fogColor );
+	}
+	return qtrue;
+}
+
+/*
+===============
+VK_DynamicLights
+
+One more pass over the batch for every dynamic light that reaches it. The light is worked out per pixel in
+generic.frag and added to what the stages left there, times the texture of the surface.
+===============
+*/
+static void VK_DynamicLights( uint32_t transform, int cullMode ) {
+	const shader_t *shader = tess.shader;
+	const shaderStage_t *textured = NULL;
+	const textureBundle_t *bundle = NULL;
+
+	if ( !backEnd.refdef.num_dlights || !tr.dlightImage ) {
+		return;
+	}
+	// the first opaque stage with a plain texture is what the light shines on
+	for ( int i = 0; i < shader->numUnfoggedPasses && !textured; i++ ) {
+		const shaderStage_t *pStage = &shader->stages[i];
+
+		if ( pStage->stateBits & ( GLS_SRCBLEND_BITS | GLS_DSTBLEND_BITS ) ) {
+			continue;
+		}
+		for ( int b = 0; b < NUM_TEXTURE_BUNDLES; b++ ) {
+			const textureBundle_t *candidate = &pStage->bundle[b];
+
+			if ( candidate->image && !candidate->isLightmap && !candidate->numTexMods
+				&& candidate->tcGen != TCGEN_ENVIRONMENT_MAPPED && candidate->tcGen != TCGEN_FOG ) {
+				textured = pStage;
+				bundle = candidate;
+				break;
+			}
+		}
+	}
+
+	for ( int l = 0; l < backEnd.refdef.num_dlights; l++ ) {
+		const dlight_t *dl = &backEnd.refdef.dlights[l];
+		vkDraw_t draw;
+
+		if ( !( tess.dlightBits & ( 1 << l ) ) ) {
+			continue;	// this surface definately doesn't have any of this light
+		}
+		memset( &draw, 0, sizeof( draw ) );
+		draw.transform = transform;
+		draw.flags = VKD_DLIGHT;
+		VK_IdentityTexCoords( &draw );
+		draw.tex0 = bundle ? VK_BundleTexture( bundle ) : tr.whiteImage->texnum;
+		draw.tex1 = tr.dlightImage->texnum;
+		VectorCopy( dl->color, draw.baseColor );
+		VectorCopy( dl->transformed, draw.parm );
+		draw.parm[3] = dl->radius;
+		VK_DrawTess( &draw, VKP_GENERIC, ( textured ? ( GLS_SRCBLEND_ONE | GLS_DSTBLEND_ONE ) : ( GLS_SRCBLEND_DST_COLOR | GLS_DSTBLEND_ONE ) )
+			| GLS_DEPTHFUNC_EQUAL, cullMode, (qboolean)shader->polygonOffset );
+	}
+}
+
+/*
+===============
+VK_FogPass
+
+A surface inside a fog volume gets the fog as one more pass: the fog color, with an alpha that grows with the
+way through the fog. The alpha comes from the fog image, the coordinates into it are still computed on the CPU.
+===============
+*/
+static void VK_FogPass( uint32_t transform, int cullMode ) {
+	const fog_t *fog = tr.world->fogs + tess.fogNum;
+	vkDraw_t draw;
+
+	RB_CalcFogTexCoords( (float *)tess.svars.texcoords[0] );
+	VK_TessTexCoords( tess.svars.texcoords[0] );
+	memset( &draw, 0, sizeof( draw ) );
+	draw.transform = transform;
+	VK_IdentityTexCoords( &draw );
+	draw.tex0 = draw.tex1 = tr.fogImage->texnum;
+	VK_ByteColor( (const byte *)&fog->colorInt, draw.baseColor );
+	VK_DrawTess( &draw, VKP_GENERIC, GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA
+		| ( tess.shader->fogPass == FP_EQUAL ? GLS_DEPTHFUNC_EQUAL : 0 ), cullMode, (qboolean)tess.shader->polygonOffset );
+	VK_TessTexCoords( NULL );
+}
+
 /*
 ===============
 RB_StageIteratorGeneric
@@ -592,6 +721,12 @@ void RB_StageIteratorGeneric( void ) {
 			}
 		}
 		draw.flags |= VK_AlphaTest( stateBits );
+		if ( VK_GlobalFog( &draw ) && pStage->mGLFogColorOverride ) {
+			// some stages want to fade to black or white, not to the fog color
+			const float c = ( pStage->mGLFogColorOverride == GLFOGOVERRIDE_WHITE ) ? 1.0f : 0.0f;
+
+			VectorSet( draw.fogColor, c, c, c );
+		}
 
 		if ( cpuColors ) {
 			VK_TessColors( tess.svars.colors );
@@ -600,6 +735,17 @@ void RB_StageIteratorGeneric( void ) {
 		if ( cpuColors ) {
 			VK_TessColors( NULL );
 		}
+	}
+
+	// now do any dynamic lighting needed
+	if ( tess.dlightBits && shader->sort <= SS_OPAQUE && !( shader->surfaceFlags & ( SURF_NODLIGHT | SURF_SKY ) )
+		&& !g_bRenderGlowingObjects ) {
+		VK_DynamicLights( transform, cullMode );
+	}
+	// now do fog
+	if ( tr.world && ( tess.fogNum != tr.world->globalFog || r_drawfog->value != 2 ) && r_drawfog->value && tess.fogNum
+		&& shader->fogPass ) {
+		VK_FogPass( transform, cullMode );
 	}
 }
 

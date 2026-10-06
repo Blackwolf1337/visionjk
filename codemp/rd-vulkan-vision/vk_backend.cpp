@@ -28,6 +28,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 backEndData_t	*backEndData;
 backEndState_t	backEnd;
 
+extern int skyboxportal;
+
 // the refraction effect of force push and of some weapons, set by the game through the renderer interface
 float		tr_distortionAlpha = 1.0f;		// opaque
 float		tr_distortionStretch = 0.0f;	// no stretch override
@@ -185,8 +187,24 @@ static void RB_BeginDrawingView( void ) {
 		backEnd.isHyperspace = qtrue;
 		return;
 	}
-	if ( r_fastsky->integer && !( backEnd.refdef.rdflags & RDF_NOWORLDMODEL ) && !g_bRenderGlowingObjects ) {
+	if ( skyboxportal ) {
+		// portal scene, clear whatever is necessary
+		if ( ( backEnd.refdef.rdflags & RDF_SKYBOXPORTAL ) && ( r_fastsky->integer || ( backEnd.refdef.rdflags & RDF_NOWORLDMODEL ) ) ) {
+			const float color[4] = { 0.5f, 0.5f, 0.5f, 1.0f };
+
+			VK_ClearColor( view->viewportX, view->viewportY, view->viewportWidth, view->viewportHeight, color );
+		}
+	} else if ( r_fastsky->integer && !( backEnd.refdef.rdflags & RDF_NOWORLDMODEL ) && !g_bRenderGlowingObjects ) {
 		const float color[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
+
+		VK_ClearColor( view->viewportX, view->viewportY, view->viewportWidth, view->viewportHeight, color );
+	}
+	if ( ( ( tr.refdef.rdflags & RDF_AUTOMAP )
+		|| ( !( backEnd.refdef.rdflags & RDF_NOWORLDMODEL ) && r_DynamicGlow->integer && !g_bRenderGlowingObjects ) )
+		&& tr.world && tr.world->globalFog != -1 ) {
+		// this is because of a bug in multiple scenes I think, it needs to clear for the second scene but it doesn't normally.
+		const fog_t *fog = &tr.world->fogs[tr.world->globalFog];
+		const float color[4] = { fog->parms.color[0], fog->parms.color[1], fog->parms.color[2], 1.0f };
 
 		VK_ClearColor( view->viewportX, view->viewportY, view->viewportWidth, view->viewportHeight, color );
 	}
@@ -333,11 +351,23 @@ static const void *RB_DrawBuffer( const void *data ) {
 	const drawBufferCommand_t *cmd = (const drawBufferCommand_t *)data;
 
 	VK_BeginFrame();
-	// clear screen for debugging
-	if ( r_clear->integer ) {
-		const float color[4] = { 1.0f, 0.0f, 0.5f, 1.0f };
+	if ( tr.world && tr.world->globalFog != -1 ) {
+		// a level with fog all over starts every frame in the color of the fog: a sky without a box or clouds
+		// leaves it standing
+		const fog_t *fog = &tr.world->fogs[tr.world->globalFog];
+		const float color[4] = { fog->parms.color[0], fog->parms.color[1], fog->parms.color[2], 1.0f };
 
 		VK_ClearColor( 0, 0, glConfig.vidWidth, glConfig.vidHeight, color );
+	} else if ( r_clear->integer ) {
+		// clear screen for debugging: pink, or red, green, yellow, blue, cyan, magenta, white, black for 1 to 8
+		static const float colors[9][4] = { { 1, 0, 0.5f, 1 }, { 1, 0, 0, 1 }, { 0, 1, 0, 1 }, { 1, 1, 0, 1 }, { 0, 0, 1, 1 },
+			{ 0, 1, 1, 1 }, { 1, 0, 1, 1 }, { 1, 1, 1, 1 }, { 0, 0, 0, 1 } };
+		int i = r_clear->integer;
+
+		if ( i == 42 ) {
+			i = Q_irand( 0, 8 );
+		}
+		VK_ClearColor( 0, 0, glConfig.vidWidth, glConfig.vidHeight, colors[( i >= 1 && i <= 8 ) ? i : 0] );
 	}
 	return (const void *)( cmd + 1 );
 }

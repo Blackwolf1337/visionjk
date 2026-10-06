@@ -24,7 +24,9 @@ struct Draw {
 	vec4	texTurb1;
 	vec4	tcGenVec0[2];
 	vec4	tcGenVec1[2];
-	vec4	parm;			// x: portal range, y: time of the shader
+	vec4	parm;			// x: portal range, y: time of the shader. Dynamic light: origin in model space, w: radius
+	vec4	fogColor;
+	vec4	fogParm;		// exp2: x: density. linear: x: start, y: end
 };
 
 layout( set = 0, binding = 0 ) uniform Globals {
@@ -51,6 +53,8 @@ layout( push_constant ) uniform Push {
 #define TCGEN1( flags )		( ( ( flags ) >> 10 ) & 15u )
 #define RGBGEN( flags )		( ( ( flags ) >> 14 ) & 3u )
 #define AGEN( flags )		( ( ( flags ) >> 16 ) & 7u )
+#define DLIGHT( flags )		( ( ( flags ) & 0x80000u ) != 0u )
+#define FOG( flags )		( ( ( flags ) >> 20 ) & 3u )
 
 // texCoordGen_t
 #define TCGEN_IDENTITY		1u

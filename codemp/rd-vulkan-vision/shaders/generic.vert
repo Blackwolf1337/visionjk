@@ -18,6 +18,8 @@ layout( location = 7 ) in vec4 a_color;
 layout( location = 0 ) out vec2 v_texCoord0;
 layout( location = 1 ) out vec2 v_texCoord1;
 layout( location = 2 ) out vec4 v_color;
+layout( location = 3 ) out vec3 v_position;		// in model space
+layout( location = 4 ) out float v_depth;		// distance in front of the eye
 
 const float TWO_PI = 6.28318530718;
 
@@ -56,6 +58,8 @@ void main() {
 	Transform t = transforms[d.transform];
 
 	gl_Position = t.mvp * vec4( a_position, 1.0 );
+	v_position = a_position;
+	v_depth = gl_Position.w;
 	// the depth range of OpenGL is -w to w, the one of Vulkan 0 to w
 	gl_Position.z = ( gl_Position.z + gl_Position.w ) * 0.5;
 

@@ -66,6 +66,8 @@ typedef struct vkTransform_s {	// once per view and entity
 #define VKD_RGBGEN_MASK		0x3u
 #define VKD_AGEN_SHIFT		16				// 0: base + vertex, 1: specular, 2: portal, 3: dot, 4: one minus dot
 #define VKD_AGEN_MASK		0x7u
+#define VKD_DLIGHT			0x00080000u		// the pass that adds one dynamic light, see generic.frag
+#define VKD_FOG_SHIFT		20				// fog over the whole stage as glFog did it: 0 none, 1 exp2, 2 linear
 
 typedef struct vkDraw_s {		// once per draw
 	uint32_t	transform;			// index into the transforms of the frame
@@ -79,7 +81,9 @@ typedef struct vkDraw_s {		// once per draw
 	float		texTurb1[4];
 	float		tcGenVec0[8];		// TCGEN_VECTOR
 	float		tcGenVec1[8];
-	float		parm[4];			// x: portal range, y: time of the shader
+	float		parm[4];			// x: portal range, y: time of the shader. Dynamic light: its origin in model space, w: radius
+	float		fogColor[4];
+	float		fogParm[4];			// exp2: x: density. linear: x: start, y: end
 } vkDraw_t;
 
 // ------------------------------------------------------------------------------------------------------------
@@ -209,6 +213,7 @@ typedef struct vkState_s {
 	uint32_t					boundState;			// the dynamic state that is set, see VK_DrawTess()
 	qboolean					stateValid;
 	VkDeviceSize				tessColorOffset;	// where VK_UploadTess() put the vertex colors of the batch
+	VkDeviceSize				tessTexCoordOffset;	// and the texture coordinates
 	int							numBoundIndexes;	// of the geometry that was uploaded last
 	int							viewport[4];		// x, y, width, height as OpenGL counts them
 	qboolean					overflowed;			// this frame has more geometry than fits, said once
@@ -281,4 +286,5 @@ qboolean	VK_UploadGeometry( const vec4_t *xyz, const vec4_t *normal, const vec2_
 				const color4ub_t *colors, int numVerts, const glIndex_t *indexes, int numIndexes );
 qboolean	VK_UploadTess( void );
 void		VK_TessColors( const color4ub_t *colors );
+void		VK_TessTexCoords( const vec2_t *st );
 void		VK_DrawTess( const vkDraw_t *draw, vkProgram_t program, uint32_t stateBits, int cullType, qboolean polygonOffset );
