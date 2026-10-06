@@ -18,10 +18,10 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 ===========================================================================
 */
 
-// vk_stubs.cpp: what the shared files call and this renderer does not do yet
+// vk_stubs.cpp: what the shared files call and this renderer has no use for
 //
-// The programs of the glow pass (tr_arb.cpp of rd-vanilla) are OpenGL code. Until this renderer has its own
-// glow, the call ends here.
+// The programs of the glow pass (tr_arb.cpp of rd-vanilla) are OpenGL code. The glow of this renderer is
+// vk_post.cpp with shaders of its own, so the call ends here.
 
 #include "vk_local.h"
 

@@ -160,7 +160,8 @@ left in these views are the effects of the game (flames, smoke, light cones) and
   run on the device, so a flare shows up and goes away two frames late. Its place and size are the same.
 - Screenshots hold the frame after the gamma pass.
 - A body that burns away (disruptor) swells along the line of the fire. `rd-vanilla` moves the vertices again
-  before every stage of the shader, here all stages use what the first one has. This was not seen in the game.
+  before every stage of the shader, here all stages use what the first one has. A kill with the disruptor was seen in the game on 2026-10-07 and
+  looks right. It was not put next to `rd-vanilla`.
 - `r_showImages`: `rd-vanilla` sizes the tiles by the width of the window but draws them in the 640 x 480 of
   the menus, so most are outside of a large window. Here all of them are on the screen.
 - `r_shownormals`: the lines are made from the vertices of a batch, so while it is set nothing comes from the
