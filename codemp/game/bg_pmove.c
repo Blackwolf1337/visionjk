@@ -7137,6 +7137,13 @@ static void PM_Weapon( void )
 	bgEntity_t *veh = NULL;
 	qboolean vehicleRocketLock = qfalse;
 
+	// Not from JA+: as the physgun the stun baton does not fire, its buttons take and freeze props (g_props.c,
+	// which reads them from the command itself)
+	if ( pm->ps->weapon == WP_STUN_BATON && (pm->ps->stats[STAT_CARRY] & CARRY_PHYSGUN) )
+	{
+		pm->cmd.buttons &= ~(BUTTON_ATTACK|BUTTON_ALT_ATTACK);
+	}
+
 #ifdef _GAME
 	if (pm->ps->clientNum >= MAX_CLIENTS &&
 		pm->ps->weapon == WP_NONE &&
@@ -10914,6 +10921,17 @@ void PmoveSingle (pmove_t *pmove) {
 	// Not from JA+: so does a player who is carried with +button13 (g_props.c). Without his own moves he does not
 	// jump either, so he can not flip kick off the one who holds him.
 	stiffenedUp = ( JP_ClientFrozen( pm->ps->clientNum ) || G_PropCarried( pm->ps->clientNum ) ) ? qtrue : qfalse;
+#endif
+
+	// Not from JA+: the physgun (g_props.c). With a prop in its beam, use held next to attack turns the prop with
+	// the mouse: his view stays where it is for that. The same on the client, so it does not jump.
+	if ( (pm->ps->stats[STAT_CARRY] & CARRY_GUNHOLD) && pm->ps->weapon == WP_STUN_BATON
+		&& (pm->cmd.buttons & BUTTON_USE) && (pm->cmd.buttons & BUTTON_ATTACK) )
+	{
+		PM_SetPMViewAngle( pm->ps, pm->ps->viewangles, &pm->cmd );
+	}
+
+#ifdef _GAME
 
 	// JA+: the grab moves of the players run here (in the base game: WP_SaberPositionUpdate)
 	if ( pm->ps->clientNum >= 0 && pm->ps->clientNum < level.maxclients )

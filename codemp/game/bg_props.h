@@ -17,6 +17,9 @@ of the players, which the client predicts. Not from JA+.
 // client can make the same one to predict with. 0: it is in nobody's way.
 #define PROP_SOLID_HULL		1		// the hull of the model, or the box below if the model has none
 #define PROP_SOLID_BOX		2		// the box around the model
+// entityState_t.generic1 of the entity (ET_INVISIBLE) that stands for the beam of a physgun: otherEntityNum is
+// the player who holds it, otherEntityNum2 the prop or the player in it. The cgame draws a line between them.
+#define PROP_BEAM			4
 
 // A trace of a move that ended at a prop names the world as what it hit, with the contents of a body, which
 // the world never has: that is how the code of the moves tells a prop from a wall.

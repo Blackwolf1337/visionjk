@@ -208,6 +208,49 @@ Also changed:
   the next start of any map, so it can not come back later. An entity of the map that was edited in the panel
   is not kept, the map has it as it was. Tried once on the running server: nine placed objects before and
   after, the file gone.
+- New: the physgun, as in Garry's Mod (`g_props.c`, the section "The physgun"). An admin of JA+ types
+  `/amphysgun` and has it: it is the stun baton, which he gets with the command and keeps over a death. The
+  command again takes it away. The client of the port takes the baton out by itself, on another client it is
+  reached with the next and previous weapon keys (it has no number).
+  - Attack takes the prop he looks at into the beam, from up to 2048 units away (what a shot would hit: the box
+    of the prop), and holds it while the button is down: at the distance it was taken at, where he looks. It
+    is held by its middle, stiff (it goes to its place 12 times a second whatever its mass, 1500 units a second
+    at most), it does not swing or turn by itself and still bumps into the world and into other props. Let go,
+    it keeps its speed. The beam does not let go when the prop is caught behind something.
+  - What is in the beam turns with him: when he turns, the prop (or the player) goes around him and turns
+    about the vertical by the same angle, as if it were fixed to him (`Prop_GunTurn`). Looking up and down
+    lifts it without tilting it.
+  - Use held next to attack: his mouse turns the prop and not his view. Left and right turn it about the
+    vertical, up and down about the line through his shoulders. His view stands still for that:
+    `PmoveSingle` keeps it (`PM_SetPMViewAngle`) while `CARRY_GUNHOLD` is in `stats[STAT_CARRY]`, the weapon is
+    the baton and both buttons are down, on the server and in the prediction of the client, and the server
+    takes what the mouse did from the angles of the commands (`G_PropGunCmd`). He can still walk.
+  - Alt attack next to attack freezes the prop where it is, in the air too. A frozen prop is not moved by
+    anything (shots, shoves, force powers, the black hole, the hand of `+button13`, other props that hit it),
+    it is in the way of players and props like a piece of the map. Attack on it with the physgun takes it
+    again and that unfreezes it. A use of the entity (targetname) brings it home and unfreezes it too.
+  - The distance: with a prop in the beam every press of `+button14` moves it away along the beam and every
+    press of `+button15` brings it closer, by a tenth of the distance (16 units at least, never closer than 48,
+    no further than 2048). The cgame of the port presses those for one command when the previous weapon
+    (away) or the next weapon (closer) is asked for with a prop in the beam, so the mouse wheel does it and
+    the weapon stays. On another client the keys can be bound: `bind MWHEELUP +button14`. Buttons and not a
+    client command, which the flood protection of the server would let through once a second.
+  - Players: attack on a player takes him into the beam like a prop. He is moved the way a carried player is
+    (`Prop_CarryPlayer`: his speed is set every frame, 1000 units a second at most), without the hug: his hands
+    are free, he has no moves of his own while he hangs there. Use next to attack and the mouse turns him about
+    the vertical. He is not frozen by alt attack. The rules of carrying hold: no duels, no vehicles, nobody who
+    is carried takes one, and the two walk through each other.
+  - Use alone, with nothing in the beam (the R key of the default binds): every frozen prop of the map is free
+    again.
+  - The beam: an entity of the type `ET_INVISIBLE` with `generic1` `PROP_BEAM` names the player and what is in
+    his beam (`otherEntityNum`, `otherEntityNum2`), everybody gets it. The cgame of the port draws a blue line
+    (`gfx/effects/blueLine`) from his weapon to the middle of the prop or the player, every frame from where
+    both are drawn (`CG_PhysgunBeam`). Another client draws nothing for it. While something is in a beam the
+    entity is in the list of the World tab as `physgun_beam`.
+  - As the physgun the baton does not fire: `PM_Weapon` drops its attack buttons while `CARRY_PHYSGUN` is set.
+  Also in this change: a ball that was in a hand kept the tiny box of a body with no corners afterwards
+  (`Body_Net` set it for balls too), it has the box of its radius again.
+  Added without a test run, built for Linux only.
 - New: a flip off a prop kicks it. A trace of a move that ends at a prop names the world with the contents of
   a body (`BG_PropHit`), so the code of the moves can tell a prop from a wall: in the air with a prop right in
   front the player flips back off it as off a player (`bg_pmove.c`, next to the JA+ flip kick), the wall flips

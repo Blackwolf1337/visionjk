@@ -28,6 +28,9 @@ Not from JA+ and not from JKAdmin.
 // +button13. The base game uses the button bits up to 2048 and JA+ takes 4096 (+button12) for the hook. 8192,
 // 16384 and 32768 (+button13 to +button15) are free, and all 16 bits of the buttons reach the server.
 #define BUTTON_GRAB			8192
+// +button14 and +button15: with a prop in the beam of the physgun, a press moves it away or closer
+#define BUTTON_GUN_FAR		16384
+#define BUTTON_GUN_NEAR		32768
 
 #define PROP_HEALTH			100000		// they take damage to feel the hits, they never break
 #define PROP_PLAYER_RADIUS	15.0f		// half the width of a player
@@ -81,6 +84,13 @@ Not from JA+ and not from JKAdmin.
 #define PROP_HURT_MSEC		500			//	and not again within this time
 #define PROP_THROW_MSEC		5000		// that long after a player had his hands on it what it hurts is his doing
 #define PROP_THROW_SAFE		400			//	and that long it does not hurt him himself
+#define PHYSGUN_RANGE		2048.0f		// the physgun (the stun baton after amphysgun): it takes a prop from this far,
+#define PHYSGUN_STIFF		12.0f		//	the prop goes to its place in the beam this fast, per second, whatever its mass,
+#define PHYSGUN_SPEED		1500.0f		//	and no faster than this,
+#define PHYSGUN_PLAYER_SPEED	1000.0f	//	a player in it no faster than this
+#define PHYSGUN_NEAR		48.0f		//	the point it holds the prop at is never closer than this,
+#define PHYSGUN_STEP		0.1f		//	and a press of +button14 or +button15 moves it by this part of the distance,
+#define PHYSGUN_MIN_STEP	16.0f		//	by this at least
 
 #define PROP_KICK_REACH		60.0f		// a body this close in front of a player who flips off one is the one he kicked
 #define PROP_KICK_SPEED		900.0f		// how hard that is: the speed a body of mass 1 gets
@@ -116,6 +126,12 @@ typedef struct prop_s {
 	vec3_t		hand;			// where his hand was in the last frame
 	int			calmTime;		// since when it hardly moves, 0: it moves
 	int			solid;			// body: a player can stand on it, PROP_SOLID_ says how its shape is made of its model
+	qboolean	gun;			// the holder has it in the beam of the physgun, not in his hand:
+	float		gunDist;		//	that far along his line of sight is the point it was taken at,
+	vec3_t		gunOffset;		//	from there to its middle,
+	float		gunYaw;			//	the way its holder looked in the last frame,
+	vec3_t		gunSpin;		//	and how his mouse turns it now
+	qboolean	frozen;			// the physgun froze it where it was: nothing moves it until the physgun takes it again
 	gentity_t	*thrower;		// the player who threw, shoved or shot it last
 	int			throwTime;		//	and when
 	int			hurtTime;		// it does not hurt anybody before
@@ -148,6 +164,13 @@ static qboolean	grabDown[MAX_CLIENTS];		// the grab button in the last frame
 static gentity_t	*mates[MAX_CLIENTS];	// the other one of his hug, and after it until the two are out of each other
 static int		shoveTime[MAX_CLIENTS];		// he shoves a cube until then
 static float	shoveScale[MAX_CLIENTS];	//	and that much of his speed is left
+static qboolean	gunOn[MAX_CLIENTS];			// he has the physgun (amphysgun)
+static gentity_t	*gunProp[MAX_CLIENTS];	// the prop or the player in its beam
+static gentity_t	*gunBeam[MAX_CLIENTS];	// the entity that tells the clients about the beam
+static int		gunButtons[MAX_CLIENTS];	// his buttons in the last frame
+static float	gunAngles[MAX_CLIENTS][2];	// pitch and yaw of his last command
+static int		gunCmdButtons[MAX_CLIENTS];	// and its buttons
+static float	gunTurn[MAX_CLIENTS][2];	// how far his mouse went since the last frame while it turns a prop
 static short	propList[MAX_GENTITIES];	// the numbers of the props, made anew every frame
 static int		propCount;
 static propSolid_t	propSolids[PROP_BRUSHES];
@@ -167,6 +190,9 @@ static void Prop_Wake( gentity_t *self ) {
 	const qboolean	slept = self->genericValue2 ? qtrue : qfalse;
 	int				i;
 
+	// the physgun froze it: that holds until the physgun takes it again
+	if ( Prop_State( self )->frozen )
+		return;
 	self->genericValue2 = 0;
 	Prop_State( self )->calmTime = 0;
 	if ( !slept )
@@ -199,6 +225,8 @@ into: how fast they come together, ratio: mass of the one that asks over its mas
 static qboolean Prop_Fixed( gentity_t *other, const prop_t *q, const vec3_t normal, float into, float sep, float ratio ) {
 	const qboolean carries = ( normal[2] > BODY_GROUND ) ? qtrue : qfalse;
 
+	if ( q->frozen )
+		return qtrue;
 	if ( !other->genericValue2 && !( q->calmTime && carries ) )
 		return qfalse;
 	// what lies on it does not wake it with its weight, whatever that is
@@ -495,6 +523,8 @@ static void Prop_Home( gentity_t *self ) {
 	VectorClear( self->movedir );
 	VectorClear( p->spin );
 	p->holder = NULL;
+	p->gun = qfalse;
+	p->frozen = qfalse;
 	self->genericValue6 = 0;
 	self->s.eFlags ^= EF_TELEPORT_BIT;
 	Prop_Wake( self );
@@ -510,6 +540,8 @@ static void Prop_Impulse( gentity_t *self, const vec3_t dir, float speed, const 
 	prop_t	*p = Prop_State( self );
 	vec3_t	impulse;
 
+	if ( p->frozen )
+		return;
 	VectorScale( dir, speed / self->mass, impulse );
 	if ( at && ( p->box || p->holder ) )
 		Body_Push( self, p, at, impulse );
@@ -855,7 +887,278 @@ static void Prop_Release( gentity_t *self ) {
 	prop_t *p = Prop_State( self );
 
 	p->holder = NULL;
+	p->gun = qfalse;
 	Prop_Wake( self );
+}
+
+/*
+===============================================================================
+
+The physgun: the stun baton of an admin who typed amphysgun. Attack takes the prop he looks at into its beam,
+from far away, and holds it where it was taken as he moves and looks around: stiff, without the swinging of the
+hand, and it still bumps into the world. Use held next to attack and his mouse turns the prop instead of his
+view (the move code keeps his view still, PmoveSingle). Alt attack next to attack freezes the prop where it is,
+in the air too: nothing moves it then, until the physgun takes it again.
+
+===============================================================================
+*/
+
+// he has the physgun in his hand and may use it
+static qboolean Prop_GunOK( const gentity_t *ent ) {
+	return ( Prop_PlayerOK( ent ) && ent->s.number < MAX_CLIENTS && gunOn[ent->s.number]
+		&& ent->client->sess.jpAdminLevel != JPADM_NONE && ent->client->ps.weapon == WP_STUN_BATON ) ? qtrue : qfalse;
+}
+
+// does the one who holds a prop still hold it: the grab button, or attack with the physgun
+static qboolean Prop_Held( const prop_t *p ) {
+	if ( p->gun )
+		return ( Prop_GunOK( p->holder ) && (p->holder->client->pers.cmd.buttons & BUTTON_ATTACK) ) ? qtrue : qfalse;
+	return Prop_HolderOK( p->holder );
+}
+
+// where the beam holds the middle of a prop
+static void Prop_GunHand( const gentity_t *holder, const prop_t *p, vec3_t hand ) {
+	vec3_t eye, fwd;
+
+	VectorCopy( holder->client->ps.origin, eye );
+	eye[2] += holder->client->ps.viewheight;
+	AngleVectors( holder->client->ps.viewangles, fwd, NULL, NULL );
+	VectorMA( eye, p->gunDist, fwd, hand );
+	VectorAdd( hand, p->gunOffset, hand );
+}
+
+// The holder of a physgun turned since the last frame: what is in his beam goes around with him, as if it were
+// fixed to him. Its place from the point it is held at is turned here, the angle is returned in degrees for the
+// turn of the thing itself.
+static float Prop_GunTurn( const gentity_t *holder, prop_t *p ) {
+	const float	yaw = holder->client->ps.viewangles[YAW], turn = AngleSubtract( yaw, p->gunYaw );
+	const float	s = sinf( DEG2RAD( turn ) ), c = cosf( DEG2RAD( turn ) );
+	const float	x = p->gunOffset[0], y = p->gunOffset[1];
+
+	p->gunYaw = yaw;
+	p->gunOffset[0] = c * x - s * y;
+	p->gunOffset[1] = s * x + c * y;
+	return turn;
+}
+
+// attack was pressed: the prop or the player he looks at goes into the beam, a frozen prop is free again
+static void Prop_GunTake( gentity_t *ent ) {
+	const int	n = ent->s.number;
+	gentity_t	*prop;
+	prop_t		*p;
+	vec3_t		eye, fwd, end;
+	trace_t		tr;
+
+	VectorCopy( ent->client->ps.origin, eye );
+	eye[2] += ent->client->ps.viewheight;
+	AngleVectors( ent->client->ps.viewangles, fwd, NULL, NULL );
+	VectorMA( eye, PHYSGUN_RANGE, fwd, end );
+	// what a shot hits: the world, players, and the box of a prop
+	trap->Trace( &tr, eye, NULL, NULL, end, n, MASK_SHOT, qfalse, 0, 0 );
+	if ( tr.fraction >= 1.0f || tr.entityNum >= ENTITYNUM_WORLD )
+		return;
+	prop = &g_entities[tr.entityNum];
+	p = Prop_State( prop );
+
+	if ( tr.entityNum < MAX_CLIENTS ) {
+		// A player: he is carried the way Prop_CarryPlayer does it, by the beam instead of in a hug. The same
+		// rules as there: no duels, nobody who is carried takes one, a pair stays a pair until it is apart.
+		if ( p->holder || Prop_State( ent )->holder || !Prop_PlayerOK( prop ) || !Prop_PlayerFree( prop ) || !Prop_PlayerFree( ent )
+			|| ( mates[n] && mates[n] != prop ) || ( mates[tr.entityNum] && mates[tr.entityNum] != ent ) )
+			return;
+		p->holder = ent;
+		p->gun = qtrue;
+		p->gunDist = Distance( eye, tr.endpos );
+		p->gunYaw = ent->client->ps.viewangles[YAW];
+		VectorSubtract( prop->client->ps.origin, tr.endpos, p->gunOffset );
+		Prop_GunHand( ent, p, p->hand );
+		gunProp[n] = prop;
+		return;
+	}
+	if ( !Prop_Is( prop ) || p->holder )
+		return;
+
+	p->frozen = qfalse;
+	p->holder = ent;
+	p->gun = qtrue;
+	// held by its middle, so it does not swing
+	VectorClear( p->grab );
+	VectorClear( p->gunSpin );
+	p->gunDist = Distance( eye, tr.endpos );
+	p->gunYaw = ent->client->ps.viewangles[YAW];
+	VectorSubtract( prop->r.currentOrigin, tr.endpos, p->gunOffset );
+	if ( !p->box ) {
+		// a free ball only shows a roll, held it turns for real: from what the client sees of it now
+		vec3_t angles;
+
+		BG_EvaluateTrajectory( &prop->s.apos, level.time, angles );
+		AnglesToAxis( angles, p->axis );
+	}
+	VectorClear( p->spin );
+	Prop_GunHand( ent, p, p->hand );
+	gunProp[n] = prop;
+	Prop_Wake( prop );
+}
+
+// use with nothing in the beam: every prop a physgun froze is free again
+static void Prop_GunThaw( gentity_t *ent ) {
+	int i, count = 0;
+
+	for ( i = 0; i < propCount; i++ ) {
+		gentity_t	*prop = &g_entities[propList[i]];
+		prop_t		*p = &props[propList[i]];
+
+		if ( !Prop_Is( prop ) || !p->frozen )
+			continue;
+		p->frozen = qfalse;
+		Prop_Wake( prop );
+		count++;
+	}
+	if ( count )
+		trap->SendServerCommand( ent->s.number, va( "print \"^7Physgun: %i frozen props are free again.\n\"", count ) );
+}
+
+// alt attack with a prop in the beam: it stays where it is
+static void Prop_GunFreeze( gentity_t *prop ) {
+	prop_t *p = Prop_State( prop );
+
+	Prop_Release( prop );
+	p->frozen = qtrue;
+	VectorClear( prop->movedir );
+	VectorClear( p->spin );
+	prop->genericValue2 = 1;
+	if ( p->box )
+		Body_Net( prop, p );
+	else
+		Ball_Net( prop );
+}
+
+// A server frame of a client slot and its physgun. By the number of the slot: the entity of a slot nobody is
+// in has the number 0, and with that every empty slot would write into the state of client 0.
+static void Prop_GunFrame( int n ) {
+	gentity_t	*ent = &g_entities[n];
+	const int	buttons = ( ent->inuse && ent->client ) ? ent->client->pers.cmd.buttons : 0;
+	gentity_t	*prop = gunProp[n];
+
+	gentity_t	*beam = gunBeam[n];
+
+	if ( !ent->inuse || !ent->client || ent->client->pers.connected != CON_CONNECTED )
+		gunOn[n] = qfalse;
+	if ( prop && ( ( !Prop_Is( prop ) && !prop->client ) || Prop_State( prop )->holder != ent || !Prop_State( prop )->gun ) )
+		prop = gunProp[n] = NULL;
+
+	if ( Prop_GunOK( ent ) ) {
+		if ( !prop && (buttons & BUTTON_ATTACK) && !(gunButtons[n] & BUTTON_ATTACK) )
+			Prop_GunTake( ent );
+		// a player is not frozen
+		else if ( prop && !prop->client && (buttons & BUTTON_ALT_ATTACK) && !(gunButtons[n] & BUTTON_ALT_ATTACK) )
+			Prop_GunFreeze( prop );
+	}
+	gunButtons[n] = buttons;
+
+	// The beam: an entity that names its two ends, the cgame of the port draws a line between them. The entities
+	// of a map that is started again are gone without a word, so the one that is remembered is looked at first.
+	prop = gunProp[n];
+	if ( beam && ( !beam->inuse || beam->s.eType != ET_INVISIBLE || beam->s.generic1 != PROP_BEAM || beam->s.otherEntityNum != n ) )
+		beam = gunBeam[n] = NULL;
+	if ( prop ) {
+		if ( !beam ) {
+			beam = gunBeam[n] = G_Spawn();
+			beam->classname = "physgun_beam";
+			beam->s.eType = ET_INVISIBLE;
+			beam->s.generic1 = PROP_BEAM;
+			beam->s.otherEntityNum = n;
+			// its ends can be anywhere, everybody gets it
+			beam->r.svFlags = SVF_BROADCAST;
+		}
+		beam->s.otherEntityNum2 = prop->s.number;
+		G_SetOrigin( beam, ent->client->ps.origin );
+		trap->LinkEntity( (sharedEntity_t *)beam );
+	} else if ( beam ) {
+		G_FreeEntity( beam );
+		gunBeam[n] = NULL;
+	}
+
+	// he keeps the baton over a death while he has the physgun
+	if ( gunOn[n] && Prop_PlayerOK( ent ) )
+		ent->client->ps.stats[STAT_WEAPONS] |= ( 1 << WP_STUN_BATON );
+}
+
+/*
+=================
+G_PropGunCmd
+
+For ClientThink_real, with every command of a player: while he turns a prop with the physgun (use and attack
+held) his view stands still and what his mouse does is kept for the prop. The angles of a command go on with
+the mouse whatever his view does.
+
+And the distance of the beam: every press of +button14 moves the prop away along it, every press of +button15
+brings it closer. The cgame of the port presses them for one command when the next or previous weapon is asked
+for with a prop in the beam (the mouse wheel), any client can bind them. A press that short is in one command
+only, so it is looked for here and not once a frame.
+=================
+*/
+void G_PropGunCmd( gentity_t *ent, const usercmd_t *ucmd ) {
+	const int	n = ent->s.number;
+	float		pitch, yaw;
+	int			pressed;
+
+	if ( n < 0 || n >= MAX_CLIENTS )
+		return;
+
+	pressed = ucmd->buttons & ~gunCmdButtons[n];
+	gunCmdButtons[n] = ucmd->buttons;
+	// use alone, with nothing in the beam: the reload key of that other game
+	if ( (pressed & BUTTON_USE) && !(ucmd->buttons & BUTTON_ATTACK) && !gunProp[n] && Prop_GunOK( ent ) )
+		Prop_GunThaw( ent );
+	if ( gunProp[n] && (pressed & (BUTTON_GUN_FAR|BUTTON_GUN_NEAR)) && Prop_GunOK( ent ) ) {
+		prop_t	*p = Prop_State( gunProp[n] );
+		float	step = PHYSGUN_STEP * p->gunDist;
+
+		if ( step < PHYSGUN_MIN_STEP )
+			step = PHYSGUN_MIN_STEP;
+		if ( pressed & BUTTON_GUN_NEAR )
+			step = -step;
+		p->gunDist = Com_Clamp( PHYSGUN_NEAR, PHYSGUN_RANGE, p->gunDist + step );
+	}
+	pitch = SHORT2ANGLE( ucmd->angles[PITCH] );
+	yaw = SHORT2ANGLE( ucmd->angles[YAW] );
+	if ( gunProp[n] && (ucmd->buttons & BUTTON_USE) && (ucmd->buttons & BUTTON_ATTACK) && Prop_GunOK( ent ) ) {
+		gunTurn[n][PITCH] += AngleSubtract( pitch, gunAngles[n][PITCH] );
+		gunTurn[n][YAW] += AngleSubtract( yaw, gunAngles[n][YAW] );
+	}
+	gunAngles[n][PITCH] = pitch;
+	gunAngles[n][YAW] = yaw;
+}
+
+/*
+=================
+G_PropGunToggle
+
+The command amphysgun of an admin: gives him the physgun or takes it away. It is the stun baton, which he gets
+with it.
+=================
+*/
+void G_PropGunToggle( gentity_t *ent ) {
+	const int n = ent->s.number;
+
+	if ( n < 0 || n >= MAX_CLIENTS || !ent->client )
+		return;
+	if ( ent->client->sess.jpAdminLevel == JPADM_NONE ) {
+		trap->SendServerCommand( n, "print \"^7 You are not allowed to execute this command! \n\"" );
+		return;
+	}
+
+	gunOn[n] = (qboolean)!gunOn[n];
+	if ( gunOn[n] ) {
+		ent->client->ps.stats[STAT_WEAPONS] |= ( 1 << WP_STUN_BATON );
+		trap->SendServerCommand( n, "print \"^7Physgun ^2on^7: it is the stun baton. Attack takes the prop or the player you look "
+			"at, use with it turns it with the mouse, alt attack with it freezes a prop where it is, the wheel moves it away "
+			"and closer. Use alone frees every frozen prop.\n\"" );
+	} else {
+		// what is in the beam finds out in its next frame that nobody holds it
+		trap->SendServerCommand( n, "print \"^7Physgun ^1off^7.\n\"" );
+	}
 }
 
 // how well a spot lies on his line of sight, the lower the better. Below 0: he can not take it there.
@@ -931,7 +1234,7 @@ static void Prop_Grab( gentity_t *ent ) {
 				at[2] += prop->r.mins[2] + 0.25f * h * ( prop->r.maxs[2] - prop->r.mins[2] );
 				Prop_AimBetter( eye, fwd, at, &score, spot );
 			}
-		} else if ( !Prop_Is( prop ) || p->holder
+		} else if ( !Prop_Is( prop ) || p->holder || p->frozen
 			|| Distance( prop->r.currentOrigin, eye ) > GRAB_REACH + prop->radius ) {
 			continue;
 		} else if ( p->box ) {
@@ -1019,18 +1322,22 @@ static void Prop_HugHands( gentity_t *victim ) {
 	ps->forceHandExtendTime = level.time + GRAB_ANIM_MSEC;
 }
 
-// the hug is over, the animations end where they are. He keeps the speed he has, so he can be thrown.
+// The hug is over, the animations end where they are, or the beam of the physgun let him go. He keeps the speed
+// he has, so he can be thrown.
 static void Prop_DropPlayer( gentity_t *victim ) {
 	prop_t			*p = Prop_State( victim );
 	playerState_t	*ps = &victim->client->ps, *arms = &p->holder->client->ps;
 
-	if ( arms->torsoAnim == BOTH_HUGGER1 )
-		arms->torsoTimer = 0;
-	if ( ps->legsAnim == BOTH_HUGGEE1 )
-		ps->legsTimer = 0;
-	if ( ps->forceHandExtend == HANDEXTEND_TAUNT && ps->forceDodgeAnim == BOTH_HUGGEE1 )
-		ps->forceHandExtendTime = 0;
+	if ( !p->gun ) {
+		if ( arms->torsoAnim == BOTH_HUGGER1 )
+			arms->torsoTimer = 0;
+		if ( ps->legsAnim == BOTH_HUGGEE1 )
+			ps->legsTimer = 0;
+		if ( ps->forceHandExtend == HANDEXTEND_TAUNT && ps->forceDodgeAnim == BOTH_HUGGEE1 )
+			ps->forceHandExtendTime = 0;
+	}
 	p->holder = NULL;
+	p->gun = qfalse;
 }
 
 /*
@@ -1052,19 +1359,25 @@ static void Prop_CarryPlayer( gentity_t *victim, float dt ) {
 	gentity_t		*holder = p->holder;
 	playerState_t	*ps;
 	vec3_t			spot, want, way, angles;
-	float			len;
+	float			len, fastest, turn = 0.0f;
 
 	// the button was let go, one of them died, left or went into a duel, the admin logged out
-	if ( !Prop_HolderOK( holder ) || !Prop_Carrier( holder ) || !Prop_PlayerOK( victim ) || !Prop_PlayerFree( victim ) ) {
+	if ( ( p->gun ? !Prop_Held( p ) : ( !Prop_HolderOK( holder ) || !Prop_Carrier( holder ) ) )
+		|| !Prop_PlayerOK( victim ) || !Prop_PlayerFree( victim ) ) {
 		Prop_DropPlayer( victim );
 		return;
 	}
 	ps = &victim->client->ps;
 
-	Prop_HugSpot( holder, spot );
+	if ( p->gun ) {
+		turn = Prop_GunTurn( holder, p );
+		Prop_GunHand( holder, p, spot );
+	} else {
+		Prop_HugSpot( holder, spot );
+	}
 	VectorSubtract( spot, ps->origin, want );
-	// caught on something, or one of them was taken somewhere else
-	if ( VectorLength( want ) > GRAB_PLAYER_BREAK ) {
+	// caught on something, or one of them was taken somewhere else. The beam does not let go.
+	if ( !p->gun && VectorLength( want ) > GRAB_PLAYER_BREAK ) {
 		Prop_DropPlayer( victim );
 		return;
 	}
@@ -1074,11 +1387,24 @@ static void Prop_CarryPlayer( gentity_t *victim, float dt ) {
 	VectorCopy( spot, p->hand );
 
 	VectorCopy( ps->viewangles, angles );
-	angles[YAW] = AngleNormalize180( holder->client->ps.viewangles[YAW] + 180.0f );
-	SetClientViewAngle( victim, angles );
-	Prop_HugAnim( holder, SETANIM_TORSO, BOTH_HUGGER1 );
-	Prop_HugAnim( victim, SETANIM_LEGS, BOTH_HUGGEE1 );
-	Prop_HugHands( victim );
+	if ( p->gun ) {
+		// In the beam of the physgun: no hug, his hands are free. He turns with the one who holds him, and
+		// use next to attack and the mouse of that one turns him about the vertical.
+		const int n = holder->s.number;
+
+		turn += gunTurn[n][YAW];
+		if ( turn != 0.0f ) {
+			angles[YAW] = AngleNormalize180( angles[YAW] + turn );
+			SetClientViewAngle( victim, angles );
+		}
+		gunTurn[n][PITCH] = gunTurn[n][YAW] = 0.0f;
+	} else {
+		angles[YAW] = AngleNormalize180( holder->client->ps.viewangles[YAW] + 180.0f );
+		SetClientViewAngle( victim, angles );
+		Prop_HugAnim( holder, SETANIM_TORSO, BOTH_HUGGER1 );
+		Prop_HugAnim( victim, SETANIM_LEGS, BOTH_HUGGEE1 );
+		Prop_HugHands( victim );
+	}
 
 	if ( dt < 0.001f )
 		return;
@@ -1091,8 +1417,9 @@ static void Prop_CarryPlayer( gentity_t *victim, float dt ) {
 	if ( !(victim->r.svFlags & SVF_BOT) )
 		VectorMA( want, 1.0f / dt, way, want );
 	len = VectorLength( want );
-	if ( len > GRAB_PLAYER_SPEED )
-		VectorScale( want, GRAB_PLAYER_SPEED / len, want );
+	fastest = p->gun ? PHYSGUN_PLAYER_SPEED : GRAB_PLAYER_SPEED;
+	if ( len > fastest )
+		VectorScale( want, fastest / len, want );
 	// and what gravity takes of it until then, he hangs in the air
 	want[2] += 0.5f * g_gravity.value * dt;
 	VectorCopy( want, ps->velocity );
@@ -1231,6 +1558,9 @@ void G_PropFrame( void ) {
 			propList[propCount++] = i;
 	}
 
+	for ( i = 0; i < level.maxclients; i++ )
+		Prop_GunFrame( i );
+
 	for ( i = 0; i < level.maxclients; i++ ) {
 		gentity_t		*ent = &g_entities[i];
 		const qboolean	down = ( ent->inuse && ent->client && (ent->client->pers.cmd.buttons & BUTTON_GRAB) ) ? qtrue : qfalse;
@@ -1267,6 +1597,11 @@ void G_PropFrame( void ) {
 			else if ( Prop_State( mate )->holder == ent )
 				carry |= CARRY_HOLDS;
 		}
+		// and the physgun: the move code of both sides reads these
+		if ( gunOn[i] )
+			carry |= CARRY_PHYSGUN;
+		if ( gunProp[i] )
+			carry |= CARRY_GUNHOLD;
 		if ( ent->inuse && ent->client )
 			ent->client->ps.stats[STAT_CARRY] = carry;
 	}
@@ -1725,7 +2060,8 @@ static qboolean Body_Step( gentity_t *self, prop_t *p, float dt, const vec3_t ha
 		contact_t *contacts, int *numContacts ) {
 	float		*vel = self->movedir;
 	const int	count = p->box ? Body_Contacts( self, p, contacts ) : 0;
-	const float	stiff = GRAB_STIFF / sqrtf( self->mass );
+	const float	stiff = p->gun ? PHYSGUN_STIFF : GRAB_STIFF / sqrtf( self->mass );
+	const float	fastest = p->gun ? PHYSGUN_SPEED : GRAB_MAX_SPEED;
 	vec3_t		grab, corr, end, mins, maxs;
 	float		loud = 0.0f, len;
 	trace_t		tr;
@@ -1737,6 +2073,9 @@ static qboolean Body_Step( gentity_t *self, prop_t *p, float dt, const vec3_t ha
 	// a little drag in the air, more on the turning where it touches or hangs
 	VectorScale( vel, 1.0f - 0.05f * dt, vel );
 	VectorScale( p->spin, 1.0f - ( count ? 1.5f : p->holder ? 0.6f : 0.2f ) * dt, p->spin );
+	// in the beam of the physgun it does not turn by itself, only as the mouse of its holder says
+	if ( p->gun )
+		VectorCopy( p->gunSpin, p->spin );
 
 	for ( i = 0; i < count; i++ ) {
 		contact_t	*c = &contacts[i];
@@ -1774,8 +2113,8 @@ static qboolean Body_Step( gentity_t *self, prop_t *p, float dt, const vec3_t ha
 			VectorScale( want, stiff, want );
 			VectorAdd( want, handVel, want );
 			len = VectorLength( want );
-			if ( len > GRAB_MAX_SPEED )
-				VectorScale( want, GRAB_MAX_SPEED / len, want );
+			if ( len > fastest )
+				VectorScale( want, fastest / len, want );
 
 			Body_SpeedAt( self, p, grab, speed );
 			VectorSubtract( want, speed, want );
@@ -1909,14 +2248,31 @@ static void Body_Move( gentity_t *self, prop_t *p, float dt ) {
 	VectorClear( handVel );
 	VectorClear( way );
 	if ( p->holder ) {
+		const float fastest = p->gun ? PHYSGUN_SPEED : GRAB_MAX_SPEED;
+
 		Prop_Thrown( p, p->holder );
 		// where his hand is now and how fast it got there
-		Prop_Hand( p->holder, hand );
+		if ( p->gun ) {
+			const int	n = p->holder->s.number;
+			const float	turn = Prop_GunTurn( p->holder, p );
+			vec3_t		right;
+
+			Prop_GunHand( p->holder, p, hand );
+			// It turns with him when he turns. And what his mouse did since the last frame while he held use
+			// turns it: left and right about the vertical, up and down about the line through his shoulders, the
+			// way his view would have turned.
+			AngleVectors( p->holder->client->ps.viewangles, NULL, right, NULL );
+			VectorSet( p->gunSpin, 0.0f, 0.0f, DEG2RAD( gunTurn[n][YAW] + turn ) / dt );
+			VectorMA( p->gunSpin, -DEG2RAD( gunTurn[n][PITCH] ) / dt, right, p->gunSpin );
+			gunTurn[n][PITCH] = gunTurn[n][YAW] = 0.0f;
+		} else {
+			Prop_Hand( p->holder, hand );
+		}
 		VectorSubtract( hand, p->hand, way );
 		VectorScale( way, 1.0f / dt, handVel );
 		len = VectorLength( handVel );
-		if ( len > GRAB_MAX_SPEED )
-			VectorScale( handVel, GRAB_MAX_SPEED / len, handVel );
+		if ( len > fastest )
+			VectorScale( handVel, fastest / len, handVel );
 	}
 
 	for ( i = 1; i <= steps; i++ ) {
@@ -1942,7 +2298,8 @@ static void Body_Move( gentity_t *self, prop_t *p, float dt ) {
 		// caught on something or he was taken away from it: it is let go
 		Body_ToWorld( p, p->grab, spot );
 		VectorAdd( spot, self->r.currentOrigin, spot );
-		if ( Distance( spot, hand ) > GRAB_BREAK )
+		// (the beam of the physgun does not let go)
+		if ( !p->gun && Distance( spot, hand ) > GRAB_BREAK )
 			Prop_Release( self );
 		return;
 	}
@@ -2007,8 +2364,16 @@ static void prop_think( gentity_t *self ) {
 	self->nextthink = level.time + 1;		// every server frame
 
 	// he let go of the button, died or left
-	if ( p->holder && !Prop_HolderOK( p->holder ) )
+	if ( p->holder && !Prop_Held( p ) )
 		Prop_Release( self );
+
+	// the physgun froze it: it stays as it is, in the way of players and of other props like a piece of the map
+	if ( p->frozen ) {
+		VectorClear( self->movedir );
+		VectorClear( p->spin );
+		self->genericValue2 = 1;
+		return;
+	}
 
 	if ( p->box )
 		Cube_Players( self, p, dt );
@@ -2216,6 +2581,8 @@ weaker one does not move it off the ground, and everything in reach of a hole wo
 =================
 */
 void G_PropPull( gentity_t *ent, const vec3_t dir, float accel, float dt ) {
+	if ( Prop_State( ent )->frozen )
+		return;
 	if ( ent->genericValue2 ) {
 		if ( accel < 0.5f * g_gravity.value )
 			return;

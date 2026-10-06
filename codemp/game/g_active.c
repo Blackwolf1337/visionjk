@@ -3094,6 +3094,8 @@ void ClientThink_real( gentity_t *ent ) {
 		G_TempUnlink( ent->s.number );
 	if ( ent->s.eType != ET_NPC )
 		JP_KissSlap( ent, &pmove.cmd );
+	// not from JA+: the mouse of who turns a prop with the physgun (g_props.c)
+	G_PropGunCmd( ent, &pmove.cmd );
 	Pmove (&pmove);
 
 	if (ent->client->solidHack)

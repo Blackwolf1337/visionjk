@@ -820,7 +820,7 @@ void JP_ForceFlame( gentity_t *self ) {
 static const char *jpPlayerCommands[] = {
 	"amcolor", "sabercolor", "saber", "amflip", "amknockmedown", "amdropsaber", "BlockWallCreate", "BlockWallDel",
 	"BlockWallNext", "BlockWallPrev", "amAltDim", "toggleFlame", "jetpack", "amhug", "amkiss", "engage_FullForceDuel",
-	"ampoop"
+	"ampoop", "amphysgun"
 };
 
 qboolean JP_IsPlayerCommand( const char *cmd ) {
@@ -872,6 +872,7 @@ qboolean JP_PlayerCommand( gentity_t *ent, const char *cmd ) {
 	if ( !Q_stricmp( cmd, "amhug" ) )			{ Cmd_amhug_f( ent );			return qtrue; }
 	if ( !Q_stricmp( cmd, "amkiss" ) )			{ Cmd_amkiss_f( ent );			return qtrue; }
 	if ( !Q_stricmp( cmd, "ampoop" ) )			{ JP_EmotePoop( ent );			return qtrue; }
+	if ( !Q_stricmp( cmd, "amphysgun" ) )		{ G_PropGunToggle( ent );		return qtrue; }	// not from JA+, g_props.c
 	if ( !Q_stricmp( cmd, "amcolor" ) )			{ Cmd_amcolor_f( ent );			return qtrue; }
 	if ( !Q_stricmp( cmd, "sabercolor" ) )		{ Cmd_sabercolor_f( ent );		return qtrue; }
 	if ( !Q_stricmp( cmd, "saber" ) ) {

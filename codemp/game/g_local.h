@@ -1285,6 +1285,8 @@ qboolean G_PropCarried( int clientNum );
 void Svcmd_Props_f( void );
 qboolean G_PropIs( const gentity_t *ent );
 void G_PropFlipKick( gentity_t *ent );
+void G_PropGunToggle( gentity_t *ent );
+void G_PropGunCmd( gentity_t *ent, const usercmd_t *ucmd );
 void G_PropPull( gentity_t *ent, const vec3_t dir, float accel, float dt );
 void G_PropForceThrow( gentity_t *self, qboolean pull );
 float G_PropPlayerSpeed( const gentity_t *ent );

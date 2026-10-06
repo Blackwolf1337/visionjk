@@ -638,6 +638,9 @@ typedef enum {
 #define CARRY_NUM_MASK		63
 #define CARRY_HOLDS			64		// this player carries him
 #define CARRY_HELD			128		// this player is carried by him
+// and the physgun of g_props.c (the stun baton after amphysgun), in the same stat
+#define CARRY_PHYSGUN		256		// he has it: the stun baton does not fire, it takes props
+#define CARRY_GUNHOLD		512		// a prop is in its beam: with use and attack held his mouse turns the prop, not his view
 
 
 // playerState_t->persistant[] indexes
