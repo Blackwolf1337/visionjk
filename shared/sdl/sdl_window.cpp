@@ -326,6 +326,62 @@ static bool GLimp_DetectAvailableModes(void)
 GLimp_SetMode
 ===============
 */
+#ifdef MACOS_X
+/*
+===============
+WIN_VK_LoadLibraryMac
+
+macOS has no Vulkan library of its own. A program brings one along (MoltenVK) or the player installed one. SDL
+looks for it by name only, in the places the system searches, and neither the app bundle nor the Homebrew of
+an Apple Silicon Mac (/opt/homebrew/lib) is among them. So, in this order: what SDL finds by itself (that also
+covers SDL_VULKAN_LIBRARY), then next to the program and in Contents/Frameworks of the bundle, then the two
+places of Homebrew. The loader of the Vulkan SDK before MoltenVK itself, so layers work where there is one.
+
+Without a library the window can not be made, and the engine says so as for any window that fails.
+===============
+*/
+static void WIN_VK_LoadLibraryMac( void )
+{
+	static const char *names[] = { "libvulkan.1.dylib", "libMoltenVK.dylib" };
+	static const char *places[] = { "%s%s", "%s../Frameworks/%s" };
+	static const char *dirs[] = { "/opt/homebrew/lib/", "/usr/local/lib/" };
+	char path[MAX_OSPATH];
+	char *base;
+	size_t n, k;
+
+	if ( SDL_Vulkan_LoadLibrary( NULL ) == 0 )
+		return;
+
+	// where the program is. In a bundle that is Contents/Resources/
+	base = SDL_GetBasePath();
+	for ( n = 0; n < ARRAY_LEN( names ); n++ )
+	{
+		for ( k = 0; base && k < ARRAY_LEN( places ); k++ )
+		{
+			Com_sprintf( path, sizeof( path ), places[k], base, names[n] );
+			if ( SDL_Vulkan_LoadLibrary( path ) == 0 )
+			{
+				SDL_free( base );
+				return;
+			}
+		}
+		for ( k = 0; k < ARRAY_LEN( dirs ); k++ )
+		{
+			Com_sprintf( path, sizeof( path ), "%s%s", dirs[k], names[n] );
+			if ( SDL_Vulkan_LoadLibrary( path ) == 0 )
+			{
+				if ( base )
+					SDL_free( base );
+				return;
+			}
+		}
+	}
+	if ( base )
+		SDL_free( base );
+	Com_Printf( "No Vulkan library (MoltenVK) found: %s\n", SDL_GetError() );
+}
+#endif
+
 static rserr_t GLimp_SetMode(glconfig_t *glConfig, const windowDesc_t *windowDesc, const char *windowTitle, int mode, qboolean fullscreen, qboolean noborder)
 {
 	int perChannelColorBits;
@@ -345,6 +401,9 @@ static rserr_t GLimp_SetMode(glconfig_t *glConfig, const windowDesc_t *windowDes
 	else if ( windowDesc->api == GRAPHICS_API_VULKAN )
 	{
 		flags |= SDL_WINDOW_VULKAN;
+#ifdef MACOS_X
+		WIN_VK_LoadLibraryMac();
+#endif
 	}
 
 	Com_Printf( "Initializing display\n");
