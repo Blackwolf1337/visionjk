@@ -1,6 +1,12 @@
 This file will generally summarise the Github repo commit history
 Key: [-] removed, [+] added, [\*] modified
 
+# VisionJK
+
+* [\*] The project is named VisionJK: binaries `visionjk.<arch>` and `visionjkded.<arch>`, configs `visionjk.cfg` and `visionjk_server.cfg`, home folder `visionjk` (`VisionJK` on Windows and macOS). Everything below this section is the history of OpenJK, which VisionJK is based on.
+* [-] Removed the `ja_guid` userinfo field, the key file `jakey` it was made from, and the cvars `cl_enableGuid` and `cl_guidServerUniq`. The client no longer identifies itself to servers.
+* [\*] `cl_motd` is 0 by default: the client does not contact the update server on connect unless it is switched on.
+
 # Features
 
 ## Single- and Multiplayer

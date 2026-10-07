@@ -1,6 +1,6 @@
 # rd-vulkan-vision: the Vulkan renderer
 
-A second renderer for the OpenJK client next to `rd-vanilla`. It draws with Vulkan 1.3, keeps the level and the
+A second renderer for the VisionJK client next to `rd-vanilla`. It draws with Vulkan 1.3, keeps the level and the
 models in buffers on the graphics card and does in shaders what `rd-vanilla` computes per vertex on the CPU every
 frame. It is not a JA+ feature and it does not touch the server, the protocol or the game modules.
 
@@ -72,7 +72,7 @@ cmake --build buildwin64 -j$(nproc)
 mingw has no Vulkan headers of its own. They are the same on every platform, so the build copies the two
 header directories of the host (`vulkan`, `vk_video`) into the build directory for the cross compiler.
 `-DVulkanHeadersDir=` names another place. The result is `rd-vulkan-vision_x86_64.dll` next to
-`openjk.x86_64.exe`. Windows is built for 64 bit only, the configure line no longer needs
+`visionjk.x86_64.exe`. Windows is built for 64 bit only, the configure line no longer needs
 `-DCMAKE_SIZEOF_VOID_P=8`.
 
 A client that has no renderer stored in its config starts with `rd-vulkan-vision`. A config that was written

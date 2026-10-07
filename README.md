@@ -1,105 +1,51 @@
-# OpenJK
+# VisionJK
 
-OpenJK is a community effort to maintain and improve the game and engine powering Jedi Academy and Jedi Outcast, while maintaining _full backwards compatibility_ with the existing games and mods.  
-This project does not intend to add major features, rebalance, or otherwise modify core gameplay.
+VisionJK is an engine and game code for Jedi Academy multiplayer. It is based on
+[OpenJK](https://github.com/JACoders/OpenJK) (commit 260c59c2, 2026-09-29) and keeps its compatibility with the
+existing game, servers and clients.
 
-Our aims are to:
+What it has on top of OpenJK:
 
-- Improve the stability of the engine by fixing bugs and improving performance.
-- Support more hardware (x86_64, Arm, Apple Silicon) and software platforms (Linux, macOS)
-- Provide a clean base from which new code modifications can be made.
+- the features of the JA+ mod v2.4 Build 7, on the server and in the client ([docs/japlus](docs/japlus/README.md))
+- a Vulkan renderer, `rd-vulkan-vision`, next to `rd-vanilla` ([renderer.md](docs/japlus/renderer.md))
+- voice chat in the client module, with a relay in the game module ([voice.md](docs/japlus/voice.md))
+- 3D sound with Steam Audio ([audio.md](docs/japlus/audio.md))
+- a web admin panel in the game module ([webadmin.md](docs/japlus/webadmin.md))
 
-[![discord](https://img.shields.io/badge/discord-join-7289DA.svg?logo=discord&longCache=true&style=flat)](https://discord.gg/dPNCfeQ)
-[![forum](https://img.shields.io/badge/forum-JKHub.org%20OpenJK-brightgreen.svg)](https://jkhub.org/forums/forum/49-openjk/)
+The tree is built for 64 bit only. Single player and Jedi Outcast are still in the source but are not built.
 
-[![build](https://github.com/JACoders/OpenJK/actions/workflows/build.yml/badge.svg?branch=master)](https://github.com/JACoders/OpenJK/actions/workflows/build.yml?query=branch%3Amaster)
-[![coverity](https://scan.coverity.com/projects/1153/badge.svg)](https://scan.coverity.com/projects/1153)
+## Privacy
 
-## Supported Games
+- The client has no `ja_guid`. OpenJK makes a key file (`jakey`) and sends an identifier made from it to every
+  server it joins. VisionJK does neither. A server sees it like the original game, without a GUID.
+- `cl_motd` is 0 by default. Switched on, the client asks the update server for a news line on every connect and
+  sends the name and vendor of the graphics card, version, platform, joystick setting and color depth along.
 
-| Game | Single Player | Multi Player |
-| - | - | - |
-| Jedi Academy | ✅ Stable | ✅ Stable |
-| Jedi Outcast | 😧 Works, needs attention | 🙅 Not supported - consider [JK2MV](https://jk2mv.org) |
+## Installing
 
-Please direct support queries, discussions and feature requests to the JKHub sub-forum or Discord linked above.
+Jedi Academy has to be installed. Put the content of a release folder into its `GameData` folder and run
+`visionjk.x86_64` (Linux) or `visionjk.x86_64.exe` (Windows). The dedicated server is `visionjkded.x86_64`.
+
+The engine starts in the mod folder `japlus` by itself. Settings are written to `~/.local/share/visionjk` on
+Linux and to `My Games\VisionJK` in the documents folder on Windows, as `visionjk.cfg` (client) and
+`visionjk_server.cfg` (dedicated server).
+
+## Building
+
+```
+cmake -S . -B build64 -DCMAKE_BUILD_TYPE=Release
+cmake --build build64 -j"$(nproc)"
+cmake --install build64 --prefix release
+```
+
+`release/JediAcademy` is then a complete game folder. More, also the Windows cross build with mingw-w64, is in
+[docs/japlus/README.md](docs/japlus/README.md).
 
 ## License
 
-OpenJK is licensed under GPLv2 as free software. You are free to use, modify and redistribute OpenJK following the terms in [LICENSE.txt](https://github.com/JACoders/OpenJK/blob/master/LICENSE.txt)
+VisionJK is free software under the GNU General Public License version 2, see [LICENSE.txt](LICENSE.txt).
 
-## For players
-
-To install OpenJK, you will first need Jedi Academy installed. If you don't already own the game you can buy it from online stores such as [Steam](https://store.steampowered.com/app/6020/), [Amazon](https://www.amazon.com/Star-Wars-Jedi-Knight-Academy-Pc/dp/B0000A2MCN) or [GOG](https://www.gog.com/game/star_wars_jedi_knight_jedi_academy).
-
-Download the [latest build](https://github.com/JACoders/OpenJK/releases/tag/latest) ([alt link](https://builds.openjk.org)) for your operating system.
-
-Installing and running OpenJK:
-
-1. Extract the contents of the file into the Jedi Academy `GameData/` folder. For Steam users, this will be in `<Steam Folder>/steamapps/common/Jedi Academy/GameData/`.
-1. Run `openjk.x86_64.exe` (Windows), `openjk.x86_64` (Linux) or the `OpenJK` app bundle (macOS), depending on your operating system. This tree is built for 64 bit only.
-
-### Linux Instructions
-
-If you do not have an existing JKA installation and need to download the base game:
-
-1. Download and Install SteamCMD [SteamCMD](https://developer.valvesoftware.com/wiki/SteamCMD#Linux).
-1. Set the download path using steamCMD: `force_install_dir /path/to/install/jka/`
-1. Using SteamCMD Set the platform to windows to download any windows game on steam. @sSteamCmdForcePlatformType "windows"
-1. Using SteamCMD download the game, `app_update 6020`.
-
-Extract the contents of the file into the Jedi Academy `GameData/` folder. For Steam users, this will be in `<Steam Folder>/steamapps/common/Jedi Academy/GameData/`.
-
-### macOS Instructions
-
-If you have the Mac App Store Version of Jedi Academy, follow these steps to get OpenJK runnning under macOS:
-
-1. Install [Homebrew](https://brew.sh/) if you don't have it.
-1. Open the Terminal app, and enter the command `brew install sdl2`.
-1. Extract the contents of the OpenJK DMG into the game directory `/Applications/Star Wars Jedi Knight: Jedi Academy.app/Contents/`
-1. Run `OpenJK.app` or `OpenJK SP.app`
-1. Savegames, Config Files and Log Files are stored in `/Users/$USER/Library/Application Support/OpenJK/`
-
-## For Developers
-
-### Building OpenJK
-
-- [Compilation guide](https://github.com/JACoders/OpenJK/wiki/Compilation-guide)
-- [Debugging guide](https://github.com/JACoders/OpenJK/wiki/Debugging)
-
-### Contributing to OpenJK
-
-- [Fork](https://github.com/JACoders/OpenJK/fork) the project on GitHub
-- Create a new branch and make your changes
-- Send a [pull request](https://help.github.com/articles/creating-a-pull-request) to upstream (JACoders/OpenJK)
-
-### Using OpenJK as a base for a new mod
-
-- [Fork](https://github.com/JACoders/OpenJK/fork) the project on GitHub
-- Change the JK_VERSION define in codemp/qcommon/game_version.h from "OpenJK" to your project name
-- If you make a nice change, please consider back-porting to upstream via pull request as described above. This is so everyone benefits without having to reinvent the wheel for every project.
-
-## Maintainers (full list: [@JACoders](https://github.com/orgs/JACoders/people))
-
-Leads:
-
-- [Ensiform](https://github.com/ensiform)
-- [razor](https://github.com/Razish)
-- [Xycaleth](https://github.com/xycaleth)
-
-## Significant contributors ([full list](https://github.com/JACoders/OpenJK/graphs/contributors))
-
-- [bibendovsky](https://github.com/bibendovsky) (save games, platform support)
-- [BobaFett](https://github.com/Lrns123)
-- [BSzili](https://github.com/BSzili) (JK2, platform support)
-- [Cat](https://github.com/deepy) (infra)
-- [Didz](https://github.com/dionrhys)
-- [eezstreet](https://github.com/eezstreet)
-- exidl (SDL2, platform support)
-- [ImperatorPrime](https://github.com/ImperatorPrime) (JK2)
-- [mrwonko](https://github.com/mrwonko)
-- [redsaurus](https://github.com/redsaurus)
-- [Scooper](https://github.com/xScooper)
-- [Sil](https://github.com/TheSil)
-- [smcv](https://github.com/smcv) (debian packaging)
-- [Tristamus](https://tristamus.com>) (icon)
+It is OpenJK plus the changes of this repository. The engine is the work of the
+[OpenJK maintainers and contributors](https://github.com/JACoders/OpenJK/graphs/contributors), of the ioquake3
+contributors, Raven Software and id Software. The copyright notices in the source files name them and stay.
+The icons are the OpenJK icons, see [shared/icons/license.txt](shared/icons/license.txt).

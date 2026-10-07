@@ -12,7 +12,7 @@ Calculates and prints the name of the directory to place an pdb file in on a sym
 
 ## License
 
-Unlike OpenJK these tools use the MIT license as given in LICENSE.txt.
+Unlike VisionJK these tools use the MIT license as given in LICENSE.txt.
 
 ## Credits
 

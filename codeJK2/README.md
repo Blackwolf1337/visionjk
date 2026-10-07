@@ -1,4 +1,4 @@
-# OpenJK "Jedi Outcast" Singleplayer Code #
+# VisionJK "Jedi Outcast" Singleplayer Code #
 
 This folder contains the partial source required to build the JK2 shared library.  Set BuildJK2SPGame to ON in the main CMakeLists.txt file in the root of the repository to the feature on.
 

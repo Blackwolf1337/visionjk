@@ -568,7 +568,7 @@ To take a later JKAdmin commit: apply its diff and keep the `JA+` blocks in `WA_
 - Plain HTTP with basic auth. Put it behind a reverse proxy with HTTPS before it is reachable from outside, or
   leave `g_webBind` empty (127.0.0.1) and use an SSH tunnel. Since the security pass the default bind is localhost,
   not every interface.
-- `g_webPassword` is an archived cvar. The server writes it in clear text into `openjk_server.cfg` in its home
+- `g_webPassword` is an archived cvar. The server writes it in clear text into `visionjk_server.cfg` in its home
   path, and it shows in the process list when it is given on the command line.
 - Whoever can connect can occupy the 32 connections, then the panel does not answer until they time out. The game
   is not affected.

@@ -1,6 +1,6 @@
-# JA+ v2.4 Build 7 in OpenJK
+# JA+ v2.4 Build 7 in VisionJK
 
-This tree is OpenJK (multiplayer) with the features of the JA+ mod for Jedi Academy built in. The source of JA+
+This tree, VisionJK, is OpenJK (multiplayer) with the features of the JA+ mod for Jedi Academy built in. The source of JA+
 was never released. Everything here was rebuilt from the released binaries:
 
 - `jampgamei386.so` of JA+ v2.4 Build 7, the Linux server module. It still has its symbol names.
@@ -107,7 +107,7 @@ cmake --install build64 --prefix release
 
 ```
 JediAcademy/
-  openjk.x86_64  openjkded.x86_64  rd-vanilla_x86_64.so  rd-vulkan-vision_x86_64.so
+  visionjk.x86_64  visionjkded.x86_64  rd-vanilla_x86_64.so  rd-vulkan-vision_x86_64.so
   japlus/
     jampgamex86_64.so  cgamex86_64.so  uix86_64.so
     zz_japlus_client_assets.pk3

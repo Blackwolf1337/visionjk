@@ -4,7 +4,7 @@ The executable containing the client is separated from the game code in Jedi Aca
 
 For multiplayer there are the following files:
 
-*   **MP Client** - openjk.x86_64.exe or similar
+*   **MP Client** - visionjk.x86_64.exe or similar
     
     The main engine code, which loads the game libraries.
 *   **MP Client Game Library** - cgamex86_64.dll or similar
