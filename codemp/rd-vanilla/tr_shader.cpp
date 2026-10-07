@@ -3232,6 +3232,13 @@ static const char *FindShaderInShaderText( const char *shadername ) {
 			if ( !Q_stricmp( token, shadername ) )
 				return p;
 		}
+#ifdef RD_VULKAN_VISION
+		// The table has every shader of the text, in the order of the text (ScanAndLoadShaderFiles), so a name
+		// that is not in it is not in the text. The walk over the whole text below found nothing either, but it
+		// was made for every shader that is just an image: about 1350 times in a level load, 1.5 billion
+		// instructions.
+		return NULL;
+#endif
 	}
 
 	p = s_shaderText;
