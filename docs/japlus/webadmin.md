@@ -506,6 +506,18 @@ Also changed:
   `Cube_Players` keeps the shove and wakes a body a player is in, the step puts it outside of him. Checked on
   a private server with a frozen bot: a crate put over his head lies on it at speed 0 (before: it hung in his
   head at 127 units a second). Throws at him gave no clean numbers there. Not tried in the game.
+- Changed 2026-10-07, the same for balls. A ball that is free has a move of its own (`Ball_Move`, one sweep of
+  its box through the frame against the world) and looked at players once a frame as well (`Ball_Players`, the
+  kick). Now that sweep is also cut at the boxes of the players and NPCs near its way (`Ball_ClipMovers`), with
+  the code their moves are cut at bodies with (`BG_PropBrush` of his box, `BG_PropClipBox`). The sweep covers
+  the whole frame, so a fast ball does not get past him, it bounces off him like off a wall and hurts him
+  there, and one that falls on his head lies on it, whatever its mass. His head is no ground for it: there is
+  no rolling resistance on it and it does not go to sleep there, so it rolls off when he walks. A ball that
+  starts in his box is not stopped by him, which is how a ball he walks into (players walk through balls, that
+  is the kick) gets away. A ball in a hand or in the beam is moved by the solver of the bodies and gets one
+  contact there at its spot next to his box (`Ball_Touch` in `Body_Movers`), so it is not pulled through
+  other players any more. `Ball_Players` keeps the kick, and puts a ball outside of a player only when it is
+  more than a unit in him. Not tried, neither on a test server nor in the game.
 - New: taking a ball or a cube into the hand with `+button13` (for example `bind g +button13`). The button
   bits of the base game end at 2048, JA+ has 4096 (`+button12`) for the hook, `+button13` to `+button15` (8192,
   16384, 32768) are free and all 16 bits reach the server. No client change: the stock client and the JA+

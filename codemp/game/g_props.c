@@ -659,6 +659,39 @@ static void Prop_PlayerSpot( const gentity_t *other, float height, vec3_t spot )
 	VectorSet( spot, client->ps.origin[0], client->ps.origin[1], Com_Clamp( lo, hi, height ) );
 }
 
+// the box of a player or an NPC as a body: for Body_Touch, and for the move of a ball. The few boxes there are
+// are kept.
+static const prop_t *Mover_Box( const gentity_t *other ) {
+	static struct {
+		vec3_t	mins, maxs;
+		prop_t	body;
+	} boxes[4];
+	static int	next;
+	vec3_t		mins, maxs;
+	prop_t		*body;
+	int			i;
+
+	VectorSet( mins, other->r.mins[0] - PROP_PLAYER_SIDE, other->r.mins[1] - PROP_PLAYER_SIDE, other->r.mins[2] );
+	VectorSet( maxs, other->r.maxs[0] + PROP_PLAYER_SIDE, other->r.maxs[1] + PROP_PLAYER_SIDE, other->r.maxs[2] - PROP_PLAYER_TOP );
+	for ( i = 0; i < (int)ARRAY_LEN( boxes ); i++ ) {
+		if ( boxes[i].body.numSpots && VectorCompare( boxes[i].mins, mins ) && VectorCompare( boxes[i].maxs, maxs ) )
+			return &boxes[i].body;
+	}
+
+	body = &boxes[next].body;
+	VectorCopy( mins, boxes[next].mins );
+	VectorCopy( maxs, boxes[next].maxs );
+	next = ( next + 1 ) % (int)ARRAY_LEN( boxes );
+
+	memset( body, 0, sizeof( *body ) );
+	BG_PropShapeBox( mins, maxs, 1.0f, &body->shape );
+	AnglesToAxis( vec3_origin, body->axis );
+	// its corners are what can be in a body
+	for ( i = 0; i < body->shape.numVerts; i++ )
+		VectorCopy( body->shape.verts[i], body->spots[body->numSpots++] );
+	return body;
+}
+
 /*
 =================
 Prop_PlayerPush
@@ -736,9 +769,12 @@ Ball_Players
 
 A player or NPC who touches the ball kicks it: the ball bounces off him like off something much heavier
 that moves, and it is put outside of him. A ball that comes at him fast hurts him.
+
+He walks through a ball, that is how he kicks it. The other way round he is in its way: its move stops at
+his box (Ball_ClipMovers, and Body_Movers for a ball in a hand), which also sees a fast one get to him.
 =================
 */
-static void Ball_Players( gentity_t *self, prop_t *p, float dt ) {
+static void Ball_Players( gentity_t *self, prop_t *p ) {
 	const float	reach = self->radius + PROP_PLAYER_RADIUS;
 	int			i;
 
@@ -753,11 +789,6 @@ static void Ball_Players( gentity_t *self, prop_t *p, float dt ) {
 		if ( !Prop_Mover( other ) || other == p->holder )
 			continue;
 		Prop_PlayerSpot( other, self->r.currentOrigin[2], spot );
-
-		// a fast one is past him before it was ever seen next to him: where it will be when this frame is over
-		VectorMA( self->r.currentOrigin, dt, self->movedir, out );
-		if ( Distance( out, spot ) < reach )
-			Prop_Hurt( self, p, other, spot );
 
 		VectorSubtract( self->r.currentOrigin, spot, normal );
 		dist = VectorNormalize( normal );
@@ -780,7 +811,10 @@ static void Ball_Players( gentity_t *self, prop_t *p, float dt ) {
 		}
 		Prop_Wake( self );
 
-		// out of the player, as far as the world lets it
+		// out of the player, as far as the world lets it. One that lies on him is in his round head by less than
+		// this, it stays where its move put it.
+		if ( reach - dist <= 1.0f )
+			continue;
 		VectorMA( self->r.currentOrigin, reach - dist + 0.5f, normal, out );
 		trap->Trace( &tr, self->r.currentOrigin, self->r.mins, self->r.maxs, out, self->s.number, MASK_SOLID, qfalse, 0, 0 );
 		if ( !tr.startsolid && !tr.allsolid )
@@ -1690,6 +1724,43 @@ Ball_Move
 Gravity, the way through the world with up to four bounces in a frame, rolling resistance on the ground
 =================
 */
+// Players and NPCs are in the way of a ball: its move, already cut at the world, is cut at their boxes with the
+// code their own moves are cut at bodies with. A ball that starts in one is not stopped by him, so a ball he
+// kicks gets away. Returns the one it was cut at.
+static gentity_t *Ball_ClipMovers( const gentity_t *self, const vec3_t start, const vec3_t end, trace_t *tr ) {
+	static propBrush_t	brush;
+	gentity_t			*hit = NULL;
+	matrix3_t			axis;
+	int					i, k;
+
+	AnglesToAxis( vec3_origin, axis );
+	for ( i = 0; i < moverCount; i++ ) {
+		gentity_t		*other = &g_entities[moverList[i]];
+		const float		before = tr->fraction;
+		const prop_t	*box;
+		vec3_t			origin;
+
+		if ( !Prop_Mover( other ) )
+			continue;
+		box = Mover_Box( other );
+		VectorAdd( other->client->ps.origin, box->shape.centre, origin );
+		// nowhere near its way
+		for ( k = 0; k < 3; k++ ) {
+			if ( ( start[k] < end[k] ? start[k] : end[k] ) + self->r.mins[k] > origin[k] + box->shape.radius
+				|| ( start[k] > end[k] ? start[k] : end[k] ) + self->r.maxs[k] < origin[k] - box->shape.radius )
+				break;
+		}
+		if ( k < 3 )
+			continue;
+
+		BG_PropBrush( &box->shape, origin, axis, &brush );
+		BG_PropClipBox( tr, start, self->r.mins, self->r.maxs, end, &brush );
+		if ( tr->fraction < before )
+			hit = other;
+	}
+	return hit;
+}
+
 static void Ball_Move( gentity_t *self, float dt ) {
 	float		*vel = self->movedir;
 	vec3_t		org, end;
@@ -1702,7 +1773,8 @@ static void Ball_Move( gentity_t *self, float dt ) {
 	vel[2] -= g_gravity.value * dt;
 
 	for ( bump = 0; bump < 4 && left > 0.0f; bump++ ) {
-		float into;
+		gentity_t	*mover;
+		float		into;
 
 		VectorMA( org, left, vel, end );
 		trap->Trace( &tr, org, self->r.mins, self->r.maxs, end, self->s.number, MASK_SOLID, qfalse, 0, 0 );
@@ -1718,12 +1790,20 @@ static void Ball_Move( gentity_t *self, float dt ) {
 			break;
 		}
 		self->genericValue6 = 0;
+		mover = Ball_ClipMovers( self, org, end, &tr );
 
 		VectorCopy( tr.endpos, org );
 		if ( tr.fraction >= 1.0f )
 			break;
 		left *= 1.0f - tr.fraction;
 
+		if ( mover ) {
+			// a fast one hurts him, seen from where it came
+			vec3_t spot;
+
+			Prop_PlayerSpot( mover, org[2], spot );
+			Prop_Hurt( self, Prop_State( self ), mover, spot );
+		}
 		into = DotProduct( vel, tr.plane.normal );
 		if ( into < 0.0f ) {
 			// fast enough it bounces, else it stays on the surface and slides or rolls along it
@@ -1733,7 +1813,8 @@ static void Ball_Move( gentity_t *self, float dt ) {
 			if ( -into > PROP_LOUD )
 				Prop_BounceSound( self );
 		}
-		if ( tr.plane.normal[2] > 0.7f ) {
+		// a head is no ground: it lies on it, but it does not come to rest there, he walks away
+		if ( !mover && tr.plane.normal[2] > 0.7f ) {
 			ground = qtrue;
 			groundZ = tr.plane.normal[2];
 		}
@@ -2100,36 +2181,27 @@ static int Body_Contacts( gentity_t *self, const prop_t *p, contact_t *list ) {
 	return count;
 }
 
-// the box of a player or an NPC as a body Body_Touch can be asked about. The few boxes there are are kept.
-static const prop_t *Mover_Box( const gentity_t *other ) {
-	static struct {
-		vec3_t	mins, maxs;
-		prop_t	body;
-	} boxes[4];
-	static int	next;
-	vec3_t		mins, maxs;
-	prop_t		*body;
-	int			i;
+// a ball in a hand at the box of a player: one contact, at its spot next to him
+static int Ball_Touch( const gentity_t *self, const vec3_t otherOrigin, const prop_t *q, float ahead, contact_t *list,
+		int count ) {
+	vec3_t	rel, r, r2, normal;
+	float	dist;
 
-	VectorSet( mins, other->r.mins[0] - PROP_PLAYER_SIDE, other->r.mins[1] - PROP_PLAYER_SIDE, other->r.mins[2] );
-	VectorSet( maxs, other->r.maxs[0] + PROP_PLAYER_SIDE, other->r.maxs[1] + PROP_PLAYER_SIDE, other->r.maxs[2] - PROP_PLAYER_TOP );
-	for ( i = 0; i < (int)ARRAY_LEN( boxes ); i++ ) {
-		if ( boxes[i].body.numSpots && VectorCompare( boxes[i].mins, mins ) && VectorCompare( boxes[i].maxs, maxs ) )
-			return &boxes[i].body;
+	VectorSubtract( self->r.currentOrigin, otherOrigin, rel );
+	dist = Body_Nearest( q, rel, r2 );
+	if ( dist > self->radius + BODY_SKIN + ahead )
+		return count;
+
+	// from him to the ball
+	VectorSubtract( rel, r2, normal );
+	if ( VectorNormalize( normal ) < 0.1f ) {
+		// the middle of the ball is in him: out the way their middles lie, or up
+		VectorCopy( rel, normal );
+		if ( VectorNormalize( normal ) < 0.1f )
+			VectorSet( normal, 0, 0, 1 );
 	}
-
-	body = &boxes[next].body;
-	VectorCopy( mins, boxes[next].mins );
-	VectorCopy( maxs, boxes[next].maxs );
-	next = ( next + 1 ) % (int)ARRAY_LEN( boxes );
-
-	memset( body, 0, sizeof( *body ) );
-	BG_PropShapeBox( mins, maxs, 1.0f, &body->shape );
-	AnglesToAxis( vec3_origin, body->axis );
-	// its corners are what can be in a body
-	for ( i = 0; i < body->shape.numVerts; i++ )
-		VectorCopy( body->shape.verts[i], body->spots[body->numSpots++] );
-	return body;
+	VectorScale( normal, -self->radius, r );
+	return Contact_At( list, count, r, r2, normal, dist - self->radius );
 }
 
 /*
@@ -2140,7 +2212,8 @@ Where the body touches players and NPCs. Cube_Players looks at them once a frame
 their speed, which is the shove. That was all that kept a body out of a player: one in a hand or in the beam was
 pulled through him, a fast one was past him between two frames, and one on his head sank into him and slid out
 of him sideways. Here he is a box in the solver, like the world but one that moves: the body stops at him in
-every step, lies on his head and goes along with it by friction.
+every step, lies on his head and goes along with it by friction. A ball gets here while it is in a hand, which
+is when it is moved by this solver. A ball that is free has its own move (Ball_Move, Ball_ClipMovers).
 
 Nothing here moves him. The one who holds the body is not in its way, and a body somebody stands on is left
 alone, it does not shake under him.
@@ -2169,7 +2242,8 @@ static int Body_Movers( gentity_t *self, prop_t *p, contact_t *list, int count )
 		if ( DistanceSquared( self->r.currentOrigin, origin ) > reach * reach )
 			continue;
 
-		count = Body_Touch( self->r.currentOrigin, p, origin, box, ahead, list, count );
+		count = p->box ? Body_Touch( self->r.currentOrigin, p, origin, box, ahead, list, count )
+			: Ball_Touch( self, origin, box, ahead, list, count );
 		if ( count == first )
 			continue;
 		// he stands on it
@@ -2281,7 +2355,7 @@ Returns qfalse when it went home or is inside something, the frame ends there.
 static qboolean Body_Step( gentity_t *self, prop_t *p, float dt, const vec3_t hand, const vec3_t handVel,
 		contact_t *contacts, int *numContacts ) {
 	float		*vel = self->movedir;
-	const int	count = p->box ? Body_Movers( self, p, contacts, Body_Contacts( self, p, contacts ) ) : 0;
+	const int	count = Body_Movers( self, p, contacts, p->box ? Body_Contacts( self, p, contacts ) : 0 );
 	const float	stiff = p->gun ? PHYSGUN_STIFF : GRAB_STIFF / sqrtf( self->mass );
 	const float	fastest = p->gun ? PHYSGUN_SPEED : GRAB_MAX_SPEED;
 	vec3_t		grab, corr, end, mins, maxs;
@@ -2663,7 +2737,7 @@ static void Prop_Think( gentity_t *self ) {
 	if ( p->box )
 		Cube_Players( self, p );
 	else
-		Ball_Players( self, p, dt );
+		Ball_Players( self, p );
 
 	if ( self->genericValue2 ) {
 		// it lies still. Now and then: is the ground still there?
