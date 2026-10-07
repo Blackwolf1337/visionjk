@@ -57,6 +57,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define VOICE_FAR_GAIN			0.1f	// how loud a voice still is at the end of its range
 #define VOICE_MAX_PAN			0.8f	// how far a voice goes to one side: it is never gone from the other ear
 #define VOICE_HEAD				24.0f	// the mouth of a player above his origin
+#define VOICE_FILE_FRAME		( VOICE_FRAME_SAMPLES * 4 )	// voice_test: the bytes of one frame in a file, two channels
 
 typedef struct voiceSpeaker_s {
 	voiceQueue_t	queue;
@@ -104,9 +105,12 @@ static struct {
 	int					talkUntil;		// voice activation
 	int					micUntil;		// push to talk: when the microphone is closed again
 
-	int					test;			// voice_test: 1 a tone goes out in place of the microphone
+	int					test;			// voice_test: 1 a tone, 2 a file goes out in place of the microphone
 	int					testNext;
 	int					testSample;
+	fileHandle_t		play;			// voice_test play: the file,
+	int					playLeft;		//	how many bytes of it are not sent yet,
+	char				playName[MAX_QPATH];	//	and its name: it is opened again when it is through
 	fileHandle_t		record;			// voice_test record: what is played goes into this file
 } voice;
 
@@ -246,6 +250,10 @@ static void Voice_Close( void ) {
 	if ( voice.record ) {
 		trap->FS_Close( voice.record );
 		voice.record = 0;
+	}
+	if ( voice.play ) {
+		trap->FS_Close( voice.play );
+		voice.play = 0;
 	}
 	CG_VoiceAudioShutdown();
 	Voice_LookupJoin();
@@ -401,6 +409,50 @@ static float Voice_Level( const short *samples ) {
 	return sqrtf( sum / VOICE_FRAME_SAMPLES ) * ( 1.0f / 32768.0f );
 }
 
+// voice_test play: the file from its start. qfalse: there is not one frame in it.
+static qboolean Voice_TestOpen( void ) {
+	if ( voice.play )
+		trap->FS_Close( voice.play );
+	voice.play = 0;
+	voice.playLeft = trap->FS_Open( voice.playName, &voice.play, FS_READ );
+	if ( voice.play && voice.playLeft >= VOICE_FILE_FRAME )
+		return qtrue;
+	if ( voice.play )
+		trap->FS_Close( voice.play );
+	voice.play = 0;
+	return qfalse;
+}
+
+// voice_test: the next frame that goes out in place of the microphone. qfalse: the file is gone, the test ended.
+static qboolean Voice_TestFrame( short *samples ) {
+	byte	raw[VOICE_FILE_FRAME];
+	int		i;
+
+	if ( voice.test == 1 ) {
+		for ( i = 0; i < VOICE_FRAME_SAMPLES; i++, voice.testSample++ ) {
+			samples[i] = (short)( 6000.0f * sinf( voice.testSample * ( 2.0f * M_PI * 440.0f / VOICE_RATE ) )
+				+ 6000.0f * sinf( voice.testSample * ( 2.0f * M_PI * 3000.0f / VOICE_RATE ) ) );
+		}
+		return qtrue;
+	}
+
+	// The file again from its start when it is through. What is left of it is counted here: jamp does not say
+	// how much a read gave.
+	if ( voice.playLeft < VOICE_FILE_FRAME && !Voice_TestOpen() ) {
+		voice.test = 0;
+		return qfalse;
+	}
+	trap->FS_Read( raw, sizeof( raw ), voice.play );
+	voice.playLeft -= (int)sizeof( raw );
+	for ( i = 0; i < VOICE_FRAME_SAMPLES; i++ ) {
+		const int	left = (short)( raw[i * 4] | ( raw[i * 4 + 1] << 8 ) );
+		const int	right = (short)( raw[i * 4 + 2] | ( raw[i * 4 + 3] << 8 ) );
+
+		samples[i] = (short)( ( left + right ) / 2 );
+	}
+	return qtrue;
+}
+
 /*
 =================
 Voice_Capture
@@ -419,19 +471,15 @@ static void Voice_Capture( int now ) {
 	short			samples[VOICE_FRAME_SAMPLES];
 	int				count, i;
 
-	if ( voice.test == 1 ) {
-		// a tone of two pitches in place of the microphone, a frame for every 20 ms that went by
+	if ( voice.test ) {
+		// a tone or a file in place of the microphone, a frame for every 20 ms that went by
 		if ( !voice.testNext || now - voice.testNext > 500 )
 			voice.testNext = now;
-		for ( count = 0; count < VOICE_MAX_PER_FRAME && now >= voice.testNext; count++ ) {
-			for ( i = 0; i < VOICE_FRAME_SAMPLES; i++, voice.testSample++ ) {
-				samples[i] = (short)( 6000.0f * sinf( voice.testSample * ( 2.0f * M_PI * 440.0f / VOICE_RATE ) )
-					+ 6000.0f * sinf( voice.testSample * ( 2.0f * M_PI * 3000.0f / VOICE_RATE ) ) );
-			}
+		for ( count = 0; count < VOICE_MAX_PER_FRAME && now >= voice.testNext && Voice_TestFrame( samples ); count++ ) {
 			Voice_SendFrame( samples );
 			voice.testNext += VOICE_FRAME_MSEC;
 		}
-		voice.sending = qtrue;
+		voice.sending = voice.test ? qtrue : qfalse;
 		return;
 	}
 
@@ -876,9 +924,11 @@ void CG_VoiceUnmute_f( void ) {
 CG_VoiceTest_f
 
 voice_test tone: a tone of 440 and 3000 Hz goes out in place of the microphone
-voice_test record <name>: what the speakers get is also written to voice/<name>.raw (16 bit, two channels,
-	VOICE_RATE a second, low byte first)
-voice_test stop: both end
+voice_test play <name>: voice/<name>.raw goes out in place of the microphone, again and again
+voice_test record <name>: what the speakers get is also written to voice/<name>.raw
+voice_test stop: all of them end
+
+The files are 16 bit, two channels, VOICE_RATE a second, low byte first: what was recorded can be played.
 =================
 */
 void CG_VoiceTest_f( void ) {
@@ -887,6 +937,12 @@ void CG_VoiceTest_f( void ) {
 	if ( !Q_stricmp( what, "tone" ) ) {
 		voice.test = 1;
 		voice.testNext = 0;
+	} else if ( !Q_stricmp( what, "play" ) && CG_Argv( 2 )[0] && !strpbrk( CG_Argv( 2 ), "/\\.:" ) ) {
+		Com_sprintf( voice.playName, sizeof( voice.playName ), "voice/%s.raw", CG_Argv( 2 ) );
+		voice.testNext = 0;
+		voice.test = Voice_TestOpen() ? 2 : 0;
+		if ( !voice.test )
+			trap->Print( "voice_test: no sound in %s\n", voice.playName );
 	} else if ( !Q_stricmp( what, "record" ) && CG_Argv( 2 )[0] && !strpbrk( CG_Argv( 2 ), "/\\.:" ) ) {
 		if ( voice.record )
 			trap->FS_Close( voice.record );
@@ -899,8 +955,11 @@ void CG_VoiceTest_f( void ) {
 		if ( voice.record )
 			trap->FS_Close( voice.record );
 		voice.record = 0;
+		if ( voice.play )
+			trap->FS_Close( voice.play );
+		voice.play = 0;
 	} else {
-		trap->Print( "usage: voice_test tone | record <name> | stop\n" );
+		trap->Print( "usage: voice_test tone | play <name> | record <name> | stop\n" );
 	}
 }
 
