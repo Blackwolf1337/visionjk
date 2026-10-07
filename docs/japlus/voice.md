@@ -67,7 +67,9 @@ cgame does all three on its own.
 **Asking.** A server with the voice chat says `g_voice` in its server info. Only there the cgame sends the client
 command `jpvoice hello <protocol>`. The server answers with the server command
 `jpvoice <protocol> <port> <token> <range>`. The token is 32 random bits from the random source of the system,
-new for every connection. This exchange is all of the voice chat that goes through the game connection.
+new for every connection. This exchange is all of the voice chat that goes through the game connection. The
+cgame asks again every three seconds, ten times at most, until the answer is there: the flood protection of the
+server drops a client command that comes within a second of another one.
 
 **The sound.** The cgame opens a UDP socket of its own to that port. A datagram, low byte first:
 

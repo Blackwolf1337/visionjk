@@ -43,6 +43,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define VOICE_ENCODER_BYTES		40960	// room for the state of the Opus encoder. What it needs is asked and checked
 #define VOICE_DECODER_BYTES		24576	//	and for the decoder of one speaker
 #define VOICE_BITRATE			20000
+#define VOICE_ASK_MSEC			3000	// the server is asked for voice this often until it answers,
+#define VOICE_MAX_ASKS			10		//	and this many times at most
 #define VOICE_HELLO_MSEC		500		// a hello datagram this often until the server answers one,
 #define VOICE_KEEPALIVE_MSEC	5000	//	and this often after that: the router of the player keeps the way open
 #define VOICE_LEAD_FRAMES		3		// frames of a speaker that wait before he is played: 60 ms for late datagrams
@@ -79,7 +81,8 @@ typedef union voiceMem_u {
 
 static struct {
 	qboolean			serverHas;		// the server info says g_voice
-	qboolean			asked;			// "jpvoice hello" went to the server
+	qboolean			asked;			// "jpvoice hello" went to the server,
+	int					asks;			//	this many times
 	qboolean			answered;		// the server answered: port, token, range
 	qboolean			failed;			// something is missing for good, said once
 	int					port, range;
@@ -290,8 +293,14 @@ void CG_VoiceServerCommand( void ) {
 	const unsigned int token = (unsigned int)strtoul( CG_Argv( 3 ), NULL, 10 );
 	int			i;
 
-	if ( !voice.asked || voice.answered || voice.failed )
+	if ( !voice.asked || voice.failed )
 		return;
+	if ( voice.answered ) {
+		// two questions crossed on the way: the server knows the token of its last answer
+		if ( protocol == VOICE_PROTOCOL && token )
+			voice.token = token;
+		return;
+	}
 	if ( protocol != VOICE_PROTOCOL ) {
 		trap->Print( "Voice chat: the server speaks version %i of it, this client version %i\n", protocol, VOICE_PROTOCOL );
 		voice.failed = qtrue;
@@ -721,14 +730,18 @@ void CG_VoiceFrame( void ) {
 			Voice_Close();
 		return;
 	}
-	if ( !voice.asked ) {
-		trap->SendClientCommand( va( "jpvoice hello %i", VOICE_PROTOCOL ) );
-		voice.asked = qtrue;
-		voice.askTime = now;
+	if ( !voice.answered ) {
+		// Asked again while there is no answer: the flood protection of the server (sv_floodProtect) drops a
+		// command that comes within a second of another one without a word, and this one goes out just when the
+		// client entered the game and has more to say.
+		if ( voice.asks < VOICE_MAX_ASKS && ( !voice.asked || now - voice.askTime >= VOICE_ASK_MSEC ) ) {
+			trap->SendClientCommand( va( "jpvoice hello %i", VOICE_PROTOCOL ) );
+			voice.asked = qtrue;
+			voice.askTime = now;
+			voice.asks++;
+		}
 		return;
 	}
-	if ( !voice.answered )
-		return;
 	if ( !voice.serverKnown ) {
 		voice.serverKnown = Voice_FindServer();
 		if ( !voice.serverKnown )
