@@ -52,6 +52,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define VOICE_SILENT_MSEC		300		// nothing of a speaker for this long: he stopped talking
 #define VOICE_MIC_HOLD_MSEC		30000	// push to talk: the microphone is closed this long after the key was let go
 #define VOICE_VAD_HOLD_MSEC		400		// voice activation: it goes on sending this long after the last loud frame
+#define VOICE_SENT_MSEC			100		// the HUD shows the own voice this long after a frame of it went out
 #define VOICE_MAX_PER_FRAME		64		// datagrams taken and frames sent in one frame of the game at most
 #define VOICE_TRACE_MSEC		100		// how often the line from the listener to a speaker is looked at
 #define VOICE_FAR_GAIN			0.1f	// how loud a voice still is at the end of its range
@@ -102,6 +103,7 @@ static struct {
 	int					seq;
 	qboolean			keyDown;		// +voice
 	qboolean			sending;
+	int					sentTime;		// when the last frame of the microphone went out
 	int					talkUntil;		// voice activation
 	int					micUntil;		// push to talk: when the microphone is closed again
 
@@ -502,7 +504,6 @@ static void Voice_Capture( int now ) {
 	if ( voice.keyDown )
 		voice.micUntil = now + VOICE_MIC_HOLD_MSEC;
 
-	voice.sending = qfalse;
 	for ( count = 0; count < VOICE_MAX_PER_FRAME && CG_VoiceAudioRead( samples, VOICE_FRAME_SAMPLES ); count++ ) {
 		if ( cg_voiceMicGain.value != 1.0f ) {
 			for ( i = 0; i < VOICE_FRAME_SAMPLES; i++ )
@@ -513,8 +514,13 @@ static void Voice_Capture( int now ) {
 		if ( activation ? ( now < voice.talkUntil ) : voice.keyDown ) {
 			Voice_SendFrame( samples );
 			voice.sending = qtrue;
+			voice.sentTime = now;
 		}
 	}
+	// the microphone gives a frame every 20 ms and the game draws more often than that: the mark on the HUD
+	// must not go out in the frames between
+	if ( now - voice.sentTime > VOICE_SENT_MSEC )
+		voice.sending = qfalse;
 	// the game stood still for a while and more piled up than is worth sending late
 	if ( count == VOICE_MAX_PER_FRAME )
 		CG_VoiceAudioDropCapture();
