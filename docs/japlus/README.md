@@ -22,6 +22,7 @@ The port starts from OpenJK commit 260c59c2 (2026-09-29) and is the commits on t
 | [security.md](security.md) | Security pass over `codemp/`: findings, fixes, build hardening, what stays, server settings |
 | [threading.md](threading.md) | The frame loop from `main`, why server and client share one thread, timing numbers, what was not built |
 | [voice.md](voice.md) | Voice chat with the microphone (not a JA+ feature): in the cgame, relayed by the game module, engine unchanged, clients without it unaffected |
+| [audio.md](audio.md) | Sound that knows the level (not a JA+ feature): `s_spatial`, with Steam Audio in the engine. Walls muffle, rooms ring, sounds come round corners. Measured, not listened to yet |
 | [renderer.md](renderer.md) | rd-vulkan-vision, a Vulkan renderer next to rd-vanilla (not a JA+ feature): how it is built, the state of each part, what runs on the GPU, differences, what is left |
 
 ## Where the code is
@@ -87,6 +88,10 @@ cmake --build buildwin32 -j$(nproc)
 
 All three configurations build without errors. The code keeps to the rules of the surrounding files: C, no
 assumptions about pointer size in the game code, bounded string functions.
+
+The client can use Steam Audio for its sound (`s_spatial`, [audio.md](audio.md)). For that Valve's repository
+is a submodule, `lib/steamaudio`: `git submodule update --init` once after a clone. Without it the client is
+built without the feature.
 
 Every build also packs the client assets of the port, `assets/japlus_client` (the files of the JA+ client plugin
 1.4B4 with the menus of the port), into `<build>/assets/zz_japlus_client_assets.pk3`, and `cmake --install` puts

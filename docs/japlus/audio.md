@@ -146,8 +146,8 @@ runs, until then the old mixer plays.
 | The triangles against the collision model | 15000 rays on five levels: 97 to 99.6 % stop within a unit. Where they differ it is a curve hit from behind, which the collision model lets a point through |
 | The sound system started again, a change of level, bots fighting on mp/ffa3 | runs, the threads end when the sound system does |
 
-Cost on mp/ffa3 with bots fighting (Ryzen, 2 threads for a pass): a pass of reflections and paths 21 ms, in
-its own thread, about seven a second. In the thread of the game the sound costs mostly under 0.5 ms a frame
+Cost on mp/ffa3 with bots fighting (AMD Ryzen 9 5900X 12-Core Processor, two threads for a pass): a pass of
+reflections and paths 21 ms, in its own thread, about seven a second. In the thread of the game the sound costs mostly under 0.5 ms a frame
 and up to 2 ms, most of it the reverb. The paths of mp/ffa3: 740 probes, under a second, a file of 660 kB.
 
 Builds: Linux 64, and the client for 32 bit Windows with mingw.
