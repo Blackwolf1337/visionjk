@@ -4,9 +4,44 @@ A second renderer for the OpenJK client next to `rd-vanilla`. It draws with Vulk
 models in buffers on the graphics card and does in shaders what `rd-vanilla` computes per vertex on the CPU every
 frame. It is not a JA+ feature and it does not touch the server, the protocol or the game modules.
 
-State: work in progress on the branch `feature/rd-vulkan-vision`. It runs the menu, the levels, players, effects
-and the HUD. What is missing is listed below. `rd-vanilla` stays the default, and the fallback when the library
-does not load.
+`rd-vanilla` stays the default, and the fallback when the library does not load. The renderer is on the branch
+`feature/rd-vulkan-vision`, which is not merged into `master`, and it is not installed into the game folder.
+
+## State
+
+As of 2026-10-07, after `rd-vanilla` was gone through against this renderer once more (every render command,
+every cvar, entity flag, view flag, stage field and shader field its two back end files read, the functions of
+the shared files that are left out here, the empty functions of this renderer): everything the base game and
+JA+ draw is drawn. What is open is what was never run, and a few cvars.
+
+| Part | State |
+|------|-------|
+| Menus, console, HUD, fonts, the picture of the game at the start | done |
+| Levels: faces, patches, lightmaps and light styles, sky box, sky portal, global fog and fog volumes | done |
+| Models: Ghoul2 with bones and bolts, MD3, skins, saber marks on models | done |
+| Effects: sprites, beams, lines, saber glow, marks on walls, weather, surface sprites | done |
+| Shader scripts: all color, alpha and texture coordinate generators, tcMods, deforms, blend and depth states, animated maps | done |
+| Dynamic lights, also in the glow pass | done |
+| Dynamic glow | done |
+| Refraction: the wave of force push, the cloak, the trail of `cg_saberTrail 2` | done |
+| Shadows: `cg_shadows 1`, `2` and `3` | done |
+| Flares | done, two frames late (see the differences) |
+| Gamma and overbright | done |
+| Anti aliasing (`r_ext_multisample`) | done |
+| Compressed textures, texture filter, anisotropic filter, picmip | done |
+| Screenshots, recording to AVI | done |
+| Automap | done |
+| `r_showtris`, `r_shownormals`, `r_showImages`, `r_vkStatic`, `gfxinfo`, `imagelist` | done |
+| Window: resized from outside, `r_swapInterval`, a window nobody sees, `vid_restart` between the renderers | done |
+| Windows DLL, 32 and 64 bit | builds, never loaded into a game |
+| Portals and mirrors | written, never seen: no level of the base game has one |
+| Videos: a `.roq` on the screen, `videoMap` in a shader | written and read against `rd-vanilla`, never watched |
+| Fullscreen, a minimized window | written, not tried |
+| macOS | not tried, would need MoltenVK |
+| Other graphics cards and drivers, a long session, play by a person over a longer time | not tried |
+| `r_dlightStyle 0`, `r_colorbits`, `r_depthbits`, `r_stencilbits`, `r_texturebits 16`, `r_displayRefresh`, the developer cvars | not there, see "Checked" |
+
+The details of the open rows are under "Not done", what was compared and how under "Checked".
 
 ## Building and switching
 
@@ -30,6 +65,11 @@ cmake --build buildwin32cl -j$(nproc)
 mingw has no Vulkan headers of its own. They are the same on every platform, so the build copies the two
 header directories of the host (`vulkan`, `vk_video`) into the build directory for the cross compiler.
 `-DVulkanHeadersDir=` names another place. The result is `rd-vulkan-vision_x86.dll` next to `openjk.x86.exe`.
+
+For 64 bit the toolchain file is `cmake/Toolchains/x86_64-w64-mingw32.cmake`, and the configure line needs
+`-DCMAKE_SIZEOF_VOID_P=8` as well. The toolchain files force the compiler, so CMake does not find out the size
+of a pointer, and the tree takes Windows without it for 32 bit: the modules are then built by the 64 bit
+compiler under the names of the 32 bit ones (`..._x86.dll`). The result is `rd-vulkan-vision_x86_64.dll`.
 
 In the game:
 
@@ -198,8 +238,9 @@ left in these views are the effects of the game (flames, smoke, light cones) and
 ## Not done
 
 The Windows DLL builds with mingw-w64 for 32 and 64 bit and imports nothing but the C runtime, kernel32 and
-libwinpthread (the 32 bit one was built again on 2026-10-07, the 64 bit one not). It was never loaded into a
-game. macOS was not tried, it would need MoltenVK.
+libwinpthread. Both were built on 2026-10-07 from the last state of the renderer, the 64 bit one without a
+warning in the files of the renderer. It was never loaded into a game. macOS was not tried, it would need
+MoltenVK.
 
 Portals and mirrors have their clip plane (`gl_ClipDistance` from a plane in the transform) and the flipped
 culling, but no level of the base game has one (all levels of single and multiplayer were searched for a
@@ -284,9 +325,13 @@ soon as there is one (`R_Splash`, `menu/splash`) was missing, the window stayed 
 A screenshot asked for on the command line shows it now. No message of the validation layer in any of these
 runs.
 
-Not brought over, all for developers: `r_measureOverdraw`, `r_nobind`, `r_logFile`, `r_primitives` and
-`r_finish` do nothing, `r_speeds 1` shows no megabytes of textures and `r_speeds 4` no vertices of lights,
-`r_texturebits 16`, `r_colorbits`, `r_depthbits` and `r_stencilbits` change nothing (32, 24 and 8 bits always).
+Not brought over. For developers: `r_measureOverdraw`, `r_nobind`, `r_logFile`, `r_primitives` and `r_finish`
+do nothing, `r_speeds 1` shows no megabytes of textures and `r_speeds 4` no vertices of lights. `r_dlightStyle 0`
+(the lights of Quake 3, a texture projected on the triangles, where the default 1 is the light of this game)
+changes nothing, the lights are always the ones of the default. That one was found on 2026-10-07, it is not
+saved with the config and no menu sets it. Two that the video menu of the base game does set: `r_colorbits`
+(color depth) and `r_texturebits` (texture quality, 16 or 32 bit). They change nothing here, and neither do
+`r_depthbits` and `r_stencilbits`: 32, 24 and 8 bits always, which is what a card that runs this renderer has.
 `r_displayRefresh` is not applied in fullscreen: the window code of the engine sets a refresh rate only for an
 OpenGL window.
 
