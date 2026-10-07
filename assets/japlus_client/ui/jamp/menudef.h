@@ -111,6 +111,7 @@
 #define FEEDER_SABER_STAFF_INFO				0x2c			// saber staff
 //MODIFICATION
 #define FEEDER_HOLSTERS				0x2d			//holsters model list
+#define FEEDER_VIDEOMODES					0x2e			// list control: "Desktop" and the sizes the display offers
 
 
 

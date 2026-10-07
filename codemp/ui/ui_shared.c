@@ -8087,6 +8087,77 @@ char currLanguage[32][128];
 static const char languageString[32] = "@MENUS_MYLANGUAGE";
 #endif
 
+#ifdef UI_BUILD
+static int QDECL Item_Multi_CompareVideoModes( const void *a, const void *b ) {
+	const int *sizeA = (const int *)a, *sizeB = (const int *)b;
+
+	if ( sizeA[0] != sizeB[0] ) {
+		return sizeA[0] - sizeB[0];
+	}
+	return sizeA[1] - sizeB[1];
+}
+
+static int Item_Multi_AddVideoMode( int sizes[][2], int count, int max, int width, int height ) {
+	int i;
+
+	if ( width <= 0 || height <= 0 || count >= max ) {
+		return count;
+	}
+	for ( i = 0; i < count; i++ ) {
+		if ( sizes[i][0] == width && sizes[i][1] == height ) {
+			return count;
+		}
+	}
+	sizes[count][0] = width;
+	sizes[count][1] = height;
+	return count + 1;
+}
+
+/*
+===============
+Item_Multi_FeedVideoModes
+The entries of the video mode list: "Desktop", the size of the screen (r_mode -2), and the sizes the display
+offers (r_availableModes of the engine, "1280x720 1920x1080 ..."), smallest first, with the size in use if it
+is none of them. The value of an entry is "desktop" or "<width>x<height>": UI_UpdateVideoSetup() turns it into
+r_mode, r_customwidth and r_customheight.
+===============
+*/
+static void Item_Multi_FeedVideoModes( multiDef_t *multiPtr ) {
+	char		modes[MAX_STRING_CHARS];
+	int			sizes[MAX_MULTI_CVARS - 1][2];
+	int			count, width, height, i;
+	const char	*p;
+
+	// the size in use first: it has a place however many the display offers
+	count = Item_Multi_AddVideoMode( sizes, 0, ARRAY_LEN( sizes ), DC->glconfig.vidWidth, DC->glconfig.vidHeight );
+	DC->getCVarString( "r_availableModes", modes, sizeof( modes ) );
+	p = modes;
+	while ( *p == ' ' ) {
+		p++;
+	}
+	while ( *p ) {
+		if ( sscanf( p, "%dx%d", &width, &height ) == 2 ) {
+			count = Item_Multi_AddVideoMode( sizes, count, ARRAY_LEN( sizes ), width, height );
+		}
+		while ( *p && *p != ' ' ) {
+			p++;
+		}
+		while ( *p == ' ' ) {
+			p++;
+		}
+	}
+	qsort( sizes, count, sizeof( sizes[0] ), Item_Multi_CompareVideoModes );
+
+	multiPtr->cvarList[0] = "Desktop";
+	multiPtr->cvarStr[0] = "desktop";
+	multiPtr->count = 1;
+	for ( i = 0; i < count; i++ ) {
+		multiPtr->cvarList[multiPtr->count] = multiPtr->cvarStr[multiPtr->count] = String_Alloc( va( "%ix%i", sizes[i][0], sizes[i][1] ) );
+		multiPtr->count++;
+	}
+}
+#endif
+
 qboolean ItemParse_cvarStrList( itemDef_t *item, int handle ) {
 	pc_token_t token;
 	multiDef_t *multiPtr;
@@ -8130,6 +8201,15 @@ qboolean ItemParse_cvarStrList( itemDef_t *item, int handle ) {
 			trap->SE_GetLanguageName( (const int) multiPtr->count,(char *) currLanguage[multiPtr->count] );
 			multiPtr->cvarStr[multiPtr->count] = currLanguage[multiPtr->count];
 		}
+#endif
+		return qtrue;
+	}
+
+	// video modes
+	if (!Q_stricmp(token.string,"feeder") && item->special == FEEDER_VIDEOMODES)
+	{
+#ifdef UI_BUILD
+		Item_Multi_FeedVideoModes( multiPtr );
 #endif
 		return qtrue;
 	}

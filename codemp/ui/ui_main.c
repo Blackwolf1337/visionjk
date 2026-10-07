@@ -2963,9 +2963,12 @@ static void UI_DrawGLInfo(rectDef_t *rect, float scale, vec4_t color, int textSt
 	char *extensionName;
 	int y, i=0;
 
-	Text_Paint(rect->x + 2, rect->y, scale, color, va("GL_VENDOR: %s", uiInfo.uiDC.glconfig.vendor_string), 0, rect->w, textStyle,iMenuFont);
-	Text_Paint(rect->x + 2, rect->y + 15, scale, color, va("GL_VERSION: %s: %s", uiInfo.uiDC.glconfig.version_string,uiInfo.uiDC.glconfig.renderer_string), 0, rect->w, textStyle,iMenuFont);
-	Text_Paint(rect->x + 2, rect->y + 30, scale, color, va ("GL_PIXELFORMAT: color(%d-bits) Z(%d-bits) stencil(%d-bits)", uiInfo.uiDC.glconfig.colorBits, uiInfo.uiDC.glconfig.depthBits, uiInfo.uiDC.glconfig.stencilBits), 0, rect->w, textStyle,iMenuFont);
+	// rd-vulkan-vision fills the same strings: the driver, "Vulkan <version>" and the device, no extensions
+	const char *gl = Q_stricmpn( uiInfo.uiDC.glconfig.version_string, "Vulkan", 6 ) ? "GL_" : "";
+
+	Text_Paint(rect->x + 2, rect->y, scale, color, va("%sVENDOR: %s", gl, uiInfo.uiDC.glconfig.vendor_string), 0, rect->w, textStyle,iMenuFont);
+	Text_Paint(rect->x + 2, rect->y + 15, scale, color, va("%sVERSION: %s: %s", gl, uiInfo.uiDC.glconfig.version_string,uiInfo.uiDC.glconfig.renderer_string), 0, rect->w, textStyle,iMenuFont);
+	Text_Paint(rect->x + 2, rect->y + 30, scale, color, va ("%sPIXELFORMAT: color(%d-bits) Z(%d-bits) stencil(%d-bits)", gl, uiInfo.uiDC.glconfig.colorBits, uiInfo.uiDC.glconfig.depthBits, uiInfo.uiDC.glconfig.stencilBits), 0, rect->w, textStyle,iMenuFont);
 
 	// build null terminated extension strings
 	Q_strncpyz(buff, uiInfo.uiDC.glconfig.extensions_string, sizeof(buff));
@@ -4720,23 +4723,6 @@ static void UI_Update(const char *name) {
 		Q_strncpyz( buf, UI_Cvar_VariableString( "name" ), sizeof( buf ) );
 		trap->Cvar_Set( "ui_Name", buf );
 	}
-	else if (Q_stricmp(name, "ui_r_colorbits") == 0)
-	{
-		switch (val)
-		{
-			case 0:
-				trap->Cvar_SetValue( "ui_r_depthbits", 0 );
-				break;
-
-			case 16:
-				trap->Cvar_SetValue( "ui_r_depthbits", 16 );
-				break;
-
-			case 32:
-				trap->Cvar_SetValue( "ui_r_depthbits", 24 );
-				break;
-		}
-	}
 	else if (Q_stricmp(name, "ui_r_lodbias") == 0)
 	{
 		switch (val)
@@ -4755,18 +4741,14 @@ static void UI_Update(const char *name) {
 	}
 	else if (Q_stricmp(name, "ui_r_glCustom") == 0)
 	{
+		// the detail of the picture. The size of the window, fullscreen and the renderer are not part of a preset
 		switch (val)
 		{
 		case 0:	// high quality
 
-			trap->Cvar_SetValue( "ui_r_fullScreen", 1 );
 			trap->Cvar_SetValue( "ui_r_subdivisions", 4 );
 			trap->Cvar_SetValue( "ui_r_lodbias", 0 );
-			trap->Cvar_SetValue( "ui_r_colorbits", 32 );
-			trap->Cvar_SetValue( "ui_r_depthbits", 24 );
 			trap->Cvar_SetValue( "ui_r_picmip", 0 );
-			trap->Cvar_SetValue( "ui_r_mode", 4 );
-			trap->Cvar_SetValue( "ui_r_texturebits", 32 );
 			trap->Cvar_SetValue( "ui_r_fastSky", 0 );
 			trap->Cvar_SetValue( "ui_r_inGameVideo", 1 );
 		//	trap->Cvar_SetValue( "ui_cg_shadows", 2 );//stencil
@@ -4774,14 +4756,9 @@ static void UI_Update(const char *name) {
 			break;
 
 		case 1: // normal
-			trap->Cvar_SetValue( "ui_r_fullScreen", 1 );
 			trap->Cvar_SetValue( "ui_r_subdivisions", 4 );
 			trap->Cvar_SetValue( "ui_r_lodbias", 0 );
-			trap->Cvar_SetValue( "ui_r_colorbits", 0 );
-			trap->Cvar_SetValue( "ui_r_depthbits", 24 );
 			trap->Cvar_SetValue( "ui_r_picmip", 1 );
-			trap->Cvar_SetValue( "ui_r_mode", 3 );
-			trap->Cvar_SetValue( "ui_r_texturebits", 0 );
 			trap->Cvar_SetValue( "ui_r_fastSky", 0 );
 			trap->Cvar_SetValue( "ui_r_inGameVideo", 1 );
 		//	trap->Cvar_SetValue( "ui_cg_shadows", 2 );
@@ -4790,14 +4767,9 @@ static void UI_Update(const char *name) {
 
 		case 2: // fast
 
-			trap->Cvar_SetValue( "ui_r_fullScreen", 1 );
 			trap->Cvar_SetValue( "ui_r_subdivisions", 12 );
 			trap->Cvar_SetValue( "ui_r_lodbias", 1 );
-			trap->Cvar_SetValue( "ui_r_colorbits", 0 );
-			trap->Cvar_SetValue( "ui_r_depthbits", 0 );
 			trap->Cvar_SetValue( "ui_r_picmip", 2 );
-			trap->Cvar_SetValue( "ui_r_mode", 3 );
-			trap->Cvar_SetValue( "ui_r_texturebits", 0 );
 			trap->Cvar_SetValue( "ui_r_fastSky", 1 );
 			trap->Cvar_SetValue( "ui_r_inGameVideo", 0 );
 		//	trap->Cvar_SetValue( "ui_cg_shadows", 1 );
@@ -4806,14 +4778,9 @@ static void UI_Update(const char *name) {
 
 		case 3: // fastest
 
-			trap->Cvar_SetValue( "ui_r_fullScreen", 1 );
 			trap->Cvar_SetValue( "ui_r_subdivisions", 20 );
 			trap->Cvar_SetValue( "ui_r_lodbias", 2 );
-			trap->Cvar_SetValue( "ui_r_colorbits", 16 );
-			trap->Cvar_SetValue( "ui_r_depthbits", 16 );
-			trap->Cvar_SetValue( "ui_r_mode", 3 );
 			trap->Cvar_SetValue( "ui_r_picmip", 3 );
-			trap->Cvar_SetValue( "ui_r_texturebits", 16 );
 			trap->Cvar_SetValue( "ui_r_fastSky", 1 );
 			trap->Cvar_SetValue( "ui_r_inGameVideo", 0 );
 		//	trap->Cvar_SetValue( "ui_cg_shadows", 0 );
@@ -4900,16 +4867,32 @@ you to discard your changes if you did something you didnt want
 */
 void UI_UpdateVideoSetup ( void )
 {
-	trap->Cvar_Set ( "r_mode", UI_Cvar_VariableString ( "ui_r_mode" ) );
-	trap->Cvar_Set ( "r_fullscreen", UI_Cvar_VariableString ( "ui_r_fullscreen" ) );
-	trap->Cvar_Set ( "r_colorbits", UI_Cvar_VariableString ( "ui_r_colorbits" ) );
+	char	resolution[32], renderer[MAX_QPATH];
+	int		width, height, displayMode;
+
+	// "desktop" is the size of the screen, "<width>x<height>" one of the sizes of the list (Item_Multi_FeedVideoModes)
+	Q_strncpyz( resolution, UI_Cvar_VariableString( "ui_r_resolution" ), sizeof( resolution ) );
+	if ( sscanf( resolution, "%dx%d", &width, &height ) == 2 && width > 0 && height > 0 ) {
+		trap->Cvar_Set( "r_mode", "-1" );
+		trap->Cvar_Set( "r_customwidth", va( "%i", width ) );
+		trap->Cvar_Set( "r_customheight", va( "%i", height ) );
+	} else {
+		trap->Cvar_Set( "r_mode", "-2" );
+	}
+	// 0 window, 1 fullscreen, 2 a window without a border: with "desktop" it covers the screen
+	displayMode = (int)trap->Cvar_VariableValue( "ui_r_displaymode" );
+	trap->Cvar_Set( "r_fullscreen", displayMode == 1 ? "1" : "0" );
+	trap->Cvar_Set( "r_noborder", displayMode == 2 ? "1" : "0" );
+	Q_strncpyz( renderer, UI_Cvar_VariableString( "ui_cl_renderer" ), sizeof( renderer ) );
+	if ( renderer[0] ) {
+		trap->Cvar_Set( "cl_renderer", renderer );
+	}
+	trap->Cvar_Set ( "r_ext_multisample", UI_Cvar_VariableString ( "ui_r_ext_multisample" ) );
 	trap->Cvar_Set ( "r_lodbias", UI_Cvar_VariableString ( "ui_r_lodbias" ) );
 	trap->Cvar_Set ( "r_picmip", UI_Cvar_VariableString ( "ui_r_picmip" ) );
-	trap->Cvar_Set ( "r_texturebits", UI_Cvar_VariableString ( "ui_r_texturebits" ) );
 	trap->Cvar_Set ( "r_texturemode", UI_Cvar_VariableString ( "ui_r_texturemode" ) );
 	trap->Cvar_Set ( "r_detailtextures", UI_Cvar_VariableString ( "ui_r_detailtextures" ) );
 	trap->Cvar_Set ( "r_ext_compress_textures", UI_Cvar_VariableString ( "ui_r_ext_compress_textures" ) );
-	trap->Cvar_Set ( "r_depthbits", UI_Cvar_VariableString ( "ui_r_depthbits" ) );
 	trap->Cvar_Set ( "r_subdivisions", UI_Cvar_VariableString ( "ui_r_subdivisions" ) );
 	trap->Cvar_Set ( "r_fastSky", UI_Cvar_VariableString ( "ui_r_fastSky" ) );
 	trap->Cvar_Set ( "r_inGameVideo", UI_Cvar_VariableString ( "ui_r_inGameVideo" ) );
@@ -4933,16 +4916,15 @@ void UI_GetVideoSetup ( void )
 	trap->Cvar_Register ( NULL, "ui_r_glCustom",				"4", CVAR_INTERNAL|CVAR_ARCHIVE );
 
 	// Make sure the cvars are registered as read only.
-	trap->Cvar_Register ( NULL, "ui_r_mode",					"0", CVAR_ROM|CVAR_INTERNAL );
-	trap->Cvar_Register ( NULL, "ui_r_fullscreen",			"0", CVAR_ROM|CVAR_INTERNAL );
-	trap->Cvar_Register ( NULL, "ui_r_colorbits",				"0", CVAR_ROM|CVAR_INTERNAL );
+	trap->Cvar_Register ( NULL, "ui_r_resolution",			"desktop", CVAR_ROM|CVAR_INTERNAL );
+	trap->Cvar_Register ( NULL, "ui_r_displaymode",			"0", CVAR_ROM|CVAR_INTERNAL );
+	trap->Cvar_Register ( NULL, "ui_cl_renderer",				"", CVAR_ROM|CVAR_INTERNAL );
+	trap->Cvar_Register ( NULL, "ui_r_ext_multisample",		"0", CVAR_ROM|CVAR_INTERNAL );
 	trap->Cvar_Register ( NULL, "ui_r_lodbias",				"0", CVAR_ROM|CVAR_INTERNAL );
 	trap->Cvar_Register ( NULL, "ui_r_picmip",				"0", CVAR_ROM|CVAR_INTERNAL );
-	trap->Cvar_Register ( NULL, "ui_r_texturebits",			"0", CVAR_ROM|CVAR_INTERNAL );
 	trap->Cvar_Register ( NULL, "ui_r_texturemode",			"0", CVAR_ROM|CVAR_INTERNAL );
 	trap->Cvar_Register ( NULL, "ui_r_detailtextures",		"0", CVAR_ROM|CVAR_INTERNAL );
 	trap->Cvar_Register ( NULL, "ui_r_ext_compress_textures",	"0", CVAR_ROM|CVAR_INTERNAL );
-	trap->Cvar_Register ( NULL, "ui_r_depthbits",				"0", CVAR_ROM|CVAR_INTERNAL );
 	trap->Cvar_Register ( NULL, "ui_r_subdivisions",			"0", CVAR_ROM|CVAR_INTERNAL );
 	trap->Cvar_Register ( NULL, "ui_r_fastSky",				"0", CVAR_ROM|CVAR_INTERNAL );
 	trap->Cvar_Register ( NULL, "ui_r_inGameVideo",			"0", CVAR_ROM|CVAR_INTERNAL );
@@ -4951,16 +4933,20 @@ void UI_GetVideoSetup ( void )
 	trap->Cvar_Register ( NULL, "ui_r_modified",				"0", CVAR_ROM|CVAR_INTERNAL );
 
 	// Copy over the real video cvars into their temporary counterparts
-	trap->Cvar_Set ( "ui_r_mode",						UI_Cvar_VariableString ( "r_mode" ) );
-	trap->Cvar_Set ( "ui_r_colorbits",				UI_Cvar_VariableString ( "r_colorbits" ) );
-	trap->Cvar_Set ( "ui_r_fullscreen",				UI_Cvar_VariableString ( "r_fullscreen" ) );
+	// r_mode -2 is the size of the screen, whatever that is. Every other mode is shown as the size it gave
+	if ( trap->Cvar_VariableValue( "r_mode" ) == -2 ) {
+		trap->Cvar_Set ( "ui_r_resolution",			"desktop" );
+	} else {
+		trap->Cvar_Set ( "ui_r_resolution",			va( "%ix%i", uiInfo.uiDC.glconfig.vidWidth, uiInfo.uiDC.glconfig.vidHeight ) );
+	}
+	trap->Cvar_Set ( "ui_r_displaymode",				trap->Cvar_VariableValue( "r_fullscreen" ) ? "1" : ( trap->Cvar_VariableValue( "r_noborder" ) ? "2" : "0" ) );
+	trap->Cvar_Set ( "ui_cl_renderer",				UI_Cvar_VariableString ( "cl_renderer" ) );
+	trap->Cvar_Set ( "ui_r_ext_multisample",			UI_Cvar_VariableString ( "r_ext_multisample" ) );
 	trap->Cvar_Set ( "ui_r_lodbias",					UI_Cvar_VariableString ( "r_lodbias" ) );
 	trap->Cvar_Set ( "ui_r_picmip",					UI_Cvar_VariableString ( "r_picmip" ) );
-	trap->Cvar_Set ( "ui_r_texturebits",				UI_Cvar_VariableString ( "r_texturebits" ) );
 	trap->Cvar_Set ( "ui_r_texturemode",				UI_Cvar_VariableString ( "r_texturemode" ) );
 	trap->Cvar_Set ( "ui_r_detailtextures",			UI_Cvar_VariableString ( "r_detailtextures" ) );
 	trap->Cvar_Set ( "ui_r_ext_compress_textures",	UI_Cvar_VariableString ( "r_ext_compress_textures" ) );
-	trap->Cvar_Set ( "ui_r_depthbits",				UI_Cvar_VariableString ( "r_depthbits" ) );
 	trap->Cvar_Set ( "ui_r_subdivisions",				UI_Cvar_VariableString ( "r_subdivisions" ) );
 	trap->Cvar_Set ( "ui_r_fastSky",					UI_Cvar_VariableString ( "r_fastSky" ) );
 	trap->Cvar_Set ( "ui_r_inGameVideo",				UI_Cvar_VariableString ( "r_inGameVideo" ) );

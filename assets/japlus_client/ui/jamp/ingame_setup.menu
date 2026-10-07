@@ -697,10 +697,11 @@
 			group				video
       		type				ITEM_TYPE_MULTI
 			text				@MENUS_VIDEO_MODE
-			cvarFloatList		{  @MENUS_640_X_480 3 @MENUS_800_X_600 4  @MENUS_1024_X_768 6 @MENUS_1152_X_864 7  @MENUS_1280_X_1024 8  @MENUS_1600_X_1200 9  @MENUS_2048_X_1536 10 @MENUS_2400_X_600 12 }
-			cvar				"ui_r_mode"
+			feeder				46
+			cvarStrList			feeder
+			cvar				"ui_r_resolution"
 
-			rect				220 83 300 20
+			rect				220 63 300 20
 			textalign			ITEM_ALIGN_RIGHT
 			textalignx			165
 			textaligny			0
@@ -713,6 +714,42 @@
 
 			mouseenter 
 			{ 
+				show			highlight2
+			}
+			mouseexit 
+			{ 
+				hide			highlight2
+			} 
+			action 
+			{
+				play			"sound/interface/button1"
+				setcvar			ui_r_modified	1
+				show			applyChanges
+			}
+		}
+
+		itemDef 
+		{	
+			name				fullscreen
+			group				video
+			type				ITEM_TYPE_MULTI
+			text				"Display Mode:"
+			rect				220 83 300 20
+			textalign			ITEM_ALIGN_RIGHT
+			textalignx			165
+			textaligny			0
+			font 				4
+			textscale 			1
+			forecolor		.615 .615 .956 1
+
+			cvarFloatList		{  "Window" 0 "Fullscreen" 1 "Borderless" 2 }
+			descText			"A window, the whole screen, or a window without a border"
+			cvar				"ui_r_displaymode"
+
+			visible			0
+
+			mouseenter 
+			{ 
 				show			highlight3
 			}
 			mouseexit 
@@ -722,7 +759,6 @@
 			action 
 			{
 				play			"sound/interface/button1"
-				uiScript		glCustom
 				setcvar			ui_r_modified	1
 				show			applyChanges
 			}
@@ -730,10 +766,10 @@
 
 		itemDef 
 		{	
-			name				color_depth
+			name				renderer
 			group				video
 			type				ITEM_TYPE_MULTI
-			text				@MENUS_COLOR_DEPTH
+			text				"Renderer:"
 			rect				220 103 300 20
 			textalign			ITEM_ALIGN_RIGHT
 			textalignx			165
@@ -742,11 +778,11 @@
 			textscale 			1
 			forecolor		.615 .615 .956 1
 
-			cvarFloatList		{  @MENUS_DEFAULT 0 @MENUS_16_BIT 16 @MENUS_32_BIT 32 }
-			descText			@MENUS_CHANGE_THE_NUMBER_OF
-			cvar				"ui_r_colorbits"
+			cvarStrList			{  "Vulkan" , "rd-vulkan-vision" , "OpenGL" , "rd-vanilla" }
+			descText			"Draw with Vulkan or with OpenGL"
+			cvar				"ui_cl_renderer"
 
-			visible				0
+			visible			0
 
 			mouseenter 
 			{ 
@@ -759,45 +795,6 @@
 			action 
 			{
 				play			"sound/interface/button1"
-				uiScript		glCustom
-				uiScript update "ui_r_colorbits"
-				setcvar			ui_r_modified	1
-				show			applyChanges
-			}
-		}
-
-		itemDef 
-		{	
-			name				fullscreen
-			group				video
-			type				ITEM_TYPE_MULTI
-			text				@MENUS_FULL_SCREEN
-			rect				220 123 300 20
-			textalign			ITEM_ALIGN_RIGHT
-			textalignx			165
-			textaligny			0
-			font 				4
-			textscale 			1
-			forecolor		.615 .615 .956 1
-
-			cvarFloatList		{  @MENUS_OFF 0 @MENUS_ON 1 }
-			descText			@MENUS_TOGGLE_BETWEEN_FULL_SCREEN
-			cvar				"ui_r_fullscreen"
-
-			visible			0
-
-			mouseenter 
-			{ 
-				show			highlight5
-			}
-			mouseexit 
-			{ 
-				hide			highlight5
-			} 
-			action 
-			{
-				play			"sound/interface/button1"
-				uiScript		glCustom
 				setcvar			ui_r_modified	1
 				show			applyChanges
 			}
@@ -809,7 +806,7 @@
 			group				video
 			type				ITEM_TYPE_MULTI
 			text				@MENUS_GEOMETRIC_DETAIL
-			rect				220 143 300 20
+			rect				220 123 300 20
 			textalign			ITEM_ALIGN_RIGHT
 			textalignx			165
 			textaligny			0
@@ -824,11 +821,11 @@
 
 			mouseenter 
 			{ 
-				show			highlight6
+				show			highlight5
 			}
 			mouseexit 
 			{ 
-				hide			highlight6
+				hide			highlight5
 			} 
 			action 
 			{
@@ -846,7 +843,7 @@
 			group				video
 			type				ITEM_TYPE_MULTI
 			text				@MENUS_TEXTURE_DETAIL
-			rect				220 163 300 20
+			rect				220 143 300 20
 			textalign			ITEM_ALIGN_RIGHT
 			textalignx			165
 			textaligny			0
@@ -861,11 +858,11 @@
 
 			mouseenter 
 			{ 
-				show			highlight7
+				show			highlight6
 			}
 			mouseexit 
 			{ 
-				hide			highlight7
+				hide			highlight6
 			} 
 			action 
 			{
@@ -878,47 +875,11 @@
 
 		itemDef 
 		{	
-			name				texture_quality
-			group				video
-			type				ITEM_TYPE_MULTI
-			text				@MENUS_TEXTURE_QUALITY
-			rect				220 183 300 20
-			textalign			ITEM_ALIGN_RIGHT
-			textalignx			165
-			textaligny			0
-			font 				4
-			textscale 			1
-			forecolor		.615 .615 .956 1
-			cvarFloatList		{  @MENUS_DEFAULT 0 @MENUS_16_BIT 16 @MENUS_32_BIT 32 }
-			descText			@MENUS_SELECT_THE_NUMBER_OF
-			cvar				"ui_r_texturebits"
-
-			visible				0
-
-			mouseenter 
-			{ 
-				show			highlight8
-			}
-			mouseexit 
-			{ 
-				hide			highlight8
-			} 
-			action 
-			{
-				play			"sound/interface/button1.wav"
-				uiScript		glCustom
-				setcvar			ui_r_modified	1
-				show			applyChanges
-			}
-		}
-
-		itemDef 
-		{	
 			name				texture_filter
 			group				video
 			type				ITEM_TYPE_MULTI
 			text				@MENUS_TEXTURE_FILTER
-			rect				220 203 300 20
+			rect				220 163 300 20
 			textalign			ITEM_ALIGN_RIGHT
 			textalignx			165
 			textaligny			0
@@ -933,11 +894,11 @@
 
 			mouseenter 
 			{ 
-				show			highlight9
+				show			highlight7
 			}
 			mouseexit 
 			{ 
-				hide			highlight9
+				hide			highlight7
 			} 
 			action 
 			{
@@ -954,7 +915,7 @@
 			group				video
 			type				ITEM_TYPE_MULTI
 			text				@MENUS_DETAILED_SHADERS
-			rect				220 223 300 20
+			rect				220 183 300 20
 			textalign			ITEM_ALIGN_RIGHT
 			textalignx			165
 			textaligny			0
@@ -969,11 +930,11 @@
 
 			mouseenter 
 			{ 
-				show			highlight10
+				show			highlight8
 			}
 			mouseexit 
 			{ 
-				hide			highlight10
+				hide			highlight8
 			} 
 			action 
 			{
@@ -1024,10 +985,10 @@
 		itemDef 
 		{	
 			name				compress_textures
-			group				video_obsolete
+			group				video
 			type				ITEM_TYPE_MULTI
 			text				@MENUS_COMPRESSED_TEXTURES
-			rect				220 243 300 20
+			rect				220 203 300 20
 			textalign			ITEM_ALIGN_RIGHT
 			textalignx			165
 			textaligny			0
@@ -1042,16 +1003,50 @@
 
 			mouseenter 
 			{ 
-				show			highlight11
+				show			highlight9
 			}
 			mouseexit 
 			{ 
-				hide			highlight11
+				hide			highlight9
 			} 
 			action 
 			{
 				play			"sound/interface/button1"
-				uiScript		glCustom
+				setcvar			ui_r_modified	1
+				show			applyChanges
+			}
+		}
+
+		itemDef 
+		{	
+			name				antialiasing
+			group				video
+			type				ITEM_TYPE_MULTI
+			text				"Anti-Aliasing:"
+			rect				220 223 300 20
+			textalign			ITEM_ALIGN_RIGHT
+			textalignx			165
+			textaligny			0
+			font 				4
+			textscale 			1
+			forecolor		.615 .615 .956 1
+			cvarFloatList		{  @MENUS_OFF 0 "2x" 2 "4x" 4 "8x" 8 }
+			descText			"Smooths the edges, costs speed"
+			cvar				"ui_r_ext_multisample"
+
+			visible				0
+
+			mouseenter 
+			{ 
+				show			highlight10
+			}
+			mouseexit 
+			{ 
+				hide			highlight10
+			} 
+			action 
+			{
+				play			"sound/interface/button1"
 				setcvar			ui_r_modified	1
 				show			applyChanges
 			}
@@ -1404,7 +1399,7 @@
 
 		itemDef 
 		{	
-			name				video_mode
+			name				anisotropic_filter
 			group				video2
 			type				ITEM_TYPE_SLIDER
 			text				@MENUS_ANISOTROPIC_FILTERING
