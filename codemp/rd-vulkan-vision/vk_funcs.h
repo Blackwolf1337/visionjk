@@ -30,6 +30,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // asked without an instance. vkEnumerateInstanceVersion is on its own: a loader of Vulkan 1.0 does not have it
 #define VK_FUNCTIONS_GLOBAL( X ) \
 	X( vkCreateInstance ) \
+	X( vkEnumerateInstanceExtensionProperties ) \
 	X( vkEnumerateInstanceLayerProperties )
 
 // asked from the instance
@@ -37,12 +38,14 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 	X( vkCreateDevice ) \
 	X( vkDestroyInstance ) \
 	X( vkDestroySurfaceKHR ) \
+	X( vkEnumerateDeviceExtensionProperties ) \
 	X( vkEnumeratePhysicalDevices ) \
 	X( vkGetPhysicalDeviceFeatures ) \
 	X( vkGetPhysicalDeviceFeatures2 ) \
 	X( vkGetPhysicalDeviceFormatProperties ) \
 	X( vkGetPhysicalDeviceMemoryProperties ) \
 	X( vkGetPhysicalDeviceProperties ) \
+	X( vkGetPhysicalDeviceProperties2 ) \
 	X( vkGetPhysicalDeviceQueueFamilyProperties ) \
 	X( vkGetPhysicalDeviceSurfaceCapabilitiesKHR ) \
 	X( vkGetPhysicalDeviceSurfaceFormatsKHR ) \

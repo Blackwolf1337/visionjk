@@ -98,7 +98,23 @@ static void VK_LoadDeviceFunctions( void ) {
 #undef X
 }
 
+// The names are written out and the flag is given by its number: the headers of the build may be older than these.
+#define VK_PORTABILITY_ENUMERATION_NAME	"VK_KHR_portability_enumeration"
+#define VK_PORTABILITY_ENUMERATION_FLAG	0x00000001		// VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR
+#define VK_PORTABILITY_SUBSET_NAME		"VK_KHR_portability_subset"
+
+// is an extension among the ones a driver listed
+static qboolean VK_HasExtension( const VkExtensionProperties *list, uint32_t count, const char *name ) {
+	for ( uint32_t i = 0; i < count; i++ ) {
+		if ( !strcmp( list[i].extensionName, name ) ) {
+			return qtrue;
+		}
+	}
+	return qfalse;
+}
+
 static void VK_CreateInstance( void ) {
+	static VkExtensionProperties available[256];
 	const char *extensions[16];
 	const char *layers[1];
 	int numExtensions, numLayers = 0;
@@ -115,9 +131,25 @@ static void VK_CreateInstance( void ) {
 			"Set cl_renderer to rd-vanilla.", VK_API_VERSION_MAJOR( version ), VK_API_VERSION_MINOR( version ) );
 	}
 
-	numExtensions = ri.WIN_VK_InstanceExtensions( extensions, ARRAY_LEN( extensions ) - 1 );
+	numExtensions = ri.WIN_VK_InstanceExtensions( extensions, ARRAY_LEN( extensions ) - 2 );
 	if ( !numExtensions ) {
 		Com_Error( ERR_FATAL, "Vulkan: the window system names no instance extensions" );
+	}
+
+	// macOS has no Vulkan of its own. MoltenVK runs it on top of Metal and is a Vulkan with parts missing, and
+	// the loader only lists such a driver for a program that asks for it, with this extension and this flag.
+	// Where the extension is not offered nothing changes.
+	count = ARRAY_LEN( available );
+	if ( qvkEnumerateInstanceExtensionProperties( NULL, &count, available ) >= VK_SUCCESS
+		&& VK_HasExtension( available, count, VK_PORTABILITY_ENUMERATION_NAME ) ) {
+		int i;
+
+		for ( i = 0; i < numExtensions && strcmp( extensions[i], VK_PORTABILITY_ENUMERATION_NAME ); i++ ) {
+		}
+		if ( i == numExtensions ) {
+			extensions[numExtensions++] = VK_PORTABILITY_ENUMERATION_NAME;
+		}
+		info.flags |= VK_PORTABILITY_ENUMERATION_FLAG;
 	}
 
 	vk.validation = qfalse;
@@ -233,11 +265,30 @@ static void VK_PickDevice( void ) {
 	}
 	qvkGetPhysicalDeviceProperties( vk.physicalDevice, &vk.properties );
 	qvkGetPhysicalDeviceMemoryProperties( vk.physicalDevice, &vk.memoryProperties );
+
+	// The texture table is VK_MAX_IMAGES textures with a sampler each. A graphics card says it takes a million
+	// of them. MoltenVK passes on what Metal says, which can be less. That is said here and not refused: what
+	// Metal counts are samplers that differ, and this renderer has a handful.
+	{
+		VkPhysicalDeviceVulkan12Properties p12 = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_PROPERTIES };
+		VkPhysicalDeviceProperties2 p2 = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2, &p12 };
+		uint32_t least;
+
+		qvkGetPhysicalDeviceProperties2( vk.physicalDevice, &p2 );
+		least = Q_min( Q_min( p12.maxPerStageDescriptorUpdateAfterBindSamplers, p12.maxPerStageDescriptorUpdateAfterBindSampledImages ),
+			Q_min( p12.maxDescriptorSetUpdateAfterBindSamplers, p12.maxDescriptorSetUpdateAfterBindSampledImages ) );
+		if ( least < VK_MAX_IMAGES ) {
+			ri.Printf( PRINT_WARNING, "Vulkan: the device says it takes %u textures in one table, this renderer has %i. "
+				"If the start fails after this line or textures are missing, that is why.\n", least, VK_MAX_IMAGES );
+		}
+	}
 }
 
 static void VK_CreateDevice( void ) {
+	static VkExtensionProperties offered[512];
 	const float priority = 1.0f;
-	const char *extensions[] = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
+	const char *extensions[2] = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
+	uint32_t numExtensions = 1, count = ARRAY_LEN( offered );
 	VkDeviceQueueCreateInfo queue = { VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO };
 	VkPhysicalDeviceVulkan13Features f13 = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES };
 	VkPhysicalDeviceVulkan12Features f12 = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES, &f13 };
@@ -268,7 +319,16 @@ static void VK_CreateDevice( void ) {
 	queue.pQueuePriorities = &priority;
 	info.queueCreateInfoCount = 1;
 	info.pQueueCreateInfos = &queue;
-	info.enabledExtensionCount = ARRAY_LEN( extensions );
+	// A device that offers this extension has to have it switched on: it says of itself that it is not a whole
+	// Vulkan (MoltenVK). Of the parts such a device may lack this renderer uses one, an image view that reads
+	// alpha as 1 (the copy of the frame in vk_post.cpp), which MoltenVK has on macOS 10.15 and later.
+	if ( qvkEnumerateDeviceExtensionProperties( vk.physicalDevice, NULL, &count, offered ) >= VK_SUCCESS
+		&& VK_HasExtension( offered, count, VK_PORTABILITY_SUBSET_NAME ) ) {
+		extensions[numExtensions++] = VK_PORTABILITY_SUBSET_NAME;
+		ri.Printf( PRINT_ALL, "Vulkan on top of another graphics interface (VK_KHR_portability_subset)\n" );
+	}
+
+	info.enabledExtensionCount = numExtensions;
 	info.ppEnabledExtensionNames = extensions;
 	VK_CHECK( qvkCreateDevice( vk.physicalDevice, &info, NULL, &vk.device ) );
 	VK_LoadDeviceFunctions();
