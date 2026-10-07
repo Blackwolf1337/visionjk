@@ -56,6 +56,21 @@ void VK_InitPost( void ) {
 	VK_CreateTarget( &vk.screen, vk.width, vk.height, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
 		VK_IMAGE_ASPECT_COLOR_BIT, VK_SAMPLE_COUNT_1_BIT );
 	vk.screenSlot = -1;
+	{
+		// OpenGL copies a frame buffer that has no alpha, and such a texture reads as 1 there. The frame here has an
+		// alpha channel with what the blends left in it, so the copy is looked at without it.
+		VkImageViewCreateInfo view = { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
+
+		qvkDestroyImageView( vk.device, vk.screen.view, NULL );
+		view.image = vk.screen.image;
+		view.viewType = VK_IMAGE_VIEW_TYPE_2D;
+		view.format = vk.screen.format;
+		view.components.a = VK_COMPONENT_SWIZZLE_ONE;
+		view.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		view.subresourceRange.levelCount = 1;
+		view.subresourceRange.layerCount = 1;
+		VK_CHECK( qvkCreateImageView( vk.device, &view, NULL, &vk.screen.view ) );
+	}
 	VK_CreateTarget( &vk.blur[0], width, height, VK_FORMAT_R8G8B8A8_UNORM, usage, VK_IMAGE_ASPECT_COLOR_BIT, VK_SAMPLE_COUNT_1_BIT );
 	VK_CreateTarget( &vk.blur[1], width, height, VK_FORMAT_R8G8B8A8_UNORM, usage, VK_IMAGE_ASPECT_COLOR_BIT, VK_SAMPLE_COUNT_1_BIT );
 

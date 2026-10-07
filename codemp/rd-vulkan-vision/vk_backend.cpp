@@ -169,6 +169,9 @@ for this view
 static void RB_BeginDrawingView( void ) {
 	const viewParms_t *view = &backEnd.viewParms;
 
+	// the stencil buffer is cleared with the depth below, or not looked at again (the glow pass)
+	tr_stencilled = false;
+
 	// we will need to change the projection matrix before drawing 2D images again
 	backEnd.projection2D = qfalse;
 	VK_SetViewport( view->viewportX, view->viewportY, view->viewportWidth, view->viewportHeight, 0.0f, 1.0f );
@@ -234,6 +237,112 @@ static void RB_SetDepthRange( int depthRange ) {
 
 	VK_SetViewport( view->viewportX, view->viewportY, view->viewportWidth, view->viewportHeight, 0.0f,
 		depthRange == 1 ? 0.3f : ( depthRange == 2 ? 0.0f : 1.0f ) );
+}
+
+/*
+===============
+RB_DistortionFill
+
+Surfaces with the shader internal_distortion have marked their shape in the stencil buffer (RB_StageIteratorGeneric).
+That shape is filled with a copy of the screen that is stretched a little, more and less with the time, so that
+what lies behind seems to bend: a cloaked player, the trail of cg_saberTrail 2. This is RB_DistortionFill() of
+rd-vanilla (tr_shadows.cpp) with its numbers.
+
+rd-vanilla copies a part of the screen into a texture for this, a centered rectangle whose sides are the largest
+powers of two that fit, and puts that over the whole view. The copy here is the whole frame, so the texture
+coordinates are moved into that rectangle.
+===============
+*/
+static void RB_DistortionQuad( float spost, float spost2, float alpha ) {
+	const int width = glConfig.vidWidth, height = glConfig.vidHeight;
+	// x, y, s, t as rd-vanilla has them
+	const float corners[4][4] = { { 0.0f, 0.0f, spost2, 1.0f - spost }, { 0.0f, (float)height, spost2, spost },
+		{ (float)width, (float)height, 1.0f - spost2, spost }, { (float)width, 0.0f, 1.0f - spost2, 1.0f - spost } };
+	// the rectangle of RB_CaptureScreenImage()
+	int radX = Q_min( 2048, glConfig.maxTextureSize ), radY = radX;
+
+	while ( width < radX && radX > 1 ) {
+		radX /= 2;
+	}
+	while ( height < radY && radY > 1 ) {
+		radY /= 2;
+	}
+	const int cX = width / 2 - radX / 2, cY = height / 2 - radY / 2;
+
+	VK_GL_Begin( GL_QUADS );
+	VK_GL_Color( 1.0f, 1.0f, 1.0f, alpha );
+	for ( int i = 0; i < 4; i++ ) {
+		// t counts from the bottom of the screen, the copy has its first row at the top
+		VK_GL_TexCoord( ( cX + corners[i][2] * radX ) / width, 1.0f - ( cY + corners[i][3] * radY ) / height );
+		VK_GL_Vertex( corners[i][0], corners[i][1], 0.0f );
+	}
+	VK_GL_End();
+}
+
+static void RB_DistortionFill( void ) {
+	const float width = (float)glConfig.vidWidth, height = (float)glConfig.vidHeight;
+	const qboolean projection2D = backEnd.projection2D;
+	float alpha = tr_distortionAlpha;
+	float spost, spost2;
+	float ortho[16];
+
+	if ( !vk.frame || !tr.screenImage ) {
+		return;
+	}
+	// ok, cap the stupid thing now I guess
+	VK_CaptureFrame();
+
+	// reset the view matrices and go into ortho mode: glOrtho( 0, width, height, 32, -1, 1 )
+	memset( ortho, 0, sizeof( ortho ) );
+	ortho[0] = 2.0f / width;
+	ortho[5] = 2.0f / ( 32.0f - height );
+	ortho[10] = -1.0f;
+	ortho[12] = -1.0f;
+	ortho[13] = -( 32.0f + height ) / ( 32.0f - height );
+	ortho[15] = 1.0f;
+	// as 2D the plane of a portal does not clip it
+	backEnd.projection2D = qtrue;
+	VK_SetProjection( ortho );
+	VK_GL_PushMatrix();
+	VK_GL_LoadMatrix( NULL );
+
+	VK_GL_Enable( GL_STENCIL_TEST, 1 );
+	VK_GL_StencilFunc( GL_NOTEQUAL, 0 );
+	VK_GL_StencilOp( GL_FRONT_AND_BACK, GL_KEEP, GL_KEEP, GL_KEEP );
+	GL_Bind( tr.screenImage );
+
+	if ( tr_distortionStretch ) {
+		// override
+		spost = spost2 = tr_distortionStretch;
+	} else {
+		// do slow stretchy effect
+		spost = fabsf( sinf( tr.refdef.time * 0.0005f ) ) * 0.2f;
+		spost2 = fabsf( sinf( tr.refdef.time * 0.0005f ) ) * 0.08f;
+	}
+	// blend, or be sure to reset the draw state
+	GL_State( alpha != 1.0f ? ( GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_SRC_ALPHA ) : 0 );
+	RB_DistortionQuad( spost, spost2, alpha );
+
+	if ( tr_distortionAlpha == 1.0f && tr_distortionStretch == 0.0f ) {
+		// no overrides
+		if ( tr_distortionNegate ) {
+			// probably the crazy alternate saber trail
+			alpha = 0.8f;
+			GL_State( GLS_SRCBLEND_ZERO | GLS_DSTBLEND_ONE_MINUS_SRC_COLOR );
+		} else {
+			alpha = 0.5f;
+			GL_State( GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_SRC_ALPHA );
+		}
+		spost = fabsf( sinf( tr.refdef.time * 0.0008f ) ) * 0.08f;
+		spost2 = fabsf( sinf( tr.refdef.time * 0.0008f ) ) * 0.2f;
+		RB_DistortionQuad( spost, spost2, alpha );
+	}
+
+	// pop the view matrices back
+	VK_GL_Enable( GL_STENCIL_TEST, 0 );
+	VK_GL_PopMatrix();
+	backEnd.projection2D = projection2D;
+	VK_SetProjection( backEnd.viewParms.projectionMatrix );
 }
 
 // entities that have to be drawn after everything else: the ones that fade (RF_FORCE_ENT_ALPHA), the ones that
@@ -585,6 +694,11 @@ static void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 		RB_EndSurface();
 	}
 
+	if ( tr_stencilled && tr_distortionPrePost ) {
+		// ok, cap it now: without what is drawn after everything else
+		RB_DistortionFill();
+	}
+
 	// what was put off to the end, the last first as rd-vanilla has it
 	int lastPostEnt = -1;
 
@@ -612,6 +726,10 @@ static void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 	VK_InvalidateTransform();
 	if ( depthRange ) {
 		RB_SetDepthRange( 0 );
+	}
+	if ( tr_stencilled && !tr_distortionPrePost ) {
+		// draw in the stencil buffer's cutout
+		RB_DistortionFill();
 	}
 	if ( !didShadowPass ) {
 		// darken down any stencil shadows

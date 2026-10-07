@@ -407,6 +407,7 @@ qboolean	VK_UploadSkinnedBatch( CBoneCache *boneCache, uint32_t *bones );
 extern bool	g_bRenderGlowingObjects;	// the pass that draws only the stages that glow
 extern cvar_t	*r_aviMotionJpegQuality;	// tr_init.cpp
 extern bool	g_bDynamicGlowSupported;
+extern bool	tr_stencilled;				// a surface of this view has marked its shape in the stencil buffer, see RB_DistortionFill()
 void		VK_InvalidateTransform( void );
 void		VK_TransformChanged( void );
 uint32_t	VK_CurrentTransform( void );

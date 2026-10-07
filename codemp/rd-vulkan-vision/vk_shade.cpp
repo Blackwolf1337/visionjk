@@ -32,6 +32,11 @@ color4ub_t			styleColors[MAX_LIGHT_STYLES];
 
 bool g_bRenderGlowingObjects = false;
 bool g_bDynamicGlowSupported = true;
+bool tr_stencilled = false;
+
+// what a surface with the shader internal_distortion does to the stencil buffer: one more wherever it is seen
+static const vkStencil_t vk_distortionStencil = { qtrue, GL_ALWAYS, 1,
+	{ { GL_KEEP, GL_KEEP, GL_INCR }, { GL_KEEP, GL_KEEP, GL_INCR } }, qfalse };
 
 extern int skyboxportal;
 extern int drawskyboxportal;
@@ -956,6 +961,16 @@ void RB_StageIteratorGeneric( void ) {
 			VectorSet( draw.fogColor, c, c, c );
 		}
 
+		if ( shader == tr.distortionShader && !pStage->bundle[1].image ) {
+			// The game asks for this shader by its number, 2: a cloaked player, the trail of cg_saberTrail 2. Such a
+			// surface is not drawn. It marks its shape in the stencil buffer, both sides, where nothing is in front
+			// of it, and RB_DistortionFill() puts a bent copy of the screen into that shape when the view is done.
+			vk.stencil = &vk_distortionStencil;
+			VK_DrawTess( &draw, program, GLS_SRCBLEND_ZERO | GLS_DSTBLEND_ONE, VK_CULL_MODE_NONE, (qboolean)shader->polygonOffset );
+			vk.stencil = NULL;
+			tr_stencilled = true;
+			continue;
+		}
 		if ( cpuColors ) {
 			VK_TessColors( tess.svars.colors );
 		}
@@ -1080,13 +1095,6 @@ void RB_EndSurface( void ) {
 	// the volume a model throws its shadow through goes into the stencil buffer (tr_shadows.cpp of rd-vanilla)
 	if ( tess.shader == tr.shadowShader ) {
 		RB_ShadowTessEnd();
-		tess.numIndexes = 0;
-		return;
-	}
-	// Surfaces with the internal distortion shader cut a hole into the stencil buffer of rd-vanilla that is filled
-	// with a stretched copy of the screen afterwards. Nothing in the game or its data asks for that shader, so
-	// this was not built. As plain surfaces they would be white shapes: they are left out.
-	if ( tess.shader == tr.distortionShader ) {
 		tess.numIndexes = 0;
 		return;
 	}
