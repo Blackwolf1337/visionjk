@@ -8484,8 +8484,12 @@ Hacks to fix issues with Team Arena menu scripts
 ===============
 */
 static void Item_ApplyHacks( itemDef_t *item ) {
-#if !defined(_WIN32) || ( defined(_WIN32) && defined(idx64) )
-	if ( item->type == ITEM_TYPE_MULTI && item->cvar && !Q_stricmp( item->cvar, "s_UseOpenAL" ) ) {
+	char eax[8];
+
+	// EAX: only an engine with OpenAL has it (jamp.exe, in which this module runs too) and registers the cvar
+	// when its sound starts, before a menu is loaded. The engine of this tree has neither.
+	DC->getCVarString( "s_UseOpenAL", eax, sizeof( eax ) );
+	if ( !eax[0] && item->type == ITEM_TYPE_MULTI && item->cvar && !Q_stricmp( item->cvar, "s_UseOpenAL" ) ) {
 		if( item->parent )
 		{
 			menuDef_t *parent = (menuDef_t *)item->parent;
@@ -8493,11 +8497,11 @@ static void Item_ApplyHacks( itemDef_t *item ) {
 			item->disabled = qtrue;
 			// Just in case it had focus
 			item->window.flags &= ~WINDOW_MOUSEOVER;
-			Com_Printf( "Disabling eax field because current platform does not support EAX.\n");
+			Com_Printf( "Disabling eax field because this engine does not support EAX.\n");
 		}
 	}
 
-	if ( item->type == ITEM_TYPE_TEXT && item->window.name && !Q_stricmp( item->window.name, "eax_icon") && item->cvarTest && !Q_stricmp( item->cvarTest, "s_UseOpenAL" ) && item->enableCvar && (item->cvarFlags & CVAR_HIDE) ) {
+	if ( !eax[0] && item->type == ITEM_TYPE_TEXT && item->window.name && !Q_stricmp( item->window.name, "eax_icon") && item->cvarTest && !Q_stricmp( item->cvarTest, "s_UseOpenAL" ) && item->enableCvar && (item->cvarFlags & CVAR_HIDE) ) {
 		if( item->parent )
 		{
 			menuDef_t *parent = (menuDef_t *)item->parent;
@@ -8505,10 +8509,9 @@ static void Item_ApplyHacks( itemDef_t *item ) {
 			item->disabled = item->disabledHidden = qtrue;
 			// Just in case it had focus
 			item->window.flags &= ~WINDOW_MOUSEOVER;
-			Com_Printf( "Hiding eax_icon object because current platform does not support EAX.\n");
+			Com_Printf( "Hiding eax_icon object because this engine does not support EAX.\n");
 		}
 	}
-#endif
 
 	// Fix length of favorite address in createfavorite.menu
 	if ( item->type == ITEM_TYPE_EDITFIELD && item->cvar && !Q_stricmp( item->cvar, "ui_favoriteAddress" ) ) {

@@ -67,14 +67,12 @@ cmake_dependent_option(BuildSymbolServer "Build WIP Windows Symbol Server (exper
 # Note that we always use the bundled copy of minizip, since it is modified to
 # use Z_Malloc.
 
-set(UseInternalOpenALDefault OFF)
 set(UseInternalZlibDefault   OFF)
 set(UseInternalPNGDefault    OFF)
 set(UseInternalJPEGDefault   OFF)
 set(UseInternalSDL2Default   OFF)
 
 if(UseInternalLibs OR WIN32)
-  set(UseInternalOpenALDefault ON)
   set(UseInternalZlibDefault   ON)
   set(UseInternalPNGDefault    ON)
   set(UseInternalJPEGDefault   ON)
@@ -86,7 +84,6 @@ if(APPLE)
   set(UseInternalPNGDefault  ON)
 endif()
 
-option(UseInternalOpenAL "If set, use bundled OpenAL."  ${UseInternalOpenALDefault})
 option(UseInternalZlib   "If set, use bundled zlib."    ${UseInternalZlibDefault})
 option(UseInternalPNG    "If set, use bundled libpng."  ${UseInternalPNGDefault})
 option(UseInternalJPEG   "If set, use bundled libjpeg." ${UseInternalJPEGDefault})
