@@ -1,0 +1,324 @@
+{
+	menuDef 
+	{
+		name						"modsay"
+		visible						1
+		fullscreen					0
+		outOfBoundsClick										// this closes the window if it gets a click out of the rectangle
+		rect						20 25 600 440
+		focusColor					1 1 1 1					// Focus color for text and items
+		style						1
+		border						1
+		descX						410
+		descY						30
+		descScale					1
+		descColor				1 .682 0 .8
+		descAlignment					ITEM_ALIGN_CENTER		
+		
+
+//------------------------------------------------------------------------------------------------
+// Overall window backdrop
+//------------------------------------------------------------------------------------------------
+		
+		//bacground for player list (bigger)
+		itemDef 
+		{
+			name				background_pic
+			group				none
+			style				WINDOW_STYLE_SHADER
+			rect				0 0 600 200
+			background			"gfx/menus/menu_box_ingame"
+			forecolor			1 1 1 1
+			visible				1
+			cvarTest			"ui_modsay"
+			showCvar
+			{
+				"1" ; "3"
+			}
+			decoration
+		}
+		
+		//bacground for no display of player list
+		itemDef 
+		{
+			name				background_pic
+			group				none
+			style				WINDOW_STYLE_SHADER
+			rect				0 0 600 80
+			background			"gfx/menus/menu_box_ingame"
+			forecolor			1 1 1 1
+			visible				1
+			cvarTest			"ui_modsay"
+			hideCvar
+			{
+				"1" ; "3"
+			}
+			decoration
+		}
+
+
+		
+		
+		//title
+		itemDef 
+		{
+			name				modsaytitle
+			style				WINDOW_STYLE_SHADER
+			background			"gfx/menus/menu_blendbox"
+			text				"Say Mod"
+			rect				20 5 340 15
+			textalign			ITEM_ALIGN_CENTER		
+			textalignx			170
+			textaligny			-2
+			outlinecolor			1 .5 .5 .5
+			backcolor			0 0 0 0
+			font				3
+			textscale			0.8
+			forecolor			.549 .854 1 1
+			border				0
+			bordercolor			0 0 0 0
+			visible				1 
+		}
+		
+		//say mod type
+		itemDef 
+		{	
+			name				modsayType
+			group				none
+      			type				ITEM_TYPE_MULTI
+			text				""
+			descText			"select the type of modSay"
+			cvar				"ui_modsay"
+			cvarFloatList		
+			{
+				"Clan Say (clansay)" 		0				
+				"Private Say (tell)" 		1
+				"Admin Say (amsay)"	 	2
+				"Admin Print (ampsay)"	 	3
+			}
+			rect				10 30 150 14
+	   		textalign			ITEM_ALIGN_RIGHT
+			textalignx			0
+			textaligny			0
+			font 				4
+			textscale 			1
+			forecolor			0.65 0.65 1 1
+			visible				1
+			action
+			{
+				play			"sound/interface/button1.wav" ; 				
+			}
+			mouseenter 
+			{ 
+				show			highlight1
+			}
+			mouseexit 
+			{ 
+				hide			highlight1
+			} 
+		}
+		itemDef
+		{
+			name				highlight1
+			group				highlights
+			style				WINDOW_STYLE_SHADER
+			rect				10 30 150 14
+			background			"gfx/menus/menu_blendbox"
+			forecolor			1 1 1 1
+			visible			0
+			decoration
+		}
+		
+		//button to say if i select all players or just one in the list
+		itemDef 
+		{	
+			name				modsayAllPlayers
+			group				none
+      			type				ITEM_TYPE_MULTI
+			text				"To"
+			descText			"send messages to all players?"
+			cvar				"ui_modsayAllPlayer"
+			cvarFloatList		
+			{
+				"selected player" 		0				
+				"all players" 		1
+				
+			}
+			rect				165 30 150 14
+	   		textalign			ITEM_ALIGN_RIGHT
+			textalignx			20
+			textaligny			0
+			font 				4
+			textscale 			1
+			forecolor			0.65 0.65 1 1
+			visible				1
+			cvarTest			"ui_modsay"
+			showCvar
+			{
+				"3"
+			}
+			action
+			{
+				play			"sound/interface/button1.wav" ; 				
+			}
+			mouseenter 
+			{ 
+				show			highlight3
+			}
+			mouseexit 
+			{ 
+				hide			highlight3
+			} 
+		}
+		itemDef
+		{
+			name				highlight3
+			group				highlights
+			style				WINDOW_STYLE_SHADER
+			rect				165 30 150 14
+			background			"gfx/menus/menu_blendbox"
+			forecolor			1 1 1 1
+			visible			0
+			decoration
+		}
+		
+		//Say send button
+		itemDef 
+		{
+			name				saySendButton
+			text				@MENUS_DONE  //@MENUS_OKAY
+			descText			"send the message"
+			type				1
+			group				none
+			style				WINDOW_STYLE_FILLED
+			rect				320 20 80 30
+			textalign			ITEM_ALIGN_CENTER
+			textalignx			40
+			textaligny			0
+			font				3
+			textscale			1
+			forecolor			1 .682 0 1
+			visible				1
+			action 
+			{ 
+				play			"sound/interface/button1.wav" ;
+				uiScript sendModSayMsg ; 
+				uiScript closeingame 
+			}
+			mouseEnter 
+			{ 
+				show				doneButton
+			}
+			mouseExit 
+			{ 
+				hide				doneButton
+			}	  	  
+		}
+		itemDef 
+		{
+			name					doneButton
+			group					none
+			style					WINDOW_STYLE_SHADER
+			rect					320 20 80 30
+			background				"gfx/menus/menu_buttonback"			// Frame around button
+			forecolor				1 1 1 1
+			decoration
+			visible				0
+		}
+		
+		//text to send to server
+		itemDef 
+		{
+			name 				textToSend
+			type 				ITEM_TYPE_EDITFIELD
+			style 				0
+			text 				"Text:"
+			cvar 				"ui_modSayText"
+			maxchars 			133//149
+			rect 				10 53 570 15
+			textalign			ITEM_ALIGN_LEFT		
+			textalignx 			0
+			textaligny 			0
+			font				1
+			textscale			0.4
+			forecolor			1 .682 0 1
+			outlinecolor 			1 .5 .5 .5
+			backcolor 			0 0 0 0
+			border 				1
+			bordercolor 			0 0 0 0
+			descText			"Write your Text here"
+			visible 			1 
+			action 
+			{ 
+				play			"sound/interface/button1"
+			}
+			mouseenter 
+			{ 
+				hide			highlight2
+				setitemcolor textToSend bordercolor .7 0 0 1
+			}
+			mouseexit 
+			{ 
+				show			highlight2
+				setitemcolor textToSend bordercolor 0 0 0 0
+			} 
+			
+		}
+		itemDef
+		{
+			name				highlight2
+			group				highlights
+			style				WINDOW_STYLE_SHADER
+			rect				10 53 570 15
+			background			"gfx/menus/menu_blendbox"
+			forecolor			1 1 1 1
+			visible			1
+			decoration
+		}
+		
+		//player menu list
+		itemDef 
+		{
+			name				playerList
+			group				none
+			descText			"Select a player"
+			rect				10 70 230 108
+			style				WINDOW_STYLE_FILLED
+			type				ITEM_TYPE_LISTBOX
+			elementwidth			120
+			elementheight			15
+			elementtype			LISTBOX_TEXT
+			feeder				FEEDER_PLAYER_LIST
+			border				1
+			bordercolor			1 .682 0 .8
+			backcolor			0 0 .5 .25
+			outlinecolor			.1 .1 .7 .5
+			font				2
+			textaligny			12
+			textscale			.8
+			forecolor			.615 .615 .956 1
+			visible				1
+			cvarTest			"ui_modsay"
+			showCvar
+			{
+				"1" ; "3"
+			}
+			mouseEnter 
+			{ 
+				fadein message_arena ; 
+				setitemcolor playerList bordercolor .7 0 0 1 
+			} 
+			mouseExit 
+			{ 
+				fadeout message_arena ; 
+				setitemcolor playerList bordercolor .5 .5 .5 1 
+			}
+			action
+			{
+				play			"sound/interface/button1.wav" ; 
+			}
+
+		}
+		
+	}
+}

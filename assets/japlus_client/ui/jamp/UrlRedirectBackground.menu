@@ -1,0 +1,47 @@
+{
+
+menuDef {
+    	name "UrlRedirectBackground"
+      	rect 0 0 640 480
+    	fullScreen MENU_FALSE
+    	visible MENU_FALSE
+      	style WINDOW_STYLE_SHADER
+
+	itemDef 
+	{
+		name				dl_background
+		rect				0 0 640 480
+		style				WINDOW_STYLE_SHADER
+		background			"menu/art/unknownmap_mp"
+		visible				1
+		decoration
+	}
+	
+	
+	itemDef
+		{
+			name				dl_highlight_title_box
+			group				highlights
+			style				WINDOW_STYLE_SHADER
+			rect				140 193 360 10
+			background			"gfx/menus/menu_blendbox"
+			forecolor			1 1 1 1
+			visible			1
+			decoration
+		}
+	itemDef 
+		{
+			name				dl_background
+			group				none
+			style				WINDOW_STYLE_FILLED
+			rect				150 203 340 90	
+			backcolor			0.76 0.75 0.77 0.8
+			forecolor			1 1 1 1
+			border				1
+			bordercolor			0 0 0 0.8
+			visible				1
+			decoration
+		}
+  }
+
+}

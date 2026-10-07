@@ -4819,6 +4819,7 @@ static const char *g_bindCommands[] = {
 	"+altattack",
 	"+attack",
 	"+back",
+	"+button12",				// JA+: grapple hook
 	"+button2",
 	"+force_drain",
 	"+force_grip",
@@ -4838,12 +4839,14 @@ static const char *g_bindCommands[] = {
 	"+strafe",
 	"+use",
 	"+useforce",
+	"+voice",
 	"automap_button",
 	"automap_toggle",
 	"bow",
 	"centerview",
 	"cg_thirdperson !",
 	"engage_duel",
+	"engage_FullForceDuel",		// JA+
 	"flourish",
 	"force_absorb",
 	"force_distract",
@@ -4861,6 +4864,7 @@ static const char *g_bindCommands[] = {
 	"gloat",
 	"invnext",
 	"invprev",
+	"jetpack",					// JA+
 	"meditate",
 	"messagemode",
 	"messagemode2",
@@ -4868,6 +4872,7 @@ static const char *g_bindCommands[] = {
 	"messagemode4",
 	"saberAttackCycle",
 	"taunt",
+	"ui_openmenu modsay",		// JA+: the message menu
 	"use_bacta",
 	"use_electrobinoculars",
 	"use_field",

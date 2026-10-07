@@ -89,9 +89,17 @@ cmake --build buildwin32 -j$(nproc)
 All three configurations build without errors. The code keeps to the rules of the surrounding files: C, no
 assumptions about pointer size in the game code, bounded string functions.
 
+Every build also packs the client assets of the port, `assets/japlus_client` (the files of the JA+ client plugin
+1.4B4 with the menus of the port), into `<build>/assets/zz_japlus_client_assets.pk3`, and `cmake --install` puts
+it into `JediAcademy/japlus/` (`-DJPAssetsDir=` names another mod directory). A file that was changed, added or
+removed there is packed again by the next build. The pk3 is the same for every platform: the files are kept
+byte for byte (`assets/.gitattributes`) and `assets/make_pk3.py` writes them in the order of
+`assets/japlus_client.order`, which the player menu and the pure check depend on. Packing needs Python 3,
+`-DBuildJPAssets=OFF` builds without it. A client needs this pk3 in `japlus/` next to the modules.
+
 ## Files needed at run time
 
-They come from the original JA+ packages and are not part of this repository.
+All but the last one come from the original JA+ packages and are not part of this repository.
 
 | File | Where | Needed for |
 |------|-------|-----------|
@@ -100,12 +108,12 @@ They come from the original JA+ packages and are not part of this repository.
 | `modelscale.cfg` | `japlus/` | `jp_allowModelScale` |
 | `<map>_holes.cfg` | `japlus/` | blocking walls of a map |
 | `autoreplier.cfg` | `japlus/` on the client | auto replier texts |
-| contents of `clientPlugin_v1.4B4.pk3` without the two DLLs | `japlus/` on the client, as a pk3 | menus, shaders, effects and graphics of the plugin |
+| `zz_japlus_client_assets.pk3` | `japlus/` on the client | menus, shaders, effects and graphics of the plugin, with the menus of the port |
 
-The easiest way to get the last file is to delete `cgamex86.dll` and `uix86.dll` from a copy of the plugin pk3. When
-it is packed again from loose files, the folder entries of the original pk3 and their order have to be kept: the
-engine lists a folder of a pk3 only when it has an entry of its own, and the head list of the player menu, and with
-it the model a new player starts with, follows that order.
+The last file is built with the tree from `assets/japlus_client` (see "Building"), which holds the contents of
+`clientPlugin_v1.4B4.pk3` without the two DLLs. It is packed with the folder entries of the original pk3 and in
+their order: the engine lists a folder of a pk3 only when it has an entry of its own, and the head list of the
+player menu, and with it the model a new player starts with, follows that order.
 
 ## State
 

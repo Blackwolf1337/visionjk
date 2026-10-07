@@ -13,7 +13,10 @@ joins and plays as before, it just does not hear the voice chat. See "Clients wi
 bind v +voice
 ```
 
-Hold the key to talk. What the others say is heard without a key.
+Hold the key to talk. What the others say is heard without a key. The key is also in the menu under Controls,
+JA+ Control, and the settings a player needs most are in Setup under Voice Chat, in the main menu and in the
+game (the menus are in `assets/japlus_client/ui/jamp`, the ui module registers the cvars so they are there
+before a level was loaded).
 
 | Cvar | Default | Meaning |
 |------|---------|---------|
@@ -33,7 +36,12 @@ Hold the key to talk. What the others say is heard without a key.
 | `voice_devices` | the microphones and speakers there are |
 | `voice_status` | is the chat connected, who talks, who is muted |
 | `voice_mute <player>`, `voice_unmute <player or all>` | do not hear one player. Holds until the level changes |
-| `voice_test tone`, `voice_test record <name>`, `voice_test stop` | a tone in place of the microphone, and what is played into `voice/<name>.raw`. For tests |
+| `voice_test tone`, `voice_test play <name>`, `voice_test stop` | a tone, or the file `voice/<name>.raw` again and again, in place of the microphone. For tests |
+| `voice_test record <name>` | what is played also goes into `voice/<name>.raw`, until `voice_test stop`. For tests |
+
+The files of `voice_test` are 16 bit, two channels, 24000 samples a second, low byte first, without a header:
+what was recorded can be played, and `ffmpeg -i in.mp3 -ac 2 -ar 24000 -f s16le voice/name.raw` makes one from any
+sound. On a pure server the engine lets a module read such a file only out of a pk3 the server has too.
 
 With push to talk the microphone is opened at the first press of the key, which takes a moment that once, and is
 closed 30 seconds after the last press. A player who never presses the key never has his microphone open. With
@@ -67,7 +75,9 @@ cgame does all three on its own.
 **Asking.** A server with the voice chat says `g_voice` in its server info. Only there the cgame sends the client
 command `jpvoice hello <protocol>`. The server answers with the server command
 `jpvoice <protocol> <port> <token> <range>`. The token is 32 random bits from the random source of the system,
-new for every connection. This exchange is all of the voice chat that goes through the game connection.
+new for every connection. This exchange is all of the voice chat that goes through the game connection. The
+cgame asks again every three seconds, ten times at most, until the answer is there: the flood protection of the
+server drops a client command that comes within a second of another one.
 
 **The sound.** The cgame opens a UDP socket of its own to that port. A datagram, low byte first:
 

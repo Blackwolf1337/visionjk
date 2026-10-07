@@ -43,6 +43,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define VOICE_ENCODER_BYTES		40960	// room for the state of the Opus encoder. What it needs is asked and checked
 #define VOICE_DECODER_BYTES		24576	//	and for the decoder of one speaker
 #define VOICE_BITRATE			20000
+#define VOICE_ASK_MSEC			3000	// the server is asked for voice this often until it answers,
+#define VOICE_MAX_ASKS			10		//	and this many times at most
 #define VOICE_HELLO_MSEC		500		// a hello datagram this often until the server answers one,
 #define VOICE_KEEPALIVE_MSEC	5000	//	and this often after that: the router of the player keeps the way open
 #define VOICE_LEAD_FRAMES		3		// frames of a speaker that wait before he is played: 60 ms for late datagrams
@@ -50,11 +52,13 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define VOICE_SILENT_MSEC		300		// nothing of a speaker for this long: he stopped talking
 #define VOICE_MIC_HOLD_MSEC		30000	// push to talk: the microphone is closed this long after the key was let go
 #define VOICE_VAD_HOLD_MSEC		400		// voice activation: it goes on sending this long after the last loud frame
+#define VOICE_SENT_MSEC			100		// the HUD shows the own voice this long after a frame of it went out
 #define VOICE_MAX_PER_FRAME		64		// datagrams taken and frames sent in one frame of the game at most
 #define VOICE_TRACE_MSEC		100		// how often the line from the listener to a speaker is looked at
 #define VOICE_FAR_GAIN			0.1f	// how loud a voice still is at the end of its range
 #define VOICE_MAX_PAN			0.8f	// how far a voice goes to one side: it is never gone from the other ear
 #define VOICE_HEAD				24.0f	// the mouth of a player above his origin
+#define VOICE_FILE_FRAME		( VOICE_FRAME_SAMPLES * 4 )	// voice_test: the bytes of one frame in a file, two channels
 
 typedef struct voiceSpeaker_s {
 	voiceQueue_t	queue;
@@ -79,7 +83,8 @@ typedef union voiceMem_u {
 
 static struct {
 	qboolean			serverHas;		// the server info says g_voice
-	qboolean			asked;			// "jpvoice hello" went to the server
+	qboolean			asked;			// "jpvoice hello" went to the server,
+	int					asks;			//	this many times
 	qboolean			answered;		// the server answered: port, token, range
 	qboolean			failed;			// something is missing for good, said once
 	int					port, range;
@@ -98,12 +103,16 @@ static struct {
 	int					seq;
 	qboolean			keyDown;		// +voice
 	qboolean			sending;
+	int					sentTime;		// when the last frame of the microphone went out
 	int					talkUntil;		// voice activation
 	int					micUntil;		// push to talk: when the microphone is closed again
 
-	int					test;			// voice_test: 1 a tone goes out in place of the microphone
+	int					test;			// voice_test: 1 a tone, 2 a file goes out in place of the microphone
 	int					testNext;
 	int					testSample;
+	fileHandle_t		play;			// voice_test play: the file,
+	int					playLeft;		//	how many bytes of it are not sent yet,
+	char				playName[MAX_QPATH];	//	and its name: it is opened again when it is through
 	fileHandle_t		record;			// voice_test record: what is played goes into this file
 } voice;
 
@@ -244,6 +253,10 @@ static void Voice_Close( void ) {
 		trap->FS_Close( voice.record );
 		voice.record = 0;
 	}
+	if ( voice.play ) {
+		trap->FS_Close( voice.play );
+		voice.play = 0;
+	}
 	CG_VoiceAudioShutdown();
 	Voice_LookupJoin();
 	if ( voice.sockOpen )
@@ -290,8 +303,14 @@ void CG_VoiceServerCommand( void ) {
 	const unsigned int token = (unsigned int)strtoul( CG_Argv( 3 ), NULL, 10 );
 	int			i;
 
-	if ( !voice.asked || voice.answered || voice.failed )
+	if ( !voice.asked || voice.failed )
 		return;
+	if ( voice.answered ) {
+		// two questions crossed on the way: the server knows the token of its last answer
+		if ( protocol == VOICE_PROTOCOL && token )
+			voice.token = token;
+		return;
+	}
 	if ( protocol != VOICE_PROTOCOL ) {
 		trap->Print( "Voice chat: the server speaks version %i of it, this client version %i\n", protocol, VOICE_PROTOCOL );
 		voice.failed = qtrue;
@@ -392,6 +411,50 @@ static float Voice_Level( const short *samples ) {
 	return sqrtf( sum / VOICE_FRAME_SAMPLES ) * ( 1.0f / 32768.0f );
 }
 
+// voice_test play: the file from its start. qfalse: there is not one frame in it.
+static qboolean Voice_TestOpen( void ) {
+	if ( voice.play )
+		trap->FS_Close( voice.play );
+	voice.play = 0;
+	voice.playLeft = trap->FS_Open( voice.playName, &voice.play, FS_READ );
+	if ( voice.play && voice.playLeft >= VOICE_FILE_FRAME )
+		return qtrue;
+	if ( voice.play )
+		trap->FS_Close( voice.play );
+	voice.play = 0;
+	return qfalse;
+}
+
+// voice_test: the next frame that goes out in place of the microphone. qfalse: the file is gone, the test ended.
+static qboolean Voice_TestFrame( short *samples ) {
+	byte	raw[VOICE_FILE_FRAME];
+	int		i;
+
+	if ( voice.test == 1 ) {
+		for ( i = 0; i < VOICE_FRAME_SAMPLES; i++, voice.testSample++ ) {
+			samples[i] = (short)( 6000.0f * sinf( voice.testSample * ( 2.0f * M_PI * 440.0f / VOICE_RATE ) )
+				+ 6000.0f * sinf( voice.testSample * ( 2.0f * M_PI * 3000.0f / VOICE_RATE ) ) );
+		}
+		return qtrue;
+	}
+
+	// The file again from its start when it is through. What is left of it is counted here: jamp does not say
+	// how much a read gave.
+	if ( voice.playLeft < VOICE_FILE_FRAME && !Voice_TestOpen() ) {
+		voice.test = 0;
+		return qfalse;
+	}
+	trap->FS_Read( raw, sizeof( raw ), voice.play );
+	voice.playLeft -= (int)sizeof( raw );
+	for ( i = 0; i < VOICE_FRAME_SAMPLES; i++ ) {
+		const int	left = (short)( raw[i * 4] | ( raw[i * 4 + 1] << 8 ) );
+		const int	right = (short)( raw[i * 4 + 2] | ( raw[i * 4 + 3] << 8 ) );
+
+		samples[i] = (short)( ( left + right ) / 2 );
+	}
+	return qtrue;
+}
+
 /*
 =================
 Voice_Capture
@@ -410,19 +473,15 @@ static void Voice_Capture( int now ) {
 	short			samples[VOICE_FRAME_SAMPLES];
 	int				count, i;
 
-	if ( voice.test == 1 ) {
-		// a tone of two pitches in place of the microphone, a frame for every 20 ms that went by
+	if ( voice.test ) {
+		// a tone or a file in place of the microphone, a frame for every 20 ms that went by
 		if ( !voice.testNext || now - voice.testNext > 500 )
 			voice.testNext = now;
-		for ( count = 0; count < VOICE_MAX_PER_FRAME && now >= voice.testNext; count++ ) {
-			for ( i = 0; i < VOICE_FRAME_SAMPLES; i++, voice.testSample++ ) {
-				samples[i] = (short)( 6000.0f * sinf( voice.testSample * ( 2.0f * M_PI * 440.0f / VOICE_RATE ) )
-					+ 6000.0f * sinf( voice.testSample * ( 2.0f * M_PI * 3000.0f / VOICE_RATE ) ) );
-			}
+		for ( count = 0; count < VOICE_MAX_PER_FRAME && now >= voice.testNext && Voice_TestFrame( samples ); count++ ) {
 			Voice_SendFrame( samples );
 			voice.testNext += VOICE_FRAME_MSEC;
 		}
-		voice.sending = qtrue;
+		voice.sending = voice.test ? qtrue : qfalse;
 		return;
 	}
 
@@ -450,7 +509,6 @@ static void Voice_Capture( int now ) {
 	if ( voice.keyDown )
 		voice.micUntil = now + VOICE_MIC_HOLD_MSEC;
 
-	voice.sending = qfalse;
 	for ( count = 0; count < VOICE_MAX_PER_FRAME && CG_VoiceAudioRead( samples, VOICE_FRAME_SAMPLES ); count++ ) {
 		if ( cg_voiceMicGain.value != 1.0f ) {
 			for ( i = 0; i < VOICE_FRAME_SAMPLES; i++ )
@@ -461,8 +519,13 @@ static void Voice_Capture( int now ) {
 		if ( activation ? ( now < voice.talkUntil ) : voice.keyDown ) {
 			Voice_SendFrame( samples );
 			voice.sending = qtrue;
+			voice.sentTime = now;
 		}
 	}
+	// the microphone gives a frame every 20 ms and the game draws more often than that: the mark on the HUD
+	// must not go out in the frames between
+	if ( now - voice.sentTime > VOICE_SENT_MSEC )
+		voice.sending = qfalse;
 	// the game stood still for a while and more piled up than is worth sending late
 	if ( count == VOICE_MAX_PER_FRAME )
 		CG_VoiceAudioDropCapture();
@@ -726,14 +789,18 @@ void CG_VoiceFrame( void ) {
 			Voice_Close();
 		return;
 	}
-	if ( !voice.asked ) {
-		trap->SendClientCommand( va( "jpvoice hello %i", VOICE_PROTOCOL ) );
-		voice.asked = qtrue;
-		voice.askTime = now;
+	if ( !voice.answered ) {
+		// Asked again while there is no answer: the flood protection of the server (sv_floodProtect) drops a
+		// command that comes within a second of another one without a word, and this one goes out just when the
+		// client entered the game and has more to say.
+		if ( voice.asks < VOICE_MAX_ASKS && ( !voice.asked || now - voice.askTime >= VOICE_ASK_MSEC ) ) {
+			trap->SendClientCommand( va( "jpvoice hello %i", VOICE_PROTOCOL ) );
+			voice.asked = qtrue;
+			voice.askTime = now;
+			voice.asks++;
+		}
 		return;
 	}
-	if ( !voice.answered )
-		return;
 	if ( !voice.serverKnown ) {
 		voice.serverKnown = Voice_FindServer();
 		if ( !voice.serverKnown )
@@ -868,9 +935,11 @@ void CG_VoiceUnmute_f( void ) {
 CG_VoiceTest_f
 
 voice_test tone: a tone of 440 and 3000 Hz goes out in place of the microphone
-voice_test record <name>: what the speakers get is also written to voice/<name>.raw (16 bit, two channels,
-	VOICE_RATE a second, low byte first)
-voice_test stop: both end
+voice_test play <name>: voice/<name>.raw goes out in place of the microphone, again and again
+voice_test record <name>: what the speakers get is also written to voice/<name>.raw
+voice_test stop: all of them end
+
+The files are 16 bit, two channels, VOICE_RATE a second, low byte first: what was recorded can be played.
 =================
 */
 void CG_VoiceTest_f( void ) {
@@ -879,6 +948,12 @@ void CG_VoiceTest_f( void ) {
 	if ( !Q_stricmp( what, "tone" ) ) {
 		voice.test = 1;
 		voice.testNext = 0;
+	} else if ( !Q_stricmp( what, "play" ) && CG_Argv( 2 )[0] && !strpbrk( CG_Argv( 2 ), "/\\.:" ) ) {
+		Com_sprintf( voice.playName, sizeof( voice.playName ), "voice/%s.raw", CG_Argv( 2 ) );
+		voice.testNext = 0;
+		voice.test = Voice_TestOpen() ? 2 : 0;
+		if ( !voice.test )
+			trap->Print( "voice_test: no sound in %s\n", voice.playName );
 	} else if ( !Q_stricmp( what, "record" ) && CG_Argv( 2 )[0] && !strpbrk( CG_Argv( 2 ), "/\\.:" ) ) {
 		if ( voice.record )
 			trap->FS_Close( voice.record );
@@ -891,8 +966,11 @@ void CG_VoiceTest_f( void ) {
 		if ( voice.record )
 			trap->FS_Close( voice.record );
 		voice.record = 0;
+		if ( voice.play )
+			trap->FS_Close( voice.play );
+		voice.play = 0;
 	} else {
-		trap->Print( "usage: voice_test tone | record <name> | stop\n" );
+		trap->Print( "usage: voice_test tone | play <name> | record <name> | stop\n" );
 	}
 }
 
