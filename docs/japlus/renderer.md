@@ -4,8 +4,9 @@ A second renderer for the OpenJK client next to `rd-vanilla`. It draws with Vulk
 models in buffers on the graphics card and does in shaders what `rd-vanilla` computes per vertex on the CPU every
 frame. It is not a JA+ feature and it does not touch the server, the protocol or the game modules.
 
-`rd-vanilla` stays the default, and the fallback when the library does not load. The renderer is on the branch
-`feature/rd-vulkan-vision`, which is not merged into `master`, and it is not installed into the game folder.
+`rd-vanilla` stays the default, and the fallback when the library does not load. The renderer is in `master`
+since 2026-10-07 (it was written on the branch `feature/rd-vulkan-vision`), behind the CMake option
+`BuildMPRdVulkanVision`, which is off by default. It is not installed into the game folder.
 
 ## State
 
@@ -35,11 +36,13 @@ JA+ draw is drawn. What is open is what was never run, and a few cvars.
 | Window: resized from outside, `r_swapInterval`, a window nobody sees, `vid_restart` between the renderers | done |
 | Windows DLL, 32 and 64 bit | builds, never loaded into a game |
 | Portals and mirrors, `alphaGen portal` | done, in a test room: no level of the base game has one (see "Checked") |
-| Videos: a `.roq` on the screen, `videoMap` in a shader | written and read against `rd-vanilla`, never watched |
-| Fullscreen, a minimized window | written, not tried |
+| Videos: a `.roq` on the screen, `videoMap` in a shader | done |
+| Fullscreen, also at a size that is not the one of the desktop | done |
+| `r_displayRefresh` in fullscreen | asked for as for an OpenGL window. No effect could be shown here, this desktop offers one refresh rate |
+| A minimized window | written, not tried: the desktop of this machine (Hyprland) has no such state |
 | macOS | not tried, would need MoltenVK |
 | Other graphics cards and drivers, a long session, play by a person over a longer time | not tried |
-| `r_dlightStyle 0`, `r_colorbits`, `r_depthbits`, `r_stencilbits`, `r_texturebits 16`, `r_displayRefresh`, the developer cvars | not there, see "Checked" |
+| `r_dlightStyle 0`, `r_colorbits`, `r_depthbits`, `r_stencilbits`, `r_texturebits 16`, the developer cvars | not there and left out on purpose, see "Checked" |
 
 The details of the open rows are under "Not done", what was compared and how under "Checked".
 
@@ -327,8 +330,9 @@ for it without a map compiler, the file lump by lump: two rooms that are boxes, 
 that fades with the distance (`textures/system/mirror_yavin`), a mirror in the floor whose stage reads the
 alpha of `alphaGen portal`, a portal (`textures/system/portal_512`) that looks into the second room through a
 `misc_portal_camera`, two pillars, and a row of panels with materials of the base game (glow, scrolling, alpha
-test, color waves, rotation, an animated map). `devmap rdroom` loads it, `tools/clienttests/rd_room.cfg` takes
-eight views as a player, whose own body is in the mirrors, by both renderers from the same spot.
+test, color waves, rotation, an animated map) with a video above it. `devmap rdroom` loads it,
+`tools/clienttests/rd_room.cfg` takes nine views as a player, whose own body is in the mirrors, by both
+renderers from the same spot.
 
 | View | Pixels off by more than 16 | With four samples a pixel and glow |
 |------|----------------------------|-------------------------------------|
@@ -340,6 +344,7 @@ eight views as a player, whose own body is in the mirrors, by both renderers fro
 | the mirror in the floor, looking down | 1.4 % | 1.4 % |
 | mirror and portal in one view (only the first one is looked through, by both) | 1.6 % | 1.6 % |
 | the materials | 5.7 % | 5.7 % |
+| the video on the wall (two moments of it) | 1.7 % | not run |
 
 What is seen through a mirror or the portal lies on the same pixels in both: the best fit of the two pictures
 is at no shift at all, and the mean color of the mirror and of the portal differs by 0.1 of 255. What differs
@@ -361,8 +366,32 @@ changes nothing, the lights are always the ones of the default. That one was fou
 saved with the config and no menu sets it. Two that the video menu of the base game does set: `r_colorbits`
 (color depth) and `r_texturebits` (texture quality, 16 or 32 bit). They change nothing here, and neither do
 `r_depthbits` and `r_stencilbits`: 32, 24 and 8 bits always, which is what a card that runs this renderer has.
-`r_displayRefresh` is not applied in fullscreen: the window code of the engine sets a refresh rate only for an
-OpenGL window.
+These are left out on purpose: nothing a player of today would miss, and the light of Quake 3 would need a
+second way of lighting in the shaders for a cvar nobody sets.
+
+Fullscreen (2026-10-07). Two views of mp/ffa3 by both renderers from the same spot
+(`tools/clienttests/rd_fullscreen.cfg`). Under Wayland at the size of the desktop, 2560 x 1440, with the window
+of this renderer on the whole screen: 0.1 and 0.3 % of the pixels off, one swapchain, no message of the
+validation layer. Through X11 (Xwayland) with `r_mode 4`: the frame is 800 x 600 and is stretched into the
+window, which is as large as the screen there, the pictures of both renderers are 800 x 600 and 0.1 and 0.3 %
+apart. Into a window and back into fullscreen with a `vid_restart` each: no message. With `in_nograb 1` the
+engine refuses fullscreen. It does that in the function a renderer calls once a frame for its window
+(`WIN_Present`), which this renderer never called, so its window stayed in fullscreen where the one of
+`rd-vanilla` did not. It is called now. `r_displayRefresh` was only applied to an OpenGL window. The window of
+this renderer asks for the rate now too (`shared/sdl/sdl_window.cpp`), and the mode it got is printed. What
+that does could not be seen: Wayland and Xwayland offer a mode with the rate of the desktop only, a request for
+60 was answered with 144.
+
+Videos (2026-10-07). Nobody had played one with this renderer, and the first one ended the game: the picture of
+a video on the whole screen is a batch without a shader, and the function it was handed to reads the shader
+(for the list in `gfxinfo` and for the normals). Fixed. `cinematic ja01.roq` from the main menu, two pictures of
+it in a run with each renderer (`tools/clienttests/rd_cinematic.cfg`): the same picture the right way up and in
+the right colors, 1.8 and 4.6 % of the pixels off because the two runs are a frame of the video apart. The same
+video as a `videoMap` on a wall of the test room: the same picture in both, 1.7 % off (two moments of it).
+
+The 23 levels once more with the build that has these three changes, before it went into `master`: no crash, no
+error, no message of the validation layer, 0.1 to 3.4 % of the pixels off and 10.3 % in the lava view of
+mp/ffa5, as every time before. The Windows client and renderer still build for 32 and 64 bit.
 
 Dynamic lights in the glow pass: `rd-vanilla` runs its light pass in the glow pass too, so a surface whose shader
 has a stage that glows gets the light on its texture added to the glow. This renderer left the lights out
@@ -406,8 +435,8 @@ left the window of the game at its size. `r_swapInterval 1` in a window nobody s
 come back late or not at all, under Wayland and under X11. A frame waits 50 ms for one at most, and after a
 wait that ran out the frames of the next second do not wait at all and are shown when an image happens to be
 free, so the game and its connection go on at their speed (`gfxinfo` counts the frames that were not shown).
-Before that a frame waited without end, and under X11 the game stood still. Fullscreen and a minimized window
-were not tried.
+Before that a frame waited without end, and under X11 the game stood still. Fullscreen is further down. A
+minimized window was not tried, the desktop of this machine has no such state.
 
 What is left are animated shaders (the two pictures are seconds apart), the snow and the swaying grass, the
 patches, and texture filter noise. Also seen without a number: main menu and console, a fight of bots with
