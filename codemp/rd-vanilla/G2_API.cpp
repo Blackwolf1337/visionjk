@@ -2990,6 +2990,28 @@ qboolean G2_SetupModelPointers(CGhoul2Info *ghlInfo) // returns true if the mode
 		// RJ - experimental optimization!
 		if (!ghlInfo->mModel || 1)
 		{
+#ifdef RD_VULKAN_VISION
+			// This function runs in front of nearly every Ghoul2 call, some 380 times a frame in a fight, and each
+			// time it found the cvar by its name and the model by its name (5 % of the instructions of a frame).
+			// The cvar is asked for once. The model is only looked up when the handle this instance has no longer
+			// names a model of its file: by that name the lookup finds this very model.
+			static cvar_t *dedicated;
+
+			if (!dedicated)
+			{
+				dedicated = ri.Cvar_Get( "dedicated", "0", 0, "" );
+			}
+			if (dedicated->integer ||
+				(G2_ShouldRegisterServer())) //supreme hackery!
+			{
+				ghlInfo->mModel = RE_RegisterServerModel(ghlInfo->mFileName);
+			}
+			else if (ghlInfo->mModel <= 0 || ghlInfo->mModel >= tr.numModels ||
+				strcmp(tr.models[ghlInfo->mModel]->name, ghlInfo->mFileName))
+			{
+				ghlInfo->mModel = RE_RegisterModel(ghlInfo->mFileName);
+			}
+#else
 			if (ri.Cvar_VariableIntegerValue( "dedicated" ) ||
 				(G2_ShouldRegisterServer())) //supreme hackery!
 			{
@@ -2999,6 +3021,7 @@ qboolean G2_SetupModelPointers(CGhoul2Info *ghlInfo) // returns true if the mode
 			{
 				ghlInfo->mModel = RE_RegisterModel(ghlInfo->mFileName);
 			}
+#endif
 			ghlInfo->currentModel = R_GetModelByHandle(ghlInfo->mModel);
 		}
 
