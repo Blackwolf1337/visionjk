@@ -40,8 +40,8 @@ if(BuildJPVoice)
 	set(MPCGameDefines ${MPCGameDefines} "JP_VOICE")
 	set(MPCGameLibraries ${MPCGameLibraries} bundled_opus)
 	if(WIN32)
-		# sockets, and what miniaudio needs for the sound devices of Windows
-		set(MPCGameLibraries ${MPCGameLibraries} "ws2_32" "ole32" "winmm")
+		# the sockets. miniaudio loads the sound libraries of Windows itself when it runs, they are not linked
+		set(MPCGameLibraries ${MPCGameLibraries} "ws2_32")
 	elseif(APPLE)
 		set(MPCGameLibraries ${MPCGameLibraries} "-framework CoreFoundation" "-framework CoreAudio" "-framework AudioToolbox" "pthread" "m")
 	else()
@@ -106,6 +106,9 @@ set(MPCGameCgameFiles
 	"${MPDir}/cgame/cg_syscalls.c"
 	"${MPDir}/cgame/cg_turret.c"
 	"${MPDir}/cgame/cg_view.c"
+	"${MPDir}/cgame/cg_voice.c"
+	"${MPDir}/cgame/cg_voice_audio.c"
+	"${MPDir}/cgame/cg_voice.h"
 	"${MPDir}/cgame/cg_weaponinit.c"
 	"${MPDir}/cgame/cg_weapons.c"
 	"${MPDir}/cgame/fx_blaster.c"

@@ -2616,6 +2616,7 @@ Ghoul2 Insert End
 	s = CG_ConfigString( CS_LEVEL_START_TIME );
 	cgs.levelStartTime = atoi( s );
 
+	CG_VoiceInit();		// in front of the server info, which tells it whether this server has a voice chat
 	CG_ParseServerinfo();
 	CG_JPAutoReplierInit();
 
@@ -2726,6 +2727,9 @@ Called before every level change or subsystem restart
 */
 void CG_Shutdown( void )
 {
+	// first of all: the threads of the voice chat run code of this module
+	CG_VoiceShutdown();
+
 	BG_ClearAnimsets(); //free all dynamic allocations made through the engine
 
     CG_DestroyAllGhoul2();

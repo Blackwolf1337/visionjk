@@ -167,6 +167,8 @@ void CG_ParseServerinfo( void ) {
 	bg_jpGripSpeedScale = cgs.jpVersion > 0.0f ? atof( Info_ValueForKey( info, "jp_gripSpeedScale" ) ) : 0.4f;
 	bg_jpForceCombo = atoi( Info_ValueForKey( info, "jp_forceCombo" ) );
 	cgs.jpDuelAlpha = cgs.jpVersion >= 2.0f ? atoi( Info_ValueForKey( info, "jp_DuelAlpha" ) ) : -1;
+	// the voice chat asks a server for voice only if the server says here that it has one
+	CG_VoiceServerInfo( atoi( Info_ValueForKey( info, "g_voice" ) ) ? qtrue : qfalse );
 
 	// this changes on map_restart, attempt to precache weapons
 	value = atoi( Info_ValueForKey( info, "g_weaponDisable" ) );
@@ -1628,6 +1630,7 @@ static serverCommand_t	commands[] = {
 	{ "cps",				CG_CenterPrintSE_f },
 	{ "cs",					CG_ConfigStringModified },
 	{ "ircg",				CG_RestoreClientGhoul_f },
+	{ "jpvoice",			CG_VoiceServerCommand },
 	{ "kg2",				CG_KillGhoul2_f },
 	{ "kls",				CG_KillLoopSounds_f },
 	{ "lchat",				CG_Chat_f },

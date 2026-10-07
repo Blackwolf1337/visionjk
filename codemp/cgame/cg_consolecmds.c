@@ -294,7 +294,9 @@ int cmdcmp( const void *a, const void *b ) {
 
 static consoleCommand_t	commands[] = {
 	{ "+scores",					CG_ScoresDown_f },
+	{ "+voice",						CG_VoiceDown_f },
 	{ "-scores",					CG_ScoresUp_f },
+	{ "-voice",						CG_VoiceUp_f },
 	{ "admCmdEXE",					CG_JPAdmCmdExe_f },
 	{ "admCmdNext",					CG_JPAdmCycleCmd_f },
 	{ "admCmdPrev",					CG_JPAdmCycleCmd_f },
@@ -326,6 +328,9 @@ static consoleCommand_t	commands[] = {
 	{ "testgun",					CG_TestGun_f },
 	{ "testmodel",					CG_TestModel_f },
 	{ "viewpos",					CG_Viewpos_f },
+	{ "voice_devices",				CG_VoiceDevices_f },
+	{ "voice_status",				CG_VoiceStatus_f },
+	{ "voice_test",					CG_VoiceTest_f },
 	{ "weapnext",					CG_NextWeapon_f },
 	{ "weapon",						CG_Weapon_f },
 	{ "weaponclean",				CG_WeaponClean_f },

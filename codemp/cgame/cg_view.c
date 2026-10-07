@@ -2414,6 +2414,7 @@ static int cg_siegeClassIndex = -2;
 void CG_DrawActiveFrame( int serverTime, stereoFrame_t stereoView, qboolean demoPlayback ) {
 	CG_JPReplyFrame();
 	CG_JPMacroScanFrame();
+	CG_VoiceFrame();
 	int		inwater;
 	const char *cstr;
 	float mSensitivity = cg.zoomSensitivity;
