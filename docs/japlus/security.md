@@ -91,6 +91,16 @@ Off when a sanitizer build is configured.
 - Legacy clients have their own bugs (`CL_ParseSetGame` above was one in the stock client). The server can not fix
   a client, but it sends nothing that triggers them and keeps bounding names, models and command length.
 
+## Added after the pass: the voice chat
+
+The voice chat ([voice.md](voice.md)) came after this pass and adds attack surface of its own: a UDP port of
+the game module (`g_voice.c`, off unless `g_voice 1`), and in the cgame a UDP socket, a codec (Opus) and an
+audio library (miniaudio), both third party code built into the module. What was done about it is in the
+section "Security" of that file: every length checked in one place, a random token per connection plus the
+address of the game connection, a limit per speaker, no answer to anything that is not a datagram of a client,
+and the server never decodes. 12000 malformed datagrams at the relay under valgrind gave no error. It was not
+part of the audit above and has not been looked at by anybody else.
+
 ## Recommended server settings
 
 ```
