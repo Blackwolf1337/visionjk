@@ -727,6 +727,7 @@ static rserr_t GLimp_SetMode(glconfig_t *glConfig, const windowDesc_t *windowDes
 				continue;
 			}
 
+#ifdef MACOS_X
 			{
 				// with a high dpi window the drawable is bigger than the window: render at its size
 				int drawW = 0, drawH = 0;
@@ -738,6 +739,7 @@ static rserr_t GLimp_SetMode(glconfig_t *glConfig, const windowDesc_t *windowDes
 					glConfig->vidHeight = drawH;
 				}
 			}
+#endif
 
 			if ( SDL_GL_SetSwapInterval( r_swapInterval->integer ) == -1 )
 			{

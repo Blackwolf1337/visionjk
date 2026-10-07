@@ -464,6 +464,7 @@ static void IN_ActivateMouse( void )
 		}
 	}
 
+#ifdef MACOS_X
 	// SDL can lose the relative mode (focus changes, a failed first call): look again every frame
 	if( !in_nograb->integer )
 	{
@@ -472,6 +473,7 @@ static void IN_ActivateMouse( void )
 		if( !SDL_GetWindowGrab( SDL_window ) )
 			SDL_SetWindowGrab( SDL_window, SDL_TRUE );
 	}
+#endif
 
 	mouseActive = qtrue;
 }
@@ -503,11 +505,16 @@ static void IN_DeactivateMouse( void )
 
 		// Don't warp the mouse unless the cursor is within the window
 		if( SDL_GetWindowFlags( SDL_window ) & SDL_WINDOW_MOUSE_FOCUS )
+#ifdef MACOS_X
 		{
+			// in points of the window: on a retina display the game counts in pixels, twice as many
 			int winW = 0, winH = 0;
 			SDL_GetWindowSize( SDL_window, &winW, &winH );
 			SDL_WarpMouseInWindow( SDL_window, winW / 2, winH / 2 );
 		}
+#else
+			SDL_WarpMouseInWindow( SDL_window, cls.glconfig.vidWidth / 2, cls.glconfig.vidHeight / 2 );
+#endif
 
 		mouseActive = qfalse;
 	}
@@ -896,6 +903,7 @@ static void IN_ProcessEvents( void )
 				{
 					if ( !e.motion.xrel && !e.motion.yrel )
 						break;
+#ifdef MACOS_X
 					// the motion is in points of the window, the game counts in pixels (differs on a retina display)
 					int winW = 0, winH = 0;
 					float sx = 1.0f, sy = 1.0f;
@@ -906,6 +914,9 @@ static void IN_ProcessEvents( void )
 						sy = (float)cls.glconfig.vidHeight / winH;
 					}
 					Sys_QueEvent( 0, SE_MOUSE, (int)lrintf( e.motion.xrel * sx ), (int)lrintf( e.motion.yrel * sy ), 0, NULL );
+#else
+					Sys_QueEvent( 0, SE_MOUSE, e.motion.xrel, e.motion.yrel, 0, NULL );
+#endif
 				}
 				break;
 
@@ -1203,6 +1214,7 @@ void IN_Frame (void) {
 	else
 		IN_ActivateMouse( );
 
+#ifdef MACOS_X
 	// windowed: the cursor stays in the window as long as it has the focus, also in the console and
 	// while loading, where the mouse is not captured
 	if( !cls.glconfig.isFullscreen )
@@ -1215,6 +1227,7 @@ void IN_Frame (void) {
 			grabbed = wantGrab;
 		}
 	}
+#endif
 
 	IN_ProcessEvents( );
 }
