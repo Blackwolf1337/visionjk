@@ -13,7 +13,10 @@ joins and plays as before, it just does not hear the voice chat. See "Clients wi
 bind v +voice
 ```
 
-Hold the key to talk. What the others say is heard without a key.
+Hold the key to talk. What the others say is heard without a key. The key is also in the menu under Controls,
+JA+ Control, and the settings a player needs most are in Setup under Voice Chat, in the main menu and in the
+game (the menus are in the client assets of the port, the ui module registers the cvars so they are there
+before a level was loaded).
 
 | Cvar | Default | Meaning |
 |------|---------|---------|

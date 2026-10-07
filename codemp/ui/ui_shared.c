@@ -4838,6 +4838,7 @@ static const char *g_bindCommands[] = {
 	"+strafe",
 	"+use",
 	"+useforce",
+	"+voice",
 	"automap_button",
 	"automap_toggle",
 	"bow",
