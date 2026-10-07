@@ -193,11 +193,20 @@ Surfaces with the shader `internal_distortion` are left out. `rd-vanilla` cuts t
 fills the hole with a stretched copy of the screen, but nothing in the game code or the data of the base game
 and of JA+ asks for that shader.
 
-The Windows DLL builds with mingw-w64 for 32 and 64 bit and has no import but the C runtime. It was never
-loaded into a game. macOS was not tried, it would need MoltenVK.
+The Windows DLL builds with mingw-w64 for 32 and 64 bit and imports nothing but the C runtime, kernel32 and
+libwinpthread (the 32 bit one was built again on 2026-10-07, the 64 bit one not). It was never loaded into a
+game. macOS was not tried, it would need MoltenVK.
 
 Portals and mirrors have their clip plane (`gl_ClipDistance` from a plane in the transform) and the flipped
-culling, but no level of the base game has one, so that was never seen. The same goes for `alphaGen portal`.
+culling, but no level of the base game has one (all levels of single and multiplayer were searched for a
+surface with such a shader), so that was never seen. `alphaGen portal` is in the flares of some levels, but with
+a blend function that does not read alpha, so what it computes was never seen either.
+
+Not moved to the device, with the numbers of the fight demo. Sprites, lines and saber glow: building them is
+6 % of the instructions of a frame for about 1360 entities. A vertex shader could make the four corners of a
+sprite, but not the lines and glows, it would need a third program with pipelines of its own, and the step
+before this one (the saber marks, 3 % of the instructions) came out as 2 % in the timedemo. `alphaGen blend`
+and `rgbGen blend` are for generated terrain: no shader of the base game or of JA+ has them.
 
 ## Checked
 
@@ -245,7 +254,9 @@ unpacked again by a decoder written from the description of the formats and comp
 of one color is off by 1 of 255 at most. With the worker threads the numbers are the same. In the game, both
 renderers with their compressed textures: the two views of mp/ffa3 0.1 and 0.3 %, the player from the front
 with the HUD 0.1 %, no message of the validation layer, also not over the restarts of the renderer in between
-(the workers are started and ended with it). The Windows DLL still builds and imports what it did.
+(the workers are started and ended with it). The Windows DLL still builds and imports what it did. The 23
+levels again, with compressed textures and the marks from the device: no crash, no error, no message of the
+validation layer, 0.1 to 3.4 % of the pixels off and 10.3 % in the lava view of mp/ffa5, as before.
 
 Saber marks on models from the device (2026-10-07). A build that also moved the vertices of every such mark on
 the CPU and worked out what the vertex shader makes of the copy on the device played the fight demo: 78000
