@@ -17,9 +17,9 @@
 #============================================================================
 
 # Make sure the user is not executing this script directly
-if(NOT InOpenJK)
+if(NOT InVisionJK)
 	message(FATAL_ERROR "Use the top-level cmake script!")
-endif(NOT InOpenJK)
+endif(NOT InVisionJK)
 
 set(MPCGameIncludeDirectories
 	"${MPDir}"
@@ -35,8 +35,8 @@ set(MPCGameDefines ${MPSharedDefines} "_CGAME" )
 # The voice chat (cg_voice.c). It records and plays sound and has a codec, none of which the engine offers to
 # a module, so the two libraries for that are built into the module: nothing a player has to install.
 if(BuildJPVoice)
-	add_subdirectory("${OpenJKLibDir}/opus" "${CMAKE_BINARY_DIR}/lib/opus")
-	set(MPCGameIncludeDirectories ${MPCGameIncludeDirectories} "${OpenJKLibDir}/opus/include" "${OpenJKLibDir}/miniaudio")
+	add_subdirectory("${VisionJKLibDir}/opus" "${CMAKE_BINARY_DIR}/lib/opus")
+	set(MPCGameIncludeDirectories ${MPCGameIncludeDirectories} "${VisionJKLibDir}/opus/include" "${VisionJKLibDir}/miniaudio")
 	set(MPCGameDefines ${MPCGameDefines} "JP_VOICE")
 	set(MPCGameLibraries ${MPCGameLibraries} bundled_opus)
 	if(WIN32)
@@ -178,7 +178,7 @@ endif()
 if(MakeApplicationBundles AND BuildMPEngine)
 	install(TARGETS ${MPCGame}
 		LIBRARY
-		DESTINATION "${JKAInstallDir}/${MPEngine}.app/Contents/MacOS/OpenJK"
+		DESTINATION "${JKAInstallDir}/${MPEngine}.app/Contents/MacOS/VisionJK"
 		COMPONENT ${JKAMPCoreComponent})
 	install(TARGETS ${MPCGame}
 		LIBRARY
@@ -210,7 +210,7 @@ endif()
 set_target_properties(${MPCGame} PROPERTIES COMPILE_DEFINITIONS "${MPCGameDefines}")
 
 # Hide symbols not explicitly marked public.
-set_property(TARGET ${MPCGame} APPEND PROPERTY COMPILE_OPTIONS ${OPENJK_VISIBILITY_FLAGS})
+set_property(TARGET ${MPCGame} APPEND PROPERTY COMPILE_OPTIONS ${VISIONJK_VISIBILITY_FLAGS})
 
 set_target_properties(${MPCGame} PROPERTIES INCLUDE_DIRECTORIES "${MPCGameIncludeDirectories}")
 set_target_properties(${MPCGame} PROPERTIES PROJECT_LABEL "MP Client Game Library")

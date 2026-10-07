@@ -1319,7 +1319,7 @@ long FS_FOpenFileRead( const char *filename, fileHandle_t *file, qboolean unique
 			}
 			// is the element a pak file?
 			if ( search->pack && search->pack->hashTable[hash] ) {
-				// autoexec_sp.cfg and openjk_sp.cfg can only be loaded outside of pk3 files.
+				// autoexec_sp.cfg and visionjk_sp.cfg can only be loaded outside of pk3 files.
 				if ( isUserConfig ) {
 					continue;
 				}

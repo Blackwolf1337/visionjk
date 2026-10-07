@@ -410,15 +410,15 @@ void *Z_Malloc(int iSize, memtag_t eTag, qboolean bZeroit, int /*unusedAlign*/)
 // Special wrapper around Z_Malloc for better separation between the main engine
 // code and the bundled minizip library.
 
-extern "C" Q_EXPORT void* openjk_minizip_malloc(int size);
-extern "C" Q_EXPORT int openjk_minizip_free(void* to_free);
+extern "C" Q_EXPORT void* visionjk_minizip_malloc(int size);
+extern "C" Q_EXPORT int visionjk_minizip_free(void* to_free);
 
-void* openjk_minizip_malloc(int size)
+void* visionjk_minizip_malloc(int size)
 {
     return Z_Malloc(size, TAG_MINIZIP, qfalse);
 }
 
-int openjk_minizip_free(void *to_free)
+int visionjk_minizip_free(void *to_free)
 {
     return Z_Free(to_free);
 }

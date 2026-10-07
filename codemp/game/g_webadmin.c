@@ -2459,7 +2459,7 @@ static void WA_HandleRequest( waConnection_t *c, char *head, char *body, int bod
 			WA_AuthResult( c->addr, qfalse );
 			WA_LogUse( c, "wrong password" );
 		}
-		WA_Respond( c, 401, "Unauthorized", "text/plain", "WWW-Authenticate: Basic realm=\"OpenJK web admin\"\r\n",
+		WA_Respond( c, 401, "Unauthorized", "text/plain", "WWW-Authenticate: Basic realm=\"VisionJK web admin\"\r\n",
 			"login required", 14 );
 		return;
 	}

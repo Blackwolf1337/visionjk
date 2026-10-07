@@ -17,9 +17,9 @@
 #============================================================================
 
 # Make sure the user is not executing this script directly
-if(NOT InOpenJK)
+if(NOT InVisionJK)
 	message(FATAL_ERROR "Use the top-level cmake script!")
-endif(NOT InOpenJK)
+endif(NOT InVisionJK)
 
 set(TestFiles
 	"main.cpp"
@@ -30,7 +30,7 @@ set(TestFiles
 if(MSVC)
 	set(TestFiles
 		${TestFiles}
-		"${SharedDir}/openjk.natvis"
+		"${SharedDir}/visionjk.natvis"
 		)
 endif()
 source_group( "tests" REGULAR_EXPRESSION ".*")

@@ -162,7 +162,7 @@ static qboolean VK_CreateInstance( void ) {
 		}
 	}
 
-	app.pApplicationName = "OpenJK";
+	app.pApplicationName = "VisionJK";
 	app.pEngineName = "rd-vulkan-vision";
 	app.apiVersion = VK_API_VERSION_1_3;
 	info.pApplicationInfo = &app;

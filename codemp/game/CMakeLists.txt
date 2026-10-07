@@ -17,9 +17,9 @@
 #============================================================================
 
 # Make sure the user is not executing this script directly
-if(NOT InOpenJK)
+if(NOT InVisionJK)
 	message(FATAL_ERROR "Use the top-level cmake script!")
-endif(NOT InOpenJK)
+endif(NOT InVisionJK)
 
 set(MPGameIncludeDirectories
 	"${MPDir}"
@@ -255,7 +255,7 @@ endif()
 if(MakeApplicationBundles AND BuildMPEngine)
 	install(TARGETS ${MPGame}
 		LIBRARY
-		DESTINATION "${JKAInstallDir}/${MPEngine}.app/Contents/MacOS/OpenJK"
+		DESTINATION "${JKAInstallDir}/${MPEngine}.app/Contents/MacOS/VisionJK"
 		COMPONENT ${JKAMPCoreComponent})
 	install(TARGETS ${MPGame}
 		LIBRARY
@@ -287,7 +287,7 @@ endif()
 set_target_properties(${MPGame} PROPERTIES COMPILE_DEFINITIONS "${MPGameDefines}")
 
 # Hide symbols not explicitly marked public.
-set_property(TARGET ${MPGame} APPEND PROPERTY COMPILE_OPTIONS ${OPENJK_VISIBILITY_FLAGS})
+set_property(TARGET ${MPGame} APPEND PROPERTY COMPILE_OPTIONS ${VISIONJK_VISIBILITY_FLAGS})
 
 set_target_properties(${MPGame} PROPERTIES INCLUDE_DIRECTORIES "${MPGameIncludeDirectories}")
 set_target_properties(${MPGame} PROPERTIES PROJECT_LABEL "MP Game Library")

@@ -17,9 +17,9 @@
 #============================================================================
 
 # Make sure the user is not executing this script directly
-if(NOT InOpenJK)
+if(NOT InVisionJK)
 	message(FATAL_ERROR "Use the top-level cmake script!")
-endif(NOT InOpenJK)
+endif(NOT InVisionJK)
 
 # Only the headers of Vulkan are needed: the library is loaded by the window code at run time (vk_funcs.h).
 # -DVulkanHeadersDir=<dir with vulkan/vulkan.h> names where they are if they are not found.
@@ -193,7 +193,7 @@ list(APPEND MPVulkanVisionLibraries Threads::Threads)
 
 # tr_local.h of rd-vanilla pulls in the OpenGL headers for its types. Nothing of OpenGL is linked.
 find_package(OpenGL REQUIRED)
-list(APPEND MPVulkanVisionIncludeDirectories ${OPENGL_INCLUDE_DIR} ${OpenJKLibDir})
+list(APPEND MPVulkanVisionIncludeDirectories ${OPENGL_INCLUDE_DIR} ${VisionJKLibDir})
 
 add_library(${MPVulkanVisionRenderer} SHARED ${MPVulkanVisionFiles})
 
@@ -224,7 +224,7 @@ endif()
 set_target_properties(${MPVulkanVisionRenderer} PROPERTIES COMPILE_DEFINITIONS "${SharedDefines};RD_VULKAN_VISION")
 
 # Hide symbols not explicitly marked public.
-set_property(TARGET ${MPVulkanVisionRenderer} APPEND PROPERTY COMPILE_OPTIONS ${OPENJK_VISIBILITY_FLAGS})
+set_property(TARGET ${MPVulkanVisionRenderer} APPEND PROPERTY COMPILE_OPTIONS ${VISIONJK_VISIBILITY_FLAGS})
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
 	# an OpenGL call left in a shared file must fail the build, not the game

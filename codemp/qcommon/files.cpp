@@ -1387,7 +1387,7 @@ long FS_FOpenFileRead( const char *filename, fileHandle_t *file, qboolean unique
 					continue;
 				}
 
-				// autoexec.cfg and openjk.cfg can only be loaded outside of pk3 files.
+				// autoexec.cfg and visionjk.cfg can only be loaded outside of pk3 files.
 				if ( isUserConfig ) {
 					continue;
 				}
@@ -3488,7 +3488,7 @@ static void FS_ReorderPurePaks()
 	9.  <fs_basepath>/<fs_game>/
 	10. <fs_homepath>/<fs_game>/
 
-	@param gameName Name of the default folder (i.e. always BASEGAME = "base" in OpenJK)
+	@param gameName Name of the default folder (i.e. always BASEGAME = "base" in VisionJK)
 */
 void FS_LoadReflists( void ) {
 	char *mv_whitelist = NULL, *mv_blacklist = NULL, *mv_forcelist = NULL;

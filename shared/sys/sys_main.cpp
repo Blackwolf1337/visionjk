@@ -379,7 +379,7 @@ enum SearchPathFlag
 {
 	SEARCH_PATH_MOD		= 1 << 0,
 	SEARCH_PATH_BASE	= 1 << 1,
-	SEARCH_PATH_OPENJK	= 1 << 2,
+	SEARCH_PATH_VISIONJK	= 1 << 2,
 	SEARCH_PATH_ROOT	= 1 << 3
 };
 
@@ -423,7 +423,7 @@ static void *Sys_LoadDllFromPaths( const char *filename, const char *gamedir, co
 		}
 	}
 
-	if ( searchFlags & SEARCH_PATH_OPENJK )
+	if ( searchFlags & SEARCH_PATH_VISIONJK )
 	{
 		for ( size_t i = 0; i < numPaths; i++ )
 		{
@@ -431,7 +431,7 @@ static void *Sys_LoadDllFromPaths( const char *filename, const char *gamedir, co
 			if ( !libDir[0] )
 				continue;
 
-			fn = FS_BuildOSPath( libDir, OPENJKGAME, filename );
+			fn = FS_BuildOSPath( libDir, VISIONJKGAME, filename );
 			libHandle = Sys_LoadLibrary( fn );
 			if ( libHandle )
 				return libHandle;
@@ -583,7 +583,7 @@ void *Sys_LoadSPGameDll( const char *name, GetGameAPIProc **GetGameAPI )
 		size_t numPaths = ARRAY_LEN( searchPaths );
 
 		libHandle = Sys_LoadDllFromPaths( filename, gamedir, searchPaths, numPaths,
-											SEARCH_PATH_BASE | SEARCH_PATH_MOD | SEARCH_PATH_OPENJK | SEARCH_PATH_ROOT,
+											SEARCH_PATH_BASE | SEARCH_PATH_MOD | SEARCH_PATH_VISIONJK | SEARCH_PATH_ROOT,
 											__FUNCTION__ );
 		if ( !libHandle )
 			return NULL;

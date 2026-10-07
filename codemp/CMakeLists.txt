@@ -17,9 +17,9 @@
 #============================================================================
 
 # Make sure the user is not executing this script directly
-if(NOT InOpenJK)
+if(NOT InVisionJK)
 	message(FATAL_ERROR "Use the top-level cmake script!")
-endif(NOT InOpenJK)
+endif(NOT InVisionJK)
 
 set(MPSharedDefines ${SharedDefines})
 
@@ -163,7 +163,7 @@ if(BuildMPEngine OR BuildMPDed)
 	add_library(${MPBotLib} STATIC ${MPBotlibFiles})
 
 	# Hide symbols not explicitly marked public.
-	set_property(TARGET ${MPBotLib} APPEND PROPERTY COMPILE_OPTIONS ${OPENJK_VISIBILITY_FLAGS})
+	set_property(TARGET ${MPBotLib} APPEND PROPERTY COMPILE_OPTIONS ${VISIONJK_VISIBILITY_FLAGS})
 
 	set_target_properties(${MPBotLib} PROPERTIES COMPILE_DEFINITIONS "${MPBotlibDefines}")
 	set_target_properties(${MPBotLib} PROPERTIES INCLUDE_DIRECTORIES "${MPBotlibIncludeDirectories}")
@@ -397,13 +397,13 @@ if(BuildMPEngine)
 	if(UseInternalSDL2)
 		set(MPEngineLibraries
 			${MPEngineLibraries}
-			${OpenJKLibDir}/SDL2/lib/x64/SDL2main.lib
-			${OpenJKLibDir}/SDL2/lib/x64/SDL2.lib
+			${VisionJKLibDir}/SDL2/lib/x64/SDL2main.lib
+			${VisionJKLibDir}/SDL2/lib/x64/SDL2.lib
 			)
 
 		set(MPEngineIncludeDirectories
 			${MPEngineIncludeDirectories}
-			${OpenJKLibDir}/SDL2/include
+			${VisionJKLibDir}/SDL2/include
 			)
 	else()
 		find_package(SDL2 REQUIRED CONFIG)
@@ -529,7 +529,7 @@ if(BuildMPEngine)
 	if(WIN32)
 		set(MPEngineWin32Files
 			"${MPDir}/win32/resource.h"
-			"${MPDir}/win32/openjk.rc"
+			"${MPDir}/win32/visionjk.rc"
 			"${SharedDir}/sys/win_manifest.manifest"
 			)
 
@@ -555,9 +555,9 @@ if(BuildMPEngine)
 	if(MakeApplicationBundles)
 		set(MACOSX_BUNDLE_BUNDLE_NAME ${MPEngine})
 		set(MACOSX_BUNDLE_DISPLAY_NAME ${MPEngine})
-		set(MACOSX_BUNDLE_ICON_FILE OpenJK.icns)
-		set_source_files_properties(${MPDir}/macosx/OpenJK.icns PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
-		set(MPEngineFiles ${MPEngineFiles} ${MPDir}/macosx/OpenJK.icns)
+		set(MACOSX_BUNDLE_ICON_FILE VisionJK.icns)
+		set_source_files_properties(${MPDir}/macosx/VisionJK.icns PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
+		set(MPEngineFiles ${MPEngineFiles} ${MPDir}/macosx/VisionJK.icns)
 		set_source_files_properties(${MPDir}/macosx/English.lproj/InfoPlist.strings PROPERTIES MACOSX_PACKAGE_LOCATION Resources/English.lproj)
 		set(MPEngineFiles ${MPEngineFiles} ${MPDir}/macosx/English.lproj/InfoPlist.strings)
 	endif(MakeApplicationBundles)
@@ -566,13 +566,13 @@ if(BuildMPEngine)
 		add_executable(${MPEngine} WIN32 ${MPEngineFiles})
 		if(UseInternalSDL2)
 			set(MPEngineExtraInstallFiles
-				${OpenJKLibDir}/SDL2/bin/x64/SDL2.dll
+				${VisionJKLibDir}/SDL2/bin/x64/SDL2.dll
 				)
 		endif()
 	else(WIN32)
 		if(MakeApplicationBundles)
 			add_executable(${MPEngine} MACOSX_BUNDLE ${MPEngineFiles})
-			set_target_properties(${MPEngine} PROPERTIES MACOSX_BUNDLE_INFO_PLIST "${MPDir}/macosx/OpenJKInfo.plist")
+			set_target_properties(${MPEngine} PROPERTIES MACOSX_BUNDLE_INFO_PLIST "${MPDir}/macosx/VisionJKInfo.plist")
 		else(MakeApplicationBundles)
 			add_executable(${MPEngine} ${MPEngineFiles})
 		endif(MakeApplicationBundles)
@@ -604,7 +604,7 @@ if(BuildMPEngine)
 	set_target_properties(${MPEngine} PROPERTIES COMPILE_DEFINITIONS "${MPEngineDefines}")
 
 	# Hide symbols not explicitly marked public.
-	set_property(TARGET ${MPEngine} APPEND PROPERTY COMPILE_OPTIONS ${OPENJK_VISIBILITY_FLAGS})
+	set_property(TARGET ${MPEngine} APPEND PROPERTY COMPILE_OPTIONS ${VISIONJK_VISIBILITY_FLAGS})
 
 	set_target_properties(${MPEngine} PROPERTIES INCLUDE_DIRECTORIES "${MPEngineIncludeDirectories}")
 	set_target_properties(${MPEngine} PROPERTIES PROJECT_LABEL "MP Client")
@@ -651,7 +651,7 @@ if(BuildMPDed)
 	set(MPDedFiles ${MPDedFiles} ${MPDedNullFiles})
 	if(WIN32)
 		set(MPDedWin32Files
-			"${MPDir}/win32/openjkded.rc"
+			"${MPDir}/win32/visionjkded.rc"
 			)
 		source_group("win32" FILES ${MPDedWin32Files})
 		set(MPDedFiles ${MPDedFiles} ${MPDedWin32Files})
@@ -696,7 +696,7 @@ if(BuildMPDed)
 	set_target_properties(${MPDed} PROPERTIES COMPILE_DEFINITIONS "${MPDedDefines}")
 
 	# Hide symbols not explicitly marked public.
-	set_property(TARGET ${MPDed} APPEND PROPERTY COMPILE_OPTIONS ${OPENJK_VISIBILITY_FLAGS})
+	set_property(TARGET ${MPDed} APPEND PROPERTY COMPILE_OPTIONS ${VISIONJK_VISIBILITY_FLAGS})
 
 	set_target_properties(${MPDed} PROPERTIES INCLUDE_DIRECTORIES "${MPDedIncludeDirectories}")
 	set_target_properties(${MPDed} PROPERTIES PROJECT_LABEL "MP Dedicated Server")

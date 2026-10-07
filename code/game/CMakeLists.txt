@@ -17,9 +17,9 @@
 #============================================================================
 
 # Make sure the user is not executing this script directly
-if(NOT InOpenJK)
+if(NOT InVisionJK)
 	message(FATAL_ERROR "Use the top-level cmake script!")
-endif(NOT InOpenJK)
+endif(NOT InVisionJK)
 
 set(SPGameDefines ${SharedDefines} "SP_GAME")
 set(SPGameIncludeDirectories
@@ -376,7 +376,7 @@ endif(WIN32)
 add_library(${SPGame} SHARED ${SPGameFiles})
 
 # Hide symbols not explicitly marked public.
-set_property(TARGET ${SPGame} APPEND PROPERTY COMPILE_OPTIONS ${OPENJK_VISIBILITY_FLAGS})
+set_property(TARGET ${SPGame} APPEND PROPERTY COMPILE_OPTIONS ${VISIONJK_VISIBILITY_FLAGS})
 
 if(NOT MSVC)
 	# remove "lib" prefix for .so/.dylib files
@@ -386,18 +386,18 @@ endif()
 if(WIN32)
 	install(TARGETS ${SPGame}
 		RUNTIME
-		DESTINATION "${JKAInstallDir}/OpenJK"
+		DESTINATION "${JKAInstallDir}/VisionJK"
 		COMPONENT ${JKASPClientComponent})
 else(WIN32)
 	if(MakeApplicationBundles AND BuildSPEngine)
 		install(TARGETS ${SPGame}
 			LIBRARY
-			DESTINATION "${JKAInstallDir}/${SPEngine}.app/Contents/MacOS/OpenJK"
+			DESTINATION "${JKAInstallDir}/${SPEngine}.app/Contents/MacOS/VisionJK"
 			COMPONENT ${JKASPClientComponent})
 	else()
 		install(TARGETS ${SPGame}
 			LIBRARY
-			DESTINATION "${JKAInstallDir}/OpenJK"
+			DESTINATION "${JKAInstallDir}/VisionJK"
 			COMPONENT ${JKASPClientComponent})
 	endif()
 endif()

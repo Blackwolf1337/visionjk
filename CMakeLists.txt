@@ -21,9 +21,9 @@
 cmake_minimum_required(VERSION 3.1...3.31)
 set(CMAKE_OSX_DEPLOYMENT_TARGET "10.9" CACHE STRING "Minimum OS X deployment version")
 
-set(InOpenJK ON)
+set(InVisionJK ON)
 
-set(ProjectName "OpenJK" CACHE STRING "Project Name")
+set(ProjectName "VisionJK" CACHE STRING "Project Name")
 project(${ProjectName})
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
@@ -35,9 +35,9 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 #=============================================================================
 option(BuildPortableVersion "Build portable version (does not read or write files from your user/home directory" OFF)
 
-option(BuildMPEngine "Whether to create projects for the MP client (openjk.exe)" ON)
+option(BuildMPEngine "Whether to create projects for the MP client (visionjk.exe)" ON)
 option(BuildMPRdVanilla "Whether to create projects for the MP default renderer (rd-vanilla_x86_64.dll)" ON)
-option(BuildMPDed "Whether to create projects for the MP dedicated server (openjkded.exe)" ON)
+option(BuildMPDed "Whether to create projects for the MP dedicated server (visionjkded.exe)" ON)
 option(BuildMPGame "Whether to create projects for the MP server-side gamecode (jampgamex86_64.dll)" ON)
 option(BuildMPCGame "Whether to create projects for the MP clientside gamecode (cgamex86_64.dll)" ON)
 option(BuildMPUI "Whether to create projects for the MP UI code (uix86_64.dll)" ON)
@@ -46,7 +46,7 @@ option(BuildJPAssets "Whether to pack the directories of assets/ into pk3 files 
 option(BuildJPSpatialAudio "Whether the MP client can use Steam Audio for its sound (needs the submodule lib/steamaudio, the library is loaded at run time)" ON)
 option(BuildMPRdVulkanVision "Whether to create projects for the MP Vulkan renderer (rd-vulkan-vision_x86_64.dll, needs the Vulkan headers and glslc)" ON)
 
-option(BuildSPEngine "Whether to create projects for the SP engine (openjk_sp.exe)" OFF)
+option(BuildSPEngine "Whether to create projects for the SP engine (visionjk_sp.exe)" OFF)
 option(BuildSPGame "Whether to create projects for the SP gamecode (jagamex86_64.dll)" OFF)
 option(BuildSPRdVanilla "Whether to create projects for the SP default renderer (rdsp-vanilla_x86_64.dll)" OFF)
 
@@ -156,12 +156,12 @@ endif()
 # Binary names
 #
 #=============================================================================
-set(SPEngine "openjk_sp.${Architecture}")
+set(SPEngine "visionjk_sp.${Architecture}")
 set(SPGame "jagame${Architecture}")
 set(SPRDVanillaRenderer "rdsp-vanilla_${Architecture}")
-set(MPEngine "openjk.${Architecture}")
+set(MPEngine "visionjk.${Architecture}")
 set(MPVanillaRenderer "rd-vanilla_${Architecture}")
-set(MPDed "openjkded.${Architecture}")
+set(MPDed "visionjkded.${Architecture}")
 set(MPGame "jampgame${Architecture}")
 set(MPCGame "cgame${Architecture}")
 set(MPUI "ui${Architecture}")
@@ -169,7 +169,7 @@ set(MPVulkanVisionRenderer "rd-vulkan-vision_${Architecture}")
 set(JK2SPEngine "openjo_sp.${Architecture}")
 set(JK2SPGame "jospgame${Architecture}")
 set(JK2SPVanillaRenderer "rdjosp-vanilla_${Architecture}")
-set(AssetsPk3 "openjk-${Architecture}.pk3")
+set(AssetsPk3 "visionjk-${Architecture}.pk3")
 # Library names
 set(MPBotLib "botlib")
 set(SharedLib "shared")
@@ -183,8 +183,8 @@ set(SPDir "${CMAKE_SOURCE_DIR}/code")
 set(MPDir "${CMAKE_SOURCE_DIR}/codemp")
 set(JK2SPDir "${CMAKE_SOURCE_DIR}/codeJK2")
 set(SharedDir ${CMAKE_SOURCE_DIR}/shared)
-set(OpenJKLibDir "${CMAKE_SOURCE_DIR}/lib")
-set(GSLIncludeDirectory "${OpenJKLibDir}/gsl-lite/include")
+set(VisionJKLibDir "${CMAKE_SOURCE_DIR}/lib")
+set(GSLIncludeDirectory "${VisionJKLibDir}/gsl-lite/include")
 
 include(InstallConfig)
 
@@ -228,7 +228,7 @@ if(MSVC)
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP")
 
 	# We don't try to control symbol visibility under MSVC.
-	set(OPENJK_VISIBILITY_FLAGS "")
+	set(VISIONJK_VISIBILITY_FLAGS "")
 elseif (("${CMAKE_C_COMPILER_ID}" STREQUAL "GNU") OR ("${CMAKE_C_COMPILER_ID}" MATCHES "Clang"))
 	# I hope this doesn't come back to bite me in the butt later on.
 	# Realistically though, can the C and CXX compilers be different?
@@ -238,7 +238,7 @@ elseif (("${CMAKE_C_COMPILER_ID}" STREQUAL "GNU") OR ("${CMAKE_C_COMPILER_ID}" M
 	# ZLib explicitly declares symbols hidden, rather than defaulting to hidden.
 	#
 	# Note that -fvisibility=hidden is stronger than -fvisibility-inlines-hidden.
-	set(OPENJK_VISIBILITY_FLAGS "-fvisibility=hidden")
+	set(VISIONJK_VISIBILITY_FLAGS "-fvisibility=hidden")
 
 	# removes the -rdynamic flag at linking (which causes crashes for some reason)
 	set(CMAKE_SHARED_LIBRARY_LINK_C_FLAGS "")

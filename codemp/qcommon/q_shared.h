@@ -27,16 +27,16 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // q_shared.h -- included first by ALL program modules.
 // A user mod should never modify this file
 
-#define PRODUCT_NAME			"openjk"
+#define PRODUCT_NAME			"visionjk"
 
-#define CLIENT_WINDOW_TITLE "OpenJK (MP)"
-#define CLIENT_CONSOLE_TITLE "OpenJK Console (MP)"
-#define HOMEPATH_NAME_UNIX "openjk"
-#define HOMEPATH_NAME_WIN "OpenJK"
+#define CLIENT_WINDOW_TITLE "VisionJK (MP)"
+#define CLIENT_CONSOLE_TITLE "VisionJK Console (MP)"
+#define HOMEPATH_NAME_UNIX "visionjk"
+#define HOMEPATH_NAME_WIN "VisionJK"
 #define HOMEPATH_NAME_MACOSX HOMEPATH_NAME_WIN
 
 #define	BASEGAME "base"
-#define OPENJKGAME "OpenJK"
+#define VISIONJKGAME "VisionJK"
 // the mod directory a start without fs_game runs in ("+set fs_game base" is the base game)
 #define JAPLUSGAME "japlus"
 

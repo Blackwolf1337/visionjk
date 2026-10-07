@@ -17,9 +17,9 @@
 #============================================================================
 
 # Make sure the user is not executing this script directly
-if(NOT InOpenJK)
+if(NOT InVisionJK)
 	message(FATAL_ERROR "Use the top-level cmake script!")
-endif(NOT InOpenJK)
+endif(NOT InVisionJK)
 
 set(MPUIIncludeDirectories
 	"${MPDir}"
@@ -103,7 +103,7 @@ endif()
 if(MakeApplicationBundles AND BuildMPEngine)
 	install(TARGETS ${MPUI}
 		LIBRARY
-		DESTINATION "${JKAInstallDir}/${MPEngine}.app/Contents/MacOS/OpenJK"
+		DESTINATION "${JKAInstallDir}/${MPEngine}.app/Contents/MacOS/VisionJK"
 		COMPONENT ${JKAMPCoreComponent})
 	install(TARGETS ${MPUI}
 		LIBRARY
@@ -135,7 +135,7 @@ endif()
 set_target_properties(${MPUI} PROPERTIES COMPILE_DEFINITIONS "${MPUIDefines}")
 
 # Hide symbols not explicitly marked public.
-set_property(TARGET ${MPUI} APPEND PROPERTY COMPILE_OPTIONS ${OPENJK_VISIBILITY_FLAGS})
+set_property(TARGET ${MPUI} APPEND PROPERTY COMPILE_OPTIONS ${VISIONJK_VISIBILITY_FLAGS})
 
 set_target_properties(${MPUI} PROPERTIES INCLUDE_DIRECTORIES "${MPUIIncludeDirectories}")
 set_target_properties(${MPUI} PROPERTIES PROJECT_LABEL "MP UI Library")

@@ -17,9 +17,9 @@
 #============================================================================
 
 # Make sure the user is not executing this script directly
-if(NOT InOpenJK)
+if(NOT InVisionJK)
 	message(FATAL_ERROR "Use the top-level cmake script!")
-endif(NOT InOpenJK)
+endif(NOT InVisionJK)
 
 #    Add Game Project
 if(BuildSPGame)
@@ -57,13 +57,13 @@ if(BuildSPEngine OR BuildJK2SPEngine)
 	if(UseInternalSDL2)
 		set(SPEngineLibraries
 			${SPEngineLibraries}
-			${OpenJKLibDir}/SDL2/lib/x64/SDL2main.lib
-			${OpenJKLibDir}/SDL2/lib/x64/SDL2.lib
+			${VisionJKLibDir}/SDL2/lib/x64/SDL2main.lib
+			${VisionJKLibDir}/SDL2/lib/x64/SDL2.lib
 			)
 
 		set(SPEngineIncludeDirectories
 			${SPEngineIncludeDirectories}
-			${OpenJKLibDir}/SDL2/include
+			${VisionJKLibDir}/SDL2/include
 			)
 	else()
 		find_package(SDL2 REQUIRED CONFIG)
@@ -355,18 +355,18 @@ if(BuildSPEngine OR BuildJK2SPEngine)
 			add_executable(${ProjectName} WIN32 ${SPEngineFiles})
 			if(UseInternalSDL2)
 				set(SPEngineExtraInstallFiles
-					${OpenJKLibDir}/SDL2/bin/x64/SDL2.dll
+					${VisionJKLibDir}/SDL2/bin/x64/SDL2.dll
 					)
 			endif()
 		else(WIN32)
 			if(MakeApplicationBundles)
-				set_source_files_properties(${SPDirName}/macosx/OpenJK.icns PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
-				set(SPEngineFiles ${SPEngineFiles} ${SPDirName}/macosx/OpenJK.icns)
+				set_source_files_properties(${SPDirName}/macosx/VisionJK.icns PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
+				set(SPEngineFiles ${SPEngineFiles} ${SPDirName}/macosx/VisionJK.icns)
 				set_source_files_properties(${SPDirName}/macosx/English.lproj/InfoPlist.strings PROPERTIES MACOSX_PACKAGE_LOCATION Resources/English.lproj)
 				set(SPEngineFiles ${SPEngineFiles} ${SPDirName}/macosx/English.lproj/InfoPlist.strings)
 				
 				add_executable(${ProjectName} MACOSX_BUNDLE ${SPEngineFiles})
-				set_target_properties(${ProjectName} PROPERTIES MACOSX_BUNDLE_INFO_PLIST "${SPDirName}/macosx/OpenJKInfo.plist")
+				set_target_properties(${ProjectName} PROPERTIES MACOSX_BUNDLE_INFO_PLIST "${SPDirName}/macosx/VisionJKInfo.plist")
 			else(MakeApplicationBundles)
 				add_executable(${ProjectName} ${SPEngineFiles})
 			endif(MakeApplicationBundles)
@@ -398,7 +398,7 @@ if(BuildSPEngine OR BuildJK2SPEngine)
 		set_target_properties(${ProjectName} PROPERTIES COMPILE_DEFINITIONS "${SPEngineDefines}")
 
 		# Hide symbols not explicitly marked public.
-		set_property(TARGET ${ProjectName} APPEND PROPERTY COMPILE_OPTIONS ${OPENJK_VISIBILITY_FLAGS})
+		set_property(TARGET ${ProjectName} APPEND PROPERTY COMPILE_OPTIONS ${VISIONJK_VISIBILITY_FLAGS})
 
 		set_target_properties(${ProjectName} PROPERTIES INCLUDE_DIRECTORIES "${SPEngineIncludeDirectories}")
 		set_target_properties(${ProjectName} PROPERTIES PROJECT_LABEL ${Label})

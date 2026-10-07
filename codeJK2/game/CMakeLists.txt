@@ -17,9 +17,9 @@
 #============================================================================
 
 # Make sure the user is not executing this script directly
-if(NOT InOpenJK)
+if(NOT InVisionJK)
 	message(FATAL_ERROR "Use the top-level cmake script!")
-endif(NOT InOpenJK)
+endif(NOT InVisionJK)
 
 set(JK2SPGameDefines ${SharedDefines} "JK2_MODE" "SP_GAME")
 
@@ -292,19 +292,19 @@ if(NOT MSVC)
 endif()
 
 if(WIN32)
-	install(TARGETS ${JK2SPGame} RUNTIME DESTINATION "${JK2InstallDir}/OpenJK")
+	install(TARGETS ${JK2SPGame} RUNTIME DESTINATION "${JK2InstallDir}/VisionJK")
 else(WIN32)
 	if(MakeApplicationBundles AND BuildJK2SPEngine)
-		install(TARGETS ${JK2SPGame} LIBRARY DESTINATION "${JK2InstallDir}/${JK2SPEngine}.app/Contents/MacOS/OpenJK")
+		install(TARGETS ${JK2SPGame} LIBRARY DESTINATION "${JK2InstallDir}/${JK2SPEngine}.app/Contents/MacOS/VisionJK")
 	else(MakeApplicationBundles AND BuildJK2SPEngine)
-		install(TARGETS ${JK2SPGame} LIBRARY DESTINATION "${JK2InstallDir}/OpenJK")
+		install(TARGETS ${JK2SPGame} LIBRARY DESTINATION "${JK2InstallDir}/VisionJK")
 	endif(MakeApplicationBundles AND BuildJK2SPEngine)
 endif(WIN32)
 
 set_target_properties(${JK2SPGame} PROPERTIES COMPILE_DEFINITIONS "${JK2SPGameDefines}")
 
 # Hide symbols not explicitly marked public.
-set_property(TARGET ${JK2SPGame} APPEND PROPERTY COMPILE_OPTIONS ${OPENJK_VISIBILITY_FLAGS})
+set_property(TARGET ${JK2SPGame} APPEND PROPERTY COMPILE_OPTIONS ${VISIONJK_VISIBILITY_FLAGS})
 
 set_target_properties(${JK2SPGame} PROPERTIES INCLUDE_DIRECTORIES "${JK2SPGameIncludeDirectories}")
 set_target_properties(${JK2SPGame} PROPERTIES PROJECT_LABEL "JK2 SP Game Library")

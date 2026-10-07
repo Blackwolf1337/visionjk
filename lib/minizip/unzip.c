@@ -109,17 +109,17 @@
 #endif
 
 /* Normally, these forward declarations are a bad thing, but this seems to be
-   the best way to get at openjk_minizip_malloc and Z_Free without tightly
+   the best way to get at visionjk_minizip_malloc and Z_Free without tightly
    binding the bundled minizip lib to the rest of the engine. */
 
-void* openjk_minizip_malloc(int);
-int   openjk_minizip_free(void*);
+void* visionjk_minizip_malloc(int);
+int   visionjk_minizip_free(void*);
 
 #ifndef ALLOC
-# define ALLOC(size) (openjk_minizip_malloc(size))
+# define ALLOC(size) (visionjk_minizip_malloc(size))
 #endif
 #ifndef TRYFREE
-# define TRYFREE(p) {if (p) openjk_minizip_free(p);}
+# define TRYFREE(p) {if (p) visionjk_minizip_free(p);}
 #endif
 
 #define SIZECENTRALDIRITEM (0x2e)

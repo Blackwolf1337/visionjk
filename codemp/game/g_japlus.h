@@ -1,5 +1,5 @@
 /*
-JA+ Mod v2.4 Build 7 features, rebuilt from the jampgamei386.so for OpenJK.
+JA+ Mod v2.4 Build 7 features, rebuilt from the jampgamei386.so for VisionJK.
 Original mod by Slider (japlus.net). Everything JA+ specific is declared here.
 */
 
