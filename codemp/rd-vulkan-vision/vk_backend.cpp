@@ -1043,7 +1043,8 @@ void RE_StretchRaw( int x, int y, int w, int h, int cols, int rows, const byte *
 	VectorSet2( tess.texCoords[2][0], ( cols - 0.5f ) / cols, ( rows - 0.5f ) / rows );
 	VectorSet2( tess.texCoords[3][0], 0.5f / cols, ( rows - 0.5f ) / rows );
 
-	if ( VK_UploadTess() ) {
+	// not VK_UploadTess(): that one is for a batch with a shader, and there is none here
+	if ( VK_UploadGeometry( tess.xyz, NULL, tess.texCoords, tess.vertexColors, tess.numVertexes, tess.indexes, tess.numIndexes ) ) {
 		memset( &draw, 0, sizeof( draw ) );
 		backEnd.currentEntity = &backEnd.entity2D;
 		VK_InvalidateTransform();
