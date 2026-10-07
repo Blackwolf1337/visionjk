@@ -981,9 +981,10 @@ void RB_StageIteratorGeneric( void ) {
 		}
 	}
 
-	// now do any dynamic lighting needed
-	if ( tess.dlightBits && shader->sort <= SS_OPAQUE && !( shader->surfaceFlags & ( SURF_NODLIGHT | SURF_SKY ) )
-		&& !g_bRenderGlowingObjects ) {
+	// now do any dynamic lighting needed. Also in the glow pass, as rd-vanilla does: a surface whose shader has a
+	// stage that glows gets the light on its texture added to the glow as well, so it shines more where a blade
+	// lights it.
+	if ( tess.dlightBits && shader->sort <= SS_OPAQUE && !( shader->surfaceFlags & ( SURF_NODLIGHT | SURF_SKY ) ) ) {
 		VK_DynamicLights( transform, cullMode, program, bones );
 	}
 	// now do fog

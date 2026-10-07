@@ -288,7 +288,14 @@ Not brought over, all for developers: `r_measureOverdraw`, `r_nobind`, `r_logFil
 `r_finish` do nothing, `r_speeds 1` shows no megabytes of textures and `r_speeds 4` no vertices of lights,
 `r_texturebits 16`, `r_colorbits`, `r_depthbits` and `r_stencilbits` change nothing (32, 24 and 8 bits always).
 `r_displayRefresh` is not applied in fullscreen: the window code of the engine sets a refresh rate only for an
-OpenGL window. Dynamic lights are not added to glowing surfaces in the glow pass, where `rd-vanilla` adds them.
+OpenGL window.
+
+Dynamic lights in the glow pass: `rd-vanilla` runs its light pass in the glow pass too, so a surface whose shader
+has a stage that glows gets the light on its texture added to the glow. This renderer left the lights out
+there since its first day, without a reason that was written down. They are in since 2026-10-07. The fight demo
+with `r_DynamicGlow 1` as a video does not show it in numbers: 2.3 to 3.0 % of the pixels of a frame differ from
+`rd-vanilla` with and without the change, and the two builds differ from each other as two runs of one build
+do (0.1 to 0.8 %, the sparks). No message of the validation layer.
 
 Anti aliasing, `r_ext_multisample 4` in both renderers: mp/ffa3 0.2 and 0.4 %, with `r_DynamicGlow 1` 0.1 and
 0.3 %, mp/ffa4 with its flares 0.1 and 0.1 %. Edges are smooth where `rd-vanilla` has them smooth. A fight with
