@@ -7,7 +7,7 @@ frame. It is not a JA+ feature and it does not touch the server, the protocol or
 `rd-vanilla` stays the default, and the fallback when the library does not load. The renderer is in `master`
 since 2026-10-07 (it was written on the branch `feature/rd-vulkan-vision`), behind the CMake option
 `BuildMPRdVulkanVision`, which is on by default since 2026-10-07: every build of the client makes it next to
-`rd-vanilla`. rend2 (`BuildMPRend2`) is off by default since then.
+`rd-vanilla`. rend2, the third renderer of OpenJK, was removed from the tree that day: nothing used it.
 
 ## State
 

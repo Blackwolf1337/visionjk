@@ -43,11 +43,6 @@ if(BuildMPRdVanilla)
 	add_subdirectory("${MPDir}/rd-vanilla")
 endif(BuildMPRdVanilla)
 
-#	Add rend2 JKA Renderer Project
-if(BuildMPRend2)
-	add_subdirectory("${MPDir}/rd-rend2")
-endif(BuildMPRend2)
-
 if(BuildMPRdVulkanVision)
 	add_subdirectory("${MPDir}/rd-vulkan-vision")
 endif(BuildMPRdVulkanVision)
