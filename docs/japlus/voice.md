@@ -15,7 +15,7 @@ bind v +voice
 
 Hold the key to talk. What the others say is heard without a key. The key is also in the menu under Controls,
 JA+ Control, and the settings a player needs most are in Setup under Voice Chat, in the main menu and in the
-game (the menus are in the client assets of the port, the ui module registers the cvars so they are there
+game (the menus are in `assets/japlus_client/ui/jamp`, the ui module registers the cvars so they are there
 before a level was loaded).
 
 | Cvar | Default | Meaning |

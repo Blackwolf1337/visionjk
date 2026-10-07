@@ -42,6 +42,7 @@ option(BuildMPGame "Whether to create projects for the MP server-side gamecode (
 option(BuildMPCGame "Whether to create projects for the MP clientside gamecode (cgamex86.dll)" ON)
 option(BuildMPUI "Whether to create projects for the MP UI code (uix86.dll)" ON)
 option(BuildJPVoice "Whether the MP clientside gamecode gets the voice chat (Opus and miniaudio from lib/ are built into it)" ON)
+option(BuildJPAssets "Whether to pack the directories of assets/ into pk3 files (needs Python 3)" ON)
 option(BuildMPRend2 "Whether to create projects for the EXPERIMENTAL MP rend2 renderer (rd-rend2_x86.dll)" ON)
 option(BuildMPRdVulkanVision "Whether to create projects for the MP Vulkan renderer (rd-vulkan-vision_x86.dll)" OFF)
 
@@ -443,6 +444,10 @@ if(BuildJK2SPGame)
 endif()
 
 add_subdirectory(${MPDir})
+
+if(BuildJPAssets)
+	add_subdirectory(assets)
+endif()
 
 if(BuildSymbolServer)
 	add_subdirectory("tools/WinSymbol")
