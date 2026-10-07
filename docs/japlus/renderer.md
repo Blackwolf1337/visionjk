@@ -6,7 +6,8 @@ frame. It is not a JA+ feature and it does not touch the server, the protocol or
 
 `rd-vanilla` stays the default, and the fallback when the library does not load. The renderer is in `master`
 since 2026-10-07 (it was written on the branch `feature/rd-vulkan-vision`), behind the CMake option
-`BuildMPRdVulkanVision`, which is off by default. It is not installed into the game folder.
+`BuildMPRdVulkanVision`, which is on by default since 2026-10-07: every build of the client makes it next to
+`rd-vanilla`. rend2 (`BuildMPRend2`) is off by default since then.
 
 ## State
 
@@ -49,19 +50,20 @@ The details of the open rows are under "Not done", what was compared and how und
 ## Building and switching
 
 ```
-cmake -S . -B build64 -DBuildMPRdVulkanVision=ON
+cmake -S . -B build64
 cmake --build build64 -j$(nproc)
 ```
 
-Needs the Vulkan headers and `glslc` (package `shaderc`) on the build machine. The Vulkan library is not linked:
+Needs the Vulkan headers and `glslc` (package `shaderc`) on the build machine. Without one of them cmake says
+so and builds the tree without the renderer, `-DBuildMPRdVulkanVision=OFF` leaves it out on purpose. The Vulkan library is not linked:
 SDL loads it for the window, the engine hands its `vkGetInstanceProcAddr` to the renderer, and the renderer asks
 that for every function it calls (`vk_funcs.h`, pointers named `qvk...` as `qgl...` in `rd-vanilla`). The result
 is `codemp/rd-vulkan-vision/rd-vulkan-vision_x86_64.so`, it has to lie next to the engine binary.
 
-The Windows DLL is cross compiled with mingw-w64 like the rest, with the same option:
+The Windows DLL is cross compiled with mingw-w64 like the rest:
 
 ```
-cmake -S . -B buildwin32cl -DCMAKE_TOOLCHAIN_FILE=cmake/Toolchains/i686-w64-mingw32.cmake -DCMAKE_BUILD_TYPE=Release -DBuildMPRdVulkanVision=ON -DBuildMPDed=OFF -DBuildMPRend2=OFF -DBuildSPEngine=OFF -DBuildSPGame=OFF -DBuildSPRdVanilla=OFF
+cmake -S . -B buildwin32cl -DCMAKE_TOOLCHAIN_FILE=cmake/Toolchains/i686-w64-mingw32.cmake -DCMAKE_BUILD_TYPE=Release -DBuildMPDed=OFF -DBuildSPEngine=OFF -DBuildSPGame=OFF -DBuildSPRdVanilla=OFF
 cmake --build buildwin32cl -j$(nproc)
 ```
 

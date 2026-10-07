@@ -68,21 +68,21 @@ The three modules are `jampgame`, `cgame` and `ui`. The mod directory is `japlus
 64 bit Linux, with engine and dedicated server:
 
 ```
-cmake -S . -B build64 -DCMAKE_BUILD_TYPE=Release -DBuildSPEngine=OFF -DBuildSPGame=OFF -DBuildSPRdVanilla=OFF -DBuildMPRend2=OFF
+cmake -S . -B build64 -DCMAKE_BUILD_TYPE=Release -DBuildSPEngine=OFF -DBuildSPGame=OFF -DBuildSPRdVanilla=OFF
 cmake --build build64 -j$(nproc)
 ```
 
 32 bit Linux modules:
 
 ```
-cmake -S . -B build32 -DCMAKE_TOOLCHAIN_FILE=cmake/Toolchains/linux-i686.cmake -DCMAKE_BUILD_TYPE=Release -DBuildMPEngine=OFF -DBuildMPRdVanilla=OFF -DBuildMPDed=OFF -DBuildMPRend2=OFF -DBuildSPEngine=OFF -DBuildSPGame=OFF -DBuildSPRdVanilla=OFF
+cmake -S . -B build32 -DCMAKE_TOOLCHAIN_FILE=cmake/Toolchains/linux-i686.cmake -DCMAKE_BUILD_TYPE=Release -DBuildMPEngine=OFF -DBuildMPRdVanilla=OFF -DBuildMPRdVulkanVision=OFF -DBuildMPDed=OFF -DBuildSPEngine=OFF -DBuildSPGame=OFF -DBuildSPRdVanilla=OFF
 cmake --build build32 -j$(nproc)
 ```
 
 32 bit Windows DLLs, cross compiled with mingw-w64 (`jampgamex86.dll`, `cgamex86.dll`, `uix86.dll`):
 
 ```
-cmake -S . -B buildwin32 -DCMAKE_TOOLCHAIN_FILE=cmake/Toolchains/i686-w64-mingw32.cmake -DCMAKE_BUILD_TYPE=Release -DBuildMPEngine=OFF -DBuildMPRdVanilla=OFF -DBuildMPDed=OFF -DBuildMPRend2=OFF -DBuildSPEngine=OFF -DBuildSPGame=OFF -DBuildSPRdVanilla=OFF
+cmake -S . -B buildwin32 -DCMAKE_TOOLCHAIN_FILE=cmake/Toolchains/i686-w64-mingw32.cmake -DCMAKE_BUILD_TYPE=Release -DBuildMPEngine=OFF -DBuildMPRdVanilla=OFF -DBuildMPRdVulkanVision=OFF -DBuildMPDed=OFF -DBuildSPEngine=OFF -DBuildSPGame=OFF -DBuildSPRdVanilla=OFF
 cmake --build buildwin32 -j$(nproc)
 ```
 

@@ -23,12 +23,15 @@ endif(NOT InOpenJK)
 
 # Only the headers of Vulkan are needed: the library is loaded by the window code at run time (vk_funcs.h).
 # -DVulkanHeadersDir=<dir with vulkan/vulkan.h> names where they are if they are not found.
+# The renderer is built by default, so a machine without the headers or without glslc is told what is missing
+# and builds the rest, as with the other things this tree builds by default.
 find_path(VulkanHeadersDir vulkan/vulkan.h)
 if(NOT VulkanHeadersDir AND CMAKE_CROSSCOMPILING AND EXISTS "/usr/include/vulkan/vulkan.h")
 	set(VulkanHeadersDir "/usr/include" CACHE PATH "Vulkan headers" FORCE)
 endif()
 if(NOT VulkanHeadersDir)
-	message(FATAL_ERROR "rd-vulkan-vision needs the Vulkan headers (vulkan/vulkan.h), set VulkanHeadersDir")
+	message(WARNING "rd-vulkan-vision is not built: it needs the Vulkan headers (vulkan/vulkan.h), set VulkanHeadersDir. -DBuildMPRdVulkanVision=OFF silences this.")
+	return()
 endif()
 if(CMAKE_CROSSCOMPILING)
 	# The headers are the same for every platform, so the ones of the host do. But their directory may be the
@@ -43,7 +46,8 @@ else()
 endif()
 find_program(GLSLC glslc)
 if(NOT GLSLC)
-	message(FATAL_ERROR "rd-vulkan-vision needs glslc (package shaderc) to compile its shaders")
+	message(WARNING "rd-vulkan-vision is not built: it needs glslc (package shaderc) to compile its shaders. -DBuildMPRdVulkanVision=OFF silences this.")
+	return()
 endif()
 
 set(MPVulkanVisionIncludeDirectories
