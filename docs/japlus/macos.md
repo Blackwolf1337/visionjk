@@ -7,6 +7,10 @@ M5 Max, macOS 26 (Tahoe), Xcode clang, SDL from Homebrew (sdl2-compat on top of 
 server with `rd-vanilla`. Everything before that date was written without a Mac, see below. The voice chat and
 the Vulkan renderer compile on the Mac, but were not tried there yet.
 
+After that a tester reported that the game only runs with `rd-vanilla` on his Mac. How `rd-vulkan-vision` failed
+was not reported. The section "The Vulkan renderer on MoltenVK" says what was changed for it on the same day,
+on Linux and without a Mac: none of that was built or run on macOS.
+
 ## What was already there
 
 OpenJK builds on macOS upstream, and this tree is OpenJK 260c59c2 with additions: the app bundle
@@ -25,7 +29,7 @@ window. None of that was touched.
 | Voice chat, sound (`cg_voice_audio.c`) | miniaudio has a Core Audio back end | `MA_NO_RUNTIME_LINKING` for Apple, the cgame links CoreFoundation, CoreAudio and AudioToolbox, and the Info.plist of the app says what the microphone is for (`NSMicrophoneUsageDescription`), without which macOS ends a program that opens it |
 | Opus (`lib/opus`) | plain C | nothing needed |
 | `rd-vulkan-vision` | macOS has no Vulkan. MoltenVK runs it on top of Metal | see below |
-| Engine: window for Vulkan (`sdl_window.cpp`) | SDL makes it, but finds the Vulkan library only in the places the system searches | `WIN_VK_LoadLibraryMac`: also next to the program, in `Contents/Frameworks` of the bundle, in `/opt/homebrew/lib` and `/usr/local/lib` |
+| Engine: window for Vulkan (`sdl_window.cpp`) | SDL makes it, but finds the Vulkan library only in the places the system searches | `WIN_VK_LoadLibraryMac`: first in `Contents/Frameworks` of the bundle and next to the program, then what SDL finds, then `/opt/homebrew/lib` and `/usr/local/lib`. The console says which one was loaded (`Vulkan library: ...`) |
 | Build files | the renderer is installed into the bundle like `rd-vanilla` | see the next section for what the first build on a Mac found |
 
 ### The Vulkan renderer on MoltenVK
@@ -48,8 +52,20 @@ window. None of that was touched.
 - It needs Vulkan 1.3 with dynamic rendering and descriptor indexing, as on every platform. That means a
   MoltenVK that reports Vulkan 1.3 (its 1.3 releases and newer) and a macOS and a Mac that MoltenVK can use
   Metal argument buffers on. An older one ends in the error that names `rd-vanilla`.
-- The texture table is 4096 textures with a sampler each in one descriptor array. Whether Metal takes that
-  through MoltenVK is the largest open question. The renderer prints a line if the device says it takes fewer.
+- The texture table was 4096 textures with a sampler each in one descriptor array. A graphics card takes a
+  million of those, MoltenVK passes on what Metal says, which is about a thousand samplers a set. So the table
+  is two arrays now, on every platform: 4096 images, and next to them the samplers they are read with, at most
+  32 (the renderer never had more that differ). A draw names the texture and, above bit 16, its sampler
+  (`vk_image.cpp`, `generic.frag`). The console prints what the device takes:
+  `Vulkan: the device takes N textures and M samplers in one table, the renderer has 4096 and 32`. Checked on
+  Linux: the same pictures as before (a floor at a flat angle with trilinear and 16 times anisotropic
+  filtering, old build against new build: 0.002 % of the pixels off by more than 16), the pair tests against
+  `rd-vanilla` on mp/ffa3 and in the test room as before, no message of the validation layer.
+- The app brings MoltenVK along: the build copies `libMoltenVK.dylib` (of Homebrew, or of the Vulkan SDK through
+  `VULKAN_SDK`) into `Contents/Frameworks` and signs it with the rest, and the window code looks there first. A
+  Vulkan loader that is installed somewhere on the Mac is only used if the app has none, or if
+  `SDL_VULKAN_LIBRARY` names it: a loader may be installed without any driver, and then it finds no graphics
+  device.
 
 ## What the first build on a Mac found, and what was changed
 
@@ -75,9 +91,9 @@ interface of SDL, not its game controller mapping); that was not tried, there wa
 
 ```
 xcode-select --install
-brew install cmake ninja sdl2-compat
+brew install cmake ninja sdl2-compat vulkan-headers shaderc molten-vk
 cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release \
-      -DBuildSPEngine=OFF -DBuildSPGame=OFF -DBuildSPRdVanilla=OFF -DBuildMPRend2=OFF
+      -DBuildSPEngine=OFF -DBuildSPGame=OFF -DBuildSPRdVanilla=OFF -DBuildMPRend2=OFF -DBuildMPRdVulkanVision=ON
 cmake --build build
 ```
 
@@ -85,9 +101,11 @@ The result is `build/openjk.arm64.app`, ready to start: renderer, modules and SD
 game data (`assets0.pk3` to `assets3.pk3`) goes into `~/Library/Application Support/OpenJK/base`.
 
 - `-DBuildJPVoice=OFF` leaves the voice chat and its two libraries out.
-- `-DBuildMPRdVulkanVision=ON` builds the Vulkan renderer as well. It needs `brew install vulkan-headers shaderc`
-  (and `-DVulkanHeadersDir=/opt/homebrew/include`) and MoltenVK at run time, see below. It compiles on the
-  Mac, it was not started there.
+- `-DBuildMPRdVulkanVision=ON` builds the Vulkan renderer as well. A new build folder does that by itself on
+  macOS when the Vulkan headers and `glslc` are installed, a build folder that was configured before keeps
+  what it had, so name it. The build needs `vulkan-headers` and `shaderc`, and `molten-vk` for the library
+  that goes into the app. cmake warns if it finds no `libMoltenVK.dylib` (`-DMacBundleMoltenVK=<file>` names
+  one). Without the three packages leave the option out, the app then has `rd-vanilla` only.
 - `-DBuildMPRend2=OFF`: rend2 was not tried.
 
 The SDL of Homebrew is built for the macOS it was installed on (macOS 26 here). The app carries that SDL, so it
@@ -108,9 +126,31 @@ every line. A crash writes `crashlog-<date>.txt` one folder above.
   have): the engine says so and falls back to `rd-vanilla`, nothing to do.
 - After every build the ad hoc signature is new, and macOS may ask for the microphone again.
 
-The Vulkan renderer: `cl_renderer rd-vulkan-vision; vid_restart`. If the window can not be made, the console
-says `No Vulkan library (MoltenVK) found`. Then copy `libMoltenVK.dylib` into `Contents/Frameworks` of the app
-(and sign it again), or start with `SDL_VULKAN_LIBRARY=/path/to/libMoltenVK.dylib`.
+The Vulkan renderer is not the one the game starts with, `rd-vanilla` is. To start with it:
+
+```
+open build/openjk.arm64.app --args +set cl_renderer rd-vulkan-vision +set logfile 2
+```
+
+or in the console `cl_renderer rd-vulkan-vision; vid_restart`. The setting is stored. If the game does not
+start with it any more, `--args +set cl_renderer rd-vanilla` goes back.
+
+If it does not start, these lines of the console (or of `qconsole.log`) say how far it came:
+
+| Line | Meaning |
+|------|---------|
+| `rd-vulkan-vision` is not loaded, the engine names `rd-vanilla` | the renderer is not in the app: it was built without `-DBuildMPRdVulkanVision=ON` |
+| `No Vulkan library (MoltenVK) found` | no `libMoltenVK.dylib` in `Contents/Frameworks` of the app and none installed. `brew install molten-vk` and build again, or start with `SDL_VULKAN_LIBRARY=/path/to/libMoltenVK.dylib` |
+| `Vulkan library: ...` | which library was loaded |
+| `rd-vulkan-vision needs Vulkan 1.3, this system has ...` | the MoltenVK is too old |
+| `found no graphics device with Vulkan 1.3 and descriptor indexing` | the library knows no device that can do it. With a loader: it has no driver (MoltenVK) registered |
+| `Vulkan on top of another graphics interface` | the device is MoltenVK, as expected |
+| `Vulkan: the device takes N textures and M samplers in one table` | what Metal offers. The renderer needs 4096 and 32 |
+| `Vulkan: ... failed with ...` | a call of Vulkan failed, the line names it |
+
+`r_vkDebug 1` needs the validation layer and with it the loader of the Vulkan SDK:
+`SDL_VULKAN_LIBRARY=<sdk>/lib/libvulkan.1.dylib`. The window of the Vulkan renderer is not high resolution on a
+Retina display yet (`r_highDpi` is for the OpenGL window).
 
 The voice chat asks for the microphone the first time the talk key is pressed (the question comes from macOS,
 with the sentence from the Info.plist). If it was refused, the console says where to switch it on. Whether the
@@ -124,8 +164,9 @@ Jedi Academy app of the Mac App Store or of Steam loads this cgame at all was no
    desktop window (upstream), the mouse is let go when the game loses the focus.
 3. `r_highDpi` on the built in Retina display. The first run was on an external display at 1x, where drawable and
    window have the same size and nothing changes.
-4. The Vulkan renderer with MoltenVK, see the list of the first version of this file: `r_vkDebug 1`, `gfxinfo`,
-   the lines `Vulkan on top of another graphics interface` and `the device says it takes N textures in one table`.
+4. The Vulkan renderer with MoltenVK: a first start with what was changed after the report (MoltenVK in the app,
+   the split texture table), and if it fails the lines of the table in "Running". Then `gfxinfo`, a level, the
+   menus, a fight. High resolution for its window.
 
 ## Not done
 

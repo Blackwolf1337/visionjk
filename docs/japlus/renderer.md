@@ -40,7 +40,7 @@ JA+ draw is drawn. What is open is what was never run, and a few cvars.
 | Fullscreen, also at a size that is not the one of the desktop | done |
 | `r_displayRefresh` in fullscreen | asked for as for an OpenGL window. No effect could be shown here, this desktop offers one refresh rate |
 | A minimized window | written, not tried: the desktop of this machine (Hyprland) has no such state |
-| macOS | written for MoltenVK (portability extensions, where the library is looked for), never built or run, see [macos.md](macos.md) |
+| macOS | written for MoltenVK (portability extensions, the library in the app, a texture table within what Metal takes). It compiles on a Mac, it was not seen running there, see [macos.md](macos.md) |
 | Other graphics cards and drivers, a long session, play by a person over a longer time | not tried |
 | `r_dlightStyle 0`, `r_colorbits`, `r_depthbits`, `r_stencilbits`, `r_texturebits 16`, the developer cvars | not there and left out on purpose, see "Checked" |
 
@@ -160,7 +160,7 @@ library. The other renderers do not use them.
 | Dynamic lights | per triangle on the CPU, one pass per light | per pixel in `generic.frag`, one pass per light |
 | Global fog | fixed function fog | per pixel in `generic.frag` |
 | Fog volumes | fog pass with coordinates per vertex on the CPU, color fade per vertex on the CPU | the same pass, coordinates and fade in `stage.glsl` from two vectors per draw |
-| Textures | bound per stage | one table of all textures, indexed in the shader |
+| Textures | bound per stage | one table of all textures, indexed in the shader, and next to it the few samplers they are read with |
 | State of a stage | set per stage | only the blend function needs a pipeline, depth, cull and offset are dynamic state |
 | A draw | arrays set up and `glDrawElements` per stage | one indexed draw per stage. Which draw it is comes as its instance number, the vertex streams of the frame are bound once and a batch names its first vertex, model triangles are runs in an index buffer on the device |
 | Effects (sparks, glows, lines: one entity for each) | a batch and a draw for every entity, unless the shader says `entityMergable` | one batch for all entities in a row that have the same shader, where the shader takes nothing from its entity but the vertices |
@@ -243,7 +243,8 @@ left in these views are the effects of the game (flames, smoke, light cones) and
 The Windows DLL builds with mingw-w64 for 32 and 64 bit and imports nothing but the C runtime, kernel32 and
 libwinpthread. Both were built on 2026-10-07 from the last state of the renderer, the 64 bit one without a
 warning in the files of the renderer. It was never loaded into a game. macOS: the renderer asks for what a
-Vulkan on top of Metal needs (MoltenVK), but it was never built or run there, see [macos.md](macos.md).
+Vulkan on top of Metal needs (MoltenVK). It compiles on a Mac and was not seen running there, see
+[macos.md](macos.md).
 
 Not moved to the device, with the numbers of the fight demo. Sprites, lines and saber glow: building them is
 6 % of the instructions of a frame for about 1360 entities. A vertex shader could make the four corners of a
