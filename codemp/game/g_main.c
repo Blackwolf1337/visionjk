@@ -214,6 +214,7 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 	JP_HighlanderMapStart();
 
 	WebAdmin_Init();
+	G_VoiceInit( restart ? qtrue : qfalse );
 
 	G_InitMemory();
 
@@ -473,6 +474,7 @@ void G_ShutdownGame( int restart ) {
 //	trap->Print ("==== ShutdownGame ====\n");
 
 	WebAdmin_Shutdown();
+	G_VoiceShutdown( restart ? qtrue : qfalse );
 
 	G_CleanAllFakeClients(); //get rid of dynamically allocated fake client structs.
 
@@ -2984,6 +2986,7 @@ void G_RunFrame( int levelTime ) {
 #endif
 
 	WebAdmin_Frame();
+	G_VoiceFrame();
 	G_SchizoFrame();
 	G_FlatulenceFrame();
 	G_DisorientFrame();

@@ -100,6 +100,7 @@ set(MPGameGameFiles
 	"${MPDir}/game/g_turret.c"
 	"${MPDir}/game/g_turret_G2.c"
 	"${MPDir}/game/g_utils.c"
+	"${MPDir}/game/g_voice.c"
 	"${MPDir}/game/g_vehicles.c"
 	"${MPDir}/game/g_vehicleTurret.c"
 	"${MPDir}/game/g_weapon.c"

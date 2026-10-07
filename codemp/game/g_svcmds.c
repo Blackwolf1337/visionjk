@@ -641,6 +641,7 @@ svcmd_t svcmds[] = {
 	{ "schizo",						Svcmd_Schizo_f,						qfalse },
 	{ "toggleallowvote",			Svcmd_ToggleAllowVote_f,			qfalse },
 	{ "toggleuserinfovalidation",	Svcmd_ToggleUserinfoValidation_f,	qfalse },
+	{ "voicestatus",				Svcmd_VoiceStatus_f,				qfalse },
 };
 static const size_t numsvcmds = ARRAY_LEN( svcmds );
 

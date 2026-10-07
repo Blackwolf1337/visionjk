@@ -2502,6 +2502,9 @@ char *ClientConnect( int clientNum, qboolean firstTime, qboolean isBot ) {
 
 	ent->s.number = clientNum;
 	ent->classname = "connecting";
+	// a new client has this number: what the one before him was given for the voice chat is void
+	if ( firstTime )
+		G_VoiceClientGone( clientNum );
 
 	trap->GetUserinfo( clientNum, userinfo, sizeof( userinfo ) );
 
@@ -4099,6 +4102,7 @@ void ClientDisconnect( int clientNum ) {
 	// cleanup if we are kicking a bot that
 	// hasn't spawned yet
 	G_RemoveQueuedBotBegin( clientNum );
+	G_VoiceClientGone( clientNum );
 
 	ent = g_entities + clientNum;
 	if ( !ent->client || ent->client->pers.connected == CON_DISCONNECTED ) {

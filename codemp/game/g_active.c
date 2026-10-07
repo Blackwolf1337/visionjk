@@ -3611,6 +3611,9 @@ A new command has arrived from the client
 void ClientThink( int clientNum, usercmd_t *ucmd ) {
 	gentity_t *ent;
 
+	// the voice relay is looked at with every move that comes in, not only once a server frame
+	G_VoiceFrame();
+
 	ent = g_entities + clientNum;
 	if (clientNum < MAX_CLIENTS)
 	{

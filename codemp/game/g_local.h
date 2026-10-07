@@ -1276,6 +1276,14 @@ float WebAdmin_ClientGravity( const gentity_t *ent, float gravity );
 int G_TryConfigstringIndex( const char *name, int start, int max );
 qboolean G_CleanIP( const char *in, char *out, int outSize );
 
+// g_voice.c: the relay of the voice chat
+void G_VoiceInit( qboolean restart );
+void G_VoiceShutdown( qboolean restart );
+void G_VoiceFrame( void );
+void G_VoiceClientGone( int clientNum );
+void Cmd_JPVoice_f( gentity_t *ent );
+void Svcmd_VoiceStatus_f( void );
+
 // g_props.c: the entities misc_ball and misc_cube
 void G_PropFrame( void );
 gentity_t *G_PropMate( int clientNum );
