@@ -55,10 +55,15 @@ Use headphones. There is no echo cancellation: with speakers the others hear the
 
 | Cvar | Default | Meaning |
 |------|---------|---------|
-| `g_voice` | 0 | 1: the voice chat is on (latched: from the next level on). It is in the server info |
+| `g_voice` | 1 | 0: no voice chat, no port is opened (latched: from the next level on). It is in the server info |
 | `g_voicePort` | 0 | the UDP port of the relay, 0: the game port plus 1 (latched) |
 | `g_voiceRange` | 1024 | how far a voice carries, in units. 0: all over the level, without direction and without muffling |
 | `g_voiceTeamOnly` | 0 | 1: in team games only the own team hears a player |
+
+The voice chat is on unless a server switches it off (since 2026-10-07, before that `g_voice` was 0). So every
+server of this module opens the voice port, also a game a player starts from the menu. If the port can not be
+opened the server says so in one line and runs without voice. A server that has `g_voice 0` stored in its config
+keeps that.
 
 The voice port has to be reachable from outside like the game port: UDP, forwarded and open in the firewall.
 `voicestatus` on the server console lists who has voice, how many datagrams of each were handed on, and how many
