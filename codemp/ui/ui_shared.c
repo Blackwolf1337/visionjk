@@ -8566,7 +8566,8 @@ Hacks to fix issues with Team Arena menu scripts
 static void Item_ApplyHacks( itemDef_t *item ) {
 	// EAX: no engine this module runs in has it. The menus of this tree do not have the entry, the ones of the
 	// base game do (ui/jamp/setup.menu and ingame_setup.menu in assets1.pk3): the switch and its picture are hidden.
-	if ( ( item->type == ITEM_TYPE_MULTI && item->cvar && !Q_stricmp( item->cvar, "s_UseOpenAL" ) )
+	// So is their sound quality entry: it offers 11 and 22 kHz, the engine runs at 44 and s_spatial needs that.
+	if ( ( item->type == ITEM_TYPE_MULTI && item->cvar && ( !Q_stricmp( item->cvar, "s_UseOpenAL" ) || !Q_stricmp( item->cvar, "s_khz" ) ) )
 		|| ( item->window.name && !Q_stricmp( item->window.name, "eax_icon" ) ) ) {
 		item->disabled = item->disabledHidden = qtrue;
 		// Just in case it had focus

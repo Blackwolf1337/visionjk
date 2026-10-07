@@ -626,6 +626,7 @@
 
 				setitemcolor	setup_submenu		forecolor	1 .682 0 1 ;
 				setitemcolor	soundmenubutton		forecolor	1 1 1 1 ;
+				uiScript		getsoundsetup ;
 			}
 		}
 
@@ -2118,16 +2119,12 @@
 
 		itemDef 
 		{	
-			name				sound_quality
+			name				spatial_quality
 			group				sound
       			type				ITEM_TYPE_MULTI
-			text				@MENUS_SOUND_QUALITY
-			cvar				"s_khz"
-			cvarFloatList		
-			{ 
-				@MENUS_LOW 	11  
-				@MENUS_HIGH 	22 
-			}
+			text				"3D Sound:"
+			cvar				"ui_s_spatialQuality"
+			cvarFloatList		{  @MENUS_OFF 0 @MENUS_LOW 1 @MENUS_MEDIUM 2 @MENUS_HIGH 3 @MENUS_VERY_HIGH 4 @MENUS_CUSTOM 5 }
 			rect				260 272 340 14
 	   		textalign			ITEM_ALIGN_RIGHT
 			textalignx			174
@@ -2136,7 +2133,7 @@
 			textscale 			1
 			forecolor			0.65 0.65 1 1
 			visible				0
-			descText			@MENUS_TRADE_CLARITY_OF_SOUND
+			descText			"Steam Audio: sound that knows the level. Needs its library next to the game"
 
 			mouseenter 
 			{ 
@@ -2149,8 +2146,71 @@
 			action 
 			{
 				play			"sound/interface/button1.wav"
-				uiScript		update s_khz
+				uiScript		update ui_s_spatialQuality
 			}
+		}
+
+		itemDef 
+		{	
+			name				spatial_output
+			group				sound
+      			type				ITEM_TYPE_MULTI
+			text				"Output:"
+			cvar				"s_spatialHrtf"
+			cvarFloatList		{  "Headphones" 1 "Speakers" 0 }
+			rect				260 300 340 14
+	   		textalign			ITEM_ALIGN_RIGHT
+			textalignx			174
+			textaligny			0
+			font 				4
+			textscale 			1
+			forecolor			0.65 0.65 1 1
+			visible				0
+			descText			"3D Sound: direction for two ears, or plain panning for speakers"
+
+			mouseenter 
+			{ 
+				show			highlight9
+			}
+			mouseexit 
+			{ 
+				hide			highlight9
+			} 
+			action 
+			{
+				play			"sound/interface/button1.wav"
+			}
+		}
+
+		itemDef 
+		{
+			name				spatial_reverb
+			group				sound
+			type				ITEM_TYPE_SLIDER
+			text				"Reverb:"
+			cvarfloat			"s_spatialReverb" 1 0 2
+			rect				260 328 340 14
+	   		textalign			ITEM_ALIGN_RIGHT
+			textalignx			174
+			textaligny			0
+			font 				4
+			textscale 			1
+			forecolor			0.65 0.65 1 1
+			visible				0
+			descText			"3D Sound: how loud the rooms ring"
+			action 
+			{ 
+				play			"sound/interface/button1.wav" ;
+			}
+
+			mouseenter 
+			{ 
+				show			highlight11
+			}
+			mouseexit 
+			{ 
+				hide			highlight11
+			} 
 		}
 
 		//----------------------------------------------------------------------------------------------

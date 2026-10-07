@@ -4691,12 +4691,77 @@ static void UI_StartSkirmish(qboolean next) {
 	}
 }
 
+/*
+The presets of the "3D Sound" entry of the sound page: s_spatial of the engine (Steam Audio) and how much it
+works out. The engine reads the cvars of a row while it runs, only s_spatial itself needs the sound started
+again. Rays and bounces are the ones of a pass of the reflections, the engine clamps them to 256..8192 and 1..64.
+*/
+typedef struct spatialPreset_s {
+	int		spatial, reflections, rays, bounces, paths;
+} spatialPreset_t;
+
+static const spatialPreset_t uiSpatialPresets[] = {
+	{ 0, 0, 0, 0, 0 },			// off
+	{ 1, 0, 0, 0, 0 },			// low: direction and muffling behind walls, no rays at all
+	{ 1, 1, 1024, 8, 0 },		// medium: the room around the listener rings
+	{ 1, 1, 2048, 16, 1 },		// high: and a sound comes round corners. The defaults of the engine
+	{ 1, 1, 8192, 32, 1 },		// very high
+};
+
+/*
+=================
+UI_GetSoundSetup
+
+Which preset of the "3D Sound" entry the cvars of the engine are. One more than the last preset: none of them
+(the entry shows "Custom")
+=================
+*/
+static void UI_GetSoundSetup( void ) {
+	const int	spatial = (int)trap->Cvar_VariableValue( "s_spatial" );
+	const int	reflections = (int)trap->Cvar_VariableValue( "s_spatialReflections" );
+	const int	rays = (int)trap->Cvar_VariableValue( "s_spatialRays" );
+	const int	bounces = (int)trap->Cvar_VariableValue( "s_spatialBounces" );
+	const int	paths = (int)trap->Cvar_VariableValue( "s_spatialPaths" );
+	size_t		i;
+
+	for ( i = 0; i < ARRAY_LEN( uiSpatialPresets ); i++ ) {
+		const spatialPreset_t *preset = &uiSpatialPresets[i];
+
+		if ( !preset->spatial ) {
+			if ( !spatial ) {
+				break;
+			}
+		} else if ( spatial && !reflections == !preset->reflections && !paths == !preset->paths
+			&& ( !preset->reflections || ( rays == preset->rays && bounces == preset->bounces ) ) ) {
+			break;
+		}
+	}
+	trap->Cvar_Register( NULL, "ui_s_spatialQuality", "0", CVAR_ROM|CVAR_INTERNAL );
+	trap->Cvar_Set( "ui_s_spatialQuality", va( "%i", (int)i ) );
+}
+
 static void UI_Update(const char *name) {
 	int	val = trap->Cvar_VariableValue(name);
 
-	if (Q_stricmp(name, "s_khz") == 0)
-	{
-		trap->Cmd_ExecuteText( EXEC_APPEND, "snd_restart\n" );
+	if ( !Q_stricmp( name, "ui_s_spatialQuality" ) ) {
+		if ( val >= 0 && val < (int)ARRAY_LEN( uiSpatialPresets ) ) {
+			const spatialPreset_t	*preset = &uiSpatialPresets[val];
+			const qboolean			restart = (qboolean)( !trap->Cvar_VariableValue( "s_spatial" ) != !preset->spatial );
+
+			trap->Cvar_Set( "s_spatial", preset->spatial ? "1" : "0" );
+			if ( preset->spatial ) {
+				trap->Cvar_Set( "s_spatialReflections", preset->reflections ? "1" : "0" );
+				trap->Cvar_Set( "s_spatialPaths", preset->paths ? "1" : "0" );
+				if ( preset->reflections ) {
+					trap->Cvar_Set( "s_spatialRays", va( "%i", preset->rays ) );
+					trap->Cvar_Set( "s_spatialBounces", va( "%i", preset->bounces ) );
+				}
+			}
+			if ( restart ) {
+				// s_spatial is latched
+				trap->Cmd_ExecuteText( EXEC_APPEND, "snd_restart\n" );
+			}
+		}
 		return;
 	}
 
@@ -6216,6 +6281,10 @@ static void UI_RunMenuScript(char **args)
 		else if (Q_stricmp(name, "getvideosetup") == 0)
 		{
 			UI_GetVideoSetup ( );
+		}
+		else if (Q_stricmp(name, "getsoundsetup") == 0)
+		{
+			UI_GetSoundSetup ( );
 		}
 		else if (Q_stricmp(name, "getsaberhiltinfo") == 0)
 		{
