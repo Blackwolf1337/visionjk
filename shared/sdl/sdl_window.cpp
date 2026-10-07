@@ -336,51 +336,84 @@ WIN_VK_LoadLibraryMac
 
 macOS has no Vulkan library of its own. A program brings one along (MoltenVK) or the player installed one. SDL
 looks for it by name only, in the places the system searches, and neither the app bundle nor the Homebrew of
-an Apple Silicon Mac (/opt/homebrew/lib) is among them. So, in this order: what SDL finds by itself (that also
-covers SDL_VULKAN_LIBRARY), then next to the program and in Contents/Frameworks of the bundle, then the two
-places of Homebrew. The loader of the Vulkan SDK before MoltenVK itself, so layers work where there is one.
+an Apple Silicon Mac (/opt/homebrew/lib) is among them. So, in this order:
+
+- what SDL_VULKAN_LIBRARY names, if it is set: the player said which one
+- what the app brings, in Contents/Frameworks of the bundle or next to the program. The build puts MoltenVK
+  there (cmake/MacBundle.cmake), and that one always works: a loader that is installed somewhere on the Mac
+  may know no driver at all
+- what SDL finds by itself
+- the two places of Homebrew, the loader of the Vulkan SDK before MoltenVK, so layers work where there is one
+
+The validation layer (r_vkDebug) needs the loader: start with SDL_VULKAN_LIBRARY=<path>/libvulkan.1.dylib.
 
 Without a library the window can not be made, and the engine says so as for any window that fails.
 ===============
 */
+static qboolean WIN_VK_TryLibrary( const char *path )
+{
+	if ( SDL_Vulkan_LoadLibrary( path ) != 0 )
+		return qfalse;
+	Com_Printf( "Vulkan library: %s\n", path ? path : "the one SDL found" );
+	return qtrue;
+}
+
 static void WIN_VK_LoadLibraryMac( void )
 {
-	static const char *names[] = { "libvulkan.1.dylib", "libMoltenVK.dylib" };
-	static const char *places[] = { "%s%s", "%s../Frameworks/%s" };
-	static const char *dirs[] = { "/opt/homebrew/lib/", "/usr/local/lib/" };
+	static const char *names[] = { "libMoltenVK.dylib", "libvulkan.1.dylib" };
+	static const char *installed[] = { "/opt/homebrew/lib/libvulkan.1.dylib", "/usr/local/lib/libvulkan.1.dylib",
+		"/opt/homebrew/lib/libMoltenVK.dylib", "/usr/local/lib/libMoltenVK.dylib" };
+	const char *named = SDL_getenv( "SDL_VULKAN_LIBRARY" );
+	char dirs[2][MAX_OSPATH] = { "", "" };
 	char path[MAX_OSPATH];
-	char *base;
+	char *base, *slash;
 	size_t n, k;
 
-	if ( SDL_Vulkan_LoadLibrary( NULL ) == 0 )
+	if ( named && named[0] && WIN_VK_TryLibrary( NULL ) )
 		return;
 
-	// where the program is. In a bundle that is Contents/Resources/
+	// Where the program is: in a bundle SDL names Contents/Resources/, and the libraries are in
+	// Contents/Frameworks/ beside it. That name is put together here and not walked to through "..", which
+	// only works if the bundle has a Resources folder.
 	base = SDL_GetBasePath();
-	for ( n = 0; n < ARRAY_LEN( names ); n++ )
+	if ( base )
 	{
-		for ( k = 0; base && k < ARRAY_LEN( places ); k++ )
+		Q_strncpyz( dirs[1], base, sizeof( dirs[1] ) );
+		Q_strncpyz( dirs[0], base, sizeof( dirs[0] ) );
+		SDL_free( base );
+		n = strlen( dirs[0] );
+		if ( n && dirs[0][n - 1] == '/' )
+			dirs[0][n - 1] = '\0';
+		slash = strrchr( dirs[0], '/' );
+		if ( slash )
 		{
-			Com_sprintf( path, sizeof( path ), places[k], base, names[n] );
-			if ( SDL_Vulkan_LoadLibrary( path ) == 0 )
-			{
-				SDL_free( base );
-				return;
-			}
+			slash[1] = '\0';
+			Q_strcat( dirs[0], sizeof( dirs[0] ), "Frameworks/" );
 		}
-		for ( k = 0; k < ARRAY_LEN( dirs ); k++ )
+		else
 		{
-			Com_sprintf( path, sizeof( path ), "%s%s", dirs[k], names[n] );
-			if ( SDL_Vulkan_LoadLibrary( path ) == 0 )
-			{
-				if ( base )
-					SDL_free( base );
-				return;
-			}
+			dirs[0][0] = '\0';
 		}
 	}
-	if ( base )
-		SDL_free( base );
+	for ( n = 0; n < ARRAY_LEN( names ); n++ )
+	{
+		for ( k = 0; k < ARRAY_LEN( dirs ); k++ )
+		{
+			if ( !dirs[k][0] )
+				continue;
+			Com_sprintf( path, sizeof( path ), "%s%s", dirs[k], names[n] );
+			if ( WIN_VK_TryLibrary( path ) )
+				return;
+		}
+	}
+
+	if ( WIN_VK_TryLibrary( NULL ) )
+		return;
+	for ( n = 0; n < ARRAY_LEN( installed ); n++ )
+	{
+		if ( WIN_VK_TryLibrary( installed[n] ) )
+			return;
+	}
 	Com_Printf( "No Vulkan library (MoltenVK) found: %s\n", SDL_GetError() );
 }
 #endif
