@@ -907,6 +907,10 @@ static const void *RB_SwapBuffers( const void *data ) {
 		VK_ShowImages();
 	}
 	VK_EndFrame();
+	// What the engine does with its window once a frame, as rd-vanilla has it at this place: a change of
+	// r_fullscreen is carried out, and fullscreen is refused with in_nograb 1. The picture is not its business
+	// here, the swapchain showed it.
+	ri.WIN_Present( &window );
 	// recording to a file: now the frame has a picture
 	VK_WriteVideoFrame();
 	backEnd.projection2D = qfalse;
