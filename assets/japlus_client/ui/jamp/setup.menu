@@ -2754,13 +2754,8 @@
       			type				ITEM_TYPE_MULTI
 			text				@MENUS_ALLOW_DOWNLOADS
 			descText			@MENUS_ALLOW_DOWNLOADS_INFO
-			cvar				"ui_allowDownload"
-			cvarFloatList		
-			{
-				"URL Redirect(Quick)" 		0				
-				"Normal (Slow)" 		1
-				@MENUS_OFF	 	2
-			}
+			cvar				"cl_allowDownload"
+			cvarFloatList		{  @MENUS_OFF 0 @MENUS_ON 1 }
 			rect				260 300 340 14
 	   		textalign			ITEM_ALIGN_RIGHT
 			textalignx			174
@@ -2772,7 +2767,6 @@
 			action
 			{
 				play			"sound/interface/button1.wav" ; 
-				uiscript 		ui_configAllowDownload;	
 			}
 			mouseenter 
 			{ 
@@ -2926,46 +2920,7 @@
 
 		}
 		
-		//MODIFICATION Purge not downloaded files list
 		// APPLY CHANGES button
-		itemDef 
-		{
-			name				purgeNotDOwnloadedFilesUrlRedirect
-			group				options
-			text				"URL Redirect: Purge Not Downloaded Files Cache"
-			type				ITEM_TYPE_BUTTON
-			style				WINDOW_STYLE_EMPTY
-			rect				260 370 340 14 
-			textaligny			0
-			font 				4
-			textscale 			1       
-			textalign			ITEM_ALIGN_CENTER
-			textalignx			160
-			descText			"It will force your game to retry to download the files you couldn't have the first time connecting a specific server."
-			forecolor			1 .682 0 1
-			visible			0
-			cvarTest			"ui_allowDownload"
-			showCvar
-			{
-				"0"
-			}
-
-			action 
-			{
-				play			"sound/interface/button1"
-				uiscript 		purgeNotDOwnloadedFilesUrlRedirect;
-				
-			}
-			mouseEnter 
-			{ 
-				show			highlight14
-			}
-			mouseExit 
-			{ 
-				hide			highlight14
-			}	  	  
-
-		}
 
 //----------------------------------------------------------------------------------------------
 //
