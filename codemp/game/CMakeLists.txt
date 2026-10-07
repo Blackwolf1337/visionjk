@@ -262,24 +262,15 @@ if(MakeApplicationBundles AND BuildMPEngine)
 		DESTINATION "${JKAInstallDir}/${MPEngine}.app/Contents/MacOS/base"
 		COMPONENT ${JKAMPCoreComponent})
 elseif(WIN32)
+	# into the mod directory, next to the asset archives and the configs
 	install(TARGETS ${MPGame}
 		RUNTIME
-		DESTINATION "${JKAInstallDir}/OpenJK"
-		COMPONENT ${JKAMPCoreComponent})
-
-	# Use OpenJK modules as default
-	install(TARGETS ${MPGame}
-		RUNTIME
-		DESTINATION "${JKAInstallDir}/base"
+		DESTINATION "${JPModInstallDir}"
 		COMPONENT ${JKAMPCoreComponent})
 else()
 	install(TARGETS ${MPGame}
 		LIBRARY
-		DESTINATION "${JKAInstallDir}/OpenJK"
-		COMPONENT ${JKAMPCoreComponent})
-	install(TARGETS ${MPGame}
-		LIBRARY
-		DESTINATION "${JKAInstallDir}/base"
+		DESTINATION "${JPModInstallDir}"
 		COMPONENT ${JKAMPCoreComponent})
 endif()
 

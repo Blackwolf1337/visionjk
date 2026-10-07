@@ -94,6 +94,32 @@ The client can use Steam Audio for its sound (`s_spatial`, [audio.md](audio.md))
 is a submodule, `lib/steamaudio`: `git submodule update --init` once after a clone. Without it the client is
 built without the feature.
 
+### A folder to release
+
+The build directory is not meant to be looked into. One command collects what a build made:
+
+```
+cmake --install build64 --prefix release
+```
+
+`release/JediAcademy` is then a complete game folder, and its content goes into `GameData` as it is:
+
+```
+JediAcademy/
+  openjk.x86_64  openjkded.x86_64  rd-vanilla_x86_64.so  rd-vulkan-vision_x86_64.so
+  japlus/
+    jampgamex86_64.so  cgamex86_64.so  uix86_64.so
+    zz_japlus_client_assets.pk3
+    server.cfg and the other configs of assets/configs
+```
+
+The renderers have to lie next to the engine and the modules in the mod directory, so these are the two places
+there are. The same command on the Windows build directory gives the `.exe`, `SDL2.dll` and the `.dll` files in
+the same layout. A config that is already in the folder is kept, so an edited `server.cfg` survives the next
+install. Not in the folder, because the build does not make them: `libphonon.so` of Steam Audio for `s_spatial`
+([audio.md](audio.md)), `japlus_gla_anims.pk3` of the original JA+ package, and on Windows `libwinpthread-1.dll`
+of mingw. On macOS the modules are installed into the app as before.
+
 Every build also packs the assets of the port, `assets/japlus_client` (the files of the JA+ client plugin
 1.4B4 with the menus of the port, and the JA+ sabers and effects), into
 `<build>/assets/zz_japlus_client_assets.pk3`, and `cmake --install` puts

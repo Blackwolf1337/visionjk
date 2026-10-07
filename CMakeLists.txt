@@ -188,6 +188,11 @@ set(GSLIncludeDirectory "${OpenJKLibDir}/gsl-lite/include")
 
 include(InstallConfig)
 
+# The mod directory of the JA+ port. The three modules, the asset archives and the configs are installed into
+# it, so "cmake --install <build> --prefix <folder>" gives one complete game folder, <folder>/JediAcademy.
+set(JPAssetsDir "japlus" CACHE STRING "The mod directory the modules and the asset archives of assets/ are installed into")
+set(JPModInstallDir "${JKAInstallDir}/${JPAssetsDir}")
+
 #=============================================================================
 #
 # Compiler definitions/flags

@@ -8,13 +8,11 @@
 # entries of the pk3, see make_pk3.py for why that matters.
 #============================================================================
 
-set(JPAssetsDir "japlus" CACHE STRING "The mod directory the asset archives of assets/ are installed into")
-
-# next to where the modules of the mod are looked for, see codemp/ui/CMakeLists.txt
+# next to the modules of the mod (JPAssetsDir and JPModInstallDir are set in the CMakeLists.txt of the tree)
 if(MakeApplicationBundles AND BuildMPEngine)
 	set(JPAssetsInstallDir "${JKAInstallDir}/${MPEngine}.app/Contents/MacOS/${JPAssetsDir}")
 else()
-	set(JPAssetsInstallDir "${JKAInstallDir}/${JPAssetsDir}")
+	set(JPAssetsInstallDir "${JPModInstallDir}")
 endif()
 
 # jp_add_configs(<directory in assets/>): its .cfg files are installed into the mod directory as they are, not
