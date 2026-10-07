@@ -8484,33 +8484,13 @@ Hacks to fix issues with Team Arena menu scripts
 ===============
 */
 static void Item_ApplyHacks( itemDef_t *item ) {
-	char eax[8];
-
-	// EAX: only an engine with OpenAL has it (jamp.exe, in which this module runs too) and registers the cvar
-	// when its sound starts, before a menu is loaded. The engine of this tree has neither.
-	DC->getCVarString( "s_UseOpenAL", eax, sizeof( eax ) );
-	if ( !eax[0] && item->type == ITEM_TYPE_MULTI && item->cvar && !Q_stricmp( item->cvar, "s_UseOpenAL" ) ) {
-		if( item->parent )
-		{
-			menuDef_t *parent = (menuDef_t *)item->parent;
-			VectorSet4( parent->disableColor, 0.5f, 0.5f, 0.5f, 1.0f );
-			item->disabled = qtrue;
-			// Just in case it had focus
-			item->window.flags &= ~WINDOW_MOUSEOVER;
-			Com_Printf( "Disabling eax field because this engine does not support EAX.\n");
-		}
-	}
-
-	if ( !eax[0] && item->type == ITEM_TYPE_TEXT && item->window.name && !Q_stricmp( item->window.name, "eax_icon") && item->cvarTest && !Q_stricmp( item->cvarTest, "s_UseOpenAL" ) && item->enableCvar && (item->cvarFlags & CVAR_HIDE) ) {
-		if( item->parent )
-		{
-			menuDef_t *parent = (menuDef_t *)item->parent;
-			VectorSet4( parent->disableColor, 0.5f, 0.5f, 0.5f, 1.0f );
-			item->disabled = item->disabledHidden = qtrue;
-			// Just in case it had focus
-			item->window.flags &= ~WINDOW_MOUSEOVER;
-			Com_Printf( "Hiding eax_icon object because this engine does not support EAX.\n");
-		}
+	// EAX: no engine this module runs in has it. The menus of this tree do not have the entry, the ones of the
+	// base game do (ui/jamp/setup.menu and ingame_setup.menu in assets1.pk3): the switch and its picture are hidden.
+	if ( ( item->type == ITEM_TYPE_MULTI && item->cvar && !Q_stricmp( item->cvar, "s_UseOpenAL" ) )
+		|| ( item->window.name && !Q_stricmp( item->window.name, "eax_icon" ) ) ) {
+		item->disabled = item->disabledHidden = qtrue;
+		// Just in case it had focus
+		item->window.flags &= ~WINDOW_MOUSEOVER;
 	}
 
 	// Fix length of favorite address in createfavorite.menu

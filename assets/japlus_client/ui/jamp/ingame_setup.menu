@@ -1692,8 +1692,6 @@
 			forecolor		.615 .615 .956 1
 			visible			0
 			descText			@MENUS_TRADE_CLARITY_OF_SOUND
-			cvarTest			"s_UseOpenAL"
-			hideCvar			{ 1 }
 
 			mouseenter 
 			{ 
@@ -1708,52 +1706,6 @@
 				play			"sound/interface/button1"
 				uiScript		update 	"s_khz"
 			}
-		}
-		itemDef 
-		{
-			name				eax
-			group				sound
-			type				ITEM_TYPE_MULTI
-			cvar				"s_UseOpenAL"
-			cvarFloatList		{  @MENUS_OFF 0 @MENUS_ON 1 }
-			text				@MENUS_EAX
-			rect				220 181 300 20
-	   		textalign			ITEM_ALIGN_RIGHT
-			textalignx			120
-			textaligny			0
-			font 				4
-			textscale 			1
-			forecolor		.615 .615 .956 1
-			visible			0
-			descText			@MENUS_EAX_DESC
-			action 
-			{ 
-				play			"sound/interface/button1.wav"
-				uiScript		update s_khz
-			}
-
-			mouseenter 
-			{ 
-				show			highlight8
-			}
-			mouseexit 
-			{ 
-				hide			highlight8
-			} 
-		}
-
-		itemDef
-		{
-			name				eax_icon
-			group				sound
-			style				WINDOW_STYLE_SHADER
-			rect				297 201 128 64
-			background			"gfx/menus/eax"
-			forecolor			1 1 1 1
-			visible				1
-			decoration
-			cvarTest			"s_UseOpenAL"
-			hideCvar			{ 0 }
 		}
 
 		//----------------------------------------------------------------------------------------------
