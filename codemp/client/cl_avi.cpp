@@ -1,6 +1,7 @@
 /*
 ===========================================================================
 Copyright (C) 2005-2006 Tim Angus
+Copyright (C) 2026, VisionJK contributors
 
 This file is part of Quake III Arena source code.
 

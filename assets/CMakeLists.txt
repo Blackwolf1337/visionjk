@@ -1,4 +1,22 @@
 #============================================================================
+# Copyright (C) 2026, VisionJK contributors
+#
+# This file is part of the VisionJK source code.
+#
+# VisionJK is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License version 2 as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, see <http://www.gnu.org/licenses/>.
+#============================================================================
+
+#============================================================================
 # The assets of the JA+ port that are not code: menus, shaders, effects,
 # models, sabers, strings. Every directory named at the end of this file is packed
 # into a pk3 when the tree is built (it lands in <build>/assets) and is
