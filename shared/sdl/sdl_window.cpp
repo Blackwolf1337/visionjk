@@ -43,6 +43,9 @@ static float displayAspect;
 
 cvar_t *r_sdlDriver;
 cvar_t *r_allowSoftwareGL;
+#ifdef MACOS_X
+cvar_t *r_highDpi;
+#endif
 
 // Window cvars
 cvar_t	*r_fullscreen = 0;
@@ -397,6 +400,12 @@ static rserr_t GLimp_SetMode(glconfig_t *glConfig, const windowDesc_t *windowDes
 	if ( windowDesc->api == GRAPHICS_API_OPENGL )
 	{
 		flags |= SDL_WINDOW_OPENGL;
+#ifdef MACOS_X
+		// retina: the drawable has the pixels of the display, not the points of the window. r_highDpi 0 renders
+		// at the size of the window in points, a quarter of the pixels, for a slow graphics chip
+		if ( r_highDpi->integer )
+			flags |= SDL_WINDOW_ALLOW_HIGHDPI;
+#endif
 	}
 	else if ( windowDesc->api == GRAPHICS_API_VULKAN )
 	{
@@ -685,6 +694,18 @@ static rserr_t GLimp_SetMode(glconfig_t *glConfig, const windowDesc_t *windowDes
 				continue;
 			}
 
+			{
+				// with a high dpi window the drawable is bigger than the window: render at its size
+				int drawW = 0, drawH = 0;
+				SDL_GL_GetDrawableSize( screen, &drawW, &drawH );
+				if( drawW > 0 && drawH > 0 && ( drawW != glConfig->vidWidth || drawH != glConfig->vidHeight ) )
+				{
+					Com_Printf( "High DPI drawable: %d x %d\n", drawW, drawH );
+					glConfig->vidWidth = drawW;
+					glConfig->vidHeight = drawH;
+				}
+			}
+
 			if ( SDL_GL_SetSwapInterval( r_swapInterval->integer ) == -1 )
 			{
 				Com_DPrintf( "SDL_GL_SetSwapInterval failed: %s\n", SDL_GetError() );
@@ -828,6 +849,9 @@ window_t WIN_Init( const windowDesc_t *windowDesc, glconfig_t *glConfig )
 
 	r_sdlDriver			= Cvar_Get( "r_sdlDriver",			"",			CVAR_ROM );
 	r_allowSoftwareGL	= Cvar_Get( "r_allowSoftwareGL",	"0",		CVAR_ARCHIVE_ND|CVAR_LATCH );
+#ifdef MACOS_X
+	r_highDpi			= Cvar_Get( "r_highDpi",			"1",		CVAR_ARCHIVE|CVAR_LATCH, "Render at the full pixel size of a retina display (vid_restart)" );
+#endif
 
 	// Window cvars
 	r_fullscreen		= Cvar_Get( "r_fullscreen",			"0",		CVAR_ARCHIVE|CVAR_LATCH );

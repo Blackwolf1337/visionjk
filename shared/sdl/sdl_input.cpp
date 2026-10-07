@@ -464,6 +464,15 @@ static void IN_ActivateMouse( void )
 		}
 	}
 
+	// SDL can lose the relative mode (focus changes, a failed first call): look again every frame
+	if( !in_nograb->integer )
+	{
+		if( !SDL_GetRelativeMouseMode( ) )
+			SDL_SetRelativeMouseMode( SDL_TRUE );
+		if( !SDL_GetWindowGrab( SDL_window ) )
+			SDL_SetWindowGrab( SDL_window, SDL_TRUE );
+	}
+
 	mouseActive = qtrue;
 }
 
@@ -494,7 +503,11 @@ static void IN_DeactivateMouse( void )
 
 		// Don't warp the mouse unless the cursor is within the window
 		if( SDL_GetWindowFlags( SDL_window ) & SDL_WINDOW_MOUSE_FOCUS )
-			SDL_WarpMouseInWindow( SDL_window, cls.glconfig.vidWidth / 2, cls.glconfig.vidHeight / 2 );
+		{
+			int winW = 0, winH = 0;
+			SDL_GetWindowSize( SDL_window, &winW, &winH );
+			SDL_WarpMouseInWindow( SDL_window, winW / 2, winH / 2 );
+		}
 
 		mouseActive = qfalse;
 	}
@@ -835,6 +848,11 @@ static void IN_ProcessEvents( void )
 					Sys_QueEvent( 0, SE_CHAR, CTRL('h'), qfalse, 0, NULL);
 				else if ( kg.keys[A_CTRL].down && key >= A_CAP_A && key <= A_CAP_Z )
 					Sys_QueEvent( 0, SE_CHAR, CTRL(tolower(key)), qfalse, 0, NULL );
+#ifdef MACOS_X
+				// Cmd+V pastes, as in every other program on a Mac (Ctrl+V and Shift+Insert still do too)
+				else if ( ( e.key.keysym.mod & KMOD_GUI ) && key == A_CAP_V )
+					Sys_QueEvent( 0, SE_CHAR, CTRL('v'), qfalse, 0, NULL );
+#endif
 
 				lastKeyDown = key;
 				break;
@@ -878,7 +896,16 @@ static void IN_ProcessEvents( void )
 				{
 					if ( !e.motion.xrel && !e.motion.yrel )
 						break;
-					Sys_QueEvent( 0, SE_MOUSE, e.motion.xrel, e.motion.yrel, 0, NULL );
+					// the motion is in points of the window, the game counts in pixels (differs on a retina display)
+					int winW = 0, winH = 0;
+					float sx = 1.0f, sy = 1.0f;
+					SDL_GetWindowSize( SDL_window, &winW, &winH );
+					if( winW > 0 && winH > 0 )
+					{
+						sx = (float)cls.glconfig.vidWidth / winW;
+						sy = (float)cls.glconfig.vidHeight / winH;
+					}
+					Sys_QueEvent( 0, SE_MOUSE, (int)lrintf( e.motion.xrel * sx ), (int)lrintf( e.motion.yrel * sy ), 0, NULL );
 				}
 				break;
 
@@ -1175,6 +1202,19 @@ void IN_Frame (void) {
 	}
 	else
 		IN_ActivateMouse( );
+
+	// windowed: the cursor stays in the window as long as it has the focus, also in the console and
+	// while loading, where the mouse is not captured
+	if( !cls.glconfig.isFullscreen )
+	{
+		static SDL_bool grabbed = SDL_FALSE;
+		SDL_bool wantGrab = (SDL_bool)( !in_nograb->integer && ( SDL_GetWindowFlags( SDL_window ) & SDL_WINDOW_INPUT_FOCUS ) );
+		if( wantGrab != grabbed )
+		{
+			SDL_SetWindowGrab( SDL_window, wantGrab );
+			grabbed = wantGrab;
+		}
+	}
 
 	IN_ProcessEvents( );
 }
