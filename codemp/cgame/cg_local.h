@@ -2041,6 +2041,8 @@ void FX_TurretHitPlayer( vec3_t origin, vec3_t normal, qboolean humanoid );
 
 void FX_ConcussionHitWall( vec3_t origin, vec3_t normal );
 void FX_ConcussionHitPlayer( vec3_t origin, vec3_t normal, qboolean humanoid );
+int CG_ClientNumFromName( const char *p );		// cg_newDraw.c
+
 // cg_voice.c: the voice chat
 void CG_VoiceInit( void );
 void CG_VoiceShutdown( void );
@@ -2052,6 +2054,9 @@ void CG_VoiceUp_f( void );
 void CG_VoiceDevices_f( void );
 void CG_VoiceStatus_f( void );
 void CG_VoiceTest_f( void );
+void CG_VoiceMute_f( void );
+void CG_VoiceUnmute_f( void );
+void CG_VoiceDraw( void );
 
 void CG_JPAutoReplierInit( void );
 void CG_JPReplyDuelEvent( qboolean start );

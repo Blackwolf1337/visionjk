@@ -51,6 +51,10 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define VOICE_MIC_HOLD_MSEC		30000	// push to talk: the microphone is closed this long after the key was let go
 #define VOICE_VAD_HOLD_MSEC		400		// voice activation: it goes on sending this long after the last loud frame
 #define VOICE_MAX_PER_FRAME		64		// datagrams taken and frames sent in one frame of the game at most
+#define VOICE_TRACE_MSEC		100		// how often the line from the listener to a speaker is looked at
+#define VOICE_FAR_GAIN			0.1f	// how loud a voice still is at the end of its range
+#define VOICE_MAX_PAN			0.8f	// how far a voice goes to one side: it is never gone from the other ear
+#define VOICE_HEAD				24.0f	// the mouth of a player above his origin
 
 typedef struct voiceSpeaker_s {
 	voiceQueue_t	queue;
@@ -62,6 +66,8 @@ typedef struct voiceSpeaker_s {
 	int				concealed;		// frames in a row that were made up
 	int				flags, distance;	// of his last datagram: is he in what the server shows, and how far away
 	qboolean		muted;			// by this player (voice_mute)
+	qboolean		muffled;		// something is between him and the listener
+	int				traceTime;		//	and when that was looked at last
 } voiceSpeaker_t;
 
 // a block of memory for a state of Opus, as well aligned as anything can ask for
@@ -242,7 +248,7 @@ static void Voice_Close( void ) {
 	Voice_LookupJoin();
 	if ( voice.sockOpen )
 		BG_CloseSocket( voice.sock );
-	// who was muted stays muted
+	// who was muted stays muted while the module does
 	for ( i = 0; i < MAX_CLIENTS; i++ ) {
 		const qboolean muted = voiceSpeakers[i].muted;
 
@@ -595,6 +601,112 @@ static void Voice_Play( int now ) {
 /*
 ===============================================================================
 
+Where a voice comes from
+
+===============================================================================
+*/
+
+// Is something between the listener and this speaker: a wall, a closed door, or the surface of water?
+static qboolean Voice_Blocked( const centity_t *cent ) {
+	vec3_t	mouth;
+	trace_t	tr;
+
+	VectorCopy( cent->lerpOrigin, mouth );
+	mouth[2] += VOICE_HEAD;
+	if ( ( CG_PointContents( cg.refdef.vieworg, -1 ) ^ CG_PointContents( mouth, -1 ) ) & MASK_WATER )
+		return qtrue;
+	// players are not in this mask, so nobody stands in the way of a voice
+	CG_Trace( &tr, cg.refdef.vieworg, NULL, NULL, mouth, cg.snap->ps.clientNum, MASK_SOLID );
+	return ( tr.fraction < 1.0f && tr.entityNum != cent->currentState.number ) ? qtrue : qfalse;
+}
+
+/*
+=================
+Voice_Place
+
+How every voice that plays is heard in this frame: how loud on each side, and whether muffled.
+
+On a server with a range (g_voiceRange) a voice gets quieter with the distance and comes from the side its
+speaker is on. A speaker behind a wall, behind a closed door or on the other side of a water surface is
+muffled: one line from the eye of the listener to his head is looked at ten times a second. A speaker the
+server does not show at all is muffled too and comes from no direction, at the distance the server named:
+no more is known of him, on purpose.
+
+Without a range, and among spectators, a voice is the same everywhere, like a radio.
+=================
+*/
+static void Voice_Place( int now ) {
+	int i;
+
+	for ( i = 0; i < MAX_CLIENTS; i++ ) {
+		voiceSpeaker_t	*sp = &voiceSpeakers[i];
+		const centity_t	*cent = &cg_entities[i];
+		float			gain = cg_voiceVolume.value, pan = 0.0f, distance;
+		qboolean		muffled = qfalse;
+
+		if ( !sp->playing )
+			continue;
+		// the mark over his head, as long as his voice comes in (CG_Player)
+		cg_entities[i].vChatTime = cg.time + 250;
+
+		if ( voice.range > 0 && cgs.clientinfo[i].team != TEAM_SPECTATOR ) {
+			if ( cent->currentValid && !( sp->flags & VOICE_FLAG_UNSEEN ) ) {
+				vec3_t to;
+
+				VectorSubtract( cent->lerpOrigin, cg.refdef.vieworg, to );
+				to[2] += VOICE_HEAD;
+				distance = VectorNormalize( to );
+				// viewaxis[1] points to the left of the listener
+				pan = Com_Clamp( -VOICE_MAX_PAN, VOICE_MAX_PAN, DotProduct( to, cg.refdef.viewaxis[1] ) );
+				if ( now - sp->traceTime >= VOICE_TRACE_MSEC ) {
+					sp->traceTime = now;
+					sp->muffled = Voice_Blocked( cent );
+				}
+				muffled = sp->muffled;
+			} else {
+				distance = (float)sp->distance * VOICE_DISTANCE_STEP;
+				muffled = qtrue;
+			}
+			distance = Com_Clamp( 0.0f, 1.0f, 1.0f - distance / voice.range );
+			gain *= VOICE_FAR_GAIN + ( 1.0f - VOICE_FAR_GAIN ) * distance * distance;
+		}
+		if ( !cg_voiceMuffle.integer )
+			muffled = qfalse;
+		// the same loudness from the middle as from a side: the two ears share it
+		CG_VoiceAudioMix( i, gain * sqrtf( 1.0f + pan ), gain * sqrtf( 1.0f - pan ), muffled ? 1.0f : 0.0f );
+	}
+}
+
+/*
+=================
+CG_VoiceDraw
+
+On the HUD: who is talking, and a line for this player while his own voice goes out.
+=================
+*/
+void CG_VoiceDraw( void ) {
+	const int	x = 8, height = SMALLCHAR_HEIGHT + 2;
+	int			y = 232, i;
+
+	if ( !voice.answered || !cg_voiceDrawTalkers.integer )
+		return;
+	if ( voice.sending && cgs.clientinfo[cg.clientNum].infoValid ) {
+		CG_DrawPic( x, y, SMALLCHAR_HEIGHT, SMALLCHAR_HEIGHT, cgs.media.vchatShader );
+		CG_DrawSmallString( x + SMALLCHAR_HEIGHT + 4, y, va( "%s ^7(you)", cgs.clientinfo[cg.clientNum].name ), 1.0f );
+		y += height;
+	}
+	for ( i = 0; i < MAX_CLIENTS && y < 400; i++ ) {
+		if ( !voiceSpeakers[i].playing || !cgs.clientinfo[i].infoValid )
+			continue;
+		CG_DrawPic( x, y, SMALLCHAR_HEIGHT, SMALLCHAR_HEIGHT, cgs.media.vchatShader );
+		CG_DrawSmallString( x + SMALLCHAR_HEIGHT + 4, y, cgs.clientinfo[i].name, 1.0f );
+		y += height;
+	}
+}
+
+/*
+===============================================================================
+
 Once a frame
 
 ===============================================================================
@@ -634,8 +746,10 @@ void CG_VoiceFrame( void ) {
 	}
 
 	Voice_Receive( now );
-	if ( voice.audio )
+	if ( voice.audio ) {
 		Voice_Play( now );
+		Voice_Place( now );
+	}
 	if ( voice.linked && voice.encoderOk )
 		Voice_Capture( now );
 
@@ -709,6 +823,41 @@ void CG_VoiceStatus_f( void ) {
 	}
 }
 
+// voice_mute <player>, voice_unmute <player or all>: this player does not want to hear that one
+static void Voice_Mute( qboolean mute ) {
+	const char	*who = CG_Argv( 1 );
+	int			n = -1, i;
+
+	if ( !mute && !Q_stricmp( who, "all" ) ) {
+		for ( i = 0; i < MAX_CLIENTS; i++ )
+			voiceSpeakers[i].muted = qfalse;
+		trap->Print( "Nobody is muted\n" );
+		return;
+	}
+	if ( who[0] >= '0' && who[0] <= '9' && strlen( who ) <= 2 )
+		n = atoi( who );
+	else if ( who[0] )
+		n = CG_ClientNumFromName( who );
+	if ( n < 0 || n >= MAX_CLIENTS || !cgs.clientinfo[n].infoValid ) {
+		trap->Print( "usage: %s <name or number of a player>%s\n", CG_Argv( 0 ), mute ? "" : " | all" );
+		return;
+	}
+	voiceSpeakers[n].muted = mute;
+	if ( mute ) {
+		voiceSpeakers[n].playing = qfalse;
+		BG_VoiceQueueReset( &voiceSpeakers[n].queue );
+	}
+	trap->Print( "%s^7 is %s\n", cgs.clientinfo[n].name, mute ? "muted until the level changes" : "heard again" );
+}
+
+void CG_VoiceMute_f( void ) {
+	Voice_Mute( qtrue );
+}
+
+void CG_VoiceUnmute_f( void ) {
+	Voice_Mute( qfalse );
+}
+
 /*
 =================
 CG_VoiceTest_f
@@ -755,5 +904,8 @@ void CG_VoiceUp_f( void ) {}
 void CG_VoiceDevices_f( void ) {}
 void CG_VoiceStatus_f( void ) {}
 void CG_VoiceTest_f( void ) {}
+void CG_VoiceMute_f( void ) {}
+void CG_VoiceUnmute_f( void ) {}
+void CG_VoiceDraw( void ) {}
 
 #endif // JP_VOICE
