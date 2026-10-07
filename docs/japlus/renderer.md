@@ -160,6 +160,14 @@ left in these views are the effects of the game (flames, smoke, light cones) and
 - Refraction (the wave of force push, entities with `RF_DISTORTION`): `rd-vanilla` copies a square of the screen
   into a texture for each such entity, here the whole frame is copied and the draw is told where its square is.
   The picture is the same.
+- The other kind of refraction, the shader `internal_distortion`: the cgame asks for it by its number, 2, for a
+  cloaked player (with `cg_renderToTextureFX 1` he is drawn with nothing else), for his holstered saber and for
+  the trail of `cg_saberTrail 2`. `rd-vanilla` draws such a surface into the stencil buffer only and fills that
+  shape with a stretched copy of a part of the screen when the view is done (`RB_DistortionFill`). Here the
+  same is done with the same numbers (`vk_backend.cpp`), from the copy of the whole frame. Until 2026-10-07
+  these surfaces were left out and a cloaked player was not drawn at all: the shader had been searched for by
+  name only. The copy of the frame is read without its alpha channel, as a texture `rd-vanilla` copies from a
+  frame buffer without one.
 - Flares (the shine around a lamp): `rd-vanilla` reads the depth buffer under the flare while it draws, to see
   whether something covers it. Here that pixel is copied at the end of the view and read when the frame has
   run on the device, so a flare shows up and goes away two frames late. Its place and size are the same.
@@ -188,10 +196,6 @@ left in these views are the effects of the game (flames, smoke, light cones) and
   core. The workers do nothing else and sleep while the game runs.
 
 ## Not done
-
-Surfaces with the shader `internal_distortion` are left out. `rd-vanilla` cuts them into the stencil buffer and
-fills the hole with a stretched copy of the screen, but nothing in the game code or the data of the base game
-and of JA+ asks for that shader.
 
 The Windows DLL builds with mingw-w64 for 32 and 64 bit and imports nothing but the C runtime, kernel32 and
 libwinpthread (the 32 bit one was built again on 2026-10-07, the 64 bit one not). It was never loaded into a
@@ -265,6 +269,26 @@ marks drawn, 2.85 million vertices, the positions differ by 0.0007 units at most
 demo as a video by the build before and by this one: 0.1 to 1.6 % of the pixels of a frame differ, the sparks.
 No message of the validation layer. The marks are gone from the list of shaders `gfxinfo` names as built on the
 CPU. `rd-vanilla` is the same after the preprocessor in the three shared files this touches.
+
+What an audit of `rd-vanilla` against this renderer found on 2026-10-07 (the three files that are not built
+function by function, every cvar, entity flag, view flag and field they read, the guarded parts of the shared
+files, the cvars the menus test). The cloak: the own player with the cloak on, from the front, by both
+renderers from the same spot (`tools/clienttests/rd_cloak.cfg`): the same shape filled with the bent wall behind
+it in both, also with four samples a pixel. The fight demo with `cg_saberTrail 2` as a video by both: 2.4 to
+4.1 % of the pixels of a frame differ, as with the plain trail. `r_textureMode` was only in force until the
+next `vid_restart`: `rd-vanilla` sets the filter at every start of the renderer, which was missing here. With
+`GL_NEAREST` 17.9 % of the pixels of a view changed over a `vid_restart`, now 0.1 % as in `rd-vanilla`
+(`rd_texmode.cfg`). `r_ext_texture_filter_anisotropic_avail` was never set, so the setup menus did not offer the
+anisotropic filter. It is 16 on this card now. The picture of the game that `rd-vanilla` puts on the window as
+soon as there is one (`R_Splash`, `menu/splash`) was missing, the window stayed black until the menu was drawn.
+A screenshot asked for on the command line shows it now. No message of the validation layer in any of these
+runs.
+
+Not brought over, all for developers: `r_measureOverdraw`, `r_nobind`, `r_logFile`, `r_primitives` and
+`r_finish` do nothing, `r_speeds 1` shows no megabytes of textures and `r_speeds 4` no vertices of lights,
+`r_texturebits 16`, `r_colorbits`, `r_depthbits` and `r_stencilbits` change nothing (32, 24 and 8 bits always).
+`r_displayRefresh` is not applied in fullscreen: the window code of the engine sets a refresh rate only for an
+OpenGL window. Dynamic lights are not added to glowing surfaces in the glow pass, where `rd-vanilla` adds them.
 
 Anti aliasing, `r_ext_multisample 4` in both renderers: mp/ffa3 0.2 and 0.4 %, with `r_DynamicGlow 1` 0.1 and
 0.3 %, mp/ffa4 with its flares 0.1 and 0.1 %. Edges are smooth where `rd-vanilla` has them smooth. A fight with

@@ -534,6 +534,7 @@ void VK_InitVulkan( void ) {
 	GL_TextureMode( r_textureMode->string );
 
 	ri.Printf( PRINT_ALL, "Vulkan device: %s, %s\n", vk.properties.deviceName, vk_versionString );
+	VK_Splash();
 }
 
 /*

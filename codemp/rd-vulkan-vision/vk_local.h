@@ -414,6 +414,9 @@ uint32_t	VK_CurrentTransform( void );
 void		VK_SetRefraction( qboolean on, int x, int y, int size );
 void		VK_SetProjection( const float *projection );
 
+// vk_backend.cpp
+void		VK_Splash( void );
+
 // vk_post.cpp
 void		VK_InitPost( void );
 void		VK_ShutdownPost( void );

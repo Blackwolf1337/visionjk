@@ -69,6 +69,42 @@ static void RB_SetGL2D( void ) {
 	backEnd.refdef.floatTime = backEnd.refdef.time * 0.001f;
 }
 
+/*
+===============
+VK_Splash
+
+The picture of the game on the window as soon as there is one, as R_Splash() of rd-vanilla puts it there: get
+something on screen asap, the rest of the start takes a moment in which nothing else is drawn
+===============
+*/
+void VK_Splash( void ) {
+	image_t *image = R_FindImageFile( "menu/splash", qfalse, qfalse, qfalse, GL_CLAMP );
+
+	if ( !image ) {
+		return;		// invalid paths?
+	}
+	VK_BeginFrame();
+	if ( !vk.frame ) {
+		return;
+	}
+	RB_SetGL2D();
+	GL_Bind( image );
+	GL_State( GLS_SRCBLEND_ONE | GLS_DSTBLEND_ZERO );
+	VK_GL_Color( 1.0f, 1.0f, 1.0f, 1.0f );
+	VK_GL_Begin( GL_TRIANGLE_STRIP );
+	VK_GL_TexCoord( 0.0f, 0.0f );
+	VK_GL_Vertex( 0.0f, 0.0f, 0.0f );
+	VK_GL_TexCoord( 1.0f, 0.0f );
+	VK_GL_Vertex( 640.0f, 0.0f, 0.0f );
+	VK_GL_TexCoord( 0.0f, 1.0f );
+	VK_GL_Vertex( 0.0f, 480.0f, 0.0f );
+	VK_GL_TexCoord( 1.0f, 1.0f );
+	VK_GL_Vertex( 640.0f, 480.0f, 0.0f );
+	VK_GL_End();
+	VK_EndFrame();
+	backEnd.projection2D = qfalse;
+}
+
 // four vertices and two triangles in the tess arrays for a picture, returns the first vertex
 static int RB_Begin2DQuad( shader_t *shader ) {
 	int numVerts, numIndexes;
