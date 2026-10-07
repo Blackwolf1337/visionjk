@@ -483,7 +483,8 @@ Also changed:
     engine does not see a surface on `mp/ffa3` that the lines hit), keeping the answers of the lines within a
     frame (11 % of them could be kept, the simulation changes), and a finer tree of sectors in the server
     (`AREA_DEPTH` 6 in `sv_world.cpp`: 22 % less time in the lines with the same simulation, but it changes the
-    order of the entities every area query in the game gets, so it is not done without a word).
+    order of the entities every area query in the game gets. The user decided against it on 2026-10-07, it
+    stays at 4).
 - New: taking a ball or a cube into the hand with `+button13` (for example `bind g +button13`). The button
   bits of the base game end at 2048, JA+ has 4096 (`+button12`) for the hook, `+button13` to `+button15` (8192,
   16384, 32768) are free and all 16 bits reach the server. No client change: the stock client and the JA+
