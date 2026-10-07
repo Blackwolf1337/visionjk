@@ -65,7 +65,7 @@ is `codemp/rd-vulkan-vision/rd-vulkan-vision_x86_64.so`, it has to lie next to t
 The Windows DLL is cross compiled with mingw-w64 like the rest:
 
 ```
-cmake -S . -B buildwin64 -DCMAKE_TOOLCHAIN_FILE=cmake/Toolchains/x86_64-w64-mingw32.cmake -DCMAKE_BUILD_TYPE=Release -DBuildMPDed=OFF -DBuildSPEngine=OFF -DBuildSPGame=OFF -DBuildSPRdVanilla=OFF
+cmake -S . -B buildwin64 -DCMAKE_TOOLCHAIN_FILE=cmake/Toolchains/x86_64-w64-mingw32.cmake -DCMAKE_BUILD_TYPE=Release -DBuildMPDed=OFF
 cmake --build buildwin64 -j$(nproc)
 ```
 

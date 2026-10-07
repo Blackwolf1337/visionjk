@@ -68,7 +68,7 @@ The three modules are `jampgame`, `cgame` and `ui`. The mod directory is `japlus
 64 bit Linux, with engine and dedicated server:
 
 ```
-cmake -S . -B build64 -DCMAKE_BUILD_TYPE=Release -DBuildSPEngine=OFF -DBuildSPGame=OFF -DBuildSPRdVanilla=OFF
+cmake -S . -B build64 -DCMAKE_BUILD_TYPE=Release
 cmake --build build64 -j$(nproc)
 ```
 
@@ -76,9 +76,12 @@ cmake --build build64 -j$(nproc)
 (`jampgamex86_64.dll`, `cgamex86_64.dll`, `uix86_64.dll`):
 
 ```
-cmake -S . -B buildwin64 -DCMAKE_TOOLCHAIN_FILE=cmake/Toolchains/x86_64-w64-mingw32.cmake -DCMAKE_BUILD_TYPE=Release -DBuildMPDed=OFF -DBuildSPEngine=OFF -DBuildSPGame=OFF -DBuildSPRdVanilla=OFF
+cmake -S . -B buildwin64 -DCMAKE_TOOLCHAIN_FILE=cmake/Toolchains/x86_64-w64-mingw32.cmake -DCMAKE_BUILD_TYPE=Release -DBuildMPDed=OFF
 cmake --build buildwin64 -j$(nproc)
 ```
+
+Single player is not built: `BuildSPEngine`, `BuildSPGame` and `BuildSPRdVanilla` are off by default, as the
+three for Jedi Outcast always were. `-DBuildSPEngine=ON -DBuildSPGame=ON -DBuildSPRdVanilla=ON` switches it on.
 
 The tree is built for 64 bit only: cmake stops on a 32 bit compiler. The toolchain files, the SDL2 libraries and
 the code for 32 bit x86 were removed after commit `5ab290ba`. A stock `jamp.exe` is 32 bit and can not load these

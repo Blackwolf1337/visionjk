@@ -46,9 +46,9 @@ option(BuildJPAssets "Whether to pack the directories of assets/ into pk3 files 
 option(BuildJPSpatialAudio "Whether the MP client can use Steam Audio for its sound (needs the submodule lib/steamaudio, the library is loaded at run time)" ON)
 option(BuildMPRdVulkanVision "Whether to create projects for the MP Vulkan renderer (rd-vulkan-vision_x86_64.dll, needs the Vulkan headers and glslc)" ON)
 
-option(BuildSPEngine "Whether to create projects for the SP engine (openjk_sp.exe)" ON)
-option(BuildSPGame "Whether to create projects for the SP gamecode (jagamex86_64.dll)" ON)
-option(BuildSPRdVanilla "Whether to create projects for the SP default renderer (rdsp-vanilla_x86_64.dll)" ON)
+option(BuildSPEngine "Whether to create projects for the SP engine (openjk_sp.exe)" OFF)
+option(BuildSPGame "Whether to create projects for the SP gamecode (jagamex86_64.dll)" OFF)
+option(BuildSPRdVanilla "Whether to create projects for the SP default renderer (rdsp-vanilla_x86_64.dll)" OFF)
 
 option(BuildJK2SPEngine "Whether to create projects for the jk2 SP engine (openjo_sp.exe)" OFF)
 option(BuildJK2SPGame "Whether to create projects for the jk2 sp gamecode mod (jk2gamex86_64.dll)" OFF)
