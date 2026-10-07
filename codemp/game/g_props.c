@@ -173,6 +173,11 @@ static int		gunCmdButtons[MAX_CLIENTS];	// and its buttons
 static float	gunTurn[MAX_CLIENTS][2];	// how far his mouse went since the last frame while it turns a prop
 static short	propList[MAX_GENTITIES];	// the numbers of the props, made anew every frame
 static int		propCount;
+// The entities with a client, players and NPCs, made anew every frame. A prop looks for the ones that touch it in
+// every frame, also while it lies still, and for the props next to it in every step. Both went over all entities
+// of the map.
+static short	moverList[MAX_GENTITIES];
+static int		moverCount;
 static propSolid_t	propSolids[PROP_BRUSHES];
 static int		propSolidNext;
 
@@ -199,8 +204,8 @@ static void Prop_Wake( gentity_t *self ) {
 		return;
 
 	// it lay still and may have carried others: what lies still next to it is woken too, down the whole pile
-	for ( i = MAX_CLIENTS; i < level.num_entities; i++ ) {
-		gentity_t	*other = &g_entities[i];
+	for ( i = 0; i < propCount; i++ ) {
+		gentity_t	*other = &g_entities[propList[i]];
 		float		reach;
 
 		if ( other == self || !Prop_Is( other ) || !other->genericValue2 )
@@ -667,8 +672,8 @@ static void Ball_Players( gentity_t *self, prop_t *p, float dt ) {
 	const float	reach = self->radius + PROP_PLAYER_RADIUS;
 	int			i;
 
-	for ( i = 0; i < level.num_entities; i++ ) {
-		gentity_t	*other = &g_entities[i];
+	for ( i = 0; i < moverCount; i++ ) {
+		gentity_t	*other = &g_entities[moverList[i]];
 		gclient_t	*client = other->client;
 		vec3_t		spot, normal, rel, out;
 		float		dist, into;
@@ -730,8 +735,8 @@ static void Cube_Players( gentity_t *self, prop_t *p, float dt ) {
 	vec3_t			mins, maxs;
 	int				i;
 
-	for ( i = 0; i < level.num_entities; i++ ) {
-		gentity_t	*other = &g_entities[i];
+	for ( i = 0; i < moverCount; i++ ) {
+		gentity_t	*other = &g_entities[moverList[i]];
 		gclient_t	*client = other->client;
 		vec3_t		spot, rel, r, normal, speed, vel, out;
 		float		dist, depth, into;
@@ -787,9 +792,9 @@ static void Cube_Players( gentity_t *self, prop_t *p, float dt ) {
 			Prop_Wake( self );
 
 			// shoving it is work
-			if ( i < MAX_CLIENTS && DotProduct( vel, normal ) > 10.0f ) {
-				shoveTime[i] = level.time + SHOVE_SLOW_MSEC;
-				shoveScale[i] = Com_Clamp( 0.25f, 1.0f, 1.0f / ( 1.0f + 0.2f * self->mass ) );
+			if ( other->s.number < MAX_CLIENTS && DotProduct( vel, normal ) > 10.0f ) {
+				shoveTime[other->s.number] = level.time + SHOVE_SLOW_MSEC;
+				shoveScale[other->s.number] = Com_Clamp( 0.25f, 1.0f, 1.0f / ( 1.0f + 0.2f * self->mass ) );
 			}
 		}
 
@@ -1551,11 +1556,16 @@ void G_PropFrame( void ) {
 
 	lastTime = level.time;
 
-	// the props there are, for the moves of the players (G_PropClipMove)
+	// the props there are, for the moves of the players (G_PropClipMove) and for each other, and who can touch them
 	propCount = 0;
 	for ( i = MAX_CLIENTS; i < level.num_entities; i++ ) {
 		if ( Prop_Is( &g_entities[i] ) )
 			propList[propCount++] = i;
+	}
+	moverCount = 0;
+	for ( i = 0; i < level.num_entities; i++ ) {
+		if ( g_entities[i].inuse && g_entities[i].client )
+			moverList[moverCount++] = i;
 	}
 
 	for ( i = 0; i < level.maxclients; i++ )
@@ -1708,9 +1718,9 @@ like on the ground.
 static void Ball_Props( gentity_t *self, float dt ) {
 	int i;
 
-	for ( i = MAX_CLIENTS; i < level.num_entities; i++ ) {
-		gentity_t	*other = &g_entities[i];
-		prop_t		*q = &props[i];
+	for ( i = 0; i < propCount; i++ ) {
+		gentity_t	*other = &g_entities[propList[i]];
+		prop_t		*q = &props[propList[i]];
 		const float	reach = self->radius + other->radius;
 		vec3_t		rel, normal, r2, speed, out;
 		float		depth, into, ratio, len;
@@ -1963,9 +1973,9 @@ static int Body_Contacts( gentity_t *self, const prop_t *p, contact_t *list ) {
 		count++;
 	}
 
-	for ( n = MAX_CLIENTS; n < level.num_entities && count < BODY_MAX_CONTACTS; n++ ) {
-		gentity_t		*other = &g_entities[n];
-		const prop_t	*q = &props[n];
+	for ( n = 0; n < propCount && count < BODY_MAX_CONTACTS; n++ ) {
+		gentity_t		*other = &g_entities[propList[n]];
+		const prop_t	*q = &props[propList[n]];
 		float			reach;
 
 		if ( other == self || !Prop_Is( other ) )
