@@ -14,6 +14,7 @@ with the outline of its top and its feet.
 #include "qcommon/q_shared.h"
 #include "bg_public.h"
 #include "bg_props.h"
+#include "bg_props_math.h"		// the vector functions, inline
 
 #define HULL_ON			0.05f		// a corner this close to a plane is on it
 #define HULL_LINE		0.001f		// three corners with less than this sine between them are a line: no plane, no corner

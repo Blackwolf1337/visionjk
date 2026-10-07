@@ -24,6 +24,7 @@ Not from JA+ and not from JKAdmin.
 #include "g_local.h"
 #include "b_local.h"				// G_BoundsOverlap
 #include "bg_props.h"				// the shape of a body: the hull of its model
+#include "bg_props_math.h"			// the vector functions, inline
 
 // +button13. The base game uses the button bits up to 2048 and JA+ takes 4096 (+button12) for the hook. 8192,
 // 16384 and 32768 (+button13 to +button15) are free, and all 16 bits of the buttons reach the server.
