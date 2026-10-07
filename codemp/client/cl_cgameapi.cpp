@@ -324,7 +324,7 @@ static void CL_CM_LoadMap( const char *mapname, qboolean subBSP ) {
 	else			CM_LoadMap( mapname, qtrue, NULL );
 
 	// the sound gets the world as a mesh (s_spatial)
-	if ( !subBSP )	S_SpatialLoadMap();
+	if ( !subBSP )	S_SpatialLoadMap( mapname );
 }
 
 static void CL_GetGlconfig( glconfig_t *glconfig ) {

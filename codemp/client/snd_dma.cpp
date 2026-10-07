@@ -1349,21 +1349,17 @@ Used for spatializing s_channels
 */
 /*
 ====================
-S_AttenuateOrigin
+S_AttenuateDistance
 
-What is left of a sound at its distance from the listener, 1 at full volume, 0 and less: not heard.
-source_vec gets the direction to it.
+What is left of a sound of this kind of channel at a distance, 1 at full volume, 0 and less: not heard.
+Touches nothing but its arguments: snd_spatial.cpp also asks it from another thread, for the length of a
+way round a corner.
 ====================
 */
-static float S_AttenuateOrigin( const vec3_t origin, int channel, vec3_t source_vec )
+float S_AttenuateDistance( float dist, int channel )
 {
-    float		dist;
 	float		dist_mult = SOUND_ATTENUATE;
 
-	// calculate stereo seperation and distance attenuation
-	VectorSubtract(origin, listener_origin, source_vec);
-
-	dist = VectorNormalize(source_vec);
 	if ( channel == CHAN_VOICE )
 	{
 		dist -= SOUND_FULLVOLUME * 3.0f;
@@ -1394,6 +1390,21 @@ static float S_AttenuateOrigin( const vec3_t origin, int channel, vec3_t source_
 	dist *= dist_mult;		// different attenuation levels
 
 	return 1.0f - dist;
+}
+
+/*
+====================
+S_AttenuateOrigin
+
+The same for a place in the level, from where the listener is. source_vec gets the direction to it.
+====================
+*/
+static float S_AttenuateOrigin( const vec3_t origin, int channel, vec3_t source_vec )
+{
+	// calculate stereo seperation and distance attenuation
+	VectorSubtract(origin, listener_origin, source_vec);
+
+	return S_AttenuateDistance( VectorNormalize(source_vec), channel );
 }
 
 void S_SpatializeOrigin (const vec3_t origin, float master_vol, int *left_vol, int *right_vol, int channel)
@@ -2720,7 +2731,7 @@ static void S_SpatialGather( void ) {
 		if ( fade <= 0.0f ) {
 			continue;
 		}
-		ch->spatial = S_SpatialAddChannel( ch, origin, ch->master_vol * fade * ( 1.0f / 255.0f ),
+		ch->spatial = S_SpatialAddChannel( ch, origin, ch->master_vol * ( 1.0f / 255.0f ), fade,
 			(qboolean)( ch->entchannel == CHAN_VOICE || ch->entchannel == CHAN_VOICE_ATTEN ) );
 	}
 
@@ -2734,7 +2745,7 @@ static void S_SpatialGather( void ) {
 		if ( fade <= 0.0f ) {
 			continue;
 		}
-		S_SpatialAddLoop( loop->entnum, loop->sfx, loop->origin, loop->volume * fade * ( 1.0f / 255.0f ),
+		S_SpatialAddLoop( loop->entnum, loop->sfx, loop->origin, loop->volume * ( 1.0f / 255.0f ), fade,
 			( loop->doppler && loop->dopplerScale > 1 ) ? loop->dopplerScale : 1.0f );
 	}
 }

@@ -32,13 +32,14 @@ typedef struct portable_samplepair_s portable_samplepair_t;
 void		S_SpatialInit( void );			// the sound device is open: dma.speed is known
 void		S_SpatialShutdown( void );
 qboolean	S_SpatialActive( void );		// s_spatial is on, the library is there and a level is loaded
-void		S_SpatialLoadMap( void );		// the collision model of a level was loaded
+void		S_SpatialLoadMap( const char *mapname );	// the collision model of a level was loaded
 void		S_SpatialUpdate( void );		// once a frame: a level that was loaded is taken over when that is safe
 
 // once a frame, from S_Update_(): the listener, every sound with a place in the level, then render ahead
 void		S_SpatialBeginFrame( const vec3_t origin, matrix3_t axis );
-qboolean	S_SpatialAddChannel( channel_t *ch, const vec3_t origin, float gain, qboolean voiceVolume );
-void		S_SpatialAddLoop( int entnum, sfx_t *sfx, const vec3_t origin, float gain, float step );
+// volume: how loud the game plays it, 0 to 1. fade: what is left of that at its distance in a straight line
+qboolean	S_SpatialAddChannel( channel_t *ch, const vec3_t origin, float volume, float fade, qboolean voiceVolume );
+void		S_SpatialAddLoop( int entnum, sfx_t *sfx, const vec3_t origin, float volume, float fade, float step );
 void		S_SpatialEndFrame( int from, int target );
 float		S_SpatialAhead( void );
 

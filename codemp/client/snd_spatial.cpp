@@ -100,7 +100,32 @@ from the library when it is loaded.
 	X( iplAmbisonicsDecodeEffectCreate ) \
 	X( iplAmbisonicsDecodeEffectRelease ) \
 	X( iplAmbisonicsDecodeEffectReset ) \
-	X( iplAmbisonicsDecodeEffectApply )
+	X( iplAmbisonicsDecodeEffectApply ) \
+	X( iplSceneRetain ) \
+	X( iplProbeArrayCreate ) \
+	X( iplProbeArrayRelease ) \
+	X( iplProbeArrayGenerateProbes ) \
+	X( iplProbeArrayGetNumProbes ) \
+	X( iplProbeBatchCreate ) \
+	X( iplProbeBatchRelease ) \
+	X( iplProbeBatchLoad ) \
+	X( iplProbeBatchSave ) \
+	X( iplProbeBatchAddProbeArray ) \
+	X( iplProbeBatchCommit ) \
+	X( iplProbeBatchGetNumProbes ) \
+	X( iplPathBakerBake ) \
+	X( iplPathBakerCancelBake ) \
+	X( iplSerializedObjectCreate ) \
+	X( iplSerializedObjectRelease ) \
+	X( iplSerializedObjectGetSize ) \
+	X( iplSerializedObjectGetData ) \
+	X( iplSimulatorAddProbeBatch ) \
+	X( iplSimulatorRemoveProbeBatch ) \
+	X( iplSimulatorRunPathing ) \
+	X( iplPathEffectCreate ) \
+	X( iplPathEffectRelease ) \
+	X( iplPathEffectReset ) \
+	X( iplPathEffectApply )
 
 #define X( name )	static decltype( &name ) q##name;
 SPATIAL_FUNCTIONS( X )
@@ -220,6 +245,23 @@ enum {
 	WORKER_RUNNING
 };
 
+// Paths: how a sound gets round a corner. Steam Audio works that out from points it spreads over the floors of
+// the level (probes) and from which of them see each other. That is worked out once per level, which takes
+// from seconds to minutes: in a thread of its own, the first time the level is loaded, and kept in a file.
+#define SPATIAL_PROBE_SPACING		3.0f	// metres between two probes
+#define SPATIAL_PROBE_HEIGHT		1.5f	//	and how high above the floor they are
+#define SPATIAL_PATH_SAMPLES		1		// points of a probe that are tried when asking whether two see each other
+#define SPATIAL_PATH_RADIUS			0.5f	//	and how far from its middle they are, in metres
+#define SPATIAL_PATH_THRESHOLD		0.1f
+#define SPATIAL_PATH_VIS_RANGE		30.0f	// two probes further apart than this are not asked, in metres
+#define SPATIAL_PATH_RANGE			100.0f	// a way longer than this is no way
+
+enum {
+	BAKE_NONE,
+	BAKE_RUNNING,
+	BAKE_DONE
+};
+
 // One sound in the level. The effects of Steam Audio remember what they did to the block before, so a sound
 // keeps its voice for as long as it plays and each voice is rendered once and in order, see "Rendering".
 typedef struct spatialVoice_s {
@@ -237,7 +279,9 @@ typedef struct spatialVoice_s {
 	// where, and how loud the game wants it at that distance
 	vec3_t		origin;
 	IPLVector3	direction;			// from the listener, in his axes
-	float		gain;
+	int			entchannel;			// CHAN_*: the kind of sound, which says how it fades with the distance
+	float		volume;				// how loud the game plays it, 0 to 1
+	float		gain;				//	and what is left of that at its distance in a straight line
 	float		renderedGain;		// the gain the last block ended with: the next one moves on from there
 	qboolean	voiceVolume;		// s_volumeVoice and not s_volume
 
@@ -252,7 +296,9 @@ typedef struct spatialVoice_s {
 	IPLDirectEffect			direct;
 	IPLBinauralEffect		binaural;
 	IPLPanningEffect		panning;
+	IPLPathEffect			path;
 	IPLDirectEffectParams	directParams;
+	qboolean				pathing;	// this frame its way round the corners is asked for
 } spatialVoice_t;
 
 static cvar_t	*s_spatial;
@@ -262,6 +308,8 @@ static cvar_t	*s_spatialReflections;
 static cvar_t	*s_spatialReverb;
 static cvar_t	*s_spatialRays;
 static cvar_t	*s_spatialBounces;
+static cvar_t	*s_spatialPaths;
+static cvar_t	*s_spatialPathLoss;
 
 static struct {
 	void		*library;
@@ -281,6 +329,18 @@ static struct {
 	qboolean			sceneWaits;
 	int					materialTriangles[SPATIAL_NUM_MATERIALS];
 	int					sceneMsec;
+	int					sceneNumber;		// counts the levels that were taken over
+	IPLVector3			nextMins, nextMaxs;	// the corners of the level, for where to spread probes
+	IPLVector3			mins, maxs;
+	char				nextPathFile[MAX_QPATH], pathFile[MAX_QPATH];
+
+	// paths
+	IPLProbeBatch		probes;				// in the simulator
+	IPLProbeBatch		nextProbes;			// waits to be put there, as a level does
+	qboolean			probesWait;
+	qboolean			bakeWanted;			// this level has no file yet
+	int					numProbes;
+	int					bakeSeconds;		// what the bake took, 0: the probes came from the file
 
 	// reflections
 	IPLSource					reverbSource;		// stands where the listener stands
@@ -308,9 +368,27 @@ static struct {
 	int					peakRenderUsec;
 } spatial;
 
+// The bake of the paths of one level. The thread has the fields to itself while it runs (spatialBakeState is
+// BAKE_RUNNING), the game before and after.
+static struct {
+	SDL_Thread			*thread;
+	IPLScene			scene;				// held by the thread for as long as it runs
+	IPLVector3			mins, maxs;
+	int					sceneNumber;		// the level it is for: by the time it is done there may be another
+	IPLProbeBatch		batch;
+	IPLSerializedObject	saved;
+	int					numProbes;
+	int					seconds;
+} spatialBake;
+
+static std::atomic<int>	spatialBakeState;		// BAKE_*
+static std::atomic<int>	spatialBakeProgress;	// 0 to 100
+
 // what the game and the thread of the reflections both touch
 static std::atomic<int>	spatialWorkerState;		// WORKER_*
 static std::atomic<int>	spatialWorkerQuit;
+static std::atomic<int>	spatialPassReflections;	// what the pass that is asked for is to work out
+static std::atomic<int>	spatialPassPaths;
 static std::atomic<int>	spatialReflectUsec;		// what the last pass took
 static std::atomic<int>	spatialReflectPasses;
 
@@ -394,6 +472,19 @@ static void S_SpatialTriangle( const vec3_t a, const vec3_t b, const vec3_t c, i
 	S_SpatialPoint( a, &build->vertices[n * 3] );
 	S_SpatialPoint( b, &build->vertices[n * 3 + 1] );
 	S_SpatialPoint( c, &build->vertices[n * 3 + 2] );
+	for ( int i = 0; i < 3; i++ ) {
+		const IPLVector3 *p = &build->vertices[n * 3 + i];
+
+		if ( !n && !i ) {
+			spatial.nextMins = spatial.nextMaxs = *p;
+		}
+		spatial.nextMins.x = Q_min( spatial.nextMins.x, p->x );
+		spatial.nextMins.y = Q_min( spatial.nextMins.y, p->y );
+		spatial.nextMins.z = Q_min( spatial.nextMins.z, p->z );
+		spatial.nextMaxs.x = Q_max( spatial.nextMaxs.x, p->x );
+		spatial.nextMaxs.y = Q_max( spatial.nextMaxs.y, p->y );
+		spatial.nextMaxs.z = Q_max( spatial.nextMaxs.z, p->z );
+	}
 	build->triangles[n].indices[0] = n * 3;
 	build->triangles[n].indices[1] = n * 3 + 1;
 	build->triangles[n].indices[2] = n * 3 + 2;
@@ -416,6 +507,172 @@ static void S_SpatialReleaseScene( IPLScene *scene, IPLStaticMesh *mesh ) {
 static void S_SpatialResetVoice( spatialVoice_t *v );
 
 /*
+===============================================================================
+
+THE PATHS OF A LEVEL
+
+===============================================================================
+*/
+
+static void IPLCALL S_SpatialBakeProgress( IPLfloat32 progress, void *userData ) {
+	spatialBakeProgress.store( (int)( progress * 100.0f ) );
+}
+
+// The thread that works the paths of one level out. It touches spatialBake and nothing of the engine.
+static int SDLCALL S_SpatialBaker( void *unused ) {
+	const int start = S_SpatialUsec();
+	IPLProbeGenerationParams generate;
+	IPLPathBakeParams bake;
+	IPLSerializedObjectSettings serialized;
+	IPLProbeArray array = NULL;
+
+	spatialBake.batch = NULL;
+	spatialBake.saved = NULL;
+	spatialBake.numProbes = 0;
+
+	// probes over every floor of the box the level is in. The matrix makes that box of the cube from 0 to 1.
+	memset( &generate, 0, sizeof( generate ) );
+	generate.type = IPL_PROBEGENERATIONTYPE_UNIFORMFLOOR;
+	generate.spacing = SPATIAL_PROBE_SPACING;
+	generate.height = SPATIAL_PROBE_HEIGHT;
+	generate.transform.elements[0][0] = spatialBake.maxs.x - spatialBake.mins.x;
+	generate.transform.elements[1][1] = spatialBake.maxs.y - spatialBake.mins.y;
+	generate.transform.elements[2][2] = spatialBake.maxs.z - spatialBake.mins.z;
+	generate.transform.elements[0][3] = spatialBake.mins.x;
+	generate.transform.elements[1][3] = spatialBake.mins.y;
+	generate.transform.elements[2][3] = spatialBake.mins.z;
+	generate.transform.elements[3][3] = 1.0f;
+
+	if ( qiplProbeArrayCreate( spatial.context, &array ) == IPL_STATUS_SUCCESS
+		&& qiplProbeBatchCreate( spatial.context, &spatialBake.batch ) == IPL_STATUS_SUCCESS ) {
+		qiplProbeArrayGenerateProbes( array, spatialBake.scene, &generate );
+		spatialBake.numProbes = qiplProbeArrayGetNumProbes( array );
+		qiplProbeBatchAddProbeArray( spatialBake.batch, array );
+		qiplProbeBatchCommit( spatialBake.batch );
+
+		memset( &bake, 0, sizeof( bake ) );
+		bake.scene = spatialBake.scene;
+		bake.probeBatch = spatialBake.batch;
+		bake.identifier.type = IPL_BAKEDDATATYPE_PATHING;
+		bake.identifier.variation = IPL_BAKEDDATAVARIATION_DYNAMIC;
+		bake.numSamples = SPATIAL_PATH_SAMPLES;
+		bake.radius = SPATIAL_PATH_RADIUS;
+		bake.threshold = SPATIAL_PATH_THRESHOLD;
+		bake.visRange = SPATIAL_PATH_VIS_RANGE;
+		bake.pathRange = SPATIAL_PATH_RANGE;
+		bake.numThreads = 2;
+		if ( spatialBake.numProbes > 1 ) {
+			qiplPathBakerBake( spatial.context, &bake, S_SpatialBakeProgress, NULL );
+		}
+
+		// as it goes into the file. The game writes it, the file system of the engine is not for this thread.
+		memset( &serialized, 0, sizeof( serialized ) );
+		if ( qiplSerializedObjectCreate( spatial.context, &serialized, &spatialBake.saved ) == IPL_STATUS_SUCCESS ) {
+			qiplProbeBatchSave( spatialBake.batch, spatialBake.saved );
+		} else {
+			spatialBake.saved = NULL;
+		}
+	}
+	if ( array ) {
+		qiplProbeArrayRelease( &array );
+	}
+	qiplSceneRelease( &spatialBake.scene );
+	spatialBake.seconds = ( S_SpatialUsec() - start ) / 1000000;
+	spatialBakeState.store( BAKE_DONE );
+	return 0;
+}
+
+// the probes of this level from its file, if it has one
+static qboolean S_SpatialLoadPaths( void ) {
+	IPLSerializedObjectSettings serialized;
+	IPLSerializedObject object = NULL;
+	void *data = NULL;
+	const int size = FS_ReadFile( spatial.pathFile, &data );
+	qboolean loaded = qfalse;
+
+	if ( size <= 0 || !data ) {
+		return qfalse;
+	}
+	memset( &serialized, 0, sizeof( serialized ) );
+	serialized.data = (IPLbyte *)data;
+	serialized.size = (IPLsize)size;
+	if ( qiplSerializedObjectCreate( spatial.context, &serialized, &object ) == IPL_STATUS_SUCCESS ) {
+		if ( qiplProbeBatchLoad( spatial.context, object, &spatial.nextProbes ) == IPL_STATUS_SUCCESS ) {
+			qiplProbeBatchCommit( spatial.nextProbes );
+			spatial.numProbes = qiplProbeBatchGetNumProbes( spatial.nextProbes );
+			spatial.bakeSeconds = 0;
+			spatial.probesWait = qtrue;
+			loaded = qtrue;
+		} else {
+			spatial.nextProbes = NULL;
+		}
+		qiplSerializedObjectRelease( &object );
+	}
+	FS_FreeFile( data );
+	return loaded;
+}
+
+/*
+===============
+S_SpatialThinkPaths
+
+Once a frame. Picks up a bake that is done, starts the one this level waits for, and hands probes that are
+ready to the simulator when no pass of the reflections runs. Nothing in here waits.
+===============
+*/
+static void S_SpatialThinkPaths( void ) {
+	if ( spatialBake.thread && spatialBakeState.load() == BAKE_DONE ) {
+		// the thread is at its end: this does not wait
+		SDL_WaitThread( spatialBake.thread, NULL );
+		spatialBake.thread = NULL;
+		spatialBakeState.store( BAKE_NONE );
+
+		if ( spatialBake.sceneNumber == spatial.sceneNumber && spatialBake.batch && spatialBake.saved && !spatial.sceneWaits ) {
+			FS_WriteFile( spatial.pathFile, qiplSerializedObjectGetData( spatialBake.saved ), (int)qiplSerializedObjectGetSize( spatialBake.saved ) );
+			spatial.nextProbes = spatialBake.batch;
+			spatial.numProbes = spatialBake.numProbes;
+			spatial.bakeSeconds = Q_max( 1, spatialBake.seconds );
+			spatial.probesWait = qtrue;
+			spatialBake.batch = NULL;
+			Com_Printf( "s_spatial: the paths of this level are worked out, %i probes in %i s, kept in %s\n", spatial.numProbes,
+				spatial.bakeSeconds, spatial.pathFile );
+		}
+		// a bake for a level that is gone
+		if ( spatialBake.batch ) {
+			qiplProbeBatchRelease( &spatialBake.batch );
+		}
+		if ( spatialBake.saved ) {
+			qiplSerializedObjectRelease( &spatialBake.saved );
+		}
+	}
+
+	if ( spatial.bakeWanted && !spatialBake.thread && spatial.scene && !spatial.sceneWaits && s_spatialPaths->integer ) {
+		spatial.bakeWanted = qfalse;
+		spatialBake.scene = qiplSceneRetain( spatial.scene );
+		spatialBake.mins = spatial.mins;
+		spatialBake.maxs = spatial.maxs;
+		spatialBake.sceneNumber = spatial.sceneNumber;
+		spatialBakeProgress.store( 0 );
+		spatialBakeState.store( BAKE_RUNNING );
+		spatialBake.thread = SDL_CreateThread( S_SpatialBaker, "s_spatialBake", NULL );
+		if ( !spatialBake.thread ) {
+			qiplSceneRelease( &spatialBake.scene );
+			spatialBakeState.store( BAKE_NONE );
+		} else {
+			Com_Printf( "s_spatial: working out the paths of this level in the background\n" );
+		}
+	}
+
+	if ( spatial.probesWait && !spatial.sceneWaits && spatialWorkerState.load() == WORKER_IDLE ) {
+		qiplSimulatorAddProbeBatch( spatial.simulator, spatial.nextProbes );
+		qiplSimulatorCommit( spatial.simulator );
+		spatial.probes = spatial.nextProbes;
+		spatial.nextProbes = NULL;
+		spatial.probesWait = qfalse;
+	}
+}
+
+/*
 ===============
 S_SpatialTakeScene
 
@@ -427,16 +684,42 @@ static void S_SpatialTakeScene( void ) {
 	if ( !spatial.sceneWaits || spatialWorkerState.load() != WORKER_IDLE ) {
 		return;
 	}
+	// the probes of the level before go with it, and a bake that still runs for it is told to stop
+	if ( spatial.probes ) {
+		qiplSimulatorRemoveProbeBatch( spatial.simulator, spatial.probes );
+	}
 	qiplSimulatorSetScene( spatial.simulator, spatial.nextScene );
 	qiplSimulatorCommit( spatial.simulator );
+	if ( spatial.probes ) {
+		qiplProbeBatchRelease( &spatial.probes );
+	}
+	if ( spatial.nextProbes ) {
+		qiplProbeBatchRelease( &spatial.nextProbes );
+	}
+	spatial.probesWait = qfalse;
+	spatial.numProbes = 0;
+	if ( spatialBakeState.load() == BAKE_RUNNING ) {
+		qiplPathBakerCancelBake( spatial.context );
+	}
+
 	S_SpatialReleaseScene( &spatial.scene, &spatial.mesh );
 	spatial.scene = spatial.nextScene;
 	spatial.mesh = spatial.nextMesh;
 	spatial.numTriangles = spatial.nextTriangles;
+	spatial.mins = spatial.nextMins;
+	spatial.maxs = spatial.nextMaxs;
+	Q_strncpyz( spatial.pathFile, spatial.nextPathFile, sizeof( spatial.pathFile ) );
 	spatial.nextScene = NULL;
 	spatial.nextMesh = NULL;
 	spatial.nextTriangles = 0;
 	spatial.sceneWaits = qfalse;
+	spatial.sceneNumber++;
+
+	// its paths: from the file of an earlier visit, or worked out now
+	spatial.bakeWanted = qfalse;
+	if ( spatial.scene && s_spatialPaths->integer && !S_SpatialLoadPaths() ) {
+		spatial.bakeWanted = qtrue;
+	}
 
 	// nothing of the level before is left to ring on
 	for ( int i = 0; i < SPATIAL_VOICES; i++ ) {
@@ -459,7 +742,7 @@ loading screen is up: building the mesh of a large level takes a moment. The lev
 see S_SpatialTakeScene().
 ===============
 */
-void S_SpatialLoadMap( void ) {
+void S_SpatialLoadMap( const char *mapname ) {
 	const int start = Sys_Milliseconds();
 	spatialMeshBuild_t build;
 	IPLSceneSettings sceneSettings;
@@ -493,6 +776,17 @@ void S_SpatialLoadMap( void ) {
 	build.triangles = (IPLTriangle *)Z_Malloc( count * sizeof( IPLTriangle ), TAG_TEMP_WORKSPACE, qfalse );
 	build.materials = (IPLint32 *)Z_Malloc( count * sizeof( IPLint32 ), TAG_TEMP_WORKSPACE, qfalse );
 	CM_ExportSolidTriangles( S_SpatialTriangle, &build );
+
+	// The file of the paths of this level is named after the level and after its walls: another version of a
+	// level with the same name has other walls and gets a file of its own.
+	{
+		char path[MAX_QPATH], name[MAX_QPATH];
+
+		Q_strncpyz( path, mapname, sizeof( path ) );
+		COM_StripExtension( COM_SkipPath( path ), name, sizeof( name ) );
+		Com_sprintf( spatial.nextPathFile, sizeof( spatial.nextPathFile ), "steamaudio/%s_%08x.paths", name,
+			Com_BlockChecksum( build.vertices, build.count * 3 * (int)sizeof( IPLVector3 ) ) );
+	}
 
 	// what a side of a wall lets through, see spatialMaterials
 	for ( int i = 0; i < SPATIAL_NUM_MATERIALS; i++ ) {
@@ -545,6 +839,7 @@ static void S_SpatialResetVoice( spatialVoice_t *v ) {
 	qiplDirectEffectReset( v->direct );
 	qiplBinauralEffectReset( v->binaural );
 	qiplPanningEffectReset( v->panning );
+	qiplPathEffectReset( v->path );
 	v->active = qfalse;
 	v->channel = NULL;
 	v->sfx = NULL;
@@ -591,12 +886,15 @@ static spatialVoice_t *S_SpatialFindVoice( channel_t *channel, int entnum, sfx_t
 	return unused;
 }
 
-static void S_SpatialPlaceVoice( spatialVoice_t *v, channel_t *channel, const vec3_t origin, float gain, float step, qboolean voiceVolume ) {
+static void S_SpatialPlaceVoice( spatialVoice_t *v, channel_t *channel, int entchannel, const vec3_t origin, float volume, float fade,
+	float step, qboolean voiceVolume ) {
 	vec3_t d;
 
 	v->frame = spatial.frame;
 	v->channel = channel;
-	v->gain = gain;
+	v->entchannel = entchannel;
+	v->volume = volume;
+	v->gain = volume * fade;
 	v->step = step;
 	v->voiceVolume = voiceVolume;
 	VectorCopy( origin, v->origin );
@@ -612,21 +910,22 @@ static void S_SpatialPlaceVoice( spatialVoice_t *v, channel_t *channel, const ve
 }
 
 // qfalse: no voice is free, the mixer plays the channel the old way
-qboolean S_SpatialAddChannel( channel_t *ch, const vec3_t origin, float gain, qboolean voiceVolume ) {
+qboolean S_SpatialAddChannel( channel_t *ch, const vec3_t origin, float volume, float fade, qboolean voiceVolume ) {
 	spatialVoice_t *v = S_SpatialFindVoice( ch, ch->entnum, ch->thesfx, (int)ch->startSample );
 
 	if ( !v ) {
 		return qfalse;
 	}
-	S_SpatialPlaceVoice( v, ch, origin, gain, ( ch->doppler && ch->dopplerScale > 1 ) ? ch->dopplerScale : 1.0f, voiceVolume );
+	S_SpatialPlaceVoice( v, ch, ch->entchannel, origin, volume, fade, ( ch->doppler && ch->dopplerScale > 1 ) ? ch->dopplerScale : 1.0f,
+		voiceVolume );
 	return qtrue;
 }
 
-void S_SpatialAddLoop( int entnum, sfx_t *sfx, const vec3_t origin, float gain, float step ) {
+void S_SpatialAddLoop( int entnum, sfx_t *sfx, const vec3_t origin, float volume, float fade, float step ) {
 	spatialVoice_t *v = S_SpatialFindVoice( NULL, entnum, sfx, 0 );
 
 	if ( v ) {
-		S_SpatialPlaceVoice( v, NULL, origin, gain, step, qfalse );
+		S_SpatialPlaceVoice( v, NULL, CHAN_AUTO, origin, volume, fade, step, qfalse );
 	}
 }
 
@@ -640,6 +939,14 @@ what the walls in between let through. Cheap, every frame, in the thread of the 
 
 ===============================================================================
 */
+
+// Called by Steam Audio in the thread of S_SpatialWorker(), with the length of a way in metres. What it calls
+// touches nothing but its arguments.
+static float IPLCALL S_SpatialPathFade( IPLfloat32 distance, void *userData ) {
+	const float fade = S_AttenuateDistance( distance * ( 1.0f / SPATIAL_UNIT ), (int)(intptr_t)userData );
+
+	return fade > 0.0f ? fade : 0.0f;
+}
 
 static void S_SpatialSimulate( void ) {
 	IPLSimulationSharedInputs shared;
@@ -657,7 +964,8 @@ static void S_SpatialSimulate( void ) {
 	shared.duration = SPATIAL_REVERB_SECONDS;
 	shared.order = SPATIAL_REVERB_ORDER;
 	shared.irradianceMinDistance = 1.0f;
-	qiplSimulatorSetSharedInputs( spatial.simulator, (IPLSimulationFlags)( IPL_SIMULATIONFLAGS_DIRECT | IPL_SIMULATIONFLAGS_REFLECTIONS ), &shared );
+	qiplSimulatorSetSharedInputs( spatial.simulator,
+		(IPLSimulationFlags)( IPL_SIMULATIONFLAGS_DIRECT | IPL_SIMULATIONFLAGS_REFLECTIONS | IPL_SIMULATIONFLAGS_PATHING ), &shared );
 
 	{
 		IPLSimulationInputs inputs;
@@ -688,8 +996,30 @@ static void S_SpatialSimulate( void ) {
 			inputs.occlusionRadius = SPATIAL_OCCLUSION_RADIUS;
 			inputs.numOcclusionSamples = SPATIAL_OCCLUSION_SAMPLES;
 			inputs.numTransmissionRays = SPATIAL_TRANSMISSION_RAYS;
+
+			// Its way round the corners, from the probes of the level. How loud it is at the end of that way is
+			// what the game makes of a sound at that distance.
+			v->pathing = (qboolean)( spatial.probes && s_spatialPaths->integer );
+			if ( v->pathing ) {
+				inputs.flags = (IPLSimulationFlags)( inputs.flags | IPL_SIMULATIONFLAGS_PATHING );
+				inputs.baked = IPL_TRUE;
+				inputs.bakedDataIdentifier.type = IPL_BAKEDDATATYPE_PATHING;
+				inputs.bakedDataIdentifier.variation = IPL_BAKEDDATAVARIATION_DYNAMIC;
+				inputs.pathingProbes = spatial.probes;
+				inputs.visRadius = SPATIAL_PATH_RADIUS;
+				inputs.visThreshold = SPATIAL_PATH_THRESHOLD;
+				inputs.visRange = SPATIAL_PATH_VIS_RANGE;
+				inputs.pathingOrder = SPATIAL_REVERB_ORDER;
+				inputs.enableValidation = IPL_TRUE;
+				inputs.findAlternatePaths = IPL_TRUE;
+				inputs.distanceAttenuationModel.type = IPL_DISTANCEATTENUATIONTYPE_CALLBACK;
+				inputs.distanceAttenuationModel.callback = S_SpatialPathFade;
+				inputs.distanceAttenuationModel.userData = (void *)(intptr_t)v->entchannel;
+			}
+		} else {
+			v->pathing = qfalse;
 		}
-		qiplSourceSetInputs( v->source, IPL_SIMULATIONFLAGS_DIRECT, &inputs );
+		qiplSourceSetInputs( v->source, (IPLSimulationFlags)( IPL_SIMULATIONFLAGS_DIRECT | IPL_SIMULATIONFLAGS_PATHING ), &inputs );
 	}
 
 	qiplSimulatorRunDirect( spatial.simulator );
@@ -774,13 +1104,20 @@ static qboolean S_SpatialSamples( const spatialVoice_t *v, int c, float *out ) {
 // the next block of a voice into the ring, getting from the gain of its last block to this one
 static void S_SpatialRenderBlock( spatialVoice_t *v, float gain ) {
 	static float mono[SPATIAL_FRAME], direct[SPATIAL_FRAME], left[SPATIAL_FRAME], right[SPATIAL_FRAME];
+	static float whole[SPATIAL_FRAME], pathLeft[SPATIAL_FRAME], pathRight[SPATIAL_FRAME];
 	float *monoData = mono, *directData = direct, *stereoData[2] = { left, right };
+	float *wholeData = whole, *pathData[2] = { pathLeft, pathRight };
 	IPLAudioBuffer in = { 1, SPATIAL_FRAME, &monoData };
 	IPLAudioBuffer mid = { 1, SPATIAL_FRAME, &directData };
 	IPLAudioBuffer out = { 2, SPATIAL_FRAME, stereoData };
+	IPLAudioBuffer pathIn = { 1, SPATIAL_FRAME, &wholeData };
+	IPLAudioBuffer pathOut = { 2, SPATIAL_FRAME, pathData };
 	const int c = v->rendered;
 	const float from = v->renderedGain, step = ( gain - v->renderedGain ) * ( 1.0f / SPATIAL_FRAME );
-	float volume;
+	// the sound without its fade by the distance in a straight line: a way round a corner has a length of its own
+	const float unfade = ( v->gain > 0.001f ) ? v->volume / v->gain : 0.0f;
+	qboolean pathed = qfalse;
+	float volume, hidden;
 
 	if ( v->fresh ) {
 		v->dryRead = c;
@@ -796,12 +1133,42 @@ static void S_SpatialRenderBlock( spatialVoice_t *v, float gain ) {
 	}
 	for ( int i = 0; i < SPATIAL_FRAME; i++ ) {
 		mono[i] *= from + step * i;
+		whole[i] = mono[i] * unfade;
 	}
 
 	qiplDirectEffectApply( v->direct, &v->directParams, &in, &mid );
-	// what the walls in the way left of it is what the room around the listener gets to hear
+
+	// The way round the corners, for as much of the sound as the walls hide: what is in sight needs no way
+	// round. Steam Audio gives it the direction it arrives from, which is the last corner.
+	hidden = 1.0f - v->directParams.occlusion;
+	if ( v->pathing && hidden > 0.01f ) {
+		IPLSimulationOutputs outputs;
+		IPLPathEffectParams params;
+		vec3_t rightAxis;
+
+		memset( &outputs, 0, sizeof( outputs ) );
+		qiplSourceGetOutputs( v->source, IPL_SIMULATIONFLAGS_PATHING, &outputs );
+		params = outputs.pathing;
+		if ( params.shCoeffs ) {
+			params.order = SPATIAL_REVERB_ORDER;
+			params.binaural = s_spatialHrtf->integer ? IPL_TRUE : IPL_FALSE;
+			params.hrtf = spatial.hrtf;
+			// what bending round the corners costs: all of it, or only how much duller the sound gets
+			params.normalizeEQ = s_spatialPathLoss->integer ? IPL_FALSE : IPL_TRUE;
+			VectorNegate( spatial.listenerAxis[1], rightAxis );
+			S_SpatialPoint( spatial.listenerOrigin, &params.listener.origin );
+			S_SpatialDirection( spatial.listenerAxis[0], &params.listener.ahead );
+			S_SpatialDirection( spatial.listenerAxis[2], &params.listener.up );
+			S_SpatialDirection( rightAxis, &params.listener.right );
+			qiplPathEffectApply( v->path, &params, &pathIn, &pathOut );
+			pathed = qtrue;
+		}
+	}
+
+	// what the walls in the way left of it, and what came round them, is what the room around the listener
+	// gets to hear
 	for ( int i = 0; i < SPATIAL_FRAME; i++ ) {
-		v->dry[( c + i ) & ( SPATIAL_DRY - 1 )] = direct[i];
+		v->dry[( c + i ) & ( SPATIAL_DRY - 1 )] = direct[i] + ( pathed ? ( pathLeft[i] + pathRight[i] ) * 0.5f * hidden : 0.0f );
 	}
 	volume = ( v->voiceVolume ? s_volumeVoice->value : s_volume->value ) * ( 32768.0f * 256.0f );
 	if ( s_spatialHrtf->integer ) {
@@ -829,6 +1196,14 @@ static void S_SpatialRenderBlock( spatialVoice_t *v, float gain ) {
 
 		slot[0] += left[i] * volume;
 		slot[1] += right[i] * volume;
+	}
+	if ( pathed ) {
+		for ( int i = 0; i < SPATIAL_FRAME; i++ ) {
+			float *slot = spatial.ring[( c + i ) & ( SPATIAL_RING - 1 )];
+
+			slot[0] += pathLeft[i] * hidden * volume;
+			slot[1] += pathRight[i] * hidden * volume;
+		}
 	}
 }
 
@@ -859,7 +1234,12 @@ static int SDLCALL S_SpatialWorker( void *unused ) {
 			const int start = S_SpatialUsec();
 
 			spatialWorkerState.store( WORKER_RUNNING );
-			qiplSimulatorRunReflections( spatial.simulator );
+			if ( spatialPassReflections.load() ) {
+				qiplSimulatorRunReflections( spatial.simulator );
+			}
+			if ( spatialPassPaths.load() ) {
+				qiplSimulatorRunPathing( spatial.simulator );
+			}
 			spatialReflectUsec.store( S_SpatialUsec() - start );
 			spatialReflectPasses.fetch_add( 1 );
 			spatialWorkerState.store( WORKER_IDLE );
@@ -868,17 +1248,24 @@ static int SDLCALL S_SpatialWorker( void *unused ) {
 	return 0;
 }
 
-// the next pass, if the last one is done and not too long ago. Never while a level waits to be taken over.
-static void S_SpatialAskReflections( void ) {
+// The next pass of the thread, if the last one is done and not too long ago: the reflections around the
+// listener, and the ways of the sounds round the corners. Never while a level waits to be taken over.
+static void S_SpatialAskPass( void ) {
 	const int now = Sys_Milliseconds();
+	const qboolean paths = (qboolean)( spatial.probes && s_spatialPaths->integer );
 	int idle = WORKER_IDLE;
 
-	if ( !s_spatialReflections->integer || spatial.sceneWaits || now - spatial.reflectAsked < SPATIAL_REFLECT_MSEC ) {
+	if ( ( !s_spatialReflections->integer && !paths ) || spatial.sceneWaits || now - spatial.reflectAsked < SPATIAL_REFLECT_MSEC ) {
 		return;
 	}
-	if ( spatialWorkerState.compare_exchange_strong( idle, WORKER_ASKED ) ) {
-		spatial.reflectAsked = now;
-		SDL_SemPost( spatial.workerWake );
+	// the thread reads these two only after it was woken
+	if ( spatialWorkerState.load() == WORKER_IDLE ) {
+		spatialPassReflections.store( s_spatialReflections->integer ? 1 : 0 );
+		spatialPassPaths.store( paths ? 1 : 0 );
+		if ( spatialWorkerState.compare_exchange_strong( idle, WORKER_ASKED ) ) {
+			spatial.reflectAsked = now;
+			SDL_SemPost( spatial.workerWake );
+		}
 	}
 }
 
@@ -1036,8 +1423,8 @@ void S_SpatialEndFrame( int from, int target ) {
 			S_SpatialRenderReverb( spatial.reverbRendered );
 			spatial.reverbRendered += SPATIAL_FRAME;
 		}
-		S_SpatialAskReflections();
 	}
+	S_SpatialAskPass();
 
 	// the voices that ended have given the reverb what they had
 	for ( int i = 0; i < SPATIAL_VOICES; i++ ) {
@@ -1109,6 +1496,19 @@ static void S_SpatialInfo_f( void ) {
 	} else {
 		Com_Printf( "reflections: off (s_spatialReflections 0)\n" );
 	}
+	if ( !s_spatialPaths->integer ) {
+		Com_Printf( "paths: off (s_spatialPaths 0)\n" );
+	} else if ( spatialBakeState.load() == BAKE_RUNNING && spatialBake.sceneNumber == spatial.sceneNumber ) {
+		Com_Printf( "paths: being worked out for this level, %i %%\n", spatialBakeProgress.load() );
+	} else if ( spatial.probes ) {
+		if ( spatial.bakeSeconds ) {
+			Com_Printf( "paths: %i probes, worked out in %i s, kept in %s\n", spatial.numProbes, spatial.bakeSeconds, spatial.pathFile );
+		} else {
+			Com_Printf( "paths: %i probes from %s\n", spatial.numProbes, spatial.pathFile );
+		}
+	} else {
+		Com_Printf( "paths: none yet\n" );
+	}
 	Com_Printf( "listener at %.0f %.0f %.0f\n", spatial.listenerOrigin[0], spatial.listenerOrigin[1], spatial.listenerOrigin[2] );
 	for ( int i = 0; i < SPATIAL_VOICES; i++ ) {
 		const spatialVoice_t *v = &spatial.voices[i];
@@ -1138,10 +1538,33 @@ static void S_SpatialRelease( void ) {
 	spatialWorkerQuit.store( 0 );
 	spatialWorkerState.store( WORKER_IDLE );
 
+	// a bake is told to stop and waited for the same way. What it had is thrown away.
+	if ( spatialBake.thread ) {
+		qiplPathBakerCancelBake( spatial.context );
+		SDL_WaitThread( spatialBake.thread, NULL );
+		spatialBake.thread = NULL;
+		if ( spatialBake.batch ) {
+			qiplProbeBatchRelease( &spatialBake.batch );
+		}
+		if ( spatialBake.saved ) {
+			qiplSerializedObjectRelease( &spatialBake.saved );
+		}
+	}
+	spatialBakeState.store( BAKE_NONE );
+
 	if ( spatial.library ) {
 		if ( spatial.simulator ) {
+			if ( spatial.probes ) {
+				qiplSimulatorRemoveProbeBatch( spatial.simulator, spatial.probes );
+			}
 			qiplSimulatorSetScene( spatial.simulator, NULL );
 			qiplSimulatorCommit( spatial.simulator );
+		}
+		if ( spatial.probes ) {
+			qiplProbeBatchRelease( &spatial.probes );
+		}
+		if ( spatial.nextProbes ) {
+			qiplProbeBatchRelease( &spatial.nextProbes );
 		}
 		S_SpatialReleaseScene( &spatial.scene, &spatial.mesh );
 		S_SpatialReleaseScene( &spatial.nextScene, &spatial.nextMesh );
@@ -1157,6 +1580,9 @@ static void S_SpatialRelease( void ) {
 		for ( int i = 0; i < SPATIAL_VOICES; i++ ) {
 			spatialVoice_t *v = &spatial.voices[i];
 
+			if ( v->path ) {
+				qiplPathEffectRelease( &v->path );
+			}
 			if ( v->panning ) {
 				qiplPanningEffectRelease( &v->panning );
 			}
@@ -1193,9 +1619,10 @@ static qboolean S_SpatialCreateVoices( void ) {
 	IPLPanningEffectSettings panningSettings;
 	IPLReflectionEffectSettings reflectionSettings;
 	IPLAmbisonicsDecodeEffectSettings decodeSettings;
+	IPLPathEffectSettings pathSettings;
 
 	memset( &simulation, 0, sizeof( simulation ) );
-	simulation.flags = (IPLSimulationFlags)( IPL_SIMULATIONFLAGS_DIRECT | IPL_SIMULATIONFLAGS_REFLECTIONS );
+	simulation.flags = (IPLSimulationFlags)( IPL_SIMULATIONFLAGS_DIRECT | IPL_SIMULATIONFLAGS_REFLECTIONS | IPL_SIMULATIONFLAGS_PATHING );
 	simulation.sceneType = IPL_SCENETYPE_DEFAULT;
 	simulation.reflectionType = IPL_REFLECTIONEFFECTTYPE_CONVOLUTION;
 	simulation.maxNumOcclusionSamples = SPATIAL_OCCLUSION_SAMPLES;
@@ -1206,6 +1633,7 @@ static qboolean S_SpatialCreateVoices( void ) {
 	simulation.maxNumSources = SPATIAL_VOICES + 1;
 	// threads Steam Audio shares a pass of the rays between, inside the one of S_SpatialWorker()
 	simulation.numThreads = 2;
+	simulation.numVisSamples = 4;
 	simulation.samplingRate = spatial.audio.samplingRate;
 	simulation.frameSize = spatial.audio.frameSize;
 	if ( qiplSimulatorCreate( spatial.context, &simulation, &spatial.simulator ) != IPL_STATUS_SUCCESS ) {
@@ -1214,7 +1642,12 @@ static qboolean S_SpatialCreateVoices( void ) {
 	}
 
 	memset( &sourceSettings, 0, sizeof( sourceSettings ) );
-	sourceSettings.flags = IPL_SIMULATIONFLAGS_DIRECT;
+	sourceSettings.flags = (IPLSimulationFlags)( IPL_SIMULATIONFLAGS_DIRECT | IPL_SIMULATIONFLAGS_PATHING );
+	memset( &pathSettings, 0, sizeof( pathSettings ) );
+	pathSettings.maxOrder = SPATIAL_REVERB_ORDER;
+	pathSettings.spatialize = IPL_TRUE;
+	pathSettings.speakerLayout.type = IPL_SPEAKERLAYOUTTYPE_STEREO;
+	pathSettings.hrtf = spatial.hrtf;
 	memset( &directSettings, 0, sizeof( directSettings ) );
 	directSettings.numChannels = 1;
 	memset( &binauralSettings, 0, sizeof( binauralSettings ) );
@@ -1228,7 +1661,8 @@ static qboolean S_SpatialCreateVoices( void ) {
 		if ( qiplSourceCreate( spatial.simulator, &sourceSettings, &v->source ) != IPL_STATUS_SUCCESS
 			|| qiplDirectEffectCreate( spatial.context, &spatial.audio, &directSettings, &v->direct ) != IPL_STATUS_SUCCESS
 			|| qiplBinauralEffectCreate( spatial.context, &spatial.audio, &binauralSettings, &v->binaural ) != IPL_STATUS_SUCCESS
-			|| qiplPanningEffectCreate( spatial.context, &spatial.audio, &panningSettings, &v->panning ) != IPL_STATUS_SUCCESS ) {
+			|| qiplPanningEffectCreate( spatial.context, &spatial.audio, &panningSettings, &v->panning ) != IPL_STATUS_SUCCESS
+			|| qiplPathEffectCreate( spatial.context, &spatial.audio, &pathSettings, &v->path ) != IPL_STATUS_SUCCESS ) {
 			return qfalse;
 		}
 		qiplSourceAdd( v->source, spatial.simulator );
@@ -1276,6 +1710,8 @@ void S_SpatialInit( void ) {
 	s_spatialReverb = Cvar_Get( "s_spatialReverb", "1", CVAR_ARCHIVE, "s_spatial: how loud the reverb is" );
 	s_spatialRays = Cvar_Get( "s_spatialRays", "2048", CVAR_ARCHIVE, "s_spatial: rays of a pass of the reflections, 256 to 8192" );
 	s_spatialBounces = Cvar_Get( "s_spatialBounces", "16", CVAR_ARCHIVE, "s_spatial: how often a ray is followed off a wall" );
+	s_spatialPaths = Cvar_Get( "s_spatialPaths", "1", CVAR_ARCHIVE, "s_spatial: 1 a sound comes round corners. Worked out once per level in the background" );
+	s_spatialPathLoss = Cvar_Get( "s_spatialPathLoss", "1", CVAR_ARCHIVE, "s_spatial: 1 a sound loses on its way round a corner what Steam Audio works out. 0 it only gets duller, and is as loud as the game makes a sound that far away" );
 	Cmd_AddCommand( "s_spatialInfo", S_SpatialInfo_f, "What s_spatial is doing" );
 
 	memset( &spatial, 0, sizeof( spatial ) );
@@ -1326,7 +1762,7 @@ void S_SpatialInit( void ) {
 
 	spatial.active = qtrue;
 	// the sound system was started again in the middle of a level
-	S_SpatialLoadMap();
+	S_SpatialLoadMap( Cvar_VariableString( "mapname" ) );
 	S_SpatialInfo_f();
 }
 
@@ -1345,6 +1781,7 @@ qboolean S_SpatialActive( void ) {
 void S_SpatialUpdate( void ) {
 	if ( spatial.active ) {
 		S_SpatialTakeScene();
+		S_SpatialThinkPaths();
 	}
 }
 
@@ -1354,11 +1791,11 @@ void S_SpatialUpdate( void ) {
 void		S_SpatialInit( void ) {}
 void		S_SpatialShutdown( void ) {}
 qboolean	S_SpatialActive( void ) { return qfalse; }
-void		S_SpatialLoadMap( void ) {}
+void		S_SpatialLoadMap( const char *mapname ) {}
 void		S_SpatialUpdate( void ) {}
 void		S_SpatialBeginFrame( const vec3_t origin, matrix3_t axis ) {}
-qboolean	S_SpatialAddChannel( channel_t *ch, const vec3_t origin, float gain, qboolean voiceVolume ) { return qfalse; }
-void		S_SpatialAddLoop( int entnum, sfx_t *sfx, const vec3_t origin, float gain, float step ) {}
+qboolean	S_SpatialAddChannel( channel_t *ch, const vec3_t origin, float volume, float fade, qboolean voiceVolume ) { return qfalse; }
+void		S_SpatialAddLoop( int entnum, sfx_t *sfx, const vec3_t origin, float volume, float fade, float step ) {}
 void		S_SpatialEndFrame( int from, int target ) {}
 void		S_SpatialPaint( int from, int to, portable_samplepair_t *paint ) {}
 float		S_SpatialAhead( void ) { return 0.0f; }

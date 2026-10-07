@@ -187,6 +187,9 @@ typedef struct wavinfo_s {
 #define	MAX_CHANNELS			32
 extern	channel_t   s_channels[MAX_CHANNELS];
 
+// snd_dma.cpp: how a sound fades with the distance
+float	S_AttenuateDistance( float dist, int channel );
+
 // snd_mix.cpp: samples of a sound as floats, for snd_spatial.cpp
 int		S_SampleRun( sfx_t *sfx, channel_t *mp3Channel, float step, int count, int sampleOffset, float *out );
 
