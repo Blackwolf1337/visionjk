@@ -1,0 +1,84 @@
+Particle
+{
+	name				lightpuff
+
+	count				3 4
+
+	life				400 500
+
+	delay				0 400
+
+	rotation			0 360
+
+	rgb
+	{
+		start			0 1 1 0 0 1
+		end				0 0 1
+		parm			1
+		flags			linear
+	}
+
+	alpha
+	{
+		end				0
+		parm			3
+		flags			linear
+	}
+
+	size
+	{
+		start			0
+		end				64 72
+		parm			1
+		flags			linear
+	}
+
+	shaders
+	[
+		gfx/effects/snowpuff2
+	]
+}
+
+Particle
+{
+	name				caustic
+
+	spawnFlags			evenDistribution
+
+	count				2 3
+
+	life				500 300
+
+	delay				0 300
+
+	rotation			0 360
+
+	rgb
+	{
+		start			0 0 1 0 1 1
+		end				0.4745 0.6588 1 1 1 1
+		parm			1
+		flags			linear
+	}
+
+	alpha
+	{
+		start			0
+		end				0.3 0.4
+		parm			1
+		flags			linear
+	}
+
+	size
+	{
+		start			65
+		end				0 1
+		parm			1
+		flags			linear
+	}
+
+	shaders
+	[
+		gfx/effects/caustic1
+	]
+}

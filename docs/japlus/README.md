@@ -93,13 +93,15 @@ The client can use Steam Audio for its sound (`s_spatial`, [audio.md](audio.md))
 is a submodule, `lib/steamaudio`: `git submodule update --init` once after a clone. Without it the client is
 built without the feature.
 
-Every build also packs the client assets of the port, `assets/japlus_client` (the files of the JA+ client plugin
-1.4B4 with the menus of the port), into `<build>/assets/zz_japlus_client_assets.pk3`, and `cmake --install` puts
+Every build also packs the assets of the port, `assets/japlus_client` (the files of the JA+ client plugin
+1.4B4 with the menus of the port, and the JA+ sabers and effects), into
+`<build>/assets/zz_japlus_client_assets.pk3`, and `cmake --install` puts
 it into `JediAcademy/japlus/` (`-DJPAssetsDir=` names another mod directory). A file that was changed, added or
 removed there is packed again by the next build. The pk3 is the same for every platform: the files are kept
 byte for byte (`assets/.gitattributes`) and `assets/make_pk3.py` writes them in the order of
 `assets/japlus_client.order`, which the player menu and the pure check depend on. Packing needs Python 3,
-`-DBuildJPAssets=OFF` builds without it. A client needs this pk3 in `japlus/` next to the modules.
+`-DBuildJPAssets=OFF` builds without it. A client needs this pk3 in `japlus/` next to the modules, and so does
+the server: it reads the sabers from it.
 
 ## Files needed at run time
 
@@ -108,14 +110,14 @@ All but the last one come from the original JA+ packages and are not part of thi
 | File | Where | Needed for |
 |------|-------|-----------|
 | `japlus_gla_anims.pk3` | `base/` on the server and on every client | the new animations. Without it `jp_newGLAAnims` is switched off at map start |
-| `japlus_sabers.pk3`, `efx_MOD.pk3` | `japlus/` | the JA+ sabers and effects |
 | `modelscale.cfg` | `japlus/` | `jp_allowModelScale` |
 | `<map>_holes.cfg` | `japlus/` | blocking walls of a map |
 | `autoreplier.cfg` | `japlus/` on the client | auto replier texts |
-| `zz_japlus_client_assets.pk3` | `japlus/` on the client | menus, shaders, effects and graphics of the plugin, with the menus of the port |
+| `zz_japlus_client_assets.pk3` | `japlus/` on the server and on the client | menus, shaders, effects and graphics of the plugin, with the menus of the port, and the JA+ sabers and effects |
 
 The last file is built with the tree from `assets/japlus_client` (see "Building"), which holds the contents of
-`clientPlugin_v1.4B4.pk3` without the two DLLs. It is packed with the folder entries of the original pk3 and in
+`clientPlugin_v1.4B4.pk3`, `japlus_sabers.pk3` and `efx_MOD.pk3` of JA+ 2.4 Build 7, without the two DLLs of the
+plugin and without the `Thumbs.db` files. It replaces those three: a folder that has it does not need them. It is packed with the folder entries of the original pk3 and in
 their order: the engine lists a folder of a pk3 only when it has an entry of its own, and the head list of the
 player menu, and with it the model a new player starts with, follows that order.
 

@@ -1,6 +1,6 @@
 #============================================================================
 # The assets of the JA+ port that are not code: menus, shaders, effects,
-# models, strings. Every directory named at the end of this file is packed
+# models, sabers, strings. Every directory named at the end of this file is packed
 # into a pk3 when the tree is built (it lands in <build>/assets) and is
 # installed into the mod directory.
 #
@@ -55,6 +55,8 @@ function(jp_add_pk3 name directory)
 	endif()
 endfunction()
 
-# what the client needs on top of the assets of the game: the files of the JA+ client plugin 1.4B4 with the
-# changes of the port (menus)
+# One archive with all of it: the contents of clientPlugin_v1.4B4.pk3, japlus_sabers.pk3 and efx_MOD.pk3 of the
+# JA+ 2.4 Build 7 package, with the changes of the port (four menus in ui/jamp). Left out: the thumbnail caches
+# of Windows Explorer (Thumbs.db) and the two modules of the plugin, cgamex86.dll and uix86.dll, which the
+# engine would unpack and load in place of the modules of this tree.
 jp_add_pk3(zz_japlus_client_assets japlus_client)
