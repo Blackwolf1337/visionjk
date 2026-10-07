@@ -1,0 +1,4 @@
+[submodule "lib/steamaudio"]
+	path = lib/steamaudio
+	url = https://github.com/ValveSoftware/steam-audio.git
+	shallow = true

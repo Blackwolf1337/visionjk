@@ -359,6 +359,36 @@ if(BuildMPEngine)
 	set(MPEngineFiles ${MPEngineAndDedFiles})
 	set(MPEngineDefines ${MPSharedDefines})
 
+	# Steam Audio: sound that knows the level (client/snd_spatial.cpp). The engine is not linked against it, it
+	# loads the library when it runs. It needs the header of Valve's repository, the submodule lib/steamaudio:
+	# only that one file is put on the include path (in the build folder), the folder it comes from holds the
+	# whole of Steam Audio, with header names of its own that the engine must not pick up.
+	if(BuildJPSpatialAudio)
+		set(SteamAudioCore "${CMAKE_SOURCE_DIR}/lib/steamaudio/core")
+		if(EXISTS "${SteamAudioCore}/src/core/phonon.h")
+			# phonon.h includes phonon_version.h. Valve's build writes that from a template with the version of
+			# its project line, so this build does the same.
+			function(jp_steamaudio_headers)
+				file(STRINGS "${SteamAudioCore}/CMakeLists.txt" line REGEX "^project\\(Phonon VERSION")
+				string(REGEX MATCH "([0-9]+)\\.([0-9]+)\\.([0-9]+)" version "${line}")
+				if(NOT version)
+					message(FATAL_ERROR "No version in ${SteamAudioCore}/CMakeLists.txt")
+				endif()
+				set(PROJECT_VERSION_MAJOR ${CMAKE_MATCH_1})
+				set(PROJECT_VERSION_MINOR ${CMAKE_MATCH_2})
+				set(PROJECT_VERSION_PATCH ${CMAKE_MATCH_3})
+				configure_file("${SteamAudioCore}/src/core/phonon_version.h.in" "${CMAKE_BINARY_DIR}/steamaudio/phonon_version.h" @ONLY)
+				configure_file("${SteamAudioCore}/src/core/phonon.h" "${CMAKE_BINARY_DIR}/steamaudio/phonon.h" COPYONLY)
+				message(STATUS "Steam Audio ${version}: the header of lib/steamaudio, the library is loaded at run time")
+			endfunction()
+			jp_steamaudio_headers()
+			set(MPEngineDefines ${MPEngineDefines} "JP_SPATIAL")
+			set(MPEngineIncludeDirectories ${MPEngineIncludeDirectories} "${CMAKE_BINARY_DIR}/steamaudio")
+		else()
+			message(STATUS "Steam Audio: lib/steamaudio is not checked out (git submodule update --init), the client is built without s_spatial")
+		endif()
+	endif()
+
 	#    Dependencies
 
 	if (NOT WIN32)
@@ -466,6 +496,8 @@ if(BuildMPEngine)
 		"${MPDir}/client/snd_mp3.h"
 		"${MPDir}/client/snd_music.cpp"
 		"${MPDir}/client/snd_music.h"
+		"${MPDir}/client/snd_spatial.cpp"
+		"${MPDir}/client/snd_spatial.h"
 		)
 	source_group("client" FILES ${MPEngineClientFiles})
 	set(MPEngineFiles ${MPEngineFiles} ${MPEngineClientFiles})

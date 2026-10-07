@@ -135,6 +135,7 @@ qboolean	Sys_Mkdir( const char *path );
 char	*Sys_Cwd( void );
 void	Sys_SetDefaultInstallPath(const char *path);
 char	*Sys_DefaultInstallPath(void);
+char	*Sys_BinaryPath(void);			// the folder the program file is in
 
 #ifdef MACOS_X
 char    *Sys_DefaultAppPath(void);
