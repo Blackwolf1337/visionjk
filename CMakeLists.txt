@@ -19,7 +19,8 @@
 # The <min>...<policy_max> syntax is needed to remain compatible with 3.1, but also newer versions that dropped 3.1 compatibility
 # More info here: https://cmake.org/cmake/help/latest/command/cmake_minimum_required.html
 cmake_minimum_required(VERSION 3.1...3.31)
-set(CMAKE_OSX_DEPLOYMENT_TARGET "10.9" CACHE STRING "Minimum OS X deployment version")
+# 11.0: the first macOS on Apple Silicon. 10.9 is older than any Mac the libraries of today still build for
+set(CMAKE_OSX_DEPLOYMENT_TARGET "11.0" CACHE STRING "Minimum macOS deployment version")
 
 set(InOpenJK ON)
 
@@ -338,7 +339,9 @@ elseif (("${CMAKE_C_COMPILER_ID}" STREQUAL "GNU") OR ("${CMAKE_C_COMPILER_ID}" M
 			set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -D_FORTIFY_SOURCE=2")
 			set(CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO} -D_FORTIFY_SOURCE=2")
 			set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} -D_FORTIFY_SOURCE=2")
-			add_link_options(-Wl,-z,relro -Wl,-z,now)
+			if(NOT APPLE)
+				add_link_options(-Wl,-z,relro -Wl,-z,now)
+			endif()
 		endif()
 	endif()
 else()

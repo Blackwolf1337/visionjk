@@ -715,3 +715,39 @@ if(BuildMPDed)
 	set_target_properties(${MPDed} PROPERTIES PROJECT_LABEL "MP Dedicated Server")
 	target_link_libraries(${MPDed} ${MPDedLibraries})
 endif(BuildMPDed)
+
+# macOS: the app the build makes is ready to run as it is. The renderers go next to the program, game, cgame
+# and ui into base/ beside it (both are in the search path), then cmake/MacBundle.cmake copies SDL into the app
+# and signs it. `cmake --install` is not needed for a game to start from the build folder.
+if(APPLE AND MakeApplicationBundles AND BuildMPEngine)
+	find_library(MacBundleSDL3 NAMES SDL3 SDL3.0)
+	set(MacBundleApp "$<TARGET_BUNDLE_DIR:${MPEngine}>")
+	set(MacBundleCommands
+		COMMAND ${CMAKE_COMMAND} -E make_directory "${MacBundleApp}/Contents/MacOS/base")
+	set(MacBundleTargets ${MPEngine})
+	foreach(renderer ${MPVanillaRenderer} ${MPRend2} ${MPVulkanVisionRenderer})
+		if(TARGET ${renderer})
+			list(APPEND MacBundleCommands
+				COMMAND ${CMAKE_COMMAND} -E copy "$<TARGET_FILE:${renderer}>" "${MacBundleApp}/Contents/MacOS/")
+			list(APPEND MacBundleTargets ${renderer})
+		endif()
+	endforeach()
+	foreach(module ${MPGame} ${MPCGame} ${MPUI})
+		if(TARGET ${module})
+			list(APPEND MacBundleCommands
+				COMMAND ${CMAKE_COMMAND} -E copy "$<TARGET_FILE:${module}>" "${MacBundleApp}/Contents/MacOS/base/")
+			list(APPEND MacBundleTargets ${module})
+		endif()
+	endforeach()
+	set(MacBundleOptional "")
+	if(MacBundleSDL3)
+		list(APPEND MacBundleOptional "-DSDL3=${MacBundleSDL3}")
+	endif()
+	add_custom_target(MacBundle ALL
+		${MacBundleCommands}
+		COMMAND ${CMAKE_COMMAND} "-DAPP=${MacBundleApp}" "-DENGINE=${MPEngine}" ${MacBundleOptional}
+			-P "${CMAKE_SOURCE_DIR}/cmake/MacBundle.cmake"
+		COMMENT "Putting the modules and SDL into ${MPEngine}.app and signing it"
+		VERBATIM)
+	add_dependencies(MacBundle ${MacBundleTargets})
+endif()
