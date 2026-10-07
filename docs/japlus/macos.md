@@ -158,6 +158,8 @@ Jedi Academy app of the Mac App Store or of Steam loads this cgame at all was no
 
 ## Still open, in this order
 
+The steps for somebody who tests on a Mac, and what to send back, are in [macos-test.md](macos-test.md).
+
 1. The voice chat on the Mac: `voice_devices`, then `+voice` on a server with `g_voice 1`. Does macOS ask, does
    `voice_status` say connected, is a second player heard.
 2. Fullscreen (`r_fullscreen 1`): Cmd+Tab, Mission Control, the notch of the built in display. Fullscreen is a

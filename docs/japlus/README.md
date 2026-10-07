@@ -22,6 +22,7 @@ The port starts from OpenJK commit 260c59c2 (2026-09-29) and is the commits on t
 | [security.md](security.md) | Security pass over `codemp/`: findings, fixes, build hardening, what stays, server settings |
 | [threading.md](threading.md) | The frame loop from `main`, why server and client share one thread, timing numbers, what was not built |
 | [macos.md](macos.md) | The state on macOS: what the first build on a Mac found and changed, how to build and run there, what is still open |
+| [macos-test.md](macos-test.md) | For a tester with a Mac: build, start the Vulkan renderer, what to look at and what to send back |
 | [voice.md](voice.md) | Voice chat with the microphone (not a JA+ feature): in the cgame, relayed by the game module, engine unchanged, clients without it unaffected |
 | [renderer.md](renderer.md) | rd-vulkan-vision, a Vulkan renderer next to rd-vanilla (not a JA+ feature): how it is built, the state of each part, what runs on the GPU, differences, what is left |
 
