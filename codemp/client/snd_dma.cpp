@@ -1347,12 +1347,17 @@ S_SpatializeOrigin
 Used for spatializing s_channels
 =================
 */
-void S_SpatializeOrigin (const vec3_t origin, float master_vol, int *left_vol, int *right_vol, int channel)
+/*
+====================
+S_AttenuateOrigin
+
+What is left of a sound at its distance from the listener, 1 at full volume, 0 and less: not heard.
+source_vec gets the direction to it.
+====================
+*/
+static float S_AttenuateOrigin( const vec3_t origin, int channel, vec3_t source_vec )
 {
-    float		dot;
     float		dist;
-    float		lscale, rscale, scale;
-    vec3_t		source_vec;
 	float		dist_mult = SOUND_ATTENUATE;
 
 	// calculate stereo seperation and distance attenuation
@@ -1388,6 +1393,18 @@ void S_SpatializeOrigin (const vec3_t origin, float master_vol, int *left_vol, i
 	}
 	dist *= dist_mult;		// different attenuation levels
 
+	return 1.0f - dist;
+}
+
+void S_SpatializeOrigin (const vec3_t origin, float master_vol, int *left_vol, int *right_vol, int channel)
+{
+    float		dot;
+    float		fade;
+    float		lscale, rscale, scale;
+    vec3_t		source_vec;
+
+	fade = S_AttenuateOrigin( origin, channel, source_vec );
+
 	dot = -DotProduct(listener_axis[1], source_vec);
 
 	if (dma.channels == 1)	// || !dist_mult)
@@ -1412,14 +1429,14 @@ void S_SpatializeOrigin (const vec3_t origin, float master_vol, int *left_vol, i
 	}
 
 	// add in distance effect
-	scale = (1.0f - dist) * rscale;
+	scale = fade * rscale;
 	*right_vol = (int) (master_vol * scale);
 	if (*right_vol < 0)
 	{
 		*right_vol = 0;
 	}
 
-	scale = (1.0f - dist) * lscale;
+	scale = fade * lscale;
 	*left_vol = (int) (master_vol * scale);
 	if (*left_vol < 0)
 	{
@@ -2046,6 +2063,11 @@ void S_AddLoopSounds (void)
 	loopSound_t	*loop, *loop2;
 	static int	loopFrame;
 
+	// each of them is a sound with a place of its own for snd_spatial.cpp, see S_SpatialGather()
+	if ( S_SpatialActive() ) {
+		return;
+	}
+
 	loopFrame++;
 	for ( i = 0 ; i < numLoopSounds ; i++) {
 		loop = &loopSounds[i];
@@ -2661,6 +2683,64 @@ void S_Respatialize( int entityNum, const vec3_t head, matrix3_t axis, int inwat
 
 /*
 ========================
+S_SpatialGather
+
+s_spatial: names the listener and every sound with a place in the level to snd_spatial.cpp. What it takes is
+marked, and S_PaintChannels() leaves it out. The rest stays with the mixer: the sounds of the own player, the
+menus, the announcer, the music.
+========================
+*/
+static void S_SpatialGather( void ) {
+	channel_t	*ch = s_channels;
+	vec3_t		origin, source_vec;
+	float		fade;
+	int			i;
+
+	S_SpatialBeginFrame( listener_origin, listener_axis );
+
+	for ( i = 0; i < MAX_CHANNELS; i++, ch++ ) {
+		ch->spatial = qfalse;
+		if ( !ch->thesfx || ch->loopSound || ch->startSample == START_SAMPLE_IMMEDIATE ) {
+			continue;
+		}
+		// as in S_Respatialize(): anything coming from the view entity is at full volume in both ears
+		if ( ch->entnum == listener_number ) {
+			continue;
+		}
+		if ( ch->entchannel == CHAN_LOCAL || ch->entchannel == CHAN_LOCAL_SOUND || ch->entchannel == CHAN_ANNOUNCER
+			|| ch->entchannel == CHAN_VOICE_GLOBAL || ch->entchannel == CHAN_MENU1 || ch->entchannel == CHAN_MUSIC ) {
+			continue;
+		}
+		if ( ch->fixed_origin ) {
+			VectorCopy( ch->origin, origin );
+		} else {
+			VectorCopy( s_entityPosition[ ch->entnum ], origin );
+		}
+		fade = S_AttenuateOrigin( origin, ch->entchannel, source_vec );
+		if ( fade <= 0.0f ) {
+			continue;
+		}
+		ch->spatial = S_SpatialAddChannel( ch, origin, ch->master_vol * fade * ( 1.0f / 255.0f ),
+			(qboolean)( ch->entchannel == CHAN_VOICE || ch->entchannel == CHAN_VOICE_ATTEN ) );
+	}
+
+	for ( i = 0; i < numLoopSounds; i++ ) {
+		const loopSound_t *loop = &loopSounds[i];
+
+		if ( !loop->sfx || !loop->sfx->bInMemory ) {
+			continue;
+		}
+		fade = S_AttenuateOrigin( loop->origin, CHAN_AUTO, source_vec );
+		if ( fade <= 0.0f ) {
+			continue;
+		}
+		S_SpatialAddLoop( loop->entnum, loop->sfx, loop->origin, loop->volume * fade * ( 1.0f / 255.0f ),
+			( loop->doppler && loop->dopplerScale > 1 ) ? loop->dopplerScale : 1.0f );
+	}
+}
+
+/*
+========================
 S_ScanChannelStarts
 
 Returns qtrue if any new sounds were started since the last mix
@@ -3113,6 +3193,18 @@ void S_Update_(void) {
 		if (endtime - s_soundtime > (unsigned)samps)
 			endtime = s_soundtime + samps;
 
+
+		// the sounds in the level are rendered ahead by snd_spatial.cpp, the mixer adds them
+		if ( S_SpatialActive() ) {
+			unsigned target = (unsigned)( s_soundtime + S_SpatialAhead() * dma.speed );
+
+			// a recording takes every sample as it is painted the first time
+			if ( CL_VideoRecording() || target > endtime ) {
+				target = endtime;
+			}
+			S_SpatialGather();
+			S_SpatialEndFrame( s_paintedtime, (int)target );
+		}
 
 		SNDDMA_BeginPainting ();
 

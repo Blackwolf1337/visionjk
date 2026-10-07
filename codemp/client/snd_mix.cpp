@@ -25,6 +25,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include "client.h"
 #include "snd_local.h"
+#include "snd_spatial.h"
 
 portable_samplepair_t paintbuffer[PAINTBUFFER_SIZE];
 int 	*snd_p, snd_linear_count, snd_vol;
@@ -342,6 +343,71 @@ void S_PaintChannelFromMP3( channel_t *ch, const sfx_t *sc, int count, int sampl
 }
 
 
+/*
+===============
+S_SampleRun
+
+For the sound of snd_spatial.cpp, which mixes on its own: up to count samples of a sound from sampleOffset on,
+as floats from -1 to 1, read the way the two functions above read them. Returns how many there were before the
+sound ended. A sound that is an MP3 stream is decoded through the channel that plays it, without one it gives
+nothing.
+===============
+*/
+int S_SampleRun( sfx_t *sfx, channel_t *mp3Channel, float step, int count, int sampleOffset, float *out )
+{
+	if ( sampleOffset < 0 || sampleOffset >= sfx->iSoundLengthInSamples )
+	{
+		return 0;
+	}
+	if ( count > PAINTBUFFER_SIZE )
+	{
+		count = PAINTBUFFER_SIZE;
+	}
+
+	if ( sfx->eSoundCompressionMethod == ct_16 )
+	{
+		float ofst = sampleOffset;
+
+		// doppler, as S_PaintChannels() and S_PaintChannelFrom16() do it: samples are skipped
+		if ( step > 1.0f )
+		{
+			if ( sampleOffset + count * step > sfx->iSoundLengthInSamples )
+				count = (int)( ( sfx->iSoundLengthInSamples - sampleOffset ) / step );
+		}
+		else
+		{
+			step = 1.0f;
+			if ( sampleOffset + count > sfx->iSoundLengthInSamples )
+				count = sfx->iSoundLengthInSamples - sampleOffset;
+		}
+		if ( !sfx->pSoundData )
+		{
+			return 0;
+		}
+		for ( int i = 0; i < count; i++, ofst += step )
+		{
+			out[i] = sfx->pSoundData[ (int)ofst ] * ( 1.0f / 32768.0f );
+		}
+		return count;
+	}
+
+	if ( sfx->eSoundCompressionMethod == ct_MP3 && mp3Channel )
+	{
+		static short tempMP3Buffer[PAINTBUFFER_SIZE];
+
+		if ( sampleOffset + count > sfx->iSoundLengthInSamples )
+			count = sfx->iSoundLengthInSamples - sampleOffset;
+		MP3Stream_GetSamples( mp3Channel, sampleOffset, count, tempMP3Buffer, qfalse );	// qfalse = not stereo
+		for ( int i = 0; i < count; i++ )
+		{
+			out[i] = tempMP3Buffer[i] * ( 1.0f / 32768.0f );
+		}
+		return count;
+	}
+	return 0;
+}
+
+
 // subroutinised to save code dup (called twice)	-ste
 //
 void ChannelPaint(channel_t *ch, sfx_t *sc, int count, int sampleOffset, int bufferOffset)
@@ -419,6 +485,10 @@ void S_PaintChannels( int endtime ) {
 		ch = s_channels;
 		for ( i = 0; i < MAX_CHANNELS ; i++, ch++ ) {
 			if ( !ch->thesfx || (ch->leftvol<0.25 && ch->rightvol<0.25 )) {
+				continue;
+			}
+			// a sound in the level that snd_spatial.cpp plays (s_spatial)
+			if ( ch->spatial ) {
 				continue;
 			}
 
@@ -502,6 +572,11 @@ void S_PaintChannels( int endtime ) {
 			}
 		}
 */
+		// the sounds in the level that snd_spatial.cpp plays
+		if ( S_SpatialActive() ) {
+			S_SpatialPaint( s_paintedtime, end, paintbuffer );
+		}
+
 		// transfer out according to DMA format
 		S_TransferPaintBuffer( end );
 		s_paintedtime = end;

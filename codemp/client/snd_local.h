@@ -163,6 +163,8 @@ typedef struct channel_s {
 	bool		bPlaying;		// Set to true when a sound is playing on this channel / source
 	int			iStartTime;		// Time playback of Source begins
 	int			lSlotID;		// ID of Slot rendering Source's environment (enables a send to this FXSlot)
+
+	qboolean	spatial;		// this frame snd_spatial.cpp plays it and S_PaintChannels() leaves it out
 } channel_t;
 
 
@@ -184,6 +186,9 @@ typedef struct wavinfo_s {
 
 #define	MAX_CHANNELS			32
 extern	channel_t   s_channels[MAX_CHANNELS];
+
+// snd_mix.cpp: samples of a sound as floats, for snd_spatial.cpp
+int		S_SampleRun( sfx_t *sfx, channel_t *mp3Channel, float step, int count, int sampleOffset, float *out );
 
 extern	int		s_paintedtime;
 extern	int		s_rawend;
