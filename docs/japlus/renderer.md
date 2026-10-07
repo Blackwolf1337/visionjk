@@ -390,6 +390,38 @@ spends them on: the bones of the skeletons 7 %, the draw calls 6 %, building spr
 vertices of saber marks on models 4 % (those have gone to the device since). The profile counts every byte of
 a large copy as an instruction, so it says nothing about the copies.
 
+### After the profile of 2026-10-07
+
+The timedemo has reached its limit: in a `timedemo` the engine lets a frame last at least one millisecond
+(`Com_Frame`, `minMsec = 1`), so nothing above 1000 frames a second can show, and the fight demo plays at 950 to
+990 now. From here on steps are counted in instructions with callgrind over the same 1729 frames (not time, but
+without that limit, and the same from run to run within about one percent).
+
+Where the instructions of a frame of the fight demo went before these steps: 54 % the cgame (its player code 28 %,
+of that the saber blades 13 %), 30 % the back end of the renderer, 10 % its front end. Three things in it were
+work for nothing, and none of them was drawing:
+
+| Step | Before | After |
+|------|--------|-------|
+| The effect list of the engine (`FX_GetValidEffect`, both renderers): the free slot with the lowest number was looked for from the first slot on for nearly every new effect, 1230 steps a search in a fight. A bit for every slot now | 8 % of all instructions | gone. Timedemo 949 against 920 (medians of eight runs by turns) |
+| `G2_SetupModelPointers` runs in front of nearly every Ghoul2 call, 380 times a frame, and read the cvar `dedicated` by name and looked the model up by its file name each time. The cvar is asked for once, the model is looked up only when the handle no longer names a model of that file | 16.6 billion instructions for the frames, the cgame part 10.1 | 15.4 billion, the cgame part 8.9 |
+| `FindShaderInShaderText`: a shader that is just an image is not in the table of the shader text, and for each one the whole text was walked over to find that out again, 1350 times in a level load | 3.6 billion instructions outside of the frames (loading) | 1.7 billion |
+
+Each of the three gives what the old code gave. That was checked with builds that ran both ways: 320000 slot
+searches, 800000 Ghoul2 calls and 2250 shader names over the fight demo, fights of bots and five level loads
+with a `vid_restart`, no difference. The second and third are under `RD_VULKAN_VISION` in `G2_API.cpp` and
+`tr_shader.cpp`, `rd-vanilla` is the same after the preprocessor. The first is in `codemp/client/FxUtil.cpp`.
+
+Looked at and left, with the numbers:
+
+- Sprites, lines and saber glow in a vertex shader: see "Not done". The three steps above are each larger.
+- Only the bones a drawn surface names into the frame: 81 % of the bones that are uploaded are named by a
+  surface that is drawn, so this would take a fifth off the 7 % the bones cost.
+- Link time optimization (`-DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON`): 16.0 instead of 16.6 billion instructions
+  for the frames. All of it is the cgame (9.5 instead of 10.1) and the front end, where `DotProduct`, `VectorMA`
+  and the like are calls into `q_math.c`. The back end is the same with and without. Not switched on: it changes
+  how every module is compiled, the Windows ones that never ran included, for 4 %.
+
 In a view without a crowd both renderers reach the 1000 frames a second the engine allows (a frame lasts at
 least 1 ms, in a `timedemo` too), so there is nothing to measure there. See [threading.md](threading.md) for why
 neither renderer is the limit at 60 or 125 frames a second on this machine. `tools/clienttests/rd_benchrec.cfg`
