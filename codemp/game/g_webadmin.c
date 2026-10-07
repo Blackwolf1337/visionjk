@@ -28,36 +28,14 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // It only starts when g_webPassword is set. Every request needs HTTP basic
 // auth with that password (any user name).
 
+#include "bg_net.h"		// the sockets, in front of everything else
 #ifdef _WIN32
-	#include <winsock2.h>
-	#include <ws2tcpip.h>
 	#include <io.h>
 	#include <direct.h>
 	#include <sys/stat.h>
-	typedef SOCKET waSocket_t;
-	#define WA_INVALID_SOCKET	INVALID_SOCKET
-	#define WA_CloseSocket		closesocket
-	#define WA_WouldBlock()		( WSAGetLastError() == WSAEWOULDBLOCK )
-	#define WA_SEND_FLAGS		0
 #else
-	#include <sys/types.h>
-	#include <sys/socket.h>
-	#include <netinet/in.h>
-	#include <arpa/inet.h>
-	#include <unistd.h>
-	#include <fcntl.h>
-	#include <errno.h>
 	#include <sys/stat.h>
 	#include <dirent.h>
-	typedef int waSocket_t;
-	#define WA_INVALID_SOCKET	( -1 )
-	#define WA_CloseSocket		close
-	#define WA_WouldBlock()		( errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR )
-	#ifdef MSG_NOSIGNAL
-		#define WA_SEND_FLAGS	MSG_NOSIGNAL
-	#else
-		#define WA_SEND_FLAGS	0
-	#endif
 #endif
 
 #include "g_local.h"
@@ -81,7 +59,7 @@ typedef struct waBuffer_s {
 
 typedef struct waConnection_s {
 	qboolean		inUse;
-	waSocket_t		sock;
+	bgSocket_t		sock;
 	unsigned int	addr;			// IPv4 of the peer, for the login throttle
 	char		request[WA_MAX_REQUEST + 1];
 	int			requestLen;
@@ -105,7 +83,7 @@ typedef struct waAuthFail_s {
 
 static waAuthFail_t	authFails[WA_AUTH_SLOTS];
 
-static waSocket_t		listenSocket = WA_INVALID_SOCKET;
+static bgSocket_t		listenSocket = BG_INVALID_SOCKET;
 static waConnection_t	connections[WA_MAX_CONNECTIONS];
 static int				listenPort;
 
@@ -1583,7 +1561,7 @@ void WebAdmin_Chat( const char *mode, const gentity_t *from, const gentity_t *to
 	waChatLine_t	*line;
 	qtime_t			now;
 
-	if ( listenSocket == WA_INVALID_SOCKET )
+	if ( listenSocket == BG_INVALID_SOCKET )
 		return;
 
 	line = &chatLines[chatSeq % WA_MAX_CHAT];
@@ -2447,11 +2425,11 @@ Connections
 */
 
 static void WA_CloseConnection( waConnection_t *c ) {
-	if ( c->sock != WA_INVALID_SOCKET )
-		WA_CloseSocket( c->sock );
+	if ( c->sock != BG_INVALID_SOCKET )
+		BG_CloseSocket( c->sock );
 	WA_BufFree( &c->response );
 	memset( c, 0, sizeof( *c ) );
-	c->sock = WA_INVALID_SOCKET;
+	c->sock = BG_INVALID_SOCKET;
 }
 
 // Handles a complete request. The response goes into c->response.
@@ -2583,7 +2561,7 @@ static void WA_ReadRequest( waConnection_t *c ) {
 	int			received, bodyLen = 0, headLen;
 
 	received = recv( c->sock, c->request + c->requestLen, WA_MAX_REQUEST - c->requestLen, 0 );
-	if ( received == 0 || ( received < 0 && !WA_WouldBlock() ) ) {
+	if ( received == 0 || ( received < 0 && !BG_SocketWouldBlock() ) ) {
 		WA_CloseConnection( c );
 		return;
 	}
@@ -2623,9 +2601,9 @@ static void WA_ReadRequest( waConnection_t *c ) {
 
 static void WA_WriteResponse( waConnection_t *c ) {
 	while ( c->sent < c->response.len ) {
-		const int n = send( c->sock, c->response.data + c->sent, c->response.len - c->sent, WA_SEND_FLAGS );
+		const int n = send( c->sock, c->response.data + c->sent, c->response.len - c->sent, BG_SEND_FLAGS );
 		if ( n < 0 ) {
-			if ( !WA_WouldBlock() )
+			if ( !BG_SocketWouldBlock() )
 				WA_CloseConnection( c );
 			return;
 		}
@@ -2635,26 +2613,17 @@ static void WA_WriteResponse( waConnection_t *c ) {
 	WA_CloseConnection( c );
 }
 
-static void WA_SetNonBlocking( waSocket_t s ) {
-#ifdef _WIN32
-	u_long on = 1;
-	ioctlsocket( s, FIONBIO, &on );
-#else
-	fcntl( s, F_SETFL, fcntl( s, F_GETFL, 0 ) | O_NONBLOCK );
-#endif
-}
-
 static void WA_Accept( void ) {
 	for ( ;; ) {
 		struct sockaddr_in	from;
 		socklen_t			fromLen = sizeof( from );
-		waSocket_t			s = accept( listenSocket, (struct sockaddr *)&from, &fromLen );
+		bgSocket_t			s = accept( listenSocket, (struct sockaddr *)&from, &fromLen );
 		int					i;
 
-		if ( s == WA_INVALID_SOCKET )
+		if ( s == BG_INVALID_SOCKET )
 			return;
 
-		WA_SetNonBlocking( s );
+		BG_SocketNonBlocking( s );
 #ifdef SO_NOSIGPIPE
 		{
 			int on = 1;
@@ -2667,7 +2636,7 @@ static void WA_Accept( void ) {
 				break;
 		}
 		if ( i == WA_MAX_CONNECTIONS ) {
-			WA_CloseSocket( s );
+			BG_CloseSocket( s );
 			continue;
 		}
 
@@ -2692,7 +2661,7 @@ void WebAdmin_Init( void ) {
 	int					on = 1, i;
 
 	for ( i = 0; i < WA_MAX_CONNECTIONS; i++ )
-		connections[i].sock = WA_INVALID_SOCKET;
+		connections[i].sock = BG_INVALID_SOCKET;
 
 	// before anything can keep the panel off: the file of a reload must not wait for a later start of this map
 	WA_ReloadRead();
@@ -2705,15 +2674,10 @@ void WebAdmin_Init( void ) {
 	if ( g_webPort.integer <= 0 || g_webPort.integer > 65535 )
 		return;
 
-#ifdef _WIN32
-	{
-		WSADATA wsa;
-		WSAStartup( MAKEWORD( 2, 2 ), &wsa );
-	}
-#endif
+	BG_NetStart();
 
 	listenSocket = socket( AF_INET, SOCK_STREAM, IPPROTO_TCP );
-	if ( listenSocket == WA_INVALID_SOCKET ) {
+	if ( listenSocket == BG_INVALID_SOCKET ) {
 		trap->Print( S_COLOR_YELLOW "Web admin: could not create a socket\n" );
 		return;
 	}
@@ -2730,12 +2694,12 @@ void WebAdmin_Init( void ) {
 	if ( bind( listenSocket, (struct sockaddr *)&addr, sizeof( addr ) ) != 0 || listen( listenSocket, 16 ) != 0 ) {
 		trap->Print( S_COLOR_YELLOW "Web admin: could not listen on %s:%d (port in use, or below 1024 without root?)\n",
 			g_webBind.string[0] ? g_webBind.string : "0.0.0.0", g_webPort.integer );
-		WA_CloseSocket( listenSocket );
-		listenSocket = WA_INVALID_SOCKET;
+		BG_CloseSocket( listenSocket );
+		listenSocket = BG_INVALID_SOCKET;
 		return;
 	}
 
-	WA_SetNonBlocking( listenSocket );
+	BG_SocketNonBlocking( listenSocket );
 	// the engine loads the module again for every map and map_restart, the chat lines of the last one are gone
 	{
 		qtime_t now;
@@ -2766,7 +2730,7 @@ void WebAdmin_Frame( void ) {
 	if ( reloadText && level.time - level.startTime >= WA_RELOAD_DELAY )
 		WA_ReloadSpawn();
 
-	if ( listenSocket == WA_INVALID_SOCKET )
+	if ( listenSocket == BG_INVALID_SOCKET )
 		return;
 
 	if ( modelScan == 1 )
@@ -2805,9 +2769,9 @@ void WebAdmin_Shutdown( void ) {
 		if ( connections[i].inUse )
 			WA_CloseConnection( &connections[i] );
 	}
-	if ( listenSocket != WA_INVALID_SOCKET ) {
-		WA_CloseSocket( listenSocket );
-		listenSocket = WA_INVALID_SOCKET;
+	if ( listenSocket != BG_INVALID_SOCKET ) {
+		BG_CloseSocket( listenSocket );
+		listenSocket = BG_INVALID_SOCKET;
 	}
 
 	for ( i = 0; i < MAX_GENTITIES; i++ )
