@@ -80,6 +80,10 @@ Not from JA+ and not from JKAdmin.
 
 #define SHOVE_SLOW_MSEC		150			// a player who shoves a cube is slowed for that long
 
+#define PROP_PLAYER_SIDE	0.25f		// for a body the box of a player is this much wider, so it comes to rest outside
+										//	of his box and stays in his way (BG_PropClipBox),
+#define PROP_PLAYER_TOP		0.5f		//	and this much lower: what lies on his head is in his box by that, and a box
+										//	that starts in a shape is not stopped by it. He can jump, it goes up with him.
 #define PROP_PLAYER_TOUCH	8.0f		// a body stops a player at his box, which reaches this much further than
 										//	PROP_PLAYER_RADIUS at its corners: within that he touches it
 #define PROP_BRUSHES		24			// bodies whose planes for the moves of players are kept
@@ -164,6 +168,8 @@ typedef struct contact_s {
 	gentity_t	*other;			// the prop it touches there. NULL: the world, or a prop that counts as world
 	vec3_t		r2;				// from the middle of that prop to the spot
 	float		ratio;			// mass of the cube over the mass of that prop: its part of an impulse
+	gentity_t	*mover;			// the player or NPC it touches there: like the world, but he moves,
+	vec3_t		moverVel;		//	this fast as far as the contact goes (Body_Movers)
 	float		kn;				// what an impulse of 1 along the normal does to the speed of the spot
 	float		want;			// speed along the normal the spot has to have at least
 	float		jn;				// impulse along the normal so far
@@ -387,10 +393,10 @@ static float Body_Reach( const prop_t *p, const vec3_t dir ) {
 }
 
 // is a point in the body or within BODY_SKIN of it
-static qboolean Body_Holds( const gentity_t *ent, const prop_t *p, const vec3_t point ) {
+static qboolean Body_Holds( const vec3_t origin, const prop_t *p, const vec3_t point ) {
 	vec3_t rel, local;
 
-	VectorSubtract( point, ent->r.currentOrigin, rel );
+	VectorSubtract( point, origin, rel );
 	Body_ToLocal( p, rel, local );
 	return BG_PropHolds( &p->shape, local, BODY_SKIN );
 }
@@ -791,32 +797,24 @@ turns it too when that spot is off its middle. It is heavy: only part of his spe
 slowed down while he shoves (G_PropPlayerSpeed). A body that comes at him fast hurts him.
 
 The body is in the way of a player (G_PropClipMove), so he stops at its faces with his box and shoves from
-there. Should he be in it all the same, because it fell on him or was thrown at him, it is put outside of him.
+there. The other way round, what keeps the body out of him, is in its step: Body_Movers, which also sees a fast
+one get to him. Should he be in it all the same it is woken here, and its step puts it outside of him.
 =================
 */
-static void Cube_Players( gentity_t *self, prop_t *p, float dt ) {
-	const qboolean	fast = ( VectorLengthSquared( self->movedir ) * dt * dt > PROP_PLAYER_TOUCH * PROP_PLAYER_TOUCH ) ? qtrue : qfalse;
-	vec3_t			mins, maxs;
-	int				i;
+static void Cube_Players( gentity_t *self, prop_t *p ) {
+	int i;
 
 	for ( i = 0; i < moverCount; i++ ) {
 		gentity_t	*other = &g_entities[moverList[i]];
 		gclient_t	*client = other->client;
-		vec3_t		spot, rel, r, normal, speed, vel, out;
+		vec3_t		spot, rel, r, normal, speed, vel;
 		float		dist, depth, into;
-		trace_t		tr;
 
 		if ( !Prop_Mover( other ) || other == p->holder )
 			continue;
 		Prop_PlayerSpot( other, self->r.currentOrigin[2], spot );
 
 		VectorSubtract( spot, self->r.currentOrigin, rel );
-		// a fast one is in him before it was ever seen next to him: where it will be when this frame is over
-		if ( fast ) {
-			VectorMA( rel, -dt, self->movedir, out );
-			if ( Body_Nearest( p, out, r ) < PROP_PLAYER_RADIUS )
-				Prop_Hurt( self, p, other, spot );
-		}
 		dist = Body_Nearest( p, rel, r );
 		if ( dist >= PROP_PLAYER_RADIUS + PROP_PLAYER_TOUCH )
 			continue;
@@ -827,7 +825,7 @@ static void Cube_Players( gentity_t *self, prop_t *p, float dt ) {
 			VectorScale( normal, 1.0f / dist, normal );
 			depth = PROP_PLAYER_RADIUS - dist;
 		} else {
-			// he is in the body: out to the side he is not on, a bit in every frame
+			// he is in the body: shoved to the side he is not on
 			VectorSet( normal, -rel[0], -rel[1], 0.0f );
 			if ( VectorNormalize( normal ) < 1.0f ) {
 				const float yaw = DEG2RAD( client->ps.viewangles[YAW] );
@@ -862,18 +860,10 @@ static void Cube_Players( gentity_t *self, prop_t *p, float dt ) {
 			}
 		}
 
-		// He touches it and no more, or he stands on it: there is nowhere to put it then but into the ground.
-		// A body a player stands on is left asleep, it does not shake under him.
-		if ( depth <= 0.0f || normal[2] < -0.5f )
-			continue;
-		Prop_Wake( self );
-
-		// out of him, as far as the world lets it
-		Body_Bounds( p, mins, maxs );
-		VectorMA( self->r.currentOrigin, depth + 0.5f, normal, out );
-		trap->Trace( &tr, self->r.currentOrigin, mins, maxs, out, self->s.number, MASK_SOLID, qfalse, 0, 0 );
-		if ( !tr.startsolid && !tr.allsolid )
-			VectorCopy( tr.endpos, self->r.currentOrigin );
+		// He is in it, and not because he stands on it: a body a player stands on is left asleep, it does not
+		// shake under him.
+		if ( depth > 0.0f && normal[2] >= -0.5f )
+			Prop_Wake( self );
 	}
 }
 
@@ -1891,11 +1881,9 @@ A contact of the cube with another prop. Whether that one takes its part of the 
 (Prop_Fixed), from how fast the two come together at the spot.
 =================
 */
-static int Contact_Add( gentity_t *self, const prop_t *p, gentity_t *other, const prop_t *q, contact_t *list, int count,
-		const vec3_t r, const vec3_t r2, const vec3_t normal, float sep ) {
-	const float	ratio = self->mass / other->mass;
-	contact_t	*c;
-	vec3_t		mine, theirs;
+// a spot of the body at something: where, which way out of it and how far apart. What it is at is for the caller.
+static int Contact_At( contact_t *list, int count, const vec3_t r, const vec3_t r2, const vec3_t normal, float sep ) {
+	contact_t *c;
 
 	if ( count >= BODY_MAX_CONTACTS )
 		return count;
@@ -1905,36 +1893,56 @@ static int Contact_Add( gentity_t *self, const prop_t *p, gentity_t *other, cons
 	VectorCopy( r2, c->r2 );
 	VectorCopy( normal, c->normal );
 	c->sep = sep;
+	c->other = NULL;
+	c->ratio = 0.0f;
+	c->mover = NULL;
+	return count + 1;
+}
 
-	Body_SpeedAt( self, p, r, mine );
-	Body_SpeedAt( other, q, r2, theirs );
+// a contact is with another prop: does that one take its part of the impulses or does it count as world
+static void Contact_Prop( gentity_t *self, const prop_t *p, gentity_t *other, const prop_t *q, contact_t *c ) {
+	const float	ratio = self->mass / other->mass;
+	vec3_t		mine, theirs;
+
+	Body_SpeedAt( self, p, c->r, mine );
+	Body_SpeedAt( other, q, c->r2, theirs );
 	VectorSubtract( mine, theirs, mine );
-	if ( Prop_Fixed( other, q, normal, -DotProduct( mine, normal ), sep, ratio ) ) {
-		c->other = NULL;
-		c->ratio = 0.0f;
-	} else {
+	if ( !Prop_Fixed( other, q, c->normal, -DotProduct( mine, c->normal ), c->sep, ratio ) ) {
 		c->other = other;
 		c->ratio = ratio;
 	}
-	return count + 1;
+}
+
+static int Contact_Add( gentity_t *self, const prop_t *p, gentity_t *other, const prop_t *q, contact_t *list, int count,
+		const vec3_t r, const vec3_t r2, const vec3_t normal, float sep ) {
+	const int next = Contact_At( list, count, r, r2, normal, sep );
+
+	if ( next > count )
+		Contact_Prop( self, p, other, q, &list[count] );
+	return next;
 }
 
 /*
 =================
-Body_Body
+Body_Touch
 
-Where this body touches another one. First the direction they are pushed apart along: of the directions the
-faces of the two look into, the one along which they overlap least. Without an overlap along one of them they
-do not touch. Then every spot of one that is in the other is a contact.
+Where a body touches another shape, each where it stands. First the direction they are pushed apart along: of
+the directions the faces of the two look into, the one along which they overlap least. Without an overlap along
+one of them they do not touch. Then every spot of one that is in the other is a contact.
+
+ahead: how far they can come together in this step. Two that are still that far apart get one contact, at the
+spots of the body next to the other one, which lets it close the gap and no more. Without it a fast body is
+past a thin shape, or deep in it and nearer to its far side, before it is ever seen at it.
 =================
 */
-static int Body_Body( gentity_t *self, const prop_t *p, gentity_t *other, const prop_t *q, contact_t *list, int count ) {
+static int Body_Touch( const vec3_t origin, const prop_t *p, const vec3_t otherOrigin, const prop_t *q, float ahead,
+		contact_t *list, int count ) {
 	vec3_t		apart, normal, dir, back, r, r2, point;
 	float		least = 0.0f, reachSelf, reachOther;
 	qboolean	found = qfalse;
 	int			n;
 
-	VectorSubtract( self->r.currentOrigin, other->r.currentOrigin, apart );
+	VectorSubtract( origin, otherOrigin, apart );
 	VectorClear( normal );
 	for ( n = 0; n < q->shape.numPlanes + p->shape.numPlanes; n++ ) {
 		const qboolean	theirs = ( n < q->shape.numPlanes ) ? qtrue : qfalse;
@@ -1946,7 +1954,7 @@ static int Body_Body( gentity_t *self, const prop_t *p, gentity_t *other, const 
 		Body_ToWorld( owner, plane, dir );
 		VectorNegate( dir, back );
 		gap = ( theirs ? 1.0f : -1.0f ) * DotProduct( apart, dir ) - Body_Reach( facing, back ) - plane[3];
-		if ( gap > BODY_SKIN )
+		if ( gap > BODY_SKIN + ahead )
 			return count;
 		if ( !found || -gap < least ) {
 			// from the other one to this one
@@ -1959,24 +1967,58 @@ static int Body_Body( gentity_t *self, const prop_t *p, gentity_t *other, const 
 	VectorNegate( normal, back );
 	reachSelf = Body_Reach( p, back );
 
+	if ( -least > BODY_SKIN ) {
+		// not at it yet: the middle of the spots that get there first
+		float	low = 0.0f;
+		int		near = 0;
+
+		for ( n = 0; n < p->numSpots; n++ ) {
+			Body_Spot( p, n, r );
+			if ( !n || DotProduct( r, normal ) < low )
+				low = DotProduct( r, normal );
+		}
+		VectorClear( point );
+		for ( n = 0; n < p->numSpots; n++ ) {
+			Body_Spot( p, n, r );
+			if ( DotProduct( r, normal ) < low + 0.25f ) {
+				VectorAdd( point, r, point );
+				near++;
+			}
+		}
+		VectorScale( point, 1.0f / near, r );
+		VectorAdd( apart, r, r2 );
+		return Contact_At( list, count, r, r2, normal, -least );
+	}
+
 	for ( n = 0; n < p->numSpots; n++ ) {
 		// a spot of this body in the other one: how far it is under the other one along that direction
 		Body_Spot( p, n, r );
-		VectorAdd( self->r.currentOrigin, r, point );
-		if ( Body_Holds( other, q, point ) ) {
-			VectorSubtract( point, other->r.currentOrigin, r2 );
-			count = Contact_Add( self, p, other, q, list, count, r, r2, normal, DotProduct( normal, r2 ) - reachOther );
+		VectorAdd( origin, r, point );
+		if ( Body_Holds( otherOrigin, q, point ) ) {
+			VectorSubtract( point, otherOrigin, r2 );
+			count = Contact_At( list, count, r, r2, normal, DotProduct( normal, r2 ) - reachOther );
 		}
 	}
 	for ( n = 0; n < q->numSpots; n++ ) {
 		// and a spot of the other one in this body
 		Body_Spot( q, n, r2 );
-		VectorAdd( other->r.currentOrigin, r2, point );
-		if ( Body_Holds( self, p, point ) ) {
-			VectorSubtract( point, self->r.currentOrigin, r );
-			count = Contact_Add( self, p, other, q, list, count, r, r2, normal, -DotProduct( normal, r ) - reachSelf );
+		VectorAdd( otherOrigin, r2, point );
+		if ( Body_Holds( origin, p, point ) ) {
+			VectorSubtract( point, origin, r );
+			count = Contact_At( list, count, r, r2, normal, -DotProduct( normal, r ) - reachSelf );
 		}
 	}
+	return count;
+}
+
+// where this body touches another one
+static int Body_Body( gentity_t *self, const prop_t *p, gentity_t *other, const prop_t *q, contact_t *list, int count ) {
+	const int	first = count;
+	int			n;
+
+	count = Body_Touch( self->r.currentOrigin, p, other->r.currentOrigin, q, 0.0f, list, count );
+	for ( n = first; n < count; n++ )
+		Contact_Prop( self, p, other, q, &list[n] );
 	return count;
 }
 
@@ -2040,6 +2082,7 @@ static int Body_Contacts( gentity_t *self, const prop_t *p, contact_t *list ) {
 		c->sep = DotProduct( spot, c->normal );
 		c->other = NULL;
 		c->ratio = 0.0f;
+		c->mover = NULL;
 		count++;
 	}
 
@@ -2057,6 +2100,104 @@ static int Body_Contacts( gentity_t *self, const prop_t *p, contact_t *list ) {
 	return count;
 }
 
+// the box of a player or an NPC as a body Body_Touch can be asked about. The few boxes there are are kept.
+static const prop_t *Mover_Box( const gentity_t *other ) {
+	static struct {
+		vec3_t	mins, maxs;
+		prop_t	body;
+	} boxes[4];
+	static int	next;
+	vec3_t		mins, maxs;
+	prop_t		*body;
+	int			i;
+
+	VectorSet( mins, other->r.mins[0] - PROP_PLAYER_SIDE, other->r.mins[1] - PROP_PLAYER_SIDE, other->r.mins[2] );
+	VectorSet( maxs, other->r.maxs[0] + PROP_PLAYER_SIDE, other->r.maxs[1] + PROP_PLAYER_SIDE, other->r.maxs[2] - PROP_PLAYER_TOP );
+	for ( i = 0; i < (int)ARRAY_LEN( boxes ); i++ ) {
+		if ( boxes[i].body.numSpots && VectorCompare( boxes[i].mins, mins ) && VectorCompare( boxes[i].maxs, maxs ) )
+			return &boxes[i].body;
+	}
+
+	body = &boxes[next].body;
+	VectorCopy( mins, boxes[next].mins );
+	VectorCopy( maxs, boxes[next].maxs );
+	next = ( next + 1 ) % (int)ARRAY_LEN( boxes );
+
+	memset( body, 0, sizeof( *body ) );
+	BG_PropShapeBox( mins, maxs, 1.0f, &body->shape );
+	AnglesToAxis( vec3_origin, body->axis );
+	// its corners are what can be in a body
+	for ( i = 0; i < body->shape.numVerts; i++ )
+		VectorCopy( body->shape.verts[i], body->spots[body->numSpots++] );
+	return body;
+}
+
+/*
+=================
+Body_Movers
+
+Where the body touches players and NPCs. Cube_Players looks at them once a frame and gives the body a part of
+their speed, which is the shove. That was all that kept a body out of a player: one in a hand or in the beam was
+pulled through him, a fast one was past him between two frames, and one on his head sank into him and slid out
+of him sideways. Here he is a box in the solver, like the world but one that moves: the body stops at him in
+every step, lies on his head and goes along with it by friction.
+
+Nothing here moves him. The one who holds the body is not in its way, and a body somebody stands on is left
+alone, it does not shake under him.
+=================
+*/
+static int Body_Movers( gentity_t *self, prop_t *p, contact_t *list, int count ) {
+	int i;
+
+	for ( i = 0; i < moverCount && count < BODY_MAX_CONTACTS; i++ ) {
+		gentity_t		*other = &g_entities[moverList[i]];
+		const prop_t	*box;
+		const int		first = count;
+		vec3_t			origin, rel, vel, spot;
+		float			ahead, into, reach;
+		int				n;
+
+		if ( !Prop_Mover( other ) || other == p->holder )
+			continue;
+		box = Mover_Box( other );
+		VectorAdd( other->client->ps.origin, box->shape.centre, origin );
+
+		// how far they can come together in this step, and are they near each other at all
+		VectorSubtract( self->movedir, other->client->ps.velocity, rel );
+		ahead = ( VectorLength( rel ) + VectorLength( p->spin ) * self->radius ) * BODY_STEP;
+		reach = self->radius + box->shape.radius + BODY_SKIN + ahead;
+		if ( DistanceSquared( self->r.currentOrigin, origin ) > reach * reach )
+			continue;
+
+		count = Body_Touch( self->r.currentOrigin, p, origin, box, ahead, list, count );
+		if ( count == first )
+			continue;
+		// he stands on it
+		if ( list[first].normal[2] < -0.5f ) {
+			count = first;
+			continue;
+		}
+
+		// The speed of the surface is his. What of it goes towards the body does not count, the body stops him
+		// and he shoves it (Cube_Players), unless it lies on him: that goes up with him when he jumps or climbs.
+		VectorCopy( other->client->ps.velocity, vel );
+		into = DotProduct( vel, list[first].normal );
+		if ( into > 0.0f && list[first].normal[2] < BODY_GROUND )
+			VectorMA( vel, -into, list[first].normal, vel );
+		for ( n = first; n < count; n++ ) {
+			list[n].mover = other;
+			VectorCopy( vel, list[n].moverVel );
+		}
+
+		// it gets to him in this step: a fast one hurts him
+		if ( -DotProduct( rel, list[first].normal ) * BODY_STEP >= list[first].sep - BODY_SKIN ) {
+			Prop_PlayerSpot( other, self->r.currentOrigin[2], spot );
+			Prop_Hurt( self, p, other, spot );
+		}
+	}
+	return count;
+}
+
 // how fast the cube moves at a contact, seen from what it touches there
 static void Contact_Speed( const gentity_t *self, const prop_t *p, const contact_t *c, vec3_t out ) {
 	Body_SpeedAt( self, p, c->r, out );
@@ -2065,6 +2206,8 @@ static void Contact_Speed( const gentity_t *self, const prop_t *p, const contact
 
 		Body_SpeedAt( c->other, Prop_State( c->other ), c->r2, theirs );
 		VectorSubtract( out, theirs, out );
+	} else if ( c->mover ) {
+		VectorSubtract( out, c->moverVel, out );
 	}
 }
 
@@ -2079,7 +2222,7 @@ static void Contact_Push( gentity_t *self, prop_t *p, const contact_t *c, const 
 	}
 }
 
-// does it lie on something: three spots that are not in one line, on ground that carries
+// does it lie on something: three spots that are not in one line, on ground that carries. A player is no ground.
 static qboolean Body_Carried( const prop_t *p, const contact_t *list, int count ) {
 	const float		apart = 0.3f * Prop_MinHalf( p );
 	const contact_t	*a = NULL, *b = NULL;
@@ -2092,7 +2235,7 @@ static qboolean Body_Carried( const prop_t *p, const contact_t *list, int count 
 		const contact_t	*c = &list[i];
 		float			d;
 
-		if ( c->normal[2] < BODY_GROUND || c->sep > 0.5f )
+		if ( c->mover || c->normal[2] < BODY_GROUND || c->sep > 0.5f )
 			continue;
 		if ( !a ) {
 			a = c;
@@ -2112,7 +2255,7 @@ static qboolean Body_Carried( const prop_t *p, const contact_t *list, int count 
 	for ( i = 0; i < count; i++ ) {
 		const contact_t *c = &list[i];
 
-		if ( c->normal[2] < BODY_GROUND || c->sep > 0.5f )
+		if ( c->mover || c->normal[2] < BODY_GROUND || c->sep > 0.5f )
 			continue;
 		VectorSubtract( c->r, a->r, ac );
 		CrossProduct( ab, ac, cross );
@@ -2138,7 +2281,7 @@ Returns qfalse when it went home or is inside something, the frame ends there.
 static qboolean Body_Step( gentity_t *self, prop_t *p, float dt, const vec3_t hand, const vec3_t handVel,
 		contact_t *contacts, int *numContacts ) {
 	float		*vel = self->movedir;
-	const int	count = p->box ? Body_Contacts( self, p, contacts ) : 0;
+	const int	count = p->box ? Body_Movers( self, p, contacts, Body_Contacts( self, p, contacts ) ) : 0;
 	const float	stiff = p->gun ? PHYSGUN_STIFF : GRAB_STIFF / sqrtf( self->mass );
 	const float	fastest = p->gun ? PHYSGUN_SPEED : GRAB_MAX_SPEED;
 	vec3_t		grab, corr, end, mins, maxs;
@@ -2429,6 +2572,15 @@ static void Body_Move( gentity_t *self, prop_t *p, float dt ) {
 	if ( !p->box || i <= steps )
 		return;
 
+	// what lies or leans on a player does not come to rest: he walks away
+	for ( i = 0; i < count; i++ ) {
+		if ( contacts[i].mover && contacts[i].jn > 0.0f ) {
+			p->calmTime = 0;
+			p->restTime = level.time;
+			return;
+		}
+	}
+
 	if ( VectorLength( self->movedir ) < BODY_CALM_SPEED && VectorLength( p->spin ) < BODY_CALM_SPIN
 		&& Body_Carried( p, contacts, count ) ) {
 		if ( !p->calmTime )
@@ -2509,7 +2661,7 @@ static void Prop_Think( gentity_t *self ) {
 	}
 
 	if ( p->box )
-		Cube_Players( self, p, dt );
+		Cube_Players( self, p );
 	else
 		Ball_Players( self, p, dt );
 

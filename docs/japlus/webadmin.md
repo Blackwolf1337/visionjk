@@ -485,6 +485,27 @@ Also changed:
     (`AREA_DEPTH` 6 in `sv_world.cpp`: 22 % less time in the lines with the same simulation, but it changes the
     order of the entities every area query in the game gets. The user decided against it on 2026-10-07, it
     stays at 4).
+- Changed 2026-10-07, bodies against players (`g_props.c`). A body went through a player when it was in a hand
+  or in the beam, when it was fast, and when it lay on his head. The cause was one: players were no part of
+  the solver. `Cube_Players` looked at them once a frame, gave the body a part of the speed between them (with
+  the defaults 31 % of it, that is the shove of a heavy thing) and put it outside of him. So the pull of a
+  hand, which the solver works on six times in each of the four steps of a frame, dragged a body through him;
+  a body at 900 units a second moves 45 units a frame and was never seen at him; and one on his head kept
+  falling into him, 4.7 units deep at 127 units a second for a crate of mass 4, deeper the heavier it is, until
+  his middle was in it and it was shoved out sideways. Now `Body_Movers` makes every player and NPC near a
+  body a box in its step, like the world but one that moves (`Body_Touch`, the code that finds where two
+  bodies touch, with his box as the second one). The body stops at him in every step, bounces off him, and
+  lies on his head, where friction takes it along when he walks. A body that can reach him within the step is
+  held back before it is in him (one contact that lets it close the gap and no more), which is what stops the
+  fast ones, and that is also where a fast one hurts him now. Nothing there moves the player. His speed towards
+  a body beside him does not count, he is stopped by it and shoves it as before. A body that lies on him goes
+  up with him when he jumps: his box is half a unit lower for it (`PROP_PLAYER_TOP`), so it lies in his box by
+  that and does not stop his moves. At his sides the box is a quarter unit wider (`PROP_PLAYER_SIDE`), so a
+  body comes to rest outside of it and stays in his way. The one who holds a body is still not in its way, a
+  body somebody stands on is still left alone, and what lies or leans on a player does not go to sleep.
+  `Cube_Players` keeps the shove and wakes a body a player is in, the step puts it outside of him. Checked on
+  a private server with a frozen bot: a crate put over his head lies on it at speed 0 (before: it hung in his
+  head at 127 units a second). Throws at him gave no clean numbers there. Not tried in the game.
 - New: taking a ball or a cube into the hand with `+button13` (for example `bind g +button13`). The button
   bits of the base game end at 2048, JA+ has 4096 (`+button12`) for the hook, `+button13` to `+button15` (8192,
   16384, 32768) are free and all 16 bits reach the server. No client change: the stock client and the JA+
