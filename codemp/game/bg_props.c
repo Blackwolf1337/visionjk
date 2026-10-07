@@ -773,6 +773,11 @@ be asked, so the file is read, every offset checked against its size.
 #ifndef BG_PROPS_NO_FILES
 
 #include "qcommon/qfiles.h"
+// q_shared.h has the bone structure already: the header is told so, as ghoul2_shared.h and tr_types.h tell it.
+// Without this clang (macOS) stops at a structure that is defined twice, gcc lets it pass.
+#ifndef MDXABONEDEF
+	#define MDXABONEDEF
+#endif
 #include "rd-common/mdx_format.h"
 
 #if defined( _GAME )
