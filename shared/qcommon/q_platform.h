@@ -61,30 +61,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // Win32
 #elif defined(_WIN32) || defined(__WIN32__)
 
-	#undef QDECL
-	#define	QDECL __cdecl
-
-	#undef QCALL
-	#define QCALL __stdcall
-
-	#if defined(_MSC_VER)
-		#define OS_STRING "win_msvc"
-	#elif defined(__MINGW32__)
-		#define OS_STRING "win_mingw"
-	#endif
-
-	#define QINLINE __inline
-	#define PATH_SEP '\\'
-
-	#if defined(_M_IX86) || defined(__i386__)
-		#define ARCH_STRING "x86"
-	#elif defined _M_ALPHA
-		#define ARCH_STRING "AXP"
-	#endif
-
-	#define Q3_LITTLE_ENDIAN
-
-	#define DLL_EXT ".dll"
+	#error "32 bit Windows is not supported, this tree is built for 64 bit only"
 
 // MAC OS X
 #elif defined(MACOS_X) || defined(__APPLE_CC__)
@@ -101,9 +78,6 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 	#if defined(__ppc__)
 		#define ARCH_STRING "ppc"
 		#define Q3_BIG_ENDIAN
-	#elif defined(__i386__)
-		#define ARCH_STRING "x86"
-		#define Q3_LITTLE_ENDIAN
 	#elif defined(__x86_64__)
 		#define idx64
 		#define ARCH_STRING "x86_64"

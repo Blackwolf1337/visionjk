@@ -143,12 +143,6 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #endif
 
 // this is the define for determining if we have an asm version of a C function
-#if (defined(_M_IX86) || defined(__i386__)) && !defined(__sun__)
-	#define id386	1
-#else
-	#define id386	0
-#endif
-
 #if (defined(powerc) || defined(powerpc) || defined(ppc) || defined(__ppc) || defined(__ppc__)) && !defined(C_ONLY)
 	#define idppc	1
 #else

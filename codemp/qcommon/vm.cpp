@@ -75,12 +75,9 @@ void VM_Init( void ) {
 // This hack below copies all needed values for an argument to an array in memory, so that QVM can get the correct values.
 // This can also be used on systems where the stack grows upwards, as the presumably standard and safe stdargs.h macros
 //	are used.
-// The original code, while probably still inherently dangerous, seems to work well enough for the platforms it already
-//	works on. Rather than add the performance hit for those platforms, the original code is still in use there.
 // For speed, we just grab 15 arguments, and don't worry about exactly how many the syscall actually needs; the extra is
 //	thrown away.
 intptr_t QDECL VM_DllSyscall( intptr_t arg, ... ) {
-#if !id386 || defined __clang__ || defined MACOS_X
 	// rcg010206 - see commentary above
 	intptr_t args[16];
 	va_list ap;
@@ -93,9 +90,6 @@ intptr_t QDECL VM_DllSyscall( intptr_t arg, ... ) {
 	va_end( ap );
 
 	return currentVM->legacy.syscall( args );
-#else // original id code
-	return currentVM->legacy.syscall( &arg );
-#endif
 }
 
 // Reload the data, but leave everything else in place

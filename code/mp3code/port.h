@@ -54,14 +54,6 @@ ____________________________________________________________________________*/
     #undef LITTLE_SHORT16
     #define LITTLE_SHORT16
   #endif
-  #ifdef _M_IX86
-    #undef LITTLE_SHORT16
-    #define LITTLE_SHORT16
-  #endif
-  #ifdef __i386__
-    #undef LITTLE_SHORT16
-    #define LITTLE_SHORT16
-  #endif
 #endif
 
 

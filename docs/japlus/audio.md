@@ -72,10 +72,6 @@ generates into `<build>/steamaudio`, nothing else of the submodule is on the inc
 submodule checked out, cmake says so and builds the client without `s_spatial`. `-DBuildJPSpatialAudio=OFF`
 does the same on purpose.
 
-The 32 bit library for Windows exports its functions under their `__stdcall` names (`_name@N`). The engine
-counts N from the type of each declaration. `tools/satest/exports.py` of the port compares that with the
-export table of the DLL.
-
 ## How it works
 
 **The level** (`qcommon/cm_export.cpp`). Steam Audio traces rays in threads of its own, and the collision code
@@ -187,7 +183,7 @@ Cost on mp/ffa3 with bots fighting (AMD Ryzen 9 5900X 12-Core Processor, two thr
 reflections and paths 21 ms, in its own thread, about seven a second. In the thread of the game the sound costs mostly under 0.5 ms a frame
 and up to 2 ms, most of it the reverb. The paths of mp/ffa3: 740 probes, under a second, a file of 660 kB.
 
-Builds: Linux 64, and the client and the modules for 32 bit Windows with mingw.
+Builds: Linux 64, and the client and the modules for 64 bit Windows with mingw (built, never run).
 
 ## Limits
 

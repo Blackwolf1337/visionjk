@@ -33,8 +33,6 @@ short	*snd_out;
 
 
 
-// FIXME: proper fix for that ?
-#if !defined(_MSC_VER) || !id386
 void S_WriteLinearBlastStereo16 (void)
 {
 	int		i;
@@ -59,95 +57,6 @@ void S_WriteLinearBlastStereo16 (void)
 			snd_out[i+1] = val;
 	}
 }
-#else
-unsigned int uiMMXAvailable = 0;	// leave as 32 bit
-__declspec( naked ) void S_WriteLinearBlastStereo16 (void)
-{
-	__asm {
-
- push edi
- push ebx
-
- mov ecx,ds:dword ptr[snd_linear_count]		// snd_linear_count is always even at this point, but not nec. mult of 4
- mov ebx,ds:dword ptr[snd_p]
- mov edi,ds:dword ptr[snd_out]
-
- cmp		[uiMMXAvailable], dword ptr 0
- je			NoMMX
-
-// writes 8 items (128 bits) per loop pass...
-//
- cmp		ecx,8
- jb			NoMMX
-
-LWLBLoopTop_MMX:
-
- movq		mm1,[-8+ebx+ecx*4]
- movq		mm0,[-16+ebx+ecx*4]
- movq		mm3,[-24+ebx+ecx*4]
- movq		mm2,[-32+ebx+ecx*4]
- psrad		mm0,8
- psrad		mm1,8
- psrad		mm2,8
- psrad		mm3,8
- packssdw	mm0,mm1
- packssdw	mm2,mm3
- movq		[-8+edi+ecx*2],mm0
- movq		[-16+edi+ecx*2],mm2
-
- sub		ecx,8
- cmp		ecx,8
- jae		LWLBLoopTop_MMX
-
- emms
-
- // now deal with any remaining count...
- //
- jecxz		LExit
-
-NoMMX:
-
-// writes 2 items (32 bits) per loop pass...
-//
-LWLBLoopTop:
- mov eax,ds:dword ptr[-8+ebx+ecx*4]
- sar eax,8
- cmp eax,07FFFh
- jg LClampHigh
- cmp eax,0FFFF8000h
- jnl LClampDone
- mov eax,0FFFF8000h
- jmp LClampDone
-LClampHigh:
- mov eax,07FFFh
-LClampDone:
- mov edx,ds:dword ptr[-4+ebx+ecx*4]
- sar edx,8
- cmp edx,07FFFh
- jg LClampHigh2
- cmp edx,0FFFF8000h
- jnl LClampDone2
- mov edx,0FFFF8000h
- jmp LClampDone2
-LClampHigh2:
- mov edx,07FFFh
-LClampDone2:
- shl edx,16
- and eax,0FFFFh
- or edx,eax
- mov ds:dword ptr[-4+edi+ecx*2],edx
-
- sub ecx,2
- jnz LWLBLoopTop
-
-LExit:
- pop ebx
- pop edi
- ret
-	}
-}
-
-#endif
 
 
 void S_TransferStereo16 (unsigned long *pbuf, int endtime)

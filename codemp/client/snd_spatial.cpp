@@ -131,21 +131,6 @@ from the library when it is loaded.
 SPATIAL_FUNCTIONS( X )
 #undef X
 
-#if defined(_WIN32) && !defined(_WIN64)
-// The 32 bit library for Windows exports its functions under their __stdcall names: _name@N, N the bytes its
-// arguments take on the stack, each rounded up to 4. N is counted from the type of the declaration.
-template<typename T> struct spatialArgBytes_t;
-template<typename R> struct spatialArgBytes_t<R (__stdcall *)()> {
-	enum { value = 0 };
-};
-template<typename R, typename A, typename... B> struct spatialArgBytes_t<R (__stdcall *)( A, B... )> {
-	enum { value = (int)( ( sizeof( A ) + 3 ) & ~(size_t)3 ) + spatialArgBytes_t<R (__stdcall *)( B... )>::value };
-};
-#define SPATIAL_EXPORT( name )	va( "_%s@%i", #name, (int)spatialArgBytes_t<decltype( &name )>::value )
-#else
-#define SPATIAL_EXPORT( name )	#name
-#endif
-
 // Steam Audio counts in metres. A unit of the game is taken as an inch: the player is 64 units tall.
 #define SPATIAL_UNIT	0.0254f
 
@@ -458,7 +443,7 @@ static qboolean S_SpatialLoad( void ) {
 		Com_Printf( "s_spatial: no " SPATIAL_LIBRARY " next to the program (%s), the sound stays as it is\n", Sys_BinaryPath() );
 		return qfalse;
 	}
-#define X( name )	q##name = (decltype( q##name ))Sys_LoadFunction( spatial.library, SPATIAL_EXPORT( name ) ); if ( !q##name ) { missing = #name; }
+#define X( name )	q##name = (decltype( q##name ))Sys_LoadFunction( spatial.library, #name ); if ( !q##name ) { missing = #name; }
 	SPATIAL_FUNCTIONS( X )
 #undef X
 	if ( missing ) {
