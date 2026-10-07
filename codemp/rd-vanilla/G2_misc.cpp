@@ -1005,6 +1005,9 @@ void G2_GorePolys( const mdxmSurface_t *surface, CTraceSurface &TS, const mdxmSu
 
 		if ( gore->tex[TS.lod] )
 		{
+#ifdef RD_VULKAN_VISION
+			VK_GoreFreed( gore->tex[TS.lod] );
+#endif
 			Z_Free(gore->tex[TS.lod]);
 		}
 

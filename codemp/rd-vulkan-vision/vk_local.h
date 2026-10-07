@@ -396,6 +396,8 @@ void		VK_ShutdownModels( void );
 void		VK_ModelsBeginFrame( void );
 int			VK_SkinnedSurface( const mdxmSurface_t *surface );
 int			VK_StaticMeshSurface( const md3Surface_t *surface );
+int			VK_GoreSurface( const mdxmSurface_t *surface, const float *goreData );
+qboolean	VK_UploadGoreBatch( CBoneCache *boneCache, uint32_t *bones );
 void		VK_ModelBatchBegin( void );
 qboolean	VK_ModelBatchAdd( int firstIndex, int numIndexes );
 qboolean	VK_UploadSkinnedBatch( CBoneCache *boneCache, uint32_t *bones );

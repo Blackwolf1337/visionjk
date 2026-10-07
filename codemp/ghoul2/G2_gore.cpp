@@ -25,6 +25,10 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #ifdef _G2_GORE
 
+#ifdef RD_VULKAN_VISION
+void VK_GoreFreed( const void *goreData );	// rd-vulkan-vision/vk_model.cpp: the mark has vertices on the device
+#endif
+
 GoreTextureCoordinates::GoreTextureCoordinates()
 {
 	Com_Memset (tex, 0, sizeof (tex));
@@ -36,6 +40,9 @@ GoreTextureCoordinates::~GoreTextureCoordinates()
 	{
 		if ( tex[i] )
 		{
+#ifdef RD_VULKAN_VISION
+			VK_GoreFreed( tex[i] );
+#endif
 			ri.Z_Free(tex[i]);
 			tex[i] = NULL;
 		}

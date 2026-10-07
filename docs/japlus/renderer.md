@@ -63,7 +63,8 @@ beams and the like, the weather particles, the surface sprites and the shadows (
 
 What that needs in `rd-vanilla`: `#ifndef RD_VULKAN_VISION` around the OpenGL-only functions of `tr_init.cpp`
 and `tr_image.cpp` and around the two functions of `tr_shadows.cpp` that are not about shadows, two functions in
-`tr_ghoul2.cpp` (the bone matrices, the vertices of saber marks), the depth test of a flare in `tr_surface.cpp`,
+`tr_ghoul2.cpp` (the bone matrices, the vertices of saber marks), a call where the data of a saber mark is freed
+(`G2_gore.cpp`, `G2_misc.cpp`), the depth test of a flare in `tr_surface.cpp`,
 an early way out for triangles a mark does not reach in `tr_marks.cpp` (see the speed steps below),
 and one include at the end of `tr_local.h`. Without the macro the files are byte for byte the same after the preprocessor, that was checked
 with `g++ -E -P` against `master`. The target links with `-Wl,-z,defs` and without libGL, so an OpenGL call that
@@ -97,7 +98,7 @@ library. The other renderers do not use them.
 | `vk_shade.cpp` | a batch with a `.shader` script becomes draws: colors, tcMods, fog, dynamic lights |
 | `vk_backend.cpp` | the render commands: pictures, views, entities, draw order |
 | `vk_world.cpp` | the level in a device buffer, which batches can use it |
-| `vk_model.cpp` | Ghoul2 and MD3 vertices in a device buffer, bones per frame |
+| `vk_model.cpp` | Ghoul2 and MD3 vertices in a device buffer, the saber marks on models, bones per frame |
 | `vk_post.cpp` | dynamic glow, the copy of the frame for refraction, the depth test of flares |
 | `vk_gl.cpp` | the immediate mode drawing of the shared files |
 | `shaders/` | `stage.glsl` (one stage of a script on a vertex), `generic.vert`, `skinned.vert`, `generic.frag`, `post.vert`, `gamma.frag`, `blur.frag`, `copy.frag`. `glslc -mfmt=c` turns them into headers while building |
@@ -109,6 +110,7 @@ library. The other renderers do not use them.
 | Level faces, meshes, patches | copied into the tess arrays every frame | one device buffer, per frame only indexes |
 | Ghoul2 models | every vertex moved by its bones on the CPU | vertices and triangles in device buffers, bones per skeleton per frame, skinning in `skinned.vert` |
 | MD3 with one frame | decoded and copied every frame | same device buffer, one identity bone |
+| Saber marks on models | their vertices taken from the surface every frame, after the CPU moved it | the vertices of a mark in a device buffer of the marks, with the bones they have in the surface, moved by `skinned.vert` |
 | tcMod, tcGen, rgbGen, alphaGen | per vertex on the CPU | one matrix and two colors per draw, the rest in `stage.glsl` |
 | rgbGen lightingDiffuse, alphaGen lightingSpecular and portal | per vertex on the CPU | vertex shader |
 | deformVertexes wave, bulge, move | per vertex on the CPU | vertex shader, for a shader with one of them |
@@ -125,8 +127,8 @@ library. The other renderers do not use them.
 Still on the CPU, through the tess arrays as in `rd-vanilla`: the sky, shaders with the other kinds of
 `deformVertexes` (autosprite, text, normals) or with more than one of them,
 `alphaGen blend` (terrain), vertex lit surfaces with more than one light style, MD3 with several frames, the
-saber marks on models (the model itself is on the device, the few vertices a mark takes from it are moved on
-the CPU), all effects the game hands over as polygons, sprites, beams and lines, marks on walls, the weather,
+saber marks on models while they fade (the last tenth of their time, the color of every vertex changes then),
+all effects the game hands over as polygons, sprites, beams and lines, marks on walls, the weather,
 surface sprites, the HUD.
 
 MD3 with several frames stay there on purpose. Of the 604 MD3 files of the base game and of JA+ 42 have more
@@ -153,7 +155,8 @@ left in these views are the effects of the game (flames, smoke, light cones) and
 - The frame is cleared at its start. Where nothing of the level is drawn (looking out of the world, the camera
   inside a model) this renderer shows black, `rd-vanilla` shows what the last frame left there.
 - Dynamic lights are evaluated per pixel with the same formula, not per triangle.
-- The glow buffers have 8 bits per channel, `rd-vanilla` asks for 16.
+- The glow buffers have 8 bits per channel. `rd-vanilla` makes its glow textures with 16, but fills them with
+  copies of the frame buffer of the window, which has 8, so there is no more in them.
 - Refraction (the wave of force push, entities with `RF_DISTORTION`): `rd-vanilla` copies a square of the screen
   into a texture for each such entity, here the whole frame is copied and the draw is told where its square is.
   The picture is the same.
@@ -244,6 +247,14 @@ renderers with their compressed textures: the two views of mp/ffa3 0.1 and 0.3 %
 with the HUD 0.1 %, no message of the validation layer, also not over the restarts of the renderer in between
 (the workers are started and ended with it). The Windows DLL still builds and imports what it did.
 
+Saber marks on models from the device (2026-10-07). A build that also moved the vertices of every such mark on
+the CPU and worked out what the vertex shader makes of the copy on the device played the fight demo: 78000
+marks drawn, 2.85 million vertices, the positions differ by 0.0007 units at most (the weights of the bones have
+16 bits on the device) and the normals not at all. That check is not in the code. The first 30 seconds of the
+demo as a video by the build before and by this one: 0.1 to 1.6 % of the pixels of a frame differ, the sparks.
+No message of the validation layer. The marks are gone from the list of shaders `gfxinfo` names as built on the
+CPU. `rd-vanilla` is the same after the preprocessor in the three shared files this touches.
+
 Anti aliasing, `r_ext_multisample 4` in both renderers: mp/ffa3 0.2 and 0.4 %, with `r_DynamicGlow 1` 0.1 and
 0.3 %, mp/ffa4 with its flares 0.1 and 0.1 %. Edges are smooth where `rd-vanilla` has them smooth. A fight with
 glow and four samples was looked at as a picture. In the timedemo below four samples cost little: 673 and 673
@@ -309,7 +320,7 @@ this section had numbers from two test profiles of which one had `r_dynamiclight
 diagnostic run. That made `rd-vanilla` 6 % faster there and showed a gain for a step that was a loss (the
 sixth row of the table below). The start script of the tests deletes the stored config before every run now.
 
-A frame of that demo has 600 to 850 draws, 35000 to 62000 triangles from device buffers and 6300 to 8200 built
+A frame of that demo has 600 to 850 draws, 37000 to 65000 triangles from device buffers and 5200 to 5700 built
 on the CPU. Those are all effects of the game: saber marks on walls, sparks, saber glow. How the numbers came
 down, each step measured with the same demo:
 
@@ -323,9 +334,10 @@ down, each step measured with the same demo:
 | tried and taken out: only the first set of texture coordinates of a vertex written where no stage reads the others. Four tenths less to copy, but piece by piece into the memory of the device | the same | 803 against 848, a loss of 5 % |
 | the normals of a vertex left out of the copy where no stage reads them | the same | 900 against 863 |
 | marks: a triangle the planes of a mark leave nothing of is passed over before it is copied and chopped (`tr_marks.cpp`, for this renderer only). The game asks for the shadow mark of every player in every frame, and a floor that is a patch gave it 150 triangles a call | the same | 863 against 803 |
+| saber marks on models from the device: the vertices of a mark go into a buffer once, with the bones they have in the surface, and are not moved on the CPU every frame any more (about 1500 vertices a frame) | 5200 to 5700 | 921 against 901, which is about as little as this measurement can tell apart |
 
 The first four rows were measured without dynamic lights (the stored cvar named above), the others with the
-defaults. The pairs of numbers in the last four rows are medians of eight runs by turns of two builds that
+defaults. The pairs of numbers in the last five rows are medians of eight runs by turns of two builds that
 differ in that step alone.
 
 Where a frame of that demo goes, counted in instructions with callgrind (`tools/rdprof.sh`, not a measure of
@@ -333,8 +345,8 @@ time), after the effects went into shared batches: 62 % are the cgame (36 % its 
 marks it puts on walls, 10 % the front end of the renderer it calls), 36 % the back end. Before that step the
 back end had 45 % and half as many instructions again, before the three steps ahead of it 54 %. What it still
 spends them on: the bones of the skeletons 7 %, the draw calls 6 %, building sprites and beams 5 %, the
-vertices of saber marks on models 4 %. The profile counts every byte of a large copy as an instruction, so it
-says nothing about the copies.
+vertices of saber marks on models 4 % (those have gone to the device since). The profile counts every byte of
+a large copy as an instruction, so it says nothing about the copies.
 
 In a view without a crowd both renderers reach the 1000 frames a second the engine allows (a frame lasts at
 least 1 ms, in a `timedemo` too), so there is nothing to measure there. See [threading.md](threading.md) for why

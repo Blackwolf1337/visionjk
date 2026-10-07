@@ -41,7 +41,8 @@ static vkBuffer_t		vk_worldVertexes;
 static VkDeviceSize		vk_worldOffsets[4];			// where xyz, normal, texCoords and colors start in it
 static qboolean			vk_worldValid;
 // the batch in tess: 0: vertices and indexes in the tess arrays, 1: indexes into the buffer of the level,
-// 2: indexes into the buffer of the models (vk_model.cpp), all of one skeleton (NULL: MD3 meshes with one frame)
+// 2: runs of indexes in the buffer of the models (vk_model.cpp), all of one skeleton (NULL: MD3 meshes with one frame),
+// 3: indexes into the buffer of the saber marks on models, all of one skeleton
 static int				vk_batchMode;
 
 cvar_t	*r_vkStatic;		// 0: nothing from buffers on the device, every vertex through the tess arrays as in rd-vanilla
@@ -52,7 +53,7 @@ qboolean VK_BatchIsStatic( void ) {
 }
 
 qboolean VK_BatchIsSkinned( void ) {
-	return (qboolean)( vk_batchMode == 2 );
+	return (qboolean)( vk_batchMode == 2 || vk_batchMode == 3 );
 }
 
 // RB_BeginSurface(): the first surface of the batch decides again
@@ -233,13 +234,13 @@ void VK_StaticColorScale( float *scale ) {
 }
 
 // ends the batch and begins another one of the same shader for surfaces on the bones
-static void VK_NewModelBatch( CBoneCache *bones ) {
+static void VK_NewModelBatch( CBoneCache *bones, int mode ) {
 	shader_t *shader = tess.shader;
 	const int fogNum = tess.fogNum;
 
 	RB_EndSurface();
 	RB_BeginSurface( shader, fogNum );
-	vk_batchMode = 2;
+	vk_batchMode = mode;
 	vk_batchBones = bones;
 }
 
@@ -260,7 +261,7 @@ static qboolean VK_AddDeviceMesh( CBoneCache *bones, const void *mesh, qboolean 
 		vk_batchBones = bones;
 	} else if ( vk_batchMode == 2 && vk_batchBones != bones ) {
 		// a batch has the bones of one skeleton
-		VK_NewModelBatch( bones );
+		VK_NewModelBatch( bones, 2 );
 	}
 	if ( vk_batchMode != 2 ) {
 		return qfalse;
@@ -274,8 +275,52 @@ static qboolean VK_AddDeviceMesh( CBoneCache *bones, const void *mesh, qboolean 
 	vk_batchMode = 2;		// an overflow began a new batch
 	vk_batchBones = bones;
 	if ( !VK_ModelBatchAdd( first, numIndexes ) ) {
-		VK_NewModelBatch( bones );
+		VK_NewModelBatch( bones, 2 );
 		VK_ModelBatchAdd( first, numIndexes );
+	}
+	tess.numIndexes += numIndexes;
+	return qtrue;
+}
+
+/*
+===============
+VK_AddDeviceGore
+
+A saber mark on a surface of a model into the batch, as indexes into the buffer of the marks (vk_model.cpp).
+qfalse: it has to take the way through the tess arrays.
+===============
+*/
+static qboolean VK_AddDeviceGore( const CRenderableSurface *rs ) {
+	const int *data = (const int *)rs->alternateTex;
+	const int numVerts = data[0], numIndexes = data[1] * 3;
+	// behind the numbers of its vertices in the surface, their positions, normals and texture coordinates
+	const int *triangles = data + 2 + numVerts * 11;
+	glIndex_t *out;
+	int first;
+
+	// while it grows its texture coordinates change, while it fades its colors (RB_SurfaceGhoul)
+	if ( rs->scale > 1.0f || rs->fade != 1.0f ) {
+		return qfalse;
+	}
+	if ( !tess.numIndexes && !tess.numVertexes ) {
+		vk_batchMode = VK_ShaderIsStatic() ? 3 : 0;
+		vk_batchBones = rs->boneCache;
+	} else if ( vk_batchMode == 3 && vk_batchBones != rs->boneCache ) {
+		VK_NewModelBatch( rs->boneCache, 3 );
+	}
+	if ( vk_batchMode != 3 ) {
+		return qfalse;
+	}
+	first = VK_GoreSurface( rs->surfaceData, rs->alternateTex );
+	if ( first < 0 ) {
+		return qfalse;
+	}
+	RB_CHECKOVERFLOW( 0, numIndexes );
+	vk_batchMode = 3;		// an overflow began a new batch
+	vk_batchBones = rs->boneCache;
+	out = tess.indexes + tess.numIndexes;
+	for ( int i = 0; i < numIndexes; i++ ) {
+		out[i] = (glIndex_t)( triangles[i] + first );
 	}
 	tess.numIndexes += numIndexes;
 	return qtrue;
@@ -294,19 +339,24 @@ void VK_AddSurface( surfaceType_t *surface ) {
 		CRenderableSurface *rs = (CRenderableSurface *)surface;
 		const mdxmSurface_t *mesh = rs->surfaceData;
 
-		// a gore surface (alternateTex) is a few triangles that were made for this frame, it takes the tess arrays
 		if ( rs->boneCache && mesh && !rs->alternateTex
 			&& VK_AddDeviceMesh( rs->boneCache, mesh, qfalse, mesh->numTriangles * 3 ) ) {
-			// the marks on this surface want some of its vertices as the bones move them
-			if ( rs->goreChain ) {
-				G2_SkinGore( rs );
-			}
 			// R_AddGhoulSurfaces() made this object for the frame and RB_SurfaceGhoul() frees it, which is not
 			// called on this way. It stays if the glow pass draws the surface a second time.
 			if ( !tess.shader->hasGlow || g_bRenderGlowingObjects || !g_bDynamicGlowSupported || !r_DynamicGlow->integer ) {
 				delete rs;
 			}
 			return;
+		}
+		// a saber mark on a surface (gore)
+		if ( rs->boneCache && mesh && rs->alternateTex ) {
+			if ( VK_AddDeviceGore( rs ) ) {
+				return;
+			}
+			// Through the tess arrays: RB_SurfaceGhoul() copies the vertices of the mark that the surface under
+			// it left there when it was moved by its bones on the CPU. That surface may have come from the
+			// device, so they are worked out for this mark now.
+			G2_SkinGore( rs );
 		}
 	} else if ( *surface == SF_MD3 ) {
 		const md3Surface_t *mesh = (const md3Surface_t *)surface;
@@ -407,6 +457,9 @@ bones: for a batch of a model, where its skeleton is in the frame
 qboolean VK_UploadStaticBatch( uint32_t *bones ) {
 	if ( vk_batchMode == 2 ) {
 		return VK_UploadSkinnedBatch( vk_batchBones, bones );
+	}
+	if ( vk_batchMode == 3 ) {
+		return VK_UploadGoreBatch( vk_batchBones, bones );
 	}
 	return VK_UploadIndexes( vk_worldVertexes.buffer, vk_worldOffsets, 4, tess.indexes, tess.numIndexes );
 }

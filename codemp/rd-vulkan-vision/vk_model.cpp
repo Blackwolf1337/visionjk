@@ -26,8 +26,11 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // bones of a skeleton are copied into the frame, shaders/skinned.vert does the rest. The bones themselves still
 // come from the bone cache of tr_ghoul2.cpp, so animation, bolts and collision are what they always were.
 //
-// Saber marks on a model (gore) take a few vertices of the surface they lie on as the bones move them. Those
-// are worked out on the CPU (G2_SkinGore in tr_ghoul2.cpp), the surface itself is drawn from the device.
+// A saber mark on a model (gore) is a few triangles of the surface it lies on with texture coordinates of its
+// own. rd-vanilla takes their vertices from the surface each frame when it has moved it by its bones. Here the
+// vertices of a mark go into a buffer of the marks the first time it is drawn, with the bones and weights they
+// have in the surface, and are moved by the same vertex shader. Only a mark that grows or fades is still made
+// on the CPU (G2_SkinGore in tr_ghoul2.cpp).
 //
 // An MD3 model with one frame (items, weapons, most models of a level) goes the same way: its vertices are put
 // into the same buffer with one bone that leaves them where they are. MD3 models with more frames are still
@@ -42,6 +45,19 @@ static vkBuffer_t		vk_modelVertexes;			// vkSkinVertex_t, filled from the front
 static VkDeviceSize		vk_modelUsed;
 static vkBuffer_t		vk_modelIndexes;			// the triangles of those surfaces, as indexes into the whole buffer
 static VkDeviceSize		vk_modelIndexUsed;
+
+// Marks come and go all the time, so their vertices have two buffers: when the one in use is nearly full the
+// other one is begun, and every mark that is still drawn goes into that one again. A frame the device still
+// works on may read the old one, which is not written to before the buffers change places the next time.
+#define VK_GORE_BYTES	( 4 << 20 )
+// by the data of a mark (CRenderableSurface::alternateTex): where its vertices begin in the buffer in use. On
+// the heap and never freed: the marks tell when their data goes (VK_GoreFreed), also when the library is
+// unloaded and things of this file may be gone already.
+static std::unordered_map<const void *, int>	*vk_goreFirstVertex;
+static vkBuffer_t		vk_goreVertexes[2];			// vkSkinVertex_t, filled from the front
+static int				vk_goreBuffer;				// the one in use
+static VkDeviceSize		vk_goreUsed;
+static int				vk_goreFrames;				// frames since the two changed places
 
 // the surfaces of the batch that is collected, as runs in the index buffer
 static vkIndexRange_t	vk_batchRanges[VK_MAX_BATCH_RANGES];
@@ -60,6 +76,14 @@ void VK_InitModels( void ) {
 	VK_CreateBuffer( &vk_modelVertexes, VK_MODEL_BYTES, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, qfalse );
 	VK_CreateBuffer( &vk_modelIndexes, VK_MODEL_INDEX_BYTES, VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, qfalse );
 	vk_modelUsed = vk_modelIndexUsed = 0;
+	for ( int i = 0; i < 2; i++ ) {
+		VK_CreateBuffer( &vk_goreVertexes[i], VK_GORE_BYTES, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, qfalse );
+	}
+	if ( !vk_goreFirstVertex ) {
+		vk_goreFirstVertex = new std::unordered_map<const void *, int>;
+	}
+	vk_goreFirstVertex->clear();
+	vk_goreUsed = 0;
 }
 
 void VK_ShutdownModels( void ) {
@@ -67,6 +91,12 @@ void VK_ShutdownModels( void ) {
 	VK_DestroyBuffer( &vk_modelIndexes );
 	vk_modelFirstIndex.clear();
 	vk_modelUsed = vk_modelIndexUsed = 0;
+	VK_DestroyBuffer( &vk_goreVertexes[0] );
+	VK_DestroyBuffer( &vk_goreVertexes[1] );
+	if ( vk_goreFirstVertex ) {
+		vk_goreFirstVertex->clear();
+	}
+	vk_goreUsed = 0;
 }
 
 /*
@@ -83,11 +113,24 @@ void VK_ModelsChanged( void ) {
 	}
 	vk_modelFirstIndex.clear();
 	vk_modelUsed = vk_modelIndexUsed = 0;
+	if ( vk_goreFirstVertex ) {
+		vk_goreFirstVertex->clear();
+	}
+	vk_goreUsed = 0;
 }
 
 void VK_ModelsBeginFrame( void ) {
 	vk_numFrameSkeletons = 0;
 	vk_identityBone = -1;
+
+	// only here: a mark that was put into the batch of a frame keeps its place until that frame is drawn
+	if ( vk_goreUsed > VK_GORE_BYTES / 4 * 3 && vk_goreFrames > VK_FRAMES && vk_goreFirstVertex ) {
+		vk_goreBuffer ^= 1;
+		vk_goreFirstVertex->clear();
+		vk_goreUsed = 0;
+		vk_goreFrames = 0;
+	}
+	vk_goreFrames++;
 }
 
 // the weight of one of the first bones of a vertex: ten bits, eight of them in BoneWeightings (the function of
@@ -97,6 +140,23 @@ static float VK_BoneWeight( const mdxmVertex_t *v, int weightNum ) {
 
 	weight |= ( v->uiNmWeightsAndBoneIndexes >> ( iG2_BONEWEIGHT_TOPBITS_SHIFT + ( weightNum * 2 ) ) ) & iG2_BONEWEIGHT_TOPBITS_AND;
 	return fG2_BONEWEIGHT_RECIPROCAL_MULT * weight;
+}
+
+// a vertex of a Ghoul2 surface as the vertex shader wants it, without texture coordinates. out is zeroed.
+static void VK_SkinVertex( const mdxmVertex_t *v, const int *boneReferences, vkSkinVertex_t *out ) {
+	const int numWeights = G2_GetVertWeights( v );
+	float total = 0.0f;
+
+	VectorCopy( v->vertCoords, out->xyz );
+	VectorCopy( v->normal, out->normal );
+	// the last weight is what the others leave
+	for ( int k = 0; k < numWeights; k++ ) {
+		const float weight = ( k < numWeights - 1 ) ? VK_BoneWeight( v, k ) : 1.0f - total;
+
+		total += weight;
+		out->bones[k] = (byte)boneReferences[G2_GetVertBoneIndex( v, k )];
+		out->weights[k] = (uint16_t)( Com_Clamp( 0.0f, 1.0f, weight ) * 65535.0f + 0.5f );
+	}
 }
 
 // The triangles of a surface whose vertices begin at firstVertex of the vertex buffer. They are stored as indexes
@@ -156,21 +216,9 @@ int VK_SkinnedSurface( const mdxmSurface_t *surface ) {
 	out = (vkSkinVertex_t *)VK_Stage( size, &staged );
 	memset( out, 0, (size_t)size );
 	for ( int i = 0; i < surface->numVerts; i++, v++, out++ ) {
-		const int numWeights = G2_GetVertWeights( v );
-		float total = 0.0f;
-
-		VectorCopy( v->vertCoords, out->xyz );
-		VectorCopy( v->normal, out->normal );
+		VK_SkinVertex( v, boneReferences, out );
 		out->st[0] = texCoords[i].texCoords[0];
 		out->st[1] = texCoords[i].texCoords[1];
-		// the last weight is what the others leave
-		for ( int k = 0; k < numWeights; k++ ) {
-			const float weight = ( k < numWeights - 1 ) ? VK_BoneWeight( v, k ) : 1.0f - total;
-
-			total += weight;
-			out->bones[k] = (byte)boneReferences[G2_GetVertBoneIndex( v, k )];
-			out->weights[k] = (uint16_t)( Com_Clamp( 0.0f, 1.0f, weight ) * 65535.0f + 0.5f );
-		}
 	}
 
 	region.srcOffset = staged;
@@ -182,6 +230,81 @@ int VK_SkinnedSurface( const mdxmSurface_t *surface ) {
 	vk_modelUsed += size;
 	vk_modelFirstIndex[surface] = first;
 	return first;
+}
+
+/*
+===============
+VK_GoreSurface
+
+A saber mark on a surface of a model: where its vertices begin in the buffer of the marks. They are put there
+now if this is the first time the mark is drawn since the buffer was begun.
+goreData, as G2_misc.cpp makes it: the number of vertices, the number of triangles, for every vertex its number
+in the surface, room for 8 floats a vertex (position and normal as the bones move them, not used on this way),
+2 texture coordinates a vertex, the triangles.
+-1: it can not go there.
+===============
+*/
+int VK_GoreSurface( const mdxmSurface_t *surface, const float *goreData ) {
+	const int *data = (const int *)goreData;
+	const int numVerts = data[0];
+	const int *which = data + 2;
+	const float *st = (const float *)( which + numVerts * 9 );
+	const VkDeviceSize size = (VkDeviceSize)numVerts * sizeof( vkSkinVertex_t );
+	const mdxmVertex_t *v = (const mdxmVertex_t *)( (const byte *)surface + surface->ofsVerts );
+	const int *boneReferences = (const int *)( (const byte *)surface + surface->ofsBoneReferences );
+	VkDeviceSize staged;
+	VkBufferCopy region;
+	vkSkinVertex_t *out;
+	int first;
+
+	if ( !vk_goreFirstVertex ) {
+		return -1;
+	}
+	const auto found = vk_goreFirstVertex->find( goreData );
+	if ( found != vk_goreFirstVertex->end() ) {
+		return found->second;
+	}
+	if ( !vk_goreVertexes[vk_goreBuffer].buffer || numVerts <= 0 || vk_goreUsed + size > VK_GORE_BYTES ) {
+		return -1;
+	}
+	// a surface that can not go to the device has bones a byte can not number
+	if ( VK_SkinnedSurface( surface ) < 0 ) {
+		return -1;
+	}
+	for ( int i = 0; i < numVerts; i++ ) {
+		if ( which[i] < 0 || which[i] >= surface->numVerts ) {
+			return -1;
+		}
+	}
+
+	out = (vkSkinVertex_t *)VK_Stage( size, &staged );
+	memset( out, 0, (size_t)size );
+	for ( int i = 0; i < numVerts; i++, out++ ) {
+		VK_SkinVertex( &v[which[i]], boneReferences, out );
+		out->st[0] = st[i * 2];
+		out->st[1] = st[i * 2 + 1];
+	}
+	region.srcOffset = staged;
+	region.dstOffset = vk_goreUsed;
+	region.size = size;
+	qvkCmdCopyBuffer( VK_UploadCmd(), vk.staging.buffer, vk_goreVertexes[vk_goreBuffer].buffer, 1, &region );
+	first = (int)( vk_goreUsed / sizeof( vkSkinVertex_t ) );
+	vk_goreUsed += size;
+	( *vk_goreFirstVertex )[goreData] = first;
+	return first;
+}
+
+/*
+===============
+VK_GoreFreed
+
+The data of a mark is freed (G2_gore.cpp, G2_misc.cpp). Another mark may get the same address.
+===============
+*/
+void VK_GoreFreed( const void *goreData ) {
+	if ( vk_goreFirstVertex ) {
+		vk_goreFirstVertex->erase( goreData );
+	}
 }
 
 /*
@@ -288,9 +411,35 @@ frame if they are not there yet. boneCache NULL: meshes that do not move, they g
 bones: where the skeleton starts, counted in rows of the bone buffer.
 ===============
 */
-qboolean VK_UploadSkinnedBatch( CBoneCache *boneCache, uint32_t *bones ) {
+// the bones of a skeleton into the frame if they are not there yet. bones: where it starts, in rows of the bone buffer
+static qboolean VK_FrameSkeleton( CBoneCache *boneCache, uint32_t *bones ) {
 	vkFrame_t *frame = vk.frame;
 	int i;
+
+	for ( i = 0; i < vk_numFrameSkeletons; i++ ) {
+		if ( vk_frameSkeletons[i].cache == boneCache ) {
+			*bones = vk_frameSkeletons[i].base;
+			return qtrue;
+		}
+	}
+	// a skeleton has at most 256 bones, see VK_SkinnedSurface()
+	if ( frame->numBones + 256 > VK_MAX_BONES ) {
+		return qfalse;
+	}
+	const int numBones = G2_BoneMatrices( boneCache, (float *)( frame->bones.mapped + sizeof( float ) * 12 * frame->numBones ), 256 );
+
+	if ( vk_numFrameSkeletons < VK_MAX_FRAME_SKELETONS ) {
+		vk_frameSkeletons[vk_numFrameSkeletons].cache = boneCache;
+		vk_frameSkeletons[vk_numFrameSkeletons].base = (uint32_t)frame->numBones * 3;
+		vk_numFrameSkeletons++;
+	}
+	*bones = (uint32_t)frame->numBones * 3;
+	frame->numBones += numBones;
+	return qtrue;
+}
+
+qboolean VK_UploadSkinnedBatch( CBoneCache *boneCache, uint32_t *bones ) {
+	vkFrame_t *frame = vk.frame;
 
 	if ( !frame ) {
 		return qfalse;
@@ -309,27 +458,24 @@ qboolean VK_UploadSkinnedBatch( CBoneCache *boneCache, uint32_t *bones ) {
 		*bones = (uint32_t)vk_identityBone;
 		return VK_BindModelBatch();
 	}
-	for ( i = 0; i < vk_numFrameSkeletons; i++ ) {
-		if ( vk_frameSkeletons[i].cache == boneCache ) {
-			break;
-		}
-	}
-	if ( i == vk_numFrameSkeletons ) {
-		// a skeleton has at most 256 bones, see VK_SkinnedSurface()
-		if ( frame->numBones + 256 > VK_MAX_BONES ) {
-			return qfalse;
-		}
-		const int numBones = G2_BoneMatrices( boneCache, (float *)( frame->bones.mapped + sizeof( float ) * 12 * frame->numBones ), 256 );
-
-		if ( vk_numFrameSkeletons < VK_MAX_FRAME_SKELETONS ) {
-			vk_frameSkeletons[vk_numFrameSkeletons].cache = boneCache;
-			vk_frameSkeletons[vk_numFrameSkeletons].base = (uint32_t)frame->numBones * 3;
-			vk_numFrameSkeletons++;
-		}
-		*bones = (uint32_t)frame->numBones * 3;
-		frame->numBones += numBones;
-	} else {
-		*bones = vk_frameSkeletons[i].base;
+	if ( !VK_FrameSkeleton( boneCache, bones ) ) {
+		return qfalse;
 	}
 	return VK_BindModelBatch();
+}
+
+/*
+===============
+VK_UploadGoreBatch
+
+A batch of saber marks on one model: the indexes in tess.indexes count in the buffer of the marks
+===============
+*/
+qboolean VK_UploadGoreBatch( CBoneCache *boneCache, uint32_t *bones ) {
+	const VkDeviceSize offset = 0;
+
+	if ( !vk.frame || !boneCache || !VK_FrameSkeleton( boneCache, bones ) ) {
+		return qfalse;
+	}
+	return VK_UploadIndexes( vk_goreVertexes[vk_goreBuffer].buffer, &offset, 1, tess.indexes, tess.numIndexes );
 }
