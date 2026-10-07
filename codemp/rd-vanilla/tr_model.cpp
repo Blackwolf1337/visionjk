@@ -1653,6 +1653,12 @@ void RE_BeginRegistration( glconfig_t *glconfigOut ) {
 
 	*glconfigOut = glConfig;
 
+#ifdef RD_VULKAN_VISION
+	// the renderer could not start on this machine (VK_InitVulkan), the engine sees that in the empty glconfig
+	if ( !glConfig.vidWidth ) {
+		return;
+	}
+#endif
 	R_IssuePendingRenderCommands();
 
 	tr.viewCluster = -1;		// force markleafs to regenerate

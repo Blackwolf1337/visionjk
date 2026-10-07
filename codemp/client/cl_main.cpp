@@ -152,6 +152,20 @@ void CL_ServerStatus_f(void);
 void CL_ServerStatusResponse( const netadr_t *from, msg_t *msg );
 static void CL_ShutdownRef( qboolean restarting );
 
+// The renderer a client without a stored cl_renderer starts with, and the one that takes its place for a run
+// where the chosen one is not there or says that it can not run on this machine (CL_InitRenderer).
+// macOS: nobody has seen rd-vulkan-vision run there yet.
+#ifdef MACOS_X
+#define DEFAULT_RENDER_LIBRARY "rd-vanilla"
+#else
+#define DEFAULT_RENDER_LIBRARY "rd-vulkan-vision"
+#endif
+#define FALLBACK_RENDER_LIBRARY "rd-vanilla"
+
+// This run goes on with the fallback renderer, whatever cl_renderer says. The cvar is left alone, so the next
+// start and a vid_restart try the chosen renderer again (a new driver may have come).
+static qboolean cl_rendererFallback;
+
 /*
 =======================================================================
 
@@ -1228,7 +1242,8 @@ void CL_Vid_Restart_f( void ) {
 		Hunk_ClearToMark();
 	}
 
-	// initialize the renderer interface
+	// initialize the renderer interface, with the renderer cl_renderer names: a run on the fallback tries again
+	cl_rendererFallback = qfalse;
 	CL_InitRef();
 
 	// startup all the client stuff
@@ -2335,6 +2350,19 @@ void CL_InitRenderer( void ) {
 	// this sets up the renderer and calls R_Init
 	re->BeginRegistration( &cls.glconfig );
 
+	// A renderer that can not run on this machine comes back without a window: rd-vulkan-vision where there is no
+	// Vulkan 1.3 (VK_InitVulkan() says why in the console). The game goes on with the fallback renderer.
+	if ( !cls.glconfig.vidWidth && !cl_rendererFallback ) {
+		Com_Printf( "%s can not run on this machine, going on with " FALLBACK_RENDER_LIBRARY "\n", cl_renderer->string );
+		cl_rendererFallback = qtrue;
+		CL_ShutdownRef( qfalse );
+		CL_InitRef();
+		re->BeginRegistration( &cls.glconfig );
+	}
+	if ( !cls.glconfig.vidWidth ) {
+		Com_Error( ERR_FATAL, "The renderer made no window" );
+	}
+
 	// load character sets
 	cls.charSetShader = re->RegisterShaderNoMip("gfx/2d/charsgrid_med");
 	cls.consoleFont = re->RegisterFont( "ocr_a" );
@@ -2412,8 +2440,6 @@ static IHeapAllocator *GetG2VertSpaceServer( void ) {
 	return G2VertSpaceServer;
 }
 
-#define DEFAULT_RENDER_LIBRARY "rd-vanilla"
-
 void CL_InitRef( void ) {
 	static refimport_t ri;
 	refexport_t	*ret;
@@ -2424,14 +2450,14 @@ void CL_InitRef( void ) {
 
 	cl_renderer = Cvar_Get( "cl_renderer", DEFAULT_RENDER_LIBRARY, CVAR_ARCHIVE|CVAR_LATCH, "Which renderer library to use" );
 
-	Com_sprintf( dllName, sizeof( dllName ), "%s_" ARCH_STRING DLL_EXT, cl_renderer->string );
+	Com_sprintf( dllName, sizeof( dllName ), "%s_" ARCH_STRING DLL_EXT, cl_rendererFallback ? FALLBACK_RENDER_LIBRARY : cl_renderer->string );
 
-	if( !(rendererLib = Sys_LoadDll( dllName, qfalse )) && strcmp( cl_renderer->string, cl_renderer->resetString ) )
+	if( !(rendererLib = Sys_LoadDll( dllName, qfalse )) && !cl_rendererFallback && strcmp( cl_renderer->string, FALLBACK_RENDER_LIBRARY ) )
 	{
 		Com_Printf( "failed: trying to load fallback renderer\n" );
-		Cvar_ForceReset( "cl_renderer" );
+		cl_rendererFallback = qtrue;
 
-		Com_sprintf( dllName, sizeof( dllName ), DEFAULT_RENDER_LIBRARY "_" ARCH_STRING DLL_EXT );
+		Com_sprintf( dllName, sizeof( dllName ), FALLBACK_RENDER_LIBRARY "_" ARCH_STRING DLL_EXT );
 		rendererLib = Sys_LoadDll( dllName, qfalse );
 	}
 

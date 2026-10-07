@@ -25,7 +25,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // place of OpenGL. It is included at the end of rd-vanilla/tr_local.h when RD_VULKAN_VISION is defined.
 
 // vk_main.cpp
-void VK_InitVulkan( void );
+qboolean VK_InitVulkan( void );		// qfalse: this machine can not run the renderer
 void VK_ShutdownVulkan( qboolean destroyWindow );
 void VK_GfxInfo_f( void );
 

@@ -801,9 +801,23 @@ window_t WIN_Init( const windowDesc_t *windowDesc, glconfig_t *glConfig )
 			if (!GLimp_StartDriverAndSetMode( glConfig, windowDesc, R_MODE_FALLBACK, qfalse, qfalse ))
 			{
 				// Nothing worked, give up
-				Com_Error( ERR_FATAL, "GLimp_Init() - could not load OpenGL subsystem" );
+				if ( windowDesc->api != GRAPHICS_API_VULKAN )
+				{
+					Com_Error( ERR_FATAL, "GLimp_Init() - could not load OpenGL subsystem" );
+				}
 			}
 		}
+	}
+
+	// No window with Vulkan on this machine (no library of Vulkan for SDL to load). That is not the end of the
+	// game: the renderer that asked gets a window without a size back and the client goes on with another
+	// renderer, see CL_InitRenderer().
+	if ( !screen && windowDesc->api == GRAPHICS_API_VULKAN )
+	{
+		window_t none = {};
+
+		glConfig->vidWidth = glConfig->vidHeight = 0;
+		return none;
 	}
 
 	glConfig->deviceSupportsGamma =

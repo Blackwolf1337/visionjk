@@ -1800,7 +1800,10 @@ void R_Init( void ) {
 		RE_SetLightStyle(i, -1);
 	}
 #ifdef RD_VULKAN_VISION
-	VK_InitVulkan();
+	if ( !VK_InitVulkan() ) {
+		// this machine can not run the renderer: RE_BeginRegistration() hands an empty glconfig back
+		return;
+	}
 #else
 	InitOpenGL();
 #endif

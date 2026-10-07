@@ -4,7 +4,9 @@ A second renderer for the OpenJK client next to `rd-vanilla`. It draws with Vulk
 models in buffers on the graphics card and does in shaders what `rd-vanilla` computes per vertex on the CPU every
 frame. It is not a JA+ feature and it does not touch the server, the protocol or the game modules.
 
-`rd-vanilla` stays the default, and the fallback when the library does not load. The renderer is in `master`
+Since 2026-10-07 it is the renderer a client starts with (on macOS that is still `rd-vanilla`). `rd-vanilla` is
+the fallback: where the library is missing or the machine can not run it, the game goes on with `rd-vanilla` by
+itself, see "Building and switching". The renderer is in `master`
 since 2026-10-07 (it was written on the branch `feature/rd-vulkan-vision`), behind the CMake option
 `BuildMPRdVulkanVision`, which is on by default since 2026-10-07: every build of the client makes it next to
 `rd-vanilla`. rend2, the third renderer of OpenJK, was removed from the tree that day: nothing used it.
@@ -76,14 +78,29 @@ For 64 bit the toolchain file is `cmake/Toolchains/x86_64-w64-mingw32.cmake`, an
 of a pointer, and the tree takes Windows without it for 32 bit: the modules are then built by the 64 bit
 compiler under the names of the 32 bit ones (`..._x86.dll`). The result is `rd-vulkan-vision_x86_64.dll`.
 
+A client that has no renderer stored in its config starts with `rd-vulkan-vision`. A config that was written
+before 2026-10-07 has `cl_renderer "rd-vanilla"` in it and keeps that: the stored value wins over the default.
 In the game:
 
 ```
 cl_renderer rd-vulkan-vision; vid_restart
 ```
 
-and `cl_renderer rd-vanilla; vid_restart` to go back. A graphics card without Vulkan 1.3 or without descriptor
-indexing ends in an error that names `rd-vanilla`.
+and `cl_renderer rd-vanilla; vid_restart` to go back.
+
+A machine that can not run it gets `rd-vanilla` without anybody doing anything: no library of Vulkan, no driver
+for it, Vulkan older than 1.3, no graphics device with descriptor indexing, or the renderer library is not
+there. The console says which (`rd-vulkan-vision can not run here: ...`). `cl_renderer` is not changed by
+that, so the next start and every `vid_restart` try again, for example after a new driver. How it is done:
+`VK_InitVulkan()` returns instead of ending the game, the renderer hands an empty `glconfig` back, and
+`CL_InitRenderer()` of the client loads `rd-vanilla` for the rest of the run. No exception crosses the library
+border for it (the Windows builds link libgcc statically).
+
+What that does not catch: a driver that crashes inside Vulkan instead of refusing. Then
+`+set cl_renderer rd-vanilla` on the command line is the way out.
+
+The fallback was built for Linux and not run: no start without Vulkan was tried, neither by taking the library
+away nor on a real machine. Windows was not built with it.
 
 | Cvar | Meaning |
 |------|---------|

@@ -35,6 +35,24 @@ void VK_Fatal( const char *what, VkResult result ) {
 	Com_Error( ERR_FATAL, "Vulkan: %s failed with %i", what, (int)result );
 }
 
+/*
+A machine that can not run this renderer (no Vulkan, an older one, no device that fits) is no error of the game:
+VK_InitVulkan() says why in the console and returns qfalse, and the engine goes on with rd-vanilla
+(CL_InitRenderer() of the client). It is said by returning, not by an error the engine catches: the Windows
+builds link libgcc statically, an exception does not get out of this library there. What fails once a device
+was found is an error as before.
+*/
+static qboolean VK_CanNotRun( const char *fmt, ... ) {
+	va_list args;
+	char reason[256];
+
+	va_start( args, fmt );
+	Q_vsnprintf( reason, sizeof( reason ), fmt, args );
+	va_end( args );
+	ri.Printf( PRINT_ALL, "rd-vulkan-vision can not run here: %s\n", reason );
+	return qfalse;
+}
+
 // r_swapInterval changed since the swapchain was made
 qboolean VK_SwapIntervalChanged( void ) {
 	return (qboolean)( r_swapIntervalVk->modified && r_swapIntervalVk->integer != vk.swapInterval );
@@ -75,21 +93,23 @@ static void VK_MissingFunction( const char *name ) {
 }
 
 // the window is there, so its library of Vulkan is loaded
-static void VK_LoadGlobalFunctions( void ) {
+static qboolean VK_LoadGlobalFunctions( void ) {
 	qvkGetInstanceProcAddr = (PFN_vkGetInstanceProcAddr)ri.WIN_VK_GetInstanceProcAddr();
 	if ( !qvkGetInstanceProcAddr ) {
-		Com_Error( ERR_FATAL, "Vulkan: no library of Vulkan was loaded for the window.\nSet cl_renderer to rd-vanilla." );
+		return VK_CanNotRun( "no library of Vulkan was loaded for the window" );
 	}
-#define X( name )	q##name = (PFN_##name)qvkGetInstanceProcAddr( VK_NULL_HANDLE, #name ); if ( !q##name ) { VK_MissingFunction( #name ); }
+#define X( name )	q##name = (PFN_##name)qvkGetInstanceProcAddr( VK_NULL_HANDLE, #name ); if ( !q##name ) { return VK_CanNotRun( "the library of Vulkan has no %s", #name ); }
 	VK_FUNCTIONS_GLOBAL( X )
 #undef X
 	qvkEnumerateInstanceVersion = (PFN_vkEnumerateInstanceVersion)qvkGetInstanceProcAddr( VK_NULL_HANDLE, "vkEnumerateInstanceVersion" );
+	return qtrue;
 }
 
-static void VK_LoadInstanceFunctions( void ) {
-#define X( name )	q##name = (PFN_##name)qvkGetInstanceProcAddr( vk.instance, #name ); if ( !q##name ) { VK_MissingFunction( #name ); }
+static qboolean VK_LoadInstanceFunctions( void ) {
+#define X( name )	q##name = (PFN_##name)qvkGetInstanceProcAddr( vk.instance, #name ); if ( !q##name ) { return VK_CanNotRun( "the library of Vulkan has no %s", #name ); }
 	VK_FUNCTIONS_INSTANCE( X )
 #undef X
+	return qtrue;
 }
 
 static void VK_LoadDeviceFunctions( void ) {
@@ -98,26 +118,29 @@ static void VK_LoadDeviceFunctions( void ) {
 #undef X
 }
 
-static void VK_CreateInstance( void ) {
+// qfalse: this machine can not run the renderer, see VK_CanNotRun()
+static qboolean VK_CreateInstance( void ) {
 	const char *extensions[16];
 	const char *layers[1];
 	int numExtensions, numLayers = 0;
 	uint32_t count, version = VK_API_VERSION_1_0;
 	VkApplicationInfo app = { VK_STRUCTURE_TYPE_APPLICATION_INFO };
 	VkInstanceCreateInfo info = { VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO };
+	VkResult result;
 
-	VK_LoadGlobalFunctions();
+	if ( !VK_LoadGlobalFunctions() ) {
+		return qfalse;
+	}
 	if ( qvkEnumerateInstanceVersion ) {
 		qvkEnumerateInstanceVersion( &version );
 	}
 	if ( version < VK_API_VERSION_1_3 ) {
-		Com_Error( ERR_FATAL, "rd-vulkan-vision needs Vulkan 1.3, this system has %i.%i.\n"
-			"Set cl_renderer to rd-vanilla.", VK_API_VERSION_MAJOR( version ), VK_API_VERSION_MINOR( version ) );
+		return VK_CanNotRun( "it needs Vulkan 1.3, this system has %i.%i", VK_API_VERSION_MAJOR( version ), VK_API_VERSION_MINOR( version ) );
 	}
 
 	numExtensions = ri.WIN_VK_InstanceExtensions( extensions, ARRAY_LEN( extensions ) - 1 );
 	if ( !numExtensions ) {
-		Com_Error( ERR_FATAL, "Vulkan: the window system names no instance extensions" );
+		return VK_CanNotRun( "the window system names no instance extensions" );
 	}
 
 	vk.validation = qfalse;
@@ -147,8 +170,15 @@ static void VK_CreateInstance( void ) {
 	info.ppEnabledExtensionNames = extensions;
 	info.enabledLayerCount = (uint32_t)numLayers;
 	info.ppEnabledLayerNames = layers;
-	VK_CHECK( qvkCreateInstance( &info, NULL, &vk.instance ) );
-	VK_LoadInstanceFunctions();
+	// fails with VK_ERROR_INCOMPATIBLE_DRIVER where the library is there and no driver for it
+	result = qvkCreateInstance( &info, NULL, &vk.instance );
+	if ( result != VK_SUCCESS ) {
+		vk.instance = VK_NULL_HANDLE;
+		return VK_CanNotRun( "vkCreateInstance failed with %i", (int)result );
+	}
+	if ( !VK_LoadInstanceFunctions() ) {
+		return qfalse;
+	}
 
 	if ( vk.validation ) {
 		VkDebugUtilsMessengerCreateInfoEXT debug = { VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT };
@@ -163,6 +193,7 @@ static void VK_CreateInstance( void ) {
 			create( vk.instance, &debug, NULL, &vk.messenger );
 		}
 	}
+	return qtrue;
 }
 
 /*
@@ -205,7 +236,8 @@ static qboolean VK_DeviceUsable( VkPhysicalDevice device, uint32_t *queueFamily 
 	return qfalse;
 }
 
-static void VK_PickDevice( void ) {
+// qfalse: this machine can not run the renderer, see VK_CanNotRun()
+static qboolean VK_PickDevice( void ) {
 	VkPhysicalDevice devices[16];
 	uint32_t count = ARRAY_LEN( devices );
 	uint32_t family = 0;
@@ -228,11 +260,11 @@ static void VK_PickDevice( void ) {
 		}
 	}
 	if ( !vk.physicalDevice ) {
-		Com_Error( ERR_FATAL, "rd-vulkan-vision found no graphics device with Vulkan 1.3 and descriptor indexing.\n"
-			"Set cl_renderer to rd-vanilla." );
+		return VK_CanNotRun( "no graphics device with Vulkan 1.3 and descriptor indexing" );
 	}
 	qvkGetPhysicalDeviceProperties( vk.physicalDevice, &vk.properties );
 	qvkGetPhysicalDeviceMemoryProperties( vk.physicalDevice, &vk.memoryProperties );
+	return qtrue;
 }
 
 static void VK_CreateDevice( void ) {
@@ -438,9 +470,14 @@ VK_InitVulkan
 
 Called by R_Init() in the place of InitOpenGL(). The window and everything on the device live until the
 window is destroyed (vid_restart), a map change keeps them.
+
+qfalse: this machine can not run the renderer, see VK_CanNotRun(). glConfig is empty then, which is how the
+engine knows. A window that was made stays until RE_Shutdown() destroys it.
 ===============
 */
-void VK_InitVulkan( void ) {
+static void VK_DestroyInstance( void );
+
+qboolean VK_InitVulkan( void ) {
 	r_vkDebug = ri.Cvar_Get( "r_vkDebug", "0", CVAR_ARCHIVE_ND | CVAR_LATCH, "Vulkan validation layer and its messages" );
 	r_swapIntervalVk = ri.Cvar_Get( "r_swapInterval", "0", CVAR_ARCHIVE_ND, "" );
 	r_multisampleVk = ri.Cvar_Get( "r_ext_multisample", "0", CVAR_ARCHIVE_ND | CVAR_LATCH, "" );
@@ -456,7 +493,7 @@ void VK_InitVulkan( void ) {
 	if ( glConfig.vidWidth ) {
 		// the window stays, the textures get their filter again as GL_SetDefaultState() of rd-vanilla gives it to them
 		GL_TextureMode( r_textureMode->string );
-		return;
+		return qtrue;
 	}
 
 	windowDesc_t windowDesc = { GRAPHICS_API_VULKAN };
@@ -465,14 +502,26 @@ void VK_InitVulkan( void ) {
 	memset( &glConfigExt, 0, sizeof( glConfigExt ) );
 	memset( &vk, 0, sizeof( vk ) );
 	window = ri.WIN_Init( &windowDesc, &glConfig );
+	if ( !glConfig.vidWidth ) {
+		// WIN_Init() of the engine hands back a window without a size where none with Vulkan can be made
+		return VK_CanNotRun( "no window for Vulkan could be made" );
+	}
 	vk.width = glConfig.vidWidth;
 	vk.height = glConfig.vidHeight;
 
-	VK_CreateInstance();
-	if ( !ri.WIN_VK_CreateSurface( vk.instance, &vk.surface ) ) {
-		Com_Error( ERR_FATAL, "Vulkan: no surface for the window" );
+	if ( !VK_CreateInstance() ) {
+		VK_DestroyInstance();
+		return qfalse;
 	}
-	VK_PickDevice();
+	if ( !ri.WIN_VK_CreateSurface( vk.instance, &vk.surface ) ) {
+		vk.surface = VK_NULL_HANDLE;
+		VK_DestroyInstance();
+		return VK_CanNotRun( "no surface for the window" );
+	}
+	if ( !VK_PickDevice() ) {
+		VK_DestroyInstance();
+		return qfalse;
+	}
 	VK_CreateDevice();
 	VK_InitMemory();
 	VK_CreateSwapchain();
@@ -535,6 +584,7 @@ void VK_InitVulkan( void ) {
 
 	ri.Printf( PRINT_ALL, "Vulkan device: %s, %s\n", vk.properties.deviceName, vk_versionString );
 	VK_Splash();
+	return qtrue;
 }
 
 /*
@@ -568,16 +618,28 @@ void VK_ShutdownVulkan( qboolean destroyWindow ) {
 	VK_ShutdownMemory();
 	qvkDestroyCommandPool( vk.device, vk.commandPool, NULL );
 	qvkDestroyDevice( vk.device, NULL );
-	qvkDestroySurfaceKHR( vk.instance, vk.surface, NULL );
-	if ( vk.messenger ) {
-		PFN_vkDestroyDebugUtilsMessengerEXT destroy = (PFN_vkDestroyDebugUtilsMessengerEXT)
-			qvkGetInstanceProcAddr( vk.instance, "vkDestroyDebugUtilsMessengerEXT" );
+	VK_DestroyInstance();
+}
 
-		if ( destroy ) {
-			destroy( vk.instance, vk.messenger, NULL );
+// The end of the instance and of what hangs on it alone, and of what the renderer knows about the window. Also
+// for a start that stopped before it had a device: then some of it was never made.
+static void VK_DestroyInstance( void ) {
+	if ( vk.instance ) {
+		if ( vk.surface && qvkDestroySurfaceKHR ) {
+			qvkDestroySurfaceKHR( vk.instance, vk.surface, NULL );
+		}
+		if ( vk.messenger ) {
+			PFN_vkDestroyDebugUtilsMessengerEXT destroy = (PFN_vkDestroyDebugUtilsMessengerEXT)
+				qvkGetInstanceProcAddr( vk.instance, "vkDestroyDebugUtilsMessengerEXT" );
+
+			if ( destroy ) {
+				destroy( vk.instance, vk.messenger, NULL );
+			}
+		}
+		if ( qvkDestroyInstance ) {
+			qvkDestroyInstance( vk.instance, NULL );
 		}
 	}
-	qvkDestroyInstance( vk.instance, NULL );
 	memset( &vk, 0, sizeof( vk ) );
 	memset( &glConfig, 0, sizeof( glConfig ) );
 }
