@@ -1,8 +1,8 @@
 # Voice chat
 
 An in-game voice chat with the microphone. It is not a JA+ feature. It needs the cgame of this tree on the
-client and the game module of this tree on the server. The engine is not changed: it works with OpenJK and with
-a stock `jamp.exe` that loads this cgame.
+client and the game module of this tree on the server. The engine is not changed: it works with a 64 bit OpenJK.
+A stock `jamp.exe` is 32 bit and can not load this cgame, the tree is built for 64 bit only.
 
 A client without this cgame (stock jamp, the original JA+ plugin, another fork) is not touched by any of it. It
 joins and plays as before, it just does not hear the voice chat. See "Clients without it".
@@ -188,9 +188,9 @@ Nothing of the voice chat is in the game protocol.
 - 12000 datagrams that are no voice (random bytes, the right shape with tokens nobody has, client numbers out
   of range, too long, cut off) at the relay of a server under valgrind (`tools/voicetest/flood.py`): all
   refused, no error.
-- Builds: Linux 64, and with mingw for Windows 32 and 64. The Windows cgame imports `ws2_32` in addition to
+- Builds: Linux 64, and with mingw for Windows 64. The Windows cgame imports `ws2_32` in addition to
   what it imported before.
 
-Not checked: a real microphone and real speakers, how it sounds, Windows at run time, a stock `jamp.exe`, the
+Not checked: a real microphone and real speakers, how it sounds, Windows at run time, the
 original JA+ plugin as the client without it, macOS (not even built), more than two speakers, a connection with
 loss, a server over the internet.

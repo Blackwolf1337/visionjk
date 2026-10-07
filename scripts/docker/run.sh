@@ -6,7 +6,7 @@
 # Set variables
 OJK_DIR="/opt/openjk"
 OJK_MOD="${OJK_MOD:-base}"
-OJK_ARCH="${OJK_ARCH:-i386}"
+OJK_ARCH="${OJK_ARCH:-x86_64}"
 OJK_CDPATH="$OJK_DIR/cdpath"
 OJK_BASEPATH="$OJK_DIR/basepath"
 OJK_HOMEPATH="$OJK_DIR/homepath"

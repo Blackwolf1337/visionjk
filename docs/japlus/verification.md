@@ -2,6 +2,10 @@
 
 State of 2026-10-05.
 
+Both comparisons need a 32 bit build of the port, since the original modules are 32 bit. The tree is built for
+64 bit only since 2026-10-07, so they can not be repeated with it: the last commit that builds for 32 bit is
+`5ab290ba`.
+
 ## Compared against the original server module
 
 The method is in [porting-method.md](porting-method.md). Results:
@@ -112,7 +116,7 @@ menu, the HUD and the scoreboard look the same in engine screenshots.
 
 - Flamethrower hits, ledge grab by a human player, the two force grabs.
 - Walking through players in the 3 seconds after a duel (the other use of `EF_PASS_PLAYERS`).
-- The 32 bit Linux modules and the Windows server module were only built, never loaded into a game.
+- The Windows modules of today (64 bit) and the Windows server module were only built, never loaded into a game.
 - A client with the original plugin on this server in a real game (only in the scripted test scenes), and this
   client on an original JA+ server.
 - The menus of the ui were never used with mouse and keys after the changes of the client work: the holster list,

@@ -37,7 +37,7 @@ Download the [latest build](https://github.com/JACoders/OpenJK/releases/tag/late
 Installing and running OpenJK:
 
 1. Extract the contents of the file into the Jedi Academy `GameData/` folder. For Steam users, this will be in `<Steam Folder>/steamapps/common/Jedi Academy/GameData/`.
-1. Run `openjk.x86.exe` (Windows), `openjk.i386` (Linux 32-bit), `openjk.x86_64` (Linux 64-bit) or the `OpenJK` app bundle (macOS), depending on your operating system.
+1. Run `openjk.x86_64.exe` (Windows), `openjk.x86_64` (Linux) or the `OpenJK` app bundle (macOS), depending on your operating system. This tree is built for 64 bit only.
 
 ### Linux Instructions
 

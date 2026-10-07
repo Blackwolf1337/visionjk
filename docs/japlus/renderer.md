@@ -37,7 +37,7 @@ JA+ draw is drawn. What is open is what was never run, and a few cvars.
 | Automap | done |
 | `r_showtris`, `r_shownormals`, `r_showImages`, `r_vkStatic`, `gfxinfo`, `imagelist` | done |
 | Window: resized from outside, `r_swapInterval`, a window nobody sees, `vid_restart` between the renderers | done |
-| Windows DLL, 32 and 64 bit | builds, never loaded into a game |
+| Windows DLL, 64 bit | builds, never loaded into a game |
 | Portals and mirrors, `alphaGen portal` | done, in a test room: no level of the base game has one (see "Checked") |
 | Videos: a `.roq` on the screen, `videoMap` in a shader | done |
 | Fullscreen, also at a size that is not the one of the desktop | done |
@@ -65,18 +65,15 @@ is `codemp/rd-vulkan-vision/rd-vulkan-vision_x86_64.so`, it has to lie next to t
 The Windows DLL is cross compiled with mingw-w64 like the rest:
 
 ```
-cmake -S . -B buildwin32cl -DCMAKE_TOOLCHAIN_FILE=cmake/Toolchains/i686-w64-mingw32.cmake -DCMAKE_BUILD_TYPE=Release -DBuildMPDed=OFF -DBuildSPEngine=OFF -DBuildSPGame=OFF -DBuildSPRdVanilla=OFF
-cmake --build buildwin32cl -j$(nproc)
+cmake -S . -B buildwin64 -DCMAKE_TOOLCHAIN_FILE=cmake/Toolchains/x86_64-w64-mingw32.cmake -DCMAKE_BUILD_TYPE=Release -DBuildMPDed=OFF -DBuildSPEngine=OFF -DBuildSPGame=OFF -DBuildSPRdVanilla=OFF
+cmake --build buildwin64 -j$(nproc)
 ```
 
 mingw has no Vulkan headers of its own. They are the same on every platform, so the build copies the two
 header directories of the host (`vulkan`, `vk_video`) into the build directory for the cross compiler.
-`-DVulkanHeadersDir=` names another place. The result is `rd-vulkan-vision_x86.dll` next to `openjk.x86.exe`.
-
-For 64 bit the toolchain file is `cmake/Toolchains/x86_64-w64-mingw32.cmake`, and the configure line needs
-`-DCMAKE_SIZEOF_VOID_P=8` as well. The toolchain files force the compiler, so CMake does not find out the size
-of a pointer, and the tree takes Windows without it for 32 bit: the modules are then built by the 64 bit
-compiler under the names of the 32 bit ones (`..._x86.dll`). The result is `rd-vulkan-vision_x86_64.dll`.
+`-DVulkanHeadersDir=` names another place. The result is `rd-vulkan-vision_x86_64.dll` next to
+`openjk.x86_64.exe`. Windows is built for 64 bit only, the configure line no longer needs
+`-DCMAKE_SIZEOF_VOID_P=8`.
 
 A client that has no renderer stored in its config starts with `rd-vulkan-vision`. A config that was written
 before 2026-10-07 has `cl_renderer "rd-vanilla"` in it and keeps that: the stored value wins over the default.
@@ -259,9 +256,9 @@ left in these views are the effects of the game (flames, smoke, light cones) and
 
 ## Not done
 
-The Windows DLL builds with mingw-w64 for 32 and 64 bit and imports nothing but the C runtime, kernel32 and
-libwinpthread. Both were built on 2026-10-07 from the last state of the renderer, the 64 bit one without a
-warning in the files of the renderer. It was never loaded into a game. macOS was not tried, it would need
+The Windows DLL builds with mingw-w64 for 64 bit and imports nothing but the C runtime, kernel32 and
+libwinpthread. It was built on 2026-10-07 from the last state of the renderer, without a warning in the files
+of the renderer (32 bit was built until then too and is gone from the tree). It was never loaded into a game. macOS was not tried, it would need
 MoltenVK.
 
 Not moved to the device, with the numbers of the fight demo. Sprites, lines and saber glow: building them is

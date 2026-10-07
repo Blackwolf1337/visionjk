@@ -72,21 +72,19 @@ cmake -S . -B build64 -DCMAKE_BUILD_TYPE=Release -DBuildSPEngine=OFF -DBuildSPGa
 cmake --build build64 -j$(nproc)
 ```
 
-32 bit Linux modules:
+64 bit Windows, cross compiled with mingw-w64: the client, the renderers and the three modules
+(`jampgamex86_64.dll`, `cgamex86_64.dll`, `uix86_64.dll`):
 
 ```
-cmake -S . -B build32 -DCMAKE_TOOLCHAIN_FILE=cmake/Toolchains/linux-i686.cmake -DCMAKE_BUILD_TYPE=Release -DBuildMPEngine=OFF -DBuildMPRdVanilla=OFF -DBuildMPRdVulkanVision=OFF -DBuildMPDed=OFF -DBuildSPEngine=OFF -DBuildSPGame=OFF -DBuildSPRdVanilla=OFF
-cmake --build build32 -j$(nproc)
+cmake -S . -B buildwin64 -DCMAKE_TOOLCHAIN_FILE=cmake/Toolchains/x86_64-w64-mingw32.cmake -DCMAKE_BUILD_TYPE=Release -DBuildMPDed=OFF -DBuildSPEngine=OFF -DBuildSPGame=OFF -DBuildSPRdVanilla=OFF
+cmake --build buildwin64 -j$(nproc)
 ```
 
-32 bit Windows DLLs, cross compiled with mingw-w64 (`jampgamex86.dll`, `cgamex86.dll`, `uix86.dll`):
+The tree is built for 64 bit only: cmake stops on a 32 bit compiler. The toolchain files, the SDL2 libraries and
+the code for 32 bit x86 were removed after commit `5ab290ba`. A stock `jamp.exe` is 32 bit and can not load these
+modules, it plays with its own cgame and ui.
 
-```
-cmake -S . -B buildwin32 -DCMAKE_TOOLCHAIN_FILE=cmake/Toolchains/i686-w64-mingw32.cmake -DCMAKE_BUILD_TYPE=Release -DBuildMPEngine=OFF -DBuildMPRdVanilla=OFF -DBuildMPRdVulkanVision=OFF -DBuildMPDed=OFF -DBuildSPEngine=OFF -DBuildSPGame=OFF -DBuildSPRdVanilla=OFF
-cmake --build buildwin32 -j$(nproc)
-```
-
-All three configurations build without errors. The code keeps to the rules of the surrounding files: C, no
+Both configurations build without errors. The code keeps to the rules of the surrounding files: C, no
 assumptions about pointer size in the game code, bounded string functions.
 
 The client can use Steam Audio for its sound (`s_spatial`, [audio.md](audio.md)). For that Valve's repository

@@ -36,23 +36,23 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 option(BuildPortableVersion "Build portable version (does not read or write files from your user/home directory" OFF)
 
 option(BuildMPEngine "Whether to create projects for the MP client (openjk.exe)" ON)
-option(BuildMPRdVanilla "Whether to create projects for the MP default renderer (rd-vanilla_x86.dll)" ON)
+option(BuildMPRdVanilla "Whether to create projects for the MP default renderer (rd-vanilla_x86_64.dll)" ON)
 option(BuildMPDed "Whether to create projects for the MP dedicated server (openjkded.exe)" ON)
-option(BuildMPGame "Whether to create projects for the MP server-side gamecode (jampgamex86.dll)" ON)
-option(BuildMPCGame "Whether to create projects for the MP clientside gamecode (cgamex86.dll)" ON)
-option(BuildMPUI "Whether to create projects for the MP UI code (uix86.dll)" ON)
+option(BuildMPGame "Whether to create projects for the MP server-side gamecode (jampgamex86_64.dll)" ON)
+option(BuildMPCGame "Whether to create projects for the MP clientside gamecode (cgamex86_64.dll)" ON)
+option(BuildMPUI "Whether to create projects for the MP UI code (uix86_64.dll)" ON)
 option(BuildJPVoice "Whether the MP clientside gamecode gets the voice chat (Opus and miniaudio from lib/ are built into it)" ON)
 option(BuildJPAssets "Whether to pack the directories of assets/ into pk3 files (needs Python 3)" ON)
 option(BuildJPSpatialAudio "Whether the MP client can use Steam Audio for its sound (needs the submodule lib/steamaudio, the library is loaded at run time)" ON)
-option(BuildMPRdVulkanVision "Whether to create projects for the MP Vulkan renderer (rd-vulkan-vision_x86.dll, needs the Vulkan headers and glslc)" ON)
+option(BuildMPRdVulkanVision "Whether to create projects for the MP Vulkan renderer (rd-vulkan-vision_x86_64.dll, needs the Vulkan headers and glslc)" ON)
 
 option(BuildSPEngine "Whether to create projects for the SP engine (openjk_sp.exe)" ON)
-option(BuildSPGame "Whether to create projects for the SP gamecode (jagamex86.dll)" ON)
-option(BuildSPRdVanilla "Whether to create projects for the SP default renderer (rdsp-vanilla_x86.dll)" ON)
+option(BuildSPGame "Whether to create projects for the SP gamecode (jagamex86_64.dll)" ON)
+option(BuildSPRdVanilla "Whether to create projects for the SP default renderer (rdsp-vanilla_x86_64.dll)" ON)
 
 option(BuildJK2SPEngine "Whether to create projects for the jk2 SP engine (openjo_sp.exe)" OFF)
-option(BuildJK2SPGame "Whether to create projects for the jk2 sp gamecode mod (jk2gamex86.dll)" OFF)
-option(BuildJK2SPRdVanilla "Whether to create projects for the jk2 sp renderer (rdjosp-vanilla_x86.dll)" OFF)
+option(BuildJK2SPGame "Whether to create projects for the jk2 sp gamecode mod (jk2gamex86_64.dll)" OFF)
+option(BuildJK2SPRdVanilla "Whether to create projects for the jk2 sp renderer (rdjosp-vanilla_x86_64.dll)" OFF)
 
 option(BuildTests "Whether to build automatic unit tests (requires Boost)" OFF)
 option(UseAddressSanitizer "Whether to enable runtime address sanitizer" OFF)
@@ -115,16 +115,17 @@ endif()
 #
 #=============================================================================
 # ${Architecture} must match ARCH_STRING in q_platform.h,
-# and is used in DLL names (jagamex86.dll, jagamex86.dylib, jagamei386.so).
+# and is used in DLL names (jagamex86_64.dll, jagamex86_64.dylib, jagamex86_64.so).
+
+# This tree is built for 64 bit only. A toolchain file that forces the compiler leaves the size unset.
+if(CMAKE_SIZEOF_VOID_P EQUAL 4)
+	message(FATAL_ERROR "32 bit builds are not supported, use a 64 bit compiler")
+endif()
+
 if(WIN32)
 	set(X86 ON)
-	if(CMAKE_SIZEOF_VOID_P MATCHES "8")
-		set(Architecture "x86_64")
-		set(WIN64 TRUE)
-	else()
-		set(Architecture "x86")
-		set(WIN64 FALSE)
-	endif()
+	set(Architecture "x86_64")
+	set(WIN64 TRUE)
 else()
 	set(X86 OFF)
 	if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(arm64|aarch64)$")
@@ -132,14 +133,6 @@ else()
 		add_definitions(-DPNG_ARM_NEON_OPT=0)
 	elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^arm")
 		set(Architecture "arm")
-	elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^i.86$")
-		set(X86 ON)
-		if(APPLE)
-			set(Architecture "x86")
-		else()
-			# e.g. Linux
-			set(Architecture "i386")
-		endif()
 	elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^x86.64$")
 		set(X86 ON)
 		set(Architecture "x86_64")
@@ -225,10 +218,8 @@ if(MSVC)
 	set(SharedDefines ${SharedDefines} "_SCL_SECURE_NO_WARNINGS")
 	set(SharedDefines ${SharedDefines} "_CRT_NONSTDC_NO_DEPRECATE")
 
-	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /arch:SSE2")
 	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /MP")
 
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /arch:SSE2")
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP")
 
 	# We don't try to control symbol visibility under MSVC.
