@@ -83,6 +83,30 @@ ui:
 
 The menus, shaders and pictures come from the plugin pk3, see [README.md](README.md).
 
+### The setup menu
+
+`ui/jamp/setup.menu` (main menu) and `ui/jamp/ingame_setup.menu` (in a game) are the plugin's copies of the base
+game's menu, changed for this engine. Both have the same pages.
+
+| Page | Entry | What it sets |
+|------|-------|--------------|
+| Video | Video Mode | a list the ui fills: "Desktop", the size of the screen (`r_mode -2`), and the sizes of `r_availableModes`. A size is `r_mode -1` with `r_customwidth` and `r_customheight` |
+| Video | Display Mode | Window, Fullscreen, Borderless (`r_fullscreen`, `r_noborder`). Borderless with "Desktop" covers the screen |
+| Video | Renderer | Vulkan or OpenGL (`cl_renderer`) |
+| Video | Anti-Aliasing | Off, 2x, 4x, 8x (`r_ext_multisample`) |
+| Video | Compressed Textures | `r_ext_compress_textures` |
+| Video | Video Quality | presets for the detail only (`r_lodbias`, `r_picmip`, `r_textureMode`, `r_subdivisions`, `r_fastSky`, `r_inGameVideo`), not for the size or the bit depths any more |
+| Sound | 3D Sound, Output, Reverb | the sound of [audio.md](audio.md), see "The menu" there |
+| Options | Allow Downloads | Off, On (`cl_allowDownload`) |
+
+Everything on the video page is applied by its "Apply" with a `vid_restart`. Taken out, because they did
+nothing or did harm: Color Depth and Texture Quality (`rd-vulkan-vision` ignores `r_colorbits` and
+`r_texturebits`), Sound Quality (11 or 22 kHz, the engine runs at 44), EAX, and the button for the URL redirect
+cache. The menus of the base game, which a client shows while it plays as base, still have the EAX and Sound
+Quality entries: the ui hides them (`Item_ApplyHacks`).
+
+None of the pages was looked at in the game after these changes: the rows were placed by their numbers.
+
 ## Prediction
 
 The movement code (`bg_*.c`) is shared with the server. The JA+ rules in it are switched by `JP_FEATURE( JPF_... )`,

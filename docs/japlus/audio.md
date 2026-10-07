@@ -33,6 +33,25 @@ snd_restart
 | `s_spatialBounces` | 16 | how often a ray is followed off a wall. Fewer cut the tail of a large room |
 | `s_spatialAhead` | 0.1 | seconds of sound rendered ahead. Less follows a turn of the head sooner, more survives a longer hitch |
 
+### The menu
+
+The sound page of the setup menu has three entries for it. "3D Sound" is a preset:
+
+| Preset | `s_spatial` | Reflections | Rays | Bounces | Paths |
+|--------|-------------|-------------|------|---------|-------|
+| Off | 0 | | | | |
+| Low | 1 | 0 | | | 0 |
+| Medium | 1 | 1 | 1024 | 8 | 0 |
+| High | 1 | 1 | 2048 | 16 | 1 |
+| Very High | 1 | 1 | 8192 | 32 | 1 |
+
+High is the defaults. Low is direction and muffling behind walls without a ray pass. The numbers of Medium and
+Very High are a choice inside what the engine clamps to, their cost was not measured. The entry shows "Custom"
+when the cvars are none of the rows. Choosing a preset restarts the sound only when it switches `s_spatial`
+itself, the rest is read while the game runs. "Output" is `s_spatialHrtf` (Headphones or Speakers), "Reverb" a
+slider on `s_spatialReverb`. The menu does not know whether the library is there: without it the console says
+so and the sound stays as it is.
+
 `s_spatialInfo` says whether it runs, what the level is made of, every sound with how much of it is in sight,
 what the threads take and the state of the paths.
 

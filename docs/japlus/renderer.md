@@ -112,6 +112,11 @@ The cvars of `rd-vanilla` keep their names and meaning (`r_gamma`, `r_textureMod
 `r_DynamicGlow` and its parameters, `r_dynamiclight`, `r_drawfog`, `r_fastsky`, `r_surfaceSprites`, ...). The ones
 that only make sense for OpenGL extensions are registered and ignored.
 
+In the setup menu: the video page has the entries Renderer (`cl_renderer`), Anti-Aliasing (`r_ext_multisample`)
+and Compressed Textures (`r_ext_compress_textures`), and no Color Depth or Texture Quality, which this renderer
+ignores. The renderer has no player setting that is only its own, so nothing on the page depends on which one
+runs. See "The setup menu" in [client.md](client.md).
+
 ## How it is built
 
 The renderer does not copy the parts of `rd-vanilla` that are not graphics code. Its CMake target compiles them
