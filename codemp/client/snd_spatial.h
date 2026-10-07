@@ -33,6 +33,7 @@ void		S_SpatialInit( void );			// the sound device is open: dma.speed is known
 void		S_SpatialShutdown( void );
 qboolean	S_SpatialActive( void );		// s_spatial is on, the library is there and a level is loaded
 void		S_SpatialLoadMap( void );		// the collision model of a level was loaded
+void		S_SpatialUpdate( void );		// once a frame: a level that was loaded is taken over when that is safe
 
 // once a frame, from S_Update_(): the listener, every sound with a place in the level, then render ahead
 void		S_SpatialBeginFrame( const vec3_t origin, matrix3_t axis );

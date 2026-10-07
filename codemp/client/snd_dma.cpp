@@ -3195,6 +3195,7 @@ void S_Update_(void) {
 
 
 		// the sounds in the level are rendered ahead by snd_spatial.cpp, the mixer adds them
+		S_SpatialUpdate();
 		if ( S_SpatialActive() ) {
 			unsigned target = (unsigned)( s_soundtime + S_SpatialAhead() * dma.speed );
 
