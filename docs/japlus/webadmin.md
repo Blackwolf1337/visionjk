@@ -457,6 +457,33 @@ Also changed:
   taken away. Limits: edges that cross without a spot of one cube in the other are not seen, a ball can not
   come to rest on a cube without thinking every frame (it does), and a pile is only as calm as the solver.
   Added without a test run.
+- Changed 2026-10-07, the cost of many props (`g_props.c`). Measured on a dedicated server without clients,
+  `sv_fps 20`, 300 `misc_cube` over the spawn points of `mp/ffa3`. Where the time goes while they move: about
+  two thirds in the lines to the 26 spots (`trap->Trace`, 426000 a second, most of that the walk through the
+  map, a fifth the list of entities of the sector), the rest in the contacts with other props and the solver.
+  None of it is arithmetic that wider registers would speed up.
+  - Every loop that looked for players or props went over all entities of the map. `G_PropFrame` makes two
+    lists once a frame (`propList`, `moverList`), and the places and sizes of the props sit in arrays of their
+    own (`propSeenAt`, `propSeenRadius`), so the search for the props next to one reads 16 bytes per prop and
+    not an entity. The vector functions of `q_math.c` are inline for these two files (`bg_props_math.h`).
+    Together 15 to 17 % less time in the physics, the simulation is the same to the last digit.
+  - A pile never came to rest: of 300 crates in low piles about 400 fell asleep and about 400 were woken every
+    second, for as long as the server ran, at 300 to 340 ms of CPU a second. A body that woke woke everything
+    that lay still next to it, down the whole pile, and what woke them were bodies that had come to rest deep
+    in each other: that depth woke one (more than 2 units at the look at the ground every 500 ms) or the other
+    (more than 4 units in `Prop_Fixed`) again and again. Now a body wakes its neighbours when it leaves the
+    place it lay at (`Body_Left`: 0.25 units or 0.01 radians), not because it woke, so a pile still falls when
+    its base goes. The depth a body came to rest with is kept (`restSep`) and only 1 unit more than that wakes.
+    And a body that leans between a floor and a wall, with no three spots under it, thought for good: it lies
+    still once it has not left its place for a second, and stays so while as many spots touch as did then.
+    The same piles: 224 ms a second in the first 5 seconds, 64 in the next 5, 28 after 40 seconds (an idle
+    server: 17). Checked on that server: a crate with two others on it pushed away, both woke within 0.4
+    seconds and fell. Not tried in the game with players.
+  - Looked at and left: one box test in place of the 26 lines for a body in the air (the box test of the
+    engine does not see a surface on `mp/ffa3` that the lines hit), keeping the answers of the lines within a
+    frame (11 % of them could be kept, the simulation changes), and a finer tree of sectors in the server
+    (`AREA_DEPTH` 6 in `sv_world.cpp`: 22 % less time in the lines with the same simulation, but it changes the
+    order of the entities every area query in the game gets, so it is not done without a word).
 - New: taking a ball or a cube into the hand with `+button13` (for example `bind g +button13`). The button
   bits of the base game end at 2048, JA+ has 4096 (`+button12`) for the hook, `+button13` to `+button15` (8192,
   16384, 32768) are free and all 16 bits reach the server. No client change: the stock client and the JA+

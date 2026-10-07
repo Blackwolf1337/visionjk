@@ -60,6 +60,10 @@ Not from JA+ and not from JKAdmin.
 #define BODY_CALM_SPEED		14.0f		// slower than this and turning slower than BODY_CALM_SPIN for
 #define BODY_CALM_SPIN		0.5f		//	BODY_CALM_MSEC on something that carries it: it lies still
 #define BODY_CALM_MSEC		300
+#define BODY_REST_MSEC		1000		// a body that touches something and has not left its place by more than
+#define BODY_REST_MOVE		0.25f		//	this, nor turned further than BODY_REST_TURN (radians), for that long lies
+#define BODY_REST_TURN		0.01f		//	still as well: it is wedged, with no three spots under it
+#define BODY_REST_DEEPER	1.0f		// in something this much deeper than when it came to rest: it was pushed in
 
 #define GRAB_REACH			96.0f		// from the eye to the spot he takes it at
 #define GRAB_AIM			32.0f		// that far off his line of sight at most
@@ -126,6 +130,12 @@ typedef struct prop_s {
 	vec3_t		grab;			// the spot he holds it at, in the prop
 	vec3_t		hand;			// where his hand was in the last frame
 	int			calmTime;		// since when it hardly moves, 0: it moves
+	int			restTime;		// since when it is where restAt and restAxis say, 0: it is not watched
+	vec3_t		restAt;
+	vec3_t		restAxis[2];
+	qboolean	leaves;			// it lay still there: when it leaves that place, what lies still next to it is woken
+	int			restContacts;	// it lies still because it is wedged, with that many spots at something. 0: on three spots
+	float		restSep;		// how deep it was in something when it came to rest, 0 or below. 0 while it moves
 	int			solid;			// body: a player can stand on it, PROP_SOLID_ says how its shape is made of its model
 	qboolean	gun;			// the holder has it in the beam of the physgun, not in his hand:
 	float		gunDist;		//	that far along his line of sight is the point it was taken at,
@@ -206,11 +216,11 @@ static void Prop_Seen( const gentity_t *self ) {
 	propSeenRadius[place] = self->radius;
 }
 
-// how far apart the middles of this prop and of the one at a place of propList are, squared
-static float Prop_SeenDistanceSquared( const gentity_t *self, int place ) {
-	const float dx = propSeenAt[0][place] - self->r.currentOrigin[0];
-	const float dy = propSeenAt[1][place] - self->r.currentOrigin[1];
-	const float dz = propSeenAt[2][place] - self->r.currentOrigin[2];
+// how far a point is from the middle of the prop at a place of propList, squared
+static float Prop_SeenDistanceSquared( const vec3_t at, int place ) {
+	const float dx = propSeenAt[0][place] - at[0];
+	const float dy = propSeenAt[1][place] - at[1];
+	const float dz = propSeenAt[2][place] - at[2];
 
 	return dx * dx + dy * dy + dz * dz;
 }
@@ -219,29 +229,53 @@ static qboolean Prop_Is( const gentity_t *ent ) {
 	return ( ent->inuse && ent->pain == prop_pain ) ? qtrue : qfalse;
 }
 
-static void Prop_Wake( gentity_t *self ) {
-	const qboolean	slept = self->genericValue2 ? qtrue : qfalse;
-	int				i;
+static void Prop_Wake( gentity_t *self );
 
-	// the physgun froze it: that holds until the physgun takes it again
-	if ( Prop_State( self )->frozen )
-		return;
-	self->genericValue2 = 0;
-	Prop_State( self )->calmTime = 0;
-	if ( !slept )
-		return;
+// what lies still next to the place a prop lay at is woken: it may have lain or leaned on it
+static void Prop_WakeAround( gentity_t *self, const vec3_t at ) {
+	int i;
 
-	// it lay still and may have carried others: what lies still next to it is woken too, down the whole pile
 	for ( i = 0; i < propCount; i++ ) {
 		gentity_t	*other = &g_entities[propList[i]];
 		const float	reach = self->radius + propSeenRadius[i] + 2.0f;
 
-		if ( Prop_SeenDistanceSquared( self, i ) > reach * reach )
+		if ( Prop_SeenDistanceSquared( at, i ) > reach * reach )
 			continue;
 		if ( other == self || !Prop_Is( other ) || !other->genericValue2 )
 			continue;
 		Prop_Wake( other );
 	}
+}
+
+static void Prop_Wake( gentity_t *self ) {
+	prop_t			*p = Prop_State( self );
+	const qboolean	slept = self->genericValue2 ? qtrue : qfalse;
+
+	// the physgun froze it: that holds until the physgun takes it again
+	if ( p->frozen )
+		return;
+	self->genericValue2 = 0;
+	p->calmTime = 0;
+	p->restContacts = 0;
+	p->restSep = 0.0f;
+	if ( !slept ) {
+		// something is at it: the time it has been at its place starts again
+		if ( p->restTime )
+			p->restTime = level.time;
+		return;
+	}
+
+	// It lay still and may have carried others. A body wakes them once it leaves its place (Body_Left), not
+	// because it woke: a pile of them woke as a whole for every body in it that did, and that never ended.
+	if ( p->box ) {
+		p->leaves = qtrue;
+		p->restTime = level.time;
+		VectorCopy( self->r.currentOrigin, p->restAt );
+		VectorCopy( p->axis[0], p->restAxis[0] );
+		VectorCopy( p->axis[1], p->restAxis[1] );
+		return;
+	}
+	Prop_WakeAround( self, self->r.currentOrigin );
 }
 
 /*
@@ -263,7 +297,8 @@ static qboolean Prop_Fixed( gentity_t *other, const prop_t *q, const vec3_t norm
 	if ( !other->genericValue2 && !( q->calmTime && carries ) )
 		return qfalse;
 	// what lies on it does not wake it with its weight, whatever that is
-	if ( into * ( carries ? 1.0f : ratio ) > PROP_WAKE_SPEED || sep < -PROP_WAKE_DEPTH ) {
+	if ( into * ( carries ? 1.0f : ratio ) > PROP_WAKE_SPEED
+		|| ( sep < -PROP_WAKE_DEPTH && sep < q->restSep - BODY_REST_DEEPER ) ) {
 		Prop_Wake( other );
 		return qfalse;
 	}
@@ -1760,7 +1795,7 @@ static void Ball_Props( gentity_t *self, float dt ) {
 		qboolean	fixed;
 		trace_t		tr;
 
-		if ( Prop_SeenDistanceSquared( self, i ) >= reach * reach )
+		if ( Prop_SeenDistanceSquared( self->r.currentOrigin, i ) >= reach * reach )
 			continue;
 		if ( other == self || !Prop_Is( other ) )
 			continue;
@@ -2013,7 +2048,7 @@ static int Body_Contacts( gentity_t *self, const prop_t *p, contact_t *list ) {
 		const prop_t	*q = &props[propList[n]];
 		const float		reach = self->radius + propSeenRadius[n] + BODY_SKIN;
 
-		if ( Prop_SeenDistanceSquared( self, n ) > reach * reach )
+		if ( Prop_SeenDistanceSquared( self->r.currentOrigin, n ) > reach * reach )
 			continue;
 		if ( other == self || !Prop_Is( other ) )
 			continue;
@@ -2270,6 +2305,46 @@ static qboolean Body_Step( gentity_t *self, prop_t *p, float dt, const vec3_t ha
 	return qtrue;
 }
 
+// Has it left the place it was last seen at? Then its place is where it is now, and if it lay still at the old
+// one, what lies still next to that is woken.
+static qboolean Body_Left( gentity_t *self, prop_t *p ) {
+	if ( p->restTime && DistanceSquared( self->r.currentOrigin, p->restAt ) <= BODY_REST_MOVE * BODY_REST_MOVE
+		&& DistanceSquared( p->axis[0], p->restAxis[0] ) <= BODY_REST_TURN * BODY_REST_TURN
+		&& DistanceSquared( p->axis[1], p->restAxis[1] ) <= BODY_REST_TURN * BODY_REST_TURN )
+		return qfalse;
+
+	if ( p->leaves ) {
+		p->leaves = qfalse;
+		Prop_WakeAround( self, p->restAt );
+	}
+	p->restTime = level.time;
+	VectorCopy( self->r.currentOrigin, p->restAt );
+	VectorCopy( p->axis[0], p->restAxis[0] );
+	VectorCopy( p->axis[1], p->restAxis[1] );
+	return qtrue;
+}
+
+// It lies still from now on. What it touches is looked at once more, where it stands now and the way
+// Prop_OnGround will: how deep it is in something, and for a wedged one how many of its spots touch (none: it
+// does not lie still).
+static void Body_LieStill( gentity_t *self, prop_t *p, contact_t *contacts, qboolean wedged ) {
+	const int	count = Body_Contacts( self, p, contacts );
+	int			i;
+
+	if ( wedged && !count )
+		return;
+	p->restContacts = wedged ? count : 0;
+	p->restSep = 0.0f;
+	for ( i = 0; i < count; i++ ) {
+		if ( contacts[i].sep < p->restSep )
+			p->restSep = contacts[i].sep;
+	}
+	VectorClear( self->movedir );
+	VectorClear( p->spin );
+	self->genericValue2 = 1;
+	self->genericValue5 = level.time + 500;
+}
+
 /*
 =================
 Body_Move
@@ -2283,6 +2358,7 @@ static void Body_Move( gentity_t *self, prop_t *p, float dt ) {
 	vec3_t		hand, handVel, way;
 	int			steps, count = 0, i;
 	float		len;
+	qboolean	left;
 
 	if ( dt < 0.001f )
 		return;
@@ -2327,6 +2403,7 @@ static void Body_Move( gentity_t *self, prop_t *p, float dt ) {
 		if ( !Body_Step( self, p, dt / steps, now, handVel, contacts, &count ) )
 			break;
 	}
+	left = Body_Left( self, p );
 
 	// fell out of the world or into a pit nothing comes back from
 	if ( self->r.currentOrigin[2] < self->pos1[2] - 8192.0f
@@ -2354,17 +2431,18 @@ static void Body_Move( gentity_t *self, prop_t *p, float dt ) {
 
 	if ( VectorLength( self->movedir ) < BODY_CALM_SPEED && VectorLength( p->spin ) < BODY_CALM_SPIN
 		&& Body_Carried( p, contacts, count ) ) {
-		if ( !p->calmTime ) {
+		if ( !p->calmTime )
 			p->calmTime = level.time;
-		} else if ( level.time - p->calmTime >= BODY_CALM_MSEC ) {
-			VectorClear( self->movedir );
-			VectorClear( p->spin );
-			self->genericValue2 = 1;
-			self->genericValue5 = level.time + 500;
-		}
+		else if ( level.time - p->calmTime >= BODY_CALM_MSEC )
+			Body_LieStill( self, p, contacts, qfalse );
 	} else {
 		p->calmTime = 0;
 	}
+
+	// A body that leans between a floor and a wall or in a pile is not carried by three spots and went on thinking
+	// for good, 26 traces a step. It lies still once it has not left its place for a while.
+	if ( !left && !self->genericValue2 && level.time - p->restTime >= BODY_REST_MSEC )
+		Body_LieStill( self, p, contacts, qtrue );
 }
 
 // while it lies still: is what it lies on still there
@@ -2377,12 +2455,15 @@ static qboolean Prop_OnGround( gentity_t *self, const prop_t *p ) {
 		const int	count = Body_Contacts( self, p, contacts );
 		int			i;
 
-		// something that moves pushed into it
+		// something that moves pushed into it: it is in deeper than it lay when it came to rest
 		for ( i = 0; i < count; i++ ) {
-			if ( contacts[i].sep < -2.0f )
+			if ( contacts[i].sep < -2.0f && contacts[i].sep < p->restSep - BODY_REST_DEEPER )
 				return qfalse;
 		}
-		return Body_Carried( p, contacts, count );
+		if ( Body_Carried( p, contacts, count ) )
+			return qtrue;
+		// wedged: nothing it leaned on is gone
+		return ( p->restContacts && count >= p->restContacts ) ? qtrue : qfalse;
 	}
 
 	VectorCopy( self->r.currentOrigin, below );
