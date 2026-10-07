@@ -319,6 +319,7 @@ typedef struct vkState_s {
 	int							statNumCpuShaders[2];
 
 	qboolean					wireframe;			// the device can draw triangles as lines (r_showtris)
+	qboolean					anisotropy;			// and filter textures along the direction they are seen in
 	qboolean					bcTextures;			// r_ext_compress_textures on a device that takes BC1 and BC3 blocks
 	double						statBcPixels;		// what packing textures into blocks has cost since the window was made
 	double						statBcSeconds;

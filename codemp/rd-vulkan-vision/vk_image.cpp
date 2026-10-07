@@ -205,7 +205,7 @@ static VkSampler VK_FindSampler( int minFilter, int magFilter, int wrap, float a
 	info.maxLod = ( minFilter == GL_NEAREST || minFilter == GL_LINEAR ) ? 0.25f : VK_LOD_CLAMP_NONE;
 	info.addressModeU = info.addressModeV = info.addressModeW =
 		( wrap == GL_REPEAT ) ? VK_SAMPLER_ADDRESS_MODE_REPEAT : VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-	if ( anisotropy > 1.0f && vk.properties.limits.maxSamplerAnisotropy > 1.0f ) {
+	if ( anisotropy > 1.0f && vk.anisotropy && vk.properties.limits.maxSamplerAnisotropy > 1.0f ) {
 		info.anisotropyEnable = VK_TRUE;
 		info.maxAnisotropy = Q_min( anisotropy, vk.properties.limits.maxSamplerAnisotropy );
 	}

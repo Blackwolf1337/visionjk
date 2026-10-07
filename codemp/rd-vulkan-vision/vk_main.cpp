@@ -248,6 +248,7 @@ static void VK_CreateDevice( void ) {
 
 	qvkGetPhysicalDeviceFeatures( vk.physicalDevice, &available );
 	features.features.samplerAnisotropy = available.samplerAnisotropy;
+	vk.anisotropy = (qboolean)( available.samplerAnisotropy != VK_FALSE );
 	features.features.fillModeNonSolid = available.fillModeNonSolid;
 	vk.wireframe = (qboolean)( available.fillModeNonSolid != VK_FALSE );
 	features.features.textureCompressionBC = available.textureCompressionBC;
@@ -453,6 +454,8 @@ void VK_InitVulkan( void ) {
 	VK_ModelsChanged();
 	VK_ClearFlares();
 	if ( glConfig.vidWidth ) {
+		// the window stays, the textures get their filter again as GL_SetDefaultState() of rd-vanilla gives it to them
+		GL_TextureMode( r_textureMode->string );
 		return;
 	}
 
@@ -509,7 +512,7 @@ void VK_InitVulkan( void ) {
 	glConfigExt.originalExtensionString = "";
 	glConfig.maxTextureSize = Q_min( (int)vk.properties.limits.maxImageDimension2D, 8192 );
 	glConfig.maxActiveTextures = NUM_TEXTURE_BUNDLES;
-	glConfig.maxTextureFilterAnisotropy = vk.properties.limits.maxSamplerAnisotropy;
+	glConfig.maxTextureFilterAnisotropy = vk.anisotropy ? vk.properties.limits.maxSamplerAnisotropy : 0.0f;
 	glConfig.colorBits = 32;
 	glConfig.depthBits = 24;
 	glConfig.stencilBits = 8;
@@ -522,6 +525,13 @@ void VK_InitVulkan( void ) {
 	glConfig.deviceSupportsGamma = qfalse;
 	glConfigExt.doGammaCorrectionWithShaders = qtrue;
 	glConfigExt.doStencilShadowsInOneDrawcall = qtrue;	// front and back faces have stencil operations of their own
+
+	// the setup menus offer the anisotropic filter only if this cvar says how much of it there is
+	ri.Cvar_SetValue( "r_ext_texture_filter_anisotropic_avail", glConfig.maxTextureFilterAnisotropy );
+	// The filter new textures are made with (r_textureMode) lives in tr_image.cpp and is what it was compiled as in a
+	// library that was just loaded. rd-vanilla sets it in GL_SetDefaultState() at every start, RE_BeginFrame() only
+	// when the cvar changes.
+	GL_TextureMode( r_textureMode->string );
 
 	ri.Printf( PRINT_ALL, "Vulkan device: %s, %s\n", vk.properties.deviceName, vk_versionString );
 }
