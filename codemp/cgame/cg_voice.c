@@ -432,8 +432,13 @@ static void Voice_Capture( int now ) {
 		return;
 	}
 	if ( !CG_VoiceAudioCapturing() ) {
-		if ( !CG_VoiceAudioInit( cg_voiceBackend.string ) || !CG_VoiceAudioOpenCapture( cg_voiceCapture.string ) ) {
-			if ( voice.keyDown || activation )
+		// a refused microphone opens on macOS and gives silence: ask first, so the player learns why
+		int denied = CG_VoiceAudioMicDenied();
+		if ( denied || !CG_VoiceAudioInit( cg_voiceBackend.string ) || !CG_VoiceAudioOpenCapture( cg_voiceCapture.string ) ) {
+			if ( ( voice.keyDown || activation ) && denied )
+				trap->Print( "Voice chat: macOS does not let the game use the microphone. Switch it on in System "
+					"Settings, Privacy & Security, Microphone, then start the game again\n" );
+			else if ( voice.keyDown || activation )
 				trap->Print( "Voice chat: no microphone (voice_devices lists what there is, cg_voiceCapture chooses)\n" );
 			voice.keyDown = qfalse;
 			voice.micUntil = 0;

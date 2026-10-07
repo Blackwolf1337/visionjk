@@ -43,7 +43,7 @@ if(BuildJPVoice)
 		# the sockets. miniaudio loads the sound libraries of Windows itself when it runs, they are not linked
 		set(MPCGameLibraries ${MPCGameLibraries} "ws2_32")
 	elseif(APPLE)
-		set(MPCGameLibraries ${MPCGameLibraries} "-framework CoreFoundation" "-framework CoreAudio" "-framework AudioToolbox" "pthread" "m")
+		set(MPCGameLibraries ${MPCGameLibraries} "-framework CoreFoundation" "-framework CoreAudio" "-framework AudioToolbox" "-framework AVFoundation" "objc" "pthread" "m")
 	else()
 		# miniaudio opens the sound library of the system (ALSA, PulseAudio) when it runs, it is not linked
 		set(MPCGameLibraries ${MPCGameLibraries} "dl" "pthread" "m")

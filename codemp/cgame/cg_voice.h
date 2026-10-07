@@ -41,6 +41,7 @@ int		CG_VoiceAudioOpenPlayback( const char *device );
 int		CG_VoiceAudioOpenCapture( const char *device );
 void	CG_VoiceAudioCloseCapture( void );
 int		CG_VoiceAudioCapturing( void );
+int		CG_VoiceAudioMicDenied( void );
 
 int		CG_VoiceAudioRead( short *samples, int count );
 void	CG_VoiceAudioDropCapture( void );

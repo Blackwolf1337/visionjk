@@ -44,6 +44,12 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define MINIAUDIO_IMPLEMENTATION
 #include "miniaudio.h"
 
+#ifdef __APPLE__
+	#include <objc/runtime.h>
+	#include <objc/message.h>
+	#include <CoreFoundation/CoreFoundation.h>
+#endif
+
 #include "qcommon/q_shared.h"
 #include "game/bg_voice.h"
 #include "cg_voice.h"
@@ -321,6 +327,25 @@ void CG_VoiceAudioCloseCapture( void ) {
 
 int CG_VoiceAudioCapturing( void ) {
 	return audioRecording ? 1 : 0;
+}
+
+// 1 if the system does not let the game have the microphone. On macOS the user decides it in the privacy
+// settings, and a capture device that was refused opens without an error and only delivers silence, or fails
+// without saying why. AVFoundation is asked through the Objective-C runtime, the file stays C.
+int CG_VoiceAudioMicDenied( void ) {
+#ifdef __APPLE__
+	Class device = (Class)objc_getClass( "AVCaptureDevice" );
+	long status;
+
+	if ( !device )
+		return 0;
+	// AVMediaTypeAudio is the string "soun". 1 is restricted, 2 is denied, 0 not asked yet, 3 allowed
+	status = ( (long (*)( id, SEL, CFStringRef ))objc_msgSend )( (id)device,
+		sel_registerName( "authorizationStatusForMediaType:" ), CFSTR( "soun" ) );
+	return status == 1 || status == 2;
+#else
+	return 0;
+#endif
 }
 
 // count samples of the microphone, or none: a frame is taken whole or not at all. Returns count or 0.
