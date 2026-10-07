@@ -72,6 +72,9 @@ typedef struct voiceSpeaker_s {
 	qboolean		muted;			// by this player (voice_mute)
 	qboolean		muffled;		// something is between him and the listener
 	int				traceTime;		//	and when that was looked at last
+	qboolean		inLevel;		// what he says now is played by the engine as a sound in the level, see Voice_InLevel()
+	vec3_t			mouth;			//	from here,
+	float			volume;			//	this loud
 } voiceSpeaker_t;
 
 // a block of memory for a state of Opus, as well aligned as anything can ask for
@@ -573,6 +576,51 @@ static void Voice_Receive( int now ) {
 	}
 }
 
+/*
+=================
+Voice_InLevel
+
+This engine with s_spatial on plays every sound in a level through walls, with the ring of the room and round
+corners. It takes the voice of a player too, if it is told where he is: then what is decoded of him goes to the
+engine and not to the sound device of this file, and the direction, the fall with the distance to nothing and
+the muffling of Voice_Place() are left to it. Any other engine has no such call, a speaker the server does not
+show has no place, and a chat without a range has none on purpose: those are played here as before. So is every
+voice for a player who does not want voices muffled (cg_voiceMuffle 0): a wall of the engine can not be put off.
+
+The engine says that it takes voices in the cvar s_spatialVoice. Only then is the call there at all.
+=================
+*/
+static qboolean Voice_EngineTakesVoices( void ) {
+	char value[8];
+
+	trap->Cvar_VariableStringBuffer( "s_spatialVoice", value, sizeof( value ) );
+	return ( atoi( value ) == 1 && trap->ext.S_SpatialVoice ) ? qtrue : qfalse;
+}
+
+static qboolean Voice_InLevel( int speaker ) {
+	const voiceSpeaker_t	*sp = &voiceSpeakers[speaker];
+	const centity_t			*cent = &cg_entities[speaker];
+
+	if ( voice.range <= 0 || cgs.clientinfo[speaker].team == TEAM_SPECTATOR || !cent->currentValid || ( sp->flags & VOICE_FLAG_UNSEEN ) )
+		return qfalse;
+	if ( !cg_voiceMuffle.integer || !Voice_EngineTakesVoices() )
+		return qfalse;
+	return ( trap->ext.S_SpatialVoice( speaker, NULL, 0.0f, NULL, 0, VOICE_RATE ) >= 0 ) ? qtrue : qfalse;
+}
+
+// how much of a speaker is decoded and waits to be heard, in samples
+static int Voice_Queued( int speaker ) {
+	if ( voiceSpeakers[speaker].inLevel ) {
+		const int queued = trap->ext.S_SpatialVoice( speaker, NULL, voiceSpeakers[speaker].volume, NULL, 0, VOICE_RATE );
+
+		// the engine stopped taking voices (the level changes): what he says goes on here
+		if ( queued >= 0 )
+			return queued;
+		voiceSpeakers[speaker].inLevel = qfalse;
+	}
+	return CG_VoiceAudioQueued( speaker );
+}
+
 // the next 20 ms of a speaker into what is played: the frame whose turn it is, or what the codec makes up for it
 static void Voice_PlayFrame( int speaker, qboolean makeUp ) {
 	voiceSpeaker_t	*sp = &voiceSpeakers[speaker];
@@ -594,7 +642,25 @@ static void Voice_PlayFrame( int speaker, qboolean makeUp ) {
 	// a frame of another length than this chat uses, or one the codec refuses, is silence
 	if ( got != VOICE_FRAME_SAMPLES )
 		memset( samples, 0, sizeof( samples ) );
+	if ( sp->inLevel && trap->ext.S_SpatialVoice( speaker, sp->mouth, sp->volume, samples, VOICE_FRAME_SAMPLES, VOICE_RATE ) >= 0 )
+		return;
 	CG_VoiceAudioWrite( speaker, samples, VOICE_FRAME_SAMPLES );
+}
+
+// Where the mouth of a speaker is and how loud he is, for a voice the engine plays in the level. How loud at
+// his distance is the fall of this chat (g_voiceRange), the engine does not let it fall again.
+static void Voice_Mouth( int speaker ) {
+	voiceSpeaker_t	*sp = &voiceSpeakers[speaker];
+	const centity_t	*cent = &cg_entities[speaker];
+	float			distance;
+
+	// a speaker the server stopped showing in the middle of a word stays where he was
+	if ( cent->currentValid ) {
+		VectorCopy( cent->lerpOrigin, sp->mouth );
+		sp->mouth[2] += VOICE_HEAD;
+	}
+	distance = Com_Clamp( 0.0f, 1.0f, 1.0f - Distance( sp->mouth, cg.refdef.vieworg ) / voice.range );
+	sp->volume = cg_voiceVolume.value * ( VOICE_FAR_GAIN + ( 1.0f - VOICE_FAR_GAIN ) * distance * distance );
 }
 
 /*
@@ -631,9 +697,13 @@ static void Voice_Play( int now ) {
 				continue;
 			sp->playing = qtrue;
 			sp->concealed = 0;
+			// decided when he starts to talk and kept until he stops: a voice does not change over in a word
+			sp->inLevel = Voice_InLevel( i );
+			if ( sp->inLevel )
+				Voice_Mouth( i );
 		}
 
-		for ( count = 0; count < VOICE_QUEUE && CG_VoiceAudioQueued( i ) < ahead; count++ ) {
+		for ( count = 0; count < VOICE_QUEUE && Voice_Queued( i ) < ahead; count++ ) {
 			if ( BG_VoiceQueueSpan( &sp->queue ) ) {
 				Voice_PlayFrame( i, qfalse );
 			} else if ( now - sp->lastHeard < 3 * VOICE_FRAME_MSEC && sp->concealed < 3 ) {
@@ -644,7 +714,7 @@ static void Voice_Play( int now ) {
 			}
 		}
 
-		if ( !BG_VoiceQueueSpan( &sp->queue ) && !CG_VoiceAudioQueued( i ) ) {
+		if ( !BG_VoiceQueueSpan( &sp->queue ) && !Voice_Queued( i ) ) {
 			if ( now - sp->lastHeard > VOICE_SILENT_MSEC ) {
 				// he stopped talking
 				sp->playing = qfalse;
@@ -711,6 +781,13 @@ static void Voice_Place( int now ) {
 			continue;
 		// the mark over his head, as long as his voice comes in (CG_Player)
 		cg_entities[i].vChatTime = cg.time + 250;
+
+		// the engine places him, see Voice_InLevel()
+		if ( sp->inLevel ) {
+			Voice_Mouth( i );
+			trap->ext.S_SpatialVoice( i, sp->mouth, sp->volume, NULL, 0, VOICE_RATE );
+			continue;
+		}
 
 		if ( voice.range > 0 && cgs.clientinfo[i].team != TEAM_SPECTATOR ) {
 			if ( cent->currentValid && !( sp->flags & VOICE_FLAG_UNSEEN ) ) {

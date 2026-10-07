@@ -25,7 +25,7 @@ before a level was loaded).
 | `cg_voiceVolume` | 1 | how loud the others are. `s_volume` does not change them |
 | `cg_voiceMicGain` | 1 | how loud the own microphone is sent |
 | `cg_voiceThreshold` | 0.02 | voice activation: from which level on, 0 to 1 |
-| `cg_voiceMuffle` | 1 | 0: voices behind walls are not muffled |
+| `cg_voiceMuffle` | 1 | 0: voices behind walls are not muffled, and the engine's `s_spatial` leaves them alone |
 | `cg_voiceDrawTalkers` | 1 | the list of who is talking on the HUD |
 | `cg_voiceCapture`, `cg_voicePlayback` | "" | the name of the microphone and of the speakers, empty: the ones the system uses. `voice_devices` lists the names |
 | `cg_voiceBackend` | "" | `null`: a sound system that plays into nothing, for tests |
@@ -107,6 +107,11 @@ speaker is on. Ten times a second one line is traced from the eye of the listene
 against the level and its doors. If something is in the way, or one of the two is under water and the other is
 not, the voice is muffled: two low-passes at about 700 Hz and a little quieter, faded in over 150 ms. A speaker
 the server does not show at all is muffled and comes from no direction.
+
+With the engine of this tree and `s_spatial 1` the cgame does none of that for a speaker it can see: it hands
+his voice to the engine, where it is a sound in the level, behind the walls and in the reverb of every other
+sound. See [audio.md](audio.md), "The voice chat". With `cg_voiceMuffle 0`, on any other engine and with
+`s_spatial 0` every voice is played as described here.
 
 **The sound devices** (`cg_voice_audio.c`) are opened through miniaudio (`lib/miniaudio`), which is compiled into
 that one file, on Windows, Linux and macOS. The codec is Opus (`lib/opus`). Both are built into the module,

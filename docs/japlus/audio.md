@@ -5,8 +5,9 @@ nothing else. It does not know that there is a wall between a sound and the list
 that a sound has to come round a corner. `s_spatial 1` changes that for the sounds in a level, with Steam Audio
 of Valve doing the acoustics. It is not a JA+ feature.
 
-It is in the engine, so only a player with this engine has it. Nothing of it is in the game modules or in the
-protocol: a server and the other players notice nothing.
+It is in the engine, so only a player with this engine has it. Nothing of it is in the protocol: a server and
+the other players notice nothing. The one thing a game module does for it is in the cgame, which hands the
+voices of the [voice chat](voice.md) to it when the engine says it takes them.
 
 Nobody has listened to it yet. Everything under "Checked" is measured from recordings, how it sounds is not
 judged.
@@ -37,8 +38,9 @@ what the threads take and the state of the paths.
 
 What changes: a sound behind a wall is quieter and duller, by what the wall is made of. A sound has a direction
 that is more than left and right (with headphones). The room around the listener rings, a hall longer than a
-chamber. A sound in the next room arrives through the doorway. The sounds of the own player, the menus, the
-announcer and the music are not touched.
+chamber. A sound in the next room arrives through the doorway. The voices of the voice chat are sounds in the
+level too, see "The voice chat". The sounds of the own player, the menus, the announcer and the music are not
+touched.
 
 What does not: how loud a sound is at its distance is still what the game makes of it. Doors and lifts are not
 in the way of anything, see "Limits".
@@ -109,6 +111,23 @@ once per level, in another thread, the first time the level is loaded, and kept 
 `steamaudio/<level>_<checksum of its walls>.paths` in the profile. Until it is done the level has no paths.
 How loud a sound is at the end of a way is what the game makes of a sound at that distance.
 
+**The voice chat.** The cgame plays the voices of its voice chat on a sound device of its own, which the
+engine knows nothing of. With `s_spatial` on, the engine sets the cvar `s_spatialVoice` to 1 and the cgame
+hands over what it decoded of a player, 20 ms at a time, with where his mouth is and how loud he is at his
+distance (`ext.S_SpatialVoice` in `cgame/cg_public.h`, a call only this engine has: the cgame looks at the
+cvar before it touches it). The engine brings it to the rate of the mixer and it is a voice like the others:
+the walls, the reverb, the ways round corners. How loud a voice is at its distance stays what the voice chat
+makes of it (`g_voiceRange`, `cg_voiceVolume`), and `s_volume` does not change it. A voice is decided when its
+speaker starts to talk and stays on its way until he stops.
+
+Not handed over, and played by the cgame as before: a chat without a range (`g_voiceRange 0`), a speaker the
+server does not show, a spectator, and every voice for a player with `cg_voiceMuffle 0`, who does not want
+voices muffled. The same goes for any other engine, and for this one with `s_spatial 0` or without the library.
+
+The other sounds are there ahead of time, a voice is not. It is rendered as far as what arrived of it reaches,
+a block behind where the others are rendered to, so it is heard about `s_spatialAhead` (0.1 s) later than the
+cgame would play it.
+
 **Threads.** The engine had none. Now: one for the passes of reflections and paths, one while the paths of a
 level are worked out, and what Steam Audio starts inside them. The game never waits for one, except when the
 sound system is shut down. A level that was loaded is handed to the simulator in the first frame no pass
@@ -120,6 +139,7 @@ runs, until then the old mixer plays.
 | `qcommon/cm_export.cpp` | the world as triangles |
 | `client/snd_dma.cpp` | `S_SpatialGather`, and the fade by distance as functions both paths use (`S_AttenuateDistance`) |
 | `client/snd_mix.cpp` | `S_SampleRun`: samples of a sound as floats. The mixer leaves out what the new path plays |
+| `cgame/cg_voice.c` | `Voice_InLevel`: which voices of the voice chat go to the engine |
 | `lib/steamaudio` | Valve's repository, a submodule |
 
 ## Checked
@@ -146,11 +166,28 @@ runs, until then the old mixer plays.
 | The triangles against the collision model | 15000 rays on five levels: 97 to 99.6 % stop within a unit. Where they differ it is a curve hit from behind, which the collision model lets a point through |
 | The sound system started again, a change of level, bots fighting on mp/ffa3 | runs, the threads end when the sound system does |
 
+The voice chat, the same day: a dedicated server, a client that sends in place of a microphone and a listener
+365 units in front of him, whose own voice device writes into a second file (`tools/satest/voice.sh`).
+
+| What | Result |
+|------|--------|
+| Noise with the spectrum of speech, on the voice chat's own device | -28.9 dB in each ear |
+| The same through the engine | -28.9 dB with HRTF, -29.1 dB panned, and nothing on the own device |
+| A tone of 440 and 3000 Hz, 10 s | no hole in the levels of 5 ms |
+| The tone in sight, 365 units away | 440 Hz at -22 dB. On the voice chat's own device: -21.5 dB |
+| The listener in the next room, 625 units away, a wall in between | 440 Hz at -47.9 dB. On the own device, with its muffling: -34.7 dB |
+| `cg_voiceMuffle 0`, `s_spatial 0` | the voice comes from the own device, nothing from the engine |
+
+The "disk" sound driver of SDL takes 0.6 % more sound a second than there is. A listener on it runs out of
+voice every 3 s and the codec makes up a frame, which is a hole of 40 ms in a tone. The numbers above are from a
+driver buffer of 882 samples, with which it runs 0.4 % slow (`tools/satest/clock.py`). A sound card that is that
+far off would do the same on either way of the voice.
+
 Cost on mp/ffa3 with bots fighting (AMD Ryzen 9 5900X 12-Core Processor, two threads for a pass): a pass of
 reflections and paths 21 ms, in its own thread, about seven a second. In the thread of the game the sound costs mostly under 0.5 ms a frame
 and up to 2 ms, most of it the reverb. The paths of mp/ffa3: 740 probes, under a second, a file of 660 kB.
 
-Builds: Linux 64, and the client for 32 bit Windows with mingw.
+Builds: Linux 64, and the client and the modules for 32 bit Windows with mingw.
 
 ## Limits
 
@@ -163,6 +200,12 @@ Builds: Linux 64, and the client for 32 bit Windows with mingw.
   later. If the game stands still for longer than that, the sounds of the level have a gap while the others
   play on.
 - A sound that starts gets its reverb up to 0.1 s late.
-- The voice chat keeps its own mixer and its own muffling.
+- A voice of the voice chat behind a wall without a way round it is 13 dB quieter than the voice chat makes it
+  on its own (see "Checked"): the wall is the wall of every other sound. Whether that is too quiet to talk
+  through is for ears to say. `cg_voiceMuffle 0` takes the voices out of it.
+- The voice chat looks at doors when it muffles a voice itself. Here a door is not in the way, as for every
+  sound.
+- A voice is 0.1 s later than on the voice chat's own device. That number is from the code, not measured.
+- Not tried: more than one speaker at a time, a speaker who moves, a change of level while somebody talks.
 - Not run: Windows and macOS. Not built: macOS, 64 bit Windows.
 - 22 kHz (`s_khz 22`) is refused.

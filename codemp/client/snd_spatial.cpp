@@ -262,6 +262,26 @@ enum {
 	BAKE_DONE
 };
 
+// The voice chat of the cgame can hand the voice of a player to this file (S_SpatialVoice), so that it is in
+// the level like any other sound. The cgame decodes it and plays it itself on every other engine.
+#define SPATIAL_STREAM_FIFO			16384	// samples of a voice that wait to be rendered, at the rate of the mixer, a power of two
+#define SPATIAL_STREAM_MSEC			500		// a voice that got nothing for this long has ended
+// How loud a voice is against what the cgame makes of it on its own device, where a voice in front is in both
+// ears at full volume. Panning gives each side 0.7 of it, and the HRTF takes 2 dB off noise with the spectrum
+// of speech (measured, see docs/japlus/audio.md).
+#define SPATIAL_GAIN_VOICE_HRTF		1.25f
+#define SPATIAL_GAIN_VOICE_PANNING	1.4f
+
+typedef struct spatialStream_s {
+	qboolean	active;
+	int			lastWrite;				// Sys_Milliseconds() of the last samples
+	vec3_t		origin;
+	float		volume;
+	float		fifo[SPATIAL_STREAM_FIFO];
+	unsigned	read, write;			// counted on and on, the place in fifo is the low bits
+	float		last, phase;			// from the rate of the voice to the one of the mixer: where the last call ended
+} spatialStream_t;
+
 // One sound in the level. The effects of Steam Audio remember what they did to the block before, so a sound
 // keeps its voice for as long as it plays and each voice is rendered once and in order, see "Rendering".
 typedef struct spatialVoice_s {
@@ -269,6 +289,7 @@ typedef struct spatialVoice_s {
 	int			frame;				// spatial.frame of the last S_SpatialAdd*() that named it
 
 	// what it plays
+	spatialStream_t	*stream;		// the voice of a player from the voice chat, else NULL
 	channel_t	*channel;			// a channel of the mixer, NULL: a loop sound. Only looked into in its frame
 	int			entnum;
 	sfx_t		*sfx;
@@ -383,6 +404,8 @@ static struct {
 
 static std::atomic<int>	spatialBakeState;		// BAKE_*
 static std::atomic<int>	spatialBakeProgress;	// 0 to 100
+
+static spatialStream_t	spatialStreams[MAX_CLIENTS];
 
 // what the game and the thread of the reflections both touch
 static std::atomic<int>	spatialWorkerState;		// WORKER_*
@@ -727,6 +750,7 @@ static void S_SpatialTakeScene( void ) {
 			S_SpatialResetVoice( &spatial.voices[i] );
 		}
 	}
+	memset( spatialStreams, 0, sizeof( spatialStreams ) );
 	if ( spatial.reverbEffect ) {
 		qiplReflectionEffectReset( spatial.reverbEffect );
 		qiplAmbisonicsDecodeEffectReset( spatial.reverbDecode );
@@ -836,6 +860,7 @@ mixer that play one, and the loop sounds. Each finds its voice again or gets a f
 */
 
 static void S_SpatialResetVoice( spatialVoice_t *v ) {
+	v->stream = NULL;
 	qiplDirectEffectReset( v->direct );
 	qiplBinauralEffectReset( v->binaural );
 	qiplPanningEffectReset( v->panning );
@@ -855,7 +880,7 @@ void S_SpatialBeginFrame( const vec3_t origin, matrix3_t axis ) {
 
 // A channel is the same sound as last frame if it still plays the sample it started then. A loop sound is
 // known by its entity and its sample: the mixer makes its loop channels anew every frame.
-static spatialVoice_t *S_SpatialFindVoice( channel_t *channel, int entnum, sfx_t *sfx, int startSample ) {
+static spatialVoice_t *S_SpatialFindVoice( spatialStream_t *stream, channel_t *channel, int entnum, sfx_t *sfx, int startSample ) {
 	spatialVoice_t *unused = NULL;
 
 	for ( int i = 0; i < SPATIAL_VOICES; i++ ) {
@@ -867,17 +892,18 @@ static spatialVoice_t *S_SpatialFindVoice( channel_t *channel, int entnum, sfx_t
 			}
 			continue;
 		}
-		if ( v->sfx != sfx ) {
+		if ( v->stream != stream || v->sfx != sfx ) {
 			continue;
 		}
-		if ( channel ? ( !v->loop && v->channel == channel && v->startSample == startSample ) : ( v->loop && v->entnum == entnum ) ) {
+		if ( stream || ( channel ? ( !v->loop && v->channel == channel && v->startSample == startSample ) : ( v->loop && v->entnum == entnum ) ) ) {
 			return v;
 		}
 	}
 	if ( unused ) {
 		unused->active = qtrue;
 		unused->fresh = qtrue;
-		unused->loop = channel ? qfalse : qtrue;
+		unused->stream = stream;
+		unused->loop = ( channel || stream ) ? qfalse : qtrue;
 		unused->entnum = entnum;
 		unused->sfx = sfx;
 		unused->startSample = startSample;
@@ -911,7 +937,7 @@ static void S_SpatialPlaceVoice( spatialVoice_t *v, channel_t *channel, int entc
 
 // qfalse: no voice is free, the mixer plays the channel the old way
 qboolean S_SpatialAddChannel( channel_t *ch, const vec3_t origin, float volume, float fade, qboolean voiceVolume ) {
-	spatialVoice_t *v = S_SpatialFindVoice( ch, ch->entnum, ch->thesfx, (int)ch->startSample );
+	spatialVoice_t *v = S_SpatialFindVoice( NULL, ch, ch->entnum, ch->thesfx, (int)ch->startSample );
 
 	if ( !v ) {
 		return qfalse;
@@ -922,10 +948,101 @@ qboolean S_SpatialAddChannel( channel_t *ch, const vec3_t origin, float volume, 
 }
 
 void S_SpatialAddLoop( int entnum, sfx_t *sfx, const vec3_t origin, float volume, float fade, float step ) {
-	spatialVoice_t *v = S_SpatialFindVoice( NULL, entnum, sfx, 0 );
+	spatialVoice_t *v = S_SpatialFindVoice( NULL, NULL, entnum, sfx, 0 );
 
 	if ( v ) {
 		S_SpatialPlaceVoice( v, NULL, CHAN_AUTO, origin, volume, fade, step, qfalse );
+	}
+}
+
+/*
+===============================================================================
+
+VOICES OF THE VOICE CHAT
+
+The cgame hands over what it decoded of a player, a frame of 20 ms at a time as it comes in, and says where his
+mouth is and how loud he is to be. Here that is a sound in the level like the others, with one difference: it
+is not there ahead of time. The other voices are rendered s_spatialAhead ahead of what is heard. A voice of the
+chat is rendered as far as what arrived of it reaches, so it is heard that much later than the cgame would
+play it itself.
+
+===============================================================================
+*/
+
+static int S_SpatialStreamQueued( const spatialStream_t *stream ) {
+	return (int)( stream->write - stream->read );
+}
+
+/*
+===============
+S_SpatialVoice
+
+From the cgame, through its engine interface (ext.S_SpatialVoice). samples: 16 bit, one channel, rate of them a
+second. With no samples it only says where the player is and how loud. origin NULL: where he was.
+Returns how many samples of him wait here, counted at his rate, or -1: the sound of the level does not run, the
+cgame plays him itself.
+===============
+*/
+int S_SpatialVoice( int clientNum, const vec3_t origin, float volume, const short *samples, int numSamples, int rate ) {
+	spatialStream_t *stream;
+	float ratio;
+
+	if ( !S_SpatialActive() || clientNum < 0 || clientNum >= MAX_CLIENTS || rate < 8000 || rate > 48000 ) {
+		return -1;
+	}
+	stream = &spatialStreams[clientNum];
+	if ( !stream->active ) {
+		memset( stream, 0, sizeof( *stream ) );
+		stream->active = qtrue;
+	}
+	if ( origin ) {
+		VectorCopy( origin, stream->origin );
+	}
+	stream->volume = volume;
+
+	// to the rate of the mixer: a line from each sample to the next
+	ratio = (float)rate / spatial.audio.samplingRate;
+	if ( samples && numSamples > 0 ) {
+		stream->lastWrite = Sys_Milliseconds();
+		for ( int i = 0; i < numSamples; i++ ) {
+			const float next = samples[i] * ( 1.0f / 32768.0f );
+
+			while ( stream->phase < 1.0f ) {
+				// full: the game stood still, or nothing renders. The newest is dropped.
+				if ( S_SpatialStreamQueued( stream ) < SPATIAL_STREAM_FIFO ) {
+					stream->fifo[stream->write & ( SPATIAL_STREAM_FIFO - 1 )] = stream->last + ( next - stream->last ) * stream->phase;
+					stream->write++;
+				}
+				stream->phase += ratio;
+			}
+			stream->phase -= 1.0f;
+			stream->last = next;
+		}
+	}
+	return (int)( S_SpatialStreamQueued( stream ) * ratio );
+}
+
+// once a frame: every voice of the chat that still has something to say is one of the sounds of the frame
+static void S_SpatialGatherStreams( void ) {
+	const int now = Sys_Milliseconds();
+
+	for ( int i = 0; i < MAX_CLIENTS; i++ ) {
+		spatialStream_t *stream = &spatialStreams[i];
+		spatialVoice_t *v;
+
+		if ( !stream->active ) {
+			continue;
+		}
+		if ( now - stream->lastWrite > SPATIAL_STREAM_MSEC && S_SpatialStreamQueued( stream ) < SPATIAL_FRAME ) {
+			stream->active = qfalse;
+			continue;
+		}
+		v = S_SpatialFindVoice( stream, NULL, i, NULL, 0 );
+		if ( v ) {
+			// CHAN_VOICE_GLOBAL: how loud he is at his distance is in the volume the cgame gave, also for a way
+			// round a corner
+			S_SpatialPlaceVoice( v, NULL, CHAN_VOICE_GLOBAL, stream->origin, stream->volume, 1.0f, 1.0f, qfalse );
+		}
 	}
 }
 
@@ -1076,6 +1193,17 @@ static qboolean S_SpatialSamples( const spatialVoice_t *v, int c, float *out ) {
 	sfx_t *sfx = v->sfx;
 	int have = 0;
 
+	if ( v->stream ) {
+		// a whole block or nothing: S_SpatialEndFrame() only asks when there is one
+		if ( S_SpatialStreamQueued( v->stream ) < SPATIAL_FRAME ) {
+			return qfalse;
+		}
+		for ( int i = 0; i < SPATIAL_FRAME; i++ ) {
+			out[i] = v->stream->fifo[( v->stream->read + i ) & ( SPATIAL_STREAM_FIFO - 1 )];
+		}
+		v->stream->read += SPATIAL_FRAME;
+		return qtrue;
+	}
 	if ( !sfx || !sfx->bInMemory || sfx->iSoundLengthInSamples <= 0 ) {
 		return qfalse;
 	}
@@ -1117,7 +1245,7 @@ static void S_SpatialRenderBlock( spatialVoice_t *v, float gain ) {
 	// the sound without its fade by the distance in a straight line: a way round a corner has a length of its own
 	const float unfade = ( v->gain > 0.001f ) ? v->volume / v->gain : 0.0f;
 	qboolean pathed = qfalse;
-	float volume, hidden;
+	float volume, hidden, send;
 
 	if ( v->fresh ) {
 		v->dryRead = c;
@@ -1165,12 +1293,18 @@ static void S_SpatialRenderBlock( spatialVoice_t *v, float gain ) {
 		}
 	}
 
+	// A voice of the chat is as loud as the cgame said, s_volume is not for it. Against the other sounds it is
+	// louder by what its two factors differ, which the reverb has to know: it has one factor for all it gets.
+	send = v->voiceVolume ? s_volumeVoice->value : s_volume->value;
+	if ( v->stream ) {
+		send = s_spatialHrtf->integer ? ( SPATIAL_GAIN_VOICE_HRTF / SPATIAL_GAIN_HRTF ) : ( SPATIAL_GAIN_VOICE_PANNING / SPATIAL_GAIN_PANNING );
+	}
 	// what the walls in the way left of it, and what came round them, is what the room around the listener
 	// gets to hear
 	for ( int i = 0; i < SPATIAL_FRAME; i++ ) {
-		v->dry[( c + i ) & ( SPATIAL_DRY - 1 )] = direct[i] + ( pathed ? ( pathLeft[i] + pathRight[i] ) * 0.5f * hidden : 0.0f );
+		v->dry[( c + i ) & ( SPATIAL_DRY - 1 )] = ( direct[i] + ( pathed ? ( pathLeft[i] + pathRight[i] ) * 0.5f * hidden : 0.0f ) ) * send;
 	}
-	volume = ( v->voiceVolume ? s_volumeVoice->value : s_volume->value ) * ( 32768.0f * 256.0f );
+	volume = ( v->stream ? 1.0f : send ) * ( 32768.0f * 256.0f );
 	if ( s_spatialHrtf->integer ) {
 		IPLBinauralEffectParams params;
 
@@ -1180,13 +1314,13 @@ static void S_SpatialRenderBlock( spatialVoice_t *v, float gain ) {
 		params.spatialBlend = 1.0f;
 		params.hrtf = spatial.hrtf;
 		qiplBinauralEffectApply( v->binaural, &params, &mid, &out );
-		volume *= SPATIAL_GAIN_HRTF;
+		volume *= v->stream ? SPATIAL_GAIN_VOICE_HRTF : SPATIAL_GAIN_HRTF;
 	} else {
 		IPLPanningEffectParams params;
 
 		params.direction = v->direction;
 		qiplPanningEffectApply( v->panning, &params, &mid, &out );
-		volume *= SPATIAL_GAIN_PANNING;
+		volume *= v->stream ? SPATIAL_GAIN_VOICE_PANNING : SPATIAL_GAIN_PANNING;
 	}
 
 	// into the ring, in what the paint buffer counts in: 16 bit samples times 256
@@ -1332,7 +1466,8 @@ static void S_SpatialRenderReverb( int c ) {
 	qiplAmbisonicsDecodeEffectApply( spatial.reverbDecode, &decode, &ambisonicsBuffer, &out );
 
 	S_SpatialRingExtend( c + SPATIAL_FRAME );
-	volume = s_volume->value * s_spatialReverb->value * ( s_spatialHrtf->integer ? SPATIAL_GAIN_HRTF : SPATIAL_GAIN_PANNING ) * ( 32768.0f * 256.0f );
+	// how loud each voice is went in with what it gave
+	volume = s_spatialReverb->value * ( s_spatialHrtf->integer ? SPATIAL_GAIN_HRTF : SPATIAL_GAIN_PANNING ) * ( 32768.0f * 256.0f );
 	for ( int i = 0; i < SPATIAL_FRAME; i++ ) {
 		float *slot = spatial.ring[( c + i ) & ( SPATIAL_RING - 1 )];
 
@@ -1372,6 +1507,7 @@ void S_SpatialEndFrame( int from, int target ) {
 		spatial.ringEnd = from;
 	}
 
+	S_SpatialGatherStreams();
 	S_SpatialSimulate();
 	simulated = S_SpatialUsec();
 
@@ -1392,6 +1528,21 @@ void S_SpatialEndFrame( int from, int target ) {
 			continue;
 		}
 		spatial.numVoices++;
+		if ( v->stream ) {
+			// A voice of the chat: not there ahead of time. It starts a block short of where the others are
+			// rendered to, and goes on as whole blocks of it arrive. If it runs dry it starts there again.
+			if ( v->fresh || v->rendered < from ) {
+				v->rendered = Q_max( from, target - SPATIAL_FRAME );
+				v->dryRead = v->rendered;
+				if ( v->fresh ) {
+					v->renderedGain = v->gain;
+				}
+			}
+			while ( v->rendered < target + SPATIAL_FRAME && S_SpatialStreamQueued( v->stream ) >= SPATIAL_FRAME ) {
+				S_SpatialRenderBlock( v, v->gain );
+			}
+			continue;
+		}
 		if ( v->fresh ) {
 			// A sound that starts now starts at full volume with its first sample. One that is found in the
 			// middle (a loop sound that comes into reach) fades in.
@@ -1514,7 +1665,8 @@ static void S_SpatialInfo_f( void ) {
 		const spatialVoice_t *v = &spatial.voices[i];
 
 		if ( v->active && v->frame == spatial.frame ) {
-			Com_Printf( "  %-40s at %.0f %.0f %.0f, %5.0f units away, gain %.2f, %3.0f %% in sight, through what hides it: %.3f %.3f %.3f\n", v->sfx->sSoundName,
+			Com_Printf( "  %-40s at %.0f %.0f %.0f, %5.0f units away, gain %.2f, %3.0f %% in sight, through what hides it: %.3f %.3f %.3f\n",
+				v->stream ? va( "voice of player %i", (int)( v->stream - spatialStreams ) ) : v->sfx->sSoundName,
 				v->origin[0], v->origin[1], v->origin[2], Distance( v->origin, spatial.listenerOrigin ), v->gain, v->directParams.occlusion * 100.0f,
 				v->directParams.transmission[0], v->directParams.transmission[1], v->directParams.transmission[2] );
 		}
@@ -1715,6 +1867,9 @@ void S_SpatialInit( void ) {
 	Cmd_AddCommand( "s_spatialInfo", S_SpatialInfo_f, "What s_spatial is doing" );
 
 	memset( &spatial, 0, sizeof( spatial ) );
+	memset( spatialStreams, 0, sizeof( spatialStreams ) );
+	Cvar_Get( "s_spatialVoice", "0", CVAR_ROM, "1: this engine plays the voices of the voice chat as sounds in the level (s_spatial)" );
+	Cvar_Set( "s_spatialVoice", "0" );
 	if ( !s_spatial->integer ) {
 		return;
 	}
@@ -1761,6 +1916,8 @@ void S_SpatialInit( void ) {
 	}
 
 	spatial.active = qtrue;
+	// tells the cgame that this engine takes the voices of its voice chat (ext.S_SpatialVoice)
+	Cvar_Set( "s_spatialVoice", "1" );
 	// the sound system was started again in the middle of a level
 	S_SpatialLoadMap( Cvar_VariableString( "mapname" ) );
 	S_SpatialInfo_f();
@@ -1768,6 +1925,7 @@ void S_SpatialInit( void ) {
 
 void S_SpatialShutdown( void ) {
 	Cmd_RemoveCommand( "s_spatialInfo" );
+	Cvar_Set( "s_spatialVoice", "0" );
 	S_SpatialRelease();
 }
 
@@ -1799,5 +1957,6 @@ void		S_SpatialAddLoop( int entnum, sfx_t *sfx, const vec3_t origin, float volum
 void		S_SpatialEndFrame( int from, int target ) {}
 void		S_SpatialPaint( int from, int to, portable_samplepair_t *paint ) {}
 float		S_SpatialAhead( void ) { return 0.0f; }
+int			S_SpatialVoice( int clientNum, const vec3_t origin, float volume, const short *samples, int numSamples, int rate ) { return -1; }
 
 #endif // JP_SPATIAL
