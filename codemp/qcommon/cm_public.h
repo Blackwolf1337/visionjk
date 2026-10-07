@@ -35,6 +35,10 @@ clipHandle_t CM_TempBoxModel( const vec3_t mins, const vec3_t maxs, int capsule 
 void		CM_ModelBounds( clipHandle_t model, vec3_t mins, vec3_t maxs );
 
 int			CM_NumInlineModels( void );
+
+// cm_export.cpp: the solid surfaces of the world as triangles, counter clockwise seen from outside
+typedef void (*cmTriangleFunc_t)( const vec3_t a, const vec3_t b, const vec3_t c, int surfaceFlags, void *data );
+int			CM_ExportSolidTriangles( cmTriangleFunc_t emit, void *data );
 char		*CM_EntityString (void);
 
 // returns an ORed contents mask

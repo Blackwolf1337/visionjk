@@ -27,6 +27,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "cl_uiapi.h"
 #include "botlib/botlib.h"
 #include "snd_ambient.h"
+#include "snd_spatial.h"
 #include "FXExport.h"
 #include "FxUtil.h"
 
@@ -321,6 +322,9 @@ static void CL_AddCgameCommand( const char *cmdName ) {
 static void CL_CM_LoadMap( const char *mapname, qboolean subBSP ) {
 	if ( subBSP )	CM_LoadSubBSP( va( "maps/%s.bsp", mapname+1 ), qfalse );
 	else			CM_LoadMap( mapname, qtrue, NULL );
+
+	// the sound gets the world as a mesh (s_spatial)
+	if ( !subBSP )	S_SpatialLoadMap();
 }
 
 static void CL_GetGlconfig( glconfig_t *glconfig ) {

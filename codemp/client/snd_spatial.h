@@ -27,3 +27,4 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 void		S_SpatialInit( void );			// the sound device is open: dma.speed is known
 void		S_SpatialShutdown( void );
 qboolean	S_SpatialActive( void );		// s_spatial is on and the library is there
+void		S_SpatialLoadMap( void );		// the collision model of a level was loaded
