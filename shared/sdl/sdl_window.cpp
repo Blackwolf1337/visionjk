@@ -660,9 +660,29 @@ static rserr_t GLimp_SetMode(glconfig_t *glConfig, const windowDesc_t *windowDes
 #endif
 			if( fullscreen )
 			{
-				if( SDL_SetWindowDisplayMode( screen, NULL ) < 0 )
+				// The size of the window and the format of the desktop. With r_displayRefresh the refresh rate
+				// that was asked for, as for an OpenGL window above, else the one of the desktop too.
+				SDL_DisplayMode fullscreenMode = desktopMode;
+				SDL_DisplayMode *wanted = NULL;
+
+				glConfig->displayFrequency = r_displayRefresh->integer;
+				if( r_displayRefresh->integer && desktopMode.h > 0 )
+				{
+					fullscreenMode.w = glConfig->vidWidth;
+					fullscreenMode.h = glConfig->vidHeight;
+					fullscreenMode.refresh_rate = r_displayRefresh->integer;
+					fullscreenMode.driverdata = NULL;
+					wanted = &fullscreenMode;
+				}
+
+				if( SDL_SetWindowDisplayMode( screen, wanted ) < 0 )
 				{
 					Com_DPrintf( "SDL_SetWindowDisplayMode failed: %s\n", SDL_GetError( ) );
+				}
+				else if( SDL_GetWindowDisplayMode( screen, &fullscreenMode ) == 0 )
+				{
+					Com_Printf( "Fullscreen: %d x %d at %d Hz\n", fullscreenMode.w, fullscreenMode.h,
+						fullscreenMode.refresh_rate );
 				}
 			}
 		}
