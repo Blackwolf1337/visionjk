@@ -63,13 +63,14 @@ static VkShaderModule VK_CreateShader( const uint32_t *code, size_t size ) {
 
 static void VK_CreateLayouts( void ) {
 	VkDescriptorSetLayoutBinding frame[4];
-	VkDescriptorSetLayoutBinding texture;
+	VkDescriptorSetLayoutBinding texture[2];
 	VkDescriptorSetLayoutBinding post;
-	VkDescriptorBindingFlags textureFlags = VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT
+	const VkDescriptorBindingFlags tableFlags = VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT
 		| VK_DESCRIPTOR_BINDING_UPDATE_UNUSED_WHILE_PENDING_BIT;
+	const VkDescriptorBindingFlags textureFlags[2] = { tableFlags, tableFlags };
 	VkDescriptorSetLayoutBindingFlagsCreateInfo flags = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO };
 	VkDescriptorSetLayoutCreateInfo info = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO };
-	VkDescriptorPoolSize sizes[3];
+	VkDescriptorPoolSize sizes[5];
 	VkDescriptorPoolCreateInfo pool = { VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO };
 	VkPushConstantRange push;
 	VkPipelineLayoutCreateInfo layout = { VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
@@ -89,17 +90,23 @@ static void VK_CreateLayouts( void ) {
 	info.pBindings = frame;
 	VK_CHECK( qvkCreateDescriptorSetLayout( vk.device, &info, NULL, &vk.frameSetLayout ) );
 
-	// set 1: the texture table. Entries are written while frames that use other entries are still on their way.
-	memset( &texture, 0, sizeof( texture ) );
-	texture.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	texture.descriptorCount = VK_MAX_IMAGES;
-	texture.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-	flags.bindingCount = 1;
-	flags.pBindingFlags = &textureFlags;
+	// set 1: the texture table and, apart from it, the samplers its textures are read with (vk_image.cpp says
+	// why they are apart). Entries are written while frames that use other entries are still on their way.
+	memset( texture, 0, sizeof( texture ) );
+	texture[0].binding = 0;
+	texture[0].descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+	texture[0].descriptorCount = VK_MAX_IMAGES;
+	texture[0].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+	texture[1].binding = 1;
+	texture[1].descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
+	texture[1].descriptorCount = VK_MAX_SAMPLERS;
+	texture[1].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+	flags.bindingCount = 2;
+	flags.pBindingFlags = textureFlags;
 	info.pNext = &flags;
 	info.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT;
-	info.bindingCount = 1;
-	info.pBindings = &texture;
+	info.bindingCount = 2;
+	info.pBindings = texture;
 	VK_CHECK( qvkCreateDescriptorSetLayout( vk.device, &info, NULL, &vk.textureSetLayout ) );
 
 	// the frame as a texture for the gamma pass
@@ -109,6 +116,7 @@ static void VK_CreateLayouts( void ) {
 	post.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 	info.pNext = NULL;
 	info.flags = 0;
+	info.bindingCount = 1;
 	info.pBindings = &post;
 	VK_CHECK( qvkCreateDescriptorSetLayout( vk.device, &info, NULL, &vk.postSetLayout ) );
 
@@ -116,11 +124,16 @@ static void VK_CreateLayouts( void ) {
 	sizes[0].descriptorCount = VK_FRAMES;
 	sizes[1].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
 	sizes[1].descriptorCount = VK_FRAMES * 3;
-	sizes[2].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	sizes[2].descriptorCount = VK_MAX_IMAGES + 4;
+	sizes[2].type = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+	sizes[2].descriptorCount = VK_MAX_IMAGES;
+	sizes[3].type = VK_DESCRIPTOR_TYPE_SAMPLER;
+	sizes[3].descriptorCount = VK_MAX_SAMPLERS;
+	// the passes over the finished frame
+	sizes[4].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	sizes[4].descriptorCount = 4;
 	pool.flags = VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT;
 	pool.maxSets = VK_FRAMES + 5;
-	pool.poolSizeCount = 3;
+	pool.poolSizeCount = 5;
 	pool.pPoolSizes = sizes;
 	VK_CHECK( qvkCreateDescriptorPool( vk.device, &pool, NULL, &vk.descriptorPool ) );
 

@@ -2,7 +2,12 @@
 
 #include "common.glsl"
 
-layout( set = 1, binding = 0 ) uniform sampler2D u_textures[];
+// The texture table and the samplers its textures are read with. A draw names a texture as its index in the
+// table and, above bit 16, the index of its sampler (VK_SAMPLER_SHIFT, VK_MAX_SAMPLERS of vk_local.h).
+layout( set = 1, binding = 0 ) uniform texture2D u_textures[];
+layout( set = 1, binding = 1 ) uniform sampler u_samplers[32];
+
+#define TEXTURE( ref )	sampler2D( u_textures[nonuniformEXT( ( ref ) & 0xffffu )], u_samplers[nonuniformEXT( ( ref ) >> 16 )] )
 
 layout( location = 0 ) in vec2 v_texCoord0;
 layout( location = 1 ) in vec2 v_texCoord1;
@@ -40,8 +45,8 @@ vec4 DynamicLight( Draw d ) {
 	if ( any( lessThan( st, vec2( 0.0 ) ) ) || any( greaterThan( st, vec2( 1.0 ) ) ) ) {
 		discard;
 	}
-	vec3 light = texture( u_textures[nonuniformEXT( d.tex1 )], st ).rgb * d.baseColor.rgb * modulate;
-	return vec4( texture( u_textures[nonuniformEXT( d.tex0 )], v_texCoord0 ).rgb * light, 1.0 );
+	vec3 light = texture( TEXTURE( d.tex1 ), st ).rgb * d.baseColor.rgb * modulate;
+	return vec4( texture( TEXTURE( d.tex0 ), v_texCoord0 ).rgb * light, 1.0 );
 }
 
 void main() {
@@ -52,12 +57,12 @@ void main() {
 		return;
 	}
 
-	vec4 color = texture( u_textures[nonuniformEXT( d.tex0 )], v_texCoord0 ) * v_color;
+	vec4 color = texture( TEXTURE( d.tex0 ), v_texCoord0 ) * v_color;
 
 	// the second texture of a stage, combined the way glTexEnv did it
 	uint env = TEXENV( d.flags );
 	if ( env != 0u ) {
-		vec4 second = texture( u_textures[nonuniformEXT( d.tex1 )], v_texCoord1 );
+		vec4 second = texture( TEXTURE( d.tex1 ), v_texCoord1 );
 
 		if ( env == 1u ) {				// modulate
 			color *= second;

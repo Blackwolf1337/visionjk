@@ -687,6 +687,11 @@ static VkCompareOp VK_StencilFunc( int func ) {
 #define VKS_STENCIL			0x80u
 #define VKS_CULL_SHIFT		4		// VkCullModeFlags, 2 bits
 
+// what a draw says of a texture: its index in the table and, above it, the index of the sampler that reads it
+static uint32_t VK_TextureRef( uint32_t slot ) {
+	return ( slot < VK_MAX_IMAGES ) ? ( slot | ( (uint32_t)vk.images[slot].sampler << VK_SAMPLER_SHIFT ) ) : slot;
+}
+
 /*
 ===============
 VK_DrawTess
@@ -698,6 +703,7 @@ void VK_DrawTess( const vkDraw_t *draw, vkProgram_t program, uint32_t stateBits,
 	vkFrame_t *frame = vk.frame;
 	VkCommandBuffer cmd;
 	VkPipeline pipeline;
+	vkDraw_t *out;
 	uint32_t state, changed, drawIndex;
 
 	if ( !frame || frame->numDraws == VK_MAX_DRAWS ) {
@@ -764,7 +770,11 @@ void VK_DrawTess( const vkDraw_t *draw, vkProgram_t program, uint32_t stateBits,
 	vk.stateValid = qtrue;
 
 	drawIndex = (uint32_t)frame->numDraws++;
-	memcpy( frame->draws.mapped + sizeof( vkDraw_t ) * drawIndex, draw, sizeof( *draw ) );
+	out = (vkDraw_t *)( frame->draws.mapped + sizeof( vkDraw_t ) * drawIndex );
+	memcpy( out, draw, sizeof( *draw ) );
+	// with each texture goes the sampler that reads it now
+	out->tex0 = VK_TextureRef( draw->tex0 );
+	out->tex1 = VK_TextureRef( draw->tex1 );
 	// the shaders learn which draw this is from the first instance of the call
 	if ( vk.numRanges ) {
 		// surfaces of models: their triangles are in an index buffer on the device

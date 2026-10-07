@@ -15,7 +15,7 @@ struct Transform {
 
 struct Draw {
 	uint	transform;
-	uint	tex0, tex1;
+	uint	tex0, tex1;		// index into the texture table, above bit 16 the index of the sampler
 	uint	flags;
 	vec4	baseColor;		// color = baseColor + vertColor * vertex color
 	vec4	vertColor;

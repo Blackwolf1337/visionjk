@@ -20,8 +20,11 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 // vk_image.cpp: the texture table, uploads, samplers, render targets
 //
-// All textures of the game sit in one array of combined image samplers that every shader sees. image_t::texnum
-// is the index. tr_image.cpp of rd-vanilla still decides what a texture looks like (size, picmip, light scale,
+// All textures of the game sit in one array of images that every shader sees. image_t::texnum is the index.
+// The samplers they are read with are an array of their own next to it: there are a handful of them, and a
+// draw names the sampler with the texture (vkImage_t::sampler, VK_SAMPLER_SHIFT). A sampler in every entry of
+// the table would be more than a Vulkan on top of Metal takes: MoltenVK says about a thousand samplers a set.
+// tr_image.cpp of rd-vanilla still decides what a texture looks like (size, picmip, light scale,
 // mip levels) and drives the upload: GL_Bind( image ), then VK_ImageLevel() per level and VK_ImageParm() for
 // filter and wrap mode, see vk_hooks.h.
 
@@ -183,17 +186,20 @@ SAMPLERS
 ===============================================================================
 */
 
-static VkSampler VK_FindSampler( int minFilter, int magFilter, int wrap, float anisotropy ) {
+// the index of the sampler with these parameters in vk.samplers and in the array of the shaders
+static int VK_FindSampler( int minFilter, int magFilter, int wrap, float anisotropy ) {
 	const int key[4] = { minFilter, magFilter, wrap, (int)anisotropy };
 	VkSamplerCreateInfo info = { VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO };
+	VkDescriptorImageInfo image = { VK_NULL_HANDLE, VK_NULL_HANDLE, VK_IMAGE_LAYOUT_UNDEFINED };
+	VkWriteDescriptorSet write = { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
 
 	for ( int i = 0; i < vk.numSamplers; i++ ) {
 		if ( !memcmp( vk.samplerKeys[i], key, sizeof( key ) ) ) {
-			return vk.samplers[i];
+			return i;
 		}
 	}
 	if ( vk.numSamplers == VK_MAX_SAMPLERS ) {
-		return vk.samplers[0];
+		return 0;
 	}
 
 	info.magFilter = ( magFilter == GL_NEAREST ) ? VK_FILTER_NEAREST : VK_FILTER_LINEAR;
@@ -211,23 +217,34 @@ static VkSampler VK_FindSampler( int minFilter, int magFilter, int wrap, float a
 	}
 	VK_CHECK( qvkCreateSampler( vk.device, &info, NULL, &vk.samplers[vk.numSamplers] ) );
 	memcpy( vk.samplerKeys[vk.numSamplers], key, sizeof( key ) );
-	return vk.samplers[vk.numSamplers++];
+
+	// into its place of the array of samplers, next to the texture table
+	image.sampler = vk.samplers[vk.numSamplers];
+	write.dstSet = vk.textureSet;
+	write.dstBinding = 1;
+	write.dstArrayElement = (uint32_t)vk.numSamplers;
+	write.descriptorCount = 1;
+	write.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
+	write.pImageInfo = &image;
+	qvkUpdateDescriptorSets( vk.device, 1, &write, 0, NULL );
+	return vk.numSamplers++;
 }
 
-// puts the image with the sampler its parameters ask for into its slot of the table
+// puts the image into its slot of the table and notes the sampler its parameters ask for
 static void VK_WriteTexture( int slot ) {
-	const vkImage_t *vi = &vk.images[slot];
+	vkImage_t *vi = &vk.images[slot];
 	VkDescriptorImageInfo image;
 	VkWriteDescriptorSet write = { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
 
-	image.sampler = VK_FindSampler( vi->minFilter, vi->magFilter, vi->wrap, vi->anisotropy );
+	vi->sampler = VK_FindSampler( vi->minFilter, vi->magFilter, vi->wrap, vi->anisotropy );
+	image.sampler = VK_NULL_HANDLE;
 	image.imageView = vi->view;
 	image.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 	write.dstSet = vk.textureSet;
 	write.dstBinding = 0;
 	write.dstArrayElement = (uint32_t)slot;
 	write.descriptorCount = 1;
-	write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	write.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
 	write.pImageInfo = &image;
 	qvkUpdateDescriptorSets( vk.device, 1, &write, 0, NULL );
 }
@@ -469,8 +486,9 @@ void VK_ImageParm( int name, int value ) {
 	case GL_TEXTURE_MAX_ANISOTROPY_EXT:	vi->anisotropy = (float)value;	break;
 	default:							return;
 	}
+	// the image stays where it is in the table, the draws that come name another sampler with it
 	if ( vi->uploaded ) {
-		VK_WriteTexture( (int)( vi - vk.images ) );
+		vi->sampler = VK_FindSampler( vi->minFilter, vi->magFilter, vi->wrap, vi->anisotropy );
 	}
 }
 

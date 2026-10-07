@@ -266,20 +266,23 @@ static void VK_PickDevice( void ) {
 	qvkGetPhysicalDeviceProperties( vk.physicalDevice, &vk.properties );
 	qvkGetPhysicalDeviceMemoryProperties( vk.physicalDevice, &vk.memoryProperties );
 
-	// The texture table is VK_MAX_IMAGES textures with a sampler each. A graphics card says it takes a million
-	// of them. MoltenVK passes on what Metal says, which can be less. That is said here and not refused: what
-	// Metal counts are samplers that differ, and this renderer has a handful.
+	// The texture table is VK_MAX_IMAGES textures and, apart from them, VK_MAX_SAMPLERS samplers in one set. A
+	// graphics card says it takes a million of each. MoltenVK passes on what Metal says, which is far fewer
+	// samplers (about a thousand): that is why they are apart. What the device says is printed, and less than
+	// the renderer has is said here and not refused.
 	{
 		VkPhysicalDeviceVulkan12Properties p12 = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_PROPERTIES };
 		VkPhysicalDeviceProperties2 p2 = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2, &p12 };
-		uint32_t least;
+		uint32_t images, samplers;
 
 		qvkGetPhysicalDeviceProperties2( vk.physicalDevice, &p2 );
-		least = Q_min( Q_min( p12.maxPerStageDescriptorUpdateAfterBindSamplers, p12.maxPerStageDescriptorUpdateAfterBindSampledImages ),
-			Q_min( p12.maxDescriptorSetUpdateAfterBindSamplers, p12.maxDescriptorSetUpdateAfterBindSampledImages ) );
-		if ( least < VK_MAX_IMAGES ) {
-			ri.Printf( PRINT_WARNING, "Vulkan: the device says it takes %u textures in one table, this renderer has %i. "
-				"If the start fails after this line or textures are missing, that is why.\n", least, VK_MAX_IMAGES );
+		images = Q_min( p12.maxPerStageDescriptorUpdateAfterBindSampledImages, p12.maxDescriptorSetUpdateAfterBindSampledImages );
+		samplers = Q_min( p12.maxPerStageDescriptorUpdateAfterBindSamplers, p12.maxDescriptorSetUpdateAfterBindSamplers );
+		ri.Printf( PRINT_ALL, "Vulkan: the device takes %u textures and %u samplers in one table, the renderer has %i and %i\n",
+			images, samplers, VK_MAX_IMAGES, VK_MAX_SAMPLERS );
+		if ( images < VK_MAX_IMAGES || samplers < VK_MAX_SAMPLERS ) {
+			ri.Printf( PRINT_WARNING, "Vulkan: that is less than the renderer has. If the start fails after this line or "
+				"textures are missing, that is why.\n" );
 		}
 	}
 }

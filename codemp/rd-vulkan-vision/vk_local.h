@@ -31,6 +31,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "vk_funcs.h"
 
 #define VK_MAX_IMAGES		4096		// size of the texture table the shaders index, image_t::texnum is the index
+#define VK_SAMPLER_SHIFT	16			// a draw names a texture as its index, and above this bit the index of its sampler
 #define VK_FRAMES			2			// frames in flight
 #define VK_MAX_SWAP_IMAGES	8
 #define VK_MAX_DRAWS		32768		// draws of one frame, each is one shader stage of one batch
@@ -38,7 +39,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define VK_VERTEX_BYTES		( 32 << 20 )	// geometry of one frame that is built on the CPU
 #define VK_INDEX_BYTES		( 8 << 20 )
 #define VK_STAGING_BYTES	( 32 << 20 )
-#define VK_MAX_SAMPLERS		32
+#define VK_MAX_SAMPLERS		32			// the samplers the textures are read with, u_samplers of generic.frag has as many
 #define VK_MAX_PIPELINES	256
 
 // a state bit next to the GLS_* ones of rd-vanilla, which have no such thing: the indexes are pairs, each a line
@@ -84,7 +85,7 @@ typedef struct vkTransform_s {	// once per view and entity
 
 typedef struct vkDraw_s {		// once per draw
 	uint32_t	transform;			// index into the transforms of the frame
-	uint32_t	tex0, tex1;			// indices into the texture table
+	uint32_t	tex0, tex1;			// indices into the texture table. VK_DrawTess() adds the samplers (VK_SAMPLER_SHIFT)
 	uint32_t	flags;				// VKD_*
 	float		baseColor[4];		// color = baseColor + vertColor * vertex color
 	float		vertColor[4];
@@ -138,6 +139,7 @@ typedef struct vkImage_s {		// one entry of the texture table
 	VkFormat		format;			// 32 bit RGBA, or blocks: BC1 without alpha, BC3 with
 	int				minFilter, magFilter, wrap;		// OpenGL names, as tr_image.cpp hands them over
 	float			anisotropy;
+	int				sampler;		// which of vk.samplers reads it, from the four above
 	qboolean		uploaded;		// all levels are there and the layout is the one for sampling
 } vkImage_t;
 
