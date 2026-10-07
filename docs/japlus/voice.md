@@ -172,5 +172,5 @@ Nothing of the voice chat is in the game protocol.
   what it imported before.
 
 Not checked: a real microphone and real speakers, how it sounds, Windows at run time, a stock `jamp.exe`, the
-original JA+ plugin as the client without it, macOS (not even built, see [macos.md](macos.md)), more than two speakers, a connection with
+original JA+ plugin as the client without it, macOS (built, not tried yet, see [macos.md](macos.md)), more than two speakers, a connection with
 loss, a server over the internet.
