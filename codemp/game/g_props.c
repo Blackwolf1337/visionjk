@@ -178,6 +178,12 @@ static int		propCount;
 // of the map.
 static short	moverList[MAX_GENTITIES];
 static int		moverCount;
+// Where the props are and how far they reach, by their place in propList. A body asks of every other prop whether
+// it is near, in every step: with 300 props that is 5 million questions a second. Asked of the entities, each one
+// is two pieces of memory far from all others, and that was most of what a pile cost. Here they lie side by side.
+static float	propSeenAt[3][MAX_GENTITIES];
+static float	propSeenRadius[MAX_GENTITIES];
+static short	propPlace[MAX_GENTITIES];	// by entity number: its place in propList plus 1, 0: it is not in it
 static propSolid_t	propSolids[PROP_BRUSHES];
 static int		propSolidNext;
 
@@ -185,6 +191,27 @@ static void prop_pain( gentity_t *self, gentity_t *attacker, int damage );
 
 static prop_t *Prop_State( const gentity_t *self ) {
 	return &props[self - g_entities];
+}
+
+// the prop is somewhere else now: for the ones that ask where the others are
+static void Prop_Seen( const gentity_t *self ) {
+	const int place = propPlace[self - g_entities] - 1;
+
+	if ( place < 0 || place >= propCount || propList[place] != self - g_entities )
+		return;
+	propSeenAt[0][place] = self->r.currentOrigin[0];
+	propSeenAt[1][place] = self->r.currentOrigin[1];
+	propSeenAt[2][place] = self->r.currentOrigin[2];
+	propSeenRadius[place] = self->radius;
+}
+
+// how far apart the middles of this prop and of the one at a place of propList are, squared
+static float Prop_SeenDistanceSquared( const gentity_t *self, int place ) {
+	const float dx = propSeenAt[0][place] - self->r.currentOrigin[0];
+	const float dy = propSeenAt[1][place] - self->r.currentOrigin[1];
+	const float dz = propSeenAt[2][place] - self->r.currentOrigin[2];
+
+	return dx * dx + dy * dy + dz * dz;
 }
 
 static qboolean Prop_Is( const gentity_t *ent ) {
@@ -206,13 +233,13 @@ static void Prop_Wake( gentity_t *self ) {
 	// it lay still and may have carried others: what lies still next to it is woken too, down the whole pile
 	for ( i = 0; i < propCount; i++ ) {
 		gentity_t	*other = &g_entities[propList[i]];
-		float		reach;
+		const float	reach = self->radius + propSeenRadius[i] + 2.0f;
 
+		if ( Prop_SeenDistanceSquared( self, i ) > reach * reach )
+			continue;
 		if ( other == self || !Prop_Is( other ) || !other->genericValue2 )
 			continue;
-		reach = self->radius + other->radius + 2.0f;
-		if ( DistanceSquared( self->r.currentOrigin, other->r.currentOrigin ) <= reach * reach )
-			Prop_Wake( other );
+		Prop_Wake( other );
 	}
 }
 
@@ -525,6 +552,7 @@ static void Prop_Home( gentity_t *self ) {
 	prop_t *p = Prop_State( self );
 
 	VectorCopy( self->pos1, self->r.currentOrigin );
+	Prop_Seen( self );
 	VectorClear( self->movedir );
 	VectorClear( p->spin );
 	p->holder = NULL;
@@ -1558,9 +1586,13 @@ void G_PropFrame( void ) {
 
 	// the props there are, for the moves of the players (G_PropClipMove) and for each other, and who can touch them
 	propCount = 0;
+	memset( propPlace, 0, sizeof( propPlace ) );
 	for ( i = MAX_CLIENTS; i < level.num_entities; i++ ) {
-		if ( Prop_Is( &g_entities[i] ) )
+		if ( Prop_Is( &g_entities[i] ) ) {
 			propList[propCount++] = i;
+			propPlace[i] = propCount;
+			Prop_Seen( &g_entities[i] );
+		}
 	}
 	moverCount = 0;
 	for ( i = 0; i < level.num_entities; i++ ) {
@@ -1721,12 +1753,14 @@ static void Ball_Props( gentity_t *self, float dt ) {
 	for ( i = 0; i < propCount; i++ ) {
 		gentity_t	*other = &g_entities[propList[i]];
 		prop_t		*q = &props[propList[i]];
-		const float	reach = self->radius + other->radius;
+		const float	reach = self->radius + propSeenRadius[i];
 		vec3_t		rel, normal, r2, speed, out;
 		float		depth, into, ratio, len;
 		qboolean	fixed;
 		trace_t		tr;
 
+		if ( Prop_SeenDistanceSquared( self, i ) >= reach * reach )
+			continue;
 		if ( other == self || !Prop_Is( other ) )
 			continue;
 		VectorSubtract( self->r.currentOrigin, other->r.currentOrigin, rel );
@@ -1976,12 +2010,11 @@ static int Body_Contacts( gentity_t *self, const prop_t *p, contact_t *list ) {
 	for ( n = 0; n < propCount && count < BODY_MAX_CONTACTS; n++ ) {
 		gentity_t		*other = &g_entities[propList[n]];
 		const prop_t	*q = &props[propList[n]];
-		float			reach;
+		const float		reach = self->radius + propSeenRadius[n] + BODY_SKIN;
 
-		if ( other == self || !Prop_Is( other ) )
+		if ( Prop_SeenDistanceSquared( self, n ) > reach * reach )
 			continue;
-		reach = self->radius + other->radius + BODY_SKIN;
-		if ( DistanceSquared( self->r.currentOrigin, other->r.currentOrigin ) > reach * reach )
+		if ( other == self || !Prop_Is( other ) )
 			continue;
 		count = q->box ? Body_Body( self, p, other, q, list, count ) : Cube_Ball( self, p, other, q, list, count );
 	}
@@ -2365,7 +2398,15 @@ Think, damage, force powers
 ===============================================================================
 */
 
+static void Prop_Think( gentity_t *self );
+
 static void prop_think( gentity_t *self ) {
+	Prop_Think( self );
+	// where it is now, for the props that think after it
+	Prop_Seen( self );
+}
+
+static void Prop_Think( gentity_t *self ) {
 	prop_t		*p = Prop_State( self );
 	// the time since the last frame, capped for a server that hitched
 	const float	dt = Com_Clamp( 0.0f, 0.1f, ( level.time - self->genericValue1 ) * 0.001f );
