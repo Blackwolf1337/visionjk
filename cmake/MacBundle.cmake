@@ -8,8 +8,10 @@
 #   program without a valid one is ended by macOS on Apple Silicon. A signed app also gets its own entry in
 #   the privacy settings (microphone for the voice chat)
 #
+# - MoltenVK, the Vulkan library the renderer rd-vulkan-vision loads when it starts, goes there too
+#
 # Called with -DAPP=<path of the .app> -DENGINE=<name of the program in Contents/MacOS>
-# and optionally -DSDL3=<libSDL3 dylib>
+# and optionally -DSDL3=<libSDL3 dylib> -DMOLTENVK=<libMoltenVK dylib>
 #============================================================================
 
 set(contents "${APP}/Contents")
@@ -36,6 +38,16 @@ endforeach()
 
 if(SDL3 AND EXISTS "${SDL3}")
 	bundle_copy("${SDL3}" "libSDL3.dylib")
+endif()
+
+if(MOLTENVK AND EXISTS "${MOLTENVK}")
+	bundle_copy("${MOLTENVK}" "libMoltenVK.dylib")
+	# it is meant to need nothing but the system. If it does, the app only runs where that is installed
+	execute_process(COMMAND otool -L "${frameworks}/libMoltenVK.dylib" OUTPUT_VARIABLE deps)
+	string(REGEX MATCHALL "/(opt/homebrew|usr/local)/[^ \t\n]+\\.dylib" deps "${deps}")
+	if(deps)
+		message(WARNING "libMoltenVK.dylib in the app links ${deps}, which is not in the app")
+	endif()
 endif()
 
 # sign from the inside out: the libraries and modules first, then the app

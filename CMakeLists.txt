@@ -44,7 +44,19 @@ option(BuildMPCGame "Whether to create projects for the MP clientside gamecode (
 option(BuildMPUI "Whether to create projects for the MP UI code (uix86.dll)" ON)
 option(BuildJPVoice "Whether the MP clientside gamecode gets the voice chat (Opus and miniaudio from lib/ are built into it)" ON)
 option(BuildMPRend2 "Whether to create projects for the EXPERIMENTAL MP rend2 renderer (rd-rend2_x86.dll)" ON)
-option(BuildMPRdVulkanVision "Whether to create projects for the MP Vulkan renderer (rd-vulkan-vision_x86.dll)" OFF)
+# macOS has no OpenGL that is still looked after. There the Vulkan renderer (on top of MoltenVK) is built
+# whenever what its build needs is installed: brew install vulkan-headers shaderc molten-vk
+set(BuildMPRdVulkanVisionDefault OFF)
+if(APPLE)
+	find_path(VulkanHeadersDir vulkan/vulkan.h HINTS /opt/homebrew/include /usr/local/include)
+	find_program(GLSLC glslc HINTS /opt/homebrew/bin /usr/local/bin)
+	if(VulkanHeadersDir AND GLSLC)
+		set(BuildMPRdVulkanVisionDefault ON)
+	else()
+		message(STATUS "rd-vulkan-vision is not built by default: no Vulkan headers or no glslc (brew install vulkan-headers shaderc molten-vk)")
+	endif()
+endif()
+option(BuildMPRdVulkanVision "Whether to create projects for the MP Vulkan renderer (rd-vulkan-vision_x86.dll)" ${BuildMPRdVulkanVisionDefault})
 
 option(BuildSPEngine "Whether to create projects for the SP engine (openjk_sp.exe)" ON)
 option(BuildSPGame "Whether to create projects for the SP gamecode (jagamex86.dll)" ON)

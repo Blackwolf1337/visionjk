@@ -743,11 +743,24 @@ if(APPLE AND MakeApplicationBundles AND BuildMPEngine)
 	if(MacBundleSDL3)
 		list(APPEND MacBundleOptional "-DSDL3=${MacBundleSDL3}")
 	endif()
+	# The Vulkan renderer loads a Vulkan library when it starts and macOS has none: MoltenVK goes into the app,
+	# where the window code looks first (WIN_VK_LoadLibraryMac in shared/sdl/sdl_window.cpp)
+	if(TARGET ${MPVulkanVisionRenderer})
+		find_library(MacBundleMoltenVK NAMES libMoltenVK.dylib
+			HINTS /opt/homebrew/lib /usr/local/lib "$ENV{VULKAN_SDK}/lib" "$ENV{VULKAN_SDK}/../MoltenVK/dylib/macOS")
+		if(MacBundleMoltenVK)
+			list(APPEND MacBundleOptional "-DMOLTENVK=${MacBundleMoltenVK}")
+		else()
+			message(WARNING "rd-vulkan-vision is built, but no libMoltenVK.dylib was found to put into the app "
+				"(brew install molten-vk, or -DMacBundleMoltenVK=<file>). Without it the renderer only starts "
+				"on a Mac that has a Vulkan library installed.")
+		endif()
+	endif()
 	add_custom_target(MacBundle ALL
 		${MacBundleCommands}
 		COMMAND ${CMAKE_COMMAND} "-DAPP=${MacBundleApp}" "-DENGINE=${MPEngine}" ${MacBundleOptional}
 			-P "${CMAKE_SOURCE_DIR}/cmake/MacBundle.cmake"
-		COMMENT "Putting the modules and SDL into ${MPEngine}.app and signing it"
+		COMMENT "Putting the modules, SDL and MoltenVK into ${MPEngine}.app and signing it"
 		VERBATIM)
 	add_dependencies(MacBundle ${MacBundleTargets})
 endif()
