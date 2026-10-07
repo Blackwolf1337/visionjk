@@ -34,7 +34,7 @@ JA+ draw is drawn. What is open is what was never run, and a few cvars.
 | `r_showtris`, `r_shownormals`, `r_showImages`, `r_vkStatic`, `gfxinfo`, `imagelist` | done |
 | Window: resized from outside, `r_swapInterval`, a window nobody sees, `vid_restart` between the renderers | done |
 | Windows DLL, 32 and 64 bit | builds, never loaded into a game |
-| Portals and mirrors | written, never seen: no level of the base game has one |
+| Portals and mirrors, `alphaGen portal` | done, in a test room: no level of the base game has one (see "Checked") |
 | Videos: a `.roq` on the screen, `videoMap` in a shader | written and read against `rd-vanilla`, never watched |
 | Fullscreen, a minimized window | written, not tried |
 | macOS | not tried, would need MoltenVK |
@@ -242,11 +242,6 @@ libwinpthread. Both were built on 2026-10-07 from the last state of the renderer
 warning in the files of the renderer. It was never loaded into a game. macOS was not tried, it would need
 MoltenVK.
 
-Portals and mirrors have their clip plane (`gl_ClipDistance` from a plane in the transform) and the flipped
-culling, but no level of the base game has one (all levels of single and multiplayer were searched for a
-surface with such a shader), so that was never seen. `alphaGen portal` is in the flares of some levels, but with
-a blend function that does not read alpha, so what it computes was never seen either.
-
 Not moved to the device, with the numbers of the fight demo. Sprites, lines and saber glow: building them is
 6 % of the instructions of a frame for about 1360 entities. A vertex shader could make the four corners of a
 sprite, but not the lines and glows, it would need a third program with pipelines of its own, and the step
@@ -324,6 +319,40 @@ anisotropic filter. It is 16 on this card now. The picture of the game that `rd-
 soon as there is one (`R_Splash`, `menu/splash`) was missing, the window stayed black until the menu was drawn.
 A screenshot asked for on the command line shows it now. No message of the validation layer in any of these
 runs.
+
+Portals and mirrors (2026-10-07). They have their clip plane (`gl_ClipDistance` from a plane in the transform)
+and the flipped culling, but no level of the base game has one (all levels of single and multiplayer were
+searched for a surface with such a shader), so there was nothing to look at. `tools/rdroom.py` writes a level
+for it without a map compiler, the file lump by lump: two rooms that are boxes, in the first a mirror, a mirror
+that fades with the distance (`textures/system/mirror_yavin`), a mirror in the floor whose stage reads the
+alpha of `alphaGen portal`, a portal (`textures/system/portal_512`) that looks into the second room through a
+`misc_portal_camera`, two pillars, and a row of panels with materials of the base game (glow, scrolling, alpha
+test, color waves, rotation, an animated map). `devmap rdroom` loads it, `tools/clienttests/rd_room.cfg` takes
+eight views as a player, whose own body is in the mirrors, by both renderers from the same spot.
+
+| View | Pixels off by more than 16 | With four samples a pixel and glow |
+|------|----------------------------|-------------------------------------|
+| the mirror from the front, with the player in it | 0.2 % | 0.3 % |
+| the mirror from the side | 0.2 % | 0.2 % |
+| the portal from the middle of the room | 1.2 % | 1.2 % |
+| the portal from close by | 4.8 % | 5.4 % |
+| the mirror that fades with the distance | 0.0 % | 0.0 % |
+| the mirror in the floor, looking down | 1.4 % | 1.4 % |
+| mirror and portal in one view (only the first one is looked through, by both) | 1.6 % | 1.6 % |
+| the materials | 5.7 % | 5.7 % |
+
+What is seen through a mirror or the portal lies on the same pixels in both: the best fit of the two pictures
+is at no shift at all, and the mean color of the mirror and of the portal differs by 0.1 of 255. What differs
+is the pose of the player (his idle animation, the pictures are seconds apart), the grain of a sand floor seen
+at a flat angle through the portal (the 4.8 %), and the materials that move (the 5.7 %). No message of the
+validation layer.
+
+Two things that are not the renderers. The plain mirror of the base game, `textures/system/mirror1`, is a
+script without a stage, and this engine makes its default shader of such a script, so that surface is a grey
+tile with a white cross in both renderers. The room brings a mirror shader with a stage. And for a while after
+`setviewpos` the game draws the own player see-through in some places, which ends with the next restart of the
+renderer: the first picture of a pair had a see-through player and the second a solid one, 8 % of the pixels,
+with either renderer alone too. The script restarts the renderer before the first picture as well.
 
 Not brought over. For developers: `r_measureOverdraw`, `r_nobind`, `r_logFile`, `r_primitives` and `r_finish`
 do nothing, `r_speeds 1` shows no megabytes of textures and `r_speeds 4` no vertices of lights. `r_dlightStyle 0`
