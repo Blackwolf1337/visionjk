@@ -30,6 +30,11 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #ifdef JP_VOICE
 
+#ifdef __APPLE__
+	// The sound frameworks of macOS are linked like any library (the build names them), not looked for when
+	// the game runs: a program that does that does not get through the checks Apple has for signed programs.
+	#define MA_NO_RUNTIME_LINKING
+#endif
 #define MA_NO_DECODING
 #define MA_NO_ENCODING
 #define MA_NO_GENERATION
