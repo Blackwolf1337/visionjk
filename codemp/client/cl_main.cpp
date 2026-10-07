@@ -92,11 +92,6 @@ cvar_t	*cl_inGameVideo;
 cvar_t	*cl_serverStatusResendTime;
 cvar_t	*cl_framerate;
 
-// cvar to enable sending a "ja_guid" player identifier in userinfo to servers
-// ja_guid is a persistent "cookie" that allows servers to track players across game sessions
-cvar_t	*cl_enableGuid;
-cvar_t	*cl_guidServerUniq;
-
 cvar_t	*cl_autolodscale;
 
 cvar_t	*cl_consoleKeys;
@@ -744,43 +739,6 @@ void CL_ClearState (void) {
 }
 
 /*
-====================
-CL_UpdateGUID
-
-update cl_guid using QKEY_FILE and optional prefix
-====================
-*/
-static void CL_UpdateGUID( const char *prefix, int prefix_len )
-{
-	if (cl_enableGuid->integer) {
-		fileHandle_t f;
-		int len;
-
-		len = FS_SV_FOpenFileRead( QKEY_FILE, &f );
-		FS_FCloseFile( f );
-
-		// initialize the cvar here in case it's unset or was user-created
-		// while tracking was disabled (removes CVAR_USER_CREATED)
-		Cvar_Get( "ja_guid", "", CVAR_USERINFO | CVAR_ROM, "Client GUID" );
-
-		if( len != QKEY_SIZE ) {
-			Cvar_Set( "ja_guid", "" );
-		} else {
-			Cvar_Set( "ja_guid", Com_MD5File( QKEY_FILE, QKEY_SIZE,
-				prefix, prefix_len ) );
-		}
-	} else {
-		// Remove the cvar entirely if tracking is disabled
-		uint32_t flags = Cvar_Flags("ja_guid");
-		// keep the cvar if it's user-created, but destroy it otherwise
-		if (flags != CVAR_NONEXISTENT && !(flags & CVAR_USER_CREATED)) {
-			cvar_t *ja_guid = Cvar_Get("ja_guid", "", 0, "Client GUID" );
-			Cvar_Unset(ja_guid);
-		}
-	}
-}
-
-/*
 =====================
 CL_Disconnect
 
@@ -853,8 +811,6 @@ void CL_Disconnect( qboolean showMainMenu ) {
 		SCR_UpdateScreen( );
 		CL_CloseAVI( );
 	}
-
-	CL_UpdateGUID( NULL, 0 );
 }
 
 
@@ -1067,11 +1023,6 @@ void CL_Connect_f( void ) {
 	serverString = NET_AdrToString(&clc.serverAddress);
 
 	Com_Printf( "%s resolved to %s\n", cls.servername, serverString );
-
-	if( cl_guidServerUniq->integer )
-		CL_UpdateGUID( serverString, strlen( serverString ) );
-	else
-		CL_UpdateGUID( NULL, 0 );
 
 	// if we aren't playing on a lan, we need to authenticate
 	if ( NET_IsLocalAddress( &clc.serverAddress ) ) {
@@ -2703,50 +2654,6 @@ static void CL_AddFavorite_f( void ) {
 #define G2_VERT_SPACE_CLIENT_SIZE 256
 
 /*
-===============
-CL_GenerateQKey
-
-test to see if a valid QKEY_FILE exists.  If one does not, try to generate
-it by filling it with 2048 bytes of random data.
-===============
-*/
-
-static void CL_GenerateQKey(void)
-{
-	if (cl_enableGuid->integer) {
-		int len = 0;
-		unsigned char buff[ QKEY_SIZE ];
-		fileHandle_t f;
-
-		len = FS_SV_FOpenFileRead( QKEY_FILE, &f );
-		FS_FCloseFile( f );
-		if( len == QKEY_SIZE ) {
-			Com_Printf( "QKEY found.\n" );
-			return;
-		}
-		else {
-			if( len > 0 ) {
-				Com_Printf( "QKEY file size != %d, regenerating\n",
-					QKEY_SIZE );
-			}
-
-			Com_Printf( "QKEY building random string\n" );
-			Com_RandomBytes( buff, sizeof(buff) );
-
-			f = FS_SV_FOpenFileWrite( QKEY_FILE );
-			if( !f ) {
-				Com_Printf( "QKEY could not open %s for write\n",
-					QKEY_FILE );
-				return;
-			}
-			FS_Write( buff, sizeof(buff), f );
-			FS_FCloseFile( f );
-			Com_Printf( "QKEY generated\n" );
-		}
-	}
-}
-
-/*
 ====================
 CL_Init
 ====================
@@ -2768,7 +2675,9 @@ void CL_Init( void ) {
 	// register our variables
 	//
 	cl_noprint = Cvar_Get( "cl_noprint", "0", 0 );
-	cl_motd = Cvar_Get ("cl_motd", "1", CVAR_ARCHIVE_ND, "Display welcome message from master server on the bottom of connection screen" );
+	// off by default: the request tells the update server the graphics card, its vendor, version and platform of
+	// the client, the joystick setting and the color depth, on every connect
+	cl_motd = Cvar_Get ("cl_motd", "0", CVAR_ARCHIVE_ND, "Ask the update server for a welcome message on every connect (sends graphics card, version and platform), shown on the bottom of connection screen" );
 	cl_motdServer[0] = Cvar_Get( "cl_motdServer1", UPDATE_SERVER_NAME, 0 );
 	cl_motdServer[1] = Cvar_Get( "cl_motdServer2", JKHUB_UPDATE_SERVER_NAME, 0 );
 	for ( int index = 2; index < MAX_MASTER_SERVERS; index++ )
@@ -2847,9 +2756,6 @@ void CL_Init( void ) {
 
 	cl_drawRecording = Cvar_Get("cl_drawRecording", "1", CVAR_ARCHIVE);
 
-	// enable the ja_guid player identifier in userinfo by default in OpenJK
-	cl_enableGuid = Cvar_Get("cl_enableGuid", "1", CVAR_ARCHIVE_ND, "Enable GUID userinfo identifier" );
-	cl_guidServerUniq = Cvar_Get ("cl_guidServerUniq", "1", CVAR_ARCHIVE_ND, "Use a unique guid value per server" );
 
 	// ~ and `, as keys and characters
 	cl_consoleKeys = Cvar_Get( "cl_consoleKeys", "~ ` 0x7e 0x60 0xb2", CVAR_ARCHIVE, "Which keys are used to toggle the console");
@@ -2931,9 +2837,6 @@ void CL_Init( void ) {
 	Cvar_Set( "cl_running", "1" );
 
 	G2VertSpaceClient = new CMiniHeap (G2_VERT_SPACE_CLIENT_SIZE * 1024);
-
-	CL_GenerateQKey();
-	CL_UpdateGUID( NULL, 0 );
 
 //	Com_Printf( "----- Client Initialization Complete -----\n" );
 }
