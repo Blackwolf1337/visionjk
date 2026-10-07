@@ -37,6 +37,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #define	BASEGAME "base"
 #define OPENJKGAME "OpenJK"
+// the mod directory a start without fs_game runs in ("+set fs_game base" is the base game)
+#define JAPLUSGAME "japlus"
 
 //NOTENOTE: Only change this to re-point ICARUS to a new script directory
 #define Q3_SCRIPT_DIR	"scripts"

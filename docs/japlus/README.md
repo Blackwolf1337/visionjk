@@ -63,7 +63,8 @@ all 70 files.
 
 ## Building
 
-The three modules are `jampgame`, `cgame` and `ui`. The mod directory is `japlus` (`+set fs_game japlus`).
+The three modules are `jampgame`, `cgame` and `ui`. The mod directory is `japlus`. The engine of this
+tree starts in it by itself, another OpenJK needs `+set fs_game japlus`.
 
 64 bit Linux, with engine and dedicated server:
 
@@ -116,10 +117,12 @@ JediAcademy/
 ```
 
 The renderers have to lie next to the engine and the modules in the mod directory. The same three modules are
-in `base/` as well: the engine looks there when `fs_game` is not set, which is a start without arguments and
-every server that is not `japlus`. Without them such a start ends with `VM_CreateLegacy on ui failed`. A start
-without `+set fs_game japlus` runs as `base`: the pk3 and the configs of `japlus/` are not loaded until the
-client joins a server of the mod. The same command on the Windows build directory gives the `.exe`, `SDL2.dll` and the `.dll` files in
+in `base/` as well: the engine looks there when the client plays as base, which is every server that is not
+`japlus` and a start with `+set fs_game base`. Without them that ends with `VM_CreateLegacy on ui failed`.
+
+A start without arguments runs in `japlus`: it is the default of `fs_game` in this engine (`JAPLUSGAME` in
+`codemp/qcommon/q_shared.h`), for the client and for the dedicated server. So the menus, sabers and effects of
+the port are there from the first picture on. The same command on the Windows build directory gives the `.exe`, `SDL2.dll` and the `.dll` files in
 the same layout. A config that is already in the folder is kept, so an edited `server.cfg` survives the next
 install. Not in the folder, because the build does not make them: `libphonon.so` of Steam Audio for `s_spatial`
 ([audio.md](audio.md)), `japlus_gla_anims.pk3` of the original JA+ package, and on Windows `libwinpthread-1.dll`
