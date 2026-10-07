@@ -103,16 +103,22 @@ byte for byte (`assets/.gitattributes`) and `assets/make_pk3.py` writes them in 
 `-DBuildJPAssets=OFF` builds without it. A client needs this pk3 in `japlus/` next to the modules, and so does
 the server: it reads the sabers from it.
 
+The configs of the JA+ package are in `assets/configs` and are not packed: `cmake --install` puts them into the
+same directory as loose files, and only where there is no file of that name yet, so a config an admin edited
+stays. `server.cfg` is the example of the package with its passwords (rcon and the three admin ranks) emptied:
+the ones it came with can be looked up by everybody. Set your own before a server runs with it.
+
 ## Files needed at run time
 
-All but the last one come from the original JA+ packages and are not part of this repository.
+Only the first one is not part of this repository: it comes from the original JA+ package.
 
 | File | Where | Needed for |
 |------|-------|-----------|
 | `japlus_gla_anims.pk3` | `base/` on the server and on every client | the new animations. Without it `jp_newGLAAnims` is switched off at map start |
-| `modelscale.cfg` | `japlus/` | `jp_allowModelScale` |
-| `<map>_holes.cfg` | `japlus/` | blocking walls of a map |
-| `autoreplier.cfg` | `japlus/` on the client | auto replier texts |
+| `modelscale.cfg` | `japlus/`, from `assets/configs` | `jp_allowModelScale` |
+| `<map>_holes.cfg` | `japlus/`, from `assets/configs` | blocking walls of a map |
+| `autoreplier.cfg` | `japlus/` on the client, from `assets/configs` | auto replier texts |
+| `server.cfg`, `admin.cfg`, `jk2.cfg`, `vstr.cfg`, `chat.cfg`, `saber.cfg` | `japlus/`, from `assets/configs` | the example server config of JA+ and what it loads. Nothing reads them unless a server is started with `+exec server.cfg` |
 | `zz_japlus_client_assets.pk3` | `japlus/` on the server and on the client | menus, shaders, effects and graphics of the plugin, with the menus of the port, and the JA+ sabers and effects |
 
 The last file is built with the tree from `assets/japlus_client` (see "Building"), which holds the contents of
