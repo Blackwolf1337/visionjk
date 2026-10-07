@@ -111,10 +111,15 @@ JediAcademy/
     jampgamex86_64.so  cgamex86_64.so  uix86_64.so
     zz_japlus_client_assets.pk3
     server.cfg and the other configs of assets/configs
+  base/
+    jampgamex86_64.so  cgamex86_64.so  uix86_64.so
 ```
 
-The renderers have to lie next to the engine and the modules in the mod directory, so these are the two places
-there are. The same command on the Windows build directory gives the `.exe`, `SDL2.dll` and the `.dll` files in
+The renderers have to lie next to the engine and the modules in the mod directory. The same three modules are
+in `base/` as well: the engine looks there when `fs_game` is not set, which is a start without arguments and
+every server that is not `japlus`. Without them such a start ends with `VM_CreateLegacy on ui failed`. A start
+without `+set fs_game japlus` runs as `base`: the pk3 and the configs of `japlus/` are not loaded until the
+client joins a server of the mod. The same command on the Windows build directory gives the `.exe`, `SDL2.dll` and the `.dll` files in
 the same layout. A config that is already in the folder is kept, so an edited `server.cfg` survives the next
 install. Not in the folder, because the build does not make them: `libphonon.so` of Steam Audio for `s_spatial`
 ([audio.md](audio.md)), `japlus_gla_anims.pk3` of the original JA+ package, and on Windows `libwinpthread-1.dll`

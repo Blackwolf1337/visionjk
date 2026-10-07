@@ -190,10 +190,20 @@ elseif(WIN32)
 		RUNTIME
 		DESTINATION "${JPModInstallDir}"
 		COMPONENT ${JKAMPCoreComponent})
+
+	# and into base: the engine looks there when fs_game is not set or the mod directory has no module
+	install(TARGETS ${MPCGame}
+		RUNTIME
+		DESTINATION "${JKAInstallDir}/base"
+		COMPONENT ${JKAMPCoreComponent})
 else()
 	install(TARGETS ${MPCGame}
 		LIBRARY
 		DESTINATION "${JPModInstallDir}"
+		COMPONENT ${JKAMPCoreComponent})
+	install(TARGETS ${MPCGame}
+		LIBRARY
+		DESTINATION "${JKAInstallDir}/base"
 		COMPONENT ${JKAMPCoreComponent})
 endif()
 
