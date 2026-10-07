@@ -36,6 +36,34 @@ struct SEffectList
 
 SEffectList		effectList[MAX_EFFECTS];
 SEffectList		*nextValidEffect;
+
+// One bit for every slot of effectList, set while the slot is free. A new effect takes the free slot with the
+// lowest number (the effects are drawn in the order of their slots). That slot was looked for from the first one
+// on, slot by slot: in a fight more than a thousand are in use, and they were walked over for nearly every
+// effect that was made. Here it is at most MAX_EFFECTS / 32 words and the bits of one.
+static unsigned int	freeEffectBits[( MAX_EFFECTS + 31 ) / 32];
+
+static void FX_SetEffectFree( const SEffectList *slot, bool isFree )
+{
+	const int i = (int)( slot - effectList );
+
+	if ( isFree )
+	{
+		freeEffectBits[i >> 5] |= 1u << ( i & 31 );
+	}
+	else
+	{
+		freeEffectBits[i >> 5] &= ~( 1u << ( i & 31 ) );
+	}
+}
+
+static void FX_SetAllEffectsFree( void )
+{
+	for ( int i = 0; i < MAX_EFFECTS; i++ )
+	{
+		FX_SetEffectFree( &effectList[i], true );
+	}
+}
 SFxHelper		theFxHelper;
 
 int				activeFx = 0;
@@ -58,6 +86,7 @@ bool FX_Free( bool templates )
 
 		effectList[i].mEffect = 0;
 	}
+	FX_SetAllEffectsFree();
 
 	activeFx = 0;
 
@@ -81,6 +110,7 @@ void FX_Stop( void )
 
 		effectList[i].mEffect = 0;
 	}
+	FX_SetAllEffectsFree();
 
 	activeFx = 0;
 
@@ -103,6 +133,7 @@ int	FX_Init( refdef_t* refdef )
 		{
 			effectList[i].mEffect = 0;
 		}
+		FX_SetAllEffectsFree();
 	}
 	nextValidEffect = &effectList[0];
 
@@ -131,6 +162,7 @@ static void FX_FreeMember( SEffectList *obj )
 	obj->mEffect->Die();
 	delete obj->mEffect;
 	obj->mEffect = 0;
+	FX_SetEffectFree( obj, true );
 
 	// May as well mark this to be used next
 	nextValidEffect = obj;
@@ -154,15 +186,21 @@ static SEffectList *FX_GetValidEffect()
 		return nextValidEffect;
 	}
 
-	int			i;
-	SEffectList	*ef;
-
-	// Blah..plow through the list till we find something that is currently untainted
-	for ( i = 0, ef = effectList; i < MAX_EFFECTS; i++, ef++ )
+	// the free slot with the lowest number
+	for ( size_t word = 0; word < ARRAY_LEN( freeEffectBits ); word++ )
 	{
-		if ( ef->mEffect == 0 )
+		unsigned int bits = freeEffectBits[word];
+
+		if ( bits )
 		{
-			return ef;
+			int bit = 0;
+
+			while ( !( bits & 1u ) )
+			{
+				bits >>= 1;
+				bit++;
+			}
+			return &effectList[word * 32 + bit];
 		}
 	}
 
@@ -243,6 +281,7 @@ void FX_AddPrimitive( CEffect *pEffect, int killTime )
 	SEffectList *item = FX_GetValidEffect();
 
 	item->mEffect = pEffect;
+	FX_SetEffectFree( item, pEffect == 0 );
 	item->mKillTime = theFxHelper.mTime + killTime;
 	item->mPortal = gEffectsInPortal;	//global set in AddScheduledEffects
 
