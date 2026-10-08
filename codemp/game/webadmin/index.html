@@ -684,9 +684,24 @@ function parseBsp(buffer) {
 		for (const t of tris) pickIdx.push(pbase + t);
 	}
 
+	// The light grid: the light a model gets where it stands (R_LoadLightGrid in tr_bsp.cpp). The map is cut into
+	// cells, 64 x 64 x 128 units unless the worldspawn says otherwise, every cell names its sample in the array,
+	// and a sample is the ambient and the directed light of four styles, the styles, and where the light comes from.
+	const el = lump(0), gdl = lump(15), gal = lump(17);
+	const worldspawn = /\{([^}]*)\}/.exec(new TextDecoder('latin1').decode(new Uint8Array(buffer, el.ofs, Math.min(el.len, 8192))));
+	const gridKey = worldspawn && /"gridsize"\s+"([^"]*)"/i.exec(worldspawn[1]);
+	const cell = gridKey ? gridKey[1].trim().split(/\s+/).map(Number) : [];
+	const gridSize = cell.length === 3 && cell.every(v => v > 0) ? cell : [64, 64, 128];
+	const gridOrigin = gridSize.map((g, i) => g * Math.ceil(models[0].mins[i] / g));
+	const grid = {
+		size: gridSize, origin: gridOrigin,
+		bounds: gridSize.map((g, i) => Math.floor((g * Math.floor(models[0].maxs[i] / g) - gridOrigin[i]) / g) + 1),
+		data: new Uint8Array(buffer.slice(gdl.ofs, gdl.ofs + gdl.len)),
+		array: new Uint16Array(buffer.slice(gal.ofs, gal.ofs + (gal.len & ~1)))
+	};
 	const stats = { surfaces: Math.floor(sfl.len / SURF_SIZE), vertices: Math.floor(numVerts), indexes: indexes.length, shaders: shaders.length, lightmaps: lightmaps.length,
 		brushModels: models.length, brushes: brushes.brushes.length / 3, planes: brushes.planes.length / 4, bytes: buffer.byteLength };
-	return { shaders, lightmaps, batches: [...batches.values()], bounds, sky, models, brushes, stats, pick: { pos: new Float32Array(pickPos), idx: new Uint32Array(pickIdx) } };
+	return { shaders, lightmaps, batches: [...batches.values()], bounds, sky, models, brushes, grid, stats, pick: { pos: new Float32Array(pickPos), idx: new Uint32Array(pickIdx) } };
 }
 
 // quadratic bezier patch, 3x3 control blocks
@@ -949,7 +964,7 @@ async function loadMap(name) {
 			return { vao, count: b.idx.length, shaderName, lm: b.lightmap >= 0 ? lightmapTex[b.lightmap] : null, posBuf, tri, wire: null };
 		});
 
-		world = { batches, textures, bounds: bsp.bounds, pick: bsp.pick, sky: bsp.sky, models: bsp.models, brushes: bsp.brushes, shaders: bsp.shaders, stats: bsp.stats, wires: new Map(), scripted: null, skyDraw: null };
+		world = { batches, textures, bounds: bsp.bounds, pick: bsp.pick, sky: bsp.sky, models: bsp.models, brushes: bsp.brushes, shaders: bsp.shaders, stats: bsp.stats, grid: bsp.grid, wires: new Map(), scripted: null, skyDraw: null };
 		prepareScripted(world);
 		resetCamera();
 		$('loading').style.display = 'none';
@@ -1052,8 +1067,9 @@ void main() {
 const modelStageProg = compile(`#version 300 es
 layout(location=0) in vec3 aPos; layout(location=1) in vec3 aNorm; layout(location=2) in vec2 aUv;
 uniform mat4 uMvp; uniform mat4 uModel; uniform vec3 uEyeLocal;
+uniform vec3 uAmbient; uniform vec3 uDirected; uniform vec3 uLightDir;	// the light of the place, and where it comes from
 uniform int uTcGen; uniform vec3 uTcA; uniform vec3 uTcB; uniform vec2 uTurb;
-out vec2 vTc; out float vLight;
+out vec2 vTc; out vec3 vLight;
 void main() {
 	vec4 world = uModel * vec4(aPos, 1.0);
 	vec2 tc = aUv;
@@ -1067,12 +1083,13 @@ void main() {
 		tc.y += sin((world.y * 0.0009765625 + uTurb.y) * 6.2831853) * uTurb.x;
 	}
 	vTc = vec2(dot(uTcA.xy, tc) + uTcA.z, dot(uTcB.xy, tc) + uTcB.z);
-	vLight = 0.5 + 0.6 * max(dot(normalize(mat3(uModel) * aNorm), normalize(vec3(0.4, 0.3, 0.85))), 0.0);
+	// as RB_CalcDiffuseColor: the ambient light, and the directed one by how much the surface faces it
+	vLight = min(uAmbient + max(dot(normalize(mat3(uModel) * aNorm), uLightDir), 0.0) * uDirected, vec3(1.0));
 	gl_Position = uMvp * world;
 }`,
 `#version 300 es
 precision mediump float;
-in vec2 vTc; in float vLight;
+in vec2 vTc; in vec3 vLight;
 uniform sampler2D uTex; uniform vec4 uColor;
 uniform int uRgbVertex;	// 3: times the light of the place
 uniform int uAlphaFunc;
@@ -1547,6 +1564,57 @@ function drawWorldScripted(now, late) {
 	gl.colorMask(true, true, true, true);
 }
 
+// The light an entity gets at a place, as the engine works it out (R_SetupEntityLightingGrid and
+// R_SetupEntityLighting in tr_light.cpp): the eight samples of the light grid around the place, weighed by how
+// near they are, without the ones inside walls. The ambient light times r_ambientScale (0.6) with a little added
+// for everything, the directed light, and the direction it comes from. All three in out, colours from 0 to 1.
+const lightNow = { ambient: [0, 0, 0], directed: [0, 0, 0], dir: [0, 0, 1] };
+
+function gridLight(pos, out = lightNow) {
+	const g = world && world.grid, a = [0, 0, 0], d = [0, 0, 0], n = [0, 0, 0];
+	if (!g || g.data.length < 30 || !g.array.length) {
+		// a map without a grid: the same light everywhere, from where the sun of the engine is
+		out.ambient.fill((150 + 32) / 255);
+		out.directed.fill(150 / 255);
+		out.dir[0] = 0.433; out.dir[1] = 0.289; out.dir[2] = 0.854;
+		return out;
+	}
+	const at = [0, 0, 0], frac = [0, 0, 0];
+	for (let i = 0; i < 3; i++) {
+		const v = (pos[i] - g.origin[i]) / g.size[i];
+		at[i] = Math.floor(v);
+		frac[i] = v - at[i];
+		if (at[i] < 0) at[i] = 0; else if (at[i] >= g.bounds[i] - 1) at[i] = g.bounds[i] - 1;
+	}
+	const step = [1, g.bounds[0], g.bounds[0] * g.bounds[1]], start = at[0] + at[1] * step[1] + at[2] * step[2];
+	let total = 0;
+	for (let i = 0; i < 8; i++) {
+		let factor = 1, cellAt = start;
+		for (let j = 0; j < 3; j++) {
+			if (i & (1 << j)) { factor *= frac[j]; cellAt += step[j]; } else factor *= 1 - frac[j];
+		}
+		if (cellAt < 0 || cellAt >= g.array.length) continue;
+		// a sample: 4 x 3 bytes of ambient light, 4 x 3 of directed, 4 styles, 2 for the direction
+		const o = g.array[cellAt] * 30;
+		if (o + 30 > g.data.length || g.data[o + 24] === 255) continue;	// none there, or one inside a wall
+		total += factor;
+		for (let j = 0; j < 4 && g.data[o + 24 + j] !== 255; j++) {
+			for (let c = 0; c < 3; c++) { a[c] += factor * g.data[o + j * 3 + c]; d[c] += factor * g.data[o + 12 + j * 3 + c]; }
+		}
+		const lat = g.data[o + 29] / 256 * Math.PI * 2, lng = g.data[o + 28] / 256 * Math.PI * 2;
+		n[0] += factor * Math.cos(lat) * Math.sin(lng);
+		n[1] += factor * Math.sin(lat) * Math.sin(lng);
+		n[2] += factor * Math.cos(lng);
+	}
+	const scale = total > 0 && total < 0.99 ? 1 / total : 1, len = Math.hypot(n[0], n[1], n[2]);
+	for (let c = 0; c < 3; c++) {
+		out.ambient[c] = Math.min(255, a[c] * scale * 0.6 + 32) / 255;
+		out.directed[c] = d[c] * scale / 255;
+		out.dir[c] = len ? n[c] / len : 0;
+	}
+	return out;
+}
+
 // The surfaces of a model with the stages of their shaders, in the view of the administration. world: where the
 // model stands. A surface that blends is drawn where it comes in the model, not sorted with the rest of the
 // picture as the game does.
@@ -1556,6 +1624,10 @@ function drawModelScripted(meshes, world) {
 	gl.uniformMatrix4fv(u.uMvp, false, viewProj);
 	gl.uniformMatrix4fv(u.uModel, false, world);
 	gl.uniform3f(u.uEyeLocal, at[0], at[1], at[2]);
+	const light = gridLight([world[12], world[13], world[14]]);
+	gl.uniform3fv(u.uAmbient, light.ambient);
+	gl.uniform3fv(u.uDirected, light.directed);
+	gl.uniform3fv(u.uLightDir, light.dir);
 	gl.uniform1i(u.uTex, 0);
 	gl.activeTexture(gl.TEXTURE0);
 	gl.colorMask(true, true, true, false);

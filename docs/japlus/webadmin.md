@@ -163,9 +163,12 @@ Also changed:
   the props of the Models tab, cubes, balls and what else is a model entity.
 - New: in the administration every model is drawn with the stages of its shaders too (`drawModelScripted`):
   players and NPCs with the shaders of their skin, items, the weapons they hold, props. A surface whose shader
-  has no script is its image times the light of the place, as the engine makes it. The light of the place is
-  the one fixed light the page has for models, not the light grid of the map, so a model is lit the same
-  everywhere. A surface of a model that blends is drawn where it comes in the model and not sorted with the
+  has no script is its image times the light of the place, as the engine makes it. The light of the place comes
+  from the light grid of the map file as in `tr_light.cpp`: the eight samples around the model weighed by how
+  near they are, without the ones inside walls, the ambient light times `r_ambientScale` (0.6) with the little
+  the engine adds for everything, the directed light and where it comes from. A map without a grid gives the
+  same light everywhere. Light styles that flicker and dynamic lights (a saber, a shot) are not in it. A
+  surface of a model that blends is drawn where it comes in the model and not sorted with the
   rest of the picture. The colour of the team that the plain view lays over a player is left out here, the
   game has none. The editor draws models as before.
 - New: values to pick from (`/api/list`). The Map field of the top bar offers the maps of the server and the
