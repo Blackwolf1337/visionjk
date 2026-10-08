@@ -29,7 +29,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // It only starts when g_webPassword is set. Every request needs HTTP basic
 // auth with that password (any user name).
 
-#include "bg_net.h"		// the sockets, in front of everything else
+#include "game/bg_net.h"		// the sockets, in front of everything else
 #ifdef _WIN32
 	#include <io.h>
 	#include <direct.h>
@@ -39,7 +39,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 	#include <dirent.h>
 #endif
 
-#include "g_local.h"
+#include "game/g_local.h"
 #include "webadmin_html.h"
 
 #define WA_MAX_CONNECTIONS	32

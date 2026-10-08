@@ -7,7 +7,7 @@ which is OpenJK 260c59c2 plus that one commit, the same base this tree starts fr
 
 | File | Content |
 |------|---------|
-| `codemp/game/g_webadmin.c` | HTTP server, JSON state, player actions, entity editor, chat lines |
+| `codemp/game/webadmin/g_webadmin.c` | HTTP server, JSON state, player actions, entity editor, chat lines |
 | `codemp/game/webadmin/index.html` | the page of JKAdmin, with a chat box added |
 | `cmake/Modules/EmbedFile.cmake` | turns the page into `webadmin_html.h` in the build directory |
 

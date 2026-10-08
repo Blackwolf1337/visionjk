@@ -77,8 +77,6 @@ set(MPGameGameFiles
 	"${MPDir}/game/g_session.c"
 	"${MPDir}/game/g_spawn.c"
 	"${MPDir}/game/g_svcmds.c"
-	"${MPDir}/game/g_webadmin.c"
-	"${MPDir}/game/webadmin/index.html"
 	"${MPDir}/game/g_syscalls.c"
 	"${MPDir}/game/g_target.c"
 	"${MPDir}/game/g_team.c"
@@ -187,6 +185,14 @@ set(MPGameVoiceFiles
 	)
 source_group("game/voice" FILES ${MPGameVoiceFiles})
 set(MPGameFiles ${MPGameFiles} ${MPGameVoiceFiles})
+
+# the web admin panel and its page
+set(MPGameWebadminFiles
+	"${MPDir}/game/webadmin/g_webadmin.c"
+	"${MPDir}/game/webadmin/index.html"
+	)
+source_group("game/webadmin" FILES ${MPGameWebadminFiles})
+set(MPGameFiles ${MPGameFiles} ${MPGameWebadminFiles})
 
 set(MPGameCommonFiles
 	"${MPDir}/qcommon/q_shared.c"

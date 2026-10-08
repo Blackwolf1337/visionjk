@@ -47,7 +47,7 @@ New files, all JA+ code that did not have to live inside a base function:
 | `codemp/game/japlus/g_japlus_scale.c` | model scale |
 | `codemp/game/japlus/g_japlus_misc.c` | timers, welcome and MOTD, inactivity protection, `jp_cinfo` |
 | `codemp/cgame/cg_japlus.c` | auto replier, cameras, macro scan |
-| `codemp/game/g_webadmin.c`, `codemp/game/webadmin/index.html` | web admin panel from JKAdmin, see [webadmin.md](webadmin.md) |
+| `codemp/game/webadmin/g_webadmin.c`, `codemp/game/webadmin/index.html` | web admin panel from JKAdmin, see [webadmin.md](webadmin.md) |
 | `codemp/game/g_blackhole.c` | the entity `misc_blackhole`, not from JA+, see [webadmin.md](webadmin.md) |
 | `codemp/game/g_schizo.c` | hallucinations only one player gets, not from JA+, see [webadmin.md](webadmin.md) |
 | `codemp/game/g_props.c` | the entities `misc_ball`, `misc_cube` and `misc_prop` (any model of the game) with physics, taking them with `+button13` (admins take players with it too), not from JA+, see [webadmin.md](webadmin.md) |
