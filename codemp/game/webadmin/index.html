@@ -204,12 +204,28 @@ body.fp #help, body.fp #command, body.fp #entPanel { display: none; }
 .hud-bottom span { color: #ccc; font-size: 11px; text-transform: uppercase; letter-spacing: .8px; }
 .hud-bottom .w { margin-left: auto; font-size: 16px; font-weight: 700; }
 .c0{color:#666}.c1{color:#ff4040}.c2{color:#40ff40}.c3{color:#ffff40}.c4{color:#5a7dff}.c5{color:#40ffff}.c6{color:#ff40ff}.c7{color:#fff}.c8{color:#ff9a30}.c9{color:#aaa}
+/* administration or editor: which tabs there are and whether the debug views are offered */
+#appMode { display: flex; }
+#appMode button { border-radius: 0; color: var(--muted); }
+#appMode button:first-child { border-radius: 3px 0 0 3px; }
+#appMode button:last-child { border-radius: 0 3px 3px 0; border-left: 0; }
+#appMode button.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+#dbg { gap: 10px; color: var(--muted); }
+#dbg label { display: flex; align-items: center; gap: 4px; cursor: pointer; }
+#dbg input { width: auto; }
+body.app-admin #dbg, body.app-admin #tabs button[data-app="editor"], body.app-editor #tabs button[data-app="admin"] { display: none; }
 </style>
 </head>
 <body>
 <div id="topbar">
 	<button id="toggleSide" title="Player list">&#9776;</button>
 	<div class="brand"><i></i>VisionJK Admin</div>
+	<div id="appMode"><button data-app="admin" title="The map as the game draws it, the players, the server">Administration</button><button data-app="editor" title="Placing entities and models, with the debug views">Editor</button></div>
+	<span id="dbg" class="inline">
+		<label title="A marker at every entity of the map"><input type="checkbox" id="dbgMarkers" checked>Entities</label>
+		<label title="The triangles of the map as lines"><input type="checkbox" id="dbgWire">Wireframe</label>
+		<select id="dbgLight" title="What the surfaces of the map show"><option value="0">Texture and light</option><option value="1">Light only</option><option value="2">Texture only</option></select>
+	</span>
 	<span class="meta" id="host"></span>
 	<span class="meta">Map <b id="map">-</b></span>
 	<span class="meta"><b id="gametype">-</b></span>
@@ -223,7 +239,7 @@ body.fp #help, body.fp #command, body.fp #entPanel { display: none; }
 </div>
 
 <div id="side">
-	<div id="tabs"><button data-tab="players" class="on">Players</button><button data-tab="world">World</button><button data-tab="models">Models</button><button data-tab="config">Config</button><button data-tab="files">Files</button></div>
+	<div id="tabs"><button data-tab="players" data-app="admin" class="on">Players</button><button data-tab="world" data-app="editor">World</button><button data-tab="models" data-app="editor">Models</button><button data-tab="config" data-app="admin">Config</button><button data-tab="files" data-app="admin">Files</button></div>
 	<div class="pane on" id="pane-players">
 		<h2><span>Players</span><span id="playerCount">0</span></h2>
 		<div class="scroll">
@@ -531,6 +547,7 @@ function parseBsp(buffer) {
 			p: [dv.getFloat32(o, true), dv.getFloat32(o + 4, true), dv.getFloat32(o + 8, true)],
 			st: [dv.getFloat32(o + 12, true), dv.getFloat32(o + 16, true)],
 			lm: [dv.getFloat32(o + 20, true), dv.getFloat32(o + 24, true)],
+			n: [dv.getFloat32(o + 52, true), dv.getFloat32(o + 56, true), dv.getFloat32(o + 60, true)],
 			c: [dv.getUint8(o + 64), dv.getUint8(o + 65), dv.getUint8(o + 66), dv.getUint8(o + 67)]
 		};
 	};
@@ -542,6 +559,7 @@ function parseBsp(buffer) {
 	const batches = new Map();
 	const pickPos = [], pickIdx = [];
 	const sfl = lump(13);
+	let sky = '';
 
 	for (let o = sfl.ofs; o < sfl.ofs + sfl.len; o += SURF_SIZE) {
 		const shaderNum = dv.getInt32(o, true), type = dv.getInt32(o + 8, true);
@@ -550,6 +568,8 @@ function parseBsp(buffer) {
 		const lmNum = dv.getInt32(o + 36, true);
 		const pw = dv.getInt32(o + 140, true), ph = dv.getInt32(o + 144, true);
 		const shader = shaders[shaderNum];
+		// the sky is not a surface here: its shader is drawn around the eye
+		if (shader && (shader.flags & SURF_SKY) && !sky) sky = shader.name;
 		if (!shader || (shader.flags & (SURF_SKY | SURF_NODRAW)) || SKIP_SHADER.test(shader.name)) continue;
 		if (type !== MST_PLANAR && type !== MST_TRIANGLE_SOUP && type !== MST_PATCH) continue;
 
@@ -566,7 +586,7 @@ function parseBsp(buffer) {
 		const key = shaderNum + ':' + (lmNum >= 0 && lmNum < lightmaps.length ? lmNum : -1);
 		let b = batches.get(key);
 		if (!b) {
-			b = { shader: shaderNum, lightmap: lmNum >= 0 && lmNum < lightmaps.length ? lmNum : -1, pos: [], st: [], lm: [], col: [], idx: [] };
+			b = { shader: shaderNum, lightmap: lmNum >= 0 && lmNum < lightmaps.length ? lmNum : -1, pos: [], st: [], lm: [], col: [], norm: [], idx: [] };
 			batches.set(key, b);
 		}
 		const base = b.pos.length / 3;
@@ -575,6 +595,7 @@ function parseBsp(buffer) {
 			b.st.push(v.st[0], v.st[1]);
 			b.lm.push(v.lm[0], v.lm[1]);
 			b.col.push(v.c[0], v.c[1], v.c[2], v.c[3]);
+			b.norm.push(v.n[0], v.n[1], v.n[2]);
 		}
 		for (const t of tris) b.idx.push(base + t);
 
@@ -584,7 +605,7 @@ function parseBsp(buffer) {
 		for (const t of tris) pickIdx.push(pbase + t);
 	}
 
-	return { shaders, lightmaps, batches: [...batches.values()], bounds, pick: { pos: new Float32Array(pickPos), idx: new Uint32Array(pickIdx) } };
+	return { shaders, lightmaps, batches: [...batches.values()], bounds, sky, pick: { pos: new Float32Array(pickPos), idx: new Uint32Array(pickIdx) } };
 }
 
 // quadratic bezier patch, 3x3 control blocks
@@ -600,6 +621,7 @@ function tessellatePatch(vert, firstVert, w, h) {
 			p: [0, 1, 2].map(i => k0 * a.p[i] + k1 * b.p[i] + k2 * c.p[i]),
 			st: [0, 1].map(i => k0 * a.st[i] + k1 * b.st[i] + k2 * c.st[i]),
 			lm: [0, 1].map(i => k0 * a.lm[i] + k1 * b.lm[i] + k2 * c.lm[i]),
+			n: [0, 1, 2].map(i => k0 * a.n[i] + k1 * b.n[i] + k2 * c.n[i]),
 			c: [0, 1, 2, 3].map(i => k0 * a.c[i] + k1 * b.c[i] + k2 * c.c[i])
 		};
 	};
@@ -689,13 +711,14 @@ void main() { vSt = aSt; vLm = aLm; vCol = aCol; vDist = distance(aPos, uEye); g
 `#version 300 es
 precision mediump float;
 in vec2 vSt; in vec2 vLm; in vec4 vCol; in float vDist;
-uniform sampler2D uTex; uniform sampler2D uLm; uniform int uUseLm; uniform int uAlphaTest; uniform float uFogFar;
+uniform sampler2D uTex; uniform sampler2D uLm; uniform int uUseLm; uniform int uAlphaTest; uniform float uFogFar; uniform int uView;
 out vec4 o;
 void main() {
 	vec4 t = texture(uTex, vSt);
 	if (uAlphaTest == 1 && t.a < 0.5) discard;
 	vec3 light = uUseLm == 1 ? min(texture(uLm, vLm).rgb * 2.0, vec3(1.6)) : vCol.rgb;
-	vec3 c = t.rgb * light;
+	// the debug views of the editor: 1 the light alone, 2 the texture alone
+	vec3 c = uView == 1 ? light : uView == 2 ? t.rgb : t.rgb * light;
 	float fog = clamp(vDist / uFogFar, 0.0, 1.0) * 0.55;
 	o = vec4(mix(c, vec3(0.05, 0.05, 0.06), fog), 1.0);
 }`);
@@ -807,6 +830,10 @@ async function loadMap(name) {
 	$('loading').style.display = '';
 	$('loading').textContent = 'Loading ' + name + '...';
 	world = null;
+	// the images and the stages that hold them are those of a map: the ones of the last map are let go
+	gameImages.clear();
+	imageQueue.length = 0;
+	scripts.materials.clear();
 	try {
 		const res = await fetch('api/map?name=' + encodeURIComponent(name));
 		if (!res.ok) throw new Error('HTTP ' + res.status);
@@ -824,61 +851,597 @@ async function loadMap(name) {
 				gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
 				gl.enableVertexAttribArray(loc);
 				gl.vertexAttribPointer(loc, size, type, normalized, 0, 0);
+				return buf;
 			};
-			attr(0, new Float32Array(b.pos), 3, gl.FLOAT, false);
+			const posBuf = attr(0, new Float32Array(b.pos), 3, gl.FLOAT, false);
 			attr(1, new Float32Array(b.st), 2, gl.FLOAT, false);
 			attr(2, new Float32Array(b.lm), 2, gl.FLOAT, false);
 			attr(3, new Uint8Array(b.col), 4, gl.UNSIGNED_BYTE, true);
-			const ib = gl.createBuffer();
+			attr(4, new Float32Array(b.norm), 3, gl.FLOAT, false);
+			const tri = new Uint32Array(b.idx), ib = gl.createBuffer();
 			gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ib);
-			gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint32Array(b.idx), gl.STATIC_DRAW);
+			gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, tri, gl.STATIC_DRAW);
 			gl.bindVertexArray(null);
 			const shaderName = bsp.shaders[b.shader].name;
-			if (!textures.has(shaderName)) textures.set(shaderName, { tex: grayTex, alpha: false });
-			return { vao, count: b.idx.length, shaderName, lm: b.lightmap >= 0 ? lightmapTex[b.lightmap] : null };
+			if (!textures.has(shaderName)) textures.set(shaderName, gameImage(shaderName, false));
+			// posBuf and tri: the wireframe of the editor makes its lines of them when it is asked for
+			return { vao, count: b.idx.length, shaderName, lm: b.lightmap >= 0 ? lightmapTex[b.lightmap] : null, posBuf, tri, wire: null };
 		});
 
-		world = { batches, textures, bounds: bsp.bounds, pick: bsp.pick };
+		world = { batches, textures, bounds: bsp.bounds, pick: bsp.pick, sky: bsp.sky, scripted: null, skyDraw: null };
+		prepareScripted(world);
 		resetCamera();
 		$('loading').style.display = 'none';
-		loadTextures([...textures.keys()]);
 	} catch (e) {
 		$('loading').textContent = 'Could not load the map: ' + e.message;
 	}
 }
 
-// fetch the images behind the shader names, 6 at a time
-async function loadTextures(names) {
-	const queue = names.slice(), current = world;
-	const one = async name => {
-		const base = name.replace(/\.(tga|jpg|png)$/i, '');
-		for (const ext of ['.jpg', '.tga', '.png']) {
-			try {
-				const res = await fetch('api/file?name=' + encodeURIComponent(base + ext));
-				if (!res.ok) continue;
-				const data = await res.arrayBuffer();
-				if (world !== current) return;
-				let tex, alpha = false;
-				if (ext === '.tga') {
-					const img = decodeTga(data);
-					if (!img) continue;
-					tex = makeTexture(img.w, img.h, img.data);
-					alpha = img.alpha;
-				} else {
-					const bmp = await createImageBitmap(new Blob([data]));
-					tex = gl.createTexture();
-					gl.bindTexture(gl.TEXTURE_2D, tex);
-					gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, bmp);
-					gl.generateMipmap(gl.TEXTURE_2D);
-					gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
-				}
-				current.textures.set(name, { tex, alpha });
-				return;
-			} catch (e) { /* try the next extension */ }
+// An image of the game as a texture, by its name with or without an ending: the ending the name has first, as
+// the engine does, then the others. null: there is none, or the server does not hand out its folder.
+async function fetchImage(name, clamp) {
+	const m = /\.(tga|jpg|png)$/i.exec(name), base = m ? name.slice(0, m.index) : name;
+	const endings = [m ? m[0].toLowerCase() : '', '.jpg', '.tga', '.png'].filter((e, i, all) => e && all.indexOf(e) === i);
+	for (const ext of endings) {
+		try {
+			const res = await fetch('api/file?name=' + encodeURIComponent(base + ext));
+			if (!res.ok) continue;
+			const data = await res.arrayBuffer();
+			if (ext === '.tga') {
+				const img = decodeTga(data);
+				if (!img) continue;
+				return { tex: makeTexture(img.w, img.h, img.data, { clamp }), alpha: img.alpha };
+			}
+			// as it is in the file: the stages of a shader blend with the alpha themselves
+			const bmp = await createImageBitmap(new Blob([data]), { premultiplyAlpha: 'none', colorSpaceConversion: 'none' });
+			const tex = gl.createTexture();
+			gl.bindTexture(gl.TEXTURE_2D, tex);
+			gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, bmp);
+			gl.generateMipmap(gl.TEXTURE_2D);
+			gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+			if (clamp) {
+				gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+				gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+			}
+			return { tex, alpha: false };
+		} catch (e) { /* the next ending */ }
+	}
+	return null;
+}
+
+/* ------------------------------------------------------------------ */
+/* the shader scripts of the game                                      */
+/* ------------------------------------------------------------------ */
+
+// The view of the administration draws the map the way the game does: every surface with the stages its shader
+// script names (images, blending, moving texture coordinates, colours that pulse), in the order of the game,
+// under the sky of the map. What the engine makes of a script is in rd-vanilla/tr_shader.cpp and tr_shade.cpp,
+// the rules here are taken from there. Not done: fog, deformed vertices, glow, sprites on surfaces, portals.
+//
+// The editor keeps the plain view (an image times the light), which needs nothing but the map.
+
+const whiteTex = makeTexture(1, 1, new Uint8Array([255, 255, 255, 255]), { mip: false });
+
+const stageProg = compile(`#version 300 es
+layout(location=0) in vec3 aPos; layout(location=1) in vec2 aSt; layout(location=2) in vec2 aLm; layout(location=3) in vec4 aCol; layout(location=4) in vec3 aNorm;
+uniform mat4 uMvp; uniform vec3 uEye;
+uniform int uTcGen;		// 0 the texture coordinates, 1 the ones of the lightmap, 2 the environment
+uniform vec3 uTcA; uniform vec3 uTcB;	// the tcMods of the stage as one matrix
+uniform vec2 uTurb;		// tcMod turb: how far, and where in its wave it is
+out vec2 vTc; out vec4 vCol;
+void main() {
+	vec2 tc = aSt;
+	if (uTcGen == 1) tc = aLm;
+	else if (uTcGen == 2) {
+		vec3 v = normalize(uEye - aPos);
+		vec3 r = aNorm * 2.0 * dot(aNorm, v) - v;
+		tc = vec2(0.5 + r.y * 0.5, 0.5 - r.z * 0.5);
+	}
+	if (uTurb.x != 0.0) {
+		tc.x += sin(((aPos.x + aPos.z) * 0.0009765625 + uTurb.y) * 6.2831853) * uTurb.x;
+		tc.y += sin((aPos.y * 0.0009765625 + uTurb.y) * 6.2831853) * uTurb.x;
+	}
+	vTc = vec2(dot(uTcA.xy, tc) + uTcA.z, dot(uTcB.xy, tc) + uTcB.z);
+	vCol = aCol;
+	gl_Position = uMvp * vec4(aPos, 1.0);
+}`,
+`#version 300 es
+precision mediump float;
+in vec2 vTc; in vec4 vCol;
+uniform sampler2D uTex; uniform vec4 uColor;
+uniform int uRgbVertex; uniform int uAlphaVertex;	// 1 times the colour of the vertex, 2 times one minus it
+uniform int uAlphaFunc;	// 1 GT0, 2 LT128, 3 GE128, 4 GE192
+out vec4 o;
+void main() {
+	vec4 c = uColor;
+	if (uRgbVertex == 1) c.rgb *= vCol.rgb; else if (uRgbVertex == 2) c.rgb *= 1.0 - vCol.rgb;
+	if (uAlphaVertex == 1) c.a *= vCol.a; else if (uAlphaVertex == 2) c.a *= 1.0 - vCol.a;
+	c *= texture(uTex, vTc);
+	if (uAlphaFunc == 1 && c.a <= 0.0) discard;
+	if (uAlphaFunc == 2 && c.a >= 0.5) discard;
+	if (uAlphaFunc == 3 && c.a < 0.5) discard;
+	if (uAlphaFunc == 4 && c.a < 0.75) discard;
+	o = c;
+}`);
+
+const SC_BLEND = {
+	gl_one: gl.ONE, gl_zero: gl.ZERO, gl_dst_color: gl.DST_COLOR, gl_one_minus_dst_color: gl.ONE_MINUS_DST_COLOR,
+	gl_src_color: gl.SRC_COLOR, gl_one_minus_src_color: gl.ONE_MINUS_SRC_COLOR, gl_src_alpha: gl.SRC_ALPHA,
+	gl_one_minus_src_alpha: gl.ONE_MINUS_SRC_ALPHA, gl_dst_alpha: gl.DST_ALPHA, gl_one_minus_dst_alpha: gl.ONE_MINUS_DST_ALPHA,
+	gl_src_alpha_saturate: gl.SRC_ALPHA_SATURATE
+};
+// shaderSort_t of the engine
+const SC_SORT = { portal: 1, sky: 2, opaque: 3, decal: 4, seethrough: 5, banner: 6, inside: 7, mid_inside: 8, middle: 9, mid_outside: 10, outside: 11, underwater: 13, additive: 15, nearest: 21 };
+const SC_SORT_OPAQUE = 3, SC_SORT_DECAL = 4, SC_SORT_SEE_THROUGH = 5, SC_SORT_BANNER = 6, SC_SORT_BLEND = 14;
+
+// state: 0 not asked for, 1 on their way, 2 there, 3 the server has none to give (an older game module)
+const scripts = { state: 0, bodies: new Map(), defs: new Map(), materials: new Map() };
+
+const scNum = s => { const v = parseFloat(s); return Number.isFinite(v) ? v : 0; };
+const scKey = name => name.toLowerCase().replace(/\\/g, '/').replace(/\.(tga|jpg|png)$/, '');
+
+// The shaders of a .shader file: a name and what stands between its braces, kept as text until a map uses it.
+// The first text of a name stays, as in the engine.
+function scanShaderFile(text, into) {
+	const re = /\/\/[^\n]*|\/\*[\s\S]*?\*\/|"[^"\n]*"|[{}]|[^\s{}]+/g;
+	let name = null, depth = 0, start = 0;
+	for (let m; (m = re.exec(text)); ) {
+		const t = m[0];
+		if (t[0] === '/' && (t[1] === '/' || t[1] === '*')) continue;
+		if (t === '{') {
+			if (depth++ === 0) start = re.lastIndex;
+		} else if (t === '}') {
+			if (depth > 0 && --depth === 0 && name !== null) {
+				const key = scKey(name);
+				if (!into.has(key)) into.set(key, text.slice(start, m.index));
+				name = null;
+			}
+		} else if (depth === 0) {
+			name = t[0] === '"' ? t.slice(1, -1) : t;
 		}
+	}
+}
+
+async function loadShaderScripts() {
+	if (scripts.state) return;
+	scripts.state = 1;
+	try {
+		const res = await fetch('api/shaders', { cache: 'no-store' });
+		if (!res.ok) throw new Error('HTTP ' + res.status);
+		// the engine puts the files together last one first, so that is the one whose text of a shader counts
+		const files = (await res.json()).files.slice().reverse(), texts = new Array(files.length);
+		let next = 0;
+		const worker = async () => {
+			while (next < files.length) {
+				const i = next++;
+				try {
+					const file = await fetch('api/file?name=' + encodeURIComponent('shaders/' + files[i]));
+					if (file.ok) texts[i] = await file.text();
+				} catch (e) { /* the map is drawn without the shaders of that file */ }
+			}
+		};
+		await Promise.all([1, 2, 3, 4, 5, 6].map(worker));
+		for (const text of texts) if (text) scanShaderFile(text, scripts.bodies);
+		scripts.state = 2;
+	} catch (e) {
+		scripts.state = 3;
+	}
+	prepareScripted(world);
+}
+
+// the lines of a script as words, a brace is a line of its own
+function scriptLines(body) {
+	const lines = [], re = /\n|\/\/[^\n]*|\/\*[\s\S]*?\*\/|"[^"\n]*"|[{}]|[^\s{}]+/g;
+	let cur = null;
+	for (let m; (m = re.exec(body)); ) {
+		const t = m[0];
+		if (t === '\n') { cur = null; continue; }
+		if (t[0] === '/' && (t[1] === '/' || t[1] === '*')) { if (t.includes('\n')) cur = null; continue; }
+		if (t === '{' || t === '}') { lines.push([t]); cur = null; continue; }
+		if (!cur) lines.push(cur = []);
+		cur.push(t[0] === '"' ? t.slice(1, -1) : t);
+	}
+	return lines;
+}
+
+function scWave(a, i) {
+	return { func: (a[i] || 'sin').toLowerCase(), base: scNum(a[i + 1]), amp: scNum(a[i + 2]), phase: scNum(a[i + 3]), freq: scNum(a[i + 4]) };
+}
+
+function waveValue(w, t) {
+	const x = w.phase + t * w.freq, f = x - Math.floor(x);
+	let v = 1;
+	if (w.func === 'sin') v = Math.sin(x * Math.PI * 2);
+	else if (w.func === 'triangle') v = f < 0.25 ? f * 4 : f < 0.75 ? 2 - f * 4 : f * 4 - 4;
+	else if (w.func === 'square') v = f < 0.5 ? 1 : -1;
+	else if (w.func === 'sawtooth') v = f;
+	else if (w.func === 'inversesawtooth') v = 1 - f;
+	else if (w.func === 'noise') v = Math.random() * 2 - 1;
+	return w.base + w.amp * v;
+}
+
+// What the colour or the alpha of a stage is: a number, a wave, or what the vertices carry. null: white, which
+// is also what stands here for the gens that ask the entity or the light grid.
+function scGen(a, rgb) {
+	const v = (a[1] || '').toLowerCase();
+	if (v === 'wave') return { wave: scWave(a, 2) };
+	if (v === 'const') {
+		const n = a.slice(2).map(t => t.replace(/[()]/g, '')).filter(Boolean).map(scNum);
+		return { value: rgb ? [n[0] || 0, n[1] || 0, n[2] || 0] : (n[0] || 0) };
+	}
+	if (v === 'vertex' || v === 'exactvertex') return { vertex: 1, exact: v === 'exactvertex' };
+	if (v === 'oneminusvertex') return { vertex: 2, exact: true };
+	return null;
+}
+
+function newStage() {
+	return { maps: [], images: null, animFreq: 0, clamp: false, lightmap: false, white: false, skip: false,
+		src: gl.ONE, dst: gl.ZERO, blend: null, alphaFunc: 0, depthEqual: false, depthWrite: true, depthWriteAsked: false,
+		rgb: null, alpha: null, tcGen: 0, tcMods: [] };
+}
+
+function stageLine(st, k, a) {
+	const v = (a[1] || '').toLowerCase();
+	if (k === 'map' || k === 'clampmap') {
+		if (v === '$lightmap') st.lightmap = true;
+		else if (v === '$whiteimage' || v === '*white') st.white = true;
+		else if (a[1]) st.maps = [a[1]];
+		st.clamp = k === 'clampmap';
+	} else if (k === 'animmap' || k === 'clampanimmap' || k === 'oneshotanimmap') {
+		st.animFreq = scNum(a[1]);
+		st.maps = a.slice(2);
+		st.clamp = k !== 'animmap';
+	} else if (k === 'videomap' || k === 'surfacesprites') {
+		st.skip = true;
+	} else if (k === 'blendfunc') {
+		if (v === 'add') { st.src = gl.ONE; st.dst = gl.ONE; }
+		else if (v === 'filter') { st.src = gl.DST_COLOR; st.dst = gl.ZERO; }
+		else if (v === 'blend') { st.src = gl.SRC_ALPHA; st.dst = gl.ONE_MINUS_SRC_ALPHA; }
+		else { st.src = SC_BLEND[v] ?? gl.ONE; st.dst = SC_BLEND[(a[2] || '').toLowerCase()] ?? gl.ONE; }
+	} else if (k === 'alphafunc') {
+		st.alphaFunc = { gt0: 1, lt128: 2, ge128: 3, ge192: 4 }[v] || 0;
+	} else if (k === 'depthfunc') {
+		st.depthEqual = v === 'equal';
+	} else if (k === 'depthwrite') {
+		st.depthWriteAsked = true;
+	} else if (k === 'rgbgen') {
+		st.rgb = scGen(a, true);
+	} else if (k === 'alphagen') {
+		st.alpha = scGen(a, false);
+	} else if (k === 'tcgen' || k === 'texgen') {
+		st.tcGen = v === 'lightmap' ? 1 : v === 'environment' ? 2 : 0;
+	} else if (k === 'tcmod') {
+		const kind = v, n = a.slice(2).map(scNum);
+		if (kind === 'stretch') st.tcMods.push({ kind, wave: scWave(a, 2) });
+		else if (kind === 'scroll' || kind === 'scale' || kind === 'rotate' || kind === 'transform' || kind === 'turb') st.tcMods.push({ kind, n });
+	}
+}
+
+// what the engine settles when a stage is read to its end
+function finishStage(st) {
+	// one and zero is no blending. A stage that blends leaves the depth alone unless it says otherwise.
+	st.blend = st.src === gl.ONE && st.dst === gl.ZERO ? null : [st.src, st.dst];
+	st.depthWrite = !st.blend || st.depthWriteAsked;
+	if (st.lightmap) st.tcGen = 1;
+	return st;
+}
+
+function parseScript(body) {
+	const def = { stages: [], sort: 0, polygonOffset: false, nodraw: false, sky: null };
+	let st = null, depth = 0;
+	for (const a of scriptLines(body)) {
+		const k = a[0].toLowerCase();
+		if (k === '{') {
+			if (depth++ === 0) st = newStage();
+		} else if (k === '}') {
+			if (depth > 0 && --depth === 0 && st) {
+				if (!st.skip) def.stages.push(finishStage(st));
+				st = null;
+			}
+		} else if (depth === 1 && st) {
+			stageLine(st, k, a);
+		} else if (depth === 0) {
+			if (k === 'surfaceparm') { if ((a[1] || '').toLowerCase() === 'nodraw') def.nodraw = true; }
+			else if (k === 'skyparms') def.sky = { box: a[1] && a[1] !== '-' ? a[1] : '', height: scNum(a[2]) || 512 };
+			else if (k === 'sort') def.sort = SC_SORT[(a[1] || '').toLowerCase()] || scNum(a[1]);
+			else if (k === 'polygonoffset') def.polygonOffset = true;
+		}
+	}
+	return def;
+}
+
+// The stages a surface of the map is drawn with: the script of its shader, or what the engine makes of an image
+// that has none. A surface without a lightmap is lit by the colours of its vertices, with the rules of the
+// engine for that (the end of FinishShader).
+function materialFor(name, lit) {
+	const key = scKey(name), mkey = key + (lit ? '|l' : '|v');
+	let mat = scripts.materials.get(mkey);
+	if (mat) return mat;
+
+	let def = scripts.defs.get(key);
+	if (def === undefined) {
+		const body = scripts.bodies.get(key);
+		def = body === undefined ? null : parseScript(body);
+		scripts.defs.set(key, def);
+	}
+
+	let stages;
+	if (!def) {
+		const image = Object.assign(newStage(), { maps: [name] });
+		if (lit) {
+			Object.assign(image, { src: gl.DST_COLOR, dst: gl.ZERO });
+			stages = [Object.assign(newStage(), { lightmap: true }), image];
+		} else {
+			image.rgb = { vertex: 1, exact: true };
+			stages = [image];
+		}
+		stages.forEach(finishStage);
+	} else {
+		stages = def.stages.map(st => Object.assign({}, st));
+		const lm = lit ? -1 : stages.findIndex(st => st.lightmap);
+		if (lm === 0 && stages.length > 1) {
+			// the stage after the lightmap takes its place, as the first thing that is drawn there
+			stages.shift();
+			Object.assign(stages[0], { blend: null, depthWrite: true, alphaFunc: 0, depthEqual: false, rgb: { vertex: 1, exact: true }, alpha: null });
+		} else if (lm >= 0) {
+			Object.assign(stages[lm], { lightmap: false, white: true, rgb: { vertex: 1, exact: true }, alpha: null });
+		}
+	}
+
+	const first = stages[0];
+	mat = {
+		stages,
+		nodraw: !!def && def.nodraw,
+		polygonOffset: !!def && def.polygonOffset,
+		sky: def ? def.sky : null,
+		sort: (def && def.sort) || (def && def.polygonOffset ? SC_SORT_DECAL : first && first.blend ? (first.depthWrite ? SC_SORT_SEE_THROUGH : SC_SORT_BLEND) : SC_SORT_OPAQUE)
 	};
-	const worker = async () => { while (queue.length && world === current) await one(queue.shift()); };
-	await Promise.all([1, 2, 3, 4, 5, 6].map(worker));
+	scripts.materials.set(mkey, mat);
+	return mat;
+}
+
+// the images the stages name, a few on their way at a time
+const gameImages = new Map();	// name and whether it is clamped -> { tex, alpha, ready, failed }, of the map that is shown
+const imageQueue = [];
+let imageBusy = 0;
+
+function gameImage(name, clamp) {
+	const key = name.toLowerCase() + (clamp ? '|c' : '');
+	let h = gameImages.get(key);
+	if (!h) {
+		h = { tex: grayTex, alpha: false, ready: false, failed: false };
+		gameImages.set(key, h);
+		imageQueue.push([h, name, clamp]);
+		pumpImages();
+	}
+	return h;
+}
+
+function pumpImages() {
+	while (imageBusy < 6 && imageQueue.length) {
+		const [h, name, clamp] = imageQueue.shift();
+		imageBusy++;
+		fetchImage(name, clamp).then(img => {
+			if (img) { h.tex = img.tex; h.alpha = img.alpha; h.ready = true; } else h.failed = true;
+		}, () => { h.failed = true; }).finally(() => { imageBusy--; pumpImages(); });
+	}
+}
+
+// the sky of the engine (tr_sky.cpp): a box around the eye, and the layers of clouds on a dome above it
+const SKY_SIDES = [[3, -1, 2], [-3, 1, 2], [1, 3, 2], [-1, -3, 2], [-2, -1, 3], [2, -1, -3]];
+const SKY_SUFFIX = ['rt', 'lf', 'bk', 'ft', 'up', 'dn'];
+const SKY_CUTS = 8, SKY_RADIUS = 4096;
+
+function skyVec(s, t, side) {
+	const b = [s, t, 1];
+	return SKY_SIDES[side].map(k => k < 0 ? -b[-k - 1] : b[k - 1]);
+}
+
+// where a direction meets the layer of clouds, as texture coordinates
+function cloudSt(v, height) {
+	const R = SKY_RADIUS, x = v[0], y = v[1], z = v[2];
+	const p = (1 / (2 * (x * x + y * y + z * z))) * (-2 * z * R + 2 * Math.sqrt(z * z * R * R + 2 * x * x * R * height + x * x * height * height
+		+ 2 * y * y * R * height + y * y * height * height + 2 * z * z * R * height + z * z * height * height));
+	const px = x * p, py = y * p, pz = z * p + R, l = Math.hypot(px, py, pz);
+	return [Math.acos(px / l), Math.acos(py / l)];
+}
+
+function buildSky(name) {
+	// without a script there is nothing that says what the sky is
+	if (!scripts.bodies.has(scKey(name))) return null;
+	const mat = materialFor(name, true);
+	if (!mat.sky && !mat.stages.length) return null;
+	const N = SKY_CUTS, pos = [], st = [], cst = [], idx = [], height = mat.sky ? mat.sky.height : 512;
+	for (let side = 0; side < 6; side++) {
+		const base = pos.length / 3;
+		for (let j = 0; j <= N; j++) {
+			for (let i = 0; i <= N; i++) {
+				const s = i / N * 2 - 1, t = j / N * 2 - 1, v = skyVec(s, t, side);
+				pos.push(v[0] * SKY_RADIUS, v[1] * SKY_RADIUS, v[2] * SKY_RADIUS);
+				st.push((s + 1) / 2, 1 - (t + 1) / 2);
+				cst.push(...cloudSt(v, height));
+			}
+		}
+		for (let j = 0; j < N; j++) {
+			for (let i = 0; i < N; i++) {
+				const a = base + j * (N + 1) + i;
+				idx.push(a, a + 1, a + N + 1, a + 1, a + N + 2, a + N + 1);
+			}
+		}
+	}
+	const posBuf = gl.createBuffer(), ib = gl.createBuffer();
+	gl.bindBuffer(gl.ARRAY_BUFFER, posBuf);
+	gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(pos), gl.STATIC_DRAW);
+	const side = coords => {
+		const vao = gl.createVertexArray(), buf = gl.createBuffer();
+		gl.bindVertexArray(vao);
+		gl.bindBuffer(gl.ARRAY_BUFFER, posBuf);
+		gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 0, 0);
+		gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+		gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(coords), gl.STATIC_DRAW);
+		gl.enableVertexAttribArray(1); gl.vertexAttribPointer(1, 2, gl.FLOAT, false, 0, 0);
+		gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ib);
+		if (coords === st) gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(idx), gl.STATIC_DRAW);
+		gl.bindVertexArray(null);
+		return vao;
+	};
+	return {
+		boxVao: side(st), cloudVao: side(cst), perSide: N * N * 6, stages: mat.stages,
+		box: mat.sky && mat.sky.box ? SKY_SUFFIX.map(suffix => Object.assign(newStage(), { maps: [mat.sky.box + '_' + suffix], clamp: true })) : null
+	};
+}
+
+// the batches of the map in the order and with the stages the game draws them
+function prepareScripted(w) {
+	if (scripts.state !== 2 || !w) return;
+	const list = [];
+	w.batches.forEach((b, i) => {
+		const mat = materialFor(b.shaderName, !!b.lm);
+		if (!mat.nodraw && mat.stages.length) list.push({ b, mat, i });
+	});
+	list.sort((x, y) => x.mat.sort - y.mat.sort || x.i - y.i);
+	w.skyDraw = w.sky ? buildSky(w.sky) : null;
+	w.scripted = list;
+}
+
+const stTcA = new Float32Array(3), stTcB = new Float32Array(3), stTurb = new Float32Array(2), stColor = new Float32Array(4);
+
+function drawStage(st, t, lm, vao, count, type, offset) {
+	let tex;
+	if (st.lightmap) {
+		tex = lm || whiteTex;
+	} else if (st.white) {
+		tex = whiteTex;
+	} else {
+		if (!st.images) st.images = st.maps.map(name => gameImage(name, st.clamp));
+		const n = st.images.length;
+		if (!n) return;
+		const h = st.images[n > 1 ? ((Math.floor(t * st.animFreq) % n) + n) % n : 0];
+		// an image that is not there, or not yet: grey where it covers something, nothing where it would lie over it
+		if (!h.ready && st.blend) return;
+		tex = h.tex;
+	}
+
+	if (st.blend) { gl.enable(gl.BLEND); gl.blendFunc(st.blend[0], st.blend[1]); } else gl.disable(gl.BLEND);
+	gl.depthMask(st.depthWrite);
+	gl.depthFunc(st.depthEqual ? gl.EQUAL : gl.LEQUAL);
+
+	// the tcMods, each applied to what the ones before it made
+	let a = 1, b = 0, c = 0, d = 0, e = 1, f = 0;
+	stTurb[0] = 0;
+	for (const m of st.tcMods) {
+		const n = m.n;
+		let k;
+		if (m.kind === 'scroll') { const x = n[0] * t, y = n[1] * t; k = [1, 0, x - Math.floor(x), 0, 1, y - Math.floor(y)]; }
+		else if (m.kind === 'scale') k = [n[0], 0, 0, 0, n[1], 0];
+		else if (m.kind === 'rotate') { const r = -n[0] * t * Math.PI / 180, cs = Math.cos(r), sn = Math.sin(r); k = [cs, -sn, 0.5 - 0.5 * cs + 0.5 * sn, sn, cs, 0.5 - 0.5 * sn - 0.5 * cs]; }
+		else if (m.kind === 'stretch') { const w = waveValue(m.wave, t), p = w ? 1 / w : 1; k = [p, 0, 0.5 - 0.5 * p, 0, p, 0.5 - 0.5 * p]; }
+		else if (m.kind === 'transform') k = [n[0], n[2], n[4], n[1], n[3], n[5]];
+		else { stTurb[0] = n[1]; stTurb[1] = n[2] + t * n[3]; continue; }
+		[a, b, c, d, e, f] = [k[0] * a + k[1] * d, k[0] * b + k[1] * e, k[0] * c + k[1] * f + k[2], k[3] * a + k[4] * d, k[3] * b + k[4] * e, k[3] * c + k[4] * f + k[5]];
+	}
+	stTcA[0] = a; stTcA[1] = b; stTcA[2] = c; stTcB[0] = d; stTcB[1] = e; stTcB[2] = f;
+
+	stColor[0] = stColor[1] = stColor[2] = stColor[3] = 1;
+	if (st.rgb && st.rgb.wave) stColor[0] = stColor[1] = stColor[2] = Math.min(1, Math.max(0, waveValue(st.rgb.wave, t)));
+	else if (st.rgb && st.rgb.value) { stColor[0] = st.rgb.value[0]; stColor[1] = st.rgb.value[1]; stColor[2] = st.rgb.value[2]; }
+	if (st.alpha && st.alpha.wave) stColor[3] = Math.min(1, Math.max(0, waveValue(st.alpha.wave, t)));
+	else if (st.alpha && st.alpha.value !== undefined) stColor[3] = st.alpha.value;
+
+	const u = stageProg.u;
+	gl.uniform1i(u.uTcGen, st.tcGen);
+	gl.uniform3fv(u.uTcA, stTcA);
+	gl.uniform3fv(u.uTcB, stTcB);
+	gl.uniform2fv(u.uTurb, stTurb);
+	gl.uniform4fv(u.uColor, stColor);
+	gl.uniform1i(u.uRgbVertex, st.rgb && st.rgb.vertex ? st.rgb.vertex : 0);
+	// rgbGen vertex brings the alpha of the vertex along unless the stage says what its alpha is
+	gl.uniform1i(u.uAlphaVertex, st.alpha ? (st.alpha.vertex || 0) : (st.rgb && st.rgb.vertex === 1 && !st.rgb.exact ? 1 : 0));
+	gl.uniform1i(u.uAlphaFunc, st.alphaFunc);
+	gl.bindTexture(gl.TEXTURE_2D, tex);
+	gl.bindVertexArray(vao);
+	gl.drawElements(gl.TRIANGLES, count, type, offset);
+}
+
+function drawSky(sky, t) {
+	// around the eye wherever it is, behind everything
+	const at = new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, eye[0], eye[1], eye[2], 1]);
+	gl.uniformMatrix4fv(stageProg.u.uMvp, false, M4.mul(viewProj, at));
+	gl.disable(gl.DEPTH_TEST);
+	// the sky has no colours at its vertices: white for a stage that asks for them
+	gl.vertexAttrib4f(3, 1, 1, 1, 1);
+	if (sky.box) {
+		for (let side = 0; side < 6; side++) drawStage(sky.box[side], t, null, sky.boxVao, sky.perSide, gl.UNSIGNED_SHORT, side * sky.perSide * 2);
+	}
+	// the clouds are on every side but the one below
+	for (const st of sky.stages) drawStage(st, t, null, sky.cloudVao, sky.perSide * 5, gl.UNSIGNED_SHORT, 0);
+	gl.enable(gl.DEPTH_TEST);
+}
+
+// The map with its scripts, in two parts as the sort of the game has it: the sky and everything solid first,
+// then, after the players and the models were drawn, what is see-through (late), so that glass and water lie
+// over who stands behind them.
+function drawWorldScripted(now, late) {
+	const t = now / 1000;
+	gl.useProgram(stageProg.p);
+	gl.uniform1i(stageProg.u.uTex, 0);
+	gl.uniform3fv(stageProg.u.uEye, eye);
+	gl.activeTexture(gl.TEXTURE0);
+	gl.disable(gl.CULL_FACE);
+	// the alpha of the canvas stays 1 whatever a stage blends, or the page would shine through
+	gl.colorMask(true, true, true, false);
+	if (!late && world.skyDraw) drawSky(world.skyDraw, t);
+	gl.uniformMatrix4fv(stageProg.u.uMvp, false, viewProj);
+	for (const e of world.scripted) {
+		if ((e.mat.sort > SC_SORT_BANNER) !== late) continue;
+		if (e.mat.polygonOffset) { gl.enable(gl.POLYGON_OFFSET_FILL); gl.polygonOffset(-1, -2); }
+		for (const st of e.mat.stages) drawStage(st, t, e.b.lm, e.b.vao, e.b.count, gl.UNSIGNED_INT, 0);
+		if (e.mat.polygonOffset) gl.disable(gl.POLYGON_OFFSET_FILL);
+	}
+	gl.disable(gl.BLEND);
+	gl.depthMask(true);
+	gl.depthFunc(gl.LESS);
+	gl.colorMask(true, true, true, true);
+}
+
+// the debug view of the editor: the triangles of the map as lines
+const lineProg = compile(`#version 300 es
+layout(location=0) in vec3 aPos; uniform mat4 uMvp;
+void main() { gl_Position = uMvp * vec4(aPos, 1.0); }`,
+`#version 300 es
+precision mediump float;
+uniform vec4 uColor; out vec4 o;
+void main() { o = uColor; }`);
+
+function wireOf(b) {
+	if (b.wire) return b.wire;
+	const t = b.tri, lines = new Uint32Array(t.length * 2);
+	for (let i = 0, o = 0; i < t.length; i += 3) {
+		lines[o++] = t[i]; lines[o++] = t[i + 1];
+		lines[o++] = t[i + 1]; lines[o++] = t[i + 2];
+		lines[o++] = t[i + 2]; lines[o++] = t[i];
+	}
+	const vao = gl.createVertexArray(), ib = gl.createBuffer();
+	gl.bindVertexArray(vao);
+	gl.bindBuffer(gl.ARRAY_BUFFER, b.posBuf);
+	gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 0, 0);
+	gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ib);
+	gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, lines, gl.STATIC_DRAW);
+	gl.bindVertexArray(null);
+	return b.wire = { vao, count: lines.length };
+}
+
+function drawWorldWire() {
+	gl.useProgram(lineProg.p);
+	gl.uniformMatrix4fv(lineProg.u.uMvp, false, viewProj);
+	gl.uniform4fv(lineProg.u.uColor, [0.35, 0.95, 0.55, 1]);
+	gl.depthFunc(gl.LEQUAL);
+	for (const b of world.batches) {
+		const wire = wireOf(b);
+		gl.bindVertexArray(wire.vao);
+		gl.drawElements(gl.LINES, wire.count, gl.UNSIGNED_INT, 0);
+	}
+	gl.depthFunc(gl.LESS);
 }
 
 // ray against the map triangles, returns the hit point or null
@@ -1382,14 +1945,23 @@ function frame(now) {
 	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 	gl.enable(gl.DEPTH_TEST);
 
-	if (world) {
+	const editor = appMode === 'editor';
+	const scripted = world && !editor && world.scripted;
+	if (scripted) {
+		drawWorldScripted(now, false);
+	} else if (world) {
+		// the plain view: of the editor, and of the administration until the shader scripts are there
+		const wire = editor && $('dbgWire').checked;
 		gl.useProgram(mapProg.p);
 		gl.uniformMatrix4fv(mapProg.u.uMvp, false, viewProj);
 		gl.uniform3fv(mapProg.u.uEye, eye);
 		gl.uniform1f(mapProg.u.uFogFar, Math.max(4000, cam.dist * 3));
 		gl.uniform1i(mapProg.u.uTex, 0);
 		gl.uniform1i(mapProg.u.uLm, 1);
+		gl.uniform1i(mapProg.u.uView, editor ? +$('dbgLight').value : 0);
 		gl.disable(gl.CULL_FACE);
+		// the lines lie in the surfaces: those are pushed back a little so the lines win
+		if (wire) { gl.enable(gl.POLYGON_OFFSET_FILL); gl.polygonOffset(1, 1); }
 		for (const b of world.batches) {
 			const t = world.textures.get(b.shaderName);
 			gl.activeTexture(gl.TEXTURE0);
@@ -1401,6 +1973,7 @@ function frame(now) {
 			gl.bindVertexArray(b.vao);
 			gl.drawElements(gl.TRIANGLES, b.count, gl.UNSIGNED_INT, 0);
 		}
+		if (wire) { gl.disable(gl.POLYGON_OFFSET_FILL); drawWorldWire(); }
 	}
 
 	gl.useProgram(flatProg.p);
@@ -1424,7 +1997,7 @@ function frame(now) {
 		}
 	}
 
-	if (mode === 'world') {
+	if (editor && $('dbgMarkers').checked) {
 		for (const ent of ents.values()) {
 			if (!entVisible(ent)) continue;
 			const c = entColor(ent.classname), sel = ent.id === selectedEnt;
@@ -1479,6 +2052,7 @@ function frame(now) {
 		else drawMesh(ringMesh, marker.pos[0], marker.pos[1], marker.pos[2], 0, 1 - age * 0.6, [0.3, 1, 0.4, 1]);
 	}
 
+	if (scripted) drawWorldScripted(now, true);
 	drawBlades();
 	if (view.id >= 0 && players.has(view.id)) {
 		const d = players.get(view.id).data;
@@ -1541,6 +2115,24 @@ function entMatches(ent, f) {
 	return !f || ent.classname.toLowerCase().includes(f) || entKey(ent, 'targetname').toLowerCase().includes(f) || String(ent.id) === f;
 }
 function entVisible(ent) { return entMatches(ent, $('entFilter').value.trim().toLowerCase()); }
+
+// The two modes of the panel. Administration: the map as the game draws it, the players, the config and the
+// files of the server. Editor: placing entities and models, in the plain view with its debug views.
+let appMode = 'admin';
+const APP_TAB = { admin: 'players', editor: 'world' };
+
+function setAppMode(a) {
+	appMode = a === 'editor' ? 'editor' : 'admin';
+	document.body.classList.toggle('app-admin', appMode === 'admin');
+	document.body.classList.toggle('app-editor', appMode === 'editor');
+	document.querySelectorAll('#appMode button').forEach(b => b.classList.toggle('on', b.dataset.app === appMode));
+	try { localStorage.setItem('appMode', appMode); } catch (e) { /* it is asked for again next time */ }
+	// a tab of the other mode is not there any more
+	const tab = document.querySelector('#tabs button[data-tab="' + mode + '"]');
+	if (!tab || tab.dataset.app !== appMode) setMode(APP_TAB[appMode]);
+	if (appMode === 'editor') pollEntities();
+	else loadShaderScripts();
+}
 
 function setMode(m) {
 	mode = m;
@@ -1935,6 +2527,7 @@ $('fsText').addEventListener('scroll', () => codeScroll('fsText', 'fsHi'));
 $('fsSave').addEventListener('click', fsSave);
 $('fsClose').addEventListener('click', fsCloseEdit);
 document.querySelectorAll('#tabs button').forEach(b => b.addEventListener('click', () => setMode(b.dataset.tab)));
+document.querySelectorAll('#appMode button').forEach(b => b.addEventListener('click', () => setAppMode(b.dataset.app)));
 
 let classesLoaded = false;
 async function loadClasses() {
@@ -1949,7 +2542,7 @@ async function loadClasses() {
 }
 
 async function pollEntities() {
-	if (mode !== 'world') return;
+	if (appMode !== 'editor') return;
 	try {
 		const json = await (await fetch('api/entities', { cache: 'no-store' })).json();
 		ents.clear();
@@ -3240,6 +3833,9 @@ if (!gl) {
 	const poll = () => { pollState(); pollInterval = view.id >= 0 ? 50 : 100; setTimeout(poll, pollInterval); };
 	poll();
 	loadClasses();
+	let wanted = 'admin';
+	try { wanted = localStorage.getItem('appMode') || 'admin'; } catch (e) { /* the administration then */ }
+	setAppMode(wanted);
 }
 </script>
 </body>

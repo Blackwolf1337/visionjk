@@ -35,6 +35,10 @@ any user name and the password (HTTP basic auth).
 
 ## What the page does
 
+- Two modes, switched in the top bar and kept by the browser. Administration: the tabs Players, Config and
+  Files, and the map drawn the way the game draws it (see below). Editor: the tabs World and Models, the plain
+  view of the map (an image times the light) and its debug views: a marker at every entity, the triangles of the
+  map as lines, the light alone or the texture alone.
 - Players: list, health, armor, size, team, god mode, kill, kick, ban, follow, first person view with the HUD.
   Right click on the map teleports the selected player.
 - World: all entities with their spawn keys. Edit keys and apply, drag or right click to move, rotate, duplicate,
@@ -70,7 +74,8 @@ the answer tells the page that the numbers started over.
 | `GET /` | the page |
 | `GET /api/state` | map, scores, players, NPCs and items as JSON. The page polls this |
 | `GET /api/map` | the `.bsp` of the current map |
-| `GET /api/file?name=` | a file below `textures/`, `models/` or `gfx/` (images, md3, glm, gla, cfg, skin) |
+| `GET /api/file?name=` | a file below `textures/`, `models/` or `gfx/` (images, md3, glm, gla, cfg, skin), or a shader script `shaders/<name>.shader` |
+| `GET /api/shaders` | the names of the shader scripts of the game, in the order the engine reads them in |
 | `GET /api/anims` | animation names in `animNumber_t` order |
 | `GET /api/classes` | everything that can be spawned, and the items with model and icon |
 | `GET /api/entities` | the entities with their keys |
@@ -107,6 +112,23 @@ Also changed:
   script section are marked "not in JKAdmin". The rest of the page is JKAdmin's.
 - A message typed in the panel is turned from UTF-8 into the one byte per character the game uses (Latin-1), so
   umlauts arrive. Characters the game does not have become `?`.
+- New: the modes Administration and Editor (`setAppMode` in the page). In the administration the map is drawn
+  with the shader scripts of the game, by a renderer of the page (script section "the shader scripts of the
+  game"): the page asks `/api/shaders` for the script files, reads them through `/api/file` and keeps the text of
+  every shader until a map uses it. A surface is drawn with the stages of its script, in the sort order of the
+  game: images, `animMap`, `clampMap`, `$lightmap`, `blendFunc`, `alphaFunc`, `depthFunc`, `depthWrite`,
+  `rgbGen` and `alphaGen` (const, wave, vertex), `tcGen` (lightmap, environment), `tcMod` (scroll, scale, rotate,
+  stretch, transform, turb), `polygonOffset`, `sort`. A shader without a script is the lightmap times its image,
+  a surface without a lightmap is lit by its vertices, both as `tr_shader.cpp` makes them. The sky is the box of
+  `skyParms` around the eye and the stages of the sky shader as layers of clouds, as in `tr_sky.cpp`. The
+  lightmaps are taken as they are in the map, which is what the game shows with `r_overBrightBits 0`,
+  `r_mapOverBrightBits 0` and `r_gamma 1`, the defaults. See-through surfaces are drawn after the players and
+  the models. Not done: fog, `deformVertexes`, glow, `surfaceSprites`, portals, culling by side (every surface
+  is drawn from both sides), and the scripts on the models of players and items, which are drawn as before.
+  Images outside `textures/`, `models/` and `gfx/` are not handed out by the server, a stage that names one is
+  left out. With a game module that has no `/api/shaders` the administration shows the plain view. The rules
+  were checked by reading all 3365 shaders of the game through the parser, the picture was not looked at in a
+  browser.
 - New: the JA+ admin commands that work on a player (`WA_JpAction`). The panel does not copy them, it sends the
   same line an rcon admin would type on the server console (`amsleep 3`, `amrename 3 "name"`), so the rules,
   texts and logs are those of JA+. The command runs in the next frame, the answer of the panel only says it was

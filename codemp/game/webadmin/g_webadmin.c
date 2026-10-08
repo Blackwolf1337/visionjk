@@ -764,21 +764,28 @@ static void WA_ApiMap( waConnection_t *c ) {
 	WA_Respond( c, 200, "OK", "application/octet-stream", "Cache-Control: no-store\r\n", mapData, mapLen );
 }
 
-// Textures, models and skins for the 3D views. Only below textures/, models/ and gfx/.
+// Textures, models and skins for the 3D views, and the shader scripts the view of the administration draws the
+// map with. Only below textures/, models/ and gfx/, and of shaders/ the scripts.
 static void WA_ApiFile( waConnection_t *c, const char *query ) {
 	char		name[MAX_QPATH];
 	const char	*ext, *type;
 	char		*data;
 	int			len;
+	qboolean	script;
 
-	if ( !WA_FormValue( query, "name", name, sizeof( name ) ) || strstr( name, ".." ) || strchr( name, '\\' ) || strchr( name, ':' ) ||
-		 ( Q_stricmpn( name, "textures/", 9 ) && Q_stricmpn( name, "models/", 7 ) && Q_stricmpn( name, "gfx/", 4 ) ) ) {
+	if ( !WA_FormValue( query, "name", name, sizeof( name ) ) || strstr( name, ".." ) || strchr( name, '\\' ) || strchr( name, ':' ) ) {
+		WA_RespondText( c, 400, "Bad Request", "bad file name" );
+		return;
+	}
+	ext = COM_GetExtension( name );
+	script = (qboolean)( !Q_stricmpn( name, "shaders/", 8 ) && !Q_stricmp( ext, "shader" ) );
+	if ( !script && Q_stricmpn( name, "textures/", 9 ) && Q_stricmpn( name, "models/", 7 ) && Q_stricmpn( name, "gfx/", 4 ) ) {
 		WA_RespondText( c, 400, "Bad Request", "bad file name" );
 		return;
 	}
 
-	ext = COM_GetExtension( name );
-	if ( !Q_stricmp( ext, "jpg" ) ) type = "image/jpeg";
+	if ( script ) type = "text/plain; charset=utf-8";
+	else if ( !Q_stricmp( ext, "jpg" ) ) type = "image/jpeg";
 	else if ( !Q_stricmp( ext, "gla" ) || !Q_stricmp( ext, "cfg" ) ) type = "application/octet-stream";
 	else if ( !Q_stricmp( ext, "png" ) ) type = "image/png";
 	else if ( !Q_stricmp( ext, "tga" ) || !Q_stricmp( ext, "md3" ) || !Q_stricmp( ext, "glm" ) ) type = "application/octet-stream";
@@ -2401,6 +2408,31 @@ static void WA_ModelScanFrame( void ) {
 	}
 }
 
+// GET /api/shaders: the names of the shader scripts of the game, in the order the engine reads them in. The page
+// reads the files themselves through /api/file.
+static void WA_ApiShaders( waConnection_t *c ) {
+	static char	list[32768];
+	waBuffer_t	b = { 0 };
+	const char	*name;
+	qboolean	first = qtrue;
+	int			i, n;
+
+	n = trap->FS_GetFileList( "shaders", ".shader", list, sizeof( list ) );
+	WA_BufAppend( &b, "{\"files\":[", 10 );
+	for ( i = 0, name = list; i < n; i++, name += strlen( name ) + 1 ) {
+		// the engine reads the ones of this folder only, and each name once
+		if ( !name[0] || strchr( name, '/' ) || WA_ModelListedBefore( list, name ) )
+			continue;
+		if ( !first )
+			WA_BufAppend( &b, ",", 1 );
+		first = qfalse;
+		WA_BufJsonString( &b, name );
+	}
+	WA_BufAppend( &b, "]}", 2 );
+	WA_RespondJson( c, &b );
+	WA_BufFree( &b );
+}
+
 // GET /api/models: the list as far as it is, done says whether that is all
 static void WA_ApiModels( waConnection_t *c ) {
 	waBuffer_t b = { 0 };
@@ -2521,6 +2553,8 @@ static void WA_HandleRequest( waConnection_t *c, char *head, char *body, int bod
 		WA_ApiConfigSet( c, body, (qboolean)( run[0] == '1' ) );
 	} else if ( !strcmp( method, "GET" ) && !strcmp( path, "/api/models" ) ) {
 		WA_ApiModels( c );
+	} else if ( !strcmp( method, "GET" ) && !strcmp( path, "/api/shaders" ) ) {
+		WA_ApiShaders( c );
 	} else if ( !strcmp( method, "GET" ) && !strcmp( path, "/api/fs/list" ) ) {
 		WA_ApiFsList( c, query );
 	} else if ( !strcmp( method, "GET" ) && !strcmp( path, "/api/fs/get" ) ) {
