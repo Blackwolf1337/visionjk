@@ -292,6 +292,21 @@ Also changed:
   192 towards the viewer for the teleport. The game frees a `trigger_push` without a target in its first
   frame, before a key could be added. The server refuses a box whose `mins` are not below its `maxs`, half a
   box, and one wider than 32768. A layout keeps such a trigger like every other placed entity.
+- New: a class that can not be placed bare is opened as a draft (`openDraft`, `draftOp`, `placeDraft` in
+  `js/editor-entities.js`). Place gives a class its name and where it is, and the server refuses a class
+  without a key it can not be without: an effect without its file, a speaker without its sound, a class of
+  brushes without its model. That left such a class with no way into the map but a template or an import
+  (the log of the user's server had a `fx_runner` tried four times in a row). The answer of a refused spawn
+  now names the key it was refused for (`key` in the answer of `/api/entity`), and the page opens the entity
+  as a draft with that key in its table and the cursor in its value. A draft is in the list (as "new") and on
+  the map like an entity, its keys are edited and completed like those of one, it is moved, turned and
+  resized like one, and "Place" in its panel sends it; "Discard" throws it away. The server knows nothing of
+  it until then, so nothing of it is in the history either: the entity it becomes is one step. Place that is
+  refused again leaves the draft as it was typed, with the next key that is missing. One draft at a time, and
+  it belongs to the map it was begun on. What is refused for something no key helps with (a `misc_bsp`, a
+  full map) is only refused, as before.
+- New: the `model` key of a class that is made of brushes offers the brush models of the map (`*1`, `*2`,
+  ...), each with the entities that have it now. A disabled button looks disabled.
 - Fixed: a `misc_bsp` placed in the editor ended the server. It happened to the user on 2026-10-08: the class
   loads another `.bsp` file into the map, placed without keys it asks for `maps/.bsp`, and a file the engine
   can not load is an error that a dedicated server does not survive. That error comes from the engine and not
@@ -1050,6 +1065,18 @@ middle, a start point had no such row, a push and a teleport came with their `ta
 took both away, and after "Save layout" and a start of the map the box was there again. Not tried: a real
 player in such a box (how the late push feels on a client with its own prediction), an NPC, a vehicle, the
 classes for ships (`trigger_space`, `trigger_shipboundary`, `trigger_hyperspace`), and the Windows build.
+
+Drafts (`steps_draft.js`, 18 checks, the same day): a `fx_runner` placed with Place came up as a draft with
+the row `fxFile`, the cursor in its value and the list of the effects on it, "Place" and "Discard" as its
+buttons, Fire and Duplicate off, listed as "new", and the server had no `fx_runner`; it was still there after
+the next poll. With an effect typed in, Place made it entity 107 of the server and one Undo took that away.
+A `target_speaker` draft was moved by the Z field with a key typed into a new row and not applied: it stood
+where the number said and the typed key was still in the table, and nothing had gone to the server. Place
+without the noise was refused and left the draft, with the noise it was placed where it had been moved to.
+Discard threw a draft away at once. A `func_wall` asked for its model with the brush models of the map to
+pick from (`*1 func_plat #77`, ...). A `misc_bsp` gave no draft, a `trigger_hurt` was placed as before, and
+a draft of another map was gone at the next poll. Not tried: a real browser, a draft of a class of brushes
+placed (the checks do not put a second entity on the brushes of the lift).
 
 Every class placed bare (`steps_guard.js`, 12 checks, the same day, mp/ffa3): a `misc_bsp` with and without a
 file, an `info_siege_radaricon` without an icon, a `fx_runner` without an effect and a shooter with `WP_NONSENSE`

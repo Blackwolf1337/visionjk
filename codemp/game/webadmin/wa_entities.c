@@ -181,6 +181,10 @@ static const char *WA_SpawnVar( const char *key ) {
 }
 
 #define WA_TRIGGER_BOX	32768		// the widest box a trigger may have that is one of its own
+
+// The key a spawn was refused for, when giving it or changing it is what helps: the page opens the entity with
+// that key to fill in instead of only saying no. NULL: it was refused for something else.
+static const char	*refusedKey;
 #define WA_MEMORY_RESERVE	( 256 * 1024 )	// of the pool of G_Alloc the editor leaves this much to the game
 
 extern stringID_table_t WPTable[];
@@ -254,6 +258,7 @@ static qboolean WA_SpawnRefused( char *err, int errSize ) {
 		}
 		if ( !item->classname ) {
 			Com_sprintf( err, errSize, "a misc_weapon_shooter can not fire %s: its weapon has to be one that lies around as an item, like WP_BLASTER or WP_ROCKET_LAUNCHER", value );
+			refusedKey = "weapon";
 			return qtrue;
 		}
 	}
@@ -267,11 +272,13 @@ static qboolean WA_SpawnRefused( char *err, int errSize ) {
 			if ( VALIDSTRING( value ) )
 				continue;
 			Com_sprintf( err, errSize, "a %s needs the key %s", classname, needs[i].key );
+			refusedKey = needs[i].key;
 			return qtrue;
 		}
 		// these two look for what they name while they spawn
 		if ( !Q_stricmpn( needs[i].key, "target", 6 ) && !G_Find( NULL, FOFS( targetname ), value ) ) {
 			Com_sprintf( err, errSize, "a %s needs an entity with the targetname %s, there is none", classname, value );
+			refusedKey = needs[i].key;
 			return qtrue;
 		}
 	}
@@ -291,6 +298,7 @@ static qboolean WA_SpawnRefused( char *err, int errSize ) {
 			if ( !lo || !hi || sscanf( lo, "%f %f %f", &mins[0], &mins[1], &mins[2] ) != 3 || sscanf( hi, "%f %f %f", &maxs[0], &maxs[1], &maxs[2] ) != 3
 				|| maxs[0] <= mins[0] || maxs[1] <= mins[1] || maxs[2] <= mins[2] ) {
 				Com_sprintf( err, errSize, "the box of a %s needs mins and maxs with three numbers each, mins below maxs", classname );
+				refusedKey = "maxs";
 				return qtrue;
 			}
 			if ( maxs[0] - mins[0] > WA_TRIGGER_BOX || maxs[1] - mins[1] > WA_TRIGGER_BOX || maxs[2] - mins[2] > WA_TRIGGER_BOX ) {
@@ -301,9 +309,11 @@ static qboolean WA_SpawnRefused( char *err, int errSize ) {
 			Com_sprintf( err, errSize, boxed
 				? "a %s needs a shape: a model key like *1 for brushes of the map, or mins and maxs for a box of its own"
 				: "a %s is made of brushes of the map: it needs a model key like *1", classname );
+			refusedKey = "model";
 			return qtrue;
 		} else if ( count >= 0 && atoi( value + 1 ) >= count ) {
 			Com_sprintf( err, errSize, "the map has no brush model %s, the last one is *%d", value, count - 1 );
+			refusedKey = "model";
 			return qtrue;
 		}
 	}
@@ -534,6 +544,7 @@ static int WA_SpawnFromText( const char *text, char *err, int errSize ) {
 	const char	*p = text;
 	qboolean	hasClass = qfalse, wasSpawning;
 
+	refusedKey = NULL;
 	level.numSpawnVars = 0;
 	level.numSpawnVarChars = 0;
 
@@ -616,6 +627,12 @@ static void WA_EntityResult( waConnection_t *c, qboolean ok, const char *msg, in
 
 	WA_BufPrintf( &b, "{\"ok\":%s,\"id\":%d,\"message\":", ok ? "true" : "false", id );
 	WA_BufJsonString( &b, msg );
+	// what a refused spawn was refused for, once
+	if ( !ok && refusedKey ) {
+		WA_BufAppend( &b, ",\"key\":", 7 );
+		WA_BufJsonString( &b, refusedKey );
+	}
+	refusedKey = NULL;
 	WA_BufAppend( &b, "}", 1 );
 	WA_RespondJson( c, &b );
 	WA_BufFree( &b );

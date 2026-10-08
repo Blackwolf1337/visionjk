@@ -96,7 +96,7 @@ window.addEventListener('mouseup', e => {
 		else if (mode === 'world') {
 			// Ctrl and a click adds an entity to the selected ones or takes it out again
 			const hit = entityAt(x, y);
-			if ((e.ctrlKey || e.metaKey) && hit >= 0 && selectedEnt >= 0) {
+			if ((e.ctrlKey || e.metaKey) && hit >= 0 && selectedEnt >= 0 && hit !== DRAFT_ID && selectedEnt !== DRAFT_ID) {
 				if (hit !== selectedEnt) { if (picked.has(hit)) picked.delete(hit); else picked.add(hit); }
 				kvShown = '';
 				renderEntPanel();

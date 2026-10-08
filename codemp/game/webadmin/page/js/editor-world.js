@@ -4,6 +4,8 @@
 
 let mode = 'players', placing = false, selectedEnt = -1, ghost = null, kvDirty = false, kvShown = '';
 let boxGhost = null;		// { id, mins, maxs }: the box of a trigger while one of its faces is dragged
+const DRAFT_ID = 99999;	// the number the draft has among the entities, which the server never gives one
+let draft = null;		// an entity that is not placed yet (openDraft in editor-entities.js)
 const ents = new Map();
 
 const ENT_COLORS = [

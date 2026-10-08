@@ -21,6 +21,8 @@ button { background: var(--panel2); border: 1px solid var(--line); border-radius
 button:hover { border-color: #44444d; background: #24242a; }
 button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
 button.primary:hover { background: var(--accent2); }
+button:disabled { opacity: 0.4; cursor: default; }
+button:disabled:hover { border-color: var(--line); background: var(--panel2); }
 button.danger { color: #ff8b8b; }
 button.danger.armed { background: var(--accent); color: #fff; border-color: var(--accent); }
 input, select { background: #0f0f12; border: 1px solid var(--line); border-radius: 3px; padding: 3px 6px; }

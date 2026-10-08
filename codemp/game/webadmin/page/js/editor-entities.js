@@ -16,6 +16,9 @@ async function pollEntities() {
 		const json = await (await fetch('api/entities', { cache: 'no-store' })).json();
 		ents.clear();
 		for (const e of json.entities) ents.set(e.id, e);
+		// the draft is of the map it was begun on
+		if (draft && state && state.map !== draft.map) draft = null;
+		if (draft) ents.set(DRAFT_ID, draft);
 		takeFired(json.used);
 		renderBudget(json.budget);
 		renderLayout(json.layout);
@@ -33,7 +36,7 @@ function renderEntityList() {
 	$('entCount').textContent = list.length + (list.length !== ents.size ? ' / ' + ents.size : '');
 	$('entities').innerHTML = list.slice(0, 600).map(e =>
 		'<tr class="player ent' + (e.id === selectedEnt ? ' sel' : '') + (e.keys ? '' : ' ro') + '" data-id="' + e.id + '">' +
-		'<td class="num">' + e.id + '</td><td>' + escapeHtml(e.classname) + '</td><td class="tn">' + escapeHtml(entKey(e, 'targetname')) + '</td></tr>').join('');
+		'<td class="num">' + (e.draft ? 'new' : e.id) + '</td><td>' + escapeHtml(e.classname) + '</td><td class="tn">' + escapeHtml(entKey(e, 'targetname')) + '</td></tr>').join('');
 }
 $('entFilter').addEventListener('input', renderEntityList);
 $('entities').addEventListener('click', e => {
@@ -72,7 +75,7 @@ function renderEntPanel() {
 	$('entPanel').classList.toggle('open', !!ent);
 	if (!ent) return;
 	$('entTitle').textContent = ent.classname;
-	$('entSub').textContent = '#' + ent.id + (ent.bmodel ? ' · brush model' : '') + (ent.linked ? '' : ' · not linked') + (picked.size ? ' · and ' + picked.size + ' more' : '');
+	$('entSub').textContent = ent.draft ? 'new · not placed yet' : '#' + ent.id + (ent.bmodel ? ' · brush model' : '') + (ent.linked ? '' : ' · not linked') + (picked.size ? ' · and ' + picked.size + ' more' : '');
 	const editable = !!ent.keys;
 	const shown = ent.id + '|' + JSON.stringify(ent.keys || null);
 	if (shown !== kvShown) {
@@ -81,6 +84,11 @@ function renderEntPanel() {
 		renderEntTools(ent);
 	}
 	for (const id of ['kvAdd', 'entApply', 'entRotL', 'entRotR', 'entDup', 'entFloor', 'entTemplate']) $(id).disabled = !editable;
+	// a draft is sent with Place and thrown away with Discard, and there is nothing of it yet to fire or to copy
+	$('entApply').textContent = ent.draft ? 'Place' : 'Apply';
+	if (!$('entDel').classList.contains('armed')) $('entDel').textContent = ent.draft ? 'Discard' : 'Delete';
+	$('entFire').disabled = !!ent.draft;
+	if (ent.draft) $('entDup').disabled = true;
 	$('entHint').style.display = editable ? '' : 'none';
 }
 
@@ -139,14 +147,16 @@ const fmtVec = v => v.map(n => Math.round(n)).join(' ');
 // (not the steps of undo and redo themselves). Gives the answer of the server, null if it was refused.
 // quiet: one of several changes that are made together. It says nothing, leaves the list and the selection as
 // they are, and why it was refused is in entRefused for whoever makes them.
-let entRefused = '';
+let entRefused = '', entRefusedKey = '';
 async function entityOp(params, okMessage, record = true, quiet = false) {
+	// the draft is not on the server: what is done to it is done here
+	if (draft && params.id !== undefined && +params.id === DRAFT_ID) return draftOp(params);
 	const ent = params.id !== undefined ? ents.get(+params.id) : null;
 	const before = ent && ent.keys ? keysText(ent.keys) : null;
 	try {
 		const json = await (await fetch('api/entity', { method: 'POST', body: new URLSearchParams(params) })).json();
 		if (!quiet) toast(json.ok ? okMessage || json.message : json.message, json.ok);
-		if (!json.ok) entRefused = json.message;
+		if (!json.ok) { entRefused = json.message; entRefusedKey = json.key || ''; }
 		if (json.ok) {
 			if (record) histPush(histStepFor(params, ent, before, json.id));
 			if (!quiet) {
@@ -158,12 +168,13 @@ async function entityOp(params, okMessage, record = true, quiet = false) {
 		return json.ok ? json : null;
 	} catch (e) {
 		entRefused = e.message;
+		entRefusedKey = '';
 		if (!quiet) toast('Request failed: ' + e.message, false);
 		return null;
 	}
 }
 
-$('entApply').addEventListener('click', () => entityOp({ op: 'update', id: selectedEnt, kv: keysText(panelKeys()) }, 'Applied'));
+$('entApply').addEventListener('click', () => { if (selectedEnt === DRAFT_ID) placeDraft(); else entityOp({ op: 'update', id: selectedEnt, kv: keysText(panelKeys()) }, 'Applied'); });
 $('entDup').addEventListener('click', () => {
 	const ent = ents.get(selectedEnt);
 	if (ent.bmodel) { toast('Brush models can not be duplicated, they use the map geometry', false); return; }
@@ -207,6 +218,8 @@ for (const [id, delta] of [['entRotL', 15], ['entRotR', -15]]) {
 	});
 }
 $('entDel').addEventListener('click', () => {
+	// nothing is lost with a draft but what was typed
+	if (selectedEnt === DRAFT_ID) { entityOp({ op: 'delete', id: DRAFT_ID }); return; }
 	if (!confirmed($('entDel'))) return;
 	if (picked.size) groupRun('Deleted', ent => ({ op: 'delete', id: ent.id }));
 	else entityOp({ op: 'delete', id: selectedEnt }, 'Deleted');
@@ -280,7 +293,74 @@ async function placeAimed(cls, keys, at) {
 	await groupDone('Placed ' + cls + (steps.length === 2 ? ' and what it is aimed at:' : ', refused:'), steps, false, ids, steps.length, 2 - steps.length);
 }
 
-function placeEntity(hit) {
+// ---- An entity that is not placed yet. The server refuses a class that lacks a key it can not be without (an
+// effect without its file, a class of brushes without its model), and Place gives a class only its name and
+// where it is. So what was refused for a key is opened as a draft: it is in the list and on the map like an
+// entity, its keys are edited and it is moved like one, and Place in its panel sends it. The server knows
+// nothing of it until then.
+
+function openDraft(cls, keys, at, key) {
+	draft = { id: DRAFT_ID, classname: cls, type: 0, bmodel: false, linked: false, placed: true, draft: true, map: state ? state.map : '', pos: at.slice(), keys: keys.map(k => k.slice()) };
+	const lower = key.toLowerCase();
+	if (!draft.keys.some(k => k[0].toLowerCase() === lower)) draft.keys.push([key, '']);
+	ents.set(DRAFT_ID, draft);
+	refreshLinks();
+	picked.clear();
+	selectEnt(DRAFT_ID);
+	toast('Not placed yet: give it its ' + key + ', then Place');
+	// the cursor into the field of what is missing
+	const row = [...$('kvRows').querySelectorAll('tr')].find(tr => tr.querySelector('input') && tr.querySelector('input').value.toLowerCase() === lower);
+	if (row) row.querySelectorAll('input')[1].focus();
+}
+function closeDraft() {
+	draft = null;
+	ents.delete(DRAFT_ID);
+	if (selectedEnt === DRAFT_ID) selectEnt(-1);
+	refreshLinks();
+	renderEntityList();
+}
+// What the editor does to an entity, done to the draft: a delete throws it away, new keys are its keys. They are
+// laid over what the table of the panel holds, so that a move does not undo what was typed there.
+function draftOp(params) {
+	if (params.op === 'delete') { closeDraft(); toast('Discarded'); return { ok: true, id: -1 }; }
+	if (params.op !== 'update') { toast('It is not placed yet', false); return null; }
+	const now = String(params.kv).split('\n').map(l => { const i = l.indexOf('='); return i < 0 ? ['', ''] : [l.slice(0, i), l.slice(i + 1)]; }).filter(k => k[0]);
+	const same = (a, b) => a.toLowerCase() === b.toLowerCase(), was = draft.keys;
+	let base = selectedEnt === DRAFT_ID && kvDirty ? panelKeys() : was.map(k => k.slice());
+	for (const [k, v] of now) {
+		const old = was.find(x => same(x[0], k)), has = base.find(x => same(x[0], k));
+		if (old && old[1] === v) continue;
+		if (has) has[1] = v; else base.push([k, v]);
+	}
+	base = base.filter(k => now.some(n => same(n[0], k[0])) || !was.some(x => same(x[0], k[0])));
+	draft.keys = base;
+	draft.classname = (base.find(k => same(k[0], 'classname')) || [])[1] || draft.classname;
+	const at = ((base.find(k => same(k[0], 'origin')) || [])[1] || '').trim().split(/\s+/).map(Number);
+	if (at.length === 3 && at.every(isFinite)) draft.pos = at;
+	kvDirty = false;
+	kvShown = '';
+	refreshLinks();
+	renderEntPanel();
+	renderEntityList();
+	return { ok: true, id: DRAFT_ID };
+}
+async function placeDraft() {
+	const d = draft, keys = panelKeys();
+	const json = await entityOp({ op: 'spawn', kv: keysText(keys) }, 'Placed ' + ((keys.find(k => k[0].toLowerCase() === 'classname') || [])[1] || d.classname));
+	if (json) {
+		// it is an entity of the server now, and that one is selected
+		if (draft === d) { draft = null; ents.delete(DRAFT_ID); renderEntityList(); }
+		return;
+	}
+	// refused again: it stays as it was typed, with what is missing now
+	d.keys = keys;
+	if (entRefusedKey && !keys.some(k => k[0].toLowerCase() === entRefusedKey.toLowerCase())) d.keys.push([entRefusedKey, '']);
+	kvDirty = false;
+	kvShown = '';
+	renderEntPanel();
+}
+
+async function placeEntity(hit) {
 	const name = $('newClass').value.trim();
 	// a template: its keys, at the height its class is placed at
 	if (name[0] === '@') {
@@ -296,6 +376,7 @@ function placeEntity(hit) {
 	const at = [hit[0], hit[1], hit[2] + placeHeight(cls)];
 	const keys = [['classname', cls], ['origin', fmtVec(at)]].concat(PLACE_KEYS[cls] || (BOX_TRIGGER.test(cls) ? TRIGGER_BOX : []));
 	if (cls.toLowerCase() in PLACE_AIM) { placeAimed(cls.toLowerCase(), keys, at); return; }
-	entityOp({ op: 'spawn', kv: keysText(keys) }, 'Placed ' + cls);
+	// refused for a key that it needs: it is opened to be given that key
+	if (!await entityOp({ op: 'spawn', kv: keysText(keys) }, 'Placed ' + cls) && entRefusedKey) openDraft(cls, keys, at, entRefusedKey);
 }
 

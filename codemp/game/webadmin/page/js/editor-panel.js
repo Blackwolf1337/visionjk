@@ -150,6 +150,17 @@ async function pickPath(input, key) {
 	if (document.activeElement === input) pickOptions('pickPath', names);
 }
 
+// every brush model of the map by its number, each with the entities that have it now
+function pickBrushes() {
+	const used = new Map();
+	for (const e of ents.values()) {
+		const m = /^\*(\d+)$/.exec(entKey(e, 'model'));
+		if (m && !e.draft) used.set(+m[1], (used.get(+m[1]) || []).concat(e.classname + ' #' + e.id));
+	}
+	const count = world ? world.models.length - 1 : 0;
+	$('pickBrush').innerHTML = Array.from({ length: Math.max(0, count) }, (_, i) => '<option value="*' + (i + 1) + '" label="' + escapeHtml((used.get(i + 1) || ['no entity has it now']).join(', ')) + '">').join('');
+}
+
 // the value field of a row of the key table that the event is for, and the key of that row
 function kvValueField(e) {
 	const row = e.target.closest('tr'), inputs = row ? row.querySelectorAll('input') : [];
@@ -159,6 +170,8 @@ function kvValueField(e) {
 $('kvRows').addEventListener('focusin', e => {
 	const key = kvValueField(e);
 	if (key === null) return;
+	// the model of a class that is made of brushes is one of the brush models of the map
+	if (key === 'model' && /^(func_|trigger_)/i.test(panelClass())) { e.target.setAttribute('list', 'pickBrush'); pickBrushes(); return; }
 	if (key in PATH_KEYS) { e.target.setAttribute('list', 'pickPath'); pickPath(e.target, key); return; }
 	const id = pickFor(key);
 	if (id) { e.target.setAttribute('list', id); pickFill(id); } else e.target.removeAttribute('list');

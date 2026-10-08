@@ -8,7 +8,7 @@ const picked = new Set();	// the ones that are selected besides selectedEnt
 function bandSelect(b, more) {
 	const x0 = Math.min(b.x, b.x2), x1 = Math.max(b.x, b.x2), y0 = Math.min(b.y, b.y2), y1 = Math.max(b.y, b.y2), inside = [];
 	for (const ent of ents.values()) {
-		if (!entVisible(ent)) continue;
+		if (!entVisible(ent) || ent.draft) continue;
 		const sp = project(ent.pos);
 		if (sp && sp[0] >= x0 && sp[0] <= x1 && sp[1] >= y0 && sp[1] <= y1) inside.push([Math.hypot(sp[0] - b.x, sp[1] - b.y), ent.id]);
 	}
