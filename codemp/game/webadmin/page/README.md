@@ -37,6 +37,8 @@ order of the template, so a file may only use there what a file before it has ma
 | `js/editor-move.js` | the grid, moving, copy and paste |
 | `js/editor-panel.js` | the panel of an entity and the values to pick from |
 | `js/editor-complete.js` | the keys that are offered while one is typed |
+| `js/editor-drafts.js` | the drafts: entities that are only in the page until they are placed |
+| `js/editor-labels.js` | the names of the entities above their markers |
 | `js/routes.js` | the route of the bots |
 | `js/mapreport.js` | the report of the map, what a surface is made of, entities to look at |
 | `js/log.js` | the log of the game |
@@ -48,5 +50,9 @@ order of the template, so a file may only use there what a file before it has ma
 | `js/g2.js` | Ghoul2 models with their animations |
 | `js/picker.js` | the class picker with its preview |
 | `js/weapons.js` | weapons, sabers, shots, the view through the eyes of a player |
+| `js/fx-parse.js` | the effect files of the game (.efx) read into what the page plays |
+| `js/fx-run.js` | the effects that are playing: what the feed tells of them, how their parts move |
+| `js/fx-draw.js` | the effects drawn |
+| `js/fx-weapons.js` | which effect a weapon has for its muzzle, its shot and what it hits |
 | `js/hud.js` | the HUD of that view |
 | `js/boot.js` | what starts the page |

@@ -145,6 +145,8 @@ function drawEditorMarks(now, editor) {
 			if (!entVisible(ent)) continue;
 			const c = classColor(ent.classname), sel = ent.id === selectedEnt || picked.has(ent.id);
 			const pos = ghost && ghost.id === ent.id ? ghost.pos : ent.pos;
+			// what is not on the server yet has a marker of its own
+			if (ent.draft) { drawDraftMark(pos, c, sel, now); continue; }
 			drawMesh(cubeMesh, pos[0], pos[1], pos[2], 0, sel ? 1.6 : 1, sel ? [1, 0.2, 0.3, 1] : [c[0], c[1], c[2], 1]);
 		}
 		if (selectedEnt >= 0 && ents.has(selectedEnt)) {
@@ -300,6 +302,8 @@ function frame(now) {
 
 	if (state && ((state.shots && state.shots.length) || flashes.length)) drawShots(k);
 	if (scripted) drawWorldScripted(now, true);
+	// the effects of the game, over what is see-through of the map and under the glow of blades and bolts
+	drawEffects(now);
 	drawBlades();
 	if (view.id >= 0 && players.has(view.id)) {
 		const d = players.get(view.id).data;
@@ -308,6 +312,7 @@ function frame(now) {
 	}
 
 	placeLabels();
+	placeEntLabels();
 
 	savePicture();
 

@@ -46,7 +46,7 @@ async function pollState() {
 		// The list of the items is not sent again as long as it is the one that is here, and neither is what stays
 		// the same of a player: the server is told the number of what the page has of each.
 		const has = [...playerSlow].map(([id, slow]) => id + '.' + slow.rev).join('-');
-		const res = await fetch('api/state?items=' + itemsRev + (has ? '&p=' + has : ''), { cache: 'no-store' });
+		const res = await fetch('api/state?items=' + itemsRev + fxQuery() + (has ? '&p=' + has : ''), { cache: 'no-store' });
 		if (!res.ok) throw new Error('HTTP ' + res.status);
 		const s = await res.json();
 		$('status').className = 'live';
@@ -109,11 +109,15 @@ function applyState(s) {
 	const before = new Map(((state && state.models) || []).map(m => [m.id, m.pos]));
 	for (const m of s.models || []) m.prev = before.get(m.id) || m.pos;
 	applyMovers(s.movers);
+	// the effects: the ones that loop and the ones that were played once (state is still the poll before)
+	fxTakeState(s);
 	// the same for what is in the air. A new shot comes from where it was a poll ago, by its speed.
 	const flew = new Map(((state && state.shots) || []).map(m => [m[0], m]));
 	for (const m of s.shots || []) {
 		const was = flew.get(m[0]), back = pollInterval / 1000;
 		m.prev = was ? [was[3], was[4], was[5]] : [m[3] - m[6] * back, m[4] - m[7] * back, m[5] - m[8] * back];
+		// it was fired since the last poll: where its muzzle effect belongs
+		m.fresh = !was && !!state;
 		flew.delete(m[0]);
 	}
 	// What was in the air and is not any more has hit something, about half a poll further on. Not when the map
@@ -121,7 +125,7 @@ function applyState(s) {
 	if (state && s.map === state.map) {
 		for (const was of flew.values()) {
 			const on = pollInterval / 2000;
-			if (flashes.length < 64) flashes.push({ pos: [was[3] + was[6] * on, was[4] + was[7] * on, was[5] + was[8] * on], weapon: was[1], alt: was[2], t: performance.now() });
+			if (flashes.length < 64) flashes.push({ pos: [was[3] + was[6] * on, was[4] + was[7] * on, was[5] + was[8] * on], weapon: was[1], alt: was[2], vel: [was[6], was[7], was[8]], t: performance.now() });
 		}
 	}
 	state = s;

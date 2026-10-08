@@ -138,6 +138,8 @@
 				<label class="hint" style="margin:0 0 0 auto" title="Placing, moving and the Shift+arrow keys go in steps of this many units">Grid <select id="grid"><option>1</option><option>2</option><option>4</option><option selected>8</option><option>16</option><option>32</option><option>64</option></select></label></div>
 			<div class="inline" id="layoutRow"><span class="hint" id="layoutState" style="margin:0"></span>
 				<button id="layoutSave" style="margin-left:auto" title="Keeps the map as it stands for every start of it: what was placed, and what of the map was changed or deleted. Without this a change of the map or a restart of the server loses it.">Save layout</button><button id="layoutForget" title="The next start of the map is the map as its file has it. What stands on the map now stays until then.">Forget</button></div>
+			<div class="inline" id="draftRow" hidden><span class="hint" id="draftCount" style="margin:0"></span>
+				<button id="draftPlaceAll" class="primary" style="margin-left:auto" title="Sends every draft to the server, what is aimed at before what aims at it. All of them are one step of undo.">Place all</button><button id="draftDiscardAll" title="Throws every draft away. Nothing of them is on the server.">Discard all</button></div>
 			<div class="hint" id="entBudget" title="What is in use of what the engine has a limit for. The server refuses to place an entity that would go over one."></div>
 		</div>
 		<h2><span>Entities</span><span id="entCount">0</span></h2>
@@ -158,6 +160,7 @@
 <div id="view">
 	<canvas id="gl"></canvas>
 	<div id="labels"></div>
+	<div id="entLabels"></div>
 	<div id="viewTop">
 	<div id="dbg">
 		<label title="A marker at every entity of the map, and an arrow where its keys say which way it looks (a start point, a shooter) or moves (a door)"><input type="checkbox" id="dbgMarkers" checked>Entities</label>
@@ -166,6 +169,8 @@
 		<label title="The brushes that stop players, bots or shots and are not seen in the game"><input type="checkbox" id="dbgClip">Clip</label>
 		<label title="The triangles of the map as lines"><input type="checkbox" id="dbgWire">Wireframe</label>
 		<label title="Only the side of a surface the game draws. From outside a room is open then: its walls and its ceiling face inwards."><input type="checkbox" id="dbgCull">Open</label>
+		<label title="The name of its class above an entity, with its targetname. Of the ones near the camera, the selected ones and every draft."><input type="checkbox" id="dbgNames" checked>Names</label>
+		<label title="The effects of the game: what an fx_runner plays, what the server plays once, and what the weapons leave. The administration always has them."><input type="checkbox" id="dbgFx" checked>Effects</label>
 		<select id="dbgLight" title="What the surfaces of the map show"><option value="0">Texture and light</option><option value="1">Light only</option><option value="2">Texture only</option></select>
 	</div>
 	<div id="help">
@@ -300,6 +305,8 @@
 <!--#include js/editor-move.js -->
 <!--#include js/editor-panel.js -->
 <!--#include js/editor-complete.js -->
+<!--#include js/editor-drafts.js -->
+<!--#include js/editor-labels.js -->
 <!--#include js/routes.js -->
 <!--#include js/mapreport.js -->
 <!--#include js/log.js -->
@@ -311,6 +318,10 @@
 <!--#include js/g2.js -->
 <!--#include js/picker.js -->
 <!--#include js/weapons.js -->
+<!--#include js/fx-parse.js -->
+<!--#include js/fx-run.js -->
+<!--#include js/fx-draw.js -->
+<!--#include js/fx-weapons.js -->
 <!--#include js/hud.js -->
 <!--#include js/boot.js -->
 </script>
