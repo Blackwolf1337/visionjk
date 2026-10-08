@@ -811,21 +811,22 @@ when flying. The wheel zooms and sets the flying speed. A right-click teleports,
 adds a waypoint. Undo, the Z field, Remove and Save of a route. Copy, paste, the stored views and the keys of
 the fly camera went through the keyboard. What that is not: a person at a real browser on a real GPU.
 
-Fire, the rectangle and teams of doors (`steps_fire.js`, 10 checks, the same day): on mp/ffa3 Fire sent a lift
+Fire, the rectangle and teams of doors (`steps_fire.js`, 11 checks, the same day): on mp/ffa3 Fire sent a lift
 its 280 units, an info_player_deathmatch answered that it does nothing when fired, and a fired
 trigger_multiple sent the four lifts it has as targets. A drag with Shift around three placed entities
 selected the three. On mp/ctf2, with its team of four doors: fired at the second part all four moved, after
 an edit of the third part all four still moved, and with the first part deleted the other three moved
-together when the last was fired. Not tried: a team whose first part is deleted while it moves, firing
-every class of the game (the use functions were read, not run), a `func_breakable`.
+together when the last was fired. On mp/duel6 a fired `func_breakable` broke: its entity was gone and its
+brush model was not drawn any more (30 drawn before, 29 after). Not tried: a team whose first part is
+deleted while it moves, and firing every class of the game (the use functions were read, not run).
 
 Doors and lifts (`steps_movers.js`, 10 checks, the same day, mp/ffa3): the server named 6 of the 8 brush
 models as drawn, the two triggers not, and each where the entity list of the editor has it. A lift with a
 targetname of its own was fired by a `trigger_always` placed through the panel: it was drawn up to 280 units
 from where it rests, at seven or eight places on the way, the picture changed, it came back and the picture
 was the one from before to the pixel. Deleted in the editor its brush model was not drawn and a ray at it
-went through, undo brought both back. Not tried: a door that turns, one that a player opens, a map with a
-`func_breakable` or a `func_usable`.
+went through, undo brought both back. Not tried: a door that turns, one that a player opens, a
+`func_usable` that is switched off.
 
 The sides, the deforms and the order of see-through model surfaces (`steps_cull.js`, `steps_deform.js`, the
 same day, on mp/ffa3, mp/ctf4 and mp/duel7): inside the map, at 8 spawn points looking four ways, the picture
