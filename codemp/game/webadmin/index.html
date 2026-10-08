@@ -112,7 +112,9 @@ body.sideClosed #view { left: 0; }
 #command .close { margin-left: auto; }
 
 [hidden] { display: none !important; }
-#cfgView, #fsView { position: fixed; top: var(--top); left: var(--side); right: 0; bottom: 0; z-index: 14; display: none; background: var(--panel); transition: left .15s; }
+#logText { position: absolute; inset: 0; margin: 0; padding: 10px 12px; overflow: auto; font: 12px/1.45 ui-monospace, Menlo, Consolas, monospace; white-space: pre-wrap; word-break: break-word; color: var(--text); }
+body.logOpen #logView { display: block; }
+#cfgView, #fsView, #logView { position: fixed; top: var(--top); left: var(--side); right: 0; bottom: 0; z-index: 14; display: none; background: var(--panel); transition: left .15s; }
 body.sideClosed #cfgView, body.sideClosed #fsView { left: 0; }
 body.cfgOpen #cfgView, body.fsOpen #fsView { display: block; }
 /* the colored text lies under a text field whose own letters are not drawn: both must set every letter alike */
@@ -259,7 +261,7 @@ body.app-admin #dbg, body.app-admin .editorOnly, body.app-admin #tabs button[dat
 </div>
 
 <div id="side">
-	<div id="tabs"><button data-tab="players" data-app="admin" class="on">Players</button><button data-tab="world" data-app="editor">World</button><button data-tab="models" data-app="editor">Models</button><button data-tab="routes" data-app="editor">Routes</button><button data-tab="mapinfo" data-app="editor">Map</button><button data-tab="config" data-app="admin">Config</button><button data-tab="files" data-app="admin">Files</button></div>
+	<div id="tabs"><button data-tab="players" data-app="admin" class="on">Players</button><button data-tab="world" data-app="editor">World</button><button data-tab="models" data-app="editor">Models</button><button data-tab="routes" data-app="editor">Routes</button><button data-tab="mapinfo" data-app="editor">Map</button><button data-tab="config" data-app="admin">Config</button><button data-tab="files" data-app="admin">Files</button><button data-tab="log" data-app="admin">Log</button></div>
 	<div class="pane on" id="pane-players">
 		<h2><span>Players</span><span id="playerCount">0</span></h2>
 		<div class="scroll">
@@ -313,6 +315,15 @@ body.app-admin #dbg, body.app-admin .editorOnly, body.app-admin #tabs button[dat
 		<div class="hint">The first save puts the file into the home path of the server (fs_homepath/&lt;game&gt;/server.cfg), which the engine reads before the one of the installation. The text before a save is kept as server.cfg.bak.</div>
 		<div class="hint">Executing sets the cvars of the file at once. Latched ones (most g_web*, sv_maxclients, the game type) take effect with the next map, and a line that changes the map does so.</div>
 		<div class="hint">The passwords in the file are shown as they are.</div>
+	</div>
+	<div class="pane" id="pane-log">
+		<h2><span>Server log</span><span id="logSize"></span></h2>
+		<div class="tools">
+			<div class="inline"><input id="logFilter" placeholder="Show only lines with" spellcheck="false" autocomplete="off"></div>
+			<div class="inline"><label class="hint" style="margin:0"><input type="checkbox" id="logFollow" checked style="width:auto"> follow the end</label><button id="logClear" style="margin-left:auto" title="Empties the view, the file stays as it is">Clear view</button></div>
+			<div class="hint" id="logState" style="margin:0"></div>
+		</div>
+		<div class="hint" style="padding:0 10px">The log of the game as the server writes it: who came and went, kills, chat, the commands of admins. The view starts with the last lines and follows the log as it grows. The whole file is games.log in the Files tab.</div>
 	</div>
 	<div class="pane" id="pane-files">
 		<h2><span>Files</span><span id="fsCount"></span></h2>
@@ -460,6 +471,7 @@ body.app-admin #dbg, body.app-admin .editorOnly, body.app-admin #tabs button[dat
 		<details id="entDoc"><summary>About this class</summary><pre id="entDocText"></pre></details>
 	</div>
 </div>
+<div id="logView"><pre id="logText"></pre></div>
 <div id="cfgView"><pre id="cfgHi" class="codeHi" aria-hidden="true"></pre><textarea id="cfgText" class="codeText" spellcheck="false" autocomplete="off" autocapitalize="off" wrap="off"></textarea></div>
 <div id="fsView">
 	<div id="fsList"><table><thead><tr><th>Name</th><th class="num">Size</th><th>Changed</th><th></th></tr></thead><tbody id="fsRows"></tbody></table></div>
@@ -2514,6 +2526,8 @@ function setMode(m) {
 	else { selectEnt(-1); setPlacing(false); }
 	document.body.classList.toggle('cfgOpen', m === 'config');
 	document.body.classList.toggle('fsOpen', m === 'files');
+	document.body.classList.toggle('logOpen', m === 'log');
+	if (m === 'log') { select(-1); logPoll(); }
 	if (m === 'config') { select(-1); if (!cfgLoaded) loadConfig(); }
 	if (m === 'files') { select(-1); if (!fsEdit) fsList(); }
 	if (m === 'models') { select(-1); if (!mdlAsked) mdlLoad(); mdlSetPlacing(!!mdlPath); }
@@ -3821,6 +3835,52 @@ $('mapReport').addEventListener('click', e => {
 	setMode('world');
 	renderEntityList();
 });
+
+// ---- the log of the game: /api/log gives the file from a place on, the view asks on from where the last answer ended
+
+const logView = { next: -1, lines: [], partial: '', first: true, busy: false };
+const LOG_KEEP = 4000;	// lines the view holds
+
+function logRender() {
+	const f = $('logFilter').value.trim().toLowerCase(), box = $('logText');
+	const atEnd = box.scrollHeight - box.scrollTop - box.clientHeight < 40;
+	box.textContent = (f ? logView.lines.filter(l => l.toLowerCase().includes(f)) : logView.lines).join('\n');
+	if ($('logFollow').checked && (atEnd || logView.first)) box.scrollTop = box.scrollHeight;
+}
+
+async function logPoll() {
+	if (mode !== 'log' || logView.busy) return;
+	logView.busy = true;
+	try {
+		const res = await fetch('api/log' + (logView.next >= 0 ? '?from=' + logView.next : ''), { cache: 'no-store' });
+		if (!res.ok) { $('logState').textContent = res.status === 404 ? 'This game module has no log view.' : 'HTTP ' + res.status; return; }
+		const json = await res.json();
+		// a new file, or the view was behind its end: what is shown is of the old one
+		if (logView.next >= 0 && json.from !== logView.next) { logView.lines = []; logView.partial = ''; logView.first = true; }
+		let text = logView.partial + json.text;
+		// a view that starts in the middle of the file starts in the middle of a line
+		if (logView.first && json.from > 0) text = text.slice(text.indexOf('\n') + 1);
+		const lines = text.split('\n');
+		logView.partial = lines.pop();
+		const before = logView.lines.length;
+		logView.lines.push(...lines.map(l => l.replace(/\r$/, '').replace(/\^[0-9]/g, '')));
+		if (logView.lines.length > LOG_KEEP) logView.lines.splice(0, logView.lines.length - LOG_KEEP);
+		logView.next = json.next;
+		$('logSize').textContent = logView.lines.length + ' lines';
+		$('logState').textContent = '';
+		if (lines.length || logView.first) logRender();
+		logView.first = false;
+		// more of it is there already
+		if (json.next < json.size && lines.length + before > before) setTimeout(logPoll, 50);
+	} catch (e) {
+		$('logState').textContent = 'Request failed: ' + e.message;
+	} finally {
+		logView.busy = false;
+	}
+}
+setInterval(logPoll, 2000);
+$('logFilter').addEventListener('input', logRender);
+$('logClear').addEventListener('click', () => { logView.lines = []; logRender(); });
 
 // ---- undo and redo
 

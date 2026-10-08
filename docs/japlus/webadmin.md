@@ -86,6 +86,7 @@ the answer tells the page that the numbers started over.
 | `GET /api/list?kind=` | names the fields of the page offer: `maps`, `effects` and `music` (the files of the game), `npcs` (the types of the `.npc` files), `bots`. `kind=dir&dir=&ext=`: the folders and files of one folder below `sound`, `models`, `music`, `effects` or `maps`, with the endings of `ext` (`.wav,.mp3`) |
 | `GET /api/waypoints` | the route of the bots: every waypoint with its place, its flags and the numbers of the ones it leads to. `editing`: it was changed and not saved, the bots stand still |
 | `POST /api/waypoint` | `op` add (`x`, `y`, `z`, `flags`, `after`: the waypoint it comes behind, none for the end), remove (`index`) or save |
+| `GET /api/log?from=` | the log of the game from a place on, `next` is where to ask from the next time. Without `from`, or with a place the panel does not have: its last part |
 | `GET /api/classdoc` | the entity definitions of the game code: every `QUAKED` comment of its source files as text |
 | `GET /api/export` | the entities in `.ent` format |
 | `GET /api/chat?since=&epoch=` | chat lines after number `since`. Everything if `epoch` is not the current one |
@@ -199,6 +200,12 @@ Also changed:
   triangles, vertices, shaders, lightmaps, brushes, brush models, the shader of its sky). What is missing: a
   shader a surface names that is neither a script nor an image, and every image a stage of a shader names that
   the server does not have. The entities by class with their number, a click shows a class in the World tab.
+- New: the tab Log of the administration, the log of the game as it grows (who came and went, kills, chat, the
+  commands of admins), with a filter for lines. The engine writes the file of the log in blocks unless
+  `g_logSync` is set, so the end of the file is behind: the game hands every line to the panel where it writes
+  it (`WebAdmin_Log`, one line in `G_LogPrintf`), which keeps the last 64 KB. The module is loaded anew with
+  every map, so the view of a new map starts with the end of the file as the map before left it. The whole
+  file is `games.log` in the Files tab.
 - New: the server refuses to place what would end it (`WA_SpawnRefused`): a class made of brushes (`trigger_`,
   `func_`) without a `model` key that names a brush model of the map, the classes whose spawn function raises
   an error without a key (`target_speaker`, `target_play_music`, `target_level_change`,

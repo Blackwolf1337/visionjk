@@ -1271,6 +1271,7 @@ void WebAdmin_Shutdown( void );
 void WebAdmin_EntitySpawned( int entityNum );
 void WebAdmin_EntityFreed( int entityNum );
 void WebAdmin_Chat( const char *mode, const gentity_t *from, const gentity_t *to, const char *text );
+void WebAdmin_Log( const char *line );
 float WebAdmin_ClientGravity( const gentity_t *ent, float gravity );
 
 // g_utils.c

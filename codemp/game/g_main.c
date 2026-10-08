@@ -1559,6 +1559,9 @@ void QDECL G_LogPrintf( const char *fmt, ... ) {
 	if ( dedicated.integer )
 		trap->Print( "%s", string + l );
 
+	// not in OpenJK: the web admin panel follows the log, the file is written in blocks and is behind
+	WebAdmin_Log( string );
+
 	if ( !level.logFile )
 		return;
 

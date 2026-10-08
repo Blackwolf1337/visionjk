@@ -2125,6 +2125,106 @@ static void WA_ApiFsList( waConnection_t *c, const char *query ) {
 }
 
 // GET /api/fs/get?root=&path=<file>[&text=1]: the file as it is for a download, or as UTF-8 text for the editor
+/*
+=================
+WebAdmin_Log, WA_ApiLog
+
+Not in JKAdmin. The log of the game for the view of the page that follows it. The engine writes the file of the
+log in blocks unless g_logSync is set, so its end is not on the disk yet when it is asked for: the panel keeps
+the lines itself, as the game hands them over where it writes them (G_LogPrintf). The module is loaded anew
+with every map, so the view of a new map starts with the end of the file, which the map before left complete.
+
+GET /api/log?from=: the log from a place on. Without from, or with a place the panel does not have (any more):
+its last part. next is where to ask from the next time.
+=================
+*/
+#define WA_LOG_RING		65536		// bytes of the log the panel keeps
+#define WA_LOG_CHUNK	32768		//	and gives in one answer
+#define WA_LOG_TAIL		8192		// what a view starts with, and what is taken from the file when a map starts
+
+static char		logRing[WA_LOG_RING];
+static int		logLen;			// bytes in it
+static double	logTotal;		// bytes that ever went into it: the place of what comes next
+static qboolean	logPreloaded;
+
+static void WA_LogAppend( const char *text, int len ) {
+	if ( len <= 0 || len >= WA_LOG_RING / 2 )
+		return;
+	if ( logLen + len > WA_LOG_RING ) {
+		// full: the older half goes
+		memmove( logRing, logRing + logLen - WA_LOG_RING / 2, WA_LOG_RING / 2 );
+		logLen = WA_LOG_RING / 2;
+	}
+	memcpy( logRing + logLen, text, len );
+	logLen += len;
+	logTotal += len;
+}
+
+// the end of the file of the log as the maps before left it, from the first whole line on
+static void WA_LogPreload( void ) {
+	static char	tail[WA_LOG_TAIL + 1];
+	char		path[MAX_OSPATH], *line;
+	qboolean	exists, isDir;
+	double		size = 0;
+	int			len = 0;
+	FILE		*f;
+
+	if ( logPreloaded )
+		return;
+	logPreloaded = qtrue;
+	if ( !g_log.string[0] || !WA_FsResolve( qfalse, g_log.string, qfalse, path, sizeof( path ), &exists )
+		|| !WA_FsStat( path, &isDir, &size, NULL ) || isDir )
+		return;
+	f = fopen( path, "rb" );
+	if ( !f )
+		return;
+	if ( !fseek( f, size > WA_LOG_TAIL ? (long)size - WA_LOG_TAIL : 0, SEEK_SET ) )
+		len = (int)fread( tail, 1, WA_LOG_TAIL, f );
+	fclose( f );
+	tail[len] = '\0';
+	line = ( size > WA_LOG_TAIL ) ? strchr( tail, '\n' ) : tail;
+	if ( line && line != tail )
+		line++;
+	if ( line )
+		WA_LogAppend( line, (int)strlen( line ) );
+}
+
+void WebAdmin_Log( const char *line ) {
+	// the panel is only there with a password, and the first lines of a map come before it listens
+	if ( !g_webPassword.string[0] )
+		return;
+	WA_LogPreload();
+	WA_LogAppend( line, (int)strlen( line ) );
+}
+
+static void WA_ApiLog( waConnection_t *c, const char *query ) {
+	static char	data[WA_LOG_CHUNK + 1];
+	char		value[32];
+	double		start, from = -1;
+	int			offset, len;
+	waBuffer_t	b = { 0 };
+
+	WA_LogPreload();
+	start = logTotal - logLen;
+	if ( WA_FormValue( query, "from", value, sizeof( value ) ) && value[0] )
+		from = atof( value );
+	if ( from < start || from > logTotal )
+		from = ( logLen > WA_LOG_TAIL ) ? logTotal - WA_LOG_TAIL : start;
+
+	offset = (int)( from - start );
+	len = logLen - offset;
+	if ( len > WA_LOG_CHUNK )
+		len = WA_LOG_CHUNK;
+	memcpy( data, logRing + offset, len );
+	data[len] = '\0';
+
+	WA_BufPrintf( &b, "{\"from\":%.0f,\"next\":%.0f,\"size\":%.0f,\"text\":", from, from + len, logTotal );
+	WA_BufJsonString( &b, data );
+	WA_BufAppend( &b, "}", 1 );
+	WA_RespondJson( c, &b );
+	WA_BufFree( &b );
+}
+
 static void WA_ApiFsGet( waConnection_t *c, const char *query ) {
 	char		rel[WA_FS_MAX_PATH + 1], path[MAX_OSPATH], flag[4], header[WA_FS_MAX_PATH + 128];
 	qboolean	install, exists, isDir;
@@ -3015,6 +3115,8 @@ static void WA_HandleRequest( waConnection_t *c, char *head, char *body, int bod
 		WA_ApiWaypoint( c, body );
 	} else if ( !strcmp( method, "GET" ) && !strcmp( path, "/api/fs/list" ) ) {
 		WA_ApiFsList( c, query );
+	} else if ( !strcmp( method, "GET" ) && !strcmp( path, "/api/log" ) ) {
+		WA_ApiLog( c, query );
 	} else if ( !strcmp( method, "GET" ) && !strcmp( path, "/api/fs/get" ) ) {
 		WA_ApiFsGet( c, query );
 	} else if ( !strcmp( method, "POST" ) && !strcmp( path, "/api/fs/put" ) ) {
