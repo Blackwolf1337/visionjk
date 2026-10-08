@@ -1331,6 +1331,9 @@ gentity_t *G_PlayEffect(int fxID, vec3_t org, vec3_t ang)
 	VectorCopy(org, te->s.origin);
 	te->s.eventParm = fxID;
 
+	// not in the game as it was: the web admin panel draws the effects too, and only a client is sent this event
+	WebAdmin_Effect( 0, fxID, org, te->s.angles );
+
 	return te;
 }
 
@@ -1354,6 +1357,9 @@ gentity_t *G_PlayEffectID(const int fxID, vec3_t org, vec3_t ang)
 	{ //play off this dir by default then.
 		te->s.angles[1] = 1;
 	}
+
+	// not in the game as it was: the web admin panel draws the effects too, and only a client is sent this event
+	WebAdmin_Effect( 1, fxID, org, te->s.angles );
 
 	return te;
 }

@@ -1271,6 +1271,7 @@ void WebAdmin_Init( void );
 void WebAdmin_Frame( void );
 void WebAdmin_FrameEnd( void );
 void WebAdmin_Used( const gentity_t *by, const gentity_t *ent );
+void WebAdmin_Effect( int kind, int id, const vec3_t org, const vec3_t ang );
 void WebAdmin_Shutdown( void );
 void WebAdmin_EntitySpawned( int entityNum );
 void WebAdmin_EntityFreed( int entityNum );

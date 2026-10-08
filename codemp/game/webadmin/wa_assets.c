@@ -76,8 +76,9 @@ void WA_ApiMap( waConnection_t *c ) {
 	c->fileLeft = len;
 }
 
-// Textures, models and skins for the 3D views, and the shader scripts the view of the administration draws the
-// map with. Only below textures/, models/ and gfx/, and of shaders/ the scripts.
+// Textures, models and skins for the 3D views, the shader scripts the view of the administration draws the
+// map with, and the effect files the page plays. Only below textures/, models/ and gfx/, of shaders/ the
+// scripts and of effects/ the effect files.
 void WA_ApiFile( waConnection_t *c, const char *query ) {
 	char			name[MAX_QPATH];
 	const char		*ext, *type;
@@ -90,7 +91,8 @@ void WA_ApiFile( waConnection_t *c, const char *query ) {
 		return;
 	}
 	ext = COM_GetExtension( name );
-	script = (qboolean)( !Q_stricmpn( name, "shaders/", 8 ) && !Q_stricmp( ext, "shader" ) );
+	script = (qboolean)( ( !Q_stricmpn( name, "shaders/", 8 ) && !Q_stricmp( ext, "shader" ) )
+		|| ( !Q_stricmpn( name, "effects/", 8 ) && !Q_stricmp( ext, "efx" ) ) );
 	// a sound or a piece of music, which the editor plays in the browser to hear what a key names
 	audio = (qboolean)( ( !Q_stricmpn( name, "sound/", 6 ) || !Q_stricmpn( name, "music/", 6 ) ) && ( !Q_stricmp( ext, "wav" ) || !Q_stricmp( ext, "mp3" ) ) );
 	if ( !script && !audio && Q_stricmpn( name, "textures/", 9 ) && Q_stricmpn( name, "models/", 7 ) && Q_stricmpn( name, "gfx/", 4 ) ) {
@@ -262,7 +264,7 @@ WA_ApiList
 
 GET /api/list?kind=: names for the fields of the page to offer, so that a value does not have to be known by
 heart. maps, effects and music are the files of the game, npcs the types of the .npc files, bots the bots the
-server knows.
+server knows. fxindex is no such list: the effects the map has in use by now, in the order of their numbers.
 =================
 */
 void WA_ApiList( waConnection_t *c, const char *query ) {
@@ -379,6 +381,18 @@ void WA_ApiList( waConnection_t *c, const char *query ) {
 				WA_BufAppend( &b, ",", 1 );
 			first = qfalse;
 			WA_BufJsonString( &b, Info_ValueForKey( G_GetBotInfoByNumber( i ), "name" ) );
+		}
+	} else if ( !strcmp( kind, "fxindex" ) ) {
+		// The names of CS_EFFECTS, the first of them for the index 1: what the state feed names an effect by.
+		// G_EffectIndex gives the numbers out one after the other and none is given back within a map.
+		for ( i = 1; i < MAX_FX; i++ ) {
+			trap->GetConfigstring( CS_EFFECTS + i, name, sizeof( name ) );
+			if ( !name[0] )
+				break;
+			if ( !first )
+				WA_BufAppend( &b, ",", 1 );
+			first = qfalse;
+			WA_BufJsonString( &b, name );
 		}
 	}
 

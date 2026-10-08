@@ -20,7 +20,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 */
 
 // wa_state.c -- /api/state of the web admin panel: the map, the players, NPCs, items, models, what
-// moves and what flies, as the page asks for it ten times a second.
+// moves and what flies and the effects, as the page asks for it ten times a second.
 
 #include "game/webadmin/wa_local.h"
 
@@ -35,6 +35,17 @@ const char *WA_TeamName( team_t team ) {
 
 void WA_AppendVec( waBuffer_t *b, const vec3_t v ) {
 	WA_BufPrintf( b, "[%.1f,%.1f,%.1f]", v[0], v[1], v[2] );
+}
+
+// The number of a part of the answer a page keeps: a hash of its text (FNV-1a), and never 0, which is what a
+// page sends that has none.
+static unsigned WA_StateRev( const waBuffer_t *text ) {
+	unsigned	rev = 2166136261u;
+	int			k;
+
+	for ( k = 0; k < text->len; k++ )
+		rev = ( rev ^ (unsigned char)text->data[k] ) * 16777619u;
+	return rev ? rev : 1;
 }
 
 // the kind of ammunition the weapon in his hands takes, AMMO_NONE for none
@@ -76,13 +87,12 @@ static void WA_StateKnown( const char *query, unsigned *known ) {
 	}
 }
 
-// What stays the same of a player from one poll to the next, as an object in slow. Returns its number: a hash
-// of that text, and never 0, which is what a page sends that has none.
+// What stays the same of a player from one poll to the next, as an object in slow. Returns its number
+// (WA_StateRev).
 static unsigned WA_StatePlayerStays( waBuffer_t *slow, int clientNum ) {
 	gentity_t		*ent = &g_entities[clientNum];
 	gclient_t		*cl = ent->client;
 	playerState_t	*ps = &cl->ps;
-	unsigned		rev = 2166136261u;
 	int				k, s2, bl;
 
 	slow->len = 0;
@@ -152,11 +162,7 @@ static unsigned WA_StatePlayerStays( waBuffer_t *slow, int clientNum ) {
 		WA_BufJsonString( slow, Info_ValueForKey( userinfo, "model" ) );
 	}
 	WA_BufAppend( slow, "}", 1 );
-	for ( k = 0; k < slow->len; k++ )
-		rev = ( rev ^ (unsigned char)slow->data[k] ) * 16777619u;
-	if ( !rev )
-		rev = 1;	// 0 is what a page sends that has none
-	return rev;
+	return WA_StateRev( slow );
 }
 
 // What changes of a player all the time, as the rows "f" and "b". rev is the number of what stays of him.
@@ -263,13 +269,12 @@ static void WA_StateNpcs( waBuffer_t *b ) {
 
 // Items, flags and other pickups, so the map looks alive. The list is the same from one poll to the next
 // unless something was picked up or came back, and it is more than a third of the answer. So it has a
-// number (a hash of its text), and a page that says it has the list of that number (items=) is not sent it
-// again.
+// number (WA_StateRev), and a page that says it has the list of that number (items=) is not sent it again.
 static void WA_StateItems( waBuffer_t *b, const char *query ) {
 	waBuffer_t	items = { 0 };
 	char		value[16];
-	unsigned	rev = 2166136261u;
-	int			i, k;
+	unsigned	rev;
+	int			i;
 	qboolean	first = qtrue;
 
 	for ( i = MAX_CLIENTS; i < level.num_entities; i++ ) {
@@ -288,10 +293,7 @@ static void WA_StateItems( waBuffer_t *b, const char *query ) {
 		WA_AppendVec( &items, ent->r.currentOrigin );
 		WA_BufAppend( &items, "}", 1 );
 	}
-	for ( k = 0; k < items.len; k++ )
-		rev = ( rev ^ (unsigned char)items.data[k] ) * 16777619u;
-	if ( !rev )
-		rev = 1;	// 0 is what a page sends that has none
+	rev = WA_StateRev( &items );
 
 	WA_BufPrintf( b, ",\"itemsRev\":%u", rev );
 	if ( !WA_FormValue( query, "items", value, sizeof( value ) ) || (unsigned)strtoul( value, NULL, 10 ) != rev ) {
@@ -397,7 +399,116 @@ static void WA_StateShots( waBuffer_t *b ) {
 	WA_BufAppend( b, "]", 1 );
 }
 
-// GET /api/state[?items=<number>][&p=<client>.<number>-...]: everything the page draws, one part after the other
+/*
+==============================================================================
+
+Effects
+
+Not in JKAdmin. A client plays the effects of the game itself, the server only tells it which and where: an
+entity that is an effect (ET_FX: fx_runner, misc_blackhole) is played in a loop by CG_FX, and what the game
+plays once reaches the client as an event (EV_PLAY_EFFECT, EV_PLAY_EFFECT_ID). The page is told the same two
+things and plays the effect files as a client does.
+
+==============================================================================
+*/
+
+#define WA_FX_KEEP		64
+#define WA_FX_MS		2000		// older than that is not worth playing any more
+
+typedef struct waEffect_s {
+	int		time;		// level.time
+	int		kind, id;	// kind 0: id is an effectTypes_t, 1: an index of CS_EFFECTS
+	vec3_t	org, dir;
+} waEffect_t;
+
+static waEffect_t	fxRing[WA_FX_KEEP];
+static int			fxSeq;		// the number of the one that was played last, they count from 1 since the module was loaded
+
+// G_PlayEffect (kind 0) and G_PlayEffectID (kind 1) say what they play. dir becomes the way the client plays it:
+// for EV_PLAY_EFFECT it takes what the game calls angles as the direction itself, for EV_PLAY_EFFECT_ID the
+// way those angles look (CG_EntityEvent).
+void WebAdmin_Effect( int kind, int id, const vec3_t org, const vec3_t ang ) {
+	waEffect_t *e;
+
+	if ( !WA_Running() )
+		return;
+	e = &fxRing[fxSeq++ % WA_FX_KEEP];
+	e->time = level.time;
+	e->kind = kind;
+	e->id = id;
+	VectorCopy( org, e->org );
+	if ( kind )
+		AngleVectors( ang, e->dir, NULL, NULL );
+	else
+		VectorCopy( ang, e->dir );
+	if ( !e->dir[0] && !e->dir[1] && !e->dir[2] )
+		e->dir[1] = 1;
+}
+
+// The effects for a page that says what it has of them (fx=<number of the list>&fxs=<number of the last one
+// played>). Both parts are left out when the page has them: the list of the entities changes when one is
+// switched or moves, and most polls nothing was played.
+//   "fx": the entities that are effects, each its entity, the index of its effect in CS_EFFECTS, its state
+//        as CG_FX reads it (0 off, below 10 once for every change of the number, else in a loop: an fx_runner
+//        has 20 then), the delay and the random part of the loop in msec, where it is and the way it plays
+//   "fxPlay": what was played once and is not older than two seconds, each its number, how long ago in msec,
+//        the kind (0 an effectTypes_t, 1 an index of CS_EFFECTS), which one, where and the way it plays
+static void WA_StateEffects( waBuffer_t *b, const char *query ) {
+	waBuffer_t	list = { 0 };
+	char		value[16];
+	unsigned	rev;
+	int			i, have;
+	qboolean	first = qtrue;
+
+	for ( i = MAX_CLIENTS; i < level.num_entities; i++ ) {
+		gentity_t	*ent = &g_entities[i];
+		vec3_t		pos, dir;
+
+		if ( !ent->inuse || ent->s.eType != ET_FX )
+			continue;
+
+		BG_EvaluateTrajectory( &ent->s.pos, level.time, pos );
+		// as CG_FX turns the angles of the entity into the way the effect plays
+		AngleVectors( ent->s.angles, dir, NULL, NULL );
+		if ( !dir[0] && !dir[1] && !dir[2] )
+			dir[1] = 1;
+		WA_BufPrintf( &list, "%s[%d,%d,%d,%.0f,%d,%.1f,%.1f,%.1f,%.3f,%.3f,%.3f]", first ? "" : ",", i, ent->s.modelindex,
+			ent->s.modelindex2, ent->s.speed, ent->s.time, pos[0], pos[1], pos[2], dir[0], dir[1], dir[2] );
+		first = qfalse;
+	}
+	rev = WA_StateRev( &list );
+	if ( !WA_FormValue( query, "fx", value, sizeof( value ) ) || (unsigned)strtoul( value, NULL, 10 ) != rev ) {
+		WA_BufPrintf( b, ",\"fx\":{\"rev\":%u,\"list\":[", rev );
+		if ( list.len )
+			WA_BufAppend( b, list.data, list.len );
+		WA_BufAppend( b, "]}", 2 );
+	}
+	WA_BufFree( &list );
+
+	// A page without a number is sent what there is. One that is ahead of the server has its number from before
+	// the module was loaded anew, it starts again.
+	have = WA_FormValue( query, "fxs", value, sizeof( value ) ) ? atoi( value ) : -1;
+	if ( have == fxSeq )
+		return;
+	if ( have > fxSeq )
+		have = 0;
+	WA_BufPrintf( b, ",\"fxSeq\":%d,\"fxPlay\":[", fxSeq );
+	first = qtrue;
+	for ( i = Q_max( Q_max( have, 0 ), fxSeq - WA_FX_KEEP ); i < fxSeq; i++ ) {
+		const waEffect_t	*e = &fxRing[i % WA_FX_KEEP];
+		const int			ago = level.time - e->time;
+
+		if ( ago < 0 || ago > WA_FX_MS )
+			continue;
+		WA_BufPrintf( b, "%s[%d,%d,%d,%d,%.1f,%.1f,%.1f,%.3f,%.3f,%.3f]", first ? "" : ",", i + 1, ago, e->kind, e->id,
+			e->org[0], e->org[1], e->org[2], e->dir[0], e->dir[1], e->dir[2] );
+		first = qfalse;
+	}
+	WA_BufAppend( b, "]", 1 );
+}
+
+// GET /api/state[?items=<number>][&fx=<number>&fxs=<number>][&p=<client>.<number>-...]: everything the page draws,
+// one part after the other
 void WA_ApiState( waConnection_t *c, const char *query ) {
 	waBuffer_t	b = { 0 };
 	char		mapname[MAX_QPATH], hostname[MAX_NETNAME * 2];
@@ -421,6 +532,7 @@ void WA_ApiState( waConnection_t *c, const char *query ) {
 	WA_StateModels( &b );
 	WA_StateMovers( &b );
 	WA_StateShots( &b );
+	WA_StateEffects( &b, query );
 	WA_BufAppend( &b, "}", 1 );
 
 	WA_RespondJson( c, &b );
