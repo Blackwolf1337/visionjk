@@ -758,7 +758,13 @@ function parseBsp(buffer) {
 	};
 	const stats = { surfaces: Math.floor(sfl.len / SURF_SIZE), vertices: Math.floor(numVerts), indexes: indexes.length, shaders: shaders.length, lightmaps: lightmaps.length,
 		brushModels: models.length, brushes: brushes.brushes.length / 3, planes: brushes.planes.length / 4, bytes: buffer.byteLength };
-	return { shaders, lightmaps, batches: [...batches.values()], bounds, sky, models, brushes, fogs, grid, stats, pick: { pos: new Float32Array(pickPos), idx: new Uint32Array(pickIdx), model: new Uint16Array(pickModel) } };
+	// the triangles of one brush model after the other: a click asks each where its entity is
+	const pickRuns = [];
+	for (let i = 0; i < pickModel.length; i++) {
+		const run = pickRuns[pickRuns.length - 1];
+		if (run && run[0] === pickModel[i]) run[2] = (i + 1) * 3; else pickRuns.push([pickModel[i], i * 3, (i + 1) * 3]);
+	}
+	return { shaders, lightmaps, batches: [...batches.values()], bounds, sky, models, brushes, fogs, grid, stats, pick: { pos: new Float32Array(pickPos), idx: new Uint32Array(pickIdx), model: new Uint16Array(pickModel), runs: pickRuns } };
 }
 
 // quadratic bezier patch, 3x3 control blocks
@@ -2139,14 +2145,27 @@ function drawWorldWire(now) {
 }
 
 // Ray against the map triangles, returns the hit point or null. oneSided: only a triangle that is hit on its
-// front counts (the side its corners run clockwise on), as the view shows it.
+// front counts (the side its corners run clockwise on), as the view shows it. A brush model that is an entity
+// (a door, a lift) is hit where that entity is, and not at all when no entity shows it: for that the ray is
+// taken to where the map file has the model.
 function pickGround(origin, dir, oneSided = viewCulls()) {
 	if (!world) return null;
-	const p = world.pick.pos, idx = world.pick.idx, of = world.pick.model;
+	const now = performance.now();
 	let best = Infinity;
-	for (let i = 0; i < idx.length; i += 3) {
-		// a brush model no entity shows is not there. One that moved is still hit where the map has it.
-		if (movers && of[i / 3] && !movers.has(of[i / 3])) continue;
+	for (const [model, from, to] of world.pick.runs) {
+		for (const place of moverPlaces(model, now)) {
+			if (!place) { best = pickRun(origin, dir, from, to, oneSided, best); continue; }
+			const back = M4.invert(place), o = M4.transform(back, origin), e = M4.transform(back, [origin[0] + dir[0], origin[1] + dir[1], origin[2] + dir[2]]);
+			best = pickRun(o, [e[0] - o[0], e[1] - o[1], e[2] - o[2]], from, to, oneSided, best);
+		}
+	}
+	return best === Infinity ? null : [origin[0] + dir[0] * best, origin[1] + dir[1] * best, origin[2] + dir[2] * best];
+}
+
+// the nearest hit of the ray among the triangles from to, when it is nearer than best
+function pickRun(origin, dir, from, to, oneSided, best) {
+	const p = world.pick.pos, idx = world.pick.idx;
+	for (let i = from; i < to; i += 3) {
 		const a = idx[i] * 3, b = idx[i + 1] * 3, c = idx[i + 2] * 3;
 		const e1x = p[b] - p[a], e1y = p[b + 1] - p[a + 1], e1z = p[b + 2] - p[a + 2];
 		const e2x = p[c] - p[a], e2y = p[c + 1] - p[a + 1], e2z = p[c + 2] - p[a + 2];
@@ -2162,7 +2181,7 @@ function pickGround(origin, dir, oneSided = viewCulls()) {
 		const t = f * (e2x * qx + e2y * qy + e2z * qz);
 		if (t > 1 && t < best) best = t;
 	}
-	return best === Infinity ? null : [origin[0] + dir[0] * best, origin[1] + dir[1] * best, origin[2] + dir[2] * best];
+	return best;
 }
 
 /* ------------------------------------------------------------------ */

@@ -212,10 +212,11 @@ Also changed:
   switched off stayed. The server lists what the clients draw as a mover (`CG_Mover`: linked, `ET_MOVER`,
   not `EF_NODRAW`, not `SVF_NOCLIENT`) with place and angles from its trajectory, the page puts the surfaces
   of the brush model there and moves them between two polls as it does with the players. A brush model no
-  entity shows is not drawn and a click goes through it. In the editor the surfaces now follow the box of a
-  brush entity that is moved or turned, and a deleted one is gone at once. Limits: a click still finds a
-  brush model that moved where the map file has it, the fog of a brush is not drawn on one that moved, and
-  a turn of more than half a circle between two polls (a tenth of a second) is drawn the short way round.
+  entity shows is not drawn and a click goes through it, one that moved or turned is hit where it is
+  (`pickGround` takes the ray to where the map file has the model), so a right-click puts a player on a lift
+  that is up. In the editor the surfaces now follow the box of a brush entity that is moved or turned, and a
+  deleted one is gone at once. Limits: the fog of a brush is not drawn on one that moved, and a turn of more
+  than half a circle between two polls (a tenth of a second) is drawn the short way round.
 - New: the switch "Open" in the bar of the debug views of the editor. The plain view of the editor draws every
   surface from both sides, so a map with ceilings is a closed box from above. With "Open" it draws the side
   the game draws, a click goes through the rest, and entities can be placed into a room from above.
@@ -820,12 +821,15 @@ together when the last was fired. On mp/duel6 a fired `func_breakable` broke: it
 brush model was not drawn any more (30 drawn before, 29 after). Not tried: a team whose first part is
 deleted while it moves, and firing every class of the game (the use functions were read, not run).
 
-Doors and lifts (`steps_movers.js`, 10 checks, the same day, mp/ffa3): the server named 6 of the 8 brush
+Doors and lifts (`steps_movers.js`, the same day, mp/ffa3): the server named 6 of the 8 brush
 models as drawn, the two triggers not, and each where the entity list of the editor has it. A lift with a
 targetname of its own was fired by a `trigger_always` placed through the panel: it was drawn up to 280 units
 from where it rests, at seven or eight places on the way, the picture changed, it came back and the picture
 was the one from before to the pixel. Deleted in the editor its brush model was not drawn and a ray at it
-went through, undo brought both back. Not tried: a door that turns, one that a player opens, a
+went through, undo brought both back. Aimed at where the lift rests the ray hit it, aimed at where the map
+file has it the ray went on. A `func_rotating` placed with the brush model of the lift made the server name
+that model twice, the second one turned 90 degrees in a second as its speed says, and a ray at one of its
+triangles where it was at that moment hit it (15 checks now). Not tried: a door that a player opens, a
 `func_usable` that is switched off.
 
 The sides, the deforms and the order of see-through model surfaces (`steps_cull.js`, `steps_deform.js`, the
