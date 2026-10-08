@@ -292,7 +292,38 @@ Also changed:
   192 towards the viewer for the teleport. The game frees a `trigger_push` without a target in its first
   frame, before a key could be added. The server refuses a box whose `mins` are not below its `maxs`, half a
   box, and one wider than 32768. A layout keeps such a trigger like every other placed entity.
-- New: a class that can not be placed bare is opened as a draft (`openDraft`, `draftOp`, `placeDraft` in
+- New: everything new in the World tab is a draft first (`js/editor-drafts.js`; the user: "The draft is not a
+  bad idea, make this for all entities"). A class or a template placed with a right-click, the copy that
+  Duplicate or a paste makes, and a `trigger_push` or `trigger_teleport` with the `target_position` it is aimed
+  at exist only in the page: the server gets no spawn. A draft is in the entity list (first, numbered "new")
+  and on the map as a diamond in the colour of its class made half white, turning over a ring. It is selected,
+  moved, turned, resized, duplicated and copied like an entity, alone or together with placed ones: in a
+  mixed selection the drafts change in the page and the placed ones on the server, and only the placed ones
+  are in the step of the history. A draft has no Apply: what is typed into its keys is taken when the
+  selection changes, when it is moved or placed, and before any request to the server. After a draft is made
+  and after its keys change the page asks the server what a spawn would be refused for (`op` check, which
+  spawns nothing): a class that needs a key gets that key as an empty row, a single new draft with the cursor
+  in it, and its panel and its name on the map say what is missing.
+  "Place" in the panel of a draft sends it, with several drafts selected it reads "Place N", and "Place all"
+  above the list sends every draft. Drafts that a sent draft names as its targets go with it, and what is
+  aimed at is sent before what aims at it, because the game frees a `trigger_push` whose target is not there
+  in its first frame. All that one Place puts on the server is one step of undo. A draft the server refuses
+  stays a draft, selected, with the reason in its panel; one that aims at a draft that was not placed is not
+  sent. "Discard" throws drafts away, "Discard all" asks once when there is more than one. Drafts belong to
+  the map they were made on and are lost with a reload of the page.
+  What goes to the server at once as before: undo and redo, the import of a `.ent` file, the layout, and
+  Place of the Models tab. Their keys are complete, there is nothing to fill in first. What is not in a draft:
+  an export or a saved layout, which are made on the server.
+- New: the names of the entities float above their markers (`js/editor-labels.js`, view toggle "Names"): the
+  class, the targetname in quotes, and `[draft]` or `[draft: needs fxFile]` for a draft. Every draft and what
+  is selected always have a name (64 at most), besides those the 40 entities nearest to the camera that pass
+  the filter of the list, are in front of the camera and within reach (1500 units, more when the camera is
+  far out). A name that would lie over one already placed is left out. Which entities have one is worked out
+  every 150 ms without the screen, a frame only projects those and moves their lines, which are made once and
+  used again. A name has no test against the walls: it shows where its marker is hidden. Not in the
+  administration.
+- New, and since the entry above the way of every new entity: a class that can not be placed bare is opened as a
+  draft (first as one draft at a time, with ``openDraft`, `draftOp`, `placeDraft` in
   `js/editor-entities.js`). Place gives a class its name and where it is, and the server refuses a class
   without a key it can not be without: an effect without its file, a speaker without its sound, a class of
   brushes without its model. That left such a class with no way into the map but a template or an import
@@ -1066,7 +1097,25 @@ took both away, and after "Save layout" and a start of the map the box was there
 player in such a box (how the late push feels on a client with its own prediction), an NPC, a vehicle, the
 classes for ships (`trigger_space`, `trigger_shipboundary`, `trigger_hyperspace`), and the Windows build.
 
-Drafts (`steps_draft.js`, 18 checks, the same day): a `fx_runner` placed with Place came up as a draft with
+Drafts for everything (`steps_drafts.js`, 68 checks, 2026-10-08, it takes the place of `steps_draft.js`): a
+placed class is a draft with a number from 100000 and the server has none of it; three survive a poll; typed
+keys survive a change of the selection; a class that needs a key shows it without a spawn; a template,
+Duplicate, a paste of one and of a group and a `trigger_push` give drafts; Place on the push alone places its
+target first and the push is still there two seconds later; the rectangle and Ctrl with a click take drafts;
+a draft and a placed entity moved together are one step of the history; "Place all" with one `fx_runner`
+that lacks its file places the others, keeps that one with the cursor in `fxFile`, and one Undo takes away
+all that were placed; "Discard all"; a draft of another map is gone; a prop of the Models tab is on the
+server at once. The names (`steps_labels.js`, 23 checks): a draft reads `fx_runner [draft: needs fxFile]`, a
+targetname shows, no more than 40 besides the ones that always have one, the pool of lines does not grow in
+200 frames, none with Names off and none in the administration, and a frame spends 0.1 to 0.2 ms on them with
+74 entities and 0.3 to 0.5 ms with 924 (software GL). The checks that placed, duplicated or pasted were
+changed to place their drafts and run as before: `steps_boxtrigger.js` 24, `steps_group.js` 24,
+`steps_pusharc.js` 13, `steps_mouse.js` 19, `steps_boxdrag.js` 16, `steps_complete.js` 22, `steps_guard.js`
+12, `steps_layout.js` 13, `steps_problems.js` 7. Written and first run by a second session of the assistant
+that worked next to the one on the effects, each with a private server of its own; the counts here are from
+a run after it. Not tried: a real browser, the editor through the eyes of a player, many drafts (hundreds).
+
+The first drafts (`steps_draft.js`, 18 checks, the same day, the script is gone since): a `fx_runner` placed with Place came up as a draft with
 the row `fxFile`, the cursor in its value and the list of the effects on it, "Place" and "Discard" as its
 buttons, Fire and Duplicate off, listed as "new", and the server had no `fx_runner`; it was still there after
 the next poll. With an effect typed in, Place made it entity 107 of the server and one Undo took that away.
