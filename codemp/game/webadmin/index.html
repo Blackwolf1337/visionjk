@@ -4466,10 +4466,20 @@ function parseAnimCfg(text) {
 
 const g2 = { animNames: null, glas: new Map(), cfgs: new Map(), models: new Map(), instances: new Map() };
 
+// The server does not answer while it changes the map. A file that was asked for just then is asked for again,
+// for half a minute: without that a model whose files were on their way stays a placeholder until the page is
+// loaded again. An answer that says the file is not there is final.
 async function fetchGameFile(path, asText) {
-	const res = await fetch('api/file?name=' + encodeURIComponent(path));
-	if (!res.ok) throw new Error(path + ': HTTP ' + res.status);
-	return asText ? res.text() : res.arrayBuffer();
+	for (let attempt = 0; ; attempt++) {
+		try {
+			const res = await fetch('api/file?name=' + encodeURIComponent(path));
+			if (!res.ok) throw Object.assign(new Error(path + ': HTTP ' + res.status), { final: true });
+			return await (asText ? res.text() : res.arrayBuffer());
+		} catch (e) {
+			if (e.final || attempt >= 10) throw e;
+			await new Promise(done => setTimeout(done, 3000));
+		}
+	}
 }
 
 function cached(map, key, make) {

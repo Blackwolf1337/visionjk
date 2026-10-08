@@ -257,6 +257,10 @@ Also changed:
   (`WA_FreeEntity`). Such a mover makes a trigger when it spawns and the game never frees a mover, so the
   trigger stayed: every move of a lift left one more behind, and it named an entity number that the next
   entity gets. What still stays wrong: the parts of a door team whose first part is deleted.
+- Fixed: a file of the game that the page asked for while the server changed the map is asked for again
+  (`fetchGameFile`, every three seconds for half a minute). The server does not answer during a change, and
+  what was on its way just then was lost for good: a player whose model was being read stayed the plain
+  figure until the page was loaded again. An answer that says the file is not there is still final.
 - New: the JA+ admin commands that work on a player (`WA_JpAction`). The panel does not copy them, it sends the
   same line an rcon admin would type on the server console (`amsleep 3`, `amrename 3 "name"`), so the rules,
   texts and logs are those of JA+. The command runs in the next frame, the answer of the panel only says it was
