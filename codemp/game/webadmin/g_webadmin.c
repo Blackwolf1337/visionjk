@@ -1756,6 +1756,21 @@ static void WA_EntityResult( waConnection_t *c, qboolean ok, const char *msg, in
 	WA_BufFree( &b );
 }
 
+// A func_plat and a func_door make a trigger of their own when they spawn (SpawnPlatTrigger,
+// Think_SpawnNewDoorTrigger) and are its parent. The game never frees a mover, so nothing frees that trigger
+// either: left behind it would use whatever entity gets the number of the mover next.
+static void WA_FreeEntity( gentity_t *ent ) {
+	int	i;
+
+	for ( i = MAX_CLIENTS; i < level.num_entities; i++ ) {
+		gentity_t *other = &g_entities[i];
+
+		if ( other->inuse && other != ent && other->parent == ent && !entityVars[i] && other->r.contents == CONTENTS_TRIGGER )
+			G_FreeEntity( other );
+	}
+	G_FreeEntity( ent );
+}
+
 static void WA_ApiEntity( waConnection_t *c, const char *body ) {
 	char		op[16], idStr[16], ofMap[4], err[128];
 	static char	kv[WA_MAX_REQUEST];
@@ -1787,7 +1802,7 @@ static void WA_ApiEntity( waConnection_t *c, const char *body ) {
 			gentity_t *ent = &g_entities[i];
 
 			if ( entityPlaced[i] && WA_ListedEntity( ent ) && !Q_stricmp( ent->classname, classname ) ) {
-				G_FreeEntity( ent );
+				WA_FreeEntity( ent );
 				count++;
 			}
 		}
@@ -1801,7 +1816,7 @@ static void WA_ApiEntity( waConnection_t *c, const char *body ) {
 	}
 
 	if ( !strcmp( op, "delete" ) ) {
-		G_FreeEntity( &g_entities[id] );
+		WA_FreeEntity( &g_entities[id] );
 		WA_EntityResult( c, qtrue, "deleted", id );
 	} else if ( !strcmp( op, "update" ) ) {
 		if ( !entityVars[id] ) {
@@ -1816,7 +1831,7 @@ static void WA_ApiEntity( waConnection_t *c, const char *body ) {
 		}
 		// an entity of the map that was edited is still one of the map: the next start of the map has it as it was
 		entityPlaced[newId] = entityPlaced[id];
-		G_FreeEntity( &g_entities[id] );
+		WA_FreeEntity( &g_entities[id] );
 		WA_EntityResult( c, qtrue, "updated", newId );
 	} else {
 		WA_EntityResult( c, qfalse, "unknown op", id );
