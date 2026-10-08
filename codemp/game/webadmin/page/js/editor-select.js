@@ -53,6 +53,7 @@ async function groupDone(label, steps, lost, now, done, refused) {
 	kvDirty = false;
 	await pollEntities();
 	pickOnly(now.filter(id => ents.has(id)));
-	toast(label + ' ' + done + (refused ? ', ' + refused + ' refused: ' + entRefused : ''), !refused);
+	// one alone that was refused: "Not placed", and why, instead of a count of none and one
+	toast(!done && refused === 1 ? 'Not ' + label.charAt(0).toLowerCase() + label.slice(1) + ': ' + entRefused : label + ' ' + done + (refused ? ', ' + refused + ' refused: ' + entRefused : ''), !refused);
 }
 

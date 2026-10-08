@@ -240,9 +240,11 @@ static qboolean WA_SpawnRefused( char *err, int errSize ) {
 	}
 	// It loads another .bsp file into the map and spawns every entity of that one. A file that is not there ends
 	// the server (also no bspmodel key at all: it asks for maps/.bsp), and so does one that brings more than
-	// the map has room for. None of that can be told from the keys.
+	// the map has room for. And a client loads such a file only while it loads the map (CG_RegisterGraphics):
+	// one that is connected already gets an entity with a model its collision map does not have, and the
+	// engine drops it for that (CM_InlineModel: bad number).
 	if ( !Q_stricmp( classname, "misc_bsp" ) ) {
-		Q_strncpyz( err, "a misc_bsp puts a whole other .bsp file into the map with all of its entities, the panel does not place it: a file that is missing or too big ends the server", errSize );
+		Q_strncpyz( err, "a misc_bsp puts a whole other .bsp file into the map with all of its entities, the panel does not place it: it only works when it is there as the map starts. A missing file ends the server, and players who are on it already are dropped", errSize );
 		return qtrue;
 	}
 	// it registers the item of its weapon and ends the server when there is none (a name that is no weapon, or

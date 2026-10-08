@@ -387,7 +387,10 @@ Also changed:
   can not load is an error that a dedicated server does not survive. That error comes from the engine and not
   from the spawn function, so reading the spawn functions for `trap->Error` had not found it. The panel does
   not place a `misc_bsp` at all now: a file that is there can still bring more entities than the map has room
-  for. Found by going through every class again, this time with what it calls (two deep) and with every call
+  for. And it can not work on a running map for the players either: a client loads such a file only while
+  it loads the map (`CG_RegisterGraphics`), so one that is connected already gets an entity with a model its
+  collision map does not have, and the engine drops it (`CM_InlineModel: bad number`). The refusal says so.
+  A `misc_bsp` could only come with the start of a map, before any client loads it. Found by going through every class again, this time with what it calls (two deep) and with every call
   that can end the server: an `info_siege_radaricon` without `icon` is refused, and a `misc_weapon_shooter`
   whose `weapon` is no weapon or one without an item (it registers the item and ends the server when there is
   none). A `fx_runner` without `fxFile` frees itself; it is refused with that reason instead of "the game did
