@@ -626,6 +626,19 @@ static void WA_ApiState( waConnection_t *c ) {
 
 		WA_BufPrintf( &b, "{\"id\":%d,\"name\":", i );
 		WA_BufJsonString( &b, cl->pers.netname );
+		// Not in JKAdmin: who that is for an admin. Where he connects from (without the port, nothing for a bot),
+		// how long he has been in the game and which client plugin of JA+ he has, 0 for none.
+		{
+			char address[NET_ADDRSTRMAXLEN], *port;
+
+			Q_strncpyz( address, ( ent->r.svFlags & SVF_BOT ) ? "" : cl->sess.IP, sizeof( address ) );
+			port = strchr( address, ':' );
+			if ( port )
+				*port = '\0';
+			WA_BufAppend( &b, ",\"address\":", 11 );
+			WA_BufJsonString( &b, address );
+			WA_BufPrintf( &b, ",\"minutes\":%d,\"plugin\":%.2f", ( level.time - cl->pers.enterTime ) / 60000, cl->pers.jp.pluginVersion );
+		}
 		WA_BufPrintf( &b, ",\"team\":\"%s\",\"bot\":%s,\"connected\":%s,\"health\":%d,\"maxHealth\":%d,\"armor\":%d,"
 			"\"score\":%d,\"ping\":%d,\"weapon\":%d,\"forcePower\":%d,\"scale\":%d,\"god\":%s,\"dead\":%s,\"saberOn\":%s,\"pos\":",
 			WA_TeamName( cl->sess.sessionTeam ), ( ent->r.svFlags & SVF_BOT ) ? "true" : "false",

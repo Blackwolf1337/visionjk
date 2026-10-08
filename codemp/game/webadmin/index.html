@@ -2110,6 +2110,11 @@ function renderCommand(fillInputs) {
 	$('flatulenceBtn').classList.toggle('primary', !!d.flatulence);
 	$('disorientBtn').classList.toggle('primary', !!d.disorient);
 	$('followBtn').classList.toggle('primary', cam.follow === d.id);
+	// who that is: since when he is there, from where, and with which client plugin of JA+
+	if (d.minutes !== undefined) {
+		$('cmdSub').insertAdjacentHTML('beforeend', '<br>' + (d.minutes < 60 ? d.minutes + ' min' : Math.floor(d.minutes / 60) + ' h ' + d.minutes % 60 + ' min') + ' in the game' +
+			(d.address ? ' &middot; ' + escapeHtml(d.address) : '') + (d.bot ? '' : ' &middot; ' + (d.plugin ? 'plugin ' + d.plugin : 'no plugin')));
+	}
 	if (d.jp) {
 		document.querySelectorAll('[data-jpstate]').forEach(b => b.classList.toggle('primary', jpState(d.jp, b.dataset.jpstate)));
 		if (d.jp.admin) $('cmdSub').insertAdjacentHTML('beforeend', ' &middot; admin ' + (JP_RANKS[d.jp.admin] || d.jp.admin));

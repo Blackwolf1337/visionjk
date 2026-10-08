@@ -237,6 +237,9 @@ Also changed:
   in the game, not in the panel. The server refuses it when the name would need a place among the config
   strings and none is left.
 - New: "Set" in the Routes tab gives the selected waypoint what a bot does there (`op` flags).
+- New: the panel of a player says who that is for an admin: how long he has been in the game, the address he
+  connects from (without the port, none for a bot) and the client plugin of JA+ he has or that he has none
+  (`address`, `minutes`, `plugin` of a player in `/api/state`).
 - New: the server refuses to place what would end it (`WA_SpawnRefused`): a class made of brushes (`trigger_`,
   `func_`) without a `model` key that names a brush model of the map, the classes whose spawn function raises
   an error without a key (`target_speaker`, `target_play_music`, `target_level_change`,
