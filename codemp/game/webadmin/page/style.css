@@ -182,6 +182,13 @@ tr.ent.ro td:first-child { opacity: .6; }
 #kvTable td { padding: 2px 3px; border: 0; }
 #kvTable input { width: 100%; }
 #kvTable td.k { width: 38%; }
+#kvSuggest { position: fixed; z-index: 40; display: none; width: 440px; max-width: calc(100vw - 8px); overflow-y: auto; background: #0f0f12; border: 1px solid var(--line); border-radius: 3px; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5); font-size: 12px; }
+#kvSuggest .opt { display: grid; grid-template-columns: auto 1fr; gap: 0 8px; padding: 4px 8px; cursor: pointer; border-bottom: 1px solid #1c1c22; }
+#kvSuggest .opt.on { background: #24242c; }
+#kvSuggest .opt b { color: var(--text); font-weight: 600; }
+#kvSuggest .opt i { color: var(--muted); font-style: normal; text-align: right; white-space: nowrap; }
+#kvSuggest .opt span { grid-column: 1 / 3; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#kvSuggest .opt span:empty { display: none; }
 #kvTable td.x { width: 24px; white-space: nowrap; }
 #kvTable button.play { margin-right: 3px; }
 #kvTable button { padding: 1px 6px; }

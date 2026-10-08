@@ -25,6 +25,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include "game/webadmin/wa_local.h"
 #include "classdoc_txt.h"
+#include "classkeys_txt.h"
 
 // key/value pairs each entity was spawned with, "key\0value\0key\0value\0"
 static char		*entityVars[MAX_GENTITIES];
@@ -1100,5 +1101,23 @@ void WA_EntitiesShutdown( void ) {
 // does, its keys, the names of its spawnflags, its box and its colour.
 void WA_ApiClassDoc( waConnection_t *c ) {
 	WA_Respond( c, 200, "OK", "text/plain; charset=utf-8", "Cache-Control: max-age=3600\r\n", (const char *)classdoc_txt, (int)classdoc_txt_len );
+}
+
+// GET /api/classkeys: the keys the game code reads, for the completion of the editor. A line for a class: its
+// name, then for every key a tab and key|kind|default (cmake/Modules/ExtractSpawnKeys.cmake has the form and
+// how they are found). The first line, with the name *, is the keys every entity takes: the table of the
+// fields in g_spawn.c, which has no defaults.
+void WA_ApiClassKeys( waConnection_t *c ) {
+	waBuffer_t	b = { 0 };
+	const char	*name, *kind;
+	int			i;
+
+	WA_BufAppend( &b, "*", 1 );
+	for ( i = 0; G_SpawnFieldInfo( i, &name, &kind ); i++ )
+		WA_BufPrintf( &b, "\t%s|%s|", name, kind );
+	WA_BufAppend( &b, "\n", 1 );
+	WA_BufAppend( &b, (const char *)classkeys_txt, (int)classkeys_txt_len );
+	WA_Respond( c, 200, "OK", "text/plain; charset=utf-8", "Cache-Control: max-age=3600\r\n", b.data, b.len );
+	WA_BufFree( &b );
 }
 

@@ -36,6 +36,7 @@ order of the template, so a file may only use there what a file before it has ma
 | `js/editor-lines.js` | boxes, links, arrows, what fired |
 | `js/editor-move.js` | the grid, moving, copy and paste |
 | `js/editor-panel.js` | the panel of an entity and the values to pick from |
+| `js/editor-complete.js` | the keys that are offered while one is typed |
 | `js/routes.js` | the route of the bots |
 | `js/mapreport.js` | the report of the map, what a surface is made of, entities to look at |
 | `js/log.js` | the log of the game |

@@ -8,8 +8,21 @@
 
 // ---- the entity definitions of the game code: /api/classdoc is every QUAKED comment of its source files
 
-const classDocs = new Map();	// classname in lower case -> { name, color, mins, maxs, flags, text, keys }
+const classDocs = new Map();	// classname in lower case -> { name, color, mins, maxs, flags, text, keys, keyDocs }
 let classDocsAsked = false;
+
+// The keys a definition tells of, each with what it says about it. The definitions write them in two ways:
+// "key" what it does, with or without a - or : between, and key - what it does. The second way is also how they
+// describe a spawnflag, and how a sentence may begin: so only for a name that is written small (or NPC_...) and
+// is no flag of the class.
+function parseKeyDocs(body, flags) {
+	const out = new Map(), flag = new Set(flags.map(f => f.toLowerCase()));
+	for (const line of body.split('\n')) {
+		const m = /^\s*"([A-Za-z_][A-Za-z0-9_]*)"\s*[-:=]?\s*(.*)$/.exec(line) || /^\s*([a-z][A-Za-z0-9_]*|NPC_[A-Za-z0-9_]+)\s*(?:-|:|=)\s+(.*)$/.exec(line);
+		if (m && !flag.has(m[1].toLowerCase()) && !out.has(m[1])) out.set(m[1], m[2].trim());
+	}
+	return out;
+}
 
 function parseClassDocs(text) {
 	const vec = t => t.trim().split(/\s+/).map(Number);
@@ -22,20 +35,23 @@ function parseClassDocs(text) {
 		const body = (nl < 0 ? '' : block.slice(nl + 1)).replace(/\s*\*\/\s*$/, '').trim();
 		const color = vec(m[2]), mins = m[3] ? vec(m[3]) : null, maxs = m[4] ? vec(m[4]) : null;
 		const boxed = !!mins && !!maxs && three(mins) && three(maxs);
+		const flags = m[5].trim() ? m[5].trim().split(/\s+/) : [], keyDocs = parseKeyDocs(body, flags);
 		classDocs.set(m[1].toLowerCase(), {
 			name: m[1],
 			// a class that is defined black would not be seen here
 			color: three(color) && Math.max(...color) >= 0.25 ? color : null,
 			mins: boxed ? mins : null,
 			maxs: boxed ? maxs : null,
-			flags: m[5].trim() ? m[5].trim().split(/\s+/) : [],
+			flags,
 			text: body,
-			keys: [...new Set([...body.matchAll(/^\s*"([A-Za-z_][A-Za-z0-9_]*)"/gm)].map(k => k[1]))]
+			keys: [...keyDocs.keys()],
+			keyDocs
 		});
 	}
 }
 
 async function loadClassDocs() {
+	loadClassKeys();
 	if (classDocsAsked) return;
 	classDocsAsked = true;
 	try {

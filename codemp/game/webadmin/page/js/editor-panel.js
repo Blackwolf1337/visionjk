@@ -35,7 +35,6 @@ function renderEntTools(ent) {
 
 	$('entDoc').style.display = d ? '' : 'none';
 	if (d) $('entDocText').textContent = d.name + (d.flags.length ? '   ' + d.flags.join(' ') : '') + '\n\n' + d.text;
-	$('kvKeys').innerHTML = (d ? d.keys : []).map(k => '<option value="' + escapeHtml(k) + '">').join('');
 }
 
 // a value into the table of keys, where Apply takes it from

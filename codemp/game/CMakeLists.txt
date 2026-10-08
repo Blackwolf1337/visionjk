@@ -310,6 +310,19 @@ add_custom_command(
 	DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/classdoc.txt" "${CMAKE_SOURCE_DIR}/cmake/Modules/EmbedFile.cmake"
 	COMMENT "Embedding the entity definitions")
 set(MPGameFiles ${MPGameFiles} "${CMAKE_CURRENT_BINARY_DIR}/classdoc_txt.h")
+
+# and the keys the spawn function of every class reads, which the editor offers when a key is typed
+add_custom_command(
+	OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/classkeys.txt"
+	COMMAND ${CMAKE_COMMAND} -DDIR="${MPDir}/game" -DOUTPUT="${CMAKE_CURRENT_BINARY_DIR}/classkeys.txt" -P "${CMAKE_SOURCE_DIR}/cmake/Modules/ExtractSpawnKeys.cmake"
+	DEPENDS ${MPGameGameFiles} ${MPGameJaplusFiles} ${MPGameVoiceFiles} ${MPGamePropsFiles} ${MPGameFunFiles} "${CMAKE_SOURCE_DIR}/cmake/Modules/ExtractSpawnKeys.cmake"
+	COMMENT "Collecting the keys of the entity classes")
+add_custom_command(
+	OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/classkeys_txt.h"
+	COMMAND ${CMAKE_COMMAND} -DINPUT="${CMAKE_CURRENT_BINARY_DIR}/classkeys.txt" -DOUTPUT="${CMAKE_CURRENT_BINARY_DIR}/classkeys_txt.h" -DNAME=classkeys_txt -P "${CMAKE_SOURCE_DIR}/cmake/Modules/EmbedFile.cmake"
+	DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/classkeys.txt" "${CMAKE_SOURCE_DIR}/cmake/Modules/EmbedFile.cmake"
+	COMMENT "Embedding the keys of the entity classes")
+set(MPGameFiles ${MPGameFiles} "${CMAKE_CURRENT_BINARY_DIR}/classkeys_txt.h")
 set(MPGameIncludeDirectories ${MPGameIncludeDirectories} "${CMAKE_CURRENT_BINARY_DIR}")
 
 add_library(${MPGame} SHARED ${MPGameFiles})

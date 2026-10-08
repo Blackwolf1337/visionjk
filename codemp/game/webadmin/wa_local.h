@@ -118,6 +118,7 @@ void WA_ReloadRead( void );
 void WA_EntitiesFrame( void );
 void WA_EntitiesShutdown( void );
 void WA_ApiClassDoc( waConnection_t *c );
+void WA_ApiClassKeys( waConnection_t *c );
 
 // wa_assets.c
 int WA_MapBrushModels( void );

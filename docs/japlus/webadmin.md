@@ -21,6 +21,8 @@ which is OpenJK 260c59c2 plus that one commit, the same base this tree starts fr
 | `codemp/game/webadmin/page/` | the page: a template, a style sheet and its script files |
 | `codemp/game/webadmin/index.html` | the page of JKAdmin, with a chat box added |
 | `cmake/Modules/EmbedFile.cmake` | turns the page into `webadmin_html.h` in the build directory |
+| `cmake/Modules/ExtractQuaked.cmake` | collects the entity definitions of the game code for the editor |
+| `cmake/Modules/ExtractSpawnKeys.cmake` | collects the keys the spawn function of every class reads, for the completion of the editor |
 
 The page is compiled into `jampgame`, the server needs no extra files and no extra library (`ws2_32` on Windows).
 
@@ -126,6 +128,7 @@ the answer tells the page that the numbers started over.
 | `GET /api/log?from=` | the log of the game from a place on, `next` is where to ask from the next time. Without `from`, or with a place the panel does not have: its last part |
 | `GET /api/perf?since=` | the load of the server, a sample a second, the last 300 kept: `samples` are `[frames, average and longest frame of the game in microseconds, longest wait for a frame in ms, entities, players, average and longest part of this panel in a frame in microseconds]`, `seq` is how many there were, `from` the number of the first one sent. `since`: only the ones from that number on. With them `svFps`, `entityMax`, `maxClients` |
 | `GET /api/classdoc` | the entity definitions of the game code: every `QUAKED` comment of its source files as text |
+| `GET /api/classkeys` | the keys the game code reads, as text: a line for a class with its name and, each after a tab, `key\|kind\|default`. The first line (`*`) is the keys every entity takes, `*item` the ones of an item |
 | `GET /api/export` | the entities in `.ent` format. `placed=1`: only what was placed through the panel, without the worldspawn |
 | `GET /api/chat?since=&epoch=` | chat lines after number `since`. Everything if `epoch` is not the current one |
 | `POST /api/action` | `action`, `id`, `value`: say, addbot, map, kick, ban, health, armor, scale, kill, god, noclip, schizo, flatulence, disorient, poop, gravity (no `id`), reload (no `id`), playergravity, team, teleport, and the JA+ ones: amsleep, amwake, amprotect, amempower, ammerc, ammindtrick, amghost, amsilence, amunsilence, amslap, amForceAltDim, amUnForceAltDim, amdenyvote, amShowMotd, amrename, ampsay, admgrant, freeze |
@@ -188,7 +191,8 @@ Also changed:
 - New: the tools of the editor (script section "the tools of the editor"), each made of what the game code has.
   - The entity definitions. A step of the build (`cmake/Modules/ExtractQuaked.cmake`) collects every `QUAKED`
     comment of `codemp/game` into the module, `/api/classdoc` hands them out. The panel of an entity shows the
-    text of its class, a box for every spawnflag that has a name, and offers the keys the text names. A class
+    text of its class, a box for every spawnflag that has a name, and offers the keys the text names (and since
+    the completion of the keys many more, see below). A class
     is drawn in the colour of its definition, and the class picker shows the first lines as a tip.
   - Views, switched in the bar at the top left of the map: Volumes draws every entity as lines (a trigger or a
     door with the real shape of its brushes, worked out from the planes of the map file, moved and turned as
@@ -288,6 +292,24 @@ Also changed:
   192 towards the viewer for the teleport. The game frees a `trigger_push` without a target in its first
   frame, before a key could be added. The server refuses a box whose `mins` are not below its `maxs`, half a
   box, and one wider than 32768. A layout keeps such a trigger like every other placed entity.
+- New: the keys are completed while they are typed (`js/editor-complete.js`, asked for by the user: "add auto
+  completion for keys"). The key field of a row had the list of the browser with the keys a definition writes
+  in quotes, which for many classes is none (`trigger_push` writes `wait - how long ...`). Now a list opens
+  under the field with every key the entity can have and does not have yet, each with what is known about
+  it, from four places, the nearest first: what the definition of the class says about a key (both ways of
+  writing are read, a spawnflag is not taken for a key), what the spawn function of the class reads, what
+  other entities of the class have on this map (with a value one of them has), and the keys every entity
+  takes. Typing narrows the list to what begins with the typed text, then what has it in its middle. The
+  arrows walk it, Enter or a click takes a key and goes on to the field of its value, Tab takes the nearest
+  one, Escape closes it. The field of a value says in its tip what its key is for and shows the default of the
+  key while it is empty.
+  The keys of the code come from the build: `cmake/Modules/ExtractSpawnKeys.cmake` looks for the calls
+  `G_SpawnString`, `G_SpawnInt`, `G_SpawnFloat`, `G_SpawnVector` and `G_SpawnBoolean` in the function the table
+  of the classes names for a class and in the functions that one calls (`InitTrigger`, `InitMover`, three
+  deep), with the kind of the value and the default the call has: 133 classes. The keys every entity takes
+  are the table of the fields in `g_spawn.c`, handed out at run time (`G_SpawnFieldInfo`, 84 keys).
+  `/api/classkeys` is both. What this does not know: a key that is read some other way (a field that a class
+  uses for something of its own is offered as what it is for every entity), and what a value may be.
 - New: the throw of a push is drawn (`pushArc`, `drawArcs` in `js/editor-lines.js`). With the Links view on,
   every `trigger_push` and `target_push` that throws an arc has that arc as a line: from its middle on the way
   whose top is its target, worked out as the game does it (`AimAtTarget`: the time to the top from the height
@@ -1005,6 +1027,19 @@ middle, a start point had no such row, a push and a teleport came with their `ta
 took both away, and after "Save layout" and a start of the map the box was there again. Not tried: a real
 player in such a box (how the late push feels on a client with its own prediction), an NPC, a vehicle, the
 classes for ships (`trigger_space`, `trigger_shipboundary`, `trigger_hyperspace`), and the Windows build.
+
+The completion of the keys (`steps_complete.js`, 22 checks, the same day, keyboard and mouse of the browser):
+`/api/classkeys` had 84 keys for every entity and 133 classes, `func_door` with `lip|Float|8` and, from
+`InitMover`, `color|Vector|1 1 1`. The definition of `trigger_push` gave `wait` and `speed` and none of its
+flags. For a `trigger_push` the list had 86 keys, each once, `wait`, `speed`, `mins`, `maxs` before
+`targetname`. In the panel: "+ Key" opened the list without the keys the entity has; `wa` left `wait` and
+`awakescript` with `wait` marked; Enter took it, the focus was in the value field and its tip had the text
+of the definition; Apply gave the entity `wait=2`. The arrows walked the list and Enter took the marked key,
+Tab took `speed` for `spe`, `name` offered `targetname`, Escape closed the list and left the entity selected,
+the arrow down opened it again, a click took `targetname`. On a door a key it did not have showed its default
+in the empty value field, and `lip`, which it has, was not offered. A headless window sends no focus events
+by itself, the check turns them on. Not tried: a real browser, and how it reads on a narrow screen (the list
+is 440 px wide).
 
 The throw of a push (`steps_pusharc.js`, 12 checks, the same day, mp/ffa3 with four bots). In the game: a
 push over the whole map with its target 4000 above gave the bots 2530 units/s upwards, which is the root of

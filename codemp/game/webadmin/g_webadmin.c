@@ -209,6 +209,8 @@ static void WA_HandleRequest( waConnection_t *c, char *head, char *body, int bod
 		WA_ApiShaders( c );
 	} else if ( !strcmp( method, "GET" ) && !strcmp( path, "/api/classdoc" ) ) {
 		WA_ApiClassDoc( c );
+	} else if ( !strcmp( method, "GET" ) && !strcmp( path, "/api/classkeys" ) ) {
+		WA_ApiClassKeys( c );
 	} else if ( !strcmp( method, "GET" ) && !strcmp( path, "/api/list" ) ) {
 		WA_ApiList( c, query );
 	} else if ( !strcmp( method, "GET" ) && !strcmp( path, "/api/bans" ) ) {

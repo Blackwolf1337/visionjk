@@ -89,7 +89,7 @@ const playKind = key => { const k = key.trim().toLowerCase(); return k === 'nois
 
 function kvRow(kv) {
 	const kind = playKind(kv[0]);
-	return '<tr><td class="k"><input value="' + escapeHtml(kv[0]) + '" spellcheck="false" list="kvKeys"></td><td><input value="' + escapeHtml(kv[1]) + '" spellcheck="false"></td>' +
+	return '<tr><td class="k"><input value="' + escapeHtml(kv[0]) + '" spellcheck="false" autocomplete="off"></td><td><input value="' + escapeHtml(kv[1]) + '" spellcheck="false"></td>' +
 		'<td class="x">' + (kind ? '<button class="play" title="' + (kind === 'sound' ? 'Plays the sound here, in the browser' : 'Plays the effect once in the game, where the entity is') + '">Play</button>' : '') +
 		'<button title="Remove key">&#10005;</button></td></tr>';
 }

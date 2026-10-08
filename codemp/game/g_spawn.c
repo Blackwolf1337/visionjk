@@ -210,6 +210,29 @@ field_t fields[] = {
 	{ "wait",					FOFS( wait ),							F_FLOAT },
 };
 
+/*
+=================
+G_SpawnFieldInfo
+
+Not in the game as it was: the keys every entity takes and what kind of value each one is, for the editor of the
+web admin panel. qfalse: there is no field with this number.
+=================
+*/
+qboolean G_SpawnFieldInfo( int index, const char **name, const char **kind ) {
+	if ( index < 0 || index >= (int)ARRAY_LEN( fields ) )
+		return qfalse;
+
+	*name = fields[index].name;
+	switch ( fields[index].type ) {
+	case F_INT:			*kind = "Int";		break;
+	case F_FLOAT:		*kind = "Float";	break;
+	case F_VECTOR:		*kind = "Vector";	break;
+	case F_ANGLEHACK:	*kind = "Float";	break;
+	default:			*kind = "String";	break;
+	}
+	return qtrue;
+}
+
 typedef struct spawn_s {
 	const char	*name;
 	void		(*spawn)(gentity_t *ent);
