@@ -323,6 +323,11 @@ Also changed:
   longer one of the team. Now a deleted part is taken out of the chain, the next one leads when it was the
   first (it takes over the targetname, the trigger and what the team was about to do), and an edited part
   takes the place of the old one unless the edit gave it another team.
+- Fixed: a file of the game is read as it is sent (`/api/file`, `WA_FileMore`): at most 256 KB for a
+  connection and 512 KB for all of them in one frame, and another connection is the first each frame. It was
+  read in one go before, and the tab Load showed what that costs: the animations of the players, 11.8 MB out
+  of a pk3, made a frame of 30 ms every time a page was opened. Now the longest frame while six such files
+  go out at once is under 2 ms, and the file takes half a second.
 - Fixed: a file of the game that the page asked for while the server changed the map is asked for again
   (`fetchGameFile`, every three seconds for half a minute). The server does not answer during a change, and
   what was on its way just then was lost for good: a player whose model was being read stayed the plain
@@ -840,7 +845,10 @@ it): 40 frames in a second at `sv_fps 40`, a frame of 0.06 ms on average and 0.2
 while the page read its files, a wait of 25 ms, the entities the editor counts too. A value came every
 second, a number the server does not have got all it keeps, and nothing was asked for with the tab closed.
 In one run a second had a frame of 30 ms: the page was reading the animations of the players just then,
-8 MB out of a pk3, which the server reads in one go.
+which the server read in one go. That led to the files being read as they are sent. Tried with a script
+that takes six files through the route and compares them with what the pk3 files of the game hold: the same
+to the byte, 11.8 MB in 0.56 s alone and three of them next to three models in 1.8 s, with frames of the game
+of 1.7 to 1.8 ms at most in those seconds and all 40 frames in each.
 Not tried: a server under real load, where the yellow marks would show, and the clock on Windows.
 
 Fire, the rectangle and teams of doors (`steps_fire.js`, 11 checks, the same day): on mp/ffa3 Fire sent a lift

@@ -69,7 +69,15 @@ typedef struct waConnection_s {
 	waBuffer_t	response;
 	int			sent;
 	int			lastActive;		// trap->Milliseconds()
+	fileHandle_t	file;		// a file of the game that is handed out piece by piece, 0 for none
+	int			fileLeft;		// what of it is not read yet
 } waConnection_t;
+
+// A file of the game is read as it is sent, so much in a frame for one connection and so much for all of them.
+// Read in one go, a big one (the animations of the players, 8 MB out of a pk3) took a frame of 30 ms.
+#define WA_FILE_CHUNK		( 256 * 1024 )
+#define WA_FILE_FRAME		( 512 * 1024 )
+static int	fileBudget;		// what may still be read in this frame
 
 // login throttle: after WA_AUTH_TRIES wrong passwords an address waits, the wait doubles from WA_AUTH_BASE_MS
 #define WA_AUTH_TRIES		5
@@ -88,6 +96,7 @@ static waAuthFail_t	authFails[WA_AUTH_SLOTS];
 
 static bgSocket_t		listenSocket = BG_INVALID_SOCKET;
 static waConnection_t	connections[WA_MAX_CONNECTIONS];
+static int				firstConnection;	// the one WebAdmin_Frame starts with
 static int				listenPort;
 
 // key/value pairs each entity was spawned with, "key\0value\0key\0value\0"
@@ -226,8 +235,9 @@ Responses
 ==============================================================================
 */
 
-static void WA_Respond( waConnection_t *c, int status, const char *statusText, const char *contentType,
-	const char *extraHeaders, const void *body, int bodyLen ) {
+// the head of an answer whose body has bodyLen bytes
+static void WA_RespondHead( waConnection_t *c, int status, const char *statusText, const char *contentType,
+	const char *extraHeaders, int bodyLen ) {
 	WA_BufPrintf( &c->response,
 		"HTTP/1.1 %d %s\r\n"
 		"Content-Type: %s\r\n"
@@ -241,6 +251,11 @@ static void WA_Respond( waConnection_t *c, int status, const char *statusText, c
 		"%s"
 		"\r\n",
 		status, statusText, contentType, bodyLen, extraHeaders ? extraHeaders : "" );
+}
+
+static void WA_Respond( waConnection_t *c, int status, const char *statusText, const char *contentType,
+	const char *extraHeaders, const void *body, int bodyLen ) {
+	WA_RespondHead( c, status, statusText, contentType, extraHeaders, bodyLen );
 	if ( bodyLen > 0 )
 		WA_BufAppend( &c->response, body, bodyLen );
 }
@@ -855,11 +870,11 @@ static void WA_ApiMap( waConnection_t *c ) {
 // Textures, models and skins for the 3D views, and the shader scripts the view of the administration draws the
 // map with. Only below textures/, models/ and gfx/, and of shaders/ the scripts.
 static void WA_ApiFile( waConnection_t *c, const char *query ) {
-	char		name[MAX_QPATH];
-	const char	*ext, *type;
-	char		*data;
-	int			len;
-	qboolean	script, audio;
+	char			name[MAX_QPATH];
+	const char		*ext, *type;
+	fileHandle_t	f = 0;
+	int				len;
+	qboolean		script, audio;
 
 	if ( !WA_FormValue( query, "name", name, sizeof( name ) ) || strstr( name, ".." ) || strchr( name, '\\' ) || strchr( name, ':' ) ) {
 		WA_RespondText( c, 400, "Bad Request", "bad file name" );
@@ -886,13 +901,17 @@ static void WA_ApiFile( waConnection_t *c, const char *query ) {
 		return;
 	}
 
-	data = WA_ReadGameFile( name, &len );
-	if ( !data ) {
+	len = trap->FS_Open( name, &f, FS_READ );
+	if ( len <= 0 || !f || len > WA_MAX_FILE ) {
+		if ( f )
+			trap->FS_Close( f );
 		WA_RespondText( c, 404, "Not Found", "not found" );
 		return;
 	}
-	WA_Respond( c, 200, "OK", type, "Cache-Control: max-age=3600\r\n", data, len );
-	free( data );
+	// the head now, the file itself as it is sent (WA_FileMore)
+	WA_RespondHead( c, 200, "OK", type, "Cache-Control: max-age=3600\r\n", len );
+	c->file = f;
+	c->fileLeft = len;
 }
 
 static void WA_ActionResult( waConnection_t *c, qboolean ok, const char *msg ) {
@@ -3397,6 +3416,8 @@ Connections
 */
 
 static void WA_CloseConnection( waConnection_t *c ) {
+	if ( c->file )
+		trap->FS_Close( c->file );
 	if ( c->sock != BG_INVALID_SOCKET )
 		BG_CloseSocket( c->sock );
 	WA_BufFree( &c->response );
@@ -3587,16 +3608,55 @@ static void WA_ReadRequest( waConnection_t *c ) {
 	WA_HandleRequest( c, c->request, c->request + headLen, bodyLen );
 }
 
+// The next piece of the file a connection hands out, in the place of what was sent. qfalse: there is none, or
+// nothing may be read any more in this frame.
+static qboolean WA_FileMore( waConnection_t *c ) {
+	int n = c->fileLeft;
+
+	if ( n > WA_FILE_CHUNK )
+		n = WA_FILE_CHUNK;
+	if ( n > fileBudget )
+		n = fileBudget;
+	if ( n <= 0 )
+		return qfalse;
+
+	c->response.len = 0;
+	c->sent = 0;
+	if ( !WA_BufReserve( &c->response, n ) ) {
+		WA_CloseConnection( c );
+		return qfalse;
+	}
+	trap->FS_Read( c->response.data, n, c->file );
+	c->response.len = n;
+	c->fileLeft -= n;
+	fileBudget -= n;
+	if ( c->fileLeft <= 0 ) {
+		trap->FS_Close( c->file );
+		c->file = 0;
+	}
+	return qtrue;
+}
+
 static void WA_WriteResponse( waConnection_t *c ) {
-	while ( c->sent < c->response.len ) {
-		const int n = send( c->sock, c->response.data + c->sent, c->response.len - c->sent, BG_SEND_FLAGS );
-		if ( n < 0 ) {
-			if ( !BG_SocketWouldBlock() )
-				WA_CloseConnection( c );
-			return;
+	do {
+		while ( c->sent < c->response.len ) {
+			const int n = send( c->sock, c->response.data + c->sent, c->response.len - c->sent, BG_SEND_FLAGS );
+			if ( n < 0 ) {
+				if ( !BG_SocketWouldBlock() )
+					WA_CloseConnection( c );
+				return;
+			}
+			c->sent += n;
+			c->lastActive = trap->Milliseconds();
 		}
-		c->sent += n;
+	} while ( WA_FileMore( c ) );
+
+	if ( !c->inUse )
+		return;
+	if ( c->fileLeft > 0 ) {
+		// it waits for the next frame, not for the other side
 		c->lastActive = trap->Milliseconds();
+		return;
 	}
 	WA_CloseConnection( c );
 }
@@ -3734,8 +3794,13 @@ void WebAdmin_Frame( void ) {
 
 	WA_Accept();
 
+	// what is read of files in this frame. Another connection is the first each frame, so none waits for long
+	// behind the ones in front of it.
+	fileBudget = WA_FILE_FRAME;
+	firstConnection = ( firstConnection + 1 ) % WA_MAX_CONNECTIONS;
+
 	for ( i = 0; i < WA_MAX_CONNECTIONS; i++ ) {
-		waConnection_t *c = &connections[i];
+		waConnection_t *c = &connections[( firstConnection + i ) % WA_MAX_CONNECTIONS];
 
 		if ( !c->inUse )
 			continue;
