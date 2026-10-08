@@ -682,9 +682,10 @@ static void WA_ApiState( waConnection_t *c ) {
 				WA_BOOL( jp->denyVote ), WA_BOOL( jp->frozen ) );
 		}
 		WA_BufPrintf( &b, ",\"yaw\":%.1f,\"pitch\":%.1f,\"legsAnim\":%d,\"torsoAnim\":%d,\"viewheight\":%d,"
-			"\"saberHolstered\":%d,\"saberInFlight\":%s,",
+			"\"saberHolstered\":%d,\"saberInFlight\":%s,\"saberEnt\":%d,",
 			ps->viewangles[YAW], ps->viewangles[PITCH], ps->legsAnim, ps->torsoAnim, ps->viewheight,
-			ps->saberHolstered, ps->saberInFlight ? "true" : "false" );
+			// saberEnt: the entity of his saber, which is among the models while it flies
+			ps->saberHolstered, ps->saberInFlight ? "true" : "false", ps->saberEntityNum );
 		if ( ps->weapon > WP_NONE && ps->weapon < WP_NUM_WEAPONS ) {
 			const int ammoIndex = weaponData[ps->weapon].ammoIndex;
 			WA_BufPrintf( &b, "\"ammo\":%d,\"maxAmmo\":%d,\"ammoInfinite\":%s,", ammoIndex > AMMO_NONE && ammoIndex < AMMO_MAX ? ps->ammo[ammoIndex] : -1,

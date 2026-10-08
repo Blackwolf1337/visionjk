@@ -2936,9 +2936,25 @@ function frame(now) {
 
 	// what else the game draws as a model: the props and the models of the map that are entities
 	if (state) {
+		// A saber that was thrown is one of them, as its hilt. The game lays it flat and lets it spin (the client
+		// tilts it there, the server only turns it), and its blade is on: whose saber an entity is, the players say.
+		const thrown = new Map();
+		for (const p of players.values()) if (p.data.saberInFlight && p.data.saberEnt > 0 && !p.data.dead) thrown.set(p.data.saberEnt, p.data);
 		for (const m of state.models || []) {
-			const model = staticNow(m.model);
-			if (model) drawStatic(model, anglesMatrix(m.prev.map((v, i) => v + (m.pos[i] - v) * k), m.angles, m.scale / 100));
+			const model = staticNow(m.model), pos = m.prev.map((v, i) => v + (m.pos[i] - v) * k), owner = thrown.get(m.id);
+			if (!owner) {
+				if (model) drawStatic(model, anglesMatrix(pos, m.angles, m.scale / 100));
+				continue;
+			}
+			// 800 degrees a second is how the game spins it, on from where it was at the last poll
+			const yaw = m.angles[1] + SABER_SPIN * Math.min(pollInterval * 2, now - lastPoll) / 1000, r = yaw * Math.PI / 180;
+			if (model) drawStatic(model, anglesMatrix(pos, [90, yaw, 0], 1));
+			// the hilt lies along the way it looks then, and the blades start where its tag says
+			const dir = [Math.cos(r), Math.sin(r), 0], tag = model && model.tags['*blade1'], from = tag ? tag[11] : 6;
+			const saber = (owner.sabers || [])[0];
+			for (const blade of saber ? saber.blades.slice(0, 1) : []) {
+				blades.push({ org: [pos[0] + dir[0] * from, pos[1] + dir[1] * from, pos[2]], dir, len: blade.length, radius: blade.radius, color: blade.color });
+			}
 		}
 	}
 	if (editor) drawEditorLines();
@@ -5843,6 +5859,7 @@ const blades = [];	// collected while drawing models, drawn after everything opa
 // What is in the air (shots of /api/state), as far as it can be shown without the effects of the game: a bolt is
 // a streak of light in about the colour of its effect, and what the game draws as a model (a rocket, a thermal
 // detonator, a det pack) is that model. [length, radius, colour] by weapon, and by the other way to fire it.
+const SABER_SPIN = 800;		// degrees a second, the turn the game gives a saber that was thrown
 const SHOT_BOLT = {
 	4: [20, 2.5, [1, 0.6, 0.15]], 5: [28, 2.5, [1, 0.15, 0.1]], 7: [24, 3, [0.2, 1, 0.25]], 8: [14, 2, [1, 0.9, 0.5]], 9: [20, 4, [0.5, 0.7, 1]],
 	10: [10, 1.5, [1, 0.75, 0.3]], 11: [44, 4, [1, 0.55, 0.15]], 15: [40, 4, [0.6, 0.8, 1]], 16: [20, 2.5, [1, 0.6, 0.15]], 17: [28, 3, [1, 0.2, 0.15]], 18: [24, 2.5, [1, 0.3, 0.2]]

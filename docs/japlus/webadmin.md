@@ -297,8 +297,11 @@ Also changed:
   and grenades the clients draw as missiles. The page has none of the effects of the game, so a bolt is a
   streak of light in about the colour of its effect, as long and as thick as the weapon makes it, and what the
   game draws as a model is that model: a rocket, a thermal detonator, a det pack. They move between two polls
-  by where they were, a new one comes from where its speed says it was. Not drawn: a saber that was thrown,
-  the trail and the explosion of anything, and what only an effect shows (the beam of a disruptor).
+  by where they were, a new one comes from where its speed says it was. A saber that was thrown was drawn
+  before, but only as its hilt, upright and without a blade: the server has it among the models then. Now the
+  page knows whose saber an entity is (`saberEnt` of a player), lays it flat as the client does, lets it turn
+  its 800 degrees a second between the polls and gives it the blade of its owner. Not drawn: the trail and
+  the explosion of anything, and what only an effect shows (the beam of a disruptor).
 - Changed: "Fire" also fires a `misc_weapon_shooter`. The game lends that class a client for the weapon code,
   and the first guard took everything with a client for an NPC. It asks for the NPC itself now.
 - New: the tab Load of the administration (`/api/perf`, `WA_PerfFrameBegin`, `WebAdmin_FrameEnd`). Five
@@ -862,6 +865,13 @@ a surface with a script, one without, a patch and one of a lift, each the first 
 from there, and a click in the middle of the view showed that surface with its shader and with what its
 kind must say, the lift with the `func_door` it belongs to. The outline had six line ends for every triangle,
 and a click at nothing emptied the box.
+
+A saber that was thrown (`steps_saber.js`, the same day, mp/ffa3): no bot throws on demand, so the page was given
+a saber in the air by hand. As a thrown one it got one blade, flat and as long as the saber of its owner, and
+the picture differed from the one with the hilt alone. Then the bots were watched: one threw, his saber was
+among the models with its own hilt from the second state on, moved about 50 units from poll to poll and
+turned 80 degrees in each, the 800 a second the page turns it by. Not seen: the picture of a real throw (it
+is over in a second), a saber with two blades, a thrown saber of a player with two sabers.
 
 What is in the air (`steps_shots.js`, 7 checks, the same day, mp/ffa3): a `misc_weapon_shooter` with a rocket
 launcher, placed and fired through the panel, put a rocket into the list that flew 360 units in 0.4 s along
