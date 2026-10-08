@@ -2323,14 +2323,48 @@ let lastPoll = 0, pollInterval = 100;
 
 let itemsRev = 0, itemsKept = [];		// the number of the item list the server sent last, and that list
 
+// A player comes in two parts (see WA_ApiState): "s" is what stays the same of him, sent with a number "r" and
+// then only again when it changed, "f" and "b" are rows of numbers for what changes all the time. Here they
+// become the one object the rest of the page reads. A game module that sends a player as one object: as it is.
+const playerSlow = new Map();		// client -> { rev, data }
+
+function expandPlayers(s) {
+	const out = [], seen = new Set();
+	for (const e of s.players || []) {
+		if (e.f === undefined) { out.push(e); continue; }
+		seen.add(e.id);
+		if (e.s) playerSlow.set(e.id, { rev: e.r, data: e.s });
+		const slow = playerSlow.get(e.id);
+		// what the page has is not what the server thinks it has: asked for again, he is back with the next poll
+		if (!slow || slow.rev !== e.r) { playerSlow.delete(e.id); continue; }
+		const f = e.f, d = slow.data;
+		let n = 0;
+		out.push(Object.assign({}, d, {
+			id: e.id, health: f[0], armor: f[1], score: f[2], ping: f[3], weapon: f[4], forcePower: f[5],
+			dead: !!(f[6] & 1), saberOn: !!(f[6] & 2), saberInFlight: !!(f[6] & 4), saberHolstered: f[7], saberEnt: f[8],
+			pos: [f[9], f[10], f[11]], vel: [f[12], f[13], f[14]], yaw: f[15], pitch: f[16], legsAnim: f[17], torsoAnim: f[18], viewheight: f[19], ammo: f[20],
+			minutes: Math.max(0, Math.floor(((s.time || 0) - (d.entered || 0)) / 60000)),
+			sabers: (d.sabers || []).map(sb => ({ model: sb.model, blades: sb.blades.map(bl => {
+				const now = e.b[n++] || [0, 0, 0, 0, 0, 0, 0];
+				return { length: bl.length, radius: bl.radius, color: bl.color, current: now[0], org: [now[1], now[2], now[3]], dir: [now[4], now[5], now[6]] };
+			}) }))
+		}));
+	}
+	for (const id of [...playerSlow.keys()]) if (!seen.has(id)) playerSlow.delete(id);
+	return out;
+}
+
 async function pollState() {
 	try {
-		// the list of the items is not sent again as long as it is the one that is here
-		const res = await fetch('api/state' + (itemsRev ? '?items=' + itemsRev : ''), { cache: 'no-store' });
+		// The list of the items is not sent again as long as it is the one that is here, and neither is what stays
+		// the same of a player: the server is told the number of what the page has of each.
+		const has = [...playerSlow].map(([id, slow]) => id + '.' + slow.rev).join('-');
+		const res = await fetch('api/state?items=' + itemsRev + (has ? '&p=' + has : ''), { cache: 'no-store' });
 		if (!res.ok) throw new Error('HTTP ' + res.status);
 		const s = await res.json();
 		$('status').className = 'live';
 		if (s.items) { itemsKept = s.items; itemsRev = s.itemsRev || 0; } else s.items = itemsKept;
+		s.players = expandPlayers(s);
 		applyState(s);
 	} catch (e) {
 		$('status').className = 'err';

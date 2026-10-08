@@ -76,7 +76,7 @@ the answer tells the page that the numbers started over.
 | Request | Answer |
 |---------|--------|
 | `GET /` | the page |
-| `GET /api/state` | map, scores, players, NPCs, items and `models` as JSON. The page polls this. `itemsRev` is a number for the list of the items as it is, and with `items=<that number>` the list is left out as long as it is the same. `models`: every other entity the clients draw as a model (props, models of the map that are entities), with its model, scale, origin and angles as the clients have them. `movers`: every brush model the clients draw as an entity (doors, lifts, what turns or can be switched off), as the number of the brush model, or as `[number, x, y, z, pitch, yaw, roll]` when it is not where the map file has it. `shots`: what is in the air, each as `[entity, weapon, 1 for the other way to fire it, x, y, z, and its speed along the three axes]` |
+| `GET /api/state` | map, scores, players, NPCs, items and `models` as JSON. The page polls this. `itemsRev` is a number for the list of the items as it is, and with `items=<that number>` the list is left out as long as it is the same. A player is `id`, `r` (the number of what stays the same of him), `s` (that part: name, address, team, flags, sabers, model; left out for a page that names the number with `p=<id>.<r>-<id>.<r>`), `f` (21 numbers: health, armor, score, ping, weapon, force, flags 1 dead 2 saber on 4 saber in flight, saberHolstered, saber entity, origin, velocity, yaw, pitch, legs and torso animation, view height, ammo) and `b` (for every blade its length now, where it starts and the way it points). `models`: every other entity the clients draw as a model (props, models of the map that are entities), with its model, scale, origin and angles as the clients have them. `movers`: every brush model the clients draw as an entity (doors, lifts, what turns or can be switched off), as the number of the brush model, or as `[number, x, y, z, pitch, yaw, roll]` when it is not where the map file has it. `shots`: what is in the air, each as `[entity, weapon, 1 for the other way to fire it, x, y, z, and its speed along the three axes]` |
 | `GET /api/map` | the `.bsp` of the current map |
 | `GET /api/file?name=` | a file below `textures/`, `models/` or `gfx/` (images, md3, glm, gla, cfg, skin), a shader script `shaders/<name>.shader`, or a `.wav` or `.mp3` below `sound/` or `music/` |
 | `GET /api/shaders` | the names of the shader scripts of the game, in the order the engine reads them in |
@@ -368,7 +368,10 @@ Also changed:
 - Changed: the state feed is smaller and asked for less often. The list of the items is more than a third of
   an answer and the same from one poll to the next unless something was picked up or came back: it has a
   number now (`itemsRev`, a hash of its text), and a page that has the list of that number is not sent it
-  again. And the page asks once a second and not ten times while the map is not looked at: the tab of the
+  again. The same for a player, who was about a kilobyte ten times a second: who he is and what he has stays
+  the same nearly always and is sent with a number and then only when it changed, what changes all the time
+  comes as two rows of numbers, about 150 bytes (`expandPlayers` makes the one object of it that the rest of
+  the page reads). With three bots an answer went from about 7,500 to about 1,000 bytes. And the page asks once a second and not ten times while the map is not looked at: the tab of the
   browser is in the back, or the config, the files or the log lie over the map.
 - Fixed: the map file is read as it is sent as well (`/api/map`), and the panel no longer keeps a copy of
   it. It read the whole `.bsp` in one go at the first question an editor has after a map started, 7 to 20 MB,
@@ -926,11 +929,14 @@ What fires what (`steps_trace.js`, 4 checks, the same day, mp/ffa3): a trigger_m
 panel gave five events, the world firing the trigger and the trigger firing each of its four lifts, nothing
 before the click and nothing after, and the light was out after three seconds.
 
-The state feed (`steps_state.js`, 9 checks, the same day, mp/ffa3): without a number the 40 items came with
+The state feed (`steps_state.js`, 14 checks, the same day, mp/ffa3): without a number the 40 items came with
 one, with that number they were left out and the answer was 87% smaller (456 of 3,418 bytes, nobody on the
 server), with another number they came again. The page kept its list, got a new one when an item was placed
 and the old number back when it was taken away. It asked 29 times in three seconds with the map in view, 4
-times with the log over it, and 29 times again after it.
+times with the log over it, and 29 times again after it. Three players came with what stays of them the
+first time (2,988 bytes), without it when their numbers were named (1,012 bytes, about 152 a player), and
+with it again for a number that was not theirs. The page read a player as before, with his name, his team,
+his place and the blades of his saber, and the checks that click, follow and teleport players passed.
 
 The tab Load (`steps_load.js`, 11 checks, the same day, Linux, a private server with four bots and nobody on
 it): 40 frames in a second at `sv_fps 40`, a frame of 0.06 ms on average and 0.2 ms at most, 0.3 and 1.1 ms

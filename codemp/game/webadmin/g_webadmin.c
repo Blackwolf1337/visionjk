@@ -607,7 +607,9 @@ static void WA_AppendVec( waBuffer_t *b, const vec3_t v ) {
 }
 
 static void WA_ApiState( waConnection_t *c, const char *query ) {
-	waBuffer_t	b = { 0 };
+	static char	knownText[MAX_CLIENTS * 16];
+	unsigned	known[MAX_CLIENTS];
+	waBuffer_t	b = { 0 }, slow = { 0 };
 	char		mapname[MAX_QPATH], hostname[MAX_NETNAME * 2];
 	int			i;
 	qboolean	first = qtrue;
@@ -625,23 +627,56 @@ static void WA_ApiState( waConnection_t *c, const char *query ) {
 		level.gametype, BG_GetGametypeString( level.gametype ), level.time - level.startTime, timelimit.integer,
 		fraglimit.integer, capturelimit.integer, level.teamScores[TEAM_RED], level.teamScores[TEAM_BLUE], level.maxclients );
 
+	// Of a player most of what is told stays the same from one poll to the next: who he is, what he has, what
+	// was done to him. That part ("s") has a number ("r", a hash of its text), and a page that says it has the
+	// part of that number (p=<client>.<number>-<client>.<number>...) is not sent it again. What changes all the
+	// time comes as two rows of numbers:
+	//   "f": health, armor, score, ping, weapon, force, flags (1 dead, 2 saber on, 4 saber in flight),
+	//        saberHolstered, entity of the saber, origin (3), velocity (3), yaw, pitch, legs and torso animation,
+	//        view height, ammo of the weapon (-1: it has none)
+	//   "b": for every blade of his sabers its length now, where it starts (3) and the way it points (3)
+	// A player was about a kilobyte ten times a second before, he is about 170 bytes now.
+	memset( known, 0, sizeof( known ) );
+	if ( WA_FormValue( query, "p", knownText, sizeof( knownText ) ) ) {
+		const char *at = knownText;
+
+		while ( *at ) {
+			char		*end;
+			const long	id = strtol( at, &end, 10 );
+			unsigned long rev;
+
+			if ( end == at || *end != '.' )
+				break;
+			at = end + 1;
+			rev = strtoul( at, &end, 10 );
+			if ( end == at )
+				break;
+			if ( id >= 0 && id < MAX_CLIENTS )
+				known[id] = (unsigned)rev;
+			at = ( *end == '-' ) ? end + 1 : end;
+			if ( *end && *end != '-' )
+				break;
+		}
+	}
+
 	for ( i = 0; i < level.maxclients; i++ ) {
 		gentity_t		*ent = &g_entities[i];
 		gclient_t		*cl = ent->client;
 		playerState_t	*ps;
+		unsigned		rev = 2166136261u;
+		int				k, ammo = -1, s2, bl;
+		qboolean		firstBlade = qtrue;
 
 		if ( !ent->inuse || !cl || cl->pers.connected == CON_DISCONNECTED )
 			continue;
 		ps = &cl->ps;
 
-		if ( !first )
-			WA_BufAppend( &b, ",", 1 );
-		first = qfalse;
-
-		WA_BufPrintf( &b, "{\"id\":%d,\"name\":", i );
-		WA_BufJsonString( &b, cl->pers.netname );
+		// ---- what stays
+		slow.len = 0;
+		WA_BufAppend( &slow, "{\"name\":", 8 );
+		WA_BufJsonString( &slow, cl->pers.netname );
 		// Not in JKAdmin: who that is for an admin. Where he connects from (without the port, nothing for a bot),
-		// how long he has been in the game and which client plugin of JA+ he has, 0 for none.
+		// when he came (in the time of the map, as "time" above is) and which client plugin of JA+ he has, 0 for none.
 		{
 			char address[NET_ADDRSTRMAXLEN], *port;
 
@@ -649,81 +684,100 @@ static void WA_ApiState( waConnection_t *c, const char *query ) {
 			port = strchr( address, ':' );
 			if ( port )
 				*port = '\0';
-			WA_BufAppend( &b, ",\"address\":", 11 );
-			WA_BufJsonString( &b, address );
-			WA_BufPrintf( &b, ",\"minutes\":%d,\"plugin\":%.2f", ( level.time - cl->pers.enterTime ) / 60000, cl->pers.jp.pluginVersion );
+			WA_BufAppend( &slow, ",\"address\":", 11 );
+			WA_BufJsonString( &slow, address );
+			WA_BufPrintf( &slow, ",\"entered\":%d,\"plugin\":%.2f", cl->pers.enterTime - level.startTime, cl->pers.jp.pluginVersion );
 		}
-		WA_BufPrintf( &b, ",\"team\":\"%s\",\"bot\":%s,\"connected\":%s,\"health\":%d,\"maxHealth\":%d,\"armor\":%d,"
-			"\"score\":%d,\"ping\":%d,\"weapon\":%d,\"forcePower\":%d,\"scale\":%d,\"god\":%s,\"dead\":%s,\"saberOn\":%s,\"pos\":",
+		WA_BufPrintf( &slow, ",\"team\":\"%s\",\"bot\":%s,\"connected\":%s,\"maxHealth\":%d,\"scale\":%d,\"god\":%s",
 			WA_TeamName( cl->sess.sessionTeam ), ( ent->r.svFlags & SVF_BOT ) ? "true" : "false",
-			cl->pers.connected == CON_CONNECTED ? "true" : "false",
-			ps->stats[STAT_HEALTH], ps->stats[STAT_MAX_HEALTH], ps->stats[STAT_ARMOR],
-			ps->persistant[PERS_SCORE], ps->ping, ps->weapon, ps->fd.forcePower,
-			ps->iModelScale ? ps->iModelScale : 100, ( ent->flags & FL_GODMODE ) ? "true" : "false",
-			( ps->pm_type == PM_DEAD || ps->stats[STAT_HEALTH] <= 0 ) ? "true" : "false",
-			( ps->weapon == WP_SABER && !ps->saberHolstered ) ? "true" : "false" );
-		WA_AppendVec( &b, ps->origin );
-		WA_BufAppend( &b, ",\"vel\":", 7 );
-		WA_AppendVec( &b, ps->velocity );
-		WA_BufPrintf( &b, ",\"noclip\":%s", cl->noclip ? "true" : "false" );		// not in JKAdmin
-		WA_BufPrintf( &b, ",\"gravity\":%d,\"ownGravity\":%s", ps->gravity, WA_BOOL( clientGravitySet[i] ) );	// not in JKAdmin
-		WA_BufPrintf( &b, ",\"schizo\":%s", WA_BOOL( G_SchizoActive( i ) ) );		// not in JKAdmin, g_schizo.c
-		WA_BufPrintf( &b, ",\"flatulence\":%s", WA_BOOL( G_FlatulenceActive( i ) ) );	// not in JKAdmin, g_flatulence.c
-		WA_BufPrintf( &b, ",\"disorient\":%s", WA_BOOL( G_DisorientActive( i ) ) );	// not in JKAdmin, g_disorient.c
+			cl->pers.connected == CON_CONNECTED ? "true" : "false", ps->stats[STAT_MAX_HEALTH],
+			ps->iModelScale ? ps->iModelScale : 100, ( ent->flags & FL_GODMODE ) ? "true" : "false" );
+		WA_BufPrintf( &slow, ",\"noclip\":%s", cl->noclip ? "true" : "false" );		// not in JKAdmin
+		WA_BufPrintf( &slow, ",\"gravity\":%d,\"ownGravity\":%s", ps->gravity, WA_BOOL( clientGravitySet[i] ) );	// not in JKAdmin
+		WA_BufPrintf( &slow, ",\"schizo\":%s", WA_BOOL( G_SchizoActive( i ) ) );		// not in JKAdmin, g_schizo.c
+		WA_BufPrintf( &slow, ",\"flatulence\":%s", WA_BOOL( G_FlatulenceActive( i ) ) );	// not in JKAdmin, g_flatulence.c
+		WA_BufPrintf( &slow, ",\"disorient\":%s", WA_BOOL( G_DisorientActive( i ) ) );	// not in JKAdmin, g_disorient.c
 		{
 			// not in JKAdmin: what the JA+ buttons of the page show. admin is jpAdminLevel_t, altDim 2 is forced.
 			const jpClient_t *jp = &cl->pers.jp;
 
-			WA_BufPrintf( &b, ",\"jp\":{\"admin\":%d,\"sleep\":%s,\"protect\":%s,\"empower\":%s,\"merc\":%s,\"mindtrick\":%s,"
+			WA_BufPrintf( &slow, ",\"jp\":{\"admin\":%d,\"sleep\":%s,\"protect\":%s,\"empower\":%s,\"merc\":%s,\"mindtrick\":%s,"
 				"\"ghost\":%s,\"silence\":%s,\"altDim\":%d,\"denyVote\":%s,\"frozen\":%s}",
 				(int)cl->sess.jpAdminLevel, WA_BOOL( jp->sleeping ), WA_BOOL( jp->protectedByAdmin ), WA_BOOL( jp->empowered ),
 				WA_BOOL( jp->merc ), WA_BOOL( jp->mindtricked ), WA_BOOL( jp->isGhost ), WA_BOOL( jp->silenced ), jp->dimension,
 				WA_BOOL( jp->denyVote ), WA_BOOL( jp->frozen ) );
 		}
-		WA_BufPrintf( &b, ",\"yaw\":%.1f,\"pitch\":%.1f,\"legsAnim\":%d,\"torsoAnim\":%d,\"viewheight\":%d,"
-			"\"saberHolstered\":%d,\"saberInFlight\":%s,\"saberEnt\":%d,",
-			ps->viewangles[YAW], ps->viewangles[PITCH], ps->legsAnim, ps->torsoAnim, ps->viewheight,
-			// saberEnt: the entity of his saber, which is among the models while it flies
-			ps->saberHolstered, ps->saberInFlight ? "true" : "false", ps->saberEntityNum );
 		if ( ps->weapon > WP_NONE && ps->weapon < WP_NUM_WEAPONS ) {
 			const int ammoIndex = weaponData[ps->weapon].ammoIndex;
-			WA_BufPrintf( &b, "\"ammo\":%d,\"maxAmmo\":%d,\"ammoInfinite\":%s,", ammoIndex > AMMO_NONE && ammoIndex < AMMO_MAX ? ps->ammo[ammoIndex] : -1,
-				ammoIndex > AMMO_NONE && ammoIndex < AMMO_MAX ? ammoData[ammoIndex].max : 0,
+
+			if ( ammoIndex > AMMO_NONE && ammoIndex < AMMO_MAX )
+				ammo = ps->ammo[ammoIndex];
+			WA_BufPrintf( &slow, ",\"maxAmmo\":%d,\"ammoInfinite\":%s", ammoIndex > AMMO_NONE && ammoIndex < AMMO_MAX ? ammoData[ammoIndex].max : 0,
 				( !weaponData[ps->weapon].energyPerShot && !weaponData[ps->weapon].altEnergyPerShot ) ? "true" : "false" );
 		}
-		WA_BufPrintf( &b, "\"saberStyle\":%d,\"forceMax\":%d,\"sabers\":[", ps->fd.saberDrawAnimLevel, ps->fd.forcePowerMax ? ps->fd.forcePowerMax : 100 );
-		{
-			int s, bl;
-			qboolean firstSaber = qtrue;
-			for ( s = 0; s < MAX_SABERS; s++ ) {
-				const saberInfo_t *saber = &cl->saber[s];
-				if ( !saber->model[0] )
-					continue;
-				if ( !firstSaber )
-					WA_BufAppend( &b, ",", 1 );
-				firstSaber = qfalse;
-				WA_BufAppend( &b, "{\"model\":", 9 );
-				WA_BufJsonString( &b, saber->model );
-				WA_BufAppend( &b, ",\"blades\":[", 11 );
-				for ( bl = 0; bl < saber->numBlades && bl < MAX_BLADES; bl++ ) {
-					const bladeInfo_t *blade = &saber->blade[bl];
-					WA_BufPrintf( &b, "%s{\"length\":%.1f,\"current\":%.1f,\"radius\":%.1f,\"color\":%d,"
-						"\"org\":[%.1f,%.1f,%.1f],\"dir\":[%.3f,%.3f,%.3f]}", bl ? "," : "",
-						blade->lengthMax, blade->length, blade->radius, blade->color,
-						blade->muzzlePoint[0], blade->muzzlePoint[1], blade->muzzlePoint[2],
-						blade->muzzleDir[0], blade->muzzleDir[1], blade->muzzleDir[2] );
-				}
-				WA_BufAppend( &b, "]}", 2 );
+		WA_BufPrintf( &slow, ",\"saberStyle\":%d,\"forceMax\":%d,\"sabers\":[", ps->fd.saberDrawAnimLevel, ps->fd.forcePowerMax ? ps->fd.forcePowerMax : 100 );
+		for ( s2 = 0, k = 0; s2 < MAX_SABERS; s2++ ) {
+			const saberInfo_t *saber = &cl->saber[s2];
+
+			if ( !saber->model[0] )
+				continue;
+			if ( k++ )
+				WA_BufAppend( &slow, ",", 1 );
+			WA_BufAppend( &slow, "{\"model\":", 9 );
+			WA_BufJsonString( &slow, saber->model );
+			WA_BufAppend( &slow, ",\"blades\":[", 11 );
+			for ( bl = 0; bl < saber->numBlades && bl < MAX_BLADES; bl++ ) {
+				const bladeInfo_t *blade = &saber->blade[bl];
+
+				WA_BufPrintf( &slow, "%s{\"length\":%.1f,\"radius\":%.1f,\"color\":%d}", bl ? "," : "", blade->lengthMax, blade->radius, blade->color );
 			}
+			WA_BufAppend( &slow, "]}", 2 );
 		}
-		WA_BufAppend( &b, "],\"model\":", 10 );
+		WA_BufAppend( &slow, "],\"model\":", 10 );
 		{
 			char userinfo[MAX_INFO_STRING];
+
 			trap->GetUserinfo( i, userinfo, sizeof( userinfo ) );
-			WA_BufJsonString( &b, Info_ValueForKey( userinfo, "model" ) );
+			WA_BufJsonString( &slow, Info_ValueForKey( userinfo, "model" ) );
+		}
+		WA_BufAppend( &slow, "}", 1 );
+		for ( k = 0; k < slow.len; k++ )
+			rev = ( rev ^ (unsigned char)slow.data[k] ) * 16777619u;
+		if ( !rev )
+			rev = 1;	// 0 is what a page sends that has none
+
+		// ---- what changes
+		WA_BufPrintf( &b, "%s{\"id\":%d,\"r\":%u,\"f\":[%d,%d,%d,%d,%d,%d,%d,%d,%d,%.1f,%.1f,%.1f,%.0f,%.0f,%.0f,%.1f,%.1f,%d,%d,%d,%d],\"b\":[",
+			first ? "" : ",", i, rev,
+			ps->stats[STAT_HEALTH], ps->stats[STAT_ARMOR], ps->persistant[PERS_SCORE], ps->ping, ps->weapon, ps->fd.forcePower,
+			( ( ps->pm_type == PM_DEAD || ps->stats[STAT_HEALTH] <= 0 ) ? 1 : 0 ) | ( ( ps->weapon == WP_SABER && !ps->saberHolstered ) ? 2 : 0 )
+				| ( ps->saberInFlight ? 4 : 0 ),
+			ps->saberHolstered, ps->saberEntityNum, ps->origin[0], ps->origin[1], ps->origin[2],
+			ps->velocity[0], ps->velocity[1], ps->velocity[2], ps->viewangles[YAW], ps->viewangles[PITCH],
+			ps->legsAnim, ps->torsoAnim, ps->viewheight, ammo );
+		first = qfalse;
+		for ( s2 = 0; s2 < MAX_SABERS; s2++ ) {
+			const saberInfo_t *saber = &cl->saber[s2];
+
+			if ( !saber->model[0] )
+				continue;
+			for ( bl = 0; bl < saber->numBlades && bl < MAX_BLADES; bl++ ) {
+				const bladeInfo_t *blade = &saber->blade[bl];
+
+				WA_BufPrintf( &b, "%s[%.1f,%.1f,%.1f,%.1f,%.3f,%.3f,%.3f]", firstBlade ? "" : ",", blade->length,
+					blade->muzzlePoint[0], blade->muzzlePoint[1], blade->muzzlePoint[2],
+					blade->muzzleDir[0], blade->muzzleDir[1], blade->muzzleDir[2] );
+				firstBlade = qfalse;
+			}
+		}
+		WA_BufAppend( &b, "]", 1 );
+		if ( known[i] != rev ) {
+			WA_BufAppend( &b, ",\"s\":", 5 );
+			WA_BufAppend( &b, slow.data, slow.len );
 		}
 		WA_BufAppend( &b, "}", 1 );
 	}
+	WA_BufFree( &slow );
 
 	// NPCs, drawn with their models too
 	WA_BufAppend( &b, "],\"npcs\":[", 10 );
