@@ -105,9 +105,8 @@ static int		entityVarsLen[MAX_GENTITIES];
 static int		lastSpawnedEntity = -1;
 
 // the current map's .bsp, loaded on the first request for it
-static char		*mapData;
-static int		mapLen;
-static char		mapDataName[MAX_QPATH];
+static int		mapModels = -1;				// brush models of the map, asked once (WA_MapBrushModels)
+static char		mapModelsName[MAX_QPATH];
 
 // the newest chat lines, a ring. Line number n is in chatLines[(n - 1) % WA_MAX_CHAT].
 #define WA_MAX_CHAT		128
@@ -856,36 +855,49 @@ static void WA_ApiState( waConnection_t *c ) {
 	WA_BufFree( &b );
 }
 
-// the .bsp of the map that runs, read once and kept. qfalse: it can not be read
-static qboolean WA_LoadMap( void ) {
-	char mapname[MAX_QPATH];
+// How many brush models the map has, the world being the first: *1 to one less than this can be named. -1: not
+// known. Asked of the head of the .bsp, once a map. (The whole file was read and kept for this and for
+// /api/map before, 7 to 20 MB in one frame of 8 to 12 ms.)
+static int WA_MapBrushModels( void ) {
+	char			mapname[MAX_QPATH];
+	fileHandle_t	f = 0;
+	dheader_t		header;
+	int				len;
 
 	trap->Cvar_VariableStringBuffer( "mapname", mapname, sizeof( mapname ) );
+	if ( !Q_stricmp( mapModelsName, mapname ) )
+		return mapModels;
 
-	if ( !mapData || Q_stricmp( mapDataName, mapname ) ) {
-		free( mapData );
-		mapData = WA_ReadGameFile( va( "maps/%s.bsp", mapname ), &mapLen );
-		Q_strncpyz( mapDataName, mapname, sizeof( mapDataName ) );
+	Q_strncpyz( mapModelsName, mapname, sizeof( mapModelsName ) );
+	mapModels = -1;
+	len = trap->FS_Open( va( "maps/%s.bsp", mapname ), &f, FS_READ );
+	if ( f ) {
+		if ( len >= (int)sizeof( header ) ) {
+			trap->FS_Read( &header, sizeof( header ), f );
+			mapModels = LittleLong( header.lumps[LUMP_MODELS].filelen ) / (int)sizeof( dmodel_t );
+		}
+		trap->FS_Close( f );
 	}
-	return (qboolean)( mapData != NULL );
+	return mapModels;
 }
 
-// how many brush models the map has, the world being the first: *1 to one less than this can be named. -1: not known
-static int WA_MapBrushModels( void ) {
-	dheader_t header;
-
-	if ( !WA_LoadMap() || mapLen < (int)sizeof( header ) )
-		return -1;
-	memcpy( &header, mapData, sizeof( header ) );
-	return LittleLong( header.lumps[LUMP_MODELS].filelen ) / (int)sizeof( dmodel_t );
-}
-
+// the .bsp of the map that runs, handed out as it is read, like every other file of the game (WA_FileMore)
 static void WA_ApiMap( waConnection_t *c ) {
-	if ( !WA_LoadMap() ) {
+	char			mapname[MAX_QPATH];
+	fileHandle_t	f = 0;
+	int				len;
+
+	trap->Cvar_VariableStringBuffer( "mapname", mapname, sizeof( mapname ) );
+	len = trap->FS_Open( va( "maps/%s.bsp", mapname ), &f, FS_READ );
+	if ( len <= 0 || !f || len > WA_MAX_FILE ) {
+		if ( f )
+			trap->FS_Close( f );
 		WA_RespondText( c, 404, "Not Found", "map not found" );
 		return;
 	}
-	WA_Respond( c, 200, "OK", "application/octet-stream", "Cache-Control: no-store\r\n", mapData, mapLen );
+	WA_RespondHead( c, 200, "OK", "application/octet-stream", "Cache-Control: no-store\r\n", len );
+	c->file = f;
+	c->fileLeft = len;
 }
 
 // Textures, models and skins for the 3D views, and the shader scripts the view of the administration draws the
@@ -3854,10 +3866,8 @@ void WebAdmin_Shutdown( void ) {
 	for ( i = 0; i < MAX_GENTITIES; i++ )
 		WebAdmin_EntityFreed( i );
 
-	free( mapData );
-	mapData = NULL;
-	mapLen = 0;
-	mapDataName[0] = '\0';
+	mapModels = -1;
+	mapModelsName[0] = '\0';
 	free( reloadText );
 	reloadText = NULL;
 	WA_BufFree( &modelQueue );

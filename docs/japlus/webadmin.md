@@ -364,6 +364,11 @@ Also changed:
   longer one of the team. Now a deleted part is taken out of the chain, the next one leads when it was the
   first (it takes over the targetname, the trigger and what the team was about to do), and an edited part
   takes the place of the old one unless the edit gave it another team.
+- Fixed: the map file is read as it is sent as well (`/api/map`), and the panel no longer keeps a copy of
+  it. It read the whole `.bsp` in one go at the first question an editor has after a map started, 7 to 20 MB,
+  and kept it, only to hand it out and to know how many brush models there are. That number comes from the
+  head of the file now. The longest frame of the game after a map start with an editor open went from 8.6 to
+  1.5 ms on mp/ffa3 and from 12.4 to 2.3 ms on mp/siege_hoth.
 - Fixed: a file of the game is read as it is sent (`/api/file`, `WA_FileMore`): at most 256 KB for a
   connection and 512 KB for all of them in one frame, and another connection is the first each frame. It was
   read in one go before, and the tab Load showed what that costs: the animations of the players, 11.8 MB out
@@ -923,7 +928,9 @@ In one run a second had a frame of 30 ms: the page was reading the animations of
 which the server read in one go. That led to the files being read as they are sent. Tried with a script
 that takes six files through the route and compares them with what the pk3 files of the game hold: the same
 to the byte, 11.8 MB in 0.56 s alone and three of them next to three models in 1.8 s, with frames of the game
-of 1.7 to 1.8 ms at most in those seconds and all 40 frames in each.
+of 1.7 to 1.8 ms at most in those seconds and all 40 frames in each. The same for the map: `/api/map` of
+mp/ffa3 (7.6 MB, 0.38 s) and mp/siege_hoth (11.1 MB, 0.55 s) is what the pk3 holds to the byte, and the
+number of brush models (9 and 95) is right.
 Not tried: a server under real load, where the yellow marks would show, and the clock on Windows.
 
 Fire, the rectangle and teams of doors (`steps_fire.js`, 11 checks, the same day): on mp/ffa3 Fire sent a lift
