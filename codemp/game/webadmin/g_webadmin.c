@@ -818,7 +818,7 @@ static void WA_ApiFile( waConnection_t *c, const char *query ) {
 	const char	*ext, *type;
 	char		*data;
 	int			len;
-	qboolean	script;
+	qboolean	script, audio;
 
 	if ( !WA_FormValue( query, "name", name, sizeof( name ) ) || strstr( name, ".." ) || strchr( name, '\\' ) || strchr( name, ':' ) ) {
 		WA_RespondText( c, 400, "Bad Request", "bad file name" );
@@ -826,12 +826,15 @@ static void WA_ApiFile( waConnection_t *c, const char *query ) {
 	}
 	ext = COM_GetExtension( name );
 	script = (qboolean)( !Q_stricmpn( name, "shaders/", 8 ) && !Q_stricmp( ext, "shader" ) );
-	if ( !script && Q_stricmpn( name, "textures/", 9 ) && Q_stricmpn( name, "models/", 7 ) && Q_stricmpn( name, "gfx/", 4 ) ) {
+	// a sound or a piece of music, which the editor plays in the browser to hear what a key names
+	audio = (qboolean)( ( !Q_stricmpn( name, "sound/", 6 ) || !Q_stricmpn( name, "music/", 6 ) ) && ( !Q_stricmp( ext, "wav" ) || !Q_stricmp( ext, "mp3" ) ) );
+	if ( !script && !audio && Q_stricmpn( name, "textures/", 9 ) && Q_stricmpn( name, "models/", 7 ) && Q_stricmpn( name, "gfx/", 4 ) ) {
 		WA_RespondText( c, 400, "Bad Request", "bad file name" );
 		return;
 	}
 
 	if ( script ) type = "text/plain; charset=utf-8";
+	else if ( audio ) type = Q_stricmp( ext, "mp3" ) ? "audio/wav" : "audio/mpeg";
 	else if ( !Q_stricmp( ext, "jpg" ) ) type = "image/jpeg";
 	else if ( !Q_stricmp( ext, "gla" ) || !Q_stricmp( ext, "cfg" ) ) type = "application/octet-stream";
 	else if ( !Q_stricmp( ext, "png" ) ) type = "image/png";
@@ -1023,6 +1026,8 @@ static qboolean WA_JpAction( waConnection_t *c, const char *action, int id, char
 	return qfalse;
 }
 
+static qboolean WA_ConfigstringRoom( int start, int max, const char *name );
+
 static void WA_ApiAction( waConnection_t *c, const char *body ) {
 	char		action[32], idStr[16], value[256], xs[32], ys[32], zs[32];
 	gentity_t	*ent = NULL;
@@ -1078,6 +1083,45 @@ static void WA_ApiAction( waConnection_t *c, const char *body ) {
 			trap->Cvar_Update( &g_gravity );
 			WA_ActionResult( c, qtrue, va( "gravity %d", v ) );
 		}
+		return;
+	}
+
+	if ( !strcmp( action, "banip" ) || !strcmp( action, "unban" ) ) {
+		// Not in JKAdmin: a ban by its address, which is how one is lifted. addip and removeip of the game do it,
+		// and write the file of the bans. Only what such an address is made of goes into the line.
+		if ( !value[0] || strlen( value ) > 15 || strspn( value, "0123456789.*" ) != strlen( value ) || !strpbrk( value, "0123456789" ) ) {
+			WA_ActionResult( c, qfalse, "not an address: four numbers with dots, a * for any" );
+			return;
+		}
+		trap->SendConsoleCommand( EXEC_APPEND, va( "%s %s\n", action[0] == 'b' ? "addip" : "removeip", value ) );
+		WA_ActionResult( c, qtrue, va( "%s %s", action[0] == 'b' ? "banned" : "ban lifted for", value ) );
+		return;
+	}
+
+	if ( !strcmp( action, "effect" ) || !strcmp( action, "sound" ) ) {
+		// Not in JKAdmin: an effect or a sound of the game once at a place, so that who is in the game sees and
+		// hears what a key of an entity would bring. Its name takes a place among the config strings if it has
+		// none yet, and the server would end without one left.
+		const qboolean	fx = (qboolean)( action[0] == 'e' );
+		vec3_t			at, up = { 0, 0, 1 };
+
+		Q_strstrip( value, "\n\r\";", NULL );
+		if ( !value[0] || strstr( value, ".." ) || !WA_FormValue( body, "x", xs, sizeof( xs ) ) || !WA_FormValue( body, "y", ys, sizeof( ys ) )
+			|| !WA_FormValue( body, "z", zs, sizeof( zs ) ) ) {
+			WA_ActionResult( c, qfalse, "no name or no place" );
+			return;
+		}
+		if ( !WA_ConfigstringRoom( fx ? CS_EFFECTS : CS_SOUNDS, fx ? MAX_FX : MAX_SOUNDS, value ) ) {
+			WA_ActionResult( c, qfalse, va( "the map has no room for another one of its %s", fx ? "effects" : "sounds" ) );
+			return;
+		}
+		VectorSet( at, Com_Clamp( -MAX_WORLD_COORD, MAX_WORLD_COORD, atof( xs ) ), Com_Clamp( -MAX_WORLD_COORD, MAX_WORLD_COORD, atof( ys ) ),
+			Com_Clamp( -MAX_WORLD_COORD, MAX_WORLD_COORD, atof( zs ) ) );
+		if ( fx )
+			G_PlayEffectID( G_EffectIndex( value ), at, up );
+		else
+			G_SoundAtLoc( at, CHAN_AUTO, G_SoundIndex( value ) );
+		WA_ActionResult( c, qtrue, va( "%s played in the game", value ) );
 		return;
 	}
 
@@ -2810,6 +2854,17 @@ static void WA_ApiWaypoint( waConnection_t *c, const char *body ) {
 		RemoveWP_InTrail( index );
 		gDeactivated = 1;
 		WA_ActionResult( c, qtrue, va( "waypoint removed, %d left. The bots wait until the route is saved", gWPNum ) );
+	} else if ( !strcmp( op, "flags" ) ) {
+		// what a bot does at a waypoint that is there (bot_wp_switchflags of the game)
+		if ( WA_FormValue( body, "index", value, sizeof( value ) ) && value[0] )
+			index = atoi( value );
+		if ( index < 0 || index >= gWPNum || !gWPArray[index] || !gWPArray[index]->inuse || !WA_FormValue( body, "flags", value, sizeof( value ) ) ) {
+			WA_ActionResult( c, qfalse, "no such waypoint" );
+			return;
+		}
+		gWPArray[index]->flags = atoi( value );
+		gDeactivated = 1;
+		WA_ActionResult( c, qtrue, va( "waypoint %d changed. The bots wait until the route is saved", index ) );
 	} else if ( !strcmp( op, "save" ) ) {
 		if ( !gWPNum ) {
 			WA_ActionResult( c, qfalse, "there are no waypoints to save" );
@@ -2825,6 +2880,27 @@ static void WA_ApiWaypoint( waConnection_t *c, const char *body ) {
 	} else {
 		WA_ActionResult( c, qfalse, "unknown op" );
 	}
+}
+
+// GET /api/bans: the addresses that are banned, as addip and removeip take them
+static void WA_ApiBans( waConnection_t *c ) {
+	waBuffer_t	b = { 0 };
+	char		address[32];
+	qboolean	first = qtrue;
+	int			i;
+
+	WA_BufAppend( &b, "{\"bans\":[", 9 );
+	for ( i = 0; i < G_BanListSize(); i++ ) {
+		if ( !G_BanListEntry( i, address, sizeof( address ) ) )
+			continue;
+		if ( !first )
+			WA_BufAppend( &b, ",", 1 );
+		first = qfalse;
+		WA_BufJsonString( &b, address );
+	}
+	WA_BufAppend( &b, "]}", 2 );
+	WA_RespondJson( c, &b );
+	WA_BufFree( &b );
 }
 
 extern char NPCParms[];		// NPC_stats.c: the text of every .npc file
@@ -3118,6 +3194,8 @@ static void WA_HandleRequest( waConnection_t *c, char *head, char *body, int bod
 		WA_ApiClassDoc( c );
 	} else if ( !strcmp( method, "GET" ) && !strcmp( path, "/api/list" ) ) {
 		WA_ApiList( c, query );
+	} else if ( !strcmp( method, "GET" ) && !strcmp( path, "/api/bans" ) ) {
+		WA_ApiBans( c );
 	} else if ( !strcmp( method, "GET" ) && !strcmp( path, "/api/waypoints" ) ) {
 		WA_ApiWaypoints( c );
 	} else if ( !strcmp( method, "POST" ) && !strcmp( path, "/api/waypoint" ) ) {

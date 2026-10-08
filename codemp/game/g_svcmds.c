@@ -430,6 +430,32 @@ void Svcmd_RemoveIP_f (void)
 		trap->Print( "Didn't find %s.\n", str );
 }
 
+/*
+=================
+G_BanListSize, G_BanListEntry
+
+Not from JA+, for the web admin panel: the ban list an address at a time, written the way addip and removeip
+read it (a * for a part that matches anything). qfalse: that place of the list is empty.
+=================
+*/
+int G_BanListSize( void ) {
+	return numIPFilters;
+}
+
+qboolean G_BanListEntry( int index, char *out, int outSize ) {
+	byteAlias_t	b, m;
+	int			i;
+
+	if ( index < 0 || index >= numIPFilters || ipFilters[index].compare == 0xffffffffu )
+		return qfalse;
+	b.ui = ipFilters[index].compare;
+	m.ui = ipFilters[index].mask;
+	out[0] = '\0';
+	for ( i = 0; i < 4; i++ )
+		Q_strcat( out, outSize, va( "%s%s", m.b[i] ? va( "%i", b.b[i] ) : "*", i < 3 ? "." : "" ) );
+	return qtrue;
+}
+
 void Svcmd_ListIP_f (void)
 {
 	int		i, count = 0;

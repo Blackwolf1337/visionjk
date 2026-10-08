@@ -78,14 +78,15 @@ the answer tells the page that the numbers started over.
 | `GET /` | the page |
 | `GET /api/state` | map, scores, players, NPCs, items and `models` as JSON. The page polls this. `models`: every other entity the clients draw as a model (props, models of the map that are entities), with its model, scale, origin and angles as the clients have them |
 | `GET /api/map` | the `.bsp` of the current map |
-| `GET /api/file?name=` | a file below `textures/`, `models/` or `gfx/` (images, md3, glm, gla, cfg, skin), or a shader script `shaders/<name>.shader` |
+| `GET /api/file?name=` | a file below `textures/`, `models/` or `gfx/` (images, md3, glm, gla, cfg, skin), a shader script `shaders/<name>.shader`, or a `.wav` or `.mp3` below `sound/` or `music/` |
 | `GET /api/shaders` | the names of the shader scripts of the game, in the order the engine reads them in |
 | `GET /api/anims` | animation names in `animNumber_t` order |
 | `GET /api/classes` | everything that can be spawned, and the items with model and icon |
 | `GET /api/entities` | the entities with their keys. One that is made of brushes has `moved` and `turned`: how far its brushes are from where the map file has them. `budget`: entities, models, sounds and effects in use and the most there can be. `brushModels`: how many brush models the map has |
 | `GET /api/list?kind=` | names the fields of the page offer: `maps`, `effects` and `music` (the files of the game), `npcs` (the types of the `.npc` files), `bots`. `kind=dir&dir=&ext=`: the folders and files of one folder below `sound`, `models`, `music`, `effects` or `maps`, with the endings of `ext` (`.wav,.mp3`) |
+| `GET /api/bans` | the addresses that are banned, as `addip` and `removeip` take them (a `*` for a part that matches anything) |
 | `GET /api/waypoints` | the route of the bots: every waypoint with its place, its flags and the numbers of the ones it leads to. `editing`: it was changed and not saved, the bots stand still |
-| `POST /api/waypoint` | `op` add (`x`, `y`, `z`, `flags`, `after`: the waypoint it comes behind, none for the end), remove (`index`) or save |
+| `POST /api/waypoint` | `op` add (`x`, `y`, `z`, `flags`, `after`: the waypoint it comes behind, none for the end), remove (`index`), flags (`index`, `flags`) or save |
 | `GET /api/log?from=` | the log of the game from a place on, `next` is where to ask from the next time. Without `from`, or with a place the panel does not have: its last part |
 | `GET /api/classdoc` | the entity definitions of the game code: every `QUAKED` comment of its source files as text |
 | `GET /api/export` | the entities in `.ent` format. `placed=1`: only what was placed through the panel, without the worldspawn |
@@ -226,6 +227,16 @@ Also changed:
 - The panel of a selected player is a column at the right edge of the map. JKAdmin has it across the bottom,
   where with the buttons of JA+ in it it took half of the height of the map view and lay over what one wanted
   to click on.
+- New: the tab Bans of the administration. It lists the addresses that may not connect (`G_BanListEntry`, the
+  list the game keeps in `banIPs.txt`), lifts a ban and takes a new one by its address, with a `*` for any
+  number. The actions `banip` and `unban` run `addip` and `removeip` of the game, only digits, dots and `*`
+  go into the line.
+- New: "Play" next to a key of an entity that names something to hear or see. A sound (`noise`, `music`) is
+  played in the browser, from the file of the game. An effect (a key with `fx` in its name) is played once in
+  the game where the entity is (action `effect`, and `sound` does the same for a sound), so it is seen by who is
+  in the game, not in the panel. The server refuses it when the name would need a place among the config
+  strings and none is left.
+- New: "Set" in the Routes tab gives the selected waypoint what a bot does there (`op` flags).
 - New: the server refuses to place what would end it (`WA_SpawnRefused`): a class made of brushes (`trigger_`,
   `func_`) without a `model` key that names a brush model of the map, the classes whose spawn function raises
   an error without a key (`target_speaker`, `target_play_music`, `target_level_change`,
