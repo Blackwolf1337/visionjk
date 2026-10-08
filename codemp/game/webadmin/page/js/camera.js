@@ -56,7 +56,28 @@ function resetCamera() {
 	cam.dist = Math.max(b.maxs[0] - b.mins[0], b.maxs[1] - b.mins[1]) * 0.75;
 }
 
+// The projection of the game: R_SetupProjection with what CG_CalcFov hands it. fovX is the angle across
+// (cg_fov, 80), the angle up and down follows from the shape of the picture, the near plane is r_znear.
+function gameProjection(w, h, fovX = 80, far = 65536) {
+	return M4.perspective(2 * Math.atan(Math.tan(fovX * Math.PI / 360) * h / w), w / h, 4, far);
+}
+
+// The camera of the comparison with the game: the eye and the angles of a client, as /api/state?view= tells
+// them (origin, pitch yaw roll, viewheight, pm_type, time of the level). null: the camera of the page again.
+let refCam = null;
+function refView(v) {
+	refCam = v ? { eye: [v[0], v[1], v[2] + v[6]], pitch: v[3], yaw: v[4], time: v[8] } : null;
+}
+
 function updateCamera() {
+	if (refCam) {
+		// the way a client looks: AngleVectors, a pitch above zero looks down
+		const p = refCam.pitch * Math.PI / 180, y = refCam.yaw * Math.PI / 180, d = [Math.cos(p) * Math.cos(y), Math.cos(p) * Math.sin(y), -Math.sin(p)];
+		eye = refCam.eye.slice();
+		viewProj = M4.mul(gameProjection(canvas.width, canvas.height), M4.lookAt(eye, eye.map((v, i) => v + d[i]), [0, 0, 1]));
+		invViewProj = M4.invert(viewProj);
+		return;
+	}
 	// following a player is done around him
 	if (cam.fly && cam.follow >= 0) setFly(false);
 	if (cam.fly) {

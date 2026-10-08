@@ -507,8 +507,28 @@ static void WA_StateEffects( waBuffer_t *b, const char *query ) {
 	WA_BufAppend( b, "]", 1 );
 }
 
-// GET /api/state[?items=<number>][&fx=<number>&fxs=<number>][&p=<client>.<number>-...]: everything the page draws,
-// one part after the other
+// &view=<client>: where that client looks from. Not for the page as it is used: for the comparison of its
+// picture with the one a client of the game draws from the same spot (tools/panelshot/steps_ref.js), which
+// reads the eye back instead of working it out, because a spectator that is put somewhere drifts on.
+//   "view": origin, pitch yaw roll, viewheight, pm_type, level.time, velocity
+static void WA_StateView( waBuffer_t *b, const char *query ) {
+	char			value[8];
+	int				n;
+	const gclient_t	*cl;
+
+	if ( !WA_FormValue( query, "view", value, sizeof( value ) ) )
+		return;
+	n = atoi( value );
+	if ( n < 0 || n >= level.maxclients || level.clients[n].pers.connected != CON_CONNECTED )
+		return;
+	cl = &level.clients[n];
+	WA_BufPrintf( b, ",\"view\":[%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%d,%d,%d,%.2f,%.2f,%.2f]",
+		cl->ps.origin[0], cl->ps.origin[1], cl->ps.origin[2], cl->ps.viewangles[PITCH], cl->ps.viewangles[YAW], cl->ps.viewangles[ROLL],
+		cl->ps.viewheight, cl->ps.pm_type, level.time, cl->ps.velocity[0], cl->ps.velocity[1], cl->ps.velocity[2] );
+}
+
+// GET /api/state[?items=<number>][&fx=<number>&fxs=<number>][&p=<client>.<number>-...][&view=<client>]: everything
+// the page draws, one part after the other
 void WA_ApiState( waConnection_t *c, const char *query ) {
 	waBuffer_t	b = { 0 };
 	char		mapname[MAX_QPATH], hostname[MAX_NETNAME * 2];
@@ -533,6 +553,7 @@ void WA_ApiState( waConnection_t *c, const char *query ) {
 	WA_StateMovers( &b );
 	WA_StateShots( &b );
 	WA_StateEffects( &b, query );
+	WA_StateView( &b, query );
 	WA_BufAppend( &b, "}", 1 );
 
 	WA_RespondJson( c, &b );

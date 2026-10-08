@@ -211,6 +211,47 @@ function cameraAxes() {
 	return { fwd: from(at(0, 0, -1), at(0, 0, 1)), left: from(o, at(-1, 0, 0)), up: from(o, at(0, 1, 0)) };
 }
 
+// ---- for the comparison with the game: what of the map animates on its own
+
+// A shader that looks different from one moment to the next whatever the view: images that scroll, turn or
+// change, colours that follow a wave, vertices that move, the clouds of a sky. The picture of the page and the
+// one of the game are never taken at the very same time, so these surfaces are left out of the comparison.
+function matAnimates(mat) {
+	return mat.deforms.length > 0 || mat.stages.some(st => st.maps.length > 1 || !!(st.rgb && st.rgb.wave) || !!(st.alpha && st.alpha.wave)
+		|| (st.tcMods || []).some(m => m.kind !== 'scale' && m.kind !== 'transform'));
+}
+let refMasking = false;
+function refMask(on) { refMasking = !!on; }
+// the map in two colours: white where what is drawn animates, black where it does not
+function drawWorldMask(now) {
+	gl.clearColor(0, 0, 0, 1);
+	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+	gl.enable(gl.DEPTH_TEST);
+	gl.disable(gl.BLEND);
+	gl.depthMask(true);
+	gl.disable(gl.CULL_FACE);
+	gl.useProgram(lineProg.p);
+	const list = world.scripted || world.batches.map(b => ({ b, mat: null, vao: b.vao, count: b.count }));
+	// what is solid first and into the depth, then what is see-through over it without
+	for (const late of [false, true]) {
+		for (const e of list) {
+			const blended = !!e.mat && e.mat.sort > SC_SORT_SEE_THROUGH;
+			if (blended !== late || (e.mat && e.mat.nodraw)) continue;
+			const moves = !!e.mat && (matAnimates(e.mat) || !!e.mat.sky);
+			if (late && !moves) continue;
+			gl.depthMask(!late);
+			gl.uniform4f(lineProg.u.uColor, moves ? 1 : 0, moves ? 1 : 0, moves ? 1 : 0, 1);
+			gl.bindVertexArray(e.vao);
+			for (const place of moverPlaces(e.b.model, now)) {
+				gl.uniformMatrix4fv(lineProg.u.uMvp, false, place ? M4.mul(viewProj, place) : viewProj);
+				gl.drawElements(gl.TRIANGLES, e.count, gl.UNSIGNED_INT, 0);
+			}
+		}
+	}
+	gl.depthMask(true);
+	gl.clearColor(0.05, 0.05, 0.06, 1);
+}
+
 let cullSides = true;
 function setCull(side) {
 	if (side === 2 || !cullSides) { gl.disable(gl.CULL_FACE); return; }

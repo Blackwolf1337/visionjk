@@ -2,8 +2,10 @@
 /* render loop                                                         */
 /* ------------------------------------------------------------------ */
 
+// how many pixels of the picture a pixel of the page is: one for the comparison with the game
+const canvasScale = () => REF ? 1 : Math.min(window.devicePixelRatio || 1, 2);
 function resize() {
-	const dpr = Math.min(window.devicePixelRatio || 1, 2);
+	const dpr = canvasScale();
 	canvas.width = Math.round(canvas.clientWidth * dpr);
 	canvas.height = Math.round(canvas.clientHeight * dpr);
 }
@@ -267,8 +269,11 @@ function frame(now) {
 		for (let i = 0; i < 3; i++) p.draw[i] = p.prev[i] + (p.data.pos[i] - p.prev[i]) * k;
 	}
 
-	if (canvas.width !== Math.round(canvas.clientWidth * Math.min(window.devicePixelRatio || 1, 2))) resize();
+	if (canvas.width !== Math.round(canvas.clientWidth * canvasScale())) resize();
 	if (view.id < 0 || !firstPersonCamera(now)) updateCamera();
+	// the comparison: the time of the game for what a shader animates, and the picture of what animates on its own
+	if (refCam && refCam.time) now = refCam.time;
+	if (refMasking && world) { drawWorldMask(now); requestAnimationFrame(frame); return; }
 
 	gl.viewport(0, 0, canvas.width, canvas.height);
 	gl.clearColor(0.05, 0.05, 0.06, 1);

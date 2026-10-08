@@ -85,6 +85,9 @@ body.chatClosed #chatLog, body.chatClosed #sayForm { display: none; }
 #view { position: fixed; top: var(--top); left: var(--side); right: 0; bottom: 0; transition: left .15s; }
 body.sideClosed #view { left: 0; }
 #gl { width: 100%; height: 100%; display: block; cursor: default; }
+/* the view for a comparison with a picture of the game (?ref=): the map alone, at the top left */
+body.ref #topbar, body.ref #side, body.ref #toasts, body.ref #view > :not(canvas) { display: none !important; }
+body.ref #view { left: 0; top: 0; right: auto; bottom: auto; transition: none; }
 #labels { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
 .label { position: absolute; transform: translate(-50%, -100%); text-align: center; white-space: nowrap; font-size: 12px; text-shadow: 0 1px 2px #000, 0 0 3px #000; }
 .label .bar { width: 46px; height: 4px; background: rgba(0,0,0,.6); margin: 2px auto 0; border-radius: 1px; overflow: hidden; }

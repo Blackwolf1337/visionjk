@@ -2,8 +2,17 @@
 /* WebGL                                                               */
 /* ------------------------------------------------------------------ */
 
+// ?ref=<width>x<height>: the view for a comparison with a picture of the game from the same spot
+// (tools/panelshot/steps_ref.js). The map alone in a canvas of exactly that size, no smoothing of edges, as
+// the client is run without it, and a picture that can be read back after the frame.
+const REF = (() => { const m = /[?&]ref=(\d+)x(\d+)/.exec(location.search); return m ? { w: +m[1], h: +m[2] } : null; })();
 const canvas = $('gl');
-const gl = canvas.getContext('webgl2', { antialias: true });
+const gl = canvas.getContext('webgl2', { antialias: !REF, preserveDrawingBuffer: !!REF });
+if (REF) {
+	document.body.classList.add('ref');
+	$('view').style.width = REF.w + 'px';
+	$('view').style.height = REF.h + 'px';
+}
 
 function compile(vs, fs, g = gl) {
 	const gl = g;
