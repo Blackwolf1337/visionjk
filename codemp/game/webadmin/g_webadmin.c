@@ -606,7 +606,7 @@ static void WA_AppendVec( waBuffer_t *b, const vec3_t v ) {
 	WA_BufPrintf( b, "[%.1f,%.1f,%.1f]", v[0], v[1], v[2] );
 }
 
-static void WA_ApiState( waConnection_t *c ) {
+static void WA_ApiState( waConnection_t *c, const char *query ) {
 	waBuffer_t	b = { 0 };
 	char		mapname[MAX_QPATH], hostname[MAX_NETNAME * 2];
 	int			i;
@@ -751,29 +751,51 @@ static void WA_ApiState( waConnection_t *c ) {
 		WA_BufAppend( &b, "}", 1 );
 	}
 
-	// items, flags and other pickups, so the map looks alive
-	WA_BufAppend( &b, "],\"items\":[", 11 );
-	first = qtrue;
-	for ( i = MAX_CLIENTS; i < level.num_entities; i++ ) {
-		gentity_t *ent = &g_entities[i];
+	// Items, flags and other pickups, so the map looks alive. The list is the same from one poll to the next
+	// unless something was picked up or came back, and it is more than a third of the answer. So it has a
+	// number (a hash of its text), and a page that says it has the list of that number (items=) is not sent it
+	// again.
+	{
+		waBuffer_t	items = { 0 };
+		char		value[16];
+		unsigned	rev = 2166136261u;
+		int			k;
 
-		if ( !ent->inuse || ent->s.eType != ET_ITEM || !ent->item || ( ent->s.eFlags & EF_NODRAW ) || ( ent->r.svFlags & SVF_NOCLIENT ) )
-			continue;
+		first = qtrue;
+		for ( i = MAX_CLIENTS; i < level.num_entities; i++ ) {
+			gentity_t *ent = &g_entities[i];
 
-		if ( !first )
-			WA_BufAppend( &b, ",", 1 );
-		first = qfalse;
+			if ( !ent->inuse || ent->s.eType != ET_ITEM || !ent->item || ( ent->s.eFlags & EF_NODRAW ) || ( ent->r.svFlags & SVF_NOCLIENT ) )
+				continue;
 
-		WA_BufPrintf( &b, "{\"id\":%d,\"type\":%d,\"name\":", i, ent->item->giType );
-		WA_BufJsonString( &b, ent->item->classname );
-		WA_BufAppend( &b, ",\"pos\":", 7 );
-		WA_AppendVec( &b, ent->r.currentOrigin );
-		WA_BufAppend( &b, "}", 1 );
+			if ( !first )
+				WA_BufAppend( &items, ",", 1 );
+			first = qfalse;
+
+			WA_BufPrintf( &items, "{\"id\":%d,\"type\":%d,\"name\":", i, ent->item->giType );
+			WA_BufJsonString( &items, ent->item->classname );
+			WA_BufAppend( &items, ",\"pos\":", 7 );
+			WA_AppendVec( &items, ent->r.currentOrigin );
+			WA_BufAppend( &items, "}", 1 );
+		}
+		for ( k = 0; k < items.len; k++ )
+			rev = ( rev ^ (unsigned char)items.data[k] ) * 16777619u;
+		if ( !rev )
+			rev = 1;	// 0 is what a page sends that has none
+
+		WA_BufPrintf( &b, "],\"itemsRev\":%u", rev );
+		if ( !WA_FormValue( query, "items", value, sizeof( value ) ) || (unsigned)strtoul( value, NULL, 10 ) != rev ) {
+			WA_BufAppend( &b, ",\"items\":[", 10 );
+			if ( items.len )
+				WA_BufAppend( &b, items.data, items.len );
+			WA_BufAppend( &b, "]", 1 );
+		}
+		WA_BufFree( &items );
 	}
 
 	// Not in JKAdmin: what else the clients draw as a model, where they draw it: the props, the models of the
 	// map that are entities. Not what is made of brushes, and not what only one client is sent.
-	WA_BufAppend( &b, "],\"models\":[", 12 );
+	WA_BufAppend( &b, ",\"models\":[", 11 );
 	first = qtrue;
 	for ( i = MAX_CLIENTS; i < level.num_entities; i++ ) {
 		gentity_t	*ent = &g_entities[i];
@@ -3533,7 +3555,7 @@ static void WA_HandleRequest( waConnection_t *c, char *head, char *body, int bod
 	} else if ( !strcmp( method, "GET" ) && !strcmp( path, "/api/anims" ) ) {
 		WA_ApiAnims( c );
 	} else if ( !strcmp( method, "GET" ) && !strcmp( path, "/api/state" ) ) {
-		WA_ApiState( c );
+		WA_ApiState( c, query );
 	} else if ( !strcmp( method, "GET" ) && !strcmp( path, "/api/map" ) ) {
 		WA_ApiMap( c );
 	} else if ( !strcmp( method, "GET" ) && !strcmp( path, "/api/file" ) ) {
