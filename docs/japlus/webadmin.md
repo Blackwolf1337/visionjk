@@ -140,10 +140,12 @@ Also changed:
     comment of `codemp/game` into the module, `/api/classdoc` hands them out. The panel of an entity shows the
     text of its class, a box for every spawnflag that has a name, and offers the keys the text names. A class
     is drawn in the colour of its definition, and the class picker shows the first lines as a tip.
-  - Views, switched in the bar at the top left of the map: Volumes draws the box of every entity (the size of
-    its brushes for a trigger or a door, from the models of the map file, else the box its class is defined
-    with), Links a line from an entity to every one it fires (`target` to `targetname`). What belongs to the
-    selected entity is drawn through the walls, the panel lists it with a click to go there.
+  - Views, switched in the bar at the top left of the map: Volumes draws every entity as lines (a trigger or a
+    door with the real shape of its brushes, worked out from the planes of the map file and moved to where the
+    entity is now, another one as the box its class is defined with), Links a line from an entity to every one
+    it fires (`target` to `targetname`), Clip the brushes of the map that stop players, NPCs, bots or shots
+    and are not seen in the game. What belongs to the selected entity is drawn through the walls, the panel
+    lists it with a click to go there.
   - Moving: position and angles as numbers, a grid (1 to 64) for what the mouse places, Shift with the arrow
     keys and Page Up or Down for a step of the grid, "To floor", "Focus". Page Up and Down alone move the camera
     up and down.
@@ -627,8 +629,8 @@ To take a later JKAdmin commit: apply its diff and keep the `JA+` blocks in `WA_
   raises an error, the dedicated server exits, because OpenJK makes every game error fatal there. The cases that
   can be told from the keys are refused since `WA_SpawnRefused` (see above): the list was made by reading the
   spawn functions for `trap->Error`, a class that fails somewhere else is not in it.
-- Volumes shows a brush entity as the box around its brushes, not their shape. The lights of a map can not be
-  shown: the compiler takes them out of the map file.
+- A brush entity that turns (a door on a hinge, `func_rotating`) is drawn with the shape it has in the map file,
+  moved but not turned. The lights of a map can not be shown: the compiler takes them out of the map file.
 - Plain HTTP with basic auth. Put it behind a reverse proxy with HTTPS before it is reachable from outside, or
   leave `g_webBind` empty (127.0.0.1) and use an SSH tunnel. Since the security pass the default bind is localhost,
   not every interface.

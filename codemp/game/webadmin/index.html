@@ -340,6 +340,7 @@ body.app-admin #dbg, body.app-admin .editorOnly, body.app-admin #tabs button[dat
 		<label title="A marker at every entity of the map"><input type="checkbox" id="dbgMarkers" checked>Entities</label>
 		<label title="The box of every entity: the brushes of a trigger or a door, the size of a class"><input type="checkbox" id="dbgVolumes" checked>Volumes</label>
 		<label title="A line from every entity to what it fires (target and targetname)"><input type="checkbox" id="dbgLinks" checked>Links</label>
+		<label title="The brushes that stop players, bots or shots and are not seen in the game"><input type="checkbox" id="dbgClip">Clip</label>
 		<label title="The triangles of the map as lines"><input type="checkbox" id="dbgWire">Wireframe</label>
 		<select id="dbgLight" title="What the surfaces of the map show"><option value="0">Texture and light</option><option value="1">Light only</option><option value="2">Texture only</option></select>
 	</div>
@@ -577,8 +578,18 @@ function parseBsp(buffer) {
 	// every brush model: the world first, then the ones an entity names with *1, *2, ...
 	const models = [];
 	for (let o = ml.ofs; o + 40 <= ml.ofs + ml.len; o += 40) {
-		models.push({ mins: [0, 1, 2].map(i => dv.getFloat32(o + i * 4, true)), maxs: [0, 1, 2].map(i => dv.getFloat32(o + 12 + i * 4, true)) });
+		models.push({ mins: [0, 1, 2].map(i => dv.getFloat32(o + i * 4, true)), maxs: [0, 1, 2].map(i => dv.getFloat32(o + 12 + i * 4, true)),
+			firstBrush: dv.getInt32(o + 32, true), numBrushes: dv.getInt32(o + 36, true) });
 	}
+	// The brushes: what the game collides with, seen or not. Kept as they are in the file (a plane is a normal
+	// and a distance, a brush its first side, how many it has and its shader, a side its plane and two more
+	// numbers). Their edges are worked out when a view of the editor asks for them.
+	const pl = lump(2), bl = lump(8), bsl = lump(9);
+	const brushes = {
+		planes: new Float32Array(buffer.slice(pl.ofs, pl.ofs + (pl.len & ~3))),
+		brushes: new Int32Array(buffer.slice(bl.ofs, bl.ofs + (bl.len & ~3))),
+		sides: new Int32Array(buffer.slice(bsl.ofs, bsl.ofs + (bsl.len & ~3)))
+	};
 
 
 	const vert = i => {
@@ -645,7 +656,7 @@ function parseBsp(buffer) {
 		for (const t of tris) pickIdx.push(pbase + t);
 	}
 
-	return { shaders, lightmaps, batches: [...batches.values()], bounds, sky, models, pick: { pos: new Float32Array(pickPos), idx: new Uint32Array(pickIdx) } };
+	return { shaders, lightmaps, batches: [...batches.values()], bounds, sky, models, brushes, pick: { pos: new Float32Array(pickPos), idx: new Uint32Array(pickIdx) } };
 }
 
 // quadratic bezier patch, 3x3 control blocks
@@ -908,7 +919,7 @@ async function loadMap(name) {
 			return { vao, count: b.idx.length, shaderName, lm: b.lightmap >= 0 ? lightmapTex[b.lightmap] : null, posBuf, tri, wire: null };
 		});
 
-		world = { batches, textures, bounds: bsp.bounds, pick: bsp.pick, sky: bsp.sky, models: bsp.models, scripted: null, skyDraw: null };
+		world = { batches, textures, bounds: bsp.bounds, pick: bsp.pick, sky: bsp.sky, models: bsp.models, brushes: bsp.brushes, shaders: bsp.shaders, wires: new Map(), scripted: null, skyDraw: null };
 		prepareScripted(world);
 		resetCamera();
 		$('loading').style.display = 'none';
@@ -2933,11 +2944,91 @@ function drawLinkSet(list, color) {
 	gl.drawArrays(gl.LINES, 0, n / 3);
 }
 
+// The edges of a brush, as pairs of points into out. A brush is the space behind all of its planes: every side
+// is a sheet on its plane, cut down by the planes of the other sides.
+function brushEdges(bd, index, out) {
+	const first = bd.brushes[index * 3], count = bd.brushes[index * 3 + 1], planes = [];
+	for (let i = 0; i < count; i++) {
+		const n = bd.sides[(first + i) * 3] * 4;
+		if (n >= 0 && n + 3 < bd.planes.length) planes.push([bd.planes[n], bd.planes[n + 1], bd.planes[n + 2], bd.planes[n + 3]]);
+	}
+	for (let i = 0; i < planes.length; i++) {
+		const [nx, ny, nz, d] = planes[i];
+		// two directions in the plane, and a sheet far larger than a map
+		let ux = Math.abs(nz) > 0.9 ? 1 : 0, uy = 0, uz = Math.abs(nz) > 0.9 ? 0 : 1;
+		const along = ux * nx + uy * ny + uz * nz;
+		ux -= nx * along; uy -= ny * along; uz -= nz * along;
+		const len = Math.hypot(ux, uy, uz);
+		ux /= len; uy /= len; uz /= len;
+		const vx = ny * uz - nz * uy, vy = nz * ux - nx * uz, vz = nx * uy - ny * ux, far = 131072;
+		let poly = [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([a, b]) => [nx * d + (ux * a + vx * b) * far, ny * d + (uy * a + vy * b) * far, nz * d + (uz * a + vz * b) * far]);
+		for (let j = 0; j < planes.length && poly.length >= 3; j++) {
+			if (j === i) continue;
+			const [ax, ay, az, ad] = planes[j], next = [];
+			for (let q = 0; q < poly.length; q++) {
+				const a = poly[q], b = poly[(q + 1) % poly.length];
+				const da = a[0] * ax + a[1] * ay + a[2] * az - ad, db = b[0] * ax + b[1] * ay + b[2] * az - ad;
+				if (da <= 0.01) next.push(a);
+				if ((da > 0.01) !== (db > 0.01)) {
+					const t = da / (da - db);
+					next.push([a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t]);
+				}
+			}
+			poly = next;
+		}
+		// a plane that only helps the collision (a bevel) leaves no face
+		if (poly.length < 3) continue;
+		for (let q = 0; q < poly.length; q++) {
+			const a = poly[q], b = poly[(q + 1) % poly.length];
+			if (Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]) + Math.abs(a[2] - b[2]) > 0.05) out.push(a[0], a[1], a[2], b[0], b[1], b[2]);
+		}
+	}
+}
+
+// the brushes that stop something without being seen: for players, NPCs, bots and shots
+const CONTENTS_CLIP = 0x10 | 0x20 | 0x40 | 0x80;
+
+// The edges of some brushes of the map as lines, made once: of a brush model (its number), or of the clip
+// brushes of the world ('clip'). null: there are none.
+function brushWire(key) {
+	if (world.wires.has(key)) return world.wires.get(key);
+	const bd = world.brushes, model = world.models[key === 'clip' ? 0 : key], out = [];
+	if (model) {
+		for (let i = model.firstBrush; i < model.firstBrush + model.numBrushes && i * 3 + 2 < bd.brushes.length; i++) {
+			if (key === 'clip' && !(((world.shaders[bd.brushes[i * 3 + 2]] || {}).contents | 0) & CONTENTS_CLIP)) continue;
+			brushEdges(bd, i, out);
+		}
+	}
+	let wire = null;
+	if (out.length) {
+		const vao = gl.createVertexArray(), buf = gl.createBuffer();
+		gl.bindVertexArray(vao);
+		gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+		gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(out), gl.STATIC_DRAW);
+		gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 0, 0);
+		gl.bindVertexArray(null);
+		wire = { vao, count: out.length / 3 };
+	}
+	world.wires.set(key, wire);
+	return wire;
+}
+
+// An entity as lines. One that is made of brushes with their real shape, moved to where the server says it is
+// now. Another one, or one whose brushes the map file does not give, as its box.
 function drawEntBox(ent, color) {
+	gl.uniform4f(lineProg.u.uColor, color[0], color[1], color[2], 1);
+	const n = ent.bmodel ? /^\*(\d+)$/.exec(entKey(ent, 'model')) : null, wire = n && world ? brushWire(+n[1]) : null;
+	if (wire) {
+		const m = world.models[+n[1]];
+		gl.uniformMatrix4fv(lineProg.u.uMvp, false, M4.mul(viewProj, new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0,
+			ent.pos[0] - (m.mins[0] + m.maxs[0]) / 2, ent.pos[1] - (m.mins[1] + m.maxs[1]) / 2, ent.pos[2] - (m.mins[2] + m.maxs[2]) / 2, 1])));
+		gl.bindVertexArray(wire.vao);
+		gl.drawArrays(gl.LINES, 0, wire.count);
+		return;
+	}
 	const box = entBox(ent);
 	if (!box) return;
 	gl.uniformMatrix4fv(lineProg.u.uMvp, false, M4.mul(viewProj, new Float32Array([box.size[0], 0, 0, 0, 0, box.size[1], 0, 0, 0, 0, box.size[2], 0, box.center[0], box.center[1], box.center[2], 1])));
-	gl.uniform4f(lineProg.u.uColor, color[0], color[1], color[2], 1);
 	gl.bindVertexArray(wireBox);
 	gl.drawElements(gl.LINES, 24, gl.UNSIGNED_SHORT, 0);
 }
@@ -2945,10 +3036,16 @@ function drawEntBox(ent, color) {
 // The lines of the editor: the boxes of the entities and what they are linked to. What belongs to the selected
 // entity is drawn last and through the walls.
 function drawEditorLines() {
-	const volumes = $('dbgVolumes').checked, linked = $('dbgLinks').checked;
-	if (!volumes && !linked) return;
+	const volumes = $('dbgVolumes').checked, linked = $('dbgLinks').checked, clip = world && $('dbgClip').checked ? brushWire('clip') : null;
+	if (!volumes && !linked && !clip) return;
 	const sel = ents.get(selectedEnt);
 	gl.useProgram(lineProg.p);
+	if (clip) {
+		gl.uniformMatrix4fv(lineProg.u.uMvp, false, viewProj);
+		gl.uniform4f(lineProg.u.uColor, 1, 0.35, 0.9, 1);
+		gl.bindVertexArray(clip.vao);
+		gl.drawArrays(gl.LINES, 0, clip.count);
+	}
 	if (volumes) {
 		for (const ent of ents.values()) if (ent !== sel && entVisible(ent)) drawEntBox(ent, classColor(ent.classname));
 	}
