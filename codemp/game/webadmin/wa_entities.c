@@ -570,6 +570,8 @@ static int WA_SpawnFromText( const char *text, char *err, int errSize ) {
 	}
 	WA_OriginalBack( lastSpawnedEntity );
 	layoutDirty = qtrue;
+	// a push that is aimed at it throws to where it is now, and not to where its target was when the map began
+	G_PushAimAgain( &g_entities[lastSpawnedEntity] );
 	return lastSpawnedEntity;
 }
 

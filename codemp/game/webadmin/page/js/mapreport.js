@@ -115,6 +115,8 @@ function entityProblems() {
 		if (name && NEEDS_FIRING.test(e.classname) && !fired.has(name.toLowerCase())) {
 			out.push({ id: e.id, bad: false, text: e.classname + ' "' + name + '": nothing fires it' + (e.classname === 'func_door' ? ', so it never opens' : '') });
 		}
+		const arc = isPush(e) ? pushArc(e, false) : null;
+		if (arc && arc.bad) out.push({ id: e.id, bad: true, text: e.classname + ': its target "' + entKey(e, 'target') + '" is not above it, so there is no throw. The game takes such a push away when the map starts' });
 		if (e.pos.some((v, i) => v < b.mins[i] - 64 || v > b.maxs[i] + 64)) out.push({ id: e.id, bad: true, text: e.classname + ': outside of the map, at ' + e.pos.map(Math.round).join(' ') });
 		if (e.bmodel && !/^\*\d+$/.test(entKey(e, 'model'))) out.push({ id: e.id, bad: false, text: e.classname + ': made of brushes, but its keys name no brush model' });
 	}

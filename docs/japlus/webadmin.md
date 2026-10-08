@@ -288,6 +288,24 @@ Also changed:
   192 towards the viewer for the teleport. The game frees a `trigger_push` without a target in its first
   frame, before a key could be added. The server refuses a box whose `mins` are not below its `maxs`, half a
   box, and one wider than 32768. A layout keeps such a trigger like every other placed entity.
+- New: the throw of a push is drawn (`pushArc`, `drawArcs` in `js/editor-lines.js`). With the Links view on,
+  every `trigger_push` and `target_push` that throws an arc has that arc as a line: from its middle on the way
+  whose top is its target, worked out as the game does it (`AimAtTarget`: the time to the top from the height
+  and the gravity, the speed across from that time). For the selected push, and for the pushes that are aimed
+  at the selected entity, the way is followed on down until it meets the map, with a cross there; under a roof
+  it ends at the roof, which is where a player would hit his head. The panel of a push says the same in
+  numbers: how far up and across, the time to the top, where it meets the map. While a target is dragged the
+  arc follows it. A push that goes straight (`LINEAR`, `RELATIVE`, `CONSTANT`) has no arc. A push whose target
+  is not above it has no throw: a red line, a warning in its panel and a line in "Entities to look at".
+- Fixed: a push throws to where its target is now (`G_PushAimAgain` in `g_trigger.c`, called for every entity
+  the panel spawns). The game works the throw out once, in the first frame of the push, so a target moved in
+  the editor changed nothing until the map started again, and a layout that moved the target of a jump pad of
+  the map left that pad throwing to the old place. What is aimed at a placed or changed entity is aimed again.
+  Not when the new place has no throw (a target that is not above the push): the game frees such a push, and
+  moving a target should not take the push away, so it keeps the throw it had and the report names it.
+- Fixed in the game: a push whose target is below it (`AimAtTarget`). The time to the top is a root, and of a
+  negative height that is no number: the push stayed and gave everybody who touched it a speed that is no
+  number. Only a target at exactly the height of the push ended it. Now one below does too.
 - New: the faces of a trigger box are dragged with the mouse (`boxHandles`, `boxDragMove` in
   `js/editor-move.js`). A selected trigger that is a box has a yellow handle in the middle of each of its six
   faces, drawn through the walls and as big on the screen wherever it is; the one under the mouse is white. A
@@ -987,6 +1005,20 @@ middle, a start point had no such row, a push and a teleport came with their `ta
 took both away, and after "Save layout" and a start of the map the box was there again. Not tried: a real
 player in such a box (how the late push feels on a client with its own prediction), an NPC, a vehicle, the
 classes for ships (`trigger_space`, `trigger_shipboundary`, `trigger_hyperspace`), and the Windows build.
+
+The throw of a push (`steps_pusharc.js`, 12 checks, the same day, mp/ffa3 with four bots). In the game: a
+push over the whole map with its target 4000 above gave the bots 2530 units/s upwards, which is the root of
+2 x 800 x 4000; with the target alone moved to 500 above they got 894, the number for that; with it moved to
+below the middle of the push the push was still there and threw 894 as before, the report named it and its
+panel said "No throw". A push placed with its target below it from the start was gone after its first frame
+and every place and speed of the players was a number. In the editor: a placed push had an arc of 256 up
+and none across with its top at the target and 0.80 s to it, it came down on the floor under it, the panel
+said so; with the target moved to the side the point of the arc at the top was the target to a hundredth of
+a unit; not selected the arc has no rays, and with `LINEAR` there is none. Following the way down cost 30 ms
+for 19 rays on this machine. At the first place tried the way ended at a roof 215 above the floor, which is
+right and is why the check now looks for open sky. Not tried: a real player on such a pad (the arc is the
+way from the middle of the push, a player starts where he touches it), `target_push`, a push of a map file
+whose target a layout moves.
 
 The handles of a box (`steps_boxdrag.js`, 16 checks, the same day, with the mouse of the browser): six
 handles, none under the panel of the entity in the view that was set up. The face towards +X dragged 64 units

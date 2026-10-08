@@ -141,6 +141,69 @@ function drawLinkSet(list, color) {
 	gl.drawArrays(gl.LINES, 0, n / 3);
 }
 
+// ---- the throw of a push, as the game works it out (AimAtTarget in g_trigger.c)
+
+const PUSH_CONSTANT = 2, PUSH_LINEAR = 4, PUSH_RELATIVE = 16, ARC_STEPS = 12;
+const arcCache = new Map();		// what was asked -> the answer
+
+// Where a trigger_push or a target_push throws: from its middle on the way whose top is its target.
+// null: this entity throws no arc (it pushes straight, or has no target that is there).
+// { bad }: its target is not above it, the game has no throw for that.
+// { pts, time, up, across, land }: the way as points. land: where it meets the map, looked for only when asked:
+// every piece of the way is a ray against all of the map.
+function pushArc(ent, land) {
+	const cls = ent.classname.toLowerCase(), flags = +entKey(ent, 'spawnflags') || 0;
+	if (cls !== 'trigger_push' && cls !== 'target_push') return null;
+	if (flags & (cls === 'trigger_push' ? PUSH_LINEAR | PUSH_RELATIVE : PUSH_CONSTANT)) return null;
+	const link = links.find(l => l.from === ent.id && l.key.toLowerCase() === 'target'), to = link && ents.get(link.to);
+	if (!to) return null;
+	const at = e => ghost && ghost.id === e.id ? ghost.pos : e.pos, box = cls === 'trigger_push' ? entBox(ent) : null;
+	const from = box ? box.center.map((v, i) => v + at(ent)[i] - ent.pos[i]) : at(ent), top = at(to), g = (state && +state.gravity) || 800;
+	const key = [ent.id, from, top, g, land].join();
+	if (arcCache.has(key)) return arcCache.get(key);
+	const up = top[2] - from[2], across = Math.hypot(top[0] - from[0], top[1] - from[1]);
+	let arc = { bad: true, from, top };
+	if (up > 0) {
+		const time = Math.sqrt(up / (0.5 * g)), vz = time * g, pts = [from];
+		const p = t => [from[0] + (top[0] - from[0]) * t / time, from[1] + (top[1] - from[1]) * t / time, from[2] + vz * t - 0.5 * g * t * t];
+		arc = { pts, time, up, across, land: null };
+		// to the height it began at, or on down to the map
+		for (let i = 1; i <= (land ? ARC_STEPS * 5 : ARC_STEPS * 2) && !arc.land; i++) {
+			const a = pts[pts.length - 1], b = p(time * i / ARC_STEPS);
+			if (land) {
+				const d = [b[0] - a[0], b[1] - a[1], b[2] - a[2]], len = Math.hypot(...d), hit = pickGround(a, d.map(v => v / len), true);
+				if (hit && Math.hypot(hit[0] - a[0], hit[1] - a[1], hit[2] - a[2]) <= len) arc.land = hit;
+			}
+			pts.push(arc.land || b);
+		}
+	}
+	if (arcCache.size > 200) arcCache.clear();
+	arcCache.set(key, arc);
+	return arc;
+}
+
+// the throws of some pushes as lines: one that has none as a straight red line to its target
+function drawArcs(list, color, land) {
+	const good = [], bad = [];
+	for (const ent of list) {
+		const arc = pushArc(ent, land);
+		if (!arc) continue;
+		if (arc.bad) { bad.push(...arc.from, ...arc.top); continue; }
+		for (let i = 1; i < arc.pts.length; i++) good.push(...arc.pts[i - 1], ...arc.pts[i]);
+		// a cross where it comes down
+		if (arc.land) for (let k = 0; k < 3; k++) good.push(...arc.land.map((v, i) => v - (i === k ? 14 : 0)), ...arc.land.map((v, i) => v + (i === k ? 14 : 0)));
+	}
+	gl.bindVertexArray(linkLines.vao);
+	gl.bindBuffer(gl.ARRAY_BUFFER, linkLines.buf);
+	for (const [data, c] of [[good, color], [bad, [1, 0.15, 0.15, 1]]]) {
+		if (!data.length) continue;
+		gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(data), gl.DYNAMIC_DRAW);
+		gl.uniform4fv(lineProg.u.uColor, c);
+		gl.drawArrays(gl.LINES, 0, data.length / 3);
+	}
+}
+const isPush = e => /^(trigger|target)_push$/i.test(e.classname);
+
 // The edges of a brush, as pairs of points into out. A brush is the space behind all of its planes: every side
 // is a sheet on its plane, cut down by the planes of the other sides.
 function brushEdges(bd, index, out) {
@@ -253,12 +316,17 @@ function drawEditorLines() {
 	}
 	gl.uniformMatrix4fv(lineProg.u.uMvp, false, viewProj);
 	if (linked) drawLinkSet(links.filter(l => l.from !== selectedEnt && l.to !== selectedEnt), [0.3, 0.7, 0.8, 1]);
+	// the throw of the selected push, and of the pushes that are aimed at what is selected
+	const throwers = !sel ? [] : (isPush(sel) ? [sel] : []).concat(links.filter(l => l.to === selectedEnt).map(l => ents.get(l.from)).filter(e => e && isPush(e)));
+	if (linked) drawArcs([...ents.values()].filter(e => isPush(e) && entVisible(e) && !throwers.includes(e)), [0.3, 0.7, 0.8, 1], false);
 	if (sel) {
 		gl.disable(gl.DEPTH_TEST);
 		if (linked) {
 			// what it fires, and what fires it
 			drawLinkSet(links.filter(l => l.from === selectedEnt), [1, 0.65, 0.15, 1]);
 			drawLinkSet(links.filter(l => l.to === selectedEnt), [0.4, 1, 0.45, 1]);
+			// where it comes down is not looked for while something is dragged
+			drawArcs(throwers, [1, 0.9, 0.3, 1], !ghost && !boxGhost);
 		}
 		if (volumes || handled) drawEntBox(sel, [1, 0.25, 0.35]);
 		// and the ones that are selected with it

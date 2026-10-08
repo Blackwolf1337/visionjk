@@ -26,8 +26,12 @@ function renderEntTools(ent) {
 		return other ? '<a data-id="' + id + '" title="' + escapeHtml(key) + '">#' + id + ' ' + escapeHtml(other.classname) + '</a>' : '';
 	};
 	const fires = links.filter(l => l.from === ent.id), firedBy = links.filter(l => l.to === ent.id);
-	$('entLinks').innerHTML = (fires.length ? 'Fires ' + fires.map(l => chip(l.to, l.key)).join('') : '') + (fires.length && firedBy.length ? '<br>' : '') +
-		(firedBy.length ? 'Fired by ' + firedBy.map(l => chip(l.from, l.key)).join('') : '');
+	// a push: what its throw is, as the arc of the Links view shows it
+	const arc = isPush(ent) ? pushArc(ent, true) : null, r = v => Math.round(v);
+	const thrown = !arc ? '' : arc.bad ? '<span class="warn">No throw: its target has to be above ' + (ent.classname.toLowerCase() === 'trigger_push' ? 'the middle of its box' : 'it') + '.</span>'
+		: 'Throws ' + r(arc.up) + ' up and ' + r(arc.across) + ' across, at the top after ' + arc.time.toFixed(2) + ' s' + (arc.land ? ', meets the map at ' + arc.land.map(r).join(' ') : '') + '.';
+	$('entLinks').innerHTML = [fires.length ? 'Fires ' + fires.map(l => chip(l.to, l.key)).join('') : '', firedBy.length ? 'Fired by ' + firedBy.map(l => chip(l.from, l.key)).join('') : '', thrown]
+		.filter(Boolean).join('<br>');
 
 	$('entDoc').style.display = d ? '' : 'none';
 	if (d) $('entDocText').textContent = d.name + (d.flags.length ? '   ' + d.flags.join(' ') : '') + '\n\n' + d.text;

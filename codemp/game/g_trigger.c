@@ -1115,7 +1115,9 @@ void AimAtTarget( gentity_t *self ) {
 	height = ent->s.origin[2] - origin[2];
 	gravity = g_gravity.value;
 	time = sqrt( height / ( .5 * gravity ) );
-	if ( !time ) {
+	// Not in the game as it was: only a target at the height of the push ended here. With one below it the root
+	// is no number, and so was the speed everybody got who touched the push.
+	if ( !( time > 0 ) ) {
 		G_FreeEntity( self );
 		return;
 	}
@@ -1129,6 +1131,44 @@ void AimAtTarget( gentity_t *self ) {
 	VectorScale( self->s.origin2, forward, self->s.origin2 );
 
 	self->s.origin2[2] = time * gravity;
+}
+
+/*
+=================
+G_PushAimAgain
+
+Not in the game as it was. A trigger_push and a target_push work out their throw once, in their first frame, from
+where their target is then. The editor of the web admin panel places and moves entities while the map runs: what
+is aimed at the one given here is aimed again. Not a push the new place has no throw for (a target that is not
+above it): AimAtTarget frees that one, and moving a target should not take the push away. It keeps the throw it
+had.
+=================
+*/
+void G_PushAimAgain( const gentity_t *target ) {
+	int i;
+
+	if ( !VALIDSTRING( target->targetname ) )
+		return;
+
+	for ( i = MAX_CLIENTS; i < level.num_entities; i++ ) {
+		gentity_t	*ent = &g_entities[i];
+		qboolean	arc;
+
+		if ( !ent->inuse || ent == target || !ent->classname || !VALIDSTRING( ent->target ) || Q_stricmp( ent->target, target->targetname ) )
+			continue;
+		if ( !Q_stricmp( ent->classname, "trigger_push" ) )
+			arc = (qboolean)!( ent->spawnflags & ( PUSH_RELATIVE | PUSH_LINEAR ) );
+		else if ( !Q_stricmp( ent->classname, "target_push" ) )
+			arc = (qboolean)!( ent->spawnflags & PUSH_CONSTANT );
+		else
+			continue;
+		// the height AimAtTarget takes: from the middle of the push to its target
+		if ( arc && target->s.origin[2] <= ( ent->r.absmin[2] + ent->r.absmax[2] ) * 0.5f )
+			continue;
+
+		ent->think = AimAtTarget;
+		ent->nextthink = level.time + FRAMETIME;
+	}
 }
 
 
