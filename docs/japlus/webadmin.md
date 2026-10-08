@@ -125,7 +125,7 @@ Also changed:
   game"): the page asks `/api/shaders` for the script files, reads them through `/api/file` and keeps the text of
   every shader until a map uses it. A surface is drawn with the stages of its script, in the sort order of the
   game: images, `animMap`, `clampMap`, `$lightmap`, `blendFunc`, `alphaFunc`, `depthFunc`, `depthWrite`,
-  `rgbGen` and `alphaGen` (const, wave, vertex), `tcGen` (lightmap, environment), `tcMod` (scroll, scale, rotate,
+  `rgbGen` and `alphaGen` (const, wave, vertex, `lightingDiffuse`, `lightingSpecular`), `tcGen` (lightmap, environment), `tcMod` (scroll, scale, rotate,
   stretch, transform, turb), `polygonOffset`, `sort`. A shader without a script is the lightmap times its image,
   a surface without a lightmap is lit by its vertices, both as `tr_shader.cpp` makes them. The sky is the box of
   `skyParms` around the eye and the stages of the sky shader as layers of clouds, as in `tr_sky.cpp`. The

@@ -1024,8 +1024,17 @@ uniform mat4 uMvp; uniform vec3 uEye;
 uniform int uTcGen;		// 0 the texture coordinates, 1 the ones of the lightmap, 2 the environment
 uniform vec3 uTcA; uniform vec3 uTcB;	// the tcMods of the stage as one matrix
 uniform vec2 uTurb;		// tcMod turb: how far, and where in its wave it is
-out vec2 vTc; out vec4 vCol;
+uniform mediump int uAlphaVertex;	// the precision the fragment shader has for it: it is in both
+out vec2 vTc; out vec4 vCol; out float vSpec;
 void main() {
+	// alphaGen lightingSpecular, as RB_CalcSpecularAlpha: how much of a light is mirrored into the eye, to the
+	// fourth power. For the map the engine has one light at a fixed place.
+	vSpec = 1.0;
+	if (uAlphaVertex == 3) {
+		vec3 l = normalize(vec3(-960.0, 1980.0, 96.0) - aPos);
+		float s = max(dot(aNorm * 2.0 * dot(aNorm, l) - l, normalize(uEye - aPos)), 0.0);
+		vSpec = s * s * s * s;
+	}
 	vec2 tc = aSt;
 	if (uTcGen == 1) tc = aLm;
 	else if (uTcGen == 2) {
@@ -1043,15 +1052,15 @@ void main() {
 }`,
 `#version 300 es
 precision mediump float;
-in vec2 vTc; in vec4 vCol;
+in vec2 vTc; in vec4 vCol; in float vSpec;
 uniform sampler2D uTex; uniform vec4 uColor;
-uniform int uRgbVertex; uniform int uAlphaVertex;	// 1 times the colour of the vertex, 2 times one minus it
+uniform int uRgbVertex; uniform int uAlphaVertex;	// 1 times the colour of the vertex, 2 times one minus it, 3 the shine
 uniform int uAlphaFunc;	// 1 GT0, 2 LT128, 3 GE128, 4 GE192
 out vec4 o;
 void main() {
 	vec4 c = uColor;
 	if (uRgbVertex == 1) c.rgb *= vCol.rgb; else if (uRgbVertex == 2) c.rgb *= 1.0 - vCol.rgb;
-	if (uAlphaVertex == 1) c.a *= vCol.a; else if (uAlphaVertex == 2) c.a *= 1.0 - vCol.a;
+	if (uAlphaVertex == 1) c.a *= vCol.a; else if (uAlphaVertex == 2) c.a *= 1.0 - vCol.a; else if (uAlphaVertex == 3) c.a *= vSpec;
 	c *= texture(uTex, vTc);
 	if (uAlphaFunc == 1 && c.a <= 0.0) discard;
 	if (uAlphaFunc == 2 && c.a >= 0.5) discard;
@@ -1069,9 +1078,17 @@ layout(location=0) in vec3 aPos; layout(location=1) in vec3 aNorm; layout(locati
 uniform mat4 uMvp; uniform mat4 uModel; uniform vec3 uEyeLocal;
 uniform vec3 uAmbient; uniform vec3 uDirected; uniform vec3 uLightDir;	// the light of the place, and where it comes from
 uniform int uTcGen; uniform vec3 uTcA; uniform vec3 uTcB; uniform vec2 uTurb;
-out vec2 vTc; out vec3 vLight;
+uniform mediump int uAlphaVertex;	// the precision the fragment shader has for it: it is in both
+out vec2 vTc; out vec3 vLight; out float vSpec;
 void main() {
 	vec4 world = uModel * vec4(aPos, 1.0);
+	// alphaGen lightingSpecular: for a model the light of the place is the one that is mirrored
+	vSpec = 1.0;
+	if (uAlphaVertex == 3) {
+		vec3 l = normalize(transpose(mat3(uModel)) * uLightDir);
+		float s = max(dot(aNorm * 2.0 * dot(aNorm, l) - l, normalize(uEyeLocal - aPos)), 0.0);
+		vSpec = s * s * s * s;
+	}
 	vec2 tc = aUv;
 	if (uTcGen == 2) {
 		vec3 v = normalize(uEyeLocal - aPos);
@@ -1089,14 +1106,16 @@ void main() {
 }`,
 `#version 300 es
 precision mediump float;
-in vec2 vTc; in vec3 vLight;
+in vec2 vTc; in vec3 vLight; in float vSpec;
 uniform sampler2D uTex; uniform vec4 uColor;
 uniform int uRgbVertex;	// 3: times the light of the place
+uniform int uAlphaVertex;	// 3: times the shine
 uniform int uAlphaFunc;
 out vec4 o;
 void main() {
 	vec4 c = uColor;
 	if (uRgbVertex == 3) c.rgb *= vLight;
+	if (uAlphaVertex == 3) c.a *= vSpec;
 	c *= texture(uTex, vTc);
 	if (uAlphaFunc == 1 && c.a <= 0.0) discard;
 	if (uAlphaFunc == 2 && c.a >= 0.5) discard;
@@ -1211,7 +1230,9 @@ function scGen(a, rgb) {
 		return { value: rgb ? [n[0] || 0, n[1] || 0, n[2] || 0] : (n[0] || 0) };
 	}
 	if (v === 'vertex' || v === 'exactvertex') return { vertex: 1, exact: v === 'exactvertex' };
-	if (rgb && v === 'lightingdiffuse') return { diffuse: true };
+	// lightingDiffuseEntity is that light times the colour of the entity, which is white here
+	if (rgb && (v === 'lightingdiffuse' || v === 'lightingdiffuseentity')) return { diffuse: true };
+	if (!rgb && v === 'lightingspecular') return { vertex: 3 };
 	if (v === 'oneminusvertex') return { vertex: 2, exact: true };
 	return null;
 }
