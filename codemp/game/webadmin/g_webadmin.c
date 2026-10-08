@@ -2071,11 +2071,12 @@ typedef struct waPerfSample_s {
 	int		avgUs, maxUs;		// what a frame took, in microseconds
 	int		gapMs;				// the longest time from the start of a frame to the start of the next
 	int		entities, clients;
+	int		panelAvgUs, panelMaxUs;	// what of a frame was this panel (WebAdmin_Frame)
 } waPerfSample_t;
 
 static waPerfSample_t	perfSamples[WA_PERF_SAMPLES];
 static int				perfSeq;			// how many samples were written
-static double			perfFrameStart, perfSecondStart, perfSum, perfMax, perfGap;
+static double			perfFrameStart, perfSecondStart, perfSum, perfMax, perfGap, perfPanelSum, perfPanelMax;
 static int				perfFrames;
 static qboolean			perfInFrame;
 
@@ -2117,12 +2118,23 @@ static void WA_PerfFrameBegin( void ) {
 		sample->gapMs = (int)( perfGap / 1000.0 + 0.5 );
 		sample->entities = ENTITYNUM_MAX_NORMAL - MAX_CLIENTS - WA_FreeEntities();
 		sample->clients = level.numConnectedClients;
+		sample->panelAvgUs = perfFrames ? (int)( perfPanelSum / perfFrames ) : 0;
+		sample->panelMaxUs = (int)perfPanelMax;
 		perfSeq++;
 
 		perfFrames = 0;
-		perfSum = perfMax = perfGap = 0;
+		perfSum = perfMax = perfGap = perfPanelSum = perfPanelMax = 0;
 		perfSecondStart = now;
 	}
+}
+
+// the part of the panel in a frame is over: the rest of it is the game
+static void WA_PerfPanelDone( void ) {
+	const double took = WA_Microseconds() - perfFrameStart;
+
+	perfPanelSum += took;
+	if ( took > perfPanelMax )
+		perfPanelMax = took;
 }
 
 void WebAdmin_FrameEnd( void ) {
@@ -2159,8 +2171,8 @@ static void WA_ApiPerf( waConnection_t *c, const char *query ) {
 	for ( i = since; i < perfSeq; i++ ) {
 		const waPerfSample_t *sample = &perfSamples[i % WA_PERF_SAMPLES];
 
-		WA_BufPrintf( &b, "%s[%d,%d,%d,%d,%d,%d]", i > since ? "," : "", sample->frames, sample->avgUs, sample->maxUs,
-			sample->gapMs, sample->entities, sample->clients );
+		WA_BufPrintf( &b, "%s[%d,%d,%d,%d,%d,%d,%d,%d]", i > since ? "," : "", sample->frames, sample->avgUs, sample->maxUs,
+			sample->gapMs, sample->entities, sample->clients, sample->panelAvgUs, sample->panelMaxUs );
 	}
 	WA_BufAppend( &b, "]}", 2 );
 	WA_RespondJson( c, &b );
@@ -3849,6 +3861,8 @@ void WebAdmin_Frame( void ) {
 		if ( c->inUse && c->response.len )
 			WA_WriteResponse( c );
 	}
+
+	WA_PerfPanelDone();
 }
 
 void WebAdmin_Shutdown( void ) {

@@ -360,7 +360,7 @@ body.app-admin #dbg, body.app-admin .editorOnly, body.app-admin #tabs button[dat
 		<div class="scroll">
 			<div id="perfRows"></div>
 			<div class="hint" id="perfState" style="padding:0 10px"></div>
-			<div class="hint" style="padding:0 10px 8px">One value a second, the last five minutes of this map. A frame of the game is the step of the game module alone, with the work of this panel in it: handing out a map to a browser is done in a frame. Fewer frames than sv_fps or a long wait for one mean the machine does not keep up.</div>
+			<div class="hint" style="padding:0 10px 8px">One value a second, the last five minutes of this map. A frame of the game is the step of the game module alone, with the work of this panel in it, which the second line shows by itself: answering a browser is done in a frame. Fewer frames than sv_fps or a long wait for one mean the machine does not keep up.</div>
 		</div>
 	</div>
 	<div class="pane" id="pane-log">
@@ -4813,10 +4813,13 @@ setInterval(logPoll, 2000);
 // ---- the load of the server: a value a second from /api/perf, the last five minutes
 
 const perf = { seq: -1, samples: [], info: null, busy: false };
-// a sample: frames, what a frame took on average and at most (microseconds), the longest wait (ms), entities, players
+// a sample: frames, what a frame took on average and at most (microseconds), the longest wait (ms), entities, players,
+// and what of a frame was this panel, on average and at most
 const PERF_ROWS = [
 	{ title: 'A frame of the game', of: s => s[1] / 1000, top: s => s[2] / 1000, least: 0.2, unit: ' ms',
 		text: s => (s[1] / 1000).toFixed(2) + ' ms, at most ' + (s[2] / 1000).toFixed(2), bad: (s, i) => s[2] / 1000 > 1000 / i.svFps },
+	{ title: 'Of it, this panel', of: s => s[6] / 1000, top: s => s[7] / 1000, least: 0.2, unit: ' ms', needs: 7,
+		text: s => (s[6] / 1000).toFixed(2) + ' ms, at most ' + (s[7] / 1000).toFixed(2), bad: (s, i) => s[7] / 1000 > 500 / i.svFps },
 	{ title: 'Frames in a second', of: s => s[0], least: i => i.svFps * 1.25, unit: '',
 		text: (s, i) => s[0] + ' of ' + i.svFps, bad: (s, i) => s[0] < i.svFps * 0.9 },
 	{ title: 'Longest wait for a frame', of: s => s[3], least: i => 2000 / i.svFps, unit: ' ms',
@@ -4858,6 +4861,9 @@ function perfRender() {
 	if (!last) { $('perfState').textContent = 'The first value comes after a second.'; return; }
 	PERF_ROWS.forEach((row, n) => {
 		const el = box.children[n], text = el.querySelector('b'), cv = el.querySelector('canvas');
+		// a value an older game module does not send
+		el.style.display = row.needs !== undefined && last[row.needs] === undefined ? 'none' : '';
+		if (el.style.display === 'none') return;
 		text.textContent = row.text(last, info);
 		text.classList.toggle('bad', row.bad(last, info));
 		// drawn as wide as it is shown, for a sharp line

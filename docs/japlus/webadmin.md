@@ -88,7 +88,7 @@ the answer tells the page that the numbers started over.
 | `GET /api/waypoints` | the route of the bots: every waypoint with its place, its flags and the numbers of the ones it leads to. `editing`: it was changed and not saved, the bots stand still |
 | `POST /api/waypoint` | `op` add (`x`, `y`, `z`, `flags`, `after`: the waypoint it comes behind, none for the end), remove (`index`), flags (`index`, `flags`) or save |
 | `GET /api/log?from=` | the log of the game from a place on, `next` is where to ask from the next time. Without `from`, or with a place the panel does not have: its last part |
-| `GET /api/perf?since=` | the load of the server, a sample a second, the last 300 kept: `samples` are `[frames, average and longest frame of the game in microseconds, longest wait for a frame in ms, entities, players]`, `seq` is how many there were, `from` the number of the first one sent. `since`: only the ones from that number on. With them `svFps`, `entityMax`, `maxClients` |
+| `GET /api/perf?since=` | the load of the server, a sample a second, the last 300 kept: `samples` are `[frames, average and longest frame of the game in microseconds, longest wait for a frame in ms, entities, players, average and longest part of this panel in a frame in microseconds]`, `seq` is how many there were, `from` the number of the first one sent. `since`: only the ones from that number on. With them `svFps`, `entityMax`, `maxClients` |
 | `GET /api/classdoc` | the entity definitions of the game code: every `QUAKED` comment of its source files as text |
 | `GET /api/export` | the entities in `.ent` format. `placed=1`: only what was placed through the panel, without the worldspawn |
 | `GET /api/chat?since=&epoch=` | chat lines after number `since`. Everything if `epoch` is not the current one |
@@ -321,9 +321,10 @@ Also changed:
   trail of anything, the real effects, and what only an effect shows (the beam of a disruptor).
 - Changed: "Fire" also fires a `misc_weapon_shooter`. The game lends that class a client for the weapon code,
   and the first guard took everything with a client for an NPC. It asks for the NPC itself now.
-- New: the tab Load of the administration (`/api/perf`, `WA_PerfFrameBegin`, `WebAdmin_FrameEnd`). Five
+- New: the tab Load of the administration (`/api/perf`, `WA_PerfFrameBegin`, `WebAdmin_FrameEnd`). Six
   values, one a second, each with a graph of the last five minutes: how long a frame of the game takes on
-  average and at most, how many frames the game got, the longest wait from one frame to the next, the
+  average and at most, how much of that is this panel (`WA_PerfPanelDone`, from the start of a frame to
+  the end of `WebAdmin_Frame`), how many frames the game got, the longest wait from one frame to the next, the
   entities in use and the players. The game module measures itself from the start of `G_RunFrame` to its
   end with a clock of the system (`clock_gettime`, `QueryPerformanceCounter` on Windows), since a frame is
   done in a fraction of a millisecond and the precision timer of the engine only counts on Windows. The
@@ -920,7 +921,7 @@ What fires what (`steps_trace.js`, 4 checks, the same day, mp/ffa3): a trigger_m
 panel gave five events, the world firing the trigger and the trigger firing each of its four lifts, nothing
 before the click and nothing after, and the light was out after three seconds.
 
-The tab Load (`steps_load.js`, 10 checks, the same day, Linux, a private server with four bots and nobody on
+The tab Load (`steps_load.js`, 11 checks, the same day, Linux, a private server with four bots and nobody on
 it): 40 frames in a second at `sv_fps 40`, a frame of 0.06 ms on average and 0.2 ms at most, 0.3 and 1.1 ms
 while the page read its files, a wait of 25 ms, the entities the editor counts too. A value came every
 second, a number the server does not have got all it keeps, and nothing was asked for with the tab closed.
@@ -931,7 +932,9 @@ to the byte, 11.8 MB in 0.56 s alone and three of them next to three models in 1
 of 1.7 to 1.8 ms at most in those seconds and all 40 frames in each. The same for the map: `/api/map` of
 mp/ffa3 (7.6 MB, 0.38 s) and mp/siege_hoth (11.1 MB, 0.55 s) is what the pk3 holds to the byte, and the
 number of brush models (9 and 95) is right.
-Not tried: a server under real load, where the yellow marks would show, and the clock on Windows.
+The part of the panel: on the empty server 0.05 of 0.06 ms (a page asking for the state ten times a second
+is most of what the game module does then), with four bots 0.05 of 0.34 ms. Not tried: a server under real
+load, where the yellow marks would show, and the clock on Windows.
 
 Fire, the rectangle and teams of doors (`steps_fire.js`, 11 checks, the same day): on mp/ffa3 Fire sent a lift
 its 280 units, an info_player_deathmatch answered that it does nothing when fired, and a fired
