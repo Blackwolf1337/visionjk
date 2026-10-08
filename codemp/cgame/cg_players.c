@@ -4209,6 +4209,15 @@ qboolean CG_G2PlayerHeadAnims( centity_t *cent )
 		}
 
 		voiceVolume = trap->S_GetVoiceVolume(cent->currentState.number);
+		if (voiceVolume <= 0)
+		{// no line of the game on his voice channel: what he says over the voice chat opens his mouth the same way
+			const int chat = CG_VoiceLip(cent->currentState.number);
+
+			if (chat)
+			{
+				voiceVolume = chat;
+			}
+		}
 
 		if (voiceVolume > 0)	// if we aren't talking, then it will be 0, -1 for talking but paused
 		{

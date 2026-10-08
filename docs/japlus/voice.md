@@ -119,6 +119,13 @@ his voice to the engine, where it is a sound in the level, behind the walls and 
 sound. See [audio.md](audio.md), "The voice chat". With `cg_voiceMuffle 0`, on any other engine and with
 `s_spatial 0` every voice is played as described here.
 
+**The mouth.** The game opens the mouth of a character by how loud the line is that he says, in four steps,
+which the engine works out for its own sounds. A voice of the chat is none of those, so the cgame works out the
+same from every frame it plays of a speaker, and for the own character from every frame that goes out
+(`Voice_Lip`, asked by `CG_G2PlayerHeadAnims`): how loud the frame is against the loudest of that player lately,
+since no two microphones are alike. A line of the game on his voice channel goes first. The mouth is ahead of
+the voice by what waits to be played, 40 ms and more. Added 2026-10-08, built, not seen in the game.
+
 **The sound devices** (`cg_voice_audio.c`) are opened through miniaudio (`lib/miniaudio`), which is compiled into
 that one file, on Windows, Linux and macOS. The codec is Opus (`lib/opus`). Both are built into the module,
 there is nothing a player has to install. The devices run in threads of miniaudio. Those threads touch nothing

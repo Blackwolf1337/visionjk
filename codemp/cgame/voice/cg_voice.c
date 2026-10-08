@@ -62,6 +62,9 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define VOICE_OWN_REVERB_GAIN	0.3f	// what the room gets of the own voice at cg_voiceOwnReverb 1, against a voice next to the listener
 #define VOICE_OWN_REVERB_CAP	0.1f	//	a frame of it louder than this (Voice_Level) goes in this loud,
 #define VOICE_OWN_REVERB_RISE	0.1f	//	and after a loud one the gain comes back by this much a frame at most
+#define VOICE_LIP_FLOOR			0.004f	// a frame quieter than this (Voice_Level) leaves the mouth shut
+#define VOICE_LIP_DECAY			0.995f	// what the loudest frame of a player lately loses with every frame after it
+#define VOICE_LIP_HOLD_MSEC		120		// the mouth keeps what a frame gave it this long
 #define VOICE_FILE_FRAME		( VOICE_FRAME_SAMPLES * 4 )	// voice_test: the bytes of one frame in a file, two channels
 
 typedef struct voiceSpeaker_s {
@@ -79,6 +82,9 @@ typedef struct voiceSpeaker_s {
 	qboolean		inLevel;		// what he says now is played by the engine as a sound in the level, see Voice_InLevel()
 	vec3_t			mouth;			//	from here,
 	float			volume;			//	this loud
+	float			lipPeak;		// Voice_Lip: the loudest frame of him lately,
+	int				lipLevel;		//	how far that opens his mouth now, 0 to 4,
+	int				lipTime;		//	and since when
 } voiceSpeaker_t;
 
 // a block of memory for a state of Opus, as well aligned as anything can ask for
@@ -416,6 +422,43 @@ static float Voice_Level( const short *samples ) {
 	return sqrtf( sum / VOICE_FRAME_SAMPLES ) * ( 1.0f / 32768.0f );
 }
 
+/*
+=================
+Voice_Lip
+
+The game opens the mouth of a character by how loud the line is that he says, in four steps, which the engine
+works out for the sounds on its voice channels (S_GetVoiceVolume). A voice of the chat is no sound of the
+engine, so the same is worked out here for every frame that is played, and for the own player for every frame
+that goes out: how loud it is against the loudest frame of that player lately, since no two microphones are
+alike. CG_G2PlayerHeadAnims() asks CG_VoiceLip().
+
+A frame is heard a little after it is decoded, so the mouth is ahead of the voice by what is kept ahead of the
+sound device.
+=================
+*/
+static void Voice_Lip( int client, const short *samples ) {
+	voiceSpeaker_t	*sp = &voiceSpeakers[client];
+	const float		level = Voice_Level( samples );
+	float			part;
+
+	sp->lipPeak *= VOICE_LIP_DECAY;
+	if ( level > sp->lipPeak )
+		sp->lipPeak = level;
+	sp->lipTime = trap->Milliseconds();
+	if ( level < VOICE_LIP_FLOOR ) {
+		sp->lipLevel = 0;
+		return;
+	}
+	part = level / sp->lipPeak;
+	sp->lipLevel = ( part > 0.75f ) ? 4 : ( part > 0.5f ) ? 3 : ( part > 0.25f ) ? 2 : 1;
+}
+
+int CG_VoiceLip( int clientNum ) {
+	if ( clientNum < 0 || clientNum >= MAX_CLIENTS )
+		return 0;
+	return ( trap->Milliseconds() - voiceSpeakers[clientNum].lipTime < VOICE_LIP_HOLD_MSEC ) ? voiceSpeakers[clientNum].lipLevel : 0;
+}
+
 // What this player says, for an engine that lets the room he stands in ring from it. He does not hear his
 // voice, only the room. Not for a spectator and not while he follows somebody (the listener is not where his
 // mouth is then), and not in a chat without a range, where no voice is in the level.
@@ -452,6 +495,7 @@ static void Voice_SendFrame( const short *samples ) {
 	const int	len = opus_encode( (OpusEncoder *)&voiceEncoder, samples, VOICE_FRAME_SAMPLES, frame, sizeof( frame ) );
 
 	Voice_OwnReverb( samples );
+	Voice_Lip( cg.clientNum, samples );
 
 	// two bytes and less is a frame the codec found nothing in
 	if ( len > 2 ) {
@@ -685,6 +729,7 @@ static void Voice_PlayFrame( int speaker, qboolean makeUp ) {
 	// a frame of another length than this chat uses, or one the codec refuses, is silence
 	if ( got != VOICE_FRAME_SAMPLES )
 		memset( samples, 0, sizeof( samples ) );
+	Voice_Lip( speaker, samples );
 	if ( sp->inLevel && trap->ext.S_SpatialVoice( speaker, sp->mouth, sp->volume, samples, VOICE_FRAME_SAMPLES, VOICE_RATE ) >= 0 )
 		return;
 	CG_VoiceAudioWrite( speaker, samples, VOICE_FRAME_SAMPLES );
@@ -1105,5 +1150,6 @@ void CG_VoiceTest_f( void ) {}
 void CG_VoiceMute_f( void ) {}
 void CG_VoiceUnmute_f( void ) {}
 void CG_VoiceDraw( void ) {}
+int CG_VoiceLip( int clientNum ) { (void)clientNum; return 0; }
 
 #endif // JP_VOICE

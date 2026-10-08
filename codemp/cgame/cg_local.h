@@ -2058,6 +2058,7 @@ void CG_VoiceTest_f( void );
 void CG_VoiceMute_f( void );
 void CG_VoiceUnmute_f( void );
 void CG_VoiceDraw( void );
+int CG_VoiceLip( int clientNum );	// how far the mouth of a player is open by what he says, 0 to 4
 
 void CG_JPAutoReplierInit( void );
 void CG_JPReplyDuelEvent( qboolean start );
