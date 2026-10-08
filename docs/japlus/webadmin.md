@@ -267,7 +267,7 @@ Also changed:
   within about 350 of the 600 units of reach), a weaker pull would not move it and everything in reach would
   stay awake. Added without a test run.
 - New: props have the shape of their model, players stand on them, and a prop that is thrown at somebody hurts
-  (`codemp/game/bg_props.c`, shared by the game and the cgame, and `g_props.c`).
+  (`codemp/game/props/bg_props.c`, shared by the game and the cgame, and `g_props.c`).
   - The shape. `misc_prop` has a key `shape`: `model` (the default now), `box` or `ball`. `model` is the convex
     hull of the model: its furthest vertex along each of 26 directions, then the vertex that sticks out of the
     hull of those furthest, one at a time, until nothing sticks out by more than half a percent of the size of
@@ -321,7 +321,7 @@ Also changed:
     Not checked: the prediction of the cgame (not at all, it shares the code of the trace), shoving by walking,
     a prop thrown with +button13 at a player, stacks and piles after the last change of the hull, a client
     without the new cgame. Built for Linux and Windows.
-- New: `+button13` takes players too, for admins only (`Prop_CarryPlayer` in `codemp/game/g_props.c`): who is
+- New: `+button13` takes players too, for admins only (`Prop_CarryPlayer` in `codemp/game/props/g_props.c`): who is
   logged in as an admin of JA+, with any rank. Everybody else takes props with it as before. The ranks are not
   compared and `jp_admUsableOn` is not looked at, any admin takes any player. He takes the player he looks at
   within 96 units (his legs, his chest or his head within 32 units of the line of sight, not through a wall)
@@ -390,7 +390,7 @@ Also changed:
   for the other deletes): every `misc_prop` that was placed through the panel goes, with one request (`op`
   clear). Props of the map stay, and so do the balls and cubes of the World tab. The buttons that need a second
   click share one helper on the page now (`confirmed`). Added without a test run.
-- New: the tab "Models" and the entity `misc_prop` (`codemp/game/g_props.c`): any model of the game as a thing
+- New: the tab "Models" and the entity `misc_prop` (`codemp/game/props/g_props.c`): any model of the game as a thing
   with the physics of the cube. The tab lists every `.md3` and `.glm` of the game (748 with the base game and
   JA+), with a search and the turning preview the class list has. Pick one, set scale, mass and shape if they
   are not to be the defaults, and right-click on the map: it is spawned as a `misc_prop` half its height above
@@ -424,7 +424,7 @@ Also changed:
   props dropped onto a floor come to rest with their middle half their height above it (a crate, a crystal, a
   player model, a weapon model at 300 percent, a ball), two crates stack. The user placed props through the
   page. How the models look in the game was not seen by me.
-- New entity `misc_cube` (`codemp/game/g_props.c`, next to the ball), placed in the World tab like the ball. A
+- New entity `misc_cube` (`codemp/game/props/g_props.c`, next to the ball), placed in the World tab like the ball. A
   cube with corners and edges that is a rigid body: it falls, lands on a corner or an edge, tips over, tumbles
   and slides to a stop on one of its faces. It is heavy. Players and NPCs shove it instead of kicking it away:
   only part of their speed gets into it, off its middle the shove turns it, and the player is slowed down while
@@ -528,7 +528,7 @@ Also changed:
   of the button, it keeps the speed it had, so it can be flung. A force push throws it out of the hand. It is
   also let go when he dies, leaves, or it gets more than 144 units away from the hand (caught behind a wall,
   teleport). The one who holds it does not kick it. Added without a test run.
-- New entity `misc_ball` (`codemp/game/g_props.c`), placed in the World tab like the black hole. A ball with
+- New entity `misc_ball` (`codemp/game/props/g_props.c`), placed in the World tab like the black hole. A ball with
   physics of its own: gravity, bounces that keep part of the speed, rolling with resistance, rolling down slopes,
   coming to rest. Players and NPCs kick it by running into it (it bounces off them like off something much
   heavier that moves), force push and pull throw it (a call in `ForceThrow` of `w_force.c`), shots, sabers and
@@ -538,7 +538,7 @@ Also changed:
   `radius` 18, `modelscale` 600, `bounce` 0.7, `friction` 90, `mass` 1, `kick` 1, `model`. A use, falling out of
   the world or getting stuck brings it back to where it was placed. Lifts do not carry it, and the black hole
   does not pull it. Added without a test run.
-- New entity `misc_blackhole` (`codemp/game/g_blackhole.c`), made to be placed in the World tab: it is in the
+- New entity `misc_blackhole` (`codemp/game/props/g_blackhole.c`), made to be placed in the World tab: it is in the
   spawn table, so it shows up in the class list. It pulls players and NPCs towards itself, stronger the closer
   they are, and crushes what reaches its core. It is server side only: for the client it is a stock looping effect
   entity (`ET_FX`, like `fx_runner`) with a looping sound and a light. Keys: `radius` 600, `strength` 2400 (the

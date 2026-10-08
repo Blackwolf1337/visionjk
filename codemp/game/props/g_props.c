@@ -41,8 +41,8 @@ of the port predicts that with the same code. A ball is in nobody's way.
 Not from JA+ and not from JKAdmin.
 */
 
-#include "g_local.h"
-#include "b_local.h"				// G_BoundsOverlap
+#include "game/g_local.h"
+#include "game/b_local.h"				// G_BoundsOverlap
 #include "bg_props.h"				// the shape of a body: the hull of its model
 #include "bg_props_math.h"			// the vector functions, inline
 

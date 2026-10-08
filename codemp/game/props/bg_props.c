@@ -32,7 +32,7 @@ with the outline of its top and its feet.
 */
 
 #include "qcommon/q_shared.h"
-#include "bg_public.h"
+#include "game/bg_public.h"
 #include "bg_props.h"
 #include "bg_props_math.h"		// the vector functions, inline
 
@@ -796,7 +796,7 @@ be asked, so the file is read, every offset checked against its size.
 #include "rd-common/mdx_format.h"
 
 #if defined( _GAME )
-	#include "g_local.h"
+	#include "game/g_local.h"
 #elif defined( _CGAME )
 	#include "cgame/cg_local.h"
 #endif

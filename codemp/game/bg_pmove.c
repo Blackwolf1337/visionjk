@@ -28,7 +28,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "qcommon/q_shared.h"
 #include "bg_public.h"
 #include "bg_local.h"
-#include "bg_props.h"
+#include "game/props/bg_props.h"
 #include "ghoul2/G2.h"
 
 #ifdef _GAME

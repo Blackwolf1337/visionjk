@@ -41,7 +41,6 @@ set(MPGameGameFiles
 	"${MPDir}/game/bg_misc.c"
 	"${MPDir}/game/bg_panimate.c"
 	"${MPDir}/game/bg_pmove.c"
-	"${MPDir}/game/bg_props.c"
 	"${MPDir}/game/bg_saber.c"
 	"${MPDir}/game/bg_saberLoad.c"
 	"${MPDir}/game/bg_saga.c"
@@ -50,13 +49,11 @@ set(MPGameGameFiles
 	"${MPDir}/game/bg_weapons.c"
 	"${MPDir}/game/FighterNPC.c"
 	"${MPDir}/game/g_active.c"
-	"${MPDir}/game/g_blackhole.c"
 	"${MPDir}/game/g_bot.c"
 	"${MPDir}/game/g_client.c"
 	"${MPDir}/game/g_disorient.c"
 	"${MPDir}/game/g_flatulence.c"
 	"${MPDir}/game/g_poop.c"
-	"${MPDir}/game/g_props.c"
 	"${MPDir}/game/g_cmds.c"
 	"${MPDir}/game/g_combat.c"
 	"${MPDir}/game/g_cvar.c"
@@ -131,8 +128,6 @@ set(MPGameGameFiles
 	"${MPDir}/game/b_local.h"
 	"${MPDir}/game/b_public.h"
 	"${MPDir}/game/bg_local.h"
-	"${MPDir}/game/bg_props.h"
-	"${MPDir}/game/bg_props_math.h"
 	"${MPDir}/game/bg_net.h"
 	"${MPDir}/game/bg_public.h"
 	"${MPDir}/game/bg_saga.h"
@@ -193,6 +188,17 @@ set(MPGameWebadminFiles
 	)
 source_group("game/webadmin" FILES ${MPGameWebadminFiles})
 set(MPGameFiles ${MPGameFiles} ${MPGameWebadminFiles})
+
+# the props with physics and the black hole that pulls them, bg_props.c is built into the cgame too
+set(MPGamePropsFiles
+	"${MPDir}/game/props/bg_props.c"
+	"${MPDir}/game/props/g_blackhole.c"
+	"${MPDir}/game/props/g_props.c"
+	"${MPDir}/game/props/bg_props.h"
+	"${MPDir}/game/props/bg_props_math.h"
+	)
+source_group("game/props" FILES ${MPGamePropsFiles})
+set(MPGameFiles ${MPGameFiles} ${MPGamePropsFiles})
 
 set(MPGameCommonFiles
 	"${MPDir}/qcommon/q_shared.c"

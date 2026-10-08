@@ -26,7 +26,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // cg_ents.c -- present snapshot entities, happens every single frame
 
 #include "cg_local.h"
-#include "game/bg_props.h"
+#include "game/props/bg_props.h"
 /*
 Ghoul2 Insert Start
 */

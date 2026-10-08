@@ -24,7 +24,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 */
 
 #include "g_local.h"
-#include "bg_props.h"
+#include "game/props/bg_props.h"
 #include "bg_saga.h"
 
 extern void Jedi_Cloak( gentity_t *self );

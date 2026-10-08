@@ -28,7 +28,7 @@ light, which the client adds for every entity type (CG_EntityEffects).
 Not from JA+ and not from JKAdmin.
 */
 
-#include "g_local.h"
+#include "game/g_local.h"
 
 #define BLACKHOLE_START_OFF		1
 #define BLACKHOLE_HURT_MSEC		100		// the core hurts this often
