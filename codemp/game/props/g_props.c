@@ -1590,8 +1590,8 @@ by it: he walks out.
 */
 void G_PropClipMove( trace_t *results, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end,
 		int passEntityNum, int contentMask ) {
-	vec3_t	lo, hi;
-	int		i, k;
+	float	boxReach;
+	int		i;
 
 	if ( !propCount || !(contentMask & CONTENTS_BODY) || results->allsolid )
 		return;
@@ -1599,10 +1599,7 @@ void G_PropClipMove( trace_t *results, const vec3_t start, const vec3_t mins, co
 		mins = vec3_origin;
 	if ( !maxs )
 		maxs = vec3_origin;
-	for ( k = 0; k < 3; k++ ) {
-		lo[k] = ( start[k] < end[k] ? start[k] : end[k] ) + mins[k] - 1.0f;
-		hi[k] = ( start[k] > end[k] ? start[k] : end[k] ) + maxs[k] + 1.0f;
-	}
+	boxReach = BG_PropBoxReach( mins, maxs );
 
 	for ( i = 0; i < propCount; i++ ) {
 		const gentity_t	*ent = &g_entities[propList[i]];
@@ -1611,11 +1608,7 @@ void G_PropClipMove( trace_t *results, const vec3_t start, const vec3_t mins, co
 		// the list is of the start of the frame
 		if ( !Prop_Is( ent ) || !p->solid || ( p->holder && p->holder->s.number == passEntityNum ) )
 			continue;
-		for ( k = 0; k < 3; k++ ) {
-			if ( ent->r.currentOrigin[k] + ent->radius < lo[k] || ent->r.currentOrigin[k] - ent->radius > hi[k] )
-				break;
-		}
-		if ( k < 3 )
+		if ( !BG_PropNearMove( start, end, boxReach, ent->r.currentOrigin, ent->radius ) )
 			continue;
 		BG_PropClipBox( results, start, mins, maxs, end, Prop_Brush( ent, p ) );
 	}

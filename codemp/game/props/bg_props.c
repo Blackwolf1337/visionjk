@@ -709,6 +709,46 @@ void BG_PropBrush( const propShape_t *shape, const vec3_t middle, matrix3_t axis
 	}
 }
 
+// how far the corners of a box are from its origin: the same for every shape a move is cut against
+float BG_PropBoxReach( const vec3_t mins, const vec3_t maxs ) {
+	vec3_t	corner;
+	int		k;
+
+	for ( k = 0; k < 3; k++ )
+		corner[k] = ( fabsf( mins[k] ) > fabsf( maxs[k] ) ) ? fabsf( mins[k] ) : fabsf( maxs[k] );
+	return VectorLength( corner );
+}
+
+/*
+=================
+BG_PropNearMove
+
+A quick no before the planes of a shape are made (BG_PropBrush), which is what costs: can a box that moves from
+start to end touch a shape that lies within reach of point at all. A move comes past every prop there is and
+is near a few of them.
+
+boxReach is BG_PropBoxReach() of the box. The line from start to end is asked, not the box around it, so a
+long shot across the map is not near everything that lies beside its way.
+=================
+*/
+qboolean BG_PropNearMove( const vec3_t start, const vec3_t end, float boxReach, const vec3_t point, float reach ) {
+	vec3_t	move, to;
+	float	length, along;
+
+	VectorSubtract( end, start, move );
+	VectorSubtract( point, start, to );
+	length = DotProduct( move, move );
+	along = DotProduct( to, move );
+	// from the spot of the move that is nearest to the point
+	if ( along >= length )
+		VectorSubtract( point, end, to );
+	else if ( along > 0.0f )
+		VectorMA( to, -along / length, move, to );
+
+	reach += boxReach + 1.0f;
+	return ( DotProduct( to, to ) <= reach * reach ) ? qtrue : qfalse;
+}
+
 /*
 =================
 BG_PropClipBox

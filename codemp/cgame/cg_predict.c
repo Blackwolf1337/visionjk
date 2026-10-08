@@ -42,13 +42,18 @@ static	centity_t	*cg_triggerEntities[MAX_ENTITIES_IN_SNAPSHOT];
 // players against those shapes (G_PropClipMove) and this does the same with the same code, so the prediction
 // agrees with it. The shape is made from the model file once and kept, the planes of a prop for where it stands
 // are kept too.
-#define CG_PROP_SHAPES		32
-#define CG_PROP_BRUSHES		16
+//
+// A frame makes hundreds of traces and each of them comes past every prop of the snapshot. So what is asked of
+// a prop in a trace is little: where it is and how far its shape reaches are worked out once for a time of the
+// physics (CG_PropsForTime), and its planes, which are what costs, only when a move comes near it.
+#define CG_PROP_SHAPES		128
+#define CG_PROP_BRUSHES		24
 
 typedef struct cgPropShape_s {
 	int			modelindex;		// 0: free
 	int			scale, kind;
 	qboolean	ok;				// the model could be read
+	int			stamp;			// cg_propStamp when a prop last asked for it: such a one is not given away
 	propShape_t	shape;
 } cgPropShape_t;
 
@@ -56,15 +61,26 @@ typedef struct cgPropBrush_s {
 	int					number;		// of the entity
 	const propShape_t	*shape;
 	vec3_t				origin, angles;
+	int					used;		// cg.clientFrame when it was last asked for
 	propBrush_t			brush;
 } cgPropBrush_t;
 
-static	int				cg_numPropEntities;
-static	centity_t		*cg_propEntities[MAX_ENTITIES_IN_SNAPSHOT];
+// a prop of the snapshot, for the time the moves are predicted at
+typedef struct cgProp_s {
+	centity_t			*cent;
+	const propShape_t	*shape;		// NULL: this client can not read its model
+	vec3_t				origin, angles;
+	float				reach;		// its shape lies within this of origin
+} cgProp_t;
+
+static	int				cg_numProps;
+static	cgProp_t		cg_props[MAX_ENTITIES_IN_SNAPSHOT];
+static	int				cg_propTime = -1;		// cg.physicsTime and the time of cg.snap cg_props is worked out for
+static	int				cg_propSnapTime;
+static	int				cg_propStamp = 1;		// goes up every time it is worked out
 static	cgPropShape_t	cg_propShapes[CG_PROP_SHAPES];
 static	int				cg_propShapeNext;
 static	cgPropBrush_t	cg_propBrushes[CG_PROP_BRUSHES];
-static	int				cg_propBrushNext;
 
 // the shape of a prop, NULL if this client can not read its model
 static const propShape_t *CG_PropShape( const entityState_t *es ) {
@@ -74,12 +90,23 @@ static const propShape_t *CG_PropShape( const entityState_t *es ) {
 
 	for ( i = 0; i < CG_PROP_SHAPES; i++ ) {
 		s = &cg_propShapes[i];
-		if ( s->modelindex == es->modelindex && s->scale == es->iModelScale && s->kind == es->generic1 )
+		if ( s->modelindex == es->modelindex && s->scale == es->iModelScale && s->kind == es->generic1 ) {
+			s->stamp = cg_propStamp;
 			return s->ok ? &s->shape : NULL;
+		}
 	}
 
-	s = &cg_propShapes[cg_propShapeNext];
-	cg_propShapeNext = ( cg_propShapeNext + 1 ) % CG_PROP_SHAPES;
+	// A new one takes the place of one that no prop of the list has: the list points at them. With more kinds
+	// of props in sight than there are places the rest goes without a shape and is not predicted, which is
+	// better than reading model files in every frame.
+	for ( i = 0; i < CG_PROP_SHAPES; i++ ) {
+		s = &cg_propShapes[( cg_propShapeNext + i ) % CG_PROP_SHAPES];
+		if ( s->stamp != cg_propStamp )
+			break;
+	}
+	if ( i == CG_PROP_SHAPES )
+		return NULL;
+	cg_propShapeNext = ( cg_propShapeNext + i + 1 ) % CG_PROP_SHAPES;
 	// the planes that were made of the shape that was here are of no use any more
 	for ( i = 0; i < CG_PROP_BRUSHES; i++ ) {
 		if ( cg_propBrushes[i].shape == &s->shape )
@@ -88,6 +115,7 @@ static const propShape_t *CG_PropShape( const entityState_t *es ) {
 	s->modelindex = es->modelindex;
 	s->scale = es->iModelScale;
 	s->kind = es->generic1;
+	s->stamp = cg_propStamp;
 	s->ok = BG_PropCloudFromModel( CG_ConfigString( CS_MODELS + es->modelindex ), &cloud );
 	if ( s->ok ) {
 		BG_PropShapeOfKind( &cloud, s->kind, s->scale / 100.0f, &s->shape );
@@ -97,38 +125,67 @@ static const propShape_t *CG_PropShape( const entityState_t *es ) {
 }
 
 // the planes of a prop for where the server last said it stands
-static const propBrush_t *CG_PropBrush( const entityState_t *es, const propShape_t *shape ) {
-	cgPropBrush_t	*b = NULL;
-	vec3_t			origin, angles, middle;
+static const propBrush_t *CG_PropBrush( const cgProp_t *prop ) {
+	const int		number = prop->cent->currentState.number;
+	cgPropBrush_t	*b = NULL, *oldest = &cg_propBrushes[0];
+	vec3_t			middle;
 	matrix3_t		axis;
 	int				i, k;
 
-	BG_EvaluateTrajectory( &es->pos, cg.physicsTime, origin );
-	BG_EvaluateTrajectory( &es->apos, cg.physicsTime, angles );
 	for ( i = 0; i < CG_PROP_BRUSHES; i++ ) {
-		if ( cg_propBrushes[i].shape != shape || cg_propBrushes[i].number != es->number )
-			continue;
-		b = &cg_propBrushes[i];
-		if ( VectorCompare( b->origin, origin ) && VectorCompare( b->angles, angles ) )
-			return &b->brush;
-		break;
+		cgPropBrush_t *have = &cg_propBrushes[i];
+
+		if ( have->shape == prop->shape && have->number == number ) {
+			b = have;
+			break;
+		}
+		if ( have->used < oldest->used )
+			oldest = have;
 	}
-	if ( !b ) {
-		b = &cg_propBrushes[cg_propBrushNext];
-		cg_propBrushNext = ( cg_propBrushNext + 1 ) % CG_PROP_BRUSHES;
+	if ( b && VectorCompare( b->origin, prop->origin ) && VectorCompare( b->angles, prop->angles ) ) {
+		b->used = cg.clientFrame;
+		return &b->brush;
 	}
-	b->number = es->number;
-	b->shape = shape;
-	VectorCopy( origin, b->origin );
-	VectorCopy( angles, b->angles );
+	// A new one takes the place of the one that was not asked for for the longest: the props around the player
+	// are asked for in every frame and stay, whatever a long shot comes past.
+	if ( !b )
+		b = oldest;
+	b->number = number;
+	b->shape = prop->shape;
+	b->used = cg.clientFrame;
+	VectorCopy( prop->origin, b->origin );
+	VectorCopy( prop->angles, b->angles );
 
 	// the entity is where the origin of the model is, the shape is around its middle
-	AnglesToAxis( angles, axis );
-	VectorCopy( origin, middle );
+	AnglesToAxis( prop->angles, axis );
+	VectorCopy( prop->origin, middle );
 	for ( k = 0; k < 3; k++ )
-		VectorMA( middle, shape->centre[k], axis[k], middle );
-	BG_PropBrush( shape, middle, axis, &b->brush );
+		VectorMA( middle, prop->shape->centre[k], axis[k], middle );
+	BG_PropBrush( prop->shape, middle, axis, &b->brush );
 	return &b->brush;
+}
+
+// Where the props of the list are at the time the moves are predicted for. The states they are worked out from
+// change with the snapshot the client is at, and the list itself with the next one (CG_BuildSolidList).
+static void CG_PropsForTime( void ) {
+	int i;
+
+	cg_propTime = cg.physicsTime;
+	cg_propSnapTime = cg.snap->serverTime;
+	cg_propStamp++;
+
+	for ( i = 0; i < cg_numProps; i++ ) {
+		cgProp_t			*prop = &cg_props[i];
+		const entityState_t	*es = &prop->cent->currentState;
+
+		prop->shape = CG_PropShape( es );
+		if ( !prop->shape )
+			continue;
+		BG_EvaluateTrajectory( &es->pos, cg.physicsTime, prop->origin );
+		BG_EvaluateTrajectory( &es->apos, cg.physicsTime, prop->angles );
+		// the middle of a shape is not always the origin of its model
+		prop->reach = prop->shape->radius + VectorLength( prop->shape->centre );
+	}
 }
 
 // the middle of a prop that is drawn at lerpOrigin, which is where the origin of its model is
@@ -159,22 +216,32 @@ is not in his way.
 */
 static void CG_ClipMoveToProps( const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int skipNumber,
 		int mask, trace_t *tr ) {
-	int i;
+	vec3_t	stop;
+	float	boxReach;
+	int		i;
 
-	if ( !cg_numPropEntities || !(mask & CONTENTS_BODY) || tr->allsolid )
+	if ( !cg_numProps || !(mask & CONTENTS_BODY) || tr->allsolid )
 		return;
 	if ( !mins )
 		mins = vec3_origin;
 	if ( !maxs )
 		maxs = vec3_origin;
+	if ( cg_propTime != cg.physicsTime || cg_propSnapTime != cg.snap->serverTime )
+		CG_PropsForTime();
 
-	for ( i = 0; i < cg_numPropEntities; i++ ) {
-		const entityState_t	*es = &cg_propEntities[i]->currentState;
-		const propShape_t	*shape;
+	// what lies behind the place the trace got to can not cut it short
+	VectorSubtract( end, start, stop );
+	VectorMA( start, tr->fraction, stop, stop );
+	boxReach = BG_PropBoxReach( mins, maxs );
 
-		if ( es->otherEntityNum == skipNumber || !( shape = CG_PropShape( es ) ) )
+	for ( i = 0; i < cg_numProps; i++ ) {
+		const cgProp_t *prop = &cg_props[i];
+
+		if ( !prop->shape || prop->cent->currentState.otherEntityNum == skipNumber )
 			continue;
-		BG_PropClipBox( tr, start, mins, maxs, end, CG_PropBrush( es, shape ) );
+		if ( !BG_PropNearMove( start, stop, boxReach, prop->origin, prop->reach ) )
+			continue;
+		BG_PropClipBox( tr, start, mins, maxs, end, CG_PropBrush( prop ) );
 	}
 }
 
@@ -218,7 +285,8 @@ void CG_BuildSolidList( void ) {
 
 	cg_numSolidEntities = 0;
 	cg_numTriggerEntities = 0;
-	cg_numPropEntities = 0;
+	cg_numProps = 0;
+	cg_propTime = -1;
 
 	if ( cg.nextSnap && !cg.nextFrameTeleport && !cg.thisFrameTeleport ) {
 		snap = cg.nextSnap;
@@ -242,8 +310,8 @@ void CG_BuildSolidList( void ) {
 		// Port: a prop that is in the way of players has its own list. The box it brings along as every solid
 		// entity does is for clients that do not know its shape.
 		if ( ent->eType == ET_GENERAL && ent->modelindex && ( ent->generic1 == PROP_SOLID_HULL || ent->generic1 == PROP_SOLID_BOX ) ) {
-			cg_propEntities[cg_numPropEntities] = cent;
-			cg_numPropEntities++;
+			cg_props[cg_numProps].cent = cent;
+			cg_numProps++;
 			continue;
 		}
 

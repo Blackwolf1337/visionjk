@@ -97,5 +97,7 @@ float		BG_PropReach( const propShape_t *shape, const vec3_t dir );
 qboolean	BG_PropHolds( const propShape_t *shape, const vec3_t point, float skin );
 float		BG_PropNearest( const propShape_t *shape, const vec3_t point, vec3_t out );
 void		BG_PropBrush( const propShape_t *shape, const vec3_t middle, matrix3_t axis, propBrush_t *brush );
+float		BG_PropBoxReach( const vec3_t mins, const vec3_t maxs );
+qboolean	BG_PropNearMove( const vec3_t start, const vec3_t end, float boxReach, const vec3_t point, float reach );
 void		BG_PropClipBox( trace_t *results, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end,
 				const propBrush_t *brush );
