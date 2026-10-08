@@ -194,3 +194,8 @@ compile_commands.json
 #############
 [Bb]uild*/
 cmake-build-*
+
+#############
+## Steam Audio: the unpacked release zip of Valve, where the build takes the library from (SteamAudioSDK)
+#############
+/lib/steamaudio-sdk

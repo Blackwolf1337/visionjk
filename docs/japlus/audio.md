@@ -76,9 +76,17 @@ The file comes from Valve's release of the version the tree is built for, 4.8.1:
 `steamaudio_4.8.1.zip` from github.com/ValveSoftware/steam-audio/releases, in it
 `lib/linux-x64`, `lib/windows-x86`, `lib/windows-x64`, `lib/osx`. It is 24 to 50 MB.
 
+The build puts it there. cmake takes the library of the system it builds for from the folder `SteamAudioSDK`
+(`lib/steamaudio-sdk` in the tree, which is not in git: the content of that zip, or a link to where it is
+unpacked), copies it next to the client when the client is built and installs it with the client. If the folder
+does not have the library, cmake fetches the zip once (181 MB), holds it against the checksum in
+`codemp/CMakeLists.txt` and takes that one file out of it. `-DFetchSteamAudio=OFF` leaves the fetching out,
+`-DSteamAudioURL=file:///path/steamaudio_4.8.1.zip` takes a zip that is on the disk already. Without a library
+the client is built all the same, and says when it runs that the file is not there.
+
 Steam Audio is under the Apache License 2.0, this engine under the GPL version 2. They stay two files, the way
 the engine has always loaded the EAX library. Before giving out builds with the library in them, look at that
-again.
+again: since 2026-10-08 a folder the build installed has the library in it.
 
 ## Building
 
@@ -244,6 +252,12 @@ reflections and paths 21 ms, in its own thread, about seven a second. In the thr
 and up to 2 ms, most of it the reverb. The paths of mp/ffa3: 740 probes, under a second, a file of 660 kB.
 
 Builds: Linux 64, and the client and the modules for 64 bit Windows with mingw (built, never run).
+
+The library in the build, 2026-10-08: after a build it is next to the client, after an install too, on Linux 64
+and with mingw for Windows 64. The fetching was tried with the zip from the disk (`file://`): the library came
+out of it and was the right one, a zip with another checksum was refused, an address with nothing behind it
+gave a warning and the configure went on. The address on GitHub answers with a file of the size of that zip, the
+download itself was not run. The part for macOS and its application bundle is written and was never run.
 
 ## Limits
 

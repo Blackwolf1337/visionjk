@@ -377,10 +377,77 @@ if(BuildMPEngine)
 				configure_file("${SteamAudioCore}/src/core/phonon_version.h.in" "${CMAKE_BINARY_DIR}/steamaudio/phonon_version.h" @ONLY)
 				configure_file("${SteamAudioCore}/src/core/phonon.h" "${CMAKE_BINARY_DIR}/steamaudio/phonon.h" COPYONLY)
 				message(STATUS "Steam Audio ${version}: the header of lib/steamaudio, the library is loaded at run time")
+				set(SteamAudioVersion "${version}" PARENT_SCOPE)
 			endfunction()
 			jp_steamaudio_headers()
 			set(MPEngineDefines ${MPEngineDefines} "JP_SPATIAL")
 			set(MPEngineIncludeDirectories ${MPEngineIncludeDirectories} "${CMAKE_BINARY_DIR}/steamaudio")
+
+			# The library is no part of this tree and is not built here: Valve gives it out ready made, in the zip
+			# of a release. SteamAudioSDK is a folder with the content of that zip. The library of this system is
+			# copied from there next to the client, when the client is built and when it is installed. If the
+			# folder does not have it and FetchSteamAudio is on, the zip is fetched once and that one file is
+			# taken out of it.
+			set(SteamAudioSDK "${CMAKE_SOURCE_DIR}/lib/steamaudio-sdk" CACHE PATH "The unpacked release zip of Steam Audio (the folder with lib/ in it): where the library is taken from that the client loads at run time")
+			option(FetchSteamAudio "Download the release zip of Steam Audio when SteamAudioSDK does not have the library of this system (181 MB, once)" ON)
+			set(SteamAudioURL "" CACHE STRING "Where FetchSteamAudio gets the zip. Empty: the release of Valve on GitHub. file:// for a zip that is on the disk already")
+			# the zips this tree knows: nothing else is unpacked under the name of a release
+			set(SteamAudioSHA256_4.8.1 "4a0aa5ec1176f38f0b0993a37c2259d9e86f27e22d5e24f83ec4c3cb9a1d5449")
+			if(WIN32)
+				set(SteamAudioLibrary "lib/windows-x64/phonon.dll")
+			elseif(APPLE)
+				set(SteamAudioLibrary "lib/osx/libphonon.dylib")
+			elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|AMD64|amd64)$")
+				set(SteamAudioLibrary "lib/linux-x64/libphonon.so")
+			else()
+				set(SteamAudioLibrary "")
+			endif()
+
+			function(jp_steamaudio_fetch)
+				set(url "${SteamAudioURL}")
+				if(NOT url)
+					set(url "https://github.com/ValveSoftware/steam-audio/releases/download/v${SteamAudioVersion}/steamaudio_${SteamAudioVersion}.zip")
+				endif()
+				if(NOT DEFINED SteamAudioSHA256_${SteamAudioVersion})
+					message(STATUS "Steam Audio: no checksum of the zip of ${SteamAudioVersion} in codemp/CMakeLists.txt, it is not fetched")
+					return()
+				endif()
+				if(CMAKE_VERSION VERSION_LESS 3.18)
+					message(STATUS "Steam Audio: this cmake can not unpack a zip (3.18 and up can)")
+					return()
+				endif()
+				set(zip "${CMAKE_BINARY_DIR}/steamaudio/release.zip")
+				message(STATUS "Steam Audio: fetching ${url} for ${SteamAudioLibrary} (181 MB, once)")
+				file(DOWNLOAD "${url}" "${zip}" STATUS status TLS_VERIFY ON)
+				list(GET status 0 code)
+				if(code)
+					list(GET status 1 text)
+					message(WARNING "Steam Audio: the download failed (${text})")
+					file(REMOVE "${zip}")
+					return()
+				endif()
+				file(SHA256 "${zip}" sum)
+				if(NOT sum STREQUAL "${SteamAudioSHA256_${SteamAudioVersion}}")
+					message(WARNING "Steam Audio: ${url} is not the zip of ${SteamAudioVersion} this tree knows (its SHA256 is ${sum}), it is not used")
+					file(REMOVE "${zip}")
+					return()
+				endif()
+				file(ARCHIVE_EXTRACT INPUT "${zip}" DESTINATION "${CMAKE_BINARY_DIR}/steamaudio/unpacked" PATTERNS "steamaudio/${SteamAudioLibrary}")
+				get_filename_component(dir "${SteamAudioSDK}/${SteamAudioLibrary}" DIRECTORY)
+				file(COPY "${CMAKE_BINARY_DIR}/steamaudio/unpacked/steamaudio/${SteamAudioLibrary}" DESTINATION "${dir}")
+				file(REMOVE_RECURSE "${CMAKE_BINARY_DIR}/steamaudio/unpacked")
+				file(REMOVE "${zip}")
+			endfunction()
+
+			if(SteamAudioLibrary AND FetchSteamAudio AND NOT EXISTS "${SteamAudioSDK}/${SteamAudioLibrary}")
+				jp_steamaudio_fetch()
+			endif()
+			if(SteamAudioLibrary AND EXISTS "${SteamAudioSDK}/${SteamAudioLibrary}")
+				set(SteamAudioLibraryFile "${SteamAudioSDK}/${SteamAudioLibrary}")
+				message(STATUS "Steam Audio: ${SteamAudioLibraryFile} goes next to the client")
+			else()
+				message(STATUS "Steam Audio: no library for this system in ${SteamAudioSDK}. The client is built with s_spatial, the library has to be put next to it by hand (docs/japlus/audio.md)")
+			endif()
 		else()
 			message(STATUS "Steam Audio: lib/steamaudio is not checked out (git submodule update --init), the client is built without s_spatial")
 		endif()
@@ -600,7 +667,20 @@ if(BuildMPEngine)
 				DESTINATION ${JKAInstallDir}
 				COMPONENT ${JKAMPClientComponent})
 		endif()
+		if(SteamAudioLibraryFile)
+			install(FILES "${SteamAudioLibraryFile}"
+				DESTINATION ${JKAInstallDir}
+				COMPONENT ${JKAMPClientComponent})
+		endif()
 	endif(MakeApplicationBundles)
+
+	# The client looks for the library of Steam Audio in the folder it is in itself. In an application bundle
+	# that is inside the bundle, which is installed as a whole.
+	if(SteamAudioLibraryFile)
+		add_custom_command(TARGET ${MPEngine} POST_BUILD
+			COMMAND ${CMAKE_COMMAND} -E copy_if_different "${SteamAudioLibraryFile}" "$<TARGET_FILE_DIR:${MPEngine}>"
+			VERBATIM)
+	endif()
 
 	set_target_properties(${MPEngine} PROPERTIES COMPILE_DEFINITIONS "${MPEngineDefines}")
 
