@@ -24,7 +24,7 @@ private duel do not interfere with the others.
 Rebuilt from jampgamei386.so (JA+ v2.4 Build 7).
 */
 
-#include "g_local.h"
+#include "game/g_local.h"
 #include "g_japlus.h"
 
 qboolean JP_IsConnectedClient( const gentity_t *ent ) {

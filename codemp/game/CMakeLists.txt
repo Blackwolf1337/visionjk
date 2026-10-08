@@ -61,19 +61,6 @@ set(MPGameGameFiles
 	"${MPDir}/game/g_cmds.c"
 	"${MPDir}/game/g_combat.c"
 	"${MPDir}/game/g_cvar.c"
-	"${MPDir}/game/g_japlus_admin.c"
-	"${MPDir}/game/g_japlus_admin2.c"
-	"${MPDir}/game/g_japlus_chat.c"
-	"${MPDir}/game/g_japlus_cmds.c"
-	"${MPDir}/game/g_japlus_dim.c"
-	"${MPDir}/game/g_japlus_fx.c"
-	"${MPDir}/game/g_japlus_highlander.c"
-	"${MPDir}/game/g_japlus_hook.c"
-	"${MPDir}/game/g_japlus_blockwall.c"
-	"${MPDir}/game/g_japlus_info.c"
-	"${MPDir}/game/g_japlus_misc.c"
-	"${MPDir}/game/g_japlus_scale.c"
-	"${MPDir}/game/g_japlus_tele.c"
 	"${MPDir}/game/g_exphysics.c"
 	"${MPDir}/game/g_ICARUScb.c"
 	"${MPDir}/game/g_items.c"
@@ -173,6 +160,27 @@ set(MPGameGameFiles
 	)
 source_group("game" FILES ${MPGameGameFiles})
 set(MPGameFiles ${MPGameFiles} ${MPGameGameFiles})
+
+# the features of JA+ v2.4 Build 7
+set(MPGameJaplusFiles
+	"${MPDir}/game/japlus/g_japlus_admin.c"
+	"${MPDir}/game/japlus/g_japlus_admin2.c"
+	"${MPDir}/game/japlus/g_japlus_blockwall.c"
+	"${MPDir}/game/japlus/g_japlus_chat.c"
+	"${MPDir}/game/japlus/g_japlus_cmds.c"
+	"${MPDir}/game/japlus/g_japlus_dim.c"
+	"${MPDir}/game/japlus/g_japlus_fx.c"
+	"${MPDir}/game/japlus/g_japlus_highlander.c"
+	"${MPDir}/game/japlus/g_japlus_hook.c"
+	"${MPDir}/game/japlus/g_japlus_info.c"
+	"${MPDir}/game/japlus/g_japlus_misc.c"
+	"${MPDir}/game/japlus/g_japlus_scale.c"
+	"${MPDir}/game/japlus/g_japlus_tele.c"
+	"${MPDir}/game/japlus/g_japlus.h"
+	"${MPDir}/game/japlus/g_japlus_xcvar.h"
+	)
+source_group("game/japlus" FILES ${MPGameJaplusFiles})
+set(MPGameFiles ${MPGameFiles} ${MPGameJaplusFiles})
 
 set(MPGameCommonFiles
 	"${MPDir}/qcommon/q_shared.c"

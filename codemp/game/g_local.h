@@ -35,7 +35,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 typedef struct gentity_s gentity_t;
 typedef struct gclient_s gclient_t;
 
-#include "g_japlus.h"
+#include "game/japlus/g_japlus.h"
 
 //npc stuff
 #include "b_public.h"
@@ -1605,7 +1605,7 @@ void Svcmd_ToggleAllowVote_f( void );
 // g_cvar.c
 #define XCVAR_PROTO
 	#include "g_xcvar.h"
-	#include "g_japlus_xcvar.h"
+	#include "game/japlus/g_japlus_xcvar.h"
 #undef XCVAR_PROTO
 void G_RegisterCvars( void );
 void G_UpdateCvars( void );

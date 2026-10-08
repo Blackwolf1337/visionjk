@@ -23,7 +23,7 @@ JA+ server management admin commands: ammap, amvstr, amrename, amlockteam, amfor
 Rebuilt from jampgamei386.so (JA+ v2.4 Build 7).
 */
 
-#include "g_local.h"
+#include "game/g_local.h"
 #include "g_japlus.h"
 
 extern stringID_table_t animTable[MAX_ANIMATIONS+1];

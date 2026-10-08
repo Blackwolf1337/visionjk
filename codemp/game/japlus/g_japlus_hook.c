@@ -24,7 +24,7 @@ The hook uses ps.lastHitLoc as the grapple point and ps.jetpackFuel as its fuel.
 Rebuilt from jampgamei386.so (JA+ v2.4 Build 7).
 */
 
-#include "g_local.h"
+#include "game/g_local.h"
 #include "g_japlus.h"
 
 extern void G_SoundOnEnt( gentity_t *ent, soundChannel_t channel, const char *soundPath );

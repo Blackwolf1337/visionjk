@@ -31,21 +31,21 @@ New files, all JA+ code that did not have to live inside a base function:
 
 | File | Content |
 |------|---------|
-| `codemp/game/g_japlus.h` | `jpClient_t` (the state of a player), prototypes, version strings |
-| `codemp/game/g_japlus_xcvar.h` | the 187 `jp_` cvars |
-| `codemp/game/g_japlus_admin.c` | login, ranks, allowed commands, anti abuse, admin gun, console commands |
-| `codemp/game/g_japlus_admin2.c` | ammap, amvstr, amrename, amlockteam, amforceteam, amkillvote, ampoll, amweather |
-| `codemp/game/g_japlus_fx.c` | sleep, ghost, empower, merc, mindtrick, protect, silence, slap, forced dimension |
-| `codemp/game/g_japlus_tele.c` | amtele, amtelemark, amorigin, refuseTele, the teleport effect |
-| `codemp/game/g_japlus_cmds.c` | emotes, kiss and hug, flip, jetpack, amcolor, sabercolor, /saber, flamethrower |
-| `codemp/game/g_japlus_chat.c` | word filter, silence, clan chat, ignore, name rules, clan tag |
-| `codemp/game/g_japlus_info.c` | ammove, amDMGs, duelWhois |
-| `codemp/game/g_japlus_dim.c` | alternate dimension and duel isolation: who may touch whom, the traces |
-| `codemp/game/g_japlus_hook.c` | grappling hook |
-| `codemp/game/g_japlus_highlander.c` | highlander mode |
-| `codemp/game/g_japlus_blockwall.c` | invisible blocking walls and their editor |
-| `codemp/game/g_japlus_scale.c` | model scale |
-| `codemp/game/g_japlus_misc.c` | timers, welcome and MOTD, inactivity protection, `jp_cinfo` |
+| `codemp/game/japlus/g_japlus.h` | `jpClient_t` (the state of a player), prototypes, version strings |
+| `codemp/game/japlus/g_japlus_xcvar.h` | the 187 `jp_` cvars |
+| `codemp/game/japlus/g_japlus_admin.c` | login, ranks, allowed commands, anti abuse, admin gun, console commands |
+| `codemp/game/japlus/g_japlus_admin2.c` | ammap, amvstr, amrename, amlockteam, amforceteam, amkillvote, ampoll, amweather |
+| `codemp/game/japlus/g_japlus_fx.c` | sleep, ghost, empower, merc, mindtrick, protect, silence, slap, forced dimension |
+| `codemp/game/japlus/g_japlus_tele.c` | amtele, amtelemark, amorigin, refuseTele, the teleport effect |
+| `codemp/game/japlus/g_japlus_cmds.c` | emotes, kiss and hug, flip, jetpack, amcolor, sabercolor, /saber, flamethrower |
+| `codemp/game/japlus/g_japlus_chat.c` | word filter, silence, clan chat, ignore, name rules, clan tag |
+| `codemp/game/japlus/g_japlus_info.c` | ammove, amDMGs, duelWhois |
+| `codemp/game/japlus/g_japlus_dim.c` | alternate dimension and duel isolation: who may touch whom, the traces |
+| `codemp/game/japlus/g_japlus_hook.c` | grappling hook |
+| `codemp/game/japlus/g_japlus_highlander.c` | highlander mode |
+| `codemp/game/japlus/g_japlus_blockwall.c` | invisible blocking walls and their editor |
+| `codemp/game/japlus/g_japlus_scale.c` | model scale |
+| `codemp/game/japlus/g_japlus_misc.c` | timers, welcome and MOTD, inactivity protection, `jp_cinfo` |
 | `codemp/cgame/cg_japlus.c` | auto replier, cameras, macro scan |
 | `codemp/game/g_webadmin.c`, `codemp/game/webadmin/index.html` | web admin panel from JKAdmin, see [webadmin.md](webadmin.md) |
 | `codemp/game/g_blackhole.c` | the entity `misc_blackhole`, not from JA+, see [webadmin.md](webadmin.md) |

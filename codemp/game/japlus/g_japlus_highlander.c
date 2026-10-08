@@ -24,7 +24,7 @@ powers of the victim, at the end two players fight a final duel.
 Rebuilt from jampgamei386.so (JA+ v2.4 Build 7).
 */
 
-#include "g_local.h"
+#include "game/g_local.h"
 #include "g_japlus.h"
 
 extern void LogExit( const char *string );

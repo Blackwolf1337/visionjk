@@ -24,7 +24,7 @@ forced alternate dimension and denyvote.
 Rebuilt from jampgamei386.so (JA+ v2.4 Build 7).
 */
 
-#include "g_local.h"
+#include "game/g_local.h"
 #include "g_japlus.h"
 
 static gentity_t *JP_ValidClient( int num ) {

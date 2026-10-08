@@ -23,7 +23,7 @@ JA+ small per client features: timers, messages for players without the client p
 Rebuilt from jampgamei386.so (JA+ v2.4 Build 7).
 */
 
-#include "g_local.h"
+#include "game/g_local.h"
 #include "g_japlus.h"
 
 #define JP_PLUGIN_MESSAGE_VERSION	1.1f	// players with an older plugin get messages as center print

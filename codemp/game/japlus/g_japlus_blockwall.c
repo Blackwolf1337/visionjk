@@ -19,7 +19,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 */
 
 // JA+ invisible blocking walls: boxes stored per map in <mapname>_holes.cfg that block players
-#include "g_local.h"
+#include "game/g_local.h"
 
 #define BLOCKWALL_CLASS	"InvisibleBlockingWall"
 #define BLOCKWALL_MAXFILE	0x10000

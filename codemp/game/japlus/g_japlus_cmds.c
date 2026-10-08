@@ -23,7 +23,7 @@ JA+ player commands: emotes, amflip, amknockmedown, amdropsaber, jetpack.
 Rebuilt from jampgamei386.so (JA+ v2.4 Build 7).
 */
 
-#include "g_local.h"
+#include "game/g_local.h"
 #include "g_japlus.h"
 
 extern qboolean G_InGetUpAnim( playerState_t *ps );

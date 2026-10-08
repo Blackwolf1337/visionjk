@@ -23,7 +23,7 @@ JA+ teleporting: amtele, amtelemark, amorigin, refuseTele and the star trek tele
 Rebuilt from jampgamei386.so (JA+ v2.4 Build 7).
 */
 
-#include "g_local.h"
+#include "game/g_local.h"
 #include "g_japlus.h"
 
 extern void Jedi_Cloak( gentity_t *self );

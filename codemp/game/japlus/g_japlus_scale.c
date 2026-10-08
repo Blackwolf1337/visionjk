@@ -25,7 +25,7 @@ the saber damage and speed.
 Rebuilt from jampgamei386.so (JA+ v2.4 Build 7).
 */
 
-#include "g_local.h"
+#include "game/g_local.h"
 #include "g_japlus.h"
 
 #define JP_MODELSCALE_FILE	"modelscale.cfg"

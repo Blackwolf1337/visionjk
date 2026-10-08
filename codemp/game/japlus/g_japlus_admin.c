@@ -23,7 +23,7 @@ JA+ admin system: login, ranks, command permissions, anti abuse, admin guns.
 Rebuilt from jampgamei386.so (JA+ v2.4 Build 7).
 */
 
-#include "g_local.h"
+#include "game/g_local.h"
 #include "g_japlus.h"
 
 // admin command lists, the bit of a command in jp_*AllowedCMD is its position in A then B, starting at 1
