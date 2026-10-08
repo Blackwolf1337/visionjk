@@ -244,6 +244,7 @@ body.fp #help, body.fp #command, body.fp #entPanel { display: none; }
 #dbg { flex: 0 1 auto; flex-wrap: wrap; display: flex; align-items: center; gap: 12px; color: var(--muted); font-size: 12px; background: rgba(13,13,15,.75); border: 1px solid var(--line); padding: 5px 8px; border-radius: 3px; }
 #coords { position: absolute; left: 50%; bottom: 10px; transform: translateX(-50%); color: var(--muted); font: 11px ui-monospace, Menlo, Consolas, monospace; background: rgba(13,13,15,.75); border: 1px solid var(--line); padding: 3px 8px; border-radius: 3px; pointer-events: none; white-space: nowrap; }
 #coords:empty { display: none; }
+#band { position: absolute; display: none; border: 1px solid var(--accent2); background: rgba(255, 47, 79, .12); pointer-events: none; }
 #flyBtn { position: absolute; right: 10px; bottom: 10px; }
 #shotBtn { position: absolute; right: 56px; bottom: 10px; }
 #dbg label { display: flex; align-items: center; gap: 4px; cursor: pointer; }
@@ -407,12 +408,13 @@ body.app-admin #dbg, body.app-admin .editorOnly, body.app-admin #tabs button[dat
 		<kbd>W A S D</kbd> move &nbsp; <kbd>Q E</kbd> / <kbd>MMB</kbd> rotate &nbsp; wheel zoom<br>
 		<kbd>F</kbd> follow selected &nbsp; <kbd>Esc</kbd> deselect &nbsp; <kbd>PgUp</kbd> <kbd>PgDn</kbd> camera height &nbsp; <kbd>C</kbd> fly &nbsp; <kbd>1</kbd>-<kbd>9</kbd> views, <kbd>Shift</kbd> stores<span class="editorOnly"><br>
 		<kbd>Del</kbd> delete entity &nbsp; <kbd>Shift</kbd>+arrows move entity &nbsp; <kbd>Ctrl Z</kbd> <kbd>Ctrl Y</kbd> undo, redo &nbsp; <kbd>Ctrl C</kbd> <kbd>Ctrl V</kbd> copy, paste<br>
-		<kbd>Ctrl</kbd>+click selects one more entity</span>
+		<kbd>Ctrl</kbd>+click selects one more entity &nbsp; <kbd>Shift</kbd>+drag selects in a rectangle</span>
 	</div>
 	</div>
 	<button id="shotBtn" title="Saves what the map view shows as a picture">Picture</button>
 	<button id="flyBtn" title="Fly through the map instead of looking at it from above (C). W A S D fly, Q and E go down and up, the mouse turns the head, the wheel sets the speed, Shift is faster.">Fly</button>
 	<div id="coords" class="editorOnly"></div>
+	<div id="band"></div>
 	<div id="loading">Loading map...</div>
 	<div id="hud"><canvas id="hudCanvas"></canvas><div class="hud-top"><span id="hudName"></span><button id="fpExit">Exit (Esc)</button></div></div>
 	<div id="command">
@@ -493,7 +495,7 @@ body.app-admin #dbg, body.app-admin .editorOnly, body.app-admin #tabs button[dat
 			<button id="entFire" title="Fires it as a trigger would that has it as its target: a door opens, a trigger fires its targets. The world is what fired it, so what only works on the player who fired it does nothing.">Fire</button>
 			<button class="danger" id="entDel">Delete</button>
 		</div>
-		<div class="hint" id="entHint">Drag the marker or right-click on the map to move it. Shift and the arrow keys or Page Up and Down move it a grid step. Ctrl and a click selects one more: what is done to this one is then done to all of them.</div>
+		<div class="hint" id="entHint">Drag the marker or right-click on the map to move it. Shift and the arrow keys or Page Up and Down move it a grid step. Ctrl and a click selects one more, Shift and a drag all in a rectangle: what is done to this one is then done to all of them.</div>
 		<details id="entDoc"><summary>About this class</summary><pre id="entDocText"></pre></details>
 	</div>
 </div>
@@ -2621,6 +2623,11 @@ canvas.addEventListener('contextmenu', e => e.preventDefault());
 canvas.addEventListener('mousedown', e => {
 	const rect = canvas.getBoundingClientRect(), x = e.clientX - rect.left, y = e.clientY - rect.top;
 	drag = { x: e.clientX, y: e.clientY, button: e.button, moved: false, target: cam.target.slice(), yaw: cam.yaw, pitch: cam.pitch };
+	// Shift and a drag in the World tab of the editor: a rectangle, and what is in it is selected
+	if (appMode === 'editor' && mode === 'world' && e.button === 0 && e.shiftKey) {
+		drag.band = { x, y };
+		return;
+	}
 	// grab the selected entity to move it
 	if (mode === 'world' && e.button === 0 && selectedEnt >= 0 && entityAt(x, y) === selectedEnt) {
 		const ent = ents.get(selectedEnt), below = pickGround([ent.pos[0], ent.pos[1], ent.pos[2] + 1], [0, 0, -1]);
@@ -2632,7 +2639,16 @@ window.addEventListener('mousemove', e => {
 	const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
 	if (Math.abs(dx) + Math.abs(dy) > 4) drag.moved = true;
 	if (!drag.moved) return;
-	if (drag.ent) {
+	if (drag.band) {
+		const rect = canvas.getBoundingClientRect(), b = drag.band, el = $('band');
+		b.x2 = Math.min(rect.width, Math.max(0, e.clientX - rect.left));
+		b.y2 = Math.min(rect.height, Math.max(0, e.clientY - rect.top));
+		el.style.display = 'block';
+		el.style.left = Math.min(b.x, b.x2) + 'px';
+		el.style.top = Math.min(b.y, b.y2) + 'px';
+		el.style.width = Math.abs(b.x2 - b.x) + 'px';
+		el.style.height = Math.abs(b.y2 - b.y) + 'px';
+	} else if (drag.ent) {
 		const rect = canvas.getBoundingClientRect(), ray = screenRay(e.clientX - rect.left, e.clientY - rect.top);
 		const hit = snapHit(pickGround(ray.origin, ray.dir));
 		if (hit) ghost = { id: drag.ent.id, pos: [hit[0], hit[1], hit[2] + drag.ent.height] };
@@ -2654,6 +2670,11 @@ window.addEventListener('mouseup', e => {
 	if (!drag) return;
 	const d = drag;
 	drag = null;
+	if (d.band) {
+		$('band').style.display = 'none';
+		if (d.moved && d.band.x2 !== undefined) bandSelect(d.band, e.ctrlKey || e.metaKey);
+		return;
+	}
 	if (d.ent && d.moved) {
 		if (ghost) moveEntity(d.ent.id, ghost.pos);
 		return;
@@ -4572,6 +4593,22 @@ $('banRows').addEventListener('click', e => {
 // all of them, and is one step of the history.
 
 const picked = new Set();	// the ones that are selected besides selectedEnt
+
+// Every entity whose marker is in the rectangle on the screen is selected, the one nearest to where the drag
+// began as the one the panel shows. more: they are added to what is selected already.
+function bandSelect(b, more) {
+	const x0 = Math.min(b.x, b.x2), x1 = Math.max(b.x, b.x2), y0 = Math.min(b.y, b.y2), y1 = Math.max(b.y, b.y2), inside = [];
+	for (const ent of ents.values()) {
+		if (!entVisible(ent)) continue;
+		const sp = project(ent.pos);
+		if (sp && sp[0] >= x0 && sp[0] <= x1 && sp[1] >= y0 && sp[1] <= y1) inside.push([Math.hypot(sp[0] - b.x, sp[1] - b.y), ent.id]);
+	}
+	inside.sort((p, q) => p[0] - q[0]);
+	const ids = inside.map(p => p[1]);
+	if (more && selectedEnt >= 0) pickOnly([...new Set([selectedEnt, ...picked, ...ids])]);
+	else pickOnly(ids);
+	if (ids.length) toast(ids.length + ' in the rectangle');
+}
 
 // the selection is these and nothing else
 function pickOnly(ids) {

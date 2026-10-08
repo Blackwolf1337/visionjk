@@ -236,6 +236,9 @@ Also changed:
   these is one step of undo. The keys of the panel stay those of the one that was clicked first, "Apply" and
   the turn buttons change only that one. The server knows nothing of it: the page sends one change for each
   entity, so one of them can be refused while the others are made, and the message says how many.
+  Shift and a drag draws a rectangle and selects every entity whose marker is in it, also the ones behind a
+  wall. With Ctrl they are added to what is selected. The one nearest to where the drag began is the one
+  the panel shows.
 - New: stored views. Shift and a digit from 1 to 9 stores where the camera is, around a point or flying, the
   digit alone goes back there. The browser keeps them for each map.
 - New: the button Picture at the bottom right saves what the map view shows as a PNG.
@@ -807,6 +810,14 @@ waypoint. A drag moves the view, turns it with the middle button, moves an entit
 when flying. The wheel zooms and sets the flying speed. A right-click teleports, places the class that is armed,
 adds a waypoint. Undo, the Z field, Remove and Save of a route. Copy, paste, the stored views and the keys of
 the fly camera went through the keyboard. What that is not: a person at a real browser on a real GPU.
+
+Fire, the rectangle and teams of doors (`steps_fire.js`, 10 checks, the same day): on mp/ffa3 Fire sent a lift
+its 280 units, an info_player_deathmatch answered that it does nothing when fired, and a fired
+trigger_multiple sent the four lifts it has as targets. A drag with Shift around three placed entities
+selected the three. On mp/ctf2, with its team of four doors: fired at the second part all four moved, after
+an edit of the third part all four still moved, and with the first part deleted the other three moved
+together when the last was fired. Not tried: a team whose first part is deleted while it moves, firing
+every class of the game (the use functions were read, not run), a `func_breakable`.
 
 Doors and lifts (`steps_movers.js`, 10 checks, the same day, mp/ffa3): the server named 6 of the 8 brush
 models as drawn, the two triggers not, and each where the entity list of the editor has it. A lift with a
