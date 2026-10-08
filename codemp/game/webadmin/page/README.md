@@ -31,6 +31,7 @@ order of the template, so a file may only use there what a file before it has ma
 | `js/editor-props.js` | the Models tab |
 | `js/config.js` | the server config |
 | `js/files.js` | the file manager |
+| `js/editor-entities.js` | the entities of the World tab: the poll of the list, the list, the key table, every change to an entity, placing |
 | `js/editor-classes.js` | the entity definitions of the game code |
 | `js/editor-lines.js` | boxes, links, arrows, what fired |
 | `js/editor-move.js` | the grid, moving, copy and paste |
