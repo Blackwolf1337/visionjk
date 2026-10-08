@@ -515,8 +515,8 @@ body.app-admin #dbg, body.app-admin .editorOnly, body.app-admin #tabs button[dat
 		<div class="actions">
 			<button id="kvAdd">+ Key</button>
 			<button class="primary" id="entApply">Apply</button>
-			<button id="entRotL" title="Turn left 15&deg;">&#10226; 15&deg;</button>
-			<button id="entRotR" title="Turn right 15&deg;">&#10227; 15&deg;</button>
+			<button id="entRotL" title="Turn left 15&deg;. Several selected turn together around their middle.">&#10226; 15&deg;</button>
+			<button id="entRotR" title="Turn right 15&deg;. Several selected turn together around their middle.">&#10227; 15&deg;</button>
 			<button id="entDup">Duplicate</button>
 			<button id="entFloor" title="Puts it on the floor below it">To floor</button>
 			<button id="entTemplate" title="Keeps its keys under a name. The name is offered in the class search, to place more of it.">Template</button>
@@ -3693,19 +3693,35 @@ $('entDup').addEventListener('click', () => {
 	}
 	entityOp({ op: 'spawn', kv: beside(panelKeys(), ent) }, 'Duplicated');
 });
+// the keys of an entity that is turned by delta degrees around the upright axis
+function turnKeys(keys, delta) {
+	const angles = keys.find(k => k[0].toLowerCase() === 'angles');
+	if (angles) {
+		const a = angles[1].split(/\s+/).map(Number);
+		a[1] = (((a[1] || 0) + delta) % 360 + 360) % 360;
+		angles[1] = fmtVec(a);
+	} else {
+		const cur = Number((keys.find(k => k[0].toLowerCase() === 'angle') || [])[1] || 0);
+		setKey(keys, 'angle', String(((cur + delta) % 360 + 360) % 360));
+	}
+	return keys;
+}
+
 for (const [id, delta] of [['entRotL', 15], ['entRotR', -15]]) {
 	$(id).addEventListener('click', () => {
-		const keys = panelKeys();
-		const angles = keys.find(k => k[0].toLowerCase() === 'angles');
-		if (angles) {
-			const a = angles[1].split(/\s+/).map(Number);
-			a[1] = (((a[1] || 0) + delta) % 360 + 360) % 360;
-			angles[1] = fmtVec(a);
-		} else {
-			const cur = Number((keys.find(k => k[0].toLowerCase() === 'angle') || [])[1] || 0);
-			setKey(keys, 'angle', String(((cur + delta) % 360 + 360) % 360));
-		}
-		entityOp({ op: 'update', id: selectedEnt, kv: keysText(keys) }, 'Rotated');
+		if (!picked.size) { entityOp({ op: 'update', id: selectedEnt, kv: keysText(turnKeys(panelKeys(), delta)) }, 'Rotated'); return; }
+		// Several: they turn together around the middle of where they stand, each as far as the others. What is
+		// made of brushes stays: its angle is the way a door opens, not how it stands.
+		const all = [selectedEnt, ...picked].map(n => ents.get(n)).filter(e => e && e.keys && !e.bmodel);
+		if (!all.length) { toast('Nothing of what is selected can be turned', false); return; }
+		const mid = [0, 1].map(i => (Math.min(...all.map(e => e.pos[i])) + Math.max(...all.map(e => e.pos[i]))) / 2);
+		const r = delta * Math.PI / 180, c = Math.cos(r), sn = Math.sin(r);
+		groupRun('Rotated', ent => {
+			if (!ent.keys || ent.bmodel) { entRefused = 'what is made of brushes stays as it is'; return null; }
+			const dx = ent.pos[0] - mid[0], dy = ent.pos[1] - mid[1];
+			const keys = turnKeys(ent.keys.map(k => k.slice()), delta);
+			return { op: 'update', id: ent.id, kv: keysText(setKey(keys, 'origin', fmtVec([mid[0] + dx * c - dy * sn, mid[1] + dx * sn + dy * c, ent.pos[2]]))) };
+		});
 	});
 }
 $('entDel').addEventListener('click', () => {

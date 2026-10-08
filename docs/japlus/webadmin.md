@@ -262,8 +262,10 @@ Also changed:
   selected one or takes it out again, a click without Ctrl or Escape ends it. Moving (the drag, the right-click,
   the fields of the position, "To floor", Shift and the keys) takes the others along by the same way, Delete,
   Duplicate, Ctrl+C and Ctrl+V take all of them, and a paste keeps where they stand to each other. Each of
-  these is one step of undo. The keys of the panel stay those of the one that was clicked first, "Apply" and
-  the turn buttons change only that one. The server knows nothing of it: the page sends one change for each
+  these is one step of undo. The two turn buttons turn all of them together, by 15 degrees around the middle
+  of where they stand, each as far as the others (what is made of brushes stays: its angle is the way a door
+  opens). The keys of the panel stay those of the one that was clicked first, and "Apply" changes only that
+  one. The server knows nothing of it: the page sends one change for each
   entity, so one of them can be refused while the others are made, and the message says how many.
   Shift and a drag draws a rectangle and selects every entity whose marker is in it, also the ones behind a
   wall. With Ctrl they are added to what is selected. The one nearest to where the drag began is the one
@@ -941,13 +943,14 @@ after it, and a move by nothing changes nothing. After the two changes of the ma
 (one file was cut off on its way and was asked for again). Not tried: a model with a see-through surface in
 front of another model (no such pair stood on the maps), a comparison with a picture of the game.
 
-Several entities at once (`steps_group.js`, 20 checks, the same day): Ctrl and a click selected three and took
+Several entities at once (`steps_group.js`, 22 checks, the same day): Ctrl and a click selected three and took
 one out again, Shift and Page Up lifted the three by one grid step as one step of undo, Ctrl+Z and Ctrl+Y put
 them back and up again, the Z field moved the others by as much, a paste of the three stood as the copied ones,
 Delete took them away and undo brought them back, Duplicate made three more, and at the end the map had the
 entities it had before, class by class. A brush entity in the group went the same way and came back, and with
 one of the three deleted behind the back of the page the other two were moved and the message named the one
-refused. Tried with info_notnull, which stays where it is put: a prop falls, and then where it is and what its
+refused. Six turns of 15 degrees put the three exactly where a quarter turn puts them, each with the angle
+90, and six undos put them back. Tried with info_notnull, which stays where it is put: a prop falls, and then where it is and what its
 origin key says are two things. This run is what found the trigger a moved lift left behind: after the fix a
 func_plat moved and put back leaves the same entities as before (the door of this map has no trigger of its
 own, so that half is not tried).
