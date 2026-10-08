@@ -107,53 +107,47 @@ static qboolean WA_JpAction( waConnection_t *c, const char *action, int id, char
 }
 
 
-void WA_ApiAction( waConnection_t *c, const char *body ) {
-	char		action[32], idStr[16], value[256], xs[32], ys[32], zs[32];
-	gentity_t	*ent = NULL;
-	int			id;
+// What is done to the server and not to one player: a line of chat, a bot, a map, the gravity of all, a ban or
+// its end by address, an effect or a sound at a place. qfalse: the action is none of these.
+static qboolean WA_ServerAction( waConnection_t *c, const char *action, char *value, const char *body ) {
+	char xs[32], ys[32], zs[32];
 
-	WA_FormValue( body, "action", action, sizeof( action ) );
-	WA_FormValue( body, "value", value, sizeof( value ) );
-	WA_FormValue( body, "id", idStr, sizeof( idStr ) );
-	WA_LogUse( c, va( "action %s id %s value \"%.100s\"", action, idStr[0] ? idStr : "-", value ) );
-
-	// actions on the server
 	if ( !strcmp( action, "say" ) ) {
 		WA_Utf8ToLatin1( value );
 		Q_strstrip( value, "\n\r\";", NULL );
 		trap->SendServerCommand( -1, va( "chat \"" S_COLOR_RED "Admin" S_COLOR_WHITE ": %s\"", value ) );
 		WebAdmin_Chat( "panel", NULL, NULL, value );
 		WA_ActionResult( c, qtrue, "message sent" );
-		return;
+		return qtrue;
 	}
 	if ( !strcmp( action, "addbot" ) ) {
 		Q_strstrip( value, "\n\r\";", NULL );
 		trap->SendConsoleCommand( EXEC_APPEND, va( "addbot \"%s\" 3\n", value[0] ? value : "Kyle Katarn" ) );	// JKAdmin says "Kyle", no bot has that name
 		WA_ActionResult( c, qtrue, "bot added" );
-		return;
+		return qtrue;
 	}
 	if ( !strcmp( action, "map" ) ) {
 		Q_strstrip( value, "\n\r\";", NULL );
 		if ( !value[0] || strstr( value, ".." ) ) {
 			WA_ActionResult( c, qfalse, "no map name" );
-			return;
+			return qtrue;
 		}
 		trap->SendConsoleCommand( EXEC_APPEND, va( "map \"%s\"\n", value ) );
 		WA_ActionResult( c, qtrue, "changing map" );
-		return;
+		return qtrue;
 	}
 
 	if ( !strcmp( action, "reload" ) ) {
 		// not in JKAdmin: the running map again, so the engine finds a pk3 that was uploaded
 		WA_ReloadMap( c );
-		return;
+		return qtrue;
 	}
 
 	if ( !strcmp( action, "gravity" ) ) {
 		// not in JKAdmin: g_gravity for everybody. The map sets it again at its next start (worldspawn key "gravity").
 		if ( !value[0] ) {
 			WA_ActionResult( c, qfalse, "no gravity value" );
-			return;
+			return qtrue;
 		}
 		{
 			const int v = Com_Clampi( WA_MIN_GRAVITY, WA_MAX_GRAVITY, atoi( value ) );
@@ -162,7 +156,7 @@ void WA_ApiAction( waConnection_t *c, const char *body ) {
 			trap->Cvar_Update( &g_gravity );
 			WA_ActionResult( c, qtrue, va( "gravity %d", v ) );
 		}
-		return;
+		return qtrue;
 	}
 
 	if ( !strcmp( action, "banip" ) || !strcmp( action, "unban" ) ) {
@@ -170,11 +164,11 @@ void WA_ApiAction( waConnection_t *c, const char *body ) {
 		// and write the file of the bans. Only what such an address is made of goes into the line.
 		if ( !value[0] || strlen( value ) > 15 || strspn( value, "0123456789.*" ) != strlen( value ) || !strpbrk( value, "0123456789" ) ) {
 			WA_ActionResult( c, qfalse, "not an address: four numbers with dots, a * for any" );
-			return;
+			return qtrue;
 		}
 		trap->SendConsoleCommand( EXEC_APPEND, va( "%s %s\n", action[0] == 'b' ? "addip" : "removeip", value ) );
 		WA_ActionResult( c, qtrue, va( "%s %s", action[0] == 'b' ? "banned" : "ban lifted for", value ) );
-		return;
+		return qtrue;
 	}
 
 	if ( !strcmp( action, "effect" ) || !strcmp( action, "sound" ) ) {
@@ -188,11 +182,11 @@ void WA_ApiAction( waConnection_t *c, const char *body ) {
 		if ( !value[0] || strstr( value, ".." ) || !WA_FormValue( body, "x", xs, sizeof( xs ) ) || !WA_FormValue( body, "y", ys, sizeof( ys ) )
 			|| !WA_FormValue( body, "z", zs, sizeof( zs ) ) ) {
 			WA_ActionResult( c, qfalse, "no name or no place" );
-			return;
+			return qtrue;
 		}
 		if ( !WA_ConfigstringRoom( fx ? CS_EFFECTS : CS_SOUNDS, fx ? MAX_FX : MAX_SOUNDS, value ) ) {
 			WA_ActionResult( c, qfalse, va( "the map has no room for another one of its %s", fx ? "effects" : "sounds" ) );
-			return;
+			return qtrue;
 		}
 		VectorSet( at, Com_Clamp( -MAX_WORLD_COORD, MAX_WORLD_COORD, atof( xs ) ), Com_Clamp( -MAX_WORLD_COORD, MAX_WORLD_COORD, atof( ys ) ),
 			Com_Clamp( -MAX_WORLD_COORD, MAX_WORLD_COORD, atof( zs ) ) );
@@ -201,21 +195,16 @@ void WA_ApiAction( waConnection_t *c, const char *body ) {
 		else
 			G_SoundAtLoc( at, CHAN_AUTO, G_SoundIndex( value ) );
 		WA_ActionResult( c, qtrue, va( "%s played in the game", value ) );
-		return;
+		return qtrue;
 	}
 
-	// actions on a player
-	if ( !WA_FormValue( body, "id", idStr, sizeof( idStr ) ) ) {
-		WA_ActionResult( c, qfalse, "no player id" );
-		return;
-	}
-	id = atoi( idStr );
-	if ( id < 0 || id >= level.maxclients || !g_entities[id].inuse || !g_entities[id].client ||
-		 g_entities[id].client->pers.connected == CON_DISCONNECTED ) {
-		WA_ActionResult( c, qfalse, "no such player" );
-		return;
-	}
-	ent = &g_entities[id];
+	return qfalse;
+}
+
+// what is done to one player, who is there
+static void WA_PlayerAction( waConnection_t *c, const char *action, int id, char *value, const char *body ) {
+	char		xs[32], ys[32], zs[32];
+	gentity_t	*ent = &g_entities[id];
 
 	if ( !strcmp( action, "kick" ) ) {
 		trap->SendConsoleCommand( EXEC_APPEND, va( "clientkick %d\n", id ) );
@@ -372,6 +361,32 @@ void WA_ApiAction( waConnection_t *c, const char *body ) {
 	} else if ( !WA_JpAction( c, action, id, value ) ) {
 		WA_ActionResult( c, qfalse, "unknown action" );
 	}
+}
+
+void WA_ApiAction( waConnection_t *c, const char *body ) {
+	char	action[32], idStr[16], value[256];
+	int		id;
+
+	WA_FormValue( body, "action", action, sizeof( action ) );
+	WA_FormValue( body, "value", value, sizeof( value ) );
+	WA_FormValue( body, "id", idStr, sizeof( idStr ) );
+	WA_LogUse( c, va( "action %s id %s value \"%.100s\"", action, idStr[0] ? idStr : "-", value ) );
+
+	if ( WA_ServerAction( c, action, value, body ) )
+		return;
+
+	// the rest is done to a player
+	if ( !WA_FormValue( body, "id", idStr, sizeof( idStr ) ) ) {
+		WA_ActionResult( c, qfalse, "no player id" );
+		return;
+	}
+	id = atoi( idStr );
+	if ( id < 0 || id >= level.maxclients || !g_entities[id].inuse || !g_entities[id].client ||
+		 g_entities[id].client->pers.connected == CON_DISCONNECTED ) {
+		WA_ActionResult( c, qfalse, "no such player" );
+		return;
+	}
+	WA_PlayerAction( c, action, id, value, body );
 }
 
 
