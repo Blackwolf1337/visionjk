@@ -28,7 +28,7 @@ seta g_webBind ""
 | `g_webPassword` | empty | password of the panel. Empty: the panel is off |
 | `g_webPort` | 80 | TCP port. Below 1024 needs root on Linux |
 | `g_webBind` | empty | IPv4 address to listen on. Empty: 127.0.0.1 only. Set `0.0.0.0` to reach it from the network |
-| `g_webRoot` | empty | folder with an `index.html` that is served instead of the built in page, for working on the page |
+| `g_webRoot` | empty | folder with the files of the page (`codemp/game/webadmin/page` of the source), served instead of the built in page, for working on the page: the server puts `index.html` and the files it includes together at every load |
 
 The first three are latched, they take effect at the next map start. Open `http://server:8080/` and log in with
 any user name and the password (HTTP basic auth).
@@ -58,6 +58,11 @@ any user name and the password (HTTP basic auth).
 - Top bar: add bots, change map.
 
 ## How it works
+
+The page is kept as a template, a style sheet and one script file for each part of it
+(`codemp/game/webadmin/page`, its `README.md` says what is where). The build puts them together into the one
+file a browser gets (`cmake/Modules/BundlePage.cmake`) and compiles that into the game module, so nothing
+changed for the browser when the page was split: one request, one script.
 
 `WebAdmin_Frame` is called at the start of `G_RunFrame`. All sockets are non-blocking, a request is read, answered
 and closed without ever waiting, so a slow browser can not hold up the game. At most 32 connections at once, an

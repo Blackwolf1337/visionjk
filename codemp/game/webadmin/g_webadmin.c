@@ -3548,6 +3548,56 @@ static void WA_CloseConnection( waConnection_t *c ) {
 }
 
 // Handles a complete request. The response goes into c->response.
+// A file of the folder g_webRoot names, added to a buffer. qfalse: it can not be read.
+static qboolean WA_PageFile( waBuffer_t *b, const char *name ) {
+	FILE	*f = fopen( va( "%s/%s", g_webRoot.string, name ), "rb" );
+	char	chunk[8192];
+	size_t	n;
+
+	if ( !f )
+		return qfalse;
+	while ( ( n = fread( chunk, 1, sizeof( chunk ), f ) ) > 0 )
+		WA_BufAppend( b, chunk, (int)n );
+	fclose( f );
+	return qtrue;
+}
+
+// The page as the build puts it together (cmake/Modules/BundlePage.cmake), from the files of the folder
+// g_webRoot names: index.html, and for every line "<!--#include name -->" in it the file of that name in its
+// place. For working on the page: a change to one of its files is there with the next load of the page.
+static qboolean WA_PageFromDisk( waBuffer_t *page ) {
+	static const char	mark[] = "<!--#include ";
+	waBuffer_t			text = { 0 };
+	const char			*at, *include;
+	qboolean			whole = qtrue;
+
+	if ( !WA_PageFile( &text, "index.html" ) || !text.len ) {
+		WA_BufFree( &text );
+		return qfalse;
+	}
+
+	for ( at = text.data; ( include = strstr( at, mark ) ) != NULL; ) {
+		const char	*name = include + sizeof( mark ) - 1, *end = strstr( name, " -->" ), *line;
+		char		file[MAX_QPATH];
+
+		if ( !end || end - name >= (int)sizeof( file ) )
+			break;
+		WA_BufAppend( page, at, (int)( include - at ) );
+		Q_strncpyz( file, name, (int)( end - name ) + 1 );
+		// only what is in the folder
+		if ( strstr( file, ".." ) || file[0] == '/' || strchr( file, '\\' ) || strchr( file, ':' ) || !WA_PageFile( page, file ) ) {
+			trap->Print( S_COLOR_YELLOW "Web admin: %s/index.html includes %s, which can not be read\n", g_webRoot.string, file );
+			whole = qfalse;
+		}
+		// the line of the include goes with it
+		line = strchr( end, '\n' );
+		at = line ? line + 1 : end + strlen( end );
+	}
+	WA_BufAppend( page, at, (int)strlen( at ) );
+	WA_BufFree( &text );
+	return whole;
+}
+
 static void WA_HandleRequest( waConnection_t *c, char *head, char *body, int bodyLen ) {
 	char	method[8], path[4096];
 	char	*query;
@@ -3593,17 +3643,13 @@ static void WA_HandleRequest( waConnection_t *c, char *head, char *body, int bod
 
 	if ( !strcmp( method, "GET" ) && ( !strcmp( path, "/" ) || !strcmp( path, "/index.html" ) ) ) {
 		// g_webRoot serves the page from disk instead, for working on it without a restart
-		FILE *f = g_webRoot.string[0] ? fopen( va( "%s/index.html", g_webRoot.string ), "rb" ) : NULL;
-		if ( f ) {
-			waBuffer_t page = { 0 };
-			char chunk[8192];
-			size_t n;
-			while ( ( n = fread( chunk, 1, sizeof( chunk ), f ) ) > 0 )
-				WA_BufAppend( &page, chunk, (int)n );
-			fclose( f );
+		waBuffer_t page = { 0 };
+
+		if ( g_webRoot.string[0] && WA_PageFromDisk( &page ) ) {
 			WA_Respond( c, 200, "OK", "text/html; charset=utf-8", "Cache-Control: no-store\r\n", page.data, page.len );
 			WA_BufFree( &page );
 		} else {
+			WA_BufFree( &page );
 			WA_Respond( c, 200, "OK", "text/html; charset=utf-8", "Cache-Control: no-store\r\n", webadmin_html, (int)webadmin_html_len );
 		}
 	} else if ( !strcmp( method, "GET" ) && !strcmp( path, "/api/anims" ) ) {

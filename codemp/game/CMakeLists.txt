@@ -177,13 +177,18 @@ set(MPGameVoiceFiles
 source_group("game/voice" FILES ${MPGameVoiceFiles})
 set(MPGameFiles ${MPGameFiles} ${MPGameVoiceFiles})
 
-# the web admin panel and its page
+# the web admin panel and its page: a template, a style sheet and one script file for each part of the page
+file(GLOB_RECURSE MPGameWebadminPageFiles CONFIGURE_DEPENDS
+	"${MPDir}/game/webadmin/page/*.html"
+	"${MPDir}/game/webadmin/page/*.css"
+	"${MPDir}/game/webadmin/page/*.js"
+	)
 set(MPGameWebadminFiles
 	"${MPDir}/game/webadmin/g_webadmin.c"
-	"${MPDir}/game/webadmin/index.html"
 	)
 source_group("game/webadmin" FILES ${MPGameWebadminFiles})
-set(MPGameFiles ${MPGameFiles} ${MPGameWebadminFiles})
+source_group("game/webadmin/page" FILES ${MPGameWebadminPageFiles})
+set(MPGameFiles ${MPGameFiles} ${MPGameWebadminFiles} ${MPGameWebadminPageFiles})
 
 # the props with physics and the black hole that pulls them, bg_props.c is built into the cgame too
 set(MPGamePropsFiles
@@ -269,11 +274,17 @@ set(MPGameUiFiles
 source_group("ui" FILES ${MPGameUiFiles})
 set(MPGameFiles ${MPGameFiles} ${MPGameUiFiles})
 
-# the web admin page is compiled into the module
+# The web admin page is put together into one file (the template with the style sheet and the scripts in it),
+# and that file is compiled into the module. A browser gets the page as it got it when it was one file.
+add_custom_command(
+	OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/webadmin_page.html"
+	COMMAND ${CMAKE_COMMAND} -DINPUT="${MPDir}/game/webadmin/page/index.html" -DOUTPUT="${CMAKE_CURRENT_BINARY_DIR}/webadmin_page.html" -P "${CMAKE_SOURCE_DIR}/cmake/Modules/BundlePage.cmake"
+	DEPENDS ${MPGameWebadminPageFiles} "${CMAKE_SOURCE_DIR}/cmake/Modules/BundlePage.cmake"
+	COMMENT "Putting the web admin page together")
 add_custom_command(
 	OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/webadmin_html.h"
-	COMMAND ${CMAKE_COMMAND} -DINPUT="${MPDir}/game/webadmin/index.html" -DOUTPUT="${CMAKE_CURRENT_BINARY_DIR}/webadmin_html.h" -DNAME=webadmin_html -P "${CMAKE_SOURCE_DIR}/cmake/Modules/EmbedFile.cmake"
-	DEPENDS "${MPDir}/game/webadmin/index.html" "${CMAKE_SOURCE_DIR}/cmake/Modules/EmbedFile.cmake"
+	COMMAND ${CMAKE_COMMAND} -DINPUT="${CMAKE_CURRENT_BINARY_DIR}/webadmin_page.html" -DOUTPUT="${CMAKE_CURRENT_BINARY_DIR}/webadmin_html.h" -DNAME=webadmin_html -P "${CMAKE_SOURCE_DIR}/cmake/Modules/EmbedFile.cmake"
+	DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/webadmin_page.html" "${CMAKE_SOURCE_DIR}/cmake/Modules/EmbedFile.cmake"
 	COMMENT "Embedding web admin page")
 set(MPGameFiles ${MPGameFiles} "${CMAKE_CURRENT_BINARY_DIR}/webadmin_html.h")
 

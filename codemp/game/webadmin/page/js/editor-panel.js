@@ -1,0 +1,132 @@
+// ---- the panel of an entity: its place, the names of its spawnflags, its links, what its class is
+
+function renderEntTools(ent) {
+	const d = classDoc(ent.classname), editable = !!ent.keys, ang = entAngles(ent);
+	[['posX', ent.pos[0]], ['posY', ent.pos[1]], ['posZ', ent.pos[2]], ['angP', ang[0]], ['angY', ang[1]], ['angR', ang[2]]].forEach(([id, v]) => {
+		$(id).value = Math.round(v * 100) / 100;
+		$(id).disabled = !editable;
+	});
+
+	// a box for every spawnflag that has a name, x and - stand for bits without one
+	const flags = +entKey(ent, 'spawnflags') || 0;
+	$('entFlags').innerHTML = editable && d ? d.flags.map((name, i) => /^(x|-|\?)$/i.test(name) ? '' :
+		'<label><input type="checkbox" data-bit="' + i + '"' + (flags & (1 << i) ? ' checked' : '') + '>' + escapeHtml(name) + '</label>').join('') : '';
+
+	const chip = (id, key) => {
+		const other = ents.get(id);
+		return other ? '<a data-id="' + id + '" title="' + escapeHtml(key) + '">#' + id + ' ' + escapeHtml(other.classname) + '</a>' : '';
+	};
+	const fires = links.filter(l => l.from === ent.id), firedBy = links.filter(l => l.to === ent.id);
+	$('entLinks').innerHTML = (fires.length ? 'Fires ' + fires.map(l => chip(l.to, l.key)).join('') : '') + (fires.length && firedBy.length ? '<br>' : '') +
+		(firedBy.length ? 'Fired by ' + firedBy.map(l => chip(l.from, l.key)).join('') : '');
+
+	$('entDoc').style.display = d ? '' : 'none';
+	if (d) $('entDocText').textContent = d.name + (d.flags.length ? '   ' + d.flags.join(' ') : '') + '\n\n' + d.text;
+	$('kvKeys').innerHTML = (d ? d.keys : []).map(k => '<option value="' + escapeHtml(k) + '">').join('');
+}
+
+// a value into the table of keys, where Apply takes it from
+function setPanelKey(key, value) {
+	const row = [...$('kvRows').querySelectorAll('tr')].find(tr => {
+		const name = tr.querySelector('input');
+		return name && name.value.trim().toLowerCase() === key;
+	});
+	if (row) row.querySelectorAll('input')[1].value = value;
+	else $('kvRows').insertAdjacentHTML('beforeend', kvRow([key, value]));
+	kvDirty = true;
+}
+
+$('entFlags').addEventListener('change', () => {
+	const boxes = [...$('entFlags').querySelectorAll('input')];
+	const named = boxes.reduce((bits, box) => bits | (1 << +box.dataset.bit), 0);
+	const now = +((panelKeys().find(k => k[0].toLowerCase() === 'spawnflags') || [])[1]) || 0;
+	// the bits without a name stay as they are
+	setPanelKey('spawnflags', String((now & ~named) | boxes.reduce((bits, box) => box.checked ? bits | (1 << +box.dataset.bit) : bits, 0)));
+});
+$('entLinks').addEventListener('click', e => {
+	const a = e.target.closest('a');
+	if (!a || !ents.has(+a.dataset.id)) return;
+	selectEnt(+a.dataset.id);
+	focusEntity(+a.dataset.id);
+});
+
+function renderBudget(b) {
+	if (!b) { $('entBudget').textContent = ''; return; }
+	const part = (name, v) => {
+		const text = name + ' ' + v[0] + '/' + v[1];
+		return v[0] >= v[1] * 0.9 ? '<b>' + text + '</b>' : text;
+	};
+	$('entBudget').innerHTML = [part('Entities', b.entities), part('Models', b.models), part('Sounds', b.sounds), part('Effects', b.effects)].join(' &middot; ');
+}
+
+// ---- values to pick from, so that the name of a map, an effect or an NPC does not have to be known by heart
+
+const PICK_KINDS = { pickMaps: 'maps', pickBots: 'bots', pickEffects: 'effects', pickMusic: 'music', pickNpcs: 'npcs' };
+const pickAsked = new Set();
+
+function pickOptions(id, names) {
+	$(id).innerHTML = [...new Set(names)].filter(Boolean).sort().map(n => '<option value="' + escapeHtml(n) + '">').join('');
+}
+
+// the lists the server has are asked for once, the ones the page knows itself are made when they are needed
+async function pickFill(id) {
+	if (id === 'pickClasses') { pickOptions(id, allClasses); return; }
+	if (id === 'pickNames') { pickOptions(id, [...ents.values()].map(e => entKey(e, 'targetname'))); return; }
+	if (!(id in PICK_KINDS) || pickAsked.has(id)) return;
+	pickAsked.add(id);
+	try {
+		pickOptions(id, (await (await fetch('api/list?kind=' + PICK_KINDS[id])).json()).names);
+	} catch (e) {
+		pickAsked.delete(id);
+	}
+}
+
+// the list the value of a key is picked from: what it fires from the names there are, an effect, an NPC type, ...
+function pickFor(key) {
+	const k = key.trim().toLowerCase();
+	if (k === 'classname') return 'pickClasses';
+	if (LINK_KEYS.has(k)) return 'pickNames';
+	if (k === 'npc_type') return 'pickNpcs';
+	if (k === 'mapname') return 'pickMaps';
+	if (k === 'music') return 'pickMusic';
+	return /fx/.test(k) ? 'pickEffects' : '';
+}
+
+// Keys whose value is a file of the game: the folder it is looked for in and the endings that count. The field
+// offers what is in the folder that is typed so far, a folder that is picked shows its own files next.
+const PATH_KEYS = { noise: ['sound', '.wav,.mp3'], model: ['models', '.md3,.glm'], model2: ['models', '.md3,.glm'] };
+const pathLists = new Map();
+
+async function pickPath(input, key) {
+	const [root, ext] = PATH_KEYS[key], value = input.value.trim();
+	let dir = value.includes('/') ? value.slice(0, value.lastIndexOf('/')) : root;
+	if (dir.toLowerCase() !== root && !dir.toLowerCase().startsWith(root + '/')) dir = root;
+	const id = dir.toLowerCase() + '|' + ext;
+	if (!pathLists.has(id)) {
+		pathLists.set(id, fetch('api/list?kind=dir&dir=' + encodeURIComponent(dir) + '&ext=' + encodeURIComponent(ext)).then(r => r.json()).then(j => j.names)
+			.catch(() => { pathLists.delete(id); return []; }));
+	}
+	const names = await pathLists.get(id);
+	if (document.activeElement === input) pickOptions('pickPath', names);
+}
+
+// the value field of a row of the key table that the event is for, and the key of that row
+function kvValueField(e) {
+	const row = e.target.closest('tr'), inputs = row ? row.querySelectorAll('input') : [];
+	return inputs.length === 2 && e.target === inputs[1] ? inputs[0].value.trim().toLowerCase() : null;
+}
+
+$('kvRows').addEventListener('focusin', e => {
+	const key = kvValueField(e);
+	if (key === null) return;
+	if (key in PATH_KEYS) { e.target.setAttribute('list', 'pickPath'); pickPath(e.target, key); return; }
+	const id = pickFor(key);
+	if (id) { e.target.setAttribute('list', id); pickFill(id); } else e.target.removeAttribute('list');
+});
+$('kvRows').addEventListener('input', e => {
+	const key = kvValueField(e);
+	if (key !== null && key in PATH_KEYS) pickPath(e.target, key);
+});
+$('mapName').addEventListener('focus', () => pickFill('pickMaps'));
+$('botName').addEventListener('focus', () => pickFill('pickBots'));
+
