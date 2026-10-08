@@ -1874,14 +1874,15 @@ void S_Respatialize( int entityNum, const vec3_t head, matrix3_t axis, int inwat
 S_SpatialGather
 
 s_spatial: names the listener and every sound with a place in the level to snd_spatial.cpp. What it takes is
-marked, and S_PaintChannels() leaves it out. The rest stays with the mixer: the sounds of the own player, the
-menus, the announcer, the music.
+marked, and S_PaintChannels() leaves it out. The rest stays with the mixer: the menus, the announcer, the music,
+and the sounds of the own player, of which snd_spatial.cpp only gets what goes into the reverb.
 ========================
 */
 static void S_SpatialGather( void ) {
 	channel_t	*ch = s_channels;
 	vec3_t		origin, source_vec;
 	float		fade;
+	qboolean	voiceVolume;
 	int			i;
 
 	S_SpatialBeginFrame( listener_origin, listener_axis );
@@ -1891,12 +1892,15 @@ static void S_SpatialGather( void ) {
 		if ( !ch->thesfx || ch->loopSound || ch->startSample == START_SAMPLE_IMMEDIATE ) {
 			continue;
 		}
-		// as in S_Respatialize(): anything coming from the view entity is at full volume in both ears
-		if ( ch->entnum == listener_number ) {
-			continue;
-		}
 		if ( ch->entchannel == CHAN_LOCAL || ch->entchannel == CHAN_LOCAL_SOUND || ch->entchannel == CHAN_ANNOUNCER
 			|| ch->entchannel == CHAN_VOICE_GLOBAL || ch->entchannel == CHAN_MENU1 || ch->entchannel == CHAN_MUSIC ) {
+			continue;
+		}
+		voiceVolume = (qboolean)( ch->entchannel == CHAN_VOICE || ch->entchannel == CHAN_VOICE_ATTEN );
+		// As in S_Respatialize(): anything coming from the view entity is at full volume in both ears, and the
+		// mixer goes on playing it. The room around the listener rings from it like from any other sound.
+		if ( ch->entnum == listener_number ) {
+			S_SpatialAddSend( ch, ch->master_vol * ( 1.0f / 255.0f ), voiceVolume );
 			continue;
 		}
 		if ( ch->fixed_origin ) {
@@ -1908,8 +1912,7 @@ static void S_SpatialGather( void ) {
 		if ( fade <= 0.0f ) {
 			continue;
 		}
-		ch->spatial = S_SpatialAddChannel( ch, origin, ch->master_vol * ( 1.0f / 255.0f ), fade,
-			(qboolean)( ch->entchannel == CHAN_VOICE || ch->entchannel == CHAN_VOICE_ATTEN ) );
+		ch->spatial = S_SpatialAddChannel( ch, origin, ch->master_vol * ( 1.0f / 255.0f ), fade, voiceVolume );
 	}
 
 	for ( i = 0; i < numLoopSounds; i++ ) {

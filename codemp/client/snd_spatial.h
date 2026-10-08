@@ -40,6 +40,8 @@ void		S_SpatialUpdate( void );		// once a frame: a level that was loaded is take
 void		S_SpatialBeginFrame( const vec3_t origin, matrix3_t axis );
 // volume: how loud the game plays it, 0 to 1. fade: what is left of that at its distance in a straight line
 qboolean	S_SpatialAddChannel( channel_t *ch, const vec3_t origin, float volume, float fade, qboolean voiceVolume );
+// a sound of the own player: the mixer goes on playing it, only the reverb gets it
+void		S_SpatialAddSend( channel_t *ch, float volume, qboolean voiceVolume );
 void		S_SpatialAddLoop( int entnum, sfx_t *sfx, const vec3_t origin, float volume, float fade, float step );
 void		S_SpatialEndFrame( int from, int target );
 float		S_SpatialAhead( void );

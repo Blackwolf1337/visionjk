@@ -213,6 +213,22 @@ static const byte spatialMaterialOf[MATERIAL_LAST] = {
 // Measured with noise from a speaker 45 degrees to the right: the louder ear is within 1.5 dB of the old path.
 #define SPATIAL_GAIN_HRTF			0.5f
 #define SPATIAL_GAIN_PANNING		0.8f
+// The sounds of the own player stay on the old path, in both ears. The room around him gets them like the
+// sounds in the level: this much of what the game plays of them goes into the reverb.
+#define SPATIAL_OWN_SEND			1.0f
+
+// The thump of an explosion. Below about 200 Hz the direction data for headphones has no direction: both ears
+// get the lows of a sound at SPATIAL_GAIN_HRTF wherever it is, where the old path gives the near ear up to all
+// of it. An explosion is mostly lows (rocket, thermal, detpack, concussion: half of the energy is under
+// 120 Hz), so its lows go to both ears a second time, past HRTF and panning.
+#define SPATIAL_SHOCK_HZ			120.0f	// the thump is what the sound has below this
+#define SPATIAL_SHOCK_GAIN			1.0f	//	and this much of it for each ear, at s_spatialShock 1
+
+// Which sounds are explosions: "explo" in the name of the file (the folder sound/weapons/explosions also has
+// glass and debris in it), or one of these in its path.
+static const char *spatialShockPaths[] = {
+	"rocket/hit_wall", "proton/impact", "conc_missile/impact", "mine/impact"
+};
 
 // Reflections: what the room around the listener gives back. Rays from where he stands are followed through
 // the level, in a thread of its own, and what comes back when and from where becomes the reverb every sound in
@@ -291,6 +307,12 @@ typedef struct spatialVoice_s {
 	float		gain;				//	and what is left of that at its distance in a straight line
 	float		renderedGain;		// the gain the last block ended with: the next one moves on from there
 	qboolean	voiceVolume;		// s_volumeVoice and not s_volume
+	qboolean	sendOnly;			// of the own player: the mixer plays the sound itself, only the reverb gets it from here
+
+	// the thump of an explosion
+	qboolean	shock;
+	float		shockState[2];		// of its low pass
+	float		shockThrough;		// what the walls left of it in the last block
 
 	int			rendered;			// up to which sample of the mixer's time it is in the ring
 	qboolean	fresh;				// nothing of it is rendered yet
@@ -317,11 +339,13 @@ static cvar_t	*s_spatialRays;
 static cvar_t	*s_spatialBounces;
 static cvar_t	*s_spatialPaths;
 static cvar_t	*s_spatialPathLoss;
+static cvar_t	*s_spatialShock;
 
 static struct {
 	void		*library;
 	char		libraryPath[MAX_OSPATH];
 	qboolean	active;
+	float		shockCoeffs[5];		// the low pass of the thump: b0 b1 b2 a1 a2
 
 	IPLContext			context;
 	IPLAudioSettings	audio;
@@ -851,9 +875,22 @@ static void S_SpatialResetVoice( spatialVoice_t *v ) {
 	qiplBinauralEffectReset( v->binaural );
 	qiplPanningEffectReset( v->panning );
 	qiplPathEffectReset( v->path );
+	v->shockState[0] = v->shockState[1] = 0.0f;
 	v->active = qfalse;
 	v->channel = NULL;
 	v->sfx = NULL;
+}
+
+static qboolean S_SpatialIsExplosion( sfx_t *sfx ) {
+	if ( Q_stristr( COM_SkipPath( sfx->sSoundName ), "explo" ) ) {
+		return qtrue;
+	}
+	for ( size_t i = 0; i < ARRAY_LEN( spatialShockPaths ); i++ ) {
+		if ( Q_stristr( sfx->sSoundName, spatialShockPaths[i] ) ) {
+			return qtrue;
+		}
+	}
+	return qfalse;
 }
 
 void S_SpatialBeginFrame( const vec3_t origin, matrix3_t axis ) {
@@ -894,8 +931,15 @@ static spatialVoice_t *S_SpatialFindVoice( spatialStream_t *stream, channel_t *c
 		unused->sfx = sfx;
 		unused->startSample = startSample;
 		unused->renderedGain = 0.0f;
+		unused->sendOnly = qfalse;
+		unused->shock = channel ? S_SpatialIsExplosion( sfx ) : qfalse;
 	}
 	return unused;
+}
+
+// samples of the sound of a channel per sample that is heard
+static float S_SpatialChannelStep( const channel_t *ch ) {
+	return ( ch->doppler && ch->dopplerScale > 1 ) ? ch->dopplerScale : 1.0f;
 }
 
 static void S_SpatialPlaceVoice( spatialVoice_t *v, channel_t *channel, int entchannel, const vec3_t origin, float volume, float fade,
@@ -928,9 +972,24 @@ qboolean S_SpatialAddChannel( channel_t *ch, const vec3_t origin, float volume, 
 	if ( !v ) {
 		return qfalse;
 	}
-	S_SpatialPlaceVoice( v, ch, ch->entchannel, origin, volume, fade, ( ch->doppler && ch->dopplerScale > 1 ) ? ch->dopplerScale : 1.0f,
-		voiceVolume );
+	S_SpatialPlaceVoice( v, ch, ch->entchannel, origin, volume, fade, S_SpatialChannelStep( ch ), voiceVolume );
+	v->sendOnly = qfalse;
 	return qtrue;
+}
+
+// A sound of the own player. The mixer plays it as it always did, at full volume in both ears: from here only
+// the room gets it, see S_SpatialRenderBlock().
+void S_SpatialAddSend( channel_t *ch, float volume, qboolean voiceVolume ) {
+	spatialVoice_t *v;
+
+	if ( !s_spatialReflections->integer ) {
+		return;
+	}
+	v = S_SpatialFindVoice( NULL, ch, ch->entnum, ch->thesfx, (int)ch->startSample );
+	if ( v ) {
+		S_SpatialPlaceVoice( v, ch, ch->entchannel, spatial.listenerOrigin, volume, 1.0f, S_SpatialChannelStep( ch ), voiceVolume );
+		v->sendOnly = qtrue;
+	}
 }
 
 void S_SpatialAddLoop( int entnum, sfx_t *sfx, const vec3_t origin, float volume, float fade, float step ) {
@@ -1086,9 +1145,9 @@ static void S_SpatialSimulate( void ) {
 		spatialVoice_t *v = &spatial.voices[i];
 		IPLSimulationInputs inputs;
 
-		// a voice that plays nothing is not looked at
+		// a voice that plays nothing is not looked at, and neither is one of the own player: nothing is in his way
 		memset( &inputs, 0, sizeof( inputs ) );
-		if ( v->active && v->frame == spatial.frame ) {
+		if ( v->active && v->frame == spatial.frame && !v->sendOnly ) {
 			inputs.flags = IPL_SIMULATIONFLAGS_DIRECT;
 			inputs.directFlags = (IPLDirectSimulationFlags)( IPL_DIRECTSIMULATIONFLAGS_OCCLUSION | IPL_DIRECTSIMULATIONFLAGS_TRANSMISSION );
 			S_SpatialPoint( v->origin, &inputs.source.origin );
@@ -1131,7 +1190,7 @@ static void S_SpatialSimulate( void ) {
 		spatialVoice_t *v = &spatial.voices[i];
 		IPLSimulationOutputs outputs;
 
-		if ( !v->active || v->frame != spatial.frame ) {
+		if ( !v->active || v->frame != spatial.frame || v->sendOnly ) {
 			continue;
 		}
 		memset( &outputs, 0, sizeof( outputs ) );
@@ -1230,6 +1289,7 @@ static void S_SpatialRenderBlock( spatialVoice_t *v, float gain ) {
 	const float from = v->renderedGain, step = ( gain - v->renderedGain ) * ( 1.0f / SPATIAL_FRAME );
 	// the sound without its fade by the distance in a straight line: a way round a corner has a length of its own
 	const float unfade = ( v->gain > 0.001f ) ? v->volume / v->gain : 0.0f;
+	const qboolean fresh = v->fresh;
 	qboolean pathed = qfalse;
 	float volume, hidden, send;
 
@@ -1248,6 +1308,20 @@ static void S_SpatialRenderBlock( spatialVoice_t *v, float gain ) {
 	for ( int i = 0; i < SPATIAL_FRAME; i++ ) {
 		mono[i] *= from + step * i;
 		whole[i] = mono[i] * unfade;
+	}
+
+	// A voice of the chat is as loud as the cgame said, s_volume is not for it. Against the other sounds it is
+	// louder by what its two factors differ, which the reverb has to know: it has one factor for all it gets.
+	send = v->voiceVolume ? s_volumeVoice->value : s_volume->value;
+	if ( v->stream ) {
+		send = s_spatialHrtf->integer ? ( SPATIAL_GAIN_VOICE_HRTF / SPATIAL_GAIN_HRTF ) : ( SPATIAL_GAIN_VOICE_PANNING / SPATIAL_GAIN_PANNING );
+	}
+	if ( v->sendOnly ) {
+		// of the own player: the room gets it as the game plays it, the mixer plays the sound itself
+		for ( int i = 0; i < SPATIAL_FRAME; i++ ) {
+			v->dry[( c + i ) & ( SPATIAL_DRY - 1 )] = mono[i] * send * SPATIAL_OWN_SEND;
+		}
+		return;
 	}
 
 	qiplDirectEffectApply( v->direct, &v->directParams, &in, &mid );
@@ -1279,12 +1353,6 @@ static void S_SpatialRenderBlock( spatialVoice_t *v, float gain ) {
 		}
 	}
 
-	// A voice of the chat is as loud as the cgame said, s_volume is not for it. Against the other sounds it is
-	// louder by what its two factors differ, which the reverb has to know: it has one factor for all it gets.
-	send = v->voiceVolume ? s_volumeVoice->value : s_volume->value;
-	if ( v->stream ) {
-		send = s_spatialHrtf->integer ? ( SPATIAL_GAIN_VOICE_HRTF / SPATIAL_GAIN_HRTF ) : ( SPATIAL_GAIN_VOICE_PANNING / SPATIAL_GAIN_PANNING );
-	}
 	// what the walls in the way left of it, and what came round them, is what the room around the listener
 	// gets to hear
 	for ( int i = 0; i < SPATIAL_FRAME; i++ ) {
@@ -1324,6 +1392,31 @@ static void S_SpatialRenderBlock( spatialVoice_t *v, float gain ) {
 			slot[0] += pathLeft[i] * hidden * volume;
 			slot[1] += pathRight[i] * hidden * volume;
 		}
+	}
+
+	// The thump of an explosion: its lows once more, for both ears alike. A wall takes from them what Steam
+	// Audio takes from the lows of any sound behind it, and the block gets there from what the last one had.
+	if ( v->shock && s_spatialShock->value > 0.0f ) {
+		const float *k = spatial.shockCoeffs;
+		const float through = v->directParams.occlusion + ( 1.0f - v->directParams.occlusion ) * v->directParams.transmission[0];
+		const float throughFrom = fresh ? through : v->shockThrough;
+		const float throughStep = ( through - throughFrom ) * ( 1.0f / SPATIAL_FRAME );
+		const float shock = send * s_spatialShock->value * SPATIAL_SHOCK_GAIN * ( 32768.0f * 256.0f );
+		float z1 = v->shockState[0], z2 = v->shockState[1];
+
+		for ( int i = 0; i < SPATIAL_FRAME; i++ ) {
+			float *slot = spatial.ring[( c + i ) & ( SPATIAL_RING - 1 )];
+			const float low = k[0] * mono[i] + z1;
+			const float add = low * ( throughFrom + throughStep * i ) * shock;
+
+			z1 = k[1] * mono[i] - k[3] * low + z2;
+			z2 = k[2] * mono[i] - k[4] * low;
+			slot[0] += add;
+			slot[1] += add;
+		}
+		v->shockState[0] = z1;
+		v->shockState[1] = z2;
+		v->shockThrough = through;
 	}
 }
 
@@ -1650,12 +1743,18 @@ static void S_SpatialInfo_f( void ) {
 	for ( int i = 0; i < SPATIAL_VOICES; i++ ) {
 		const spatialVoice_t *v = &spatial.voices[i];
 
-		if ( v->active && v->frame == spatial.frame ) {
-			Com_Printf( "  %-40s at %.0f %.0f %.0f, %5.0f units away, gain %.2f, %3.0f %% in sight, through what hides it: %.3f %.3f %.3f\n",
-				v->stream ? va( "voice of player %i", (int)( v->stream - spatialStreams ) ) : v->sfx->sSoundName,
-				v->origin[0], v->origin[1], v->origin[2], Distance( v->origin, spatial.listenerOrigin ), v->gain, v->directParams.occlusion * 100.0f,
-				v->directParams.transmission[0], v->directParams.transmission[1], v->directParams.transmission[2] );
+		if ( !v->active || v->frame != spatial.frame ) {
+			continue;
 		}
+		if ( v->sendOnly ) {
+			Com_Printf( "  %-40s own, reverb only, gain %.2f\n", v->stream ? "voice chat" : v->sfx->sSoundName, v->gain );
+			continue;
+		}
+		Com_Printf( "  %-40s at %.0f %.0f %.0f, %5.0f units away, gain %.2f, %3.0f %% in sight, through what hides it: %.3f %.3f %.3f%s\n",
+			v->stream ? va( "voice of player %i", (int)( v->stream - spatialStreams ) ) : v->sfx->sSoundName,
+			v->origin[0], v->origin[1], v->origin[2], Distance( v->origin, spatial.listenerOrigin ), v->gain, v->directParams.occlusion * 100.0f,
+			v->directParams.transmission[0], v->directParams.transmission[1], v->directParams.transmission[2],
+			( v->shock && s_spatialShock->value > 0.0f ) ? ", thump" : "" );
 	}
 }
 
@@ -1850,6 +1949,7 @@ void S_SpatialInit( void ) {
 	s_spatialBounces = Cvar_Get( "s_spatialBounces", "16", CVAR_ARCHIVE, "s_spatial: how often a ray is followed off a wall" );
 	s_spatialPaths = Cvar_Get( "s_spatialPaths", "1", CVAR_ARCHIVE, "s_spatial: 1 a sound comes round corners. Worked out once per level in the background" );
 	s_spatialPathLoss = Cvar_Get( "s_spatialPathLoss", "1", CVAR_ARCHIVE, "s_spatial: 1 a sound loses on its way round a corner what Steam Audio works out. 0 it only gets duller, and is as loud as the game makes a sound that far away" );
+	s_spatialShock = Cvar_Get( "s_spatialShock", "1", CVAR_ARCHIVE, "s_spatial: how strong the thump of an explosion is, its lows in both ears. 0 none" );
 	Cmd_AddCommand( "s_spatialInfo", S_SpatialInfo_f, "What s_spatial is doing" );
 
 	memset( &spatial, 0, sizeof( spatial ) );
@@ -1882,6 +1982,17 @@ void S_SpatialInit( void ) {
 
 	spatial.audio.samplingRate = dma.speed;
 	spatial.audio.frameSize = SPATIAL_FRAME;
+
+	// the low pass of the thump of an explosion: two poles, flat up to SPATIAL_SHOCK_HZ (Butterworth)
+	{
+		const double w = 2.0 * M_PI * SPATIAL_SHOCK_HZ / dma.speed;
+		const double alpha = sin( w ) * 0.7071067811865476, a0 = 1.0 + alpha;	// sin( w ) / ( 2 Q ), Q = 1 / sqrt( 2 )
+
+		spatial.shockCoeffs[0] = spatial.shockCoeffs[2] = (float)( ( 1.0 - cos( w ) ) * 0.5 / a0 );
+		spatial.shockCoeffs[1] = (float)( ( 1.0 - cos( w ) ) / a0 );
+		spatial.shockCoeffs[3] = (float)( -2.0 * cos( w ) / a0 );
+		spatial.shockCoeffs[4] = (float)( ( 1.0 - alpha ) / a0 );
+	}
 
 	// the direction data the library brings along
 	memset( &hrtfSettings, 0, sizeof( hrtfSettings ) );
@@ -1939,6 +2050,7 @@ void		S_SpatialLoadMap( const char *mapname ) {}
 void		S_SpatialUpdate( void ) {}
 void		S_SpatialBeginFrame( const vec3_t origin, matrix3_t axis ) {}
 qboolean	S_SpatialAddChannel( channel_t *ch, const vec3_t origin, float volume, float fade, qboolean voiceVolume ) { return qfalse; }
+void		S_SpatialAddSend( channel_t *ch, float volume, qboolean voiceVolume ) {}
 void		S_SpatialAddLoop( int entnum, sfx_t *sfx, const vec3_t origin, float volume, float fade, float step ) {}
 void		S_SpatialEndFrame( int from, int target ) {}
 void		S_SpatialPaint( int from, int to, portable_samplepair_t *paint ) {}

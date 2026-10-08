@@ -29,6 +29,7 @@ snd_restart
 | `s_spatialReverb` | 1 | how loud the reverb is |
 | `s_spatialPaths` | 1 | 1: a sound comes round corners |
 | `s_spatialPathLoss` | 1 | 0: a sound round a corner only gets duller, without what bending costs |
+| `s_spatialShock` | 1 | how strong the thump of an explosion is: its lows, in both ears. 0: none, 2: twice as much |
 | `s_spatialRays` | 2048 | rays of a pass of the reflections, 256 to 8192 |
 | `s_spatialBounces` | 16 | how often a ray is followed off a wall. Fewer cut the tail of a large room |
 | `s_spatialAhead` | 0.1 | seconds of sound rendered ahead. Less follows a turn of the head sooner, more survives a longer hitch |
@@ -58,8 +59,9 @@ what the threads take and the state of the paths.
 What changes: a sound behind a wall is quieter and duller, by what the wall is made of. A sound has a direction
 that is more than left and right (with headphones). The room around the listener rings, a hall longer than a
 chamber. A sound in the next room arrives through the doorway. The voices of the voice chat are sounds in the
-level too, see "The voice chat". The sounds of the own player, the menus, the announcer and the music are not
-touched.
+level too, see "The voice chat". The sounds of the own player stay as they are, in both ears, and the room
+rings from them like from any other sound. An explosion has a thump. The menus, the announcer and the music
+are not touched.
 
 What does not: how loud a sound is at its distance is still what the game makes of it. Doors and lifts are not
 in the way of anything, see "Limits".
@@ -120,6 +122,20 @@ and what comes back becomes the impulse response of the place. Every voice is se
 it arrives after the walls in its way. A pass takes 10 to 60 ms, so it runs in a thread. The game asks for a
 pass at most every 50 ms and takes what the last one found.
 
+**The own player.** What comes from the entity the game listens from (steps, shots, saber swings, the voice of
+the character) is played by the old mixer, at full volume in both ears, as it always was. With reflections on
+it also gets a voice that renders nothing but what goes into the reverb (`S_SpatialAddSend`): as loud as the
+game plays it, no rays, no direction. The reverb is the one of where the listener stands, which for these
+sounds is the right place. Left dry: what is started on the channels of the menus, the HUD and the announcer.
+
+**Explosions.** The data that gives a sound its direction for headphones has none below about 200 Hz: both ears
+get the lows at half volume wherever the sound is, where the old mixer gives the near ear up to all of it. An
+explosion is mostly lows, so with headphones it lost more than other sounds. Its lows (a low pass at 120 Hz)
+are added a second time, to both ears alike, past the direction and past the panning for speakers too, by
+`s_spatialShock`. A wall takes from them what it takes from the lows of any sound. An explosion is a sound
+with "explo" in the name of its file, or the hit of a rocket, a proton torpedo, a concussion missile or a
+mine of a vehicle (`spatialShockPaths`). `s_spatialInfo` says "thump" behind such a sound.
+
 **Paths.** For a sound the listener does not see, Steam Audio finds the ways round the corners from points it
 has spread over the floors of the level (probes) and from which of them see each other. That is worked out
 once per level, in another thread, the first time the level is loaded, and kept in
@@ -152,7 +168,7 @@ runs, until then the old mixer plays.
 |------|---------|
 | `client/snd_spatial.cpp`, `snd_spatial.h` | everything of Steam Audio: loading, the level, voices, rendering, reverb, paths |
 | `qcommon/cm_export.cpp` | the world as triangles |
-| `client/snd_dma.cpp` | `S_SpatialGather`, and the fade by distance as functions both paths use (`S_AttenuateDistance`) |
+| `client/snd_dma.cpp` | `S_SpatialGather`: which sound is a voice in the level and which only goes into the reverb. The fade by distance as functions both paths use (`S_AttenuateDistance`) |
 | `client/snd_mix.cpp` | `S_SampleRun`: samples of a sound as floats. The mixer leaves out what the new path plays |
 | `cgame/voice/cg_voice.c` | `Voice_InLevel`: which voices of the voice chat go to the engine |
 | `lib/steamaudio` | Valve's repository, a submodule |
@@ -198,6 +214,20 @@ voice every 3 s and the codec makes up a frame, which is a hole of 40 ms in a to
 driver buffer of 882 samples, with which it runs 0.4 % slow (`tools/satest/clock.py`). A sound card that is that
 far off would do the same on either way of the voice.
 
+The thump, 2026-10-08: not from the game, from the samples of the base assets and the low pass on its own.
+
+| Sample | Energy under 120 Hz | Highest sample after the low pass (the whole: 1.0) |
+|--------|---------------------|-----------------------------------------------------|
+| `weapons/rocket/hit_wall` | 57 % | 0.57 |
+| `weapons/thermal/explode` (also the trip mine and the mines of the flechette) | 47 % | 0.70 |
+| `weapons/detpack/explode` | 44 % | 0.81 |
+| `weapons/concussion/explosion` | 61 % | 0.84 |
+| `weapons/explosions/explosion_huge3` | 63 % | 0.91 |
+| `weapons/repeater/alt_explode` | 11 % | 0.36 |
+| `weapons/blaster/hit_wall`, for comparison, no thump | 5 % | 0.30 |
+
+The low pass in single precision: -0.3 dB at 60 Hz, -3 dB at 120 Hz, -12 dB at 240 Hz.
+
 Cost on mp/ffa3 with bots fighting (AMD Ryzen 9 5900X 12-Core Processor, two threads for a pass): a pass of
 reflections and paths 21 ms, in its own thread, about seven a second. In the thread of the game the sound costs mostly under 0.5 ms a frame
 and up to 2 ms, most of it the reverb. The paths of mp/ffa3: 740 probes, under a second, a file of 660 kB.
@@ -208,6 +238,15 @@ Builds: Linux 64, and the client and the modules for 64 bit Windows with mingw (
 
 - Nobody has heard it. Volumes, how strong the reverb is and how much a wall lets through are from
   measurements and from Valve's numbers, not from listening.
+- The reverb of the own player's sounds and the thump of explosions were built and never run: not heard and
+  not measured in the game. How much of an own sound the room gets is one number, `SPATIAL_OWN_SEND`.
+- The thump is added on top. With `s_volume` near 1 an explosion next to the listener goes past what the
+  sound card takes and is cut off there, sooner than without it. `s_spatialShock` below 1 if it distorts.
+- A sound the cgame starts as a local sound on the channel of the body sounds rings too: in this cgame that is
+  the zoom of the disruptor.
+- The voice of the own character is an MP3 that is decoded while it plays, through its channel, and now by two
+  readers: the mixer and the voice for the reverb. By the code they stay inside what the decoder keeps. If a
+  line of the own character ever has a hole in its reverb, that is where to look.
 - Doors and lifts do not block sound. They are brush models that move, the mesh is the world that does not.
 - One reverb, of where the listener stands. A sound in another room rings like the listener's room, and has no
   reflections of its own.
