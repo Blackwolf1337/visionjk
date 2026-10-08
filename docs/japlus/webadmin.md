@@ -223,6 +223,9 @@ Also changed:
   undo. "Template" in the panel of an entity keeps its keys under a name in the browser: the name is offered in
   the class search as `@name` and is placed like a class, Shift and a click there takes it away. At the bottom
   of the map the place under the mouse is shown, on the grid, and how far it is from the selected entity.
+- The panel of a selected player is a column at the right edge of the map. JKAdmin has it across the bottom,
+  where with the buttons of JA+ in it it took half of the height of the map view and lay over what one wanted
+  to click on.
 - New: the server refuses to place what would end it (`WA_SpawnRefused`): a class made of brushes (`trigger_`,
   `func_`) without a `model` key that names a brush model of the map, the classes whose spawn function raises
   an error without a key (`target_speaker`, `target_play_music`, `target_level_change`,
@@ -724,8 +727,14 @@ tell, amsay, clansay, umlauts), the console `say`, the panel, the ring with more
 with software GL, driven through its debugging port: both modes and every view came up without an error on the
 console. The guard refused the five bad entities that were tried and the server kept running. Placing a cube,
 moving it a grid step, two undos and two redos gave the states they should, a deleted spawn point of the map came
-back with its keys and as an entity of the map, a spawnflag box wrote its bit into the key table. Not done by
-hand with a mouse: dragging, the number fields, the keys.
+back with its keys and as an entity of the map, a spawnflag box wrote its bit into the key table.
+
+The same day the panel was used with the mouse and the keys as events of the browser
+(`japlus_port/tools/panelshot/steps_mouse.js`, `steps_keys.js`), 18 checks: a click selects a player, an entity, a
+waypoint. A drag moves the view, turns it with the middle button, moves an entity by its marker, turns the head
+when flying. The wheel zooms and sets the flying speed. A right-click teleports, places the class that is armed,
+adds a waypoint. Undo, the Z field, Remove and Save of a route. Copy, paste, the stored views and the keys of
+the fly camera went through the keyboard. What that is not: a person at a real browser on a real GPU.
 
 The page was looked at once in headless Chromium with software GL: the 3D map, the player list and the chat box
 with all kinds of lines show up. Not tested: using the page by hand (HUD view, dragging entities), the Windows DLL

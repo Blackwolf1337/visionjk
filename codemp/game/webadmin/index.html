@@ -92,7 +92,10 @@ body.sideClosed #view { left: 0; }
 #help { position: absolute; right: 10px; top: 10px; color: var(--muted); font-size: 11px; background: rgba(13,13,15,.75); border: 1px solid var(--line); padding: 6px 8px; border-radius: 3px; line-height: 1.6; }
 #help kbd { color: var(--text); border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 2px; padding: 0 3px; font-size: 10px; }
 
-#command { position: absolute; left: 12px; right: 12px; bottom: 12px; background: rgba(22,22,26,.96); border: 1px solid var(--line); border-top: 2px solid var(--accent); border-radius: 4px; padding: 10px 12px; display: none; gap: 18px; align-items: flex-start; flex-wrap: wrap; max-height: calc(100% - 24px); overflow: auto; }
+/* The panel of a selected player: a column at the right edge of the map. JKAdmin has it across the bottom, where it
+   took half of the view with the buttons of JA+ in it and lay over what one wanted to click on. */
+#command { position: absolute; right: 12px; top: 12px; width: 372px; max-height: calc(100% - 68px); background: rgba(22,22,26,.96); border: 1px solid var(--line); border-top: 2px solid var(--accent); border-radius: 4px; padding: 10px 12px; display: none; flex-direction: column; gap: 12px; align-items: stretch; overflow: auto; }
+#view:has(#command.open) #help { display: none; }
 #jpBox .actions { max-width: 380px; }
 #jpBox .grid { margin-top: 8px; }
 #jpBox .grid input, #jpBox .grid select { width: 150px; }
@@ -109,7 +112,8 @@ body.sideClosed #view { left: 0; }
 .grid input[type=range] { width: 120px; padding: 0; accent-color: var(--accent); }
 .actions { display: flex; flex-wrap: wrap; gap: 5px; max-width: 330px; }
 .hint { color: var(--muted); font-size: 12px; margin-top: 6px; }
-#command .close { margin-left: auto; }
+#command .close { position: absolute; top: 8px; right: 8px; }
+#command .actions, #jpBox .actions { max-width: none; }
 
 [hidden] { display: none !important; }
 #logText { position: absolute; inset: 0; margin: 0; padding: 10px 12px; overflow: auto; font: 12px/1.45 ui-monospace, Menlo, Consolas, monospace; white-space: pre-wrap; word-break: break-word; color: var(--text); }
