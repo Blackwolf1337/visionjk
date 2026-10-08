@@ -312,7 +312,7 @@ const fogShown = () => cam.fly || view.id >= 0;
 // then, after the players and the models were drawn, what is see-through (late), so that glass and water lie
 // over who stands behind them.
 function drawWorldScripted(now, late) {
-	const t = now / 1000;
+	const t = now / 1000, open = viewCulls();
 	gl.useProgram(stageProg.p);
 	gl.uniform1i(stageProg.u.uTex, 0);
 	gl.uniform3fv(stageProg.u.uEye, eye);
@@ -338,7 +338,8 @@ function drawWorldScripted(now, late) {
 		if (!places.length) continue;
 		const fog = fogged ? e.fog : null;
 		// a quad that turns to the viewer has no back
-		setCull(e.sprite ? 2 : e.mat.cull);
+		// both sides where the editor is not set to "Open"
+		setCull(e.sprite || !open ? 2 : e.mat.cull);
 		if (e.sprite && !axes) {
 			axes = cameraAxes();
 			gl.uniform3fv(stageProg.u.uViewLeft, axes.left);

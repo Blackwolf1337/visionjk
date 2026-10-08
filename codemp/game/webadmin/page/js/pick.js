@@ -1,13 +1,11 @@
 // Whether the map is drawn as the game draws it, with its shader scripts: the administration, and the editor with
 // "As in the game" chosen, which it is to begin with. The other choices of the editor are its plain view.
 const gameLook = () => appMode !== 'editor' || $('dbgLight').value === '3';
-// Whether the map is drawn with one side of its surfaces only: as the game draws it once the scripts are there,
-// and the plain view of the editor when "Open" is set. A click on the map then goes through what is not drawn.
-const viewCulls = () => cullSides && !!world && (gameLook() ? !!world.scripted : $('dbgCull').checked);
-// as the game draws it the sides are the ones of the game, there is nothing to switch
-const lookChanged = () => { $('dbgCull').disabled = $('dbgLight').value === '3'; $('dbgCull').parentNode.style.opacity = $('dbgCull').disabled ? 0.45 : ''; };
-$('dbgLight').addEventListener('change', lookChanged);
-lookChanged();
+// Whether the map is drawn with one side of its surfaces only, the side the game draws: the administration once
+// it has the scripts, the editor when "Open" is set, in its plain view and in the look of the game alike. Without
+// it the editor draws both sides, so that a room is closed from outside. A click on the map goes through what
+// is not drawn.
+const viewCulls = () => cullSides && !!world && (appMode === 'editor' ? $('dbgCull').checked : !!world.scripted);
 
 // the debug view of the editor: the triangles of the map as lines
 const lineProg = compile(`#version 300 es

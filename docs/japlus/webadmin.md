@@ -299,9 +299,10 @@ Also changed:
   brighter than the game on mp/ffa3, and it has no shader scripts, no sky and no fog. The choice in the bar of
   the views now begins with "As in the game", which is the renderer of the administration (`gameLook()` in
   `js/pick.js`: the world, the models and which side of a surface is drawn). The three plain views are still
-  there: "Texture and light", "Light only", "Texture only". "Open" belongs to the plain view and is greyed out
-  otherwise: the game look always has the sides of the game. The wireframe lies over both, in the game look
-  drawn forward by a hair of the depth. Until the shader scripts are read the game look is the plain view with
+  there: "Texture and light", "Light only", "Texture only". "Open" works in both: without it the editor draws
+  both sides of every surface, so that a room is closed from outside, with it only the side the game draws
+  (for a day it was greyed out in the game look, which then always had the sides of the game; the user asked
+  why). The wireframe lies over both, in the game look drawn forward by a hair of the depth. Until the shader scripts are read the game look is the plain view with
   the light as it is and without the haze.
 - New: the effects of the game are drawn (`js/fx-parse.js`, `fx-run.js`, `fx-draw.js`, `fx-weapons.js`; the
   user: "Effects/FXes don't show up in the panel"). Nothing of them was in the page: the fire of an
@@ -1146,8 +1147,8 @@ classes for ships (`trigger_space`, `trigger_shipboundary`, `trigger_hyperspace`
 
 The look of the editor (`steps_look.js`, 8 checks, 2026-10-08, mp/ffa3): the editor begins with "As in the
 game"; with its markers off its picture is as bright as the one of the administration from the same camera
-(63.2 against 63.2 of 255 on average); "Texture and light" is brighter (83.9); "Open" is greyed out in the
-one and can be switched in the other; the wireframe is in the picture of both and gone without it; a ray into
+(63.2 against 63.2 of 255 on average, with "Open" set as the administration has it); "Texture and light" is
+brighter (83.9); "Open" switches the sides in the game look too (seen from below the map the picture changes); the wireframe is in the picture of both and gone without it; a ray into
 the middle of the picture finds the same spot of the map in both. The checks of the editor, which had all
 run in the plain view, ran again in the game look: `steps_drafts.js` 68, `steps_labels.js` 23,
 `steps_boxdrag.js` 16, `steps_mouse.js` 19, `steps_group.js` 24, `steps_boxtrigger.js` 24, `steps_pusharc.js`
