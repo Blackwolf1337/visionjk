@@ -410,7 +410,7 @@ body.app-admin #dbg, body.app-admin .editorOnly, body.app-admin #tabs button[dat
 	<div id="dbg">
 		<label title="A marker at every entity of the map"><input type="checkbox" id="dbgMarkers" checked>Entities</label>
 		<label title="The box of every entity: the brushes of a trigger or a door, the size of a class"><input type="checkbox" id="dbgVolumes" checked>Volumes</label>
-		<label title="A line from every entity to what it fires (target and targetname)"><input type="checkbox" id="dbgLinks" checked>Links</label>
+		<label title="A line from every entity to what it fires (target and targetname). When one fires another, the line and the box of the one that was fired light up for three seconds."><input type="checkbox" id="dbgLinks" checked>Links</label>
 		<label title="The brushes that stop players, bots or shots and are not seen in the game"><input type="checkbox" id="dbgClip">Clip</label>
 		<label title="The triangles of the map as lines"><input type="checkbox" id="dbgWire">Wireframe</label>
 		<label title="Only the side of a surface the game draws. From outside a room is open then: its walls and its ceiling face inwards."><input type="checkbox" id="dbgCull">Open</label>
@@ -3489,6 +3489,7 @@ async function pollEntities() {
 		const json = await (await fetch('api/entities', { cache: 'no-store' })).json();
 		ents.clear();
 		for (const e of json.entities) ents.set(e.id, e);
+		takeFired(json.used);
 		renderBudget(json.budget);
 		refreshLinks();
 		if (selectedEnt >= 0 && !ents.has(selectedEnt)) selectEnt(-1);
@@ -3831,6 +3832,22 @@ const linkLines = (() => {
 // the keys with which an entity names the ones it fires
 const LINK_KEYS = new Set(['target', 'target2', 'target3', 'target4', 'target5', 'target6', 'opentarget', 'closetarget', 'paintarget', 'deathtarget']);
 let links = [];		// { from, to, key }: from fires to
+// What fired what just now (used of /api/entities): the line from the one to the other and the box of the one
+// that was fired light up for a few seconds. from is the number of the world when it was fired through the panel.
+const FIRED_MS = 3000;
+let fired = [], firedSeq = -1;		// { from, to, at }, and the number of the last event that was taken
+
+function takeFired(used) {
+	if (!used || !used.length) return;
+	// the numbers start anew with a map
+	if (used[used.length - 1][0] < firedSeq) firedSeq = -1;
+	const now = performance.now();
+	for (const [seq, ago, from, to] of used) {
+		if (seq <= firedSeq) continue;
+		firedSeq = seq;
+		if (ago < FIRED_MS) fired.push({ from, to, at: now - ago });
+	}
+}
 
 function refreshLinks() {
 	const byName = new Map();
@@ -3987,6 +4004,16 @@ function drawEditorLines() {
 		if (volumes) drawEntBox(sel, [1, 0.25, 0.35]);
 		// and the ones that are selected with it
 		if (volumes) for (const id of picked) if (ents.has(id)) drawEntBox(ents.get(id), [1, 0.55, 0.25]);
+		gl.enable(gl.DEPTH_TEST);
+	}
+	// what fired just now, over everything else
+	const now = performance.now();
+	if (fired.length) fired = fired.filter(f => now - f.at < FIRED_MS);
+	if (fired.length) {
+		gl.disable(gl.DEPTH_TEST);
+		gl.uniformMatrix4fv(lineProg.u.uMvp, false, viewProj);
+		if (linked) drawLinkSet(fired, [1, 1, 0.2, 1]);
+		if (volumes) for (const f of fired) if (ents.has(f.to)) drawEntBox(ents.get(f.to), [1, 1, 0.2]);
 		gl.enable(gl.DEPTH_TEST);
 	}
 	gl.useProgram(flatProg.p);

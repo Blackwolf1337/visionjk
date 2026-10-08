@@ -1533,6 +1533,30 @@ static qboolean WA_SpawnRefused( char *err, int errSize ) {
 	return qfalse;
 }
 
+// What fired what, the last of it: the editor lights up the line from one entity to the other. G_UseTargets2
+// says it for every target an entity fires, the panel for what is fired through it (from the world then).
+#define WA_USED_KEEP	64
+#define WA_USED_MS		10000		// older than that is not worth telling any more
+
+typedef struct waUsed_s {
+	int		time;		// level.time
+	int		by, ent;
+} waUsed_t;
+
+static waUsed_t	usedRing[WA_USED_KEEP];
+static int		usedSeq;
+
+void WebAdmin_Used( const gentity_t *by, const gentity_t *ent ) {
+	waUsed_t *u;
+
+	if ( listenSocket == BG_INVALID_SOCKET || !by || !ent )
+		return;
+	u = &usedRing[usedSeq++ % WA_USED_KEEP];
+	u->time = level.time;
+	u->by = by->s.number;
+	u->ent = ent->s.number;
+}
+
 static void WA_ApiEntities( waConnection_t *c ) {
 	waBuffer_t	b = { 0 };
 	qboolean	first = qtrue;
@@ -1589,6 +1613,18 @@ static void WA_ApiEntities( waConnection_t *c ) {
 			WA_BufAppend( &b, "]", 1 );
 		}
 		WA_BufAppend( &b, "}", 1 );
+	}
+
+	// what fired what in the last seconds: the number of the event, how long ago, who, whom
+	WA_BufAppend( &b, "],\"used\":[", 10 );
+	first = qtrue;
+	for ( i = usedSeq > WA_USED_KEEP ? usedSeq - WA_USED_KEEP : 0; i < usedSeq; i++ ) {
+		const waUsed_t *u = &usedRing[i % WA_USED_KEEP];
+
+		if ( level.time - u->time > WA_USED_MS )
+			continue;
+		WA_BufPrintf( &b, "%s[%d,%d,%d,%d]", first ? "" : ",", i, level.time - u->time, u->by, u->ent );
+		first = qfalse;
 	}
 	WA_BufAppend( &b, "]}", 2 );
 
@@ -1935,6 +1971,7 @@ static void WA_ApiEntity( waConnection_t *c, const char *body ) {
 		} else if ( ent->flags & FL_INACTIVE ) {
 			WA_EntityResult( c, qfalse, "this entity is inactive, a target_activate has to wake it first", id );
 		} else {
+			WebAdmin_Used( &g_entities[ENTITYNUM_WORLD], ent );
 			GlobalUse( ent, &g_entities[ENTITYNUM_WORLD], &g_entities[ENTITYNUM_WORLD] );
 			// it may be gone now (something that breaks, a trigger that fires once)
 			WA_EntityResult( c, qtrue, "fired", ent->inuse ? id : -1 );

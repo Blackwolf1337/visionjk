@@ -663,6 +663,7 @@ void G_UseTargets2( gentity_t *ent, gentity_t *activator, const char *string ) {
 			trap->Print ("WARNING: Entity used itself.\n");
 		} else {
 			if ( t->use ) {
+				WebAdmin_Used( ent, t );
 				GlobalUse(t, ent, activator);
 			}
 		}

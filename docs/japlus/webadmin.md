@@ -82,7 +82,7 @@ the answer tells the page that the numbers started over.
 | `GET /api/shaders` | the names of the shader scripts of the game, in the order the engine reads them in |
 | `GET /api/anims` | animation names in `animNumber_t` order |
 | `GET /api/classes` | everything that can be spawned, and the items with model and icon |
-| `GET /api/entities` | the entities with their keys. One that is made of brushes has `moved` and `turned`: how far its brushes are from where the map file has them. `budget`: entities, models, sounds and effects in use and the most there can be. `brushModels`: how many brush models the map has |
+| `GET /api/entities` | the entities with their keys. One that is made of brushes has `moved` and `turned`: how far its brushes are from where the map file has them. `budget`: entities, models, sounds and effects in use and the most there can be. `brushModels`: how many brush models the map has. `used`: what fired what in the last ten seconds, each as `[number of the event, milliseconds ago, entity that fired, entity that was fired]`, the first entity is the world (1022) for what the panel fired |
 | `GET /api/list?kind=` | names the fields of the page offer: `maps`, `effects` and `music` (the files of the game), `npcs` (the types of the `.npc` files), `bots`. `kind=dir&dir=&ext=`: the folders and files of one folder below `sound`, `models`, `music`, `effects` or `maps`, with the endings of `ext` (`.wav,.mp3`) |
 | `GET /api/bans` | the addresses that are banned, as `addip` and `removeip` take them (a `*` for a part that matches anything) |
 | `GET /api/waypoints` | the route of the bots: every waypoint with its place, its flags and the numbers of the ones it leads to. `editing`: it was changed and not saved, the bots stand still |
@@ -231,6 +231,12 @@ Also changed:
   inactive, and an NPC (a vehicle takes whoever uses it on board without asking whether that is a player).
   The use functions of the game were read for this: every one that reaches into the client of what fired it
   asks first whether there is one.
+- New: what fires what lights up in the editor (`WebAdmin_Used`, `used` of `/api/entities`, `takeFired`). The
+  game tells the panel every time an entity fires one of its targets (one line in `G_UseTargets2`), the last
+  64 of them are kept. With "Links" on, the line from the one to the other turns yellow for three seconds,
+  with "Volumes" the box of the one that was fired. So a trigger that a player walks into, a button, a chain
+  of relays or a click on "Fire" can be followed while it happens. Only what goes through a target is told:
+  a door that its own trigger opens when somebody walks up to it is not.
 - New: several entities selected at once in the World tab. Ctrl and a click on a marker adds an entity to the
   selected one or takes it out again, a click without Ctrl or Escape ends it. Moving (the drag, the right-click,
   the fields of the position, "To floor", Shift and the keys) takes the others along by the same way, Delete,
@@ -825,10 +831,16 @@ when flying. The wheel zooms and sets the flying speed. A right-click teleports,
 adds a waypoint. Undo, the Z field, Remove and Save of a route. Copy, paste, the stored views and the keys of
 the fly camera went through the keyboard. What that is not: a person at a real browser on a real GPU.
 
+What fires what (`steps_trace.js`, 4 checks, the same day, mp/ffa3): a trigger_multiple fired through the
+panel gave five events, the world firing the trigger and the trigger firing each of its four lifts, nothing
+before the click and nothing after, and the light was out after three seconds.
+
 The tab Load (`steps_load.js`, 10 checks, the same day, Linux, a private server with four bots and nobody on
 it): 40 frames in a second at `sv_fps 40`, a frame of 0.06 ms on average and 0.2 ms at most, 0.3 and 1.1 ms
 while the page read its files, a wait of 25 ms, the entities the editor counts too. A value came every
 second, a number the server does not have got all it keeps, and nothing was asked for with the tab closed.
+In one run a second had a frame of 30 ms: the page was reading the animations of the players just then,
+8 MB out of a pk3, which the server reads in one go.
 Not tried: a server under real load, where the yellow marks would show, and the clock on Windows.
 
 Fire, the rectangle and teams of doors (`steps_fire.js`, 11 checks, the same day): on mp/ffa3 Fire sent a lift
