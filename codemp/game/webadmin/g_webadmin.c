@@ -140,6 +140,8 @@ static char		*reloadText;
 
 static const char *WA_TeamName( team_t team );
 static void WA_ReloadMap( waConnection_t *c );
+static qboolean WA_Running( void );
+static qboolean WA_GravityIsSet( int clientNum );
 
 /*
 ==============================================================================
@@ -693,7 +695,7 @@ static void WA_ApiState( waConnection_t *c, const char *query ) {
 			cl->pers.connected == CON_CONNECTED ? "true" : "false", ps->stats[STAT_MAX_HEALTH],
 			ps->iModelScale ? ps->iModelScale : 100, ( ent->flags & FL_GODMODE ) ? "true" : "false" );
 		WA_BufPrintf( &slow, ",\"noclip\":%s", cl->noclip ? "true" : "false" );		// not in JKAdmin
-		WA_BufPrintf( &slow, ",\"gravity\":%d,\"ownGravity\":%s", ps->gravity, WA_BOOL( clientGravitySet[i] ) );	// not in JKAdmin
+		WA_BufPrintf( &slow, ",\"gravity\":%d,\"ownGravity\":%s", ps->gravity, WA_BOOL( WA_GravityIsSet( i ) ) );	// not in JKAdmin
 		WA_BufPrintf( &slow, ",\"schizo\":%s", WA_BOOL( G_SchizoActive( i ) ) );		// not in JKAdmin, g_schizo.c
 		WA_BufPrintf( &slow, ",\"flatulence\":%s", WA_BOOL( G_FlatulenceActive( i ) ) );	// not in JKAdmin, g_flatulence.c
 		WA_BufPrintf( &slow, ",\"disorient\":%s", WA_BOOL( G_DisorientActive( i ) ) );	// not in JKAdmin, g_disorient.c
@@ -1677,7 +1679,7 @@ static int		usedSeq;
 void WebAdmin_Used( const gentity_t *by, const gentity_t *ent ) {
 	waUsed_t *u;
 
-	if ( listenSocket == BG_INVALID_SOCKET || !by || !ent )
+	if ( !WA_Running() || !by || !ent )
 		return;
 	u = &usedRing[usedSeq++ % WA_USED_KEEP];
 	u->time = level.time;
@@ -2266,11 +2268,19 @@ the page asks for the lines it does not have yet.
 ==============================================================================
 */
 
+// The engine loads the module again for every map and map_restart, the chat lines of the last one are gone.
+// The lines of this map have its start time with them, by which a page tells them from the ones it has.
+static void WA_ChatInit( void ) {
+	qtime_t now;
+
+	chatEpoch = trap->RealTime( &now );
+}
+
 void WebAdmin_Chat( const char *mode, const gentity_t *from, const gentity_t *to, const char *text ) {
 	waChatLine_t	*line;
 	qtime_t			now;
 
-	if ( listenSocket == BG_INVALID_SOCKET )
+	if ( !WA_Running() )
 		return;
 
 	line = &chatLines[chatSeq % WA_MAX_CHAT];
@@ -2622,7 +2632,6 @@ static void WA_ApiFsList( waConnection_t *c, const char *query ) {
 	WA_BufFree( &b );
 }
 
-// GET /api/fs/get?root=&path=<file>[&text=1]: the file as it is for a download, or as UTF-8 text for the editor
 /*
 =================
 WebAdmin_Log, WA_ApiLog
@@ -2723,6 +2732,7 @@ static void WA_ApiLog( waConnection_t *c, const char *query ) {
 	WA_BufFree( &b );
 }
 
+// GET /api/fs/get?root=&path=<file>[&text=1]: the file as it is for a download, or as UTF-8 text for the editor
 static void WA_ApiFsGet( waConnection_t *c, const char *query ) {
 	char		rel[WA_FS_MAX_PATH + 1], path[MAX_OSPATH], flag[4], header[WA_FS_MAX_PATH + 128];
 	qboolean	install, exists, isDir;
@@ -3092,6 +3102,22 @@ static void WA_ReloadSpawn( void ) {
 	free( reloadText );
 	reloadText = NULL;
 	trap->Print( "Web admin: %d placed objects are back after the map reload%s\n", count, lost ? va( ", %d did not spawn", lost ) : "" );
+}
+
+// every frame: what a reload left for this start of the map is spawned once the map has settled
+static void WA_EntitiesFrame( void ) {
+	if ( reloadText && level.time - level.startTime >= WA_RELOAD_DELAY )
+		WA_ReloadSpawn();
+}
+
+// the end of the map: the keys that were kept of every entity, and a reload that never got its turn
+static void WA_EntitiesShutdown( void ) {
+	int i;
+
+	for ( i = 0; i < MAX_GENTITIES; i++ )
+		WebAdmin_EntityFreed( i );
+	free( reloadText );
+	reloadText = NULL;
 }
 
 /*
@@ -3529,6 +3555,21 @@ static void WA_ApiModels( waConnection_t *c ) {
 	WA_BufFree( &b );
 }
 
+// every frame: the list of the models is looked for a little at a time while a page waits for it
+static void WA_AssetsFrame( void ) {
+	if ( modelScan == 1 )
+		WA_ModelScanFrame();
+}
+
+// the end of the map: what was found out about it and the list of the models
+static void WA_AssetsShutdown( void ) {
+	mapModels = -1;
+	mapModelsName[0] = '\0';
+	WA_BufFree( &modelQueue );
+	WA_BufFree( &modelNames );
+	modelQueueNext = modelCount = modelScan = 0;
+}
+
 /*
 ==============================================================================
 
@@ -3536,6 +3577,11 @@ Connections
 
 ==============================================================================
 */
+
+// qtrue: the panel listens. It does not without a password, or when its port could not be had.
+static qboolean WA_Running( void ) {
+	return (qboolean)( listenSocket != BG_INVALID_SOCKET );
+}
 
 static void WA_CloseConnection( waConnection_t *c ) {
 	if ( c->file )
@@ -3916,13 +3962,24 @@ void WebAdmin_Init( void ) {
 	}
 
 	BG_SocketNonBlocking( listenSocket );
-	// the engine loads the module again for every map and map_restart, the chat lines of the last one are gone
-	{
-		qtime_t now;
-		chatEpoch = trap->RealTime( &now );
-	}
+	WA_ChatInit();
 	listenPort = g_webPort.integer;
 	trap->Print( "Web admin listening on http://%s:%d/\n", g_webBind.string[0] ? g_webBind.string : "0.0.0.0", listenPort );
+}
+
+// qtrue: this player has a gravity of his own
+static qboolean WA_GravityIsSet( int clientNum ) {
+	return clientGravitySet[clientNum];
+}
+
+// the own gravity goes with the player, the next one in his slot starts without
+static void WA_GravityFrame( void ) {
+	int i;
+
+	for ( i = 0; i < level.maxclients; i++ ) {
+		if ( clientGravitySet[i] && level.clients[i].pers.connected == CON_DISCONNECTED )
+			clientGravitySet[i] = qfalse;
+	}
 }
 
 /*
@@ -3943,22 +4000,16 @@ void WebAdmin_Frame( void ) {
 	const int	now = trap->Milliseconds();
 	int			i;
 
-	if ( reloadText && level.time - level.startTime >= WA_RELOAD_DELAY )
-		WA_ReloadSpawn();
+	WA_EntitiesFrame();
 
-	if ( listenSocket == BG_INVALID_SOCKET )
+	if ( !WA_Running() )
 		return;
 
 	WA_PerfFrameBegin();
 
-	if ( modelScan == 1 )
-		WA_ModelScanFrame();
+	WA_AssetsFrame();
 
-	// the own gravity goes with the player, the next one in his slot starts without
-	for ( i = 0; i < level.maxclients; i++ ) {
-		if ( clientGravitySet[i] && level.clients[i].pers.connected == CON_DISCONNECTED )
-			clientGravitySet[i] = qfalse;
-	}
+	WA_GravityFrame();
 
 	WA_Accept();
 
@@ -3999,14 +4050,6 @@ void WebAdmin_Shutdown( void ) {
 		listenSocket = BG_INVALID_SOCKET;
 	}
 
-	for ( i = 0; i < MAX_GENTITIES; i++ )
-		WebAdmin_EntityFreed( i );
-
-	mapModels = -1;
-	mapModelsName[0] = '\0';
-	free( reloadText );
-	reloadText = NULL;
-	WA_BufFree( &modelQueue );
-	WA_BufFree( &modelNames );
-	modelQueueNext = modelCount = modelScan = 0;
+	WA_EntitiesShutdown();
+	WA_AssetsShutdown();
 }
