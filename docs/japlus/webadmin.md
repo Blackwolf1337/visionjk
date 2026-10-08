@@ -175,6 +175,10 @@ Also changed:
   the functions of the waypoint commands of the game (`bot_wp_add`, `bot_wp_rem`, `bot_wp_save`), and as with
   those the bots stand still from the first change until the route is saved: which waypoint leads to which is
   only worked out again by the save.
+- New: the fly camera, in both modes (the button at the bottom right of the map, or C). The camera of JKAdmin
+  looks at a point of the map from above. Flying, it is in the map: W A S D go along and across the line of
+  sight, Q and E down and up, the mouse turns the head, the wheel sets the speed, Shift is faster. Leaving it
+  puts the point the other camera looks at in front of where one was. Picking, placing and "Focus" work in both.
 - New: the server refuses to place what would end it (`WA_SpawnRefused`): a class made of brushes (`trigger_`,
   `func_`) without a `model` key that names a brush model of the map, the classes whose spawn function raises
   an error without a key (`target_speaker`, `target_play_music`, `target_level_change`,

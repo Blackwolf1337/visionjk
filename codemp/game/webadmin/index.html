@@ -226,6 +226,7 @@ body.fp #help, body.fp #command, body.fp #entPanel { display: none; }
 #appMode button:last-child { border-radius: 0 3px 3px 0; border-left: 0; }
 #appMode button.on { background: var(--accent); border-color: var(--accent); color: #fff; }
 #dbg { position: absolute; left: 10px; top: 10px; display: flex; align-items: center; gap: 12px; color: var(--muted); font-size: 12px; background: rgba(13,13,15,.75); border: 1px solid var(--line); padding: 5px 8px; border-radius: 3px; }
+#flyBtn { position: absolute; right: 10px; bottom: 10px; }
 #dbg label { display: flex; align-items: center; gap: 4px; cursor: pointer; }
 #dbg input { width: auto; }
 #dbg select { padding: 1px 4px; }
@@ -356,12 +357,13 @@ body.app-admin #dbg, body.app-admin .editorOnly, body.app-admin #tabs button[dat
 		<label title="The triangles of the map as lines"><input type="checkbox" id="dbgWire">Wireframe</label>
 		<select id="dbgLight" title="What the surfaces of the map show"><option value="0">Texture and light</option><option value="1">Light only</option><option value="2">Texture only</option></select>
 	</div>
+	<button id="flyBtn" title="Fly through the map instead of looking at it from above (C). W A S D fly, Q and E go down and up, the mouse turns the head, the wheel sets the speed, Shift is faster.">Fly</button>
 	<div id="loading">Loading map...</div>
 	<div id="hud"><canvas id="hudCanvas"></canvas><div class="hud-top"><span id="hudName"></span><button id="fpExit">Exit (Esc)</button></div></div>
 	<div id="help">
 		<kbd>LMB</kbd> select, drag to pan &nbsp; <kbd>RMB</kbd> teleport selected<br>
 		<kbd>W A S D</kbd> move &nbsp; <kbd>Q E</kbd> / <kbd>MMB</kbd> rotate &nbsp; wheel zoom<br>
-		<kbd>F</kbd> follow selected &nbsp; <kbd>Esc</kbd> deselect &nbsp; <kbd>PgUp</kbd> <kbd>PgDn</kbd> camera height<span class="editorOnly"><br>
+		<kbd>F</kbd> follow selected &nbsp; <kbd>Esc</kbd> deselect &nbsp; <kbd>PgUp</kbd> <kbd>PgDn</kbd> camera height &nbsp; <kbd>C</kbd> fly<span class="editorOnly"><br>
 		<kbd>Del</kbd> delete entity &nbsp; <kbd>Shift</kbd>+arrows move entity &nbsp; <kbd>Ctrl Z</kbd> <kbd>Ctrl Y</kbd> undo, redo</span>
 	</div>
 	<div id="command">
@@ -1546,17 +1548,50 @@ function pickGround(origin, dir) {
 /* camera (RTS style, Z up like the game)                              */
 /* ------------------------------------------------------------------ */
 
-const cam = { target: [0, 0, 0], yaw: 45, pitch: 55, dist: 1500, follow: -1 };
+// Two ways to look at the map. Around a point on it, from above (target, dist), as JKAdmin has it. Or flying:
+// the camera is at pos and looks along yaw and pitch, which is how the inside of a map is looked at. A pitch
+// above zero looks down in both.
+const cam = { target: [0, 0, 0], yaw: 45, pitch: 55, dist: 1500, follow: -1, fly: false, pos: [0, 0, 0], flySpeed: 600 };
+
+function camDir() {
+	const y = cam.yaw * Math.PI / 180, p = cam.pitch * Math.PI / 180;
+	return [Math.cos(y) * Math.cos(p), Math.sin(y) * Math.cos(p), -Math.sin(p)];
+}
+
+// into flying from where the camera is, and out of it to the point it looks at
+function setFly(on) {
+	if (on === cam.fly) return;
+	if (on) {
+		cam.pos = eye.slice();
+		cam.follow = -1;
+	} else {
+		cam.pitch = Math.min(89, Math.max(10, cam.pitch));
+		const d = camDir();
+		cam.target = cam.pos.map((v, i) => v + d[i] * cam.dist);
+	}
+	cam.fly = on;
+	$('flyBtn').classList.toggle('armedPlace', on);
+}
 let viewProj = null, invViewProj = null, eye = [0, 0, 0];
 
 function resetCamera() {
 	if (!world) return;
+	setFly(false);
 	const b = world.bounds;
 	cam.target = [(b.mins[0] + b.maxs[0]) / 2, (b.mins[1] + b.maxs[1]) / 2, (b.mins[2] + b.maxs[2]) / 2];
 	cam.dist = Math.max(b.maxs[0] - b.mins[0], b.maxs[1] - b.mins[1]) * 0.75;
 }
 
 function updateCamera() {
+	// following a player is done around him
+	if (cam.fly && cam.follow >= 0) setFly(false);
+	if (cam.fly) {
+		const d = camDir();
+		eye = cam.pos.slice();
+		viewProj = M4.mul(M4.perspective(55 * Math.PI / 180, canvas.width / canvas.height, 4, 65536), M4.lookAt(eye, eye.map((v, i) => v + d[i]), [0, 0, 1]));
+		invViewProj = M4.invert(viewProj);
+		return;
+	}
 	if (cam.follow >= 0) {
 		const p = players.get(cam.follow);
 		if (p) cam.target = p.draw.slice();
@@ -1910,6 +1945,10 @@ window.addEventListener('mousemove', e => {
 		const rect = canvas.getBoundingClientRect(), ray = screenRay(e.clientX - rect.left, e.clientY - rect.top);
 		const hit = snapHit(pickGround(ray.origin, ray.dir));
 		if (hit) ghost = { id: drag.ent.id, pos: [hit[0], hit[1], hit[2] + drag.ent.height] };
+	} else if (cam.fly && drag.button !== 2) {
+		// flying: the mouse turns the head
+		cam.yaw = drag.yaw - dx * 0.25;
+		cam.pitch = Math.min(89, Math.max(-89, drag.pitch + dy * 0.25));
 	} else if (drag.button === 1 || (drag.button === 0 && e.altKey)) {
 		cam.yaw = drag.yaw - dx * 0.3;
 		cam.pitch = Math.min(89, Math.max(10, drag.pitch + dy * 0.3));
@@ -1964,7 +2003,8 @@ window.addEventListener('mouseup', e => {
 });
 canvas.addEventListener('wheel', e => {
 	e.preventDefault();
-	cam.dist = Math.min(20000, Math.max(80, cam.dist * Math.pow(1.0015, e.deltaY)));
+	if (cam.fly) cam.flySpeed = Math.min(6000, Math.max(50, cam.flySpeed * Math.pow(1.0015, -e.deltaY)));
+	else cam.dist = Math.min(20000, Math.max(80, cam.dist * Math.pow(1.0015, e.deltaY)));
 }, { passive: false });
 window.addEventListener('keydown', e => {
 	if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') return;
@@ -1974,6 +2014,7 @@ window.addEventListener('keydown', e => {
 	if (e.key.toLowerCase() === 'v' && (selected >= 0 || view.id >= 0)) setFirstPerson(view.id >= 0 ? -1 : selected);
 	if ((e.key === 'Delete' || e.key === 'Backspace') && mode === 'world' && selectedEnt >= 0) $('entDel').click();
 	if ((e.key === 'Delete' || e.key === 'Backspace') && mode === 'routes' && wp.selected >= 0) $('wpRemove').click();
+	if (e.key.toLowerCase() === 'c' && !e.ctrlKey && !e.metaKey && !e.altKey) setFly(!cam.fly);
 	if (e.key.toLowerCase() === 'f' && selected >= 0) { cam.follow = cam.follow === selected ? -1 : selected; renderCommand(); }
 });
 window.addEventListener('keyup', e => keys.delete(e.key.toLowerCase()));
@@ -2007,16 +2048,24 @@ function frame(now) {
 	const speed = cam.dist * 1.2 * dt, y = cam.yaw * Math.PI / 180;
 	const fwd = (keys.has('w') || keys.has('arrowup') ? 1 : 0) - (keys.has('s') || keys.has('arrowdown') ? 1 : 0);
 	const right = (keys.has('d') || keys.has('arrowright') ? 1 : 0) - (keys.has('a') || keys.has('arrowleft') ? 1 : 0);
-	if (fwd || right) {
-		cam.follow = -1;
-		cam.target[0] += (Math.cos(y) * fwd + Math.sin(y) * right) * speed;
-		cam.target[1] += (Math.sin(y) * fwd - Math.cos(y) * right) * speed;
-	}
-	if (keys.has('q')) cam.yaw += 90 * dt;
-	if (keys.has('e')) cam.yaw -= 90 * dt;
 	// up and down: a map has floors
 	const rise = (keys.has('pageup') ? 1 : 0) - (keys.has('pagedown') ? 1 : 0);
-	if (rise) { cam.follow = -1; cam.target[2] += rise * speed; }
+	if (cam.fly) {
+		// along the line of sight and across it, Q and E down and up, Shift faster
+		const d = camDir(), v = cam.flySpeed * (keys.has('shift') ? 3 : 1) * dt, up = rise + (keys.has('e') ? 1 : 0) - (keys.has('q') ? 1 : 0);
+		cam.pos[0] += (d[0] * fwd + Math.sin(y) * right) * v;
+		cam.pos[1] += (d[1] * fwd - Math.cos(y) * right) * v;
+		cam.pos[2] += (d[2] * fwd + up) * v;
+	} else {
+		if (fwd || right) {
+			cam.follow = -1;
+			cam.target[0] += (Math.cos(y) * fwd + Math.sin(y) * right) * speed;
+			cam.target[1] += (Math.sin(y) * fwd - Math.cos(y) * right) * speed;
+		}
+		if (keys.has('q')) cam.yaw += 90 * dt;
+		if (keys.has('e')) cam.yaw -= 90 * dt;
+		if (rise) { cam.follow = -1; cam.target[2] += rise * speed; }
+	}
 
 	// smooth player movement between polls
 	const k = Math.min(1, (now - lastPoll) / pollInterval);
@@ -2669,7 +2718,7 @@ $('entities').addEventListener('click', e => {
 	if (!tr) return;
 	selectEnt(+tr.dataset.id);
 	const ent = ents.get(selectedEnt);
-	if (ent) { cam.follow = -1; cam.target = ent.pos.slice(); }
+	if (ent) { const far = cam.dist; focusEntity(selectedEnt); cam.dist = far; }
 });
 
 function entityAt(x, y) {
@@ -3115,6 +3164,8 @@ function focusEntity(id) {
 	cam.follow = -1;
 	cam.target = ent.pos.slice();
 	cam.dist = Math.min(cam.dist, 700);
+	// flying: to a place it is seen from, looking the way the camera looks
+	if (cam.fly) { const d = camDir(); cam.pos = ent.pos.map((v, i) => v - d[i] * 320); }
 }
 
 for (const id of ['posX', 'posY', 'posZ']) {
@@ -3132,6 +3183,7 @@ for (const id of ['angP', 'angY', 'angR']) {
 	});
 }
 $('entFocus').addEventListener('click', () => focusEntity(selectedEnt));
+$('flyBtn').addEventListener('click', () => setFly(!cam.fly));
 $('entFloor').addEventListener('click', () => {
 	const ent = ents.get(selectedEnt);
 	if (!ent) return;
