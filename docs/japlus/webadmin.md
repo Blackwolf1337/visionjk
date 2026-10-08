@@ -761,7 +761,7 @@ when flying. The wheel zooms and sets the flying speed. A right-click teleports,
 adds a waypoint. Undo, the Z field, Remove and Save of a route. Copy, paste, the stored views and the keys of
 the fly camera went through the keyboard. What that is not: a person at a real browser on a real GPU.
 
-Several entities at once (`steps_group.js`, 18 checks, the same day): Ctrl and a click selected three and took
+Several entities at once (`steps_group.js`, 20 checks, the same day): Ctrl and a click selected three and took
 one out again, Shift and Page Up lifted the three by one grid step as one step of undo, Ctrl+Z and Ctrl+Y put
 them back and up again, the Z field moved the others by as much, a paste of the three stood as the copied ones,
 Delete took them away and undo brought them back, Duplicate made three more, and at the end the map had the
