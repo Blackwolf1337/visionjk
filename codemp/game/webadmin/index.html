@@ -5927,12 +5927,13 @@ uniform mat4 uMvp; out vec2 vUv;
 void main() { vUv = aUv; gl_Position = uMvp * vec4(aPos, 1.0); }`,
 `#version 300 es
 precision mediump float;
-in vec2 vUv; uniform vec3 uColor; out vec4 o;
+in vec2 vUv; uniform vec3 uColor; uniform float uRound; out vec4 o;
 void main() {
-	float a = 1.0 - abs(vUv.x);
-	float tip = smoothstep(1.0, 0.92, vUv.y);
+	// a blade: bright along its middle, with a soft tip. uRound: a ball of light instead, bright in its middle
+	float a = uRound > 0.5 ? max(0.0, 1.0 - length(vec2(vUv.x, vUv.y * 2.0 - 1.0))) : 1.0 - abs(vUv.x);
+	float tip = uRound > 0.5 ? 1.0 : smoothstep(1.0, 0.92, vUv.y);
 	float glow = a * a * tip;
-	float core = smoothstep(0.62, 0.85, a) * tip;
+	float core = smoothstep(0.62, 0.85, a) * tip * (uRound > 0.5 ? max(uColor.r, max(uColor.g, uColor.b)) : 1.0);
 	o = vec4((uColor * glow * 1.4 + vec3(core)) , 1.0);
 }`);
 const bladeVao = gl.createVertexArray(), bladeBuf = gl.createBuffer();
@@ -5961,14 +5962,15 @@ const SHOT_BANG = { 11: [60, 450], 12: [70, 500], 14: [90, 550], 15: [60, 450] }
 const flashes = [];		// { pos, weapon, alt, t }
 
 function drawShots(k) {
-	const now = performance.now();
+	const now = performance.now(), up = flashes.length ? cameraAxes().up : null;
 	for (let i = flashes.length - 1; i >= 0; i--) {
 		const f = flashes[i], bang = (f.alt && SHOT_BANG_ALT[f.weapon]) || SHOT_BANG[f.weapon] || [7, 130], age = (now - f.t) / bang[1];
 		if (age >= 1) { flashes.splice(i, 1); continue; }
 		// it grows to its size at once and fades
 		const r = bang[0] * Math.min(1, 0.4 + age * 2), fade = (1 - age) * (1 - age);
 		const rgb = ((f.alt && SHOT_BOLT_ALT[f.weapon]) || SHOT_BOLT[f.weapon] || [0, 0, [1, 0.7, 0.3]])[2].map(v => Math.min(1, v + 0.25) * fade);
-		blades.push({ org: [f.pos[0], f.pos[1], f.pos[2] - r], dir: [0, 0, 1], len: r * 2, radius: r * 0.45, rgb });
+		// a square that faces the camera, as wide as it is high (a blade is 2.2 times its radius to each side)
+		blades.push({ org: [f.pos[0] - up[0] * r, f.pos[1] - up[1] * r, f.pos[2] - up[2] * r], dir: up, len: r * 2, radius: r / 2.2, rgb, round: true });
 	}
 	for (const m of (state && state.shots) || []) {
 		const weapon = m[1], pos = [m.prev[0] + (m[3] - m.prev[0]) * k, m.prev[1] + (m[4] - m.prev[1]) * k, m.prev[2] + (m[5] - m.prev[2]) * k];
@@ -6007,6 +6009,7 @@ function drawBlades() {
 			tip[0] - side[0], tip[1] - side[1], tip[2] - side[2], -1, 1,
 			tip[0] + side[0], tip[1] + side[1], tip[2] + side[2], 1, 1]));
 		gl.uniform3fv(bladeProg.u.uColor, b.rgb || SABER_COLORS[b.color] || SABER_COLORS[4]);
+		gl.uniform1f(bladeProg.u.uRound, b.round ? 1 : 0);
 		gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 	}
 	gl.depthMask(true);
