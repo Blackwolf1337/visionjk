@@ -2604,6 +2604,113 @@ static void WA_ModelScanFrame( void ) {
 	}
 }
 
+/*
+=================
+WA_ApiWaypoints, WA_ApiWaypoint
+
+Not in JKAdmin. The waypoints the bots walk along (ai_wpnav.c), for the editor of the page: where they are and
+which ones each leads to, and adding, removing and saving them with the functions the waypoint commands of the
+game use (bot_wp_add, bot_wp_rem, bot_wp_save). As with those commands the bots stand still from the first
+change until the route is saved: what leads where is only worked out again by the save.
+=================
+*/
+extern wpobject_t	*gWPArray[MAX_WPARRAY_SIZE];	// ai_wpnav.c
+extern int			gWPNum;
+extern float		gDeactivated;
+void	CreateNewWP( vec3_t origin, int flags );
+int		CreateNewWP_InTrail( vec3_t origin, int flags, int afterindex );
+void	RemoveWP_InTrail( int afterindex );
+int		SavePathData( const char *filename );
+
+static void WA_ApiWaypoints( waConnection_t *c ) {
+	waBuffer_t	b = { 0 };
+	int			i, n;
+
+	WA_BufPrintf( &b, "{\"max\":%d,\"editing\":%s,\"points\":[", MAX_WPARRAY_SIZE, WA_BOOL( gDeactivated != 0 ) );
+	for ( i = 0; i < gWPNum; i++ ) {
+		const wpobject_t *wp = gWPArray[i];
+
+		if ( i )
+			WA_BufAppend( &b, ",", 1 );
+		if ( !wp || !wp->inuse ) {
+			WA_BufAppend( &b, "null", 4 );
+			continue;
+		}
+		WA_BufPrintf( &b, "{\"flags\":%d,\"pos\":", wp->flags );
+		WA_AppendVec( &b, wp->origin );
+		WA_BufAppend( &b, ",\"next\":[", 9 );
+		for ( n = 0; n < wp->neighbornum && n < MAX_NEIGHBOR_SIZE; n++ )
+			WA_BufPrintf( &b, "%s%d", n ? "," : "", wp->neighbors[n].num );
+		WA_BufAppend( &b, "]}", 2 );
+	}
+	WA_BufAppend( &b, "]}", 2 );
+	WA_RespondJson( c, &b );
+	WA_BufFree( &b );
+}
+
+// POST /api/waypoint: op add (x, y, z, flags, and after: the waypoint it comes behind, none for the end),
+// remove (index) or save
+static void WA_ApiWaypoint( waConnection_t *c, const char *body ) {
+	char	op[16], value[32], mapname[MAX_QPATH];
+	vec3_t	origin;
+	int		index = -1;
+
+	WA_FormValue( body, "op", op, sizeof( op ) );
+	WA_LogUse( c, va( "waypoint %.15s %.60s", op, strchr( body, '&' ) ? strchr( body, '&' ) + 1 : "" ) );
+
+	if ( !strcmp( op, "add" ) ) {
+		static const char *const axes[3] = { "x", "y", "z" };
+		int k, flags = 0;
+
+		if ( gWPNum >= MAX_WPARRAY_SIZE ) {
+			WA_ActionResult( c, qfalse, va( "the route is full, %d waypoints", MAX_WPARRAY_SIZE ) );
+			return;
+		}
+		for ( k = 0; k < 3; k++ ) {
+			if ( !WA_FormValue( body, axes[k], value, sizeof( value ) ) ) {
+				WA_ActionResult( c, qfalse, "no place for the waypoint" );
+				return;
+			}
+			origin[k] = Com_Clamp( -MAX_WORLD_COORD, MAX_WORLD_COORD, atof( value ) );
+		}
+		if ( WA_FormValue( body, "flags", value, sizeof( value ) ) )
+			flags = atoi( value );
+		if ( WA_FormValue( body, "after", value, sizeof( value ) ) && value[0] )
+			index = atoi( value );
+
+		if ( index >= 0 && index < gWPNum - 1 )
+			CreateNewWP_InTrail( origin, flags, index );
+		else
+			CreateNewWP( origin, flags );
+		gDeactivated = 1;
+		WA_ActionResult( c, qtrue, va( "waypoint added, %d now. The bots wait until the route is saved", gWPNum ) );
+	} else if ( !strcmp( op, "remove" ) ) {
+		if ( WA_FormValue( body, "index", value, sizeof( value ) ) && value[0] )
+			index = atoi( value );
+		if ( index < 0 || index >= gWPNum ) {
+			WA_ActionResult( c, qfalse, "no such waypoint" );
+			return;
+		}
+		RemoveWP_InTrail( index );
+		gDeactivated = 1;
+		WA_ActionResult( c, qtrue, va( "waypoint removed, %d left. The bots wait until the route is saved", gWPNum ) );
+	} else if ( !strcmp( op, "save" ) ) {
+		if ( !gWPNum ) {
+			WA_ActionResult( c, qfalse, "there are no waypoints to save" );
+			return;
+		}
+		trap->Cvar_VariableStringBuffer( "mapname", mapname, sizeof( mapname ) );
+		if ( SavePathData( mapname ) ) {
+			gDeactivated = 0;
+			WA_ActionResult( c, qtrue, va( "saved as botroutes/%s.wnt, %d waypoints. The bots walk again", mapname, gWPNum ) );
+		} else {
+			WA_ActionResult( c, qfalse, "the route could not be saved, the server console says why" );
+		}
+	} else {
+		WA_ActionResult( c, qfalse, "unknown op" );
+	}
+}
+
 extern char NPCParms[];		// NPC_stats.c: the text of every .npc file
 
 /*
@@ -2841,6 +2948,10 @@ static void WA_HandleRequest( waConnection_t *c, char *head, char *body, int bod
 		WA_ApiClassDoc( c );
 	} else if ( !strcmp( method, "GET" ) && !strcmp( path, "/api/list" ) ) {
 		WA_ApiList( c, query );
+	} else if ( !strcmp( method, "GET" ) && !strcmp( path, "/api/waypoints" ) ) {
+		WA_ApiWaypoints( c );
+	} else if ( !strcmp( method, "POST" ) && !strcmp( path, "/api/waypoint" ) ) {
+		WA_ApiWaypoint( c, body );
 	} else if ( !strcmp( method, "GET" ) && !strcmp( path, "/api/fs/list" ) ) {
 		WA_ApiFsList( c, query );
 	} else if ( !strcmp( method, "GET" ) && !strcmp( path, "/api/fs/get" ) ) {

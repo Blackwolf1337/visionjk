@@ -84,6 +84,8 @@ the answer tells the page that the numbers started over.
 | `GET /api/classes` | everything that can be spawned, and the items with model and icon |
 | `GET /api/entities` | the entities with their keys. `budget`: entities, models, sounds and effects in use and the most there can be. `brushModels`: how many brush models the map has |
 | `GET /api/list?kind=` | names the fields of the page offer: `maps`, `effects` and `music` (the files of the game), `npcs` (the types of the `.npc` files), `bots` |
+| `GET /api/waypoints` | the route of the bots: every waypoint with its place, its flags and the numbers of the ones it leads to. `editing`: it was changed and not saved, the bots stand still |
+| `POST /api/waypoint` | `op` add (`x`, `y`, `z`, `flags`, `after`: the waypoint it comes behind, none for the end), remove (`index`) or save |
 | `GET /api/classdoc` | the entity definitions of the game code: every `QUAKED` comment of its source files as text |
 | `GET /api/export` | the entities in `.ent` format |
 | `GET /api/chat?since=&epoch=` | chat lines after number `since`. Everything if `epoch` is not the current one |
@@ -165,6 +167,14 @@ Also changed:
   `classname`, the targetnames there are for `target` and the other keys that fire, the effects for a key with
   `fx` in its name, the NPC types for `NPC_type`, the maps for `mapname`, the music files for `music`. Sounds are
   not offered yet.
+- New: the tab Routes of the editor, the waypoints the bots walk along (`ai_wpnav.c`). The trail is drawn from
+  each waypoint to the next and to the others it leads to, faintly through the walls so that it is seen from
+  above. A click selects a waypoint. With Add on, a right-click on the map puts a new one there, behind the
+  selected one or at the end, with what a bot does there (walk, jump, duck, snipe or camp, goal, a flag).
+  Remove takes the selected one away, Save writes `botroutes/<map>.wnt` into the server folder. The server uses
+  the functions of the waypoint commands of the game (`bot_wp_add`, `bot_wp_rem`, `bot_wp_save`), and as with
+  those the bots stand still from the first change until the route is saved: which waypoint leads to which is
+  only worked out again by the save.
 - New: the server refuses to place what would end it (`WA_SpawnRefused`): a class made of brushes (`trigger_`,
   `func_`) without a `model` key that names a brush model of the map, the classes whose spawn function raises
   an error without a key (`target_speaker`, `target_play_music`, `target_level_change`,
