@@ -998,9 +998,9 @@ async function loadMap(name) {
 				return buf;
 			};
 			const posBuf = attr(0, new Float32Array(b.pos), 3, gl.FLOAT, false);
-			attr(1, new Float32Array(b.st), 2, gl.FLOAT, false);
+			const stBuf = attr(1, new Float32Array(b.st), 2, gl.FLOAT, false);
 			attr(2, new Float32Array(b.lm), 2, gl.FLOAT, false);
-			attr(3, new Uint8Array(b.col), 4, gl.UNSIGNED_BYTE, true);
+			const colBuf = attr(3, new Uint8Array(b.col), 4, gl.UNSIGNED_BYTE, true);
 			attr(4, new Float32Array(b.norm), 3, gl.FLOAT, false);
 			const tri = new Uint32Array(b.idx), ib = gl.createBuffer();
 			gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ib);
@@ -1008,8 +1008,9 @@ async function loadMap(name) {
 			gl.bindVertexArray(null);
 			const shaderName = bsp.shaders[b.shader].name;
 			if (!textures.has(shaderName)) textures.set(shaderName, gameImage(shaderName, false));
-			// posBuf and tri: the wireframe of the editor makes its lines of them when it is asked for
-			return { vao, count: b.idx.length, shaderName, fog: b.fog, lm: b.lightmap >= 0 ? lightmapTex[b.lightmap] : null, posBuf, tri, wire: null };
+			// posBuf and tri: the wireframe of the editor makes its lines of them when it is asked for. With stBuf,
+			// colBuf and verts they are also what the quads that turn to the viewer are made of (buildSprites).
+			return { vao, count: b.idx.length, shaderName, fog: b.fog, lm: b.lightmap >= 0 ? lightmapTex[b.lightmap] : null, posBuf, stBuf, colBuf, verts: b.pos.length / 3, tri, wire: null, sprites: undefined };
 		});
 
 		world = { batches, textures, bounds: bsp.bounds, pick: bsp.pick, sky: bsp.sky, models: bsp.models, brushes: bsp.brushes, shaders: bsp.shaders, stats: bsp.stats, grid: bsp.grid, fogs: bsp.fogs, fogInfo: [], globalFog: null, wires: new Map(), scripted: null, skyDraw: null };
@@ -1069,11 +1070,31 @@ async function fetchImage(name, clamp) {
 // The view of the administration draws the map the way the game does: every surface with the stages its shader
 // script names (images, blending, moving texture coordinates, colours that pulse), in the order of the game,
 // under the sky of the map. What the engine makes of a script is in rd-vanilla/tr_shader.cpp and tr_shade.cpp,
-// the rules here are taken from there. Not done: fog, deformed vertices, glow, sprites on surfaces, portals.
+// the rules here are taken from there. Not done: glow, sprites on surfaces, portals.
 //
 // The editor keeps the plain view (an image times the light), which needs nothing but the map.
 
 const whiteTex = makeTexture(1, 1, new Uint8Array([255, 255, 255, 255]), { mip: false });
+
+// deformVertexes wave, bulge and move, as RB_DeformTessGeometry does them: a wave and a bulge move a vertex along
+// its normal, by how far depends on where it is, and a move shifts all of them.
+const DEFORM_GLSL = `uniform int uWaveFunc;	// 0 no wave, 1 sin, 2 triangle, 3 square, 4 sawtooth, 5 the same falling
+uniform vec4 uWave;		// how fast it changes along the surface, its base, how far it goes, where it is in its wave
+uniform vec4 uBulge;	// width, height, where it is, and 1 when it only pushes outwards. Height 0: none
+uniform vec3 uMove;
+float waveOf(int f, float x) {
+	float r = fract(x);
+	if (f == 2) return r < 0.25 ? r * 4.0 : r < 0.75 ? 2.0 - r * 4.0 : r * 4.0 - 4.0;
+	if (f == 3) return r < 0.5 ? 1.0 : -1.0;
+	if (f == 4) return r;
+	if (f == 5) return 1.0 - r;
+	return sin(r * 6.2831853);
+}
+vec3 deformed(vec3 p, vec3 n, vec2 st) {
+	if (uWaveFunc != 0) p += n * (uWave.y + uWave.z * waveOf(uWaveFunc, (p.x + p.y + p.z) * uWave.x + uWave.w));
+	if (uBulge.y != 0.0) p += n * (uBulge.w > 0.5 ? uBulge.y : sin(st.x * uBulge.x + uBulge.z) * uBulge.y);
+	return p + uMove;
+}`;
 
 const stageProg = compile(`#version 300 es
 layout(location=0) in vec3 aPos; layout(location=1) in vec2 aSt; layout(location=2) in vec2 aLm; layout(location=3) in vec4 aCol; layout(location=4) in vec3 aNorm;
@@ -1082,30 +1103,38 @@ uniform int uTcGen;		// 0 the texture coordinates, 1 the ones of the lightmap, 2
 uniform vec3 uTcA; uniform vec3 uTcB;	// the tcMods of the stage as one matrix
 uniform vec2 uTurb;		// tcMod turb: how far, and where in its wave it is
 uniform mediump int uAlphaVertex;	// the precision the fragment shader has for it: it is in both
+${DEFORM_GLSL}
+// deformVertexes autosprite (1) and autosprite2 (2): a quad that turns to the viewer. Its vertices come as the
+// middle it turns around, and aLm says how far from it they are (see buildSprites).
+uniform int uSprite; uniform vec3 uViewLeft; uniform vec3 uViewUp; uniform vec3 uViewFwd;
 out vec2 vTc; out vec4 vCol; out float vSpec; out float vDepth;
 void main() {
+	vec3 pos = aPos, norm = aNorm;
+	if (uSprite == 1) { pos += uViewLeft * aLm.x + uViewUp * aLm.y; norm = -uViewFwd; }
+	else if (uSprite == 2) { pos += normalize(cross(aNorm, uViewFwd)) * aLm.x; norm = -uViewFwd; }
+	pos = deformed(pos, norm, aSt);
 	// alphaGen lightingSpecular, as RB_CalcSpecularAlpha: how much of a light is mirrored into the eye, to the
 	// fourth power. For the map the engine has one light at a fixed place.
 	vSpec = 1.0;
 	if (uAlphaVertex == 3) {
-		vec3 l = normalize(vec3(-960.0, 1980.0, 96.0) - aPos);
-		float s = max(dot(aNorm * 2.0 * dot(aNorm, l) - l, normalize(uEye - aPos)), 0.0);
+		vec3 l = normalize(vec3(-960.0, 1980.0, 96.0) - pos);
+		float s = max(dot(norm * 2.0 * dot(norm, l) - l, normalize(uEye - pos)), 0.0);
 		vSpec = s * s * s * s;
 	}
 	vec2 tc = aSt;
 	if (uTcGen == 1) tc = aLm;
 	else if (uTcGen == 2) {
-		vec3 v = normalize(uEye - aPos);
-		vec3 r = aNorm * 2.0 * dot(aNorm, v) - v;
+		vec3 v = normalize(uEye - pos);
+		vec3 r = norm * 2.0 * dot(norm, v) - v;
 		tc = vec2(0.5 + r.y * 0.5, 0.5 - r.z * 0.5);
 	}
 	if (uTurb.x != 0.0) {
-		tc.x += sin(((aPos.x + aPos.z) * 0.0009765625 + uTurb.y) * 6.2831853) * uTurb.x;
-		tc.y += sin((aPos.y * 0.0009765625 + uTurb.y) * 6.2831853) * uTurb.x;
+		tc.x += sin(((pos.x + pos.z) * 0.0009765625 + uTurb.y) * 6.2831853) * uTurb.x;
+		tc.y += sin((pos.y * 0.0009765625 + uTurb.y) * 6.2831853) * uTurb.x;
 	}
 	vTc = vec2(dot(uTcA.xy, tc) + uTcA.z, dot(uTcB.xy, tc) + uTcB.z);
 	vCol = aCol;
-	gl_Position = uMvp * vec4(aPos, 1.0);
+	gl_Position = uMvp * vec4(pos, 1.0);
 	vDepth = gl_Position.w;	// how far in front of the eye
 }`,
 `#version 300 es
@@ -1140,19 +1169,21 @@ uniform mat4 uMvp; uniform mat4 uModel; uniform vec3 uEyeLocal;
 uniform vec3 uAmbient; uniform vec3 uDirected; uniform vec3 uLightDir;	// the light of the place, and where it comes from
 uniform int uTcGen; uniform vec3 uTcA; uniform vec3 uTcB; uniform vec2 uTurb;
 uniform mediump int uAlphaVertex;	// the precision the fragment shader has for it: it is in both
+${DEFORM_GLSL}
 out vec2 vTc; out vec3 vLight; out float vSpec; out float vDepth;
 void main() {
-	vec4 world = uModel * vec4(aPos, 1.0);
+	vec3 pos = deformed(aPos, aNorm, aUv);
+	vec4 world = uModel * vec4(pos, 1.0);
 	// alphaGen lightingSpecular: for a model the light of the place is the one that is mirrored
 	vSpec = 1.0;
 	if (uAlphaVertex == 3) {
 		vec3 l = normalize(transpose(mat3(uModel)) * uLightDir);
-		float s = max(dot(aNorm * 2.0 * dot(aNorm, l) - l, normalize(uEyeLocal - aPos)), 0.0);
+		float s = max(dot(aNorm * 2.0 * dot(aNorm, l) - l, normalize(uEyeLocal - pos)), 0.0);
 		vSpec = s * s * s * s;
 	}
 	vec2 tc = aUv;
 	if (uTcGen == 2) {
-		vec3 v = normalize(uEyeLocal - aPos);
+		vec3 v = normalize(uEyeLocal - pos);
 		vec3 r = aNorm * 2.0 * dot(aNorm, v) - v;
 		tc = vec2(0.5 + r.y * 0.5, 0.5 - r.z * 0.5);
 	}
@@ -1386,7 +1417,7 @@ function finishStage(st) {
 }
 
 function parseScript(body) {
-	const def = { stages: [], sort: 0, polygonOffset: false, nodraw: false, sky: null, fog: null, noFog: false, cull: 0 };
+	const def = { stages: [], sort: 0, polygonOffset: false, nodraw: false, sky: null, fog: null, noFog: false, cull: 0, deforms: [] };
 	let st = null, depth = 0;
 	for (const a of scriptLines(body)) {
 		const k = a[0].toLowerCase();
@@ -1408,6 +1439,14 @@ function parseScript(body) {
 				// which side is drawn: the front unless the script says the back or both
 				const v = (a[1] || '').toLowerCase();
 				def.cull = v === 'none' || v === 'twosided' || v === 'disable' ? 2 : v === 'back' || v === 'backside' || v === 'backsided' ? 1 : 0;
+			}
+			else if (k === 'deformvertexes') {
+				const kind = (a[1] || '').toLowerCase(), div = scNum(a[2]);
+				// a wave over a length of 0 is not allowed, the engine takes this for it
+				if (kind === 'wave') def.deforms.push({ kind, spread: div ? 1 / div : 100, wave: scWave(a, 3) });
+				else if (kind === 'bulge') def.deforms.push({ kind, width: scNum(a[2]), height: scNum(a[3]), speed: scNum(a[4]) });
+				else if (kind === 'move') def.deforms.push({ kind, vec: [scNum(a[2]), scNum(a[3]), scNum(a[4])], wave: scWave(a, 5) });
+				else if (kind === 'autosprite' || kind === 'autosprite2') def.deforms.push({ kind });
 			}
 			else if (k === 'noglfog') def.noFog = true;
 			else if (k === 'fogparms') {
@@ -1474,6 +1513,7 @@ function materialFor(name, lit) {
 		fog: def ? def.fog : null,
 		noFog: !!def && def.noFog,
 		cull: def ? def.cull : 0,
+		deforms: def ? def.deforms : [],
 		sort: (def && def.sort) || (def && def.polygonOffset ? SC_SORT_DECAL : first && first.blend ? (first.depthWrite ? SC_SORT_SEE_THROUGH : SC_SORT_BLEND) : SC_SORT_OPAQUE)
 	};
 	scripts.materials.set(mkey, mat);
@@ -1587,13 +1627,98 @@ function buildSky(name) {
 	};
 }
 
+// The quads of a shader with deformVertexes autosprite or autosprite2, which the engine turns to the viewer in
+// every frame (AutospriteDeform and Autosprite2Deform in tr_shade_calc.cpp). What does not depend on the viewer
+// is worked out here, once, the rest is done by the vertex shader. Four vertices and six indexes are a quad.
+// autosprite: a flare. The quad is made new around its middle, as wide as the old one, the whole image on it.
+//   aPos is the middle, aLm how far along the left and the up of the view a corner is.
+// autosprite2: a beam or a chain. It turns around its long axis: aPos is the middle of the short edge a vertex is
+//   on, aNorm the long axis and aLm.x how far to which side of it the vertex is.
+// null: the surfaces are no quads, they stay as they are (the engine warns then).
+const EDGE_VERTS = [[0, 1], [0, 2], [0, 3], [1, 2], [1, 3], [2, 3]];
+
+function buildSprites(b, kind) {
+	const nv = b.verts, tri = b.tri;
+	if ((nv & 3) || tri.length !== (nv >> 2) * 6) return null;
+	const read = (buf, into) => { gl.bindBuffer(gl.ARRAY_BUFFER, buf); gl.getBufferSubData(gl.ARRAY_BUFFER, 0, into); return into; };
+	const pos = read(b.posBuf, new Float32Array(nv * 3)), st = read(b.stBuf, new Float32Array(nv * 2)), col = read(b.colBuf, new Uint8Array(nv * 4));
+	const at = new Float32Array(nv * 3), off = new Float32Array(nv * 2), axis = new Float32Array(nv * 3);
+	let idx = tri;
+	if (kind === 1) {
+		// RB_AddQuadStamp: left and up, right and up, right and down, left and down
+		const CORNER = [[1, 1], [-1, 1], [-1, -1], [1, -1]], ST = [0, 0, 1, 0, 1, 1, 0, 1];
+		idx = new Uint32Array(tri.length);
+		for (let i = 0, q = 0; i < nv; i += 4, q += 6) {
+			const mid = [0, 1, 2].map(c => (pos[i * 3 + c] + pos[i * 3 + 3 + c] + pos[i * 3 + 6 + c] + pos[i * 3 + 9 + c]) / 4);
+			const radius = Math.hypot(pos[i * 3] - mid[0], pos[i * 3 + 1] - mid[1], pos[i * 3 + 2] - mid[2]) * 0.707;
+			for (let j = 0; j < 4; j++) {
+				const v = i + j;
+				at.set(mid, v * 3);
+				off[v * 2] = CORNER[j][0] * radius; off[v * 2 + 1] = CORNER[j][1] * radius;
+				st[v * 2] = ST[j * 2]; st[v * 2 + 1] = ST[j * 2 + 1];
+				// the colour of the first vertex is the one of the whole quad
+				for (let c = 0; c < 4; c++) col[v * 4 + c] = col[i * 4 + c];
+			}
+			idx.set([i, i + 1, i + 3, i + 3, i + 1, i + 2], q);
+		}
+	} else {
+		at.set(pos);
+		for (let i = 0, q = 0; i < nv; i += 4, q += 6) {
+			// the two shortest edges are the ends of the quad
+			const nums = [0, 0], lengths = [999999, 999999];
+			for (let j = 0; j < 6; j++) {
+				const a = (i + EDGE_VERTS[j][0]) * 3, c = (i + EDGE_VERTS[j][1]) * 3;
+				const l = (pos[a] - pos[c]) ** 2 + (pos[a + 1] - pos[c + 1]) ** 2 + (pos[a + 2] - pos[c + 2]) ** 2;
+				if (l < lengths[0]) { nums[1] = nums[0]; lengths[1] = lengths[0]; nums[0] = j; lengths[0] = l; }
+				else if (l < lengths[1]) { nums[1] = j; lengths[1] = l; }
+			}
+			const mid = nums.map(n => [0, 1, 2].map(c => (pos[(i + EDGE_VERTS[n][0]) * 3 + c] + pos[(i + EDGE_VERTS[n][1]) * 3 + c]) / 2));
+			const major = [mid[1][0] - mid[0][0], mid[1][1] - mid[0][1], mid[1][2] - mid[0][2]];
+			for (let j = 0; j < 2; j++) {
+				const v1 = i + EDGE_VERTS[nums[j]][0], v2 = i + EDGE_VERTS[nums[j]][1], l = 0.5 * Math.sqrt(lengths[j]);
+				// which way round the edge is used says to which side its ends go
+				let k = 0;
+				for (; k < 5; k++) if (tri[q + k] === v1 && tri[q + k + 1] === v2) break;
+				at.set(mid[j], v1 * 3); at.set(mid[j], v2 * 3);
+				off[v1 * 2] = k === 5 ? l : -l;
+				off[v2 * 2] = k === 5 ? -l : l;
+			}
+			for (let j = 0; j < 4; j++) axis.set(major, (i + j) * 3);
+		}
+	}
+	const vao = gl.createVertexArray();
+	gl.bindVertexArray(vao);
+	const attr = (loc, data, size, type, normalized) => {
+		gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+		gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
+		gl.enableVertexAttribArray(loc);
+		gl.vertexAttribPointer(loc, size, type, normalized, 0, 0);
+	};
+	attr(0, at, 3, gl.FLOAT, false);
+	attr(1, st, 2, gl.FLOAT, false);
+	attr(2, off, 2, gl.FLOAT, false);
+	attr(3, col, 4, gl.UNSIGNED_BYTE, true);
+	attr(4, axis, 3, gl.FLOAT, false);
+	gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, gl.createBuffer());
+	gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, idx, gl.STATIC_DRAW);
+	gl.bindVertexArray(null);
+	return { vao, count: idx.length };
+}
+
 // the batches of the map in the order and with the stages the game draws them
 function prepareScripted(w) {
 	if (scripts.state !== 2 || !w) return;
 	const list = [];
 	w.batches.forEach((b, i) => {
 		const mat = materialFor(b.shaderName, !!b.lm);
-		if (!mat.nodraw && mat.stages.length) list.push({ b, mat, i });
+		if (mat.nodraw || !mat.stages.length) return;
+		const e = { b, mat, i, vao: b.vao, count: b.count, sprite: 0 };
+		const kind = mat.deforms.some(d => d.kind === 'autosprite') ? 1 : mat.deforms.some(d => d.kind === 'autosprite2') ? 2 : 0;
+		if (kind) {
+			if (b.sprites === undefined) b.sprites = buildSprites(b, kind);
+			if (b.sprites) Object.assign(e, { vao: b.sprites.vao, count: b.sprites.count, sprite: kind });
+		}
+		list.push(e);
 	});
 	list.sort((x, y) => x.mat.sort - y.mat.sort || x.i - y.i);
 	// The fogs of the map, from the scripts of their shaders. exp2: sqrt( -ln( 1 / 255 ) ) over the depth, the
@@ -1614,6 +1739,43 @@ const stTcA = new Float32Array(3), stTcB = new Float32Array(3), stTurb = new Flo
 // Which side of a surface is drawn (GL_Cull in tr_backend.cpp): 0 the front, 1 the back, 2 both. The front of a
 // triangle of the game is the side its corners run clockwise on. Seen from outside, a room is open that way:
 // its walls and its ceiling face inwards.
+const WAVE_FUNC = { sin: 1, triangle: 2, square: 3, sawtooth: 4, inversesawtooth: 5 };
+const dfWave = new Float32Array(4), dfBulge = new Float32Array(4), dfMove = new Float32Array(3);
+
+// the deformVertexes of a shader for the program that draws it next, at the time t
+function setDeform(prog, mat, t) {
+	// most have none: nothing to send when the program has none set either
+	if (!mat.deforms.length && !prog.deformed) return;
+	let func = 0;
+	dfWave.fill(0); dfBulge.fill(0); dfMove.fill(0);
+	for (const d of mat.deforms) {
+		if (d.kind === 'wave') {
+			const x = d.wave.phase + t * d.wave.freq;
+			func = WAVE_FUNC[d.wave.func] || 1;
+			// a wave that does not run is the same for every vertex
+			dfWave[0] = d.wave.freq ? d.spread : 0; dfWave[1] = d.wave.base; dfWave[2] = d.wave.amp; dfWave[3] = x - Math.floor(x);
+		} else if (d.kind === 'bulge') {
+			dfBulge[0] = d.width; dfBulge[1] = d.height; dfBulge[2] = (t * d.speed) % (Math.PI * 2); dfBulge[3] = d.width === 0 && d.speed === 0 ? 1 : 0;
+		} else if (d.kind === 'move') {
+			const by = waveValue(d.wave, t);
+			for (let i = 0; i < 3; i++) dfMove[i] += d.vec[i] * by;
+		}
+	}
+	prog.deformed = mat.deforms.length > 0;
+	gl.uniform1i(prog.u.uWaveFunc, func);
+	gl.uniform4fv(prog.u.uWave, dfWave);
+	gl.uniform4fv(prog.u.uBulge, dfBulge);
+	gl.uniform3fv(prog.u.uMove, dfMove);
+}
+
+// where the camera looks, and its left and its up, in the map
+function cameraAxes() {
+	const at = (x, y, z) => { const v = M4.transform(invViewProj, [x, y, z]); return [v[0] / v[3], v[1] / v[3], v[2] / v[3]]; };
+	const from = (a, b) => { const d = [b[0] - a[0], b[1] - a[1], b[2] - a[2]], l = Math.hypot(d[0], d[1], d[2]) || 1; return [d[0] / l, d[1] / l, d[2] / l]; };
+	const o = at(0, 0, 0);
+	return { fwd: from(at(0, 0, -1), at(0, 0, 1)), left: from(o, at(-1, 0, 0)), up: from(o, at(0, 1, 0)) };
+}
+
 let cullSides = true;
 function setCull(side) {
 	if (side === 2 || !cullSides) { gl.disable(gl.CULL_FACE); return; }
@@ -1721,17 +1883,29 @@ function drawWorldScripted(now, late) {
 	gl.disable(gl.CULL_FACE);
 	// the alpha of the canvas stays 1 whatever a stage blends, or the page would shine through
 	gl.colorMask(true, true, true, false);
+	setDeform(stageProg, NO_DEFORM, t);
+	gl.uniform1i(stageProg.u.uSprite, 0);
 	if (!late && world.skyDraw) drawSky(world.skyDraw, t);
 	gl.uniformMatrix4fv(stageProg.u.uMvp, false, viewProj);
 	const fogged = fogShown();
+	let sprite = 0, axes = null;
 	for (const e of world.scripted) {
 		if ((e.mat.sort > SC_SORT_BANNER) !== late) continue;
 		const fog = fogged ? e.fog : null;
-		setCull(e.mat.cull);
+		// a quad that turns to the viewer has no back
+		setCull(e.sprite ? 2 : e.mat.cull);
+		if (e.sprite && !axes) {
+			axes = cameraAxes();
+			gl.uniform3fv(stageProg.u.uViewLeft, axes.left);
+			gl.uniform3fv(stageProg.u.uViewUp, axes.up);
+			gl.uniform3fv(stageProg.u.uViewFwd, axes.fwd);
+		}
+		if (e.sprite !== sprite) gl.uniform1i(stageProg.u.uSprite, sprite = e.sprite);
+		setDeform(stageProg, e.mat, t);
 		if (e.mat.polygonOffset) { gl.enable(gl.POLYGON_OFFSET_FILL); gl.polygonOffset(-1, -2); }
-		for (const st of e.mat.stages) drawStage(st, t, e.b.lm, e.b.vao, e.b.count, gl.UNSIGNED_INT, 0, stageProg, fog && fog.global ? fog : null);
+		for (const st of e.mat.stages) drawStage(st, t, e.b.lm, e.vao, e.count, gl.UNSIGNED_INT, 0, stageProg, fog && fog.global ? fog : null);
 		// the fog of a brush is a pass of its own over what was just drawn
-		if (fog && !fog.global) {
+		if (fog && !fog.global && !e.sprite && !e.mat.deforms.length) {
 			gl.useProgram(fogProg.p);
 			gl.uniformMatrix4fv(fogProg.u.uMvp, false, viewProj);
 			gl.uniform4fv(fogProg.u.uPlane, fog.plane);
@@ -1809,6 +1983,8 @@ function gridLight(pos, out = lightNow) {
 // The surfaces of a model with the stages of their shaders, in the view of the administration. place: where the
 // model stands. A surface that blends is drawn where it comes in the model, not sorted with the rest of the
 // picture as the game does.
+const NO_DEFORM = { deforms: [] };
+
 function drawModelScripted(meshes, place) {
 	const t = performance.now() / 1000, u = modelStageProg.u, at = M4.transform(M4.invert(place), eye);
 	gl.useProgram(modelStageProg.p);
@@ -1828,6 +2004,7 @@ function drawModelScripted(meshes, place) {
 		const mat = mesh.mat || (mesh.mat = materialFor(mesh.shaderName || '', 'model'));
 		if (mat.nodraw) continue;
 		setCull(mat.cull);
+		setDeform(modelStageProg, mat, t);
 		if (mat.polygonOffset) { gl.enable(gl.POLYGON_OFFSET_FILL); gl.polygonOffset(-1, -2); }
 		const fog = globalFog && mat.sort <= SC_SORT_SEE_THROUGH && !mat.noFog ? globalFog : null;
 		for (const st of mat.stages) drawStage(st, t, null, mesh.vao, mesh.count, gl.UNSIGNED_INT, 0, modelStageProg, fog);

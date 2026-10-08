@@ -137,7 +137,12 @@ Also changed:
   its script says the back or both. Seen from outside a room is open that way, as in the game when one leaves
   the map: its walls and its ceiling face inwards. So the view from above shows who is in a building. A click
   on the map goes through what is not drawn (`pickGround` with `oneSided`), a right-click from above lands
-  on the floor of the room and not on its roof. Not done: `deformVertexes`, glow, `surfaceSprites`, portals.
+  on the floor of the room and not on its roof. `deformVertexes` is done in the vertex shader (`setDeform`,
+  `buildSprites`): `wave` and `bulge` move a vertex along its normal, `move` shifts all of them, and the quads
+  of `autosprite` and `autosprite2` turn to the viewer as in `tr_shade_calc.cpp`, which is what makes the
+  flares of a map round lights and its chains chains from every side. Not done: the deforms `normal`,
+  `projectionShadow` and the text ones, the fog of a brush on a surface that is deformed, glow,
+  `surfaceSprites`, portals.
   Images outside `textures/`, `models/` and `gfx/` are not handed out by the server, a stage that names one is
   left out. With a game module that has no `/api/shaders` the administration shows the plain view. The rules
   were checked by reading all 3365 shaders of the game through the parser. The picture was looked at in headless
