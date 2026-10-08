@@ -130,6 +130,7 @@ the answer tells the page that the numbers started over.
 | `GET /api/chat?since=&epoch=` | chat lines after number `since`. Everything if `epoch` is not the current one |
 | `POST /api/action` | `action`, `id`, `value`: say, addbot, map, kick, ban, health, armor, scale, kill, god, noclip, schizo, flatulence, disorient, poop, gravity (no `id`), reload (no `id`), playergravity, team, teleport, and the JA+ ones: amsleep, amwake, amprotect, amempower, ammerc, ammindtrick, amghost, amsilence, amunsilence, amslap, amForceAltDim, amUnForceAltDim, amdenyvote, amShowMotd, amrename, ampsay, admgrant, freeze |
 | `POST /api/entity` | `op` spawn, update or delete, with `id` and `kv` (one `key=value` per line). `op` use with `id` fires the entity. `op` clear with `kv` `classname=<class>` deletes every entity of that class that was placed through the panel. `map=1` with spawn: it is an entity of the map that comes back (undo), not a placed one |
+| `POST /api/layout` | `op` save keeps the map as it stands for every start of it (`layouts/<map>.txt` in the game folder), `op` forget removes that file. `/api/entities` has `layout`: is one saved, is the map as it has it, and how many entities it would add and take away now |
 | `GET /api/config` | the text of `server.cfg`, as UTF-8 |
 | `POST /api/config`, `POST /api/config?exec=1` | the body is the new text of `server.cfg` (plain text, not a form). With `exec=1` the server runs `exec server.cfg` afterwards |
 | `GET /api/models` | every `.md3` and `.glm` under `models/`. The server reads the folders a few at a frame: `done` says whether the list is complete, the page asks again until it is |
@@ -271,6 +272,23 @@ Also changed:
   inactive, and an NPC (a vehicle takes whoever uses it on board without asking whether that is a player).
   The use functions of the game were read for this: every one that reaches into the client of what fired it
   asks first whether there is one.
+- New: the layout of a map (`WA_ApiLayout`, `WA_LayoutText`, `WA_ReloadSpawn` in `wa_entities.c`). What the
+  editor did to a map was lost with every change of the map and every start of the server, only "Reload map"
+  carried the placed entities over. "Save layout" in the World tab keeps the map as it stands in
+  `layouts/<map>.txt`, and the server does that to the map again whenever it starts, with the panel on or off:
+  the entities that are there and that the map file does not bring are spawned (the placed ones, and the ones
+  of the map that were changed), and the entities of the map file that were deleted or changed are taken
+  away. For that the server keeps the keys every entity of the map file came with, and knows of each entity
+  whether it still is one of them. Keys that are put back to what the map file has, or a delete that is
+  undone, make an entity that one again. An entity that the game frees by itself (something that broke) is
+  not a change. The line above the buttons says how it stands: none, not saved, saved, changed since.
+  "Forget" removes the file, the map is its own again with the next start. The file is text and can be
+  changed in the Files tab, what is in it goes through the same checks as an entity that is placed by hand.
+  An entity keeps the origin its keys have unless it is somewhere else by now, as a prop that was pushed.
+  "Reload map" writes the same text for the one start that follows, so it carries what was deleted or
+  changed of the map as well now. Limits: an entity of the map file is known by its keys, so a layout made
+  for one version of a map takes nothing away in another whose entities have other keys (it says how many it
+  did not find), and two entities with the very same keys are one as good as the other.
 - New: an arrow at every entity whose keys say which way it looks (`drawFacing`, with the markers): where a
   player looks at a start point, where a shooter fires, the way a door opens. `angle` and `angles` are read
   as the game reads them, -1 and -2 are up and down. The arrow of the selected entity is longer and in its
@@ -926,6 +944,18 @@ waypoint. A drag moves the view, turns it with the middle button, moves an entit
 when flying. The wheel zooms and sets the flying speed. A right-click teleports, places the class that is armed,
 adds a waypoint. Undo, the Z field, Remove and Save of a route. Copy, paste, the stored views and the keys of
 the fly camera went through the keyboard. What that is not: a person at a real browser on a real GPU.
+
+The layout (`steps_layout.js`, 13 checks, the same day, mp/ffa3): two entities placed, an item of the map
+deleted and a start point of the map moved gave a layout of three to spawn and two to take away. Saved, the
+file was in the game folder with those five blocks, and after the map was started again with the map command
+all of it was there: the two placed ones, the item gone, the start point at its new place and not at the old.
+Moved back to the keys of the map file the start point was the one of the map again (two and one). After
+"Forget" the file was gone and the next start was the map as its file has it. A "Reload map" with an entity
+placed and an item deleted came back with both, and a plain start after it was the map again. On a second
+server without a password, so with the panel off, a layout written by hand was done at the start of its map:
+one entity spawned, a door without a brush model refused, an entity to take away that the map does not have
+passed over. Not tried: a layout in another game type than it was made in, one with many props, a layout
+that a pk3 brings.
 
 The arrows (`steps_facing.js`, 3 checks, the same day, mp/ffa3): 23 of the entities of the map have an angle.
 Seen from straight above, the pixels that the arrow of a start point adds to the picture reach furthest in

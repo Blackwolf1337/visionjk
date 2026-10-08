@@ -194,6 +194,8 @@ static void WA_HandleRequest( waConnection_t *c, char *head, char *body, int bod
 		WA_ApiChat( c, query );
 	} else if ( !strcmp( method, "POST" ) && !strcmp( path, "/api/entity" ) ) {
 		WA_ApiEntity( c, body );
+	} else if ( !strcmp( method, "POST" ) && !strcmp( path, "/api/layout" ) ) {
+		WA_ApiLayout( c, body );
 	} else if ( !strcmp( method, "GET" ) && !strcmp( path, "/api/config" ) ) {
 		WA_ApiConfigGet( c );
 	} else if ( !strcmp( method, "POST" ) && !strcmp( path, "/api/config" ) ) {

@@ -50,6 +50,31 @@ $('entLinks').addEventListener('click', e => {
 	focusEntity(+a.dataset.id);
 });
 
+// ---- the layout: what the editor did to the map, kept on the server for every start of it (/api/layout)
+
+function renderLayout(l) {
+	// a game module that keeps none
+	$('layoutRow').style.display = l ? '' : 'none';
+	if (!l) return;
+	const holds = l.add + l.remove ? l.add + ' placed or changed' + (l.remove ? ', ' + l.remove + ' of the map gone' : '') : 'the map as its file has it';
+	$('layoutState').textContent = l.saved ? (l.dirty ? 'Layout: changed since it was saved' : 'Layout: saved, comes back with the map')
+		: (l.add + l.remove ? 'Layout: not saved, lost with the map' : 'Layout: none');
+	$('layoutState').title = 'What a layout of this map holds now: ' + holds + '.';
+	$('layoutState').style.color = l.dirty || (!l.saved && l.add + l.remove) ? 'var(--yellow)' : '';
+	$('layoutSave').disabled = l.saved ? !l.dirty : !(l.add + l.remove);
+	$('layoutForget').disabled = !l.saved;
+}
+
+async function layoutOp(op) {
+	try {
+		const json = await (await fetch('api/layout', { method: 'POST', body: new URLSearchParams({ op }) })).json();
+		toast(json.message, json.ok);
+		pollEntities();
+	} catch (e) { toast('Request failed: ' + e.message, false); }
+}
+$('layoutSave').addEventListener('click', () => layoutOp('save'));
+$('layoutForget').addEventListener('click', () => { if (confirmed($('layoutForget'))) layoutOp('forget'); });
+
 function renderBudget(b) {
 	if (!b) { $('entBudget').textContent = ''; return; }
 	const part = (name, v) => {

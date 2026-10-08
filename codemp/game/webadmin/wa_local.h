@@ -113,6 +113,7 @@ void WA_ApiClasses( waConnection_t *c );
 void WA_ApiExport( waConnection_t *c, const char *query );
 void WA_ApiEntity( waConnection_t *c, const char *body );
 void WA_ReloadMap( waConnection_t *c );
+void WA_ApiLayout( waConnection_t *c, const char *body );
 void WA_ReloadRead( void );
 void WA_EntitiesFrame( void );
 void WA_EntitiesShutdown( void );

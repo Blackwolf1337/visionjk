@@ -136,6 +136,8 @@
 				<button id="entImport" style="margin-left:auto" title="Places every entity of a .ent file. The worldspawn and what is made of brushes of another map are left out.">Import .ent</button><input type="file" id="entImportFile" accept=".ent,.txt,text/plain" hidden></div>
 			<div class="inline"><button id="entUndo" disabled title="Takes the last change to an entity back (Ctrl+Z)">Undo</button><button id="entRedo" disabled title="Does it again (Ctrl+Y)">Redo</button>
 				<label class="hint" style="margin:0 0 0 auto" title="Placing, moving and the Shift+arrow keys go in steps of this many units">Grid <select id="grid"><option>1</option><option>2</option><option>4</option><option selected>8</option><option>16</option><option>32</option><option>64</option></select></label></div>
+			<div class="inline" id="layoutRow"><span class="hint" id="layoutState" style="margin:0"></span>
+				<button id="layoutSave" style="margin-left:auto" title="Keeps the map as it stands for every start of it: what was placed, and what of the map was changed or deleted. Without this a change of the map or a restart of the server loses it.">Save layout</button><button id="layoutForget" title="The next start of the map is the map as its file has it. What stands on the map now stays until then.">Forget</button></div>
 			<div class="hint" id="entBudget" title="What is in use of what the engine has a limit for. The server refuses to place an entity that would go over one."></div>
 		</div>
 		<h2><span>Entities</span><span id="entCount">0</span></h2>

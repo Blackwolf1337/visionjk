@@ -202,6 +202,7 @@ async function pollEntities() {
 		for (const e of json.entities) ents.set(e.id, e);
 		takeFired(json.used);
 		renderBudget(json.budget);
+		renderLayout(json.layout);
 		refreshLinks();
 		if (selectedEnt >= 0 && !ents.has(selectedEnt)) selectEnt(-1);
 		renderEntityList();

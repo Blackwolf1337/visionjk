@@ -33,6 +33,24 @@ static int		lastSpawnedEntity = -1;
 
 // entities that were spawned through the panel: WA_ReloadMap() puts these back after the map has started again
 static qboolean	entityPlaced[MAX_GENTITIES];
+
+// The entities the map file brought, each with the keys it came with. An entity that still is one of them says
+// which (entityOriginal, its number plus one, 0 for none). One that was deleted or changed through the panel is
+// gone: that is what a layout has to take away again at the next start of the map (see "The layout of a map").
+typedef struct waOriginal_s {
+	char		*vars;		// as entityVars has them
+	int			len;
+	qboolean	gone;
+} waOriginal_t;
+
+static waOriginal_t	originals[MAX_GENTITIES];
+static int			originalCount;
+static short		entityOriginal[MAX_GENTITIES];
+static qboolean		panelSpawns;				// WA_SpawnFromText() is at work: what spawns is not of the map file
+static qboolean		layoutSaved, layoutDirty;	// there is a file for this map, and the map is not as the file has it
+
+static qboolean WA_LayoutFile( char *mapname, int mapSize, char *file, int fileSize );
+static void WA_LayoutText( waBuffer_t *b, const char *mapname, int *adds, int *removes );
 // what WA_ReloadMap() left for this start of the map, the entities one after the other. NULL: nothing.
 static char		*reloadText;
 
@@ -65,6 +83,20 @@ void WebAdmin_EntitySpawned( int entityNum ) {
 		p += k + v;
 	}
 	lastSpawnedEntity = entityNum;
+
+	// what the game spawns of itself, at the start of the map, is an entity of the map file
+	entityOriginal[entityNum] = 0;
+	if ( !panelSpawns && entityNum != ENTITYNUM_WORLD && originalCount < MAX_GENTITIES ) {
+		waOriginal_t *o = &originals[originalCount];
+
+		o->vars = (char *)malloc( len + 1 );
+		if ( o->vars ) {
+			memcpy( o->vars, entityVars[entityNum], len );
+			o->len = len;
+			o->gone = qfalse;
+			entityOriginal[entityNum] = (short)++originalCount;
+		}
+	}
 }
 
 void WebAdmin_EntityFreed( int entityNum ) {
@@ -74,6 +106,8 @@ void WebAdmin_EntityFreed( int entityNum ) {
 	entityVars[entityNum] = NULL;
 	entityVarsLen[entityNum] = 0;
 	entityPlaced[entityNum] = qfalse;
+	// freed by the game (something that broke, a trigger that fired once): that is not a change of the layout
+	entityOriginal[entityNum] = 0;
 }
 
 // entities the editor shows: no players, temp entities or saber helpers
@@ -313,8 +347,18 @@ void WA_ApiEntities( waConnection_t *c ) {
 		WA_BufAppend( &b, "}", 1 );
 	}
 
+	// the layout of the map: is one saved, is the map as it has it, and what it would hold now
+	{
+		char	mapname[MAX_QPATH], file[MAX_QPATH];
+		int		adds = 0, removes = 0;
+
+		if ( WA_LayoutFile( mapname, sizeof( mapname ), file, sizeof( file ) ) )
+			WA_LayoutText( NULL, mapname, &adds, &removes );
+		WA_BufPrintf( &b, "],\"layout\":{\"saved\":%s,\"dirty\":%s,\"add\":%d,\"remove\":%d},\"used\":[", WA_BOOL( layoutSaved ),
+			WA_BOOL( layoutDirty && ( layoutSaved || adds + removes > 0 ) ), adds, removes );
+	}
+
 	// what fired what in the last seconds: the number of the event, how long ago, who, whom
-	WA_BufAppend( &b, "],\"used\":[", 10 );
 	first = qtrue;
 	for ( i = usedSeq > WA_USED_KEEP ? usedSeq - WA_USED_KEEP : 0; i < usedSeq; i++ ) {
 		const waUsed_t *u = &usedRing[i % WA_USED_KEEP];
@@ -416,6 +460,21 @@ void WA_ApiExport( waConnection_t *c, const char *query ) {
 
 // Spawns an entity from "key=value" lines through the normal spawn code.
 // Returns the entity number, or -1 with a reason in err.
+// An entity that came through the panel with the very keys an entity of the map file had that is gone: it is
+// that one again. That is an undo of a delete, or keys that were put back to what they were.
+static void WA_OriginalBack( int entityNum ) {
+	int k;
+
+	for ( k = 0; k < originalCount; k++ ) {
+		if ( originals[k].gone && originals[k].len == entityVarsLen[entityNum]
+			&& !memcmp( originals[k].vars, entityVars[entityNum], originals[k].len ) ) {
+			originals[k].gone = qfalse;
+			entityOriginal[entityNum] = (short)( k + 1 );
+			return;
+		}
+	}
+}
+
 static int WA_SpawnFromText( const char *text, char *err, int errSize ) {
 	char		line[MAX_SPAWN_VARS_CHARS];
 	const char	*p = text;
@@ -479,7 +538,9 @@ static int WA_SpawnFromText( const char *text, char *err, int errSize ) {
 	wasSpawning = level.spawning;
 	level.spawning = qtrue;
 	lastSpawnedEntity = -1;
+	panelSpawns = qtrue;
 	G_SpawnGEntityFromSpawnVars( qfalse );
+	panelSpawns = qfalse;
 	level.spawning = wasSpawning;
 
 	// new item types have to reach the clients
@@ -489,6 +550,8 @@ static int WA_SpawnFromText( const char *text, char *err, int errSize ) {
 		Q_strncpyz( err, "the game did not spawn it (unknown classname, or not for this gametype)", errSize );
 		return -1;
 	}
+	WA_OriginalBack( lastSpawnedEntity );
+	layoutDirty = qtrue;
 	return lastSpawnedEntity;
 }
 
@@ -588,13 +651,17 @@ static void WA_FreeEntity( gentity_t *ent ) {
 		else
 			G_FreeEntity( other );
 	}
+	// an entity of the map file that the panel takes away is gone for the layout
+	if ( entityOriginal[ent->s.number] )
+		originals[entityOriginal[ent->s.number] - 1].gone = qtrue;
+	layoutDirty = qtrue;
 	G_FreeEntity( ent );
 }
 
 void WA_ApiEntity( waConnection_t *c, const char *body ) {
 	char		op[16], idStr[16], ofMap[4], err[128];
 	static char	kv[WA_MAX_REQUEST];
-	int			id = -1, newId;
+	int			id = -1, newId, original;
 
 	WA_FormValue( body, "op", op, sizeof( op ) );
 	WA_FormValue( body, "kv", kv, sizeof( kv ) );
@@ -604,10 +671,11 @@ void WA_ApiEntity( waConnection_t *c, const char *body ) {
 
 	if ( !strcmp( op, "spawn" ) ) {
 		newId = WA_SpawnFromText( kv, err, sizeof( err ) );
-		// map=1: an entity of the map that was deleted and is taken back (undo). It is not kept over a start of
-		// the map as a placed one is, the map brings it itself.
+		// map=1: an entity of the map that was deleted and is taken back (undo), not a placed one. One that came
+		// with the very keys the map file had it with is that entity again, whatever the page says.
 		if ( newId >= 0 )
-			entityPlaced[newId] = (qboolean)!( WA_FormValue( body, "map", ofMap, sizeof( ofMap ) ) && ofMap[0] == '1' );
+			entityPlaced[newId] = (qboolean)( !entityOriginal[newId]
+				&& !( WA_FormValue( body, "map", ofMap, sizeof( ofMap ) ) && ofMap[0] == '1' ) );
 		WA_EntityResult( c, newId >= 0, newId >= 0 ? "spawned" : err, newId );
 		return;
 	}
@@ -664,14 +732,20 @@ void WA_ApiEntity( waConnection_t *c, const char *body ) {
 			WA_EntityResult( c, qfalse, "this entity was made by the game code, it has no keys to edit", id );
 			return;
 		}
-		// spawn the new one first, so a bad edit keeps the old entity
+		// Spawn the new one first, so a bad edit keeps the old entity. For the layout the old one is gone before
+		// that already: keys that are put back to what the map file has make the new one that entity again.
+		original = entityOriginal[id];
+		if ( original )
+			originals[original - 1].gone = qtrue;
 		newId = WA_SpawnFromText( kv, err, sizeof( err ) );
 		if ( newId < 0 ) {
+			if ( original )
+				originals[original - 1].gone = qfalse;
 			WA_EntityResult( c, qfalse, err, id );
 			return;
 		}
-		// an entity of the map that was edited is still one of the map: the next start of the map has it as it was
-		entityPlaced[newId] = entityPlaced[id];
+		entityOriginal[id] = 0;
+		entityPlaced[newId] = (qboolean)( !entityOriginal[newId] && entityPlaced[id] );
 		WA_TakeTeamPlace( &g_entities[id], &g_entities[newId] );
 		WA_FreeEntity( &g_entities[id] );
 		WA_EntityResult( c, qtrue, "updated", newId );
@@ -683,57 +757,110 @@ void WA_ApiEntity( waConnection_t *c, const char *body ) {
 /*
 ==============================================================================
 
-Map reload
+The layout of a map, and its reload
 
-Not in JKAdmin. The engine looks through its folders for pk3 files whenever a map starts (FS_Restart in
-SV_SpawnServer) and at no other time, so starting the running map again is what makes it find a pk3 that was
-uploaded. The players stay connected.
+Not in JKAdmin. A start of the map removes what was done to it through the panel, and the module is loaded
+anew with nothing it remembered. A layout is what was done, as text: the entities that are there and that the
+map file does not bring (placed ones, and ones of the map that were changed), each with the keys it was
+spawned with and the place it is at now, and the entities of the map file that are not to be there (deleted,
+or changed), each with the keys the map file has it with.
 
-A start of the map also removes what was spawned through the panel, and the module is loaded anew with
-nothing it remembered. So the placed entities are written to a file first, with the keys they were spawned
-with and the place they are at now, and the new map spawns them again and removes the file.
+  map=<name>
+  -{            an entity of the map file that is taken away
+  key=value
+  }
+  {             an entity that is spawned
+  key=value
+  }
+
+Saved, it is the file layouts/<map>.txt in the game folder, and is done to the map again at every start of it,
+with the panel on or off. An entity to take away that the map does not have (another game type, another
+version of the map) is passed over.
+
+"Reload map" writes the same text for the one start that follows: the engine looks through its folders for pk3
+files whenever a map starts (FS_Restart in SV_SpawnServer) and at no other time, so starting the running map
+again is what makes it find a pk3 that was uploaded. The players stay connected. That file wins over the saved
+layout for that one start, it is the map as it stood.
 
 ==============================================================================
 */
 
 #define WA_RELOAD_FILE		"webadmin_reload.dat"
+#define WA_LAYOUT_FOLDER	"layouts"
 #define WA_RELOAD_DELAY		1500		// msec after the start of the map
+
+// the keys of an entity as a block of a layout. at: the entity, for where it is now, NULL for the keys as they are
+static void WA_LayoutBlock( waBuffer_t *b, const char *open, const char *vars, int len, const gentity_t *at ) {
+	const char *key, *end;
+
+	WA_BufAppend( b, open, (int)strlen( open ) );
+	for ( key = vars, end = vars + len; key < end; ) {
+		const char *value = key + strlen( key ) + 1;
+
+		vec3_t put;
+
+		// Where it is now, not where it was put, when the two are not the same place: a ball rolls. One that
+		// stands where its key says keeps the key as it is written.
+		if ( at && !at->r.bmodel && !Q_stricmp( key, "origin" )
+			&& ( sscanf( value, "%f %f %f", &put[0], &put[1], &put[2] ) != 3 || Distance( put, at->r.currentOrigin ) > 0.5f ) ) {
+			WA_BufPrintf( b, "origin=%.1f %.1f %.1f\n", at->r.currentOrigin[0], at->r.currentOrigin[1], at->r.currentOrigin[2] );
+		} else {
+			WA_BufPrintf( b, "%s=%s\n", key, value );
+		}
+		key = value + strlen( value ) + 1;
+	}
+	WA_BufAppend( b, "}\n", 2 );
+}
+
+// The layout of the map as it stands: what of the map file is gone, and what is there that the map file does
+// not bring. b may be NULL, to count only. adds and removes: how many of each.
+static void WA_LayoutText( waBuffer_t *b, const char *mapname, int *adds, int *removes ) {
+	int i;
+
+	*adds = *removes = 0;
+	if ( b )
+		WA_BufPrintf( b, "map=%s\n", mapname );
+	for ( i = 0; i < originalCount; i++ ) {
+		if ( !originals[i].gone )
+			continue;
+		if ( b )
+			WA_LayoutBlock( b, "-{\n", originals[i].vars, originals[i].len, NULL );
+		( *removes )++;
+	}
+	for ( i = MAX_CLIENTS; i < level.num_entities; i++ ) {
+		const gentity_t *ent = &g_entities[i];
+
+		// one that still is an entity of the map file is brought by the map
+		if ( !entityVars[i] || entityOriginal[i] || !WA_ListedEntity( ent ) )
+			continue;
+		if ( b )
+			WA_LayoutBlock( b, "{\n", entityVars[i], entityVarsLen[i], ent );
+		( *adds )++;
+	}
+}
+
+// the name of the map that runs, and of the file its layout is kept in. qfalse: no map, or a name that is none
+static qboolean WA_LayoutFile( char *mapname, int mapSize, char *file, int fileSize ) {
+	trap->Cvar_VariableStringBuffer( "mapname", mapname, mapSize );
+	Q_strstrip( mapname, "\n\r\";", NULL );
+	if ( !mapname[0] || strstr( mapname, ".." ) || mapname[0] == '/' )
+		return qfalse;
+	Com_sprintf( file, fileSize, WA_LAYOUT_FOLDER "/%s.txt", mapname );
+	return qtrue;
+}
 
 void WA_ReloadMap( waConnection_t *c ) {
 	waBuffer_t	b = { 0 };
-	char		mapname[MAX_QPATH];
-	int			i, count = 0;
+	char		mapname[MAX_QPATH], file[MAX_QPATH];
+	int			adds, removes;
 
-	trap->Cvar_VariableStringBuffer( "mapname", mapname, sizeof( mapname ) );
-	Q_strstrip( mapname, "\n\r\";", NULL );
-	if ( !mapname[0] ) {
+	if ( !WA_LayoutFile( mapname, sizeof( mapname ), file, sizeof( file ) ) ) {
 		WA_ActionResult( c, qfalse, "no map is running" );
 		return;
 	}
 
-	// the first line names the map, then a block of key=value lines for each entity
-	WA_BufPrintf( &b, "map=%s\n", mapname );
-	for ( i = MAX_CLIENTS; i < level.num_entities; i++ ) {
-		const gentity_t	*ent = &g_entities[i];
-		const char		*key, *end;
-
-		if ( !entityPlaced[i] || !entityVars[i] || !WA_ListedEntity( ent ) )
-			continue;
-		WA_BufAppend( &b, "{\n", 2 );
-		for ( key = entityVars[i], end = key + entityVarsLen[i]; key < end; ) {
-			const char *value = key + strlen( key ) + 1;
-
-			if ( !Q_stricmp( key, "origin" ) && !ent->r.bmodel ) {
-				// where it is now, not where it was put: a ball rolls
-				WA_BufPrintf( &b, "origin=%.1f %.1f %.1f\n", ent->r.currentOrigin[0], ent->r.currentOrigin[1], ent->r.currentOrigin[2] );
-			} else {
-				WA_BufPrintf( &b, "%s=%s\n", key, value );
-			}
-			key = value + strlen( value ) + 1;
-		}
-		WA_BufAppend( &b, "}\n", 2 );
-		count++;
-	}
+	// the map as it stands, for the one start that follows
+	WA_LayoutText( &b, mapname, &adds, &removes );
 	if ( !WA_WriteGameFile( WA_RELOAD_FILE, b.data, b.len ) ) {
 		WA_BufFree( &b );
 		WA_ActionResult( c, qfalse, "could not write " WA_RELOAD_FILE ", the map is not started again" );
@@ -743,64 +870,132 @@ void WA_ReloadMap( waConnection_t *c ) {
 
 	// devmap keeps the cheats on if they are
 	trap->SendConsoleCommand( EXEC_APPEND, va( "%s \"%s\"\n", trap->Cvar_VariableIntegerValue( "sv_cheats" ) ? "devmap" : "map", mapname ) );
-	WA_ActionResult( c, qtrue, va( "starting %s again, %d placed objects come back", mapname, count ) );
+	WA_ActionResult( c, qtrue, va( "starting %s again, %d placed objects come back", mapname, adds ) );
 }
 
-// At the start of a map: takes what WA_ReloadMap() left. The file is for the start that follows it and for no
-// other, so it is removed whatever is in it.
+// the text of a layout if it is one for this map: what follows its first line, which names the map. NULL: not.
+// text is freed or handed back.
+static char *WA_LayoutBody( char *text, const char *mapname ) {
+	char *body = text ? strchr( text, '\n' ) : NULL;
+
+	if ( !body || strncmp( text, "map=", 4 ) || (int)( body - text ) - 4 != (int)strlen( mapname )
+		|| strncmp( text + 4, mapname, strlen( mapname ) ) ) {
+		free( text );
+		return NULL;
+	}
+	memmove( text, body + 1, strlen( body + 1 ) + 1 );
+	return text;
+}
+
+// At the start of a map: takes what is to be done to it. That is what WA_ReloadMap() left for this one start
+// (the file is removed whatever is in it), or else the layout that was saved for the map.
 void WA_ReloadRead( void ) {
-	char		path[MAX_OSPATH], mapname[MAX_QPATH];
+	char		path[MAX_OSPATH], mapname[MAX_QPATH], file[MAX_QPATH];
 	qboolean	exists, isDir;
 	double		size;
 	FILE		*f;
-	char		*text, *body;
+	char		*text = NULL, *saved, *whole;
 	int			len;
 
 	free( reloadText );
 	reloadText = NULL;
-	if ( !WA_FsResolve( qfalse, WA_RELOAD_FILE, qfalse, path, sizeof( path ), &exists )
-		|| !WA_FsStat( path, &isDir, &size, NULL ) || isDir )
+	layoutSaved = layoutDirty = qfalse;
+	if ( !WA_LayoutFile( mapname, sizeof( mapname ), file, sizeof( file ) ) )
 		return;
-	len = ( size < 4 * 1024 * 1024 ) ? (int)size : 0;
-	f = fopen( path, "rb" );
-	text = f ? (char *)malloc( len + 1 ) : NULL;
-	if ( text )
-		len = (int)fread( text, 1, len, f );
-	if ( f )
-		fclose( f );
-	remove( path );
-	if ( !text )
-		return;
-	text[len] = '\0';
 
-	trap->Cvar_VariableStringBuffer( "mapname", mapname, sizeof( mapname ) );
-	body = strchr( text, '\n' );
-	if ( !body || strncmp( text, "map=", 4 ) || (int)( body - text ) - 4 != (int)strlen( mapname )
-		|| strncmp( text + 4, mapname, strlen( mapname ) ) ) {
-		free( text );		// it was left for another map
-		return;
+	if ( WA_FsResolve( qfalse, WA_RELOAD_FILE, qfalse, path, sizeof( path ), &exists )
+		&& WA_FsStat( path, &isDir, &size, NULL ) && !isDir ) {
+		len = ( size < 4 * 1024 * 1024 ) ? (int)size : 0;
+		f = fopen( path, "rb" );
+		text = f ? (char *)malloc( len + 1 ) : NULL;
+		if ( text )
+			len = (int)fread( text, 1, len, f );
+		if ( f )
+			fclose( f );
+		remove( path );
+		if ( text )
+			text[len] = '\0';
+		reloadText = WA_LayoutBody( text, mapname );
 	}
-	memmove( text, body + 1, strlen( body + 1 ) + 1 );
-	reloadText = text;
+
+	// the layout that was saved for this map
+	saved = WA_ReadGameFile( file, &len );
+	whole = saved ? (char *)malloc( len + 1 ) : NULL;
+	if ( whole ) {
+		memcpy( whole, saved, len );
+		whole[len] = '\0';
+		whole = WA_LayoutBody( whole, mapname );
+	}
+	free( saved );
+	layoutSaved = (qboolean)( whole != NULL );
+	if ( reloadText ) {
+		// what a reload carried over is the map as it stood then: not what was saved, unless the two are the same
+		layoutDirty = (qboolean)( whole ? strcmp( whole, reloadText ) != 0 : strstr( reloadText, "{\n" ) != NULL );
+		free( whole );
+	} else {
+		reloadText = whole;
+	}
 }
 
-// spawns what WA_ReloadRead() took, when the map has run for a moment
+// An entity of the map file that a layout takes away: the one that still has the keys of this block, which are
+// lines of key=value. qfalse: there is none (another game type, or the map file is not the one it was).
+static qboolean WA_LayoutRemove( const char *lines ) {
+	static char	vars[MAX_SPAWN_VARS_CHARS];
+	int			len = 0, i;
+
+	while ( *lines ) {
+		const char	*end = strchr( lines, '\n' ), *eq;
+		const int	n = end ? (int)( end - lines ) : (int)strlen( lines );
+
+		eq = (const char *)memchr( lines, '=', n );
+		if ( eq ) {
+			if ( len + n + 2 > (int)sizeof( vars ) )
+				return qfalse;
+			memcpy( vars + len, lines, eq - lines );
+			len += (int)( eq - lines );
+			vars[len++] = '\0';
+			memcpy( vars + len, eq + 1, n - (int)( eq - lines ) - 1 );
+			len += n - (int)( eq - lines ) - 1;
+			vars[len++] = '\0';
+		}
+		lines = end ? end + 1 : lines + n;
+	}
+
+	for ( i = MAX_CLIENTS; i < level.num_entities; i++ ) {
+		const waOriginal_t *o = entityOriginal[i] ? &originals[entityOriginal[i] - 1] : NULL;
+
+		if ( o && g_entities[i].inuse && o->len == len && !memcmp( o->vars, vars, len ) ) {
+			WA_FreeEntity( &g_entities[i] );
+			return qtrue;
+		}
+	}
+	return qfalse;
+}
+
+// does to the map what WA_ReloadRead() took, when the map has run for a moment
 static void WA_ReloadSpawn( void ) {
-	char	*block = reloadText, err[128];
-	int		count = 0, lost = 0;
+	char		*block = reloadText, err[128];
+	int			added = 0, lost = 0, removed = 0, missing = 0;
+	const qboolean	wasDirty = layoutDirty;
 
 	while ( ( block = strstr( block, "{\n" ) ) != NULL ) {
-		char *end = strstr( block, "\n}\n" );
+		const qboolean	remove = (qboolean)( block > reloadText && block[-1] == '-' );
+		char			*end = strstr( block + 1, "\n}\n" );
 
 		if ( !end )
 			break;
 		end[1] = '\0';
-		{
+		if ( remove ) {
+			if ( WA_LayoutRemove( block + 2 ) )
+				removed++;
+			else
+				missing++;
+		} else {
 			const int id = WA_SpawnFromText( block + 2, err, sizeof( err ) );
 
 			if ( id >= 0 ) {
-				entityPlaced[id] = qtrue;
-				count++;
+				entityPlaced[id] = (qboolean)!entityOriginal[id];
+				added++;
 			} else {
 				lost++;
 			}
@@ -809,7 +1004,56 @@ static void WA_ReloadSpawn( void ) {
 	}
 	free( reloadText );
 	reloadText = NULL;
-	trap->Print( "Web admin: %d placed objects are back after the map reload%s\n", count, lost ? va( ", %d did not spawn", lost ) : "" );
+	// the map is now as the file has it: doing that was no change
+	layoutDirty = wasDirty;
+	trap->Print( "Web admin: the layout of the map: %d entities placed, %d of the map taken away%s%s\n", added, removed,
+		lost ? va( ", %d did not spawn", lost ) : "", missing ? va( ", %d to take away were not there", missing ) : "" );
+}
+
+/*
+=================
+WA_ApiLayout
+
+POST /api/layout, op=save: the map as it stands is kept for every start of it. op=forget: it is not any more.
+=================
+*/
+void WA_ApiLayout( waConnection_t *c, const char *body ) {
+	waBuffer_t	b = { 0 };
+	char		op[16], mapname[MAX_QPATH], file[MAX_QPATH], path[MAX_OSPATH];
+	qboolean	exists;
+	int			adds, removes;
+
+	WA_FormValue( body, "op", op, sizeof( op ) );
+	WA_LogUse( c, va( "layout %s", op ) );
+	if ( !WA_LayoutFile( mapname, sizeof( mapname ), file, sizeof( file ) ) ) {
+		WA_ActionResult( c, qfalse, "no map is running" );
+		return;
+	}
+
+	if ( !strcmp( op, "save" ) ) {
+		WA_LayoutText( &b, mapname, &adds, &removes );
+		if ( !WA_WriteGameFile( file, b.data, b.len ) ) {
+			WA_BufFree( &b );
+			WA_ActionResult( c, qfalse, va( "could not write %s", file ) );
+			return;
+		}
+		WA_BufFree( &b );
+		layoutSaved = qtrue;
+		layoutDirty = qfalse;
+		WA_ActionResult( c, qtrue, va( "Saved as %s: %d entities placed or changed, %d of the map taken away. It comes back with the map.",
+			file, adds, removes ) );
+	} else if ( !strcmp( op, "forget" ) ) {
+		if ( !WA_FsResolve( qfalse, file, qfalse, path, sizeof( path ), &exists ) || !exists || remove( path ) != 0 ) {
+			WA_ActionResult( c, qfalse, layoutSaved ? va( "could not remove %s", file ) : "no layout is saved for this map" );
+			return;
+		}
+		layoutSaved = qfalse;
+		WA_LayoutText( NULL, mapname, &adds, &removes );
+		layoutDirty = (qboolean)( adds + removes > 0 );
+		WA_ActionResult( c, qtrue, "Forgotten. The next start of the map is the map as its file has it." );
+	} else {
+		WA_ActionResult( c, qfalse, "unknown op" );
+	}
 }
 
 // every frame: what a reload left for this start of the map is spawned once the map has settled
@@ -824,6 +1068,9 @@ void WA_EntitiesShutdown( void ) {
 
 	for ( i = 0; i < MAX_GENTITIES; i++ )
 		WebAdmin_EntityFreed( i );
+	for ( i = 0; i < originalCount; i++ )
+		free( originals[i].vars );
+	originalCount = 0;
 	free( reloadText );
 	reloadText = NULL;
 }
