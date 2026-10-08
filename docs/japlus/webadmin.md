@@ -178,8 +178,11 @@ Also changed:
   near they are, without the ones inside walls, the ambient light times `r_ambientScale` (0.6) with the little
   the engine adds for everything, the directed light and where it comes from. A map without a grid gives the
   same light everywhere. Light styles that flicker and dynamic lights (a saber, a shot) are not in it. A
-  surface of a model that blends is drawn where it comes in the model and not sorted with the
-  rest of the picture. The colour of the team that the plain view lays over a player is left out here, the
+  surface of a model that is see-through (a sort after the banners) waits until everything solid is drawn
+  (`lateModels`) and is then drawn in the order of its sort together with the see-through surfaces of the map,
+  the model first where both have the same sort, as the game sorts all of them together. Before that a model
+  drawn later behind such a surface wiped it out. Within one sort nothing is ordered by distance, the game
+  does not do that either. The colour of the team that the plain view lays over a player is left out here, the
   game has none. The editor draws models as before.
 - New: values to pick from (`/api/list`). The Map field of the top bar offers the maps of the server and the
   bot field its bots. In the key table of an entity a value field offers what fits its key: the class names for
@@ -777,6 +780,18 @@ waypoint. A drag moves the view, turns it with the middle button, moves an entit
 when flying. The wheel zooms and sets the flying speed. A right-click teleports, places the class that is armed,
 adds a waypoint. Undo, the Z field, Remove and Save of a route. Copy, paste, the stored views and the keys of
 the fly camera went through the keyboard. What that is not: a person at a real browser on a real GPU.
+
+The sides, the deforms and the order of see-through model surfaces (`steps_cull.js`, `steps_deform.js`, the
+same day, on mp/ffa3, mp/ctf4 and mp/duel7): inside the map, at 8 spawn points looking four ways, the picture
+with one side drawn and the one with both differ in 0.04% of their pixels on average and 0.25% at most, and a
+click in the middle hits the same place either way in all 32 views, so the front of a triangle is taken as the
+game takes it. From above a third of the picture is another one: the rooms are open. A player close up is not
+inside out. The three flares of mp/ctf4 and the eight chain quads of mp/duel7 are found and the picture differs
+from the one with the quads as the map has them. No map of the game for more than one player has a wave, a
+bulge or a move, so those were put on every shader of mp/ffa3 by hand: the picture changes and is the old one
+after it, and a move by nothing changes nothing. After the two changes of the map every player had his model
+(one file was cut off on its way and was asked for again). Not tried: a model with a see-through surface in
+front of another model (no such pair stood on the maps), a comparison with a picture of the game.
 
 Several entities at once (`steps_group.js`, 20 checks, the same day): Ctrl and a click selected three and took
 one out again, Shift and Page Up lifted the three by one grid step as one step of undo, Ctrl+Z and Ctrl+Y put
