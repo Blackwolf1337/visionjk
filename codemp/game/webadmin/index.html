@@ -243,8 +243,8 @@ body.app-admin #dbg, body.app-admin .editorOnly, body.app-admin #tabs button[dat
 	<span class="meta">Time <b id="time">-</b></span>
 	<span id="teamScores" class="inline" style="display:none"><span class="score red" id="scoreRed">0</span><span class="score blue" id="scoreBlue">0</span></span>
 	<span class="spacer"></span>
-	<form class="inline" id="botForm"><input id="botName" placeholder="Bot name" style="width:100px"><button>Add bot</button></form>
-	<form class="inline" id="mapForm"><input id="mapName" placeholder="mp/ffa3" style="width:100px"><button>Map</button></form>
+	<form class="inline" id="botForm"><input id="botName" placeholder="Bot name" style="width:100px" list="pickBots" autocomplete="off"><button>Add bot</button></form>
+	<form class="inline" id="mapForm"><input id="mapName" placeholder="mp/ffa3" style="width:100px" list="pickMaps" autocomplete="off"><button>Map</button></form>
 	<form class="inline" id="gravForm" title="Gravity for everybody (g_gravity). 800 is normal. The map sets it again when it starts."><input id="gravValue" type="number" min="-2000" max="5000" placeholder="800" style="width:70px"><button>Gravity</button></form>
 	<span id="status" title="Connection"></span>
 </div>
@@ -415,6 +415,8 @@ body.app-admin #dbg, body.app-admin .editorOnly, body.app-admin #tabs button[dat
 		<div id="entLinks"></div>
 		<table id="kvTable"><tbody id="kvRows"></tbody></table>
 		<datalist id="kvKeys"></datalist>
+		<datalist id="pickMaps"></datalist><datalist id="pickBots"></datalist><datalist id="pickEffects"></datalist><datalist id="pickMusic"></datalist>
+		<datalist id="pickNpcs"></datalist><datalist id="pickClasses"></datalist><datalist id="pickNames"></datalist>
 		<div class="actions">
 			<button id="kvAdd">+ Key</button>
 			<button class="primary" id="entApply">Apply</button>
@@ -3114,6 +3116,48 @@ function renderBudget(b) {
 	};
 	$('entBudget').innerHTML = [part('Entities', b.entities), part('Models', b.models), part('Sounds', b.sounds), part('Effects', b.effects)].join(' &middot; ');
 }
+
+// ---- values to pick from, so that the name of a map, an effect or an NPC does not have to be known by heart
+
+const PICK_KINDS = { pickMaps: 'maps', pickBots: 'bots', pickEffects: 'effects', pickMusic: 'music', pickNpcs: 'npcs' };
+const pickAsked = new Set();
+
+function pickOptions(id, names) {
+	$(id).innerHTML = [...new Set(names)].filter(Boolean).sort().map(n => '<option value="' + escapeHtml(n) + '">').join('');
+}
+
+// the lists the server has are asked for once, the ones the page knows itself are made when they are needed
+async function pickFill(id) {
+	if (id === 'pickClasses') { pickOptions(id, allClasses); return; }
+	if (id === 'pickNames') { pickOptions(id, [...ents.values()].map(e => entKey(e, 'targetname'))); return; }
+	if (!(id in PICK_KINDS) || pickAsked.has(id)) return;
+	pickAsked.add(id);
+	try {
+		pickOptions(id, (await (await fetch('api/list?kind=' + PICK_KINDS[id])).json()).names);
+	} catch (e) {
+		pickAsked.delete(id);
+	}
+}
+
+// the list the value of a key is picked from: what it fires from the names there are, an effect, an NPC type, ...
+function pickFor(key) {
+	const k = key.trim().toLowerCase();
+	if (k === 'classname') return 'pickClasses';
+	if (LINK_KEYS.has(k)) return 'pickNames';
+	if (k === 'npc_type') return 'pickNpcs';
+	if (k === 'mapname') return 'pickMaps';
+	if (k === 'music') return 'pickMusic';
+	return /fx/.test(k) ? 'pickEffects' : '';
+}
+
+$('kvRows').addEventListener('focusin', e => {
+	const row = e.target.closest('tr'), inputs = row ? row.querySelectorAll('input') : [];
+	if (inputs.length !== 2 || e.target !== inputs[1]) return;
+	const id = pickFor(inputs[0].value);
+	if (id) { e.target.setAttribute('list', id); pickFill(id); } else e.target.removeAttribute('list');
+});
+$('mapName').addEventListener('focus', () => pickFill('pickMaps'));
+$('botName').addEventListener('focus', () => pickFill('pickBots'));
 
 // ---- undo and redo
 

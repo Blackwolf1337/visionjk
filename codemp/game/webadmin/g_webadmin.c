@@ -2604,6 +2604,85 @@ static void WA_ModelScanFrame( void ) {
 	}
 }
 
+extern char NPCParms[];		// NPC_stats.c: the text of every .npc file
+
+/*
+=================
+WA_ApiList
+
+GET /api/list?kind=: names for the fields of the page to offer, so that a value does not have to be known by
+heart. maps, effects and music are the files of the game, npcs the types of the .npc files, bots the bots the
+server knows.
+=================
+*/
+static void WA_ApiList( waConnection_t *c, const char *query ) {
+	// strip: the name goes without its ending. prefix: what the key of an entity wants in front of it
+	static const struct { const char *kind, *dir, *ext, *prefix; qboolean strip; } folders[] = {
+		{ "maps", "maps", ".bsp", "", qtrue },
+		{ "effects", "effects", ".efx", "", qtrue },
+		{ "music", "music", ".mp3", "music/", qfalse },
+	};
+	static char	list[65536];
+	char		kind[16], name[MAX_QPATH];
+	waBuffer_t	b = { 0 };
+	qboolean	first = qtrue;
+	size_t		f;
+	int			i, n;
+
+	WA_FormValue( query, "kind", kind, sizeof( kind ) );
+	WA_BufAppend( &b, "{\"names\":[", 10 );
+
+	for ( f = 0; f < ARRAY_LEN( folders ); f++ ) {
+		const char *file;
+
+		if ( strcmp( kind, folders[f].kind ) )
+			continue;
+		// the engine names the files of the folders below too, with the folder in front
+		n = trap->FS_GetFileList( folders[f].dir, folders[f].ext, list, sizeof( list ) );
+		for ( i = 0, file = list; i < n; i++, file += strlen( file ) + 1 ) {
+			if ( !file[0] || WA_ModelListedBefore( list, file ) )
+				continue;
+			Com_sprintf( name, sizeof( name ), "%s%s", folders[f].prefix, file );
+			if ( folders[f].strip )
+				COM_StripExtension( name, name, sizeof( name ) );
+			if ( !first )
+				WA_BufAppend( &b, ",", 1 );
+			first = qfalse;
+			WA_BufJsonString( &b, name );
+		}
+	}
+
+	if ( !strcmp( kind, "npcs" ) ) {
+		// a .npc file is a name and its block, one after the other
+		const char *p = NPCParms;
+
+		while ( p ) {
+			const char *token = COM_ParseExt( &p, qtrue );
+
+			if ( !token[0] )
+				break;
+			Q_strncpyz( name, token, sizeof( name ) );
+			if ( SkipBracedSection( &p, 0 ) && name[0] != '{' ) {
+				if ( !first )
+					WA_BufAppend( &b, ",", 1 );
+				first = qfalse;
+				WA_BufJsonString( &b, name );
+			}
+		}
+	} else if ( !strcmp( kind, "bots" ) ) {
+		for ( i = 0; i < level.bots.num; i++ ) {
+			if ( !first )
+				WA_BufAppend( &b, ",", 1 );
+			first = qfalse;
+			WA_BufJsonString( &b, Info_ValueForKey( G_GetBotInfoByNumber( i ), "name" ) );
+		}
+	}
+
+	WA_BufAppend( &b, "]}", 2 );
+	WA_RespondJson( c, &b );
+	WA_BufFree( &b );
+}
+
 // GET /api/classdoc: the entity definitions of the game code, every QUAKED comment of its source files as it
 // stands there (cmake/Modules/ExtractQuaked.cmake). The editor of the page reads the classes from it: what one
 // does, its keys, the names of its spawnflags, its box and its colour.
@@ -2760,6 +2839,8 @@ static void WA_HandleRequest( waConnection_t *c, char *head, char *body, int bod
 		WA_ApiShaders( c );
 	} else if ( !strcmp( method, "GET" ) && !strcmp( path, "/api/classdoc" ) ) {
 		WA_ApiClassDoc( c );
+	} else if ( !strcmp( method, "GET" ) && !strcmp( path, "/api/list" ) ) {
+		WA_ApiList( c, query );
 	} else if ( !strcmp( method, "GET" ) && !strcmp( path, "/api/fs/list" ) ) {
 		WA_ApiFsList( c, query );
 	} else if ( !strcmp( method, "GET" ) && !strcmp( path, "/api/fs/get" ) ) {

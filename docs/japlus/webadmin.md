@@ -83,6 +83,7 @@ the answer tells the page that the numbers started over.
 | `GET /api/anims` | animation names in `animNumber_t` order |
 | `GET /api/classes` | everything that can be spawned, and the items with model and icon |
 | `GET /api/entities` | the entities with their keys. `budget`: entities, models, sounds and effects in use and the most there can be. `brushModels`: how many brush models the map has |
+| `GET /api/list?kind=` | names the fields of the page offer: `maps`, `effects` and `music` (the files of the game), `npcs` (the types of the `.npc` files), `bots` |
 | `GET /api/classdoc` | the entity definitions of the game code: every `QUAKED` comment of its source files as text |
 | `GET /api/export` | the entities in `.ent` format |
 | `GET /api/chat?since=&epoch=` | chat lines after number `since`. Everything if `epoch` is not the current one |
@@ -157,6 +158,11 @@ Also changed:
 - New: the page draws the models of `models` in both modes, on their way from where they were at the last poll:
   the props of the Models tab, cubes, balls and what else is a model entity. They are drawn with their image,
   without the shader scripts.
+- New: values to pick from (`/api/list`). The Map field of the top bar offers the maps of the server and the
+  bot field its bots. In the key table of an entity a value field offers what fits its key: the class names for
+  `classname`, the targetnames there are for `target` and the other keys that fire, the effects for a key with
+  `fx` in its name, the NPC types for `NPC_type`, the maps for `mapname`, the music files for `music`. Sounds are
+  not offered yet.
 - New: the server refuses to place what would end it (`WA_SpawnRefused`): a class made of brushes (`trigger_`,
   `func_`) without a `model` key that names a brush model of the map, the classes whose spawn function raises
   an error without a key (`target_speaker`, `target_play_music`, `target_level_change`,
