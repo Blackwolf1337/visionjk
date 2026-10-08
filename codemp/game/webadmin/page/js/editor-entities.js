@@ -253,6 +253,32 @@ const PLACE_KEYS = {
 	misc_prop: [['model', 'models/map_objects/cairn/cargo_sm.md3'], ['scale', '100']],
 };
 const PLACE_HEIGHT = { misc_blackhole: 72, misc_ball: 64, misc_cube: 48, misc_prop: 48 };
+// A trigger is placed as a box of its own, standing on the floor: the brushes of the map are for the ones the
+// map came with. All but the two that are no space to walk into.
+const BOX_TRIGGER = /^trigger_(?!always$|asteroid_field$)/i, TRIGGER_BOX = [['mins', '-64 -64 -48'], ['maxs', '64 64 48']];
+// Where a class sends to, from where it is placed: one that pushes or teleports is placed with a target_position
+// of its own. A trigger_push without one is freed by the game in its first frame, before a key could be added.
+const PLACE_AIM = { trigger_push: at => [at[0], at[1], at[2] + 256], trigger_teleport: at => {
+	// towards the viewer, where the floor is seen
+	const d = camDir(), l = Math.hypot(d[0], d[1]);
+	return l > 0.2 ? [at[0] - d[0] / l * 192, at[1] - d[1] / l * 192, at[2]] : [at[0] + 192, at[1], at[2]];
+} };
+const placeHeight = cls => cls in PLACE_HEIGHT ? PLACE_HEIGHT[cls] : BOX_TRIGGER.test(cls) ? 48 : /^misc_model/.test(cls) ? 0 : 24;
+
+// the trigger and what it is aimed at as one step. The target first: the trigger looks for it in its first frame.
+async function placeAimed(cls, keys, at) {
+	const names = new Set([...ents.values()].map(e => entKey(e, 'targetname').toLowerCase()));
+	let n = 1;
+	while (names.has('aim' + n)) n++;
+	const steps = [], ids = [];
+	for (const kv of [keysText([['classname', 'target_position'], ['origin', fmtVec(PLACE_AIM[cls](at))], ['targetname', 'aim' + n]]), keysText(keys.concat([['target', 'aim' + n]]))]) {
+		const params = { op: 'spawn', kv }, json = await entityOp(params, null, false, true);
+		if (!json) break;
+		steps.push(histStepFor(params, null, null, json.id));
+		ids.unshift(json.id);
+	}
+	await groupDone('Placed ' + cls + (steps.length === 2 ? ' and what it is aimed at:' : ', refused:'), steps, false, ids, steps.length, 2 - steps.length);
+}
 
 function placeEntity(hit) {
 	const name = $('newClass').value.trim();
@@ -261,13 +287,15 @@ function placeEntity(hit) {
 		const keys = templates[name.slice(1)];
 		if (!keys) { toast('No template ' + name.slice(1), false); return; }
 		const tcls = (keys.find(k => k[0].toLowerCase() === 'classname') || [])[1] || '';
-		const tz = tcls in PLACE_HEIGHT ? PLACE_HEIGHT[tcls] : /^misc_model/.test(tcls) ? 0 : 24;
+		const tz = placeHeight(tcls);
 		entityOp({ op: 'spawn', kv: keysText(setKey(keys.map(k => k.slice()), 'origin', fmtVec([hit[0], hit[1], hit[2] + tz]))) }, 'Placed ' + name.slice(1));
 		return;
 	}
 	const cls = name;
 	// items drop to the floor themselves, players and NPCs stand on it
-	const z = cls in PLACE_HEIGHT ? PLACE_HEIGHT[cls] : /^misc_model/.test(cls) ? 0 : 24;
-	entityOp({ op: 'spawn', kv: keysText([['classname', cls], ['origin', fmtVec([hit[0], hit[1], hit[2] + z])]].concat(PLACE_KEYS[cls] || [])) }, 'Placed ' + cls);
+	const at = [hit[0], hit[1], hit[2] + placeHeight(cls)];
+	const keys = [['classname', cls], ['origin', fmtVec(at)]].concat(PLACE_KEYS[cls] || (BOX_TRIGGER.test(cls) ? TRIGGER_BOX : []));
+	if (cls.toLowerCase() in PLACE_AIM) { placeAimed(cls.toLowerCase(), keys, at); return; }
+	entityOp({ op: 'spawn', kv: keysText(keys) }, 'Placed ' + cls);
 }
 

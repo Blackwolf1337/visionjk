@@ -27,10 +27,24 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 int gTrigFallSound;
 
 void InitTrigger( gentity_t *self ) {
+	vec3_t	mins, maxs;
+
 	if (!VectorCompare (self->s.angles, vec3_origin))
 		G_SetMovedir (self->s.angles, self->movedir);
 
-	trap->SetBrushModel( (sharedEntity_t *)self, self->model );
+	// Not in the game as it was: a trigger that names no brush model and has the keys mins and maxs is a box of
+	// that size at its origin. No map file has such a trigger (without a model the line below ends the server),
+	// the editor of the web admin panel places them, so that a trigger does not need a shape the map happens to
+	// have. The server alone works such a trigger: a client predicts its own way only through triggers that are
+	// brush models (CG_TouchTriggerPrediction), so a push by one comes with the next snapshot.
+	if ( ( !self->model || self->model[0] != '*' ) && G_SpawnVector( "mins", "0 0 0", mins ) && G_SpawnVector( "maxs", "0 0 0", maxs )
+		&& maxs[0] > mins[0] && maxs[1] > mins[1] && maxs[2] > mins[2] ) {
+		VectorCopy( mins, self->r.mins );
+		VectorCopy( maxs, self->r.maxs );
+		G_SetOrigin( self, self->s.origin );
+	} else {
+		trap->SetBrushModel( (sharedEntity_t *)self, self->model );
+	}
 	self->r.contents = CONTENTS_TRIGGER;		// replaces the -1 from trap->SetBrushModel
 	self->r.svFlags = SVF_NOCLIENT;
 

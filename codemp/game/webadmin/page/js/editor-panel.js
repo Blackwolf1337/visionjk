@@ -7,6 +7,15 @@ function renderEntTools(ent) {
 		$(id).disabled = !editable;
 	});
 
+	// a trigger that is a box of its own: how big
+	const tb = triggerBox(ent);
+	['boxLabel', 'boxX', 'boxY', 'boxZ'].forEach((id, i) => {
+		$(id).style.display = tb ? '' : 'none';
+		if (!tb || !i) return;
+		$(id).value = Math.round((tb.maxs[i - 1] - tb.mins[i - 1]) * 100) / 100;
+		$(id).disabled = !editable;
+	});
+
 	// a box for every spawnflag that has a name, x and - stand for bits without one
 	const flags = +entKey(ent, 'spawnflags') || 0;
 	$('entFlags').innerHTML = editable && d ? d.flags.map((name, i) => /^(x|-|\?)$/i.test(name) ? '' :

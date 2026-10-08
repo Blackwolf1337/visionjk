@@ -47,6 +47,17 @@ for (const id of ['angP', 'angY', 'angR']) {
 		entityOp({ op: 'update', id: selectedEnt, kv: keysText(setKey(keys, 'angles', ['angP', 'angY', 'angR'].map(i => +$(i).value || 0).join(' '))) }, 'Turned');
 	});
 }
+for (const id of ['boxX', 'boxY', 'boxZ']) {
+	$(id).addEventListener('change', () => {
+		const ent = ents.get(selectedEnt), tb = ent && ent.keys ? triggerBox(ent) : null;
+		if (!tb) return;
+		// around the middle the box has, which need not be its origin
+		const half = ['boxX', 'boxY', 'boxZ'].map(i => Math.max(1, +$(i).value || 0) / 2), mid = tb.mins.map((v, i) => (v + tb.maxs[i]) / 2);
+		const num = v => String(Math.round(v * 100) / 100), keys = ent.keys.map(k => k.slice());
+		setKey(keys, 'mins', mid.map((v, i) => num(v - half[i])).join(' '));
+		entityOp({ op: 'update', id: selectedEnt, kv: keysText(setKey(keys, 'maxs', mid.map((v, i) => num(v + half[i])).join(' '))) }, 'Resized');
+	});
+}
 $('entFocus').addEventListener('click', () => focusEntity(selectedEnt));
 
 // Fire: what a trigger does to the entity it has as its target. The map is not changed by it, so it is no step

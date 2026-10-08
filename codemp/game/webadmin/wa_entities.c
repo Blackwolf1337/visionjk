@@ -179,6 +179,8 @@ static const char *WA_SpawnVar( const char *key ) {
 	return NULL;
 }
 
+#define WA_TRIGGER_BOX	32768		// the widest box a trigger may have that is one of its own
+
 /*
 =================
 WA_SpawnRefused
@@ -242,14 +244,30 @@ static qboolean WA_SpawnRefused( char *err, int errSize ) {
 	// the classes that are made of brushes of the map take them from the model key
 	if ( ( !Q_stricmpn( classname, "trigger_", 8 ) && Q_stricmp( classname, "trigger_always" ) )
 		|| ( !Q_stricmpn( classname, "func_", 5 ) && Q_stricmp( classname, "func_timer" ) && Q_stricmp( classname, "func_group" ) ) ) {
-		const int count = WA_MapBrushModels();
+		const int		count = WA_MapBrushModels();
+		const char		*lo = WA_SpawnVar( "mins" ), *hi = WA_SpawnVar( "maxs" );
+		// a trigger may be a box of its own instead (InitTrigger in g_trigger.c), all but the one that does not ask it
+		const qboolean	boxed = (qboolean)( !Q_stricmpn( classname, "trigger_", 8 ) && Q_stricmp( classname, "trigger_asteroid_field" ) );
+		vec3_t			mins, maxs;
 
 		value = WA_SpawnVar( "model" );
-		if ( !value || value[0] != '*' || atoi( value + 1 ) < 1 ) {
-			Com_sprintf( err, errSize, "a %s is made of brushes of the map: it needs a model key like *1", classname );
+		if ( ( !value || value[0] != '*' ) && boxed && ( VALIDSTRING( lo ) || VALIDSTRING( hi ) ) ) {
+			// mins below maxs on every axis, or InitTrigger asks for the brushes after all
+			if ( !lo || !hi || sscanf( lo, "%f %f %f", &mins[0], &mins[1], &mins[2] ) != 3 || sscanf( hi, "%f %f %f", &maxs[0], &maxs[1], &maxs[2] ) != 3
+				|| maxs[0] <= mins[0] || maxs[1] <= mins[1] || maxs[2] <= mins[2] ) {
+				Com_sprintf( err, errSize, "the box of a %s needs mins and maxs with three numbers each, mins below maxs", classname );
+				return qtrue;
+			}
+			if ( maxs[0] - mins[0] > WA_TRIGGER_BOX || maxs[1] - mins[1] > WA_TRIGGER_BOX || maxs[2] - mins[2] > WA_TRIGGER_BOX ) {
+				Com_sprintf( err, errSize, "the box of a trigger may be %d units wide at most", WA_TRIGGER_BOX );
+				return qtrue;
+			}
+		} else if ( !value || value[0] != '*' || atoi( value + 1 ) < 1 ) {
+			Com_sprintf( err, errSize, boxed
+				? "a %s needs a shape: a model key like *1 for brushes of the map, or mins and maxs for a box of its own"
+				: "a %s is made of brushes of the map: it needs a model key like *1", classname );
 			return qtrue;
-		}
-		if ( count >= 0 && atoi( value + 1 ) >= count ) {
+		} else if ( count >= 0 && atoi( value + 1 ) >= count ) {
 			Com_sprintf( err, errSize, "the map has no brush model %s, the last one is *%d", value, count - 1 );
 			return qtrue;
 		}

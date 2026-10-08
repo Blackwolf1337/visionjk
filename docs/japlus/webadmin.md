@@ -272,6 +272,22 @@ Also changed:
   inactive, and an NPC (a vehicle takes whoever uses it on board without asking whether that is a player).
   The use functions of the game were read for this: every one that reaches into the client of what fired it
   asks first whether there is one.
+- New: a trigger can be a box of its own (`InitTrigger` in `g_trigger.c`, the one change to a file of the game
+  for this). A trigger of the game is made of brushes of the map, so the editor could only place one in a
+  shape the map already had: a second teleporter the size of the first, where the first is. A trigger that
+  names no brush model and has the keys `mins` and `maxs` is now a box of that size at its origin, and it
+  works as any other: `trigger_multiple`, `trigger_once`, `trigger_push`, `trigger_teleport`, `trigger_hurt`
+  and the rest that go through `InitTrigger` (not `trigger_asteroid_field`, which asks for its brushes
+  itself). No map file is read differently: a trigger without a model ended the server before. Such a box
+  does not turn (a trigger takes its angles as the way it pushes) and only the server works it: a client
+  predicts its own way only through triggers that are brush models, so the push of a box comes with the next
+  snapshot instead of at once. In the editor "Place" gives a trigger class a box of 128 x 128 x 96 that stands
+  on the floor, the Volumes view draws it, and the panel of the entity has a "Box" row with its size (the
+  middle of the box stays where it is; for another middle the two keys are edited). A `trigger_push` and a
+  `trigger_teleport` are placed with a `target_position` of their own, as one step: 256 above for the push,
+  192 towards the viewer for the teleport. The game frees a `trigger_push` without a target in its first
+  frame, before a key could be added. The server refuses a box whose `mins` are not below its `maxs`, half a
+  box, and one wider than 32768. A layout keeps such a trigger like every other placed entity.
 - New: the layout of a map (`WA_ApiLayout`, `WA_LayoutText`, `WA_ReloadSpawn` in `wa_entities.c`). What the
   editor did to a map was lost with every change of the map and every start of the server, only "Reload map"
   carried the placed entities over. "Save layout" in the World tab keeps the map as it stands in
@@ -402,7 +418,8 @@ Also changed:
   connects from (without the port, none for a bot) and the client plugin of JA+ he has or that he has none
   (`address`, `minutes`, `plugin` of a player in `/api/state`).
 - New: the server refuses to place what would end it (`WA_SpawnRefused`): a class made of brushes (`trigger_`,
-  `func_`) without a `model` key that names a brush model of the map, the classes whose spawn function raises
+  `func_`) without a `model` key that names a brush model of the map (a trigger may have a box instead, see
+  above), the classes whose spawn function raises
   an error without a key (`target_speaker`, `target_play_music`, `target_level_change`,
   `trigger_lightningstrike`, `misc_siege_item`, `misc_model_breakable`, `trigger_shipboundary`,
   `trigger_hyperspace`), an entity when fewer than 64 are left for the game, and a model, sound or effect when
@@ -944,6 +961,19 @@ waypoint. A drag moves the view, turns it with the middle button, moves an entit
 when flying. The wheel zooms and sets the flying speed. A right-click teleports, places the class that is armed,
 adds a waypoint. Undo, the Z field, Remove and Save of a route. Copy, paste, the stored views and the keys of
 the fly camera went through the keyboard. What that is not: a person at a real browser on a real GPU.
+
+Triggers as boxes (`steps_boxtrigger.js`, 22 checks, 2026-10-08, mp/ffa3 with four bots): a trigger without a
+shape, a flat box, half a box, one wider than 32768, a `trigger_asteroid_field` with a box and a `func_door`
+with one were refused, each with its reason. A box over the whole map was tried with four classes: as a
+`trigger_multiple` it fired its `target_relay` seven times in three seconds (read from the trace of what fires
+what), as a `trigger_teleport` it had all four bots at its target, as a `trigger_push` with a target 4000 units
+up it gave them 2530 units/s upwards and was still there after its first frame, as a `trigger_hurt` it left
+seven deaths by `MOD_TRIGGER_HURT` in the log. Placed through the page a `trigger_hurt` stood on the floor
+with the keys of the box, its panel showed 128 x 128 x 96, a new size gave the keys for it around the same
+middle, a start point had no such row, a push and a teleport came with their `target_position` and one Undo
+took both away, and after "Save layout" and a start of the map the box was there again. Not tried: a real
+player in such a box (how the late push feels on a client with its own prediction), an NPC, a vehicle, the
+classes for ships (`trigger_space`, `trigger_shipboundary`, `trigger_hyperspace`), and the Windows build.
 
 The layout (`steps_layout.js`, 13 checks, the same day, mp/ffa3): two entities placed, an item of the map
 deleted and a start point of the map moved gave a layout of three to spawn and two to take away. Saved, the
