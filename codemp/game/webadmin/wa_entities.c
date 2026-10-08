@@ -539,10 +539,19 @@ static void WA_OriginalBack( int entityNum ) {
 	}
 }
 
-static int WA_SpawnFromText( const char *text, char *err, int errSize ) {
+/*
+=================
+WA_SpawnVarsFromText
+
+The keys of an entity, one "key=value" to a line, into level.spawnVars, and looked at by the spawn guard.
+qfalse: they are not to be spawned, err says why. Nothing is spawned here: the page also asks this way what an
+entity it has only as a draft would be refused for (op check).
+=================
+*/
+static qboolean WA_SpawnVarsFromText( const char *text, char *err, int errSize ) {
 	char		line[MAX_SPAWN_VARS_CHARS];
 	const char	*p = text;
-	qboolean	hasClass = qfalse, wasSpawning;
+	qboolean	hasClass = qfalse;
 
 	refusedKey = NULL;
 	level.numSpawnVars = 0;
@@ -555,7 +564,7 @@ static int WA_SpawnFromText( const char *text, char *err, int errSize ) {
 
 		if ( len >= (int)sizeof( line ) ) {
 			Q_strncpyz( err, "a line is too long", errSize );
-			return -1;
+			return qfalse;
 		}
 		memcpy( line, p, len );
 		line[len] = '\0';
@@ -578,12 +587,12 @@ static int WA_SpawnFromText( const char *text, char *err, int errSize ) {
 		if ( level.numSpawnVars >= MAX_SPAWN_VARS ||
 			 level.numSpawnVarChars + (int)strlen( key ) + (int)strlen( value ) + 2 >= MAX_SPAWN_VARS_CHARS ) {
 			Q_strncpyz( err, "too many keys", errSize );
-			return -1;
+			return qfalse;
 		}
 		if ( !Q_stricmp( key, "classname" ) ) {
 			if ( !value[0] || !Q_stricmp( value, "worldspawn" ) ) {
 				Q_strncpyz( err, "this classname can not be spawned", errSize );
-				return -1;
+				return qfalse;
 			}
 			hasClass = qtrue;
 		}
@@ -595,9 +604,15 @@ static int WA_SpawnFromText( const char *text, char *err, int errSize ) {
 
 	if ( !hasClass ) {
 		Q_strncpyz( err, "no classname", errSize );
-		return -1;
+		return qfalse;
 	}
-	if ( WA_SpawnRefused( err, errSize ) )
+	return (qboolean)!WA_SpawnRefused( err, errSize );
+}
+
+static int WA_SpawnFromText( const char *text, char *err, int errSize ) {
+	qboolean	wasSpawning;
+
+	if ( !WA_SpawnVarsFromText( text, err, errSize ) )
 		return -1;
 
 	wasSpawning = level.spawning;
@@ -732,7 +747,7 @@ static void WA_FreeEntity( gentity_t *ent ) {
 }
 
 void WA_ApiEntity( waConnection_t *c, const char *body ) {
-	char		op[16], idStr[16], ofMap[4], err[128];
+	char		op[16], idStr[16], ofMap[4], err[256];
 	static char	kv[WA_MAX_REQUEST];
 	int			id = -1, newId, original;
 
@@ -740,6 +755,15 @@ void WA_ApiEntity( waConnection_t *c, const char *body ) {
 	WA_FormValue( body, "kv", kv, sizeof( kv ) );
 	if ( WA_FormValue( body, "id", idStr, sizeof( idStr ) ) )
 		id = atoi( idStr );
+
+	// What a spawn of these keys would be refused for, with nothing spawned: for an entity the page holds as a
+	// draft. It changes nothing, so it is not a line in the log either (the page asks at every change of a key).
+	if ( !strcmp( op, "check" ) ) {
+		const qboolean ok = WA_SpawnVarsFromText( kv, err, sizeof( err ) );
+
+		WA_EntityResult( c, ok, ok ? "it can be placed" : err, -1 );
+		return;
+	}
 	WA_LogUse( c, va( "entity %s id %i keys %.200s", op, id, kv ) );
 
 	if ( !strcmp( op, "spawn" ) ) {
