@@ -133,8 +133,11 @@ Also changed:
   `skyParms` around the eye and the stages of the sky shader as layers of clouds, as in `tr_sky.cpp`. The
   lightmaps are taken as they are in the map, which is what the game shows with `r_overBrightBits 0`,
   `r_mapOverBrightBits 0` and `r_gamma 1`, the defaults. See-through surfaces are drawn after the players and
-  the models. Not done: `deformVertexes`, glow, `surfaceSprites`, portals, culling by side (every surface
-  is drawn from both sides).
+  the models. A surface is drawn from the side the game draws it from (`cull`, `setCull`): the front, unless
+  its script says the back or both. Seen from outside a room is open that way, as in the game when one leaves
+  the map: its walls and its ceiling face inwards. So the view from above shows who is in a building. A click
+  on the map goes through what is not drawn (`pickGround` with `oneSided`), a right-click from above lands
+  on the floor of the room and not on its roof. Not done: `deformVertexes`, glow, `surfaceSprites`, portals.
   Images outside `textures/`, `models/` and `gfx/` are not handed out by the server, a stage that names one is
   left out. With a game module that has no `/api/shaders` the administration shows the plain view. The rules
   were checked by reading all 3365 shaders of the game through the parser. The picture was looked at in headless
@@ -194,6 +197,11 @@ Also changed:
 - New: copy and paste in the World tab. Ctrl+C takes the keys of the selected entity, Ctrl+V places one with them
   where the mouse is on the map (on the grid, as high above the floor as the copied one was), Ctrl+D is the
   Duplicate of the panel. Both go into the history of undo.
+- New: the switch "Open" in the bar of the debug views of the editor. The plain view of the editor draws every
+  surface from both sides, so a map with ceilings is a closed box from above. With "Open" it draws the side
+  the game draws, a click goes through the rest, and entities can be placed into a room from above.
+- Changed: the bar of the debug views and the legend of the keys share the top of the map view (`#viewTop`).
+  The legend goes below the bar when both do not fit next to each other, they lay over each other before.
 - New: several entities selected at once in the World tab. Ctrl and a click on a marker adds an entity to the
   selected one or takes it out again, a click without Ctrl or Escape ends it. Moving (the drag, the right-click,
   the fields of the position, "To floor", Shift and the keys) takes the others along by the same way, Delete,

@@ -89,7 +89,9 @@ body.sideClosed #view { left: 0; }
 .label .bar.ar i { background: #5aa9ff; }
 .label.sel .nm { outline: 1px solid var(--accent2); outline-offset: 1px; background: rgba(213,12,45,.35); padding: 0 3px; }
 #loading { position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%); color: var(--muted); background: var(--panel); border: 1px solid var(--line); padding: 10px 16px; border-radius: 4px; }
-#help { position: absolute; right: 10px; top: 10px; color: var(--muted); font-size: 11px; background: rgba(13,13,15,.75); border: 1px solid var(--line); padding: 6px 8px; border-radius: 3px; line-height: 1.6; }
+#viewTop { position: absolute; left: 10px; right: 10px; top: 10px; display: flex; flex-wrap: wrap; align-items: flex-start; gap: 6px 10px; pointer-events: none; }
+#viewTop > * { pointer-events: auto; }
+#help { margin-left: auto; min-width: 0; color: var(--muted); font-size: 11px; background: rgba(13,13,15,.75); border: 1px solid var(--line); padding: 6px 8px; border-radius: 3px; line-height: 1.6; }
 #help kbd { color: var(--text); border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 2px; padding: 0 3px; font-size: 10px; }
 
 /* The panel of a selected player: a column at the right edge of the map. JKAdmin has it across the bottom, where it
@@ -239,7 +241,7 @@ body.fp #help, body.fp #command, body.fp #entPanel { display: none; }
 #appMode button:first-child { border-radius: 3px 0 0 3px; }
 #appMode button:last-child { border-radius: 0 3px 3px 0; border-left: 0; }
 #appMode button.on { background: var(--accent); border-color: var(--accent); color: #fff; }
-#dbg { position: absolute; left: 10px; top: 10px; display: flex; align-items: center; gap: 12px; color: var(--muted); font-size: 12px; background: rgba(13,13,15,.75); border: 1px solid var(--line); padding: 5px 8px; border-radius: 3px; }
+#dbg { flex: 0 1 auto; flex-wrap: wrap; display: flex; align-items: center; gap: 12px; color: var(--muted); font-size: 12px; background: rgba(13,13,15,.75); border: 1px solid var(--line); padding: 5px 8px; border-radius: 3px; }
 #coords { position: absolute; left: 50%; bottom: 10px; transform: translateX(-50%); color: var(--muted); font: 11px ui-monospace, Menlo, Consolas, monospace; background: rgba(13,13,15,.75); border: 1px solid var(--line); padding: 3px 8px; border-radius: 3px; pointer-events: none; white-space: nowrap; }
 #coords:empty { display: none; }
 #flyBtn { position: absolute; right: 10px; bottom: 10px; }
@@ -390,19 +392,16 @@ body.app-admin #dbg, body.app-admin .editorOnly, body.app-admin #tabs button[dat
 <div id="view">
 	<canvas id="gl"></canvas>
 	<div id="labels"></div>
+	<div id="viewTop">
 	<div id="dbg">
 		<label title="A marker at every entity of the map"><input type="checkbox" id="dbgMarkers" checked>Entities</label>
 		<label title="The box of every entity: the brushes of a trigger or a door, the size of a class"><input type="checkbox" id="dbgVolumes" checked>Volumes</label>
 		<label title="A line from every entity to what it fires (target and targetname)"><input type="checkbox" id="dbgLinks" checked>Links</label>
 		<label title="The brushes that stop players, bots or shots and are not seen in the game"><input type="checkbox" id="dbgClip">Clip</label>
 		<label title="The triangles of the map as lines"><input type="checkbox" id="dbgWire">Wireframe</label>
+		<label title="Only the side of a surface the game draws. From outside a room is open then: its walls and its ceiling face inwards."><input type="checkbox" id="dbgCull">Open</label>
 		<select id="dbgLight" title="What the surfaces of the map show"><option value="0">Texture and light</option><option value="1">Light only</option><option value="2">Texture only</option></select>
 	</div>
-	<button id="shotBtn" title="Saves what the map view shows as a picture">Picture</button>
-	<button id="flyBtn" title="Fly through the map instead of looking at it from above (C). W A S D fly, Q and E go down and up, the mouse turns the head, the wheel sets the speed, Shift is faster.">Fly</button>
-	<div id="coords" class="editorOnly"></div>
-	<div id="loading">Loading map...</div>
-	<div id="hud"><canvas id="hudCanvas"></canvas><div class="hud-top"><span id="hudName"></span><button id="fpExit">Exit (Esc)</button></div></div>
 	<div id="help">
 		<kbd>LMB</kbd> select, drag to pan &nbsp; <kbd>RMB</kbd> teleport selected<br>
 		<kbd>W A S D</kbd> move &nbsp; <kbd>Q E</kbd> / <kbd>MMB</kbd> rotate &nbsp; wheel zoom<br>
@@ -410,6 +409,12 @@ body.app-admin #dbg, body.app-admin .editorOnly, body.app-admin #tabs button[dat
 		<kbd>Del</kbd> delete entity &nbsp; <kbd>Shift</kbd>+arrows move entity &nbsp; <kbd>Ctrl Z</kbd> <kbd>Ctrl Y</kbd> undo, redo &nbsp; <kbd>Ctrl C</kbd> <kbd>Ctrl V</kbd> copy, paste<br>
 		<kbd>Ctrl</kbd>+click selects one more entity</span>
 	</div>
+	</div>
+	<button id="shotBtn" title="Saves what the map view shows as a picture">Picture</button>
+	<button id="flyBtn" title="Fly through the map instead of looking at it from above (C). W A S D fly, Q and E go down and up, the mouse turns the head, the wheel sets the speed, Shift is faster.">Fly</button>
+	<div id="coords" class="editorOnly"></div>
+	<div id="loading">Loading map...</div>
+	<div id="hud"><canvas id="hudCanvas"></canvas><div class="hud-top"><span id="hudName"></span><button id="fpExit">Exit (Esc)</button></div></div>
 	<div id="command">
 		<div class="who">
 			<div class="nm" id="cmdName"></div>
@@ -1381,7 +1386,7 @@ function finishStage(st) {
 }
 
 function parseScript(body) {
-	const def = { stages: [], sort: 0, polygonOffset: false, nodraw: false, sky: null, fog: null, noFog: false };
+	const def = { stages: [], sort: 0, polygonOffset: false, nodraw: false, sky: null, fog: null, noFog: false, cull: 0 };
 	let st = null, depth = 0;
 	for (const a of scriptLines(body)) {
 		const k = a[0].toLowerCase();
@@ -1399,6 +1404,11 @@ function parseScript(body) {
 			else if (k === 'skyparms') def.sky = { box: a[1] && a[1] !== '-' ? a[1] : '', height: scNum(a[2]) || 512 };
 			else if (k === 'sort') def.sort = SC_SORT[(a[1] || '').toLowerCase()] || scNum(a[1]);
 			else if (k === 'polygonoffset') def.polygonOffset = true;
+			else if (k === 'cull') {
+				// which side is drawn: the front unless the script says the back or both
+				const v = (a[1] || '').toLowerCase();
+				def.cull = v === 'none' || v === 'twosided' || v === 'disable' ? 2 : v === 'back' || v === 'backside' || v === 'backsided' ? 1 : 0;
+			}
 			else if (k === 'noglfog') def.noFog = true;
 			else if (k === 'fogparms') {
 				// ( r g b ) and the depth at which nothing is seen through it any more
@@ -1463,6 +1473,7 @@ function materialFor(name, lit) {
 		sky: def ? def.sky : null,
 		fog: def ? def.fog : null,
 		noFog: !!def && def.noFog,
+		cull: def ? def.cull : 0,
 		sort: (def && def.sort) || (def && def.polygonOffset ? SC_SORT_DECAL : first && first.blend ? (first.depthWrite ? SC_SORT_SEE_THROUGH : SC_SORT_BLEND) : SC_SORT_OPAQUE)
 	};
 	scripts.materials.set(mkey, mat);
@@ -1600,6 +1611,17 @@ function prepareScripted(w) {
 
 const stTcA = new Float32Array(3), stTcB = new Float32Array(3), stTurb = new Float32Array(2), stColor = new Float32Array(4);
 
+// Which side of a surface is drawn (GL_Cull in tr_backend.cpp): 0 the front, 1 the back, 2 both. The front of a
+// triangle of the game is the side its corners run clockwise on. Seen from outside, a room is open that way:
+// its walls and its ceiling face inwards.
+let cullSides = true;
+function setCull(side) {
+	if (side === 2 || !cullSides) { gl.disable(gl.CULL_FACE); return; }
+	gl.enable(gl.CULL_FACE);
+	gl.frontFace(gl.CW);
+	gl.cullFace(side === 1 ? gl.FRONT : gl.BACK);
+}
+
 const FOG_BLACK = [0, 0, 0], FOG_WHITE = [1, 1, 1];
 
 function drawStage(st, t, lm, vao, count, type, offset, prog = stageProg, fog = null) {
@@ -1705,6 +1727,7 @@ function drawWorldScripted(now, late) {
 	for (const e of world.scripted) {
 		if ((e.mat.sort > SC_SORT_BANNER) !== late) continue;
 		const fog = fogged ? e.fog : null;
+		setCull(e.mat.cull);
 		if (e.mat.polygonOffset) { gl.enable(gl.POLYGON_OFFSET_FILL); gl.polygonOffset(-1, -2); }
 		for (const st of e.mat.stages) drawStage(st, t, e.b.lm, e.b.vao, e.b.count, gl.UNSIGNED_INT, 0, stageProg, fog && fog.global ? fog : null);
 		// the fog of a brush is a pass of its own over what was just drawn
@@ -1725,6 +1748,7 @@ function drawWorldScripted(now, late) {
 		}
 		if (e.mat.polygonOffset) gl.disable(gl.POLYGON_OFFSET_FILL);
 	}
+	gl.disable(gl.CULL_FACE);
 	gl.disable(gl.BLEND);
 	gl.depthMask(true);
 	gl.depthFunc(gl.LESS);
@@ -1803,11 +1827,13 @@ function drawModelScripted(meshes, place) {
 	for (const mesh of meshes) {
 		const mat = mesh.mat || (mesh.mat = materialFor(mesh.shaderName || '', 'model'));
 		if (mat.nodraw) continue;
+		setCull(mat.cull);
 		if (mat.polygonOffset) { gl.enable(gl.POLYGON_OFFSET_FILL); gl.polygonOffset(-1, -2); }
 		const fog = globalFog && mat.sort <= SC_SORT_SEE_THROUGH && !mat.noFog ? globalFog : null;
 		for (const st of mat.stages) drawStage(st, t, null, mesh.vao, mesh.count, gl.UNSIGNED_INT, 0, modelStageProg, fog);
 		if (mat.polygonOffset) gl.disable(gl.POLYGON_OFFSET_FILL);
 	}
+	gl.disable(gl.CULL_FACE);
 	gl.disable(gl.BLEND);
 	gl.depthMask(true);
 	gl.depthFunc(gl.LESS);
@@ -1815,6 +1841,9 @@ function drawModelScripted(meshes, place) {
 }
 // the administration draws models with their scripts once those are read
 const modelsScripted = () => appMode === 'admin' && scripts.state === 2;
+// Whether the map is drawn with one side of its surfaces only: the administration once it has the scripts, the
+// editor when "Open" is set. A click on the map then goes through what is not drawn.
+const viewCulls = () => cullSides && !!world && (appMode === 'editor' ? $('dbgCull').checked : !!world.scripted);
 
 // the debug view of the editor: the triangles of the map as lines
 const lineProg = compile(`#version 300 es
@@ -1856,8 +1885,9 @@ function drawWorldWire() {
 	gl.depthFunc(gl.LESS);
 }
 
-// ray against the map triangles, returns the hit point or null
-function pickGround(origin, dir) {
+// Ray against the map triangles, returns the hit point or null. oneSided: only a triangle that is hit on its
+// front counts (the side its corners run clockwise on), as the view shows it.
+function pickGround(origin, dir, oneSided = viewCulls()) {
 	if (!world) return null;
 	const p = world.pick.pos, idx = world.pick.idx;
 	let best = Infinity;
@@ -1867,7 +1897,7 @@ function pickGround(origin, dir) {
 		const e2x = p[c] - p[a], e2y = p[c + 1] - p[a + 1], e2z = p[c + 2] - p[a + 2];
 		const hx = dir[1] * e2z - dir[2] * e2y, hy = dir[2] * e2x - dir[0] * e2z, hz = dir[0] * e2y - dir[1] * e2x;
 		const det = e1x * hx + e1y * hy + e1z * hz;
-		if (Math.abs(det) < 1e-7) continue;
+		if (oneSided ? det > -1e-7 : Math.abs(det) < 1e-7) continue;
 		const f = 1 / det, sx = origin[0] - p[a], sy = origin[1] - p[a + 1], sz = origin[2] - p[a + 2];
 		const u = f * (sx * hx + sy * hy + sz * hz);
 		if (u < 0 || u > 1) continue;
@@ -2470,9 +2500,12 @@ function frame(now) {
 		gl.uniform1i(mapProg.u.uLm, 1);
 		gl.uniform1i(mapProg.u.uView, editor ? +$('dbgLight').value : 0);
 		gl.disable(gl.CULL_FACE);
+		const open = viewCulls();
 		// the lines lie in the surfaces: those are pushed back a little so the lines win
 		if (wire) { gl.enable(gl.POLYGON_OFFSET_FILL); gl.polygonOffset(1, 1); }
 		for (const b of world.batches) {
+			// the side the game draws, which the script of the shader says once the scripts are read
+			if (open) setCull(scripts.state === 2 ? materialFor(b.shaderName, !!b.lm).cull : 0);
 			let t = world.textures.get(b.shaderName);
 			if (t.failed) t = b.editorTex || (b.editorTex = editorImage(b.shaderName)) || t;
 			gl.activeTexture(gl.TEXTURE0);
@@ -2484,6 +2517,7 @@ function frame(now) {
 			gl.bindVertexArray(b.vao);
 			gl.drawElements(gl.TRIANGLES, b.count, gl.UNSIGNED_INT, 0);
 		}
+		gl.disable(gl.CULL_FACE);
 		if (wire) { gl.disable(gl.POLYGON_OFFSET_FILL); drawWorldWire(); }
 	}
 
