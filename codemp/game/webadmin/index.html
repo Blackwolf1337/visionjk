@@ -424,7 +424,7 @@ body.app-admin #dbg, body.app-admin .editorOnly, body.app-admin #tabs button[dat
 	<div id="labels"></div>
 	<div id="viewTop">
 	<div id="dbg">
-		<label title="A marker at every entity of the map"><input type="checkbox" id="dbgMarkers" checked>Entities</label>
+		<label title="A marker at every entity of the map, and an arrow where its keys say which way it looks (a start point, a shooter) or moves (a door)"><input type="checkbox" id="dbgMarkers" checked>Entities</label>
 		<label title="The box of every entity: the brushes of a trigger or a door, the size of a class"><input type="checkbox" id="dbgVolumes" checked>Volumes</label>
 		<label title="A line from every entity to what it fires (target and targetname). When one fires another, the line and the box of the one that was fired light up for three seconds."><input type="checkbox" id="dbgLinks" checked>Links</label>
 		<label title="The brushes that stop players, bots or shots and are not seen in the game"><input type="checkbox" id="dbgClip">Clip</label>
@@ -2969,6 +2969,7 @@ function frame(now) {
 		}
 	}
 	if (editor) drawEditorLines();
+	if (editor && $('dbgMarkers').checked && (mode === 'world' || mode === 'mapinfo')) drawFacing();
 	if (editor && mode === 'mapinfo' && surfShown && world.surfs[surfShown.surface]) drawSurfaceWire(now);
 	if (editor && mode === 'routes') drawRoute();
 	if (editor && $('dbgMarkers').checked) {
@@ -3935,6 +3936,46 @@ function refreshLinks() {
 			for (const to of byName.get(v.toLowerCase()) || []) if (to !== e.id) links.push({ from: e.id, to, key: k });
 		}
 	}
+}
+
+// Which way an entity looks: an arrow from where it is, for every one whose keys say so (angle or angles). For a
+// start point that is where the player looks, for a shooter where it fires, for a door the way it opens. Drawn
+// with the markers. The one that is selected has a longer one in its colour.
+function arrowInto(data, n, pos, angles, length) {
+	const r = Math.PI / 180, cp = Math.cos(angles[0] * r), f = [cp * Math.cos(angles[1] * r), cp * Math.sin(angles[1] * r), -Math.sin(angles[0] * r)];
+	// across it, for the head: level unless the arrow stands upright
+	const flat = Math.hypot(f[0], f[1]), side = flat > 0.01 ? [-f[1] / flat, f[0] / flat, 0] : [1, 0, 0];
+	const tip = [pos[0] + f[0] * length, pos[1] + f[1] * length, pos[2] + f[2] * length], head = length * 0.28;
+	const put = (a, b) => { data.set(a, n); data.set(b, n + 3); n += 6; };
+	put(pos, tip);
+	for (const w of [0.45, -0.45]) put(tip, [tip[0] - f[0] * head + side[0] * head * w, tip[1] - f[1] * head + side[1] * head * w, tip[2] - f[2] * head + side[2] * head * w]);
+	return n;
+}
+
+function drawFacing() {
+	const has = e => e.keys && e.keys.some(k => /^angles?$/i.test(k[0]));
+	const all = [...ents.values()].filter(e => entVisible(e) && has(e) && e.id !== selectedEnt), sel = ents.get(selectedEnt);
+	const data = new Float32Array((all.length + 1) * 18);
+	let n = 0;
+	for (const e of all) n = arrowInto(data, n, e.pos, entAngles(e), 28);
+	gl.useProgram(lineProg.p);
+	gl.uniformMatrix4fv(lineProg.u.uMvp, false, viewProj);
+	gl.bindVertexArray(linkLines.vao);
+	gl.bindBuffer(gl.ARRAY_BUFFER, linkLines.buf);
+	if (n) {
+		gl.bufferData(gl.ARRAY_BUFFER, data.subarray(0, n), gl.DYNAMIC_DRAW);
+		gl.uniform4f(lineProg.u.uColor, 0.92, 0.92, 0.95, 1);
+		gl.drawArrays(gl.LINES, 0, n / 3);
+	}
+	if (sel && has(sel)) {
+		const pos = ghost && ghost.id === sel.id ? ghost.pos : sel.pos, m = arrowInto(data, 0, pos, entAngles(sel), 48);
+		gl.bufferData(gl.ARRAY_BUFFER, data.subarray(0, m), gl.DYNAMIC_DRAW);
+		gl.uniform4f(lineProg.u.uColor, 1, 0.25, 0.35, 1);
+		gl.disable(gl.DEPTH_TEST);
+		gl.drawArrays(gl.LINES, 0, m / 3);
+		gl.enable(gl.DEPTH_TEST);
+	}
+	gl.useProgram(flatProg.p);
 }
 
 function drawLinkSet(list, color) {

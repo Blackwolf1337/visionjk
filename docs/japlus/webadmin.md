@@ -235,6 +235,10 @@ Also changed:
   inactive, and an NPC (a vehicle takes whoever uses it on board without asking whether that is a player).
   The use functions of the game were read for this: every one that reaches into the client of what fired it
   asks first whether there is one.
+- New: an arrow at every entity whose keys say which way it looks (`drawFacing`, with the markers): where a
+  player looks at a start point, where a shooter fires, the way a door opens. `angle` and `angles` are read
+  as the game reads them, -1 and -2 are up and down. The arrow of the selected entity is longer and in its
+  colour, and follows the turn buttons.
 - New: "Entities to look at" in the report of the tab Map (`entityProblems`). Red, it does not work as it is:
   a target key (`target` to `target6`, `opentarget`, `closetarget`, `paintarget`, `deathtarget`) that names
   no entity, an entity outside of the map, no `info_player_deathmatch`, capture the flag without a flag.
@@ -872,6 +876,10 @@ waypoint. A drag moves the view, turns it with the middle button, moves an entit
 when flying. The wheel zooms and sets the flying speed. A right-click teleports, places the class that is armed,
 adds a waypoint. Undo, the Z field, Remove and Save of a route. Copy, paste, the stored views and the keys of
 the fly camera went through the keyboard. What that is not: a person at a real browser on a real GPU.
+
+The arrows (`steps_facing.js`, 3 checks, the same day, mp/ffa3): 23 of the entities of the map have an angle.
+Seen from straight above, the pixels that the arrow of a start point adds to the picture reach furthest in
+the direction 359, its angle key says 360. Not tried: an arrow that points up or down.
 
 Entities to look at (`steps_problems.js`, 7 checks, the same day, mp/ffa3): the map as it is gave nothing. Of
 five entities placed for it, the one with a target that names nothing, the relay with a name nothing fires
