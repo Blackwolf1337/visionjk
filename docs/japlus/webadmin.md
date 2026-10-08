@@ -31,14 +31,14 @@ The panel only starts when a password is set. In the server config:
 ```
 seta g_webPassword "something long"
 seta g_webPort 8080
-seta g_webBind ""
+seta g_webBind "0.0.0.0"
 ```
 
 | Cvar | Default | Meaning |
 |------|---------|---------|
 | `g_webPassword` | empty | password of the panel. Empty: the panel is off |
 | `g_webPort` | 80 | TCP port. Below 1024 needs root on Linux |
-| `g_webBind` | empty | IPv4 address to listen on. Empty: 127.0.0.1 only. Set `0.0.0.0` to reach it from the network |
+| `g_webBind` | 0.0.0.0 | IPv4 address to listen on. `0.0.0.0` or empty: every interface, the panel is reached from the network. `127.0.0.1`: this machine only. A value that is no address: 127.0.0.1, with a line in the log |
 | `g_webRoot` | empty | folder with the files of the page (`codemp/game/webadmin/page` of the source), served instead of the built in page, for working on the page: the server puts `index.html` and the files it includes together at every load |
 
 The first three are latched, they take effect at the next map start. Open `http://server:8080/` and log in with
@@ -917,9 +917,12 @@ To take a later JKAdmin commit: apply its diff and keep the `JA+` blocks in `WA_
   can be told from the keys are refused since `WA_SpawnRefused` (see above): the list was made by reading the
   spawn functions for `trap->Error`, a class that fails somewhere else is not in it.
 - The lights of a map can not be shown: the compiler takes them out of the map file.
-- Plain HTTP with basic auth. Put it behind a reverse proxy with HTTPS before it is reachable from outside, or
-  leave `g_webBind` empty (127.0.0.1) and use an SSH tunnel. Since the security pass the default bind is localhost,
-  not every interface.
+- Plain HTTP with basic auth, and it listens on every interface unless `g_webBind` says otherwise: the password
+  crosses the network as it is with every request. Where that network is not your own, set `g_webBind 127.0.0.1`
+  and use an SSH tunnel, or put a reverse proxy with HTTPS in front. The security pass had made localhost the
+  default; since 2026-10-08 it is every interface again, by decision of the owner of this fork, who opens the
+  panel from other machines. A config that still has `g_webBind ""` from that time listens on every interface
+  now.
 - `g_webPassword` is an archived cvar. The server writes it in clear text into `visionjk_server.cfg` in its home
   path, and it shows in the process list when it is given on the command line.
 - Whoever can connect can occupy the 32 connections, then the panel does not answer until they time out. The game

@@ -29,7 +29,7 @@ Each line is one commit on the branch `security/hardening`.
 | `g_webadmin.c` `WA_ReadRequest` | `Content-Length` read with `atoi`; a value near `INT_MAX` made `headLen + bodyLen` wrap, the bound passed, and the body's terminating zero was written ~2 GB before the buffer, before any login. Confirmed as an AddressSanitizer SEGV. | `WA_ParseLength` (digits only, capped at `WA_MAX_REQUEST`); the bound is now `bodyLen > WA_MAX_REQUEST - headLen`, which can not wrap. |
 | `g_webadmin.c` POST handlers | No CSRF defence: a browser sends the panel login with any request a hostile page makes it send, so that page could run player actions and the entity editor. | `WA_SameOrigin` checks `Sec-Fetch-Site`/`Origin`/`Referer` against `Host` (or `X-Forwarded-Host`) on every POST. Requests with none of those headers (curl, scripts) still pass. `X-Frame-Options`, a frame-ancestors CSP and `Cross-Origin-Resource-Policy` on every response. |
 | `wa_http.c` `WA_CheckAuth` | Unlimited password tries; `strcmp` compare leaks length through timing. | Constant time compare; after five wrong tries an address waits, doubling up to half an hour; a wrong try goes to the security log. |
-| `wa_http.c` buffers, `g_webadmin.c` bind | `realloc`/`malloc` not checked, a negative `Q_vsnprintf` used as a length, default bind on every interface. | Allocations checked (a short response instead of a crash), negative length guarded, default bind 127.0.0.1. |
+| `wa_http.c` buffers, `g_webadmin.c` bind | `realloc`/`malloc` not checked, a negative `Q_vsnprintf` used as a length, default bind on every interface. | Allocations checked (a short response instead of a crash), negative length guarded, default bind 127.0.0.1 (every interface again since 2026-10-08, see "Known and left alone"). |
 | `wa_http.c` `WA_Base64Decode` | Signed `int` shifted left for every header character: signed overflow (UBSan). | Unsigned accumulator; the decoded bytes are unchanged. |
 | `g_japlus_admin.c` `G_amlogin` | Unlimited tries on the three admin passwords, over `amlogin` and the `cp_login` userinfo. | After three wrong tries a player waits, doubling; reset on success and at each map; logged. |
 | `g_japlus_admin2.c` `Cmd_amvstr_f` | `vstr` block list missed cvars with secrets or outside content. | Added `g_password`, `jp_clanPass`, `g_webPassword` and every `session<n>` (the IP and admin level of a player). |
@@ -75,12 +75,19 @@ Off when a sanitizer build is configured.
 - Every JA+ command and cvar with its behaviour. New are only the waits after wrong passwords and the longer
   `amvstr` block list.
 - The panel in use and API. Requests without an `Origin` header (curl, scripts) still work. A config that sets
-  `g_webBind` keeps working; only an unset one now means localhost instead of every interface.
+  `g_webBind` keeps working; only an unset one now means localhost instead of every interface (taken back on
+  2026-10-08, see "Known and left alone").
 
 ## Known and left alone
 
-- The panel speaks plain HTTP. Bind it to localhost (the default now) and reach it through an SSH tunnel, or put a
-  reverse proxy with HTTPS in front.
+- The panel speaks plain HTTP. Bind it to localhost (`g_webBind 127.0.0.1`) and reach it through an SSH tunnel,
+  or put a reverse proxy with HTTPS in front.
+- The panel listens on every interface by default again (2026-10-08). This pass had made an unset `g_webBind`
+  mean 127.0.0.1; the owner of the fork opens the panel from other machines and decided for `0.0.0.0` as the
+  default, an empty value included. What that costs: whoever sets a password and a port has a plain HTTP login
+  on every address of the machine, and a config written to the recommendation of this file (`g_webBind ""`)
+  is open to the network after the update. What holds it: the panel is off without `g_webPassword`, wrong
+  passwords are slowed down, and a value that is no address falls back to 127.0.0.1.
 - The entity editor can still end the dedicated server by placing a class whose spawn code raises a game error, or
   by deleting all spawn points. OpenJK makes every game error fatal on a dedicated server. Decided to leave as is.
 - JKA loads the client DLLs from pk3. Whoever plays on a server with `cl_allowDownload 1` trusts that server; the
@@ -109,7 +116,7 @@ seta sv_legacyFixes "1"              // leave on: the engine clears out of range
 seta g_securityLog "2"               // security.log written line by line
 seta g_logClientCmds "1"             // client commands in security.log
 seta sv_maxOOBRateIP "1"             // the per address rate limit on connectionless packets and rcon
-seta g_webBind ""                    // localhost only; set 0.0.0.0 only behind a proxy or a firewall
+seta g_webBind "127.0.0.1"           // this machine only. The default is every interface: fine on your own network or behind a firewall
 seta g_webPassword "<long random>"   // the panel is off without it
 seta rconpassword "<long random>"    // or empty to disable rcon
 ```

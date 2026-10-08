@@ -399,7 +399,7 @@ Public
 void WebAdmin_Init( void ) {
 	struct sockaddr_in	addr;
 	int					on = 1, i;
-	const char			*bindTo = "127.0.0.1";
+	const char			*bindTo = "0.0.0.0";
 
 	for ( i = 0; i < WA_MAX_CONNECTIONS; i++ )
 		connections[i].sock = BG_INVALID_SOCKET;
@@ -427,12 +427,19 @@ void WebAdmin_Init( void ) {
 	memset( &addr, 0, sizeof( addr ) );
 	addr.sin_family = AF_INET;
 	addr.sin_port = htons( (unsigned short)g_webPort.integer );
-	// default to localhost, not every interface: the panel is plain HTTP, reaching it from outside should be a
-	// choice (g_webBind 0.0.0.0, or a reverse proxy). An unset or unparseable g_webBind binds to 127.0.0.1.
-	if ( g_webBind.string[0] && inet_pton( AF_INET, g_webBind.string, &addr.sin_addr ) == 1 )
-		bindTo = g_webBind.string;
-	else
+	// Every interface unless g_webBind names one address, an empty one included (a config that was written while
+	// empty was the default has it that way). The security pass had made that 127.0.0.1; it is back so that the
+	// panel is reached from the network without a setting. It is plain HTTP: where the network is not trusted,
+	// g_webBind 127.0.0.1 and a tunnel or a reverse proxy. A value that is no address does not open anything.
+	if ( !g_webBind.string[0] ) {
 		inet_pton( AF_INET, bindTo, &addr.sin_addr );
+	} else if ( inet_pton( AF_INET, g_webBind.string, &addr.sin_addr ) == 1 ) {
+		bindTo = g_webBind.string;
+	} else {
+		bindTo = "127.0.0.1";
+		inet_pton( AF_INET, bindTo, &addr.sin_addr );
+		trap->Print( S_COLOR_YELLOW "Web admin: g_webBind \"%s\" is no IPv4 address, taking %s\n", g_webBind.string, bindTo );
+	}
 
 	if ( bind( listenSocket, (struct sockaddr *)&addr, sizeof( addr ) ) != 0 || listen( listenSocket, 16 ) != 0 ) {
 		trap->Print( S_COLOR_YELLOW "Web admin: could not listen on %s:%d (port in use, or below 1024 without root?)\n",
@@ -445,7 +452,6 @@ void WebAdmin_Init( void ) {
 	BG_SocketNonBlocking( listenSocket );
 	WA_ChatInit();
 	listenPort = g_webPort.integer;
-	// the address it is bound to: an unset g_webBind was named 0.0.0.0 here while the socket was on 127.0.0.1
 	trap->Print( "Web admin listening on http://%s:%d/\n", bindTo, listenPort );
 }
 
