@@ -431,7 +431,7 @@ body.app-admin #dbg, body.app-admin .editorOnly, body.app-admin #tabs button[dat
 		<table id="kvTable"><tbody id="kvRows"></tbody></table>
 		<datalist id="kvKeys"></datalist>
 		<datalist id="pickMaps"></datalist><datalist id="pickBots"></datalist><datalist id="pickEffects"></datalist><datalist id="pickMusic"></datalist>
-		<datalist id="pickNpcs"></datalist><datalist id="pickClasses"></datalist><datalist id="pickNames"></datalist>
+		<datalist id="pickNpcs"></datalist><datalist id="pickPath"></datalist><datalist id="pickClasses"></datalist><datalist id="pickNames"></datalist>
 		<div class="actions">
 			<button id="kvAdd">+ Key</button>
 			<button class="primary" id="entApply">Apply</button>
@@ -3088,9 +3088,12 @@ function drawEntBox(ent, color) {
 	gl.uniform4f(lineProg.u.uColor, color[0], color[1], color[2], 1);
 	const n = ent.bmodel ? /^\*(\d+)$/.exec(entKey(ent, 'model')) : null, wire = n && world ? brushWire(+n[1]) : null;
 	if (wire) {
+		// The engine draws the brushes of an entity moved and turned from where the map file has them, and the
+		// server says by how much. A game module that does not: moved by where the middle of its box is.
 		const m = world.models[+n[1]];
-		gl.uniformMatrix4fv(lineProg.u.uMvp, false, M4.mul(viewProj, new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0,
-			ent.pos[0] - (m.mins[0] + m.maxs[0]) / 2, ent.pos[1] - (m.mins[1] + m.maxs[1]) / 2, ent.pos[2] - (m.mins[2] + m.maxs[2]) / 2, 1])));
+		const place = ent.moved ? anglesMatrix(ent.moved, ent.turned, 1) : new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0,
+			ent.pos[0] - (m.mins[0] + m.maxs[0]) / 2, ent.pos[1] - (m.mins[1] + m.maxs[1]) / 2, ent.pos[2] - (m.mins[2] + m.maxs[2]) / 2, 1]);
+		gl.uniformMatrix4fv(lineProg.u.uMvp, false, M4.mul(viewProj, place));
 		gl.bindVertexArray(wire.vao);
 		gl.drawArrays(gl.LINES, 0, wire.count);
 		return;
@@ -3319,11 +3322,40 @@ function pickFor(key) {
 	return /fx/.test(k) ? 'pickEffects' : '';
 }
 
-$('kvRows').addEventListener('focusin', e => {
+// Keys whose value is a file of the game: the folder it is looked for in and the endings that count. The field
+// offers what is in the folder that is typed so far, a folder that is picked shows its own files next.
+const PATH_KEYS = { noise: ['sound', '.wav,.mp3'], model: ['models', '.md3,.glm'], model2: ['models', '.md3,.glm'] };
+const pathLists = new Map();
+
+async function pickPath(input, key) {
+	const [root, ext] = PATH_KEYS[key], value = input.value.trim();
+	let dir = value.includes('/') ? value.slice(0, value.lastIndexOf('/')) : root;
+	if (dir.toLowerCase() !== root && !dir.toLowerCase().startsWith(root + '/')) dir = root;
+	const id = dir.toLowerCase() + '|' + ext;
+	if (!pathLists.has(id)) {
+		pathLists.set(id, fetch('api/list?kind=dir&dir=' + encodeURIComponent(dir) + '&ext=' + encodeURIComponent(ext)).then(r => r.json()).then(j => j.names)
+			.catch(() => { pathLists.delete(id); return []; }));
+	}
+	const names = await pathLists.get(id);
+	if (document.activeElement === input) pickOptions('pickPath', names);
+}
+
+// the value field of a row of the key table that the event is for, and the key of that row
+function kvValueField(e) {
 	const row = e.target.closest('tr'), inputs = row ? row.querySelectorAll('input') : [];
-	if (inputs.length !== 2 || e.target !== inputs[1]) return;
-	const id = pickFor(inputs[0].value);
+	return inputs.length === 2 && e.target === inputs[1] ? inputs[0].value.trim().toLowerCase() : null;
+}
+
+$('kvRows').addEventListener('focusin', e => {
+	const key = kvValueField(e);
+	if (key === null) return;
+	if (key in PATH_KEYS) { e.target.setAttribute('list', 'pickPath'); pickPath(e.target, key); return; }
+	const id = pickFor(key);
 	if (id) { e.target.setAttribute('list', id); pickFill(id); } else e.target.removeAttribute('list');
+});
+$('kvRows').addEventListener('input', e => {
+	const key = kvValueField(e);
+	if (key !== null && key in PATH_KEYS) pickPath(e.target, key);
 });
 $('mapName').addEventListener('focus', () => pickFill('pickMaps'));
 $('botName').addEventListener('focus', () => pickFill('pickBots'));

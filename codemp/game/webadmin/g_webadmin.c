@@ -1476,6 +1476,13 @@ static void WA_ApiEntities( waConnection_t *c ) {
 		WA_BufPrintf( &b, ",\"type\":%d,\"bmodel\":%s,\"linked\":%s,\"placed\":%s,\"pos\":", ent->s.eType, ent->r.bmodel ? "true" : "false",
 			ent->r.linked ? "true" : "false", WA_BOOL( entityPlaced[i] ) );
 		WA_AppendVec( &b, pos );
+		// one that is made of brushes: how far they were moved and turned from where the map file has them
+		if ( ent->r.bmodel ) {
+			WA_BufAppend( &b, ",\"moved\":", 9 );
+			WA_AppendVec( &b, ent->r.currentOrigin );
+			WA_BufAppend( &b, ",\"turned\":", 10 );
+			WA_AppendVec( &b, ent->r.currentAngles );
+		}
 
 		if ( entityVars[i] ) {
 			const char *p = entityVars[i], *end = entityVars[i] + entityVarsLen[i];
@@ -2756,6 +2763,60 @@ static void WA_ApiList( waConnection_t *c, const char *query ) {
 				WA_BufAppend( &b, ",", 1 );
 			first = qfalse;
 			WA_BufJsonString( &b, name );
+		}
+	}
+
+	// The files and folders of one folder of the game, for a field that takes a path: dir is the folder, ext
+	// the endings that are wanted (".wav,.mp3"). Only below the folders the editor has a use for.
+	if ( !strcmp( kind, "dir" ) ) {
+		static const char *const roots[] = { "sound", "models", "music", "effects", "maps" };
+		char		dir[MAX_QPATH], exts[64], *ext, *next;
+		const char	*file;
+		qboolean	allowed = qfalse;
+
+		WA_FormValue( query, "dir", dir, sizeof( dir ) );
+		WA_FormValue( query, "ext", exts, sizeof( exts ) );
+		i = (int)strlen( dir );
+		while ( i > 0 && dir[i - 1] == '/' )
+			dir[--i] = '\0';
+		for ( f = 0; f < ARRAY_LEN( roots ); f++ ) {
+			const size_t len = strlen( roots[f] );
+
+			if ( !Q_stricmpn( dir, roots[f], (int)len ) && ( dir[len] == '\0' || dir[len] == '/' ) )
+				allowed = qtrue;
+		}
+		if ( allowed && !strstr( dir, ".." ) && !strchr( dir, '\\' ) && !strchr( dir, ':' ) ) {
+			// the folders in it, named with a / at their end
+			n = trap->FS_GetFileList( dir, "/", list, sizeof( list ) );
+			for ( i = 0, file = list; i < n; i++, file += strlen( file ) + 1 ) {
+				int len = (int)strlen( file );
+
+				if ( len && file[len - 1] == '/' )
+					len--;
+				if ( !len || file[0] == '.' || WA_ModelListedBefore( list, file ) )
+					continue;
+				Com_sprintf( name, sizeof( name ), "%s/%.*s/", dir, len, file );
+				if ( !first )
+					WA_BufAppend( &b, ",", 1 );
+				first = qfalse;
+				WA_BufJsonString( &b, name );
+			}
+			// and its files: the engine names the ones of the folders below too, those are left out
+			for ( ext = exts; ext && ext[0]; ext = next ) {
+				next = strchr( ext, ',' );
+				if ( next )
+					*next++ = '\0';
+				n = trap->FS_GetFileList( dir, ext, list, sizeof( list ) );
+				for ( i = 0, file = list; i < n; i++, file += strlen( file ) + 1 ) {
+					if ( !file[0] || strchr( file, '/' ) || WA_ModelListedBefore( list, file ) )
+						continue;
+					Com_sprintf( name, sizeof( name ), "%s/%s", dir, file );
+					if ( !first )
+						WA_BufAppend( &b, ",", 1 );
+					first = qfalse;
+					WA_BufJsonString( &b, name );
+				}
+			}
 		}
 	}
 

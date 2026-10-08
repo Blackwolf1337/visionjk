@@ -82,8 +82,8 @@ the answer tells the page that the numbers started over.
 | `GET /api/shaders` | the names of the shader scripts of the game, in the order the engine reads them in |
 | `GET /api/anims` | animation names in `animNumber_t` order |
 | `GET /api/classes` | everything that can be spawned, and the items with model and icon |
-| `GET /api/entities` | the entities with their keys. `budget`: entities, models, sounds and effects in use and the most there can be. `brushModels`: how many brush models the map has |
-| `GET /api/list?kind=` | names the fields of the page offer: `maps`, `effects` and `music` (the files of the game), `npcs` (the types of the `.npc` files), `bots` |
+| `GET /api/entities` | the entities with their keys. One that is made of brushes has `moved` and `turned`: how far its brushes are from where the map file has them. `budget`: entities, models, sounds and effects in use and the most there can be. `brushModels`: how many brush models the map has |
+| `GET /api/list?kind=` | names the fields of the page offer: `maps`, `effects` and `music` (the files of the game), `npcs` (the types of the `.npc` files), `bots`. `kind=dir&dir=&ext=`: the folders and files of one folder below `sound`, `models`, `music`, `effects` or `maps`, with the endings of `ext` (`.wav,.mp3`) |
 | `GET /api/waypoints` | the route of the bots: every waypoint with its place, its flags and the numbers of the ones it leads to. `editing`: it was changed and not saved, the bots stand still |
 | `POST /api/waypoint` | `op` add (`x`, `y`, `z`, `flags`, `after`: the waypoint it comes behind, none for the end), remove (`index`) or save |
 | `GET /api/classdoc` | the entity definitions of the game code: every `QUAKED` comment of its source files as text |
@@ -143,8 +143,8 @@ Also changed:
     text of its class, a box for every spawnflag that has a name, and offers the keys the text names. A class
     is drawn in the colour of its definition, and the class picker shows the first lines as a tip.
   - Views, switched in the bar at the top left of the map: Volumes draws every entity as lines (a trigger or a
-    door with the real shape of its brushes, worked out from the planes of the map file and moved to where the
-    entity is now, another one as the box its class is defined with), Links a line from an entity to every one
+    door with the real shape of its brushes, worked out from the planes of the map file, moved and turned as
+    the server says the entity is now, another one as the box its class is defined with), Links a line from an entity to every one
     it fires (`target` to `targetname`), Clip the brushes of the map that stop players, NPCs, bots or shots
     and are not seen in the game. What belongs to the selected entity is drawn through the walls, the panel
     lists it with a click to go there.
@@ -165,8 +165,9 @@ Also changed:
 - New: values to pick from (`/api/list`). The Map field of the top bar offers the maps of the server and the
   bot field its bots. In the key table of an entity a value field offers what fits its key: the class names for
   `classname`, the targetnames there are for `target` and the other keys that fire, the effects for a key with
-  `fx` in its name, the NPC types for `NPC_type`, the maps for `mapname`, the music files for `music`. Sounds are
-  not offered yet.
+  `fx` in its name, the NPC types for `NPC_type`, the maps for `mapname`, the music files for `music`. A value
+  that is a file is completed folder by folder: `noise` below `sound/`, `model` and `model2` below `models/`. The
+  field offers what is in the folder typed so far, a folder that is picked shows its own files next.
 - New: the tab Routes of the editor, the waypoints the bots walk along (`ai_wpnav.c`). The trail is drawn from
   each waypoint to the next and to the others it leads to, faintly through the walls so that it is seen from
   above. A click selects a waypoint. With Add on, a right-click on the map puts a new one there, behind the
@@ -643,8 +644,7 @@ To take a later JKAdmin commit: apply its diff and keep the `JA+` blocks in `WA_
   raises an error, the dedicated server exits, because OpenJK makes every game error fatal there. The cases that
   can be told from the keys are refused since `WA_SpawnRefused` (see above): the list was made by reading the
   spawn functions for `trap->Error`, a class that fails somewhere else is not in it.
-- A brush entity that turns (a door on a hinge, `func_rotating`) is drawn with the shape it has in the map file,
-  moved but not turned. The lights of a map can not be shown: the compiler takes them out of the map file.
+- The lights of a map can not be shown: the compiler takes them out of the map file.
 - Plain HTTP with basic auth. Put it behind a reverse proxy with HTTPS before it is reachable from outside, or
   leave `g_webBind` empty (127.0.0.1) and use an SSH tunnel. Since the security pass the default bind is localhost,
   not every interface.
