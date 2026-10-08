@@ -50,6 +50,8 @@ order of the template, so a file may only use there what a file before it has ma
 | `js/g2.js` | Ghoul2 models with their animations |
 | `js/picker.js` | the class picker with its preview |
 | `js/weapons.js` | weapons, sabers, shots, the view through the eyes of a player |
+| `js/world-ents.js` | what the client game puts into a map by itself: the sky portal, the models of misc_model_static |
+| `js/flares.js` | the flares of a map |
 | `js/fx-parse.js` | the effect files of the game (.efx) read into what the page plays |
 | `js/fx-run.js` | the effects that are playing: what the feed tells of them, how their parts move |
 | `js/fx-draw.js` | the effects drawn |

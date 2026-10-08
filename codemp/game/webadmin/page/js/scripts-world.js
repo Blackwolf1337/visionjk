@@ -249,9 +249,17 @@ function drawWorldMask(now) {
 		}
 	}
 	gl.depthMask(true);
+	// The client draws a small icon into the top left corner also without its HUD. It is no part of the scene.
+	gl.enable(gl.SCISSOR_TEST);
+	gl.scissor(0, canvas.height - 40, 56, 40);
+	gl.clearColor(1, 1, 1, 1);
+	gl.clear(gl.COLOR_BUFFER_BIT);
+	gl.disable(gl.SCISSOR_TEST);
 	gl.clearColor(0.05, 0.05, 0.06, 1);
 }
 
+// A sky portal was drawn for this frame (drawSkyPortal in js/world-ents.js): the sky of the map is left as it is.
+let skyPortalOn = false;
 let cullSides = true;
 function setCull(side) {
 	if (side === 2 || !cullSides) { gl.disable(gl.CULL_FACE); return; }
@@ -363,7 +371,8 @@ function drawWorldScripted(now, late) {
 	gl.colorMask(true, true, true, false);
 	setDeform(stageProg, NO_DEFORM, t);
 	gl.uniform1i(stageProg.u.uSprite, 0);
-	if (!late && world.skyDraw) drawSky(world.skyDraw, t);
+	// with a sky portal the picture of its room is what shows where the sky is
+	if (!late && world.skyDraw && !skyPortalOn) drawSky(world.skyDraw, t);
 	gl.uniformMatrix4fv(stageProg.u.uMvp, false, viewProj);
 	const fogged = fogShown();
 	let sprite = 0, axes = null, placed = null;

@@ -326,19 +326,15 @@ function firstPersonCamera(now) {
 		let dist = 80;
 		if (hit) dist = Math.min(dist, Math.hypot(hit[0] - target[0], hit[1] - target[1], hit[2] - target[2]) - 4);
 		eye = target.map((v, i) => v + back[i] * Math.max(4, dist));
-		viewProj = M4.mul(M4.perspective(fovY(), canvas.width / canvas.height, 4, 65536), M4.lookAt(eye, target, [0, 0, 1]));
+		viewProj = M4.mul(gameProjection(canvas.width, canvas.height), M4.lookAt(eye, target, [0, 0, 1]));
 	} else {
 		eye = head;
-		viewProj = M4.mul(M4.perspective(fovY(), canvas.width / canvas.height, 4, 65536), M4.lookAt(eye, head.map((v, i) => v + ax.fwd[i]), ax.up));
+		viewProj = M4.mul(gameProjection(canvas.width, canvas.height), M4.lookAt(eye, head.map((v, i) => v + ax.fwd[i]), ax.up));
 	}
 	invViewProj = M4.invert(viewProj);
 	return true;
 }
 
-// cg_fov 80 is horizontal on the game's 4:3 screen, wider windows see more to the sides
-function fovY() {
-	return 2 * Math.atan(Math.tan(80 * Math.PI / 360) * 0.75);
-}
 
 // the gun in front of the camera: hand at the eye, gun on its tag_weapon
 function drawViewWeapon(d) {

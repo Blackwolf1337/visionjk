@@ -286,7 +286,11 @@ function frame(now) {
 	lateModels.length = 0;
 	deferLate = !!scripted;
 	if (scripted) {
+		// the room of a sky portal first, from its own spot: what the map then draws of its sky is that picture
+		skyPortalOn = drawSkyPortal(now);
 		drawWorldScripted(now, false);
+		// what the client game puts into the map by itself (cg_spawn.c): the models of misc_model_static
+		drawWorldEnts(now);
 		// The lines of the triangles lie in the surfaces. The plain view pushes its surfaces back for them, here
 		// the lines come forward by a hair of the depth instead: the stages of a shader set that offset themselves.
 		if (editor && $('dbgWire').checked) { gl.depthRange(0, 0.9997); drawWorldWire(now); gl.depthRange(0, 1); }
@@ -310,6 +314,8 @@ function frame(now) {
 
 	if (state && ((state.shots && state.shots.length) || flashes.length)) drawShots(k);
 	if (scripted) drawWorldScripted(now, true);
+	// the flares of the map (the engine draws them when everything else of the scene is drawn)
+	if (scripted) drawFlares(now);
 	// the effects of the game, over what is see-through of the map and under the glow of blades and bolts
 	drawEffects(now);
 	drawBlades();
