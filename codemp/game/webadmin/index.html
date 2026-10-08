@@ -4693,15 +4693,16 @@ function renderMapReport() {
 	const n = v => Number(v).toLocaleString('en-US');
 	$('mapReportName').textContent = loadedMap;
 	$('mapReport').innerHTML =
-		'<h3>The file</h3><table>' + row('Size', n(Math.round(st.bytes / 1024)) + ' KB') + row('Extent', size.join(' x ')) + row('Surfaces', n(st.surfaces)) +
-		row('Triangles drawn', n(w.batches.reduce((sum, b) => sum + b.count / 3, 0))) + row('Vertices', n(st.vertices)) + row('Shaders', n(st.shaders) + ', ' + used.length + ' drawn') +
-		row('Lightmaps', n(st.lightmaps)) + row('Brushes', n(st.brushes)) + row('Planes', n(st.planes)) + row('Brush models', n(st.brushModels - 1)) +
-		row('Sky', escapeHtml(w.sky || 'none')) + '</table>' +
+		// what is wrong comes first, then what the file holds
+		entityProblemsHtml() +
 		'<h3>Missing' + (loading ? ' (' + loading + ' images on their way)' : '') + '</h3>' +
 		(noImage.length || noStage.size ? '' : '<div>' + (scripted ? 'Nothing: every image the map names is there.' : 'The shader scripts are not read yet.') + '</div>') +
 		noImage.map(name => '<div class="bad" title="A surface names this shader, and it is neither a script nor an image">' + escapeHtml(name) + '</div>').join('') +
 		[...noStage].sort().map(name => '<div class="bad" title="An image a stage of a shader names">' + escapeHtml(name) + '</div>').join('') +
-		entityProblemsHtml() +
+		'<h3>The file</h3><table>' + row('Size', n(Math.round(st.bytes / 1024)) + ' KB') + row('Extent', size.join(' x ')) + row('Surfaces', n(st.surfaces)) +
+		row('Triangles drawn', n(w.batches.reduce((sum, b) => sum + b.count / 3, 0))) + row('Vertices', n(st.vertices)) + row('Shaders', n(st.shaders) + ', ' + used.length + ' drawn') +
+		row('Lightmaps', n(st.lightmaps)) + row('Brushes', n(st.brushes)) + row('Planes', n(st.planes)) + row('Brush models', n(st.brushModels - 1)) +
+		row('Sky', escapeHtml(w.sky || 'none')) + '</table>' +
 		'<h3>Entities, ' + ents.size + '</h3><table>' + [...byClass].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([cls, count]) =>
 			'<tr><td><a data-cls="' + escapeHtml(cls) + '" title="Show them in the World tab">' + escapeHtml(cls) + '</a></td><td class="num">' + count + '</td></tr>').join('') + '</table>';
 }
