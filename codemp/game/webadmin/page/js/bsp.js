@@ -12,6 +12,9 @@ function parseBsp(buffer) {
 	const ident = String.fromCharCode(dv.getUint8(0), dv.getUint8(1), dv.getUint8(2), dv.getUint8(3));
 	if (ident !== 'RBSP') throw new Error('not a Jedi Academy map (' + ident + ')');
 	const lump = n => ({ ofs: dv.getInt32(8 + n * 8, true), len: dv.getInt32(12 + n * 8, true) });
+	// The entities of the map file as the text they are: the client game reads its own entities from it (the sky
+	// portal, the models of misc_model_static) and the keys of the worldspawn, and so does the page.
+	const entLump = lump(0), entityText = new TextDecoder('latin1').decode(new Uint8Array(buffer, entLump.ofs, Math.max(0, entLump.len))).replace(/\0+$/, '');
 
 	const sl = lump(1), shaders = [];
 	for (let o = sl.ofs; o < sl.ofs + sl.len; o += SHADER_SIZE) {
@@ -148,7 +151,7 @@ function parseBsp(buffer) {
 		const run = pickRuns[pickRuns.length - 1];
 		if (run && run[0] === pickModel[i]) run[2] = (i + 1) * 3; else pickRuns.push([pickModel[i], i * 3, (i + 1) * 3]);
 	}
-	return { shaders, lightmaps, batches: [...batches.values()], bounds, sky, models, brushes, fogs, grid, stats, surfs, pick: { pos: new Float32Array(pickPos), idx: new Uint32Array(pickIdx), model: new Uint16Array(pickModel), surf: new Uint32Array(pickSurf), runs: pickRuns } };
+	return { entityText, shaders, lightmaps, batches: [...batches.values()], bounds, sky, models, brushes, fogs, grid, stats, surfs, pick: { pos: new Float32Array(pickPos), idx: new Uint32Array(pickIdx), model: new Uint16Array(pickModel), surf: new Uint32Array(pickSurf), runs: pickRuns } };
 }
 
 // quadratic bezier patch, 3x3 control blocks

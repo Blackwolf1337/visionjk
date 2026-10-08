@@ -49,7 +49,7 @@ async function loadMap(name) {
 			return { vao, count: b.idx.length, shaderName, fog: b.fog, model: b.model, lm: b.lightmap >= 0 ? lightmapTex[b.lightmap] : null, posBuf, stBuf, colBuf, verts: b.pos.length / 3, tri, wire: null, sprites: undefined };
 		});
 
-		world = { batches, textures, bounds: bsp.bounds, pick: bsp.pick, sky: bsp.sky, models: bsp.models, brushes: bsp.brushes, shaders: bsp.shaders, surfs: bsp.surfs, stats: bsp.stats, grid: bsp.grid, fogs: bsp.fogs, fogInfo: [], globalFog: null, wires: new Map(), scripted: null, skyDraw: null };
+		world = { entityText: bsp.entityText, batches, textures, bounds: bsp.bounds, pick: bsp.pick, sky: bsp.sky, models: bsp.models, brushes: bsp.brushes, shaders: bsp.shaders, surfs: bsp.surfs, stats: bsp.stats, grid: bsp.grid, fogs: bsp.fogs, fogInfo: [], globalFog: null, wires: new Map(), scripted: null, skyDraw: null };
 		prepareScripted(world);
 		resetCamera();
 		$('loading').style.display = 'none';
