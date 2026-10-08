@@ -221,6 +221,9 @@ function setCull(side) {
 
 const FOG_BLACK = [0, 0, 0], FOG_WHITE = [1, 1, 1];
 
+// the images a stage names, asked for the first time they are wanted
+const stageImages = st => st.images || (st.images = st.maps.map(name => gameImage(name, st.clamp)));
+
 function drawStage(st, t, lm, vao, count, type, offset, prog = stageProg, fog = null) {
 	let tex;
 	if (st.lightmap) {
@@ -228,10 +231,9 @@ function drawStage(st, t, lm, vao, count, type, offset, prog = stageProg, fog = 
 	} else if (st.white) {
 		tex = whiteTex;
 	} else {
-		if (!st.images) st.images = st.maps.map(name => gameImage(name, st.clamp));
-		const n = st.images.length;
+		const images = stageImages(st), n = images.length, frame = Math.floor(t * st.animFreq);
 		if (!n) return;
-		const h = st.images[n > 1 ? ((Math.floor(t * st.animFreq) % n) + n) % n : 0];
+		const h = images[n < 2 ? 0 : st.oneShot ? Math.min(n - 1, Math.max(0, frame)) : ((frame % n) + n) % n];
 		// an image that is not there, or not yet: grey where it covers something, nothing where it would lie over it
 		if (!h.ready && st.blend) return;
 		tex = h.tex;

@@ -114,14 +114,14 @@ the answer tells the page that the numbers started over.
 | Request | Answer |
 |---------|--------|
 | `GET /` | the page |
-| `GET /api/state` | map, scores, players, NPCs, items and `models` as JSON. The page polls this. `itemsRev` is a number for the list of the items as it is, and with `items=<that number>` the list is left out as long as it is the same. A player is `id`, `r` (the number of what stays the same of him), `s` (that part: name, address, team, flags, sabers, model; left out for a page that names the number with `p=<id>.<r>-<id>.<r>`), `f` (21 numbers: health, armor, score, ping, weapon, force, flags 1 dead 2 saber on 4 saber in flight, saberHolstered, saber entity, origin, velocity, yaw, pitch, legs and torso animation, view height, ammo) and `b` (for every blade its length now, where it starts and the way it points). `models`: every other entity the clients draw as a model (props, models of the map that are entities), with its model, scale, origin and angles as the clients have them. `movers`: every brush model the clients draw as an entity (doors, lifts, what turns or can be switched off), as the number of the brush model, or as `[number, x, y, z, pitch, yaw, roll]` when it is not where the map file has it. `shots`: what is in the air, each as `[entity, weapon, 1 for the other way to fire it, x, y, z, and its speed along the three axes]` |
+| `GET /api/state` | map, scores, players, NPCs, items and `models` as JSON. The page polls this. `itemsRev` is a number for the list of the items as it is, and with `items=<that number>` the list is left out as long as it is the same. A player is `id`, `r` (the number of what stays the same of him), `s` (that part: name, address, team, flags, sabers, model; left out for a page that names the number with `p=<id>.<r>-<id>.<r>`), `f` (21 numbers: health, armor, score, ping, weapon, force, flags 1 dead 2 saber on 4 saber in flight, saberHolstered, saber entity, origin, velocity, yaw, pitch, legs and torso animation, view height, ammo) and `b` (for every blade its length now, where it starts and the way it points). `models`: every other entity the clients draw as a model (props, models of the map that are entities), with its model, scale, origin and angles as the clients have them. `movers`: every brush model the clients draw as an entity (doors, lifts, what turns or can be switched off), as the number of the brush model, or as `[number, x, y, z, pitch, yaw, roll]` when it is not where the map file has it. `shots`: what is in the air, each as `[entity, weapon, 1 for the other way to fire it, x, y, z, and its speed along the three axes]` The effects: with `fx=<number>&fxs=<number>` the page says what it has, and `fx` (`rev` and a `list` of the entities that are effects: entity, index of the effect, state, delay and random part of its loop in msec, place, direction) and `fxSeq` with `fxPlay` (what the game played once in the last two seconds: number, msec ago, kind 0 for an `effectTypes_t` or 1 for an index, which, place, direction) are sent only when they differ |
 | `GET /api/map` | the `.bsp` of the current map |
-| `GET /api/file?name=` | a file below `textures/`, `models/` or `gfx/` (images, md3, glm, gla, cfg, skin), a shader script `shaders/<name>.shader`, or a `.wav` or `.mp3` below `sound/` or `music/` |
+| `GET /api/file?name=` | a file below `textures/`, `models/` or `gfx/` (images, md3, glm, gla, cfg, skin), a shader script `shaders/<name>.shader`, or a `.wav` or `.mp3` below `sound/` or `music/` Also an effect file `effects/<name>.efx`, as text |
 | `GET /api/shaders` | the names of the shader scripts of the game, in the order the engine reads them in |
 | `GET /api/anims` | animation names in `animNumber_t` order |
 | `GET /api/classes` | everything that can be spawned, and the items with model and icon |
 | `GET /api/entities` | the entities with their keys. One that is made of brushes has `moved` and `turned`: how far its brushes are from where the map file has them. `budget`: entities, models, sounds and effects in use and the most there can be. `brushModels`: how many brush models the map has. `used`: what fired what in the last ten seconds, each as `[number of the event, milliseconds ago, entity that fired, entity that was fired]`, the first entity is the world (1022) for what the panel fired |
-| `GET /api/list?kind=` | names the fields of the page offer: `maps`, `effects` and `music` (the files of the game), `npcs` (the types of the `.npc` files), `bots`. `kind=dir&dir=&ext=`: the folders and files of one folder below `sound`, `models`, `music`, `effects` or `maps`, with the endings of `ext` (`.wav,.mp3`) |
+| `GET /api/list?kind=` | names the fields of the page offer: `maps`, `effects` and `music` (the files of the game), `npcs` (the types of the `.npc` files), `bots`. `kind=dir&dir=&ext=`: the folders and files of one folder below `sound`, `models`, `music`, `effects` or `maps`, with the endings of `ext` (`.wav,.mp3`) `kind=fxindex`: the effects the map has in use, in the order of the numbers the state feed names them by |
 | `GET /api/bans` | the addresses that are banned, as `addip` and `removeip` take them (a `*` for a part that matches anything) |
 | `GET /api/waypoints` | the route of the bots: every waypoint with its place, its flags and the numbers of the ones it leads to. `editing`: it was changed and not saved, the bots stand still |
 | `POST /api/waypoint` | `op` add (`x`, `y`, `z`, `flags`, `after`: the waypoint it comes behind, none for the end), remove (`index`), flags (`index`, `flags`) or save |
@@ -292,6 +292,39 @@ Also changed:
   192 towards the viewer for the teleport. The game frees a `trigger_push` without a target in its first
   frame, before a key could be added. The server refuses a box whose `mins` are not below its `maxs`, half a
   box, and one wider than 32768. A layout keeps such a trigger like every other placed entity.
+- New: the effects of the game are drawn (`js/fx-parse.js`, `fx-run.js`, `fx-draw.js`, `fx-weapons.js`; the
+  user: "Effects/FXes don't show up in the panel"). Nothing of them was in the page: the fire of an
+  `fx_runner`, an explosion, what a blaster bolt leaves on a wall were not there.
+  - What the server tells (`WA_StateEffects` in `wa_state.c`): the entities that are effects (`ET_FX`:
+    `fx_runner`, `misc_blackhole`) with the effect, the state, the delay and where they are, and what the
+    game played once through `G_PlayEffect` and `G_PlayEffectID` in the last two seconds. For the second a
+    line in each of those two functions of `g_utils.c` tells the panel (`WebAdmin_Effect`, a ring of 64):
+    the game sends such an effect to clients only, as an event. Both parts are left out of a poll when the
+    page has them, so a poll in which nothing happened is no bigger than before (663 bytes with four bots).
+  - The files: the page reads an effect file (`.efx`) through `/api/file` the first time it is needed and
+    parses it with the rules of the engine (`FxTemplate.cpp`, `GenericParser2`): counts, delays, ranges, the
+    blocks for size, colour and alpha with their flags.
+  - Playing (`fx-run.js`): as `CFxScheduler` does it. Where a primitive is made and how it moves (through the
+    axis of the effect, on a sphere or a cylinder, with gravity), how its size, colour and alpha change over
+    its life, emitters that play an effect as they move, effects at the death of a primitive, effects that
+    play other effects. An entity loops as `CG_FX` loops it, and a state that means once plays once for every
+    change. No more than 3000 primitives live at a time, counts thin out from 2000 on, and nothing is played
+    further than 8192 units from the camera.
+  - Drawing (`fx-draw.js`): particles, oriented particles, lines, tails, cylinders and electricity as quads
+    with the shader scripts of the game, through the same stage renderer as the map (`materialFor`,
+    `drawStage`): the engine colours a particle by the vertex colour of a normal shader. One buffer that is
+    filled every frame, a batch for every shader. After the see-through surfaces of the map, with the depth
+    test and without writing the depth.
+  - Weapons (`fx-weapons.js`): the server names no effect for a shot, a client makes them itself. The page
+    has a table by weapon for the muzzle, the shot in the air and what it leaves on a wall or on a player,
+    and finds the wall with a ray against the map (four rays a poll at most). The glow quads from before
+    stay for when Effects is off in the editor, the shader scripts are not read yet, or a file is missing.
+  - The view toggle "Effects" of the editor switches them off there. The administration always has them.
+  - Not drawn: sounds, lights, camera shakes, decals and screen flashes of an effect, the models of emitters,
+    wind, forks of electricity; particles do not collide with the map. And what a client plays on its own
+    that is neither an effect entity, nor played by the server, nor a missile: saber clashes, the laser of a
+    trip mine, force powers, jetpacks, the beams of the disruptor and of the concussion rifle's second fire.
+    A hitscan weapon has no shot the feed could tell of.
 - New: everything new in the World tab is a draft first (`js/editor-drafts.js`; the user: "The draft is not a
   bad idea, make this for all entities"). A class or a template placed with a right-click, the copy that
   Duplicate or a paste makes, and a `trigger_push` or `trigger_teleport` with the `target_position` it is aimed
@@ -1096,6 +1129,27 @@ middle, a start point had no such row, a push and a teleport came with their `ta
 took both away, and after "Save layout" and a start of the map the box was there again. Not tried: a real
 player in such a box (how the late push feels on a client with its own prediction), an NPC, a vehicle, the
 classes for ships (`trigger_space`, `trigger_shipboundary`, `trigger_hyperspace`), and the Windows build.
+
+The effects (`steps_fx.js`, 38 checks, and `steps_fxsweep.js`, 9 checks, 2026-10-08, mp/ffa3): an effect file
+is handed out and a name with `..` is not; a poll of a page that has it all has neither `fx` nor `fxPlay`
+(663 bytes, 720 when the page says nothing of the effects); an `fx_runner` with `env/fire` is one runner and
+within two seconds has primitives and quads, the pixels at its place are brighter with Effects on than off,
+and the administration draws it too; one that plays once plays once for every time it is fired; the Play
+button of the editor arrives once and is not played again by the next poll; a bolt that ends at a wall or at
+a player leaves the effect of its weapon there; while the bots fight effects are played that the script did
+not ask for; with Effects off the glow quads are back; a change of the map leaves nothing behind. The sweep
+reads all 378 effect files the server has (the 376 of the game, seven of them replaced and two added by the
+JA+ pk3) through the page: none makes the parser fail, each is played and stepped for three seconds with no
+exception and no number in a vertex that is none, and never more than 580 of the 3000 are alive. The files
+hold 692 particles, 151 lines, 102 tails, 72 oriented particles, 46 emitters, 47 cylinders, 29 electricity
+and 20 runners; seven files hold nothing the page draws. With 3000 primitives of fire close to the camera a
+frame took 29 to 57 ms in software GL, of that 0.7 to 1.8 ms to write the vertices. Looked at as pictures:
+fire, a rocket explosion, a shockwave ring, electricity, sparks, water spray, the 28 torches of mp/ffa2.
+Written and first run by a second session of the assistant that worked next to the one on the drafts, with a
+private server of its own; the counts here are from a run of both parts together, where `steps_shots.js`
+(9), `steps_saber.js` (4), `steps_state.js` (14), `steps_movers.js` (15), `steps_deform.js` (12) and
+`steps_cull.js` (5) ran as before. Not done: a comparison with the picture of a real client, a real GPU, the
+Windows build (the C code of it is three small functions with ints, floats and vectors).
 
 Drafts for everything (`steps_drafts.js`, 68 checks, 2026-10-08, it takes the place of `steps_draft.js`): a
 placed class is a draft with a number from 100000 and the server has none of it; three survive a poll; typed

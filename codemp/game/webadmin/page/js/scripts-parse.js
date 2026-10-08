@@ -121,7 +121,7 @@ function scGen(a, rgb) {
 }
 
 function newStage() {
-	return { maps: [], images: null, animFreq: 0, clamp: false, lightmap: false, white: false, skip: false,
+	return { maps: [], images: null, animFreq: 0, oneShot: false, clamp: false, lightmap: false, white: false, skip: false,
 		src: gl.ONE, dst: gl.ZERO, blend: null, alphaFunc: 0, depthEqual: false, depthWrite: true, depthWriteAsked: false,
 		rgb: null, alpha: null, tcGen: 0, tcMods: [] };
 }
@@ -136,7 +136,9 @@ function stageLine(st, k, a) {
 	} else if (k === 'animmap' || k === 'clampanimmap' || k === 'oneshotanimmap') {
 		st.animFreq = scNum(a[1]);
 		st.maps = a.slice(2);
-		st.clamp = k !== 'animmap';
+		st.clamp = k === 'clampanimmap';
+		// it runs through its images once and stays on the last: an explosion
+		st.oneShot = k === 'oneshotanimmap';
 	} else if (k === 'videomap' || k === 'surfacesprites') {
 		st.skip = true;
 	} else if (k === 'blendfunc') {
@@ -218,9 +220,10 @@ function parseScript(body) {
 // The stages a surface of the map is drawn with: the script of its shader, or what the engine makes of an image
 // that has none. A surface without a lightmap is lit by the colours of its vertices, with the rules of the
 // engine for that (the end of FinishShader). lit: true for a surface with a lightmap, false for one without,
-// 'model' for a model, which gets the light of the place where a shader has no script.
+// 'model' for a model, which gets the light of the place where a shader has no script, 'fx' for a primitive of
+// an effect, which has the colour and the alpha of its vertices there and is blended.
 function materialFor(name, lit) {
-	const key = scKey(name), mkey = key + (lit === 'model' ? '|m' : lit ? '|l' : '|v');
+	const key = scKey(name), mkey = key + (lit === 'model' ? '|m' : lit === 'fx' ? '|f' : lit ? '|l' : '|v');
 	let mat = scripts.materials.get(mkey);
 	if (mat) return mat;
 
@@ -236,6 +239,9 @@ function materialFor(name, lit) {
 		const image = Object.assign(newStage(), name ? { maps: [name] } : { white: true });
 		if (lit === 'model') {
 			image.rgb = { diffuse: true };
+			stages = [image];
+		} else if (lit === 'fx') {
+			Object.assign(image, { rgb: { vertex: 1 }, src: gl.SRC_ALPHA, dst: gl.ONE_MINUS_SRC_ALPHA });
 			stages = [image];
 		} else if (lit) {
 			Object.assign(image, { src: gl.DST_COLOR, dst: gl.ZERO });
@@ -259,6 +265,9 @@ function materialFor(name, lit) {
 			Object.assign(stages[lm], { lightmap: false, white: true, rgb: { vertex: 1, exact: true }, alpha: null });
 		}
 	}
+	// An effect never writes the depth, whatever its script says: what is drawn after it (the blades, the weapon
+	// in front of the eye) is not cut out by a quad of smoke.
+	if (lit === 'fx') for (const st of stages) st.depthWrite = false;
 
 	const first = stages[0];
 	mat = {
