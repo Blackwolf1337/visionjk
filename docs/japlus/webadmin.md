@@ -76,7 +76,7 @@ the answer tells the page that the numbers started over.
 | Request | Answer |
 |---------|--------|
 | `GET /` | the page |
-| `GET /api/state` | map, scores, players, NPCs and items as JSON. The page polls this |
+| `GET /api/state` | map, scores, players, NPCs, items and `models` as JSON. The page polls this. `models`: every other entity the clients draw as a model (props, models of the map that are entities), with its model, scale, origin and angles as the clients have them |
 | `GET /api/map` | the `.bsp` of the current map |
 | `GET /api/file?name=` | a file below `textures/`, `models/` or `gfx/` (images, md3, glm, gla, cfg, skin), or a shader script `shaders/<name>.shader` |
 | `GET /api/shaders` | the names of the shader scripts of the game, in the order the engine reads them in |
@@ -154,6 +154,9 @@ Also changed:
     90 percent on.
   - The plain view shows a shader whose own name is no image with the image its script names for editors
     (`qer_editorimage`), or the first one of its stages.
+- New: the page draws the models of `models` in both modes, on their way from where they were at the last poll:
+  the props of the Models tab, cubes, balls and what else is a model entity. They are drawn with their image,
+  without the shader scripts.
 - New: the server refuses to place what would end it (`WA_SpawnRefused`): a class made of brushes (`trigger_`,
   `func_`) without a `model` key that names a brush model of the map, the classes whose spawn function raises
   an error without a key (`target_speaker`, `target_play_music`, `target_level_change`,

@@ -1580,6 +1580,9 @@ async function pollState() {
 }
 
 function applyState(s) {
+	// where the models were at the last poll: they are drawn on their way from there
+	const before = new Map(((state && state.models) || []).map(m => [m.id, m.pos]));
+	for (const m of s.models || []) m.prev = before.get(m.id) || m.pos;
 	state = s;
 	const now = performance.now();
 	if (s.map && s.map !== loadedMap) loadMap(s.map);
@@ -2051,6 +2054,13 @@ function frame(now) {
 		}
 	}
 
+	// what else the game draws as a model: the props and the models of the map that are entities
+	if (state) {
+		for (const m of state.models || []) {
+			const model = staticNow(m.model);
+			if (model) drawStatic(model, anglesMatrix(m.prev.map((v, i) => v + (m.pos[i] - v) * k), m.angles, m.scale / 100));
+		}
+	}
 	if (editor) drawEditorLines();
 	if (editor && $('dbgMarkers').checked) {
 		for (const ent of ents.values()) {
@@ -3884,6 +3894,17 @@ const to44 = m => new Float32Array([m[0], m[4], m[8], 0, m[1], m[5], m[9], 0, m[
 function entityMatrix(x, y, z, yaw, scale) {
 	const a = yaw + Math.PI / 2, c = Math.cos(a) * scale, s = Math.sin(a) * scale;
 	return new Float32Array([c, s, 0, 0, -s, c, 0, 0, 0, 0, scale, 0, x, y, z, 1]);
+}
+
+// where an entity draws its model: the axes of the game for its angles (AnglesToAxis), scaled, at its origin
+function anglesMatrix(pos, angles, scale) {
+	const r = Math.PI / 180, sp = Math.sin(angles[0] * r), cp = Math.cos(angles[0] * r), sy = Math.sin(angles[1] * r), cy = Math.cos(angles[1] * r),
+		sr = Math.sin(angles[2] * r), cr = Math.cos(angles[2] * r);
+	return new Float32Array([
+		cp * cy * scale, cp * sy * scale, -sp * scale, 0,
+		(sr * sp * cy - cr * sy) * scale, (sr * sp * sy + cr * cy) * scale, sr * cp * scale, 0,
+		(cr * sp * cy + sr * sy) * scale, (cr * sp * sy - sr * cy) * scale, cr * cp * scale, 0,
+		pos[0], pos[1], pos[2], 1]);
 }
 
 // a static model (weapon or saber hilt), GLM or MD3, with its tags

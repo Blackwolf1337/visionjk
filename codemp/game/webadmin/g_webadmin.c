@@ -742,6 +742,37 @@ static void WA_ApiState( waConnection_t *c ) {
 		WA_AppendVec( &b, ent->r.currentOrigin );
 		WA_BufAppend( &b, "}", 1 );
 	}
+
+	// Not in JKAdmin: what else the clients draw as a model, where they draw it: the props, the models of the
+	// map that are entities. Not what is made of brushes, and not what only one client is sent.
+	WA_BufAppend( &b, "],\"models\":[", 12 );
+	first = qtrue;
+	for ( i = MAX_CLIENTS; i < level.num_entities; i++ ) {
+		gentity_t	*ent = &g_entities[i];
+		char		model[MAX_QPATH];
+		vec3_t		pos, angles;
+
+		if ( !ent->inuse || ent->s.eType != ET_GENERAL || !ent->s.modelindex || ent->r.bmodel || ( ent->s.eFlags & EF_NODRAW )
+			|| ( ent->r.svFlags & ( SVF_NOCLIENT | SVF_SINGLECLIENT ) ) )
+			continue;
+		trap->GetConfigstring( CS_MODELS + ent->s.modelindex, model, sizeof( model ) );
+		if ( !model[0] || model[0] == '*' )
+			continue;
+
+		if ( !first )
+			WA_BufAppend( &b, ",", 1 );
+		first = qfalse;
+
+		BG_EvaluateTrajectory( &ent->s.pos, level.time, pos );
+		BG_EvaluateTrajectory( &ent->s.apos, level.time, angles );
+		WA_BufPrintf( &b, "{\"id\":%d,\"scale\":%d,\"model\":", i, ent->s.iModelScale ? ent->s.iModelScale : 100 );
+		WA_BufJsonString( &b, model );
+		WA_BufAppend( &b, ",\"pos\":", 7 );
+		WA_AppendVec( &b, pos );
+		WA_BufAppend( &b, ",\"angles\":", 10 );
+		WA_AppendVec( &b, angles );
+		WA_BufAppend( &b, "}", 1 );
+	}
 	WA_BufAppend( &b, "]}", 2 );
 
 	WA_RespondJson( c, &b );
