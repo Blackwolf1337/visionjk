@@ -74,7 +74,8 @@ with one of another version, it says so in one line and the sound is as it alway
 
 The file comes from Valve's release of the version the tree is built for, 4.8.1:
 `steamaudio_4.8.1.zip` from github.com/ValveSoftware/steam-audio/releases, in it
-`lib/linux-x64`, `lib/windows-x86`, `lib/windows-x64`, `lib/osx`. It is 24 to 50 MB.
+`lib/linux-x64`, `lib/windows-x64`, `lib/osx`. It is 24 to 50 MB. The zip also has libraries for 32 bit, which
+nothing here uses: the tree is built for 64 bit only, and the build takes the 64 bit library of its system.
 
 The build puts it there. cmake takes the library of the system it builds for from the folder `SteamAudioSDK`
 (`lib/steamaudio-sdk` in the tree, which is not in git: the content of that zip, or a link to where it is
