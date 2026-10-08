@@ -298,8 +298,7 @@ a twentieth, 300 Hz nearly whole, and all of it a little quieter.
 =================
 */
 void BG_VoiceMuffle( voiceFilter_t *f, float *samples, int count, float target ) {
-	// 1 - exp( -2 pi 700 / VOICE_RATE )
-	const float	pole = 0.1675f;
+	const float	pole = 1.0f - expf( -2.0f * (float)M_PI * 700.0f / VOICE_RATE );
 	const float	step = 1.0f / ( VOICE_MUFFLE_FADE * VOICE_RATE );
 	int			i;
 

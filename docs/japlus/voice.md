@@ -40,8 +40,8 @@ before a level was loaded).
 | `voice_test tone`, `voice_test play <name>`, `voice_test stop` | a tone, or the file `voice/<name>.raw` again and again, in place of the microphone. For tests |
 | `voice_test record <name>` | what is played also goes into `voice/<name>.raw`, until `voice_test stop`. For tests |
 
-The files of `voice_test` are 16 bit, two channels, 24000 samples a second, low byte first, without a header:
-what was recorded can be played, and `ffmpeg -i in.mp3 -ac 2 -ar 24000 -f s16le voice/name.raw` makes one from any
+The files of `voice_test` are 16 bit, two channels, 48000 samples a second, low byte first, without a header:
+what was recorded can be played, and `ffmpeg -i in.mp3 -ac 2 -ar 48000 -f s16le voice/name.raw` makes one from any
 sound. On a pure server the engine lets a module read such a file only out of a pk3 the server has too.
 
 With push to talk the microphone is opened at the first press of the key, which takes a moment that once, and is
@@ -92,8 +92,11 @@ to the server   "VO" version type client  token[4] sequence[2]                 f
 to a client     "VO" version type speaker token[4] sequence[2] flags distance  frame
 ```
 
-A frame is 20 ms of sound, 24000 samples a second, one channel, coded with Opus at about 20 kbit a second, with
-a small copy of the frame before it in each: about 3 kB a second for a speaker. The type is sound or hello. A
+A frame is 20 ms of sound, 48000 samples a second, one channel, coded with Opus at about 32 kbit a second, with
+a small copy of the frame before it in each: about 4.5 kB a second for a speaker. Until 2026-10-08 it was 24000
+samples and 20 kbit, at which Opus gives up everything above 8 kHz to pay for the copy (read from its source,
+`decide_fec`). The rate is no part of the protocol: a frame of Opus is 20 ms at any rate, so a client with the
+old numbers and one with the new ones understand each other. The type is sound or hello. A
 hello carries nothing, it tells the server where the client listens (through his router) and is answered.
 
 **The relay** (`g_voice.c`) is polled with every server frame and with every move a client sends, so a voice does

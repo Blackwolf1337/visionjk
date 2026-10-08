@@ -36,7 +36,10 @@ tells the server who sends and tells the client that it is the server that sends
 #pragma once
 
 #define VOICE_PROTOCOL			1
-#define VOICE_RATE				24000	// samples a second, one channel, 16 bit
+// Samples a second, one channel, 16 bit: what the microphone is opened with and what a voice is decoded to.
+// It is no part of the protocol. A frame of Opus is 20 ms at any rate, so a client that has another number
+// here (24000 until 2026-10-08) is understood and understands.
+#define VOICE_RATE				48000
 #define VOICE_FRAME_MSEC		20
 #define VOICE_FRAME_SAMPLES		( VOICE_RATE * VOICE_FRAME_MSEC / 1000 )
 #define VOICE_MAX_FRAME			240		// bytes of one coded frame. A longer one is not sent and not taken

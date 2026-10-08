@@ -48,7 +48,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define AUDIO_CAPTURE_SAMPLES	VOICE_RATE				// what waits of the microphone at most: a second
 #define AUDIO_TAP_FRAMES		VOICE_RATE
 #define AUDIO_CHUNK				256						// samples of one voice the mixer takes at a time
-#define AUDIO_GAIN_SLEW			0.004f					// how fast the loudness of a voice follows what was set, per sample
+#define AUDIO_GAIN_SLEW			( 96.0f / VOICE_RATE )	// how fast the loudness of a voice follows what was set, per sample: all the way in about 10 ms
 
 typedef struct audioSpeaker_s {
 	ma_pcm_rb		ring;

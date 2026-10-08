@@ -43,7 +43,10 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #define VOICE_ENCODER_BYTES		40960	// room for the state of the Opus encoder. What it needs is asked and checked
 #define VOICE_DECODER_BYTES		24576	//	and for the decoder of one speaker
-#define VOICE_BITRATE			20000
+// With the copy of the frame before in every frame (OPUS_SET_INBAND_FEC, 10 % loss) Opus codes the whole width
+// of VOICE_RATE only from about 26500 bits a second on. Below that it gives up width to pay for the copy: at
+// 20000, which this was until 2026-10-08, nothing above 8 kHz was left of a voice.
+#define VOICE_BITRATE			32000
 #define VOICE_ASK_MSEC			3000	// the server is asked for voice this often until it answers,
 #define VOICE_MAX_ASKS			10		//	and this many times at most
 #define VOICE_HELLO_MSEC		500		// a hello datagram this often until the server answers one,
