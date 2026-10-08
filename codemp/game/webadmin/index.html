@@ -204,16 +204,32 @@ body.fp #help, body.fp #command, body.fp #entPanel { display: none; }
 .hud-bottom span { color: #ccc; font-size: 11px; text-transform: uppercase; letter-spacing: .8px; }
 .hud-bottom .w { margin-left: auto; font-size: 16px; font-weight: 700; }
 .c0{color:#666}.c1{color:#ff4040}.c2{color:#40ff40}.c3{color:#ffff40}.c4{color:#5a7dff}.c5{color:#40ffff}.c6{color:#ff40ff}.c7{color:#fff}.c8{color:#ff9a30}.c9{color:#aaa}
+/* the tools of the editor in the panel of an entity */
+#entFlags { display: flex; flex-wrap: wrap; gap: 2px 12px; margin-bottom: 6px; }
+#entFlags label { display: flex; align-items: center; gap: 4px; font-size: 12px; cursor: pointer; }
+#entFlags input { width: auto; }
+#entXform { display: grid; grid-template-columns: 64px 1fr 1fr 1fr; gap: 4px; align-items: center; margin-bottom: 6px; }
+#entXform label { color: var(--muted); font-size: 12px; }
+#entXform input, #entXform select { width: 100%; min-width: 0; }
+#entLinks { font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+#entLinks a { color: var(--text); cursor: pointer; margin-right: 8px; white-space: nowrap; }
+#entLinks a:hover { color: var(--accent); }
+#entDoc { margin-top: 8px; font-size: 12px; }
+#entDoc summary { cursor: pointer; color: var(--muted); }
+#entDocText { white-space: pre-wrap; margin: 6px 0 0; max-height: 220px; overflow: auto; font: inherit; color: var(--text); }
+#entBudget { margin: 0; font-size: 11px; }
+#entBudget b { color: #ff8b8b; font-weight: 400; }
 /* administration or editor: which tabs there are and whether the debug views are offered */
 #appMode { display: flex; }
 #appMode button { border-radius: 0; color: var(--muted); }
 #appMode button:first-child { border-radius: 3px 0 0 3px; }
 #appMode button:last-child { border-radius: 0 3px 3px 0; border-left: 0; }
 #appMode button.on { background: var(--accent); border-color: var(--accent); color: #fff; }
-#dbg { gap: 10px; color: var(--muted); }
+#dbg { position: absolute; left: 10px; top: 10px; display: flex; align-items: center; gap: 12px; color: var(--muted); font-size: 12px; background: rgba(13,13,15,.75); border: 1px solid var(--line); padding: 5px 8px; border-radius: 3px; }
 #dbg label { display: flex; align-items: center; gap: 4px; cursor: pointer; }
 #dbg input { width: auto; }
-body.app-admin #dbg, body.app-admin #tabs button[data-app="editor"], body.app-editor #tabs button[data-app="admin"] { display: none; }
+#dbg select { padding: 1px 4px; }
+body.app-admin #dbg, body.app-admin .editorOnly, body.app-admin #tabs button[data-app="editor"], body.app-editor #tabs button[data-app="admin"] { display: none; }
 </style>
 </head>
 <body>
@@ -221,11 +237,6 @@ body.app-admin #dbg, body.app-admin #tabs button[data-app="editor"], body.app-ed
 	<button id="toggleSide" title="Player list">&#9776;</button>
 	<div class="brand"><i></i>VisionJK Admin</div>
 	<div id="appMode"><button data-app="admin" title="The map as the game draws it, the players, the server">Administration</button><button data-app="editor" title="Placing entities and models, with the debug views">Editor</button></div>
-	<span id="dbg" class="inline">
-		<label title="A marker at every entity of the map"><input type="checkbox" id="dbgMarkers" checked>Entities</label>
-		<label title="The triangles of the map as lines"><input type="checkbox" id="dbgWire">Wireframe</label>
-		<select id="dbgLight" title="What the surfaces of the map show"><option value="0">Texture and light</option><option value="1">Light only</option><option value="2">Texture only</option></select>
-	</span>
 	<span class="meta" id="host"></span>
 	<span class="meta">Map <b id="map">-</b></span>
 	<span class="meta"><b id="gametype">-</b></span>
@@ -303,6 +314,9 @@ body.app-admin #dbg, body.app-admin #tabs button[data-app="editor"], body.app-ed
 			<div class="inline"><input id="newClass" placeholder="Search a class to place" spellcheck="false" autocomplete="off"><button id="placeBtn" title="Then right-click on the map">Place</button></div>
 			<div id="classPicker"></div>
 			<div class="inline"><input id="entFilter" placeholder="Filter by class or targetname" spellcheck="false"><a href="api/export" title="Download the entities as .ent">Export .ent</a></div>
+			<div class="inline"><button id="entUndo" disabled title="Takes the last change to an entity back (Ctrl+Z)">Undo</button><button id="entRedo" disabled title="Does it again (Ctrl+Y)">Redo</button>
+				<label class="hint" style="margin:0 0 0 auto" title="Placing, moving and the Shift+arrow keys go in steps of this many units">Grid <select id="grid"><option>1</option><option>2</option><option>4</option><option selected>8</option><option>16</option><option>32</option><option>64</option></select></label></div>
+			<div class="hint" id="entBudget" title="What is in use of what the engine has a limit for. The server refuses to place an entity that would go over one."></div>
 		</div>
 		<h2><span>Entities</span><span id="entCount">0</span></h2>
 		<div class="scroll">
@@ -322,12 +336,20 @@ body.app-admin #dbg, body.app-admin #tabs button[data-app="editor"], body.app-ed
 <div id="view">
 	<canvas id="gl"></canvas>
 	<div id="labels"></div>
+	<div id="dbg">
+		<label title="A marker at every entity of the map"><input type="checkbox" id="dbgMarkers" checked>Entities</label>
+		<label title="The box of every entity: the brushes of a trigger or a door, the size of a class"><input type="checkbox" id="dbgVolumes" checked>Volumes</label>
+		<label title="A line from every entity to what it fires (target and targetname)"><input type="checkbox" id="dbgLinks" checked>Links</label>
+		<label title="The triangles of the map as lines"><input type="checkbox" id="dbgWire">Wireframe</label>
+		<select id="dbgLight" title="What the surfaces of the map show"><option value="0">Texture and light</option><option value="1">Light only</option><option value="2">Texture only</option></select>
+	</div>
 	<div id="loading">Loading map...</div>
 	<div id="hud"><canvas id="hudCanvas"></canvas><div class="hud-top"><span id="hudName"></span><button id="fpExit">Exit (Esc)</button></div></div>
 	<div id="help">
 		<kbd>LMB</kbd> select, drag to pan &nbsp; <kbd>RMB</kbd> teleport selected<br>
 		<kbd>W A S D</kbd> move &nbsp; <kbd>Q E</kbd> / <kbd>MMB</kbd> rotate &nbsp; wheel zoom<br>
-		<kbd>F</kbd> follow selected &nbsp; <kbd>Esc</kbd> deselect &nbsp; <kbd>Del</kbd> delete entity
+		<kbd>F</kbd> follow selected &nbsp; <kbd>Esc</kbd> deselect &nbsp; <kbd>PgUp</kbd> <kbd>PgDn</kbd> camera height<span class="editorOnly"><br>
+		<kbd>Del</kbd> delete entity &nbsp; <kbd>Shift</kbd>+arrows move entity &nbsp; <kbd>Ctrl Z</kbd> <kbd>Ctrl Y</kbd> undo, redo</span>
 	</div>
 	<div id="command">
 		<div class="who">
@@ -385,16 +407,26 @@ body.app-admin #dbg, body.app-admin #tabs button[data-app="editor"], body.app-ed
 	</div>
 	<div id="entPanel">
 		<div class="hd"><b id="entTitle"></b><span class="meta" id="entSub"></span><button class="close" id="entClose" title="Deselect">&#10005;</button></div>
+		<div id="entXform">
+			<label>Position</label><input type="number" id="posX" step="1" title="X"><input type="number" id="posY" step="1" title="Y"><input type="number" id="posZ" step="1" title="Z">
+			<label>Angles</label><input type="number" id="angP" step="15" title="Pitch"><input type="number" id="angY" step="15" title="Yaw"><input type="number" id="angR" step="15" title="Roll">
+		</div>
+		<div id="entFlags"></div>
+		<div id="entLinks"></div>
 		<table id="kvTable"><tbody id="kvRows"></tbody></table>
+		<datalist id="kvKeys"></datalist>
 		<div class="actions">
 			<button id="kvAdd">+ Key</button>
 			<button class="primary" id="entApply">Apply</button>
 			<button id="entRotL" title="Turn left 15&deg;">&#10226; 15&deg;</button>
 			<button id="entRotR" title="Turn right 15&deg;">&#10227; 15&deg;</button>
 			<button id="entDup">Duplicate</button>
+			<button id="entFloor" title="Puts it on the floor below it">To floor</button>
+			<button id="entFocus" title="Brings the camera to it">Focus</button>
 			<button class="danger" id="entDel">Delete</button>
 		</div>
-		<div class="hint" id="entHint">Drag the marker or right-click on the map to move it.</div>
+		<div class="hint" id="entHint">Drag the marker or right-click on the map to move it. Shift and the arrow keys or Page Up and Down move it a grid step.</div>
+		<details id="entDoc"><summary>About this class</summary><pre id="entDocText"></pre></details>
 	</div>
 </div>
 <div id="cfgView"><pre id="cfgHi" class="codeHi" aria-hidden="true"></pre><textarea id="cfgText" class="codeText" spellcheck="false" autocomplete="off" autocapitalize="off" wrap="off"></textarea></div>
@@ -540,6 +572,12 @@ function parseBsp(buffer) {
 	const il = lump(11), indexes = new Int32Array(buffer.slice(il.ofs, il.ofs + il.len));
 	const ml = lump(7);
 	const bounds = { mins: [0, 1, 2].map(i => dv.getFloat32(ml.ofs + i * 4, true)), maxs: [0, 1, 2].map(i => dv.getFloat32(ml.ofs + 12 + i * 4, true)) };
+	// every brush model: the world first, then the ones an entity names with *1, *2, ...
+	const models = [];
+	for (let o = ml.ofs; o + 40 <= ml.ofs + ml.len; o += 40) {
+		models.push({ mins: [0, 1, 2].map(i => dv.getFloat32(o + i * 4, true)), maxs: [0, 1, 2].map(i => dv.getFloat32(o + 12 + i * 4, true)) });
+	}
+
 
 	const vert = i => {
 		const o = vl.ofs + i * VERT_SIZE;
@@ -605,7 +643,7 @@ function parseBsp(buffer) {
 		for (const t of tris) pickIdx.push(pbase + t);
 	}
 
-	return { shaders, lightmaps, batches: [...batches.values()], bounds, sky, pick: { pos: new Float32Array(pickPos), idx: new Uint32Array(pickIdx) } };
+	return { shaders, lightmaps, batches: [...batches.values()], bounds, sky, models, pick: { pos: new Float32Array(pickPos), idx: new Uint32Array(pickIdx) } };
 }
 
 // quadratic bezier patch, 3x3 control blocks
@@ -868,7 +906,7 @@ async function loadMap(name) {
 			return { vao, count: b.idx.length, shaderName, lm: b.lightmap >= 0 ? lightmapTex[b.lightmap] : null, posBuf, tri, wire: null };
 		});
 
-		world = { batches, textures, bounds: bsp.bounds, pick: bsp.pick, sky: bsp.sky, scripted: null, skyDraw: null };
+		world = { batches, textures, bounds: bsp.bounds, pick: bsp.pick, sky: bsp.sky, models: bsp.models, scripted: null, skyDraw: null };
 		prepareScripted(world);
 		resetCamera();
 		$('loading').style.display = 'none';
@@ -1198,6 +1236,17 @@ function materialFor(name, lit) {
 	};
 	scripts.materials.set(mkey, mat);
 	return mat;
+}
+
+// The image a map editor shows for a shader, for the plain view: the one its script names for that
+// (qer_editorimage), or the first one of its stages. null: no script, or the scripts are not there yet.
+function editorImage(name) {
+	const body = scripts.state === 2 ? scripts.bodies.get(scKey(name)) : undefined;
+	if (body === undefined) return null;
+	const named = /^\s*qer_editorimage\s+(\S+)/im.exec(body);
+	const stage = named ? null : materialFor(name, true).stages.find(st => st.maps.length);
+	const image = named ? named[1] : stage ? stage.maps[0] : '';
+	return image ? gameImage(image, false) : null;
 }
 
 // the images the stages name, a few on their way at a time
@@ -1831,7 +1880,7 @@ window.addEventListener('mousemove', e => {
 	if (!drag.moved) return;
 	if (drag.ent) {
 		const rect = canvas.getBoundingClientRect(), ray = screenRay(e.clientX - rect.left, e.clientY - rect.top);
-		const hit = pickGround(ray.origin, ray.dir);
+		const hit = snapHit(pickGround(ray.origin, ray.dir));
 		if (hit) ghost = { id: drag.ent.id, pos: [hit[0], hit[1], hit[2] + drag.ent.height] };
 	} else if (drag.button === 1 || (drag.button === 0 && e.altKey)) {
 		cam.yaw = drag.yaw - dx * 0.3;
@@ -1860,7 +1909,7 @@ window.addEventListener('mouseup', e => {
 		return;
 	}
 	if (d.button !== 2) return;
-	const ray = screenRay(x, y), hit = pickGround(ray.origin, ray.dir);
+	const ray = screenRay(x, y), hit = snapHit(pickGround(ray.origin, ray.dir));
 	if (mode === 'world' && placing) {
 		if (!hit) { toast('No floor there', false); return; }
 		marker = { pos: hit, t: performance.now() };
@@ -1886,6 +1935,7 @@ canvas.addEventListener('wheel', e => {
 }, { passive: false });
 window.addEventListener('keydown', e => {
 	if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') return;
+	if (editorKey(e)) { e.preventDefault(); return; }
 	keys.add(e.key.toLowerCase());
 	if (e.key === 'Escape') { if (view.id >= 0) { setFirstPerson(-1); return; } select(-1); selectEnt(-1); setPlacing(false); }
 	if (e.key.toLowerCase() === 'v' && (selected >= 0 || view.id >= 0)) setFirstPerson(view.id >= 0 ? -1 : selected);
@@ -1930,6 +1980,9 @@ function frame(now) {
 	}
 	if (keys.has('q')) cam.yaw += 90 * dt;
 	if (keys.has('e')) cam.yaw -= 90 * dt;
+	// up and down: a map has floors
+	const rise = (keys.has('pageup') ? 1 : 0) - (keys.has('pagedown') ? 1 : 0);
+	if (rise) { cam.follow = -1; cam.target[2] += rise * speed; }
 
 	// smooth player movement between polls
 	const k = Math.min(1, (now - lastPoll) / pollInterval);
@@ -1963,7 +2016,8 @@ function frame(now) {
 		// the lines lie in the surfaces: those are pushed back a little so the lines win
 		if (wire) { gl.enable(gl.POLYGON_OFFSET_FILL); gl.polygonOffset(1, 1); }
 		for (const b of world.batches) {
-			const t = world.textures.get(b.shaderName);
+			let t = world.textures.get(b.shaderName);
+			if (t.failed) t = b.editorTex || (b.editorTex = editorImage(b.shaderName)) || t;
 			gl.activeTexture(gl.TEXTURE0);
 			gl.bindTexture(gl.TEXTURE_2D, t.tex);
 			gl.activeTexture(gl.TEXTURE1);
@@ -1997,10 +2051,11 @@ function frame(now) {
 		}
 	}
 
+	if (editor) drawEditorLines();
 	if (editor && $('dbgMarkers').checked) {
 		for (const ent of ents.values()) {
 			if (!entVisible(ent)) continue;
-			const c = entColor(ent.classname), sel = ent.id === selectedEnt;
+			const c = classColor(ent.classname), sel = ent.id === selectedEnt;
 			const pos = ghost && ghost.id === ent.id ? ghost.pos : ent.pos;
 			drawMesh(cubeMesh, pos[0], pos[1], pos[2], 0, sel ? 1.6 : 1, sel ? [1, 0.2, 0.3, 1] : [c[0], c[1], c[2], 1]);
 		}
@@ -2130,8 +2185,9 @@ function setAppMode(a) {
 	// a tab of the other mode is not there any more
 	const tab = document.querySelector('#tabs button[data-tab="' + mode + '"]');
 	if (!tab || tab.dataset.app !== appMode) setMode(APP_TAB[appMode]);
-	if (appMode === 'editor') pollEntities();
-	else loadShaderScripts();
+	// the scripts: how the administration draws the map, and where the plain view finds the image of a shader
+	loadShaderScripts();
+	if (appMode === 'editor') { loadClassDocs(); pollEntities(); }
 }
 
 function setMode(m) {
@@ -2547,6 +2603,8 @@ async function pollEntities() {
 		const json = await (await fetch('api/entities', { cache: 'no-store' })).json();
 		ents.clear();
 		for (const e of json.entities) ents.set(e.id, e);
+		renderBudget(json.budget);
+		refreshLinks();
 		if (selectedEnt >= 0 && !ents.has(selectedEnt)) selectEnt(-1);
 		renderEntityList();
 		// not while the cursor is in a key field: a rebuilt table takes the focus away
@@ -2605,13 +2663,14 @@ function renderEntPanel() {
 	if (shown !== kvShown) {
 		kvShown = shown;
 		$('kvRows').innerHTML = editable ? ent.keys.map(kvRow).join('') : '<tr><td class="hint">Made by the game code, there are no keys to edit. It can only be deleted.</td></tr>';
+		renderEntTools(ent);
 	}
-	for (const id of ['kvAdd', 'entApply', 'entRotL', 'entRotR', 'entDup']) $(id).disabled = !editable;
+	for (const id of ['kvAdd', 'entApply', 'entRotL', 'entRotR', 'entDup', 'entFloor']) $(id).disabled = !editable;
 	$('entHint').style.display = editable ? '' : 'none';
 }
 
 function kvRow(kv) {
-	return '<tr><td class="k"><input value="' + escapeHtml(kv[0]) + '" spellcheck="false"></td><td><input value="' + escapeHtml(kv[1]) + '" spellcheck="false"></td>' +
+	return '<tr><td class="k"><input value="' + escapeHtml(kv[0]) + '" spellcheck="false" list="kvKeys"></td><td><input value="' + escapeHtml(kv[1]) + '" spellcheck="false"></td>' +
 		'<td class="x"><button title="Remove key">&#10005;</button></td></tr>';
 }
 $('kvRows').addEventListener('input', () => kvDirty = true);
@@ -2635,19 +2694,24 @@ function setKey(keys, key, value) {
 }
 const fmtVec = v => v.map(n => Math.round(n)).join(' ');
 
-async function entityOp(params, okMessage) {
+// Every change to an entity goes through here. record: it is one the user made, it goes into the history
+// (not the steps of undo and redo themselves). Gives the answer of the server, null if it was refused.
+async function entityOp(params, okMessage, record = true) {
+	const ent = params.id !== undefined ? ents.get(+params.id) : null;
+	const before = ent && ent.keys ? keysText(ent.keys) : null;
 	try {
 		const json = await (await fetch('api/entity', { method: 'POST', body: new URLSearchParams(params) })).json();
 		toast(json.ok ? okMessage || json.message : json.message, json.ok);
 		if (json.ok) {
+			if (record) histRecord(params, ent, before, json.id);
 			kvDirty = false;
 			await pollEntities();
-			selectEnt(params.op === 'delete' ? -1 : json.id);
+			selectEnt(params.op === 'delete' || params.op === 'clear' ? -1 : json.id);
 		}
-		return json.ok;
+		return json.ok ? json : null;
 	} catch (e) {
 		toast('Request failed: ' + e.message, false);
-		return false;
+		return null;
 	}
 }
 
@@ -2686,7 +2750,7 @@ function moveEntity(id, pos) {
 	const keys = ent.keys.map(k => k.slice());
 	const cur = (entKey(ent, 'origin') || '0 0 0').split(/\s+/).map(Number);
 	const origin = ent.bmodel ? cur.map((v, i) => v + pos[i] - ent.pos[i]) : pos;
-	entityOp({ op: 'update', id, kv: keysText(setKey(keys, 'origin', fmtVec(origin))) }, 'Moved');
+	return entityOp({ op: 'update', id, kv: keysText(setKey(keys, 'origin', fmtVec(origin))) }, 'Moved');
 }
 
 function setPlacing(on) {
@@ -2715,6 +2779,415 @@ function placeEntity(hit) {
 	const z = cls in PLACE_HEIGHT ? PLACE_HEIGHT[cls] : /^misc_model/.test(cls) ? 0 : 24;
 	entityOp({ op: 'spawn', kv: keysText([['classname', cls], ['origin', fmtVec([hit[0], hit[1], hit[2] + z])]].concat(PLACE_KEYS[cls] || [])) }, 'Placed ' + cls);
 }
+
+/* ------------------------------------------------------------------ */
+/* the tools of the editor                                             */
+/* ------------------------------------------------------------------ */
+
+// Not in JKAdmin. What a level editor has on top of a table of keys: what a class is (read from the game code),
+// the box of an entity and what it is linked to, moving by numbers and on a grid, undo and redo, and how much
+// of what the engine has a limit for is in use.
+
+// ---- the entity definitions of the game code: /api/classdoc is every QUAKED comment of its source files
+
+const classDocs = new Map();	// classname in lower case -> { name, color, mins, maxs, flags, text, keys }
+let classDocsAsked = false;
+
+function parseClassDocs(text) {
+	const vec = t => t.trim().split(/\s+/).map(Number);
+	const three = v => v.length === 3 && v.every(Number.isFinite);
+	for (const block of text.split(/^\/\*QUAKED\s+/m).slice(1)) {
+		const nl = block.indexOf('\n'), head = (nl < 0 ? block : block.slice(0, nl)).trim();
+		// name (colour) (mins) (maxs) FLAG FLAG ..., with a ? for the box of a class that is made of brushes
+		const m = /^(\S+?)\s*\(([^)]*)\)\s*(?:\?|\(([^)]*)\)\s*\(([^)]*)\))?\s*(.*)$/.exec(head);
+		if (!m || classDocs.has(m[1].toLowerCase())) continue;
+		const body = (nl < 0 ? '' : block.slice(nl + 1)).replace(/\s*\*\/\s*$/, '').trim();
+		const color = vec(m[2]), mins = m[3] ? vec(m[3]) : null, maxs = m[4] ? vec(m[4]) : null;
+		const boxed = !!mins && !!maxs && three(mins) && three(maxs);
+		classDocs.set(m[1].toLowerCase(), {
+			name: m[1],
+			// a class that is defined black would not be seen here
+			color: three(color) && Math.max(...color) >= 0.25 ? color : null,
+			mins: boxed ? mins : null,
+			maxs: boxed ? maxs : null,
+			flags: m[5].trim() ? m[5].trim().split(/\s+/) : [],
+			text: body,
+			keys: [...new Set([...body.matchAll(/^\s*"([A-Za-z_][A-Za-z0-9_]*)"/gm)].map(k => k[1]))]
+		});
+	}
+}
+
+async function loadClassDocs() {
+	if (classDocsAsked) return;
+	classDocsAsked = true;
+	try {
+		const res = await fetch('api/classdoc');
+		if (!res.ok) return;	// a game module without it: the editor is what it was
+		parseClassDocs(await res.text());
+		kvShown = '';
+		renderEntPanel();
+		if ($('classPicker').classList.contains('open')) renderPicker();
+	} catch (e) {
+		classDocsAsked = false;
+	}
+}
+
+const classDoc = cls => classDocs.get((cls || '').toLowerCase());
+// the colour its definition gives a class, as a map editor shows it
+function classColor(cls) {
+	const d = classDoc(cls);
+	return d && d.color ? d.color : entColor(cls);
+}
+function classSummary(cls) {
+	const d = classDoc(cls);
+	return d ? d.text.split('\n').map(l => l.trim()).filter(Boolean).slice(0, 3).join(' ').slice(0, 300) : '';
+}
+
+// ---- boxes and links
+
+// The box of an entity. Of one that is made of brushes: the size of those, where the server says it is now.
+// Of another one: the box its class is defined with. null: neither is known.
+function entBox(ent) {
+	if (ent.bmodel) {
+		const n = /^\*(\d+)$/.exec(entKey(ent, 'model')), m = n && world && world.models[+n[1]];
+		return m ? { center: ent.pos, size: m.maxs.map((v, i) => Math.max(1, v - m.mins[i])) } : null;
+	}
+	const d = classDoc(ent.classname);
+	if (!d || !d.mins) return null;
+	return { center: ent.pos.map((v, i) => v + (d.mins[i] + d.maxs[i]) / 2), size: d.maxs.map((v, i) => Math.max(1, v - d.mins[i])) };
+}
+
+// the edges of a box one unit wide around its middle
+const wireBox = (() => {
+	const pos = [];
+	for (let i = 0; i < 8; i++) pos.push(i & 1 ? 0.5 : -0.5, i & 2 ? 0.5 : -0.5, i & 4 ? 0.5 : -0.5);
+	const vao = gl.createVertexArray(), pb = gl.createBuffer(), ib = gl.createBuffer();
+	gl.bindVertexArray(vao);
+	gl.bindBuffer(gl.ARRAY_BUFFER, pb);
+	gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(pos), gl.STATIC_DRAW);
+	gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 0, 0);
+	gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ib);
+	gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array([0, 1, 2, 3, 4, 5, 6, 7, 0, 2, 1, 3, 4, 6, 5, 7, 0, 4, 1, 5, 2, 6, 3, 7]), gl.STATIC_DRAW);
+	gl.bindVertexArray(null);
+	return vao;
+})();
+
+// lines from point to point, filled anew for what is drawn
+const linkLines = (() => {
+	const vao = gl.createVertexArray(), buf = gl.createBuffer();
+	gl.bindVertexArray(vao);
+	gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+	gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 0, 0);
+	gl.bindVertexArray(null);
+	return { vao, buf };
+})();
+
+// the keys with which an entity names the ones it fires
+const LINK_KEYS = new Set(['target', 'target2', 'target3', 'target4', 'target5', 'target6', 'opentarget', 'closetarget', 'paintarget', 'deathtarget']);
+let links = [];		// { from, to, key }: from fires to
+
+function refreshLinks() {
+	const byName = new Map();
+	for (const e of ents.values()) {
+		const name = entKey(e, 'targetname').toLowerCase();
+		if (!name) continue;
+		if (!byName.has(name)) byName.set(name, []);
+		byName.get(name).push(e.id);
+	}
+	links = [];
+	for (const e of ents.values()) {
+		for (const [k, v] of e.keys || []) {
+			if (!v || !LINK_KEYS.has(k.toLowerCase())) continue;
+			for (const to of byName.get(v.toLowerCase()) || []) if (to !== e.id) links.push({ from: e.id, to, key: k });
+		}
+	}
+}
+
+function drawLinkSet(list, color) {
+	const data = new Float32Array(list.length * 6);
+	let n = 0;
+	for (const l of list) {
+		const a = ents.get(l.from), b = ents.get(l.to);
+		if (!a || !b) continue;
+		data.set(a.pos, n);
+		data.set(b.pos, n + 3);
+		n += 6;
+	}
+	if (!n) return;
+	gl.bindVertexArray(linkLines.vao);
+	gl.bindBuffer(gl.ARRAY_BUFFER, linkLines.buf);
+	gl.bufferData(gl.ARRAY_BUFFER, data.subarray(0, n), gl.DYNAMIC_DRAW);
+	gl.uniform4fv(lineProg.u.uColor, color);
+	gl.drawArrays(gl.LINES, 0, n / 3);
+}
+
+function drawEntBox(ent, color) {
+	const box = entBox(ent);
+	if (!box) return;
+	gl.uniformMatrix4fv(lineProg.u.uMvp, false, M4.mul(viewProj, new Float32Array([box.size[0], 0, 0, 0, 0, box.size[1], 0, 0, 0, 0, box.size[2], 0, box.center[0], box.center[1], box.center[2], 1])));
+	gl.uniform4f(lineProg.u.uColor, color[0], color[1], color[2], 1);
+	gl.bindVertexArray(wireBox);
+	gl.drawElements(gl.LINES, 24, gl.UNSIGNED_SHORT, 0);
+}
+
+// The lines of the editor: the boxes of the entities and what they are linked to. What belongs to the selected
+// entity is drawn last and through the walls.
+function drawEditorLines() {
+	const volumes = $('dbgVolumes').checked, linked = $('dbgLinks').checked;
+	if (!volumes && !linked) return;
+	const sel = ents.get(selectedEnt);
+	gl.useProgram(lineProg.p);
+	if (volumes) {
+		for (const ent of ents.values()) if (ent !== sel && entVisible(ent)) drawEntBox(ent, classColor(ent.classname));
+	}
+	gl.uniformMatrix4fv(lineProg.u.uMvp, false, viewProj);
+	if (linked) drawLinkSet(links.filter(l => l.from !== selectedEnt && l.to !== selectedEnt), [0.3, 0.7, 0.8, 1]);
+	if (sel) {
+		gl.disable(gl.DEPTH_TEST);
+		if (linked) {
+			// what it fires, and what fires it
+			drawLinkSet(links.filter(l => l.from === selectedEnt), [1, 0.65, 0.15, 1]);
+			drawLinkSet(links.filter(l => l.to === selectedEnt), [0.4, 1, 0.45, 1]);
+		}
+		if (volumes) drawEntBox(sel, [1, 0.25, 0.35]);
+		gl.enable(gl.DEPTH_TEST);
+	}
+	gl.useProgram(flatProg.p);
+}
+
+// ---- the grid, and moving by numbers and keys
+
+function gridStep() { return Math.max(1, +$('grid').value || 1); }
+
+// a spot on the floor, on the grid of the editor: across, its height stays that of the floor
+function snapHit(hit) {
+	if (!hit || appMode !== 'editor') return hit;
+	const g = gridStep();
+	return [Math.round(hit[0] / g) * g, Math.round(hit[1] / g) * g, hit[2]];
+}
+
+try { const g = localStorage.getItem('grid'); if (g) $('grid').value = g; } catch (e) { /* the grid of the page then */ }
+$('grid').addEventListener('change', () => { try { localStorage.setItem('grid', $('grid').value); } catch (e) { /* not kept */ } });
+
+function entAngles(ent) {
+	const a = entKey(ent, 'angles');
+	if (a) {
+		const v = a.trim().split(/\s+/).map(Number);
+		return [v[0] || 0, v[1] || 0, v[2] || 0];
+	}
+	// the angle key is the yaw, with -1 and -2 for up and down
+	const yaw = Number(entKey(ent, 'angle')) || 0;
+	return yaw === -1 ? [-90, 0, 0] : yaw === -2 ? [90, 0, 0] : [0, yaw, 0];
+}
+
+function focusEntity(id) {
+	const ent = ents.get(id);
+	if (!ent) return;
+	cam.follow = -1;
+	cam.target = ent.pos.slice();
+	cam.dist = Math.min(cam.dist, 700);
+}
+
+for (const id of ['posX', 'posY', 'posZ']) {
+	$(id).addEventListener('change', () => {
+		if (ents.has(selectedEnt)) moveEntity(selectedEnt, ['posX', 'posY', 'posZ'].map(i => +$(i).value || 0));
+	});
+}
+for (const id of ['angP', 'angY', 'angR']) {
+	$(id).addEventListener('change', () => {
+		const ent = ents.get(selectedEnt);
+		if (!ent || !ent.keys) return;
+		// the three angles take the place of the one of the angle key
+		const keys = ent.keys.map(k => k.slice()).filter(k => k[0].toLowerCase() !== 'angle');
+		entityOp({ op: 'update', id: selectedEnt, kv: keysText(setKey(keys, 'angles', ['angP', 'angY', 'angR'].map(i => +$(i).value || 0).join(' '))) }, 'Turned');
+	});
+}
+$('entFocus').addEventListener('click', () => focusEntity(selectedEnt));
+$('entFloor').addEventListener('click', () => {
+	const ent = ents.get(selectedEnt);
+	if (!ent) return;
+	const hit = pickGround([ent.pos[0], ent.pos[1], ent.pos[2] + 1], [0, 0, -1]);
+	if (!hit) { toast('No floor below it', false); return; }
+	// its box stands on the floor. A class without one goes where placing puts it.
+	const box = entBox(ent);
+	const lift = box ? ent.pos[2] - (box.center[2] - box.size[2] / 2) : ent.classname in PLACE_HEIGHT ? PLACE_HEIGHT[ent.classname] : 24;
+	moveEntity(selectedEnt, [ent.pos[0], ent.pos[1], hit[2] + lift]);
+});
+
+const NUDGE_KEYS = new Set(['arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'pageup', 'pagedown']);
+let nudging = false;
+
+async function nudgeEntity(k) {
+	const ent = ents.get(selectedEnt);
+	if (!ent || nudging) return;
+	const g = gridStep(), y = cam.yaw * Math.PI / 180;
+	// along the axis of the world the camera looks along most, so that up is away from the viewer
+	const fwd = Math.abs(Math.cos(y)) >= Math.abs(Math.sin(y)) ? [Math.sign(Math.cos(y)), 0] : [0, Math.sign(Math.sin(y))];
+	const d = k === 'arrowup' ? [fwd[0], fwd[1], 0] : k === 'arrowdown' ? [-fwd[0], -fwd[1], 0] : k === 'arrowright' ? [fwd[1], -fwd[0], 0]
+		: k === 'arrowleft' ? [-fwd[1], fwd[0], 0] : k === 'pageup' ? [0, 0, 1] : [0, 0, -1];
+	nudging = true;
+	try { await moveEntity(selectedEnt, ent.pos.map((v, i) => v + d[i] * g)); } finally { nudging = false; }
+}
+
+// the keys of the editor. true: the key was one of them
+function editorKey(e) {
+	if (appMode !== 'editor') return false;
+	const k = e.key.toLowerCase();
+	if ((e.ctrlKey || e.metaKey) && !e.altKey && (k === 'z' || k === 'y')) {
+		histStep(k === 'z' && !e.shiftKey);
+		return true;
+	}
+	if (e.shiftKey && mode === 'world' && selectedEnt >= 0 && NUDGE_KEYS.has(k)) {
+		nudgeEntity(k);
+		return true;
+	}
+	return false;
+}
+
+// ---- the panel of an entity: its place, the names of its spawnflags, its links, what its class is
+
+function renderEntTools(ent) {
+	const d = classDoc(ent.classname), editable = !!ent.keys, ang = entAngles(ent);
+	[['posX', ent.pos[0]], ['posY', ent.pos[1]], ['posZ', ent.pos[2]], ['angP', ang[0]], ['angY', ang[1]], ['angR', ang[2]]].forEach(([id, v]) => {
+		$(id).value = Math.round(v * 100) / 100;
+		$(id).disabled = !editable;
+	});
+
+	// a box for every spawnflag that has a name, x and - stand for bits without one
+	const flags = +entKey(ent, 'spawnflags') || 0;
+	$('entFlags').innerHTML = editable && d ? d.flags.map((name, i) => /^(x|-|\?)$/i.test(name) ? '' :
+		'<label><input type="checkbox" data-bit="' + i + '"' + (flags & (1 << i) ? ' checked' : '') + '>' + escapeHtml(name) + '</label>').join('') : '';
+
+	const chip = (id, key) => {
+		const other = ents.get(id);
+		return other ? '<a data-id="' + id + '" title="' + escapeHtml(key) + '">#' + id + ' ' + escapeHtml(other.classname) + '</a>' : '';
+	};
+	const fires = links.filter(l => l.from === ent.id), firedBy = links.filter(l => l.to === ent.id);
+	$('entLinks').innerHTML = (fires.length ? 'Fires ' + fires.map(l => chip(l.to, l.key)).join('') : '') + (fires.length && firedBy.length ? '<br>' : '') +
+		(firedBy.length ? 'Fired by ' + firedBy.map(l => chip(l.from, l.key)).join('') : '');
+
+	$('entDoc').style.display = d ? '' : 'none';
+	if (d) $('entDocText').textContent = d.name + (d.flags.length ? '   ' + d.flags.join(' ') : '') + '\n\n' + d.text;
+	$('kvKeys').innerHTML = (d ? d.keys : []).map(k => '<option value="' + escapeHtml(k) + '">').join('');
+}
+
+// a value into the table of keys, where Apply takes it from
+function setPanelKey(key, value) {
+	const row = [...$('kvRows').querySelectorAll('tr')].find(tr => {
+		const name = tr.querySelector('input');
+		return name && name.value.trim().toLowerCase() === key;
+	});
+	if (row) row.querySelectorAll('input')[1].value = value;
+	else $('kvRows').insertAdjacentHTML('beforeend', kvRow([key, value]));
+	kvDirty = true;
+}
+
+$('entFlags').addEventListener('change', () => {
+	const boxes = [...$('entFlags').querySelectorAll('input')];
+	const named = boxes.reduce((bits, box) => bits | (1 << +box.dataset.bit), 0);
+	const now = +((panelKeys().find(k => k[0].toLowerCase() === 'spawnflags') || [])[1]) || 0;
+	// the bits without a name stay as they are
+	setPanelKey('spawnflags', String((now & ~named) | boxes.reduce((bits, box) => box.checked ? bits | (1 << +box.dataset.bit) : bits, 0)));
+});
+$('entLinks').addEventListener('click', e => {
+	const a = e.target.closest('a');
+	if (!a || !ents.has(+a.dataset.id)) return;
+	selectEnt(+a.dataset.id);
+	focusEntity(+a.dataset.id);
+});
+
+function renderBudget(b) {
+	if (!b) { $('entBudget').textContent = ''; return; }
+	const part = (name, v) => {
+		const text = name + ' ' + v[0] + '/' + v[1];
+		return v[0] >= v[1] * 0.9 ? '<b>' + text + '</b>' : text;
+	};
+	$('entBudget').innerHTML = [part('Entities', b.entities), part('Models', b.models), part('Sounds', b.sounds), part('Effects', b.effects)].join(' &middot; ');
+}
+
+// ---- undo and redo
+
+// The server spawns an entity anew with every change, so it has another number afterwards. The history names an
+// entity by a reference that is told the new number.
+const hist = { undo: [], redo: [], refs: new Map(), map: '' };
+
+function histRef(id) {
+	let ref = hist.refs.get(id);
+	if (!ref) { ref = { id }; hist.refs.set(id, ref); }
+	return ref;
+}
+function histRenumber(ref, id) {
+	if (hist.refs.get(ref.id) === ref) hist.refs.delete(ref.id);
+	ref.id = id;
+	hist.refs.set(id, ref);
+}
+function histClear() {
+	hist.undo.length = 0;
+	hist.redo.length = 0;
+	hist.refs.clear();
+}
+function histButtons() {
+	$('entUndo').disabled = !hist.undo.length;
+	$('entRedo').disabled = !hist.redo.length;
+}
+// another map has other entities under the numbers
+function histOfThisMap() {
+	if (hist.map !== loadedMap) { histClear(); hist.map = loadedMap; }
+}
+
+function histRecord(params, ent, before, newId) {
+	histOfThisMap();
+	let step = null;
+	if (params.op === 'spawn') {
+		step = { op: 'spawn', ref: histRef(newId), after: params.kv };
+	} else if (params.op === 'update' && before !== null) {
+		const ref = histRef(+params.id);
+		histRenumber(ref, newId);
+		step = { op: 'update', ref, before, after: params.kv };
+	} else if (params.op === 'delete' && before !== null) {
+		step = { op: 'delete', ref: histRef(+params.id), before, ofMap: !ent.placed };
+	}
+	if (step) {
+		hist.undo.push(step);
+		if (hist.undo.length > 200) hist.undo.shift();
+		hist.redo.length = 0;
+	} else {
+		// what has no keys, or a whole class at once: that can not be taken back, and the steps before it may
+		// name entities that are gone with it
+		histClear();
+	}
+	histButtons();
+}
+
+let histBusy = false;
+async function histStep(undo) {
+	histOfThisMap();
+	const from = undo ? hist.undo : hist.redo, to = undo ? hist.redo : hist.undo;
+	if (histBusy || !from.length) return;
+	histBusy = true;
+	const step = from.pop();
+	// what the step is on the server: the keys of the other side, or the delete of a spawn and the other way round
+	let params;
+	if (step.op === 'update') {
+		params = { op: 'update', id: step.ref.id, kv: undo ? step.before : step.after };
+	} else if ((step.op === 'spawn') === undo) {
+		params = { op: 'delete', id: step.ref.id };
+	} else {
+		params = { op: 'spawn', kv: step.op === 'spawn' ? step.after : step.before };
+		// an entity of the map that comes back stays one of the map
+		if (step.ofMap) params.map = 1;
+	}
+	const json = await entityOp(params, undo ? 'Undone' : 'Redone', false);
+	// refused: something else changed or removed the entity meanwhile. The step is dropped.
+	if (json) {
+		if (params.op !== 'delete') histRenumber(step.ref, json.id);
+		to.push(step);
+	}
+	histBusy = false;
+	histButtons();
+}
+$('entUndo').addEventListener('click', () => histStep(true));
+$('entRedo').addEventListener('click', () => histStep(false));
 
 setInterval(pollEntities, 1000);
 
@@ -3080,8 +3553,8 @@ function renderPicker() {
 	const list = pickerMatches();
 	pickerIndex = Math.min(pickerIndex, list.length - 1);
 	$('classPicker').innerHTML = list.map((c, i) => {
-		const col = entColor(c).map(v => Math.round(v * 255)).join(',');
-		return '<div class="cls' + (i === pickerIndex ? ' hl' : '') + '" data-cls="' + escapeHtml(c) + '"><i style="background:rgb(' + col + ')"></i>' +
+		const col = classColor(c).map(v => Math.round(v * 255)).join(',');
+		return '<div class="cls' + (i === pickerIndex ? ' hl' : '') + '" data-cls="' + escapeHtml(c) + '" title="' + escapeHtml(classSummary(c)) + '"><i style="background:rgb(' + col + ')"></i>' +
 			escapeHtml(c) + '<span class="ty">' + escapeHtml(classCategory(c)) + '</span></div>';
 	}).join('') || '<div class="cls">' + (classesLoaded ? 'No class matches' : 'Loading...') + '</div>';
 }

@@ -276,6 +276,19 @@ add_custom_command(
 	DEPENDS "${MPDir}/game/webadmin/index.html" "${CMAKE_SOURCE_DIR}/cmake/Modules/EmbedFile.cmake"
 	COMMENT "Embedding web admin page")
 set(MPGameFiles ${MPGameFiles} "${CMAKE_CURRENT_BINARY_DIR}/webadmin_html.h")
+
+# and so are the entity definitions of the game code (its QUAKED comments), which the editor of the page shows
+add_custom_command(
+	OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/classdoc.txt"
+	COMMAND ${CMAKE_COMMAND} -DDIR="${MPDir}/game" -DOUTPUT="${CMAKE_CURRENT_BINARY_DIR}/classdoc.txt" -P "${CMAKE_SOURCE_DIR}/cmake/Modules/ExtractQuaked.cmake"
+	DEPENDS ${MPGameGameFiles} ${MPGameJaplusFiles} ${MPGameVoiceFiles} ${MPGamePropsFiles} ${MPGameFunFiles} "${CMAKE_SOURCE_DIR}/cmake/Modules/ExtractQuaked.cmake"
+	COMMENT "Collecting the entity definitions")
+add_custom_command(
+	OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/classdoc_txt.h"
+	COMMAND ${CMAKE_COMMAND} -DINPUT="${CMAKE_CURRENT_BINARY_DIR}/classdoc.txt" -DOUTPUT="${CMAKE_CURRENT_BINARY_DIR}/classdoc_txt.h" -DNAME=classdoc_txt -P "${CMAKE_SOURCE_DIR}/cmake/Modules/EmbedFile.cmake"
+	DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/classdoc.txt" "${CMAKE_SOURCE_DIR}/cmake/Modules/EmbedFile.cmake"
+	COMMENT "Embedding the entity definitions")
+set(MPGameFiles ${MPGameFiles} "${CMAKE_CURRENT_BINARY_DIR}/classdoc_txt.h")
 set(MPGameIncludeDirectories ${MPGameIncludeDirectories} "${CMAKE_CURRENT_BINARY_DIR}")
 
 add_library(${MPGame} SHARED ${MPGameFiles})

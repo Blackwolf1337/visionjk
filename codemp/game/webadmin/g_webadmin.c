@@ -40,7 +40,9 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #endif
 
 #include "game/g_local.h"
+#include "qcommon/qfiles.h"		// the header of a .bsp
 #include "webadmin_html.h"
+#include "classdoc_txt.h"
 
 #define WA_MAX_CONNECTIONS	32
 #define WA_MAX_REQUEST		65536		// head and body. The largest body is the text of the server config.
@@ -746,7 +748,8 @@ static void WA_ApiState( waConnection_t *c ) {
 	WA_BufFree( &b );
 }
 
-static void WA_ApiMap( waConnection_t *c ) {
+// the .bsp of the map that runs, read once and kept. qfalse: it can not be read
+static qboolean WA_LoadMap( void ) {
 	char mapname[MAX_QPATH];
 
 	trap->Cvar_VariableStringBuffer( "mapname", mapname, sizeof( mapname ) );
@@ -756,8 +759,21 @@ static void WA_ApiMap( waConnection_t *c ) {
 		mapData = WA_ReadGameFile( va( "maps/%s.bsp", mapname ), &mapLen );
 		Q_strncpyz( mapDataName, mapname, sizeof( mapDataName ) );
 	}
+	return (qboolean)( mapData != NULL );
+}
 
-	if ( !mapData ) {
+// how many brush models the map has, the world being the first: *1 to one less than this can be named. -1: not known
+static int WA_MapBrushModels( void ) {
+	dheader_t header;
+
+	if ( !WA_LoadMap() || mapLen < (int)sizeof( header ) )
+		return -1;
+	memcpy( &header, mapData, sizeof( header ) );
+	return LittleLong( header.lumps[LUMP_MODELS].filelen ) / (int)sizeof( dmodel_t );
+}
+
+static void WA_ApiMap( waConnection_t *c ) {
+	if ( !WA_LoadMap() ) {
 		WA_RespondText( c, 404, "Not Found", "map not found" );
 		return;
 	}
@@ -1261,12 +1277,157 @@ static void WA_EntityPosition( const gentity_t *ent, vec3_t out ) {
 	}
 }
 
+#define WA_ENTITY_RESERVE	64		// free entities the editor leaves to the game: shots, effects, bodies
+
+// entities the game can still spawn: the slots it never used and the ones that are free for long enough
+static int WA_FreeEntities( void ) {
+	int i, count = ENTITYNUM_MAX_NORMAL - level.num_entities;
+
+	for ( i = MAX_CLIENTS; i < level.num_entities; i++ ) {
+		const gentity_t *ent = &g_entities[i];
+
+		// G_Spawn() leaves a slot alone for a second after it was freed
+		if ( !ent->inuse && !( ent->freetime > level.startTime + 2000 && level.time - ent->freetime < 1000 ) )
+			count++;
+	}
+	return count;
+}
+
+// how many names of a kind (models, sounds, effects) are taken. The first place of each kind is never used.
+static int WA_ConfigstringsUsed( int start, int max ) {
+	char	name[MAX_STRING_CHARS];
+	int		i, count = 0;
+
+	for ( i = 1; i < max; i++ ) {
+		trap->GetConfigstring( start + i, name, sizeof( name ) );
+		if ( name[0] )
+			count++;
+	}
+	return count;
+}
+
+// qtrue: the name has its place among the config strings already, or there is one left for it. The compare is
+// the one of G_FindConfigstringIndex(), which ends the server when it finds no place.
+static qboolean WA_ConfigstringRoom( int start, int max, const char *name ) {
+	char	have[MAX_STRING_CHARS];
+	int		i;
+
+	for ( i = 1; i < max; i++ ) {
+		trap->GetConfigstring( start + i, have, sizeof( have ) );
+		if ( !have[0] || !strcmp( have, name ) )
+			return qtrue;
+	}
+	return qfalse;
+}
+
+// the value of a key of the entity that is about to be spawned, NULL without it
+static const char *WA_SpawnVar( const char *key ) {
+	int i;
+
+	for ( i = 0; i < level.numSpawnVars; i++ ) {
+		if ( !Q_stricmp( key, level.spawnVars[i][0] ) )
+			return level.spawnVars[i][1];
+	}
+	return NULL;
+}
+
+/*
+=================
+WA_SpawnRefused
+
+Not in JKAdmin. The spawn code of the game ends the server when an entity is not what it has to be: an error of
+the game is fatal on a dedicated server. So does running out of entities, and out of places for the names of
+models, sounds and effects. What can be told from the keys is looked at here before the spawn code runs.
+
+qtrue: it is not spawned, err says why. The keys are in level.spawnVars.
+=================
+*/
+static qboolean WA_SpawnRefused( char *err, int errSize ) {
+	// trap->Error in the spawn function of the class without the key. unless: the other key that will do
+	static const struct { const char *classname, *key, *unless; } needs[] = {
+		{ "target_speaker", "noise", "soundSet" },
+		{ "target_play_music", "music", NULL },
+		{ "target_level_change", "mapname", NULL },
+		{ "trigger_lightningstrike", "lightningfx", NULL },
+		{ "misc_siege_item", "model", NULL },
+		{ "misc_model_breakable", "model", NULL },
+		{ "trigger_shipboundary", "target", NULL },
+		{ "trigger_shipboundary", "traveltime", NULL },
+		{ "trigger_hyperspace", "target", NULL },
+		{ "trigger_hyperspace", "target2", NULL },
+	};
+	// keys whose value gets a place among the config strings
+	static const struct { const char *key; int start, max; const char *what; } names[] = {
+		{ "model", CS_MODELS, MAX_MODELS, "models" },
+		{ "model2", CS_MODELS, MAX_MODELS, "models" },
+		{ "noise", CS_SOUNDS, MAX_SOUNDS, "sounds" },
+		{ "fxFile", CS_EFFECTS, MAX_FX, "effects" },
+		{ "lightningfx", CS_EFFECTS, MAX_FX, "effects" },
+	};
+	const char	*classname = WA_SpawnVar( "classname" ), *value;
+	const int	room = WA_FreeEntities();
+	size_t		i;
+
+	if ( room < WA_ENTITY_RESERVE ) {
+		Com_sprintf( err, errSize, "the map is full: %d entities are left, the game needs %d for itself", room, WA_ENTITY_RESERVE );
+		return qtrue;
+	}
+
+	for ( i = 0; i < ARRAY_LEN( needs ); i++ ) {
+		if ( Q_stricmp( classname, needs[i].classname ) )
+			continue;
+		value = WA_SpawnVar( needs[i].key );
+		if ( !VALIDSTRING( value ) ) {
+			value = needs[i].unless ? WA_SpawnVar( needs[i].unless ) : NULL;
+			if ( VALIDSTRING( value ) )
+				continue;
+			Com_sprintf( err, errSize, "a %s needs the key %s", classname, needs[i].key );
+			return qtrue;
+		}
+		// these two look for what they name while they spawn
+		if ( !Q_stricmpn( needs[i].key, "target", 6 ) && !G_Find( NULL, FOFS( targetname ), value ) ) {
+			Com_sprintf( err, errSize, "a %s needs an entity with the targetname %s, there is none", classname, value );
+			return qtrue;
+		}
+	}
+
+	// the classes that are made of brushes of the map take them from the model key
+	if ( ( !Q_stricmpn( classname, "trigger_", 8 ) && Q_stricmp( classname, "trigger_always" ) )
+		|| ( !Q_stricmpn( classname, "func_", 5 ) && Q_stricmp( classname, "func_timer" ) && Q_stricmp( classname, "func_group" ) ) ) {
+		const int count = WA_MapBrushModels();
+
+		value = WA_SpawnVar( "model" );
+		if ( !value || value[0] != '*' || atoi( value + 1 ) < 1 ) {
+			Com_sprintf( err, errSize, "a %s is made of brushes of the map: it needs a model key like *1", classname );
+			return qtrue;
+		}
+		if ( count >= 0 && atoi( value + 1 ) >= count ) {
+			Com_sprintf( err, errSize, "the map has no brush model %s, the last one is *%d", value, count - 1 );
+			return qtrue;
+		}
+	}
+
+	for ( i = 0; i < ARRAY_LEN( names ); i++ ) {
+		value = WA_SpawnVar( names[i].key );
+		if ( VALIDSTRING( value ) && value[0] != '*' && !WA_ConfigstringRoom( names[i].start, names[i].max, value ) ) {
+			Com_sprintf( err, errSize, "the map has no room for another one of its %s (%d at most)", names[i].what, names[i].max - 1 );
+			return qtrue;
+		}
+	}
+	return qfalse;
+}
+
 static void WA_ApiEntities( waConnection_t *c ) {
 	waBuffer_t	b = { 0 };
 	qboolean	first = qtrue;
 	int			i;
 
-	WA_BufAppend( &b, "{\"entities\":[", 13 );
+	// how much of what the engine has a limit for is in use, and how many brush models the map has
+	WA_BufPrintf( &b, "{\"budget\":{\"entities\":[%d,%d],\"models\":[%d,%d],\"sounds\":[%d,%d],\"effects\":[%d,%d]},\"brushModels\":%d,",
+		ENTITYNUM_MAX_NORMAL - MAX_CLIENTS - WA_FreeEntities(), ENTITYNUM_MAX_NORMAL - MAX_CLIENTS - WA_ENTITY_RESERVE,
+		WA_ConfigstringsUsed( CS_MODELS, MAX_MODELS ), MAX_MODELS - 1, WA_ConfigstringsUsed( CS_SOUNDS, MAX_SOUNDS ), MAX_SOUNDS - 1,
+		WA_ConfigstringsUsed( CS_EFFECTS, MAX_FX ), MAX_FX - 1, WA_MapBrushModels() );
+	WA_BufAppend( &b, "\"entities\":[", 12 );
 	for ( i = MAX_CLIENTS; i < level.num_entities; i++ ) {
 		gentity_t	*ent = &g_entities[i];
 		vec3_t		pos;
@@ -1462,6 +1623,8 @@ static int WA_SpawnFromText( const char *text, char *err, int errSize ) {
 		Q_strncpyz( err, "no classname", errSize );
 		return -1;
 	}
+	if ( WA_SpawnRefused( err, errSize ) )
+		return -1;
 
 	wasSpawning = level.spawning;
 	level.spawning = qtrue;
@@ -1490,7 +1653,7 @@ static void WA_EntityResult( waConnection_t *c, qboolean ok, const char *msg, in
 }
 
 static void WA_ApiEntity( waConnection_t *c, const char *body ) {
-	char		op[16], idStr[16], err[128];
+	char		op[16], idStr[16], ofMap[4], err[128];
 	static char	kv[WA_MAX_REQUEST];
 	int			id = -1, newId;
 
@@ -1502,8 +1665,10 @@ static void WA_ApiEntity( waConnection_t *c, const char *body ) {
 
 	if ( !strcmp( op, "spawn" ) ) {
 		newId = WA_SpawnFromText( kv, err, sizeof( err ) );
+		// map=1: an entity of the map that was deleted and is taken back (undo). It is not kept over a start of
+		// the map as a placed one is, the map brings it itself.
 		if ( newId >= 0 )
-			entityPlaced[newId] = qtrue;
+			entityPlaced[newId] = (qboolean)!( WA_FormValue( body, "map", ofMap, sizeof( ofMap ) ) && ofMap[0] == '1' );
 		WA_EntityResult( c, newId >= 0, newId >= 0 ? "spawned" : err, newId );
 		return;
 	}
@@ -2408,6 +2573,13 @@ static void WA_ModelScanFrame( void ) {
 	}
 }
 
+// GET /api/classdoc: the entity definitions of the game code, every QUAKED comment of its source files as it
+// stands there (cmake/Modules/ExtractQuaked.cmake). The editor of the page reads the classes from it: what one
+// does, its keys, the names of its spawnflags, its box and its colour.
+static void WA_ApiClassDoc( waConnection_t *c ) {
+	WA_Respond( c, 200, "OK", "text/plain; charset=utf-8", "Cache-Control: max-age=3600\r\n", (const char *)classdoc_txt, (int)classdoc_txt_len );
+}
+
 // GET /api/shaders: the names of the shader scripts of the game, in the order the engine reads them in. The page
 // reads the files themselves through /api/file.
 static void WA_ApiShaders( waConnection_t *c ) {
@@ -2555,6 +2727,8 @@ static void WA_HandleRequest( waConnection_t *c, char *head, char *body, int bod
 		WA_ApiModels( c );
 	} else if ( !strcmp( method, "GET" ) && !strcmp( path, "/api/shaders" ) ) {
 		WA_ApiShaders( c );
+	} else if ( !strcmp( method, "GET" ) && !strcmp( path, "/api/classdoc" ) ) {
+		WA_ApiClassDoc( c );
 	} else if ( !strcmp( method, "GET" ) && !strcmp( path, "/api/fs/list" ) ) {
 		WA_ApiFsList( c, query );
 	} else if ( !strcmp( method, "GET" ) && !strcmp( path, "/api/fs/get" ) ) {

@@ -43,6 +43,10 @@ any user name and the password (HTTP basic auth).
   Right click on the map teleports the selected player.
 - World: all entities with their spawn keys. Edit keys and apply, drag or right click to move, rotate, duplicate,
   delete, place new ones with a model preview, export the layout as `.ent`.
+- The tools of the editor on top of that: what a class is, with its keys and its spawnflags by name, read from
+  the game code. The box of every entity and the lines to what it fires. Position and angles as numbers, a grid,
+  moving with keys, putting on the floor, undo and redo. How much of what the engine limits is in use. The
+  server refuses to place what would end it.
 - JA+ admin commands for the selected player: sleep and wake, protect, empower, merc, mindtrick, ghost, silence
   and unsilence, force and unforce the alternate dimension, deny vote, freeze, slap, show the MOTD, rename, a
   message on his screen (ampsay) and his admin rank (admGrant). A button is lit while its state is on.
@@ -78,11 +82,12 @@ the answer tells the page that the numbers started over.
 | `GET /api/shaders` | the names of the shader scripts of the game, in the order the engine reads them in |
 | `GET /api/anims` | animation names in `animNumber_t` order |
 | `GET /api/classes` | everything that can be spawned, and the items with model and icon |
-| `GET /api/entities` | the entities with their keys |
+| `GET /api/entities` | the entities with their keys. `budget`: entities, models, sounds and effects in use and the most there can be. `brushModels`: how many brush models the map has |
+| `GET /api/classdoc` | the entity definitions of the game code: every `QUAKED` comment of its source files as text |
 | `GET /api/export` | the entities in `.ent` format |
 | `GET /api/chat?since=&epoch=` | chat lines after number `since`. Everything if `epoch` is not the current one |
 | `POST /api/action` | `action`, `id`, `value`: say, addbot, map, kick, ban, health, armor, scale, kill, god, noclip, schizo, flatulence, disorient, poop, gravity (no `id`), reload (no `id`), playergravity, team, teleport, and the JA+ ones: amsleep, amwake, amprotect, amempower, ammerc, ammindtrick, amghost, amsilence, amunsilence, amslap, amForceAltDim, amUnForceAltDim, amdenyvote, amShowMotd, amrename, ampsay, admgrant, freeze |
-| `POST /api/entity` | `op` spawn, update or delete, with `id` and `kv` (one `key=value` per line). `op` clear with `kv` `classname=<class>` deletes every entity of that class that was placed through the panel |
+| `POST /api/entity` | `op` spawn, update or delete, with `id` and `kv` (one `key=value` per line). `op` clear with `kv` `classname=<class>` deletes every entity of that class that was placed through the panel. `map=1` with spawn: it is an entity of the map that comes back (undo), not a placed one |
 | `GET /api/config` | the text of `server.cfg`, as UTF-8 |
 | `POST /api/config`, `POST /api/config?exec=1` | the body is the new text of `server.cfg` (plain text, not a form). With `exec=1` the server runs `exec server.cfg` afterwards |
 | `GET /api/models` | every `.md3` and `.glm` under `models/`. The server reads the folders a few at a frame: `done` says whether the list is complete, the page asks again until it is |
@@ -127,8 +132,34 @@ Also changed:
   is drawn from both sides), and the scripts on the models of players and items, which are drawn as before.
   Images outside `textures/`, `models/` and `gfx/` are not handed out by the server, a stage that names one is
   left out. With a game module that has no `/api/shaders` the administration shows the plain view. The rules
-  were checked by reading all 3365 shaders of the game through the parser, the picture was not looked at in a
-  browser.
+  were checked by reading all 3365 shaders of the game through the parser. The picture was looked at in headless
+  Chromium on mp/ffa3, where every image a stage names loaded. It was not put next to a picture of the game.
+- New: the tools of the editor (script section "the tools of the editor"), each made of what the game code has.
+  - The entity definitions. A step of the build (`cmake/Modules/ExtractQuaked.cmake`) collects every `QUAKED`
+    comment of `codemp/game` into the module, `/api/classdoc` hands them out. The panel of an entity shows the
+    text of its class, a box for every spawnflag that has a name, and offers the keys the text names. A class
+    is drawn in the colour of its definition, and the class picker shows the first lines as a tip.
+  - Views, switched in the bar at the top left of the map: Volumes draws the box of every entity (the size of
+    its brushes for a trigger or a door, from the models of the map file, else the box its class is defined
+    with), Links a line from an entity to every one it fires (`target` to `targetname`). What belongs to the
+    selected entity is drawn through the walls, the panel lists it with a click to go there.
+  - Moving: position and angles as numbers, a grid (1 to 64) for what the mouse places, Shift with the arrow
+    keys and Page Up or Down for a step of the grid, "To floor", "Focus". Page Up and Down alone move the camera
+    up and down.
+  - Undo and redo (Ctrl+Z, Ctrl+Y, 200 steps) for placing, changing and deleting. The server spawns an entity
+    anew with every change, so the history follows its number. An entity of the map that is deleted and taken
+    back is one of the map again (`map=1`). Deleting a whole class, or an entity without keys, empties the
+    history.
+  - The budget line: entities, models, sounds and effects in use against the limits of the engine, red from
+    90 percent on.
+  - The plain view shows a shader whose own name is no image with the image its script names for editors
+    (`qer_editorimage`), or the first one of its stages.
+- New: the server refuses to place what would end it (`WA_SpawnRefused`): a class made of brushes (`trigger_`,
+  `func_`) without a `model` key that names a brush model of the map, the classes whose spawn function raises
+  an error without a key (`target_speaker`, `target_play_music`, `target_level_change`,
+  `trigger_lightningstrike`, `misc_siege_item`, `misc_model_breakable`, `trigger_shipboundary`,
+  `trigger_hyperspace`), an entity when fewer than 64 are left for the game, and a model, sound or effect when
+  its kind has no place left. The answer says which rule it was.
 - New: the JA+ admin commands that work on a player (`WA_JpAction`). The panel does not copy them, it sends the
   same line an rcon admin would type on the server console (`amsleep 3`, `amrename 3 "name"`), so the rules,
   texts and logs are those of JA+. The command runs in the next frame, the answer of the panel only says it was
@@ -583,10 +614,12 @@ To take a later JKAdmin commit: apply its diff and keep the `JA+` blocks in `WA_
 
 ## Limits
 
-- Not fixed: the entity editor can end the server. If the spawn code of a class raises an error, the dedicated
-  server exits, because OpenJK makes every game error fatal there. Seen with `trigger_lightningstrike` placed
-  without a `lightningfx` key. Brush classes (`trigger_`, `func_`) without a valid `model` key are expected to do
-  the same. A restart script or care in the World tab is needed until placing is guarded.
+- The entity editor can still end the server in ways the guard does not know. If the spawn code of a class
+  raises an error, the dedicated server exits, because OpenJK makes every game error fatal there. The cases that
+  can be told from the keys are refused since `WA_SpawnRefused` (see above): the list was made by reading the
+  spawn functions for `trap->Error`, a class that fails somewhere else is not in it.
+- Volumes shows a brush entity as the box around its brushes, not their shape. The lights of a map can not be
+  shown: the compiler takes them out of the map file.
 - Plain HTTP with basic auth. Put it behind a reverse proxy with HTTPS before it is reachable from outside, or
   leave `g_webBind` empty (127.0.0.1) and use an SSH tunnel. Since the security pass the default bind is localhost,
   not every interface.
@@ -618,6 +651,13 @@ with `jp_allowGodTalk` 1, scale across a respawn, team past `amlockteam`, telepo
 Chat: every kind of line once from a scripted client (`japlus_port/tools/clienttests/chat.cfg`: say, say_team,
 tell, amsay, clansay, umlauts), the console `say`, the panel, the ring with more than 128 lines, `since` and
 `epoch` over a `map_restart` and a map change, also under valgrind.
+
+2026-10-08, the modes and the tools of the editor, on a private server (mp/ffa3 with bots) in headless Chromium
+with software GL, driven through its debugging port: both modes and every view came up without an error on the
+console. The guard refused the five bad entities that were tried and the server kept running. Placing a cube,
+moving it a grid step, two undos and two redos gave the states they should, a deleted spawn point of the map came
+back with its keys and as an entity of the map, a spawnflag box wrote its bit into the key table. Not done by
+hand with a mouse: dragging, the number fields, the keys.
 
 The page was looked at once in headless Chromium with software GL: the 3D map, the player list and the chat box
 with all kinds of lines show up. Not tested: using the page by hand (HUD view, dragging entities), the Windows DLL
