@@ -43,6 +43,14 @@ input:focus, select:focus { outline: none; border-color: var(--accent); }
 .score.red { background: rgba(229,72,77,.18); color: var(--red); }
 .score.blue { background: rgba(62,142,247,.18); color: var(--blue); }
 #topbar .spacer { flex: 1; }
+/* A narrow window: nothing of the bar breaks into two lines or runs out of it. What only tells goes first (the
+   game type, the time, the name of the server, the name of the panel), the fields get shorter, and the name of
+   the map is cut before a button is. */
+#topbar > * { flex: none; white-space: nowrap; }
+#topbar .meta { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 1240px) { #topbar .meta.wide { display: none; } }
+@media (max-width: 1080px) { #topbar { gap: 8px; } #topbar #host, #topbar .brand span { display: none; } #topbar form.inline input { width: 64px !important; } }
+@media (max-width: 880px) { #topbar { gap: 6px; padding: 0 8px; } #topbar form.inline input { width: 48px !important; } }
 #status { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
 #status.live { background: var(--green); }
 #status.err { background: var(--accent2); }
@@ -267,12 +275,12 @@ body.app-admin #dbg, body.app-admin .editorOnly, body.app-admin #tabs button[dat
 <body>
 <div id="topbar">
 	<button id="toggleSide" title="Player list">&#9776;</button>
-	<div class="brand"><i></i>VisionJK Admin</div>
+	<div class="brand"><i></i><span>VisionJK Admin</span></div>
 	<div id="appMode"><button data-app="admin" title="The map as the game draws it, the players, the server">Administration</button><button data-app="editor" title="Placing entities and models, with the debug views">Editor</button></div>
 	<span class="meta" id="host"></span>
 	<span class="meta">Map <b id="map">-</b></span>
-	<span class="meta"><b id="gametype">-</b></span>
-	<span class="meta">Time <b id="time">-</b></span>
+	<span class="meta wide"><b id="gametype">-</b></span>
+	<span class="meta wide">Time <b id="time">-</b></span>
 	<span id="teamScores" class="inline" style="display:none"><span class="score red" id="scoreRed">0</span><span class="score blue" id="scoreBlue">0</span></span>
 	<span class="spacer"></span>
 	<form class="inline" id="botForm"><input id="botName" placeholder="Bot name" style="width:100px" list="pickBots" autocomplete="off"><button>Add bot</button></form>

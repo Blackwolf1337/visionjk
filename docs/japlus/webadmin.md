@@ -221,6 +221,10 @@ Also changed:
 - New: the switch "Open" in the bar of the debug views of the editor. The plain view of the editor draws every
   surface from both sides, so a map with ceilings is a closed box from above. With "Open" it draws the side
   the game draws, a click goes through the rest, and entities can be placed into a room from above.
+- Changed: the bar at the top holds together in a narrow window. Below about 1000 px "Add bot" broke into two
+  lines and the fields at the right ran out of the window. Now what only tells goes first (the game type and
+  the time below 1240 px, the name of the server and of the panel below 1080 px), the fields get shorter, and
+  nothing wraps. Tried at 1440, 1280, 1100, 1000, 900 and 800 px (`steps_topbar.js`).
 - Changed: the bar of the debug views and the legend of the keys share the top of the map view (`#viewTop`).
   The legend goes below the bar when both do not fit next to each other, they lay over each other before.
 - New: "Fire" in the panel of an entity (`op` use). It does to the entity what a trigger does that has it as
