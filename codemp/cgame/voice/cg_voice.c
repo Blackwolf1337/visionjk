@@ -59,6 +59,9 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define VOICE_FAR_GAIN			0.1f	// how loud a voice still is at the end of its range
 #define VOICE_MAX_PAN			0.8f	// how far a voice goes to one side: it is never gone from the other ear
 #define VOICE_HEAD				24.0f	// the mouth of a player above his origin
+#define VOICE_OWN_REVERB_GAIN	0.3f	// what the room gets of the own voice at cg_voiceOwnReverb 1, against a voice next to the listener
+#define VOICE_OWN_REVERB_CAP	0.1f	//	a frame of it louder than this (Voice_Level) goes in this loud,
+#define VOICE_OWN_REVERB_RISE	0.1f	//	and after a loud one the gain comes back by this much a frame at most
 #define VOICE_FILE_FRAME		( VOICE_FRAME_SAMPLES * 4 )	// voice_test: the bytes of one frame in a file, two channels
 
 typedef struct voiceSpeaker_s {
@@ -107,6 +110,7 @@ static struct {
 	int					seq;
 	qboolean			keyDown;		// +voice
 	qboolean			sending;
+	float				ownGain;		// Voice_OwnReverb: what the cap left of the last frame
 	int					sentTime;		// when the last frame of the microphone went out
 	int					talkUntil;		// voice activation
 	int					micUntil;		// push to talk: when the microphone is closed again
@@ -402,15 +406,44 @@ static qboolean Voice_EngineSays( const char *cvar ) {
 	return ( atoi( value ) == 1 ) ? qtrue : qfalse;
 }
 
+// how loud a frame is, 0 to 1
+static float Voice_Level( const short *samples ) {
+	float	sum = 0.0f;
+	int		i;
+
+	for ( i = 0; i < VOICE_FRAME_SAMPLES; i++ )
+		sum += (float)samples[i] * samples[i];
+	return sqrtf( sum / VOICE_FRAME_SAMPLES ) * ( 1.0f / 32768.0f );
+}
+
 // What this player says, for an engine that lets the room he stands in ring from it. He does not hear his
 // voice, only the room. Not for a spectator and not while he follows somebody (the listener is not where his
 // mouth is then), and not in a chat without a range, where no voice is in the level.
+//
+// The room is in his ears a moment after the word, while he talks on, so it gets little of him
+// (VOICE_OWN_REVERB_GAIN) and has a cap: a frame that is louder than VOICE_OWN_REVERB_CAP is turned down to it
+// within that frame, and what is turned down comes back slowly, so that the room does not pump with every word.
 static void Voice_OwnReverb( const short *samples ) {
-	if ( !cg_voiceOwnReverb.integer || voice.range <= 0 || !cg.snap || cg.snap->ps.clientNum != cg.clientNum
+	short	capped[VOICE_FRAME_SAMPLES];
+	float	level, gain, step;
+	int		i;
+
+	if ( cg_voiceOwnReverb.value <= 0.0f || voice.range <= 0 || !cg.snap || cg.snap->ps.clientNum != cg.clientNum
 		|| cgs.clientinfo[cg.clientNum].team == TEAM_SPECTATOR )
 		return;
-	if ( Voice_EngineSays( "s_spatialOwnVoice" ) && trap->ext.S_SpatialOwnVoice )
-		trap->ext.S_SpatialOwnVoice( cg_voiceVolume.value, samples, VOICE_FRAME_SAMPLES, VOICE_RATE );
+	if ( !Voice_EngineSays( "s_spatialOwnVoice" ) || !trap->ext.S_SpatialOwnVoice )
+		return;
+
+	level = Voice_Level( samples );
+	gain = ( level > VOICE_OWN_REVERB_CAP ) ? VOICE_OWN_REVERB_CAP / level : 1.0f;
+	if ( gain > voice.ownGain + VOICE_OWN_REVERB_RISE )
+		gain = voice.ownGain + VOICE_OWN_REVERB_RISE;
+	step = ( gain - voice.ownGain ) * ( 1.0f / VOICE_FRAME_SAMPLES );
+	for ( i = 0; i < VOICE_FRAME_SAMPLES; i++ )
+		capped[i] = (short)( samples[i] * ( voice.ownGain + step * ( i + 1 ) ) );
+	voice.ownGain = gain;
+	trap->ext.S_SpatialOwnVoice( cg_voiceVolume.value * cg_voiceOwnReverb.value * VOICE_OWN_REVERB_GAIN, capped, VOICE_FRAME_SAMPLES,
+		VOICE_RATE );
 }
 
 // one frame of sound goes out
@@ -425,16 +458,6 @@ static void Voice_SendFrame( const short *samples ) {
 		Voice_Send( VOICE_AUDIO, frame, len );
 		voice.seq = ( voice.seq + 1 ) & 0xffff;
 	}
-}
-
-// how loud a frame is, 0 to 1
-static float Voice_Level( const short *samples ) {
-	float	sum = 0.0f;
-	int		i;
-
-	for ( i = 0; i < VOICE_FRAME_SAMPLES; i++ )
-		sum += (float)samples[i] * samples[i];
-	return sqrtf( sum / VOICE_FRAME_SAMPLES ) * ( 1.0f / 32768.0f );
 }
 
 // voice_test play: the file from its start. qfalse: there is not one frame in it.

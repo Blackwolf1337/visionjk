@@ -158,8 +158,13 @@ voices muffled. The same goes for any other engine, and for this one with `s_spa
 What the own player says goes the same way as his other sounds: into the reverb and nowhere else. The cgame
 hands every frame of the microphone that goes out to the engine too (`ext.S_SpatialOwnVoice`, a second call,
 which an engine has that sets the cvar `s_spatialOwnVoice` to 1). He does not hear his voice, he hears the room
-he stands in ring from it, as loud as the voice of a player next to him would make it ring. `cg_voiceOwnReverb 0`
-turns it off. Not handed over: a spectator's voice, and a chat without a range.
+he stands in ring from it. That room is in his ears a moment after the word, while he talks on, so it gets
+little of him: at `cg_voiceOwnReverb 1` three tenths of what the voice of a player next to him would give it
+(`VOICE_OWN_REVERB_GAIN`). And it has a cap: a frame of the microphone that is louder than a tenth of full
+scale (`VOICE_OWN_REVERB_CAP`, as the voice activation measures it) goes in that loud and no louder, turned
+down within the frame, and comes back over the next frames, so a raised voice does not raise the room.
+`cg_voiceOwnReverb` scales what the room gets, 0 turns it off. Not handed over: a spectator's voice, and a chat
+without a range.
 
 The other sounds are there ahead of time, a voice is not. It is rendered as far as what arrived of it reaches,
 a block behind where the others are rendered to, so it is heard about `s_spatialAhead` (0.1 s) later than the
