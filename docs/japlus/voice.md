@@ -131,8 +131,8 @@ the rings and the queues are static memory. `CG_Shutdown` stops the devices befo
 | `game/voice/bg_voice.h`, `bg_voice.c` | the datagram, the queue, the limit, who hears whom, the low-pass. Calls nothing of the engine |
 | `game/bg_net.h` | the sockets as the modules use them, shared with the web admin panel, and the random source |
 | `game/voice/g_voice.c` | the relay |
-| `cgame/cg_voice.c` | the client: asking, socket, codec, queues, the key, where a voice comes from, HUD |
-| `cgame/cg_voice_audio.c`, `cg_voice.h` | microphone and speakers |
+| `cgame/voice/cg_voice.c` | the client: asking, socket, codec, queues, the key, where a voice comes from, HUD |
+| `cgame/voice/cg_voice_audio.c`, `cg_voice.h` | microphone and speakers |
 
 `-DBuildJPVoice=OFF` builds the cgame without it (and without the two libraries).
 

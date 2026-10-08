@@ -107,9 +107,6 @@ set(MPCGameCgameFiles
 	"${MPDir}/cgame/cg_syscalls.c"
 	"${MPDir}/cgame/cg_turret.c"
 	"${MPDir}/cgame/cg_view.c"
-	"${MPDir}/cgame/cg_voice.c"
-	"${MPDir}/cgame/cg_voice_audio.c"
-	"${MPDir}/cgame/cg_voice.h"
 	"${MPDir}/cgame/cg_weaponinit.c"
 	"${MPDir}/cgame/cg_weapons.c"
 	"${MPDir}/cgame/fx_blaster.c"
@@ -129,6 +126,15 @@ set(MPCGameCgameFiles
 	)
 source_group("cgame" FILES ${MPCGameCgameFiles})
 set(MPCGameFiles ${MPCGameFiles} ${MPCGameCgameFiles})
+
+# the voice chat, its part in the game module is game/voice
+set(MPCGameVoiceFiles
+	"${MPDir}/cgame/voice/cg_voice.c"
+	"${MPDir}/cgame/voice/cg_voice_audio.c"
+	"${MPDir}/cgame/voice/cg_voice.h"
+	)
+source_group("cgame/voice" FILES ${MPCGameVoiceFiles})
+set(MPCGameFiles ${MPCGameFiles} ${MPCGameVoiceFiles})
 
 set(MPCGameCommonFiles
 	"${MPDir}/qcommon/q_shared.c"

@@ -154,7 +154,7 @@ runs, until then the old mixer plays.
 | `qcommon/cm_export.cpp` | the world as triangles |
 | `client/snd_dma.cpp` | `S_SpatialGather`, and the fade by distance as functions both paths use (`S_AttenuateDistance`) |
 | `client/snd_mix.cpp` | `S_SampleRun`: samples of a sound as floats. The mixer leaves out what the new path plays |
-| `cgame/cg_voice.c` | `Voice_InLevel`: which voices of the voice chat go to the engine |
+| `cgame/voice/cg_voice.c` | `Voice_InLevel`: which voices of the voice chat go to the engine |
 | `lib/steamaudio` | Valve's repository, a submodule |
 
 ## Checked

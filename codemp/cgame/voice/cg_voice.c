@@ -29,7 +29,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // and CG_VoiceFrame() moves a little of everything along once a frame.
 
 #include "game/bg_net.h"		// the sockets, in front of everything else
-#include "cg_local.h"
+#include "cgame/cg_local.h"
 #include "game/voice/bg_voice.h"
 #include "cg_voice.h"
 
