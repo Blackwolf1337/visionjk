@@ -232,6 +232,12 @@ body.fp #help, body.fp #command, body.fp #entPanel { display: none; }
 #entDoc summary { cursor: pointer; color: var(--muted); }
 #entDocText { white-space: pre-wrap; margin: 6px 0 0; max-height: 220px; overflow: auto; font: inherit; color: var(--text); }
 #mapReport { padding: 0 10px 10px; font-size: 12px; }
+#surfInfo { padding: 0 10px; font-size: 12px; border-bottom: 1px solid var(--line); }
+#surfInfo h3 { margin: 12px 0 4px; font-size: 11px; letter-spacing: .5px; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+#surfInfo td { padding: 1px 0; border: 0; vertical-align: top; }
+#surfInfo td.num { color: var(--text); padding-left: 12px; word-break: break-all; user-select: text; }
+#surfInfo pre { margin: 6px 0 10px; padding: 6px 8px; max-height: 220px; overflow: auto; background: var(--bg); border: 1px solid var(--line); border-radius: 3px; font: 11px ui-monospace, Menlo, Consolas, monospace; color: var(--text); white-space: pre; user-select: text; tab-size: 4; }
+#surfInfo .hint { margin: 8px 0 10px; }
 #mapReport h3 { margin: 12px 0 4px; font-size: 11px; letter-spacing: .5px; text-transform: uppercase; color: var(--muted); font-weight: 600; }
 #mapReport td { padding: 1px 0; border: 0; }
 #mapReport td.num { color: var(--text); padding-left: 12px; }
@@ -305,7 +311,7 @@ body.app-admin #dbg, body.app-admin .editorOnly, body.app-admin #tabs button[dat
 	<div class="pane" id="pane-mapinfo">
 		<h2><span>Map</span><span id="mapReportName"></span></h2>
 		<div class="tools"><button id="mapReportAgain" title="Counts again">Refresh</button></div>
-		<div class="scroll" id="mapReport"></div>
+		<div class="scroll"><div id="surfInfo"></div><div id="mapReport"></div></div>
 	</div>
 	<div class="pane" id="pane-routes">
 		<h2><span>Bot route</span><span id="wpCount"></span></h2>
@@ -691,7 +697,9 @@ function parseBsp(buffer) {
 	// batches per shader + lightmap, and per brush model: one that is an entity (a door, a lift) is drawn where
 	// that entity is, the world (0) where the file has it
 	const batches = new Map();
-	const pickPos = [], pickIdx = [], pickModel = [];
+	const pickPos = [], pickIdx = [], pickModel = [], pickSurf = [];
+	// what a surface is made of, for the click that asks: its shader, lightmap, kind, fog, brush model and size
+	const surfs = [];
 	const sfl = lump(13);
 	let sky = '';
 	const surfModel = new Uint16Array(Math.floor(sfl.len / SURF_SIZE));
@@ -740,7 +748,8 @@ function parseBsp(buffer) {
 		const pbase = pickPos.length / 3;
 		for (const v of verts) pickPos.push(v.p[0], v.p[1], v.p[2]);
 		for (const t of tris) pickIdx.push(pbase + t);
-		for (let i = 0; i < tris.length; i += 3) pickModel.push(model);
+		for (let i = 0; i < tris.length; i += 3) { pickModel.push(model); pickSurf.push(surfs.length); }
+		surfs.push({ shader: shaderNum, lm: lmNum, type, fog: fogNum, model, verts: verts.length, tris: tris.length / 3, patch: type === MST_PATCH ? [pw, ph] : null });
 	}
 
 	// The fogs (R_LoadFogs in tr_bsp.cpp): a shader with fogParms and the brush that is filled with it. No brush
@@ -777,7 +786,7 @@ function parseBsp(buffer) {
 		const run = pickRuns[pickRuns.length - 1];
 		if (run && run[0] === pickModel[i]) run[2] = (i + 1) * 3; else pickRuns.push([pickModel[i], i * 3, (i + 1) * 3]);
 	}
-	return { shaders, lightmaps, batches: [...batches.values()], bounds, sky, models, brushes, fogs, grid, stats, pick: { pos: new Float32Array(pickPos), idx: new Uint32Array(pickIdx), model: new Uint16Array(pickModel), runs: pickRuns } };
+	return { shaders, lightmaps, batches: [...batches.values()], bounds, sky, models, brushes, fogs, grid, stats, surfs, pick: { pos: new Float32Array(pickPos), idx: new Uint32Array(pickIdx), model: new Uint16Array(pickModel), surf: new Uint32Array(pickSurf), runs: pickRuns } };
 }
 
 // quadratic bezier patch, 3x3 control blocks
@@ -1041,7 +1050,7 @@ async function loadMap(name) {
 			return { vao, count: b.idx.length, shaderName, fog: b.fog, model: b.model, lm: b.lightmap >= 0 ? lightmapTex[b.lightmap] : null, posBuf, stBuf, colBuf, verts: b.pos.length / 3, tri, wire: null, sprites: undefined };
 		});
 
-		world = { batches, textures, bounds: bsp.bounds, pick: bsp.pick, sky: bsp.sky, models: bsp.models, brushes: bsp.brushes, shaders: bsp.shaders, stats: bsp.stats, grid: bsp.grid, fogs: bsp.fogs, fogInfo: [], globalFog: null, wires: new Map(), scripted: null, skyDraw: null };
+		world = { batches, textures, bounds: bsp.bounds, pick: bsp.pick, sky: bsp.sky, models: bsp.models, brushes: bsp.brushes, shaders: bsp.shaders, surfs: bsp.surfs, stats: bsp.stats, grid: bsp.grid, fogs: bsp.fogs, fogInfo: [], globalFog: null, wires: new Map(), scripted: null, skyDraw: null };
 		prepareScripted(world);
 		resetCamera();
 		$('loading').style.display = 'none';
@@ -2161,7 +2170,9 @@ function drawWorldWire(now) {
 // front counts (the side its corners run clockwise on), as the view shows it. A brush model that is an entity
 // (a door, a lift) is hit where that entity is, and not at all when no entity shows it: for that the ray is
 // taken to where the map file has the model.
+let pickTri = -1;		// the triangle the last ray hit, as its number in world.pick
 function pickGround(origin, dir, oneSided = viewCulls()) {
+	pickTri = -1;
 	if (!world) return null;
 	const now = performance.now();
 	let best = Infinity;
@@ -2192,7 +2203,7 @@ function pickRun(origin, dir, from, to, oneSided, best) {
 		const v = f * (dir[0] * qx + dir[1] * qy + dir[2] * qz);
 		if (v < 0 || u + v > 1) continue;
 		const t = f * (e2x * qx + e2y * qy + e2z * qz);
-		if (t > 1 && t < best) best = t;
+		if (t > 1 && t < best) { best = t; pickTri = i / 3; }
 	}
 	return best;
 }
@@ -2722,6 +2733,7 @@ window.addEventListener('mouseup', e => {
 	if (e.target !== canvas) return;
 	if (d.button === 0) {
 		if (mode === 'routes') wpSelect(wpAt(x, y));
+		else if (mode === 'mapinfo') inspectSurface(x, y);
 		else if (mode === 'world') {
 			// Ctrl and a click adds an entity to the selected ones or takes it out again
 			const hit = entityAt(x, y);
@@ -2922,6 +2934,7 @@ function frame(now) {
 		}
 	}
 	if (editor) drawEditorLines();
+	if (editor && mode === 'mapinfo' && surfShown && world.surfs[surfShown.surface]) drawSurfaceWire(now);
 	if (editor && mode === 'routes') drawRoute();
 	if (editor && $('dbgMarkers').checked) {
 		for (const ent of ents.values()) {
@@ -3094,7 +3107,7 @@ function setMode(m) {
 	if (m === 'files') { select(-1); if (!fsEdit) fsList(); }
 	if (m === 'models') { select(-1); if (!mdlAsked) mdlLoad(); mdlSetPlacing(!!mdlPath); }
 	if (m === 'routes') { select(-1); wpLoad(); } else wpSetAdding(false);
-	if (m === 'mapinfo') { select(-1); mapReport(); }
+	if (m === 'mapinfo') { select(-1); mapReport(); renderSurface(); }
 }
 
 /* ------------------------------------------------------------------ */
@@ -4449,6 +4462,94 @@ $('wpReload').addEventListener('click', wpLoad);
 // ---- the report of a map: what its file holds, what stands on it, and what is missing
 
 let mapReportTimer = 0;
+
+// ---- what a surface is made of: a click on the map in the Map tab
+
+const SURF_FLAGS = { 0x2000: 'sky', 0x4000: 'slick', 0x8000: 'metal steps', 0x10000: 'force field', 0x40000: 'no damage', 0x80000: 'no impact', 0x100000: 'no marks',
+	0x200000: 'nodraw', 0x400000: 'no steps', 0x800000: 'no dynamic light', 0x1000000: 'no misc_model on it', 0x2000000: 'only with force sight' };
+const CONTENT_FLAGS = { 0x1: 'solid', 0x2: 'lava', 0x4: 'water', 0x8: 'fog', 0x10: 'player clip', 0x20: 'monster clip', 0x40: 'bot clip', 0x80: 'shot clip', 0x100: 'body', 0x200: 'corpse',
+	0x400: 'trigger', 0x800: 'no drop', 0x1000: 'terrain', 0x2000: 'ladder', 0x4000: 'abseil', 0x8000: 'opaque', 0x10000: 'outside', 0x20000: 'slime', 0x40000: 'light saber',
+	0x80000: 'teleporter', 0x100000: 'item', 0x200000: 'no shot', 0x8000000: 'detail', 0x10000000: 'inside', 0x80000000: 'translucent' };
+const MATERIALS = ['none', 'solid wood', 'hollow wood', 'solid metal', 'hollow metal', 'short grass', 'long grass', 'dirt', 'sand', 'gravel', 'glass', 'concrete', 'marble', 'water',
+	'snow', 'ice', 'flesh', 'mud', 'bulletproof glass', 'dry leaves', 'green leaves', 'fabric', 'canvas', 'rock', 'rubber', 'plastic', 'tiles', 'carpet', 'plaster', 'shatter glass',
+	'armor', 'computer'];
+const SORT_NAMES = Object.fromEntries(Object.entries(SC_SORT).map(([name, n]) => [n, name]));
+const flagNames = (bits, names) => Object.keys(names).filter(bit => (bits >>> 0) & +bit).map(bit => names[bit]);
+
+let surfShown = null;		// { surface, wire: the lines of its triangles }
+
+function inspectSurface(x, y) {
+	const ray = screenRay(x, y), hit = pickGround(ray.origin, ray.dir);
+	if (surfShown && surfShown.wire) { gl.deleteVertexArray(surfShown.wire.vao); gl.deleteBuffer(surfShown.wire.buf); }
+	surfShown = hit && pickTri >= 0 ? { surface: world.pick.surf[pickTri], at: hit, wire: null } : null;
+	renderSurface();
+}
+
+function renderSurface() {
+	const box = $('surfInfo');
+	// the one of another map
+	if (surfShown && (!world || !world.surfs[surfShown.surface])) surfShown = null;
+	if (!surfShown) {
+		box.innerHTML = '<h3>A surface</h3><div class="hint">Click on the map to see what a surface is made of: its shader and the script of it, what it is for the game, its lightmap.</div>';
+		return;
+	}
+	const sf = world.surfs[surfShown.surface], sh = world.shaders[sf.shader], lit = sf.lm >= 0 && sf.lm < world.stats.lightmaps;
+	const body = scripts.bodies.get(scKey(sh.name)), mat = scripts.state === 2 ? materialFor(sh.name, lit) : null;
+	const row = (name, value) => '<tr><td>' + name + '</td><td class="num">' + value + '</td></tr>';
+	const kind = sf.type === MST_PATCH ? 'a patch of ' + sf.patch[0] + ' x ' + sf.patch[1] + ' points' : sf.type === MST_TRIANGLE_SOUP ? 'triangles (a model of the map)' : 'a face of a brush';
+	let owner = 'the world';
+	if (sf.model) {
+		const ent = [...ents.values()].find(e => entKey(e, 'model') === '*' + sf.model);
+		owner = '*' + sf.model + (ent ? ', ' + escapeHtml(ent.classname) + ' #' + ent.id : '') + (movers && !movers.has(sf.model) ? ', not drawn by the game' : '');
+	}
+	const fog = sf.fog >= 0 && world.fogs[sf.fog] ? escapeHtml(world.fogs[sf.fog].shader) : 'none';
+	const game = [MATERIALS[sh.flags & 31] !== 'none' ? MATERIALS[sh.flags & 31] : null, ...flagNames(sh.flags, SURF_FLAGS)].filter(Boolean);
+	let drawn = '';
+	if (mat) {
+		drawn = row('Stages', mat.stages.length + (mat.nodraw ? ', not drawn' : '')) +
+			row('Sort', (SORT_NAMES[mat.sort] || mat.sort) + (mat.sort > SC_SORT_BANNER ? ', see-through' : '')) +
+			row('Side', ['the front', 'the back', 'both'][mat.cull]) +
+			(mat.deforms.length ? row('Moves', mat.deforms.map(d => d.kind).join(', ')) : '') +
+			(mat.polygonOffset ? row('Lies on', 'another surface (polygonOffset)') : '');
+	}
+	box.innerHTML = '<h3>A surface</h3><table>' + row('Shader', escapeHtml(sh.name)) + row('Kind', kind + ', ' + sf.tris + ' triangles') +
+		row('Belongs to', owner) + row('Lightmap', lit ? '#' + sf.lm : 'none, lit by its vertices') + row('Fog', fog) +
+		row('For the game', game.length ? game.join(', ') : 'nothing special') + row('Contents', flagNames(sh.contents, CONTENT_FLAGS).join(', ') || 'none') +
+		row('Where', surfShown.at.map(Math.round).join(' ')) + drawn + '</table>' +
+		(body !== undefined ? '<pre>' + escapeHtml(sh.name + '\n{' + body + '}') + '</pre>'
+			: '<div class="hint">No script: the image of that name ' + (lit ? 'times the lightmap' : 'times the light of its vertices') + ', as the engine makes it.</div>');
+}
+
+// the triangles of the surface that is shown, as lines over the map
+function drawSurfaceWire(now) {
+	const pk = world.pick, sf = world.surfs[surfShown.surface];
+	if (!sf) return;
+	if (!surfShown.wire) {
+		const pts = [];
+		for (let t = 0; t < pk.surf.length; t++) {
+			if (pk.surf[t] !== surfShown.surface) continue;
+			for (const [a, b] of [[0, 1], [1, 2], [2, 0]]) for (const v of [pk.idx[t * 3 + a], pk.idx[t * 3 + b]]) pts.push(pk.pos[v * 3], pk.pos[v * 3 + 1], pk.pos[v * 3 + 2]);
+		}
+		const vao = gl.createVertexArray(), buf = gl.createBuffer();
+		gl.bindVertexArray(vao);
+		gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+		gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(pts), gl.STATIC_DRAW);
+		gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 0, 0);
+		gl.bindVertexArray(null);
+		surfShown.wire = { vao, buf, count: pts.length / 3 };
+	}
+	gl.useProgram(lineProg.p);
+	gl.uniform4f(lineProg.u.uColor, 0.2, 1, 1, 1);
+	gl.disable(gl.DEPTH_TEST);
+	gl.bindVertexArray(surfShown.wire.vao);
+	// a brush model that is an entity: where that is
+	for (const place of moverPlaces(sf.model, now)) {
+		gl.uniformMatrix4fv(lineProg.u.uMvp, false, place ? M4.mul(viewProj, place) : viewProj);
+		gl.drawArrays(gl.LINES, 0, surfShown.wire.count);
+	}
+	gl.enable(gl.DEPTH_TEST);
+	gl.useProgram(flatProg.p);
+}
 
 function mapReport() {
 	clearInterval(mapReportTimer);

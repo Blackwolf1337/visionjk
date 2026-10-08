@@ -231,6 +231,15 @@ Also changed:
   inactive, and an NPC (a vehicle takes whoever uses it on board without asking whether that is a player).
   The use functions of the game were read for this: every one that reaches into the client of what fired it
   asks first whether there is one.
+- New: what a surface is made of, in the tab Map of the editor (`inspectSurface`, `renderSurface`). A click on
+  the map shows the surface under it: the name of its shader and the script of it as the game reads it, or
+  that it has none and is its image times the light; whether it is a face of a brush, a patch or the triangles
+  of a model of the map; the brush model it belongs to and the entity that has that one; its lightmap and its
+  fog; what it is for the game (the material that says how steps and hits sound, and flags like slick or no
+  marks) and what the brush behind it holds (solid, water, the clips); and how the page draws it (stages, sort,
+  side, deforms). Its triangles are outlined. The page had all of this already, it only had to remember which
+  surface a triangle of the map is from. What is never drawn (the sky, nodraw, the clip brushes themselves)
+  has no triangles and can not be clicked.
 - New: what fires what lights up in the editor (`WebAdmin_Used`, `used` of `/api/entities`, `takeFired`). The
   game tells the panel every time an entity fires one of its targets (one line in `G_UseTargets2`), the last
   64 of them are kept. With "Links" on, the line from the one to the other turns yellow for three seconds,
@@ -843,6 +852,12 @@ waypoint. A drag moves the view, turns it with the middle button, moves an entit
 when flying. The wheel zooms and sets the flying speed. A right-click teleports, places the class that is armed,
 adds a waypoint. Undo, the Z field, Remove and Save of a route. Copy, paste, the stored views and the keys of
 the fly camera went through the keyboard. What that is not: a person at a real browser on a real GPU.
+
+What a surface is made of (`steps_surface.js`, 7 checks, the same day, mp/ffa3): the camera was put in front of
+a surface with a script, one without, a patch and one of a lift, each the first of its kind that can be seen
+from there, and a click in the middle of the view showed that surface with its shader and with what its
+kind must say, the lift with the `func_door` it belongs to. The outline had six line ends for every triangle,
+and a click at nothing emptied the box.
 
 What is in the air (`steps_shots.js`, 7 checks, the same day, mp/ffa3): a `misc_weapon_shooter` with a rocket
 launcher, placed and fired through the panel, put a rocket into the list that flew 360 units in 0.4 s along
