@@ -252,6 +252,8 @@ body.fp #help, body.fp #command, body.fp #entPanel { display: none; }
 #mapReport a { color: var(--text); cursor: pointer; }
 #mapReport a:hover { color: var(--accent); }
 #mapReport .bad { color: #ff8b8b; word-break: break-all; }
+#mapReport .maybe { color: var(--yellow); }
+#mapReport .look { margin: 2px 0; }
 #entBudget { margin: 0; font-size: 11px; }
 #entBudget b { color: #ff8b8b; font-weight: 400; }
 /* administration or editor: which tabs there are and whether the debug views are offered */
@@ -4575,6 +4577,57 @@ function drawSurfaceWire(now) {
 	gl.useProgram(flatProg.p);
 }
 
+// ---- entities that look wrong, for the report of the map
+
+// Classes that only do something when they are fired: with a name that nothing fires they never do. Not the ones
+// that are aimed at or looked up by their name (a position, a place on the map), and not what plays by itself.
+const NEEDS_FIRING = /^(func_door|func_usable|target_(?!position|location|speaker|push$))/;
+
+// bad: this does not work as it is. maybe: it may be meant, or a script does what is missing.
+function entityProblems() {
+	const out = [], named = new Map(), fired = new Set(), b = world.bounds;
+	for (const e of ents.values()) {
+		const name = entKey(e, 'targetname').toLowerCase();
+		if (name) named.set(name, (named.get(name) || 0) + 1);
+	}
+	for (const e of ents.values()) {
+		for (const [k, v] of e.keys || []) {
+			if (!v || !LINK_KEYS.has(k.toLowerCase())) continue;
+			fired.add(v.toLowerCase());
+			if (!named.has(v.toLowerCase())) out.push({ id: e.id, bad: true, text: e.classname + ': its ' + k + ' "' + v + '" names no entity' });
+		}
+	}
+	for (const e of ents.values()) {
+		const name = entKey(e, 'targetname');
+		if (name && NEEDS_FIRING.test(e.classname) && !fired.has(name.toLowerCase())) {
+			out.push({ id: e.id, bad: false, text: e.classname + ' "' + name + '": nothing fires it' + (e.classname === 'func_door' ? ', so it never opens' : '') });
+		}
+		if (e.pos.some((v, i) => v < b.mins[i] - 64 || v > b.maxs[i] + 64)) out.push({ id: e.id, bad: true, text: e.classname + ': outside of the map, at ' + e.pos.map(Math.round).join(' ') });
+		if (e.bmodel && !/^\*\d+$/.test(entKey(e, 'model'))) out.push({ id: e.id, bad: false, text: e.classname + ': made of brushes, but its keys name no brush model' });
+	}
+	// what the game type needs to be there at all
+	const count = cls => [...ents.values()].filter(e => e.classname === cls).length, general = [];
+	if (!count('info_player_deathmatch')) general.push({ bad: true, text: 'No info_player_deathmatch: players have nowhere to start' });
+	if (state && (state.gametype === 8 || state.gametype === 9)) {
+		for (const cls of ['team_CTF_redflag', 'team_CTF_blueflag']) if (!count(cls)) general.push({ bad: true, text: 'Capture the flag without a ' + cls });
+		for (const cls of ['team_CTF_redspawn', 'team_CTF_bluespawn']) if (!count(cls)) general.push({ bad: false, text: 'No ' + cls + ': that team starts at the points for everybody' });
+	}
+	if (state && (state.gametype === 3 || state.gametype === 4) && !count('info_player_duel') && !count('info_player_duel1')) {
+		general.push({ bad: false, text: 'A duel without info_player_duel: the two start at the points for everybody' });
+	}
+	return general.concat(out.sort((x, y) => (y.bad ? 1 : 0) - (x.bad ? 1 : 0) || x.id - y.id));
+}
+
+function entityProblemsHtml() {
+	if (!ents.size) return '';
+	const list = entityProblems(), shown = list.slice(0, 60);
+	return '<h3>Entities to look at' + (list.length ? ', ' + list.length : '') + '</h3>' +
+		(list.length ? '' : '<div>Nothing: every target names an entity, and nothing that waits to be fired waits in vain.</div>') +
+		shown.map(p => '<div class="look ' + (p.bad ? 'bad' : 'maybe') + '">' + (p.id !== undefined ? '<a data-ent="' + p.id + '" title="Show it in the World tab">#' + p.id + '</a> ' : '') + escapeHtml(p.text) + '</div>').join('') +
+		(list.length > shown.length ? '<div class="hint">and ' + (list.length - shown.length) + ' more</div>' : '') +
+		(list.some(p => !p.bad) ? '<div class="hint">Yellow: it may be meant that way, or a script does what seems to be missing.</div>' : '');
+}
+
 function mapReport() {
 	clearInterval(mapReportTimer);
 	if (!world) { $('mapReport').textContent = 'No map is loaded.'; return; }
@@ -4623,12 +4676,22 @@ function renderMapReport() {
 		(noImage.length || noStage.size ? '' : '<div>' + (scripted ? 'Nothing: every image the map names is there.' : 'The shader scripts are not read yet.') + '</div>') +
 		noImage.map(name => '<div class="bad" title="A surface names this shader, and it is neither a script nor an image">' + escapeHtml(name) + '</div>').join('') +
 		[...noStage].sort().map(name => '<div class="bad" title="An image a stage of a shader names">' + escapeHtml(name) + '</div>').join('') +
+		entityProblemsHtml() +
 		'<h3>Entities, ' + ents.size + '</h3><table>' + [...byClass].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([cls, count]) =>
 			'<tr><td><a data-cls="' + escapeHtml(cls) + '" title="Show them in the World tab">' + escapeHtml(cls) + '</a></td><td class="num">' + count + '</td></tr>').join('') + '</table>';
 }
 
 $('mapReportAgain').addEventListener('click', mapReport);
 $('mapReport').addEventListener('click', e => {
+	// an entity to look at: it is selected in the World tab and the camera goes there
+	const one = e.target.closest('a[data-ent]');
+	if (one && ents.has(+one.dataset.ent)) {
+		$('entFilter').value = '';
+		setMode('world');
+		selectEnt(+one.dataset.ent);
+		focusEntity(+one.dataset.ent);
+		return;
+	}
 	const a = e.target.closest('a[data-cls]');
 	if (!a) return;
 	$('entFilter').value = a.dataset.cls;

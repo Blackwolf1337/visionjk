@@ -235,6 +235,14 @@ Also changed:
   inactive, and an NPC (a vehicle takes whoever uses it on board without asking whether that is a player).
   The use functions of the game were read for this: every one that reaches into the client of what fired it
   asks first whether there is one.
+- New: "Entities to look at" in the report of the tab Map (`entityProblems`). Red, it does not work as it is:
+  a target key (`target` to `target6`, `opentarget`, `closetarget`, `paintarget`, `deathtarget`) that names
+  no entity, an entity outside of the map, no `info_player_deathmatch`, capture the flag without a flag.
+  Yellow, it may be meant or a script may do what is missing: a `func_door`, a `func_usable` or a `target_`
+  entity with a name that nothing fires (such a door never opens), a brush class without a brush model in
+  its keys, a game type without its own start points. A click on a line selects the entity in the World tab
+  and brings the camera to it. The twenty maps of the game for free for all, capture the flag and duel give
+  no line at all, the three siege maps a few yellow ones for relays that the rules of the siege fire by name.
 - New: what a surface is made of, in the tab Map of the editor (`inspectSurface`, `renderSurface`). A click on
   the map shows the surface under it: the name of its shader and the script of it as the game reads it, or
   that it has none and is its image times the light; whether it is a face of a brush, a patch or the triangles
@@ -859,6 +867,12 @@ waypoint. A drag moves the view, turns it with the middle button, moves an entit
 when flying. The wheel zooms and sets the flying speed. A right-click teleports, places the class that is armed,
 adds a waypoint. Undo, the Z field, Remove and Save of a route. Copy, paste, the stored views and the keys of
 the fly camera went through the keyboard. What that is not: a person at a real browser on a real GPU.
+
+Entities to look at (`steps_problems.js`, 7 checks, the same day, mp/ffa3): the map as it is gave nothing. Of
+five entities placed for it, the one with a target that names nothing, the relay with a name nothing fires
+and the one 900 units outside of the map were listed, the relay that is fired and what fires it were not. A
+click on a line opened the World tab with that entity selected, and with the five deleted the list was empty
+again. The rules were also run over the entity lists of all 23 map files of the game by a script.
 
 What a surface is made of (`steps_surface.js`, 7 checks, the same day, mp/ffa3): the camera was put in front of
 a surface with a script, one without, a patch and one of a lift, each the first of its kind that can be seen
