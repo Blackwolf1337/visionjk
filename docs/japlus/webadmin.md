@@ -76,7 +76,7 @@ the answer tells the page that the numbers started over.
 | Request | Answer |
 |---------|--------|
 | `GET /` | the page |
-| `GET /api/state` | map, scores, players, NPCs, items and `models` as JSON. The page polls this. `models`: every other entity the clients draw as a model (props, models of the map that are entities), with its model, scale, origin and angles as the clients have them. `movers`: every brush model the clients draw as an entity (doors, lifts, what turns or can be switched off), as the number of the brush model, or as `[number, x, y, z, pitch, yaw, roll]` when it is not where the map file has it |
+| `GET /api/state` | map, scores, players, NPCs, items and `models` as JSON. The page polls this. `models`: every other entity the clients draw as a model (props, models of the map that are entities), with its model, scale, origin and angles as the clients have them. `movers`: every brush model the clients draw as an entity (doors, lifts, what turns or can be switched off), as the number of the brush model, or as `[number, x, y, z, pitch, yaw, roll]` when it is not where the map file has it. `shots`: what is in the air, each as `[entity, weapon, 1 for the other way to fire it, x, y, z, and its speed along the three axes]` |
 | `GET /api/map` | the `.bsp` of the current map |
 | `GET /api/file?name=` | a file below `textures/`, `models/` or `gfx/` (images, md3, glm, gla, cfg, skin), a shader script `shaders/<name>.shader`, or a `.wav` or `.mp3` below `sound/` or `music/` |
 | `GET /api/shaders` | the names of the shader scripts of the game, in the order the engine reads them in |
@@ -280,6 +280,14 @@ Also changed:
 - The panel of a selected player is a column at the right edge of the map. JKAdmin has it across the bottom,
   where with the buttons of JA+ in it it took half of the height of the map view and lay over what one wanted
   to click on.
+- New: what is in the air is drawn, in both modes (`shots` of `/api/state`, `drawShots`): the shots, rockets
+  and grenades the clients draw as missiles. The page has none of the effects of the game, so a bolt is a
+  streak of light in about the colour of its effect, as long and as thick as the weapon makes it, and what the
+  game draws as a model is that model: a rocket, a thermal detonator, a det pack. They move between two polls
+  by where they were, a new one comes from where its speed says it was. Not drawn: a saber that was thrown,
+  the trail and the explosion of anything, and what only an effect shows (the beam of a disruptor).
+- Changed: "Fire" also fires a `misc_weapon_shooter`. The game lends that class a client for the weapon code,
+  and the first guard took everything with a client for an NPC. It asks for the NPC itself now.
 - New: the tab Load of the administration (`/api/perf`, `WA_PerfFrameBegin`, `WebAdmin_FrameEnd`). Five
   values, one a second, each with a graph of the last five minutes: how long a frame of the game takes on
   average and at most, how many frames the game got, the longest wait from one frame to the next, the
@@ -835,6 +843,13 @@ waypoint. A drag moves the view, turns it with the middle button, moves an entit
 when flying. The wheel zooms and sets the flying speed. A right-click teleports, places the class that is armed,
 adds a waypoint. Undo, the Z field, Remove and Save of a route. Copy, paste, the stored views and the keys of
 the fly camera went through the keyboard. What that is not: a person at a real browser on a real GPU.
+
+What is in the air (`steps_shots.js`, 7 checks, the same day, mp/ffa3): a `misc_weapon_shooter` with a rocket
+launcher, placed and fired through the panel, put a rocket into the list that flew 360 units in 0.4 s along
+the way the shooter looks (its speed is 900) and had the page ask for the model of a rocket. One with a
+blaster that repeats had three bolts in the air at once, and the picture with them differed from the one
+without. Not tried: a thermal detonator and a det pack (no bot threw one), and how the colours compare with
+the effects of the game.
 
 What fires what (`steps_trace.js`, 4 checks, the same day, mp/ffa3): a trigger_multiple fired through the
 panel gave five events, the world firing the trigger and the trigger firing each of its four lifts, nothing

@@ -2363,6 +2363,12 @@ function applyState(s) {
 	const before = new Map(((state && state.models) || []).map(m => [m.id, m.pos]));
 	for (const m of s.models || []) m.prev = before.get(m.id) || m.pos;
 	applyMovers(s.movers);
+	// the same for what is in the air. A new shot comes from where it was a poll ago, by its speed.
+	const flew = new Map(((state && state.shots) || []).map(m => [m[0], m]));
+	for (const m of s.shots || []) {
+		const was = flew.get(m[0]), back = pollInterval / 1000;
+		m.prev = was ? [was[3], was[4], was[5]] : [m[3] - m[6] * back, m[4] - m[7] * back, m[5] - m[8] * back];
+	}
 	state = s;
 	const now = performance.now();
 	if (s.map && s.map !== loadedMap) loadMap(s.map);
@@ -2972,6 +2978,7 @@ function frame(now) {
 		else drawMesh(ringMesh, marker.pos[0], marker.pos[1], marker.pos[2], 0, 1 - age * 0.6, [0.3, 1, 0.4, 1]);
 	}
 
+	if (state && state.shots && state.shots.length) drawShots(k);
 	if (scripted) drawWorldScripted(now, true);
 	drawBlades();
 	if (view.id >= 0 && players.has(view.id)) {
@@ -5724,6 +5731,32 @@ gl.enableVertexAttribArray(1); gl.vertexAttribPointer(1, 2, gl.FLOAT, false, 20,
 gl.bindVertexArray(null);
 
 const blades = [];	// collected while drawing models, drawn after everything opaque
+// What is in the air (shots of /api/state), as far as it can be shown without the effects of the game: a bolt is
+// a streak of light in about the colour of its effect, and what the game draws as a model (a rocket, a thermal
+// detonator, a det pack) is that model. [length, radius, colour] by weapon, and by the other way to fire it.
+const SHOT_BOLT = {
+	4: [20, 2.5, [1, 0.6, 0.15]], 5: [28, 2.5, [1, 0.15, 0.1]], 7: [24, 3, [0.2, 1, 0.25]], 8: [14, 2, [1, 0.9, 0.5]], 9: [20, 4, [0.5, 0.7, 1]],
+	10: [10, 1.5, [1, 0.75, 0.3]], 11: [44, 4, [1, 0.55, 0.15]], 15: [40, 4, [0.6, 0.8, 1]], 16: [20, 2.5, [1, 0.6, 0.15]], 17: [28, 3, [1, 0.2, 0.15]], 18: [24, 2.5, [1, 0.3, 0.2]]
+};
+const SHOT_BOLT_ALT = { 8: [12, 7, [0.3, 0.5, 1]], 9: [16, 12, [0.5, 0.7, 1]], 10: [8, 3, [1, 0.75, 0.3]] };
+const SHOT_MODEL = { 11: 'models/weapons2/merr_sonn/projectile.md3', 12: 'models/weapons2/thermal/thermal_proj.md3', 14: 'models/weapons2/detpack/det_pack.md3' };
+
+function drawShots(k) {
+	for (const m of state.shots) {
+		const weapon = m[1], pos = [m.prev[0] + (m[3] - m.prev[0]) * k, m.prev[1] + (m[4] - m.prev[1]) * k, m.prev[2] + (m[5] - m.prev[2]) * k];
+		const speed = Math.hypot(m[6], m[7], m[8]), dir = speed ? [m[6] / speed, m[7] / speed, m[8] / speed] : [0, 0, 1];
+		const model = SHOT_MODEL[weapon] ? staticNow(SHOT_MODEL[weapon]) : null;
+		if (model) {
+			// its nose where it flies to
+			const yaw = Math.atan2(dir[1], dir[0]) * 180 / Math.PI, pitch = -Math.atan2(dir[2], Math.hypot(dir[0], dir[1])) * 180 / Math.PI;
+			drawStatic(model, anglesMatrix(pos, [pitch, yaw, 0], 1));
+		}
+		const bolt = (m[2] && SHOT_BOLT_ALT[weapon]) || SHOT_BOLT[weapon] || (model ? null : [14, 2, [1, 1, 1]]);
+		// the streak ends where the shot is: the fire of a rocket is behind it
+		if (bolt) blades.push({ org: [pos[0] - dir[0] * bolt[0], pos[1] - dir[1] * bolt[0], pos[2] - dir[2] * bolt[0]], dir, len: bolt[0], radius: bolt[1], rgb: bolt[2] });
+	}
+}
+
 function drawBlades() {
 	if (!blades.length) return;
 	gl.useProgram(bladeProg.p);
@@ -5745,7 +5778,7 @@ function drawBlades() {
 			b.org[0] + side[0], b.org[1] + side[1], b.org[2] + side[2], 1, 0,
 			tip[0] - side[0], tip[1] - side[1], tip[2] - side[2], -1, 1,
 			tip[0] + side[0], tip[1] + side[1], tip[2] + side[2], 1, 1]));
-		gl.uniform3fv(bladeProg.u.uColor, SABER_COLORS[b.color] || SABER_COLORS[4]);
+		gl.uniform3fv(bladeProg.u.uColor, b.rgb || SABER_COLORS[b.color] || SABER_COLORS[4]);
 		gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 	}
 	gl.depthMask(true);

@@ -829,6 +829,26 @@ static void WA_ApiState( waConnection_t *c ) {
 			WA_BufPrintf( &b, "[%d,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f]", ent->s.modelindex, pos[0], pos[1], pos[2],
 				angles[0], angles[1], angles[2] );
 	}
+
+	// Not in JKAdmin: what is in the air, the shots, rockets and grenades the clients draw (CG_Missile). Each is
+	// its entity, the weapon, 1 when it was fired the other way, where it is and how fast it flies. Not a saber
+	// that was thrown: that is drawn with its player.
+	WA_BufAppend( &b, "],\"shots\":[", 11 );
+	first = qtrue;
+	for ( i = MAX_CLIENTS; i < level.num_entities; i++ ) {
+		gentity_t	*ent = &g_entities[i];
+		vec3_t		pos, speed;
+
+		if ( !ent->inuse || !ent->r.linked || ent->s.eType != ET_MISSILE || ent->s.weapon == WP_SABER
+			|| ( ent->s.eFlags & EF_NODRAW ) || ( ent->r.svFlags & ( SVF_NOCLIENT | SVF_SINGLECLIENT ) ) )
+			continue;
+
+		BG_EvaluateTrajectory( &ent->s.pos, level.time, pos );
+		BG_EvaluateTrajectoryDelta( &ent->s.pos, level.time, speed );
+		WA_BufPrintf( &b, "%s[%d,%d,%d,%.0f,%.0f,%.0f,%.0f,%.0f,%.0f]", first ? "" : ",", i, ent->s.weapon,
+			( ent->s.eFlags & EF_ALT_FIRING ) ? 1 : 0, pos[0], pos[1], pos[2], speed[0], speed[1], speed[2] );
+		first = qfalse;
+	}
 	WA_BufAppend( &b, "]}", 2 );
 
 	WA_RespondJson( c, &b );
@@ -1980,10 +2000,11 @@ static void WA_ApiEntity( waConnection_t *c, const char *body ) {
 		// the trigger: a door opens, a trigger fires its targets, a target does what it is there for. What only
 		// works on the player who fired it (a teleporter, a give) does nothing then, the use functions of the game
 		// all ask for a client before they reach into one. An NPC is left alone: a vehicle takes whoever uses it
-		// on board without asking.
+		// on board without asking. A misc_weapon_shooter has a client too, one the game lends it for the weapon
+		// code, and is fired like everything else.
 		gentity_t *ent = &g_entities[id];
 
-		if ( ent->client || ent->s.eType == ET_NPC ) {
+		if ( ent->NPC || ent->s.eType == ET_NPC ) {
 			WA_EntityResult( c, qfalse, "an NPC is not fired from here", id );
 		} else if ( !ent->use ) {
 			WA_EntityResult( c, qfalse, "this entity does nothing when it is fired", id );
