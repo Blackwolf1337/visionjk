@@ -217,6 +217,13 @@ body.fp #help, body.fp #command, body.fp #entPanel { display: none; }
 #entDoc { margin-top: 8px; font-size: 12px; }
 #entDoc summary { cursor: pointer; color: var(--muted); }
 #entDocText { white-space: pre-wrap; margin: 6px 0 0; max-height: 220px; overflow: auto; font: inherit; color: var(--text); }
+#mapReport { padding: 0 10px 10px; font-size: 12px; }
+#mapReport h3 { margin: 12px 0 4px; font-size: 11px; letter-spacing: .5px; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+#mapReport td { padding: 1px 0; border: 0; }
+#mapReport td.num { color: var(--text); padding-left: 12px; }
+#mapReport a { color: var(--text); cursor: pointer; }
+#mapReport a:hover { color: var(--accent); }
+#mapReport .bad { color: #ff8b8b; word-break: break-all; }
 #entBudget { margin: 0; font-size: 11px; }
 #entBudget b { color: #ff8b8b; font-weight: 400; }
 /* administration or editor: which tabs there are and whether the debug views are offered */
@@ -252,7 +259,7 @@ body.app-admin #dbg, body.app-admin .editorOnly, body.app-admin #tabs button[dat
 </div>
 
 <div id="side">
-	<div id="tabs"><button data-tab="players" data-app="admin" class="on">Players</button><button data-tab="world" data-app="editor">World</button><button data-tab="models" data-app="editor">Models</button><button data-tab="routes" data-app="editor">Routes</button><button data-tab="config" data-app="admin">Config</button><button data-tab="files" data-app="admin">Files</button></div>
+	<div id="tabs"><button data-tab="players" data-app="admin" class="on">Players</button><button data-tab="world" data-app="editor">World</button><button data-tab="models" data-app="editor">Models</button><button data-tab="routes" data-app="editor">Routes</button><button data-tab="mapinfo" data-app="editor">Map</button><button data-tab="config" data-app="admin">Config</button><button data-tab="files" data-app="admin">Files</button></div>
 	<div class="pane on" id="pane-players">
 		<h2><span>Players</span><span id="playerCount">0</span></h2>
 		<div class="scroll">
@@ -277,6 +284,11 @@ body.app-admin #dbg, body.app-admin .editorOnly, body.app-admin #tabs button[dat
 		<div id="mdlList"></div>
 		<div class="tools"><button class="danger" id="mdlClear" title="Deletes every misc_prop that was placed through the panel. The ones of the map stay, and so do the balls and cubes of the World tab.">Delete all props</button></div>
 		<div class="hint" style="padding-top:6px">Every model is placed as a misc_prop with physics of its own: a body with the shape of the model that falls, tips, can be shoved, thrown, stacked and stood on. Thrown hard at somebody it hurts. It is in the list of the World tab afterwards.</div>
+	</div>
+	<div class="pane" id="pane-mapinfo">
+		<h2><span>Map</span><span id="mapReportName"></span></h2>
+		<div class="tools"><button id="mapReportAgain" title="Counts again">Refresh</button></div>
+		<div class="scroll" id="mapReport"></div>
 	</div>
 	<div class="pane" id="pane-routes">
 		<h2><span>Bot route</span><span id="wpCount"></span></h2>
@@ -672,7 +684,9 @@ function parseBsp(buffer) {
 		for (const t of tris) pickIdx.push(pbase + t);
 	}
 
-	return { shaders, lightmaps, batches: [...batches.values()], bounds, sky, models, brushes, pick: { pos: new Float32Array(pickPos), idx: new Uint32Array(pickIdx) } };
+	const stats = { surfaces: Math.floor(sfl.len / SURF_SIZE), vertices: Math.floor(numVerts), indexes: indexes.length, shaders: shaders.length, lightmaps: lightmaps.length,
+		brushModels: models.length, brushes: brushes.brushes.length / 3, planes: brushes.planes.length / 4, bytes: buffer.byteLength };
+	return { shaders, lightmaps, batches: [...batches.values()], bounds, sky, models, brushes, stats, pick: { pos: new Float32Array(pickPos), idx: new Uint32Array(pickIdx) } };
 }
 
 // quadratic bezier patch, 3x3 control blocks
@@ -935,7 +949,7 @@ async function loadMap(name) {
 			return { vao, count: b.idx.length, shaderName, lm: b.lightmap >= 0 ? lightmapTex[b.lightmap] : null, posBuf, tri, wire: null };
 		});
 
-		world = { batches, textures, bounds: bsp.bounds, pick: bsp.pick, sky: bsp.sky, models: bsp.models, brushes: bsp.brushes, shaders: bsp.shaders, wires: new Map(), scripted: null, skyDraw: null };
+		world = { batches, textures, bounds: bsp.bounds, pick: bsp.pick, sky: bsp.sky, models: bsp.models, brushes: bsp.brushes, shaders: bsp.shaders, stats: bsp.stats, wires: new Map(), scripted: null, skyDraw: null };
 		prepareScripted(world);
 		resetCamera();
 		$('loading').style.display = 'none';
@@ -2333,6 +2347,7 @@ function setMode(m) {
 	if (m === 'files') { select(-1); if (!fsEdit) fsList(); }
 	if (m === 'models') { select(-1); if (!mdlAsked) mdlLoad(); mdlSetPlacing(!!mdlPath); }
 	if (m === 'routes') { select(-1); wpLoad(); } else wpSetAdding(false);
+	if (m === 'mapinfo') { select(-1); mapReport(); }
 }
 
 /* ------------------------------------------------------------------ */
@@ -3570,6 +3585,71 @@ $('wpRemove').addEventListener('click', async () => {
 });
 $('wpSave').addEventListener('click', () => wpOp({ op: 'save' }));
 $('wpReload').addEventListener('click', wpLoad);
+
+// ---- the report of a map: what its file holds, what stands on it, and what is missing
+
+let mapReportTimer = 0;
+
+function mapReport() {
+	clearInterval(mapReportTimer);
+	if (!world) { $('mapReport').textContent = 'No map is loaded.'; return; }
+	// every image the map uses is asked for, so that the ones that are not there show. The plain view only
+	// asks for the first one of a shader.
+	if (scripts.state === 2) {
+		for (const b of world.batches) {
+			for (const st of materialFor(b.shaderName, !!b.lm).stages) if (!st.images) st.images = st.maps.map(name => gameImage(name, st.clamp));
+		}
+	}
+	renderMapReport();
+	// and again while they come in
+	mapReportTimer = setInterval(() => {
+		if (mode !== 'mapinfo' || !world) { clearInterval(mapReportTimer); return; }
+		renderMapReport();
+		if (!imageBusy && !imageQueue.length && scripts.state >= 2) clearInterval(mapReportTimer);
+	}, 800);
+}
+
+function renderMapReport() {
+	const w = world, st = w.stats, scripted = scripts.state === 2;
+	const used = [...new Set(w.batches.map(b => b.shaderName))];
+	// a shader of a surface that is neither a script nor an image
+	const noImage = used.filter(n => w.textures.get(n).failed && !(scripted && scripts.bodies.has(scKey(n))));
+	const noStage = new Set();
+	let loading = imageBusy + imageQueue.length;
+	if (scripted) {
+		for (const b of w.batches) {
+			for (const stage of materialFor(b.shaderName, !!b.lm).stages) {
+				(stage.images || []).forEach((h, i) => { if (h.failed) noStage.add(stage.maps[i] + '  (' + b.shaderName + ')'); });
+			}
+		}
+	}
+	const byClass = new Map();
+	for (const e of ents.values()) byClass.set(e.classname, (byClass.get(e.classname) || 0) + 1);
+	const size = w.bounds.maxs.map((v, i) => Math.round(v - w.bounds.mins[i]));
+	const row = (name, value) => '<tr><td>' + name + '</td><td class="num">' + value + '</td></tr>';
+	const n = v => Number(v).toLocaleString('en-US');
+	$('mapReportName').textContent = loadedMap;
+	$('mapReport').innerHTML =
+		'<h3>The file</h3><table>' + row('Size', n(Math.round(st.bytes / 1024)) + ' KB') + row('Extent', size.join(' x ')) + row('Surfaces', n(st.surfaces)) +
+		row('Triangles drawn', n(w.batches.reduce((sum, b) => sum + b.count / 3, 0))) + row('Vertices', n(st.vertices)) + row('Shaders', n(st.shaders) + ', ' + used.length + ' drawn') +
+		row('Lightmaps', n(st.lightmaps)) + row('Brushes', n(st.brushes)) + row('Planes', n(st.planes)) + row('Brush models', n(st.brushModels - 1)) +
+		row('Sky', escapeHtml(w.sky || 'none')) + '</table>' +
+		'<h3>Missing' + (loading ? ' (' + loading + ' images on their way)' : '') + '</h3>' +
+		(noImage.length || noStage.size ? '' : '<div>' + (scripted ? 'Nothing: every image the map names is there.' : 'The shader scripts are not read yet.') + '</div>') +
+		noImage.map(name => '<div class="bad" title="A surface names this shader, and it is neither a script nor an image">' + escapeHtml(name) + '</div>').join('') +
+		[...noStage].sort().map(name => '<div class="bad" title="An image a stage of a shader names">' + escapeHtml(name) + '</div>').join('') +
+		'<h3>Entities, ' + ents.size + '</h3><table>' + [...byClass].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([cls, count]) =>
+			'<tr><td><a data-cls="' + escapeHtml(cls) + '" title="Show them in the World tab">' + escapeHtml(cls) + '</a></td><td class="num">' + count + '</td></tr>').join('') + '</table>';
+}
+
+$('mapReportAgain').addEventListener('click', mapReport);
+$('mapReport').addEventListener('click', e => {
+	const a = e.target.closest('a[data-cls]');
+	if (!a) return;
+	$('entFilter').value = a.dataset.cls;
+	setMode('world');
+	renderEntityList();
+});
 
 // ---- undo and redo
 

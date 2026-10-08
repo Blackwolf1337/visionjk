@@ -186,6 +186,10 @@ Also changed:
 - New: stored views. Shift and a digit from 1 to 9 stores where the camera is, around a point or flying, the
   digit alone goes back there. The browser keeps them for each map.
 - New: the button Picture at the bottom right saves what the map view shows as a PNG.
+- New: the tab Map of the editor, a report of the map that runs. What its file holds (size, extent, surfaces,
+  triangles, vertices, shaders, lightmaps, brushes, brush models, the shader of its sky). What is missing: a
+  shader a surface names that is neither a script nor an image, and every image a stage of a shader names that
+  the server does not have. The entities by class with their number, a click shows a class in the World tab.
 - New: the server refuses to place what would end it (`WA_SpawnRefused`): a class made of brushes (`trigger_`,
   `func_`) without a `model` key that names a brush model of the map, the classes whose spawn function raises
   an error without a key (`target_speaker`, `target_play_music`, `target_level_change`,
