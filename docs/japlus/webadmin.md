@@ -7,7 +7,18 @@ which is OpenJK 260c59c2 plus that one commit, the same base this tree starts fr
 
 | File | Content |
 |------|---------|
-| `codemp/game/webadmin/g_webadmin.c` | HTTP server, JSON state, player actions, entity editor, chat lines |
+| `codemp/game/webadmin/g_webadmin.c` | the HTTP server: connections, which request goes where, what the game calls |
+| `codemp/game/webadmin/wa_http.c` | buffers, answers, headers, the login and its throttle, form values |
+| `codemp/game/webadmin/wa_state.c` | `/api/state` |
+| `codemp/game/webadmin/wa_actions.c` | player and server actions, the bans |
+| `codemp/game/webadmin/wa_entities.c` | the entity editor, the reload of placed entities |
+| `codemp/game/webadmin/wa_assets.c` | the map, the files of the game, the lists to pick from |
+| `codemp/game/webadmin/wa_fs.c` | the file manager and the server config |
+| `codemp/game/webadmin/wa_perf.c` | `/api/perf` |
+| `codemp/game/webadmin/wa_log.c` | the chat lines and the log of the game |
+| `codemp/game/webadmin/wa_routes.c` | the route of the bots |
+| `codemp/game/webadmin/wa_local.h` | what those files share |
+| `codemp/game/webadmin/page/` | the page: a template, a style sheet and its script files |
 | `codemp/game/webadmin/index.html` | the page of JKAdmin, with a chat box added |
 | `cmake/Modules/EmbedFile.cmake` | turns the page into `webadmin_html.h` in the build directory |
 
@@ -64,6 +75,12 @@ The page is kept as a template, a style sheet and one script file for each part 
 file a browser gets (`cmake/Modules/BundlePage.cmake`) and compiles that into the game module, so nothing
 changed for the browser when the page was split: one request, one script.
 
+The code of the panel in the game module is ten files with one header (`wa_local.h` lists them). It was one
+file of 4,000 lines: the functions moved as they were, the ones another file calls lost their `static`, and
+every variable stayed with the one file that owns it. Where a file needed a variable of another it asks
+through a function now (`WA_Running`, `WA_GravityIsSet`, the `Frame` and `Shutdown` of the entities and the
+assets).
+
 `WebAdmin_Frame` is called at the start of `G_RunFrame`. All sockets are non-blocking, a request is read, answered
 and closed without ever waiting, so a slow browser can not hold up the game. At most 32 connections at once, an
 idle one is closed after 15 seconds, a request may be 16 KB.
@@ -109,7 +126,7 @@ the answer tells the page that the numbers started over.
 
 ## Where it differs from JKAdmin
 
-In `g_webadmin.c` the player actions that would bypass JA+ state go through the JA+ code instead, each place
+In `wa_actions.c` the player actions that would bypass JA+ state go through the JA+ code instead, each place
 carries a `JA+` comment:
 
 | Action | JKAdmin | Here | Reason |
@@ -124,7 +141,7 @@ Also changed:
 
 - The chat view is new: `WebAdmin_Chat`, `/api/chat` and the one line hooks in `g_cmds.c`, `g_japlus_chat.c`,
   `g_japlus_admin.c` and `g_svcmds.c`. In the page: the `#chat` block in the side bar with its style rules, the
-  script section "chat", and the say form moved there from the top bar. The chat section in `g_webadmin.c` and the
+  script section "chat", and the say form moved there from the top bar. The chat section in `wa_log.c` and the
   script section are marked "not in JKAdmin". The rest of the page is JKAdmin's.
 - A message typed in the panel is turned from UTF-8 into the one byte per character the game uses (Latin-1), so
   umlauts arrive. Characters the game does not have become `?`.
@@ -439,7 +456,7 @@ Also changed:
   third person camera has none). Not while dead, a spectator or in a vehicle. Bots are not bothered, they turn
   to where they want to look. Server side only. Gone when the player leaves or the map changes. Added without a
   test run.
-- New: the tab "Config" edits `server.cfg` (`WA_ApiConfigGet`, `WA_ApiConfigSet` in `g_webadmin.c`). It is that
+- New: the tab "Config" edits `server.cfg` (`WA_ApiConfigGet`, `WA_ApiConfigSet` in `wa_fs.c`). It is that
   one file, the request names none. The text field lies over the map view, the buttons are "Save", "Save and
   execute" (`exec server.cfg` on the server console) and "Reload". The engine reads a file from the home path
   first and writes only there, so the first save makes `fs_homepath/<game>/server.cfg` and the file of the
@@ -456,7 +473,7 @@ Also changed:
   `cfgString`, `cfgPaint` in the page), no library. Checked with node that every line of the config reads
   the same colored and plain, not seen in a browser.
 - New: the tab "Files", a file manager for the game folder and nothing above it (`WA_ApiFs*` in
-  `g_webadmin.c`). It shows two folders: the game folder in the home path of the server
+  `wa_fs.c`). It shows two folders: the game folder in the home path of the server
   (`fs_homepath/<fs_game>`: logs, the stored config, what the panel saved), which can be changed, and the game
   folder of the installation (`fs_basepath/<fs_game>`), which can only be read. A click opens a folder or a
   text file (in a text field as in the Config tab, with the colors for a `.cfg`), any other file is
@@ -480,7 +497,7 @@ Also changed:
   rename and delete, a link to `/etc` inside the folder, the game module, and the plain operations on scratch
   files with text in Latin-1 and an upload in two pieces. Everything was refused that has to be and nothing
   was written outside. The page itself was not seen in a browser. The Windows module builds, it was not run.
-- New: action `reload`, the running map again (`WA_ReloadMap` in `g_webadmin.c`). The engine looks through its
+- New: action `reload`, the running map again (`WA_ReloadMap` in `wa_entities.c`). The engine looks through its
   folders for pk3 files when a map starts and at no other time (`FS_Restart` in `SV_SpawnServer`), so this is
   what makes the server find a pk3 that was uploaded. A restart of the server process is not needed for that,
   and the panel could not start the process again. The players stay connected. With cheats on it is `devmap`,

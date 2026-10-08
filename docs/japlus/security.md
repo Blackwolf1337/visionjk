@@ -15,7 +15,7 @@ the `cmdCount` and `reliableAcknowledge` checks, downloads limited to referenced
 the rate limit on connectionless packets and so on rcon (`sv_maxOOBRateIP`), the stateless challenge, the
 userinfo check in the game (`G_ValidateUserinfo`), and vote strings without `;`.
 
-The attack surface this fork adds is the web admin panel (`g_webadmin.c`, from JKAdmin, speaks HTTP to the
+The attack surface this fork adds is the web admin panel (`codemp/game/webadmin/`, from JKAdmin, speaks HTTP to the
 network), the JA+ port, the extra features and the client modules. The JA+ port itself was already careful
 (`Q_strncpyz`, `Com_sprintf`, client numbers checked, `;\r\n` stripped before console lines). The findings were in
 the panel, in old Raven code the panel now reaches from outside, and at two spots in the client.
@@ -28,16 +28,16 @@ Each line is one commit on the branch `security/hardening`.
 |-------|---------|-----|
 | `g_webadmin.c` `WA_ReadRequest` | `Content-Length` read with `atoi`; a value near `INT_MAX` made `headLen + bodyLen` wrap, the bound passed, and the body's terminating zero was written ~2 GB before the buffer, before any login. Confirmed as an AddressSanitizer SEGV. | `WA_ParseLength` (digits only, capped at `WA_MAX_REQUEST`); the bound is now `bodyLen > WA_MAX_REQUEST - headLen`, which can not wrap. |
 | `g_webadmin.c` POST handlers | No CSRF defence: a browser sends the panel login with any request a hostile page makes it send, so that page could run player actions and the entity editor. | `WA_SameOrigin` checks `Sec-Fetch-Site`/`Origin`/`Referer` against `Host` (or `X-Forwarded-Host`) on every POST. Requests with none of those headers (curl, scripts) still pass. `X-Frame-Options`, a frame-ancestors CSP and `Cross-Origin-Resource-Policy` on every response. |
-| `g_webadmin.c` `WA_CheckAuth` | Unlimited password tries; `strcmp` compare leaks length through timing. | Constant time compare; after five wrong tries an address waits, doubling up to half an hour; a wrong try goes to the security log. |
-| `g_webadmin.c` buffers and bind | `realloc`/`malloc` not checked, a negative `Q_vsnprintf` used as a length, default bind on every interface. | Allocations checked (a short response instead of a crash), negative length guarded, default bind 127.0.0.1. |
-| `g_webadmin.c` `WA_Base64Decode` | Signed `int` shifted left for every header character: signed overflow (UBSan). | Unsigned accumulator; the decoded bytes are unchanged. |
+| `wa_http.c` `WA_CheckAuth` | Unlimited password tries; `strcmp` compare leaks length through timing. | Constant time compare; after five wrong tries an address waits, doubling up to half an hour; a wrong try goes to the security log. |
+| `wa_http.c` buffers, `g_webadmin.c` bind | `realloc`/`malloc` not checked, a negative `Q_vsnprintf` used as a length, default bind on every interface. | Allocations checked (a short response instead of a crash), negative length guarded, default bind 127.0.0.1. |
+| `wa_http.c` `WA_Base64Decode` | Signed `int` shifted left for every header character: signed overflow (UBSan). | Unsigned accumulator; the decoded bytes are unchanged. |
 | `g_japlus_admin.c` `G_amlogin` | Unlimited tries on the three admin passwords, over `amlogin` and the `cp_login` userinfo. | After three wrong tries a player waits, doubling; reset on success and at each map; logged. |
 | `g_japlus_admin2.c` `Cmd_amvstr_f` | `vstr` block list missed cvars with secrets or outside content. | Added `g_password`, `jp_clanPass`, `g_webPassword` and every `session<n>` (the IP and admin level of a player). |
 | `g_utils.c` `AddRemap` | `targetshadername`/`targetshadernewname` entity keys `strcpy`'d into 64 byte global buffers; the entity editor can set them to any length. | `Q_strncpyz`. |
 | `g_client.c` `SetupGameGhoul2Model` | Player model path built with `strcpy`/`strcat` into a MAX_QPATH stack buffer that the finished path does not fit. | `Com_sprintf`/`Q_strcat`; a name too long falls back to the default model. |
 | `g_session.c` `G_ReadSessionData` | `sscanf` `%s` with no width into `siegeClass[64]` and `IP[48]`. | `%63s`, `%47s`. |
 | `g_bot.c`, `ui/ui_gameinfo.c` | `.bot`/`.arena` file names from the pk3 list `strcpy`/`strcat`'d into 128 byte buffers. | `Com_sprintf`, skip a name that does not fit. |
-| ban paths (`g_webadmin.c`, `g_japlus_admin.c`) | The IP went into an `addip` console line unchecked. The IP is already the real one (the engine prepends it and wins the lookup, and `g_userinfoValidate` rejects a client `ip`), but a relaxed validation could let a newline or `;` through. | `G_CleanIP` keeps only the characters of an address before the console line. |
+| ban paths (`wa_actions.c`, `g_japlus_admin.c`) | The IP went into an `addip` console line unchecked. The IP is already the real one (the engine prepends it and wins the lookup, and `g_userinfoValidate` rejects a client `ip`), but a relaxed validation could let a newline or `;` through. | `G_CleanIP` keeps only the characters of an address before the console line. |
 | `client/cl_parse.cpp` `CL_ParseSetGame` | Off by one: a server filling the name wrote the terminating zero one past `newGameDir[MAX_QPATH]`. | Loop to `MAX_QPATH-1`. |
 | `bg_pmove.c` `PmoveSingle`, `w_force.c` `WP_InitForcePowers` | `forcesel` and `invensel` of the usercmd were tested with `1 << value`. A shift by 32 or more wraps on x86, so `forcesel` 32+n passed for power n and became `forcePowerSelected`, an index into the force arrays. The engine clears such values only while `sv_legacyFixes` is on. | Both have to be below `NUM_FORCE_POWERS` and `HI_NUM_HOLDABLE`; the init checks the range before it shifts. |
 | `cgame/cg_japlus.c` auto replier | Builds `tell`/`say` with another player's name and sends it through the console; quotes and `%` were dropped but not a newline or `;`, so a crafted name ran as its own console command. | `FormatReply` drops control characters and `;` too. |

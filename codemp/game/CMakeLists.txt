@@ -184,7 +184,17 @@ file(GLOB_RECURSE MPGameWebadminPageFiles CONFIGURE_DEPENDS
 	"${MPDir}/game/webadmin/page/*.js"
 	)
 set(MPGameWebadminFiles
+	"${MPDir}/game/webadmin/wa_local.h"
 	"${MPDir}/game/webadmin/g_webadmin.c"
+	"${MPDir}/game/webadmin/wa_http.c"
+	"${MPDir}/game/webadmin/wa_state.c"
+	"${MPDir}/game/webadmin/wa_actions.c"
+	"${MPDir}/game/webadmin/wa_entities.c"
+	"${MPDir}/game/webadmin/wa_assets.c"
+	"${MPDir}/game/webadmin/wa_fs.c"
+	"${MPDir}/game/webadmin/wa_perf.c"
+	"${MPDir}/game/webadmin/wa_log.c"
+	"${MPDir}/game/webadmin/wa_routes.c"
 	)
 source_group("game/webadmin" FILES ${MPGameWebadminFiles})
 source_group("game/webadmin/page" FILES ${MPGameWebadminPageFiles})

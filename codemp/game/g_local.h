@@ -1264,7 +1264,7 @@ int TAG_GetFlags( const char *owner, const char *name );
 
 void TeleportPlayer( gentity_t *player, vec3_t origin, vec3_t angles );
 
-// g_webadmin.c
+// webadmin/: g_webadmin.c and the wa_*.c files next to it
 void WebAdmin_Init( void );
 void WebAdmin_Frame( void );
 void WebAdmin_FrameEnd( void );
