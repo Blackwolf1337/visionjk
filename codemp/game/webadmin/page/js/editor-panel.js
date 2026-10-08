@@ -23,7 +23,7 @@ function renderEntTools(ent) {
 
 	const chip = (id, key) => {
 		const other = ents.get(id);
-		return other ? '<a data-id="' + id + '" title="' + escapeHtml(key) + '">#' + id + ' ' + escapeHtml(other.classname) + '</a>' : '';
+		return other ? '<a data-id="' + id + '" title="' + escapeHtml(key) + '">' + (other.draft ? 'new' : '#' + id) + ' ' + escapeHtml(other.classname) + '</a>' : '';
 	};
 	const fires = links.filter(l => l.from === ent.id), firedBy = links.filter(l => l.to === ent.id);
 	// a push: what its throw is, as the arc of the Links view shows it

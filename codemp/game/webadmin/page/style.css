@@ -181,6 +181,8 @@ tr.ent.ro td:first-child { opacity: .6; }
 #entPanel .hd { display: flex; align-items: baseline; gap: 8px; margin-bottom: 8px; }
 #entPanel .hd b { font-size: 15px; }
 #entPanel .hd .close { margin-left: auto; }
+/* what the server says of a draft can be a long line */
+#entPanel .hd .meta { white-space: normal; min-width: 0; }
 #kvTable td { padding: 2px 3px; border: 0; }
 #kvTable input { width: 100%; }
 #kvTable td.k { width: 38%; }
@@ -272,6 +274,17 @@ body.fp #help, body.fp #command, body.fp #entPanel { display: none; }
 #draftRow button { white-space: nowrap; flex: none; }
 #draftRow[hidden] { display: none; }
 #entLabels { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+/* the name of an entity above its marker: a line that is moved by its transform alone, sixty times a second */
+.elabel { position: absolute; left: 0; top: 0; white-space: nowrap; font: 10px/12px ui-monospace, Menlo, Consolas, monospace; color: #d0d0d6; text-shadow: 0 1px 2px #000, 0 0 3px #000; }
+.elabel i { font-style: normal; opacity: .65; }
+.elabel b { font-weight: 400; }
+.elabel.sel { color: #fff; }
+/* what is not on the server yet is yellow, on the map and in the list */
+.elabel.draft, tr.ent.draft td { color: var(--yellow); }
+tr.ent.draft td.num { font-style: italic; }
+tr.ent.draft .tn { opacity: .7; }
+#draftDiscardAll { color: #ff8b8b; }
+#draftDiscardAll.armed { background: var(--accent); color: #fff; border-color: var(--accent); }
 #band { position: absolute; display: none; border: 1px solid var(--accent2); background: rgba(255, 47, 79, .12); pointer-events: none; }
 #flyBtn { position: absolute; right: 10px; bottom: 10px; }
 #shotBtn { position: absolute; right: 56px; bottom: 10px; }

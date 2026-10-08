@@ -127,7 +127,8 @@ $('entFocus').addEventListener('click', () => focusEntity(selectedEnt));
 // Fire: what a trigger does to the entity it has as its target. The map is not changed by it, so it is no step
 // of the history, and what is typed into the keys stays.
 async function fireEntities() {
-	const ids = [...new Set([selectedEnt, ...picked])].filter(id => ents.has(id));
+	// a draft is not there yet to be fired
+	const ids = selectedIds().filter(id => !drafts.has(id));
 	let done = 0, said = '';
 	for (const id of ids) {
 		try {
@@ -168,7 +169,7 @@ async function nudgeEntity(k) {
 	try { await moveEntity(selectedEnt, ent.pos.map((v, i) => v + d[i] * g)); } finally { nudging = false; }
 }
 
-// ---- copy and paste: Ctrl+C takes the keys of the selected entity, Ctrl+V places one with them where the mouse
+// ---- copy and paste: Ctrl+C takes the keys of the selected entity, Ctrl+V makes a draft with them where the mouse
 // is on the map, as high above the floor as the copied one was. Ctrl+D is the Duplicate of its panel.
 
 let entClip = null;		// { keys, pos, lift }
@@ -180,6 +181,7 @@ canvas.addEventListener('mousemove', e => {
 canvas.addEventListener('mouseleave', () => { mouseAt = null; });
 
 function entCopy() {
+	draftTakePanel();
 	const ent = ents.get(selectedEnt);
 	if (!ent || !ent.keys) { toast('This entity has no keys to copy', false); return; }
 	if (ent.bmodel) { toast('Brush models can not be copied, they use the map geometry', false); return; }
@@ -196,9 +198,7 @@ function entPaste() {
 		const ray = screenRay(mouseAt[0], mouseAt[1]), hit = snapHit(pickGround(ray.origin, ray.dir));
 		if (hit) origin = [hit[0], hit[1], hit[2] + entClip.lift];
 	}
-	const kv = (keys, at) => keysText(setKey(keys.map(k => k.slice()), 'origin', fmtVec(at)));
-	if (!entClip.more.length) { entityOp({ op: 'spawn', kv: kv(entClip.keys, origin) }, 'Pasted'); return; }
-	spawnMany('Pasted', [kv(entClip.keys, origin)].concat(entClip.more.map(m => kv(m.keys, origin.map((v, i) => v + m.from[i])))));
+	openDrafts([draftAt(entClip.keys, origin)].concat(entClip.more.map(m => draftAt(m.keys, origin.map((v, i) => v + m.from[i])))), 'Pasted');
 }
 
 // the keys of the editor. true: the key was one of them

@@ -4,8 +4,11 @@
 
 let mode = 'players', placing = false, selectedEnt = -1, ghost = null, kvDirty = false, kvShown = '';
 let boxGhost = null;		// { id, mins, maxs }: the box of a trigger while one of its faces is dragged
-const DRAFT_ID = 99999;	// the number the draft has among the entities, which the server never gives one
-let draft = null;		// an entity that is not placed yet (openDraft in editor-entities.js)
+// The drafts: entities that are only in the page until they are placed (editor-drafts.js). Each is in ents like an
+// entity of the server, under a number the server never gives one: its own stay below 1024.
+const DRAFT_BASE = 100000;
+const drafts = new Map();	// id -> draft, in the order they were made
+let draftNext = 0;
 const ents = new Map();
 
 const ENT_COLORS = [

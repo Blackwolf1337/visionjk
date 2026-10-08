@@ -65,6 +65,6 @@ setInterval(() => {
 	if (!coordsWanted || appMode !== 'editor' || !mouseAt || !world || drag) return;
 	coordsWanted = false;
 	const ray = screenRay(mouseAt[0], mouseAt[1]), hit = snapHit(pickGround(ray.origin, ray.dir)), sel = ents.get(selectedEnt);
-	$('coords').textContent = hit ? fmtVec(hit) + (sel ? '   ' + Math.round(Math.hypot(hit[0] - sel.pos[0], hit[1] - sel.pos[1], hit[2] - sel.pos[2])) + ' from #' + sel.id : '') : '';
+	$('coords').textContent = hit ? fmtVec(hit) + (sel ? '   ' + Math.round(Math.hypot(hit[0] - sel.pos[0], hit[1] - sel.pos[1], hit[2] - sel.pos[2])) + ' from ' + (sel.draft ? 'the draft' : '#' + sel.id) : '') : '';
 }, 80);
 

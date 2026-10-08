@@ -2,13 +2,15 @@
 // all of them, and is one step of the history.
 
 const picked = new Set();	// the ones that are selected besides selectedEnt
+// all that are selected and still there, the one the panel shows first
+function selectedIds() { return [...new Set([selectedEnt, ...picked])].filter(id => ents.has(id)); }
 
 // Every entity whose marker is in the rectangle on the screen is selected, the one nearest to where the drag
 // began as the one the panel shows. more: they are added to what is selected already.
 function bandSelect(b, more) {
 	const x0 = Math.min(b.x, b.x2), x1 = Math.max(b.x, b.x2), y0 = Math.min(b.y, b.y2), y1 = Math.max(b.y, b.y2), inside = [];
 	for (const ent of ents.values()) {
-		if (!entVisible(ent) || ent.draft) continue;
+		if (!entVisible(ent)) continue;
 		const sp = project(ent.pos);
 		if (sp && sp[0] >= x0 && sp[0] <= x1 && sp[1] >= y0 && sp[1] <= y1) inside.push([Math.hypot(sp[0] - b.x, sp[1] - b.y), ent.id]);
 	}
@@ -27,32 +29,22 @@ function pickOnly(ids) {
 }
 
 // A change to every selected entity, one after the other. what( ent ) is the change, null for an entity it can
-// not be made to.
+// not be made to. A draft among them is changed here in the page (entityOp), and is no part of the step of the
+// history: the server never had it.
 async function groupRun(label, what) {
-	const list = [...new Set([selectedEnt, ...picked])].map(id => ents.get(id)).filter(Boolean), steps = [], now = [];
+	const list = selectedIds().map(id => ents.get(id)), steps = [], now = [];
 	let refused = 0, lost = false;
 	for (const ent of list) {
 		const params = what(ent), before = ent.keys ? keysText(ent.keys) : null;
 		const json = params && await entityOp(params, null, false, true);
 		if (!json) { refused++; continue; }
-		const step = histStepFor(params, ent, before, json.id);
-		if (step) steps.push(step); else lost = true;
+		if (!ent.draft) {
+			const step = histStepFor(params, ent, before, json.id);
+			if (step) steps.push(step); else lost = true;
+		}
 		if (params.op !== 'delete') now.push(json.id);
 	}
 	await groupDone(label, steps, lost, now, list.length - refused, refused);
-}
-
-// several new entities, the keys of each as lines
-async function spawnMany(label, kvs) {
-	const steps = [], now = [];
-	let refused = 0;
-	for (const kv of kvs) {
-		const params = { op: 'spawn', kv }, json = await entityOp(params, null, false, true);
-		if (!json) { refused++; continue; }
-		steps.push(histStepFor(params, null, null, json.id));
-		now.push(json.id);
-	}
-	await groupDone(label, steps, false, now, kvs.length - refused, refused);
 }
 
 async function groupDone(label, steps, lost, now, done, refused) {

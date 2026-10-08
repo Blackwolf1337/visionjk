@@ -16,9 +16,7 @@ async function pollEntities() {
 		const json = await (await fetch('api/entities', { cache: 'no-store' })).json();
 		ents.clear();
 		for (const e of json.entities) ents.set(e.id, e);
-		// the draft is of the map it was begun on
-		if (draft && state && state.map !== draft.map) draft = null;
-		if (draft) ents.set(DRAFT_ID, draft);
+		draftsKeep();
 		takeFired(json.used);
 		renderBudget(json.budget);
 		renderLayout(json.layout);
@@ -32,10 +30,11 @@ async function pollEntities() {
 
 function renderEntityList() {
 	const f = $('entFilter').value.trim().toLowerCase();
-	const list = [...ents.values()].filter(e => entMatches(e, f));
+	// the drafts first: the list is cut, and they are what is being worked on
+	const list = [...drafts.values()].concat([...ents.values()].filter(e => !e.draft)).filter(e => entMatches(e, f));
 	$('entCount').textContent = list.length + (list.length !== ents.size ? ' / ' + ents.size : '');
 	$('entities').innerHTML = list.slice(0, 600).map(e =>
-		'<tr class="player ent' + (e.id === selectedEnt ? ' sel' : '') + (e.keys ? '' : ' ro') + '" data-id="' + e.id + '">' +
+		'<tr class="player ent' + (e.id === selectedEnt ? ' sel' : '') + (e.keys ? '' : ' ro') + (e.draft ? ' draft' : '') + '" data-id="' + e.id + '">' +
 		'<td class="num">' + (e.draft ? 'new' : e.id) + '</td><td>' + escapeHtml(e.classname) + '</td><td class="tn">' + escapeHtml(entKey(e, 'targetname')) + '</td></tr>').join('');
 }
 $('entFilter').addEventListener('input', renderEntityList);
@@ -60,6 +59,8 @@ function entityAt(x, y) {
 }
 
 function selectEnt(id) {
+	// a draft has no Apply: what was typed into its keys is taken before the panel shows something else
+	draftTakePanel();
 	selectedEnt = id;
 	kvDirty = false;
 	ghost = null;
@@ -70,25 +71,29 @@ function selectEnt(id) {
 
 // kvShown is what the key table shows: the entity and its keys. The poll comes every second, the table is only
 // built again when this changed, so fields keep focus, cursor and selection (JKAdmin rebuilds it every time).
+function kvSig(ent) { return ent.id + '|' + JSON.stringify(ent.keys || null); }
 function renderEntPanel() {
 	const ent = selectedEnt >= 0 && ents.get(selectedEnt);
 	$('entPanel').classList.toggle('open', !!ent);
 	if (!ent) return;
 	$('entTitle').textContent = ent.classname;
-	$('entSub').textContent = ent.draft ? 'new · not placed yet' : '#' + ent.id + (ent.bmodel ? ' · brush model' : '') + (ent.linked ? '' : ' · not linked') + (picked.size ? ' · and ' + picked.size + ' more' : '');
+	// of a draft: why the server would not take it as it is, when it has said so
+	$('entSub').textContent = (ent.draft ? 'draft · ' + (ent.why || 'not on the server yet') : '#' + ent.id + (ent.bmodel ? ' · brush model' : '') + (ent.linked ? '' : ' · not linked')) +
+		(picked.size ? ' · and ' + picked.size + ' more' : '');
 	const editable = !!ent.keys;
-	const shown = ent.id + '|' + JSON.stringify(ent.keys || null);
+	const shown = kvSig(ent);
 	if (shown !== kvShown) {
 		kvShown = shown;
 		$('kvRows').innerHTML = editable ? ent.keys.map(kvRow).join('') : '<tr><td class="hint">Made by the game code, there are no keys to edit. It can only be deleted.</td></tr>';
 		renderEntTools(ent);
 	}
 	for (const id of ['kvAdd', 'entApply', 'entRotL', 'entRotR', 'entDup', 'entFloor', 'entTemplate']) $(id).disabled = !editable;
-	// a draft is sent with Place and thrown away with Discard, and there is nothing of it yet to fire or to copy
-	$('entApply').textContent = ent.draft ? 'Place' : 'Apply';
-	if (!$('entDel').classList.contains('armed')) $('entDel').textContent = ent.draft ? 'Discard' : 'Delete';
-	$('entFire').disabled = !!ent.draft;
-	if (ent.draft) $('entDup').disabled = true;
+	// a draft is sent with Place, with the drafts that are selected with it, and thrown away with Discard. There is
+	// nothing of it yet to fire.
+	const all = selectedIds(), nd = all.filter(id => drafts.has(id)).length;
+	$('entApply').textContent = ent.draft ? (nd > 1 ? 'Place ' + nd : 'Place') : 'Apply';
+	if (!$('entDel').classList.contains('armed')) $('entDel').textContent = nd === all.length ? 'Discard' : 'Delete';
+	$('entFire').disabled = nd === all.length;
 	$('entHint').style.display = editable ? '' : 'none';
 }
 
@@ -101,12 +106,13 @@ function kvRow(kv) {
 		'<td class="x">' + (kind ? '<button class="play" title="' + (kind === 'sound' ? 'Plays the sound here, in the browser' : 'Plays the effect once in the game, where the entity is') + '">Play</button>' : '') +
 		'<button title="Remove key">&#10005;</button></td></tr>';
 }
-$('kvRows').addEventListener('input', () => kvDirty = true);
+$('kvRows').addEventListener('input', () => { kvDirty = true; draftTyped(); });
 $('kvRows').addEventListener('click', e => {
 	if (e.target.tagName !== 'BUTTON') return;
 	if (e.target.classList.contains('play')) { playValue(e.target.closest('tr')); return; }
 	e.target.closest('tr').remove();
 	kvDirty = true;
+	draftTyped();
 });
 
 let playing = null;
@@ -149,8 +155,10 @@ const fmtVec = v => v.map(n => Math.round(n)).join(' ');
 // they are, and why it was refused is in entRefused for whoever makes them.
 let entRefused = '', entRefusedKey = '';
 async function entityOp(params, okMessage, record = true, quiet = false) {
-	// the draft is not on the server: what is done to it is done here
-	if (draft && params.id !== undefined && +params.id === DRAFT_ID) return draftOp(params);
+	// a draft is not on the server: what is done to it is done here
+	if (params.id !== undefined && drafts.has(+params.id)) return draftOp(params, quiet);
+	// and what was typed into one is its keys before the panel goes to what the server answers with
+	draftTakePanel();
 	const ent = params.id !== undefined ? ents.get(+params.id) : null;
 	const before = ent && ent.keys ? keysText(ent.keys) : null;
 	try {
@@ -174,17 +182,17 @@ async function entityOp(params, okMessage, record = true, quiet = false) {
 	}
 }
 
-$('entApply').addEventListener('click', () => { if (selectedEnt === DRAFT_ID) placeDraft(); else entityOp({ op: 'update', id: selectedEnt, kv: keysText(panelKeys()) }, 'Applied'); });
+$('entApply').addEventListener('click', () => {
+	if (drafts.has(selectedEnt)) placeDrafts(selectedIds(), 'Placed');
+	else entityOp({ op: 'update', id: selectedEnt, kv: keysText(panelKeys()) }, 'Applied');
+});
+// the copies are drafts beside what they are copies of, also the copy of a draft
 $('entDup').addEventListener('click', () => {
 	const ent = ents.get(selectedEnt);
 	if (ent.bmodel) { toast('Brush models can not be duplicated, they use the map geometry', false); return; }
-	const beside = (keys, one) => keysText(setKey(keys, 'origin', fmtVec([one.pos[0] + 48, one.pos[1], one.pos[2]])));
-	if (picked.size) {
-		const more = [...picked].map(id => ents.get(id)).filter(e => e && e.keys && !e.bmodel);
-		spawnMany('Duplicated', [beside(panelKeys(), ent)].concat(more.map(e => beside(e.keys.map(k => k.slice()), e))));
-		return;
-	}
-	entityOp({ op: 'spawn', kv: beside(panelKeys(), ent) }, 'Duplicated');
+	const beside = (keys, one) => draftAt(keys, [one.pos[0] + 48, one.pos[1], one.pos[2]]);
+	const more = [...picked].map(id => ents.get(id)).filter(e => e && e.keys && !e.bmodel);
+	openDrafts([beside(panelKeys(), ent)].concat(more.map(e => beside(e.keys, e))), 'Duplicated');
 });
 // the keys of an entity that is turned by delta degrees around the upright axis
 function turnKeys(keys, delta) {
@@ -219,7 +227,8 @@ for (const [id, delta] of [['entRotL', 15], ['entRotR', -15]]) {
 }
 $('entDel').addEventListener('click', () => {
 	// nothing is lost with a draft but what was typed
-	if (selectedEnt === DRAFT_ID) { entityOp({ op: 'delete', id: DRAFT_ID }); return; }
+	const all = selectedIds();
+	if (all.every(id => drafts.has(id))) { discardDrafts(all); return; }
 	if (!confirmed($('entDel'))) return;
 	if (picked.size) groupRun('Deleted', ent => ({ op: 'delete', id: ent.id }));
 	else entityOp({ op: 'delete', id: selectedEnt }, 'Deleted');
@@ -278,105 +287,32 @@ const PLACE_AIM = { trigger_push: at => [at[0], at[1], at[2] + 256], trigger_tel
 } };
 const placeHeight = cls => cls in PLACE_HEIGHT ? PLACE_HEIGHT[cls] : BOX_TRIGGER.test(cls) ? 48 : /^misc_model/.test(cls) ? 0 : 24;
 
-// the trigger and what it is aimed at as one step. The target first: the trigger looks for it in its first frame.
-async function placeAimed(cls, keys, at) {
+// The trigger and what it is aimed at, as two drafts: the trigger is the one the panel shows, and Place sends its
+// target before it, for the trigger looks for it in its first frame.
+function placeAimed(cls, keys, at) {
 	const names = new Set([...ents.values()].map(e => entKey(e, 'targetname').toLowerCase()));
 	let n = 1;
 	while (names.has('aim' + n)) n++;
-	const steps = [], ids = [];
-	for (const kv of [keysText([['classname', 'target_position'], ['origin', fmtVec(PLACE_AIM[cls](at))], ['targetname', 'aim' + n]]), keysText(keys.concat([['target', 'aim' + n]]))]) {
-		const params = { op: 'spawn', kv }, json = await entityOp(params, null, false, true);
-		if (!json) break;
-		steps.push(histStepFor(params, null, null, json.id));
-		ids.unshift(json.id);
-	}
-	await groupDone('Placed ' + cls + (steps.length === 2 ? ' and what it is aimed at:' : ', refused:'), steps, false, ids, steps.length, 2 - steps.length);
+	const to = PLACE_AIM[cls](at);
+	openDrafts([{ keys: keys.concat([['target', 'aim' + n]]), pos: at }, { keys: [['classname', 'target_position'], ['origin', fmtVec(to)], ['targetname', 'aim' + n]], pos: to }], cls + ' and what it is aimed at');
 }
 
-// ---- An entity that is not placed yet. The server refuses a class that lacks a key it can not be without (an
-// effect without its file, a class of brushes without its model), and Place gives a class only its name and
-// where it is. So what was refused for a key is opened as a draft: it is in the list and on the map like an
-// entity, its keys are edited and it is moved like one, and Place in its panel sends it. The server knows
-// nothing of it until then.
-
-function openDraft(cls, keys, at, key) {
-	draft = { id: DRAFT_ID, classname: cls, type: 0, bmodel: false, linked: false, placed: true, draft: true, map: state ? state.map : '', pos: at.slice(), keys: keys.map(k => k.slice()) };
-	const lower = key.toLowerCase();
-	if (!draft.keys.some(k => k[0].toLowerCase() === lower)) draft.keys.push([key, '']);
-	ents.set(DRAFT_ID, draft);
-	refreshLinks();
-	picked.clear();
-	selectEnt(DRAFT_ID);
-	toast('Not placed yet: give it its ' + key + ', then Place');
-	// the cursor into the field of what is missing
-	const row = [...$('kvRows').querySelectorAll('tr')].find(tr => tr.querySelector('input') && tr.querySelector('input').value.toLowerCase() === lower);
-	if (row) row.querySelectorAll('input')[1].focus();
-}
-function closeDraft() {
-	draft = null;
-	ents.delete(DRAFT_ID);
-	if (selectedEnt === DRAFT_ID) selectEnt(-1);
-	refreshLinks();
-	renderEntityList();
-}
-// What the editor does to an entity, done to the draft: a delete throws it away, new keys are its keys. They are
-// laid over what the table of the panel holds, so that a move does not undo what was typed there.
-function draftOp(params) {
-	if (params.op === 'delete') { closeDraft(); toast('Discarded'); return { ok: true, id: -1 }; }
-	if (params.op !== 'update') { toast('It is not placed yet', false); return null; }
-	const now = String(params.kv).split('\n').map(l => { const i = l.indexOf('='); return i < 0 ? ['', ''] : [l.slice(0, i), l.slice(i + 1)]; }).filter(k => k[0]);
-	const same = (a, b) => a.toLowerCase() === b.toLowerCase(), was = draft.keys;
-	let base = selectedEnt === DRAFT_ID && kvDirty ? panelKeys() : was.map(k => k.slice());
-	for (const [k, v] of now) {
-		const old = was.find(x => same(x[0], k)), has = base.find(x => same(x[0], k));
-		if (old && old[1] === v) continue;
-		if (has) has[1] = v; else base.push([k, v]);
-	}
-	base = base.filter(k => now.some(n => same(n[0], k[0])) || !was.some(x => same(x[0], k[0])));
-	draft.keys = base;
-	draft.classname = (base.find(k => same(k[0], 'classname')) || [])[1] || draft.classname;
-	const at = ((base.find(k => same(k[0], 'origin')) || [])[1] || '').trim().split(/\s+/).map(Number);
-	if (at.length === 3 && at.every(isFinite)) draft.pos = at;
-	kvDirty = false;
-	kvShown = '';
-	refreshLinks();
-	renderEntPanel();
-	renderEntityList();
-	return { ok: true, id: DRAFT_ID };
-}
-async function placeDraft() {
-	const d = draft, keys = panelKeys();
-	const json = await entityOp({ op: 'spawn', kv: keysText(keys) }, 'Placed ' + ((keys.find(k => k[0].toLowerCase() === 'classname') || [])[1] || d.classname));
-	if (json) {
-		// it is an entity of the server now, and that one is selected
-		if (draft === d) { draft = null; ents.delete(DRAFT_ID); renderEntityList(); }
-		return;
-	}
-	// refused again: it stays as it was typed, with what is missing now
-	d.keys = keys;
-	if (entRefusedKey && !keys.some(k => k[0].toLowerCase() === entRefusedKey.toLowerCase())) d.keys.push([entRefusedKey, '']);
-	kvDirty = false;
-	kvShown = '';
-	renderEntPanel();
-}
-
-async function placeEntity(hit) {
+// Place: the class that is picked, or a template, as a draft where the click was. Nothing is sent: a class may
+// lack a key it can not be without, and what is placed is one step of the history with what it belongs to.
+function placeEntity(hit) {
 	const name = $('newClass').value.trim();
 	// a template: its keys, at the height its class is placed at
 	if (name[0] === '@') {
 		const keys = templates[name.slice(1)];
 		if (!keys) { toast('No template ' + name.slice(1), false); return; }
 		const tcls = (keys.find(k => k[0].toLowerCase() === 'classname') || [])[1] || '';
-		const tz = placeHeight(tcls);
-		entityOp({ op: 'spawn', kv: keysText(setKey(keys.map(k => k.slice()), 'origin', fmtVec([hit[0], hit[1], hit[2] + tz]))) }, 'Placed ' + name.slice(1));
+		openDrafts([draftAt(keys, [hit[0], hit[1], hit[2] + placeHeight(tcls)])], name.slice(1));
 		return;
 	}
 	const cls = name;
 	// items drop to the floor themselves, players and NPCs stand on it
 	const at = [hit[0], hit[1], hit[2] + placeHeight(cls)];
 	const keys = [['classname', cls], ['origin', fmtVec(at)]].concat(PLACE_KEYS[cls] || (BOX_TRIGGER.test(cls) ? TRIGGER_BOX : []));
-	if (cls.toLowerCase() in PLACE_AIM) { placeAimed(cls.toLowerCase(), keys, at); return; }
-	// refused for a key that it needs: it is opened to be given that key
-	if (!await entityOp({ op: 'spawn', kv: keysText(keys) }, 'Placed ' + cls) && entRefusedKey) openDraft(cls, keys, at, entRefusedKey);
+	if (cls.toLowerCase() in PLACE_AIM) placeAimed(cls.toLowerCase(), keys, at);
+	else openDrafts([{ keys, pos: at }], cls);
 }
-

@@ -38,7 +38,7 @@ function renderSurface() {
 	const kind = sf.type === MST_PATCH ? 'a patch of ' + sf.patch[0] + ' x ' + sf.patch[1] + ' points' : sf.type === MST_TRIANGLE_SOUP ? 'triangles (a model of the map)' : 'a face of a brush';
 	let owner = 'the world';
 	if (sf.model) {
-		const ent = [...ents.values()].find(e => entKey(e, 'model') === '*' + sf.model);
+		const ent = [...ents.values()].find(e => !e.draft && entKey(e, 'model') === '*' + sf.model);
 		owner = '*' + sf.model + (ent ? ', ' + escapeHtml(ent.classname) + ' #' + ent.id : '') + (movers && !movers.has(sf.model) ? ', not drawn by the game' : '');
 	}
 	const fog = sf.fog >= 0 && world.fogs[sf.fog] ? escapeHtml(world.fogs[sf.fog].shader) : 'none';
@@ -121,7 +121,8 @@ function entityProblems() {
 		if (e.bmodel && !/^\*\d+$/.test(entKey(e, 'model'))) out.push({ id: e.id, bad: false, text: e.classname + ': made of brushes, but its keys name no brush model' });
 	}
 	// what the game type needs to be there at all
-	const count = cls => [...ents.values()].filter(e => e.classname === cls).length, general = [];
+	// a draft is not in the game yet
+	const count = cls => [...ents.values()].filter(e => !e.draft && e.classname === cls).length, general = [];
 	if (!count('info_player_deathmatch')) general.push({ bad: true, text: 'No info_player_deathmatch: players have nowhere to start' });
 	if (state && (state.gametype === 8 || state.gametype === 9)) {
 		for (const cls of ['team_CTF_redflag', 'team_CTF_blueflag']) if (!count(cls)) general.push({ bad: true, text: 'Capture the flag without a ' + cls });
@@ -177,7 +178,7 @@ function renderMapReport() {
 		}
 	}
 	const byClass = new Map();
-	for (const e of ents.values()) byClass.set(e.classname, (byClass.get(e.classname) || 0) + 1);
+	for (const e of ents.values()) if (!e.draft) byClass.set(e.classname, (byClass.get(e.classname) || 0) + 1);
 	const size = w.bounds.maxs.map((v, i) => Math.round(v - w.bounds.mins[i]));
 	const row = (name, value) => '<tr><td>' + name + '</td><td class="num">' + value + '</td></tr>';
 	const n = v => Number(v).toLocaleString('en-US');
