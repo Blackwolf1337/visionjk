@@ -81,6 +81,20 @@ every variable stayed with the one file that owns it. Where a file needed a vari
 through a function now (`WA_Running`, `WA_GravityIsSet`, the `Frame` and `Shutdown` of the entities and the
 assets).
 
+The three longest functions were cut up as well, each into the parts it already had: `WA_ApiState` (320
+lines) into one function for each list of the answer and for the two parts of a player, `WA_ApiAction` (265
+lines) into what is done to the server and what is done to a player, and `frame()` of the page (245 lines)
+into one function for each thing a frame draws.
+
+What was checked for the split, on Linux: the page put together by the build and the one the server puts
+together for `g_webRoot` are the page as it was before the split, byte for byte (322,968 bytes). Of the 3,900
+lines of the one C file all but four are in the new files, once each (the four: a title and a comment that
+were no longer true), and the files compile without a warning. After each step the checks of the panel ran
+against a private server: 25 scripts with about 230 checks, every route once by hand, the file manager with a
+file written, read, renamed and deleted, and the 20 actions of `/api/action`. The answer of `/api/state` was
+compared before and after by its keys, their order and the kinds of its values, not byte for byte, since it
+changes with every frame. Not built: Windows.
+
 `WebAdmin_Frame` is called at the start of `G_RunFrame`. All sockets are non-blocking, a request is read, answered
 and closed without ever waiting, so a slow browser can not hold up the game. At most 32 connections at once, an
 idle one is closed after 15 seconds, a request may be 16 KB.
