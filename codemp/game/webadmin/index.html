@@ -227,6 +227,7 @@ body.fp #help, body.fp #command, body.fp #entPanel { display: none; }
 #appMode button.on { background: var(--accent); border-color: var(--accent); color: #fff; }
 #dbg { position: absolute; left: 10px; top: 10px; display: flex; align-items: center; gap: 12px; color: var(--muted); font-size: 12px; background: rgba(13,13,15,.75); border: 1px solid var(--line); padding: 5px 8px; border-radius: 3px; }
 #flyBtn { position: absolute; right: 10px; bottom: 10px; }
+#shotBtn { position: absolute; right: 56px; bottom: 10px; }
 #dbg label { display: flex; align-items: center; gap: 4px; cursor: pointer; }
 #dbg input { width: auto; }
 #dbg select { padding: 1px 4px; }
@@ -357,14 +358,15 @@ body.app-admin #dbg, body.app-admin .editorOnly, body.app-admin #tabs button[dat
 		<label title="The triangles of the map as lines"><input type="checkbox" id="dbgWire">Wireframe</label>
 		<select id="dbgLight" title="What the surfaces of the map show"><option value="0">Texture and light</option><option value="1">Light only</option><option value="2">Texture only</option></select>
 	</div>
+	<button id="shotBtn" title="Saves what the map view shows as a picture">Picture</button>
 	<button id="flyBtn" title="Fly through the map instead of looking at it from above (C). W A S D fly, Q and E go down and up, the mouse turns the head, the wheel sets the speed, Shift is faster.">Fly</button>
 	<div id="loading">Loading map...</div>
 	<div id="hud"><canvas id="hudCanvas"></canvas><div class="hud-top"><span id="hudName"></span><button id="fpExit">Exit (Esc)</button></div></div>
 	<div id="help">
 		<kbd>LMB</kbd> select, drag to pan &nbsp; <kbd>RMB</kbd> teleport selected<br>
 		<kbd>W A S D</kbd> move &nbsp; <kbd>Q E</kbd> / <kbd>MMB</kbd> rotate &nbsp; wheel zoom<br>
-		<kbd>F</kbd> follow selected &nbsp; <kbd>Esc</kbd> deselect &nbsp; <kbd>PgUp</kbd> <kbd>PgDn</kbd> camera height &nbsp; <kbd>C</kbd> fly<span class="editorOnly"><br>
-		<kbd>Del</kbd> delete entity &nbsp; <kbd>Shift</kbd>+arrows move entity &nbsp; <kbd>Ctrl Z</kbd> <kbd>Ctrl Y</kbd> undo, redo</span>
+		<kbd>F</kbd> follow selected &nbsp; <kbd>Esc</kbd> deselect &nbsp; <kbd>PgUp</kbd> <kbd>PgDn</kbd> camera height &nbsp; <kbd>C</kbd> fly &nbsp; <kbd>1</kbd>-<kbd>9</kbd> views, <kbd>Shift</kbd> stores<span class="editorOnly"><br>
+		<kbd>Del</kbd> delete entity &nbsp; <kbd>Shift</kbd>+arrows move entity &nbsp; <kbd>Ctrl Z</kbd> <kbd>Ctrl Y</kbd> undo, redo &nbsp; <kbd>Ctrl C</kbd> <kbd>Ctrl V</kbd> copy, paste</span>
 	</div>
 	<div id="command">
 		<div class="who">
@@ -1574,6 +1576,26 @@ function setFly(on) {
 }
 let viewProj = null, invViewProj = null, eye = [0, 0, 0];
 
+// Up to nine views of a map, kept by the browser: Shift and a digit stores where the camera is, the digit alone
+// goes back there.
+function camBookmark(n, store) {
+	const key = 'views:' + loadedMap;
+	let all = {};
+	try { all = JSON.parse(localStorage.getItem(key) || '{}'); } catch (e) { /* none then */ }
+	if (store) {
+		all[n] = cam.fly ? { fly: true, pos: cam.pos, yaw: cam.yaw, pitch: cam.pitch } : { fly: false, target: cam.target, dist: cam.dist, yaw: cam.yaw, pitch: cam.pitch };
+		try { localStorage.setItem(key, JSON.stringify(all)); toast('View ' + n + ' stored'); } catch (e) { toast('The browser does not keep it', false); }
+		return;
+	}
+	const v = all[n];
+	if (!v) { toast('No view under ' + n + ', Shift+' + n + ' stores one', false); return; }
+	cam.follow = -1;
+	setFly(!!v.fly);
+	if (v.fly) cam.pos = v.pos.slice(); else { cam.target = v.target.slice(); cam.dist = v.dist; }
+	cam.yaw = v.yaw;
+	cam.pitch = v.pitch;
+}
+
 function resetCamera() {
 	if (!world) return;
 	setFly(false);
@@ -2009,6 +2031,8 @@ canvas.addEventListener('wheel', e => {
 window.addEventListener('keydown', e => {
 	if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') return;
 	if (editorKey(e)) { e.preventDefault(); return; }
+	const digit = /^Digit([1-9])$/.exec(e.code || '');
+	if (digit && !e.ctrlKey && !e.altKey && !e.metaKey) { camBookmark(+digit[1], e.shiftKey); return; }
 	keys.add(e.key.toLowerCase());
 	if (e.key === 'Escape') { if (view.id >= 0) { setFirstPerson(-1); return; } select(-1); selectEnt(-1); setPlacing(false); }
 	if (e.key.toLowerCase() === 'v' && (selected >= 0 || view.id >= 0)) setFirstPerson(view.id >= 0 ? -1 : selected);
@@ -2235,8 +2259,23 @@ function frame(now) {
 		el.style.top = sp[1] + 'px';
 	}
 
+	if (wantShot) {
+		// now, while the frame is still in the canvas
+		wantShot = false;
+		canvas.toBlob(blob => {
+			if (!blob) return;
+			const a = document.createElement('a');
+			a.href = URL.createObjectURL(blob);
+			a.download = (loadedMap || 'map').replace(/\//g, '_') + '_' + new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-') + '.png';
+			a.click();
+			setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+		});
+	}
+
 	requestAnimationFrame(frame);
 }
+let wantShot = false;
+$('shotBtn').addEventListener('click', () => { wantShot = true; });
 
 /* ------------------------------------------------------------------ */
 /* world editor                                                        */
@@ -3213,10 +3252,45 @@ async function nudgeEntity(k) {
 	try { await moveEntity(selectedEnt, ent.pos.map((v, i) => v + d[i] * g)); } finally { nudging = false; }
 }
 
+// ---- copy and paste: Ctrl+C takes the keys of the selected entity, Ctrl+V places one with them where the mouse
+// is on the map, as high above the floor as the copied one was. Ctrl+D is the Duplicate of its panel.
+
+let entClip = null;		// { keys, pos, lift }
+let mouseAt = null;		// where the mouse is over the map, null when it is not
+canvas.addEventListener('mousemove', e => {
+	const rect = canvas.getBoundingClientRect();
+	mouseAt = [e.clientX - rect.left, e.clientY - rect.top];
+});
+canvas.addEventListener('mouseleave', () => { mouseAt = null; });
+
+function entCopy() {
+	const ent = ents.get(selectedEnt);
+	if (!ent || !ent.keys) { toast('This entity has no keys to copy', false); return; }
+	if (ent.bmodel) { toast('Brush models can not be copied, they use the map geometry', false); return; }
+	const below = pickGround([ent.pos[0], ent.pos[1], ent.pos[2] + 1], [0, 0, -1]);
+	entClip = { keys: ent.keys.map(k => k.slice()), pos: ent.pos.slice(), lift: below ? ent.pos[2] - below[2] : 0 };
+	toast('Copied ' + ent.classname);
+}
+
+function entPaste() {
+	let origin = [entClip.pos[0] + 48, entClip.pos[1], entClip.pos[2]];
+	if (mouseAt) {
+		const ray = screenRay(mouseAt[0], mouseAt[1]), hit = snapHit(pickGround(ray.origin, ray.dir));
+		if (hit) origin = [hit[0], hit[1], hit[2] + entClip.lift];
+	}
+	entityOp({ op: 'spawn', kv: keysText(setKey(entClip.keys.map(k => k.slice()), 'origin', fmtVec(origin))) }, 'Pasted');
+}
+
 // the keys of the editor. true: the key was one of them
 function editorKey(e) {
 	if (appMode !== 'editor') return false;
 	const k = e.key.toLowerCase();
+	// not while text of the page is marked: then Ctrl+C is for that
+	if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && mode === 'world' && !String(window.getSelection())) {
+		if (k === 'c' && selectedEnt >= 0) { entCopy(); return true; }
+		if (k === 'v' && entClip) { entPaste(); return true; }
+		if (k === 'd' && selectedEnt >= 0 && ents.has(selectedEnt) && ents.get(selectedEnt).keys) { $('entDup').click(); return true; }
+	}
 	if ((e.ctrlKey || e.metaKey) && !e.altKey && (k === 'z' || k === 'y')) {
 		histStep(k === 'z' && !e.shiftKey);
 		return true;

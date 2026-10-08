@@ -180,6 +180,12 @@ Also changed:
   looks at a point of the map from above. Flying, it is in the map: W A S D go along and across the line of
   sight, Q and E down and up, the mouse turns the head, the wheel sets the speed, Shift is faster. Leaving it
   puts the point the other camera looks at in front of where one was. Picking, placing and "Focus" work in both.
+- New: copy and paste in the World tab. Ctrl+C takes the keys of the selected entity, Ctrl+V places one with them
+  where the mouse is on the map (on the grid, as high above the floor as the copied one was), Ctrl+D is the
+  Duplicate of the panel. Both go into the history of undo.
+- New: stored views. Shift and a digit from 1 to 9 stores where the camera is, around a point or flying, the
+  digit alone goes back there. The browser keeps them for each map.
+- New: the button Picture at the bottom right saves what the map view shows as a PNG.
 - New: the server refuses to place what would end it (`WA_SpawnRefused`): a class made of brushes (`trigger_`,
   `func_`) without a `model` key that names a brush model of the map, the classes whose spawn function raises
   an error without a key (`target_speaker`, `target_play_music`, `target_level_change`,
