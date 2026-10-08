@@ -3507,6 +3507,8 @@ void G_RunFrame( int levelTime ) {
 #endif
 
 	g_LastFrameTime = level.time;
+
+	WebAdmin_FrameEnd();
 }
 
 const char *G_GetStringEdString(char *refSection, char *refName)

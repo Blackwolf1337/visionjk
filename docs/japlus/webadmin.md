@@ -88,6 +88,7 @@ the answer tells the page that the numbers started over.
 | `GET /api/waypoints` | the route of the bots: every waypoint with its place, its flags and the numbers of the ones it leads to. `editing`: it was changed and not saved, the bots stand still |
 | `POST /api/waypoint` | `op` add (`x`, `y`, `z`, `flags`, `after`: the waypoint it comes behind, none for the end), remove (`index`), flags (`index`, `flags`) or save |
 | `GET /api/log?from=` | the log of the game from a place on, `next` is where to ask from the next time. Without `from`, or with a place the panel does not have: its last part |
+| `GET /api/perf?since=` | the load of the server, a sample a second, the last 300 kept: `samples` are `[frames, average and longest frame of the game in microseconds, longest wait for a frame in ms, entities, players]`, `seq` is how many there were, `from` the number of the first one sent. `since`: only the ones from that number on. With them `svFps`, `entityMax`, `maxClients` |
 | `GET /api/classdoc` | the entity definitions of the game code: every `QUAKED` comment of its source files as text |
 | `GET /api/export` | the entities in `.ent` format. `placed=1`: only what was placed through the panel, without the worldspawn |
 | `GET /api/chat?since=&epoch=` | chat lines after number `since`. Everything if `epoch` is not the current one |
@@ -273,6 +274,18 @@ Also changed:
 - The panel of a selected player is a column at the right edge of the map. JKAdmin has it across the bottom,
   where with the buttons of JA+ in it it took half of the height of the map view and lay over what one wanted
   to click on.
+- New: the tab Load of the administration (`/api/perf`, `WA_PerfFrameBegin`, `WebAdmin_FrameEnd`). Five
+  values, one a second, each with a graph of the last five minutes: how long a frame of the game takes on
+  average and at most, how many frames the game got, the longest wait from one frame to the next, the
+  entities in use and the players. The game module measures itself from the start of `G_RunFrame` to its
+  end with a clock of the system (`clock_gettime`, `QueryPerformanceCounter` on Windows), since a frame is
+  done in a fraction of a millisecond and the precision timer of the engine only counts on Windows. The
+  engine around the game is not in the frame time, it shows in the wait between two frames. The work of the
+  panel is in it: a map or a model handed out to a browser is sent from inside a frame, and the graph shows
+  that as peaks when a page loads. A value turns yellow when the game got less than nine tenths of its
+  frames, waited twice as long as `sv_fps` says, or a frame took longer than the time there is for one. The
+  numbers start anew with every map. The graph of the frame time lets the few highest peaks run over its
+  top, or one long frame at the start of a map would flatten the rest.
 - New: the tab Bans of the administration. It lists the addresses that may not connect (`G_BanListEntry`, the
   list the game keeps in `banIPs.txt`), lifts a ban and takes a new one by its address, with a `*` for any
   number. The actions `banip` and `unban` run `addip` and `removeip` of the game, only digits, dots and `*`
@@ -811,6 +824,12 @@ waypoint. A drag moves the view, turns it with the middle button, moves an entit
 when flying. The wheel zooms and sets the flying speed. A right-click teleports, places the class that is armed,
 adds a waypoint. Undo, the Z field, Remove and Save of a route. Copy, paste, the stored views and the keys of
 the fly camera went through the keyboard. What that is not: a person at a real browser on a real GPU.
+
+The tab Load (`steps_load.js`, 10 checks, the same day, Linux, a private server with four bots and nobody on
+it): 40 frames in a second at `sv_fps 40`, a frame of 0.06 ms on average and 0.2 ms at most, 0.3 and 1.1 ms
+while the page read its files, a wait of 25 ms, the entities the editor counts too. A value came every
+second, a number the server does not have got all it keeps, and nothing was asked for with the tab closed.
+Not tried: a server under real load, where the yellow marks would show, and the clock on Windows.
 
 Fire, the rectangle and teams of doors (`steps_fire.js`, 11 checks, the same day): on mp/ffa3 Fire sent a lift
 its 280 units, an info_player_deathmatch answered that it does nothing when fired, and a fired

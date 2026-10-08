@@ -1267,6 +1267,7 @@ void TeleportPlayer( gentity_t *player, vec3_t origin, vec3_t angles );
 // g_webadmin.c
 void WebAdmin_Init( void );
 void WebAdmin_Frame( void );
+void WebAdmin_FrameEnd( void );
 void WebAdmin_Shutdown( void );
 void WebAdmin_EntitySpawned( int entityNum );
 void WebAdmin_EntityFreed( int entityNum );
