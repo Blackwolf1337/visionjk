@@ -39,6 +39,10 @@ models/items/g_hook/extras.jpg
 models/items/g_hook/hook.md3
 models/items/g_hook/hook.skin
 models/players/
+models/players/_humanoid/
+models/players/_humanoid/_humanoid.gla
+models/players/_humanoid/animevents.cfg
+models/players/_humanoid/animation.cfg
 models/players/jedi_hm/
 models/players/jedi_hm/blonde_head_show7.jpg
 models/players/jedi_hm/face_blonde_show7.png

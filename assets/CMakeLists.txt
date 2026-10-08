@@ -93,8 +93,8 @@ function(jp_add_pk3 name directory)
 		COMPONENT ${JKAMPCoreComponent})
 endfunction()
 
-# One archive with all of it: the contents of clientPlugin_v1.4B4.pk3, japlus_sabers.pk3 and efx_MOD.pk3 of the
-# JA+ 2.4 Build 7 package, with the changes of the port (four menus in ui/jamp). Left out: the thumbnail caches
+# One archive with all of it: the contents of clientPlugin_v1.4B4.pk3, japlus_sabers.pk3, efx_MOD.pk3 and
+# japlus_gla_anims.pk3 of the JA+ 2.4 Build 7 package, with the changes of the port (four menus in ui/jamp). Left out: the thumbnail caches
 # of Windows Explorer (Thumbs.db) and the two modules of the plugin, cgamex86.dll and uix86.dll, which the
 # engine would unpack and load in place of the modules of this tree.
 jp_add_pk3(zz_japlus_client_assets japlus_client)

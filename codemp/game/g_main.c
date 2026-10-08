@@ -387,7 +387,7 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 	trap->Cvar_Register( NULL, "V", JP_SERVER_VERSION, CVAR_SERVERINFO|CVAR_ROM );
 	trap->Cvar_Set( "V", JP_SERVER_VERSION );
 
-	// the new animations come with japlus_gla_anims.pk3 in base, without it they have no frames
+	// the new animations come with the _humanoid files of the asset pk3 (japlus_gla_anims.pk3 in JA+), without them they have no frames
 	if ( jp_newGLAAnims.integer && !bgHumanoidAnimations[BOTH_KISSEE].numFrames )
 		trap->Cvar_Set( "jp_newGLAAnims", "0" );
 	trap->Cvar_Update( &jp_newGLAAnims );
