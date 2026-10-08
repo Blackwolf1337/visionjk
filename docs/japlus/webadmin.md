@@ -292,6 +292,25 @@ Also changed:
   192 towards the viewer for the teleport. The game frees a `trigger_push` without a target in its first
   frame, before a key could be added. The server refuses a box whose `mins` are not below its `maxs`, half a
   box, and one wider than 32768. A layout keeps such a trigger like every other placed entity.
+- Fixed: a `misc_bsp` placed in the editor ended the server. It happened to the user on 2026-10-08: the class
+  loads another `.bsp` file into the map, placed without keys it asks for `maps/.bsp`, and a file the engine
+  can not load is an error that a dedicated server does not survive. That error comes from the engine and not
+  from the spawn function, so reading the spawn functions for `trap->Error` had not found it. The panel does
+  not place a `misc_bsp` at all now: a file that is there can still bring more entities than the map has room
+  for. Found by going through every class again, this time with what it calls (two deep) and with every call
+  that can end the server: an `info_siege_radaricon` without `icon` is refused, and a `misc_weapon_shooter`
+  whose `weapon` is no weapon or one without an item (it registers the item and ends the server when there is
+  none). A `fx_runner` without `fxFile` frees itself; it is refused with that reason instead of "the game did
+  not keep it", which is now worded for what it means.
+- New: the memory of the game is a budget of the editor. Every spawn takes memory for the text of its keys
+  from a pool the game gives back only when the map starts (`G_Alloc`, 4 MB here), every move of an entity in
+  the editor is a spawn, and the allocation that does not fit ends the server. The line with the budgets
+  shows how much is used ("Memory 1%", `memory` in the `budget` of `/api/entities`, from `G_MemoryLeft` in
+  `g_mem.c`), and the server refuses a spawn when less than 256 KB are left and says that a start of the map
+  frees it. A map takes about 20 KB when it starts and a spawn 30 to 100 bytes, so this is far away, but it
+  is not out of reach for a script.
+- Fixed: a model whose name begins with a `/` is found by the page as the game finds it (two classes of the
+  game name their model that way and the page got a 400 for it).
 - New: the keys are completed while they are typed (`js/editor-complete.js`, asked for by the user: "add auto
   completion for keys"). The key field of a row had the list of the browser with the keys a definition writes
   in quotes, which for many classes is none (`trigger_push` writes `wait - how long ...`). Now a list opens
@@ -472,8 +491,10 @@ Also changed:
   above), the classes whose spawn function raises
   an error without a key (`target_speaker`, `target_play_music`, `target_level_change`,
   `trigger_lightningstrike`, `misc_siege_item`, `misc_model_breakable`, `trigger_shipboundary`,
-  `trigger_hyperspace`), an entity when fewer than 64 are left for the game, and a model, sound or effect when
-  its kind has no place left. The answer says which rule it was.
+  `trigger_hyperspace`, later `info_siege_radaricon` and `fx_runner`), a `misc_bsp`, a `misc_weapon_shooter` with a
+  weapon that has no item, an entity when fewer than 64 are left for the game or the memory of the game is
+  nearly used up, and a model, sound or effect when its kind has no place left. The answer says which rule
+  it was.
 - Fixed: a `func_plat` or a `func_door` that the panel deletes or changes takes its own trigger along
   (`WA_FreeEntity`). Such a mover makes a trigger when it spawns and the game never frees a mover, so the
   trigger stayed: every move of a lift left one more behind, and it named an entity number that the next
@@ -964,8 +985,10 @@ To take a later JKAdmin commit: apply its diff and keep the `JA+` blocks in `WA_
 
 - The entity editor can still end the server in ways the guard does not know. If the spawn code of a class
   raises an error, the dedicated server exits, because OpenJK makes every game error fatal there. The cases that
-  can be told from the keys are refused since `WA_SpawnRefused` (see above): the list was made by reading the
-  spawn functions for `trap->Error`, a class that fails somewhere else is not in it.
+  can be told from the keys are refused since `WA_SpawnRefused` (see above). The list was first made by reading
+  the spawn functions for `trap->Error`, which missed `misc_bsp` (the error comes from the engine). Since then
+  every class the editor offers is placed bare by a check (`steps_guard.js`) and the server has to be there
+  after it. What that does not cover: keys with values that are wrong, and other game types.
 - The lights of a map can not be shown: the compiler takes them out of the map file.
 - Plain HTTP with basic auth, and it listens on every interface unless `g_webBind` says otherwise: the password
   crosses the network as it is with every request. Where that network is not your own, set `g_webBind 127.0.0.1`
@@ -1027,6 +1050,17 @@ middle, a start point had no such row, a push and a teleport came with their `ta
 took both away, and after "Save layout" and a start of the map the box was there again. Not tried: a real
 player in such a box (how the late push feels on a client with its own prediction), an NPC, a vehicle, the
 classes for ships (`trigger_space`, `trigger_shipboundary`, `trigger_hyperspace`), and the Windows build.
+
+Every class placed bare (`steps_guard.js`, 12 checks, the same day, mp/ffa3): a `misc_bsp` with and without a
+file, an `info_siege_radaricon` without an icon, a `fx_runner` without an effect and a shooter with `WP_NONSENSE`
+and with `WP_NONE` were refused with their reasons, a shooter with `WP_ROCKET_LAUNCHER` and one without the
+key were placed. The budget had 21088 of 3932160 bytes of memory in use and an entity with three text keys
+took 96 more. Then each of the 243 classes the editor offers was spawned with the keys a click on Place
+gives it (classname and origin, a box for a trigger), given a moment, and deleted: 184 were placed and
+deleted, 4 were placed and gone by themselves (the three flags outside of CTF, a `trigger_push` without a
+target), 55 were refused (31 the game did not keep, 13 are made of brushes, 11 need a key or are a
+`misc_bsp`), and the server was still there. That sweep is what would have found the `misc_bsp` before the
+user did. Not tried: every class with keys that are wrong instead of missing, other game types, other maps.
 
 The completion of the keys (`steps_complete.js`, 22 checks, the same day, keyboard and mouse of the browser):
 `/api/classkeys` had 84 keys for every entity and 133 classes, `func_door` with `lip|Float|8` and, from

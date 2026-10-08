@@ -112,6 +112,8 @@ const g2 = { animNames: null, glas: new Map(), cfgs: new Map(), models: new Map(
 // for half a minute: without that a model whose files were on their way stays a placeholder until the page is
 // loaded again. An answer that says the file is not there is final.
 async function fetchGameFile(path, asText) {
+	// the game takes a name with a / in front as the one without it, and some of its own classes write it so
+	path = path.replace(/^[\/\\]+/, '');
 	for (let attempt = 0; ; attempt++) {
 		try {
 			const res = await fetch('api/file?name=' + encodeURIComponent(path));

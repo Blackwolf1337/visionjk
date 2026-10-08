@@ -1456,6 +1456,7 @@ void Team_CheckDroppedItem( gentity_t *dropped );
 //
 void *G_Alloc( int size );
 void G_InitMemory( void );
+int G_MemoryLeft( int *size );
 void Svcmd_GameMem_f( void );
 
 //

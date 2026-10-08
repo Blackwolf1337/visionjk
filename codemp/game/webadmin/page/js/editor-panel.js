@@ -93,7 +93,10 @@ function renderBudget(b) {
 		const text = name + ' ' + v[0] + '/' + v[1];
 		return v[0] >= v[1] * 0.9 ? '<b>' + text + '</b>' : text;
 	};
-	$('entBudget').innerHTML = [part('Entities', b.entities), part('Models', b.models), part('Sounds', b.sounds), part('Effects', b.effects)].join(' &middot; ');
+	// the memory of the game for this map, which every spawn takes from and only a start of the map gives back
+	const memory = b.memory ? ['Memory ' + Math.round(b.memory[0] / b.memory[1] * 100) + '%'].map(t => b.memory[0] >= b.memory[1] * 0.9 ? '<b>' + t + '</b>' : t) : [];
+	$('entBudget').innerHTML = [part('Entities', b.entities), part('Models', b.models), part('Sounds', b.sounds), part('Effects', b.effects)].concat(memory).join(' &middot; ');
+	$('entBudget').title = b.memory ? 'Memory: ' + Math.round(b.memory[0] / 1024) + ' of ' + Math.round(b.memory[1] / 1024) + ' KB of what the game has for a map. Every spawn takes some for the text of its keys, also every move of an entity, and only a start of the map gives it back (Reload map keeps what was placed).' : '';
 }
 
 // ---- values to pick from, so that the name of a map, an effect or an NPC does not have to be known by heart

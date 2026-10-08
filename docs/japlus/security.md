@@ -90,6 +90,9 @@ Off when a sanitizer build is configured.
   passwords are slowed down, and a value that is no address falls back to 127.0.0.1.
 - The entity editor can still end the dedicated server by placing a class whose spawn code raises a game error, or
   by deleting all spawn points. OpenJK makes every game error fatal on a dedicated server. Decided to leave as is.
+  Later the panel got a guard for what can be told from the keys (`WA_SpawnRefused`, [webadmin.md](webadmin.md)).
+  On 2026-10-08 a `misc_bsp` placed in the editor did end a server: that class is refused now and every class
+  the editor offers is placed bare by a check.
 - JKA loads the client DLLs from pk3. Whoever plays on a server with `cl_allowDownload 1` trusts that server; the
   start script sets 0.
 - `getstatus`/`getinfo` stay usable as amplifiers for a spoofed sender, held down by the existing rate limits.

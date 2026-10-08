@@ -181,6 +181,9 @@ static const char *WA_SpawnVar( const char *key ) {
 }
 
 #define WA_TRIGGER_BOX	32768		// the widest box a trigger may have that is one of its own
+#define WA_MEMORY_RESERVE	( 256 * 1024 )	// of the pool of G_Alloc the editor leaves this much to the game
+
+extern stringID_table_t WPTable[];
 
 /*
 =================
@@ -206,6 +209,9 @@ static qboolean WA_SpawnRefused( char *err, int errSize ) {
 		{ "trigger_shipboundary", "traveltime", NULL },
 		{ "trigger_hyperspace", "target", NULL },
 		{ "trigger_hyperspace", "target2", NULL },
+		{ "info_siege_radaricon", "icon", NULL },
+		// no error, but the class frees itself without it, and "the game did not keep it" does not say why
+		{ "fx_runner", "fxFile", NULL },
 	};
 	// keys whose value gets a place among the config strings
 	static const struct { const char *key; int start, max; const char *what; } names[] = {
@@ -222,6 +228,34 @@ static qboolean WA_SpawnRefused( char *err, int errSize ) {
 	if ( room < WA_ENTITY_RESERVE ) {
 		Com_sprintf( err, errSize, "the map is full: %d entities are left, the game needs %d for itself", room, WA_ENTITY_RESERVE );
 		return qtrue;
+	}
+	// every spawn takes memory for the strings of its keys that the game gives back only with the map
+	if ( G_MemoryLeft( NULL ) < WA_MEMORY_RESERVE ) {
+		Q_strncpyz( err, "the memory the game has for this map is used up by all that was spawned: start the map again (Reload map keeps what was placed)", errSize );
+		return qtrue;
+	}
+	// It loads another .bsp file into the map and spawns every entity of that one. A file that is not there ends
+	// the server (also no bspmodel key at all: it asks for maps/.bsp), and so does one that brings more than
+	// the map has room for. None of that can be told from the keys.
+	if ( !Q_stricmp( classname, "misc_bsp" ) ) {
+		Q_strncpyz( err, "a misc_bsp puts a whole other .bsp file into the map with all of its entities, the panel does not place it: a file that is missing or too big ends the server", errSize );
+		return qtrue;
+	}
+	// it registers the item of its weapon and ends the server when there is none (a name that is no weapon, or
+	// a weapon nobody can pick up)
+	value = WA_SpawnVar( "weapon" );
+	if ( !Q_stricmp( classname, "misc_weapon_shooter" ) && VALIDSTRING( value ) ) {
+		const int		weapon = GetIDForString( WPTable, value );
+		const gitem_t	*item;
+
+		for ( item = bg_itemlist + 1; item->classname; item++ ) {
+			if ( item->giType == IT_WEAPON && item->giTag == weapon )
+				break;
+		}
+		if ( !item->classname ) {
+			Com_sprintf( err, errSize, "a misc_weapon_shooter can not fire %s: its weapon has to be one that lies around as an item, like WP_BLASTER or WP_ROCKET_LAUNCHER", value );
+			return qtrue;
+		}
 	}
 
 	for ( i = 0; i < ARRAY_LEN( needs ); i++ ) {
@@ -311,13 +345,14 @@ void WebAdmin_Used( const gentity_t *by, const gentity_t *ent ) {
 void WA_ApiEntities( waConnection_t *c ) {
 	waBuffer_t	b = { 0 };
 	qboolean	first = qtrue;
-	int			i;
+	int			i, memoryLeft, memorySize;
 
 	// how much of what the engine has a limit for is in use, and how many brush models the map has
-	WA_BufPrintf( &b, "{\"budget\":{\"entities\":[%d,%d],\"models\":[%d,%d],\"sounds\":[%d,%d],\"effects\":[%d,%d]},\"brushModels\":%d,",
+	memoryLeft = G_MemoryLeft( &memorySize );
+	WA_BufPrintf( &b, "{\"budget\":{\"entities\":[%d,%d],\"models\":[%d,%d],\"sounds\":[%d,%d],\"effects\":[%d,%d],\"memory\":[%d,%d]},\"brushModels\":%d,",
 		ENTITYNUM_MAX_NORMAL - MAX_CLIENTS - WA_FreeEntities(), ENTITYNUM_MAX_NORMAL - MAX_CLIENTS - WA_ENTITY_RESERVE,
 		WA_ConfigstringsUsed( CS_MODELS, MAX_MODELS ), MAX_MODELS - 1, WA_ConfigstringsUsed( CS_SOUNDS, MAX_SOUNDS ), MAX_SOUNDS - 1,
-		WA_ConfigstringsUsed( CS_EFFECTS, MAX_FX ), MAX_FX - 1, WA_MapBrushModels() );
+		WA_ConfigstringsUsed( CS_EFFECTS, MAX_FX ), MAX_FX - 1, memorySize - memoryLeft, memorySize - WA_MEMORY_RESERVE, WA_MapBrushModels() );
 	WA_BufAppend( &b, "\"entities\":[", 12 );
 	for ( i = MAX_CLIENTS; i < level.num_entities; i++ ) {
 		gentity_t	*ent = &g_entities[i];
@@ -566,7 +601,7 @@ static int WA_SpawnFromText( const char *text, char *err, int errSize ) {
 	SaveRegisteredItems();
 
 	if ( lastSpawnedEntity < 0 || !g_entities[lastSpawnedEntity].inuse ) {
-		Q_strncpyz( err, "the game did not spawn it (unknown classname, or not for this gametype)", errSize );
+		Q_strncpyz( err, "the game did not keep it: no such class, a class that is not for this game type, or one the game frees at once (many are only for the map compiler)", errSize );
 		return -1;
 	}
 	WA_OriginalBack( lastSpawnedEntity );
