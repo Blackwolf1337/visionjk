@@ -18,10 +18,8 @@ function drawMesh(mesh, x, y, z, yaw, scale, color) {
 }
 
 let lastFrame = performance.now();
-function frame(now) {
-	const dt = Math.min(0.1, (now - lastFrame) / 1000);
-	lastFrame = now;
-
+// the keys that move the camera
+function moveCamera(dt) {
 	// keyboard camera
 	const speed = cam.dist * 1.2 * dt, y = cam.yaw * Math.PI / 180;
 	const fwd = (keys.has('w') || keys.has('arrowup') ? 1 : 0) - (keys.has('s') || keys.has('arrowdown') ? 1 : 0);
@@ -44,73 +42,53 @@ function frame(now) {
 		if (keys.has('e')) cam.yaw -= 90 * dt;
 		if (rise) { cam.follow = -1; cam.target[2] += rise * speed; }
 	}
+}
 
-	// smooth player movement between polls
-	const k = Math.min(1, (now - lastPoll) / pollInterval);
-	for (const p of players.values()) {
-		for (let i = 0; i < 3; i++) p.draw[i] = p.prev[i] + (p.data.pos[i] - p.prev[i]) * k;
-	}
-
-	if (canvas.width !== Math.round(canvas.clientWidth * Math.min(window.devicePixelRatio || 1, 2))) resize();
-	if (view.id < 0 || !firstPersonCamera(now)) updateCamera();
-
-	gl.viewport(0, 0, canvas.width, canvas.height);
-	gl.clearColor(0.05, 0.05, 0.06, 1);
-	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-	gl.enable(gl.DEPTH_TEST);
-
-	const editor = appMode === 'editor';
-	const scripted = world && !editor && world.scripted;
-	// what was left over from a frame that did not get to its end
-	lateModels.length = 0;
-	deferLate = !!scripted;
-	if (scripted) {
-		drawWorldScripted(now, false);
-	} else if (world) {
-		// the plain view: of the editor, and of the administration until the shader scripts are there
-		const wire = editor && $('dbgWire').checked;
-		gl.useProgram(mapProg.p);
-		gl.uniformMatrix4fv(mapProg.u.uMvp, false, viewProj);
-		gl.uniform3fv(mapProg.u.uEye, eye);
-		gl.uniform1f(mapProg.u.uFogFar, Math.max(4000, cam.dist * 3));
-		gl.uniform1i(mapProg.u.uTex, 0);
-		gl.uniform1i(mapProg.u.uLm, 1);
-		gl.uniform1i(mapProg.u.uView, editor ? +$('dbgLight').value : 0);
-		gl.disable(gl.CULL_FACE);
-		const open = viewCulls();
-		// the lines lie in the surfaces: those are pushed back a little so the lines win
-		if (wire) { gl.enable(gl.POLYGON_OFFSET_FILL); gl.polygonOffset(1, 1); }
-		let placed = null;
-		for (const b of world.batches) {
-			const places = moverPlaces(b.model, now);
-			if (!places.length) continue;
-			// the side the game draws, which the script of the shader says once the scripts are read
-			if (open) setCull(scripts.state === 2 ? materialFor(b.shaderName, !!b.lm).cull : 0);
-			let t = world.textures.get(b.shaderName);
-			if (t.failed) t = b.editorTex || (b.editorTex = editorImage(b.shaderName)) || t;
-			gl.activeTexture(gl.TEXTURE0);
-			gl.bindTexture(gl.TEXTURE_2D, t.tex);
-			gl.activeTexture(gl.TEXTURE1);
-			gl.bindTexture(gl.TEXTURE_2D, b.lm || grayTex);
-			gl.uniform1i(mapProg.u.uUseLm, b.lm ? 1 : 0);
-			gl.uniform1i(mapProg.u.uAlphaTest, t.alpha ? 1 : 0);
-			gl.bindVertexArray(b.vao);
-			for (const place of places) {
-				if (place !== placed) {
-					placed = place;
-					gl.uniformMatrix4fv(mapProg.u.uMvp, false, place ? M4.mul(viewProj, place) : viewProj);
-					gl.uniform3fv(mapProg.u.uEye, place ? eyeAt(place) : eye);
-				}
-				gl.drawElements(gl.TRIANGLES, b.count, gl.UNSIGNED_INT, 0);
+// The plain view of the map: an image times the light for every surface. The view of the editor, and of the
+// administration until the shader scripts are there.
+function drawWorldPlain(now, editor) {
+	const wire = editor && $('dbgWire').checked;
+	gl.useProgram(mapProg.p);
+	gl.uniformMatrix4fv(mapProg.u.uMvp, false, viewProj);
+	gl.uniform3fv(mapProg.u.uEye, eye);
+	gl.uniform1f(mapProg.u.uFogFar, Math.max(4000, cam.dist * 3));
+	gl.uniform1i(mapProg.u.uTex, 0);
+	gl.uniform1i(mapProg.u.uLm, 1);
+	gl.uniform1i(mapProg.u.uView, editor ? +$('dbgLight').value : 0);
+	gl.disable(gl.CULL_FACE);
+	const open = viewCulls();
+	// the lines lie in the surfaces: those are pushed back a little so the lines win
+	if (wire) { gl.enable(gl.POLYGON_OFFSET_FILL); gl.polygonOffset(1, 1); }
+	let placed = null;
+	for (const b of world.batches) {
+		const places = moverPlaces(b.model, now);
+		if (!places.length) continue;
+		// the side the game draws, which the script of the shader says once the scripts are read
+		if (open) setCull(scripts.state === 2 ? materialFor(b.shaderName, !!b.lm).cull : 0);
+		let t = world.textures.get(b.shaderName);
+		if (t.failed) t = b.editorTex || (b.editorTex = editorImage(b.shaderName)) || t;
+		gl.activeTexture(gl.TEXTURE0);
+		gl.bindTexture(gl.TEXTURE_2D, t.tex);
+		gl.activeTexture(gl.TEXTURE1);
+		gl.bindTexture(gl.TEXTURE_2D, b.lm || grayTex);
+		gl.uniform1i(mapProg.u.uUseLm, b.lm ? 1 : 0);
+		gl.uniform1i(mapProg.u.uAlphaTest, t.alpha ? 1 : 0);
+		gl.bindVertexArray(b.vao);
+		for (const place of places) {
+			if (place !== placed) {
+				placed = place;
+				gl.uniformMatrix4fv(mapProg.u.uMvp, false, place ? M4.mul(viewProj, place) : viewProj);
+				gl.uniform3fv(mapProg.u.uEye, place ? eyeAt(place) : eye);
 			}
+			gl.drawElements(gl.TRIANGLES, b.count, gl.UNSIGNED_INT, 0);
 		}
-		gl.disable(gl.CULL_FACE);
-		if (wire) { gl.disable(gl.POLYGON_OFFSET_FILL); drawWorldWire(now); }
 	}
+	gl.disable(gl.CULL_FACE);
+	if (wire) { gl.disable(gl.POLYGON_OFFSET_FILL); drawWorldWire(now); }
+}
 
-	gl.useProgram(flatProg.p);
-	gl.uniformMatrix4fv(flatProg.u.uMvp, false, viewProj);
-
+// the items of the map, each as its model that turns as in the game, or as a diamond until that is read
+function drawItems(now) {
 	if (state) {
 		const spin = now / 600;
 		for (const it of state.items) {
@@ -128,8 +106,10 @@ function frame(now) {
 			}
 		}
 	}
+}
 
-	// what else the game draws as a model: the props and the models of the map that are entities
+// what else the game draws as a model: the props and the models of the map that are entities
+function drawModelEntities(now, k) {
 	if (state) {
 		// A saber that was thrown is one of them, as its hilt. The game lays it flat and lets it spin (the client
 		// tilts it there, the server only turns it), and its blade is on: whose saber an entity is, the players say.
@@ -152,6 +132,10 @@ function frame(now) {
 			}
 		}
 	}
+}
+
+// what the editor lays over the map: boxes and links, arrows, the outline of a surface, the route, the markers
+function drawEditorMarks(now, editor) {
 	if (editor) drawEditorLines();
 	if (editor && $('dbgMarkers').checked && (mode === 'world' || mode === 'mapinfo')) drawFacing();
 	if (editor && mode === 'mapinfo' && surfShown && world.surfs[surfShown.surface]) drawSurfaceWire(now);
@@ -168,7 +152,10 @@ function frame(now) {
 			drawMesh(ringMesh, pos[0], pos[1], pos[2] - 8, now / 900, 0.6, [1, 0.15, 0.25, 1]);
 		}
 	}
+}
 
+// the players with their models, or as plain figures until those are read
+function drawPlayers(now) {
 	for (const [id, p] of players) {
 		const d = p.data;
 		if (d.team === 'spectator') continue;
@@ -194,8 +181,10 @@ function frame(now) {
 		}
 		if (id === selected && view.id < 0) drawMesh(ringMesh, p.draw[0], p.draw[1], base, now / 900, s, [1, 0.15, 0.25, 1]);
 	}
+}
 
-	// NPCs with their models
+// NPCs with their models
+function drawNpcs(now) {
 	if (state) {
 		for (const n of state.npcs || []) {
 			const inst = g2Instance(n.id, n.model, '');
@@ -204,23 +193,19 @@ function frame(now) {
 			else drawMesh(bodyMesh, n.pos[0], n.pos[1], n.pos[2] - 24 * sc, n.yaw * Math.PI / 180, sc, [0.9, 0.4, 0.9, 1]);
 		}
 	}
+}
 
+// the ring where a right-click went, for a moment
+function drawMarker(now) {
 	if (marker) {
 		const age = (now - marker.t) / 1000;
 		if (age > 1.2) marker = null;
 		else drawMesh(ringMesh, marker.pos[0], marker.pos[1], marker.pos[2], 0, 1 - age * 0.6, [0.3, 1, 0.4, 1]);
 	}
+}
 
-	if (state && ((state.shots && state.shots.length) || flashes.length)) drawShots(k);
-	if (scripted) drawWorldScripted(now, true);
-	drawBlades();
-	if (view.id >= 0 && players.has(view.id)) {
-		const d = players.get(view.id).data;
-		drawViewWeapon(d);
-		renderHud(d);
-	}
-
-	// name labels above the heads
+// name labels above the heads
+function placeLabels() {
 	for (const [id, p] of players) {
 		const d = p.data;
 		let el = labels.get(id);
@@ -248,7 +233,10 @@ function frame(now) {
 		el.style.left = sp[0] + 'px';
 		el.style.top = sp[1] + 'px';
 	}
+}
 
+// the button Picture: what the view shows, as a file
+function savePicture() {
 	if (wantShot) {
 		// now, while the frame is still in the canvas
 		wantShot = false;
@@ -261,6 +249,66 @@ function frame(now) {
 			setTimeout(() => URL.revokeObjectURL(a.href), 5000);
 		});
 	}
+}
+
+// A frame: the camera, the map, what stands and moves on it, what the editor lays over it, the labels.
+function frame(now) {
+	const dt = Math.min(0.1, (now - lastFrame) / 1000);
+	lastFrame = now;
+
+	moveCamera(dt);
+
+	// smooth player movement between polls
+	const k = Math.min(1, (now - lastPoll) / pollInterval);
+	for (const p of players.values()) {
+		for (let i = 0; i < 3; i++) p.draw[i] = p.prev[i] + (p.data.pos[i] - p.prev[i]) * k;
+	}
+
+	if (canvas.width !== Math.round(canvas.clientWidth * Math.min(window.devicePixelRatio || 1, 2))) resize();
+	if (view.id < 0 || !firstPersonCamera(now)) updateCamera();
+
+	gl.viewport(0, 0, canvas.width, canvas.height);
+	gl.clearColor(0.05, 0.05, 0.06, 1);
+	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+	gl.enable(gl.DEPTH_TEST);
+
+	const editor = appMode === 'editor';
+	const scripted = world && !editor && world.scripted;
+	// what was left over from a frame that did not get to its end
+	lateModels.length = 0;
+	deferLate = !!scripted;
+	if (scripted) {
+		drawWorldScripted(now, false);
+	} else if (world) {
+		drawWorldPlain(now, editor);
+	}
+
+	gl.useProgram(flatProg.p);
+	gl.uniformMatrix4fv(flatProg.u.uMvp, false, viewProj);
+
+	drawItems(now);
+
+	drawModelEntities(now, k);
+	drawEditorMarks(now, editor);
+
+	drawPlayers(now);
+
+	drawNpcs(now);
+
+	drawMarker(now);
+
+	if (state && ((state.shots && state.shots.length) || flashes.length)) drawShots(k);
+	if (scripted) drawWorldScripted(now, true);
+	drawBlades();
+	if (view.id >= 0 && players.has(view.id)) {
+		const d = players.get(view.id).data;
+		drawViewWeapon(d);
+		renderHud(d);
+	}
+
+	placeLabels();
+
+	savePicture();
 
 	requestAnimationFrame(frame);
 }
