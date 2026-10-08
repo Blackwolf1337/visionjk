@@ -407,7 +407,7 @@ body.app-admin #dbg, body.app-admin .editorOnly, body.app-admin #tabs button[dat
 		<kbd>LMB</kbd> select, drag to pan &nbsp; <kbd>RMB</kbd> teleport selected<br>
 		<kbd>W A S D</kbd> move &nbsp; <kbd>Q E</kbd> / <kbd>MMB</kbd> rotate &nbsp; wheel zoom<br>
 		<kbd>F</kbd> follow selected &nbsp; <kbd>Esc</kbd> deselect &nbsp; <kbd>PgUp</kbd> <kbd>PgDn</kbd> camera height &nbsp; <kbd>C</kbd> fly &nbsp; <kbd>1</kbd>-<kbd>9</kbd> views, <kbd>Shift</kbd> stores<span class="editorOnly"><br>
-		<kbd>Del</kbd> delete entity &nbsp; <kbd>Shift</kbd>+arrows move entity &nbsp; <kbd>Ctrl Z</kbd> <kbd>Ctrl Y</kbd> undo, redo &nbsp; <kbd>Ctrl C</kbd> <kbd>Ctrl V</kbd> copy, paste</span>
+		<kbd>Del</kbd> delete entity &nbsp; <kbd>Shift</kbd>+arrows move entity &nbsp; <kbd>Ctrl Z</kbd> <kbd>Ctrl Y</kbd> undo, redo &nbsp; <kbd>Ctrl C</kbd> <kbd>Ctrl V</kbd> copy, paste &nbsp; <kbd>Ctrl</kbd>+click select more</span>
 	</div>
 	<div id="command">
 		<div class="who">
@@ -486,7 +486,7 @@ body.app-admin #dbg, body.app-admin .editorOnly, body.app-admin #tabs button[dat
 			<button id="entFocus" title="Brings the camera to it">Focus</button>
 			<button class="danger" id="entDel">Delete</button>
 		</div>
-		<div class="hint" id="entHint">Drag the marker or right-click on the map to move it. Shift and the arrow keys or Page Up and Down move it a grid step.</div>
+		<div class="hint" id="entHint">Drag the marker or right-click on the map to move it. Shift and the arrow keys or Page Up and Down move it a grid step. Ctrl and a click selects one more: what is done to this one is then done to all of them.</div>
 		<details id="entDoc"><summary>About this class</summary><pre id="entDocText"></pre></details>
 	</div>
 </div>
@@ -2332,7 +2332,18 @@ window.addEventListener('mouseup', e => {
 	if (e.target !== canvas) return;
 	if (d.button === 0) {
 		if (mode === 'routes') wpSelect(wpAt(x, y));
-		else if (mode === 'world') selectEnt(entityAt(x, y));
+		else if (mode === 'world') {
+			// Ctrl and a click adds an entity to the selected ones or takes it out again
+			const hit = entityAt(x, y);
+			if ((e.ctrlKey || e.metaKey) && hit >= 0 && selectedEnt >= 0) {
+				if (hit !== selectedEnt) { if (picked.has(hit)) picked.delete(hit); else picked.add(hit); }
+				kvShown = '';
+				renderEntPanel();
+			} else {
+				picked.clear();
+				selectEnt(hit);
+			}
+		}
 		else select(playerAt(x, y));
 		return;
 	}
@@ -2372,7 +2383,7 @@ window.addEventListener('keydown', e => {
 	const digit = /^Digit([1-9])$/.exec(e.code || '');
 	if (digit && !e.ctrlKey && !e.altKey && !e.metaKey) { camBookmark(+digit[1], e.shiftKey); return; }
 	keys.add(e.key.toLowerCase());
-	if (e.key === 'Escape') { if (view.id >= 0) { setFirstPerson(-1); return; } select(-1); selectEnt(-1); setPlacing(false); }
+	if (e.key === 'Escape') { if (view.id >= 0) { setFirstPerson(-1); return; } select(-1); picked.clear(); selectEnt(-1); setPlacing(false); }
 	if (e.key.toLowerCase() === 'v' && (selected >= 0 || view.id >= 0)) setFirstPerson(view.id >= 0 ? -1 : selected);
 	if ((e.key === 'Delete' || e.key === 'Backspace') && mode === 'world' && selectedEnt >= 0) $('entDel').click();
 	if ((e.key === 'Delete' || e.key === 'Backspace') && mode === 'routes' && wp.selected >= 0) $('wpRemove').click();
@@ -2508,7 +2519,7 @@ function frame(now) {
 	if (editor && $('dbgMarkers').checked) {
 		for (const ent of ents.values()) {
 			if (!entVisible(ent)) continue;
-			const c = classColor(ent.classname), sel = ent.id === selectedEnt;
+			const c = classColor(ent.classname), sel = ent.id === selectedEnt || picked.has(ent.id);
 			const pos = ghost && ghost.id === ent.id ? ghost.pos : ent.pos;
 			drawMesh(cubeMesh, pos[0], pos[1], pos[2], 0, sel ? 1.6 : 1, sel ? [1, 0.2, 0.3, 1] : [c[0], c[1], c[2], 1]);
 		}
@@ -3130,7 +3141,7 @@ function renderEntPanel() {
 	$('entPanel').classList.toggle('open', !!ent);
 	if (!ent) return;
 	$('entTitle').textContent = ent.classname;
-	$('entSub').textContent = '#' + ent.id + (ent.bmodel ? ' · brush model' : '') + (ent.linked ? '' : ' · not linked');
+	$('entSub').textContent = '#' + ent.id + (ent.bmodel ? ' · brush model' : '') + (ent.linked ? '' : ' · not linked') + (picked.size ? ' · and ' + picked.size + ' more' : '');
 	const editable = !!ent.keys;
 	const shown = ent.id + '|' + JSON.stringify(ent.keys || null);
 	if (shown !== kvShown) {
@@ -3195,21 +3206,28 @@ const fmtVec = v => v.map(n => Math.round(n)).join(' ');
 
 // Every change to an entity goes through here. record: it is one the user made, it goes into the history
 // (not the steps of undo and redo themselves). Gives the answer of the server, null if it was refused.
-async function entityOp(params, okMessage, record = true) {
+// quiet: one of several changes that are made together. It says nothing, leaves the list and the selection as
+// they are, and why it was refused is in entRefused for whoever makes them.
+let entRefused = '';
+async function entityOp(params, okMessage, record = true, quiet = false) {
 	const ent = params.id !== undefined ? ents.get(+params.id) : null;
 	const before = ent && ent.keys ? keysText(ent.keys) : null;
 	try {
 		const json = await (await fetch('api/entity', { method: 'POST', body: new URLSearchParams(params) })).json();
-		toast(json.ok ? okMessage || json.message : json.message, json.ok);
+		if (!quiet) toast(json.ok ? okMessage || json.message : json.message, json.ok);
+		if (!json.ok) entRefused = json.message;
 		if (json.ok) {
-			if (record) histRecord(params, ent, before, json.id);
-			kvDirty = false;
-			await pollEntities();
-			selectEnt(params.op === 'delete' || params.op === 'clear' ? -1 : json.id);
+			if (record) histPush(histStepFor(params, ent, before, json.id));
+			if (!quiet) {
+				kvDirty = false;
+				await pollEntities();
+				selectEnt(params.op === 'delete' || params.op === 'clear' ? -1 : json.id);
+			}
 		}
 		return json.ok ? json : null;
 	} catch (e) {
-		toast('Request failed: ' + e.message, false);
+		entRefused = e.message;
+		if (!quiet) toast('Request failed: ' + e.message, false);
 		return null;
 	}
 }
@@ -3218,8 +3236,13 @@ $('entApply').addEventListener('click', () => entityOp({ op: 'update', id: selec
 $('entDup').addEventListener('click', () => {
 	const ent = ents.get(selectedEnt);
 	if (ent.bmodel) { toast('Brush models can not be duplicated, they use the map geometry', false); return; }
-	const keys = setKey(panelKeys(), 'origin', fmtVec([ent.pos[0] + 48, ent.pos[1], ent.pos[2]]));
-	entityOp({ op: 'spawn', kv: keysText(keys) }, 'Duplicated');
+	const beside = (keys, one) => keysText(setKey(keys, 'origin', fmtVec([one.pos[0] + 48, one.pos[1], one.pos[2]])));
+	if (picked.size) {
+		const more = [...picked].map(id => ents.get(id)).filter(e => e && e.keys && !e.bmodel);
+		spawnMany('Duplicated', [beside(panelKeys(), ent)].concat(more.map(e => beside(e.keys.map(k => k.slice()), e))));
+		return;
+	}
+	entityOp({ op: 'spawn', kv: beside(panelKeys(), ent) }, 'Duplicated');
 });
 for (const [id, delta] of [['entRotL', 15], ['entRotR', -15]]) {
 	$(id).addEventListener('click', () => {
@@ -3237,19 +3260,31 @@ for (const [id, delta] of [['entRotL', 15], ['entRotR', -15]]) {
 	});
 }
 $('entDel').addEventListener('click', () => {
-	if (confirmed($('entDel'))) entityOp({ op: 'delete', id: selectedEnt }, 'Deleted');
+	if (!confirmed($('entDel'))) return;
+	if (picked.size) groupRun('Deleted', ent => ({ op: 'delete', id: ent.id }));
+	else entityOp({ op: 'delete', id: selectedEnt }, 'Deleted');
 });
 $('entClose').addEventListener('click', () => selectEnt(-1));
 
 // new origin for a moved entity, brush models keep their offset to the map geometry
-function moveEntity(id, pos) {
-	const ent = ents.get(id);
-	ghost = null;
-	if (!ent || !ent.keys) { toast('This entity has no keys, it can not be moved', false); return; }
+function moveParams(ent, pos) {
+	if (!ent.keys) return null;
 	const keys = ent.keys.map(k => k.slice());
 	const cur = (entKey(ent, 'origin') || '0 0 0').split(/\s+/).map(Number);
 	const origin = ent.bmodel ? cur.map((v, i) => v + pos[i] - ent.pos[i]) : pos;
-	return entityOp({ op: 'update', id, kv: keysText(setKey(keys, 'origin', fmtVec(origin))) }, 'Moved');
+	return { op: 'update', id: ent.id, kv: keysText(setKey(keys, 'origin', fmtVec(origin))) };
+}
+
+function moveEntity(id, pos) {
+	const ent = ents.get(id), params = ent && moveParams(ent, pos);
+	ghost = null;
+	if (!params) { toast('This entity has no keys, it can not be moved', false); return; }
+	// one of several that are selected: the others go the same way
+	if (picked.size && (id === selectedEnt || picked.has(id))) {
+		const by = pos.map((v, i) => v - ent.pos[i]);
+		return groupRun('Moved', one => moveParams(one, one.pos.map((v, i) => v + by[i])));
+	}
+	return entityOp(params, 'Moved');
 }
 
 function setPlacing(on) {
@@ -3548,6 +3583,8 @@ function drawEditorLines() {
 			drawLinkSet(links.filter(l => l.to === selectedEnt), [0.4, 1, 0.45, 1]);
 		}
 		if (volumes) drawEntBox(sel, [1, 0.25, 0.35]);
+		// and the ones that are selected with it
+		if (volumes) for (const id of picked) if (ents.has(id)) drawEntBox(ents.get(id), [1, 0.55, 0.25]);
 		gl.enable(gl.DEPTH_TEST);
 	}
 	gl.useProgram(flatProg.p);
@@ -3646,8 +3683,10 @@ function entCopy() {
 	if (!ent || !ent.keys) { toast('This entity has no keys to copy', false); return; }
 	if (ent.bmodel) { toast('Brush models can not be copied, they use the map geometry', false); return; }
 	const below = pickGround([ent.pos[0], ent.pos[1], ent.pos[2] + 1], [0, 0, -1]);
-	entClip = { keys: ent.keys.map(k => k.slice()), pos: ent.pos.slice(), lift: below ? ent.pos[2] - below[2] : 0 };
-	toast('Copied ' + ent.classname);
+	// the ones that are selected with it come along, each where it is from the first
+	const more = [...picked].map(id => ents.get(id)).filter(e => e && e.keys && !e.bmodel).map(e => ({ keys: e.keys.map(k => k.slice()), from: e.pos.map((v, i) => v - ent.pos[i]) }));
+	entClip = { keys: ent.keys.map(k => k.slice()), pos: ent.pos.slice(), lift: below ? ent.pos[2] - below[2] : 0, more };
+	toast('Copied ' + ent.classname + (more.length ? ' and ' + more.length + ' more' : ''));
 }
 
 function entPaste() {
@@ -3656,7 +3695,9 @@ function entPaste() {
 		const ray = screenRay(mouseAt[0], mouseAt[1]), hit = snapHit(pickGround(ray.origin, ray.dir));
 		if (hit) origin = [hit[0], hit[1], hit[2] + entClip.lift];
 	}
-	entityOp({ op: 'spawn', kv: keysText(setKey(entClip.keys.map(k => k.slice()), 'origin', fmtVec(origin))) }, 'Pasted');
+	const kv = (keys, at) => keysText(setKey(keys.map(k => k.slice()), 'origin', fmtVec(at)));
+	if (!entClip.more.length) { entityOp({ op: 'spawn', kv: kv(entClip.keys, origin) }, 'Pasted'); return; }
+	spawnMany('Pasted', [kv(entClip.keys, origin)].concat(entClip.more.map(m => kv(m.keys, origin.map((v, i) => v + m.from[i])))));
 }
 
 // the keys of the editor. true: the key was one of them
@@ -4161,6 +4202,56 @@ $('banRows').addEventListener('click', e => {
 	if (b) banChange({ action: 'unban', value: b.dataset.ban });
 });
 
+// ---- several entities at once: Ctrl and a click selects one more. What is done to the selected one is done to
+// all of them, and is one step of the history.
+
+const picked = new Set();	// the ones that are selected besides selectedEnt
+
+// the selection is these and nothing else
+function pickOnly(ids) {
+	picked.clear();
+	ids.slice(1).forEach(id => picked.add(id));
+	selectEnt(ids.length ? ids[0] : -1);
+}
+
+// A change to every selected entity, one after the other. what( ent ) is the change, null for an entity it can
+// not be made to.
+async function groupRun(label, what) {
+	const list = [...new Set([selectedEnt, ...picked])].map(id => ents.get(id)).filter(Boolean), steps = [], now = [];
+	let refused = 0, lost = false;
+	for (const ent of list) {
+		const params = what(ent), before = ent.keys ? keysText(ent.keys) : null;
+		const json = params && await entityOp(params, null, false, true);
+		if (!json) { refused++; continue; }
+		const step = histStepFor(params, ent, before, json.id);
+		if (step) steps.push(step); else lost = true;
+		if (params.op !== 'delete') now.push(json.id);
+	}
+	await groupDone(label, steps, lost, now, list.length - refused, refused);
+}
+
+// several new entities, the keys of each as lines
+async function spawnMany(label, kvs) {
+	const steps = [], now = [];
+	let refused = 0;
+	for (const kv of kvs) {
+		const params = { op: 'spawn', kv }, json = await entityOp(params, null, false, true);
+		if (!json) { refused++; continue; }
+		steps.push(histStepFor(params, null, null, json.id));
+		now.push(json.id);
+	}
+	await groupDone(label, steps, false, now, kvs.length - refused, refused);
+}
+
+async function groupDone(label, steps, lost, now, done, refused) {
+	// one that can not be taken back is in it (an entity without keys): the history can not go behind it
+	if (lost) histPush(null); else if (steps.length) histPush({ op: 'group', steps });
+	kvDirty = false;
+	await pollEntities();
+	pickOnly(now.filter(id => ents.has(id)));
+	toast(label + ' ' + done + (refused ? ', ' + refused + ' refused: ' + entRefused : ''), !refused);
+}
+
 // ---- undo and redo
 
 // The server spawns an entity anew with every change, so it has another number afterwards. The history names an
@@ -4191,18 +4282,21 @@ function histOfThisMap() {
 	if (hist.map !== loadedMap) { histClear(); hist.map = loadedMap; }
 }
 
-function histRecord(params, ent, before, newId) {
+// the step of the history a change is, null for one that can not be taken back
+function histStepFor(params, ent, before, newId) {
 	histOfThisMap();
-	let step = null;
-	if (params.op === 'spawn') {
-		step = { op: 'spawn', ref: histRef(newId), after: params.kv };
-	} else if (params.op === 'update' && before !== null) {
+	if (params.op === 'spawn') return { op: 'spawn', ref: histRef(newId), after: params.kv };
+	if (params.op === 'update' && before !== null) {
 		const ref = histRef(+params.id);
 		histRenumber(ref, newId);
-		step = { op: 'update', ref, before, after: params.kv };
-	} else if (params.op === 'delete' && before !== null) {
-		step = { op: 'delete', ref: histRef(+params.id), before, ofMap: !ent.placed };
+		return { op: 'update', ref, before, after: params.kv };
 	}
+	if (params.op === 'delete' && before !== null) return { op: 'delete', ref: histRef(+params.id), before, ofMap: !ent.placed };
+	return null;
+}
+
+function histPush(step) {
+	histOfThisMap();
 	if (step) {
 		hist.undo.push(step);
 		if (hist.undo.length > 200) hist.undo.shift();
@@ -4222,7 +4316,26 @@ async function histStep(undo) {
 	if (histBusy || !from.length) return;
 	histBusy = true;
 	const step = from.pop();
-	// what the step is on the server: the keys of the other side, or the delete of a spawn and the other way round
+	let done;
+	if (step.op === 'group') {
+		// several changes that were made together are taken back together, the last one first
+		done = true;
+		for (const part of undo ? step.steps.slice().reverse() : step.steps) if (!(await histApply(part, undo, true))) done = false;
+		kvDirty = false;
+		await pollEntities();
+		pickOnly(step.steps.map(part => part.ref.id).filter(id => ents.has(id)));
+		toast((undo ? 'Undone' : 'Redone') + (done ? '' : ', not all of it: ' + entRefused), done);
+	} else {
+		done = await histApply(step, undo, false);
+	}
+	// refused: something else changed or removed an entity meanwhile. The step is dropped.
+	if (done) to.push(step);
+	histBusy = false;
+	histButtons();
+}
+
+// one step of the history on the server: the keys of the other side, or the delete of a spawn and the other way round
+async function histApply(step, undo, quiet) {
 	let params;
 	if (step.op === 'update') {
 		params = { op: 'update', id: step.ref.id, kv: undo ? step.before : step.after };
@@ -4233,14 +4346,9 @@ async function histStep(undo) {
 		// an entity of the map that comes back stays one of the map
 		if (step.ofMap) params.map = 1;
 	}
-	const json = await entityOp(params, undo ? 'Undone' : 'Redone', false);
-	// refused: something else changed or removed the entity meanwhile. The step is dropped.
-	if (json) {
-		if (params.op !== 'delete') histRenumber(step.ref, json.id);
-		to.push(step);
-	}
-	histBusy = false;
-	histButtons();
+	const json = await entityOp(params, undo ? 'Undone' : 'Redone', false, quiet);
+	if (json && params.op !== 'delete') histRenumber(step.ref, json.id);
+	return !!json;
 }
 $('entUndo').addEventListener('click', () => histStep(true));
 $('entRedo').addEventListener('click', () => histStep(false));

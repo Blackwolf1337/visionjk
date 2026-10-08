@@ -194,6 +194,13 @@ Also changed:
 - New: copy and paste in the World tab. Ctrl+C takes the keys of the selected entity, Ctrl+V places one with them
   where the mouse is on the map (on the grid, as high above the floor as the copied one was), Ctrl+D is the
   Duplicate of the panel. Both go into the history of undo.
+- New: several entities selected at once in the World tab. Ctrl and a click on a marker adds an entity to the
+  selected one or takes it out again, a click without Ctrl or Escape ends it. Moving (the drag, the right-click,
+  the fields of the position, "To floor", Shift and the keys) takes the others along by the same way, Delete,
+  Duplicate, Ctrl+C and Ctrl+V take all of them, and a paste keeps where they stand to each other. Each of
+  these is one step of undo. The keys of the panel stay those of the one that was clicked first, "Apply" and
+  the turn buttons change only that one. The server knows nothing of it: the page sends one change for each
+  entity, so one of them can be refused while the others are made, and the message says how many.
 - New: stored views. Shift and a digit from 1 to 9 stores where the camera is, around a point or flying, the
   digit alone goes back there. The browser keeps them for each map.
 - New: the button Picture at the bottom right saves what the map view shows as a PNG.
@@ -246,6 +253,10 @@ Also changed:
   `trigger_lightningstrike`, `misc_siege_item`, `misc_model_breakable`, `trigger_shipboundary`,
   `trigger_hyperspace`), an entity when fewer than 64 are left for the game, and a model, sound or effect when
   its kind has no place left. The answer says which rule it was.
+- Fixed: a `func_plat` or a `func_door` that the panel deletes or changes takes its own trigger along
+  (`WA_FreeEntity`). Such a mover makes a trigger when it spawns and the game never frees a mover, so the
+  trigger stayed: every move of a lift left one more behind, and it named an entity number that the next
+  entity gets. What still stays wrong: the parts of a door team whose first part is deleted.
 - New: the JA+ admin commands that work on a player (`WA_JpAction`). The panel does not copy them, it sends the
   same line an rcon admin would type on the server console (`amsleep 3`, `amrename 3 "name"`), so the rules,
   texts and logs are those of JA+. The command runs in the next frame, the answer of the panel only says it was
@@ -749,6 +760,17 @@ waypoint. A drag moves the view, turns it with the middle button, moves an entit
 when flying. The wheel zooms and sets the flying speed. A right-click teleports, places the class that is armed,
 adds a waypoint. Undo, the Z field, Remove and Save of a route. Copy, paste, the stored views and the keys of
 the fly camera went through the keyboard. What that is not: a person at a real browser on a real GPU.
+
+Several entities at once (`steps_group.js`, 18 checks, the same day): Ctrl and a click selected three and took
+one out again, Shift and Page Up lifted the three by one grid step as one step of undo, Ctrl+Z and Ctrl+Y put
+them back and up again, the Z field moved the others by as much, a paste of the three stood as the copied ones,
+Delete took them away and undo brought them back, Duplicate made three more, and at the end the map had the
+entities it had before, class by class. A brush entity in the group went the same way and came back, and with
+one of the three deleted behind the back of the page the other two were moved and the message named the one
+refused. Tried with info_notnull, which stays where it is put: a prop falls, and then where it is and what its
+origin key says are two things. This run is what found the trigger a moved lift left behind: after the fix a
+func_plat moved and put back leaves the same entities as before (the door of this map has no trigger of its
+own, so that half is not tried).
 
 The page was looked at once in headless Chromium with software GL: the 3D map, the player list and the chat box
 with all kinds of lines show up. Not tested: using the page by hand (HUD view, dragging entities), the Windows DLL
