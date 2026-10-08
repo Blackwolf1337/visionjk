@@ -28,8 +28,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // sees no difference: the one server command there is, jpvoice, only goes to a client that asked with the
 // client command of the same name.
 
-#include "bg_net.h"		// the sockets, in front of everything else
-#include "g_local.h"
+#include "game/bg_net.h"		// the sockets, in front of everything else
+#include "game/g_local.h"
 #include "bg_voice.h"
 
 #define VOICE_MAX_PER_CALL	64		// datagrams one call of G_VoiceFrame() takes at most

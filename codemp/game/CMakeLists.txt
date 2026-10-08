@@ -42,7 +42,6 @@ set(MPGameGameFiles
 	"${MPDir}/game/bg_panimate.c"
 	"${MPDir}/game/bg_pmove.c"
 	"${MPDir}/game/bg_props.c"
-	"${MPDir}/game/bg_voice.c"
 	"${MPDir}/game/bg_saber.c"
 	"${MPDir}/game/bg_saberLoad.c"
 	"${MPDir}/game/bg_saga.c"
@@ -88,7 +87,6 @@ set(MPGameGameFiles
 	"${MPDir}/game/g_turret.c"
 	"${MPDir}/game/g_turret_G2.c"
 	"${MPDir}/game/g_utils.c"
-	"${MPDir}/game/g_voice.c"
 	"${MPDir}/game/g_vehicles.c"
 	"${MPDir}/game/g_vehicleTurret.c"
 	"${MPDir}/game/g_weapon.c"
@@ -137,7 +135,6 @@ set(MPGameGameFiles
 	"${MPDir}/game/bg_local.h"
 	"${MPDir}/game/bg_props.h"
 	"${MPDir}/game/bg_props_math.h"
-	"${MPDir}/game/bg_voice.h"
 	"${MPDir}/game/bg_net.h"
 	"${MPDir}/game/bg_public.h"
 	"${MPDir}/game/bg_saga.h"
@@ -181,6 +178,15 @@ set(MPGameJaplusFiles
 	)
 source_group("game/japlus" FILES ${MPGameJaplusFiles})
 set(MPGameFiles ${MPGameFiles} ${MPGameJaplusFiles})
+
+# the relay of the voice chat, bg_voice.c is built into the cgame too
+set(MPGameVoiceFiles
+	"${MPDir}/game/voice/bg_voice.c"
+	"${MPDir}/game/voice/g_voice.c"
+	"${MPDir}/game/voice/bg_voice.h"
+	)
+source_group("game/voice" FILES ${MPGameVoiceFiles})
+set(MPGameFiles ${MPGameFiles} ${MPGameVoiceFiles})
 
 set(MPGameCommonFiles
 	"${MPDir}/qcommon/q_shared.c"

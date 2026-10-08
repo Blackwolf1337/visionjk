@@ -41,7 +41,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "miniaudio.h"
 
 #include "qcommon/q_shared.h"
-#include "game/bg_voice.h"
+#include "game/voice/bg_voice.h"
 #include "cg_voice.h"
 
 #define AUDIO_SPEAKER_SAMPLES	( VOICE_RATE / 2 )		// what waits to be played of one voice at most: half a second

@@ -30,7 +30,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include "game/bg_net.h"		// the sockets, in front of everything else
 #include "cg_local.h"
-#include "game/bg_voice.h"
+#include "game/voice/bg_voice.h"
 #include "cg_voice.h"
 
 #ifdef JP_VOICE
