@@ -9,9 +9,9 @@ function renderEntTools(ent) {
 
 	// a trigger that is a box of its own: how big
 	const tb = triggerBox(ent);
-	['boxLabel', 'boxX', 'boxY', 'boxZ'].forEach((id, i) => {
+	['boxLabel', 'boxX', 'boxY', 'boxZ', 'boxHint'].forEach((id, i) => {
 		$(id).style.display = tb ? '' : 'none';
-		if (!tb || !i) return;
+		if (!tb || !i || i > 3) return;
 		$(id).value = Math.round((tb.maxs[i - 1] - tb.mins[i - 1]) * 100) / 100;
 		$(id).disabled = !editable;
 	});

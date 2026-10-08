@@ -29,6 +29,9 @@ canvas.addEventListener('mousedown', e => {
 		drag.band = { x, y };
 		return;
 	}
+	// a face of the box of the selected trigger
+	const face = e.button === 0 ? boxHandleAt(x, y) : null;
+	if (face) { drag.face = boxDragStart(face); return; }
 	// grab the selected entity to move it
 	if (mode === 'world' && e.button === 0 && selectedEnt >= 0 && entityAt(x, y) === selectedEnt) {
 		const ent = ents.get(selectedEnt), below = pickGround([ent.pos[0], ent.pos[1], ent.pos[2] + 1], [0, 0, -1]);
@@ -49,6 +52,9 @@ window.addEventListener('mousemove', e => {
 		el.style.top = Math.min(b.y, b.y2) + 'px';
 		el.style.width = Math.abs(b.x2 - b.x) + 'px';
 		el.style.height = Math.abs(b.y2 - b.y) + 'px';
+	} else if (drag.face) {
+		const rect = canvas.getBoundingClientRect();
+		boxDragMove(drag.face, screenRay(e.clientX - rect.left, e.clientY - rect.top));
 	} else if (drag.ent) {
 		const rect = canvas.getBoundingClientRect(), ray = screenRay(e.clientX - rect.left, e.clientY - rect.top);
 		const hit = snapHit(pickGround(ray.origin, ray.dir));
@@ -76,6 +82,7 @@ window.addEventListener('mouseup', e => {
 		if (d.moved && d.band.x2 !== undefined) bandSelect(d.band, e.ctrlKey || e.metaKey);
 		return;
 	}
+	if (d.face) { boxDragEnd(d.face); return; }
 	if (d.ent && d.moved) {
 		if (ghost) moveEntity(d.ent.id, ghost.pos);
 		return;

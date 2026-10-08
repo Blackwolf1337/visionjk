@@ -47,16 +47,80 @@ for (const id of ['angP', 'angY', 'angR']) {
 		entityOp({ op: 'update', id: selectedEnt, kv: keysText(setKey(keys, 'angles', ['angP', 'angY', 'angR'].map(i => +$(i).value || 0).join(' '))) }, 'Turned');
 	});
 }
+// ---- the box of a trigger: its size in the panel, and its faces dragged with the mouse
+
+function setTriggerBox(ent, mins, maxs) {
+	const num = v => String(Math.round(v * 100) / 100), keys = ent.keys.map(k => k.slice());
+	setKey(keys, 'mins', mins.map(num).join(' '));
+	return entityOp({ op: 'update', id: ent.id, kv: keysText(setKey(keys, 'maxs', maxs.map(num).join(' '))) }, 'Resized');
+}
 for (const id of ['boxX', 'boxY', 'boxZ']) {
 	$(id).addEventListener('change', () => {
 		const ent = ents.get(selectedEnt), tb = ent && ent.keys ? triggerBox(ent) : null;
 		if (!tb) return;
 		// around the middle the box has, which need not be its origin
 		const half = ['boxX', 'boxY', 'boxZ'].map(i => Math.max(1, +$(i).value || 0) / 2), mid = tb.mins.map((v, i) => (v + tb.maxs[i]) / 2);
-		const num = v => String(Math.round(v * 100) / 100), keys = ent.keys.map(k => k.slice());
-		setKey(keys, 'mins', mid.map((v, i) => num(v - half[i])).join(' '));
-		entityOp({ op: 'update', id: selectedEnt, kv: keysText(setKey(keys, 'maxs', mid.map((v, i) => num(v + half[i])).join(' '))) }, 'Resized');
+		setTriggerBox(ent, mid.map((v, i) => v - half[i]), mid.map((v, i) => v + half[i]));
 	});
+}
+
+// The handles of the selected trigger that is a box: one in the middle of each face, { axis, side, pos }. Only
+// of one entity: several that are selected are moved, not shaped.
+function boxHandles() {
+	const ent = appMode === 'editor' && mode === 'world' && !picked.size ? ents.get(selectedEnt) : null, tb = ent && ent.keys ? triggerBox(ent) : null;
+	if (!tb) return [];
+	const b = boxGhost && boxGhost.id === ent.id ? boxGhost : tb, out = [];
+	for (let axis = 0; axis < 3; axis++) {
+		for (const side of [0, 1]) out.push({ axis, side, pos: ent.pos.map((v, i) => v + (i === axis ? (side ? b.maxs[i] : b.mins[i]) : (b.mins[i] + b.maxs[i]) / 2)) });
+	}
+	return out;
+}
+// as big on the screen wherever it is
+const handleScale = pos => Math.min(12, Math.max(0.3, Math.hypot(pos[0] - eye[0], pos[1] - eye[1], pos[2] - eye[2]) / 1000));
+function boxHandleAt(x, y) {
+	let best = null, bestD = 13;
+	for (const h of boxHandles()) {
+		const sp = project(h.pos), d = sp ? Math.hypot(sp[0] - x, sp[1] - y) : 99;
+		if (d < bestD) { bestD = d; best = h; }
+	}
+	return best;
+}
+function drawBoxHandles() {
+	const list = boxHandles();
+	if (!list.length) return;
+	const over = drag && drag.face ? drag.face : mouseAt && !drag ? boxHandleAt(mouseAt[0], mouseAt[1]) : null;
+	gl.useProgram(flatProg.p);
+	gl.disable(gl.DEPTH_TEST);
+	for (const h of list) {
+		const hot = over && over.axis === h.axis && over.side === h.side;
+		drawMesh(cubeMesh, h.pos[0], h.pos[1], h.pos[2], 0, handleScale(h.pos) * (hot ? 1.5 : 1), hot ? [1, 1, 1, 1] : [1, 0.8, 0.15, 1]);
+	}
+	gl.enable(gl.DEPTH_TEST);
+}
+
+// A face is dragged along its axis: to the point of that line the ray of the mouse comes closest to, on the grid
+// of the editor. The other faces stay, and so does the origin. The box keeps a width.
+function boxDragStart(h) {
+	const ent = ents.get(selectedEnt), tb = triggerBox(ent);
+	return { id: ent.id, axis: h.axis, side: h.side, from: h.pos.slice(), origin: ent.pos.slice(), mins: tb.mins.slice(), maxs: tb.maxs.slice() };
+}
+function boxDragMove(f, ray) {
+	const w = f.from.map((v, i) => v - ray.origin[i]), b = ray.dir[f.axis], dw = ray.dir[0] * w[0] + ray.dir[1] * w[1] + ray.dir[2] * w[2];
+	// looking along the axis the mouse says nothing about it
+	if (1 - b * b < 0.002) return;
+	const g = gridStep(), at = Math.round((f.from[f.axis] + (b * dw - w[f.axis]) / (1 - b * b)) / g) * g - f.origin[f.axis];
+	const mins = f.mins.slice(), maxs = f.maxs.slice();
+	if (f.side) maxs[f.axis] = Math.min(mins[f.axis] + 32768, Math.max(mins[f.axis] + 1, at));
+	else mins[f.axis] = Math.max(maxs[f.axis] - 32768, Math.min(maxs[f.axis] - 1, at));
+	boxGhost = { id: f.id, mins, maxs };
+	// the size in the panel follows
+	['boxX', 'boxY', 'boxZ'].forEach((id, i) => { $(id).value = Math.round((maxs[i] - mins[i]) * 100) / 100; });
+}
+async function boxDragEnd(f) {
+	const g = boxGhost, ent = ents.get(f.id);
+	try {
+		if (g && ent && ent.keys && (g.mins[f.axis] !== f.mins[f.axis] || g.maxs[f.axis] !== f.maxs[f.axis])) await setTriggerBox(ent, g.mins, g.maxs);
+	} finally { boxGhost = null; }
 }
 $('entFocus').addEventListener('click', () => focusEntity(selectedEnt));
 

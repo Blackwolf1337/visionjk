@@ -288,6 +288,16 @@ Also changed:
   192 towards the viewer for the teleport. The game frees a `trigger_push` without a target in its first
   frame, before a key could be added. The server refuses a box whose `mins` are not below its `maxs`, half a
   box, and one wider than 32768. A layout keeps such a trigger like every other placed entity.
+- New: the faces of a trigger box are dragged with the mouse (`boxHandles`, `boxDragMove` in
+  `js/editor-move.js`). A selected trigger that is a box has a yellow handle in the middle of each of its six
+  faces, drawn through the walls and as big on the screen wherever it is; the one under the mouse is white. A
+  handle dragged with the left button moves its face along its axis, to the point of that line the ray of the
+  mouse comes closest to, on the grid of the editor. The other five faces and the origin stay, so a box can be
+  fitted into a doorway side by side. While it is dragged the box is drawn where it will be and the "Box" row
+  says its size; nothing is sent before the button is let go, and then it is one change and one step of undo.
+  A face stops one unit before the one across. The box of such a trigger is drawn while it is selected, also
+  with the Volumes view off. Several selected entities have no handles (they are moved, not shaped), and with
+  the fly camera a drag that starts on a handle moves the face and not the head.
 - New: the layout of a map (`WA_ApiLayout`, `WA_LayoutText`, `WA_ReloadSpawn` in `wa_entities.c`). What the
   editor did to a map was lost with every change of the map and every start of the server, only "Reload map"
   carried the placed entities over. "Save layout" in the World tab keeps the map as it stands in
@@ -965,7 +975,7 @@ when flying. The wheel zooms and sets the flying speed. A right-click teleports,
 adds a waypoint. Undo, the Z field, Remove and Save of a route. Copy, paste, the stored views and the keys of
 the fly camera went through the keyboard. What that is not: a person at a real browser on a real GPU.
 
-Triggers as boxes (`steps_boxtrigger.js`, 22 checks, 2026-10-08, mp/ffa3 with four bots): a trigger without a
+Triggers as boxes (`steps_boxtrigger.js`, 21 checks, 2026-10-08, mp/ffa3 with four bots): a trigger without a
 shape, a flat box, half a box, one wider than 32768, a `trigger_asteroid_field` with a box and a `func_door`
 with one were refused, each with its reason. A box over the whole map was tried with four classes: as a
 `trigger_multiple` it fired its `target_relay` seven times in three seconds (read from the trace of what fires
@@ -977,6 +987,16 @@ middle, a start point had no such row, a push and a teleport came with their `ta
 took both away, and after "Save layout" and a start of the map the box was there again. Not tried: a real
 player in such a box (how the late push feels on a client with its own prediction), an NPC, a vehicle, the
 classes for ships (`trigger_space`, `trigger_shipboundary`, `trigger_hyperspace`), and the Windows build.
+
+The handles of a box (`steps_boxdrag.js`, 16 checks, the same day, with the mouse of the browser): six
+handles, none under the panel of the entity in the view that was set up. The face towards +X dragged 64 units
+out, the top 48 up, the one towards -Y 32 out and the one towards -X 32 in gave exactly those keys on a grid
+of 16, with the origin where it was. In the middle of a drag the box was drawn 240 wide, the row said 240, the
+keys were the old ones and the entity the same; let go, the keys followed. A face dragged 600 units through
+the one across stopped one unit before it. Six undos gave the box that was placed. A click on a handle
+changed nothing, flying the yaw stayed, and a start point, two selected entities and the administration had
+no handles. Not tried: a hand on a real mouse, a box seen along one of its axes (the code leaves the face
+where it is then), a touch screen.
 
 The layout (`steps_layout.js`, 13 checks, the same day, mp/ffa3): two entities placed, an item of the map
 deleted and a start point of the map moved gave a layout of three to spawn and two to take away. Saved, the

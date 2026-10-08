@@ -3,6 +3,7 @@
 /* ------------------------------------------------------------------ */
 
 let mode = 'players', placing = false, selectedEnt = -1, ghost = null, kvDirty = false, kvShown = '';
+let boxGhost = null;		// { id, mins, maxs }: the box of a trigger while one of its faces is dragged
 const ents = new Map();
 
 const ENT_COLORS = [

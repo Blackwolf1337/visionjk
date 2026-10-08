@@ -241,7 +241,7 @@
 		<div id="entXform">
 			<label>Position</label><input type="number" id="posX" step="1" title="X"><input type="number" id="posY" step="1" title="Y"><input type="number" id="posZ" step="1" title="Z">
 			<label>Angles</label><input type="number" id="angP" step="15" title="Pitch"><input type="number" id="angY" step="15" title="Yaw"><input type="number" id="angR" step="15" title="Roll">
-			<label id="boxLabel" title="How wide, deep and high the box of this trigger is. Its middle stays where it is.">Box</label><input type="number" id="boxX" step="8" min="1" title="Along X"><input type="number" id="boxY" step="8" min="1" title="Along Y"><input type="number" id="boxZ" step="8" min="1" title="Height">
+			<label id="boxLabel" title="How wide, deep and high the box of this trigger is. Its middle stays where it is. The yellow handles on the map drag one face each.">Box</label><input type="number" id="boxX" step="8" min="1" title="Along X"><input type="number" id="boxY" step="8" min="1" title="Along Y"><input type="number" id="boxZ" step="8" min="1" title="Height">
 		</div>
 		<div id="entFlags"></div>
 		<div id="entLinks"></div>
@@ -261,7 +261,7 @@
 			<button id="entFire" title="Fires it as a trigger would that has it as its target: a door opens, a trigger fires its targets. The world is what fired it, so what only works on the player who fired it does nothing.">Fire</button>
 			<button class="danger" id="entDel">Delete</button>
 		</div>
-		<div class="hint" id="entHint">Drag the marker or right-click on the map to move it. Shift and the arrow keys or Page Up and Down move it a grid step. Ctrl and a click selects one more, Shift and a drag all in a rectangle: what is done to this one is then done to all of them.</div>
+		<div class="hint" id="entHint">Drag the marker or right-click on the map to move it. Shift and the arrow keys or Page Up and Down move it a grid step. Ctrl and a click selects one more, Shift and a drag all in a rectangle: what is done to this one is then done to all of them.<span id="boxHint"> The yellow handles on the box of this trigger each drag one face of it, on the grid.</span></div>
 		<details id="entDoc"><summary>About this class</summary><pre id="entDocText"></pre></details>
 	</div>
 </div>

@@ -16,7 +16,7 @@ function entBox(ent) {
 		const n = /^\*(\d+)$/.exec(entKey(ent, 'model')), m = n && world && world.models[+n[1]];
 		return m ? { center: ent.pos, size: m.maxs.map((v, i) => Math.max(1, v - m.mins[i])) } : null;
 	}
-	const d = triggerBox(ent) || classDoc(ent.classname);
+	const d = (boxGhost && boxGhost.id === ent.id ? boxGhost : triggerBox(ent)) || classDoc(ent.classname);
 	if (!d || !d.mins) return null;
 	return { center: ent.pos.map((v, i) => v + (d.mins[i] + d.maxs[i]) / 2), size: d.maxs.map((v, i) => Math.max(1, v - d.mins[i])) };
 }
@@ -237,7 +237,9 @@ function drawEntBox(ent, color) {
 // entity is drawn last and through the walls.
 function drawEditorLines() {
 	const volumes = $('dbgVolumes').checked, linked = $('dbgLinks').checked, clip = world && $('dbgClip').checked ? brushWire('clip') : null;
-	if (!volumes && !linked && !clip) return;
+	// a box that has handles to drag is drawn, whatever the views are set to
+	const handled = boxHandles().length > 0;
+	if (!volumes && !linked && !clip && !handled) return;
 	const sel = ents.get(selectedEnt);
 	gl.useProgram(lineProg.p);
 	if (clip) {
@@ -258,7 +260,7 @@ function drawEditorLines() {
 			drawLinkSet(links.filter(l => l.from === selectedEnt), [1, 0.65, 0.15, 1]);
 			drawLinkSet(links.filter(l => l.to === selectedEnt), [0.4, 1, 0.45, 1]);
 		}
-		if (volumes) drawEntBox(sel, [1, 0.25, 0.35]);
+		if (volumes || handled) drawEntBox(sel, [1, 0.25, 0.35]);
 		// and the ones that are selected with it
 		if (volumes) for (const id of picked) if (ents.has(id)) drawEntBox(ents.get(id), [1, 0.55, 0.25]);
 		gl.enable(gl.DEPTH_TEST);

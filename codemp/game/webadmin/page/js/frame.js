@@ -152,6 +152,7 @@ function drawEditorMarks(now, editor) {
 			drawMesh(ringMesh, pos[0], pos[1], pos[2] - 8, now / 900, 0.6, [1, 0.15, 0.25, 1]);
 		}
 	}
+	if (editor) drawBoxHandles();
 }
 
 // the players with their models, or as plain figures until those are read
