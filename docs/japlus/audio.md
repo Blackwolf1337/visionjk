@@ -155,6 +155,12 @@ Not handed over, and played by the cgame as before: a chat without a range (`g_v
 server does not show, a spectator, and every voice for a player with `cg_voiceMuffle 0`, who does not want
 voices muffled. The same goes for any other engine, and for this one with `s_spatial 0` or without the library.
 
+What the own player says goes the same way as his other sounds: into the reverb and nowhere else. The cgame
+hands every frame of the microphone that goes out to the engine too (`ext.S_SpatialOwnVoice`, a second call,
+which an engine has that sets the cvar `s_spatialOwnVoice` to 1). He does not hear his voice, he hears the room
+he stands in ring from it, as loud as the voice of a player next to him would make it ring. `cg_voiceOwnReverb 0`
+turns it off. Not handed over: a spectator's voice, and a chat without a range.
+
 The other sounds are there ahead of time, a voice is not. It is rendered as far as what arrived of it reaches,
 a block behind where the others are rendered to, so it is heard about `s_spatialAhead` (0.1 s) later than the
 cgame would play it.
@@ -247,6 +253,10 @@ Builds: Linux 64, and the client and the modules for 64 bit Windows with mingw (
 - The voice of the own character is an MP3 that is decoded while it plays, through its channel, and now by two
   readers: the mixer and the voice for the reverb. By the code they stay inside what the decoder keeps. If a
   line of the own character ever has a hole in its reverb, that is where to look.
+- The reverb of the own voice is late. By the code, not measured: the microphone and its frames of 20 ms, a
+  block of 1024 samples that has to be full, then `s_spatialAhead` (0.1 s), then the sound card. About 0.2 s
+  from the word to the first of its reverb, which in a small room is heard as an echo more than as a room.
+  Built and never run, like the two above. With speakers the microphone hears that reverb again.
 - Doors and lifts do not block sound. They are brush models that move, the mesh is the world that does not.
 - One reverb, of where the listener stands. A sound in another room rings like the listener's room, and has no
   reflections of its own.

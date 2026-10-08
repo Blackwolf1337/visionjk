@@ -49,6 +49,8 @@ float		S_SpatialAhead( void );
 // from the cgame (ext.S_SpatialVoice): the voice of a player of the voice chat as a sound in the level.
 // Returns the samples of him that wait, at his rate, or -1 if the cgame has to play him itself.
 int			S_SpatialVoice( int clientNum, const vec3_t origin, float volume, const short *samples, int numSamples, int rate );
+// from the cgame (ext.S_SpatialOwnVoice): what the own player says into the voice chat, only for the reverb
+void		S_SpatialOwnVoice( float volume, const short *samples, int numSamples, int rate );
 
 // from S_PaintChannels(): adds what the voices have for the samples from to to
 void		S_SpatialPaint( int from, int to, portable_samplepair_t *paint );

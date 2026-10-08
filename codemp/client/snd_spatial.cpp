@@ -415,7 +415,9 @@ static struct {
 static std::atomic<int>	spatialBakeState;		// BAKE_*
 static std::atomic<int>	spatialBakeProgress;	// 0 to 100
 
-static spatialStream_t	spatialStreams[MAX_CLIENTS];
+// one for every player, and one more for what the own player says (S_SpatialOwnVoice)
+#define SPATIAL_OWN_STREAM	MAX_CLIENTS
+static spatialStream_t	spatialStreams[MAX_CLIENTS + 1];
 
 // what the game and the thread of the reflections both touch
 static std::atomic<int>	spatialWorkerState;		// WORKER_*
@@ -1018,24 +1020,12 @@ static int S_SpatialStreamQueued( const spatialStream_t *stream ) {
 	return (int)( stream->write - stream->read );
 }
 
-/*
-===============
-S_SpatialVoice
-
-From the cgame, through its engine interface (ext.S_SpatialVoice). samples: 16 bit, one channel, rate of them a
-second. With no samples it only says where the player is and how loud. origin NULL: where he was.
-Returns how many samples of him wait here, counted at his rate, or -1: the sound of the level does not run, the
-cgame plays him itself.
-===============
-*/
-int S_SpatialVoice( int clientNum, const vec3_t origin, float volume, const short *samples, int numSamples, int rate ) {
-	spatialStream_t *stream;
+// What the cgame hands over of a voice, into the queue of it here. samples: 16 bit, one channel, rate of them a
+// second. With no samples it only says where the voice is and how loud. origin NULL: where it was.
+// Returns how many samples of it wait here, counted at its rate.
+static int S_SpatialStreamWrite( spatialStream_t *stream, const vec3_t origin, float volume, const short *samples, int numSamples, int rate ) {
 	float ratio;
 
-	if ( !S_SpatialActive() || clientNum < 0 || clientNum >= MAX_CLIENTS || rate < 8000 || rate > 48000 ) {
-		return -1;
-	}
-	stream = &spatialStreams[clientNum];
 	if ( !stream->active ) {
 		memset( stream, 0, sizeof( *stream ) );
 		stream->active = qtrue;
@@ -1067,11 +1057,43 @@ int S_SpatialVoice( int clientNum, const vec3_t origin, float volume, const shor
 	return (int)( S_SpatialStreamQueued( stream ) * ratio );
 }
 
+/*
+===============
+S_SpatialVoice
+
+From the cgame, through its engine interface (ext.S_SpatialVoice): the voice of another player, see
+S_SpatialStreamWrite(). Returns how many samples of him wait here, counted at his rate, or -1: the sound of the
+level does not run, the cgame plays him itself.
+===============
+*/
+int S_SpatialVoice( int clientNum, const vec3_t origin, float volume, const short *samples, int numSamples, int rate ) {
+	if ( !S_SpatialActive() || clientNum < 0 || clientNum >= MAX_CLIENTS || rate < 8000 || rate > 48000 ) {
+		return -1;
+	}
+	return S_SpatialStreamWrite( &spatialStreams[clientNum], origin, volume, samples, numSamples, rate );
+}
+
+/*
+===============
+S_SpatialOwnVoice
+
+From the cgame (ext.S_SpatialOwnVoice): what the own player says into the voice chat, as it goes out. Nobody
+hears himself from a place in the level, so the voice is not played. The room around the listener gets it, like
+the other sounds of the own player, and he hears it ring.
+===============
+*/
+void S_SpatialOwnVoice( float volume, const short *samples, int numSamples, int rate ) {
+	if ( !S_SpatialActive() || !s_spatialReflections->integer || rate < 8000 || rate > 48000 ) {
+		return;
+	}
+	S_SpatialStreamWrite( &spatialStreams[SPATIAL_OWN_STREAM], NULL, volume, samples, numSamples, rate );
+}
+
 // once a frame: every voice of the chat that still has something to say is one of the sounds of the frame
 static void S_SpatialGatherStreams( void ) {
 	const int now = Sys_Milliseconds();
 
-	for ( int i = 0; i < MAX_CLIENTS; i++ ) {
+	for ( int i = 0; i < (int)ARRAY_LEN( spatialStreams ); i++ ) {
 		spatialStream_t *stream = &spatialStreams[i];
 		spatialVoice_t *v;
 
@@ -1084,9 +1106,12 @@ static void S_SpatialGatherStreams( void ) {
 		}
 		v = S_SpatialFindVoice( stream, NULL, i, NULL, 0 );
 		if ( v ) {
+			// the own voice has no place of its own: it is where the listener is, and only for the reverb
+			v->sendOnly = (qboolean)( i == SPATIAL_OWN_STREAM );
 			// CHAN_VOICE_GLOBAL: how loud he is at his distance is in the volume the cgame gave, also for a way
 			// round a corner
-			S_SpatialPlaceVoice( v, NULL, CHAN_VOICE_GLOBAL, stream->origin, stream->volume, 1.0f, 1.0f, qfalse );
+			S_SpatialPlaceVoice( v, NULL, CHAN_VOICE_GLOBAL, v->sendOnly ? spatial.listenerOrigin : stream->origin, stream->volume, 1.0f,
+				1.0f, qfalse );
 		}
 	}
 }
@@ -1956,6 +1981,8 @@ void S_SpatialInit( void ) {
 	memset( spatialStreams, 0, sizeof( spatialStreams ) );
 	Cvar_Get( "s_spatialVoice", "0", CVAR_ROM, "1: this engine plays the voices of the voice chat as sounds in the level (s_spatial)" );
 	Cvar_Set( "s_spatialVoice", "0" );
+	Cvar_Get( "s_spatialOwnVoice", "0", CVAR_ROM, "1: this engine lets the room ring from what the own player says into the voice chat (s_spatial)" );
+	Cvar_Set( "s_spatialOwnVoice", "0" );
 	if ( !s_spatial->integer ) {
 		return;
 	}
@@ -2013,8 +2040,10 @@ void S_SpatialInit( void ) {
 	}
 
 	spatial.active = qtrue;
-	// tells the cgame that this engine takes the voices of its voice chat (ext.S_SpatialVoice)
+	// tells the cgame that this engine takes the voices of its voice chat (ext.S_SpatialVoice), and the own one
+	// for the reverb (ext.S_SpatialOwnVoice)
 	Cvar_Set( "s_spatialVoice", "1" );
+	Cvar_Set( "s_spatialOwnVoice", "1" );
 	// the sound system was started again in the middle of a level
 	S_SpatialLoadMap( Cvar_VariableString( "mapname" ) );
 	S_SpatialInfo_f();
@@ -2023,6 +2052,7 @@ void S_SpatialInit( void ) {
 void S_SpatialShutdown( void ) {
 	Cmd_RemoveCommand( "s_spatialInfo" );
 	Cvar_Set( "s_spatialVoice", "0" );
+	Cvar_Set( "s_spatialOwnVoice", "0" );
 	S_SpatialRelease();
 }
 
@@ -2056,5 +2086,6 @@ void		S_SpatialEndFrame( int from, int target ) {}
 void		S_SpatialPaint( int from, int to, portable_samplepair_t *paint ) {}
 float		S_SpatialAhead( void ) { return 0.0f; }
 int			S_SpatialVoice( int clientNum, const vec3_t origin, float volume, const short *samples, int numSamples, int rate ) { return -1; }
+void		S_SpatialOwnVoice( float volume, const short *samples, int numSamples, int rate ) {}
 
 #endif // JP_SPATIAL

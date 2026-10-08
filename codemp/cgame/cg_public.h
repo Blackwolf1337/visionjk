@@ -721,6 +721,9 @@ typedef struct cgameImport_s {
 		// before it: look at the cvar before touching it. The voice of a player of the voice chat as a sound in
 		// the level, see client/snd_spatial.cpp. Returns the samples of him that wait, or -1.
 		int				(*S_SpatialVoice)						( int clientNum, const vec3_t origin, float volume, const short *samples, int numSamples, int rate );
+		// Only an engine that sets the cvar s_spatialOwnVoice to 1 has this one, the same way. What the own
+		// player says into the voice chat: he does not hear the voice, the room he stands in rings from it.
+		void			(*S_SpatialOwnVoice)					( float volume, const short *samples, int numSamples, int rate );
 	} ext;
 } cgameImport_t;
 

@@ -26,6 +26,7 @@ before a level was loaded).
 | `cg_voiceMicGain` | 1 | how loud the own microphone is sent |
 | `cg_voiceThreshold` | 0.02 | voice activation: from which level on, 0 to 1 |
 | `cg_voiceMuffle` | 1 | 0: voices behind walls are not muffled, and the engine's `s_spatial` leaves them alone |
+| `cg_voiceOwnReverb` | 1 | with the engine's `s_spatial`: the room rings from what you say yourself. 0: it does not. See [audio.md](audio.md) |
 | `cg_voiceDrawTalkers` | 1 | the list of who is talking on the HUD |
 | `cg_voiceCapture`, `cg_voicePlayback` | "" | the name of the microphone and of the speakers, empty: the ones the system uses. `voice_devices` lists the names |
 | `cg_voiceBackend` | "" | `null`: a sound system that plays into nothing, for tests |

@@ -1917,6 +1917,7 @@ void CL_BindCGame( void ) {
 
 		cgi.ext.R_Font_StrLenPixels				= re->ext.Font_StrLenPixels;
 		cgi.ext.S_SpatialVoice					= S_SpatialVoice;
+		cgi.ext.S_SpatialOwnVoice				= S_SpatialOwnVoice;
 
 		GetCGameAPI = (GetCGameAPI_t)cgvm->GetModuleAPI;
 		ret = GetCGameAPI( CGAME_API_VERSION, &cgi );

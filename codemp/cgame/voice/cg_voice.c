@@ -393,10 +393,32 @@ static void Voice_Send( int type, const byte *frame, int frameLen ) {
 		sendto( voice.sock, (const char *)datagram, len, BG_SEND_FLAGS, (const struct sockaddr *)&voice.server, sizeof( voice.server ) );
 }
 
+// The engine of this tree says in a cvar what its sound (s_spatial) takes from the voice chat. Only when the
+// cvar is 1 is the call that goes with it there at all: any other engine ends trap->ext before it.
+static qboolean Voice_EngineSays( const char *cvar ) {
+	char value[8];
+
+	trap->Cvar_VariableStringBuffer( cvar, value, sizeof( value ) );
+	return ( atoi( value ) == 1 ) ? qtrue : qfalse;
+}
+
+// What this player says, for an engine that lets the room he stands in ring from it. He does not hear his
+// voice, only the room. Not for a spectator and not while he follows somebody (the listener is not where his
+// mouth is then), and not in a chat without a range, where no voice is in the level.
+static void Voice_OwnReverb( const short *samples ) {
+	if ( !cg_voiceOwnReverb.integer || voice.range <= 0 || !cg.snap || cg.snap->ps.clientNum != cg.clientNum
+		|| cgs.clientinfo[cg.clientNum].team == TEAM_SPECTATOR )
+		return;
+	if ( Voice_EngineSays( "s_spatialOwnVoice" ) && trap->ext.S_SpatialOwnVoice )
+		trap->ext.S_SpatialOwnVoice( cg_voiceVolume.value, samples, VOICE_FRAME_SAMPLES, VOICE_RATE );
+}
+
 // one frame of sound goes out
 static void Voice_SendFrame( const short *samples ) {
 	byte		frame[VOICE_MAX_FRAME];
 	const int	len = opus_encode( (OpusEncoder *)&voiceEncoder, samples, VOICE_FRAME_SAMPLES, frame, sizeof( frame ) );
+
+	Voice_OwnReverb( samples );
 
 	// two bytes and less is a frame the codec found nothing in
 	if ( len > 2 ) {
@@ -592,10 +614,7 @@ The engine says that it takes voices in the cvar s_spatialVoice. Only then is th
 =================
 */
 static qboolean Voice_EngineTakesVoices( void ) {
-	char value[8];
-
-	trap->Cvar_VariableStringBuffer( "s_spatialVoice", value, sizeof( value ) );
-	return ( atoi( value ) == 1 && trap->ext.S_SpatialVoice ) ? qtrue : qfalse;
+	return ( Voice_EngineSays( "s_spatialVoice" ) && trap->ext.S_SpatialVoice ) ? qtrue : qfalse;
 }
 
 static qboolean Voice_InLevel( int speaker ) {
