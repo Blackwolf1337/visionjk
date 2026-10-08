@@ -1784,16 +1784,90 @@ static void WA_EntityResult( waConnection_t *c, qboolean ok, const char *msg, in
 	WA_BufFree( &b );
 }
 
+// Movers with the same team key move together (G_FindTeams): they are a chain, the first one leads, the game
+// runs only that one and it moves the others, who name it as their master. The game never frees a mover, so
+// nothing takes one out of its team either. Left in, the team goes on moving and linking whatever entity gets
+// its number, and without its first part the others never move again.
+// Returns the part that leads the team from now on when ent led it, NULL otherwise.
+static gentity_t *WA_LeaveTeam( gentity_t *ent ) {
+	gentity_t	*master = ent->teammaster, *next = NULL, *part;
+
+	if ( !master )
+		return NULL;
+
+	if ( master != ent ) {
+		for ( part = master; part; part = part->teamchain ) {
+			if ( part->teamchain == ent ) {
+				part->teamchain = ent->teamchain;
+				break;
+			}
+		}
+	} else if ( ( next = ent->teamchain ) != NULL ) {
+		next->flags &= ~FL_TEAMSLAVE;
+		for ( part = next; part; part = part->teamchain )
+			part->teammaster = next;
+		// what fires the team fires its first part: G_FindTeams gave that one the name
+		if ( !next->targetname )
+			next->targetname = ent->targetname;
+		// what the team was about to do (come back, start to move) it still does
+		if ( !next->think ) {
+			next->think = ent->think;
+			next->nextthink = ent->nextthink;
+		}
+	}
+	ent->teammaster = ent->teamchain = NULL;
+	return next;
+}
+
+// An edit spawns a new entity and frees the old one. The new one takes the place of the old one in its team,
+// unless the edit gave it another team key.
+static void WA_TakeTeamPlace( gentity_t *old, gentity_t *ent ) {
+	gentity_t	*master = old->teammaster, *part;
+
+	if ( !master || !old->team || !ent->team || strcmp( old->team, ent->team ) )
+		return;
+
+	if ( master == old ) {
+		ent->teamchain = old->teamchain;
+		ent->flags &= ~FL_TEAMSLAVE;
+		for ( part = ent; part; part = part->teamchain )
+			part->teammaster = ent;
+		if ( !ent->targetname )
+			ent->targetname = old->targetname;
+	} else {
+		for ( part = master; part && part->teamchain != old; part = part->teamchain )
+			;
+		if ( !part )
+			return;
+		part->teamchain = ent;
+		ent->teamchain = old->teamchain;
+		ent->teammaster = master;
+		ent->flags |= FL_TEAMSLAVE;
+		// as G_FindTeams: targets only point at the first part
+		if ( ent->targetname ) {
+			master->targetname = ent->targetname;
+			ent->targetname = NULL;
+		}
+	}
+	old->teammaster = old->teamchain = NULL;
+}
+
 // A func_plat and a func_door make a trigger of their own when they spawn (SpawnPlatTrigger,
 // Think_SpawnNewDoorTrigger) and are its parent. The game never frees a mover, so nothing frees that trigger
-// either: left behind it would use whatever entity gets the number of the mover next.
+// either: left behind it would use whatever entity gets the number of the mover next. The trigger of a team
+// goes to the part that leads the team now.
 static void WA_FreeEntity( gentity_t *ent ) {
-	int	i;
+	gentity_t	*heir = WA_LeaveTeam( ent );
+	int			i;
 
 	for ( i = MAX_CLIENTS; i < level.num_entities; i++ ) {
 		gentity_t *other = &g_entities[i];
 
-		if ( other->inuse && other != ent && other->parent == ent && !entityVars[i] && other->r.contents == CONTENTS_TRIGGER )
+		if ( !other->inuse || other == ent || other->parent != ent || entityVars[i] || other->r.contents != CONTENTS_TRIGGER )
+			continue;
+		if ( heir )
+			other->parent = heir;
+		else
 			G_FreeEntity( other );
 	}
 	G_FreeEntity( ent );
@@ -1859,6 +1933,7 @@ static void WA_ApiEntity( waConnection_t *c, const char *body ) {
 		}
 		// an entity of the map that was edited is still one of the map: the next start of the map has it as it was
 		entityPlaced[newId] = entityPlaced[id];
+		WA_TakeTeamPlace( &g_entities[id], &g_entities[newId] );
 		WA_FreeEntity( &g_entities[id] );
 		WA_EntityResult( c, qtrue, "updated", newId );
 	} else {

@@ -283,7 +283,15 @@ Also changed:
 - Fixed: a `func_plat` or a `func_door` that the panel deletes or changes takes its own trigger along
   (`WA_FreeEntity`). Such a mover makes a trigger when it spawns and the game never frees a mover, so the
   trigger stayed: every move of a lift left one more behind, and it named an entity number that the next
-  entity gets. What still stays wrong: the parts of a door team whose first part is deleted.
+  entity gets.
+- Fixed: a team of movers (doors with the same `team` key, which open together) stays whole when the panel
+  deletes or changes one of its parts (`WA_LeaveTeam`, `WA_TakeTeamPlace`). The game builds the chain of a
+  team once at the start of the map and never frees a mover. Deleted through the panel, the first part of a
+  team left the others without the one that moves them, and any part stayed in the chain, so the team went
+  on moving and linking whatever entity got its number. An edited part (an edit spawns a new entity) was no
+  longer one of the team. Now a deleted part is taken out of the chain, the next one leads when it was the
+  first (it takes over the targetname, the trigger and what the team was about to do), and an edited part
+  takes the place of the old one unless the edit gave it another team.
 - Fixed: a file of the game that the page asked for while the server changed the map is asked for again
   (`fetchGameFile`, every three seconds for half a minute). The server does not answer during a change, and
   what was on its way just then was lost for good: a player whose model was being read stayed the plain
