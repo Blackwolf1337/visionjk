@@ -38,10 +38,13 @@ out vec4 o;
 void main() {
 	vec4 t = texture(uTex, vSt);
 	if (uAlphaTest == 1 && t.a < 0.5) discard;
-	vec3 light = uUseLm == 1 ? min(texture(uLm, vLm).rgb * 2.0, vec3(1.6)) : vCol.rgb;
+	// The plain view has twice the light of the map, so that dark corners can be worked in. 3 is "As in the game"
+	// until the shader scripts are read and that view takes over: the light as it is, and no haze.
+	vec3 lm = texture(uLm, vLm).rgb;
+	vec3 light = uUseLm == 1 ? (uView == 3 ? lm : min(lm * 2.0, vec3(1.6))) : vCol.rgb;
 	// the debug views of the editor: 1 the light alone, 2 the texture alone
 	vec3 c = uView == 1 ? light : uView == 2 ? t.rgb : t.rgb * light;
-	float fog = clamp(vDist / uFogFar, 0.0, 1.0) * 0.55;
+	float fog = uView == 3 ? 0.0 : clamp(vDist / uFogFar, 0.0, 1.0) * 0.55;
 	o = vec4(mix(c, vec3(0.05, 0.05, 0.06), fog), 1.0);
 }`);
 

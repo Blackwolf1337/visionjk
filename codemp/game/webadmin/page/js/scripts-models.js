@@ -133,4 +133,4 @@ function drawLateModels(upTo) {
 	return true;
 }
 // the administration draws models with their scripts once those are read
-const modelsScripted = () => appMode === 'admin' && scripts.state === 2;
+const modelsScripted = () => gameLook() && scripts.state === 2;

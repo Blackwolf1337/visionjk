@@ -276,12 +276,15 @@ function frame(now) {
 	gl.enable(gl.DEPTH_TEST);
 
 	const editor = appMode === 'editor';
-	const scripted = world && !editor && world.scripted;
+	const scripted = world && gameLook() && world.scripted;
 	// what was left over from a frame that did not get to its end
 	lateModels.length = 0;
 	deferLate = !!scripted;
 	if (scripted) {
 		drawWorldScripted(now, false);
+		// The lines of the triangles lie in the surfaces. The plain view pushes its surfaces back for them, here
+		// the lines come forward by a hair of the depth instead: the stages of a shader set that offset themselves.
+		if (editor && $('dbgWire').checked) { gl.depthRange(0, 0.9997); drawWorldWire(now); gl.depthRange(0, 1); }
 	} else if (world) {
 		drawWorldPlain(now, editor);
 	}

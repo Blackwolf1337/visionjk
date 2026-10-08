@@ -171,7 +171,7 @@
 		<label title="Only the side of a surface the game draws. From outside a room is open then: its walls and its ceiling face inwards."><input type="checkbox" id="dbgCull">Open</label>
 		<label title="The name of its class above an entity, with its targetname. Of the ones near the camera, the selected ones and every draft."><input type="checkbox" id="dbgNames" checked>Names</label>
 		<label title="The effects of the game: what an fx_runner plays, what the server plays once, and what the weapons leave. The administration always has them."><input type="checkbox" id="dbgFx" checked>Effects</label>
-		<select id="dbgLight" title="What the surfaces of the map show"><option value="0">Texture and light</option><option value="1">Light only</option><option value="2">Texture only</option></select>
+		<select id="dbgLight" title="How the map is drawn. As in the game: with the shader scripts, the light and the fog of the game, as the administration draws it. The others are the plain view of the editor: twice the light so that dark corners can be worked in, the light alone, or the images alone."><option value="3" selected>As in the game</option><option value="0">Texture and light</option><option value="1">Light only</option><option value="2">Texture only</option></select>
 	</div>
 	<div id="help">
 		<kbd>LMB</kbd> select, drag to pan &nbsp; <kbd>RMB</kbd> teleport selected<br>

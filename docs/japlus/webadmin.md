@@ -292,6 +292,17 @@ Also changed:
   192 towards the viewer for the teleport. The game frees a `trigger_push` without a target in its first
   frame, before a key could be added. The server refuses a box whose `mins` are not below its `maxs`, half a
   box, and one wider than 32768. A layout keeps such a trigger like every other placed entity.
+- New: the editor draws the map as the game does, unless its plain view is chosen (the user: "when in editor mode
+  the map is really bright than in normal administration mode", and "add the as in the game and make it
+  default"). The editor had only its plain view: an image times the light for every surface, with twice the
+  light of the map so that dark corners can be worked in, and a grey haze with the distance. That is a third
+  brighter than the game on mp/ffa3, and it has no shader scripts, no sky and no fog. The choice in the bar of
+  the views now begins with "As in the game", which is the renderer of the administration (`gameLook()` in
+  `js/pick.js`: the world, the models and which side of a surface is drawn). The three plain views are still
+  there: "Texture and light", "Light only", "Texture only". "Open" belongs to the plain view and is greyed out
+  otherwise: the game look always has the sides of the game. The wireframe lies over both, in the game look
+  drawn forward by a hair of the depth. Until the shader scripts are read the game look is the plain view with
+  the light as it is and without the haze.
 - New: the effects of the game are drawn (`js/fx-parse.js`, `fx-run.js`, `fx-draw.js`, `fx-weapons.js`; the
   user: "Effects/FXes don't show up in the panel"). Nothing of them was in the page: the fire of an
   `fx_runner`, an explosion, what a blaster bolt leaves on a wall were not there.
@@ -1129,6 +1140,16 @@ middle, a start point had no such row, a push and a teleport came with their `ta
 took both away, and after "Save layout" and a start of the map the box was there again. Not tried: a real
 player in such a box (how the late push feels on a client with its own prediction), an NPC, a vehicle, the
 classes for ships (`trigger_space`, `trigger_shipboundary`, `trigger_hyperspace`), and the Windows build.
+
+The look of the editor (`steps_look.js`, 8 checks, 2026-10-08, mp/ffa3): the editor begins with "As in the
+game"; with its markers off its picture is as bright as the one of the administration from the same camera
+(63.2 against 63.2 of 255 on average); "Texture and light" is brighter (83.9); "Open" is greyed out in the
+one and can be switched in the other; the wireframe is in the picture of both and gone without it; a ray into
+the middle of the picture finds the same spot of the map in both. The checks of the editor, which had all
+run in the plain view, ran again in the game look: `steps_drafts.js` 68, `steps_labels.js` 23,
+`steps_boxdrag.js` 16, `steps_mouse.js` 19, `steps_group.js` 24, `steps_boxtrigger.js` 24, `steps_pusharc.js`
+13, `steps_fx.js` 38, `steps_cull.js` 5, `steps_surface.js` 7, `steps_movers.js` 15, `steps_facing.js` 3,
+`steps_trace.js` 4. Not tried: how fast the game look is in the editor on a real GPU with many entities.
 
 The effects (`steps_fx.js`, 38 checks, and `steps_fxsweep.js`, 9 checks, 2026-10-08, mp/ffa3): an effect file
 is handed out and a name with `..` is not; a poll of a page that has it all has neither `fx` nor `fxPlay`
