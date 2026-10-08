@@ -132,7 +132,7 @@ Also changed:
   lightmaps are taken as they are in the map, which is what the game shows with `r_overBrightBits 0`,
   `r_mapOverBrightBits 0` and `r_gamma 1`, the defaults. See-through surfaces are drawn after the players and
   the models. Not done: fog, `deformVertexes`, glow, `surfaceSprites`, portals, culling by side (every surface
-  is drawn from both sides), and the scripts on the models of players and items, which are drawn as before.
+  is drawn from both sides).
   Images outside `textures/`, `models/` and `gfx/` are not handed out by the server, a stage that names one is
   left out. With a game module that has no `/api/shaders` the administration shows the plain view. The rules
   were checked by reading all 3365 shaders of the game through the parser. The picture was looked at in headless
@@ -160,8 +160,14 @@ Also changed:
   - The plain view shows a shader whose own name is no image with the image its script names for editors
     (`qer_editorimage`), or the first one of its stages.
 - New: the page draws the models of `models` in both modes, on their way from where they were at the last poll:
-  the props of the Models tab, cubes, balls and what else is a model entity. They are drawn with their image,
-  without the shader scripts.
+  the props of the Models tab, cubes, balls and what else is a model entity.
+- New: in the administration every model is drawn with the stages of its shaders too (`drawModelScripted`):
+  players and NPCs with the shaders of their skin, items, the weapons they hold, props. A surface whose shader
+  has no script is its image times the light of the place, as the engine makes it. The light of the place is
+  the one fixed light the page has for models, not the light grid of the map, so a model is lit the same
+  everywhere. A surface of a model that blends is drawn where it comes in the model and not sorted with the
+  rest of the picture. The colour of the team that the plain view lays over a player is left out here, the
+  game has none. The editor draws models as before.
 - New: values to pick from (`/api/list`). The Map field of the top bar offers the maps of the server and the
   bot field its bots. In the key table of an entity a value field offers what fits its key: the class names for
   `classname`, the targetnames there are for `target` and the other keys that fire, the effects for a key with

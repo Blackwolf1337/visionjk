@@ -1045,6 +1045,49 @@ void main() {
 	o = c;
 }`);
 
+// The same stages on a model: its vertices are placed by a matrix, it has no colours and no lightmap of its own,
+// and where a stage asks for the light of the place (rgbGen lightingDiffuse, and every model without a script)
+// it gets the light the page gives its models. The environment is worked out in the space of the model, as
+// the engine does it.
+const modelStageProg = compile(`#version 300 es
+layout(location=0) in vec3 aPos; layout(location=1) in vec3 aNorm; layout(location=2) in vec2 aUv;
+uniform mat4 uMvp; uniform mat4 uModel; uniform vec3 uEyeLocal;
+uniform int uTcGen; uniform vec3 uTcA; uniform vec3 uTcB; uniform vec2 uTurb;
+out vec2 vTc; out float vLight;
+void main() {
+	vec4 world = uModel * vec4(aPos, 1.0);
+	vec2 tc = aUv;
+	if (uTcGen == 2) {
+		vec3 v = normalize(uEyeLocal - aPos);
+		vec3 r = aNorm * 2.0 * dot(aNorm, v) - v;
+		tc = vec2(0.5 + r.y * 0.5, 0.5 - r.z * 0.5);
+	}
+	if (uTurb.x != 0.0) {
+		tc.x += sin(((world.x + world.z) * 0.0009765625 + uTurb.y) * 6.2831853) * uTurb.x;
+		tc.y += sin((world.y * 0.0009765625 + uTurb.y) * 6.2831853) * uTurb.x;
+	}
+	vTc = vec2(dot(uTcA.xy, tc) + uTcA.z, dot(uTcB.xy, tc) + uTcB.z);
+	vLight = 0.5 + 0.6 * max(dot(normalize(mat3(uModel) * aNorm), normalize(vec3(0.4, 0.3, 0.85))), 0.0);
+	gl_Position = uMvp * world;
+}`,
+`#version 300 es
+precision mediump float;
+in vec2 vTc; in float vLight;
+uniform sampler2D uTex; uniform vec4 uColor;
+uniform int uRgbVertex;	// 3: times the light of the place
+uniform int uAlphaFunc;
+out vec4 o;
+void main() {
+	vec4 c = uColor;
+	if (uRgbVertex == 3) c.rgb *= vLight;
+	c *= texture(uTex, vTc);
+	if (uAlphaFunc == 1 && c.a <= 0.0) discard;
+	if (uAlphaFunc == 2 && c.a >= 0.5) discard;
+	if (uAlphaFunc == 3 && c.a < 0.5) discard;
+	if (uAlphaFunc == 4 && c.a < 0.75) discard;
+	o = c;
+}`);
+
 const SC_BLEND = {
 	gl_one: gl.ONE, gl_zero: gl.ZERO, gl_dst_color: gl.DST_COLOR, gl_one_minus_dst_color: gl.ONE_MINUS_DST_COLOR,
 	gl_src_color: gl.SRC_COLOR, gl_one_minus_src_color: gl.ONE_MINUS_SRC_COLOR, gl_src_alpha: gl.SRC_ALPHA,
@@ -1151,6 +1194,7 @@ function scGen(a, rgb) {
 		return { value: rgb ? [n[0] || 0, n[1] || 0, n[2] || 0] : (n[0] || 0) };
 	}
 	if (v === 'vertex' || v === 'exactvertex') return { vertex: 1, exact: v === 'exactvertex' };
+	if (rgb && v === 'lightingdiffuse') return { diffuse: true };
 	if (v === 'oneminusvertex') return { vertex: 2, exact: true };
 	return null;
 }
@@ -1233,9 +1277,10 @@ function parseScript(body) {
 
 // The stages a surface of the map is drawn with: the script of its shader, or what the engine makes of an image
 // that has none. A surface without a lightmap is lit by the colours of its vertices, with the rules of the
-// engine for that (the end of FinishShader).
+// engine for that (the end of FinishShader). lit: true for a surface with a lightmap, false for one without,
+// 'model' for a model, which gets the light of the place where a shader has no script.
 function materialFor(name, lit) {
-	const key = scKey(name), mkey = key + (lit ? '|l' : '|v');
+	const key = scKey(name), mkey = key + (lit === 'model' ? '|m' : lit ? '|l' : '|v');
 	let mat = scripts.materials.get(mkey);
 	if (mat) return mat;
 
@@ -1248,8 +1293,11 @@ function materialFor(name, lit) {
 
 	let stages;
 	if (!def) {
-		const image = Object.assign(newStage(), { maps: [name] });
-		if (lit) {
+		const image = Object.assign(newStage(), name ? { maps: [name] } : { white: true });
+		if (lit === 'model') {
+			image.rgb = { diffuse: true };
+			stages = [image];
+		} else if (lit) {
 			Object.assign(image, { src: gl.DST_COLOR, dst: gl.ZERO });
 			stages = [Object.assign(newStage(), { lightmap: true }), image];
 		} else {
@@ -1260,7 +1308,10 @@ function materialFor(name, lit) {
 	} else {
 		stages = def.stages.map(st => Object.assign({}, st));
 		const lm = lit ? -1 : stages.findIndex(st => st.lightmap);
-		if (lm === 0 && stages.length > 1) {
+		if (lit === 'model') {
+			// a model has no lightmap: such a stage is white
+			for (const st of stages) if (st.lightmap) Object.assign(st, { lightmap: false, white: true });
+		} else if (lm === 0 && stages.length > 1) {
 			// the stage after the lightmap takes its place, as the first thing that is drawn there
 			stages.shift();
 			Object.assign(stages[0], { blend: null, depthWrite: true, alphaFunc: 0, depthEqual: false, rgb: { vertex: 1, exact: true }, alpha: null });
@@ -1398,7 +1449,7 @@ function prepareScripted(w) {
 
 const stTcA = new Float32Array(3), stTcB = new Float32Array(3), stTurb = new Float32Array(2), stColor = new Float32Array(4);
 
-function drawStage(st, t, lm, vao, count, type, offset) {
+function drawStage(st, t, lm, vao, count, type, offset, prog = stageProg) {
 	let tex;
 	if (st.lightmap) {
 		tex = lm || whiteTex;
@@ -1440,13 +1491,13 @@ function drawStage(st, t, lm, vao, count, type, offset) {
 	if (st.alpha && st.alpha.wave) stColor[3] = Math.min(1, Math.max(0, waveValue(st.alpha.wave, t)));
 	else if (st.alpha && st.alpha.value !== undefined) stColor[3] = st.alpha.value;
 
-	const u = stageProg.u;
+	const u = prog.u;
 	gl.uniform1i(u.uTcGen, st.tcGen);
 	gl.uniform3fv(u.uTcA, stTcA);
 	gl.uniform3fv(u.uTcB, stTcB);
 	gl.uniform2fv(u.uTurb, stTurb);
 	gl.uniform4fv(u.uColor, stColor);
-	gl.uniform1i(u.uRgbVertex, st.rgb && st.rgb.vertex ? st.rgb.vertex : 0);
+	gl.uniform1i(u.uRgbVertex, st.rgb && st.rgb.vertex ? st.rgb.vertex : st.rgb && st.rgb.diffuse ? 3 : 0);
 	// rgbGen vertex brings the alpha of the vertex along unless the stage says what its alpha is
 	gl.uniform1i(u.uAlphaVertex, st.alpha ? (st.alpha.vertex || 0) : (st.rgb && st.rgb.vertex === 1 && !st.rgb.exact ? 1 : 0));
 	gl.uniform1i(u.uAlphaFunc, st.alphaFunc);
@@ -1495,6 +1546,33 @@ function drawWorldScripted(now, late) {
 	gl.depthFunc(gl.LESS);
 	gl.colorMask(true, true, true, true);
 }
+
+// The surfaces of a model with the stages of their shaders, in the view of the administration. world: where the
+// model stands. A surface that blends is drawn where it comes in the model, not sorted with the rest of the
+// picture as the game does.
+function drawModelScripted(meshes, world) {
+	const t = performance.now() / 1000, u = modelStageProg.u, at = M4.transform(M4.invert(world), eye);
+	gl.useProgram(modelStageProg.p);
+	gl.uniformMatrix4fv(u.uMvp, false, viewProj);
+	gl.uniformMatrix4fv(u.uModel, false, world);
+	gl.uniform3f(u.uEyeLocal, at[0], at[1], at[2]);
+	gl.uniform1i(u.uTex, 0);
+	gl.activeTexture(gl.TEXTURE0);
+	gl.colorMask(true, true, true, false);
+	for (const mesh of meshes) {
+		const mat = mesh.mat || (mesh.mat = materialFor(mesh.shaderName || '', 'model'));
+		if (mat.nodraw) continue;
+		if (mat.polygonOffset) { gl.enable(gl.POLYGON_OFFSET_FILL); gl.polygonOffset(-1, -2); }
+		for (const st of mat.stages) drawStage(st, t, null, mesh.vao, mesh.count, gl.UNSIGNED_INT, 0, modelStageProg);
+		if (mat.polygonOffset) gl.disable(gl.POLYGON_OFFSET_FILL);
+	}
+	gl.disable(gl.BLEND);
+	gl.depthMask(true);
+	gl.depthFunc(gl.LESS);
+	gl.colorMask(true, true, true, true);
+}
+// the administration draws models with their scripts once those are read
+const modelsScripted = () => appMode === 'admin' && scripts.state === 2;
 
 // the debug view of the editor: the triangles of the map as lines
 const lineProg = compile(`#version 300 es
@@ -3962,7 +4040,7 @@ function g2Instance(id, model, team) {
 				gl.enableVertexAttribArray(2); gl.vertexAttribPointer(2, 2, gl.FLOAT, false, 0, 0);
 				const ib = gl.createBuffer(); gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ib); gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, s.idx, gl.STATIC_DRAW);
 				gl.bindVertexArray(null);
-				return { vao, posBuf, normBuf, count: s.idx.length, tex: m.textures[i], outPos: new Float32Array(s.pos.length), outNorm: new Float32Array(s.norm.length) };
+				return { vao, posBuf, normBuf, count: s.idx.length, tex: m.textures[i], shaderName: s.texName, mat: null, outPos: new Float32Array(s.pos.length), outNorm: new Float32Array(s.norm.length) };
 			});
 			inst.bones = new Float32Array(m.gla.numBones * 12);
 			inst.model = m;
@@ -4057,9 +4135,12 @@ function g2Draw(inst, x, y, z, yaw, scale, tint, tintAmount) {
 	// Ghoul2 models look down -Y, the game's yaw 0 is +X
 	yaw += Math.PI / 2;
 	const c = Math.cos(yaw), s = Math.sin(yaw);
+	const place = new Float32Array([c * scale, s * scale, 0, 0, -s * scale, c * scale, 0, 0, 0, 0, scale, 0, x, y, z, 1]);
+	// as the game draws him: with the scripts of his skin, and without the colour of his team over it
+	if (modelsScripted()) { drawModelScripted(inst.meshes, place); gl.useProgram(flatProg.p); return; }
 	gl.useProgram(skinProg.p);
 	gl.uniformMatrix4fv(skinProg.u.uMvp, false, viewProj);
-	gl.uniformMatrix4fv(skinProg.u.uModel, false, new Float32Array([c * scale, s * scale, 0, 0, -s * scale, c * scale, 0, 0, 0, 0, scale, 0, x, y, z, 1]));
+	gl.uniformMatrix4fv(skinProg.u.uModel, false, place);
 	gl.uniform3fv(skinProg.u.uTint, tint);
 	gl.uniform1f(skinProg.u.uTintAmount, tintAmount);
 	gl.uniform1i(skinProg.u.uTex, 0);
@@ -4469,7 +4550,7 @@ function loadStaticModel(path) {
 			const ib = gl.createBuffer(); gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ib); gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, s.idx, gl.STATIC_DRAW);
 			gl.bindVertexArray(null);
 			const shader = s.shader && s.shader !== '[nomaterial]' ? s.shader : '';
-			meshes.push({ vao, count: s.idx.length, tex: shader ? await mainTexture(shader) : grayTex });
+			meshes.push({ vao, count: s.idx.length, tex: shader ? await mainTexture(shader) : grayTex, shaderName: shader, mat: null });
 		}
 		const tagMats = {};
 		for (const [name, tag] of Object.entries(tags)) tagMats[name] = tagMatrix(tag, null);
@@ -4500,6 +4581,7 @@ function md3Tags(buf) {
 const handTag = cached(new Map(), 'hand', async () => md3Tags(await fetchGameFile('models/weapons2/stun_baton/baton_hand.md3'))['tag_weapon'] || null);
 
 function drawStatic(model, world) {
+	if (modelsScripted()) { drawModelScripted(model.meshes, world); gl.useProgram(flatProg.p); return; }
 	gl.useProgram(skinProg.p);
 	gl.uniformMatrix4fv(skinProg.u.uMvp, false, viewProj);
 	gl.uniformMatrix4fv(skinProg.u.uModel, false, world);
