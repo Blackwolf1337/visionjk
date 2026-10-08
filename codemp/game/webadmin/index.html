@@ -2389,6 +2389,15 @@ function applyState(s) {
 	for (const m of s.shots || []) {
 		const was = flew.get(m[0]), back = pollInterval / 1000;
 		m.prev = was ? [was[3], was[4], was[5]] : [m[3] - m[6] * back, m[4] - m[7] * back, m[5] - m[8] * back];
+		flew.delete(m[0]);
+	}
+	// What was in the air and is not any more has hit something, about half a poll further on. Not when the map
+	// is another one: then it is simply gone.
+	if (state && s.map === state.map) {
+		for (const was of flew.values()) {
+			const on = pollInterval / 2000;
+			if (flashes.length < 64) flashes.push({ pos: [was[3] + was[6] * on, was[4] + was[7] * on, was[5] + was[8] * on], weapon: was[1], alt: was[2], t: performance.now() });
+		}
 	}
 	state = s;
 	const now = performance.now();
@@ -3017,7 +3026,7 @@ function frame(now) {
 		else drawMesh(ringMesh, marker.pos[0], marker.pos[1], marker.pos[2], 0, 1 - age * 0.6, [0.3, 1, 0.4, 1]);
 	}
 
-	if (state && state.shots && state.shots.length) drawShots(k);
+	if (state && ((state.shots && state.shots.length) || flashes.length)) drawShots(k);
 	if (scripted) drawWorldScripted(now, true);
 	drawBlades();
 	if (view.id >= 0 && players.has(view.id)) {
@@ -5946,8 +5955,22 @@ const SHOT_BOLT = {
 const SHOT_BOLT_ALT = { 8: [12, 7, [0.3, 0.5, 1]], 9: [16, 12, [0.5, 0.7, 1]], 10: [8, 3, [1, 0.75, 0.3]] };
 const SHOT_MODEL = { 11: 'models/weapons2/merr_sonn/projectile.md3', 12: 'models/weapons2/thermal/thermal_proj.md3', 14: 'models/weapons2/detpack/det_pack.md3' };
 
+// Where a shot ended: a flash for a moment, since the page has no explosion of the game to show. How far it
+// reaches and how long it lasts (ms) for what goes off with a bang, by weapon and by the other way to fire it.
+const SHOT_BANG = { 11: [60, 450], 12: [70, 500], 14: [90, 550], 15: [60, 450] }, SHOT_BANG_ALT = { 8: [45, 400], 9: [60, 450], 10: [35, 350] };
+const flashes = [];		// { pos, weapon, alt, t }
+
 function drawShots(k) {
-	for (const m of state.shots) {
+	const now = performance.now();
+	for (let i = flashes.length - 1; i >= 0; i--) {
+		const f = flashes[i], bang = (f.alt && SHOT_BANG_ALT[f.weapon]) || SHOT_BANG[f.weapon] || [7, 130], age = (now - f.t) / bang[1];
+		if (age >= 1) { flashes.splice(i, 1); continue; }
+		// it grows to its size at once and fades
+		const r = bang[0] * Math.min(1, 0.4 + age * 2), fade = (1 - age) * (1 - age);
+		const rgb = ((f.alt && SHOT_BOLT_ALT[f.weapon]) || SHOT_BOLT[f.weapon] || [0, 0, [1, 0.7, 0.3]])[2].map(v => Math.min(1, v + 0.25) * fade);
+		blades.push({ org: [f.pos[0], f.pos[1], f.pos[2] - r], dir: [0, 0, 1], len: r * 2, radius: r * 0.45, rgb });
+	}
+	for (const m of (state && state.shots) || []) {
 		const weapon = m[1], pos = [m.prev[0] + (m[3] - m.prev[0]) * k, m.prev[1] + (m[4] - m.prev[1]) * k, m.prev[2] + (m[5] - m.prev[2]) * k];
 		const speed = Math.hypot(m[6], m[7], m[8]), dir = speed ? [m[6] / speed, m[7] / speed, m[8] / speed] : [0, 0, 1];
 		const model = SHOT_MODEL[weapon] ? staticNow(SHOT_MODEL[weapon]) : null;

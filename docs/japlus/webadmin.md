@@ -310,8 +310,11 @@ Also changed:
   by where they were, a new one comes from where its speed says it was. A saber that was thrown was drawn
   before, but only as its hilt, upright and without a blade: the server has it among the models then. Now the
   page knows whose saber an entity is (`saberEnt` of a player), lays it flat as the client does, lets it turn
-  its 800 degrees a second between the polls and gives it the blade of its owner. Not drawn: the trail and
-  the explosion of anything, and what only an effect shows (the beam of a disruptor).
+  its 800 degrees a second between the polls and gives it the blade of its owner. Where a shot ends there is
+  a flash for a moment (`flashes`): the page has no explosion of the game to show, so what was in the air at
+  one poll and is gone at the next lights up about where it must have hit, a spark for a bolt, a ball of 35
+  to 90 units for half a second for a rocket, a grenade, a det pack and the shots that burst. Not drawn: the
+  trail of anything, the real effects, and what only an effect shows (the beam of a disruptor).
 - Changed: "Fire" also fires a `misc_weapon_shooter`. The game lends that class a client for the weapon code,
   and the first guard took everything with a client for an NPC. It asks for the NPC itself now.
 - New: the tab Load of the administration (`/api/perf`, `WA_PerfFrameBegin`, `WebAdmin_FrameEnd`). Five
@@ -893,8 +896,12 @@ What is in the air (`steps_shots.js`, 7 checks, the same day, mp/ffa3): a `misc_
 launcher, placed and fired through the panel, put a rocket into the list that flew 360 units in 0.4 s along
 the way the shooter looks (its speed is 900) and had the page ask for the model of a rocket. One with a
 blaster that repeats had three bolts in the air at once, and the picture with them differed from the one
-without. Not tried: a thermal detonator and a det pack (no bot threw one), and how the colours compare with
-the effects of the game.
+without. The rocket ended in one flash, about where it met the wall 2,700 units on, and the flash was gone
+half a second later (9 checks now, three runs). Seen while testing, in the code of the game and not of the
+panel: the client the game lends a `misc_weapon_shooter` starts as zeros, which `WP_FireRocket` takes for a
+finished lock on player 0, so the first rocket a shooter fires after a map started turns to that player
+when he is alive. Not tried: a thermal detonator and a det pack (no bot threw one), and how the colours
+compare with the effects of the game.
 
 What fires what (`steps_trace.js`, 4 checks, the same day, mp/ffa3): a trigger_multiple fired through the
 panel gave five events, the world firing the trigger and the trigger firing each of its four lifts, nothing
