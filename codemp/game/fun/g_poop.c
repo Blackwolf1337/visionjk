@@ -31,7 +31,7 @@ plain model entity (a chunk of the rock debris of the game), the splat a stock s
 Not from JA+ and not from JKAdmin.
 */
 
-#include "g_local.h"
+#include "game/g_local.h"
 
 #define POOP_TIME		3200		// msec the emote takes
 #define POOP_DROP		2500		// msec until the rock comes

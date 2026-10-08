@@ -36,7 +36,7 @@ the view of the followed client. A bot does not care: it turns to where it wants
 Not from JA+ and not from JKAdmin.
 */
 
-#include "g_local.h"
+#include "game/g_local.h"
 
 gclient_t *ClientForString( const char *s );	// g_svcmds.c
 

@@ -113,7 +113,7 @@ Also changed:
   sent, what happened shows in the state (`jp` object of a player: admin rank and the JA+ flags). `freeze` has no
   console command in JA+ and toggles the flag directly. Left out: `amplayefx` and `amtest`, which JA+ does not
   offer on the console. Kick, ban, team and teleport were there already. Added without a test run.
-- New: hallucinations for one player (`codemp/game/g_schizo.c`), the "Schizophrenia" button in the player panel,
+- New: hallucinations for one player (`codemp/game/fun/g_schizo.c`), the "Schizophrenia" button in the player panel,
   action `schizo`, also the server console command `schizo <player>`. Every few seconds something happens that
   only he gets: blaster bolts pass him, a saber is switched on behind him, steps come closer, voices, breathing
   and screams, a detonator beeps and goes off, the lock tone of a rocket launcher, thunder with a shaking view,
@@ -131,20 +131,20 @@ Also changed:
 - Fixed in the page: the key fields of an entity lost the focus about once a second. JKAdmin builds the key
   table again with every poll of the entities unless something was typed. Here it is only built again when the
   entity or its keys changed, and never while the cursor is in one of its fields.
-- New emote `ampoop` (`codemp/game/g_poop.c`, the command with the other emotes in `g_japlus_cmds.c`). A player
+- New emote `ampoop` (`codemp/game/fun/g_poop.c`, the command with the other emotes in `g_japlus_cmds.c`). A player
   types it or binds it like `amsit`: he sits down in the air (animation `BOTH_SIT3`), moans three times (the
   pain sounds of his own model), and a small rock lands on the floor under him with a splat and a sigh. The
   rock is a plain model entity (a chunk of the rock debris), lies there for 90 seconds, at most 24 on the map.
   The rules of the emotes apply (`JP_Emote`), bit 30 of `jp_emotDisallow` turns it off, he has to stand still
   and it is not for duels. It is in the emote list the server prints. In the panel the "Poop" button sends it
   for the selected player (action `poop`). Server side only. Added without a test run.
-- New: flatulence for one player (`codemp/game/g_flatulence.c`), the "Flatulence" button in the player panel,
+- New: flatulence for one player (`codemp/game/fun/g_flatulence.c`), the "Flatulence" button in the player panel,
   action `flatulence`, also the server console command `flatulence <player>`. Every 1.5 to 6 seconds he breaks
   wind: a sound everybody near him hears (the snorts of the rancor, the talk of the gonk droid, an air burst)
   and a green cloud behind him (the gas cloud of the noghri stick). One in six is a big one with three clouds
   that shoves him forward, not in a duel. Server side only, stock sound and effect events. Gone when he leaves or
   the map changes. Added without a test run.
-- New: disorientation for one player (`codemp/game/g_disorient.c`), the "Disorient" button in the player panel,
+- New: disorientation for one player (`codemp/game/fun/g_disorient.c`), the "Disorient" button in the player panel,
   action `disorient`, also the server console command `disorient <player>`. The view sways all the time (pitch,
   yaw and roll, two sines each with periods that do not fit together). Every 3.5 to 9 seconds it is thrown around
   by 70 to 200 degrees with a screen shake only this client gets, and the player stumbles a step to the side (not

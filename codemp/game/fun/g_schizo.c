@@ -39,7 +39,7 @@ the player gets the same things, the engine sends him the view of the followed c
 Not from JA+ and not from JKAdmin.
 */
 
-#include "g_local.h"
+#include "game/g_local.h"
 
 gclient_t *ClientForString( const char *s );	// g_svcmds.c
 gentity_t *NPC_Spawn_Do( gentity_t *ent );		// NPC_spawn.c

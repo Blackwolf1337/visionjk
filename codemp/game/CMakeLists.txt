@@ -51,9 +51,6 @@ set(MPGameGameFiles
 	"${MPDir}/game/g_active.c"
 	"${MPDir}/game/g_bot.c"
 	"${MPDir}/game/g_client.c"
-	"${MPDir}/game/g_disorient.c"
-	"${MPDir}/game/g_flatulence.c"
-	"${MPDir}/game/g_poop.c"
 	"${MPDir}/game/g_cmds.c"
 	"${MPDir}/game/g_combat.c"
 	"${MPDir}/game/g_cvar.c"
@@ -70,7 +67,6 @@ set(MPGameGameFiles
 	"${MPDir}/game/g_navnew.c"
 	"${MPDir}/game/g_object.c"
 	"${MPDir}/game/g_saga.c"
-	"${MPDir}/game/g_schizo.c"
 	"${MPDir}/game/g_session.c"
 	"${MPDir}/game/g_spawn.c"
 	"${MPDir}/game/g_svcmds.c"
@@ -199,6 +195,16 @@ set(MPGamePropsFiles
 	)
 source_group("game/props" FILES ${MPGamePropsFiles})
 set(MPGameFiles ${MPGameFiles} ${MPGamePropsFiles})
+
+# what an admin does to one player, and the emote ampoop
+set(MPGameFunFiles
+	"${MPDir}/game/fun/g_disorient.c"
+	"${MPDir}/game/fun/g_flatulence.c"
+	"${MPDir}/game/fun/g_poop.c"
+	"${MPDir}/game/fun/g_schizo.c"
+	)
+source_group("game/fun" FILES ${MPGameFunFiles})
+set(MPGameFiles ${MPGameFiles} ${MPGameFunFiles})
 
 set(MPGameCommonFiles
 	"${MPDir}/qcommon/q_shared.c"
