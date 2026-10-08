@@ -235,6 +235,8 @@ body.fp #help, body.fp #command, body.fp #entPanel { display: none; }
 #appMode button:last-child { border-radius: 0 3px 3px 0; border-left: 0; }
 #appMode button.on { background: var(--accent); border-color: var(--accent); color: #fff; }
 #dbg { position: absolute; left: 10px; top: 10px; display: flex; align-items: center; gap: 12px; color: var(--muted); font-size: 12px; background: rgba(13,13,15,.75); border: 1px solid var(--line); padding: 5px 8px; border-radius: 3px; }
+#coords { position: absolute; left: 50%; bottom: 10px; transform: translateX(-50%); color: var(--muted); font: 11px ui-monospace, Menlo, Consolas, monospace; background: rgba(13,13,15,.75); border: 1px solid var(--line); padding: 3px 8px; border-radius: 3px; pointer-events: none; white-space: nowrap; }
+#coords:empty { display: none; }
 #flyBtn { position: absolute; right: 10px; bottom: 10px; }
 #shotBtn { position: absolute; right: 56px; bottom: 10px; }
 #dbg label { display: flex; align-items: center; gap: 4px; cursor: pointer; }
@@ -350,7 +352,9 @@ body.app-admin #dbg, body.app-admin .editorOnly, body.app-admin #tabs button[dat
 		<div class="tools">
 			<div class="inline"><input id="newClass" placeholder="Search a class to place" spellcheck="false" autocomplete="off"><button id="placeBtn" title="Then right-click on the map">Place</button></div>
 			<div id="classPicker"></div>
-			<div class="inline"><input id="entFilter" placeholder="Filter by class or targetname" spellcheck="false"><a href="api/export" title="Download the entities as .ent">Export .ent</a></div>
+			<div class="inline"><input id="entFilter" placeholder="Filter by class or targetname" spellcheck="false"><a href="api/export" title="Download all entities of the map as .ent">Export .ent</a></div>
+			<div class="inline"><a href="api/export?placed=1" title="Download only what was placed through the panel, as .ent: what an import takes on another map or server">Export placed</a>
+				<button id="entImport" style="margin-left:auto" title="Places every entity of a .ent file. The worldspawn and what is made of brushes of another map are left out.">Import .ent</button><input type="file" id="entImportFile" accept=".ent,.txt,text/plain" hidden></div>
 			<div class="inline"><button id="entUndo" disabled title="Takes the last change to an entity back (Ctrl+Z)">Undo</button><button id="entRedo" disabled title="Does it again (Ctrl+Y)">Redo</button>
 				<label class="hint" style="margin:0 0 0 auto" title="Placing, moving and the Shift+arrow keys go in steps of this many units">Grid <select id="grid"><option>1</option><option>2</option><option>4</option><option selected>8</option><option>16</option><option>32</option><option>64</option></select></label></div>
 			<div class="hint" id="entBudget" title="What is in use of what the engine has a limit for. The server refuses to place an entity that would go over one."></div>
@@ -383,6 +387,7 @@ body.app-admin #dbg, body.app-admin .editorOnly, body.app-admin #tabs button[dat
 	</div>
 	<button id="shotBtn" title="Saves what the map view shows as a picture">Picture</button>
 	<button id="flyBtn" title="Fly through the map instead of looking at it from above (C). W A S D fly, Q and E go down and up, the mouse turns the head, the wheel sets the speed, Shift is faster.">Fly</button>
+	<div id="coords" class="editorOnly"></div>
 	<div id="loading">Loading map...</div>
 	<div id="hud"><canvas id="hudCanvas"></canvas><div class="hud-top"><span id="hudName"></span><button id="fpExit">Exit (Esc)</button></div></div>
 	<div id="help">
@@ -464,6 +469,7 @@ body.app-admin #dbg, body.app-admin .editorOnly, body.app-admin #tabs button[dat
 			<button id="entRotR" title="Turn right 15&deg;">&#10227; 15&deg;</button>
 			<button id="entDup">Duplicate</button>
 			<button id="entFloor" title="Puts it on the floor below it">To floor</button>
+			<button id="entTemplate" title="Keeps its keys under a name. The name is offered in the class search, to place more of it.">Template</button>
 			<button id="entFocus" title="Brings the camera to it">Focus</button>
 			<button class="danger" id="entDel">Delete</button>
 		</div>
@@ -3113,7 +3119,7 @@ function renderEntPanel() {
 		$('kvRows').innerHTML = editable ? ent.keys.map(kvRow).join('') : '<tr><td class="hint">Made by the game code, there are no keys to edit. It can only be deleted.</td></tr>';
 		renderEntTools(ent);
 	}
-	for (const id of ['kvAdd', 'entApply', 'entRotL', 'entRotR', 'entDup', 'entFloor']) $(id).disabled = !editable;
+	for (const id of ['kvAdd', 'entApply', 'entRotL', 'entRotR', 'entDup', 'entFloor', 'entTemplate']) $(id).disabled = !editable;
 	$('entHint').style.display = editable ? '' : 'none';
 }
 
@@ -3222,7 +3228,17 @@ const PLACE_KEYS = {
 const PLACE_HEIGHT = { misc_blackhole: 72, misc_ball: 64, misc_cube: 48, misc_prop: 48 };
 
 function placeEntity(hit) {
-	const cls = $('newClass').value.trim();
+	const name = $('newClass').value.trim();
+	// a template: its keys, at the height its class is placed at
+	if (name[0] === '@') {
+		const keys = templates[name.slice(1)];
+		if (!keys) { toast('No template ' + name.slice(1), false); return; }
+		const tcls = (keys.find(k => k[0].toLowerCase() === 'classname') || [])[1] || '';
+		const tz = tcls in PLACE_HEIGHT ? PLACE_HEIGHT[tcls] : /^misc_model/.test(tcls) ? 0 : 24;
+		entityOp({ op: 'spawn', kv: keysText(setKey(keys.map(k => k.slice()), 'origin', fmtVec([hit[0], hit[1], hit[2] + tz]))) }, 'Placed ' + name.slice(1));
+		return;
+	}
+	const cls = name;
 	// items drop to the floor themselves, players and NPCs stand on it
 	const z = cls in PLACE_HEIGHT ? PLACE_HEIGHT[cls] : /^misc_model/.test(cls) ? 0 : 24;
 	entityOp({ op: 'spawn', kv: keysText([['classname', cls], ['origin', fmtVec([hit[0], hit[1], hit[2] + z])]].concat(PLACE_KEYS[cls] || [])) }, 'Placed ' + cls);
@@ -3999,6 +4015,76 @@ setInterval(logPoll, 2000);
 $('logFilter').addEventListener('input', logRender);
 $('logClear').addEventListener('click', () => { logView.lines = []; logRender(); });
 
+// ---- templates: the keys of an entity under a name, kept by the browser, to place more of the same
+
+let templates = {};
+try { templates = JSON.parse(localStorage.getItem('templates') || '{}') || {}; } catch (e) { /* none then */ }
+function templatesKeep() {
+	try { localStorage.setItem('templates', JSON.stringify(templates)); } catch (e) { toast('The browser does not keep it', false); }
+}
+
+$('entTemplate').addEventListener('click', () => {
+	const ent = ents.get(selectedEnt);
+	if (!ent || !ent.keys) return;
+	if (ent.bmodel) { toast('Brush models make no template, they use the map geometry', false); return; }
+	const name = (prompt('Name of the template', entKey(ent, 'targetname') || ent.classname) || '').trim().replace(/[@"<>]/g, '');
+	if (!name) return;
+	// without its place: that is where it is put
+	templates[name] = panelKeys().filter(k => k[0].toLowerCase() !== 'origin');
+	templatesKeep();
+	toast('Template ' + name + ' kept: search for it where the classes are, Shift+click there takes it away');
+});
+
+// ---- import: every entity of a .ent file is placed, one after the other
+
+function parseEnt(text) {
+	const out = [];
+	for (const m of text.matchAll(/\{([^{}]*)\}/g)) {
+		const keys = [...m[1].matchAll(/"([^"]*)"\s+"([^"]*)"/g)].map(k => [k[1], k[2]]);
+		if (keys.length) out.push(keys);
+	}
+	return out;
+}
+
+$('entImport').addEventListener('click', () => $('entImportFile').click());
+$('entImportFile').addEventListener('change', async () => {
+	const file = $('entImportFile').files[0];
+	$('entImportFile').value = '';
+	if (!file) return;
+	const all = parseEnt(await file.text()), value = (keys, key) => (keys.find(k => k[0].toLowerCase() === key) || [])[1] || '';
+	// not the worldspawn, and nothing that is made of the brushes of the map it came from
+	const list = all.filter(keys => value(keys, 'classname').toLowerCase() !== 'worldspawn' && value(keys, 'model')[0] !== '*');
+	if (!list.length) { toast('No entity to place in ' + file.name, false); return; }
+	if (!confirm('Place ' + list.length + ' entities of ' + file.name + '?' + (all.length > list.length ? ' ' + (all.length - list.length) + ' are left out (worldspawn, brush models).' : ''))) return;
+	let placed = 0, refused = 0, why = '';
+	for (const keys of list) {
+		try {
+			const json = await (await fetch('api/entity', { method: 'POST', body: new URLSearchParams({ op: 'spawn', kv: keysText(keys) }) })).json();
+			if (json.ok) placed++; else { refused++; why = why || value(keys, 'classname') + ': ' + json.message; }
+		} catch (e) {
+			refused++;
+			why = why || e.message;
+		}
+	}
+	// that many at once are not one step of undo, and the steps before name numbers that may be taken now
+	histClear();
+	histButtons();
+	await pollEntities();
+	toast('Imported ' + placed + (refused ? ', ' + refused + ' refused (' + why + ')' : ''), !refused);
+});
+
+// ---- where the mouse is on the map, and how far that is from the selected entity
+
+let coordsWanted = false;
+canvas.addEventListener('mousemove', () => { coordsWanted = true; });
+canvas.addEventListener('mouseleave', () => { $('coords').textContent = ''; });
+setInterval(() => {
+	if (!coordsWanted || appMode !== 'editor' || !mouseAt || !world || drag) return;
+	coordsWanted = false;
+	const ray = screenRay(mouseAt[0], mouseAt[1]), hit = snapHit(pickGround(ray.origin, ray.dir)), sel = ents.get(selectedEnt);
+	$('coords').textContent = hit ? fmtVec(hit) + (sel ? '   ' + Math.round(Math.hypot(hit[0] - sel.pos[0], hit[1] - sel.pos[1], hit[2] - sel.pos[2])) + ' from #' + sel.id : '') : '';
+}, 80);
+
 // ---- undo and redo
 
 // The server spawns an entity anew with every change, so it has another number afterwards. The history names an
@@ -4433,6 +4519,7 @@ const classInfo = new Map();	// item classname -> { model, view, icon, descripti
 const ITEM_TYPES = ['', 'Weapon', 'Ammo', 'Armor', 'Health', 'Powerup', 'Holdable', 'Powerup', 'Team item'];
 
 function classCategory(cls) {
+	if (cls[0] === '@') return 'Template';
 	const it = classInfo.get(cls);
 	if (it) return ITEM_TYPES[it.type] || 'Item';
 	const cats = [[/^npc_/i, 'NPC'], [/^info_player/, 'Spawn point'], [/^info_/, 'Info'], [/^trigger_/, 'Trigger'], [/^func_/, 'Brush'],
@@ -4442,9 +4529,10 @@ function classCategory(cls) {
 }
 
 let pickerIndex = -1;
+// the templates come first: "@name" in the list and in the field
 function pickerMatches() {
 	const f = $('newClass').value.trim().toLowerCase();
-	return allClasses.filter(c => !f || c.toLowerCase().includes(f)).slice(0, 400);
+	return Object.keys(templates).sort().map(n => '@' + n).concat(allClasses).filter(c => !f || c.toLowerCase().includes(f)).slice(0, 400);
 }
 function renderPicker() {
 	const list = pickerMatches();
@@ -4488,7 +4576,10 @@ $('newClass').addEventListener('keydown', e => {
 $('classPicker').addEventListener('mousedown', e => e.preventDefault());	// keep the focus in the input
 $('classPicker').addEventListener('click', e => {
 	const row = e.target.closest('.cls[data-cls]');
-	if (row) choose(row.dataset.cls);
+	if (!row) return;
+	// Shift and a click takes a template away
+	if (e.shiftKey && row.dataset.cls[0] === '@') { delete templates[row.dataset.cls.slice(1)]; templatesKeep(); renderPicker(); return; }
+	choose(row.dataset.cls);
 });
 let hoverTimer = 0;
 $('classPicker').addEventListener('mouseover', e => {

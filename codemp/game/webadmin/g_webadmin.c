@@ -1575,16 +1575,24 @@ static void WA_ApiClasses( waConnection_t *c ) {
 }
 
 // The current entities in .ent format, for keeping an edited layout.
-static void WA_ApiExport( waConnection_t *c ) {
+// placed=1: only what was placed through the panel, without the worldspawn. That is what an import takes on
+// another map or another server.
+static void WA_ApiExport( waConnection_t *c, const char *query ) {
 	waBuffer_t	b = { 0 };
-	char		mapname[MAX_QPATH], headers[256];
+	char		mapname[MAX_QPATH], headers[256], flag[4];
+	qboolean	placedOnly;
 	int			i;
+
+	WA_FormValue( query, "placed", flag, sizeof( flag ) );
+	placedOnly = (qboolean)( flag[0] == '1' );
 
 	for ( i = MAX_CLIENTS; i <= ENTITYNUM_WORLD; i++ ) {
 		const int num = i == MAX_CLIENTS ? ENTITYNUM_WORLD : ( i == ENTITYNUM_WORLD ? MAX_CLIENTS : i );	// worldspawn first
 		const char *p, *end;
 
 		if ( !entityVars[num] || ( num != ENTITYNUM_WORLD && !g_entities[num].inuse ) )
+			continue;
+		if ( placedOnly && ( num == ENTITYNUM_WORLD || !entityPlaced[num] ) )
 			continue;
 
 		WA_BufAppend( &b, "{\n", 2 );
@@ -1597,7 +1605,8 @@ static void WA_ApiExport( waConnection_t *c ) {
 	}
 
 	trap->Cvar_VariableStringBuffer( "mapname", mapname, sizeof( mapname ) );
-	Com_sprintf( headers, sizeof( headers ), "Content-Disposition: attachment; filename=\"%s.ent\"\r\nCache-Control: no-store\r\n", COM_SkipPath( mapname ) );
+	Com_sprintf( headers, sizeof( headers ), "Content-Disposition: attachment; filename=\"%s%s.ent\"\r\nCache-Control: no-store\r\n", COM_SkipPath( mapname ),
+		placedOnly ? "_placed" : "" );
 	WA_Respond( c, 200, "OK", "text/plain; charset=utf-8", headers, b.data ? b.data : "", b.len );
 	WA_BufFree( &b );
 }
@@ -3089,7 +3098,7 @@ static void WA_HandleRequest( waConnection_t *c, char *head, char *body, int bod
 	} else if ( !strcmp( method, "GET" ) && !strcmp( path, "/api/classes" ) ) {
 		WA_ApiClasses( c );
 	} else if ( !strcmp( method, "GET" ) && !strcmp( path, "/api/export" ) ) {
-		WA_ApiExport( c );
+		WA_ApiExport( c, query );
 	} else if ( !strcmp( method, "GET" ) && !strcmp( path, "/api/chat" ) ) {
 		WA_ApiChat( c, query );
 	} else if ( !strcmp( method, "POST" ) && !strcmp( path, "/api/entity" ) ) {

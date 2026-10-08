@@ -88,7 +88,7 @@ the answer tells the page that the numbers started over.
 | `POST /api/waypoint` | `op` add (`x`, `y`, `z`, `flags`, `after`: the waypoint it comes behind, none for the end), remove (`index`) or save |
 | `GET /api/log?from=` | the log of the game from a place on, `next` is where to ask from the next time. Without `from`, or with a place the panel does not have: its last part |
 | `GET /api/classdoc` | the entity definitions of the game code: every `QUAKED` comment of its source files as text |
-| `GET /api/export` | the entities in `.ent` format |
+| `GET /api/export` | the entities in `.ent` format. `placed=1`: only what was placed through the panel, without the worldspawn |
 | `GET /api/chat?since=&epoch=` | chat lines after number `since`. Everything if `epoch` is not the current one |
 | `POST /api/action` | `action`, `id`, `value`: say, addbot, map, kick, ban, health, armor, scale, kill, god, noclip, schizo, flatulence, disorient, poop, gravity (no `id`), reload (no `id`), playergravity, team, teleport, and the JA+ ones: amsleep, amwake, amprotect, amempower, ammerc, ammindtrick, amghost, amsilence, amunsilence, amslap, amForceAltDim, amUnForceAltDim, amdenyvote, amShowMotd, amrename, ampsay, admgrant, freeze |
 | `POST /api/entity` | `op` spawn, update or delete, with `id` and `kv` (one `key=value` per line). `op` clear with `kv` `classname=<class>` deletes every entity of that class that was placed through the panel. `map=1` with spawn: it is an entity of the map that comes back (undo), not a placed one |
@@ -217,6 +217,12 @@ Also changed:
   drawn on them, and the sky is not fogged.
 - A shader script or an image the server did not answer for is asked for again (the server is away for a moment
   when the map changes), a few times, before it counts as missing.
+- New: in the World tab. "Export placed" downloads only what was placed through the panel, "Import .ent" places
+  every entity of such a file, one after the other, and says how many the server refused and why. The
+  worldspawn and what is made of brushes of the map it came from are left out. An import empties the history of
+  undo. "Template" in the panel of an entity keeps its keys under a name in the browser: the name is offered in
+  the class search as `@name` and is placed like a class, Shift and a click there takes it away. At the bottom
+  of the map the place under the mouse is shown, on the grid, and how far it is from the selected entity.
 - New: the server refuses to place what would end it (`WA_SpawnRefused`): a class made of brushes (`trigger_`,
   `func_`) without a `model` key that names a brush model of the map, the classes whose spawn function raises
   an error without a key (`target_speaker`, `target_play_music`, `target_level_change`,
