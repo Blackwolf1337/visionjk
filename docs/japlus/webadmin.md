@@ -132,7 +132,7 @@ Also changed:
   `skyParms` around the eye and the stages of the sky shader as layers of clouds, as in `tr_sky.cpp`. The
   lightmaps are taken as they are in the map, which is what the game shows with `r_overBrightBits 0`,
   `r_mapOverBrightBits 0` and `r_gamma 1`, the defaults. See-through surfaces are drawn after the players and
-  the models. Not done: fog, `deformVertexes`, glow, `surfaceSprites`, portals, culling by side (every surface
+  the models. Not done: `deformVertexes`, glow, `surfaceSprites`, portals, culling by side (every surface
   is drawn from both sides).
   Images outside `textures/`, `models/` and `gfx/` are not handed out by the server, a stage that names one is
   left out. With a game module that has no `/api/shaders` the administration shows the plain view. The rules
@@ -206,6 +206,17 @@ Also changed:
   it (`WebAdmin_Log`, one line in `G_LogPrintf`), which keeps the last 64 KB. The module is loaded anew with
   every map, so the view of a new map starts with the end of the file as the map before left it. The whole
   file is `games.log` in the Files tab.
+- New: fog in the administration, where the camera is in the map (flying, or through the eyes of a player; from
+  above it would hide the map). The page reads the fogs of the map file and which one a surface is in, and takes
+  colour and depth from `fogParms` of the fog shader. The fog of the whole map is what the engine does with the
+  fog of OpenGL: every stage fades to the colour of the fog by `exp( -( d * 2.354 / depth )^2 )`, a stage that
+  adds fades to black and one that multiplies to white. The fog of a brush (a pit) is a pass of its own over the
+  surfaces in it, as `RB_FogPass`: the colour of the fog, the thicker the further the line of sight runs through
+  the fog, cut at the side of the brush the fog ends at. Only shaders with a sort up to see-through are fogged,
+  and `noglfog` is read, as in the engine. Models are in the fog of the whole map, the fog of a brush is not
+  drawn on them, and the sky is not fogged.
+- A shader script or an image the server did not answer for is asked for again (the server is away for a moment
+  when the map changes), a few times, before it counts as missing.
 - New: the server refuses to place what would end it (`WA_SpawnRefused`): a class made of brushes (`trigger_`,
   `func_`) without a `model` key that names a brush model of the map, the classes whose spawn function raises
   an error without a key (`target_speaker`, `target_play_music`, `target_level_change`,

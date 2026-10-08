@@ -653,7 +653,7 @@ function parseBsp(buffer) {
 	let sky = '';
 
 	for (let o = sfl.ofs; o < sfl.ofs + sfl.len; o += SURF_SIZE) {
-		const shaderNum = dv.getInt32(o, true), type = dv.getInt32(o + 8, true);
+		const shaderNum = dv.getInt32(o, true), fogNum = dv.getInt32(o + 4, true), type = dv.getInt32(o + 8, true);
 		const firstVert = dv.getInt32(o + 12, true), nv = dv.getInt32(o + 16, true);
 		const firstIndex = dv.getInt32(o + 20, true), ni = dv.getInt32(o + 24, true);
 		const lmNum = dv.getInt32(o + 36, true);
@@ -674,10 +674,10 @@ function parseBsp(buffer) {
 		}
 		if (!tris.length) continue;
 
-		const key = shaderNum + ':' + (lmNum >= 0 && lmNum < lightmaps.length ? lmNum : -1);
+		const key = shaderNum + ':' + (lmNum >= 0 && lmNum < lightmaps.length ? lmNum : -1) + ':' + fogNum;
 		let b = batches.get(key);
 		if (!b) {
-			b = { shader: shaderNum, lightmap: lmNum >= 0 && lmNum < lightmaps.length ? lmNum : -1, pos: [], st: [], lm: [], col: [], norm: [], idx: [] };
+			b = { shader: shaderNum, fog: fogNum, lightmap: lmNum >= 0 && lmNum < lightmaps.length ? lmNum : -1, pos: [], st: [], lm: [], col: [], norm: [], idx: [] };
 			batches.set(key, b);
 		}
 		const base = b.pos.length / 3;
@@ -696,6 +696,17 @@ function parseBsp(buffer) {
 		for (const t of tris) pickIdx.push(pbase + t);
 	}
 
+	// The fogs (R_LoadFogs in tr_bsp.cpp): a shader with fogParms and the brush that is filled with it. No brush
+	// means the whole map. The side of the brush that is seen from outside is the plane the fog ends at, kept as
+	// the engine keeps it: looking into the fog.
+	const fl = lump(12), fogs = [];
+	for (let o = fl.ofs; o + 72 <= fl.ofs + fl.len; o += 72) {
+		let name = '';
+		for (let i = 0; i < 64; i++) { const ch = dv.getUint8(o + i); if (!ch) break; name += String.fromCharCode(ch); }
+		const brush = dv.getInt32(o + 64, true), side = dv.getInt32(o + 68, true);
+		const pn = brush >= 0 && side >= 0 ? brushes.sides[(brushes.brushes[brush * 3] + side) * 3] * 4 : -1, P = brushes.planes;
+		fogs.push({ shader: name, global: brush === -1, plane: pn >= 0 && pn + 3 < P.length ? [-P[pn], -P[pn + 1], -P[pn + 2], -P[pn + 3]] : [0, 0, 0, 0] });
+	}
 	// The light grid: the light a model gets where it stands (R_LoadLightGrid in tr_bsp.cpp). The map is cut into
 	// cells, 64 x 64 x 128 units unless the worldspawn says otherwise, every cell names its sample in the array,
 	// and a sample is the ambient and the directed light of four styles, the styles, and where the light comes from.
@@ -713,7 +724,7 @@ function parseBsp(buffer) {
 	};
 	const stats = { surfaces: Math.floor(sfl.len / SURF_SIZE), vertices: Math.floor(numVerts), indexes: indexes.length, shaders: shaders.length, lightmaps: lightmaps.length,
 		brushModels: models.length, brushes: brushes.brushes.length / 3, planes: brushes.planes.length / 4, bytes: buffer.byteLength };
-	return { shaders, lightmaps, batches: [...batches.values()], bounds, sky, models, brushes, grid, stats, pick: { pos: new Float32Array(pickPos), idx: new Uint32Array(pickIdx) } };
+	return { shaders, lightmaps, batches: [...batches.values()], bounds, sky, models, brushes, fogs, grid, stats, pick: { pos: new Float32Array(pickPos), idx: new Uint32Array(pickIdx) } };
 }
 
 // quadratic bezier patch, 3x3 control blocks
@@ -973,10 +984,10 @@ async function loadMap(name) {
 			const shaderName = bsp.shaders[b.shader].name;
 			if (!textures.has(shaderName)) textures.set(shaderName, gameImage(shaderName, false));
 			// posBuf and tri: the wireframe of the editor makes its lines of them when it is asked for
-			return { vao, count: b.idx.length, shaderName, lm: b.lightmap >= 0 ? lightmapTex[b.lightmap] : null, posBuf, tri, wire: null };
+			return { vao, count: b.idx.length, shaderName, fog: b.fog, lm: b.lightmap >= 0 ? lightmapTex[b.lightmap] : null, posBuf, tri, wire: null };
 		});
 
-		world = { batches, textures, bounds: bsp.bounds, pick: bsp.pick, sky: bsp.sky, models: bsp.models, brushes: bsp.brushes, shaders: bsp.shaders, stats: bsp.stats, grid: bsp.grid, wires: new Map(), scripted: null, skyDraw: null };
+		world = { batches, textures, bounds: bsp.bounds, pick: bsp.pick, sky: bsp.sky, models: bsp.models, brushes: bsp.brushes, shaders: bsp.shaders, stats: bsp.stats, grid: bsp.grid, fogs: bsp.fogs, fogInfo: [], globalFog: null, wires: new Map(), scripted: null, skyDraw: null };
 		prepareScripted(world);
 		resetCamera();
 		$('loading').style.display = 'none';
@@ -990,11 +1001,18 @@ async function loadMap(name) {
 async function fetchImage(name, clamp) {
 	const m = /\.(tga|jpg|png)$/i.exec(name), base = m ? name.slice(0, m.index) : name;
 	const endings = [m ? m[0].toLowerCase() : '', '.jpg', '.tga', '.png'].filter((e, i, all) => e && all.indexOf(e) === i);
+	let unanswered = false;
 	for (const ext of endings) {
 		try {
-			const res = await fetch('api/file?name=' + encodeURIComponent(base + ext));
-			if (!res.ok) continue;
-			const data = await res.arrayBuffer();
+			let res, data;
+			try {
+				res = await fetch('api/file?name=' + encodeURIComponent(base + ext));
+				if (!res.ok) { if (res.status !== 404 && res.status !== 400) unanswered = true; continue; }
+				data = await res.arrayBuffer();
+			} catch (e) {
+				unanswered = true;
+				continue;
+			}
 			if (ext === '.tga') {
 				const img = decodeTga(data);
 				if (!img) continue;
@@ -1012,8 +1030,10 @@ async function fetchImage(name, clamp) {
 				gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 			}
 			return { tex, alpha: false };
-		} catch (e) { /* the next ending */ }
+		} catch (e) { /* a file that is no image: the next ending */ }
 	}
+	// the server did not answer (it changes the map, say): that is not "there is none", the caller may ask again
+	if (unanswered) throw new Error('no answer for ' + name);
 	return null;
 }
 
@@ -1037,7 +1057,7 @@ uniform int uTcGen;		// 0 the texture coordinates, 1 the ones of the lightmap, 2
 uniform vec3 uTcA; uniform vec3 uTcB;	// the tcMods of the stage as one matrix
 uniform vec2 uTurb;		// tcMod turb: how far, and where in its wave it is
 uniform mediump int uAlphaVertex;	// the precision the fragment shader has for it: it is in both
-out vec2 vTc; out vec4 vCol; out float vSpec;
+out vec2 vTc; out vec4 vCol; out float vSpec; out float vDepth;
 void main() {
 	// alphaGen lightingSpecular, as RB_CalcSpecularAlpha: how much of a light is mirrored into the eye, to the
 	// fourth power. For the map the engine has one light at a fixed place.
@@ -1061,11 +1081,13 @@ void main() {
 	vTc = vec2(dot(uTcA.xy, tc) + uTcA.z, dot(uTcB.xy, tc) + uTcB.z);
 	vCol = aCol;
 	gl_Position = uMvp * vec4(aPos, 1.0);
+	vDepth = gl_Position.w;	// how far in front of the eye
 }`,
 `#version 300 es
 precision mediump float;
-in vec2 vTc; in vec4 vCol; in float vSpec;
+in vec2 vTc; in vec4 vCol; in float vSpec; in float vDepth;
 uniform sampler2D uTex; uniform vec4 uColor;
+uniform vec4 uFog;	// the fog of the whole map: what the colour fades to, and how thick it is. 0: none
 uniform int uRgbVertex; uniform int uAlphaVertex;	// 1 times the colour of the vertex, 2 times one minus it, 3 the shine
 uniform int uAlphaFunc;	// 1 GT0, 2 LT128, 3 GE128, 4 GE192
 out vec4 o;
@@ -1078,6 +1100,8 @@ void main() {
 	if (uAlphaFunc == 2 && c.a >= 0.5) discard;
 	if (uAlphaFunc == 3 && c.a < 0.5) discard;
 	if (uAlphaFunc == 4 && c.a < 0.75) discard;
+	// as the fog of OpenGL with GL_EXP2, which the engine uses for it
+	if (uFog.a > 0.0) { float f = uFog.a * vDepth; c.rgb = mix(uFog.rgb, c.rgb, exp(-f * f)); }
 	o = c;
 }`);
 
@@ -1091,7 +1115,7 @@ uniform mat4 uMvp; uniform mat4 uModel; uniform vec3 uEyeLocal;
 uniform vec3 uAmbient; uniform vec3 uDirected; uniform vec3 uLightDir;	// the light of the place, and where it comes from
 uniform int uTcGen; uniform vec3 uTcA; uniform vec3 uTcB; uniform vec2 uTurb;
 uniform mediump int uAlphaVertex;	// the precision the fragment shader has for it: it is in both
-out vec2 vTc; out vec3 vLight; out float vSpec;
+out vec2 vTc; out vec3 vLight; out float vSpec; out float vDepth;
 void main() {
 	vec4 world = uModel * vec4(aPos, 1.0);
 	// alphaGen lightingSpecular: for a model the light of the place is the one that is mirrored
@@ -1115,11 +1139,13 @@ void main() {
 	// as RB_CalcDiffuseColor: the ambient light, and the directed one by how much the surface faces it
 	vLight = min(uAmbient + max(dot(normalize(mat3(uModel) * aNorm), uLightDir), 0.0) * uDirected, vec3(1.0));
 	gl_Position = uMvp * world;
+	vDepth = gl_Position.w;
 }`,
 `#version 300 es
 precision mediump float;
-in vec2 vTc; in vec3 vLight; in float vSpec;
+in vec2 vTc; in vec3 vLight; in float vSpec; in float vDepth;
 uniform sampler2D uTex; uniform vec4 uColor;
+uniform vec4 uFog;
 uniform int uRgbVertex;	// 3: times the light of the place
 uniform int uAlphaVertex;	// 3: times the shine
 uniform int uAlphaFunc;
@@ -1133,7 +1159,31 @@ void main() {
 	if (uAlphaFunc == 2 && c.a >= 0.5) discard;
 	if (uAlphaFunc == 3 && c.a < 0.5) discard;
 	if (uAlphaFunc == 4 && c.a < 0.75) discard;
+	if (uFog.a > 0.0) { float f = uFog.a * vDepth; c.rgb = mix(uFog.rgb, c.rgb, exp(-f * f)); }
 	o = c;
+}`);
+
+// The fog of a brush (RB_FogPass): the surfaces in it are drawn once more in the colour of the fog, the thicker
+// the further the line of sight runs through it. uPlane is the side the fog ends at, looking into it: what
+// counts is how far behind it a place is (vT), and where the eye is (uEyeT, below zero outside of the fog).
+const fogProg = compile(`#version 300 es
+layout(location=0) in vec3 aPos;
+uniform mat4 uMvp; uniform vec4 uPlane; uniform float uScale;
+out float vS; out float vT;
+void main() {
+	gl_Position = uMvp * vec4(aPos, 1.0);
+	vS = gl_Position.w * uScale;
+	vT = dot(aPos, uPlane.xyz) - uPlane.w;
+}`,
+`#version 300 es
+precision mediump float;
+in float vS; in float vT;
+uniform vec3 uColor; uniform float uEyeT;
+out vec4 o;
+void main() {
+	// the part of the way to the eye that is in the fog
+	float part = uEyeT < 0.0 ? (vT < 1.0 ? 0.0 : vT / (vT - uEyeT)) : (vT < 0.0 ? 0.0 : 1.0);
+	o = vec4(uColor, sqrt(clamp(vS * part, 0.0, 1.0)));
 }`);
 
 const SC_BLEND = {
@@ -1182,17 +1232,26 @@ async function loadShaderScripts() {
 		if (!res.ok) throw new Error('HTTP ' + res.status);
 		// the engine puts the files together last one first, so that is the one whose text of a shader counts
 		const files = (await res.json()).files.slice().reverse(), texts = new Array(files.length);
-		let next = 0;
-		const worker = async () => {
-			while (next < files.length) {
-				const i = next++;
-				try {
-					const file = await fetch('api/file?name=' + encodeURIComponent('shaders/' + files[i]));
-					if (file.ok) texts[i] = await file.text();
-				} catch (e) { /* the map is drawn without the shaders of that file */ }
-			}
-		};
-		await Promise.all([1, 2, 3, 4, 5, 6].map(worker));
+		// The server does not answer for a moment while it changes the map. A file that could not be fetched then
+		// is asked for again, a few rounds, before the map is drawn without its shaders.
+		let todo = files.map((_, i) => i);
+		for (let round = 0; todo.length && round < 6; round++) {
+			if (round) await new Promise(done => setTimeout(done, 2500));
+			const queue = todo;
+			todo = [];
+			const worker = async () => {
+				while (queue.length) {
+					const i = queue.shift();
+					try {
+						const file = await fetch('api/file?name=' + encodeURIComponent('shaders/' + files[i]));
+						if (file.ok) texts[i] = await file.text(); else if (file.status !== 404) todo.push(i);
+					} catch (e) {
+						todo.push(i);
+					}
+				}
+			};
+			await Promise.all([1, 2, 3, 4, 5, 6].map(worker));
+		}
 		for (const text of texts) if (text) scanShaderFile(text, scripts.bodies);
 		scripts.state = 2;
 	} catch (e) {
@@ -1302,7 +1361,7 @@ function finishStage(st) {
 }
 
 function parseScript(body) {
-	const def = { stages: [], sort: 0, polygonOffset: false, nodraw: false, sky: null };
+	const def = { stages: [], sort: 0, polygonOffset: false, nodraw: false, sky: null, fog: null, noFog: false };
 	let st = null, depth = 0;
 	for (const a of scriptLines(body)) {
 		const k = a[0].toLowerCase();
@@ -1320,6 +1379,12 @@ function parseScript(body) {
 			else if (k === 'skyparms') def.sky = { box: a[1] && a[1] !== '-' ? a[1] : '', height: scNum(a[2]) || 512 };
 			else if (k === 'sort') def.sort = SC_SORT[(a[1] || '').toLowerCase()] || scNum(a[1]);
 			else if (k === 'polygonoffset') def.polygonOffset = true;
+			else if (k === 'noglfog') def.noFog = true;
+			else if (k === 'fogparms') {
+				// ( r g b ) and the depth at which nothing is seen through it any more
+				const n = a.slice(1).map(t => t.replace(/[()]/g, '')).filter(Boolean).map(scNum);
+				def.fog = { color: [n[0] || 0, n[1] || 0, n[2] || 0], depth: Math.max(1, n[3] || 0) };
+			}
 		}
 	}
 	return def;
@@ -1376,6 +1441,8 @@ function materialFor(name, lit) {
 		nodraw: !!def && def.nodraw,
 		polygonOffset: !!def && def.polygonOffset,
 		sky: def ? def.sky : null,
+		fog: def ? def.fog : null,
+		noFog: !!def && def.noFog,
 		sort: (def && def.sort) || (def && def.polygonOffset ? SC_SORT_DECAL : first && first.blend ? (first.depthWrite ? SC_SORT_SEE_THROUGH : SC_SORT_BLEND) : SC_SORT_OPAQUE)
 	};
 	scripts.materials.set(mkey, mat);
@@ -1416,7 +1483,12 @@ function pumpImages() {
 		imageBusy++;
 		fetchImage(name, clamp).then(img => {
 			if (img) { h.tex = img.tex; h.alpha = img.alpha; h.ready = true; } else h.failed = true;
-		}, () => { h.failed = true; }).finally(() => { imageBusy--; pumpImages(); });
+		}, () => {
+			// no answer: again in a moment, three times, if the image is still one of the map that is shown
+			h.tries = (h.tries || 0) + 1;
+			if (h.tries > 3) { h.failed = true; return; }
+			setTimeout(() => { if (gameImages.get(name.toLowerCase() + (clamp ? '|c' : '')) === h) { imageQueue.push([h, name, clamp]); pumpImages(); } }, 2500);
+		}).finally(() => { imageBusy--; pumpImages(); });
 	}
 }
 
@@ -1493,13 +1565,24 @@ function prepareScripted(w) {
 		if (!mat.nodraw && mat.stages.length) list.push({ b, mat, i });
 	});
 	list.sort((x, y) => x.mat.sort - y.mat.sort || x.i - y.i);
+	// The fogs of the map, from the scripts of their shaders. exp2: sqrt( -ln( 1 / 255 ) ) over the depth, the
+	// thickness the engine gives OpenGL for the fog of the whole map.
+	w.fogInfo = w.fogs.map(f => {
+		const fog = scripts.bodies.has(scKey(f.shader)) ? materialFor(f.shader, true).fog : null;
+		return fog ? { color: fog.color, exp2: 2.354 / fog.depth, scale: 1 / fog.depth, global: f.global, plane: f.plane } : null;
+	});
+	w.globalFog = w.fogInfo.find(f => f && f.global) || null;
+	// only what is solid enough is fogged (a sort up to see-through), as the engine decides it
+	for (const e of list) e.fog = e.b.fog >= 0 && e.mat.sort <= SC_SORT_SEE_THROUGH && !e.mat.noFog ? w.fogInfo[e.b.fog] || null : null;
 	w.skyDraw = w.sky ? buildSky(w.sky) : null;
 	w.scripted = list;
 }
 
 const stTcA = new Float32Array(3), stTcB = new Float32Array(3), stTurb = new Float32Array(2), stColor = new Float32Array(4);
 
-function drawStage(st, t, lm, vao, count, type, offset, prog = stageProg) {
+const FOG_BLACK = [0, 0, 0], FOG_WHITE = [1, 1, 1];
+
+function drawStage(st, t, lm, vao, count, type, offset, prog = stageProg, fog = null) {
 	let tex;
 	if (st.lightmap) {
 		tex = lm || whiteTex;
@@ -1551,6 +1634,15 @@ function drawStage(st, t, lm, vao, count, type, offset, prog = stageProg) {
 	// rgbGen vertex brings the alpha of the vertex along unless the stage says what its alpha is
 	gl.uniform1i(u.uAlphaVertex, st.alpha ? (st.alpha.vertex || 0) : (st.rgb && st.rgb.vertex === 1 && !st.rgb.exact ? 1 : 0));
 	gl.uniform1i(u.uAlphaFunc, st.alphaFunc);
+	if (fog) {
+		// What a stage adds fades to black in the fog and what it multiplies with to white, so that what is under
+		// it stays the colour of the fog. The engine has the two overrides for the same reason.
+		const b = st.blend;
+		const to = b && b[1] === gl.ONE ? FOG_BLACK : b && ((b[0] === gl.DST_COLOR && b[1] === gl.ZERO) || (b[0] === gl.ZERO && b[1] === gl.SRC_COLOR)) ? FOG_WHITE : fog.color;
+		gl.uniform4f(u.uFog, to[0], to[1], to[2], fog.exp2);
+	} else {
+		gl.uniform4f(u.uFog, 0, 0, 0, 0);
+	}
 	gl.bindTexture(gl.TEXTURE_2D, tex);
 	gl.bindVertexArray(vao);
 	gl.drawElements(gl.TRIANGLES, count, type, offset);
@@ -1571,6 +1663,10 @@ function drawSky(sky, t) {
 	gl.enable(gl.DEPTH_TEST);
 }
 
+// Fog is drawn where the camera is in the map, flying or through the eyes of a player. Looking at the map from
+// above it would hide the map.
+const fogShown = () => cam.fly || view.id >= 0;
+
 // The map with its scripts, in two parts as the sort of the game has it: the sky and everything solid first,
 // then, after the players and the models were drawn, what is see-through (late), so that glass and water lie
 // over who stands behind them.
@@ -1585,10 +1681,28 @@ function drawWorldScripted(now, late) {
 	gl.colorMask(true, true, true, false);
 	if (!late && world.skyDraw) drawSky(world.skyDraw, t);
 	gl.uniformMatrix4fv(stageProg.u.uMvp, false, viewProj);
+	const fogged = fogShown();
 	for (const e of world.scripted) {
 		if ((e.mat.sort > SC_SORT_BANNER) !== late) continue;
+		const fog = fogged ? e.fog : null;
 		if (e.mat.polygonOffset) { gl.enable(gl.POLYGON_OFFSET_FILL); gl.polygonOffset(-1, -2); }
-		for (const st of e.mat.stages) drawStage(st, t, e.b.lm, e.b.vao, e.b.count, gl.UNSIGNED_INT, 0);
+		for (const st of e.mat.stages) drawStage(st, t, e.b.lm, e.b.vao, e.b.count, gl.UNSIGNED_INT, 0, stageProg, fog && fog.global ? fog : null);
+		// the fog of a brush is a pass of its own over what was just drawn
+		if (fog && !fog.global) {
+			gl.useProgram(fogProg.p);
+			gl.uniformMatrix4fv(fogProg.u.uMvp, false, viewProj);
+			gl.uniform4fv(fogProg.u.uPlane, fog.plane);
+			gl.uniform1f(fogProg.u.uScale, fog.scale);
+			gl.uniform1f(fogProg.u.uEyeT, eye[0] * fog.plane[0] + eye[1] * fog.plane[1] + eye[2] * fog.plane[2] - fog.plane[3]);
+			gl.uniform3fv(fogProg.u.uColor, fog.color);
+			gl.enable(gl.BLEND);
+			gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+			gl.depthMask(false);
+			gl.depthFunc(gl.EQUAL);
+			gl.bindVertexArray(e.b.vao);
+			gl.drawElements(gl.TRIANGLES, e.b.count, gl.UNSIGNED_INT, 0);
+			gl.useProgram(stageProg.p);
+		}
 		if (e.mat.polygonOffset) gl.disable(gl.POLYGON_OFFSET_FILL);
 	}
 	gl.disable(gl.BLEND);
@@ -1648,27 +1762,30 @@ function gridLight(pos, out = lightNow) {
 	return out;
 }
 
-// The surfaces of a model with the stages of their shaders, in the view of the administration. world: where the
+// The surfaces of a model with the stages of their shaders, in the view of the administration. place: where the
 // model stands. A surface that blends is drawn where it comes in the model, not sorted with the rest of the
 // picture as the game does.
-function drawModelScripted(meshes, world) {
-	const t = performance.now() / 1000, u = modelStageProg.u, at = M4.transform(M4.invert(world), eye);
+function drawModelScripted(meshes, place) {
+	const t = performance.now() / 1000, u = modelStageProg.u, at = M4.transform(M4.invert(place), eye);
 	gl.useProgram(modelStageProg.p);
 	gl.uniformMatrix4fv(u.uMvp, false, viewProj);
-	gl.uniformMatrix4fv(u.uModel, false, world);
+	gl.uniformMatrix4fv(u.uModel, false, place);
 	gl.uniform3f(u.uEyeLocal, at[0], at[1], at[2]);
-	const light = gridLight([world[12], world[13], world[14]]);
+	const light = gridLight([place[12], place[13], place[14]]);
 	gl.uniform3fv(u.uAmbient, light.ambient);
 	gl.uniform3fv(u.uDirected, light.directed);
 	gl.uniform3fv(u.uLightDir, light.dir);
 	gl.uniform1i(u.uTex, 0);
 	gl.activeTexture(gl.TEXTURE0);
 	gl.colorMask(true, true, true, false);
+	// a model is in the fog of the whole map like everything else, the fog of a brush is not drawn on models
+	const globalFog = fogShown() && world ? world.globalFog : null;
 	for (const mesh of meshes) {
 		const mat = mesh.mat || (mesh.mat = materialFor(mesh.shaderName || '', 'model'));
 		if (mat.nodraw) continue;
 		if (mat.polygonOffset) { gl.enable(gl.POLYGON_OFFSET_FILL); gl.polygonOffset(-1, -2); }
-		for (const st of mat.stages) drawStage(st, t, null, mesh.vao, mesh.count, gl.UNSIGNED_INT, 0, modelStageProg);
+		const fog = globalFog && mat.sort <= SC_SORT_SEE_THROUGH && !mat.noFog ? globalFog : null;
+		for (const st of mat.stages) drawStage(st, t, null, mesh.vao, mesh.count, gl.UNSIGNED_INT, 0, modelStageProg, fog);
 		if (mat.polygonOffset) gl.disable(gl.POLYGON_OFFSET_FILL);
 	}
 	gl.disable(gl.BLEND);
