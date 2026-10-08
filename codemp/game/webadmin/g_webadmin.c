@@ -1920,6 +1920,25 @@ static void WA_ApiEntity( waConnection_t *c, const char *body ) {
 	if ( !strcmp( op, "delete" ) ) {
 		WA_FreeEntity( &g_entities[id] );
 		WA_EntityResult( c, qtrue, "deleted", id );
+	} else if ( !strcmp( op, "use" ) ) {
+		// Fires the entity as a trigger_always would that has it as its target, with the world in the place of
+		// the trigger: a door opens, a trigger fires its targets, a target does what it is there for. What only
+		// works on the player who fired it (a teleporter, a give) does nothing then, the use functions of the game
+		// all ask for a client before they reach into one. An NPC is left alone: a vehicle takes whoever uses it
+		// on board without asking.
+		gentity_t *ent = &g_entities[id];
+
+		if ( ent->client || ent->s.eType == ET_NPC ) {
+			WA_EntityResult( c, qfalse, "an NPC is not fired from here", id );
+		} else if ( !ent->use ) {
+			WA_EntityResult( c, qfalse, "this entity does nothing when it is fired", id );
+		} else if ( ent->flags & FL_INACTIVE ) {
+			WA_EntityResult( c, qfalse, "this entity is inactive, a target_activate has to wake it first", id );
+		} else {
+			GlobalUse( ent, &g_entities[ENTITYNUM_WORLD], &g_entities[ENTITYNUM_WORLD] );
+			// it may be gone now (something that breaks, a trigger that fires once)
+			WA_EntityResult( c, qtrue, "fired", ent->inuse ? id : -1 );
+		}
 	} else if ( !strcmp( op, "update" ) ) {
 		if ( !entityVars[id] ) {
 			WA_EntityResult( c, qfalse, "this entity was made by the game code, it has no keys to edit", id );

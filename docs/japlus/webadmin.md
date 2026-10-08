@@ -92,7 +92,7 @@ the answer tells the page that the numbers started over.
 | `GET /api/export` | the entities in `.ent` format. `placed=1`: only what was placed through the panel, without the worldspawn |
 | `GET /api/chat?since=&epoch=` | chat lines after number `since`. Everything if `epoch` is not the current one |
 | `POST /api/action` | `action`, `id`, `value`: say, addbot, map, kick, ban, health, armor, scale, kill, god, noclip, schizo, flatulence, disorient, poop, gravity (no `id`), reload (no `id`), playergravity, team, teleport, and the JA+ ones: amsleep, amwake, amprotect, amempower, ammerc, ammindtrick, amghost, amsilence, amunsilence, amslap, amForceAltDim, amUnForceAltDim, amdenyvote, amShowMotd, amrename, ampsay, admgrant, freeze |
-| `POST /api/entity` | `op` spawn, update or delete, with `id` and `kv` (one `key=value` per line). `op` clear with `kv` `classname=<class>` deletes every entity of that class that was placed through the panel. `map=1` with spawn: it is an entity of the map that comes back (undo), not a placed one |
+| `POST /api/entity` | `op` spawn, update or delete, with `id` and `kv` (one `key=value` per line). `op` use with `id` fires the entity. `op` clear with `kv` `classname=<class>` deletes every entity of that class that was placed through the panel. `map=1` with spawn: it is an entity of the map that comes back (undo), not a placed one |
 | `GET /api/config` | the text of `server.cfg`, as UTF-8 |
 | `POST /api/config`, `POST /api/config?exec=1` | the body is the new text of `server.cfg` (plain text, not a form). With `exec=1` the server runs `exec server.cfg` afterwards |
 | `GET /api/models` | every `.md3` and `.glm` under `models/`. The server reads the folders a few at a frame: `done` says whether the list is complete, the page asks again until it is |
@@ -221,6 +221,14 @@ Also changed:
   the game draws, a click goes through the rest, and entities can be placed into a room from above.
 - Changed: the bar of the debug views and the legend of the keys share the top of the map view (`#viewTop`).
   The legend goes below the bar when both do not fit next to each other, they lay over each other before.
+- New: "Fire" in the panel of an entity (`op` use). It does to the entity what a trigger does that has it as
+  its target: a door opens, a lift goes up, a trigger fires its targets, something that breaks breaks. The
+  world stands in for the trigger, as with a `trigger_always`, so what only works on the player who fired it
+  (a teleporter, a give) does nothing. With several entities selected all of them are fired. It is not a
+  change of the map and no step of undo. The server refuses an entity without a use function, one that is
+  inactive, and an NPC (a vehicle takes whoever uses it on board without asking whether that is a player).
+  The use functions of the game were read for this: every one that reaches into the client of what fired it
+  asks first whether there is one.
 - New: several entities selected at once in the World tab. Ctrl and a click on a marker adds an entity to the
   selected one or takes it out again, a click without Ctrl or Escape ends it. Moving (the drag, the right-click,
   the fields of the position, "To floor", Shift and the keys) takes the others along by the same way, Delete,

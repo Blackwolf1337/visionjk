@@ -490,6 +490,7 @@ body.app-admin #dbg, body.app-admin .editorOnly, body.app-admin #tabs button[dat
 			<button id="entFloor" title="Puts it on the floor below it">To floor</button>
 			<button id="entTemplate" title="Keeps its keys under a name. The name is offered in the class search, to place more of it.">Template</button>
 			<button id="entFocus" title="Brings the camera to it">Focus</button>
+			<button id="entFire" title="Fires it as a trigger would that has it as its target: a door opens, a trigger fires its targets. The world is what fired it, so what only works on the player who fired it does nothing.">Fire</button>
 			<button class="danger" id="entDel">Delete</button>
 		</div>
 		<div class="hint" id="entHint">Drag the marker or right-click on the map to move it. Shift and the arrow keys or Page Up and Down move it a grid step. Ctrl and a click selects one more: what is done to this one is then done to all of them.</div>
@@ -3987,6 +3988,24 @@ for (const id of ['angP', 'angY', 'angR']) {
 	});
 }
 $('entFocus').addEventListener('click', () => focusEntity(selectedEnt));
+
+// Fire: what a trigger does to the entity it has as its target. The map is not changed by it, so it is no step
+// of the history, and what is typed into the keys stays.
+async function fireEntities() {
+	const ids = [...new Set([selectedEnt, ...picked])].filter(id => ents.has(id));
+	let done = 0, said = '';
+	for (const id of ids) {
+		try {
+			const json = await (await fetch('api/entity', { method: 'POST', body: new URLSearchParams({ op: 'use', id }) })).json();
+			if (json.ok) done++; else said = json.message;
+		} catch (e) { said = e.message; }
+	}
+	if (ids.length === 1) toast(done ? 'Fired' : said, !!done);
+	else toast('Fired ' + done + (done < ids.length ? ', ' + (ids.length - done) + ' refused: ' + said : ''), done === ids.length);
+	// what breaks or fires only once is gone now
+	pollEntities();
+}
+$('entFire').addEventListener('click', fireEntities);
 $('flyBtn').addEventListener('click', () => setFly(!cam.fly));
 $('entFloor').addEventListener('click', () => {
 	const ent = ents.get(selectedEnt);
