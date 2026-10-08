@@ -2384,14 +2384,12 @@ void FlagObjects(void)
 int SavePathData(const char *filename)
 {
 	fileHandle_t f;
-	char *fileString;
 	char *storeString;
 	char *routePath;
 	vec3_t a;
 	float flLen;
 	int i, n;
 
-	fileString = NULL;
 	i = 0;
 
 	if (!gWPNum)
@@ -2423,63 +2421,30 @@ int SavePathData(const char *filename)
 
 	FlagObjects(); //currently only used for flagging waypoints nearest CTF flags
 
-	fileString = (char *)B_TempAlloc(524288);
 	storeString = (char *)B_TempAlloc(4096);
 
-	Com_sprintf(fileString, 524288, "%i %i %f (%f %f %f) { ", gWPArray[i]->index, gWPArray[i]->flags, gWPArray[i]->weight, gWPArray[i]->origin[0], gWPArray[i]->origin[1], gWPArray[i]->origin[2]);
-
-	n = 0;
-
-	while (n < gWPArray[i]->neighbornum)
+	// Not in OpenJK. The lines were put together with Com_sprintf( s, size, "%s...", s, ... ), the buffer as its
+	// own argument. With the C libraries of today that loses what the buffer held, and the file had lines of
+	// "} <distance>" and nothing else: no place, no flags, no neighbours. A route that was saved was gone.
+	// A line is built by appending now and written as it is done, so the route has no limit of its own either
+	// (the whole file used to go through one buffer of 512 KB).
+	for (i = 0; i < gWPNum; i++)
 	{
-		if (gWPArray[i]->neighbors[n].forceJumpTo)
-		{
-			Com_sprintf(storeString, 4096, "%s%i-%i ", storeString, gWPArray[i]->neighbors[n].num, gWPArray[i]->neighbors[n].forceJumpTo);
-		}
-		else
-		{
-			Com_sprintf(storeString, 4096, "%s%i ", storeString, gWPArray[i]->neighbors[n].num);
-		}
-		n++;
-	}
-
-	if (gWPArray[i+1] && gWPArray[i+1]->inuse && gWPArray[i+1]->index)
-	{
-		VectorSubtract(gWPArray[i]->origin, gWPArray[i+1]->origin, a);
-		flLen = VectorLength(a);
-	}
-	else
-	{
-		flLen = 0;
-	}
-
-	gWPArray[i]->disttonext = flLen;
-
-	Com_sprintf(fileString, 524288, "%s} %f\n", fileString, flLen);
-
-	i++;
-
-	while (i < gWPNum)
-	{
-		//sprintf(fileString, "%s%i %i %f (%f %f %f) { ", fileString, gWPArray[i]->index, gWPArray[i]->flags, gWPArray[i]->weight, gWPArray[i]->origin[0], gWPArray[i]->origin[1], gWPArray[i]->origin[2]);
 		Com_sprintf(storeString, 4096, "%i %i %f (%f %f %f) { ", gWPArray[i]->index, gWPArray[i]->flags, gWPArray[i]->weight, gWPArray[i]->origin[0], gWPArray[i]->origin[1], gWPArray[i]->origin[2]);
 
-		n = 0;
-
-		while (n < gWPArray[i]->neighbornum)
+		for (n = 0; n < gWPArray[i]->neighbornum; n++)
 		{
 			if (gWPArray[i]->neighbors[n].forceJumpTo)
 			{
-				Com_sprintf(storeString, 4096, "%s%i-%i ", storeString, gWPArray[i]->neighbors[n].num, gWPArray[i]->neighbors[n].forceJumpTo);
+				Q_strcat(storeString, 4096, va("%i-%i ", gWPArray[i]->neighbors[n].num, gWPArray[i]->neighbors[n].forceJumpTo));
 			}
 			else
 			{
-				Com_sprintf(storeString, 4096, "%s%i ", storeString, gWPArray[i]->neighbors[n].num);
+				Q_strcat(storeString, 4096, va("%i ", gWPArray[i]->neighbors[n].num));
 			}
-			n++;
 		}
 
-		if (gWPArray[i+1] && gWPArray[i+1]->inuse && gWPArray[i+1]->index)
+		if (i + 1 < gWPNum && gWPArray[i+1] && gWPArray[i+1]->inuse && gWPArray[i+1]->index)
 		{
 			VectorSubtract(gWPArray[i]->origin, gWPArray[i+1]->origin, a);
 			flLen = VectorLength(a);
@@ -2491,16 +2456,10 @@ int SavePathData(const char *filename)
 
 		gWPArray[i]->disttonext = flLen;
 
-		Com_sprintf(storeString, 4096, "%s} %f\n", storeString, flLen);
-
-		strcat(fileString, storeString);
-
-		i++;
+		Q_strcat(storeString, 4096, va("} %f\n", flLen));
+		trap->FS_Write(storeString, strlen(storeString), f);
 	}
 
-	trap->FS_Write(fileString, strlen(fileString), f);
-
-	B_TempFree(524288); //fileString
 	B_TempFree(4096); //storeString
 
 	trap->FS_Close(f);
