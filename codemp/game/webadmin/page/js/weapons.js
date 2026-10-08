@@ -152,6 +152,7 @@ const blades = [];	// collected while drawing models, drawn after everything opa
 // What is in the air (shots of /api/state), as far as it can be shown without the effects of the game: a bolt is
 // a streak of light in about the colour of its effect, and what the game draws as a model (a rocket, a thermal
 // detonator, a det pack) is that model. [length, radius, colour] by weapon, and by the other way to fire it.
+// With the effects (js/fx-weapons.js) the streak is the effect of the shot and the model stays.
 const SABER_SPIN = 800;		// degrees a second, the turn the game gives a saber that was thrown
 const SHOT_BOLT = {
 	4: [20, 2.5, [1, 0.6, 0.15]], 5: [28, 2.5, [1, 0.15, 0.1]], 7: [24, 3, [0.2, 1, 0.25]], 8: [14, 2, [1, 0.9, 0.5]], 9: [20, 4, [0.5, 0.7, 1]],
@@ -160,16 +161,19 @@ const SHOT_BOLT = {
 const SHOT_BOLT_ALT = { 8: [12, 7, [0.3, 0.5, 1]], 9: [16, 12, [0.5, 0.7, 1]], 10: [8, 3, [1, 0.75, 0.3]] };
 const SHOT_MODEL = { 11: 'models/weapons2/merr_sonn/projectile.md3', 12: 'models/weapons2/thermal/thermal_proj.md3', 14: 'models/weapons2/detpack/det_pack.md3' };
 
-// Where a shot ended: a flash for a moment, since the page has no explosion of the game to show. How far it
+// Where a shot ended: a flash for a moment, when the page has no effect of the game to show for it. How far it
 // reaches and how long it lasts (ms) for what goes off with a bang, by weapon and by the other way to fire it.
 const SHOT_BANG = { 11: [60, 450], 12: [70, 500], 14: [90, 550], 15: [60, 450] }, SHOT_BANG_ALT = { 8: [45, 400], 9: [60, 450], 10: [35, 350] };
 const flashes = [];		// { pos, weapon, alt, t }
 
 function drawShots(k) {
-	const now = performance.now(), up = flashes.length ? cameraAxes().up : null;
+	const now = performance.now(), fx = fxOn(), up = flashes.length ? cameraAxes().up : null;
 	for (let i = flashes.length - 1; i >= 0; i--) {
 		const f = flashes[i], bang = (f.alt && SHOT_BANG_ALT[f.weapon]) || SHOT_BANG[f.weapon] || [7, 130], age = (now - f.t) / bang[1];
 		if (age >= 1) { flashes.splice(i, 1); continue; }
+		// with the effects of the game it is what its weapon leaves there, played once
+		if (fx && f.played === undefined) f.played = fxShotEnds(f);
+		if (fx && f.played) continue;
 		// it grows to its size at once and fades
 		const r = bang[0] * Math.min(1, 0.4 + age * 2), fade = (1 - age) * (1 - age);
 		const rgb = ((f.alt && SHOT_BOLT_ALT[f.weapon]) || SHOT_BOLT[f.weapon] || [0, 0, [1, 0.7, 0.3]])[2].map(v => Math.min(1, v + 0.25) * fade);
@@ -185,6 +189,7 @@ function drawShots(k) {
 			const yaw = Math.atan2(dir[1], dir[0]) * 180 / Math.PI, pitch = -Math.atan2(dir[2], Math.hypot(dir[0], dir[1])) * 180 / Math.PI;
 			drawStatic(model, anglesMatrix(pos, [pitch, yaw, 0], 1));
 		}
+		if (fx && fxShotFlies(m, pos, dir)) continue;
 		const bolt = (m[2] && SHOT_BOLT_ALT[weapon]) || SHOT_BOLT[weapon] || (model ? null : [14, 2, [1, 1, 1]]);
 		// the streak ends where the shot is: the fire of a rocket is behind it
 		if (bolt) blades.push({ org: [pos[0] - dir[0] * bolt[0], pos[1] - dir[1] * bolt[0], pos[2] - dir[2] * bolt[0]], dir, len: bolt[0], radius: bolt[1], rgb: bolt[2] });
