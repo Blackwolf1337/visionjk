@@ -76,7 +76,7 @@ the answer tells the page that the numbers started over.
 | Request | Answer |
 |---------|--------|
 | `GET /` | the page |
-| `GET /api/state` | map, scores, players, NPCs, items and `models` as JSON. The page polls this. `models`: every other entity the clients draw as a model (props, models of the map that are entities), with its model, scale, origin and angles as the clients have them |
+| `GET /api/state` | map, scores, players, NPCs, items and `models` as JSON. The page polls this. `models`: every other entity the clients draw as a model (props, models of the map that are entities), with its model, scale, origin and angles as the clients have them. `movers`: every brush model the clients draw as an entity (doors, lifts, what turns or can be switched off), as the number of the brush model, or as `[number, x, y, z, pitch, yaw, roll]` when it is not where the map file has it |
 | `GET /api/map` | the `.bsp` of the current map |
 | `GET /api/file?name=` | a file below `textures/`, `models/` or `gfx/` (images, md3, glm, gla, cfg, skin), a shader script `shaders/<name>.shader`, or a `.wav` or `.mp3` below `sound/` or `music/` |
 | `GET /api/shaders` | the names of the shader scripts of the game, in the order the engine reads them in |
@@ -205,6 +205,17 @@ Also changed:
 - New: copy and paste in the World tab. Ctrl+C takes the keys of the selected entity, Ctrl+V places one with them
   where the mouse is on the map (on the grid, as high above the floor as the copied one was), Ctrl+D is the
   Duplicate of the panel. Both go into the history of undo.
+- New: doors, lifts and everything else that is made of brushes and is an entity are drawn where the game has
+  them, in both modes (`movers` of `/api/state`, `applyMovers`, `moverPlaces`). The map file has such a
+  brush model at one place, the game moves it: before this a lift that rests at the bottom was drawn at the
+  top (on mp/ffa3 all six of them, 270 to 296 units too high), a door never opened and what was broken or
+  switched off stayed. The server lists what the clients draw as a mover (`CG_Mover`: linked, `ET_MOVER`,
+  not `EF_NODRAW`, not `SVF_NOCLIENT`) with place and angles from its trajectory, the page puts the surfaces
+  of the brush model there and moves them between two polls as it does with the players. A brush model no
+  entity shows is not drawn and a click goes through it. In the editor the surfaces now follow the box of a
+  brush entity that is moved or turned, and a deleted one is gone at once. Limits: a click still finds a
+  brush model that moved where the map file has it, the fog of a brush is not drawn on one that moved, and
+  a turn of more than half a circle between two polls (a tenth of a second) is drawn the short way round.
 - New: the switch "Open" in the bar of the debug views of the editor. The plain view of the editor draws every
   surface from both sides, so a map with ceilings is a closed box from above. With "Open" it draws the side
   the game draws, a click goes through the rest, and entities can be placed into a room from above.
@@ -780,6 +791,14 @@ waypoint. A drag moves the view, turns it with the middle button, moves an entit
 when flying. The wheel zooms and sets the flying speed. A right-click teleports, places the class that is armed,
 adds a waypoint. Undo, the Z field, Remove and Save of a route. Copy, paste, the stored views and the keys of
 the fly camera went through the keyboard. What that is not: a person at a real browser on a real GPU.
+
+Doors and lifts (`steps_movers.js`, 10 checks, the same day, mp/ffa3): the server named 6 of the 8 brush
+models as drawn, the two triggers not, and each where the entity list of the editor has it. A lift with a
+targetname of its own was fired by a `trigger_always` placed through the panel: it was drawn up to 280 units
+from where it rests, at seven or eight places on the way, the picture changed, it came back and the picture
+was the one from before to the pixel. Deleted in the editor its brush model was not drawn and a ray at it
+went through, undo brought both back. Not tried: a door that turns, one that a player opens, a map with a
+`func_breakable` or a `func_usable`.
 
 The sides, the deforms and the order of see-through model surfaces (`steps_cull.js`, `steps_deform.js`, the
 same day, on mp/ffa3, mp/ctf4 and mp/duel7): inside the map, at 8 spawn points looking four ways, the picture

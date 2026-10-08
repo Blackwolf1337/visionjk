@@ -644,6 +644,7 @@ function parseBsp(buffer) {
 	const models = [];
 	for (let o = ml.ofs; o + 40 <= ml.ofs + ml.len; o += 40) {
 		models.push({ mins: [0, 1, 2].map(i => dv.getFloat32(o + i * 4, true)), maxs: [0, 1, 2].map(i => dv.getFloat32(o + 12 + i * 4, true)),
+			firstSurface: dv.getInt32(o + 24, true), numSurfaces: dv.getInt32(o + 28, true),
 			firstBrush: dv.getInt32(o + 32, true), numBrushes: dv.getInt32(o + 36, true) });
 	}
 	// The brushes: what the game collides with, seen or not. Kept as they are in the file (a plane is a normal
@@ -671,11 +672,14 @@ function parseBsp(buffer) {
 	const ll = lump(14), lmSize = 128 * 128 * 3, lightmaps = [];
 	for (let o = ll.ofs; o + lmSize <= ll.ofs + ll.len; o += lmSize) lightmaps.push(new Uint8Array(buffer, o, lmSize));
 
-	// batches per shader + lightmap
+	// batches per shader + lightmap, and per brush model: one that is an entity (a door, a lift) is drawn where
+	// that entity is, the world (0) where the file has it
 	const batches = new Map();
-	const pickPos = [], pickIdx = [];
+	const pickPos = [], pickIdx = [], pickModel = [];
 	const sfl = lump(13);
 	let sky = '';
+	const surfModel = new Uint16Array(Math.floor(sfl.len / SURF_SIZE));
+	models.forEach((m, n) => { if (n) surfModel.fill(n, Math.max(0, m.firstSurface), Math.min(surfModel.length, m.firstSurface + m.numSurfaces)); });
 
 	for (let o = sfl.ofs; o < sfl.ofs + sfl.len; o += SURF_SIZE) {
 		const shaderNum = dv.getInt32(o, true), fogNum = dv.getInt32(o + 4, true), type = dv.getInt32(o + 8, true);
@@ -699,10 +703,11 @@ function parseBsp(buffer) {
 		}
 		if (!tris.length) continue;
 
-		const key = shaderNum + ':' + (lmNum >= 0 && lmNum < lightmaps.length ? lmNum : -1) + ':' + fogNum;
+		const model = surfModel[(o - sfl.ofs) / SURF_SIZE];
+		const key = shaderNum + ':' + (lmNum >= 0 && lmNum < lightmaps.length ? lmNum : -1) + ':' + fogNum + ':' + model;
 		let b = batches.get(key);
 		if (!b) {
-			b = { shader: shaderNum, fog: fogNum, lightmap: lmNum >= 0 && lmNum < lightmaps.length ? lmNum : -1, pos: [], st: [], lm: [], col: [], norm: [], idx: [] };
+			b = { shader: shaderNum, fog: fogNum, model, lightmap: lmNum >= 0 && lmNum < lightmaps.length ? lmNum : -1, pos: [], st: [], lm: [], col: [], norm: [], idx: [] };
 			batches.set(key, b);
 		}
 		const base = b.pos.length / 3;
@@ -719,6 +724,7 @@ function parseBsp(buffer) {
 		const pbase = pickPos.length / 3;
 		for (const v of verts) pickPos.push(v.p[0], v.p[1], v.p[2]);
 		for (const t of tris) pickIdx.push(pbase + t);
+		for (let i = 0; i < tris.length; i += 3) pickModel.push(model);
 	}
 
 	// The fogs (R_LoadFogs in tr_bsp.cpp): a shader with fogParms and the brush that is filled with it. No brush
@@ -749,7 +755,7 @@ function parseBsp(buffer) {
 	};
 	const stats = { surfaces: Math.floor(sfl.len / SURF_SIZE), vertices: Math.floor(numVerts), indexes: indexes.length, shaders: shaders.length, lightmaps: lightmaps.length,
 		brushModels: models.length, brushes: brushes.brushes.length / 3, planes: brushes.planes.length / 4, bytes: buffer.byteLength };
-	return { shaders, lightmaps, batches: [...batches.values()], bounds, sky, models, brushes, fogs, grid, stats, pick: { pos: new Float32Array(pickPos), idx: new Uint32Array(pickIdx) } };
+	return { shaders, lightmaps, batches: [...batches.values()], bounds, sky, models, brushes, fogs, grid, stats, pick: { pos: new Float32Array(pickPos), idx: new Uint32Array(pickIdx), model: new Uint16Array(pickModel) } };
 }
 
 // quadratic bezier patch, 3x3 control blocks
@@ -1010,7 +1016,7 @@ async function loadMap(name) {
 			if (!textures.has(shaderName)) textures.set(shaderName, gameImage(shaderName, false));
 			// posBuf and tri: the wireframe of the editor makes its lines of them when it is asked for. With stBuf,
 			// colBuf and verts they are also what the quads that turn to the viewer are made of (buildSprites).
-			return { vao, count: b.idx.length, shaderName, fog: b.fog, lm: b.lightmap >= 0 ? lightmapTex[b.lightmap] : null, posBuf, stBuf, colBuf, verts: b.pos.length / 3, tri, wire: null, sprites: undefined };
+			return { vao, count: b.idx.length, shaderName, fog: b.fog, model: b.model, lm: b.lightmap >= 0 ? lightmapTex[b.lightmap] : null, posBuf, stBuf, colBuf, verts: b.pos.length / 3, tri, wire: null, sprites: undefined };
 		});
 
 		world = { batches, textures, bounds: bsp.bounds, pick: bsp.pick, sky: bsp.sky, models: bsp.models, brushes: bsp.brushes, shaders: bsp.shaders, stats: bsp.stats, grid: bsp.grid, fogs: bsp.fogs, fogInfo: [], globalFog: null, wires: new Map(), scripted: null, skyDraw: null };
@@ -1888,7 +1894,7 @@ function drawWorldScripted(now, late) {
 	if (!late && world.skyDraw) drawSky(world.skyDraw, t);
 	gl.uniformMatrix4fv(stageProg.u.uMvp, false, viewProj);
 	const fogged = fogShown();
-	let sprite = 0, axes = null;
+	let sprite = 0, axes = null, placed = null;
 	for (const e of world.scripted) {
 		if ((e.mat.sort > SC_SORT_BANNER) !== late) continue;
 		// what a model has of this sort or one before it comes first, as the game has the map last
@@ -1896,6 +1902,9 @@ function drawWorldScripted(now, late) {
 			gl.useProgram(stageProg.p);
 			gl.colorMask(true, true, true, false);
 		}
+		// a brush model that is an entity: where that is, and not at all without one
+		const places = moverPlaces(e.b.model, now);
+		if (!places.length) continue;
 		const fog = fogged ? e.fog : null;
 		// a quad that turns to the viewer has no back
 		setCull(e.sprite ? 2 : e.mat.cull);
@@ -1908,9 +1917,16 @@ function drawWorldScripted(now, late) {
 		if (e.sprite !== sprite) gl.uniform1i(stageProg.u.uSprite, sprite = e.sprite);
 		setDeform(stageProg, e.mat, t);
 		if (e.mat.polygonOffset) { gl.enable(gl.POLYGON_OFFSET_FILL); gl.polygonOffset(-1, -2); }
-		for (const st of e.mat.stages) drawStage(st, t, e.b.lm, e.vao, e.count, gl.UNSIGNED_INT, 0, stageProg, fog && fog.global ? fog : null);
-		// the fog of a brush is a pass of its own over what was just drawn
-		if (fog && !fog.global && !e.sprite && !e.mat.deforms.length) {
+		for (const place of places) {
+			if (place !== placed) {
+				placed = place;
+				gl.uniformMatrix4fv(stageProg.u.uMvp, false, place ? M4.mul(viewProj, place) : viewProj);
+				gl.uniform3fv(stageProg.u.uEye, place ? eyeAt(place) : eye);
+			}
+			for (const st of e.mat.stages) drawStage(st, t, e.b.lm, e.vao, e.count, gl.UNSIGNED_INT, 0, stageProg, fog && fog.global ? fog : null);
+		}
+		// the fog of a brush is a pass of its own over what was just drawn, where the map has it
+		if (fog && !fog.global && !e.sprite && !e.mat.deforms.length && !placed) {
 			gl.useProgram(fogProg.p);
 			gl.uniformMatrix4fv(fogProg.u.uMvp, false, viewProj);
 			gl.uniform4fv(fogProg.u.uPlane, fog.plane);
@@ -2102,15 +2118,19 @@ function wireOf(b) {
 	return b.wire = { vao, count: lines.length };
 }
 
-function drawWorldWire() {
+function drawWorldWire(now) {
 	gl.useProgram(lineProg.p);
 	gl.uniformMatrix4fv(lineProg.u.uMvp, false, viewProj);
 	gl.uniform4fv(lineProg.u.uColor, [0.35, 0.95, 0.55, 1]);
 	gl.depthFunc(gl.LEQUAL);
+	let placed = null;
 	for (const b of world.batches) {
 		const wire = wireOf(b);
 		gl.bindVertexArray(wire.vao);
-		gl.drawElements(gl.LINES, wire.count, gl.UNSIGNED_INT, 0);
+		for (const place of moverPlaces(b.model, now)) {
+			if (place !== placed) gl.uniformMatrix4fv(lineProg.u.uMvp, false, (placed = place) ? M4.mul(viewProj, place) : viewProj);
+			gl.drawElements(gl.LINES, wire.count, gl.UNSIGNED_INT, 0);
+		}
 	}
 	gl.depthFunc(gl.LESS);
 }
@@ -2119,9 +2139,11 @@ function drawWorldWire() {
 // front counts (the side its corners run clockwise on), as the view shows it.
 function pickGround(origin, dir, oneSided = viewCulls()) {
 	if (!world) return null;
-	const p = world.pick.pos, idx = world.pick.idx;
+	const p = world.pick.pos, idx = world.pick.idx, of = world.pick.model;
 	let best = Infinity;
 	for (let i = 0; i < idx.length; i += 3) {
+		// a brush model no entity shows is not there. One that moved is still hit where the map has it.
+		if (movers && of[i / 3] && !movers.has(of[i / 3])) continue;
 		const a = idx[i] * 3, b = idx[i + 1] * 3, c = idx[i + 2] * 3;
 		const e1x = p[b] - p[a], e1y = p[b + 1] - p[a + 1], e1z = p[b + 2] - p[a + 2];
 		const e2x = p[c] - p[a], e2y = p[c + 1] - p[a + 1], e2z = p[c + 2] - p[a + 2];
@@ -2255,10 +2277,57 @@ async function pollState() {
 	}
 }
 
+// The brush models that are entities (state.movers): doors, lifts, what turns, what can be switched off or
+// broken. The game draws such a model where its entity is, and not at all without one. movers has, for the
+// number of a brush model, where it is drawn, as often as an entity shows it. null: the server does not say
+// (an older game module), then all of them are drawn where the map file has them.
+let movers = null;
+const ZERO3 = [0, 0, 0], AT_REST = [null], moverNow = new Map();
+let moverStamp = -1;
+
+function applyMovers(list) {
+	if (!list) { movers = null; return; }
+	const next = new Map();
+	for (const m of list) {
+		// a number alone: where the map has it
+		const flat = typeof m === 'number', n = flat ? m : m[0], pos = flat ? ZERO3 : [m[1], m[2], m[3]], angles = flat ? ZERO3 : [m[4], m[5], m[6]];
+		const places = next.get(n) || [], old = movers && movers.get(n) && movers.get(n)[places.length];
+		// drawn on its way from where it was at the last poll
+		places.push({ pos, angles, prevPos: old ? old.pos : pos, prevAngles: old ? old.angles : angles });
+		next.set(n, places);
+	}
+	movers = next;
+	moverStamp = -1;
+}
+
+// Where a brush model is drawn in the frame of the time now: a matrix for each time it is drawn, null for where
+// the map file has it. An empty list: no entity shows it.
+function moverPlaces(model, now) {
+	if (!model || !movers) return AT_REST;
+	if (moverStamp !== now) { moverNow.clear(); moverStamp = now; }
+	let places = moverNow.get(model);
+	if (!places) {
+		const k = Math.min(1, (now - lastPoll) / pollInterval);
+		places = (movers.get(model) || []).map(m => {
+			const pos = m.prevPos.map((v, i) => v + (m.pos[i] - v) * k), angles = m.prevAngles.map((v, i) => lerpAngle(v, m.angles[i], k));
+			return pos.some(v => v !== 0) || angles.some(v => v !== 0) ? anglesMatrix(pos, angles, 1) : null;
+		});
+		moverNow.set(model, places);
+	}
+	return places;
+}
+
+// the eye as a model that stands at place sees it
+function eyeAt(place) {
+	const at = M4.transform(M4.invert(place), eye);
+	return [at[0], at[1], at[2]];
+}
+
 function applyState(s) {
 	// where the models were at the last poll: they are drawn on their way from there
 	const before = new Map(((state && state.models) || []).map(m => [m.id, m.pos]));
 	for (const m of s.models || []) m.prev = before.get(m.id) || m.pos;
+	applyMovers(s.movers);
 	state = s;
 	const now = performance.now();
 	if (s.map && s.map !== loadedMap) loadMap(s.map);
@@ -2736,7 +2805,10 @@ function frame(now) {
 		const open = viewCulls();
 		// the lines lie in the surfaces: those are pushed back a little so the lines win
 		if (wire) { gl.enable(gl.POLYGON_OFFSET_FILL); gl.polygonOffset(1, 1); }
+		let placed = null;
 		for (const b of world.batches) {
+			const places = moverPlaces(b.model, now);
+			if (!places.length) continue;
 			// the side the game draws, which the script of the shader says once the scripts are read
 			if (open) setCull(scripts.state === 2 ? materialFor(b.shaderName, !!b.lm).cull : 0);
 			let t = world.textures.get(b.shaderName);
@@ -2748,10 +2820,17 @@ function frame(now) {
 			gl.uniform1i(mapProg.u.uUseLm, b.lm ? 1 : 0);
 			gl.uniform1i(mapProg.u.uAlphaTest, t.alpha ? 1 : 0);
 			gl.bindVertexArray(b.vao);
-			gl.drawElements(gl.TRIANGLES, b.count, gl.UNSIGNED_INT, 0);
+			for (const place of places) {
+				if (place !== placed) {
+					placed = place;
+					gl.uniformMatrix4fv(mapProg.u.uMvp, false, place ? M4.mul(viewProj, place) : viewProj);
+					gl.uniform3fv(mapProg.u.uEye, place ? eyeAt(place) : eye);
+				}
+				gl.drawElements(gl.TRIANGLES, b.count, gl.UNSIGNED_INT, 0);
+			}
 		}
 		gl.disable(gl.CULL_FACE);
-		if (wire) { gl.disable(gl.POLYGON_OFFSET_FILL); drawWorldWire(); }
+		if (wire) { gl.disable(gl.POLYGON_OFFSET_FILL); drawWorldWire(now); }
 	}
 
 	gl.useProgram(flatProg.p);

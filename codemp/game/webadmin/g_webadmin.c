@@ -786,6 +786,34 @@ static void WA_ApiState( waConnection_t *c ) {
 		WA_AppendVec( &b, angles );
 		WA_BufAppend( &b, "}", 1 );
 	}
+
+	// Not in JKAdmin: what is made of brushes and is an entity (doors, lifts, what turns, what can be switched
+	// off or broken), as the clients draw it (CG_Mover). Each is the number of its brush model, or that number
+	// with its place and its angles when it is not where the map file has it. One that is not in the list is
+	// not drawn by a client either.
+	WA_BufAppend( &b, "],\"movers\":[", 12 );
+	first = qtrue;
+	for ( i = MAX_CLIENTS; i < level.num_entities; i++ ) {
+		gentity_t	*ent = &g_entities[i];
+		vec3_t		pos, angles;
+
+		if ( !ent->inuse || !ent->r.linked || !ent->r.bmodel || ent->s.eType != ET_MOVER || ent->s.modelindex <= 0
+			|| ( ent->s.eFlags & EF_NODRAW ) || ( ent->s.eFlags2 & EF2_HYPERSPACE )
+			|| ( ent->r.svFlags & ( SVF_NOCLIENT | SVF_SINGLECLIENT ) ) )
+			continue;
+
+		if ( !first )
+			WA_BufAppend( &b, ",", 1 );
+		first = qfalse;
+
+		BG_EvaluateTrajectory( &ent->s.pos, level.time, pos );
+		BG_EvaluateTrajectory( &ent->s.apos, level.time, angles );
+		if ( VectorCompare( pos, vec3_origin ) && VectorCompare( angles, vec3_origin ) )
+			WA_BufPrintf( &b, "%d", ent->s.modelindex );
+		else
+			WA_BufPrintf( &b, "[%d,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f]", ent->s.modelindex, pos[0], pos[1], pos[2],
+				angles[0], angles[1], angles[2] );
+	}
 	WA_BufAppend( &b, "]}", 2 );
 
 	WA_RespondJson( c, &b );
