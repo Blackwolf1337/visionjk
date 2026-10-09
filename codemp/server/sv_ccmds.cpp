@@ -5,6 +5,7 @@ Copyright (C) 2000 - 2013, Raven Software, Inc.
 Copyright (C) 2001 - 2013, Activision, Inc.
 Copyright (C) 2005 - 2015, ioquake3 contributors
 Copyright (C) 2013 - 2015, OpenJK contributors
+Copyright (C) 2026, VisionJK contributors
 
 This file is part of the OpenJK source code.
 
@@ -821,6 +822,12 @@ static void SV_AddBanToList( qboolean isexception )
 		}
 
 		ip = cl->netchan.remoteAddress;
+#ifdef DEDICATED
+		// a peer of the web host (NA_WEB) is banned by its address as any other player is: a ban is kept as
+		// NA_IP, so it holds for UDP and for the web host alike (SV_IsBanned)
+		if ( ip.type == NA_WEB )
+			ip.type = NA_IP;
+#endif
 
 		if ( argc == 3 )
 		{

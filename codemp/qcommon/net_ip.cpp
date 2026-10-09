@@ -5,6 +5,7 @@ Copyright (C) 2000 - 2013, Raven Software, Inc.
 Copyright (C) 2001 - 2013, Activision, Inc.
 Copyright (C) 2005 - 2015, ioquake3 contributors
 Copyright (C) 2013 - 2015, OpenJK contributors
+Copyright (C) 2026, VisionJK contributors
 
 This file is part of the OpenJK source code.
 
@@ -373,7 +374,7 @@ qboolean Sys_IsLANAddress( const netadr_t *adr ) {
 	if( adr->type == NA_LOOPBACK )
 		return qtrue;
 
-	if( adr->type != NA_IP )
+	if( !NET_AdrHasIP( adr ) )
 		return qfalse;
 
 	// RFC1918:

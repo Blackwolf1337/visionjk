@@ -5,6 +5,7 @@ Copyright (C) 2000 - 2013, Raven Software, Inc.
 Copyright (C) 2001 - 2013, Activision, Inc.
 Copyright (C) 2005 - 2015, ioquake3 contributors
 Copyright (C) 2013 - 2015, OpenJK contributors
+Copyright (C) 2026, VisionJK contributors
 
 This file is part of the OpenJK source code.
 
@@ -400,7 +401,7 @@ qboolean NET_CompareBaseAdrMask( const netadr_t *a, const netadr_t *b, unsigned 
 	if ( a->type == NA_LOOPBACK )
 		return qtrue;
 
-	if ( a->type == NA_IP )
+	if ( NET_AdrHasIP( a ) )
 	{
 		addra = (byte *)&a->ip;
 		addrb = (byte *)&b->ip;
@@ -454,7 +455,8 @@ const char	*NET_AdrToString (const netadr_t *a)
 		Com_sprintf (s, sizeof(s), "loopback");
 	} else if (a->type == NA_BOT) {
 		Com_sprintf (s, sizeof(s), "bot");
-	} else if (a->type == NA_IP) {
+	} else if (NET_AdrHasIP(a)) {
+		// (a peer of the web host is written as a UDP peer is: the game and its bans go by this text)
 		Com_sprintf (s, sizeof(s), "%i.%i.%i.%i:%hu",
 			a->ip[0], a->ip[1], a->ip[2], a->ip[3], BigShort(a->port));
 	} else if (a->type == NA_BAD) {
@@ -470,7 +472,7 @@ qboolean	NET_CompareAdr (const netadr_t *a, const netadr_t *b)
 	if (!NET_CompareBaseAdr(a, b))
 		return qfalse;
 
-	if (a->type == NA_IP)
+	if (NET_AdrHasIP(a))
 	{
 		if (a->port == b->port)
 			return qtrue;

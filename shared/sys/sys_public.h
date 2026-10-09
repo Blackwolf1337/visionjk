@@ -32,7 +32,11 @@ typedef enum netadrtype_s
 	NA_BOT,
 	NA_LOOPBACK,
 	NA_BROADCAST,
-	NA_IP
+	NA_IP,
+	NA_WEB						// a peer of the web host of the dedicated server (codemp/server/web): the address and
+								// the port of its TCP connection, kept as NA_IP keeps them. The type is what tells
+								// it from a UDP peer of the same address: the server finds a client by address and
+								// qport and writes the port over (SV_PacketEvent), so a port could not.
 } netadrtype_t;
 
 typedef struct netadr_s
@@ -44,6 +48,16 @@ typedef struct netadr_s
 	};
 	uint16_t	port;
 } netadr_t;
+
+// qtrue: the address is an IPv4 address and a port. That is NA_IP, and for the dedicated server NA_WEB too.
+static inline bool NET_AdrHasIP( const netadr_t *a ) {
+#ifdef DEDICATED
+	if ( a->type == NA_WEB ) {
+		return true;
+	}
+#endif
+	return a->type == NA_IP;
+}
 
 /*
 ==============================================================

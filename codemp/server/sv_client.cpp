@@ -5,6 +5,7 @@ Copyright (C) 2000 - 2013, Raven Software, Inc.
 Copyright (C) 2001 - 2013, Activision, Inc.
 Copyright (C) 2005 - 2015, ioquake3 contributors
 Copyright (C) 2013 - 2015, OpenJK contributors
+Copyright (C) 2026, VisionJK contributors
 
 This file is part of the OpenJK source code.
 
@@ -95,6 +96,17 @@ static qboolean SV_IsBanned( const netadr_t *from, qboolean isexception )
 {
 	int index;
 	serverBan_t *curban;
+#ifdef DEDICATED
+	netadr_t asIP;
+
+	// a ban is kept as NA_IP and holds for the address whichever way it comes in: a peer of the web host
+	// (NA_WEB, codemp/server/web) is looked up as the UDP peer of its address
+	if ( from->type == NA_WEB ) {
+		asIP = *from;
+		asIP.type = NA_IP;
+		from = &asIP;
+	}
+#endif
 
 	if ( !serverBansCount ) {
 		return qfalse;

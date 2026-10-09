@@ -5,6 +5,7 @@ Copyright (C) 2000 - 2013, Raven Software, Inc.
 Copyright (C) 2001 - 2013, Activision, Inc.
 Copyright (C) 2005 - 2015, ioquake3 contributors
 Copyright (C) 2013 - 2015, OpenJK contributors
+Copyright (C) 2026, VisionJK contributors
 
 This file is part of the OpenJK source code.
 
@@ -327,7 +328,8 @@ static leakyBucket_t *SVC_BucketForAddress( const netadr_t *address, int burst, 
 	static std::map<int, leakyBucket_t> bucketMap;
 	static int lastGC = 0;
 
-	if (address->type != NA_IP) {
+	// (a peer of the web host shares the bucket of its address with the UDP peers of that address)
+	if (!NET_AdrHasIP(address)) {
 		return NULL;
 	}
 
@@ -657,7 +659,7 @@ void SVC_LoadWhitelist( void ) {
 void SVC_WhitelistAdr( const netadr_t *adr ) {
 	fileHandle_t f;
 
-	if (adr->type != NA_IP) {
+	if (!NET_AdrHasIP(adr)) {
 		return;
 	}
 
@@ -678,7 +680,7 @@ void SVC_WhitelistAdr( const netadr_t *adr ) {
 }
 
 static qboolean SVC_IsWhitelisted( const netadr_t *adr ) {
-	if (adr->type == NA_IP) {
+	if (NET_AdrHasIP(adr)) {
 		return (qboolean)(svc_whitelist.find(adr->ipi) != svc_whitelist.end());
 	} else {
 		return qtrue;
