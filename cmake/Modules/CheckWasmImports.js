@@ -8,13 +8,14 @@
 //
 // A side module links whatever it does not have itself against the main module when it is loaded, and a function
 // that is not there only shows when it is called. On the desktop the linker says so at build time (-z defs).
-// This says it here: every function a module imports has to be one the engine exports, or one of WebGL, which
-// the page provides.
+// This says it here: every function a module imports has to be one the engine exports, one the engine itself gets
+// from the JavaScript side of Emscripten (exit is one), or one of WebGL, which is on that side too.
 const fs = require( 'fs' );
 const [enginePath, modulePath] = process.argv.slice( 2 );
-const exported = new Set( WebAssembly.Module.exports( new WebAssembly.Module( fs.readFileSync( enginePath ) ) ).map( ( e ) => e.name ) );
+const engine = new WebAssembly.Module( fs.readFileSync( enginePath ) );
+const known = new Set( WebAssembly.Module.exports( engine ).concat( WebAssembly.Module.imports( engine ) ).map( ( e ) => e.name ) );
 const missing = WebAssembly.Module.imports( new WebAssembly.Module( fs.readFileSync( modulePath ) ) )
-	.filter( ( i ) => i.kind === 'function' && !exported.has( i.name ) && !/^(gl[A-Z]|emscripten_gl|invoke_)/.test( i.name ) )
+	.filter( ( i ) => i.kind === 'function' && !known.has( i.name ) && !/^(gl[A-Z]|emscripten_gl|invoke_)/.test( i.name ) )
 	.map( ( i ) => i.name );
 
 if ( missing.length ) {
