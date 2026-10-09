@@ -90,6 +90,23 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
     #define DLL_EXT ".dylib"
 
+// the browser: WebAssembly built with Emscripten, pointers of 4 bytes
+#elif defined(__EMSCRIPTEN__)
+
+	#define OS_STRING "emscripten"
+
+	#define QINLINE inline
+
+	#define PATH_SEP '/'
+
+	#if !defined(ARCH_STRING)
+		#error ARCH_STRING should be defined by the build system
+	#endif
+
+	#define Q3_LITTLE_ENDIAN
+
+	#define DLL_EXT ".wasm"
+
 // Linux
 #elif defined(__linux__) || defined(__FreeBSD_kernel__)
 

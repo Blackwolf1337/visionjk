@@ -161,6 +161,11 @@ if(BuildMPEngine OR BuildMPDed)
 	source_group("server" FILES ${MPBotlibServerFiles})
 	set(MPBotlibFiles ${MPBotlibFiles} ${MPBotlibServerFiles})
 
+	if(EMSCRIPTEN)
+		# A main module takes every member of a library, used or not, and the engine has these files itself.
+		list(FILTER MPBotlibFiles EXCLUDE REGEX "/shared/qcommon/.*\\.(c|cpp)$")
+	endif()
+
 	add_library(${MPBotLib} STATIC ${MPBotlibFiles})
 
 	# Hide symbols not explicitly marked public.
@@ -455,14 +460,17 @@ if(BuildMPEngine)
 
 	#    Dependencies
 
-	if (NOT WIN32)
+	if (NOT WIN32 AND NOT EMSCRIPTEN)
 		# OpenGL
 		find_package(OpenGL REQUIRED)
 		set(MPEngineIncludeDirectories ${MPEngineIncludeDirectories} ${OPENGL_INCLUDE_DIR})
 		set(MPEngineLibraries ${MPEngineLibraries} ${OPENGL_LIBRARIES})
 	endif()
 
-	if(UseInternalSDL2)
+	if(EMSCRIPTEN)
+		# SDL2 is one of the ports that come with Emscripten, and WebGL with its headers is part of it: both are
+		# options of the compiler and not libraries to find
+	elseif(UseInternalSDL2)
 		set(MPEngineLibraries
 			${MPEngineLibraries}
 			${VisionJKLibDir}/SDL2/lib/x64/SDL2main.lib
@@ -609,6 +617,18 @@ if(BuildMPEngine)
 			"${SharedDir}/sys/sys_win32.cpp"
 			"${SharedDir}/sys/con_passive.cpp"
 			)
+	elseif(EMSCRIPTEN)
+		# The browser: no terminal, a frame when the page is about to paint, modules that the page has compiled,
+		# and packets through a WebSocket to the server the page came from (a page can not send UDP).
+		set(MPEngineSysFiles
+			${MPEngineSysFiles}
+			"${SharedDir}/sys/sys_unix.cpp"
+			"${SharedDir}/sys/con_passive.cpp"
+			"${SharedDir}/sys/web/sys_web.h"
+			"${SharedDir}/sys/web/sys_web.cpp"
+			)
+		list(REMOVE_ITEM MPEngineFiles "${MPDir}/qcommon/net_ip.cpp")
+		set(MPEngineFiles ${MPEngineFiles} "${MPDir}/qcommon/net_ws.cpp")
 	else(WIN32)
 		set(MPEngineSysFiles
 			${MPEngineSysFiles}
@@ -686,6 +706,12 @@ if(BuildMPEngine)
 
 	# Hide symbols not explicitly marked public.
 	set_property(TARGET ${MPEngine} APPEND PROPERTY COMPILE_OPTIONS ${VISIONJK_VISIBILITY_FLAGS})
+
+	if(EMSCRIPTEN)
+		include(WasmModule)
+		vjk_wasm_main_module(${MPEngine} "${SharedDir}/sys/web/sys_web.js")
+		vjk_wasm_page("${SharedDir}/sys/web/page")
+	endif()
 
 	set_target_properties(${MPEngine} PROPERTIES INCLUDE_DIRECTORIES "${MPEngineIncludeDirectories}")
 	set_target_properties(${MPEngine} PROPERTIES PROJECT_LABEL "MP Client")

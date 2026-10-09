@@ -119,11 +119,16 @@ endif()
 # and is used in DLL names (jagamex86_64.dll, jagamex86_64.dylib, jagamex86_64.so).
 
 # This tree is built for 64 bit only. A toolchain file that forces the compiler leaves the size unset.
-if(CMAKE_SIZEOF_VOID_P EQUAL 4)
+# The one exception is the client for the browser: WebAssembly as Emscripten builds it has pointers of 4 bytes.
+if(CMAKE_SIZEOF_VOID_P EQUAL 4 AND NOT EMSCRIPTEN)
 	message(FATAL_ERROR "32 bit builds are not supported, use a 64 bit compiler")
 endif()
 
-if(WIN32)
+if(EMSCRIPTEN)
+	# the toolchain of Emscripten calls the processor x86
+	set(X86 OFF)
+	set(Architecture "wasm32")
+elseif(WIN32)
 	set(X86 ON)
 	set(Architecture "x86_64")
 	set(WIN64 TRUE)
@@ -213,8 +218,22 @@ if (NOT WIN32 AND NOT APPLE)
 	set(SharedDefines ${SharedDefines} "ARCH_STRING=\"${Architecture}\"")
 endif()
 
-if(CMAKE_SYSTEM_NAME MATCHES "BSD")
+if(CMAKE_SYSTEM_NAME MATCHES "BSD" OR EMSCRIPTEN)
   add_definitions(-DIOAPI_NO_64)
+endif()
+
+if(EMSCRIPTEN)
+	# Com_Error() throws through the C code of the modules, libjpeg and libpng jump: both as WebAssembly does
+	# it natively, and the same in every object file. The engine is a main module and the game modules are
+	# side modules of it, so everything is position independent.
+	add_compile_options(-fwasm-exceptions -fPIC)
+	add_link_options(-fwasm-exceptions)
+	# zlib takes off_t for its file offsets only when it is told that unistd.h is there, and else long, which
+	# is half the size here. C++ files are told so by the compiler, C files are not: one answer for all.
+	add_definitions(-DZ_HAVE_UNISTD_H)
+	# A call through a function pointer of another type than the function works on the desktop and traps in
+	# WebAssembly, so the compiler should name such casts.
+	add_compile_options(-Wcast-function-type)
 endif()
 
 # Compiler settings
@@ -323,7 +342,7 @@ elseif (("${CMAKE_C_COMPILER_ID}" STREQUAL "GNU") OR ("${CMAKE_C_COMPILER_ID}" M
 			# the PE flags: data execution prevention and address space layout randomisation. No stack protector
 			# here: on mingw it would pull in libssp-0.dll, a new runtime file the modules must not depend on.
 			add_link_options(-Wl,--nxcompat -Wl,--dynamicbase)
-		else()
+		elseif(NOT EMSCRIPTEN)
 			# a canary on functions with buffers (the runtime is in libc, no new dependency), checked libc calls
 			# (needs optimisation, so only in the optimised configs), and a read-only GOT bound at start
 			set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fstack-protector-strong")

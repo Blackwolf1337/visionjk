@@ -189,6 +189,11 @@ if(NOT MSVC)
 	set_target_properties(${MPCGame} PROPERTIES PREFIX "")
 endif()
 
+if(EMSCRIPTEN)
+	include(WasmModule)
+	vjk_wasm_side_module(${MPCGame})
+endif()
+
 if(MakeApplicationBundles AND BuildMPEngine)
 	install(TARGETS ${MPCGame}
 		LIBRARY

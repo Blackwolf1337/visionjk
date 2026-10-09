@@ -101,6 +101,11 @@ if(NOT MSVC)
 	set_target_properties(${MPUI} PROPERTIES PREFIX "")
 endif()
 
+if(EMSCRIPTEN)
+	include(WasmModule)
+	vjk_wasm_side_module(${MPUI})
+endif()
+
 if(MakeApplicationBundles AND BuildMPEngine)
 	install(TARGETS ${MPUI}
 		LIBRARY
