@@ -2731,6 +2731,9 @@ void CG_Shutdown( void )
 	// first of all: the threads of the voice chat run code of this module
 	CG_VoiceShutdown();
 
+	// the keys bot mode holds down are let go
+	CG_BotModeShutdown();
+
 	BG_ClearAnimsets(); //free all dynamic allocations made through the engine
 
     CG_DestroyAllGhoul2();

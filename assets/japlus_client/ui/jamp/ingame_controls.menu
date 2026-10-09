@@ -3444,7 +3444,7 @@
 			group				japluscontrols
 			type				ITEM_TYPE_BIND
 			text				"Bot Mode (On/Off)"
-			cvar				"cp_botMode !"
+			cvar				"cg_botMode !"
 			rect				220 141 300 20
 			textalign			ITEM_ALIGN_RIGHT
 			textalignx			151
@@ -3454,7 +3454,7 @@
 			forecolor			.615 .615 .956 1
 			visible			0
 			// appearance_slot		1
-			descText			"a bot of the server plays for you, and stops (Setup, Bot Mode)"
+			descText			"your client plays by itself, and stops (Setup, Bot Mode)"
 			
 			mouseenter 
 			{ 

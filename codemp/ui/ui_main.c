@@ -2834,19 +2834,6 @@ static void UI_DrawBotName(rectDef_t *rect, float scale, vec4_t color, int textS
 	Text_Paint(rect->x, rect->y, scale, color, text, 0, 0, textStyle,iMenuFont);
 }
 
-// The bot whose personality the bot mode takes: cp_botName, on the Bot Mode page of the setup menus. No name
-// is the default personality, and so is a name this list does not have.
-static const char *UI_BotModeName( void ) {
-	const char *name = UI_Cvar_VariableString( "cp_botName" );
-
-	return name[0] ? name : "Default";
-}
-
-static void UI_DrawBotModeName(rectDef_t *rect, float scale, vec4_t color, int textStyle,int iMenuFont)
-{
-	Text_Paint(rect->x, rect->y, scale, color, UI_BotModeName(), 0, 0, textStyle,iMenuFont);
-}
-
 static void UI_DrawBotSkill(rectDef_t *rect, float scale, vec4_t color, int textStyle,int iMenuFont)
 {
 	if (uiInfo.skillIndex >= 0 && uiInfo.skillIndex < numSkillLevels)
@@ -3262,9 +3249,6 @@ static void UI_OwnerDraw(float x, float y, float w, float h, float text_x, float
 			break;
 		case UI_BOTNAME:
 			UI_DrawBotName(&rect, scale, color, textStyle,iMenuFont);
-			break;
-		case UI_BOTMODE_NAME:
-			UI_DrawBotModeName(&rect, scale, color, textStyle,iMenuFont);
 			break;
 		case UI_BOTSKILL:
 			UI_DrawBotSkill(&rect, scale, color, textStyle,iMenuFont);
@@ -4103,31 +4087,6 @@ static qboolean UI_BotName_HandleKey(int flags, float *special, int key) {
 	return qfalse;
 }
 
-// through "Default" and the bots of the list, the right mouse button goes back
-static qboolean UI_BotModeName_HandleKey(int flags, float *special, int key) {
-	if (key == A_MOUSE1 || key == A_MOUSE2 || key == A_ENTER || key == A_KP_ENTER) {
-		const char	*name = UI_Cvar_VariableString( "cp_botName" );
-		const int	count = UI_GetNumBots();
-		int			i, value = -1;		// -1: no bot, the default personality
-
-		for ( i = 0; i < count; i++ ) {
-			if ( !Q_stricmp( name, UI_GetBotNameByNumber( i ) ) ) {
-				value = i;
-				break;
-			}
-		}
-		value += ( key == A_MOUSE2 ) ? -1 : 1;
-		if ( value >= count ) {
-			value = -1;
-		} else if ( value < -1 ) {
-			value = count - 1;
-		}
-		trap->Cvar_Set( "cp_botName", value < 0 ? "" : UI_GetBotNameByNumber( value ) );
-		return qtrue;
-	}
-	return qfalse;
-}
-
 static qboolean UI_BotSkill_HandleKey(int flags, float *special, int key) {
 	if (key == A_MOUSE1 || key == A_MOUSE2 || key == A_ENTER || key == A_KP_ENTER) {
 		if (key == A_MOUSE2) {
@@ -4362,9 +4321,6 @@ static qboolean UI_OwnerDrawHandleKey(int ownerDraw, int flags, float *special, 
 			break;
 		case UI_BOTNAME:
 			return UI_BotName_HandleKey(flags, special, key);
-			break;
-		case UI_BOTMODE_NAME:
-			return UI_BotModeName_HandleKey(flags, special, key);
 			break;
 		case UI_BOTSKILL:
 			return UI_BotSkill_HandleKey(flags, special, key);

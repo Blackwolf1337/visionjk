@@ -98,11 +98,10 @@ game's menu, changed for this engine. Both have the same pages.
 | Video | Video Quality | presets for the detail only (`r_lodbias`, `r_picmip`, `r_textureMode`, `r_subdivisions`, `r_fastSky`, `r_inGameVideo`), not for the size or the bit depths any more |
 | Sound | 3D Sound, Output, Reverb | the sound of [audio.md](audio.md), see "The menu" there |
 | Options | Allow Downloads | Off, On (`cl_allowDownload`) |
-| Bot Mode | Bot Mode | a bot of the server plays for me (`cp_botMode`, not saved: off at every start) |
-| Bot Mode | Skill | Initiate to Jedi Master (`cp_botSkill` 1 to 5) |
-| Bot Mode | Personality | "Default" or a bot of the client's bot list (`cp_botName`): the bot mine behaves like |
-| Bot Mode | Fight | No: it has no enemies and only walks the route of the map (`cp_botFight`) |
-| Bot Mode | Chat | the chat lines of the personality (`cp_botChat`) |
+| Bot Mode | Bot Mode | the client plays by itself (`cg_botMode`, not saved: off at every start) |
+| Bot Mode | Skill | Initiate to Jedi Master (`cg_botModeSkill` 1 to 5): turn speed, aim, time to the first attack |
+| Bot Mode | Fight | Never, In Duels, Always (`cg_botModeFight` 0 to 2) |
+| Bot Mode | Walk The Route | No: it stays where it is and only turns and fights (`cg_botModeRoam`) |
 | Bot Mode | Keys Take Over | a move or attack key ends the bot mode (`cg_botModeKeys`) |
 
 Everything on the video page is applied by its "Apply" with a `vid_restart`. Taken out, because they did
@@ -115,20 +114,29 @@ None of the pages was looked at in the game after these changes: the rows were p
 
 ### Bot mode
 
-Not a JA+ feature. The server plays the player with its bot code, see "Bot mode" in [server.md](server.md). The
-five `cp_bot` cvars are in the userinfo and ask for it. The server answers in the player configstring: a human
-in bot mode has the key `skill`, as a bot has. While the cgame reads that for its own player
-(`CG_BotMode`, `cgame/botmode/cg_botmode.c`):
+Not a JA+ feature, and client only (`cgame/botmode/cg_botmode.c`): no server knows of it, the game module and the
+engine are not changed, so it runs on any server and in any client that loads this cgame. A key for on and off
+is on the JA+ page of the controls menus (`cg_botMode !`).
 
-- `CG_PredictPlayerState` takes the player from the snapshots, as for a followed player: the server does not run
-  what the keys say any more, so the view is the one of the bot.
-- The HUD says "BOT MODE", and the scoreboard shows "BOT" in place of the ping (to every client).
-- Once a frame the selected weapon is set to the one of the bot and the engine is given its yaw
-  (`SetClientForceAngle`), so that neither jumps when the bot lets go. The pitch is the one of the mouse again.
-- With `cg_botModeKeys` a move key or a button that was not down the frame before sets `cp_botMode 0`.
+- The route is the file the bots of a server walk, `botroutes/<map>.wnt`, read from the client's own pk3s
+  (the format `SavePathData` of `ai_wpnav.c` writes). The waypoints are a trail in the order of the file. At
+  a waypoint the next one of the trail is taken, one time in four another waypoint it names, and at the end of
+  the trail the way back. Links that need a force jump are not taken. A waypoint that is not reached in 8
+  seconds, or after five jumps and side steps against what is in the way, is given up for the nearest other
+  one in view. A map without that file: the bot stands and fights.
+- Enemies: the nearest player in view within 1536 units who is alive, not on my team and not in a duel of his
+  own. In a duel only the duel partner. It walks to where the weapon reaches (72 units with a saber, 512 with
+  a gun), steps to the sides and attacks when he is where it looks. The weapon is the one that is selected.
+  Dead, it presses attack to come back.
+- The input: the engine has no way in for a cgame to write a command. So the bot holds keys with the console
+  commands of the keys (`+forward` without a key number is held until `-forward`), sets the yaw with
+  `SetClientForceAngle`, and turns the pitch with `+lookdown` held all the time and the pitch override of
+  `SetUserCmdValue` as its rate, set every frame from how far off the pitch is. `CG_Shutdown` lets the keys go.
+- It does nothing as a spectator, in the intermission, in a vehicle and at an emplaced gun.
+- The HUD says "BOT MODE".
 
-A key for on and off is bound on the JA+ page of the controls menus (`cp_botMode !`). A server that does not know
-the cvars ignores them. Built, not run: nobody has seen a player in bot mode or the page.
+Built, not run: nobody has seen it walk or fight, and the pitch control is worked out from the engine code, not
+measured.
 
 ## Prediction
 

@@ -2416,7 +2416,6 @@ void CG_DrawActiveFrame( int serverTime, stereoFrame_t stereoView, qboolean demo
 	CG_JPReplyFrame();
 	CG_JPMacroScanFrame();
 	CG_VoiceFrame();
-	CG_BotModeFrame();
 	int		inwater;
 	const char *cstr;
 	float mSensitivity = cg.zoomSensitivity;
@@ -2563,6 +2562,9 @@ void CG_DrawActiveFrame( int serverTime, stereoFrame_t stereoView, qboolean demo
 			trap->SetUserCmdValue( cg.weaponSelect, mSensitivity, mPitchOverride, mYawOverride, 0.0f, cg.forceSelect, cg.itemSelect, qfalse );
 		}
 	}
+
+	// bot mode holds my keys and turns my view, and says the values above again with its own in them
+	CG_BotModeFrame( mSensitivity );
 
 	// this counter will be bumped for every valid scene we generate
 	cg.clientFrame++;

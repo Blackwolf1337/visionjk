@@ -745,9 +745,7 @@ int BotAI(int client, float thinktime) {
 	BotAI_GetClientState( client, &bs->cur_ps );
 
 	//retrieve any waiting server commands
-	// (not those of a human in bot mode: this reads them from his connection as acknowledged, his client
-	// would never get them)
-	while( !(bs->settings.botMode & BOTMODE_HUMAN) && trap->BotGetServerCommand(client, buf, sizeof(buf)) ) {
+	while( trap->BotGetServerCommand(client, buf, sizeof(buf)) ) {
 		//have buf point to the command and args to the command arguments
 		args = strchr( buf, ' ');
 		if (!args) continue;
@@ -6006,11 +6004,6 @@ void StandardBotAI(bot_state_t *bs, float thinktime)
 		return;
 	}
 
-	if (bs->settings.botMode & BOTMODE_PEACEFUL)
-	{ //bot mode of a human who only wants to walk: whoever hit him since the last frame is no enemy
-		bs->currentEnemy = NULL;
-		bs->revengeEnemy = NULL;
-	}
 
 #ifndef FINAL_BUILD
 	if (bot_getinthecarrr.integer)
@@ -6548,11 +6541,7 @@ void StandardBotAI(bot_state_t *bs, float thinktime)
 		}
 	}
 
-	if (bs->settings.botMode & BOTMODE_PEACEFUL)
-	{ //nobody to look for, and the owner of a projectile is no enemy either
-		bs->currentEnemy = NULL;
-	}
-	else if (bs->enemySeenTime < level.time || !bs->frame_Enemy_Vis || !bs->currentEnemy ||
+	if (bs->enemySeenTime < level.time || !bs->frame_Enemy_Vis || !bs->currentEnemy ||
 		(bs->currentEnemy /*&& bs->cur_ps.weapon == WP_SABER && bs->frame_Enemy_Len > 300*/))
 	{
 		enemy = ScanForEnemies(bs);
@@ -7606,11 +7595,7 @@ int BotAIStartFrame(int time) {
 		}
 
 		BotUpdateInput(botstates[i], time, elapsed_time);
-		// a human in bot mode sends his commands himself, G_BotModeCommand puts lastucmd into them
-		if (!(botstates[i]->settings.botMode & BOTMODE_HUMAN))
-		{
-			trap->BotUserCommand(botstates[i]->client, &botstates[i]->lastucmd);
-		}
+		trap->BotUserCommand(botstates[i]->client, &botstates[i]->lastucmd);
 	}
 
 	return qtrue;

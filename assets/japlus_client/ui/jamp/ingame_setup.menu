@@ -364,7 +364,7 @@
 			textstyle			3
 			forecolor			1 .682 0 1
 			visible			1
-			descText			"Let a bot play for you."
+			descText			"Let your client play by itself."
 
 			mouseEnter 
 			{ 
@@ -2063,7 +2063,7 @@
 			group				botmode
 			type				ITEM_TYPE_YESNO
 			text				"Bot Mode:"
-			cvar				"cp_botMode"
+			cvar				"cg_botMode"
 			rect				220 41 300 20
 			textalign			ITEM_ALIGN_RIGHT
 			textalignx			165
@@ -2072,7 +2072,7 @@
 			textscale			1
 			forecolor			.615 .615 .956 1
 			visible				0
-			descText			"A bot of the server plays for you. Only on servers of this mod."
+			descText			"Your client plays by itself, on any server: it walks the route of the map and fights."
 			action
 			{
 				play			"sound/interface/button1"
@@ -2093,7 +2093,7 @@
 			group				botmode
 			type				ITEM_TYPE_MULTI
 			text				"Skill:"
-			cvar				"cp_botSkill"
+			cvar				"cg_botModeSkill"
 			cvarFloatList		{ "Initiate" 1 "Padawan" 2 "Jedi" 3 "Jedi Knight" 4 "Jedi Master" 5 }
 			rect				220 61 300 20
 			textalign			ITEM_ALIGN_RIGHT
@@ -2103,7 +2103,7 @@
 			textscale			1
 			forecolor			.615 .615 .956 1
 			visible				0
-			descText			"How well your bot fights."
+			descText			"How fast it turns, how well it aims and how soon it attacks."
 			action
 			{
 				play			"sound/interface/button1"
@@ -2122,8 +2122,10 @@
 		{
 			name				botmode3
 			group				botmode
-			ownerdraw			UI_BOTMODE_NAME
-			text				"Personality:"
+			type				ITEM_TYPE_MULTI
+			text				"Fight:"
+			cvar				"cg_botModeFight"
+			cvarFloatList		{ "Never" 0 "In Duels" 1 "Always" 2 }
 			rect				220 81 300 20
 			textalign			ITEM_ALIGN_RIGHT
 			textalignx			165
@@ -2132,7 +2134,7 @@
 			textscale			1
 			forecolor			.615 .615 .956 1
 			visible				0
-			descText			"The bot your bot behaves like. The right mouse button goes back."
+			descText			"Whom it attacks: nobody, only the one you are in a duel with, or every enemy it sees."
 			action
 			{
 				play			"sound/interface/button1"
@@ -2152,8 +2154,8 @@
 			name				botmode4
 			group				botmode
 			type				ITEM_TYPE_YESNO
-			text				"Fight:"
-			cvar				"cp_botFight"
+			text				"Walk The Route:"
+			cvar				"cg_botModeRoam"
 			rect				220 101 300 20
 			textalign			ITEM_ALIGN_RIGHT
 			textalignx			165
@@ -2162,7 +2164,7 @@
 			textscale			1
 			forecolor			.615 .615 .956 1
 			visible				0
-			descText			"No: your bot has no enemies, it only walks the route of the map."
+			descText			"No: it stays where it is and only turns and fights."
 			action
 			{
 				play			"sound/interface/button1"
@@ -2182,39 +2184,9 @@
 			name				botmode5
 			group				botmode
 			type				ITEM_TYPE_YESNO
-			text				"Chat:"
-			cvar				"cp_botChat"
-			rect				220 121 300 20
-			textalign			ITEM_ALIGN_RIGHT
-			textalignx			165
-			textaligny			0
-			font				4
-			textscale			1
-			forecolor			.615 .615 .956 1
-			visible				0
-			descText			"Your bot says the chat lines of its personality."
-			action
-			{
-				play			"sound/interface/button1"
-			}
-			mouseenter
-			{
-				show			highlight5
-			}
-			mouseexit
-			{
-				hide			highlight5
-			}
-		}
-
-		itemDef
-		{
-			name				botmode6
-			group				botmode
-			type				ITEM_TYPE_YESNO
 			text				"Keys Take Over:"
 			cvar				"cg_botModeKeys"
-			rect				220 141 300 20
+			rect				220 121 300 20
 			textalign			ITEM_ALIGN_RIGHT
 			textalignx			165
 			textaligny			0
@@ -2229,11 +2201,11 @@
 			}
 			mouseenter
 			{
-				show			highlight6
+				show			highlight5
 			}
 			mouseexit
 			{
-				hide			highlight6
+				hide			highlight5
 			}
 		}
 

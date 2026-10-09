@@ -810,7 +810,6 @@ qboolean G_BotConnect( int clientNum, qboolean restart ) {
 	Q_strncpyz( settings.personalityfile, Info_ValueForKey( userinfo, "personality" ), sizeof(settings.personalityfile) );
 	settings.skill = atof( Info_ValueForKey( userinfo, "skill" ) );
 	Q_strncpyz( settings.team, Info_ValueForKey( userinfo, "team" ), sizeof(settings.team) );
-	settings.botMode = 0;
 
 	if (!BotAISetupClient( clientNum, &settings, restart )) {
 		trap->DropClient( clientNum, "BotAISetupClient failed" );

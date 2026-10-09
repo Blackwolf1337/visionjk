@@ -2044,10 +2044,10 @@ void FX_ConcussionHitWall( vec3_t origin, vec3_t normal );
 void FX_ConcussionHitPlayer( vec3_t origin, vec3_t normal, qboolean humanoid );
 int CG_ClientNumFromName( const char *p );		// cg_newDraw.c
 
-// cg_botmode.c: a bot of the server plays for me
-qboolean CG_BotMode( void );
-void CG_BotModeFrame( void );
+// cg_botmode.c: the client plays by itself
+void CG_BotModeFrame( float sensitivity );
 void CG_BotModeDraw( void );
+void CG_BotModeShutdown( void );
 
 // cg_voice.c: the voice chat
 void CG_VoiceInit( void );

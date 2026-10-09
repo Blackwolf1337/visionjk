@@ -1222,8 +1222,7 @@ void CG_PredictPlayerState( void ) {
 	}
 
 	// demo playback just copies the moves
-	// (and so does bot mode, not in the original: the server runs what a bot wants and not what my keys say)
-	if ( cg.demoPlayback || (cg.snap->ps.pm_flags & PMF_FOLLOW) || CG_BotMode() ) {
+	if ( cg.demoPlayback || (cg.snap->ps.pm_flags & PMF_FOLLOW) ) {
 		CG_InterpolatePlayerState( qfalse );
 		if (CG_Piloting(cg.predictedPlayerState.m_iVehicleNum))
 		{

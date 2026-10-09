@@ -77,8 +77,6 @@ XCVAR_DEF( g_armBreakage,				"0",			NULL,						CVAR_NONE,										qtrue )
 XCVAR_DEF( g_austrian,					"0",			NULL,						CVAR_ARCHIVE,									qfalse )
 XCVAR_DEF( g_autoMapCycle,				"0",			NULL,						CVAR_ARCHIVE|CVAR_NORESTART,					qtrue )
 XCVAR_DEF( g_banIPs,					"",				NULL,						CVAR_ARCHIVE,									qfalse )
-// Bot mode (g_botmode.c): a player may let a bot play for him. A change asks every player again.
-XCVAR_DEF( g_botMode,					"1",			G_BotModeCvarChanged,		CVAR_ARCHIVE,									qtrue )
 XCVAR_DEF( g_charRestrictRGB,			"1",			NULL,						CVAR_ARCHIVE,									qfalse )
 XCVAR_DEF( g_duelWeaponDisable,			"1",			NULL,						CVAR_SERVERINFO|CVAR_ARCHIVE|CVAR_LATCH,		qtrue )
 XCVAR_DEF( g_debugAlloc,				"0",			NULL,						CVAR_NONE,										qfalse )

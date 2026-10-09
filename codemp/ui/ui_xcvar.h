@@ -35,6 +35,12 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #endif
 
 XCVAR_DEF( capturelimit,					"0",					NULL,				CVAR_ARCHIVE|CVAR_NORESTART|CVAR_SERVERINFO ) // fixme init'd to 8 in game module
+// bot mode of the cgame, for the setup menu as the voice chat ones below
+XCVAR_DEF( cg_botMode,						"0",					NULL,				CVAR_NONE )
+XCVAR_DEF( cg_botModeFight,					"2",					NULL,				CVAR_ARCHIVE )
+XCVAR_DEF( cg_botModeKeys,					"1",					NULL,				CVAR_ARCHIVE )
+XCVAR_DEF( cg_botModeRoam,					"1",					NULL,				CVAR_ARCHIVE )
+XCVAR_DEF( cg_botModeSkill,					"3",					NULL,				CVAR_ARCHIVE )
 XCVAR_DEF( cg_drawCrosshair,				"1",					NULL,				CVAR_ARCHIVE )
 XCVAR_DEF( cg_drawCrosshairNames,			"1",					NULL,				CVAR_ARCHIVE )
 XCVAR_DEF( cg_marks,						"1",					NULL,				CVAR_ARCHIVE )
@@ -49,13 +55,6 @@ XCVAR_DEF( cg_voiceMode,					"1",					NULL,				CVAR_ARCHIVE )
 XCVAR_DEF( cg_voiceMuffle,					"1",					NULL,				CVAR_ARCHIVE )
 XCVAR_DEF( cg_voiceThreshold,				"0.02",					NULL,				CVAR_ARCHIVE )
 XCVAR_DEF( cg_voiceVolume,					"1",					NULL,				CVAR_ARCHIVE )
-// bot mode of the cgame, for the setup menu as the voice chat ones above
-XCVAR_DEF( cp_botMode,						"0",					NULL,				CVAR_USERINFO )
-XCVAR_DEF( cp_botSkill,						"3",					NULL,				CVAR_USERINFO|CVAR_ARCHIVE )
-XCVAR_DEF( cp_botName,						"",						NULL,				CVAR_USERINFO|CVAR_ARCHIVE )
-XCVAR_DEF( cp_botFight,						"1",					NULL,				CVAR_USERINFO|CVAR_ARCHIVE )
-XCVAR_DEF( cp_botChat,						"0",					NULL,				CVAR_USERINFO|CVAR_ARCHIVE )
-XCVAR_DEF( cg_botModeKeys,					"1",					NULL,				CVAR_ARCHIVE )
 XCVAR_DEF( g_botsFile,						"",						NULL,				CVAR_INIT|CVAR_ROM )
 XCVAR_DEF( g_spSkill,						"2",					NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
 XCVAR_DEF( g_warmup,						"20",					NULL,				CVAR_ARCHIVE )

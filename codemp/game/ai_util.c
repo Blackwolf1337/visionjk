@@ -357,7 +357,7 @@ int BotDoChat(bot_state_t *bs, char *section, int always)
 	int getthisline;
 	gentity_t *cobject;
 
-	if (!bs->canChat || (bs->settings.botMode & BOTMODE_SILENT))
+	if (!bs->canChat)
 	{
 		return 0;
 	}

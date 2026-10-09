@@ -133,29 +133,6 @@ Game modes and rules
   userinfo flood protection, auto quit at a time of day (`jp_autoQUIT`), fake clients, download redirect URL,
   logging of plugin versions and IPs.
 
-### Bot mode
-
-Not a JA+ feature (`game/botmode/g_botmode.c`). A human lets a bot play for him: his userinfo asks with
-`cp_botMode 1`, `cp_botSkill` (1 to 5, 3 without the key), `cp_botName` (a bot of the server's bot list whose
-personality file is taken, `botfiles/default.jkb` without one), `cp_botFight 0` (no enemies) and `cp_botChat 1`
-(chat lines). `g_botMode 0` switches it off for the server, and a server with `bot_enable 0` has none.
-
-- `ClientUserinfoChanged` calls `G_BotModeUpdate`: the slot gets a bot state with `BotAISetupClient`, as a bot
-  has one, with `BOTMODE_HUMAN` in its settings. So the bot code thinks for him every frame: the route of the
-  map, enemies, weapons, force powers.
-- He stays a client with a connection. For `BOTMODE_HUMAN` the bot code does not read the reliable commands of
-  the slot (`BotGetServerCommand` marks them as acknowledged, his client would lose them) and does not hand its
-  command to the server (`BotUserCommand`).
-- `ClientThink_real` calls `G_BotModeCommand` for each command his client sends: everything but the time is
-  replaced by the last command of the bot. Not for a spectator and not in the intermission. The web admin
-  panel's Control comes after it and wins.
-- The player configstring gets `skill`, which a human never had: that is how the cgame of this tree knows that
-  it is not to predict its player. A client without that code (JA+ plugin, base) sees its own view jitter, as
-  with Control of the panel.
-- `BOTMODE_PEACEFUL` clears the enemy of the bot in `StandardBotAI`, `BOTMODE_SILENT` stops `BotDoChat`.
-
-Built, not run.
-
 ## Not done on the server
 
 - The wall flip part of `jp_jk2RedDFA` (the red DFA rule itself is in).

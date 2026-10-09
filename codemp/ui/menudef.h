@@ -374,8 +374,6 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define UI_CHAT_SPOT		296
 #define UI_CHAT_TACTICAL	297
 
-#define UI_BOTMODE_NAME		298		// the bot whose personality the bot mode takes (cp_botName)
-
 #define VOICECHAT_GETFLAG			"getflag"				// command someone to get the flag
 #define VOICECHAT_OFFENSE			"offense"				// command someone to go on offense
 #define VOICECHAT_DEFEND			"defend"				// command someone to go on defense
