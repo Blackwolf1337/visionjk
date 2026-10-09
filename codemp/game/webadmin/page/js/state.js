@@ -93,7 +93,8 @@ function applyMovers(list) {
 		const flat = typeof m === 'number', n = flat ? m : m[0], pos = flat ? ZERO3 : [m[1], m[2], m[3]], angles = flat ? ZERO3 : [m[4], m[5], m[6]];
 		const places = next.get(n) || [], old = movers && movers.get(n) && movers.get(n)[places.length];
 		// drawn on its way from where it was at the last poll
-		places.push({ pos, angles, prevPos: old ? old.pos : pos, prevAngles: old ? old.angles : angles });
+		// frame: the frame its shaders are at (-1: the one the time gives), model2: the model drawn with it ('' for none)
+		places.push({ pos, angles, prevPos: old ? old.pos : pos, prevAngles: old ? old.angles : angles, frame: flat || m[7] === undefined ? -1 : m[7], model2: (!flat && m[8]) || '' });
 		next.set(n, places);
 	}
 	movers = next;

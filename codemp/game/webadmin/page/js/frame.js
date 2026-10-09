@@ -89,29 +89,6 @@ function drawWorldPlain(now, editor) {
 	if (wire) { gl.disable(gl.POLYGON_OFFSET_FILL); drawWorldWire(now); }
 }
 
-// the items of the map, each as its model that turns as in the game, or as a diamond until that is read
-function drawItems(now) {
-	if (state) {
-		const spin = now / 600;
-		for (const it of state.items) {
-			// one the game does not draw either: taken, and not to come back as a ghost
-			if (it.flags & EF_NODRAW) continue;
-			// the real item model, spinning like in the game, until it loaded a colored diamond
-			const info = itemDef(it);
-			const model = info && info.model ? staticNow(info.model) : null;
-			if (model) {
-				const c = Math.cos(spin), sn = Math.sin(spin);
-				drawStatic(model, new Float32Array([c, sn, 0, 0, -sn, c, 0, 0, 0, 0, 1, 0, it.pos[0], it.pos[1], it.pos[2] + 4 + Math.sin(spin + it.id) * 2, 1]));
-				gl.useProgram(flatProg.p);
-				gl.uniformMatrix4fv(flatProg.u.uMvp, false, viewProj);
-			} else {
-				const col = ITEM_COLORS[info ? info.type : it.type] || [1, 1, 1];
-				drawMesh(diamondMesh, it.pos[0], it.pos[1], it.pos[2] + 6 + Math.sin(spin + it.id) * 3, spin, 1, [col[0], col[1], col[2], 1]);
-			}
-		}
-	}
-}
-
 // what else the game draws as a model: the props and the models of the map that are entities
 function drawModelEntities(now, k) {
 	if (state) {
@@ -159,47 +136,6 @@ function drawEditorMarks(now, editor) {
 		}
 	}
 	if (editor) drawBoxHandles();
-}
-
-// the players with their models, or as plain figures until those are read
-function drawPlayers(now) {
-	for (const [id, p] of players) {
-		const d = p.data;
-		if (d.team === 'spectator') continue;
-		const s = (d.scale || 100) / 100, base = p.draw[2] - 24 * s;
-		const col = TEAM_COLORS[d.team] || TEAM_COLORS.free;
-		const c = d.dead ? [0.35, 0.35, 0.38, 1] : [col[0], col[1], col[2], 1];
-		const yaw = d.yaw * Math.PI / 180;
-		const inst = g2Instance(id, d.model, d.team);
-		const ownView = id === view.id && !view.thirdPerson;
-		if (g2Update(inst, d.legsAnim, d.torsoAnim, now)) {
-			if (!ownView) {
-				g2Draw(inst, p.draw[0], p.draw[1], p.draw[2], yaw, s, col, d.dead ? 0.35 : 0.08);
-				drawHeldWeapons(inst, d, entityMatrix(p.draw[0], p.draw[1], p.draw[2], yaw, s));
-			}
-		} else if (ownView) {
-			// nothing to draw from inside the head
-		} else if (d.dead) {
-			drawMesh(bodyMesh, p.draw[0], p.draw[1], base, yaw, s * 0.6, c);
-		} else {
-			drawMesh(bodyMesh, p.draw[0], p.draw[1], base, yaw, s, c);
-			drawMesh(headMesh, p.draw[0], p.draw[1], base, yaw, s, [0.85, 0.75, 0.65, 1]);
-			drawMesh(noseMesh, p.draw[0], p.draw[1], base, yaw, s, d.saberOn ? [0.6, 0.9, 1, 1] : [0.9, 0.9, 0.9, 1]);
-		}
-		if (id === selected && view.id < 0) drawMesh(ringMesh, p.draw[0], p.draw[1], base, now / 900, s, [1, 0.15, 0.25, 1]);
-	}
-}
-
-// NPCs with their models
-function drawNpcs(now) {
-	if (state) {
-		for (const n of state.npcs || []) {
-			const inst = g2Instance(n.id, n.model, '');
-			const sc = (n.scale || 100) / 100;
-			if (g2Update(inst, n.legsAnim, n.torsoAnim, now)) g2Draw(inst, n.pos[0], n.pos[1], n.pos[2], n.yaw * Math.PI / 180, sc, [1, 0.4, 1], 0.05);
-			else drawMesh(bodyMesh, n.pos[0], n.pos[1], n.pos[2] - 24 * sc, n.yaw * Math.PI / 180, sc, [0.9, 0.4, 0.9, 1]);
-		}
-	}
 }
 
 // the ring where a right-click went, for a moment
@@ -259,6 +195,8 @@ function savePicture() {
 }
 
 // A frame: the camera, the map, what stands and moves on it, what the editor lays over it, the labels.
+// the time of the frame that is drawn: for what animates by a shader and is not handed the time
+let frameNow = 0;
 function frame(now) {
 	const dt = Math.min(0.1, (now - lastFrame) / 1000);
 	lastFrame = now;
@@ -275,10 +213,13 @@ function frame(now) {
 	if (view.id < 0 || !firstPersonCamera(now)) updateCamera();
 	// the comparison: the time of the game for what a shader animates, and the picture of what animates on its own
 	if (refCam && refCam.time) now = refCam.time;
+	frameNow = now;
 	// The sky of a map that was there before the shader scripts is settled once they have come, and the curved
 	// surfaces take the level of detail of where the camera is now (RB_SurfaceGrid).
 	if (world) { if (settleSky(world)) prepareScripted(world); updateGridLod(now, gameLook() && !!world.scripted); }
 	if (refMasking && world) { drawWorldMask(now); requestAnimationFrame(frame); return; }
+	// the lights of this frame, before anything they fall on is drawn
+	gatherDlights(now);
 
 	gl.viewport(0, 0, canvas.width, canvas.height);
 	gl.clearColor(0.05, 0.05, 0.06, 1);
@@ -296,6 +237,10 @@ function frame(now) {
 		drawWorldScripted(now, false);
 		// what the client game puts into the map by itself (cg_spawn.c): the models of misc_model_static
 		drawWorldEnts(now);
+		// the models of the movers, the light of blades and shots on the map, the marks and shadows on it
+		drawMoverModels(now);
+		drawDlights(now);
+		drawMarks(now);
 		// The lines of the triangles lie in the surfaces. The plain view pushes its surfaces back for them, here
 		// the lines come forward by a hair of the depth instead: the stages of a shader set that offset themselves.
 		if (editor && $('dbgWire').checked) { gl.depthRange(0, 0.9997); drawWorldWire(now); gl.depthRange(0, 1); }
@@ -319,6 +264,8 @@ function frame(now) {
 
 	if (state && ((state.shots && state.shots.length) || flashes.length)) drawShots(k);
 	if (scripted) drawWorldScripted(now, true);
+	// what a client draws above and around the players (sprites, shells)
+	if (scripted) drawPlayerSprites(now);
 	// the flares of the map (the engine draws them when everything else of the scene is drawn)
 	if (scripted) drawFlares(now);
 	// the effects of the game, over what is see-through of the map and under the glow of blades and bolts

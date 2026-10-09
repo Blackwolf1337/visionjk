@@ -11,6 +11,7 @@ function gridLight(pos, out = lightNow) {
 		out.ambient.fill((150 + 32) / 255);
 		out.directed.fill(150 / 255);
 		out.dir[0] = 0.433; out.dir[1] = 0.289; out.dir[2] = 0.854;
+		dlightsOn(pos, out);
 		return out;
 	}
 	const at = [0, 0, 0], frac = [0, 0, 0];
@@ -46,6 +47,8 @@ function gridLight(pos, out = lightNow) {
 		out.directed[c] = d[c] * scale / 255;
 		out.dir[c] = len ? n[c] / len : 0;
 	}
+	// what shines in this frame is added (js/dlights.js)
+	dlightsOn(pos, out);
 	return out;
 }
 
@@ -56,6 +59,7 @@ function gridLight(pos, out = lightNow) {
 // surface would wipe it out.
 const NO_DEFORM = { deforms: [] };
 const lateModels = [];
+const LATE_LAST = 1e9;		// the sort of what is drawn after everything else
 let deferLate = false;		// true from the start of a frame of the administration until its late part is drawn
 let lateSorted = true;
 
@@ -78,6 +82,7 @@ function modelPassBegin() {
 
 function modelPassEnd() {
 	stEntity[0] = stEntity[1] = stEntity[2] = stEntity[3] = 1;
+	stTint = stForceAlpha = false;
 	gl.disable(gl.CULL_FACE);
 	gl.disable(gl.BLEND);
 	gl.depthMask(true);
@@ -113,11 +118,14 @@ function drawModelMesh(mesh, mat, t, fog) {
 	if (mat.polygonOffset) gl.disable(gl.POLYGON_OFFSET_FILL);
 }
 
-// ent: what the game says of the entity that is drawn and the renderer uses, all of it optional. rgba is its
-// colour (shaderRGBA, 0 to 1) for the stages that ask for it, white without. radius is the ball around it that
-// says which fog it is in, as far as its vertices reach without.
+// ent: what the game says of the entity that is drawn and the renderer uses (its refEntity_t), all of it optional.
+// rgba is its colour (shaderRGBA, 0 to 1) for the stages that ask for it, white without. radius is the ball
+// around it that says which fog it is in, as far as its vertices reach without. shader is the name of a shader
+// that is drawn instead of the one of every surface (customShader). tint (RF_RGB_TINT): every stage takes the
+// colour of the entity. forceAlpha (RF_FORCE_ENT_ALPHA): every stage is blended by the alpha of the entity, and
+// the entity is drawn after everything else of the scene.
 function drawModelScripted(meshes, place, ent) {
-	const t = performance.now() / 1000, at = [place[12], place[13], place[14]];
+	const t = frameNow / 1000, at = [place[12], place[13], place[14]];
 	modelPassBegin();
 	const light = gridLight(at);
 	modelPlace(place, light);
@@ -125,16 +133,19 @@ function drawModelScripted(meshes, place, ent) {
 	// A place that scales the model scales the ball.
 	const fog = fogShown() && world && world.fogInfo.length
 		? fogAt(at, ent && ent.radius !== undefined ? ent.radius : meshRadius(meshes) * Math.hypot(place[0], place[1], place[2])) : null;
-	const rgba = (ent && ent.rgba) || null;
+	const rgba = (ent && ent.rgba) || null, tint = !!(ent && ent.tint), forceAlpha = !!(ent && ent.forceAlpha);
+	const custom = ent && ent.shader ? materialFor(ent.shader, 'model') : null;
 	if (rgba) for (let i = 0; i < 4; i++) stEntity[i] = rgba[i];
+	stTint = tint; stForceAlpha = forceAlpha;
 	let kept = null;
 	for (const mesh of meshes) {
-		const mat = mesh.mat || (mesh.mat = materialFor(mesh.shaderName || '', 'model'));
+		const mat = custom || mesh.mat || (mesh.mat = materialFor(mesh.shaderName || '', 'model'));
 		if (mat.nodraw) continue;
-		if (deferLate && mat.sort > SC_SORT_BANNER) {
+		if (deferLate && (forceAlpha || mat.sort > SC_SORT_BANNER)) {
 			// the place and the light are the ones of now: the next model changes both
-			if (!kept) kept = { place: place.slice(), light: { ambient: light.ambient.slice(), directed: light.directed.slice(), dir: light.dir.slice() }, fog, rgba: rgba && rgba.slice() };
-			lateModels.push({ mesh, mat, at: kept, order: lateModels.length });
+			if (!kept) kept = { place: place.slice(), light: { ambient: light.ambient.slice(), directed: light.directed.slice(), dir: light.dir.slice() }, fog, rgba: rgba && rgba.slice(), tint, forceAlpha };
+			// what is blended by the alpha of its entity comes after everything else (the post renders of the engine)
+			lateModels.push({ mesh, mat, at: kept, order: lateModels.length, sort: forceAlpha ? LATE_LAST : mat.sort });
 			lateSorted = false;
 			continue;
 		}
@@ -149,12 +160,12 @@ function drawModelScripted(meshes, place, ent) {
 // first. True when something was drawn: the program in use and the state of the blending are then those of a model.
 function drawLateModels(sort, order = Infinity) {
 	if (!lateModels.length) return false;
-	if (!lateSorted) lateModels.sort((a, b) => a.mat.sort - b.mat.sort || a.mat.order - b.mat.order || a.order - b.order);
+	if (!lateSorted) lateModels.sort((a, b) => a.sort - b.sort || a.mat.order - b.mat.order || a.order - b.order);
 	lateSorted = true;
 	let n = 0;
-	while (n < lateModels.length && (lateModels[n].mat.sort < sort || (lateModels[n].mat.sort === sort && lateModels[n].mat.order < order))) n++;
+	while (n < lateModels.length && (lateModels[n].sort < sort || (lateModels[n].sort === sort && lateModels[n].mat.order < order))) n++;
 	if (!n) return false;
-	const t = performance.now() / 1000;
+	const t = frameNow / 1000;
 	modelPassBegin();
 	let at = null;
 	for (const m of lateModels.splice(0, n)) {
@@ -162,6 +173,7 @@ function drawLateModels(sort, order = Infinity) {
 			at = m.at;
 			modelPlace(at.place, at.light);
 			for (let i = 0; i < 4; i++) stEntity[i] = at.rgba ? at.rgba[i] : 1;
+			stTint = at.tint; stForceAlpha = at.forceAlpha;
 		}
 		drawModelMesh(m.mesh, m.mat, t, at.fog);
 	}

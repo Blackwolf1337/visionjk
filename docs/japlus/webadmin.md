@@ -363,9 +363,20 @@ Also changed:
     does until the items are drawn as `CG_Item` draws them.
   - A mover says the frame of its shaders and its `model2` when it has them, a shot its angles and the
     flags of its entity.
-  A player is about 220 bytes ten times a second now, he was about 170. `tools/panelshot/steps_feed.js` (19
+  A player is about 220 bytes ten times a second now, he was about 170. `tools/panelshot/steps_feed.js` (21
   checks): the frames against the animation files the page reads, a weapon placed through the panel in the
   list by its place, a `func_static` with `model2` and a switched shader, a rocket.
+- New: what an entity asks of the renderer besides its model, for the next steps of the port. A brush model
+  whose entity has `EF_SHADER_ANIM` shows the image of an `animMap` its entity names and not the one the time
+  gives (`stFrame` in `js/scripts-world.js`; `RF_SETANIMINDEX` in `R_BindAnimatedImage`): a `func_static` with
+  the spawnflag SWITCH_SHADER, a locked door. A model can be drawn with a shader of its own, with its colour
+  on every stage and blended by its alpha after everything else (`shader`, `tint`, `forceAlpha` of the `ent`
+  of `drawModelScripted`; `customShader`, `RF_RGB_TINT` and `RF_FORCE_ENT_ALPHA` in
+  `RB_IterateStagesGeneric`): what the game does for the ghost of an item that was taken and for one that
+  fades in. Nothing draws with them yet. What a frame draws of players, items, movers, marks and lights is
+  in files of its own now (`js/player-draw.js`, `items.js`, `movers.js`, `marks.js`, `trace.js`,
+  `dlights.js`, `sabers.js`, `player-fx.js`, `g2-angles.js`), most of them empty until those steps.
+  `tools/panelshot/steps_entfx.js` (5 checks).
 - New: the editor draws the map as the game does, unless its plain view is chosen (the user: "when in editor mode
   the map is really bright than in normal administration mode", and "add the as in the game and make it
   default"). The editor had only its plain view: an image times the light for every surface, with twice the

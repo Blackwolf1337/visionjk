@@ -388,6 +388,13 @@ const stEntity = [1, 1, 1, 1], NO_ENTITY = [0, 0, 0, 0];
 let stWorld = false;
 // where the brush model that is drawn stands (its matrix), null for the map as the file has it
 let stPlace = null;
+// What the entity that is drawn asks of every stage, whatever the stage says (renderfx of its refEntity_t,
+// RB_IterateStagesGeneric). stTint (RF_RGB_TINT): its colour and not the rgbGen of the stage. stForceAlpha
+// (RF_FORCE_ENT_ALPHA): blended over what is there by its alpha, with no alpha test and without writing depth.
+let stTint = false, stForceAlpha = false;
+// The frame the entity that is drawn gives its shaders (RF_SETANIMINDEX with skinNum in R_BindAnimatedImage: a
+// mover with EF_SHADER_ANIM, CG_Mover). -1: an animMap shows the image the time gives.
+let stFrame = -1;
 
 // the images a stage names, asked for the first time they are wanted
 const stageImages = st => st.images || (st.images = st.maps.map(name => gameImage(name, st.clamp)));
@@ -398,7 +405,7 @@ function stageTexture(st, t, lm, blended) {
 	if (st.lightmap) return lm || whiteTex;
 	if (st.white) return whiteTex;
 	if (st.tex) return st.tex;
-	const images = stageImages(st), n = images.length, frame = Math.floor(t * st.animFreq);
+	const images = stageImages(st), n = images.length, frame = stFrame >= 0 ? stFrame : Math.floor(t * st.animFreq);
 	if (!n) return null;
 	const h = images[n < 2 ? 0 : st.oneShot ? Math.min(n - 1, Math.max(0, frame)) : ((frame % n) + n) % n];
 	return !h.ready && blended ? null : h.tex;
@@ -466,9 +473,15 @@ function drawStage(st, t, lm, vao, count, type, offset, prog = stageProg, fog = 
 	const two = st.multi, tex = stageTexture(st, t, lm, st.blend), tex2 = two ? stageTexture(two, t, lm, st.blend) : null;
 	if (!tex || (two && !tex2)) return;
 
-	if (st.blend) { gl.enable(gl.BLEND); gl.blendFunc(st.blend[0], st.blend[1]); } else gl.disable(gl.BLEND);
-	gl.depthMask(st.depthWrite);
-	gl.depthFunc(st.depthEqual ? gl.EQUAL : gl.LEQUAL);
+	if (stForceAlpha) {
+		gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+		gl.depthMask(false);
+		gl.depthFunc(gl.LEQUAL);
+	} else {
+		if (st.blend) { gl.enable(gl.BLEND); gl.blendFunc(st.blend[0], st.blend[1]); } else gl.disable(gl.BLEND);
+		gl.depthMask(st.depthWrite);
+		gl.depthFunc(st.depthEqual ? gl.EQUAL : gl.LEQUAL);
+	}
 
 	const u = prog.u, set = stageSet(prog);
 	stageInt(prog, 'uTcGen', st.tcGen);
@@ -494,7 +507,7 @@ function drawStage(st, t, lm, vao, count, type, offset, prog = stageProg, fog = 
 	// The colour that is the same for every vertex. What the vertices bring is the vertex shader's (rgbMode and
 	// alphaMode of the stage).
 	let r = 1, g = 1, b = 1, a = 1;
-	const cg = st.rgbGen, ag = st.alphaGen, model = prog === modelStageProg, dark = stWorld && !model, ent = dark ? NO_ENTITY : stEntity;
+	const cg = stTint ? CGEN.entity : st.rgbGen, ag = stForceAlpha ? AGEN.entity : st.alphaGen, model = prog === modelStageProg, dark = stWorld && !model, ent = dark ? NO_ENTITY : stEntity;
 	if (cg === CGEN.wave) r = g = b = Math.min(1, Math.max(0, waveValue(st.rgbWave, t)));
 	else if (cg === CGEN.const) { r = st.rgbConst[0]; g = st.rgbConst[1]; b = st.rgbConst[2]; }
 	else if (cg === CGEN.entity || cg === CGEN.lightingdiffuseentity) { r = ent[0]; g = ent[1]; b = ent[2]; }
@@ -509,10 +522,10 @@ function drawStage(st, t, lm, vao, count, type, offset, prog = stageProg, fog = 
 	const c = set.color;
 	if (c[0] !== r || c[1] !== g || c[2] !== b || c[3] !== a) { c[0] = r; c[1] = g; c[2] = b; c[3] = a; gl.uniform4f(u.uColor, r, g, b, a); }
 	// a model has no colours at its vertices, and what is no model no light of a place: white for a stage that asks
-	stageInt(prog, 'uRgbVertex', (st.rgbMode === 3) === model ? st.rgbMode : 0);
-	stageInt(prog, 'uAlphaVertex', model && st.alphaMode === 2 ? 0 : st.alphaMode);
+	stageInt(prog, 'uRgbVertex', !stTint && (st.rgbMode === 3) === model ? st.rgbMode : 0);
+	stageInt(prog, 'uAlphaVertex', stForceAlpha || (model && st.alphaMode === 2) ? 0 : st.alphaMode);
 	if (st.alphaMode === 4 && set.portal !== st.portalRange) { set.portal = st.portalRange; gl.uniform1f(u.uPortalRange, st.portalRange || 256); }
-	stageInt(prog, 'uAlphaFunc', st.alphaFunc);
+	stageInt(prog, 'uAlphaFunc', stForceAlpha ? 0 : st.alphaFunc);
 
 	// The fog of the whole map is the fog of OpenGL, on every shader that takes a fog: the stage fades to the
 	// colour of the fog, or to black where it adds to what is there and to white where it multiplies it
@@ -610,7 +623,11 @@ function drawWorldScripted(now, late) {
 		if (e.sprite !== sprite) gl.uniform1i(stageProg.u.uSprite, sprite = e.sprite);
 		setDeform(stageProg, e.mat, t);
 		if (e.mat.polygonOffset) { gl.enable(gl.POLYGON_OFFSET_FILL); gl.polygonOffset(-1, -2); }
-		for (const place of places) {
+		// as often as an entity shows the brush model, each with the frame that entity gives its shaders
+		const shown = e.b.model && movers ? movers.get(e.b.model) : null;
+		for (let i = 0; i < places.length; i++) {
+			const place = places[i];
+			stFrame = shown && shown[i] ? shown[i].frame : -1;
 			if (place !== placed) {
 				placed = stPlace = place;
 				gl.uniformMatrix4fv(stageProg.u.uMvp, false, place ? M4.mul(viewProj, place) : viewProj);
@@ -622,6 +639,7 @@ function drawWorldScripted(now, late) {
 		if (e.mat.polygonOffset) gl.disable(gl.POLYGON_OFFSET_FILL);
 	}
 	stPlace = null;
+	stFrame = -1;
 	stWorld = false;
 	if (late) { drawLateModels(Infinity); deferLate = false; }
 	gl.disable(gl.CULL_FACE);

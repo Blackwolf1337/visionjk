@@ -27,6 +27,10 @@ order of the template, so a file may only use there what a file before it has ma
 | `js/chat.js` | the chat |
 | `js/input.js` | mouse and keyboard on the map |
 | `js/frame.js` | what a frame draws, the two modes and the tabs |
+| `js/items.js` | the items of a map as the client draws them |
+| `js/movers.js` | the model a mover draws besides its brushes |
+| `js/trace.js` | a line through the map: where it hits first |
+| `js/marks.js` | marks on the map: shadows, what a shot or a blade leaves |
 | `js/editor-world.js` | the entity list of the World tab |
 | `js/editor-props.js` | the Models tab |
 | `js/config.js` | the server config |
@@ -48,8 +52,13 @@ order of the template, so a file may only use there what a file before it has ma
 | `js/editor-select.js` | several entities at once |
 | `js/editor-history.js` | undo and redo |
 | `js/g2.js` | Ghoul2 models with their animations |
+| `js/g2-angles.js` | how a player model is turned: legs, torso, head |
+| `js/player-draw.js` | the players and the NPCs drawn |
+| `js/player-fx.js` | what is drawn at a player besides his model: sprites, shells, the flag |
 | `js/picker.js` | the class picker with its preview |
 | `js/weapons.js` | weapons, sabers, shots, the view through the eyes of a player |
+| `js/sabers.js` | the blade of a saber as the client draws it |
+| `js/dlights.js` | the dynamic lights of a frame, on the map and on models |
 | `js/world-ents.js` | what the client game puts into a map by itself: the sky portal, the models of misc_model_static |
 | `js/flares.js` | the flares of a map |
 | `js/fx-parse.js` | the effect files of the game (.efx) read into what the page plays |
