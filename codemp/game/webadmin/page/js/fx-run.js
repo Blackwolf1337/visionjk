@@ -547,3 +547,41 @@ function fxTakeState(s) {
 		fxSeq = s.fxSeq;
 	}
 }
+
+// ---- an effect the game plays anew in every frame of a client (the cone of light over an item, the beam of a
+// trip mine)
+//
+// Each of them lives 50 msec, so how bright it is says how many frames a client draws in that time. With
+// com_maxfps at its default of 125 a frame is 8 msec. In the comparison with the game the time stands and the
+// game runs at timescale 0.05, where a frame is one msec of the game (Com_ModifyMsec): 51 lie over one another.
+const FX_FRAME_MSEC = 8, FX_REF_FRAMES = 51;
+const fxFrames = () => ({ last: 0, owed: 0, time: -1, done: new Map(), room: 0 });
+
+// How many times such an effect is played for every place in this frame of the page: as many as a client would
+// have had frames since the last one. -1 in the comparison: fxFramePlay counts there. c: what fxFrames made, t:
+// the time of the game, ready: whether the effect and its images are read (none are played before that).
+function fxFramePlays(c, t, ready) {
+	if (refCam && refCam.time) {
+		if (c.time !== t) { c.time = t; c.done.clear(); }
+		// the effects take a few hundred at a time
+		c.room = ready ? 200 : 0;
+		return -1;
+	}
+	c.owed += Math.min(50, Math.max(0, t - c.last)) / FX_FRAME_MSEC;
+	c.last = t;
+	const n = Math.floor(c.owed);
+	c.owed -= n;
+	return ready ? n : 0;
+}
+
+// The effect played that often at one place (id: the entity it is at). In the comparison: as many as the game has
+// alive at a time that stands, once for that time.
+function fxFramePlay(c, id, plays, name, org, fwd) {
+	if (plays < 0) {
+		const had = c.done.get(id) || 0;
+		plays = Math.min(FX_REF_FRAMES - had, c.room);
+		c.room -= plays;
+		c.done.set(id, had + plays);
+	}
+	for (let i = 0; i < plays; i++) fxPlay(name, org, fwd);
+}

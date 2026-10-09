@@ -486,6 +486,15 @@ Also changed:
   its start colour, alpha and size, kept until its place in the ring of 100 is taken. Seen: the burn mark of
   `blaster/wall_impact` on a floor. Not compared with a picture of the game. `tools/panelshot/steps_decal.js`
   (4 checks).
+- New: the beam of a trip mine. A mine that sticks and is armed has no entity for its beam: the client plays
+  the effect `tripMine/laserMP` at it in every one of its frames (`CG_General`), 6.6 in front of the mine
+  along the direction the server keeps in `pos.trDelta`. The page does the same in `drawModelEntities`
+  (`js/frame.js`). "Played anew in every frame of a client" was already there for the cone under an item,
+  inside `js/items.js`; it is one helper for both now (`fxFrames`, `fxFramePlays`, `fxFramePlay` at the end
+  of `js/fx-run.js`): a client frame is taken as 8 msec, a gap between two frames of the page counts for
+  50 msec at most, and in the comparison with the game, where the time stands, it is played 51 times once.
+  Seen: the blue beam from a mine on a floor up to the ceiling. Not compared with a picture of the game.
+  `tools/panelshot/steps_mine.js` (3 checks).
 - Changed: the leader and the scores at the top right of the HUD are the ones the game tells its clients
   (`leader`, `scores1`, `scores2` of the state). The page worked them out from the scores of the players, which
   is another order when two have the same score.
@@ -596,10 +605,10 @@ Also changed:
     and finds the wall with a ray against the map (four rays a poll at most). The glow quads from before
     stay for when Effects is off in the editor, the shader scripts are not read yet, or a file is missing.
   - The view toggle "Effects" of the editor switches them off there. The administration always has them.
-  - Not drawn: sounds, lights, camera shakes, decals and screen flashes of an effect, the models of emitters,
+  - Not drawn: sounds, lights, camera shakes and screen flashes of an effect, the models of emitters,
     wind, forks of electricity; particles do not collide with the map. And what a client plays on its own
-    that is neither an effect entity, nor played by the server, nor a missile: saber clashes, the laser of a
-    trip mine, force powers, jetpacks, the beams of the disruptor and of the concussion rifle's second fire.
+    that is neither an effect entity, nor played by the server, nor a missile: saber clashes, force powers,
+    jetpacks, the beams of the disruptor and of the concussion rifle's second fire.
     A hitscan weapon has no shot the feed could tell of.
 - New: everything new in the World tab is a draft first (`js/editor-drafts.js`; the user: "The draft is not a
   bad idea, make this for all entities"). A class or a template placed with a right-click, the copy that

@@ -20,10 +20,6 @@ const ITEM_SCALEUP_TIME = 1000;		// cg_local.h: how long one that is back fades 
 const ITEM_HOLO = 'models/map_objects/mp/holo.md3', ITEM_CONE = 'mp/itemcone';
 const ITEM_PLACEHOLDER = 'powerups/placeholder', ITEM_REZOUT = 'powerups/rezout';
 const ITEM_UP = [0, 0, 1];
-// The game plays the cone anew in every frame and each lives 50 msec, so how bright it is says how many frames a
-// client draws in that time. With com_maxfps at its default of 125 a frame is 8 msec. In the comparison the game
-// runs at timescale 0.05, where a frame is one msec of the game (Com_ModifyMsec): 51 cones lie over one another.
-const ITEM_FRAME_MSEC = 8, ITEM_REF_CONES = 51;
 
 // CG_GreyItem: the enlightenment of the other side is grey for one who has chosen his
 function itemGrey(type, tag, side) {
@@ -104,38 +100,15 @@ function itemModel(path, g2, place, ent) {
 	return true;
 }
 
-// How many cones of light every base gets in this frame (see ITEM_FRAME_MSEC): as many as a client would have
-// played since the last frame of the page. -1 in the comparison, where the time stands: itemCone counts there.
-// None until the effect and its images are read: what is asked for before that waits in the queue of the effects,
-// which is the one of the shots too.
-const itemCones = { last: 0, owed: 0, time: -1, done: new Map(), room: 0 };
-function itemConePlays(t) {
-	const c = itemCones, ready = fxOn() && fxReady(fxGet(ITEM_CONE));
-	if (refCam && refCam.time) {
-		if (c.time !== t) { c.time = t; c.done.clear(); }
-		// the effects take a few hundred at a time
-		c.room = ready ? 200 : 0;
-		return -1;
-	}
-	c.owed += Math.min(50, Math.max(0, t - c.last)) / ITEM_FRAME_MSEC;
-	c.last = t;
-	const n = Math.floor(c.owed);
-	c.owed -= n;
-	return ready ? n : 0;
-}
+// How many cones of light every base gets in this frame: the game plays the cone anew in every frame of a
+// client (fxFramePlays in js/fx-run.js says how often that is for a frame of the page). None until the effect
+// and its images are read: what is asked for before that waits in the queue of the effects, which is the one of
+// the shots too. itemCones is made with the first frame: js/fx-run.js is read after this file.
+let itemCones = null;
+const itemConePlays = t => fxFramePlays(itemCones || (itemCones = fxFrames()), t, fxOn() && fxReady(fxGet(ITEM_CONE)));
 
 // the cone of light over a base: the effect of the game, upwards from where the item is
-function itemCone(it, plays) {
-	const c = itemCones;
-	if (plays < 0) {
-		// the comparison: the cones the game has alive at a time that stands, once for that time
-		const had = c.done.get(it.id) || 0;
-		plays = Math.min(ITEM_REF_CONES - had, c.room);
-		c.room -= plays;
-		c.done.set(it.id, had + plays);
-	}
-	for (let i = 0; i < plays; i++) fxPlay(ITEM_CONE, it.pos, ITEM_UP);
-}
+const itemCone = (it, plays) => fxFramePlay(itemCones, it.id, plays, ITEM_CONE, it.pos, ITEM_UP);
 
 // Where CG_Item draws the first model of an item at the time t (cg.time), and how it is turned: org and angles.
 function itemPose(it, def, flags, t) {

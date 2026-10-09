@@ -90,18 +90,32 @@ function drawWorldPlain(now, editor) {
 }
 
 // what else the game draws as a model: the props and the models of the map that are entities
+// WP_TRIP_MINE, EF_FIRING and the effect of cgs.effects.tripmineLaserFX (cg_weaponinit.c)
+const MINE_WEAPON = 13, MINE_EF_FIRING = 1 << 9, MINE_BEAM = 'tripMine/laserMP';
+let mineBeams = null;
 function drawModelEntities(now, k) {
 	if (state) {
 		// A saber that was thrown is one of them, as its hilt. The game lays it flat and lets it spin (the client
 		// tilts it there, the server only turns it), and its blade is on: whose saber an entity is, the players say.
 		const thrown = new Map();
 		for (const p of players.values()) if (p.data.saberInFlight && p.data.saberEnt > 0 && !p.data.dead) thrown.set(p.data.saberEnt, p.data);
+		// the beam of a trip mine is an effect the game plays anew in every frame of a client (fxFramePlays): how
+		// often in this frame of the page is asked with the first mine
+		let beams = null;
 		for (const m of state.models || []) {
 			// what a client that looks from here is not sent, it does not draw
 			if (!clientSees(m.pos)) continue;
 			const model = staticNow(m.model), pos = m.prev.map((v, i) => v + (m.pos[i] - v) * k), owner = thrown.get(m.id);
 			if (!owner) {
-				if (model) drawStatic(model, anglesMatrix(pos, m.angles, m.scale / 100));
+				const place = anglesMatrix(pos, m.angles, m.scale / 100);
+				if (model) drawStatic(model, place);
+				// A trip mine that sticks and is armed (CG_General: time -1, EF_FIRING): its beam starts 6.6 in front of
+				// it and runs the way the server says (pos.trDelta) until it meets the map.
+				if (m.weapon === MINE_WEAPON && m.time === -1 && (m.eFlags & MINE_EF_FIRING) && m.delta) {
+					if (beams === null) beams = fxFramePlays(mineBeams || (mineBeams = fxFrames()), frameNow, fxOn() && fxReady(fxGet(MINE_BEAM)));
+					const s = m.scale / 100, l = Math.hypot(m.delta[0], m.delta[1], m.delta[2]) || 1;
+					fxFramePlay(mineBeams, m.id, beams, MINE_BEAM, [pos[0] + place[0] / s * 6.6, pos[1] + place[1] / s * 6.6, pos[2] + place[2] / s * 6.6], [m.delta[0] / l, m.delta[1] / l, m.delta[2] / l]);
+				}
 				continue;
 			}
 			// 800 degrees a second is how the game spins it, on from where it was at the last poll
