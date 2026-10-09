@@ -136,7 +136,7 @@ set(MPCGameVoiceFiles
 source_group("cgame/voice" FILES ${MPCGameVoiceFiles})
 set(MPCGameFiles ${MPCGameFiles} ${MPCGameVoiceFiles})
 
-# bot mode: a bot of the server plays for me, its part in the game module is game/botmode
+# bot mode: the client plays by itself, all of it is in the cgame
 set(MPCGameBotmodeFiles
 	"${MPDir}/cgame/botmode/cg_botmode.c"
 	)
