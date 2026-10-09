@@ -5,7 +5,7 @@
 // moved, turned and selected like one, and the server knows nothing of it until Place in its panel or Place all
 // sends it. So a class that can not be without a key (an effect without its file, a class of brushes without its
 // model) gets that key before the first spawn, and what belongs together is placed as one step of the history.
-// Undo and redo, the import of a file and the Models tab go to the server at once: their keys are complete.
+// Undo and redo, the import of a file and the tab Physical props go to the server at once: their keys are complete.
 
 const draftWaiting = new Set();	// the drafts whose keys changed since the server was asked about them
 let draftTimer = 0, draftBusy = false;

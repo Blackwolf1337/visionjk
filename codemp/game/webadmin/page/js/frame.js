@@ -203,7 +203,7 @@ function placeLabels() {
 	}
 }
 
-// the button Picture: what the view shows, as a file
+// the button Screenshot: what the view shows, as a file
 function savePicture() {
 	if (wantShot) {
 		// now, while the frame is still in the canvas

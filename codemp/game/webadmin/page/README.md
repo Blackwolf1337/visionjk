@@ -26,6 +26,7 @@ order of the template, so a file may only use there what a file before it has ma
 | `js/players.js` | the panel of a player with its actions |
 | `js/chat.js` | the chat |
 | `js/input.js` | mouse and keyboard on the map |
+| `js/ui-inputs.js` | the fields of the page: which keys are theirs, who keeps the focus, the wheel on a number, the width of the side panel |
 | `js/frame.js` | what a frame draws, the two modes and the tabs |
 | `js/items.js` | the items of a map as the client draws them |
 | `js/movers.js` | the model a mover draws besides its brushes |
@@ -33,7 +34,7 @@ order of the template, so a file may only use there what a file before it has ma
 | `js/marks.js` | marks on the map: shadows, what a shot or a blade leaves |
 | `js/weather.js` | the weather of a map: snow, rain, dust |
 | `js/editor-world.js` | the entity list of the World tab |
-| `js/editor-props.js` | the Models tab |
+| `js/editor-props.js` | the tab Physical props |
 | `js/config.js` | the server config |
 | `js/files.js` | the file manager |
 | `js/editor-entities.js` | the entities of the World tab: the poll of the list, the list, the key table, every change to an entity, placing |
@@ -45,10 +46,13 @@ order of the template, so a file may only use there what a file before it has ma
 | `js/editor-drafts.js` | the drafts: entities that are only in the page until they are placed |
 | `js/editor-labels.js` | the names of the entities above their markers |
 | `js/routes.js` | the route of the bots |
+| `js/control.js` | a player who is controlled from the page |
 | `js/mapreport.js` | the report of the map, what a surface is made of, entities to look at |
-| `js/log.js` | the log of the game |
-| `js/load.js` | the tab Load |
+| `js/log.js` | the log of the game, the console of the server and the line that runs a command on it |
+| `js/load.js` | the tab Performance |
 | `js/editor-templates.js` | templates, import of `.ent` files, where the mouse is |
+| `js/editor-form.js` | the form of an entity: the keys its class takes as fields of their kind |
+| `js/editor-kits.js` | kits: entities that belong together, placed as drafts that are wired |
 | `js/bans.js` | the bans |
 | `js/editor-select.js` | several entities at once |
 | `js/editor-history.js` | undo and redo |

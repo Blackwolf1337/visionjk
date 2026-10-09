@@ -2,7 +2,7 @@
 
 let mapReportTimer = 0;
 
-// ---- what a surface is made of: a click on the map in the Map tab
+// ---- what a surface is made of: a click on the map in the tab Map info
 
 const SURF_FLAGS = { 0x2000: 'sky', 0x4000: 'slick', 0x8000: 'metal steps', 0x10000: 'force field', 0x40000: 'no damage', 0x80000: 'no impact', 0x100000: 'no marks',
 	0x200000: 'nodraw', 0x400000: 'no steps', 0x800000: 'no dynamic light', 0x1000000: 'no misc_model on it', 0x2000000: 'only with force sight' };

@@ -49,7 +49,7 @@ any user name and the password (HTTP basic auth).
 ## What the page does
 
 - Two modes, switched in the top bar and kept by the browser. Administration: the tabs Players, Config and
-  Files, and the map drawn the way the game draws it (see below). Editor: the tabs World and Models, the plain
+  Files, and the map drawn the way the game draws it (see below). Editor: the tabs World and Physical props, the plain
   view of the map (an image times the light) and its debug views: a marker at every entity, the triangles of the
   map as lines, the light alone or the texture alone.
 - Players: list, health, armor, size, team, god mode, kill, kick, ban, follow, first person view with the HUD.
@@ -1637,6 +1637,25 @@ Also changed:
   to be picked), Hurt zone, Sound emitter, Effect emitter, Spawn points (four in a ring), Pickups, Cube stack
   and Blocking wall. A kit is only offered when the game module has every class of it. There are no doors:
   a mover is made of brushes of the map. Added without a test run.
+- Renamed on 2026-10-09, the text above still has the names of the day a thing was built: the tab Models is
+  "Physical props", the tab Map of the editor is "Map info", the tab Load is "Performance". Config: "Save file",
+  "Save and run on server" (was "Save and execute"), "Discard changes" (was "Reload"). Routes: "Add waypoint",
+  "Set flag", and "Reload" gave way to "Revert to saved" and "Map default". Files: "Refresh list", "Restart map"
+  (was "Reload map"), "Server files" and "Game installation" (were "Server folder" and "Installation"). World:
+  "Apply changes", "Forget layout". Top bar: "Change map", "Set gravity". View: "Screenshot" (was "Picture"),
+  "Backface culling" (was "Open"). Bans: "Ban address", "Unban" (was "Lift"). Every id of the page is what it
+  was, only the words changed.
+- New: small things of the page that make it easier to use, all in `js/ui-inputs.js` and `js/players.js`. A box
+  that was ticked and a list that was chosen from give the focus back, so W A S D move the camera again right
+  after (the keys of the map are only dropped while the cursor is in a field that is typed into). The wheel
+  over a number field turns it by its step, five steps with Shift: the field gets its `input` event at once and
+  its `change` when the wheel rests, so a position field of the entity panel sends the entity once. Inside a
+  panel that has something to scroll the wheel is the panel's until the field has the focus. Enter in a field
+  of the player panel is its Set button, Enter in a key field of an entity is "Apply changes" or Place. The
+  size of a player is a number field with a slider under it whose middle is 100 percent (10 to 100 on the
+  left half, 100 to 500 on the right) and which stops there, a double click sets 100. The side panel has a
+  grip on its right edge that drags its width, from 240 pixels to 60 percent of the window, kept by the
+  browser, a double click sets the usual width. Added without a test run.
 - "Add bot" with an empty name adds `Kyle Katarn`. JKAdmin asks for `Kyle`, a bot the game does not have, so
   nothing happened there.
 - The two entity hooks pass `ent-g_entities` instead of `ent->s.number`.
