@@ -122,6 +122,10 @@ body.ref #hud .hud-top { display: none !important; }
 .grid label { color: var(--muted); }
 .grid input[type=number] { width: 70px; }
 .grid input[type=range] { width: 120px; padding: 0; accent-color: var(--accent); }
+/* the slider of the size, a row of its own under its field, and under it what its ends and its middle stand for */
+#setScaleBar { grid-column: 1 / -1; width: 100%; margin: 0; }
+#setScaleMarks { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr auto 1fr; margin-top: -4px; font-size: 10px; color: var(--muted); }
+#setScaleMarks :last-child { text-align: right; }
 .actions { display: flex; flex-wrap: wrap; gap: 5px; max-width: 330px; }
 .hint { color: var(--muted); font-size: 12px; margin-top: 6px; }
 #command .close { position: absolute; top: 8px; right: 8px; }

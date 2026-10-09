@@ -197,7 +197,9 @@
 		<div class="grid">
 			<label for="setHp">Health</label><input type="number" id="setHp" min="1" max="999"><button data-set="health" data-input="setHp">Set</button>
 			<label for="setAr">Armor</label><input type="number" id="setAr" min="0" max="999"><button data-set="armor" data-input="setAr">Set</button>
-			<label for="setScale">Size <span id="scaleVal"></span></label><input type="range" id="setScale" min="10" max="500" step="5"><button data-set="scale" data-input="setScale">Set</button>
+			<label for="setScale">Size <span id="scaleVal"></span></label><input type="number" id="setScale" min="10" max="500" step="5"><button data-set="scale" data-input="setScale">Set</button>
+			<input type="range" id="setScaleBar" min="0" max="1000" tabindex="-1" data-wheel="setScale" title="The size in percent: the left half is 10 to 100, the right half 100 to 500. It stops at 100 in the middle, and a double click sets 100. Nothing is sent before Set, or Enter in the field.">
+			<div id="setScaleMarks"><span>10%</span><span>100%</span><span>500%</span></div>
 			<label for="setTeam">Team</label><select id="setTeam"><option>free</option><option>red</option><option>blue</option><option>spectator</option></select><button data-set="team" data-input="setTeam">Set</button>
 			<label for="setGrav" title="A gravity only for this player. Empty: the gravity of the server.">Gravity</label><input type="number" id="setGrav" min="-2000" max="5000" placeholder="server"><button data-set="playergravity" data-input="setGrav">Set</button>
 		</div>

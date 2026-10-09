@@ -14,6 +14,29 @@ function select(id) {
 	if (state) renderTable();
 }
 
+// The size of a player in percent. The field #setScale holds what Set sends, the slider under it only moves that
+// field. The slider is two halves, so that 100 percent is its middle: it runs from 0 to 1000, left of the middle
+// is 10 to 100 percent and right of it 100 to 500. The 30 on either side of the middle (3 percent of its way)
+// are 100 percent too: there it snaps. What it gives is rounded to 5.
+const SCALE_MIN = 10, SCALE_MAX = 500, SCALE_BAR_MID = 500, SCALE_BAR_SNAP = 30, SCALE_BAR_HALF = SCALE_BAR_MID - SCALE_BAR_SNAP;
+function scaleOfBar(pos) {
+	if (Math.abs(pos - SCALE_BAR_MID) <= SCALE_BAR_SNAP) return 100;
+	const pct = pos < SCALE_BAR_MID ? SCALE_MIN + pos / SCALE_BAR_HALF * (100 - SCALE_MIN) : 100 + (pos - SCALE_BAR_MID - SCALE_BAR_SNAP) / SCALE_BAR_HALF * (SCALE_MAX - 100);
+	// and so is what comes out within 3 of 100
+	return Math.abs(pct - 100) <= 3 ? 100 : Math.round(pct / 5) * 5;
+}
+function scaleToBar(pct) {
+	pct = Math.min(SCALE_MAX, Math.max(SCALE_MIN, pct));
+	if (pct === 100) return SCALE_BAR_MID;
+	return pct < 100 ? (pct - SCALE_MIN) / (100 - SCALE_MIN) * SCALE_BAR_HALF : SCALE_BAR_MID + SCALE_BAR_SNAP + (pct - 100) / (SCALE_MAX - 100) * SCALE_BAR_HALF;
+}
+// the slider and the label follow the field
+function scaleFollow() {
+	const text = $('setScale').value;
+	$('scaleVal').textContent = text === '' ? '' : text + '%';
+	if (text !== '') $('setScaleBar').value = scaleToBar(+text);
+}
+
 function renderCommand(fillInputs) {
 	const p = selected >= 0 && players.get(selected);
 	$('command').classList.toggle('open', !!p);
@@ -47,17 +70,22 @@ function renderCommand(fillInputs) {
 		$('setHp').value = Math.max(d.health, 1);
 		$('setAr').value = d.armor;
 		$('setScale').value = d.scale;
-		$('scaleVal').textContent = d.scale + '%';
+		scaleFollow();
 		$('setTeam').value = d.team;
 		// empty while the player has the gravity of the server
 		$('setGrav').value = d.ownGravity ? d.gravity : '';
 	}
 }
 
-for (const id of ['setHp', 'setAr', 'setScale', 'setTeam', 'setGrav', 'jpRank']) {
+for (const id of ['setHp', 'setAr', 'setScale', 'setScaleBar', 'setTeam', 'setGrav', 'jpRank']) {
 	$(id).addEventListener('focus', () => editing = true);
-	$(id).addEventListener('input', () => { editing = true; if (id === 'setScale') $('scaleVal').textContent = $(id).value + '%'; });
+	$(id).addEventListener('input', () => editing = true);
 }
+// The field and the slider of the size follow each other. The slider is put where its value is, which is how it
+// stops in the middle. Nothing of this is sent: Set does that, or Enter in the field.
+$('setScale').addEventListener('input', scaleFollow);
+$('setScaleBar').addEventListener('input', () => { $('setScale').value = scaleOfBar(+$('setScaleBar').value); scaleFollow(); });
+$('setScaleBar').addEventListener('dblclick', () => { editing = true; $('setScale').value = 100; scaleFollow(); });
 
 document.querySelectorAll('[data-set]').forEach(b => b.addEventListener('click', async () => {
 	await action({ action: b.dataset.set, id: selected, value: $(b.dataset.input).value });
