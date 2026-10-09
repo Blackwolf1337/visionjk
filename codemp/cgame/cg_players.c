@@ -2316,7 +2316,6 @@ static void CG_PlayerFootsteps( centity_t *cent, footstepType_t footStepType )
 		trap->G2API_GetBoltMatrix( cent->ghoul2, 0, footBolt, &boltMatrix, tempAngles, cent->lerpOrigin,
 				cg.time, cgs.gameModels, cent->modelScale);
 		BG_GiveMeVectorFromMatrix( &boltMatrix, ORIGIN, sideOrigin );
-		CG_Stomp( cent, sideOrigin, STOMP_STEP );
 		sideOrigin[2] += 15;	//fudge up a bit for coplanar
 		_PlayerFootStep( sideOrigin, cent->pe.legs.yawAngle, 6, cent, footStepType );
 	}

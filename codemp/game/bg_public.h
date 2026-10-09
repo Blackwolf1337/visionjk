@@ -849,6 +849,10 @@ typedef enum
 	PDSOUND_FORCEGRIP
 } pdSounds_t;
 
+// EV_SCREENSHAKE, angles[1]: the shake of a giant's step (game/fun/g_stomp.c). Not in the game as it was: a
+// client that does not know it shakes all the same, the cgame of this tree can leave these out (cg_stomp).
+#define SHAKE_STOMP		1.0f
+
 typedef enum {
 	EV_NONE,
 
@@ -906,7 +910,7 @@ typedef enum {
 
 	EV_TEAM_POWER,
 
-	EV_SCREENSHAKE,
+	EV_SCREENSHAKE,		// angles[0]: how strong, time: msec, modelindex: the client it is for plus 1, or 0. angles[1]: SHAKE_STOMP or 0
 
 	EV_LOCALTIMER,
 

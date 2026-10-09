@@ -97,13 +97,16 @@ A bug of OpenJK that was fixed:
   corrected by the server. An original plugin on this server ignores the bit.
 - A model without the tags `*back`, `*hip_l` and `*hip_r` is loaded and simply has no saber on the body. The plugin
   refuses such a model.
-- A giant shakes the ground (`cg_stomp`, on by default, `codemp/cgame/fun/cg_stomp.c`): a player the server made
-  more than three times his size (model scale above 300) is felt by who is near him. Where a foot of his comes
-  down, where he pushes off for a jump and where he lands, the view shakes, a heavy step is heard (the rancor's)
-  and a ring of dust comes up. It grows with his size up to four times, a landing is stronger than a step, a fall
-  stronger than a landing, and his own view gets a third of it. All of it is in the cgame: a client without it
-  sees and hears nothing of it. The steps are the footstep events of the animation, so `cg_footsteps 0` takes
-  them away too. Built, not seen in the game.
+- A giant shakes the ground (`g_stomp`, on by default, `codemp/game/fun/g_stomp.c`): a player the server made
+  more than three times his size (model scale above 300) is felt by who is near him. With every step, where he
+  pushes off for a jump and where he lands, the view shakes, a heavy step is heard (the rancor's) and a ring of
+  dust comes up. It grows with his size up to four times, a landing is stronger than a step, a fall stronger than
+  a landing, and his own view gets a third of it. It is done by the server with events every client of the game
+  knows (the screen shake, sent to each player near enough with what is left of it at his distance, a sound and
+  an effect at the spot), so a client without the cgame of this tree gets all of it. The server does not know when
+  a foot touches the ground, only a client plays the animation: a step is where the movement code's cycle of steps
+  turns over, which keeps the pace of the legs and not the very moment. With the cgame of this tree `cg_stomp 0`
+  leaves the shake out for that player, the sound and the dust stay. Built, not seen in the game.
 
 ## What of the original was taken out
 

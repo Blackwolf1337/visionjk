@@ -1395,8 +1395,6 @@ void CG_EntityEvent( centity_t *cent, vec3_t position ) {
 
 	case EV_FOOTSTEP:
 		DEBUGNAME("EV_FOOTSTEP");
-		// the movement code sends this for a landing too soft to be a fall
-		CG_StompBelow( cent, STOMP_STEP );
 		if (cg_footsteps.integer) {
 			footstep_t	soundType;
 			switch( es->eventParm )
@@ -1483,8 +1481,6 @@ void CG_EntityEvent( centity_t *cent, vec3_t position ) {
 			break;
 		}
 		DoFall(cent, es, clientNum);
-		// eventParm is how hard he came down, above 44 DoFall() has him hurt
-		CG_StompBelow( cent, ( es->eventParm > 44 ) ? STOMP_FALL : STOMP_LAND );
 		break;
 	case EV_STEP_4:
 	case EV_STEP_8:
@@ -1579,7 +1575,6 @@ void CG_EntityEvent( centity_t *cent, vec3_t position ) {
 
 	case EV_JUMP:
 		DEBUGNAME("EV_JUMP");
-		CG_StompBelow( cent, STOMP_JUMP );
 		if (cg_jumpSounds.integer)
 		{
 			trap->S_StartSound (NULL, es->number, CHAN_VOICE, CG_CustomSound( es->number, "*jump1.wav" ) );
@@ -1594,7 +1589,6 @@ void CG_EntityEvent( centity_t *cent, vec3_t position ) {
 		if (es->eventParm)
 		{ //fall-roll-in-one event
 			DoFall(cent, es, clientNum);
-			CG_StompBelow( cent, STOMP_LAND );
 		}
 
 		trap->S_StartSound (NULL, es->number, CHAN_VOICE, CG_CustomSound( es->number, "*jump1.wav" ) );
@@ -2610,6 +2604,11 @@ void CG_EntityEvent( centity_t *cent, vec3_t position ) {
 
 	case EV_SCREENSHAKE:
 		DEBUGNAME("EV_SCREENSHAKE");
+		// not in the game as it was: the shake of a giant's step (game/fun/g_stomp.c) can be left out
+		if ( es->angles[1] == SHAKE_STOMP && !cg_stomp.integer )
+		{
+			break;
+		}
 		if (!es->modelindex || cg.predictedPlayerState.clientNum == es->modelindex-1)
 		{
 			CGCam_Shake(es->angles[0], es->time);

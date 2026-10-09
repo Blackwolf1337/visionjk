@@ -1075,7 +1075,6 @@ typedef struct cgscreffects_s
 extern cgscreffects_t cgScreenEffects;
 
 void CGCam_Shake( float intensity, int duration );
-void CG_DoCameraShake( vec3_t origin, float intensity, int radius, int time );
 void CGCam_SetMusicMult( float multiplier, int duration );
 
 enum
@@ -2044,19 +2043,6 @@ void FX_TurretHitPlayer( vec3_t origin, vec3_t normal, qboolean humanoid );
 void FX_ConcussionHitWall( vec3_t origin, vec3_t normal );
 void FX_ConcussionHitPlayer( vec3_t origin, vec3_t normal, qboolean humanoid );
 int CG_ClientNumFromName( const char *p );		// cg_newDraw.c
-
-// fun/cg_stomp.c: a giant shakes the ground
-typedef enum {
-	STOMP_STEP,			// a foot comes down
-	STOMP_JUMP,			// he pushes off
-	STOMP_LAND,			// he comes down from a jump
-	STOMP_FALL,			// he comes down from high up
-	STOMP_NUM_KINDS
-} stompKind_t;
-
-void CG_StompRegister( void );
-void CG_Stomp( const centity_t *cent, const vec3_t origin, stompKind_t kind );
-void CG_StompBelow( const centity_t *cent, stompKind_t kind );
 
 // cg_botmode.c: the client plays by itself
 void CG_BotModeFrame( float sensitivity );

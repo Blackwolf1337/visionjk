@@ -972,6 +972,12 @@ void ClientEvents( gentity_t *ent, int oldEventSequence ) {
 					break;
 				}
 
+				// not from JA+: a giant who lands shakes the ground (g_stomp.c). A roll without a fall is none.
+				if ( event == EV_FALL || delta )
+				{
+					G_Stomp( ent, ( delta > 44 ) ? STOMP_FALL : STOMP_LAND );
+				}
+
 				if ( ent->s.eType != ET_PLAYER )
 				{
 					break;		// not in the player model
@@ -1024,6 +1030,13 @@ void ClientEvents( gentity_t *ent, int oldEventSequence ) {
 					G_Sound(ent, CHAN_AUTO, G_SoundIndex( "sound/player/fallsplat.wav" ));
 				}
 			}
+			break;
+		// not from JA+: where a giant pushes off, and where he lands too softly for it to be a fall (g_stomp.c)
+		case EV_JUMP:
+			G_Stomp( ent, STOMP_JUMP );
+			break;
+		case EV_FOOTSTEP:
+			G_Stomp( ent, STOMP_STEP );
 			break;
 		case EV_FIRE_WEAPON:
 			FireWeapon( ent, qfalse );
@@ -1892,6 +1905,7 @@ void ClientThink_real( gentity_t *ent ) {
 	qboolean	controlledByPlayer = qfalse;
 	qboolean	killJetFlags = qtrue;
 	qboolean	isFollowing;
+	int			stompBobCycle;
 
 	client = ent->client;
 
@@ -3099,7 +3113,10 @@ void ClientThink_real( gentity_t *ent ) {
 		JP_KissSlap( ent, &pmove.cmd );
 	// not from JA+: the mouse of who turns a prop with the physgun (g_props.c)
 	G_PropGunCmd( ent, &pmove.cmd );
+	// not from JA+: the step of a giant shakes the ground (g_stomp.c)
+	stompBobCycle = ent->client->ps.bobCycle;
 	Pmove (&pmove);
+	G_StompStep( ent, stompBobCycle );
 
 	if (ent->client->solidHack)
 	{
