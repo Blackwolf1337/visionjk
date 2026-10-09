@@ -188,7 +188,13 @@ static void NORETURN Sys_Exit( int ex ) {
     exit( ex );
 }
 
-#if !defined(DEDICATED)
+#if defined(__EMSCRIPTEN__)
+// no dialog and no crash log: the page shows the text, the console is in its log
+static void Sys_ErrorDialog( const char *error )
+{
+	Sys_WebShowError( error );
+}
+#elif !defined(DEDICATED)
 static void Sys_ErrorDialog( const char *error )
 {
 	time_t rawtime;
@@ -791,6 +797,10 @@ int main ( int argc, char* argv[] )
 	Com_Printf( "SDL Version Linked: %d.%d.%d\n", linked.major, linked.minor, linked.patch );
 #endif
 
+#ifdef __EMSCRIPTEN__
+	// a page has one thread and no loop of its own: the frames come when it is about to paint
+	Sys_WebMainLoop();
+#else
 	// main game loop
 	while (1)
 	{
@@ -819,6 +829,7 @@ int main ( int argc, char* argv[] )
 		// run the game
 		Com_Frame();
 	}
+#endif
 
 	// never gets here
 	return 0;

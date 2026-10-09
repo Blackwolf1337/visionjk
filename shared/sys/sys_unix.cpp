@@ -393,6 +393,11 @@ void Sys_Sleep( int msec )
 	if( msec == 0 )
 		return;
 
+#ifdef __EMSCRIPTEN__
+	// a page has one thread, a wait would stop the page with it
+	return;
+#endif
+
 	if( stdinIsATTY )
 	{
 		fd_set fdset;

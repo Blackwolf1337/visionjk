@@ -1489,6 +1489,23 @@ int Com_TimeVal(int minMsec)
 
 /*
 =================
+Com_MinFrameMsec
+
+How long a frame of the client lasts at least, as com_maxfps and its two variants ask for it
+=================
+*/
+int Com_MinFrameMsec( void ) {
+	if(com_minimized->integer && com_maxfpsMinimized->integer > 0)
+		return 1000 / com_maxfpsMinimized->integer;
+	if(com_unfocused->integer && com_maxfpsUnfocused->integer > 0)
+		return 1000 / com_maxfpsUnfocused->integer;
+	if(com_maxfps->integer > 0)
+		return 1000 / com_maxfps->integer;
+	return 1;
+}
+
+/*
+=================
 Com_Frame
 =================
 */
@@ -1526,14 +1543,7 @@ void Com_Frame( void ) {
 				minMsec = SV_FrameMsec();
 			else
 			{
-				if(com_minimized->integer && com_maxfpsMinimized->integer > 0)
-					minMsec = 1000 / com_maxfpsMinimized->integer;
-				else if(com_unfocused->integer && com_maxfpsUnfocused->integer > 0)
-					minMsec = 1000 / com_maxfpsUnfocused->integer;
-				else if(com_maxfps->integer > 0)
-					minMsec = 1000 / com_maxfps->integer;
-				else
-					minMsec = 1;
+				minMsec = Com_MinFrameMsec();
 
 				timeVal = com_frameTime - lastTime;
 				bias += timeVal - minMsec;
