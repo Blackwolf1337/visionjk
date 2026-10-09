@@ -152,7 +152,8 @@ function plPlayerCent(id, p, k) {
 		legsAnim: d.legsAnim, torsoAnim: d.torsoAnim, legsFlip: d.legsFlip || 0, torsoFlip: d.torsoFlip || 0, weapon: d.weapon,
 		eFlags: d.eFlags ?? (d.dead ? PG.EF_DEAD : 0), eFlags2: d.eFlags2 || 0, powerups: d.powerups || 0, forceActive: d.forceActive || 0,
 		saberMove: d.saberMove || 0, ground: d.ground ?? PG.ENTITYNUM_WORLD, brokenLimbs: d.brokenLimbs || 0, saberLevel: d.saberLevel || 0, moveDir: d.moveDir,
-		legsFrame: d.legsFrame ?? -1, legsSpeed: d.legsSpeed || 0, torsoFrame: d.torsoFrame ?? -1, torsoSpeed: d.torsoSpeed || 0, scale: (d.scale || 100) / 100 };
+		legsFrame: d.legsFrame ?? -1, legsSpeed: d.legsSpeed || 0, torsoFrame: d.torsoFrame ?? -1, torsoSpeed: d.torsoSpeed || 0, scale: (d.scale || 100) / 100,
+		electrify: d.electrify || 0 };
 }
 
 // An NPC of the state the same way. The state has no place before for it: the instance keeps where it was at the

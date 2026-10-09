@@ -201,6 +201,16 @@ function plDrawModel(inst, cent, place, d, ownView, plain) {
 		// (through walls from the second level of force sight on, RF_NODEPTH: not known to the model drawing here)
 		shell(PL_MEDIA.sightShell, [rgb[0], rgb[1], rgb[2], 1]);
 	}
+	// Electricity (CG_Player, emplacedOwner): while he is electrified (force lightning, a DEMP 2, the stun baton,
+	// the freeze of the JA+ admins) his model is drawn again in six of ten frames with one of the two electric
+	// shaders, white, fainter in the last half second (the byte the game makes of that number wraps: 255 down to
+	// 1). The msec he has left are the ones of the last poll less the time of the game since then.
+	// Not here: the forks between his limbs (CG_ForceElectrocution).
+	const dif = (cent.electrify || 0) - (state ? time - (state.time || 0) : 0);
+	if (dif > 0 && (refCam || Math.random() > 0.4)) {
+		const v = (dif < 500 ? Math.floor((dif - 500) / 500 * 255) & 255 : 255) / 255;
+		shell(Math.random() < 0.5 ? PL_MEDIA.electricBody : PL_MEDIA.electricBody2, [v, v, v, 1], { tint: true });
+	}
 	// his shield took a hit: a flicker in a grey of chance
 	if (pw & (1 << PG.PW_SHIELDHIT)) { const v = (1 + Math.floor(Math.random() * 255)) / 255; shell(PL_MEDIA.playerShieldDamage, [v, v, v, 1]); }
 }

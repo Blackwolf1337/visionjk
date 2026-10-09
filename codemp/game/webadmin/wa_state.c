@@ -223,10 +223,11 @@ static void WA_StatePlayerChanges( waBuffer_t *b, int clientNum, unsigned rev, q
 		ps->velocity[0], ps->velocity[1], ps->velocity[2], ps->viewangles[YAW], ps->viewangles[PITCH],
 		ps->legsAnim, ps->torsoAnim, ps->viewheight, ammoIndex != AMMO_NONE ? ps->ammo[ammoIndex] : -1 );
 	// the flags are the ones of his entity: what the clients are sent of him (BG_PlayerStateToEntityState)
-	WA_BufPrintf( b, "%.1f,%.2f,%.1f,%.2f,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d],\"b\":[",
+	// the last one: for how many msec more he is electrified (electrifyTime, which the clients have as emplacedOwner)
+	WA_BufPrintf( b, "%.1f,%.2f,%.1f,%.2f,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d],\"b\":[",
 		legsFrame, legsSpeed, torsoFrame, torsoSpeed, ent->s.eFlags, ent->s.eFlags2, ent->s.powerups, ps->fd.forcePowersActive,
 		ps->weaponstate, ps->saberMove, ( ps->legsFlip ? 1 : 0 ) | ( ps->torsoFlip ? 2 : 0 ), ps->groundEntityNum,
-		ps->brokenLimbs, ps->fd.saberAnimLevel, ps->movementDir );
+		ps->brokenLimbs, ps->fd.saberAnimLevel, ps->movementDir, Q_max( 0, ps->electrifyTime - level.time ) );
 	for ( s2 = 0; s2 < MAX_SABERS; s2++ ) {
 		const saberInfo_t *saber = &cl->saber[s2];
 
@@ -256,7 +257,8 @@ static void WA_StatePlayerChanges( waBuffer_t *b, int clientNum, unsigned rev, q
 //        powerups of his entity, the force powers that are on,
 //        weaponstate, saberMove, the flips (1 legs, 2 torso: an animation that starts again), the entity he
 //        stands on (ENTITYNUM_NONE in the air), brokenLimbs, the saber style he fights in, and which of eight
-//        ways he moves in against where he looks (movementDir: BG_G2PlayerAngles turns his legs by it)
+//        ways he moves in against where he looks (movementDir: BG_G2PlayerAngles turns his legs by it),
+//        and for how many msec more he is electrified (0: he is not)
 //   "b": for every blade of his sabers its length now, where it starts (3) and the way it points (3)
 // A player was about a kilobyte ten times a second before, he is about 220 bytes now.
 static void WA_StatePlayers( waBuffer_t *b, const char *query ) {
