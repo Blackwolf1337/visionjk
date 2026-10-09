@@ -22,32 +22,66 @@ if(NOT InVisionJK)
 	message(FATAL_ERROR "Use the top-level cmake script!")
 endif(NOT InVisionJK)
 
+# rd-vulkan-vision has a shared part and two devices (vk_local.h says which file is which), and this file builds it
+# up to two times:
+# - with the Vulkan device as ${MPVulkanVisionRenderer} (BuildMPRdVulkanVision), the renderer of the client
+# - with the OpenGL ES 3 device as ${MPVisionGLESRenderer} (BuildMPRdVisionGLES), a library for the desktop to work
+#   on that device with
+# For a browser (Emscripten) there is no Vulkan. There BuildMPRdVulkanVision builds the renderer with the OpenGL ES
+# device, under the name the engine asks for.
+set(MPVulkanVisionVulkanTarget)
+set(MPVulkanVisionGLESTarget)
+if(EMSCRIPTEN)
+	if(BuildMPRdVulkanVision)
+		set(MPVulkanVisionGLESTarget ${MPVulkanVisionRenderer})
+	endif()
+else()
+	if(BuildMPRdVulkanVision)
+		set(MPVulkanVisionVulkanTarget ${MPVulkanVisionRenderer})
+	endif()
+	if(BuildMPRdVisionGLES)
+		set(MPVulkanVisionGLESTarget ${MPVisionGLESRenderer})
+	endif()
+endif()
+
 # Only the headers of Vulkan are needed: the library is loaded by the window code at run time (vk_funcs.h).
 # -DVulkanHeadersDir=<dir with vulkan/vulkan.h> names where they are if they are not found.
 # The renderer is built by default, so a machine without the headers or without glslc is told what is missing
 # and builds the rest, as with the other things this tree builds by default.
-find_path(VulkanHeadersDir vulkan/vulkan.h)
-if(NOT VulkanHeadersDir AND CMAKE_CROSSCOMPILING AND EXISTS "/usr/include/vulkan/vulkan.h")
-	set(VulkanHeadersDir "/usr/include" CACHE PATH "Vulkan headers" FORCE)
-endif()
-if(NOT VulkanHeadersDir)
-	message(WARNING "rd-vulkan-vision is not built: it needs the Vulkan headers (vulkan/vulkan.h), set VulkanHeadersDir. -DBuildMPRdVulkanVision=OFF silences this.")
-	return()
-endif()
-if(CMAKE_CROSSCOMPILING)
-	# The headers are the same for every platform, so the ones of the host do. But their directory may be the
-	# include directory of the host, which a cross compiler must not see: it gets a copy of the two directories.
-	file(COPY "${VulkanHeadersDir}/vulkan" DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/vulkan-headers")
-	if(EXISTS "${VulkanHeadersDir}/vk_video")
-		file(COPY "${VulkanHeadersDir}/vk_video" DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/vulkan-headers")
+if(MPVulkanVisionVulkanTarget)
+	find_path(VulkanHeadersDir vulkan/vulkan.h)
+	if(NOT VulkanHeadersDir AND CMAKE_CROSSCOMPILING AND EXISTS "/usr/include/vulkan/vulkan.h")
+		set(VulkanHeadersDir "/usr/include" CACHE PATH "Vulkan headers" FORCE)
 	endif()
-	set(MPVulkanVisionVulkanHeaders "${CMAKE_CURRENT_BINARY_DIR}/vulkan-headers")
-else()
-	set(MPVulkanVisionVulkanHeaders "${VulkanHeadersDir}")
+	find_program(GLSLC glslc)
+	if(NOT VulkanHeadersDir)
+		message(WARNING "rd-vulkan-vision is not built: it needs the Vulkan headers (vulkan/vulkan.h), set VulkanHeadersDir. -DBuildMPRdVulkanVision=OFF silences this.")
+		set(MPVulkanVisionVulkanTarget)
+	elseif(NOT GLSLC)
+		message(WARNING "rd-vulkan-vision is not built: it needs glslc (package shaderc) to compile its shaders. -DBuildMPRdVulkanVision=OFF silences this.")
+		set(MPVulkanVisionVulkanTarget)
+	elseif(CMAKE_CROSSCOMPILING)
+		# The headers are the same for every platform, so the ones of the host do. But their directory may be the
+		# include directory of the host, which a cross compiler must not see: it gets a copy of the two directories.
+		file(COPY "${VulkanHeadersDir}/vulkan" DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/vulkan-headers")
+		if(EXISTS "${VulkanHeadersDir}/vk_video")
+			file(COPY "${VulkanHeadersDir}/vk_video" DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/vulkan-headers")
+		endif()
+		set(MPVulkanVisionVulkanHeaders "${CMAKE_CURRENT_BINARY_DIR}/vulkan-headers")
+	else()
+		set(MPVulkanVisionVulkanHeaders "${VulkanHeadersDir}")
+	endif()
 endif()
-find_program(GLSLC glslc)
-if(NOT GLSLC)
-	message(WARNING "rd-vulkan-vision is not built: it needs glslc (package shaderc) to compile its shaders. -DBuildMPRdVulkanVision=OFF silences this.")
+# The library for the desktop links the OpenGL ES of the system. A browser has it in the engine, see below.
+if(MPVulkanVisionGLESTarget AND NOT EMSCRIPTEN)
+	find_path(GLES3HeadersDir GLES3/gl3.h)
+	find_library(GLESv2Library GLESv2)
+	if(NOT GLES3HeadersDir OR NOT GLESv2Library)
+		message(WARNING "${MPVisionGLESRenderer} is not built: it needs the headers and the library of OpenGL ES 3 (GLES3/gl3.h, libGLESv2). -DBuildMPRdVisionGLES=OFF silences this.")
+		set(MPVulkanVisionGLESTarget)
+	endif()
+endif()
+if(NOT MPVulkanVisionVulkanTarget AND NOT MPVulkanVisionGLESTarget)
 	return()
 endif()
 
@@ -58,32 +92,47 @@ set(MPVulkanVisionIncludeDirectories
 	"${MPDir}/rd-vanilla"
 	"${GSLIncludeDirectory}"
 	"${CMAKE_CURRENT_BINARY_DIR}"
-	${MPVulkanVisionVulkanHeaders}
 	)
 
-# everything that touches the GPU
-set(MPVulkanVisionFiles
-	"${MPDir}/rd-vulkan-vision/vk_device.h"
-	"${MPDir}/rd-vulkan-vision/vk_funcs.h"
+# what both devices share: which batch is drawn how and in which order
+set(MPVulkanVisionSharedFiles
 	"${MPDir}/rd-vulkan-vision/vk_hooks.h"
 	"${MPDir}/rd-vulkan-vision/vk_local.h"
 	"${MPDir}/rd-vulkan-vision/vk_backend.cpp"
-	"${MPDir}/rd-vulkan-vision/vk_bc.cpp"
-	"${MPDir}/rd-vulkan-vision/vk_cmd.cpp"
 	"${MPDir}/rd-vulkan-vision/vk_frame.cpp"
 	"${MPDir}/rd-vulkan-vision/vk_gl.cpp"
 	"${MPDir}/rd-vulkan-vision/vk_image.cpp"
-	"${MPDir}/rd-vulkan-vision/vk_main.cpp"
-	"${MPDir}/rd-vulkan-vision/vk_memory.cpp"
 	"${MPDir}/rd-vulkan-vision/vk_model.cpp"
-	"${MPDir}/rd-vulkan-vision/vk_pipeline.cpp"
 	"${MPDir}/rd-vulkan-vision/vk_post.cpp"
 	"${MPDir}/rd-vulkan-vision/vk_shade.cpp"
 	"${MPDir}/rd-vulkan-vision/vk_stubs.cpp"
-	"${MPDir}/rd-vulkan-vision/vk_texture.cpp"
 	"${MPDir}/rd-vulkan-vision/vk_world.cpp"
 	)
-source_group("renderer" FILES ${MPVulkanVisionFiles})
+source_group("renderer" FILES ${MPVulkanVisionSharedFiles})
+# The Vulkan device. vk_bc.cpp is with it because the other device does not take textures in blocks yet, and its
+# worker threads are nothing a browser has.
+set(MPVulkanVisionVulkanFiles
+	"${MPDir}/rd-vulkan-vision/vk_device.h"
+	"${MPDir}/rd-vulkan-vision/vk_funcs.h"
+	"${MPDir}/rd-vulkan-vision/vk_bc.cpp"
+	"${MPDir}/rd-vulkan-vision/vk_cmd.cpp"
+	"${MPDir}/rd-vulkan-vision/vk_main.cpp"
+	"${MPDir}/rd-vulkan-vision/vk_memory.cpp"
+	"${MPDir}/rd-vulkan-vision/vk_pipeline.cpp"
+	"${MPDir}/rd-vulkan-vision/vk_texture.cpp"
+	)
+source_group("vulkan" FILES ${MPVulkanVisionVulkanFiles})
+# the OpenGL ES device
+set(MPVulkanVisionGLESFiles
+	"${MPDir}/rd-vulkan-vision/gles/gles_device.h"
+	"${MPDir}/rd-vulkan-vision/gles/gles_gl.h"
+	"${MPDir}/rd-vulkan-vision/gles/gles_buffer.cpp"
+	"${MPDir}/rd-vulkan-vision/gles/gles_cmd.cpp"
+	"${MPDir}/rd-vulkan-vision/gles/gles_main.cpp"
+	"${MPDir}/rd-vulkan-vision/gles/gles_program.cpp"
+	"${MPDir}/rd-vulkan-vision/gles/gles_texture.cpp"
+	)
+source_group("gles" FILES ${MPVulkanVisionGLESFiles})
 
 # the files of rd-vanilla without graphics code: loaders, shader parser, Ghoul2, scene. Built from where they
 # are, with RD_VULKAN_VISION defined, so that there is one copy of them.
@@ -122,7 +171,7 @@ set(MPVulkanVisionVanillaFiles
 	"${MPDir}/rd-vanilla/tr_WorldEffects.h"
 	)
 source_group("rd-vanilla" FILES ${MPVulkanVisionVanillaFiles})
-set(MPVulkanVisionFiles ${MPVulkanVisionFiles} ${MPVulkanVisionVanillaFiles})
+set(MPVulkanVisionFiles ${MPVulkanVisionSharedFiles} ${MPVulkanVisionVanillaFiles})
 
 set(MPVulkanVisionGhoul2Files
 	"${MPDir}/ghoul2/g2_local.h"
@@ -154,8 +203,9 @@ set(MPVulkanVisionCommonFiles
 source_group("common" FILES ${MPVulkanVisionCommonFiles})
 set(MPVulkanVisionFiles ${MPVulkanVisionFiles} ${MPVulkanVisionCommonFiles} ${SharedCommonSafeFiles})
 
-# GLSL to SPIR-V as a C initializer list, one .inc per shader, included by vk_pipeline.cpp. glslc runs on the
-# build machine, so this also works when cross compiling.
+# The shaders, one set of sources for both devices (shaders/dialect.glsl). Both libraries include what is made of
+# them here, so a target of its own makes it and the libraries wait for that: a command whose output two targets
+# of one directory list is run for each of them, at the same time.
 set(MPVulkanVisionShaders
 	generic.vert
 	skinned.vert
@@ -172,26 +222,30 @@ set(MPVulkanVisionShaderIncludes
 	"${MPDir}/rd-vulkan-vision/shaders/stage.glsl"
 	)
 set(MPVulkanVisionShaderOutputs)
-foreach(shader ${MPVulkanVisionShaders})
-	set(shaderIn "${MPDir}/rd-vulkan-vision/shaders/${shader}")
-	string(REPLACE "." "_" shaderName ${shader})
-	set(shaderOut "${CMAKE_CURRENT_BINARY_DIR}/shaders/${shaderName}.inc")
-	add_custom_command(
-		OUTPUT ${shaderOut}
-		COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/shaders"
-		COMMAND ${GLSLC} --target-env=vulkan1.3 -O -mfmt=c -I "${MPDir}/rd-vulkan-vision/shaders" -o ${shaderOut} ${shaderIn}
-		DEPENDS ${shaderIn} ${MPVulkanVisionShaderIncludes}
-		COMMENT "glslc ${shader}"
-		VERBATIM)
-	list(APPEND MPVulkanVisionShaderOutputs ${shaderOut})
-endforeach()
+if(MPVulkanVisionVulkanTarget)
+	# GLSL to SPIR-V as a C initializer list, one .inc per shader, included by vk_pipeline.cpp. glslc runs on the
+	# build machine, so this also works when cross compiling.
+	foreach(shader ${MPVulkanVisionShaders})
+		set(shaderIn "${MPDir}/rd-vulkan-vision/shaders/${shader}")
+		string(REPLACE "." "_" shaderName ${shader})
+		set(shaderOut "${CMAKE_CURRENT_BINARY_DIR}/shaders/${shaderName}.inc")
+		add_custom_command(
+			OUTPUT ${shaderOut}
+			COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/shaders"
+			COMMAND ${GLSLC} --target-env=vulkan1.3 -O -mfmt=c -I "${MPDir}/rd-vulkan-vision/shaders" -o ${shaderOut} ${shaderIn}
+			DEPENDS ${shaderIn} ${MPVulkanVisionShaderIncludes}
+			COMMENT "glslc ${shader}"
+			VERBATIM)
+		list(APPEND MPVulkanVisionShaderOutputs ${shaderOut})
+	endforeach()
+endif()
 
-# The same sources as GLSL ES 3.00, for a device on WebGL2: it compiles them itself, so they go into the library
-# as text. One file a shader with its includes put in (cmake/Modules/BundleShader.cmake), as a C array with a zero
-# at its end, and gles_prefix.glsl, the lines the device puts in front of each. No code reads the arrays yet. They
-# are made in every build so that a change to a shader that is not GLSL ES fails here and not in a browser:
-# glslangValidator compiles each file with the prefix in front and links the pairs that make a program, which is
-# where GLSL ES finds the varyings of a stage by their names.
+# The same sources as GLSL ES 3.00 for the OpenGL ES device, which compiles them itself, so they go into the
+# library as text: one file a shader with its includes put in (cmake/Modules/BundleShader.cmake), as a C array with
+# a zero at its end, and gles_prefix.glsl, the lines the device puts in front of each (gles/gles_program.cpp).
+# They are made in every build, also in one of the Vulkan device alone, so that a change to a shader that is not
+# GLSL ES fails here and not in a browser: glslangValidator compiles each file with the prefix in front and links
+# the pairs that make a program, which is where GLSL ES finds the varyings of a stage by their names.
 set(MPVulkanVisionShaderPrefix "${MPDir}/rd-vulkan-vision/shaders/gles_prefix.glsl")
 set(MPVulkanVisionShaderCheck)
 find_program(GLSLANG_VALIDATOR glslangValidator)
@@ -250,62 +304,89 @@ if(GLSLANG_VALIDATOR)
 		list(APPEND MPVulkanVisionShaderOutputs ${programOut})
 	endforeach()
 endif()
-set(MPVulkanVisionFiles ${MPVulkanVisionFiles} ${MPVulkanVisionShaderOutputs})
+add_custom_target(rd-vulkan-vision-shaders DEPENDS ${MPVulkanVisionShaderOutputs})
 
 # Transparently use either bundled or system libjpeg, libpng, zlib and our bundled minizip, as rd-vanilla does.
-list(APPEND MPVulkanVisionIncludeDirectories ${JPEG_INCLUDE_DIR})
-list(APPEND MPVulkanVisionLibraries          ${JPEG_LIBRARIES})
-list(APPEND MPVulkanVisionIncludeDirectories ${PNG_INCLUDE_DIRS})
-list(APPEND MPVulkanVisionLibraries          ${PNG_LIBRARIES})
-list(APPEND MPVulkanVisionIncludeDirectories ${ZLIB_INCLUDE_DIR})
-list(APPEND MPVulkanVisionLibraries          ${ZLIB_LIBRARIES})
-list(APPEND MPVulkanVisionIncludeDirectories ${MINIZIP_INCLUDE_DIRS})
-list(APPEND MPVulkanVisionLibraries          ${MINIZIP_LIBRARIES})
+set(MPVulkanVisionImageIncludeDirectories)
+set(MPVulkanVisionLibraries)
+list(APPEND MPVulkanVisionImageIncludeDirectories ${JPEG_INCLUDE_DIR})
+list(APPEND MPVulkanVisionLibraries               ${JPEG_LIBRARIES})
+list(APPEND MPVulkanVisionImageIncludeDirectories ${PNG_INCLUDE_DIRS})
+list(APPEND MPVulkanVisionLibraries               ${PNG_LIBRARIES})
+list(APPEND MPVulkanVisionImageIncludeDirectories ${ZLIB_INCLUDE_DIR})
+list(APPEND MPVulkanVisionLibraries               ${ZLIB_LIBRARIES})
+list(APPEND MPVulkanVisionImageIncludeDirectories ${MINIZIP_INCLUDE_DIRS})
+list(APPEND MPVulkanVisionLibraries               ${MINIZIP_LIBRARIES})
 
-# the worker threads that pack textures into blocks (vk_bc.cpp)
-find_package(Threads REQUIRED)
-list(APPEND MPVulkanVisionLibraries Threads::Threads)
+# One library of the renderer: the shared files with the files of a device (ARGN). defines: what it is compiled
+# with beyond the defines of the tree.
+function(vision_renderer target label defines)
+	add_library(${target} SHARED ${MPVulkanVisionFiles} ${ARGN})
+	add_dependencies(${target} rd-vulkan-vision-shaders)
 
-# tr_local.h of rd-vanilla pulls in the OpenGL headers for its types. Nothing of OpenGL is linked.
-find_package(OpenGL REQUIRED)
-list(APPEND MPVulkanVisionIncludeDirectories ${OPENGL_INCLUDE_DIR} ${VisionJKLibDir})
+	if(NOT MSVC)
+		# remove "lib" prefix for .so/.dylib files
+		set_target_properties(${target} PROPERTIES PREFIX "")
+	endif()
 
-add_library(${MPVulkanVisionRenderer} SHARED ${MPVulkanVisionFiles})
-
-if(NOT MSVC)
-	# remove "lib" prefix for .so/.dylib files
-	set_target_properties(${MPVulkanVisionRenderer} PROPERTIES PREFIX "")
-endif()
-
-if(WIN32)
-	install(TARGETS ${MPVulkanVisionRenderer}
-		RUNTIME
-		DESTINATION ${JKAInstallDir}
-		COMPONENT ${JKAMPClientComponent})
-else(WIN32)
-	if(MakeApplicationBundles AND BuildMPEngine)
-		install(TARGETS ${MPVulkanVisionRenderer}
-			LIBRARY
-			DESTINATION "${JKAInstallDir}/${MPEngine}.app/Contents/MacOS/"
-			COMPONENT ${JKAMPClientComponent})
-	else()
-		install(TARGETS ${MPVulkanVisionRenderer}
-			LIBRARY
+	if(WIN32)
+		install(TARGETS ${target}
+			RUNTIME
 			DESTINATION ${JKAInstallDir}
 			COMPONENT ${JKAMPClientComponent})
+	else(WIN32)
+		if(MakeApplicationBundles AND BuildMPEngine)
+			install(TARGETS ${target}
+				LIBRARY
+				DESTINATION "${JKAInstallDir}/${MPEngine}.app/Contents/MacOS/"
+				COMPONENT ${JKAMPClientComponent})
+		else()
+			install(TARGETS ${target}
+				LIBRARY
+				DESTINATION ${JKAInstallDir}
+				COMPONENT ${JKAMPClientComponent})
+		endif()
+	endif()
+
+	set_target_properties(${target} PROPERTIES COMPILE_DEFINITIONS "${SharedDefines};${defines}")
+
+	# Hide symbols not explicitly marked public.
+	set_property(TARGET ${target} APPEND PROPERTY COMPILE_OPTIONS ${VISIONJK_VISIBILITY_FLAGS})
+
+	if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+		# an OpenGL call left in a shared file must fail the build, not the game
+		set_property(TARGET ${target} APPEND PROPERTY LINK_OPTIONS "-Wl,-z,defs")
+	endif()
+
+	set_target_properties(${target} PROPERTIES PROJECT_LABEL "${label}")
+endfunction()
+
+if(MPVulkanVisionVulkanTarget)
+	vision_renderer(${MPVulkanVisionVulkanTarget} "MP Vulkan Vision Renderer" "RD_VULKAN_VISION" ${MPVulkanVisionVulkanFiles})
+
+	# the worker threads that pack textures into blocks (vk_bc.cpp)
+	find_package(Threads REQUIRED)
+	# tr_local.h of rd-vanilla pulls in the OpenGL headers for its types. Nothing of OpenGL is linked.
+	find_package(OpenGL REQUIRED)
+	set_target_properties(${MPVulkanVisionVulkanTarget} PROPERTIES INCLUDE_DIRECTORIES
+		"${MPVulkanVisionIncludeDirectories};${MPVulkanVisionVulkanHeaders};${MPVulkanVisionImageIncludeDirectories};${OPENGL_INCLUDE_DIR};${VisionJKLibDir}")
+	target_link_libraries(${MPVulkanVisionVulkanTarget} ${MPVulkanVisionLibraries} Threads::Threads)
+endif()
+
+if(MPVulkanVisionGLESTarget)
+	# RD_VISION_GLES: vk_local.h takes the header of this device, and rd-vanilla/qgl.h the names of OpenGL ES
+	vision_renderer(${MPVulkanVisionGLESTarget} "MP Vision Renderer with OpenGL ES" "RD_VULKAN_VISION;RD_VISION_GLES" ${MPVulkanVisionGLESFiles})
+
+	if(EMSCRIPTEN)
+		# a module of the engine, which has every function of OpenGL ES 3 that Emscripten knows (WebGL2)
+		set_target_properties(${MPVulkanVisionGLESTarget} PROPERTIES INCLUDE_DIRECTORIES
+			"${MPVulkanVisionIncludeDirectories};${MPVulkanVisionImageIncludeDirectories};${VisionJKLibDir}")
+		target_link_libraries(${MPVulkanVisionGLESTarget} ${MPVulkanVisionLibraries})
+		include(WasmModule)
+		vjk_wasm_side_module(${MPVulkanVisionGLESTarget})
+	else()
+		set_target_properties(${MPVulkanVisionGLESTarget} PROPERTIES INCLUDE_DIRECTORIES
+			"${MPVulkanVisionIncludeDirectories};${GLES3HeadersDir};${MPVulkanVisionImageIncludeDirectories};${VisionJKLibDir}")
+		target_link_libraries(${MPVulkanVisionGLESTarget} ${MPVulkanVisionLibraries} ${GLESv2Library})
 	endif()
 endif()
-
-set_target_properties(${MPVulkanVisionRenderer} PROPERTIES COMPILE_DEFINITIONS "${SharedDefines};RD_VULKAN_VISION")
-
-# Hide symbols not explicitly marked public.
-set_property(TARGET ${MPVulkanVisionRenderer} APPEND PROPERTY COMPILE_OPTIONS ${VISIONJK_VISIBILITY_FLAGS})
-
-if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-	# an OpenGL call left in a shared file must fail the build, not the game
-	set_property(TARGET ${MPVulkanVisionRenderer} APPEND PROPERTY LINK_OPTIONS "-Wl,-z,defs")
-endif()
-
-set_target_properties(${MPVulkanVisionRenderer} PROPERTIES INCLUDE_DIRECTORIES "${MPVulkanVisionIncludeDirectories}")
-set_target_properties(${MPVulkanVisionRenderer} PROPERTIES PROJECT_LABEL "MP Vulkan Vision Renderer")
-target_link_libraries(${MPVulkanVisionRenderer} ${MPVulkanVisionLibraries})
