@@ -1,7 +1,11 @@
-// what every shader of rd-vulkan-vision sees. The structures are vkGlobals_t, vkTransform_t and vkDraw_t of
-// vk_local.h, keep them the same.
+// what every shader of rd-vulkan-vision that draws geometry sees. The structures are vkGlobals_t, vkTransform_t
+// and vkDraw_t of vk_local.h, keep them the same.
 
+#include "dialect.glsl"
+
+#ifndef VK_GLES
 #extension GL_EXT_nonuniform_qualifier : require
+#endif
 
 struct Transform {
 	mat4	mvp;			// OpenGL clip space
@@ -35,11 +39,26 @@ struct Draw {
 	uint	unused0, unused1, unused2;
 };
 
-layout( set = 0, binding = 0 ) uniform Globals {
+BINDING( 0, 0 ) uniform Globals {
 	vec4	gamma;			// x: 1 / r_gamma, y: 2 ^ overbright bits, z: identity light
 	vec4	screen;
 } globals;
 
+#ifdef VK_GLES
+// GLSL ES has no buffers a shader could index, so a block holds one transform and one draw, and the device binds
+// the place of its buffers where the ones of a draw call lie. std140 puts every member where std430 has it: they
+// are all scalars of 4 bytes in fours, vec4 and mat4.
+uniform Transforms {
+	Transform	u_transform;
+};
+
+uniform Draws {
+	Draw		u_draw;
+};
+
+#define TRANSFORMS( index )	u_transform
+#define DRAWS( index )		u_draw
+#else
 layout( set = 0, binding = 1, std430 ) readonly buffer Transforms {
 	Transform	transforms[];
 };
@@ -50,6 +69,9 @@ layout( set = 0, binding = 2, std430 ) readonly buffer Draws {
 
 // Which of the draws a draw call is comes as its first instance: gl_InstanceIndex in the vertex shaders (DRAW in
 // stage.glsl), which hand it on to the fragment shader as v_draw. That costs no call of its own per draw.
+#define TRANSFORMS( index )	transforms[index]
+#define DRAWS( index )		draws[index]
+#endif
 
 // Draw.flags
 #define ATEST( flags )		( ( flags ) & 7u )

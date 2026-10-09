@@ -2,14 +2,28 @@
 
 #include "common.glsl"
 
-layout( set = 1, binding = 0 ) uniform sampler2D u_textures[];
+#ifdef VK_GLES
+// the two textures of the draw, the device binds them for every draw call
+uniform sampler2D u_tex0;
+uniform sampler2D u_tex1;
+#define TEX0( draw_ )	u_tex0
+#define TEX1( draw_ )	u_tex1
+#else
+BINDING( 1, 0 ) uniform sampler2D u_textures[];
+#define TEX0( draw_ )	u_textures[nonuniformEXT( draw_.tex0 )]
+#define TEX1( draw_ )	u_textures[nonuniformEXT( draw_.tex1 )]
+#endif
 
-layout( location = 0 ) in vec2 v_texCoord0;
-layout( location = 1 ) in vec2 v_texCoord1;
-layout( location = 2 ) in vec4 v_color;
-layout( location = 3 ) in vec3 v_position;
-layout( location = 4 ) in float v_depth;
-layout( location = 5 ) flat in uint v_draw;
+VARYING( 0 ) in vec2 v_texCoord0;
+VARYING( 1 ) in vec2 v_texCoord1;
+VARYING( 2 ) in vec4 v_color;
+VARYING( 3 ) in vec3 v_position;
+VARYING( 4 ) in float v_depth;
+#ifdef VK_GLES
+in float v_clip;
+#else
+VARYING( 5 ) flat in uint v_draw;
+#endif
 
 layout( location = 0 ) out vec4 o_color;
 
@@ -23,7 +37,7 @@ vec4 DynamicLight( Draw d ) {
 	float radius = d.parm.w;
 
 	// the side of the triangle that is looked at
-	if ( dot( normal, transforms[d.transform].viewOrigin.xyz - v_position ) < 0.0 ) {
+	if ( dot( normal, TRANSFORMS( d.transform ).viewOrigin.xyz - v_position ) < 0.0 ) {
 		normal = -normal;
 	}
 	float fac = dot( normal, toLight );
@@ -40,24 +54,30 @@ vec4 DynamicLight( Draw d ) {
 	if ( any( lessThan( st, vec2( 0.0 ) ) ) || any( greaterThan( st, vec2( 1.0 ) ) ) ) {
 		discard;
 	}
-	vec3 light = texture( u_textures[nonuniformEXT( d.tex1 )], st ).rgb * d.baseColor.rgb * modulate;
-	return vec4( texture( u_textures[nonuniformEXT( d.tex0 )], v_texCoord0 ).rgb * light, 1.0 );
+	vec3 light = texture( TEX1( d ), st ).rgb * d.baseColor.rgb * modulate;
+	return vec4( texture( TEX0( d ), v_texCoord0 ).rgb * light, 1.0 );
 }
 
 void main() {
-	Draw d = draws[v_draw];
+	Draw d = DRAWS( v_draw );
 
+#ifdef VK_GLES
+	// the plane of a portal or mirror, see stage.glsl
+	if ( v_clip < 0.0 ) {
+		discard;
+	}
+#endif
 	if ( DLIGHT( d.flags ) ) {
 		o_color = DynamicLight( d );
 		return;
 	}
 
-	vec4 color = texture( u_textures[nonuniformEXT( d.tex0 )], v_texCoord0 ) * v_color;
+	vec4 color = texture( TEX0( d ), v_texCoord0 ) * v_color;
 
 	// the second texture of a stage, combined the way glTexEnv did it
 	uint env = TEXENV( d.flags );
 	if ( env != 0u ) {
-		vec4 second = texture( u_textures[nonuniformEXT( d.tex1 )], v_texCoord1 );
+		vec4 second = texture( TEX1( d ), v_texCoord1 );
 
 		if ( env == 1u ) {				// modulate
 			color *= second;

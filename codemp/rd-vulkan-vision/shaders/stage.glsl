@@ -11,14 +11,20 @@ struct StageInput {
 	vec4	color;
 };
 
-layout( location = 0 ) out vec2 v_texCoord0;
-layout( location = 1 ) out vec2 v_texCoord1;
-layout( location = 2 ) out vec4 v_color;
-layout( location = 3 ) out vec3 v_position;		// in model space
-layout( location = 4 ) out float v_depth;		// distance in front of the eye
-layout( location = 5 ) flat out uint v_draw;	// index into draws
+VARYING( 0 ) out vec2 v_texCoord0;
+VARYING( 1 ) out vec2 v_texCoord1;
+VARYING( 2 ) out vec4 v_color;
+VARYING( 3 ) out vec3 v_position;		// in model space
+VARYING( 4 ) out float v_depth;		// distance in front of the eye
+#ifdef VK_GLES
+out float v_clip;		// GLSL ES has no clip distances: generic.frag drops what is behind the plane
+#define CLIP_DISTANCE	v_clip
+#else
+VARYING( 5 ) flat out uint v_draw;	// index into draws
+#define CLIP_DISTANCE	gl_ClipDistance[0]
 
 #define DRAW	uint( gl_InstanceIndex )
+#endif
 
 const float TWO_PI = 6.28318530718;
 
@@ -98,7 +104,7 @@ vec2 GenTexCoord( uint gen, vec4 vectors[2], vec3 viewOrigin, StageInput v ) {
 		return vec2( 0.5 + reflected.y * 0.5, 0.5 - reflected.z * 0.5 );
 	}
 	case TCGEN_VECTOR:		return vec2( dot( v.position, vectors[0].xyz ), dot( v.position, vectors[1].xyz ) );
-	case TCGEN_FOG:			return FogCoords( v.position, draws[DRAW].fogVec, draws[DRAW].fogParm.z );
+	case TCGEN_FOG:			return FogCoords( v.position, DRAWS( DRAW ).fogVec, DRAWS( DRAW ).fogParm.z );
 	default:				return vec2( 0.0 );
 	}
 }
@@ -116,19 +122,23 @@ vec2 ModTexCoord( vec2 st, vec4 mat[2], vec4 turb, StageInput v ) {
 }
 
 void StageVertex( StageInput v ) {
-	Draw d = draws[DRAW];
-	Transform t = transforms[d.transform];
+	Draw d = DRAWS( DRAW );
+	Transform t = TRANSFORMS( d.transform );
 
+#ifndef VK_GLES
 	v_draw = DRAW;
+#endif
 	v.position = Deform( d, v );
 	gl_Position = t.mvp * vec4( v.position, 1.0 );
 	v_position = v.position;
 	// the view through a portal or mirror must not show what lies between the eye and the portal
-	gl_ClipDistance[0] = ( t.clipPlane.xyz == vec3( 0.0 ) ) ? 1.0
+	CLIP_DISTANCE = ( t.clipPlane.xyz == vec3( 0.0 ) ) ? 1.0
 		: dot( ( t.model * vec4( v.position, 1.0 ) ).xyz, t.clipPlane.xyz ) - t.clipPlane.w;
 	v_depth = gl_Position.w;
+#ifndef VK_GLES
 	// the depth range of OpenGL is -w to w, the one of Vulkan 0 to w
 	gl_Position.z = ( gl_Position.z + gl_Position.w ) * 0.5;
+#endif
 
 	v_texCoord0 = ModTexCoord( GenTexCoord( TCGEN0( d.flags ), d.tcGenVec0, t.viewOrigin.xyz, v ), d.texMat0, d.texTurb0, v );
 	v_texCoord1 = ModTexCoord( GenTexCoord( TCGEN1( d.flags ), d.tcGenVec1, t.viewOrigin.xyz, v ), d.texMat1, d.texTurb1, v );

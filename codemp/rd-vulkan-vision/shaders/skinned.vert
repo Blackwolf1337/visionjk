@@ -5,9 +5,19 @@
 
 #include "stage.glsl"
 
+#ifdef VK_GLES
+// the device binds the place of its bones where the skeleton of the draw starts: 256 bones, which is the most a
+// skeleton has (VK_FrameSkeleton() of vk_model.cpp)
+uniform Bones {
+	vec4	bones[768];
+};
+#define SKELETON	0u
+#else
 layout( set = 0, binding = 3, std430 ) readonly buffer Bones {
 	vec4	bones[];		// three rows a bone: x' = dot( row.xyz, x ) + row.w
 };
+#define SKELETON	DRAWS( DRAW ).bones
+#endif
 
 layout( location = 0 ) in vec3 a_position;
 layout( location = 1 ) in vec3 a_normal;
@@ -16,7 +26,7 @@ layout( location = 3 ) in uvec4 a_bones;
 layout( location = 4 ) in vec4 a_weights;
 
 void main() {
-	uint base = draws[DRAW].bones;
+	uint base = SKELETON;
 	vec3 position = vec3( 0.0 );
 	vec3 normal = vec3( 0.0 );
 

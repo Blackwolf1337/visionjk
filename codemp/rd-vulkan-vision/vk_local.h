@@ -59,7 +59,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define VK_MAX_BATCH_RANGES	64				// runs of indexes a batch of model surfaces can have
 
 // ------------------------------------------------------------------------------------------------------------
-// what the shaders read, shaders/common.glsl has the same layout (std430)
+// what the shaders read, shaders/common.glsl has the same layout (std430, and std140 as GLSL ES)
 // ------------------------------------------------------------------------------------------------------------
 
 typedef struct vkGlobals_s {	// once per frame
@@ -68,7 +68,7 @@ typedef struct vkGlobals_s {	// once per frame
 } vkGlobals_t;
 
 typedef struct vkTransform_s {	// once per view and entity
-	float		mvp[16];			// OpenGL clip space, the vertex shader turns it into the one of Vulkan
+	float		mvp[16];			// OpenGL clip space, the vertex shader turns it into the one of the device
 	float		model[16];			// model to world
 	float		viewOrigin[4];		// in model space
 	float		lightDir[4];		// in model space, entity lighting. w: 1 for a model, else 0

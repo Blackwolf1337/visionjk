@@ -165,6 +165,12 @@ set(MPVulkanVisionShaders
 	blur.frag
 	copy.frag
 	)
+set(MPVulkanVisionShaderIncludes
+	"${MPDir}/rd-vulkan-vision/shaders/common.glsl"
+	"${MPDir}/rd-vulkan-vision/shaders/dialect.glsl"
+	"${MPDir}/rd-vulkan-vision/shaders/post.glsl"
+	"${MPDir}/rd-vulkan-vision/shaders/stage.glsl"
+	)
 set(MPVulkanVisionShaderOutputs)
 foreach(shader ${MPVulkanVisionShaders})
 	set(shaderIn "${MPDir}/rd-vulkan-vision/shaders/${shader}")
@@ -174,11 +180,76 @@ foreach(shader ${MPVulkanVisionShaders})
 		OUTPUT ${shaderOut}
 		COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/shaders"
 		COMMAND ${GLSLC} --target-env=vulkan1.3 -O -mfmt=c -I "${MPDir}/rd-vulkan-vision/shaders" -o ${shaderOut} ${shaderIn}
-		DEPENDS ${shaderIn} "${MPDir}/rd-vulkan-vision/shaders/common.glsl" "${MPDir}/rd-vulkan-vision/shaders/stage.glsl"
+		DEPENDS ${shaderIn} ${MPVulkanVisionShaderIncludes}
 		COMMENT "glslc ${shader}"
 		VERBATIM)
 	list(APPEND MPVulkanVisionShaderOutputs ${shaderOut})
 endforeach()
+
+# The same sources as GLSL ES 3.00, for a device on WebGL2: it compiles them itself, so they go into the library
+# as text. One file a shader with its includes put in (cmake/Modules/BundleShader.cmake), as a C array with a zero
+# at its end, and gles_prefix.glsl, the lines the device puts in front of each. No code reads the arrays yet. They
+# are made in every build so that a change to a shader that is not GLSL ES fails here and not in a browser:
+# glslangValidator compiles each file with the prefix in front and links the pairs that make a program, which is
+# where GLSL ES finds the varyings of a stage by their names.
+set(MPVulkanVisionShaderPrefix "${MPDir}/rd-vulkan-vision/shaders/gles_prefix.glsl")
+set(MPVulkanVisionShaderCheck)
+find_program(GLSLANG_VALIDATOR glslangValidator)
+if(GLSLANG_VALIDATOR)
+	set(MPVulkanVisionShaderCheck "-DVALIDATOR=${GLSLANG_VALIDATOR}" "-DPREFIX=${MPVulkanVisionShaderPrefix}")
+else()
+	message(WARNING "rd-vulkan-vision: the shaders are not checked as GLSL ES, that needs glslangValidator (package glslang).")
+endif()
+foreach(shader ${MPVulkanVisionShaders})
+	set(shaderIn "${MPDir}/rd-vulkan-vision/shaders/${shader}")
+	string(REPLACE "." "_" shaderName ${shader})
+	string(REGEX REPLACE ".*\\." "" shaderStage ${shader})
+	set(shaderBundle "${CMAKE_CURRENT_BINARY_DIR}/shaders/${shaderName}_es.glsl")
+	set(shaderOut "${CMAKE_CURRENT_BINARY_DIR}/shaders/${shaderName}_es.inc")
+	add_custom_command(
+		OUTPUT ${shaderBundle}
+		COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/shaders"
+		COMMAND ${CMAKE_COMMAND} "-DINPUT=${shaderIn}" "-DOUTPUT=${shaderBundle}" ${MPVulkanVisionShaderCheck} -DSTAGE=${shaderStage}
+			-P "${CMAKE_SOURCE_DIR}/cmake/Modules/BundleShader.cmake"
+		DEPENDS ${shaderIn} ${MPVulkanVisionShaderIncludes} ${MPVulkanVisionShaderPrefix} "${CMAKE_SOURCE_DIR}/cmake/Modules/BundleShader.cmake"
+		COMMENT "GLSL ES ${shader}"
+		VERBATIM)
+	add_custom_command(
+		OUTPUT ${shaderOut}
+		COMMAND ${CMAKE_COMMAND} "-DINPUT=${shaderBundle}" "-DOUTPUT=${shaderOut}" -DNAME=vk_es_${shaderName}
+			-P "${CMAKE_SOURCE_DIR}/cmake/Modules/EmbedFile.cmake"
+		DEPENDS ${shaderBundle} "${CMAKE_SOURCE_DIR}/cmake/Modules/EmbedFile.cmake"
+		COMMENT "Embedding GLSL ES ${shader}"
+		VERBATIM)
+	list(APPEND MPVulkanVisionShaderOutputs ${shaderOut})
+endforeach()
+add_custom_command(
+	OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/shaders/prefix_es.inc"
+	COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/shaders"
+	COMMAND ${CMAKE_COMMAND} "-DINPUT=${MPVulkanVisionShaderPrefix}" "-DOUTPUT=${CMAKE_CURRENT_BINARY_DIR}/shaders/prefix_es.inc" -DNAME=vk_es_prefix
+		-P "${CMAKE_SOURCE_DIR}/cmake/Modules/EmbedFile.cmake"
+	DEPENDS ${MPVulkanVisionShaderPrefix} "${CMAKE_SOURCE_DIR}/cmake/Modules/EmbedFile.cmake"
+	COMMENT "Embedding GLSL ES prefix"
+	VERBATIM)
+list(APPEND MPVulkanVisionShaderOutputs "${CMAKE_CURRENT_BINARY_DIR}/shaders/prefix_es.inc")
+if(GLSLANG_VALIDATOR)
+	# vertex and fragment shader of every program, as vk_pipeline.cpp puts them together
+	foreach(program generic_vert:generic_frag skinned_vert:generic_frag post_vert:gamma_frag post_vert:blur_frag post_vert:copy_frag)
+		string(REPLACE ":" ";" programStages ${program})
+		list(GET programStages 0 programVert)
+		list(GET programStages 1 programFrag)
+		set(programOut "${CMAKE_CURRENT_BINARY_DIR}/shaders/${programVert}_${programFrag}_es.linked")
+		add_custom_command(
+			OUTPUT ${programOut}
+			COMMAND ${GLSLANG_VALIDATOR} --quiet -l --validate-io "${CMAKE_CURRENT_BINARY_DIR}/shaders/${programVert}_es.glsl.vert"
+				"${CMAKE_CURRENT_BINARY_DIR}/shaders/${programFrag}_es.glsl.frag"
+			COMMAND ${CMAKE_COMMAND} -E touch ${programOut}
+			DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/shaders/${programVert}_es.glsl" "${CMAKE_CURRENT_BINARY_DIR}/shaders/${programFrag}_es.glsl"
+			COMMENT "GLSL ES ${programVert} with ${programFrag}"
+			VERBATIM)
+		list(APPEND MPVulkanVisionShaderOutputs ${programOut})
+	endforeach()
+endif()
 set(MPVulkanVisionFiles ${MPVulkanVisionFiles} ${MPVulkanVisionShaderOutputs})
 
 # Transparently use either bundled or system libjpeg, libpng, zlib and our bundled minizip, as rd-vanilla does.
