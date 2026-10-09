@@ -4,6 +4,11 @@ A second renderer for the VisionJK client next to `rd-vanilla`. It draws with Vu
 models in buffers on the graphics card and does in shaders what `rd-vanilla` computes per vertex on the CPU every
 frame. It is not a JA+ feature and it does not touch the server, the protocol or the game modules.
 
+Since 2026-10-09 the renderer is a shared part and a device. The shared part decides what is drawn and in which
+order, a device hands that to a graphics library. There are two devices: the one for Vulkan, which is the library
+`rd-vulkan-vision` this page is about, and one for OpenGL ES 3, which is what a browser has as WebGL2 and what the
+client for a browser draws with. See "The two devices".
+
 Since 2026-10-07 it is the renderer a client starts with (on macOS that is still `rd-vanilla`). `rd-vanilla` is
 the fallback: where the library is missing or the machine can not run it, the game goes on with `rd-vanilla` by
 itself, see "Building and switching". The renderer is in `master`
@@ -46,6 +51,13 @@ JA+ draw is drawn. What is open is what was never run, and a few cvars.
 | macOS | not tried, would need MoltenVK |
 | Other graphics cards and drivers, a long session, play by a person over a longer time | not tried |
 | `r_dlightStyle 0`, `r_colorbits`, `r_depthbits`, `r_stencilbits`, `r_texturebits 16`, the developer cvars | not there and left out on purpose, see "Checked" |
+| OpenGL ES device on the desktop (`rd-vision-gles`, Linux) | draws what the Vulkan device draws, compared picture by picture (see "The two devices") |
+| OpenGL ES device in a browser (WebGL2) | the menu, demos of two levels, `vid_restart`, four samples a pixel and flares were run in a headless Chromium, in software and on the graphics card |
+| OpenGL ES device: flares | done, one query for each flare, the answer some frames late |
+| OpenGL ES device: anti aliasing (`r_ext_multisample`) | done, run with 4 |
+| OpenGL ES device: compressed textures | not there: every texture is 32 bit, `r_ext_compress_textures` changes nothing |
+| OpenGL ES device: `r_showtris`, the automap as lines (`r_autoMap 2`) | not there: OpenGL ES draws no face as its edges, the faces come out filled. `r_autoMap 1` is right |
+| OpenGL ES device: Windows, macOS | not built |
 
 The details of the open rows are under "Not done", what was compared and how under "Checked".
 
@@ -74,6 +86,20 @@ header directories of the host (`vulkan`, `vk_video`) into the build directory f
 `-DVulkanHeadersDir=` names another place. The result is `rd-vulkan-vision_x86_64.dll` next to
 `visionjk.x86_64.exe`. Windows is built for 64 bit only, the configure line no longer needs
 `-DCMAKE_SIZEOF_VOID_P=8`.
+
+The same sources with the device for OpenGL ES 3 are a library of their own on the desktop:
+
+```
+cmake -S . -B build64 -DBuildMPRdVisionGLES=ON
+```
+
+builds `rd-vision-gles_x86_64.so` next to the other two (Linux, needs `GLES3/gl3.h` and `libGLESv2`). It is there
+to work on that device with the tools of the desktop, a player has no use for it: `cl_renderer rd-vision-gles;
+vid_restart`. The build for a browser (Emscripten, see [web.md](web.md)) has no Vulkan. There
+`BuildMPRdVulkanVision` builds the renderer with the OpenGL ES device as a module of the engine, under the name
+the engine asks for (`rd-vulkan-vision_wasm32.wasm`). If `glslangValidator` (package `glslang`) is on the build
+machine, every build compiles and links the shaders as GLSL ES too, so a shader that is not GLSL ES fails the
+build of the desktop and not the game in a browser.
 
 A client that has no renderer stored in its config starts with `rd-vulkan-vision`. A config that was written
 before 2026-10-07 has `cl_renderer "rd-vanilla"` in it and keeps that: the stored value wins over the default.
@@ -106,6 +132,7 @@ away nor on a real machine. Windows was not built with it.
 | `r_ext_compress_textures 0` | textures as 32 bit and not packed into blocks, the cvar `rd-vanilla` uses for it (latched, the default is 1) |
 | `r_vkStatic 0` | cheat: nothing from the device buffers, every vertex through the CPU as in `rd-vanilla`. For telling a fault of the buffers from a fault of the shading |
 | `r_vkMerge 0` | cheat: a batch ends with its entity as in `rd-vanilla`, the sprites of an effect are a draw each again |
+| `r_glesDebug 1` | OpenGL ES device: asks the device for its errors after every frame and prints them with the frame. Slow in a browser |
 | `gfxinfo` | device, memory, how many textures are compressed and how long packing them took, what the last frame was made of (draws, triangles, transforms, bones), the shaders whose batches were still built on the CPU, how many swapchains the window has had and how many frames found no image to be shown in, how many of the 1024 Ghoul2 instances of the engine are taken and how many of those hold no model (with `developer 1` a line for each model that is held; the same list is printed when the engine stops with "Out of ghoul2 info slots"). The count has to be 0 in the menu after leaving a server, apart from the models the menu shows itself |
 
 The cvars of `rd-vanilla` keep their names and meaning (`r_gamma`, `r_textureMode`, `r_picmip`,
@@ -151,21 +178,116 @@ The engine got a window type for Vulkan (`GRAPHICS_API_VULKAN`, `SDL_WINDOW_VULK
 end of `refimport_t`: the instance extensions the window needs, the surface, and the entry point of the Vulkan
 library. The other renderers do not use them.
 
-| File | Content |
-|------|---------|
-| `vk_main.cpp`, `vk_funcs.h` | the functions of Vulkan, instance, device, swapchain, start and shutdown, `gfxinfo` |
-| `vk_memory.cpp` | device memory in 64 MB blocks with free lists, buffers |
-| `vk_image.cpp` | the texture table, uploads batched in one command buffer, samplers, render targets |
-| `vk_bc.cpp` | textures packed into BC1 and BC3 blocks, the worker threads that do it |
-| `vk_pipeline.cpp` | descriptor layouts, shader modules, pipelines |
-| `vk_frame.cpp` | a frame: targets, gamma pass, copy to the window, buffers per frame, screenshots, video frames |
-| `vk_shade.cpp` | a batch with a `.shader` script becomes draws: colors, tcMods, fog, dynamic lights |
+The shared part names no type and no function of a graphics library. `vk_local.h` includes exactly one device
+header (`vk_device.h`, or `gles/gles_device.h` when `RD_VISION_GLES` is defined), and the last block of
+`vk_local.h` is the list of functions a device has for the shared files.
+
+| Shared file | Content |
+|-------------|---------|
 | `vk_backend.cpp` | the render commands: pictures, views, entities, draw order |
+| `vk_shade.cpp` | a batch with a `.shader` script becomes draws: colors, tcMods, fog, dynamic lights |
+| `vk_frame.cpp` | a frame from its first draw to the window: what is in its buffers, which state the last draw had, screenshots, video frames |
+| `vk_image.cpp` | the texture table: which slot an image has, its size, levels and format, the upload level by level |
 | `vk_world.cpp` | the level in a device buffer, which batches can use it |
 | `vk_model.cpp` | Ghoul2 and MD3 vertices in a device buffer, the saber marks on models, bones per frame |
-| `vk_post.cpp` | dynamic glow, the copy of the frame for refraction, the depth test of flares |
+| `vk_post.cpp` | dynamic glow, the copy of the frame for refraction, which flares are tested |
 | `vk_gl.cpp` | the immediate mode drawing of the shared files |
-| `shaders/` | `stage.glsl` (one stage of a script on a vertex), `generic.vert`, `skinned.vert`, `generic.frag`, `post.vert`, `gamma.frag`, `blur.frag`, `copy.frag`. `glslc -mfmt=c` turns them into headers while building |
+| `vk_bc.cpp` | textures packed into BC1 and BC3 blocks, the worker threads that do it (built with the Vulkan device only) |
+| `vk_stubs.cpp` | what the files of `rd-vanilla` call and this renderer has no use for |
+| `shaders/` | `stage.glsl` (one stage of a script on a vertex), `generic.vert`, `skinned.vert`, `generic.frag`, `post.vert`, `gamma.frag`, `blur.frag`, `copy.frag`, with `common.glsl`, `post.glsl` and `dialect.glsl` (what is written in another way in GLSL for Vulkan and in GLSL ES). One set of sources for both devices |
+
+| Vulkan device | Content |
+|---------------|---------|
+| `vk_device.h`, `vk_funcs.h` | what the shared files take from the device, the functions of Vulkan |
+| `vk_main.cpp` | instance, device, swapchain, start and shutdown, `gfxinfo` |
+| `vk_memory.cpp` | device memory in 64 MB blocks with free lists, buffers |
+| `vk_texture.cpp` | images, views, samplers, the descriptors of the texture table, uploads batched in one command buffer, render targets |
+| `vk_pipeline.cpp` | descriptor layouts, shader modules, pipelines |
+| `vk_cmd.cpp` | the command buffer of a frame: targets, bindings, dynamic state, draw calls, the gamma pass, the blur, the copy to the window and back into memory |
+
+| OpenGL ES device (`gles/`) | Content |
+|----------------------------|---------|
+| `gles_device.h`, `gles_gl.h` | what the shared files take from the device, the names of OpenGL ES (and the few of OpenGL the files of `rd-vanilla` still say) |
+| `gles_main.cpp` | the window with its context, start and shutdown, `gfxinfo` |
+| `gles_buffer.cpp` | buffers. The ones the shared files write into are memory of the engine, sent to the device once a frame |
+| `gles_texture.cpp` | textures, render targets as framebuffer objects, multisample renderbuffers |
+| `gles_program.cpp` | the shaders as programs, uniform blocks and samplers bound by name |
+| `gles_cmd.cpp` | a frame written down as a list of commands and played when it ends, the queries of the flares |
+
+For Vulkan `glslc -mfmt=c` turns the shaders into headers while building. For OpenGL ES
+`cmake/Modules/BundleShader.cmake` makes one text of each shader with its includes put in, and the device
+compiles it when it starts, with `shaders/gles_prefix.glsl` in front.
+
+## The two devices
+
+Both draw the same frame from the same shared files and the same shader sources. What the device for OpenGL ES 3
+does in another way, because WebGL2 leaves it no choice:
+
+- A frame is not handed to OpenGL ES while it is built. It is written down, and when it ends its buffers go to
+  the device in one call each and the list is played. WebGL can not map a buffer, and a buffer that changes
+  between two draws that read it makes a driver wait.
+- A draw finds its values (`vkDraw_t`), its transform and its bones in uniform blocks, bound to the place of the
+  frame buffers where they lie. There is no draw number in a shader of WebGL2 and no buffer a shader can index
+  freely. The entries lie as far apart as the device asks for (256 bytes here: a draw takes 512, a transform 256,
+  a skeleton starts every 16 bones).
+- Textures are bound per draw, two of them. There is no table of all textures in a shader.
+- The targets have their top row first as the images of Vulkan do. The vertex shaders turn the picture and the
+  copy to the window turns it again, so no shared file knows which way a target lies.
+- No depth is read back. Whether a flare is covered is asked with an occlusion query: one pixel at the place of
+  the flare, at its depth, drawn into nothing. The answers are taken when they are there, some frames later,
+  nothing waits for one.
+- Anti aliasing: color, glow and depth are multisample renderbuffers, resolved into their textures before
+  something reads them (the copy for refraction, the blur of the glow, the copy to the window).
+- The textures are not packed into blocks, and there is no validation layer. `r_glesDebug 1` asks for errors.
+
+`gfxinfo` of this device prints how many buffers, textures, framebuffers, renderbuffers and queries it holds
+(what a `vid_restart` or a change of level leaves more of each time would be a leak), how many commands the last
+frame had and how many calls of OpenGL ES played it, and for how many flares the last answers were.
+
+Checked on 2026-10-09 against the Vulkan device, the same way as against `rd-vanilla` (see "Checked"): both draw
+the same view in one run, `rd-vision-gles` after a `vid_restart`, at 1280 x 720, textures not packed into blocks
+on either (`r_ext_compress_textures 0`, the blocks alone are a difference of two levels), `r_glesDebug 1`. No
+run printed an error of OpenGL ES.
+
+| Scene | Mean difference of the two pictures (of 255) |
+|-------|----------------------------------------------|
+| the main menu, and the console over it | 2.8 and 3.3: the parts that move. Two pictures of the Vulkan device differ by 2.4 and 3.4 |
+| a demo played as timedemo, two frames of it | 0.00 |
+| mp/ffa3, two views, also with four samples a pixel and glow | 0.7 and 1.3 |
+| mp/ffa4 (fog volume, flares), two views | 1.4 and 1.2 |
+| mp/ffa4, ten views with flares | the same picture below a line of text. At one of them 23 flares are asked about and 6 are seen, on the desktop and in a browser |
+| mp/ctf2 (global fog, snow on the ground), two views | 1.0 and 1.3 |
+| mp/duel6 (sky portal), two views | 2.5 and 2.1 |
+| the player with the saber, with the HUD | 0.8 to 2.3 |
+| the test room: mirrors, the portal, the mirror in the floor, the materials, nine views | 0.1 to 2.7, the same with four samples and glow (0.1 to 3.7, the video on the wall is at another frame) |
+| the cloak, the wave of force push (refraction) | 1.7, and 2.7 to 6.3 for the wave, which is caught at two moments |
+| the automap (`r_autoMap 1`) | 1.7 and 3.5 |
+
+Looked at and not measured, because two runs do not show the same moment: six bots fighting with sabers on
+mp/duel1 (blades, glow, sparks, lightning, marks), the shadows of `cg_shadows 2` and `3`, snow and rain
+(`r_we snow`, `r_we heavyrain`) under the open sky of mp/duel6, the marks of a blaster and of a blade on a wall,
+a player in the sphere of a ysalamiri, a cinematic. Three `vid_restart`, a change of level and back, the window
+at 960 x 600 and 800 x 600 and four samples a pixel leave the same counts on the device every time (11 buffers,
+859 textures in mp/ffa3).
+
+In a browser (headless Chromium, WebGL2 in software and on the graphics card, 1440 x 810): the menu, two
+`vid_restart` in it, a demo of mp/ffa3 with a `vid_restart` while it plays (also with four samples a pixel) and a
+demo of mp/ffa4 with its flares draw the pictures of the desktop, without an error of OpenGL ES and without a
+message of the browser about WebGL. A `vid_restart` loads the module of the renderer a second time: it is linked
+with `-Bsymbolic` so that it finds its own tables then and not the ones of the first load (every JPEG was noise
+after a `vid_restart` before that).
+
+Speed, as far as it was looked at (nothing was made faster for it). The demo is short and light: 384 frames of a
+spectator in mp/ffa3, 157 draws and about 1200 calls of OpenGL ES a frame. On the desktop both devices play it at
+the 1000 frames a second the engine allows at most (992 and 1000), so it tells them apart no further. In the
+browser on the graphics card it runs at 60 frames a second, which is how often that browser hands the page a
+frame, and at 115 to 480 with that limit switched off (`--disable-frame-rate-limit --disable-gpu-vsync`). The
+profiler of the browser then has the thread of the page idle for 78 % of the time: the client waits for the
+browser, not the other way round. A fight costs more calls: six bots on mp/duel1 are 633 draws, 666 commands and
+3331 calls of OpenGL ES in a frame. Every one of them crosses from the page to the graphics process of the
+browser, so that count is the first thing to bring down if a slower machine needs it: a uniform block bound once
+for many draws with the number of the draw as a uniform, and draws that differ in nothing but their indexes
+joined into one.
 
 ## What runs where
 
