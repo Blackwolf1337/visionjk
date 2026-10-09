@@ -241,6 +241,8 @@ nothing left is the first one of the next wake-up, which comes at once because i
 ==================
 */
 static void SV_WebWrite( webConnection_t *c ) {
+	qboolean served = qfalse;		// it got a piece in this wake-up
+
 	for ( ;; ) {
 		int max, got;
 
@@ -253,7 +255,9 @@ static void SV_WebWrite( webConnection_t *c ) {
 		}
 
 		if ( fileBudget <= 0 ) {
-			if ( starvedConnection < 0 ) {
+			// (not the one that took the last of it: it would be the first again in every wake-up, and
+			// the others would wait until its file is through)
+			if ( !served && starvedConnection < 0 ) {
 				starvedConnection = (int)( c - connections );
 			}
 			return;
@@ -266,6 +270,7 @@ static void SV_WebWrite( webConnection_t *c ) {
 			return;
 		}
 		fileBudget -= got;
+		served = qtrue;
 	}
 
 	// all of it is out
