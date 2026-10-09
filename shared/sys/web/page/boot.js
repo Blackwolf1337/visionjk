@@ -102,6 +102,12 @@ function say(status, detail) {
 	$('detail').textContent = detail || '';
 }
 
+// the panel of the loading steps makes room for it
+function showError(on) {
+	$('error').hidden = !on;
+	document.body.classList.toggle('failed', on);
+}
+
 // retry: what the button does instead of loading the page anew
 function fail(message, retry) {
 	note('error: ' + message);
@@ -111,8 +117,8 @@ function fail(message, retry) {
 	if (document.pointerLockElement) document.exitPointerLock();
 	$('errorText').textContent = message;
 	$('errorButton').textContent = retry ? 'Try again' : 'Reload the page';
-	$('errorButton').onclick = retry ? () => { $('error').hidden = true; canvas.focus({ preventScroll: true }); vjk.phase = before; retry(); } : () => location.reload();
-	$('error').hidden = false;
+	$('errorButton').onclick = retry ? () => { showError(false); canvas.focus({ preventScroll: true }); vjk.phase = before; retry(); } : () => location.reload();
+	showError(true);
 	$('errorButton').focus();
 	showLog(true);
 }
@@ -140,14 +146,23 @@ async function ask(url, options) {
 	return answer;
 }
 
-// ---- the packs in the browser: IndexedDB database "visionjk", object store "packs", a record for each pack:
-// { path, size, checksum, blob }, the key is the path. (The home path of the game is another database, which
-// Emscripten keeps under the name of the mount point, "/home".)
+// ---- the packs in the browser: IndexedDB database "visionjk", version 2. A pack is kept in pieces of
+// STORE_CHUNK bytes: a browser does not write one value of hundreds of megabytes (Chromium: "Failed to write
+// blobs" for a pack of 562 MB), and a piece is the only second copy of bytes of a pack there ever is.
+//   store "chunks"  the key is [path, index], the value an ArrayBuffer with that piece of the pack
+//   store "packs"   the key is the path, the value { path, size, checksum, chunkSize, chunks }. It is written
+//                   after the last chunk: a pack without it was not stored to its end and is thrown away.
+// (The home path of the game is another database, which Emscripten keeps under the name of the mount point,
+// "/home".)
+
+const STORE_CHUNK = 16 * 1024 * 1024;
+let db = null;				// null: this browser keeps nothing for the page
 
 const request = r => new Promise((ok, bad) => { r.onsuccess = () => ok(r.result); r.onerror = () => bad(r.error); });
 const finished = tx => new Promise((ok, bad) => { tx.oncomplete = () => ok(); tx.onabort = () => bad(tx.error || new Error('the transaction was aborted')); });
-const same = (entry, pack) => !!entry && entry.path === pack.path && entry.size === pack.size && entry.checksum === pack.checksum &&
-	entry.blob instanceof Blob && entry.blob.size === pack.size;
+// the record of a pack, of the file the server has now
+const same = (meta, pack) => !!meta && meta.path === pack.path && meta.size === pack.size && meta.checksum === pack.checksum &&
+	meta.chunkSize > 0 && meta.chunks === Math.ceil(pack.size / meta.chunkSize);
 
 // some browsers throw already when a page without storage (a private window, a sandbox) names it
 function haveIndexedDB() {
@@ -155,38 +170,105 @@ function haveIndexedDB() {
 }
 
 function openStore() {
-	if (!haveIndexedDB()) return Promise.reject(new Error('no IndexedDB'));
-	const open = indexedDB.open('visionjk', 1);
-	open.onupgradeneeded = () => open.result.createObjectStore('packs', { keyPath: 'path' });
-	return request(open);
+	return new Promise((ok, bad) => {
+		if (!haveIndexedDB()) throw new Error('no IndexedDB');
+		const open = indexedDB.open('visionjk', 2);
+		let blocked = false;
+		open.onupgradeneeded = () => {
+			// version 1 kept a pack as one Blob: nothing of it is read any more
+			for (const name of [...open.result.objectStoreNames]) open.result.deleteObjectStore(name);
+			open.result.createObjectStore('packs', { keyPath: 'path' });
+			open.result.createObjectStore('chunks');
+		};
+		open.onblocked = () => { blocked = true; bad(new Error('another tab holds an older form of it open')); };
+		open.onerror = () => bad(open.error);
+		open.onsuccess = () => {
+			if (blocked) { open.result.close(); return; }
+			// a later form of this page in another tab that changes the layout is not kept waiting
+			open.result.onversionchange = () => open.result.close();
+			ok(open.result);
+		};
+	});
 }
 
-// what the server does not have any more, or has with another size or checksum, only takes up room
-function pruneStore(db, packs) {
-	const tx = db.transaction('packs', 'readwrite'), walk = tx.objectStore('packs').openCursor();
-	walk.onsuccess = () => {
-		const at = walk.result;
-		if (!at) return;
-		if (!packs.some(pack => same(at.value, pack))) {
-			note(at.key + " in the browser's storage is not a file of this server any more: removed");
-			at.delete();
+// What only takes up room: packs the server does not have any more or has with another size or checksum, and
+// chunks without the record of their pack (a store that was cut off, or a pack that was just removed).
+async function pruneStore(packs) {
+	const tx = db.transaction(['packs', 'chunks'], 'readwrite'), chunks = tx.objectStore('chunks');
+	const whole = new Map();		// path: number of chunks, of the packs that stay
+	let loose = 0;
+	const metas = tx.objectStore('packs').openCursor();
+	metas.onsuccess = () => {
+		const at = metas.result;
+		if (at) {
+			if (packs.some(pack => same(at.value, pack))) {
+				whole.set(at.key, at.value.chunks);
+			} else {
+				note(at.key + " in the browser's storage is not a file of this server any more: removed");
+				at.delete();
+			}
+			at.continue();
+			return;
 		}
-		at.continue();
+		// the keys only: the values are the packs themselves
+		const keys = chunks.openKeyCursor();
+		keys.onsuccess = () => {
+			const chunk = keys.result;
+			if (!chunk) return;
+			if (!(Array.isArray(chunk.key) && chunk.key[1] < whole.get(chunk.key[0]))) {
+				chunks.delete(chunk.key);
+				loose++;
+			}
+			chunk.continue();
+		};
 	};
+	await finished(tx);
+	if (loose) note(loose + " pieces of game files whose pack is gone or was not stored to its end were removed from the browser's storage");
+}
+
+async function clearPack(path) {
+	const tx = db.transaction(['packs', 'chunks'], 'readwrite');
+	tx.objectStore('packs').delete(path);
+	tx.objectStore('chunks').delete(IDBKeyRange.bound([path, 0], [path, Infinity]));
 	return finished(tx);
 }
 
-// the Blob is the browser's own copy of the bytes: the array is free for the engine when this is through
-function putStore(db, pack, bytes) {
-	const blob = new Blob([bytes]), tx = db.transaction('packs', 'readwrite');
-	tx.objectStore('packs').put({ path: pack.path, size: pack.size, checksum: pack.checksum, blob });
-	return finished(tx);
+// A chunk is written and through before the next one is cut out of the array.
+async function toStore(pack, bytes) {
+	await clearPack(pack.path);
+	const chunks = Math.ceil(pack.size / STORE_CHUNK);
+	for (let i = 0; i < chunks; i++) {
+		const tx = db.transaction('chunks', 'readwrite');
+		// slice() copies the piece into a buffer of its own. A view on the array would be stored with the whole
+		// array behind it.
+		tx.objectStore('chunks').put(bytes.slice(i * STORE_CHUNK, (i + 1) * STORE_CHUNK).buffer, [pack.path, i]);
+		await finished(tx);
+		$('detail').textContent = megabytes(Math.min((i + 1) * STORE_CHUNK, pack.size), pack.size);
+	}
+	const tx = db.transaction('packs', 'readwrite');
+	tx.objectStore('packs').put({ path: pack.path, size: pack.size, checksum: pack.checksum, chunkSize: STORE_CHUNK, chunks });
+	await finished(tx);
 }
 
-// ---- the packs: one after another, the smallest first. A pack is one array from its first byte on, and at
-// most that array and the copy the browser's storage is given exist at a time.
+// null: the pack is not stored. An error: it is, but not all of it can be read.
+async function fromStore(pack) {
+	const meta = await request(db.transaction('packs').objectStore('packs').get(pack.path));
+	if (!same(meta, pack)) return null;
+	begin('Reading ' + pack.path + " from this browser's storage");
+	const bytes = new Uint8Array(pack.size);
+	for (let i = 0; i < meta.chunks; i++) {
+		const at = i * meta.chunkSize, size = Math.min(meta.chunkSize, pack.size - at);
+		const piece = await request(db.transaction('chunks').objectStore('chunks').get([pack.path, i]));
+		if (!(piece instanceof ArrayBuffer) || piece.byteLength !== size) throw new Error('piece ' + (i + 1) + ' of ' + meta.chunks + ' is missing or has the wrong size');
+		bytes.set(new Uint8Array(piece), at);
+		onBytes(size);
+	}
+	return bytes;
+}
 
-let db = null;				// null: this browser keeps nothing for the page
+// ---- the packs: one after another, the smallest first. A pack is one array from its first byte on, and that
+// array is what the engine gets.
+
 let fs = null;				// Module.FS, once the file system of the engine is there
 const forFS = [];			// packs that were ready before it: [path, bytes]
 const packsDone = pending();
@@ -249,32 +331,36 @@ function toFS(path, bytes) {
 }
 
 async function loadPack(pack) {
+	const began = performance.now(), seconds = () => ((performance.now() - began) / 1000).toFixed(1) + ' s';
 	let bytes = null;
-	const entry = db && await request(db.transaction('packs').objectStore('packs').get(pack.path)).catch(() => null);
-	if (same(entry, pack)) {
-		begin('Reading ' + pack.path + " from this browser's storage");
+	if (db) {
 		try {
-			bytes = await readAll(entry.blob.stream(), pack.size);
+			bytes = await fromStore(pack);
 		} catch (e) {
 			note(pack.path + " could not be read from the browser's storage (" + words(e) + '): it is downloaded');
 		}
 	}
 	if (bytes) {
 		pack.source = 'stored';
+		note(pack.path + ": read from the browser's storage after " + seconds());
 	} else {
 		begin('Downloading ' + pack.path);
 		// no-store: the cache of the browser is not to hold a second copy of a pack
 		const answer = await ask('pk3/' + pack.path.split('/').map(encodeURIComponent).join('/'), { cache: 'no-store' });
 		bytes = await readAll(answer.body, pack.size);
 		pack.source = 'network';
+		note(pack.path + ': downloaded after ' + seconds());
 		if (db) {
 			paintProgress();
 			$('status').textContent = 'Keeping ' + pack.path + ' in this browser for the next visit';
 			try {
-				await putStore(db, pack, bytes);
+				await toStore(pack, bytes);
+				note(pack.path + ": in the browser's storage after " + seconds());
 			} catch (e) {
 				// no room, most often. The packs come smallest first, so what follows would not fit either.
 				note('the browser did not take ' + pack.path + ' into its storage (' + words(e) + '): the game files that are not in it yet are downloaded again at the next visit');
+				// what was written of it only takes up room
+				await clearPack(pack.path).catch(() => {});
 				db.close();
 				db = null;
 			}
@@ -429,9 +515,10 @@ async function main() {
 	load.order = [...manifest.packs].sort((a, b) => a.size - b.size);
 	load.total = manifest.packs.reduce((sum, pack) => sum + pack.size, 0);
 	setPhase('packs');
+	say('Looking what this browser has kept of the game files');
 	try {
 		db = await openStore();
-		await pruneStore(db, manifest.packs);
+		await pruneStore(manifest.packs);
 	} catch (e) {
 		note('this browser keeps no files for the page (' + words(e) + '): the game files are downloaded at every visit');
 		if (db) db.close();
