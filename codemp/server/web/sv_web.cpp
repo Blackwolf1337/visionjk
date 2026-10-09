@@ -149,14 +149,15 @@ void SV_WebDrop( webConnection_t *c ) {
 ==================
 SV_WebTransfers
 
-How many connections hand out a file
+How many connections hand out a file: all of them, or the ones of that address
 ==================
 */
-int SV_WebTransfers( void ) {
+int SV_WebTransfers( const netadr_t *adr ) {
 	int i, count = 0;
 
 	for ( i = 0; i < SV_WEB_MAX_CONNECTIONS; i++ ) {
-		if ( connections[i].state != WEB_FREE && connections[i].body == WEB_BODY_FILE ) {
+		if ( connections[i].state != WEB_FREE && connections[i].body == WEB_BODY_FILE
+			&& ( !adr || !memcmp( connections[i].adr.ip, adr->ip, sizeof( adr->ip ) ) ) ) {
 			count++;
 		}
 	}

@@ -401,11 +401,14 @@ static void SV_WebSendFile( webConnection_t *c, FILE *f, int64_t size, const cha
 ==================
 SV_WebBusy
 
-qtrue, and the answer that says so, if as many files are on their way as this host hands out at once
+qtrue, and the answer that says so, if as many files are on their way as this host hands out at once, or as
+many to the address of this connection as one address gets. Without the second a few peers that take their
+files a byte at a time held every place there is, and nobody else got the page.
 ==================
 */
 static qboolean SV_WebBusy( webConnection_t *c ) {
-	if ( c->headOnly || SV_WebTransfers() < SV_WEB_MAX_TRANSFERS ) {
+	if ( c->headOnly || ( SV_WebTransfers( NULL ) < SV_WEB_MAX_TRANSFERS
+		&& SV_WebTransfers( &c->adr ) < SV_WEB_MAX_ADDRESS_TRANSFERS ) ) {
 		return qfalse;
 	}
 	SV_WebError( c, 503, "Service Unavailable", "Retry-After: 2\r\n" );
