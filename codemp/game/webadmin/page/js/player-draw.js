@@ -210,6 +210,7 @@ function drawPlayers(now) {
 					plForcePass(inst, cent, place);
 					plDrawModel(inst, cent, place, d, ownView, [col, d.dead ? 0.35 : 0.08]);
 					if (!ownView) drawHeldWeapons(inst, d, place);
+					plJetpack(inst, cent, place, ownView);
 				}
 			});
 		} else if (ownView) {

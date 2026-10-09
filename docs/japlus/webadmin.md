@@ -617,6 +617,16 @@ Also changed:
   page for all three; not compared with a picture of the game (no bot cast it while a row was taken after
   it was in). Not here: a client that fights a private duel does not see the force effects of the others
   (`CG_JPForceFxVisible`). Three more checks in `steps_players.js` (41).
+- New: the jetpack. Who wears one (`EF_JETPACK`, with JA+ `jp_allowJetpack`) has its model on his back, on
+  the `*chestg` bolt of his model, not when he is dead and not in his own view. While it is on
+  (`EF_JETPACK_ACTIVE`) the jet effect `boba/jet` plays at its two nozzles in every frame of a client, twice
+  while it burns (`EF_JETPACK_FLAMING`), as `CG_Player` does it. A nozzle is no tag: cgame bolts to the two
+  drawn surfaces `torso_ljet` and `torso_rjet`, and the engine makes such a bolt of the first three vertices
+  of the surface (`G2_ProcessSurfaceBolt2`). The two share their third vertex, so both bolts sit at one
+  point in the middle of the pack, and the 9.5 and 13.5 units cgame moves along two axes of each lead from
+  there to the nozzles, 19 apart. The effect is handed the way up: its flames leave against the way it is
+  given. `plJetpack` in `js/player-fx.js`. Seen on the page; not compared with a picture of the game (no bot
+  switches a jetpack on). Three more checks in `steps_players.js` (44).
 - Fixed: the trail of a swinging blade was hardly there. The page adds a piece of trail at the start of a
   frame and let it age by that whole frame before it was first drawn: at 60 frames a second every piece
   missed its first and brightest frame, and at fewer than 25 it was gone before it was drawn at all (a piece
@@ -794,7 +804,7 @@ Also changed:
     lights of the frame, `fxLights` in `js/fx-run.js`),
     wind, forks of electricity; particles do not collide with the map. And of what a client plays on its own
     that is neither an effect entity, nor played by the server, nor a missile: the push, the pull and the
-    grip of the Force and jetpacks (lightning and drain are there, the rest comes with the events of the
+    grip of the Force (lightning, drain and the jetpack are there, the rest comes with the events of the
     game, see above).
 - New: everything new in the World tab is a draft first (`js/editor-drafts.js`; the user: "The draft is not a
   bad idea, make this for all entities"). A class or a template placed with a right-click, the copy that

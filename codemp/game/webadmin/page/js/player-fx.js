@@ -35,6 +35,52 @@ function plFloatSprite(cent, shader) {
 // (CG_JPForceFxVisible).
 const PL_FORCE_FX = { lightning: 'force/lightning', lightningWide: 'force/lightningwide', drain: 'mp/drain', drainWide: 'mp/drainwide_new', drainHand: 'force/drain_hand', flame: 'env/flame_jet' };
 const plForceFrames = new Map();		// the name of such an effect -> what fxFrames made for it, with the plays of this frame
+
+// An effect the client game plays at a player anew in every one of its frames (fxFramePlays of js/fx-run.js): how
+// often in this frame of the page is asked once for all who have it. id: what tells the places of one effect
+// apart, times: how often the game plays it there in a frame.
+function plEveryFrame(name, id, org, fwd, times = 1) {
+	let c = plForceFrames.get(name);
+	if (!c) plForceFrames.set(name, c = fxFrames());
+	if (c.at !== frameNow) { c.at = frameNow; c.plays = fxFramePlays(c, frameNow, fxOn() && fxReady(fxGet(name))); }
+	for (let i = 0; i < times; i++) fxFramePlay(c, id, c.plays, name, org, fwd);
+}
+
+// The jetpack on the back of a player (CG_Player, EF_JETPACK): its model on the *chestg bolt of his model, not
+// on the dead and not from inside his own head. While it is on (EF_JETPACK_ACTIVE) the jet effect at its two
+// nozzles in every frame of a client, twice while it burns (EF_JETPACK_FLAMING). A nozzle is a bolt on a surface
+// of the jetpack model, moved by 9.5 and 13.5 against two of its axes, as the game has it.
+const PL_JETPACK = 'models/weapons2/jetpack/model.glm', PL_JET_FX = 'boba/jet';
+let plJetBolts = null;		// the two bolts in the space of the jetpack model: null not asked for, false none (yet)
+function plJetpack(inst, cent, place, ownView) {
+	if (!(cent.eFlags & PG.EF_JETPACK) || (cent.eFlags & PG.EF_DEAD) || !inst.model || !inst.bones) return;
+	const tag = inst.model.tags['*chestg'];
+	if (!tag) return;
+	const at = M4.mul(place, to44(tagMatrix(tag, inst.bones))), model = staticNow(PL_JETPACK);
+	if (model && !ownView) drawStatic(model, at);
+	if (plJetBolts === null) {
+		plJetBolts = false;
+		// The two are no tags and no bones but surfaces of the model that are drawn (torso_ljet, torso_rjet): a bolt on
+		// such a surface is made of its first three vertices (G2_ProcessSurfaceBolt2), as the one of a tag surface.
+		fetchGameFile(PL_JETPACK).then(buf => {
+			const glm = parseGlmSkinned(buf), bolts = [];
+			for (const name of ['torso_ljet', 'torso_rjet']) {
+				const surf = glm && glm.surfs.find(sf => sf.name.toLowerCase() === name);
+				if (!surf || surf.pos.length < 9) return;
+				bolts.push(tagMatrix({ pos: surf.pos.subarray(0, 9) }, null));
+			}
+			plJetBolts = bolts;
+		}, () => {});
+	}
+	if (!(cent.eFlags & PG.EF_JETPACK_ACTIVE) || !plJetBolts) return;
+	plJetBolts.forEach((base, n) => {
+		// the axes the code of the game calls POSITIVE_X and NEGATIVE_Y of a bolt (see drawHilt in js/weapons.js)
+		const f = M4.mul(at, to44(base)), x = fxUnit([-f[4], -f[5], -f[6]]), negY = fxUnit([-f[0], -f[1], -f[2]]);
+		const first = n === 0 ? negY : x, second = n === 0 ? x : negY;
+		plEveryFrame(PL_JET_FX, cent.number * 2 + n, [0, 1, 2].map(i => f[12 + i] - 9.5 * first[i] - 13.5 * second[i]), second, cent.eFlags & PG.EF_JETPACK_FLAMING ? 2 : 1);
+	});
+}
+
 function plForcePass(inst, cent, place) {
 	const pass = cent.forcePass | 0, model = inst.model;
 	if (!pass || cent.vehicle || !inst.pe || !inst.bones || !model) return;
@@ -43,12 +89,8 @@ function plForcePass(inst, cent, place) {
 		: cent.eFlags & PG.EF_FLAME ? PL_FORCE_FX.flame : pass > 2 ? PL_FORCE_FX.lightningWide : PL_FORCE_FX.lightning;
 	const tag = model.tags[drain && cent.torsoAnim === t.BOTH_FORCE_2HANDEDLIGHTNING_HOLD && Math.random() < 0.5 ? '*r_hand' : '*l_hand'];
 	if (!tag) return;
-	let c = plForceFrames.get(name);
-	if (!c) plForceFrames.set(name, c = fxFrames());
-	// how often in this frame of the page is asked once for all who cast it
-	if (c.at !== frameNow) { c.at = frameNow; c.plays = fxFramePlays(c, frameNow, fxOn() && fxReady(fxGet(name))); }
 	const hand = M4.mul(place, to44(tagMatrix(tag, inst.bones))), p = inst.pe.torso.pitchAngle * Math.PI / 180, y = inst.pe.torso.yawAngle * Math.PI / 180;
-	fxFramePlay(c, cent.number, c.plays, name, [hand[12], hand[13], hand[14]], [Math.cos(p) * Math.cos(y), Math.cos(p) * Math.sin(y), -Math.sin(p)]);
+	plEveryFrame(name, cent.number, [hand[12], hand[13], hand[14]], [Math.cos(p) * Math.cos(y), Math.cos(p) * Math.sin(y), -Math.sin(p)]);
 }
 
 // one more sprite for this frame (a frame that never gets to draw them must not let them pile up)
