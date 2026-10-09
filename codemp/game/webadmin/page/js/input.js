@@ -37,6 +37,11 @@ canvas.addEventListener('mousedown', e => {
 		const ent = ents.get(selectedEnt), below = pickGround([ent.pos[0], ent.pos[1], ent.pos[2] + 1], [0, 0, -1]);
 		drag.ent = { id: selectedEnt, height: below ? ent.pos[2] - below[2] : 0 };
 	}
+	// grab the selected wall of the Clips tab to move it
+	if (mode === 'clips' && e.button === 0 && clip.wall >= 0) {
+		const at = clipAt(x, y);
+		if (at && at.wall === clip.wall) drag.clipWall = clipDragStart(clip.wall);
+	}
 	// grab a selected waypoint to move all that are selected
 	if (mode === 'routes' && e.button === 0) {
 		const i = wpAt(x, y);
@@ -64,6 +69,9 @@ window.addEventListener('mousemove', e => {
 		const rect = canvas.getBoundingClientRect(), ray = screenRay(e.clientX - rect.left, e.clientY - rect.top);
 		const hit = snapHit(pickGround(ray.origin, ray.dir));
 		if (hit) ghost = { id: drag.ent.id, pos: [hit[0], hit[1], hit[2] + drag.ent.height] };
+	} else if (drag.clipWall) {
+		const rect = canvas.getBoundingClientRect();
+		clipDragMove(drag.clipWall, screenRay(e.clientX - rect.left, e.clientY - rect.top));
 	} else if (drag.wp) {
 		const rect = canvas.getBoundingClientRect();
 		wpDragMove(drag.wp, screenRay(e.clientX - rect.left, e.clientY - rect.top));
@@ -96,6 +104,11 @@ window.addEventListener('mouseup', e => {
 		return;
 	}
 	if (d.wp && d.moved) { wpDragEnd(); return; }
+	if (d.clipWall) {
+		// let go: it stands where it was dragged to, or stays when the mouse did not move
+		if (d.moved) { clipDragEnd(d.clipWall); return; }
+		clip.move = null;
+	}
 	if (d.moved) return;
 	const rect = canvas.getBoundingClientRect(), x = e.clientX - rect.left, y = e.clientY - rect.top;
 	if (e.target !== canvas) return;
@@ -139,6 +152,10 @@ window.addEventListener('mouseup', e => {
 		const ent = ents.get(selectedEnt), below = pickGround([ent.pos[0], ent.pos[1], ent.pos[2] + 1], [0, 0, -1]);
 		marker = { pos: hit, t: performance.now() };
 		moveEntity(selectedEnt, [hit[0], hit[1], hit[2] + (below ? ent.pos[2] - below[2] : 0)]);
+	} else if (mode === 'clips') {
+		if (!hit) { toast('No floor there', false); return; }
+		marker = { pos: hit, t: performance.now() };
+		clipRightClick(hit);
 	} else if (mode === 'players' && selected >= 0) {
 		if (!hit) { toast('No floor there', false); return; }
 		marker = { pos: hit, t: performance.now() };
@@ -161,6 +178,7 @@ window.addEventListener('keydown', e => {
 	if (e.key.toLowerCase() === 'v' && (selected >= 0 || view.id >= 0)) setFirstPerson(view.id >= 0 ? -1 : selected);
 	if ((e.key === 'Delete' || e.key === 'Backspace') && mode === 'world' && selectedEnt >= 0) $('entDel').click();
 	if ((e.key === 'Delete' || e.key === 'Backspace') && mode === 'routes' && wp.selected >= 0) $('wpRemove').click();
+	if ((e.key === 'Delete' || e.key === 'Backspace') && mode === 'clips' && clip.wall >= 0) $('clipDelete').click();
 	if (e.key.toLowerCase() === 'c' && !e.ctrlKey && !e.metaKey && !e.altKey) setFly(!cam.fly);
 	if (e.key.toLowerCase() === 'f' && selected >= 0) { cam.follow = cam.follow === selected ? -1 : selected; renderCommand(); }
 });

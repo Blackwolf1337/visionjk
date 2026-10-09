@@ -72,9 +72,6 @@ typedef struct jpClient_s {
 	qboolean	protectedByAdmin;
 	qboolean	empowered;
 	qboolean	merc;
-	qboolean	blockEditor;			// BlockWallGrantEditor: may use the blocking wall editor
-	vec3_t		blockPoint1;			// first corner of the wall being created, zero if none
-	int			blockCurrent;			// entity number of the wall the editor is at
 	int			userinfoCount;			// jp_userInfoAntiSpam: userinfo changes, lowered every 4 seconds
 	int			userinfoDecayTime;
 	int			inactProtectTime;		// jp_inactivityProtectTimer: idle players are protected after this
@@ -199,16 +196,15 @@ void		JP_InactivityProtect( gentity_t *ent );
 void		JP_AutoQuitInit( void );
 void		JP_AutoQuitFrame( void );
 qboolean	JP_UserinfoMayChange( int clientNum );
-void		JP_LoadBlockWalls( void );
-qboolean	JP_BlockWallPart( const gentity_t *ent );
+int			JP_LoadBlockWalls( void );
+qboolean	JP_SaveBlockWalls( void );
+int			JP_ClearBlockWalls( void );
+gentity_t	*JP_BlockWallCreate( const vec3_t p1, const vec3_t p2 );
 int			JP_BlockWallParts( const vec3_t mins, const vec3_t maxs );
+qboolean	JP_BlockWallEntity( const gentity_t *ent );
+qboolean	JP_BlockWallBounds( const gentity_t *ent, vec3_t mins, vec3_t maxs );
 void		JP_BlockWallFreed( gentity_t *wall );
-void		JP_WriteBlockWalls( void );
-qboolean	JP_BlockWallConsoleCommand( const char *cmd );
-void		Cmd_BlockWallCreate_f( gentity_t *ent );
-void		Cmd_BlockWallDel_f( gentity_t *ent );
-void		Cmd_BlockWallNext_f( gentity_t *ent );
-void		Cmd_BlockWallPrev_f( gentity_t *ent );
+int			JP_ClipBrushes( qboolean on, const char *numbers );
 void		Cmd_toggleFlame_f( gentity_t *ent );
 qboolean	JP_FlameActive( gentity_t *ent );
 void		JP_ForceFlame( gentity_t *self );

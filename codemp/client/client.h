@@ -514,6 +514,7 @@ extern int cl_connectedToPureServer;
 extern int cl_connectedToCheatServer;
 
 void CL_SystemInfoChanged( void );
+void CL_ClipOffChanged( const char *list );
 void CL_ParseServerMessage( msg_t *msg );
 
 //====================================================================

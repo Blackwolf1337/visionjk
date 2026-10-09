@@ -128,7 +128,8 @@ the answer tells the page that the numbers started over.
 | `GET /api/log?from=` | the log of the game from a place on, `next` is where to ask from the next time. Without `from`, or with a place the panel does not have: its last part |
 | `GET /api/console?from=` | the console of the server from a place on, as `/api/log` gives the log: read from `qconsole.log` of the server folder. The first request sets `logfile 2` when it is 0 |
 | `POST /api/command` | `cmd`: one line for the server console, run in the next frame as if it was typed there |
-| `POST /api/clip` | `brush` (the number of a clip brush in the map file, or several), `on` (1 or 0): the server minds it again or stops minding it. `GET /api/entities` has the ones that are off as `clipOff` |
+| `GET /api/clips` | the clip editor: `off` (the numbers of the clip brushes of the map the server does not mind), `walls` (the blocking walls, each with the number of its entity and its two corners), `dirty` (changed since the last save) |
+| `POST /api/clip` | `op` off or on (`brush`: numbers of clip brushes), wall (`x1 y1 z1 x2 y2 z2`, with `id` in the place of that wall), delete (`id`), save (writes `wallblocks/<map>.cfg`) or revert (what that file has) |
 | `POST /api/control` | a player moved from the page. `op` start (`id`), input (`id`, `f`, `r`, `u` from -127 to 127, `buttons`, `yaw`, `pitch`), goal (`id`, `x`, `y`, `z`: he walks there) or stop. The answer names who is held, -1 for nobody |
 | `GET /api/perf?since=` | the load of the server, a sample a second, the last 300 kept: `samples` are `[frames, average and longest frame of the game in microseconds, longest wait for a frame in ms, entities, players, average and longest part of this panel in a frame in microseconds]`, `seq` is how many there were, `from` the number of the first one sent. `since`: only the ones from that number on. With them `svFps`, `entityMax`, `maxClients` |
 | `GET /api/classdoc` | the entity definitions of the game code: every `QUAKED` comment of its source files as text |
@@ -1723,6 +1724,27 @@ Also changed:
   layout", "Forget layout" and "Restart map" carry it like the entities. The panel sends only digits to the
   console line. Tried once on a private server: all 243 clips of mp/ffa3 off and on, two off through the panel,
   kept by a saved layout over a start of the map and put back after `map_restart`. Not seen in a game.
+- Changed on 2026-10-09, after the three entries above that tell of the blocking wall as an entity, of its kit
+  and of the tab Clips (the user: put the walls next to the clip editor and not among the entities, take their
+  commands away, and keep them in a file like the route of the bots). A blocking wall is no entity of the World
+  tab any more: `InvisibleBlockingWall` is no spawn class, the kit is gone, the list of the entities leaves
+  walls out, and a layout holds neither walls nor clips. The tab Clips has both. A click on the map selects the
+  wall or the clip under the mouse. "New wall" and a right-click put a wall on the floor, its wide side across
+  the view. The selected wall is dragged with the mouse or sent to a spot with a right-click, its six yellow
+  handles drag one face each (the handles of a box trigger, `boxSubject` in `editor-move.js`), its size can be
+  typed, Del removes it. A change is a new wall in the place of the old one on the server, so a wall gets a
+  new number with it. "Move it" on a clip puts a wall of its size there and turns the clip off. "Save" writes
+  `wallblocks/<map>.cfg` with the walls and the clips that are off, "Revert to saved" loads it again, and the
+  start of a map loads it (`JP_LoadBlockWalls`). Nothing is kept without Save.
+  The clips that are off are told to the clients now: the engine keeps them in the system info as `cm_clipOff`,
+  and a client of this tree turns the same brushes off in its own collision (`CL_ClipOffChanged`), so it
+  predicts the moves the server makes. Its prediction code is unchanged. A client that does not know the key
+  still has the clip and is set right by the server after a moment, as before. `server.md` says what another
+  client has to do to take part.
+  Tried on a private server and in a headless browser: walls placed, moved, resized, refused when too large,
+  saved, reverted and loaded by a start of the map, the tab driven through all of it without an error of the
+  page, a box trigger of the World tab still shaped by its handles. Not seen in a game, and no client was
+  connected, so that a client applies `cm_clipOff` is untested.
 - "Add bot" with an empty name adds `Kyle Katarn`. JKAdmin asks for `Kyle`, a bot the game does not have, so
   nothing happened there.
 - The two entity hooks pass `ent-g_entities` instead of `ent->s.number`.

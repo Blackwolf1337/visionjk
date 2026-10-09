@@ -1297,7 +1297,6 @@ qboolean JP_ConsoleCommand( const char *cmd ) {
 	if ( !Q_stricmp( cmd, "admAddIP" ) )		{ Svcmd_admAddIP_f();	return qtrue; }
 	if ( !Q_stricmp( cmd, "admRemoveIP" ) )		{ Svcmd_admRemoveIP_f();	return qtrue; }
 	if ( !Q_stricmp( cmd, "admListIP" ) )		{ trap->SendConsoleCommand( EXEC_NOW, "jp_banAdminIPs\n" );	return qtrue; }
-	if ( JP_BlockWallConsoleCommand( cmd ) )	return qtrue;
 	if ( !Q_stricmp( cmd, "admBan" ) )			{ Svcmd_admBan_f();		return qtrue; }
 
 	for ( i = 0; i < (int)ARRAY_LEN( jpAdminCommands ); i++ ) {

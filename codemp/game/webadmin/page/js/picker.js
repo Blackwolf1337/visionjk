@@ -11,8 +11,6 @@ function classCategory(cls) {
 	if (cls[0] === '@') return 'Template';
 	const it = classInfo.get(cls);
 	if (it) return ITEM_TYPES[it.type] || 'Item';
-	// a class with a short name for its title says what it is by that
-	if (classLabel(cls) !== cls) return classLabel(cls);
 	const cats = [[/^npc_/i, 'NPC'], [/^info_player/, 'Spawn point'], [/^info_/, 'Info'], [/^trigger_/, 'Trigger'], [/^func_/, 'Brush'],
 		[/^target_/, 'Target'], [/^misc_model/, 'Model'], [/^misc_/, 'Misc'], [/^fx_/, 'Effect'], [/^light/, 'Light'], [/^team_/, 'Team']];
 	for (const [re, name] of cats) if (re.test(cls)) return name;
@@ -22,8 +20,8 @@ function classCategory(cls) {
 let pickerIndex = -1;
 // the kits come first, then the templates: "+name" and "@name" in the list and in the field
 function pickerMatches() {
-	const f = $('newClass').value.trim().toLowerCase(), has = name => !f || name.toLowerCase().includes(f);
-	return kitsOffered().map(k => '+' + k.name).concat(Object.keys(templates).sort().map(n => '@' + n), allClasses).filter(c => has(c) || has(classLabel(c))).slice(0, 400);
+	const f = $('newClass').value.trim().toLowerCase();
+	return kitsOffered().map(k => '+' + k.name).concat(Object.keys(templates).sort().map(n => '@' + n), allClasses).filter(c => !f || c.toLowerCase().includes(f)).slice(0, 400);
 }
 function renderPicker() {
 	const list = pickerMatches();

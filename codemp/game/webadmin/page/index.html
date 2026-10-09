@@ -54,18 +54,22 @@
 		<div class="hint" style="padding-top:6px">Every model is placed as a misc_prop with physics of its own: a body with the shape of the model that falls, tips, can be shoved, thrown, stacked and stood on. Thrown hard at somebody it hurts. It is in the list of the World tab afterwards.</div>
 	</div>
 	<div class="pane" id="pane-clips">
-		<h2><span>Clips of the map</span><span id="clipCount"></span></h2>
+		<h2><span>Clips and walls</span><span id="clipCount"></span></h2>
 		<div class="tools">
-			<div class="inline"><button id="clipToggle" disabled title="The server stops minding the selected clip, or minds it again. Off, players are let through there. Their own game still has the clip: it stops them for a moment and then they are set to where the server has them.">Turn off</button>
-				<button id="clipToWall" disabled title="Puts a blocking wall of the size of the selected clip where it is and turns the clip off. The wall is dragged and shaped in the World tab, and every game is told of it.">Move it</button></div>
-			<div class="inline"><button id="clipNew" title="A new blocking wall: then right-click on the map. It is placed and shaped in the World tab.">New clip</button>
-				<button id="clipAllOn" disabled title="Every clip that is off is minded again">All on again</button>
-				<button id="clipSave" style="margin-left:auto" title="Keeps the map as it stands for every start of it: the clips that are off, the walls, and all else the World tab placed or changed. Without this a change of the map or a restart of the server loses it.">Save layout</button></div>
+			<div class="inline"><button id="clipNew" title="A new blocking wall: then right-click on the map. It stands on the floor there, its wide side across the view.">New wall</button>
+				<button id="clipDelete" class="danger" disabled title="The selected wall (Del)">Remove wall</button></div>
+			<div class="inline" id="clipSizes" title="How wide, deep and high the selected wall is. Even numbers: the server makes them that. The yellow handles on the map drag one face each."><label class="hint" style="margin:0">Size</label>
+				<input type="number" id="clipSizeX" step="2" min="2" disabled title="Along X"><input type="number" id="clipSizeY" step="2" min="2" disabled title="Along Y"><input type="number" id="clipSizeZ" step="2" min="2" disabled title="Height"></div>
+			<div class="inline"><button id="clipToggle" disabled title="The server stops minding the selected clip of the map, or minds it again. Off, players are let through there. A game that does not know of that still has the clip: it stops its player for a moment, then the server sets him right.">Turn off</button>
+				<button id="clipToWall" disabled title="Puts a wall of the size of the selected clip where it is and turns the clip off. The wall can be dragged and shaped, and every game is told of it.">Move it</button>
+				<button id="clipAllOn" disabled title="Every clip of the map that is off is minded again">All on again</button></div>
+			<div class="inline"><button id="clipSave" title="Writes wallblocks/&lt;map&gt;.cfg: the walls that stand and the clips that are off come back with every start of the map">Save</button>
+				<button id="clipRevert" title="Drops what was changed since the last save: the walls and the clips as the file has them">Revert to saved</button></div>
 			<div class="hint" id="clipState" style="margin:0"></div>
 		</div>
-		<div class="scroll"><table><tbody id="clipRows"></tbody></table></div>
-		<div class="hint" style="padding:6px 10px 0">The clips of the map: brushes that stop players, NPCs, bots or shots and are not seen. They are drawn in pink, the ones that are off in red. A click on the map selects the one under the mouse.</div>
-		<div class="hint" style="padding:0 10px 8px">A clip is part of the map file every game has, so it can only be turned off on the server: a player who walks into one that is off is stopped by his own game for a moment and then pulled through. Move it puts a blocking wall of its size in its place, which every game is told of, and New clip places a wall where there was none.</div>
+		<div class="scroll"><table><tbody id="clipRows"></tbody></table>
+		<div class="hint" style="padding:6px 10px 0">What stops players without being seen. The clips of the map are pink, the ones that are off red, the walls violet. A click on the map selects what is under the mouse. A wall is dragged with the mouse or sent to a spot with a right-click, its yellow handles drag one face each.</div>
+		<div class="hint" style="padding:0 10px 8px">A clip is part of the map file every game has, so it can only be turned off, not moved. This game is told which ones are off and lets its player through. Another game still has the clip: it stops its player for a moment and the server then sets him right. Move it puts a wall where the clip was, which every game is told of. Nothing is kept until Save.</div></div>
 	</div>
 	<div class="pane" id="pane-mapinfo">
 		<h2><span>Map</span><span id="mapReportName"></span></h2>
@@ -276,7 +280,7 @@
 		<div id="entXform">
 			<label>Position</label><input type="number" id="posX" step="1" title="X"><input type="number" id="posY" step="1" title="Y"><input type="number" id="posZ" step="1" title="Z">
 			<label>Angles</label><input type="number" id="angP" step="15" title="Pitch"><input type="number" id="angY" step="15" title="Yaw"><input type="number" id="angR" step="15" title="Roll">
-			<label id="boxLabel" title="How wide, deep and high its box is: the box of a trigger, or of a blocking wall. Its middle stays where it is. The yellow handles on the map drag one face each. The sizes of a blocking wall are even numbers.">Box</label><input type="number" id="boxX" step="8" min="1" title="Along X"><input type="number" id="boxY" step="8" min="1" title="Along Y"><input type="number" id="boxZ" step="8" min="1" title="Height">
+			<label id="boxLabel" title="How wide, deep and high the box of this trigger is. Its middle stays where it is. The yellow handles on the map drag one face each.">Box</label><input type="number" id="boxX" step="8" min="1" title="Along X"><input type="number" id="boxY" step="8" min="1" title="Along Y"><input type="number" id="boxZ" step="8" min="1" title="Height">
 		</div>
 		<div id="entFlags"></div>
 		<div id="entLinks"></div>
@@ -296,7 +300,7 @@
 			<button id="entFire" title="Fires it as a trigger would that has it as its target: a door opens, a trigger fires its targets. The world is what fired it, so what only works on the player who fired it does nothing.">Fire</button>
 			<button class="danger" id="entDel">Delete</button>
 		</div>
-		<div class="hint" id="entHint">Drag the marker or right-click on the map to move it. Shift and the arrow keys or Page Up and Down move it a grid step. Ctrl and a click selects one more, Shift and a drag all in a rectangle: what is done to this one is then done to all of them.<span id="boxHint"> The yellow handles on its box each drag one face of it, on the grid.</span></div>
+		<div class="hint" id="entHint">Drag the marker or right-click on the map to move it. Shift and the arrow keys or Page Up and Down move it a grid step. Ctrl and a click selects one more, Shift and a drag all in a rectangle: what is done to this one is then done to all of them.<span id="boxHint"> The yellow handles on the box of this trigger each drag one face of it, on the grid.</span></div>
 		<details id="entDoc"><summary>About this class</summary><pre id="entDocText"></pre></details>
 	</div>
 </div>

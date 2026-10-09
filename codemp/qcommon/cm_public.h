@@ -41,6 +41,8 @@ int			CM_NumInlineModels( void );
 qboolean	CM_SetClipBrush( int brushNum, qboolean on );
 int			CM_SetClipBrushes( qboolean on );
 qboolean	CM_ClipBrushesOff( char *out, int outSize );
+qboolean	CM_ClipBrushesOffRanges( char *out, int outSize );
+void		CM_ApplyClipOff( const char *list );
 
 // cm_export.cpp: the solid surfaces of the world as triangles, counter clockwise seen from outside
 typedef void (*cmTriangleFunc_t)( const vec3_t a, const vec3_t b, const vec3_t c, int surfaceFlags, void *data );

@@ -406,8 +406,7 @@ static const char *jpgcmds[] = {
 	"amghost", "aminfo", "amkick", "amkillvote", "amknockmedown", "amlockteam", "amlogin", "amlogout", "ammap", "ammerc",
 	"ammindtrick", "ammotd", "ammove", "amorigin", "ampoll", "amprotect", "ampsay", "amrename", "amsay", "amseeGhost",
 	"amShowMotd", "amsilence", "amslap", "amsleep", "amstatus", "amtele", "amtelemark", "amUnForceAltDim", "amunsilence",
-	"amvstr", "amwake", "amwhois", "BlockWallCreate", "BlockWallDel", "BlockWallDraw", "BlockWallGrantEditor",
-	"BlockWallNext", "BlockWallPrev", "BlockWallWrite", "clanpass", "clansay", "clanwhois", "duelWhois",
+	"amvstr", "amwake", "amwhois", "clanpass", "clansay", "clanwhois", "duelWhois",
 	"engage_FullForceDuel", "ignore", "immortal", "jetpack", "refuseTele", "sabercolor", "say_team_mod", "toggleFlame",
 	"ui_macroenable", "ui_macroscan",
 };

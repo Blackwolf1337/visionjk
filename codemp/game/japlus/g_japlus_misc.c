@@ -363,8 +363,6 @@ void JP_ClientSpawnReset( gclient_t *client ) {
 	jp->saberSwitchTime = 0;
 	jp->godTalkDenied = qfalse;
 	jp->duelEndTime = 0;
-	VectorClear( jp->blockPoint1 );
-	jp->blockCurrent = 0;
 	jp->quickening = qfalse;
 	jp->quickeningTimer = 0;
 	jp->teleTime = 0;

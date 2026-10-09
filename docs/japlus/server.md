@@ -100,19 +100,32 @@ Game modes and rules
 - Highlander (`g_japlus_highlander.c`): lives, the powers of the victim go to the killer, final duel with a timer.
 - Jedi against mercenaries: the spawn extras of levels 2 and 3, team choice by class.
 - Votes: sleep and silence votes, polls, `jp_votesDisable`, vote spam protection, `amdenyvote`.
-- Blocking walls (`g_japlus_blockwall.c`): boxes per map from `<map>_holes.cfg`, editor commands BlockWallCreate,
-  BlockWallDel, BlockWallNext, BlockWallPrev, BlockWallDraw, BlockWallWrite, BlockWallGrantEditor. Not as in
-  JA+: there a wall was one entity with SVF_NOCLIENT that no client knew of, so every client, the plugin too,
-  walked into it in its prediction and was set back by the server. Here the wall is an entity that only says
-  where it is and how big, and parts that do the blocking and are sent to the clients as solid boxes
-  (ET_INVISIBLE, `s.solid` packed by the module, contents still CONTENTS_PLAYERCLIP so shots pass). What a
-  client can be told of a box is square in X and Y, 510 wide and 446 high at most, so a wall is cut into parts
-  as wide as its short side, 64 at most: a long thin wall gets thicker to stay under that, and each side is
-  rounded up to an even number. No engine and no cgame change, so the unchanged game, the JA+ plugin and this
+- Blocking walls (`g_japlus_blockwall.c`): boxes of a map that stop players and let shots through. Not as in
+  JA+ in three ways.
+  Clients predict them. In JA+ a wall was one entity with SVF_NOCLIENT that no client knew of, so every client,
+  the plugin too, walked into it in its prediction and was set back by the server. Here the wall is an entity
+  that only says where it is and how big, and parts that do the blocking and are sent to the clients as solid
+  boxes (ET_INVISIBLE, `s.solid` packed by the module, contents still CONTENTS_PLAYERCLIP). What a client can be
+  told of a box is square in X and Y, 510 wide and 446 high at most, so a wall is cut into parts as wide as its
+  short side, 64 at most: a long thin wall gets thicker to stay under that, and each side is rounded up to an
+  even number. No engine and no cgame change is needed for it, so the unchanged game, the JA+ plugin and this
   client predict the same boxes. Still not predicted: a spectator and a dead body (their moves ignore bodies on
-  the client), and a client shows no crosshair name through a wall. `InvisibleBlockingWall` is also a spawn
-  class (keys `origin`, `mins`, `maxs`) for the entity editor of the web panel: such a wall is kept by the layout
-  of the editor and left out by BlockWallWrite.
+  the client), and a client shows no crosshair name through a wall.
+  The commands are gone (the user, 2026-10-09: the web panel drags them, the commands are not needed):
+  BlockWallCreate, BlockWallDel, BlockWallNext, BlockWallPrev, BlockWallDraw, BlockWallWrite and
+  BlockWallGrantEditor, with the editor who flew through everything as a spectator. The walls are placed, dragged
+  and shaped in the tab Clips of the web admin panel (`docs/japlus/webadmin.md`).
+  The file is `wallblocks/<map>.cfg` in the server folder, written by Save in that tab: a wall a line as JA+
+  wrote them (two corners, six numbers), and a line `clipsoff` with the clip brushes of the map the server does
+  not mind. A map without that file takes `<map>_holes.cfg` of JA+, so the files of the package still work.
+- Clip brushes of the map turned off (the engine, not JA+): `clipbrush off|on <number> ...`, see the tab Clips
+  in `webadmin.md`. For another client that wants to predict them: the server sends the system info key
+  `cm_clipOff`, the numbers of the brushes in the brush lump of the map file that are off, with a blank between
+  them and a run written as `first-last` (`4178-4182 4190`), empty when none is. A client sets the contents of
+  those brushes to 0 in its collision map and gives every other clip brush the contents of its shader again,
+  whenever the key changes and after it has loaded the map. Only for a brush whose shader has PLAYERCLIP,
+  MONSTERCLIP, BOTCLIP or SHOTCLIP and not SOLID. Here that is `CL_ClipOffChanged` (`cl_cgameapi.cpp`) and
+  `CM_ApplyClipOff` (`cm_load.cpp`), about forty lines.
 - Model scale from `modelscale.cfg` (`g_japlus_scale.c`): model, eye height and saber blades, with
   `jp_allowDmgSpeedScale` also saber damage and speed.
 - Server housekeeping: welcome text and MOTD, inactivity protection in FFA (a player without input is protected

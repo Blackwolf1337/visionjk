@@ -340,6 +340,67 @@ qboolean CM_ClipBrushesOff( char *out, int outSize ) {
 	return qtrue;
 }
 
+// The same numbers for the clients (cm_clipOff), a run of them written as first-last. qfalse: they did not all
+// fit, and what is left out is off on the server alone.
+qboolean CM_ClipBrushesOffRanges( char *out, int outSize ) {
+	int len = 0;
+
+	out[0] = '\0';
+	for ( int i = 0; i < cmg.numBrushes; i++ ) {
+		if ( cmg.brushes[i].contents || !CM_IsClipBrush( i ) ) {
+			continue;
+		}
+		int last = i;
+		while ( last + 1 < cmg.numBrushes && !cmg.brushes[last + 1].contents && CM_IsClipBrush( last + 1 ) ) {
+			last++;
+		}
+		const char *run = ( last > i ) ? va( "%s%d-%d", len ? " " : "", i, last ) : va( "%s%d", len ? " " : "", i );
+		const int runLen = (int)strlen( run );
+		if ( len + runLen >= outSize ) {
+			return qfalse;
+		}
+		memcpy( out + len, run, runLen + 1 );
+		len += runLen;
+		i = last;
+	}
+	return qtrue;
+}
+
+/*
+=================
+CM_ApplyClipOff
+
+What a server says it has off (cm_clipOff, as CM_ClipBrushesOffRanges writes it), done to the collision of a
+client: every clip brush on, then those off. The client then predicts the moves the server makes there. A
+number that is no clip brush of the map is left alone, so a server can take nothing else away.
+=================
+*/
+void CM_ApplyClipOff( const char *list ) {
+	CM_SetClipBrushes( qtrue );
+	for ( const char *p = list; *p; ) {
+		char *end;
+		const long first = strtol( p, &end, 10 );
+
+		if ( end == p ) {
+			p++;
+			continue;
+		}
+		long last = first;
+		p = end;
+		if ( *p == '-' ) {
+			last = strtol( p + 1, &end, 10 );
+			if ( end == p + 1 ) {
+				last = first;
+			}
+			p = end;
+		}
+		// a run is no longer than the map has brushes
+		for ( long n = first; n >= 0 && n <= last && n < cmg.numBrushes; n++ ) {
+			CM_SetClipBrush( (int)n, qfalse );
+		}
+	}
+}
+
 /*
 =================
 CMod_LoadLeafs

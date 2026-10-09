@@ -150,7 +150,8 @@ All of them are part of this repository.
 | File | Where | Needed for |
 |------|-------|-----------|
 | `modelscale.cfg` | `japlus/`, from `assets/configs` | `jp_allowModelScale` |
-| `<map>_holes.cfg` | `japlus/`, from `assets/configs` | blocking walls of a map |
+| `<map>_holes.cfg` | `japlus/`, from `assets/configs` | blocking walls of a map as JA+ kept them, read when the map has no `wallblocks/<map>.cfg` |
+| `wallblocks/<map>.cfg` | the server folder, written by the tab Clips of the web panel | the blocking walls of a map and the clip brushes of it that are off |
 | `autoreplier.cfg` | `japlus/` on the client, from `assets/configs` | auto replier texts |
 | `server.cfg`, `admin.cfg`, `jk2.cfg`, `vstr.cfg`, `chat.cfg`, `saber.cfg` | `japlus/`, from `assets/configs` | the example server config of JA+ and what it loads. Nothing reads them unless a server is started with `+exec server.cfg` |
 | `zz_japlus_client_assets.pk3` | `japlus/` on the server and on the client | menus, shaders, effects and graphics of the plugin, with the menus of the port, the JA+ sabers and effects, and the new animations (`models/players/_humanoid`). Without them `jp_newGLAAnims` is switched off at map start |

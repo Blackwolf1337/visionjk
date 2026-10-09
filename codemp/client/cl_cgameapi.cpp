@@ -320,9 +320,34 @@ static void CL_AddCgameCommand( const char *cmdName ) {
 	Cmd_AddCommand( cmdName, NULL );
 }
 
+/*
+====================
+CL_ClipOffChanged
+
+Port, not in the game as it was. A server of this tree can stop minding clip brushes of the map while the map
+runs (clipbrush) and says in its system info which (cm_clipOff). They are off in the collision of this client
+too then, so that it predicts the moves the server makes. Not while this process runs the server itself: the
+collision is the one of the server then.
+====================
+*/
+static char cl_clipOff[1024];
+
+void CL_ClipOffChanged( const char *list ) {
+	if ( !strcmp( list, cl_clipOff ) ) {
+		return;
+	}
+	Q_strncpyz( cl_clipOff, list, sizeof( cl_clipOff ) );
+	if ( !com_sv_running->integer ) {
+		CM_ApplyClipOff( cl_clipOff );
+	}
+}
+
 static void CL_CM_LoadMap( const char *mapname, qboolean subBSP ) {
 	if ( subBSP )	CM_LoadSubBSP( va( "maps/%s.bsp", mapname+1 ), qfalse );
 	else			CM_LoadMap( mapname, qtrue, NULL );
+
+	// Port: the map as it is loaded has every clip brush on, the server may have some off (CL_ClipOffChanged)
+	if ( !subBSP && !com_sv_running->integer )	CM_ApplyClipOff( cl_clipOff );
 
 	// the sound gets the world as a mesh (s_spatial)
 	if ( !subBSP )	S_SpatialLoadMap( mapname );

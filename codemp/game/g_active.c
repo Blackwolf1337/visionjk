@@ -732,8 +732,6 @@ void SpectatorThink( gentity_t *ent, usercmd_t *ucmd ) {
 		pmove.ps = &client->ps;
 		pmove.cmd = *ucmd;
 		pmove.tracemask = MASK_PLAYERSOLID & ~CONTENTS_BODY;	// spectators can fly through bodies
-		if ( client->pers.jp.blockEditor )
-			pmove.tracemask = 0;	// JA+: the editor of the blocking walls flies through everything
 		pmove.trace = SV_PMTrace;
 		pmove.pointcontents = trap->PointContents;
 

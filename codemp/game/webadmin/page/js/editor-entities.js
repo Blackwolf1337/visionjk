@@ -20,7 +20,6 @@ async function pollEntities() {
 		takeFired(json.used);
 		renderBudget(json.budget);
 		renderLayout(json.layout);
-		clipTake(json.clipOff);
 		refreshLinks();
 		if (selectedEnt >= 0 && !ents.has(selectedEnt)) selectEnt(-1);
 		renderEntityList();
@@ -79,8 +78,7 @@ function renderEntPanel() {
 	const ent = selectedEnt >= 0 && ents.get(selectedEnt);
 	$('entPanel').classList.toggle('open', !!ent);
 	if (!ent) return;
-	$('entTitle').textContent = classLabel(ent.classname);
-	$('entTitle').title = ent.classname;
+	$('entTitle').textContent = ent.classname;
 	// of a draft: why the server would not take it as it is, when it has said so
 	$('entSub').textContent = (ent.draft ? 'draft · ' + (ent.why || 'not on the server yet') : '#' + ent.id + (ent.bmodel ? ' · brush model' : '') + (ent.linked ? '' : ' · not linked')) +
 		(picked.size ? ' · and ' + picked.size + ' more' : '');
@@ -312,17 +310,14 @@ $('placeBtn').addEventListener('click', () => {
 	setPlacing(!placing);
 });
 
-// not in JKAdmin: keys a class gets when it is placed, so they are there to edit, and its height above the floor.
-// By the name of the class in small letters.
+// not in JKAdmin: keys a class gets when it is placed, so they are there to edit, and its height above the floor
 const PLACE_KEYS = {
 	misc_blackhole: [['radius', '600'], ['strength', '2400'], ['coreradius', '48'], ['dmg', '1000']],
 	misc_ball: [['radius', '18'], ['modelscale', '600'], ['bounce', '0.7'], ['friction', '90'], ['mass', '1'], ['kick', '1']],
 	misc_cube: [['size', '32'], ['bounce', '0.25'], ['friction', '0.7'], ['mass', '4'], ['kick', '1']],
 	misc_prop: [['model', 'models/map_objects/cairn/cargo_sm.md3'], ['scale', '100']],
-	// the blocking wall: a piece of it that stands on the floor, its box from its origin like that of a trigger
-	invisibleblockingwall: [['mins', '-64 -8 -64'], ['maxs', '64 8 64']],
 };
-const PLACE_HEIGHT = { misc_blackhole: 72, misc_ball: 64, misc_cube: 48, misc_prop: 48, invisibleblockingwall: 64 };
+const PLACE_HEIGHT = { misc_blackhole: 72, misc_ball: 64, misc_cube: 48, misc_prop: 48 };
 // A trigger is placed as a box of its own, standing on the floor: the brushes of the map are for the ones the
 // map came with. All but the two that are no space to walk into.
 const BOX_TRIGGER = /^trigger_(?!always$|asteroid_field$)/i, TRIGGER_BOX = [['mins', '-64 -64 -48'], ['maxs', '64 64 48']];
@@ -333,7 +328,7 @@ const PLACE_AIM = { trigger_push: at => [at[0], at[1], at[2] + 256], trigger_tel
 	const d = camDir(), l = Math.hypot(d[0], d[1]);
 	return l > 0.2 ? [at[0] - d[0] / l * 192, at[1] - d[1] / l * 192, at[2]] : [at[0] + 192, at[1], at[2]];
 } };
-const placeHeight = cls => cls.toLowerCase() in PLACE_HEIGHT ? PLACE_HEIGHT[cls.toLowerCase()] : BOX_TRIGGER.test(cls) ? 48 : /^misc_model/.test(cls) ? 0 : 24;
+const placeHeight = cls => cls in PLACE_HEIGHT ? PLACE_HEIGHT[cls] : BOX_TRIGGER.test(cls) ? 48 : /^misc_model/.test(cls) ? 0 : 24;
 
 // where a class is placed above the spot of the floor that was clicked: items drop to the floor themselves, players
 // and NPCs stand on it
@@ -385,5 +380,5 @@ function placeEntity(hit) {
 	}
 	const one = placedAt(name, placeSpot(name, hit));
 	if (name.toLowerCase() in PLACE_AIM) openDrafts(aimedPair(one, freeNames()('aim')), name + ' and what it is aimed at');
-	else openDrafts([one], classLabel(name));
+	else openDrafts([one], name);
 }

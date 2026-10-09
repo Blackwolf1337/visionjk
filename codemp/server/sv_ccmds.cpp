@@ -1959,11 +1959,17 @@ of the collision of the server or puts them back (CM_SetClipBrush), by their num
 every one of them. Without arguments: which ones are off. sv_clipOff holds those numbers, which is where the
 game module reads them (the clip editor of the web admin panel). They are off until the map is loaded or
 started again.
+
+cm_clipOff holds them for the clients, a run of numbers as first-last. It is a cvar of the system info, so every
+client is sent it when it changes. A client that knows of it turns the same brushes off in its own collision
+(CL_ClipOffChanged) and predicts as the server moves. One that does not still has the brushes: it predicts a
+stop there and is set to where the server has the player.
 =================
 */
 void SV_ClipBrushesReset( void ) {
 	CM_SetClipBrushes( qtrue );
 	Cvar_Set( "sv_clipOff", "" );
+	Cvar_Set( "cm_clipOff", "" );
 }
 
 static void SV_ClipBrush_f( void ) {
@@ -2001,6 +2007,12 @@ static void SV_ClipBrush_f( void ) {
 		Com_Printf( S_COLOR_YELLOW "more clip brushes are off than sv_clipOff holds\n" );
 	}
 	Cvar_Set( "sv_clipOff", off );
+	// the system info is one string for all of its cvars, this one is kept short
+	char ranges[1024];
+	if ( !CM_ClipBrushesOffRanges( ranges, sizeof( ranges ) ) ) {
+		Com_Printf( S_COLOR_YELLOW "more clip brushes are off than the clients can be told of: they will mispredict at the rest\n" );
+	}
+	Cvar_Set( "cm_clipOff", ranges );
 	if ( Cmd_Argc() == 1 ) {
 		Com_Printf( "clip brushes that are off: %s\n", off[0] ? off : "none" );
 	}
@@ -2017,6 +2029,7 @@ void SV_AddOperatorCommands( void ) {
 	Cmd_AddCommand ("heartbeat", SV_Heartbeat_f, "Sends a heartbeat to the masterserver" );
 	Cmd_AddCommand ("clipbrush", SV_ClipBrush_f, "Takes clip brushes of the map out of the collision of the server or puts them back" );
 	Cvar_Get( "sv_clipOff", "", CVAR_ROM, "The numbers of the clip brushes of the map that are off (clipbrush)" );
+	Cvar_Get( "cm_clipOff", "", CVAR_SYSTEMINFO | CVAR_ROM, "The same numbers as the clients are told them" );
 	Cmd_AddCommand ("kick", SV_Kick_f, "Kick a user from the server" );
 	Cmd_AddCommand ("kickbots", SV_KickBots_f, "Kick all bots from the server" );
 	Cmd_AddCommand ("kickall", SV_KickAll_f, "Kick all users from the server" );

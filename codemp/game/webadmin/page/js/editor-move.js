@@ -47,11 +47,8 @@ for (const id of ['angP', 'angY', 'angR']) {
 		entityOp({ op: 'update', id: selectedEnt, kv: keysText(setKey(keys, 'angles', ['angP', 'angY', 'angR'].map(i => +$(i).value || 0).join(' '))) }, 'Turned');
 	});
 }
-// ---- the box of a trigger or of a blocking wall: its size in the panel, and its faces dragged with the mouse
-
-// How wide the box of a class may be along an axis: 1 at least. That of a blocking wall an even number and 2 at
-// least: the server makes its size that anyway, so the page shows what the wall will be.
-const boxWidth = (cls, w) => BOX_WALL.test(cls) ? Math.max(2, Math.ceil(Math.round(w * 100) / 200) * 2) : Math.max(1, w);
+// ---- a box with handles: the box of a trigger with its size in the panel, and a wall of the Clips tab. Their
+// faces are dragged with the mouse.
 
 function setTriggerBox(ent, mins, maxs) {
 	const num = v => String(Math.round(v * 100) / 100), keys = ent.keys.map(k => k.slice());
@@ -63,19 +60,30 @@ for (const id of ['boxX', 'boxY', 'boxZ']) {
 		const ent = ents.get(selectedEnt), tb = ent && ent.keys ? triggerBox(ent) : null;
 		if (!tb) return;
 		// around the middle the box has, which need not be its origin
-		const half = ['boxX', 'boxY', 'boxZ'].map(i => boxWidth(ent.classname, +$(i).value || 0) / 2), mid = tb.mins.map((v, i) => (v + tb.maxs[i]) / 2);
+		const half = ['boxX', 'boxY', 'boxZ'].map(i => Math.max(1, +$(i).value || 0) / 2), mid = tb.mins.map((v, i) => (v + tb.maxs[i]) / 2);
 		setTriggerBox(ent, mid.map((v, i) => v - half[i]), mid.map((v, i) => v + half[i]));
 	});
 }
 
-// The handles of the selected trigger that is a box, or of the selected wall: one in the middle of each face,
-// { axis, side, pos }. Only of one entity: several that are selected are moved, not shaped.
+// What the handles shape: the selected trigger that is a box in the World tab (only one entity: several that are
+// selected are moved, not shaped), the selected wall in the Clips tab (js/editor-clips.js). null: nothing.
+// { id, origin, mins, maxs: its box from its origin, step: its sizes are whole steps of this, show(mins, maxs):
+// the fields that tell its size, set(mins, maxs): it is that big from now on }
+function boxSubject() {
+	if (appMode !== 'editor') return null;
+	if (mode === 'clips') return clipWallSubject();
+	const ent = mode === 'world' && !picked.size ? ents.get(selectedEnt) : null, tb = ent && ent.keys ? triggerBox(ent) : null;
+	if (!tb) return null;
+	return { id: ent.id, origin: ent.pos, mins: tb.mins, maxs: tb.maxs, step: 0, set: (mins, maxs) => setTriggerBox(ent, mins, maxs),
+		show: (mins, maxs) => ['boxX', 'boxY', 'boxZ'].forEach((id, i) => { $(id).value = Math.round((maxs[i] - mins[i]) * 100) / 100; }) };
+}
+// the handles of it: one in the middle of each face, { axis, side, pos }
 function boxHandles() {
-	const ent = appMode === 'editor' && mode === 'world' && !picked.size ? ents.get(selectedEnt) : null, tb = ent && ent.keys ? triggerBox(ent) : null;
-	if (!tb) return [];
-	const b = boxGhost && boxGhost.id === ent.id ? boxGhost : tb, out = [];
+	const s = boxSubject();
+	if (!s) return [];
+	const b = boxGhost && boxGhost.id === s.id ? boxGhost : s, out = [];
 	for (let axis = 0; axis < 3; axis++) {
-		for (const side of [0, 1]) out.push({ axis, side, pos: ent.pos.map((v, i) => v + (i === axis ? (side ? b.maxs[i] : b.mins[i]) : (b.mins[i] + b.maxs[i]) / 2)) });
+		for (const side of [0, 1]) out.push({ axis, side, pos: s.origin.map((v, i) => v + (i === axis ? (side ? b.maxs[i] : b.mins[i]) : (b.mins[i] + b.maxs[i]) / 2)) });
 	}
 	return out;
 }
@@ -105,8 +113,8 @@ function drawBoxHandles() {
 // A face is dragged along its axis: to the point of that line the ray of the mouse comes closest to, on the grid
 // of the editor. The other faces stay, and so does the origin. The box keeps a width.
 function boxDragStart(h) {
-	const ent = ents.get(selectedEnt), tb = triggerBox(ent);
-	return { id: ent.id, cls: ent.classname, axis: h.axis, side: h.side, from: h.pos.slice(), origin: ent.pos.slice(), mins: tb.mins.slice(), maxs: tb.maxs.slice() };
+	const s = boxSubject();
+	return { id: s.id, axis: h.axis, side: h.side, from: h.pos.slice(), origin: s.origin.slice(), mins: s.mins.slice(), maxs: s.maxs.slice(), step: s.step, show: s.show, set: s.set };
 }
 function boxDragMove(f, ray) {
 	const w = f.from.map((v, i) => v - ray.origin[i]), b = ray.dir[f.axis], dw = ray.dir[0] * w[0] + ray.dir[1] * w[1] + ray.dir[2] * w[2];
@@ -114,18 +122,19 @@ function boxDragMove(f, ray) {
 	if (1 - b * b < 0.002) return;
 	const g = gridStep(), at = Math.round((f.from[f.axis] + (b * dw - w[f.axis]) / (1 - b * b)) / g) * g - f.origin[f.axis];
 	const mins = f.mins.slice(), maxs = f.maxs.slice();
-	// from the face across, as wide as the box of its class may be
-	const wide = Math.min(32768, boxWidth(f.cls, f.side ? at - mins[f.axis] : maxs[f.axis] - at));
+	// from the face across: 1 wide at least, and whole steps for what has them
+	let wide = f.side ? at - mins[f.axis] : maxs[f.axis] - at;
+	wide = Math.min(32768, f.step ? Math.max(f.step, Math.ceil(wide / f.step) * f.step) : Math.max(1, wide));
 	if (f.side) maxs[f.axis] = mins[f.axis] + wide;
 	else mins[f.axis] = maxs[f.axis] - wide;
 	boxGhost = { id: f.id, mins, maxs };
 	// the size in the panel follows
-	['boxX', 'boxY', 'boxZ'].forEach((id, i) => { $(id).value = Math.round((maxs[i] - mins[i]) * 100) / 100; });
+	f.show(mins, maxs);
 }
 async function boxDragEnd(f) {
-	const g = boxGhost, ent = ents.get(f.id);
+	const g = boxGhost;
 	try {
-		if (g && ent && ent.keys && (g.mins[f.axis] !== f.mins[f.axis] || g.maxs[f.axis] !== f.maxs[f.axis])) await setTriggerBox(ent, g.mins, g.maxs);
+		if (g && (g.mins[f.axis] !== f.mins[f.axis] || g.maxs[f.axis] !== f.maxs[f.axis])) await f.set(g.mins, g.maxs);
 	} finally { boxGhost = null; }
 }
 $('entFocus').addEventListener('click', () => focusEntity(selectedEnt));
@@ -155,8 +164,8 @@ $('entFloor').addEventListener('click', () => {
 	const hit = pickGround([ent.pos[0], ent.pos[1], ent.pos[2] + 1], [0, 0, -1]);
 	if (!hit) { toast('No floor below it', false); return; }
 	// its box stands on the floor. A class without one goes where placing puts it.
-	const box = entBox(ent), cls = ent.classname.toLowerCase();
-	const lift = box ? ent.pos[2] - (box.center[2] - box.size[2] / 2) : cls in PLACE_HEIGHT ? PLACE_HEIGHT[cls] : 24;
+	const box = entBox(ent);
+	const lift = box ? ent.pos[2] - (box.center[2] - box.size[2] / 2) : ent.classname in PLACE_HEIGHT ? PLACE_HEIGHT[ent.classname] : 24;
 	moveEntity(selectedEnt, [ent.pos[0], ent.pos[1], hit[2] + lift]);
 });
 

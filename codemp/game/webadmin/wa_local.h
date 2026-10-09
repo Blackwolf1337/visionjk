@@ -33,7 +33,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 //   wa_log.c        the chat, the log of the game, and the console: what it prints and a line to run on it
 //   wa_routes.c     the route of the bots
 //   wa_control.c    a player who is moved from the page
-//   wa_clips.c      the clip brushes of the map: which are off, and switching them
+//   wa_clips.c      the clip editor: the clip brushes of the map that are off, and the blocking walls
 
 #pragma once
 
@@ -119,7 +119,6 @@ void WA_ApiExport( waConnection_t *c, const char *query );
 void WA_ApiEntity( waConnection_t *c, const char *body );
 void WA_ReloadMap( waConnection_t *c );
 void WA_ApiLayout( waConnection_t *c, const char *body );
-void WA_LayoutTouched( void );
 void WA_ReloadRead( void );
 void WA_EntitiesFrame( void );
 void WA_EntitiesShutdown( void );
@@ -169,7 +168,5 @@ void WA_ApiWaypoint( waConnection_t *c, const char *body );
 void WA_ApiControl( waConnection_t *c, const char *body );
 
 // wa_clips.c
+void WA_ApiClips( waConnection_t *c );
 void WA_ApiClip( waConnection_t *c, const char *body );
-void WA_ClipsJson( waBuffer_t *b );
-int WA_ClipsLayout( waBuffer_t *b );
-int WA_ClipsApply( const char *lines );

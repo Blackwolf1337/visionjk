@@ -71,9 +71,6 @@ const KITS = [
 	// settle
 	{ name: 'Cube stack', about: 'three misc_cube on top of each other', classes: ['misc_cube'],
 		make: at => [18, 52, 86].map(up => placedAt('misc_cube', [at[0], at[1], at[2] + up])) },
-	// the box a wall is placed with as a class: it stops players, shots pass
-	{ name: 'Blocking wall', about: 'an invisible box that stops players', classes: ['InvisibleBlockingWall'],
-		make: at => [kitEnt('InvisibleBlockingWall', at)] },
 ];
 
 const kitNamed = name => KITS.find(k => k.name.toLowerCase() === name.trim().toLowerCase());

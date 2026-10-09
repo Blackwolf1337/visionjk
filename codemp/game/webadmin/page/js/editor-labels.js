@@ -13,7 +13,7 @@ const entLabel = { list: [], put: [], pool: [], shown: 0, at: 0, names: $('dbgNa
 function entLabelsChoose() {
 	const list = [], has = new Set();
 	const add = ent => {
-		const cn = classLabel(ent.classname), name = entKey(ent, 'targetname'), tn = name ? ' "' + name + '"' : '', tag = ent.draft ? (ent.need ? ' [draft: needs ' + ent.need + ']' : ' [draft]') : '';
+		const cn = ent.classname, name = entKey(ent, 'targetname'), tn = name ? ' "' + name + '"' : '', tag = ent.draft ? (ent.need ? ' [draft: needs ' + ent.need + ']' : ' [draft]') : '';
 		const cls = 'elabel' + (ent.id === selectedEnt || picked.has(ent.id) ? ' sel' : '') + (ent.draft ? ' draft' : '');
 		has.add(ent.id);
 		// half: half of how wide the line is, by its letters

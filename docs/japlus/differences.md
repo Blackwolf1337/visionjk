@@ -98,6 +98,13 @@ A bug of OpenJK that was fixed:
 - A model without the tags `*back`, `*hip_l` and `*hip_r` is loaded and simply has no saber on the body. The plugin
   refuses such a model.
 
+## What of the original was taken out
+
+- The commands of the blocking walls: BlockWallCreate, BlockWallDel, BlockWallNext, BlockWallPrev (players with
+  editor rights), BlockWallDraw, BlockWallWrite and BlockWallGrantEditor (rcon). The user on 2026-10-09: the web
+  panel drags the walls, the commands are not needed. The walls themselves are there and are predicted by the
+  clients now, see `server.md`. The client still knows none of these names for its tab completion.
+
 ## Where the client is knowingly not the plugin
 
 - No download over an URL, see [client.md](client.md).

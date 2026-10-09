@@ -838,8 +838,8 @@ void JP_ForceFlame( gentity_t *self ) {
 }
 
 static const char *jpPlayerCommands[] = {
-	"amcolor", "sabercolor", "saber", "amflip", "amknockmedown", "amdropsaber", "BlockWallCreate", "BlockWallDel",
-	"BlockWallNext", "BlockWallPrev", "amAltDim", "toggleFlame", "jetpack", "amhug", "amkiss", "engage_FullForceDuel",
+	"amcolor", "sabercolor", "saber", "amflip", "amknockmedown", "amdropsaber",
+	"amAltDim", "toggleFlame", "jetpack", "amhug", "amkiss", "engage_FullForceDuel",
 	"ampoop", "amphysgun"
 };
 
@@ -903,10 +903,6 @@ qboolean JP_PlayerCommand( gentity_t *ent, const char *cmd ) {
 	if ( !Q_stricmp( cmd, "amflip" ) )			{ Cmd_amflip_f( ent );			return qtrue; }
 	if ( !Q_stricmp( cmd, "amknockmedown" ) )	{ Cmd_amknockmedown_f( ent );	return qtrue; }
 	if ( !Q_stricmp( cmd, "amdropsaber" ) )		{ Cmd_amdropsaber_f( ent );		return qtrue; }
-	if ( !Q_stricmp( cmd, "BlockWallCreate" ) )	{ Cmd_BlockWallCreate_f( ent );	return qtrue; }
-	if ( !Q_stricmp( cmd, "BlockWallDel" ) )	{ Cmd_BlockWallDel_f( ent );	return qtrue; }
-	if ( !Q_stricmp( cmd, "BlockWallNext" ) )	{ Cmd_BlockWallNext_f( ent );	return qtrue; }
-	if ( !Q_stricmp( cmd, "BlockWallPrev" ) )	{ Cmd_BlockWallPrev_f( ent );	return qtrue; }
 	if ( !Q_stricmp( cmd, "amAltDim" ) )		{ Cmd_amAltDim_f( ent );		return qtrue; }
 	if ( !Q_stricmp( cmd, "toggleFlame" ) )		{ Cmd_toggleFlame_f( ent );		return qtrue; }
 	if ( !Q_stricmp( cmd, "jetpack" ) )			{ Cmd_jetpack_f( ent );			return qtrue; }

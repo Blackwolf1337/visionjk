@@ -3,7 +3,7 @@
 /* ------------------------------------------------------------------ */
 
 let mode = 'players', placing = false, selectedEnt = -1, ghost = null, kvDirty = false, kvShown = '';
-let boxGhost = null;		// { id, mins, maxs }: the box of a trigger or a wall while one of its faces is dragged
+let boxGhost = null;		// { id, mins, maxs }: the box of a trigger or of a wall while one of its faces is dragged
 // The drafts: entities that are only in the page until they are placed (editor-drafts.js). Each is in ents like an
 // entity of the server, under a number the server never gives one: its own stay below 1024.
 const DRAFT_BASE = 100000;
@@ -11,22 +11,14 @@ const drafts = new Map();	// id -> draft, in the order they were made
 let draftNext = 0;
 const ents = new Map();
 
-// The blocking wall: an invisible box that stops players and lets shots pass. Like a trigger that is a box of its
-// own it has its size in the keys mins and maxs, from its origin, and it is shaped the same way. It is no
-// trigger: it fires nothing and takes no brushes of the map.
-const BOX_WALL = /^invisibleblockingwall$/i;
 const ENT_COLORS = [
 	[/^weapon_/, [1, 0.6, 0.15]], [/^(item_|ammo_|holocron)/, [0.3, 0.95, 0.45]], [/^info_/, [0.95, 0.3, 0.3]],
 	[/^npc_/i, [0.95, 0.35, 0.95]], [/^misc_/, [0.75, 0.75, 0.8]], [/^trigger_/, [0.95, 0.9, 0.2]], [/^func_/, [0.3, 0.55, 1]],
-	[/^target_/, [0.3, 0.9, 0.95]], [/^fx_/, [1, 0.85, 0.5]], [/^light/, [1, 1, 0.7]], [/^team_/, [1, 1, 1]], [BOX_WALL, [0.62, 0.45, 1]]];
+	[/^target_/, [0.3, 0.9, 0.95]], [/^fx_/, [1, 0.85, 0.5]], [/^light/, [1, 1, 0.7]], [/^team_/, [1, 1, 1]]];
 function entColor(cls) {
 	for (const [re, c] of ENT_COLORS) if (re.test(cls)) return c;
 	return [0.8, 0.8, 0.8];
 }
-// A class whose name is long for a title has a short one for it. Only for what is shown: the keys and what is
-// sent have the name of the class.
-const CLASS_LABELS = { invisibleblockingwall: 'Blocking wall' };
-const classLabel = cls => CLASS_LABELS[(cls || '').toLowerCase()] || cls;
 function entKey(ent, key) {
 	const kv = ent.keys && ent.keys.find(k => k[0].toLowerCase() === key);
 	return kv ? kv[1] : '';
@@ -73,6 +65,6 @@ function setMode(m) {
 	if (m === 'models') { select(-1); if (!mdlAsked) mdlLoad(); mdlSetPlacing(!!mdlPath); }
 	if (m === 'routes') { select(-1); wpLoad(); } else wpSetAdding(false);
 	if (m === 'mapinfo') { select(-1); mapReport(); renderSurface(); }
-	if (m === 'clips') { select(-1); pollEntities(); clipRender(); }
+	if (m === 'clips') { select(-1); clipPoll(); clipRender(); } else clipLeave();
 }
 
