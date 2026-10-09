@@ -53,7 +53,7 @@ function itemModels(def) {
 // snapshots (CL_AdjustTimeDelta): it stays just behind the newest one, and jumps only when it is far off.
 const itemClock = { delta: 0, poll: -1, ahead: false, set: false };
 function itemTime(now) {
-	if (refCam && refCam.time) return now;
+	if (refStands()) return now;
 	// the time of the level where the feed has it (with the HUD of a player), else the time since the map began
 	const server = state.now !== undefined ? state.now : state.hud && state.hud.now !== undefined ? state.hud.now : state.time, c = itemClock;
 	if (c.poll !== lastPoll) {

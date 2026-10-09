@@ -381,7 +381,7 @@ let hudFollows = true;
 function hudTime() {
 	const h = state && state.hud;
 	if (!h || h.now === undefined) return state ? state.time || 0 : 0;
-	return refCam ? h.now : h.now + Math.max(0, Math.min(2 * pollInterval, performance.now() - lastPoll));
+	return refStands() ? h.now : h.now + Math.max(0, Math.min(2 * pollInterval, performance.now() - lastPoll));
 }
 
 // level.sortedClients[0] and what CalculateRanks puts into CS_SCORES1 (the leader the top right shows): the state
@@ -1025,7 +1025,7 @@ function hudDraw2D(cg) {
 const HUD_CHAT = { keep: 5, msec: 10000, x: 30, y: 350, cut: 550, height: 20, scale: 0.65 };
 const hudChat = { items: [], next: 0, seq: 0 };
 // the time of the game the lines are kept by: the one of the last answer of the server, carried on between two
-const hudChatTime = () => (state && state.now !== undefined ? state.now : 0) + (refCam ? 0 : Math.max(0, Math.min(2 * pollInterval, performance.now() - lastPoll)));
+const hudChatTime = () => (state && state.now !== undefined ? state.now : 0) + (refStands() ? 0 : Math.max(0, Math.min(2 * pollInterval, performance.now() - lastPoll)));
 
 // a line the server sent, as it sends it: the name, white, a colon, and what he said in the colour of its kind
 function hudChatAdd(text) {

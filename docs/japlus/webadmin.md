@@ -607,6 +607,21 @@ Also changed:
   keeps an empty menu open, and the engine leaves these lines out while a menu has the keys. Not shown: what
   the engine and the client game print by themselves besides the kills. `tools/panelshot/steps_console.js`
   (19 checks).
+- Fixed: the trail of a swinging blade was hardly there. The page adds a piece of trail at the start of a
+  frame and let it age by that whole frame before it was first drawn: at 60 frames a second every piece
+  missed its first and brightest frame, and at fewer than 25 it was gone before it was drawn at all (a piece
+  lives 30 or 40 msec). The game adds such a primitive and draws it in the same frame. What code adds between
+  two frames (a trail piece, a line of a beam) begins with the frame it is first drawn in now (`fresh` in
+  `fxAdvance`, `js/fx-run.js`). Counted with two bots that fight: the pieces were made (some 1.3 for every
+  frame of an attack) and none drawn at ten frames a second. Against the game, side by side at the game's
+  speed (`REF_LIVE` of `tools/refshot.sh`): the game had its fans in five of six pictures, the page a short
+  streak in one; after it the page has them as the game does.
+- The comparison can take a row of pictures of both while the game runs at its speed (`REF_LIVE=<n>` with
+  `REF_LOOK=fight`): they are of nearly the same time, 50 to 100 msec apart, and for what is too quick and
+  too random to count in pixels (sparks, the flare of a clash, trails). The camera of the comparison alone no
+  longer stops the page: it stands still only when the comparison names a time of the game (`refStands` in
+  `js/camera.js`); before, the skeletons of the page did not move between two polls in every view of the
+  comparison.
 - New: the electric shell of a player. One who is electrified (force lightning, a DEMP 2 hit, the stun baton,
   the login effect and the freeze of the JA+ admins) is drawn by the game once more with one of two electric
   shaders in six of ten frames, white, fainter in his last half second (`CG_Player`, `emplacedOwner` of the

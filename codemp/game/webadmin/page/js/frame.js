@@ -254,7 +254,7 @@ function drawFrame(now) {
 	if (canvas.width !== Math.round(canvas.clientWidth * canvasScale())) resize();
 	if (view.id < 0 || !firstPersonCamera(now)) updateCamera();
 	// the comparison: the time of the game for what a shader animates, and the picture of what animates on its own
-	if (refCam && refCam.time) now = refCam.time;
+	if (refStands()) now = refCam.time;
 	frameNow = now;
 	// The sky of a map that was there before the shader scripts is settled once they have come, and the curved
 	// surfaces take the level of detail of where the camera is now (RB_SurfaceGrid).

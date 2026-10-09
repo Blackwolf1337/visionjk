@@ -468,6 +468,15 @@ function fxAdvance(dtMs) {
 	let n = 0;
 	for (let i = 0; i < fxLive.length; i++) {
 		const e = fxLive[i];
+		// What code added since the last frame (the trail of a blade, a line) begins with this frame: the game adds
+		// such a primitive and draws it in the same frame, at its full strength. Without this it was a frame old
+		// when it was first drawn, and gone before that at fewer than 25 frames a second.
+		if (e.fresh) {
+			const d = fxTime - e.t0;
+			e.t0 += d; e.t1 += d;
+			if (e.clocked) for (const a of e.clocked) a[2] += d;
+			e.fresh = false;
+		}
 		if (fxTime > e.t1) { fxDie(e); continue; }
 		fxMove(e, dtMs);
 		fxLive[n++] = e;
@@ -481,7 +490,7 @@ function fxAdvance(dtMs) {
 // texture coordinates it begins with and the ones it ends with.
 function fxAddTrail(shader, verts, rgb, st, life) {
 	if (!fxOn() || fxLive.length >= FX_MAX_LIVE || !(life > 0)) return;
-	fxLive.push({ p: null, type: 'trail', flags: FX_USE_ALPHA, t0: fxTime, t1: fxTime + life, shader, verts: verts.map(v => v.slice()), rgb, st });
+	fxLive.push({ p: null, type: 'trail', flags: FX_USE_ALPHA, fresh: true, t0: fxTime, t1: fxTime + life, shader, verts: verts.map(v => v.slice()), rgb, st });
 }
 
 // CLight::Update and Draw: the lights of the effects that are playing, for the lights of the frame. The size of
@@ -569,7 +578,7 @@ const fxFrames = () => ({ last: 0, owed: 0, time: -1, done: new Map(), room: 0 }
 // have had frames since the last one. -1 in the comparison: fxFramePlay counts there. c: what fxFrames made, t:
 // the time of the game, ready: whether the effect and its images are read (none are played before that).
 function fxFramePlays(c, t, ready) {
-	if (refCam && refCam.time) {
+	if (refStands()) {
 		if (c.time !== t) { c.time = t; c.done.clear(); }
 		// the effects take a few hundred at a time
 		c.room = ready ? 200 : 0;

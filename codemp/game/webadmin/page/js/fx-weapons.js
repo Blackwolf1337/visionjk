@@ -82,8 +82,11 @@ const FX_ALPHA_LINEAR = FX_LINEAR, FX_SIZE_LINEAR = FX_LINEAR << 8, FX_ALPHA_WAV
 function fxAddLine(start, end, size1, size2, sizeParm, alpha1, alpha2, alphaParm, sRGB, eRGB, rgbParm, killTime, shader, flags) {
 	if (!fxOn() || fxLive.length >= FX_MAX_LIVE) return;
 	const parm = (v, shift) => { const mode = flags >> shift & FX_PARM_MASK; return mode === FX_WAVE ? v * 3.14159 * 0.001 : mode ? v * 0.01 * killTime + fxTime : 0; };
-	fxLive.push({ p: null, type: 'line', flags, t0: fxTime, t1: fxTime + killTime, org: start.slice(0, 3), org2: end.slice(0, 3), shader,
-		size: [size1, size2, parm(sizeParm, 8)], alpha: [alpha1, alpha2, parm(alphaParm, 0)], rgb: [sRGB.slice(), eRGB.slice(), parm(rgbParm, 4)] });
+	const e = { p: null, type: 'line', flags, fresh: true, t0: fxTime, t1: fxTime + killTime, org: start.slice(0, 3), org2: end.slice(0, 3), shader,
+		size: [size1, size2, parm(sizeParm, 8)], alpha: [alpha1, alpha2, parm(alphaParm, 0)], rgb: [sRGB.slice(), eRGB.slice(), parm(rgbParm, 4)] };
+	// (its parameters that are a time on the clock of the effects move with it when it begins, see fxAdvance)
+	e.clocked = [[e.size, 8], [e.alpha, 0], [e.rgb, 4]].filter(([, shift]) => { const mode = flags >> shift & FX_PARM_MASK; return mode && mode !== FX_WAVE; }).map(([a]) => a);
+	fxLive.push(e);
 }
 
 // ---- fx_disruptor.c

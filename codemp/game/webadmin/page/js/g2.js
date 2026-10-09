@@ -675,7 +675,7 @@ function g2Skin(inst) {
 // the clock of the page. Not carried on in the comparison with the game, where the game nearly stands.
 function g2Time() {
 	const at = state ? state.time || 0 : 0;
-	return refCam ? at : at + Math.min(pollInterval * 3, Math.max(0, performance.now() - lastPoll));
+	return refStands() ? at : at + Math.min(pollInterval * 3, Math.max(0, performance.now() - lastPoll));
 }
 
 // Where a Ghoul2 model is drawn: its axes for the angles the client game gives its entity (AnglesToAxis), scaled,

@@ -111,6 +111,10 @@ let refCam = null;
 function refView(v) {
 	refCam = v ? { eye: [v[0], v[1], v[2] + v[6]], pitch: v[3], yaw: v[4], time: v[8] } : null;
 }
+// The comparison with a time: the time of the game stands for the page too (what animates is at that time, and
+// nothing runs on between two polls). Without a time (0) it is only the camera of the game, and the page goes on
+// as it does for anybody who looks at it.
+const refStands = () => !!refCam && !!refCam.time;
 
 function updateCamera() {
 	let at;
