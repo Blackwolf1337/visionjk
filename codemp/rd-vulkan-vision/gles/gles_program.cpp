@@ -90,7 +90,7 @@ static GLuint VK_CompileShader( GLenum stage, const char *name, const char *defi
 static void VK_BindBlock( GLuint program, const char *name, GLuint binding ) {
 	const GLuint index = glGetUniformBlockIndex( program, name );
 
-	// a block the program does not read has no index
+	// a block the program does not have has no index
 	if ( index != GL_INVALID_INDEX ) {
 		glUniformBlockBinding( program, index, binding );
 	}
@@ -138,6 +138,7 @@ static GLuint VK_LinkProgram( glesProgram_t which ) {
 	}
 
 	glUseProgram( program );
+	VK_BindBlock( program, "Globals", GLES_BLOCK_GLOBALS );
 	VK_BindBlock( program, "Transforms", GLES_BLOCK_TRANSFORMS );
 	VK_BindBlock( program, "Draws", GLES_BLOCK_DRAWS );
 	VK_BindBlock( program, "Bones", GLES_BLOCK_BONES );

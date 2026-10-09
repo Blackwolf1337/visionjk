@@ -390,7 +390,7 @@ static void GLES_Texture( int unit, GLuint texture ) {
 	gles.textures[unit] = texture;
 }
 
-static void GLES_BeginReplay( void ) {
+static void GLES_BeginReplay( const vkFrame_t *frame ) {
 	memset( &gles, 0, sizeof( gles ) );
 	gles.layout = -1;
 	gles.textures[0] = gles.textures[1] = ~0u;
@@ -405,6 +405,8 @@ static void GLES_BeginReplay( void ) {
 	glViewport( 0, 0, vk.width, vk.height );
 	glScissor( 0, 0, vk.width, vk.height );
 	glDepthRangef( 0.0f, 1.0f );
+	// the same for every draw of the frame
+	glBindBufferRange( GL_UNIFORM_BUFFER, GLES_BLOCK_GLOBALS, frame->globals.buffer, 0, sizeof( vkGlobals_t ) );
 }
 
 // the state of a pass over a whole target: nothing is tested, nothing is cut off. With blend 0 nothing is blended.
@@ -668,7 +670,7 @@ static void GLES_Draw( const vkFrame_t *frame, const glesCommand_t *cmd ) {
 }
 
 static void GLES_Replay( const vkFrame_t *frame ) {
-	GLES_BeginReplay();
+	GLES_BeginReplay( frame );
 	for ( int i = 0; i < gles_numCommands; i++ ) {
 		const glesCommand_t *cmd = &gles_commands[i];
 

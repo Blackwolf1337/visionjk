@@ -95,7 +95,8 @@ typedef struct vkDeviceFrame_s {	// see vkFrame_t
 // what only the files of this device see
 // ------------------------------------------------------------------------------------------------------------
 
-#define GLES_BLOCK_TRANSFORMS	1		// where the uniform blocks of the shaders are bound, as the bindings of Vulkan
+#define GLES_BLOCK_GLOBALS		0		// where the uniform blocks of the shaders are bound, as the bindings of Vulkan
+#define GLES_BLOCK_TRANSFORMS	1
 #define GLES_BLOCK_DRAWS		2
 #define GLES_BLOCK_BONES		3
 #define GLES_BONES_BYTES		12288	// the block of shaders/skinned.vert: 256 bones of three rows of 16 bytes

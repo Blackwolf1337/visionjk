@@ -113,8 +113,9 @@ void VK_InitFrames( void ) {
 
 		VK_CreateBuffer( &frame->vertexes, VK_VERTEX_BYTES, VKB_VERTEXES, qtrue );
 		VK_CreateBuffer( &frame->indexes, VK_INDEX_BYTES, VKB_INDEXES, qtrue );
-		// no shader reads the globals, so they have nothing on the device
-		VK_CreateBuffer( &frame->globals, sizeof( vkGlobals_t ), VKB_STAGING, qtrue );
+		// No shader reads the globals, but their block is in every program of geometry: a block of the layout
+		// std140 is never left out, and WebGL draws nothing while one of a program has no buffer.
+		VK_CreateBuffer( &frame->globals, sizeof( vkGlobals_t ), VKB_UNIFORMS, qtrue );
 		VK_CreateBuffer( &frame->transforms, (vkSize_t)VK_TRANSFORM_STRIDE * VK_MAX_TRANSFORMS, VKB_UNIFORMS, qtrue );
 		VK_CreateBuffer( &frame->draws, (vkSize_t)VK_DRAW_STRIDE * VK_MAX_DRAWS, VKB_UNIFORMS, qtrue );
 		// The block of the bones is bound from where a skeleton starts and is 256 bones long whatever the skeleton
@@ -163,6 +164,7 @@ void GLES_UploadFrame( const vkFrame_t *frame ) {
 		}
 	}
 	GLES_UploadBuffer( &frame->indexes, frame->indexUsed );
+	GLES_UploadBuffer( &frame->globals, sizeof( vkGlobals_t ) );
 	GLES_UploadBuffer( &frame->transforms, (vkSize_t)VK_TRANSFORM_STRIDE * frame->numTransforms );
 	GLES_UploadBuffer( &frame->draws, (vkSize_t)VK_DRAW_STRIDE * frame->numDraws );
 	GLES_UploadBuffer( &frame->bones, sizeof( float ) * 12 * frame->numBones );
