@@ -1589,6 +1589,14 @@ Also changed:
   characters, goes to the security log and is echoed on the console with a `]` in front, both without what
   follows a word with `pass` in it. It gives the panel no right it did not have: the config tab could run any
   console line already. Added without a test run.
+- New: the Files tab has a tree instead of the list of two roots. Its top entries are "Server files" (the game
+  folder in the home path of the server: its configs, its logs, what is uploaded, open at the start) and "Game
+  installation, read only" (the game folder of the installation). A folder asks the server for its sub folders
+  when it is opened the first time, a click on its name shows it in the list, the path above is parts to click
+  on. Files can be dropped onto the list. A `.pk3` always goes into the top folder of the server files whatever
+  folder is shown, the engine finds one nowhere else, and the page says so. Any other file goes into the folder
+  that is shown and is refused there when that is of the installation. The server side is unchanged
+  (`/api/fs/*`). Added without a test run.
 - "Add bot" with an empty name adds `Kyle Katarn`. JKAdmin asks for `Kyle`, a bot the game does not have, so
   nothing happened there.
 - The two entity hooks pass `ent-g_entities` instead of `ent->s.number`.
