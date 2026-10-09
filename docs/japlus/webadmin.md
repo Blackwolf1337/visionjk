@@ -607,6 +607,13 @@ Also changed:
   keeps an empty menu open, and the engine leaves these lines out while a menu has the keys. Not shown: what
   the engine and the client game print by themselves besides the kills. `tools/panelshot/steps_console.js`
   (19 checks).
+- Changed: a saber in the air has its blades at the bolts of its hilt, as one in a hand (`drawModelEntities`
+  in `js/frame.js`; `CG_Player` for `saberInFlight` hands `CG_AddSaberBlade` the saber entity). Until now
+  only the first blade was drawn, along the way the hilt lies: a staff that was thrown had one blade.
+  The second blade is left out while it is off (`saberHolstered` 1). Still not as the game has it: the hilt
+  is laid flat at once (the game tilts it there within some 180 msec), it is not turned towards its owner
+  while he pulls it back, and the hand that guides it has no glow. Three more checks in `steps_sabers.js`
+  (53). Not compared with a picture of the game.
 - Fixed: the sabers were not in the hands. The page put every blade where the server says its blade is and
   set the hilt to it. A client never sees those points: it bolts the hilt to the hand of its own skeleton and
   the blade to the hilt (`CG_AddSaberBlade`). The points of the server are for its own hit tests, worked out
@@ -735,7 +742,8 @@ Also changed:
     and finds the wall with a ray against the map (four rays a poll at most). The glow quads from before
     stay for when Effects is off in the editor, the shader scripts are not read yet, or a file is missing.
   - The view toggle "Effects" of the editor switches them off there. The administration always has them.
-  - Not drawn: sounds, lights, camera shakes and screen flashes of an effect, the models of emitters,
+  - Not drawn: sounds, camera shakes and screen flashes of an effect, the models of emitters (its lights are
+    lights of the frame, `fxLights` in `js/fx-run.js`),
     wind, forks of electricity; particles do not collide with the map. And of what a client plays on its own
     that is neither an effect entity, nor played by the server, nor a missile: force powers and jetpacks
     (the rest comes with the events of the game, see above).

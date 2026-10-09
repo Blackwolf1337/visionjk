@@ -120,14 +120,22 @@ function drawModelEntities(now, k) {
 			}
 			// 800 degrees a second is how the game spins it, on from where it was at the last poll
 			const yaw = m.angles[1] + SABER_SPIN * Math.min(pollInterval * 2, now - lastPoll) / 1000, r = yaw * Math.PI / 180;
-			if (model) drawStatic(model, anglesMatrix(pos, [90, yaw, 0], 1));
-			// the hilt lies along the way it looks then, and the blades start where its tag says
-			const dir = [Math.cos(r), Math.sin(r), 0], tag = model && model.tags['*blade1'], from = tag ? tag[11] : 6;
+			const at = anglesMatrix(pos, [90, yaw, 0], 1);
+			if (model) drawStatic(model, at);
+			// Its blades start at the bolts of the hilt, as in a hand (CG_AddSaberBlade from the saber entity): *blade1
+			// and on, *flash for a hilt of the old kind. The second blade of a staff is off with saberHolstered 1.
+			// A hilt that is not read yet: the first blade along the way the hilt lies.
 			const saber = (owner.sabers || [])[0];
-			for (const blade of saber ? saber.blades.slice(0, 1) : []) {
+			(saber ? saber.blades : []).forEach((blade, bi) => {
+				if (bi > 0 && owner.saberHolstered === 1) return;
+				const tag = model && (model.tags['*blade' + (bi + 1)] || (bi ? null : model.tags['*flash']));
+				let org, dir;
+				if (tag) { const f = M4.mul(at, to44(tag)); org = [f[12], f[13], f[14]]; dir = fxUnit([-f[0], -f[1], -f[2]]); }
+				else if (!bi && !model) { dir = [Math.cos(r), Math.sin(r), 0]; org = [pos[0] + dir[0] * 6, pos[1] + dir[1] * 6, pos[2]]; }
+				else return;
 				// lenMax and packed: its full length and the colour of an RGB saber, for the blade as the game draws it (js/sabers.js)
-				blades.push({ org: [pos[0] + dir[0] * from, pos[1] + dir[1] * from, pos[2]], dir, len: blade.length, lenMax: blade.length, radius: blade.radius, color: blade.color, packed: blade.packed || 0 });
-			}
+				blades.push({ org, dir, len: blade.length, lenMax: blade.length, radius: blade.radius, color: blade.color, packed: blade.packed || 0 });
+			});
 		}
 	}
 }
