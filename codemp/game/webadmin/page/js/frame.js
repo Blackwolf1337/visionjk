@@ -293,6 +293,8 @@ function drawFrame(now) {
 	drawBlades();
 	// the weather comes when all of the scene is drawn (RB_RenderWorldEffects)
 	if (scripted) drawWeather(now);
+	// what an event of the game shows by itself for a moment
+	if (scripted) drawEvents(now);
 	if (view.id >= 0 && players.has(view.id)) {
 		const d = players.get(view.id).data;
 		drawViewWeapon(d);

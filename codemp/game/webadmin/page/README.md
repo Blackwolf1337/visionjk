@@ -66,6 +66,7 @@ order of the template, so a file may only use there what a file before it has ma
 | `js/fx-run.js` | the effects that are playing: what the feed tells of them, how their parts move |
 | `js/fx-draw.js` | the effects drawn |
 | `js/fx-weapons.js` | which effect a weapon has for its muzzle, its shot and what it hits |
+| `js/events.js` | the events of the game: what a client is told once and shows for a moment |
 | `js/hud.js` | the HUD of that view |
 | `js/hud-font.js` | the fonts of the game: the measures of the glyphs and their image |
 | `js/hud-world.js` | the crosshair and what it points at, the radar |

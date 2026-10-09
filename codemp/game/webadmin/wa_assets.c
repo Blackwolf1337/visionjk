@@ -27,6 +27,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "qcommon/qfiles.h"		// the header of a .bsp
 
 extern stringID_table_t animTable[MAX_ANIMATIONS + 1];
+extern const char *eventnames[EV_NUM_ENTITY_EVENTS];	// bg_misc.c
 
 static int		mapModels = -1;				// brush models of the map, asked once (WA_MapBrushModels)
 static char		mapModelsName[MAX_QPATH];
@@ -390,6 +391,15 @@ void WA_ApiList( waConnection_t *c, const char *query ) {
 				WA_BufAppend( &b, ",", 1 );
 			first = qfalse;
 			WA_BufJsonString( &b, Info_ValueForKey( G_GetBotInfoByNumber( i ), "name" ) );
+		}
+	} else if ( !strcmp( kind, "events" ) ) {
+		// the names of the events of the game in the order of their numbers (entity_event_t), which is what the
+		// state feed names an event by
+		for ( i = 0; i < EV_NUM_ENTITY_EVENTS; i++ ) {
+			if ( !first )
+				WA_BufAppend( &b, ",", 1 );
+			first = qfalse;
+			WA_BufJsonString( &b, eventnames[i] ? eventnames[i] : "" );
 		}
 	} else if ( !strcmp( kind, "fxindex" ) ) {
 		// The names of CS_EFFECTS, the first of them for the index 1: what the state feed names an effect by.

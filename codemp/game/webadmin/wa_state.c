@@ -609,6 +609,135 @@ static void WA_StateEffects( waBuffer_t *b, const char *query ) {
 	WA_BufAppend( b, "]", 1 );
 }
 
+/*
+==============================================================================
+
+Events
+
+Not in JKAdmin. Much of what a client shows it is told as an event: that somebody fired, that two blades met,
+where a shot of the disruptor went. The server keeps none of them, a client gets each for a few frames in its
+snapshots. The panel looks at the end of every frame at what is new and keeps it for the pages: the events of
+the players (the ones their move made and the ones the game gave them), the entities that are an event and
+nothing else (G_TempEntity), and the events of other entities (G_AddEvent).
+
+==============================================================================
+*/
+
+#define WA_EV_KEEP		256
+#define WA_EV_MS		2000		// older than that is not worth showing any more
+
+typedef struct waEvent_s {
+	int		time;				// level.time
+	int		ent, event, parm;
+	vec3_t	org, org2, ang;
+	int		other, other2, weapon, eFlags, time1, time2, client, owner;
+} waEvent_t;
+
+static waEvent_t	evRing[WA_EV_KEEP];
+static int			evSeq;						// the number of the last one, they count from 1 since the module was loaded
+static int			evClientSeq[MAX_CLIENTS];	// the eventSequence of every player that was looked at
+static int			evClientExt[MAX_CLIENTS];	// the time of the event the game gave him that was looked at
+static int			evSeen[MAX_GENTITIES];		// the eventTime of every other entity that was looked at
+
+static void WA_EventKeep( const gentity_t *ent, int event, int parm, const vec3_t org ) {
+	waEvent_t *e;
+
+	event &= ~EV_EVENT_BITS;
+	if ( event <= EV_NONE || event >= EV_NUM_ENTITY_EVENTS )
+		return;
+	e = &evRing[evSeq++ % WA_EV_KEEP];
+	e->time = level.time;
+	e->ent = ent->s.number;
+	e->event = event;
+	e->parm = parm;
+	VectorCopy( org, e->org );
+	VectorCopy( ent->s.origin2, e->org2 );
+	VectorCopy( ent->s.angles, e->ang );
+	e->other = ent->s.otherEntityNum;
+	e->other2 = ent->s.otherEntityNum2;
+	e->weapon = ent->s.weapon;
+	e->eFlags = ent->s.eFlags;
+	e->time1 = ent->s.time;
+	e->time2 = ent->s.time2;
+	e->client = ent->s.clientNum;
+	e->owner = ent->s.owner;
+}
+
+// at the end of a frame of the game: what is new of events
+void WA_EventsFrame( void ) {
+	int i;
+
+	for ( i = 0; i < level.maxclients; i++ ) {
+		gentity_t			*ent = &g_entities[i];
+		const playerState_t	*ps;
+		int					seq;
+
+		if ( !ent->inuse || !ent->client || ent->client->pers.connected != CON_CONNECTED ) {
+			evClientSeq[i] = evClientExt[i] = 0;
+			continue;
+		}
+		ps = &ent->client->ps;
+		// the events of his move: the player state keeps the last two of them, by a number that counts on
+		if ( evClientSeq[i] > ps->eventSequence || evClientSeq[i] < ps->eventSequence - MAX_PS_EVENTS )
+			evClientSeq[i] = ps->eventSequence - MAX_PS_EVENTS;
+		for ( seq = evClientSeq[i]; seq < ps->eventSequence; seq++ ) {
+			if ( seq >= 0 )
+				WA_EventKeep( ent, ps->events[seq & ( MAX_PS_EVENTS - 1 )], ps->eventParms[seq & ( MAX_PS_EVENTS - 1 )], ps->origin );
+		}
+		evClientSeq[i] = ps->eventSequence;
+		// the one the game gave him (G_AddEvent on a client)
+		if ( ps->externalEvent && ps->externalEventTime != evClientExt[i] ) {
+			WA_EventKeep( ent, ps->externalEvent, ps->externalEventParm, ps->origin );
+			evClientExt[i] = ps->externalEventTime;
+		}
+	}
+	for ( i = MAX_CLIENTS; i < level.num_entities; i++ ) {
+		const gentity_t *ent = &g_entities[i];
+
+		if ( !ent->inuse || !ent->eventTime || ent->eventTime == evSeen[i] )
+			continue;
+		evSeen[i] = ent->eventTime;
+		if ( ent->s.eType > ET_EVENTS )
+			WA_EventKeep( ent, ent->s.eType - ET_EVENTS, ent->s.eventParm, ent->r.currentOrigin );
+		else if ( ent->s.event )
+			WA_EventKeep( ent, ent->s.event, ent->s.eventParm, ent->r.currentOrigin );
+	}
+}
+
+// The events for a page that says the number of the last one it has (evs=<number>), left out when it has them all.
+//   "ev": each its number, how long ago in msec, the entity, the event (an entity_event_t: /api/list?kind=events
+//        names them in order), its parameter, where (3), origin2 (3), the angles (3), then of the entity that
+//        carried it otherEntityNum, otherEntityNum2, weapon, eFlags, time, time2, clientNum and owner. What each
+//        of these means is the event's own business, as in CG_EntityEvent.
+static void WA_StateEvents( waBuffer_t *b, const char *query ) {
+	char		value[16];
+	int			i, have;
+	qboolean	first = qtrue;
+
+	have = WA_FormValue( query, "evs", value, sizeof( value ) ) ? atoi( value ) : -1;
+	if ( have == evSeq )
+		return;
+	if ( have > evSeq )
+		have = 0;
+	WA_BufPrintf( b, ",\"evSeq\":%d", evSeq );
+	// a page that asks for the first time gets the number alone: what was before it came is not for it
+	if ( have < 0 )
+		return;
+	WA_BufAppend( b, ",\"ev\":[", 7 );
+	for ( i = Q_max( have, evSeq - WA_EV_KEEP ); i < evSeq; i++ ) {
+		const waEvent_t	*e = &evRing[i % WA_EV_KEEP];
+		const int		ago = level.time - e->time;
+
+		if ( ago < 0 || ago > WA_EV_MS )
+			continue;
+		WA_BufPrintf( b, "%s[%d,%d,%d,%d,%d,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%d,%d,%d,%d,%d,%d,%d,%d]", first ? "" : ",",
+			i + 1, ago, e->ent, e->event, e->parm, e->org[0], e->org[1], e->org[2], e->org2[0], e->org2[1], e->org2[2],
+			e->ang[0], e->ang[1], e->ang[2], e->other, e->other2, e->weapon, e->eFlags, e->time1, e->time2, e->client, e->owner );
+		first = qfalse;
+	}
+	WA_BufAppend( b, "]", 1 );
+}
+
 // &view=<client>: where that client looks from. Not for the page as it is used: for the comparison of its
 // picture with the one a client of the game draws from the same spot (tools/panelshot/steps_ref.js), which
 // reads the eye back instead of working it out, because a spectator that is put somewhere drifts on.
@@ -686,7 +815,7 @@ static void WA_StateHud( waBuffer_t *b, const char *query ) {
 		ps->electrifyTime, ps->commandTime, ps->isJediMaster ? 1 : 0 );
 }
 
-// GET /api/state[?items=<number>][&fx=<number>&fxs=<number>][&p=<client>.<number>-...][&view=<client>][&hud=<client>]:
+// GET /api/state[?items=<number>][&fx=<number>&fxs=<number>][&evs=<number>][&p=<client>.<number>-...][&view=<client>][&hud=<client>]:
 // everything the page draws, one part after the other
 void WA_ApiState( waConnection_t *c, const char *query ) {
 	waBuffer_t	b = { 0 };
@@ -715,6 +844,7 @@ void WA_ApiState( waConnection_t *c, const char *query ) {
 	WA_StateMovers( &b );
 	WA_StateShots( &b );
 	WA_StateEffects( &b, query );
+	WA_StateEvents( &b, query );
 	WA_StateView( &b, query );
 	WA_StateHud( &b, query );
 	WA_BufAppend( &b, "}", 1 );

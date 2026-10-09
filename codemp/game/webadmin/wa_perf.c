@@ -114,6 +114,9 @@ void WA_PerfPanelDone( void ) {
 void WebAdmin_FrameEnd( void ) {
 	double took;
 
+	// what the frame made of events, for the pages (wa_state.c)
+	if ( WA_Running() )
+		WA_EventsFrame();
 	if ( !perfInFrame )
 		return;
 	perfInFrame = qfalse;
