@@ -4,12 +4,28 @@
 
 // The view of the administration draws the map the way the game does: every surface with the stages its shader
 // script names (images, blending, moving texture coordinates, colours that pulse), in the order of the game,
-// under the sky of the map. What the engine makes of a script is in rd-vanilla/tr_shader.cpp and tr_shade.cpp,
-// the rules here are taken from there. Not done: glow, sprites on surfaces, portals.
+// under the sky of the map and in its fog. What the engine makes of a script is in rd-vanilla/tr_shader.cpp and
+// tr_shade.cpp, the rules here are taken from there. Not done: glow, sprites on surfaces, portals.
 //
 // The editor keeps the plain view (an image times the light), which needs nothing but the map.
 
 const whiteTex = makeTexture(1, 1, new Uint8Array([255, 255, 255, 255]), { mip: false });
+
+// R_FogFactor in tr_image.cpp: how thick the fog of a brush is, 0 to 1, from how far the line of sight runs (s)
+// and how deep under the surface of the fog a place is (t). The table of the engine is a square root in 256 steps.
+function fogFactor(s, t) {
+	s -= 1 / 512;
+	if (s < 0 || t < 1 / 32) return 0;
+	if (t < 31 / 32) s *= (t - 1 / 32) / (30 / 32);
+	return Math.sqrt(Math.floor(Math.min(1, s * 8) * 255) / 255);
+}
+
+// the image the fog of a brush is drawn with (R_CreateFogImage): white, its alpha is the thickness
+const fogTex = (() => {
+	const W = 256, H = 32, data = new Uint8Array(W * H * 4).fill(255);
+	for (let x = 0; x < W; x++) for (let y = 0; y < H; y++) data[(y * W + x) * 4 + 3] = 255 * fogFactor((x + 0.5) / W, (y + 0.5) / H);
+	return makeTexture(W, H, data, { mip: false, clamp: true });
+})();
 
 // deformVertexes wave, bulge and move, as RB_DeformTessGeometry does them: a wave and a bulge move a vertex along
 // its normal, by how far depends on where it is, and a move shifts all of them.
@@ -31,149 +47,145 @@ vec3 deformed(vec3 p, vec3 n, vec2 st) {
 	return p + uMove;
 }`;
 
+// What the vertex shader of the map and the one of a model share: the texture coordinates of the one or two
+// images of a stage, its colour with what a vertex brings to it, and the fog of a brush.
+const STAGE_VS_GLSL = `uniform int uTcGen;		// 0 the texture coordinates, 1 the ones of the lightmap, 2 the environment, 3 the fog
+uniform vec3 uTcA; uniform vec3 uTcB;	// the tcMods of the stage as one matrix
+uniform vec2 uTurb;		// tcMod turb: how far, and where in its wave it is
+uniform int uTcGen2; uniform vec3 uTcA2; uniform vec3 uTcB2; uniform vec2 uTurb2;	// the same of its second image
+uniform vec4 uColor;	// the colour of the stage that every vertex has
+uniform int uRgbVertex;	// 2 times one minus the colour of the vertex, else when not 0 times that colour
+uniform int uAlphaVertex;	// 1 times the alpha of the vertex, 2 times one minus it, 3 times the shine, 4 times how far the eye is
+uniform int uFogAdj;	// what of the colour fades in a fog: 1 the colour, 2 colour and alpha, 3 the alpha
+uniform float uPortalRange;
+uniform vec4 uFogPlane;	// the side the fog of a brush ends at, looking into it (all 0: the fog has none)
+uniform vec2 uFogSt;	// one over eight times its depth, and how far behind that side the eye is
+out vec2 vTc; out vec2 vTc2; out vec4 vCol; out float vDepth;
+// RB_CalcFogTexCoords: how far in front of the eye a vertex is (s), and what part of the way to it is in the
+// fog (t), as the image of the fog wants them
+vec2 fogTc(vec3 at, float depth) {
+	float t = dot(at, uFogPlane.xyz) - uFogPlane.w;
+	if (uFogSt.y < 0.0) t = t < 1.0 ? 0.03125 : 0.03125 + 0.9375 * t / (t - uFogSt.y);
+	else t = t < 0.0 ? 0.03125 : 0.96875;
+	return vec2(depth * uFogSt.x + 0.001953125, t);
+}
+// R_FogFactor, as fogFactor of the page
+float fogFactor(vec2 st) {
+	float s = st.x - 0.001953125;
+	if (s < 0.0 || st.y < 0.03125) return 0.0;
+	if (st.y < 0.96875) s *= (st.y - 0.03125) / 0.9375;
+	return sqrt(floor(min(s * 8.0, 1.0) * 255.0) / 255.0);
+}
+vec2 stageTc(int gen, vec3 a, vec3 b, vec2 turb, vec2 st, vec2 lm, vec2 env, vec2 fog, vec3 at) {
+	vec2 tc = gen == 1 ? lm : gen == 2 ? env : gen == 3 ? fog : st;
+	if (turb.x != 0.0) {
+		tc.x += sin(((at.x + at.z) * 0.0009765625 + turb.y) * 6.2831853) * turb.x;
+		tc.y += sin((at.y * 0.0009765625 + turb.y) * 6.2831853) * turb.x;
+	}
+	return vec2(dot(a.xy, tc) + a.z, dot(b.xy, tc) + b.z);
+}
+// pos and norm as the model has them, eye in the same space. color: what the vertex brings to the colour of
+// the stage. at: where the planes of the fog are measured (the map), turbAt: what a turb runs along. light:
+// where the light that shines on it comes from.
+void stageVertex(vec3 pos, vec3 norm, vec3 eye, vec2 st, vec2 lm, vec4 color, vec3 at, vec3 turbAt, vec3 light, float depth) {
+	vec3 v = normalize(eye - pos);
+	vec2 env = vec2(0.0), fog = vec2(0.0);
+	if (uTcGen == 2 || uTcGen2 == 2) {
+		vec3 r = norm * 2.0 * dot(norm, v) - v;
+		env = vec2(0.5 + r.y * 0.5, 0.5 - r.z * 0.5);
+	}
+	if (uTcGen == 3 || uFogAdj != 0) fog = fogTc(at, depth);
+	vTc = stageTc(uTcGen, uTcA, uTcB, uTurb, st, lm, env, fog, turbAt);
+	vTc2 = stageTc(uTcGen2, uTcA2, uTcB2, uTurb2, st, lm, env, fog, turbAt);
+	// ComputeColors: the engine too works the colour out for every vertex
+	vec4 c = uColor;
+	if (uRgbVertex == 2) c.rgb *= 1.0 - color.rgb; else if (uRgbVertex != 0) c.rgb *= color.rgb;
+	if (uAlphaVertex == 1) c.a *= color.a;
+	else if (uAlphaVertex == 2) c.a *= 1.0 - color.a;
+	else if (uAlphaVertex == 3) {
+		// alphaGen lightingSpecular, as RB_CalcSpecularAlpha: how much of a light is mirrored into the eye, to
+		// the fourth power
+		float s = max(dot(norm * 2.0 * dot(norm, light) - light, v), 0.0);
+		c.a *= s * s * s * s;
+	} else if (uAlphaVertex == 4) {
+		// alphaGen portal: nothing at the eye, all of it from the range of the shader on
+		c.a *= clamp(distance(eye, pos) / uPortalRange, 0.0, 1.0);
+	}
+	// a stage that blends fades out in a fog instead of being fogged (RB_CalcModulateColorsByFog and its kin)
+	if (uFogAdj != 0) {
+		float clear = 1.0 - fogFactor(fog);
+		if (uFogAdj == 1) c.rgb *= clear; else if (uFogAdj == 2) c *= clear; else c.a *= clear;
+	}
+	vCol = c;
+	vDepth = depth;
+}`;
+
+// The fragment shader of both: the colour of the stage times its one or two images, the alpha test, and the fog
+// of the whole map, which the engine leaves to OpenGL (glFog in RB_IterateStagesGeneric).
+const STAGE_FS = `#version 300 es
+precision highp float;
+in vec2 vTc; in vec2 vTc2; in vec4 vCol; in float vDepth;
+uniform sampler2D uTex; uniform sampler2D uTex2;
+uniform int uMulti;	// 0 one image, 1 two multiplied, 2 two added (the stages CollapseMultitexture made one of)
+uniform vec4 uFog;	// what the colour fades to, and how: 0 no fog, 1 GL_EXP2, 2 GL_LINEAR
+uniform vec2 uFogParm;	// GL_EXP2: the density. GL_LINEAR: where it ends and one over its length
+uniform int uAlphaFunc;	// 1 GT0, 2 LT128, 3 GE128, 4 GE192
+out vec4 o;
+void main() {
+	vec4 c = vCol * texture(uTex, vTc);
+	if (uMulti == 1) c *= texture(uTex2, vTc2);
+	else if (uMulti == 2) { vec4 t = texture(uTex2, vTc2); c = vec4(min(c.rgb + t.rgb, 1.0), c.a * t.a); }
+	if (uAlphaFunc == 1 && c.a <= 0.0) discard;
+	if (uAlphaFunc == 2 && c.a >= 0.5) discard;
+	if (uAlphaFunc == 3 && c.a < 0.5) discard;
+	if (uAlphaFunc == 4 && c.a < 0.75) discard;
+	if (uFog.a > 0.5) {
+		float d = uFogParm.x * vDepth;
+		c.rgb = mix(uFog.rgb, c.rgb, uFog.a > 1.5 ? clamp((uFogParm.x - vDepth) * uFogParm.y, 0.0, 1.0) : exp(-d * d));
+	}
+	o = c;
+}`;
+
 const stageProg = compile(`#version 300 es
 layout(location=0) in vec3 aPos; layout(location=1) in vec2 aSt; layout(location=2) in vec2 aLm; layout(location=3) in vec4 aCol; layout(location=4) in vec3 aNorm;
 uniform mat4 uMvp; uniform vec3 uEye;
-uniform int uTcGen;		// 0 the texture coordinates, 1 the ones of the lightmap, 2 the environment
-uniform vec3 uTcA; uniform vec3 uTcB;	// the tcMods of the stage as one matrix
-uniform vec2 uTurb;		// tcMod turb: how far, and where in its wave it is
-uniform mediump int uAlphaVertex;	// the precision the fragment shader has for it: it is in both
 ${DEFORM_GLSL}
+${STAGE_VS_GLSL}
 // deformVertexes autosprite (1) and autosprite2 (2): a quad that turns to the viewer. Its vertices come as the
 // middle it turns around, and aLm says how far from it they are (see buildSprites).
 uniform int uSprite; uniform vec3 uViewLeft; uniform vec3 uViewUp; uniform vec3 uViewFwd;
-out vec2 vTc; out vec4 vCol; out float vSpec; out float vDepth;
 void main() {
 	vec3 pos = aPos, norm = aNorm;
 	if (uSprite == 1) { pos += uViewLeft * aLm.x + uViewUp * aLm.y; norm = -uViewFwd; }
 	else if (uSprite == 2) { pos += normalize(cross(aNorm, uViewFwd)) * aLm.x; norm = -uViewFwd; }
 	pos = deformed(pos, norm, aSt);
-	// alphaGen lightingSpecular, as RB_CalcSpecularAlpha: how much of a light is mirrored into the eye, to the
-	// fourth power. For the map the engine has one light at a fixed place.
-	vSpec = 1.0;
-	if (uAlphaVertex == 3) {
-		vec3 l = normalize(vec3(-960.0, 1980.0, 96.0) - pos);
-		float s = max(dot(norm * 2.0 * dot(norm, l) - l, normalize(uEye - pos)), 0.0);
-		vSpec = s * s * s * s;
-	}
-	vec2 tc = aSt;
-	if (uTcGen == 1) tc = aLm;
-	else if (uTcGen == 2) {
-		vec3 v = normalize(uEye - pos);
-		vec3 r = norm * 2.0 * dot(norm, v) - v;
-		tc = vec2(0.5 + r.y * 0.5, 0.5 - r.z * 0.5);
-	}
-	if (uTurb.x != 0.0) {
-		tc.x += sin(((pos.x + pos.z) * 0.0009765625 + uTurb.y) * 6.2831853) * uTurb.x;
-		tc.y += sin((pos.y * 0.0009765625 + uTurb.y) * 6.2831853) * uTurb.x;
-	}
-	vTc = vec2(dot(uTcA.xy, tc) + uTcA.z, dot(uTcB.xy, tc) + uTcB.z);
-	vCol = aCol;
 	gl_Position = uMvp * vec4(pos, 1.0);
-	vDepth = gl_Position.w;	// how far in front of the eye
-}`,
-`#version 300 es
-precision mediump float;
-in vec2 vTc; in vec4 vCol; in float vSpec; in float vDepth;
-uniform sampler2D uTex; uniform vec4 uColor;
-uniform vec4 uFog;	// the fog of the whole map: what the colour fades to, and how thick it is. 0: none
-uniform int uRgbVertex; uniform int uAlphaVertex;	// 1 times the colour of the vertex, 2 times one minus it, 3 the shine
-uniform int uAlphaFunc;	// 1 GT0, 2 LT128, 3 GE128, 4 GE192
-out vec4 o;
-void main() {
-	vec4 c = uColor;
-	if (uRgbVertex == 1) c.rgb *= vCol.rgb; else if (uRgbVertex == 2) c.rgb *= 1.0 - vCol.rgb;
-	if (uAlphaVertex == 1) c.a *= vCol.a; else if (uAlphaVertex == 2) c.a *= 1.0 - vCol.a; else if (uAlphaVertex == 3) c.a *= vSpec;
-	c *= texture(uTex, vTc);
-	if (uAlphaFunc == 1 && c.a <= 0.0) discard;
-	if (uAlphaFunc == 2 && c.a >= 0.5) discard;
-	if (uAlphaFunc == 3 && c.a < 0.5) discard;
-	if (uAlphaFunc == 4 && c.a < 0.75) discard;
-	// as the fog of OpenGL with GL_EXP2, which the engine uses for it
-	if (uFog.a > 0.0) { float f = uFog.a * vDepth; c.rgb = mix(uFog.rgb, c.rgb, exp(-f * f)); }
-	o = c;
-}`);
+	// for the shine of the map the engine has one light at a fixed place
+	stageVertex(pos, norm, uEye, aSt, aLm, aCol, pos, pos, normalize(vec3(-960.0, 1980.0, 96.0) - pos), gl_Position.w);
+}`, STAGE_FS);
 
-// The same stages on a model: its vertices are placed by a matrix, it has no colours and no lightmap of its own,
-// and where a stage asks for the light of the place (rgbGen lightingDiffuse, and every model without a script)
-// it gets the light the page gives its models. The environment is worked out in the space of the model, as
-// the engine does it.
+// The same stages on a model: its vertices are placed by a matrix, it has no lightmap of its own, and what a
+// vertex brings to the colour of a stage is the light the page gives its models, where a stage asks for the
+// light of the place (rgbGen lightingDiffuse, and every model without a script). The environment is worked out
+// in the space of the model, as the engine does it.
 const modelStageProg = compile(`#version 300 es
 layout(location=0) in vec3 aPos; layout(location=1) in vec3 aNorm; layout(location=2) in vec2 aUv;
 uniform mat4 uMvp; uniform mat4 uModel; uniform vec3 uEyeLocal;
 uniform vec3 uAmbient; uniform vec3 uDirected; uniform vec3 uLightDir;	// the light of the place, and where it comes from
-uniform int uTcGen; uniform vec3 uTcA; uniform vec3 uTcB; uniform vec2 uTurb;
-uniform mediump int uAlphaVertex;	// the precision the fragment shader has for it: it is in both
 ${DEFORM_GLSL}
-out vec2 vTc; out vec3 vLight; out float vSpec; out float vDepth;
+${STAGE_VS_GLSL}
 void main() {
 	vec3 pos = deformed(aPos, aNorm, aUv);
 	vec4 world = uModel * vec4(pos, 1.0);
-	// alphaGen lightingSpecular: for a model the light of the place is the one that is mirrored
-	vSpec = 1.0;
-	if (uAlphaVertex == 3) {
-		vec3 l = normalize(transpose(mat3(uModel)) * uLightDir);
-		float s = max(dot(aNorm * 2.0 * dot(aNorm, l) - l, normalize(uEyeLocal - pos)), 0.0);
-		vSpec = s * s * s * s;
-	}
-	vec2 tc = aUv;
-	if (uTcGen == 2) {
-		vec3 v = normalize(uEyeLocal - pos);
-		vec3 r = aNorm * 2.0 * dot(aNorm, v) - v;
-		tc = vec2(0.5 + r.y * 0.5, 0.5 - r.z * 0.5);
-	}
-	if (uTurb.x != 0.0) {
-		tc.x += sin(((world.x + world.z) * 0.0009765625 + uTurb.y) * 6.2831853) * uTurb.x;
-		tc.y += sin((world.y * 0.0009765625 + uTurb.y) * 6.2831853) * uTurb.x;
-	}
-	vTc = vec2(dot(uTcA.xy, tc) + uTcA.z, dot(uTcB.xy, tc) + uTcB.z);
-	// as RB_CalcDiffuseColor: the ambient light, and the directed one by how much the surface faces it
-	vLight = min(uAmbient + max(dot(normalize(mat3(uModel) * aNorm), uLightDir), 0.0) * uDirected, vec3(1.0));
 	gl_Position = uMvp * world;
-	vDepth = gl_Position.w;
-}`,
-`#version 300 es
-precision mediump float;
-in vec2 vTc; in vec3 vLight; in float vSpec; in float vDepth;
-uniform sampler2D uTex; uniform vec4 uColor;
-uniform vec4 uFog;
-uniform int uRgbVertex;	// 3: times the light of the place
-uniform int uAlphaVertex;	// 3: times the shine
-uniform int uAlphaFunc;
-out vec4 o;
-void main() {
-	vec4 c = uColor;
-	if (uRgbVertex == 3) c.rgb *= vLight;
-	if (uAlphaVertex == 3) c.a *= vSpec;
-	c *= texture(uTex, vTc);
-	if (uAlphaFunc == 1 && c.a <= 0.0) discard;
-	if (uAlphaFunc == 2 && c.a >= 0.5) discard;
-	if (uAlphaFunc == 3 && c.a < 0.5) discard;
-	if (uAlphaFunc == 4 && c.a < 0.75) discard;
-	if (uFog.a > 0.0) { float f = uFog.a * vDepth; c.rgb = mix(uFog.rgb, c.rgb, exp(-f * f)); }
-	o = c;
-}`);
+	// as RB_CalcDiffuseColor: the ambient light, and the directed one by how much the surface faces it
+	vec3 lit = min(uAmbient + max(dot(mat3(uModel) * aNorm, uLightDir), 0.0) * uDirected, vec3(1.0));
+	// alphaGen lightingSpecular: for a model the light of the place is the one that is mirrored
+	stageVertex(pos, aNorm, uEyeLocal, aUv, vec2(0.0), vec4(lit, 1.0), world.xyz, world.xyz, normalize(transpose(mat3(uModel)) * uLightDir), gl_Position.w);
+}`, STAGE_FS);
 
-// The fog of a brush (RB_FogPass): the surfaces in it are drawn once more in the colour of the fog, the thicker
-// the further the line of sight runs through it. uPlane is the side the fog ends at, looking into it: what
-// counts is how far behind it a place is (vT), and where the eye is (uEyeT, below zero outside of the fog).
-const fogProg = compile(`#version 300 es
-layout(location=0) in vec3 aPos;
-uniform mat4 uMvp; uniform vec4 uPlane; uniform float uScale;
-out float vS; out float vT;
-void main() {
-	gl_Position = uMvp * vec4(aPos, 1.0);
-	vS = gl_Position.w * uScale;
-	vT = dot(aPos, uPlane.xyz) - uPlane.w;
-}`,
-`#version 300 es
-precision mediump float;
-in float vS; in float vT;
-uniform vec3 uColor; uniform float uEyeT;
-out vec4 o;
-void main() {
-	// the part of the way to the eye that is in the fog
-	float part = uEyeT < 0.0 ? (vT < 1.0 ? 0.0 : vT / (vT - uEyeT)) : (vT < 0.0 ? 0.0 : 1.0);
-	o = vec4(uColor, sqrt(clamp(vS * part, 0.0, 1.0)));
-}`);
-
+// the second image of a stage is on the second unit
+for (const prog of [stageProg, modelStageProg]) {
+	gl.useProgram(prog.p);
+	gl.uniform1i(prog.u.uTex2, 1);
+}

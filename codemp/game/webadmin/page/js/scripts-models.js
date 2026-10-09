@@ -57,6 +57,7 @@ function gridLight(pos, out = lightNow) {
 const NO_DEFORM = { deforms: [] };
 const lateModels = [];
 let deferLate = false;		// true from the start of a frame of the administration until its late part is drawn
+let lateSorted = true;
 
 function modelPlace(place, light) {
 	const u = modelStageProg.u, at = M4.transform(M4.invert(place), eye);
@@ -71,11 +72,12 @@ function modelPassBegin() {
 	gl.useProgram(modelStageProg.p);
 	gl.uniformMatrix4fv(modelStageProg.u.uMvp, false, viewProj);
 	gl.uniform1i(modelStageProg.u.uTex, 0);
-	gl.activeTexture(gl.TEXTURE0);
 	gl.colorMask(true, true, true, false);
+	stageBegin(modelStageProg, fogShown() && world ? world.globalFog : null);
 }
 
 function modelPassEnd() {
+	stEntity[0] = stEntity[1] = stEntity[2] = stEntity[3] = 1;
 	gl.disable(gl.CULL_FACE);
 	gl.disable(gl.BLEND);
 	gl.depthMask(true);
@@ -83,51 +85,85 @@ function modelPassEnd() {
 	gl.colorMask(true, true, true, true);
 }
 
-function drawModelMesh(mesh, mat, t, globalFog) {
+// How far the vertices of a model reach from its origin, read back from its meshes once. Until they have any
+// (a model whose bones were never set) it is asked again.
+function meshRadius(meshes) {
+	if (meshes.radius) return meshes.radius;
+	let far = 0;
+	for (const mesh of meshes) {
+		gl.bindVertexArray(mesh.vao);
+		const stride = gl.getVertexAttrib(0, gl.VERTEX_ATTRIB_ARRAY_STRIDE) || 12, first = gl.getVertexAttribOffset(0, gl.VERTEX_ATTRIB_ARRAY_POINTER);
+		gl.bindBuffer(gl.ARRAY_BUFFER, gl.getVertexAttrib(0, gl.VERTEX_ATTRIB_ARRAY_BUFFER_BINDING));
+		const pos = new Float32Array(gl.getBufferParameter(gl.ARRAY_BUFFER, gl.BUFFER_SIZE) >> 2);
+		gl.getBufferSubData(gl.ARRAY_BUFFER, 0, pos);
+		for (let i = first >> 2; i + 2 < pos.length; i += stride >> 2) far = Math.max(far, pos[i] * pos[i] + pos[i + 1] * pos[i + 1] + pos[i + 2] * pos[i + 2]);
+	}
+	gl.bindVertexArray(null);
+	return meshes.radius = Math.sqrt(far);
+}
+
+// fog: the fog the model is in, as the map has it for its surfaces
+function drawModelMesh(mesh, mat, t, fog) {
 	setCull(mat.cull);
 	setDeform(modelStageProg, mat, t);
 	if (mat.polygonOffset) { gl.enable(gl.POLYGON_OFFSET_FILL); gl.polygonOffset(-1, -2); }
-	const fog = globalFog && mat.sort <= SC_SORT_SEE_THROUGH && !mat.noFog ? globalFog : null;
 	for (const st of mat.stages) drawStage(st, t, null, mesh.vao, mesh.count, gl.UNSIGNED_INT, 0, modelStageProg, fog);
+	// the fog of a brush, drawn onto it as onto the map (RB_FogPass)
+	if (fog && !fog.global && mat.fogPass) drawStage(fog.pass[mat.fogPass - 1], t, null, mesh.vao, mesh.count, gl.UNSIGNED_INT, 0, modelStageProg, fog);
 	if (mat.polygonOffset) gl.disable(gl.POLYGON_OFFSET_FILL);
 }
 
-function drawModelScripted(meshes, place) {
-	const t = performance.now() / 1000;
+// ent: what the game says of the entity that is drawn and the renderer uses, all of it optional. rgba is its
+// colour (shaderRGBA, 0 to 1) for the stages that ask for it, white without. radius is the ball around it that
+// says which fog it is in, as far as its vertices reach without.
+function drawModelScripted(meshes, place, ent) {
+	const t = performance.now() / 1000, at = [place[12], place[13], place[14]];
 	modelPassBegin();
-	const light = gridLight([place[12], place[13], place[14]]);
+	const light = gridLight(at);
 	modelPlace(place, light);
-	// a model is in the fog of the whole map like everything else, the fog of a brush is not drawn on models
-	const globalFog = fogShown() && world ? world.globalFog : null;
+	// The fog of the entity is the fog of all its surfaces: the first of the map its ball reaches into (fogAt).
+	// A place that scales the model scales the ball.
+	const fog = fogShown() && world && world.fogInfo.length
+		? fogAt(at, ent && ent.radius !== undefined ? ent.radius : meshRadius(meshes) * Math.hypot(place[0], place[1], place[2])) : null;
+	const rgba = (ent && ent.rgba) || null;
+	if (rgba) for (let i = 0; i < 4; i++) stEntity[i] = rgba[i];
 	let kept = null;
 	for (const mesh of meshes) {
 		const mat = mesh.mat || (mesh.mat = materialFor(mesh.shaderName || '', 'model'));
 		if (mat.nodraw) continue;
 		if (deferLate && mat.sort > SC_SORT_BANNER) {
 			// the place and the light are the ones of now: the next model changes both
-			if (!kept) kept = { place: place.slice(), light: { ambient: light.ambient.slice(), directed: light.directed.slice(), dir: light.dir.slice() } };
+			if (!kept) kept = { place: place.slice(), light: { ambient: light.ambient.slice(), directed: light.directed.slice(), dir: light.dir.slice() }, fog, rgba: rgba && rgba.slice() };
 			lateModels.push({ mesh, mat, at: kept, order: lateModels.length });
+			lateSorted = false;
 			continue;
 		}
-		drawModelMesh(mesh, mat, t, globalFog);
+		drawModelMesh(mesh, mat, t, fog);
 	}
 	modelPassEnd();
 }
 
-// Draws what waits in lateModels with a sort up to upTo, lowest sort first. True when something was drawn: the
-// program in use and the state of the blending are then those of a model.
-function drawLateModels(upTo) {
+// Draws what waits in lateModels and comes before a surface of the map with that sort and order of its shader
+// (prepareScripted): a lower sort, or the same sort and a shader that was registered before. The shaders of
+// models are registered after the ones of the map as far as the page knows, so among the same sort the map comes
+// first. True when something was drawn: the program in use and the state of the blending are then those of a model.
+function drawLateModels(sort, order = Infinity) {
 	if (!lateModels.length) return false;
-	lateModels.sort((a, b) => a.mat.sort - b.mat.sort || a.order - b.order);
+	if (!lateSorted) lateModels.sort((a, b) => a.mat.sort - b.mat.sort || a.mat.order - b.mat.order || a.order - b.order);
+	lateSorted = true;
 	let n = 0;
-	while (n < lateModels.length && lateModels[n].mat.sort <= upTo) n++;
+	while (n < lateModels.length && (lateModels[n].mat.sort < sort || (lateModels[n].mat.sort === sort && lateModels[n].mat.order < order))) n++;
 	if (!n) return false;
-	const t = performance.now() / 1000, globalFog = fogShown() && world ? world.globalFog : null;
+	const t = performance.now() / 1000;
 	modelPassBegin();
 	let at = null;
 	for (const m of lateModels.splice(0, n)) {
-		if (m.at !== at) { at = m.at; modelPlace(at.place, at.light); }
-		drawModelMesh(m.mesh, m.mat, t, globalFog);
+		if (m.at !== at) {
+			at = m.at;
+			modelPlace(at.place, at.light);
+			for (let i = 0; i < 4; i++) stEntity[i] = at.rgba ? at.rgba[i] : 1;
+		}
+		drawModelMesh(m.mesh, m.mat, t, at.fog);
 	}
 	modelPassEnd();
 	return true;

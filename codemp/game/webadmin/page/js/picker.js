@@ -97,7 +97,7 @@ function parseMd3(buf) {
 		for (let v = 0; v < nv; v++) {
 			const b = o + ofsXyz + v * 8;
 			pos[v * 3] = dv.getInt16(b, true) / 64; pos[v * 3 + 1] = dv.getInt16(b + 2, true) / 64; pos[v * 3 + 2] = dv.getInt16(b + 4, true) / 64;
-			const lat = dv.getUint8(b + 7) * Math.PI * 2 / 255, lng = dv.getUint8(b + 6) * Math.PI * 2 / 255;
+			const lat = dv.getUint8(b + 7) * Math.PI * 2 / 256, lng = dv.getUint8(b + 6) * Math.PI * 2 / 256;
 			norm[v * 3] = Math.cos(lat) * Math.sin(lng); norm[v * 3 + 1] = Math.sin(lat) * Math.sin(lng); norm[v * 3 + 2] = Math.cos(lng);
 			uv[v * 2] = dv.getFloat32(o + ofsSt + v * 8, true); uv[v * 2 + 1] = dv.getFloat32(o + ofsSt + v * 8 + 4, true);
 		}

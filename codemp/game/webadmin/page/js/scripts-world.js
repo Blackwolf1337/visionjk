@@ -1,6 +1,7 @@
 // the sky of the engine (tr_sky.cpp): a box around the eye, and the layers of clouds on a dome above it
 const SKY_SIDES = [[3, -1, 2], [-3, 1, 2], [1, 3, 2], [-1, -3, 2], [-2, -1, 3], [2, -1, -3]];
 const SKY_SUFFIX = ['rt', 'lf', 'bk', 'ft', 'up', 'dn'];
+// SKY_RADIUS: the radius of the world the clouds are laid around (R_InitSkyTexCoords), not the size of the box
 const SKY_CUTS = 8, SKY_RADIUS = 4096;
 
 function skyVec(s, t, side) {
@@ -22,13 +23,14 @@ function buildSky(name) {
 	if (!scripts.bodies.has(scKey(name))) return null;
 	const mat = materialFor(name, true);
 	if (!mat.sky && !mat.stages.length) return null;
+	// a box one unit to each side: how large it is drawn the far plane says (drawSky)
 	const N = SKY_CUTS, pos = [], st = [], cst = [], idx = [], height = mat.sky ? mat.sky.height : 512;
 	for (let side = 0; side < 6; side++) {
 		const base = pos.length / 3;
 		for (let j = 0; j <= N; j++) {
 			for (let i = 0; i <= N; i++) {
 				const s = i / N * 2 - 1, t = j / N * 2 - 1, v = skyVec(s, t, side);
-				pos.push(v[0] * SKY_RADIUS, v[1] * SKY_RADIUS, v[2] * SKY_RADIUS);
+				pos.push(v[0], v[1], v[2]);
 				st.push((s + 1) / 2, 1 - (t + 1) / 2);
 				cst.push(...cloudSt(v, height));
 			}
@@ -57,7 +59,8 @@ function buildSky(name) {
 		return vao;
 	};
 	return {
-		boxVao: side(st), cloudVao: side(cst), perSide: N * N * 6, stages: mat.stages,
+		// moves: its clouds scroll or pulse, so no two pictures of it are alike (drawWorldMask)
+		boxVao: side(st), cloudVao: side(cst), perSide: N * N * 6, stages: mat.stages, moves: matAnimates(mat),
 		box: mat.sky && mat.sky.box ? SKY_SUFFIX.map(suffix => Object.assign(newStage(), { maps: [mat.sky.box + '_' + suffix], clamp: true })) : null
 	};
 }
@@ -140,14 +143,120 @@ function buildSprites(b, kind) {
 	return { vao, count: idx.length };
 }
 
-// the batches of the map in the order and with the stages the game draws them
+// ---- the fogs of a map
+
+// a key of the worldspawn, in large or small letters, '' without it
+function worldKey(w, key) {
+	const first = /\{([^}]*)\}/.exec(w.entityText || ''), k = first && new RegExp('"' + key + '"\\s+"([^"]*)"', 'i').exec(first[1]);
+	return k ? k[1] : '';
+}
+
+// The brush a fog fills. The map file names it, and so does the page where js/bsp.js keeps that number (f.brush).
+// Where it does not: the first brush with the shader of the fog and the side the fog ends at that no fog before
+// it took. -1: none.
+function fogBrush(w, f, taken) {
+	if (f.brush !== undefined) return f.brush;
+	const B = w.brushes, P = B.planes, n = f.plane, any = !n.some(v => v !== 0);
+	for (let i = 0; i * 3 + 2 < B.brushes.length; i++) {
+		const sh = w.shaders[B.brushes[i * 3 + 2]];
+		if (taken.has(i) || !sh || sh.name !== f.shader) continue;
+		for (let s = B.brushes[i * 3], end = s + B.brushes[i * 3 + 1]; s < end; s++) {
+			const p = B.sides[s * 3] * 4;
+			if (any || (P[p] === -n[0] && P[p + 1] === -n[1] && P[p + 2] === -n[2] && P[p + 3] === -n[3])) { taken.add(i); return i; }
+		}
+	}
+	return -1;
+}
+
+// the pass that draws the fog of a brush onto a surface (RB_FogPass): the image of the fog in its colour, blended
+// by how thick the fog is there, where the surface was drawn (equal) or over what is behind it
+function fogPassStage(color, equal) {
+	return Object.assign(newStage(), { tex: fogTex, tcGen: 3, blend: [gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA], depthWrite: false, depthEqual: equal, rgbGen: CGEN.const, rgbConst: color });
+}
+
+// The fogs of the map as R_LoadFogs sets them up: colour and depth from the script of their shader, the box of
+// the brush they fill (the whole map without one), and the side they end at.
+const WORLD_MAX = 65536, FOG_EXP2 = Math.sqrt(-Math.log(1 / 255));
+function prepareFogs(w) {
+	const taken = new Set(), B = w.brushes, P = B.planes;
+	w.globalFog = null;
+	w.fogInfo = w.fogs.map(f => {
+		// a shader without fogParms: the engine takes a red fog, 250 deep
+		const parms = materialFor(f.shader, 'model').fog || { color: [1, 0, 0], depth: 250 };
+		const info = { shader: f.shader, global: false, color: parms.color, depth: parms.depth, tcScale: 1 / (Math.max(1, parms.depth) * 8), plane: f.plane,
+			mins: [-WORLD_MAX, -WORLD_MAX, -WORLD_MAX], maxs: [WORLD_MAX, WORLD_MAX, WORLD_MAX], mode: 0, parm: new Float32Array(2), pass: null };
+		// the colour of the pass is the one of the fog cut down to bytes (ColorBytes4)
+		const bytes = parms.color.map(c => Math.floor(c * 255) / 255);
+		info.pass = [fogPassStage(bytes, true), fogPassStage(bytes, false)];
+		if (f.global) {
+			// the last one of the file is the fog of the whole map (worldData.globalFog)
+			if (w.globalFog) w.globalFog.global = false;
+			info.global = true;
+			w.globalFog = info;
+		} else {
+			// a brush has its six sides along the axes first
+			const brush = fogBrush(w, f, taken), first = brush >= 0 ? B.brushes[brush * 3] : -1;
+			if (first >= 0 && (first + 5) * 3 < B.sides.length) {
+				for (let i = 0; i < 3; i++) {
+					info.mins[i] = -P[B.sides[(first + i * 2) * 3] * 4 + 3];
+					info.maxs[i] = P[B.sides[(first + i * 2 + 1) * 3] * 4 + 3];
+				}
+			}
+		}
+		return info;
+	});
+	const g = w.globalFog;
+	if (!g) return;
+	// The fog of the whole map is the fog of OpenGL (RB_IterateStagesGeneric). GL_EXP2, as thick as leaves 1/255
+	// of a colour at the depth of the fog. With "fogstart" in the worldspawn the client game asks for a fog in a
+	// range (cg_linearFogOverride, RE_SetRangedFog): GL_LINEAR from there to the distance the map is culled at.
+	const start = parseFloat(worldKey(w, 'fogstart')) || 0, cull = parseFloat(worldKey(w, 'distancecull')), end = isFinite(cull) ? cull : 6000;
+	if (!start) {
+		g.mode = 1;
+		g.parm[0] = FOG_EXP2 / g.depth;
+	} else {
+		// below zero it is the range the scope of a rifle asks for: from the depth of the fog, or nearer where
+		// that leaves less than the range before the end
+		const from = start > 0 ? start : end - g.depth < -start ? Math.max(16, end + start) : g.depth;
+		g.mode = 2;
+		g.parm[0] = end;
+		g.parm[1] = 1 / (end - from);
+	}
+}
+
+// The fog an entity is in (R_ComputeFogNum, R_GComputeFogNum, R_SpriteFogNum): the first one of the map whose box
+// the ball around it reaches into. The fog of the whole map has a box around everything. null: none.
+function fogAt(origin, radius) {
+	for (const f of world.fogInfo) {
+		// the fog of the whole map can be taken away for a view (a sky portal with "onlyfoghere")
+		if (f.global && f !== world.globalFog) continue;
+		let j = 0;
+		for (; j < 3; j++) if (origin[j] - radius >= f.maxs[j] || origin[j] + radius <= f.mins[j]) break;
+		if (j === 3) return f;
+	}
+	return null;
+}
+
+// The batches of the map in the order and with the stages the game draws them.
+// The order (R_AddDrawSurf, the sort key): the sort of the shader, then the order in which the shaders were
+// registered, then the entity (a brush model that is one before the map itself), then the fog. A shader of the
+// engine is a name with a lightmap, registered when the first surface that has both is loaded (R_LoadSurfaces),
+// and the batches of the map are in the order of their first surface: so that order is the place of the first
+// batch with the same name and lightmap. Not known here: the number the game gives an entity, the brush models
+// are taken in the order of the map file.
 function prepareScripted(w) {
 	if (scripts.state !== 2 || !w) return;
-	const list = [];
+	prepareFogs(w);
+	const list = [], first = new Map();
 	w.batches.forEach((b, i) => {
-		const mat = materialFor(b.shaderName, !!b.lm);
-		if (mat.nodraw || !mat.stages.length) return;
-		const e = { b, mat, i, vao: b.vao, count: b.count, sprite: 0 };
+		let byLm = first.get(b.shaderName);
+		if (!byLm) first.set(b.shaderName, byLm = new Map());
+		if (!byLm.has(b.lm)) byLm.set(b.lm, i);
+		const mat = materialFor(b.shaderName, !!b.lm), order = byLm.get(b.lm), fog = (b.fog >= 0 && w.fogInfo[b.fog]) || null;
+		if (mat.order > order) mat.order = order;
+		// a shader without stages is still drawn where it is the surface of a fog: as that fog (SS_FOG)
+		if (mat.nodraw || (!mat.stages.length && !(mat.fogPass && fog && !fog.global))) return;
+		const e = { b, mat, i, order, fog, vao: b.vao, count: b.count, sprite: 0 };
 		const kind = mat.deforms.some(d => d.kind === 'autosprite') ? 1 : mat.deforms.some(d => d.kind === 'autosprite2') ? 2 : 0;
 		if (kind) {
 			if (b.sprites === undefined) b.sprites = buildSprites(b, kind);
@@ -155,25 +264,11 @@ function prepareScripted(w) {
 		}
 		list.push(e);
 	});
-	list.sort((x, y) => x.mat.sort - y.mat.sort || x.i - y.i);
-	// The fogs of the map, from the scripts of their shaders. exp2: sqrt( -ln( 1 / 255 ) ) over the depth, the
-	// thickness the engine gives OpenGL for the fog of the whole map.
-	w.fogInfo = w.fogs.map(f => {
-		const fog = scripts.bodies.has(scKey(f.shader)) ? materialFor(f.shader, true).fog : null;
-		return fog ? { color: fog.color, exp2: 2.354 / fog.depth, scale: 1 / fog.depth, global: f.global, plane: f.plane } : null;
-	});
-	w.globalFog = w.fogInfo.find(f => f && f.global) || null;
-	// only what is solid enough is fogged (a sort up to see-through), as the engine decides it
-	for (const e of list) e.fog = e.b.fog >= 0 && e.mat.sort <= SC_SORT_SEE_THROUGH && !e.mat.noFog ? w.fogInfo[e.b.fog] || null : null;
+	list.sort((x, y) => x.mat.sort - y.mat.sort || x.order - y.order || !x.b.model - !y.b.model || x.b.model - y.b.model || x.b.fog - y.b.fog || x.i - y.i);
 	w.skyDraw = w.sky ? buildSky(w.sky) : null;
 	w.scripted = list;
 }
 
-const stTcA = new Float32Array(3), stTcB = new Float32Array(3), stTurb = new Float32Array(2), stColor = new Float32Array(4);
-
-// Which side of a surface is drawn (GL_Cull in tr_backend.cpp): 0 the front, 1 the back, 2 both. The front of a
-// triangle of the game is the side its corners run clockwise on. Seen from outside, a room is open that way:
-// its walls and its ceiling face inwards.
 const WAVE_FUNC = { sin: 1, triangle: 2, square: 3, sawtooth: 4, inversesawtooth: 5 };
 const dfWave = new Float32Array(4), dfBulge = new Float32Array(4), dfMove = new Float32Array(3);
 
@@ -211,20 +306,30 @@ function cameraAxes() {
 	return { fwd: from(at(0, 0, -1), at(0, 0, 1)), left: from(o, at(-1, 0, 0)), up: from(o, at(0, 1, 0)) };
 }
 
+// How far away the far plane of the camera is, from its matrix: the row of the depth is a times the row below
+// it, which is the depth before the planes come into it, plus b, and the far plane is at b / (a + 1).
+function cameraFar() {
+	const m = viewProj, a = -(m[2] * m[3] + m[6] * m[7] + m[10] * m[11]) / (m[3] * m[3] + m[7] * m[7] + m[11] * m[11]);
+	return (m[14] + a * m[15]) / (a + 1);
+}
+
 // ---- for the comparison with the game: what of the map animates on its own
 
 // A shader that looks different from one moment to the next whatever the view: images that scroll, turn or
 // change, colours that follow a wave, vertices that move, the clouds of a sky. The picture of the page and the
 // one of the game are never taken at the very same time, so these surfaces are left out of the comparison.
+const stageAnimates = st => st.maps.length > 1 || st.rgbGen === CGEN.wave || st.alphaGen === AGEN.wave || st.tcMods.some(m => m.kind !== 'scale' && m.kind !== 'transform');
 function matAnimates(mat) {
-	return mat.deforms.length > 0 || mat.stages.some(st => st.maps.length > 1 || !!(st.rgb && st.rgb.wave) || !!(st.alpha && st.alpha.wave)
-		|| (st.tcMods || []).some(m => m.kind !== 'scale' && m.kind !== 'transform'));
+	return mat.deforms.length > 0 || mat.stages.some(stageAnimates);
 }
 let refMasking = false;
 function refMask(on) { refMasking = !!on; }
 // the map in two colours: white where what is drawn animates, black where it does not
 function drawWorldMask(now) {
-	gl.clearColor(0, 0, 0, 1);
+	// Where nothing of the map is drawn the sky shows: left out where its clouds move, compared where it is a
+	// box of images or nothing at all.
+	const sky = world.skyDraw && world.skyDraw.moves ? 1 : 0;
+	gl.clearColor(sky, sky, sky, 1);
 	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 	gl.enable(gl.DEPTH_TEST);
 	gl.disable(gl.BLEND);
@@ -260,6 +365,9 @@ function drawWorldMask(now) {
 
 // A sky portal was drawn for this frame (drawSkyPortal in js/world-ents.js): the sky of the map is left as it is.
 let skyPortalOn = false;
+// Which side of a surface is drawn (GL_Cull in tr_backend.cpp): 0 the front, 1 the back, 2 both. The front of a
+// triangle of the game is the side its corners run clockwise on. Seen from outside, a room is open that way:
+// its walls and its ceiling face inwards.
 let cullSides = true;
 function setCull(side) {
 	if (side === 2 || !cullSides) { gl.disable(gl.CULL_FACE); return; }
@@ -268,31 +376,36 @@ function setCull(side) {
 	gl.cullFace(side === 1 ? gl.FRONT : gl.BACK);
 }
 
+// ---- a stage drawn
+
 const FOG_BLACK = [0, 0, 0], FOG_WHITE = [1, 1, 1];
+const stTcA = new Float32Array(3), stTcB = new Float32Array(3), stTurb = new Float32Array(2), stFogPlane = new Float32Array(4);
+// The colour of the entity that is drawn (shaderRGBA), for rgbGen entity and alphaGen entity: white unless the
+// one who draws says otherwise (drawModelScripted).
+const stEntity = [1, 1, 1, 1], NO_ENTITY = [0, 0, 0, 0];
+// The map itself is drawn. Its entity is the world of the engine (tr.worldEntity), which has no colour and no
+// light of a place: what asks for either is black there, as in the game.
+let stWorld = false;
+// where the brush model that is drawn stands (its matrix), null for the map as the file has it
+let stPlace = null;
 
 // the images a stage names, asked for the first time they are wanted
 const stageImages = st => st.images || (st.images = st.maps.map(name => gameImage(name, st.clamp)));
 
-function drawStage(st, t, lm, vao, count, type, offset, prog = stageProg, fog = null) {
-	let tex;
-	if (st.lightmap) {
-		tex = lm || whiteTex;
-	} else if (st.white) {
-		tex = whiteTex;
-	} else {
-		const images = stageImages(st), n = images.length, frame = Math.floor(t * st.animFreq);
-		if (!n) return;
-		const h = images[n < 2 ? 0 : st.oneShot ? Math.min(n - 1, Math.max(0, frame)) : ((frame % n) + n) % n];
-		// an image that is not there, or not yet: grey where it covers something, nothing where it would lie over it
-		if (!h.ready && st.blend) return;
-		tex = h.tex;
-	}
+// The image a stage shows at the time t. null: it has none, or it is not there (yet) and the stage would lie over
+// what is drawn (blended): grey where it covers something, nothing where it would lie over it.
+function stageTexture(st, t, lm, blended) {
+	if (st.lightmap) return lm || whiteTex;
+	if (st.white) return whiteTex;
+	if (st.tex) return st.tex;
+	const images = stageImages(st), n = images.length, frame = Math.floor(t * st.animFreq);
+	if (!n) return null;
+	const h = images[n < 2 ? 0 : st.oneShot ? Math.min(n - 1, Math.max(0, frame)) : ((frame % n) + n) % n];
+	return !h.ready && blended ? null : h.tex;
+}
 
-	if (st.blend) { gl.enable(gl.BLEND); gl.blendFunc(st.blend[0], st.blend[1]); } else gl.disable(gl.BLEND);
-	gl.depthMask(st.depthWrite);
-	gl.depthFunc(st.depthEqual ? gl.EQUAL : gl.LEQUAL);
-
-	// the tcMods, each applied to what the ones before it made
+// the tcMods of a stage at the time t as one matrix, each applied to what the ones before it made
+function stageTcMods(st, t) {
 	let a = 1, b = 0, c = 0, d = 0, e = 1, f = 0;
 	stTurb[0] = 0;
 	for (const m of st.tcMods) {
@@ -307,55 +420,147 @@ function drawStage(st, t, lm, vao, count, type, offset, prog = stageProg, fog = 
 		[a, b, c, d, e, f] = [k[0] * a + k[1] * d, k[0] * b + k[1] * e, k[0] * c + k[1] * f + k[2], k[3] * a + k[4] * d, k[3] * b + k[4] * e, k[3] * c + k[4] * f + k[5]];
 	}
 	stTcA[0] = a; stTcA[1] = b; stTcA[2] = c; stTcB[0] = d; stTcB[1] = e; stTcB[2] = f;
-
-	stColor[0] = stColor[1] = stColor[2] = stColor[3] = 1;
-	if (st.rgb && st.rgb.wave) stColor[0] = stColor[1] = stColor[2] = Math.min(1, Math.max(0, waveValue(st.rgb.wave, t)));
-	else if (st.rgb && st.rgb.value) { stColor[0] = st.rgb.value[0]; stColor[1] = st.rgb.value[1]; stColor[2] = st.rgb.value[2]; }
-	if (st.alpha && st.alpha.wave) stColor[3] = Math.min(1, Math.max(0, waveValue(st.alpha.wave, t)));
-	else if (st.alpha && st.alpha.value !== undefined) stColor[3] = st.alpha.value;
-
-	const u = prog.u;
-	gl.uniform1i(u.uTcGen, st.tcGen);
-	gl.uniform3fv(u.uTcA, stTcA);
-	gl.uniform3fv(u.uTcB, stTcB);
-	gl.uniform2fv(u.uTurb, stTurb);
-	gl.uniform4fv(u.uColor, stColor);
-	gl.uniform1i(u.uRgbVertex, st.rgb && st.rgb.vertex ? st.rgb.vertex : st.rgb && st.rgb.diffuse ? 3 : 0);
-	// rgbGen vertex brings the alpha of the vertex along unless the stage says what its alpha is
-	gl.uniform1i(u.uAlphaVertex, st.alpha ? (st.alpha.vertex || 0) : (st.rgb && st.rgb.vertex === 1 && !st.rgb.exact ? 1 : 0));
-	gl.uniform1i(u.uAlphaFunc, st.alphaFunc);
-	if (fog) {
-		// What a stage adds fades to black in the fog and what it multiplies with to white, so that what is under
-		// it stays the colour of the fog. The engine has the two overrides for the same reason.
-		const b = st.blend;
-		const to = b && b[1] === gl.ONE ? FOG_BLACK : b && ((b[0] === gl.DST_COLOR && b[1] === gl.ZERO) || (b[0] === gl.ZERO && b[1] === gl.SRC_COLOR)) ? FOG_WHITE : fog.color;
-		gl.uniform4f(u.uFog, to[0], to[1], to[2], fog.exp2);
-	} else {
-		gl.uniform4f(u.uFog, 0, 0, 0, 0);
-	}
-	gl.bindTexture(gl.TEXTURE_2D, tex);
-	gl.bindVertexArray(vao);
-	gl.drawElements(gl.TRIANGLES, count, type, offset);
 }
 
-function drawSky(sky, t) {
-	// around the eye wherever it is, behind everything
-	const at = new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, eye[0], eye[1], eye[2], 1]);
-	gl.uniformMatrix4fv(stageProg.u.uMvp, false, M4.mul(viewProj, at));
+// What a program was last sent of the uniforms of a stage. One stage is mostly like the one before it, and a
+// uniform is only sent when it changes.
+const stageSet = prog => prog.set || (prog.set = { color: [-1, 0, 0, 0] });
+function stageInt(prog, name, v) {
+	if (prog.set[name] !== v) { prog.set[name] = v; gl.uniform1i(prog.u[name], v); }
+}
+
+// What a program needs before the stages of a view are drawn with it: how thick the fog of the whole map is, and
+// an image on the second unit also where no stage has two.
+function stageBegin(prog, globalFog) {
+	stageSet(prog);
+	if (globalFog) gl.uniform2fv(prog.u.uFogParm, globalFog.parm);
+	gl.activeTexture(gl.TEXTURE1);
+	gl.bindTexture(gl.TEXTURE_2D, whiteTex);
+	gl.activeTexture(gl.TEXTURE0);
+}
+
+// Where the fog of a brush is, for the vertex shader (RB_CalcFogTexCoords): the side it ends at and how far
+// behind that side the eye is. For a brush model that an entity moved the side is turned into its space.
+function stageFogPlane(prog, fog) {
+	const set = prog.set, place = prog === stageProg ? stPlace : null, n = fog.plane;
+	if (set.fog === fog && set.fogPlace === place && set.fogX === eye[0] && set.fogY === eye[1] && set.fogZ === eye[2]) return;
+	set.fog = fog; set.fogPlace = place; set.fogX = eye[0]; set.fogY = eye[1]; set.fogZ = eye[2];
+	if (place) {
+		const m = place;
+		stFogPlane[0] = m[0] * n[0] + m[1] * n[1] + m[2] * n[2];
+		stFogPlane[1] = m[4] * n[0] + m[5] * n[1] + m[6] * n[2];
+		stFogPlane[2] = m[8] * n[0] + m[9] * n[1] + m[10] * n[2];
+		stFogPlane[3] = n[3] - (m[12] * n[0] + m[13] * n[1] + m[14] * n[2]);
+	} else {
+		stFogPlane.set(n);
+	}
+	gl.uniform4fv(prog.u.uFogPlane, stFogPlane);
+	gl.uniform2f(prog.u.uFogSt, fog.tcScale, eye[0] * n[0] + eye[1] * n[1] + eye[2] * n[2] - n[3]);
+}
+
+// One stage of a shader drawn (RB_IterateStagesGeneric with ComputeColors and ComputeTexCoords). lm: the lightmap
+// of the surface. fog: the fog the surface is in (an entry of world.fogInfo), null for none.
+function drawStage(st, t, lm, vao, count, type, offset, prog = stageProg, fog = null) {
+	// the second of two stages the engine draws as one was drawn with the first
+	if (st.merged) return;
+	const two = st.multi, tex = stageTexture(st, t, lm, st.blend), tex2 = two ? stageTexture(two, t, lm, st.blend) : null;
+	if (!tex || (two && !tex2)) return;
+
+	if (st.blend) { gl.enable(gl.BLEND); gl.blendFunc(st.blend[0], st.blend[1]); } else gl.disable(gl.BLEND);
+	gl.depthMask(st.depthWrite);
+	gl.depthFunc(st.depthEqual ? gl.EQUAL : gl.LEQUAL);
+
+	const u = prog.u, set = stageSet(prog);
+	stageInt(prog, 'uTcGen', st.tcGen);
+	// most stages have no tcMod: nothing to send while the program has none either
+	if (st.tcMods.length || set.tc !== 0) {
+		stageTcMods(st, t);
+		gl.uniform3fv(u.uTcA, stTcA); gl.uniform3fv(u.uTcB, stTcB); gl.uniform2fv(u.uTurb, stTurb);
+		set.tc = st.tcMods.length;
+	}
+	stageInt(prog, 'uMulti', two ? st.env : 0);
+	if (two) {
+		stageInt(prog, 'uTcGen2', two.tcGen);
+		if (two.tcMods.length || set.tc2 !== 0) {
+			stageTcMods(two, t);
+			gl.uniform3fv(u.uTcA2, stTcA); gl.uniform3fv(u.uTcB2, stTcB); gl.uniform2fv(u.uTurb2, stTurb);
+			set.tc2 = two.tcMods.length;
+		}
+		gl.activeTexture(gl.TEXTURE1);
+		gl.bindTexture(gl.TEXTURE_2D, tex2);
+		gl.activeTexture(gl.TEXTURE0);
+	}
+
+	// The colour that is the same for every vertex. What the vertices bring is the vertex shader's (rgbMode and
+	// alphaMode of the stage).
+	let r = 1, g = 1, b = 1, a = 1;
+	const cg = st.rgbGen, ag = st.alphaGen, model = prog === modelStageProg, dark = stWorld && !model, ent = dark ? NO_ENTITY : stEntity;
+	if (cg === CGEN.wave) r = g = b = Math.min(1, Math.max(0, waveValue(st.rgbWave, t)));
+	else if (cg === CGEN.const) { r = st.rgbConst[0]; g = st.rgbConst[1]; b = st.rgbConst[2]; }
+	else if (cg === CGEN.entity || cg === CGEN.lightingdiffuseentity) { r = ent[0]; g = ent[1]; b = ent[2]; }
+	else if (cg === CGEN.oneminusentity) { r = 1 - ent[0]; g = 1 - ent[1]; b = 1 - ent[2]; }
+	// RB_CalcDiffuseColor with the light of the world: black, and an alpha of nothing where no alphaGen follows
+	else if (cg === CGEN.lightingdiffuse && dark) r = g = b = a = 0;
+	if (ag === AGEN.const) a = st.alphaConst;
+	else if (ag === AGEN.wave) a = Math.min(1, Math.max(0, waveValue(st.alphaWave, t)));
+	else if (ag === AGEN.entity) a = ent[3];
+	else if (ag === AGEN.oneminusentity) a = 1 - ent[3];
+	else if (ag !== AGEN.skip) a = 1;
+	const c = set.color;
+	if (c[0] !== r || c[1] !== g || c[2] !== b || c[3] !== a) { c[0] = r; c[1] = g; c[2] = b; c[3] = a; gl.uniform4f(u.uColor, r, g, b, a); }
+	// a model has no colours at its vertices, and what is no model no light of a place: white for a stage that asks
+	stageInt(prog, 'uRgbVertex', (st.rgbMode === 3) === model ? st.rgbMode : 0);
+	stageInt(prog, 'uAlphaVertex', model && st.alphaMode === 2 ? 0 : st.alphaMode);
+	if (st.alphaMode === 4 && set.portal !== st.portalRange) { set.portal = st.portalRange; gl.uniform1f(u.uPortalRange, st.portalRange || 256); }
+	stageInt(prog, 'uAlphaFunc', st.alphaFunc);
+
+	// The fog of the whole map is the fog of OpenGL, on every shader that takes a fog: the stage fades to the
+	// colour of the fog, or to black where it adds to what is there and to white where it multiplies it
+	// (mGLFogColorOverride), so that what is under it comes out as the colour of the fog.
+	const to = fog && fog.global && st.fogPass ? (st.fogOverride === 1 ? FOG_BLACK : st.fogOverride === 2 ? FOG_WHITE : fog.color) : null;
+	const mode = to ? fog.mode : 0;
+	if (set.fogTo !== to || set.fogMode !== mode) {
+		set.fogTo = to; set.fogMode = mode;
+		if (to) gl.uniform4f(u.uFog, to[0], to[1], to[2], mode); else gl.uniform4f(u.uFog, 0, 0, 0, 0);
+	}
+	// in any fog, what blends fades out with it (adjustColorsForFog)
+	const adjust = fog ? st.adjustFog : 0;
+	stageInt(prog, 'uFogAdj', adjust);
+	if (adjust || (fog && st.tcGen === 3)) stageFogPlane(prog, fog);
+
+	gl.bindTexture(gl.TEXTURE_2D, tex);
+	gl.bindVertexArray(vao);
+	if (st.noDepth) gl.disable(gl.DEPTH_TEST);
+	gl.drawElements(gl.TRIANGLES, count, type, offset);
+	if (st.noDepth) gl.enable(gl.DEPTH_TEST);
+}
+
+function drawSky(sky, t, fog) {
+	// Around the eye wherever it is, behind everything, and as large as the far plane lets it be (MakeSkyVec in
+	// tr_sky.cpp): how far away that is says how much of a fog lies on the clouds.
+	const size = cameraFar() / 1.75;
+	gl.uniformMatrix4fv(stageProg.u.uMvp, false, M4.mul(viewProj, new Float32Array([size, 0, 0, 0, 0, size, 0, 0, 0, 0, size, 0, eye[0], eye[1], eye[2], 1])));
 	gl.disable(gl.DEPTH_TEST);
 	// the sky has no colours at its vertices: white for a stage that asks for them
 	gl.vertexAttrib4f(3, 1, 1, 1, 1);
+	// the box is drawn as its images are, also in a fog (DrawSkyBox)
 	if (sky.box) {
 		for (let side = 0; side < 6; side++) drawStage(sky.box[side], t, null, sky.boxVao, sky.perSide, gl.UNSIGNED_SHORT, side * sky.perSide * 2);
 	}
-	// the clouds are on every side but the one below
-	for (const st of sky.stages) drawStage(st, t, null, sky.cloudVao, sky.perSide * 5, gl.UNSIGNED_SHORT, 0);
+	// The clouds are on every side but the one below, and they are drawn as every surface is
+	// (RB_StageIteratorGeneric): with the fog of the whole map on them.
+	for (const st of sky.stages) {
+		drawStage(st, t, null, sky.cloudVao, sky.perSide * 5, gl.UNSIGNED_SHORT, 0, stageProg, fog);
+		if (st.noDepth) gl.disable(gl.DEPTH_TEST);
+	}
 	gl.enable(gl.DEPTH_TEST);
 }
 
-// Fog is drawn where the camera is in the map, flying or through the eyes of a player. Looking at the map from
-// above it would hide the map.
-const fogShown = () => cam.fly || view.id >= 0;
+// Fog is drawn where the camera is in the map: flying, through the eyes of a player, or where a client of the
+// game is (the comparison). Looking at the map from above it would hide the map. fogOff takes it away for a
+// view (the map outside of a sky portal with "onlyfoghere", RDF_NOFOG).
+let fogOff = false;
+const fogShown = () => !fogOff && (cam.fly || view.id >= 0 || !!refCam);
 
 // The map with its scripts, in two parts as the sort of the game has it: the sky and everything solid first,
 // then, after the players and the models were drawn, what is see-through (late), so that glass and water lie
@@ -371,22 +576,28 @@ function drawWorldScripted(now, late) {
 	gl.colorMask(true, true, true, false);
 	setDeform(stageProg, NO_DEFORM, t);
 	gl.uniform1i(stageProg.u.uSprite, 0);
+	const fogged = fogShown(), globalFog = fogged ? world.globalFog : null;
+	stageBegin(stageProg, globalFog);
+	stPlace = null;
 	// with a sky portal the picture of its room is what shows where the sky is
-	if (!late && world.skyDraw && !skyPortalOn) drawSky(world.skyDraw, t);
+	// (the frame begins as the colour of a fog of the whole map: drawSkyPortal in js/world-ents.js does that clear)
+	if (!late && !skyPortalOn && world.skyDraw) drawSky(world.skyDraw, t, globalFog);
 	gl.uniformMatrix4fv(stageProg.u.uMvp, false, viewProj);
-	const fogged = fogShown();
 	let sprite = 0, axes = null, placed = null;
+	stWorld = true;
 	for (const e of world.scripted) {
 		if ((e.mat.sort > SC_SORT_BANNER) !== late) continue;
-		// what a model has of this sort or one before it comes first, as the game has the map last
-		if (late && lateModels.length && drawLateModels(e.mat.sort)) {
+		// what a model has that the game draws before this comes first
+		if (late && lateModels.length && drawLateModels(e.mat.sort, e.order)) {
 			gl.useProgram(stageProg.p);
 			gl.colorMask(true, true, true, false);
 		}
 		// a brush model that is an entity: where that is, and not at all without one
 		const places = moverPlaces(e.b.model, now);
 		if (!places.length) continue;
-		const fog = fogged ? e.fog : null;
+		const fog = !fogged || (e.fog && e.fog.global && !globalFog) ? null : e.fog;
+		// the fog of a brush is a pass of its own over what was just drawn, on every shader that takes a fog
+		const pass = fog && !fog.global && e.mat.fogPass ? fog.pass[e.mat.fogPass - 1] : null;
 		// a quad that turns to the viewer has no back
 		// both sides where the editor is not set to "Open"
 		setCull(e.sprite || !open ? 2 : e.mat.cull);
@@ -401,30 +612,17 @@ function drawWorldScripted(now, late) {
 		if (e.mat.polygonOffset) { gl.enable(gl.POLYGON_OFFSET_FILL); gl.polygonOffset(-1, -2); }
 		for (const place of places) {
 			if (place !== placed) {
-				placed = place;
+				placed = stPlace = place;
 				gl.uniformMatrix4fv(stageProg.u.uMvp, false, place ? M4.mul(viewProj, place) : viewProj);
 				gl.uniform3fv(stageProg.u.uEye, place ? eyeAt(place) : eye);
 			}
-			for (const st of e.mat.stages) drawStage(st, t, e.b.lm, e.vao, e.count, gl.UNSIGNED_INT, 0, stageProg, fog && fog.global ? fog : null);
-		}
-		// the fog of a brush is a pass of its own over what was just drawn, where the map has it
-		if (fog && !fog.global && !e.sprite && !e.mat.deforms.length && !placed) {
-			gl.useProgram(fogProg.p);
-			gl.uniformMatrix4fv(fogProg.u.uMvp, false, viewProj);
-			gl.uniform4fv(fogProg.u.uPlane, fog.plane);
-			gl.uniform1f(fogProg.u.uScale, fog.scale);
-			gl.uniform1f(fogProg.u.uEyeT, eye[0] * fog.plane[0] + eye[1] * fog.plane[1] + eye[2] * fog.plane[2] - fog.plane[3]);
-			gl.uniform3fv(fogProg.u.uColor, fog.color);
-			gl.enable(gl.BLEND);
-			gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-			gl.depthMask(false);
-			gl.depthFunc(gl.EQUAL);
-			gl.bindVertexArray(e.b.vao);
-			gl.drawElements(gl.TRIANGLES, e.b.count, gl.UNSIGNED_INT, 0);
-			gl.useProgram(stageProg.p);
+			for (const st of e.mat.stages) drawStage(st, t, e.b.lm, e.vao, e.count, gl.UNSIGNED_INT, 0, stageProg, fog);
+			if (pass) drawStage(pass, t, null, e.vao, e.count, gl.UNSIGNED_INT, 0, stageProg, fog);
 		}
 		if (e.mat.polygonOffset) gl.disable(gl.POLYGON_OFFSET_FILL);
 	}
+	stPlace = null;
+	stWorld = false;
 	if (late) { drawLateModels(Infinity); deferLate = false; }
 	gl.disable(gl.CULL_FACE);
 	gl.disable(gl.BLEND);
@@ -432,4 +630,3 @@ function drawWorldScripted(now, late) {
 	gl.depthFunc(gl.LESS);
 	gl.colorMask(true, true, true, true);
 }
-

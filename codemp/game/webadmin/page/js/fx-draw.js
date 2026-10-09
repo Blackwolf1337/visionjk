@@ -169,7 +169,7 @@ function fxBuild(now) {
 		if (!b) batches.set(key, b = { mat: materialFor(e.shader, 'fx'), t: own ? (fxTime - e.t0) / 1000 : now / 1000, list: [], first: 0, count: 0 });
 		b.list.push(e);
 	}
-	const order = [...batches.values()].filter(b => !b.mat.nodraw && b.mat.stages.length).sort((a, b) => a.mat.sort - b.mat.sort);
+	const order = [...batches.values()].filter(b => !b.mat.nodraw && b.mat.stages.length).sort((a, b) => a.mat.sort - b.mat.sort || a.mat.order - b.mat.order);
 	for (const b of order) {
 		const from = fxVerts;
 		for (const e of b.list) {
@@ -213,11 +213,14 @@ function drawEffects(now) {
 	gl.colorMask(true, true, true, false);
 	gl.bindBuffer(gl.ARRAY_BUFFER, fxVbo);
 	gl.bufferSubData(gl.ARRAY_BUFFER, 0, fxBytes, 0, fxVerts * FX_STRIDE);
+	// in a fog of the whole map what blends fades with the distance (RB_CalcModulateColorsByFog). The fog of a
+	// brush is not looked for per primitive.
+	const fog = fogShown() && world ? world.globalFog : null;
 	for (const b of batches) {
 		setCull(b.mat.cull);
 		setDeform(stageProg, b.mat, b.t);
 		if (b.mat.polygonOffset) { gl.enable(gl.POLYGON_OFFSET_FILL); gl.polygonOffset(-1, -2); }
-		for (const st of b.mat.stages) drawStage(st, b.t, null, fxVao, b.count, gl.UNSIGNED_SHORT, b.first * 2);
+		for (const st of b.mat.stages) drawStage(st, b.t, null, fxVao, b.count, gl.UNSIGNED_SHORT, b.first * 2, stageProg, fog);
 		if (b.mat.polygonOffset) gl.disable(gl.POLYGON_OFFSET_FILL);
 	}
 	setDeform(stageProg, NO_DEFORM, 0);
