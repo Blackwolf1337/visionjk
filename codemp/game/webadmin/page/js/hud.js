@@ -956,6 +956,54 @@ function hudDraw2D(cg) {
 	hudDrawBracketedEntities(cg);
 	hudDrawUpperRight(cg);
 	hudDrawFollow(cg);
+	// "always draw chat"
+	hudDrawChatBox(cg);
+}
+
+// ---- the chat lines over the picture (CG_ChatBox_AddString and CG_ChatBox_DrawStrings in cg_draw.c)
+//
+// A client keeps the last five lines it was sent, each for ten seconds (cg_chatBox), and draws them above 350
+// (cg_chatBoxHeight) in the small font at 0.65 with an outline, the oldest at the top. A line wider than 550 is
+// cut at a blank into more. The page shows what was said to all: what a team or one player was told, a client
+// that follows somebody is sent only when it is one of them.
+const HUD_CHAT = { keep: 5, msec: 10000, x: 30, y: 350, cut: 550, height: 20, scale: 0.65 };
+const hudChat = { items: [], next: 0, seq: 0 };
+// the time of the game the lines are kept by: the one of the last answer of the server, carried on between two
+const hudChatTime = () => (state && state.now !== undefined ? state.now : 0) + (refCam ? 0 : Math.max(0, Math.min(2 * pollInterval, performance.now() - lastPoll)));
+
+// a line the server sent, as it sends it: the name, white, a colon, and what he said in the colour of its kind
+function hudChatAdd(text) {
+	const C = HUD_CHAT;
+	let lines = 1;
+	if (hudMenus.state === 2 && hudTextWidth(text, 1.0, HUD_FONT_SMALL) > C.cut) {
+		// cut where the letters so far are wider than the room, at the last blank before that
+		let len = 0, last = 0;
+		for (let i = 0; i < text.length; i++) {
+			len += hudTextWidth(text[i], C.scale, HUD_FONT_SMALL);
+			if (len < C.cut) continue;
+			let j = i;
+			while (j > 0 && j > last && text[j] !== ' ') j--;
+			if (text[j] === ' ') i = j;
+			lines++;
+			text = text.slice(0, i) + '\n' + text.slice(i);
+			i++;
+			len = 0;
+			last = i + 1;
+		}
+	}
+	hudChat.items[hudChat.next] = { text, time: hudChatTime() + C.msec, lines, seq: ++hudChat.seq };
+	hudChat.next = (hudChat.next + 1) % C.keep;
+}
+
+function hudDrawChatBox(cg) {
+	const C = HUD_CHAT, now = hudChatTime(), live = hudChat.items.filter(it => it && it.time >= now).sort((a, b) => a.time - b.time || a.seq - b.seq);
+	if (!live.length) return;
+	// from the bottom up: the first is drawn as far above 350 as all of them are high
+	let y = C.y - C.height * C.scale * live.reduce((n, it) => n + it.lines, 0);
+	for (const it of live) {
+		hudTextPaint(C.x, y, C.scale, [1, 1, 1, 1], it.text, 0, 0, HUD_TEXTSTYLE.OUTLINED, HUD_FONT_SMALL);
+		y += C.height * C.scale * it.lines;
+	}
 }
 
 // The 2D of the frame, for the player the page looks through the eyes of (renderHud in js/weapons.js)

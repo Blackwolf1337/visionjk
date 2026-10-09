@@ -32,6 +32,14 @@ async function pollChat() {
 		}
 		const fresh = json.messages.filter(m => m.seq > chatSeq);
 		html += fresh.map(chatLine).join('');
+		// What was said to all goes over the picture too, as on a client (js/hud.js), in the words the server sends
+		// it with. Not what was there before the page came.
+		// (G_Say for a player: his name, white, a colon and his words in green; the panel's own line as wa_actions.c
+		// sends it, without the green)
+		if (chatEpoch) for (const m of fresh) {
+			if (m.mode === 'all') hudChatAdd(m.name + '^7: ^2' + m.text);
+			else if (m.mode === 'panel') hudChatAdd(m.name + '^7: ' + m.text);
+		}
 		chatEpoch = json.epoch;
 		chatSeq = json.seq;
 		if (!html) return;

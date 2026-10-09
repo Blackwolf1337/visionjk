@@ -478,6 +478,12 @@ Also changed:
   events of other entities) and keeps the last 256 for two seconds; a poll brings the ones a page does not
   have (`evs=`). With four bots that was 112 events in 45 seconds. The page takes them (`js/events.js`) and
   shows nothing for them yet. Four more checks in `steps_feed.js` (32).
+- New: the chat lines over the picture (`hudChatAdd`, `hudDrawChatBox` in `js/hud.js`; `CG_ChatBox_AddString`
+  and `CG_ChatBox_DrawStrings`): the last five lines, each for ten seconds of the game, above 350 in the small
+  font at 0.65 with an outline, the oldest on top, a line wider than 550 cut at a blank. What was said to all
+  and what the panel itself says, in the words the server sends them with; not what a team or one player was
+  told. Two lines said through the panel while the client followed a bot are the same in both pictures. Two
+  more checks in `steps_hud.js` (15).
 - New: the eye of the own view as the game moves it (`firstPersonCamera` in `js/weapons.js`,
   `CG_OffsetFirstPersonView`): it leans with the speed of the player (`cg_runPitch`, `cg_runRoll`) and bobs
   with his steps (`cg_bobPitch`, `cg_bobRoll`, `cg_bobUp`, three times as much while he ducks), by the bob
