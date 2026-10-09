@@ -25,6 +25,9 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include <stdio.h>
 
 #include <SDL.h>
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
 
 #include "qcommon/q_shared.h"
 #include "client/client.h"
@@ -276,6 +279,18 @@ void SNDDMA_Shutdown(void)
 {
 	Com_Printf("Closing SDL audio device...\n");
 	SDL_PauseAudioDevice(dev, 1);
+#ifdef __EMSCRIPTEN__
+	// SDL 2.32 only disconnects the node of the page that asks for sound and leaves it its handler. A call
+	// that was on its way already then arrives after the device is gone. snd_restart opens the next device in
+	// the same go, so the call does not stop at "there is no device" either and runs with the memory of the
+	// old one (it ended in a division by zero, the format of a freed device). So the handler goes first.
+	EM_ASM( {
+		var SDL2 = Module['SDL2'];
+		if ( SDL2 && SDL2.audio && SDL2.audio.scriptProcessorNode ) {
+			SDL2.audio.scriptProcessorNode['onaudioprocess'] = null;
+		}
+	} );
+#endif
 	SDL_CloseAudioDevice(dev);
 	SDL_QuitSubSystem(SDL_INIT_AUDIO);
 	free(dma.buffer);
