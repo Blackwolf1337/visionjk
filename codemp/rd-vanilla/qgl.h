@@ -23,7 +23,11 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #pragma once
 
-#if defined( __LINT__ )
+#if defined( RD_VISION_GLES )
+// rd-vulkan-vision with its device for OpenGL ES, which builds some files of this renderer: the types and names of
+// OpenGL ES 3 and the names of OpenGL those files still say. No function of OpenGL is declared there.
+#	include "../rd-vulkan-vision/gles/gles_gl.h"
+#elif defined( __LINT__ )
 #	include <GL/gl.h>
 #elif defined( _WIN32 )
 #	include <windows.h>
@@ -49,7 +53,9 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #	include <gl.h>
 #endif
 
+#if !defined( RD_VISION_GLES )
 #include "glext.h"
+#endif
 
 #define qglAccum glAccum
 #define qglAlphaFunc glAlphaFunc
@@ -395,6 +401,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define qglVertexPointer glVertexPointer
 #define qglViewport glViewport
 
+#if !defined( RD_VISION_GLES )
 #if !defined(__APPLE__)
 extern PFNGLSTENCILOPSEPARATEPROC qglStencilOpSeparate;
 #endif
@@ -444,3 +451,4 @@ extern PFNGLISPROGRAMARBPROC qglIsProgramARB;
 
 extern PFNGLLOCKARRAYSEXTPROC qglLockArraysEXT;
 extern PFNGLUNLOCKARRAYSEXTPROC qglUnlockArraysEXT;
+#endif // !RD_VISION_GLES

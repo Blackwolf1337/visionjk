@@ -135,7 +135,11 @@ void StageVertex( StageInput v ) {
 	CLIP_DISTANCE = ( t.clipPlane.xyz == vec3( 0.0 ) ) ? 1.0
 		: dot( ( t.model * vec4( v.position, 1.0 ) ).xyz, t.clipPlane.xyz ) - t.clipPlane.w;
 	v_depth = gl_Position.w;
-#ifndef VK_GLES
+#ifdef VK_GLES
+	// The targets of that device have the top row first, as the images of Vulkan have it, and OpenGL ES counts its
+	// rows from the bottom: the picture is drawn upside down and turned again on its way to the window.
+	gl_Position.y = -gl_Position.y;
+#else
 	// the depth range of OpenGL is -w to w, the one of Vulkan 0 to w
 	gl_Position.z = ( gl_Position.z + gl_Position.w ) * 0.5;
 #endif
