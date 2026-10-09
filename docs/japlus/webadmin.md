@@ -395,8 +395,12 @@ Also changed:
   then. A delete, an edit and a fire now say the class the page takes the entity for (`class=` of
   `/api/entity`), the history from the keys of its step, and the server refuses when the entity of that
   number is of another class ("that entity is gone, another one has its number now"); the step is dropped.
-  Seen in the log of a check run, where nothing wrong was deleted because the number was still free. Not
-  changed: the panel still says "Placed" for such an item. `tools/panelshot/steps_entclass.js` (8 checks).
+  Seen in the log of a check run, where nothing wrong was deleted because the number was still free.
+  And the panel now says when the game took back what was just placed: 0.7 seconds after a spawn it looks at
+  the list once more (`spawnedStays` in `js/editor-entities.js`) and names what is not in it, with the three
+  reasons there are (an item inside a wall, which `spawnflags 1` avoids, an item the game type does not
+  have, a class that acts once and frees itself such as `trigger_always`). `tools/panelshot/steps_entclass.js`
+  (10 checks).
 - New: what the HUD and the own view of a client are drawn from, for the last step of the port. `/api/state`
   with `hud=<client>` has the rest of his player state (`WA_StateHud`: 684 bytes for a bot, and only when a
   page asks, which it does while it looks through the eyes of a player), and `/api/file` serves the menu

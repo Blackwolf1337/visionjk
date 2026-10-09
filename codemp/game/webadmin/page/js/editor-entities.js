@@ -154,6 +154,30 @@ const fmtVec = v => v.map(n => Math.round(n)).join(' ');
 // quiet: one of several changes that are made together. It says nothing, leaves the list and the selection as
 // they are, and why it was refused is in entRefused for whoever makes them.
 let entRefused = '', entRefusedKey = '';
+// The game may free what was just spawned a moment later, and says nothing of it to the panel: an item that
+// starts inside a wall or that this game type does not have (FinishSpawningItem, two frames after the spawn), a
+// class that does its one thing and goes. The panel had said "Placed" by then. So the list is looked at once
+// more when those frames are over, and it is said when the entity is not in it.
+const spawnedWatch = new Map();		// number -> class, of what was spawned and not looked at again yet
+let spawnedTimer = 0;
+function spawnedStays(id, classname) {
+	if (!classname) return;
+	spawnedWatch.set(id, classname);
+	clearTimeout(spawnedTimer);
+	spawnedTimer = setTimeout(async () => {
+		const watch = [...spawnedWatch];
+		spawnedWatch.clear();
+		let list;
+		try { list = (await (await fetch('api/entities', { cache: 'no-store' })).json()).entities; } catch (e) { return; }
+		const now = new Map(list.map(e => [e.id, e.classname]));
+		const gone = watch.filter(([id, cls]) => (now.get(id) || '').toLowerCase() !== cls.toLowerCase()).map(w => w[1]);
+		if (!gone.length) return;
+		toast((gone.length === 1 ? 'The game removed the ' + gone[0] : 'The game removed ' + gone.length + ' of them (' + [...new Set(gone)].join(', ') + ')')
+			+ ' again right after it was placed: an item inside a wall (spawnflags 1 lets it hang where it is put), an item this game type does not have, or a class that acts once and goes', false);
+		pollEntities();
+	}, 700);
+}
+
 async function entityOp(params, okMessage, record = true, quiet = false) {
 	// a draft is not on the server: what is done to it is done here
 	if (params.id !== undefined && drafts.has(+params.id)) return draftOp(params, quiet);
@@ -170,6 +194,7 @@ async function entityOp(params, okMessage, record = true, quiet = false) {
 		if (!json.ok) { entRefused = json.message; entRefusedKey = json.key || ''; }
 		if (json.ok) {
 			if (record) histPush(histStepFor(params, ent, before, json.id));
+			if (params.op === 'spawn') spawnedStays(json.id, (/^classname=(.*)$/mi.exec(params.kv || '') || ['', ''])[1].trim());
 			if (!quiet) {
 				kvDirty = false;
 				await pollEntities();
