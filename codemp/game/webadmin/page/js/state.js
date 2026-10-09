@@ -64,7 +64,8 @@ async function pollState() {
 		// The list of the items is not sent again as long as it is the one that is here, and neither is what stays
 		// the same of a player: the server is told the number of what the page has of each.
 		const has = [...playerSlow].map(([id, slow]) => id + '.' + slow.rev).join('-');
-		const res = await fetch('api/state?items=' + itemsRev + fxQuery() + (has ? '&p=' + has : ''), { cache: 'no-store' });
+		// through the eyes of a player: what his HUD and his own view are drawn from comes with it (state.hud)
+		const res = await fetch('api/state?items=' + itemsRev + fxQuery() + (has ? '&p=' + has : '') + (view.id >= 0 ? '&hud=' + view.id : ''), { cache: 'no-store' });
 		if (!res.ok) throw new Error('HTTP ' + res.status);
 		const s = await res.json();
 		$('status').className = 'live';

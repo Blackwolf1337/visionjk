@@ -607,8 +607,65 @@ static void WA_StateView( waBuffer_t *b, const char *query ) {
 		cl->ps.viewheight, cl->ps.pm_type, level.time, cl->ps.velocity[0], cl->ps.velocity[1], cl->ps.velocity[2] );
 }
 
-// GET /api/state[?items=<number>][&fx=<number>&fxs=<number>][&p=<client>.<number>-...][&view=<client>]: everything
-// the page draws, one part after the other
+// one array of whole numbers of a player state, as a part of an object
+static void WA_StateInts( waBuffer_t *b, const char *key, const int *v, int n ) {
+	int i;
+
+	WA_BufPrintf( b, ",\"%s\":[", key );
+	for ( i = 0; i < n; i++ )
+		WA_BufPrintf( b, "%s%d", i ? "," : "", v[i] );
+	WA_BufAppend( b, "]", 1 );
+}
+
+// &hud=<client>: what a client draws his HUD and his own view from (CG_Draw2D, CG_CalcViewValues,
+// CG_AddViewWeapon), the part of his player state the rows of the players do not have. Only for the one a page
+// looks through the eyes of, and only when it asks. The times are the ones of the game as the player state has
+// them, and "now" is the time of the game they are measured against.
+//   "stats", "pers", "powerups", "ammo": the arrays of the player state (STAT_, PERS_, PW_ and AMMO_ of
+//       bg_public.h; a powerup is the time it runs out)
+//   "forceLevel": the level of every force power, "force": the powers he knows (mask), the one he has
+//       selected, his side, his rank, when his rage recovery ends
+//   "zoom": zoomMode, zoomFov, zoomTime, zoomLocked    "weapon": weaponTime, weaponChargeTime
+//   "lock": rocketLockIndex, rocketLockTime, rocketLastValidTime, rocketTargetTime
+//   "fuel": jetpackFuel, cloakFuel    "duel": duelInProgress, duelIndex, duelTime
+//   "pm": pm_type, pm_flags, pm_time, bobCycle    "damage": damageEvent, damageYaw, damagePitch, damageCount, damageType
+//   "angles": his view angles with the roll, "psClient": the client of the player state (the one he follows)
+static void WA_StateHud( waBuffer_t *b, const char *query ) {
+	char				value[8];
+	int					n;
+	const playerState_t	*ps;
+
+	if ( !WA_FormValue( query, "hud", value, sizeof( value ) ) )
+		return;
+	n = atoi( value );
+	if ( n < 0 || n >= level.maxclients || level.clients[n].pers.connected != CON_CONNECTED )
+		return;
+	ps = &level.clients[n].ps;
+
+	WA_BufPrintf( b, ",\"hud\":{\"client\":%d,\"psClient\":%d,\"now\":%d", n, ps->clientNum, level.time );
+	WA_StateInts( b, "stats", ps->stats, MAX_STATS );
+	WA_StateInts( b, "pers", ps->persistant, MAX_PERSISTANT );
+	WA_StateInts( b, "powerups", ps->powerups, MAX_POWERUPS );
+	WA_StateInts( b, "ammo", ps->ammo, MAX_AMMO );
+	WA_StateInts( b, "forceLevel", ps->fd.forcePowerLevel, NUM_FORCE_POWERS );
+	WA_BufPrintf( b, ",\"force\":[%d,%d,%d,%d,%d],\"zoom\":[%d,%.1f,%d,%d],\"weapon\":[%d,%d],\"lock\":[%d,%.0f,%.0f,%.0f],\"fuel\":[%d,%d],"
+		"\"duel\":[%d,%d,%d],\"pm\":[%d,%d,%d,%d],\"damage\":[%d,%d,%d,%d,%d],\"angles\":[%.2f,%.2f,%.2f]",
+		ps->fd.forcePowersKnown, ps->fd.forcePowerSelected, ps->fd.forceSide, ps->fd.forceRank, ps->fd.forceRageRecoveryTime,
+		ps->zoomMode, ps->zoomFov, ps->zoomTime, ps->zoomLocked ? 1 : 0, ps->weaponTime, ps->weaponChargeTime,
+		ps->rocketLockIndex, ps->rocketLockTime, ps->rocketLastValidTime, ps->rocketTargetTime, ps->jetpackFuel, ps->cloakFuel,
+		ps->duelInProgress ? 1 : 0, ps->duelIndex, ps->duelTime, ps->pm_type, ps->pm_flags, ps->pm_time, ps->bobCycle,
+		ps->damageEvent, ps->damageYaw, ps->damagePitch, ps->damageCount, ps->damageType,
+		ps->viewangles[PITCH], ps->viewangles[YAW], ps->viewangles[ROLL] );
+	WA_BufPrintf( b, ",\"fallingToDeath\":%d,\"holocronBits\":%d,\"hackingTime\":%d,\"hackingBaseTime\":%d,\"generic1\":%d,\"emplacedIndex\":%d,"
+		"\"vehicle\":%d,\"forceHandExtend\":%d,\"saberLockTime\":%d,\"lookTarget\":%d,\"detPack\":%d,\"electrifyTime\":%d,\"commandTime\":%d,"
+		"\"jediMaster\":%d}",
+		ps->fallingToDeath, ps->holocronBits, ps->hackingTime, ps->hackingBaseTime, ps->generic1, ps->emplacedIndex,
+		ps->m_iVehicleNum, ps->forceHandExtend, ps->saberLockTime, ps->hasLookTarget ? ps->lookTarget : -1, ps->hasDetPackPlanted ? 1 : 0,
+		ps->electrifyTime, ps->commandTime, ps->isJediMaster ? 1 : 0 );
+}
+
+// GET /api/state[?items=<number>][&fx=<number>&fxs=<number>][&p=<client>.<number>-...][&view=<client>][&hud=<client>]:
+// everything the page draws, one part after the other
 void WA_ApiState( waConnection_t *c, const char *query ) {
 	waBuffer_t	b = { 0 };
 	char		mapname[MAX_QPATH], hostname[MAX_NETNAME * 2];
@@ -634,6 +691,7 @@ void WA_ApiState( waConnection_t *c, const char *query ) {
 	WA_StateShots( &b );
 	WA_StateEffects( &b, query );
 	WA_StateView( &b, query );
+	WA_StateHud( &b, query );
 	WA_BufAppend( &b, "}", 1 );
 
 	WA_RespondJson( c, &b );

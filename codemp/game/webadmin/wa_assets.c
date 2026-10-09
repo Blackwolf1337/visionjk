@@ -77,14 +77,15 @@ void WA_ApiMap( waConnection_t *c ) {
 }
 
 // Textures, models and skins for the 3D views, the shader scripts the view of the administration draws the
-// map with, and the effect files the page plays. Only below textures/, models/ and gfx/, of shaders/ the
-// scripts and of effects/ the effect files.
+// map with, the effect files the page plays, and what the HUD of the game is made of. Only below textures/,
+// models/ and gfx/, of shaders/ the scripts, of effects/ the effect files, of ui/ the menu files with their
+// lists and images, of fonts/ the fonts and of strings/ the texts.
 void WA_ApiFile( waConnection_t *c, const char *query ) {
 	char			name[MAX_QPATH];
 	const char		*ext, *type;
 	fileHandle_t	f = 0;
 	int				len;
-	qboolean		script, audio;
+	qboolean		script, audio, hud;
 
 	if ( !WA_FormValue( query, "name", name, sizeof( name ) ) || strstr( name, ".." ) || strchr( name, '\\' ) || strchr( name, ':' ) ) {
 		WA_RespondText( c, 400, "Bad Request", "bad file name" );
@@ -95,12 +96,20 @@ void WA_ApiFile( waConnection_t *c, const char *query ) {
 		|| ( !Q_stricmpn( name, "effects/", 8 ) && !Q_stricmp( ext, "efx" ) ) );
 	// a sound or a piece of music, which the editor plays in the browser to hear what a key names
 	audio = (qboolean)( ( !Q_stricmpn( name, "sound/", 6 ) || !Q_stricmpn( name, "music/", 6 ) ) && ( !Q_stricmp( ext, "wav" ) || !Q_stricmp( ext, "mp3" ) ) );
-	if ( !script && !audio && Q_stricmpn( name, "textures/", 9 ) && Q_stricmpn( name, "models/", 7 ) && Q_stricmpn( name, "gfx/", 4 ) ) {
+	// The HUD (CG_LoadHudMenu reads ui/jahud.txt and the menu files it names) with its images, the fonts (a
+	// .fontdat with the image of its glyphs) and the texts a menu names with an @ (strings/<language>/*.str).
+	hud = (qboolean)( ( !Q_stricmpn( name, "ui/", 3 ) && ( !Q_stricmp( ext, "menu" ) || !Q_stricmp( ext, "txt" ) || !Q_stricmp( ext, "tga" )
+			|| !Q_stricmp( ext, "jpg" ) || !Q_stricmp( ext, "png" ) ) )
+		|| ( !Q_stricmpn( name, "fonts/", 6 ) && ( !Q_stricmp( ext, "fontdat" ) || !Q_stricmp( ext, "tga" ) || !Q_stricmp( ext, "jpg" )
+			|| !Q_stricmp( ext, "png" ) ) )
+		|| ( !Q_stricmpn( name, "strings/", 8 ) && !Q_stricmp( ext, "str" ) ) );
+	if ( !script && !audio && !hud && Q_stricmpn( name, "textures/", 9 ) && Q_stricmpn( name, "models/", 7 ) && Q_stricmpn( name, "gfx/", 4 ) ) {
 		WA_RespondText( c, 400, "Bad Request", "bad file name" );
 		return;
 	}
 
-	if ( script ) type = "text/plain; charset=utf-8";
+	if ( script || !Q_stricmp( ext, "menu" ) || !Q_stricmp( ext, "txt" ) || !Q_stricmp( ext, "str" ) ) type = "text/plain; charset=utf-8";
+	else if ( !Q_stricmp( ext, "fontdat" ) ) type = "application/octet-stream";
 	else if ( audio ) type = Q_stricmp( ext, "mp3" ) ? "audio/wav" : "audio/mpeg";
 	else if ( !Q_stricmp( ext, "jpg" ) ) type = "image/jpeg";
 	else if ( !Q_stricmp( ext, "gla" ) || !Q_stricmp( ext, "cfg" ) ) type = "application/octet-stream";
