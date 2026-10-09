@@ -10,6 +10,9 @@
 
 // the keys that have a control of their own in the panel
 const FORM_SKIP = new Set(['classname', 'origin', 'angles', 'angle', 'spawnflags', 'mins', 'maxs']);
+// The two keys that wire entities together are fields of every class, in front of the others: its name, and
+// what it fires. Few definitions tell of them, every entity takes them.
+const FORM_WIRE = ['targetname', 'target'];
 // what a number field of the browser takes as its value
 const FORM_NUMBER = /^-?(\d+(\.\d+)?|\.\d+)(e[-+]?\d+)?$/i;
 const formFields = new Map();	// key in small letters -> { key, c, n, tip }: a field of the form, c is what is known of its key
@@ -73,7 +76,9 @@ function formRead(cell, f) {
 // the cursor is in. So a field keeps focus and cursor, as the rows of the table do.
 function renderEntForm(fresh) {
 	const ent = ents.get(selectedEnt), editable = !!(ent && ent.keys), cls = panelClass();
-	const list = editable ? keyChoices(cls).filter(c => c.from === 'class' && !FORM_SKIP.has(c.key.toLowerCase())) : [];
+	const wire = c => FORM_WIRE.indexOf(c.key.toLowerCase());
+	const list = editable ? keyChoices(cls).filter(c => (c.from === 'class' || wire(c) >= 0) && !FORM_SKIP.has(c.key.toLowerCase()))
+		.sort((a, b) => (wire(a) < 0 ? FORM_WIRE.length : wire(a)) - (wire(b) < 0 ? FORM_WIRE.length : wire(b))) : [];
 	const sig = cls.toLowerCase() + '|' + list.map(c => c.key + ':' + (c.kind || '') + ':' + (c.def || '')).join('|');
 	// a key that is there twice counts as its first row, which is the one a field writes to
 	const keys = panelKeys(), values = new Map();
