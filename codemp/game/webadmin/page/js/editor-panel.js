@@ -37,15 +37,21 @@ function renderEntTools(ent) {
 	if (d) $('entDocText').textContent = d.name + (d.flags.length ? '   ' + d.flags.join(' ') : '') + '\n\n' + d.text;
 }
 
-// a value into the table of keys, where Apply takes it from
-function setPanelKey(key, value) {
-	const row = [...$('kvRows').querySelectorAll('tr')].find(tr => {
+// the row of a key in the table of keys, however the key is written there. undefined: the table has none.
+function panelRow(key) {
+	const lower = key.toLowerCase();
+	return [...$('kvRows').querySelectorAll('tr')].find(tr => {
 		const name = tr.querySelector('input');
-		return name && name.value.trim().toLowerCase() === key;
+		return name && name.value.trim().toLowerCase() === lower;
 	});
+}
+// a value into the table of keys, where Apply takes it from. The form shows what the table holds.
+function setPanelKey(key, value) {
+	const row = panelRow(key);
 	if (row) row.querySelectorAll('input')[1].value = value;
 	else $('kvRows').insertAdjacentHTML('beforeend', kvRow([key, value]));
 	kvDirty = true;
+	renderEntForm();
 }
 
 $('entFlags').addEventListener('change', () => {
@@ -167,14 +173,18 @@ function kvValueField(e) {
 	return inputs.length === 2 && e.target === inputs[1] ? inputs[0].value.trim().toLowerCase() : null;
 }
 
+// The list the field of a value offers, by its key in small letters. For a row of the key table and for a field
+// of the form alike.
+function pickList(input, key) {
+	// the model of a class that is made of brushes is one of the brush models of the map
+	if (key === 'model' && /^(func_|trigger_)/i.test(panelClass())) { input.setAttribute('list', 'pickBrush'); pickBrushes(); return; }
+	if (key in PATH_KEYS) { input.setAttribute('list', 'pickPath'); pickPath(input, key); return; }
+	const id = pickFor(key);
+	if (id) { input.setAttribute('list', id); pickFill(id); } else input.removeAttribute('list');
+}
 $('kvRows').addEventListener('focusin', e => {
 	const key = kvValueField(e);
-	if (key === null) return;
-	// the model of a class that is made of brushes is one of the brush models of the map
-	if (key === 'model' && /^(func_|trigger_)/i.test(panelClass())) { e.target.setAttribute('list', 'pickBrush'); pickBrushes(); return; }
-	if (key in PATH_KEYS) { e.target.setAttribute('list', 'pickPath'); pickPath(e.target, key); return; }
-	const id = pickFor(key);
-	if (id) { e.target.setAttribute('list', id); pickFill(id); } else e.target.removeAttribute('list');
+	if (key !== null) pickList(e.target, key);
 });
 $('kvRows').addEventListener('input', e => {
 	const key = kvValueField(e);

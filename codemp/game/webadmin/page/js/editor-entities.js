@@ -24,7 +24,7 @@ async function pollEntities() {
 		if (selectedEnt >= 0 && !ents.has(selectedEnt)) selectEnt(-1);
 		renderEntityList();
 		// not while the cursor is in a key field: a rebuilt table takes the focus away
-		if (!kvDirty && !$('kvRows').contains(document.activeElement)) renderEntPanel();
+		if (!kvDirty && !panelTyping()) renderEntPanel();
 	} catch (e) { /* keep the old list */ }
 }
 
@@ -72,6 +72,8 @@ function selectEnt(id) {
 // kvShown is what the key table shows: the entity and its keys. The poll comes every second, the table is only
 // built again when this changed, so fields keep focus, cursor and selection (JKAdmin rebuilds it every time).
 function kvSig(ent) { return ent.id + '|' + JSON.stringify(ent.keys || null); }
+// the cursor is in a field of the keys: in the table, or in the form that shows the same keys (editor-form.js)
+const panelTyping = () => $('kvRows').contains(document.activeElement) || $('entForm').contains(document.activeElement);
 function renderEntPanel() {
 	const ent = selectedEnt >= 0 && ents.get(selectedEnt);
 	$('entPanel').classList.toggle('open', !!ent);
@@ -87,6 +89,7 @@ function renderEntPanel() {
 		kvShown = shown;
 		$('kvRows').innerHTML = editable ? ent.keys.map(kvRow).join('') : '<tr><td class="hint">Made by the game code, there are no keys to edit. It can only be deleted.</td></tr>';
 		renderEntTools(ent);
+		renderEntForm(true);
 	}
 	for (const id of ['kvAdd', 'entApply', 'entRotL', 'entRotR', 'entDup', 'entFloor', 'entTemplate']) $(id).disabled = !editable;
 	// a draft is sent with Place, with the drafts that are selected with it, and thrown away with Discard. There is
@@ -101,24 +104,34 @@ function renderEntPanel() {
 // a key whose value can be played: a sound here in the browser, an effect in the game
 const playKind = key => { const k = key.trim().toLowerCase(); return k === 'noise' || k === 'music' ? 'sound' : /fx/.test(k) ? 'effect' : ''; };
 
+// the button beside such a value, '' for a key that has nothing to play
+const playButton = key => {
+	const kind = playKind(key);
+	return kind ? '<button class="play" title="' + (kind === 'sound' ? 'Plays the sound here, in the browser' : 'Plays the effect once in the game, where the entity is') + '">Play</button>' : '';
+};
+
 function kvRow(kv) {
-	const kind = playKind(kv[0]);
 	return '<tr><td class="k"><input value="' + escapeHtml(kv[0]) + '" spellcheck="false" autocomplete="off"></td><td><input value="' + escapeHtml(kv[1]) + '" spellcheck="false"></td>' +
-		'<td class="x">' + (kind ? '<button class="play" title="' + (kind === 'sound' ? 'Plays the sound here, in the browser' : 'Plays the effect once in the game, where the entity is') + '">Play</button>' : '') +
-		'<button title="Remove key">&#10005;</button></td></tr>';
+		'<td class="x">' + playButton(kv[0]) + '<button title="Remove key">&#10005;</button></td></tr>';
 }
-$('kvRows').addEventListener('input', () => { kvDirty = true; draftTyped(); });
+// what is typed into the table shows in the form above it
+$('kvRows').addEventListener('input', () => { kvDirty = true; draftTyped(); renderEntForm(); });
 $('kvRows').addEventListener('click', e => {
 	if (e.target.tagName !== 'BUTTON') return;
-	if (e.target.classList.contains('play')) { playValue(e.target.closest('tr')); return; }
+	if (e.target.classList.contains('play')) {
+		const [key, value] = [...e.target.closest('tr').querySelectorAll('input')].map(i => i.value);
+		playValue(key, value);
+		return;
+	}
 	e.target.closest('tr').remove();
 	kvDirty = true;
 	draftTyped();
+	renderEntForm();
 });
 
 let playing = null;
-async function playValue(row) {
-	const [key, value] = [...row.querySelectorAll('input')].map(i => i.value.trim());
+async function playValue(key, value) {
+	value = value.trim();
 	if (!value) return;
 	if (playKind(key) === 'effect') {
 		const ent = ents.get(selectedEnt);
@@ -136,6 +149,8 @@ async function playValue(row) {
 $('kvAdd').addEventListener('click', () => {
 	$('kvRows').insertAdjacentHTML('beforeend', kvRow(['', '']));
 	kvDirty = true;
+	// A field of a block that is folded takes no cursor. Who adds a key wants the table: it stays unfolded.
+	kvOpen = $('kvBlock').open = true;
 	$('kvRows').lastElementChild.querySelector('input').focus();
 });
 

@@ -1620,6 +1620,15 @@ Also changed:
   does too, refuses a box that would take more than 64 parts or more entities than the map has left, and leaves
   the parts out of the list of the editor. A wall of the editor is kept by "Save layout" like every placed
   entity. BlockWallWrite leaves it out, or it would come back twice. Added without a test run.
+- New: a form per class in the panel of an entity. Above the table of keys the panel shows the keys the class is
+  known to take (what its definition tells of and what its spawn function reads, without the ones that have a
+  control of their own: place, angles, spawnflags, box), each as a field of its kind: a number, three numbers
+  for a vector, a box to tick for a yes or no, text for the rest, with the lists, the search for files and the
+  Play button the table has for the same keys. What the game code says about a key is under its name. The form
+  holds nothing itself: a field writes into the row of its key, an emptied field takes the row away, and what
+  is typed into the table shows in its field, so Apply, Place, the drafts and undo work as before. The table of
+  every key is folded under "All keys" while the form has fields, and unfolded when a class has none or a key
+  waits for a value that has no field. Added without a test run.
 - "Add bot" with an empty name adds `Kyle Katarn`. JKAdmin asks for `Kyle`, a bot the game does not have, so
   nothing happened there.
 - The two entity hooks pass `ent-g_entities` instead of `ent->s.number`.

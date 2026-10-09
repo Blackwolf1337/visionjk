@@ -234,6 +234,21 @@ tr.ent.ro td:first-child { opacity: .6; }
 #entPanel .hd .close { margin-left: auto; }
 /* what the server says of a draft can be a long line */
 #entPanel .hd .meta { white-space: normal; min-width: 0; }
+/* the form of an entity: a line for every key its class takes, the key with what it is for and the fields of its value */
+#entForm { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); gap: 4px 8px; align-items: center; margin-bottom: 6px; }
+#entForm:empty { display: none; }
+#entForm label { min-width: 0; font-size: 12px; line-height: 1.25; }
+#entForm label b, #entForm label i { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#entForm label b { font-weight: 500; }
+#entForm label i { font-style: normal; font-size: 11px; color: var(--muted); }
+#entForm label i:empty { display: none; }
+#entForm .v { display: flex; gap: 4px; align-items: center; min-width: 0; }
+#entForm .v input { flex: 1; width: 0; min-width: 0; }
+#entForm .v input[type=checkbox] { flex: none; width: auto; margin: 4px 0; accent-color: var(--accent); }
+#entForm .v button { flex: none; padding: 1px 6px; }
+/* the table of all keys, folded under the form */
+#kvBlock summary { cursor: pointer; color: var(--muted); font-size: 12px; user-select: none; }
+#kvBlock[open] summary { margin-bottom: 3px; }
 #kvTable td { padding: 2px 3px; border: 0; }
 #kvTable input { width: 100%; }
 #kvTable td.k { width: 38%; }

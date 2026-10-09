@@ -88,7 +88,7 @@ async function draftAskNow() {
 
 // What the server says of a draft: why a spawn of it is refused ('' when it is not), and the key it lacks when a
 // key is what is missing. That key gets a row to be typed into. The table of the panel is not built again for
-// it: the cursor may be in it.
+// it, nor is the form: the cursor may be in one of them.
 function draftSays(d, why, need) {
 	const shown = d.id === selectedEnt, lower = need.toLowerCase();
 	d.why = why;
@@ -96,16 +96,17 @@ function draftSays(d, why, need) {
 	if (need && !draftShown(d).some(k => k[0].toLowerCase() === lower)) {
 		if (shown) draftTakePanel();
 		d.keys.push([need, '']);
-		if (shown) { $('kvRows').insertAdjacentHTML('beforeend', kvRow([need, ''])); kvShown = kvSig(d); }
+		// the new row is to be seen: the key has a field in the form, or the table of all keys is unfolded for it
+		if (shown) { $('kvRows').insertAdjacentHTML('beforeend', kvRow([need, ''])); kvShown = kvSig(d); renderEntForm(); keyField(need); }
 	}
 	if (shown) renderEntPanel();
 	if (draftFocus === d.id) { draftNeedFocus(d); draftFocus = -1; }
 }
-// the cursor into the field of what the selected draft lacks, unless it is in a field of the table already
+// the cursor into the field of what the selected draft lacks, unless it is in a field of its keys already
 function draftNeedFocus(d) {
-	if (!d || !d.need || d.id !== selectedEnt || $('kvRows').contains(document.activeElement)) return;
-	const lower = d.need.toLowerCase(), row = [...$('kvRows').querySelectorAll('tr')].find(tr => tr.querySelector('input') && tr.querySelector('input').value.trim().toLowerCase() === lower);
-	if (row) row.querySelectorAll('input')[1].focus();
+	if (!d || !d.need || d.id !== selectedEnt || panelTyping()) return;
+	const field = keyField(d.need);
+	if (field) field.focus();
 }
 
 // What the editor does to an entity, done to a draft (entityOp): new keys are its keys, a delete throws it away.

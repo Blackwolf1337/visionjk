@@ -266,7 +266,8 @@
 		</div>
 		<div id="entFlags"></div>
 		<div id="entLinks"></div>
-		<table id="kvTable"><tbody id="kvRows"></tbody></table>
+		<div id="entForm"></div>
+		<details id="kvBlock"><summary title="Every key of the entity as it is sent, also the ones its class is not known to take. The fields above are another view of the same keys.">All keys <span id="kvCount"></span></summary><table id="kvTable"><tbody id="kvRows"></tbody></table></details>
 		<datalist id="pickBrush"></datalist><datalist id="pickMaps"></datalist><datalist id="pickBots"></datalist><datalist id="pickEffects"></datalist><datalist id="pickMusic"></datalist>
 		<datalist id="pickNpcs"></datalist><datalist id="pickPath"></datalist><datalist id="pickClasses"></datalist><datalist id="pickNames"></datalist>
 		<div class="actions">
@@ -336,6 +337,7 @@
 <!--#include js/log.js -->
 <!--#include js/load.js -->
 <!--#include js/editor-templates.js -->
+<!--#include js/editor-form.js -->
 <!--#include js/bans.js -->
 <!--#include js/editor-select.js -->
 <!--#include js/editor-history.js -->

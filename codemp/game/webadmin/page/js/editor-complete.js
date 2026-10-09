@@ -16,6 +16,8 @@ async function loadClassKeys() {
 			const [name, ...keys] = line.split('\t');
 			if (name) classKeys.set(name.toLowerCase(), keys.map(k => { const [key, kind, def] = k.split('|'); return { key, kind, def: def || '' }; }));
 		}
+		// the form of the selected entity has the fields of these keys now
+		renderEntForm();
 	} catch (e) {
 		classKeysAsked = false;
 	}
@@ -125,6 +127,7 @@ function suggestTake(i, focus) {
 	const value = input.closest('tr').querySelectorAll('input')[1];
 	input.value = c.key;
 	kvDirty = true;
+	renderEntForm();
 	suggestClose();
 	if (focus && value) value.focus();
 }
