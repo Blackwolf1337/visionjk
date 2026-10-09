@@ -400,6 +400,77 @@ Also changed:
   Not done: the burn of a blade on a wall, the flare and sparks when blades meet (the state has no events), the
   beam of a trip mine, sabers of NPCs. `tools/panelshot/steps_sabers.js` (50 checks; one of them needs a bot
   with his saber on in view and fails when none is).
+- New: the items, the models of movers, marks and shadows as the client draws them, and a line through the map
+  (`js/items.js`, `js/movers.js`, `js/marks.js`, `js/trace.js`). The page drew an item as one model on the
+  floor and had no shadow and no mark.
+  - Items (`CG_Item`, `CG_RegisterItemVisuals`): a weapon or powerup floats over the holo base with its cone of
+    light (the effect `mp/itemcone`), 16 higher, bobbing and turning by the time of the game, a weapon at one
+    and a half times its size, with the bluish light of `RF_MINLIGHT`; the heights of the other kinds; the
+    second model of health and powerups; the ghost of one that was taken (`powerups/placeholder`, tinted),
+    nothing for `EF_NODRAW`; a dropped weapon as its angles say; the fade after a respawn; what the force
+    side of the viewer greys (`CG_GreyItem`). Eight kinds on mp/ffa3 against the game: 3.8, 13.2, 11.9, 1.0,
+    0.2, 0.01, 0.2, 29.2 before, 0.15, 0.7, 0.45, 0.3, 0.02, 0.01, 0.02, 0.7 after.
+  - A mover's `model2` is drawn where the mover is (`CG_Mover`).
+  - A line or box through the map (`traceWorld`, `traceBox`; `CM_Trace` with the tree, the brushes and the
+    curves, the last as the triangles the page draws of them).
+  - Marks (`CG_ImpactMark` with `R_MarkFragments`, which cuts the mark against the surfaces near it;
+    `CG_AddMarks` with its ten seconds and fade; the decals of effect files; the burn of a blade,
+    `CG_CreateSaberMarks`) and the round shadow under players and NPCs (`CG_PlayerShadow`: a box traced down
+    128, darker the nearer the floor).
+  - What a client is not sent, it does not draw: the server sends a client only the entities in clusters of
+    the map its eye sees, and none at all when its eye is in no area (inside a wall). The page asks the same
+    for its own eye (`clientSees`, `snapshotFrom`, `snapshotSees` from `SV_AddEntitiesVisibleFromPoint`) for
+    items, shadows, players, NPCs, blades, lights, shots and models, in every view from inside the map. Not
+    known to the page: which doors are shut. Found by measuring: four of the item views had the eye in a
+    wall, and the game drew no item there.
+  Not compared with a picture of the game: a ghost, a fade, a dropped weapon, a flag, a mover with a model, a
+  mark that stays, a decal. `tools/panelshot/steps_ground.js` (59 checks).
+- New: the weather of a map (`js/weather.js`, all of `tr_WorldEffects.cpp`): the commands the game names
+  among its effects with a `*` (`fx_snow`, `fx_rain`, `fx_spacedust`), the zones of `misc_weather_zone`, the
+  cache that says where a point is under the sky, the wind, and the clouds of particles with their numbers,
+  boxes, speeds and images. Of the stock maps only mp/ctf2 has weather (snow, fog, a steady wind). Against
+  the game the flakes can only be counted, they fall at random: 182 against 167, 190 against 192 and 176
+  against 174 in one outdoor view, the same size and the same brightest value. The mean difference of such a
+  view does not say this: both pictures have flakes at other places, and it went from 0.6 to 1.1 and from 0.1
+  to 2.3 in two views while the snow was added. Rain, dust, sand and gusts are ported and checked against the
+  source, with no map to compare them on. `tools/panelshot/steps_weather.js` (58 checks on mp/ctf2).
+- New: players and NPCs as `CG_Player` draws them (`js/g2.js`, `js/g2-angles.js`, `js/player-draw.js`,
+  `js/player-fx.js`). The page started an animation when it first saw its number, ran it by its own clock
+  and turned the whole model by the yaw of its player.
+  - Ghoul2 as the engine has it: the list of bones with an animation of their own (`G2_Set_Bone_Anim_Index`),
+    the frame of a bone at a time with the wrap of a loop and the hold of a freeze (`G2_TimingModel`), a bone
+    takes the frames of its parent unless it has its own, the blend from the pose before, bone angle
+    overrides, bolts.
+  - The animation (`CG_PlayerAnimation`, `CG_RunLerpFrame`, `CG_SetLerpFrameAnimation`): legs on `model_root`,
+    torso on `lower_lumbar` and `Motion`, a blend of 100 msec as the client has it, the speed scales. The bone
+    is put at the frame the server has it at (the state), and runs on between two polls and where the state
+    has none.
+  - How the model is turned (`BG_G2PlayerAngles` with the spine, the neck, the look and the swing of the
+    legs): the legs follow where he moves, torso and head where he looks.
+  - NPCs go the same way, with the model and skin the state names; the walker turns its head
+    (`BG_G2ATSTAngles`). The walker of mp/siege_hoth no longer breaks a frame: a non-humanoid is not given an
+    animation its file lacks, and a model that fails is given up with one warning.
+  - Around the model (`js/player-fx.js`), ported and checked in the page only, not against the game: the
+    sprites above a head, the flag, the spheres of powerups, the shells of rage, protect and absorb, the speed
+    trail, the cloak.
+  A bot with a pistol from four sides, the same in both runs: 0.62, 0.47, 0.56 before, 0.30, 0.30, 0.29
+  after. What moves can not match a single picture: the page draws the frame of the server, a client is a
+  snapshot behind. `tools/panelshot/steps_players.js` (36 checks).
+- New: the 2D of a client (`js/hud.js`, `js/hud-font.js`, `js/hud-world.js`): the HUD of the page was written
+  by hand into a canvas of its own. Now it is drawn as the game draws it, into the 3D picture after the scene
+  with the shaders of the game (many of them blend in ways a canvas laid over another can not), in the
+  virtual screen of 640 x 480 the renderer stretches over the picture.
+  - The fonts (`tr_font.cpp`): the `.fontdat` with its glyph table, widths and heights of a string, colour
+    codes, the drop shadow; the text functions of cgame on top of it.
+  - The HUD (`CG_DrawHUD` with `ui/hud.menu`, which the page parses for the places, sizes and colours):
+    health, armor, force, ammo, saber style, the numbers, the score.
+  - More of `CG_Draw2D`: who is followed, the leader with his picture at the top right, the crosshair where
+    the line from the muzzle ends, the line of JA+ for the other dimension. Ported from the source and never
+    seen running: the selection bar of weapons, the screen tints of force powers, the zoom masks, the fuel
+    bars, the names under the crosshair.
+  The HUD alone against the game (where a picture with it differs from one without): 70.1 and 66.5 with 90 %
+  of its pixels off before, 9.7 and 6.6 with 13 % and 7 % after. Not ported: the radar, the chat lines, votes,
+  centre prints, the scoreboard, the flag status. `tools/panelshot/steps_hud.js` (13 checks).
 - Fixed: a file with a long name was not found. The server cut a value of a request to the room it had for
   it before it decoded it (`WA_FormValue`), and the page writes every slash of a file name as `%2F`: a name
   of 58 to 63 letters, which the game has room for, lost its end and was refused. So the image
