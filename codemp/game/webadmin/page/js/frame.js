@@ -250,6 +250,8 @@ function drawFrame(now) {
 	for (const p of players.values()) {
 		for (let i = 0; i < 3; i++) p.draw[i] = p.prev[i] + (p.data.pos[i] - p.prev[i]) * k;
 	}
+	// a player who is controlled from the page, and the camera behind him (js/control.js)
+	controlFrame();
 
 	if (canvas.width !== Math.round(canvas.clientWidth * canvasScale())) resize();
 	if (view.id < 0 || !firstPersonCamera(now)) updateCamera();

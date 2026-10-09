@@ -1282,6 +1282,7 @@ gameImport_t *WebAdmin_WrapImport( gameImport_t *import );
 int G_BanListSize( void );
 qboolean G_BanListEntry( int index, char *out, int outSize );
 float WebAdmin_ClientGravity( const gentity_t *ent, float gravity );
+void WebAdmin_ClientCommand( gentity_t *ent, usercmd_t *ucmd );
 
 // g_utils.c
 int G_TryConfigstringIndex( const char *name, int start, int max );

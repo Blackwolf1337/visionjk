@@ -141,7 +141,8 @@ window.addEventListener('mouseup', e => {
 	} else if (mode === 'players' && selected >= 0) {
 		if (!hit) { toast('No floor there', false); return; }
 		marker = { pos: hit, t: performance.now() };
-		action({ action: 'teleport', id: selected, x: hit[0].toFixed(1), y: hit[1].toFixed(1), z: hit[2].toFixed(1) });
+		// one who is controlled from the page walks there (js/control.js)
+		if (!controlGoal(hit)) action({ action: 'teleport', id: selected, x: hit[0].toFixed(1), y: hit[1].toFixed(1), z: hit[2].toFixed(1) });
 	}
 });
 canvas.addEventListener('wheel', e => {

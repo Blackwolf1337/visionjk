@@ -137,6 +137,13 @@ body.ref #hud .hud-top { display: none !important; }
 .hint { color: var(--muted); font-size: 12px; margin-top: 6px; }
 #command .close { position: absolute; top: 8px; right: 8px; }
 #command .actions, #jpBox .actions { max-width: none; }
+/* Who is controlled from the page and from where he is looked at: a bar at the top left of the map, and under the
+   name of the view through his eyes while that is on. */
+#controlBar { position: absolute; left: 10px; top: 10px; max-width: calc(100% - 20px); display: flex; flex-wrap: wrap; gap: 6px; align-items: center; background: rgba(13,13,15,.75); border: 1px solid var(--line); border-radius: 3px; padding: 5px 8px; }
+#controlBar .hint { margin: 0; }
+body.fp #controlBar { left: 50%; top: 44px; width: max-content; transform: translateX(-50%); }
+/* the keys of it in the help are of the administration alone */
+body.app-editor #help .adminOnly { display: none; }
 
 [hidden] { display: none !important; }
 #logText { position: absolute; inset: 0 0 39px 0; margin: 0; padding: 10px 12px; overflow: auto; font: 12px/1.45 ui-monospace, Menlo, Consolas, monospace; white-space: pre-wrap; word-break: break-word; color: var(--text); }

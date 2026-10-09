@@ -32,6 +32,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 //   wa_perf.c       /api/perf, how the server keeps up
 //   wa_log.c        the chat, the log of the game, and the console: what it prints and a line to run on it
 //   wa_routes.c     the route of the bots
+//   wa_control.c    a player who is moved from the page
 
 #pragma once
 
@@ -160,3 +161,6 @@ void WA_ApiCommand( waConnection_t *c, const char *body );
 // wa_routes.c
 void WA_ApiWaypoints( waConnection_t *c );
 void WA_ApiWaypoint( waConnection_t *c, const char *body );
+
+// wa_control.c
+void WA_ApiControl( waConnection_t *c, const char *body );

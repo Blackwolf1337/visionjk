@@ -128,6 +128,7 @@ the answer tells the page that the numbers started over.
 | `GET /api/log?from=` | the log of the game from a place on, `next` is where to ask from the next time. Without `from`, or with a place the panel does not have: its last part |
 | `GET /api/console?from=` | the console of the server from a place on, as `/api/log` gives the log: read from `qconsole.log` of the server folder. The first request sets `logfile 2` when it is 0 |
 | `POST /api/command` | `cmd`: one line for the server console, run in the next frame as if it was typed there |
+| `POST /api/control` | a player moved from the page. `op` start (`id`), input (`id`, `f`, `r`, `u` from -127 to 127, `buttons`, `yaw`, `pitch`), goal (`id`, `x`, `y`, `z`: he walks there) or stop. The answer names who is held, -1 for nobody |
 | `GET /api/perf?since=` | the load of the server, a sample a second, the last 300 kept: `samples` are `[frames, average and longest frame of the game in microseconds, longest wait for a frame in ms, entities, players, average and longest part of this panel in a frame in microseconds]`, `seq` is how many there were, `from` the number of the first one sent. `since`: only the ones from that number on. With them `svFps`, `entityMax`, `maxClients` |
 | `GET /api/classdoc` | the entity definitions of the game code: every `QUAKED` comment of its source files as text |
 | `GET /api/classkeys` | the keys the game code reads, as text: a line for a class with its name and, each after a tab, `key\|kind\|default`. The first line (`*`) is the keys every entity takes, `*item` the ones of an item |
@@ -1597,6 +1598,20 @@ Also changed:
   folder is shown, the engine finds one nowhere else, and the page says so. Any other file goes into the folder
   that is shown and is refused there when that is of the installation. The server side is unchanged
   (`/api/fs/*`). Added without a test run.
+- New: "Control" in the panel of a player takes him over, a bot or a human, one at a time (`wa_control.c`). A
+  bar over the map has three views. Map: a right-click makes him walk to that spot instead of teleporting him,
+  straight there, with a jump when he does not get on and a stop after a few of them. Third person: the camera
+  of the map sits behind him. First person: the view through his eyes that the panel has. In those two a click
+  on the map takes the mouse, which turns him, and W A S D, Space, C or Ctrl, Shift, E, F and the mouse buttons
+  are his (move, jump, crouch, walk, use, the force power, attack and alternate attack). Esc, a second click on
+  Control or selecting somebody else gives him back. The page sends what is held 20 times a second. On the
+  server `ClientThink_real` asks `WebAdmin_ClientCommand` for every command of that player before it runs it:
+  the moves, the buttons and the view of the command are replaced, the view as `ANGLE2SHORT( want ) -
+  delta_angles`. An input counts for half a second and five seconds without a request let him go, so a page
+  that is closed does not keep him. A bot goes on thinking and is not listened to. A human goes on predicting
+  his own keys, so his own view jitters while he is held: nothing on the server can change that for a client
+  that predicts. While he is dead his own command counts, which is what brings him back. Added without a test
+  run.
 - "Add bot" with an empty name adds `Kyle Katarn`. JKAdmin asks for `Kyle`, a bot the game does not have, so
   nothing happened there.
 - The two entity hooks pass `ent-g_entities` instead of `ent->s.number`.

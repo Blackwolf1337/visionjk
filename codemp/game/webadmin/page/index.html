@@ -184,6 +184,7 @@
 		<kbd>Del</kbd> delete entity &nbsp; <kbd>Shift</kbd>+arrows move entity &nbsp; <kbd>Ctrl Z</kbd> <kbd>Ctrl Y</kbd> undo, redo &nbsp; <kbd>Ctrl C</kbd> <kbd>Ctrl V</kbd> copy, paste<br>
 		<kbd>Ctrl</kbd>+click selects one more entity &nbsp; <kbd>Shift</kbd>+drag selects in a rectangle</span>
 		<span class="editorOnly"><br>Routes: <kbd>Ctrl</kbd>+click one more waypoint &nbsp; <kbd>Shift</kbd>+drag a rectangle &nbsp; drag a selected one to move them &nbsp; <kbd>Del</kbd> removes them</span>
+		<span class="adminOnly"><br>Control of a player: <kbd>W A S D</kbd> move &nbsp; <kbd>Space</kbd> jump &nbsp; <kbd>C</kbd> / <kbd>Ctrl</kbd> crouch &nbsp; <kbd>Shift</kbd> walk &nbsp; <kbd>LMB</kbd> <kbd>RMB</kbd> attack, alternate &nbsp; <kbd>E</kbd> use &nbsp; <kbd>F</kbd> force power &nbsp; <kbd>Esc</kbd> gives him back</span>
 	</div>
 	</div>
 	<button id="shotBtn" title="Saves what the map view shows as a PNG file">Screenshot</button>
@@ -192,6 +193,11 @@
 	<div id="band"></div>
 	<div id="loading">Loading map...</div>
 	<div id="hud"><div class="hud-top"><span id="hudName"></span><button id="fpExit">Exit (Esc)</button></div></div>
+	<div id="controlBar" hidden><span>Controlling <b id="controlName"></b></span>
+		<button data-view="map" title="The view of the map stays as it is. A right-click on the map makes him walk to that spot.">Map</button>
+		<button data-view="third" title="The camera behind him. A click on the map takes the mouse, which turns him from then on. W A S D move him, Space jumps, C or Ctrl crouches, Shift walks, the mouse buttons attack, E uses, F is the force power. Esc frees the mouse, Esc again gives him back.">Third person</button>
+		<button data-view="first" title="The view through his eyes, with the keys and the mouse of the third person. It turns as the server reports him, a moment after the mouse.">First person</button>
+		<button id="controlEnd" title="Lets him go (Esc)">Give back</button><span class="hint" id="controlHint"></span></div>
 	<div id="command">
 		<div class="who">
 			<div class="nm" id="cmdName"></div>
@@ -219,10 +225,12 @@
 				<button data-act="kill">Kill</button>
 				<button id="followBtn">Follow</button>
 				<button id="fpBtn" title="Player view (V)">First person</button>
+				<button id="controlBtn" title="Steers this player from the page: a right-click on the map makes him walk there, and from behind him or through his eyes he is played with the keys and the mouse. A second click or Esc gives him back.">Control</button>
 				<button class="danger" data-act="kick" data-confirm>Kick</button>
 				<button class="danger" data-act="ban" data-confirm>Ban</button>
 			</div>
 			<div class="hint">Right-click on the map to teleport this player there.</div>
+			<div class="hint">Control steers him from this page until a second click or Esc gives him back: a right-click on the map then makes him walk there instead, and the views Third person and First person play him with the keys and the mouse. A human who is controlled sees his own view jitter.</div>
 		</div>
 		<!-- JA+ admin commands on the selected player, not in JKAdmin -->
 		<div id="jpBox">
@@ -323,6 +331,7 @@
 <!--#include js/editor-drafts.js -->
 <!--#include js/editor-labels.js -->
 <!--#include js/routes.js -->
+<!--#include js/control.js -->
 <!--#include js/mapreport.js -->
 <!--#include js/log.js -->
 <!--#include js/load.js -->

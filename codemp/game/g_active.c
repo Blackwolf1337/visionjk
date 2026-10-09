@@ -1907,6 +1907,10 @@ void ClientThink_real( gentity_t *ent ) {
 		return;
 	}
 
+	// a player who is moved from the web admin panel: his command is what the page says
+	if ( ent->s.number < MAX_CLIENTS )
+		WebAdmin_ClientCommand( ent, &client->pers.cmd );
+
 	// This code was moved here from clientThink to fix a problem with g_synchronousClients
 	// being set to 1 when in vehicles.
 	if ( ent->s.number < MAX_CLIENTS && ent->client->ps.m_iVehicleNum )

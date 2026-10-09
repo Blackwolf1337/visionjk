@@ -54,6 +54,7 @@ now has one line for each of these:
 | `CallVote: <n> [<ip>] "<name>": <console line>` | a vote starts: the line the console runs if it passes |
 | `Web admin: <ip>: action ...` / `entity ...` / `wrong password` | every action and entity edit of the panel, and every wrong password |
 | `Web admin: <ip>: command <console line>` | a line typed into the console of the panel. What follows a word with `pass` in it is replaced by `...`, here and in the echo on the console |
+| `Web admin: <ip>: control start id <n>` / `control stop id <n>` | the panel takes a player over or lets him go |
 | `amlogin: wrong password from <name> [<ip>]` | a wrong admin password |
 | `Odd userinfo: <n> [<ip>] <bytes> bytes: ...` | a userinfo with control characters or of more than 800 bytes, the control characters as `\xNN`, the values of `password`, `cp_login` and `cp_clanPwd` left out |
 
@@ -110,6 +111,12 @@ which runs any console line. The new line needs the same login and the same orig
 one line of 480 characters at most with control characters removed, and goes to the security log. To show what
 the console answers the panel reads `qconsole.log` of the server folder and sets `logfile 2` when it is 0, so a
 server whose panel console was opened once keeps that file until it is stopped.
+
+## Added after the pass: the player control of the panel
+
+`POST /api/control` (`wa_control.c`) replaces the moves, buttons and view of the commands of one player while
+the page holds him. It writes nothing but the usercmd of that player, with the moves clamped to what a client
+may send and the buttons masked to the ones a key can press.
 
 ## Added after the pass: the voice chat
 
