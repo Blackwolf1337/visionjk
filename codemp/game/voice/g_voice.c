@@ -27,6 +27,9 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // Nothing of it is in the game protocol, so a client without that cgame (jamp, the JA+ plugin, another fork)
 // sees no difference: the one server command there is, jpvoice, only goes to a client that asked with the
 // client command of the same name.
+//
+// A client that runs in a browser sends the same datagrams through the web host of the dedicated server
+// (codemp/server/web/sv_web_voice.cpp), which passes them on to this port as they are.
 
 #include "game/bg_net.h"		// the sockets, in front of everything else
 #include "game/g_local.h"
@@ -49,6 +52,23 @@ static voiceClient_t	voiceClients[MAX_CLIENTS];
 static bgSocket_t		voiceSocket = BG_INVALID_SOCKET;
 static int				voicePort;
 static int				voiceRefused;		// datagrams that were no voice of a client of this server, since the socket was made
+static struct in_addr	voiceSelf;			// the address of this machine the web host of the server reaches the relay on
+
+/*
+=================
+G_VoiceTell
+
+Says in the cvar g_voiceRelay where the relay listens, "address:port" in numbers, or nothing while there is no
+relay. The web host of the dedicated server reads it (codemp/server/web/sv_web_voice.cpp): it carries the
+voice chat of the clients that run in a browser, see G_VoiceFromWebHost().
+=================
+*/
+static void G_VoiceTell( qboolean open ) {
+	const byte *ip = (const byte *)&voiceSelf.s_addr;
+
+	trap->Cvar_Register( NULL, "g_voiceRelay", "", CVAR_ROM );
+	trap->Cvar_Set( "g_voiceRelay", open ? va( "%i.%i.%i.%i:%i", ip[0], ip[1], ip[2], ip[3], voicePort ) : "" );
+}
 
 /*
 =================
@@ -64,6 +84,7 @@ void G_VoiceShutdown( qboolean restart ) {
 		BG_CloseSocket( voiceSocket );
 		voiceSocket = BG_INVALID_SOCKET;
 	}
+	G_VoiceTell( qfalse );
 	memset( voiceClients, 0, sizeof( voiceClients ) );
 }
 
@@ -115,6 +136,12 @@ void G_VoiceInit( qboolean restart ) {
 	}
 	BG_SocketNonBlocking( voiceSocket );
 	trap->Print( "Voice chat on UDP port %i\n", voicePort );
+
+	// on every address: the web host of this server reaches the relay on the one no network has
+	voiceSelf = addr.sin_addr;
+	if ( voiceSelf.s_addr == htonl( INADDR_ANY ) )
+		voiceSelf.s_addr = htonl( INADDR_LOOPBACK );
+	G_VoiceTell( qtrue );
 
 	// the cgame only asks for voice on a server that says in its server info that it has it
 	trap->GetServerinfo( text, sizeof( text ) );
@@ -224,6 +251,24 @@ static void G_VoiceRelay( int speaker, const voicePacket_t *in ) {
 
 /*
 =================
+G_VoiceFromWebHost
+
+A client that runs in a browser can not send to this port. His datagrams come through the web host of the
+dedicated server of this tree (sv_webPort), from a socket that host has on this machine, and are handed on
+there only if the client they name plays through that host from the address they came from: the check of the
+address is made where the address is known. So on a server that runs that host a datagram from this machine
+is taken with the token alone.
+
+Nothing that comes in from a network has the address of this machine, the system does not take such a packet
+from a line. On a server without that host nothing changes.
+=================
+*/
+static qboolean G_VoiceFromWebHost( const struct sockaddr_in *from ) {
+	return ( from->sin_addr.s_addr == voiceSelf.s_addr && trap->Cvar_VariableIntegerValue( "sv_webPort" ) > 0 ) ? qtrue : qfalse;
+}
+
+/*
+=================
 G_VoiceFrame
 
 Takes what came in on the voice port and hands it on. Called with every server frame and with every move a
@@ -231,9 +276,10 @@ client sends (ClientThink), so a voice does not wait for the next server frame. 
 takes a limited number of datagrams.
 
 A datagram counts only if it is a whole one of this protocol, names a client who is connected, carries the
-token that client was given, and comes from the address his game connection comes from. Everything else is
-dropped without an answer. One datagram in is at most one out per listener, and only to addresses that proved
-themselves with a token, so the port can not be used to flood somebody else.
+token that client was given, and comes from the address his game connection comes from (or from the web host
+of this server, which looked at that address itself). Everything else is dropped without an answer. One
+datagram in is at most one out per listener, and only to addresses that proved themselves with a token, so the
+port can not be used to flood somebody else.
 =================
 */
 void G_VoiceFrame( void ) {
@@ -263,7 +309,7 @@ void G_VoiceFrame( void ) {
 		vc = &voiceClients[p.client];
 		if ( !vc->token || p.token != vc->token || !g_entities[p.client].inuse || !g_entities[p.client].client
 			|| g_entities[p.client].client->pers.connected == CON_DISCONNECTED
-			|| ( vc->gameAddrKnown && from.sin_addr.s_addr != vc->gameAddr.s_addr ) ) {
+			|| ( vc->gameAddrKnown && from.sin_addr.s_addr != vc->gameAddr.s_addr && !G_VoiceFromWebHost( &from ) ) ) {
 			voiceRefused++;
 			continue;
 		}
