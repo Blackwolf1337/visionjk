@@ -58,6 +58,14 @@ function(vjk_wasm_side_module target)
 		PREFIX ""
 		SUFFIX ".wasm"
 		LIBRARY_OUTPUT_DIRECTORY "${VisionJKWebDir}")
+	# what -z defs does for the libraries of the desktop: a function nobody has fails the build, not the game
+	if(BuildMPEngine)
+		add_dependencies(${target} ${MPEngine})
+		add_custom_command(TARGET ${target} POST_BUILD
+			COMMAND "${CMAKE_CROSSCOMPILING_EMULATOR}" "${CMAKE_SOURCE_DIR}/cmake/Modules/CheckWasmImports.js"
+				"$<TARGET_FILE_DIR:${MPEngine}>/$<TARGET_FILE_BASE_NAME:${MPEngine}>.wasm" "$<TARGET_FILE:${target}>"
+			VERBATIM)
+	endif()
 endfunction()
 
 # the files of the page, copied as they are

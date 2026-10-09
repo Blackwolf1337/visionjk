@@ -63,6 +63,7 @@ void Sys_PlatformInit( int argc, char *argv[] )
 	else
 		stdinIsATTY = qfalse;
 
+#ifndef __EMSCRIPTEN__	// a page has no such limit to raise
 	// raise open file limit to allow more pk3 files
 	int retval;
 	struct rlimit rlim;
@@ -81,6 +82,7 @@ void Sys_PlatformInit( int argc, char *argv[] )
 	if (retval == -1) {
 		Com_Printf("Warning: Failed to raise open file limit. %s\n", strerror(errno));
 	}
+#endif
 }
 
 void Sys_PlatformExit( void )
