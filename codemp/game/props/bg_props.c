@@ -833,6 +833,10 @@ be asked, so the file is read, every offset checked against its size.
 #ifndef BG_PROPS_NO_FILES
 
 #include "qcommon/qfiles.h"
+// q_shared.h has the bone struct already. Only a C23 compiler takes it a second time.
+#ifndef MDXABONEDEF
+#define MDXABONEDEF
+#endif
 #include "rd-common/mdx_format.h"
 
 #if defined( _GAME )

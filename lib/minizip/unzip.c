@@ -113,7 +113,7 @@
    binding the bundled minizip lib to the rest of the engine. */
 
 void* visionjk_minizip_malloc(int);
-int   visionjk_minizip_free(void*);
+void  visionjk_minizip_free(void*);
 
 #ifndef ALLOC
 # define ALLOC(size) (visionjk_minizip_malloc(size))
