@@ -471,6 +471,15 @@ Also changed:
   The HUD alone against the game (where a picture with it differs from one without): 70.1 and 66.5 with 90 %
   of its pixels off before, 9.7 and 6.6 with 13 % and 7 % after. Not ported: the radar, the chat lines, votes,
   centre prints, the scoreboard, the flag status. `tools/panelshot/steps_hud.js` (13 checks).
+- New: the camera behind a player as the game has it (`chaseCamera` in `js/camera.js`,
+  `CG_OffsetThirdPersonView`): it looks at a point 16 above his eye from 80 behind it along his view, both
+  follow him with the delay of the game (stiffer the faster he turns), and both stop at walls: a box of 4 to
+  every side is traced from his eye to the point and from the point to the camera. The page had its own guess
+  with two rays, which stood inside a wall in a narrow corridor (14.5 of 255 against the game there). And the
+  game decides who is looked at from behind: one who is dead, who holds a saber or his fists, who falls to his
+  death or rides. Against the game, behind three bots: 4.1, 1.5 and (through the eyes of one with a gun) 1.5;
+  what is left is the place of the blades and the weapon in front of the camera, which is not drawn as the
+  game draws it yet. Not ported: the camera of a vehicle, movers in the way of the camera.
 - Fixed: a file with a long name was not found. The server cut a value of a request to the room it had for
   it before it decoded it (`WA_FormValue`), and the page writes every slash of a file name as `%2F`: a name
   of 58 to 63 letters, which the game has room for, lost its end and was refused. So the image

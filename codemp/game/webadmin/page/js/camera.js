@@ -154,3 +154,61 @@ function project(p) {
 	return [(c[0] / c[3] * 0.5 + 0.5) * canvas.clientWidth, (0.5 - c[1] / c[3] * 0.5) * canvas.clientHeight];
 }
 
+// ---- the camera behind a player (CG_OffsetThirdPersonView in cg_view.c, with the cvars at their defaults)
+//
+// The game looks at a point 16 above the eye of the player (cg_thirdPersonVertOffset) from 80 behind it along his
+// view (cg_thirdPersonRange). Both follow him with a delay (cg_thirdPersonTargetDamp 0.5, cg_thirdPersonCameraDamp
+// 0.3, stiffer the faster he turns), and both stop at what is in the way: a box of 4 to every side is traced from
+// his eye to the point and from the point to the camera (MASK_CAMERACLIP). Not here: the camera of a vehicle and of
+// one a rancor holds, and movers in the way (the trace of the page knows the map alone).
+const CHASE = { range: 80, vertOffset: 16, targetDamp: 0.5, cameraDamp: 0.3, interval: 50, mins: [-4, -4, -4], maxs: [4, 4, 4], mask: 0x1 | 0x1000 | 0x10 };
+const chase = { lastFrame: 0, lastYaw: 0, of: -1, curTarget: [0, 0, 0], curLoc: [0, 0, 0] };
+
+// origin: where the player is, angles: the way he looks (pitch, yaw), time: the time of the frame in msec, or -1
+// for a camera that has come to rest (the comparison with the game, where the time stands). deadYaw: where one who
+// is dead is looked at from (STAT_DEAD_YAW), undefined for one who lives. Returns the eye and the way it looks.
+function chaseCamera(id, origin, viewheight, pitch, yaw, time, deadYaw) {
+	const C = CHASE, c = chase;
+	if (deadYaw !== undefined && deadYaw !== null) yaw = deadYaw;
+	const reset = time < 0 || c.of !== id || c.lastFrame === 0 || c.lastFrame > time;
+	// the pitch is capped at 89 for a camera that starts and at 80 for one that follows
+	const cap = reset ? 89 : 80;
+	pitch = Math.max(-cap, Math.min(cap, pitch));
+	const pr = pitch * Math.PI / 180, yr = yaw * Math.PI / 180, fwd = [Math.cos(pr) * Math.cos(yr), Math.cos(pr) * Math.sin(yr), -Math.sin(pr)];
+	// CG_CalcIdealThirdPersonViewTarget and ...Location
+	const focus = [origin[0], origin[1], origin[2] + viewheight], idealTarget = [focus[0], focus[1], focus[2] + C.vertOffset];
+	const idealLoc = idealTarget.map((v, i) => v - C.range * fwd[i]);
+	const clip = (from, to) => traceBox(from, to, C.mins, C.maxs, C.mask);
+	if (reset) {
+		// CG_ResetThirdPersonViewDamp: everything at its place at once
+		c.curTarget = clip(focus, idealTarget).pos.slice();
+		c.curLoc = clip(c.curTarget, idealLoc).pos.slice();
+		c.of = id;
+	} else {
+		let dyaw = Math.abs(yaw - c.lastYaw);
+		if (dyaw > 180) dyaw = Math.abs(dyaw - 360);
+		const dt = time - c.lastFrame, dtime = dt / C.interval;
+		let stiff = dt > 0 ? dyaw / dt : 0;
+		stiff = stiff < 1 ? 0 : stiff > 2.5 ? 0.75 : (stiff - 1) * 0.5;
+		// CG_UpdateThirdPersonTargetDamp: what is left of the way to the point after this time
+		let ratio = Math.pow(1 - C.targetDamp, dtime);
+		c.curTarget = idealTarget.map((v, i) => v - ratio * (v - c.curTarget[i]));
+		let tr = clip(focus, c.curTarget);
+		if (tr.fraction < 1) c.curTarget = tr.pos.slice();
+		// CG_UpdateThirdPersonCameraDamp: less of a delay the more he looks up or down, and the faster he turns
+		const pf = Math.abs(pitch) / 115;
+		let damp = (1 - C.cameraDamp) * pf * pf + C.cameraDamp;
+		if (stiff > 0) damp += (1 - damp) * stiff;
+		if (damp >= 1) c.curLoc = idealLoc.slice();
+		else { ratio = Math.pow(1 - damp, dtime); c.curLoc = idealLoc.map((v, i) => v - ratio * (v - c.curLoc[i])); }
+		tr = clip(c.curTarget, c.curLoc);
+		if (tr.fraction < 1) c.curLoc = tr.pos.slice();
+	}
+	c.lastYaw = yaw;
+	c.lastFrame = time < 0 ? 0 : time;
+	// the camera looks from where it is to the point, or along the view of the player where the two are one
+	let dir = [c.curTarget[0] - c.curLoc[0], c.curTarget[1] - c.curLoc[1], c.curTarget[2] - c.curLoc[2]];
+	const dist = Math.hypot(dir[0], dir[1], dir[2]);
+	if (!dist || dir[0] === 0 || dir[1] === 0) dir = fwd; else dir = dir.map(v => v / dist);
+	return { eye: c.curLoc.slice(), dir };
+}

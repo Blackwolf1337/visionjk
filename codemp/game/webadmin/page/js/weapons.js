@@ -392,19 +392,16 @@ function firstPersonCamera(now) {
 	view.pitch = lerpAngle(p.prevPitch ?? d.pitch, d.pitch, k);
 	const ax = viewAxes(view.yaw, view.pitch);
 	const head = [p.draw[0], p.draw[1], p.draw[2] + (d.viewheight || 36)];
-	view.thirdPerson = d.weapon === 3 || d.dead;
+	// From behind him as the game decides it (CG_DrawActiveFrame): one who is dead, who holds a saber or his fists,
+	// who falls to his death or rides a vehicle. Not known here: a grapple move, a knockdown, the emplaced gun.
+	const hud = state && state.hud && state.hud.client === view.id ? state.hud : null;
+	view.thirdPerson = d.dead || d.weapon === 3 || d.weapon === 2 || !!(hud && (hud.fallingToDeath || hud.vehicle));
 	if (view.thirdPerson) {
-		// CG_OffsetThirdPersonView: target is the head plus cg_thirdPersonVertOffset 16,
-		// the camera cg_thirdPersonRange 80 behind it along the view, both stop at walls
-		const back = ax.fwd.map(v => -v);
-		let target = [head[0], head[1], head[2] + 16];
-		const up = pickGround(head, [0, 0, 1]);
-		if (up && up[2] - head[2] < 20) target[2] = up[2] - 4;
-		const hit = pickGround(target, back);
-		let dist = 80;
-		if (hit) dist = Math.min(dist, Math.hypot(hit[0] - target[0], hit[1] - target[1], hit[2] - target[2]) - 4);
-		eye = target.map((v, i) => v + back[i] * Math.max(4, dist));
-		viewProj = M4.mul(gameProjection(canvas.width, canvas.height), M4.lookAt(eye, target, [0, 0, 1]));
+		// CG_OffsetThirdPersonView (chaseCamera in js/camera.js). In the comparison with the game the time stands
+		// and the camera of the game has come to rest behind him.
+		const c = chaseCamera(view.id, p.draw, d.viewheight ?? 36, view.pitch, view.yaw, refCam ? -1 : now, d.dead && hud ? hud.stats[6] : undefined);
+		eye = c.eye;
+		viewProj = M4.mul(gameProjection(canvas.width, canvas.height), M4.lookAt(eye, eye.map((v, i) => v + c.dir[i]), [0, 0, 1]));
 	} else {
 		eye = head;
 		viewProj = M4.mul(gameProjection(canvas.width, canvas.height), M4.lookAt(eye, head.map((v, i) => v + ax.fwd[i]), ax.up));
