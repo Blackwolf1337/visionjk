@@ -208,6 +208,48 @@ webConnection_t *SV_WebSocketOf( const netadr_t *adr ) {
 
 /*
 ==================
+SV_WebPeerOpen
+
+qtrue: the WebSocket of that peer, the address of a client of the game, is open. The server asks when a
+packet for the channel of that client came from another socket of its address (SV_PacketEvent), and the
+channel stays where it is while the answer is qtrue.
+
+A socket can be gone without a word (the network of the player changed), and the client that comes back on
+its next socket is not to wait until the silence of the old one is noticed by itself. So a peer that was not
+heard for a moment is asked at once whether it is there (a ping, which a browser answers by itself), and
+one that sent nothing at all SV_WEB_PROBE_MSEC later is gone.
+==================
+*/
+qboolean SV_WebPeerOpen( const netadr_t *adr ) {
+	webConnection_t	*c = SV_WebSocketOf( adr );
+	char			waiting;
+	int				now;
+
+	if ( !c ) {
+		return qfalse;
+	}
+
+	now = Sys_Milliseconds();
+	if ( !c->probed ) {
+		if ( now - c->lastHeard > SV_WEB_PROBE_QUIET_MSEC ) {
+			c->probed = qtrue;
+			c->probeTime = now;
+			SV_WebSocketPing( c );
+		}
+		return (qboolean)!c->drop;
+	}
+
+	// Its time is over, unless its answer is there and only was not read yet: this wake-up came to the other
+	// socket first, or the server did not look at its sockets for a while (a map loaded).
+	if ( now - c->probeTime > SV_WEB_PROBE_MSEC && recv( c->sock, &waiting, 1, MSG_PEEK ) <= 0 ) {
+		SV_WebDrop( c );
+		return qfalse;
+	}
+	return qtrue;
+}
+
+/*
+==================
 SV_WebFlush
 
 Sends what the socket takes of what waits
@@ -325,7 +367,7 @@ static void SV_WebRead( webConnection_t *c ) {
 	if ( c->state == WEB_SOCKET ) {
 		c->inLen += received;
 		c->lastHeard = Sys_Milliseconds();
-		c->pinged = qfalse;
+		c->pinged = c->probed = qfalse;
 		SV_WebSocketFrames( c );
 		SV_WebWrite( c );
 		return;

@@ -82,6 +82,13 @@ byte that comes in is read as one of an attacker: fixed buffers, a fixed table, 
 // it sends. And a peer that only asks what the server runs (getinfo, getstatus) does not keep a place.
 #define SV_WEB_NO_CLIENT_MSEC	60000
 
+// The channel of a client of the game stays with its WebSocket while that is open (SV_WebPeerOpen). A socket
+// that is gone without a word must not hold it for the 90 seconds above: when another socket of the address
+// sends for the channel and the peer was not heard for the first of these, it is asked at once (a ping), and
+// if nothing at all came from it by the second it is gone.
+#define SV_WEB_PROBE_QUIET_MSEC	1000
+#define SV_WEB_PROBE_MSEC		5000
+
 // The packets a WebSocket peer hands the server: one in a millisecond, and this many more at once. No client
 // sends that much (cl_maxpackets is 1000 at most, and one packet in a frame of the client). What is above it
 // is lost, as a datagram is on a line that is full.
@@ -132,6 +139,8 @@ typedef struct webConnection_s {
 	int			lastHeard;		// Sys_Milliseconds() when something came from the peer
 	int			clientTime;		// and when it was last the peer of a client of the game, or became a WebSocket
 	qboolean	pinged;			// and it was asked since
+	qboolean	probed;			// asked because another socket sent for its channel, and not heard since
+	int			probeTime;
 	qboolean	inMessage;		// a message that comes in several frames is begun
 	int			messageLen;
 	leakyBucket_t	packets;	// how many packets it handed the server of late (SV_WEB_PACKET_BURST)

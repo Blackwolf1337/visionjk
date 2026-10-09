@@ -1008,6 +1008,7 @@ qboolean SV_GameCommand( void );
 void SV_WebInit( void );
 void SV_WebShutdown( void );
 void SV_WebSendPacket( int length, const void *data, const netadr_t *to );
+qboolean SV_WebPeerOpen( const netadr_t *adr );
 #endif
 
 

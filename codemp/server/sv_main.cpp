@@ -820,6 +820,16 @@ void SV_PacketEvent( const netadr_t *from, msg_t *msg ) {
 		// some address translating routers periodically change UDP
 		// port assignments
 		if (cl->netchan.remoteAddress.port != from->port) {
+#ifdef DEDICATED
+			// The port of a peer of the web host (NA_WEB) is the one of its connection and does not change
+			// while that is open: this packet is from another socket of the address, and the channel of a
+			// client is not pulled over to it. A client whose socket is gone goes on from its next one,
+			// which is what the client in a page does (codemp/qcommon/net_ws.cpp). Nothing is answered: a
+			// "disconnect" would end that client while its old socket is not yet known to be gone.
+			if ( from->type == NA_WEB && SV_WebPeerOpen( &cl->netchan.remoteAddress ) ) {
+				return;
+			}
+#endif
 			Com_Printf( "SV_ReadPackets: fixing up a translated port\n" );
 			cl->netchan.remoteAddress.port = from->port;
 		}
