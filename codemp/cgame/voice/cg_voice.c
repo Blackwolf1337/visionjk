@@ -27,6 +27,10 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 //
 // Nothing in here waits. The socket does not block, the sound devices run in threads of the audio library,
 // and CG_VoiceFrame() moves a little of everything along once a frame.
+//
+// The client that runs in a browser can not send UDP and has no threads. There the same datagrams go through
+// a WebSocket to the web host of the server, which hands them to that port (cg_voice_web.c), and nothing is
+// looked up. Those are the places marked __EMSCRIPTEN__, everything else is the same code.
 
 #include "game/bg_net.h"		// the sockets, in front of everything else
 #include "cgame/cg_local.h"
@@ -36,7 +40,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #ifdef JP_VOICE
 
 #include <opus.h>
-#ifndef _WIN32
+#if !defined( _WIN32 ) && !defined( __EMSCRIPTEN__ )
 	#include <pthread.h>
 	#include <netdb.h>
 #endif
@@ -79,6 +83,7 @@ typedef struct voiceSpeaker_s {
 	int				lastHeard;		// when his last datagram came
 	int				concealed;		// frames in a row that were made up
 	int				flags, distance;	// of his last datagram: is he in what the server shows, and how far away
+	int				heard;			// frames of him that were played, for voice_status
 	qboolean		muted;			// by this player (voice_mute)
 	qboolean		muffled;		// something is between him and the listener
 	int				traceTime;		//	and when that was looked at last
@@ -153,6 +158,23 @@ that does nothing else. The game only asks whether it is done.
 
 ===============================================================================
 */
+
+#ifdef __EMSCRIPTEN__
+
+// A page has no socket to give an address to and no thread to look one up in. Its way to the relay is a
+// WebSocket to the web host it came from, and the server is found when that is open.
+// qtrue: it is. qfalse: not yet, or never (voice.failed).
+static qboolean Voice_FindServer( void ) {
+	const int open = CG_VoiceWebOpen();
+
+	if ( open < 0 ) {
+		trap->Print( "Voice chat: the web host of the server does not take it (/voice, where this page came from)\n" );
+		voice.failed = qtrue;
+	}
+	return ( open > 0 ) ? qtrue : qfalse;
+}
+
+#else
 
 static struct {
 	volatile int		state;		// 0: none, 1: running, 2: found, 3: not found
@@ -254,6 +276,8 @@ static qboolean Voice_FindServer( void ) {
 	return qfalse;
 }
 
+#endif // __EMSCRIPTEN__
+
 /*
 ===============================================================================
 
@@ -275,9 +299,13 @@ static void Voice_Close( void ) {
 		voice.play = 0;
 	}
 	CG_VoiceAudioShutdown();
+#ifdef __EMSCRIPTEN__
+	CG_VoiceWebClose();
+#else
 	Voice_LookupJoin();
 	if ( voice.sockOpen )
 		BG_CloseSocket( voice.sock );
+#endif
 	// who was muted stays muted while the module does
 	for ( i = 0; i < MAX_CLIENTS; i++ ) {
 		const qboolean muted = voiceSpeakers[i].muted;
@@ -357,6 +385,7 @@ void CG_VoiceServerCommand( void ) {
 	for ( i = 0; i < MAX_CLIENTS; i++ )
 		voiceSpeakers[i].decoderOk = ( opus_decoder_init( (OpusDecoder *)&voiceDecoders[i], VOICE_RATE, 1 ) == OPUS_OK ) ? qtrue : qfalse;
 
+#ifndef __EMSCRIPTEN__		// (the WebSocket of a page is asked for by Voice_FindServer)
 	BG_NetStart();
 	voice.sock = socket( AF_INET, SOCK_DGRAM, IPPROTO_UDP );
 	if ( voice.sock == BG_INVALID_SOCKET ) {
@@ -369,6 +398,7 @@ void CG_VoiceServerCommand( void ) {
 	memset( &voice.server, 0, sizeof( voice.server ) );
 	voice.server.sin_family = AF_INET;
 	voice.server.sin_port = htons( (unsigned short)port );
+#endif
 
 	if ( !CG_VoiceAudioInit( cg_voiceBackend.string ) || !CG_VoiceAudioOpenPlayback( cg_voicePlayback.string ) ) {
 		trap->Print( "Voice chat: no sound device to play on, you will not hear the others\n" );
@@ -403,7 +433,11 @@ static void Voice_Send( int type, const byte *frame, int frameLen ) {
 	p.dataLen = frameLen;
 	len = BG_VoicePack( datagram, sizeof( datagram ), &p, qfalse );
 	if ( len )
+#ifdef __EMSCRIPTEN__
+		CG_VoiceWebSend( datagram, len );
+#else
 		sendto( voice.sock, (const char *)datagram, len, BG_SEND_FLAGS, (const struct sockaddr *)&voice.server, sizeof( voice.server ) );
+#endif
 }
 
 // The engine of this tree says in a cvar what its sound (s_spatial) takes from the voice chat. Only when the
@@ -588,8 +622,20 @@ static void Voice_Capture( int now ) {
 	}
 	if ( !CG_VoiceAudioCapturing() ) {
 		if ( !CG_VoiceAudioInit( cg_voiceBackend.string ) || !CG_VoiceAudioOpenCapture( cg_voiceCapture.string ) ) {
+#ifdef __EMSCRIPTEN__
+			const char *why;
+
+			// the browser is asking the player whether this page may have the microphone: his answer is not
+			// waited for, the next frame looks again
+			if ( CG_VoiceAudioAsking() )
+				return;
+			why = CG_VoiceAudioNoMicrophone();
+			if ( voice.keyDown || activation )
+				trap->Print( "Voice chat: this page has no microphone: %s\n", why ? why : "it does not open" );
+#else
 			if ( voice.keyDown || activation )
 				trap->Print( "Voice chat: no microphone (voice_devices lists what there is, cg_voiceCapture chooses)\n" );
+#endif
 			voice.keyDown = qfalse;
 			voice.micUntil = 0;
 			if ( activation )
@@ -635,10 +681,17 @@ static void Voice_Receive( int now ) {
 
 	for ( count = 0; count < VOICE_MAX_PER_FRAME; count++ ) {
 		byte				datagram[VOICE_MAX_DATAGRAM + 1];	// one more: a longer one shows as too long
-		struct sockaddr_in	from;
-		socklen_t			fromLen = sizeof( from );
 		voicePacket_t		p;
 		voiceSpeaker_t		*sp;
+#ifdef __EMSCRIPTEN__
+		// what the WebSocket brought since the last frame. Only the web host of the server is at its other end.
+		const int			len = CG_VoiceWebReceive( datagram, sizeof( datagram ) );
+
+		if ( len < 0 )
+			break;
+#else
+		struct sockaddr_in	from;
+		socklen_t			fromLen = sizeof( from );
 		const int			len = (int)recvfrom( voice.sock, (char *)datagram, sizeof( datagram ), 0, (struct sockaddr *)&from, &fromLen );
 
 		if ( len < 0 ) {
@@ -648,7 +701,10 @@ static void Voice_Receive( int now ) {
 		}
 		// only the server speaks here: its address, its port, and the token it gave this client
 		if ( fromLen < (socklen_t)sizeof( from ) || from.sin_addr.s_addr != voice.server.sin_addr.s_addr
-			|| from.sin_port != voice.server.sin_port || !BG_VoiceUnpack( datagram, len, qtrue, &p ) || p.token != voice.token )
+			|| from.sin_port != voice.server.sin_port )
+			continue;
+#endif
+		if ( !BG_VoiceUnpack( datagram, len, qtrue, &p ) || p.token != voice.token )
 			continue;
 		if ( p.type == VOICE_HELLO ) {
 			voice.linked = qtrue;
@@ -723,6 +779,7 @@ static void Voice_PlayFrame( int speaker, qboolean makeUp ) {
 	if ( len ) {
 		got = opus_decode( decoder, data, len, samples, VOICE_FRAME_SAMPLES, 0 );
 		sp->concealed = 0;
+		sp->heard++;
 	} else {
 		// lost: from the copy the frame after it carries, or guessed from what came before
 		got = after ? opus_decode( decoder, after, afterLen, samples, VOICE_FRAME_SAMPLES, 1 )
@@ -794,7 +851,12 @@ static void Voice_Play( int now ) {
 				Voice_Mouth( i );
 		}
 
+#ifdef __EMSCRIPTEN__
+		// (the sound device of a page takes VOICE_PAGE_PERIOD samples at a time, which have to wait there too)
+		for ( count = 0; count < VOICE_QUEUE && Voice_Queued( i ) < ahead + ( sp->inLevel ? 0 : VOICE_PAGE_PERIOD ); count++ ) {
+#else
 		for ( count = 0; count < VOICE_QUEUE && Voice_Queued( i ) < ahead; count++ ) {
+#endif
 			if ( BG_VoiceQueueSpan( &sp->queue ) ) {
 				Voice_PlayFrame( i, qfalse );
 			} else if ( now - sp->lastHeard < 3 * VOICE_FRAME_MSEC && sp->concealed < 3 ) {
@@ -964,6 +1026,14 @@ void CG_VoiceFrame( void ) {
 		}
 		return;
 	}
+#ifdef __EMSCRIPTEN__
+	// A WebSocket ends when the server or the line says so. The next one is asked for, and the relay has to
+	// be greeted from it anew.
+	if ( voice.serverKnown && CG_VoiceWebOpen() <= 0 ) {
+		voice.serverKnown = voice.linked = qfalse;
+		voice.askTime = now;
+	}
+#endif
 	if ( !voice.serverKnown ) {
 		voice.serverKnown = Voice_FindServer();
 		if ( !voice.serverKnown )
@@ -975,7 +1045,11 @@ void CG_VoiceFrame( void ) {
 		Voice_Send( VOICE_HELLO, NULL, 0 );
 		voice.helloTime = now;
 		if ( !voice.linked && !voice.toldNoLink && now - voice.askTime > 10000 ) {
+#ifdef __EMSCRIPTEN__
+			trap->Print( "Voice chat: no answer from the server through its web host\n" );
+#else
 			trap->Print( "Voice chat: no answer from UDP port %i of the server. Is that port open there?\n", voice.port );
+#endif
 			voice.toldNoLink = qtrue;
 		}
 	}
@@ -1046,15 +1120,25 @@ void CG_VoiceStatus_f( void ) {
 	} else if ( !voice.answered ) {
 		trap->Print( "Voice chat: asked the server, no answer yet\n" );
 	} else {
-		trap->Print( "Voice chat: UDP port %i, %s, range %i, %s, microphone %s%s\n", voice.port,
-			voice.linked ? "connected" : "no answer from that port yet", voice.range,
+#ifdef __EMSCRIPTEN__
+		const char *way = "through the web host of the server", *silent = "no answer from it yet";
+#else
+		const char *way = va( "UDP port %i", voice.port ), *silent = "no answer from that port yet";
+#endif
+
+		trap->Print( "Voice chat: %s, %s, range %i, %s, microphone %s%s\n", way,
+			voice.linked ? "connected" : silent, voice.range,
 			cg_voiceMode.integer == 2 ? "voice activation" : "push to talk (+voice)",
 			CG_VoiceAudioCapturing() ? "open" : "closed", voice.sending ? ", sending" : "" );
 	}
+#ifdef __EMSCRIPTEN__
+	if ( cg_voice.integer && voice.serverHas && CG_VoiceAudioNoMicrophone() )
+		trap->Print( "This page has no microphone: %s. The others are heard all the same.\n", CG_VoiceAudioNoMicrophone() );
+#endif
 	for ( i = 0; i < MAX_CLIENTS; i++ ) {
-		if ( cgs.clientinfo[i].infoValid && ( voiceSpeakers[i].playing || voiceSpeakers[i].muted ) )
-			trap->Print( "  %2i %s^7%s%s\n", i, cgs.clientinfo[i].name, voiceSpeakers[i].playing ? " talks" : "",
-				voiceSpeakers[i].muted ? " (muted by you)" : "" );
+		if ( cgs.clientinfo[i].infoValid && ( voiceSpeakers[i].playing || voiceSpeakers[i].muted || voiceSpeakers[i].heard ) )
+			trap->Print( "  %2i %s^7%s%s, %i frames heard\n", i, cgs.clientinfo[i].name, voiceSpeakers[i].playing ? " talks" : "",
+				voiceSpeakers[i].muted ? " (muted by you)" : "", voiceSpeakers[i].heard );
 	}
 }
 

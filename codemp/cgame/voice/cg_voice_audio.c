@@ -28,6 +28,9 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 //
 // miniaudio calls Audio_Play() and Audio_Record() from threads of its own. Between them and the game there are
 // only ring buffers with one writer and one reader each, and a few numbers that are set as a whole.
+//
+// The client that runs in a browser (__EMSCRIPTEN__) has the same devices through Web Audio, see "In a browser"
+// below.
 
 #ifdef JP_VOICE
 
@@ -68,6 +71,98 @@ static ma_atomic_bool32	audioTapOn;
 static short			audioSpeakerMem[VOICE_SPEAKERS][AUDIO_SPEAKER_SAMPLES];
 static short			audioMicMem[AUDIO_CAPTURE_SAMPLES];
 static short			audioTapMem[AUDIO_TAP_FRAMES * 2];
+
+#ifdef __EMSCRIPTEN__
+/*
+===============================================================================
+
+In a browser
+
+miniaudio plays and records through Web Audio there, with a ScriptProcessorNode: this build of the client has
+no threads and no audio worklets. Audio_Play() and Audio_Record() are called by the page between two frames
+of the game, in its one thread, VOICE_PAGE_PERIOD samples at a time.
+
+Three things miniaudio does not do are done here, each with a line for the page (EM_ASM, as miniaudio has it
+too, and nothing the engine would have to be linked with):
+
+- miniaudio's part in the page calls its C functions by their names, which a program that is linked as one
+  piece has there. This module is loaded by the engine, so the page is handed the three functions by where
+  they are in the table (Audio_PageFunctions).
+- A browser gives a page the microphone only if the page came over https or from the machine itself, and if
+  the player says yes. miniaudio opens a device that stays silent when that is not so. So the page is asked
+  first, without waiting for the answer (Audio_PageMicrophone), and the device is opened after a yes.
+- When the device is closed the microphone is given back (Audio_PageMicrophoneOff). miniaudio only lets go of
+  it, and the browser would go on showing that the page listens.
+
+===============================================================================
+*/
+
+// what the page says of the microphone (Module.vjkVoiceMic, which outlives this module: the answer of the
+// player holds for the page, not for a level)
+#define MIC_NOT_ASKED	0
+#define MIC_ASKING		1		// the browser asks the player
+#define MIC_YES			2
+#define MIC_NO			3		// he said no, or there is none
+#define MIC_NEVER		4		// the browser does not give this page one at all
+
+static qboolean	audioRefused;		// the last answer of the page was no
+
+// the three functions of miniaudio its part in the page calls, or none of them any more
+static void Audio_PageFunctions( qboolean there ) {
+	EM_ASM( {
+		globalThis._ma_device_process_pcm_frames_capture__webaudio = $0 ? wasmTable.get( $1 ) : undefined;
+		globalThis._ma_device_process_pcm_frames_playback__webaudio = $0 ? wasmTable.get( $2 ) : undefined;
+		globalThis._ma_device__on_notification_unlocked = $0 ? wasmTable.get( $3 ) : undefined;
+	}, there ? 1 : 0, ma_device_process_pcm_frames_capture__webaudio, ma_device_process_pcm_frames_playback__webaudio,
+		ma_device__on_notification_unlocked );
+}
+
+// Where the page is with the microphone, MIC_*. ask: it is wanted now, so the browser is asked if it was not
+// yet. Nothing waits for the answer, a later call has it. A no is told once: the call after it asks again.
+static int Audio_PageMicrophone( qboolean ask ) {
+	return EM_ASM_INT( {
+		if ( !window.isSecureContext || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia ) return 4;
+		var state = Module.vjkVoiceMic | 0;
+		if ( $0 && state == 3 ) Module.vjkVoiceMic = 0;
+		if ( $0 && state == 0 ) {
+			Module.vjkVoiceMic = state = 1;
+			navigator.mediaDevices.getUserMedia( { audio: true } ).then( ( stream ) => {
+				stream.getTracks().forEach( ( track ) => track.stop() );
+				Module.vjkVoiceMic = 2;
+			} ).catch( () => { Module.vjkVoiceMic = 3; } );
+		}
+		return state;
+	}, ask ? 1 : 0 );
+}
+
+// qtrue: the device of the microphone can be opened. qfalse: not, or not yet (CG_VoiceAudioAsking).
+static qboolean Audio_PageMicrophoneReady( void ) {
+	const int state = Audio_PageMicrophone( qtrue );
+
+	if ( state == MIC_YES || state == MIC_NO )
+		audioRefused = ( state == MIC_NO ) ? qtrue : qfalse;
+	return ( state == MIC_YES ) ? qtrue : qfalse;
+}
+
+// the stream of the microphone miniaudio holds in the page for this device ends: the browser has it back
+static void Audio_PageMicrophoneOff( int deviceIndex ) {
+	EM_ASM( {
+		var device = window.miniaudio && window.miniaudio.get_device_by_index( $0 );
+		if ( device && device.streamNode ) device.streamNode.mediaStream.getTracks().forEach( ( track ) => track.stop() );
+	}, deviceIndex );
+}
+
+int CG_VoiceAudioAsking( void ) {
+	return ( Audio_PageMicrophone( qfalse ) == MIC_ASKING ) ? 1 : 0;
+}
+
+// why this page has no microphone, for a line the player reads. NULL: nothing is known against one.
+const char *CG_VoiceAudioNoMicrophone( void ) {
+	if ( Audio_PageMicrophone( qfalse ) == MIC_NEVER )
+		return "it was not opened over https or on the machine itself";
+	return audioRefused ? "the browser did not give it one (it was refused, or there is none)" : NULL;
+}
+#endif // __EMSCRIPTEN__
 
 // count samples out of a ring, fewer if it has fewer. A ring hands out its memory in up to two pieces.
 static int Audio_RingRead( ma_pcm_rb *ring, short *out, int count ) {
@@ -208,6 +303,9 @@ int CG_VoiceAudioInit( const char *backend ) {
 	ma_pcm_rb_init( ma_format_s16, 1, AUDIO_CAPTURE_SAMPLES, audioMicMem, NULL, &audioMic );
 	ma_pcm_rb_init( ma_format_s16, 2, AUDIO_TAP_FRAMES, audioTapMem, NULL, &audioTap );
 	ma_atomic_bool32_set( &audioTapOn, MA_FALSE );
+#ifdef __EMSCRIPTEN__
+	Audio_PageFunctions( qtrue );
+#endif
 	audioReady = qtrue;
 	return 1;
 }
@@ -223,6 +321,9 @@ void CG_VoiceAudioShutdown( void ) {
 		audioPlaying = qfalse;
 	}
 	ma_context_uninit( &audioContext );
+#ifdef __EMSCRIPTEN__
+	Audio_PageFunctions( qfalse );
+#endif
 	audioReady = qfalse;
 }
 
@@ -272,6 +373,11 @@ int CG_VoiceAudioOpenPlayback( const char *device ) {
 	config.playback.channels = 2;
 	config.sampleRate = VOICE_RATE;
 	config.periodSizeInMilliseconds = 10;
+#ifdef __EMSCRIPTEN__
+	// The page hands the sound over in the thread the game runs in. A piece has to last longer than a frame of
+	// the game, or every frame is a gap: see VOICE_PAGE_PERIOD.
+	config.periodSizeInFrames = VOICE_PAGE_PERIOD;
+#endif
 	config.dataCallback = Audio_Play;
 	if ( ma_device_init( &audioContext, &config, &audioPlayback ) != MA_SUCCESS )
 		return 0;
@@ -290,6 +396,10 @@ int CG_VoiceAudioOpenCapture( const char *device ) {
 		return 0;
 	if ( audioRecording )
 		return 1;
+#ifdef __EMSCRIPTEN__
+	if ( !Audio_PageMicrophoneReady() )
+		return 0;
+#endif
 	ma_pcm_rb_reset( &audioMic );
 	config = ma_device_config_init( ma_device_type_capture );
 	config.capture.pDeviceID = Audio_FindDevice( 1, device );
@@ -297,6 +407,9 @@ int CG_VoiceAudioOpenCapture( const char *device ) {
 	config.capture.channels = 1;
 	config.sampleRate = VOICE_RATE;
 	config.periodSizeInMilliseconds = 10;
+#ifdef __EMSCRIPTEN__
+	config.periodSizeInFrames = VOICE_PAGE_PERIOD;
+#endif
 	config.dataCallback = Audio_Record;
 	if ( ma_device_init( &audioContext, &config, &audioCapture ) != MA_SUCCESS )
 		return 0;
@@ -310,6 +423,9 @@ int CG_VoiceAudioOpenCapture( const char *device ) {
 
 void CG_VoiceAudioCloseCapture( void ) {
 	if ( audioRecording ) {
+#ifdef __EMSCRIPTEN__
+		Audio_PageMicrophoneOff( audioCapture.webaudio.deviceIndex );
+#endif
 		ma_device_uninit( &audioCapture );
 		audioRecording = qfalse;
 	}

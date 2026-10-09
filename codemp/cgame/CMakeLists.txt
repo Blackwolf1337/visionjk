@@ -43,6 +43,9 @@ if(BuildJPVoice)
 	if(WIN32)
 		# the sockets. miniaudio loads the sound libraries of Windows itself when it runs, they are not linked
 		set(MPCGameLibraries ${MPCGameLibraries} "ws2_32")
+	elseif(EMSCRIPTEN)
+		# Nothing to link: the sound devices and the WebSocket are the ones of the page, which the engine
+		# (the main module) brings. See docs/japlus/voice.md, "In a browser".
 	elseif(APPLE)
 		set(MPCGameLibraries ${MPCGameLibraries} "-framework CoreFoundation" "-framework CoreAudio" "-framework AudioToolbox" "pthread" "m")
 	else()
@@ -133,6 +136,10 @@ set(MPCGameVoiceFiles
 	"${MPDir}/cgame/voice/cg_voice_audio.c"
 	"${MPDir}/cgame/voice/cg_voice.h"
 	)
+if(EMSCRIPTEN AND BuildJPVoice)
+	# in a browser the datagrams go through a WebSocket
+	set(MPCGameVoiceFiles ${MPCGameVoiceFiles} "${MPDir}/cgame/voice/cg_voice_web.c")
+endif()
 source_group("cgame/voice" FILES ${MPCGameVoiceFiles})
 set(MPCGameFiles ${MPCGameFiles} ${MPCGameVoiceFiles})
 
