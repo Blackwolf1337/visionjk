@@ -158,19 +158,19 @@ function fxTrace(from, to) {
 
 // Plays an effect of the game at a place: fwd is the way it plays, as the client hands it to the engine. It
 // starts with the next step of the effects, or when its file is there if that is soon.
-function fxPlay(name, org, fwd) {
+function fxPlay(name, org, fwd, born = 0) {
 	if (!name || !fxOn() || !(Math.hypot(org[0] - eye[0], org[1] - eye[1], org[2] - eye[2]) < FX_FAR)) return;
 	const fx = fxGet(name);
 	if (fx.state === 2) return;
 	fxStats.played++;
 	if (fxQueue.length >= 256) { fxQueue.shift(); fxStats.dropped++; }
 	// CFxScheduler::PlayEffect with a forward: that vector as it is, and two that stand on it
-	fxQueue.push({ fx, org: org.slice(0, 3), axis: [fwd.slice(0, 3), ...fxNormals(fwd)], asked: performance.now() });
+	fxQueue.push({ fx, org: org.slice(0, 3), axis: [fwd.slice(0, 3), ...fxNormals(fwd)], asked: performance.now(), born });
 }
 
 // CFxScheduler::PlayEffect: every primitive of the effect is made as often as its count says, at once or when
-// its delay is over.
-function fxStart(fx, org, axis) {
+// its delay is over. born: the effect was played that many msec before this frame (see fxFramePlay).
+function fxStart(fx, org, axis, born = 0) {
 	if (fxDepth > 8) return;
 	fxDepth++;
 	// near the most that may live the counts get smaller, as fx_countScale of the game makes them
@@ -181,8 +181,8 @@ function fxStart(fx, org, axis) {
 		// evenDistribution spreads them over the width of the delay, from now on
 		const even = p.spawnFlags & FX_EVEN_DISTRIBUTION, step = even ? Math.abs(p.delay[1] - p.delay[0]) / count : 0;
 		for (let t = 0; t < count; t++) {
-			const delay = Math.trunc(even ? t * step : fxVal(p.delay));
-			if (delay < 1) fxCreate(p, org, axis, -delay);
+			const delay = Math.trunc(even ? t * step : fxVal(p.delay)) - born;
+			if (delay < 1) fxCreate(p, org, axis, -delay, born ? -delay : 0);
 			else if (fxSchedule.length < FX_MAX_SCHEDULED) fxSchedule.push({ at: fxTime + delay, p, org, axis });
 			else fxStats.dropped++;
 		}
@@ -192,7 +192,14 @@ function fxStart(fx, org, axis) {
 
 // CFxScheduler::CreateEffect: one primitive is made. origin and axis are those of the effect, late is how many
 // msec after its time it is made.
-function fxCreate(p, origin, axis, late) {
+function fxCreate(p, origin, axis, late, aged = 0) {
+	// aged: it was made that many msec before this frame, so its life began then: it is made by the clock of that
+	// moment and is where it has come to since. One whose life is over by now is gone before it is drawn.
+	if (aged > 0) {
+		fxTime -= aged;
+		try { fxCreate(p, origin, axis, late); } finally { fxTime += aged; }
+		return;
+	}
 	const sf = p.spawnFlags, type = p.type;
 	let ax = axis;
 	if (sf & FX_RAND_ROT_AROUND_FWD) {
@@ -453,7 +460,7 @@ function fxAdvance(dtMs) {
 	for (const q of queue) {
 		const waited = now - q.asked;
 		if (waited > FX_WAIT_MS * 3) continue;
-		if (waited < FX_WAIT_MS ? fxReady(q.fx) : q.fx.state === 1) fxStart(q.fx, q.org, q.axis);
+		if (waited < FX_WAIT_MS ? fxReady(q.fx) : q.fx.state === 1) fxStart(q.fx, q.org, q.axis, q.born);
 		else if (waited < FX_WAIT_MS && q.fx.state !== 2) fxQueue.push(q);
 	}
 
@@ -599,6 +606,11 @@ function fxFramePlay(c, id, plays, name, org, fwd) {
 		plays = Math.min(FX_REF_FRAMES - had, c.room);
 		c.room -= plays;
 		c.done.set(id, had + plays);
+		for (let i = 0; i < plays; i++) fxPlay(name, org, fwd);
+		return;
 	}
-	for (let i = 0; i < plays; i++) fxPlay(name, org, fwd);
+	// The frames of a client that lie between two of the page: the last is now, each one before it a frame of
+	// the client earlier. What such an effect has that lives shorter than a frame (the flare of a jet: 2 msec) is
+	// then seen once, as in the game, and not once for every frame that was caught up.
+	for (let i = 0; i < plays; i++) fxPlay(name, org, fwd, (plays - 1 - i) * FX_FRAME_MSEC);
 }
