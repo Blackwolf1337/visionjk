@@ -171,7 +171,7 @@ body.cfgOpen #cfgView, body.fsOpen #fsView { display: block; }
 .toast.err { border-left-color: var(--accent2); }
 
 #tabs { display: flex; border-bottom: 1px solid var(--line); }
-#tabs button { flex: 1; border: 0; border-radius: 0; background: transparent; padding: 8px 2px; color: var(--muted); border-bottom: 2px solid transparent; }
+#tabs button { flex: 1; border: 0; border-radius: 0; background: transparent; padding: 8px 2px; color: var(--muted); border-bottom: 2px solid transparent; white-space: nowrap; }
 #tabs button.on { color: var(--text); border-bottom-color: var(--accent); }
 .pane { display: none; flex: 1; min-height: 0; flex-direction: column; }
 .pane.on { display: flex; }

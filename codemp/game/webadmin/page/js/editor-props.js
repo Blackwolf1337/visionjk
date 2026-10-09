@@ -25,7 +25,7 @@ function mdlMatches() {
 function mdlName(path) { return path.slice(path.lastIndexOf('/') + 1); }
 function mdlRender() {
 	const list = mdlMatches(), shown = list.slice(0, 500);
-	$('mdlCount').textContent = (mdlDone ? '' : 'reading, ') + list.length + (list.length < mdlAll.length ? ' of ' + mdlAll.length : '');
+	$('mdlCount').textContent = (mdlDone ? '' : 'reading, ') + list.length + (list.length < mdlAll.length ? ' of ' + mdlAll.length : '') + (mdlDone ? ' models' : '');
 	// "models/" is in front of all of them
 	let html = shown.map(p => '<div class="cls' + (p === mdlPath ? ' hl' : '') + '" data-path="' + escapeHtml(p) + '">' + escapeHtml(mdlName(p)) +
 		'<span class="ty">' + escapeHtml(p.slice(7, Math.max(7, p.lastIndexOf('/')))) + '</span></div>').join('');
