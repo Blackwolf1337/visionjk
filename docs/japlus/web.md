@@ -56,8 +56,10 @@ player has the address of the proxy.
 
 Limits of the web host: 60 connections, 16 from one address, 32 files being sent at once and 6 of them to one
 address, 256 KB of file data each time the server wakes up for the network, a request head of 16 KB, a WebSocket
-message of 4096 bytes. A WebSocket whose peer is not a client of the game is closed after 60 seconds, the page
-opens the next one when it has something to send.
+message of 4096 bytes, 32 packets at once from a WebSocket and 1000 a second (more are dropped, as a datagram
+would be). A WebSocket whose peer is not a client of the game is closed after 60 seconds, the page opens the next
+one when it has something to send. Beyond the limit for files the answer is 503 with the seconds to wait, and the
+page asks again.
 
 ## For players
 

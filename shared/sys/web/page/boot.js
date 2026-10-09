@@ -29,7 +29,10 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 // the engine looks its modules up in Module.vjkModules by exactly these names
 const SIDE_MODULES = ['cgamewasm32.wasm', 'uiwasm32.wasm', 'rd-vulkan-vision_wasm32.wasm'];
-const ENGINE = 'visionjk.wasm32.js';
+const ENGINE = 'visionjk.wasm32.js', ENGINE_CODE = 'visionjk.wasm32.wasm';
+// The server sends files to one address only so many at a time and answers 503 beyond that, with the seconds to
+// wait (two players behind one address who load at once). That often the page asks again.
+const BUSY_TRIES = 40;
 const LOG_KEPT = 2000, LOG_SHOWN = 10;
 // how long the window has to keep a new size before the renderer is started again for it
 const RESIZE_WAIT = 600;
@@ -142,10 +145,18 @@ window.addEventListener('unhandledrejection', ev => {
 });
 
 async function ask(url, options) {
-	let answer;
-	try { answer = await fetch(url, options); } catch (e) { throw new Error('no answer from the server (' + words(e) + ')'); }
-	if (!answer.ok) throw new Error(('the server answered ' + answer.status + ' ' + answer.statusText).trim());
-	return answer;
+	for (let tries = 0; ; tries++) {
+		let answer;
+		try { answer = await fetch(url, options); } catch (e) { throw new Error('no answer from the server (' + words(e) + ')'); }
+		if (answer.status === 503 && tries < BUSY_TRIES) {
+			if (!tries) note(url + ': the server is busy, asking again');
+			const seconds = Math.min(Math.max(parseInt(answer.headers.get('Retry-After'), 10) || 2, 1), 10);
+			await new Promise(resolve => setTimeout(resolve, seconds * 1000));
+			continue;
+		}
+		if (!answer.ok) throw new Error(('the server answered ' + answer.status + ' ' + answer.statusText).trim());
+		return answer;
+	}
 }
 
 // ---- the packs in the browser: IndexedDB database "visionjk", version 2. A pack is kept in pieces of
@@ -422,6 +433,18 @@ const Module = window.Module = {
 	onAbort: what => fail('The engine stopped' + (what ? ': ' + words(what) : '.')),
 	onExit: code => fail('The game has ended (exit code ' + code + ').'),
 	onRuntimeInitialized: () => runtime.done(),
+	// The script of the engine is run from a copy the page fetched (loadEngine), so it does not know where it
+	// came from: its files are next to the page.
+	locateFile: name => name,
+	// The code of the engine, fetched by the page and not by the script, so that a busy server is asked again.
+	instantiateWasm: (imports, receive) => {
+		const options = { cache: 'no-cache' };
+		const whole = async () => WebAssembly.instantiate(await (await ask(ENGINE_CODE, options)).arrayBuffer(), imports);
+		(WebAssembly.instantiateStreaming ? WebAssembly.instantiateStreaming(ask(ENGINE_CODE, options), imports).catch(whole) : whole())
+			.then(result => { receive(result.instance, result.module); prepared(ENGINE_CODE); },
+				e => fail(ENGINE_CODE + ': ' + words(e)));
+		return {};
+	},
 	// The file system of the engine is there, and the runtime does not start before the packs are in it and the
 	// home path is read. "packs" is held from here until the last pack is written: this Emscripten goes on as
 	// soon as nothing is held, also when something would be taken again later, so "home" is taken while "packs"
@@ -451,7 +474,7 @@ const Module = window.Module = {
 };
 
 // what the start still waits for once the packs are in
-const awaited = new Set([...SIDE_MODULES, ENGINE]);
+const awaited = new Set([...SIDE_MODULES, ENGINE, ENGINE_CODE]);
 
 function prepared(name) {
 	awaited.delete(name);
@@ -463,16 +486,21 @@ async function compile(name) {
 	const options = { cache: 'no-cache' };
 	// the whole file first: for a server that does not send it as application/wasm
 	const whole = async () => WebAssembly.compile(await (await ask(name, options)).arrayBuffer());
-	Module.vjkModules[name] = await (WebAssembly.compileStreaming ? WebAssembly.compileStreaming(fetch(name, options)).catch(whole) : whole());
+	Module.vjkModules[name] = await (WebAssembly.compileStreaming ? WebAssembly.compileStreaming(ask(name, options)).catch(whole) : whole());
 	prepared(name);
 }
 
-// the engine reads the Module object above when its script runs
-function loadEngine() {
-	const script = document.createElement('script');
-	script.src = ENGINE;
-	script.onerror = () => fail(ENGINE + ': the server did not send the engine');
-	document.body.appendChild(script);
+// The engine reads the Module object above when its script runs. The page fetches the script itself and runs
+// the copy: a script element does not say why the server did not send its file, and a busy server is asked again.
+async function loadEngine() {
+	try {
+		const script = document.createElement('script');
+		script.src = URL.createObjectURL(await (await ask(ENGINE, { cache: 'no-cache' })).blob());
+		script.onerror = () => fail(ENGINE + ': the browser did not run the engine');
+		document.body.appendChild(script);
+	} catch (e) {
+		fail(ENGINE + ': ' + words(e));
+	}
 }
 
 async function start(manifest) {
