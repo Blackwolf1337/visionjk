@@ -16,9 +16,11 @@
 # along with this program; if not, see <http://www.gnu.org/licenses/>.
 #============================================================================
 
-# Steam Audio for the client in a browser. There is no library of Valve for WebAssembly to load, so the core
-# of lib/steamaudio is built here, as a static library the engine is linked against (client/snd_spatial.cpp
-# takes its functions from there, where the desktop takes them from the library it loads).
+# Steam Audio for the client in a browser. Valve gives out no library for WebAssembly, so the core of
+# lib/steamaudio is built here: as phonon.wasm, a module of its own next to cgame, ui and the renderer in the
+# folder the server hands out. The engine is not linked against it. It loads the file when the sound system
+# starts and looks its functions up by name, as it does with libphonon.so on the desktop
+# (client/snd_spatial.cpp), and without the file the sound is as it always was.
 #
 # Valve's own cmake files are not used: they find their dependencies in a folder their Python script fills,
 # and they copy the result into the folders of the Unity, Unreal, FMOD and Wwise plugins, which would write
@@ -109,11 +111,12 @@ function(jp_steamaudio_dep name repository urlOverride has found)
 	endif()
 endfunction()
 
-# Makes the static library of Steam Audio and names its targets in <libraries> of the caller's scope, or
-# leaves that empty when something it needs is not there. Wants SteamAudioCore (lib/steamaudio/core) and
-# ${CMAKE_BINARY_DIR}/steamaudio/phonon_version.h, both from codemp/CMakeLists.txt.
-function(jp_steamaudio_wasm libraries)
-	set(${libraries} "" PARENT_SCOPE)
+# Makes the target of phonon.wasm and names it in <module> of the caller's scope, or leaves that empty when
+# something it needs is not there. Wants SteamAudioCore (lib/steamaudio/core) and
+# ${CMAKE_BINARY_DIR}/steamaudio/phonon_version.h, both from codemp/CMakeLists.txt, and is called where the
+# engine is made (BuildMPEngine, MPEngine): the module is held against what the engine has when it is linked.
+function(jp_steamaudio_wasm module)
+	set(${module} "" PARENT_SCOPE)
 	set(source "${SteamAudioCore}/src/core")
 	set(own "${CMAKE_SOURCE_DIR}/lib/steamaudio-wasm")
 	set(generated "${CMAKE_BINARY_DIR}/steamaudio/generated")
@@ -134,8 +137,13 @@ function(jp_steamaudio_wasm libraries)
 	# Nothing of this is the tree's own code: its warnings are not shown, with the one exception the build for
 	# the browser has for every file (a call through a function pointer of another type traps there).
 	set(quiet -Wno-everything -Wcast-function-type)
-	# what Valve's CMakeLists and their dependencies.json give the compiler on this platform
+	# What Valve's CMakeLists and their dependencies.json give the compiler on this platform. Only what goes
+	# into phonon.wasm is built with it: a browser that does not know the SIMD of WebAssembly can not have that
+	# file and runs the engine all the same.
 	set(simd -msimd128 -mfpu=neon)
+	# From outside only the functions of phonon.h are seen (IPLAPI, as in Valve's library for Linux) and the two
+	# of phonon_slices.h.
+	set(hidden -fvisibility=hidden -fvisibility-inlines-hidden)
 	# FlatBuffers at the commit Valve builds with has a function in a template of flatbuffers.h that no
 	# compiler could ever build and nothing calls (TableKeyComparator::operator=). The clang of Emscripten 6
 	# refuses the header for it. With this switch it reads the functions of a template when they are used,
@@ -177,7 +185,7 @@ function(jp_steamaudio_wasm libraries)
 	# PFFFT, the FFT of Steam Audio where it has no other
 	add_library(steamaudio_pffft STATIC EXCLUDE_FROM_ALL "${pffft}/pffft.c" "${pffft}/pffft_common.c")
 	target_include_directories(steamaudio_pffft PUBLIC "${pffft}")
-	target_compile_options(steamaudio_pffft PRIVATE ${quiet} ${simd})
+	target_compile_options(steamaudio_pffft PRIVATE ${quiet} ${simd} ${hidden})
 	target_compile_definitions(steamaudio_pffft PRIVATE PFFFT_ENABLE_NEON=1 __arm__=1)
 
 	# The core: what Valve's CMakeLists puts into its object library "core", and what its options add on a
@@ -219,17 +227,36 @@ function(jp_steamaudio_wasm libraries)
 		list(APPEND ownFiles "${generated}/${name}")
 	endforeach()
 
-	add_library(steamaudio STATIC EXCLUDE_FROM_ALL ${coreFiles} ${ownFiles})
+	add_library(steamaudio SHARED ${coreFiles} ${ownFiles})
 	add_dependencies(steamaudio steamaudio_schemas)
 	# ${own} holds the empty mysofa.h, and the folder of the version header also has the copy of phonon.h
 	# the engine is built with: the same text as the one next to the sources
 	target_include_directories(steamaudio PRIVATE "${source}" "${generated}" "${CMAKE_BINARY_DIR}/steamaudio" "${flatbuffers}/include" "${own}")
 	target_compile_definitions(steamaudio PRIVATE STEAMAUDIO_BUILDING_CORE IPL_DISABLE_SOFA)
 	# after the -std of the tree's flags, and so the one that counts: Valve builds it as C++14
-	target_compile_options(steamaudio PRIVATE -std=c++14 ${quiet} ${simd} ${templates})
+	target_compile_options(steamaudio PRIVATE -std=c++14 ${quiet} ${simd} ${templates} ${hidden})
 	# the sources count on it for the headers of the standard library
 	target_precompile_headers(steamaudio PRIVATE "${source}/pch.h")
-	target_link_libraries(steamaudio PUBLIC steamaudio_pffft)
+	target_link_libraries(steamaudio PRIVATE steamaudio_pffft)
 
-	set(${libraries} steamaudio PARENT_SCOPE)
+	# phonon.wasm: the name the engine asks its loader for (SPATIAL_LIBRARY) and the page takes along
+	# (OPTIONAL_MODULES of shared/sys/web/page/boot.js)
+	set_target_properties(steamaudio PROPERTIES OUTPUT_NAME phonon)
+	include(WasmModule)
+	vjk_wasm_side_module(steamaudio)
+	# The engine's loader makes a new instance of the module for every load and gives the memory of the one
+	# before back. What the module still has visible of its own (templates of the standard library, for one) it
+	# would look up by name in the table of symbols of the page, which keeps the addresses of the first load:
+	# with this it takes its own.
+	target_link_options(steamaudio PRIVATE -Wl,-Bsymbolic)
+	# Every function of phonon.h stays a function of its own in the file. The optimizer of Emscripten makes one
+	# of functions with the same code (145 of the 216 are the same lines as another: all that release a handle,
+	# for one), and the names then all stand for that one. The engine's loader (shared/sys/web/sys_web.js)
+	# notes a slot in the function table for each name it is asked for and gives each back when the module is
+	# unloaded: the one slot of such a function went back once for each of its names, was handed out again that
+	# often, and after the first snd_restart a call of one function ran another. Not needed any more once the
+	# loader notes a slot once.
+	target_link_options(steamaudio PRIVATE -sBINARYEN_EXTRA_PASSES=--skip-pass=duplicate-function-elimination)
+
+	set(${module} steamaudio PARENT_SCOPE)
 endfunction()

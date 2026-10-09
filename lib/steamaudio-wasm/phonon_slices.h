@@ -20,9 +20,10 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #pragma once
 
-// What Steam Audio as it is built for the browser (cmake/Modules/SteamAudioWasm.cmake) has on top of phonon.h.
-// Not from Valve: thread_pool.cpp of this folder has the two functions, simulation_manager.cpp.patch makes
-// iplSimulatorRunReflections() heed them.
+// What Steam Audio as it is built for the browser (phonon.wasm, cmake/Modules/SteamAudioWasm.cmake) has on top
+// of phonon.h. Not from Valve: thread_pool.cpp of this folder has the two functions, simulation_manager.cpp.patch
+// makes iplSimulatorRunReflections() heed them. The engine gets them from the library by name like the functions
+// of phonon.h (client/snd_spatial.cpp), which is why the build copies this header next to that one.
 //
 // A pass of the reflections traces its rays in jobs of 32 and takes tens of milliseconds as a whole. On the
 // desktop that is the work of a thread. In a page there is one thread, and it has a frame to draw: so there a
@@ -33,16 +34,23 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // and the inputs of the reflections (iplSimulatorSetSharedInputs() with IPL_SIMULATIONFLAGS_REFLECTIONS)
 // should: the rays that are left start from where the listener is by then.
 
+// seen from outside the library, as IPLAPI of phonon.h is
+#if defined(STEAMAUDIO_BUILDING_CORE)
+#define IPLXAPI __attribute__((visibility("default")))
+#else
+#define IPLXAPI
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 // usec: how long a call of iplSimulatorRunReflections() traces rays, in microseconds. 0: until all are traced,
 // which is what the library does without this.
-void	iplxSetSliceBudget( int usec );
+IPLXAPI void	iplxSetSliceBudget( int usec );
 
 // not 0: the last call of iplSimulatorRunReflections() left its pass unfinished
-int		iplxSlicePending( void );
+IPLXAPI int		iplxSlicePending( void );
 
 #ifdef __cplusplus
 }

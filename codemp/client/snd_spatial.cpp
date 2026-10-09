@@ -27,10 +27,10 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // through a pointer. Without the library file, or with s_spatial 0, nothing in here runs and the game sounds as
 // it always did.
 //
-// The client for a browser is the exception in two things, see "In a browser" in docs/japlus/audio.md. It can
-// load nothing, so Steam Audio is built from the submodule and linked in (JP_SPATIAL_STATIC), and the pointers
-// are filled from there. And a page has one thread (__EMSCRIPTEN__): what the two threads of this file do
-// elsewhere is done by the game itself, in a slice of each frame and while a level loads.
+// The client for a browser does the same with phonon.wasm, a module the page takes along when the server has
+// it, see "In a browser" in docs/japlus/audio.md. What is different there (__EMSCRIPTEN__): a page has one
+// thread, so what the two threads of this file do elsewhere is done by the game itself, in a slice of a frame
+// and while a level loads.
 
 #include "snd_local.h"
 #include "snd_spatial.h"
@@ -47,7 +47,9 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include <phonon_slices.h>	// lib/steamaudio-wasm: a pass of the reflections that returns when its time is up
 #endif
 
-#if defined(_WIN32)
+#if defined(__EMSCRIPTEN__)
+#define SPATIAL_LIBRARY	"phonon.wasm"	// one of the modules the page compiled, built from lib/steamaudio by this tree
+#elif defined(_WIN32)
 #define SPATIAL_LIBRARY	"phonon.dll"
 #elif defined(MACOS_X)
 #define SPATIAL_LIBRARY	"libphonon.dylib"
@@ -134,7 +136,17 @@ from the library when it is loaded.
 	X( iplPathEffectCreate ) \
 	X( iplPathEffectRelease ) \
 	X( iplPathEffectReset ) \
-	X( iplPathEffectApply )
+	X( iplPathEffectApply ) \
+	SPATIAL_SLICE_FUNCTIONS( X )
+
+// what the library for a browser has on top of Valve's, see phonon_slices.h
+#ifdef __EMSCRIPTEN__
+#define SPATIAL_SLICE_FUNCTIONS( X ) \
+	X( iplxSetSliceBudget ) \
+	X( iplxSlicePending )
+#else
+#define SPATIAL_SLICE_FUNCTIONS( X )
+#endif
 
 #define X( name )	static decltype( &name ) q##name;
 SPATIAL_FUNCTIONS( X )
@@ -383,8 +395,7 @@ enum {
 };
 
 static struct {
-	void		*library;			// NULL when it is linked in
-	qboolean	loaded;				// the functions are there
+	void		*library;
 	char		libraryPath[MAX_OSPATH];
 	qboolean	active;
 	float		shockCoeffs[5];		// the low pass of the thump: b0 b1 b2 a1 a2
@@ -512,25 +523,13 @@ static void S_SpatialUnload( void ) {
 		Sys_UnloadLibrary( spatial.library );
 	}
 	spatial.library = NULL;
-	spatial.loaded = qfalse;
 #define X( name )	q##name = NULL;
 	SPATIAL_FUNCTIONS( X )
 #undef X
 }
 
-#ifdef JP_SPATIAL_STATIC
-// The library is linked into the engine (the client for a browser, which can load nothing): the functions are
-// there, by their names.
-static qboolean S_SpatialLoad( void ) {
-	Q_strncpyz( spatial.libraryPath, "the engine itself (linked in)", sizeof( spatial.libraryPath ) );
-#define X( name )	q##name = name;
-	SPATIAL_FUNCTIONS( X )
-#undef X
-	spatial.loaded = qtrue;
-	return qtrue;
-}
-#else
-// next to the program first: that is where a build puts it. Then wherever the system looks.
+// Next to the program first: that is where a build puts it. Then wherever the system looks. A page has its
+// modules by name only: there both ask for the same one.
 static qboolean S_SpatialLoad( void ) {
 	const char *missing = NULL;
 
@@ -552,10 +551,8 @@ static qboolean S_SpatialLoad( void ) {
 		S_SpatialUnload();
 		return qfalse;
 	}
-	spatial.loaded = qtrue;
 	return qtrue;
 }
-#endif
 
 /*
 ===============================================================================
@@ -1625,9 +1622,9 @@ static void S_SpatialSlice( int limit ) {
 	if ( spatialWorkerState.load() != WORKER_RUNNING ) {
 		return;
 	}
-	iplxSetSliceBudget( limit );
+	qiplxSetSliceBudget( limit );
 	qiplSimulatorRunReflections( spatial.simulator );
-	iplxSetSliceBudget( 0 );
+	qiplxSetSliceBudget( 0 );
 
 	took = S_SpatialUsec() - start;
 	// what is done while the game stands still anyway takes nothing off the frames after it
@@ -1639,7 +1636,7 @@ static void S_SpatialSlice( int limit ) {
 	spatial.passPeakUsec = Q_max( spatial.passPeakUsec, took );
 	spatial.costUsec[COST_PASS] += took;
 	spatial.costFrameUsec += took;
-	if ( !iplxSlicePending() ) {
+	if ( !qiplxSlicePending() ) {
 		spatialReflectUsec.store( spatial.passUsec );
 		spatialReflectPasses.fetch_add( 1 );
 		spatial.lastPassSlices = spatial.passSlices;
@@ -2161,7 +2158,7 @@ static void S_SpatialRelease( void ) {
 	spatialBakeState.store( BAKE_NONE );
 
 	S_SpatialCaptureEnd( qfalse );
-	if ( spatial.loaded ) {
+	if ( spatial.library ) {
 		if ( spatial.simulator ) {
 			if ( spatial.probes ) {
 				qiplSimulatorRemoveProbeBatch( spatial.simulator, spatial.probes );

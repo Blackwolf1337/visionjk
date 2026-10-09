@@ -365,8 +365,8 @@ if(BuildMPEngine)
 	# loads the library when it runs. It needs the header of Valve's repository, the submodule lib/steamaudio:
 	# only that one file is put on the include path (in the build folder), the folder it comes from holds the
 	# whole of Steam Audio, with header names of its own that the engine must not pick up.
-	# The client for a browser is the exception: nothing can be loaded there, so Steam Audio is built from the
-	# submodule and linked into the engine, see cmake/Modules/SteamAudioWasm.cmake.
+	# The client for a browser does the same with phonon.wasm. Valve gives out no library for WebAssembly, so
+	# that file is built from the submodule, see cmake/Modules/SteamAudioWasm.cmake.
 	if(BuildJPSpatialAudio)
 		set(SteamAudioCore "${CMAKE_SOURCE_DIR}/lib/steamaudio/core")
 		if(EXISTS "${SteamAudioCore}/src/core/phonon.h")
@@ -386,26 +386,24 @@ if(BuildMPEngine)
 				set(SteamAudioVersion "${version}" PARENT_SCOPE)
 			endfunction()
 			jp_steamaudio_headers()
+			message(STATUS "Steam Audio ${SteamAudioVersion}: the header of lib/steamaudio, the library is loaded at run time")
+			set(MPEngineDefines ${MPEngineDefines} "JP_SPATIAL")
+			set(MPEngineIncludeDirectories ${MPEngineIncludeDirectories} "${CMAKE_BINARY_DIR}/steamaudio")
 			option(FetchSteamAudio "Download what the build needs of Steam Audio and does not find: the release zip when SteamAudioSDK does not have the library of this system (181 MB, once), for a browser the sources of FlatBuffers and PFFFT (1.3 MB, once)" ON)
 
 			if(EMSCRIPTEN)
+				# The library for a browser is a module of its own in the folder the server hands out, and has two
+				# functions more than Valve's, which the engine looks up like the others: their header goes next
+				# to phonon.h.
+				configure_file("${CMAKE_SOURCE_DIR}/lib/steamaudio-wasm/phonon_slices.h" "${CMAKE_BINARY_DIR}/steamaudio/phonon_slices.h" COPYONLY)
 				include(SteamAudioWasm)
-				jp_steamaudio_wasm(SteamAudioStatic)
-				if(SteamAudioStatic)
-					message(STATUS "Steam Audio ${SteamAudioVersion}: built from lib/steamaudio and linked into the engine")
-					# JP_SPATIAL_STATIC: snd_spatial.cpp takes the functions from the linker and loads nothing
-					set(MPEngineDefines ${MPEngineDefines} "JP_SPATIAL" "JP_SPATIAL_STATIC")
-					# the second folder for phonon_slices.h, what this build of Steam Audio has on top of Valve's
-					set(MPEngineIncludeDirectories ${MPEngineIncludeDirectories} "${CMAKE_BINARY_DIR}/steamaudio" "${CMAKE_SOURCE_DIR}/lib/steamaudio-wasm")
-					set(MPEngineLibraries ${MPEngineLibraries} ${SteamAudioStatic})
+				jp_steamaudio_wasm(SteamAudioModule)
+				if(SteamAudioModule)
+					message(STATUS "Steam Audio: phonon.wasm is built from lib/steamaudio and goes next to the client")
 				else()
-					message(STATUS "Steam Audio: what it is built from for a browser is not there (see above), the client is built without s_spatial")
+					message(STATUS "Steam Audio: what phonon.wasm is built from is not there (see above). The client is built with s_spatial, the file has to be put next to it by hand (docs/japlus/audio.md)")
 				endif()
 			else()
-				message(STATUS "Steam Audio ${SteamAudioVersion}: the header of lib/steamaudio, the library is loaded at run time")
-				set(MPEngineDefines ${MPEngineDefines} "JP_SPATIAL")
-				set(MPEngineIncludeDirectories ${MPEngineIncludeDirectories} "${CMAKE_BINARY_DIR}/steamaudio")
-
 				# The library is no part of this tree and is not built here: Valve gives it out ready made, in the zip
 				# of a release. SteamAudioSDK is a folder with the content of that zip. The library of this system is
 				# copied from there next to the client, when the client is built and when it is installed. If the
