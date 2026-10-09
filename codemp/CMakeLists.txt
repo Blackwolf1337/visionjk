@@ -768,6 +768,10 @@ if(BuildMPDed)
 		set(MPDedFiles ${MPDedFiles} ${MPDedSysFiles})
 	endif(WIN32)
 
+	# the web host of the dedicated server: page, game files and WebSocket peers (sv_webPort). It appends to
+	# MPDedFiles and MPDedIncludeDirectories.
+	include("${MPDir}/server/web/sources.cmake" OPTIONAL)
+
 	add_executable(${MPDed} ${MPDedFiles})
 	install(TARGETS ${MPDed}
 		RUNTIME
