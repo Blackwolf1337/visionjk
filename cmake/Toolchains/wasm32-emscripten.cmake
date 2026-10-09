@@ -19,8 +19,7 @@ set(BuildMPGame OFF CACHE BOOL "" FORCE)
 set(BuildMPRdVanilla OFF CACHE BOOL "" FORCE)
 set(BuildJPAssets OFF CACHE BOOL "" FORCE)
 
-# Off unless asked for with -D: the voice chat and Steam Audio are being brought to the browser.
-set(BuildJPVoice OFF CACHE BOOL "")
+# Off unless asked for with -D: Steam Audio is being brought to the browser.
 set(BuildJPSpatialAudio OFF CACHE BOOL "")
 
 # there are no system libraries to find

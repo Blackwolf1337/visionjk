@@ -18,12 +18,12 @@ Nothing changes for the clients of the desktop and for a server that does not sw
 | Renderer: OpenGL ES 3 device of rd-vulkan-vision | menu, level, players, sabers with glow, `vid_restart` drawn in the page. Compared with the Vulkan device on the desktop, see [renderer.md](renderer.md) |
 | ui and cgame in the page | menus, the join, a game followed as a spectator. Nobody has played a round |
 | Sound | starts (SDL audio of the browser). Not listened to |
-| Voice chat (`-DBuildJPVoice=ON`) | builds. Run headless in a demo with a stand-in for the web host and the relay: plays, records, sends, see [voice.md](voice.md). Not run against a server |
+| Voice chat | run on a live server, headless and muted: the page joined, got the chat through `/voice`, counted 529 frames of a talking test client in 10 seconds (a voice is 50 a second) and sent a tone for 5. Whether the others heard that tone was not looked at, and nobody has listened. See [voice.md](voice.md) |
 | Mouse and keys | never used by a person from here: a headless browser has neither |
 | A resized window | the page starts the renderer again with the new size when the window has kept it for a moment. Run headless, 1280 x 633 to 1000 x 700 |
 | Firefox, Safari, Windows, a phone | never run |
 
-The voice chat is in the build that asks for it (`-DBuildJPVoice=ON`). Left out on purpose in the first version: Steam Audio (`BuildJPSpatialAudio`),
+The voice chat is in the build unless it is switched off (`-DBuildJPVoice=OFF`). Left out on purpose in the first version: Steam Audio (`BuildJPSpatialAudio`),
 compressed textures, threads. See "What is different in the page".
 
 ## For the owner of a server
@@ -168,7 +168,7 @@ well: the headers of a request, base64, SHA-1.
 | | Desktop | Page |
 |---|---------|------|
 | Renderer | Vulkan device | OpenGL ES 3 device (WebGL2), the same renderer otherwise |
-| Voice chat | yes | with `-DBuildJPVoice=ON`, through `/voice` of the web host. Talking needs https or the machine of the server itself, hearing does not. See [voice.md](voice.md) |
+| Voice chat | yes | yes, through `/voice` of the web host. Talking needs https or the machine of the server itself, hearing does not. See [voice.md](voice.md) |
 | `s_spatial` (Steam Audio) | yes | no |
 | Compressed textures | `r_ext_compress_textures` | no |
 | Other servers, the server list | yes | only the server of the page |
