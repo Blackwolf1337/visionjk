@@ -377,6 +377,29 @@ Also changed:
   in files of its own now (`js/player-draw.js`, `items.js`, `movers.js`, `marks.js`, `trace.js`,
   `dlights.js`, `sabers.js`, `player-fx.js`, `g2-angles.js`), most of them empty until those steps.
   `tools/panelshot/steps_entfx.js` (5 checks).
+- New: saber blades, the weapon in a hand, shots and the light they throw, as the client draws them
+  (`js/sabers.js`, `js/dlights.js`, `js/weapons.js`, the effect files). The page drew a blade as a wide streak
+  in a colour of its own table, with no light.
+  - The blade (`CG_DoSaber`, `RB_SurfaceSaberGlow`, `RB_SurfaceLine`): the glow sprites from the tip down and the
+    core line with the shaders of the game, the sizes of the game with their random part (the middle of it in
+    the comparison view), the length as `BG_SI_SetLengthGradual` grows and shrinks it, the trail of a blade
+    that moves (`CG_AddSaberBlade`, the trail length of every saber move), RGB sabers of JA+.
+  - The colour is the one a client draws: `color1` and `color2` of the player (`saberColors` of the state), the
+    team colour in team games. The state had only the colour of the saber file as the server read it, which is
+    another one. With it, the two red blades of the baseline picture are red.
+  - Dynamic lights (`RE_AddLightToScene`, up to 32): on the map as `ProjectDlightTexture2` does it (the one the
+    defaults take: per triangle, with the light image, added over the surface), on brush models and curves, and
+    on models as `R_SetupEntityLighting` adds them to the light of the grid. A blade, a rocket, the lights of
+    effect files and of powerups throw one.
+  - The weapon in a hand sits on the bolt of the hand as the client bolts it on, a hilt is turned onto the blade
+    the server tells; a missile is the model of `CG_Missile`, turned as it turns it.
+  - The state says more for this: per saber its second flags and trail styles, per shot how it was fired and by
+    whom, and for a mine that sticks its weapon, flags and time.
+  Against the real client, two frozen bots each at a start point of his own: 2.4, 3.4, 1.9, 0.8 for the first
+  from four sides. The second stands next to an item, which is not drawn as the game draws it in this step.
+  Not done: the burn of a blade on a wall, the flare and sparks when blades meet (the state has no events), the
+  beam of a trip mine, sabers of NPCs. `tools/panelshot/steps_sabers.js` (50 checks; one of them needs a bot
+  with his saber on in view and fails when none is).
 - Fixed: a file with a long name was not found. The server cut a value of a request to the room it had for
   it before it decoded it (`WA_FormValue`), and the page writes every slash of a file name as `%2F`: a name
   of 58 to 63 letters, which the game has room for, lost its end and was refused. So the image

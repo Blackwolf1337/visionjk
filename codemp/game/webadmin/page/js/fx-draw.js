@@ -138,8 +138,21 @@ function fxColour(e) {
 	fxColor[3] = e.flags & FX_USE_ALPHA ? a : 0;
 }
 
+// CTrail::Update and Draw: the quad behind a saber blade. Its corners stay where they are, its image slides over
+// it while it lives (the texture coordinates go from where they began to where they end, and no further than 1).
+function fxTrailQuad(e) {
+	const perc = (e.t1 - fxTime) / (e.t1 - e.t0);
+	fxColor[0] = e.rgb[0]; fxColor[1] = e.rgb[1]; fxColor[2] = e.rgb[2]; fxColor[3] = 255;
+	// the two triangles of the engine: new muzzle, new tip, old muzzle and old muzzle, old tip, new tip
+	for (const i of [0, 1, 3, 2]) {
+		const v = e.verts[i], st = e.st[i];
+		fxVertex(v[0], v[1], v[2], Math.min(1, st[0] * perc + st[2] * (1 - perc)), st[1] * perc + st[3] * (1 - perc));
+	}
+}
+
 // The quads of one primitive as the eye sees it now. view is cameraAxes().
 function fxQuads(e, view) {
+	if (e.type === 'trail') { fxTrailQuad(e); return; }
 	const type = e.type, radius = fxNow(e, 8, e.size);
 	fxColour(e);
 	if (type === 'particle') fxSprite(e, view.left, view.up, radius);
@@ -202,6 +215,18 @@ function drawEffects(now) {
 	fxStats.batches = batches.length;
 	if (!batches.length) return;
 
+	// in a fog of the whole map what blends fades with the distance (RB_CalcModulateColorsByFog). The fog of a
+	// brush is not looked for per primitive.
+	const fog = fogShown() && world ? world.globalFog : null;
+	for (const b of batches) b.fog = fog;
+	fxDrawBatches(batches);
+}
+
+// Draws batches of quads that were written into the buffer of the effects with the stages of their shaders. A
+// batch is { mat, t, first, count, fog }: its material, the time its stages are drawn at, where its vertex numbers
+// are, and the fog it is in (null for none).
+function fxDrawBatches(batches) {
+	if (!batches.length) return;
 	const program = gl.getParameter(gl.CURRENT_PROGRAM);
 	gl.useProgram(stageProg.p);
 	gl.uniform1i(stageProg.u.uTex, 0);
@@ -213,14 +238,12 @@ function drawEffects(now) {
 	gl.colorMask(true, true, true, false);
 	gl.bindBuffer(gl.ARRAY_BUFFER, fxVbo);
 	gl.bufferSubData(gl.ARRAY_BUFFER, 0, fxBytes, 0, fxVerts * FX_STRIDE);
-	// in a fog of the whole map what blends fades with the distance (RB_CalcModulateColorsByFog). The fog of a
-	// brush is not looked for per primitive.
-	const fog = fogShown() && world ? world.globalFog : null;
 	for (const b of batches) {
+		if (!b.count) continue;
 		setCull(b.mat.cull);
 		setDeform(stageProg, b.mat, b.t);
 		if (b.mat.polygonOffset) { gl.enable(gl.POLYGON_OFFSET_FILL); gl.polygonOffset(-1, -2); }
-		for (const st of b.mat.stages) drawStage(st, b.t, null, fxVao, b.count, gl.UNSIGNED_SHORT, b.first * 2, stageProg, fog);
+		for (const st of b.mat.stages) drawStage(st, b.t, null, fxVao, b.count, gl.UNSIGNED_SHORT, b.first * 2, stageProg, b.fog);
 		if (b.mat.polygonOffset) gl.disable(gl.POLYGON_OFFSET_FILL);
 	}
 	setDeform(stageProg, NO_DEFORM, 0);

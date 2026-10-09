@@ -34,10 +34,10 @@ const FX_LINEAR = 0x1, FX_RAND = 0x2, FX_NONLINEAR = 0x4, FX_WAVE = 0x8, FX_CLAM
 const FX_GROUP_FLAGS = { linear: FX_LINEAR, nonlinear: FX_NONLINEAR, wave: FX_WAVE, random: FX_RAND, clamp: FX_CLAMP };
 const FX_GROUPS = { alpha: ['alpha', 0], rgb: ['rgb', 4], size: ['size', 8], width: ['size', 8], length: ['length', 12], height: ['length', 12], size2: ['size2', 16], width2: ['size2', 16] };
 
-// The kinds of primitive the engine knows. An effect holds 24 of them, the page keeps the ones it draws or
-// that play other effects: not sound, light, camerashake, decal and flash.
+// The kinds of primitive the engine knows. An effect holds 24 of them, the page keeps the ones it draws, that
+// play other effects or that shine: not sound, camerashake, decal and flash.
 const FX_TYPES_KNOWN = ['particle', 'line', 'tail', 'sound', 'cylinder', 'electricity', 'emitter', 'decal', 'orientedparticle', 'fxrunner', 'light', 'camerashake', 'flash'];
-const FX_TYPES_KEPT = new Set(['particle', 'orientedparticle', 'line', 'tail', 'cylinder', 'electricity', 'emitter', 'fxrunner']);
+const FX_TYPES_KEPT = new Set(['particle', 'orientedparticle', 'line', 'tail', 'cylinder', 'electricity', 'emitter', 'fxrunner', 'light']);
 const FX_MAX_COMPONENTS = 24;
 
 // The keys of a primitive that are a range of numbers (2) or of vectors (3), and the field they set. A range

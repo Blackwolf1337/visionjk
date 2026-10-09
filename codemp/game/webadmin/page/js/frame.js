@@ -109,7 +109,8 @@ function drawModelEntities(now, k) {
 			const dir = [Math.cos(r), Math.sin(r), 0], tag = model && model.tags['*blade1'], from = tag ? tag[11] : 6;
 			const saber = (owner.sabers || [])[0];
 			for (const blade of saber ? saber.blades.slice(0, 1) : []) {
-				blades.push({ org: [pos[0] + dir[0] * from, pos[1] + dir[1] * from, pos[2]], dir, len: blade.length, radius: blade.radius, color: blade.color });
+				// lenMax and packed: its full length and the colour of an RGB saber, for the blade as the game draws it (js/sabers.js)
+				blades.push({ org: [pos[0] + dir[0] * from, pos[1] + dir[1] * from, pos[2]], dir, len: blade.length, lenMax: blade.length, radius: blade.radius, color: blade.color, packed: blade.packed || 0 });
 			}
 		}
 	}

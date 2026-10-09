@@ -122,9 +122,8 @@ function drawStatic(model, world) {
 	gl.useProgram(flatProg.p);
 }
 
-/* glowing saber blades */
+/* streaks of light: what the plain view shows of a blade or a bolt */
 
-const SABER_COLORS = [[1, 0.15, 0.1], [1, 0.45, 0.05], [1, 0.95, 0.15], [0.15, 1, 0.2], [0.15, 0.4, 1], [0.8, 0.15, 1]];
 const bladeProg = compile(`#version 300 es
 layout(location=0) in vec3 aPos; layout(location=1) in vec2 aUv;
 uniform mat4 uMvp; out vec2 vUv;
@@ -148,10 +147,13 @@ gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 20,
 gl.enableVertexAttribArray(1); gl.vertexAttribPointer(1, 2, gl.FLOAT, false, 20, 12);
 gl.bindVertexArray(null);
 
-const blades = [];	// collected while drawing models, drawn after everything opaque
+// What is drawn after everything opaque, collected while the frame goes on. A saber blade: { org, dir, len, radius,
+// color } (and lenMax, packed, mine where js/sabers.js made it), drawn as the game draws it (sbDraw) or as a streak
+// in the plain view. A streak of a shot or a flash: { org, dir, len, radius, rgb, round }.
+const blades = [];
 // What is in the air (shots of /api/state), as far as it can be shown without the effects of the game: a bolt is
-// a streak of light in about the colour of its effect, and what the game draws as a model (a rocket, a thermal
-// detonator, a det pack) is that model. [length, radius, colour] by weapon, and by the other way to fire it.
+// a streak of light in about the colour of its effect, and what the game draws as a model is that model.
+// [length, radius, colour] by weapon, and by the other way to fire it.
 // With the effects (js/fx-weapons.js) the streak is the effect of the shot and the model stays.
 const SABER_SPIN = 800;		// degrees a second, the turn the game gives a saber that was thrown
 const SHOT_BOLT = {
@@ -159,7 +161,51 @@ const SHOT_BOLT = {
 	10: [10, 1.5, [1, 0.75, 0.3]], 11: [44, 4, [1, 0.55, 0.15]], 15: [40, 4, [0.6, 0.8, 1]], 16: [20, 2.5, [1, 0.6, 0.15]], 17: [28, 3, [1, 0.2, 0.15]], 18: [24, 2.5, [1, 0.3, 0.2]]
 };
 const SHOT_BOLT_ALT = { 8: [12, 7, [0.3, 0.5, 1]], 9: [16, 12, [0.5, 0.7, 1]], 10: [8, 3, [1, 0.75, 0.3]] };
-const SHOT_MODEL = { 11: 'models/weapons2/merr_sonn/projectile.md3', 12: 'models/weapons2/thermal/thermal_proj.md3', 14: 'models/weapons2/detpack/det_pack.md3' };
+// missileModel and altMissileModel of CG_RegisterWeapon (cg_weaponinit.c), by weapon. A trip mine and a det pack
+// are no missiles for the clients: they come as models of the state.
+const SHOT_MODEL = { 10: 'models/weapons2/golan_arms/projectileMain.md3', 11: 'models/weapons2/merr_sonn/projectile.md3', 12: 'models/weapons2/thermal/thermal_proj.md3' };
+const SHOT_MODEL_ALT = { 10: 'models/weapons2/golan_arms/projectile.md3', 11: SHOT_MODEL[11], 12: SHOT_MODEL[12] };
+// missileDlight and its colour: only a rocket shines, fired either way
+const SHOT_LIGHT = { 11: [125, [1, 1, 0.5]] };
+const EF_MISSILE_STICK = 1 << 22;
+
+// where a shot of the state is now, on its way from where it was at the last poll
+const shotPos = (m, k) => [m.prev[0] + (m[3] - m.prev[0]) * k, m.prev[1] + (m[4] - m.prev[1]) * k, m.prev[2] + (m[5] - m.prev[2]) * k];
+
+// CG_Missile: the lights of what is in the air, for the lights of the frame
+function shotLights(now) {
+	const k = Math.min(1, (performance.now() - lastPoll) / pollInterval);
+	for (const m of (state && state.shots) || []) {
+		const light = SHOT_LIGHT[m[1]];
+		if (light && m.prev) dlightAdd(shotPos(m, k), light[0], light[1]);
+	}
+}
+
+// PerpendicularVector and RotateAroundDirection of the engine: the three axes of something that looks along fwd
+// and is turned around that by yaw degrees
+function aroundDirection(fwd, yaw) {
+	let at = 0;
+	for (let i = 1; i < 3; i++) if (Math.abs(fwd[i]) < Math.abs(fwd[at])) at = i;
+	if (!(Math.abs(fwd[at]) < 1)) at = 0;
+	const d = fwd[at], p = [-d * fwd[0], -d * fwd[1], -d * fwd[2]];
+	p[at] += 1;
+	let right = fxUnit(p);
+	if (yaw) right = fxTurn(fwd, right, yaw);
+	return [fwd, right, fxCross(fwd, right)];
+}
+
+// CG_Missile: how the model of a missile is turned. It looks the way it flies and spins around that, a quarter
+// of a degree for every msec (half a degree for one that sticks). One that lies still looks the way its angles
+// say when it has any (a mine on a wall), else up. The game takes the speed it was fired with for the way and,
+// lying still, turns it by a time of its entity: the state has the speed of now and no such time.
+function missileMatrix(m, pos) {
+	const speed = Math.hypot(m[6], m[7], m[8]), stick = (m[12] | 0) & EF_MISSILE_STICK, r = Math.PI / 180;
+	let fwd = [0, 0, 1], yaw = 0;
+	if (speed) { fwd = [m[6] / speed, m[7] / speed, m[8] / speed]; yaw = frameNow * (stick ? 0.5 : 0.25) % 360; }
+	else if (m[9] || m[10]) fwd = [Math.cos(m[9] * r) * Math.cos(m[10] * r), Math.cos(m[9] * r) * Math.sin(m[10] * r), -Math.sin(m[9] * r)];
+	const ax = aroundDirection(fwd, yaw);
+	return new Float32Array([...ax[0], 0, ...ax[1], 0, ...ax[2], 0, pos[0], pos[1], pos[2], 1]);
+}
 
 // Where a shot ended: a flash for a moment, when the page has no effect of the game to show for it. How far it
 // reaches and how long it lasts (ms) for what goes off with a bang, by weapon and by the other way to fire it.
@@ -181,14 +227,10 @@ function drawShots(k) {
 		blades.push({ org: [f.pos[0] - up[0] * r, f.pos[1] - up[1] * r, f.pos[2] - up[2] * r], dir: up, len: r * 2, radius: r / 2.2, rgb, round: true });
 	}
 	for (const m of (state && state.shots) || []) {
-		const weapon = m[1], pos = [m.prev[0] + (m[3] - m.prev[0]) * k, m.prev[1] + (m[4] - m.prev[1]) * k, m.prev[2] + (m[5] - m.prev[2]) * k];
+		const weapon = m[1], pos = shotPos(m, k);
 		const speed = Math.hypot(m[6], m[7], m[8]), dir = speed ? [m[6] / speed, m[7] / speed, m[8] / speed] : [0, 0, 1];
-		const model = SHOT_MODEL[weapon] ? staticNow(SHOT_MODEL[weapon]) : null;
-		if (model) {
-			// its nose where it flies to
-			const yaw = Math.atan2(dir[1], dir[0]) * 180 / Math.PI, pitch = -Math.atan2(dir[2], Math.hypot(dir[0], dir[1])) * 180 / Math.PI;
-			drawStatic(model, anglesMatrix(pos, [pitch, yaw, 0], 1));
-		}
+		const path = (m[2] ? SHOT_MODEL_ALT : SHOT_MODEL)[weapon], model = path ? staticNow(path) : null;
+		if (model) drawStatic(model, missileMatrix(m, pos));
 		if (fx && fxShotFlies(m, pos, dir)) continue;
 		const bolt = (m[2] && SHOT_BOLT_ALT[weapon]) || SHOT_BOLT[weapon] || (model ? null : [14, 2, [1, 1, 1]]);
 		// the streak ends where the shot is: the fire of a rocket is behind it
@@ -198,31 +240,38 @@ function drawShots(k) {
 
 function drawBlades() {
 	if (!blades.length) return;
-	gl.useProgram(bladeProg.p);
-	gl.uniformMatrix4fv(bladeProg.u.uMvp, false, viewProj);
-	gl.enable(gl.BLEND);
-	gl.blendFunc(gl.ONE, gl.ONE);
-	gl.depthMask(false);
-	gl.bindVertexArray(bladeVao);
-	for (const b of blades) {
-		const mid = [0, 1, 2].map(k => b.org[k] + b.dir[k] * b.len / 2);
-		const toEye = [0, 1, 2].map(k => eye[k] - mid[k]);
-		let side = [b.dir[1] * toEye[2] - b.dir[2] * toEye[1], b.dir[2] * toEye[0] - b.dir[0] * toEye[2], b.dir[0] * toEye[1] - b.dir[1] * toEye[0]];
-		const l = Math.hypot(...side) || 1, w = Math.max(3, b.radius) * 2.2;
-		side = side.map(v => v / l * w);
-		const tip = [0, 1, 2].map(k => b.org[k] + b.dir[k] * b.len);
-		gl.bindBuffer(gl.ARRAY_BUFFER, bladeBuf);
-		gl.bufferSubData(gl.ARRAY_BUFFER, 0, new Float32Array([
-			b.org[0] - side[0], b.org[1] - side[1], b.org[2] - side[2], -1, 0,
-			b.org[0] + side[0], b.org[1] + side[1], b.org[2] + side[2], 1, 0,
-			tip[0] - side[0], tip[1] - side[1], tip[2] - side[2], -1, 1,
-			tip[0] + side[0], tip[1] + side[1], tip[2] + side[2], 1, 1]));
-		gl.uniform3fv(bladeProg.u.uColor, b.rgb || SABER_COLORS[b.color] || SABER_COLORS[4]);
-		gl.uniform1f(bladeProg.u.uRound, b.round ? 1 : 0);
-		gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+	// the blades of sabers with the shaders of the game, where the view is the one of the game
+	const scripted = modelsScripted(), sabers = scripted ? blades.filter(b => b.color !== undefined) : [];
+	if (sabers.length) sbDraw(sabers);
+	const streaks = scripted ? blades.filter(b => b.color === undefined) : blades;
+	if (streaks.length) {
+		gl.useProgram(bladeProg.p);
+		gl.uniformMatrix4fv(bladeProg.u.uMvp, false, viewProj);
+		gl.enable(gl.BLEND);
+		gl.blendFunc(gl.ONE, gl.ONE);
+		gl.depthMask(false);
+		gl.bindVertexArray(bladeVao);
+		for (const b of streaks) {
+			const mid = [0, 1, 2].map(k => b.org[k] + b.dir[k] * b.len / 2);
+			const toEye = [0, 1, 2].map(k => eye[k] - mid[k]);
+			let side = [b.dir[1] * toEye[2] - b.dir[2] * toEye[1], b.dir[2] * toEye[0] - b.dir[0] * toEye[2], b.dir[0] * toEye[1] - b.dir[1] * toEye[0]];
+			const l = Math.hypot(...side) || 1, w = Math.max(3, b.radius) * 2.2;
+			side = side.map(v => v / l * w);
+			const tip = [0, 1, 2].map(k => b.org[k] + b.dir[k] * b.len);
+			gl.bindBuffer(gl.ARRAY_BUFFER, bladeBuf);
+			gl.bufferSubData(gl.ARRAY_BUFFER, 0, new Float32Array([
+				b.org[0] - side[0], b.org[1] - side[1], b.org[2] - side[2], -1, 0,
+				b.org[0] + side[0], b.org[1] + side[1], b.org[2] + side[2], 1, 0,
+				tip[0] - side[0], tip[1] - side[1], tip[2] - side[2], -1, 1,
+				tip[0] + side[0], tip[1] + side[1], tip[2] + side[2], 1, 1]));
+			// a saber in the plain view: a streak in the colour of its light
+			gl.uniform3fv(bladeProg.u.uColor, b.rgb || sbLightRgb(b.color, b.packed));
+			gl.uniform1f(bladeProg.u.uRound, b.round ? 1 : 0);
+			gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+		}
+		gl.depthMask(true);
+		gl.disable(gl.BLEND);
 	}
-	gl.depthMask(true);
-	gl.disable(gl.BLEND);
 	gl.useProgram(flatProg.p);
 	blades.length = 0;
 }
@@ -232,53 +281,81 @@ function weaponModelPath(weapon) {
 	return null;
 }
 
-// the weapon or the sabers in the hands of an animated player
+// the muzzle of the weapon a player holds, where the page drew it last: client -> { org, dir, now (the time of that frame) }
+const wpMuzzles = new Map();
+
+// The weapon or the sabers in the hands of an animated player. A client has them as Ghoul2 models bolted to the
+// model of the player (CG_CopyG2WeaponInstance in cg_weapons.c): the world model of the weapon on his right hand
+// (the first bolt, *r_hand), the hilt of his first saber there and the hilt of his second on the left (*l_hand).
+// A bolted model stands where the bolt is: the matrix of the bolt is its own.
+// inst: the Ghoul2 instance of the player with its bones of this frame, world: where his model stands.
 function drawHeldWeapons(inst, d, world) {
 	const m = inst.model;
-	if (!m || d.dead) return;
-	const hands = [m.tags['*r_hand'], m.tags['*l_hand']];
+	if (!m) return;
+	const hand = name => m.tags[name] && inst.bones ? M4.mul(world, to44(tagMatrix(m.tags[name], inst.bones))) : null;
 	if (d.weapon === 3) {
-		(d.sabers || []).forEach((saber, si) => drawSaber(saber, si, d, inst));
+		(d.sabers || []).forEach((saber, si) => drawHilt(saber, si, d, hand(si ? '*l_hand' : '*r_hand')));
 		return;
 	}
-	const it = weaponModelPath(d.weapon);
-	if (!it || !hands[0] || !it.model) return;
+	// bare hands hold nothing, and the gun that stands is no model in a hand
+	if (d.weapon === 2 || d.weapon === 17) return;
+	const it = weaponModelPath(d.weapon), at = hand('*r_hand');
+	if (!it || !at || !it.model) return;
 	const w = staticNow(it.model);
-	if (w) drawStatic(w, M4.mul(world, to44(tagMatrix(hands[0], inst.bones))));
+	if (!w) return;
+	drawStatic(w, at);
+	// Where its muzzle is (CG_AddPlayerWeapon for a player seen from outside): the *flash bolt of the weapon, and
+	// the way a flash leaves it, which cgame reads as POSITIVE_X of the bolt (against its second axis, see drawHilt).
+	const flash = w.tags['*flash'];
+	if (flash) { const f = M4.mul(at, to44(flash)); wpMuzzles.set(d.id, { org: [f[12], f[13], f[14]], dir: fxUnit([-f[4], -f[5], -f[6]]), now: frameNow }); }
 }
 
-// Sabers come from the server's muzzle point and direction, the same numbers the game
-// uses, smoothed between the polls. The hilt sits on the blade's axis below it.
-function drawSaber(saber, si, d, inst) {
+// a matrix that stands where at does, turned so that what looked along from looks along to, around the point pivot,
+// which then lies at target
+function turnedTo(at, pivot, from, to, target) {
+	const v = fxCross(from, to), c = from[0] * to[0] + from[1] * to[1] + from[2] * to[2];
+	let R;
+	if (c < -0.999999) {
+		// the other way round: half a turn around something that stands on it
+		const n = fxNormals(from)[0];
+		R = [2 * n[0] * n[0] - 1, 2 * n[0] * n[1], 2 * n[0] * n[2], 2 * n[1] * n[0], 2 * n[1] * n[1] - 1, 2 * n[1] * n[2], 2 * n[2] * n[0], 2 * n[2] * n[1], 2 * n[2] * n[2] - 1];
+	} else {
+		const k = 1 / (1 + c);
+		R = [c + k * v[0] * v[0], k * v[0] * v[1] - v[2], k * v[0] * v[2] + v[1], k * v[1] * v[0] + v[2], c + k * v[1] * v[1], k * v[1] * v[2] - v[0], k * v[2] * v[0] - v[1], k * v[2] * v[1] + v[0], c + k * v[2] * v[2]];
+	}
+	const turn = (x, y, z) => [R[0] * x + R[1] * y + R[2] * z, R[3] * x + R[4] * y + R[5] * z, R[6] * x + R[7] * y + R[8] * z];
+	const out = new Float32Array(16);
+	for (let col = 0; col < 3; col++) out.set(turn(at[col * 4], at[col * 4 + 1], at[col * 4 + 2]), col * 4);
+	const o = turn(at[12] - pivot[0], at[13] - pivot[1], at[14] - pivot[2]);
+	out[12] = target[0] + o[0]; out[13] = target[1] + o[1]; out[14] = target[2] + o[2]; out[15] = 1;
+	return out;
+}
+
+// The hilt of a saber in a hand. The blades of the frame are where the server has the bolts of the hilt
+// (js/sabers.js), so the hilt is put to its blade: it stands as the hand holds it, turned the shortest way that
+// lets its first blade bolt (*blade1) lie where that blade starts and points. A blade starts at the origin of its
+// bolt and points against the first axis of the bolt as G2_ProcessSurfaceBolt makes it: that is what cgame reads
+// as NEGATIVE_Y, because G2API_GetBoltMatrix swaps the first two axes of what it hands out. While the server
+// does not say where the blade is (the saber is being raised, he is dead) the hilt is where the hand is, and the
+// blades are taken from there for the next frame.
+// hand: the matrix of the bolt of the hand, null when the model has none.
+function drawHilt(saber, si, d, hand) {
 	if (si > 1 || (si === 0 && d.saberInFlight)) return;
-	const h = staticNow(saber.model);
-	const prev = inst.prevSabers && inst.prevSabers[si];
-	const k = Math.min(1, (performance.now() - lastPoll) / pollInterval);
-	saber.blades.forEach((blade, bi) => {
-		const pb = prev && prev.blades[bi];
-		let org = blade.org, dir = blade.dir;
-		if (!dir || (!dir[0] && !dir[1] && !dir[2])) return;
-		if (pb && pb.dir && (pb.dir[0] || pb.dir[1] || pb.dir[2])) {
-			org = org.map((v, i) => pb.org[i] + (v - pb.org[i]) * k);
-			dir = dir.map((v, i) => pb.dir[i] + (v - pb.dir[i]) * k);
-		}
-		const l = Math.hypot(dir[0], dir[1], dir[2]) || 1;
-		dir = dir.map(v => v / l);
-		if (bi === 0 && h) {
-			// hilt: its +Z is the blade axis, the blade tag sits at the muzzle point
-			const tag = h.tags['*blade1'];
-			const tz = tag ? tag[11] : 6;
-			let side = Math.abs(dir[2]) < 0.9 ? [0, 0, 1] : [1, 0, 0];
-			let x = [side[1] * dir[2] - side[2] * dir[1], side[2] * dir[0] - side[0] * dir[2], side[0] * dir[1] - side[1] * dir[0]];
-			const xl = Math.hypot(...x); x = x.map(v => v / xl);
-			const y = [dir[1] * x[2] - dir[2] * x[1], dir[2] * x[0] - dir[0] * x[2], dir[0] * x[1] - dir[1] * x[0]];
-			const o = org.map((v, i) => v - dir[i] * tz);
-			drawStatic(h, new Float32Array([...x, 0, ...y, 0, ...dir, 0, o[0], o[1], o[2], 1]));
-		}
-		// saberHolstered 1 turns off the second blade or the second saber, 2 all of them
-		if (d.saberHolstered === 2 || (d.saberHolstered === 1 && (bi > 0 || si > 0))) return;
-		blades.push({ org, dir, len: blade.length, radius: blade.radius, color: blade.color });
-	});
+	const h = staticNow(saber.model), st = sbPlayers.get(d.id), now = st && st.now && st.now[si];
+	if (!h) return;
+	const tags = saber.blades.map((_, bi) => h.tags['*blade' + (bi + 1)] || (bi ? null : h.tags['*flash']) || null);
+	const frame = (at, tag) => { const f = M4.mul(at, to44(tag)); return { org: [f[12], f[13], f[14]], dir: fxUnit([-f[0], -f[1], -f[2]]) }; };
+	let at = hand;
+	if (now && tags[0]) {
+		const from = at || new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]), f = frame(from, tags[0]);
+		at = turnedTo(from, f.org, f.dir, now.dir, now.org);
+	}
+	if (!at) return;
+	drawStatic(h, at);
+	if (!st) return;
+	st.hand[si] = hand ? tags.map(tag => tag && frame(hand, tag)) : null;
+	// a blade that is taken from the hand is where the hand of this frame has it, not the one of the last
+	if (sbFromHand && st.hand[si]) st.hand[si].forEach((held, bi) => { const b = st.blades[si][bi].drawn; if (held && b) { b.org = held.org; b.dir = held.dir; } });
 }
 
 /* first person / gameplay camera */

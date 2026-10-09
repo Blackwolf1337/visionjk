@@ -174,7 +174,10 @@ static unsigned WA_StatePlayerStays( waBuffer_t *slow, int clientNum ) {
 
 			WA_BufPrintf( slow, "%s{\"length\":%.1f,\"radius\":%.1f,\"color\":%d}", bl ? "," : "", blade->lengthMax, blade->radius, blade->color );
 		}
-		WA_BufAppend( slow, "]}", 2 );
+		// what of the saber file a client draws the blades by: its second flags (no blade, no light, no marks),
+		// the styles of its trail, and from which blade on the second set of them holds
+		WA_BufPrintf( slow, "],\"flags2\":%d,\"trailStyle\":%d,\"trailStyle2\":%d,\"bladeStyle2Start\":%d}",
+			saber->saberFlags2, saber->trailStyle, saber->trailStyle2, saber->bladeStyle2Start );
 	}
 	WA_BufAppend( slow, "],\"model\":", 10 );
 	{
@@ -187,6 +190,11 @@ static unsigned WA_StatePlayerStays( waBuffer_t *slow, int clientNum ) {
 		if ( jp_allowRGBsaber.integer == 1 )
 			WA_BufPrintf( slow, ",\"saberRgb\":[%d,%d]", atoi( Info_ValueForKey( userinfo, "cp_sbRGB1" ) ),
 				atoi( Info_ValueForKey( userinfo, "cp_sbRGB2" ) ) );
+		// The colour of his first and of his second saber as a client draws them: color1 and color2 of his
+		// userinfo, which the clients are told as c1 and c2. Not the colour of a blade above: that one is of
+		// the saber file as the server read it, and a client does not draw by it.
+		WA_BufPrintf( slow, ",\"saberColors\":[%d,%d]", atoi( Info_ValueForKey( userinfo, "color1" ) ),
+			atoi( Info_ValueForKey( userinfo, "color2" ) ) );
 	}
 	WA_BufAppend( slow, "}", 1 );
 	return WA_StateRev( slow );
@@ -399,6 +407,11 @@ static void WA_StateModels( waBuffer_t *b ) {
 		WA_AppendVec( b, pos );
 		WA_BufAppend( b, ",\"angles\":", 10 );
 		WA_AppendVec( b, angles );
+		// A mine or a det pack is one of them once it sticks (CG_General draws the beam of a trip mine by these),
+		// and so is what shines by itself (constantLight, CG_EntityEffects): only for those.
+		if ( ent->s.weapon || ent->s.constantLight )
+			WA_BufPrintf( b, ",\"weapon\":%d,\"eFlags\":%d,\"time\":%d,\"delta\":[%.1f,%.1f,%.1f],\"light\":%d", ent->s.weapon, ent->s.eFlags,
+				ent->s.time, ent->s.pos.trDelta[0], ent->s.pos.trDelta[1], ent->s.pos.trDelta[2], ent->s.constantLight );
 		WA_BufAppend( b, "}", 1 );
 	}
 	WA_BufAppend( b, "]", 1 );
@@ -453,8 +466,10 @@ static void WA_StateMovers( waBuffer_t *b ) {
 
 // Not in JKAdmin: what is in the air, the shots, rockets and grenades the clients draw (CG_Missile). Each is
 // its entity, the weapon, 1 when it was fired the other way, where it is and how fast it flies, its angles
-// and the eFlags of its entity (a mine that sticks, a trip mine whose beam is on). Not a saber that was
-// thrown: that is drawn with its player.
+// and the eFlags of its entity (a mine that sticks, a trip mine whose beam is on), then what CG_Missile turns
+// it by: the kind of its way (trType), the speed it was fired with (trDelta), how long ago in msec, the time
+// of its entity (a resting one is turned by it), and who fired it. Not a saber that was thrown: that is drawn
+// with its player.
 static void WA_StateShots( waBuffer_t *b ) {
 	int			i;
 	qboolean	first = qtrue;
@@ -471,9 +486,10 @@ static void WA_StateShots( waBuffer_t *b ) {
 		BG_EvaluateTrajectory( &ent->s.pos, level.time, pos );
 		BG_EvaluateTrajectoryDelta( &ent->s.pos, level.time, speed );
 		BG_EvaluateTrajectory( &ent->s.apos, level.time, angles );
-		WA_BufPrintf( b, "%s[%d,%d,%d,%.0f,%.0f,%.0f,%.0f,%.0f,%.0f,%.0f,%.0f,%.0f,%d]", first ? "" : ",", i, ent->s.weapon,
+		WA_BufPrintf( b, "%s[%d,%d,%d,%.0f,%.0f,%.0f,%.0f,%.0f,%.0f,%.0f,%.0f,%.0f,%d,%d,%.0f,%.0f,%.0f,%d,%d,%d]", first ? "" : ",", i, ent->s.weapon,
 			( ent->s.eFlags & EF_ALT_FIRING ) ? 1 : 0, pos[0], pos[1], pos[2], speed[0], speed[1], speed[2],
-			angles[0], angles[1], angles[2], ent->s.eFlags );
+			angles[0], angles[1], angles[2], ent->s.eFlags, ent->s.pos.trType, ent->s.pos.trDelta[0], ent->s.pos.trDelta[1],
+			ent->s.pos.trDelta[2], level.time - ent->s.pos.trTime, ent->s.time, ent->r.ownerNum );
 		first = qfalse;
 	}
 	WA_BufAppend( b, "]", 1 );

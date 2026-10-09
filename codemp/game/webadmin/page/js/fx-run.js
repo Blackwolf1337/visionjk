@@ -4,6 +4,8 @@
 // entities that are effects and loop (CG_FX in cgame/cg_ents.c), and what the game played once (EV_PLAY_EFFECT
 // and EV_PLAY_EFFECT_ID in cgame/cg_event.c). What an effect does then is the engine's: client/FxScheduler.cpp
 // (PlayEffect, CreateEffect), client/FxUtil.cpp (FX_Add...) and client/FxPrimitives.cpp (Update, Die).
+// A light of an effect is one of the lights of the frame (fxLights, js/dlights.js), and the trail of a saber blade
+// is a primitive cgame hands in by itself (fxAddTrail).
 // Not done: what a primitive runs into (usePhysics, impactFx: it goes through walls and floors), the models of
 // emitters (useModel, and paperPhysics which is for them), wind, and the forks of electricity.
 
@@ -376,9 +378,10 @@ function fxMove(e, ms) {
 	}
 }
 
-// CParticle::Die: what a primitive whose time is over leaves behind. A line and electricity leave nothing.
+// CParticle::Die: what a primitive whose time is over leaves behind. A line, electricity, a light and a trail
+// leave nothing.
 function fxDie(e) {
-	const fx = e.type !== 'line' && e.type !== 'electricity' ? fxOwn(e, FX_DEATH_RUNS_FX, e.p.deathFx) : null;
+	const fx = e.type !== 'line' && e.type !== 'electricity' && e.type !== 'light' && e.type !== 'trail' ? fxOwn(e, FX_DEATH_RUNS_FX, e.p.deathFx) : null;
 	if (!fx) return;
 	const fwd = fxUnit([Math.random() * 2 - 1, Math.random() * 2 - 1, Math.random() * 2 - 1]);
 	fxStart(fx, e.org, [fwd, ...fxNormals(fwd)]);
@@ -454,6 +457,25 @@ function fxAdvance(dtMs) {
 	}
 	fxLive.length = n;
 	fxStats.live = n;
+}
+
+// FX_AddPrimitive of cgame (FX_FeedTrail, CTrail): a quad that lives for life msec. verts are its four corners
+// (new muzzle, new tip, old tip, old muzzle), rgb the colour of all of them (0 to 255), st for every corner the
+// texture coordinates it begins with and the ones it ends with.
+function fxAddTrail(shader, verts, rgb, st, life) {
+	if (!fxOn() || fxLive.length >= FX_MAX_LIVE || !(life > 0)) return;
+	fxLive.push({ p: null, type: 'trail', flags: FX_USE_ALPHA, t0: fxTime, t1: fxTime + life, shader, verts: verts.map(v => v.slice()), rgb, st });
+}
+
+// CLight::Update and Draw: the lights of the effects that are playing, for the lights of the frame. The size of
+// such a primitive is the radius of its light and its colour the colour.
+function fxLights() {
+	for (const e of fxLive) {
+		if (e.type !== 'light') continue;
+		let k = fxFade(e, 4, e.rgb[2]);
+		if (e.flags & FX_RAND << 4) k *= Math.random();
+		dlightAdd(e.org, fxNow(e, 8, e.size), [0, 1, 2].map(i => e.rgb[0][i] * k + e.rgb[1][i] * (1 - k)));
+	}
 }
 
 // nothing is playing any more

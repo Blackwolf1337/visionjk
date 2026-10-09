@@ -39,15 +39,16 @@ const FX_MUZZLE_DIST = 80;					// one that came by this near to a player was fir
 const fxShot = (weapon, alt) => (alt && FX_SHOTS_ALT[weapon]) || FX_SHOTS[weapon] || null;
 
 // The player nearest to a stretch of a way, when he is nearer to it than far: from is where it begins, dir the
-// way it runs and reach how long it is. { along, far }: how far along the way he is next to it, and how near.
+// way it runs and reach how long it is. { along, far, id }: how far along the way he is next to it, how near, and
+// who he is.
 function fxPlayerOn(from, dir, reach, far) {
 	let found = null;
-	for (const p of players.values()) {
+	for (const [id, p] of players) {
 		if (p.data.dead || p.data.team === 'spectator') continue;
 		const to = [p.draw[0] - from[0], p.draw[1] - from[1], p.draw[2] - from[2]];
 		const along = Math.min(reach, Math.max(0, to[0] * dir[0] + to[1] * dir[1] + to[2] * dir[2]));
 		const off = Math.hypot(to[0] - dir[0] * along, to[1] - dir[1] * along, to[2] - dir[2] * along);
-		if (off < far && (!found || off < found.far)) found = { along, far: off };
+		if (off < far && (!found || off < found.far)) found = { along, far: off, id };
 	}
 	return found;
 }
@@ -61,10 +62,13 @@ function fxShotFlies(m, pos, dir) {
 		m.seen = true;
 		if (m.fresh && w.muzzle) {
 			// Who fired it is not told: it is the player the way behind it leads back to, as far as a shot gets in
-			// two polls. The muzzle is a little in front of him. What a thing of the map fired has no flash in the
-			// game either.
+			// two polls. The flash is at the muzzle of his weapon where the page drew it (the *flash bolt, as
+			// CG_AddPlayerWeapon plays it), or a little in front of him when the page did not draw his weapon. What
+			// a thing of the map fired has no flash in the game either.
 			const speed = Math.hypot(m[6], m[7], m[8]), back = [-dir[0], -dir[1], -dir[2]], from = fxPlayerOn([m[3], m[4], m[5]], back, speed * pollInterval / 500, FX_MUZZLE_DIST);
-			if (from) fxPlay(w.muzzle, [0, 1, 2].map(i => m[3 + i] + back[i] * Math.max(0, from.along - 24)), dir);
+			const muzzle = from ? wpMuzzles.get(from.id) : null;
+			if (muzzle && Math.abs(frameNow - muzzle.now) < 250) fxPlay(w.muzzle, muzzle.org, muzzle.dir);
+			else if (from) fxPlay(w.muzzle, [0, 1, 2].map(i => m[3 + i] + back[i] * Math.max(0, from.along - 24)), dir);
 		}
 		// what it will leave where it ends, so that the file is there by then
 		for (const name of w.wall ? [...w.wall, ...w.flesh] : []) fxGet(name);
