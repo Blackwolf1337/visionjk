@@ -30,7 +30,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 //   wa_assets.c     what the page draws with: the map, the files of the game, the lists to pick from
 //   wa_fs.c         the file manager and the server config
 //   wa_perf.c       /api/perf, how the server keeps up
-//   wa_log.c        the chat and the log of the game
+//   wa_log.c        the chat, the log of the game, and the console: what it prints and a line to run on it
 //   wa_routes.c     the route of the bots
 
 #pragma once
@@ -154,6 +154,8 @@ void WA_ApiPerf( waConnection_t *c, const char *query );
 void WA_ChatInit( void );
 void WA_ApiChat( waConnection_t *c, const char *query );
 void WA_ApiLog( waConnection_t *c, const char *query );
+void WA_ApiConsole( waConnection_t *c, const char *query );
+void WA_ApiCommand( waConnection_t *c, const char *body );
 
 // wa_routes.c
 void WA_ApiWaypoints( waConnection_t *c );

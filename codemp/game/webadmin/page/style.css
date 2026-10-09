@@ -139,10 +139,19 @@ body.ref #hud .hud-top { display: none !important; }
 #command .actions, #jpBox .actions { max-width: none; }
 
 [hidden] { display: none !important; }
-#logText { position: absolute; inset: 0; margin: 0; padding: 10px 12px; overflow: auto; font: 12px/1.45 ui-monospace, Menlo, Consolas, monospace; white-space: pre-wrap; word-break: break-word; color: var(--text); }
+#logText { position: absolute; inset: 0 0 39px 0; margin: 0; padding: 10px 12px; overflow: auto; font: 12px/1.45 ui-monospace, Menlo, Consolas, monospace; white-space: pre-wrap; word-break: break-word; color: var(--text); }
+/* the line for a console command, across the width under the text */
+#logCmd { position: absolute; left: 0; right: 0; bottom: 0; height: 39px; display: flex; gap: 6px; padding: 6px 12px; border-top: 1px solid var(--line); }
+#logCmd input { flex: 1; min-width: 0; font: 12px ui-monospace, Menlo, Consolas, monospace; }
+/* which of the two texts is shown */
+#logSource { display: flex; }
+#logSource button { flex: 1; border-radius: 0; color: var(--muted); }
+#logSource button:first-child { border-radius: 3px 0 0 3px; }
+#logSource button:last-child { border-radius: 0 3px 3px 0; border-left: 0; }
+#logSource button.on { background: var(--accent); border-color: var(--accent); color: #fff; }
 body.logOpen #logView { display: block; }
 #cfgView, #fsView, #logView { position: fixed; top: var(--top); left: var(--side); right: 0; bottom: 0; z-index: 14; display: none; background: var(--panel); transition: left .15s; }
-body.sideClosed #cfgView, body.sideClosed #fsView { left: 0; }
+body.sideClosed #cfgView, body.sideClosed #fsView, body.sideClosed #logView { left: 0; }
 body.cfgOpen #cfgView, body.fsOpen #fsView { display: block; }
 /* the colored text lies under a text field whose own letters are not drawn: both must set every letter alike */
 .codeHi, .codeText { position: absolute; inset: 0; margin: 0; border: 0; padding: 10px 12px; font: 12px/1.45 ui-monospace, Menlo, Consolas, monospace; letter-spacing: 0; font-variant-ligatures: none; white-space: pre; tab-size: 4; }

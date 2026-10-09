@@ -53,6 +53,7 @@ now has one line for each of these:
 | `ClientCommand: <n> [<ip>] "<name>": <command> <arguments>` | every client command. Not `say`, `say_team`, `tell` (the game log has them) and `score`. `amlogin` and `clanpass` with `<hidden>` for the arguments. Arguments cut to 200 characters. Off with `g_logClientCmds 0` |
 | `CallVote: <n> [<ip>] "<name>": <console line>` | a vote starts: the line the console runs if it passes |
 | `Web admin: <ip>: action ...` / `entity ...` / `wrong password` | every action and entity edit of the panel, and every wrong password |
+| `Web admin: <ip>: command <console line>` | a line typed into the console of the panel. What follows a word with `pass` in it is replaced by `...`, here and in the echo on the console |
 | `amlogin: wrong password from <name> [<ip>]` | a wrong admin password |
 | `Odd userinfo: <n> [<ip>] <bytes> bytes: ...` | a userinfo with control characters or of more than 800 bytes, the control characters as `\xNN`, the values of `password`, `cp_login` and `cp_clanPwd` left out |
 
@@ -100,6 +101,15 @@ Off when a sanitizer build is configured.
   this pass, the panel's base64 decoder (now fixed).
 - Legacy clients have their own bugs (`CL_ParseSetGame` above was one in the stock client). The server can not fix
   a client, but it sends nothing that triggers them and keeps bounding names, models and command length.
+
+## Added after the pass: the console of the panel
+
+The Log tab of the panel has a line that runs on the server console (`POST /api/command`, `wa_log.c`). That is
+the right the panel had already: "Save and run on server" of the config tab writes `server.cfg` and executes it,
+which runs any console line. The new line needs the same login and the same origin check as every POST, takes
+one line of 480 characters at most with control characters removed, and goes to the security log. To show what
+the console answers the panel reads `qconsole.log` of the server folder and sets `logfile 2` when it is 0, so a
+server whose panel console was opened once keeps that file until it is stopped.
 
 ## Added after the pass: the voice chat
 

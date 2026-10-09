@@ -222,3 +222,86 @@ void WA_ApiLog( waConnection_t *c, const char *query ) {
 	WA_BufFree( &b );
 }
 
+/*
+=================
+WA_ApiConsole, WA_ApiCommand
+
+Not in JKAdmin. The console of the server for the page: what it prints, and a line to run on it. The module
+only sees its own prints, so what the engine and its commands print is read from the file the engine keeps of
+its console (qconsole.log in the server folder, written while logfile is set). The first request sets
+logfile 2 when it is off: every print is in the file at once then.
+
+GET /api/console?from=: the file from a place on, as /api/log gives the log. Without from, or with a place
+behind its end (the server was started again, the file is a new one): its last part.
+
+POST /api/command (cmd=): one line for the console, run in the next frame as if it was typed there. Not more
+than "Save and execute" of the config could do already. What follows a word with "pass" in it is left out of
+the security log and of the echo on the console, which is in a file too.
+=================
+*/
+#define WA_CONSOLE_FILE	"qconsole.log"
+#define WA_COMMAND_MAX	480
+
+void WA_ApiConsole( waConnection_t *c, const char *query ) {
+	static char	data[WA_LOG_CHUNK + 1];
+	char		path[MAX_OSPATH], value[32];
+	qboolean	exists, isDir;
+	double		size = 0, from = -1;
+	int			len = 0;
+	waBuffer_t	b = { 0 };
+	FILE		*f;
+
+	if ( !trap->Cvar_VariableIntegerValue( "logfile" ) )
+		trap->Cvar_Set( "logfile", "2" );
+
+	if ( !WA_FsResolve( qfalse, WA_CONSOLE_FILE, qfalse, path, sizeof( path ), &exists ) || !WA_FsStat( path, &isDir, &size, NULL ) || isDir )
+		size = 0;
+	if ( WA_FormValue( query, "from", value, sizeof( value ) ) && value[0] )
+		from = atof( value );
+	if ( from < 0 || from > size )
+		from = ( size > WA_LOG_TAIL ) ? size - WA_LOG_TAIL : 0;
+
+	if ( size > from && ( f = fopen( path, "rb" ) ) != NULL ) {
+		if ( !fseek( f, (long)from, SEEK_SET ) )
+			len = (int)fread( data, 1, WA_LOG_CHUNK, f );
+		fclose( f );
+	}
+	data[len] = '\0';
+
+	WA_BufPrintf( &b, "{\"from\":%.0f,\"next\":%.0f,\"size\":%.0f,\"text\":", from, from + len, size );
+	WA_BufJsonString( &b, data );
+	WA_BufAppend( &b, "}", 1 );
+	WA_RespondJson( c, &b );
+	WA_BufFree( &b );
+}
+
+void WA_ApiCommand( waConnection_t *c, const char *body ) {
+	char	cmd[WA_COMMAND_MAX + 2], shown[WA_COMMAND_MAX + 2];
+	char	*in, *out, *secret;
+
+	WA_FormValue( body, "cmd", cmd, sizeof( cmd ) );
+	WA_Utf8ToLatin1( cmd );
+	// one line of the console: nothing that ends it
+	for ( in = out = cmd; *in; in++ ) {
+		if ( (unsigned char)*in >= ' ' && ( out != cmd || *in != ' ' ) )
+			*out++ = *in;
+	}
+	*out = '\0';
+	if ( !cmd[0] ) {
+		WA_ActionResult( c, qfalse, "no command" );
+		return;
+	}
+	if ( strlen( cmd ) > WA_COMMAND_MAX ) {
+		WA_ActionResult( c, qfalse, va( "a command is %d characters at most", WA_COMMAND_MAX ) );
+		return;
+	}
+
+	Q_strncpyz( shown, cmd, sizeof( shown ) );
+	secret = (char *)Q_stristr( shown, "pass" );
+	if ( secret && ( secret = strchr( secret, ' ' ) ) != NULL )
+		Q_strncpyz( secret, " ...", (int)( sizeof( shown ) - ( secret - shown ) ) );
+	WA_LogUse( c, va( "command %s", shown ) );
+	trap->Print( "]%s\n", shown );
+	trap->SendConsoleCommand( EXEC_APPEND, va( "%s\n", cmd ) );
+	WA_ActionResult( c, qtrue, "sent to the console" );
+}

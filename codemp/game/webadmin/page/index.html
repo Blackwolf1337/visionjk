@@ -102,11 +102,13 @@
 	<div class="pane" id="pane-log">
 		<h2><span>Server log</span><span id="logSize"></span></h2>
 		<div class="tools">
+			<div id="logSource"><button data-log="log" class="on" title="The log of the game: who came and went, kills, chat, the commands of admins">Game log</button><button data-log="console" title="What the server prints on its console">Server console</button></div>
 			<div class="inline"><input id="logFilter" placeholder="Show only lines with" spellcheck="false" autocomplete="off"></div>
-			<div class="inline"><label class="hint" style="margin:0"><input type="checkbox" id="logFollow" checked style="width:auto"> follow the end</label><button id="logClear" style="margin-left:auto" title="Empties the view, the file stays as it is">Clear view</button></div>
+			<div class="inline"><label class="hint" style="margin:0"><input type="checkbox" id="logFollow" checked style="width:auto"> follow the end</label><button id="logClear" style="margin-left:auto" title="Empties the view of what is shown, the server keeps its text">Clear view</button></div>
 			<div class="hint" id="logState" style="margin:0"></div>
 		</div>
-		<div class="hint" style="padding:0 10px">The log of the game as the server writes it: who came and went, kills, chat, the commands of admins. The view starts with the last lines and follows the log as it grows. The whole file is games.log in the Files tab.</div>
+		<div class="hint" style="padding:0 10px">Game log is the log of the game as the server writes it: who came and went, kills, chat, the commands of admins. The whole file is games.log in the Files tab. Server console shows what the server prints on its console.</div>
+		<div class="hint" style="padding:0 10px">Both start with their last lines and follow the text as it grows. A command typed into the line under the text runs as if it was typed on the server console, and the view goes to the console for its answer. The arrow keys up and down bring back the commands typed before.</div>
 	</div>
 	<div class="pane" id="pane-files">
 		<h2><span>Files</span><span id="fsCount"></span></h2>
@@ -275,7 +277,7 @@
 		<details id="entDoc"><summary>About this class</summary><pre id="entDocText"></pre></details>
 	</div>
 </div>
-<div id="logView"><pre id="logText"></pre></div>
+<div id="logView"><pre id="logText"></pre><form id="logCmd"><input id="logCmdText" placeholder="Console command, Enter runs it" spellcheck="false" autocomplete="off" maxlength="480"><button>Run</button></form></div>
 <div id="cfgView"><pre id="cfgHi" class="codeHi" aria-hidden="true"></pre><textarea id="cfgText" class="codeText" spellcheck="false" autocomplete="off" autocapitalize="off" wrap="off"></textarea></div>
 <div id="fsView">
 	<div id="fsList"><table><thead><tr><th>Name</th><th class="num">Size</th><th>Changed</th><th></th></tr></thead><tbody id="fsRows"></tbody></table></div>

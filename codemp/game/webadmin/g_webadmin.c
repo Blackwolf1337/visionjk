@@ -252,6 +252,10 @@ static void WA_HandleRequest( waConnection_t *c, char *head, char *body, int bod
 		WA_ApiFsList( c, query );
 	} else if ( !strcmp( method, "GET" ) && !strcmp( path, "/api/log" ) ) {
 		WA_ApiLog( c, query );
+	} else if ( !strcmp( method, "GET" ) && !strcmp( path, "/api/console" ) ) {
+		WA_ApiConsole( c, query );
+	} else if ( !strcmp( method, "POST" ) && !strcmp( path, "/api/command" ) ) {
+		WA_ApiCommand( c, body );
 	} else if ( !strcmp( method, "GET" ) && !strcmp( path, "/api/perf" ) ) {
 		WA_ApiPerf( c, query );
 	} else if ( !strcmp( method, "GET" ) && !strcmp( path, "/api/fs/get" ) ) {

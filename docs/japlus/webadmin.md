@@ -126,6 +126,8 @@ the answer tells the page that the numbers started over.
 | `GET /api/waypoints` | the route of the bots: every waypoint with its place, its flags and the numbers of the ones it leads to. `editing`: it was changed and not saved, the bots stand still |
 | `POST /api/waypoint` | `op` add (`x`, `y`, `z`, `flags`, `after`: the waypoint it comes behind, none for the end), remove (`indexes` as `3,5,9`, or one `index`), flags (`indexes`, `flags`), move (`indexes`, `dx`, `dy`, `dz`), save, revert (the route as the start of the map loaded it) or default (the route of the map's own files) |
 | `GET /api/log?from=` | the log of the game from a place on, `next` is where to ask from the next time. Without `from`, or with a place the panel does not have: its last part |
+| `GET /api/console?from=` | the console of the server from a place on, as `/api/log` gives the log: read from `qconsole.log` of the server folder. The first request sets `logfile 2` when it is 0 |
+| `POST /api/command` | `cmd`: one line for the server console, run in the next frame as if it was typed there |
 | `GET /api/perf?since=` | the load of the server, a sample a second, the last 300 kept: `samples` are `[frames, average and longest frame of the game in microseconds, longest wait for a frame in ms, entities, players, average and longest part of this panel in a frame in microseconds]`, `seq` is how many there were, `from` the number of the first one sent. `since`: only the ones from that number on. With them `svFps`, `entityMax`, `maxClients` |
 | `GET /api/classdoc` | the entity definitions of the game code: every `QUAKED` comment of its source files as text |
 | `GET /api/classkeys` | the keys the game code reads, as text: a line for a class with its name and, each after a tab, `key\|kind\|default`. The first line (`*`) is the keys every entity takes, `*item` the ones of an item |
@@ -1578,6 +1580,15 @@ Also changed:
   `botroutes/<map>.wnt` of the server folder aside as `.wnt.bak` first, so that the load finds the route of the
   map's own files. On a server whose folder is the installation the saved one is all there is: it is put back
   and stays. After both the bots forget the waypoints they held and walk again. Added without a test run.
+- New: the console of the server in the Log tab. A switch shows the game log or the console, each with its own
+  lines, and a line under the text runs a command on the server console (Enter or Run, the arrow keys walk the
+  last 50 commands, which the browser keeps without the ones that name a password). The game module only sees
+  its own prints, so the text of the console is read from the file the engine keeps of it: `qconsole.log`, which
+  is written while `logfile` is set. The first request for the console sets `logfile 2` when it is off, and the
+  view starts with what is printed from then on. A command is one line of 480 characters at most without control
+  characters, goes to the security log and is echoed on the console with a `]` in front, both without what
+  follows a word with `pass` in it. It gives the panel no right it did not have: the config tab could run any
+  console line already. Added without a test run.
 - "Add bot" with an empty name adds `Kyle Katarn`. JKAdmin asks for `Kyle`, a bot the game does not have, so
   nothing happened there.
 - The two entity hooks pass `ent-g_entities` instead of `ent->s.number`.
