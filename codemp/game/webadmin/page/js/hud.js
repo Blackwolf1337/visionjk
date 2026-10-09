@@ -6,7 +6,7 @@
 // stretched over the whole picture, whatever its shape (RB_SetGL2D, this fork has no correction for a wide
 // picture). So it is drawn into the 3D canvas here too, after the scene, with the stages of the script renderer
 // (drawStage): a shader that adds to the picture or multiplies it (the zoom mask, the tints) can not be laid
-// over it as a canvas of its own. The canvas #hudCanvas of the page stays empty.
+// over it as a canvas of its own.
 
 // ---- the 2D of the renderer (RE_SetColor, RE_StretchPic, RE_RotatePic2 of rd-vanilla/tr_cmds.cpp and their
 // RB_ functions in tr_backend.cpp)
