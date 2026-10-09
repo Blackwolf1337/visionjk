@@ -476,8 +476,8 @@ Also changed:
   blades met, where the beam of a disruptor went, that a shield was hit. At the end of every frame the panel
   looks at what is new (the events of the players, the entities that are an event and nothing else, the
   events of other entities) and keeps the last 256 for two seconds; a poll brings the ones a page does not
-  have (`evs=`). With four bots that was 112 events in 45 seconds. The page takes them (`js/events.js`) and
-  shows nothing for them yet. Four more checks in `steps_feed.js` (32).
+  have (`evs=`). With four bots that was 112 events in 45 seconds. The page takes them (`js/events.js`; what
+  it shows for them came later, see above). Four more checks in `steps_feed.js` (32).
 - New: what an effect leaves on a wall. 41 effect files of the game have a decal (the scorch of a blaster
   bolt, of an explosion), and the page dropped that part when it read a file. The scheduler of the engine
   hands a decal to the renderer at once (the `Decal` case of `CFxScheduler::CreateEffect`,
@@ -514,6 +514,45 @@ Also changed:
   sits on the tag between the two frames. Seen: the green flash of a hit on the shield with the pistol in
   front of it. Nothing of this is compared with a picture of the game: none of it stands still.
   `tools/panelshot/steps_ownview.js` (17 checks).
+- New: the page shows the events of the game (`js/events.js`, `js/fx-weapons.js`; `CG_EntityEvent`). Until
+  now it guessed a muzzle flash and an impact from the shots it saw come and go, and showed nothing where no
+  shot entity exists. Now, from the events of the feed:
+  - who fires has the flash at the muzzle of the weapon in his hands (`CG_FireWeapon`, `CG_AddPlayerWeapon`:
+    played in every frame of a client for 20 msec, the second effect by `EF_ALT_FIRING` of the player, not by
+    the event), a stun baton lights the map there;
+  - where a blade hits or is blocked: the sparks by what it hit and how hard (`EV_SABER_HIT`,
+    `EV_SABER_BLOCK`), and the flare of two blades that clash (`CG_SaberClashFlare`, a picture of the 2D);
+  - the beams of the disruptor (`FX_DisruptorMainShot`, `AltShot`, the bands of `FX_AddBezier` and
+    `FX_AddLine`), what it leaves at a wall or on a player, and the other fire of the concussion rifle with a
+    ring every 64 units of its way;
+  - what a shot does where it ends is by `EV_MISSILE_HIT`, `EV_MISSILE_MISS` and `EV_MISSILE_MISS_METAL`
+    (`CG_MissileHitWall`, `CG_MissileHitPlayer`): on a player the effect for flesh, the bryar by its charge,
+    the DEMP 2 and the flechette as their code has them. The guess stays for a game module without events;
+  - the effect where somebody comes into the map or is teleported, the half shield around one whose shield
+    took a hit (`CG_PlayerHitFX`, drawn where the players are drawn), the red shell of one who is drained;
+  - the view through the eyes of a player shakes (`CGCam_Shake`, `CG_SE_UpdateShake`: for the bowcaster, the
+    rocket launcher, the repeater's and flechette's second fire, a charged pistol or DEMP 2, and for
+    `EV_SCREENSHAKE`). As in the game the shake moves the eye, and its two angles turn only the weapon in
+    front of the camera, because the axes of the view are made before it. His fall dips his view (`EV_FALL`)
+    and the concussion rifle kicks it back, the two that waited for the events.
+  An event is taken once (two polls that were on their way together both have it), not when it is older than
+  the 300 msec the server keeps it for a client, and with the time of the next frame of the page. The events
+  are drawn in the plain view of the editor too. The feed sends the angles of an event to a thousandth now
+  (they are a direction of length one in the saber events).
+  Not measured against the game: the bots of a comparison are frozen and cause no event. Seen from the
+  server and played in a probe of 30 seconds with two bots face to face: 24 `EV_SABER_HIT`, 25
+  `EV_SABER_BLOCK`, 5 `EV_SHIELD_HIT`, 1 `EV_PLAYER_TELEPORT_IN`, none older than 100 msec when it came.
+  Only handed in by the check, never seen from the server: the fire events, the impacts, all disruptor
+  events, the clash flare, the screen shake, the drain. Not shown: the flash and the start of a beam of the
+  one the page looks through the eyes of (needs the muzzle of the weapon in front of the camera), the
+  flashes of NPCs and of turrets, sparks between two server frames (`CG_SaberCompWork`), glass, debris,
+  score plums, marks on models, effects of a saber of its own, and every event that is only a sound.
+  `tools/panelshot/steps_events.js` (59 checks), `steps_events_live.js` (the probe), `steps_fx.js` (39).
+- Fixed: a call the graphics card refuses, in every frame while the models of the players were still read. The
+  plain figure that stands in for a player whose model is not there yet was drawn with the program of the
+  model drawn before it (`plTry` in `js/player-draw.js` now ends on the plain program, as `drawStatic` does).
+  Nothing was seen of it but the missing figure; the checks that ask the card for errors found it once the
+  events made more files load at the start of a map.
 - Changed: the leader and the scores at the top right of the HUD are the ones the game tells its clients
   (`leader`, `scores1`, `scores2` of the state). The page worked them out from the scores of the players, which
   is another order when two have the same score.
@@ -625,10 +664,9 @@ Also changed:
     stay for when Effects is off in the editor, the shader scripts are not read yet, or a file is missing.
   - The view toggle "Effects" of the editor switches them off there. The administration always has them.
   - Not drawn: sounds, lights, camera shakes and screen flashes of an effect, the models of emitters,
-    wind, forks of electricity; particles do not collide with the map. And what a client plays on its own
-    that is neither an effect entity, nor played by the server, nor a missile: saber clashes, force powers,
-    jetpacks, the beams of the disruptor and of the concussion rifle's second fire.
-    A hitscan weapon has no shot the feed could tell of.
+    wind, forks of electricity; particles do not collide with the map. And of what a client plays on its own
+    that is neither an effect entity, nor played by the server, nor a missile: force powers and jetpacks
+    (the rest comes with the events of the game, see above).
 - New: everything new in the World tab is a draft first (`js/editor-drafts.js`; the user: "The draft is not a
   bad idea, make this for all entities"). A class or a template placed with a right-click, the copy that
   Duplicate or a paste makes, and a `trigger_push` or `trigger_teleport` with the `target_position` it is aimed

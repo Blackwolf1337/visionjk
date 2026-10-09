@@ -478,11 +478,14 @@ function firstPersonCamera(now) {
 	const hud = state && state.hud && state.hud.client === view.id ? state.hud : null;
 	view.thirdPerson = d.dead || d.weapon === 3 || d.weapon === 2 || !!(hud && (hud.fallingToDeath || hud.vehicle));
 	ownTransition(d, hud, ax, now);
+	// CG_CalcScreenEffects: a shake moves the eye. Its two angles come after the axes of the view are made, so
+	// they turn only what reads the angles later: the weapon in front of the camera.
+	const shake = evCamShake(now);
 	if (view.thirdPerson) {
 		// CG_OffsetThirdPersonView (chaseCamera in js/camera.js). In the comparison with the game the time stands
 		// and the camera of the game has come to rest behind him.
 		const c = chaseCamera(view.id, p.draw, d.viewheight ?? 36, view.pitch, view.yaw, refCam ? -1 : now, d.dead && hud ? hud.stats[6] : undefined);
-		eye = c.eye;
+		eye = shake ? c.eye.map((v, i) => v + shake.origin[i]) : c.eye;
 		viewProj = M4.mul(gameProjection(canvas.width, canvas.height), M4.lookAt(eye, eye.map((v, i) => v + c.dir[i]), [0, 0, 1]));
 	} else {
 		// CG_OffsetFirstPersonView: the eye is kicked by the concussion rifle and by a hit he takes, leans with his
@@ -509,9 +512,10 @@ function firstPersonCamera(now) {
 		t = now - own.duckTime;
 		if (t >= 0 && t < OWN_DUCK_TIME) eye[2] -= own.duckChange * (OWN_DUCK_TIME - t) / OWN_DUCK_TIME;
 		eye[2] += own.landChange * ownLandDip(now);
-		view.angles = pitchYawRoll;
+		if (shake) for (let i = 0; i < 3; i++) eye[i] += shake.origin[i];
 		const m = anglesMatrix(eye, pitchYawRoll, 1);
 		ownDamageBlob(hud, m, now);
+		view.angles = shake ? [pitchYawRoll[0] + shake.angles[0], pitchYawRoll[1] + shake.angles[1], pitchYawRoll[2]] : pitchYawRoll;
 		// CG_CalcFov: 80 across, less while he looks through the scope of the disruptor or through binoculars
 		viewProj = M4.mul(gameProjection(canvas.width, canvas.height, ownZoomFov(hud, now)), M4.lookAt(eye, [eye[0] + m[0], eye[1] + m[1], eye[2] + m[2]], [m[8], m[9], m[10]]));
 	}

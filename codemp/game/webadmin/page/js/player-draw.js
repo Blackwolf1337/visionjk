@@ -181,8 +181,10 @@ function plTry(inst, what, draw) {
 		inst.failed = String(e && e.stack || e);
 		console.warn('the model of ' + what + ' can not be drawn (' + inst.key + '): ' + inst.failed.slice(0, 300));
 		gl.bindVertexArray(null);
-		gl.useProgram(flatProg.p);
 	}
+	// What is drawn next is drawn with the plain program again, as after every model with shaders (drawStatic):
+	// the plain figure of one whose model is not read yet, the ring around the one who is picked.
+	gl.useProgram(flatProg.p);
 }
 
 // the players with their models, or as plain figures until those are read

@@ -925,8 +925,9 @@ function hudDrawWeaponSelect(cg) {
 
 // What a client that follows a player sees with the cvars at their defaults. Left out, each for what it needs
 // that the feed does not have: the scoreboard and the intermission, the vehicle HUD, the health of an e-web, the
-// flags of a CTF game (CG_DrawFlagStatus), the flare where sabers clash and the icon of an item that was picked
-// up (events), votes, the centre prints, the chat lines, the warmup and the siege.
+// flags of a CTF game (CG_DrawFlagStatus), the icon of an item that was picked up (an event), votes, the centre
+// prints, the warmup and the siege. The flare where sabers clash is drawn by js/events.js (evSaberClashFlare)
+// before all of this; the game draws it after the tints, the zoom mask, the crosshair names and the weapon select.
 function hudDraw2D(cg) {
 	const ps = cg.ps;
 	if (ps.pm_type === HUD_PM_INTERMISSION) return;

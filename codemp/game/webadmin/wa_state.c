@@ -754,7 +754,7 @@ static void WA_StateEvents( waBuffer_t *b, const char *query ) {
 
 		if ( ago < 0 || ago > WA_EV_MS )
 			continue;
-		WA_BufPrintf( b, "%s[%d,%d,%d,%d,%d,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%d,%d,%d,%d,%d,%d,%d,%d]", first ? "" : ",",
+		WA_BufPrintf( b, "%s[%d,%d,%d,%d,%d,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%.3f,%.3f,%.3f,%d,%d,%d,%d,%d,%d,%d,%d]", first ? "" : ",",
 			i + 1, ago, e->ent, e->event, e->parm, e->org[0], e->org[1], e->org[2], e->org2[0], e->org2[1], e->org2[2],
 			e->ang[0], e->ang[1], e->ang[2], e->other, e->other2, e->weapon, e->eFlags, e->time1, e->time2, e->client, e->owner );
 		first = qfalse;

@@ -116,6 +116,8 @@ function plDrawModel(inst, cent, place, d, ownView, plain) {
 	// what is his body is not drawn from inside his head (RF_THIRD_PERSON)
 	const body = !ownView;
 
+	// the half shield of one whose shield took a hit (CG_PlayerHitFX, set by EV_SHIELD_HIT in js/events.js)
+	evPlayerHitFX(cent, ownView);
 	if (body) plTeamSprite(cent, isViewer);
 	if (body && (cent.eFlags & PG.EF_SEEKERDRONE) && !cent.npc) plSeeker(cent);
 
@@ -181,6 +183,9 @@ function plDrawModel(inst, cent, place, d, ownView, plain) {
 	// the flag on his back (CG_PlayerFlag draws none from inside the head of the one who carries it)
 	plPlayerPowerups(inst, cent, time);
 
+	// a team power or a drain that has just reached him (teamPowerEffectTime, set by events): his model again in its colour
+	const power = evTeamPower(cent);
+	if (power) shell(power.shader, power.rgba, { tint: true, forceAlpha: true });
 	// force rage: crackling red, one of two shaders by chance in every frame
 	if (fp & (1 << PG.FP_RAGE)) shell(Math.random() < 0.5 ? PL_MEDIA.electricBody : PL_MEDIA.electricBody2, [1, 0, 0, 1], { tint: true });
 	// force protect is green
