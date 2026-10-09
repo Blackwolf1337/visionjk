@@ -393,38 +393,31 @@ void WA_AuthResult( unsigned int addr, qboolean ok ) {
 	}
 }
 
-static void WA_UrlDecode( char *s ) {
-	char *out = s;
-
-	for ( ; *s; s++ ) {
-		if ( *s == '+' ) {
-			*out++ = ' ';
-		} else if ( *s == '%' && s[1] && s[2] ) {
-			char hex[3] = { s[1], s[2], 0 };
-			*out++ = (char)strtol( hex, NULL, 16 );
-			s += 2;
-		} else {
-			*out++ = *s;
-		}
-	}
-	*out = '\0';
-}
-
-// Looks up key in an "a=1&b=2" string. Returns qfalse if missing.
+// Looks up key in an "a=1&b=2" string. Returns qfalse if missing. The value is decoded as it is copied: the room
+// of out is for what the value says, not for how it was written. A file name with a %2F for every slash is longer
+// on the wire than MAX_QPATH while the name itself fits, and it was cut before it was decoded.
 qboolean WA_FormValue( const char *form, const char *key, char *out, int outSize ) {
 	const size_t keyLen = strlen( key );
 	const char *p = form;
 
 	while ( p && *p ) {
 		if ( !strncmp( p, key, keyLen ) && p[keyLen] == '=' ) {
-			const char *v = p + keyLen + 1;
-			const char *end = strchr( v, '&' );
-			int len = end ? (int)( end - v ) : (int)strlen( v );
-			if ( len >= outSize )
-				len = outSize - 1;
-			memcpy( out, v, len );
-			out[len] = '\0';
-			WA_UrlDecode( out );
+			const char	*v = p + keyLen + 1;
+			int			n = 0;
+
+			for ( ; *v && *v != '&' && n < outSize - 1; v++ ) {
+				if ( *v == '+' ) {
+					out[n++] = ' ';
+				} else if ( *v == '%' && v[1] && v[1] != '&' && v[2] && v[2] != '&' ) {
+					char hex[3] = { v[1], v[2], 0 };
+
+					out[n++] = (char)strtol( hex, NULL, 16 );
+					v += 2;
+				} else {
+					out[n++] = *v;
+				}
+			}
+			out[n] = '\0';
 			return qtrue;
 		}
 		p = strchr( p, '&' );

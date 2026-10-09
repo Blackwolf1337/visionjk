@@ -377,6 +377,11 @@ Also changed:
   in files of its own now (`js/player-draw.js`, `items.js`, `movers.js`, `marks.js`, `trace.js`,
   `dlights.js`, `sabers.js`, `player-fx.js`, `g2-angles.js`), most of them empty until those steps.
   `tools/panelshot/steps_entfx.js` (5 checks).
+- Fixed: a file with a long name was not found. The server cut a value of a request to the room it had for
+  it before it decoded it (`WA_FormValue`), and the page writes every slash of a file name as `%2F`: a name
+  of 58 to 63 letters, which the game has room for, lost its end and was refused. So the image
+  `models/weapons2/blaster_pistol/w_blaster_pistol_inview_spec` of a shader was never drawn. The value is
+  decoded as it is copied now. One more check in `steps_feed.js` (28).
 - Fixed: one error while a frame was drawn ended the picture for good. The frame that threw never asked for
   the next one, so the map stood still until the page was loaded again. A frame is now drawn inside a guard
   (`frame` around `drawFrame` in `js/frame.js`): the error is told once on the console, the state of the
