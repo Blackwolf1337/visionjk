@@ -334,32 +334,55 @@ const PLACE_AIM = { trigger_push: at => [at[0], at[1], at[2] + 256], trigger_tel
 } };
 const placeHeight = cls => cls.toLowerCase() in PLACE_HEIGHT ? PLACE_HEIGHT[cls.toLowerCase()] : BOX_TRIGGER.test(cls) ? 48 : /^misc_model/.test(cls) ? 0 : 24;
 
-// The trigger and what it is aimed at, as two drafts: the trigger is the one the panel shows, and Place sends its
-// target before it, for the trigger looks for it in its first frame.
-function placeAimed(cls, keys, at) {
-	const names = new Set([...ents.values()].map(e => entKey(e, 'targetname').toLowerCase()));
-	let n = 1;
-	while (names.has('aim' + n)) n++;
-	const to = PLACE_AIM[cls](at);
-	openDrafts([{ keys: keys.concat([['target', 'aim' + n]]), pos: at }, { keys: [['classname', 'target_position'], ['origin', fmtVec(to)], ['targetname', 'aim' + n]], pos: to }], cls + ' and what it is aimed at');
+// where a class is placed above the spot of the floor that was clicked: items drop to the floor themselves, players
+// and NPCs stand on it
+const placeSpot = (cls, hit) => [hit[0], hit[1], hit[2] + placeHeight(cls)];
+// a class at a place as openDrafts takes it: with the keys its class begins with, and more
+const placedAt = (cls, at, more = []) => ({ keys: [['classname', cls], ['origin', fmtVec(at)]].concat(PLACE_KEYS[cls.toLowerCase()] || (BOX_TRIGGER.test(cls) ? TRIGGER_BOX : []), more), pos: at });
+
+// Names to wire what is placed together: a stem and a number, each a name no entity has as its targetname and
+// none names as what it fires, the drafts counted. Gives a function that is asked with a stem: every call of it
+// gives another name.
+function freeNames() {
+	const taken = new Set();
+	for (const e of ents.values()) {
+		for (const [k, v] of e.keys || []) if (v && (k.toLowerCase() === 'targetname' || LINK_KEYS.has(k.toLowerCase()))) taken.add(v.toLowerCase());
+	}
+	return stem => {
+		let n = 1;
+		while (taken.has(stem + n)) n++;
+		taken.add(stem + n);
+		return stem + n;
+	};
 }
 
-// Place: the class that is picked, or a template, as a draft where the click was. Nothing is sent: a class may
-// lack a key it can not be without, and what is placed is one step of the history with what it belongs to.
+// The trigger and what it is aimed at under that name, as two drafts: the trigger is the one the panel shows, and
+// Place sends its target before it, for the trigger looks for it in its first frame.
+function aimedPair(one, name) {
+	const to = PLACE_AIM[entKey(one, 'classname').toLowerCase()](one.pos);
+	return [{ keys: one.keys.concat([['target', name]]), pos: one.pos }, { keys: [['classname', 'target_position'], ['origin', fmtVec(to)], ['targetname', name]], pos: to }];
+}
+
+// Place: the class that is picked, a template or a kit, as drafts where the click was. Nothing is sent: a class
+// may lack a key it can not be without, and what is placed is one step of the history with what it belongs to.
 function placeEntity(hit) {
 	const name = $('newClass').value.trim();
+	// a kit: all it is made of, wired with names that are free (editor-kits.js)
+	if (name[0] === '+') {
+		const kit = kitNamed(name.slice(1));
+		if (!kit) { toast('No kit ' + name.slice(1), false); return; }
+		openDrafts(kit.make(hit, freeNames()), kit.name);
+		return;
+	}
 	// a template: its keys, at the height its class is placed at
 	if (name[0] === '@') {
 		const keys = templates[name.slice(1)];
 		if (!keys) { toast('No template ' + name.slice(1), false); return; }
 		const tcls = (keys.find(k => k[0].toLowerCase() === 'classname') || [])[1] || '';
-		openDrafts([draftAt(keys, [hit[0], hit[1], hit[2] + placeHeight(tcls)])], name.slice(1));
+		openDrafts([draftAt(keys, placeSpot(tcls, hit))], name.slice(1));
 		return;
 	}
-	const cls = name;
-	// items drop to the floor themselves, players and NPCs stand on it
-	const at = [hit[0], hit[1], hit[2] + placeHeight(cls)];
-	const keys = [['classname', cls], ['origin', fmtVec(at)]].concat(PLACE_KEYS[cls.toLowerCase()] || (BOX_TRIGGER.test(cls) ? TRIGGER_BOX : []));
-	if (cls.toLowerCase() in PLACE_AIM) placeAimed(cls.toLowerCase(), keys, at);
-	else openDrafts([{ keys, pos: at }], classLabel(cls));
+	const one = placedAt(name, placeSpot(name, hit));
+	if (name.toLowerCase() in PLACE_AIM) openDrafts(aimedPair(one, freeNames()('aim')), name + ' and what it is aimed at');
+	else openDrafts([one], classLabel(name));
 }

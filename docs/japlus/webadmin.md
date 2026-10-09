@@ -1629,6 +1629,14 @@ Also changed:
   is typed into the table shows in its field, so Apply, Place, the drafts and undo work as before. The table of
   every key is folded under "All keys" while the form has fields, and unfolded when a class has none or a key
   waits for a value that has no field. Added without a test run.
+- New: kits. Where the classes are searched, a kit is offered with a `+` before its name (a template has an
+  `@`), the kits first while the field is empty. Placing one makes drafts of everything it is made of where
+  the floor was clicked, wired with targetnames that are free, and "Place all" sends them, what is aimed at
+  before what aims at it. The first ones: Teleporter (a `trigger_teleport` box and its `target_position`), Jump
+  pad (`trigger_push` and the top of its jump), Use button (a `trigger_multiple` that fires on use, its target
+  to be picked), Hurt zone, Sound emitter, Effect emitter, Spawn points (four in a ring), Pickups, Cube stack
+  and Blocking wall. A kit is only offered when the game module has every class of it. There are no doors:
+  a mover is made of brushes of the map. Added without a test run.
 - "Add bot" with an empty name adds `Kyle Katarn`. JKAdmin asks for `Kyle`, a bot the game does not have, so
   nothing happened there.
 - The two entity hooks pass `ent-g_entities` instead of `ent->s.number`.

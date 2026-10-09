@@ -7,6 +7,7 @@ const classInfo = new Map();	// item classname -> { model, view, icon, descripti
 const ITEM_TYPES = ['', 'Weapon', 'Ammo', 'Armor', 'Health', 'Powerup', 'Holdable', 'Powerup', 'Team item'];
 
 function classCategory(cls) {
+	if (cls[0] === '+') return 'Kit';
 	if (cls[0] === '@') return 'Template';
 	const it = classInfo.get(cls);
 	if (it) return ITEM_TYPES[it.type] || 'Item';
@@ -19,18 +20,20 @@ function classCategory(cls) {
 }
 
 let pickerIndex = -1;
-// the templates come first: "@name" in the list and in the field
+// the kits come first, then the templates: "+name" and "@name" in the list and in the field
 function pickerMatches() {
-	const f = $('newClass').value.trim().toLowerCase();
-	return Object.keys(templates).sort().map(n => '@' + n).concat(allClasses).filter(c => !f || c.toLowerCase().includes(f) || classLabel(c).toLowerCase().includes(f)).slice(0, 400);
+	const f = $('newClass').value.trim().toLowerCase(), has = name => !f || name.toLowerCase().includes(f);
+	return kitsOffered().map(k => '+' + k.name).concat(Object.keys(templates).sort().map(n => '@' + n), allClasses).filter(c => has(c) || has(classLabel(c))).slice(0, 400);
 }
 function renderPicker() {
 	const list = pickerMatches();
 	pickerIndex = Math.min(pickerIndex, list.length - 1);
 	$('classPicker').innerHTML = list.map((c, i) => {
-		const col = classColor(c).map(v => Math.round(v * 255)).join(',');
-		return '<div class="cls' + (i === pickerIndex ? ' hl' : '') + '" data-cls="' + escapeHtml(c) + '" title="' + escapeHtml(classSummary(c)) + '"><i style="background:rgb(' + col + ')"></i>' +
-			escapeHtml(c) + '<span class="ty">' + escapeHtml(classCategory(c)) + '</span></div>';
+		// a kit has the colour of its first class, and a second line that says what it makes
+		const kit = c[0] === '+' ? kitNamed(c.slice(1)) : null;
+		const col = classColor(kit ? kit.classes[0] : c).map(v => Math.round(v * 255)).join(',');
+		return '<div class="cls' + (kit ? ' kit' : '') + (i === pickerIndex ? ' hl' : '') + '" data-cls="' + escapeHtml(c) + '" title="' + escapeHtml(kit ? kit.about : classSummary(c)) + '"><i style="background:rgb(' + col + ')"></i>' +
+			escapeHtml(c) + '<span class="ty">' + escapeHtml(classCategory(c)) + '</span>' + (kit ? '<span class="about">' + escapeHtml(kit.about) + '</span>' : '') + '</div>';
 	}).join('') || '<div class="cls">' + (classesLoaded ? 'No class matches' : 'Loading...') + '</div>';
 }
 function openPicker() { $('classPicker').classList.add('open'); renderPicker(); }
@@ -283,6 +286,9 @@ async function pvShowPath(token, row, name, subText, path, none) {
 	if (!pv.visible) { pv.visible = true; pv.t0 = performance.now(); requestAnimationFrame(pvFrame); }
 }
 function showPreview(cls, row) {
+	// a kit has no model of its own: what it is made of
+	const kit = cls[0] === '+' ? kitNamed(cls.slice(1)) : null;
+	if (kit) return pvShowPath(cls, row, kit.name, 'Kit · ' + kit.classes.join(', '), '', kit.about.charAt(0).toUpperCase() + kit.about.slice(1));
 	const it = classInfo.get(cls);
 	return pvShowPath(cls, row, cls, it ? (ITEM_TYPES[it.type] || 'Item') + (it.quantity ? ' · ' + it.quantity : '') + (it.description && it.description[0] !== '@' ? ' · ' + it.description : '') : (classCategory(cls) || 'Entity'), it ? itemModelPath(it) : '',
 		/^npc_/i.test(cls) ? 'NPC, the model comes from its .npc file' : 'No model, this entity is game logic');

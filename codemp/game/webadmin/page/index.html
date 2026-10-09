@@ -133,7 +133,7 @@
 	</div>
 	<div class="pane" id="pane-world">
 		<div class="tools">
-			<div class="inline"><input id="newClass" placeholder="Search a class to place" spellcheck="false" autocomplete="off"><button id="placeBtn" title="Then right-click on the map">Place</button></div>
+			<div class="inline"><input id="newClass" placeholder="Search a class or a kit to place" title="A class of the game, a kit (+name: several entities that belong together, wired already) or a template (@name)" spellcheck="false" autocomplete="off"><button id="placeBtn" title="Then right-click on the map">Place</button></div>
 			<div id="classPicker"></div>
 			<div class="inline"><input id="entFilter" placeholder="Filter by class or targetname" spellcheck="false"><a href="api/export" title="Download all entities of the map as .ent">Export .ent</a></div>
 			<div class="inline"><a href="api/export?placed=1" title="Download only what was placed through the panel, as .ent: what an import takes on another map or server">Export placed</a>
@@ -338,6 +338,7 @@
 <!--#include js/load.js -->
 <!--#include js/editor-templates.js -->
 <!--#include js/editor-form.js -->
+<!--#include js/editor-kits.js -->
 <!--#include js/bans.js -->
 <!--#include js/editor-select.js -->
 <!--#include js/editor-history.js -->

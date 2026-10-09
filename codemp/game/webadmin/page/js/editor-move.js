@@ -163,12 +163,17 @@ $('entFloor').addEventListener('click', () => {
 const NUDGE_KEYS = new Set(['arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'pageup', 'pagedown']);
 let nudging = false;
 
+// the axis of the world the camera looks along most, as one unit away from the viewer: [x, y]
+function viewAxis() {
+	const y = cam.yaw * Math.PI / 180;
+	return Math.abs(Math.cos(y)) >= Math.abs(Math.sin(y)) ? [Math.sign(Math.cos(y)), 0] : [0, Math.sign(Math.sin(y))];
+}
+
 async function nudgeEntity(k) {
 	const ent = ents.get(selectedEnt);
 	if (!ent || nudging) return;
-	const g = gridStep(), y = cam.yaw * Math.PI / 180;
-	// along the axis of the world the camera looks along most, so that up is away from the viewer
-	const fwd = Math.abs(Math.cos(y)) >= Math.abs(Math.sin(y)) ? [Math.sign(Math.cos(y)), 0] : [0, Math.sign(Math.sin(y))];
+	// along that axis, so that up is away from the viewer
+	const g = gridStep(), fwd = viewAxis();
 	const d = k === 'arrowup' ? [fwd[0], fwd[1], 0] : k === 'arrowdown' ? [-fwd[0], -fwd[1], 0] : k === 'arrowright' ? [fwd[1], -fwd[0], 0]
 		: k === 'arrowleft' ? [-fwd[1], fwd[0], 0] : k === 'pageup' ? [0, 0, 1] : [0, 0, -1];
 	nudging = true;
