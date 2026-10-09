@@ -47,7 +47,7 @@ function expandPlayers(s) {
 			// What a client draws him by. The frames are the ones the server has his skeleton at, at the time of this
 			// state, and the speeds are frames per 50 ms. undefined with a game module that does not send them.
 			legsFrame: f[21], legsSpeed: f[22], torsoFrame: f[23], torsoSpeed: f[24], eFlags: f[25], eFlags2: f[26], powerups: f[27], forceActive: f[28],
-			weaponstate: f[29], saberMove: f[30], legsFlip: f[31] & 1, torsoFlip: (f[31] & 2) >> 1, ground: f[32], brokenLimbs: f[33], saberLevel: f[34],
+			weaponstate: f[29], saberMove: f[30], legsFlip: f[31] & 1, torsoFlip: (f[31] & 2) >> 1, ground: f[32], brokenLimbs: f[33], saberLevel: f[34], moveDir: f[35],
 			minutes: Math.max(0, Math.floor(((s.time || 0) - (d.entered || 0)) / 60000)),
 			sabers: (d.sabers || []).map(sb => ({ model: sb.model, blades: sb.blades.map(bl => {
 				const now = e.b[n++] || [0, 0, 0, 0, 0, 0, 0];
@@ -94,8 +94,9 @@ function applyMovers(list) {
 		const flat = typeof m === 'number', n = flat ? m : m[0], pos = flat ? ZERO3 : [m[1], m[2], m[3]], angles = flat ? ZERO3 : [m[4], m[5], m[6]];
 		const places = next.get(n) || [], old = movers && movers.get(n) && movers.get(n)[places.length];
 		// drawn on its way from where it was at the last poll
-		// frame: the frame its shaders are at (-1: the one the time gives), model2: the model drawn with it ('' for none)
-		places.push({ pos, angles, prevPos: old ? old.pos : pos, prevAngles: old ? old.angles : angles, frame: flat || m[7] === undefined ? -1 : m[7], model2: (!flat && m[8]) || '' });
+		// frame: the frame its shaders are at (-1: the one the time gives), model2: the model drawn with it ('' for none),
+		// scale: the scale of that model in percent (0: as it is)
+		places.push({ pos, angles, prevPos: old ? old.pos : pos, prevAngles: old ? old.angles : angles, frame: flat || m[7] === undefined ? -1 : m[7], model2: (!flat && m[8]) || '', scale: (!flat && m[9]) || 0 });
 		next.set(n, places);
 	}
 	movers = next;

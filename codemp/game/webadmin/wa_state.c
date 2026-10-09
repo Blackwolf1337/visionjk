@@ -221,10 +221,10 @@ static void WA_StatePlayerChanges( waBuffer_t *b, int clientNum, unsigned rev, q
 		ps->velocity[0], ps->velocity[1], ps->velocity[2], ps->viewangles[YAW], ps->viewangles[PITCH],
 		ps->legsAnim, ps->torsoAnim, ps->viewheight, ammoIndex != AMMO_NONE ? ps->ammo[ammoIndex] : -1 );
 	// the flags are the ones of his entity: what the clients are sent of him (BG_PlayerStateToEntityState)
-	WA_BufPrintf( b, "%.1f,%.2f,%.1f,%.2f,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d],\"b\":[",
+	WA_BufPrintf( b, "%.1f,%.2f,%.1f,%.2f,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d],\"b\":[",
 		legsFrame, legsSpeed, torsoFrame, torsoSpeed, ent->s.eFlags, ent->s.eFlags2, ent->s.powerups, ps->fd.forcePowersActive,
 		ps->weaponstate, ps->saberMove, ( ps->legsFlip ? 1 : 0 ) | ( ps->torsoFlip ? 2 : 0 ), ps->groundEntityNum,
-		ps->brokenLimbs, ps->fd.saberAnimLevel );
+		ps->brokenLimbs, ps->fd.saberAnimLevel, ps->movementDir );
 	for ( s2 = 0; s2 < MAX_SABERS; s2++ ) {
 		const saberInfo_t *saber = &cl->saber[s2];
 
@@ -253,7 +253,8 @@ static void WA_StatePlayerChanges( waBuffer_t *b, int clientNum, unsigned rev, q
 //        torso (WA_StateBoneFrame, -1 and 0 when the server has none of that animation), eFlags, eFlags2 and
 //        powerups of his entity, the force powers that are on,
 //        weaponstate, saberMove, the flips (1 legs, 2 torso: an animation that starts again), the entity he
-//        stands on (ENTITYNUM_NONE in the air), brokenLimbs, the saber style he fights in
+//        stands on (ENTITYNUM_NONE in the air), brokenLimbs, the saber style he fights in, and which of eight
+//        ways he moves in against where he looks (movementDir: BG_G2PlayerAngles turns his legs by it)
 //   "b": for every blade of his sabers its length now, where it starts (3) and the way it points (3)
 // A player was about a kilobyte ten times a second before, he is about 220 bytes now.
 static void WA_StatePlayers( waBuffer_t *b, const char *query ) {
@@ -322,6 +323,8 @@ static void WA_StateNpcs( waBuffer_t *b ) {
 		if ( vehicle ) {
 			WA_BufAppend( b, ",\"skin\":", 8 );
 			WA_BufJsonString( b, VALIDSTRING( ent->m_pVehicle->m_pVehicleInfo->skin ) ? ent->m_pVehicle->m_pVehicleInfo->skin : "" );
+			// its kind (vehicleType_t): a walker turns its head by where it looks, a fighter rolls
+			WA_BufPrintf( b, ",\"veh\":%d", (int)ent->m_pVehicle->m_pVehicleInfo->type );
 		}
 		WA_StateBoneFrame( ent, "model_root", ps->legsAnim, &legsFrame, &legsSpeed );
 		WA_StateBoneFrame( ent, "lower_lumbar", ps->torsoAnim, &torsoFrame, &torsoSpeed );
@@ -420,8 +423,9 @@ static void WA_StateModels( waBuffer_t *b ) {
 // Not in JKAdmin: what is made of brushes and is an entity (doors, lifts, what turns, what can be switched
 // off or broken), as the clients draw it (CG_Mover). Each is the number of its brush model, or that number
 // with its place and its angles when it is not where the map file has it. One that is not in the list is
-// not drawn by a client either. Two more follow for one that has them: the frame its shaders are at (the
-// frame of an animMap, EF_SHADER_ANIM, else -1) and the model that is drawn with it (model2, else "").
+// not drawn by a client either. Three more follow for one that has them: the frame its shaders are at (the
+// frame of an animMap, EF_SHADER_ANIM, else -1), the model that is drawn with it (model2, else "") and the
+// scale of that model.
 static void WA_StateMovers( waBuffer_t *b ) {
 	int			i;
 	qboolean	first = qtrue;
@@ -458,6 +462,8 @@ static void WA_StateMovers( waBuffer_t *b ) {
 		if ( more ) {
 			WA_BufPrintf( b, ",%d,", ( ent->s.eFlags & EF_SHADER_ANIM ) ? ent->s.frame : -1 );
 			WA_BufJsonString( b, model2 );
+			// the scale of that model in percent, 0 for as it is
+			WA_BufPrintf( b, ",%d", ent->s.iModelScale );
 		}
 		WA_BufAppend( b, "]", 1 );
 	}
@@ -694,6 +700,9 @@ void WA_ApiState( waConnection_t *c, const char *query ) {
 	WA_BufAppend( &b, ",\"host\":", 8 );
 	WA_BufJsonString( &b, hostname );
 	WA_BufPrintf( &b, ",\"gravity\":%d", (int)g_gravity.value );		// not in JKAdmin
+	// The time of the game as the clients have it (cg.time runs after it): what a client draws by the time (the
+	// bob and the spin of an item) is in step with it only by this, "time" below counts from the start of the map.
+	WA_BufPrintf( &b, ",\"now\":%d", level.time );
 	WA_BufPrintf( &b, ",\"gametype\":%d,\"gametypeName\":\"%s\",\"time\":%d,\"timelimit\":%d,\"fraglimit\":%d,\"capturelimit\":%d,"
 		"\"scores\":{\"red\":%d,\"blue\":%d},\"maxClients\":%d",
 		level.gametype, BG_GetGametypeString( level.gametype ), level.time - level.startTime, timelimit.integer,

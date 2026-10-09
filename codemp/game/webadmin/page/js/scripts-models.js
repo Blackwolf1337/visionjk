@@ -58,6 +58,7 @@ function gridLight(pos, out = lightNow) {
 // surfaces of the map, as the game sorts all of them together. Without that, what is drawn later behind such a
 // surface would wipe it out.
 const NO_DEFORM = { deforms: [] };
+const MINLIGHT_ADD = [16 / 255, 96 / 255, 150 / 255];
 const lateModels = [];
 const LATE_LAST = 1e9;		// the sort of what is drawn after everything else
 let deferLate = false;		// true from the start of a frame of the administration until its late part is drawn
@@ -123,11 +124,14 @@ function drawModelMesh(mesh, mat, t, fog) {
 // around it that says which fog it is in, as far as its vertices reach without. shader is the name of a shader
 // that is drawn instead of the one of every surface (customShader). tint (RF_RGB_TINT): every stage takes the
 // colour of the entity. forceAlpha (RF_FORCE_ENT_ALPHA): every stage is blended by the alpha of the entity, and
-// the entity is drawn after everything else of the scene.
+// the entity is drawn after everything else of the scene. minLight (RF_MINLIGHT): more ambient light.
 function drawModelScripted(meshes, place, ent) {
 	const t = frameNow / 1000, at = [place[12], place[13], place[14]];
 	modelPassBegin();
 	const light = gridLight(at);
+	// RF_MINLIGHT: a fixed bluish add to the ambient light (R_SetupEntityLighting: 16 96 150 of 255), which the
+	// game gives items that float and the weapon in front of the camera
+	if (ent && ent.minLight) for (let c = 0; c < 3; c++) light.ambient[c] = Math.min(1, light.ambient[c] + MINLIGHT_ADD[c]);
 	modelPlace(place, light);
 	// The fog of the entity is the fog of all its surfaces: the first of the map its ball reaches into (fogAt).
 	// A place that scales the model scales the ball.
