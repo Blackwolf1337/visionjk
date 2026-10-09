@@ -7,6 +7,9 @@ A stock `jamp.exe` is 32 bit and can not load this cgame, the tree is built for 
 A client without this cgame (stock jamp, the original JA+ plugin, another fork) is not touched by any of it. It
 joins and plays as before, it just does not hear the voice chat. See "Clients without it".
 
+The client that runs in a browser ([web.md](web.md)) has the voice chat too, with the same code and through the
+web host of the dedicated server of this tree. See "In a browser".
+
 ## For players
 
 ```
@@ -35,7 +38,7 @@ before a level was loaded).
 |---------|---|
 | `+voice` | talk while it is held |
 | `voice_devices` | the microphones and speakers there are |
-| `voice_status` | is the chat connected, who talks, who is muted |
+| `voice_status` | is the chat connected, who talks, who is muted, how many frames of each player were heard |
 | `voice_mute <player>`, `voice_unmute <player or all>` | do not hear one player. Holds until the level changes |
 | `voice_test tone`, `voice_test play <name>`, `voice_test stop` | a tone, or the file `voice/<name>.raw` again and again, in place of the microphone. For tests |
 | `voice_test record <name>` | what is played also goes into `voice/<name>.raw`, until `voice_test stop`. For tests |
@@ -60,6 +63,7 @@ Use headphones. There is no echo cancellation: with speakers the others hear the
 | `g_voicePort` | 0 | the UDP port of the relay, 0: the game port plus 1 (latched) |
 | `g_voiceRange` | 1024 | how far a voice carries, in units. 0: all over the level, without direction and without muffling |
 | `g_voiceTeamOnly` | 0 | 1: in team games only the own team hears a player |
+| `g_voiceRelay` | | read only, set by the game module: where the relay listens for the web host of the same server, `address:port`. Empty: no relay |
 
 The voice chat is on unless a server switches it off (since 2026-10-07, before that `g_voice` was 0). So every
 server of this module opens the voice port, also a game a player starts from the menu. If the port can not be
@@ -145,7 +149,75 @@ the rings and the queues are static memory. `CG_Shutdown` stops the devices befo
 | `cgame/voice/cg_voice.c` | the client: asking, socket, codec, queues, the key, where a voice comes from, HUD |
 | `cgame/voice/cg_voice_audio.c`, `cg_voice.h` | microphone and speakers |
 
+| `cgame/voice/cg_voice_web.c` | in a browser: the WebSocket to the web host in place of the UDP socket |
+| `server/web/sv_web_voice.cpp` | in the dedicated server: `/voice` of the web host, between that WebSocket and the relay |
+
 `-DBuildJPVoice=OFF` builds the cgame without it (and without the two libraries).
+
+## In a browser
+
+The client for the browser is built with the voice chat by `-DBuildJPVoice=ON` (the toolchain file for
+Emscripten leaves it off unless it is asked for). It is the same code: the asking, the datagram, the codec, the
+queues, who is heard how. Two things a page does not have are replaced, in the places marked `__EMSCRIPTEN__`.
+
+**The way to the relay.** A page can not send UDP. The cgame opens a WebSocket of its own to `/voice` of the web
+host the page came from (`ws://<host of the page>/voice`, `wss` over https), and every datagram is one binary
+message on it, nothing added. The web host (`sv_webPort`, [web.md](web.md)) has a UDP socket for each such
+WebSocket, tied to the address the relay names in `g_voiceRelay` (the server machine itself, the voice port).
+It hands each message to the relay from that socket and each datagram the relay sends there back as a message.
+To the relay that is one more client of the voice chat, the datagram and the server command are what they were.
+No thread and nothing that waits: the socket is asked for and is open some frames later, what comes in between
+two frames is copied into a queue of 64 datagrams and taken out by the next frame. A socket that was open and
+ended is asked for again, once a second at most. If the web host does not take it, the next try comes after 2,
+4, 8, 16 and 32 seconds, and after the sixth the chat says so in one line and stays off until the level changes.
+
+**Who is let in.** The relay takes a datagram by its token and by the address it comes from. From the web host
+they all come from the server machine, so the web host makes that check where the address of the page is known:
+
+- `/voice` becomes a WebSocket only for an address a client of the game plays from through the web host (and
+  only with the Origin of the page, as `/net`). The cgame asks when it has its token, which is when it is in the
+  game. Anybody else gets 403, a server without a relay answers 404.
+- A message is handed to the relay only if it is a whole datagram of the voice chat and the client it names
+  plays through the web host from the address of that WebSocket. So a page speaks for the clients of its own
+  address and for nobody else, which is what the relay asks of a client over UDP. A client that plays over UDP
+  can not be named through the web host at all.
+- What the relay sends to the socket of a WebSocket is handed on only if it has the token that peer itself last
+  spoke with.
+- The relay takes a datagram from the address of its own machine with the token alone, if the server runs the
+  web host (`sv_webPort` is set). On a server without the web host nothing changed.
+
+Limits of `/voice`: a message of 251 bytes at most (a datagram, a longer one ends the socket), 60 datagrams at
+once and 60 a second from one WebSocket (what the relay takes from a speaker, the relay counts again), 4 such
+sockets for one address, and each takes two of the 60 connections of the web host because of its UDP socket.
+A socket whose address has no client in the game any more is closed after 10 seconds. One that is silent is
+asked after 30 seconds and closed after 90, as every WebSocket of the web host.
+
+**The sound devices.** miniaudio plays and records through Web Audio, with a ScriptProcessorNode, since this
+build has no threads and no audio worklets. The page hands the sound over in the thread the game runs in, in
+pieces of 2048 samples (43 ms), so that much more of every voice is kept decoded ahead of the device: a voice is
+later than on the desktop by that and by what the browser adds, which was not measured. A frame of the game
+that takes much longer than a piece is a gap in the voices.
+The devices are the ones the browser uses, `cg_voiceCapture` and `cg_voicePlayback` choose nothing, and
+`cg_voiceBackend null` is not there. A browser lets a page play sound after the first click or key in it.
+
+**The microphone.** A browser gives a page a microphone only if the page came over https or from the machine
+itself (`http://localhost`, `http://127.0.0.1`), and only if the player says yes. The web host speaks plain
+http, so a player on another machine hears the others and can not talk. The page is asked at the first press of
+`+voice` (with voice activation: at once), the game does not wait for the answer. Without a microphone the
+press says why in one line, once a press, voice activation falls back to push to talk, and `voice_status` says
+it in words:
+
+```
+This page has no microphone: it was not opened over https or on the machine itself. The others are heard all the same.
+This page has no microphone: the browser did not give it one (it was refused, or there is none). The others are heard all the same.
+```
+
+A no is asked about again with the next press. The microphone is given back to the browser when it is closed,
+30 seconds after the last press. What a browser does to a microphone by itself is left as the browser has it.
+
+**The engine's sound in the level.** The engine for the browser is built without `s_spatial`, so every voice is
+played on the device of the cgame, as on any engine that does not take voices. If the engine offers the call
+later (`s_spatialVoice` 1), the voices go there as on the desktop: that part has no code of its own here.
 
 ## Clients without it
 
@@ -161,6 +233,9 @@ Nothing of the voice chat is in the game protocol.
 - The mark over a speaker is drawn by the cgame of the listener. No flag is set on the player.
 - With `g_voice 0`, or if the port can not be opened, the server prints one line and runs as before.
 - The other way round, this cgame on a server without the voice chat sends nothing it did not send before.
+- The way of a browser through the web host is beside all of that. A client over UDP sends and is checked as
+  before, also on a server that has players in a browser. The game module only gained the cvar `g_voiceRelay`,
+  which is not in the server info.
 
 ## Security
 
@@ -169,6 +244,14 @@ Nothing of the voice chat is in the game protocol.
   sides. The server never decodes sound.
 - A datagram is only taken with the token of the client it names and from the address of his game connection,
   so nobody can talk as somebody else without being on the line between him and the server.
+- On a server with the web host (`sv_webPort`) a datagram from the server machine itself is taken with the token
+  alone: that is how the voice of a browser arrives, and the web host has checked the address by then, see "In
+  a browser". A packet with the address of the machine does not come in from a network, the system drops it.
+  What is left is a program on the server machine: it can try tokens (32 random bits) for any client without
+  being at his address.
+- Whoever reaches the port of the web host and is no player gets no WebSocket for the voice chat (403). A player
+  in a browser can send for the clients of his own address only, hears only what the relay sends for the token
+  he spoke with, and nothing he sends changes where the web host sends: its UDP sockets are tied to the relay.
 - One datagram in is at most one out per listener, and only to addresses that proved themselves with a token:
   the port can not be used to flood a third party.
 - From one speaker 60 datagrams and 14000 bytes a second are taken, the rest is dropped and counted. One call
@@ -205,3 +288,27 @@ Nothing of the voice chat is in the game protocol.
 Not checked: a real microphone and real speakers, how it sounds, Windows at run time, the
 original JA+ plugin as the client without it, macOS (not even built), more than two speakers, a connection with
 loss, a server over the internet.
+
+2026-10-09, the browser. No game server was run for it: the two halves were checked apart.
+
+- The web host with the sanitizers, on sockets that are none (the test program of the web host, with the UDP
+  sockets to the relay added): who gets `/voice` (404, 403, 500, 503, 101), a datagram each way byte for byte,
+  14 kinds of message that are not handed on, the token on the way back, 1000 datagrams at once (60 are handed
+  on, 60 more a second later), 4 sockets for an address and the fifth, the last place of the table, a peer that
+  does not read, the closing 11 seconds after its client left, and 100000 random wake-ups with peers that ask
+  for `/voice` and send what they like. 13 changes that take one of the checks out again were each seen by a
+  test.
+- The cgame in headless Chromium 153 (`tools/panelshot/steps_voice_mock.js`), in a demo, with the answer of the
+  server given by hand and a WebSocket in the page that answers like the relay and sends each frame back as the
+  voice of another player. The device of the page plays (48000 Hz, pieces of 2048), `voice_test tone` comes back
+  through the codec at 440 and 3000 Hz at 0.183 and 0.179 of full scale (0.183 went in), without a gap in 1.5
+  seconds. With the microphone of the browser that is none: asked, opened, 50 frames a second sent, closed 30
+  seconds after the key. Without one, and as a page over plain http: one line a press, `voice_status` as above,
+  the tone still heard. On a host without `/voice`: six tries in 62 seconds, one line, nothing after it.
+  `vid_restart` while it talks: devices and socket gone, the new cgame starts again.
+- Builds: the browser with and without the voice chat (without it the object code of the voice files is the
+  same as before), Linux 64, mingw for Windows 64 (server, game module, cgame).
+
+Not checked in a browser: a page against the relay of a real server (`tools/panelshot/steps_voice_e2e.js` is
+for that), the UDP sockets of the web host on a real system, a real microphone, how it sounds, a browser that
+asks the player, Firefox and Safari, a page over https behind a proxy, the web host on Windows.

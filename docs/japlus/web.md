@@ -18,11 +18,12 @@ Nothing changes for the clients of the desktop and for a server that does not sw
 | Renderer: OpenGL ES 3 device of rd-vulkan-vision | menu, level, players, sabers with glow, `vid_restart` drawn in the page. Compared with the Vulkan device on the desktop, see [renderer.md](renderer.md) |
 | ui and cgame in the page | menus, the join, a game followed as a spectator. Nobody has played a round |
 | Sound | starts (SDL audio of the browser). Not listened to |
+| Voice chat (`-DBuildJPVoice=ON`) | builds. Run headless in a demo with a stand-in for the web host and the relay: plays, records, sends, see [voice.md](voice.md). Not run against a server |
 | Mouse and keys | never used by a person from here: a headless browser has neither |
 | A resized window | the page starts the renderer again with the new size when the window has kept it for a moment. Run headless, 1280 x 633 to 1000 x 700 |
 | Firefox, Safari, Windows, a phone | never run |
 
-Left out on purpose in the first version: the voice chat (`BuildJPVoice`), Steam Audio (`BuildJPSpatialAudio`),
+The voice chat is in the build that asks for it (`-DBuildJPVoice=ON`). Left out on purpose in the first version: Steam Audio (`BuildJPSpatialAudio`),
 compressed textures, threads. See "What is different in the page".
 
 ## For the owner of a server
@@ -45,6 +46,8 @@ The web host has no password. Whoever reaches the port gets:
 - `/manifest.json`, the list of the pk3 files in the search path of the server with size and checksum,
 - `/pk3/<path>`, each of those files, the game's own `assets0.pk3` to `assets3.pk3` among them,
 - `/net`, a WebSocket whose messages are the datagrams of a client.
+- `/voice`, a WebSocket for the voice chat, only for an address a client of the game plays from through this
+  host. See [voice.md](voice.md), "In a browser".
 
 So opening the port to the internet hands the game data to everyone. The port has to be opened in the firewall
 by hand, the server does not do that.
@@ -59,7 +62,9 @@ address, 256 KB of file data each time the server wakes up for the network, a re
 message of 4096 bytes, 32 packets at once from a WebSocket and 1000 a second (more are dropped, as a datagram
 would be). A WebSocket whose peer is not a client of the game is closed after 60 seconds, the page opens the next
 one when it has something to send. Beyond the limit for files the answer is 503 with the seconds to wait, and the
-page asks again.
+page asks again. A WebSocket of the voice chat takes two of the 60 connections, an address has 4 of them, its
+messages are 251 bytes at most and 60 a second, and it is closed 10 seconds after the last client of its address
+left the game.
 
 ## For players
 
@@ -151,7 +156,8 @@ of the engine console), `state()` (the `connstate_t` of the client, 8 is in the 
 ### The web host
 
 `codemp/server/web`: `sv_web.cpp` (listener, a fixed table of connections, the sets for `select()`),
-`sv_web_http.cpp` (requests, files, ranges), `sv_web_ws.cpp` (the upgrade, frames). Its sockets are in the
+`sv_web_http.cpp` (requests, files, ranges), `sv_web_ws.cpp` (the upgrade, frames), `sv_web_voice.cpp` (the
+voice chat between its WebSocket and the relay of the game module). Its sockets are in the
 `select()` of `NET_Sleep()`, those with something left to send in a write set, so a packet is passed on at once
 and a file is sent in the time the server would have slept. A datagram that does not fit into the buffer of its
 connection is dropped, as UDP would drop it. `shared/web` has what the web panel of the game module needs as
@@ -162,7 +168,7 @@ well: the headers of a request, base64, SHA-1.
 | | Desktop | Page |
 |---|---------|------|
 | Renderer | Vulkan device | OpenGL ES 3 device (WebGL2), the same renderer otherwise |
-| Voice chat | yes | no |
+| Voice chat | yes | with `-DBuildJPVoice=ON`, through `/voice` of the web host. Talking needs https or the machine of the server itself, hearing does not. See [voice.md](voice.md) |
 | `s_spatial` (Steam Audio) | yes | no |
 | Compressed textures | `r_ext_compress_textures` | no |
 | Other servers, the server list | yes | only the server of the page |
