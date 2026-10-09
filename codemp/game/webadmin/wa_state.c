@@ -212,7 +212,9 @@ static void WA_StatePlayerChanges( waBuffer_t *b, int clientNum, unsigned rev, q
 
 	WA_StateBoneFrame( ent, "model_root", ps->legsAnim, &legsFrame, &legsSpeed );
 	WA_StateBoneFrame( ent, "lower_lumbar", ps->torsoAnim, &torsoFrame, &torsoSpeed );
-	WA_BufPrintf( b, "%s{\"id\":%d,\"r\":%u,\"f\":[%d,%d,%d,%d,%d,%d,%d,%d,%d,%.1f,%.1f,%.1f,%.0f,%.0f,%.0f,%.1f,%.1f,%d,%d,%d,%d,",
+	// where he is and the way he looks to a hundredth: the page looks through his eyes by them, and a tenth of
+	// a degree is more than a pixel in a picture 1280 wide
+	WA_BufPrintf( b, "%s{\"id\":%d,\"r\":%u,\"f\":[%d,%d,%d,%d,%d,%d,%d,%d,%d,%.2f,%.2f,%.2f,%.0f,%.0f,%.0f,%.2f,%.2f,%d,%d,%d,%d,",
 		first ? "" : ",", clientNum, rev,
 		ps->stats[STAT_HEALTH], ps->stats[STAT_ARMOR], ps->persistant[PERS_SCORE], ps->ping, ps->weapon, ps->fd.forcePower,
 		( ( ps->pm_type == PM_DEAD || ps->stats[STAT_HEALTH] <= 0 ) ? 1 : 0 ) | ( ( ps->weapon == WP_SABER && !ps->saberHolstered ) ? 2 : 0 )

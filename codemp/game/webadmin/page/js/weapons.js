@@ -402,11 +402,52 @@ function firstPersonCamera(now) {
 		eye = c.eye;
 		viewProj = M4.mul(gameProjection(canvas.width, canvas.height), M4.lookAt(eye, eye.map((v, i) => v + c.dir[i]), [0, 0, 1]));
 	} else {
-		eye = head;
-		viewProj = M4.mul(gameProjection(canvas.width, canvas.height), M4.lookAt(eye, head.map((v, i) => v + ax.fwd[i]), ax.up));
+		// CG_OffsetFirstPersonView: the eye leans with his speed and bobs with his steps. Not here: the kick of a
+		// weapon that fires and of a hit he takes, the dip after a fall, the smoothing of steps and of ducking
+		// (they come from events and from what the client predicts).
+		const pitchYawRoll = [view.pitch, view.yaw, 0], cycle = hud ? hud.pm[3] : 0, ducked = !!(hud && hud.pm[1] & 1);
+		const xyspeed = Math.hypot(d.vel[0], d.vel[1]), bobfracsin = Math.abs(Math.sin((cycle & 127) / 127 * Math.PI));
+		pitchYawRoll[0] += (d.vel[0] * ax.fwd[0] + d.vel[1] * ax.fwd[1] + d.vel[2] * ax.fwd[2]) * 0.002;		// cg_runPitch
+		pitchYawRoll[2] -= (d.vel[0] * ax.left[0] + d.vel[1] * ax.left[1] + d.vel[2] * ax.left[2]) * 0.005;		// cg_runRoll
+		const swing = bobfracsin * 0.002 * Math.max(xyspeed, 200) * (ducked ? 3 : 1);		// cg_bobPitch and cg_bobRoll
+		pitchYawRoll[0] += swing;
+		pitchYawRoll[2] += cycle & 128 ? -swing : swing;
+		eye = [head[0], head[1], head[2] + Math.min(6, bobfracsin * xyspeed * 0.005)];		// cg_bobUp
+		view.angles = pitchYawRoll;
+		const m = anglesMatrix(eye, pitchYawRoll, 1);
+		// CG_CalcFov: 80 across, less while he looks through the scope of the disruptor or through binoculars
+		viewProj = M4.mul(gameProjection(canvas.width, canvas.height, ownZoomFov(hud, now)), M4.lookAt(eye, [eye[0] + m[0], eye[1] + m[1], eye[2] + m[2]], [m[8], m[9], m[10]]));
 	}
 	invViewProj = M4.invert(viewProj);
 	return true;
+}
+
+// The angle across of the own view (the zoom part of CG_CalcFov). A client that looks through a scope narrows its
+// own angle frame by frame until the player locks it; the server only says that he zooms. One that follows him
+// does the same, and so does the page: from 50 down by 0.035 a msec to 3 for the disruptor, to 40 by 0.075 a
+// msec for binoculars. After the zoom the angle goes back from what the server last had within 100 msec
+// (ZOOM_OUT_TIME).
+let ownZoom = 80, ownZoomAt = 0;
+function ownZoomFov(hud, now) {
+	const dt = Math.max(0, Math.min(200, now - ownZoomAt));
+	ownZoomAt = now;
+	if (!hud) { ownZoom = 80; return 80; }
+	const mode = hud.zoom[0], locked = hud.zoom[3];
+	if (mode === 2) {
+		if (ownZoom > 40) { ownZoom -= dt * 0.075; if (ownZoom < 40) ownZoom = 40; else if (ownZoom > 80) ownZoom = 80; }
+		return ownZoom;
+	}
+	if (mode) {
+		if (!locked) {
+			if (ownZoom > 50) ownZoom = 50;
+			ownZoom -= dt * 0.035;
+			if (ownZoom < 3) ownZoom = 3; else if (ownZoom > 80) ownZoom = 80;
+		}
+		return ownZoom;
+	}
+	ownZoom = 80;
+	const f = (hud.now - hud.zoom[2]) / 100;
+	return f >= 0 && f <= 1 ? hud.zoom[1] + f * (80 - hud.zoom[1]) : 80;
 }
 
 
@@ -440,7 +481,8 @@ function drawViewWeapon(d) {
 	const xyspeed = Math.hypot(d.vel[0], d.vel[1]), cycle = hud ? hud.pm[3] : 0;
 	const bobfracsin = Math.abs(Math.sin((cycle & 127) / 127 * Math.PI)), step = (cycle & 128 ? -xyspeed : xyspeed) * bobfracsin;
 	const drift = (xyspeed + 40) * Math.sin(frameNow * 0.001) * 0.01;
-	const angles = [view.pitch + xyspeed * bobfracsin * 0.005 + drift, view.yaw + step * 0.01 + drift, step * 0.005 + drift];
+	const va = view.angles || [view.pitch, view.yaw, 0];
+	const angles = [va[0] + xyspeed * bobfracsin * 0.005 + drift, va[1] + step * 0.01 + drift, va[2] + step * 0.005 + drift];
 	const place = M4.mul(anglesMatrix(eye, angles, 1), to44(tag));
 	gl.depthRange(0, 0.3);
 	drawStatic(gun, place);

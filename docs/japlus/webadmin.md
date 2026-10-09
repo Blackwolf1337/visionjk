@@ -478,6 +478,15 @@ Also changed:
   events of other entities) and keeps the last 256 for two seconds; a poll brings the ones a page does not
   have (`evs=`). With four bots that was 112 events in 45 seconds. The page takes them (`js/events.js`) and
   shows nothing for them yet. Four more checks in `steps_feed.js` (32).
+- New: the eye of the own view as the game moves it (`firstPersonCamera` in `js/weapons.js`,
+  `CG_OffsetFirstPersonView`): it leans with the speed of the player (`cg_runPitch`, `cg_runRoll`) and bobs
+  with his steps (`cg_bobPitch`, `cg_bobRoll`, `cg_bobUp`, three times as much while he ducks), by the bob
+  cycle of his player state. And the zoom (`CG_CalcFov`): the angle across narrows while he looks through
+  the scope of the disruptor or through binoculars, frame by frame as on a client that follows him. The state
+  tells where a player is and the way he looks to a hundredth now: a tenth of a degree was more than a pixel
+  of the picture, and that was what was left of the difference. Through the eyes of a bot with a pistol
+  against the game: 1.50 of 255 before, 0.13 after, at the same spot. Not here: the kick of a weapon that
+  fires and of a hit he takes, the dip after a fall, the smoothing of steps and of ducking.
 - New: the bodies players leave behind (`bodies` of the state, `drawBodies` in `js/player-draw.js`). When a
   player comes back the game leaves his body where he died for half a minute (`CopyToBodyQue`, the last eight
   of them); the state did not tell them and the page drew none. A client copies the model of the one who died
