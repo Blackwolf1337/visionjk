@@ -43,9 +43,9 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 static std::unordered_map<const void *, int>	vk_modelFirstIndex;		// of an mdxmSurface_t or md3Surface_t, -1: not on the device
 static vkBuffer_t		vk_modelVertexes;			// vkSkinVertex_t, filled from the front
-static VkDeviceSize		vk_modelUsed;
+static vkSize_t			vk_modelUsed;
 static vkBuffer_t		vk_modelIndexes;			// the triangles of those surfaces, as indexes into the whole buffer
-static VkDeviceSize		vk_modelIndexUsed;
+static vkSize_t			vk_modelIndexUsed;
 
 // Marks come and go all the time, so their vertices have two buffers: when the one in use is nearly full the
 // other one is begun, and every mark that is still drawn goes into that one again. A frame the device still
@@ -57,7 +57,7 @@ static VkDeviceSize		vk_modelIndexUsed;
 static std::unordered_map<const void *, int>	*vk_goreFirstVertex;
 static vkBuffer_t		vk_goreVertexes[2];			// vkSkinVertex_t, filled from the front
 static int				vk_goreBuffer;				// the one in use
-static VkDeviceSize		vk_goreUsed;
+static vkSize_t			vk_goreUsed;
 static int				vk_goreFrames;				// frames since the two changed places
 
 // the surfaces of the batch that is collected, as runs in the index buffer
@@ -73,12 +73,17 @@ static struct {
 static int				vk_numFrameSkeletons;
 static int				vk_identityBone;			// where the bone that does nothing is in the frame, -1: not yet
 
+// the bone the next skeleton of the frame starts at: a device may want that to be a multiple of VK_BONE_ALIGN
+static int VK_SkeletonStart( const vkFrame_t *frame ) {
+	return ( frame->numBones + VK_BONE_ALIGN - 1 ) / VK_BONE_ALIGN * VK_BONE_ALIGN;
+}
+
 void VK_InitModels( void ) {
-	VK_CreateBuffer( &vk_modelVertexes, VK_MODEL_BYTES, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, qfalse );
-	VK_CreateBuffer( &vk_modelIndexes, VK_MODEL_INDEX_BYTES, VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, qfalse );
+	VK_CreateBuffer( &vk_modelVertexes, VK_MODEL_BYTES, VKB_VERTEXES, qfalse );
+	VK_CreateBuffer( &vk_modelIndexes, VK_MODEL_INDEX_BYTES, VKB_INDEXES, qfalse );
 	vk_modelUsed = vk_modelIndexUsed = 0;
 	for ( int i = 0; i < 2; i++ ) {
-		VK_CreateBuffer( &vk_goreVertexes[i], VK_GORE_BYTES, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, qfalse );
+		VK_CreateBuffer( &vk_goreVertexes[i], VK_GORE_BYTES, VKB_VERTEXES, qfalse );
 	}
 	if ( !vk_goreFirstVertex ) {
 		vk_goreFirstVertex = new std::unordered_map<const void *, int>;
@@ -109,9 +114,7 @@ a surface holds any more
 ===============
 */
 void VK_ModelsChanged( void ) {
-	if ( vk.device ) {
-		qvkDeviceWaitIdle( vk.device );
-	}
+	VK_WaitIdle();
 	vk_modelFirstIndex.clear();
 	vk_modelUsed = vk_modelIndexUsed = 0;
 	if ( vk_goreFirstVertex ) {
@@ -163,19 +166,15 @@ static void VK_SkinVertex( const mdxmVertex_t *v, const int *boneReferences, vkS
 // The triangles of a surface whose vertices begin at firstVertex of the vertex buffer. They are stored as indexes
 // into the whole buffer, so a batch only has to say which run of them it wants. Returns where they begin.
 static int VK_ModelIndexes( const int *triangles, int numIndexes, int firstVertex ) {
-	const VkDeviceSize size = (VkDeviceSize)numIndexes * sizeof( uint32_t );
+	const vkSize_t size = (vkSize_t)numIndexes * sizeof( uint32_t );
 	const int first = (int)( vk_modelIndexUsed / sizeof( uint32_t ) );
-	VkDeviceSize staged;
-	VkBufferCopy region;
+	vkSize_t staged;
 	uint32_t *out = (uint32_t *)VK_Stage( size, &staged );
 
 	for ( int i = 0; i < numIndexes; i++ ) {
 		out[i] = (uint32_t)( triangles[i] + firstVertex );
 	}
-	region.srcOffset = staged;
-	region.dstOffset = vk_modelIndexUsed;
-	region.size = size;
-	qvkCmdCopyBuffer( VK_UploadCmd(), vk.staging.buffer, vk_modelIndexes.buffer, 1, &region );
+	VK_CopyBuffer( &vk.staging, staged, &vk_modelIndexes, vk_modelIndexUsed, size );
 	vk_modelIndexUsed += size;
 	return first;
 }
@@ -191,12 +190,11 @@ into the buffers now if this is the first time.
 */
 int VK_SkinnedSurface( const mdxmSurface_t *surface ) {
 	const auto found = vk_modelFirstIndex.find( surface );
-	const VkDeviceSize size = (VkDeviceSize)surface->numVerts * sizeof( vkSkinVertex_t );
+	const vkSize_t size = (vkSize_t)surface->numVerts * sizeof( vkSkinVertex_t );
 	const mdxmVertex_t *v = (const mdxmVertex_t *)( (const byte *)surface + surface->ofsVerts );
 	const mdxmVertexTexCoord_t *texCoords = (const mdxmVertexTexCoord_t *)&v[surface->numVerts];
 	const int *boneReferences = (const int *)( (const byte *)surface + surface->ofsBoneReferences );
-	VkDeviceSize staged;
-	VkBufferCopy region;
+	vkSize_t staged;
 	vkSkinVertex_t *out;
 	int first;
 
@@ -204,7 +202,7 @@ int VK_SkinnedSurface( const mdxmSurface_t *surface ) {
 		return found->second;
 	}
 	if ( !vk_modelVertexes.buffer || vk_modelUsed + size > VK_MODEL_BYTES
-		|| vk_modelIndexUsed + (VkDeviceSize)surface->numTriangles * 3 * sizeof( uint32_t ) > VK_MODEL_INDEX_BYTES ) {
+		|| vk_modelIndexUsed + (vkSize_t)surface->numTriangles * 3 * sizeof( uint32_t ) > VK_MODEL_INDEX_BYTES ) {
 		return -1;
 	}
 	for ( int i = 0; i < surface->numBoneReferences; i++ ) {
@@ -222,10 +220,7 @@ int VK_SkinnedSurface( const mdxmSurface_t *surface ) {
 		out->st[1] = texCoords[i].texCoords[1];
 	}
 
-	region.srcOffset = staged;
-	region.dstOffset = vk_modelUsed;
-	region.size = size;
-	qvkCmdCopyBuffer( VK_UploadCmd(), vk.staging.buffer, vk_modelVertexes.buffer, 1, &region );
+	VK_CopyBuffer( &vk.staging, staged, &vk_modelVertexes, vk_modelUsed, size );
 	first = VK_ModelIndexes( (const int *)( (const byte *)surface + surface->ofsTriangles ), surface->numTriangles * 3,
 		(int)( vk_modelUsed / sizeof( vkSkinVertex_t ) ) );
 	vk_modelUsed += size;
@@ -250,11 +245,10 @@ int VK_GoreSurface( const mdxmSurface_t *surface, const float *goreData ) {
 	const int numVerts = data[0];
 	const int *which = data + 2;
 	const float *st = (const float *)( which + numVerts * 9 );
-	const VkDeviceSize size = (VkDeviceSize)numVerts * sizeof( vkSkinVertex_t );
+	const vkSize_t size = (vkSize_t)numVerts * sizeof( vkSkinVertex_t );
 	const mdxmVertex_t *v = (const mdxmVertex_t *)( (const byte *)surface + surface->ofsVerts );
 	const int *boneReferences = (const int *)( (const byte *)surface + surface->ofsBoneReferences );
-	VkDeviceSize staged;
-	VkBufferCopy region;
+	vkSize_t staged;
 	vkSkinVertex_t *out;
 	int first;
 
@@ -285,10 +279,7 @@ int VK_GoreSurface( const mdxmSurface_t *surface, const float *goreData ) {
 		out->st[0] = st[i * 2];
 		out->st[1] = st[i * 2 + 1];
 	}
-	region.srcOffset = staged;
-	region.dstOffset = vk_goreUsed;
-	region.size = size;
-	qvkCmdCopyBuffer( VK_UploadCmd(), vk.staging.buffer, vk_goreVertexes[vk_goreBuffer].buffer, 1, &region );
+	VK_CopyBuffer( &vk.staging, staged, &vk_goreVertexes[vk_goreBuffer], vk_goreUsed, size );
 	first = (int)( vk_goreUsed / sizeof( vkSkinVertex_t ) );
 	vk_goreUsed += size;
 	( *vk_goreFirstVertex )[goreData] = first;
@@ -318,11 +309,10 @@ decodes them, hung on one bone
 */
 int VK_StaticMeshSurface( const md3Surface_t *surface ) {
 	const auto found = vk_modelFirstIndex.find( surface );
-	const VkDeviceSize size = (VkDeviceSize)surface->numVerts * sizeof( vkSkinVertex_t );
+	const vkSize_t size = (vkSize_t)surface->numVerts * sizeof( vkSkinVertex_t );
 	const short *xyz = (const short *)( (const byte *)surface + surface->ofsXyzNormals );
 	const float *st = (const float *)( (const byte *)surface + surface->ofsSt );
-	VkDeviceSize staged;
-	VkBufferCopy region;
+	vkSize_t staged;
 	vkSkinVertex_t *out;
 	int first;
 
@@ -330,7 +320,7 @@ int VK_StaticMeshSurface( const md3Surface_t *surface ) {
 		return found->second;
 	}
 	if ( !vk_modelVertexes.buffer || vk_modelUsed + size > VK_MODEL_BYTES
-		|| vk_modelIndexUsed + (VkDeviceSize)surface->numTriangles * 3 * sizeof( uint32_t ) > VK_MODEL_INDEX_BYTES ) {
+		|| vk_modelIndexUsed + (vkSize_t)surface->numTriangles * 3 * sizeof( uint32_t ) > VK_MODEL_INDEX_BYTES ) {
 		return -1;
 	}
 	out = (vkSkinVertex_t *)VK_Stage( size, &staged );
@@ -349,10 +339,7 @@ int VK_StaticMeshSurface( const md3Surface_t *surface ) {
 		out->weights[0] = 65535;
 	}
 
-	region.srcOffset = staged;
-	region.dstOffset = vk_modelUsed;
-	region.size = size;
-	qvkCmdCopyBuffer( VK_UploadCmd(), vk.staging.buffer, vk_modelVertexes.buffer, 1, &region );
+	VK_CopyBuffer( &vk.staging, staged, &vk_modelVertexes, vk_modelUsed, size );
 	first = VK_ModelIndexes( (const int *)( (const byte *)surface + surface->ofsTriangles ), surface->numTriangles * 3,
 		(int)( vk_modelUsed / sizeof( vkSkinVertex_t ) ) );
 	vk_modelUsed += size;
@@ -390,13 +377,13 @@ qboolean VK_ModelBatchAdd( int firstIndex, int numIndexes ) {
 
 // the buffers of the models and the runs of the batch are what the next draws use
 static qboolean VK_BindModelBatch( void ) {
-	const VkDeviceSize offset = 0;
+	const vkSize_t offset = 0;
 
 	if ( !vk_numBatchRanges ) {
 		return qfalse;
 	}
-	VK_BindVertexBuffer( vk_modelVertexes.buffer, &offset, 1 );
-	VK_BindIndexBuffer( vk_modelIndexes.buffer );
+	VK_BindVertexBuffer( &vk_modelVertexes, &offset, 1 );
+	VK_BindIndexBuffer( &vk_modelIndexes );
 	vk.ranges = vk_batchRanges;
 	vk.numRanges = vk_numBatchRanges;
 	vk.statStaticIndexes[0] += tess.numIndexes;
@@ -424,18 +411,20 @@ static qboolean VK_FrameSkeleton( CBoneCache *boneCache, uint32_t *bones ) {
 		}
 	}
 	// a skeleton has at most 256 bones, see VK_SkinnedSurface()
-	if ( frame->numBones + 256 > VK_MAX_BONES ) {
+	const int first = VK_SkeletonStart( frame );
+
+	if ( first + 256 > VK_MAX_BONES ) {
 		return qfalse;
 	}
-	const int numBones = G2_BoneMatrices( boneCache, (float *)( frame->bones.mapped + sizeof( float ) * 12 * frame->numBones ), 256 );
+	const int numBones = G2_BoneMatrices( boneCache, (float *)( frame->bones.mapped + sizeof( float ) * 12 * first ), 256 );
 
 	if ( vk_numFrameSkeletons < VK_MAX_FRAME_SKELETONS ) {
 		vk_frameSkeletons[vk_numFrameSkeletons].cache = boneCache;
-		vk_frameSkeletons[vk_numFrameSkeletons].base = (uint32_t)frame->numBones * 3;
+		vk_frameSkeletons[vk_numFrameSkeletons].base = (uint32_t)first * 3;
 		vk_numFrameSkeletons++;
 	}
-	*bones = (uint32_t)frame->numBones * 3;
-	frame->numBones += numBones;
+	*bones = (uint32_t)first * 3;
+	frame->numBones = first + numBones;
 	return qtrue;
 }
 
@@ -448,13 +437,14 @@ qboolean VK_UploadSkinnedBatch( CBoneCache *boneCache, uint32_t *bones ) {
 	if ( !boneCache ) {
 		if ( vk_identityBone < 0 ) {
 			static const float identity[12] = { 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0 };
+			const int first = VK_SkeletonStart( frame );
 
-			if ( frame->numBones + 1 > VK_MAX_BONES ) {
+			if ( first + 1 > VK_MAX_BONES ) {
 				return qfalse;
 			}
-			memcpy( frame->bones.mapped + sizeof( identity ) * frame->numBones, identity, sizeof( identity ) );
-			vk_identityBone = frame->numBones * 3;
-			frame->numBones++;
+			memcpy( frame->bones.mapped + sizeof( identity ) * first, identity, sizeof( identity ) );
+			vk_identityBone = first * 3;
+			frame->numBones = first + 1;
 		}
 		*bones = (uint32_t)vk_identityBone;
 		return VK_BindModelBatch();
@@ -473,10 +463,10 @@ A batch of saber marks on one model: the indexes in tess.indexes count in the bu
 ===============
 */
 qboolean VK_UploadGoreBatch( CBoneCache *boneCache, uint32_t *bones ) {
-	const VkDeviceSize offset = 0;
+	const vkSize_t offset = 0;
 
 	if ( !vk.frame || !boneCache || !VK_FrameSkeleton( boneCache, bones ) ) {
 		return qfalse;
 	}
-	return VK_UploadIndexes( vk_goreVertexes[vk_goreBuffer].buffer, &offset, 1, tess.indexes, tess.numIndexes );
+	return VK_UploadIndexes( &vk_goreVertexes[vk_goreBuffer], &offset, 1, tess.indexes, tess.numIndexes );
 }

@@ -26,75 +26,18 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // keyword (saber blades, lights, screens). They are drawn a second time over the depth of the finished scene,
 // so what is in front of them covers them. The blur is r_DynamicGlowPasses passes of four samples each at
 // r_DynamicGlowWidth x r_DynamicGlowHeight, every pass r_DynamicGlowDelta further out.
+//
+// This file says which passes there are and in which order. How a pass reaches the device is vk_cmd.cpp, the
+// targets are made in vk_texture.cpp.
 
 #include "vk_local.h"
-
-static void VK_WritePostSet( VkDescriptorSet set, VkImageView view ) {
-	VkDescriptorImageInfo image = { vk.linearSampler, view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
-	VkWriteDescriptorSet write = { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
-
-	write.dstSet = set;
-	write.descriptorCount = 1;
-	write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	write.pImageInfo = &image;
-	qvkUpdateDescriptorSets( vk.device, 1, &write, 0, NULL );
-}
 
 void VK_InitPost( void ) {
 	const int width = Com_Clampi( 16, vk.width, r_DynamicGlowWidth->integer );
 	const int height = Com_Clampi( 16, vk.height, r_DynamicGlowHeight->integer );
-	const VkImageUsageFlags usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
-	VkSamplerCreateInfo sampler = { VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO };
-	VkDescriptorSetAllocateInfo alloc = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO };
-	VkDescriptorSet *sets[3] = { &vk.glowSet, &vk.blurSets[0], &vk.blurSets[1] };
-	vkTarget_t *targets[3] = { &vk.glow, &vk.blur[0], &vk.blur[1] };
 
-	VK_CreateTarget( &vk.glow, vk.width, vk.height, VK_FORMAT_R8G8B8A8_UNORM, usage, VK_IMAGE_ASPECT_COLOR_BIT, VK_SAMPLE_COUNT_1_BIT );
-	if ( vk.samples > VK_SAMPLE_COUNT_1_BIT ) {
-		// the glowing stages are drawn over the depth of the scene, so with as many samples
-		VK_CreateTarget( &vk.glowMS, vk.width, vk.height, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_IMAGE_ASPECT_COLOR_BIT, vk.samples );
-	}
-	VK_CreateTarget( &vk.screen, vk.width, vk.height, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-		VK_IMAGE_ASPECT_COLOR_BIT, VK_SAMPLE_COUNT_1_BIT );
+	VK_CreatePostTargets( width, height );
 	vk.screenSlot = -1;
-	{
-		// OpenGL copies a frame buffer that has no alpha, and such a texture reads as 1 there. The frame here has an
-		// alpha channel with what the blends left in it, so the copy is looked at without it.
-		VkImageViewCreateInfo view = { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
-
-		qvkDestroyImageView( vk.device, vk.screen.view, NULL );
-		view.image = vk.screen.image;
-		view.viewType = VK_IMAGE_VIEW_TYPE_2D;
-		view.format = vk.screen.format;
-		view.components.a = VK_COMPONENT_SWIZZLE_ONE;
-		view.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-		view.subresourceRange.levelCount = 1;
-		view.subresourceRange.layerCount = 1;
-		VK_CHECK( qvkCreateImageView( vk.device, &view, NULL, &vk.screen.view ) );
-	}
-	VK_CreateTarget( &vk.blur[0], width, height, VK_FORMAT_R8G8B8A8_UNORM, usage, VK_IMAGE_ASPECT_COLOR_BIT, VK_SAMPLE_COUNT_1_BIT );
-	VK_CreateTarget( &vk.blur[1], width, height, VK_FORMAT_R8G8B8A8_UNORM, usage, VK_IMAGE_ASPECT_COLOR_BIT, VK_SAMPLE_COUNT_1_BIT );
-
-	sampler.magFilter = sampler.minFilter = VK_FILTER_LINEAR;
-	sampler.addressModeU = sampler.addressModeV = sampler.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-	VK_CHECK( qvkCreateSampler( vk.device, &sampler, NULL, &vk.linearSampler ) );
-
-	alloc.descriptorPool = vk.descriptorPool;
-	alloc.descriptorSetCount = 1;
-	alloc.pSetLayouts = &vk.postSetLayout;
-	for ( int i = 0; i < 3; i++ ) {
-		VK_CHECK( qvkAllocateDescriptorSets( vk.device, &alloc, sets[i] ) );
-		VK_WritePostSet( *sets[i], targets[i]->view );
-	}
-}
-
-void VK_ShutdownPost( void ) {
-	VK_DestroyTarget( &vk.glow );
-	VK_DestroyTarget( &vk.glowMS );
-	VK_DestroyTarget( &vk.screen );
-	VK_DestroyTarget( &vk.blur[0] );
-	VK_DestroyTarget( &vk.blur[1] );
-	qvkDestroySampler( vk.device, vk.linearSampler, NULL );
 }
 
 /*
@@ -106,28 +49,12 @@ the scene.
 ===============
 */
 void VK_BeginGlow( void ) {
-	VkCommandBuffer cmd;
-
 	if ( !vk.frame ) {
 		return;
 	}
-	cmd = vk.frame->cmd;
-	qvkCmdEndRendering( cmd );
-	VK_TargetLayout( cmd, &vk.glow, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
-	if ( vk.samples > VK_SAMPLE_COUNT_1_BIT ) {
-		VK_TargetLayout( cmd, &vk.glowMS, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
-	}
-	VK_BeginTarget( cmd, &vk.glow, &vk.depth, 1, qtrue );
-	vk.boundPipeline = VK_NULL_HANDLE;
+	VK_EndTarget();
+	VK_BeginTarget( &vk.glow, &vk.depth, 1, qtrue );
 	vk.stateValid = qfalse;
-}
-
-static void VK_FullTarget( VkCommandBuffer cmd, const vkTarget_t *target ) {
-	const VkViewport viewport = { 0.0f, 0.0f, (float)target->width, (float)target->height, 0.0f, 1.0f };
-	const VkRect2D scissor = { { 0, 0 }, { (uint32_t)target->width, (uint32_t)target->height } };
-
-	qvkCmdSetViewport( cmd, 0, 1, &viewport );
-	qvkCmdSetScissor( cmd, 0, 1, &scissor );
 }
 
 /*
@@ -139,54 +66,37 @@ Blurs the glow buffer and adds it to the frame, then the frame is drawn into aga
 */
 void VK_EndGlow( void ) {
 	const int passes = Com_Clampi( 1, 16, r_DynamicGlowPasses->integer );
-	const vkTarget_t *source = &vk.glow;
-	VkDescriptorSet sourceSet = vk.glowSet;
+	vkTarget_t *source = &vk.glow;
 	float offset = 0.1f;		// in pixels of the source
-	VkCommandBuffer cmd;
 
 	if ( !vk.frame ) {
 		return;
 	}
-	cmd = vk.frame->cmd;
-	qvkCmdEndRendering( cmd );
-	VK_TargetLayout( cmd, &vk.glow, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
+	VK_EndTarget();
 
-	qvkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.blurPipeline );
 	for ( int i = 0; i < passes; i++ ) {
 		vkTarget_t *target = &vk.blur[i & 1];
 		const float parm[4] = { offset / source->width, offset / source->height, r_DynamicGlowIntensity->value * 0.25f, 0.0f };
 
-		VK_TargetLayout( cmd, target, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
-		VK_BeginTarget( cmd, target, NULL, 0, qfalse );
-		VK_FullTarget( cmd, target );
-		qvkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.postPipelineLayout, 0, 1, &sourceSet, 0, NULL );
-		qvkCmdPushConstants( cmd, vk.postPipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof( parm ), parm );
-		qvkCmdDraw( cmd, 3, 1, 0, 0 );
-		qvkCmdEndRendering( cmd );
-		VK_TargetLayout( cmd, target, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
+		VK_BlurPass( source, target, parm );
 
 		source = target;
-		sourceSet = vk.blurSets[i & 1];
 		// Increase the texel offsets. NOTE: This is possibly the most important input to the effect.
 		offset += r_DynamicGlowDelta->value;
 	}
 
 	// back to the frame, with what is in it
-	VK_BeginTarget( cmd, &vk.color, &vk.depth, 2, qtrue );
+	VK_BeginTarget( &vk.color, &vk.depth, 2, qtrue );
 	if ( r_DynamicGlow->integer == 2 ) {
 		// show the glow alone
 		const float black[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
 
 		VK_ClearColor( 0, 0, vk.width, vk.height, black );
 	}
-	qvkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.glowPipelines[r_DynamicGlowSoft->integer ? 1 : 0] );
-	qvkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.postPipelineLayout, 0, 1, &sourceSet, 0, NULL );
-	VK_FullTarget( cmd, &vk.color );
-	qvkCmdDraw( cmd, 3, 1, 0, 0 );
+	VK_AddTarget( source, (qboolean)( r_DynamicGlowSoft->integer != 0 ) );
 
 	// the shaders that draw geometry have other sets and other state
 	VK_BindFrameSets();
-	vk.boundPipeline = VK_NULL_HANDLE;
 	vk.stateValid = qfalse;
 	VK_SetViewport( vk.viewport[0], vk.viewport[1], vk.viewport[2], vk.viewport[3], 0.0f, 1.0f );
 }
@@ -201,43 +111,19 @@ the texture table in the place of tr.screenImage. rd-vanilla copies a square of 
 ===============
 */
 void VK_CaptureFrame( void ) {
-	VkCommandBuffer cmd;
-	VkImageCopy region;
-
 	if ( !vk.frame || !tr.screenImage ) {
 		return;
 	}
-	cmd = vk.frame->cmd;
-	qvkCmdEndRendering( cmd );
-
-	memset( &region, 0, sizeof( region ) );
-	region.srcSubresource.aspectMask = region.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-	region.srcSubresource.layerCount = region.dstSubresource.layerCount = 1;
-	region.extent.width = (uint32_t)vk.width;
-	region.extent.height = (uint32_t)vk.height;
-	region.extent.depth = 1;
-	VK_TargetLayout( cmd, &vk.color, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL );
-	VK_TargetLayout( cmd, &vk.screen, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL );
-	qvkCmdCopyImage( cmd, vk.color.image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, vk.screen.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region );
-	VK_TargetLayout( cmd, &vk.screen, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
-	VK_TargetLayout( cmd, &vk.color, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
+	VK_EndTarget();
+	VK_CopyTarget( &vk.color, &vk.screen );
 
 	// the entry of tr.screenImage in the texture table shows the copy from now on
 	if ( vk.screenSlot != (int)tr.screenImage->texnum ) {
-		VkDescriptorImageInfo image = { vk.linearSampler, vk.screen.view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
-		VkWriteDescriptorSet write = { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
-
 		vk.screenSlot = (int)tr.screenImage->texnum;
-		write.dstSet = vk.textureSet;
-		write.dstArrayElement = (uint32_t)vk.screenSlot;
-		write.descriptorCount = 1;
-		write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		write.pImageInfo = &image;
-		qvkUpdateDescriptorSets( vk.device, 1, &write, 0, NULL );
+		VK_ShowTarget( vk.screenSlot, &vk.screen );
 	}
 
-	VK_BeginTarget( cmd, &vk.color, &vk.depth, 2, qtrue );
-	vk.boundPipeline = VK_NULL_HANDLE;
+	VK_BeginTarget( &vk.color, &vk.depth, 2, qtrue );
 	vk.stateValid = qfalse;
 }
 
@@ -332,32 +218,18 @@ The end of a view: the pixels of the depth its flares asked for go into the buff
 ===============
 */
 void VK_CopyProbes( void ) {
-	static VkBufferImageCopy regions[VK_MAX_FLARES];
 	vkFrame_t *frame = vk.frame;
-	VkCommandBuffer cmd;
-	uint32_t count = 0;
+	int first;
 
 	if ( !frame || frame->numProbesCopied == frame->numProbes ) {
 		return;
 	}
-	cmd = frame->cmd;
-	memset( regions, 0, sizeof( regions[0] ) * ( frame->numProbes - frame->numProbesCopied ) );
-	for ( int i = frame->numProbesCopied; i < frame->numProbes; i++, count++ ) {
-		regions[count].bufferOffset = sizeof( uint32_t ) * i;
-		regions[count].imageSubresource.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-		regions[count].imageSubresource.layerCount = 1;
-		regions[count].imageOffset.x = frame->probe[i].x;
-		regions[count].imageOffset.y = frame->probe[i].y;
-		regions[count].imageExtent.width = regions[count].imageExtent.height = regions[count].imageExtent.depth = 1;
-	}
+	first = frame->numProbesCopied;
 	frame->numProbesCopied = frame->numProbes;
 
-	qvkCmdEndRendering( cmd );
-	VK_TargetLayout( cmd, &vk.depth, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL );
-	qvkCmdCopyImageToBuffer( cmd, vk.depth.image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, frame->probes.buffer, count, regions );
-	VK_TargetLayout( cmd, &vk.depth, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL );
-	VK_BeginTarget( cmd, &vk.color, &vk.depth, 2, qtrue );
-	vk.boundPipeline = VK_NULL_HANDLE;
+	VK_EndTarget();
+	VK_CopyProbeDepths( first, frame->numProbes - first );
+	VK_BeginTarget( &vk.color, &vk.depth, 2, qtrue );
 	vk.stateValid = qfalse;
 }
 
@@ -370,19 +242,11 @@ RB_TestZFlare() of rd-vanilla makes.
 ===============
 */
 void VK_ReadProbes( vkFrame_t *frame ) {
-	const uint32_t *words = (const uint32_t *)frame->probes.mapped;
-
 	for ( int i = 0; i < frame->numProbesCopied; i++ ) {
 		const vkProbe_t *probe = &frame->probe[i];
-		float depth, screenZ;
+		const float depth = VK_ProbeDepth( frame, i );
+		const float screenZ = probe->projection[2] / ( ( 2.0f * depth - 1.0f ) * probe->projection[1] - probe->projection[0] );
 
-		// the depth aspect of a format with 24 bits comes in the low bits of a word, the other one as a float
-		if ( vk.depth.format == VK_FORMAT_D24_UNORM_S8_UINT ) {
-			depth = ( words[i] & 0xffffff ) / 16777215.0f;
-		} else {
-			memcpy( &depth, &words[i], sizeof( depth ) );
-		}
-		screenZ = probe->projection[2] / ( ( 2.0f * depth - 1.0f ) * probe->projection[1] - probe->projection[0] );
 		vk_flares[probe->flare].visible = (qboolean)( probe->eyeZ + screenZ < 24.0f );
 	}
 	frame->numProbes = frame->numProbesCopied = 0;

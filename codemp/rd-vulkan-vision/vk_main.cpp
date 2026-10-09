@@ -36,6 +36,12 @@ void VK_Fatal( const char *what, VkResult result ) {
 	Com_Error( ERR_FATAL, "Vulkan: %s failed with %i", what, (int)result );
 }
 
+void VK_WaitIdle( void ) {
+	if ( vk.device ) {
+		qvkDeviceWaitIdle( vk.device );
+	}
+}
+
 /*
 A machine that can not run this renderer (no Vulkan, an older one, no device that fits) is no error of the game:
 VK_InitVulkan() says why in the console and returns qfalse, and the engine goes on with rd-vanilla
@@ -535,7 +541,7 @@ qboolean VK_InitVulkan( void ) {
 	VK_CreateTarget( &vk.depth, vk.width, vk.height, VK_DepthFormat(),
 		VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
 		VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT, VK_SAMPLE_COUNT_1_BIT );
-	// anti aliasing: the scene goes into targets with several samples a pixel, see VK_BeginTarget()
+	// anti aliasing: the scene goes into targets with several samples a pixel, see VK_BeginRendering()
 	vk.samples = VK_SampleCount();
 	if ( vk.samples > VK_SAMPLE_COUNT_1_BIT ) {
 		VK_CreateTarget( &vk.colorMS, vk.width, vk.height, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
@@ -608,7 +614,7 @@ void VK_ShutdownVulkan( qboolean destroyWindow ) {
 	VK_ShutdownModels();
 	VK_ShutdownImages();
 	VK_ShutdownFrames();
-	VK_ShutdownPost();
+	VK_DestroyPostTargets();
 	VK_ShutdownPipelines();
 	VK_DestroyTarget( &vk.color );
 	VK_DestroyTarget( &vk.final );

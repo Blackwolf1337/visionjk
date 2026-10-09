@@ -39,7 +39,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 static std::unordered_map<const void *, int>	vk_firstVertex;		// of a surface in the buffer
 static vkBuffer_t		vk_worldVertexes;
-static VkDeviceSize		vk_worldOffsets[4];			// where xyz, normal, texCoords and colors start in it
+static vkSize_t			vk_worldOffsets[4];			// where xyz, normal, texCoords and colors start in it
 static qboolean			vk_worldValid;
 // the batch in tess: 0: vertices and indexes in the tess arrays, 1: indexes into the buffer of the level,
 // 2: runs of indexes in the buffer of the models (vk_model.cpp), all of one skeleton (NULL: MD3 meshes with one frame),
@@ -83,11 +83,10 @@ void VK_ShutdownWorld( void ) {
 static void VK_BuildWorld( void ) {
 	const world_t *world = tr.world;
 	int numVertexes = 0, vertex = 0;
-	VkDeviceSize sizes[4], total = 0;
+	vkSize_t sizes[4], total = 0;
 	vkBuffer_t staging;
-	VkBufferCopy region;
 
-	qvkDeviceWaitIdle( vk.device );
+	VK_WaitIdle();
 	VK_ShutdownWorld();
 	vk_worldValid = qtrue;
 
@@ -105,14 +104,14 @@ static void VK_BuildWorld( void ) {
 	if ( !numVertexes ) {
 		return;
 	}
-	sizes[0] = sizes[1] = (VkDeviceSize)numVertexes * sizeof( vec4_t );
-	sizes[2] = (VkDeviceSize)numVertexes * sizeof( vec2_t ) * NUM_TEX_COORDS;
-	sizes[3] = (VkDeviceSize)numVertexes * 4;
+	sizes[0] = sizes[1] = (vkSize_t)numVertexes * sizeof( vec4_t );
+	sizes[2] = (vkSize_t)numVertexes * sizeof( vec2_t ) * NUM_TEX_COORDS;
+	sizes[3] = (vkSize_t)numVertexes * 4;
 	for ( int i = 0; i < 4; i++ ) {
 		vk_worldOffsets[i] = total;
-		total += ( sizes[i] + 15 ) & ~(VkDeviceSize)15;
+		total += ( sizes[i] + 15 ) & ~(vkSize_t)15;
 	}
-	VK_CreateBuffer( &staging, total, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, qtrue );
+	VK_CreateBuffer( &staging, total, VKB_STAGING, qtrue );
 	memset( staging.mapped, 0, (size_t)total );
 
 	vec4_t *xyz = (vec4_t *)( staging.mapped + vk_worldOffsets[0] );
@@ -157,10 +156,8 @@ static void VK_BuildWorld( void ) {
 		}
 	}
 
-	VK_CreateBuffer( &vk_worldVertexes, total, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, qfalse );
-	region.srcOffset = region.dstOffset = 0;
-	region.size = total;
-	qvkCmdCopyBuffer( VK_UploadCmd(), staging.buffer, vk_worldVertexes.buffer, 1, &region );
+	VK_CreateBuffer( &vk_worldVertexes, total, VKB_VERTEXES, qfalse );
+	VK_CopyBuffer( &staging, 0, &vk_worldVertexes, 0, total );
 	VK_FlushUploads();
 	VK_DestroyBuffer( &staging );
 	ri.Printf( PRINT_DEVELOPER, "rd-vulkan-vision: %i vertices of %i surfaces of the level on the device, %i KB\n",
@@ -462,5 +459,5 @@ qboolean VK_UploadStaticBatch( uint32_t *bones ) {
 	if ( vk_batchMode == 3 ) {
 		return VK_UploadGoreBatch( vk_batchBones, bones );
 	}
-	return VK_UploadIndexes( vk_worldVertexes.buffer, vk_worldOffsets, 4, tess.indexes, tess.numIndexes );
+	return VK_UploadIndexes( &vk_worldVertexes, vk_worldOffsets, 4, tess.indexes, tess.numIndexes );
 }

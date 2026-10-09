@@ -23,24 +23,33 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 // rd-vulkan-vision: everything that touches the GPU. The front end (loaders, shader parser, Ghoul2, scene) is
 // built from rd-vanilla, see vk_hooks.h.
+//
+// The renderer is a shared part and a device. The shared part decides what is drawn and in which order, and names
+// no type and no function of a graphics library: vk_backend.cpp, vk_shade.cpp, vk_gl.cpp, vk_world.cpp,
+// vk_model.cpp, vk_frame.cpp, vk_image.cpp, vk_post.cpp, vk_bc.cpp, vk_stubs.cpp and the shaders. A device is the
+// files that talk to such a library. For Vulkan: vk_main.cpp, vk_memory.cpp, vk_pipeline.cpp, vk_cmd.cpp,
+// vk_texture.cpp, with vk_device.h and vk_funcs.h.
+//
+// This header includes exactly one device header: vk_device.h, or gles/gles_device.h when RD_VISION_GLES is
+// defined. It comes after the constants and the structures the shaders read and before the state, and gives:
+// - constants: VK_FRAMES, VK_DRAW_STRIDE, VK_TRANSFORM_STRIDE, VK_BONE_ALIGN, VK_DEVICE_BASE_VERTEX, the cull modes
+//   VKC_*, the texture formats VKF_* and the buffer usages VKB_*
+// - types the shared files hand around: vkSize_t, vkFormat_t, vkBufferUsage_t, vkBuffer_t, vkTarget_t
+// - vkDeviceImage_t, vkDeviceFrame_t and vkDeviceState_t, which vkImage_t, vkFrame_t and vkState_t below are
+//   derived from. So what a device keeps per texture, per frame and as its state are members of vk.images[],
+//   vk.frame and vk like the shared ones, and no file has to know which part a member is in.
+// What the shared files read of these: vkBuffer_t::buffer (zero: there is none), size and mapped,
+// vkTarget_t::width and height, vkDeviceImage_t::image (zero: the slot has nothing on the device),
+// vkDeviceState_t::device (zero: the device can not draw yet) and staging (what VK_Stage() hands out pieces of).
+// The functions a device has for the shared files are the last block of this header.
 
 #include "tr_local.h"
 
-// no prototypes: the functions are pointers that are filled at run time, see vk_funcs.h
-#define VK_NO_PROTOTYPES
-#include <vulkan/vulkan.h>
-#include "vk_funcs.h"
-
 #define VK_MAX_IMAGES		4096		// size of the texture table the shaders index, image_t::texnum is the index
-#define VK_FRAMES			2			// frames in flight
-#define VK_MAX_SWAP_IMAGES	8
 #define VK_MAX_DRAWS		32768		// draws of one frame, each is one shader stage of one batch
 #define VK_MAX_TRANSFORMS	4096		// views times entities of one frame
 #define VK_VERTEX_BYTES		( 32 << 20 )	// geometry of one frame that is built on the CPU
 #define VK_INDEX_BYTES		( 8 << 20 )
-#define VK_STAGING_BYTES	( 32 << 20 )
-#define VK_MAX_SAMPLERS		32
-#define VK_MAX_PIPELINES	256
 
 // a state bit next to the GLS_* ones of rd-vanilla, which have no such thing: the indexes are pairs, each a line
 #define VK_GLS_LINES		0x00002000
@@ -116,40 +125,37 @@ typedef struct vkSkinVertex_s {	// a vertex of a Ghoul2 surface as it lies on th
 
 // ------------------------------------------------------------------------------------------------------------
 
-typedef struct vkAlloc_s {
-	int				block;			// -1: nothing allocated
-	VkDeviceSize	offset;
-	VkDeviceSize	size;
-} vkAlloc_t;
+typedef enum {
+	VKP_GENERIC,					// vertices in the layout of the tess arrays, one shader stage
+	VKP_SKINNED,					// vertices of a Ghoul2 surface, moved by their bones in the vertex shader
+	VKP_NUM_PROGRAMS
+} vkProgram_t;
 
-typedef struct vkBuffer_s {
-	VkBuffer		buffer;
-	vkAlloc_t		alloc;
-	VkDeviceSize	size;
-	byte			*mapped;		// host visible buffers stay mapped
-} vkBuffer_t;
+// what a draw sets on the device beyond its program and blend function, as one word, so that a draw only sets what
+// differs from the draw before it
+#define VKS_DEPTH_TEST		0x01u
+#define VKS_DEPTH_WRITE		0x02u
+#define VKS_DEPTH_EQUAL		0x04u
+#define VKS_OFFSET			0x08u
+#define VKS_DEPTH_LESS		0x40u
+#define VKS_STENCIL			0x80u
+#define VKS_CULL_SHIFT		4		// VKC_*, 2 bits
 
-typedef struct vkImage_s {		// one entry of the texture table
+#ifdef RD_VISION_GLES
+#include "gles/gles_device.h"
+#else
+#include "vk_device.h"
+#endif
+
+typedef struct vkImage_s : vkDeviceImage_t {	// one entry of the texture table
 	image_t			*owner;			// NULL: free
-	VkImage			image;
-	VkImageView		view;
-	vkAlloc_t		alloc;
 	int				width, height;
 	int				mipLevels;
-	VkFormat		format;			// 32 bit RGBA, or blocks: BC1 without alpha, BC3 with
+	vkFormat_t		format;			// 32 bit RGBA, or blocks: BC1 without alpha, BC3 with
 	int				minFilter, magFilter, wrap;		// OpenGL names, as tr_image.cpp hands them over
 	float			anisotropy;
 	qboolean		uploaded;		// all levels are there and the layout is the one for sampling
 } vkImage_t;
-
-typedef struct vkTarget_s {		// something to render into
-	VkImage			image;
-	VkImageView		view;
-	vkAlloc_t		alloc;
-	VkFormat		format;
-	VkImageLayout	layout;
-	int				width, height;
-} vkTarget_t;
 
 #define VK_MAX_FLARES		256
 
@@ -172,22 +178,16 @@ typedef struct vkProbe_s {		// one pixel of the depth of a frame that is read ba
 	float		projection[3];		// [10], [11] and [14] of the projection matrix of that view
 } vkProbe_t;
 
-typedef struct vkFrame_s {
-	VkCommandBuffer	cmd;
-	VkFence			fence;
-	VkSemaphore		acquired;
-	VkDescriptorSet	set;			// globals, transforms and draws of this frame
-
+typedef struct vkFrame_s : vkDeviceFrame_t {
 	vkBuffer_t		vertexes;
 	vkBuffer_t		indexes;
 	vkBuffer_t		globals;
 	vkBuffer_t		transforms;
 	vkBuffer_t		draws;
 	vkBuffer_t		bones;
-	vkBuffer_t		probes;			// 4 bytes of depth per probe, written by the device
 
 	int				numVertexes;		// in the four streams of vertices built on the CPU
-	VkDeviceSize	indexUsed;
+	vkSize_t		indexUsed;
 	int				numTransforms;
 	int				numDraws;
 	int				numBones;
@@ -195,17 +195,6 @@ typedef struct vkFrame_s {
 	int				numProbes;
 	int				numProbesCopied;	// that many have their copy in the commands of the frame
 } vkFrame_t;
-
-typedef enum {
-	VKP_GENERIC,					// vertices in the layout of the tess arrays, one shader stage
-	VKP_SKINNED,					// vertices of a Ghoul2 surface, moved by their bones in the vertex shader
-	VKP_NUM_PROGRAMS
-} vkProgram_t;
-
-typedef struct vkPipeline_s {
-	uint32_t		key;
-	VkPipeline		pipeline;
-} vkPipeline_t;
 
 #define VK_MAX_STAT_SHADERS	64
 
@@ -215,34 +204,10 @@ typedef struct vkStatShader_s {
 	int				indexes;
 } vkStatShader_t;
 
-typedef struct vkState_s {
-	VkInstance					instance;
-	VkDebugUtilsMessengerEXT	messenger;
-	VkPhysicalDevice			physicalDevice;
-	VkPhysicalDeviceProperties	properties;
-	VkPhysicalDeviceMemoryProperties	memoryProperties;
-	VkDevice					device;
-	uint32_t					queueFamily;
-	VkQueue						queue;
-	VkCommandPool				commandPool;
-
-	VkSurfaceKHR				surface;
-	VkSwapchainKHR				swapchain;
-	VkFormat					swapFormat;
-	VkExtent2D					swapExtent;
-	uint32_t					numSwapImages;
-	VkImage						swapImages[VK_MAX_SWAP_IMAGES];
-	// signaled when the image of that number can be shown. One for an image and not one for a frame: the swapchain
-	// may hold on to it until that image is acquired again.
-	VkSemaphore					swapReady[VK_MAX_SWAP_IMAGES];
-	int							swapInterval;		// what the swapchain was made for
-	int							swapStallTime;		// ri.Milliseconds() when a frame waited for an image in vain, 0: the last wait got one
-
+typedef struct vkState_s : vkDeviceState_t {
 	int							width, height;		// size of the frame, glConfig.vidWidth and vidHeight
 	vkTarget_t					color;				// the frame as the game draws it
 	vkTarget_t					depth;
-	VkSampleCountFlagBits		samples;			// r_ext_multisample. More than one: the scene is drawn into the three targets below
-	vkTarget_t					colorMS, depthMS, glowMS;	// and each pass ends by resolving them into color, depth and glow
 	vkTarget_t					final;				// after gamma, what goes to the window and into screenshots
 	vkTarget_t					screen;				// a copy of the frame as it was a moment ago, for surfaces that bend what is behind them
 	int							screenSlot;			// the entry of the texture table that shows it, -1: none yet
@@ -250,54 +215,15 @@ typedef struct vkState_s {
 	vkTarget_t					blur[2];			// and blurred, r_DynamicGlowWidth x r_DynamicGlowHeight
 	qboolean					finalValid;			// a frame has been rendered into it
 
-	VkDescriptorPool			descriptorPool;
-	VkDescriptorSetLayout		frameSetLayout;
-	VkDescriptorSetLayout		textureSetLayout;
-	VkDescriptorSetLayout		postSetLayout;
-	VkPipelineLayout			pipelineLayout;
-	VkPipelineLayout			postPipelineLayout;
-	VkDescriptorSet				textureSet;
-	VkDescriptorSet				postSet;
-	VkSampler					postSampler;
-	VkDescriptorSet				glowSet;
-	VkDescriptorSet				blurSets[2];
-	VkSampler					linearSampler;
-
-	VkShaderModule				vertexShaders[VKP_NUM_PROGRAMS];
-	VkShaderModule				fragmentShaders[VKP_NUM_PROGRAMS];
-	VkShaderModule				postVertexShader;
-	VkShaderModule				gammaFragmentShader;
-	VkPipeline					gammaPipeline;
-	VkShaderModule				blurFragmentShader;
-	VkShaderModule				copyFragmentShader;
-	VkPipeline					blurPipeline;
-	VkPipeline					glowPipelines[2];	// the blurred glow onto the frame: added, or added softly
-	vkPipeline_t				pipelines[VK_MAX_PIPELINES];
-	int							numPipelines;
-	uint32_t					lastPipelineKey;	// what VK_FindPipeline() was asked last and what it answered
-	VkPipeline					lastPipeline;
-
 	vkImage_t					images[VK_MAX_IMAGES];
 	image_t						*boundImage;		// GL_Bind(), the image tr_image.cpp is uploading
-	VkSampler					samplers[VK_MAX_SAMPLERS];
-	int							samplerKeys[VK_MAX_SAMPLERS][4];
-	int							numSamplers;
-
-	// uploads wait in one command buffer until something needs them on the GPU
-	VkCommandBuffer				uploadCmd;
-	qboolean					uploadOpen;
-	vkBuffer_t					staging;
-	VkDeviceSize				stagingUsed;
 
 	vkFrame_t					frames[VK_FRAMES];
 	int							frameIndex;
 	vkFrame_t					*frame;				// the frame being recorded, NULL between frames
-	qboolean					rendering;			// inside vkCmdBeginRendering of the frame
-	VkPipeline					boundPipeline;
+	qboolean					rendering;			// the frame is being drawn into, until VK_EndFrame() ends its last target
 	uint32_t					boundState;			// the dynamic state that is set, see VK_DrawTess()
 	qboolean					stateValid;
-	VkBuffer					boundVertexBuffer;	// what the draws read: the streams of the frame, the level or the models
-	VkBuffer					boundIndexBuffer;
 	int							numBoundIndexes;	// the batch that was set up last: that many indexes
 	uint32_t					firstIndex;			// from here in the index buffer
 	int32_t						vertexOffset;		// counted from this vertex
@@ -308,8 +234,6 @@ typedef struct vkState_s {
 	qboolean					overflowed;			// this frame has more geometry than fits, said once
 
 	// what the frame was made of, for gfxinfo: [0] the frame being recorded, [1] the last finished one
-	int							statSwapchains;		// how many swapchains this window has had
-	int							statFramesNotShown;	// frames that found no image of the swapchain to go to
 	int							statDraws[2];
 	int							statTransforms[2];
 	int							statBones[2];
@@ -324,55 +248,24 @@ typedef struct vkState_s {
 	qboolean					bcTextures;			// r_ext_compress_textures on a device that takes BC1 and BC3 blocks
 	double						statBcPixels;		// what packing textures into blocks has cost since the window was made
 	double						statBcSeconds;
-	qboolean					validation;
-	int							validationMessages;
 } vkState_t;
 
 extern vkState_t vk;
 
-#define VK_CHECK( call ) \
-	do { VkResult vkCheckResult = ( call ); \
-		if ( vkCheckResult != VK_SUCCESS ) VK_Fatal( #call, vkCheckResult ); } while ( 0 )
-
-// vk_main.cpp
-void		VK_Fatal( const char *what, VkResult result );
-qboolean	VK_SwapIntervalChanged( void );
-void		VK_CreateSwapchain( void );
-void		VK_DestroySwapchain( void );
-
-// vk_memory.cpp
-void		VK_InitMemory( void );
-void		VK_ShutdownMemory( void );
-void		VK_AllocMemory( const VkMemoryRequirements *req, VkMemoryPropertyFlags flags, vkAlloc_t *alloc );
-void		VK_FreeMemory( vkAlloc_t *alloc );
-VkDeviceMemory VK_MemoryOf( const vkAlloc_t *alloc );
-void		VK_CreateBuffer( vkBuffer_t *buf, VkDeviceSize size, VkBufferUsageFlags usage, qboolean hostVisible );
-void		VK_DestroyBuffer( vkBuffer_t *buf );
-void		VK_MemoryInfo_f( void );
+// ------------------------------------------------------------------------------------------------------------
+// the shared files
+// ------------------------------------------------------------------------------------------------------------
 
 // vk_image.cpp
 void		VK_InitImages( void );
 void		VK_ShutdownImages( void );
-void		VK_FlushUploads( void );
-VkCommandBuffer VK_UploadCmd( void );
-byte		*VK_Stage( VkDeviceSize size, VkDeviceSize *offset );
 void		VK_UpdateImage( image_t *image, int width, int height, const byte *rgba );
-void		VK_CreateTarget( vkTarget_t *target, int width, int height, VkFormat format, VkImageUsageFlags usage, VkImageAspectFlags aspect,
-				VkSampleCountFlagBits samples );
-void		VK_DestroyTarget( vkTarget_t *target );
-void		VK_SetLayout( VkCommandBuffer cmd, VkImage image, VkImageAspectFlags aspect, VkImageLayout from, VkImageLayout to );
-void		VK_TargetLayout( VkCommandBuffer cmd, vkTarget_t *target, VkImageLayout to );
 
 // vk_bc.cpp
 void		VK_BC_Init( void );
 void		VK_BC_Shutdown( void );
-VkDeviceSize VK_BC_Size( VkFormat format, int width, int height );
-void		VK_BC_Compress( VkFormat format, const byte *rgba, int width, int height, byte *out );
-
-// vk_pipeline.cpp
-void		VK_InitPipelines( void );
-void		VK_ShutdownPipelines( void );
-VkPipeline	VK_FindPipeline( vkProgram_t program, uint32_t stateBits );
+vkSize_t	VK_BC_Size( vkFormat_t format, int width, int height );
+void		VK_BC_Compress( vkFormat_t format, const byte *rgba, int width, int height, byte *out );
 
 // vk_gl.cpp
 const float *VK_GL_ModelView( void );
@@ -420,7 +313,6 @@ void		VK_Splash( void );
 
 // vk_post.cpp
 void		VK_InitPost( void );
-void		VK_ShutdownPost( void );
 void		VK_BeginGlow( void );
 void		VK_EndGlow( void );
 void		VK_CaptureFrame( void );
@@ -430,22 +322,103 @@ void		VK_CopyProbes( void );
 void		VK_ReadProbes( vkFrame_t *frame );
 
 // vk_frame.cpp
-void		VK_BeginTarget( VkCommandBuffer cmd, vkTarget_t *color, vkTarget_t *depth, int colorLoad, qboolean depthLoad );
-void		VK_BindFrameSets( void );
-void		VK_InitFrames( void );
-void		VK_ShutdownFrames( void );
 void		VK_BeginFrame( void );
 void		VK_EndFrame( void );
 void		VK_SetViewport( int x, int y, int width, int height, float minDepth, float maxDepth );
-void		VK_ClearDepth( int x, int y, int width, int height );
-void		VK_ClearColor( int x, int y, int width, int height, const float *color );
 int			VK_AddTransform( const vkTransform_t *transform );
 void		VK_SetDepthRange( float minDepth, float maxDepth );
-void		VK_BindVertexBuffer( VkBuffer buffer, const VkDeviceSize *offsets, int numBindings );
-void		VK_BindIndexBuffer( VkBuffer buffer );
 qboolean	VK_UploadGeometry( const vec4_t *xyz, const vec4_t *normal, const vec2_t ( *texCoords )[NUM_TEX_COORDS],
 				const color4ub_t *colors, int numVerts, const glIndex_t *indexes, int numIndexes );
-qboolean	VK_UploadIndexes( VkBuffer vertexBuffer, const VkDeviceSize *offsets, int numBindings, const glIndex_t *indexes, int numIndexes );
+qboolean	VK_UploadIndexes( const vkBuffer_t *vertexBuffer, const vkSize_t *offsets, int numBindings, const glIndex_t *indexes, int numIndexes );
 qboolean	VK_UploadTess( void );
 void		VK_TessColors( const color4ub_t *colors );
-void		VK_DrawTess( const vkDraw_t *draw, vkProgram_t program, uint32_t stateBits, int cullType, qboolean polygonOffset );
+void		VK_DrawTess( const vkDraw_t *draw, vkProgram_t program, uint32_t stateBits, int cullMode, qboolean polygonOffset );
+
+// ------------------------------------------------------------------------------------------------------------
+// what a device has for the shared files, by the Vulkan file it is in. A rectangle is x, y, width, height as
+// OpenGL counts them: y from the lower edge of the frame.
+// ------------------------------------------------------------------------------------------------------------
+
+// vk_main.cpp. With vk_hooks.h: VK_InitVulkan(), VK_ShutdownVulkan(), VK_GfxInfo_f().
+// nothing the device was handed is still being worked on when this returns. Also called before there is a device.
+void		VK_WaitIdle( void );
+
+// vk_memory.cpp
+// hostVisible: buf->mapped is memory the shared files write, and what is in it when a frame is presented is what
+// the draws of that frame read. Else the buffer is filled with VK_CopyBuffer().
+void		VK_CreateBuffer( vkBuffer_t *buf, vkSize_t size, vkBufferUsage_t usage, qboolean hostVisible );
+void		VK_DestroyBuffer( vkBuffer_t *buf );
+
+// vk_texture.cpp
+// the device part of VK_InitImages() and VK_ShutdownImages(). The second one destroys every image of the table.
+void		VK_InitTextures( void );
+void		VK_ShutdownTextures( void );
+// Room for size bytes that are on their way to the device, offset is where they are in vk.staging. They have to be
+// handed on with VK_CopyBuffer() or VK_UploadImageLevel() before the next call, which may reuse the room.
+byte		*VK_Stage( vkSize_t size, vkSize_t *offset );
+// size bytes of a host visible buffer into another buffer, there before a draw reads them
+void		VK_CopyBuffer( const vkBuffer_t *src, vkSize_t srcOffset, vkBuffer_t *dst, vkSize_t dstOffset, vkSize_t size );
+// everything that was handed over with the two is on the device when this returns
+void		VK_FlushUploads( void );
+// A texture for a slot of the table. VK_DestroyImage() leaves the slot and its parameters, vi->image is zero after it.
+void		VK_CreateImage( vkImage_t *vi, int width, int height, int mipLevels, vkFormat_t format );
+void		VK_DestroyImage( vkImage_t *vi );
+// The levels of a texture follow, the first one first. created: VK_CreateImage() just made it, else it has contents.
+void		VK_BeginImageUpload( vkImage_t *vi, qboolean created );
+// one level in the format of the image, its bytes are at staged of VK_Stage()
+void		VK_UploadImageLevel( vkImage_t *vi, int level, int width, int height, vkSize_t staged );
+void		VK_EndImageUpload( vkImage_t *vi );
+// the slot of the table shows its image from now on, with the filters, the wrap mode and the anisotropy vk.images[slot] has
+void		VK_WriteTexture( int slot );
+// the slot of the table shows the target from now on: filtered, clamped, and for vk.screen with an alpha of 1
+void		VK_ShowTarget( int slot, const vkTarget_t *target );
+// vk.glow and vk.screen in the size of the frame, vk.blur[] in the size given. vk.color, vk.depth and vk.final are
+// made when the device starts.
+void		VK_CreatePostTargets( int blurWidth, int blurHeight );
+
+// vk_cmd.cpp
+// The device is through with what this frame recorded the last time: its buffers can be written and VK_ProbeDepth()
+// answers for it. From here on the frame records.
+void		VK_BeginCommands( vkFrame_t *frame );
+// What is drawn from now on lands in these targets, depth may be NULL. colorLoad: 0 what is in the target does not
+// matter, 1 clear it to zero, 2 keep it. depthLoad: keep the depth and the stencil too, else they are cleared to 1
+// and 0. Nothing of the state of a draw survives it, the shared files set stateValid to qfalse.
+void		VK_BeginTarget( vkTarget_t *color, vkTarget_t *depth, int colorLoad, qboolean depthLoad );
+void		VK_EndTarget( void );
+// the buffers of the frame and the texture table are what the draws read: at the start of a frame, and after VK_AddTarget()
+void		VK_BindFrameSets( void );
+// viewport and scissor of the draws that follow, the scissor cut to the frame
+void		VK_ViewportAndScissor( int x, int y, int width, int height, float minDepth, float maxDepth );
+// a rectangle of the target that is drawn into, cut to the frame: depth to 1 and stencil to 0, or the color
+void		VK_ClearDepth( int x, int y, int width, int height );
+void		VK_ClearColor( int x, int y, int width, int height, const float *color );
+// The vertices of the draws that follow: numBindings streams of one buffer, each from its offset. 4: xyz, normal,
+// texCoords, colors in the layout of the tess arrays (VKP_GENERIC). 1: vkSkinVertex_t (VKP_SKINNED).
+void		VK_BindVertexBuffer( const vkBuffer_t *buffer, const vkSize_t *offsets, int numBindings );
+// one of those streams from another offset
+void		VK_BindVertexStream( int binding, const vkBuffer_t *buffer, vkSize_t offset );
+// indexes of 32 bits
+void		VK_BindIndexBuffer( const vkBuffer_t *buffer );
+// One draw with what is bound: vk.numRanges runs of vk.ranges, or vk.numBoundIndexes indexes from vk.firstIndex
+// that count from vk.vertexOffset (with VK_DEVICE_BASE_VERTEX 0 the indexes hold that already). drawIndex: its
+// vkDraw_t in the draws of the frame. stateBits: its blend function, GLS_POLYMODE_LINE and VK_GLS_LINES count.
+// state: VKS_*, changed: the bits of it that differ from the draw before. With VKS_STENCIL also vk.stencil.
+void		VK_Draw( vkProgram_t program, uint32_t stateBits, uint32_t state, uint32_t changed, uint32_t drawIndex );
+// The end of a frame, no target is begun: vk.color through shaders/gamma.frag with these four numbers into vk.final,
+// vk.final to the window, and everything the frame recorded to the device.
+void		VK_PresentFrame( const float *gamma );
+// A rectangle of vk.final as it is on the device now: 4 bytes a pixel, red first, the top row first. Stays until
+// the next call.
+const byte	*VK_ReadFrame( int x, int y, int width, int height );
+// One pass of shaders/blur.frag with these four numbers over the whole of target, reading source. No target is begun
+// before and after.
+void		VK_BlurPass( vkTarget_t *source, vkTarget_t *target, const float *parm );
+// source over the whole of the target that is drawn into, added to what is there (soft: GL_ONE, GL_ONE_MINUS_SRC_COLOR)
+void		VK_AddTarget( vkTarget_t *source, qboolean soft );
+// all of source into dest, which is as large. No target is begun.
+void		VK_CopyTarget( vkTarget_t *source, vkTarget_t *dest );
+// The depth of vk.depth at the pixels of count probes of the frame, from probe[first] on (x and y count from the
+// upper left corner). No target is begun. VK_ProbeDepth() has it when VK_BeginCommands() gets this frame again:
+// what the depth buffer holds, 0 to 1.
+void		VK_CopyProbeDepths( int first, int count );
+float		VK_ProbeDepth( const vkFrame_t *frame, int probe );

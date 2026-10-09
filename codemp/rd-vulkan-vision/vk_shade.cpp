@@ -564,12 +564,12 @@ static int VK_CullMode( cullType_t type ) {
 	qboolean front = (qboolean)( type == CT_FRONT_SIDED );
 
 	if ( type == CT_TWO_SIDED || backEnd.projection2D ) {
-		return VK_CULL_MODE_NONE;
+		return VKC_NONE;
 	}
 	if ( backEnd.viewParms.isMirror ) {
 		front = (qboolean)!front;
 	}
-	return front ? VK_CULL_MODE_FRONT_BIT : VK_CULL_MODE_BACK_BIT;
+	return front ? VKC_FRONT : VKC_BACK;
 }
 
 static uint32_t VK_TexEnv( int env ) {
@@ -967,7 +967,7 @@ void RB_StageIteratorGeneric( void ) {
 			// surface is not drawn. It marks its shape in the stencil buffer, both sides, where nothing is in front
 			// of it, and RB_DistortionFill() puts a bent copy of the screen into that shape when the view is done.
 			vk.stencil = &vk_distortionStencil;
-			VK_DrawTess( &draw, program, GLS_SRCBLEND_ZERO | GLS_DSTBLEND_ONE, VK_CULL_MODE_NONE, (qboolean)shader->polygonOffset );
+			VK_DrawTess( &draw, program, GLS_SRCBLEND_ZERO | GLS_DSTBLEND_ONE, VKC_NONE, (qboolean)shader->polygonOffset );
 			vk.stencil = NULL;
 			tr_stencilled = true;
 			continue;
@@ -975,7 +975,7 @@ void RB_StageIteratorGeneric( void ) {
 		if ( cpuColors ) {
 			VK_TessColors( tess.svars.colors );
 		}
-		VK_DrawTess( &draw, program, stateBits, ( refract && !pStage->bundle[1].image ) ? VK_CULL_MODE_NONE : cullMode,
+		VK_DrawTess( &draw, program, stateBits, ( refract && !pStage->bundle[1].image ) ? VKC_NONE : cullMode,
 			(qboolean)shader->polygonOffset );
 		if ( cpuColors ) {
 			VK_TessColors( NULL );
@@ -1046,7 +1046,7 @@ static void VK_DrawNormals( void ) {
 	draw.tex0 = draw.tex1 = tr.whiteImage->texnum;
 	VectorSet4( draw.baseColor, 1.0f, 1.0f, 1.0f, 1.0f );
 	VK_SetDepthRange( 0.0f, 0.0f );
-	VK_DrawTess( &draw, VKP_GENERIC, VK_GLS_LINES | GLS_DEPTHMASK_TRUE, VK_CULL_MODE_NONE, qfalse );
+	VK_DrawTess( &draw, VKP_GENERIC, VK_GLS_LINES | GLS_DEPTHMASK_TRUE, VKC_NONE, qfalse );
 	VK_SetDepthRange( 0.0f, 1.0f );
 }
 

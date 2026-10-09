@@ -1059,7 +1059,7 @@ void RE_StretchRaw( int x, int y, int w, int h, int cols, int rows, const byte *
 		draw.baseColor[0] = draw.baseColor[1] = draw.baseColor[2] = tr.identityLight;
 		draw.baseColor[3] = 1.0f;
 		draw.texMat0[0] = draw.texMat0[5] = 1.0f;
-		VK_DrawTess( &draw, VKP_GENERIC, GLS_DEPTHTEST_DISABLE, VK_CULL_MODE_NONE, qfalse );
+		VK_DrawTess( &draw, VKP_GENERIC, GLS_DEPTHTEST_DISABLE, VKC_NONE, qfalse );
 	}
 	tess.numIndexes = 0;
 	tess.numVertexes = 0;

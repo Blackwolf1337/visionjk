@@ -63,11 +63,13 @@ set(MPVulkanVisionIncludeDirectories
 
 # everything that touches the GPU
 set(MPVulkanVisionFiles
+	"${MPDir}/rd-vulkan-vision/vk_device.h"
 	"${MPDir}/rd-vulkan-vision/vk_funcs.h"
 	"${MPDir}/rd-vulkan-vision/vk_hooks.h"
 	"${MPDir}/rd-vulkan-vision/vk_local.h"
 	"${MPDir}/rd-vulkan-vision/vk_backend.cpp"
 	"${MPDir}/rd-vulkan-vision/vk_bc.cpp"
+	"${MPDir}/rd-vulkan-vision/vk_cmd.cpp"
 	"${MPDir}/rd-vulkan-vision/vk_frame.cpp"
 	"${MPDir}/rd-vulkan-vision/vk_gl.cpp"
 	"${MPDir}/rd-vulkan-vision/vk_image.cpp"
@@ -78,6 +80,7 @@ set(MPVulkanVisionFiles
 	"${MPDir}/rd-vulkan-vision/vk_post.cpp"
 	"${MPDir}/rd-vulkan-vision/vk_shade.cpp"
 	"${MPDir}/rd-vulkan-vision/vk_stubs.cpp"
+	"${MPDir}/rd-vulkan-vision/vk_texture.cpp"
 	"${MPDir}/rd-vulkan-vision/vk_world.cpp"
 	)
 source_group("renderer" FILES ${MPVulkanVisionFiles})

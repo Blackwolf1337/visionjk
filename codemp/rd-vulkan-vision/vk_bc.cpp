@@ -50,7 +50,7 @@ static struct vkBcPool_s {
 	int						job;			// counts up, so that every worker takes a job once
 	int						working;		// workers that are not through with the job yet
 
-	VkFormat				format;
+	vkFormat_t				format;
 	const byte				*rgba;
 	int						width, height;
 	byte					*out;
@@ -118,8 +118,8 @@ void VK_BC_Shutdown( void ) {
 	vk_bcPool.numThreads = 0;
 }
 
-VkDeviceSize VK_BC_Size( VkFormat format, int width, int height ) {
-	return (VkDeviceSize)( ( width + 3 ) / 4 ) * ( ( height + 3 ) / 4 ) * ( format == VK_FORMAT_BC3_UNORM_BLOCK ? 16 : 8 );
+vkSize_t VK_BC_Size( vkFormat_t format, int width, int height ) {
+	return (vkSize_t)( ( width + 3 ) / 4 ) * ( ( height + 3 ) / 4 ) * ( format == VKF_BC3 ? 16 : 8 );
 }
 
 // the vector functions of the engine are for floats, most of this is whole numbers
@@ -422,8 +422,8 @@ static void VK_BC_AlphaBlock( const byte *block, byte *out ) {
 }
 
 // rows of blocks from firstRow up to endRow
-static void VK_BC_CompressRows( VkFormat format, const byte *rgba, int width, int height, byte *out, int firstRow, int endRow ) {
-	const qboolean alpha = (qboolean)( format == VK_FORMAT_BC3_UNORM_BLOCK );
+static void VK_BC_CompressRows( vkFormat_t format, const byte *rgba, int width, int height, byte *out, int firstRow, int endRow ) {
+	const qboolean alpha = (qboolean)( format == VKF_BC3 );
 	byte block[64];
 
 	out += (size_t)firstRow * ( ( width + 3 ) / 4 ) * ( alpha ? 16 : 8 );
@@ -500,7 +500,7 @@ VK_BC_Compress
 One level of a texture, 32 bit RGBA, into VK_BC_Size() bytes at out
 ===============
 */
-void VK_BC_Compress( VkFormat format, const byte *rgba, int width, int height, byte *out ) {
+void VK_BC_Compress( vkFormat_t format, const byte *rgba, int width, int height, byte *out ) {
 	const int rows = ( height + 3 ) / 4;
 
 	if ( !vk_bcPool.numThreads || rows * ( ( width + 3 ) / 4 ) < VK_BC_SHARED_BLOCKS ) {

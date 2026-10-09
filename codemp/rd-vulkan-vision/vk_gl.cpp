@@ -287,7 +287,7 @@ void VK_GL_Flush( void ) {
 		stateBits = ( stateBits & ~( GLS_SRCBLEND_BITS | GLS_DSTBLEND_BITS ) ) | GLS_SRCBLEND_ZERO | GLS_DSTBLEND_ONE;
 	}
 	vk.stencil = ( gl_stencil.test || gl_stencil.depthLess ) ? &gl_stencil : NULL;
-	VK_DrawTess( &draw, VKP_GENERIC, stateBits, VK_CULL_MODE_NONE, qfalse );
+	VK_DrawTess( &draw, VKP_GENERIC, stateBits, VKC_NONE, qfalse );
 	vk.stencil = NULL;
 }
 
