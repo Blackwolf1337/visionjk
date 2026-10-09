@@ -488,6 +488,7 @@ does not begin with a dot. There is no list of the folder.
 */
 static void SV_WebSendPage( webConnection_t *c, const char *name ) {
 	const char	*root = sv_webRoot->string;
+	const char	*base = Cvar_VariableString( "fs_basepath" );
 	const char	*extension = COM_GetExtension( name );
 	const char	*type = "application/octet-stream";
 	const char	*s;
@@ -502,7 +503,9 @@ static void SV_WebSendPage( webConnection_t *c, const char *name ) {
 			break;
 		}
 	}
-	if ( *s || !name[0] || name[0] == '.' || strstr( name, ".." ) || s - name >= MAX_QPATH || !root[0] ) {
+	// (a path that does not fit would be cut, and what is left of it is the name of another file)
+	if ( *s || !name[0] || name[0] == '.' || strstr( name, ".." ) || s - name >= MAX_QPATH || !root[0]
+		|| strlen( base ) + strlen( root ) + strlen( name ) + 3 > sizeof( osPath ) ) {
 		SV_WebError( c, 404, "Not Found", "" );
 		return;
 	}
@@ -514,7 +517,7 @@ static void SV_WebSendPage( webConnection_t *c, const char *name ) {
 	if ( root[0] == '/' || root[0] == '\\' || ( root[0] && root[1] == ':' ) ) {
 		Com_sprintf( osPath, sizeof( osPath ), "%s%c%s", root, PATH_SEP, name );
 	} else {
-		Q_strncpyz( osPath, FS_BuildOSPath( Cvar_VariableString( "fs_basepath" ), root, name ), sizeof( osPath ) );
+		Q_strncpyz( osPath, FS_BuildOSPath( base, root, name ), sizeof( osPath ) );
 	}
 
 	if ( !( f = SV_WebOpen( osPath, &size ) ) ) {
@@ -625,7 +628,7 @@ static void SV_WebManifestBuild( void ) {
 	const uint32_t	oldSum = Com_BlockChecksum( manifestText, manifestLen );
 	const int		oldLen = manifestLen;
 	const int		count = FS_PakInfo( webPaks, SV_WEB_MAX_PACKS );
-	int				i, j, listed = 0;
+	int				i, j, listed = 0, unnamed = 0;
 
 	manifestLen = 0;
 	manifestCut = qfalse;
@@ -640,6 +643,8 @@ static void SV_WebManifestBuild( void ) {
 		int64_t	size;
 
 		if ( !SV_WebPakPath( &webPaks[i], path, sizeof( path ) ) ) {
+			Com_DPrintf( "web host: %s is not in the manifest\n", webPaks[i].fileName );
+			unnamed++;
 			continue;
 		}
 		for ( j = 0; j < i; j++ ) {
@@ -663,6 +668,11 @@ static void SV_WebManifestBuild( void ) {
 	}
 	if ( !manifestBuilt || manifestLen != oldLen || Com_BlockChecksum( manifestText, manifestLen ) != oldSum ) {
 		manifestGen++;
+		// (said once for a list, not every time it is put together)
+		if ( unnamed ) {
+			Com_Printf( S_COLOR_YELLOW "WARNING: web host: %d pk3 files are not handed out, their names are too long or have characters "
+				"a page can not ask for (developer 1 names them)\n", unnamed );
+		}
 	}
 	manifestBuilt = qtrue;
 }
@@ -727,12 +737,14 @@ static void SV_WebSendPak( webConnection_t *c, const char *head, const char *nam
 
 	// A part of the file only if nothing is tied to it: If-Range asks for the part of one version of the
 	// file, and this host tells no versions apart, so the whole file is the answer then.
-	// (not kept by the browser: the client keeps the files itself and tells them by their checksums)
 	// (and a value that fills the buffer was cut, which makes another range of it)
 	if ( !Web_HeaderValue( head, "Range", range, sizeof( range ) ) || strlen( range ) >= sizeof( range ) - 1
 		|| Web_FindHeader( head, "If-Range" ) ) {
 		range[0] = '\0';
 	}
+
+	// (no-store: the page keeps the files itself and tells them by their checksums, the cache of the browser
+	// is not to hold a second copy of 650 MB)
 	SV_WebSendFile( c, f, size, "application/octet-stream", "Cache-Control: no-store\r\nAccept-Ranges: bytes\r\n", range );
 }
 

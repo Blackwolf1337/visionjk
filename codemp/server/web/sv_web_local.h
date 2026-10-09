@@ -54,7 +54,7 @@ byte that comes in is read as one of an attacker: fixed buffers, a fixed table, 
 // listener in it too. So the table is a little smaller than 64 on every system.
 #define SV_WEB_MAX_CONNECTIONS	60
 #define SV_WEB_MAX_TRANSFERS	32			// of them hand out a file at once, the rest stays free for requests
-#define SV_WEB_MAX_PER_ADDRESS	8			// a browser opens 6 to a host
+#define SV_WEB_MAX_PER_ADDRESS	16			// a browser opens 6 to a host and a socket for each of its pages
 #define SV_WEB_MAX_ACCEPTS		16			// new connections taken in one wake-up
 #define SV_WEB_IN_SIZE			16384		// the head of a request, or the frames of a WebSocket that came in
 #define SV_WEB_MAX_PACKET		4096		// the longest message a WebSocket peer may send, which is one datagram
