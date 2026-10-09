@@ -24,6 +24,7 @@ The port starts from OpenJK commit 260c59c2 (2026-09-29) and is the commits on t
 | [voice.md](voice.md) | Voice chat with the microphone (not a JA+ feature): in the cgame, relayed by the game module, engine unchanged, clients without it unaffected |
 | [audio.md](audio.md) | Sound that knows the level (not a JA+ feature): `s_spatial`, with Steam Audio in the engine. Walls muffle, rooms ring, sounds come round corners. Measured, not listened to yet |
 | [renderer.md](renderer.md) | rd-vulkan-vision, a Vulkan renderer next to rd-vanilla (not a JA+ feature): how it is built, the state of each part, what runs on the GPU, differences, what is left |
+| [web.md](web.md) | The client in a browser (not a JA+ feature): built as WebAssembly, handed out by the dedicated server itself (`sv_webPort`), packets through a WebSocket. What runs and what never ran |
 
 ## Where the code is
 
