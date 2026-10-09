@@ -26,6 +26,11 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // against it: it takes the header from there and loads the library when the sound system starts, every function
 // through a pointer. Without the library file, or with s_spatial 0, nothing in here runs and the game sounds as
 // it always did.
+//
+// The client for a browser is the exception in two things, see "In a browser" in docs/japlus/audio.md. It can
+// load nothing, so Steam Audio is built from the submodule and linked in (JP_SPATIAL_STATIC), and the pointers
+// are filled from there. And a page has one thread (__EMSCRIPTEN__): what the two threads of this file do
+// elsewhere is done by the game itself, in a slice of each frame and while a level loads.
 
 #include "snd_local.h"
 #include "snd_spatial.h"
@@ -38,6 +43,9 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include <SDL.h>
 #include <atomic>
 #include <chrono>
+#ifdef __EMSCRIPTEN__
+#include <phonon_slices.h>	// lib/steamaudio-wasm: a pass of the reflections that returns when its time is up
+#endif
 
 #if defined(_WIN32)
 #define SPATIAL_LIBRARY	"phonon.dll"
@@ -241,6 +249,22 @@ static const char *spatialShockPaths[] = {
 #define SPATIAL_REFLECT_MSEC		50		// a new pass of the rays is not started sooner than this after the last one
 #define SPATIAL_DRY					8192	// samples of each voice that are kept for the reverb, a power of two
 
+// A page does a pass in the thread of the game, a slice of it in a frame (S_SpatialSlice), so a pass takes as
+// many frames as it has rays to trace. Its defaults there are the "Medium" of the menu: such a pass is 20 ms of
+// work in a page (mp/ffa3, Ryzen 9 5900X), one with the defaults of the desktop 60 ms. Steam Audio can not
+// start threads there, so it is told that it has one.
+#ifdef __EMSCRIPTEN__
+#define SPATIAL_DEFAULT				"1"
+#define SPATIAL_DEFAULT_RAYS		"1024"
+#define SPATIAL_DEFAULT_BOUNCES		"8"
+#define SPATIAL_THREADS				1
+#else
+#define SPATIAL_DEFAULT				"0"		// of s_spatial: the library has to be put next to the program first
+#define SPATIAL_DEFAULT_RAYS		"2048"
+#define SPATIAL_DEFAULT_BOUNCES		"16"
+#define SPATIAL_THREADS				2		// threads Steam Audio shares a pass or a bake between, inside the one of this file
+#endif
+
 enum {
 	WORKER_IDLE,		// waits for work. Only in this state may the simulator be given another level
 	WORKER_ASKED,
@@ -257,6 +281,11 @@ enum {
 #define SPATIAL_PATH_THRESHOLD		0.1f
 #define SPATIAL_PATH_VIS_RANGE		30.0f	// two probes further apart than this are not asked, in metres
 #define SPATIAL_PATH_RANGE			100.0f	// a way longer than this is no way
+// A page has no thread to work the paths out next to the game. It does it while the level loads, when it stands
+// still anyway, and only for a level of up to this many probes: the work and the memory it takes grow with their
+// square. mp/ffa3 has 740 and takes 0.4 s (Ryzen 9 5900X), so this is about 3 s. A larger level has no paths
+// there.
+#define SPATIAL_PAGE_PROBES			2000
 
 enum {
 	BAKE_NONE,
@@ -340,9 +369,22 @@ static cvar_t	*s_spatialBounces;
 static cvar_t	*s_spatialPaths;
 static cvar_t	*s_spatialPathLoss;
 static cvar_t	*s_spatialShock;
+#ifdef __EMSCRIPTEN__
+static cvar_t	*s_spatialBudget;
+#endif
+
+// what s_spatialInfo says the sound of the level took of the thread of the game
+enum {
+	COST_SIMULATE,		// what is in the way of each sound
+	COST_VOICES,		// the effects of the voices
+	COST_REVERB,		// the convolution with what the last pass found
+	COST_PASS,			// the passes themselves, where the game does them (a browser). Elsewhere a thread does
+	COST_NUM
+};
 
 static struct {
-	void		*library;
+	void		*library;			// NULL when it is linked in
+	qboolean	loaded;				// the functions are there
 	char		libraryPath[MAX_OSPATH];
 	qboolean	active;
 	float		shockCoeffs[5];		// the low pass of the thump: b0 b1 b2 a1 a2
@@ -371,7 +413,8 @@ static struct {
 	qboolean			probesWait;
 	qboolean			bakeWanted;			// this level has no file yet
 	int					numProbes;
-	int					bakeSeconds;		// what the bake took, 0: the probes came from the file
+	int					bakeMsec;			// what the bake took, 0: the probes came from the file
+	int					refusedProbes;		// not 0: the level has this many, too many to work its paths out here
 
 	// reflections
 	IPLSource					reverbSource;		// stands where the listener stands
@@ -381,6 +424,14 @@ static struct {
 	SDL_Thread					*worker;
 	SDL_sem						*workerWake;
 	int							reflectAsked;		// Sys_Milliseconds() of the last pass that was asked for
+	int							maxRays;			// the rays the simulator was made for
+#ifdef __EMSCRIPTEN__
+	int							pathsAsked;			// Sys_Milliseconds() of the last look for the ways round the corners
+	int							passCredit;			// microseconds the passes may take, see S_SpatialUpdate()
+	// of the pass that is being done: the time of its slices, how many they are, the longest, when it began
+	int							passUsec, passSlices, passPeakUsec, passBegun;
+	int							lastPassSlices, lastPassPeakUsec, lastPassMsec;
+#endif
 
 	// the listener and the sounds of this frame
 	int					frame;
@@ -397,6 +448,16 @@ static struct {
 	int					numVoices;
 	int					renderUsec, simulateUsec;	// of the last frame
 	int					peakRenderUsec;
+	// since the command last asked: microseconds by what they went into, the frame that took most, the voices
+	int					costFrames;
+	int					costUsec[COST_NUM];
+	int					costFrameUsec, costPeakUsec;
+	int					costVoices, costPeakVoices;
+
+	// s_spatialCapture
+	short				*capture;			// a WAV file in the making: its header, then two channels of 16 bit
+	int					captureSamples, captureWritten;
+	int					captureFrom;		// up to which sample of the mixer's time it has what was heard, -1: not begun
 } spatial;
 
 // The bake of the paths of one level. The thread has the fields to itself while it runs (spatialBakeState is
@@ -409,7 +470,7 @@ static struct {
 	IPLProbeBatch		batch;
 	IPLSerializedObject	saved;
 	int					numProbes;
-	int					seconds;
+	int					msec;
 } spatialBake;
 
 static std::atomic<int>	spatialBakeState;		// BAKE_*
@@ -451,11 +512,24 @@ static void S_SpatialUnload( void ) {
 		Sys_UnloadLibrary( spatial.library );
 	}
 	spatial.library = NULL;
+	spatial.loaded = qfalse;
 #define X( name )	q##name = NULL;
 	SPATIAL_FUNCTIONS( X )
 #undef X
 }
 
+#ifdef JP_SPATIAL_STATIC
+// The library is linked into the engine (the client for a browser, which can load nothing): the functions are
+// there, by their names.
+static qboolean S_SpatialLoad( void ) {
+	Q_strncpyz( spatial.libraryPath, "the engine itself (linked in)", sizeof( spatial.libraryPath ) );
+#define X( name )	q##name = name;
+	SPATIAL_FUNCTIONS( X )
+#undef X
+	spatial.loaded = qtrue;
+	return qtrue;
+}
+#else
 // next to the program first: that is where a build puts it. Then wherever the system looks.
 static qboolean S_SpatialLoad( void ) {
 	const char *missing = NULL;
@@ -478,8 +552,10 @@ static qboolean S_SpatialLoad( void ) {
 		S_SpatialUnload();
 		return qfalse;
 	}
+	spatial.loaded = qtrue;
 	return qtrue;
 }
+#endif
 
 /*
 ===============================================================================
@@ -540,6 +616,15 @@ static void S_SpatialReleaseScene( IPLScene *scene, IPLStaticMesh *mesh ) {
 }
 
 static void S_SpatialResetVoice( spatialVoice_t *v );
+#ifdef __EMSCRIPTEN__
+static void S_SpatialSlice( int limit );
+
+// spatial.refusedProbes says how many it has
+static void S_SpatialSayTooLarge( void ) {
+	Com_Printf( "s_spatial: this level has %i probes, a page works the paths out for up to %i: no sound round corners here\n",
+		spatial.refusedProbes, SPATIAL_PAGE_PROBES );
+}
+#endif
 
 /*
 ===============================================================================
@@ -554,6 +639,7 @@ static void IPLCALL S_SpatialBakeProgress( IPLfloat32 progress, void *userData )
 }
 
 // The thread that works the paths of one level out. It touches spatialBake and nothing of the engine.
+// A page has no thread for it: there the game calls this while the level loads, see S_SpatialLoadMap().
 static int SDLCALL S_SpatialBaker( void *unused ) {
 	const int start = S_SpatialUsec();
 	IPLProbeGenerationParams generate;
@@ -595,14 +681,20 @@ static int SDLCALL S_SpatialBaker( void *unused ) {
 		bake.threshold = SPATIAL_PATH_THRESHOLD;
 		bake.visRange = SPATIAL_PATH_VIS_RANGE;
 		bake.pathRange = SPATIAL_PATH_RANGE;
-		bake.numThreads = 2;
-		if ( spatialBake.numProbes > 1 ) {
+		bake.numThreads = SPATIAL_THREADS;
+#ifdef __EMSCRIPTEN__
+		// too large to do while the game waits, see SPATIAL_PAGE_PROBES: nothing is kept of it
+		if ( spatialBake.numProbes > SPATIAL_PAGE_PROBES ) {
+			qiplProbeBatchRelease( &spatialBake.batch );
+		}
+#endif
+		if ( spatialBake.batch && spatialBake.numProbes > 1 ) {
 			qiplPathBakerBake( spatial.context, &bake, S_SpatialBakeProgress, NULL );
 		}
 
 		// as it goes into the file. The game writes it, the file system of the engine is not for this thread.
 		memset( &serialized, 0, sizeof( serialized ) );
-		if ( qiplSerializedObjectCreate( spatial.context, &serialized, &spatialBake.saved ) == IPL_STATUS_SUCCESS ) {
+		if ( spatialBake.batch && qiplSerializedObjectCreate( spatial.context, &serialized, &spatialBake.saved ) == IPL_STATUS_SUCCESS ) {
 			qiplProbeBatchSave( spatialBake.batch, spatialBake.saved );
 		} else {
 			spatialBake.saved = NULL;
@@ -612,7 +704,7 @@ static int SDLCALL S_SpatialBaker( void *unused ) {
 		qiplProbeArrayRelease( &array );
 	}
 	qiplSceneRelease( &spatialBake.scene );
-	spatialBake.seconds = ( S_SpatialUsec() - start ) / 1000000;
+	spatialBake.msec = ( S_SpatialUsec() - start ) / 1000;
 	spatialBakeState.store( BAKE_DONE );
 	return 0;
 }
@@ -635,7 +727,7 @@ static qboolean S_SpatialLoadPaths( void ) {
 		if ( qiplProbeBatchLoad( spatial.context, object, &spatial.nextProbes ) == IPL_STATUS_SUCCESS ) {
 			qiplProbeBatchCommit( spatial.nextProbes );
 			spatial.numProbes = qiplProbeBatchGetNumProbes( spatial.nextProbes );
-			spatial.bakeSeconds = 0;
+			spatial.bakeMsec = 0;
 			spatial.probesWait = qtrue;
 			loaded = qtrue;
 		} else {
@@ -656,9 +748,11 @@ ready to the simulator when no pass of the reflections runs. Nothing in here wai
 ===============
 */
 static void S_SpatialThinkPaths( void ) {
-	if ( spatialBake.thread && spatialBakeState.load() == BAKE_DONE ) {
-		// the thread is at its end: this does not wait
-		SDL_WaitThread( spatialBake.thread, NULL );
+	if ( spatialBakeState.load() == BAKE_DONE ) {
+		// the thread is at its end: this does not wait. A page had none.
+		if ( spatialBake.thread ) {
+			SDL_WaitThread( spatialBake.thread, NULL );
+		}
 		spatialBake.thread = NULL;
 		spatialBakeState.store( BAKE_NONE );
 
@@ -666,12 +760,18 @@ static void S_SpatialThinkPaths( void ) {
 			FS_WriteFile( spatial.pathFile, qiplSerializedObjectGetData( spatialBake.saved ), (int)qiplSerializedObjectGetSize( spatialBake.saved ) );
 			spatial.nextProbes = spatialBake.batch;
 			spatial.numProbes = spatialBake.numProbes;
-			spatial.bakeSeconds = Q_max( 1, spatialBake.seconds );
+			spatial.bakeMsec = Q_max( 1, spatialBake.msec );
 			spatial.probesWait = qtrue;
 			spatialBake.batch = NULL;
-			Com_Printf( "s_spatial: the paths of this level are worked out, %i probes in %i s, kept in %s\n", spatial.numProbes,
-				spatial.bakeSeconds, spatial.pathFile );
+			Com_Printf( "s_spatial: the paths of this level are worked out, %i probes in %.1f s, kept in %s\n", spatial.numProbes,
+				spatial.bakeMsec * 0.001f, spatial.pathFile );
 		}
+#ifdef __EMSCRIPTEN__
+		else if ( spatialBake.sceneNumber == spatial.sceneNumber && spatialBake.numProbes > SPATIAL_PAGE_PROBES ) {
+			spatial.refusedProbes = spatialBake.numProbes;
+			S_SpatialSayTooLarge();
+		}
+#endif
 		// a bake for a level that is gone
 		if ( spatialBake.batch ) {
 			qiplProbeBatchRelease( &spatialBake.batch );
@@ -681,7 +781,7 @@ static void S_SpatialThinkPaths( void ) {
 		}
 	}
 
-	if ( spatial.bakeWanted && !spatialBake.thread && spatial.scene && !spatial.sceneWaits && s_spatialPaths->integer ) {
+	if ( spatial.bakeWanted && spatialBakeState.load() == BAKE_NONE && spatial.scene && !spatial.sceneWaits && s_spatialPaths->integer ) {
 		spatial.bakeWanted = qfalse;
 		spatialBake.scene = qiplSceneRetain( spatial.scene );
 		spatialBake.mins = spatial.mins;
@@ -689,6 +789,10 @@ static void S_SpatialThinkPaths( void ) {
 		spatialBake.sceneNumber = spatial.sceneNumber;
 		spatialBakeProgress.store( 0 );
 		spatialBakeState.store( BAKE_RUNNING );
+#ifdef __EMSCRIPTEN__
+		// done when this returns, and picked up by the next call of this function
+		S_SpatialBaker( NULL );
+#else
 		spatialBake.thread = SDL_CreateThread( S_SpatialBaker, "s_spatialBake", NULL );
 		if ( !spatialBake.thread ) {
 			qiplSceneRelease( &spatialBake.scene );
@@ -696,6 +800,7 @@ static void S_SpatialThinkPaths( void ) {
 		} else {
 			Com_Printf( "s_spatial: working out the paths of this level in the background\n" );
 		}
+#endif
 	}
 
 	if ( spatial.probesWait && !spatial.sceneWaits && spatialWorkerState.load() == WORKER_IDLE ) {
@@ -752,6 +857,7 @@ static void S_SpatialTakeScene( void ) {
 
 	// its paths: from the file of an earlier visit, or worked out now
 	spatial.bakeWanted = qfalse;
+	spatial.refusedProbes = 0;
 	if ( spatial.scene && s_spatialPaths->integer && !S_SpatialLoadPaths() ) {
 		spatial.bakeWanted = qtrue;
 	}
@@ -776,6 +882,9 @@ S_SpatialLoadMap
 The collision model of a level was loaded, or the sound system starts while a level is. Runs while the
 loading screen is up: building the mesh of a large level takes a moment. The level waits to be taken over,
 see S_SpatialTakeScene().
+
+A page takes it over here and now, and works its paths out: it has no thread that could do that later next
+to the game, and it stands still while a level loads anyway.
 ===============
 */
 void S_SpatialLoadMap( const char *mapname ) {
@@ -858,6 +967,13 @@ void S_SpatialLoadMap( const char *mapname ) {
 	if ( spatial.nextTriangles ) {
 		Com_Printf( "s_spatial: %i triangles of the level in %i ms\n", spatial.nextTriangles, spatial.sceneMsec );
 	}
+#ifdef __EMSCRIPTEN__
+	// the pass that may be in its slices is brought to its end, so that the simulator can be given the level
+	S_SpatialSlice( 0 );
+	S_SpatialTakeScene();
+	S_SpatialThinkPaths();		// the bake, if this level has no file
+	S_SpatialThinkPaths();		//	and what it made
+#endif
 }
 
 /*
@@ -1135,7 +1251,27 @@ static float IPLCALL S_SpatialPathFade( IPLfloat32 distance, void *userData ) {
 	return fade > 0.0f ? fade : 0.0f;
 }
 
+// The rays of a pass. Steam Audio spreads the rays the simulator was made for (spatial.maxRays) round the
+// listener in the order of their direction, and a pass of fewer takes the first of them: on the desktop, where
+// the simulator is made for SPATIAL_MAX_RAYS, the 2048 of the default are the quarter of the circle those
+// begin with. A page makes the simulator for the rays it traces, see S_SpatialCreateVoices().
+static int S_SpatialRays( void ) {
+#ifdef __EMSCRIPTEN__
+	return spatial.maxRays;
+#else
+	return Com_Clampi( 256, SPATIAL_MAX_RAYS, s_spatialRays->integer );
+#endif
+}
+
 static void S_SpatialSimulate( void ) {
+	// A pass that a page does in slices over many frames (S_SpatialSlice) keeps what it began with: its rays
+	// all start from one place, and are as many and as long as its first ones. A thread has its pass done
+	// before that matters.
+#ifdef __EMSCRIPTEN__
+	const qboolean passBegun = (qboolean)( spatialWorkerState.load() != WORKER_IDLE );
+#else
+	const qboolean passBegun = qfalse;
+#endif
 	IPLSimulationSharedInputs shared;
 	vec3_t right;
 
@@ -1146,15 +1282,15 @@ static void S_SpatialSimulate( void ) {
 	S_SpatialDirection( spatial.listenerAxis[2], &shared.listener.up );
 	S_SpatialDirection( right, &shared.listener.right );
 	// for the reflections, which the thread of S_SpatialWorker() works out from where the listener is now
-	shared.numRays = Com_Clampi( 256, SPATIAL_MAX_RAYS, s_spatialRays->integer );
+	shared.numRays = S_SpatialRays();
 	shared.numBounces = Com_Clampi( 1, 64, s_spatialBounces->integer );
 	shared.duration = SPATIAL_REVERB_SECONDS;
 	shared.order = SPATIAL_REVERB_ORDER;
 	shared.irradianceMinDistance = 1.0f;
-	qiplSimulatorSetSharedInputs( spatial.simulator,
-		(IPLSimulationFlags)( IPL_SIMULATIONFLAGS_DIRECT | IPL_SIMULATIONFLAGS_REFLECTIONS | IPL_SIMULATIONFLAGS_PATHING ), &shared );
+	qiplSimulatorSetSharedInputs( spatial.simulator, (IPLSimulationFlags)( IPL_SIMULATIONFLAGS_DIRECT | IPL_SIMULATIONFLAGS_PATHING
+		| ( passBegun ? 0 : IPL_SIMULATIONFLAGS_REFLECTIONS ) ), &shared );
 
-	{
+	if ( !passBegun ) {
 		IPLSimulationInputs inputs;
 
 		memset( &inputs, 0, sizeof( inputs ) );
@@ -1462,6 +1598,59 @@ ring.
 ===============================================================================
 */
 
+#ifdef __EMSCRIPTEN__
+
+/*
+===============
+S_SpatialSlice
+
+A page: what the thread of S_SpatialWorker() does elsewhere. A pass that was asked for is begun, one that is
+begun gets its next slice: Steam Audio traces rays for limit microseconds and returns
+(lib/steamaudio-wasm/phonon_slices.h), and the call that finds no ray left makes the impulse response of them.
+A slice is one job of 32 rays at least, whatever limit says. limit 0: what is left of a pass that is begun,
+all at once, which is for when the game stands still anyway. While a pass is in its slices the state is
+WORKER_RUNNING, and what must wait for the thread elsewhere waits here too.
+===============
+*/
+static void S_SpatialSlice( int limit ) {
+	const int start = S_SpatialUsec();
+	int asked = WORKER_ASKED;
+	int took;
+
+	// a pass that was asked for begins, unless all that is wanted is the end of one that is begun
+	if ( spatialWorkerState.compare_exchange_strong( asked, limit ? WORKER_RUNNING : WORKER_IDLE ) ) {
+		spatial.passUsec = spatial.passSlices = spatial.passPeakUsec = 0;
+		spatial.passBegun = Sys_Milliseconds();
+	}
+	if ( spatialWorkerState.load() != WORKER_RUNNING ) {
+		return;
+	}
+	iplxSetSliceBudget( limit );
+	qiplSimulatorRunReflections( spatial.simulator );
+	iplxSetSliceBudget( 0 );
+
+	took = S_SpatialUsec() - start;
+	// what is done while the game stands still anyway takes nothing off the frames after it
+	if ( limit ) {
+		spatial.passCredit -= took;
+	}
+	spatial.passUsec += took;
+	spatial.passSlices++;
+	spatial.passPeakUsec = Q_max( spatial.passPeakUsec, took );
+	spatial.costUsec[COST_PASS] += took;
+	spatial.costFrameUsec += took;
+	if ( !iplxSlicePending() ) {
+		spatialReflectUsec.store( spatial.passUsec );
+		spatialReflectPasses.fetch_add( 1 );
+		spatial.lastPassSlices = spatial.passSlices;
+		spatial.lastPassPeakUsec = spatial.passPeakUsec;
+		spatial.lastPassMsec = Sys_Milliseconds() - spatial.passBegun;
+		spatialWorkerState.store( WORKER_IDLE );
+	}
+}
+
+#else
+
 static int SDLCALL S_SpatialWorker( void *unused ) {
 	for ( ;; ) {
 		SDL_SemWait( spatial.workerWake );
@@ -1486,13 +1675,28 @@ static int SDLCALL S_SpatialWorker( void *unused ) {
 	return 0;
 }
 
+#endif
+
 // The next pass of the thread, if the last one is done and not too long ago: the reflections around the
 // listener, and the ways of the sounds round the corners. Never while a level waits to be taken over.
 static void S_SpatialAskPass( void ) {
 	const int now = Sys_Milliseconds();
-	const qboolean paths = (qboolean)( spatial.probes && s_spatialPaths->integer );
+	qboolean paths = (qboolean)( spatial.probes && s_spatialPaths->integer );
 	int idle = WORKER_IDLE;
 
+#ifdef __EMSCRIPTEN__
+	// A page: the ways round the corners are looked up in what was worked out for the level, which is little
+	// work (20 microseconds for two sounds behind a wall). Done here and as often as the desktop does it, and
+	// not as a part of a pass, which takes a page many frames.
+	if ( paths && !spatial.sceneWaits && now - spatial.pathsAsked >= SPATIAL_REFLECT_MSEC ) {
+		const int start = S_SpatialUsec();
+
+		spatial.pathsAsked = now;
+		qiplSimulatorRunPathing( spatial.simulator );
+		spatial.costUsec[COST_PASS] += S_SpatialUsec() - start;
+	}
+	paths = qfalse;
+#endif
 	if ( ( !s_spatialReflections->integer && !paths ) || spatial.sceneWaits || now - spatial.reflectAsked < SPATIAL_REFLECT_MSEC ) {
 		return;
 	}
@@ -1502,7 +1706,9 @@ static void S_SpatialAskPass( void ) {
 		spatialPassPaths.store( paths ? 1 : 0 );
 		if ( spatialWorkerState.compare_exchange_strong( idle, WORKER_ASKED ) ) {
 			spatial.reflectAsked = now;
+#ifndef __EMSCRIPTEN__
 			SDL_SemPost( spatial.workerWake );
+#endif
 		}
 	}
 }
@@ -1582,6 +1788,102 @@ static void S_SpatialRenderReverb( int c ) {
 
 /*
 ===============
+S_SpatialCapture
+
+s_spatialCapture <seconds>: what the voices and the reverb give the mixer, as it is heard, into the file
+steamaudio/capture.wav of the home path. For measuring without ears where SDL has no sound driver that writes
+a file (a page) and with the same code where it has one, see docs/japlus/audio.md. What the mixer plays itself
+is not in it: the sounds of the own player, the menus, the music.
+
+What is behind the first sample the mixer paints in a frame is not painted again and no voice adds to it any
+more: that is what was heard, and it is still in the ring unless the game stood still for a third of a second.
+===============
+*/
+#define SPATIAL_WAV_HEADER	44		// bytes
+
+static void S_SpatialCapturePut( byte *out, unsigned value, int bytes ) {
+	for ( int i = 0; i < bytes; i++ ) {
+		out[i] = ( value >> ( i * 8 ) ) & 0xff;		// little endian, as the format wants it
+	}
+}
+
+static void S_SpatialCaptureEnd( qboolean write ) {
+	if ( spatial.capture && write ) {
+		byte *header = (byte *)spatial.capture;
+		const int dataBytes = spatial.captureWritten * 2 * (int)sizeof( short );
+
+		memcpy( header, "RIFF", 4 );
+		S_SpatialCapturePut( header + 4, SPATIAL_WAV_HEADER - 8 + dataBytes, 4 );
+		memcpy( header + 8, "WAVEfmt ", 8 );
+		S_SpatialCapturePut( header + 16, 16, 4 );
+		S_SpatialCapturePut( header + 20, 1, 2 );		// PCM
+		S_SpatialCapturePut( header + 22, 2, 2 );		// channels
+		S_SpatialCapturePut( header + 24, spatial.audio.samplingRate, 4 );
+		S_SpatialCapturePut( header + 28, spatial.audio.samplingRate * 2 * (int)sizeof( short ), 4 );
+		S_SpatialCapturePut( header + 32, 2 * (int)sizeof( short ), 2 );
+		S_SpatialCapturePut( header + 34, 16, 2 );
+		memcpy( header + 36, "data", 4 );
+		S_SpatialCapturePut( header + 40, dataBytes, 4 );
+		FS_WriteFile( "steamaudio/capture.wav", spatial.capture, SPATIAL_WAV_HEADER + dataBytes );
+		Com_Printf( "s_spatialCapture: %.1f s in steamaudio/capture.wav\n", (float)spatial.captureWritten / spatial.audio.samplingRate );
+	}
+	if ( spatial.capture ) {
+		Z_Free( spatial.capture );
+	}
+	spatial.capture = NULL;
+}
+
+// from: the first sample the mixer paints in this frame
+static void S_SpatialCapture( int from ) {
+	short *out;
+
+	if ( !spatial.capture ) {
+		return;
+	}
+	// the first frame, or the time of the mixer went back
+	if ( spatial.captureFrom < 0 || from < spatial.captureFrom ) {
+		spatial.captureFrom = from;
+	}
+	out = spatial.capture + SPATIAL_WAV_HEADER / (int)sizeof( short ) + spatial.captureWritten * 2;
+	for ( int t = spatial.captureFrom; t < from && spatial.captureWritten < spatial.captureSamples; t++, spatial.captureWritten++, out += 2 ) {
+		const float *slot = spatial.ring[t & ( SPATIAL_RING - 1 )];
+
+		// The ring counts in 16 bit samples times 256, as the paint buffer does. What it no longer has, or
+		// never had, is silence.
+		if ( t >= spatial.ringEnd || t < spatial.ringEnd - SPATIAL_RING ) {
+			out[0] = out[1] = 0;
+		} else {
+			out[0] = (short)Com_Clampi( -32768, 32767, (int)( slot[0] * ( 1.0f / 256.0f ) ) );
+			out[1] = (short)Com_Clampi( -32768, 32767, (int)( slot[1] * ( 1.0f / 256.0f ) ) );
+		}
+	}
+	spatial.captureFrom = from;
+	if ( spatial.captureWritten >= spatial.captureSamples ) {
+		S_SpatialCaptureEnd( qtrue );
+	}
+}
+
+static void S_SpatialCapture_f( void ) {
+	const float seconds = Com_Clamp( 1.0f, 120.0f, atof( Cmd_Argv( 1 ) ) );
+
+	if ( Cmd_Argc() != 2 ) {
+		Com_Printf( "usage: s_spatialCapture <seconds>, 1 to 120. Writes what the sounds of the level give the mixer to steamaudio/capture.wav\n" );
+		return;
+	}
+	if ( !spatial.active ) {
+		Com_Printf( "s_spatialCapture: s_spatial does not run\n" );
+		return;
+	}
+	S_SpatialCaptureEnd( qfalse );
+	spatial.captureSamples = (int)( seconds * spatial.audio.samplingRate );
+	spatial.captureWritten = 0;
+	spatial.captureFrom = -1;
+	// as long as it was asked for, so the size is not known before
+	spatial.capture = (short *)Z_Malloc( SPATIAL_WAV_HEADER + spatial.captureSamples * 2 * (int)sizeof( short ), TAG_TEMP_WORKSPACE, qfalse );
+}
+
+/*
+===============
 S_SpatialEndFrame
 
 All sounds of the frame are named. from: the first sample the mixer paints now, target: up to which sample the
@@ -1590,7 +1892,7 @@ voices have to be in the ring.
 */
 void S_SpatialEndFrame( int from, int target ) {
 	const int start = S_SpatialUsec();
-	int simulated;
+	int simulated, voicesDone;
 
 	int limit = target;
 
@@ -1607,6 +1909,7 @@ void S_SpatialEndFrame( int from, int target ) {
 		spatial.ringEnd = from;
 	}
 	spatial.lastPaint = from;
+	S_SpatialCapture( from );
 	if ( spatial.ringEnd < from ) {
 		spatial.ringEnd = from;
 	}
@@ -1670,6 +1973,7 @@ void S_SpatialEndFrame( int from, int target ) {
 	}
 
 	// the reverb, up to where every voice that plays is rendered, and the next pass of the rays
+	voicesDone = S_SpatialUsec();
 	if ( s_spatialReflections->integer ) {
 		if ( spatial.reverbRendered < from ) {
 			spatial.reverbRendered = from;
@@ -1678,6 +1982,7 @@ void S_SpatialEndFrame( int from, int target ) {
 			S_SpatialRenderReverb( spatial.reverbRendered );
 			spatial.reverbRendered += SPATIAL_FRAME;
 		}
+		spatial.costUsec[COST_REVERB] += S_SpatialUsec() - voicesDone;
 	}
 	S_SpatialAskPass();
 
@@ -1695,6 +2000,16 @@ void S_SpatialEndFrame( int from, int target ) {
 	if ( spatial.renderUsec > spatial.peakRenderUsec ) {
 		spatial.peakRenderUsec = spatial.renderUsec;
 	}
+
+	// what this frame took, with what S_SpatialUpdate() did of a pass before it (a page)
+	spatial.costFrames++;
+	spatial.costUsec[COST_SIMULATE] += spatial.simulateUsec;
+	spatial.costUsec[COST_VOICES] += voicesDone - simulated;
+	spatial.costFrameUsec += S_SpatialUsec() - start;
+	spatial.costPeakUsec = Q_max( spatial.costPeakUsec, spatial.costFrameUsec );
+	spatial.costFrameUsec = 0;
+	spatial.costVoices += spatial.numVoices;
+	spatial.costPeakVoices = Q_max( spatial.costPeakVoices, spatial.numVoices );
 }
 
 // the mixer paints the samples from to to: what the voices have for them is added
@@ -1714,6 +2029,13 @@ void S_SpatialPaint( int from, int to, portable_samplepair_t *paint ) {
 float S_SpatialAhead( void ) {
 	return Com_Clamp( 0.08f, 0.5f, s_spatialAhead->value );
 }
+
+#ifdef __EMSCRIPTEN__
+// microseconds of a frame for the passes
+static int S_SpatialBudget( void ) {
+	return (int)( Com_Clamp( 0.1f, 8.0f, s_spatialBudget->value ) * 1000.0f );
+}
+#endif
 
 static void S_SpatialInfo_f( void ) {
 	if ( !s_spatial->integer ) {
@@ -1745,9 +2067,31 @@ static void S_SpatialInfo_f( void ) {
 	Com_Printf( "%i sounds in the level, rendered %i ms ahead. Last frame: %i us for what is in the way, %i us to render (most so far: %i us)\n",
 		spatial.numVoices, (int)( S_SpatialAhead() * 1000.0f ), spatial.simulateUsec, spatial.renderUsec, spatial.peakRenderUsec );
 	spatial.peakRenderUsec = 0;
+	// What it took of the thread of the game since this was last asked. A browser counts time in steps of 0.1 ms
+	// or more: the averages are of many frames and hold, the one frame that took most is that coarse.
+	if ( spatial.costFrames ) {
+		const float perFrame = 1.0f / spatial.costFrames;
+
+		Com_Printf( "%i frames since this was last asked, %.1f sounds in each (most: %i). Of the thread of the game a frame took %.0f us (most: %i us):"
+			" %.0f us what is in the way, %.0f us the sounds, %.0f us the reverb",
+			spatial.costFrames, spatial.costVoices * perFrame, spatial.costPeakVoices,
+			( spatial.costUsec[COST_SIMULATE] + spatial.costUsec[COST_VOICES] + spatial.costUsec[COST_REVERB] + spatial.costUsec[COST_PASS] ) * perFrame,
+			spatial.costPeakUsec, spatial.costUsec[COST_SIMULATE] * perFrame, spatial.costUsec[COST_VOICES] * perFrame,
+			spatial.costUsec[COST_REVERB] * perFrame );
+#ifdef __EMSCRIPTEN__
+		Com_Printf( ", %.0f us the passes", spatial.costUsec[COST_PASS] * perFrame );
+#endif
+		Com_Printf( "\n" );
+	}
+	spatial.costFrames = spatial.costPeakUsec = spatial.costVoices = spatial.costPeakVoices = 0;
+	memset( spatial.costUsec, 0, sizeof( spatial.costUsec ) );
 	if ( s_spatialReflections->integer ) {
-		Com_Printf( "reflections: %i rays, %i bounces, the last pass took %i ms, %i passes so far\n", Com_Clampi( 256, SPATIAL_MAX_RAYS, s_spatialRays->integer ),
+		Com_Printf( "reflections: %i rays, %i bounces, the last pass took %i ms, %i passes so far\n", S_SpatialRays(),
 			Com_Clampi( 1, 64, s_spatialBounces->integer ), spatialReflectUsec.load() / 1000, spatialReflectPasses.load() );
+#ifdef __EMSCRIPTEN__
+		Com_Printf( "  done by the game itself, with %.2f ms of each frame (s_spatialBudget): the last pass in %i slices over %i ms, the longest %.1f ms\n",
+			S_SpatialBudget() * 0.001f, spatial.lastPassSlices, spatial.lastPassMsec, spatial.lastPassPeakUsec * 0.001f );
+#endif
 	} else {
 		Com_Printf( "reflections: off (s_spatialReflections 0)\n" );
 	}
@@ -1756,11 +2100,13 @@ static void S_SpatialInfo_f( void ) {
 	} else if ( spatialBakeState.load() == BAKE_RUNNING && spatialBake.sceneNumber == spatial.sceneNumber ) {
 		Com_Printf( "paths: being worked out for this level, %i %%\n", spatialBakeProgress.load() );
 	} else if ( spatial.probes ) {
-		if ( spatial.bakeSeconds ) {
-			Com_Printf( "paths: %i probes, worked out in %i s, kept in %s\n", spatial.numProbes, spatial.bakeSeconds, spatial.pathFile );
+		if ( spatial.bakeMsec ) {
+			Com_Printf( "paths: %i probes, worked out in %.1f s, kept in %s\n", spatial.numProbes, spatial.bakeMsec * 0.001f, spatial.pathFile );
 		} else {
 			Com_Printf( "paths: %i probes from %s\n", spatial.numProbes, spatial.pathFile );
 		}
+	} else if ( spatial.refusedProbes ) {
+		Com_Printf( "paths: none, the level has %i probes and a page works them out for up to %i\n", spatial.refusedProbes, SPATIAL_PAGE_PROBES );
 	} else {
 		Com_Printf( "paths: none yet\n" );
 	}
@@ -1814,7 +2160,8 @@ static void S_SpatialRelease( void ) {
 	}
 	spatialBakeState.store( BAKE_NONE );
 
-	if ( spatial.library ) {
+	S_SpatialCaptureEnd( qfalse );
+	if ( spatial.loaded ) {
 		if ( spatial.simulator ) {
 			if ( spatial.probes ) {
 				qiplSimulatorRemoveProbeBatch( spatial.simulator, spatial.probes );
@@ -1888,13 +2235,22 @@ static qboolean S_SpatialCreateVoices( void ) {
 	simulation.sceneType = IPL_SCENETYPE_DEFAULT;
 	simulation.reflectionType = IPL_REFLECTIONEFFECTTYPE_CONVOLUTION;
 	simulation.maxNumOcclusionSamples = SPATIAL_OCCLUSION_SAMPLES;
-	simulation.maxNumRays = SPATIAL_MAX_RAYS;
+#ifdef __EMSCRIPTEN__
+	// A pass traces the first rays of those the simulator has, which are not spread round the listener unless
+	// it traces them all (S_SpatialRays). A page traces fewer than the desktop, so it has the simulator made
+	// for what it traces, and s_spatialRays is read here.
+	spatial.maxRays = Com_Clampi( 256, SPATIAL_MAX_RAYS, s_spatialRays->integer );
+	s_spatialRays->modified = qfalse;
+#else
+	spatial.maxRays = SPATIAL_MAX_RAYS;
+#endif
+	simulation.maxNumRays = spatial.maxRays;
 	simulation.numDiffuseSamples = SPATIAL_DIFFUSE_SAMPLES;
 	simulation.maxDuration = SPATIAL_REVERB_SECONDS;
 	simulation.maxOrder = SPATIAL_REVERB_ORDER;
 	simulation.maxNumSources = SPATIAL_VOICES + 1;
 	// threads Steam Audio shares a pass of the rays between, inside the one of S_SpatialWorker()
-	simulation.numThreads = 2;
+	simulation.numThreads = SPATIAL_THREADS;
 	simulation.numVisSamples = 4;
 	simulation.samplingRate = spatial.audio.samplingRate;
 	simulation.frameSize = spatial.audio.frameSize;
@@ -1949,9 +2305,14 @@ static qboolean S_SpatialCreateVoices( void ) {
 	qiplSourceAdd( spatial.reverbSource, spatial.simulator );
 	qiplSimulatorCommit( spatial.simulator );
 
+#ifdef __EMSCRIPTEN__
+	// no thread: S_SpatialSlice() does the passes
+	return qtrue;
+#else
 	spatial.workerWake = SDL_CreateSemaphore( 0 );
 	spatial.worker = spatial.workerWake ? SDL_CreateThread( S_SpatialWorker, "s_spatial", NULL ) : NULL;
 	return (qboolean)( spatial.worker != NULL );
+#endif
 }
 
 /*
@@ -1965,17 +2326,24 @@ void S_SpatialInit( void ) {
 	IPLContextSettings contextSettings;
 	IPLHRTFSettings hrtfSettings;
 
-	s_spatial = Cvar_Get( "s_spatial", "0", CVAR_ARCHIVE | CVAR_LATCH, "Sound that knows the level, with Steam Audio (snd_restart)" );
+	s_spatial = Cvar_Get( "s_spatial", SPATIAL_DEFAULT, CVAR_ARCHIVE | CVAR_LATCH, "Sound that knows the level, with Steam Audio (snd_restart)" );
 	s_spatialHrtf = Cvar_Get( "s_spatialHrtf", "1", CVAR_ARCHIVE, "s_spatial: 1 direction for headphones (HRTF), 0 for speakers" );
 	s_spatialAhead = Cvar_Get( "s_spatialAhead", "0.1", CVAR_ARCHIVE, "s_spatial: seconds of sound rendered ahead. Less follows a turn of the head sooner, more survives a longer hitch" );
 	s_spatialReflections = Cvar_Get( "s_spatialReflections", "1", CVAR_ARCHIVE, "s_spatial: 1 the room around the listener rings, worked out with rays. 0 no reverb" );
 	s_spatialReverb = Cvar_Get( "s_spatialReverb", "1", CVAR_ARCHIVE, "s_spatial: how loud the reverb is" );
-	s_spatialRays = Cvar_Get( "s_spatialRays", "2048", CVAR_ARCHIVE, "s_spatial: rays of a pass of the reflections, 256 to 8192" );
-	s_spatialBounces = Cvar_Get( "s_spatialBounces", "16", CVAR_ARCHIVE, "s_spatial: how often a ray is followed off a wall" );
+#ifdef __EMSCRIPTEN__
+	s_spatialRays = Cvar_Get( "s_spatialRays", SPATIAL_DEFAULT_RAYS, CVAR_ARCHIVE, "s_spatial: rays of a pass of the reflections, 256 to 8192. In a browser from the next snd_restart on" );
+	s_spatialPaths = Cvar_Get( "s_spatialPaths", "1", CVAR_ARCHIVE, "s_spatial: 1 a sound comes round corners. Worked out once per level while it loads, in a browser not for a large level" );
+	s_spatialBudget = Cvar_Get( "s_spatialBudget", "0.75", CVAR_ARCHIVE, "s_spatial in a browser: milliseconds of a frame the passes of the reflections take on average, 0.1 to 8. More: the reverb follows the listener sooner" );
+#else
+	s_spatialRays = Cvar_Get( "s_spatialRays", SPATIAL_DEFAULT_RAYS, CVAR_ARCHIVE, "s_spatial: rays of a pass of the reflections, 256 to 8192" );
 	s_spatialPaths = Cvar_Get( "s_spatialPaths", "1", CVAR_ARCHIVE, "s_spatial: 1 a sound comes round corners. Worked out once per level in the background" );
+#endif
+	s_spatialBounces = Cvar_Get( "s_spatialBounces", SPATIAL_DEFAULT_BOUNCES, CVAR_ARCHIVE, "s_spatial: how often a ray is followed off a wall" );
 	s_spatialPathLoss = Cvar_Get( "s_spatialPathLoss", "1", CVAR_ARCHIVE, "s_spatial: 1 a sound loses on its way round a corner what Steam Audio works out. 0 it only gets duller, and is as loud as the game makes a sound that far away" );
 	s_spatialShock = Cvar_Get( "s_spatialShock", "1", CVAR_ARCHIVE, "s_spatial: how strong the thump of an explosion is, its lows in both ears. 0 none" );
 	Cmd_AddCommand( "s_spatialInfo", S_SpatialInfo_f, "What s_spatial is doing" );
+	Cmd_AddCommand( "s_spatialCapture", S_SpatialCapture_f, "s_spatial: what the sounds of the level give the mixer for so many seconds, into steamaudio/capture.wav" );
 
 	memset( &spatial, 0, sizeof( spatial ) );
 	memset( spatialStreams, 0, sizeof( spatialStreams ) );
@@ -2051,6 +2419,7 @@ void S_SpatialInit( void ) {
 
 void S_SpatialShutdown( void ) {
 	Cmd_RemoveCommand( "s_spatialInfo" );
+	Cmd_RemoveCommand( "s_spatialCapture" );
 	Cvar_Set( "s_spatialVoice", "0" );
 	Cvar_Set( "s_spatialOwnVoice", "0" );
 	S_SpatialRelease();
@@ -2065,6 +2434,33 @@ qboolean S_SpatialActive( void ) {
 // once a frame, whether a level is loaded or not
 void S_SpatialUpdate( void ) {
 	if ( spatial.active ) {
+#ifdef __EMSCRIPTEN__
+		// Every frame gives the passes s_spatialBudget of time, and a slice takes off that what it took: the
+		// least a slice can be is 32 rays with all their bounces, which is more than a frame gives, and what makes
+		// the impulse response at the end of a pass is 2 ms in one piece. So some frames go without a slice.
+		spatial.costFrameUsec = 0;
+		spatial.passCredit = Q_min( spatial.passCredit, 0 ) + S_SpatialBudget();
+		if ( spatial.passCredit > 0 ) {
+			S_SpatialSlice( spatial.passCredit );
+		}
+		if ( s_spatialRays->modified ) {
+			s_spatialRays->modified = qfalse;
+			if ( Com_Clampi( 256, SPATIAL_MAX_RAYS, s_spatialRays->integer ) != spatial.maxRays ) {
+				Com_Printf( "s_spatialRays: a page takes it when the sound system starts (snd_restart), the passes go on with %i rays\n", spatial.maxRays );
+			}
+		}
+		// switched on in a level that has no paths: a page has no thread that could work them out now
+		if ( s_spatialPaths->modified ) {
+			s_spatialPaths->modified = qfalse;
+			if ( s_spatialPaths->integer && spatial.scene && !spatial.probes && !spatial.probesWait ) {
+				if ( spatial.refusedProbes ) {
+					S_SpatialSayTooLarge();
+				} else {
+					Com_Printf( "s_spatialPaths: a page works the paths of a level out while it loads, this one has them from its next load on\n" );
+				}
+			}
+		}
+#endif
 		S_SpatialTakeScene();
 		S_SpatialThinkPaths();
 	}
