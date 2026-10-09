@@ -1,5 +1,6 @@
 /* ------------------------------------------------------------------ */
-/* the fields of the page: keys, focus, the wheel                      */
+/* the fields of the page: keys, focus, the wheel, and the width of    */
+/* the side panel                                                      */
 /* ------------------------------------------------------------------ */
 
 // The keys of the map (js/input.js) are dropped while the focus is on a field that is typed into. A box to tick,
@@ -74,3 +75,48 @@ document.addEventListener('wheel', e => {
 	clearTimeout(uiWheelRest.get(el));
 	uiWheelRest.set(el, setTimeout(() => el.dispatchEvent(new Event('change', { bubbles: true })), 250));
 }, { passive: false });
+
+// ---- the width of the side panel
+
+// The grip on the right edge of the side panel drags its width. The width is the variable --side of the style
+// sheet, where the map view and the views of the config, the files and the log begin: 240 pixels at least and
+// 60 percent of the window at most. The browser keeps it (wa.sideWidth). A double click on the grip takes it
+// away again, which leaves the width of the style sheet.
+const SIDE_MIN = 240, SIDE_MOST = 0.6, sideGrip = $('sideGrip');
+let sideWidth = 0, sideGrab = 0, sideFramed = false;
+function sideSetWidth(w) {
+	sideWidth = Math.round(Math.max(SIDE_MIN, Math.min(window.innerWidth * SIDE_MOST, w)));
+	document.documentElement.style.setProperty('--side', sideWidth + 'px');
+}
+sideGrip.addEventListener('pointerdown', e => {
+	if (e.button !== 0) return;
+	e.preventDefault();
+	sideGrip.setPointerCapture(e.pointerId);
+	// where on the grip it was taken, so that the edge does not jump to the pointer
+	sideGrab = e.clientX - $('side').offsetWidth;
+	// body.sideDrag: the panel and the views beside it do not ease after the pointer
+	document.body.classList.add('sideDrag');
+});
+sideGrip.addEventListener('pointermove', e => {
+	if (!sideGrip.hasPointerCapture(e.pointerId)) return;
+	sideSetWidth(e.clientX - sideGrab);
+	// The canvas follows once a frame, and before the frame is drawn: sized after it, it would be empty.
+	if (!sideFramed) { sideFramed = true; requestAnimationFrame(() => { sideFramed = false; }); resize(); }
+});
+// the end of a drag, however it ends
+sideGrip.addEventListener('lostpointercapture', () => {
+	document.body.classList.remove('sideDrag');
+	resize();
+	if (sideWidth) try { localStorage.setItem('wa.sideWidth', sideWidth); } catch (e) { /* no storage */ }
+});
+sideGrip.addEventListener('dblclick', () => {
+	sideWidth = 0;
+	// at once, as while it is dragged: the panel does not ease, and the views would come after it
+	document.body.classList.add('sideDrag');
+	document.documentElement.style.removeProperty('--side');
+	resize();
+	requestAnimationFrame(() => document.body.classList.remove('sideDrag'));
+	try { localStorage.removeItem('wa.sideWidth'); } catch (e) { /* no storage */ }
+});
+// (not resize() here: this runs while the page loads, before js/frame.js, and a frame sizes the canvas itself)
+try { const w = +localStorage.getItem('wa.sideWidth'); if (w) sideSetWidth(w); } catch (e) { /* no storage */ }
