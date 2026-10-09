@@ -10,13 +10,16 @@ Nothing changes for the clients of the desktop and for a server that does not sw
 
 | Part | State |
 |------|-------|
-| Build with Emscripten (engine, cgame, ui) | builds, 6.0.12 |
-| Engine in the page | starts in Chromium 153: file system, configs, up to the renderer |
-| Page: fetch the pk3 files, keep them in the browser, start | run in headless Chromium, twice in a row (the second visit fetches no pk3) |
+| Build with Emscripten (engine, cgame, ui, renderer) | builds, 6.0.12 |
+| Engine in the page | runs in Chromium 153, headless, with software GL and on the graphics card |
+| Page: fetch the pk3 files, keep them in the browser, start | run twice in a row (the second visit fetches no pk3) |
 | Web host of the server: page, pk3 files, ranges | run on a live server, a whole 653 MB pack compared by hash |
-| Web host: WebSocket peers as clients | one `getinfo` answered through it. No client has joined through it yet |
-| Renderer: OpenGL ES 3 device of rd-vulkan-vision | in work, see [renderer.md](renderer.md) |
-| cgame, ui, sound, mouse and keys in the page | never run |
+| Web host: WebSocket peers as clients | run on a live server: a client in a page joined, played as a spectator, was logged with its address |
+| Renderer: OpenGL ES 3 device of rd-vulkan-vision | menu, level, players, sabers with glow, `vid_restart` drawn in the page. Compared with the Vulkan device on the desktop, see [renderer.md](renderer.md) |
+| ui and cgame in the page | menus, the join, a game followed as a spectator. Nobody has played a round |
+| Sound | starts (SDL audio of the browser). Not listened to |
+| Mouse and keys | never used by a person from here: a headless browser has neither |
+| A resized window | the picture is scaled, the frame keeps the size it started with |
 | Firefox, Safari, Windows, a phone | never run |
 
 Left out on purpose in the first version: the voice chat (`BuildJPVoice`), Steam Audio (`BuildJPSpatialAudio`),
