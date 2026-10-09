@@ -543,9 +543,7 @@ Also changed:
   server and played in a probe of 30 seconds with two bots face to face: 24 `EV_SABER_HIT`, 25
   `EV_SABER_BLOCK`, 5 `EV_SHIELD_HIT`, 1 `EV_PLAYER_TELEPORT_IN`, none older than 100 msec when it came.
   Only handed in by the check, never seen from the server: the fire events, the impacts, all disruptor
-  events, the clash flare, the screen shake, the drain. Not shown: the flash and the start of a beam of the
-  one the page looks through the eyes of (needs the muzzle of the weapon in front of the camera), the
-  flashes of NPCs and of turrets, sparks between two server frames (`CG_SaberCompWork`), glass, debris,
+  events, the clash flare, the screen shake, the drain. Not shown: the flashes of NPCs and of turrets, sparks between two server frames (`CG_SaberCompWork`), glass, debris,
   score plums, marks on models, effects of a saber of its own, and every event that is only a sound.
   `tools/panelshot/steps_events.js` (59 checks), `steps_events_live.js` (the probe), `steps_fx.js` (39).
 - New: the scoreboard and the centre print of a kill (`js/hud-scores.js`; `cg_scoreboard.c`,
@@ -576,6 +574,14 @@ Also changed:
   launcher and the event named its icon. Never seen: a real vote (nobody on the test server can call one, the
   check hands one in), so the `vote` of the state is only seen absent. Not compared with a picture of the
   game. `tools/panelshot/steps_pickup.js` (8 checks).
+- New: the flash of a shot of the one the page looks through the eyes of, and where the beam of his disruptor
+  starts. The muzzle is the `tag_flash` of the weapon in front of the camera (`drawViewWeapon` in
+  `js/weapons.js` keeps it, `CG_AddPlayerWeapon`); the events are taken after that weapon is placed, so the
+  flash of a frame is at the muzzle of that frame. The beam starts at the muzzle as it last was
+  (`cg.lastFPFlashPoint`): while he looks through the scope the weapon is not drawn and the point stays, as in
+  the game. Seen: the flash of the pistol at its muzzle. The game plays the effect bound to the weapon with
+  all three of its axes, the page along the first; the glow while a weapon is charged is not drawn. Not
+  compared with a picture of the game. Three more checks in `steps_ownview.js` (20).
 - Fixed: a call the graphics card refuses, in every frame while the models of the players were still read. The
   plain figure that stands in for a player whose model is not there yet was drawn with the program of the
   model drawn before it (`plTry` in `js/player-draw.js` now ends on the plain program, as `drawStatic` does).

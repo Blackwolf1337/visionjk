@@ -435,6 +435,8 @@ function ownTransition(d, hud, ax, now) {
 		own.damageEvent = null;
 		own.kickTime = own.damageTime = own.landTime = own.duckTime = -1e9;
 		own.damageValue = 0;
+		// (cgame keeps its last flash point for good; the one of another player is of no use here)
+		view.flashPoint = null;
 	}
 	if (hud) {
 		if (own.damageEvent !== null && hud.damage[0] !== own.damageEvent && hud.damage[3]) ownDamageFeedback(hud.damage[1], hud.damage[2], hud.damage[3], hud.stats[0], ax, now);
@@ -558,19 +560,22 @@ function ownZoomFov(hud, now) {
 // The game puts a hand model at the eye, turned as the view with a little drift, and the weapon on the tag_weapon
 // of that hand. The hand model is the one of the weapon (its view model's name with _hand.md3) and is not drawn
 // itself. Both are drawn in the near third of the depth (RF_DEPTHHACK), so that no wall cuts into them.
-// Not here: the barrel of the stun baton, the flash at the muzzle.
-const viewHands = new Map();		// the path of a hand model -> its tag_weapon in every frame, null while it is read, false for none
-function viewHandTags(path) {
-	if (!viewHands.has(path)) {
-		viewHands.set(path, null);
+// Not here: the barrel of the stun baton, the glow at the muzzle while a weapon is charged.
+const viewTagFrames = new Map();		// the path of an md3 and the name of a tag -> that tag in every frame, null while it is read, false for none
+function viewTags(path, name) {
+	const key = path + ' ' + name;
+	if (!viewTagFrames.has(key)) {
+		viewTagFrames.set(key, null);
 		fetchGameFile(path).then(buf => {
 			const tags = [];
-			for (let f = 0, n = buf ? new DataView(buf).getInt32(76, true) : 0; f < n; f++) { const t = md3Tags(buf, f)['tag_weapon']; if (t) tags.push(t); }
-			viewHands.set(path, tags.length ? tags : false);
-		}).catch(() => viewHands.set(path, false));
+			for (let f = 0, n = buf ? new DataView(buf).getInt32(76, true) : 0; f < n; f++) { const t = md3Tags(buf, f)[name]; if (t) tags.push(t); }
+			viewTagFrames.set(key, tags.length ? tags : false);
+		}).catch(() => viewTagFrames.set(key, false));
 	}
-	return viewHands.get(path);
+	return viewTagFrames.get(key);
 }
+// the tag_weapon of a hand model in every frame
+const viewHandTags = path => viewTags(path, 'tag_weapon');
 
 // R_LerpTag: the tag between two frames of the hand (frac of the way from "from" to "to"), its axes of length one
 // again. A frame the model does not have is its last (R_GetTag).
@@ -638,6 +643,16 @@ function drawViewWeapon(d) {
 	gl.depthRange(0, 0.3);
 	drawStatic(gun, place);
 	gl.depthRange(0, 1);
+	// The muzzle of the weapon in front of the camera (tag_flash of its model, CG_AddPlayerWeapon): where its flash
+	// is played (js/events.js takes it from wpMuzzles), and where the beam of a disruptor starts for the one who
+	// looks through these eyes (cg.lastFPFlashPoint: it stays what it was while the weapon is not drawn, as when he
+	// looks through the scope).
+	const flash = viewTags(it.view, 'tag_flash');
+	if (flash) {
+		const f = M4.mul(place, to44(flash[0]));
+		view.flashPoint = [f[12], f[13], f[14]];
+		wpMuzzles.set(view.id, { org: view.flashPoint, dir: fxUnit([f[0], f[1], f[2]]), now: frameNow });
+	}
 }
 
 function renderHud(d) {

@@ -186,7 +186,9 @@ function evAddPlayerWeapon(id, c, frame) {
 	const time = d.weapon === WP_DEMP2 && d.eFlags & EV_EF_FIRING ? MUZZLE_FLASH_TIME + 10 : MUZZLE_FLASH_TIME;
 	if (dt > time + EV_LATE_MSEC) return;
 	// without a weapon model on him there is no flash (G2API_HasGhoul2ModelOnIndex), nor is there one for somebody
-	// who is not drawn in this frame, or from inside his own head
+	// who is not drawn in this frame. From inside his own head the muzzle is the one of the weapon in front of the
+	// camera (tag_flash, drawViewWeapon of js/weapons.js); the game plays the effect bound to that entity with all
+	// three of its axes there, the page along its first.
 	const muzzle = wpMuzzles.get(id);
 	if (!muzzle || muzzle.now !== frame) return;
 	const frames = Math.floor(Math.min(dt, time) / FX_FRAME_MSEC) + 1, plays = frames - c.flashFrames;
@@ -290,10 +292,11 @@ function evClientMuzzlePoint(client, to) {
 
 // The start of the beam of a disruptor (EV_DISRUPTOR_MAIN_SHOT and EV_DISRUPTOR_SNIPER_SHOT): the muzzle of the
 // weapon on the one who fired (the parameter of the event) instead of the point the server shot from. Through
-// his own eyes the game takes the muzzle of the weapon in front of the camera (cg.lastFPFlashPoint), which the
-// page does not keep: the point of the server stays then, as in the game while that muzzle is not known.
+// his own eyes the game takes the muzzle of the weapon in front of the camera as it last was
+// (cg.lastFPFlashPoint, view.flashPoint of js/weapons.js), and the point of the server while there is none.
 function evDisruptorStart(e) {
-	return e.parm !== view.id || view.thirdPerson ? evClientMuzzlePoint(e.parm, e.org2) : e.org2;
+	if (e.parm !== view.id || view.thirdPerson) return evClientMuzzlePoint(e.parm, e.org2);
+	return view.flashPoint ? view.flashPoint.slice() : e.org2;
 }
 
 // FX_AddBezier of the engine (client/FxUtil.cpp): a band along a curve from start to end with two control points

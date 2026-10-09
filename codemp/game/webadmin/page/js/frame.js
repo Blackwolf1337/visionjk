@@ -307,12 +307,16 @@ function drawFrame(now) {
 	drawBlades();
 	// the weather comes when all of the scene is drawn (RB_RenderWorldEffects)
 	if (scripted) drawWeather(now);
-	// what an event of the game shows by itself for a moment (the plain view of the editor plays effects too)
-	drawEvents(now);
 	if (view.id >= 0 && players.has(view.id)) {
 		const d = players.get(view.id).data;
 		drawViewWeapon(d);
+		// what an event of the game shows by itself for a moment: after the weapon in front of the camera, whose
+		// muzzle a flash of this frame is played at, and before the 2D
+		drawEvents(now);
 		renderHud(d);
+	} else {
+		// (the plain view of the editor plays effects too)
+		drawEvents(now);
 	}
 
 	placeLabels();
