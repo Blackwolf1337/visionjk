@@ -4,7 +4,7 @@ async function loadClasses() {
 	try {
 		const json = await (await fetch('api/classes')).json();
 		allClasses = [...new Set(json.classes)].sort();
-		for (const it of json.items) classInfo.set(it.classname, it);
+		for (const it of json.items) { classInfo.set(it.classname, it); if (it.index) itemDefs[it.index] = it; }
 		classesLoaded = true;
 		if ($('classPicker').classList.contains('open')) renderPicker();
 	} catch (e) { /* retry next time */ }

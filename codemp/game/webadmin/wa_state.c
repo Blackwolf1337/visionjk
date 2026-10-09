@@ -58,6 +58,28 @@ static int WA_StateAmmoIndex( const playerState_t *ps ) {
 	return ( index > AMMO_NONE && index < AMMO_MAX ) ? index : AMMO_NONE;
 }
 
+// The frame the skeleton of a client or an NPC is at in the animation anim, as the server animates it
+// (G_UpdateClientAnims sets the same animations a client sets: the legs on "model_root", the torso on
+// "lower_lumbar"), and how fast it runs in frames per 50 ms, below zero when it runs backwards.
+// -1 and 0 when the skeleton is not in that animation: the player state has a new one from his last move
+// and the skeleton gets it later in the frame, or the server animates none (g_disableServerG2, a follower).
+static void WA_StateBoneFrame( gentity_t *ent, const char *bone, int anim, float *frame, float *speed ) {
+	int					start, end, flags;
+	const animation_t	*a;
+
+	*frame = -1.0f;
+	*speed = 0.0f;
+	if ( !ent->ghoul2 || !trap->G2API_HaveWeGhoul2Models( ent->ghoul2 ) || anim < 0 || anim >= MAX_TOTALANIMATIONS
+		|| ent->localAnimIndex < 0 || ent->localAnimIndex >= MAX_ANIM_FILES || !bgAllAnims[ent->localAnimIndex].anims )
+		return;
+	a = &bgAllAnims[ent->localAnimIndex].anims[anim];
+	if ( !trap->G2API_GetBoneAnim( ent->ghoul2, bone, level.time, frame, &start, &end, &flags, speed, NULL, 0 )
+		|| *frame < a->firstFrame || *frame > a->firstFrame + a->numFrames ) {
+		*frame = -1.0f;
+		*speed = 0.0f;
+	}
+}
+
 // What a page says it has of the players: known[client] becomes the number of the part "s" it has of him,
 // 0 for none. p=<client>.<number>-<client>.<number>...
 static void WA_StateKnown( const char *query, unsigned *known ) {
@@ -160,6 +182,11 @@ static unsigned WA_StatePlayerStays( waBuffer_t *slow, int clientNum ) {
 
 		trap->GetUserinfo( clientNum, userinfo, sizeof( userinfo ) );
 		WA_BufJsonString( slow, Info_ValueForKey( userinfo, "model" ) );
+		// not in JKAdmin: the colours a blade of the colour "rgb" has (r | g << 8 | b << 16), as the clients are
+		// told them (c3 and c4 of ClientUserinfoChanged)
+		if ( jp_allowRGBsaber.integer == 1 )
+			WA_BufPrintf( slow, ",\"saberRgb\":[%d,%d]", atoi( Info_ValueForKey( userinfo, "cp_sbRGB1" ) ),
+				atoi( Info_ValueForKey( userinfo, "cp_sbRGB2" ) ) );
 	}
 	WA_BufAppend( slow, "}", 1 );
 	return WA_StateRev( slow );
@@ -167,13 +194,17 @@ static unsigned WA_StatePlayerStays( waBuffer_t *slow, int clientNum ) {
 
 // What changes of a player all the time, as the rows "f" and "b". rev is the number of what stays of him.
 static void WA_StatePlayerChanges( waBuffer_t *b, int clientNum, unsigned rev, qboolean first ) {
-	gclient_t		*cl = g_entities[clientNum].client;
+	gentity_t		*ent = &g_entities[clientNum];
+	gclient_t		*cl = ent->client;
 	playerState_t	*ps = &cl->ps;
 	const int		ammoIndex = WA_StateAmmoIndex( ps );
 	int				s2, bl;
 	qboolean		firstBlade = qtrue;
+	float			legsFrame, legsSpeed, torsoFrame, torsoSpeed;
 
-	WA_BufPrintf( b, "%s{\"id\":%d,\"r\":%u,\"f\":[%d,%d,%d,%d,%d,%d,%d,%d,%d,%.1f,%.1f,%.1f,%.0f,%.0f,%.0f,%.1f,%.1f,%d,%d,%d,%d],\"b\":[",
+	WA_StateBoneFrame( ent, "model_root", ps->legsAnim, &legsFrame, &legsSpeed );
+	WA_StateBoneFrame( ent, "lower_lumbar", ps->torsoAnim, &torsoFrame, &torsoSpeed );
+	WA_BufPrintf( b, "%s{\"id\":%d,\"r\":%u,\"f\":[%d,%d,%d,%d,%d,%d,%d,%d,%d,%.1f,%.1f,%.1f,%.0f,%.0f,%.0f,%.1f,%.1f,%d,%d,%d,%d,",
 		first ? "" : ",", clientNum, rev,
 		ps->stats[STAT_HEALTH], ps->stats[STAT_ARMOR], ps->persistant[PERS_SCORE], ps->ping, ps->weapon, ps->fd.forcePower,
 		( ( ps->pm_type == PM_DEAD || ps->stats[STAT_HEALTH] <= 0 ) ? 1 : 0 ) | ( ( ps->weapon == WP_SABER && !ps->saberHolstered ) ? 2 : 0 )
@@ -181,6 +212,11 @@ static void WA_StatePlayerChanges( waBuffer_t *b, int clientNum, unsigned rev, q
 		ps->saberHolstered, ps->saberEntityNum, ps->origin[0], ps->origin[1], ps->origin[2],
 		ps->velocity[0], ps->velocity[1], ps->velocity[2], ps->viewangles[YAW], ps->viewangles[PITCH],
 		ps->legsAnim, ps->torsoAnim, ps->viewheight, ammoIndex != AMMO_NONE ? ps->ammo[ammoIndex] : -1 );
+	// the flags are the ones of his entity: what the clients are sent of him (BG_PlayerStateToEntityState)
+	WA_BufPrintf( b, "%.1f,%.2f,%.1f,%.2f,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d],\"b\":[",
+		legsFrame, legsSpeed, torsoFrame, torsoSpeed, ent->s.eFlags, ent->s.eFlags2, ent->s.powerups, ps->fd.forcePowersActive,
+		ps->weaponstate, ps->saberMove, ( ps->legsFlip ? 1 : 0 ) | ( ps->torsoFlip ? 2 : 0 ), ps->groundEntityNum,
+		ps->brokenLimbs, ps->fd.saberAnimLevel );
 	for ( s2 = 0; s2 < MAX_SABERS; s2++ ) {
 		const saberInfo_t *saber = &cl->saber[s2];
 
@@ -204,9 +240,14 @@ static void WA_StatePlayerChanges( waBuffer_t *b, int clientNum, unsigned rev, q
 // time comes as two rows of numbers:
 //   "f": health, armor, score, ping, weapon, force, flags (1 dead, 2 saber on, 4 saber in flight),
 //        saberHolstered, entity of the saber, origin (3), velocity (3), yaw, pitch, legs and torso animation,
-//        view height, ammo of the weapon (-1: it has none)
+//        view height, ammo of the weapon (-1: it has none),
+//        from 21 on what a client draws him by: the frame of the legs and how fast it runs, the same of the
+//        torso (WA_StateBoneFrame, -1 and 0 when the server has none of that animation), eFlags, eFlags2 and
+//        powerups of his entity, the force powers that are on,
+//        weaponstate, saberMove, the flips (1 legs, 2 torso: an animation that starts again), the entity he
+//        stands on (ENTITYNUM_NONE in the air), brokenLimbs, the saber style he fights in
 //   "b": for every blade of his sabers its length now, where it starts (3) and the way it points (3)
-// A player was about a kilobyte ten times a second before, he is about 170 bytes now.
+// A player was about a kilobyte ten times a second before, he is about 220 bytes now.
 static void WA_StatePlayers( waBuffer_t *b, const char *query ) {
 	unsigned	known[MAX_CLIENTS];
 	waBuffer_t	slow = { 0 };
@@ -236,32 +277,54 @@ static void WA_StatePlayers( waBuffer_t *b, const char *query ) {
 	WA_BufAppend( b, "]", 1 );
 }
 
-// NPCs, drawn with their models too
+// NPCs, drawn with their models too. The model is the one a client loads for it (CG_G2AnimEntModelLoad): a
+// vehicle tells the clients its name with a $ in front, and they take the model and the skin from what the
+// vehicle files say of that name. "skin" is there for a vehicle only, "" for the default one. "f" is what a
+// client draws it by, as from 21 on in the row of a player: the frame of the legs and how fast it runs, the
+// same of the torso, eFlags, eFlags2, powerups, the flips, the entity it stands on.
 static void WA_StateNpcs( waBuffer_t *b ) {
 	int			i;
 	qboolean	first = qtrue;
 
 	WA_BufAppend( b, ",\"npcs\":[", 9 );
 	for ( i = MAX_CLIENTS; i < level.num_entities; i++ ) {
-		gentity_t *ent = &g_entities[i];
-		char model[MAX_QPATH];
+		gentity_t		*ent = &g_entities[i];
+		playerState_t	*ps;
+		char			model[MAX_QPATH];
+		float			legsFrame, legsSpeed, torsoFrame, torsoSpeed;
+		const qboolean	vehicle = (qboolean)( ent->inuse && ent->s.NPC_class == CLASS_VEHICLE && ent->m_pVehicle
+							&& ent->m_pVehicle->m_pVehicleInfo && VALIDSTRING( ent->m_pVehicle->m_pVehicleInfo->model ) );
 
 		if ( !ent->inuse || ent->s.eType != ET_NPC || !ent->client )
 			continue;
+		ps = &ent->client->ps;
 
 		if ( !first )
 			WA_BufAppend( b, ",", 1 );
 		first = qfalse;
 
-		trap->GetConfigstring( CS_MODELS + ent->s.modelindex, model, sizeof( model ) );
+		if ( vehicle )
+			Com_sprintf( model, sizeof( model ), "models/players/%s/model.glm", ent->m_pVehicle->m_pVehicleInfo->model );
+		else
+			trap->GetConfigstring( CS_MODELS + ent->s.modelindex, model, sizeof( model ) );
 		WA_BufPrintf( b, "{\"id\":%d,\"name\":", i );
 		WA_BufJsonString( b, ent->NPC_type ? ent->NPC_type : "NPC" );
 		WA_BufAppend( b, ",\"model\":", 9 );
 		WA_BufJsonString( b, model );
-		WA_BufPrintf( b, ",\"health\":%d,\"dead\":%s,\"scale\":%d,\"yaw\":%.1f,\"legsAnim\":%d,\"torsoAnim\":%d,\"pos\":",
-			ent->health, ( ent->health <= 0 ) ? "true" : "false", ent->client->ps.iModelScale ? ent->client->ps.iModelScale : 100,
-			ent->client->ps.viewangles[YAW], ent->client->ps.legsAnim, ent->client->ps.torsoAnim );
-		WA_AppendVec( b, ent->client->ps.origin );
+		if ( vehicle ) {
+			WA_BufAppend( b, ",\"skin\":", 8 );
+			WA_BufJsonString( b, VALIDSTRING( ent->m_pVehicle->m_pVehicleInfo->skin ) ? ent->m_pVehicle->m_pVehicleInfo->skin : "" );
+		}
+		WA_StateBoneFrame( ent, "model_root", ps->legsAnim, &legsFrame, &legsSpeed );
+		WA_StateBoneFrame( ent, "lower_lumbar", ps->torsoAnim, &torsoFrame, &torsoSpeed );
+		WA_BufPrintf( b, ",\"health\":%d,\"dead\":%s,\"scale\":%d,\"yaw\":%.1f,\"legsAnim\":%d,\"torsoAnim\":%d,\"class\":%d,\"weapon\":%d,"
+			"\"angles\":[%.1f,%.1f,%.1f],\"vel\":[%.0f,%.0f,%.0f],\"f\":[%.1f,%.2f,%.1f,%.2f,%d,%d,%d,%d,%d],\"pos\":",
+			ent->health, ( ent->health <= 0 ) ? "true" : "false", ps->iModelScale ? ps->iModelScale : 100,
+			ps->viewangles[YAW], ps->legsAnim, ps->torsoAnim, ent->s.NPC_class, ps->weapon,
+			ps->viewangles[PITCH], ps->viewangles[YAW], ps->viewangles[ROLL], ps->velocity[0], ps->velocity[1], ps->velocity[2],
+			legsFrame, legsSpeed, torsoFrame, torsoSpeed, ent->s.eFlags, ent->s.eFlags2, ent->s.powerups,
+			( ps->legsFlip ? 1 : 0 ) | ( ps->torsoFlip ? 2 : 0 ), ps->groundEntityNum );
+		WA_AppendVec( b, ps->origin );
 		WA_BufAppend( b, "}", 1 );
 	}
 	WA_BufAppend( b, "]", 1 );
@@ -270,6 +333,10 @@ static void WA_StateNpcs( waBuffer_t *b ) {
 // Items, flags and other pickups, so the map looks alive. The list is the same from one poll to the next
 // unless something was picked up or came back, and it is more than a third of the answer. So it has a
 // number (WA_StateRev), and a page that says it has the list of that number (items=) is not sent it again.
+// Each is a row of what CG_Item draws it by: its entity, its place in the list of the items (bg_itemlist, the
+// "index" of /api/classes), the eFlags of its entity, where it is and its angles. All of them the clients are
+// sent, also one that is not drawn (EF_NODRAW) or is the ghost of one that was taken (EF_ITEMPLACEHOLDER):
+// what of it shows is for the page to say, as it is for a client.
 static void WA_StateItems( waBuffer_t *b, const char *query ) {
 	waBuffer_t	items = { 0 };
 	char		value[16];
@@ -280,18 +347,14 @@ static void WA_StateItems( waBuffer_t *b, const char *query ) {
 	for ( i = MAX_CLIENTS; i < level.num_entities; i++ ) {
 		gentity_t *ent = &g_entities[i];
 
-		if ( !ent->inuse || ent->s.eType != ET_ITEM || !ent->item || ( ent->s.eFlags & EF_NODRAW ) || ( ent->r.svFlags & SVF_NOCLIENT ) )
+		if ( !ent->inuse || ent->s.eType != ET_ITEM || !ent->item || ent->s.modelindex <= 0 || ent->s.modelindex >= bg_numItems
+			|| ( ent->r.svFlags & SVF_NOCLIENT ) )
 			continue;
 
-		if ( !first )
-			WA_BufAppend( &items, ",", 1 );
+		WA_BufPrintf( &items, "%s[%d,%d,%d,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f]", first ? "" : ",", i, ent->s.modelindex, ent->s.eFlags,
+			ent->r.currentOrigin[0], ent->r.currentOrigin[1], ent->r.currentOrigin[2],
+			ent->s.angles[0], ent->s.angles[1], ent->s.angles[2] );
 		first = qfalse;
-
-		WA_BufPrintf( &items, "{\"id\":%d,\"type\":%d,\"name\":", i, ent->item->giType );
-		WA_BufJsonString( &items, ent->item->classname );
-		WA_BufAppend( &items, ",\"pos\":", 7 );
-		WA_AppendVec( &items, ent->r.currentOrigin );
-		WA_BufAppend( &items, "}", 1 );
 	}
 	rev = WA_StateRev( &items );
 
@@ -344,7 +407,8 @@ static void WA_StateModels( waBuffer_t *b ) {
 // Not in JKAdmin: what is made of brushes and is an entity (doors, lifts, what turns, what can be switched
 // off or broken), as the clients draw it (CG_Mover). Each is the number of its brush model, or that number
 // with its place and its angles when it is not where the map file has it. One that is not in the list is
-// not drawn by a client either.
+// not drawn by a client either. Two more follow for one that has them: the frame its shaders are at (the
+// frame of an animMap, EF_SHADER_ANIM, else -1) and the model that is drawn with it (model2, else "").
 static void WA_StateMovers( waBuffer_t *b ) {
 	int			i;
 	qboolean	first = qtrue;
@@ -353,6 +417,8 @@ static void WA_StateMovers( waBuffer_t *b ) {
 	for ( i = MAX_CLIENTS; i < level.num_entities; i++ ) {
 		gentity_t	*ent = &g_entities[i];
 		vec3_t		pos, angles;
+		char		model2[MAX_QPATH];
+		qboolean	more;
 
 		if ( !ent->inuse || !ent->r.linked || !ent->r.bmodel || ent->s.eType != ET_MOVER || ent->s.modelindex <= 0
 			|| ( ent->s.eFlags & EF_NODRAW ) || ( ent->s.eFlags2 & EF2_HYPERSPACE )
@@ -363,20 +429,32 @@ static void WA_StateMovers( waBuffer_t *b ) {
 			WA_BufAppend( b, ",", 1 );
 		first = qfalse;
 
+		model2[0] = '\0';
+		if ( ent->s.modelindex2 > 0 && ent->s.modelindex2 < MAX_MODELS )
+			trap->GetConfigstring( CS_MODELS + ent->s.modelindex2, model2, sizeof( model2 ) );
+		more = (qboolean)( model2[0] || ( ent->s.eFlags & EF_SHADER_ANIM ) );
+
 		BG_EvaluateTrajectory( &ent->s.pos, level.time, pos );
 		BG_EvaluateTrajectory( &ent->s.apos, level.time, angles );
-		if ( VectorCompare( pos, vec3_origin ) && VectorCompare( angles, vec3_origin ) )
+		if ( !more && VectorCompare( pos, vec3_origin ) && VectorCompare( angles, vec3_origin ) ) {
 			WA_BufPrintf( b, "%d", ent->s.modelindex );
-		else
-			WA_BufPrintf( b, "[%d,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f]", ent->s.modelindex, pos[0], pos[1], pos[2],
-				angles[0], angles[1], angles[2] );
+			continue;
+		}
+		WA_BufPrintf( b, "[%d,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f", ent->s.modelindex, pos[0], pos[1], pos[2],
+			angles[0], angles[1], angles[2] );
+		if ( more ) {
+			WA_BufPrintf( b, ",%d,", ( ent->s.eFlags & EF_SHADER_ANIM ) ? ent->s.frame : -1 );
+			WA_BufJsonString( b, model2 );
+		}
+		WA_BufAppend( b, "]", 1 );
 	}
 	WA_BufAppend( b, "]", 1 );
 }
 
 // Not in JKAdmin: what is in the air, the shots, rockets and grenades the clients draw (CG_Missile). Each is
-// its entity, the weapon, 1 when it was fired the other way, where it is and how fast it flies. Not a saber
-// that was thrown: that is drawn with its player.
+// its entity, the weapon, 1 when it was fired the other way, where it is and how fast it flies, its angles
+// and the eFlags of its entity (a mine that sticks, a trip mine whose beam is on). Not a saber that was
+// thrown: that is drawn with its player.
 static void WA_StateShots( waBuffer_t *b ) {
 	int			i;
 	qboolean	first = qtrue;
@@ -384,7 +462,7 @@ static void WA_StateShots( waBuffer_t *b ) {
 	WA_BufAppend( b, ",\"shots\":[", 10 );
 	for ( i = MAX_CLIENTS; i < level.num_entities; i++ ) {
 		gentity_t	*ent = &g_entities[i];
-		vec3_t		pos, speed;
+		vec3_t		pos, speed, angles;
 
 		if ( !ent->inuse || !ent->r.linked || ent->s.eType != ET_MISSILE || ent->s.weapon == WP_SABER
 			|| ( ent->s.eFlags & EF_NODRAW ) || ( ent->r.svFlags & ( SVF_NOCLIENT | SVF_SINGLECLIENT ) ) )
@@ -392,8 +470,10 @@ static void WA_StateShots( waBuffer_t *b ) {
 
 		BG_EvaluateTrajectory( &ent->s.pos, level.time, pos );
 		BG_EvaluateTrajectoryDelta( &ent->s.pos, level.time, speed );
-		WA_BufPrintf( b, "%s[%d,%d,%d,%.0f,%.0f,%.0f,%.0f,%.0f,%.0f]", first ? "" : ",", i, ent->s.weapon,
-			( ent->s.eFlags & EF_ALT_FIRING ) ? 1 : 0, pos[0], pos[1], pos[2], speed[0], speed[1], speed[2] );
+		BG_EvaluateTrajectory( &ent->s.apos, level.time, angles );
+		WA_BufPrintf( b, "%s[%d,%d,%d,%.0f,%.0f,%.0f,%.0f,%.0f,%.0f,%.0f,%.0f,%.0f,%d]", first ? "" : ",", i, ent->s.weapon,
+			( ent->s.eFlags & EF_ALT_FIRING ) ? 1 : 0, pos[0], pos[1], pos[2], speed[0], speed[1], speed[2],
+			angles[0], angles[1], angles[2], ent->s.eFlags );
 		first = qfalse;
 	}
 	WA_BufAppend( b, "]", 1 );

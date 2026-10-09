@@ -10,6 +10,20 @@ let lastPoll = 0, pollInterval = 100;
 
 let itemsRev = 0, itemsKept = [];		// the number of the item list the server sent last, and that list
 
+// the flags of an entity the page looks at (eFlags, bg_public.h)
+const EF_NODRAW = 1 << 8, EF_ITEMPLACEHOLDER = 1 << 23, EF_DROPPEDWEAPON = 1 << 25;
+// What the game says of an item (its class, its models, its kind), by its place in the list of the items of the
+// game (bg_itemlist): that place is what an item of the state names itself by. Filled when the classes are read.
+const itemDefs = [];
+const itemDef = it => it.name ? classInfo.get(it.name) : itemDefs[it.index];
+
+// An item comes as a row (see WA_StateItems): its entity, its place in the list of the items, the eFlags of its
+// entity, where it is, its angles. All of them the clients are sent, also one that is not drawn. A game module
+// that sends an item as an object: as it is.
+function expandItems(rows) {
+	return rows.map(r => Array.isArray(r) ? { id: r[0], index: r[1], flags: r[2], pos: [r[3], r[4], r[5]], angles: [r[6], r[7], r[8]] } : r);
+}
+
 // A player comes in two parts (see WA_ApiState): "s" is what stays the same of him, sent with a number "r" and
 // then only again when it changed, "f" and "b" are rows of numbers for what changes all the time. Here they
 // become the one object the rest of the page reads. A game module that sends a player as one object: as it is.
@@ -30,6 +44,10 @@ function expandPlayers(s) {
 			id: e.id, health: f[0], armor: f[1], score: f[2], ping: f[3], weapon: f[4], forcePower: f[5],
 			dead: !!(f[6] & 1), saberOn: !!(f[6] & 2), saberInFlight: !!(f[6] & 4), saberHolstered: f[7], saberEnt: f[8],
 			pos: [f[9], f[10], f[11]], vel: [f[12], f[13], f[14]], yaw: f[15], pitch: f[16], legsAnim: f[17], torsoAnim: f[18], viewheight: f[19], ammo: f[20],
+			// What a client draws him by. The frames are the ones the server has his skeleton at, at the time of this
+			// state, and the speeds are frames per 50 ms. undefined with a game module that does not send them.
+			legsFrame: f[21], legsSpeed: f[22], torsoFrame: f[23], torsoSpeed: f[24], eFlags: f[25], eFlags2: f[26], powerups: f[27], forceActive: f[28],
+			weaponstate: f[29], saberMove: f[30], legsFlip: f[31] & 1, torsoFlip: (f[31] & 2) >> 1, ground: f[32], brokenLimbs: f[33], saberLevel: f[34],
 			minutes: Math.max(0, Math.floor(((s.time || 0) - (d.entered || 0)) / 60000)),
 			sabers: (d.sabers || []).map(sb => ({ model: sb.model, blades: sb.blades.map(bl => {
 				const now = e.b[n++] || [0, 0, 0, 0, 0, 0, 0];
@@ -50,7 +68,8 @@ async function pollState() {
 		if (!res.ok) throw new Error('HTTP ' + res.status);
 		const s = await res.json();
 		$('status').className = 'live';
-		if (s.items) { itemsKept = s.items; itemsRev = s.itemsRev || 0; } else s.items = itemsKept;
+		if (s.items) { itemsKept = expandItems(s.items); itemsRev = s.itemsRev || 0; }
+		s.items = itemsKept;
 		s.players = expandPlayers(s);
 		applyState(s);
 	} catch (e) {
@@ -177,9 +196,7 @@ function renderTopbar() {
 	$('teamScores').style.display = team ? '' : 'none';
 	$('scoreRed').textContent = state.scores.red;
 	$('scoreBlue').textContent = state.scores.blue;
-	const counts = {};
-	for (const it of state.items) counts[it.type] = (counts[it.type] || 0) + 1;
-	$('itemsInfo').textContent = state.items.length + ' items on the map';
+	$('itemsInfo').textContent = state.items.filter(it => !(it.flags & EF_NODRAW)).length + ' items on the map';
 }
 
 function renderTable() {

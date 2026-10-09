@@ -469,10 +469,13 @@ void WA_ApiClasses( waConnection_t *c ) {
 		if ( !first )
 			WA_BufAppend( &b, ",", 1 );
 		first = qfalse;
-		WA_BufAppend( &b, "{\"classname\":", 13 );
+		// index: its place in bg_itemlist, which is what an item of /api/state names it by
+		WA_BufPrintf( &b, "{\"index\":%d,\"classname\":", i );
 		WA_BufJsonString( &b, item->classname );
 		WA_BufAppend( &b, ",\"model\":", 9 );
 		WA_BufJsonString( &b, item->world_model[0] ? item->world_model[0] : "" );
+		WA_BufAppend( &b, ",\"model2\":", 10 );
+		WA_BufJsonString( &b, item->world_model[1] ? item->world_model[1] : "" );
 		WA_BufAppend( &b, ",\"view\":", 8 );
 		WA_BufJsonString( &b, item->view_model ? item->view_model : "" );
 		WA_BufAppend( &b, ",\"icon\":", 8 );

@@ -114,7 +114,7 @@ the answer tells the page that the numbers started over.
 | Request | Answer |
 |---------|--------|
 | `GET /` | the page |
-| `GET /api/state` | map, scores, players, NPCs, items and `models` as JSON. The page polls this. `itemsRev` is a number for the list of the items as it is, and with `items=<that number>` the list is left out as long as it is the same. A player is `id`, `r` (the number of what stays the same of him), `s` (that part: name, address, team, flags, sabers, model; left out for a page that names the number with `p=<id>.<r>-<id>.<r>`), `f` (21 numbers: health, armor, score, ping, weapon, force, flags 1 dead 2 saber on 4 saber in flight, saberHolstered, saber entity, origin, velocity, yaw, pitch, legs and torso animation, view height, ammo) and `b` (for every blade its length now, where it starts and the way it points). `models`: every other entity the clients draw as a model (props, models of the map that are entities), with its model, scale, origin and angles as the clients have them. `movers`: every brush model the clients draw as an entity (doors, lifts, what turns or can be switched off), as the number of the brush model, or as `[number, x, y, z, pitch, yaw, roll]` when it is not where the map file has it. `shots`: what is in the air, each as `[entity, weapon, 1 for the other way to fire it, x, y, z, and its speed along the three axes]` The effects: with `fx=<number>&fxs=<number>` the page says what it has, and `fx` (`rev` and a `list` of the entities that are effects: entity, index of the effect, state, delay and random part of its loop in msec, place, direction) and `fxSeq` with `fxPlay` (what the game played once in the last two seconds: number, msec ago, kind 0 for an `effectTypes_t` or 1 for an index, which, place, direction) are sent only when they differ |
+| `GET /api/state` | map, scores, players, NPCs, items and `models` as JSON. The page polls this. `itemsRev` is a number for the list of the items as it is, and with `items=<that number>` the list is left out as long as it is the same. An item is `[entity, its place in the list of the items of the game (the `index` of `/api/classes`), eFlags, x, y, z, pitch, yaw, roll]`: every item the clients are sent, also the ghost of a weapon that was taken. An NPC has, besides its name, model, health and place, its `class`, `weapon`, `angles`, `vel` and `f` (the frames and speeds as of a player, eFlags, eFlags2, powerups, the flips, the entity it stands on); for a vehicle the model is the one of its vehicle file and `skin` the skin of that file. A player is `id`, `r` (the number of what stays the same of him), `s` (that part: name, address, team, flags, sabers, model; left out for a page that names the number with `p=<id>.<r>-<id>.<r>`), `f` (35 numbers: health, armor, score, ping, weapon, force, flags 1 dead 2 saber on 4 saber in flight, saberHolstered, saber entity, origin, velocity, yaw, pitch, legs and torso animation, view height, ammo, and from the 22nd on what a client draws him by: the frame the server has his legs at and how fast it runs in frames per 50 msec, the same of his torso (-1 and 0 while the skeleton is not in the animation the row names), `eFlags`, `eFlags2` and `powerups` of his entity, the force powers that are on, `weaponstate`, `saberMove`, the flips 1 legs 2 torso, the entity he stands on, `brokenLimbs`, the saber style he fights in) and `b` (for every blade its length now, where it starts and the way it points). `models`: every other entity the clients draw as a model (props, models of the map that are entities), with its model, scale, origin and angles as the clients have them. `movers`: every brush model the clients draw as an entity (doors, lifts, what turns or can be switched off), as the number of the brush model, or as `[number, x, y, z, pitch, yaw, roll]` when it is not where the map file has it, with two more for one that has them: the frame of its shaders (`EF_SHADER_ANIM`, else -1) and its `model2`. `shots`: what is in the air, each as `[entity, weapon, 1 for the other way to fire it, x, y, z, its speed along the three axes, pitch, yaw, roll, eFlags]` The effects: with `fx=<number>&fxs=<number>` the page says what it has, and `fx` (`rev` and a `list` of the entities that are effects: entity, index of the effect, state, delay and random part of its loop in msec, place, direction) and `fxSeq` with `fxPlay` (what the game played once in the last two seconds: number, msec ago, kind 0 for an `effectTypes_t` or 1 for an index, which, place, direction) are sent only when they differ |
 | `GET /api/map` | the `.bsp` of the current map |
 | `GET /api/file?name=` | a file below `textures/`, `models/` or `gfx/` (images, md3, glm, gla, cfg, skin), a shader script `shaders/<name>.shader`, or a `.wav` or `.mp3` below `sound/` or `music/` Also an effect file `effects/<name>.efx`, as text |
 | `GET /api/shaders` | the names of the shader scripts of the game, in the order the engine reads them in |
@@ -341,6 +341,31 @@ Also changed:
   Not done in this step, and seen in the pictures: weather (the snow of mp/ctf2), items and pickups as the
   game draws them, players, the HUD. No visibility culling: from outside the hull of a map the game shows
   only what is seen from there and the page shows rooms through their missing outer walls.
+- New: the state says what a client draws players, items, movers and shots by (`wa_state.c`). The page drew
+  them from less than a client has: an animation without the frame it is at, an item as a class name and a
+  place. Now:
+  - A player and an NPC have the frame the server has their skeleton at, for the legs and for the torso, and
+    how fast it runs (`WA_StateBoneFrame`: the server sets the same animations on its own copy of the skeleton
+    as a client does, `G_UpdateClientAnims`). The frame is left out while the skeleton is not in the animation
+    the row names: the player state gets a new one with a move, the skeleton later in the frame. On a private
+    server with bots that was 1 or 2 of 40 looks.
+  - A player has the flags of his entity (`eFlags`, `eFlags2`), his powerups and the force powers that are
+    on, the state of his weapon, his saber move, the flips, what he stands on, his broken limbs and the saber
+    style he fights in. What stays of him has the two RGB colours of his sabers (`saberRgb`, as `c3` and `c4`
+    of the client info, when `jp_allowRGBsaber` is 1).
+  - An NPC has its class, weapon, angles and speed, and a vehicle the model and the skin of its vehicle file:
+    the server tells the clients only the name of a vehicle with a `$` in front, and they look it up
+    (`CG_G2AnimEntModelLoad`). The walker of mp/siege_hoth came as `$atst_vehicle`, which is no model.
+  - An item is a row: its entity, its place in the list of the items of the game, the flags of its entity,
+    its place and its angles. `/api/classes` says that place for every class (`index`) and the second model
+    some items have (`model2`). A weapon or a powerup that was taken stays in the list with
+    `EF_ITEMPLACEHOLDER`: the game draws a ghost of it there. The page drew it as if it lay there, and still
+    does until the items are drawn as `CG_Item` draws them.
+  - A mover says the frame of its shaders and its `model2` when it has them, a shot its angles and the
+    flags of its entity.
+  A player is about 220 bytes ten times a second now, he was about 170. `tools/panelshot/steps_feed.js` (19
+  checks): the frames against the animation files the page reads, a weapon placed through the panel in the
+  list by its place, a `func_static` with `model2` and a switched shader, a rocket.
 - New: the editor draws the map as the game does, unless its plain view is chosen (the user: "when in editor mode
   the map is really bright than in normal administration mode", and "add the as in the game and make it
   default"). The editor had only its plain view: an image times the light for every surface, with twice the

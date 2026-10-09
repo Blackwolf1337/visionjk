@@ -94,8 +94,10 @@ function drawItems(now) {
 	if (state) {
 		const spin = now / 600;
 		for (const it of state.items) {
+			// one the game does not draw either: taken, and not to come back as a ghost
+			if (it.flags & EF_NODRAW) continue;
 			// the real item model, spinning like in the game, until it loaded a colored diamond
-			const info = classInfo.get(it.name);
+			const info = itemDef(it);
 			const model = info && info.model ? staticNow(info.model) : null;
 			if (model) {
 				const c = Math.cos(spin), sn = Math.sin(spin);
@@ -103,7 +105,7 @@ function drawItems(now) {
 				gl.useProgram(flatProg.p);
 				gl.uniformMatrix4fv(flatProg.u.uMvp, false, viewProj);
 			} else {
-				const col = ITEM_COLORS[it.type] || [1, 1, 1];
+				const col = ITEM_COLORS[info ? info.type : it.type] || [1, 1, 1];
 				drawMesh(diamondMesh, it.pos[0], it.pos[1], it.pos[2] + 6 + Math.sin(spin + it.id) * 3, spin, 1, [col[0], col[1], col[2], 1]);
 			}
 		}
