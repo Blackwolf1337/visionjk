@@ -19,9 +19,6 @@ set(BuildMPGame OFF CACHE BOOL "" FORCE)
 set(BuildMPRdVanilla OFF CACHE BOOL "" FORCE)
 set(BuildJPAssets OFF CACHE BOOL "" FORCE)
 
-# Off unless asked for with -D: Steam Audio is being brought to the browser.
-set(BuildJPSpatialAudio OFF CACHE BOOL "")
-
 # there are no system libraries to find
 set(UseInternalZlib ON CACHE BOOL "" FORCE)
 set(UseInternalPNG ON CACHE BOOL "" FORCE)
