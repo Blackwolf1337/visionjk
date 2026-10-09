@@ -86,16 +86,15 @@ const prQuery = () => '&prs=' + prSeq;
 // string package is not read yet waits for it.
 function takePrints(s) {
 	if (s.prSeq === undefined) return;
-	const now = performance.now();
 	for (const p of s.pr || []) {
 		// known by its number and the time of the map it was sent at, as an event is (takeEvents)
 		const key = p[0] + ' ' + (s.time - p[1]);
 		if (prHeard.has(key)) continue;
-		prHeard.set(key, now);
+		prHeard.set(key, s.time - p[1]);
 		const kind = p[2], text = String(p[3]), show = () => { const t = hudSvString(text); if (kind === 1) hudCenterPrint(t, 480 * 0.30); else conPrint(t); };
 		if (text.includes('@@@') && !(hudStrings.get('MP_SVGAME') instanceof Map)) hudStringsRead('MP_SVGAME').then(show); else show();
 	}
-	for (const [key, at] of prHeard) if (now - at > 10000) prHeard.delete(key);
+	heardForget(prHeard, s.time, 10000);
 	prSeq = s.prSeq;
 }
 

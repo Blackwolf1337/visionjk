@@ -37,7 +37,15 @@ let fxDepth = 0;				// effects that are being started from within one another
 
 const fxRunners = new Map();	// entity -> { index, state, delay, random, pos, dir, next, fire }
 let fxMap = '', fxRev = 0, fxSeq = 0;
-const fxHeard = new Map();		// what of fxPlay was taken, and when
+const fxHeard = new Map();		// what of fxPlay was taken, and the time of the map it was played at
+
+// What a poll tells once (an effect that was played, an event, a line of the server) is known by its number and
+// the time of the map it happened at. It is forgotten when the map is keep msec past it, or before it (the map
+// was started again): by the time of the game, as the server keeps it, not by the clock of the page. A server
+// whose time runs slower than the clock tells the same thing for longer.
+function heardForget(heard, mapTime, keep) {
+	for (const [key, at] of heard) if (mapTime - at > keep || at > mapTime + 1000) heard.delete(key);
+}
 let fxNames = [], fxNamesAsked = 0, fxNamesBusy = false;
 
 const fxTraces = new Map();		// the rays of the last second
@@ -536,12 +544,12 @@ function fxTakeState(s) {
 			// that were on their way together both have it, and a module that was loaded anew counts from 1 again.
 			const key = seq + ' ' + (s.time - ago);
 			if (fxHeard.has(key)) continue;
-			fxHeard.set(key, now);
+			fxHeard.set(key, s.time - ago);
 			if (!fxOn()) continue;
 			if (kind) fxUnnamed.push({ id, org: [x, y, z], dir: [dx, dy, dz], asked: now });
 			else fxPlay(FX_GAME_TYPES[id], [x, y, z], [dx, dy, dz]);
 		}
-		for (const [key, at] of fxHeard) if (now - at > 5000) fxHeard.delete(key);
+		heardForget(fxHeard, s.time, 5000);
 		if (fxUnnamed.length > 64) fxUnnamed.splice(0, fxUnnamed.length - 64);
 		// the number of the server, also when it is lower than the one here: its module was loaded anew then
 		fxSeq = s.fxSeq;

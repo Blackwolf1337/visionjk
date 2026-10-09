@@ -12,7 +12,7 @@ let evSeq = -1;			// the number of the last event the page has, -1 until the ser
 const EV = {};			// the number of an event by its name (EV.EV_FIRE_WEAPON), there once the list is read
 let evNames = null, evNamed = false;
 let evWaiting = [];		// what came before the names were read: [the row of the feed, when it came]
-const evHeard = new Map();	// what was taken, and when: two polls that were on their way together both have it
+const evHeard = new Map();	// what was taken, and the time of the map it happened at: two polls that were on their way together both have it
 let evMap = '';
 // for the checks: the bands that were drawn in the last frame, and the flare as it was drawn last
 const evStats = { beziers: 0, quads: 0, flare: null };
@@ -55,11 +55,11 @@ function takeEvents(s) {
 		// is (fxTakeState): a module that was loaded anew counts from 1 again.
 		const key = e[0] + ' ' + (s.time - e[1]);
 		if (evHeard.has(key)) continue;
-		evHeard.set(key, now);
+		evHeard.set(key, s.time - e[1]);
 		if (!evNamed) { if (evWaiting.length < 64) evWaiting.push([e, now]); continue; }
 		gameEvent(evRow(e, evNames[e[3]] || ''));
 	}
-	for (const [key, at] of evHeard) if (now - at > 5000) evHeard.delete(key);
+	heardForget(evHeard, s.time, 5000);
 	evSeq = s.evSeq;
 }
 

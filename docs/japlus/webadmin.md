@@ -607,6 +607,29 @@ Also changed:
   keeps an empty menu open, and the engine leaves these lines out while a menu has the keys. Not shown: what
   the engine and the client game print by themselves besides the kills. `tools/panelshot/steps_console.js`
   (19 checks).
+- New: the electric shell of a player. One who is electrified (force lightning, a DEMP 2 hit, the stun baton,
+  the login effect and the freeze of the JA+ admins) is drawn by the game once more with one of two electric
+  shaders in six of ten frames, white, fainter in his last half second (`CG_Player`, `emplacedOwner` of the
+  entity). The state did not tell it: the row of a player has a 37th number now, the msec he is electrified
+  for, and `plDrawModel` in `js/player-fx.js` draws the shell. Found in the pairs of a fight (see below), where
+  the game had the shell on both bots and the page on neither; with it the page has it too. Not drawn: the
+  forks of lightning between his limbs (`CG_ForceElectrocution`). Two more checks in `steps_players.js` (38).
+- Fixed: what a poll tells once was forgotten by the clock of the page. An effect that was played, an event
+  and a line of the server are known by their number and the time of the map they happened at, and the page
+  forgot them five seconds of its own clock later. The server keeps them by the time of the game: when that
+  runs slower than the clock (a low `timescale`), the page took the same event again every five seconds and
+  played its effect anew. They are forgotten by the time of the map now (`heardForget` in `js/fx-run.js`).
+- The comparison with the game can take a pair of one moment of a scene that moves (`REF_LOOK=fight` of
+  `tools/refshot.sh`: two bots frozen next to each other, who still fight). Until now a pair was taken at
+  `timescale 0.05`, which the engine does not go below a msec a frame with: 60 msec of the game went by in
+  every second, and the two pictures were of moments some 60 to 120 msec apart. For a moment the client is
+  slowed to ten frames a second of a msec each and the server runs a frame for every msec, so that the panel
+  still answers; and the pair waits seven seconds, because the client draws the world a snapshot or two
+  behind the server and comes nearer only by a msec with every snapshot. What that showed: bodies and blades
+  of two fighting bots agree with the game to about a frame of their animation, the electric shell was
+  missing (above), and the half shield of a hit is there on both. What it can not compare yet: sparks,
+  flares and the trails of blades, which the page runs by its own clock while the time of the game nearly
+  stands; the page plays no particle effects in such a pair for that reason.
 - Changed: a saber in the air has its blades at the bolts of its hilt, as one in a hand (`drawModelEntities`
   in `js/frame.js`; `CG_Player` for `saberInFlight` hands `CG_AddSaberBlade` the saber entity). Until now
   only the first blade was drawn, along the way the hilt lies: a staff that was thrown had one blade.
