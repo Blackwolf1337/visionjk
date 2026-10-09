@@ -29,6 +29,8 @@ on a TCP port of its own (sv_webPort) and is to a browser what it is to a client
                    GET /pk3/<path>     one of them, whole or a part of it (Range)
   the packets      GET /net            becomes a WebSocket (RFC 6455). Every binary message on it is one
                                        datagram of the game as UDP carries it, nothing added, both ways.
+  the voice chat   GET /voice          becomes a WebSocket too. Every binary message on it is one datagram of
+                                       the voice chat, which goes to the relay of the game module and back.
 
 It is inside the server and no program in front of it, so the server knows the address a page plays from:
 the peer of a WebSocket is a netadr_t of the type NA_WEB with the address and the port of its connection, and
@@ -40,6 +42,7 @@ byte that comes in is read as one of an attacker: fixed buffers, a fixed table, 
   sv_web.cpp       the listener, the connections, their buffers and timeouts, what NET_Sleep calls
   sv_web_http.cpp  a request, the files, the manifest
   sv_web_ws.cpp    the WebSocket: its handshake, its frames, the packets in and out
+  sv_web_voice.cpp the voice chat of a client in a page, between its WebSocket and the relay
 */
 
 #pragma once
@@ -48,10 +51,16 @@ byte that comes in is read as one of an attacker: fixed buffers, a fixed table, 
 #include "qcommon/net_local.h"
 #include "web/web_http.h"
 
+// the datagram of the voice chat (plain C of the game modules, built into the server for sv_web_voice.cpp)
+extern "C" {
+#include "game/voice/bg_voice.h"
+}
+
 #include <stdio.h>
 
 // Winsock waits on 64 sockets in a set (FD_SETSIZE), and the one NET_Sleep reads has the UDP socket and the
-// listener in it too. So the table is a little smaller than 64 on every system.
+// listener in it too. So the table is a little smaller than 64 on every system. A WebSocket of the voice chat
+// has a second socket in that set (to the relay) and takes two of these places (SV_WebPlaces).
 #define SV_WEB_MAX_CONNECTIONS	60
 #define SV_WEB_MAX_TRANSFERS	32			// of them hand out a file at once, the rest stays free for requests
 #define SV_WEB_MAX_ADDRESS_TRANSFERS	6	// and of those for one address: what a browser opens to one host
@@ -94,6 +103,17 @@ byte that comes in is read as one of an attacker: fixed buffers, a fixed table, 
 // is lost, as a datagram is on a line that is full.
 #define SV_WEB_PACKET_BURST		32
 #define SV_WEB_PACKET_MSEC		1
+
+// The voice chat of a client in a page (GET /voice, sv_web_voice.cpp). A message is a datagram of that chat
+// as a client sends it, and a longer one ends the socket. What is handed on to the relay is as many as the
+// relay itself takes from a speaker in a second (VOICE_MAX_PPS) at once and that many in every second after:
+// a page that stood still for a moment sends what its microphone recorded since in one go.
+#define SV_WEB_MAX_VOICE_PACKET	( VOICE_HEAD_TO_SERVER + VOICE_MAX_FRAME )
+#define SV_WEB_MAX_ADDRESS_VOICE	4		// WebSockets of the voice chat for one address
+#define SV_WEB_VOICE_READS		32			// datagrams of the relay that are taken for one of them in a wake-up
+// It is only opened for an address a client of the game plays from through this host, and closed this long
+// after the last such client is gone: nothing is handed on for it by then anyway.
+#define SV_WEB_VOICE_NO_CLIENT_MSEC	10000
 
 #define SV_WEB_MAX_PACKS		512			// pk3 files in the manifest
 #define SV_WEB_MANIFEST_MSEC	2000		// the manifest is not put together more often than this
@@ -145,6 +165,11 @@ typedef struct webConnection_s {
 	int			messageLen;
 	leakyBucket_t	packets;	// how many packets it handed the server of late (SV_WEB_PACKET_BURST)
 
+	// the WebSocket of the voice chat (GET /voice)
+	qboolean	voice;			// its messages are datagrams for the relay of the voice chat, none is a packet of the game
+	SOCKET		voiceSock;		// while voice is set: the UDP socket they go to the relay from, and what it answers comes on
+	unsigned int	voiceToken;	// the token of the last datagram that went out there, 0: none yet
+
 	int			inLen;
 	int			inPos;			// WEB_SOCKET: the frames in front of this are done with
 	int			outLen;
@@ -178,10 +203,14 @@ typedef struct webFrame_s {
 extern cvar_t	*sv_webRoot;
 
 // sv_web.cpp
+qboolean SV_WebSocketFits( SOCKET s );
+qboolean SV_WebNonBlocking( SOCKET s );
 void SV_WebDrop( webConnection_t *c );
 byte *SV_WebOutRoom( webConnection_t *c, int len );
 void SV_WebFlush( webConnection_t *c );
 int SV_WebTransfers( const netadr_t *adr );
+int SV_WebVoices( const netadr_t *adr );
+int SV_WebPlaces( void );
 webConnection_t *SV_WebSocketOf( const netadr_t *adr );
 
 // sv_web_http.cpp
@@ -198,6 +227,13 @@ int SV_WebFrameHead( const byte *data, int len, int maxPayload, webFrame_t *fram
 void SV_WebFrameUnmask( byte *payload, int len, const byte *mask );
 int SV_WebFrameBuild( byte *out, int outSize, int opcode, const void *payload, int len );
 void SV_WebUpgrade( webConnection_t *c, const char *head, int headLen, int minor );
+qboolean SV_WebSocketSend( webConnection_t *c, int opcode, const void *payload, int len );
 void SV_WebSocketFrames( webConnection_t *c );
 void SV_WebSocketPing( webConnection_t *c );
 void SV_WebSocketEnd( webConnection_t *c, int code );
+
+// sv_web_voice.cpp
+qboolean SV_WebVoiceIsClient( const netadr_t *adr );
+void SV_WebVoiceUpgrade( webConnection_t *c, const char *head, int headLen, int minor );
+void SV_WebVoiceDatagram( webConnection_t *c, const byte *data, int length );
+void SV_WebVoiceRead( webConnection_t *c );

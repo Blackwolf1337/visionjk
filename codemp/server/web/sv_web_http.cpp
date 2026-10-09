@@ -19,8 +19,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 */
 
 // sv_web_http.cpp -- what the web host answers a request with: the files of the page, the manifest of the
-// pk3 files and the pk3 files themselves. Only GET and HEAD, no request has a body. The request for /net is
-// the one that makes a WebSocket of its connection (sv_web_ws.cpp).
+// pk3 files and the pk3 files themselves. Only GET and HEAD, no request has a body. The requests for /net and
+// /voice are the ones that make a WebSocket of their connection (sv_web_ws.cpp, sv_web_voice.cpp).
 //
 // A file is never held in memory. It is opened when its answer begins and read in pieces as the socket
 // takes them (SV_WebBodyMore), with fopen and not with a file of the file system of the engine: every change
@@ -836,6 +836,10 @@ void SV_WebHttpRequest( webConnection_t *c, int headLen ) {
 
 	if ( !strcmp( path, "/net" ) ) {
 		SV_WebUpgrade( c, head, headLen, minor );
+		return;
+	}
+	if ( !strcmp( path, "/voice" ) ) {
+		SV_WebVoiceUpgrade( c, head, headLen, minor );
 		return;
 	}
 

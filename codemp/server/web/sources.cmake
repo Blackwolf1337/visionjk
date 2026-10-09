@@ -25,11 +25,21 @@ set(MPDedWebFiles
 	"${MPDir}/server/web/sv_web.cpp"
 	"${MPDir}/server/web/sv_web_http.cpp"
 	"${MPDir}/server/web/sv_web_ws.cpp"
+	"${MPDir}/server/web/sv_web_voice.cpp"
 	# the sockets of the system, which net_ip.cpp and the web host name alike
 	"${MPDir}/qcommon/net_local.h"
 	)
 source_group("server/web" FILES ${MPDedWebFiles})
 set(MPDedFiles ${MPDedFiles} ${MPDedWebFiles})
+
+# The datagram of the voice chat, which sv_web_voice.cpp reads before it hands one on: the file the game
+# modules are built with (codemp/game/CMakeLists.txt, codemp/cgame/CMakeLists.txt). It calls nothing.
+set(MPDedVoiceFiles
+	"${MPDir}/game/voice/bg_voice.h"
+	"${MPDir}/game/voice/bg_voice.c"
+	)
+source_group("game/voice" FILES ${MPDedVoiceFiles})
+set(MPDedFiles ${MPDedFiles} ${MPDedVoiceFiles})
 
 # what it reads a request with, the web admin panel of the game module is built with the same files
 # (codemp/game/CMakeLists.txt)

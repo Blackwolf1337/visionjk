@@ -25,6 +25,9 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 //
 // It is a stream, but it is used as UDP is: a datagram that does not fit into what waits to be sent is lost,
 // and nothing here knows of clients. The netchan above it deals with loss as it always did.
+//
+// The WebSocket of the voice chat (GET /voice) has the same frames. Its messages are datagrams of that chat
+// and go to sv_web_voice.cpp.
 
 #include "server/web/sv_web_local.h"
 
@@ -223,7 +226,7 @@ SV_WebSocketSend
 A frame behind what waits to be sent. qfalse: there is no room for all of it, and none of it is sent.
 ==================
 */
-static qboolean SV_WebSocketSend( webConnection_t *c, int opcode, const void *payload, int len ) {
+qboolean SV_WebSocketSend( webConnection_t *c, int opcode, const void *payload, int len ) {
 	byte	*out;
 	int		size;
 
@@ -301,6 +304,32 @@ static void SV_WebDatagram( webConnection_t *c, const byte *data, int length ) {
 
 /*
 ==================
+SV_WebMaxMessage
+
+The longest message this peer may send: a packet of the game, or a datagram of the voice chat
+==================
+*/
+static int SV_WebMaxMessage( const webConnection_t *c ) {
+	return c->voice ? SV_WEB_MAX_VOICE_PACKET : SV_WEB_MAX_PACKET;
+}
+
+/*
+==================
+SV_WebMessage
+
+A message of a peer that is whole
+==================
+*/
+static void SV_WebMessage( webConnection_t *c, const byte *data, int length ) {
+	if ( c->voice ) {
+		SV_WebVoiceDatagram( c, data, length );
+	} else {
+		SV_WebDatagram( c, data, length );
+	}
+}
+
+/*
+==================
 SV_WebSocketFrame
 
 One frame of a peer that is whole, its payload is unscrambled
@@ -312,7 +341,7 @@ static void SV_WebSocketFrame( webConnection_t *c, const webFrame_t *frame, cons
 		if ( c->inMessage ) {
 			SV_WebSocketEnd( c, WEB_CLOSE_PROTOCOL );
 		} else if ( frame->fin ) {
-			SV_WebDatagram( c, payload, frame->length );
+			SV_WebMessage( c, payload, frame->length );
 		} else {
 			// the first frame of a message that comes in several
 			memcpy( c->message, payload, frame->length );
@@ -324,14 +353,14 @@ static void SV_WebSocketFrame( webConnection_t *c, const webFrame_t *frame, cons
 	case WEB_OP_CONTINUATION:
 		if ( !c->inMessage ) {
 			SV_WebSocketEnd( c, WEB_CLOSE_PROTOCOL );
-		} else if ( frame->length > SV_WEB_MAX_PACKET - c->messageLen ) {
+		} else if ( frame->length > SV_WebMaxMessage( c ) - c->messageLen ) {
 			SV_WebSocketEnd( c, WEB_CLOSE_TOO_BIG );
 		} else {
 			memcpy( c->message + c->messageLen, payload, frame->length );
 			c->messageLen += frame->length;
 			if ( frame->fin ) {
 				c->inMessage = qfalse;
-				SV_WebDatagram( c, c->message, c->messageLen );
+				SV_WebMessage( c, c->message, c->messageLen );
 			}
 		}
 		break;
@@ -370,7 +399,7 @@ void SV_WebSocketFrames( webConnection_t *c ) {
 		webFrame_t	frame;
 		byte		*data = c->in + c->inPos;
 		const int	len = c->inLen - c->inPos;
-		const int	headLen = SV_WebFrameHead( data, len, SV_WEB_MAX_PACKET, &frame );
+		const int	headLen = SV_WebFrameHead( data, len, SV_WebMaxMessage( c ), &frame );
 
 		if ( headLen < 0 ) {
 			SV_WebSocketEnd( c, ( headLen == WEB_FRAME_LONG ) ? WEB_CLOSE_TOO_BIG : WEB_CLOSE_PROTOCOL );

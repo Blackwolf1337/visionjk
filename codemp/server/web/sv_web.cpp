@@ -87,7 +87,7 @@ qfalse: the sets of select() can not hold the socket. On Windows a set is a list
 the table sees to. Elsewhere it has a bit for every descriptor below FD_SETSIZE and no room for one above.
 ==================
 */
-static qboolean SV_WebSocketFits( SOCKET s ) {
+qboolean SV_WebSocketFits( SOCKET s ) {
 #ifdef _WIN32
 	return qtrue;
 #else
@@ -102,7 +102,7 @@ SV_WebNonBlocking
 No call on the socket waits from here on. qfalse: it could not be set, and the socket is of no use.
 ==================
 */
-static qboolean SV_WebNonBlocking( SOCKET s ) {
+qboolean SV_WebNonBlocking( SOCKET s ) {
 #ifdef _WIN32
 	u_long	on = 1;
 #else
@@ -128,6 +128,10 @@ Not while something still works with the connection, see SV_WebDrop
 */
 static void SV_WebClose( webConnection_t *c ) {
 	SV_WebBodyEnd( c );
+	if ( c->voice ) {
+		closesocket( c->voiceSock );
+		c->voice = qfalse;
+	}
 	closesocket( c->sock );
 	c->sock = INVALID_SOCKET;
 	c->state = WEB_FREE;
@@ -166,6 +170,45 @@ int SV_WebTransfers( const netadr_t *adr ) {
 
 /*
 ==================
+SV_WebVoices
+
+How many connections are WebSockets of the voice chat: all of them, or the ones of that address
+==================
+*/
+int SV_WebVoices( const netadr_t *adr ) {
+	int i, count = 0;
+
+	for ( i = 0; i < SV_WEB_MAX_CONNECTIONS; i++ ) {
+		if ( connections[i].state != WEB_FREE && connections[i].voice
+			&& ( !adr || !memcmp( connections[i].adr.ip, adr->ip, sizeof( adr->ip ) ) ) ) {
+			count++;
+		}
+	}
+	return count;
+}
+
+/*
+==================
+SV_WebPlaces
+
+How many of the SV_WEB_MAX_CONNECTIONS places are taken. A connection takes one, a WebSocket of the voice chat
+two: its UDP socket to the relay waits in the read set of NET_Sleep as well, which has no more room than that
+on Windows.
+==================
+*/
+int SV_WebPlaces( void ) {
+	int i, count = 0;
+
+	for ( i = 0; i < SV_WEB_MAX_CONNECTIONS; i++ ) {
+		if ( connections[i].state != WEB_FREE ) {
+			count += connections[i].voice ? 2 : 1;
+		}
+	}
+	return count;
+}
+
+/*
+==================
 SV_WebOutRoom
 
 Room for len more bytes behind what waits to be sent, or NULL if there is not that much. The caller writes
@@ -189,7 +232,7 @@ byte *SV_WebOutRoom( webConnection_t *c, int len ) {
 ==================
 SV_WebSocketOf
 
-The WebSocket a packet to that address goes out on, NULL if it is gone
+The WebSocket a packet to that address goes out on, NULL if it is gone. Never one of the voice chat.
 ==================
 */
 webConnection_t *SV_WebSocketOf( const netadr_t *adr ) {
@@ -198,7 +241,7 @@ webConnection_t *SV_WebSocketOf( const netadr_t *adr ) {
 	for ( i = 0; i < SV_WEB_MAX_CONNECTIONS; i++ ) {
 		webConnection_t *c = &connections[i];
 
-		if ( c->state == WEB_SOCKET && !c->drop && c->adr.port == adr->port
+		if ( c->state == WEB_SOCKET && !c->drop && !c->voice && c->adr.port == adr->port
 			&& !memcmp( c->adr.ip, adr->ip, sizeof( c->adr.ip ) ) ) {
 			return c;
 		}
@@ -445,7 +488,8 @@ static void SV_WebAccept( void ) {
 
 		// It is always taken from the listener, also when there is no place for it: one that stays there
 		// keeps the listener readable, and the server would not sleep any more.
-		if ( !c || sameAddress >= SV_WEB_MAX_PER_ADDRESS || from.sin_family != AF_INET || !SV_WebSocketFits( s )
+		if ( !c || SV_WebPlaces() >= SV_WEB_MAX_CONNECTIONS || sameAddress >= SV_WEB_MAX_PER_ADDRESS
+			|| from.sin_family != AF_INET || !SV_WebSocketFits( s )
 			|| !SV_WebNonBlocking( s ) ) {
 			closesocket( s );
 			continue;
@@ -654,6 +698,11 @@ void SV_WebFDSet( fd_set *readSet, fd_set *writeSet, SOCKET *highest ) {
 		if ( c->state == WEB_REQUEST || c->state == WEB_SOCKET ) {
 			SV_WebSetFD( c->sock, readSet, highest );
 		}
+		// what the relay of the voice chat has for this peer (not for one that is being closed: nobody would
+		// read it, and the socket would wake the server up again and again)
+		if ( c->state == WEB_SOCKET && c->voice ) {
+			SV_WebSetFD( c->voiceSock, readSet, highest );
+		}
 		if ( c->state == WEB_RESPONSE || c->state == WEB_CLOSING || c->outSent < c->outLen ) {
 			SV_WebSetFD( c->sock, writeSet, highest );
 		}
@@ -711,13 +760,13 @@ static void SV_WebTimeouts( void ) {
 		}
 
 		if ( c->state == WEB_SOCKET ) {
-			if ( SV_WebIsClient( &c->adr ) ) {
+			if ( c->voice ? SV_WebVoiceIsClient( &c->adr ) : SV_WebIsClient( &c->adr ) ) {
 				c->clientTime = now;
 			}
 			if ( now - c->lastHeard > SV_WEB_SILENT_MSEC ) {
 				SV_WebDrop( c );
-			} else if ( now - c->clientTime > SV_WEB_NO_CLIENT_MSEC ) {
-				// no client for a minute: it is told that nothing went wrong (1000), and its place is free
+			} else if ( now - c->clientTime > ( c->voice ? SV_WEB_VOICE_NO_CLIENT_MSEC : SV_WEB_NO_CLIENT_MSEC ) ) {
+				// no client for too long: it is told that nothing went wrong (1000), and its place is free
 				SV_WebSocketEnd( c, 1000 );
 			} else if ( now - c->lastHeard > SV_WEB_PING_MSEC && !c->pinged ) {
 				c->pinged = qtrue;
@@ -765,6 +814,10 @@ void SV_WebEvent( fd_set *readSet, fd_set *writeSet ) {
 			// (The rest may also be a part of a frame, which goes on waiting for its end. What the frames
 			// are answered with is sent by the next wake-up, which the socket causes if it takes it.)
 			SV_WebSocketFrames( c );
+		}
+		// (a socket to the relay that was made in this wake-up is in no set yet)
+		if ( c->voice && c->state == WEB_SOCKET && !c->drop && FD_ISSET( c->voiceSock, readSet ) ) {
+			SV_WebVoiceRead( c );
 		}
 		if ( !c->drop && FD_ISSET( c->sock, writeSet ) ) {
 			SV_WebWrite( c );
