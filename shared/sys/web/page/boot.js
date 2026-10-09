@@ -29,6 +29,9 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 // the engine looks its modules up in Module.vjkModules by exactly these names
 const SIDE_MODULES = ['cgamewasm32.wasm', 'uiwasm32.wasm', 'rd-vulkan-vision_wasm32.wasm'];
+// Taken along when the server has them, the game runs without: Steam Audio for s_spatial, a file of its own that
+// the engine loads when it wants it, as it loads the library on the desktop.
+const OPTIONAL_MODULES = ['phonon.wasm'];
 const ENGINE = 'visionjk.wasm32.js', ENGINE_CODE = 'visionjk.wasm32.wasm';
 // The server sends files to one address only so many at a time and answers 503 beyond that, with the seconds to
 // wait (two players behind one address who load at once). That often the page asks again.
@@ -551,7 +554,8 @@ async function main() {
 
 	// the code of the game is fetched and compiled while the packs come, and what is wrong with it is said at
 	// once and not after the packs
-	const modules = Promise.all(SIDE_MODULES.map(name => named(name, compile(name)))).then(() => true, e => { fail(words(e)); return false; });
+	const optional = OPTIONAL_MODULES.map(name => compile(name).catch(e => note(name + ': not there (' + words(e) + '), the game runs without it')));
+	const modules = Promise.all([...SIDE_MODULES.map(name => named(name, compile(name))), ...optional]).then(() => true, e => { fail(words(e)); return false; });
 	runtime.promise.then(() => prepared(ENGINE));
 	loadEngine();
 
