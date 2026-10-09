@@ -92,11 +92,11 @@ function staticNow(path) {
 }
 
 // MD3 tags of the first frame: name -> 3x4 matrix
-function md3Tags(buf) {
+function md3Tags(buf, frame = 0) {
 	const dv = new DataView(buf), tags = {};
 	const n = dv.getInt32(80, true), o = dv.getInt32(96, true);
 	for (let i = 0; i < n; i++) {
-		const t = o + i * 112, org = [0, 1, 2].map(k => dv.getFloat32(t + 64 + k * 4, true));
+		const t = o + (frame * n + i) * 112, org = [0, 1, 2].map(k => dv.getFloat32(t + 64 + k * 4, true));
 		const ax = [0, 1, 2].map(r => [0, 1, 2].map(k => dv.getFloat32(t + 76 + (r * 3 + k) * 4, true)));
 		// columns are the tag's forward, left, up axes
 		tags[readStr(dv, t, 64).toLowerCase()] = new Float32Array([ax[0][0], ax[1][0], ax[2][0], org[0], ax[0][1], ax[1][1], ax[2][1], org[1], ax[0][2], ax[1][2], ax[2][2], org[2]]);
@@ -382,6 +382,88 @@ function setFirstPerson(id) {
 	if (id >= 0) cam.follow = -1;
 }
 
+// ---- What moves the view through the eyes of a player besides his speed and his steps (CG_OffsetFirstPersonView):
+// the kick of a hit he takes (CG_DamageFeedback), the kick of the concussion rifle (CG_FireWeapon), the dip after
+// a fall (DoFall) and the smoothing of ducking (CG_TransitionPlayerState). The times are the ones of the frames
+// of the page. Not here: the smoothing of steps (EV_STEP_4 to 16), which the game leaves out too for one it
+// follows, and cg.kick_origin, which nothing of cgame ever sets.
+const OWN_DAMAGE_DEFLECT = 100, OWN_DAMAGE_RETURN = 400, OWN_DAMAGE_TIME = 500, OWN_LAND_DEFLECT = 150, OWN_LAND_RETURN = 300, OWN_DUCK_TIME = 100;	// cg_local.h
+const OWN_PAIN = ['gfx/misc/borgeyeflare', 'gfx/mp/dmgshader_shields', 'gfx/mp/dmgshader_shieldsandhealth'], OWN_PAIN_RGB = [[180, 50, 50], [50, 180, 50], [180, 180, 50]];
+const own = { id: -1, viewheight: 0, damageEvent: null, kickTime: -1e9, kickPitch: 0, damageTime: -1e9, dmgPitch: 0, dmgRoll: 0, damageX: 0, damageY: 0, damageValue: 0,
+	landTime: -1e9, landChange: 0, duckTime: -1e9, duckChange: 0 };
+
+// DoFall for the one the page looks through the eyes of: delta is the parameter of his EV_FALL
+function ownFall(id, delta, now) {
+	if (id !== view.id) return;
+	own.landChange = Math.max(-32, Math.min(32, -delta));
+	own.landTime = now;
+}
+
+// CG_FireWeapon, the concussion rifle fired the first way: the view is kicked back by 10 to 15 degrees
+function ownKick(id, now) {
+	if (id !== view.id || view.thirdPerson) return;
+	own.kickPitch = refCam ? -12.5 : -10 - Math.random() * 5;
+	own.kickTime = now;
+}
+
+// CG_DamageFeedback: the more the less health he has, and to the side the hit came from (255 and 255: from nowhere,
+// as a fall). ax: the axes of his view.
+function ownDamageFeedback(yawByte, pitchByte, damage, health, ax, now) {
+	const kick = Math.max(5, Math.min(10, damage * (health < 40 ? 1 : 40 / health)));
+	if (yawByte === 255 && pitchByte === 255) {
+		own.damageX = own.damageY = own.dmgRoll = 0;
+		own.dmgPitch = -kick;
+	} else {
+		const from = viewAxes(yawByte / 255 * 360, pitchByte / 255 * 360).fwd, dot = a => -(from[0] * a[0] + from[1] * a[1] + from[2] * a[2]);
+		const front = dot(ax.fwd), left = dot(ax.left), up = dot(ax.up);
+		own.dmgRoll = kick * left;
+		own.dmgPitch = -kick * front;
+		own.damageX = Math.max(-1, Math.min(1, -left / Math.max(front, 0.1)));
+		own.damageY = Math.max(-1, Math.min(1, up / Math.max(Math.hypot(front, left), 0.1)));
+	}
+	own.damageValue = kick;
+	own.damageTime = now;
+}
+
+// CG_TransitionPlayerState: what changed in his player state since the frame before. Nothing carries over from
+// another one the page looked through.
+function ownTransition(d, hud, ax, now) {
+	const viewheight = d.viewheight ?? 36;
+	if (own.id !== view.id) {
+		own.id = view.id;
+		own.viewheight = viewheight;
+		own.damageEvent = null;
+		own.kickTime = own.damageTime = own.landTime = own.duckTime = -1e9;
+		own.damageValue = 0;
+	}
+	if (hud) {
+		if (own.damageEvent !== null && hud.damage[0] !== own.damageEvent && hud.damage[3]) ownDamageFeedback(hud.damage[1], hud.damage[2], hud.damage[3], hud.stats[0], ax, now);
+		own.damageEvent = hud.damage[0];
+	}
+	if (viewheight !== own.viewheight) {
+		own.duckChange = viewheight - own.viewheight;
+		own.duckTime = now;
+		own.viewheight = viewheight;
+	}
+}
+
+// how far the dip after a fall is at the time now, 0 to 1 and back (the eye takes all of landChange, the weapon in
+// front of it a quarter more)
+function ownLandDip(now) {
+	const t = now - own.landTime;
+	return t < 0 ? 0 : t < OWN_LAND_DEFLECT ? t / OWN_LAND_DEFLECT : t < OWN_LAND_DEFLECT + OWN_LAND_RETURN ? 1 - (t - OWN_LAND_DEFLECT) / OWN_LAND_RETURN : 0;
+}
+
+// CG_DamageBlendBlob: the flash of a hit in front of the eye, half a second long, to the side the hit came from.
+// By what took it (damageType of his player state): his health, his shield, both. m: the matrix of the view.
+function ownDamageBlob(hud, m, now) {
+	const t = now - own.damageTime;
+	if (!own.damageValue || t <= 0 || t >= OWN_DAMAGE_TIME || !hud) return;
+	const f = 1 - t / OWN_DAMAGE_TIME, type = hud.damage[4] === 0 ? 0 : hud.damage[4] === 1 ? 1 : 2, x = own.damageX * -8, y = own.damageY * 8;
+	plAddSprite({ org: [0, 1, 2].map(i => eye[i] + 8 * m[i] + x * m[4 + i] + y * m[8 + i]), shader: OWN_PAIN[type], radius: own.damageValue * 3 * f,
+		rgba: [OWN_PAIN_RGB[type][0] * f, OWN_PAIN_RGB[type][1] * f, OWN_PAIN_RGB[type][2] * f, 255] });
+}
+
 // camera for the player view: eye at view height, sabers get the game's chase camera
 function firstPersonCamera(now) {
 	const p = players.get(view.id);
@@ -395,6 +477,7 @@ function firstPersonCamera(now) {
 	// who falls to his death or rides a vehicle. Not known here: a grapple move, a knockdown, the emplaced gun.
 	const hud = state && state.hud && state.hud.client === view.id ? state.hud : null;
 	view.thirdPerson = d.dead || d.weapon === 3 || d.weapon === 2 || !!(hud && (hud.fallingToDeath || hud.vehicle));
+	ownTransition(d, hud, ax, now);
 	if (view.thirdPerson) {
 		// CG_OffsetThirdPersonView (chaseCamera in js/camera.js). In the comparison with the game the time stands
 		// and the camera of the game has come to rest behind him.
@@ -402,19 +485,33 @@ function firstPersonCamera(now) {
 		eye = c.eye;
 		viewProj = M4.mul(gameProjection(canvas.width, canvas.height), M4.lookAt(eye, eye.map((v, i) => v + c.dir[i]), [0, 0, 1]));
 	} else {
-		// CG_OffsetFirstPersonView: the eye leans with his speed and bobs with his steps. Not here: the kick of a
-		// weapon that fires and of a hit he takes, the dip after a fall, the smoothing of steps and of ducking
-		// (they come from events and from what the client predicts).
+		// CG_OffsetFirstPersonView: the eye is kicked by the concussion rifle and by a hit he takes, leans with his
+		// speed, bobs with his steps and dips after a fall (the "own" above has what sets these)
 		const pitchYawRoll = [view.pitch, view.yaw, 0], cycle = hud ? hud.pm[3] : 0, ducked = !!(hud && hud.pm[1] & 1);
 		const xyspeed = Math.hypot(d.vel[0], d.vel[1]), bobfracsin = Math.abs(Math.sin((cycle & 127) / 127 * Math.PI));
+		// the kick of a weapon: up within 200 msec, back within 600
+		let t = now - own.kickTime;
+		if (t >= 0 && t < 800) pitchYawRoll[0] += (t <= 200 ? t / 200 : (800 - t) / 600) * own.kickPitch;
+		// the kick of a hit: there within DAMAGE_DEFLECT_TIME, back within DAMAGE_RETURN_TIME
+		t = now - own.damageTime;
+		if (t >= 0 && t < OWN_DAMAGE_DEFLECT + OWN_DAMAGE_RETURN) {
+			const ratio = t < OWN_DAMAGE_DEFLECT ? t / OWN_DAMAGE_DEFLECT : 1 - (t - OWN_DAMAGE_DEFLECT) / OWN_DAMAGE_RETURN;
+			pitchYawRoll[0] += ratio * own.dmgPitch;
+			pitchYawRoll[2] += ratio * own.dmgRoll;
+		}
 		pitchYawRoll[0] += (d.vel[0] * ax.fwd[0] + d.vel[1] * ax.fwd[1] + d.vel[2] * ax.fwd[2]) * 0.002;		// cg_runPitch
 		pitchYawRoll[2] -= (d.vel[0] * ax.left[0] + d.vel[1] * ax.left[1] + d.vel[2] * ax.left[2]) * 0.005;		// cg_runRoll
 		const swing = bobfracsin * 0.002 * Math.max(xyspeed, 200) * (ducked ? 3 : 1);		// cg_bobPitch and cg_bobRoll
 		pitchYawRoll[0] += swing;
 		pitchYawRoll[2] += cycle & 128 ? -swing : swing;
 		eye = [head[0], head[1], head[2] + Math.min(6, bobfracsin * xyspeed * 0.005)];		// cg_bobUp
+		// a change of his view height is spread over DUCK_TIME
+		t = now - own.duckTime;
+		if (t >= 0 && t < OWN_DUCK_TIME) eye[2] -= own.duckChange * (OWN_DUCK_TIME - t) / OWN_DUCK_TIME;
+		eye[2] += own.landChange * ownLandDip(now);
 		view.angles = pitchYawRoll;
 		const m = anglesMatrix(eye, pitchYawRoll, 1);
+		ownDamageBlob(hud, m, now);
 		// CG_CalcFov: 80 across, less while he looks through the scope of the disruptor or through binoculars
 		viewProj = M4.mul(gameProjection(canvas.width, canvas.height, ownZoomFov(hud, now)), M4.lookAt(eye, [eye[0] + m[0], eye[1] + m[1], eye[2] + m[2]], [m[8], m[9], m[10]]));
 	}
@@ -457,15 +554,50 @@ function ownZoomFov(hud, now) {
 // The game puts a hand model at the eye, turned as the view with a little drift, and the weapon on the tag_weapon
 // of that hand. The hand model is the one of the weapon (its view model's name with _hand.md3) and is not drawn
 // itself. Both are drawn in the near third of the depth (RF_DEPTHHACK), so that no wall cuts into them.
-// Not here: the frames of the hand while a weapon fires, is raised or put away (the tag of the first frame is
-// used), the barrel of the stun baton, the flash at the muzzle.
-const viewHands = new Map();		// the path of a hand model -> its tag_weapon, null while it is read, false for none
-function viewHandTag(path) {
+// Not here: the barrel of the stun baton, the flash at the muzzle.
+const viewHands = new Map();		// the path of a hand model -> its tag_weapon in every frame, null while it is read, false for none
+function viewHandTags(path) {
 	if (!viewHands.has(path)) {
 		viewHands.set(path, null);
-		fetchGameFile(path).then(buf => viewHands.set(path, (buf && md3Tags(buf)['tag_weapon']) || false)).catch(() => viewHands.set(path, false));
+		fetchGameFile(path).then(buf => {
+			const tags = [];
+			for (let f = 0, n = buf ? new DataView(buf).getInt32(76, true) : 0; f < n; f++) { const t = md3Tags(buf, f)['tag_weapon']; if (t) tags.push(t); }
+			viewHands.set(path, tags.length ? tags : false);
+		}).catch(() => viewHands.set(path, false));
 	}
 	return viewHands.get(path);
+}
+
+// R_LerpTag: the tag between two frames of the hand (frac of the way from "from" to "to"), its axes of length one
+// again. A frame the model does not have is its last (R_GetTag).
+function viewHandTag(tags, from, to, frac) {
+	const a = tags[Math.min(from, tags.length - 1)], b = tags[Math.min(to, tags.length - 1)];
+	if (a === b) return b;
+	const out = new Float32Array(12);
+	for (let i = 0; i < 12; i++) out[i] = a[i] * (1 - frac) + b[i] * frac;
+	for (let c = 0; c < 3; c++) { const l = Math.hypot(out[c], out[4 + c], out[8 + c]) || 1; out[c] /= l; out[4 + c] /= l; out[8 + c] /= l; }
+	return out;
+}
+
+// CG_MapTorsoToWeaponFrame: the frame of the hand for a frame of his torso. It fires in the frames 1 to 6, goes
+// down in 6 to 10 and comes up in 10 to 13. While he holds a hand out for a force power (forceHandExtend) it goes
+// down a frame every 10 msec and stays down (WEAPON_FORCE_BUSY_HOLSTER with the two numbers of cgame that last,
+// cgWeapFrame and cgWeapFrameTime). -1: no frame of its own.
+const VIEW_ATTACKS = new Set(['BOTH_ATTACK1', 'BOTH_ATTACK2', 'BOTH_ATTACK3', 'BOTH_ATTACK4', 'BOTH_ATTACK10', 'BOTH_THERMAL_THROW']);
+const viewWeap = { frame: 0, time: 0 };
+function viewWeaponFrame(frame, name, first, handExtend, now) {
+	if (handExtend || viewWeap.time > now) {
+		if (viewWeap.frame < 6) { viewWeap.frame = 6; viewWeap.time = now + 10; }
+		else if (viewWeap.time < now && viewWeap.frame < 10) { viewWeap.frame++; viewWeap.time = now + 10; }
+		else if (handExtend && viewWeap.frame === 10) viewWeap.time = now + 100;
+		return viewWeap.frame;
+	}
+	viewWeap.frame = viewWeap.time = 0;
+	const at = frame - first;
+	if (name === 'TORSO_DROPWEAP1') return at >= 0 && at < 5 ? at + 6 : -1;
+	if (name === 'TORSO_RAISEWEAP1') return at >= 0 && at < 4 ? at + 6 + 4 : -1;
+	if (VIEW_ATTACKS.has(name)) return at >= 0 && at < 6 ? 1 + at : -1;
+	return -1;
 }
 
 function drawViewWeapon(d) {
@@ -474,8 +606,22 @@ function drawViewWeapon(d) {
 	if (view.thirdPerson || d.team === 'spectator' || (hud && hud.zoom[0])) return;
 	const it = weaponModelPath(d.weapon);
 	if (!it || !it.view) return;
-	const gun = staticNow(it.view), tag = viewHandTag(it.view.replace(/\.[^./]*$/, '') + '_hand.md3');
-	if (!gun || !tag) return;
+	const gun = staticNow(it.view), tags = viewHandTags(it.view.replace(/\.[^./]*$/, '') + '_hand.md3');
+	if (!gun || !tags) return;
+	// the frame of the hand, from the frame the bone of his torso is at (CG_AddViewWeapon)
+	let handFrame = 0, handOld = 0, backlerp = 0;
+	const inst = g2Instance(view.id, d.model, d.team);
+	if (inst.model && inst.lastTime !== undefined) {
+		const cur = g2GetBoneFrame(inst, 'lower_lumbar', inst.lastTime), name = inst.model.anims[d.torsoAnim], first = g2Anim(inst.model, d.torsoAnim).first;
+		const ext = hud ? hud.forceHandExtend : 0;
+		handFrame = viewWeaponFrame(Math.ceil(cur), name, first, ext, frameNow);
+		handOld = viewWeaponFrame(Math.floor(cur), name, first, ext, frameNow);
+		backlerp = 1 - (cur - Math.floor(cur));
+		if (handFrame === -1) handFrame = handOld = backlerp = 0;
+		else if (handOld === -1) { handOld = handFrame; backlerp = 0; }
+	}
+	view.hand = [handFrame, handOld, backlerp];
+	const tag = viewHandTag(tags, handOld, handFrame, 1 - backlerp);
 	// CG_CalculateWeaponPosition: the angles of the view, moved by his steps (xyspeed and the bob cycle of his
 	// player state) and by the slow drift of a hand that holds still
 	const xyspeed = Math.hypot(d.vel[0], d.vel[1]), cycle = hud ? hud.pm[3] : 0;
@@ -483,7 +629,8 @@ function drawViewWeapon(d) {
 	const drift = (xyspeed + 40) * Math.sin(frameNow * 0.001) * 0.01;
 	const va = view.angles || [view.pitch, view.yaw, 0];
 	const angles = [va[0] + xyspeed * bobfracsin * 0.005 + drift, va[1] + step * 0.01 + drift, va[2] + step * 0.005 + drift];
-	const place = M4.mul(anglesMatrix(eye, angles, 1), to44(tag));
+	// the weapon drops a quarter of the dip after a fall more than the eye (cg_fallingBob)
+	const place = M4.mul(anglesMatrix([eye[0], eye[1], eye[2] + own.landChange * 0.25 * ownLandDip(frameNow)], angles, 1), to44(tag));
 	gl.depthRange(0, 0.3);
 	drawStatic(gun, place);
 	gl.depthRange(0, 1);

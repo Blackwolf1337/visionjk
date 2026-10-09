@@ -18,14 +18,18 @@ const PL_MEDIA = Object.freeze({
 });
 const PL_GT_TEAM = 6, PL_GT_SIEGE = 7, PL_GT_CTY = 9, PL_SPEED_TRAIL_DISTANCE = 6;
 
-const plSprites = [];		// the sprites of this frame: { org, shader, radius }
+const plSprites = [];		// the sprites of this frame: { org, shader, radius, rgba: the colour of its entity (0 to 255), white without }
 
 // CG_PlayerFloatSprite: a sprite 48 above the origin of a player, 10 to each side
 function plFloatSprite(cent, shader) {
 	const o = cent.lerpOrigin;
-	// (a frame that never gets to draw them must not let them pile up)
+	plAddSprite({ org: [o[0], o[1], o[2] + 48], shader, radius: 10 });
+}
+
+// one more sprite for this frame (a frame that never gets to draw them must not let them pile up)
+function plAddSprite(s) {
 	if (plSprites.length >= 64) plSprites.length = 0;
-	plSprites.push({ org: [o[0], o[1], o[2] + 48], shader, radius: 10 });
+	plSprites.push(s);
 }
 
 // who looks: the player the page looks through the eyes of, null for a view of its own (a spectator of the game)
@@ -227,7 +231,7 @@ function drawPlayerSprites(now) {
 			const f = (n * 4 + k) * 6, c = (n * 4 + k) * b.stride + 20;
 			for (let i = 0; i < 3; i++) b.floats[f + i] = o[i] + l[i] * r * sl + u[i] * r * su;
 			b.floats[f + 3] = tu; b.floats[f + 4] = tv;
-			b.bytes[c] = b.bytes[c + 1] = b.bytes[c + 2] = b.bytes[c + 3] = 255;
+			for (let i = 0; i < 4; i++) b.bytes[c + i] = s.rgba ? s.rgba[i] : 255;
 		});
 		s.first = n++;
 	}

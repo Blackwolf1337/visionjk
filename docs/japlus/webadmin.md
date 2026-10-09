@@ -495,6 +495,25 @@ Also changed:
   50 msec at most, and in the comparison with the game, where the time stands, it is played 51 times once.
   Seen: the blue beam from a mine on a floor up to the ceiling. Not compared with a picture of the game.
   `tools/panelshot/steps_mine.js` (3 checks).
+- New: what else moves the view through the eyes of a player (`own` and `firstPersonCamera` in
+  `js/weapons.js`; `CG_OffsetFirstPersonView`). A hit he takes kicks the view (`CG_DamageFeedback`): by the
+  damage times 40 through his health, 5 to 10 degrees, up for a hit from the front or from nowhere, rolled
+  for one from the side, there within 100 msec and back within 400. The page sees it as the game does, by
+  `damageEvent` of his player state (two hits between two polls count as one). With it the flash of the hit
+  (`CG_DamageBlendBlob`): a sprite 8 in front of the eye for half a second, to the side the hit came from,
+  red when his health took it, green for his shield, yellow for both (`gfx/misc/borgeyeflare`,
+  `gfx/mp/dmgshader_shields`, `gfx/mp/dmgshader_shieldsandhealth`). A change of his view height is spread
+  over 100 msec (ducking). There too, and not set by anything until the page acts on the events of the
+  game: the dip after a fall (`ownFall` for `EV_FALL`: up to 32, there in 150 msec, back in 300, the weapon a
+  quarter more) and the kick of the concussion rifle (`ownKick`: 10 to 15 degrees, up in 200 msec, back in
+  600). Left out as the game leaves it out for one it follows: the smoothing of steps.
+  The hand that holds the weapon has its frames (`viewWeaponFrame`, `viewHandTag`;
+  `CG_MapTorsoToWeaponFrame`, `R_LerpTag`): the frame of the bone of his torso picks the frame of the hand
+  model while he fires (1 to 6), puts the weapon away (6 to 10) or takes it out (10 to 13), and while he
+  holds a hand out for a force power the weapon goes down a frame every 10 msec and stays there. The weapon
+  sits on the tag between the two frames. Seen: the green flash of a hit on the shield with the pistol in
+  front of it. Nothing of this is compared with a picture of the game: none of it stands still.
+  `tools/panelshot/steps_ownview.js` (17 checks).
 - Changed: the leader and the scores at the top right of the HUD are the ones the game tells its clients
   (`leader`, `scores1`, `scores2` of the state). The page worked them out from the scores of the players, which
   is another order when two have the same score.
@@ -511,8 +530,8 @@ Also changed:
   the scope of the disruptor or through binoculars, frame by frame as on a client that follows him. The state
   tells where a player is and the way he looks to a hundredth now: a tenth of a degree was more than a pixel
   of the picture, and that was what was left of the difference. Through the eyes of a bot with a pistol
-  against the game: 1.50 of 255 before, 0.13 after, at the same spot. Not here: the kick of a weapon that
-  fires and of a hit he takes, the dip after a fall, the smoothing of steps and of ducking.
+  against the game: 1.50 of 255 before, 0.13 after, at the same spot. (The kick of a hit, the dip after a
+  fall and the smoothing of ducking came later, see above.)
 - New: the bodies players leave behind (`bodies` of the state, `drawBodies` in `js/player-draw.js`). When a
   player comes back the game leaves his body where he died for half a minute (`CopyToBodyQue`, the last eight
   of them); the state did not tell them and the page drew none. A client copies the model of the one who died
@@ -534,8 +553,8 @@ Also changed:
   weapon, which stands at the eye and is turned as the view with the drift of a hand and the bob of his
   steps, drawn in the near third of the depth (`RF_DEPTHHACK`). The page hung every weapon on the hand of the
   stun baton, which is below the picture for a pistol: no weapon was seen. Through the eyes of a bot with a
-  pistol against the game: 0.65 of 255, its HUD alone 0.49. Not ported: the frames of the hand while a weapon
-  fires or is raised, the barrel of the stun baton, the flash at the muzzle.
+  pistol against the game: 0.65 of 255, its HUD alone 0.49. Not ported: the barrel of the stun baton, the
+  flash at the muzzle (the frames of the hand came later, see above).
 - Fixed: a file with a long name was not found. The server cut a value of a request to the room it had for
   it before it decoded it (`WA_FormValue`), and the page writes every slash of a file name as `%2F`: a name
   of 58 to 63 letters, which the game has room for, lost its end and was refused. So the image
