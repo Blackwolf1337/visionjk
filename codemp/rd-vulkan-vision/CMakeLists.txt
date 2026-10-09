@@ -386,6 +386,11 @@ if(MPVulkanVisionGLESTarget)
 		target_link_libraries(${MPVulkanVisionGLESTarget} ${MPVulkanVisionLibraries})
 		include(WasmModule)
 		vjk_wasm_side_module(${MPVulkanVisionGLESTarget})
+		# The libraries for JPEG, PNG and zlib are built with their symbols visible, so the module would look for its
+		# own tables and functions (jpeg_natural_order, jpeg_idct_islow, ...) by name in the table of symbols of the
+		# page. That table keeps the addresses of the first load of a module: after a vid_restart the new renderer
+		# read the tables of the old one, whose memory was given back, and every JPEG came out as noise.
+		target_link_options(${MPVulkanVisionGLESTarget} PRIVATE -Wl,-Bsymbolic)
 	else()
 		set_target_properties(${MPVulkanVisionGLESTarget} PROPERTIES INCLUDE_DIRECTORIES
 			"${MPVulkanVisionIncludeDirectories};${GLES3HeadersDir};${MPVulkanVisionImageIncludeDirectories};${VisionJKLibDir}")
