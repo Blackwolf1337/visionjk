@@ -160,6 +160,9 @@ void WIN_Present( window_t *window )
 	{
 		SDL_GL_SwapWindow(screen);
 
+#ifndef __EMSCRIPTEN__
+		// Not in a browser: a page is always shown with the refresh of the display, and its frames come from
+		// that (Sys_WebMainLoop). An interval of 0 would make SDL run the frames from a timer instead.
 		if ( r_swapInterval->modified )
 		{
 			r_swapInterval->modified = qfalse;
@@ -168,6 +171,7 @@ void WIN_Present( window_t *window )
 				Com_DPrintf( "SDL_GL_SetSwapInterval failed: %s\n", SDL_GetError() );
 			}
 		}
+#endif
 	}
 
 	if ( r_fullscreen->modified )
@@ -230,6 +234,7 @@ static int GLimp_CompareModes( const void *a, const void *b )
 		return areaA - areaB;
 }
 
+#ifndef __EMSCRIPTEN__
 /*
 ===============
 GLimp_DetectAvailableModes
@@ -321,6 +326,7 @@ static bool GLimp_DetectAvailableModes(void)
 	SDL_free( modes );
 	return true;
 }
+#endif
 
 /*
 ===============
@@ -627,10 +633,12 @@ static rserr_t GLimp_SetMode(glconfig_t *glConfig, const windowDesc_t *windowDes
 				continue;
 			}
 
+#ifndef __EMSCRIPTEN__	// see WIN_Present()
 			if ( SDL_GL_SetSwapInterval( r_swapInterval->integer ) == -1 )
 			{
 				Com_DPrintf( "SDL_GL_SetSwapInterval failed: %s\n", SDL_GetError() );
 			}
+#endif
 
 			glConfig->colorBits = testColorBits;
 			glConfig->depthBits = testDepthBits;
@@ -691,10 +699,14 @@ static rserr_t GLimp_SetMode(glconfig_t *glConfig, const windowDesc_t *windowDes
 
 	SDL_FreeSurface( icon );
 
+#ifndef __EMSCRIPTEN__
+	// Not in a browser: a page has no display modes to choose from, SDL finds none, and the mode would count
+	// as failed. The frame has the size the page asks for (r_mode -1).
 	if (!GLimp_DetectAvailableModes())
 	{
 		return RSERR_UNKNOWN;
 	}
+#endif
 
 	return RSERR_OK;
 }
