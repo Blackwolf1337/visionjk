@@ -39,7 +39,9 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "Ratl/vector_vs.h"
 #include "Ratl/bits_vs.h"
 
+#ifndef RD_VISION_GLES	// rd-vulkan-vision with its device for OpenGL ES has the names of OpenGL ES, see qgl.h
 #include "glext.h"
+#endif
 
 ////////////////////////////////////////////////////////////////////////////////////////
 // Defines

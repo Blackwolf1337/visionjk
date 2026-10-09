@@ -25,7 +25,9 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // tr_image.c
 #include "tr_local.h"
 #include "../rd-common/tr_common.h"
+#ifndef RD_VISION_GLES	// rd-vulkan-vision with its device for OpenGL ES has the names of OpenGL ES, see qgl.h
 #include "glext.h"
+#endif
 
 #include <map>
 

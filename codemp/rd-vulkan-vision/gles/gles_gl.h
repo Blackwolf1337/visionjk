@@ -33,10 +33,6 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include <GLES3/gl3.h>
 
-// rd-vanilla/glext.h is about OpenGL and its typedefs do not compile without it. tr_image.cpp and
-// tr_WorldEffects.cpp include it by name, this is the name it guards itself with.
-#define __gl_glext_h_ 1
-
 #define GL_QUADS							0x0007
 #define GL_POLYGON							0x0009
 #define GL_ADD								0x0104
