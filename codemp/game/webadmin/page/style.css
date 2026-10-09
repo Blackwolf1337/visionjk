@@ -173,6 +173,11 @@ body.cfgOpen #cfgView, body.fsOpen #fsView { display: block; }
 #fsList tr[data-fs]:hover { background: var(--panel2); }
 #fsList tr.off { color: var(--muted); }
 #fsList td.acts { text-align: right; }
+/* the list of the Clips tab: the clips that are off and the blocking walls, a row to click on each */
+#clipRows tr { cursor: pointer; }
+#clipRows tr.sel td { color: var(--yellow); }
+#clipRows td.acts { text-align: right; }
+#clipRows td.acts button { padding: 1px 7px; font-size: 12px; }
 #fsList td.acts button { margin-left: 4px; padding: 1px 7px; font-size: 12px; }
 /* files dropped on the list */
 #fsView.drop::after { content: ''; position: absolute; inset: 3px; border: 2px dashed var(--accent2); border-radius: 4px; pointer-events: none; }

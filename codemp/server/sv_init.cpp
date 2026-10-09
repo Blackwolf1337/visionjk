@@ -591,6 +591,8 @@ Ghoul2 Insert End
 	FS_Restart( sv.checksumFeed );
 
 	CM_LoadMap( va("maps/%s.bsp", server), qfalse, &checksum );
+	// Port: the map is loaded anew, no clip brush of it is off (clipbrush)
+	SV_ClipBrushesReset();
 
 	SV_SendMapChange();
 

@@ -128,6 +128,7 @@ the answer tells the page that the numbers started over.
 | `GET /api/log?from=` | the log of the game from a place on, `next` is where to ask from the next time. Without `from`, or with a place the panel does not have: its last part |
 | `GET /api/console?from=` | the console of the server from a place on, as `/api/log` gives the log: read from `qconsole.log` of the server folder. The first request sets `logfile 2` when it is 0 |
 | `POST /api/command` | `cmd`: one line for the server console, run in the next frame as if it was typed there |
+| `POST /api/clip` | `brush` (the number of a clip brush in the map file, or several), `on` (1 or 0): the server minds it again or stops minding it. `GET /api/entities` has the ones that are off as `clipOff` |
 | `POST /api/control` | a player moved from the page. `op` start (`id`), input (`id`, `f`, `r`, `u` from -127 to 127, `buttons`, `yaw`, `pitch`), goal (`id`, `x`, `y`, `z`: he walks there) or stop. The answer names who is held, -1 for nobody |
 | `GET /api/perf?since=` | the load of the server, a sample a second, the last 300 kept: `samples` are `[frames, average and longest frame of the game in microseconds, longest wait for a frame in ms, entities, players, average and longest part of this panel in a frame in microseconds]`, `seq` is how many there were, `from` the number of the first one sent. `since`: only the ones from that number on. With them `svFps`, `entityMax`, `maxClients` |
 | `GET /api/classdoc` | the entity definitions of the game code: every `QUAKED` comment of its source files as text |
@@ -1705,6 +1706,23 @@ Also changed:
   left half, 100 to 500 on the right) and which stops there, a double click sets 100. The side panel has a
   grip on its right edge that drags its width, from 240 pixels to 60 percent of the window, kept by the
   browser, a double click sets the usual width. Added without a test run.
+- New: the tab Clips of the editor, for the clips of the map: the brushes that stop players, NPCs, bots or shots
+  and are not seen. They are part of the map file, which the server and every client load alike, so nothing can
+  move one for everybody while the map runs. What the server can do is stop minding one. The engine got a
+  command for that, `clipbrush off|on <number> [<number> ...]` (`all` for every one, without arguments it lists
+  what is off): `CM_SetClipBrush` in `cm_load.cpp` takes the contents of the brush away or gives it those of
+  its shader again, for a brush that is a clip and not solid, so that nobody is let through a wall he can see.
+  The numbers that are off are in `sv_clipOff`, and a load or a restart of the map puts every clip back. In the
+  tab a click on the map selects the clip under the mouse (drawn in pink, the ones that are off in red, the
+  selected one in yellow). "Turn off" and "Turn on" switch it, "All on again" all of them. "Move it" puts a
+  blocking wall of its size where it is and turns the clip off: the wall is dragged and shaped in the World tab,
+  and clients predict it, which they do not for a clip that is only off on the server. A client still has that
+  clip in its own copy of the map: it stops the player for a moment and the server then sets him to where it
+  has him. That is the price of doing it while the map runs, and the user asked for it knowing that. "New clip"
+  places a blocking wall. What is off is a block of the layout of the map (`#{`, a line `off=`), so "Save
+  layout", "Forget layout" and "Restart map" carry it like the entities. The panel sends only digits to the
+  console line. Tried once on a private server: all 243 clips of mp/ffa3 off and on, two off through the panel,
+  kept by a saved layout over a start of the map and put back after `map_restart`. Not seen in a game.
 - "Add bot" with an empty name adds `Kyle Katarn`. JKAdmin asks for `Kyle`, a bot the game does not have, so
   nothing happened there.
 - The two entity hooks pass `ent-g_entities` instead of `ent->s.number`.

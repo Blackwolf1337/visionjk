@@ -26,6 +26,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "qcommon/stringed_ingame.h"
 #include "qcommon/game_version.h"
 #include "server/sv_gameapi.h"
+#include "qcommon/cm_public.h"
 
 /*
 ===============================================================================
@@ -294,6 +295,9 @@ static void SV_MapRestart_f( void ) {
 	// TTimo - don't update restartedserverId there, otherwise we won't deal correctly with multiple map_restart
 	sv.serverId = com_frameTime;
 	Cvar_Set( "sv_serverid", va("%i", sv.serverId ) );
+
+	// Port: the map starts again as its file has it, as the entities of the game do
+	SV_ClipBrushesReset();
 
 	time( &sv.realMapTimeStarted );
 	sv.demosPruned = qfalse;
@@ -1946,6 +1950,62 @@ static void SV_CompleteMapName( char *args, int argNum ) {
 SV_AddOperatorCommands
 ==================
 */
+/*
+=================
+SV_ClipBrush_f
+
+Port, not in the game as it was. clipbrush off|on <number> [<number> ...]: takes clip brushes of the map out
+of the collision of the server or puts them back (CM_SetClipBrush), by their number in the map file. "all" for
+every one of them. Without arguments: which ones are off. sv_clipOff holds those numbers, which is where the
+game module reads them (the clip editor of the web admin panel). They are off until the map is loaded or
+started again.
+=================
+*/
+void SV_ClipBrushesReset( void ) {
+	CM_SetClipBrushes( qtrue );
+	Cvar_Set( "sv_clipOff", "" );
+}
+
+static void SV_ClipBrush_f( void ) {
+	char	off[4096];
+	int		done = 0, bad = 0;
+
+	if ( !com_sv_running->integer ) {
+		Com_Printf( "Server is not running.\n" );
+		return;
+	}
+	if ( Cmd_Argc() >= 3 && ( !Q_stricmp( Cmd_Argv( 1 ), "on" ) || !Q_stricmp( Cmd_Argv( 1 ), "off" ) ) ) {
+		const qboolean on = (qboolean)!Q_stricmp( Cmd_Argv( 1 ), "on" );
+
+		if ( !Q_stricmp( Cmd_Argv( 2 ), "all" ) ) {
+			done = CM_SetClipBrushes( on );
+		} else {
+			for ( int i = 2; i < Cmd_Argc(); i++ ) {
+				const char *arg = Cmd_Argv( i );
+
+				if ( arg[0] >= '0' && arg[0] <= '9' && CM_SetClipBrush( atoi( arg ), on ) ) {
+					done++;
+				} else {
+					bad++;
+				}
+			}
+		}
+		Com_Printf( "%d clip brush%s %s%s\n", done, done == 1 ? "" : "es", on ? "on" : "off",
+			bad ? va( ", %d of the numbers are no clip brush of this map", bad ) : "" );
+	} else if ( Cmd_Argc() != 1 ) {
+		Com_Printf( "Usage: clipbrush off|on <number of a brush> [more numbers], or all for every clip brush\n" );
+		return;
+	}
+
+	if ( !CM_ClipBrushesOff( off, sizeof( off ) ) ) {
+		Com_Printf( S_COLOR_YELLOW "more clip brushes are off than sv_clipOff holds\n" );
+	}
+	Cvar_Set( "sv_clipOff", off );
+	if ( Cmd_Argc() == 1 ) {
+		Com_Printf( "clip brushes that are off: %s\n", off[0] ? off : "none" );
+	}
+}
+
 void SV_AddOperatorCommands( void ) {
 	static qboolean	initialized;
 
@@ -1955,6 +2015,8 @@ void SV_AddOperatorCommands( void ) {
 	initialized = qtrue;
 
 	Cmd_AddCommand ("heartbeat", SV_Heartbeat_f, "Sends a heartbeat to the masterserver" );
+	Cmd_AddCommand ("clipbrush", SV_ClipBrush_f, "Takes clip brushes of the map out of the collision of the server or puts them back" );
+	Cvar_Get( "sv_clipOff", "", CVAR_ROM, "The numbers of the clip brushes of the map that are off (clipbrush)" );
 	Cmd_AddCommand ("kick", SV_Kick_f, "Kick a user from the server" );
 	Cmd_AddCommand ("kickbots", SV_KickBots_f, "Kick all bots from the server" );
 	Cmd_AddCommand ("kickall", SV_KickAll_f, "Kick all users from the server" );

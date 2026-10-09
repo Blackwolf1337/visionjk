@@ -20,6 +20,7 @@ async function pollEntities() {
 		takeFired(json.used);
 		renderBudget(json.budget);
 		renderLayout(json.layout);
+		clipTake(json.clipOff);
 		refreshLinks();
 		if (selectedEnt >= 0 && !ents.has(selectedEnt)) selectEnt(-1);
 		renderEntityList();

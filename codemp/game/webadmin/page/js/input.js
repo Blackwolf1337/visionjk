@@ -102,6 +102,7 @@ window.addEventListener('mouseup', e => {
 	if (d.button === 0) {
 		if (mode === 'routes') wpClick(wpAt(x, y), e.ctrlKey || e.metaKey);
 		else if (mode === 'mapinfo') inspectSurface(x, y);
+		else if (mode === 'clips') clipClick(x, y);
 		else if (mode === 'world') {
 			// Ctrl and a click adds an entity to the selected ones or takes it out again
 			const hit = entityAt(x, y);

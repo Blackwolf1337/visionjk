@@ -196,6 +196,7 @@ set(MPGameWebadminFiles
 	"${MPDir}/game/webadmin/wa_log.c"
 	"${MPDir}/game/webadmin/wa_routes.c"
 	"${MPDir}/game/webadmin/wa_control.c"
+	"${MPDir}/game/webadmin/wa_clips.c"
 	)
 source_group("game/webadmin" FILES ${MPGameWebadminFiles})
 source_group("game/webadmin/page" FILES ${MPGameWebadminPageFiles})

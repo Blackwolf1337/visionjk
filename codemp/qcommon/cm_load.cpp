@@ -279,6 +279,69 @@ void CMod_LoadBrushes( const lump_t *l, clipMap_t &cm ) {
 
 /*
 =================
+CM_SetClipBrush, CM_SetClipBrushes, CM_ClipBrushesOff
+
+Port, not in the game as it was: a clip brush of the map is taken out of the collision or put back while the
+map runs (the server command clipbrush, for the clip editor of the web admin panel). A brush stops what its
+contents name, and gets them from its shader when the map is loaded: off is no contents, on is those of its
+shader again. Only a brush that is a clip and not solid, which is what stops players, NPCs, bots or shots
+without being seen: nobody is let through a wall he can see this way.
+
+This is the collision of this process alone. A client has the brush in its own copy of the map: where one is
+off on the server, the client predicts a stop the server does not make and is set to where the server has it.
+=================
+*/
+#define CONTENTS_CLIPS	( CONTENTS_PLAYERCLIP | CONTENTS_MONSTERCLIP | CONTENTS_BOTCLIP | CONTENTS_SHOTCLIP )
+
+static qboolean CM_IsClipBrush( int brushNum ) {
+	if ( brushNum < 0 || brushNum >= cmg.numBrushes ) {
+		return qfalse;
+	}
+	const int contents = cmg.shaders[cmg.brushes[brushNum].shaderNum].contentFlags;
+	return (qboolean)( ( contents & CONTENTS_CLIPS ) && !( contents & CONTENTS_SOLID ) );
+}
+
+// qfalse: the map has no clip brush of that number
+qboolean CM_SetClipBrush( int brushNum, qboolean on ) {
+	if ( !CM_IsClipBrush( brushNum ) ) {
+		return qfalse;
+	}
+	cmg.brushes[brushNum].contents = on ? cmg.shaders[cmg.brushes[brushNum].shaderNum].contentFlags : 0;
+	return qtrue;
+}
+
+// all of them at once. Returns how many the map has.
+int CM_SetClipBrushes( qboolean on ) {
+	int count = 0;
+
+	for ( int i = 0; i < cmg.numBrushes; i++ ) {
+		count += CM_SetClipBrush( i, on );
+	}
+	return count;
+}
+
+// The numbers of the clip brushes that are off, with a blank between them. qfalse: they did not all fit.
+qboolean CM_ClipBrushesOff( char *out, int outSize ) {
+	int len = 0;
+
+	out[0] = '\0';
+	for ( int i = 0; i < cmg.numBrushes; i++ ) {
+		if ( cmg.brushes[i].contents || !CM_IsClipBrush( i ) ) {
+			continue;
+		}
+		const char *num = va( "%s%d", len ? " " : "", i );
+		const int numLen = (int)strlen( num );
+		if ( len + numLen >= outSize ) {
+			return qfalse;
+		}
+		memcpy( out + len, num, numLen + 1 );
+		len += numLen;
+	}
+	return qtrue;
+}
+
+/*
+=================
 CMod_LoadLeafs
 =================
 */

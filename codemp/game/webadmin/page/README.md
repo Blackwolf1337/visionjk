@@ -53,6 +53,7 @@ order of the template, so a file may only use there what a file before it has ma
 | `js/editor-templates.js` | templates, import of `.ent` files, where the mouse is |
 | `js/editor-form.js` | the form of an entity: the keys its class takes as fields of their kind |
 | `js/editor-kits.js` | kits: entities that belong together, placed as drafts that are wired |
+| `js/editor-clips.js` | the clip editor: the clips of the map turned off and on, and put aside for a wall that is moved |
 | `js/bans.js` | the bans |
 | `js/editor-select.js` | several entities at once |
 | `js/editor-history.js` | undo and redo |

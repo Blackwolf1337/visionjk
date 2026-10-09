@@ -357,6 +357,7 @@ void SV_WriteDownloadToClient( client_t *cl , msg_t *msg );
 // sv_ccmds.c
 //
 void SV_Heartbeat_f( void );
+void SV_ClipBrushesReset( void );		// Port: every clip brush of the map is on again (clipbrush)
 void SV_RecordDemo( client_t *cl, char *demoName );
 void SV_StopRecordDemo( client_t *cl );
 void SV_AutoRecordDemo( client_t *cl );

@@ -390,6 +390,7 @@ void WA_ApiEntities( waConnection_t *c ) {
 		ENTITYNUM_MAX_NORMAL - MAX_CLIENTS - WA_FreeEntities(), ENTITYNUM_MAX_NORMAL - MAX_CLIENTS - WA_ENTITY_RESERVE,
 		WA_ConfigstringsUsed( CS_MODELS, MAX_MODELS ), MAX_MODELS - 1, WA_ConfigstringsUsed( CS_SOUNDS, MAX_SOUNDS ), MAX_SOUNDS - 1,
 		WA_ConfigstringsUsed( CS_EFFECTS, MAX_FX ), MAX_FX - 1, memorySize - memoryLeft, memorySize - WA_MEMORY_RESERVE, WA_MapBrushModels() );
+	WA_ClipsJson( &b );
 	WA_BufAppend( &b, "\"entities\":[", 12 );
 	for ( i = MAX_CLIENTS; i < level.num_entities; i++ ) {
 		gentity_t	*ent = &g_entities[i];
@@ -954,6 +955,8 @@ static void WA_LayoutText( waBuffer_t *b, const char *mapname, int *adds, int *r
 	*adds = *removes = 0;
 	if ( b )
 		WA_BufPrintf( b, "map=%s\n", mapname );
+	// the clip brushes of the map that are off (wa_clips.c)
+	*removes += WA_ClipsLayout( b );
 	for ( i = 0; i < originalCount; i++ ) {
 		if ( !originals[i].gone )
 			continue;
@@ -1114,12 +1117,15 @@ static void WA_ReloadSpawn( void ) {
 
 	while ( ( block = strstr( block, "{\n" ) ) != NULL ) {
 		const qboolean	remove = (qboolean)( block > reloadText && block[-1] == '-' );
+		const qboolean	clips = (qboolean)( block > reloadText && block[-1] == '#' );
 		char			*end = strstr( block + 1, "\n}\n" );
 
 		if ( !end )
 			break;
 		end[1] = '\0';
-		if ( remove ) {
+		if ( clips ) {
+			removed += WA_ClipsApply( block + 2 );
+		} else if ( remove ) {
 			if ( WA_LayoutRemove( block + 2 ) )
 				removed++;
 			else
@@ -1188,6 +1194,11 @@ void WA_ApiLayout( waConnection_t *c, const char *body ) {
 	} else {
 		WA_ActionResult( c, qfalse, "unknown op" );
 	}
+}
+
+// a change of the map that is none of its entities: a layout that is saved does not have it yet
+void WA_LayoutTouched( void ) {
+	layoutDirty = qtrue;
 }
 
 // every frame: what a reload left for this start of the map is spawned once the map has settled

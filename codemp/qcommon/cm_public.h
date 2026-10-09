@@ -37,6 +37,11 @@ void		CM_ModelBounds( clipHandle_t model, vec3_t mins, vec3_t maxs );
 
 int			CM_NumInlineModels( void );
 
+// Port: a clip brush of the map out of the collision of this process and back in (cm_load.cpp)
+qboolean	CM_SetClipBrush( int brushNum, qboolean on );
+int			CM_SetClipBrushes( qboolean on );
+qboolean	CM_ClipBrushesOff( char *out, int outSize );
+
 // cm_export.cpp: the solid surfaces of the world as triangles, counter clockwise seen from outside
 typedef void (*cmTriangleFunc_t)( const vec3_t a, const vec3_t b, const vec3_t c, int surfaceFlags, void *data );
 int			CM_ExportSolidTriangles( cmTriangleFunc_t emit, void *data );

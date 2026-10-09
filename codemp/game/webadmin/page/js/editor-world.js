@@ -73,5 +73,6 @@ function setMode(m) {
 	if (m === 'models') { select(-1); if (!mdlAsked) mdlLoad(); mdlSetPlacing(!!mdlPath); }
 	if (m === 'routes') { select(-1); wpLoad(); } else wpSetAdding(false);
 	if (m === 'mapinfo') { select(-1); mapReport(); renderSurface(); }
+	if (m === 'clips') { select(-1); pollEntities(); clipRender(); }
 }
 

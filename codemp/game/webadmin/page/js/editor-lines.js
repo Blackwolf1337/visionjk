@@ -300,17 +300,20 @@ function drawEntBox(ent, color) {
 // The lines of the editor: the boxes of the entities and what they are linked to. What belongs to the selected
 // entity is drawn last and through the walls.
 function drawEditorLines() {
-	const volumes = $('dbgVolumes').checked, linked = $('dbgLinks').checked, clip = world && $('dbgClip').checked ? brushWire('clip') : null;
+	// the Clips tab has the clips of the map drawn, whatever the view is set to
+	const volumes = $('dbgVolumes').checked, linked = $('dbgLinks').checked, clipWire = world && ($('dbgClip').checked || mode === 'clips') ? brushWire('clip') : null;
 	// a box that has handles to drag is drawn, whatever the views are set to
 	const handled = boxHandles().length > 0;
-	if (!volumes && !linked && !clip && !handled) return;
+	if (!volumes && !linked && !clipWire && !handled) return;
 	const sel = ents.get(selectedEnt);
 	gl.useProgram(lineProg.p);
-	if (clip) {
+	if (clipWire) {
 		gl.uniformMatrix4fv(lineProg.u.uMvp, false, viewProj);
 		gl.uniform4f(lineProg.u.uColor, 1, 0.35, 0.9, 1);
-		gl.bindVertexArray(clip.vao);
-		gl.drawArrays(gl.LINES, 0, clip.count);
+		gl.bindVertexArray(clipWire.vao);
+		gl.drawArrays(gl.LINES, 0, clipWire.count);
+		// the ones the server has off, and the one the Clips tab has selected (js/editor-clips.js)
+		drawClipMarks();
 	}
 	if (volumes) {
 		for (const ent of ents.values()) if (ent !== sel && entVisible(ent)) drawEntBox(ent, classColor(ent.classname));
