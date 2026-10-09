@@ -567,6 +567,15 @@ Also changed:
   as a turning model (its icon is drawn), the pictures of a power duel and of a siege class; in a Jedi
   Master game the centre print is the short one. Never seen from the server: the scoreboard of a team game
   and of a duel, the centre print (the checks hand them in). `tools/panelshot/steps_scores.js` (20 checks).
+- New: two more parts of the 2D of a client (`js/hud.js`). The icon of what the watched player picked up, for
+  three seconds at the right above the HUD (`CG_ItemPickup`, `CG_DrawPickupItem`; from his `EV_ITEM_PICKUP`,
+  the item by its entity in the list of the items, or in the list of the poll before for one that is gone with
+  the pickup). And the line of a vote that runs (`CG_DrawVote`): what it is for in the words of the string
+  file, the seconds it has left and the count, at the top left in the fixed font; the state tells a vote as
+  the clients are told it (`vote`: time, yes, no, text). Seen from the server: a bot picked up a rocket
+  launcher and the event named its icon. Never seen: a real vote (nobody on the test server can call one, the
+  check hands one in), so the `vote` of the state is only seen absent. Not compared with a picture of the
+  game. `tools/panelshot/steps_pickup.js` (8 checks).
 - Fixed: a call the graphics card refuses, in every frame while the models of the players were still read. The
   plain figure that stands in for a player whose model is not there yet was drawn with the program of the
   model drawn before it (`plTry` in `js/player-draw.js` now ends on the plain program, as `drawStatic` does).

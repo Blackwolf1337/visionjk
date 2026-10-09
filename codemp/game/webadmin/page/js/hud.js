@@ -921,12 +921,60 @@ function hudDrawWeaponSelect(cg) {
 	}
 }
 
+// CG_ItemPickup and CG_DrawPickupItem: the icon of what he picked up, for three seconds at the right above the HUD.
+// e: his EV_ITEM_PICKUP, its parameter is the entity of the item.
+const hudPickup = { item: 0, time: 0 };
+function hudItemPickup(e) {
+	if (e.ent !== view.id || !state) return;
+	// an item that is not to come back (one that was dropped) is gone from the list with the poll that tells of it
+	const it = (state.items || []).find(i => i.id === e.parm) || (itemsBefore || []).find(i => i.id === e.parm);
+	// (a holocron has no item of the list: the name of its power is not printed here)
+	if (!it || !(it.index > 0)) return;
+	hudPickup.item = it.index;
+	hudPickup.time = hudTime();
+}
+function hudDrawPickupItem(cg) {
+	const def = hudPickup.item ? itemDefs[hudPickup.item] : null;
+	if (!def || !def.icon) return;
+	const fade = hudFadeColor(cg, hudPickup.time, 3000);
+	if (fade === null) return;
+	hudSetColor([1, 1, 1, fade]);
+	hudPic(573, 320, HUD_ICON_SIZE, HUD_ICON_SIZE, hudShader(def.icon));
+	hudSetColor(null);
+}
+
+// CG_DrawVote: the vote that runs, with the seconds it has left (VOTE_TIME is 30000) and the count, in the fixed
+// font at the left. The line below it ("or press ESC then click Vote") is for one who plays, not for one who
+// watches. state.vote: what the clients are told of it (time, yes, no, text).
+function hudDrawVote(cg) {
+	const v = state.vote;
+	if (!v || !v.time) return;
+	const sec = Math.max(0, Math.trunc((30000 - (cg.time - v.time)) / 1000)), text = String(v.text || ''), is = s => text.startsWith(s);
+	let cmd, parm = '';
+	if (is('map_restart')) cmd = hudString('MENUS', 'RESTART_MAP');
+	else if (is('vstr nextmap')) cmd = hudString('MENUS', 'NEXT_MAP');
+	else if (is('g_doWarmup')) cmd = hudString('MENUS', 'WARMUP');
+	else if (is('g_gametype')) {
+		const names = { 'free for all': 'FREE_FOR_ALL', 'duel': 'DUEL', 'holocron ffa': 'HOLOCRON_FFA', 'power duel': 'POWERDUEL', 'team ffa': 'TEAM_FFA', 'siege': 'SIEGE', 'capture the flag': 'CAPTURE_THE_FLAG', 'capture the ysalamiri': 'CAPTURE_THE_YSALIMARI' };
+		cmd = hudString('MENUS', 'GAME_TYPE');
+		const name = names[text.slice(11).toLowerCase()];
+		if (name) parm = hudString('MENUS', name);
+	} else if (is('map')) { cmd = hudString('MENUS', 'NEW_MAP'); parm = text.slice(4); }
+	else if (is('kick')) { cmd = hudString('MENUS', 'KICK_PLAYER'); parm = text.slice(5); }
+	// the votes of a JA+ server
+	else if (is('sleep')) { cmd = 'sleep'; parm = text.slice(6); }
+	else if (is('silence')) { cmd = 'silence'; parm = text.slice(8); }
+	else if (is('poll')) { cmd = 'Poll By'; parm = text.slice(5); }
+	else cmd = text.slice(0, 99);
+	hudDrawSmallString(4, 58, hudString('MENUS', 'VOTE') + '(' + sec + '):<' + cmd + (parm ? ' ' + parm : '') + '> ' + hudString('MENUS', 'YES') + ':' + v.yes + ' ' + hudString('MENUS', 'NO') + ':' + v.no, 1.0);
+}
+
 // ---- CG_Draw2D, in the order it draws
 
 // What a client that follows a player sees with the cvars at their defaults. Left out, each for what it needs
 // that the feed does not have: the vehicle HUD, the health of an e-web, the flags of a CTF game
-// (CG_DrawFlagStatus), the icon of an item that was picked up (an event), votes, the centre prints the server
-// sends (the one of a kill is there, js/hud-scores.js), the warmup and the siege. The flare where sabers clash is
+// (CG_DrawFlagStatus), the vote of a team, the centre prints the server sends (the one of a kill is there,
+// js/hud-scores.js), the warmup and the siege. The flare where sabers clash is
 // drawn by js/events.js (evSaberClashFlare) before all of this; the game draws it after the tints, the zoom
 // mask, the crosshair names and the weapon select.
 function hudDraw2D(cg) {
@@ -951,12 +999,14 @@ function hudDraw2D(cg) {
 		hudDrawWeaponSelect(cg);
 		// CG_DrawStats
 		if (!ps.m_iVehicleNum) hudDrawHUD(cg);
+		hudDrawPickupItem(cg);
 	}
 
 	if (ps.fallingToDeath) {
 		// FALL_FADE_TIME is 3000
 		hudFillRect(0, 0, 640, 480, [0, 0, 0, Math.max(0, Math.min(1, (cg.time - ps.fallingToDeath) / 1500))]);
 	}
+	hudDrawVote(cg);
 	hudDrawBracketedEntities(cg);
 	hudDrawUpperRight(cg);
 	hudDrawFollow(cg);

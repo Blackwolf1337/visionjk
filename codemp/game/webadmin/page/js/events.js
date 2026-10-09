@@ -487,6 +487,8 @@ const evHandlers = {
 	// frame, when the player state that came with the event is in the state. The line it prints to the console is
 	// not shown.
 	EV_OBITUARY(e) { evAtFrame(() => hudObituary(e)); },
+	// what the one the page looks through the eyes of picked up shows as an icon in his 2D (js/hud.js)
+	EV_ITEM_PICKUP(e) { hudItemPickup(e); },
 	EV_FALL(e) { if (e.ent === view.id && !(state && state.hud && state.hud.client === view.id && state.hud.fallingToDeath)) evAtFrame(now => ownFall(e.ent, e.parm, now)); }
 	// Cases that show something and are not here, each for what it needs: EV_GLASS_SHATTER, EV_DEBRIS and
 	// EV_MISC_MODEL_EXP (pieces that fly: local entities, and fields of the entity the feed does not have),

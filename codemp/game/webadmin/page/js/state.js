@@ -8,7 +8,7 @@ const players = new Map();		// id -> { data, prev, draw, t }
 const labels = new Map();
 let lastPoll = 0, pollInterval = 100;
 
-let itemsRev = 0, itemsKept = [];		// the number of the item list the server sent last, and that list
+let itemsRev = 0, itemsKept = [], itemsBefore = [];		// the number of the item list the server sent last, that list, and the one before it
 
 // the flags of an entity the page looks at (eFlags, bg_public.h)
 const EF_NODRAW = 1 << 8, EF_ITEMPLACEHOLDER = 1 << 23, EF_DROPPEDWEAPON = 1 << 25;
@@ -69,7 +69,8 @@ async function pollState() {
 		if (!res.ok) throw new Error('HTTP ' + res.status);
 		const s = await res.json();
 		$('status').className = 'live';
-		if (s.items) { itemsKept = expandItems(s.items); itemsRev = s.itemsRev || 0; }
+		// (the list before this one is kept: an item that was picked up and is gone with it still has a number then)
+		if (s.items) { itemsBefore = itemsKept; itemsKept = expandItems(s.items); itemsRev = s.itemsRev || 0; }
 		s.items = itemsKept;
 		s.players = expandPlayers(s);
 		applyState(s);

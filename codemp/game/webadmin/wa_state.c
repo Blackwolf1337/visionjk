@@ -894,6 +894,21 @@ void WA_ApiState( waConnection_t *c, const char *query ) {
 		WA_BufPrintf( &b, ",\"leader\":%d,\"scores1\":%d,\"scores2\":%d,\"duelists\":", leader[0] ? atoi( leader ) : -1, atoi( scores1 ), atoi( scores2 ) );
 		WA_BufJsonString( &b, duelists );
 	}
+	{
+		// A vote that runs, as the clients are told it: the time of the game it was called at, the count, and what
+		// it is for. Not there without one.
+		char voteTime[16], voteYes[16], voteNo[16], voteString[MAX_STRING_CHARS];
+
+		trap->GetConfigstring( CS_VOTE_TIME, voteTime, sizeof( voteTime ) );
+		if ( atoi( voteTime ) ) {
+			trap->GetConfigstring( CS_VOTE_YES, voteYes, sizeof( voteYes ) );
+			trap->GetConfigstring( CS_VOTE_NO, voteNo, sizeof( voteNo ) );
+			trap->GetConfigstring( CS_VOTE_STRING, voteString, sizeof( voteString ) );
+			WA_BufPrintf( &b, ",\"vote\":{\"time\":%d,\"yes\":%d,\"no\":%d,\"text\":", atoi( voteTime ), atoi( voteYes ), atoi( voteNo ) );
+			WA_BufJsonString( &b, voteString );
+			WA_BufAppend( &b, "}", 1 );
+		}
+	}
 	WA_BufPrintf( &b, ",\"gametype\":%d,\"gametypeName\":\"%s\",\"time\":%d,\"timelimit\":%d,\"fraglimit\":%d,\"capturelimit\":%d,"
 		"\"scores\":{\"red\":%d,\"blue\":%d},\"maxClients\":%d",
 		level.gametype, BG_GetGametypeString( level.gametype ), level.time - level.startTime, timelimit.integer,
