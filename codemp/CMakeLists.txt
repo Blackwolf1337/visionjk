@@ -44,9 +44,9 @@ if(BuildMPRdVanilla)
 	add_subdirectory("${MPDir}/rd-vanilla")
 endif(BuildMPRdVanilla)
 
-if(BuildMPRdVulkanVision)
+if(BuildMPRdVulkanVision OR BuildMPRdVisionGLES)
 	add_subdirectory("${MPDir}/rd-vulkan-vision")
-endif(BuildMPRdVulkanVision)
+endif()
 
 #    Common things between Engine and Dedicated Server
 if(BuildMPEngine OR BuildMPDed)
