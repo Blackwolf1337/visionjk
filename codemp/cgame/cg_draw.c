@@ -8202,6 +8202,7 @@ static void CG_Draw2D( void ) {
 	CG_DrawVote();
 	CG_DrawTeamVote();
 	CG_VoiceDraw();
+	CG_BotModeDraw();
 
 	CG_DrawLagometer();
 

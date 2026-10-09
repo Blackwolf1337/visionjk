@@ -3438,6 +3438,40 @@
 			}		
 		}
 
+		itemDef 
+		{
+			name				japlus6
+			group				japluscontrols
+			type				ITEM_TYPE_BIND
+			text				"Bot Mode (On/Off)"
+			cvar				"cp_botMode !"
+			rect				220 141 300 20
+			textalign			ITEM_ALIGN_RIGHT
+			textalignx			151
+			textaligny			0
+			font				4
+			textscale			1
+			forecolor			.615 .615 .956 1
+			visible			0
+			// appearance_slot		1
+			descText			"a bot of the server plays for you, and stops (Setup, Bot Mode)"
+			
+			mouseenter 
+			{ 
+				show			highlight6
+				show			keybindstatus
+			}
+			mouseexit 
+			{ 
+				hide			highlight6
+				hide			keybindstatus
+			}
+			action 
+			{ 
+				play			"sound/interface/button1.wav" ; 
+			}		
+		}
+
 
 		//----------------------------------------------------------------------------------------------
 		//

@@ -1285,6 +1285,12 @@ qboolean G_BanListEntry( int index, char *out, int outSize );
 float WebAdmin_ClientGravity( const gentity_t *ent, float gravity );
 void WebAdmin_ClientCommand( gentity_t *ent, usercmd_t *ucmd );
 
+// g_botmode.c
+void G_BotModeUpdate( gentity_t *ent, const char *userinfo );
+int G_BotModeSkill( const gentity_t *ent );
+void G_BotModeCommand( gentity_t *ent, usercmd_t *ucmd );
+void G_BotModeCvarChanged( void );
+
 // g_utils.c
 int G_TryConfigstringIndex( const char *name, int start, int max );
 qboolean G_CleanIP( const char *in, char *out, int outSize );
@@ -1577,12 +1583,18 @@ int		InFieldOfVision	( vec3_t viewangles, float fov, vec3_t angles);
 void B_InitAlloc(void);
 void B_CleanupAlloc(void);
 
+// botMode of bot_settings_t: a human who lets a bot play for him (game/botmode/g_botmode.c)
+#define BOTMODE_HUMAN		1	// the slot is a human's: his commands are replaced, his connection is left alone
+#define BOTMODE_PEACEFUL	2	// nobody is his enemy
+#define BOTMODE_SILENT		4	// no chat lines
+
 //bot settings
 typedef struct bot_settings_s
 {
 	char personalityfile[MAX_FILEPATH];
 	float skill;
 	char team[MAX_FILEPATH];
+	int botMode;	// BOTMODE_ flags, 0 for a bot
 } bot_settings_t;
 
 int BotAISetup( int restart );

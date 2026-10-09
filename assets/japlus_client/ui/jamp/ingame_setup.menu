@@ -31,6 +31,7 @@
 			hide			vidrestart
 			hide			sound
 			hide			voicechat
+			hide			botmode
 			hide			options
 			hide			mods
 			hide			defaults
@@ -137,6 +138,7 @@
 				hide			vidrestart
 				hide			sound
 				hide			voicechat
+				hide			botmode
 				hide			options
 				hide			mods
 				hide			defaults
@@ -198,6 +200,7 @@
 				hide			vidrestart
 				hide			sound
 				hide			voicechat
+				hide			botmode
 				hide			options
 				hide			mods
 				hide			defaults
@@ -259,6 +262,7 @@
 				hide			vidrestart
 				show			sound
 				hide			voicechat
+				hide			botmode
 				hide			options
 				hide			mods
 				hide			defaults
@@ -321,12 +325,75 @@
 				hide			vidrestart
 				hide			sound
 				show			voicechat
+				hide			botmode
 				hide			options
 				hide			mods
 				hide			defaults
 
 				setitemcolor	setup_submenu		forecolor	1 .682 0 1
 				setitemcolor	voicechatmenubutton		forecolor	1 1 1 1
+			}
+		}
+
+		// bot mode button
+		itemDef 
+		{
+			name				botmodebutton_glow
+			style				WINDOW_STYLE_SHADER
+			rect				20 193 185 30
+			background			"gfx/menus/menu_blendbox2"			// Frame around button
+			forecolor			1 1 1 1
+			visible			0
+			// appearance_slot		1
+			decoration
+		}
+
+		itemDef 
+		{
+			name				botmodemenubutton
+			group				setup_submenu
+			text				"BOT MODE"
+			type				ITEM_TYPE_BUTTON
+			style				WINDOW_STYLE_EMPTY
+			rect				20 193 170 30
+			font				3
+			textscale			0.9
+			textalignx			170
+			textaligny			5
+			textalign			ITEM_ALIGN_RIGHT
+			textstyle			3
+			forecolor			1 .682 0 1
+			visible			1
+			descText			"Let a bot play for you."
+
+			mouseEnter 
+			{ 
+				show			botmodebutton_glow
+			}
+			mouseExit 
+			{ 
+				hide			botmodebutton_glow
+			}	  	  
+			action 
+			{ 
+				play			"sound/interface/button1"
+
+				defer			VideoSetup	videowarningMenu
+
+				show			setup_background
+				hide 			video
+				hide			applyChanges
+				hide			video2
+				hide			vidrestart
+				hide			sound
+				hide			voicechat
+				show			botmode
+				hide			options
+				hide			mods
+				hide			defaults
+
+				setitemcolor	setup_submenu		forecolor	1 .682 0 1
+				setitemcolor	botmodemenubutton		forecolor	1 1 1 1
 			}
 		}
 
@@ -382,6 +449,7 @@
 				hide			vidrestart
 				hide			sound
 				hide			voicechat
+				hide			botmode
 				show			options
 				hide			langapply
 				hide			mods
@@ -411,7 +479,7 @@
 		{
 			name				gamedefaultsbutton_glow
 			style				WINDOW_STYLE_SHADER
-			rect				20 193 185 30
+			rect				20 223 185 30
 			background			"gfx/menus/menu_blendbox2"			// Frame around button
 			forecolor			1 1 1 1
 			visible			0
@@ -426,7 +494,7 @@
 			text				@MENUS_DEFAULTS
 			type				ITEM_TYPE_BUTTON
 			style				WINDOW_STYLE_EMPTY
-			rect				20 193 170 30
+			rect				20 223 170 30
 			font				3
 			textscale			0.9
 			textalignx			170
@@ -458,6 +526,7 @@
 				hide			vidrestart
 				hide			sound
 				hide			voicechat
+				hide			botmode
 				hide			options
 				hide			mods
 				show			defaults
@@ -1982,6 +2051,192 @@
 				hide			highlight7
 			}
 		}
+
+		//----------------------------------------------------------------------------------------------
+		//
+		//	BOT MODE FIELDS (cg_botmode.c of the port, not a JA+ menu)
+		//
+		//----------------------------------------------------------------------------------------------
+		itemDef
+		{
+			name				botmode1
+			group				botmode
+			type				ITEM_TYPE_YESNO
+			text				"Bot Mode:"
+			cvar				"cp_botMode"
+			rect				220 41 300 20
+			textalign			ITEM_ALIGN_RIGHT
+			textalignx			165
+			textaligny			0
+			font				4
+			textscale			1
+			forecolor			.615 .615 .956 1
+			visible				0
+			descText			"A bot of the server plays for you. Only on servers of this mod."
+			action
+			{
+				play			"sound/interface/button1"
+			}
+			mouseenter
+			{
+				show			highlight1
+			}
+			mouseexit
+			{
+				hide			highlight1
+			}
+		}
+
+		itemDef
+		{
+			name				botmode2
+			group				botmode
+			type				ITEM_TYPE_MULTI
+			text				"Skill:"
+			cvar				"cp_botSkill"
+			cvarFloatList		{ "Initiate" 1 "Padawan" 2 "Jedi" 3 "Jedi Knight" 4 "Jedi Master" 5 }
+			rect				220 61 300 20
+			textalign			ITEM_ALIGN_RIGHT
+			textalignx			165
+			textaligny			0
+			font				4
+			textscale			1
+			forecolor			.615 .615 .956 1
+			visible				0
+			descText			"How well your bot fights."
+			action
+			{
+				play			"sound/interface/button1"
+			}
+			mouseenter
+			{
+				show			highlight2
+			}
+			mouseexit
+			{
+				hide			highlight2
+			}
+		}
+
+		itemDef
+		{
+			name				botmode3
+			group				botmode
+			ownerdraw			UI_BOTMODE_NAME
+			text				"Personality:"
+			rect				220 81 300 20
+			textalign			ITEM_ALIGN_RIGHT
+			textalignx			165
+			textaligny			0
+			font				4
+			textscale			1
+			forecolor			.615 .615 .956 1
+			visible				0
+			descText			"The bot your bot behaves like. The right mouse button goes back."
+			action
+			{
+				play			"sound/interface/button1"
+			}
+			mouseenter
+			{
+				show			highlight3
+			}
+			mouseexit
+			{
+				hide			highlight3
+			}
+		}
+
+		itemDef
+		{
+			name				botmode4
+			group				botmode
+			type				ITEM_TYPE_YESNO
+			text				"Fight:"
+			cvar				"cp_botFight"
+			rect				220 101 300 20
+			textalign			ITEM_ALIGN_RIGHT
+			textalignx			165
+			textaligny			0
+			font				4
+			textscale			1
+			forecolor			.615 .615 .956 1
+			visible				0
+			descText			"No: your bot has no enemies, it only walks the route of the map."
+			action
+			{
+				play			"sound/interface/button1"
+			}
+			mouseenter
+			{
+				show			highlight4
+			}
+			mouseexit
+			{
+				hide			highlight4
+			}
+		}
+
+		itemDef
+		{
+			name				botmode5
+			group				botmode
+			type				ITEM_TYPE_YESNO
+			text				"Chat:"
+			cvar				"cp_botChat"
+			rect				220 121 300 20
+			textalign			ITEM_ALIGN_RIGHT
+			textalignx			165
+			textaligny			0
+			font				4
+			textscale			1
+			forecolor			.615 .615 .956 1
+			visible				0
+			descText			"Your bot says the chat lines of its personality."
+			action
+			{
+				play			"sound/interface/button1"
+			}
+			mouseenter
+			{
+				show			highlight5
+			}
+			mouseexit
+			{
+				hide			highlight5
+			}
+		}
+
+		itemDef
+		{
+			name				botmode6
+			group				botmode
+			type				ITEM_TYPE_YESNO
+			text				"Keys Take Over:"
+			cvar				"cg_botModeKeys"
+			rect				220 141 300 20
+			textalign			ITEM_ALIGN_RIGHT
+			textalignx			165
+			textaligny			0
+			font				4
+			textscale			1
+			forecolor			.615 .615 .956 1
+			visible				0
+			descText			"A move or attack key ends the bot mode. A key for on and off: Controls, JA+."
+			action
+			{
+				play			"sound/interface/button1"
+			}
+			mouseenter
+			{
+				show			highlight6
+			}
+			mouseexit
+			{
+				hide			highlight6
+			}
+		}
+
 
 		//----------------------------------------------------------------------------------------------
 		//

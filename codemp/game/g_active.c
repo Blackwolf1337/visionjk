@@ -1905,9 +1905,12 @@ void ClientThink_real( gentity_t *ent ) {
 		return;
 	}
 
-	// a player who is moved from the web admin panel: his command is what the page says
-	if ( ent->s.number < MAX_CLIENTS )
+	// a player who lets a bot play for him: his command is what the bot wants. Then a player who is moved
+	// from the web admin panel: his command is what the page says, whoever played him.
+	if ( ent->s.number < MAX_CLIENTS ) {
+		G_BotModeCommand( ent, &client->pers.cmd );
 		WebAdmin_ClientCommand( ent, &client->pers.cmd );
+	}
 
 	// This code was moved here from clientThink to fix a problem with g_synchronousClients
 	// being set to 1 when in vehicles.

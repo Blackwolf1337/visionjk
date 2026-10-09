@@ -2201,6 +2201,9 @@ qboolean ClientUserinfoChanged( int clientNum ) {
 	if ( !strcmp( s, "localhost" ) && !(ent->r.svFlags & SVF_BOT) )
 		client->pers.localClient = qtrue;
 
+	// a bot plays for him, or does not any more: in front of the configstring, which says so
+	G_BotModeUpdate( ent, userinfo );
+
 	// check the item prediction
 	s = Info_ValueForKey( userinfo, "cg_predictItems" );
 	if ( !atoi( s ) )	client->pers.predictItemPickup = qfalse;
@@ -2421,6 +2424,8 @@ qboolean ClientUserinfoChanged( int clientNum ) {
 		Q_strcat( buf, sizeof( buf ), va( "\\hc\\%i\\w\\%i\\l\\%i", client->pers.maxHealth, client->sess.wins, client->sess.losses ) );
 		if ( bot )
 			Q_strcat( buf, sizeof( buf ), va( "\\skill\\%s", Info_ValueForKey( userinfo, "skill" ) ) );
+		else if ( G_BotModeSkill( ent ) )	// not in the original: a human in bot mode is a bot to the clients
+			Q_strcat( buf, sizeof( buf ), va( "\\skill\\%i", G_BotModeSkill( ent ) ) );
 		Q_strcat( buf, sizeof( buf ), va( "\\tt\\%d\\tl\\%d", atoi( Info_ValueForKey( userinfo, "teamtask" ) ), teamLeader ) );
 		if ( bot || level.gametype == GT_SIEGE )
 			Q_strcat( buf, sizeof( buf ), va( "\\siegeclass\\%s", className ) );
@@ -4237,9 +4242,8 @@ void ClientDisconnect( int clientNum ) {
 
 	CalculateRanks();
 
-	if ( ent->r.svFlags & SVF_BOT ) {
-		BotAIShutdownClient( clientNum, qfalse );
-	}
+	// a bot, or a human in bot mode: nobody else has a bot state
+	BotAIShutdownClient( clientNum, qfalse );
 
 	G_ClearClientLog(clientNum);
 }

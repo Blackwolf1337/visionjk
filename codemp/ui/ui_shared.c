@@ -4846,6 +4846,7 @@ static const char *g_bindCommands[] = {
 	"bow",
 	"centerview",
 	"cg_thirdperson !",
+	"cp_botMode !",				// bot mode on and off
 	"engage_duel",
 	"engage_FullForceDuel",		// JA+
 	"flourish",

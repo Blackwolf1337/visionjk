@@ -213,6 +213,13 @@ set(MPGamePropsFiles
 source_group("game/props" FILES ${MPGamePropsFiles})
 set(MPGameFiles ${MPGameFiles} ${MPGamePropsFiles})
 
+# bot mode: a bot plays for a human, the bot code is ai_main.c
+set(MPGameBotmodeFiles
+	"${MPDir}/game/botmode/g_botmode.c"
+	)
+source_group("game/botmode" FILES ${MPGameBotmodeFiles})
+set(MPGameFiles ${MPGameFiles} ${MPGameBotmodeFiles})
+
 # what an admin does to one player, and the emote ampoop
 set(MPGameFunFiles
 	"${MPDir}/game/fun/g_disorient.c"

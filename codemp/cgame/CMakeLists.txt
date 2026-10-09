@@ -136,6 +136,13 @@ set(MPCGameVoiceFiles
 source_group("cgame/voice" FILES ${MPCGameVoiceFiles})
 set(MPCGameFiles ${MPCGameFiles} ${MPCGameVoiceFiles})
 
+# bot mode: a bot of the server plays for me, its part in the game module is game/botmode
+set(MPCGameBotmodeFiles
+	"${MPDir}/cgame/botmode/cg_botmode.c"
+	)
+source_group("cgame/botmode" FILES ${MPCGameBotmodeFiles})
+set(MPCGameFiles ${MPCGameFiles} ${MPCGameBotmodeFiles})
+
 set(MPCGameCommonFiles
 	"${MPDir}/qcommon/q_shared.c"
 	"${MPDir}/qcommon/disablewarnings.h"

@@ -98,6 +98,12 @@ game's menu, changed for this engine. Both have the same pages.
 | Video | Video Quality | presets for the detail only (`r_lodbias`, `r_picmip`, `r_textureMode`, `r_subdivisions`, `r_fastSky`, `r_inGameVideo`), not for the size or the bit depths any more |
 | Sound | 3D Sound, Output, Reverb | the sound of [audio.md](audio.md), see "The menu" there |
 | Options | Allow Downloads | Off, On (`cl_allowDownload`) |
+| Bot Mode | Bot Mode | a bot of the server plays for me (`cp_botMode`, not saved: off at every start) |
+| Bot Mode | Skill | Initiate to Jedi Master (`cp_botSkill` 1 to 5) |
+| Bot Mode | Personality | "Default" or a bot of the client's bot list (`cp_botName`): the bot mine behaves like |
+| Bot Mode | Fight | No: it has no enemies and only walks the route of the map (`cp_botFight`) |
+| Bot Mode | Chat | the chat lines of the personality (`cp_botChat`) |
+| Bot Mode | Keys Take Over | a move or attack key ends the bot mode (`cg_botModeKeys`) |
 
 Everything on the video page is applied by its "Apply" with a `vid_restart`. Taken out, because they did
 nothing or did harm: Color Depth and Texture Quality (`rd-vulkan-vision` ignores `r_colorbits` and
@@ -106,6 +112,23 @@ cache. The menus of the base game, which a client shows while it plays as base, 
 Quality entries: the ui hides them (`Item_ApplyHacks`).
 
 None of the pages was looked at in the game after these changes: the rows were placed by their numbers.
+
+### Bot mode
+
+Not a JA+ feature. The server plays the player with its bot code, see "Bot mode" in [server.md](server.md). The
+five `cp_bot` cvars are in the userinfo and ask for it. The server answers in the player configstring: a human
+in bot mode has the key `skill`, as a bot has. While the cgame reads that for its own player
+(`CG_BotMode`, `cgame/botmode/cg_botmode.c`):
+
+- `CG_PredictPlayerState` takes the player from the snapshots, as for a followed player: the server does not run
+  what the keys say any more, so the view is the one of the bot.
+- The HUD says "BOT MODE", and the scoreboard shows "BOT" in place of the ping (to every client).
+- Once a frame the selected weapon is set to the one of the bot and the engine is given its yaw
+  (`SetClientForceAngle`), so that neither jumps when the bot lets go. The pitch is the one of the mouse again.
+- With `cg_botModeKeys` a move key or a button that was not down the frame before sets `cp_botMode 0`.
+
+A key for on and off is bound on the JA+ page of the controls menus (`cp_botMode !`). A server that does not know
+the cvars ignores them. Built, not run: nobody has seen a player in bot mode or the page.
 
 ## Prediction
 
