@@ -135,6 +135,38 @@ void VK_EndFrame( void ) {
 
 /*
 ===============
+VK_FrameInfo_f
+
+Part of gfxinfo: what the textures cost and what the last frame was made of
+===============
+*/
+void VK_FrameInfo_f( void ) {
+	if ( vk.bcTextures ) {
+		ri.Printf( PRINT_ALL, "  packed into blocks since the window was made: %.1f million pixels in %.2f s\n", vk.statBcPixels * 1e-6,
+			vk.statBcSeconds );
+	}
+	ri.Printf( PRINT_ALL, "last frame: %i draws, %i triangles from buffers on the device, %i triangles and %i vertices built on the CPU\n",
+		vk.statDraws[1], vk.statStaticIndexes[1] / 3, vk.statCpuIndexes[1] / 3, vk.statCpuVertexes[1] );
+	ri.Printf( PRINT_ALL, "  %i of %i transforms, %i of %i bones\n", vk.statTransforms[1], VK_MAX_TRANSFORMS, vk.statBones[1], VK_MAX_BONES );
+	// the shaders with the most triangles from the CPU
+	for ( int n = 0; n < 8; n++ ) {
+		vkStatShader_t *most = NULL;
+
+		for ( int i = 0; i < vk.statNumCpuShaders[1]; i++ ) {
+			if ( vk.statCpuShaders[1][i].indexes > ( most ? most->indexes : 0 ) ) {
+				most = &vk.statCpuShaders[1][i];
+			}
+		}
+		if ( !most ) {
+			break;
+		}
+		ri.Printf( PRINT_ALL, "  on the CPU: %5i triangles %s\n", most->indexes / 3, most->name );
+		most->indexes = 0;
+	}
+}
+
+/*
+===============
 VK_AddTransform
 
 Returns the index the draws refer to

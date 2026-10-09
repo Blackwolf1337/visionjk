@@ -260,6 +260,7 @@ extern vkState_t vk;
 void		VK_InitImages( void );
 void		VK_ShutdownImages( void );
 void		VK_UpdateImage( image_t *image, int width, int height, const byte *rgba );
+void		VK_CountImages( int *numImages, int *numBlockImages );
 
 // vk_bc.cpp
 void		VK_BC_Init( void );
@@ -309,6 +310,8 @@ void		VK_SetRefraction( qboolean on, int x, int y, int size );
 void		VK_SetProjection( const float *projection );
 
 // vk_backend.cpp
+qboolean	VK_InitShared( void );
+void		VK_InitConfig( void );
 void		VK_Splash( void );
 
 // vk_post.cpp
@@ -325,6 +328,7 @@ void		VK_ReadProbes( vkFrame_t *frame );
 void		VK_BeginFrame( void );
 void		VK_EndFrame( void );
 void		VK_SetViewport( int x, int y, int width, int height, float minDepth, float maxDepth );
+void		VK_FrameInfo_f( void );
 int			VK_AddTransform( const vkTransform_t *transform );
 void		VK_SetDepthRange( float minDepth, float maxDepth );
 qboolean	VK_UploadGeometry( const vec4_t *xyz, const vec4_t *normal, const vec2_t ( *texCoords )[NUM_TEX_COORDS],

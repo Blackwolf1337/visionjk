@@ -72,6 +72,65 @@ static void RB_SetGL2D( void ) {
 
 /*
 ===============
+VK_InitShared
+
+What every start of the renderer begins with, whatever the device. qtrue: the window of the last start is still
+there and with it everything on the device (a map change), so the start is over.
+===============
+*/
+qboolean VK_InitShared( void ) {
+	r_vkStatic = ri.Cvar_Get( "r_vkStatic", "1", CVAR_CHEAT, "Level and models from buffers on the device. 0: all vertices are built on the CPU every frame" );
+	r_vkMerge = ri.Cvar_Get( "r_vkMerge", "1", CVAR_CHEAT, "Sprites of several entities in one batch where the picture stays the same. 0: a batch ends with its entity" );
+
+	// the builtin images are made again, the copy of the frame has to be put into the texture table again
+	vk.screenSlot = -1;
+	// the buffers of the level and of the models are filled again when they are first drawn
+	VK_WorldChanged();
+	VK_ModelsChanged();
+	VK_ClearFlares();
+	if ( glConfig.vidWidth ) {
+		// the window stays, the textures get their filter again as GL_SetDefaultState() of rd-vanilla gives it to them
+		GL_TextureMode( r_textureMode->string );
+		return qtrue;
+	}
+	return qfalse;
+}
+
+/*
+===============
+VK_InitConfig
+
+What the engine, cgame and ui want to know about the renderer and what is the same for every device. The device
+has said who it is, how large a texture may be and how much anisotropic filter there is, and has set vk.bcTextures.
+===============
+*/
+void VK_InitConfig( void ) {
+	glConfig.extensions_string = "";
+	glConfigExt.originalExtensionString = "";
+	glConfig.maxActiveTextures = NUM_TEXTURE_BUNDLES;
+	glConfig.colorBits = 32;
+	glConfig.depthBits = 24;
+	glConfig.stencilBits = 8;
+	// tr_image.cpp then asks for the formats of GL_EXT_texture_compression_s3tc, see VK_ImageLevel()
+	glConfig.textureCompression = vk.bcTextures ? TC_S3TC_DXT : TC_NONE;
+	glConfig.textureEnvAddAvailable = qtrue;
+	glConfig.clampToEdgeAvailable = qtrue;
+	glConfig.stereoEnabled = qfalse;
+	// gamma and overbright are one pass over the finished frame (shaders/gamma.frag), not a ramp of the display
+	glConfig.deviceSupportsGamma = qfalse;
+	glConfigExt.doGammaCorrectionWithShaders = qtrue;
+	glConfigExt.doStencilShadowsInOneDrawcall = qtrue;	// front and back faces have stencil operations of their own
+
+	// the setup menus offer the anisotropic filter only if this cvar says how much of it there is
+	ri.Cvar_SetValue( "r_ext_texture_filter_anisotropic_avail", glConfig.maxTextureFilterAnisotropy );
+	// The filter new textures are made with (r_textureMode) lives in tr_image.cpp and is what it was compiled as in a
+	// library that was just loaded. rd-vanilla sets it in GL_SetDefaultState() at every start, RE_BeginFrame() only
+	// when the cvar changes.
+	GL_TextureMode( r_textureMode->string );
+}
+
+/*
+===============
 VK_Splash
 
 The picture of the game on the window as soon as there is one, as R_Splash() of rd-vanilla puts it there: get

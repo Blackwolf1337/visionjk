@@ -237,6 +237,19 @@ void VK_UpdateImage( image_t *image, int width, int height, const byte *rgba ) {
 	vk.boundImage = bound;
 }
 
+// for gfxinfo: how many slots of the table are taken, and how many of those hold a texture in blocks
+void VK_CountImages( int *numImages, int *numBlockImages ) {
+	*numImages = *numBlockImages = 0;
+	for ( int i = 0; i < VK_MAX_IMAGES; i++ ) {
+		if ( vk.images[i].owner ) {
+			( *numImages )++;
+			if ( vk.images[i].format == VKF_BC1 || vk.images[i].format == VKF_BC3 ) {
+				( *numBlockImages )++;
+			}
+		}
+	}
+}
+
 void VK_InitImages( void ) {
 	VK_InitTextures();
 	if ( vk.bcTextures ) {

@@ -488,18 +488,7 @@ qboolean VK_InitVulkan( void ) {
 	r_vkDebug = ri.Cvar_Get( "r_vkDebug", "0", CVAR_ARCHIVE_ND | CVAR_LATCH, "Vulkan validation layer and its messages" );
 	r_swapIntervalVk = ri.Cvar_Get( "r_swapInterval", "0", CVAR_ARCHIVE_ND, "" );
 	r_multisampleVk = ri.Cvar_Get( "r_ext_multisample", "0", CVAR_ARCHIVE_ND | CVAR_LATCH, "" );
-	r_vkStatic = ri.Cvar_Get( "r_vkStatic", "1", CVAR_CHEAT, "Level and models from buffers on the device. 0: all vertices are built on the CPU every frame" );
-	r_vkMerge = ri.Cvar_Get( "r_vkMerge", "1", CVAR_CHEAT, "Sprites of several entities in one batch where the picture stays the same. 0: a batch ends with its entity" );
-
-	// the builtin images are made again, the copy of the frame has to be put into the texture table again
-	vk.screenSlot = -1;
-	// the buffers of the level and of the models are filled again when they are first drawn
-	VK_WorldChanged();
-	VK_ModelsChanged();
-	VK_ClearFlares();
-	if ( glConfig.vidWidth ) {
-		// the window stays, the textures get their filter again as GL_SetDefaultState() of rd-vanilla gives it to them
-		GL_TextureMode( r_textureMode->string );
+	if ( VK_InitShared() ) {
 		return qtrue;
 	}
 
@@ -564,30 +553,9 @@ qboolean VK_InitVulkan( void ) {
 	glConfig.renderer_string = vk.properties.deviceName;
 	glConfig.vendor_string = vk_driverString;
 	glConfig.version_string = vk_versionString;
-	glConfig.extensions_string = "";
-	glConfigExt.originalExtensionString = "";
 	glConfig.maxTextureSize = Q_min( (int)vk.properties.limits.maxImageDimension2D, 8192 );
-	glConfig.maxActiveTextures = NUM_TEXTURE_BUNDLES;
 	glConfig.maxTextureFilterAnisotropy = vk.anisotropy ? vk.properties.limits.maxSamplerAnisotropy : 0.0f;
-	glConfig.colorBits = 32;
-	glConfig.depthBits = 24;
-	glConfig.stencilBits = 8;
-	// tr_image.cpp then asks for the formats of GL_EXT_texture_compression_s3tc, see VK_ImageLevel()
-	glConfig.textureCompression = vk.bcTextures ? TC_S3TC_DXT : TC_NONE;
-	glConfig.textureEnvAddAvailable = qtrue;
-	glConfig.clampToEdgeAvailable = qtrue;
-	glConfig.stereoEnabled = qfalse;
-	// gamma and overbright are one pass over the finished frame (shaders/gamma.frag), not a ramp of the display
-	glConfig.deviceSupportsGamma = qfalse;
-	glConfigExt.doGammaCorrectionWithShaders = qtrue;
-	glConfigExt.doStencilShadowsInOneDrawcall = qtrue;	// front and back faces have stencil operations of their own
-
-	// the setup menus offer the anisotropic filter only if this cvar says how much of it there is
-	ri.Cvar_SetValue( "r_ext_texture_filter_anisotropic_avail", glConfig.maxTextureFilterAnisotropy );
-	// The filter new textures are made with (r_textureMode) lives in tr_image.cpp and is what it was compiled as in a
-	// library that was just loaded. rd-vanilla sets it in GL_SetDefaultState() at every start, RE_BeginFrame() only
-	// when the cvar changes.
-	GL_TextureMode( r_textureMode->string );
+	VK_InitConfig();
 
 	ri.Printf( PRINT_ALL, "Vulkan device: %s, %s\n", vk.properties.deviceName, vk_versionString );
 	VK_Splash();
@@ -660,16 +628,9 @@ VK_GfxInfo_f
 ===============
 */
 void VK_GfxInfo_f( void ) {
-	int numImages = 0, numBlockImages = 0;
+	int numImages, numBlockImages;
 
-	for ( int i = 0; i < VK_MAX_IMAGES; i++ ) {
-		if ( vk.images[i].owner ) {
-			numImages++;
-			if ( vk.images[i].format == VK_FORMAT_BC1_RGB_UNORM_BLOCK || vk.images[i].format == VK_FORMAT_BC3_UNORM_BLOCK ) {
-				numBlockImages++;
-			}
-		}
-	}
+	VK_CountImages( &numImages, &numBlockImages );
 	ri.Printf( PRINT_ALL, "\nrd-vulkan-vision\n" );
 	ri.Printf( PRINT_ALL, "device: %s\n", vk.properties.deviceName );
 	ri.Printf( PRINT_ALL, "version: %s\n", vk_versionString );
@@ -682,28 +643,7 @@ void VK_GfxInfo_f( void ) {
 		G2API_ListSlots( (qboolean)( ri.Cvar_VariableIntegerValue( "developer" ) != 0 ) ) );
 	ri.Printf( PRINT_ALL, "textures: %i of %i, %i of them compressed, pipelines: %i, samplers: %i\n", numImages, VK_MAX_IMAGES,
 		numBlockImages, vk.numPipelines, vk.numSamplers );
-	if ( vk.bcTextures ) {
-		ri.Printf( PRINT_ALL, "  packed into blocks since the window was made: %.1f million pixels in %.2f s\n", vk.statBcPixels * 1e-6,
-			vk.statBcSeconds );
-	}
-	ri.Printf( PRINT_ALL, "last frame: %i draws, %i triangles from buffers on the device, %i triangles and %i vertices built on the CPU\n",
-		vk.statDraws[1], vk.statStaticIndexes[1] / 3, vk.statCpuIndexes[1] / 3, vk.statCpuVertexes[1] );
-	ri.Printf( PRINT_ALL, "  %i of %i transforms, %i of %i bones\n", vk.statTransforms[1], VK_MAX_TRANSFORMS, vk.statBones[1], VK_MAX_BONES );
-	// the shaders with the most triangles from the CPU
-	for ( int n = 0; n < 8; n++ ) {
-		vkStatShader_t *most = NULL;
-
-		for ( int i = 0; i < vk.statNumCpuShaders[1]; i++ ) {
-			if ( vk.statCpuShaders[1][i].indexes > ( most ? most->indexes : 0 ) ) {
-				most = &vk.statCpuShaders[1][i];
-			}
-		}
-		if ( !most ) {
-			break;
-		}
-		ri.Printf( PRINT_ALL, "  on the CPU: %5i triangles %s\n", most->indexes / 3, most->name );
-		most->indexes = 0;
-	}
+	VK_FrameInfo_f();
 	VK_MemoryInfo_f();
 	ri.Printf( PRINT_ALL, "validation layer: %s", vk.validation ? "on" : "off" );
 	if ( vk.validation ) {
