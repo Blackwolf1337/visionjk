@@ -201,6 +201,31 @@ static qboolean WA_ServerAction( waConnection_t *c, const char *action, char *va
 	return qfalse;
 }
 
+/*
+=================
+WA_PlaceClient
+
+The right click of the page: the player is where the click was, and nothing else. Not the path of amtele
+(JP_ManualTeleport): no effect, no star trek delay, no telefrag, and none of its refusals. The teleport bit is
+what keeps a client from drawing him on the way there.
+=================
+*/
+static void WA_PlaceClient( gentity_t *ent, const vec3_t origin ) {
+	gclient_t	*client = ent->client;
+
+	// a hook that holds would pull him back
+	JP_HookFree( ent );
+	trap->UnlinkEntity( (sharedEntity_t *)ent );
+
+	VectorCopy( origin, client->ps.origin );
+	VectorClear( client->ps.velocity );
+	client->ps.eFlags ^= EF_TELEPORT_BIT;
+
+	BG_PlayerStateToEntityState( &client->ps, &ent->s, qtrue );
+	VectorCopy( client->ps.origin, ent->r.currentOrigin );
+	trap->LinkEntity( (sharedEntity_t *)ent );
+}
+
 // what is done to one player, who is there
 static void WA_PlayerAction( waConnection_t *c, const char *action, int id, char *value, const char *body ) {
 	char		xs[32], ys[32], zs[32];
@@ -310,29 +335,16 @@ static void WA_PlayerAction( waConnection_t *c, const char *action, int id, char
 			WA_ActionResult( c, qfalse, "player is not alive" );
 			return;
 		}
-		// JA+: the target checks of rcon amtele
-		if ( ent->client->ps.eFlags & EF_ALT_DIM ) {
-			WA_ActionResult( c, qfalse, "player is in the alternate dimension" );
-			return;
-		}
-		if ( BG_InGrappleMove( ent->client->ps.legsAnim ) || BG_InGrappleMove( ent->client->ps.torsoAnim ) ) {
-			WA_ActionResult( c, qfalse, "player is in a grapple move" );
-			return;
-		}
-		if ( ent->client->pers.jp.refuseTele ) {
-			WA_ActionResult( c, qfalse, "this player refuses to be teleported" );
-			return;
-		}
 		if ( !WA_FormValue( body, "x", xs, sizeof( xs ) ) || !WA_FormValue( body, "y", ys, sizeof( ys ) ) ||
 			 !WA_FormValue( body, "z", zs, sizeof( zs ) ) ) {
 			WA_ActionResult( c, qfalse, "no position" );
 			return;
 		}
-		// the page sends the floor point, stand on it (JP_ManualTeleport lifts it by one unit)
-		VectorSet( origin, atof( xs ), atof( ys ), atof( zs ) - ent->r.mins[2] );
-		// JA+: frees the hook and honours jp_starTrekTeleport, the path of amtele
-		JP_ManualTeleport( ent, origin, ent->client->ps.viewangles );
-		WA_ActionResult( c, qtrue, jp_starTrekTeleport.integer == 1 ? "teleport started" : "teleported" );
+		// the page sends the floor point, stand a unit above it
+		VectorSet( origin, Com_Clamp( -MAX_WORLD_COORD, MAX_WORLD_COORD, atof( xs ) ), Com_Clamp( -MAX_WORLD_COORD, MAX_WORLD_COORD, atof( ys ) ),
+			Com_Clamp( -MAX_WORLD_COORD, MAX_WORLD_COORD, atof( zs ) ) - ent->r.mins[2] + 1.0f );
+		WA_PlaceClient( ent, origin );
+		WA_ActionResult( c, qtrue, "moved" );
 	} else if ( !strcmp( action, "schizo" ) ) {
 		// not in JKAdmin: hallucinations only this player gets, see g_schizo.c
 		WA_ActionResult( c, qtrue, G_SchizoToggle( ent ) ? "schizophrenia on" : "schizophrenia off" );
