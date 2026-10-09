@@ -61,6 +61,16 @@ $('entFlags').addEventListener('change', () => {
 	// the bits without a name stay as they are
 	setPanelKey('spawnflags', String((now & ~named) | boxes.reduce((bits, box) => box.checked ? bits | (1 << +box.dataset.bit) : bits, 0)));
 });
+// Enter in a field of a key, in the form or in the table, is the button that sends the keys: Apply changes, or
+// Place for a draft. Not the Enter that takes a key from the list of keys (its handler is on the table and has
+// been asked before this one), and not the one that picks a value from the list of a field: that one changes
+// the value, which is seen a moment later. The fields of the place, the angles and the box send by themselves.
+$('entPanel').addEventListener('keydown', e => {
+	const el = e.target;
+	if (e.key !== 'Enter' || e.isComposing || e.defaultPrevented || el.tagName !== 'INPUT' || el.type === 'checkbox' || !el.closest('#kvRows, #entForm')) return;
+	const was = el.value;
+	setTimeout(() => { if (el.value === was && !$('entApply').disabled) $('entApply').click(); }, 0);
+});
 $('entLinks').addEventListener('click', e => {
 	const a = e.target.closest('a');
 	if (!a || !ents.has(+a.dataset.id)) return;
