@@ -759,6 +759,12 @@ void SV_WebEvent( fd_set *readSet, fd_set *writeSet ) {
 		}
 		if ( FD_ISSET( c->sock, readSet ) ) {
 			SV_WebRead( c );
+		} else if ( c->state == WEB_SOCKET && c->inPos < c->inLen ) {
+			// Frames that were read and not run: the server left the packet in front of them with an error,
+			// which ended that wake-up. Nothing more may come from the peer that would get them run.
+			// (the rest may also be a part of a frame, which goes on waiting for its end)
+			SV_WebSocketFrames( c );
+			SV_WebWrite( c );
 		}
 		if ( !c->drop && FD_ISSET( c->sock, writeSet ) ) {
 			SV_WebWrite( c );
