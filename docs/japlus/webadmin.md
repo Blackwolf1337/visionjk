@@ -478,6 +478,14 @@ Also changed:
   events of other entities) and keeps the last 256 for two seconds; a poll brings the ones a page does not
   have (`evs=`). With four bots that was 112 events in 45 seconds. The page takes them (`js/events.js`) and
   shows nothing for them yet. Four more checks in `steps_feed.js` (32).
+- New: what an effect leaves on a wall. 41 effect files of the game have a decal (the scorch of a blaster
+  bolt, of an explosion), and the page dropped that part when it read a file. The scheduler of the engine
+  hands a decal to the renderer at once (the `Decal` case of `CFxScheduler::CreateEffect`,
+  `RE_AddDecalToScene`), and the page now hands it to its marks the same way (`fxCreate` in `js/fx-run.js`
+  to `decalMark` in `js/marks.js`): onto the surfaces around its place along the forward of the effect, in
+  its start colour, alpha and size, kept until its place in the ring of 100 is taken. Seen: the burn mark of
+  `blaster/wall_impact` on a floor. Not compared with a picture of the game. `tools/panelshot/steps_decal.js`
+  (4 checks).
 - Changed: the leader and the scores at the top right of the HUD are the ones the game tells its clients
   (`leader`, `scores1`, `scores2` of the state). The page worked them out from the scores of the players, which
   is another order when two have the same score.

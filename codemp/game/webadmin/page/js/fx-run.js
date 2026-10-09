@@ -219,6 +219,15 @@ function fxCreate(p, origin, axis, late) {
 		if (fx) fxStart(fx, org, ax);
 		return;
 	}
+	if (type === 'decal') {
+		// A decal is no primitive that lives: the scheduler hands it to the renderer at once (the Decal case of
+		// CFxScheduler::CreateEffect, RE_AddDecalToScene), which lays it onto the surfaces around its place along
+		// the forward of the effect, in its start colour, alpha and size (decalMark in js/marks.js).
+		if (!p.shaders.length) return;
+		const k = sf & FX_RGB_COMPONENT_INTERP ? Math.random() : -1, v = p.rgb.start, c = k < 0 ? fxVec(v) : [0, 1, 2].map(i => v[i] + k * (v[i + 3] - v[i]));
+		decalMark(p.shaders[Math.floor(Math.random() * p.shaders.length)], org, ax[0], fxVal(p.rotation), c[0], c[1], c[2], fxVal(p.alpha.start), true, fxVal(p.size.start), false);
+		return;
+	}
 	if (fxLive.length >= FX_MAX_LIVE) { fxStats.dropped++; return; }
 
 	const life = Math.trunc(fxVal(p.life));

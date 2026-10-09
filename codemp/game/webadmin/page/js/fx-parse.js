@@ -35,9 +35,9 @@ const FX_GROUP_FLAGS = { linear: FX_LINEAR, nonlinear: FX_NONLINEAR, wave: FX_WA
 const FX_GROUPS = { alpha: ['alpha', 0], rgb: ['rgb', 4], size: ['size', 8], width: ['size', 8], length: ['length', 12], height: ['length', 12], size2: ['size2', 16], width2: ['size2', 16] };
 
 // The kinds of primitive the engine knows. An effect holds 24 of them, the page keeps the ones it draws, that
-// play other effects or that shine: not sound, camerashake, decal and flash.
+// play other effects, that shine or that leave a mark: not sound, camerashake and flash.
 const FX_TYPES_KNOWN = ['particle', 'line', 'tail', 'sound', 'cylinder', 'electricity', 'emitter', 'decal', 'orientedparticle', 'fxrunner', 'light', 'camerashake', 'flash'];
-const FX_TYPES_KEPT = new Set(['particle', 'orientedparticle', 'line', 'tail', 'cylinder', 'electricity', 'emitter', 'fxrunner', 'light']);
+const FX_TYPES_KEPT = new Set(['particle', 'orientedparticle', 'line', 'tail', 'cylinder', 'electricity', 'emitter', 'fxrunner', 'light', 'decal']);
 const FX_MAX_COMPONENTS = 24;
 
 // The keys of a primitive that are a range of numbers (2) or of vectors (3), and the field they set. A range
