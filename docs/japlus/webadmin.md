@@ -548,6 +548,25 @@ Also changed:
   flashes of NPCs and of turrets, sparks between two server frames (`CG_SaberCompWork`), glass, debris,
   score plums, marks on models, effects of a saber of its own, and every event that is only a sound.
   `tools/panelshot/steps_events.js` (59 checks), `steps_events_live.js` (the probe), `steps_fx.js` (39).
+- New: the scoreboard and the centre print of a kill (`js/hud-scores.js`; `cg_scoreboard.c`,
+  `CG_CenterPrint`, `CG_DrawCenterString`, `CG_Obituary`). A client that follows a player shows the scoreboard
+  while he is dead and in the intermission, and the page showed an empty picture with a body. The server
+  sends such a client the scores when he dies; the state has them with his player state for as long as his
+  client would show them (`scoreboard` of `hud`: the clients by rank with score, ping, minutes, powerups,
+  deaths, wins and losses; `duelists` at the top). The page draws the table as `CG_DrawOldScoreboard` does:
+  the head with its picture, a line of 25 for every client (15 and three quarters of the size from the
+  thirteenth client on), score with deaths as a JA+ server sends it to a client with the plugin, `BOT` for the
+  ping of a bot, the line of the one who is watched in the colour of his place, his place or the team that
+  leads above it, the teams of a team game on their colours with the leading one first, and "Killed by" with
+  the name from the obituary event. When the watched player kills somebody the centre print says so with his
+  place, for three seconds, cut at 50 characters a line.
+  Against the game, a bot killed through the panel while the client follows him (`REF_DEAD=1` of
+  `tools/refshot.sh`): the whole picture 1.35 of 255, the names 0.13, the ping and time columns 0.22, the
+  place line 0.19, the head of the table 1.19 (its picture is an animated shader). What differs most is the
+  body itself, which is in another frame of its death animation. Not drawn: the flag of one who carries it
+  as a turning model (its icon is drawn), the pictures of a power duel and of a siege class; in a Jedi
+  Master game the centre print is the short one. Never seen from the server: the scoreboard of a team game
+  and of a duel, the centre print (the checks hand them in). `tools/panelshot/steps_scores.js` (20 checks).
 - Fixed: a call the graphics card refuses, in every frame while the models of the players were still read. The
   plain figure that stands in for a player whose model is not there yet was drawn with the program of the
   model drawn before it (`plTry` in `js/player-draw.js` now ends on the plain program, as `drawStatic` does).

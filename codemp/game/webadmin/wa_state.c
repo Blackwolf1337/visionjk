@@ -805,6 +805,28 @@ static void WA_StateInts( waBuffer_t *b, const char *key, const int *v, int n ) 
 //   "fuel": jetpackFuel, cloakFuel    "duel": duelInProgress, duelIndex, duelTime
 //   "pm": pm_type, pm_flags, pm_time, bobCycle    "damage": damageEvent, damageYaw, damagePitch, damageCount, damageType
 //   "angles": his view angles with the roll, "psClient": the client of the player state (the one he follows)
+//   "scoreboard": see WA_StateScoreboard, only while his client shows it (he is dead, or it is the intermission)
+
+// The scores a client is sent when the one it plays or follows dies, and in the intermission
+// (DeathmatchScoreboardMessage in g_cmds.c): the clients by their rank, each with client, score, ping (-1 while he
+// connects), minutes in the game, powerups, deaths, and the wins and losses of a duel, which a client has from
+// the config string of the player.
+static void WA_StateScoreboard( waBuffer_t *b ) {
+	const int	numSorted = Q_min( level.numConnectedClients, MAX_CLIENT_SCORE_SEND );
+	int			i;
+
+	WA_BufAppend( b, ",\"scoreboard\":[", 15 );
+	for ( i = 0; i < numSorted; i++ ) {
+		const int		n = level.sortedClients[i];
+		const gclient_t	*cl = &level.clients[n];
+
+		WA_BufPrintf( b, "%s[%d,%d,%d,%d,%d,%d,%d,%d]", i ? "," : "", n, cl->ps.persistant[PERS_SCORE],
+			cl->pers.connected == CON_CONNECTING ? -1 : Q_min( cl->ps.ping, 999 ), ( level.time - cl->pers.enterTime ) / 60000,
+			g_entities[n].s.powerups, cl->ps.persistant[PERS_KILLED], cl->sess.wins, cl->sess.losses );
+	}
+	WA_BufAppend( b, "]", 1 );
+}
+
 static void WA_StateHud( waBuffer_t *b, const char *query ) {
 	char				value[8];
 	int					n;
@@ -833,10 +855,13 @@ static void WA_StateHud( waBuffer_t *b, const char *query ) {
 		ps->viewangles[PITCH], ps->viewangles[YAW], ps->viewangles[ROLL] );
 	WA_BufPrintf( b, ",\"fallingToDeath\":%d,\"holocronBits\":%d,\"hackingTime\":%d,\"hackingBaseTime\":%d,\"generic1\":%d,\"emplacedIndex\":%d,"
 		"\"vehicle\":%d,\"forceHandExtend\":%d,\"saberLockTime\":%d,\"lookTarget\":%d,\"detPack\":%d,\"electrifyTime\":%d,\"commandTime\":%d,"
-		"\"jediMaster\":%d}",
+		"\"jediMaster\":%d",
 		ps->fallingToDeath, ps->holocronBits, ps->hackingTime, ps->hackingBaseTime, ps->generic1, ps->emplacedIndex,
 		ps->m_iVehicleNum, ps->forceHandExtend, ps->saberLockTime, ps->hasLookTarget ? ps->lookTarget : -1, ps->hasDetPackPlanted ? 1 : 0,
 		ps->electrifyTime, ps->commandTime, ps->isJediMaster ? 1 : 0 );
+	if ( ps->pm_type == PM_DEAD || ps->pm_type == PM_INTERMISSION )
+		WA_StateScoreboard( b );
+	WA_BufAppend( b, "}", 1 );
 }
 
 // GET /api/state[?items=<number>][&fx=<number>&fxs=<number>][&evs=<number>][&p=<client>.<number>-...][&view=<client>][&hud=<client>]:
@@ -859,12 +884,15 @@ void WA_ApiState( waConnection_t *c, const char *query ) {
 	{
 		// What the clients are told of the ranking, as they are told it (CalculateRanks): who leads (the winner of
 		// the last duel in a duel) and the two best scores, or the scores of red and blue. The HUD shows them.
-		char leader[16], scores1[16], scores2[16];
+		// "duelists": the ones who fight in a duel game, as the config string has them ("3|5", a third in a power duel)
+		char leader[16], scores1[16], scores2[16], duelists[32];
 
 		trap->GetConfigstring( CS_CLIENT_DUELWINNER, leader, sizeof( leader ) );
 		trap->GetConfigstring( CS_SCORES1, scores1, sizeof( scores1 ) );
 		trap->GetConfigstring( CS_SCORES2, scores2, sizeof( scores2 ) );
-		WA_BufPrintf( &b, ",\"leader\":%d,\"scores1\":%d,\"scores2\":%d", leader[0] ? atoi( leader ) : -1, atoi( scores1 ), atoi( scores2 ) );
+		trap->GetConfigstring( CS_CLIENT_DUELISTS, duelists, sizeof( duelists ) );
+		WA_BufPrintf( &b, ",\"leader\":%d,\"scores1\":%d,\"scores2\":%d,\"duelists\":", leader[0] ? atoi( leader ) : -1, atoi( scores1 ), atoi( scores2 ) );
+		WA_BufJsonString( &b, duelists );
 	}
 	WA_BufPrintf( &b, ",\"gametype\":%d,\"gametypeName\":\"%s\",\"time\":%d,\"timelimit\":%d,\"fraglimit\":%d,\"capturelimit\":%d,"
 		"\"scores\":{\"red\":%d,\"blue\":%d},\"maxClients\":%d",

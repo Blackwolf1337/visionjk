@@ -924,13 +924,15 @@ function hudDrawWeaponSelect(cg) {
 // ---- CG_Draw2D, in the order it draws
 
 // What a client that follows a player sees with the cvars at their defaults. Left out, each for what it needs
-// that the feed does not have: the scoreboard and the intermission, the vehicle HUD, the health of an e-web, the
-// flags of a CTF game (CG_DrawFlagStatus), the icon of an item that was picked up (an event), votes, the centre
-// prints, the warmup and the siege. The flare where sabers clash is drawn by js/events.js (evSaberClashFlare)
-// before all of this; the game draws it after the tints, the zoom mask, the crosshair names and the weapon select.
+// that the feed does not have: the vehicle HUD, the health of an e-web, the flags of a CTF game
+// (CG_DrawFlagStatus), the icon of an item that was picked up (an event), votes, the centre prints the server
+// sends (the one of a kill is there, js/hud-scores.js), the warmup and the siege. The flare where sabers clash is
+// drawn by js/events.js (evSaberClashFlare) before all of this; the game draws it after the tints, the zoom
+// mask, the crosshair names and the weapon select.
 function hudDraw2D(cg) {
 	const ps = cg.ps;
-	if (ps.pm_type === HUD_PM_INTERMISSION) return;
+	// CG_DrawIntermission: the scoreboard and nothing else
+	if (ps.pm_type === HUD_PM_INTERMISSION) { hudDrawOldScoreboard(cg); return; }
 	hudDraw2DScreenTints(cg);
 	if (ps.rocketLockIndex !== HUD_ENTITYNUM_NONE && cg.time - ps.rocketLockTime > 0) hudDrawRocketLocking(cg, ps.rocketLockIndex, ps.rocketLockTime);
 	if (ps.holocronBits) hudDrawHolocronIcons(cg);
@@ -958,6 +960,8 @@ function hudDraw2D(cg) {
 	hudDrawBracketedEntities(cg);
 	hudDrawUpperRight(cg);
 	hudDrawFollow(cg);
+	// the scoreboard while he is dead, and no centre print under it
+	if (!hudDrawOldScoreboard(cg)) hudDrawCenterString(cg);
 	// "always draw chat"
 	hudDrawChatBox(cg);
 }
