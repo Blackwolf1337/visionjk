@@ -204,7 +204,7 @@ runs, until then the old mixer plays.
 | `client/snd_mix.cpp` | `S_SampleRun`: samples of a sound as floats. The mixer leaves out what the new path plays |
 | `cgame/voice/cg_voice.c` | `Voice_InLevel`: which voices of the voice chat go to the engine |
 | `lib/steamaudio` | Valve's repository, a submodule |
-| `cmake/Modules/SteamAudioWasm.cmake` | for a browser: builds the core of Steam Audio from the submodule |
+| `cmake/Modules/SteamAudioWasm.cmake` | for a browser: builds the library, `phonon.wasm`, from the submodule |
 | `lib/steamaudio-wasm` | for a browser: what is built in place of a file of Valve or laid over one, see "In a browser" |
 
 ## In a browser
@@ -214,11 +214,15 @@ toolchain file for the browser leaves that off. Two things are different there, 
 what is in the way of a sound, the direction for headphones or speakers, the reverb, the ways round corners,
 the thump, the sounds of the own player, the voices of the voice chat.
 
-Nothing can be loaded in a page, and Valve has no library for WebAssembly to load. So the core of Steam Audio
-is built from the submodule and linked into the engine, and `snd_spatial.cpp` fills its function pointers from
-there (`JP_SPATIAL_STATIC`).
+The library is a file of its own there too, `phonon.wasm`, and the engine is not linked against it. Valve gives
+out no library for WebAssembly, so this one is built from the submodule, as a module next to cgame, ui and the
+renderer in the folder the server hands out. The page takes it along when the server has it. The engine loads
+it when the sound system starts and looks its functions up by name, the same code as on the desktop with another
+file name, and lets go of it when the sound system stops. Without the file the page says so in one line, the
+engine in one more, and the sound is as it always was: a server that is not to have `s_spatial` leaves
+`phonon.wasm` out of its web folder.
 
-And a page has one thread. What the two threads of the desktop do, the game does itself:
+What is different is that a page has one thread. What the two threads of the desktop do, the game does itself:
 
 | | Desktop | Page |
 |---|---------|------|
@@ -231,9 +235,10 @@ A pass traces fewer rays by default than on the desktop (1024 with 8 bounces, th
 `s_spatialRays` is read when the sound system starts: the simulator is made for exactly the rays a pass traces,
 see the first of the "Limits" for why.
 
-`s_spatial` is 1 by default there. The library is always in the engine, and with the defaults the sound of the
-level took 1.1 ms of a frame where it was measured, with a few sounds on a fast processor. That is a choice by
-the numbers below and by nothing else: nobody has listened to it.
+`s_spatial` is 1 by default there, so whether a page has it is a matter of the file: it is on where the server
+has `phonon.wasm` and off where it has not. With the defaults the sound of the level took 1.1 ms of a frame
+where it was measured, with a few sounds on a fast processor. That is a choice by the numbers below and by
+nothing else: nobody has listened to it.
 
 What a player in a browser has less of:
 
@@ -247,7 +252,7 @@ What a player in a browser has less of:
   says so when such a level loads, and `s_spatialPaths` says it when it is switched on in one.
 - A level loads longer the first time: by the 0.4 s of its paths on mp/ffa3, by about 3 s at 2000 probes if the
   time grows as said.
-- The engine is 6.3 MB more to fetch and needs 60 to 80 MB more memory, see "Measured".
+- `phonon.wasm` is 6.2 MB more to fetch, and with it the engine needs 60 to 80 MB more memory, see "Measured".
 
 ### Building it
 
@@ -255,16 +260,16 @@ cmake does all of it (`cmake/Modules/SteamAudioWasm.cmake`). It needs the progra
 
 | Option | Default | Meaning |
 |--------|---------|---------|
-| `BuildJPSpatialAudio` | OFF with the toolchain file for the browser | ON builds the client with `s_spatial` |
+| `BuildJPSpatialAudio` | OFF with the toolchain file for the browser | ON builds the client with `s_spatial`, and `phonon.wasm` into the web folder of the build |
 | `FetchSteamAudio` | ON | fetch the sources of FlatBuffers and PFFFT when `SteamAudioDeps` does not have them (1.3 MB, once) |
 | `SteamAudioDeps` | `<build>/steamaudio/deps` | the folder with `flatbuffers` and `pffft` in it |
 | `SteamAudioFlatBuffersURL`, `SteamAudioPFFFTURL` | empty | another address for an archive, `file://` for one on the disk |
 
 FlatBuffers and PFFFT are not in the submodule. They are fetched as the archives GitHub makes of the commits
 Valve's `core/build/dependencies.json` names, and held against a checksum in the cmake file. Without them, or
-with another checksum, cmake says so and the client is built without `s_spatial`. flatc, the compiler of
-FlatBuffers, is built with Emscripten and run with the node of the SDK, so the build machine needs no compiler
-of its own.
+with another checksum, cmake says so and builds the client without `phonon.wasm`: it then asks for the file
+when it runs, like a desktop client without its library. flatc, the compiler of FlatBuffers, is built with
+Emscripten and run with the node of the SDK, so the build machine needs no compiler of its own.
 
 Valve's own cmake files are not used: they want their dependencies where their Python script puts them and
 copy the result into the folders of their plugins, inside the submodule. What is built is what they build for
@@ -280,7 +285,7 @@ The submodule stays as it is. `lib/steamaudio-wasm` has what is different:
 | `thread_pool.cpp` | built in place of Valve's file of that name. Their thread pool starts threads, which a page can not, and does no job without them. This one lets the caller do the jobs, and can stop when a time is up |
 | `simulation_manager.cpp.patch` | laid over a copy of Valve's file in the build folder: a pass of the reflections that goes on where the last call stopped |
 | `hrtf_database.cpp.patch` | the same way: an error of Valve's code for NEON, see below |
-| `phonon_slices.h` | the two functions that give a pass its time, for the engine |
+| `phonon_slices.h` | the two functions that give a pass its time. `phonon.wasm` has them next to Valve's, and the engine looks them up like those |
 | `mysofa.h` | empty |
 
 A patch that does not fit line for line stops the build. That is what happens when the submodule is moved to a
@@ -297,19 +302,35 @@ FlatBuffers at Valve's commit does not compile with the clang of Emscripten 6 as
 template that nothing calls). The build gives the compiler `-fdelayed-template-parsing` for it and leaves the
 header alone.
 
-The engine's `.wasm` grows from 3,853,061 to 10,182,875 bytes (1.3 to 6.5 MB as gzip): 5.35 MB are the HRTF
-data Valve builds into the library, for every sampling rate, 0.68 MB are code. And it now holds SIMD
-instructions, so a browser has to know them to start the page at all, with or without `s_spatial`: Chrome 91,
-Firefox 89, Safari 16.4. What the page needed before (exceptions of WebAssembly) was there since Safari 15.2.
+`phonon.wasm` is 6,184,239 bytes (5.2 MB as gzip): 5.37 MB are the HRTF data Valve builds into the library, for
+every sampling rate, 0.67 MB are code. From outside it has the functions of `phonon.h` and the two of
+`phonon_slices.h`, nothing else of it is visible. The engine's `.wasm` is 3,887,181 bytes with `s_spatial` and
+3,853,061 without: `snd_spatial.cpp`, and nothing of Steam Audio.
+
+Only `phonon.wasm` holds SIMD instructions (Chrome 91, Firefox 89, Safari 16.4). A browser that does not know
+them can not compile that file, which the page takes like a file that is not there. That was not tried: no such
+browser was at hand.
+
+The module is linked with `-Wl,-Bsymbolic`, as the renderer is: the engine's loader makes a new instance for
+every load, and what a module has visible of its own it would otherwise look up in the first one. And every
+function of `phonon.h` stays a function of its own in the file, where the optimizer of Emscripten would make
+one of all that have the same code (145 of the 216 do, all that release a handle for one). The loader of the
+engine gives a slot of the function table back once for each name it was asked for: with one function behind
+several names the slot went back several times, was handed out again as often, and after the first
+`snd_restart` a call of one function ran another. The switch for the optimizer is in `SteamAudioWasm.cmake`
+and can go when the loader (`shared/sys/web/sys_web.js`) notes a slot once.
 
 Steam Audio is under the Apache License 2.0 and FlatBuffers too, PFFFT under a BSD license, this engine under
-the GPL version 2. On the desktop they are two files. Here they are one, and the server hands it to everybody
-who opens the page: look at that before a build with `s_spatial` for the browser is given out.
+the GPL version 2. They stay two files here as on the desktop. One thing to look at before a build is given
+out: `thread_pool.cpp` and the two patches of `lib/steamaudio-wasm` are built into `phonon.wasm` and carry the
+licence header of this tree.
 
 ### Measured
 
-2026-10-09, AMD Ryzen 9 5900X, Chromium 153 without a window on the graphics card, 60 frames a second, while
-other work ran on the machine. The demo `webdemo`: mp/ffa3, a spectator at a fixed place, one bot fighting
+2026-10-09 and 2026-10-10, AMD Ryzen 9 5900X, Chromium 153 without a window on the graphics card, 60 frames a
+second, while other work ran on the machine. The numbers are of the build that had Steam Audio linked into the
+engine, which the first version was, and were taken again with `phonon.wasm` where a row says so: a call into
+the library goes through a function pointer either way, and what a frame takes did not move. The demo `webdemo`: mp/ffa3, a spectator at a fixed place, one bot fighting
 behind a wall and others far off. That is 3.1 sounds at a time and 5 at most, not a fight. Time is what the
 sound of the level took of the page's one thread, by the counters of `s_spatialInfo`. A browser counts time in
 steps of 0.1 ms: the averages are over 900 frames each, the one frame that took most is that coarse.
@@ -318,17 +339,17 @@ steps of 0.1 ms: the averages are over 900 frames each, the one frame that took 
 |------|--------|
 | The mesh of the level, 50749 triangles | 112 to 138 ms, in the loading screen. The desktop: 113 ms |
 | The paths of mp/ffa3, 740 probes | 0.3 to 0.4 s, in the loading screen of the first visit. Later from the browser's storage |
-| A frame with the defaults | 1.09 ms: 0.05 what is in the way, 0.12 the sounds, 0.18 the reverb, 0.75 the passes |
-| The frame that took most | 2.8 to 4.0 ms |
-| A pass, 1024 rays and 8 bounces | 21 to 28 ms in 27 to 32 slices over 0.44 to 0.57 s, the longest slice 1.7 to 2.7 ms |
+| A frame with the defaults | 1.09 ms: 0.05 what is in the way, 0.12 the sounds, 0.18 the reverb, 0.75 the passes. With `phonon.wasm`: 1.10 ms (0.04, 0.13, 0.18, 0.75) |
+| The frame that took most | 2.8 to 4.0 ms. With `phonon.wasm`: 2.9 ms |
+| A pass, 1024 rays and 8 bounces | 21 to 28 ms in 27 to 32 slices over 0.44 to 0.57 s, the longest slice 1.7 to 2.7 ms. With `phonon.wasm`: 20 to 24 ms in 26 to 30 slices, the longest 1.9 ms |
 | The same pass in 4 slices (`s_spatialBudget 8`) | 20 ms. In many slices it is longer: the game has the processor's caches in between |
 | A pass in one piece with other numbers | 2048 rays and 16 bounces 58 to 64 ms, 1024 and 8: 16.6 ms, 512 and 8: 10.6 ms, 256 and 4: 3.9 ms. About 2 ms of each are the impulse response. Measured before the simulator was made for the rays it traces, so with the rays of a part of the circle |
 | `s_spatialBudget` 0.5, 1.5 | a frame 0.86 and 1.81 ms, a pass over 0.70 and 0.22 s |
-| `s_spatialReflections 0` | a frame 0.19 ms |
+| `s_spatialReflections 0` | a frame 0.19 ms, the same with `phonon.wasm` |
 | and `s_spatialPaths 0` | 0.16 ms. With `s_spatialHrtf 0`: 0.09 ms |
 | One more sound | about 0.05 ms a frame with HRTF, 0.03 without: 0.01 what is in the way, 0.02 its samples, 0.02 direction for headphones. Measured by doing the effects of each sound up to 21 times |
 | The desktop, the same demo | a frame 0.12 to 0.14 ms without reverb (page: 0.16 to 0.19) and 0.41 ms with it, a pass of 2048 rays and 16 bounces 36 ms in its thread |
-| Memory of the engine in use | at the menu 101 MB without and 161 MB with `s_spatial`, in mp/ffa3 159 and 240 MB |
+| Memory of the engine in use | at the menu 101 MB without and 161 MB with `s_spatial`, in mp/ffa3 159 and 240 MB. With `phonon.wasm` 5.4 MB of it are the library's own data, taken when it is loaded and given back when it is unloaded |
 
 By these numbers the mixer's 32 channels and 32 loop sounds, all in the level at once, would be about 3.5 ms a
 frame on this machine. A cap on the sounds that get HRTF would take a third off that and was left out: what a
@@ -356,10 +377,10 @@ port: the level of each ear as a whole and in four bands from 100 Hz to 16 kHz.
 | What | Page and desktop apart |
 |------|------------------------|
 | The desktop twice | 0.2 dB at most |
-| Direct sound with HRTF | 0.1 dB at most, left against right the same |
+| Direct sound with HRTF | 0.1 dB at most, left against right the same. With `phonon.wasm`: the same |
 | Direct sound panned | 0.2 dB |
 | With the ways round corners | 0.2 dB, and 0.5 and 0.8 dB from 400 to 1600 Hz |
-| With the reverb | 0.5 dB at most. Each works its reverb out from other rays |
+| With the reverb | 0.5 dB at most. Each works its reverb out from other rays. With `phonon.wasm`: 0.5 dB at most, and 1.1 dB in the right ear from 400 to 1600 Hz |
 | Gaps | none in the 5 ms levels, but the first 0.05 to 0.26 s of a level: the first frames of a page are long |
 
 | What | Result |
@@ -370,6 +391,8 @@ port: the level of each ear as a whole and in four bands from 100 Hz to 16 kHz.
 | The sizes of what crosses to Steam Audio | 64 structs and 26 enums of `phonon.h` have the same size, alignment and offsets with the flags of the engine and with those of the library |
 | A level with more probes than the limit (the limit set to 500 for it) | the line in the console, no paths, no file, the rest runs |
 | `snd_restart` in the level, a new level while a pass is in its slices | runs |
+| `phonon.wasm` unloaded and loaded again: `snd_restart` six times at the menu and six times in the level, then three more levels | runs. The memory in use at the menu is the same after each of the six. What stays of a load are 623 entries of the function table, which the loader gives back for no module, and what the instance noted for the end of the program, which a page never reaches |
+| The page without `phonon.wasm` | one line of the page, one of the engine ("no phonon.wasm next to the program"), the demo plays with the old mixer, `s_spatialVoice` is 0 |
 | `s_spatial 0` | nothing of it runs |
 
 So a server could hand the paths of its levels to a page: the name and the format are the same. Nothing does
@@ -382,6 +405,7 @@ that yet.
 - A fight, a game on a server (the demo has no server), any level but mp/ffa3.
 - The voice chat through it. The engine's side is in the build and sets its two cvars, and the cgame for the
   browser has the voice chat since the same day. Nobody ran the two together.
+- A browser without the SIMD of WebAssembly, which can not have `phonon.wasm`.
 - A level between 740 and 2000 probes: how long its paths take is reckoned, not measured.
 - A build with a version of Emscripten other than 6.0.12.
 
