@@ -19,7 +19,7 @@ Nothing changes for the clients of the desktop and for a server that does not sw
 | ui and cgame in the page | menus, the join, a game followed as a spectator. Nobody has played a round |
 | Sound | starts (SDL audio of the browser). Not listened to |
 | Voice chat | run on a live server, headless and muted: the page joined, got the chat through `/voice`, counted 529 frames of a talking test client in 10 seconds (a voice is 50 a second) and sent a tone for 5. Whether the others heard that tone was not looked at, and nobody has listened. See [voice.md](voice.md) |
-| Sound that knows the level (`s_spatial`, Steam Audio) | in the build when asked for (`-DBuildJPSpatialAudio=ON`). Run headless and muted with a demo on mp/ffa3: 1.1 ms of a frame, and what it gives the mixer within 0.5 dB of the desktop's in each ear and band. Nobody has listened. See [audio.md](audio.md) |
+| Sound that knows the level (`s_spatial`, Steam Audio) | in the build when asked for (`-DBuildJPSpatialAudio=ON`). Run headless and muted with a demo on mp/ffa3: 1.1 ms of a frame, and what it gives the mixer within 0.2 dB of the desktop's in each ear and band for the direct sound, within 0.8 dB with the ways round corners and the reverb. Nobody has listened. See [audio.md](audio.md) |
 | Mouse and keys | never used by a person from here: a headless browser has neither |
 | A resized window | the page starts the renderer again with the new size when the window has kept it for a moment. Run headless, 1280 x 633 to 1000 x 700 |
 | Firefox, Safari, Windows, a phone | never run |
