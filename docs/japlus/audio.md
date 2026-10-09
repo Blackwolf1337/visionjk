@@ -9,6 +9,8 @@ It is in the engine, so only a player with this engine has it. Nothing of it is 
 the other players notice nothing. The one thing a game module does for it is in the cgame, which hands the
 voices of the [voice chat](voice.md) to it when the engine says it takes them.
 
+The client in a browser can have it too. It is built and run differently there, see "In a browser".
+
 Nobody has listened to it yet. Everything under "Checked" is measured from recordings, how it sounds is not
 judged.
 
@@ -33,6 +35,9 @@ snd_restart
 | `s_spatialRays` | 2048 | rays of a pass of the reflections, 256 to 8192 |
 | `s_spatialBounces` | 16 | how often a ray is followed off a wall. Fewer cut the tail of a large room |
 | `s_spatialAhead` | 0.1 | seconds of sound rendered ahead. Less follows a turn of the head sooner, more survives a longer hitch |
+| `s_spatialBudget` | 0.75 | only in a browser: milliseconds of a frame the passes of the reflections take on average, 0.1 to 8 |
+
+In a browser three defaults are others: `s_spatial` 1, `s_spatialRays` 1024, `s_spatialBounces` 8.
 
 ### The menu
 
@@ -54,7 +59,13 @@ slider on `s_spatialReverb`. The menu does not know whether the library is there
 so and the sound stays as it is.
 
 `s_spatialInfo` says whether it runs, what the level is made of, every sound with how much of it is in sight,
-what the threads take and the state of the paths.
+what the threads take and the state of the paths. One of its lines is what the sound of the level took of the
+thread of the game since the command was last given: the frames, the sounds in them, the microseconds of a frame
+by what they went into, and the frame that took most.
+
+`s_spatialCapture <seconds>` writes what the sounds of the level give the mixer to `steamaudio/capture.wav` in
+the home path (16 bit, two channels), as it was heard. It is for measuring without ears, see "In a browser".
+What the mixer plays itself is not in it: the sounds of the own player, the menus, the music.
 
 What changes: a sound behind a wall is quieter and duller, by what the wall is made of. A sound has a direction
 that is more than left and right (with headphones). The room around the listener rings, a hall longer than a
@@ -100,7 +111,8 @@ git submodule update --init
 The engine only takes the header `phonon.h` from it. cmake copies that and the version header Valve's own build
 generates into `<build>/steamaudio`, nothing else of the submodule is on the include path. Without the
 submodule checked out, cmake says so and builds the client without `s_spatial`. `-DBuildJPSpatialAudio=OFF`
-does the same on purpose.
+does the same on purpose. The client for a browser is the one build that compiles the library from the
+submodule, see "In a browser".
 
 ## How it works
 
@@ -192,6 +204,186 @@ runs, until then the old mixer plays.
 | `client/snd_mix.cpp` | `S_SampleRun`: samples of a sound as floats. The mixer leaves out what the new path plays |
 | `cgame/voice/cg_voice.c` | `Voice_InLevel`: which voices of the voice chat go to the engine |
 | `lib/steamaudio` | Valve's repository, a submodule |
+| `cmake/Modules/SteamAudioWasm.cmake` | for a browser: builds the core of Steam Audio from the submodule |
+| `lib/steamaudio-wasm` | for a browser: what is built in place of a file of Valve or laid over one, see "In a browser" |
+
+## In a browser
+
+The client in a browser ([web.md](web.md)) has `s_spatial` when it is built with `-DBuildJPSpatialAudio=ON`. The
+toolchain file for the browser leaves that off. Two things are different there, the rest is the same code:
+what is in the way of a sound, the direction for headphones or speakers, the reverb, the ways round corners,
+the thump, the sounds of the own player, the voices of the voice chat.
+
+Nothing can be loaded in a page, and Valve has no library for WebAssembly to load. So the core of Steam Audio
+is built from the submodule and linked into the engine, and `snd_spatial.cpp` fills its function pointers from
+there (`JP_SPATIAL_STATIC`).
+
+And a page has one thread. What the two threads of the desktop do, the game does itself:
+
+| | Desktop | Page |
+|---|---------|------|
+| The level as a mesh | during the loading screen, handed to the simulator in the first frame | during the loading screen, handed over right there |
+| A pass of the reflections | in a thread, about seven a second | the game traces the rays, a slice in a frame. `s_spatialBudget` is the time of a frame the passes take on average. A slice is at least 32 rays with their bounces, and what makes the impulse response at the end of a pass is 2 ms in one piece, so some frames go without a slice. A pass of the defaults is spread over about half a second |
+| The ways round corners | looked up in each pass | looked up by the game every 50 ms: 20 microseconds for two sounds behind a wall |
+| The paths of a level | worked out in a thread the first time it is loaded | worked out while the level loads, the first time, and kept in the browser like the config. Only for a level of up to 2000 probes |
+
+A pass traces fewer rays by default than on the desktop (1024 with 8 bounces, the "Medium" of the menu) and
+`s_spatialRays` is read when the sound system starts: the simulator is made for exactly the rays a pass traces,
+see the first of the "Limits" for why.
+
+`s_spatial` is 1 by default there. The library is always in the engine, and with the defaults the sound of the
+level took 1.1 ms of a frame where it was measured, with a few sounds on a fast processor. That is a choice by
+the numbers below and by nothing else: nobody has listened to it.
+
+What a player in a browser has less of:
+
+- The reverb follows him about twice a second, not seven times: in another room it is the old room's for up to
+  half a second longer. More `s_spatialBudget` makes that shorter, more rays or bounces longer.
+- A pass has half the rays and half the bounces of the desktop's default, so the reverb of a large hall is
+  rougher and its tail ends sooner. The cvars are the same ones: twice the rays or bounces is a pass twice as
+  long.
+- A level of more than 2000 probes has no sound round corners. The work and the memory the paths take grow with
+  the square of the probes, and nothing can work them out later next to the game. mp/ffa3 has 740. The console
+  says so when such a level loads, and `s_spatialPaths` says it when it is switched on in one.
+- A level loads longer the first time: by the 0.4 s of its paths on mp/ffa3, by about 3 s at 2000 probes if the
+  time grows as said.
+- The engine is 6.3 MB more to fetch and needs 60 to 80 MB more memory, see "Measured".
+
+### Building it
+
+cmake does all of it (`cmake/Modules/SteamAudioWasm.cmake`). It needs the program `patch`, and once the network:
+
+| Option | Default | Meaning |
+|--------|---------|---------|
+| `BuildJPSpatialAudio` | OFF with the toolchain file for the browser | ON builds the client with `s_spatial` |
+| `FetchSteamAudio` | ON | fetch the sources of FlatBuffers and PFFFT when `SteamAudioDeps` does not have them (1.3 MB, once) |
+| `SteamAudioDeps` | `<build>/steamaudio/deps` | the folder with `flatbuffers` and `pffft` in it |
+| `SteamAudioFlatBuffersURL`, `SteamAudioPFFFTURL` | empty | another address for an archive, `file://` for one on the disk |
+
+FlatBuffers and PFFFT are not in the submodule. They are fetched as the archives GitHub makes of the commits
+Valve's `core/build/dependencies.json` names, and held against a checksum in the cmake file. Without them, or
+with another checksum, cmake says so and the client is built without `s_spatial`. flatc, the compiler of
+FlatBuffers, is built with Emscripten and run with the node of the SDK, so the build machine needs no compiler
+of its own.
+
+Valve's own cmake files are not used: they want their dependencies where their Python script puts them and
+copy the result into the folders of their plugins, inside the submodule. What is built is what they build for
+this platform: the sources their CMakeLists names for the core, with the vector code for NEON, which a header
+of Emscripten maps to the SIMD of WebAssembly. Left out: Embree, Radeon Rays, TrueAudio Next, IPP, MKL, FFTS,
+which this platform does not have, and MySOFA with its zlib, which reads HRTF data from SOFA files the engine
+never uses (`IPL_DISABLE_SOFA`, and an empty `mysofa.h` for the header Valve's code still asks for).
+
+The submodule stays as it is. `lib/steamaudio-wasm` has what is different:
+
+| File | What it is |
+|------|------------|
+| `thread_pool.cpp` | built in place of Valve's file of that name. Their thread pool starts threads, which a page can not, and does no job without them. This one lets the caller do the jobs, and can stop when a time is up |
+| `simulation_manager.cpp.patch` | laid over a copy of Valve's file in the build folder: a pass of the reflections that goes on where the last call stopped |
+| `hrtf_database.cpp.patch` | the same way: an error of Valve's code for NEON, see below |
+| `phonon_slices.h` | the two functions that give a pass its time, for the engine |
+| `mysofa.h` | empty |
+
+A patch that does not fit line for line stops the build. That is what happens when the submodule is moved to a
+version whose files differ there.
+
+The error: with a direction between two measured ones, Steam Audio mixes the neighbours' filters (the engine asks
+for that, `IPL_HRTFINTERPOLATION_BILINEAR`) and brings each phase back into one turn of the circle. Its function
+for rounding in `neon_float4.h` adds a half and rounds nothing, so every phase came out as pi or -pi: a filter
+as loud as it should be, with no timing left in it. The patch has that step done one value at a time, by code
+of Valve that rounds. By the source every build of Steam Audio 4.8.1 for NEON has this, Valve's own for phones
+too, which was not tried. The library for the desktop does not have it: that was measured, see "Checked".
+
+FlatBuffers at Valve's commit does not compile with the clang of Emscripten 6 as it is (a function in a
+template that nothing calls). The build gives the compiler `-fdelayed-template-parsing` for it and leaves the
+header alone.
+
+The engine's `.wasm` grows from 3,853,061 to 10,182,875 bytes (1.3 to 6.5 MB as gzip): 5.35 MB are the HRTF
+data Valve builds into the library, for every sampling rate, 0.68 MB are code. And it now holds SIMD
+instructions, so a browser has to know them to start the page at all, with or without `s_spatial`: Chrome 91,
+Firefox 89, Safari 16.4. What the page needed before (exceptions of WebAssembly) was there since Safari 15.2.
+
+Steam Audio is under the Apache License 2.0 and FlatBuffers too, PFFFT under a BSD license, this engine under
+the GPL version 2. On the desktop they are two files. Here they are one, and the server hands it to everybody
+who opens the page: look at that before a build with `s_spatial` for the browser is given out.
+
+### Measured
+
+2026-10-09, AMD Ryzen 9 5900X, Chromium 153 without a window on the graphics card, 60 frames a second, while
+other work ran on the machine. The demo `webdemo`: mp/ffa3, a spectator at a fixed place, one bot fighting
+behind a wall and others far off. That is 3.1 sounds at a time and 5 at most, not a fight. Time is what the
+sound of the level took of the page's one thread, by the counters of `s_spatialInfo`. A browser counts time in
+steps of 0.1 ms: the averages are over 900 frames each, the one frame that took most is that coarse.
+
+| What | Result |
+|------|--------|
+| The mesh of the level, 50749 triangles | 112 to 138 ms, in the loading screen. The desktop: 113 ms |
+| The paths of mp/ffa3, 740 probes | 0.3 to 0.4 s, in the loading screen of the first visit. Later from the browser's storage |
+| A frame with the defaults | 1.09 ms: 0.05 what is in the way, 0.12 the sounds, 0.18 the reverb, 0.75 the passes |
+| The frame that took most | 2.8 to 4.0 ms |
+| A pass, 1024 rays and 8 bounces | 21 to 28 ms in 27 to 32 slices over 0.44 to 0.57 s, the longest slice 1.7 to 2.7 ms |
+| The same pass in 4 slices (`s_spatialBudget 8`) | 20 ms. In many slices it is longer: the game has the processor's caches in between |
+| A pass in one piece with other numbers | 2048 rays and 16 bounces 58 to 64 ms, 1024 and 8: 16.6 ms, 512 and 8: 10.6 ms, 256 and 4: 3.9 ms. About 2 ms of each are the impulse response. Measured before the simulator was made for the rays it traces, so with the rays of a part of the circle |
+| `s_spatialBudget` 0.5, 1.5 | a frame 0.86 and 1.81 ms, a pass over 0.70 and 0.22 s |
+| `s_spatialReflections 0` | a frame 0.19 ms |
+| and `s_spatialPaths 0` | 0.16 ms. With `s_spatialHrtf 0`: 0.09 ms |
+| One more sound | about 0.05 ms a frame with HRTF, 0.03 without: 0.01 what is in the way, 0.02 its samples, 0.02 direction for headphones. Measured by doing the effects of each sound up to 21 times |
+| The desktop, the same demo | a frame 0.12 to 0.14 ms without reverb (page: 0.16 to 0.19) and 0.41 ms with it, a pass of 2048 rays and 16 bounces 36 ms in its thread |
+| Memory of the engine in use | at the menu 101 MB without and 161 MB with `s_spatial`, in mp/ffa3 159 and 240 MB |
+
+By these numbers the mixer's 32 channels and 32 loop sounds, all in the level at once, would be about 3.5 ms a
+frame on this machine. A cap on the sounds that get HRTF would take a third off that and was left out: what a
+frame costs most are the passes, which have their own limit.
+
+### Checked
+
+The same day, without ears. Nobody has listened to it in a browser either.
+
+Each effect of Steam Audio fed with the same noise, in Valve's library for the desktop and in the one built
+here, run with node:
+
+| Effect | The two builds apart |
+|--------|----------------------|
+| What a wall lets through, panning, HRTF of a measured direction | nothing, sample for sample |
+| HRTF between measured directions, before the patch | the same loudness to 0.15 dB, and up to 3 dB apart in a band: another filter. Against the measured direction next to it Valve's fits with 0.60 to 1.00 (ten of twelve above 0.9), the one built here with 0.28 to 0.57 |
+| The same after the patch | a ten thousandth of the peak |
+| Ambisonics to two ears, turned or not, and the effect of the paths | a hundred thousandth of the peak |
+| The reverb between two walls, 2048 rays | the one built here has 0.4 dB more energy (three runs against five). Two runs of Valve's are up to 0.3 dB apart, the rays bounce by chance. Where the rest comes from was not looked for |
+
+18 seconds of the demo in the page and on the desktop (a hidden client with the sound driver "dummy"), each
+written by `s_spatialCapture` from the first frame of the level on, compared by `tools/satest/compare.py` of the
+port: the level of each ear as a whole and in four bands from 100 Hz to 16 kHz.
+
+| What | Page and desktop apart |
+|------|------------------------|
+| The desktop twice | 0.2 dB at most |
+| Direct sound with HRTF | 0.1 dB at most, left against right the same |
+| Direct sound panned | 0.2 dB |
+| With the ways round corners | 0.2 dB, and 0.5 and 0.8 dB from 400 to 1600 Hz |
+| With the reverb | 0.5 dB at most. Each works its reverb out from other rays |
+| Gaps | none in the 5 ms levels, but the first 0.05 to 0.26 s of a level: the first frames of a page are long |
+
+| What | Result |
+|------|--------|
+| The triangles of mp/ffa3 | the same checksum as on the desktop, so the file of the paths has the same name |
+| The paths the page worked out | the size of the desktop's file, 387 of 662548 bytes are others: some pairs of probes see each other in one and not in the other |
+| The desktop's file put into the page | read, 740 probes |
+| The sizes of what crosses to Steam Audio | 64 structs and 26 enums of `phonon.h` have the same size, alignment and offsets with the flags of the engine and with those of the library |
+| A level with more probes than the limit (the limit set to 500 for it) | the line in the console, no paths, no file, the rest runs |
+| `snd_restart` in the level, a new level while a pass is in its slices | runs |
+| `s_spatial 0` | nothing of it runs |
+
+So a server could hand the paths of its levels to a page: the name and the format are the same. Nothing does
+that yet.
+
+### Not run
+
+- Firefox, Safari, a phone, a slower machine. The numbers are of one fast desktop processor: a slice is at
+  least 32 rays and the end of a pass 2 ms there, both take longer on a slower one, and the limit is 8 ms.
+- A fight, a game on a server (the demo has no server), any level but mp/ffa3.
+- The voice chat through it. The engine's side is in the build and sets its two cvars, and the cgame for the
+  browser has the voice chat since the same day. Nobody ran the two together.
+- A level between 740 and 2000 probes: how long its paths take is reckoned, not measured.
+- A build with a version of Emscripten other than 6.0.12.
 
 ## Checked
 
@@ -262,6 +454,15 @@ download itself was not run. The part for macOS and its application bundle is wr
 
 ## Limits
 
+- On the desktop a pass of the reflections does not look all round the listener. Steam Audio has the rays the
+  simulator was made for in the order of their direction, and a pass of fewer takes the first of them. The
+  engine makes it for 8192 and a pass traces `s_spatialRays`: the 2048 of the default go into a quarter of the
+  circle round the listener, the 1024 of "Medium" into an eighth, always the same one in the level. Found in
+  Valve's code (`Sampling::generateSphereSamples`) and measured with their library, a listener between two walls:
+  made for 8192 with a pass of 2048, what comes back comes from one side (its direction goes with the whole by
+  0.87, by -0.11 when it is made for 2048), and with a pass of 1024 it has twice the energy. Not changed on
+  the desktop, where the reverb was set up as it is. The client in a browser makes the simulator for the rays
+  it traces.
 - Nobody has heard it. Volumes, how strong the reverb is and how much a wall lets through are from
   measurements and from Valve's numbers, not from listening.
 - The reverb of the own player's sounds and the thump of explosions were built and never run: not heard and
