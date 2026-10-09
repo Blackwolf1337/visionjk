@@ -582,6 +582,19 @@ Also changed:
   the game. Seen: the flash of the pistol at its muzzle. The game plays the effect bound to the weapon with
   all three of its axes, the page along the first; the glow while a weapon is charged is not drawn. Not
   compared with a picture of the game. Three more checks in `steps_ownview.js` (20).
+- Fixed: the sabers were not in the hands. The page put every blade where the server says its blade is and
+  set the hilt to it. A client never sees those points: it bolts the hilt to the hand of its own skeleton and
+  the blade to the hilt (`CG_AddSaberBlade`). The points of the server are for its own hit tests, worked out
+  from an origin it pushes along the velocity of the player and from its own skeleton
+  (`WP_SaberPositionUpdate`). With bots that fight they were 14 to 18 units away from the hands the page
+  draws on average and up to 85, and 13 to 30 degrees off, for both sabers of every player: a second saber
+  stood in the air beside its owner. The page takes a blade from the hand it draws now (`sbFromHand` in
+  `js/sabers.js`), and from the server only until it has drawn a hand. The light of a blade and where it
+  ends at a wall are from the hand of the frame before.
+  Against the game, twelve views of three standing bots, one of them with two sabers: with the blades of the
+  server 5.28, 8.06, 0.39 and 4.66 of 255 for the four sides of that one (in that run the bots also fought,
+  so not all of it is the blades), with the blades from the hand 0.15, 0.24, 0.34 and 0.16, and 0.01 to 0.27
+  for the other eight. `steps_sabers.js` 50, with its light checks taking the second of two frames.
 - Fixed: a call the graphics card refuses, in every frame while the models of the players were still read. The
   plain figure that stands in for a player whose model is not there yet was drawn with the program of the
   model drawn before it (`plTry` in `js/player-draw.js` now ends on the plain program, as `drawStatic` does).

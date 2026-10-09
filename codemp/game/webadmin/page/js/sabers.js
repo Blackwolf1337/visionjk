@@ -72,11 +72,14 @@ function sbColor(d, si, blade) {
 // to BOTH_LK_ST_S_T_SB_1_W in anims.h, every fifth one)
 const sbSuperBreakWin = anim => anim >= 744 && anim <= 829 && (anim - 744) % 5 === 0;
 
-// Where a blade is taken from. false: from the server (org and dir of the state), and the hilt is put to it. true:
-// from the hand the page draws, as the client does it (the bolt of the hilt on the bolt of the hand), and the
-// server is only asked while the page has drawn no hand yet. That is the right one once the skeleton the page
-// draws is the one a client has: the skeleton of the server is not quite that (a blade is off by a unit or two).
-let sbFromHand = false;
+// Where a blade is taken from. true: from the hand the page draws, as a client does it (the bolt of the hilt on
+// the bolt of the hand, CG_AddSaberBlade), and the server is only asked while the page has drawn no hand yet.
+// false: from the server (org and dir of the state), and the hilt is put to it. The places of the server are not
+// what a client draws: the server works them out from an origin it has pushed along the velocity of the player
+// (WP_SaberPositionUpdate) and from its own skeleton. Measured with fighting bots they were 14 to 18 units from
+// the hands of the page on average and up to 85, and 13 to 30 degrees off; even of a player who stands they put
+// two blades crossed above the head where the game has them in the hands.
+let sbFromHand = true;
 
 // What the page keeps of the sabers of a player from frame to frame: client -> { shape, sabers, prev, blades, now,
 // hand }. blades: for every blade its length, where its trail was last and where it last touched the map. now: for
