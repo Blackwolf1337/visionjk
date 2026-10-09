@@ -274,13 +274,21 @@ SV_WebDatagram
 A datagram of a peer, handed to the server as NET_Event hands it one of the UDP socket
 ==================
 */
-static void SV_WebDatagram( const webConnection_t *c, const byte *data, int length ) {
+static void SV_WebDatagram( webConnection_t *c, const byte *data, int length ) {
 	byte		bufData[MAX_MSGLEN + 1];
 	msg_t		netmsg;
 	netadr_t	from = c->adr;
 
 	// (no server runs: a dedicated server has nobody else to give it to)
 	if ( !com_sv_running->integer ) {
+		return;
+	}
+
+	// More than a client sends is lost. An empty message is six bytes, 2700 of them fit into what is read
+	// from a socket at once, and the server answers every packet of an address it has no client for with
+	// one of its own. A peer that sent nothing else kept the server from the frames of its game.
+	// (lastHeard is the time of the read these frames came with)
+	if ( SVC_RateLimit( &c->packets, SV_WEB_PACKET_BURST, SV_WEB_PACKET_MSEC, c->lastHeard ) ) {
 		return;
 	}
 

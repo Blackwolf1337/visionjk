@@ -76,6 +76,12 @@ byte that comes in is read as one of an attacker: fixed buffers, a fixed table, 
 #define SV_WEB_PING_MSEC		30000
 #define SV_WEB_SILENT_MSEC		90000
 
+// The packets a WebSocket peer hands the server: one in a millisecond, and this many more at once. No client
+// sends that much (cl_maxpackets is 1000 at most, and one packet in a frame of the client). What is above it
+// is lost, as a datagram is on a line that is full.
+#define SV_WEB_PACKET_BURST		32
+#define SV_WEB_PACKET_MSEC		1
+
 #define SV_WEB_MAX_PACKS		512			// pk3 files in the manifest
 #define SV_WEB_MANIFEST_MSEC	2000		// the manifest is not put together more often than this
 
@@ -121,6 +127,7 @@ typedef struct webConnection_s {
 	qboolean	pinged;			// and it was asked since
 	qboolean	inMessage;		// a message that comes in several frames is begun
 	int			messageLen;
+	leakyBucket_t	packets;	// how many packets it handed the server of late (SV_WEB_PACKET_BURST)
 
 	int			inLen;
 	int			inPos;			// WEB_SOCKET: the frames in front of this are done with
