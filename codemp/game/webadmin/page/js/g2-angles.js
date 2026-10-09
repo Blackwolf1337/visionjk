@@ -82,7 +82,7 @@ const G2_WEAPON_READY_ANIM = ['TORSO_DROPWEAP1', 'TORSO_WEAPONREADY3', 'TORSO_WE
 // The numbers of the game the player code checks (bg_public.h, q_shared.h, teams.h, bg_vehicles.h, bg_weapons.h):
 // flags of an entity, powerups, force powers, the kinds of a vehicle
 const PG = Object.freeze({
-	EF_DEAD: 1 << 1, EF_NODRAW: 1 << 8, EF_TALK: 1 << 13, EF_CONNECTION: 1 << 14, EF_BODYPUSH: 1 << 19, EF_SEEKERDRONE: 1 << 21, EF_DISINTEGRATION: 1 << 26, EF_INVULNERABLE: 1 << 27,
+	EF_DEAD: 1 << 1, EF_NODRAW: 1 << 8, EF_FLAME: 1 << 17, EF_TALK: 1 << 13, EF_CONNECTION: 1 << 14, EF_BODYPUSH: 1 << 19, EF_SEEKERDRONE: 1 << 21, EF_DISINTEGRATION: 1 << 26, EF_INVULNERABLE: 1 << 27,
 	EF2_HYPERSPACE: 1 << 5, EF2_SHIP_DEATH: 1 << 7,
 	PW_QUAD: 1, PW_BATTLESUIT: 2, PW_PULL: 3, PW_REDFLAG: 4, PW_BLUEFLAG: 5, PW_NEUTRALFLAG: 6, PW_SHIELDHIT: 7, PW_SPEEDBURST: 8, PW_DISINT_4: 9, PW_SPEED: 10, PW_CLOAKED: 11,
 	PW_FORCE_ENLIGHTENED_LIGHT: 12, PW_FORCE_ENLIGHTENED_DARK: 13, PW_FORCE_BOON: 14, PW_YSALAMIRI: 15,
@@ -101,6 +101,8 @@ function g2AnimTables() {
 	t.weaponReady = G2_WEAPON_READY_ANIM.map(n => num.get(n));
 	const n = name => num.has(name) ? num.get(name) : -1;
 	t.BOTH_STAND1 = n('BOTH_STAND1');
+	t.BOTH_FORCE_2HANDEDLIGHTNING_HOLD = n('BOTH_FORCE_2HANDEDLIGHTNING_HOLD');
+	t.BOTH_FORCE_DRAIN_GRAB_START = n('BOTH_FORCE_DRAIN_GRAB_START');
 	// the ranges the game checks: saber attacks and transitions (BG_SaberStartTransAnim, PM_InSaberAnim), the
 	// moves on a ledge of JA+ (BG_InLedgeMove)
 	t.saberFirst = n('BOTH_A1_T__B_'); t.rollStab = n('BOTH_ROLL_STAB'); t.saberLast = n('BOTH_H1_S1_BR');

@@ -153,7 +153,7 @@ function plPlayerCent(id, p, k) {
 		eFlags: d.eFlags ?? (d.dead ? PG.EF_DEAD : 0), eFlags2: d.eFlags2 || 0, powerups: d.powerups || 0, forceActive: d.forceActive || 0,
 		saberMove: d.saberMove || 0, ground: d.ground ?? PG.ENTITYNUM_WORLD, brokenLimbs: d.brokenLimbs || 0, saberLevel: d.saberLevel || 0, moveDir: d.moveDir,
 		legsFrame: d.legsFrame ?? -1, legsSpeed: d.legsSpeed || 0, torsoFrame: d.torsoFrame ?? -1, torsoSpeed: d.torsoSpeed || 0, scale: (d.scale || 100) / 100,
-		electrify: d.electrify || 0 };
+		electrify: d.electrify || 0, forcePass: d.forcePass || 0 };
 }
 
 // An NPC of the state the same way. The state has no place before for it: the instance keeps where it was at the
@@ -207,6 +207,7 @@ function drawPlayers(now) {
 				const cent = plPlayerCent(id, p, k), place = plPose(inst, cent, time, wall);
 				// CG_Player draws nothing of one who is not to be drawn, and from inside the own head only what is around him
 				if (!(cent.eFlags & PG.EF_NODRAW) && !(cent.eFlags2 & PG.EF2_SHIP_DEATH)) {
+					plForcePass(inst, cent, place);
 					plDrawModel(inst, cent, place, d, ownView, [col, d.dead ? 0.35 : 0.08]);
 					if (!ownView) drawHeldWeapons(inst, d, place);
 				}

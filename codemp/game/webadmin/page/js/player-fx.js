@@ -26,6 +26,31 @@ function plFloatSprite(cent, shader) {
 	plAddSprite({ org: [o[0], o[1], o[2] + 48], shader, radius: 10 });
 }
 
+// The lightning and the drain of the Force (CG_Player, activeForcePass of the entity: the level of his lightning,
+// or of his drain plus three). An effect at his left hand along the way his torso looks, played anew in every
+// frame of a client: a bolt to where it meets something, wide from the third level on. The drain comes from the
+// right hand in half of the frames while both hands are out (BOTH_FORCE_2HANDEDLIGHTNING_HOLD). JA+: the flame of
+// a merc instead of lightning (EF_FLAME), the hand of the drain grab, and its own wide drain.
+// Not here: a client that fights a private duel does not see the force effects of the others
+// (CG_JPForceFxVisible).
+const PL_FORCE_FX = { lightning: 'force/lightning', lightningWide: 'force/lightningwide', drain: 'mp/drain', drainWide: 'mp/drainwide_new', drainHand: 'force/drain_hand', flame: 'env/flame_jet' };
+const plForceFrames = new Map();		// the name of such an effect -> what fxFrames made for it, with the plays of this frame
+function plForcePass(inst, cent, place) {
+	const pass = cent.forcePass | 0, model = inst.model;
+	if (!pass || cent.vehicle || !inst.pe || !inst.bones || !model) return;
+	const t = g2AnimTables(), drain = pass > 3;
+	const name = drain ? (cent.torsoAnim === t.BOTH_FORCE_DRAIN_GRAB_START ? PL_FORCE_FX.drainHand : pass - 3 > 2 ? PL_FORCE_FX.drainWide : PL_FORCE_FX.drain)
+		: cent.eFlags & PG.EF_FLAME ? PL_FORCE_FX.flame : pass > 2 ? PL_FORCE_FX.lightningWide : PL_FORCE_FX.lightning;
+	const tag = model.tags[drain && cent.torsoAnim === t.BOTH_FORCE_2HANDEDLIGHTNING_HOLD && Math.random() < 0.5 ? '*r_hand' : '*l_hand'];
+	if (!tag) return;
+	let c = plForceFrames.get(name);
+	if (!c) plForceFrames.set(name, c = fxFrames());
+	// how often in this frame of the page is asked once for all who cast it
+	if (c.at !== frameNow) { c.at = frameNow; c.plays = fxFramePlays(c, frameNow, fxOn() && fxReady(fxGet(name))); }
+	const hand = M4.mul(place, to44(tagMatrix(tag, inst.bones))), p = inst.pe.torso.pitchAngle * Math.PI / 180, y = inst.pe.torso.yawAngle * Math.PI / 180;
+	fxFramePlay(c, cent.number, c.plays, name, [hand[12], hand[13], hand[14]], [Math.cos(p) * Math.cos(y), Math.cos(p) * Math.sin(y), -Math.sin(p)]);
+}
+
 // one more sprite for this frame (a frame that never gets to draw them must not let them pile up)
 function plAddSprite(s) {
 	if (plSprites.length >= 64) plSprites.length = 0;

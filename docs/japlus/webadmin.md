@@ -607,6 +607,16 @@ Also changed:
   keeps an empty menu open, and the engine leaves these lines out while a menu has the keys. Not shown: what
   the engine and the client game print by themselves besides the kills. `tools/panelshot/steps_console.js`
   (19 checks).
+- New: the lightning and the drain of the Force. Who casts lightning or drains has an effect at his left
+  hand along the way his torso looks, played anew in every frame of a client (`CG_Player`,
+  `activeForcePass` of the entity): a blue bolt to where it meets something, a fan of bolts from the third
+  level on, the same in red for the drain; with JA+ the flame of a merc instead of lightning (`EF_FLAME`),
+  the hand of the drain grab and its own wide drain. The state did not tell it: the row of a player has a
+  38th number, `activeForcePass`, and `plForcePass` in `js/player-fx.js` plays the effect. Found in pictures
+  of a fight side by side with the game, where a bot cast lightning and the page showed nothing. Seen on the
+  page for all three; not compared with a picture of the game (no bot cast it while a row was taken after
+  it was in). Not here: a client that fights a private duel does not see the force effects of the others
+  (`CG_JPForceFxVisible`). Three more checks in `steps_players.js` (41).
 - Fixed: the trail of a swinging blade was hardly there. The page adds a piece of trail at the start of a
   frame and let it age by that whole frame before it was first drawn: at 60 frames a second every piece
   missed its first and brightest frame, and at fewer than 25 it was gone before it was drawn at all (a piece
@@ -783,8 +793,9 @@ Also changed:
   - Not drawn: sounds, camera shakes and screen flashes of an effect, the models of emitters (its lights are
     lights of the frame, `fxLights` in `js/fx-run.js`),
     wind, forks of electricity; particles do not collide with the map. And of what a client plays on its own
-    that is neither an effect entity, nor played by the server, nor a missile: force powers and jetpacks
-    (the rest comes with the events of the game, see above).
+    that is neither an effect entity, nor played by the server, nor a missile: the push, the pull and the
+    grip of the Force and jetpacks (lightning and drain are there, the rest comes with the events of the
+    game, see above).
 - New: everything new in the World tab is a draft first (`js/editor-drafts.js`; the user: "The draft is not a
   bad idea, make this for all entities"). A class or a template placed with a right-click, the copy that
   Duplicate or a paste makes, and a `trigger_push` or `trigger_teleport` with the `target_position` it is aimed
