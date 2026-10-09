@@ -19,7 +19,7 @@ Nothing changes for the clients of the desktop and for a server that does not sw
 | ui and cgame in the page | menus, the join, a game followed as a spectator. Nobody has played a round |
 | Sound | starts (SDL audio of the browser). Not listened to |
 | Mouse and keys | never used by a person from here: a headless browser has neither |
-| A resized window | the picture is scaled, the frame keeps the size it started with |
+| A resized window | the page starts the renderer again with the new size when the window has kept it for a moment. Run headless, 1280 x 633 to 1000 x 700 |
 | Firefox, Safari, Windows, a phone | never run |
 
 Left out on purpose in the first version: the voice chat (`BuildJPVoice`), Steam Audio (`BuildJPSpatialAudio`),

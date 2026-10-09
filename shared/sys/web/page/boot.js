@@ -31,6 +31,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 const SIDE_MODULES = ['cgamewasm32.wasm', 'uiwasm32.wasm', 'rd-vulkan-vision_wasm32.wasm'];
 const ENGINE = 'visionjk.wasm32.js';
 const LOG_KEPT = 2000, LOG_SHOWN = 10;
+// how long the window has to keep a new size before the renderer is started again for it
+const RESIZE_WAIT = 600;
 
 const $ = id => document.getElementById(id);
 const canvas = $('canvas');
@@ -476,9 +478,10 @@ function loadEngine() {
 async function start(manifest) {
 	setPhase('starting');
 	say('Starting the game');
+	let frameWidth = canvas.clientWidth, frameHeight = canvas.clientHeight;
 	const args = ['+set', 'fs_basepath', '/game', '+set', 'fs_homepath', '/home', '+set', 'fs_game', manifest.game,
 		'+set', 'net_wsHost', location.host, '+set', 'r_mode', '-1',
-		'+set', 'r_customwidth', String(canvas.clientWidth), '+set', 'r_customheight', String(canvas.clientHeight)];
+		'+set', 'r_customwidth', String(frameWidth), '+set', 'r_customheight', String(frameHeight)];
 	const query = new URLSearchParams(location.search);
 	if (query.has('connect')) args.push('+connect', location.hostname);
 	args.push(...(query.get('args') || '').split(' ').filter(Boolean));
@@ -494,6 +497,21 @@ async function start(manifest) {
 	setPhase('running');
 	document.body.classList.add('running');
 	showLog(false);
+
+	// The frame keeps the size the renderer was started with, a canvas of another size only stretches it. So
+	// when the window has had a new size for a moment, the renderer is started again with that size (the two
+	// cvars take effect with a vid_restart, which loads the textures again: not something to do while dragging).
+	let resizeTimer = 0;
+	window.addEventListener('resize', () => {
+		clearTimeout(resizeTimer);
+		resizeTimer = setTimeout(() => {
+			const width = canvas.clientWidth, height = canvas.clientHeight;
+			if (vjk.phase !== 'running' || !width || !height || (width === frameWidth && height === frameHeight)) return;
+			frameWidth = width;
+			frameHeight = height;
+			vjk.command(`set r_customwidth ${width}; set r_customheight ${height}; vid_restart`);
+		}, RESIZE_WAIT);
+	});
 }
 
 async function main() {
