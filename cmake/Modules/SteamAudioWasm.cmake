@@ -249,14 +249,6 @@ function(jp_steamaudio_wasm module)
 	# would look up by name in the table of symbols of the page, which keeps the addresses of the first load:
 	# with this it takes its own.
 	target_link_options(steamaudio PRIVATE -Wl,-Bsymbolic)
-	# Every function of phonon.h stays a function of its own in the file. The optimizer of Emscripten makes one
-	# of functions with the same code (145 of the 216 are the same lines as another: all that release a handle,
-	# for one), and the names then all stand for that one. The engine's loader (shared/sys/web/sys_web.js)
-	# notes a slot in the function table for each name it is asked for and gives each back when the module is
-	# unloaded: the one slot of such a function went back once for each of its names, was handed out again that
-	# often, and after the first snd_restart a call of one function ran another. Not needed any more once the
-	# loader notes a slot once.
-	target_link_options(steamaudio PRIVATE -sBINARYEN_EXTRA_PASSES=--skip-pass=duplicate-function-elimination)
 
 	set(${module} steamaudio PARENT_SCOPE)
 endfunction()

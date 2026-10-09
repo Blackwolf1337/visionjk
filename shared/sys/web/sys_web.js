@@ -62,7 +62,12 @@ addToLibrary( {
 			return 0;
 		}
 		var ptr = addFunction( func );
-		lib.funcs.push( ptr );
+		// Once for a function: the optimizer folds functions with the same code into one, and two names of a
+		// module can then be the same function and get the same slot. Given back twice at unload, the slot
+		// would be handed out twice later, and a call of one function would run another.
+		if ( !lib.funcs.includes( ptr ) ) {
+			lib.funcs.push( ptr );
+		}
 		return ptr;
 	},
 
