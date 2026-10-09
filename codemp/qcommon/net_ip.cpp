@@ -270,6 +270,14 @@ void Sys_SendPacket( int length, const void *data, const netadr_t *to ) {
 	int					ret;
 	struct sockaddr_in	addr;
 
+#ifdef DEDICATED
+	// a peer of the web host has no UDP address: its packet is a message on its WebSocket
+	if ( to->type == NA_WEB ) {
+		SV_WebSendPacket( length, data, to );
+		return;
+	}
+#endif
+
 	if ( to->type != NA_BROADCAST && to->type != NA_IP ) {
 		Com_Error( ERR_FATAL, "Sys_SendPacket: bad address type" );
 		return;

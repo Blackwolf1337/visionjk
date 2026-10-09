@@ -186,12 +186,33 @@ byte *SV_WebOutRoom( webConnection_t *c, int len ) {
 
 /*
 ==================
+SV_WebSocketOf
+
+The WebSocket a packet to that address goes out on, NULL if it is gone
+==================
+*/
+webConnection_t *SV_WebSocketOf( const netadr_t *adr ) {
+	int i;
+
+	for ( i = 0; i < SV_WEB_MAX_CONNECTIONS; i++ ) {
+		webConnection_t *c = &connections[i];
+
+		if ( c->state == WEB_SOCKET && !c->drop && c->adr.port == adr->port
+			&& !memcmp( c->adr.ip, adr->ip, sizeof( c->adr.ip ) ) ) {
+			return c;
+		}
+	}
+	return NULL;
+}
+
+/*
+==================
 SV_WebFlush
 
 Sends what the socket takes of what waits
 ==================
 */
-static void SV_WebFlush( webConnection_t *c ) {
+void SV_WebFlush( webConnection_t *c ) {
 	while ( c->outSent < c->outLen ) {
 		const int sent = send( c->sock, (const char *)c->out + c->outSent, c->outLen - c->outSent, SV_WEB_SEND_FLAGS );
 
@@ -263,17 +284,26 @@ static void SV_WebWrite( webConnection_t *c ) {
 ==================
 SV_WebRead
 
-More of the head of a request. With the empty line that ends it the request is answered.
+More of the head of a request, which is answered with the empty line that ends it. Or more frames of a
+WebSocket, which are run as far as they are whole.
 ==================
 */
 static void SV_WebRead( webConnection_t *c ) {
 	int received, i, headLen = 0;
 
-	if ( c->state != WEB_REQUEST ) {
+	if ( c->state != WEB_REQUEST && c->state != WEB_SOCKET ) {
 		return;
 	}
 
-	// (there is room: a head that fills the buffer was refused when it did)
+	// the frames that are done with make room for the next ones
+	if ( c->inPos ) {
+		memmove( c->in, c->in + c->inPos, c->inLen - c->inPos );
+		c->inLen -= c->inPos;
+		c->inPos = 0;
+	}
+
+	// (there is room: a head that fills the buffer was refused when it did, and a frame that is longer than
+	// the quarter of it when its length came)
 	received = recv( c->sock, (char *)c->in + c->inLen, SV_WEB_IN_SIZE - 1 - c->inLen, 0 );
 	if ( received == SOCKET_ERROR ) {
 		if ( !SV_WebWouldBlock() ) {
@@ -283,6 +313,15 @@ static void SV_WebRead( webConnection_t *c ) {
 	}
 	if ( received <= 0 ) {
 		SV_WebDrop( c );		// the other side closed
+		return;
+	}
+
+	if ( c->state == WEB_SOCKET ) {
+		c->inLen += received;
+		c->lastHeard = Sys_Milliseconds();
+		c->pinged = qfalse;
+		SV_WebSocketFrames( c );
+		SV_WebWrite( c );
 		return;
 	}
 
@@ -302,6 +341,11 @@ static void SV_WebRead( webConnection_t *c ) {
 		SV_WebError( c, 431, "Request Header Fields Too Large", "" );
 	} else {
 		return;		// more of it is to come
+	}
+
+	// a WebSocket now, and frames came right behind the request
+	if ( c->state == WEB_SOCKET ) {
+		SV_WebSocketFrames( c );
 	}
 
 	// what it is answered with goes out now if the socket takes it, the rest when it does
@@ -491,9 +535,17 @@ void SV_WebShutdown( void ) {
 	int i;
 
 	for ( i = 0; i < SV_WEB_MAX_CONNECTIONS; i++ ) {
-		if ( connections[i].state != WEB_FREE ) {
-			SV_WebClose( &connections[i] );
+		webConnection_t *c = &connections[i];
+
+		if ( c->state == WEB_FREE ) {
+			continue;
 		}
+		// the page is told that the server went away (1001), if its socket takes that right now
+		if ( c->state == WEB_SOCKET && !c->drop ) {
+			SV_WebSocketEnd( c, 1001 );
+			SV_WebFlush( c );
+		}
+		SV_WebClose( c );
 	}
 	if ( listenSocket != INVALID_SOCKET ) {
 		closesocket( listenSocket );
@@ -542,7 +594,7 @@ void SV_WebFDSet( fd_set *readSet, fd_set *writeSet, SOCKET *highest ) {
 
 		// Read only where something is awaited. What comes in while an answer goes out stays in the socket:
 		// in the set it would wake the server up again and again and not be read.
-		if ( c->state == WEB_REQUEST ) {
+		if ( c->state == WEB_REQUEST || c->state == WEB_SOCKET ) {
 			SV_WebSetFD( c->sock, readSet, highest );
 		}
 		if ( c->state == WEB_RESPONSE || c->state == WEB_CLOSING || c->outSent < c->outLen ) {
@@ -574,10 +626,18 @@ static void SV_WebTimeouts( void ) {
 		}
 		// the server did not look at its sockets for a while, which is not the silence of the other side
 		if ( since < 0 || since > SV_WEB_AWAY_MSEC ) {
-			c->lastActive = now;
+			c->lastActive = c->lastHeard = now;
 			continue;
 		}
-		if ( now - c->lastActive > ( ( c->state == WEB_REQUEST ) ? SV_WEB_IDLE_MSEC : SV_WEB_STALL_MSEC ) ) {
+
+		if ( c->state == WEB_SOCKET ) {
+			if ( now - c->lastHeard > SV_WEB_SILENT_MSEC ) {
+				SV_WebDrop( c );
+			} else if ( now - c->lastHeard > SV_WEB_PING_MSEC && !c->pinged ) {
+				c->pinged = qtrue;
+				SV_WebSocketPing( c );
+			}
+		} else if ( now - c->lastActive > ( ( c->state == WEB_REQUEST ) ? SV_WEB_IDLE_MSEC : SV_WEB_STALL_MSEC ) ) {
 			SV_WebDrop( c );
 		}
 	}

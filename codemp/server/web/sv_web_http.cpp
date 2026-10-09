@@ -19,7 +19,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 */
 
 // sv_web_http.cpp -- what the web host answers a request with: the files of the page, the manifest of the
-// pk3 files and the pk3 files themselves. Only GET and HEAD, no request has a body.
+// pk3 files and the pk3 files themselves. Only GET and HEAD, no request has a body. The request for /net is
+// the one that makes a WebSocket of its connection (sv_web_ws.cpp).
 //
 // A file is never held in memory. It is opened when its answer begins and read in pieces as the socket
 // takes them (SV_WebBodyMore), with fopen and not with a file of the file system of the engine: every change
@@ -29,13 +30,9 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include <sys/stat.h>
 
-// the headers of every answer that is a file of the page. They change with every build of the page, so a
-// browser asks each time. The other two make the page one that may share memory between its threads, which
-// a client built with threads does not start without (and which only tells the browser to keep it apart).
-#define SV_WEB_PAGE_HEADERS \
-	"Cache-Control: no-cache\r\n" \
-	"Cross-Origin-Opener-Policy: same-origin\r\n" \
-	"Cross-Origin-Embedder-Policy: require-corp\r\n"
+// the headers of every answer that is a file of the page. The files change with every build of the page, so
+// a browser asks each time.
+#define SV_WEB_PAGE_HEADERS		"Cache-Control: no-cache\r\n"
 
 static const struct {
 	const char	*extension;
@@ -549,7 +546,8 @@ SV_WebPakPath
 The path a pk3 file of the search path has in the manifest and in /pk3/: its game folder and its name.
 qfalse: it has none and is not handed out. That is a path longer than the game has them (as much as the
 download over UDP takes), and one with a character that is not a visible one of ASCII: nothing says which
-character a byte above that is, and the address of a request could not name it for sure.
+character a byte above that is, and the address of a request could not name it for sure. A backslash is
+none either: the page makes a file of the path and takes it for the end of a folder.
 ==================
 */
 static qboolean SV_WebPakPath( const fsPakInfo_t *pak, char *path, int size ) {
@@ -562,7 +560,7 @@ static qboolean SV_WebPakPath( const fsPakInfo_t *pak, char *path, int size ) {
 	Com_sprintf( path, size, "%s/%s.pk3", pak->gameDir, pak->baseName );
 
 	for ( s = path; *s; s++ ) {
-		if ( *s < 0x20 || *s > 0x7E ) {
+		if ( *s < 0x20 || *s > 0x7E || *s == '\\' ) {
 			return qfalse;
 		}
 	}
@@ -792,6 +790,11 @@ void SV_WebHttpRequest( webConnection_t *c, int headLen ) {
 
 	if ( !SV_WebDecodePath( target, path, sizeof( path ) ) ) {
 		SV_WebError( c, 404, "Not Found", "" );
+		return;
+	}
+
+	if ( !strcmp( path, "/net" ) ) {
+		SV_WebUpgrade( c, head, headLen, minor );
 		return;
 	}
 

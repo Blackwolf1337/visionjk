@@ -27,13 +27,19 @@ on a TCP port of its own (sv_webPort) and is to a browser what it is to a client
   the page         GET /               index.html and the files next to it, from the folder sv_webRoot
   the game files   GET /manifest.json  the pk3 files of the search path of the server, with size and checksum
                    GET /pk3/<path>     one of them, whole or a part of it (Range)
+  the packets      GET /net            becomes a WebSocket (RFC 6455). Every binary message on it is one
+                                       datagram of the game as UDP carries it, nothing added, both ways.
 
-It is inside the server and no program in front of it, so the server knows the address a page plays from.
+It is inside the server and no program in front of it, so the server knows the address a page plays from:
+the peer of a WebSocket is a netadr_t of the type NA_WEB with the address and the port of its connection, and
+its packets go where the ones of the UDP socket go (SV_PacketEvent). A connection that ends is a peer the
+server does not hear from any more, and the timeout of its client does the rest.
 Nothing of it asks for a login (the files are the ones the server hands to every client anyway) and every
 byte that comes in is read as one of an attacker: fixed buffers, a fixed table, every length asked first.
 
   sv_web.cpp       the listener, the connections, their buffers and timeouts, what NET_Sleep calls
   sv_web_http.cpp  a request, the files, the manifest
+  sv_web_ws.cpp    the WebSocket: its handshake, its frames, the packets in and out
 */
 
 #pragma once
@@ -50,7 +56,8 @@ byte that comes in is read as one of an attacker: fixed buffers, a fixed table, 
 #define SV_WEB_MAX_TRANSFERS	32			// of them hand out a file at once, the rest stays free for requests
 #define SV_WEB_MAX_PER_ADDRESS	8			// a browser opens 6 to a host
 #define SV_WEB_MAX_ACCEPTS		16			// new connections taken in one wake-up
-#define SV_WEB_IN_SIZE			16384		// the head of a request
+#define SV_WEB_IN_SIZE			16384		// the head of a request, or the frames of a WebSocket that came in
+#define SV_WEB_MAX_PACKET		4096		// the longest message a WebSocket peer may send, which is one datagram
 #define SV_WEB_OUT_SIZE			65536		// what waits to be sent, and the piece a file is read in
 #define SV_WEB_MAX_TARGET		1024		// the address in a request
 
@@ -63,6 +70,11 @@ byte that comes in is read as one of an attacker: fixed buffers, a fixed table, 
 #define SV_WEB_SWEEP_MSEC		1000		// how often the timeouts are looked at
 #define SV_WEB_AWAY_MSEC		5000		// the server itself did not look for longer (a map loaded): nobody timed out
 #define SV_WEB_LISTEN_WAIT_MSEC	250			// the listener is left alone for this long after it failed
+
+// A WebSocket has no timeout while its peer is there: a client in its menus sends nothing. A peer that was
+// not heard for a while is asked (ping), which a browser answers by itself, and one that stays silent is gone.
+#define SV_WEB_PING_MSEC		30000
+#define SV_WEB_SILENT_MSEC		90000
 
 #define SV_WEB_MAX_PACKS		512			// pk3 files in the manifest
 #define SV_WEB_MANIFEST_MSEC	2000		// the manifest is not put together more often than this
@@ -78,6 +90,7 @@ typedef enum {
 	WEB_FREE,
 	WEB_REQUEST,				// waits for the head of a request
 	WEB_RESPONSE,				// sends an answer, the body of it is read while it goes out
+	WEB_SOCKET,					// a WebSocket, the peer of the server for packets
 	WEB_CLOSING					// sends what is left and ends
 } webState_t;
 
@@ -103,21 +116,50 @@ typedef struct webConnection_s {
 	int			bodyAt;			// WEB_BODY_MANIFEST: how far into the text
 	int			bodyGen;		// and which text it was
 
+	// the WebSocket
+	int			lastHeard;		// Sys_Milliseconds() when something came from the peer
+	qboolean	pinged;			// and it was asked since
+	qboolean	inMessage;		// a message that comes in several frames is begun
+	int			messageLen;
+
 	int			inLen;
+	int			inPos;			// WEB_SOCKET: the frames in front of this are done with
 	int			outLen;
 	int			outSent;
 
 	// the buffers come last: what is in front of them is cleared for a new connection
 	byte		in[SV_WEB_IN_SIZE];
 	byte		out[SV_WEB_OUT_SIZE];
+	byte		message[SV_WEB_MAX_PACKET];		// the frames of a message so far
 } webConnection_t;
+
+// the head of a frame of a WebSocket (RFC 6455, 5.2)
+typedef struct webFrame_s {
+	qboolean	fin;			// the last frame of its message
+	int			opcode;
+	int			length;			// of what follows the head
+	byte		mask[4];		// what a client scrambles it with
+} webFrame_t;
+
+#define WEB_OP_CONTINUATION		0x0
+#define WEB_OP_TEXT				0x1
+#define WEB_OP_BINARY			0x2
+#define WEB_OP_CLOSE			0x8
+#define WEB_OP_PING				0x9
+#define WEB_OP_PONG				0xA
+
+// what SV_WebFrameHead says of a frame that is not taken
+#define WEB_FRAME_BAD			-1			// against the protocol
+#define WEB_FRAME_LONG			-2			// more than a datagram
 
 extern cvar_t	*sv_webRoot;
 
 // sv_web.cpp
 void SV_WebDrop( webConnection_t *c );
 byte *SV_WebOutRoom( webConnection_t *c, int len );
+void SV_WebFlush( webConnection_t *c );
 int SV_WebTransfers( void );
+webConnection_t *SV_WebSocketOf( const netadr_t *adr );
 
 // sv_web_http.cpp
 int SV_WebParseRange( const char *value, int64_t size, int64_t *first, int64_t *last );
@@ -126,3 +168,13 @@ void SV_WebError( webConnection_t *c, int status, const char *statusText, const 
 void SV_WebHttpRequest( webConnection_t *c, int headLen );
 int SV_WebBodyMore( webConnection_t *c, int max );
 void SV_WebBodyEnd( webConnection_t *c );
+
+// sv_web_ws.cpp
+void SV_WebAcceptKey( const char *key, char *out, int outSize );
+int SV_WebFrameHead( const byte *data, int len, int maxPayload, webFrame_t *frame );
+void SV_WebFrameUnmask( byte *payload, int len, const byte *mask );
+int SV_WebFrameBuild( byte *out, int outSize, int opcode, const void *payload, int len );
+void SV_WebUpgrade( webConnection_t *c, const char *head, int headLen, int minor );
+void SV_WebSocketFrames( webConnection_t *c );
+void SV_WebSocketPing( webConnection_t *c );
+void SV_WebSocketEnd( webConnection_t *c, int code );

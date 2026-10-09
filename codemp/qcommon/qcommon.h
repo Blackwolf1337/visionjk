@@ -1007,6 +1007,7 @@ qboolean SV_GameCommand( void );
 // the pk3 files it loads, and its packets, which come over a WebSocket and not over UDP
 void SV_WebInit( void );
 void SV_WebShutdown( void );
+void SV_WebSendPacket( int length, const void *data, const netadr_t *to );
 #endif
 
 
