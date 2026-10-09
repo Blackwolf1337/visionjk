@@ -4,7 +4,7 @@ async function banLoad() {
 	try {
 		const bans = (await (await fetch('api/bans', { cache: 'no-store' })).json()).bans;
 		$('banCount').textContent = bans.length;
-		$('banRows').innerHTML = bans.map(a => '<tr><td>' + escapeHtml(a) + '</td><td class="num"><button data-ban="' + escapeHtml(a) + '" title="Lets this address connect again">Lift</button></td></tr>').join('') ||
+		$('banRows').innerHTML = bans.map(a => '<tr><td>' + escapeHtml(a) + '</td><td class="num"><button data-ban="' + escapeHtml(a) + '" title="Lets this address connect again">Unban</button></td></tr>').join('') ||
 			'<tr><td class="hint">Nobody is banned.</td></tr>';
 	} catch (e) {
 		$('banRows').innerHTML = '<tr><td class="hint">This game module has no list of bans.</td></tr>';

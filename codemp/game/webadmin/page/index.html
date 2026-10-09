@@ -10,7 +10,7 @@
 </head>
 <body>
 <div id="topbar">
-	<button id="toggleSide" title="Player list">&#9776;</button>
+	<button id="toggleSide" title="Show or hide the side panel">&#9776;</button>
 	<div class="brand"><i></i><span>VisionJK Admin</span></div>
 	<div id="appMode"><button data-app="admin" title="The map as the game draws it, the players, the server">Administration</button><button data-app="editor" title="Placing entities and models, with the debug views">Editor</button></div>
 	<span class="meta" id="host"></span>
@@ -20,13 +20,13 @@
 	<span id="teamScores" class="inline" style="display:none"><span class="score red" id="scoreRed">0</span><span class="score blue" id="scoreBlue">0</span></span>
 	<span class="spacer"></span>
 	<form class="inline" id="botForm"><input id="botName" placeholder="Bot name" style="width:100px" list="pickBots" autocomplete="off"><button>Add bot</button></form>
-	<form class="inline" id="mapForm"><input id="mapName" placeholder="mp/ffa3" style="width:100px" list="pickMaps" autocomplete="off"><button>Map</button></form>
-	<form class="inline" id="gravForm" title="Gravity for everybody (g_gravity). 800 is normal. The map sets it again when it starts."><input id="gravValue" type="number" min="-2000" max="5000" placeholder="800" style="width:70px"><button>Gravity</button></form>
+	<form class="inline" id="mapForm" title="Ends the running game and starts this map for everybody."><input id="mapName" placeholder="mp/ffa3" style="width:100px" list="pickMaps" autocomplete="off"><button>Change map</button></form>
+	<form class="inline" id="gravForm" title="Gravity for everybody (g_gravity). 800 is normal. The map sets it again when it starts."><input id="gravValue" type="number" min="-2000" max="5000" placeholder="800" style="width:70px"><button>Set gravity</button></form>
 	<span id="status" title="Connection"></span>
 </div>
 
 <div id="side">
-	<div id="tabs"><button data-tab="players" data-app="admin" class="on">Players</button><button data-tab="world" data-app="editor">World</button><button data-tab="models" data-app="editor">Models</button><button data-tab="routes" data-app="editor">Routes</button><button data-tab="mapinfo" data-app="editor">Map</button><button data-tab="config" data-app="admin">Config</button><button data-tab="files" data-app="admin">Files</button><button data-tab="log" data-app="admin">Log</button><button data-tab="bans" data-app="admin">Bans</button><button data-tab="load" data-app="admin">Load</button></div>
+	<div id="tabs"><button data-tab="players" data-app="admin" class="on">Players</button><button data-tab="world" data-app="editor">World</button><button data-tab="models" data-app="editor">Models</button><button data-tab="routes" data-app="editor">Routes</button><button data-tab="mapinfo" data-app="editor">Map info</button><button data-tab="config" data-app="admin">Config</button><button data-tab="files" data-app="admin">Files</button><button data-tab="log" data-app="admin">Log</button><button data-tab="bans" data-app="admin">Bans</button><button data-tab="load" data-app="admin">Performance</button></div>
 	<div class="pane on" id="pane-players">
 		<h2><span>Players</span><span id="playerCount">0</span></h2>
 		<div class="scroll">
@@ -54,7 +54,7 @@
 	</div>
 	<div class="pane" id="pane-mapinfo">
 		<h2><span>Map</span><span id="mapReportName"></span></h2>
-		<div class="tools"><button id="mapReportAgain" title="Counts again">Refresh</button></div>
+		<div class="tools"><button id="mapReportAgain" title="Builds the report of the map again: what is missing, what the file holds, the entities">Count again</button></div>
 		<div class="scroll"><div id="surfInfo"></div><div id="mapReport"></div></div>
 	</div>
 	<div class="pane" id="pane-routes">
@@ -72,22 +72,22 @@
 	<div class="pane" id="pane-config">
 		<h2><span>server.cfg</span><span id="cfgSize"></span></h2>
 		<div class="tools">
-			<button id="cfgSave" class="primary" title="Writes the file. Nothing on the server changes until it is executed.">Save</button>
-			<button id="cfgRun" title="Writes the file and runs it on the server console: exec server.cfg">Save and execute</button>
-			<button id="cfgLoad" title="Reads the file from the server again, what was typed here is dropped">Reload</button>
+			<button id="cfgSave" class="primary" title="Writes the file. Nothing on the server changes until it is run.">Save file</button>
+			<button id="cfgRun" title="Writes the file and runs it on the server console: exec server.cfg">Save and run on server</button>
+			<button id="cfgLoad" title="Reads the file from the server again, what was typed here is dropped">Discard changes</button>
 		</div>
 		<div id="cfgState"></div>
 		<div class="hint">The first save puts the file into the home path of the server (fs_homepath/&lt;game&gt;/server.cfg), which the engine reads before the one of the installation. The text before a save is kept as server.cfg.bak.</div>
-		<div class="hint">Executing sets the cvars of the file at once. Latched ones (most g_web*, sv_maxclients, the game type) take effect with the next map, and a line that changes the map does so.</div>
+		<div class="hint">Running the file sets its cvars at once. Latched ones (most g_web*, sv_maxclients, the game type) take effect with the next map, and a line that changes the map does so.</div>
 		<div class="hint">The passwords in the file are shown as they are.</div>
 	</div>
 	<div class="pane" id="pane-bans">
 		<h2><span>Bans</span><span id="banCount"></span></h2>
 		<div class="tools">
-			<form class="inline" id="banForm"><input id="banAddress" placeholder="1.2.3.4 or 1.2.*.*" spellcheck="false" autocomplete="off" maxlength="15"><button>Ban</button></form>
+			<form class="inline" id="banForm"><input id="banAddress" placeholder="1.2.3.4 or 1.2.*.*" spellcheck="false" autocomplete="off" maxlength="15"><button>Ban address</button></form>
 		</div>
 		<div class="scroll"><table><tbody id="banRows"></tbody></table></div>
-		<div class="hint" style="padding:8px 10px">The addresses that may not connect (banIPs.txt of the server). A * stands for any number. "Ban" in the panel of a player puts his address here and kicks him.</div>
+		<div class="hint" style="padding:8px 10px">The addresses that may not connect (banIPs.txt of the server). A * stands for any number. "Ban" in the panel of a player puts his address here and kicks him, "Unban" lets an address connect again.</div>
 	</div>
 	<div class="pane" id="pane-load">
 		<h2><span>Server load</span><span id="perfSpan"></span></h2>
@@ -168,7 +168,7 @@
 		<label title="A line from every entity to what it fires (target and targetname). When one fires another, the line and the box of the one that was fired light up for three seconds."><input type="checkbox" id="dbgLinks" checked>Links</label>
 		<label title="The brushes that stop players, bots or shots and are not seen in the game"><input type="checkbox" id="dbgClip">Clip</label>
 		<label title="The triangles of the map as lines"><input type="checkbox" id="dbgWire">Wireframe</label>
-		<label title="Only the side of a surface the game draws. From outside a room is open then: its walls and its ceiling face inwards."><input type="checkbox" id="dbgCull">Open</label>
+		<label title="Only the side of a surface the game draws. From outside a room is open then: its walls and its ceiling face inwards."><input type="checkbox" id="dbgCull">Backface culling</label>
 		<label title="The name of its class above an entity, with its targetname. Of the ones near the camera, the selected ones and every draft."><input type="checkbox" id="dbgNames" checked>Names</label>
 		<label title="The effects of the game: what an fx_runner plays, what the server plays once, and what the weapons leave. The administration always has them."><input type="checkbox" id="dbgFx" checked>Effects</label>
 		<select id="dbgLight" title="How the map is drawn. As in the game: with the shader scripts, the light and the fog of the game, as the administration draws it. The others are the plain view of the editor: twice the light so that dark corners can be worked in, the light alone, or the images alone."><option value="3" selected>As in the game</option><option value="0">Texture and light</option><option value="1">Light only</option><option value="2">Texture only</option></select>
@@ -181,7 +181,7 @@
 		<kbd>Ctrl</kbd>+click selects one more entity &nbsp; <kbd>Shift</kbd>+drag selects in a rectangle</span>
 	</div>
 	</div>
-	<button id="shotBtn" title="Saves what the map view shows as a picture">Picture</button>
+	<button id="shotBtn" title="Saves what the map view shows as a PNG file">Screenshot</button>
 	<button id="flyBtn" title="Fly through the map instead of looking at it from above (C). W A S D fly, Q and E go down and up, the mouse turns the head, the wheel sets the speed, Shift is faster.">Fly</button>
 	<div id="coords" class="editorOnly"></div>
 	<div id="band"></div>

@@ -94,7 +94,7 @@ async function saveConfig(run) {
 	const text = $('cfgText').value.replace(/\r/g, '');
 	if (!cfgLoaded) { toast('The config was never loaded, nothing to save', false); return; }
 	if (cfgBytes(text) > CFG_MAX_BYTES) { toast('The config is larger than ' + CFG_MAX_BYTES + ' bytes, the server does not take it', false); return; }
-	if (run && !confirm('Save server.cfg and execute it on the server now?')) return;
+	if (run && !confirm('Save server.cfg and run it on the server now?')) return;
 	try {
 		const res = await fetch('api/config' + (run ? '?exec=1' : ''), { method: 'POST', body: text });
 		const json = await res.json();
@@ -110,7 +110,7 @@ $('cfgText').addEventListener('scroll', cfgScroll);
 $('cfgSave').addEventListener('click', () => saveConfig(false));
 $('cfgRun').addEventListener('click', () => saveConfig(true));
 $('cfgLoad').addEventListener('click', () => {
-	if ($('cfgText').value === cfgSaved || confirm('Drop what was changed here and read the file again?')) loadConfig();
+	if ($('cfgText').value === cfgSaved || confirm('Discard what was changed here and read the file from the server again?')) loadConfig();
 });
 window.addEventListener('beforeunload', e => {
 	if ((cfgLoaded && $('cfgText').value !== cfgSaved) || (fsEdit && $('fsText').value !== fsEdit.saved)) e.preventDefault();
