@@ -620,6 +620,29 @@ void SV_WebFDSet( fd_set *readSet, fd_set *writeSet, SOCKET *highest ) {
 
 /*
 ==================
+SV_WebIsClient
+
+qtrue: a client of the game has that address, which is the one of a WebSocket peer with its port
+==================
+*/
+static qboolean SV_WebIsClient( const netadr_t *adr ) {
+	client_t	*cl;
+	int			i;
+
+	// (no server was started yet, or it is gone)
+	if ( !svs.clients ) {
+		return qfalse;
+	}
+	for ( i = 0, cl = svs.clients; i < sv_maxclients->integer; i++, cl++ ) {
+		if ( cl->state != CS_FREE && NET_CompareAdr( adr, &cl->netchan.remoteAddress ) ) {
+			return qtrue;
+		}
+	}
+	return qfalse;
+}
+
+/*
+==================
 SV_WebTimeouts
 ==================
 */
@@ -641,13 +664,19 @@ static void SV_WebTimeouts( void ) {
 		}
 		// the server did not look at its sockets for a while, which is not the silence of the other side
 		if ( since < 0 || since > SV_WEB_AWAY_MSEC ) {
-			c->lastActive = c->lastHeard = now;
+			c->lastActive = c->lastHeard = c->clientTime = now;
 			continue;
 		}
 
 		if ( c->state == WEB_SOCKET ) {
+			if ( SV_WebIsClient( &c->adr ) ) {
+				c->clientTime = now;
+			}
 			if ( now - c->lastHeard > SV_WEB_SILENT_MSEC ) {
 				SV_WebDrop( c );
+			} else if ( now - c->clientTime > SV_WEB_NO_CLIENT_MSEC ) {
+				// no client for a minute: it is told that nothing went wrong (1000), and its place is free
+				SV_WebSocketEnd( c, 1000 );
 			} else if ( now - c->lastHeard > SV_WEB_PING_MSEC && !c->pinged ) {
 				c->pinged = qtrue;
 				SV_WebSocketPing( c );

@@ -72,10 +72,15 @@ byte that comes in is read as one of an attacker: fixed buffers, a fixed table, 
 #define SV_WEB_AWAY_MSEC		5000		// the server itself did not look for longer (a map loaded): nobody timed out
 #define SV_WEB_LISTEN_WAIT_MSEC	250			// the listener is left alone for this long after it failed
 
-// A WebSocket has no timeout while its peer is there: a client in its menus sends nothing. A peer that was
-// not heard for a while is asked (ping), which a browser answers by itself, and one that stays silent is gone.
+// The WebSocket of a client of the game has no timeout while its peer is there. A peer that was not heard
+// for a while is asked (ping), which a browser answers by itself, and one that stays silent is gone.
 #define SV_WEB_PING_MSEC		30000
 #define SV_WEB_SILENT_MSEC		90000
+
+// A WebSocket whose peer is no client of the game is closed this long after it was opened, or after its peer
+// stopped being one. A page in its menus loses nothing by that: it opens the next socket with the next packet
+// it sends. And a peer that only asks what the server runs (getinfo, getstatus) does not keep a place.
+#define SV_WEB_NO_CLIENT_MSEC	60000
 
 // The packets a WebSocket peer hands the server: one in a millisecond, and this many more at once. No client
 // sends that much (cl_maxpackets is 1000 at most, and one packet in a frame of the client). What is above it
@@ -125,6 +130,7 @@ typedef struct webConnection_s {
 
 	// the WebSocket
 	int			lastHeard;		// Sys_Milliseconds() when something came from the peer
+	int			clientTime;		// and when it was last the peer of a client of the game, or became a WebSocket
 	qboolean	pinged;			// and it was asked since
 	qboolean	inMessage;		// a message that comes in several frames is begun
 	int			messageLen;

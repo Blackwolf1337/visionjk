@@ -447,7 +447,7 @@ void SV_WebUpgrade( webConnection_t *c, const char *head, int headLen, int minor
 	c->inPos = 0;
 
 	c->state = WEB_SOCKET;
-	c->lastHeard = Sys_Milliseconds();
+	c->lastHeard = c->clientTime = Sys_Milliseconds();
 	c->pinged = qfalse;
 	c->inMessage = qfalse;
 	c->messageLen = 0;
