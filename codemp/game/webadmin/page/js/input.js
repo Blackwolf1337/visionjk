@@ -141,7 +141,7 @@ canvas.addEventListener('wheel', e => {
 	else cam.dist = Math.min(20000, Math.max(80, cam.dist * Math.pow(1.0015, e.deltaY)));
 }, { passive: false });
 window.addEventListener('keydown', e => {
-	if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') return;
+	if (uiKeyIsTyped(e)) return;
 	if (editorKey(e)) { e.preventDefault(); return; }
 	const digit = /^Digit([1-9])$/.exec(e.code || '');
 	if (digit && !e.ctrlKey && !e.altKey && !e.metaKey) { camBookmark(+digit[1], e.shiftKey); return; }
