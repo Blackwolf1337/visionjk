@@ -215,7 +215,7 @@ elseif(WIN32)
 		RUNTIME
 		DESTINATION "${JKAInstallDir}/base"
 		COMPONENT ${JKAMPCoreComponent})
-else()
+elseif(NOT EMSCRIPTEN)
 	install(TARGETS ${MPCGame}
 		LIBRARY
 		DESTINATION "${JPModInstallDir}"

@@ -677,6 +677,8 @@ if(BuildMPEngine)
 			BUNDLE
 			DESTINATION ${JKAInstallDir}
 			COMPONENT ${JKAMPClientComponent})
+	elseif(EMSCRIPTEN)
+		# the client for the browser is installed as the folder the server hands out, see vjk_wasm_page()
 	else(MakeApplicationBundles)
 		install(TARGETS ${MPEngine}
 			RUNTIME

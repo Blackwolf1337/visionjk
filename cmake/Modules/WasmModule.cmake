@@ -82,4 +82,10 @@ function(vjk_wasm_page dir)
 		list(APPEND outputs "${VisionJKWebDir}/${name}")
 	endforeach()
 	add_custom_target(webpage ALL DEPENDS ${outputs})
+
+	# Installed next to the dedicated server, under the name sv_webRoot has by default: "cmake --install
+	# <build> --prefix <folder>" into the folder of a server install adds the client for the browser to it.
+	install(DIRECTORY "${VisionJKWebDir}/"
+		DESTINATION "${JKAInstallDir}/web"
+		COMPONENT ${JKAMPClientComponent})
 endfunction()
