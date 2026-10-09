@@ -143,6 +143,13 @@ endif()
 source_group("cgame/voice" FILES ${MPCGameVoiceFiles})
 set(MPCGameFiles ${MPCGameFiles} ${MPCGameVoiceFiles})
 
+# fun: a giant shakes the ground
+set(MPCGameFunFiles
+	"${MPDir}/cgame/fun/cg_stomp.c"
+	)
+source_group("cgame/fun" FILES ${MPCGameFunFiles})
+set(MPCGameFiles ${MPCGameFiles} ${MPCGameFunFiles})
+
 # bot mode: the client plays by itself, all of it is in the cgame
 set(MPCGameBotmodeFiles
 	"${MPDir}/cgame/botmode/cg_botmode.c"

@@ -2634,6 +2634,7 @@ Ghoul2 Insert End
 	CG_InitSiegeMode();
 
 	CG_RegisterSounds();
+	CG_StompRegister();
 
 //	CG_LoadingString( "graphics" );
 

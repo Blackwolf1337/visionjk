@@ -97,6 +97,13 @@ A bug of OpenJK that was fixed:
   corrected by the server. An original plugin on this server ignores the bit.
 - A model without the tags `*back`, `*hip_l` and `*hip_r` is loaded and simply has no saber on the body. The plugin
   refuses such a model.
+- A giant shakes the ground (`cg_stomp`, on by default, `codemp/cgame/fun/cg_stomp.c`): a player the server made
+  more than three times his size (model scale above 300) is felt by who is near him. Where a foot of his comes
+  down, where he pushes off for a jump and where he lands, the view shakes, a heavy step is heard (the rancor's)
+  and a ring of dust comes up. It grows with his size up to four times, a landing is stronger than a step, a fall
+  stronger than a landing, and his own view gets a third of it. All of it is in the cgame: a client without it
+  sees and hears nothing of it. The steps are the footstep events of the animation, so `cg_footsteps 0` takes
+  them away too. Built, not seen in the game.
 
 ## What of the original was taken out
 
