@@ -238,4 +238,41 @@ function drawNpcs(now) {
 			drawMesh(bodyMesh, n.pos[0], n.pos[1], n.pos[2] - 24 * sc, n.yaw * Math.PI / 180, sc, [0.9, 0.4, 0.9, 1]);
 		}
 	}
+	drawBodies(wall, time, k);
+}
+
+// The bodies players left behind when they came back (state.bodies; CopyToBodyQue in the game, CG_BodyQueueCopy
+// and the ET_BODY part of CG_General in the client). A client copies the model of the one who died as it is at
+// that moment and holds it at the end of the animation he died in, or in BOTH_DEAD1 when that was no death. Half
+// a minute later the game says that the body fades (EV_BODYFADE) and the client blends it away in 2.5 seconds.
+// The page takes the model the player has when it first sees his body. Not here: the glow of the force over a
+// body that fades, the weapon that stays in its hand, a body that was cut.
+const PL_BODY_FADE = 30000;		// BODY_SINK_TIME of g_client.c
+const plBodies = new Map();		// entity -> { owner, born, model, team }
+function drawBodies(wall, time, k) {
+	const t = g2AnimTables(), rows = state.bodies || [];
+	if (!rows.length) { plBodies.clear(); return; }
+	const seen = new Set();
+	for (const r of rows) {
+		const id = r[0], owner = r[1], pos = [r[2], r[3], r[4]], yaw = r[5], age = r[8], eFlags = r[9], born = (state.now || 0) - age;
+		seen.add(id);
+		// whose body it is: the game uses the same eight entities again
+		let b = plBodies.get(id);
+		if (!b || b.owner !== owner || Math.abs(b.born - born) > 500) {
+			const o = players.get(owner);
+			plBodies.set(id, b = { owner, born, model: o ? o.data.model : 'kyle', team: o ? o.data.team : '' });
+		}
+		// alpha 254 down by a tenth for every msec since the fade began (CG_General)
+		const fade = age > PL_BODY_FADE ? Math.trunc(254 - (age - PL_BODY_FADE) * 0.1) / 255 : 1;
+		if (fade <= 0 || !clientSees(pos, 16, 25, 41)) continue;
+		const inst = g2Instance(id, b.model, b.team);
+		if (!inst.model || !t) continue;
+		plTry(inst, 'body ' + id, () => {
+			const anim = t.death.has(r[6]) ? r[6] : t.num.get('BOTH_DEAD1'), a = g2Anim(inst.model, anim), last = a.first + a.count - 1;
+			const cent = plNpcCent({ id, pos, angles: [0, yaw, 0], yaw, vel: [0, 0, 0], legsAnim: anim, torsoAnim: anim, weapon: 0, scale: r[10] || 100, class: 0,
+				f: [last, 0, last, 0, eFlags, 0, 0, 0, PG.ENTITYNUM_WORLD] }, inst, k), place = plPose(inst, cent, time, wall);
+			g2Draw(inst, place, [0.35, 0.35, 0.38], 0.35, fade < 1 ? { rgba: [1, 1, 1, fade], radius: 64, forceAlpha: true } : { rgba: [1, 1, 1, 1], radius: 64 });
+		});
+	}
+	for (const id of [...plBodies.keys()]) if (!seen.has(id)) plBodies.delete(id);
 }

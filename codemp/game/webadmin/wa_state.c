@@ -341,6 +341,28 @@ static void WA_StateNpcs( waBuffer_t *b ) {
 	WA_BufAppend( b, "]", 1 );
 }
 
+// Not in JKAdmin: the bodies players left behind when they came back (CopyToBodyQue). The game keeps the last
+// eight of them, each for half a minute and a little, and a client draws them with the model of the one who died
+// (CG_BodyQueueCopy). Each is its entity, the client it was, where it lies, its yaw, the animation he died in,
+// the weapon of the body, how long ago he came back in msec, the eFlags of its entity and its scale.
+static void WA_StateBodies( waBuffer_t *b ) {
+	int			i;
+	qboolean	first = qtrue;
+
+	WA_BufAppend( b, ",\"bodies\":[", 11 );
+	for ( i = 0; i < BODY_QUEUE_SIZE; i++ ) {
+		const gentity_t *body = level.bodyQue[i];
+
+		if ( !body || !body->inuse || !body->r.linked || body->s.eType != ET_BODY || ( body->s.eFlags & EF_NODRAW ) )
+			continue;
+		WA_BufPrintf( b, "%s[%d,%d,%.1f,%.1f,%.1f,%.1f,%d,%d,%d,%d,%d]", first ? "" : ",", body->s.number, body->r.ownerNum,
+			body->r.currentOrigin[0], body->r.currentOrigin[1], body->r.currentOrigin[2], body->s.apos.trBase[YAW],
+			body->s.legsAnim, body->s.weapon, level.time - body->timestamp, body->s.eFlags, body->s.iModelScale );
+		first = qfalse;
+	}
+	WA_BufAppend( b, "]", 1 );
+}
+
 // Items, flags and other pickups, so the map looks alive. The list is the same from one poll to the next
 // unless something was picked up or came back, and it is more than a third of the answer. So it has a
 // number (WA_StateRev), and a page that says it has the list of that number (items=) is not sent it again.
@@ -839,6 +861,7 @@ void WA_ApiState( waConnection_t *c, const char *query ) {
 
 	WA_StatePlayers( &b, query );
 	WA_StateNpcs( &b );
+	WA_StateBodies( &b );
 	WA_StateItems( &b, query );
 	WA_StateModels( &b );
 	WA_StateMovers( &b );
