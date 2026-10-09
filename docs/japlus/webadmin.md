@@ -124,7 +124,7 @@ the answer tells the page that the numbers started over.
 | `GET /api/list?kind=` | names the fields of the page offer: `maps`, `effects` and `music` (the files of the game), `npcs` (the types of the `.npc` files), `bots`. `kind=dir&dir=&ext=`: the folders and files of one folder below `sound`, `models`, `music`, `effects` or `maps`, with the endings of `ext` (`.wav,.mp3`) `kind=fxindex`: the effects the map has in use, in the order of the numbers the state feed names them by |
 | `GET /api/bans` | the addresses that are banned, as `addip` and `removeip` take them (a `*` for a part that matches anything) |
 | `GET /api/waypoints` | the route of the bots: every waypoint with its place, its flags and the numbers of the ones it leads to. `editing`: it was changed and not saved, the bots stand still |
-| `POST /api/waypoint` | `op` add (`x`, `y`, `z`, `flags`, `after`: the waypoint it comes behind, none for the end), remove (`index`), flags (`index`, `flags`) or save |
+| `POST /api/waypoint` | `op` add (`x`, `y`, `z`, `flags`, `after`: the waypoint it comes behind, none for the end), remove (`indexes` as `3,5,9`, or one `index`), flags (`indexes`, `flags`), move (`indexes`, `dx`, `dy`, `dz`), save, revert (the route as the start of the map loaded it) or default (the route of the map's own files) |
 | `GET /api/log?from=` | the log of the game from a place on, `next` is where to ask from the next time. Without `from`, or with a place the panel does not have: its last part |
 | `GET /api/perf?since=` | the load of the server, a sample a second, the last 300 kept: `samples` are `[frames, average and longest frame of the game in microseconds, longest wait for a frame in ms, entities, players, average and longest part of this panel in a frame in microseconds]`, `seq` is how many there were, `from` the number of the first one sent. `since`: only the ones from that number on. With them `svFps`, `entityMax`, `maxClients` |
 | `GET /api/classdoc` | the entity definitions of the game code: every `QUAKED` comment of its source files as text |
@@ -1570,6 +1570,14 @@ Also changed:
   has `gravity` for the server and `gravity` and `ownGravity` for each player.
 - New player action noclip: a button next to god mode toggles `client->noclip` like the `noclip` cheat, for a
   living player. The state has a `noclip` field, the list shows a tag. Added without a test run.
+- New: several waypoints of a route at once. Ctrl and a click selects one more or one less, Shift and a drag
+  every one in a rectangle, as with the entities of the World tab. Remove and "Set flag" are for all of them in
+  one request, and dragging a selected one moves them all: the one that is grabbed follows the floor under the
+  mouse, the others keep their place to it. "Revert to saved" loads the route again as the start of the map did
+  (`RemoveAllWP`, `LoadPath_ThisLevel`), which drops what was not saved. "Map default" puts the saved
+  `botroutes/<map>.wnt` of the server folder aside as `.wnt.bak` first, so that the load finds the route of the
+  map's own files. On a server whose folder is the installation the saved one is all there is: it is put back
+  and stays. After both the bots forget the waypoints they held and walk again. Added without a test run.
 - "Add bot" with an empty name adds `Kyle Katarn`. JKAdmin asks for `Kyle`, a bot the game does not have, so
   nothing happened there.
 - The two entity hooks pass `ent-g_entities` instead of `ent->s.number`.

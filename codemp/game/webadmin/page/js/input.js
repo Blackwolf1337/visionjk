@@ -24,8 +24,8 @@ canvas.addEventListener('contextmenu', e => e.preventDefault());
 canvas.addEventListener('mousedown', e => {
 	const rect = canvas.getBoundingClientRect(), x = e.clientX - rect.left, y = e.clientY - rect.top;
 	drag = { x: e.clientX, y: e.clientY, button: e.button, moved: false, target: cam.target.slice(), yaw: cam.yaw, pitch: cam.pitch };
-	// Shift and a drag in the World tab of the editor: a rectangle, and what is in it is selected
-	if (appMode === 'editor' && mode === 'world' && e.button === 0 && e.shiftKey) {
+	// Shift and a drag in the World tab or the Routes tab of the editor: a rectangle, and what is in it is selected
+	if (appMode === 'editor' && (mode === 'world' || mode === 'routes') && e.button === 0 && e.shiftKey) {
 		drag.band = { x, y };
 		return;
 	}
@@ -36,6 +36,11 @@ canvas.addEventListener('mousedown', e => {
 	if (mode === 'world' && e.button === 0 && selectedEnt >= 0 && entityAt(x, y) === selectedEnt) {
 		const ent = ents.get(selectedEnt), below = pickGround([ent.pos[0], ent.pos[1], ent.pos[2] + 1], [0, 0, -1]);
 		drag.ent = { id: selectedEnt, height: below ? ent.pos[2] - below[2] : 0 };
+	}
+	// grab a selected waypoint to move all that are selected
+	if (mode === 'routes' && e.button === 0) {
+		const i = wpAt(x, y);
+		if (i >= 0 && wpSelected().includes(i)) drag.wp = wpDragStart(i);
 	}
 });
 window.addEventListener('mousemove', e => {
@@ -59,6 +64,9 @@ window.addEventListener('mousemove', e => {
 		const rect = canvas.getBoundingClientRect(), ray = screenRay(e.clientX - rect.left, e.clientY - rect.top);
 		const hit = snapHit(pickGround(ray.origin, ray.dir));
 		if (hit) ghost = { id: drag.ent.id, pos: [hit[0], hit[1], hit[2] + drag.ent.height] };
+	} else if (drag.wp) {
+		const rect = canvas.getBoundingClientRect();
+		wpDragMove(drag.wp, screenRay(e.clientX - rect.left, e.clientY - rect.top));
 	} else if (cam.fly && drag.button !== 2) {
 		// flying: the mouse turns the head
 		cam.yaw = drag.yaw - dx * 0.25;
@@ -79,7 +87,7 @@ window.addEventListener('mouseup', e => {
 	drag = null;
 	if (d.band) {
 		$('band').style.display = 'none';
-		if (d.moved && d.band.x2 !== undefined) bandSelect(d.band, e.ctrlKey || e.metaKey);
+		if (d.moved && d.band.x2 !== undefined) (mode === 'routes' ? wpBandSelect : bandSelect)(d.band, e.ctrlKey || e.metaKey);
 		return;
 	}
 	if (d.face) { boxDragEnd(d.face); return; }
@@ -87,11 +95,12 @@ window.addEventListener('mouseup', e => {
 		if (ghost) moveEntity(d.ent.id, ghost.pos);
 		return;
 	}
+	if (d.wp && d.moved) { wpDragEnd(); return; }
 	if (d.moved) return;
 	const rect = canvas.getBoundingClientRect(), x = e.clientX - rect.left, y = e.clientY - rect.top;
 	if (e.target !== canvas) return;
 	if (d.button === 0) {
-		if (mode === 'routes') wpSelect(wpAt(x, y));
+		if (mode === 'routes') wpClick(wpAt(x, y), e.ctrlKey || e.metaKey);
 		else if (mode === 'mapinfo') inspectSurface(x, y);
 		else if (mode === 'world') {
 			// Ctrl and a click adds an entity to the selected ones or takes it out again

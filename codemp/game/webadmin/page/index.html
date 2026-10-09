@@ -61,14 +61,15 @@
 	<div class="pane" id="pane-routes">
 		<h2><span>Bot route</span><span id="wpCount"></span></h2>
 		<div class="tools">
-			<div class="inline"><button id="wpAdd" title="Then right-click on the map">Add</button>
-				<select id="wpFlags" title="What a bot does at the new waypoint"><option value="0">walk</option><option value="16">jump</option><option value="32">duck</option><option value="2048">snipe or camp, standing</option>
+			<div class="inline"><button id="wpAdd" style="flex:none" title="Then right-click on the map">Add waypoint</button>
+				<select id="wpFlags" style="flex:1;min-width:0" title="What a bot does at a new waypoint, and what Set flag gives the selected ones"><option value="0">walk</option><option value="16">jump</option><option value="32">duck</option><option value="2048">snipe or camp, standing</option>
 					<option value="8192">snipe or camp, ducked</option><option value="65536">goal</option><option value="131072">red flag</option><option value="262144">blue flag</option></select></div>
-			<div class="inline"><button id="wpSetFlags" disabled title="Gives the selected waypoint what is chosen above">Set</button><button id="wpRemove" class="danger" disabled title="The selected waypoint (Del)">Remove</button><button id="wpSave" class="primary" title="Writes botroutes/&lt;map&gt;.wnt and lets the bots walk again">Save route</button><button id="wpReload" title="Asks the server for the route again">Reload</button></div>
+			<div class="inline"><button id="wpSetFlags" disabled title="Gives every selected waypoint what is chosen above">Set flag</button><button id="wpRemove" class="danger" disabled title="Every selected waypoint (Del)">Remove</button></div>
+			<div class="inline" style="flex-wrap:wrap"><button id="wpSave" class="primary" title="Writes botroutes/&lt;map&gt;.wnt and lets the bots walk again">Save route</button><button id="wpRevert" title="Drops what was changed since the last save and loads the saved route again">Revert to saved</button><button id="wpDefault" class="danger" title="Puts back the route that came with the map. The saved one is kept as botroutes/&lt;map&gt;.wnt.bak.">Map default</button></div>
 			<div class="hint" id="wpState" style="margin:0"></div>
 		</div>
-		<div class="hint" style="padding:0 10px">The waypoints the bots walk along, in the order of the trail: yellow from each one to the next, blue to the others it leads to. A click selects one. With Add on, a right-click on the map puts a new one there, behind the selected one or at the end.</div>
-		<div class="hint" style="padding:0 10px">The bots stand still from the first change until the route is saved: which waypoint leads to which is only worked out again by the save, and so is the blue.</div>
+		<div class="hint" style="padding:0 10px">The waypoints the bots walk along, in the order of the trail: yellow from each one to the next, blue to the others it leads to. A click selects one, Ctrl and a click one more or one less, Shift and a drag every one in a rectangle. Remove and Set flag are for all that are selected, and dragging one of them moves them all. With Add waypoint on, a right-click on the map puts a new one there, behind the selected one or at the end.</div>
+		<div class="hint" style="padding:0 10px">The bots stand still from the first change until the route is saved: which waypoint leads to which is only worked out again by the save, and so is the blue. Revert to saved drops what was changed since the last save, Map default puts back the route that came with the map.</div>
 	</div>
 	<div class="pane" id="pane-config">
 		<h2><span>server.cfg</span><span id="cfgSize"></span></h2>
@@ -180,6 +181,7 @@
 		<kbd>F</kbd> follow selected &nbsp; <kbd>Esc</kbd> deselect &nbsp; <kbd>PgUp</kbd> <kbd>PgDn</kbd> camera height &nbsp; <kbd>C</kbd> fly &nbsp; <kbd>1</kbd>-<kbd>9</kbd> views, <kbd>Shift</kbd> stores<span class="editorOnly"><br>
 		<kbd>Del</kbd> delete entity &nbsp; <kbd>Shift</kbd>+arrows move entity &nbsp; <kbd>Ctrl Z</kbd> <kbd>Ctrl Y</kbd> undo, redo &nbsp; <kbd>Ctrl C</kbd> <kbd>Ctrl V</kbd> copy, paste<br>
 		<kbd>Ctrl</kbd>+click selects one more entity &nbsp; <kbd>Shift</kbd>+drag selects in a rectangle</span>
+		<span class="editorOnly"><br>Routes: <kbd>Ctrl</kbd>+click one more waypoint &nbsp; <kbd>Shift</kbd>+drag a rectangle &nbsp; drag a selected one to move them &nbsp; <kbd>Del</kbd> removes them</span>
 	</div>
 	</div>
 	<button id="shotBtn" title="Saves what the map view shows as a PNG file">Screenshot</button>
