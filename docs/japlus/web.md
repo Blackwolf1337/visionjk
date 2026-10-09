@@ -51,8 +51,10 @@ bans. The server knows them by their real address (the type `NA_WEB`, printed li
 limit of connections per address and a ban by address hold for both ways in. Behind a reverse proxy every such
 player has the address of the proxy.
 
-Limits of the web host: 60 connections, 16 from one address, 32 files being sent at once, 256 KB of file data
-each time the server wakes up for the network, a request head of 16 KB, a WebSocket message of 4096 bytes.
+Limits of the web host: 60 connections, 16 from one address, 32 files being sent at once and 6 of them to one
+address, 256 KB of file data each time the server wakes up for the network, a request head of 16 KB, a WebSocket
+message of 4096 bytes. A WebSocket whose peer is not a client of the game is closed after 60 seconds, the page
+opens the next one when it has something to send.
 
 ## For players
 
