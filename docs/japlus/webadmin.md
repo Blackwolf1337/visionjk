@@ -292,6 +292,55 @@ Also changed:
   192 towards the viewer for the teleport. The game frees a `trigger_push` without a target in its first
   frame, before a key could be added. The server refuses a box whose `mins` are not below its `maxs`, half a
   box, and one wider than 32768. A layout keeps such a trigger like every other placed entity.
+- New: the renderer of the page is measured against the game, and ported from the engine function by function
+  where it differed (the user: "The renderer in the webui, still is not correct ... Do a 1:1 copy of the
+  render", and that mountains and rocks were missing on hoth). Until this the page was written from reading
+  the engine and judged by eye. Now `tools/refshot.sh` (outside of this tree) runs the real client with
+  rd-vanilla and every cvar at its default as a listen server that also serves the page, puts that client as
+  a spectator at spots of a map, reads back where its eye is (`/api/state?view=`), and has the game and the
+  page take a picture from the same spot, both on the graphics card. The page has a view for it
+  (`?ref=<width>x<height>`: the map alone, the projection of the game, no smoothing of edges) and a mask of
+  what animates on its own (`refMask`), which two pictures never catch at the same moment. The numbers are
+  the mean difference of a pixel (of 255) and the share of pixels that are off by more than 16. One
+  departure from the defaults: `r_ext_compress_textures 0`, because what the driver makes of a compressed
+  texture can not be made in a browser.
+  The first table, six views on each of six maps: the plain map was close (mean 1 to 2), and whole things
+  were missing. What was done about it, each from the function of the engine or the client game that does it:
+  - The projection (`gameProjection` in `js/camera.js`): 80 degrees across whatever the shape of the picture,
+    the angle up and down from that shape (`CG_CalcFov`), near plane 4, and the far plane of `SetFarClip`
+    (the farthest corner, at least 2048, at most `distancecull` of the worldspawn times 1.732). The page had
+    55 degrees up and down everywhere. The view from above keeps a far plane behind all of the map.
+  - The sky portal (`js/world-ents.js`, `CG_DrawSkyBoxPortal`): the room of a `misc_skyportal` is drawn first,
+    from the origin of the portal, then the depth is cleared and the map is drawn over it without its sky.
+    Which part of the map is that room comes from the visibility data of the map file. Those are the
+    mountains of mp/siege_hoth.
+  - The models of `misc_model_static` (`SP_misc_model_static`, `CG_DrawMiscStaticModels`): the client game
+    spawns them itself from the entities of the map file, the server never has them. 63 on mp/siege_hoth, 189
+    on mp/siege_korriban. Placed and culled as the client does it, lit by the light grid.
+  - Textures (`js/gl.js`, `js/map.js`; `Upload32`, `R_MipMap`): mip-nearest filtering with anisotropy 16, the
+    mip levels built as the engine builds them (four pixels made one, never rounded up) by a small program on
+    the graphics card, lightmaps without mipmaps.
+  - Curved surfaces (`js/bsp.js`; `R_SubdividePatchToGrid`, `MakeMeshNormals`, the stitching, and the level
+    of detail of `RB_SurfaceGrid` per frame). The engine's own code, built into a small program, gives the
+    same grids float for float on all 23 maps of the game.
+  - Which surface is drawn is decided as the engine decides it and no longer by the name of its shader.
+  - Flares (`js/flares.js`; `RB_SurfaceFlare`, `RB_TestZFlare`): a quad that faces the viewer, sized by
+    `alphaGen portal` of its shader, shown when nothing is in front of it, which the page asks the graphics
+    card with a query whose answer is one or two frames old.
+  - Fog (`js/scripts-world.js`, `js/scripts-programs.js`; `R_LoadFogs`, `RB_FogPass`, `RB_CalcFogTexCoords`,
+    and the fog of OpenGL for the fog of a whole map): per pixel over the depth, every stage fading to the
+    colour the engine's table gives it, the fog of a brush as one more pass with the fog image, also on
+    models, movers and effects in a fog of the whole map. The frame begins as the colour of that fog.
+  - Lightmap and image of a wall are one pass with two images (`CollapseMultitexture`) and no longer two
+    passes. That is what makes most pixels the very value of the game, and it removed a striped line on a
+    floor of mp/ctf4 where two triangles of the map file overlap.
+  - The order of drawing: the sort values of the engine, and within one value the order in which the engine
+    registers the shaders of a map.
+  - The parser of shader scripts reads every word the scripts of the game have but one
+    (`deformVertexes projectionShadow`); `tools/panelshot/shader_keywords.js` lists what it drops.
+  Not done in this step, and seen in the pictures: weather (the snow of mp/ctf2), items and pickups as the
+  game draws them, players, the HUD. No visibility culling: from outside the hull of a map the game shows
+  only what is seen from there and the page shows rooms through their missing outer walls.
 - New: the editor draws the map as the game does, unless its plain view is chosen (the user: "when in editor mode
   the map is really bright than in normal administration mode", and "add the as in the game and make it
   default"). The editor had only its plain view: an image times the light for every surface, with twice the
@@ -1144,6 +1193,34 @@ middle, a start point had no such row, a push and a teleport came with their `ta
 took both away, and after "Save layout" and a start of the map the box was there again. Not tried: a real
 player in such a box (how the late push feels on a client with its own prediction), an NPC, a vehicle, the
 classes for ships (`trigger_space`, `trigger_shipboundary`, `trigger_hyperspace`), and the Windows build.
+
+The page against the game (`tools/refshot.sh`, 2026-10-09, six views from start points on each of six maps,
+game and page on the same graphics card; mean difference of 255 / percent of pixels off by more than 16):
+
+| Map | Before | After |
+|---|---|---|
+| mp/siege_hoth | 6.28/7.5, 2.54/3.5, 0.25/0.1, 0.43/0.3, 0.88/0.2, 0.36/0.1 | 0.39/0.2, 0.02/0.0, 0.02/0.0, 0.02/0.0, 0.02/0.0, 0.01/0.0 |
+| mp/ffa3 | 0.79/0.1, 0.96/0.3, 1.59/0.6, 3.60/3.4, 1.96/1.3, 1.20/0.2 | 0.02/0.0, 0.10/0.1, 0.11/0.3, 0.43/0.5, 0.95/1.0, 0.02/0.0 |
+| mp/ffa2 | 2.53/0.5, 2.03/0.7, 2.34/0.4, 1.35/0.2, 1.04/0.2, 1.35/0.2 | 0.20/0.2, 0.46/0.5, 0.02/0.0, 0.04/0.1, 0.06/0.1, 0.01/0.0 |
+| mp/ctf4 | 0.97/0.1, 6.01/17.0, 7.24/6.8, 6.42/10.2, 6.50/15.7, 0.71/0.1 | 0.01/0.0, 0.01/0.0, 4.67/5.0, 0.12/0.1, 0.02/0.0, 0.01/0.0 |
+| mp/duel7 | 1.22/0.3, 1.31/0.2, 1.26/0.4, 0.84/0.3, 0.84/0.3, 1.10/0.5 | 0.11/0.3, 0.02/0.0, 0.10/0.3, 0.05/0.1, 0.05/0.1, 0.04/0.1 |
+| mp/ctf2 | 6.86/5.1, 13.10/27.7, 27.06/49.2, 20.40/53.8, 60.41/71.0, 7.76/5.2 | 0.58/0.0, 0.42/0.0, 0.12/0.1, 0.31/0.3, 4.84/0.3, 0.11/0.0 |
+
+How to read it. The before column is too bad for the two fog maps: the view of the comparison itself drew no
+fog then (fog was only on for the fly camera and the eyes of a player), which was found and put right in this
+step. The after column leaves out more than the before one: where the clouds of a sky scroll the whole sky is
+masked, 8 and 12 percent of the picture in the first two views of hoth and 62 percent of the fourth, and with
+it the mountains of the sky portal behind it. Those were measured apart, from spots outdoors, before the
+mask knew the sky: 22.2 and 27.1 before, 1.9 and 2.5 after. What is left: view 3 of mp/ctf4 is a weapon
+pickup, view 5 of mp/ctf2 the falling snow, view 5 of mp/ffa3 fine lines of texture filtering. Other maps,
+measured by the sessions that did the parts: mp/duel5 (19 flares) 1.1 to 2.8 before and 0.10 to 0.13 after,
+mp/duel6 (sky portal, 51 trees) 5.8 to 30.3 and 2.1 to 4.7, mp/siege_korriban at its static models 7.5 to
+64.9 and 0.1 to 2.0. One view of mp/ffa5 from outside the hull of the map stays at 35.5 (no visibility
+culling). A frame on the graphics card costs what it did or less: mp/ctf2 2.4 to 2.7 ms before and 1.9 to
+2.0 ms after (573 draw calls of the map became 412), the portal pass of hoth is not measurable.
+Written by three sessions of the assistant side by side, each with its own client of the game to measure
+against, and put together and measured again by the one that reports. Not done: a comparison at the game's
+default of compressed textures, another graphics card, the Windows build.
 
 The look of the editor (`steps_look.js`, 8 checks, 2026-10-08, mp/ffa3): the editor begins with "As in the
 game"; with its markers off its picture is as bright as the one of the administration from the same camera

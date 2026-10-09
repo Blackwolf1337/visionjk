@@ -13,15 +13,15 @@ order of the template, so a file may only use there what a file before it has ma
 |---|---|
 | `style.css` | all the styles |
 | `js/util.js` | small helpers, the tables of names, the matrices |
-| `js/bsp.js` | reading a `.bsp`: surfaces, patches, lightmaps, brushes, the light grid |
-| `js/gl.js` | the WebGL context, compiling programs, textures, the simple meshes |
-| `js/map.js` | loading the map that runs into what the view draws |
+| `js/bsp.js` | reading a `.bsp`: surfaces, patches cut into grids as the game cuts them, flares, lightmaps, brushes, fogs, the entity text, the light grid |
+| `js/gl.js` | the WebGL context, compiling programs, textures with the mipmaps and the filter of the game, the simple meshes |
+| `js/map.js` | loading the map that runs into what the view draws, the level of detail of its patches |
 | `js/scripts-programs.js` | the GLSL programs of the script renderer |
 | `js/scripts-parse.js` | reading the shader scripts of the game, materials, images |
-| `js/scripts-world.js` | the sky, the quads that turn to the viewer, the map drawn with its scripts |
+| `js/scripts-world.js` | the sky, the fogs, the quads that turn to the viewer, the map drawn with its scripts in the order of the game |
 | `js/scripts-models.js` | the light grid and models drawn with their scripts |
 | `js/pick.js` | the wireframe, and the ray that says what a click hits |
-| `js/camera.js` | the camera around a point and the fly camera |
+| `js/camera.js` | the camera around a point and the fly camera, the projection of the game (fov, near and far plane) |
 | `js/state.js` | the state feed: players, items, movers, shots |
 | `js/players.js` | the panel of a player with its actions |
 | `js/chat.js` | the chat |
