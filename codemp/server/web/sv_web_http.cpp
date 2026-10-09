@@ -479,6 +479,32 @@ The page
 
 /*
 ==================
+SV_WebDeviceName
+
+qtrue: the name is one Windows has for a device, in every folder and with any extension behind it: CON, PRN,
+AUX, NUL, COM0 to COM9, LPT0 to LPT9. No file of the page has such a name on any system.
+(SV_WebFileSize does not keep them out for sure: the older C library of Windows says they are files.)
+==================
+*/
+static qboolean SV_WebDeviceName( const char *name ) {
+	static const char *const devices[] = { "CON", "PRN", "AUX", "NUL", "COM", "LPT" };
+	const char	*dot = strchr( name, '.' );
+	const int	len = dot ? (int)( dot - name ) : (int)strlen( name );
+	size_t		i;
+
+	for ( i = 0; i < ARRAY_LEN( devices ); i++ ) {
+		const qboolean numbered = (qboolean)( i >= 4 );
+
+		if ( len == ( numbered ? 4 : 3 ) && !Q_stricmpn( name, devices[i], 3 )
+			&& ( !numbered || ( name[3] >= '0' && name[3] <= '9' ) ) ) {
+			return qtrue;
+		}
+	}
+	return qfalse;
+}
+
+/*
+==================
 SV_WebSendPage
 
 A file of the folder sv_webRoot. Only one that is in the folder itself: its name is made of letters, digits,
@@ -505,7 +531,7 @@ static void SV_WebSendPage( webConnection_t *c, const char *name ) {
 	}
 	// (a path that does not fit would be cut, and what is left of it is the name of another file)
 	if ( *s || !name[0] || name[0] == '.' || strstr( name, ".." ) || s - name >= MAX_QPATH || !root[0]
-		|| strlen( base ) + strlen( root ) + strlen( name ) + 3 > sizeof( osPath ) ) {
+		|| SV_WebDeviceName( name ) || strlen( base ) + strlen( root ) + strlen( name ) + 3 > sizeof( osPath ) ) {
 		SV_WebError( c, 404, "Not Found", "" );
 		return;
 	}
