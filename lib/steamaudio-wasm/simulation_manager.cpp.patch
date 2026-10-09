@@ -1,0 +1,53 @@
+--- a/simulation_manager.cpp
++++ b/simulation_manager.cpp
+@@ -24,6 +24,7 @@
+ #include "sh.h"
+ #include "simulation_data.h"
+ #include "profiler.h"
++#include "phonon_slices.h"
+ 
+ namespace ipl {
+ 
+@@ -199,12 +200,28 @@
+     auto numChannels = SphericalHarmonics::numCoeffsForOrder(mSharedData->reflection.order);
+     auto numSamples = static_cast<int>(ceilf(mSharedData->reflection.duration * mSamplingRate));
+ 
+-    for (auto& source : mSourceData[0])
++    // VisionJK, the build for a browser: a pass whose rays were not all traced when its time was up (see
++    // phonon_slices.h) goes on with them here and sets nothing up again.
++    if (iplxSlicePending())
+     {
+-        source->reflectionState.validSimulationData = true;
++        mThreadPool->process(mJobGraph);
++        if (iplxSlicePending())
++            return;
++
++        accumulateEnergyFields();
++    }
++    else
++    {
++        for (auto& source : mSourceData[0])
++        {
++            source->reflectionState.validSimulationData = true;
++        }
++
++        simulateRealTimeReflections();
++        if (iplxSlicePending())
++            return;
+     }
+ 
+-    simulateRealTimeReflections();
+     lookupBakedReflections();
+ 
+     if (mSceneType == SceneType::RadeonRays && mIndirectType != IndirectEffectType::TrueAudioNext)
+@@ -304,6 +321,10 @@
+ 
+     mThreadPool->process(mJobGraph);
+ 
++    // VisionJK: with rays left to trace, simulateIndirect() does this when they are done
++    if (iplxSlicePending())
++        return;
++
+     accumulateEnergyFields();
+ }
+ 
