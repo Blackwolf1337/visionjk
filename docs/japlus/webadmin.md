@@ -132,7 +132,7 @@ the answer tells the page that the numbers started over.
 | `GET /api/export` | the entities in `.ent` format. `placed=1`: only what was placed through the panel, without the worldspawn |
 | `GET /api/chat?since=&epoch=` | chat lines after number `since`. Everything if `epoch` is not the current one |
 | `POST /api/action` | `action`, `id`, `value`: say, addbot, map, kick, ban, health, armor, scale, kill, god, noclip, schizo, flatulence, disorient, poop, gravity (no `id`), reload (no `id`), playergravity, team, teleport, and the JA+ ones: amsleep, amwake, amprotect, amempower, ammerc, ammindtrick, amghost, amsilence, amunsilence, amslap, amForceAltDim, amUnForceAltDim, amdenyvote, amShowMotd, amrename, ampsay, admgrant, freeze |
-| `POST /api/entity` | `op` spawn, update or delete, with `id` and `kv` (one `key=value` per line). `op` use with `id` fires the entity. `op` clear with `kv` `classname=<class>` deletes every entity of that class that was placed through the panel. `map=1` with spawn: it is an entity of the map that comes back (undo), not a placed one. `op` check with `kv` spawns nothing and answers what a spawn of these keys would be refused for (`ok`, `message`, and `key` when a key is what is missing): the page asks it for its drafts. A refused spawn answers with `key` the same way |
+| `POST /api/entity` | `op` spawn, update or delete, with `id` and `kv` (one `key=value` per line). `op` use with `id` fires the entity. `op` clear with `kv` `classname=<class>` deletes every entity of that class that was placed through the panel. `map=1` with spawn: it is an entity of the map that comes back (undo), not a placed one. `op` check with `kv` spawns nothing and answers what a spawn of these keys would be refused for (`ok`, `message`, and `key` when a key is what is missing): the page asks it for its drafts. A refused spawn answers with `key` the same way With `class=<classname>` an operation on an `id` is refused when the entity of that number is of another class: the page says what it takes the entity for. |
 | `POST /api/layout` | `op` save keeps the map as it stands for every start of it (`layouts/<map>.txt` in the game folder), `op` forget removes that file. `/api/entities` has `layout`: is one saved, is the map as it has it, and how many entities it would add and take away now |
 | `GET /api/config` | the text of `server.cfg`, as UTF-8 |
 | `POST /api/config`, `POST /api/config?exec=1` | the body is the new text of `server.cfg` (plain text, not a form). With `exec=1` the server runs `exec server.cfg` afterwards |
@@ -377,6 +377,14 @@ Also changed:
   in files of its own now (`js/player-draw.js`, `items.js`, `movers.js`, `marks.js`, `trace.js`,
   `dlights.js`, `sabers.js`, `player-fx.js`, `g2-angles.js`), most of them empty until those steps.
   `tools/panelshot/steps_entfx.js` (5 checks).
+- Fixed: an undo could reach the wrong entity. The game uses the number of an entity again, and the history
+  of the editor names an entity by its number: an item that is placed inside a wall is freed by the game two
+  frames after the panel said "Placed", and an undo a few seconds later deleted whatever had that number by
+  then. A delete, an edit and a fire now say the class the page takes the entity for (`class=` of
+  `/api/entity`), the history from the keys of its step, and the server refuses when the entity of that
+  number is of another class ("that entity is gone, another one has its number now"); the step is dropped.
+  Seen in the log of a check run, where nothing wrong was deleted because the number was still free. Not
+  changed: the panel still says "Placed" for such an item. `tools/panelshot/steps_entclass.js` (8 checks).
 - New: what the HUD and the own view of a client are drawn from, for the last step of the port. `/api/state`
   with `hud=<client>` has the rest of his player state (`WA_StateHud`: 684 bytes for a bot, and only when a
   page asks, which it does while it looks through the eyes of a player), and `/api/file` serves the menu

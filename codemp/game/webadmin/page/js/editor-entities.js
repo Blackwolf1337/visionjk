@@ -161,6 +161,9 @@ async function entityOp(params, okMessage, record = true, quiet = false) {
 	draftTakePanel();
 	const ent = params.id !== undefined ? ents.get(+params.id) : null;
 	const before = ent && ent.keys ? keysText(ent.keys) : null;
+	// The class the page takes the entity for goes along: the game uses a number again, and what is meant for an
+	// entity that is gone must not reach the one that has its number now. The history says the class itself.
+	if (ent && params.class === undefined && params.id !== undefined) params = Object.assign({ class: ent.classname }, params);
 	try {
 		const json = await (await fetch('api/entity', { method: 'POST', body: new URLSearchParams(params) })).json();
 		if (!quiet) toast(json.ok ? okMessage || json.message : json.message, json.ok);

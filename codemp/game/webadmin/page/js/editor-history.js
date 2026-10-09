@@ -83,10 +83,13 @@ async function histStep(undo) {
 // one step of the history on the server: the keys of the other side, or the delete of a spawn and the other way round
 async function histApply(step, undo, quiet) {
 	let params;
+	// the class the entity of the step had, by the keys the step knows it with: the list of the page may have
+	// another entity under its number by now
+	const cls = text => (/^classname=(.*)$/mi.exec(text || '') || ['', ''])[1].trim();
 	if (step.op === 'update') {
-		params = { op: 'update', id: step.ref.id, kv: undo ? step.before : step.after };
+		params = { op: 'update', id: step.ref.id, kv: undo ? step.before : step.after, class: cls(undo ? step.after : step.before) };
 	} else if ((step.op === 'spawn') === undo) {
-		params = { op: 'delete', id: step.ref.id };
+		params = { op: 'delete', id: step.ref.id, class: cls(step.op === 'spawn' ? step.after : step.before) };
 	} else {
 		params = { op: 'spawn', kv: step.op === 'spawn' ? step.after : step.before };
 		// an entity of the map that comes back stays one of the map

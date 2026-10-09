@@ -752,7 +752,7 @@ static void WA_FreeEntity( gentity_t *ent ) {
 }
 
 void WA_ApiEntity( waConnection_t *c, const char *body ) {
-	char		op[16], idStr[16], ofMap[4], err[256];
+	char		op[16], idStr[16], ofMap[4], err[256], expected[MAX_QPATH];
 	static char	kv[WA_MAX_REQUEST];
 	int			id = -1, newId, original;
 
@@ -802,6 +802,13 @@ void WA_ApiEntity( waConnection_t *c, const char *body ) {
 
 	if ( id < 0 || id >= MAX_GENTITIES || !WA_ListedEntity( &g_entities[id] ) ) {
 		WA_EntityResult( c, qfalse, "no such entity", id );
+		return;
+	}
+	// class=<classname>: what the page takes the entity for. The game uses a number again: one it freed since
+	// the page last looked (an item that started inside a wall, something that broke) may be another entity by
+	// now, and a delete or an edit that was meant for the old one must not reach it.
+	if ( WA_FormValue( body, "class", expected, sizeof( expected ) ) && expected[0] && Q_stricmp( g_entities[id].classname, expected ) ) {
+		WA_EntityResult( c, qfalse, "that entity is gone, another one has its number now", id );
 		return;
 	}
 
