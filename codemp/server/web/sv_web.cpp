@@ -532,7 +532,7 @@ When the program ends (NET_Shutdown), not when the server does
 ==================
 */
 void SV_WebShutdown( void ) {
-	int i;
+	int i, reads;
 
 	for ( i = 0; i < SV_WEB_MAX_CONNECTIONS; i++ ) {
 		webConnection_t *c = &connections[i];
@@ -540,10 +540,15 @@ void SV_WebShutdown( void ) {
 		if ( c->state == WEB_FREE ) {
 			continue;
 		}
-		// the page is told that the server went away (1001), if its socket takes that right now
 		if ( c->state == WEB_SOCKET && !c->drop ) {
+			// the page is told that the server went away (1001), if its socket takes that right now
 			SV_WebSocketEnd( c, 1001 );
 			SV_WebFlush( c );
+
+			// A socket that is closed with something in it nobody read is cut off, and what was just sent on
+			// it (the disconnect of the server too) may never arrive. So what came in is taken out first.
+			for ( reads = 0; reads < 8 && recv( c->sock, (char *)c->in, sizeof( c->in ), 0 ) > 0; reads++ ) {
+			}
 		}
 		SV_WebClose( c );
 	}
