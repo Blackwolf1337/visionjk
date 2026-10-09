@@ -56,10 +56,53 @@ function resetCamera() {
 	cam.dist = Math.max(b.maxs[0] - b.mins[0], b.maxs[1] - b.mins[1]) * 0.75;
 }
 
-// The projection of the game: R_SetupProjection with what CG_CalcFov hands it. fovX is the angle across
-// (cg_fov, 80), the angle up and down follows from the shape of the picture, the near plane is r_znear.
-function gameProjection(w, h, fovX = 80, far = 65536) {
-	return M4.perspective(2 * Math.atan(Math.tan(fovX * Math.PI / 360) * h / w), w / h, 4, far);
+// The projection of the game, for every camera of the page: R_SetupProjection with what CG_CalcFov hands it.
+// fovX is the angle across (cg_fov, 80) whatever the shape of the picture (cg_fovAspectAdjust is 0), the angle
+// up and down follows from that shape, the near plane is r_znear and the far plane the one of SetFarClip.
+// The far plane is worked out for where the eye is: eye is set before this is called.
+const ZNEAR = 4;
+const gameFovY = (w, h, fovX = 80) => 2 * Math.atan2(h, w / Math.tan(fovX * Math.PI / 360));
+function gameProjection(w, h, fovX = 80, far = farClip()) {
+	return M4.perspective(gameFovY(w, h, fovX), w / h, ZNEAR, far);
+}
+
+// The eye is where an eye of the game can be: the client the page is compared with, the fly camera, the eyes of
+// a player. Around the map from above it is not, and what the game leaves out for being far away is left in
+// there, as the fog is: it would take the map away that this view is there to show.
+const camInMap = () => !!refCam || cam.fly || view.id >= 0;
+
+// The far plane (SetFarClip in tr_main.cpp): as far as the farthest corner of the box around what the view draws
+// of the map, at least 2048, and at most the distanceCull of the worldspawn times 1.732. The engine leaves no
+// surface out for being far away, the map is cut where this plane is. Its box is the one around the leafs it
+// draws; the page draws all of the map and takes the box around all of it. That is never nearer than the plane
+// of the engine, and the same plane wherever distanceCull cuts the map.
+function farClip(box = world && world.bounds, at = eye, cut = camInMap()) {
+	if (!box) return 2048;
+	let far = 0;
+	for (let i = 0; i < 8; i++) {
+		const x = (i & 1 ? box.mins : box.maxs)[0] - at[0], y = (i & 2 ? box.mins : box.maxs)[1] - at[1], z = (i & 4 ? box.mins : box.maxs)[2] - at[2];
+		far = Math.max(far, x * x + y * y + z * z);
+	}
+	far = Math.sqrt(far);
+	const most = mapEnts().distanceCull * 1.732;
+	// Com_Clamp( 2048, most, far ), in its order
+	return far < 2048 ? 2048 : cut && far > most ? most : far;
+}
+
+// A view from another place: the matrix of a view (projection times view) for an eye that is by d further on.
+function viewMoved(vp, d, out) {
+	out.set(vp);
+	for (let r = 0; r < 4; r++) out[12 + r] = vp[12 + r] - vp[r] * d[0] - vp[4 + r] * d[1] - vp[8 + r] * d[2];
+	return out;
+}
+
+// The same view with another far plane. Only the row of a projection that makes the depth has the far plane in
+// it (R_SetupProjection), and the row below it is the depth before the far plane comes into it.
+function viewWithFar(vp, far, out) {
+	const a = (far + ZNEAR) / (ZNEAR - far), b = 2 * far * ZNEAR / (ZNEAR - far);
+	out.set(vp);
+	out[2] = -a * vp[3]; out[6] = -a * vp[7]; out[10] = -a * vp[11]; out[14] = b - a * vp[15];
+	return out;
 }
 
 // The camera of the comparison with the game: the eye and the angles of a client, as /api/state?view= tells
@@ -70,31 +113,30 @@ function refView(v) {
 }
 
 function updateCamera() {
+	let at;
 	if (refCam) {
 		// the way a client looks: AngleVectors, a pitch above zero looks down
 		const p = refCam.pitch * Math.PI / 180, y = refCam.yaw * Math.PI / 180, d = [Math.cos(p) * Math.cos(y), Math.cos(p) * Math.sin(y), -Math.sin(p)];
 		eye = refCam.eye.slice();
-		viewProj = M4.mul(gameProjection(canvas.width, canvas.height), M4.lookAt(eye, eye.map((v, i) => v + d[i]), [0, 0, 1]));
-		invViewProj = M4.invert(viewProj);
-		return;
+		at = eye.map((v, i) => v + d[i]);
+	} else {
+		// following a player is done around him
+		if (cam.fly && cam.follow >= 0) setFly(false);
+		if (cam.fly) {
+			const d = camDir();
+			eye = cam.pos.slice();
+			at = eye.map((v, i) => v + d[i]);
+		} else {
+			if (cam.follow >= 0) {
+				const p = players.get(cam.follow);
+				if (p) cam.target = p.draw.slice();
+			}
+			const y = cam.yaw * Math.PI / 180, pt = cam.pitch * Math.PI / 180;
+			eye = [cam.target[0] - Math.cos(y) * Math.cos(pt) * cam.dist, cam.target[1] - Math.sin(y) * Math.cos(pt) * cam.dist, cam.target[2] + Math.sin(pt) * cam.dist];
+			at = cam.target;
+		}
 	}
-	// following a player is done around him
-	if (cam.fly && cam.follow >= 0) setFly(false);
-	if (cam.fly) {
-		const d = camDir();
-		eye = cam.pos.slice();
-		viewProj = M4.mul(M4.perspective(55 * Math.PI / 180, canvas.width / canvas.height, 4, 65536), M4.lookAt(eye, eye.map((v, i) => v + d[i]), [0, 0, 1]));
-		invViewProj = M4.invert(viewProj);
-		return;
-	}
-	if (cam.follow >= 0) {
-		const p = players.get(cam.follow);
-		if (p) cam.target = p.draw.slice();
-	}
-	const y = cam.yaw * Math.PI / 180, pt = cam.pitch * Math.PI / 180;
-	eye = [cam.target[0] - Math.cos(y) * Math.cos(pt) * cam.dist, cam.target[1] - Math.sin(y) * Math.cos(pt) * cam.dist, cam.target[2] + Math.sin(pt) * cam.dist];
-	const proj = M4.perspective(55 * Math.PI / 180, canvas.width / canvas.height, 8, 65536);
-	viewProj = M4.mul(proj, M4.lookAt(eye, cam.target, [0, 0, 1]));
+	viewProj = M4.mul(gameProjection(canvas.width, canvas.height), M4.lookAt(eye, at, [0, 0, 1]));
 	invViewProj = M4.invert(viewProj);
 }
 

@@ -273,6 +273,9 @@ function frame(now) {
 	if (view.id < 0 || !firstPersonCamera(now)) updateCamera();
 	// the comparison: the time of the game for what a shader animates, and the picture of what animates on its own
 	if (refCam && refCam.time) now = refCam.time;
+	// The sky of a map that was there before the shader scripts is settled once they have come, and the curved
+	// surfaces take the level of detail of where the camera is now (RB_SurfaceGrid).
+	if (world) { if (settleSky(world)) prepareScripted(world); updateGridLod(now, gameLook() && !!world.scripted); }
 	if (refMasking && world) { drawWorldMask(now); requestAnimationFrame(frame); return; }
 
 	gl.viewport(0, 0, canvas.width, canvas.height);

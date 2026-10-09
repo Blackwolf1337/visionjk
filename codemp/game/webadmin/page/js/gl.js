@@ -67,13 +67,87 @@ precision mediump float;
 in vec3 vNorm; uniform vec4 uColor; out vec4 o;
 void main() { float l = 0.55 + 0.45 * max(dot(normalize(vNorm), normalize(vec3(0.4, 0.3, 0.85))), 0.0); o = vec4(uColor.rgb * l, uColor.a); }`);
 
-function makeTexture(w, h, data, opts = {}) {
-	const t = gl.createTexture();
-	gl.bindTexture(gl.TEXTURE_2D, t);
-	gl.texImage2D(gl.TEXTURE_2D, 0, opts.rgb ? gl.RGB8 : gl.RGBA8, w, h, 0, opts.rgb ? gl.RGB : gl.RGBA, gl.UNSIGNED_BYTE, data);
+// ---- textures as the engine makes them (Upload32, R_CreateImage and GL_TextureMode in rd-vanilla/tr_image.cpp,
+// with every cvar at its default)
+
+// r_ext_texture_filter_anisotropic is 16, and the engine takes it down to what the graphics card has
+const texAniso = gl.getExtension('EXT_texture_filter_anisotropic');
+const TEX_ANISO = texAniso ? Math.min(16, gl.getParameter(texAniso.MAX_TEXTURE_MAX_ANISOTROPY_EXT)) : 0;
+
+// R_MipMap with r_simpleMipMaps 1: a level is the one before it with every four pixels made one, their sum
+// shifted right by two. That never rounds up, so every level is a little darker than the one generateMipmap
+// makes. Where the image is one pixel wide or high, the two pixels that are left are halved the same way.
+// The graphics card does it: a level is drawn from the one before it and copied into the texture.
+const mipProg = compile(`#version 300 es
+void main() { gl_Position = vec4(float(gl_VertexID & 1) * 4.0 - 1.0, float(gl_VertexID >> 1) * 4.0 - 1.0, 0.0, 1.0); }`,
+`#version 300 es
+precision highp float; precision highp int;
+uniform sampler2D uTex; uniform ivec2 uStep;	// how many pixels of the level before make one, each way: 2 or 1
+out vec4 o;
+ivec4 px(ivec2 p) { return ivec4(texelFetch(uTex, p, 0) * 255.0 + 0.5); }
+void main() {
+	ivec2 p = ivec2(gl_FragCoord.xy) * uStep;
+	ivec4 sum = px(p);
+	int shift = 0;
+	if (uStep.x == 2) { sum += px(p + ivec2(1, 0)); shift++; }
+	if (uStep.y == 2) { sum += px(p + ivec2(0, 1)); shift++; if (uStep.x == 2) sum += px(p + ivec2(1, 1)); }
+	o = vec4(sum >> shift) / 255.0;
+}`);
+const mipFbo = gl.createFramebuffer(), mipTarget = gl.createRenderbuffer(), mipVao = gl.createVertexArray();
+let mipTargetW = 0, mipTargetH = 0;
+
+// the mip levels of the texture that is bound, whose first level is w x h. format: gl.RGBA8 or gl.RGB8
+function buildMips(w, h, format) {
+	// What a frame has set and expects to find again. All of it is answered by the browser itself: a question
+	// the graphics card has to answer (the colour mask is one) would wait for the frame that is on its way.
+	// The colour mask is left as every frame leaves it, all on.
+	const blend = gl.isEnabled(gl.BLEND), cull = gl.isEnabled(gl.CULL_FACE), scissor = gl.isEnabled(gl.SCISSOR_TEST);
+	const port = gl.getParameter(gl.VIEWPORT), prog = gl.getParameter(gl.CURRENT_PROGRAM);
+	const target = gl.getParameter(gl.FRAMEBUFFER_BINDING), vao = gl.getParameter(gl.VERTEX_ARRAY_BINDING);
+	gl.disable(gl.BLEND); gl.disable(gl.CULL_FACE); gl.disable(gl.SCISSOR_TEST);
+	gl.colorMask(true, true, true, true);
+	gl.bindFramebuffer(gl.FRAMEBUFFER, mipFbo);
+	if (mipTargetW < w >> 1 || mipTargetH < h >> 1) {
+		mipTargetW = Math.max(mipTargetW, w >> 1, 1); mipTargetH = Math.max(mipTargetH, h >> 1, 1);
+		gl.bindRenderbuffer(gl.RENDERBUFFER, mipTarget);
+		gl.renderbufferStorage(gl.RENDERBUFFER, gl.RGBA8, mipTargetW, mipTargetH);
+		gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.RENDERBUFFER, mipTarget);
+	}
+	gl.useProgram(mipProg.p);
+	gl.uniform1i(mipProg.u.uTex, gl.getParameter(gl.ACTIVE_TEXTURE) - gl.TEXTURE0);
+	gl.bindVertexArray(mipVao);
+	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+	for (let level = 1; w > 1 || h > 1; level++) {
+		gl.uniform2i(mipProg.u.uStep, w > 1 ? 2 : 1, h > 1 ? 2 : 1);
+		w = Math.max(1, w >> 1); h = Math.max(1, h >> 1);
+		// only the level before is read: the texture is whole with it alone
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_BASE_LEVEL, level - 1);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAX_LEVEL, level - 1);
+		gl.viewport(0, 0, w, h);
+		gl.drawArrays(gl.TRIANGLES, 0, 3);
+		gl.copyTexImage2D(gl.TEXTURE_2D, level, format, 0, 0, w, h, 0);
+	}
+	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_BASE_LEVEL, 0);
+	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAX_LEVEL, 1000);
+	gl.bindVertexArray(vao);
+	gl.bindFramebuffer(gl.FRAMEBUFFER, target);
+	gl.useProgram(prog);
+	gl.viewport(port[0], port[1], port[2], port[3]);
+	if (blend) gl.enable(gl.BLEND);
+	if (cull) gl.enable(gl.CULL_FACE);
+	if (scissor) gl.enable(gl.SCISSOR_TEST);
+}
+
+// The texture that is bound has its image, w x h: now its mip levels, its filter and how it repeats.
+// mip false: an image the engine makes no mipmaps for (a lightmap, an image of a shader with nomipmaps), which
+// it filters GL_LINEAR. Every other is r_textureMode GL_LINEAR_MIPMAP_NEAREST with the anisotropy above.
+// clamp: clampmap, GL_CLAMP_TO_EDGE.
+function finishTexture(w, h, opts) {
 	if (opts.mip !== false) {
-		gl.generateMipmap(gl.TEXTURE_2D);
-		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+		buildMips(w, h, opts.rgb ? gl.RGB8 : gl.RGBA8);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_NEAREST);
+		if (TEX_ANISO > 1) gl.texParameterf(gl.TEXTURE_2D, texAniso.TEXTURE_MAX_ANISOTROPY_EXT, TEX_ANISO);
 	} else {
 		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
 	}
@@ -82,6 +156,13 @@ function makeTexture(w, h, data, opts = {}) {
 		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
 		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 	}
+}
+
+function makeTexture(w, h, data, opts = {}) {
+	const t = gl.createTexture();
+	gl.bindTexture(gl.TEXTURE_2D, t);
+	gl.texImage2D(gl.TEXTURE_2D, 0, opts.rgb ? gl.RGB8 : gl.RGBA8, w, h, 0, opts.rgb ? gl.RGB : gl.RGBA, gl.UNSIGNED_BYTE, data);
+	finishTexture(w, h, opts);
 	return t;
 }
 

@@ -203,8 +203,8 @@ function mainTexture(name) {
 					const t = gl.createTexture();
 					gl.bindTexture(gl.TEXTURE_2D, t);
 					gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, bmp);
-					gl.generateMipmap(gl.TEXTURE_2D);
-					gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+					// mip levels, filter and anisotropy as the engine has them (js/gl.js)
+					finishTexture(bmp.width, bmp.height, {});
 					return t;
 				}
 			} catch (e) { /* next extension */ }
