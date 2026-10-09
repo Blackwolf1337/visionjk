@@ -61,6 +61,7 @@ void VK_CreateBuffer( vkBuffer_t *buf, vkSize_t size, vkBufferUsage_t usage, qbo
 	default:			return;
 	}
 	glGenBuffers( 1, &buf->buffer );
+	vk.statBuffers++;
 	GLES_BindBuffer( buf );
 	glBufferData( buf->target, (GLsizeiptr)size, NULL, hostVisible ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW );
 }
@@ -68,6 +69,7 @@ void VK_CreateBuffer( vkBuffer_t *buf, vkSize_t size, vkBufferUsage_t usage, qbo
 void VK_DestroyBuffer( vkBuffer_t *buf ) {
 	if ( buf->buffer ) {
 		glDeleteBuffers( 1, &buf->buffer );
+		vk.statBuffers--;
 	}
 	if ( buf->mapped ) {
 		Z_Free( buf->mapped );
@@ -122,6 +124,12 @@ void VK_InitFrames( void ) {
 		// has, and WebGL wants all of it to lie in the buffer: so much more room behind the last start.
 		VK_CreateBuffer( &frame->bones, sizeof( float ) * 12 * VK_MAX_BONES + GLES_BONES_BYTES, VKB_UNIFORMS, qtrue );
 		frame->numProbes = frame->numProbesCopied = 0;
+		for ( int j = 0; j < GLES_PROBE_SETS; j++ ) {
+			glGenQueries( VK_MAX_FLARES, frame->probeSets[j].queries );
+			vk.statQueries += VK_MAX_FLARES;
+			frame->probeSets[j].count = 0;
+			frame->probeSets[j].pending = qfalse;
+		}
 	}
 }
 
@@ -135,37 +143,47 @@ void VK_ShutdownFrames( void ) {
 		VK_DestroyBuffer( &frame->transforms );
 		VK_DestroyBuffer( &frame->draws );
 		VK_DestroyBuffer( &frame->bones );
+		for ( int j = 0; j < GLES_PROBE_SETS; j++ ) {
+			glDeleteQueries( VK_MAX_FLARES, frame->probeSets[j].queries );
+			vk.statQueries -= VK_MAX_FLARES;
+		}
 	}
 	vk.frame = NULL;
 }
 
-// size bytes from the start of the memory of a buffer to the device
-static void GLES_UploadBuffer( const vkBuffer_t *buf, vkSize_t size ) {
+// size bytes from the start of the memory of a buffer to the device. Returns how many calls of OpenGL ES it was.
+static int GLES_UploadBuffer( const vkBuffer_t *buf, vkSize_t size ) {
 	if ( !size ) {
-		return;
+		return 0;
 	}
 	GLES_BindBuffer( buf );
 	glBufferSubData( buf->target, 0, (GLsizeiptr)size, buf->mapped );
+	return ( buf->target == GL_ELEMENT_ARRAY_BUFFER ) ? 3 : 2;
 }
 
 /*
 ===============
 GLES_UploadFrame
 
-What the frame wrote into its buffers goes to the device, before its draws are played
+What the frame wrote into its buffers goes to the device, before its draws are played. Returns how many calls
+of OpenGL ES it was, for gfxinfo.
 ===============
 */
-void GLES_UploadFrame( const vkFrame_t *frame ) {
+int GLES_UploadFrame( const vkFrame_t *frame ) {
+	int calls = 0;
+
 	if ( frame->numVertexes ) {
+		calls = 5;
 		GLES_BindBuffer( &frame->vertexes );
 		for ( int i = 0; i < 4; i++ ) {
 			glBufferSubData( GL_ARRAY_BUFFER, (GLintptr)frame->streamOffsets[i], (GLsizeiptr)frame->numVertexes * gles_streamStride[i],
 				frame->vertexes.mapped + frame->streamOffsets[i] );
 		}
 	}
-	GLES_UploadBuffer( &frame->indexes, frame->indexUsed );
-	GLES_UploadBuffer( &frame->globals, sizeof( vkGlobals_t ) );
-	GLES_UploadBuffer( &frame->transforms, (vkSize_t)VK_TRANSFORM_STRIDE * frame->numTransforms );
-	GLES_UploadBuffer( &frame->draws, (vkSize_t)VK_DRAW_STRIDE * frame->numDraws );
-	GLES_UploadBuffer( &frame->bones, sizeof( float ) * 12 * frame->numBones );
+	calls += GLES_UploadBuffer( &frame->indexes, frame->indexUsed );
+	calls += GLES_UploadBuffer( &frame->globals, sizeof( vkGlobals_t ) );
+	calls += GLES_UploadBuffer( &frame->transforms, (vkSize_t)VK_TRANSFORM_STRIDE * frame->numTransforms );
+	calls += GLES_UploadBuffer( &frame->draws, (vkSize_t)VK_DRAW_STRIDE * frame->numDraws );
+	calls += GLES_UploadBuffer( &frame->bones, sizeof( float ) * 12 * frame->numBones );
+	return calls;
 }

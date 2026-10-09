@@ -38,6 +38,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // - The targets have their top row first, as the images of Vulkan have it, and OpenGL ES has the bottom row first.
 //   So the picture is drawn upside down (the vertex shaders turn y, the front face is clockwise for it) and
 //   turned again when it is copied to the window. The shared files then need to know nothing about it.
+// - WebGL reads no depth back. Whether a flare is covered is asked with a query: is a point at its place and
+//   depth seen. The answer comes some frames later, as the depth of the Vulkan device does.
 // The names of OpenGL ES come from gles_gl.h, which rd-vanilla/qgl.h includes.
 
 // ------------------------------------------------------------------------------------------------------------
@@ -80,6 +82,12 @@ typedef struct vkTarget_s {		// something to render into
 	GLuint			texture;
 	GLuint			framebuffer;		// to draw into it alone and to read it, made when it is first asked for
 	GLuint			framebufferDepth;	// to draw into it with vk.depth
+	// With several samples a pixel (vk.samples) vk.color, vk.glow and vk.depth have a renderbuffer of that many, and
+	// the two with color a framebuffer of theirs with the one of vk.depth: that is what is drawn into then. The
+	// texture gets the average when something is about to read it.
+	GLuint			renderbuffer;
+	GLuint			framebufferSamples;
+	qboolean		unresolved;			// the renderbuffer was drawn into since the texture got its average
 	int				width, height;
 } vkTarget_t;
 
@@ -87,8 +95,21 @@ typedef struct vkDeviceImage_s {	// what an entry of the texture table is on the
 	GLuint			image;
 } vkDeviceImage_t;
 
+// What a frame asked the device about its flares, see VK_CopyProbeDepths(). The answers are fetched when they are
+// there, which is a frame or more later, so a few frames can wait for theirs.
+#define GLES_PROBE_SETS		4
+
+typedef struct glesProbeSet_s {
+	GLuint			queries[VK_MAX_FLARES];
+	short			flare[VK_MAX_FLARES];	// which flare a query is about
+	int				count;					// that many were asked
+	qboolean		pending;				// and their answers have not been fetched
+} glesProbeSet_t;
+
 typedef struct vkDeviceFrame_s {	// see vkFrame_t
 	vkSize_t		streamOffsets[4];	// where the four streams of frame->vertexes start, as the frame bound them
+	glesProbeSet_t	probeSets[GLES_PROBE_SETS];
+	int				probeSet;			// the one the frame that is recorded asks with
 } vkDeviceFrame_t;
 
 // ------------------------------------------------------------------------------------------------------------
@@ -128,6 +149,7 @@ typedef struct vkDeviceState_s {	// see vkState_t
 	int							transformStride;
 	int							boneAlign;			// a skeleton starts at a multiple of that many bones
 	float						maxAnisotropy;		// with vk.anisotropy: how much of the filter there is
+	int							samples;			// r_ext_multisample: samples a pixel of the scene and its glow, 1: no renderbuffers
 
 	GLuint						programs[GLP_NUM_PROGRAMS];
 	GLint						programParm[GLP_NUM_PROGRAMS];	// where u_parm of a pass is, -1: it has none
@@ -139,7 +161,13 @@ typedef struct vkDeviceState_s {	// see vkState_t
 	byte						*readback;			// VK_ReadFrame()
 	vkSize_t					readbackSize;
 
+	byte						flareSeen[VK_MAX_FLARES];	// the last answer of the device for a flare: nothing covers it
+
 	int							statCommands;		// of the last frame, for gfxinfo
+	int							statCalls;			// and how many calls of OpenGL ES playing it was
+	int							statFlares, statFlaresSeen;	// the last answers of the device: for how many flares, how many of them seen
+	// what the device has made and not deleted, for gfxinfo and for the end: nothing may be left
+	int							statBuffers, statTextures, statFramebuffers, statRenderbuffers, statQueries;
 	int							statErrors;			// r_glesDebug: what glGetError() has said since the start
 } vkDeviceState_t;
 
@@ -150,14 +178,14 @@ extern cvar_t	*r_glesDebug;
 void		VK_InitFrames( void );
 void		VK_ShutdownFrames( void );
 void		GLES_BindBuffer( const vkBuffer_t *buf );
-void		GLES_UploadFrame( const struct vkFrame_s *frame );
+int			GLES_UploadFrame( const struct vkFrame_s *frame );
 
 // gles_program.cpp
 qboolean	VK_InitPrograms( void );
 void		VK_ShutdownPrograms( void );
 
 // gles_texture.cpp
-void		VK_CreateTarget( vkTarget_t *target, int width, int height, GLenum format, GLenum filter );
+void		VK_CreateTarget( vkTarget_t *target, int width, int height, GLenum format, GLenum filter, int samples );
 void		VK_DestroyTarget( vkTarget_t *target );
 void		VK_DestroyPostTargets( void );
 GLuint		VK_TargetFramebuffer( vkTarget_t *color, vkTarget_t *depth );

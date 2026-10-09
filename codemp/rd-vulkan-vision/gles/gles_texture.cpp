@@ -44,6 +44,7 @@ void VK_ShutdownTextures( void ) {
 	for ( int i = 0; i < VK_MAX_IMAGES; i++ ) {
 		if ( vk.images[i].image ) {
 			glDeleteTextures( 1, &vk.images[i].image );
+			vk.statTextures--;
 		}
 	}
 	VK_DestroyBuffer( &vk.staging );
@@ -76,6 +77,7 @@ static void VK_TextureParms( const vkImage_t *vi ) {
 // the size changes.
 void VK_CreateImage( vkImage_t *vi, int width, int height, int mipLevels, vkFormat_t format ) {
 	glGenTextures( 1, &vi->image );
+	vk.statTextures++;
 	glActiveTexture( GL_TEXTURE0 );
 	glBindTexture( GL_TEXTURE_2D, vi->image );
 	glTexStorage2D( GL_TEXTURE_2D, mipLevels, format, width, height );
@@ -85,6 +87,7 @@ void VK_CreateImage( vkImage_t *vi, int width, int height, int mipLevels, vkForm
 void VK_DestroyImage( vkImage_t *vi ) {
 	if ( vi->image ) {
 		glDeleteTextures( 1, &vi->image );
+		vk.statTextures--;
 		vi->image = 0;
 	}
 }
@@ -156,12 +159,25 @@ RENDER TARGETS
 A target is a texture. What is drawn into is a framebuffer object with the texture of a target as its color,
 alone or with vk.depth, made the first time it is asked for.
 
+Anti aliasing (r_ext_multisample): a texture of WebGL has one sample a pixel. The scene and its glow are drawn
+into renderbuffers with several, color and depth, and the texture of a target gets their average when something
+is about to read it (GLES_Resolve() in gles_cmd.cpp): the gamma pass, the copy for refraction, the blur of the
+glow. The depth of several samples is never brought down: the flares ask the device, they do not read it.
+
 ===============================================================================
 */
 
-void VK_CreateTarget( vkTarget_t *target, int width, int height, GLenum format, GLenum filter ) {
+// samples above 1: the target also gets a renderbuffer with that many samples a pixel
+void VK_CreateTarget( vkTarget_t *target, int width, int height, GLenum format, GLenum filter, int samples ) {
 	memset( target, 0, sizeof( *target ) );
+	if ( samples > 1 ) {
+		glGenRenderbuffers( 1, &target->renderbuffer );
+		vk.statRenderbuffers++;
+		glBindRenderbuffer( GL_RENDERBUFFER, target->renderbuffer );
+		glRenderbufferStorageMultisample( GL_RENDERBUFFER, samples, format, width, height );
+	}
 	glGenTextures( 1, &target->texture );
+	vk.statTextures++;
 	glActiveTexture( GL_TEXTURE0 );
 	glBindTexture( GL_TEXTURE_2D, target->texture );
 	glTexStorage2D( GL_TEXTURE_2D, 1, format, width, height );
@@ -174,28 +190,50 @@ void VK_CreateTarget( vkTarget_t *target, int width, int height, GLenum format, 
 }
 
 void VK_DestroyTarget( vkTarget_t *target ) {
-	if ( target->framebuffer ) {
-		glDeleteFramebuffers( 1, &target->framebuffer );
+	GLuint *framebuffers[3] = { &target->framebuffer, &target->framebufferDepth, &target->framebufferSamples };
+
+	for ( int i = 0; i < 3; i++ ) {
+		if ( *framebuffers[i] ) {
+			glDeleteFramebuffers( 1, framebuffers[i] );
+			vk.statFramebuffers--;
+		}
 	}
-	if ( target->framebufferDepth ) {
-		glDeleteFramebuffers( 1, &target->framebufferDepth );
+	if ( target->renderbuffer ) {
+		glDeleteRenderbuffers( 1, &target->renderbuffer );
+		vk.statRenderbuffers--;
 	}
 	if ( target->texture ) {
 		glDeleteTextures( 1, &target->texture );
+		vk.statTextures--;
 	}
 	memset( target, 0, sizeof( *target ) );
 }
 
-// Leaves it bound as GL_FRAMEBUFFER when it had to be made.
+/*
+===============
+VK_TargetFramebuffer
+
+What is bound to draw into a target, with depth or alone, or to read it (alone). With depth and several samples
+a pixel that is the framebuffer of the two renderbuffers. Leaves it bound as GL_FRAMEBUFFER when it had to be
+made.
+===============
+*/
 GLuint VK_TargetFramebuffer( vkTarget_t *color, vkTarget_t *depth ) {
-	GLuint *framebuffer = depth ? &color->framebufferDepth : &color->framebuffer;
+	const qboolean samples = (qboolean)( depth && color->renderbuffer && depth->renderbuffer );
+	GLuint *framebuffer = samples ? &color->framebufferSamples : ( depth ? &color->framebufferDepth : &color->framebuffer );
 
 	if ( !*framebuffer ) {
 		glGenFramebuffers( 1, framebuffer );
+		vk.statFramebuffers++;
 		glBindFramebuffer( GL_FRAMEBUFFER, *framebuffer );
-		glFramebufferTexture2D( GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, color->texture, 0 );
-		if ( depth ) {
-			glFramebufferTexture2D( GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_TEXTURE_2D, depth->texture, 0 );
+		if ( samples ) {
+			glFramebufferRenderbuffer( GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, color->renderbuffer );
+			glFramebufferRenderbuffer( GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, depth->renderbuffer );
+		} else {
+			glFramebufferTexture2D( GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, color->texture, 0 );
+			if ( depth ) {
+				glFramebufferTexture2D( GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_TEXTURE_2D, depth->texture, 0 );
+			}
 		}
 		// asked once for each: the answer makes a browser wait for its graphics process
 		if ( glCheckFramebufferStatus( GL_FRAMEBUFFER ) != GL_FRAMEBUFFER_COMPLETE ) {
@@ -216,10 +254,11 @@ one.
 ===============
 */
 void VK_CreatePostTargets( int blurWidth, int blurHeight ) {
-	VK_CreateTarget( &vk.glow, vk.width, vk.height, GL_RGBA8, GL_LINEAR );
-	VK_CreateTarget( &vk.screen, vk.width, vk.height, GL_RGB8, GL_LINEAR );
-	VK_CreateTarget( &vk.blur[0], blurWidth, blurHeight, GL_RGBA8, GL_LINEAR );
-	VK_CreateTarget( &vk.blur[1], blurWidth, blurHeight, GL_RGBA8, GL_LINEAR );
+	// the glowing stages are drawn over the depth of the scene, so with as many samples
+	VK_CreateTarget( &vk.glow, vk.width, vk.height, GL_RGBA8, GL_LINEAR, vk.samples );
+	VK_CreateTarget( &vk.screen, vk.width, vk.height, GL_RGB8, GL_LINEAR, 1 );
+	VK_CreateTarget( &vk.blur[0], blurWidth, blurHeight, GL_RGBA8, GL_LINEAR, 1 );
+	VK_CreateTarget( &vk.blur[1], blurWidth, blurHeight, GL_RGBA8, GL_LINEAR, 1 );
 }
 
 void VK_DestroyPostTargets( void ) {

@@ -27,6 +27,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 vkState_t	vk;
 
 cvar_t		*r_glesDebug;		// 1: glGetError() after every frame. It waits for the device, which costs a browser its speed.
+static cvar_t	*r_multisampleGles;	// r_ext_multisample of the engine
 
 /*
 A machine or a browser that can not run this device is no error of the game, as with the Vulkan device (see
@@ -56,6 +57,26 @@ static int VK_AlignUp( int size, int align ) {
 
 /*
 ===============
+VK_SampleCount
+
+r_ext_multisample as the Vulkan device takes it: 0 or 1 none, else the largest of 2, 4 and 8 samples a pixel that
+is not more than asked for and that the device has for a renderbuffer
+===============
+*/
+static int VK_SampleCount( void ) {
+	GLint most = 1;
+
+	glGetIntegerv( GL_MAX_SAMPLES, &most );
+	for ( int samples = 8; samples > 1; samples >>= 1 ) {
+		if ( r_multisampleGles->integer >= samples && most >= samples ) {
+			return samples;
+		}
+	}
+	return 1;
+}
+
+/*
+===============
 VK_InitVulkan
 
 Called by R_Init() in the place of InitOpenGL(), the name is the one of the Vulkan device. The window and
@@ -69,6 +90,15 @@ qboolean VK_InitVulkan( void ) {
 	const char *extensions;
 
 	r_glesDebug = ri.Cvar_Get( "r_glesDebug", "0", CVAR_ARCHIVE_ND, "Ask OpenGL ES for its errors after every frame (slow in a browser)" );
+	r_multisampleGles = ri.Cvar_Get( "r_ext_multisample", "0", CVAR_ARCHIVE_ND | CVAR_LATCH, "" );
+	// The flares of another level are about to get the numbers of the ones the device answered for: what it said and
+	// what it has not said yet is about those.
+	memset( vk.flareSeen, 0, sizeof( vk.flareSeen ) );
+	for ( int i = 0; i < VK_FRAMES; i++ ) {
+		for ( int j = 0; j < GLES_PROBE_SETS; j++ ) {
+			vk.frames[i].probeSets[j].pending = qfalse;
+		}
+	}
 	if ( VK_InitShared() ) {
 		return qtrue;
 	}
@@ -119,10 +149,12 @@ qboolean VK_InitVulkan( void ) {
 		VK_ShutdownPrograms();
 		return VK_CanNotRun( "a shader did not compile, see above" );
 	}
-	// the gamma pass reads the frame pixel for pixel, and so does the copy to the window
-	VK_CreateTarget( &vk.color, vk.width, vk.height, GL_RGBA8, GL_NEAREST );
-	VK_CreateTarget( &vk.final, vk.width, vk.height, GL_RGBA8, GL_NEAREST );
-	VK_CreateTarget( &vk.depth, vk.width, vk.height, GL_DEPTH24_STENCIL8, GL_NEAREST );
+	// The gamma pass reads the frame pixel for pixel, and so does the copy to the window. Anti aliasing: the scene
+	// goes into renderbuffers with several samples a pixel, see gles_texture.cpp.
+	vk.samples = VK_SampleCount();
+	VK_CreateTarget( &vk.color, vk.width, vk.height, GL_RGBA8, GL_NEAREST, vk.samples );
+	VK_CreateTarget( &vk.final, vk.width, vk.height, GL_RGBA8, GL_NEAREST, 1 );
+	VK_CreateTarget( &vk.depth, vk.width, vk.height, GL_DEPTH24_STENCIL8, GL_NEAREST, vk.samples );
 	VK_InitPost();
 	VK_InitFrames();
 	VK_InitImages();
@@ -169,6 +201,10 @@ void VK_ShutdownVulkan( qboolean destroyWindow ) {
 	if ( vk.readback ) {
 		Z_Free( vk.readback );
 	}
+	if ( vk.statBuffers || vk.statTextures || vk.statFramebuffers || vk.statRenderbuffers || vk.statQueries ) {
+		ri.Printf( PRINT_ALL, S_COLOR_RED "OpenGL ES: left on the device at its end: %i buffers, %i textures, %i framebuffers, %i renderbuffers, %i queries\n",
+			vk.statBuffers, vk.statTextures, vk.statFramebuffers, vk.statRenderbuffers, vk.statQueries );
+	}
 	memset( &vk, 0, sizeof( vk ) );
 	memset( &glConfig, 0, sizeof( glConfig ) );
 }
@@ -186,9 +222,14 @@ void VK_GfxInfo_f( void ) {
 	ri.Printf( PRINT_ALL, "device: %s\n", glConfig.renderer_string );
 	ri.Printf( PRINT_ALL, "version: %s\n", glConfig.version_string );
 	ri.Printf( PRINT_ALL, "vendor: %s\n", glConfig.vendor_string );
-	ri.Printf( PRINT_ALL, "frame: %i x %i, uniform blocks every %i bytes: a draw takes %i, a transform %i, a skeleton starts every %i bones\n",
-		vk.width, vk.height, vk.uniformAlign, vk.drawStride, vk.transformStride, vk.boneAlign );
-	ri.Printf( PRINT_ALL, "textures: %i of %i, commands of the last frame: %i\n", numImages, VK_MAX_IMAGES, vk.statCommands );
+	ri.Printf( PRINT_ALL, "frame: %i x %i with %i samples a pixel, uniform blocks every %i bytes: a draw takes %i, a transform %i, a skeleton starts every %i bones\n",
+		vk.width, vk.height, vk.samples, vk.uniformAlign, vk.drawStride, vk.transformStride, vk.boneAlign );
+	// what a level change or a restart leaves more of each time is a leak
+	ri.Printf( PRINT_ALL, "on the device: %i buffers, %i textures, %i framebuffers, %i renderbuffers, %i queries\n", vk.statBuffers, vk.statTextures,
+		vk.statFramebuffers, vk.statRenderbuffers, vk.statQueries );
+	ri.Printf( PRINT_ALL, "textures: %i of %i, the last frame: %i commands, played with %i calls of OpenGL ES\n", numImages, VK_MAX_IMAGES,
+		vk.statCommands, vk.statCalls );
+	ri.Printf( PRINT_ALL, "flares: the last answers of the device were for %i, %i of them seen\n", vk.statFlares, vk.statFlaresSeen );
 	VK_FrameInfo_f();
 	if ( r_glesDebug->integer ) {
 		ri.Printf( PRINT_ALL, "errors of OpenGL ES so far: %i\n", vk.statErrors );

@@ -31,6 +31,46 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include "vk_local.h"
 
+// Every call of OpenGL ES that playing a frame makes is counted, for gfxinfo: in a browser each one is a call from
+// the module into JavaScript, and their number is most of what a frame costs there. The names below are the ones
+// this file calls while it plays.
+static int	gles_calls;
+
+#define glActiveTexture( ... )			( gles_calls++, glActiveTexture( __VA_ARGS__ ) )
+#define glBeginQuery( ... )				( gles_calls++, glBeginQuery( __VA_ARGS__ ) )
+#define glBindBuffer( ... )				( gles_calls++, glBindBuffer( __VA_ARGS__ ) )
+#define glBindBufferRange( ... )		( gles_calls++, glBindBufferRange( __VA_ARGS__ ) )
+#define glBindFramebuffer( ... )		( gles_calls++, glBindFramebuffer( __VA_ARGS__ ) )
+#define glBindTexture( ... )			( gles_calls++, glBindTexture( __VA_ARGS__ ) )
+#define glBindVertexArray( ... )		( gles_calls++, glBindVertexArray( __VA_ARGS__ ) )
+#define glBlendFunc( ... )				( gles_calls++, glBlendFunc( __VA_ARGS__ ) )
+#define glBlitFramebuffer( ... )		( gles_calls++, glBlitFramebuffer( __VA_ARGS__ ) )
+#define glClear( ... )					( gles_calls++, glClear( __VA_ARGS__ ) )
+#define glClearColor( ... )				( gles_calls++, glClearColor( __VA_ARGS__ ) )
+#define glClearDepthf( ... )			( gles_calls++, glClearDepthf( __VA_ARGS__ ) )
+#define glClearStencil( ... )			( gles_calls++, glClearStencil( __VA_ARGS__ ) )
+#define glColorMask( ... )				( gles_calls++, glColorMask( __VA_ARGS__ ) )
+#define glCopyTexSubImage2D( ... )		( gles_calls++, glCopyTexSubImage2D( __VA_ARGS__ ) )
+#define glCullFace( ... )				( gles_calls++, glCullFace( __VA_ARGS__ ) )
+#define glDepthFunc( ... )				( gles_calls++, glDepthFunc( __VA_ARGS__ ) )
+#define glDepthMask( ... )				( gles_calls++, glDepthMask( __VA_ARGS__ ) )
+#define glDepthRangef( ... )			( gles_calls++, glDepthRangef( __VA_ARGS__ ) )
+#define glDisable( ... )				( gles_calls++, glDisable( __VA_ARGS__ ) )
+#define glDrawArrays( ... )				( gles_calls++, glDrawArrays( __VA_ARGS__ ) )
+#define glDrawElements( ... )			( gles_calls++, glDrawElements( __VA_ARGS__ ) )
+#define glEnable( ... )					( gles_calls++, glEnable( __VA_ARGS__ ) )
+#define glEndQuery( ... )				( gles_calls++, glEndQuery( __VA_ARGS__ ) )
+#define glPolygonOffset( ... )			( gles_calls++, glPolygonOffset( __VA_ARGS__ ) )
+#define glScissor( ... )				( gles_calls++, glScissor( __VA_ARGS__ ) )
+#define glStencilFunc( ... )			( gles_calls++, glStencilFunc( __VA_ARGS__ ) )
+#define glStencilMask( ... )			( gles_calls++, glStencilMask( __VA_ARGS__ ) )
+#define glStencilOpSeparate( ... )		( gles_calls++, glStencilOpSeparate( __VA_ARGS__ ) )
+#define glUniform4fv( ... )				( gles_calls++, glUniform4fv( __VA_ARGS__ ) )
+#define glUseProgram( ... )				( gles_calls++, glUseProgram( __VA_ARGS__ ) )
+#define glVertexAttribIPointer( ... )	( gles_calls++, glVertexAttribIPointer( __VA_ARGS__ ) )
+#define glVertexAttribPointer( ... )	( gles_calls++, glVertexAttribPointer( __VA_ARGS__ ) )
+#define glViewport( ... )				( gles_calls++, glViewport( __VA_ARGS__ ) )
+
 #define GLES_MAX_COMMANDS	( VK_MAX_DRAWS + 16384 )	// a draw is one command, the rest is binds, viewports, clears and passes
 #define GLES_MAX_RANGES		65536						// runs of indexes of all draws of a frame that have such (surfaces of models)
 
@@ -46,7 +86,8 @@ typedef enum {
 	GC_DRAW,
 	GC_BLUR,
 	GC_ADD,
-	GC_COPY
+	GC_COPY,
+	GC_PROBES
 } glesCommandType_t;
 
 typedef struct glesCommand_s {
@@ -98,6 +139,9 @@ typedef struct glesCommand_s {
 		struct {
 			vkTarget_t	*source, *dest;
 		} copy;
+		struct {
+			int			first, count;
+		} probes;
 	};
 } glesCommand_t;
 
@@ -134,11 +178,48 @@ static glesCommand_t *GLES_Command( glesCommandType_t type ) {
 	return cmd;
 }
 
-void VK_BeginCommands( vkFrame_t * ) {
+/*
+===============
+VK_BeginCommands
+
+A frame was played when it ended, so its buffers are free at once. What is still on its way are the answers to
+what the last frames asked about their flares: the ones that are there now are taken, an older frame first so
+that the newest answer for a flare stays. Nothing waits for one that is not there.
+===============
+*/
+void VK_BeginCommands( vkFrame_t *frame ) {
 	gles_numCommands = 0;
 	gles_numRanges = 0;
 	gles_overflowed = qfalse;
 	gles_recordedVertexBuffer = gles_recordedIndexBuffer = 0;
+
+	for ( int i = 1; i <= GLES_PROBE_SETS; i++ ) {
+		glesProbeSet_t *set = &frame->probeSets[( frame->probeSet + i ) % GLES_PROBE_SETS];
+		GLuint there = GL_FALSE;
+
+		if ( !set->pending || !set->count ) {
+			continue;
+		}
+		// they were asked one after the other: when the last one has its answer, all have
+		glGetQueryObjectuiv( set->queries[set->count - 1], GL_QUERY_RESULT_AVAILABLE, &there );
+		if ( !there ) {
+			continue;
+		}
+		vk.statFlares = set->count;
+		vk.statFlaresSeen = 0;
+		for ( int j = 0; j < set->count; j++ ) {
+			GLuint seen = 0;
+
+			glGetQueryObjectuiv( set->queries[j], GL_QUERY_RESULT, &seen );
+			vk.flareSeen[set->flare[j]] = (byte)( seen != 0 );
+			vk.statFlaresSeen += ( seen != 0 );
+		}
+		set->pending = qfalse;
+	}
+	// the oldest set is asked with again, whether its answers came or not
+	frame->probeSet = ( frame->probeSet + 1 ) % GLES_PROBE_SETS;
+	frame->probeSets[frame->probeSet].count = 0;
+	frame->probeSets[frame->probeSet].pending = qfalse;
 }
 
 void VK_BeginTarget( vkTarget_t *color, vkTarget_t *depth, int colorLoad, qboolean depthLoad ) {
@@ -319,15 +400,24 @@ void VK_CopyTarget( vkTarget_t *source, vkTarget_t *dest ) {
 ===============
 VK_CopyProbeDepths, VK_ProbeDepth
 
-WebGL reads no depth back. Until the flares ask the device in another way (a query whether a point at their
-depth is seen), the answer is the far end of the depth buffer: nothing is in front of a flare.
+WebGL reads no depth back. So the device is asked what the shared code wants to know of the depth: is a flare
+covered, which is by something more than 24 units in front of it (RB_TestZFlare() of rd-vanilla). A query counts
+whether a pixel at the place of the flare and 24 units in front of it is seen, see GLES_Probes(). The shared code
+gets the answer as a depth it reads the same thing from: the far end of the depth buffer when the pixel was
+seen, the near end when not.
 ===============
 */
-void VK_CopyProbeDepths( int, int ) {
+void VK_CopyProbeDepths( int first, int count ) {
+	glesCommand_t *cmd = GLES_Command( GC_PROBES );
+
+	if ( cmd ) {
+		cmd->probes.first = first;
+		cmd->probes.count = count;
+	}
 }
 
-float VK_ProbeDepth( const vkFrame_t *, int ) {
-	return 1.0f;
+float VK_ProbeDepth( const vkFrame_t *frame, int probe ) {
+	return vk.flareSeen[frame->probe[probe].flare] ? 1.0f : 0.0f;
 }
 
 /*
@@ -360,6 +450,7 @@ static struct {
 	qboolean	stateValid;
 	vkStencil_t	stencil;					// of the draws with VKS_STENCIL
 	int			viewport[4], scissor[4];	// of the draws: a pass over a whole target sets its own and puts these back
+	float		minDepth, maxDepth;
 } gles;
 
 static void GLES_Program( glesProgram_t program ) {
@@ -396,6 +487,7 @@ static void GLES_BeginReplay( const vkFrame_t *frame ) {
 	gles.transform = gles.bones = ~0u;
 	gles.scissor[2] = gles.viewport[2] = vk.width;
 	gles.scissor[3] = gles.viewport[3] = vk.height;
+	gles.maxDepth = 1.0f;
 	glUseProgram( 0 );
 	glColorMask( GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE );
 	glStencilMask( 0xff );
@@ -430,6 +522,31 @@ static void GLES_DrawViewport( void ) {
 	glEnable( GL_SCISSOR_TEST );
 	glViewport( gles.viewport[0], gles.viewport[1], gles.viewport[2], gles.viewport[3] );
 	glScissor( gles.scissor[0], gles.scissor[1], gles.scissor[2], gles.scissor[3] );
+	glDepthRangef( gles.minDepth, gles.maxDepth );
+}
+
+/*
+===============
+GLES_Resolve
+
+The texture of a target gets the average of what was drawn into its renderbuffer of several samples. Called
+before something reads the texture. Leaves the framebuffer of the texture bound for drawing.
+===============
+*/
+static void GLES_Resolve( vkTarget_t *target ) {
+	GLuint framebuffer;
+
+	if ( !target->unresolved ) {
+		return;
+	}
+	target->unresolved = qfalse;
+	framebuffer = VK_TargetFramebuffer( target, NULL );
+	glBindFramebuffer( GL_READ_FRAMEBUFFER, target->framebufferSamples );
+	glBindFramebuffer( GL_DRAW_FRAMEBUFFER, framebuffer );
+	// the scissor cuts a blit too
+	glDisable( GL_SCISSOR_TEST );
+	glBlitFramebuffer( 0, 0, target->width, target->height, 0, 0, target->width, target->height, GL_COLOR_BUFFER_BIT, GL_NEAREST );
+	glEnable( GL_SCISSOR_TEST );
 }
 
 // one triangle over the target that is bound, with one of the programs of shaders/post.vert
@@ -444,9 +561,13 @@ static void GLES_DrawPass( glesProgram_t program, GLuint texture, const float *p
 }
 
 static void GLES_BeginTarget( const glesCommand_t *cmd ) {
+	const GLuint framebuffer = VK_TargetFramebuffer( cmd->target.color, cmd->target.depth );
 	GLbitfield clear = 0;
 
-	glBindFramebuffer( GL_FRAMEBUFFER, VK_TargetFramebuffer( cmd->target.color, cmd->target.depth ) );
+	glBindFramebuffer( GL_FRAMEBUFFER, framebuffer );
+	if ( framebuffer == cmd->target.color->framebufferSamples ) {
+		cmd->target.color->unresolved = qtrue;
+	}
 	if ( cmd->target.colorLoad == 1 ) {
 		glClearColor( 0.0f, 0.0f, 0.0f, 0.0f );
 		clear |= GL_COLOR_BUFFER_BIT;
@@ -545,6 +666,57 @@ static qboolean GLES_Vertexes( glesLayout_t layout ) {
 		glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, gles.indexBuffer );
 	}
 	return qtrue;
+}
+
+/*
+===============
+GLES_Probes
+
+For every probe one pixel at the place of its flare, 24 units nearer to the eye than the flare, with the depth
+test and without a trace: a query counts whether it got through. The pixel is the triangle of the passes cut down
+to it by the scissor, and its depth is where the depth range puts everything when its two ends are the same.
+The target of the scene is still bound, with its depth.
+===============
+*/
+static void GLES_Probes( vkFrame_t *frame, const glesCommand_t *cmd ) {
+	glesProbeSet_t *set = &frame->probeSets[frame->probeSet];
+
+	glViewport( 0, 0, vk.width, vk.height );
+	glEnable( GL_SCISSOR_TEST );
+	glEnable( GL_DEPTH_TEST );
+	glDepthFunc( GL_LEQUAL );
+	glDepthMask( GL_FALSE );
+	glColorMask( GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE );
+	glDisable( GL_STENCIL_TEST );
+	glDisable( GL_CULL_FACE );
+	glDisable( GL_BLEND );
+	glDisable( GL_POLYGON_OFFSET_FILL );
+	gles.stateValid = qfalse;
+	GLES_Program( GLP_COPY );
+	// the program reads a texture, which one does not matter as long as it is not the one that is drawn into
+	GLES_Texture( 0, vk.final.texture );
+	GLES_Layout( GLV_NONE );
+
+	for ( int i = cmd->probes.first; i < cmd->probes.first + cmd->probes.count && set->count < VK_MAX_FLARES; i++ ) {
+		const vkProbe_t *probe = &frame->probe[i];
+		// how far in front of the eye the pixel is, and what the projection of that view makes of it
+		const float distance = probe->eyeZ - 24.0f;
+		float depth = 0.0f;
+
+		if ( distance > 0.0f ) {
+			depth = Com_Clamp( 0.0f, 1.0f, 0.5f + 0.5f * ( probe->projection[2] - probe->projection[0] * distance ) / ( -probe->projection[1] * distance ) );
+		}
+		set->flare[set->count] = (short)probe->flare;
+		glScissor( probe->x, probe->y, 1, 1 );
+		glDepthRangef( depth, depth );
+		glBeginQuery( GL_ANY_SAMPLES_PASSED, set->queries[set->count] );
+		glDrawArrays( GL_TRIANGLES, 0, 3 );
+		glEndQuery( GL_ANY_SAMPLES_PASSED );
+		set->count++;
+	}
+	set->pending = qtrue;
+	glColorMask( GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE );
+	GLES_DrawViewport();
 }
 
 // the blend function of a .shader stage, as GL_State() of rd-vanilla hands it to OpenGL
@@ -667,7 +839,7 @@ static void GLES_Draw( const vkFrame_t *frame, const glesCommand_t *cmd ) {
 	}
 }
 
-static void GLES_Replay( const vkFrame_t *frame ) {
+static void GLES_Replay( vkFrame_t *frame ) {
 	GLES_BeginReplay( frame );
 	for ( int i = 0; i < gles_numCommands; i++ ) {
 		const glesCommand_t *cmd = &gles_commands[i];
@@ -679,8 +851,9 @@ static void GLES_Replay( const vkFrame_t *frame ) {
 		case GC_VIEWPORT:
 			memcpy( gles.viewport, cmd->viewport.rect, sizeof( gles.viewport ) );
 			memcpy( gles.scissor, cmd->viewport.scissor, sizeof( gles.scissor ) );
+			gles.minDepth = cmd->viewport.minDepth;
+			gles.maxDepth = cmd->viewport.maxDepth;
 			GLES_DrawViewport();
-			glDepthRangef( cmd->viewport.minDepth, cmd->viewport.maxDepth );
 			break;
 		case GC_CLEAR_DEPTH:
 		case GC_CLEAR_COLOR:
@@ -704,6 +877,7 @@ static void GLES_Replay( const vkFrame_t *frame ) {
 			GLES_Draw( frame, cmd );
 			break;
 		case GC_BLUR:
+			GLES_Resolve( cmd->blur.source );
 			glBindFramebuffer( GL_FRAMEBUFFER, VK_TargetFramebuffer( cmd->blur.target, NULL ) );
 			GLES_PassState( cmd->blur.target->width, cmd->blur.target->height, 0, 0 );
 			GLES_DrawPass( GLP_BLUR, cmd->blur.source->texture, cmd->blur.parm );
@@ -717,9 +891,13 @@ static void GLES_Replay( const vkFrame_t *frame ) {
 			break;
 		case GC_COPY:
 			// the texture of dest takes the pixels of the framebuffer that is read
+			GLES_Resolve( cmd->copy.source );
 			glBindFramebuffer( GL_READ_FRAMEBUFFER, VK_TargetFramebuffer( cmd->copy.source, NULL ) );
 			GLES_Texture( 0, cmd->copy.dest->texture );
 			glCopyTexSubImage2D( GL_TEXTURE_2D, 0, 0, 0, 0, 0, cmd->copy.source->width, cmd->copy.source->height );
+			break;
+		case GC_PROBES:
+			GLES_Probes( frame, cmd );
 			break;
 		}
 	}
@@ -734,11 +912,12 @@ The engine shows the window (ri.WIN_Present in RB_SwapBuffers).
 ===============
 */
 void VK_PresentFrame( const float *gamma ) {
-	const vkFrame_t *frame = vk.frame;
+	vkFrame_t *frame = vk.frame;
 
-	GLES_UploadFrame( frame );
+	gles_calls = GLES_UploadFrame( frame );
 	GLES_Replay( frame );
 
+	GLES_Resolve( &vk.color );
 	glBindFramebuffer( GL_FRAMEBUFFER, VK_TargetFramebuffer( &vk.final, NULL ) );
 	GLES_PassState( vk.width, vk.height, 0, 0 );
 	GLES_DrawPass( GLP_GAMMA, vk.color.texture, gamma );
@@ -748,6 +927,7 @@ void VK_PresentFrame( const float *gamma ) {
 	GLES_DrawPass( GLP_PRESENT, vk.final.texture, NULL );
 
 	vk.statCommands = gles_numCommands;
+	vk.statCalls = gles_calls;
 	if ( r_glesDebug->integer ) {
 		// this waits until the device has done all it was told
 		for ( GLenum error = glGetError(); error != GL_NO_ERROR; error = glGetError() ) {
