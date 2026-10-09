@@ -17,9 +17,11 @@ include("$ENV{EMSDK}/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake
 set(BuildMPDed OFF CACHE BOOL "" FORCE)
 set(BuildMPGame OFF CACHE BOOL "" FORCE)
 set(BuildMPRdVanilla OFF CACHE BOOL "" FORCE)
-set(BuildJPVoice OFF CACHE BOOL "" FORCE)
-set(BuildJPSpatialAudio OFF CACHE BOOL "" FORCE)
 set(BuildJPAssets OFF CACHE BOOL "" FORCE)
+
+# Off unless asked for with -D: the voice chat and Steam Audio are being brought to the browser.
+set(BuildJPVoice OFF CACHE BOOL "")
+set(BuildJPSpatialAudio OFF CACHE BOOL "")
 
 # there are no system libraries to find
 set(UseInternalZlib ON CACHE BOOL "" FORCE)
