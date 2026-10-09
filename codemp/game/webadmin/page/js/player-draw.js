@@ -211,6 +211,7 @@ function drawPlayers(now) {
 					plDrawModel(inst, cent, place, d, ownView, [col, d.dead ? 0.35 : 0.08]);
 					if (!ownView) drawHeldWeapons(inst, d, place);
 					plJetpack(inst, cent, place, ownView);
+					if (cent.eFlags2 & PG.EF2_HOOK) hookHand(inst, id, place);
 				}
 			});
 		} else if (ownView) {

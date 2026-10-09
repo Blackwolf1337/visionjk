@@ -206,6 +206,48 @@ function missileMatrix(m, pos) {
 	return new Float32Array([...ax[0], 0, ...ax[1], 0, ...ax[2], 0, pos[0], pos[1], pos[2], 1]);
 }
 
+// The grappling hook of JA+. Its missile is a shot of the pistol that names its owner (m[20], what the entity
+// hands the clients as otherEntityNum) when the owner has no client plugin, as a bot, and a stun baton missile
+// with a second pistol shot that names client 32 when he has one. As the client game of this tree draws them
+// (FX_BryarProjectileThink, CG_Missile, CG_JPHookTrail): the second one not at all, and neither a pistol shot
+// that names a player whose hook is not out (EF2_HOOK). Of the hook, while it flies (fired with 100 or more),
+// the shot of the concussion rifle anew in every frame of a client, and for the pistol kind the shot of the
+// pistol too. A rope from the right hand of the owner to it: CG_TestLine, a line of the white shader, one unit
+// wide, of the colour 0x30000 (almost black), there for one frame. For the stun baton kind the model of the
+// hook (cp_hookModel 0, the default: the grapple of the base game), which looks the way it flies and spins as
+// every missile does, and once it holds looks away from its owner.
+// Returns false: no hook, the shot is drawn as any other. True: all of it is drawn, or none of it is to be.
+const HOOK_MODEL = 'models/items/grapple.md3', HOOK_SHOT = 'concussion/shot', HOOK_ROPE = [0, 0, 3 / 255];
+const hookHands = new Map();		// player -> { org, now }: where his right hand is in this frame
+const hookRopes = new Map();		// missile -> the line of its rope
+function drawHook(m, pos) {
+	const weapon = m[1], owner = m[20];
+	if (weapon !== WP_STUN_BATON && (weapon !== WP_BRYAR_PISTOL || !(owner >= 0 && owner <= 32))) return false;
+	const p = owner >= 0 && owner < 32 ? players.get(owner) : null, out = !!p && !!(p.data.eFlags2 & PG.EF2_HOOK);
+	if (weapon === WP_BRYAR_PISTOL && !out) return true;
+	const delta = [m[14], m[15], m[16]], speed = Math.hypot(delta[0], delta[1], delta[2]);
+	if (speed >= 100) plEveryFrame(HOOK_SHOT, m[0], pos, delta.map(v => v / speed));
+	const hand = p ? hookHands.get(owner) : null;
+	if (hand && hand.now === frameNow) {
+		let rope = hookRopes.get(m[0]);
+		// the line of the frame before is taken on: so there is one, however long the clock of the effects stands
+		if (rope && rope.t1 >= fxTime) { rope.org = hand.org; rope.org2 = pos.slice(); rope.fresh = true; }
+		else if ((rope = fxAddLine(hand.org, pos, 0.5, 0.5, 0, 1, 1, 0, HOOK_ROPE, HOOK_ROPE, 0, 1, 'white', FX_USE_ALPHA))) hookRopes.set(m[0], rope);
+	}
+	if (weapon === WP_STUN_BATON) {
+		const model = staticNow(HOOK_MODEL);
+		if (model) drawStatic(model, speed > 5 ? missileMatrix(m, pos) : anglesMatrix(pos, out ? g2VecToAngles([0, 1, 2].map(i => pos[i] - p.draw[i])) : [m[9], m[10], m[11]], 1));
+		return true;
+	}
+	return speed < 100;
+}
+
+// where the right hand of a player whose hook is out is in this frame (the *r_hand bolt): his rope starts there
+function hookHand(inst, id, place) {
+	const tag = inst.model.tags['*r_hand'];
+	if (tag && inst.bones) { const at = M4.mul(place, to44(tagMatrix(tag, inst.bones))); hookHands.set(id, { org: [at[12], at[13], at[14]], now: frameNow }); }
+}
+
 // Where a shot ended: a flash for a moment, when the page has no effect of the game to show for it. How far it
 // reaches and how long it lasts (ms) for what goes off with a bang, by weapon and by the other way to fire it.
 const SHOT_BANG = { 11: [60, 450], 12: [70, 500], 14: [90, 550], 15: [60, 450] }, SHOT_BANG_ALT = { 8: [45, 400], 9: [60, 450], 10: [35, 350] };
@@ -228,6 +270,7 @@ function drawShots(k) {
 	for (const m of (state && state.shots) || []) {
 		if (!clientSees([m[3], m[4], m[5]])) continue;
 		const weapon = m[1], pos = shotPos(m, k);
+		if (drawHook(m, pos)) continue;
 		const speed = Math.hypot(m[6], m[7], m[8]), dir = speed ? [m[6] / speed, m[7] / speed, m[8] / speed] : [0, 0, 1];
 		const path = (m[2] ? SHOT_MODEL_ALT : SHOT_MODEL)[weapon], model = path ? staticNow(path) : null;
 		if (model) drawStatic(model, missileMatrix(m, pos));

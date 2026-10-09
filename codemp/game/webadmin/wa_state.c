@@ -502,8 +502,10 @@ static void WA_StateMovers( waBuffer_t *b ) {
 // its entity, the weapon, 1 when it was fired the other way, where it is and how fast it flies, its angles
 // and the eFlags of its entity (a mine that sticks, a trip mine whose beam is on), then what CG_Missile turns
 // it by: the kind of its way (trType), the speed it was fired with (trDelta), how long ago in msec, the time
-// of its entity (a resting one is turned by it), and who fired it. Not a saber that was thrown: that is drawn
-// with its player.
+// of its entity (a resting one is turned by it), and who fired it. The last is the entity it names to the
+// clients (otherEntityNum): with JA+ a shot of the pistol names nobody (-1), and one that names a player is his
+// grappling hook (32: the second missile of a hook, which a client with the plugin leaves out). Not a saber
+// that was thrown: that is drawn with its player.
 static void WA_StateShots( waBuffer_t *b ) {
 	int			i;
 	qboolean	first = qtrue;
@@ -520,10 +522,10 @@ static void WA_StateShots( waBuffer_t *b ) {
 		BG_EvaluateTrajectory( &ent->s.pos, level.time, pos );
 		BG_EvaluateTrajectoryDelta( &ent->s.pos, level.time, speed );
 		BG_EvaluateTrajectory( &ent->s.apos, level.time, angles );
-		WA_BufPrintf( b, "%s[%d,%d,%d,%.0f,%.0f,%.0f,%.0f,%.0f,%.0f,%.0f,%.0f,%.0f,%d,%d,%.0f,%.0f,%.0f,%d,%d,%d]", first ? "" : ",", i, ent->s.weapon,
+		WA_BufPrintf( b, "%s[%d,%d,%d,%.0f,%.0f,%.0f,%.0f,%.0f,%.0f,%.0f,%.0f,%.0f,%d,%d,%.0f,%.0f,%.0f,%d,%d,%d,%d]", first ? "" : ",", i, ent->s.weapon,
 			( ent->s.eFlags & EF_ALT_FIRING ) ? 1 : 0, pos[0], pos[1], pos[2], speed[0], speed[1], speed[2],
 			angles[0], angles[1], angles[2], ent->s.eFlags, ent->s.pos.trType, ent->s.pos.trDelta[0], ent->s.pos.trDelta[1],
-			ent->s.pos.trDelta[2], level.time - ent->s.pos.trTime, ent->s.time, ent->r.ownerNum );
+			ent->s.pos.trDelta[2], level.time - ent->s.pos.trTime, ent->s.time, ent->r.ownerNum, ent->s.otherEntityNum );
 		first = qfalse;
 	}
 	WA_BufAppend( b, "]", 1 );

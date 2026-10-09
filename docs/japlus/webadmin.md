@@ -618,15 +618,48 @@ Also changed:
   it was in). Not here: a client that fights a private duel does not see the force effects of the others
   (`CG_JPForceFxVisible`). Three more checks in `steps_players.js` (41).
 - New: the jetpack. Who wears one (`EF_JETPACK`, with JA+ `jp_allowJetpack`) has its model on his back, on
-  the `*chestg` bolt of his model, not when he is dead and not in his own view. While it is on
+  the `*chestg` bolt of his model, not when he is dead and not from inside his own head. While it is on
   (`EF_JETPACK_ACTIVE`) the jet effect `boba/jet` plays at its two nozzles in every frame of a client, twice
   while it burns (`EF_JETPACK_FLAMING`), as `CG_Player` does it. A nozzle is no tag: cgame bolts to the two
   drawn surfaces `torso_ljet` and `torso_rjet`, and the engine makes such a bolt of the first three vertices
   of the surface (`G2_ProcessSurfaceBolt2`). The two share their third vertex, so both bolts sit at one
   point in the middle of the pack, and the 9.5 and 13.5 units cgame moves along two axes of each lead from
   there to the nozzles, 19 apart. The effect is handed the way up: its flames leave against the way it is
-  given. `plJetpack` in `js/player-fx.js`. Seen on the page; not compared with a picture of the game (no bot
-  switches a jetpack on). Three more checks in `steps_players.js` (44).
+  given. `plJetpack` in `js/player-fx.js`. Three more checks in `steps_players.js` (44). Compared with the
+  game since: no bot switches a jetpack on, so the client of the comparison plays itself
+  (`REF_LOOK=self` of `tools/refshot.sh`, see the hook below) and is seen from behind as it sees itself,
+  hovering and burning. He moves in both, so the pairs are judged by eye: the pack and both flames are in
+  the same place, of the same size and colour.
+- Fixed: what a client plays anew in every frame was too bright on the page. The page draws fewer frames
+  than a client (125 a second by default) and plays such an effect once for every frame of a client it has
+  to catch up with (`fxFramePlay`). It played them all as of now: what such an effect has that lives
+  shorter than a frame, as the flare of a jet (2 msec), was then seen once for every frame caught up, where
+  the game shows one. Now the last of them is of now and each one before it 8 msec older: a primitive is
+  made by the clock of the moment it belongs to and is where it has come to since, and one whose life is
+  over is gone before it is drawn (`born` of `fxPlay` and `fxStart`, `aged` of `fxCreate` in
+  `js/fx-run.js`). Found in the first pair of a jetpack with the game, where the page had a white glow
+  around the flames that the game did not have. It holds for the cone of light over an item, the beam of a
+  trip mine and the lightning and the drain of the Force too.
+- New: the grappling hook of JA+. Its missile is a shot of the pistol that names its owner when the owner
+  has no client plugin (a bot), and a stun baton missile with a second pistol shot that names client 32
+  when he has one. A client of this tree draws the second not at all, nor a pistol shot that names a player
+  whose hook is not out (`EF2_HOOK`), and the page drew every one of them as a pistol shot that glows in the
+  wall for as long as the hook holds. Now as `FX_BryarProjectileThink`, `CG_Missile` and `CG_JPHookTrail`
+  have it: while it flies (fired with 100 or more) the shot of the concussion rifle in every frame of a
+  client, and for the pistol kind the shot of the pistol too; a rope from the right hand of the owner to
+  the hook (`CG_TestLine`: a line of the `white` shader, one unit wide, of the colour 0x30000, there for one
+  frame); for the stun baton kind the model of the hook (`cp_hookModel` at its default 0: the grapple of the
+  base game), which looks the way it flies and spins as every missile, and once it holds looks away from
+  its owner. `drawHook` and `hookHand` in `js/weapons.js`. The state did not say whom a shot names: a row of
+  `shots` has a 21st number, the `otherEntityNum` of the missile (-1: nobody, as JA+ sends its pistol
+  shots). Compared with the game: the client of the comparison plays itself, fires its hook at a wall above
+  it and is seen from behind as it sees itself, while the hook pulls him (mean difference 0.12 to 0.36 of
+  255 in three runs) and while he hangs on the rope (0.33 to 1.03, once 3.11 while he swung). That client
+  has the plugin, so it is the stun baton kind that was compared; the pistol kind of a bot is checked on
+  the page only. Not compared: the hook in flight. Open: in the first of the four runs the camera behind
+  him sat about 100 of 720 pixels lower on the page than in the game while the hook pulled him against a
+  ceiling (the other three agree, the cause is not found). `tools/panelshot/steps_hook.js` (11 checks), one more in
+  `steps_feed.js` (36).
 - Fixed: the trail of a swinging blade was hardly there. The page adds a piece of trail at the start of a
   frame and let it age by that whole frame before it was first drawn: at 60 frames a second every piece
   missed its first and brightest frame, and at fewer than 25 it was gone before it was drawn at all (a piece

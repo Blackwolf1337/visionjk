@@ -55,9 +55,9 @@ order of the template, so a file may only use there what a file before it has ma
 | `js/g2.js` | Ghoul2 models with their animations |
 | `js/g2-angles.js` | how a player model is turned: legs, torso, head |
 | `js/player-draw.js` | the players and the NPCs drawn |
-| `js/player-fx.js` | what is drawn at a player besides his model: sprites, shells, the flag |
+| `js/player-fx.js` | what is drawn at a player besides his model: sprites, shells, the flag, the lightning and the drain of the Force, the jetpack |
 | `js/picker.js` | the class picker with its preview |
-| `js/weapons.js` | weapons, sabers, shots, the view through the eyes of a player |
+| `js/weapons.js` | weapons, sabers, shots, the grappling hook, the view through the eyes of a player |
 | `js/sabers.js` | the blade of a saber as the client draws it |
 | `js/dlights.js` | the dynamic lights of a frame, on the map and on models |
 | `js/world-ents.js` | what the client game puts into a map by itself: the sky portal, the models of misc_model_static |
