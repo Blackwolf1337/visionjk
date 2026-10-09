@@ -95,7 +95,7 @@ function renderEntPanel() {
 	// a draft is sent with Place, with the drafts that are selected with it, and thrown away with Discard. There is
 	// nothing of it yet to fire.
 	const all = selectedIds(), nd = all.filter(id => drafts.has(id)).length;
-	$('entApply').textContent = ent.draft ? (nd > 1 ? 'Place ' + nd : 'Place') : 'Apply';
+	$('entApply').textContent = ent.draft ? (nd > 1 ? 'Place ' + nd : 'Place') : 'Apply changes';
 	if (!$('entDel').classList.contains('armed')) $('entDel').textContent = nd === all.length ? 'Discard' : 'Delete';
 	$('entFire').disabled = nd === all.length;
 	$('entHint').style.display = editable ? '' : 'none';

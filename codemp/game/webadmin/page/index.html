@@ -141,7 +141,7 @@
 			<div class="inline"><button id="entUndo" disabled title="Takes the last change to an entity back (Ctrl+Z)">Undo</button><button id="entRedo" disabled title="Does it again (Ctrl+Y)">Redo</button>
 				<label class="hint" style="margin:0 0 0 auto" title="Placing, moving and the Shift+arrow keys go in steps of this many units">Grid <select id="grid"><option>1</option><option>2</option><option>4</option><option selected>8</option><option>16</option><option>32</option><option>64</option></select></label></div>
 			<div class="inline" id="layoutRow"><span class="hint" id="layoutState" style="margin:0"></span>
-				<button id="layoutSave" style="margin-left:auto" title="Keeps the map as it stands for every start of it: what was placed, and what of the map was changed or deleted. Without this a change of the map or a restart of the server loses it.">Save layout</button><button id="layoutForget" title="The next start of the map is the map as its file has it. What stands on the map now stays until then.">Forget</button></div>
+				<button id="layoutSave" style="margin-left:auto" title="Keeps the map as it stands for every start of it: what was placed, and what of the map was changed or deleted. Without this a change of the map or a restart of the server loses it.">Save layout</button><button id="layoutForget" title="The next start of the map is the map as its file has it. What stands on the map now stays until then.">Forget layout</button></div>
 			<div class="inline" id="draftRow" hidden><span class="hint" id="draftCount" style="margin:0"></span>
 				<button id="draftPlaceAll" class="primary" style="margin-left:auto" title="Sends every draft to the server, what is aimed at before what aims at it. All of them are one step of undo.">Place all</button><button id="draftDiscardAll" title="Throws every draft away. Nothing of them is on the server.">Discard all</button></div>
 			<div class="hint" id="entBudget" title="What is in use of what the engine has a limit for. The server refuses to place an entity that would go over one."></div>
@@ -272,7 +272,7 @@
 		<datalist id="pickNpcs"></datalist><datalist id="pickPath"></datalist><datalist id="pickClasses"></datalist><datalist id="pickNames"></datalist>
 		<div class="actions">
 			<button id="kvAdd">+ Key</button>
-			<button class="primary" id="entApply">Apply</button>
+			<button class="primary" id="entApply" title="Sends the keys as they stand here to the server. A draft is placed.">Apply changes</button>
 			<button id="entRotL" title="Turn left 15&deg;. Several selected turn together around their middle.">&#10226; 15&deg;</button>
 			<button id="entRotR" title="Turn right 15&deg;. Several selected turn together around their middle.">&#10227; 15&deg;</button>
 			<button id="entDup">Duplicate</button>
