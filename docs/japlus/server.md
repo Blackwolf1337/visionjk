@@ -101,7 +101,18 @@ Game modes and rules
 - Jedi against mercenaries: the spawn extras of levels 2 and 3, team choice by class.
 - Votes: sleep and silence votes, polls, `jp_votesDisable`, vote spam protection, `amdenyvote`.
 - Blocking walls (`g_japlus_blockwall.c`): boxes per map from `<map>_holes.cfg`, editor commands BlockWallCreate,
-  BlockWallDel, BlockWallNext, BlockWallPrev, BlockWallDraw, BlockWallWrite, BlockWallGrantEditor.
+  BlockWallDel, BlockWallNext, BlockWallPrev, BlockWallDraw, BlockWallWrite, BlockWallGrantEditor. Not as in
+  JA+: there a wall was one entity with SVF_NOCLIENT that no client knew of, so every client, the plugin too,
+  walked into it in its prediction and was set back by the server. Here the wall is an entity that only says
+  where it is and how big, and parts that do the blocking and are sent to the clients as solid boxes
+  (ET_INVISIBLE, `s.solid` packed by the module, contents still CONTENTS_PLAYERCLIP so shots pass). What a
+  client can be told of a box is square in X and Y, 510 wide and 446 high at most, so a wall is cut into parts
+  as wide as its short side, 64 at most: a long thin wall gets thicker to stay under that, and each side is
+  rounded up to an even number. No engine and no cgame change, so the unchanged game, the JA+ plugin and this
+  client predict the same boxes. Still not predicted: a spectator and a dead body (their moves ignore bodies on
+  the client), and a client shows no crosshair name through a wall. `InvisibleBlockingWall` is also a spawn
+  class (keys `origin`, `mins`, `maxs`) for the entity editor of the web panel: such a wall is kept by the layout
+  of the editor and left out by BlockWallWrite.
 - Model scale from `modelscale.cfg` (`g_japlus_scale.c`): model, eye height and saber blades, with
   `jp_allowDmgSpeedScale` also saber damage and speed.
 - Server housekeeping: welcome text and MOTD, inactivity protection in FFA (a player without input is protected

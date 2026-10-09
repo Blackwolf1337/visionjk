@@ -111,11 +111,12 @@ void WebAdmin_EntityFreed( int entityNum ) {
 	entityOriginal[entityNum] = 0;
 }
 
-// entities the editor shows: no players, temp entities or saber helpers
+// entities the editor shows: no players, temp entities or saber helpers, and of a blocking wall the wall and
+// not the parts it is made of
 static qboolean WA_ListedEntity( const gentity_t *ent ) {
 	return (qboolean)( ent->inuse && ent->s.number >= MAX_CLIENTS && ent->s.number < ENTITYNUM_WORLD && ent->classname &&
 		ent->classname[0] && ent->s.eType < ET_EVENTS && !ent->isSaberEntity && Q_stricmp( ent->classname, "tempEntity" ) &&
-		Q_stricmp( ent->classname, "bodyque" ) );
+		Q_stricmp( ent->classname, "bodyque" ) && !JP_BlockWallPart( ent ) );
 }
 
 static void WA_EntityPosition( const gentity_t *ent, vec3_t out ) {
@@ -316,6 +317,30 @@ static qboolean WA_SpawnRefused( char *err, int errSize ) {
 		} else if ( count >= 0 && atoi( value + 1 ) >= count ) {
 			Com_sprintf( err, errSize, "the map has no brush model %s, the last one is *%d", value, count - 1 );
 			refusedKey = "model";
+			return qtrue;
+		}
+	}
+
+	// a blocking wall is a box of its own too, and is made of as many entities as it takes to tell a client of it
+	if ( !Q_stricmp( classname, "InvisibleBlockingWall" ) ) {
+		const char	*lo = WA_SpawnVar( "mins" ), *hi = WA_SpawnVar( "maxs" );
+		vec3_t		mins, maxs;
+		int			parts;
+
+		if ( !lo || !hi || sscanf( lo, "%f %f %f", &mins[0], &mins[1], &mins[2] ) != 3 || sscanf( hi, "%f %f %f", &maxs[0], &maxs[1], &maxs[2] ) != 3
+			|| maxs[0] <= mins[0] || maxs[1] <= mins[1] || maxs[2] <= mins[2] ) {
+			Q_strncpyz( err, "a blocking wall needs mins and maxs with three numbers each, mins below maxs", errSize );
+			refusedKey = "maxs";
+			return qtrue;
+		}
+		parts = JP_BlockWallParts( mins, maxs );
+		if ( !parts ) {
+			Q_strncpyz( err, "this wall is too large: it is cut into boxes of 510 by 510 by 446 units at most, and 64 of them are the limit", errSize );
+			refusedKey = "maxs";
+			return qtrue;
+		}
+		if ( room < WA_ENTITY_RESERVE + parts ) {
+			Com_sprintf( err, errSize, "the map has no room for this wall: it takes %d entities, %d are left and the game needs %d for itself", parts, room, WA_ENTITY_RESERVE );
 			return qtrue;
 		}
 	}

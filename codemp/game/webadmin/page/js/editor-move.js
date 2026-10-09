@@ -47,7 +47,11 @@ for (const id of ['angP', 'angY', 'angR']) {
 		entityOp({ op: 'update', id: selectedEnt, kv: keysText(setKey(keys, 'angles', ['angP', 'angY', 'angR'].map(i => +$(i).value || 0).join(' '))) }, 'Turned');
 	});
 }
-// ---- the box of a trigger: its size in the panel, and its faces dragged with the mouse
+// ---- the box of a trigger or of a blocking wall: its size in the panel, and its faces dragged with the mouse
+
+// How wide the box of a class may be along an axis: 1 at least. That of a blocking wall an even number and 2 at
+// least: the server makes its size that anyway, so the page shows what the wall will be.
+const boxWidth = (cls, w) => BOX_WALL.test(cls) ? Math.max(2, Math.ceil(Math.round(w * 100) / 200) * 2) : Math.max(1, w);
 
 function setTriggerBox(ent, mins, maxs) {
 	const num = v => String(Math.round(v * 100) / 100), keys = ent.keys.map(k => k.slice());
@@ -59,13 +63,13 @@ for (const id of ['boxX', 'boxY', 'boxZ']) {
 		const ent = ents.get(selectedEnt), tb = ent && ent.keys ? triggerBox(ent) : null;
 		if (!tb) return;
 		// around the middle the box has, which need not be its origin
-		const half = ['boxX', 'boxY', 'boxZ'].map(i => Math.max(1, +$(i).value || 0) / 2), mid = tb.mins.map((v, i) => (v + tb.maxs[i]) / 2);
+		const half = ['boxX', 'boxY', 'boxZ'].map(i => boxWidth(ent.classname, +$(i).value || 0) / 2), mid = tb.mins.map((v, i) => (v + tb.maxs[i]) / 2);
 		setTriggerBox(ent, mid.map((v, i) => v - half[i]), mid.map((v, i) => v + half[i]));
 	});
 }
 
-// The handles of the selected trigger that is a box: one in the middle of each face, { axis, side, pos }. Only
-// of one entity: several that are selected are moved, not shaped.
+// The handles of the selected trigger that is a box, or of the selected wall: one in the middle of each face,
+// { axis, side, pos }. Only of one entity: several that are selected are moved, not shaped.
 function boxHandles() {
 	const ent = appMode === 'editor' && mode === 'world' && !picked.size ? ents.get(selectedEnt) : null, tb = ent && ent.keys ? triggerBox(ent) : null;
 	if (!tb) return [];
@@ -102,7 +106,7 @@ function drawBoxHandles() {
 // of the editor. The other faces stay, and so does the origin. The box keeps a width.
 function boxDragStart(h) {
 	const ent = ents.get(selectedEnt), tb = triggerBox(ent);
-	return { id: ent.id, axis: h.axis, side: h.side, from: h.pos.slice(), origin: ent.pos.slice(), mins: tb.mins.slice(), maxs: tb.maxs.slice() };
+	return { id: ent.id, cls: ent.classname, axis: h.axis, side: h.side, from: h.pos.slice(), origin: ent.pos.slice(), mins: tb.mins.slice(), maxs: tb.maxs.slice() };
 }
 function boxDragMove(f, ray) {
 	const w = f.from.map((v, i) => v - ray.origin[i]), b = ray.dir[f.axis], dw = ray.dir[0] * w[0] + ray.dir[1] * w[1] + ray.dir[2] * w[2];
@@ -110,8 +114,10 @@ function boxDragMove(f, ray) {
 	if (1 - b * b < 0.002) return;
 	const g = gridStep(), at = Math.round((f.from[f.axis] + (b * dw - w[f.axis]) / (1 - b * b)) / g) * g - f.origin[f.axis];
 	const mins = f.mins.slice(), maxs = f.maxs.slice();
-	if (f.side) maxs[f.axis] = Math.min(mins[f.axis] + 32768, Math.max(mins[f.axis] + 1, at));
-	else mins[f.axis] = Math.max(maxs[f.axis] - 32768, Math.min(maxs[f.axis] - 1, at));
+	// from the face across, as wide as the box of its class may be
+	const wide = Math.min(32768, boxWidth(f.cls, f.side ? at - mins[f.axis] : maxs[f.axis] - at));
+	if (f.side) maxs[f.axis] = mins[f.axis] + wide;
+	else mins[f.axis] = maxs[f.axis] - wide;
 	boxGhost = { id: f.id, mins, maxs };
 	// the size in the panel follows
 	['boxX', 'boxY', 'boxZ'].forEach((id, i) => { $(id).value = Math.round((maxs[i] - mins[i]) * 100) / 100; });
@@ -149,8 +155,8 @@ $('entFloor').addEventListener('click', () => {
 	const hit = pickGround([ent.pos[0], ent.pos[1], ent.pos[2] + 1], [0, 0, -1]);
 	if (!hit) { toast('No floor below it', false); return; }
 	// its box stands on the floor. A class without one goes where placing puts it.
-	const box = entBox(ent);
-	const lift = box ? ent.pos[2] - (box.center[2] - box.size[2] / 2) : ent.classname in PLACE_HEIGHT ? PLACE_HEIGHT[ent.classname] : 24;
+	const box = entBox(ent), cls = ent.classname.toLowerCase();
+	const lift = box ? ent.pos[2] - (box.center[2] - box.size[2] / 2) : cls in PLACE_HEIGHT ? PLACE_HEIGHT[cls] : 24;
 	moveEntity(selectedEnt, [ent.pos[0], ent.pos[1], hit[2] + lift]);
 });
 

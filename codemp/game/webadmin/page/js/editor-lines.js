@@ -1,16 +1,17 @@
 // ---- boxes and links
 
 // Not in the game as it was: the box a trigger has by its keys mins and maxs when it names no brushes of the map
-// (InitTrigger in g_trigger.c), from its origin. null: it has none.
+// (InitTrigger in g_trigger.c), from its origin. A blocking wall has its box the same way. null: it has none.
 function triggerBox(ent) {
-	if (ent.bmodel || !/^trigger_/i.test(ent.classname)) return null;
+	if (ent.bmodel || !(/^trigger_/i.test(ent.classname) || BOX_WALL.test(ent.classname))) return null;
 	const vec = key => { const v = entKey(ent, key).trim().split(/\s+/).map(Number); return v.length === 3 && v.every(isFinite) ? v : null; };
 	const mins = vec('mins'), maxs = vec('maxs');
 	return mins && maxs && maxs.every((v, i) => v > mins[i]) ? { mins, maxs } : null;
 }
 
 // The box of an entity. Of one that is made of brushes: the size of those, where the server says it is now.
-// Of a trigger that is a box: that one. Of another one: the box its class is defined with. null: none is known.
+// Of a trigger that is a box, and of a blocking wall: that one. Of another one: the box its class is defined with.
+// null: none is known.
 function entBox(ent) {
 	if (ent.bmodel) {
 		const n = /^\*(\d+)$/.exec(entKey(ent, 'model')), m = n && world && world.models[+n[1]];

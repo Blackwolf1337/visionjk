@@ -10,6 +10,8 @@ function classCategory(cls) {
 	if (cls[0] === '@') return 'Template';
 	const it = classInfo.get(cls);
 	if (it) return ITEM_TYPES[it.type] || 'Item';
+	// a class with a short name for its title says what it is by that
+	if (classLabel(cls) !== cls) return classLabel(cls);
 	const cats = [[/^npc_/i, 'NPC'], [/^info_player/, 'Spawn point'], [/^info_/, 'Info'], [/^trigger_/, 'Trigger'], [/^func_/, 'Brush'],
 		[/^target_/, 'Target'], [/^misc_model/, 'Model'], [/^misc_/, 'Misc'], [/^fx_/, 'Effect'], [/^light/, 'Light'], [/^team_/, 'Team']];
 	for (const [re, name] of cats) if (re.test(cls)) return name;
@@ -20,7 +22,7 @@ let pickerIndex = -1;
 // the templates come first: "@name" in the list and in the field
 function pickerMatches() {
 	const f = $('newClass').value.trim().toLowerCase();
-	return Object.keys(templates).sort().map(n => '@' + n).concat(allClasses).filter(c => !f || c.toLowerCase().includes(f)).slice(0, 400);
+	return Object.keys(templates).sort().map(n => '@' + n).concat(allClasses).filter(c => !f || c.toLowerCase().includes(f) || classLabel(c).toLowerCase().includes(f)).slice(0, 400);
 }
 function renderPicker() {
 	const list = pickerMatches();

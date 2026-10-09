@@ -7,7 +7,7 @@ function renderEntTools(ent) {
 		$(id).disabled = !editable;
 	});
 
-	// a trigger that is a box of its own: how big
+	// a trigger that is a box of its own, or a blocking wall: how big
 	const tb = triggerBox(ent);
 	['boxLabel', 'boxX', 'boxY', 'boxZ', 'boxHint'].forEach((id, i) => {
 		$(id).style.display = tb ? '' : 'none';

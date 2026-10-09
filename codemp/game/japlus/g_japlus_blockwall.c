@@ -19,13 +19,92 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 */
 
 // JA+ invisible blocking walls: boxes stored per map in <mapname>_holes.cfg that block players
+//
+// Not as in JA+: there a wall was one entity no client was told of (SVF_NOCLIENT), so every client walked into
+// it in its own prediction and was set back by the server. Here a wall is the entity that says where it is and
+// how big, and parts that do the blocking and that clients are told of: each client clips its moves against
+// them as it does against any solid entity, the unchanged game and the JA+ plugin too.
 #include "game/g_local.h"
 
 #define BLOCKWALL_CLASS	"InvisibleBlockingWall"
+#define BLOCKWALL_PART	"InvisibleBlockingWallPart"
 #define BLOCKWALL_MAXFILE	0x10000
+// What a client is told of a solid box that is no brush model is one number (s.solid, packed by SV_LinkEntity
+// and read back by CG_ClipMoveToEntities): half its width, the same along X and Y, how far it reaches down, and
+// how far up with 32 added, each below 256. A wall is cut into parts that fit into that.
+#define BLOCKWALL_HALF_WIDTH	255
+#define BLOCKWALL_HALF_HEIGHT	223
+#define BLOCKWALL_MAX_PARTS		64
+#define BLOCKWALL_RESERVE		64		// entities that stay for the game: G_Spawn ends the server without one
+
+typedef struct blockPlan_s {
+	vec3_t	mins, maxs;		// the box in the world, its sizes whole and even
+	int		size[3];
+	int		part[3];		// the size of a part, the same along X and Y
+	int		count[3];
+} blockPlan_t;
 
 static qboolean IsBlockWall( const gentity_t *ent ) {
 	return ent->inuse && ent->classname && !Q_stricmp( ent->classname, BLOCKWALL_CLASS );
+}
+
+qboolean JP_BlockWallPart( const gentity_t *ent ) {
+	return ent->inuse && ent->classname && !Q_stricmp( ent->classname, BLOCKWALL_PART );
+}
+
+// How the box between two corners is cut. A part is as wide as the short side of the box, and wider when that
+// makes more than BLOCKWALL_MAX_PARTS: the wall is thicker then. qfalse: too large even so.
+static qboolean PlanWall( const vec3_t p1, const vec3_t p2, blockPlan_t *plan ) {
+	int i, w;
+
+	for ( i = 0; i < 3; i++ ) {
+		int size = (int)ceilf( fabsf( p2[i] - p1[i] ) );
+
+		if ( size < 2 )
+			size = 2;
+		size += size & 1;
+		plan->size[i] = size;
+	}
+	plan->part[2] = Q_min( plan->size[2], BLOCKWALL_HALF_HEIGHT * 2 );
+	plan->count[2] = ( plan->size[2] + plan->part[2] - 1 ) / plan->part[2];
+
+	for ( w = Q_min( Q_min( plan->size[0], plan->size[1] ), BLOCKWALL_HALF_WIDTH * 2 ); ; w += 2 ) {
+		for ( i = 0; i < 2; i++ )
+			plan->count[i] = ( Q_max( plan->size[i], w ) + w - 1 ) / w;
+		if ( plan->count[0] * plan->count[1] * plan->count[2] <= BLOCKWALL_MAX_PARTS )
+			break;
+		if ( w >= BLOCKWALL_HALF_WIDTH * 2 )
+			return qfalse;
+	}
+	plan->part[0] = plan->part[1] = w;
+	for ( i = 0; i < 3; i++ ) {
+		const float mid = ( p1[i] + p2[i] ) * 0.5f;
+
+		if ( i < 2 && plan->size[i] < w )
+			plan->size[i] = w;
+		plan->mins[i] = mid - plan->size[i] / 2;
+		plan->maxs[i] = mid + plan->size[i] / 2;
+	}
+	return qtrue;
+}
+
+// how many parts a wall with this box is made of, 0 for one that is too large
+int JP_BlockWallParts( const vec3_t mins, const vec3_t maxs ) {
+	blockPlan_t plan;
+
+	return PlanWall( mins, maxs, &plan ) ? plan.count[0] * plan.count[1] * plan.count[2] : 0;
+}
+
+// the parts of a wall go with it. From G_FreeEntity.
+void JP_BlockWallFreed( gentity_t *wall ) {
+	int i;
+
+	if ( !IsBlockWall( wall ) )
+		return;
+	for ( i = MAX_CLIENTS; i < level.num_entities; i++ ) {
+		if ( g_entities[i].parent == wall && JP_BlockWallPart( &g_entities[i] ) )
+			G_FreeEntity( &g_entities[i] );
+	}
 }
 
 static void DrawBox( const vec3_t mins, const vec3_t maxs, int time ) {
@@ -45,28 +124,109 @@ static void DrawBox( const vec3_t mins, const vec3_t maxs, int time ) {
 	}
 }
 
+// One part: the entity that is in the way. Its contents are those of a clip brush, so shots pass. The server
+// packs s.solid only for SOLID and BODY and clears it for anything else when it links, so it is packed here,
+// as SV_LinkEntity would. A client makes a body of it, which stops its player all the same.
+static void SpawnPart( gentity_t *wall, const vec3_t origin, const int *size ) {
+	gentity_t	*part = G_Spawn();
+	const int	halfWidth = size[0] / 2, halfHeight = size[2] / 2;
+
+	part->classname = BLOCKWALL_PART;
+	part->parent = wall;
+	G_SetOrigin( part, origin );
+	VectorSet( part->r.mins, -halfWidth, -halfWidth, -halfHeight );
+	VectorSet( part->r.maxs, halfWidth, halfWidth, halfHeight );
+	part->r.contents = CONTENTS_PLAYERCLIP;
+	part->s.eType = ET_INVISIBLE;
+	trap->LinkEntity( (sharedEntity_t *)part );
+	part->s.solid = ( ( halfHeight + 32 ) << 16 ) | ( halfHeight << 8 ) | halfWidth;
+}
+
+// The wall between two corners in world space, with its parts. wall: the entity that is to be it (one spawned
+// from keys, which stays where its origin key puts it), NULL for a new one in the middle of the box.
+// NULL: too large, or the map has no entities left for it. An entity that was handed in is not freed.
+static gentity_t *SpawnWall( gentity_t *wall, const vec3_t p1, const vec3_t p2 ) {
+	blockPlan_t	plan;
+	vec3_t		origin;
+	int			i, x, y, z, at[3];
+
+	if ( !PlanWall( p1, p2, &plan )
+		|| WA_FreeEntities() < plan.count[0] * plan.count[1] * plan.count[2] + ( wall ? 0 : 1 ) + BLOCKWALL_RESERVE )
+		return NULL;
+
+	if ( !wall ) {
+		wall = G_Spawn();
+		VectorAdd( plan.mins, plan.maxs, origin );
+		VectorScale( origin, 0.5f, origin );
+		G_SetOrigin( wall, origin );
+	}
+	wall->classname = BLOCKWALL_CLASS;
+	VectorSubtract( plan.mins, wall->r.currentOrigin, wall->r.mins );
+	VectorSubtract( plan.maxs, wall->r.currentOrigin, wall->r.maxs );
+	// it is what the editors and the file see, it stops nobody and no client hears of it
+	wall->r.contents = 0;
+	wall->s.eType = ET_INVISIBLE;
+	wall->r.svFlags |= SVF_NOCLIENT;
+	wall->r.svFlags &= ~SVF_BROADCAST;
+	trap->LinkEntity( (sharedEntity_t *)wall );
+
+	// side by side from the low corner, the last one of a row pulled back so that it ends with the box
+	for ( z = 0; z < plan.count[2]; z++ ) {
+		for ( y = 0; y < plan.count[1]; y++ ) {
+			for ( x = 0; x < plan.count[0]; x++ ) {
+				at[0] = x; at[1] = y; at[2] = z;
+				for ( i = 0; i < 3; i++ ) {
+					const int low = Q_min( at[i] * plan.part[i], plan.size[i] - plan.part[i] );
+
+					origin[i] = plan.mins[i] + low + plan.part[i] / 2;
+				}
+				SpawnPart( wall, origin, plan.part );
+			}
+		}
+	}
+	return wall;
+}
+
 // p1 and p2 are opposite corners in world space, visible: show the box to everybody for 2 minutes
 static gentity_t *CreateBlockingHole( const vec3_t p1, const vec3_t p2, qboolean visible ) {
-	gentity_t *ent = G_Spawn();
-	vec3_t mid;
-	int i;
+	gentity_t *ent = SpawnWall( NULL, p1, p2 );
 
-	for ( i = 0; i < 3; i++ ) {
-		mid[i] = (p1[i] + p2[i]) * 0.5f;
-		ent->r.mins[i] = Q_min( p1[i], p2[i] ) - mid[i];
-		ent->r.maxs[i] = Q_max( p1[i], p2[i] ) - mid[i];
+	if ( !ent ) {
+		Com_Printf( "^5Blocking Wall: ^7too large or no entities left for it, %s %s\n", vtos( p1 ), vtos( p2 ) );
+		return NULL;
 	}
-	G_SetOrigin( ent, mid );
 	if ( visible )
 		DrawBox( p1, p2, 120000 );
-
-	ent->classname = BLOCKWALL_CLASS;
-	ent->r.contents = CONTENTS_PLAYERCLIP;
-	ent->s.eType = ET_SPECIAL;
-	ent->r.svFlags |= SVF_NOCLIENT;
-	ent->r.svFlags &= ~SVF_BROADCAST;
-	trap->LinkEntity( (sharedEntity_t *)ent );
 	return ent;
+}
+
+/*QUAKED InvisibleBlockingWall (0.75 0.3 0.9) ?
+A box that stops players and lets shots and sabers through, as the JA+ command BlockWallCreate makes one. Not
+in JA+ as a class: this is the wall for the entity editor of the web admin panel, kept by its layout and not by
+BlockWallWrite.
+"mins" the low corner of the box, from its origin
+"maxs" the high corner of the box, from its origin
+Each side is rounded up to an even number of units. A long thin wall is made of many boxes: one that would
+take more than 64 gets thicker.
+*/
+void SP_InvisibleBlockingWall( gentity_t *ent ) {
+	vec3_t mins, maxs, p1, p2;
+
+	G_SpawnVector( "mins", "0 0 0", mins );
+	G_SpawnVector( "maxs", "0 0 0", maxs );
+	if ( maxs[0] <= mins[0] || maxs[1] <= mins[1] || maxs[2] <= mins[2] ) {
+		Com_Printf( "%s at %s needs mins and maxs, mins below maxs\n", BLOCKWALL_CLASS, vtos( ent->s.origin ) );
+		G_FreeEntity( ent );
+		return;
+	}
+	VectorAdd( ent->s.origin, mins, p1 );
+	VectorAdd( ent->s.origin, maxs, p2 );
+	if ( !SpawnWall( ent, p1, p2 ) ) {
+		Com_Printf( "%s at %s is too large or the map has no entities left for it\n", BLOCKWALL_CLASS, vtos( ent->s.origin ) );
+		G_FreeEntity( ent );
+		return;
+	}
+	ent->genericValue1 = 1;		// of the editor: BlockWallWrite leaves it out
 }
 
 void JP_LoadBlockWalls( void ) {
@@ -140,7 +300,8 @@ void JP_WriteBlockWalls( void ) {
 	for ( i = 1; i < level.num_entities; i++ ) {
 		const gentity_t *ent = &g_entities[i];
 
-		if ( !IsBlockWall( ent ) )
+		// one of the editor of the web panel comes back with its layout, twice if it was in this file too
+		if ( !IsBlockWall( ent ) || ent->genericValue1 )
 			continue;
 		Com_sprintf( line, sizeof( line ), "%.0f %.0f %.0f %.0f %.0f %.0f\n",
 			ent->r.mins[0] + ent->r.currentOrigin[0], ent->r.mins[1] + ent->r.currentOrigin[1], ent->r.mins[2] + ent->r.currentOrigin[2],
@@ -236,6 +397,11 @@ void Cmd_BlockWallCreate_f( gentity_t *ent ) {
 	}
 	trap->SendServerCommand( ent - g_entities, va( "print \"^5Blocking Wall Point 2:%s\n\"", vtos( ent->client->ps.origin ) ) );
 	wall = CreateBlockingHole( jp->blockPoint1, ent->client->ps.origin, qtrue );
+	if ( !wall ) {
+		trap->SendServerCommand( ent - g_entities, "print \"^1This blocking wall is too large, or the map has no entities left for it.\n\"" );
+		VectorClear( jp->blockPoint1 );
+		return;
+	}
 	jp->blockCurrent = wall - g_entities;
 	G_LogPrintf( "BLOCKING WALL: %s created a blocking wall %s, %s\n", ent->client->pers.netname, vtos( jp->blockPoint1 ), vtos( ent->client->ps.origin ) );
 	VectorClear( jp->blockPoint1 );

@@ -1612,6 +1612,14 @@ Also changed:
   his own keys, so his own view jitters while he is held: nothing on the server can change that for a client
   that predicts. While he is dead his own command counts, which is what brings him back. Added without a test
   run.
+- New: the blocking wall of JA+ in the entity editor. `InvisibleBlockingWall` is a spawn class now (keys
+  `origin`, `mins`, `maxs`), and the page treats it like a trigger that is a box of its own: it is placed with a
+  box that stands on the floor, the Box fields and the yellow handles shape it, and the Volumes view draws it.
+  It is shown as "Blocking wall". The server makes a wall of parts that clients are told of, so that they
+  predict it (see `server.md`, the blocking walls): it rounds each side up to an even number, which the page
+  does too, refuses a box that would take more than 64 parts or more entities than the map has left, and leaves
+  the parts out of the list of the editor. A wall of the editor is kept by "Save layout" like every placed
+  entity. BlockWallWrite leaves it out, or it would come back twice. Added without a test run.
 - "Add bot" with an empty name adds `Kyle Katarn`. JKAdmin asks for `Kyle`, a bot the game does not have, so
   nothing happened there.
 - The two entity hooks pass `ent-g_entities` instead of `ent->s.number`.

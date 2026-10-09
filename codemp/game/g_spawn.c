@@ -258,6 +258,7 @@ void SP_info_podium(gentity_t *ent);
 
 void SP_info_siege_objective (gentity_t *ent);
 void SP_info_siege_radaricon (gentity_t *ent);
+void SP_InvisibleBlockingWall( gentity_t *ent );	// japlus/g_japlus_blockwall.c
 void SP_info_siege_decomplete (gentity_t *ent);
 void SP_target_siege_end (gentity_t *ent);
 void SP_misc_siege_item (gentity_t *ent);
@@ -562,6 +563,7 @@ spawn_t	spawns[] = {
 	{ "info_siege_decomplete",				SP_info_siege_decomplete },
 	{ "info_siege_objective",				SP_info_siege_objective },
 	{ "info_siege_radaricon",				SP_info_siege_radaricon },
+	{ "InvisibleBlockingWall",				SP_InvisibleBlockingWall },
 	{ "item_botroam",						SP_item_botroam },
 	{ "light",								SP_light },
 	{ "misc_ammo_floor_unit",				SP_misc_ammo_floor_unit },

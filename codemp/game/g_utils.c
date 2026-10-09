@@ -1014,6 +1014,7 @@ void G_FreeEntity( gentity_t *ed ) {
 	}
 
 	WebAdmin_EntityFreed( ed-g_entities );
+	JP_BlockWallFreed( ed );
 
 	trap->UnlinkEntity ((sharedEntity_t *)ed);		// unlink from world
 
