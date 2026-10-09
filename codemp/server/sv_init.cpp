@@ -5,6 +5,7 @@ Copyright (C) 2000 - 2013, Raven Software, Inc.
 Copyright (C) 2001 - 2013, Activision, Inc.
 Copyright (C) 2005 - 2015, ioquake3 contributors
 Copyright (C) 2013 - 2015, OpenJK contributors
+Copyright (C) 2026, VisionJK contributors
 
 This file is part of the OpenJK source code.
 
@@ -1032,6 +1033,11 @@ void SV_Init (void) {
 	// create a heap for Ghoul2 to use for game side model vertex transforms used in collision detection
 #ifdef DEDICATED
 	SV_InitRef();
+
+	// the web host: the page of the client that runs in a browser, its files and its packets (sv_webPort).
+	// It is started here and not with a map, and ends with the process (NET_Shutdown): no change of map and
+	// no end of the server may cut a download or the socket of a page.
+	SV_WebInit();
 #endif
 }
 

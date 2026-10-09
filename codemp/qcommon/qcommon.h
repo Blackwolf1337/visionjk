@@ -709,6 +709,19 @@ void FS_Rename( const char *from, const char *to );
 qboolean FS_WriteToTemporaryFile( const void *data, size_t dataLength, char **tempFileName );
 const char *FS_MV_VerifyDownloadPath(const char *pk3file);
 
+#ifdef DEDICATED
+// a pk3 file of the search path, for the web host of the dedicated server (codemp/server/web). The texts are
+// those of the search path and are gone with the next restart of the file system.
+typedef struct fsPakInfo_s {
+	const char	*gameDir;		// base
+	const char	*baseName;		// assets0
+	const char	*fileName;		// the file itself, with its path
+	int			checksum;
+} fsPakInfo_t;
+
+int FS_PakInfo( fsPakInfo_t *list, int max );
+#endif
+
 
 /*
 ==============================================================
@@ -988,6 +1001,13 @@ void SV_Frame( int msec );
 void SV_PacketEvent( const netadr_t *from, msg_t *msg );
 int SV_FrameMsec( void );
 qboolean SV_GameCommand( void );
+
+#ifdef DEDICATED
+// the web host of the dedicated server (codemp/server/web): the page of the client that runs in a browser,
+// the pk3 files it loads, and its packets, which come over a WebSocket and not over UDP
+void SV_WebInit( void );
+void SV_WebShutdown( void );
+#endif
 
 
 //

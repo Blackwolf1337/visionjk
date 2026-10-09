@@ -25,60 +25,16 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include "qcommon/qcommon.h"
 
+#include "qcommon/net_local.h"
+
 #ifdef _WIN32
-	#include <winsock.h>
-
-	typedef int socklen_t;
-
-	#undef EAGAIN
-	#undef EADDRNOTAVAIL
-	#undef EAFNOSUPPORT
-	#undef ECONNRESET
-
-	#define EAGAIN WSAEWOULDBLOCK
-	#define EADDRNOTAVAIL WSAEADDRNOTAVAIL
-	#define EAFNOSUPPORT WSAEAFNOSUPPORT
-	#define ECONNRESET WSAECONNRESET
-
-	#define socketError WSAGetLastError( )
-
 	static WSADATA	winsockdata;
 	static qboolean	winsockInitialized = qfalse;
-#else
-
-#if MAC_OS_X_VERSION_MIN_REQUIRED == 1020
-        // needed for socklen_t on OSX 10.2
-#        define _BSD_SOCKLEN_T_
-#endif
-
-#include <arpa/inet.h>
-#include <errno.h>
-#include <netdb.h>
-#include <netinet/in.h>
-#include <sys/ioctl.h>
-#include <sys/socket.h>
-#include <sys/types.h>
-#include <sys/time.h>
-#include <unistd.h>
-
-#ifdef MACOS_X
+#elif defined(MACOS_X)
 #include <sys/sockio.h>
 #include <net/if.h>
 #include <net/if_types.h>
 #include <net/if_dl.h>         // for 'struct sockaddr_dl'
-#endif
-
-#ifdef __sun
-#include <sys/filio.h>
-#endif
-
-typedef int SOCKET;
-#define INVALID_SOCKET                -1
-#define SOCKET_ERROR                        -1
-#define closesocket                                close
-#define ioctlsocket                                ioctl
-#define socketError                                errno
-
 #endif
 
 static qboolean usingSocks = qfalse;
@@ -985,6 +941,13 @@ NET_Shutdown
 ====================
 */
 void NET_Shutdown( void ) {
+#ifdef DEDICATED
+	// The web host ends with the process and with nothing before it. SV_Shutdown is not its end: the server
+	// also goes down for a killserver, a dropped map or the wrap of its time and comes up again in the same
+	// process, which must not cut the downloads and the sockets of the pages.
+	SV_WebShutdown();
+#endif
+
 	if ( !networkingEnabled ) {
 		return;
 	}
@@ -1043,8 +1006,12 @@ sleeps msec or until net socket is ready
 void NET_Sleep( int msec ) {
 	struct timeval timeout;
 	fd_set	fdset;
+	fd_set	*writeSet = NULL;
 	int retval;
 	SOCKET highestfd = INVALID_SOCKET;
+#ifdef DEDICATED
+	fd_set	webWriteSet;
+#endif
 
 	if (msec < 0)
 		msec = 0;
@@ -1054,6 +1021,15 @@ void NET_Sleep( int msec ) {
 		FD_SET(ip_socket, &fdset); // network socket
 		highestfd = ip_socket;
 	}
+
+#ifdef DEDICATED
+	// The sockets of the web host (codemp/server/web) wait here too: the ones it reads from next to the UDP
+	// socket, the ones it has something to send on in a set of their own. A packet of a web peer is run and a
+	// file goes on as soon as its socket is ready, not once in a server frame.
+	FD_ZERO(&webWriteSet);
+	SV_WebFDSet(&fdset, &webWriteSet, &highestfd);
+	writeSet = &webWriteSet;
+#endif
 
 #ifdef _WIN32
 	if(highestfd == INVALID_SOCKET)
@@ -1068,12 +1044,18 @@ void NET_Sleep( int msec ) {
 	timeout.tv_sec = msec/1000;
 	timeout.tv_usec = (msec%1000)*1000;
 
-	retval = select(highestfd + 1, &fdset, NULL, NULL, &timeout);
+	retval = select(highestfd + 1, &fdset, writeSet, NULL, &timeout);
 
 	if(retval == SOCKET_ERROR)
 		Com_Printf("Warning: select() syscall failed: %s\n", NET_ErrorString());
 	else if(retval > 0)
 		NET_Event(&fdset);
+
+#ifdef DEDICATED
+	// also when nothing is ready: it looks at its timeouts
+	if(retval != SOCKET_ERROR)
+		SV_WebEvent(&fdset, &webWriteSet);
+#endif
 }
 
 /*

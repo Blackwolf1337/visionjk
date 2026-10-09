@@ -1,0 +1,128 @@
+/*
+===========================================================================
+Copyright (C) 2026, VisionJK contributors
+
+This file is part of the VisionJK source code.
+
+VisionJK is free software; you can redistribute it and/or modify it
+under the terms of the GNU General Public License version 2 as
+published by the Free Software Foundation.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, see <http://www.gnu.org/licenses/>.
+===========================================================================
+*/
+
+/*
+sv_web_local.h -- what the files of the web host of the dedicated server share. Not from OpenJK and not from JA+.
+
+The client also runs in a browser (WebAssembly), and a page can not send UDP. So the dedicated server listens
+on a TCP port of its own (sv_webPort) and is to a browser what it is to a client over UDP:
+
+  the page         GET /               index.html and the files next to it, from the folder sv_webRoot
+  the game files   GET /manifest.json  the pk3 files of the search path of the server, with size and checksum
+                   GET /pk3/<path>     one of them, whole or a part of it (Range)
+
+It is inside the server and no program in front of it, so the server knows the address a page plays from.
+Nothing of it asks for a login (the files are the ones the server hands to every client anyway) and every
+byte that comes in is read as one of an attacker: fixed buffers, a fixed table, every length asked first.
+
+  sv_web.cpp       the listener, the connections, their buffers and timeouts, what NET_Sleep calls
+  sv_web_http.cpp  a request, the files, the manifest
+*/
+
+#pragma once
+
+#include "server/server.h"
+#include "qcommon/net_local.h"
+#include "web/web_http.h"
+
+#include <stdio.h>
+
+// Winsock waits on 64 sockets in a set (FD_SETSIZE), and the one NET_Sleep reads has the UDP socket and the
+// listener in it too. So the table is a little smaller than 64 on every system.
+#define SV_WEB_MAX_CONNECTIONS	60
+#define SV_WEB_MAX_TRANSFERS	32			// of them hand out a file at once, the rest stays free for requests
+#define SV_WEB_MAX_PER_ADDRESS	8			// a browser opens 6 to a host
+#define SV_WEB_MAX_ACCEPTS		16			// new connections taken in one wake-up
+#define SV_WEB_IN_SIZE			16384		// the head of a request
+#define SV_WEB_OUT_SIZE			65536		// what waits to be sent, and the piece a file is read in
+#define SV_WEB_MAX_TARGET		1024		// the address in a request
+
+// What is read of files in one wake-up of NET_Sleep, for all connections. A wake-up comes as soon as a socket
+// takes more, so this does not slow a transfer down: it is the longest the game waits for the disk at a time.
+#define SV_WEB_WAKE_BYTES		( 4 * SV_WEB_OUT_SIZE )
+
+#define SV_WEB_IDLE_MSEC		15000		// a connection has this long to send a request
+#define SV_WEB_STALL_MSEC		30000		// and an answer is given up when the other side takes nothing for this long
+#define SV_WEB_SWEEP_MSEC		1000		// how often the timeouts are looked at
+#define SV_WEB_AWAY_MSEC		5000		// the server itself did not look for longer (a map loaded): nobody timed out
+#define SV_WEB_LISTEN_WAIT_MSEC	250			// the listener is left alone for this long after it failed
+
+#define SV_WEB_MAX_PACKS		512			// pk3 files in the manifest
+#define SV_WEB_MANIFEST_MSEC	2000		// the manifest is not put together more often than this
+
+// a connection that was closed by the other side must not end the process with SIGPIPE
+#ifdef MSG_NOSIGNAL
+	#define SV_WEB_SEND_FLAGS	MSG_NOSIGNAL
+#else
+	#define SV_WEB_SEND_FLAGS	0
+#endif
+
+typedef enum {
+	WEB_FREE,
+	WEB_REQUEST,				// waits for the head of a request
+	WEB_RESPONSE,				// sends an answer, the body of it is read while it goes out
+	WEB_CLOSING					// sends what is left and ends
+} webState_t;
+
+typedef enum {
+	WEB_BODY_NONE,
+	WEB_BODY_FILE,
+	WEB_BODY_MANIFEST
+} webBody_t;
+
+typedef struct webConnection_s {
+	webState_t	state;
+	SOCKET		sock;
+	netadr_t	adr;			// NA_WEB: the address and the port of the other side
+	qboolean	drop;			// closed at the next safe place, nothing is read or sent any more
+	int			lastActive;		// Sys_Milliseconds() when it last got on
+
+	// the answer that is being sent
+	qboolean	keepAlive;		// another request may follow it
+	qboolean	headOnly;		// HEAD: the head of the answer without its body
+	webBody_t	body;
+	FILE		*file;
+	int64_t		bodyLeft;		// what of the body is not in the out buffer yet
+	int			bodyAt;			// WEB_BODY_MANIFEST: how far into the text
+	int			bodyGen;		// and which text it was
+
+	int			inLen;
+	int			outLen;
+	int			outSent;
+
+	// the buffers come last: what is in front of them is cleared for a new connection
+	byte		in[SV_WEB_IN_SIZE];
+	byte		out[SV_WEB_OUT_SIZE];
+} webConnection_t;
+
+extern cvar_t	*sv_webRoot;
+
+// sv_web.cpp
+void SV_WebDrop( webConnection_t *c );
+byte *SV_WebOutRoom( webConnection_t *c, int len );
+int SV_WebTransfers( void );
+
+// sv_web_http.cpp
+int SV_WebParseRange( const char *value, int64_t size, int64_t *first, int64_t *last );
+qboolean SV_WebDecodePath( const char *target, char *out, int outSize );
+void SV_WebError( webConnection_t *c, int status, const char *statusText, const char *headers );
+void SV_WebHttpRequest( webConnection_t *c, int headLen );
+int SV_WebBodyMore( webConnection_t *c, int max );
+void SV_WebBodyEnd( webConnection_t *c );

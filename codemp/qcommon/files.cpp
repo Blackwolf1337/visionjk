@@ -3734,6 +3734,37 @@ const char *FS_LoadedPakNames( void ) {
 	return info;
 }
 
+#ifdef DEDICATED
+/*
+=====================
+FS_PakInfo
+
+The pk3 files of the search path in its order, at most max of them: the game folder of each, its name without
+the extension, the file it is, and its checksum. Returns how many. The web host of the dedicated server lists
+them for the client that runs in a browser and hands them out (codemp/server/web/sv_web_http.cpp).
+=====================
+*/
+int FS_PakInfo( fsPakInfo_t *list, int max ) {
+	searchpath_t	*search;
+	int				count = 0;
+
+	for ( search = fs_searchpaths ; search && count < max ; search = search->next ) {
+		// is the element a pak file?
+		if ( !search->pack ) {
+			continue;
+		}
+
+		list[count].gameDir = search->pack->pakGamename;
+		list[count].baseName = search->pack->pakBasename;
+		list[count].fileName = search->pack->pakFilename;
+		list[count].checksum = search->pack->checksum;
+		count++;
+	}
+
+	return count;
+}
+#endif
+
 /*
 =====================
 FS_LoadedPakPureChecksums

@@ -20,6 +20,16 @@
 # front of the add_executable of the server. The folders the files are found in (codemp and shared) are
 # among the include directories of the server already.
 
+set(MPDedWebFiles
+	"${MPDir}/server/web/sv_web_local.h"
+	"${MPDir}/server/web/sv_web.cpp"
+	"${MPDir}/server/web/sv_web_http.cpp"
+	# the sockets of the system, which net_ip.cpp and the web host name alike
+	"${MPDir}/qcommon/net_local.h"
+	)
+source_group("server/web" FILES ${MPDedWebFiles})
+set(MPDedFiles ${MPDedFiles} ${MPDedWebFiles})
+
 # what it reads a request with, the web admin panel of the game module is built with the same files
 # (codemp/game/CMakeLists.txt)
 set(MPDedSharedWebFiles
