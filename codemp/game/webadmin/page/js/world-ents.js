@@ -102,8 +102,11 @@ function mapEntsFor(gametype) {
 // visibility has a row of bits for every cluster: the clusters that are seen from it.
 function bspTree(buffer, planes) {
 	const dv = new DataView(buffer), lump = n => new Uint8Array(buffer, dv.getInt32(8 + n * 8, true), Math.max(0, dv.getInt32(12 + n * 8, true))).slice();
-	const nodes = lump(3), leafs = lump(4), vis = lump(16), head = new DataView(vis.buffer);
+	const nodes = lump(3), leafs = lump(4), leafBrushes = lump(6), vis = lump(16), head = new DataView(vis.buffer);
+	// leafBrushes: the brushes of every leaf one after the other, for what asks what is at a point or along a line
+	// (a leaf says the first of its brushes there and how many, the eleventh and twelfth of its twelve numbers)
 	return { planes, nodes: new Int32Array(nodes.buffer, 0, nodes.length >> 2), leafs: new Int32Array(leafs.buffer, 0, leafs.length >> 2),
+		leafBrushes: new Int32Array(leafBrushes.buffer, 0, leafBrushes.length >> 2),
 		clusters: vis.length >= 8 ? head.getInt32(0, true) : 0, rowBytes: vis.length >= 8 ? head.getInt32(4, true) : 0, vis: vis.subarray(8) };
 }
 

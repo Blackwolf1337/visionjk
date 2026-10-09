@@ -377,6 +377,13 @@ Also changed:
   in files of its own now (`js/player-draw.js`, `items.js`, `movers.js`, `marks.js`, `trace.js`,
   `dlights.js`, `sabers.js`, `player-fx.js`, `g2-angles.js`), most of them empty until those steps.
   `tools/panelshot/steps_entfx.js` (5 checks).
+- Fixed: one error while a frame was drawn ended the picture for good. The frame that threw never asked for
+  the next one, so the map stood still until the page was loaded again. A frame is now drawn inside a guard
+  (`frame` around `drawFrame` in `js/frame.js`): the error is told once on the console, the state of the
+  graphics card is put back, and the next frame comes. Found on mp/siege_hoth: since a vehicle is told with
+  its real model, the page loads the skeleton of the walker and reads past its animation file in every frame
+  (`glaBone`). That error itself is not fixed with this: what a frame draws after the NPCs is missing there
+  until it is.
 - Fixed: an undo could reach the wrong entity. The game uses the number of an entity again, and the history
   of the editor names an entity by its number: an item that is placed inside a wall is freed by the game two
   frames after the panel said "Placed", and an undo a few seconds later deleted whatever had that number by

@@ -31,6 +31,7 @@ order of the template, so a file may only use there what a file before it has ma
 | `js/movers.js` | the model a mover draws besides its brushes |
 | `js/trace.js` | a line through the map: where it hits first |
 | `js/marks.js` | marks on the map: shadows, what a shot or a blade leaves |
+| `js/weather.js` | the weather of a map: snow, rain, dust |
 | `js/editor-world.js` | the entity list of the World tab |
 | `js/editor-props.js` | the Models tab |
 | `js/config.js` | the server config |

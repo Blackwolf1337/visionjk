@@ -197,7 +197,24 @@ function savePicture() {
 // A frame: the camera, the map, what stands and moves on it, what the editor lays over it, the labels.
 // the time of the frame that is drawn: for what animates by a shader and is not handed the time
 let frameNow = 0;
+// One part of a frame that fails (a model the page reads wrongly) must not end the picture for good: it did,
+// because the frame that threw never asked for the next one. The error is told once on the console, what the
+// frame had set of the state of the graphics card is put back, and the next frame comes all the same.
+const frameErrors = new Set();
 function frame(now) {
+	try {
+		drawFrame(now);
+	} catch (e) {
+		const text = String(e && e.stack || e);
+		if (!frameErrors.has(text)) { frameErrors.add(text); console.error('a frame failed: ' + text); }
+		gl.bindVertexArray(null);
+		gl.depthMask(true); gl.depthFunc(gl.LESS); gl.depthRange(0, 1);
+		gl.colorMask(true, true, true, true);
+		gl.disable(gl.BLEND); gl.disable(gl.CULL_FACE); gl.disable(gl.POLYGON_OFFSET_FILL);
+	}
+	requestAnimationFrame(frame);
+}
+function drawFrame(now) {
 	const dt = Math.min(0.1, (now - lastFrame) / 1000);
 	lastFrame = now;
 
@@ -217,7 +234,7 @@ function frame(now) {
 	// The sky of a map that was there before the shader scripts is settled once they have come, and the curved
 	// surfaces take the level of detail of where the camera is now (RB_SurfaceGrid).
 	if (world) { if (settleSky(world)) prepareScripted(world); updateGridLod(now, gameLook() && !!world.scripted); }
-	if (refMasking && world) { drawWorldMask(now); requestAnimationFrame(frame); return; }
+	if (refMasking && world) { drawWorldMask(now); return; }
 	// the lights of this frame, before anything they fall on is drawn
 	gatherDlights(now);
 
@@ -271,6 +288,8 @@ function frame(now) {
 	// the effects of the game, over what is see-through of the map and under the glow of blades and bolts
 	drawEffects(now);
 	drawBlades();
+	// the weather comes when all of the scene is drawn (RB_RenderWorldEffects)
+	if (scripted) drawWeather(now);
 	if (view.id >= 0 && players.has(view.id)) {
 		const d = players.get(view.id).data;
 		drawViewWeapon(d);
@@ -281,8 +300,6 @@ function frame(now) {
 	placeEntLabels();
 
 	savePicture();
-
-	requestAnimationFrame(frame);
 }
 let wantShot = false;
 $('shotBtn').addEventListener('click', () => { wantShot = true; });
