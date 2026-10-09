@@ -384,9 +384,10 @@ function hudTime() {
 	return refCam ? h.now : h.now + Math.max(0, Math.min(2 * pollInterval, performance.now() - lastPoll));
 }
 
-// level.sortedClients[0] and what CalculateRanks puts into CS_SCORES1 (the leader the top right shows). The feed
-// does not have the two config strings, so the order of SortRanks is made here from what the feed has of the
-// players: who plays before who watches, then by score, and who was first stays first among equals.
+// level.sortedClients[0] and what CalculateRanks puts into CS_SCORES1 (the leader the top right shows): the state
+// has them as the clients are told them (leader, scores1, scores2). For a game module that does not send them the
+// order of SortRanks is made here from the players: who plays before who watches, then by score, and who was
+// first stays first among equals.
 function hudRanks() {
 	const list = [...players.values()].map(p => p.data).sort((a, b) => a.id - b.id);
 	const rank = d => (d.connected === false ? 2 : d.team === 'spectator' ? 1 : 0);

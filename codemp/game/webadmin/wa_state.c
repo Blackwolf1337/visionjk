@@ -856,6 +856,16 @@ void WA_ApiState( waConnection_t *c, const char *query ) {
 	// The time of the game as the clients have it (cg.time runs after it): what a client draws by the time (the
 	// bob and the spin of an item) is in step with it only by this, "time" below counts from the start of the map.
 	WA_BufPrintf( &b, ",\"now\":%d", level.time );
+	{
+		// What the clients are told of the ranking, as they are told it (CalculateRanks): who leads (the winner of
+		// the last duel in a duel) and the two best scores, or the scores of red and blue. The HUD shows them.
+		char leader[16], scores1[16], scores2[16];
+
+		trap->GetConfigstring( CS_CLIENT_DUELWINNER, leader, sizeof( leader ) );
+		trap->GetConfigstring( CS_SCORES1, scores1, sizeof( scores1 ) );
+		trap->GetConfigstring( CS_SCORES2, scores2, sizeof( scores2 ) );
+		WA_BufPrintf( &b, ",\"leader\":%d,\"scores1\":%d,\"scores2\":%d", leader[0] ? atoi( leader ) : -1, atoi( scores1 ), atoi( scores2 ) );
+	}
 	WA_BufPrintf( &b, ",\"gametype\":%d,\"gametypeName\":\"%s\",\"time\":%d,\"timelimit\":%d,\"fraglimit\":%d,\"capturelimit\":%d,"
 		"\"scores\":{\"red\":%d,\"blue\":%d},\"maxClients\":%d",
 		level.gametype, BG_GetGametypeString( level.gametype ), level.time - level.startTime, timelimit.integer,
