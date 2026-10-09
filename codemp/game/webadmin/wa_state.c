@@ -24,6 +24,47 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include "game/webadmin/wa_local.h"
 
+/*
+==============================================================================
+
+When an animation began, as a client has it
+
+A client starts the animation of the legs or of the torso of a player anew in the frame it draws after a snapshot
+showed another animation or another flip bit in his entity (CG_RunLerpFrame). The skeleton the game keeps of him
+for its own hit tests is not started at those times: G_UpdateClientAnims runs with the saber code only, and a
+loop that was never set anew there runs on from wherever it was. So the frame of that skeleton is not the frame
+a client shows, by any part of a loop. What a snapshot would show is looked at once at the end of every frame.
+
+==============================================================================
+*/
+
+static struct {
+	int		legsAnim, torsoAnim;
+	int		legsFlip, torsoFlip;
+	int		legsTime, torsoTime;		// level.time of the frame that changed them
+} wa_anims[MAX_CLIENTS];
+
+void WA_AnimsFrame( void ) {
+	int i;
+
+	for ( i = 0; i < level.maxclients && i < MAX_CLIENTS; i++ ) {
+		const gentity_t *ent = &g_entities[i];
+
+		if ( !ent->inuse || !ent->client )
+			continue;
+		if ( wa_anims[i].legsAnim != ent->s.legsAnim || wa_anims[i].legsFlip != ent->s.legsFlip ) {
+			wa_anims[i].legsAnim = ent->s.legsAnim;
+			wa_anims[i].legsFlip = ent->s.legsFlip;
+			wa_anims[i].legsTime = level.time;
+		}
+		if ( wa_anims[i].torsoAnim != ent->s.torsoAnim || wa_anims[i].torsoFlip != ent->s.torsoFlip ) {
+			wa_anims[i].torsoAnim = ent->s.torsoAnim;
+			wa_anims[i].torsoFlip = ent->s.torsoFlip;
+			wa_anims[i].torsoTime = level.time;
+		}
+	}
+}
+
 const char *WA_TeamName( team_t team ) {
 	switch ( team ) {
 	case TEAM_RED: return "red";
@@ -225,10 +266,12 @@ static void WA_StatePlayerChanges( waBuffer_t *b, int clientNum, unsigned rev, q
 	// the flags are the ones of his entity: what the clients are sent of him (BG_PlayerStateToEntityState)
 	// the last two: for how many msec more he is electrified (electrifyTime, which the clients have as
 	// emplacedOwner), and activeForcePass (the level of the lightning he casts, or of his drain plus three)
-	WA_BufPrintf( b, "%.1f,%.2f,%.1f,%.2f,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d],\"b\":[",
+	// and for how long a client has had his legs and his torso in the animation they are in (WA_AnimsFrame)
+	WA_BufPrintf( b, "%.1f,%.2f,%.1f,%.2f,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d],\"b\":[",
 		legsFrame, legsSpeed, torsoFrame, torsoSpeed, ent->s.eFlags, ent->s.eFlags2, ent->s.powerups, ps->fd.forcePowersActive,
 		ps->weaponstate, ps->saberMove, ( ps->legsFlip ? 1 : 0 ) | ( ps->torsoFlip ? 2 : 0 ), ps->groundEntityNum,
-		ps->brokenLimbs, ps->fd.saberAnimLevel, ps->movementDir, Q_max( 0, ps->electrifyTime - level.time ), ps->activeForcePass );
+		ps->brokenLimbs, ps->fd.saberAnimLevel, ps->movementDir, Q_max( 0, ps->electrifyTime - level.time ), ps->activeForcePass,
+		level.time - wa_anims[clientNum].legsTime, level.time - wa_anims[clientNum].torsoTime );
 	for ( s2 = 0; s2 < MAX_SABERS; s2++ ) {
 		const saberInfo_t *saber = &cl->saber[s2];
 
@@ -260,7 +303,8 @@ static void WA_StatePlayerChanges( waBuffer_t *b, int clientNum, unsigned rev, q
 //        stands on (ENTITYNUM_NONE in the air), brokenLimbs, the saber style he fights in, and which of eight
 //        ways he moves in against where he looks (movementDir: BG_G2PlayerAngles turns his legs by it),
 //        for how many msec more he is electrified (0: he is not), and activeForcePass (1 to 3: he casts
-//        lightning of that level, 4 to 6: he drains at that level less three)
+//        lightning of that level, 4 to 6: he drains at that level less three),
+//        and how many msec ago the animation of his legs and the one of his torso began for a client
 //   "b": for every blade of his sabers its length now, where it starts (3) and the way it points (3)
 // A player was about a kilobyte ten times a second before, he is about 220 bytes now.
 static void WA_StatePlayers( waBuffer_t *b, const char *query ) {
@@ -851,7 +895,11 @@ static void WA_StateEvents( waBuffer_t *b, const char *query ) {
 // &view=<client>: where that client looks from. Not for the page as it is used: for the comparison of its
 // picture with the one a client of the game draws from the same spot (tools/panelshot/steps_ref.js), which
 // reads the eye back instead of working it out, because a spectator that is put somewhere drifts on.
-//   "view": origin, pitch yaw roll, viewheight, pm_type, level.time, velocity
+//   "view": origin, pitch yaw roll, viewheight, pm_type, level.time, velocity, commandTime
+// commandTime is the time of the last move of that client the game ran, which is the time the client drew its
+// last frame at (CL_FinishMove puts cl.serverTime into every move). A client draws the world a snapshot or two
+// behind the server, and stays that far behind for as long as the timescale is neither 0 nor 1
+// (CL_AdjustTimeDelta): the comparison waits until the client has come to the moment the page shows.
 static void WA_StateView( waBuffer_t *b, const char *query ) {
 	char			value[8];
 	int				n;
@@ -863,9 +911,9 @@ static void WA_StateView( waBuffer_t *b, const char *query ) {
 	if ( n < 0 || n >= level.maxclients || level.clients[n].pers.connected != CON_CONNECTED )
 		return;
 	cl = &level.clients[n];
-	WA_BufPrintf( b, ",\"view\":[%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%d,%d,%d,%.2f,%.2f,%.2f]",
+	WA_BufPrintf( b, ",\"view\":[%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%d,%d,%d,%.2f,%.2f,%.2f,%d]",
 		cl->ps.origin[0], cl->ps.origin[1], cl->ps.origin[2], cl->ps.viewangles[PITCH], cl->ps.viewangles[YAW], cl->ps.viewangles[ROLL],
-		cl->ps.viewheight, cl->ps.pm_type, level.time, cl->ps.velocity[0], cl->ps.velocity[1], cl->ps.velocity[2] );
+		cl->ps.viewheight, cl->ps.pm_type, level.time, cl->ps.velocity[0], cl->ps.velocity[1], cl->ps.velocity[2], cl->ps.commandTime );
 }
 
 // one array of whole numbers of a player state, as a part of an object

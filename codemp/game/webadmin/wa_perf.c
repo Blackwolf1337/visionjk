@@ -114,9 +114,11 @@ void WA_PerfPanelDone( void ) {
 void WebAdmin_FrameEnd( void ) {
 	double took;
 
-	// what the frame made of events, for the pages (wa_state.c)
-	if ( WA_Running() )
+	// what the frame made of events, and which animations it began, for the pages (wa_state.c)
+	if ( WA_Running() ) {
 		WA_EventsFrame();
+		WA_AnimsFrame();
+	}
 	if ( !perfInFrame )
 		return;
 	perfInFrame = qfalse;

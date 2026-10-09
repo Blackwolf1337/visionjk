@@ -78,11 +78,19 @@ function plSetLerpFrameAnimation(inst, cent, lf, newAnimation, animSpeedMult, to
 }
 
 // CG_RunLerpFrame: the animation is set anew when it is another one, when the same one starts again (its flip
-// bit turned), or when it has to run at another speed (CG_FirstAnimFrame)
+// bit turned), or when it has to run at another speed (CG_FirstAnimFrame).
+// A client does that in the frame it draws after the snapshot that showed the change, and the page hears of a
+// change a poll or more later. So the server says when the animation of the legs and of the torso last changed
+// in his entity (cent.legsStart, cent.torsoStart, a time of the game): the animation is set as of then, and set
+// anew whenever that time is another one, which also catches a change and a change back between two polls.
+// Without it (an older game module, an NPC) the bones are put to the frames of the skeleton of the server
+// afterwards (plSyncBone), which is not started when a client starts his: its loops are in another place.
 function plRunLerpFrame(inst, cent, lf, flipState, newAnimation, speedScale, torsoOnly, time) {
-	if (newAnimation !== lf.animationNumber || cent.brokenLimbs !== inst.ci.brokenLimbs || lf.lastFlip !== flipState || !lf.animation
-		|| (torsoOnly ? lf.animationTorsoSpeed : lf.animationSpeed) !== speedScale) {
-		plSetLerpFrameAnimation(inst, cent, lf, newAnimation, speedScale, torsoOnly, flipState, time);
+	const began = torsoOnly ? cent.torsoStart : cent.legsStart;
+	const another = newAnimation !== lf.animationNumber || lf.lastFlip !== flipState || !lf.animation || (began !== undefined && began !== lf.began);
+	if (another || cent.brokenLimbs !== inst.ci.brokenLimbs || (torsoOnly ? lf.animationTorsoSpeed : lf.animationSpeed) !== speedScale) {
+		plSetLerpFrameAnimation(inst, cent, lf, newAnimation, speedScale, torsoOnly, flipState, another && began !== undefined ? Math.min(time, began) : time);
+		lf.began = began;
 	}
 	lf.lastFlip = flipState;
 }
@@ -129,8 +137,9 @@ function plPose(inst, cent, time, wall) {
 	cent.lerpOrigin = origin;
 	const legsAngles = g2PlayerAngles(inst, cent, time, frametime);
 	plPlayerAnimation(inst, cent, time);
-	// with a new poll: the frames of the server (none there: on from what the bones have)
-	if (inst.synced !== lastPoll) {
+	// with a new poll: the frames of the server (none there: on from what the bones have). Not when the server
+	// says when a client began his animations: then they run as his do (plRunLerpFrame).
+	if (inst.synced !== lastPoll && (cent.legsStart === undefined || cent.torsoStart === undefined)) {
 		inst.synced = lastPoll;
 		const at = state ? state.time || 0 : 0;
 		inst.fed = [plSyncBone(inst, 'model_root', cent.legsAnim, cent.legsFrame, cent.legsSpeed, at),
@@ -153,7 +162,10 @@ function plPlayerCent(id, p, k) {
 		eFlags: d.eFlags ?? (d.dead ? PG.EF_DEAD : 0), eFlags2: d.eFlags2 || 0, powerups: d.powerups || 0, forceActive: d.forceActive || 0,
 		saberMove: d.saberMove || 0, ground: d.ground ?? PG.ENTITYNUM_WORLD, brokenLimbs: d.brokenLimbs || 0, saberLevel: d.saberLevel || 0, moveDir: d.moveDir,
 		legsFrame: d.legsFrame ?? -1, legsSpeed: d.legsSpeed || 0, torsoFrame: d.torsoFrame ?? -1, torsoSpeed: d.torsoSpeed || 0, scale: (d.scale || 100) / 100,
-		electrify: d.electrify || 0, forcePass: d.forcePass || 0 };
+		electrify: d.electrify || 0, forcePass: d.forcePass || 0,
+		// when a client began the animations he is in, by the time of the game (undefined: the server does not say)
+		legsStart: d.legsSince === undefined || !state ? undefined : (state.time || 0) - d.legsSince,
+		torsoStart: d.torsoSince === undefined || !state ? undefined : (state.time || 0) - d.torsoSince };
 }
 
 // An NPC of the state the same way. The state has no place before for it: the instance keeps where it was at the

@@ -685,6 +685,25 @@ Also changed:
   for, and `plDrawModel` in `js/player-fx.js` draws the shell. Found in the pairs of a fight (see below), where
   the game had the shell on both bots and the page on neither; with it the page has it too. Not drawn: the
   forks of lightning between his limbs (`CG_ForceElectrocution`). Two more checks in `steps_players.js` (38).
+- Fixed: the animations of a player begin when a client begins them. The page put the legs and the torso
+  of a player at the frames the server has for his skeleton (`legsFrame`, `torsoFrame` of his row). That
+  skeleton is the one the game keeps for its own hit tests, and it is not started when a client starts his:
+  `G_UpdateClientAnims` runs with the saber code only, and a loop that is never set anew there runs on from
+  wherever it was. Measured in pairs of one moment with the game: a bot ran in the right place with its legs
+  in another part of the stride, in one case 17 of the 26 frames of the run off (the client log,
+  `cg_debugAnim -1`, says when the client began each animation; note that its lines have TORSO and LEGS the
+  wrong way round). A client begins an animation in the frame it draws after the snapshot that showed
+  another animation or another flip bit in the entity (`CG_RunLerpFrame`). So the server looks at the
+  entities of the players at the end of every frame (`WA_AnimsFrame` in `wa_state.c`) and says how many msec
+  ago the legs and the torso changed: the 39th and 40th number of a player's row. The page begins the
+  animation as of then, with the rules of the client it already had (`plRunLerpFrame`,
+  `plSetLerpFrameAnimation` in `js/player-draw.js`), and begins it anew whenever that time is another one,
+  which also catches a change and a change back between two polls. The frames of the server's skeleton are
+  only used where the server does not say the time (an older module, NPCs). After it, of six pairs of bots
+  that ran and jumped four were the same pose as far as one can see (mean difference 0.64 to 1.83 of 255),
+  one had the blades at another angle, and in one the game had him standing where the page had him running
+  (not looked into yet). `steps_players.js` has two checks for the new rule in the place of the one for the
+  old (46), `steps_feed.js` and `steps_state.js` count 40 numbers.
 - New: the bolts that jump off one who is electrified (`CG_ForceElectrocution`, `plElectrocution` in
   `js/player-fx.js`). In every frame of a client one of seven places of his body is taken by chance (elbows,
   hands, feet, and the bone `lower_lumbar`) and a way from there along one of two axes of that bolt, bent a
@@ -715,18 +734,22 @@ Also changed:
   missing (above), and the half shield of a hit is there on both. What it can not compare yet: sparks,
   flares and the trails of blades, which the page runs by its own clock while the time of the game nearly
   stands; the page plays no particle effects in such a pair for that reason.
-  - Corrected on 2026-10-09: those pairs were not of one moment. The run set `sv_fps 1000` next to
-    `timescale 0.01`, and the server sets the timescale back when its own frame (1000 / `sv_fps` times the
-    timescale) comes out below a msec (`SV_Frame`): the game ran on at its speed, ten frames a second.
-    That the bodies agreed "to about a frame" was the delays of the two pictures cancelling out. With
-    `sv_fps 10` the frame of the server is exactly a msec, and the run now says with every such view how
-    much of the game went by in the seven seconds (71 msec). What a true moment showed in the one pair of
-    two bots in a fight taken since: the page draws the frame the server has for a skeleton (logged: the
-    same number), and the body of a swinging bot was in a visibly different part of its swing than in the
-    game, the trails of its blades were far too large on the page, and the half shield of a hit was gone on
-    the page while the game still had it (the page times it, the trails and its effects by its own clock,
-    which runs a hundred times faster than such a game). Open, all three. Two more runs had no fight in them
-    (the bots walk off before they are frozen).
+  - Corrected on 2026-10-09: those pairs were not of one moment, for two reasons. The run set `sv_fps 1000`
+    next to `timescale 0.01`, and the server sets the timescale back when its own frame (1000 / `sv_fps`
+    times the timescale) comes out below a msec (`SV_Frame`): the game ran on at its speed. With `sv_fps 10`
+    the frame of the server is exactly a msec. And a client draws the world a snapshot or two behind the
+    server, 25 to 50 msec in these runs, and stays exactly that far behind while the timescale is neither 0
+    nor 1 (`CL_AdjustTimeDelta` does not drift then; the seven seconds the run waited for it to catch up
+    did nothing). Now the page is held at the state of one poll, and the pair is taken when the client has
+    come to that time: the state says when the client drew its last frame (`commandTime`, a 13th number of
+    `view`), and the run prints both numbers with every such view. That the bodies had agreed "to about a
+    frame" before was the delays of the two pictures cancelling out.
+  - What pairs of one moment showed then (`REF_LOOK=roam`: the bots are left to run, jump and fight, and the
+    eye is put next to the fastest one just before the game is slowed): a running bot was in the right place
+    and in the wrong part of its stride, by any part of the loop. See the entry on when an animation begins,
+    below. Still open from those pairs: the trails of blades are far too large on the page in a slowed game,
+    and the half shield of a hit is gone there while the game still has it (the page times both, and its
+    effects, by its own clock, which runs a hundred times faster than such a game).
 - Changed: a saber in the air has its blades at the bolts of its hilt, as one in a hand (`drawModelEntities`
   in `js/frame.js`; `CG_Player` for `saberInFlight` hands `CG_AddSaberBlade` the saber entity). Until now
   only the first blade was drawn, along the way the hilt lies: a staff that was thrown had one blade.

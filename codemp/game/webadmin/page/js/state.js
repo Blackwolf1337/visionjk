@@ -47,7 +47,7 @@ function expandPlayers(s) {
 			// What a client draws him by. The frames are the ones the server has his skeleton at, at the time of this
 			// state, and the speeds are frames per 50 ms. undefined with a game module that does not send them.
 			legsFrame: f[21], legsSpeed: f[22], torsoFrame: f[23], torsoSpeed: f[24], eFlags: f[25], eFlags2: f[26], powerups: f[27], forceActive: f[28],
-			weaponstate: f[29], saberMove: f[30], legsFlip: f[31] & 1, torsoFlip: (f[31] & 2) >> 1, ground: f[32], brokenLimbs: f[33], saberLevel: f[34], moveDir: f[35], electrify: f[36] || 0, forcePass: f[37] || 0,
+			weaponstate: f[29], saberMove: f[30], legsFlip: f[31] & 1, torsoFlip: (f[31] & 2) >> 1, ground: f[32], brokenLimbs: f[33], saberLevel: f[34], moveDir: f[35], electrify: f[36] || 0, forcePass: f[37] || 0, legsSince: f[38], torsoSince: f[39],
 			minutes: Math.max(0, Math.floor(((s.time || 0) - (d.entered || 0)) / 60000)),
 			sabers: (d.sabers || []).map(sb => ({ model: sb.model, blades: sb.blades.map(bl => {
 				const now = e.b[n++] || [0, 0, 0, 0, 0, 0, 0];
