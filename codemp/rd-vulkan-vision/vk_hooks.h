@@ -30,7 +30,7 @@ qboolean VK_InitVulkan( void );		// qfalse: this machine can not run the rendere
 void VK_ShutdownVulkan( qboolean destroyWindow );
 void VK_GfxInfo_f( void );
 
-// vk_screenshot.cpp: what tr_init.cpp has between its screenshot commands and the frame buffer
+// vk_frame.cpp: what tr_init.cpp has between its screenshot commands and the frame buffer
 byte *RB_ReadPixels( int x, int y, int width, int height, size_t *offset, int *padlen );
 const void *RB_TakeVideoFrameCmd( const void *data );
 

@@ -58,6 +58,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define VK_MODEL_BYTES		( 32 << 20 )	// vertices of the Ghoul2 models of a level
 #define VK_MODEL_INDEX_BYTES	( 16 << 20 )	// and their triangles
 #define VK_MAX_BATCH_RANGES	64				// runs of indexes a batch of model surfaces can have
+#define VK_MAX_FLARES		256				// flares the renderer keeps an answer for, and probes of the depth in a frame
 
 // ------------------------------------------------------------------------------------------------------------
 // what the shaders read, shaders/common.glsl has the same layout (std430, and std140 as GLSL ES)
@@ -157,8 +158,6 @@ typedef struct vkImage_s : vkDeviceImage_t {	// one entry of the texture table
 	float			anisotropy;
 	qboolean		uploaded;		// all levels are there and the layout is the one for sampling
 } vkImage_t;
-
-#define VK_MAX_FLARES		256
 
 typedef struct vkStencil_s {	// what the draws of stencil shadows need beyond the state bits, in the words of OpenGL
 	qboolean	test;				// GL_STENCIL_TEST
@@ -320,7 +319,6 @@ void		VK_InitPost( void );
 void		VK_BeginGlow( void );
 void		VK_EndGlow( void );
 void		VK_CaptureFrame( void );
-void		VK_WriteVideoFrame( void );
 void		VK_ClearFlares( void );
 void		VK_CopyProbes( void );
 void		VK_ReadProbes( vkFrame_t *frame );
@@ -328,6 +326,7 @@ void		VK_ReadProbes( vkFrame_t *frame );
 // vk_frame.cpp
 void		VK_BeginFrame( void );
 void		VK_EndFrame( void );
+void		VK_WriteVideoFrame( void );
 void		VK_SetViewport( int x, int y, int width, int height, float minDepth, float maxDepth );
 void		VK_FrameInfo_f( void );
 int			VK_AddTransform( const vkTransform_t *transform );
