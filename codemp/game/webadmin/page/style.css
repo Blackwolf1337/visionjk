@@ -88,6 +88,10 @@ body.sideClosed #view { left: 0; }
 /* the view for a comparison with a picture of the game (?ref=): the map alone, at the top left */
 body.ref #topbar, body.ref #side, body.ref #toasts, body.ref #view > :not(canvas) { display: none !important; }
 body.ref #view { left: 0; top: 0; right: auto; bottom: auto; transition: none; }
+/* and through the eyes of a player, with his HUD as the game draws it for one who looks through them (body.fp);
+   body.nohud takes the HUD away for the second picture of such a view */
+body.ref.fp:not(.nohud) #view > #hud { display: block !important; }
+body.ref #hud .hud-top { display: none !important; }
 #labels { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
 .label { position: absolute; transform: translate(-50%, -100%); text-align: center; white-space: nowrap; font-size: 12px; text-shadow: 0 1px 2px #000, 0 0 3px #000; }
 .label .bar { width: 46px; height: 4px; background: rgba(0,0,0,.6); margin: 2px auto 0; border-radius: 1px; overflow: hidden; }
