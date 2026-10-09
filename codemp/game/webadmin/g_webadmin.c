@@ -168,7 +168,7 @@ static void WA_HandleRequest( waConnection_t *c, char *head, char *body, int bod
 		return;
 	}
 	if ( !WA_CheckAuth( head ) ) {
-		const qboolean tried = ( WA_FindHeader( head, "Authorization" ) != NULL );
+		const qboolean tried = ( Web_FindHeader( head, "Authorization" ) != NULL );
 
 		// only count a wrong password, not the first request a browser sends without one
 		if ( tried ) {
@@ -181,7 +181,7 @@ static void WA_HandleRequest( waConnection_t *c, char *head, char *body, int bod
 	}
 	WA_AuthResult( c->addr, qtrue );
 
-	if ( !strcmp( method, "POST" ) && !WA_SameOrigin( head ) ) {
+	if ( !strcmp( method, "POST" ) && !Web_SameOrigin( head ) ) {
 		WA_RespondText( c, 403, "Forbidden", "request from another site refused" );
 		return;
 	}
@@ -279,24 +279,6 @@ static void WA_HandleRequest( waConnection_t *c, char *head, char *body, int bod
 	}
 }
 
-// A Content-Length: only digits, and nothing a request can not be. JKAdmin read it with atoi and then checked
-// headLen + bodyLen, which wraps for a length near INT_MAX: the check passed and the terminating zero of the
-// body was written about 2 GB in front of the request buffer, before any login. Returns -1 for a bad value.
-static int WA_ParseLength( const char *s ) {
-	int len = 0, digits = 0;
-
-	for ( ; *s >= '0' && *s <= '9'; s++, digits++ ) {
-		len = len * 10 + ( *s - '0' );
-		if ( len > WA_MAX_REQUEST )
-			return -1;
-	}
-	while ( *s == ' ' || *s == '\t' )
-		s++;
-	if ( !digits || ( *s && *s != '\r' && *s != '\n' ) )
-		return -1;
-	return len;
-}
-
 static void WA_ReadRequest( waConnection_t *c ) {
 	char		*headEnd;
 	const char	*lenHeader;
@@ -323,9 +305,9 @@ static void WA_ReadRequest( waConnection_t *c ) {
 
 	headLen = (int)( headEnd - c->request ) + 4;
 	*headEnd = '\0';
-	lenHeader = WA_FindHeader( c->request, "Content-Length" );
+	lenHeader = Web_FindHeader( c->request, "Content-Length" );
 	if ( lenHeader )
-		bodyLen = WA_ParseLength( lenHeader );
+		bodyLen = Web_ParseLength( lenHeader, WA_MAX_REQUEST );
 	*headEnd = '\r';
 
 	// (headLen is at most WA_MAX_REQUEST, the subtraction can not wrap)

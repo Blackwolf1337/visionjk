@@ -23,7 +23,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // and the functions one file has for the others. The panel is not from JA+.
 //
 //   g_webadmin.c    the connections, which request goes where, and what the game calls (WebAdmin_*)
-//   wa_http.c       buffers, answers, and what a request is made of: headers, the login, its values
+//   wa_http.c       buffers, answers, and what a request is made of: the login, its values
 //   wa_state.c      /api/state, what the page draws ten times a second
 //   wa_actions.c    /api/action, what is done to a player or to the server, and the bans
 //   wa_entities.c   the entity editor: the list, placing and changing, what comes back after a reload
@@ -39,6 +39,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include "game/bg_net.h"		// the sockets, in front of everything else
 #include "game/g_local.h"
+#include "web/web_http.h"		// the headers of a request and base64, shared with the web host of the dedicated server
 
 #define WA_MAX_CONNECTIONS	32
 #define WA_MAX_REQUEST		65536		// head and body. The largest body is the text of the server config.
@@ -83,8 +84,6 @@ void WA_Respond( waConnection_t *c, int status, const char *statusText, const ch
 void WA_RespondText( waConnection_t *c, int status, const char *statusText, const char *text );
 void WA_RespondJson( waConnection_t *c, waBuffer_t *json );
 void WA_LogUse( const waConnection_t *c, const char *what );
-const char *WA_FindHeader( const char *head, const char *name );
-qboolean WA_SameOrigin( const char *head );
 qboolean WA_CheckAuth( const char *head );
 qboolean WA_AuthThrottle( unsigned int addr );
 void WA_AuthResult( unsigned int addr, qboolean ok );

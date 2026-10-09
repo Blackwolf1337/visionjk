@@ -20,8 +20,9 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 */
 
 // wa_http.c -- what every answer of the web admin panel is made with: a buffer that grows, the head
-// of an answer, and what a request is made of (its headers, the login and its throttle, the values of a form,
+// of an answer, and what a request is made of (the login and its throttle, the values of a form,
 // text between UTF-8 and the one byte a character of the game), and a file of the game read or written whole.
+// The headers of a request are read with shared/web, which the web host of the dedicated server reads them with too.
 
 #include "game/webadmin/wa_local.h"
 
@@ -191,123 +192,14 @@ void WA_LogUse( const waConnection_t *c, const char *what ) {
 	G_SecurityLogPrintf( "%s\n", line );
 }
 
-static int WA_Base64Value( char c ) {
-	if ( c >= 'A' && c <= 'Z' ) return c - 'A';
-	if ( c >= 'a' && c <= 'z' ) return c - 'a' + 26;
-	if ( c >= '0' && c <= '9' ) return c - '0' + 52;
-	if ( c == '+' ) return 62;
-	if ( c == '/' ) return 63;
-	return -1;
-}
-
-static int WA_Base64Decode( const char *in, char *out, int outSize ) {
-	int bits = 0, len = 0;
-	unsigned int value = 0;		// unsigned: the running bits shift left without signed overflow
-
-	for ( ; *in && *in != '\r' && *in != '\n' && *in != '='; in++ ) {
-		const int v = WA_Base64Value( *in );
-		if ( v < 0 )
-			return -1;
-		value = ( value << 6 ) | (unsigned int)v;
-		bits += 6;
-		if ( bits >= 8 ) {
-			bits -= 8;
-			if ( len >= outSize - 1 )
-				return -1;
-			out[len++] = (char)( ( value >> bits ) & 0xFF );
-		}
-	}
-	out[len] = '\0';
-	return len;
-}
-
-// Finds a header value in the request head, case insensitive name. Returns a
-// pointer to the start of the value (ends at \r) or NULL.
-const char *WA_FindHeader( const char *head, const char *name ) {
-	const size_t nameLen = strlen( name );
-	const char *line = strstr( head, "\r\n" );
-
-	while ( line && line[2] != '\r' ) {
-		line += 2;
-		if ( !Q_stricmpn( line, name, (int)nameLen ) && line[nameLen] == ':' ) {
-			const char *v = line + nameLen + 1;
-			while ( *v == ' ' )
-				v++;
-			return v;
-		}
-		line = strstr( line, "\r\n" );
-	}
-	return NULL;
-}
-
-// Copies the value of a header up to the end of its line, without the spaces at its end. qfalse: not there.
-static qboolean WA_HeaderValue( const char *head, const char *name, char *out, int outSize ) {
-	const char	*v = WA_FindHeader( head, name );
-	int			len = 0;
-
-	out[0] = '\0';
-	if ( !v )
-		return qfalse;
-	while ( v[len] && v[len] != '\r' && v[len] != '\n' && len < outSize - 1 )
-		len++;
-	while ( len > 0 && ( v[len - 1] == ' ' || v[len - 1] == '\t' ) )
-		len--;
-	memcpy( out, v, len );
-	out[len] = '\0';
-	return qtrue;
-}
-
-/*
-=================
-WA_SameOrigin
-
-Not in JKAdmin. A request that changes something has to come from the page itself. The browser sends the login
-of the panel along with every request to it, also with one that another web site makes it send (CSRF). That
-site would get at the player actions and at the entity editor without knowing the password.
-
-Browsers say where a POST comes from: Sec-Fetch-Site, Origin, Referer. A page can not leave out or forge the
-first two. A request with none of the three is not from a browser (curl, scripts) and goes through.
-The address in Origin has to be the one the request was sent to: Host, or X-Forwarded-Host behind a reverse
-proxy that sends another Host to the server (a page can not set that header on a request to another site).
-=================
-*/
-qboolean WA_SameOrigin( const char *head ) {
-	static const char *const sentTo[] = { "Host", "X-Forwarded-Host" };
-	char		from[512], host[256];
-	const char	*address;
-	size_t		i;
-
-	if ( WA_HeaderValue( head, "Sec-Fetch-Site", from, sizeof( from ) ) && Q_stricmp( from, "same-origin" ) && Q_stricmp( from, "none" ) )
-		return qfalse;
-
-	if ( !WA_HeaderValue( head, "Origin", from, sizeof( from ) ) && !WA_HeaderValue( head, "Referer", from, sizeof( from ) ) )
-		return qtrue;
-
-	// scheme://host[:port][/path]. "null" (a sandboxed frame, a data: page) is no address.
-	address = strstr( from, "://" );
-	if ( !address )
-		return qfalse;
-	address += 3;
-
-	for ( i = 0; i < ARRAY_LEN( sentTo ); i++ ) {
-		if ( WA_HeaderValue( head, sentTo[i], host, sizeof( host ) ) && host[0] ) {
-			const size_t len = strlen( host );
-
-			if ( !Q_stricmpn( address, host, (int)len ) && ( address[len] == '\0' || address[len] == '/' ) )
-				return qtrue;
-		}
-	}
-	return qfalse;
-}
-
 qboolean WA_CheckAuth( const char *head ) {
-	const char *auth = WA_FindHeader( head, "Authorization" );
+	const char *auth = Web_FindHeader( head, "Authorization" );
 	char		decoded[256];
 	const char	*pass;
 
 	if ( !auth || Q_stricmpn( auth, "Basic ", 6 ) )
 		return qfalse;
-	if ( WA_Base64Decode( auth + 6, decoded, sizeof( decoded ) ) < 0 )
+	if ( Web_Base64Decode( auth + 6, decoded, sizeof( decoded ) ) < 0 )
 		return qfalse;
 
 	pass = strchr( decoded, ':' );

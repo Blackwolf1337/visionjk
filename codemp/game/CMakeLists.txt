@@ -202,6 +202,16 @@ source_group("game/webadmin" FILES ${MPGameWebadminFiles})
 source_group("game/webadmin/page" FILES ${MPGameWebadminPageFiles})
 set(MPGameFiles ${MPGameFiles} ${MPGameWebadminFiles} ${MPGameWebadminPageFiles})
 
+# what the web admin panel reads a request with. The web host of the dedicated server is built with the same
+# files (codemp/server/web/sources.cmake), and with web_sha1.c, which nothing of the game asks for.
+set(MPGameSharedWebFiles
+	"${SharedDir}/web/web_http.h"
+	"${SharedDir}/web/web_http.c"
+	"${SharedDir}/web/web_base64.c"
+	)
+source_group("shared/web" FILES ${MPGameSharedWebFiles})
+set(MPGameFiles ${MPGameFiles} ${MPGameSharedWebFiles})
+
 # the props with physics and the black hole that pulls them, bg_props.c is built into the cgame too
 set(MPGamePropsFiles
 	"${MPDir}/game/props/bg_props.c"
