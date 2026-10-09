@@ -372,6 +372,10 @@ static void SV_WebAccept( void ) {
 		memset( &from, 0, sizeof( from ) );
 		s = accept( listenSocket, (struct sockaddr *)&from, &fromLen );
 		if ( s == INVALID_SOCKET ) {
+			// one that was ended by the other side while it waited is gone from the listener: the next
+			if ( socketError == ECONNRESET || socketError == ECONNABORTED ) {
+				continue;
+			}
 			// Nothing more waits, or it can not be taken: no descriptor is free, for one. That connection
 			// stays with the listener and keeps it readable, so the listener is not waited on for a moment.
 			if ( !SV_WebWouldBlock() ) {
