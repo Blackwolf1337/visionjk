@@ -3636,7 +3636,8 @@ Q_EXPORT gameExport_t* QDECL GetModuleAPI( int apiVersion, gameImport_t *import 
 	static gameExport_t ge = {0};
 
 	assert( import );
-	trap = import;
+	// the web panel reads what the game tells all clients at once (webadmin/g_webadmin.c)
+	trap = WebAdmin_WrapImport( import );
 	Com_Printf	= trap->Print;
 	Com_Error	= trap->Error;
 

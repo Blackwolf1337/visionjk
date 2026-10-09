@@ -582,6 +582,31 @@ Also changed:
   the game. Seen: the flash of the pistol at its muzzle. The game plays the effect bound to the weapon with
   all three of its axes, the page along the first; the glow while a weapon is charged is not drawn. Not
   compared with a picture of the game. Three more checks in `steps_ownview.js` (20).
+- New: the last lines of the console over the picture (`js/hud-console.js`; `CL_ConsolePrint` and
+  `Con_DrawNotify` of the engine). A client shows the last lines of its console at the top left for three
+  seconds: what the server prints for everybody (a player comes or goes, a limit is changed or hit) and the
+  line of every kill. Neither was in any state the panel could read.
+  - What the game sends to all clients at once goes straight to the engine from some four hundred places. The
+    game now calls the engine through a copy of the engine's table in which `SendServerCommand` is the
+    panel's (`WebAdmin_WrapImport`, one line in `GetModuleAPI` of `g_main.c`): it keeps the `print` and `cp`
+    commands that go to everybody (the last 32, five seconds) and hands every command on unchanged. The state
+    has them for a page that says the number of the last one it has (`prs=`, `pr`: number, msec ago, kind,
+    text). What one client alone is told is not kept: a client that follows a player is not told it either.
+  - The page puts a `print` into its console as the engine does (rows of the line width, which is two
+    characters less than fit the picture, a colour for every character, `@@@NAME` replaced by the text of the
+    server's string package as `CG_CheckSVStringEdRef` does) and a `cp` into the centre print.
+  - The line of a kill is made from the obituary event as `CG_Obituary` makes it: the text by the means of
+    death (their names come from the server, `/api/list?kind=mods`), with the attacker for a kill, with the
+    pronoun of the model for a death by one's own hand (the gender is read from the sound file of the model,
+    as cgame does).
+  - Drawn as `Con_DrawNotify` draws them: the last four rows that are not older than three seconds, the one
+    that is being written among them, 8 x 16 pixels of the picture a character in the fixed font, from the
+    top left. They stay in a picture taken without the HUD, as the engine draws them with `cg_draw2D 0`.
+  Seen from the server: "Server: fraglimit changed to 29" after the limit was set, "Alora killed herself"
+  after a kill through the panel. Not compared with a picture of the game: the client of the comparison
+  keeps an empty menu open, and the engine leaves these lines out while a menu has the keys. Not shown: what
+  the engine and the client game print by themselves besides the kills. `tools/panelshot/steps_console.js`
+  (19 checks).
 - Fixed: the sabers were not in the hands. The page put every blade where the server says its blade is and
   set the hilt to it. A client never sees those points: it bolts the hilt to the hand of its own skeleton and
   the blade to the hilt (`CG_AddSaberBlade`). The points of the server are for its own hit tests, worked out

@@ -98,6 +98,7 @@ const char *WA_TeamName( team_t team );
 void WA_AppendVec( waBuffer_t *b, const vec3_t v );
 void WA_ApiState( waConnection_t *c, const char *query );
 void WA_EventsFrame( void );
+void WA_PrintsTake( const char *command );
 
 // wa_actions.c
 void WA_ActionResult( waConnection_t *c, qboolean ok, const char *msg );

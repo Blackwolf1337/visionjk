@@ -1064,14 +1064,15 @@ function hudDrawChatBox(cg) {
 
 // The 2D of the frame, for the player the page looks through the eyes of (renderHud in js/weapons.js)
 function drawHud(d) {
-	// the picture of the comparison that is taken without the HUD (cg_draw2D 0 in the game)
-	if (!d || !state || document.body.classList.contains('nohud')) return;
+	if (!d || !state) return;
 	hudLoadMenus();
 	if (!hudSettleShaders() || hudMenus.state < 2) return;
-	const cg = hudClientState(d);
-	if (!cg) return;
+	// The picture of the comparison that is taken without the HUD is cg_draw2D 0 in the game: the last lines of
+	// the console are the engine's and stay (js/hud-console.js).
+	const bare = document.body.classList.contains('nohud'), cg = bare ? null : hudClientState(d);
+	if (!bare && !cg) return;
 	if (hud2d.record) hud2d.pics.length = 0;
 	hudSetColor(null);
 	// what was gathered is drawn also when a part of the 2D fails, so that nothing of it is left for the next frame
-	try { hudDraw2D(cg); } finally { hud2dFlush(); }
+	try { if (cg) hudDraw2D(cg); conDrawNotify(); } finally { hud2dFlush(); }
 }

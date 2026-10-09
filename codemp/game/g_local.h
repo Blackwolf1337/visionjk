@@ -1277,6 +1277,7 @@ void WebAdmin_EntitySpawned( int entityNum );
 void WebAdmin_EntityFreed( int entityNum );
 void WebAdmin_Chat( const char *mode, const gentity_t *from, const gentity_t *to, const char *text );
 void WebAdmin_Log( const char *line );
+gameImport_t *WebAdmin_WrapImport( gameImport_t *import );
 // g_svcmds.c: the ban list, for the panel
 int G_BanListSize( void );
 qboolean G_BanListEntry( int index, char *out, int outSize );

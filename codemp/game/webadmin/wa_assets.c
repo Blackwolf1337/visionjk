@@ -28,6 +28,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 extern stringID_table_t animTable[MAX_ANIMATIONS + 1];
 extern const char *eventnames[EV_NUM_ENTITY_EVENTS];	// bg_misc.c
+extern char *modNames[MOD_MAX];							// g_combat.c
 
 static int		mapModels = -1;				// brush models of the map, asked once (WA_MapBrushModels)
 static char		mapModelsName[MAX_QPATH];
@@ -400,6 +401,15 @@ void WA_ApiList( waConnection_t *c, const char *query ) {
 				WA_BufAppend( &b, ",", 1 );
 			first = qfalse;
 			WA_BufJsonString( &b, eventnames[i] ? eventnames[i] : "" );
+		}
+	} else if ( !strcmp( kind, "mods" ) ) {
+		// the names of the means of death in the order of their numbers (meansOfDeath_t), which is what an
+		// obituary event names one by
+		for ( i = 0; i < MOD_MAX; i++ ) {
+			if ( !first )
+				WA_BufAppend( &b, ",", 1 );
+			first = qfalse;
+			WA_BufJsonString( &b, modNames[i] ? modNames[i] : "" );
 		}
 	} else if ( !strcmp( kind, "fxindex" ) ) {
 		// The names of CS_EFFECTS, the first of them for the index 1: what the state feed names an effect by.

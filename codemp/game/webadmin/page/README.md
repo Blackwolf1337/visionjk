@@ -69,6 +69,7 @@ order of the template, so a file may only use there what a file before it has ma
 | `js/events.js` | the events of the game: what a client is told once and shows for a moment |
 | `js/hud.js` | the HUD of that view |
 | `js/hud-scores.js` | the scoreboard of a client while the one it follows is dead, the centre print of a kill |
+| `js/hud-console.js` | the last lines of the console over the picture: what the server prints for all, the kills |
 | `js/hud-font.js` | the fonts of the game: the measures of the glyphs and their image |
 | `js/hud-world.js` | the crosshair and what it points at, the radar |
 | `js/boot.js` | what starts the page |

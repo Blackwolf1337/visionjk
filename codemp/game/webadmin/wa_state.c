@@ -728,6 +728,86 @@ void WA_EventsFrame( void ) {
 	}
 }
 
+// What the game told all clients at once since a page last asked: lines for their console and centre prints
+// (WA_SendServerCommand in g_webadmin.c hands them in). Kept like the events, the last 32 for five seconds.
+#define WA_PR_KEEP	32
+#define WA_PR_TEXT	256
+#define WA_PR_MS	5000
+
+typedef struct waPrint_s {
+	int		time;				// level.time it was sent at
+	int		kind;				// 0: print, 1: cp
+	char	text[WA_PR_TEXT];
+} waPrint_t;
+
+static waPrint_t	prRing[WA_PR_KEEP];
+static int			prSeq;
+
+void WA_PrintsTake( const char *command ) {
+	const char	*s;
+	waPrint_t	*p;
+	int			kind, n = 0;
+
+	if ( !WA_Running() )
+		return;
+	if ( !Q_strncmp( command, "print ", 6 ) ) {
+		kind = 0;
+		s = command + 6;
+	} else if ( !Q_strncmp( command, "cp ", 3 ) ) {
+		kind = 1;
+		s = command + 3;
+	} else {
+		return;
+	}
+	// its argument as a client reads it (Cmd_TokenizeString): what is between two quotes, else up to a blank
+	while ( *s == ' ' )
+		s++;
+	p = &prRing[prSeq % WA_PR_KEEP];
+	if ( *s == '"' ) {
+		for ( s++; *s && *s != '"' && n < WA_PR_TEXT - 1; s++ )
+			p->text[n++] = *s;
+	} else {
+		for ( ; *s && (unsigned char)*s > ' ' && n < WA_PR_TEXT - 1; s++ )
+			p->text[n++] = *s;
+	}
+	p->text[n] = '\0';
+	p->time = level.time;
+	p->kind = kind;
+	prSeq++;
+}
+
+// For a page that says the number of the last one it has (prs=<number>): "prSeq", and "pr" with a row for
+// each, [number, msec ago, kind, text]. A page that asks for the first time (prs=-1) gets the number alone.
+static void WA_StatePrints( waBuffer_t *b, const char *query ) {
+	char		value[16];
+	int			i, have;
+	qboolean	first = qtrue;
+
+	if ( !WA_FormValue( query, "prs", value, sizeof( value ) ) )
+		return;
+	have = atoi( value );
+	if ( have == prSeq )
+		return;
+	if ( have > prSeq )
+		have = 0;
+	WA_BufPrintf( b, ",\"prSeq\":%d", prSeq );
+	if ( have < 0 )
+		return;
+	WA_BufAppend( b, ",\"pr\":[", 7 );
+	for ( i = Q_max( have, prSeq - WA_PR_KEEP ); i < prSeq; i++ ) {
+		const waPrint_t	*p = &prRing[i % WA_PR_KEEP];
+		const int		ago = level.time - p->time;
+
+		if ( ago < 0 || ago > WA_PR_MS )
+			continue;
+		WA_BufPrintf( b, "%s[%d,%d,%d,", first ? "" : ",", i + 1, ago, p->kind );
+		WA_BufJsonString( b, p->text );
+		WA_BufAppend( b, "]", 1 );
+		first = qfalse;
+	}
+	WA_BufAppend( b, "]", 1 );
+}
+
 // The events for a page that says the number of the last one it has (evs=<number>), left out when it has them all.
 //   "ev": each its number, how long ago in msec, the entity, the event (an entity_event_t: /api/list?kind=events
 //        names them in order), its parameter, where (3), origin2 (3), the angles (3), then of the entity that
@@ -864,7 +944,7 @@ static void WA_StateHud( waBuffer_t *b, const char *query ) {
 	WA_BufAppend( b, "}", 1 );
 }
 
-// GET /api/state[?items=<number>][&fx=<number>&fxs=<number>][&evs=<number>][&p=<client>.<number>-...][&view=<client>][&hud=<client>]:
+// GET /api/state[?items=<number>][&fx=<number>&fxs=<number>][&evs=<number>][&prs=<number>][&p=<client>.<number>-...][&view=<client>][&hud=<client>]:
 // everything the page draws, one part after the other
 void WA_ApiState( waConnection_t *c, const char *query ) {
 	waBuffer_t	b = { 0 };
@@ -923,6 +1003,7 @@ void WA_ApiState( waConnection_t *c, const char *query ) {
 	WA_StateShots( &b );
 	WA_StateEffects( &b, query );
 	WA_StateEvents( &b, query );
+	WA_StatePrints( &b, query );
 	WA_StateView( &b, query );
 	WA_StateHud( &b, query );
 	WA_BufAppend( &b, "}", 1 );

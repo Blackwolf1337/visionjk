@@ -252,12 +252,13 @@ const hudDrawStrlen = s => s.replace(/\^(?!\^)[0-9]/g, '').length;
 // ---- the texts of the game (strings/English/<file>.str, the string packages of the engine)
 
 const hudStrings = new Map();	// file -> Map reference -> text, null while it is on its way
+const hudStringReads = new Map();	// file -> the promise of its reading
 // CG_GetStringEdString( "MP_INGAME", "FOLLOWING" ): the English text, "" while its file is not there
 function hudString(section, name) {
 	let file = hudStrings.get(section);
 	if (file === undefined) {
 		hudStrings.set(section, null);
-		hudBusy(fetchGameFile('strings/English/' + section + '.str', true).then(text => {
+		const read = fetchGameFile('strings/English/' + section + '.str', true).then(text => {
 			const refs = new Map();
 			let ref = null;
 			for (const line of text.split(/\r?\n/)) {
@@ -267,8 +268,16 @@ function hudString(section, name) {
 				else if (ref !== null && !refs.has(ref)) refs.set(ref, m[2].replace(/^"|"$/g, '').replace(/\\n/g, '\n'));
 			}
 			hudStrings.set(section, refs);
-		}, () => { hudStrings.set(section, new Map()); }));
+		}, () => { hudStrings.set(section, new Map()); });
+		hudStringReads.set(section, read);
+		hudBusy(read);
 		file = null;
 	}
 	return (file && file.get(name)) || '';
+}
+
+// when the texts of a package are read (or it is known that there are none): for what has to wait for them
+function hudStringsRead(section) {
+	hudString(section, '');
+	return hudStringReads.get(section);
 }

@@ -65,7 +65,7 @@ async function pollState() {
 		// the same of a player: the server is told the number of what the page has of each.
 		const has = [...playerSlow].map(([id, slow]) => id + '.' + slow.rev).join('-');
 		// through the eyes of a player: what his HUD and his own view are drawn from comes with it (state.hud)
-		const res = await fetch('api/state?items=' + itemsRev + fxQuery() + evQuery() + (has ? '&p=' + has : '') + (view.id >= 0 ? '&hud=' + view.id : ''), { cache: 'no-store' });
+		const res = await fetch('api/state?items=' + itemsRev + fxQuery() + evQuery() + prQuery() + (has ? '&p=' + has : '') + (view.id >= 0 ? '&hud=' + view.id : ''), { cache: 'no-store' });
 		if (!res.ok) throw new Error('HTTP ' + res.status);
 		const s = await res.json();
 		$('status').className = 'live';
@@ -76,6 +76,8 @@ async function pollState() {
 		applyState(s);
 		// the events of the game since the last poll, when the players and shots they speak of are known (js/events.js)
 		takeEvents(s);
+		// and what the server told all clients since then (js/hud-console.js)
+		takePrints(s);
 	} catch (e) {
 		$('status').className = 'err';
 	}

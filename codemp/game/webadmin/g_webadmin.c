@@ -59,6 +59,35 @@ qboolean WA_Running( void ) {
 	return (qboolean)( listenSocket != BG_INVALID_SOCKET );
 }
 
+/*
+==============================================================================
+
+What the game tells all of its clients at once
+
+A line for their console ("print") and a centre print ("cp") go straight to the engine from some four hundred
+places of the game and are in no state the panel could read. So the game calls the engine through a copy of the
+engine's table in which SendServerCommand is the one below: it shows the panel what is sent to everybody and
+hands it on unchanged. Every other call of the table is the engine's own.
+
+==============================================================================
+*/
+
+static gameImport_t	waImport;
+static void			(*waSendServerCommand)( int clientNum, const char *text );
+
+static void WA_SendServerCommand( int clientNum, const char *text ) {
+	if ( clientNum == -1 && text )
+		WA_PrintsTake( text );
+	waSendServerCommand( clientNum, text );
+}
+
+gameImport_t *WebAdmin_WrapImport( gameImport_t *import ) {
+	waImport = *import;
+	waSendServerCommand = import->SendServerCommand;
+	waImport.SendServerCommand = WA_SendServerCommand;
+	return &waImport;
+}
+
 static void WA_CloseConnection( waConnection_t *c ) {
 	if ( c->file )
 		trap->FS_Close( c->file );
