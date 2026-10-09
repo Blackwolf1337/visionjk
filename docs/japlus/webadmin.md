@@ -478,8 +478,15 @@ Also changed:
   with two rays, which stood inside a wall in a narrow corridor (14.5 of 255 against the game there). And the
   game decides who is looked at from behind: one who is dead, who holds a saber or his fists, who falls to his
   death or rides. Against the game, behind three bots: 4.1, 1.5 and (through the eyes of one with a gun) 1.5;
-  what is left is the place of the blades and the weapon in front of the camera, which is not drawn as the
-  game draws it yet. Not ported: the camera of a vehicle, movers in the way of the camera.
+  what is left is the place of the blades. Not ported: the camera of a vehicle, movers in the way of the
+  camera.
+- New: the weapon in front of the camera as the game puts it (`drawViewWeapon` in `js/weapons.js`,
+  `CG_AddViewWeapon` with `CG_CalculateWeaponPosition`): on the `tag_weapon` of the hand model of that
+  weapon, which stands at the eye and is turned as the view with the drift of a hand and the bob of his
+  steps, drawn in the near third of the depth (`RF_DEPTHHACK`). The page hung every weapon on the hand of the
+  stun baton, which is below the picture for a pistol: no weapon was seen. Through the eyes of a bot with a
+  pistol against the game: 0.65 of 255, its HUD alone 0.49. Not ported: the frames of the hand while a weapon
+  fires or is raised, the barrel of the stun baton, the flash at the muzzle.
 - Fixed: a file with a long name was not found. The server cut a value of a request to the room it had for
   it before it decoded it (`WA_FormValue`), and the page writes every slash of a file name as `%2F`: a name
   of 58 to 63 letters, which the game has room for, lost its end and was refused. So the image

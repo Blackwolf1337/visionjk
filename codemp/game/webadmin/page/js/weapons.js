@@ -103,7 +103,6 @@ function md3Tags(buf) {
 	}
 	return tags;
 }
-const handTag = cached(new Map(), 'hand', async () => md3Tags(await fetchGameFile('models/weapons2/stun_baton/baton_hand.md3'))['tag_weapon'] || null);
 
 function drawStatic(model, world) {
 	if (modelsScripted()) { drawModelScripted(model.meshes, world); gl.useProgram(flatProg.p); return; }
@@ -411,19 +410,41 @@ function firstPersonCamera(now) {
 }
 
 
-// the gun in front of the camera: hand at the eye, gun on its tag_weapon
+// ---- the weapon in front of the camera (CG_AddViewWeapon with CG_CalculateWeaponPosition, and the first person
+// part of CG_AddPlayerWeapon)
+//
+// The game puts a hand model at the eye, turned as the view with a little drift, and the weapon on the tag_weapon
+// of that hand. The hand model is the one of the weapon (its view model's name with _hand.md3) and is not drawn
+// itself. Both are drawn in the near third of the depth (RF_DEPTHHACK), so that no wall cuts into them.
+// Not here: the frames of the hand while a weapon fires, is raised or put away (the tag of the first frame is
+// used), the barrel of the stun baton, the flash at the muzzle.
+const viewHands = new Map();		// the path of a hand model -> its tag_weapon, null while it is read, false for none
+function viewHandTag(path) {
+	if (!viewHands.has(path)) {
+		viewHands.set(path, null);
+		fetchGameFile(path).then(buf => viewHands.set(path, (buf && md3Tags(buf)['tag_weapon']) || false)).catch(() => viewHands.set(path, false));
+	}
+	return viewHands.get(path);
+}
+
 function drawViewWeapon(d) {
-	if (view.thirdPerson || d.weapon <= 2) return;
+	// no weapon for one who is looked at from behind, and none while he looks through a scope (zoomMode)
+	const hud = state && state.hud && state.hud.client === view.id ? state.hud : null;
+	if (view.thirdPerson || d.team === 'spectator' || (hud && hud.zoom[0])) return;
 	const it = weaponModelPath(d.weapon);
 	if (!it || !it.view) return;
-	const gun = staticNow(it.view);
-	handTag.then(t => { view.handTag = t; });
-	if (!gun) return;
-	const ax = viewAxes(view.yaw, view.pitch);
-	const camWorld = new Float32Array([...ax.fwd, 0, ...ax.left, 0, ...ax.up, 0, eye[0], eye[1], eye[2], 1]);
-	const world = view.handTag ? M4.mul(camWorld, to44(view.handTag)) : camWorld;
-	gl.clear(gl.DEPTH_BUFFER_BIT);	// the gun is always in front, like RF_DEPTHHACK
-	drawStatic(gun, world);
+	const gun = staticNow(it.view), tag = viewHandTag(it.view.replace(/\.[^./]*$/, '') + '_hand.md3');
+	if (!gun || !tag) return;
+	// CG_CalculateWeaponPosition: the angles of the view, moved by his steps (xyspeed and the bob cycle of his
+	// player state) and by the slow drift of a hand that holds still
+	const xyspeed = Math.hypot(d.vel[0], d.vel[1]), cycle = hud ? hud.pm[3] : 0;
+	const bobfracsin = Math.abs(Math.sin((cycle & 127) / 127 * Math.PI)), step = (cycle & 128 ? -xyspeed : xyspeed) * bobfracsin;
+	const drift = (xyspeed + 40) * Math.sin(frameNow * 0.001) * 0.01;
+	const angles = [view.pitch + xyspeed * bobfracsin * 0.005 + drift, view.yaw + step * 0.01 + drift, step * 0.005 + drift];
+	const place = M4.mul(anglesMatrix(eye, angles, 1), to44(tag));
+	gl.depthRange(0, 0.3);
+	drawStatic(gun, place);
+	gl.depthRange(0, 1);
 }
 
 function renderHud(d) {
