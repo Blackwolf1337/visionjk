@@ -31,8 +31,6 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include "vk_local.h"
 
-extern cvar_t	*r_glesDebug;
-
 #define GLES_MAX_COMMANDS	( VK_MAX_DRAWS + 16384 )	// a draw is one command, the rest is binds, viewports, clears and passes
 #define GLES_MAX_RANGES		65536						// runs of indexes of all draws of a frame that have such (surfaces of models)
 

@@ -28,7 +28,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // no type and no function of a graphics library: vk_backend.cpp, vk_shade.cpp, vk_gl.cpp, vk_world.cpp,
 // vk_model.cpp, vk_frame.cpp, vk_image.cpp, vk_post.cpp, vk_bc.cpp, vk_stubs.cpp and the shaders. A device is the
 // files that talk to such a library. For Vulkan: vk_main.cpp, vk_memory.cpp, vk_pipeline.cpp, vk_cmd.cpp,
-// vk_texture.cpp, with vk_device.h and vk_funcs.h.
+// vk_texture.cpp, with vk_device.h and vk_funcs.h. For OpenGL ES 3, which is what a browser has as WebGL2: the
+// files in gles/. That device takes no textures in blocks yet, so vk_bc.cpp is built with the Vulkan device only.
 //
 // This header includes exactly one device header: vk_device.h, or gles/gles_device.h when RD_VISION_GLES is
 // defined. It comes after the constants and the structures the shaders read and before the state, and gives:

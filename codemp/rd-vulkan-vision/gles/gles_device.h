@@ -143,6 +143,9 @@ typedef struct vkDeviceState_s {	// see vkState_t
 	int							statErrors;			// r_glesDebug: what glGetError() has said since the start
 } vkDeviceState_t;
 
+// gles_main.cpp
+extern cvar_t	*r_glesDebug;
+
 // gles_buffer.cpp
 void		VK_InitFrames( void );
 void		VK_ShutdownFrames( void );
