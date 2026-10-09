@@ -329,12 +329,14 @@ function(vision_renderer target label defines)
 		set_target_properties(${target} PROPERTIES PREFIX "")
 	endif()
 
-	if(WIN32)
+	if(EMSCRIPTEN)
+		# the folder the module is built into is installed as a whole, see WasmModule.cmake
+	elseif(WIN32)
 		install(TARGETS ${target}
 			RUNTIME
 			DESTINATION ${JKAInstallDir}
 			COMPONENT ${JKAMPClientComponent})
-	else(WIN32)
+	else()
 		if(MakeApplicationBundles AND BuildMPEngine)
 			install(TARGETS ${target}
 				LIBRARY
