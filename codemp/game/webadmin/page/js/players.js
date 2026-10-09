@@ -104,6 +104,13 @@ document.querySelectorAll('[data-jptext]').forEach(b => b.addEventListener('clic
 	editing = false;
 	if (ok && input.tagName === 'INPUT') input.value = '';
 }));
+// Enter in a field is a click on the button that names it (data-input). Not in a list, which Enter opens.
+document.querySelectorAll('button[data-input]').forEach(b => {
+	const field = $(b.dataset.input);
+	if (field.tagName !== 'SELECT') field.addEventListener('keydown', e => {
+		if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); b.click(); }
+	});
+});
 $('followBtn').addEventListener('click', () => { cam.follow = cam.follow === selected ? -1 : selected; renderCommand(); });
 $('cmdClose').addEventListener('click', () => select(-1));
 $('fpBtn').addEventListener('click', () => setFirstPerson(view.id >= 0 ? -1 : selected));
