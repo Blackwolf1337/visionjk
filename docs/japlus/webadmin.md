@@ -685,6 +685,20 @@ Also changed:
   for, and `plDrawModel` in `js/player-fx.js` draws the shell. Found in the pairs of a fight (see below), where
   the game had the shell on both bots and the page on neither; with it the page has it too. Not drawn: the
   forks of lightning between his limbs (`CG_ForceElectrocution`). Two more checks in `steps_players.js` (38).
+- New: the bolts that jump off one who is electrified (`CG_ForceElectrocution`, `plElectrocution` in
+  `js/player-fx.js`). In every frame of a client one of seven places of his body is taken by chance (elbows,
+  hands, feet, and the bone `lower_lumbar`) and a way from there along one of two axes of that bolt, bent a
+  little, 40 to 80 units long; a bolt is there when that way meets the map, to where it does, and in six of
+  a hundred frames when it does not: `gfx/misc/blueLine`, 1.5 units wide to 4, growing to its end and thin
+  towards it, for 100 to 150 msec (`fxAddElectricity` in `js/fx-weapons.js`). cgame asks for a bolt that
+  forks; none does, here or in the game: rd-vanilla never sets how many forks a bolt may have (`f_count` in
+  `tr_surface.cpp`), so the "forks of electricity" this file listed as not drawn do not exist in this
+  engine. Compared with the game in pairs of one moment (`REF_LOOK=shock` of `tools/refshot.sh`: a bot is
+  hit by a DEMP 2 the run puts in front of him, which electrifies him for two seconds): thin blue-white
+  bolts at his limbs on both, of the same kind. The page had more of them that one could see in the two
+  pairs that showed him (about six against two, two against none); the tries are chance, and whether the
+  page makes too many is not settled. One more check in `steps_players.js` (45).
+
 - Fixed: what a poll tells once was forgotten by the clock of the page. An effect that was played, an event
   and a line of the server are known by their number and the time of the map they happened at, and the page
   forgot them five seconds of its own clock later. The server keeps them by the time of the game: when that
@@ -701,6 +715,18 @@ Also changed:
   missing (above), and the half shield of a hit is there on both. What it can not compare yet: sparks,
   flares and the trails of blades, which the page runs by its own clock while the time of the game nearly
   stands; the page plays no particle effects in such a pair for that reason.
+  - Corrected on 2026-10-09: those pairs were not of one moment. The run set `sv_fps 1000` next to
+    `timescale 0.01`, and the server sets the timescale back when its own frame (1000 / `sv_fps` times the
+    timescale) comes out below a msec (`SV_Frame`): the game ran on at its speed, ten frames a second.
+    That the bodies agreed "to about a frame" was the delays of the two pictures cancelling out. With
+    `sv_fps 10` the frame of the server is exactly a msec, and the run now says with every such view how
+    much of the game went by in the seven seconds (71 msec). What a true moment showed in the one pair of
+    two bots in a fight taken since: the page draws the frame the server has for a skeleton (logged: the
+    same number), and the body of a swinging bot was in a visibly different part of its swing than in the
+    game, the trails of its blades were far too large on the page, and the half shield of a hit was gone on
+    the page while the game still had it (the page times it, the trails and its effects by its own clock,
+    which runs a hundred times faster than such a game). Open, all three. Two more runs had no fight in them
+    (the bots walk off before they are frozen).
 - Changed: a saber in the air has its blades at the bolts of its hilt, as one in a hand (`drawModelEntities`
   in `js/frame.js`; `CG_Player` for `saberInFlight` hands `CG_AddSaberBlade` the saber entity). Until now
   only the first blade was drawn, along the way the hilt lies: a staff that was thrown had one blade.
@@ -838,7 +864,7 @@ Also changed:
   - The view toggle "Effects" of the editor switches them off there. The administration always has them.
   - Not drawn: sounds, camera shakes and screen flashes of an effect, the models of emitters (its lights are
     lights of the frame, `fxLights` in `js/fx-run.js`),
-    wind, forks of electricity; particles do not collide with the map. And of what a client plays on its own
+    wind; particles do not collide with the map. And of what a client plays on its own
     that is neither an effect entity, nor played by the server, nor a missile: the push, the pull and the
     grip of the Force (lightning, drain and the jetpack are there, the rest comes with the events of the
     game, see above).

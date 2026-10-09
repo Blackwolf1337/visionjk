@@ -81,6 +81,40 @@ function plJetpack(inst, cent, place, ownView) {
 	});
 }
 
+// CG_ForceElectrocution: the bolts that jump off one who is electrified. In every frame of a client one of seven
+// places of his body is taken by chance (elbows, hands, feet, and the bone lower_lumbar for the torso) and a way
+// from there: one of two axes of that bolt (what cgame reads as NEGATIVE_X and NEGATIVE_Y of it), bent by up to
+// 0.4 each way, 40 to 80 long. A bolt is there when that way meets the map, to where it does, and in six of a
+// hundred frames when it does not: gfx/misc/blueLine, 1.5 wide to 4, growing to its end and thin towards it, for
+// 100 to 150 msec. A try belongs to a frame of a client, the last one to now and each one before it to a frame
+// earlier: its bolt is that much older. While the time of the comparison stands: a pair of one moment is taken
+// after seven seconds in which the game has a frame for every msec and goes on by 70 (tools/panelshot/
+// steps_ref.js), so there are that many tries, a msec apart. No bolt is old enough then to be full grown.
+const PL_SHOCK_BOLTS = ['*r_arm_elbow', '*l_hand', '*r_hand', '*l_leg_foot', '*r_leg_foot', 'lower_lumbar', '*l_arm_elbow'], PL_SHOCK_SHADER = 'gfx/misc/blueLine';
+const PL_SHOCK_REF = 70;
+let plShockFrames = null;		// (the parts of the effects come after this one in the page: nothing of them is used before a frame)
+function plElectrocution(inst, cent, place) {
+	const model = inst.model, c = plShockFrames || (plShockFrames = fxFrames());
+	if (!model || !inst.bones || cent.vehicle) return;
+	if (c.at !== frameNow) { c.at = frameNow; c.plays = fxFramePlays(c, frameNow, fxOn()); }
+	let tries = c.plays, first = -1;
+	if (tries < 0) { first = c.done.get(cent.number) || 0; tries = Math.min(PL_SHOCK_REF - first, 30); c.done.set(cent.number, first + tries); }
+	for (let n = 0; n < tries; n++) {
+		const name = PL_SHOCK_BOLTS[Math.floor(Math.random() * 7)], tag = model.tags[name], bone = tag ? undefined : model.gla.byName.get(name);
+		let at = null;
+		if (tag) at = M4.mul(place, to44(tagMatrix(tag, inst.bones)));
+		else if (bone !== undefined) { const m = new Float32Array(12); mul34(inst.bones.subarray(bone * 12, bone * 12 + 12), model.gla.skel[bone].base, m); at = M4.mul(place, to44(m)); }
+		// without the bolt: from his origin, any way (the code of the game for what has no such bolts)
+		const org = at ? [at[12], at[13], at[14]] : cent.lerpOrigin.slice(0, 3);
+		let dir = [Math.random() * 2 - 1, Math.random() * 2 - 1, Math.random() * 2 - 1];
+		if (at) dir = (Math.random() > 0.5 ? fxUnit([at[4], at[5], at[6]]) : fxUnit([-at[0], -at[1], -at[2]])).map(v => v + (Math.random() * 2 - 1) * 0.4);
+		const len = Math.random() * 40 + 40, end = [org[0] + dir[0] * len, org[1] + dir[1] * len, org[2] + dir[2] * len], tr = traceWorld(org, end, 1);
+		if (!tr && !(Math.random() > 0.94)) continue;
+		const bolt = fxAddElectricity(org, tr ? tr.pos.slice(0, 3) : end, 1.5, 4, 0, 1, 0.5, 0, FX_WHITE, FX_WHITE, 0, 5, Math.random() * 50 + 100, PL_SHOCK_SHADER, FX_ALPHA_LINEAR | FX_SIZE_LINEAR | FX_USE_PHYSICS | FX_GROW | FX_TAPER);
+		if (bolt) bolt.born = first < 0 ? (tries - 1 - n) * FX_FRAME_MSEC : first + n;
+	}
+}
+
 function plForcePass(inst, cent, place) {
 	const pass = cent.forcePass | 0, model = inst.model;
 	if (!pass || cent.vehicle || !inst.pe || !inst.bones || !model) return;
@@ -272,12 +306,12 @@ function plDrawModel(inst, cent, place, d, ownView, plain) {
 	// the freeze of the JA+ admins) his model is drawn again in six of ten frames with one of the two electric
 	// shaders, white, fainter in the last half second (the byte the game makes of that number wraps: 255 down to
 	// 1). The msec he has left are the ones of the last poll less the time of the game since then.
-	// Not here: the forks between his limbs (CG_ForceElectrocution).
 	const dif = (cent.electrify || 0) - (state ? time - (state.time || 0) : 0);
 	if (dif > 0 && (refCam || Math.random() > 0.4)) {
 		const v = (dif < 500 ? Math.floor((dif - 500) / 500 * 255) & 255 : 255) / 255;
 		shell(Math.random() < 0.5 ? PL_MEDIA.electricBody : PL_MEDIA.electricBody2, [v, v, v, 1], { tint: true });
 	}
+	if (dif > 0) plElectrocution(inst, cent, place);
 	// his shield took a hit: a flicker in a grey of chance
 	if (pw & (1 << PG.PW_SHIELDHIT)) { const v = (1 + Math.floor(Math.random() * 255)) / 255; shell(PL_MEDIA.playerShieldDamage, [v, v, v, 1]); }
 }

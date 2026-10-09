@@ -7,7 +7,8 @@
 // A light of an effect is one of the lights of the frame (fxLights, js/dlights.js), and the trail of a saber blade
 // is a primitive cgame hands in by itself (fxAddTrail).
 // Not done: what a primitive runs into (usePhysics, impactFx: it goes through walls and floors), the models of
-// emitters (useModel, and paperPhysics which is for them), wind, and the forks of electricity.
+// emitters (useModel, and paperPhysics which is for them), and wind. Electricity has no forks in this engine:
+// rd-vanilla never sets how many a bolt may have (f_count in tr_surface.cpp).
 
 const FX_MAX_LIVE = 3000, FX_MAX_SCHEDULED = 2000;
 const FX_THIN_FROM = 2000;		// with more alive than this the counts of an effect get smaller
@@ -479,7 +480,8 @@ function fxAdvance(dtMs) {
 		// such a primitive and draws it in the same frame, at its full strength. Without this it was a frame old
 		// when it was first drawn, and gone before that at fewer than 25 frames a second.
 		if (e.fresh) {
-			const d = fxTime - e.t0;
+			// (born: it belongs to a frame of a client that many msec before this one)
+			const d = fxTime - e.t0 - (e.born || 0);
 			e.t0 += d; e.t1 += d;
 			if (e.clocked) for (const a of e.clocked) a[2] += d;
 			e.fresh = false;

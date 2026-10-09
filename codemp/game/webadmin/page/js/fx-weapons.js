@@ -90,6 +90,16 @@ function fxAddLine(start, end, size1, size2, sizeParm, alpha1, alpha2, alphaParm
 	return e;
 }
 
+// FX_AddElectricity of the engine as cgame calls it: a bolt from start to end that lives for killTime msec and
+// strays from the straight way by its chaos. The flags of a line, and of a bolt that it gets thin towards its end
+// (FX_TAPER) and that it grows to its end over its life (FX_GROW). FX_BRANCH, which cgame hands over too, does
+// nothing: rd-vanilla never sets the count of forks a bolt may have (f_count in tr_surface.cpp), so none forks.
+function fxAddElectricity(start, end, size1, size2, sizeParm, alpha1, alpha2, alphaParm, sRGB, eRGB, rgbParm, chaos, killTime, shader, flags) {
+	const e = fxAddLine(start, end, size1, size2, sizeParm, alpha1, alpha2, alphaParm, sRGB, eRGB, rgbParm, killTime, shader, flags);
+	if (e) { e.type = 'electricity'; e.chaos = chaos; e.seed = Math.floor(Math.random() * 1265536); }
+	return e;
+}
+
 // ---- fx_disruptor.c
 const FX_WHITE = [1, 1, 1];
 
