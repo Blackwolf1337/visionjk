@@ -56,8 +56,14 @@ function parseGla(buf) {
 	const skel = [];
 	for (let i = 0; i < numBones; i++) {
 		const o = skelBase + dv.getInt32(skelBase + i * 4, true);
-		skel.push({ name: readStr(dv, o, 64), parent: dv.getInt32(o + 68, true) });
+		// mdxaSkel_t: name, flags, parent, BasePoseMat, BasePoseMatInv (3x4 each)
+		const base = new Float32Array(12), baseInv = new Float32Array(12);
+		for (let k = 0; k < 12; k++) { base[k] = dv.getFloat32(o + 72 + k * 4, true); baseInv[k] = dv.getFloat32(o + 120 + k * 4, true); }
+		skel.push({ name: readStr(dv, o, 64), parent: dv.getInt32(o + 68, true), base, baseInv });
 	}
+	// a bone by its name, as G2_Find_Bone looks it up (no matter the case)
+	const byName = new Map();
+	skel.forEach((b, i) => { if (!byName.has(b.name.toLowerCase())) byName.set(b.name.toLowerCase(), i); });
 	// parents first, the file order does not promise that
 	const order = [], seen = new Uint8Array(numBones);
 	const visit = b => {
@@ -68,7 +74,7 @@ function parseGla(buf) {
 		order.push(b);
 	};
 	for (let i = 0; i < numBones; i++) visit(i);
-	return { dv, numFrames, ofsFrames, numBones, ofsPool, skel, order };
+	return { dv, numFrames, ofsFrames, numBones, ofsPool, skel, order, byName };
 }
 
 // one bone of one frame as a 3x4 matrix (row major, like mdxaBone_t)
@@ -96,15 +102,21 @@ function mul34(a, b, out) {
 	}
 }
 
-// animation.cfg: name -> { first, count, loop, fps }
+// animation.cfg: name -> { first, count, loop, fps, frameLerp } (BG_ParseAnimationFile: the time of a frame in ms
+// is rounded away from zero, and below zero for an animation that runs backwards)
 function parseAnimCfg(text) {
 	const map = new Map();
 	for (const line of text.split(/\r?\n/)) {
 		const m = line.trim().match(/^([A-Z0-9_]+)\s+(-?\d+)\s+(-?\d+)\s+(-?\d+)\s+(-?[\d.]+)/);
-		if (m) map.set(m[1], { first: +m[2], count: +m[3], loop: +m[4], fps: +m[5] });
+		if (!m) continue;
+		const fps = +m[5] || 1;
+		map.set(m[1], { first: +m[2], count: +m[3], loop: +m[4], fps, frameLerp: fps < 0 ? Math.floor(1000 / fps) : Math.ceil(1000 / fps) });
 	}
 	return map;
 }
+// an animation the file does not have, as the game has it then
+const G2_NO_ANIM = { first: 0, count: 0, loop: -1, fps: 10, frameLerp: 100 };
+const g2Anim = (model, num) => model.cfg.get(model.anims[num]) || G2_NO_ANIM;
 
 const g2 = { animNames: null, glas: new Map(), cfgs: new Map(), models: new Map(), instances: new Map() };
 
@@ -131,18 +143,55 @@ function cached(map, key, make) {
 	return map.get(key);
 }
 
-// "kyle/default" or a full models/players/x/model.glm path, plus the team for the skin
-function modelKey(model, team) {
+// What a client loads for a player or an NPC: the folder of the model and its skin. A player says "kyle/default"
+// (CG_RegisterClientModelname), an NPC the full path models/players/x/model.glm, with "*skin" at its end
+// (CG_HandleAppendedSkin) or with the skin its vehicle names (CG_G2AnimEntModelLoad). A skin is a name
+// (model_<name>.skin) or three files "head|torso|lower". In a team game a player has the skin of his team.
+function modelKey(model, team, vehSkin) {
 	let dir, skin = 'default';
 	if (/^models\//i.test(model)) {
+		const star = model.lastIndexOf('*');
+		if (star >= 0) { skin = model.slice(star + 1) || 'default'; model = model.slice(0, star); }
 		dir = model.replace(/\/[^/]*$/, '');
+		if (vehSkin) skin = vehSkin;
 	} else {
-		const [m, s] = (model || 'kyle').split('/');
-		dir = 'models/players/' + (m || 'kyle');
-		if (s) skin = s;
+		const name = model || 'kyle', slash = name.indexOf('/');
+		dir = 'models/players/' + ((slash < 0 ? name : name.slice(0, slash)) || 'kyle');
+		if (slash >= 0 && name.slice(slash + 1)) skin = name.slice(slash + 1);
 	}
 	if (team === 'red' || team === 'blue') skin = team;
 	return { dir, skin, key: dir + '|' + skin };
+}
+
+// A skin file as the engine reads it (RE_RegisterIndividualSkin): surface, shader. The names of the surfaces in
+// lower case; a surface named "..._off" that is given "*off" is left out, any other loses its "_off".
+function g2ParseSkin(text, into) {
+	let n = 0;
+	for (const line of text.split(/\r?\n/)) {
+		const comma = line.indexOf(',');
+		if (comma < 0) continue;
+		let surf = line.slice(0, comma).trim().toLowerCase();
+		const tex = line.slice(comma + 1).trim().replace(/^"|"$/g, '');
+		if (!surf || surf.startsWith('tag_')) continue;
+		if (surf.endsWith('_off')) {
+			if (tex === '*off') continue;
+			surf = surf.slice(0, -4);
+		}
+		into[surf] = tex;
+		n++;
+	}
+	return n;
+}
+
+// the files of a skin: one, or the three of "head|torso|lower" (RE_SplitSkins)
+async function g2LoadSkin(dir, skinName) {
+	const skin = {}, parts = skinName.split('|').filter(Boolean);
+	const files = skinName.includes('|') ? (parts.length >= 3 ? parts.slice(0, 3).map(p => dir + '/' + p + '.skin') : []) : [dir + '/model_' + skinName + '.skin'];
+	let n = 0;
+	for (const f of files) {
+		try { n += g2ParseSkin(await fetchGameFile(f, true), skin); } catch (e) { /* this part of the skin is not there */ }
+	}
+	return n ? skin : null;
 }
 
 async function loadG2Model(dir, skinName) {
@@ -155,18 +204,8 @@ async function loadG2Model(dir, skinName) {
 	const cfgDir = parsed.animName.replace(/\/[^/]*$/, '');
 	const cfg = await cached(g2.cfgs, cfgDir, async () => parseAnimCfg(await fetchGameFile(cfgDir + '/animation.cfg', true)));
 
-	// skin: surface -> texture, "*off" hides a surface
-	let skin = {};
-	for (const name of [skinName, 'default']) {
-		try {
-			const text = await fetchGameFile(dir + '/model_' + name + '.skin', true);
-			for (const line of text.split(/\r?\n/)) {
-				const [surf, tex] = line.split(',').map(x => x && x.trim());
-				if (surf && tex) skin[surf.toLowerCase()] = tex;
-			}
-			break;
-		} catch (e) { /* try the default skin */ }
-	}
+	// skin: surface -> shader, "*off" hides a surface. Without the skin that was asked for: the default one.
+	const skin = (await g2LoadSkin(dir, skinName)) || (skinName !== 'default' && await g2LoadSkin(dir, 'default')) || {};
 
 	const surfs = [];
 	for (const s of parsed.surfs) {
@@ -175,17 +214,15 @@ async function loadG2Model(dir, skinName) {
 		surfs.push({ ...s, texName: tex });
 	}
 
-	// bones that follow the torso animation: lower_lumbar and everything below it in the tree
-	const torso = new Uint8Array(gla.numBones);
-	const lumbar = gla.skel.findIndex(b => b.name.toLowerCase() === 'lower_lumbar');
-	for (let i = 0; i < gla.numBones; i++) {
-		for (let b = i; b >= 0; b = gla.skel[b].parent) if (b === lumbar) { torso[i] = 1; break; }
-	}
-
 	// textures in the main GL context
 	const textures = [];
 	for (const s of surfs) textures.push(s.texName ? await mainTexture(s.texName) : grayTex);
-	return { surfs, textures, gla, cfg: cfg || new Map(), torso, anims: await g2.animNames, tags: parsed.tags };
+	const anims = await g2.animNames;
+	if (anims && !g2.animList) g2.animList = anims;
+	// which set of animations the skeleton has, as the game numbers them (BG_ParseAnimationFile): 0 the humanoid
+	// one, 1 the one of the rocket trooper, above that every other
+	const animIndex = /players\/_humanoid\//i.test(glaPath) ? 0 : /players\/rockettrooper\//i.test(glaPath) ? 1 : 2;
+	return { surfs, textures, gla, cfg: cfg || new Map(), anims, tags: parsed.tags, animIndex, glaPath, dir, skinName };
 }
 
 const mainTextures = new Map();
@@ -213,12 +250,15 @@ function mainTexture(name) {
 	}).then(t => t || grayTex);
 }
 
-// per entity: GPU buffers and animation start times
-function g2Instance(id, model, team) {
-	const k = modelKey(model, team);
+// per entity: GPU buffers, the bone list of Ghoul2 and what the client game keeps of it between frames
+function g2Instance(id, model, team, vehSkin) {
+	const k = modelKey(model, team, vehSkin);
 	let inst = g2.instances.get(id);
 	if (inst && inst.key === k.key) return inst;
-	inst = { key: k.key, model: null, legs: { anim: -1, start: 0 }, torso: { anim: -1, start: 0 } };
+	// legs and torso are the lerpFrame_t of the client game, ci what its clientInfo_t keeps for the animations and
+	// the angles, pe the swing of legs and torso (playerEntity_t). Filled by js/player-draw.js and js/g2-angles.js.
+	inst = { key: k.key, model: null, blist: [], calc: [], touch: null, touchNow: 0, bones: null,
+		legs: g2LerpFrame(), torso: g2LerpFrame(), ci: { legsAnim: 0, torsoAnim: 0, brokenLimbs: 0, corrTime: 0, lastHeadAngles: [0, 0, 0], lookTime: 0 }, pe: null, turAngles: [0, 0, 0], synced: -1 };
 	g2.instances.set(id, inst);
 	cached(g2.models, k.key, () => loadG2Model(k.dir, k.skin))
 		.then(m => m || cached(g2.models, 'models/players/kyle|default', () => loadG2Model('models/players/kyle', 'default')))
@@ -237,55 +277,375 @@ function g2Instance(id, model, team) {
 				gl.bindVertexArray(null);
 				return { vao, posBuf, normBuf, count: s.idx.length, tex: m.textures[i], shaderName: s.texName, mat: null, outPos: new Float32Array(s.pos.length), outNorm: new Float32Array(s.norm.length) };
 			});
-			inst.bones = new Float32Array(m.gla.numBones * 12);
+			const n = m.gla.numBones;
+			inst.bones = new Float32Array(n * 12);
+			inst.touch = new Int32Array(n);
+			for (let i = 0; i < n; i++) inst.calc.push({ newFrame: 0, currentFrame: 0, backlerp: 0, blendFrame: 0, blendOldFrame: 0, blendMode: false, blendLerp: 0 });
+			// a model without that bone has no torso of its own (cent->noLumbar), one without a face no face
+			inst.noLumbar = !m.gla.byName.has('lower_lumbar');
+			inst.noFace = !m.gla.byName.has('face');
 			inst.model = m;
 		});
 	return inst;
 }
 
-// frame of an animation at a time, with the lerp to the next frame
-function animFrame(model, animNum, start, now) {
-	const a = model.cfg.get(model.anims[animNum]) || model.cfg.get('BOTH_STAND1') || { first: 0, count: 1, loop: -1, fps: 20 };
-	const fps = Math.abs(a.fps) || 20;
-	let f = (now - start) / 1000 * fps;
-	if (a.count <= 1) f = 0;
-	else if (f >= a.count - 1) {
-		if (a.loop >= 0 && a.loop < a.count) {
-			const span = a.count - a.loop;
-			f = a.loop + ((f - a.loop) % span + span) % span;
-		} else {
-			f = a.count - 1;
-		}
+// lerpFrame_t of the client game, as far as it is used with Ghoul2: no animation yet
+const g2LerpFrame = () => ({ animationNumber: 0, animation: null, animationSpeed: 0, animationTorsoSpeed: 0, lastFlip: 0 });
+
+/* ---- the bone list of a Ghoul2 instance (rd-vanilla/G2_bones.cpp) ---- */
+
+const BONE_ANGLES_PREMULT = 0x0001, BONE_ANGLES_POSTMULT = 0x0002, BONE_ANGLES_REPLACE = 0x0004, BONE_ANGLES_TOTAL = 0x0007;
+const BONE_ANIM_OVERRIDE = 0x0008, BONE_ANIM_OVERRIDE_LOOP = 0x0010, BONE_ANIM_OVERRIDE_FREEZE = 0x0040 + 0x0008, BONE_ANIM_BLEND = 0x0080, BONE_ANIM_TOTAL = 0x00d8;
+// Eorientations of q_shared.h
+const G2_POSITIVE_X = 1, G2_POSITIVE_Z = 2, G2_POSITIVE_Y = 3, G2_NEGATIVE_X = 4, G2_NEGATIVE_Z = 5, G2_NEGATIVE_Y = 6;
+
+// G2_Find_Bone and G2_Add_Bone: the entry of a bone in the list, made when it is not there. null: no such bone.
+function g2Bone(inst, boneName, add) {
+	const num = inst.model.gla.byName.get(boneName.toLowerCase());
+	if (num === undefined) return null;
+	if (!inst.blist[num] && add) {
+		inst.blist[num] = { boneNumber: num, flags: 0, startFrame: 0, endFrame: 0, startTime: 0, pauseTime: 0, animSpeed: 0,
+			blendFrame: 0, blendLerpFrame: 0, blendTime: 0, blendStart: 0, boneBlendTime: 0, boneBlendStart: 0, matrix: new Float32Array(12) };
 	}
-	let i0 = Math.floor(f), t = f - i0, i1 = Math.min(i0 + 1, a.count - 1);
-	if (a.loop >= 0 && i0 === a.count - 1) i1 = a.loop;
-	if (a.fps < 0) { i0 = a.count - 1 - i0; i1 = a.count - 1 - i1; }
-	const max = model.gla.numFrames - 1;
-	return [Math.min(max, a.first + i0), Math.min(max, a.first + i1), t];
+	return inst.blist[num] || null;
 }
 
-const tmpA = new Float32Array(12), tmpB = new Float32Array(12), tmpL = new Float32Array(12);
+// G2_TimingModel (tr_ghoul2.cpp): the frame an animation of a bone is at at a time, the frame after it and how far
+// it is between the two. Into out (currentFrame, newFrame, backlerp), which keeps what it had when the animation
+// has run out and neither loops nor freezes.
+function g2TimingModel(bone, currentTime, out) {
+	const animSpeed = bone.animSpeed;
+	let time = ((bone.pauseTime ? bone.pauseTime : currentTime) - bone.startTime) / 50;
+	if (time < 0) time = 0;
+	let newFrame_g = bone.startFrame + time * animSpeed;
+	const animSize = bone.endFrame - bone.startFrame, endFrame = bone.endFrame, loop = bone.flags & BONE_ANIM_OVERRIDE_LOOP;
+	if (animSize) {
+		// did we run off the end?
+		if ((animSpeed > 0 && newFrame_g > endFrame - 1) || (animSpeed < 0 && newFrame_g < endFrame + 1)) {
+			if (loop) {
+				// back within the bounds of the animation
+				if (animSpeed < 0) {
+					if (newFrame_g < endFrame + 1 && newFrame_g >= endFrame) {
+						out.backlerp = (endFrame + 1) - newFrame_g;
+						out.currentFrame = endFrame;
+						out.newFrame = bone.startFrame;
+					} else {
+						if (newFrame_g <= endFrame + 1) newFrame_g = endFrame + (newFrame_g - endFrame) % animSize - animSize;
+						out.backlerp = Math.ceil(newFrame_g) - newFrame_g;
+						out.currentFrame = Math.ceil(newFrame_g);
+						out.newFrame = out.currentFrame <= endFrame + 1 ? bone.startFrame : out.currentFrame - 1;
+					}
+				} else {
+					if (newFrame_g > endFrame - 1 && newFrame_g < endFrame) {
+						out.backlerp = newFrame_g - Math.trunc(newFrame_g);
+						out.currentFrame = Math.trunc(newFrame_g);
+						out.newFrame = bone.startFrame;
+					} else {
+						if (newFrame_g >= endFrame) newFrame_g = endFrame + (newFrame_g - endFrame) % animSize - animSize;
+						out.backlerp = newFrame_g - Math.trunc(newFrame_g);
+						out.currentFrame = Math.trunc(newFrame_g);
+						out.newFrame = newFrame_g >= endFrame - 1 ? bone.startFrame : out.currentFrame + 1;
+					}
+				}
+			} else if ((bone.flags & BONE_ANIM_OVERRIDE_FREEZE) === BONE_ANIM_OVERRIDE_FREEZE) {
+				// it holds its last frame
+				out.currentFrame = animSpeed > 0 ? bone.endFrame - 1 : bone.endFrame + 1;
+				out.newFrame = out.currentFrame;
+				out.backlerp = 0;
+			} else {
+				bone.flags &= ~BONE_ANIM_TOTAL;
+			}
+		} else if (animSpeed > 0) {
+			out.currentFrame = Math.trunc(newFrame_g);
+			out.backlerp = newFrame_g - out.currentFrame;
+			out.newFrame = out.currentFrame + 1;
+			// on the last frame: on to the first one only when it loops
+			if (out.newFrame >= endFrame) out.newFrame = loop ? bone.startFrame : bone.endFrame - 1;
+		} else {
+			out.backlerp = Math.ceil(newFrame_g) - newFrame_g;
+			out.currentFrame = Math.ceil(newFrame_g);
+			if (out.currentFrame > bone.startFrame) {
+				out.currentFrame = bone.startFrame;
+				out.newFrame = out.currentFrame;
+				out.backlerp = 0;
+			} else {
+				out.newFrame = out.currentFrame - 1;
+				if (out.newFrame < endFrame + 1) out.newFrame = loop ? bone.startFrame : bone.endFrame + 1;
+			}
+		}
+	} else {
+		out.currentFrame = animSpeed < 0 ? bone.endFrame + 1 : bone.endFrame - 1;
+		if (out.currentFrame < 0) out.currentFrame = 0;
+		out.newFrame = out.currentFrame;
+		out.backlerp = 0;
+	}
+}
+
+// G2_Get_Bone_Anim_Index: the frame (with its fraction) an animated bone is at, null when it has no animation
+const g2Timed = { currentFrame: 0, newFrame: 0, backlerp: 0 };
+function g2GetBoneAnim(inst, boneName, currentTime) {
+	const bone = g2Bone(inst, boneName, false);
+	if (!bone || !(bone.flags & (BONE_ANIM_OVERRIDE_LOOP | BONE_ANIM_OVERRIDE))) return null;
+	g2Timed.currentFrame = g2Timed.newFrame = g2Timed.backlerp = 0;
+	const flags = bone.flags;
+	g2TimingModel(bone, currentTime, g2Timed);
+	return { currentFrame: g2Timed.currentFrame + g2Timed.backlerp, startFrame: bone.startFrame, endFrame: bone.endFrame, flags, animSpeed: bone.animSpeed };
+}
+// G2API_GetBoneFrame: only the frame, 0 without an animation
+const g2GetBoneFrame = (inst, boneName, currentTime) => { const a = g2GetBoneAnim(inst, boneName, currentTime); return a ? a.currentFrame : 0; };
+
+// G2_Set_Bone_Anim_Index: a bone is given an animation, from startFrame to endFrame (the one after its last), at
+// animSpeed frames per 50 ms, starting at setFrame (-1: at its start). With BONE_ANIM_BLEND the pose it was in is
+// kept and blended out over blendTime ms.
+function g2SetBoneAnim(inst, boneName, startFrame, endFrame, flags, animSpeed, currentTime, setFrame, blendTime) {
+	const bone = g2Bone(inst, boneName, true);
+	if (!bone) return false;
+	let modFlags = flags;
+	if (flags & BONE_ANIM_BLEND) {
+		// where the animation it has is now
+		const was = g2GetBoneAnim(inst, boneName, currentTime);
+		if (was) {
+			if (bone.blendStart === currentTime) {
+				// a blend that has not started yet is replaced
+				bone.blendTime = blendTime;
+			} else {
+				if (was.animSpeed < 0) {
+					bone.blendFrame = Math.floor(was.currentFrame);
+					bone.blendLerpFrame = Math.floor(was.currentFrame);
+				} else {
+					bone.blendFrame = was.currentFrame;
+					bone.blendLerpFrame = Math.trunc(was.currentFrame + 1);
+					// off the end of the animation it had: its first frame when that one loops, else its last
+					if (bone.blendFrame >= was.endFrame) {
+						if (bone.flags & BONE_ANIM_OVERRIDE_LOOP) bone.blendFrame = was.startFrame;
+						else if (was.endFrame <= 0) bone.blendLerpFrame = 0;
+						else bone.blendFrame = was.endFrame - 1;
+					}
+					if (bone.blendLerpFrame >= was.endFrame) {
+						if (bone.flags & BONE_ANIM_OVERRIDE_LOOP) bone.blendLerpFrame = was.startFrame;
+						else if (was.endFrame <= 0) bone.blendLerpFrame = 0;
+						else bone.blendLerpFrame = was.endFrame - 1;
+					}
+				}
+				bone.blendTime = blendTime;
+				bone.blendStart = currentTime;
+			}
+		} else {
+			// it had none: nothing to blend from
+			bone.blendFrame = bone.blendLerpFrame = 0;
+			bone.blendTime = 0;
+			modFlags &= ~BONE_ANIM_BLEND;
+		}
+	} else {
+		bone.blendFrame = bone.blendLerpFrame = 0;
+		bone.blendTime = bone.blendStart = 0;
+		modFlags &= ~BONE_ANIM_BLEND;
+	}
+	bone.endFrame = endFrame;
+	bone.startFrame = startFrame;
+	bone.animSpeed = animSpeed;
+	bone.pauseTime = 0;
+	bone.startTime = setFrame !== -1 ? currentTime - (setFrame - startFrame) * 50 / animSpeed : currentTime;
+	bone.flags = (bone.flags & ~BONE_ANIM_TOTAL) | modFlags;
+	return true;
+}
+
+// AnglesToAxis of the game: forward, left and up for pitch, yaw and roll in degrees
+function g2AnglesToAxis(angles) {
+	const r = Math.PI / 180, sp = Math.sin(angles[0] * r), cp = Math.cos(angles[0] * r), sy = Math.sin(angles[1] * r), cy = Math.cos(angles[1] * r),
+		sr = Math.sin(angles[2] * r), cr = Math.cos(angles[2] * r);
+	return [[cp * cy, cp * sy, -sp], [sr * sp * cy - cr * sy, sr * sp * sy + cr * cy, sr * cp], [cr * sp * cy + sr * sy, cr * sp * sy - sr * cy, cr * cp]];
+}
+
+// Create_Matrix (G2_misc.cpp): the axes of angles as the columns of a 3x4 matrix
+function g2CreateMatrix(angles, out) {
+	const a = g2AnglesToAxis(angles);
+	out[0] = a[0][0]; out[4] = a[0][1]; out[8] = a[0][2];
+	out[1] = a[1][0]; out[5] = a[1][1]; out[9] = a[1][2];
+	out[2] = a[2][0]; out[6] = a[2][1]; out[10] = a[2][2];
+	out[3] = out[7] = out[11] = 0;
+	return out;
+}
+
+// G2_Set_Bone_Angles with G2_Generate_Matrix: a bone is turned by angles besides its animation. up, left and
+// forward say which axis of the bone each of the angles turns around.
+const g2Gen1 = new Float32Array(12), g2Gen2 = new Float32Array(12);
+function g2SetBoneAngles(inst, boneName, angles, flags, up, left, forward, blendTime, currentTime) {
+	const bone = g2Bone(inst, boneName, true);
+	if (!bone) return false;
+	bone.flags = (bone.flags & ~BONE_ANGLES_TOTAL) | flags;
+	bone.boneBlendStart = currentTime;
+	bone.boneBlendTime = blendTime;
+	const skel = inst.model.gla.skel[bone.boneNumber], newAngles = [0, 0, 0];
+	if (flags & (BONE_ANGLES_PREMULT | BONE_ANGLES_POSTMULT)) {
+		// which of the angles is the yaw of the matrix, which its pitch and which its roll
+		switch (up) {
+			case G2_NEGATIVE_X: newAngles[1] = angles[2] + 180; break;
+			case G2_POSITIVE_X: newAngles[1] = angles[2]; break;
+			case G2_NEGATIVE_Y: case G2_POSITIVE_Y: newAngles[1] = angles[0]; break;
+			case G2_NEGATIVE_Z: newAngles[1] = angles[1] + 180; break;
+			case G2_POSITIVE_Z: newAngles[1] = angles[1]; break;
+		}
+		switch (left) {
+			case G2_NEGATIVE_X: newAngles[0] = angles[2]; break;
+			case G2_POSITIVE_X: newAngles[0] = angles[2] + 180; break;
+			case G2_NEGATIVE_Y: newAngles[0] = angles[0]; break;
+			case G2_POSITIVE_Y: newAngles[0] = angles[0] + 180; break;
+			case G2_NEGATIVE_Z: case G2_POSITIVE_Z: newAngles[0] = angles[1]; break;
+		}
+		switch (forward) {
+			case G2_NEGATIVE_X: case G2_POSITIVE_X: newAngles[2] = angles[2]; break;
+			case G2_NEGATIVE_Y: newAngles[2] = angles[0]; break;
+			case G2_POSITIVE_Y: newAngles[2] = angles[0] + 180; break;
+			case G2_NEGATIVE_Z: newAngles[2] = angles[1]; break;
+			case G2_POSITIVE_Z: newAngles[2] = angles[1] + 180; break;
+		}
+		// in the space of the bone: base pose * turn * base pose inverted
+		g2CreateMatrix(newAngles, g2Gen1);
+		mul34(g2Gen1, skel.baseInv, g2Gen2);
+		mul34(skel.base, g2Gen2, bone.matrix);
+	} else {
+		newAngles[0] = angles[0] + (left === G2_POSITIVE_Y ? 180 : 0); newAngles[1] = angles[1]; newAngles[2] = angles[2];
+		g2CreateMatrix(newAngles, g2Gen1);
+		const perm = g2Gen2.fill(0), row = o => o === G2_POSITIVE_X || o === G2_NEGATIVE_X ? 0 : o === G2_POSITIVE_Y || o === G2_NEGATIVE_Y ? 1 : 2,
+			sign = o => o === G2_NEGATIVE_X || o === G2_NEGATIVE_Y || o === G2_NEGATIVE_Z ? -1 : 1;
+		if (forward) perm[row(forward) * 4] = sign(forward);
+		if (left) perm[row(left) * 4 + 1] = sign(left);
+		if (up) perm[row(up) * 4 + 2] = sign(up);
+		mul34(g2Gen1, perm, bone.matrix);
+	}
+	return true;
+}
+
+/* ---- the skeleton of a frame (CBoneCache::EvalLow and G2_TransformBone in tr_ghoul2.cpp) ---- */
+
+const g2T2 = new Float32Array(12), g2T3 = new Float32Array(12), g2T4 = new Float32Array(12), g2T5 = new Float32Array(12), g2Tmp = new Float32Array(12), g2Tmp2 = new Float32Array(12);
 const identity34 = new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0]);
 
-// animates and skins one instance, returns false while it is still loading
-function g2Update(inst, legsAnim, torsoAnim, now) {
-	const m = inst.model;
-	if (!m) return false;
-	for (const [part, anim] of [[inst.legs, legsAnim], [inst.torso, torsoAnim]]) {
-		if (part.anim !== anim) { part.anim = anim; part.start = now; }
+// One bone, after its parent: it takes the frames of its parent unless the bone list gives it an animation of
+// its own, and that holds for all bones below it. The matrices stay in the space of the model: the engine turns
+// the root by a quarter (its rootMatrix), here the place the model is drawn at does that (g2Place).
+function g2EvalBone(inst, b, time) {
+	if (inst.touch[b] === inst.touchNow) return;
+	inst.touch[b] = inst.touchNow;
+	const gla = inst.model.gla, skel = gla.skel[b], parent = skel.parent >= 0 && skel.parent < gla.numBones ? skel.parent : -1, TB = inst.calc[b], bones = inst.bones;
+	if (parent >= 0) {
+		g2EvalBone(inst, parent, time);
+		const par = inst.calc[parent];
+		TB.newFrame = par.newFrame; TB.currentFrame = par.currentFrame; TB.backlerp = par.backlerp;
+		TB.blendFrame = par.blendFrame; TB.blendOldFrame = par.blendOldFrame; TB.blendMode = par.blendMode; TB.blendLerp = par.blendLerp;
+	} else {
+		TB.newFrame = TB.currentFrame = TB.backlerp = TB.blendFrame = TB.blendOldFrame = TB.blendLerp = 0;
+		TB.blendMode = false;
 	}
-	const legs = animFrame(m, inst.legs.anim, inst.legs.start, now);
-	const torso = animFrame(m, inst.torso.anim, inst.torso.start, now);
-	const gla = m.gla, bones = inst.bones;
-	for (const b of gla.order) {
-		const fr = m.torso[b] ? torso : legs;
-		glaBone(gla, fr[0], b, tmpA);
-		glaBone(gla, fr[1], b, tmpB);
-		for (let k = 0; k < 12; k++) tmpL[k] = tmpA[k] + (tmpB[k] - tmpA[k]) * fr[2];
-		const p = gla.skel[b].parent;
-		mul34(p >= 0 ? bones.subarray(p * 12, p * 12 + 12) : identity34, tmpL, bones.subarray(b * 12, b * 12 + 12));
+	const over = inst.blist[b];
+	let angleOverride = 0;
+	if (over) {
+		angleOverride = over.flags & BONE_ANGLES_TOTAL;
+		if (over.flags & BONE_ANIM_BLEND) {
+			const blendTime = time - over.blendStart;
+			// only while there is blend time left, or a blend further up would be spoiled
+			if (blendTime >= 0 && blendTime < over.blendTime) {
+				TB.blendFrame = over.blendFrame;
+				TB.blendOldFrame = over.blendLerpFrame;
+				TB.blendLerp = blendTime / over.blendTime;
+				TB.blendMode = true;
+			} else {
+				TB.blendMode = false;
+			}
+		} else if (over.flags & (BONE_ANIM_OVERRIDE_LOOP | BONE_ANIM_OVERRIDE)) {
+			TB.blendMode = false;
+		}
+		if (over.flags & (BONE_ANIM_OVERRIDE_LOOP | BONE_ANIM_OVERRIDE)) g2TimingModel(over, time, TB);
+	}
+	const n = gla.numFrames;
+	if (!(TB.newFrame >= 0 && TB.newFrame < n)) TB.newFrame = 0;
+	if (!(TB.currentFrame >= 0 && TB.currentFrame < n)) TB.currentFrame = 0;
+	if (TB.blendFrame < 0 || TB.blendFrame >= n + 1) TB.blendFrame = 0;
+	if (!(TB.blendOldFrame >= 0 && TB.blendOldFrame < n)) TB.blendOldFrame = 0;
+
+	// the pose that is blended out of: between its two frames
+	if (TB.blendMode) {
+		const backlerp = TB.blendFrame - Math.trunc(TB.blendFrame), frontlerp = 1 - backlerp;
+		glaBone(gla, Math.min(n - 1, Math.trunc(TB.blendFrame)), b, g2T3);
+		glaBone(gla, TB.blendOldFrame, b, g2T4);
+		for (let j = 0; j < 12; j++) g2T5[j] = backlerp * g2T3[j] + frontlerp * g2T4[j];
+	}
+	if (!TB.backlerp) {
+		glaBone(gla, TB.currentFrame, b, g2T2);
+	} else {
+		const frontlerp = 1 - TB.backlerp;
+		glaBone(gla, TB.newFrame, b, g2T3);
+		glaBone(gla, TB.currentFrame, b, g2T4);
+		for (let j = 0; j < 12; j++) g2T2[j] = TB.backlerp * g2T3[j] + frontlerp * g2T4[j];
+	}
+	if (TB.blendMode) {
+		const blendFrontlerp = 1 - TB.blendLerp;
+		for (let j = 0; j < 12; j++) g2T2[j] = TB.blendLerp * g2T2[j] + blendFrontlerp * g2T5[j];
 	}
 
+	const out = bones.subarray(b * 12, b * 12 + 12), par = parent >= 0 ? bones.subarray(parent * 12, parent * 12 + 12) : identity34;
+	if (angleOverride & BONE_ANGLES_REPLACE) {
+		// where the animation would put it, then its turn replaced by the one of the list
+		mul34(par, g2T2, g2Tmp);
+		mul34(g2Tmp, skel.base, g2Tmp2);
+		const scale = Math.hypot(g2Tmp2[0], g2Tmp2[1], g2Tmp2[2]);
+		for (let r = 0; r < 3; r++) {
+			for (let c = 0; c < 3; c++) g2Tmp[r * 4 + c] = over.matrix[r * 4 + c] * scale;
+			g2Tmp[r * 4 + 3] = g2Tmp2[r * 4 + 3];
+		}
+		mul34(g2Tmp, skel.baseInv, out);
+	} else if (angleOverride & BONE_ANGLES_PREMULT) {
+		mul34(par, over.matrix, out);
+	} else {
+		mul34(par, g2T2, out);
+	}
+	if (angleOverride & BONE_ANGLES_POSTMULT) {
+		g2Tmp.set(out);
+		mul34(g2Tmp, over.matrix, out);
+	}
+}
+
+// all bones of an instance at a time (G2_TransformGhoulBones): inst.bones, one 3x4 matrix per bone
+function g2Skeleton(inst, time) {
+	inst.touchNow++;
+	for (let b = 0, n = inst.model.gla.numBones; b < n; b++) g2EvalBone(inst, b, time);
+}
+
+// The matrix of a bolt on a bone (G2_GetBoltMatrixLow): the bone times its base pose, in the space the engine has
+// its bones in, which is the one of the model turned by a quarter (the rootMatrix of tr_ghoul2.cpp). Only that
+// bone and the ones above it are worked out, if they are not yet for this time.
+function g2BoneBolt(inst, boneName, time, fresh) {
+	const num = inst.model.gla.byName.get(boneName.toLowerCase());
+	if (num === undefined) return null;
+	if (fresh) inst.touchNow++;
+	g2EvalBone(inst, num, time);
+	const m = new Float32Array(12), r = new Float32Array(12);
+	mul34(inst.bones.subarray(num * 12, num * 12 + 12), inst.model.gla.skel[num].base, m);
+	// rootMatrix: x becomes -y, y becomes x
+	for (let c = 0; c < 4; c++) { r[c] = -m[4 + c]; r[4 + c] = m[c]; r[8 + c] = m[8 + c]; }
+	return r;
+}
+
+// G2API_GetBoltMatrix for a bolt on a bone: where the bone is in the world, for the angles and the origin of its
+// entity (the client game hands it cent->turAngles and cent->lerpOrigin). 3x4, in rows: the last column is the
+// place, the first the axis the game calls POSITIVE_X. scale: the scale of the model. The bones of this frame.
+function g2BoltMatrix(inst, boneName, angles, origin, scale, time) {
+	const bolt = g2BoneBolt(inst, boneName, time, false);
+	if (!bolt) return null;
+	if (scale) { bolt[3] *= scale; bolt[7] *= scale; bolt[11] *= scale; }
+	for (let r = 0; r < 3; r++) { const l = Math.hypot(bolt[r * 4], bolt[r * 4 + 1], bolt[r * 4 + 2]) || 1; bolt[r * 4] /= l; bolt[r * 4 + 1] /= l; bolt[r * 4 + 2] /= l; }
+	const world = g2CreateMatrix(angles, new Float32Array(12)), m = new Float32Array(12);
+	world[3] = origin[0]; world[7] = origin[1]; world[11] = origin[2];
+	mul34(world, bolt, m);
+	// the quarter turn the code of the game counts on
+	for (let r = 0; r < 3; r++) { const x = m[r * 4]; m[r * 4] = -m[r * 4 + 1]; m[r * 4 + 1] = x; }
+	return m;
+}
+
+// the vertices of an instance by its bones, into its buffers
+function g2Skin(inst) {
+	const m = inst.model, bones = inst.bones;
 	m.surfs.forEach((s, si) => {
 		const mesh = inst.meshes[si], op = mesh.outPos, on = mesh.outNorm;
 		for (let v = 0, n = s.pos.length / 3; v < n; v++) {
@@ -309,7 +669,22 @@ function g2Update(inst, legsAnim, torsoAnim, now) {
 		gl.bindBuffer(gl.ARRAY_BUFFER, mesh.posBuf); gl.bufferSubData(gl.ARRAY_BUFFER, 0, op);
 		gl.bindBuffer(gl.ARRAY_BUFFER, mesh.normBuf); gl.bufferSubData(gl.ARRAY_BUFFER, 0, on);
 	});
-	return true;
+}
+
+// The time the animations of the page run by: the time of the game at the last poll (state.time), carried on by
+// the clock of the page. Not carried on in the comparison with the game, where the game nearly stands.
+function g2Time() {
+	const at = state ? state.time || 0 : 0;
+	return refCam ? at : at + Math.min(pollInterval * 3, Math.max(0, performance.now() - lastPoll));
+}
+
+// Where a Ghoul2 model is drawn: its axes for the angles the client game gives its entity (AnglesToAxis), scaled,
+// at its origin. The engine turns the root bone by a quarter, so that the model, which looks down -Y, looks along
+// the first axis: that turn is in this matrix, and the bones stay in the space of the model.
+function g2Place(origin, angles, scale) {
+	const a = g2AnglesToAxis(angles);
+	return new Float32Array([a[1][0] * scale, a[1][1] * scale, a[1][2] * scale, 0, -a[0][0] * scale, -a[0][1] * scale, -a[0][2] * scale, 0,
+		a[2][0] * scale, a[2][1] * scale, a[2][2] * scale, 0, origin[0], origin[1], origin[2], 1]);
 }
 
 const skinProg = compile(`#version 300 es
@@ -326,13 +701,13 @@ void main() {
 	o = vec4(mix(t.rgb * l, uTint, uTintAmount), 1.0);
 }`);
 
-function g2Draw(inst, x, y, z, yaw, scale, tint, tintAmount) {
-	// Ghoul2 models look down -Y, the game's yaw 0 is +X
-	yaw += Math.PI / 2;
-	const c = Math.cos(yaw), s = Math.sin(yaw);
-	const place = new Float32Array([c * scale, s * scale, 0, 0, -s * scale, c * scale, 0, 0, 0, 0, scale, 0, x, y, z, 1]);
+// An instance drawn at a place (g2Place). ent is what the game says of its entity (drawModelScripted): its colour,
+// the ball that says its fog, a shader instead of the ones of its skin. In the plain view of the editor the model
+// is drawn with its images and a little of the colour tint.
+function g2Draw(inst, place, tint, tintAmount, ent) {
 	// as the game draws him: with the scripts of his skin, and without the colour of his team over it
-	if (modelsScripted()) { drawModelScripted(inst.meshes, place); gl.useProgram(flatProg.p); return; }
+	if (modelsScripted()) { drawModelScripted(inst.meshes, place, ent); gl.useProgram(flatProg.p); return; }
+	if (ent && ent.shader) return;
 	gl.useProgram(skinProg.p);
 	gl.uniformMatrix4fv(skinProg.u.uMvp, false, viewProj);
 	gl.uniformMatrix4fv(skinProg.u.uModel, false, place);
@@ -347,5 +722,3 @@ function g2Draw(inst, x, y, z, yaw, scale, tint, tintAmount) {
 	}
 	gl.useProgram(flatProg.p);
 }
-
-

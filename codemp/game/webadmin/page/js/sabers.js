@@ -139,6 +139,8 @@ function sabersPrepare(now) {
 	for (const [id, p] of players) {
 		const d = p.data;
 		if (d.team === 'spectator' || !d.sabers || !d.sabers.length) continue;
+		// no blade and no light of one a client that looks from here is not sent
+		if (id !== view.id && !clientSees(p.draw, 16, 25, 41)) continue;
 		seen.add(id);
 		// the colours first: a saber in the air is handed in by drawModelEntities with the colour of its blade
 		d.sabers.forEach((saber, si) => saber.blades.forEach(blade => {

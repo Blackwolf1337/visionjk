@@ -97,6 +97,8 @@ function drawModelEntities(now, k) {
 		const thrown = new Map();
 		for (const p of players.values()) if (p.data.saberInFlight && p.data.saberEnt > 0 && !p.data.dead) thrown.set(p.data.saberEnt, p.data);
 		for (const m of state.models || []) {
+			// what a client that looks from here is not sent, it does not draw
+			if (!clientSees(m.pos)) continue;
 			const model = staticNow(m.model), pos = m.prev.map((v, i) => v + (m.pos[i] - v) * k), owner = thrown.get(m.id);
 			if (!owner) {
 				if (model) drawStatic(model, anglesMatrix(pos, m.angles, m.scale / 100));

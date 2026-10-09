@@ -32,7 +32,7 @@ const DL_POWERUPS = [[1, [0.2, 0.2, 1]], [4, [1, 0.2, 0.2]], [5, [0.2, 0.2, 1]],
 function dlPlayers() {
 	for (const p of players.values()) {
 		const d = p.data;
-		if (!d.powerups || d.team === 'spectator') continue;
+		if (!d.powerups || d.team === 'spectator' || !clientSees(p.draw, 16, 25, 41)) continue;
 		// 200 and up to 31 more, anew in every frame (rand() & 31)
 		for (const [bit, color] of DL_POWERUPS) if (d.powerups & 1 << bit) dlightAdd(p.draw, 200 + (refCam ? 15.5 : Math.floor(Math.random() * 32)), color);
 	}

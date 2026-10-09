@@ -177,7 +177,7 @@ function shotLights(now) {
 	const k = Math.min(1, (performance.now() - lastPoll) / pollInterval);
 	for (const m of (state && state.shots) || []) {
 		const light = SHOT_LIGHT[m[1]];
-		if (light && m.prev) dlightAdd(shotPos(m, k), light[0], light[1]);
+		if (light && m.prev && clientSees([m[3], m[4], m[5]])) dlightAdd(shotPos(m, k), light[0], light[1]);
 	}
 }
 
@@ -227,6 +227,7 @@ function drawShots(k) {
 		blades.push({ org: [f.pos[0] - up[0] * r, f.pos[1] - up[1] * r, f.pos[2] - up[2] * r], dir: up, len: r * 2, radius: r / 2.2, rgb, round: true });
 	}
 	for (const m of (state && state.shots) || []) {
+		if (!clientSees([m[3], m[4], m[5]])) continue;
 		const weapon = m[1], pos = shotPos(m, k);
 		const speed = Math.hypot(m[6], m[7], m[8]), dir = speed ? [m[6] / speed, m[7] / speed, m[8] / speed] : [0, 0, 1];
 		const path = (m[2] ? SHOT_MODEL_ALT : SHOT_MODEL)[weapon], model = path ? staticNow(path) : null;
