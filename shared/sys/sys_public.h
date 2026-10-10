@@ -122,6 +122,7 @@ char	*Sys_GetCurrentUser( void );
 
 void	NORETURN QDECL Sys_Error( const char *error, ... );
 void	NORETURN Sys_Quit (void);
+void	Sys_RestartOnExit( void );		// client: when the program has ended it starts itself again, with the same arguments
 char	*Sys_GetClipboardData( void );	// note that this isn't journaled...
 
 void	Sys_Print( const char *msg );

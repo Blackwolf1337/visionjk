@@ -32,6 +32,14 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "sys_loadlib.h"
 #include "sys_public.h"
 #include "con_local.h"
+#if !defined(DEDICATED) && !defined(__EMSCRIPTEN__)
+	#ifdef _WIN32
+		#include <windows.h>
+	#else
+		#include <unistd.h>
+		#include <climits>
+	#endif
+#endif
 
 static char binaryPath[ MAX_OSPATH ] = { 0 };
 static char installPath[ MAX_OSPATH ] = { 0 };
@@ -170,6 +178,72 @@ void Sys_Init( void ) {
 	com_unpackLibraries = Cvar_Get( "com_unpackLibraries", "0", CVAR_INIT|CVAR_PROTECTED );
 }
 
+#if !defined(DEDICATED) && !defined(__EMSCRIPTEN__)
+/*
+=================
+The program starts itself again
+
+For the updater of the client (client/cl_update.cpp): when it has replaced the files of the game, the game
+ends and starts again, with the arguments it was started with.
+=================
+*/
+static struct {
+	char		program[ MAX_OSPATH ];	// the file this program was started from, under the name it had then
+	char		**argv;
+	qboolean	wanted;
+} sysRestart;
+
+// at the very start, before the updater gives any file another name
+static void Sys_RestartInit( char **argv ) {
+	sysRestart.argv = argv;
+#ifdef _WIN32
+	const DWORD len = GetModuleFileNameA( NULL, sysRestart.program, sizeof( sysRestart.program ) );
+
+	if ( !len || len >= sizeof( sysRestart.program ) )
+		sysRestart.program[0] = '\0';
+#else
+	char			resolved[ PATH_MAX ];
+	const ssize_t	len = readlink( "/proc/self/exe", resolved, sizeof( resolved ) - 1 );
+
+	if ( len > 0 )
+		resolved[len] = '\0';
+	else if ( !realpath( argv[0], resolved ) )
+		resolved[0] = '\0';
+	Q_strncpyz( sysRestart.program, resolved, sizeof( sysRestart.program ) );
+#endif
+}
+
+void Sys_RestartOnExit( void ) {
+	sysRestart.wanted = qtrue;
+}
+
+// qfalse: it could not be started. On every system but Windows this does not come back if it could.
+static qboolean Sys_Relaunch( void ) {
+	if ( !sysRestart.program[0] )
+		return qfalse;
+#ifdef _WIN32
+	static char			commandLine[ 8192 ];
+	const char			*given = GetCommandLineA();
+	STARTUPINFOA		startup;
+	PROCESS_INFORMATION	process;
+
+	if ( strlen( given ) >= sizeof( commandLine ) )
+		return qfalse;
+	Q_strncpyz( commandLine, given, sizeof( commandLine ) );
+	memset( &startup, 0, sizeof( startup ) );
+	startup.cb = sizeof( startup );
+	if ( !CreateProcessA( sysRestart.program, commandLine, NULL, NULL, FALSE, 0, NULL, NULL, &startup, &process ) )
+		return qfalse;
+	CloseHandle( process.hThread );
+	CloseHandle( process.hProcess );
+	return qtrue;
+#else
+	execv( sysRestart.program, sysRestart.argv );
+	return qfalse;
+#endif
+}
+#endif
+
 static void NORETURN Sys_Exit( int ex ) {
 	IN_Shutdown();
 #ifndef DEDICATED
@@ -184,6 +258,12 @@ static void NORETURN Sys_Exit( int ex ) {
 	Com_ShutdownZoneMemory();
 
 	CON_Shutdown();
+
+#if !defined(DEDICATED) && !defined(__EMSCRIPTEN__)
+	// the last thing it does: the new one must not find this one still holding the window and the ports
+	if ( sysRestart.wanted )
+		Sys_Relaunch();
+#endif
 
     exit( ex );
 }
@@ -768,6 +848,14 @@ int main ( int argc, char* argv[] )
 
 	Sys_SetBinaryPath( Sys_Dirname( argv[ 0 ] ) );
 	Sys_SetDefaultInstallPath( DEFAULT_BASEDIR );
+
+#if !defined(DEDICATED) && !defined(__EMSCRIPTEN__)
+	Sys_RestartInit( argv );
+	// A swap of files by the updater that was cut short is finished here, before a renderer or a module is
+	// loaded. The program that runs may be the old one then, so it starts the new one in its place.
+	if ( CL_UpdateResume() && Sys_Relaunch() )
+		return 0;
+#endif
 
 	// Concatenate the command line for passing to Com_Init
 	for( i = 1; i < argc; i++ )

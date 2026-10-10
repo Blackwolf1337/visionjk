@@ -952,6 +952,10 @@ void CL_InitKeyCommands( void );
 // config files, but the rest of client startup will happen later
 
 void CL_Init( void );
+
+// client/cl_update.cpp, the two parts of the updater that run before the client is started
+qboolean CL_UpdateResume( void );	// from main(): a swap of files that was cut short is finished. qtrue: start the program again
+void CL_UpdateAddress( void );		// from Com_Init(): where updates are asked for, as the build or the command line says
 void CL_Disconnect( qboolean showMainMenu );
 void CL_Shutdown( void );
 void CL_Frame( int msec );

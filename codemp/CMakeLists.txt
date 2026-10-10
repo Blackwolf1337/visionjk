@@ -523,6 +523,7 @@ if(BuildMPEngine)
 		"${MPDir}/client/cl_lan.cpp"
 		"${MPDir}/client/cl_lan.h"
 		"${MPDir}/client/cl_main.cpp"
+		"${MPDir}/client/cl_update.cpp"
 		"${MPDir}/client/cl_net_chan.cpp"
 		"${MPDir}/client/cl_parse.cpp"
 		"${MPDir}/client/cl_scrn.cpp"
@@ -633,7 +634,10 @@ if(BuildMPEngine)
 			${MPEngineSysFiles}
 			"${SharedDir}/sys/sys_win32.cpp"
 			"${SharedDir}/sys/con_passive.cpp"
+			"${SharedDir}/sys/sys_http_win32.cpp"
 			)
+		# the updater asks the website through WinHTTP, which is part of Windows
+		set(MPEngineLibraries ${MPEngineLibraries} "winhttp")
 	elseif(EMSCRIPTEN)
 		# The browser: no terminal, a frame when the page is about to paint, modules that the page has compiled,
 		# and packets through a WebSocket to the server the page came from (a page can not send UDP).
@@ -651,11 +655,31 @@ if(BuildMPEngine)
 			${MPEngineSysFiles}
 			"${SharedDir}/sys/sys_unix.cpp"
 			"${SharedDir}/sys/con_tty.cpp"
+			# the updater asks the website through the libcurl of the system, loaded when it runs
+			"${SharedDir}/sys/sys_http_curl.cpp"
 			)
 	endif(WIN32)
 
 	set(MPEngineFiles ${MPEngineFiles} ${MPEngineSysFiles})
 	source_group("sys" FILES ${MPEngineSysFiles})
+
+	# The updater of the client (client/cl_update.cpp, docs/japlus/update.md): the file list of a release and
+	# the checksum of a file, both plain C. A page is the newest version whenever it is loaded and has none.
+	if(NOT EMSCRIPTEN)
+		set(MPEngineUpdateFiles
+			"${SharedDir}/sys/sys_http.h"
+			"${SharedDir}/update/upd_manifest.c"
+			"${SharedDir}/update/upd_manifest.h"
+			"${SharedDir}/web/web_http.h"
+			"${SharedDir}/web/web_sha256.c"
+			)
+		set(MPEngineFiles ${MPEngineFiles} ${MPEngineUpdateFiles})
+		source_group("update" FILES ${MPEngineUpdateFiles})
+		set(MPEngineDefines ${MPEngineDefines} "UPDATE_URL=\"${UpdateURL}\"")
+		if(UpdateVersion)
+			set(MPEngineDefines ${MPEngineDefines} "UPDATE_VERSION=\"${UpdateVersion}\"")
+		endif()
+	endif()
 
 	if(MakeApplicationBundles)
 		set(MACOSX_BUNDLE_BUNDLE_NAME ${MPEngine})
