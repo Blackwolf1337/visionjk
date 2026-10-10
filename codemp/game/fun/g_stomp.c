@@ -22,7 +22,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 A giant shakes the ground. A player who is more than three times his size (the JA+ model scale, iModelScale above
 STOMP_MIN_SCALE) is felt by who is near him: with every step, where he pushes off for a jump and where he
 lands, the view of the others shakes, a heavy step is heard and a ring of dust comes up. g_stomp 0 switches it
-off.
+off, g_stomp 2 says each one on the console of the server, with whom it was sent to and how strong.
 
 Server side only, with what every client of the game knows: the shake is the screen shake event, one for each
 player near enough with what is left of it at his distance, sent to him alone (and to who follows him as a
@@ -41,7 +41,7 @@ Not from JA+ and not from JKAdmin.
 
 #define STOMP_MIN_SCALE		300			// percent: only a player above this
 #define STOMP_MAX_GROWTH	4.0f		// twice that size is twice as strong and felt twice as far, up to this
-#define STOMP_OWN_VIEW		0.35f		// of the shake for the one whose steps they are, or his picture never stands still
+#define STOMP_OWN_VIEW		0.6f		// of the shake for the one whose steps they are, or his picture never stands still
 #define STOMP_MIN_SHAKE		0.1f		// what is left of it at a distance is not sent below this
 #define STOMP_GROUND		64			// below the origin, at normal size: how far the ground is looked for
 #define STOMP_STEP_SPEED	60.0f		// units a second over the ground: slower is no step
@@ -51,11 +51,14 @@ static const struct stompKind_s {
 	int			radius;			// how far it is felt, at STOMP_MIN_SCALE
 	int			time;			// msec the view shakes
 	qboolean	far;			// the sound carries
+	const char	*name;
 } stompKinds[STOMP_NUM_KINDS] = {
-	{ 1.5f,		 700,	250,	qfalse },	// STOMP_STEP
-	{ 1.0f,		 600,	200,	qfalse },	// STOMP_JUMP
-	{ 3.0f,		1000,	400,	qtrue },	// STOMP_LAND
-	{ 5.0f,		1400,	600,	qtrue },	// STOMP_FALL
+	// What the game itself does for a step of the rancor is 4 for a second (NPC_AI_Rancor.c). A first set of
+	// numbers a third of that was not noticed at all, least by the giant himself, whose camera is far out.
+	{  4.0f,	 900,	 450,	qfalse,	"step" },	// STOMP_STEP
+	{  3.0f,	 800,	 350,	qfalse,	"jump" },	// STOMP_JUMP
+	{  7.0f,	1200,	 700,	qtrue,	"landing" },	// STOMP_LAND
+	{ 10.0f,	1600,	1000,	qtrue,	"fall" },	// STOMP_FALL
 };
 
 static int	stompSounds[2];
@@ -94,6 +97,27 @@ static qboolean G_StompGiant( const gentity_t *ent ) {
 
 /*
 =================
+G_StompFollowed
+
+Is a spectator looking through this player's eyes
+=================
+*/
+static qboolean G_StompFollowed( int clientNum ) {
+	int i;
+
+	for ( i = 0; i < level.maxclients; i++ ) {
+		const gclient_t *cl = &level.clients[i];
+
+		if ( cl->pers.connected == CON_CONNECTED && cl->sess.spectatorState == SPECTATOR_FOLLOW
+				&& cl->sess.spectatorClient == clientNum ) {
+			return qtrue;
+		}
+	}
+	return qfalse;
+}
+
+/*
+=================
 G_Stomp
 =================
 */
@@ -102,7 +126,8 @@ void G_Stomp( gentity_t *ent, stompKind_t kind ) {
 	vec3_t spot, end, up = { -90.0f, 0.0f, 0.0f };	// angles: the effect goes upward
 	trace_t tr;
 	float growth, radius;
-	int i;
+	int i, sent = 0;
+	float strongest = 0.0f;
 
 	if ( !G_StompGiant( ent ) ) {
 		return;
@@ -134,12 +159,13 @@ void G_Stomp( gentity_t *ent, stompKind_t kind ) {
 		if ( !other->inuse || !other->client || other->client->pers.connected != CON_CONNECTED ) {
 			continue;
 		}
-		if ( other->r.svFlags & SVF_BOT ) {
-			continue;
-		}
 		// A spectator who follows somebody is sent what is for that player (the server goes by the client
 		// number of the player state, which is the followed one's), and it is that player's view he has.
 		if ( other->client->sess.spectatorState == SPECTATOR_FOLLOW ) {
+			continue;
+		}
+		// a bot has no screen, but who follows one has
+		if ( ( other->r.svFlags & SVF_BOT ) && !G_StompFollowed( i ) ) {
 			continue;
 		}
 		dist = Distance( other->client->ps.origin, spot );
@@ -160,6 +186,14 @@ void G_Stomp( gentity_t *ent, stompKind_t kind ) {
 		te->r.singleClient = i;
 		// for the cgame of this tree, which can leave these out (cg_stomp). Other clients do not read it.
 		te->s.angles[1] = SHAKE_STOMP;
+		sent++;
+		if ( shake > strongest ) {
+			strongest = shake;
+		}
+	}
+	if ( g_stomp.integer >= 2 ) {
+		trap->Print( "stomp: %s of %s^7 (scale %i) at %s, shake sent to %i, the strongest %.1f for %i msec\n", k->name,
+			ent->client->pers.netname, ent->client->ps.iModelScale, vtos( spot ), sent, strongest, k->time );
 	}
 }
 

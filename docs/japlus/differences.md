@@ -106,7 +106,10 @@ A bug of OpenJK that was fixed:
   an effect at the spot), so a client without the cgame of this tree gets all of it. The server does not know when
   a foot touches the ground, only a client plays the animation: a step is where the movement code's cycle of steps
   turns over, which keeps the pace of the legs and not the very moment. With the cgame of this tree `cg_stomp 0`
-  leaves the shake out for that player, the sound and the dust stay. Built, not seen in the game.
+  leaves the shake out for that player, the sound and the dust stay. A step shakes as the game has the step of
+  the rancor shake (4, a landing 7, a fall 10, less with the distance and more with the size). `g_stomp 2` says
+  each one on the console of the server. On a live server the console showed the stomps of a bot of scale 500
+  being sent to the one player there, what he saw was not looked at from here.
 
 ## What of the original was taken out
 
