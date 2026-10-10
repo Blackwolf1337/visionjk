@@ -34,6 +34,11 @@ if(BuildMPCGame)
 	add_subdirectory("${MPDir}/cgame")
 endif(BuildMPCGame)
 
+#    Add Voice Master Project (a page can not be one: no UDP there)
+if(BuildVoiceMaster AND NOT EMSCRIPTEN)
+	add_subdirectory("${MPDir}/voicemaster")
+endif()
+
 #    Add UI Project
 if(BuildMPUI)
 	add_subdirectory("${MPDir}/ui")

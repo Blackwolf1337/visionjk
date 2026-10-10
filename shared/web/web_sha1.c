@@ -19,7 +19,11 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 */
 
 // web_sha1.c -- SHA-1 (RFC 3174). The handshake of a WebSocket (RFC 6455) answers the key of the client with
-// the hash of it, and that is all it is for here: nothing is kept safe with it.
+// the hash of it: nothing is kept safe with it there.
+//
+// The voice chat uses it too, on servers without the game module of this tree: the cgame makes the name of its
+// room with it (Voice_MasterRoom of cg_voice.c), and the voice master its tokens, 32 bits of the hash of a
+// secret and an address (codemp/voicemaster). Nobody has to find two texts with one hash for either.
 
 #include "web_http.h"
 
