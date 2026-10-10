@@ -1181,6 +1181,11 @@ void Com_Init( char *commandLine ) {
 		// override anything from the config files with command line args
 		Com_StartupVariable( NULL );
 
+#ifndef DEDICATED
+		// here and not later: so far a cvar can only have come from the command line
+		CL_UpdateAddress();
+#endif
+
 		Com_InitZoneMemoryVars();
 		Cmd_Init ();
 

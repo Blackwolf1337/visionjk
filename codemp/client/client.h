@@ -478,6 +478,13 @@ int CL_GetPingQueueCount( void );
 
 void CL_InitRef( void );
 
+//
+// cl_update.cpp
+//
+void CL_UpdateInit( void );
+void CL_UpdateFrame( void );
+void CL_UpdateShutdown( void );
+
 int CL_ServerStatus( const char *serverAddress, char *serverStatusString, int maxLen );
 
 qboolean CL_CheckPaused(void);

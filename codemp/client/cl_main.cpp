@@ -2160,6 +2160,8 @@ void CL_Frame ( int msec ) {
 	SE_CheckForLanguageUpdates();	// will take zero time to execute unless language changes, then will reload strings.
 									//	of course this still doesn't work for menus...
 
+	CL_UpdateFrame();
+
 	if ( cls.state == CA_DISCONNECTED && !( Key_GetCatcher( ) & KEYCATCH_UI )
 		&& !com_sv_running->integer && cls.uiStarted ) {
 		// if disconnected, bring up the menu
@@ -2853,6 +2855,9 @@ void CL_Init( void ) {
 
 	Cvar_Set( "cl_running", "1" );
 
+	// is there a newer version of the game? Asked in a thread, the answer comes some frames later
+	CL_UpdateInit();
+
 	G2VertSpaceClient = new CMiniHeap (G2_VERT_SPACE_CLIENT_SIZE * 1024);
 
 //	Com_Printf( "----- Client Initialization Complete -----\n" );
@@ -2883,6 +2888,8 @@ void CL_Shutdown( void ) {
 	}
 
 	CL_Disconnect( qtrue );
+
+	CL_UpdateShutdown();
 
 	// RJ: added the shutdown all to close down the cgame (to free up some memory, such as in the fx system)
 	CL_ShutdownAll( qtrue );

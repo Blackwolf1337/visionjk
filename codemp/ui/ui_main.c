@@ -10346,6 +10346,8 @@ void UI_Refresh( int realtime )
 		UI_BuildServerStatus(qfalse);
 		// refresh find player list
 		UI_BuildFindPlayerList(qfalse);
+		// a newer version of the game is out: said on the main menu, see ui_update.c
+		UI_UpdateNoticeDraw();
 	}
 	// draw cursor
 	UI_SetColor( NULL );
@@ -10465,6 +10467,8 @@ UI_KeyEvent
 void UI_KeyEvent( int key, qboolean down ) {
 	if (Menu_Count() > 0) {
 		menuDef_t *menu = Menu_GetFocused();
+		if ( UI_UpdateNoticeKey( key, down ) )
+			return;
 		if (menu) {
 			if (key == A_ESCAPE && down && !Menus_AnyFullScreenVisible()) {
 				Menus_CloseAll();

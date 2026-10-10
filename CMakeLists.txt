@@ -44,6 +44,8 @@ option(BuildMPCGame "Whether to create projects for the MP clientside gamecode (
 option(BuildMPUI "Whether to create projects for the MP UI code (uix86_64.dll)" ON)
 option(BuildJPVoice "Whether the MP clientside gamecode gets the voice chat (Opus and miniaudio from lib/ are built into it)" ON)
 option(BuildVoiceMaster "Whether to create projects for the voice master (visionjk-voicemaster.exe), the relay of the voice chat for servers without the MP server-side gamecode of this tree" ON)
+set(UpdateURL "https://jka.vision/downloads/update" CACHE STRING "Where the MP client asks for a newer version of itself (docs/japlus/update.md)")
+set(UpdateVersion "" CACHE STRING "For a test of the updater: the version the MP client takes itself for, as a tag (v0.0.1). Empty: the tag the build was made from")
 option(BuildJPAssets "Whether to pack the directories of assets/ into pk3 files (needs Python 3)" ON)
 option(BuildJPSpatialAudio "Whether the MP client can use Steam Audio for its sound (needs the submodule lib/steamaudio, the library is loaded at run time)" ON)
 option(BuildMPRdVulkanVision "Whether to create projects for the MP Vulkan renderer (rd-vulkan-vision_x86_64.dll, needs the Vulkan headers and glslc)" ON)
