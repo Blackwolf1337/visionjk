@@ -1,8 +1,10 @@
 # Voice chat
 
 An in-game voice chat with the microphone. It is not a JA+ feature. It needs the cgame of this tree on the
-client and the game module of this tree on the server. The engine is not changed: it works with a 64 bit OpenJK.
-A stock `jamp.exe` is 32 bit and can not load this cgame, the tree is built for 64 bit only.
+client. A server with the game module of this tree relays the voices itself. On any other server they go
+through the voice master, one relay for all of those, see "On a server without it". The engine is not changed:
+it works with a 64 bit OpenJK. A stock `jamp.exe` is 32 bit and can not load this cgame, the tree is built for
+64 bit only.
 
 A client without this cgame (stock jamp, the original JA+ plugin, another fork) is not touched by any of it. It
 joins and plays as before, it just does not hear the voice chat. See "Clients without it".
@@ -33,6 +35,8 @@ before a level was loaded).
 | `cg_voiceDrawTalkers` | 1 | the list of who is talking on the HUD |
 | `cg_voiceCapture`, `cg_voicePlayback` | "" | the name of the microphone and of the speakers, empty: the ones the system uses. `voice_devices` lists the names |
 | `cg_voiceBackend` | "" | `null`: a sound system that plays into nothing, for tests |
+| `cg_voiceMaster` | 1 | 0: no voice chat on servers that have none of their own. 1: there it goes through the voice master |
+| `cg_voiceMasterHost` | voice.jka.vision | the voice master, a name or an address, with `:port` if it is not 29170 |
 
 | Command | |
 |---------|---|
@@ -69,6 +73,9 @@ The voice chat is on unless a server switches it off (since 2026-10-07, before t
 server of this module opens the voice port, also a game a player starts from the menu. If the port can not be
 opened the server says so in one line and runs without voice. A server that has `g_voice 0` stored in its config
 keeps that.
+
+A server without this game module can say no to the voice chat as well: `sets g_voice 0` puts the key into
+its server info, and the cgame then leaves the voice master alone there.
 
 The voice port has to be reachable from outside like the game port: UDP, forwarded and open in the firewall.
 `voicestatus` on the server console lists who has voice, how many datagrams of each were handed on, and how many
@@ -151,8 +158,98 @@ the rings and the queues are static memory. `CG_Shutdown` stops the devices befo
 
 | `cgame/voice/cg_voice_web.c` | in a browser: the WebSocket to the web host in place of the UDP socket |
 | `server/web/sv_web_voice.cpp` | in the dedicated server: `/voice` of the web host, between that WebSocket and the relay |
+| `voicemaster/vm_main.c` | the voice master, a program by itself |
 
 `-DBuildJPVoice=OFF` builds the cgame without it (and without the two libraries).
+
+## On a server without it
+
+A server that does not run the game module of this tree has no relay, hands out no token and tells nobody who
+stands near whom. There the cgame sends the same sound to the voice master: one relay for all such servers,
+`voice.jka.vision` on UDP port 29170. Added 2026-10-10, built, never run.
+
+When it is used:
+
+- The server info of the game server does not have the key `g_voice` at all, and `cg_voiceMaster` is 1. The
+  cgame says so in one line of the console when it starts, with the name of the master.
+- A server that says `g_voice` relays itself, or says no with 0. Either way the master is not used.
+- Never in a demo, in a browser, or for a game that runs on the same machine as the client.
+
+Nothing of it goes to the game server: no client command, no userinfo. The game server can not tell.
+
+**The room.** The master knows no game servers. Every client names the room it is in: 16 bytes of the SHA-1 of
+the address of the game server in numbers, its port and `sv_serverid`. That number is in the system info,
+which a server sends only to its clients, and is a new one with every level and every `map_restart`. So the
+clients of one game server name the same room, somebody who is not connected to it can not name it, and the
+master sees a hash and not an address. The cgame looks at `sv_serverid` once a second.
+
+**The token.** Nobody hands one out over a game connection here. The cgame sends its first `VOICE_STATE`
+without one, the master answers with the token that address has for that room and client number, and the cgame
+says the same again with it. The master works the token out (SHA-1 of a secret it made at its start, the
+address, the room and the number) and keeps nothing of an address until a datagram came back from there with
+it. A sender who gives an address that is not his fills no table, and the address he gave gets 13 bytes for the
+35 that were sent.
+
+**Who hears whom.** The range is the default of `g_voiceRange`, 1024 units, and there is no cvar for it. The
+master does not know where anybody stands, so both ends say what their game shows them. Ten times a second
+the cgame works out two masks with a bit for every client number, with the rule the relay of a game server
+uses (`BG_VoiceHears`):
+
+- whom it wants to hear: the players it is shown within the range and a tenth more, the spectators if it is
+  one itself, nobody it muted.
+- who may hear it: the players it is shown within the same distance, and every spectator, since nobody is
+  shown where a spectator watches from. A spectator lets only spectators hear him.
+
+The master hands a voice from a speaker to a listener of the same room only if the listener wants to hear him
+and the speaker lets him. A client that asks for everybody still gets only the speakers who see it near them.
+From there on the cgame does what it does on any server: how loud, from which side, muffled or not, the mouth,
+the list on the HUD.
+
+```
+to the master   "VO" version 2 client token[4] sequence[2]   room[16] hear[4] allow[4]
+to a client     "VO" version 2 client token[4] sequence[2]   flags distance
+```
+
+The cgame sends this twice a second until the master answered (after ten seconds without an answer every five
+seconds), then once a second, and at once when the room or a mask changed, ten times a second at most. It is
+also what keeps the session at the master: one that is silent for five seconds is over. The flags of the answer
+say that somebody else speaks as this client number in this room (2) or that the master is full (4). Sound is
+the datagram of the own relay, both ways. The master names 255 as the distance, the end of the range: that is
+what is left of a speaker in the moment after he went out of sight.
+
+**The master** (`visionjk-voicemaster`, `-DBuildVoiceMaster=ON`) is one program with one thread and one UDP
+socket, with nothing of the engine in it. It never decodes sound and writes no address and no room into its
+log, only one line a minute with numbers.
+
+```
+visionjk-voicemaster.x86_64 [-port 29170] [-ip <address to listen on>] [-maxkbps 4000]
+```
+
+| Limit | |
+|-------|---|
+| from one speaker | 60 datagrams and 14000 bytes a second, as the relay of a game server |
+| sessions | 1024 in all, 16 from one address |
+| a room | one session for each client number, 32 |
+| a session | over after 5 seconds without a datagram |
+| `-maxkbps` | what goes out in a second at most, with the 28 bytes in front of every datagram. Sound over it is dropped and counted, 0: no limit |
+
+What is different from a server with its own relay:
+
+- Nobody vouches for a client number. The first session that says a number in a room has it. A player of the
+  same server can say the number of somebody who is not there through the master and talk as him. Muting
+  (`voice_mute`) works on it.
+- A player inside the range that the game server does not show (behind enough walls) is silent. The relay of
+  a game server sends him muffled and without a direction.
+- A changed client that is a spectator can ask for all players at once and gets them, since every player lets
+  every spectator hear him. Between players the range holds.
+- `g_voiceRange`, `g_voiceTeamOnly` and `amsilence` do not exist there.
+- Players who reach the game server under another address than the others (its own network) are in a room of
+  their own.
+- A voice travels to the master and back, not to the game server: players far from the master hear it later.
+- The master sees the address of every player who uses it, and which addresses are in a room together. It
+  does not see which game server that is.
+- Without the master there is no voice chat on those servers. The cgame says so once and asks on every five
+  seconds.
 
 ## In a browser
 
@@ -232,14 +329,15 @@ Nothing of the voice chat is in the game protocol.
   know.
 - The mark over a speaker is drawn by the cgame of the listener. No flag is set on the player.
 - With `g_voice 0`, or if the port can not be opened, the server prints one line and runs as before.
-- The other way round, this cgame on a server without the voice chat sends nothing it did not send before.
+- The other way round, this cgame on a server without the voice chat sends that server nothing it did not send
+  before. What it sends goes to the voice master, see "On a server without it".
 - The way of a browser through the web host is beside all of that. A client over UDP sends and is checked as
   before, also on a server that has players in a browser. The game module only gained the cvar `g_voiceRelay`,
   which is not in the server info.
 
 ## Security
 
-- The relay opens a UDP port. It is off by default (`g_voice 0`).
+- The relay opens a UDP port. It is on by default since 2026-10-07 (`g_voice 1`).
 - Every length of a datagram is checked in one place (`BG_VoiceUnpack`), what passes fits the buffers of both
   sides. The server never decodes sound.
 - A datagram is only taken with the token of the client it names and from the address of his game connection,
@@ -259,6 +357,10 @@ Nothing of the voice chat is in the game protocol.
 - The client decodes sound only from the server it is connected to. Opus is built with its checks for release
   builds on.
 - Nothing is encrypted, like the game itself. Somebody on the line can listen.
+- The voice master is a port open to everybody. It answers a datagram without a token with a shorter one and
+  keeps nothing for it. It sends sound only to addresses that came back with their token, one datagram out for
+  one in per member of a room, so it can not be used to flood somebody else. `-maxkbps` caps what leaves it.
+- Through the master nobody checks who is who: see the list in "On a server without it".
 - A player whose sound takes another way out of his network than his game (two lines, some carrier NATs) is
   refused by the address check and has no voice.
 
@@ -308,6 +410,14 @@ loss, a server over the internet.
   `vid_restart` while it talks: devices and socket gone, the new cgame starts again.
 - Builds: the browser with and without the voice chat (without it the object code of the voice files is the
   same as before), Linux 64, mingw for Windows 64 (server, game module, cgame).
+
+2026-10-10, the voice master. Nothing of it was run.
+
+- Builds: the master, the cgame and the game module for Linux 64 and with mingw for Windows 64, and the cgame
+  for the browser (which has no master mode). `vm_main.c` and `cg_voice.c` give no warning with `-Wall -Wextra`.
+
+Not checked: all of it at run time. The master was never started, no client ever went through it, the menu
+entry was not seen, and the unit tests of `bg_voice.c` were not run against the new datagram.
 
 Not checked in a browser: a page against the relay of a real server (`tools/panelshot/steps_voice_e2e.js` is
 for that), the UDP sockets of the web host on a real system, a real microphone, how it sounds, a browser that

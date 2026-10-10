@@ -8,7 +8,7 @@ What it has on top of OpenJK:
 
 - the features of the JA+ mod v2.4 Build 7, on the server and in the client ([docs/japlus](docs/japlus/README.md))
 - a Vulkan renderer, `rd-vulkan-vision`, next to `rd-vanilla` ([renderer.md](docs/japlus/renderer.md))
-- voice chat in the client module, with a relay in the game module ([voice.md](docs/japlus/voice.md))
+- voice chat in the client module, with a relay in the game module and a voice master for servers without it ([voice.md](docs/japlus/voice.md))
 - 3D sound with Steam Audio ([audio.md](docs/japlus/audio.md))
 - a web admin panel in the game module ([webadmin.md](docs/japlus/webadmin.md))
 
@@ -57,7 +57,7 @@ What this tree adds, in [docs/japlus/](docs/japlus):
 | [porting-method.md](docs/japlus/porting-method.md) | How the JA+ binaries were read and how the code was carried over |
 | [verification.md](docs/japlus/verification.md) | What was compared against the original modules, what was seen in the game, what is open |
 | [webadmin.md](docs/japlus/webadmin.md) | The web admin panel (not a JA+ feature): cvars, requests, how it ties into JA+, limits |
-| [voice.md](docs/japlus/voice.md) | Voice chat with the microphone: in the client module, relayed by the game module, engine unchanged, clients without it unaffected |
+| [voice.md](docs/japlus/voice.md) | Voice chat with the microphone: in the client module, relayed by the game module or by the voice master, engine unchanged, clients without it unaffected |
 | [audio.md](docs/japlus/audio.md) | `s_spatial`, sound that knows the level, with Steam Audio: walls muffle, rooms ring, sounds come round corners |
 | [renderer.md](docs/japlus/renderer.md) | `rd-vulkan-vision`: how it is built, the state of each part, differences to `rd-vanilla`, what is left |
 | [security.md](docs/japlus/security.md) | Security pass over the network code: findings, fixes, build hardening, server settings |
