@@ -27,6 +27,9 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "rd-common/tr_types.h"
 #include "sys/sys_local.h"
 #include "sdl_icon.h"
+#ifdef __EMSCRIPTEN__
+#include "sys/web/sys_web.h"
+#endif
 
 enum rserr_t
 {
@@ -174,6 +177,10 @@ void WIN_Present( window_t *window )
 #endif
 	}
 
+#ifdef __EMSCRIPTEN__
+	// in a browser the page is what goes fullscreen, see GLimp_StartDriverAndSetMode()
+	r_fullscreen->modified = qfalse;
+#else
 	if ( r_fullscreen->modified )
 	{
 		bool	fullscreen;
@@ -206,6 +213,7 @@ void WIN_Present( window_t *window )
 
 		r_fullscreen->modified = qfalse;
 	}
+#endif
 }
 
 /*
@@ -754,6 +762,13 @@ static qboolean GLimp_StartDriverAndSetMode(glconfig_t *glConfig, const windowDe
 		r_fullscreen->modified = qfalse;
 		fullscreen = qfalse;
 	}
+
+#ifdef __EMSCRIPTEN__
+	// In a browser the page goes fullscreen and the window of SDL never does (Sys_WebFullscreen() says why).
+	// The frame then has the size of the page, which follows: the page runs a vid_restart when its size changed.
+	Sys_WebFullscreen( fullscreen );
+	fullscreen = qfalse;
+#endif
 
 	err = GLimp_SetMode(glConfig, windowDesc, CLIENT_WINDOW_TITLE, mode, fullscreen, noborder);
 

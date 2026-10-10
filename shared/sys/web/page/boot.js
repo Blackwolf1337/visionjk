@@ -532,6 +532,13 @@ async function start(manifest) {
 	// The frame keeps the size the renderer was started with, a canvas of another size only stretches it. So
 	// when the window has had a new size for a moment, the renderer is started again with that size (the two
 	// cvars take effect with a vid_restart, which loads the textures again: not something to do while dragging).
+	// The page is what goes fullscreen (r_fullscreen of the game asks for it, shared/sys/web/sys_web.js), and a
+	// player leaves it with a key of the browser the game does not see. The cvar follows the page then. It takes
+	// effect with the vid_restart the new size brings.
+	document.addEventListener('fullscreenchange', () => {
+		if (vjk.phase === 'running') vjk.command('set r_fullscreen ' + (document.fullscreenElement ? 1 : 0));
+	});
+
 	let resizeTimer = 0;
 	window.addEventListener('resize', () => {
 		clearTimeout(resizeTimer);

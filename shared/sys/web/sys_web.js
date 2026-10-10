@@ -89,6 +89,34 @@ addToLibrary( {
 		delete vjkLibs.byHandle[handle];
 	},
 
+	// r_fullscreen in a page: the page goes fullscreen, not the window of SDL. SDL would ask the browser for it
+	// with callbacks that carry its window, and the window is made anew with every vid_restart (the page runs
+	// one itself when its size changes, which going fullscreen does): the callbacks then came back with a
+	// window that was gone ("The provided selector is empty", a name read from freed memory).
+	// A browser only goes fullscreen while a click or a key of the player is fresh. The one that set
+	// r_fullscreen is. At the start of the game, with the cvar from the stored config, none is: the browser
+	// says no, and the cvar is put back so it says what is.
+	Sys_WebFullscreen: ( on ) => {
+		if ( on ) {
+			if ( !document.fullscreenElement ) {
+				var refused = ( e ) => {
+					err( `fullscreen: the browser did not go (${e && e.message || e})` );
+					Module['ccall']( 'Web_Command', null, ['string'], ['set r_fullscreen 0'] );
+				};
+				try {
+					var asked = document.documentElement.requestFullscreen();
+					if ( asked && asked.catch ) {
+						asked.catch( refused );
+					}
+				} catch ( e ) {
+					refused( e );
+				}
+			}
+		} else if ( document.fullscreenElement ) {
+			document.exitFullscreen();
+		}
+	},
+
 	Sys_WebShowError__deps: ['$UTF8ToString'],
 	Sys_WebShowError: ( textPtr ) => {
 		var text = UTF8ToString( textPtr );

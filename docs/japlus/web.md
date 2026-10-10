@@ -21,6 +21,7 @@ Nothing changes for the clients of the desktop and for a server that does not sw
 | Voice chat | run on a live server, headless and muted: the page joined, got the chat through `/voice`, counted 529 frames of a talking test client in 10 seconds (a voice is 50 a second) and sent a tone for 5. Whether the others heard that tone was not looked at, and nobody has listened. See [voice.md](voice.md) |
 | Sound that knows the level (`s_spatial`, Steam Audio) | built as a file of its own, `phonon.wasm`, that the engine loads when the sound system starts. Run headless and muted with a demo on mp/ffa3: 1.1 ms of a frame, and what it gives the mixer within 0.1 dB of the desktop's in each ear and band for the direct sound, within 1.1 dB with the ways round corners and the reverb. Run without the file too: one line, and the sound as before. Run on a live server as a player, with eight `snd_restart` in a row, and with the voice chat: the voice of a talking test client was a sound in the level there (913 units away, behind a wall). Nobody has listened. See [audio.md](audio.md) |
 | Mouse and keys | never used by a person from here: a headless browser has neither |
+| Fullscreen (`r_fullscreen`, the menu, Alt+Enter) | the page goes fullscreen, not the window of SDL. Run headless with a click before it: on, off and on again, the frame follows the page each time. Before that the first try ended the page with "The provided selector is empty" |
 | A resized window | the page starts the renderer again with the new size when the window has kept it for a moment. Run headless, 1280 x 633 to 1000 x 700 |
 | Firefox, Safari, Windows, a phone | never run |
 
@@ -135,6 +136,15 @@ allows a frame is left out, since `Com_Frame()` would wait for the rest of its t
 `Sys_Sleep()` returns at once.
 
 While a level loads the page does not paint: the loading screen is drawn and never shown.
+
+### Fullscreen
+
+`r_fullscreen` makes the page go fullscreen (`Sys_WebFullscreen()`), the window SDL has is never fullscreen. SDL
+would ask the browser with callbacks that carry its window, and that window is made anew with every
+`vid_restart`, which the page runs itself when its size changed. The frame has the size of the page before and
+after, as with any other change of size. A browser only goes fullscreen while a click or a key of the player is
+fresh, so with `r_fullscreen 1` from the stored config the start stays in the window and the cvar goes back to
+0. A player leaves it with the key of the browser (Esc), the cvar follows.
 
 ### Network
 

@@ -33,6 +33,7 @@ void	*Sys_WebLoadLibrary( const char *name );
 void	*Sys_WebLoadFunction( void *handle, const char *name );
 void	Sys_WebUnloadLibrary( void *handle );
 void	Sys_WebShowError( const char *error );
+void	Sys_WebFullscreen( int on );
 
 // for the page
 int		Web_ClientState( void );
