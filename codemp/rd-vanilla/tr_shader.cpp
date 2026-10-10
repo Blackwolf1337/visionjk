@@ -156,10 +156,11 @@ static long generateHashValue( const char *fname, const int size ) {
 }
 
 void R_RemapShader(const char *shaderName, const char *newShaderName, const char *timeOffset) {
-	char		strippedName[MAX_QPATH];
+	char		strippedName[MAX_QPATH], strippedNew[MAX_QPATH];
 	int			hash;
 	shader_t	*sh, *sh2;
 	qhandle_t	h;
+	qboolean	back;
 
 	sh = R_FindShaderByName( shaderName );
 	if (sh == NULL || sh == tr.defaultShader) {
@@ -184,14 +185,31 @@ void R_RemapShader(const char *shaderName, const char *newShaderName, const char
 
 	// remap all the shaders with the given name
 	// even tho they might have different lightmaps
+	//
+	// Not as in the game, which pointed every one of them at the one copy of the new shader found above: a wall
+	// then drew with the lightmap of another wall or with none, and a remap that was taken back (both names the
+	// same) left all but one of them that way until the next level. Here each one gets the new shader with its
+	// own lightmap, and a remap that is taken back is gone.
 	COM_StripExtension( shaderName, strippedName, sizeof( strippedName ) );
+	COM_StripExtension( newShaderName, strippedNew, sizeof( strippedNew ) );
+	back = (qboolean)!Q_stricmp( strippedName, strippedNew );
 	hash = generateHashValue(strippedName, FILE_HASH_SIZE);
 	for (sh = hashTable[hash]; sh; sh = sh->next) {
 		if (Q_stricmp(sh->name, strippedName) == 0) {
-			if (sh != sh2) {
-				sh->remappedShader = sh2;
-			} else {
+			shader_t *to;
+
+			if ( back ) {
 				sh->remappedShader = NULL;
+				continue;
+			}
+			// one that is made now goes to the head of its list, not behind sh
+			to = R_FindShader( strippedNew, sh->lightmapIndex, sh->styles, qtrue );
+			if ( !to || to->defaultShader ) {
+				to = sh2;
+			}
+			sh->remappedShader = ( to != sh ) ? to : NULL;
+			if (timeOffset) {
+				to->timeOffset = atof(timeOffset);
 			}
 		}
 	}
