@@ -2303,7 +2303,7 @@
 			textscale			1
 			forecolor			0.65 0.65 1 1
 			visible				0
-			descText			"Talk to and hear other players, on servers that have a voice chat."
+			descText			"Talk to and hear other players with your microphone."
 			action
 			{
 				play			"sound/interface/button1.wav" ;
@@ -2496,6 +2496,36 @@
 			mouseexit
 			{
 				hide			highlight13
+			}
+		}
+
+		itemDef
+		{
+			name				voicechat8
+			group				voicechat
+			type				ITEM_TYPE_YESNO
+			text				"On Other Servers:"
+			cvar				"cg_voiceMaster"
+			rect				260 384 340 14
+			textalign			ITEM_ALIGN_RIGHT
+			textalignx			174
+			textaligny			0
+			font				4
+			textscale			1
+			forecolor			0.65 0.65 1 1
+			visible				0
+			descText			"Servers without voice: use voice.jka.vision, which sees your address."
+			action
+			{
+				play			"sound/interface/button1.wav" ;
+			}
+			mouseenter
+			{
+				show			highlight15
+			}
+			mouseexit
+			{
+				hide			highlight15
 			}
 		}
 

@@ -50,6 +50,8 @@ XCVAR_DEF( cg_selectedPlayerName,			"",						NULL,				CVAR_ARCHIVE|CVAR_INTERNAL
 // The defaults are the ones of cg_xcvar.h.
 XCVAR_DEF( cg_voice,						"1",					NULL,				CVAR_ARCHIVE )
 XCVAR_DEF( cg_voiceDrawTalkers,				"1",					NULL,				CVAR_ARCHIVE )
+XCVAR_DEF( cg_voiceMaster,					"1",					NULL,				CVAR_ARCHIVE )
+XCVAR_DEF( cg_voiceMasterHost,				"voice.jka.vision",		NULL,				CVAR_ARCHIVE )
 XCVAR_DEF( cg_voiceMicGain,					"1",					NULL,				CVAR_ARCHIVE )
 XCVAR_DEF( cg_voiceMode,					"1",					NULL,				CVAR_ARCHIVE )
 XCVAR_DEF( cg_voiceMuffle,					"1",					NULL,				CVAR_ARCHIVE )
