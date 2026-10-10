@@ -16,6 +16,17 @@ precision mediump float;
 uniform vec4 uColor; out vec4 o;
 void main() { o = uColor; }`);
 
+// points for that program, as lines or triangles: { vao, buf, count }
+function pointsVao(data) {
+	const vao = gl.createVertexArray(), buf = gl.createBuffer();
+	gl.bindVertexArray(vao);
+	gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+	gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
+	gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 0, 0);
+	gl.bindVertexArray(null);
+	return { vao, buf, count: data.length / 3 };
+}
+
 function wireOf(b) {
 	if (b.wire) return b.wire;
 	const t = b.tri, lines = new Uint32Array(t.length * 2);

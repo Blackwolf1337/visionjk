@@ -266,6 +266,8 @@ function drawFrame(now) {
 	if (refMasking && world) { drawWorldMask(now); return; }
 	// the lights of this frame, before anything they fall on is drawn
 	gatherDlights(now);
+	// the test object of the Textures tab, into a corner this frame then draws over (js/editor-textures.js)
+	drawRemapPreview();
 
 	gl.viewport(0, 0, canvas.width, canvas.height);
 	gl.clearColor(0.05, 0.05, 0.06, 1);

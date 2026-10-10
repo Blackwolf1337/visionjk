@@ -49,6 +49,19 @@ function anglesMatrix(pos, angles, scale) {
 		pos[0], pos[1], pos[2], 1]);
 }
 
+// a mesh for the programs that draw models: positions, normals, texture coordinates and triangles
+function modelVao(pos, norm, uv, idx) {
+	const vao = gl.createVertexArray();
+	gl.bindVertexArray(vao);
+	[[0, pos, 3], [1, norm, 3], [2, uv, 2]].forEach(([loc, data, size]) => {
+		const b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b); gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
+		gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, size, gl.FLOAT, false, 0, 0);
+	});
+	const ib = gl.createBuffer(); gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ib); gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, idx, gl.STATIC_DRAW);
+	gl.bindVertexArray(null);
+	return vao;
+}
+
 // a static model (weapon or saber hilt), GLM or MD3, with its tags
 const staticModels = new Map();
 function loadStaticModel(path) {
@@ -66,14 +79,7 @@ function loadStaticModel(path) {
 		}
 		const meshes = [];
 		for (const s of surfs) {
-			const vao = gl.createVertexArray();
-			gl.bindVertexArray(vao);
-			[[0, s.pos, 3], [1, s.norm, 3], [2, s.uv, 2]].forEach(([loc, data, size]) => {
-				const b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b); gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
-				gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, size, gl.FLOAT, false, 0, 0);
-			});
-			const ib = gl.createBuffer(); gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ib); gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, s.idx, gl.STATIC_DRAW);
-			gl.bindVertexArray(null);
+			const vao = modelVao(s.pos, s.norm, s.uv, s.idx);
 			const shader = s.shader && s.shader !== '[nomaterial]' ? s.shader : '';
 			meshes.push({ vao, count: s.idx.length, tex: shader ? await mainTexture(shader) : grayTex, shaderName: shader, mat: null });
 		}

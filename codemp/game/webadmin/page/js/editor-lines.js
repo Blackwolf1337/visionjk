@@ -259,16 +259,7 @@ function brushWire(key) {
 			brushEdges(bd, i, out);
 		}
 	}
-	let wire = null;
-	if (out.length) {
-		const vao = gl.createVertexArray(), buf = gl.createBuffer();
-		gl.bindVertexArray(vao);
-		gl.bindBuffer(gl.ARRAY_BUFFER, buf);
-		gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(out), gl.STATIC_DRAW);
-		gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 0, 0);
-		gl.bindVertexArray(null);
-		wire = { vao, count: out.length / 3 };
-	}
+	const wire = out.length ? pointsVao(new Float32Array(out)) : null;
 	world.wires.set(key, wire);
 	return wire;
 }
@@ -302,8 +293,8 @@ function drawEditorLines() {
 	// the Clips tab has the clips of the map drawn, whatever the view is set to
 	const volumes = $('dbgVolumes').checked, linked = $('dbgLinks').checked, clipWire = world && ($('dbgClip').checked || mode === 'clips') ? brushWire('clip') : null;
 	// a box that has handles to drag is drawn, whatever the views are set to
-	const handled = boxHandles().length > 0;
-	if (!volumes && !linked && !clipWire && !handled) return;
+	const handled = boxHandles().length > 0, remapMarks = mode === 'remaps' && !!world && !!remap.selected;
+	if (!volumes && !linked && !clipWire && !handled && !remapMarks) return;
 	const sel = ents.get(selectedEnt);
 	gl.useProgram(lineProg.p);
 	if (clipWire) {
@@ -314,6 +305,8 @@ function drawEditorLines() {
 		// the ones the server has off, and the one the Clips tab has selected (js/editor-clips.js)
 		drawClipMarks();
 	}
+	// the surfaces that have the selected shader of the Textures tab (js/editor-remaps.js)
+	if (remapMarks) drawRemapMarks();
 	if (volumes) {
 		for (const ent of ents.values()) if (ent !== sel && entVisible(ent)) drawEntBox(ent, classColor(ent.classname));
 	}

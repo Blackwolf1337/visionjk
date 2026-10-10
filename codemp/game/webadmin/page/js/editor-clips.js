@@ -326,11 +326,7 @@ $('clipRows').addEventListener('click', e => {
 	const b = row.dataset.wall ? clipWall(+row.dataset.wall) : clipOf(+row.dataset.clip);
 	if (!b) return;
 	clipPick(row.dataset.wall ? { wall: b.id } : { clip: b.n });
-	const mid = b.mins.map((v, i) => (v + b.maxs[i]) / 2);
-	cam.follow = -1;
-	cam.target = mid;
-	cam.dist = Math.min(cam.dist, 900);
-	if (cam.fly) { const d = camDir(); cam.pos = mid.map((v, i) => v - d[i] * 400); }
+	boxLookAt(b);
 });
 // Esc: nothing is selected and nothing waits for a click (the other keys of the map are in js/input.js)
 window.addEventListener('keydown', e => {

@@ -318,7 +318,7 @@ void WA_ApiList( waConnection_t *c, const char *query ) {
 	// The files and folders of one folder of the game, for a field that takes a path: dir is the folder, ext
 	// the endings that are wanted (".wav,.mp3"). Only below the folders the editor has a use for.
 	if ( !strcmp( kind, "dir" ) ) {
-		static const char *const roots[] = { "sound", "models", "music", "effects", "maps" };
+		static const char *const roots[] = { "sound", "models", "music", "effects", "maps", "textures" };
 		char		dir[MAX_QPATH], exts[64], *ext, *next;
 		const char	*file;
 		qboolean	allowed = qfalse;

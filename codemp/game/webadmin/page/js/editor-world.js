@@ -42,6 +42,8 @@ function setAppMode(a) {
 	// a tab of the other mode is not there any more
 	const tab = document.querySelector('#tabs button[data-tab="' + mode + '"]');
 	if (!tab || tab.dataset.app !== appMode) setMode(APP_TAB[appMode]);
+	// the drafts of the texture swap are drawn in the editor only (js/editor-remaps.js)
+	if (remap.drafts.size) remapApply();
 	// the scripts: how the administration draws the map, and where the plain view finds the image of a shader
 	loadShaderScripts();
 	if (appMode === 'editor') { loadClassDocs(); pollEntities(); }
@@ -67,5 +69,6 @@ function setMode(m) {
 	if (m === 'mapinfo') { select(-1); mapReport(); renderSurface(); }
 	if (m === 'clips') { select(-1); clipPoll(); clipRender(); } else clipLeave();
 	if (m === 'remaps') { select(-1); remapPoll(); remapRender(); }
+	texSync();
 }
 

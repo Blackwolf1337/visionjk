@@ -56,6 +56,15 @@ function resetCamera() {
 	cam.dist = Math.max(b.maxs[0] - b.mins[0], b.maxs[1] - b.mins[1]) * 0.75;
 }
 
+// the camera looks at the middle of a box of the map, from no farther than before
+function boxLookAt(b) {
+	const mid = b.mins.map((v, i) => (v + b.maxs[i]) / 2);
+	cam.follow = -1;
+	cam.target = mid;
+	cam.dist = Math.min(cam.dist, 900);
+	if (cam.fly) { const d = camDir(); cam.pos = mid.map((v, i) => v - d[i] * 400); }
+}
+
 // The projection of the game, for every camera of the page: R_SetupProjection with what CG_CalcFov hands it.
 // fovX is the angle across (cg_fov, 80) whatever the shape of the picture (cg_fovAspectAdjust is 0), the angle
 // up and down follows from that shape, the near plane is r_znear and the far plane the one of SetFarClip.

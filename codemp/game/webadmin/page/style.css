@@ -13,6 +13,7 @@
 	--yellow: #f5d90a;
 	--top: 44px;
 	--side: 300px;
+	--tex: 42vh;
 }
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font: 13px/1.35 -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; overflow: hidden; }
@@ -181,6 +182,44 @@ body.cfgOpen #cfgView, body.fsOpen #fsView { display: block; }
 #clipRows td.acts button, #remapRows td.acts button { padding: 1px 7px; font-size: 12px; }
 #remapRows tr[data-old] { cursor: pointer; }
 #remapRows td { word-break: break-all; }
+/* the picture of a shader: in a row of the Textures tab, and the two large ones above them. none: there is no image of it */
+.thumb { display: block; box-sizing: border-box; width: 26px; height: 26px; background: #000 center / contain no-repeat; border: 1px solid var(--line); }
+.thumb.none { background-image: repeating-linear-gradient(45deg, transparent 0 5px, var(--line) 5px 6px); }
+#remapRows td.pic { width: 28px; padding-right: 0; }
+#remapPics { align-items: flex-start; gap: 8px; }
+#remapPics figure { flex: 1; min-width: 0; margin: 0; }
+#remapPics .thumb { width: 96px; height: 96px; margin: 0 auto; }
+/* the test object of the Textures tab, below them: copied there from the map view (js/editor-textures.js). As
+   large as the pane is wide, and smaller in a low window, which the list of the shaders needs more */
+#remapTest { margin: 0; }
+#remapBall { display: block; box-sizing: border-box; width: min(100%, 28vh); aspect-ratio: 1; margin: 0 auto; background: #000; border: 1px solid var(--line); }
+#remapTest figcaption { margin-top: 3px; text-align: center; }
+#remapTest button { padding: 0 7px; font-size: 11px; }
+/* the swaps that are drafts: a row each, and the row of buttons for all of them */
+#remapRows tr.draft td { color: var(--yellow); font-style: italic; }
+#remapDraftRow button { white-space: nowrap; flex: none; }
+#remapDraftRow[hidden] { display: none; }
+#remapDraftsDrop { color: #ff8b8b; }
+/* the textures to choose from, below the map view, which makes room for them */
+#texBrowser { position: fixed; left: var(--side); right: 0; bottom: 0; height: var(--tex); z-index: 14; display: none; flex-direction: column; background: var(--panel); border-top: 1px solid var(--line); transition: left .15s; }
+body.sideClosed #texBrowser { left: 0; }
+body.texOpen #texBrowser { display: flex; }
+body.texOpen #view { bottom: var(--tex); }
+#texBrowser .bar { display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; padding: 6px 10px; border-bottom: 1px solid var(--line); }
+#texBrowser .bar .hint { margin: 0; }
+#texBrowser .bar .spacer { flex: 1; }
+#texFind { width: 240px; }
+#texTiles { flex: 1; min-height: 0; overflow: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 6px; padding: 10px; align-content: start; }
+#texTiles > .hint { grid-column: 1 / -1; margin: 0; }
+#texMore { align-self: center; }
+.tile { min-width: 0; padding: 3px; border: 1px solid transparent; border-radius: 3px; cursor: pointer; }
+.tile:hover { background: var(--panel2); }
+.tile.sel { border-color: var(--yellow); }
+.tile .thumb { width: 100%; height: auto; aspect-ratio: 1; box-sizing: border-box; pointer-events: none; }
+.tile span { display: block; margin-top: 2px; overflow: hidden; color: var(--muted); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.tile.sel span { color: var(--yellow); }
+.tile.script span::after { content: ' *'; color: var(--accent2); }
+#remapPics figcaption { margin-top: 3px; min-height: 14px; color: var(--muted); font-size: 11px; text-align: center; word-break: break-all; }
 #fsList td.acts button { margin-left: 4px; padding: 1px 7px; font-size: 12px; }
 /* files dropped on the list */
 #fsView.drop::after { content: ''; position: absolute; inset: 3px; border: 2px dashed var(--accent2); border-radius: 4px; pointer-events: none; }

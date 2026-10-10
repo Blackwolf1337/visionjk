@@ -403,13 +403,17 @@ function materialFor(name, lit) {
 }
 
 // The image a map editor shows for a shader, for the plain view: the one its script names for that
-// (qer_editorimage), or the first one of its stages. null: no script, or the scripts are not there yet.
-function editorImage(name) {
+// (qer_editorimage), or the first one of its stages. Its name, '' for none: no script, or the scripts are not
+// there yet.
+function editorImageName(name) {
 	const body = scripts.state === 2 ? scripts.bodies.get(scKey(name)) : undefined;
-	if (body === undefined) return null;
+	if (body === undefined) return '';
 	const named = /^\s*qer_editorimage\s+(\S+)/im.exec(body);
 	const stage = named ? null : materialFor(name, true).stages.find(st => st.maps.length);
-	const image = named ? named[1] : stage ? stage.maps[0] : '';
+	return named ? named[1] : stage ? stage.maps[0] : '';
+}
+function editorImage(name) {
+	const image = editorImageName(name);
 	return image ? gameImage(image, false) : null;
 }
 

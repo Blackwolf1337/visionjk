@@ -3,14 +3,15 @@
 // near they are, without the ones inside walls. The ambient light times r_ambientScale (0.6) with a little added
 // for everything, the directed light, and the direction it comes from. All three in out, colours from 0 to 1.
 const lightNow = { ambient: [0, 0, 0], directed: [0, 0, 0], dir: [0, 0, 1] };
+// a map without a grid: the same light everywhere, from where the sun of the engine is
+const LIGHT_NO_GRID = { ambient: (150 + 32) / 255, directed: 150 / 255, dir: [0.433, 0.289, 0.854] };
 
 function gridLight(pos, out = lightNow) {
 	const g = world && world.grid, a = [0, 0, 0], d = [0, 0, 0], n = [0, 0, 0];
 	if (!g || g.data.length < 30 || !g.array.length) {
-		// a map without a grid: the same light everywhere, from where the sun of the engine is
-		out.ambient.fill((150 + 32) / 255);
-		out.directed.fill(150 / 255);
-		out.dir[0] = 0.433; out.dir[1] = 0.289; out.dir[2] = 0.854;
+		out.ambient.fill(LIGHT_NO_GRID.ambient);
+		out.directed.fill(LIGHT_NO_GRID.directed);
+		for (let c = 0; c < 3; c++) out.dir[c] = LIGHT_NO_GRID.dir[c];
 		dlightsOn(pos, out);
 		return out;
 	}

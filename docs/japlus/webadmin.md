@@ -121,7 +121,7 @@ the answer tells the page that the numbers started over.
 | `GET /api/anims` | animation names in `animNumber_t` order |
 | `GET /api/classes` | everything that can be spawned, and the items with model and icon |
 | `GET /api/entities` | the entities with their keys. One that is made of brushes has `moved` and `turned`: how far its brushes are from where the map file has them. `budget`: entities, models, sounds and effects in use and the most there can be. `brushModels`: how many brush models the map has. `used`: what fired what in the last ten seconds, each as `[number of the event, milliseconds ago, entity that fired, entity that was fired]`, the first entity is the world (1022) for what the panel fired |
-| `GET /api/list?kind=` | names the fields of the page offer: `maps`, `effects` and `music` (the files of the game), `npcs` (the types of the `.npc` files), `bots`. `kind=dir&dir=&ext=`: the folders and files of one folder below `sound`, `models`, `music`, `effects` or `maps`, with the endings of `ext` (`.wav,.mp3`) `kind=fxindex`: the effects the map has in use, in the order of the numbers the state feed names them by |
+| `GET /api/list?kind=` | names the fields of the page offer: `maps`, `effects` and `music` (the files of the game), `npcs` (the types of the `.npc` files), `bots`. `kind=dir&dir=&ext=`: the folders and files of one folder below `sound`, `models`, `music`, `effects`, `maps` or `textures`, with the endings of `ext` (`.wav,.mp3`) `kind=fxindex`: the effects the map has in use, in the order of the numbers the state feed names them by |
 | `GET /api/bans` | the addresses that are banned, as `addip` and `removeip` take them (a `*` for a part that matches anything) |
 | `GET /api/waypoints` | the route of the bots: every waypoint with its place, its flags and the numbers of the ones it leads to. `editing`: it was changed and not saved, the bots stand still |
 | `POST /api/waypoint` | `op` add (`x`, `y`, `z`, `flags`, `after`: the waypoint it comes behind, none for the end), remove (`indexes` as `3,5,9`, or one `index`), flags (`indexes`, `flags`), move (`indexes`, `dx`, `dy`, `dz`), save, revert (the route as the start of the map loaded it) or default (the route of the map's own files) |
@@ -1771,6 +1771,62 @@ Also changed:
   in `rd-vanilla/tr_shader.cpp`, which `rd-vulkan-vision` builds too). Another client keeps the old behaviour.
   Added without a test run: built, the page as a whole checked for syntax, not opened in a browser and not
   seen in a game.
+- New on 2026-10-10: pictures and marks in the tab Textures (the user asked for a preview of the textures and
+  for the area to be marked as in the clip editor). The pane shows a picture of the selected shader and of
+  what is typed to draw it as, with the file and its size under each, and a small one in every row (`thumbOf`
+  in `page/js/editor-remaps.js`). The picture is the image of the name of the shader, or else the one a map
+  editor shows for it (`qer_editorimage`, then the first image of its stages): what the plain view draws on a
+  wall, not what the stages of a script make of it. A row asks for its picture when it comes into view, three
+  are on their way at a time, and the file is read by the loader of the map textures (`fetchImageFile` in
+  `page/js/map.js`, split off `fetchImage` for it). On the map the surfaces that have the selected shader are
+  tinted yellow and their rims drawn, the rims faintly through the walls (`drawRemapMarks`), and a click on a
+  row turns the camera to the nearest of them. The rim is every edge that only one triangle of the shader has,
+  so where a surface ends in the middle of the edge of its neighbour there is a line inside the area.
+  Added without a test run: built, the page as a whole checked for syntax, not opened in a browser.
+- 2026-10-10: a brush editor (a tab Brushes: boxes with a texture put into the running map) was built and
+  taken out again the same day, on the user's word: "remove the brush editor again, if its not possible
+  without downloading and clientside modifications". It is not possible. A level is a file every client has,
+  and a server can only add entities to it. An unchanged client clips against a solid box entity and draws
+  nothing for it, so a box with a texture needs either a cgame that draws it, or a level file in a pk3 that
+  the client has to fetch. Both were built: boxes drawn by the cgame of this tree, and a "Publish" that wrote
+  them as a second level file a level takes in like `misc_bsp` does. The code is on the branch
+  `feature/brush-editor` and not merged. What an unchanged client draws without a download is a model of the
+  game placed as an entity, which is the tab Physical props.
+- New on 2026-10-10: the textures to choose from, and a test object, in the tab Textures (the user: "instead of
+  putting in the string, we can search and select from multiple batches which show the texture", and "a
+  debugview/preview with a ball or a cube as a test object, which shows the proper shader"). "Pick a texture"
+  opens a list below the map view, which makes room for it (`page/js/editor-textures.js`): every texture as a
+  picture, a folder of `textures/` at a time, the ones of the map, or everything, narrowed by the words typed
+  into the search, 150 at a time with a button for the next batch. A click puts the name into the field of
+  the tab, Swap does the rest. The names are the images of the folders, which the page asks the server for
+  one folder after the other, two requests at a time (`/api/list?kind=dir`, which now tells `textures` too),
+  and the shaders that have a script, which the page has anyway. A name with a star has a script. With a game
+  module from before this one the list has only what has a script, and says so.
+  The test object is the third picture of the pane: a ball or a cube (the button under it) that is drawn with
+  what the shader would be drawn as, or with the selected shader while nothing is chosen. It is drawn by the
+  code that draws the models of the map (`drawModelMesh`), so with every stage of the script, the tcMods, the
+  waves and the animations, and with the light the engine gives a place without a light grid where a shader
+  has no script. That is how the game draws a shader on a model: a stage `$lightmap` is white, so a wall
+  shader is shown without the light of a wall. It is drawn into a corner of the canvas of the map before the
+  frame, which then draws over it, and copied from there into the pane, about 16 times a second: one graphics
+  context draws both.
+  Added without a test run: built, the page as a whole checked for syntax and for the names it uses, not
+  opened in a browser. The winding of the ball and the cube and which way their images lie are worked out on
+  paper.
+- New on 2026-10-10: drafts of the texture swap (the user, after seeing the list and the test object: "when
+  clicking a texture already apply it on the surface, but add a draft mode like on the entties", and the
+  preview "below, since theres enough space"). A click on a texture of the list draws the selected shader of
+  the map as it at once, in the view of this page only: a draft, as a new entity of the World tab is one. The
+  server and the players know nothing of it until "Swap" (the selected one, or the button of its row) or "Swap
+  all" sends it, "Discard" throws it away. A draft is a row of the list, yellow and slanted, it is of the map
+  it was made on, and only the editor draws it: the administration shows the map as the players have it. The
+  yellow tint of the selected shader is left out while the shader is drawn as another one, swapped or as a
+  draft, so that the other one is seen as it is (the rims stay). What is typed into the field is still sent by
+  Swap without being a draft first.
+  The test object is on a line of its own below the two pictures now, as wide as the pane (less in a low
+  window), and drawn with as many pixels as it is shown with.
+  Added without a test run: built, the page checked for syntax and names, not opened in a browser by me. The
+  user had seen the list and the test object of the entry before in their browser and called the preview nice.
 - "Add bot" with an empty name adds `Kyle Katarn`. JKAdmin asks for `Kyle`, a bot the game does not have, so
   nothing happened there.
 - The two entity hooks pass `ent-g_entities` instead of `ent->s.number`.

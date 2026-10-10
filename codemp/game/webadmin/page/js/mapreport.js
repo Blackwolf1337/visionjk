@@ -69,13 +69,7 @@ function drawSurfaceWire(now) {
 			if (pk.surf[t] !== surfShown.surface) continue;
 			for (const [a, b] of [[0, 1], [1, 2], [2, 0]]) for (const v of [pk.idx[t * 3 + a], pk.idx[t * 3 + b]]) pts.push(pk.pos[v * 3], pk.pos[v * 3 + 1], pk.pos[v * 3 + 2]);
 		}
-		const vao = gl.createVertexArray(), buf = gl.createBuffer();
-		gl.bindVertexArray(vao);
-		gl.bindBuffer(gl.ARRAY_BUFFER, buf);
-		gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(pts), gl.STATIC_DRAW);
-		gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 0, 0);
-		gl.bindVertexArray(null);
-		surfShown.wire = { vao, buf, count: pts.length / 3 };
+		surfShown.wire = pointsVao(new Float32Array(pts));
 	}
 	gl.useProgram(lineProg.p);
 	gl.uniform4f(lineProg.u.uColor, 0.2, 1, 1, 1);

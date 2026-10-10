@@ -75,16 +75,24 @@
 		<h2><span>Texture swap</span><span id="remapCount"></span></h2>
 		<div class="tools">
 			<div class="inline"><input type="text" id="remapOld" list="remapOldNames" spellcheck="false" autocomplete="off" placeholder="a shader of the map: click a wall" title="The shader that is swapped, wherever the map has it. A click on the map or on a row puts it here, typing narrows the rows."></div>
-			<div class="inline"><input type="text" id="remapNew" list="remapNewNames" spellcheck="false" autocomplete="off" placeholder="draw it as" title="The shader or image it is drawn as. A game only draws one it has: one of the game itself or of a pk3 it has.">
-				<button id="remapSet" disabled title="For every player, at once (Enter)">Swap</button>
+			<div class="inline"><input type="text" id="remapNew" list="remapNewNames" spellcheck="false" autocomplete="off" placeholder="draw it as" title="The shader or image it is drawn as: chosen from the textures, or typed. A game only draws one it has: one of the game itself or of a pk3 it has.">
+				<button id="remapBrowse" title="The textures of the game as pictures, below the map: searched by name, a folder at a time. A click on one puts it here.">Pick a texture</button></div>
+			<div class="inline" id="remapPics"><figure title="The selected shader of the map: the image of that name, or the one a map editor shows for the shader"><i class="thumb" id="remapOldPic"></i><figcaption></figcaption></figure>
+				<figure title="What it would be drawn as: the same kind of picture"><i class="thumb" id="remapNewPic"></i><figcaption></figcaption></figure></div>
+			<figure id="remapTest"><canvas id="remapBall" width="224" height="224"></canvas><figcaption><button id="remapShape" title="The test object: a ball or a cube. It is drawn with what the shader would be drawn as, or with the shader itself while nothing is chosen.">Ball</button></figcaption></figure>
+			<div class="inline"><button id="remapSet" disabled title="For every player, at once (Enter in the field above). A draft of the selected shader is sent.">Swap</button>
 				<button id="remapClear" disabled title="The selected shader is drawn as itself again">Take back</button></div>
+			<div class="inline" id="remapDraftRow" hidden><span class="hint" id="remapDraftCount" style="margin:0"></span>
+				<button id="remapDraftsSwap" class="primary" style="margin-left:auto" title="Sends every draft to the server: every player sees them then">Swap all</button><button id="remapDraftsDrop" title="Throws every draft away. No player saw them.">Discard all</button></div>
 			<div class="inline"><button id="remapSave" title="Writes remaps/&lt;map&gt;.cfg: the swaps come back with every start of the map">Save</button>
 				<button id="remapRevert" title="Drops what was changed since the last save: the swaps as the file has them">Revert to saved</button></div>
 			<div class="hint" id="remapState" style="margin:0"></div>
 			<datalist id="remapOldNames"></datalist><datalist id="remapNewNames"></datalist>
 		</div>
 		<div class="scroll"><table><tbody id="remapRows"></tbody></table>
-		<div class="hint" style="padding:6px 10px 0">A shader of the map drawn as another one, for every player and at once. Every game can do that, the unchanged one too. A shader is swapped wherever the map has it, not on one wall, and a game only draws a shader it has.</div>
+		<div class="hint" style="padding:6px 10px 0">A shader of the map drawn as another one, for every player and at once. Every game can do that, the unchanged one too. A shader is swapped wherever the map has it, not on one wall, and a game only draws a shader it has. The surfaces that have the selected shader are yellow on the map, their rims faintly through the walls. A click on a row turns the camera to the nearest one.</div>
+		<div class="hint" style="padding:0 10px 8px">The two pictures are the selected shader and what it would be drawn as. The ball or cube below them is drawn with that the way the game draws a shader on a model, with every stage of its script.</div>
+		<div class="hint" style="padding:0 10px 8px">"Pick a texture" shows the textures of the game below the map. A click on one draws the selected shader as it at once, as a draft: only this page shows it, until Swap or Swap all sends it to every player.</div>
 		<div class="hint" style="padding:0 10px 8px">A wall that is lit by a lightmap keeps its light in a game of this tree. Another game draws it without once it is swapped, and stays that way after the swap is taken back, until the map is loaded again. What is not lit that way is safe to swap: screens, signs, lights, the skin of a model.</div></div>
 	</div>
 	<div class="pane" id="pane-mapinfo">
@@ -193,6 +201,15 @@
 		<div id="chatLog"></div>
 		<form class="inline" id="sayForm"><input id="sayText" placeholder="Message to all players" maxlength="150" autocomplete="off"><button>Say</button></form>
 	</div>
+</div>
+
+<div id="texBrowser">
+	<div class="bar"><input type="text" id="texFind" spellcheck="false" autocomplete="off" placeholder="Search a texture" title="Only what has every word that is typed in its name">
+		<select id="texSet" title="The folder of textures that is shown. Everything: all of them, and the shaders that only have a script. Of this map: the ones the map has, which every game that plays it has too."></select>
+		<span class="hint" id="texCount"></span><span class="spacer"></span>
+		<span class="hint">A click draws the selected shader of the map as it, as a draft. A name with a star has a shader script.</span>
+		<button id="texClose" title="The map view gets its room back">Close</button></div>
+	<div id="texTiles"></div>
 </div>
 
 <div id="view">
@@ -375,6 +392,7 @@
 <!--#include js/editor-kits.js -->
 <!--#include js/editor-clips.js -->
 <!--#include js/editor-remaps.js -->
+<!--#include js/editor-textures.js -->
 <!--#include js/bans.js -->
 <!--#include js/editor-select.js -->
 <!--#include js/editor-history.js -->

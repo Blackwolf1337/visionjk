@@ -158,11 +158,11 @@ function imageHasMips(name) {
 	return !noMipImages.has(scKey(name));
 }
 
-// An image of the game as a texture, by its name with or without an ending: the ending the name has first, then
-// jpg, png and tga, the order of the engine (R_LoadImage). null: there is none, or the server does not hand out
-// its folder, or its sides are not powers of two: such an image the engine refuses (R_FindImageFile), and the
-// shader that names it is drawn as one that has an error.
-async function fetchImage(name, clamp) {
+// The file of an image of the game, by its name with or without an ending: the ending the name has first, then
+// jpg, png and tga, the order of the engine (R_LoadImage). { base: the name without an ending, file: with the
+// one it has, tga, img: what decodeTga gives for a tga and a bitmap for the others, w, h }. null: there is none,
+// or the server does not hand out its folder.
+async function fetchImageFile(name) {
 	const m = /\.(tga|jpg|png)$/i.exec(name), base = m ? name.slice(0, m.index) : name;
 	const endings = [m ? m[0].toLowerCase() : '', '.jpg', '.png', '.tga'].filter((e, i, all) => e && all.indexOf(e) === i);
 	let unanswered = false;
@@ -178,26 +178,33 @@ async function fetchImage(name, clamp) {
 				continue;
 			}
 			// as it is in the file: the stages of a shader blend with the alpha themselves
-			const img = ext === '.tga' ? decodeTga(data) : await createImageBitmap(new Blob([data]), { premultiplyAlpha: 'none', colorSpaceConversion: 'none' });
+			const tga = ext === '.tga', img = tga ? decodeTga(data) : await createImageBitmap(new Blob([data]), { premultiplyAlpha: 'none', colorSpaceConversion: 'none' });
 			if (!img) continue;
-			const w = ext === '.tga' ? img.w : img.width, h = ext === '.tga' ? img.h : img.height;
-			if ((w & (w - 1)) || (h & (h - 1))) return null;
-			const t0 = performance.now(), opts = { clamp, mip: imageHasMips(base) };
-			let tex;
-			if (ext === '.tga') {
-				tex = makeTexture(w, h, img.data, opts);
-			} else {
-				tex = gl.createTexture();
-				gl.bindTexture(gl.TEXTURE_2D, tex);
-				gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, img);
-				finishTexture(w, h, opts);
-			}
-			loadTimes.images += performance.now() - t0; loadTimes.imageCount++;
-			return { tex, alpha: ext === '.tga' && img.alpha, w, h };
+			return { base, file: base + ext, tga, img, w: tga ? img.w : img.width, h: tga ? img.h : img.height };
 		} catch (e) { /* a file that is no image: the next ending */ }
 	}
 	// the server did not answer (it changes the map, say): that is not "there is none", the caller may ask again
 	if (unanswered) throw new Error('no answer for ' + name);
 	return null;
+}
+
+// An image of the game as a texture. null: there is none (fetchImageFile), or its sides are not powers of two:
+// such an image the engine refuses (R_FindImageFile), and the shader that names it is drawn as one that has an
+// error.
+async function fetchImage(name, clamp) {
+	const f = await fetchImageFile(name);
+	if (!f || (f.w & (f.w - 1)) || (f.h & (f.h - 1))) return null;
+	const t0 = performance.now(), opts = { clamp, mip: imageHasMips(f.base) };
+	let tex;
+	if (f.tga) {
+		tex = makeTexture(f.w, f.h, f.img.data, opts);
+	} else {
+		tex = gl.createTexture();
+		gl.bindTexture(gl.TEXTURE_2D, tex);
+		gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, f.img);
+		finishTexture(f.w, f.h, opts);
+	}
+	loadTimes.images += performance.now() - t0; loadTimes.imageCount++;
+	return { tex, alpha: f.tga && f.img.alpha, w: f.w, h: f.h };
 }
 
