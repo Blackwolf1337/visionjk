@@ -353,6 +353,11 @@ typedef struct refimport_s {
 	int				(*WIN_VK_InstanceExtensions)		( const char **names, int maxNames );
 	qboolean		(*WIN_VK_CreateSurface)				( void *instance, void *surface );
 	void *			(*WIN_VK_GetInstanceProcAddr)		( void );
+
+	// What the load of a level and a long frame were spent on (qcommon/com_load.cpp): around something that is
+	// loaded, on the main thread. At the end of the table.
+	void			(*LoadPush)							( const char *kind, const char *name );
+	void			(*LoadPop)							( void );
 } refimport_t;
 
 // this is the only function actually exported at the linker level

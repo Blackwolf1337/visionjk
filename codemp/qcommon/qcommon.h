@@ -773,6 +773,15 @@ int			Com_EventLoop( void );
 int			Com_Milliseconds( void );	// will be journaled properly
 uint32_t	Com_BlockChecksum( const void *buffer, int length );
 int      Com_HashKey(char *string, int maxlen);
+
+// com_load.cpp: what the load of a level and a long frame were spent on (com_loadReport, com_hitchLog)
+void	Com_LoadInit( void );
+void	Com_LoadPush( const char *kind, const char *name );	// around something that is loaded
+void	Com_LoadPop( void );
+void	Com_LoadBegin( const char *what );					// a level begins to load
+void	Com_LoadDone( void );								//	and is loaded with the frame that runs
+void	Com_LoadFrameBegin( void );
+void	Com_LoadFrameEnd( void );
 int			Com_Filter(char *filter, char *name, int casesensitive);
 int			Com_FilterPath(char *filter, char *name, int casesensitive);
 int			Com_RealTime(qtime_t *qtime);

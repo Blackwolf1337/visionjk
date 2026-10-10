@@ -156,7 +156,9 @@ void VK_FlushUploads( void ) {
 	submit.commandBufferCount = 1;
 	submit.pCommandBuffers = &vk.uploadCmd;
 	VK_CHECK( qvkQueueSubmit( vk.queue, 1, &submit, VK_NULL_HANDLE ) );
+	ri.LoadPush( "wait for uploads", NULL );
 	VK_CHECK( qvkQueueWaitIdle( vk.queue ) );
+	ri.LoadPop();
 	vk.uploadOpen = qfalse;
 	vk.stagingUsed = 0;
 }

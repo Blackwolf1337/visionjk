@@ -1251,6 +1251,7 @@ void Com_Init( char *commandLine ) {
 		com_showtrace = Cvar_Get ("com_showtrace", "0", CVAR_CHEAT);
 
 		com_speeds = Cvar_Get ("com_speeds", "0", 0);
+		Com_LoadInit();
 		com_timedemo = Cvar_Get ("timedemo", "0", 0);
 		com_cameraMode = Cvar_Get ("com_cameraMode", "0", CVAR_CHEAT);
 
@@ -1567,6 +1568,8 @@ void Com_Frame( void ) {
 			else
 				NET_Sleep(timeVal - 1);
 		} while( (timeVal = Com_TimeVal(minMsec)) != 0 );
+		// what follows is the work of the frame
+		Com_LoadFrameBegin();
 		IN_Frame();
 
 		lastTime = com_frameTime;
@@ -1586,7 +1589,9 @@ void Com_Frame( void ) {
 			timeBeforeServer = Sys_Milliseconds ();
 		}
 
+		Com_LoadPush( "frame: server", NULL );
 		SV_Frame( msec );
+		Com_LoadPop();
 
 		// if "dedicated" has been modified, start up
 		// or shut down the client system.
@@ -1626,7 +1631,9 @@ void Com_Frame( void ) {
 				timeBeforeClient = Sys_Milliseconds ();
 			}
 
+			Com_LoadPush( "frame: client", NULL );
 			CL_Frame( msec );
+			Com_LoadPop();
 
 			if ( com_speeds->integer ) {
 				timeAfter = Sys_Milliseconds ();
@@ -1679,6 +1686,7 @@ void Com_Frame( void ) {
 			Sys_SetProcessorAffinity();
 		}
 
+		Com_LoadFrameEnd();
 		com_frameNumber++;
 	}
 	catch (int code) {

@@ -86,6 +86,7 @@ static void VK_BuildWorld( void ) {
 	vkSize_t sizes[4], total = 0;
 	vkBuffer_t staging;
 
+	ri.LoadPush( "world buffers", NULL );
 	VK_WaitIdle();
 	VK_ShutdownWorld();
 	vk_worldValid = qtrue;
@@ -160,6 +161,7 @@ static void VK_BuildWorld( void ) {
 	VK_CopyBuffer( &staging, 0, &vk_worldVertexes, 0, total );
 	VK_FlushUploads();
 	VK_DestroyBuffer( &staging );
+	ri.LoadPop();
 	ri.Printf( PRINT_DEVELOPER, "rd-vulkan-vision: %i vertices of %i surfaces of the level on the device, %i KB\n",
 		numVertexes, (int)vk_firstVertex.size(), (int)( total >> 10 ) );
 }

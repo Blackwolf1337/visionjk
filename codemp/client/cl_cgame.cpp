@@ -533,7 +533,10 @@ void CL_InitCGame( void ) {
 	// init for this gamestate
 	// use the lastExecutedServerCommand instead of the serverCommandSequence
 	// otherwise server commands sent just before a gamestate are dropped
+	// what the cgame asks the engine to load in there has kinds of its own, this is the rest of it
+	Com_LoadPush( "cgame start", NULL );
 	CGVM_Init( clc.serverMessageSequence, clc.lastExecutedServerCommand, clc.clientNum );
+	Com_LoadPop();
 
 	int clRate = Cvar_VariableIntegerValue( "rate" );
 	if ( clRate == 4000 ) {
@@ -554,7 +557,9 @@ void CL_InitCGame( void ) {
 
 	// have the renderer touch all its images, so they are present
 	// on the card even if the driver does deferred loading
+	Com_LoadPush( "renderer end of registration", NULL );
 	re->EndRegistration();
+	Com_LoadPop();
 
 	// make sure everything is paged in
 //	if (!Sys_LowPhysicalMemory())
@@ -597,7 +602,9 @@ void CL_CGameRendering( stereoFrame_t stereo ) {
 	re->G2API_SetTime(cl.serverTime, 1);
 	//rww - RAGDOLL_END
 
+	Com_LoadPush( "frame: cgame", NULL );
 	CGVM_DrawActiveFrame( cl.serverTime, stereo, clc.demoplaying );
+	Com_LoadPop();
 }
 
 
@@ -684,9 +691,13 @@ void CL_FirstSnapshot( void ) {
 		return;
 	}
 
+	Com_LoadPush( "renderer end of load", NULL );
 	re->RegisterMedia_LevelLoadEnd();
+	Com_LoadPop();
 
 	cls.state = CA_ACTIVE;
+	// the frame that runs draws the game for the first time: with it the load is over
+	Com_LoadDone();
 
 	// set the timedelta so we are exactly on this first frame
 	cl.serverTimeDelta = cl.snap.serverTime - cls.realtime;

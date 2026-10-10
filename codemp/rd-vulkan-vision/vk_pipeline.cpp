@@ -358,8 +358,10 @@ VkPipeline VK_FindPipeline( vkProgram_t program, uint32_t stateBits ) {
 		Com_Error( ERR_DROP, "VK_FindPipeline: more than %i pipelines", VK_MAX_PIPELINES );
 	}
 	vk.pipelines[vk.numPipelines].key = key;
+	ri.LoadPush( "pipeline", va( "state %08x", key ) );
 	vk.pipelines[vk.numPipelines].pipeline = VK_CreatePipeline( vk.vertexShaders[program], vk.fragmentShaders[program],
 		stateBits, qfalse, (qboolean)( program == VKP_SKINNED ) );
+	ri.LoadPop();
 	vk.lastPipelineKey = key;
 	return vk.lastPipeline = vk.pipelines[vk.numPipelines++].pipeline;
 }

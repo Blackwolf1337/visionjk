@@ -171,7 +171,9 @@ void VK_ImageLevel( int level, int internalFormat, int width, int height, const 
 		const std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
 
 		size = VK_BC_Size( vi->format, width, height );
+		ri.LoadPush( "texture packed", NULL );
 		VK_BC_Compress( vi->format, rgba, width, height, VK_Stage( size, &offset ) );
+		ri.LoadPop();
 		vk.statBcPixels += (double)width * height;
 		vk.statBcSeconds += std::chrono::duration<double>( std::chrono::steady_clock::now() - start ).count();
 	}

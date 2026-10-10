@@ -1240,7 +1240,9 @@ void SV_Frame( int msec ) {
 		sv.time += frameMsec;
 
 		// let everything in the world think and move
+		Com_LoadPush( "frame: game", NULL );
 		GVM_RunFrame( sv.time );
+		Com_LoadPop();
 	}
 
 	//rww - RAGDOLL_BEGIN

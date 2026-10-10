@@ -517,9 +517,13 @@ void SCR_UpdateScreen( void ) {
 		}
 
 		if ( com_speeds->integer ) {
+			Com_LoadPush( "frame: drawn", NULL );
 			re->EndFrame( &time_frontend, &time_backend );
+			Com_LoadPop();
 		} else {
+			Com_LoadPush( "frame: drawn", NULL );
 			re->EndFrame( NULL, NULL );
+			Com_LoadPop();
 		}
 	}
 

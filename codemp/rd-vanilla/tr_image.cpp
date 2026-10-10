@@ -1108,7 +1108,9 @@ image_t	*R_FindImageFile( const char *name, qboolean mipmap, qboolean allowPicmi
 	//
 	// load the pic from disk
 	//
+	ri.LoadPush( "image file", name );
 	R_LoadImage( name, &pic, &width, &height );
+	ri.LoadPop();
 	if ( pic == NULL ) {                                    // if we dont get a successful load
 		return NULL;                                        // bail
 	}

@@ -535,11 +535,70 @@ static qboolean CL_G2API_GetBoltMatrix_NoRecNoRot( void *ghoul2, const int model
 	return re->G2API_GetBoltMatrix( *((CGhoul2Info_v *)ghoul2), modelIndex, boltIndex, matrix, angles, position, frameNum, modelList, scale );
 }
 
+// What the cgame has the engine load, each with its kind for com_loadReport and com_hitchLog (qcommon/com_load.cpp)
+static qhandle_t CL_LoadModel( const char *name ) {
+	Com_LoadPush( "model", name );
+	const qhandle_t h = re->RegisterModel( name );
+	Com_LoadPop();
+	return h;
+}
+
+static qhandle_t CL_LoadSkin( const char *name ) {
+	Com_LoadPush( "skin", name );
+	const qhandle_t h = re->RegisterSkin( name );
+	Com_LoadPop();
+	return h;
+}
+
+static qhandle_t CL_LoadShader( const char *name ) {
+	Com_LoadPush( "shader", name );
+	const qhandle_t h = re->RegisterShader( name );
+	Com_LoadPop();
+	return h;
+}
+
+static qhandle_t CL_LoadShaderNoMip( const char *name ) {
+	Com_LoadPush( "shader", name );
+	const qhandle_t h = re->RegisterShaderNoMip( name );
+	Com_LoadPop();
+	return h;
+}
+
+static sfxHandle_t CL_LoadSound( const char *name ) {
+	Com_LoadPush( "sound", name );
+	const sfxHandle_t h = S_RegisterSound( name );
+	Com_LoadPop();
+	return h;
+}
+
+static int CL_LoadEffect( const char *name ) {
+	Com_LoadPush( "effect", name );
+	const int h = FX_RegisterEffect( name );
+	Com_LoadPop();
+	return h;
+}
+
+static void CL_LoadWorld( const char *name ) {
+	Com_LoadPush( "world", name );
+	re->LoadWorld( name );
+	Com_LoadPop();
+}
+
+// the loading screen, drawn between the steps of a load
+static void CL_LoadScreen( void ) {
+	Com_LoadPush( "screen", NULL );
+	SCR_UpdateScreen();
+	Com_LoadPop();
+}
+
 static int CL_G2API_InitGhoul2Model( void **ghoul2Ptr, const char *fileName, int modelIndex, qhandle_t customSkin, qhandle_t customShader, int modelFlags, int lodBias ) {
 #ifdef _FULL_G2_LEAK_CHECKING
 		g_G2AllocServer = 0;
 #endif
-	return re->G2API_InitGhoul2Model( (CGhoul2Info_v **)ghoul2Ptr, fileName, modelIndex, customSkin, customShader, modelFlags, lodBias );
+	Com_LoadPush( "ghoul2 model", fileName );
+	const int ret = re->G2API_InitGhoul2Model( (CGhoul2Info_v **)ghoul2Ptr, fileName, modelIndex, customSkin, customShader, modelFlags, lodBias );
+	Com_LoadPop();
+	return ret;
 }
 
 static qboolean CL_G2API_SetSkin( void *ghoul2, int modelIndex, qhandle_t customSkin, qhandle_t renderSkin ) {
@@ -1762,7 +1821,7 @@ void CL_BindCGame( void ) {
 		cgi.FS_Open								= FS_FOpenFileByMode;
 		cgi.FS_Read								= FS_Read;
 		cgi.FS_Write							= FS_Write;
-		cgi.UpdateScreen						= SCR_UpdateScreen;
+		cgi.UpdateScreen						= CL_LoadScreen;
 		cgi.CM_InlineModel						= CM_InlineModel;
 		cgi.CM_LoadMap							= CL_CM_LoadMap;
 		cgi.CM_NumInlineModels					= CM_NumInlineModels;
@@ -1778,7 +1837,7 @@ void CL_BindCGame( void ) {
 		cgi.S_ClearLoopingSounds				= S_ClearLoopingSounds;
 		cgi.S_GetVoiceVolume					= CL_S_GetVoiceVolume;
 		cgi.S_MuteSound							= S_MuteSound;
-		cgi.S_RegisterSound						= S_RegisterSound;
+		cgi.S_RegisterSound						= CL_LoadSound;
 		cgi.S_Respatialize						= S_Respatialize;
 		cgi.S_Shutup							= CL_S_Shutup;
 		cgi.S_StartBackgroundTrack				= S_StartBackgroundTrack;
@@ -1818,14 +1877,14 @@ void CL_BindCGame( void ) {
 		cgi.R_Language_UsesSpaces				= re->Language_UsesSpaces;
 		cgi.R_LerpTag							= re->LerpTag;
 		cgi.R_LightForPoint						= re->LightForPoint;
-		cgi.R_LoadWorld							= re->LoadWorld;
+		cgi.R_LoadWorld							= CL_LoadWorld;
 		cgi.R_MarkFragments						= re->MarkFragments;
 		cgi.R_ModelBounds						= re->ModelBounds;
 		cgi.R_RegisterFont						= re->RegisterFont;
-		cgi.R_RegisterModel						= re->RegisterModel;
-		cgi.R_RegisterShader					= re->RegisterShader;
-		cgi.R_RegisterShaderNoMip				= re->RegisterShaderNoMip;
-		cgi.R_RegisterSkin						= re->RegisterSkin;
+		cgi.R_RegisterModel						= CL_LoadModel;
+		cgi.R_RegisterShader					= CL_LoadShader;
+		cgi.R_RegisterShaderNoMip				= CL_LoadShaderNoMip;
+		cgi.R_RegisterSkin						= CL_LoadSkin;
 		cgi.R_RemapShader						= re->RemapShader;
 		cgi.R_RenderScene						= re->RenderScene;
 		cgi.R_SetColor							= re->SetColor;
@@ -1863,7 +1922,7 @@ void CL_BindCGame( void ) {
 		cgi.CIN_SetExtents						= CIN_SetExtents;
 		cgi.CIN_StopCinematic					= CIN_StopCinematic;
 		cgi.FX_AddLine							= CGFX_AddLine;
-		cgi.FX_RegisterEffect					= FX_RegisterEffect;
+		cgi.FX_RegisterEffect					= CL_LoadEffect;
 		cgi.FX_PlayEffect						= FX_PlayEffect;
 		cgi.FX_PlayEffectID						= FX_PlayEffectID;
 		cgi.FX_PlayEntityEffectID				= FX_PlayEntityEffectID;

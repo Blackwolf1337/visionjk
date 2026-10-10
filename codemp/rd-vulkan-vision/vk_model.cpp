@@ -212,6 +212,7 @@ int VK_SkinnedSurface( const mdxmSurface_t *surface ) {
 		}
 	}
 
+	ri.LoadPush( "model buffers", NULL );
 	out = (vkSkinVertex_t *)VK_Stage( size, &staged );
 	memset( out, 0, (size_t)size );
 	for ( int i = 0; i < surface->numVerts; i++, v++, out++ ) {
@@ -223,6 +224,7 @@ int VK_SkinnedSurface( const mdxmSurface_t *surface ) {
 	VK_CopyBuffer( &vk.staging, staged, &vk_modelVertexes, vk_modelUsed, size );
 	first = VK_ModelIndexes( (const int *)( (const byte *)surface + surface->ofsTriangles ), surface->numTriangles * 3,
 		(int)( vk_modelUsed / sizeof( vkSkinVertex_t ) ) );
+	ri.LoadPop();
 	vk_modelUsed += size;
 	vk_modelFirstIndex[surface] = first;
 	return first;

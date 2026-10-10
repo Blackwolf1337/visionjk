@@ -460,10 +460,13 @@ void SV_SpawnServer( char *server, qboolean killBots, ForceReload_e eForceReload
 
 	SV_SendMapChange();
 
+	Com_LoadBegin( server );
+	Com_LoadPush( "server: end of the level before", NULL );
 	re->RegisterMedia_LevelLoadBegin(server, eForceReload);
 
 	// shut down the existing game if it is running
 	SV_ShutdownGameProgs();
+	Com_LoadPop();
 	svs.gameStarted = qfalse;
 
 	Com_Printf ("------ Server Initialization ------\n");
@@ -589,9 +592,13 @@ Ghoul2 Insert End
 	// get a new checksum feed and restart the file system
 	srand(Com_Milliseconds());
 	sv.checksumFeed = ( ((int) rand() << 16) ^ rand() ) ^ Com_Milliseconds();
+	Com_LoadPush( "server: file system", NULL );
 	FS_Restart( sv.checksumFeed );
+	Com_LoadPop();
 
+	Com_LoadPush( "server: collision map", server );
 	CM_LoadMap( va("maps/%s.bsp", server), qfalse, &checksum );
+	Com_LoadPop();
 	// Port: the map is loaded anew, no clip brush of it is off (clipbrush)
 	SV_ClipBrushesReset();
 
@@ -619,12 +626,15 @@ Ghoul2 Insert End
 	sv.state = SS_LOADING;
 
 	// load and spawn all other entities
+	Com_LoadPush( "server: game start", NULL );
 	SV_InitGameProgs();
+	Com_LoadPop();
 
 	// don't allow a map_restart if game is modified
 	sv_gametype->modified = qfalse;
 
 	// run a few frames to allow everything to settle
+	Com_LoadPush( "server: first frames", NULL );
 	for ( i = 0 ;i < 3 ; i++ ) {
 		//rww - RAGDOLL_BEGIN
 		re->G2API_SetTime(sv.time,0);
@@ -634,6 +644,7 @@ Ghoul2 Insert End
 		sv.time += 100;
 		svs.time += 100;
 	}
+	Com_LoadPop();
 	//rww - RAGDOLL_BEGIN
 	re->G2API_SetTime(sv.time,0);
 	//rww - RAGDOLL_END
@@ -760,6 +771,11 @@ Ghoul2 Insert End
 	}
 
 	SV_BeginAutoRecordDemos();
+
+	// a client of this program goes on with the load, and ends it with its first frame
+	if ( com_dedicated->integer ) {
+		Com_LoadDone();
+	}
 }
 
 
@@ -910,6 +926,8 @@ static void SV_InitRef( void ) {
 
 	//FIXME: Might have to do something about this...
 	ri.GetG2VertSpaceServer = GetG2VertSpaceServer;
+	ri.LoadPush = Com_LoadPush;
+	ri.LoadPop = Com_LoadPop;
 	G2VertSpaceServer = &IHeapAllocator_singleton;
 
 	ret = GetRefAPI( REF_API_VERSION, &ri );

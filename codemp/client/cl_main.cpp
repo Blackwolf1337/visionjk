@@ -1339,7 +1339,10 @@ void CL_DownloadsComplete( void ) {
 	// this will also (re)load the UI
 	// if this is a local client then only the client part of the hunk
 	// will be cleared, note that this is done after the hunk mark has been set
+	Com_LoadBegin( Info_ValueForKey( cl.gameState.stringData + cl.gameState.stringOffsets[CS_SERVERINFO], "mapname" ) );
+	Com_LoadPush( "client restart", NULL );
 	CL_FlushMemory();
+	Com_LoadPop();
 
 	// initialize the CGame
 	cls.cgameStarted = qtrue;
@@ -2221,7 +2224,9 @@ void CL_Frame ( int msec ) {
 	SCR_UpdateScreen();
 
 	// update audio
+	Com_LoadPush( "frame: sound", NULL );
 	S_Update();
+	Com_LoadPop();
 
 	// advance local effects for next frame
 	SCR_RunCinematic();
@@ -2347,22 +2352,30 @@ void CL_StartHunkUsers( void ) {
 
 	if ( !cls.rendererStarted ) {
 		cls.rendererStarted = qtrue;
+		Com_LoadPush( "renderer start", NULL );
 		CL_InitRenderer();
+		Com_LoadPop();
 	}
 
 	if ( !cls.soundStarted ) {
 		cls.soundStarted = qtrue;
+		Com_LoadPush( "sound start", NULL );
 		S_Init();
+		Com_LoadPop();
 	}
 
 	if ( !cls.soundRegistered ) {
 		cls.soundRegistered = qtrue;
+		Com_LoadPush( "sound start", NULL );
 		S_BeginRegistration();
+		Com_LoadPop();
 	}
 
 	if ( !cls.uiStarted ) {
 		cls.uiStarted = qtrue;
+		Com_LoadPush( "ui start", NULL );
 		CL_InitUI();
+		Com_LoadPop();
 	}
 }
 
@@ -2509,6 +2522,8 @@ void CL_InitRef( void ) {
 
 	ri.PD_Store = PD_Store;
 	ri.PD_Load = PD_Load;
+	ri.LoadPush = Com_LoadPush;
+	ri.LoadPop = Com_LoadPop;
 
 	ret = GetRefAPI( REF_API_VERSION, &ri );
 
