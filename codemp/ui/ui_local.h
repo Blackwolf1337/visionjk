@@ -420,6 +420,14 @@ qboolean UI_SaberModelForSaber( const char *saberName, char *saberModel );
 qboolean UI_SaberTypeForSaber( const char *saberName, char *saberType );
 
 
+//
+// ui_update.c
+//
+
+void UI_UpdateNoticeDraw( void );
+qboolean UI_UpdateNoticeKey( int key, qboolean down );
+
+
 // new ui
 
 extern uiImport_t *trap;
