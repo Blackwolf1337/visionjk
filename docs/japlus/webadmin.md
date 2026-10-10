@@ -1791,8 +1791,8 @@ Also changed:
   and a server can only add entities to it. An unchanged client clips against a solid box entity and draws
   nothing for it, so a box with a texture needs either a cgame that draws it, or a level file in a pk3 that
   the client has to fetch. Both were built: boxes drawn by the cgame of this tree, and a "Publish" that wrote
-  them as a second level file a level takes in like `misc_bsp` does. The code is on the branch
-  `feature/brush-editor` and not merged. What an unchanged client draws without a download is a model of the
+  them as a second level file a level takes in like `misc_bsp` does. The code was kept on a branch for a few
+  hours and deleted with it the same day, on the user's word. What an unchanged client draws without a download is a model of the
   game placed as an entity, which is the tab Physical props.
 - New on 2026-10-10: the textures to choose from, and a test object, in the tab Textures (the user: "instead of
   putting in the string, we can search and select from multiple batches which show the texture", and "a
