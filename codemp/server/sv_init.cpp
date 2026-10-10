@@ -928,6 +928,7 @@ static void SV_InitRef( void ) {
 	ri.GetG2VertSpaceServer = GetG2VertSpaceServer;
 	ri.LoadPush = Com_LoadPush;
 	ri.LoadPop = Com_LoadPop;
+	ri.FS_FileSource = FS_FileSource;
 	G2VertSpaceServer = &IHeapAllocator_singleton;
 
 	ret = GetRefAPI( REF_API_VERSION, &ri );

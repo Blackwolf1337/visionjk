@@ -380,6 +380,11 @@ left in these views are the effects of the game (flames, smoke, light cones) and
 - Packing is work at every level load: 96 million pixels for mp/ffa3. Up to seven worker threads share it with
   the main thread, which goes on when a texture is done: 0.47 s for that level on this machine, 1.5 s on one
   core. The workers do nothing else and sleep while the game runs.
+- Since 2026-10-10 a texture is packed once and then kept: `vk_texcache.cpp` writes the blocks of every image
+  file of a pak to `vulkan/tex/` of the profile and reads them back the next time, without the image file
+  being read or decoded (`r_vkTexCache`, on by default). The first load of mp/ffa3 since the program started
+  went from 1541 to 661 ms with it, a player who joins from a frame of 22 to 28 ms to one of 4 to 6.5.
+  [loading.md](loading.md) has how that was measured and what the cache is named after.
 
 ## Not done
 

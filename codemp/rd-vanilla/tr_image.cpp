@@ -588,6 +588,20 @@ static void Upload32( unsigned *data,
 		uiTarget = GL_TEXTURE_RECTANGLE_ARB;
 	}
 
+#ifdef RD_VULKAN_VISION
+	// The texture of the image is kept from an earlier run (vk_texcache.cpp, R_FindImageFile() found it): there
+	// are no pixels, its blocks go to the device as they are, and what is left to do here is the filters.
+	{
+		int keptWidth, keptHeight;
+
+		if ( VK_TexCacheUpload( pformat, &keptWidth, &keptHeight ) ) {
+			*pUploadWidth = keptWidth;
+			*pUploadHeight = keptHeight;
+			goto done;
+		}
+	}
+#endif
+
 	if (format == GL_RGBA)
 	{
 		int			samples;
@@ -1105,6 +1119,16 @@ image_t	*R_FindImageFile( const char *name, qboolean mipmap, qboolean allowPicmi
 		return image;
 	}
 
+#ifdef RD_VULKAN_VISION
+	// The texture of this file as an earlier run made it (vk_texcache.cpp): then the file is neither read nor
+	// decoded nor packed again, and the image is made without pixels.
+	if ( VK_TexCacheFind( name, mipmap, allowPicmip, allowTC, &width, &height ) ) {
+		image = R_CreateImage( ( char * ) name, NULL, width, height, GL_RGBA, mipmap, allowPicmip, allowTC, glWrapClampMode );
+		VK_TexCacheEnd();
+		return image;
+	}
+#endif
+
 	//
 	// load the pic from disk
 	//
@@ -1124,7 +1148,14 @@ image_t	*R_FindImageFile( const char *name, qboolean mipmap, qboolean allowPicmi
 		return NULL;
 	}
 
+#ifdef RD_VULKAN_VISION
+	// what is packed for this image now is kept for the next run
+	VK_TexCacheRecord();
+#endif
 	image = R_CreateImage( ( char * ) name, pic, width, height, GL_RGBA, mipmap, allowPicmip, allowTC, glWrapClampMode );
+#ifdef RD_VULKAN_VISION
+	VK_TexCacheEnd();
+#endif
 	Z_Free( pic );
 	return image;
 }

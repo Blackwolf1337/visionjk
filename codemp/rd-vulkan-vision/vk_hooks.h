@@ -49,6 +49,12 @@ void VK_ImageLevel( int level, int internalFormat, int width, int height, const 
 void VK_ImageParm( int name, int value );
 void VK_ImageDelete( unsigned int texnum );
 
+// vk_texcache.cpp: the texture of an image file as an earlier run packed it, see there for the order of the calls
+qboolean VK_TexCacheFind( const char *name, qboolean mipmap, qboolean allowPicmip, qboolean allowTC, int *width, int *height );
+qboolean VK_TexCacheUpload( int *internalFormat, int *width, int *height );
+void VK_TexCacheRecord( void );
+void VK_TexCacheEnd( void );
+
 // The few OpenGL calls left in the shared files, by where they are:
 // tr_image.cpp Upload32, R_CreateImage, GL_TextureMode, R_Images_DeleteImageContents
 #undef qglTexImage2D

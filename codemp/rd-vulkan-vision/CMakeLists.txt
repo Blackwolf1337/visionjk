@@ -102,6 +102,7 @@ set(MPVulkanVisionSharedFiles
 	"${MPDir}/rd-vulkan-vision/vk_frame.cpp"
 	"${MPDir}/rd-vulkan-vision/vk_gl.cpp"
 	"${MPDir}/rd-vulkan-vision/vk_image.cpp"
+	"${MPDir}/rd-vulkan-vision/vk_texcache.cpp"
 	"${MPDir}/rd-vulkan-vision/vk_model.cpp"
 	"${MPDir}/rd-vulkan-vision/vk_post.cpp"
 	"${MPDir}/rd-vulkan-vision/vk_shade.cpp"

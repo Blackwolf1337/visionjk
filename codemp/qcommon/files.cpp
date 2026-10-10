@@ -1881,7 +1881,8 @@ CONVENIENCE FUNCTIONS FOR ENTIRE FILES
 ======================================================================================
 */
 
-int	FS_FileIsInPAK(const char *filename, int *pChecksum ) {
+// the first pak of the search path that has the file, of the paks that may be read. NULL: none has it.
+static pack_t *FS_PakOfFile( const char *filename ) {
 	searchpath_t	*search;
 	pack_t			*pak;
 	fileInPack_t	*pakFile;
@@ -1902,7 +1903,7 @@ int	FS_FileIsInPAK(const char *filename, int *pChecksum ) {
 	// The searchpaths do guarantee that something will always
 	// be prepended, so we don't need to worry about "c:" or "//limbo"
 	if ( strstr( filename, ".." ) || strstr( filename, "::" ) ) {
-		return -1;
+		return NULL;
 	}
 
 	//
@@ -1927,16 +1928,59 @@ int	FS_FileIsInPAK(const char *filename, int *pChecksum ) {
 			do {
 				// case and separator insensitive comparisons
 				if ( !FS_FilenameCompare( pakFile->name, filename ) ) {
-					if (pChecksum) {
-						*pChecksum = pak->pure_checksum;
-					}
-					return 1;
+					return pak;
 				}
 				pakFile = pakFile->next;
 			} while(pakFile != NULL);
 		}
 	}
-	return -1;
+	return NULL;
+}
+
+int	FS_FileIsInPAK(const char *filename, int *pChecksum ) {
+	const pack_t *pak = FS_PakOfFile( filename );
+
+	if ( !pak ) {
+		return -1;
+	}
+	if (pChecksum) {
+		*pChecksum = pak->pure_checksum;
+	}
+	return 1;
+}
+
+/*
+============
+FS_FileSource
+
+Not in the game. For who keeps something it made from a file and wants to know whether the file is still the
+one it was made from: where a read of qpath would get it from.
+
+FS_SOURCE_NONE: there is no such file. FS_SOURCE_PAK: from a pak, with the length of the file and the checksum of
+that pak, which stand for its contents as long as the pak is the same. It is the checksum of the pak file itself,
+not the one a pure server compares: that one is mixed with a number of the server and is another one with every
+level. FS_SOURCE_DIRECTORY: a file of a directory, which can change at any time.
+============
+*/
+int FS_FileSource( const char *qpath, int *length, int *pakChecksum ) {
+	fileHandle_t	f = 0;
+	const long		len = FS_FOpenFileRead( qpath, &f, qfalse );
+	const pack_t	*pak;
+	qboolean		zip;
+
+	if ( !f ) {
+		return FS_SOURCE_NONE;
+	}
+	zip = fsh[f].zipFile;
+	FS_FCloseFile( f );
+	// the pak the read took it from is the first one in the search path that has it
+	pak = ( zip && len >= 0 ) ? FS_PakOfFile( qpath ) : NULL;
+	if ( !pak ) {
+		return FS_SOURCE_DIRECTORY;
+	}
+	*length = (int)len;
+	*pakChecksum = pak->checksum;
+	return FS_SOURCE_PAK;
 }
 
 /*

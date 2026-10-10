@@ -358,6 +358,10 @@ typedef struct refimport_s {
 	// loaded, on the main thread. At the end of the table.
 	void			(*LoadPush)							( const char *kind, const char *name );
 	void			(*LoadPop)							( void );
+
+	// Where a read of a file would get it from: 0 nowhere, 1 a pak (with the length of the file and the checksum
+	// of the pak), 2 a directory. FS_FileSource() of the engine, for the textures rd-vulkan-vision keeps.
+	int				(*FS_FileSource)					( const char *qpath, int *length, int *pakChecksum );
 } refimport_t;
 
 // this is the only function actually exported at the linker level

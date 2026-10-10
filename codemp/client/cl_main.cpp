@@ -2524,6 +2524,7 @@ void CL_InitRef( void ) {
 	ri.PD_Load = PD_Load;
 	ri.LoadPush = Com_LoadPush;
 	ri.LoadPop = Com_LoadPop;
+	ri.FS_FileSource = FS_FileSource;
 
 	ret = GetRefAPI( REF_API_VERSION, &ri );
 

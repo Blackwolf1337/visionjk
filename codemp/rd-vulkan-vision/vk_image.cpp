@@ -118,6 +118,50 @@ void GL_Bind( image_t *image ) {
 void GL_SelectTexture( int unit ) {
 }
 
+// a level whose bytes are staged goes to the device, and with the last one the texture is ready
+static void VK_SendLevel( vkImage_t *vi, int level, int width, int height, vkSize_t offset ) {
+	VK_UploadImageLevel( vi, level, width, height, offset );
+
+	if ( level == vi->mipLevels - 1 ) {
+		VK_EndImageUpload( vi );
+		vi->uploaded = qtrue;
+		VK_WriteTexture( (int)( vi - vk.images ) );
+	}
+}
+
+/*
+===============
+VK_ImageBlocks
+
+One mip level of the bound image that is in blocks already (vk_texcache.cpp), level 0 first: it makes the
+texture with mipLevels levels.
+===============
+*/
+void VK_ImageBlocks( int level, int mipLevels, vkFormat_t format, int width, int height, const byte *blocks, vkSize_t size ) {
+	image_t *image = vk.boundImage;
+	vkImage_t *vi = VK_SlotOf( image );
+	vkSize_t offset;
+
+	if ( !image ) {
+		return;
+	}
+	if ( level == 0 ) {
+		if ( vi ) {
+			VK_FlushUploads();
+			VK_DestroyImage( vi );
+		} else {
+			vi = VK_NewSlot( image );
+		}
+		VK_CreateSlotImage( vi, width, height, mipLevels, format );
+		VK_BeginImageUpload( vi, qtrue );
+	}
+	if ( !vi || !vi->image || level >= vi->mipLevels ) {
+		return;
+	}
+	memcpy( VK_Stage( size, &offset ), blocks, (size_t)size );
+	VK_SendLevel( vi, level, width, height, offset );
+}
+
 /*
 ===============
 VK_ImageLevel
@@ -169,21 +213,24 @@ void VK_ImageLevel( int level, int internalFormat, int width, int height, const 
 		memcpy( VK_Stage( size, &offset ), rgba, (size_t)size );
 	} else {
 		const std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
+		byte *kept;
 
 		size = VK_BC_Size( vi->format, width, height );
+		// a texture that is kept for the next run is packed into its place there, the staging memory is not
+		// for reading
+		kept = VK_TexCacheLevel( level, vi->mipLevels, vi->format, width, height, size );
 		ri.LoadPush( "texture packed", NULL );
-		VK_BC_Compress( vi->format, rgba, width, height, VK_Stage( size, &offset ) );
+		if ( kept ) {
+			VK_BC_Compress( vi->format, rgba, width, height, kept );
+			memcpy( VK_Stage( size, &offset ), kept, (size_t)size );
+		} else {
+			VK_BC_Compress( vi->format, rgba, width, height, VK_Stage( size, &offset ) );
+		}
 		ri.LoadPop();
 		vk.statBcPixels += (double)width * height;
 		vk.statBcSeconds += std::chrono::duration<double>( std::chrono::steady_clock::now() - start ).count();
 	}
-	VK_UploadImageLevel( vi, level, width, height, offset );
-
-	if ( level == vi->mipLevels - 1 ) {
-		VK_EndImageUpload( vi );
-		vi->uploaded = qtrue;
-		VK_WriteTexture( (int)( vi - vk.images ) );
-	}
+	VK_SendLevel( vi, level, width, height, offset );
 }
 
 /*
@@ -253,6 +300,7 @@ void VK_CountImages( int *numImages, int *numBlockImages ) {
 }
 
 void VK_InitImages( void ) {
+	VK_TexCacheInit();
 	VK_InitTextures();
 	if ( vk.bcTextures ) {
 		VK_BC_Init();
