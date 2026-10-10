@@ -849,12 +849,6 @@ typedef enum
 	PDSOUND_FORCEGRIP
 } pdSounds_t;
 
-// EV_SCREENSHAKE, angles[1]: the shake of a giant's step (game/fun/g_stomp.c), and angles[2] then says by how
-// many degrees the view is turned about as well. Not in the game as it was: a client that does not know it
-// shakes as for any screen shake, which moves the place of the view and does not turn it. The cgame of this
-// tree turns it too and can leave all of it out (cg_stomp).
-#define SHAKE_STOMP		1.0f
-
 typedef enum {
 	EV_NONE,
 
@@ -912,7 +906,7 @@ typedef enum {
 
 	EV_TEAM_POWER,
 
-	EV_SCREENSHAKE,		// angles[0]: how strong, time: msec, modelindex: the client it is for plus 1, or 0. angles[1], angles[2]: see SHAKE_STOMP
+	EV_SCREENSHAKE,
 
 	EV_LOCALTIMER,
 

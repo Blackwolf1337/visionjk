@@ -216,7 +216,6 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 
 	WebAdmin_Init();
 	G_VoiceInit( restart ? qtrue : qfalse );
-	G_StompInit();
 
 	G_InitMemory();
 

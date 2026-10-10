@@ -1325,19 +1325,6 @@ void JP_Hug( gentity_t *ent, gentity_t *other, int parts );
 
 // g_poop.c and g_japlus_cmds.c: the emote ampoop
 void JP_EmotePoop( gentity_t *ent );
-// fun/g_stomp.c: a giant shakes the ground
-typedef enum {
-	STOMP_STEP,			// a step
-	STOMP_JUMP,			// he pushes off
-	STOMP_LAND,			// he comes down from a jump
-	STOMP_FALL,			// he comes down from high up
-	STOMP_NUM_KINDS
-} stompKind_t;
-
-void G_StompInit( void );
-void G_Stomp( gentity_t *ent, stompKind_t kind );
-void G_StompStep( gentity_t *ent, int oldBobCycle );
-
 int G_PoopStart( gentity_t *ent );
 void G_PoopFrame( void );
 

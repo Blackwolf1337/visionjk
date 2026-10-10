@@ -97,24 +97,6 @@ A bug of OpenJK that was fixed:
   corrected by the server. An original plugin on this server ignores the bit.
 - A model without the tags `*back`, `*hip_l` and `*hip_r` is loaded and simply has no saber on the body. The plugin
   refuses such a model.
-- A giant shakes the ground (`g_stomp`, on by default, `codemp/game/fun/g_stomp.c`): a player the server made
-  more than three times his size (model scale above 300) is felt by who is near him. With every step, where he
-  pushes off for a jump and where he lands, the view shakes, a heavy step is heard (the rancor's) and a ring of
-  dust comes up. It grows with his size up to four times, a landing is stronger than a step and a fall stronger
-  than a landing, and it fades with the distance. It is done by the server with events every client of the game
-  knows (the screen shake, sent to each player near enough, a sound and an effect at the spot), so a client
-  without the cgame of this tree gets it. What such a client can be made to do is limited: the screen shake of
-  the game only moves the place of the view, by 16 units at most, and does not turn it (the client changes the
-  angles after it made the axis of the view from them). That is plain for somebody who stands next to the giant
-  and little for the giant himself, whose camera is far out. So the event also says by how many degrees the view
-  is to be turned about, which the cgame of this tree does (up to 3 degrees, half of it for the giant's own
-  view). The server does not know when a foot touches the ground, only a client plays the animation: a step is
-  where the movement code's cycle of steps turns over, which keeps the pace of the legs and not the very moment.
-  `cg_stomp 0` leaves the shake out for a player with this cgame (sound and dust stay), `g_stomp 2` and
-  `cg_stomp 2` say each one on the console, of the server and of the client. On a live server the events of a
-  bot of scale 500 were seen to arrive at a client in a browser, with units and degrees. What it looks like was
-  not seen from here.
-
 
 ## What of the original was taken out
 

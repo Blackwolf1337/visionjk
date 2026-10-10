@@ -229,7 +229,6 @@ set(MPGameFunFiles
 	"${MPDir}/game/fun/g_flatulence.c"
 	"${MPDir}/game/fun/g_poop.c"
 	"${MPDir}/game/fun/g_schizo.c"
-	"${MPDir}/game/fun/g_stomp.c"
 	)
 source_group("game/fun" FILES ${MPGameFunFiles})
 set(MPGameFiles ${MPGameFiles} ${MPGameFunFiles})

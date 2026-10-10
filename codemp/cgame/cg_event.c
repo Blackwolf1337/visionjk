@@ -2604,25 +2604,9 @@ void CG_EntityEvent( centity_t *cent, vec3_t position ) {
 
 	case EV_SCREENSHAKE:
 		DEBUGNAME("EV_SCREENSHAKE");
-		// not in the game as it was: the shake of a giant's step (game/fun/g_stomp.c) can be left out
-		if ( es->angles[1] == SHAKE_STOMP )
-		{
-			if ( !cg_stomp.integer )
-			{
-				break;
-			}
-			if ( cg_stomp.integer >= 2 )
-			{	// to see what arrives
-				trap->Print( "stomp: shake %.1f units and %.1f degrees for %i msec\n", es->angles[0], es->angles[2], es->time );
-			}
-		}
 		if (!es->modelindex || cg.predictedPlayerState.clientNum == es->modelindex-1)
 		{
 			CGCam_Shake(es->angles[0], es->time);
-			if ( es->angles[1] == SHAKE_STOMP )
-			{
-				cgScreenEffects.shake_degrees = es->angles[2];
-			}
 		}
 		break;
 	case EV_LOCALTIMER:

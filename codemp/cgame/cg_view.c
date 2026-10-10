@@ -1905,11 +1905,9 @@ cgscreffects_t cgScreenEffects;
 
 void CG_SE_UpdateShake( vec3_t origin, vec3_t angles )
 {
-	vec3_t	moveDir, turned;
+	vec3_t	moveDir;
 	float	intensity_scale, intensity;
 	int		i;
-
-	VectorCopy( angles, turned );
 
 	if ( cgScreenEffects.shake_duration <= 0 )
 		return;
@@ -1919,7 +1917,6 @@ void CG_SE_UpdateShake( vec3_t origin, vec3_t angles )
 		cgScreenEffects.shake_intensity = 0;
 		cgScreenEffects.shake_duration = 0;
 		cgScreenEffects.shake_start = 0;
-		cgScreenEffects.shake_degrees = 0.0f;
 		return;
 	}
 
@@ -1944,17 +1941,6 @@ void CG_SE_UpdateShake( vec3_t origin, vec3_t angles )
 
 	//Move the angles
 	VectorAdd( angles, moveDir, angles );
-
-	// Not in the game as it was. What is done to the angles above never shows: the axis of the view was made
-	// from them before this is called, so a screen shake of the game only moves the place of the view. That
-	// is left as it is. A shake that says by how many degrees (the stomp of a giant, game/fun/g_stomp.c)
-	// turns the view about by them, fading as the rest does.
-	if ( cgScreenEffects.shake_degrees > 0.0f )
-	{
-		turned[PITCH] += Q_flrand( -1.0f, 1.0f ) * cgScreenEffects.shake_degrees * intensity_scale;
-		turned[YAW] += Q_flrand( -1.0f, 1.0f ) * cgScreenEffects.shake_degrees * intensity_scale;
-		AnglesToAxis( turned, cg.refdef.viewaxis );
-	}
 }
 
 void CG_SE_UpdateMusic(void)
@@ -2023,7 +2009,6 @@ void CGCam_Shake( float intensity, int duration )
 
 	cgScreenEffects.shake_intensity = intensity;
 	cgScreenEffects.shake_duration = duration;
-	cgScreenEffects.shake_degrees = 0.0f;
 
 
 	cgScreenEffects.shake_start = cg.time;
