@@ -130,6 +130,8 @@ the answer tells the page that the numbers started over.
 | `POST /api/command` | `cmd`: one line for the server console, run in the next frame as if it was typed there |
 | `GET /api/clips` | the clip editor: `off` (the numbers of the clip brushes of the map the server does not mind), `walls` (the blocking walls, each with the number of its entity and its two corners), `dirty` (changed since the last save) |
 | `POST /api/clip` | `op` off or on (`brush`: numbers of clip brushes), wall (`x1 y1 z1 x2 y2 z2`, with `id` in the place of that wall), delete (`id`), save (writes `wallblocks/<map>.cfg`) or revert (what that file has) |
+| `GET /api/remaps` | the texture swap: `remaps` (each `old`, `new` and `own`: made by the panel or read from the file of the map, not by an entity of the map), `used` and `budget` (the characters the swaps take of what a client is told when it connects), `dirty` |
+| `POST /api/remap` | `op` set (`old`, `new`), clear (`old`), save (writes `remaps/<map>.cfg`) or revert (what that file has) |
 | `POST /api/control` | a player moved from the page. `op` start (`id`), input (`id`, `f`, `r`, `u` from -127 to 127, `buttons`, `yaw`, `pitch`), goal (`id`, `x`, `y`, `z`: he walks there) or stop. The answer names who is held, -1 for nobody |
 | `GET /api/perf?since=` | the load of the server, a sample a second, the last 300 kept: `samples` are `[frames, average and longest frame of the game in microseconds, longest wait for a frame in ms, entities, players, average and longest part of this panel in a frame in microseconds]`, `seq` is how many there were, `from` the number of the first one sent. `since`: only the ones from that number on. With them `svFps`, `entityMax`, `maxClients` |
 | `GET /api/classdoc` | the entity definitions of the game code: every `QUAKED` comment of its source files as text |
@@ -1745,6 +1747,30 @@ Also changed:
   saved, reverted and loaded by a start of the map, the tab driven through all of it without an error of the
   page, a box trigger of the World tab still shaped by its handles. Not seen in a game, and no client was
   connected, so that a client applies `cm_clipOff` is untested.
+- New on 2026-10-10: the tab Textures of the editor, the texture swap (the user asked whether textures of a
+  map can be changed without modifying the client). They can: the game has shader remaps for the entities of a
+  map (`targetShaderName`, `targetShaderNewName`), the server keeps a table and tells it in the configstring
+  `CS_SHADERSTATE`, and every client swaps the shader by itself (`CG_ShaderStateChanged`, `R_RemapShader`), the
+  unchanged one too. Until now only an entity of a map filled that table, the tab fills it as well
+  (`wa_remaps.c`). A click on the map takes the shader of the surface under the mouse, typing narrows the list
+  of the shaders of the map, "Swap" draws it as another shader for every player at once, "Take back" undoes
+  it. "Save" writes `remaps/<map>.cfg` (a line per swap, the old name and the new one), which the start of a
+  map loads whether the panel runs or not (`WebAdmin_LoadRemaps`). What a map swaps by itself is shown and can
+  be taken back, and is not saved. The page draws the swaps in both of its views.
+  What it can not do, and the tab says so: a shader is swapped wherever the map has it, not on one wall. A
+  client only draws a shader it has, a name it does not know is left as it is there (the server does not know
+  what a client has). The swaps get 1000 characters of the 16000 a client is told when it connects, and one
+  that was taken back keeps its room until the next map: it stays in the table with both names the same,
+  which is how a client is told. A name is refused when it is longer than 63 characters or has a blank or one
+  of `= : @ " ; % \`: the parser of every client cuts the configstring at the first three and copies what is
+  between them into buffers of that size.
+  Lightmaps: the renderer of the game points every lightmap of the old shader at one copy of the new one, so
+  a wall that is lit by a lightmap is drawn without it or with the one of another wall, and when the swap is
+  taken back all but one of them stay that way until the level is loaded again. The renderers of this tree
+  give each one the new shader with its own lightmap, and a swap that is taken back is gone (`R_RemapShader`
+  in `rd-vanilla/tr_shader.cpp`, which `rd-vulkan-vision` builds too). Another client keeps the old behaviour.
+  Added without a test run: built, the page as a whole checked for syntax, not opened in a browser and not
+  seen in a game.
 - "Add bot" with an empty name adds `Kyle Katarn`. JKAdmin asks for `Kyle`, a bot the game does not have, so
   nothing happened there.
 - The two entity hooks pass `ent-g_entities` instead of `ent->s.number`.

@@ -66,5 +66,6 @@ function setMode(m) {
 	if (m === 'routes') { select(-1); wpLoad(); } else wpSetAdding(false);
 	if (m === 'mapinfo') { select(-1); mapReport(); renderSurface(); }
 	if (m === 'clips') { select(-1); clipPoll(); clipRender(); } else clipLeave();
+	if (m === 'remaps') { select(-1); remapPoll(); remapRender(); }
 }
 

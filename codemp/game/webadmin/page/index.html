@@ -27,7 +27,7 @@
 
 <div id="side">
 	<div id="sideGrip" title="Drag to change the width of the side panel. A double click sets the usual width again."></div>
-	<div id="tabs"><button data-tab="players" data-app="admin" class="on">Players</button><button data-tab="world" data-app="editor">World</button><button data-tab="models" data-app="editor">Physical props</button><button data-tab="clips" data-app="editor">Clips</button><button data-tab="routes" data-app="editor">Routes</button><button data-tab="mapinfo" data-app="editor">Map info</button><button data-tab="config" data-app="admin">Config</button><button data-tab="files" data-app="admin">Files</button><button data-tab="log" data-app="admin">Log</button><button data-tab="bans" data-app="admin">Bans</button><button data-tab="load" data-app="admin">Performance</button></div>
+	<div id="tabs"><button data-tab="players" data-app="admin" class="on">Players</button><button data-tab="world" data-app="editor">World</button><button data-tab="models" data-app="editor">Physical props</button><button data-tab="clips" data-app="editor">Clips</button><button data-tab="remaps" data-app="editor">Textures</button><button data-tab="routes" data-app="editor">Routes</button><button data-tab="mapinfo" data-app="editor">Map info</button><button data-tab="config" data-app="admin">Config</button><button data-tab="files" data-app="admin">Files</button><button data-tab="log" data-app="admin">Log</button><button data-tab="bans" data-app="admin">Bans</button><button data-tab="load" data-app="admin">Performance</button></div>
 	<div class="pane on" id="pane-players">
 		<h2><span>Players</span><span id="playerCount">0</span></h2>
 		<div class="scroll">
@@ -70,6 +70,22 @@
 		<div class="scroll"><table><tbody id="clipRows"></tbody></table>
 		<div class="hint" style="padding:6px 10px 0">What stops players without being seen. The clips of the map are pink, the ones that are off red, the walls violet. A click on the map selects what is under the mouse. A wall is dragged with the mouse or sent to a spot with a right-click, its yellow handles drag one face each.</div>
 		<div class="hint" style="padding:0 10px 8px">A clip is part of the map file every game has, so it can only be turned off, not moved. This game is told which ones are off and lets its player through. Another game still has the clip: it stops its player for a moment and the server then sets him right. Move it puts a wall where the clip was, which every game is told of. Nothing is kept until Save.</div></div>
+	</div>
+	<div class="pane" id="pane-remaps">
+		<h2><span>Texture swap</span><span id="remapCount"></span></h2>
+		<div class="tools">
+			<div class="inline"><input type="text" id="remapOld" list="remapOldNames" spellcheck="false" autocomplete="off" placeholder="a shader of the map: click a wall" title="The shader that is swapped, wherever the map has it. A click on the map or on a row puts it here, typing narrows the rows."></div>
+			<div class="inline"><input type="text" id="remapNew" list="remapNewNames" spellcheck="false" autocomplete="off" placeholder="draw it as" title="The shader or image it is drawn as. A game only draws one it has: one of the game itself or of a pk3 it has.">
+				<button id="remapSet" disabled title="For every player, at once (Enter)">Swap</button>
+				<button id="remapClear" disabled title="The selected shader is drawn as itself again">Take back</button></div>
+			<div class="inline"><button id="remapSave" title="Writes remaps/&lt;map&gt;.cfg: the swaps come back with every start of the map">Save</button>
+				<button id="remapRevert" title="Drops what was changed since the last save: the swaps as the file has them">Revert to saved</button></div>
+			<div class="hint" id="remapState" style="margin:0"></div>
+			<datalist id="remapOldNames"></datalist><datalist id="remapNewNames"></datalist>
+		</div>
+		<div class="scroll"><table><tbody id="remapRows"></tbody></table>
+		<div class="hint" style="padding:6px 10px 0">A shader of the map drawn as another one, for every player and at once. Every game can do that, the unchanged one too. A shader is swapped wherever the map has it, not on one wall, and a game only draws a shader it has.</div>
+		<div class="hint" style="padding:0 10px 8px">A wall that is lit by a lightmap keeps its light in a game of this tree. Another game draws it without once it is swapped, and stays that way after the swap is taken back, until the map is loaded again. What is not lit that way is safe to swap: screens, signs, lights, the skin of a model.</div></div>
 	</div>
 	<div class="pane" id="pane-mapinfo">
 		<h2><span>Map</span><span id="mapReportName"></span></h2>
@@ -358,6 +374,7 @@
 <!--#include js/editor-form.js -->
 <!--#include js/editor-kits.js -->
 <!--#include js/editor-clips.js -->
+<!--#include js/editor-remaps.js -->
 <!--#include js/bans.js -->
 <!--#include js/editor-select.js -->
 <!--#include js/editor-history.js -->

@@ -34,6 +34,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 //   wa_routes.c     the route of the bots
 //   wa_control.c    a player who is moved from the page
 //   wa_clips.c      the clip editor: the clip brushes of the map that are off, and the blocking walls
+//   wa_remaps.c     the texture swap: a shader of the map drawn as another one
 
 #pragma once
 
@@ -169,3 +170,7 @@ void WA_ApiControl( waConnection_t *c, const char *body );
 // wa_clips.c
 void WA_ApiClips( waConnection_t *c );
 void WA_ApiClip( waConnection_t *c, const char *body );
+
+// wa_remaps.c
+void WA_ApiRemaps( waConnection_t *c );
+void WA_ApiRemap( waConnection_t *c, const char *body );

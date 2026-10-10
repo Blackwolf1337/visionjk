@@ -260,6 +260,10 @@ static void WA_HandleRequest( waConnection_t *c, char *head, char *body, int bod
 		WA_ApiClips( c );
 	} else if ( !strcmp( method, "POST" ) && !strcmp( path, "/api/clip" ) ) {
 		WA_ApiClip( c, body );
+	} else if ( !strcmp( method, "GET" ) && !strcmp( path, "/api/remaps" ) ) {
+		WA_ApiRemaps( c );
+	} else if ( !strcmp( method, "POST" ) && !strcmp( path, "/api/remap" ) ) {
+		WA_ApiRemap( c, body );
 	} else if ( !strcmp( method, "POST" ) && !strcmp( path, "/api/control" ) ) {
 		WA_ApiControl( c, body );
 	} else if ( !strcmp( method, "GET" ) && !strcmp( path, "/api/perf" ) ) {

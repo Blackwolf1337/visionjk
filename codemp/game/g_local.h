@@ -1149,6 +1149,7 @@ void G_SetOrigin( gentity_t *ent, vec3_t origin );
 qboolean G_CheckInSolid (gentity_t *self, qboolean fix);
 void AddRemap(const char *oldShader, const char *newShader, float timeOffset);
 const char *BuildShaderStateConfig(void);
+qboolean G_GetRemap( int index, const char **oldShader, const char **newShader );
 /*
 Ghoul2 Insert Start
 */
@@ -1275,6 +1276,7 @@ void WebAdmin_Effect( int kind, int id, const vec3_t org, const vec3_t ang );
 void WebAdmin_Shutdown( void );
 void WebAdmin_EntitySpawned( int entityNum );
 void WebAdmin_EntityFreed( int entityNum );
+int WebAdmin_LoadRemaps( void );	// the texture swaps of the map, from its file
 int WA_FreeEntities( void );		// entities the game can still spawn
 void WebAdmin_Chat( const char *mode, const gentity_t *from, const gentity_t *to, const char *text );
 void WebAdmin_Log( const char *line );

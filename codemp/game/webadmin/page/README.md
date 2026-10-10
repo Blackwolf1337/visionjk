@@ -54,6 +54,7 @@ order of the template, so a file may only use there what a file before it has ma
 | `js/editor-form.js` | the form of an entity: the keys its class takes as fields of their kind |
 | `js/editor-kits.js` | kits: entities that belong together, placed as drafts that are wired |
 | `js/editor-clips.js` | the clip editor: the clips of the map turned off and on, and put aside for a wall that is moved |
+| `js/editor-remaps.js` | the texture swap: a shader of the map drawn as another one, for every player |
 | `js/bans.js` | the bans |
 | `js/editor-select.js` | several entities at once |
 | `js/editor-history.js` | undo and redo |

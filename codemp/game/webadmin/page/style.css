@@ -176,9 +176,11 @@ body.cfgOpen #cfgView, body.fsOpen #fsView { display: block; }
 /* the list of the Clips tab: the clips that are off and the blocking walls, a row to click on each */
 #clipSizes input { width: 64px; }
 #clipRows tr { cursor: pointer; }
-#clipRows tr.sel td { color: var(--yellow); }
-#clipRows td.acts { text-align: right; }
-#clipRows td.acts button { padding: 1px 7px; font-size: 12px; }
+#clipRows tr.sel td, #remapRows tr.sel td { color: var(--yellow); }
+#clipRows td.acts, #remapRows td.acts { text-align: right; }
+#clipRows td.acts button, #remapRows td.acts button { padding: 1px 7px; font-size: 12px; }
+#remapRows tr[data-old] { cursor: pointer; }
+#remapRows td { word-break: break-all; }
 #fsList td.acts button { margin-left: 4px; padding: 1px 7px; font-size: 12px; }
 /* files dropped on the list */
 #fsView.drop::after { content: ''; position: absolute; inset: 3px; border: 2px dashed var(--accent2); border-radius: 4px; pointer-events: none; }

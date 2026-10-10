@@ -66,8 +66,10 @@ function drawWorldPlain(now, editor) {
 		const places = moverPlaces(b.model, now);
 		if (!places.length) continue;
 		// the side the game draws, which the script of the shader says once the scripts are read
-		if (open) setCull(scripts.state === 2 ? materialFor(b.shaderName, !!b.lm).cull : 0);
-		let t = world.textures.get(b.shaderName);
+		// what the shader of the batch is drawn as now (js/editor-remaps.js)
+		const drawn = remapOf(b.shaderName);
+		if (open) setCull(scripts.state === 2 ? materialFor(drawn, !!b.lm).cull : 0);
+		let t = world.textures.get(drawn) || world.textures.get(b.shaderName);
 		if (t.failed) t = b.editorTex || (b.editorTex = editorImage(b.shaderName)) || t;
 		gl.activeTexture(gl.TEXTURE0);
 		gl.bindTexture(gl.TEXTURE_2D, t.tex);

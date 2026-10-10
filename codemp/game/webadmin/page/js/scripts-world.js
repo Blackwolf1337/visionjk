@@ -252,7 +252,9 @@ function prepareScripted(w) {
 		let byLm = first.get(b.shaderName);
 		if (!byLm) first.set(b.shaderName, byLm = new Map());
 		if (!byLm.has(b.lm)) byLm.set(b.lm, i);
-		const mat = materialFor(b.shaderName, !!b.lm), order = byLm.get(b.lm), fog = (b.fog >= 0 && w.fogInfo[b.fog]) || null;
+		// a shader that is swapped is drawn with the script of what it is swapped for, in its own place and with
+		// its own lightmap (js/editor-remaps.js)
+		const mat = materialFor(remapOf(b.shaderName), !!b.lm), order = byLm.get(b.lm), fog = (b.fog >= 0 && w.fogInfo[b.fog]) || null;
 		if (mat.order > order) mat.order = order;
 		// a shader without stages is still drawn where it is the surface of a fog: as that fog (SS_FOG)
 		if (mat.nodraw || (!mat.stages.length && !(mat.fogPass && fog && !fog.global))) return;

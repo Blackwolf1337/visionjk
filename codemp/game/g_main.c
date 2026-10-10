@@ -376,6 +376,7 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 	}
 
 	JP_LoadBlockWalls();
+	WebAdmin_LoadRemaps();
 	WP_ModelScaleLoadParms();
 	JP_AntiFakeLoad();
 	JP_AutoQuitInit();
