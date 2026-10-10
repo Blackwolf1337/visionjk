@@ -41,24 +41,29 @@ Not from JA+ and not from JKAdmin.
 
 #define STOMP_MIN_SCALE		300			// percent: only a player above this
 #define STOMP_MAX_GROWTH	4.0f		// twice that size is twice as strong and felt twice as far, up to this
-#define STOMP_OWN_VIEW		0.6f		// of the shake for the one whose steps they are, or his picture never stands still
+#define STOMP_OWN_TURN		0.5f		// of the turning for the one whose steps they are, or his picture never stands still
+#define STOMP_MAX_SHAKE		16.0f		// units: what a client takes at most
+#define STOMP_MAX_TURN		3.0f		// degrees
 #define STOMP_MIN_SHAKE		0.1f		// what is left of it at a distance is not sent below this
 #define STOMP_GROUND		64			// below the origin, at normal size: how far the ground is looked for
 #define STOMP_STEP_SPEED	60.0f		// units a second over the ground: slower is no step
 
 static const struct stompKind_s {
-	float		shake;			// of a view right at the spot, at STOMP_MIN_SCALE. A client takes up to 16
+	float		shake;			// units the view is thrown about right at the spot, at STOMP_MIN_SCALE
+	float		turn;			// degrees it is turned about there, for a client that knows SHAKE_STOMP
 	int			radius;			// how far it is felt, at STOMP_MIN_SCALE
 	int			time;			// msec the view shakes
 	qboolean	far;			// the sound carries
 	const char	*name;
 } stompKinds[STOMP_NUM_KINDS] = {
-	// What the game itself does for a step of the rancor is 4 for a second (NPC_AI_Rancor.c). A first set of
-	// numbers a third of that was not noticed at all, least by the giant himself, whose camera is far out.
-	{  4.0f,	 900,	 450,	qfalse,	"step" },	// STOMP_STEP
-	{  3.0f,	 800,	 350,	qfalse,	"jump" },	// STOMP_JUMP
-	{  7.0f,	1200,	 700,	qtrue,	"landing" },	// STOMP_LAND
-	{ 10.0f,	1600,	1000,	qtrue,	"fall" },	// STOMP_FALL
+	// The screen shake of the game only moves the place of the view by so many units and does not turn it (a
+	// client changes the angles after it made the axis of the view from them). 4 units, what the game has for
+	// a step of the rancor, are hardly seen, and not at all by a giant, whose camera is far out. So the units
+	// are high, and the cgame of this tree gets degrees to turn the view by on top.
+	{  8.0f,	0.6f,	 900,	 450,	qfalse,	"step" },		// STOMP_STEP
+	{  6.0f,	0.4f,	 800,	 350,	qfalse,	"jump" },		// STOMP_JUMP
+	{ 12.0f,	1.2f,	1200,	 700,	qtrue,	"landing" },	// STOMP_LAND
+	{ 16.0f,	2.0f,	1600,	1000,	qtrue,	"fall" },		// STOMP_FALL
 };
 
 static int	stompSounds[2];
@@ -127,7 +132,7 @@ void G_Stomp( gentity_t *ent, stompKind_t kind ) {
 	trace_t tr;
 	float growth, radius;
 	int i, sent = 0;
-	float strongest = 0.0f;
+	float strongest = 0.0f, strongestTurn = 0.0f;
 
 	if ( !G_StompGiant( ent ) ) {
 		return;
@@ -154,7 +159,7 @@ void G_Stomp( gentity_t *ent, stompKind_t kind ) {
 	for ( i = 0; i < level.maxclients; i++ ) {
 		gentity_t *other = &g_entities[i];
 		gentity_t *te;
-		float dist, shake;
+		float dist, shake, turn;
 
 		if ( !other->inuse || !other->client || other->client->pers.connected != CON_CONNECTED ) {
 			continue;
@@ -172,9 +177,18 @@ void G_Stomp( gentity_t *ent, stompKind_t kind ) {
 		if ( dist >= radius ) {
 			continue;
 		}
+		// The units as they are for the giant himself too: his camera is as much further out as he is large.
+		// The turning is what would not let his picture stand still.
 		shake = k->shake * growth * ( 1.0f - dist / radius );
+		turn = k->turn * growth * ( 1.0f - dist / radius );
 		if ( other == ent ) {
-			shake *= STOMP_OWN_VIEW;
+			turn *= STOMP_OWN_TURN;
+		}
+		if ( shake > STOMP_MAX_SHAKE ) {
+			shake = STOMP_MAX_SHAKE;
+		}
+		if ( turn > STOMP_MAX_TURN ) {
+			turn = STOMP_MAX_TURN;
 		}
 		if ( shake < STOMP_MIN_SHAKE ) {
 			continue;
@@ -184,16 +198,19 @@ void G_Stomp( gentity_t *ent, stompKind_t kind ) {
 		te = G_ScreenShake( spot, NULL, shake, k->time, qtrue );
 		te->r.svFlags |= SVF_SINGLECLIENT;
 		te->r.singleClient = i;
-		// for the cgame of this tree, which can leave these out (cg_stomp). Other clients do not read it.
+		// for the cgame of this tree, which turns the view too and can leave all of it out (cg_stomp). Other
+		// clients do not read these two.
 		te->s.angles[1] = SHAKE_STOMP;
+		te->s.angles[2] = turn;
 		sent++;
 		if ( shake > strongest ) {
 			strongest = shake;
+			strongestTurn = turn;
 		}
 	}
 	if ( g_stomp.integer >= 2 ) {
-		trap->Print( "stomp: %s of %s^7 (scale %i) at %s, shake sent to %i, the strongest %.1f for %i msec\n", k->name,
-			ent->client->pers.netname, ent->client->ps.iModelScale, vtos( spot ), sent, strongest, k->time );
+		trap->Print( "stomp: %s of %s^7 (scale %i) at %s, shake sent to %i, the strongest %.1f units and %.1f degrees for %i msec\n",
+			k->name, ent->client->pers.netname, ent->client->ps.iModelScale, vtos( spot ), sent, strongest, strongestTurn, k->time );
 	}
 }
 

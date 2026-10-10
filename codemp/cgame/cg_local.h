@@ -1066,6 +1066,7 @@ typedef struct cgscreffects_s
 	float		shake_intensity;
 	int			shake_duration;
 	int			shake_start;
+	float		shake_degrees;		// not in the game as it was: the view is turned about by this too, see CG_SE_UpdateShake()
 
 	float		music_volume_multiplier;
 	int			music_volume_time;
