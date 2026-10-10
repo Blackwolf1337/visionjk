@@ -442,7 +442,7 @@ loss, a server over the internet.
 
 Not checked: a real microphone, the master over the internet and behind a router, two clients behind one
 router, the answer "taken" as a player sees it (the master's side of it is in the checks), the menu entry,
-Windows at run time, a foreign game module that is not of this tree, the stack on the Docker host.
+Windows at run time, a foreign game module that is not of this tree, the master as a service on its host.
 
 Not checked in a browser: a page against the relay of a real server (`tools/panelshot/steps_voice_e2e.js` is
 for that), the UDP sockets of the web host on a real system, a real microphone, how it sounds, a browser that
