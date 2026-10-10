@@ -185,8 +185,6 @@ next start asks again. A download that breaks off changes no file.
   (`CreateProcess`), put the files in place and was 0.0.2, with the paths of Windows. Its release had one
   file more, `SDL2.dll` with other bytes: a library the running program has loaded from its start was
   replaced. What a program writes to its output goes on with the one it starts, so a log has all three.
-- Builds: client, ui module and dedicated server for Linux 64 and with mingw for Windows 64, and the client
-  for the browser. The Windows client imports `WINHTTP.dll` in addition to what it imported before.
 
 - Windows 11 Pro 24H2 (German, fresh install, Defender as it comes) in a virtual machine without a graphics
   card, the test folder `tools/updatetest/wintest.sh` packs, started by its batch file, driven by keys from
@@ -203,8 +201,9 @@ next start asks again. A download that breaks off changes no file.
   - The same in `C:\Program Files`, as a user without the right to write there: "The folder of the game can
     not be written to (base/new.cfg)", the line of the menu says that it failed, no file was fetched and
     nothing in the folder changed.
-- Builds: client, ui module and dedicated server for Linux 64 and with mingw for Windows 64, and the client
-  for the browser. The Windows client imports `WINHTTP.dll` in addition to what it imported before.
+- Builds: client, ui module and dedicated server for Linux 64, client and ui module with mingw for Windows 64
+  (that build folder has no dedicated server), and the client for the browser. The Windows client imports
+  `WINHTTP.dll` in addition to what it imported before.
 
 Found by these runs and fixed: `+set cl_updateURL https://...` was cut off by the console (see "Who is
 trusted"), the line of the menu lay over the top of the logo, and, only on the real Windows: a game started
