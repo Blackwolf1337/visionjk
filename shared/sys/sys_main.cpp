@@ -232,7 +232,12 @@ static qboolean Sys_Relaunch( void ) {
 	Q_strncpyz( commandLine, given, sizeof( commandLine ) );
 	memset( &startup, 0, sizeof( startup ) );
 	startup.cb = sizeof( startup );
-	if ( !CreateProcessA( sysRestart.program, commandLine, NULL, NULL, FALSE, 0, NULL, NULL, &startup, &process ) )
+	// what this one writes to goes on with the next one: a log somebody sent its output to has all of it
+	startup.dwFlags = STARTF_USESTDHANDLES;
+	startup.hStdInput = GetStdHandle( STD_INPUT_HANDLE );
+	startup.hStdOutput = GetStdHandle( STD_OUTPUT_HANDLE );
+	startup.hStdError = GetStdHandle( STD_ERROR_HANDLE );
+	if ( !CreateProcessA( sysRestart.program, commandLine, NULL, NULL, TRUE, 0, NULL, NULL, &startup, &process ) )
 		return qfalse;
 	CloseHandle( process.hThread );
 	CloseHandle( process.hProcess );

@@ -6,7 +6,8 @@ fetches the files that changed and puts them in place. It is not a JA+ feature. 
 dedicated server and the client that runs in a browser do not: a page is the newest version every time it is
 loaded.
 
-Added 2026-10-10. Run on Linux against a server on the same machine, never on Windows: see "Checked".
+Added 2026-10-10. Run on Linux, and the Windows build under Wine, against a server on the same machine. Never
+on a real Windows: see "Checked".
 
 ## For players
 
@@ -176,6 +177,11 @@ next start asks again. A download that breaks off changes no file.
 - `check_update` of the website's `tools/deploy.sh`, by itself on a copy of that server: a true list
   passes, and a changed file, a byte flipped at the same size, a file too many, a file missing, another
   version on the page and no release on the page are each named.
+- The Windows build under Wine 11.19 (`WIN=1 e2e.sh`, a Wine prefix of its own): the same nine runs, 72
+  checks. The list and the files came in through WinHTTP, the game started itself again twice
+  (`CreateProcess`), put the files in place and was 0.0.2, with the paths of Windows. Its release had one
+  file more, `SDL2.dll` with other bytes: a library the running program has loaded from its start was
+  replaced. What a program writes to its output goes on with the one it starts, so a log has all three.
 - Builds: client, ui module and dedicated server for Linux 64 and with mingw for Windows 64, and the client
   for the browser. The Windows client imports `WINHTTP.dll` in addition to what it imported before.
 
@@ -184,10 +190,11 @@ trusted"), and the line of the menu lay over the top of the logo.
 
 Not checked:
 
-- Windows, all of it at run time. That a program and the libraries it has loaded can be renamed while they
-  run is how Windows is documented, it was not tried. Neither was WinHTTP, the start of the game by itself
-  (`CreateProcess`), what an antivirus says to a program that replaces itself, or a folder a player may not
-  write to (Program Files).
+- A real Windows. Wine is another program that does what Windows does, in its own way: that the Windows code
+  runs there says that the code is right, not how Windows takes it. Open are: whether Windows lets a running
+  program and its loaded libraries be renamed as its documentation says (Wine did), when the old files can
+  be deleted (under Wine at once, on Windows maybe a start later, which the journal is made for), what an
+  antivirus says to a program that replaces itself, and a folder a player may not write to (Program Files).
 - A real https server with a real certificate, and a certificate that is wrong. The test server spoke plain
   http, which only the address of a build may be.
 - A click on the line of the menu. The runs typed `update`, which is what the click does.
