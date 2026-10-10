@@ -27,14 +27,16 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // again) and cl_updateText, the line itself. This file draws that line while the main menu is up, and a click
 // on it is the command "update".
 //
-// It is drawn here and is no item of a menu file because the first main menu a player sees is the one of the
-// folder base, which is the menu file of the original game and not one of this tree.
+// It is drawn here and is no item of a menu file, so it is there whatever main menu is loaded: the one of the
+// client assets of this tree in japlus, where the game starts, or the one of the original game in base. Both
+// have the same layout, and the line sits in the band between the ring and the EXIT button, which is free
+// in both.
 
 #include "ui_local.h"
 
 #define NOTICE_FONT		4		// the small font of the menus
 #define NOTICE_SCALE	1.0f
-#define NOTICE_Y		6.0f
+#define NOTICE_Y		414.0f
 #define NOTICE_PAD_X	10.0f
 #define NOTICE_PAD_Y	4.0f
 
