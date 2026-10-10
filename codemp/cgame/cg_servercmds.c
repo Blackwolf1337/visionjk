@@ -168,8 +168,9 @@ void CG_ParseServerinfo( void ) {
 	bg_jpGripSpeedScale = cgs.jpVersion > 0.0f ? atof( Info_ValueForKey( info, "jp_gripSpeedScale" ) ) : 0.4f;
 	bg_jpForceCombo = atoi( Info_ValueForKey( info, "jp_forceCombo" ) );
 	cgs.jpDuelAlpha = cgs.jpVersion >= 2.0f ? atoi( Info_ValueForKey( info, "jp_DuelAlpha" ) ) : -1;
-	// the voice chat asks a server for voice only if the server says here that it has one
-	CG_VoiceServerInfo( atoi( Info_ValueForKey( info, "g_voice" ) ) ? qtrue : qfalse );
+	// the voice chat asks a server for voice only if the server says here that it has one. One that does not say
+	// the key at all has no relay, there the voice goes through the voice master
+	CG_VoiceServerInfo( Info_ValueForKey( info, "g_voice" ) );
 
 	// this changes on map_restart, attempt to precache weapons
 	value = atoi( Info_ValueForKey( info, "g_weaponDisable" ) );

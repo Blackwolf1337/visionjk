@@ -136,6 +136,13 @@ set(MPCGameVoiceFiles
 	"${MPDir}/cgame/voice/cg_voice_audio.c"
 	"${MPDir}/cgame/voice/cg_voice.h"
 	)
+if(BuildJPVoice AND NOT EMSCRIPTEN)
+	# SHA-1: the name of the room at the voice master, for servers without the game module of this tree
+	set(MPCGameVoiceFiles ${MPCGameVoiceFiles}
+		"${SharedDir}/web/web_sha1.c"
+		"${SharedDir}/web/web_http.h"
+		)
+endif()
 if(EMSCRIPTEN AND BuildJPVoice)
 	# in a browser the datagrams go through a WebSocket
 	set(MPCGameVoiceFiles ${MPCGameVoiceFiles} "${MPDir}/cgame/voice/cg_voice_web.c")

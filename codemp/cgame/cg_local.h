@@ -2053,7 +2053,7 @@ void CG_BotModeShutdown( void );
 void CG_VoiceInit( void );
 void CG_VoiceShutdown( void );
 void CG_VoiceFrame( void );
-void CG_VoiceServerInfo( qboolean has );
+void CG_VoiceServerInfo( const char *value );	// g_voice of the server info, "" if the server does not say it
 void CG_VoiceServerCommand( void );
 void CG_VoiceDown_f( void );
 void CG_VoiceUp_f( void );
