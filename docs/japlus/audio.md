@@ -118,10 +118,24 @@ submodule, see "In a browser".
 
 **The level** (`qcommon/cm_export.cpp`). Steam Audio traces rays in threads of its own, and the collision code
 of the engine can not be called from a second thread. So it gets the level once, as triangles: every side of a
-solid brush of the world, every facet of a solid curve. Each triangle has a material, from the surface flags
-the game uses for footsteps, mapped onto Valve's numbers for a few standard materials (how much a material
-swallows, scatters and lets through). The sky swallows everything. Most surfaces of the base levels carry no
-material and count as "generic". mp/ffa3 is 50749 triangles and takes 0.1 s, during the loading screen.
+solid brush of the world, every facet of a solid curve. Each triangle has a material of the game (the ones of
+the footsteps, `MATERIALS` in `game/surfaceflags.h`), mapped onto Valve's numbers for a few standard materials
+(how much a material swallows, scatters and lets through). The sky swallows everything. mp/ffa3 is 50749
+triangles and takes 0.1 s, during the loading screen.
+
+Where the material of a triangle comes from: a level file can name it in the surface flags of a shader, and
+few do (of the sides of the base levels, 4 in 100). So there is a table, `steamaudio/materials.txt` in
+`zz_japlus_client_assets.pk3`: the name of a shader and a material, a line each. A line of the table goes
+before what the level says. What neither names counts as "generic". A side that is not drawn (caulk, the back
+of a wall) is taken as made of what the drawn side of its brush is made of, so that a wall is one thing for a
+sound that goes through it. `s_spatialInfo` says how many triangles of the level got their material from the
+table.
+
+The table is read when the sound starts and kept: at a pure server that does not have the pk3 the file can
+not be read. It is written by `japlus_port/tools/samat` (`collect.py`, `sheets.py`, `merge.py`): the material
+a shader script names (`q3map_material`), and for the shaders nobody named one for, what the texture looks
+like. Those are guesses from a picture, kept with their source in `materials.json` there. To put one right,
+change its line in that file to `"source": "user"` with the right word and run `merge.py write`.
 
 **The sounds** (`snd_dma.cpp`, `S_SpatialGather`). Once a frame every sound with a place in the level is
 named: the channels of the mixer, and every loop sound on its own (the old mixer adds loop sounds of one

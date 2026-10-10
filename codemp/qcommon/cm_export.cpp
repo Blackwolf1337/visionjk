@@ -32,7 +32,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define EXPORT_MIN_AREA		0.01f	// twice the area squared of a triangle that is still handed on
 
 // a polygon as a fan of triangles, counter clockwise when seen from where the normal points
-static int CM_ExportWinding( const winding_t *w, const vec3_t normal, int surfaceFlags, cmTriangleFunc_t emit, void *data ) {
+static int CM_ExportWinding( const winding_t *w, const vec3_t normal, const CCMShader *shader, cmTriangleFunc_t emit, void *data ) {
 	int count = 0;
 
 	for ( int i = 1; i + 1 < w->numpoints; i++ ) {
@@ -46,9 +46,9 @@ static int CM_ExportWinding( const winding_t *w, const vec3_t normal, int surfac
 		}
 		if ( emit ) {
 			if ( DotProduct( cross, normal ) >= 0.0f ) {
-				emit( w->p[0], w->p[i], w->p[i + 1], surfaceFlags, data );
+				emit( w->p[0], w->p[i], w->p[i + 1], shader->shader, shader->surfaceFlags, data );
 			} else {
-				emit( w->p[0], w->p[i + 1], w->p[i], surfaceFlags, data );
+				emit( w->p[0], w->p[i + 1], w->p[i], shader->shader, shader->surfaceFlags, data );
 			}
 		}
 		count++;
@@ -58,30 +58,81 @@ static int CM_ExportWinding( const winding_t *w, const vec3_t normal, int surfac
 
 // Every side of a brush is its plane cut down by the planes of the other sides. The bevel planes a brush has
 // for box traces touch it at an edge or a corner only: nothing of them is left after the cuts.
+static winding_t *CM_ExportSide( const cbrush_t *b, int side ) {
+	const cplane_t *plane = b->sides[side].plane;
+	vec3_t normal;
+	winding_t *w;
+
+	VectorCopy( plane->normal, normal );
+	w = BaseWindingForPlane( normal, plane->dist );
+	for ( int j = 0; j < b->numsides && w; j++ ) {
+		vec3_t other;
+
+		if ( j == side || b->sides[j].plane == plane ) {
+			continue;
+		}
+		// what is behind the other side stays
+		VectorNegate( b->sides[j].plane->normal, other );
+		ChopWindingInPlace( &w, other, -b->sides[j].plane->dist, EXPORT_EPSILON );
+	}
+	return w;
+}
+
+// a side nothing is drawn on and that says nothing of its own of what it is made of: caulk, a clip brush
+static qboolean CM_ExportHidden( const CCMShader *shader ) {
+	return (qboolean)( ( shader->surfaceFlags & SURF_NODRAW ) && !( shader->surfaceFlags & ( SURF_SKY | MATERIAL_MASK ) ) );
+}
+
+// the shader of the first side of a brush that is seen, NULL if it has none (a clip brush)
+static const CCMShader *CM_ExportDrawnShader( const cbrush_t *b ) {
+	for ( int i = 0; i < b->numsides; i++ ) {
+		const CCMShader *shader = &cmg.shaders[b->sides[i].shaderNum];
+		winding_t *w;
+		int left;
+
+		if ( CM_ExportHidden( shader ) ) {
+			continue;
+		}
+		// a bevel plane has a shader that is not hidden, and nothing is left of it
+		w = CM_ExportSide( b, i );
+		if ( !w ) {
+			continue;
+		}
+		left = CM_ExportWinding( w, b->sides[i].plane->normal, shader, NULL, NULL );
+		FreeWinding( w );
+		if ( left ) {
+			return shader;
+		}
+	}
+	return NULL;
+}
+
+// A wall is a brush with a texture on the side that is seen and caulk on the others. For who asks what a wall
+// is made of it is one thing: a side that is not drawn is handed on with the shader of the first side of its
+// brush that is. In a brush with no such side every side keeps its own.
 static int CM_ExportBrush( const cbrush_t *b, cmTriangleFunc_t emit, void *data ) {
+	const CCMShader *drawn = NULL;
+	qboolean looked = qfalse;
 	int count = 0;
 
 	for ( int i = 0; i < b->numsides; i++ ) {
-		const cplane_t *plane = b->sides[i].plane;
-		vec3_t normal;
-		winding_t *w;
+		const CCMShader *shader = &cmg.shaders[b->sides[i].shaderNum];
+		winding_t *w = CM_ExportSide( b, i );
 
-		VectorCopy( plane->normal, normal );
-		w = BaseWindingForPlane( normal, plane->dist );
-		for ( int j = 0; j < b->numsides && w; j++ ) {
-			vec3_t other;
-
-			if ( j == i || b->sides[j].plane == plane ) {
-				continue;
+		if ( !w ) {
+			continue;
+		}
+		if ( CM_ExportHidden( shader ) ) {
+			if ( !looked ) {
+				drawn = CM_ExportDrawnShader( b );
+				looked = qtrue;
 			}
-			// what is behind the other side stays
-			VectorNegate( b->sides[j].plane->normal, other );
-			ChopWindingInPlace( &w, other, -b->sides[j].plane->dist, EXPORT_EPSILON );
+			if ( drawn ) {
+				shader = drawn;
+			}
 		}
-		if ( w ) {
-			count += CM_ExportWinding( w, plane->normal, cmg.shaders[b->sides[i].shaderNum].surfaceFlags, emit, data );
-			FreeWinding( w );
-		}
+		count += CM_ExportWinding( w, b->sides[i].plane->normal, shader, emit, data );
+		FreeWinding( w );
 	}
 	return count;
 }
@@ -115,7 +166,7 @@ static int CM_ExportPatch( const cPatch_t *patch, cmTriangleFunc_t emit, void *d
 			ChopWindingInPlace( &w, border, border[3], EXPORT_EPSILON );
 		}
 		if ( w ) {
-			count += CM_ExportWinding( w, normal, patch->surfaceFlags, emit, data );
+			count += CM_ExportWinding( w, normal, &cmg.shaders[patch->shaderNum], emit, data );
 			FreeWinding( w );
 		}
 	}
@@ -126,8 +177,8 @@ static int CM_ExportPatch( const cPatch_t *patch, cmTriangleFunc_t emit, void *d
 ===============
 CM_ExportSolidTriangles
 
-Calls emit for every triangle of the solid brushes and curves of the world and returns how many there are.
-Without emit it only counts. 0 if no level is loaded.
+Calls emit for every triangle of the solid brushes and curves of the world, with the name and the surface flags
+of its shader, and returns how many there are. Without emit it only counts. 0 if no level is loaded.
 ===============
 */
 int CM_ExportSolidTriangles( cmTriangleFunc_t emit, void *data ) {

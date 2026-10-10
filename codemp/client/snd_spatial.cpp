@@ -222,6 +222,21 @@ static const byte spatialMaterialOf[MATERIAL_LAST] = {
 	SPATIAL_METAL,		// MATERIAL_COMPUTER
 };
 
+// Most surfaces of a level do not say what they are made of. For those there is a table in the assets: the
+// name of a shader and a material of the game, a line each. It is written from the shader scripts and from the
+// pictures of the textures (japlus_port/tools/samat). It is read when the sound starts and kept from then on:
+// connected to a pure server that does not have the pk3 the file can not be read again.
+#define SPATIAL_TABLE_FILE	"steamaudio/materials.txt"
+#define SPATIAL_TABLE_MAX	4096
+
+typedef struct spatialShader_s {
+	char	shader[MAX_QPATH];		// first: an entry is compared as its name
+	byte	material;				// MATERIAL_*
+} spatialShader_t;
+
+static spatialShader_t	spatialTable[SPATIAL_TABLE_MAX];
+static int				spatialTableCount;
+
 #define SPATIAL_VOICES				64		// the mixer has 32 channels and 32 loop sounds, each can be one
 #define SPATIAL_RING				16384	// samples of finished sound that are kept, a power of two
 #define SPATIAL_OCCLUSION_SAMPLES	16		// rays from the listener to points around a source: how much of it is hidden
@@ -412,6 +427,7 @@ static struct {
 	int					numTriangles, nextTriangles;
 	qboolean			sceneWaits;
 	int					materialTriangles[SPATIAL_NUM_MATERIALS];
+	int					tableTriangles;		// of them, what the table of shaders said and not the level
 	int					sceneMsec;
 	int					sceneNumber;		// counts the levels that were taken over
 	IPLVector3			nextMins, nextMaxs;	// the corners of the level, for where to spread probes
@@ -570,12 +586,85 @@ typedef struct spatialMeshBuild_s {
 	IPLTriangle	*triangles;
 	IPLint32	*materials;
 	int			count;
+	const char	*shader;			// of the triangle before: the triangles of a side come one after the other
+	int			tableMaterial;		//	and what the table says it is made of
 } spatialMeshBuild_t;
 
-static void S_SpatialTriangle( const vec3_t a, const vec3_t b, const vec3_t c, int surfaceFlags, void *data ) {
+// for qsort and bsearch: both sides are a name, or an entry of the table, which begins with its name
+static int QDECL S_SpatialCompareShader( const void *a, const void *b ) {
+	return Q_stricmp( (const char *)a, (const char *)b );
+}
+
+static void S_SpatialLoadMaterials( void ) {
+	static const char *names[MATERIAL_LAST] = { MATERIALS };
+	void *data = NULL;
+	const char *text;
+	int count = 0, unknown = 0;
+
+	if ( FS_ReadFile( SPATIAL_TABLE_FILE, &data ) <= 0 || !data ) {
+		return;
+	}
+	text = (const char *)data;
+	COM_BeginParseSession( SPATIAL_TABLE_FILE );
+	while ( 1 ) {
+		const char *token = COM_ParseExt( &text, qtrue );
+		int material;
+
+		if ( !token[0] ) {
+			break;
+		}
+		if ( count == SPATIAL_TABLE_MAX ) {
+			Com_Printf( S_COLOR_YELLOW "s_spatial: " SPATIAL_TABLE_FILE " has more than %i shaders, the rest is left out\n", SPATIAL_TABLE_MAX );
+			break;
+		}
+		Q_strncpyz( spatialTable[count].shader, token, sizeof( spatialTable[count].shader ) );
+		token = COM_ParseExt( &text, qfalse );
+		for ( material = MATERIAL_NONE + 1; material < MATERIAL_LAST; material++ ) {
+			if ( !Q_stricmp( token, names[material] ) ) {
+				break;
+			}
+		}
+		SkipRestOfLine( &text );
+		if ( material == MATERIAL_LAST ) {
+			unknown++;
+			continue;
+		}
+		spatialTable[count++].material = material;
+	}
+	FS_FreeFile( data );
+	if ( unknown ) {
+		Com_Printf( S_COLOR_YELLOW "s_spatial: %i lines of " SPATIAL_TABLE_FILE " name no material of the game\n", unknown );
+	}
+	qsort( spatialTable, count, sizeof( spatialTable[0] ), S_SpatialCompareShader );
+	spatialTableCount = count;
+}
+
+// what the table says a shader is made of, MATERIAL_NONE if it is not in it
+static int S_SpatialTableMaterial( const char *shader ) {
+	const spatialShader_t *entry = (const spatialShader_t *)bsearch( shader, spatialTable, spatialTableCount,
+		sizeof( spatialTable[0] ), S_SpatialCompareShader );
+
+	return entry ? entry->material : MATERIAL_NONE;
+}
+
+// The sky first. Then the table, before what the level says: a line of the table can put a level right.
+static void S_SpatialTriangle( const vec3_t a, const vec3_t b, const vec3_t c, const char *shader, int surfaceFlags, void *data ) {
 	spatialMeshBuild_t *build = (spatialMeshBuild_t *)data;
 	const int n = build->count++;
-	const int material = ( surfaceFlags & SURF_SKY ) ? SPATIAL_SKY : spatialMaterialOf[surfaceFlags & MATERIAL_MASK];
+	int material;
+
+	if ( shader != build->shader ) {
+		build->shader = shader;
+		build->tableMaterial = S_SpatialTableMaterial( shader );
+	}
+	if ( surfaceFlags & SURF_SKY ) {
+		material = SPATIAL_SKY;
+	} else if ( build->tableMaterial != MATERIAL_NONE ) {
+		material = spatialMaterialOf[build->tableMaterial];
+		spatial.tableTriangles++;
+	} else {
+		material = spatialMaterialOf[surfaceFlags & MATERIAL_MASK];
+	}
 
 	S_SpatialPoint( a, &build->vertices[n * 3] );
 	S_SpatialPoint( b, &build->vertices[n * 3 + 1] );
@@ -900,6 +989,7 @@ void S_SpatialLoadMap( const char *mapname ) {
 	spatial.nextTriangles = 0;
 	spatial.sceneWaits = qtrue;
 	memset( spatial.materialTriangles, 0, sizeof( spatial.materialTriangles ) );
+	spatial.tableTriangles = 0;
 
 	count = CM_ExportSolidTriangles( NULL, NULL );
 	if ( !count ) {
@@ -2061,6 +2151,8 @@ static void S_SpatialInfo_f( void ) {
 			Com_Printf( "  %-9s %i\n", spatialMaterialNames[i], spatial.materialTriangles[i] );
 		}
 	}
+	Com_Printf( "  %i of them by " SPATIAL_TABLE_FILE " (%i shaders), the others by what the level says\n", spatial.tableTriangles,
+		spatialTableCount );
 	Com_Printf( "%i sounds in the level, rendered %i ms ahead. Last frame: %i us for what is in the way, %i us to render (most so far: %i us)\n",
 		spatial.numVoices, (int)( S_SpatialAhead() * 1000.0f ), spatial.simulateUsec, spatial.renderUsec, spatial.peakRenderUsec );
 	spatial.peakRenderUsec = 0;
@@ -2348,6 +2440,8 @@ void S_SpatialInit( void ) {
 	Cvar_Set( "s_spatialVoice", "0" );
 	Cvar_Get( "s_spatialOwnVoice", "0", CVAR_ROM, "1: this engine lets the room ring from what the own player says into the voice chat (s_spatial)" );
 	Cvar_Set( "s_spatialOwnVoice", "0" );
+	// also with s_spatial 0: it may be turned on later, at a server where the file can not be read
+	S_SpatialLoadMaterials();
 	if ( !s_spatial->integer ) {
 		return;
 	}

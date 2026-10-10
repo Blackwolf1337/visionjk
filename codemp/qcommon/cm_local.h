@@ -90,6 +90,7 @@ typedef struct cPatch_s {
 	int			checkcount;				// to avoid repeated testings
 	int			surfaceFlags;
 	int			contents;
+	int			shaderNum;				// for cm_export.cpp, which hands the name on
 	struct patchCollide_s	*pc;
 } cPatch_t;
 
