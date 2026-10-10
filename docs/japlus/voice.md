@@ -166,7 +166,7 @@ the rings and the queues are static memory. `CG_Shutdown` stops the devices befo
 
 A server that does not run the game module of this tree has no relay, hands out no token and tells nobody who
 stands near whom. There the cgame sends the same sound to the voice master: one relay for all such servers,
-`voice.jka.vision` on UDP port 29170. Added 2026-10-10, built, never run.
+`voice.jka.vision` on UDP port 29170. Added 2026-10-10, see "Checked" for what was run of it.
 
 When it is used:
 
@@ -219,7 +219,7 @@ what is left of a speaker in the moment after he went out of sight.
 
 **The master** (`visionjk-voicemaster`, `-DBuildVoiceMaster=ON`) is one program with one thread and one UDP
 socket, with nothing of the engine in it. It never decodes sound and writes no address and no room into its
-log, only one line a minute with numbers.
+log, only one line a minute with numbers while something happens, and one when it is stopped.
 
 ```
 visionjk-voicemaster.x86_64 [-port 29170] [-ip <address to listen on>] [-maxkbps 4000]
@@ -411,13 +411,38 @@ loss, a server over the internet.
 - Builds: the browser with and without the voice chat (without it the object code of the voice files is the
   same as before), Linux 64, mingw for Windows 64 (server, game module, cgame).
 
-2026-10-10, the voice master. Nothing of it was run.
+2026-10-10, the voice master, Linux, without sound hardware.
 
+- Unit tests of `bg_voice.c` (`tools/voicetest/run.sh`): 126 checks with the sanitizers, 18 of them for
+  `VOICE_STATE` (both directions, every wrong length, the masks byte for byte). The 800000 random datagrams
+  pass with the new type among them.
+- The master by itself (`tools/voicetest/master.sh`): built with the address and undefined behaviour
+  sanitizers and talked to over the loopback addresses of the machine, each client from an address of its own.
+  41 checks: the token is named for 35 bytes with 13 and nothing is kept, sound with it before the second
+  `VOICE_STATE` is no session, a voice passes only where the listener asks and the speaker allows, rooms do
+  not mix, a second address that says a number that is taken is refused and reaches nobody, the token of
+  somebody else from another address or under another number is nobody, a new port of the same address is
+  the same session, 3000 datagrams that are no voice get no answer, of 300 at once 60 a second are handed on,
+  16 sessions from one address and the 17th is refused, a silent session is over after 5 seconds and its
+  number free, another room means another token, `-maxkbps 8` lets 4 of 50 datagrams out. It ends with 0 on
+  SIGTERM and the sanitizers found nothing.
+- End to end (`tools/voicetest/e2e_master.sh`): the dedicated server with a stand-in for a foreign game module
+  (this tree's module with `g_voice` out of the server info and at 0), the master, and two clients with
+  `cg_voiceBackend null` on the test room. The server info had no `g_voice` and the game server got no
+  `jpvoice` command. Next to the speaker: 440 and 3000 Hz at the same level (0.132 and 0.130), louder on his
+  side, no gap in four seconds. From the other room: 440 Hz at 14 % and 3000 Hz at 1 % of that. In the hall
+  2400 units away, where the level still shows him: nothing. Back next to him: as before. Muted: nothing. As
+  a spectator who follows him: both pitches at the same level, the same on both sides.
+- The same run with `cg_voiceMaster 0` on both clients: the master got no datagram at all, `voice_status`
+  says why. Without a master: one line after ten seconds, the scripts of both clients run to their end.
+- The relay of a game server after the changes to `cg_voice.c` (`tools/voicetest/e2e.sh`): the same levels as
+  through the master, to the fourth digit.
 - Builds: the master, the cgame and the game module for Linux 64 and with mingw for Windows 64, and the cgame
   for the browser (which has no master mode). `vm_main.c` and `cg_voice.c` give no warning with `-Wall -Wextra`.
 
-Not checked: all of it at run time. The master was never started, no client ever went through it, the menu
-entry was not seen, and the unit tests of `bg_voice.c` were not run against the new datagram.
+Not checked: a real microphone, the master over the internet and behind a router, two clients behind one
+router, the answer "taken" as a player sees it (the master's side of it is in the checks), the menu entry,
+Windows at run time, a foreign game module that is not of this tree, the stack on the Docker host.
 
 Not checked in a browser: a page against the relay of a real server (`tools/panelshot/steps_voice_e2e.js` is
 for that), the UDP sockets of the web host on a real system, a real microphone, how it sounds, a browser that

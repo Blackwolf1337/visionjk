@@ -514,6 +514,8 @@ int main( int argc, char **argv ) {
 		}
 	}
 
+	// what happened since the last line, for whoever stopped it
+	VM_Stats( VM_Msec() - lastStats );
 	BG_CloseSocket( vmSocket );
 	return 0;
 }
