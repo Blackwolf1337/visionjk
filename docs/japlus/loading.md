@@ -82,7 +82,10 @@ lets be read from a directory on a pure server.
 | the same with an empty cache, which it fills | | 1541 ms, 27 of them writing |
 | a bot joins | a frame of 22 to 28 ms | a frame of 4 to 6.5 ms |
 
-The cache of that level and of seven player models is 905 files, 62 MB. Every texture of the game together
+Two other levels, each loaded for the first time since the program started, with an empty cache and with
+a filled one: mp/siege_hoth 1624 and 756 ms, t2_trip 1629 and 687 ms. A second load of either is 440 ms.
+
+The cache of mp/ffa3 and of seven player models is 905 files, 62 MB. Every texture of the game together
 would be several hundred. Deleting the folder is safe at any time.
 
 Two faults on the way, both found by the test and not by reading. The first key had the checksum a pure
@@ -91,6 +94,16 @@ skipped the end of `Upload32()`, where the filters are set: it was drawn without
 picture from one spot did not show and a picture from another did (10 % of its pixels were off). Now
 `Upload32()` itself takes the kept texture and goes on to its filters. With that, pictures with and without
 the cache differ by 0.07 to 0.23 % of the pixels, as much as two runs of one setting do.
+
+## What the numbers did not confirm
+
+Read from the code, these looked like causes, and they are not, on this machine and these levels:
+
+- Pipelines made in the middle of a frame: a level makes seven, 0.4 ms together, and none showed up in a long
+  frame. No pipeline cache was added.
+- The buffers of the world and of models, built at the first draw: 1.2 ms for the world of mp/ffa3, the
+  models of a player too little to measure.
+- Weapons that are loaded when first used: no long frame.
 
 ## Not done yet
 
