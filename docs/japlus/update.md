@@ -6,8 +6,8 @@ fetches the files that changed and puts them in place. It is not a JA+ feature. 
 dedicated server and the client that runs in a browser do not: a page is the newest version every time it is
 loaded.
 
-Added 2026-10-10. Run on Linux, and the Windows build under Wine, against a server on the same machine. Never
-on a real Windows: see "Checked".
+Added 2026-10-10. Run on Linux, under Wine and on a Windows 11 in a virtual machine, each against a server
+on the local network: see "Checked".
 
 ## For players
 
@@ -46,6 +46,9 @@ check, one line says so when `update_check` is typed, and the game runs.
 - Anything outside the folder the program is in, and anything a file list names that is not a plain path
   below that folder.
 - A game that is started with another `fs_basepath` than the folder of its program. That is set up by hand.
+  The folder of the program is the one the system names (`Sys_ProgramFolder`), not the one the program was
+  called with: on Windows that is empty for a program started by its bare name from a batch file. Both are
+  compared as whole paths, so the same folder spelled another way is the same folder.
 - A game that is connected to a server: `update` says to leave first.
 
 ## How it works
@@ -155,7 +158,7 @@ next start asks again. A download that breaks off changes no file.
 - End to end (`e2e.sh`): a game folder of a made up version 0.0.1 with the original game linked into it, a
   web server on the loopback address with version 0.0.2 (its lists written by `fill_update` of the website's
   build script), and the client on a hidden workspace. The two programs are the engine of the build with
-  `cl_update.cpp` built again for the test address and each version. 71 checks in nine runs:
+  `cl_update.cpp` built again for the test address and each version. 72 checks in nine runs:
   - 0.0.1 finds 0.0.2, the console and the line of the menu say so, `update` fetches the four files that
     differ and none of the others, the game starts again twice and is 0.0.2: the new program, still one that
     can be run, the changed file, the `.cfg` the player had untouched, the one he did not have and a file in
@@ -171,13 +174,13 @@ next start asks again. A download that breaks off changes no file.
     config file with `set` and `seta` can not change it, neither can the console. With https on the command
     line it is taken, and a server that speaks no TLS there gives no update ("SSL connect error").
   - A build between two releases and a game with another `fs_basepath`: each says why it does not update,
-    and the server gets no request.
+    and the server gets no request. The folder of the program under another spelling is not another folder.
 - The line on the menu was looked at in two screenshots, once offered and once failed, on the main menu of
   the client assets and on the one of the original game.
 - `check_update` of the website's `tools/deploy.sh`, by itself on a copy of that server: a true list
   passes, and a changed file, a byte flipped at the same size, a file too many, a file missing, another
   version on the page and no release on the page are each named.
-- The Windows build under Wine 11.19 (`WIN=1 e2e.sh`, a Wine prefix of its own): the same nine runs, 72
+- The Windows build under Wine 11.19 (`WIN=1 e2e.sh`, a Wine prefix of its own): the same nine runs, 73
   checks. The list and the files came in through WinHTTP, the game started itself again twice
   (`CreateProcess`), put the files in place and was 0.0.2, with the paths of Windows. Its release had one
   file more, `SDL2.dll` with other bytes: a library the running program has loaded from its start was
@@ -185,16 +188,36 @@ next start asks again. A download that breaks off changes no file.
 - Builds: client, ui module and dedicated server for Linux 64 and with mingw for Windows 64, and the client
   for the browser. The Windows client imports `WINHTTP.dll` in addition to what it imported before.
 
+- Windows 11 Pro 24H2 (German, fresh install, Defender as it comes) in a virtual machine without a graphics
+  card, the test folder `tools/updatetest/wintest.sh` packs, started by its batch file, driven by keys from
+  outside and read from pictures of its screen:
+  - The game runs there with the OpenGL Windows has by itself. At the first start Windows asks whether the
+    program may be reached from the network (its firewall, as for any game), and nothing else ever asked or
+    warned.
+  - The line stands on the main menu and lights up under the cursor of the game.
+  - `update` in a folder of the user (`C:\vjk-test`): five files came in through WinHTTP, among them the
+    program and `SDL2.dll`, which the running program has loaded. One second later the game had started
+    itself again twice and was 0.0.2. No `.vjknew`, `.vjkold` or journal was left, also not for one start:
+    the old program could be deleted at once. The `.cfg` the player had was his own still. The log of the
+    batch file has the lines of all three starts.
+  - The same in `C:\Program Files`, as a user without the right to write there: "The folder of the game can
+    not be written to (base/new.cfg)", the line of the menu says that it failed, no file was fetched and
+    nothing in the folder changed.
+- Builds: client, ui module and dedicated server for Linux 64 and with mingw for Windows 64, and the client
+  for the browser. The Windows client imports `WINHTTP.dll` in addition to what it imported before.
+
 Found by these runs and fixed: `+set cl_updateURL https://...` was cut off by the console (see "Who is
-trusted"), and the line of the menu lay over the top of the logo.
+trusted"), the line of the menu lay over the top of the logo, and, only on the real Windows: a game started
+by its bare name from a batch file took the folder it was called with, which is empty there, for its own,
+and refused to update as a game that reads its files from somewhere else. Wine names the whole path and did
+not show it.
 
 Not checked:
 
-- A real Windows. Wine is another program that does what Windows does, in its own way: that the Windows code
-  runs there says that the code is right, not how Windows takes it. Open are: whether Windows lets a running
-  program and its loaded libraries be renamed as its documentation says (Wine did), when the old files can
-  be deleted (under Wine at once, on Windows maybe a start later, which the journal is made for), what an
-  antivirus says to a program that replaces itself, and a folder a player may not write to (Program Files).
+- A click on the line with a real mouse. The cursor of the game was moved onto it once (it lit up), a click
+  through the two pointer devices of the virtual machine could not be sent cleanly. The runs typed `update`.
+- Windows 10, a Windows with a graphics driver, an antivirus other than Defender, and a program that was
+  fetched with a browser (which marks it as from the internet; this one came through curl).
 - A real https server with a real certificate, and a certificate that is wrong. The test server spoke plain
   http, which only the address of a build may be.
 - A click on the line of the menu. The runs typed `update`, which is what the click does.

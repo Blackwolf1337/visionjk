@@ -189,6 +189,7 @@ ends and starts again, with the arguments it was started with.
 */
 static struct {
 	char		program[ MAX_OSPATH ];	// the file this program was started from, under the name it had then
+	char		folder[ MAX_OSPATH ];	//	and the folder that file is in
 	char		**argv;
 	qboolean	wanted;
 } sysRestart;
@@ -210,6 +211,55 @@ static void Sys_RestartInit( char **argv ) {
 	else if ( !realpath( argv[0], resolved ) )
 		resolved[0] = '\0';
 	Q_strncpyz( sysRestart.program, resolved, sizeof( sysRestart.program ) );
+#endif
+	Q_strncpyz( sysRestart.folder, sysRestart.program, sizeof( sysRestart.folder ) );
+	char *slash = strrchr( sysRestart.folder, PATH_SEP );
+	if ( slash )
+		*slash = '\0';
+	else
+		sysRestart.folder[0] = '\0';
+}
+
+/*
+=================
+Sys_ProgramFolder
+
+The folder the program file is in, as the system names it, "" if the system does not say. Sys_BinaryPath() is
+what the program was called with, which on Windows is nothing at all for a program started by its bare name
+from its own folder (a batch file, a console): the updater must not take that for a folder.
+=================
+*/
+const char *Sys_ProgramFolder( void ) {
+	return sysRestart.folder;
+}
+
+// Are these two the same folder? Each is made a whole path first, so "." and a path with other slashes count.
+qboolean Sys_SameFolder( const char *a, const char *b ) {
+	char	wholeA[ MAX_OSPATH ], wholeB[ MAX_OSPATH ];
+
+	if ( !a[0] || !b[0] )
+		return qfalse;
+#ifdef _WIN32
+	char	*whole[2] = { wholeA, wholeB };
+	const DWORD lenA = GetFullPathNameA( a, sizeof( wholeA ), wholeA, NULL ), lenB = GetFullPathNameA( b, sizeof( wholeB ), wholeB, NULL );
+
+	if ( !lenA || lenA >= sizeof( wholeA ) || !lenB || lenB >= sizeof( wholeB ) )
+		return qfalse;
+	// (a slash at the end, but not the one of "C:\")
+	for ( int i = 0; i < 2; i++ ) {
+		const size_t len = strlen( whole[i] );
+
+		if ( len > 3 && whole[i][len - 1] == '\\' )
+			whole[i][len - 1] = '\0';
+	}
+	return Q_stricmp( wholeA, wholeB ) ? qfalse : qtrue;
+#else
+	char	realA[ PATH_MAX ], realB[ PATH_MAX ];
+
+	(void)wholeA; (void)wholeB;
+	if ( !realpath( a, realA ) || !realpath( b, realB ) )
+		return qfalse;
+	return strcmp( realA, realB ) ? qfalse : qtrue;
 #endif
 }
 

@@ -132,11 +132,13 @@ the engine is started.
 ===============================================================================
 */
 
-// The path of a file of a release on this machine, with one of the endings of the updater or "". qfalse: too long.
+// The path of a file of a release on this machine, with one of the endings of the updater or "". qfalse: too
+// long, or the system does not say where the program is: then there is no folder to put anything into.
 static qboolean Update_Path( const char *path, const char *ending, char *out, size_t outSize ) {
-	const int len = snprintf( out, outSize, "%s/%s%s", Sys_BinaryPath(), path, ending );
+	const char	*folder = Sys_ProgramFolder();
+	const int	len = snprintf( out, outSize, "%s/%s%s", folder, path, ending );
 
-	return ( len > 0 && (size_t)len < outSize ) ? qtrue : qfalse;
+	return ( folder[0] && len > 0 && (size_t)len < outSize ) ? qtrue : qfalse;
 }
 
 static qboolean Update_Exists( const char *osPath ) {
@@ -826,7 +828,7 @@ void CL_UpdateInit( void ) {
 	upd.release = UPD_ParseRelease( UPDATE_VERSION, upd.own );
 	// The files of a release are replaced where the program is. A game that reads its files from somewhere
 	// else (fs_basepath) is set up by hand, and is left to that hand.
-	upd.elsewhere = Q_stricmp( Cvar_VariableString( "fs_basepath" ), Sys_BinaryPath() ) ? qtrue : qfalse;
+	upd.elsewhere = Sys_SameFolder( Cvar_VariableString( "fs_basepath" ), Sys_ProgramFolder() ) ? qfalse : qtrue;
 	if ( upd.release && !upd.elsewhere && upd.address[0] && cl_updateCheck->integer )
 		Update_Start( JOB_CHECK, qtrue );
 }
