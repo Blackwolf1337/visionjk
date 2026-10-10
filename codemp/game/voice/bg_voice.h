@@ -31,6 +31,17 @@ to a client		"VO" version type speaker token[4] sequence[2] flags distance			fra
 
 The token is the one the server gave that client over the game connection, in both directions: it is what
 tells the server who sends and tells the client that it is the server that sends.
+
+On a server without this game module the cgame goes through the voice master (codemp/voicemaster), one relay
+for all such servers. There nobody hands out a token over a game connection and nobody knows where a player
+stands, so the client says both in a datagram of its own, VOICE_STATE:
+
+to the master	"VO" version type client token[4] sequence[2]							room[16] hear[4] allow[4]
+to a client		"VO" version type client token[4] sequence[2] flags distance
+
+room: the same bytes from every client of one game server (Voice_MasterRoom of cg_voice.c). hear and allow: a
+bit for every client number, whom this client wants to hear and who may hear it. The first one goes out with
+token 0, the answer carries the token of the session.
 */
 
 #pragma once
@@ -49,8 +60,16 @@ tells the server who sends and tells the client that it is the server that sends
 
 #define VOICE_HELLO				0		// to the server: this is my address. To a client: the server has it
 #define VOICE_AUDIO				1
+#define VOICE_STATE				2		// the voice master only: where this client is and whom it hears, and the answer
+
+#define VOICE_ROOM_BYTES		16
+#define VOICE_STATE_BYTES		( VOICE_ROOM_BYTES + 8 )	// what a VOICE_STATE to the master carries after its head
+#define VOICE_MASTER_PORT		29170	// UDP, where the voice master listens unless it is told another one
+#define VOICE_MASTER_RANGE		1024	// how far a voice carries through the master: the default of g_voiceRange
 
 #define VOICE_FLAG_UNSEEN		1		// to a client: the speaker is not in what the server shows him of the level
+#define VOICE_FLAG_TAKEN		2		// the answer of the master: another session speaks as this client number
+#define VOICE_FLAG_FULL			4		//	or it has no room for one more
 #define VOICE_DISTANCE_STEP		16		// the distance byte counts in steps of this many units
 
 #define VOICE_MAX_PPS			60		// what the relay takes from one speaker in a second: datagrams
@@ -104,6 +123,8 @@ typedef struct voiceFilter_s {
 int			BG_VoicePack( byte *out, int outSize, const voicePacket_t *p, qboolean toClient );
 qboolean	BG_VoiceUnpack( const byte *in, int len, qboolean toClient, voicePacket_t *p );
 int			BG_VoiceSeqDelta( int a, int b );
+void		BG_VoiceStatePack( byte out[VOICE_STATE_BYTES], const byte room[VOICE_ROOM_BYTES], unsigned int hear, unsigned int allow );
+void		BG_VoiceStateUnpack( const voicePacket_t *p, const byte **room, unsigned int *hear, unsigned int *allow );
 
 void		BG_VoiceQueueReset( voiceQueue_t *q );
 qboolean	BG_VoiceQueuePut( voiceQueue_t *q, int seq, const byte *data, int len );

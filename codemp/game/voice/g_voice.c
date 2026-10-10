@@ -301,8 +301,9 @@ void G_VoiceFrame( void ) {
 				continue;
 			break;
 		}
+		// (a VOICE_STATE is for the voice master, this relay knows from the game where everybody is)
 		if ( fromLen < (socklen_t)sizeof( from ) || from.sin_family != AF_INET
-			|| !BG_VoiceUnpack( datagram, len, qfalse, &p ) || p.client >= level.maxclients ) {
+			|| !BG_VoiceUnpack( datagram, len, qfalse, &p ) || p.type == VOICE_STATE || p.client >= level.maxclients ) {
 			voiceRefused++;
 			continue;
 		}

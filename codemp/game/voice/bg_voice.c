@@ -41,6 +41,21 @@ sides.
 ===============================================================================
 */
 
+// How long what follows the head has to be. A hello carries nothing, sound is never empty, and a VOICE_STATE
+// carries its fields on the way to the master and nothing on the way back.
+static qboolean BG_VoiceBodyFits( int type, int bodyLen, qboolean toClient ) {
+	switch ( type ) {
+	case VOICE_HELLO:
+		return ( bodyLen == 0 ) ? qtrue : qfalse;
+	case VOICE_AUDIO:
+		return ( bodyLen > 0 && bodyLen <= VOICE_MAX_FRAME ) ? qtrue : qfalse;
+	case VOICE_STATE:
+		return ( bodyLen == ( toClient ? 0 : VOICE_STATE_BYTES ) ) ? qtrue : qfalse;
+	default:
+		return qfalse;
+	}
+}
+
 /*
 =================
 BG_VoicePack
@@ -53,10 +68,7 @@ int BG_VoicePack( byte *out, int outSize, const voicePacket_t *p, qboolean toCli
 
 	if ( p->dataLen < 0 || p->dataLen > VOICE_MAX_FRAME || head + p->dataLen > outSize )
 		return 0;
-	if ( p->client < 0 || p->client > 255 || ( p->type != VOICE_HELLO && p->type != VOICE_AUDIO ) )
-		return 0;
-	// a hello carries no sound, sound is never empty
-	if ( ( p->type == VOICE_AUDIO ) != ( p->dataLen > 0 ) )
+	if ( p->client < 0 || p->client > 255 || !BG_VoiceBodyFits( p->type, p->dataLen, toClient ) )
 		return 0;
 
 	out[0] = 'V';
@@ -93,9 +105,7 @@ qboolean BG_VoiceUnpack( const byte *in, int len, qboolean toClient, voicePacket
 		return qfalse;
 	if ( in[0] != 'V' || in[1] != 'O' || in[2] != VOICE_PROTOCOL )
 		return qfalse;
-	if ( in[3] != VOICE_HELLO && in[3] != VOICE_AUDIO )
-		return qfalse;
-	if ( ( in[3] == VOICE_AUDIO ) != ( len > head ) )
+	if ( !BG_VoiceBodyFits( in[3], len - head, toClient ) )
 		return qfalse;
 
 	p->type = in[3];
@@ -107,6 +117,26 @@ qboolean BG_VoiceUnpack( const byte *in, int len, qboolean toClient, voicePacket
 	p->data = in + head;
 	p->dataLen = len - head;
 	return qtrue;
+}
+
+// what a VOICE_STATE tells the master, as the bytes that follow its head
+void BG_VoiceStatePack( byte out[VOICE_STATE_BYTES], const byte room[VOICE_ROOM_BYTES], unsigned int hear, unsigned int allow ) {
+	int i;
+
+	memcpy( out, room, VOICE_ROOM_BYTES );
+	for ( i = 0; i < 4; i++ ) {
+		out[VOICE_ROOM_BYTES + i] = (byte)( ( hear >> ( i * 8 ) ) & 0xff );
+		out[VOICE_ROOM_BYTES + 4 + i] = (byte)( ( allow >> ( i * 8 ) ) & 0xff );
+	}
+}
+
+// and back, from a VOICE_STATE that BG_VoiceUnpack() took as one to the server. *room points into the datagram.
+void BG_VoiceStateUnpack( const voicePacket_t *p, const byte **room, unsigned int *hear, unsigned int *allow ) {
+	const byte	*in = p->data + VOICE_ROOM_BYTES;
+
+	*room = p->data;
+	*hear = (unsigned int)in[0] | ( (unsigned int)in[1] << 8 ) | ( (unsigned int)in[2] << 16 ) | ( (unsigned int)in[3] << 24 );
+	*allow = (unsigned int)in[4] | ( (unsigned int)in[5] << 8 ) | ( (unsigned int)in[6] << 16 ) | ( (unsigned int)in[7] << 24 );
 }
 
 // how far sequence number a is ahead of b. They wrap at 65536, so this holds while the two are less than
