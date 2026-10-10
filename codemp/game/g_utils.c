@@ -107,8 +107,8 @@ const char *BuildShaderStateConfig(void) {
 G_GetRemap
 
 Not in JA+. What the table of the remaps holds, one entry a call, for the texture swap of the web admin panel:
-qfalse past the last one. An entry whose two names are the same is a remap that was taken back: it stays in the
-table until the map ends, because that is what tells a client to draw the shader as itself again.
+qfalse past the last one. An entry whose two names are the same is a remap that was taken back: that is what
+tells a client to draw the shader as itself again.
 =================
 */
 qboolean G_GetRemap( int index, const char **oldShader, const char **newShader ) {
@@ -117,6 +117,30 @@ qboolean G_GetRemap( int index, const char **oldShader, const char **newShader )
 	*oldShader = remappedShaders[index].oldShader;
 	*newShader = remappedShaders[index].newShader;
 	return qtrue;
+}
+
+/*
+=================
+G_DropTakenBackRemaps
+
+Not in JA+. Takes the remaps that were taken back out of the table, the ones whose two names are the same, and
+returns how many those were. For the caller to do only when every client was told of them: a client that had
+the shader swapped and is told a list without it keeps it swapped.
+=================
+*/
+int G_DropTakenBackRemaps( void ) {
+	int i, kept = 0, dropped;
+
+	for ( i = 0; i < remapCount; i++ ) {
+		if ( !Q_stricmp( remappedShaders[i].oldShader, remappedShaders[i].newShader ) )
+			continue;
+		if ( kept != i )
+			remappedShaders[kept] = remappedShaders[i];
+		kept++;
+	}
+	dropped = remapCount - kept;
+	remapCount = kept;
+	return dropped;
 }
 
 /*

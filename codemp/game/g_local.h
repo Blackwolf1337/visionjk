@@ -1150,6 +1150,7 @@ qboolean G_CheckInSolid (gentity_t *self, qboolean fix);
 void AddRemap(const char *oldShader, const char *newShader, float timeOffset);
 const char *BuildShaderStateConfig(void);
 qboolean G_GetRemap( int index, const char **oldShader, const char **newShader );
+int G_DropTakenBackRemaps( void );
 /*
 Ghoul2 Insert Start
 */

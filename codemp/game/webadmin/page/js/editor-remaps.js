@@ -23,11 +23,12 @@
 
 // list: { old, new, own } as the server has them. own: made here or read from the file of the map, not by an
 // entity of the map. to: the same for the view, by the key of the old name. selected: the shader the pane
-// tells of. used, budget: the characters the swaps take of what a game is told when it connects. seen: the
+// tells of. used, budget: the characters the swaps take of what a game is told when it connects, told and
+// toldRoom: all it is told, and how much of that the swaps may bring it to. seen: the
 // map the view has the swaps for. uses: the shaders of that map. mark: the surfaces of the selected shader as
 // they are drawn over the map (remapMark). shown: the shader the test object is drawn with. drafts: the swaps
 // that are only in this page, { old, new } by the key of the old name.
-const remap = { list: [], to: new Map(), dirty: false, used: 0, budget: 0, known: true, key: '', busy: false, selected: '', seen: null, uses: null, usesOf: null, namesOf: null, namesState: -1, mark: null, shown: '', drafts: new Map() };
+const remap = { list: [], to: new Map(), dirty: false, used: 0, budget: 0, known: true, key: '', busy: false, selected: '', seen: null, uses: null, usesOf: null, namesOf: null, namesState: -1, mark: null, shown: '', drafts: new Map(), told: 0, toldRoom: 0 };
 const REMAP_ROWS = 150;
 
 // what a shader of the map is drawn as
@@ -290,6 +291,8 @@ async function remapPoll() {
 			remap.dirty = json.dirty;
 			remap.used = json.used;
 			remap.budget = json.budget;
+			remap.told = json.told || 0;
+			remap.toldRoom = json.toldRoom || 0;
 			// a draft is of the map it was made on
 			if (remap.seen && remap.seen !== world) remap.drafts.clear();
 			remapApply();
@@ -423,7 +426,8 @@ function remapRender() {
 	}
 	$('remapState').innerHTML = !world ? '' : !remap.known ? 'This game module has no texture swap.' :
 		(remap.dirty ? 'Changed and not saved: gone with the map. ' : '') + about +
-		(remap.budget ? ' Room: ' + remap.used + ' of ' + remap.budget + ' characters.' : '');
+		(remap.budget ? ' Room: ' + remap.used + ' of ' + remap.budget + ' characters.' : '') +
+		(remap.toldRoom ? ' All a game is told when it connects: ' + remap.told + ' of ' + remap.toldRoom + '.' : '');
 
 	const row = (name, cls, what, act) => '<tr data-old="' + escapeHtml(name) + '"' + (cls ? ' class="' + cls + '"' : '') + '><td class="pic"><i class="thumb" data-thumb="' + escapeHtml(name) + '"></i></td><td>' +
 		escapeHtml(name) + '</td><td>' + what + '</td><td class="acts">' + act + '</td></tr>';

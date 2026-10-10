@@ -130,7 +130,7 @@ the answer tells the page that the numbers started over.
 | `POST /api/command` | `cmd`: one line for the server console, run in the next frame as if it was typed there |
 | `GET /api/clips` | the clip editor: `off` (the numbers of the clip brushes of the map the server does not mind), `walls` (the blocking walls, each with the number of its entity and its two corners), `dirty` (changed since the last save) |
 | `POST /api/clip` | `op` off or on (`brush`: numbers of clip brushes), wall (`x1 y1 z1 x2 y2 z2`, with `id` in the place of that wall), delete (`id`), save (writes `wallblocks/<map>.cfg`) or revert (what that file has) |
-| `GET /api/remaps` | the texture swap: `remaps` (each `old`, `new` and `own`: made by the panel or read from the file of the map, not by an entity of the map), `used` and `budget` (the characters the swaps take of what a client is told when it connects), `dirty` |
+| `GET /api/remaps` | the texture swap: `remaps` (each `old`, `new` and `own`: made by the panel or read from the file of the map, not by an entity of the map), `told` and `toldRoom` (all the characters a client is told when it connects, and how many of them the swaps may bring that to), `used` and `budget` (the characters the swaps take of what a client is told when it connects), `dirty` |
 | `POST /api/remap` | `op` set (`old`, `new`), clear (`old`), save (writes `remaps/<map>.cfg`) or revert (what that file has) |
 | `POST /api/control` | a player moved from the page. `op` start (`id`), input (`id`, `f`, `r`, `u` from -127 to 127, `buttons`, `yaw`, `pitch`), goal (`id`, `x`, `y`, `z`: he walks there) or stop. The answer names who is held, -1 for nobody |
 | `GET /api/perf?since=` | the load of the server, a sample a second, the last 300 kept: `samples` are `[frames, average and longest frame of the game in microseconds, longest wait for a frame in ms, entities, players, average and longest part of this panel in a frame in microseconds]`, `seq` is how many there were, `from` the number of the first one sent. `since`: only the ones from that number on. With them `svFps`, `entityMax`, `maxClients` |
@@ -1759,8 +1759,10 @@ Also changed:
   be taken back, and is not saved. The page draws the swaps in both of its views.
   What it can not do, and the tab says so: a shader is swapped wherever the map has it, not on one wall. A
   client only draws a shader it has, a name it does not know is left as it is there (the server does not know
-  what a client has). The swaps get 1000 characters of the 16000 a client is told when it connects, and one
-  that was taken back keeps its room until the next map: it stays in the table with both names the same,
+  what a client has). The swaps got 1000 characters of the 16000 a client is told when it connects (4000 since
+  the entry "the room of the swaps" below), and one
+  that was taken back kept its room until the next map (not any more, see "the room of a swap that is taken
+  back" below): it stays in the table with both names the same,
   which is how a client is told. A name is refused when it is longer than 63 characters or has a blank or one
   of `= : @ " ; % \`: the parser of every client cuts the configstring at the first three and copies what is
   between them into buffers of that size.
@@ -1827,6 +1829,27 @@ Also changed:
   window), and drawn with as many pixels as it is shown with.
   Added without a test run: built, the page checked for syntax and names, not opened in a browser by me. The
   user had seen the list and the test object of the entry before in their browser and called the preview nice.
+- 2026-10-10, the room of the swaps: 4000 characters instead of 1000 (the user asked for the limit and then:
+  "yeah go with the hard ceiling"). That is what the game can tell of them: `BuildShaderStateConfig` builds the
+  list in 4096 characters, 96 are left for what a map swaps by itself later. About 80 swaps with names of the
+  usual length, the table of the game has 128. The list is still one configstring of the 16000 characters a
+  client is told when it connects, and a client that is told more is dropped, the connected ones too with the
+  next change. So `WA_RemapSet` now also counts all of it as the client does (`WA_GamestateUsed`) and refuses a
+  swap that would not leave 200 characters for every player who can still join and 800 for what the map still
+  names (`WA_GamestateRoom`). The tab shows both numbers. With every change the whole list goes to every
+  client again, in pieces of a thousand characters as the engine sends a long configstring.
+  Built, not tried: no list of that length was sent to a client by me.
+- 2026-10-10, the room of a swap that is taken back (the user: when the room is used up the map has to be
+  started again, "can't u just configstrings everything back to normal to free it up?"). It can. A swap that
+  is taken back is told as an entry with both names the same, and every client that plays is told a change of
+  a configstring at once and in order. So the entry has done its work then: `WA_RemapsFrame` takes such
+  entries out of the table (`G_DropTakenBackRemaps` in `g_utils.c`) and tells the list again without them, a
+  frame after the swap was taken back. The one case where that would be wrong is a client that is on its way
+  into the game: it was told the list when it connected, maybe with the swap in it, its game draws the swap
+  from its start (`CG_Init`), and when it is in the game it is only told the newest list
+  (`SV_UpdateConfigstrings`). So nothing is taken out while a player (not a bot) is connecting, and the
+  entries wait for him. What a map took back by itself goes the same way.
+  Built, not tried in a game.
 - "Add bot" with an empty name adds `Kyle Katarn`. JKAdmin asks for `Kyle`, a bot the game does not have, so
   nothing happened there.
 - The two entity hooks pass `ent-g_entities` instead of `ent->s.number`.

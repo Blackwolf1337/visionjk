@@ -38,17 +38,24 @@ On a client that is not of this tree a swapped wall that is lit by a lightmap lo
 every lightmap of the old shader at one copy of the new one. That stays wrong there after the swap is taken
 back, until the map is loaded again. A renderer of this tree keeps the lightmaps (R_RemapShader).
 
-A swap that is taken back stays in the table with both names the same, which is how a client is told, and is
-not written to the file. The file of a map is remaps/<map>.cfg: the old name and the new one, a swap a line.
+A swap that is taken back is in the table with both names the same, which is how a client is told, and is
+not written to the file. Once every client was told it is taken out of the table and its room is free again
+(WA_RemapsFrame). The file of a map is remaps/<map>.cfg: the old name and the new one, a swap a line.
 
-The configstring is part of what a client gets when it connects, 16000 characters for everything (the
-players, the models, the sounds): the swaps get WA_REMAP_BUDGET of them.
+The swaps get as much as the game can tell of them: BuildShaderStateConfig() has 4096 characters for the
+list, WA_REMAP_BUDGET leaves a little of that for what a map swaps by itself later. The list is one configstring
+of what a client is told when it connects, and all of that is 16000 characters for everything (the players, the
+models, the sounds). A client that is told more is dropped, every one that is connected too. So a swap is also
+refused when it would not leave what the players who can still join need (WA_GamestateRoom).
 
-GET /api/remaps: the swaps, how much of the room they take, and whether something changed since the last save.
+GET /api/remaps: the swaps, how much of the room they take (used of budget, and told of toldRoom for all a
+client is told), and whether something changed since the last save.
 POST /api/remap: op set (old, new), clear (old), save, revert (what the file has).
 =================
 */
-#define WA_REMAP_BUDGET		1000
+#define WA_REMAP_BUDGET		4000
+#define WA_REMAP_PLAYER		200		// what a player who joins adds to what a client is told: his name, model, sabers, colours
+#define WA_REMAP_SPARE		800		// what a running map still adds: the models, sounds and effects it has not named yet
 #define WA_REMAP_MAXFILE	0x4000
 #define WA_REMAP_ENTRY		8		// what BuildShaderStateConfig() writes besides the two names: "=", ":", " 0.00", "@"
 #define WA_REMAP_OWNED		128
@@ -58,6 +65,7 @@ POST /api/remap: op set (old, new), clear (old), save, revert (what the file has
 static char		remapOwned[WA_REMAP_OWNED][MAX_QPATH];
 static int		remapOwnedCount;
 static qboolean	remapsDirty;
+static qboolean	remapsTakenBack;	// a swap was taken back and is still in the table, for the clients to be told
 
 // A name as it may go into the configstring: CG_ShaderStateChanged() cuts that at '=', ':' and '@' and copies
 // what is between them into buffers of MAX_QPATH, in every client. No blank, no quote, nothing that ends a line
@@ -102,18 +110,40 @@ static int WA_RemapUsed( void ) {
 	return (int)strlen( BuildShaderStateConfig() );
 }
 
+// How many of the MAX_GAMESTATE_CHARS a client that connects now is told, counted as it counts them
+// (CL_ParseGamestate): every configstring that is not empty and its end, and one before the first.
+static int WA_GamestateUsed( void ) {
+	static char	value[BIG_INFO_STRING];
+	int			i, used = 1;
+
+	for ( i = 0; i < MAX_CONFIGSTRINGS; i++ ) {
+		trap->GetConfigstring( i, value, sizeof( value ) );
+		if ( value[0] )
+			used += (int)strlen( value ) + 1;
+	}
+	return used;
+}
+
+// how many of them the swaps may bring it to: the rest is for the players who can still join and for the map
+static int WA_GamestateRoom( void ) {
+	return MAX_GAMESTATE_CHARS - ( level.maxclients - level.numConnectedClients ) * WA_REMAP_PLAYER - WA_REMAP_SPARE;
+}
+
 // A swap of the panel. NULL when it is in the table, else why it is not.
 static const char *WA_RemapSet( const char *oldShader, const char *newShader ) {
 	const qboolean	owned = WA_RemapIsOwned( oldShader );
 	const char		*was;
-	int				used = WA_RemapUsed();
+	const int		before = WA_RemapUsed();
+	int				used = before;
 
 	if ( WA_RemapFind( oldShader, &was ) )
 		used += (int)strlen( newShader ) - (int)strlen( was );
 	else
 		used += (int)strlen( oldShader ) + (int)strlen( newShader ) + WA_REMAP_ENTRY;
 	if ( used > WA_REMAP_BUDGET || ( !owned && remapOwnedCount == WA_REMAP_OWNED ) )
-		return "no room for another swap. What was taken back gives its room back with the next map.";
+		return "no room for another swap. What is taken back gives its room back, once nobody is on the way into the game.";
+	if ( used > before && WA_GamestateUsed() + used - before > WA_GamestateRoom() )
+		return "no room for another swap: the players who can still join need the rest of what a game is told when it connects";
 	AddRemap( oldShader, newShader, 0 );
 	// the table of the game is full when it did not take it
 	if ( !WA_RemapFind( oldShader, &was ) || Q_stricmp( was, newShader ) )
@@ -125,6 +155,44 @@ static const char *WA_RemapSet( const char *oldShader, const char *newShader ) {
 
 static void WA_RemapSend( void ) {
 	trap->SetConfigstring( CS_SHADERSTATE, BuildShaderStateConfig() );
+}
+
+/*
+=================
+WA_RemapsFrame
+
+A swap that was taken back is in the table with both names the same, and every client that plays was told so:
+at once, and in the order of the changes (SV_SetConfigstring). Then the entry has done its work. It is taken
+out and the list is told again without it, which gives its room back.
+
+Not while a client is on its way into the game. It was told the list when it connected, maybe with the swap in
+it, and its game draws the swap from its start. When it is in the game it is told the newest list only
+(SV_UpdateConfigstrings): that one has to say that the swap is taken back.
+=================
+*/
+void WA_RemapsFrame( void ) {
+	const char	*was;
+	int			i, kept = 0;
+
+	if ( !remapsTakenBack )
+		return;
+	for ( i = 0; i < level.maxclients; i++ ) {
+		if ( level.clients[i].pers.connected == CON_CONNECTING && !( g_entities[i].r.svFlags & SVF_BOT ) )
+			return;
+	}
+	remapsTakenBack = qfalse;
+	if ( !G_DropTakenBackRemaps() )
+		return;
+	// the names of the panel that the table does not have any more
+	for ( i = 0; i < remapOwnedCount; i++ ) {
+		if ( !WA_RemapFind( remapOwned[i], &was ) )
+			continue;
+		if ( kept != i )
+			Q_strncpyz( remapOwned[kept], remapOwned[i], sizeof( remapOwned[0] ) );
+		kept++;
+	}
+	remapOwnedCount = kept;
+	WA_RemapSend();
 }
 
 // '/' in the name of a map is a folder, as in wallblocks/
@@ -213,7 +281,8 @@ void WA_ApiRemaps( waConnection_t *c ) {
 	qboolean	first = qtrue;
 	int			i;
 
-	WA_BufPrintf( &b, "{\"dirty\":%s,\"used\":%d,\"budget\":%d,\"remaps\":[", WA_BOOL( remapsDirty ), WA_RemapUsed(), WA_REMAP_BUDGET );
+	WA_BufPrintf( &b, "{\"dirty\":%s,\"used\":%d,\"budget\":%d,\"told\":%d,\"toldRoom\":%d,\"remaps\":[", WA_BOOL( remapsDirty ), WA_RemapUsed(), WA_REMAP_BUDGET,
+		WA_GamestateUsed(), WA_GamestateRoom() );
 	for ( i = 0; G_GetRemap( i, &oldShader, &newShader ); i++ ) {
 		if ( !Q_stricmp( oldShader, newShader ) )
 			continue;
@@ -249,6 +318,7 @@ void WA_ApiRemap( waConnection_t *c, const char *body ) {
 				return;
 			}
 			AddRemap( oldShader, oldShader, 0 );
+			remapsTakenBack = qtrue;
 			WA_RemapSend();
 			if ( WA_RemapIsOwned( oldShader ) )
 				remapsDirty = qtrue;
@@ -284,6 +354,7 @@ void WA_ApiRemap( waConnection_t *c, const char *body ) {
 			if ( WA_RemapIsOwned( name ) && Q_stricmp( name, was ) )
 				AddRemap( name, name, 0 );
 		}
+		remapsTakenBack = qtrue;
 		count = WebAdmin_LoadRemaps();
 		WA_RemapSend();
 		remapsDirty = qfalse;

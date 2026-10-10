@@ -172,5 +172,6 @@ void WA_ApiClips( waConnection_t *c );
 void WA_ApiClip( waConnection_t *c, const char *body );
 
 // wa_remaps.c
+void WA_RemapsFrame( void );
 void WA_ApiRemaps( waConnection_t *c );
 void WA_ApiRemap( waConnection_t *c, const char *body );

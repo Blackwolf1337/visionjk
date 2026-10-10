@@ -497,6 +497,8 @@ void WebAdmin_Frame( void ) {
 
 	WA_GravityFrame();
 
+	WA_RemapsFrame();
+
 	WA_Accept();
 
 	// what is read of files in this frame. Another connection is the first each frame, so none waits for long
