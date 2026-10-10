@@ -97,4 +97,8 @@ endfunction()
 # japlus_gla_anims.pk3 of the JA+ 2.4 Build 7 package, with the changes of the port (four menus in ui/jamp). Left out: the thumbnail caches
 # of Windows Explorer (Thumbs.db) and the two modules of the plugin, cgamex86.dll and uix86.dll, which the
 # engine would unpack and load in place of the modules of this tree.
+# Added to it: the voice lines of Jedi Outcast that Jedi Academy does not have, from its assets0 to
+# assets5.pk3, in its three languages: English (sound/chars, 1733 files), German (sound/chr_d) and French
+# (sound/chr_f). A line the game or this directory had under the same name, with either ending, was left as it
+# is. Their folders are named at the end of japlus_client.order.
 jp_add_pk3(zz_japlus_client_assets japlus_client)
