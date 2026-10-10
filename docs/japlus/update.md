@@ -220,6 +220,5 @@ Not checked:
   fetched with a browser (which marks it as from the internet; this one came through curl).
 - A real https server with a real certificate, and a certificate that is wrong. The test server spoke plain
   http, which only the address of a build may be.
-- A click on the line of the menu. The runs typed `update`, which is what the click does.
 - A download that is stopped (`update_cancel`) or a line that drops in the middle of a file.
 - A release made by `tools/build-game.sh` from start to end, and the site behind its proxy.
