@@ -244,6 +244,42 @@ void JP_UserinfoChanged( gentity_t *ent, const char *userinfo ) {
 		if ( disable >= 0 )
 			ent->client->pers.jp.pluginDisable = disable;
 	}
+	ent->client->pers.jp.utf8 = atoi( Info_ValueForKey( userinfo, "cl_utf8Text" ) ) ? qtrue : qfalse;
+}
+
+/*
+=================
+JP_ChatCopy, JP_ChatFor: chat between clients that write UTF-8 and clients that do not
+
+A client of this tree types UTF-8 and says so in its userinfo (cl_utf8Text, pers.jp.utf8). Any other client
+reads and writes one byte as one character of Windows-1252. JP_ChatFor() gives the text of a line as the
+client `other` has to get it: what a UTF-8 client wrote goes to a legacy client as Windows-1252, with '?' for
+what that does not have. Nothing else is converted: a client that reads UTF-8 takes a byte that is no UTF-8 as
+Windows-1252 by itself (Q_UTF8_Decode), and between two legacy clients the bytes are theirs (they may be
+another code page altogether, Russian players use Windows-1251).
+
+JP_ChatCopy() is the copy into the buffer of a line, which cuts what is too long: between two characters where
+the text is UTF-8, so no half character is left at the end.
+=================
+*/
+void JP_ChatCopy( const gentity_t *from, const char *text, char *out, int outSize ) {
+	if ( from && from->client && from->client->pers.jp.utf8 ) {
+		char whole[MAX_STRING_CHARS];
+
+		Q_strncpyz( whole, text, sizeof( whole ) );
+		Q_UTF8_Truncate( whole, outSize - 1 );
+		Q_strncpyz( out, whole, outSize );
+		return;
+	}
+	Q_strncpyz( out, text, outSize );
+}
+
+const char *JP_ChatFor( const gentity_t *from, const gentity_t *other, const char *text, char *buffer, int bufferSize ) {
+	if ( !from || !from->client || !from->client->pers.jp.utf8 || !other || !other->client || other->client->pers.jp.utf8 ) {
+		return text;
+	}
+	Q_UTF8_ToCP1252( text, buffer, bufferSize );
+	return buffer;
 }
 
 /*
@@ -336,7 +372,7 @@ static void Cmd_say_clan_f( gentity_t *ent ) {
 	if ( trap->Argc() < 2 )
 		return;
 
-	Q_strncpyz( text, ConcatArgs( 1 ), sizeof( text ) );
+	JP_ChatCopy( ent, ConcatArgs( 1 ), text, sizeof( text ) );
 	G_LogPrintf( "say_clan: %s: %s\n", ent->client->pers.netname, text );
 	Com_sprintf( name, sizeof( name ), EC"(%s%c%c"EC")"EC": ", ent->client->pers.netname, Q_COLOR_ESCAPE, COLOR_WHITE );
 
@@ -349,8 +385,11 @@ static void Cmd_say_clan_f( gentity_t *ent ) {
 
 		if ( !other->inuse || !other->client || other->client->pers.connected != CON_CONNECTED )
 			continue;
-		if ( other->client->sess.jpAdminLevel == JPADM_RCON || !Q_stricmp( ent->client->pers.jp.clanPass, other->client->pers.jp.clanPass ) )
-			trap->SendServerCommand( i, va( "chat \"^1<Clan>^7%s^1%s\"", name, text ) );
+		if ( other->client->sess.jpAdminLevel == JPADM_RCON || !Q_stricmp( ent->client->pers.jp.clanPass, other->client->pers.jp.clanPass ) ) {
+			char legacy[sizeof( text )];
+
+			trap->SendServerCommand( i, va( "chat \"^1<Clan>^7%s^1%s\"", name, JP_ChatFor( ent, other, text, legacy, sizeof( legacy ) ) ) );
+		}
 	}
 }
 

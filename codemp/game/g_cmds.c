@@ -1588,6 +1588,8 @@ G_Say
 
 static void G_SayTo( gentity_t *ent, gentity_t *other, int mode, int color, const char *name, const char *message, char *locMsg )
 {
+	char legacy[MAX_SAY_TEXT];
+
 	if (!other) {
 		return;
 	}
@@ -1626,6 +1628,9 @@ static void G_SayTo( gentity_t *ent, gentity_t *other, int mode, int color, cons
 		return;
 	}
 
+	// JA+: what a client that writes UTF-8 said, as this one reads it
+	message = JP_ChatFor( ent, other, message, legacy, sizeof( legacy ) );
+
 	if (locMsg)
 	{
 		trap->SendServerCommand( other-g_entities, va("%s \"%s\" \"%s\" \"%c\" \"%s\" %i",
@@ -1654,7 +1659,7 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText ) 
 		mode = SAY_ALL;
 	}
 
-	Q_strncpyz( text, chatText, sizeof(text) );
+	JP_ChatCopy( ent, chatText, text, sizeof(text) );
 
 	Q_strstrip( text, "\n\r", "  " );
 

@@ -170,6 +170,9 @@ XCVAR_DEF( g_teamAutoJoin,				"0",			NULL,						CVAR_ARCHIVE,									qfalse )
 XCVAR_DEF( g_teamForceBalance,			"3",			NULL,						CVAR_ARCHIVE,									qfalse )
 XCVAR_DEF( g_timeouttospec,				"70",			NULL,						CVAR_ARCHIVE,									qfalse )
 XCVAR_DEF( g_userinfoValidate,			"25165823",		NULL,						CVAR_ARCHIVE,									qfalse )
+// What this game module knows that a stock one does not, for the clients of this tree, in the server info. Bit 0:
+// chat in UTF-8 (JP_ChatFor() in g_japlus_chat.c), a client sends UTF-8 only where it reads this bit.
+XCVAR_DEF( g_visionCaps,				"1",			NULL,						CVAR_SERVERINFO|CVAR_ROM,						qfalse )
 XCVAR_DEF( g_useWhileThrowing,			"1",			NULL,						CVAR_NONE,										qtrue )
 // The voice chat (g_voice.c). g_voice is in the server info: the cgame of this port asks for voice only where it reads it there.
 XCVAR_DEF( g_voice,						"1",			NULL,						CVAR_SERVERINFO|CVAR_ARCHIVE|CVAR_LATCH,		qfalse )

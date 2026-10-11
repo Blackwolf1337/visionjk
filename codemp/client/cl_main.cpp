@@ -1623,7 +1623,13 @@ void CL_CheckForResend( void ) {
 		// sending back the challenge
 		port = (int) Cvar_VariableValue ("net_qport");
 
-		Q_strncpyz( info, Cvar_InfoString( CVAR_USERINFO ), sizeof( info ) );
+		// The userinfo always goes out as Windows-1252, also to a server that reads UTF-8 chat: the name in it
+		// is handed to every client alike (a config string, status answers), and every client reads that.
+		if ( CL_UTF8() ) {
+			Q_UTF8_ToCP1252( Cvar_InfoString( CVAR_USERINFO ), info, sizeof( info ) );
+		} else {
+			Q_strncpyz( info, Cvar_InfoString( CVAR_USERINFO ), sizeof( info ) );
+		}
 		Info_SetValueForKey( info, "protocol", va("%i", PROTOCOL_VERSION ) );
 		Info_SetValueForKey( info, "qport", va("%i", port ) );
 		Info_SetValueForKey( info, "challenge", va("%i", clc.challenge ) );
@@ -2181,7 +2187,15 @@ void CL_CheckUserinfo( void ) {
 	// send a reliable userinfo update if needed
 	if ( cvar_modifiedFlags & CVAR_USERINFO ) {
 		cvar_modifiedFlags &= ~CVAR_USERINFO;
-		CL_AddReliableCommand( va("userinfo \"%s\"", Cvar_InfoString( CVAR_USERINFO ) ), qfalse );
+		if ( CL_UTF8() ) {
+			// as Windows-1252 to every server, see CL_CheckForResend()
+			char info[MAX_INFO_STRING];
+
+			Q_UTF8_ToCP1252( Cvar_InfoString( CVAR_USERINFO ), info, sizeof( info ) );
+			CL_AddReliableCommand( va("userinfo \"%s\"", info ), qfalse );
+		} else {
+			CL_AddReliableCommand( va("userinfo \"%s\"", Cvar_InfoString( CVAR_USERINFO ) ), qfalse );
+		}
 	}
 
 }
