@@ -1,3 +1,4 @@
+// visionjk-classic: a menu file of this tree. A file of this name without this line is a mod's: the ui then loads the menus of the game and not the new look (ui/vision), see docs/japlus/ui.md
 //---------------------------------------------------------
 // jk2mpingame.txt 
 // 

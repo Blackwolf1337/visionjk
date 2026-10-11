@@ -1,0 +1,325 @@
+// ingame_orders.menu in the new look. Made by tools/menus/build.py from ui/jamp/ingame_orders.menu: change that script or its
+// rules, not this file. See docs/japlus/ui.md.
+{
+	menuDef
+	{
+		name					"ingame_orders"
+		visible					0
+		fullscreen				0
+		rect					45 30 200 240
+		outOfBoundsClick
+		focusColor				0.43 0.83 1 1
+		style					WINDOW_STYLE_PANEL
+		disableColor			0.36 0.42 0.50 1
+		onopen
+		{
+			hide grpicon ;
+			show attack
+		}
+
+		itemDef
+		{
+			name					window
+			rect					10 15 180 225
+			style					WINDOW_STYLE_PANEL
+			backcolor				0.43 0.83 1 0.14
+			visible					1
+			decoration
+			bordercolor				0 0 0 0
+			radius					3
+		}
+
+		itemDef
+		{
+			name					orders
+			group					grporders
+			text					@MENUS_NAME
+			style					0
+			ownerdraw				UI_SELECTEDPLAYER
+			rect					10 20 200 20
+			textalign				0
+			textalignx				10
+			textaligny				2.38
+			textscale				0.21
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+			font					5
+		}
+
+		itemDef
+		{
+			name					orders
+			group					grporders
+			text					@MENUS_YOU_DECIDE
+			rect					0 80 200 20
+			type					1
+			textalign				1
+			textalignx				100
+			textaligny				2.38
+			textscale				0.21
+			forecolor				0.43 0.83 1 1
+			visible					1
+			mouseenter { hide grpicon }
+			action { uiScript voiceOrders "cmd bot_order %d 0" }
+			ownerdrawflag			UI_SHOW_LEADER
+			font					5
+		}
+
+		itemDef
+		{
+			name					orders
+			group					grporders
+			type					1
+			text					@MENUS_ATTACK_THE_ENEMY_S_BASE
+			rect					0 100 200 20
+			textalign				1
+			textalignx				100
+			textaligny				2.38
+			textscale				0.21
+			forecolor				0.43 0.83 1 1
+			visible					1
+			cvarTest				"g_gametype"
+			hideCvar
+			{
+				"5" ;
+				"6"
+			}
+			mouseenter { hide grpicon }
+			action { uiScript voiceOrders "cmd bot_order %d 1" }
+			ownerdrawflag			UI_SHOW_LEADER
+			font					5
+		}
+
+		itemDef
+		{
+			name					orders
+			group					grporders
+			type					1
+			text					@MENUS_DEFEND_OUR_BASE
+			rect					0 120 200 20
+			textalign				1
+			textalignx				100
+			textaligny				2.38
+			textscale				0.21
+			forecolor				0.43 0.83 1 1
+			visible					1
+			cvarTest				"g_gametype"
+			hideCvar
+			{
+				"5" ;
+				"6"
+			}
+			mouseenter { hide grpicon }
+			action { uiScript voiceOrders "cmd bot_order %d 2" }
+			ownerdrawflag			UI_SHOW_LEADER
+			font					5
+		}
+
+		itemDef
+		{
+			name					orders
+			group					grporders
+			type					1
+			text					@MENUS_GET_OUR_FLAG_BACK
+			rect					0 140 200 20
+			textalign				1
+			textalignx				100
+			textaligny				2.38
+			textscale				0.21
+			forecolor				0.43 0.83 1 1
+			visible					1
+			cvarTest				"g_gametype"
+			hideCvar
+			{
+				"5" ;
+				"6"
+			}
+			mouseenter { hide grpicon }
+			action { uiScript voiceOrders "cmd bot_order %d 3" }
+			ownerdrawflag			UI_SHOW_LEADER
+			font					5
+		}
+
+		itemDef
+		{
+			name					orders
+			group					grporders
+			text					@MENUS_GUARD_OUR_FLAG_CARRIER
+			type					1
+			rect					0 160 200 20
+			textalign				1
+			textalignx				100
+			textaligny				2.38
+			textscale				0.21
+			forecolor				0.43 0.83 1 1
+			visible					1
+			cvarTest				"g_gametype"
+			hideCvar
+			{
+				"5" ;
+				"6"
+			}
+			mouseenter { hide grpicon }
+			action { uiScript voiceOrders "cmd bot_order %d 4" }
+			ownerdrawflag			UI_SHOW_LEADER
+			font					5
+		}
+
+		itemDef
+		{
+			name					orders
+			group					grporders
+			type					1
+			text					@MENUS_GET_ENEMY_FLAG_BACK_TO
+			rect					0 180 200 20
+			textalign				1
+			textalignx				100
+			textaligny				2.38
+			textscale				0.21
+			forecolor				0.43 0.83 1 1
+			visible					1
+			cvarTest				"g_gametype"
+			hideCvar
+			{
+				"5" ;
+				"6"
+			}
+			mouseenter { hide grpicon }
+			action { uiScript voiceOrders "cmd bot_order %d 5" }
+			ownerdrawflag			UI_SHOW_LEADER
+			font					5
+		}
+
+		itemDef
+		{
+			name					orders
+			group					grporders
+			type					1
+			text					@MENUS_COMPLETE_THE_CURRENT
+			rect					0 100 200 20
+			textalign				1
+			textalignx				100
+			textaligny				2.38
+			textscale				0.21
+			forecolor				0.43 0.83 1 1
+			visible					1
+			cvarTest				"g_gametype"
+			hideCvar
+			{
+				"5" ;
+				"7"
+			}
+			mouseenter { hide grpicon }
+			action { uiScript voiceOrders "cmd bot_order %d 1" }
+			ownerdrawflag			UI_SHOW_LEADER
+			font					5
+		}
+
+		itemDef
+		{
+			name					orders
+			group					grporders
+			type					1
+			text					@MENUS_PREVENT_THE_ENEMY_FROM
+			rect					0 120 200 20
+			textalign				1
+			textalignx				100
+			textaligny				2.38
+			textscale				0.21
+			forecolor				0.43 0.83 1 1
+			visible					1
+			cvarTest				"g_gametype"
+			hideCvar
+			{
+				"5" ;
+				"7"
+			}
+			mouseenter { hide grpicon }
+			action { uiScript voiceOrders "cmd bot_order %d 2" }
+			ownerdrawflag			UI_SHOW_LEADER
+			font					5
+		}
+
+		itemDef
+		{
+			name					orders
+			group					grporders
+			type					1
+			text					@MENUS_FOLLOW_ME
+			rect					0 100 200 20
+			textalign				1
+			textalignx				100
+			textaligny				2.38
+			textscale				0.21
+			forecolor				0.43 0.83 1 1
+			visible					1
+			cvarTest				"g_gametype"
+			hideCvar
+			{
+				"6" ;
+				"7"
+			}
+			mouseenter { hide grpicon }
+			action { uiScript voiceOrders "cmd bot_order %d 1" }
+			ownerdrawflag			UI_SHOW_LEADER
+			font					5
+		}
+
+		itemDef
+		{
+			name					orders
+			group					grporders
+			type					1
+			text					@MENUS_ASSIST_ME
+			rect					0 120 200 20
+			textalign				1
+			textalignx				100
+			textaligny				2.38
+			textscale				0.21
+			forecolor				0.43 0.83 1 1
+			visible					1
+			cvarTest				"g_gametype"
+			hideCvar
+			{
+				"6" ;
+				"7"
+			}
+			mouseenter { hide grpicon }
+			action { uiScript voiceOrders "cmd bot_order %d 2" }
+			ownerdrawflag			UI_SHOW_LEADER
+			font					5
+		}
+
+		itemDef
+		{
+			name					orders
+			group					grporders
+			type					1
+			text					@MENUS_REGROUP
+			rect					0 140 200 20
+			textalign				1
+			textalignx				100
+			textaligny				2.38
+			textscale				0.21
+			forecolor				0.43 0.83 1 1
+			visible					1
+			cvarTest				"g_gametype"
+			hideCvar
+			{
+				"6" ;
+				"7"
+			}
+			mouseenter { hide grpicon }
+			action { uiScript voiceOrders "cmd bot_order %d 3" }
+			ownerdrawflag			UI_SHOW_LEADER
+			font					5
+		}
+		skin					1
+		openSlide				8
+		backcolor				0.035 0.07 0.12 0.80
+		bordercolor				0.43 0.83 1 0.28
+		radius					8
+		shadow					14
+		sheen					0.08
+	}
+}

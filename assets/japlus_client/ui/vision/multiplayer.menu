@@ -1,0 +1,448 @@
+// multiplayer.menu in the new look. Made by tools/menus/build.py from ui/jamp/multiplayer.menu: change that script or its
+// rules, not this file. See docs/japlus/ui.md.
+{
+	menuDef
+	{
+		name					"multiplayermenu"
+		fullScreen				1
+		rect					0 0 640 480
+		visible					1
+		focusColor				0.43 0.83 1 1
+		descX					40
+		descY					80
+		descScale				0.8
+		descColor				0.60 0.69 0.78 1
+		descAlignment			ITEM_ALIGN_LEFT
+		onESC
+		{
+			play "sound/interface/esc.wav" ;
+			close all;
+			open mainMenu
+		}
+		onOpen { setfocus quickserver_button }
+
+		itemDef
+		{
+			name					vision_bar
+			rect					-400 0 1440 34
+			visible					1
+			style					WINDOW_STYLE_FILLED
+			backcolor				0.02 0.04 0.08 0.55
+			decoration
+		}
+
+		itemDef
+		{
+			name					vision_bar_line
+			rect					-400 34 1440 0.67
+			visible					1
+			style					WINDOW_STYLE_FILLED
+			backcolor				0.43 0.83 1 0.22
+			decoration
+		}
+
+		itemDef
+		{
+			name					vision_mark
+			rect					24 7 120 20
+			visible					1
+			text					"VISIONJK"
+			font					5
+			textscale				1
+			forecolor				1 1 1 1
+			decoration
+		}
+
+		itemDef
+		{
+			name					vision_mark2
+			rect					112 12 160 14
+			visible					1
+			text					"JEDI ACADEMY"
+			font					5
+			textscale				0.5
+			forecolor				0.60 0.69 0.78 1
+			decoration
+		}
+
+		itemDef
+		{
+			name					vision_here
+			rect					340 31 52 2
+			visible					1
+			style					WINDOW_STYLE_PANEL
+			backcolor				0.43 0.83 1 1
+			radius					1
+			decoration
+		}
+
+		itemDef
+		{
+			name					playbutton
+			group					toprow
+			style					WINDOW_STYLE_EMPTY
+			type					ITEM_TYPE_BUTTON
+			rect					330 7 72 20
+			text					@MENUS_PLAY
+			descText				@MENUS_START_PLAYING_NOW
+			font					5
+			textscale				0.66
+			textaligny				4
+			textalign				ITEM_ALIGN_CENTER
+			textstyle				0
+			textalignx				36
+			forecolor				0.43 0.83 1 1
+			visible					1
+			action {  }
+			caps					1
+		}
+
+		itemDef
+		{
+			name					profilebutton
+			group					toprow
+			text					@MENUS_PROFILE
+			descText				@MENUS_PROFILE_DESC
+			style					WINDOW_STYLE_EMPTY
+			type					ITEM_TYPE_BUTTON
+			rect					404 7 72 20
+			textaligny				4
+			font					5
+			textscale				0.66
+			textalign				ITEM_ALIGN_CENTER
+			textstyle				0
+			textalignx				36
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+			mouseEnter
+			{
+				show button_glow
+				setitemrect button_glow 120 124 230 30
+			}
+			mouseExit { hide button_glow }
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				close all ;
+				open playerMenu
+			}
+			caps					1
+		}
+
+		itemDef
+		{
+			name					controlsbutton
+			group					toprow
+			text					@MENUS_CONTROLS2
+			descText				@MENUS_CONFIGURE_GAME_CONTROLS
+			type					ITEM_TYPE_BUTTON
+			style					WINDOW_STYLE_EMPTY
+			rect					478 7 72 20
+			font					5
+			textscale				0.66
+			textaligny				4
+			textalign				ITEM_ALIGN_CENTER
+			textstyle				0
+			textalignx				36
+			backcolor				0 0 0 0
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+			mouseEnter
+			{
+				show button_glow
+				setitemrect button_glow 290 124 230 30
+			}
+			mouseExit { hide button_glow }
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				close all ;
+				open controlsMenu ;
+			}
+			caps					1
+		}
+
+		itemDef
+		{
+			name					setupbutton
+			group					toprow
+			text					@MENUS_SETUP
+			descText				@MENUS_CONFIGURE_GAME_SETTINGS
+			type					ITEM_TYPE_BUTTON
+			style					WINDOW_STYLE_EMPTY
+			rect					552 7 72 20
+			font					5
+			textscale				0.66
+			textaligny				4
+			textalign				ITEM_ALIGN_CENTER
+			textstyle				0
+			textalignx				36
+			backcolor				0 0 0 0
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+			mouseEnter
+			{
+				show button_glow
+				setitemrect button_glow 452 124 230 30
+			}
+			mouseExit { hide button_glow }
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				close all ;
+				open setup_menu
+			}
+			caps					1
+		}
+
+		itemDef
+		{
+			name					title
+			group					none
+			text					@MENUS_START_PLAYING
+			style					WINDOW_STYLE_EMPTY
+			rect					40 46 400 28
+			font					5
+			textscale				1.45
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				0
+			textaligny				2
+			forecolor				1 1 1 1
+			visible					1
+			decoration
+		}
+
+		itemDef
+		{
+			name					quickserver_button
+			group					none
+			text					@MENUS_SOLO_GAME
+			descText				@MENUS_QUICKSTART_DESC
+			type					ITEM_TYPE_BUTTON
+			style					WINDOW_STYLE_EMPTY
+			rect					225 143 190 36
+			font					5
+			textscale				0.74
+			textalign				ITEM_ALIGN_CENTER
+			textstyle				0
+			textalignx				95
+			textaligny				10.5
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+			mouseEnter
+			{
+				show button_glow
+				setitemrect button_glow 175 197 300 30
+			}
+			mouseExit { hide button_glow }
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				close multiplayermenu ;
+				open quickgame
+			}
+			caps					1
+		}
+
+		itemDef
+		{
+			name					joinserver_button
+			group					none
+			text					@MENUS_JOIN_SERVER_CAPS
+			descText				@MENUS_SEARCH_FOR_SERVERS_TO
+			type					ITEM_TYPE_BUTTON
+			style					WINDOW_STYLE_EMPTY
+			rect					225 178 190 36
+			font					5
+			textscale				0.74
+			textalign				ITEM_ALIGN_CENTER
+			textstyle				0
+			textalignx				95
+			textaligny				10.5
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+			mouseEnter
+			{
+				show button_glow
+				setitemrect button_glow 175 232 300 30
+			}
+			mouseExit { hide button_glow }
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				close multiplayermenu ;
+				open joinserver
+			}
+			caps					1
+		}
+
+		itemDef
+		{
+			name					startserver_button
+			group					none
+			text					@MENUS_CREATE_SERVER_CAPS
+			descText				@MENUS_CREATE_YOUR_OWN_SERVER
+			type					ITEM_TYPE_BUTTON
+			style					WINDOW_STYLE_EMPTY
+			rect					225 213 190 36
+			font					5
+			textscale				0.74
+			textalign				ITEM_ALIGN_CENTER
+			textstyle				0
+			textalignx				95
+			textaligny				10.5
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+			mouseEnter
+			{
+				show button_glow
+				setitemrect button_glow 175 267 300 30
+			}
+			mouseExit { hide button_glow }
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				close multiplayermenu ;
+				open createserver
+			}
+			caps					1
+		}
+
+		itemDef
+		{
+			name					playdemo_button
+			group					none
+			text					@MENUS_PLAY_DEMO_CAPS
+			descText				@MENUS_PLAY_BACK_A_RECORDED
+			type					ITEM_TYPE_BUTTON
+			style					WINDOW_STYLE_EMPTY
+			rect					225 248 190 36
+			font					5
+			textscale				0.74
+			textalign				ITEM_ALIGN_CENTER
+			textstyle				0
+			textalignx				95
+			textaligny				10.5
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+			mouseEnter
+			{
+				show button_glow
+				setitemrect button_glow 175 302 300 30
+			}
+			mouseExit { hide button_glow }
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				close multiplayermenu ;
+				open demo
+			}
+			caps					1
+		}
+
+		itemDef
+		{
+			name					rules_button
+			group					none
+			text					@MENUS_RULES
+			descText				@MENUS_RULES_DESC
+			type					ITEM_TYPE_BUTTON
+			style					WINDOW_STYLE_EMPTY
+			rect					225 283 190 36
+			font					5
+			textscale				0.74
+			textalign				ITEM_ALIGN_CENTER
+			textstyle				0
+			textalignx				95
+			textaligny				10.5
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+			mouseEnter
+			{
+				show button_glow
+				setitemrect button_glow 175 337 300 30
+			}
+			mouseExit { hide button_glow }
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				close multiplayermenu ;
+				open rulesMenu
+			}
+			caps					1
+		}
+
+		itemDef
+		{
+			name					backbutton
+			group					fade_buttons
+			text					@MENUS_BACK
+			descText				@MENUS_BACKTOMAIN
+			type					ITEM_TYPE_BUTTON
+			style					WINDOW_STYLE_PANEL
+			rect					69 446 110 22
+			font					5
+			textscale				0.7
+			textalign				ITEM_ALIGN_CENTER
+			textstyle				0
+			textalignx				55
+			textaligny				4.5
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+			mouseEnter
+			{
+				show button_glow
+				setitemrect button_glow 30 441 190 30
+			}
+			mouseExit { hide button_glow }
+			action
+			{
+				play "sound/interface/esc.wav" ;
+				close all ;
+				open mainMenu
+			}
+			caps					1
+			backcolor				1 1 1 0.04
+			bordercolor				0.43 0.83 1 0.16
+			radius					11
+		}
+
+		itemDef
+		{
+			name					exitgamebutton
+			group					othermain
+			text					@MENUS_EXIT
+			descText				@MENUS_LEAVE_JEDI_KNIGHT_II
+			type					ITEM_TYPE_BUTTON
+			style					WINDOW_STYLE_PANEL
+			rect					265 446 110 22
+			font					5
+			textscale				0.7
+			textalign				ITEM_ALIGN_CENTER
+			textstyle				0
+			textalignx				55
+			textaligny				4.5
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+			mouseEnter
+			{
+				show button_glow
+				setitemrect button_glow 225 441 190 30
+			}
+			mouseExit { hide button_glow }
+			action
+			{
+				play "sound/weapons/saber/saberoff.mp3" ;
+				close all ;
+				open quitMenu
+			}
+			caps					1
+			backcolor				1 1 1 0.04
+			bordercolor				0.43 0.83 1 0.16
+			radius					11
+		}
+		skin					1
+		disableColor			0.36 0.42 0.50 1
+		backdrop				1
+	}
+}

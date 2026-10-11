@@ -1,0 +1,642 @@
+// advancedcreateserver.menu in the new look. Made by tools/menus/build.py from ui/jamp/advancedcreateserver.menu: change that script or its
+// rules, not this file. See docs/japlus/ui.md.
+{
+	menuDef
+	{
+		name					"advancedcreateserver"
+		fullScreen				MENU_FALSE
+		rect					40 50 560 380
+		visible					MENU_FALSE
+		focusColor				0.43 0.83 1 1
+		descX					320
+		descY					426
+		descScale				1
+		descColor				0.60 0.69 0.78 1
+		descAlignment			ITEM_ALIGN_CENTER
+		popup
+		outOfBoundsClick
+		onOpen { uiScript setui_dualforcepower }
+		onESC
+		{
+			play "sound/interface/button1.wav" ;
+			close advancedcreateserver ;
+			open createserver ;
+		}
+
+		itemDef
+		{
+			name					setup_background
+			group					none
+			style					WINDOW_STYLE_PANEL
+			rect					0 0 560 420
+			backcolor				0.43 0.83 1 0.14
+			forecolor				1 1 1 1
+			bordercolor				0 0 0 0
+			visible					1
+			decoration
+			radius					3
+		}
+
+		itemDef
+		{
+			name					advanced_title
+			group					none
+			style					WINDOW_STYLE_EMPTY
+			text					@MENUS_SERVER_RULES
+			rect					115 5 330 16
+			font					5
+			textscale				0.52
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				165
+			textaligny				0.75
+			forecolor				0.60 0.69 0.78 1
+			visible					1
+			decoration
+			caps					1
+		}
+
+		itemDef
+		{
+			name					rules_title
+			group					none
+			text					@MENUS_COMBAT_RULES
+			rect					5 35 280 20
+			font					5
+			textscale				0.59
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				140
+			textaligny				0
+			forecolor				0.60 0.69 0.78 1
+			visible					1
+			decoration
+			caps					1
+		}
+
+		itemDef
+		{
+			name					normal
+			group					grpsettings
+			type					ITEM_TYPE_YESNO
+			text					@MENUS_FRIENDLY_FIRE
+			descText				@MENUS_WHEN_ON_IT_MEANS_TEAMMATES
+			cvar					"g_friendlyfire"
+			cvarTest				"ui_netGameType"
+			showCvar
+			{
+				"2" ;
+				"3" ;
+				"4" ;
+				"5"
+			}
+			rect					5 55 280 20
+			textalign				ITEM_ALIGN_RIGHT
+			textalignx				165
+			textaligny				1
+			font					5
+			textscale				0.68
+			forecolor				0.43 0.83 1 1
+			visible					1
+			action { play "sound/interface/button1.wav" }
+			mouseEnter { show settingsButton1 }
+			mouseExit { hide settingsButton1 }
+		}
+
+		itemDef
+		{
+			name					options
+			group					grpOptions
+			type					ITEM_TYPE_YESNO
+			text					@MENUS_LIGHTSABER_ONLY
+			descText				@MENUS_SABER_ONLY_INFO
+			cvar					"g_weaponDisable"
+			rect					5 75 280 20
+			textalign				ITEM_ALIGN_RIGHT
+			textalignx				165
+			textaligny				1
+			font					5
+			textscale				0.68
+			forecolor				0.43 0.83 1 1
+			visible					1
+			cvarTest				"ui_netGameType"
+			hideCvar
+			{
+				"1" ;
+				"2" ;
+				"4" ;
+			}
+			action { play "sound/interface/button1.wav" }
+			mouseEnter { show settingsButton2 }
+			mouseExit { hide settingsButton2 }
+		}
+
+		itemDef
+		{
+			name					options
+			group					grpOptions
+			type					ITEM_TYPE_YESNO
+			text					@MENUS_LIGHTSABER_ONLY
+			descText				@MENUS_SABER_ONLY_INFO
+			cvar					"g_duelWeaponDisable"
+			rect					5 75 280 20
+			textalign				ITEM_ALIGN_RIGHT
+			textalignx				165
+			textaligny				1
+			font					5
+			textscale				0.68
+			forecolor				0.43 0.83 1 1
+			visible					1
+			cvarTest				"ui_netGameType"
+			showCvar
+			{
+				"1" ;
+				"2"
+			}
+			action { play "sound/interface/button1.wav" }
+			mouseEnter { show settingsButton2 }
+			mouseExit { hide settingsButton2 }
+		}
+
+		itemDef
+		{
+			name					options
+			group					grpOptions
+			type					ITEM_TYPE_YESNO
+			text					@MENUS_ALLOW_SABER_CHALLENGE
+			descText				@MENUS_SABER_CHALLENGE_INFO
+			cvar					"g_privateDuel"
+			cvarTest				"ui_netGameType"
+			showCvar
+			{
+				"0" ;
+				"3"
+			}
+			rect					5 95 280 20
+			textalign				ITEM_ALIGN_RIGHT
+			textalignx				165
+			textaligny				1
+			font					5
+			textscale				0.68
+			forecolor				0.43 0.83 1 1
+			visible					1
+			action { play "sound/interface/button1.wav" }
+			mouseEnter { show settingsButton3 }
+			mouseExit { hide settingsButton3 }
+		}
+
+		itemDef
+		{
+			name					normal
+			group					grpsettings
+			text					@MENUS_FORCE_MASTERY
+			descText				@MENUS_FORCE_MASTERY_INFO
+			ownerdraw				UI_FORCE_MASTERY_SET
+			cvarTest				"ui_netGameType"
+			hideCvar { "4" }
+			rect					5 115 280 20
+			textalign				ITEM_ALIGN_RIGHT
+			textalignx				165
+			textaligny				1
+			font					5
+			textscale				0.68
+			forecolor				0.43 0.83 1 1
+			visible					1
+			action { play "sound/interface/button1.wav" }
+			mouseEnter { show settingsButton4 }
+			mouseExit { hide settingsButton4 }
+		}
+
+		itemDef
+		{
+			name					options
+			group					grpOptions
+			type					ITEM_TYPE_YESNO
+			text					@MENUS_DISABLE_FORCE
+			descText				@MENUS_DISABLE_FORCE_INFO
+			cvar					"g_forcePowerDisable"
+			cvarTest				"ui_netGameType"
+			hideCvar
+			{
+				"1" ;
+				"2" ;
+				"4"
+			}
+			rect					5 135 280 20
+			textalign				ITEM_ALIGN_RIGHT
+			textalignx				165
+			textaligny				1
+			font					5
+			textscale				0.68
+			forecolor				0.43 0.83 1 1
+			visible					1
+			action
+			{
+				uiScript forcePowersDisable ;
+				play "sound/interface/button1.wav"
+			}
+			mouseEnter { show settingsButton5 }
+			mouseExit { hide settingsButton5 }
+		}
+
+		itemDef
+		{
+			name					options
+			group					grpOptions
+			type					ITEM_TYPE_MULTI
+			text					@MENUS_FORCE_POWERS_TITLE
+			descText				@MENUS_FORCE_POWERS_TITLE_DESC
+			cvar					"g_forcePowerDisable"
+			cvarTest				"ui_netGameType"
+			showCvar
+			{
+				"1" ;
+				"2"
+			}
+			cvar					"ui_dualforcepower"
+			cvarFloatList
+			{
+				@MENUS_YES 0
+				@MENUS_NO 1
+				@MENUS_LIMITED 2
+			}
+			rect					5 135 280 20
+			textalign				ITEM_ALIGN_RIGHT
+			textalignx				165
+			textaligny				1
+			font					5
+			textscale				0.68
+			forecolor				0.43 0.83 1 1
+			visible					1
+			action
+			{
+				uiScript dualForcePowers ;
+				play "sound/interface/button1.wav"
+			}
+			mouseEnter { show settingsButton5 }
+			mouseExit { hide settingsButton5 }
+		}
+
+		itemDef
+		{
+			name					expert
+			group					grpsettings
+			type					ITEM_TYPE_YESNO
+			text					@MENUS_SABERLOCKING
+			descText				@MENUS_SABERLOCKING_DESC
+			cvar					"g_saberLocking"
+			rect					5 175 280 20
+			textalign				ITEM_ALIGN_RIGHT
+			textalignx				165
+			textaligny				3
+			font					5
+			textscale				0.68
+			forecolor				0.43 0.83 1 1
+			visible					1
+			action { play "sound/interface/button1.wav" }
+			mouseEnter { show settingsButton7 }
+			mouseExit { hide settingsButton7 }
+		}
+
+		itemDef
+		{
+			name					rules_title
+			group					none
+			text					@MENUS_ADV_GAME_RULES
+			rect					5 205 280 20
+			font					5
+			textscale				0.59
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				140
+			textaligny				0
+			forecolor				0.60 0.69 0.78 1
+			visible					1
+			decoration
+			caps					1
+		}
+
+		itemDef
+		{
+			name					expert
+			group					grpsettings
+			type					ITEM_TYPE_YESNO
+			text					@MENUS_AUTO_JOIN
+			descText				@MENUS_SET_TO_ON_TO_HAVE_PLAYERS
+			cvar					"g_teamautojoin"
+			rect					5 225 280 20
+			textalign				ITEM_ALIGN_RIGHT
+			textalignx				165
+			textaligny				3
+			font					5
+			textscale				0.68
+			forecolor				0.43 0.83 1 1
+			visible					1
+			action { play "sound/interface/button1.wav" }
+			mouseEnter { show settingsButton8 }
+			mouseExit { hide settingsButton8 }
+		}
+
+		itemDef
+		{
+			name					options
+			group					grpOptions
+			type					ITEM_TYPE_YESNO
+			text					@MENUS_LIGHT_DARK_TEAMS
+			descText				@MENUS_LIGHT_DARK_INFO
+			cvar					"g_forceBasedTeams"
+			cvarTest				"ui_netGameType"
+			showCvar
+			{
+				"3" ;
+				"5"
+			}
+			rect					5 285 280 20
+			textalign				ITEM_ALIGN_RIGHT
+			textalignx				165
+			textaligny				1
+			font					5
+			textscale				0.68
+			forecolor				0.43 0.83 1 1
+			visible					1
+			action { play "sound/interface/button1.wav" }
+			mouseEnter { show settingsButton11 }
+			mouseExit { hide settingsButton11 }
+		}
+
+		itemDef
+		{
+			name					rules_title
+			group					none
+			text					@MENUS_SERVER_RULES
+			rect					285 35 280 20
+			font					5
+			textscale				0.59
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				140
+			textaligny				0
+			forecolor				0.60 0.69 0.78 1
+			visible					1
+			decoration
+			caps					1
+		}
+
+		itemDef
+		{
+			name					auto_map_cycle
+			group					grpsettings
+			type					ITEM_TYPE_YESNO
+			text					@MENUS_AUTO_MAP_CYCLE
+			cvar					"g_autoMapCycle"
+			rect					285 55 280 20
+			textalign				ITEM_ALIGN_RIGHT
+			textalignx				165
+			textaligny				1
+			font					5
+			textscale				0.68
+			forecolor				0.43 0.83 1 1
+			visible					1
+			descText				@MENUS_AUTO_MAP_CYCLE_DESC
+			action { play "sound/interface/button1.wav" }
+			mouseEnter { show settingsButton12 }
+			mouseExit { hide settingsButton12 }
+		}
+
+		itemDef
+		{
+			name					expert
+			group					grpsettings
+			type					ITEM_TYPE_YESNO
+			text					@MENUS_ENABLE_VOTING
+			cvar					"g_allowvote"
+			rect					285 75 280 20
+			textalign				ITEM_ALIGN_RIGHT
+			textalignx				165
+			textaligny				1
+			font					5
+			textscale				0.68
+			forecolor				0.43 0.83 1 1
+			visible					1
+			descText				@MENUS_THIS_ALLOWS_PLAYERS_TO
+			action { play "sound/interface/button1.wav" }
+			mouseEnter { show settingsButton13 }
+			mouseExit { hide settingsButton13 }
+		}
+
+		itemDef
+		{
+			name					normal
+			group					grpsettings
+			type					ITEM_TYPE_MULTI
+			text					@MENUS_DEDICATED_SERVER
+			cvar					"ui_dedicated"
+			cvarFloatList { @MENUS_NO 0 @MENUS_LAN 1 @MENUS_INTERNET 2 }
+			rect					285 95 280 20
+			textalign				ITEM_ALIGN_RIGHT
+			textalignx				165
+			textaligny				1
+			font					5
+			textscale				0.68
+			forecolor				0.43 0.83 1 1
+			visible					1
+			descText				@MENUS_A_DEDICATED_SERVER_IS
+			action { play "sound/interface/button1.wav" }
+			mouseEnter { show settingsButton14 }
+			mouseExit { hide settingsButton14 }
+		}
+
+		itemDef
+		{
+			name					expert
+			group					grpsettings
+			type					4
+			text					@MENUS_PASSWORD_1
+			cvar					"g_password"
+			rect					285 115 280 20
+			textalign				ITEM_ALIGN_RIGHT
+			textalignx				130
+			textaligny				1
+			font					5
+			textscale				0.68
+			maxchars				8
+			forecolor				0.43 0.83 1 1
+			visible					1
+			descText				@MENUS_SETS_PASSWORD_FOR_YOUR
+			action { play "sound/interface/button1.wav" }
+			mouseEnter { show settingsButton15 }
+			mouseExit { hide settingsButton15 }
+		}
+
+		itemDef
+		{
+			name					rules_title
+			group					none
+			text					@MENUS_CONNECTION_RULES
+			rect					285 205 280 20
+			font					5
+			textscale				0.59
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				140
+			textaligny				0
+			forecolor				0.60 0.69 0.78 1
+			visible					1
+			decoration
+			caps					1
+		}
+
+		itemDef
+		{
+			name					normal
+			group					grpsettings
+			type					ITEM_TYPE_YESNO
+			text					@MENUS_PURE_SERVER
+			descText				@MENUS_CLIENT_MUST_HAVE_EXACT
+			cvar					"sv_pure"
+			rect					285 225 280 20
+			textalign				ITEM_ALIGN_RIGHT
+			textalignx				165
+			textaligny				1
+			font					5
+			textscale				0.68
+			forecolor				0.43 0.83 1 1
+			visible					1
+			action { play "sound/interface/button1.wav" }
+			mouseEnter { show settingsButton16 }
+			mouseExit { hide settingsButton16 }
+		}
+
+		itemDef
+		{
+			name					expert
+			group					grpsettings
+			type					ITEM_TYPE_YESNO
+			text					@MENUS_AUTO_DOWNLOAD
+			descText				@MENUS_CLIENTS_CAN_DOWNLOAD
+			cvar					"sv_allowdownload"
+			rect					285 245 280 20
+			textalign				ITEM_ALIGN_RIGHT
+			textalignx				165
+			textaligny				1
+			font					5
+			textscale				0.68
+			forecolor				0.43 0.83 1 1
+			visible					1
+			action { play "sound/interface/button1.wav" }
+			mouseEnter { show settingsButton17 }
+			mouseExit { hide settingsButton17 }
+		}
+
+		itemDef
+		{
+			name					expert
+			group					grpsettings
+			type					ITEM_TYPE_NUMERICFIELD
+			maxchars				4
+			text					@MENUS_MINIMUM_PING
+			descText				@MENUS_FASTEST_CLIENT_ALLOWED
+			cvar					"sv_minping"
+			rect					285 265 280 20
+			textalign				ITEM_ALIGN_RIGHT
+			textalignx				165
+			textaligny				1
+			font					5
+			textscale				0.68
+			forecolor				0.43 0.83 1 1
+			visible					1
+			action { play "sound/interface/button1.wav" }
+			mouseEnter { show settingsButton18 }
+			mouseExit { hide settingsButton18 }
+		}
+
+		itemDef
+		{
+			name					expert
+			group					grpsettings
+			type					ITEM_TYPE_NUMERICFIELD
+			maxchars				4
+			text					@MENUS_MAXIMUM_PING
+			descText				@MENUS_SLOWEST_CLIENT_ALLOWED
+			cvar					"sv_maxping"
+			rect					285 285 280 20
+			textalign				ITEM_ALIGN_RIGHT
+			textalignx				165
+			textaligny				1
+			font					5
+			textscale				0.68
+			forecolor				0.43 0.83 1 1
+			visible					1
+			action { play "sound/interface/button1.wav" }
+			mouseEnter { show settingsButton19 }
+			mouseExit { hide settingsButton19 }
+		}
+
+		itemDef
+		{
+			name					expert
+			group					grpsettings
+			type					ITEM_TYPE_NUMERICFIELD
+			text					@MENUS_MAX_RATE
+			descText				@MENUS_DATA_TRANSFER_RATE_TO
+			cvar					"sv_maxrate"
+			rect					285 305 280 20
+			textalign				ITEM_ALIGN_RIGHT
+			textalignx				165
+			textaligny				1
+			font					5
+			textscale				0.68
+			forecolor				0.43 0.83 1 1
+			visible					1
+			action { play "sound/interface/button1.wav" }
+			mouseEnter { show settingsButton20 }
+			mouseExit { hide settingsButton20 }
+		}
+
+		itemDef
+		{
+			name					expert
+			group					grpsettings
+			type					ITEM_TYPE_NUMERICFIELD
+			text					@MENUS_RECONNECT_LIMIT
+			descText				@MENUS_MINIMUM_TIME_ALLOWED
+			cvar					"sv_reconnectlimit"
+			maxchars				4
+			rect					285 325 280 20
+			textalign				ITEM_ALIGN_RIGHT
+			textalignx				165
+			textaligny				1
+			font					5
+			textscale				0.68
+			forecolor				0.43 0.83 1 1
+			visible					1
+			action { play "sound/interface/button1.wav" }
+			mouseEnter { show settingsButton21 }
+			mouseExit { hide settingsButton21 }
+		}
+
+		itemDef
+		{
+			name					done
+			text					@MENUS_DONE
+			descText				@MENUS_GO_BACK_TO_STANDARD_SETTINGS
+			type					ITEM_TYPE_BUTTON
+			font					5
+			textscale				0.74
+			style					WINDOW_STYLE_EMPTY
+			rect					200 352 160 30
+			textalignx				80
+			textaligny				2.5
+			textalign				ITEM_ALIGN_CENTER
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				close advancedcreateserver ;
+				open createserver ;
+			}
+			mouseEnter { show doneButton }
+			mouseExit { hide doneButton }
+			caps					1
+		}
+		skin					1
+		disableColor			0.36 0.42 0.50 1
+		backdrop				1
+	}
+}

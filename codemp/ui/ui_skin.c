@@ -64,6 +64,8 @@ static struct {
 	qboolean	tried;
 	qhandle_t	fonts[2];			// SKIN_FONT_SANS and SKIN_FONT_MONO
 	qboolean	fontsTried;
+	qhandle_t	pointer;			// the arrow of the mouse
+	qboolean	pointerTried;
 } skin;
 
 static byte skinPic[256 * 256 * 4];
@@ -394,6 +396,69 @@ void Skin_Backdrop( void ) {
 		DC->drawHandlePic( left + ( 1.0f - fx ) * ( width + 8.0f ) - 4.0f, fy * SCREEN_HEIGHT, size, size, skin.soft );
 	}
 	DC->setColor( NULL );
+}
+
+// Is a point inside the arrow of the mouse? Its outline in a square of 32, the tip at the top left.
+static qboolean Skin_InArrow( float x, float y ) {
+	static const float	arrow[7][2] = { { 3, 2 }, { 3, 24 }, { 9, 18.5f }, { 13.5f, 28.5f }, { 17.5f, 26.8f }, { 13, 17 }, { 21, 17 } };
+	qboolean			inside = qfalse;
+	int					i, j;
+
+	for ( i = 0, j = 6; i < 7; j = i++ ) {
+		if ( ( arrow[i][1] > y ) != ( arrow[j][1] > y )
+			&& x < ( arrow[j][0] - arrow[i][0] ) * ( y - arrow[i][1] ) / ( arrow[j][1] - arrow[i][1] ) + arrow[i][0] ) {
+			inside = !inside;
+		}
+	}
+	return inside;
+}
+
+/*
+=================
+Skin_Cursor
+
+The pointer of the mouse in the new look: a light arrow with a dark rim, its tip at x and y
+=================
+*/
+void Skin_Cursor( float x, float y ) {
+	if ( !Skin_Ready() ) {
+		return;
+	}
+	if ( !skin.pointerTried ) {
+		int px, py, sx, sy, k;
+
+		skin.pointerTried = qtrue;
+		for ( py = 0; py < 32; py++ ) {
+			for ( px = 0; px < 32; px++ ) {
+				// how much of the pixel the arrow covers, and how much the arrow made 1.3 pixels fatter does
+				static const float	ring[8][2] = { { 1.3f, 0 }, { -1.3f, 0 }, { 0, 1.3f }, { 0, -1.3f }, { 0.9f, 0.9f }, { -0.9f, 0.9f }, { 0.9f, -0.9f }, { -0.9f, -0.9f } };
+				int					fill = 0, rim = 0;
+				byte				*out = &skinPic[( py * 32 + px ) * 4];
+
+				for ( sy = 0; sy < 4; sy++ ) {
+					for ( sx = 0; sx < 4; sx++ ) {
+						const float	fx = px + ( sx + 0.5f ) * 0.25f, fy = py + ( sy + 0.5f ) * 0.25f;
+						qboolean	near = Skin_InArrow( fx, fy );
+
+						fill += near;
+						for ( k = 0; k < 8 && !near; k++ ) {
+							near = Skin_InArrow( fx + ring[k][0], fy + ring[k][1] );
+						}
+						rim += near;
+					}
+				}
+				out[0] = (byte)( 16 + fill * 232 / 16 );
+				out[1] = (byte)( 26 + fill * 224 / 16 );
+				out[2] = (byte)( 40 + fill * 215 / 16 );
+				out[3] = (byte)( rim * 255 / 16 );
+			}
+		}
+		skin.pointer = DC->registerShaderRGBA( "skin_pointer", skinPic, 32, 32, RGBA_SHADER_OVER );
+	}
+	if ( skin.pointer ) {
+		DC->setColor( NULL );
+		DC->drawHandlePic( x - 2.0f, y - 1.5f, 21.0f, 21.0f, skin.pointer );
+	}
 }
 
 /*

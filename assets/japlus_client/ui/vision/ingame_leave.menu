@@ -1,0 +1,311 @@
+// ingame_leave.menu in the new look. Made by tools/menus/build.py from ui/jamp/ingame_leave.menu: change that script or its
+// rules, not this file. See docs/japlus/ui.md.
+{
+	menuDef
+	{
+		name					"ingame_leave"
+		visible					1
+		fullScreen				0
+		outOfBoundsClick
+		rect					474 40 156 100
+		focusColor				0.43 0.83 1 1
+		onOpen
+		{
+			show grpMenu ;
+			hide grpConfirm
+		}
+
+		itemDef
+		{
+			name					background_pic
+			group					none
+			style					WINDOW_STYLE_PANEL
+			rect					0 0 156 100
+			forecolor				1 1 1 1
+			visible					1
+			decoration
+			backcolor				0.035 0.07 0.12 0.55
+			bordercolor				0.43 0.83 1 0.16
+			radius					5
+		}
+
+		itemDef
+		{
+			name					leave
+			text					@MENUS_MAIN_MENU
+			group					grpMenu
+			style					2
+			type					1
+			rect					2 5 152 30
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				76
+			textaligny				1.5
+			font					5
+			textscale				0.86
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				hide grpMenu ;
+				hide buttons ;
+				show leaveConfirm
+			}
+			mouseEnter { show button1 }
+			mouseExit { hide button1 }
+		}
+
+		itemDef
+		{
+			name					leave
+			group					grpMenu
+			text					@MENUS_RESTART_MATCH
+			style					2
+			type					1
+			rect					2 35 152 30
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				76
+			textaligny				1.5
+			font					5
+			textscale				0.86
+			forecolor				0.86 0.92 0.97 1
+			cvarTest				"cl_currentServerAddress"
+			enableCvar { "Localhost" }
+			visible					1
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				hide grpMenu ;
+				hide buttons ;
+				show restartConfirm
+			}
+			mouseEnter { show button2 }
+			mouseExit { hide button2 }
+		}
+
+		itemDef
+		{
+			name					leave
+			group					grpMenu
+			type					1
+			text					@MENUS_QUIT_PROGRAM
+			style					2
+			rect					2 65 152 30
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				76
+			textaligny				1.5
+			font					5
+			textscale				0.86
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				hide grpMenu ;
+				hide buttons ;
+				show quitConfirm
+			}
+			mouseEnter { show button3 }
+			mouseExit { hide button3 }
+		}
+
+		itemDef
+		{
+			name					leaveConfirm
+			text					@MENUS_GO_TO_MAIN_MENU
+			group					grpConfirm
+			style					2
+			rect					2 5 152 30
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				76
+			textaligny				1.5
+			font					5
+			textscale				0.86
+			forecolor				0.60 0.69 0.78 1
+			decoration
+			visible					1
+		}
+
+		itemDef
+		{
+			name					leaveConfirm
+			text					@MENUS_YES
+			group					grpConfirm
+			type					1
+			style					0
+			rect					2 35 152 30
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				76
+			textaligny				1.5
+			font					5
+			textscale				0.86
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				uiScript leave
+			}
+			mouseEnter { show button2 }
+			mouseExit { hide button2 }
+		}
+
+		itemDef
+		{
+			name					leaveConfirm
+			text					@MENUS_NO
+			group					grpConfirm
+			type					1
+			style					0
+			rect					2 65 152 30
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				76
+			textaligny				1.5
+			font					5
+			textscale				0.86
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				hide grpConfirm ;
+				show grpMenu
+			}
+			mouseEnter { show button3 }
+			mouseExit { hide button3 }
+		}
+
+		itemDef
+		{
+			name					restartConfirm
+			text					@MENUS_MATCH
+			group					grpConfirm
+			style					2
+			rect					2 5 152 30
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				76
+			textaligny				1.5
+			font					5
+			textscale				0.86
+			forecolor				0.60 0.69 0.78 1
+			decoration
+			visible					1
+		}
+
+		itemDef
+		{
+			name					restartConfirm
+			text					@MENUS_YES
+			group					grpConfirm
+			type					1
+			rect					2 35 152 30
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				76
+			textaligny				1.5
+			font					5
+			textscale				0.86
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				exec "map_restart" ;
+				close ingame_leave ;
+				close ingame
+			}
+			mouseEnter { show button2 }
+			mouseExit { hide button2 }
+		}
+
+		itemDef
+		{
+			name					restartConfirm
+			text					@MENUS_NO
+			group					grpConfirm
+			type					1
+			rect					2 65 152 30
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				76
+			textaligny				1.5
+			font					5
+			textscale				0.86
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				hide grpConfirm ;
+				show grpMenu
+			}
+			mouseEnter { show button3 }
+			mouseExit { hide button3 }
+		}
+
+		itemDef
+		{
+			name					quitConfirm
+			text					@MENUS_PROGRAM
+			group					grpConfirm
+			style					2
+			rect					2 5 152 30
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				76
+			textaligny				1.5
+			font					5
+			textscale				0.86
+			forecolor				0.60 0.69 0.78 1
+			decoration
+			visible					1
+		}
+
+		itemDef
+		{
+			name					quitConfirm
+			text					@MENUS_YES
+			group					grpConfirm
+			type					1
+			rect					2 35 152 30
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				76
+			textaligny				1.5
+			font					5
+			textscale				0.86
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				uiScript quit
+			}
+			mouseEnter { show button2 }
+			mouseExit { hide button2 }
+		}
+
+		itemDef
+		{
+			name					quitConfirm
+			text					@MENUS_NO
+			group					grpConfirm
+			type					1
+			rect					2 65 152 30
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				76
+			textaligny				1.5
+			font					5
+			textscale				0.86
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				hide grpConfirm ;
+				show grpMenu
+			}
+			mouseEnter { show button3 }
+			mouseExit { hide button3 }
+		}
+		skin					1
+		disableColor			0.36 0.42 0.50 1
+		openSlide				8
+	}
+}

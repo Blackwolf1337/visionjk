@@ -677,6 +677,18 @@ void Fade(int *flags, float *f, float clamp, int *nextTime, int offsetTime, qboo
 
 #define MENU_OPEN_MSEC	180		// how long a menu with "openSlide" takes to come up
 
+// Where the line of text of an item is, for the widget that stands in it (a switch, a slider, the box of a
+// field): the place of its label, or the item itself when it has none
+static void Item_SkinLine( const itemDef_t *item, float *y, float *h ) {
+	if ( item->text && item->textRect.h > 0.0f ) {
+		*h = DC->textHeight( "A", item->textscale, item->iMenuFont );
+		*y = item->textRect.y;
+	} else {
+		*h = item->window.rect.h;
+		*y = item->window.rect.y;
+	}
+}
+
 // Is this item drawn in the look of ui_skin.c? Its menu asks for it ("skin 1") and the engine can.
 static qboolean Item_Skinned( const itemDef_t *item ) {
 	return (qboolean)( item->parent && ( (const menuDef_t *)item->parent )->skin && Skin_Ready() );
@@ -4776,6 +4788,22 @@ void Item_Text_Paint(itemDef_t *item) {
 		textPtr = text;
 	}
 
+	// "caps 1": in capital letters. Only where that is safe: text in UTF-8, or without a byte above 127 (a
+	// byte of a letter of two bytes in another encoding may look like a small letter)
+	if ( item->caps ) {
+		const char *c;
+
+		for ( c = textPtr; *c && !( *c & 0x80 ); c++ )
+			;
+		if ( !*c || DC->getCVarValue( "cl_utf8Text" ) ) {
+			if ( textPtr != text ) {
+				Q_strncpyz( text, textPtr, sizeof( text ) );
+				textPtr = text;
+			}
+			Q_strupr( text );
+		}
+	}
+
 	// this needs to go here as it sets extents for cvar types as well
 	Item_SetTextExtents(item, &width, &height, textPtr);
 
@@ -4836,10 +4864,12 @@ void Item_TextField_Paint(itemDef_t *item) {
 	offset = (item->text && *item->text) ? 8 : 0;
 	if ( Item_Skinned( item ) ) {
 		// the box the text is typed into, from where the label ends to the end of the item
-		const float boxX = item->textRect.x + item->textRect.w + offset - 3.0f;
+		const float	boxX = item->textRect.x + item->textRect.w + offset - 3.0f;
+		float		lineY, lineH;
 
+		Item_SkinLine( item, &lineY, &lineH );
 		Item_TextColor( item, &newColor );
-		Skin_Field( item, boxX, item->window.rect.y + 1.0f, item->window.rect.x + item->window.rect.w - boxX - 2.0f, item->window.rect.h - 2.0f,
+		Skin_Field( item, boxX, lineY - 2.0f, Q_max( 40.0f, item->window.rect.x + item->window.rect.w - boxX - 2.0f ), lineH + 4.0f,
 			(qboolean)( ( item->window.flags & WINDOW_HASFOCUS ) && g_editingField ) );
 	}
 	// the text that is painted does not start in the middle of a character of UTF-8 (Item_TextField_CharLen)
@@ -4878,14 +4908,14 @@ void Item_YesNo_Paint(itemDef_t *item) {
 	Item_TextColor(item, &color);
 	if ( Item_Skinned( item ) ) {
 		// a switch in place of the word
-		const qboolean on = (qboolean)( item->invertYesNo ? ( value == 0 ) : ( value != 0 ) );
+		const qboolean	on = (qboolean)( item->invertYesNo ? ( value == 0 ) : ( value != 0 ) );
+		float			lineY, lineH;
 
 		if ( item->text ) {
 			Item_Text_Paint( item );
-			Skin_Switch( item, item->textRect.x + item->textRect.w + 8, item->window.rect.y, item->window.rect.h, on );
-		} else {
-			Skin_Switch( item, item->window.rect.x + 2, item->window.rect.y, item->window.rect.h, on );
 		}
+		Item_SkinLine( item, &lineY, &lineH );
+		Skin_Switch( item, item->text ? item->textRect.x + item->textRect.w + 8 : item->window.rect.x + 2, lineY, lineH, on );
 		return;
 	}
 	if (item->text)
@@ -5173,8 +5203,11 @@ void Item_Slider_Paint(itemDef_t *item) {
 		const char				*number = ( range > 0.0f && range <= 2.0f ) ? va( "%i %%", (int)( ( value - editDef->minVal ) / range * 100.0f + 0.5f ) )
 									: ( value == (int)value ) ? va( "%i", (int)value ) : va( "%.2f", value );
 
+		float					lineY, lineH;
+
+		Item_SkinLine( item, &lineY, &lineH );
 		Item_TextColor( item, &newColor );
-		Skin_Slider( item, x, y, SLIDER_WIDTH, item->window.rect.h, ( Item_Slider_ThumbPosition( item ) - x ) / SLIDER_WIDTH );
+		Skin_Slider( item, x, lineY, SLIDER_WIDTH, lineH, ( Item_Slider_ThumbPosition( item ) - x ) / SLIDER_WIDTH );
 		if ( item->cvar ) {
 			DC->drawText( x + SLIDER_WIDTH + 8, item->textRect.y, item->textscale, newColor, number, 0, 0, item->textStyle, item->iMenuFont );
 		}
@@ -5253,9 +5286,11 @@ void Item_Bind_Paint(itemDef_t *item)
 
 		if ( Item_Skinned( item ) ) {
 			// the key stands in a box, which is lit while the next key pressed will be taken for it
+			float lineY, lineH;
+
+			Item_SkinLine( item, &lineY, &lineH );
 			Item_TextColor( item, &newColor );
-			Skin_Field( item, startingXPos - 4, item->window.rect.y + 1.0f, textWidth + 8, item->window.rect.h - 2.0f,
-				(qboolean)( g_bindItem == item && g_waitingForKey ) );
+			Skin_Field( item, startingXPos - 4, lineY - 1.0f, textWidth + 8, lineH + 2.0f, (qboolean)( g_bindItem == item && g_waitingForKey ) );
 		}
 		DC->drawText(startingXPos, item->textRect.y + yAdj, textScale, newColor, g_nameBind, 0, maxChars, item->textStyle,item->iMenuFont);
 	}
@@ -5627,6 +5662,16 @@ void Item_TextScroll_Paint(itemDef_t *item)
 	// draw scrollbar to right side of the window
 	x = item->window.rect.x + item->window.rect.w - SCROLLBAR_SIZE - 1;
 	y = item->window.rect.y + 1;
+	if ( Item_Skinned( item ) ) {
+		// a thin bar over the same track the mouse works on
+		const float track = item->window.rect.h - SCROLLBAR_SIZE * 3;
+
+		scrollPtr->endPos = scrollPtr->startPos;
+		thumb = Item_TextScroll_ThumbDrawPosition( item );
+		Skin_ScrollBar( x, y + SCROLLBAR_SIZE, SCROLLBAR_SIZE, item->window.rect.h - SCROLLBAR_SIZE * 2,
+			( track > 0.0f ) ? ( thumb - y - SCROLLBAR_SIZE ) / ( track + SCROLLBAR_SIZE ) : 0.0f,
+			( track > 0.0f ) ? SCROLLBAR_SIZE / ( track + SCROLLBAR_SIZE ) : 1.0f, qfalse, ( (menuDef_t *)item->parent )->focusColor );
+	} else {
 	DC->drawHandlePic(x, y, SCROLLBAR_SIZE, SCROLLBAR_SIZE, DC->Assets.scrollBarArrowUp);
 	y += SCROLLBAR_SIZE - 1;
 
@@ -5643,6 +5688,7 @@ void Item_TextScroll_Paint(itemDef_t *item)
 		thumb = y - SCROLLBAR_SIZE - 1;
 	}
 	DC->drawHandlePic(x, thumb, SCROLLBAR_SIZE, SCROLLBAR_SIZE, DC->Assets.scrollBarThumb);
+	}
 
 	if (item->cvar)
 	{
@@ -6668,9 +6714,15 @@ void Item_Paint(itemDef_t *item)
 					float fDescScale = parent->descScale ? parent->descScale : 1;
 					float fDescScaleCopy = fDescScale;
 					int iYadj = 0;
+					// in a menu of the new look the explanation is set in its font
+					const int descFont = Item_Skinned( item ) ? SKIN_FONT_SANS : FONT_SMALL2;
+
+					if ( Item_Skinned( item ) ) {
+						VectorCopy4( parent->descColor, color );
+					}
 					while (1)
 					{
-						textWidth = DC->textWidth(textPtr,fDescScale, FONT_SMALL2);
+						textWidth = DC->textWidth(textPtr,fDescScale, descFont);
 
 						if (parent->descAlignment == ITEM_ALIGN_RIGHT)
 						{
@@ -6703,7 +6755,7 @@ void Item_Paint(itemDef_t *item)
 							iYadj = iOriginalTextHeight - DC->textHeight(textPtr, fDescScale, FONT_MEDIUM);
 						}
 
-						DC->drawText(xPos, parent->descY + iYadj, fDescScale, parent->descColor, textPtr, 0, 0, item->textStyle, FONT_SMALL2);
+						DC->drawText(xPos, parent->descY + iYadj, fDescScale, parent->descColor, textPtr, 0, 0, item->textStyle, descFont);
 						break;
 					}
 				}
@@ -8003,6 +8055,17 @@ qboolean ItemParse_showStat( itemDef_t *item, int handle ) {
 	return PC_String_Parse( handle, &item->showStat );
 }
 
+// caps 1: the text of the item is drawn in capital letters
+qboolean ItemParse_caps( itemDef_t *item, int handle ) {
+	int i;
+
+	if ( !PC_Int_Parse( handle, &i ) ) {
+		return qfalse;
+	}
+	item->caps = (qboolean)( i != 0 );
+	return qtrue;
+}
+
 qboolean ItemParse_bordersize( itemDef_t *item, int handle ) {
 	if (!PC_Float_Parse(handle, &item->window.borderSize)) {
 		return qfalse;
@@ -8829,6 +8892,7 @@ keywordHash_t itemParseKeywords[] = {
 	{"glowcolor",		ItemParse_glowcolor,		NULL	},
 	{"stat",			ItemParse_stat,				NULL	},
 	{"showStat",		ItemParse_showStat,			NULL	},
+	{"caps",			ItemParse_caps,				NULL	},
 	{"style",			ItemParse_style,			NULL	},
 	{"text",			ItemParse_text,				NULL	},
 	{"textalign",		ItemParse_textalign,		NULL	},

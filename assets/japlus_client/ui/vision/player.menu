@@ -1,0 +1,450 @@
+// player.menu in the new look. Made by tools/menus/build.py from ui/jamp/player.menu: change that script or its
+// rules, not this file. See docs/japlus/ui.md.
+{
+	menuDef
+	{
+		name					"playerMenu"
+		fullScreen				1
+		rect					0 0 640 480
+		focusColor				0.43 0.83 1 1
+		descX					40
+		descY					80
+		descScale				0.8
+		descColor				0.60 0.69 0.78 1
+		descAlignment			ITEM_ALIGN_LEFT
+		onOpen { uiScript update "ui_GetName" }
+		onESC
+		{
+			play "sound/interface/menuroam.wav"
+			close playerMenu
+			open mainMenu
+		}
+		onClose { uiScript update "ui_SetName" }
+
+		itemDef
+		{
+			name					vision_bar
+			rect					-400 0 1440 34
+			visible					1
+			style					WINDOW_STYLE_FILLED
+			backcolor				0.02 0.04 0.08 0.55
+			decoration
+		}
+
+		itemDef
+		{
+			name					vision_bar_line
+			rect					-400 34 1440 0.67
+			visible					1
+			style					WINDOW_STYLE_FILLED
+			backcolor				0.43 0.83 1 0.22
+			decoration
+		}
+
+		itemDef
+		{
+			name					vision_mark
+			rect					24 7 120 20
+			visible					1
+			text					"VISIONJK"
+			font					5
+			textscale				1
+			forecolor				1 1 1 1
+			decoration
+		}
+
+		itemDef
+		{
+			name					vision_mark2
+			rect					112 12 160 14
+			visible					1
+			text					"JEDI ACADEMY"
+			font					5
+			textscale				0.5
+			forecolor				0.60 0.69 0.78 1
+			decoration
+		}
+
+		itemDef
+		{
+			name					vision_here
+			rect					414 31 52 2
+			visible					1
+			style					WINDOW_STYLE_PANEL
+			backcolor				0.43 0.83 1 1
+			radius					1
+			decoration
+		}
+
+		itemDef
+		{
+			name					vision_title
+			rect					40 46 400 28
+			visible					1
+			text					@MENUS_PROFILE
+			font					5
+			textscale				1.45
+			forecolor				1 1 1 1
+			decoration
+			textaligny				2
+		}
+
+		itemDef
+		{
+			name					background
+			group					none
+			style					WINDOW_STYLE_PANEL
+			rect					13 138 610 245
+			bordercolor				0.43 0.83 1 0.16
+			forecolor				1 1 1 1
+			visible					1
+			decoration
+			backcolor				0 0 0 0
+			radius					5
+		}
+
+		itemDef
+		{
+			name					background
+			group					none
+			style					WINDOW_STYLE_PANEL
+			rect					15 138 610 20
+			backcolor				0.43 0.83 1 0.14
+			forecolor				1 1 1 1
+			visible					1
+			decoration
+			bordercolor				0 0 0 0
+			radius					3
+		}
+
+		itemDef
+		{
+			name					newgamebutton
+			group					toprow
+			style					WINDOW_STYLE_EMPTY
+			type					ITEM_TYPE_BUTTON
+			rect					330 7 72 20
+			text					@MENUS_PLAY
+			descText				@MENUS_START_PLAYING_NOW
+			font					5
+			textscale				0.66
+			textaligny				4
+			textalign				ITEM_ALIGN_CENTER
+			textstyle				0
+			textalignx				36
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+			mouseEnter { show newgamebutton_glow }
+			mouseExit { hide newgamebutton_glow }
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				close all ;
+				open multiplayermenu
+			}
+			caps					1
+		}
+
+		itemDef
+		{
+			name					profilebutton
+			group					toprow
+			text					@MENUS_PROFILE
+			descText				@MENUS_PROFILE_DESC
+			style					WINDOW_STYLE_EMPTY
+			type					ITEM_TYPE_BUTTON
+			rect					404 7 72 20
+			textaligny				4
+			font					5
+			textscale				0.66
+			textalign				ITEM_ALIGN_CENTER
+			textstyle				0
+			textalignx				36
+			forecolor				0.43 0.83 1 1
+			visible					1
+			mouseEnter {  }
+			mouseExit {  }
+			caps					1
+		}
+
+		itemDef
+		{
+			name					controlsbutton
+			group					toprow
+			text					@MENUS_CONTROLS2
+			descText				@MENUS_CONFIGURE_GAME_CONTROLS
+			type					ITEM_TYPE_BUTTON
+			style					WINDOW_STYLE_EMPTY
+			rect					478 7 72 20
+			font					5
+			textscale				0.66
+			textaligny				4
+			textalign				ITEM_ALIGN_CENTER
+			textstyle				0
+			textalignx				36
+			backcolor				0 0 0 0
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+			mouseEnter { show controlsbutton_glow }
+			mouseExit { hide controlsbutton_glow }
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				close all ;
+				open controlsmenu
+			}
+			caps					1
+		}
+
+		itemDef
+		{
+			name					setupbutton
+			group					toprow
+			text					@MENUS_SETUP
+			descText				@MENUS_CONFIGURE_GAME_SETTINGS
+			type					ITEM_TYPE_BUTTON
+			style					WINDOW_STYLE_EMPTY
+			rect					552 7 72 20
+			font					5
+			textscale				0.66
+			textaligny				4
+			textalign				ITEM_ALIGN_CENTER
+			textstyle				0
+			textalignx				36
+			backcolor				0 0 0 0
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+			mouseEnter { show setupbutton_glow }
+			mouseExit { hide setupbutton_glow }
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				close all ;
+				open setup_menu
+			}
+			caps					1
+		}
+
+		itemDef
+		{
+			name					exitgamebutton
+			group					exit
+			text					@MENUS_EXIT
+			descText				@MENUS_JEDI_KNIGHT_II
+			type					ITEM_TYPE_BUTTON
+			style					WINDOW_STYLE_PANEL
+			rect					69 446 110 22
+			font					5
+			textscale				0.7
+			textalign				ITEM_ALIGN_CENTER
+			textstyle				0
+			textalignx				55
+			textaligny				4.5
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+			mouseEnter { show exitgamebutton_glow }
+			mouseExit { hide exitgamebutton_glow }
+			action
+			{
+				play "sound/weapons/saber/saberoff.mp3"
+				close all
+				open quitMenu
+			}
+			caps					1
+			backcolor				1 1 1 0.04
+			bordercolor				0.43 0.83 1 0.16
+			radius					11
+		}
+
+		itemDef
+		{
+			name					namefield
+			type					ITEM_TYPE_EDITFIELD
+			style					0
+			text					@MENUS_NAME1
+			cvar					"ui_Name"
+			maxchars				26
+			rect					15 115 300 28
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				0
+			textaligny				-3.5
+			font					5
+			textscale				0.86
+			forecolor				0.60 0.69 0.78 1
+			outlinecolor			1 .5 .5 .5
+			backcolor				0 0 0 0
+			border					0
+			bordercolor				0 0 0 0
+			descText				@MENUS_ENTER_YOUR_NAME_HERE
+			visible					1
+			action { play "sound/interface/button1.wav" }
+			mouseenter { show nameglow }
+			mouseexit { hide nameglow }
+		}
+
+		itemDef
+		{
+			name					modeltitle
+			style					0
+			text					@MENUS_CHARACTER_MODEL
+			rect					320 136 0 0
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				0
+			textaligny				-1.5
+			outlinecolor			1 .5 .5 .5
+			backcolor				0 0 0 0
+			font					5
+			textscale				0.86
+			forecolor				0.60 0.69 0.78 1
+			border					0
+			bordercolor				0 0 0 0
+			visible					1
+			action { play "sound/interface/button1.wav" ; }
+		}
+
+		itemDef
+		{
+			name					setcolor
+			style					0
+			text					@MENUS_TEAM_COLOR
+			ownerdraw				UI_SKIN_COLOR
+			rect					50 161 160 20
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				0
+			textaligny				-3.65
+			outlinecolor			1 .5 .5 .5
+			backcolor				0 0 0 0
+			font					5
+			textscale				0.77
+			forecolor				0.60 0.69 0.78 1
+			border					0
+			bordercolor				0 0 0 0
+			descText				@MENUS_CHOOSE_THE_COLOR_FOR
+			visible					1
+			action { play "sound/interface/button1.wav" ; }
+		}
+
+		itemDef
+		{
+			name					headlist
+			rect					30 176 292 206
+			type					ITEM_TYPE_LISTBOX
+			style					WINDOW_STYLE_PANEL
+			elementwidth			34
+			elementheight			34
+			elementtype				LISTBOX_IMAGE
+			feeder					FEEDER_Q3HEADS
+			backcolor				0 0 0 0.30
+			bordercolor				0.43 0.83 1 0.16
+			forecolor				0.43 0.83 1 1
+			descText				@MENUS_CHOOSE_THE_MODEL_FOR
+			visible					1
+			textscale				0.6
+			action { play "sound/interface/button1.wav" ; }
+			mouseenter { setitemcolor headlist bordercolor 1 0 0 1 }
+			mouseexit { setitemcolor headlist bordercolor .5 .5 .5 1 }
+			radius					4
+			outlinecolor			0.43 0.83 1 0.22
+			font					5
+		}
+
+		itemDef
+		{
+			name					character
+			group					models
+			type					ITEM_TYPE_MODEL
+			rect					304 176 200 225
+			model_g2anim			"BOTH_WALK1"
+			asset_model				"models/players/jedi_hm/model.glm"
+			model_g2skin			"models/players/jedi_hm/|head_b1|torso_f1|lower_a1"
+			model_angle				180
+			model_g2mins			-30 -15 -14
+			model_g2maxs			20 15 30
+			model_rotation			50
+			model_fovx				50
+			model_fovy				50
+			isCharacter				1
+			visible					1
+			decoration
+		}
+
+		itemDef
+		{
+			name					customtitle
+			style					0
+			text					@MENUS_CUSTOM
+			rect					425 202 200 26
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				100
+			textaligny				-1.5
+			outlinecolor			1 .5 .5 .5
+			backcolor				0 0 0 0
+			font					5
+			textscale				0.86
+			forecolor				0.60 0.69 0.78 1
+			visible					1
+			decoration
+		}
+
+		itemDef
+		{
+			name					custom
+			group					none
+			background				"gfx/mp/custom_mp_default"
+			descText				@MENUS_CUSTOMPLAYER_DESC
+			type					ITEM_TYPE_BUTTON
+			style					WINDOW_STYLE_SHADER
+			rect					480 232 96 96
+			font					3
+			textscale				1
+			textalignx				65
+			textaligny				-1
+			textalign				ITEM_ALIGN_CENTER
+			textstyle				3
+			forecolor				.5 .5 .5 1
+			visible					1
+			mouseenter { setitemcolor custom forecolor 0.43 0.83 1 1 }
+			mouseexit { setitemcolor custom forecolor .5 .5 .5 1 }
+			action
+			{
+				play "sound/interface/button1.wav"
+				close playerMenu
+				open playerMenu2
+			}
+		}
+
+		itemDef
+		{
+			name					next
+			group					none
+			text					@MENUS_APPLY_CAPS
+			descText				@MENUS_APPLY_PLAYER_SABER
+			type					ITEM_TYPE_BUTTON
+			style					WINDOW_STYLE_PANEL
+			rect					465 446 110 22
+			font					5
+			textscale				0.7
+			textalignx				55
+			textaligny				4.5
+			textalign				ITEM_ALIGN_CENTER
+			textstyle				0
+			forecolor				1 1 1 1
+			visible					1
+			action
+			{
+				play "sound/interface/button1.wav"
+				close all
+				open saberMenu
+			}
+			mouseEnter { show next_glow }
+			mouseExit { hide next_glow }
+			caps					1
+			backcolor				0.43 0.83 1 0.20
+			bordercolor				0.43 0.83 1 0.75
+			radius					11
+		}
+		skin					1
+		disableColor			0.36 0.42 0.50 1
+		backdrop				1
+	}
+}

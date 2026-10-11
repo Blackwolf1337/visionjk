@@ -1,0 +1,336 @@
+// rules_moves.menu in the new look. Made by tools/menus/build.py from ui/jamp/rules_moves.menu: change that script or its
+// rules, not this file. See docs/japlus/ui.md.
+{
+	menuDef
+	{
+		name					"rulesMenu_moves"
+		fullScreen				1
+		rect					0 0 640 480
+		visible					1
+		focusColor				0.43 0.83 1 1
+		descX					320
+		descY					424
+		descScale				1
+		descColor				0.60 0.69 0.78 1
+		descAlignment			ITEM_ALIGN_CENTER
+		onESC
+		{
+			play "sound/interface/esc.wav"
+			close "rulesMenu_moves" ;
+			open "rulesMenu" ;
+		}
+		onOpen
+		{
+			setcvar "ui_movesflag" 0
+			setcvar "ui_move_title" 2
+			uiScript setMoveCharacter
+			uiScript setMovesListDefault
+		}
+
+		itemDef
+		{
+			name					game_rulesheader
+			group					rulesheader
+			style					WINDOW_STYLE_EMPTY
+			text					@MENUS_MOVES
+			rect					100 5 440 24
+			font					5
+			textscale				0.74
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				225
+			textaligny				1.5
+			forecolor				0.60 0.69 0.78 1
+			visible					1
+			decoration
+			caps					1
+		}
+
+		itemDef
+		{
+			name					move_titles_box
+			group					none
+			style					WINDOW_STYLE_PANEL
+			rect					25 47 255 23
+			backcolor				0.43 0.83 1 0.14
+			visible					1
+			decoration
+			bordercolor				0 0 0 0
+			radius					3
+		}
+
+		itemDef
+		{
+			name					move_titles_outline
+			group					none
+			style					WINDOW_STYLE_PANEL
+			rect					24 68 255 30
+			bordercolor				0.43 0.83 1 0.16
+			visible					1
+			decoration
+			backcolor				0 0 0 0
+			radius					5
+		}
+
+		itemDef
+		{
+			name					move_titles_title
+			type					ITEM_TYPE_TEXT
+			rect					25 47 255 23
+			text					@MENUS_MOVE_TYPES
+			font					5
+			forecolor				0.60 0.69 0.78 1
+			textscale				0.74
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				125
+			visible					1
+			decoration
+			caps					1
+			textaligny				2.5
+		}
+
+		itemDef
+		{
+			name					move_titles
+			group					none
+			text					" "
+			descText				@MENUS_CHOOSE_MOVE_DESC
+			type					ITEM_TYPE_MULTI
+			style					WINDOW_STYLE_EMPTY
+			rect					25 77 340 14
+			font					5
+			textscale				0.69
+			textaligny				-3.8
+			textalign				ITEM_ALIGN_LEFT
+			textstyle				.8
+			textalignx				0
+			backcolor				0 0 0 0
+			forecolor				0.60 0.69 0.78 1
+			feeder					42
+			cvar					"ui_move_title"
+			cvarFloatList
+			{
+				"@MENUS_ACROBATICS" 0
+				"@MENUS_SINGLE_FAST" 1
+				"@MENUS_SINGLE_MEDIUM" 2
+				"@MENUS_SINGLE_STRONG" 3
+				"@MENUS_DUAL_SABERS" 4
+				"@MENUS_SABER_STAFF" 5
+				"Melee & others attacks" 6
+			}
+			visible					1
+			mouseEnter
+			{
+				show button_glow
+				setitemrect button_glow 0 73 320 24
+			}
+			mouseExit { hide button_glow }
+			action
+			{
+				uiScript resetMovesList
+				play "sound/interface/button1.wav"
+			}
+		}
+
+		itemDef
+		{
+			name					moveslist_title_box
+			group					none
+			style					WINDOW_STYLE_PANEL
+			rect					26 110 253 23
+			backcolor				0.43 0.83 1 0.14
+			visible					1
+			decoration
+			bordercolor				0 0 0 0
+			radius					3
+		}
+
+		itemDef
+		{
+			name					moveslist_title
+			type					ITEM_TYPE_TEXT
+			rect					35 108 253 26
+			text					@MENUS_MOVES
+			font					5
+			forecolor				0.60 0.69 0.78 1
+			textscale				0.74
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				125
+			visible					1
+			decoration
+			caps					1
+			textaligny				2.5
+		}
+
+		itemDef
+		{
+			name					moveslist
+			group					none
+			rect					25 130 253 250
+			type					ITEM_TYPE_LISTBOX
+			style					WINDOW_STYLE_PANEL
+			elementwidth			120
+			elementheight			16
+			font					5
+			textscale				0.6
+			bordercolor				0.43 0.83 1 0.16
+			forecolor				0.60 0.69 0.78 1
+			backcolor				0 0 0 0.30
+			outlinecolor			0.43 0.83 1 0.22
+			elementtype				LISTBOX_TEXT
+			feeder					41
+			desctext				@MENUS_MOVE_DESC2
+			notselectable
+			visible					1
+			columns					1 2 55 225
+			mouseEnter { setitemcolor moveslist bordercolor 1 1 1 1 }
+			mouseExit { setitemcolor moveslist bordercolor 0 0 .8 1 }
+			doubleclick { play sound/interface/button1.wav }
+			radius					4
+		}
+
+		itemDef
+		{
+			name					character_box
+			group					none
+			style					WINDOW_STYLE_PANEL
+			rect					285 38 330 370
+			bordercolor				0.43 0.83 1 0.16
+			visible					1
+			decoration
+			backcolor				0 0 0 0
+			radius					5
+		}
+
+		itemDef
+		{
+			name					character
+			group					models
+			type					ITEM_TYPE_MODEL
+			rect					295 -30 300 340
+			model_g2anim			"BOTH_ROLL_F"
+			asset_model				"ui_char_model"
+			model_angle				180
+			model_g2mins			-20 -15 -10
+			model_g2maxs			20 15 45
+			model_rotation			50
+			model_fovx				50
+			model_fovy				50
+			isCharacter				1
+			isSaber					1
+			visible					1
+			decoration
+		}
+
+		itemDef
+		{
+			name					item_desc
+			type					ITEM_TYPE_TEXTSCROLL
+			rect					295 300 320 90
+			text					"  "
+			cvar					ui_move_desc
+			font					5
+			forecolor				0.60 0.69 0.78 1
+			textscale				0.68
+			textalign				ITEM_ALIGN_LEFT
+			textaligny				7
+			visible					1
+			lineHeight				13
+			outlinecolor			0.43 0.83 1 0.22
+		}
+
+		itemDef
+		{
+			name					creditsbutton
+			group					othermain
+			descText				@MENUS_SHOW_GAME_CREDITS
+			type					ITEM_TYPE_BUTTON
+			style					WINDOW_STYLE_EMPTY
+			rect					200 144 256 256
+			font					2
+			textscale				1
+			textaligny				0
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				46
+			backcolor				0 0 0 0
+			forecolor				1 .682 0 1
+			visible					0
+			mouseEnter {  }
+			mouseExit {  }
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				close all ;
+				open creditsMenu
+			}
+		}
+
+		itemDef
+		{
+			name					backbutton
+			group					fade_buttons
+			text					@MENUS_BACK
+			descText				@MENUS_BACKTORULES
+			type					ITEM_TYPE_BUTTON
+			style					WINDOW_STYLE_PANEL
+			rect					69 446 110 22
+			font					5
+			textscale				0.7
+			textalign				ITEM_ALIGN_CENTER
+			textstyle				0
+			textalignx				55
+			textaligny				4.5
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+			mouseEnter
+			{
+				show button_glow
+				setitemrect button_glow 30 441 190 30
+			}
+			mouseExit { hide button_glow }
+			action
+			{
+				play "sound/interface/esc.wav" ;
+				close all ;
+				open rulesMenu
+			}
+			caps					1
+			backcolor				1 1 1 0.04
+			bordercolor				0.43 0.83 1 0.16
+			radius					11
+		}
+
+		itemDef
+		{
+			name					exitgamebutton
+			group					othermain
+			text					@MENUS_EXIT
+			descText				@MENUS_LEAVE_JEDI_KNIGHT_II
+			type					ITEM_TYPE_BUTTON
+			style					WINDOW_STYLE_PANEL
+			rect					265 446 110 22
+			font					5
+			textscale				0.7
+			textalign				ITEM_ALIGN_CENTER
+			textstyle				0
+			textalignx				55
+			textaligny				4.5
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+			mouseEnter { show exitgamebutton_glow }
+			mouseExit { hide exitgamebutton_glow }
+			action
+			{
+				play "sound/weapons/saber/saberoff.mp3" ;
+				close all ;
+				open quitMenu
+			}
+			caps					1
+			backcolor				1 1 1 0.04
+			bordercolor				0.43 0.83 1 0.16
+			radius					11
+		}
+		skin					1
+		disableColor			0.36 0.42 0.50 1
+		backdrop				1
+	}
+}

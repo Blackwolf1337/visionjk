@@ -334,6 +334,7 @@ typedef struct itemDef_s {
 	// ITEM_TYPE_BAR, ITEM_TYPE_VALUE and "showStat": the number of the game this item shows, by name
 	const char	*stat;
 	const char	*showStat;
+	qboolean	caps;						// "caps 1": its text is drawn in capital letters
 } itemDef_t;
 
 typedef struct menuDef_s {

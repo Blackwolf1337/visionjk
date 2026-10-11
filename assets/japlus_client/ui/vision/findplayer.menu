@@ -1,0 +1,286 @@
+// findplayer.menu in the new look. Made by tools/menus/build.py from ui/jamp/findplayer.menu: change that script or its
+// rules, not this file. See docs/japlus/ui.md.
+{
+	menuDef
+	{
+		name					"findplayer_popmenu"
+		visible					0
+		fullscreen				0
+		outOfBoundsClick
+		rect					125 60 390 360
+		focusColor				0.43 0.83 1 1
+		style					WINDOW_STYLE_PANEL
+		descX					320
+		descY					400
+		descScale				1
+		descColor				0.60 0.69 0.78 1
+		descAlignment			ITEM_ALIGN_CENTER
+		popup
+		onOpen
+		{
+			uiScript FindPlayer
+			setfocus nameField
+		}
+		onESC
+		{
+			play "sound/interface/esc.wav" ;
+			close findplayer_popmenu
+		}
+
+		itemDef
+		{
+			name					setup_background
+			group					none
+			style					WINDOW_STYLE_PANEL
+			rect					0 0 390 380
+			backcolor				0.035 0.07 0.12 0.55
+			forecolor				1 1 1 1
+			bordercolor				0.43 0.83 1 0.16
+			visible					1
+			decoration
+			radius					5
+		}
+
+		itemDef
+		{
+			name					screenTitle
+			text					@MENUS_FIND_PLAYER
+			style					WINDOW_STYLE_EMPTY
+			rect					25 5 340 20
+			font					5
+			textscale				0.52
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				170
+			textaligny				2.75
+			forecolor				0.60 0.69 0.78 1
+			visible					1
+			decoration
+			caps					1
+		}
+
+		itemDef
+		{
+			name					nameTitle
+			text					@MENUS_NAME1
+			style					0
+			decoration
+			font					5
+			textscale				0.77
+			rect					25 30 90 25
+			textalign				ITEM_ALIGN_RIGHT
+			textalignx				85
+			textaligny				1.35
+			forecolor				0.60 0.69 0.78 1
+			visible					1
+		}
+
+		itemDef
+		{
+			name					nameEntry
+			style					WINDOW_STYLE_PANEL
+			descText				@MENUS_INPUT_PLAYER_NAME
+			text					@MENUS_BLANK_1
+			maxchars				15
+			font					5
+			textscale				0.77
+			type					ITEM_TYPE_EDITFIELD
+			cvar					"ui_findplayer"
+			rect					115 30 250 25
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				5
+			textaligny				1.35
+			forecolor				0.43 0.83 1 1
+			backcolor				0.43 0.83 1 0.14
+			bordercolor				0 0 0 0
+			visible					1
+			action { ui_script FindPlayer }
+			mouseenter { setitemcolor nameEntry backcolor .25 .25 .25 .75 }
+			mouseexit { setitemcolor nameEntry backcolor .25 .25 .25 .5 }
+			radius					3
+		}
+
+		itemDef
+		{
+			name					serverNameList
+			rect					25 60 340 90
+			type					ITEM_TYPE_LISTBOX
+			style					WINDOW_STYLE_PANEL
+			elementwidth			120
+			elementheight			16
+			font					5
+			textscale				0.69
+			backcolor				0 0 0 0.30
+			outlinecolor			0.43 0.83 1 0.22
+			bordercolor				0.43 0.83 1 0.16
+			elementtype				LISTBOX_TEXT
+			feeder					FEEDER_FINDPLAYER
+			visible					1
+			textaligny				13.2
+			mouseenter { setitemcolor serverNameWindow bordercolor .7 0 0 1 }
+			mouseexit { setitemcolor serverNameWindow bordercolor .5 .5 .5 1 }
+			radius					4
+		}
+
+		itemDef
+		{
+			name					serverNameWindow
+			rect					25 60 340 90
+			style					WINDOW_STYLE_PANEL
+			backcolor				0 0 0 0
+			forecolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
+			visible					1
+			decoration
+			radius					5
+		}
+
+		itemDef
+		{
+			name					serversFoundMsg
+			cvar					"ui_playerServersFound"
+			type					0
+			style					WINDOW_STYLE_EMPTY
+			rect					5 360 390 30
+			font					5
+			textscale				0.44
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				0
+			textaligny				2.5
+			forecolor				0.60 0.69 0.78 1
+			visible					1
+			decoration
+			caps					1
+		}
+
+		itemDef
+		{
+			name					serverInfoList
+			rect					25 160 340 150
+			type					ITEM_TYPE_LISTBOX
+			style					WINDOW_STYLE_PANEL
+			elementwidth			120
+			elementheight			16
+			font					5
+			textscale				0.6
+			backcolor				0 0 0 0.30
+			bordercolor				0.43 0.83 1 0.16
+			elementtype				LISTBOX_TEXT
+			feeder					FEEDER_SERVERSTATUS
+			notselectable
+			visible					1
+			columns					4 2 40 120 40 40 180 90 40 180 135 40 180
+			mouseenter { setitemcolor serverInfowindow bordercolor .7 0 0 1 }
+			mouseexit { setitemcolor serverInfowindow bordercolor .5 .5 .5 1 }
+			radius					4
+			outlinecolor			0.43 0.83 1 0.22
+		}
+
+		itemDef
+		{
+			name					serverInfowindow
+			rect					25 160 340 150
+			style					WINDOW_STYLE_PANEL
+			backcolor				0 0 0 0
+			forecolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
+			visible					1
+			decoration
+			radius					5
+		}
+
+		itemDef
+		{
+			name					search
+			text					@MENUS_SEARCH_CAPS
+			descText				@MENUS_SEARCH_DESC
+			type					1
+			font					5
+			textscale				0.59
+			style					WINDOW_STYLE_EMPTY
+			rect					15 310 120 30
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				60
+			textaligny				7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				ui_script FindPlayer
+			}
+			mouseEnter
+			{
+				show button_glow
+				setitemrect button_glow 15 312 150 26
+			}
+			mouseExit { hide button_glow }
+			caps					1
+		}
+
+		itemDef
+		{
+			name					doneText
+			text					@MENUS_DONE_CAPS
+			descText				@MENUS_DONE_DESC
+			type					1
+			font					5
+			textscale				0.59
+			style					WINDOW_STYLE_EMPTY
+			rect					135 310 120 30
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				60
+			textaligny				7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				close findplayer_popmenu
+			}
+			mouseEnter
+			{
+				show button_glow
+				setitemrect button_glow 115 312 160 26
+			}
+			mouseExit { hide button_glow }
+			caps					1
+		}
+
+		itemDef
+		{
+			name					join
+			text					@MENUS_JOIN_CAPS
+			descText				@MENUS_JOIN_PLAYER_DESC
+			type					1
+			font					5
+			textscale				0.59
+			style					WINDOW_STYLE_EMPTY
+			rect					255 310 120 30
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				60
+			textaligny				7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				ui_script FoundPlayerJoinServer
+			}
+			mouseEnter
+			{
+				show button_glow
+				setitemrect button_glow 235 312 160 26
+			}
+			mouseExit { hide button_glow }
+			caps					1
+		}
+		skin					1
+		disableColor			0.36 0.42 0.50 1
+		openSlide				8
+		backcolor				0.035 0.07 0.12 0.80
+		bordercolor				0.43 0.83 1 0.28
+		radius					8
+		shadow					14
+		sheen					0.08
+	}
+}

@@ -1,0 +1,35 @@
+// the menus outside of a game, in the new look (ui/vision). Made by tools/menus/build.py.
+{
+	loadMenu { "ui/vision/main.menu" }
+	loadMenu { "ui/vision/joinserver.menu" }
+	loadMenu { "ui/vision/player.menu" }
+	loadMenu { "ui/vision/player2.menu" }
+	loadMenu { "ui/vision/createserver.menu" }
+	loadMenu { "ui/vision/connect.menu" }
+	loadMenu { "ui/vision/rules.menu" }
+	loadMenu { "ui/vision/rules_games.menu" }
+	loadMenu { "ui/vision/rules_force.menu" }
+	loadMenu { "ui/vision/rules_weapons.menu" }
+	loadMenu { "ui/vision/rules_items.menu" }
+	loadMenu { "ui/vision/rules_moves.menu" }
+	loadMenu { "ui/vision/controls.menu" }
+	loadMenu { "ui/vision/setup.menu" }
+	loadMenu { "ui/vision/demo.menu" }
+	loadMenu { "ui/vision/password.menu" }
+	loadMenu { "ui/vision/quit.menu" }
+	loadMenu { "ui/vision/error.menu" }
+	loadMenu { "ui/vision/serverinfo.menu" }
+	loadMenu { "ui/vision/findplayer.menu" }
+	loadMenu { "ui/vision/createfavorite.menu" }
+	loadMenu { "ui/vision/multiplayer.menu" }
+	loadMenu { "ui/vision/advancedcreateserver.menu" }
+	loadMenu { "ui/vision/saber.menu" }
+	loadMenu { "ui/vision/quickgame.menu" }
+	loadMenu { "ui/vision/quickgame2.menu" }
+	loadMenu { "ui/vision/quickbots.menu" }
+	loadMenu { "ui/vision/vid_warning.menu" }
+	loadMenu { "ui/vision/videodriver.menu" }
+	loadMenu { "ui/vision/password_request.menu" }
+	loadMenu { "ui/vision/UrlRedirectDownload.menu" }
+	loadMenu { "ui/vision/UrlRedirectBackground.menu" }
+}

@@ -1,0 +1,109 @@
+// UrlRedirectDownload.menu in the new look. Made by tools/menus/build.py from ui/jamp/UrlRedirectDownload.menu: change that script or its
+// rules, not this file. See docs/japlus/ui.md.
+{
+	assetGlobalDef
+	{
+		font					"ergoec" 18
+		bigFont					"anewhope" 20
+		small2Font				"arialnb" 14
+		cursor					"cursor"
+		gradientBar				"ui/assets/gradientbar2.tga"
+		itemFocusSound			"sound/interface/menuroam.wav"
+		fadeClamp				1.0
+		fadeCycle				1
+		fadeAmount				0.1
+		moveRollSound			"sound/player/roll1"
+		moveJumpSound			"sound/weapons/force/jump"
+		shadowColor				0.1 0.1 0.1 0.25
+		focuscolor				0.43 0.83 1 1
+		precacheSound
+		{
+			"sound/interface/choose_color.wav" ;
+			"sound/interface/choose_head.wav" ;
+			"sound/interface/choose_torso.wav" ;
+			"sound/interface/choose_saber.wav" ;
+			"sound/interface/choose_hilt.wav" ;
+			"sound/interface/choose_blade.wav" ;
+			"sound/interface/transition.wav" ;
+			"sound/interface/esc.wav" ;
+			"sound/interface/sub_select.wav" ;
+		}
+	}
+
+	menuDef
+	{
+		name					"UrlRedirectDownload"
+		rect					0 0 640 480
+		fullScreen				0
+		visible					0
+		focusColor				0.43 0.83 1 1
+		descX					300
+		descY					240
+		descScale				0.7
+		descColor				0.60 0.69 0.78 1
+		descAlignment			ITEM_ALIGN_CENTER
+
+		itemDef
+		{
+			name					abordURLRedirectCurrDownload
+			group					options
+			text					"Abort"
+			type					ITEM_TYPE_BUTTON
+			style					WINDOW_STYLE_EMPTY
+			rect					250 205 60 14
+			textaligny				1.5
+			font					5
+			textscale				0.44
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				0
+			descText				"It will abort the current download."
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+			action
+			{
+				play "sound/interface/button1"
+				uiscript abordURLRedirectCurrDownload 0;
+			}
+			mouseEnter
+			{
+				show button_glow
+				setitemrect button_glow 250 205 70 14
+			}
+			mouseExit { hide button_glow }
+			caps					1
+		}
+
+		itemDef
+		{
+			name					abordURLRedirectAllDownload
+			group					options
+			text					"Abort All"
+			type					ITEM_TYPE_BUTTON
+			style					WINDOW_STYLE_EMPTY
+			rect					320 205 75 14
+			textaligny				1.5
+			font					5
+			textscale				0.44
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				0
+			descText				"It will abort All the downloading process for the needed Files."
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+			action
+			{
+				play "sound/interface/button1"
+				uiscript abordURLRedirectCurrDownload 1;
+			}
+			mouseEnter
+			{
+				show button_glow
+				setitemrect button_glow 320 205 85 14
+			}
+			mouseExit { hide button_glow }
+			caps					1
+		}
+		skin					1
+		disableColor			0.36 0.42 0.50 1
+		openSlide				8
+	}
+}

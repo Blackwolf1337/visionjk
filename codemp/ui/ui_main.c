@@ -1448,12 +1448,69 @@ qboolean Load_Menu(int handle) {
 	return qfalse;
 }
 
+// Is this file of the old look the one of this tree? Those carry a mark in their first line. Without it the
+// file is somebody else's: a mod that brings menus of its own.
+static qboolean UI_FileIsOurs( const char *path ) {
+	fileHandle_t	f;
+	char			head[128];
+	const int		len = trap->FS_Open( path, &f, FS_READ );
+
+	if ( !f ) {
+		return qfalse;
+	}
+	memset( head, 0, sizeof( head ) );
+	if ( len > 0 ) {
+		trap->FS_Read( head, Q_min( len, (int)sizeof( head ) - 1 ), f );
+	}
+	trap->FS_Close( f );
+	return (qboolean)( strstr( head, "visionjk-classic" ) != NULL );
+}
+
+static qboolean UI_FileExists( const char *filename );
+
+/*
+=================
+UI_NewLookList
+
+The list of menu files that is loaded for a list of the game: the menus of the new look (ui/vision, made by
+tools/menus/build.py) in place of the two lists of the game. Not in an engine that can not draw that look, not
+with ui_classic 1, and not when the list or the first menu of the old look is not the file of this tree: then a
+mod brought its own menus, and those are what its player wants to see.
+=================
+*/
+static qboolean uiNewLook;		// the menus that are loaded are the ones of the new look
+
+static const char *UI_NewLookList( const char *menuFile ) {
+	static const struct {
+		const char *stock, *vision, *first;
+	} lists[] = {
+		{ "ui/jampmenus.txt", "ui/visionmenus.txt", "ui/jamp/main.menu" },
+		{ "ui/jampingame.txt", "ui/visioningame.txt", "ui/jamp/ingame.menu" },
+	};
+	size_t i;
+
+	for ( i = 0; i < ARRAY_LEN( lists ); i++ ) {
+		if ( Q_stricmp( menuFile, lists[i].stock ) ) {
+			continue;
+		}
+		if ( !Skin_Ready() || ui_classic.integer || !UI_FileIsOurs( lists[i].stock ) || !UI_FileIsOurs( lists[i].first )
+			|| !UI_FileExists( lists[i].vision ) ) {
+			uiNewLook = qfalse;
+			return menuFile;
+		}
+		uiNewLook = qtrue;
+		return lists[i].vision;
+	}
+	return menuFile;
+}
+
 void UI_LoadMenus(const char *menuFile, qboolean reset) {
 	pc_token_t token;
 	int handle;
 //	int start = trap->Milliseconds();
 
 	trap->PC_LoadGlobalDefines ( "ui/jamp/menudef.h" );
+	menuFile = UI_NewLookList( menuFile );
 
 	handle = trap->PC_LoadSource( menuFile );
 	if (!handle) {
@@ -10389,8 +10446,11 @@ void UI_Refresh( int realtime )
 	// draw cursor
 	UI_SetColor( NULL );
 	if (Menu_Count() > 0 && (trap->Key_GetCatcher() & KEYCATCH_UI)) {
-		UI_DrawHandlePic( (float)uiInfo.uiDC.cursorx, (float)uiInfo.uiDC.cursory, 40.0f, 40.0f, uiInfo.uiDC.Assets.cursor);
-		//UI_DrawHandlePic( uiInfo.uiDC.cursorx, uiInfo.uiDC.cursory, 48, 48, uiInfo.uiDC.Assets.cursor);
+		if ( uiNewLook ) {
+			Skin_Cursor( (float)uiInfo.uiDC.cursorx, (float)uiInfo.uiDC.cursory );
+		} else {
+			UI_DrawHandlePic( (float)uiInfo.uiDC.cursorx, (float)uiInfo.uiDC.cursory, 40.0f, 40.0f, uiInfo.uiDC.Assets.cursor);
+		}
 	}
 
 	if (ui_rankChange.integer)

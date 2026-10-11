@@ -1,0 +1,127 @@
+// ingame_addbot.menu in the new look. Made by tools/menus/build.py from ui/jamp/ingame_addbot.menu: change that script or its
+// rules, not this file. See docs/japlus/ui.md.
+{
+	menuDef
+	{
+		name					"ingame_addbot"
+		visible					0
+		fullscreen				0
+		outOfBoundsClick
+		rect					105 40 240 128
+		disableColor			0.36 0.42 0.50 1
+		focusColor				0.43 0.83 1 1
+		style					WINDOW_STYLE_PANEL
+
+		itemDef
+		{
+			name					background_pic
+			group					none
+			style					WINDOW_STYLE_PANEL
+			rect					0 0 240 128
+			forecolor				1 1 1 1
+			visible					1
+			decoration
+			backcolor				0.035 0.07 0.12 0.55
+			bordercolor				0.43 0.83 1 0.16
+			radius					5
+		}
+
+		itemDef
+		{
+			name					gametypefield
+			style					0
+			text					@MENUS_NAME1
+			ownerdraw				UI_BOTNAME
+			rect					2 4 236 30
+			textalign				ITEM_ALIGN_RIGHT
+			textalignx				80
+			textaligny				1.35
+			font					5
+			textscale				0.77
+			forecolor				0.86 0.92 0.97 1
+			border					0
+			bordercolor				0 0 0 0
+			visible					1
+			action { play "sound/interface/button1.wav" ; }
+		}
+
+		itemDef
+		{
+			name					gametypefield
+			style					0
+			text					@MENUS_TEAM
+			ownerdraw				UI_REDBLUE
+			rect					2 34 236 30
+			textalign				ITEM_ALIGN_RIGHT
+			textalignx				80
+			textaligny				1.35
+			font					5
+			textscale				0.77
+			forecolor				0.86 0.92 0.97 1
+			cvarTest				"g_gametype"
+			disableCvar
+			{
+				"0" ;
+				"1" ;
+				"2" ;
+				"3" ;
+				"4" ;
+				"5"
+			}
+			border					0
+			bordercolor				0 0 0 0
+			visible					1
+			action { play "sound/interface/button1.wav" ; }
+		}
+
+		itemDef
+		{
+			name					gametypefield
+			style					0
+			text					@MENUS_SKILL1
+			ownerdraw				UI_BOTSKILL
+			rect					2 64 236 30
+			textalign				ITEM_ALIGN_RIGHT
+			textalignx				80
+			textaligny				1.35
+			font					5
+			textscale				0.77
+			forecolor				0.86 0.92 0.97 1
+			border					0
+			bordercolor				0 0 0 0
+			visible					1
+			action { play "sound/interface/button1.wav" ; }
+		}
+
+		itemDef
+		{
+			name					ok
+			text					@MENUS_ADD_BOT
+			type					1
+			style					WINDOW_STYLE_EMPTY
+			rect					20 94 200 30
+			textalignx				80
+			textaligny				3.5
+			font					5
+			textscale				0.86
+			textalign				ITEM_ALIGN_CENTER
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				uiScript addBot ;
+				uiScript closeingame
+			}
+			mouseEnter { show okButton }
+			mouseExit { hide okButton }
+		}
+		skin					1
+		openSlide				8
+		backcolor				0.035 0.07 0.12 0.80
+		bordercolor				0.43 0.83 1 0.28
+		radius					8
+		shadow					14
+		sheen					0.08
+	}
+}

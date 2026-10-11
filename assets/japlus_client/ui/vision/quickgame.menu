@@ -1,0 +1,270 @@
+// quickgame.menu in the new look. Made by tools/menus/build.py from ui/jamp/quickgame.menu: change that script or its
+// rules, not this file. See docs/japlus/ui.md.
+{
+	menuDef
+	{
+		name					"quickgame"
+		fullScreen				MENU_TRUE
+		rect					0 0 640 480
+		visible					1
+		focusColor				0.43 0.83 1 1
+		descX					320
+		descY					424
+		descScale				1
+		descColor				0.60 0.69 0.78 1
+		descAlignment			ITEM_ALIGN_CENTER
+		onEsc
+		{
+			play "sound/interface/esc.wav" ;
+			close quickgame ;
+			open multiplayermenu
+		}
+		onOpen
+		{
+			uiScript loadArenas ;
+			uiScript checkforsiege ;
+			hide accept_alt ;
+			show accept ;
+			hide back_alt ;
+			show back ;
+			hide grpmessage
+		}
+
+		itemDef
+		{
+			name					title
+			group					none
+			style					WINDOW_STYLE_EMPTY
+			text					@MENUS_SOLO_GAME
+			rect					50 14 540 16
+			font					5
+			textscale				0.74
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				270
+			textaligny				1.5
+			forecolor				0.60 0.69 0.78 1
+			visible					1
+			decoration
+			caps					1
+		}
+
+		itemDef
+		{
+			name					solo_gametypefield
+			style					WINDOW_STYLE_EMPTY
+			ownerdraw				UI_NETGAMETYPE
+			text					@MENUS_GAME_TYPE
+			descText				@MENUS_ALLOWS_YOU_TO_SELECT
+			textstyle				0
+			rect					170 60 300 32
+			textalign				ITEM_ALIGN_RIGHT
+			textalignx				85
+			textaligny				0.5
+			font					5
+			textscale				0.86
+			forecolor				0.60 0.69 0.78 1
+			visible					1
+			border					0
+			bordercolor				1 1 1 1
+			action { play "sound/interface/button1.wav" }
+			mouseEnter
+			{
+				show button_glow
+				setitemrect button_glow 125 57 400 38
+			}
+			mouseExit { hide button_glow }
+		}
+
+		itemDef
+		{
+			name					create_title
+			group					none
+			style					WINDOW_STYLE_EMPTY
+			text					@MENUS_MAP_LISTING
+			rect					30 105 200 24
+			font					5
+			textscale				0.67
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				100
+			textaligny				1.25
+			forecolor				0.60 0.69 0.78 1
+			visible					1
+			decoration
+			caps					1
+		}
+
+		itemDef
+		{
+			name					maplist
+			rect					35 125 194 250
+			type					ITEM_TYPE_LISTBOX
+			style					WINDOW_STYLE_PANEL
+			elementwidth			120
+			elementheight			20
+			font					5
+			textscale				0.68
+			elementtype				LISTBOX_TEXT
+			feeder					FEEDER_ALLMAPS
+			textstyle				0
+			textalign				3
+			textaligny				3
+			bordercolor				0.43 0.83 1 0.16
+			forecolor				0.60 0.69 0.78 1
+			backcolor				0 0 0 0.30
+			outlinecolor			0.43 0.83 1 0.22
+			descText				@MENUS_CHOOSE_YOUR_GAME
+			visible					1
+			columns					1 2 190 172
+			action { play "sound/interface/button1.wav" ; }
+			mouseEnter { setitemcolor maplist bordercolor .79 .64 .22 1 }
+			mouseExit { setitemcolor maplist bordercolor .79 .64 .22 .5 }
+			radius					4
+		}
+
+		itemDef
+		{
+			name					setup_background
+			group					none
+			style					WINDOW_STYLE_PANEL
+			rect					280 104 340 280
+			backcolor				0.035 0.07 0.12 0.55
+			forecolor				1 1 1 1
+			bordercolor				0.43 0.83 1 0.16
+			visible					1
+			decoration
+			radius					5
+		}
+
+		itemDef
+		{
+			name					mappreview
+			style					WINDOW_STYLE_PANEL
+			ownerdraw				UI_STARTMAPCINEMATIC
+			rect					290 124 320 240
+			bordercolor				0.43 0.83 1 0.16
+			visible					1
+			backcolor				0 0 0 0
+			radius					5
+			font					5
+			textscale				0.47
+		}
+
+		itemDef
+		{
+			name					mappreview
+			style					WINDOW_STYLE_PANEL
+			rect					289 123 322 242
+			bordercolor				0.43 0.83 1 0.16
+			visible					1
+			backcolor				0 0 0 0
+			radius					5
+		}
+
+		itemDef
+		{
+			name					backbutton
+			group					fade_buttons
+			text					@MENUS_BACK
+			descText				@MENUS_BACKUP_ONE_MENU
+			type					ITEM_TYPE_BUTTON
+			style					WINDOW_STYLE_PANEL
+			rect					69 446 110 22
+			font					5
+			textscale				0.7
+			textalign				ITEM_ALIGN_CENTER
+			textstyle				0
+			textalignx				55
+			textaligny				4.5
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+			mouseEnter
+			{
+				show button_glow
+				setitemrect button_glow 30 441 190 30
+			}
+			mouseExit { hide button_glow }
+			action
+			{
+				play "sound/interface/esc.wav" ;
+				close all ;
+				open multiplayermenu
+			}
+			caps					1
+			backcolor				1 1 1 0.04
+			bordercolor				0.43 0.83 1 0.16
+			radius					11
+		}
+
+		itemDef
+		{
+			name					exitgamebutton
+			group					othermain
+			text					@MENUS_EXIT
+			descText				@MENUS_LEAVE_JEDI_KNIGHT_II
+			type					ITEM_TYPE_BUTTON
+			style					WINDOW_STYLE_PANEL
+			rect					265 446 110 22
+			font					5
+			textscale				0.7
+			textalign				ITEM_ALIGN_CENTER
+			textstyle				0
+			textalignx				55
+			textaligny				4.5
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+			mouseEnter
+			{
+				show button_glow
+				setitemrect button_glow 225 441 190 30
+			}
+			mouseExit { hide button_glow }
+			action
+			{
+				play "sound/weapons/saber/saberoff.mp3" ;
+				close all ;
+				open quitMenu
+			}
+			caps					1
+			backcolor				1 1 1 0.04
+			bordercolor				0.43 0.83 1 0.16
+			radius					11
+		}
+
+		itemDef
+		{
+			name					next_button
+			text					@MENUS_NEXT
+			descText				@MENUS_CHOOSE_RULES
+			type					ITEM_TYPE_BUTTON
+			font					5
+			textscale				0.7
+			textstyle				0
+			style					WINDOW_STYLE_PANEL
+			rect					500 446 110 22
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				55
+			textaligny				4.5
+			forecolor				1 1 1 1
+			visible					1
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				close quickgame ;
+				open quickgame2
+			}
+			mouseEnter
+			{
+				show button_glow
+				setitemrect button_glow 425 441 190 30
+			}
+			mouseExit { hide button_glow }
+			caps					1
+			backcolor				0.43 0.83 1 0.20
+			bordercolor				0.43 0.83 1 0.75
+			radius					11
+		}
+		skin					1
+		disableColor			0.36 0.42 0.50 1
+		backdrop				1
+	}
+}

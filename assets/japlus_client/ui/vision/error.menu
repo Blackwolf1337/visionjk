@@ -1,0 +1,102 @@
+// error.menu in the new look. Made by tools/menus/build.py from ui/jamp/error.menu: change that script or its
+// rules, not this file. See docs/japlus/ui.md.
+{
+	menuDef
+	{
+		name					"error_popmenu"
+		visible					0
+		fullscreen				0
+		rect					158 80 320 320
+		focusColor				0.43 0.83 1 1
+		style					WINDOW_STYLE_PANEL
+		popup
+		outOfBoundsClick
+		onClose { uiScript clearError }
+		onOpen {  }
+		onESC
+		{
+			close error_popmenu ;
+			open main
+		}
+
+		itemDef
+		{
+			name					window
+			rect					10 15 300 320
+			style					WINDOW_STYLE_PANEL
+			backcolor				0.43 0.83 1 0.14
+			forecolor				0 0 0 1
+			bordercolor				0 0 0 0
+			visible					1
+			decoration
+			radius					3
+		}
+
+		itemDef
+		{
+			name					errorinfo
+			rect					0 50 320 20
+			text					@MENUS_ERROR
+			textalign				ITEM_ALIGN_CENTER
+			textstyle				0
+			textscale				0.86
+			textalignx				160
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+			decoration
+			font					5
+			textaligny				1.5
+		}
+
+		itemDef
+		{
+			name					errorinfo
+			rect					60 80 200 270
+			type					ITEM_TYPE_TEXT
+			style					WINDOW_STYLE_EMPTY
+			textstyle				0
+			autowrapped
+			cvar					"com_errorMessage"
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				90
+			textscale				0.86
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+			decoration
+			font					5
+		}
+
+		itemDef
+		{
+			name					exit
+			group					grpControlbutton
+			style					WINDOW_STYLE_EMPTY
+			type					ITEM_TYPE_BUTTON
+			rect					138 295 45 26
+			text					@MENUS_OKAY
+			textscale				0.86
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				22
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+			action
+			{
+				play "sound/misc/nomenu.wav"
+				close error_popmenu
+				open main
+			}
+			mouseEnter { show button_glow }
+			mouseExit { hide button_glow }
+			font					5
+			textaligny				1.5
+		}
+		skin					1
+		disableColor			0.36 0.42 0.50 1
+		openSlide				8
+		backcolor				0.035 0.07 0.12 0.80
+		bordercolor				0.43 0.83 1 0.28
+		radius					8
+		shadow					14
+		sheen					0.08
+	}
+}
