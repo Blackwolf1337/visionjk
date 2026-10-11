@@ -337,7 +337,18 @@ typedef struct itemDef_s {
 	const char	*stat;
 	const char	*showStat;
 	qboolean	caps;						// "caps 1": its text is drawn in capital letters
+	// a menu with pages (Menu_SetPage): "page <n>": the item is only there while that page is open. "tab <n>": a
+	// button that opens that page. "scroll 1": it stands in the list of its page, which moves under the window
+	// of the list ("scrollRect" of the menu). "row 1": a setting drawn as a row of that list, its name at the
+	// left and its widget at the right (Item_Row_Paint).
+	int			page;
+	int			tab;
+	qboolean	scroll;
+	int			row;
+	qboolean	flow;				// "flow 1": in a row of buttons it is as wide as its word, with a line in front of it
 } itemDef_t;
+
+#define MENU_PAGES		16					// pages of a menu, counted from 1
 
 typedef struct menuDef_s {
 	windowDef_t window;
@@ -372,6 +383,14 @@ typedef struct menuDef_s {
 	qboolean	backdrop;					// "backdrop 1": the sky of ui_skin.c is behind it
 	int			openSlide;					// "openSlide <units>": it comes up from that far below when it opens,
 	int			openTime;					//	which was then
+	// pages: the one that is open, and for the list of each how far it is moved up. "scrollRect <x y w h>" is
+	// the window of that list, "scrollStep <units>" the height of one of its rows.
+	int			page;
+	rectDef_t	scrollRect;
+	float		scrollStep;
+	float		scrollTo[MENU_PAGES];		// where the list of a page is going,
+	float		scrollShown;				//	and where the one of the open page is drawn in this frame
+	qboolean	descPane;					// an ITEM_TYPE_DESC is in it: it says what the item in focus is for
 } menuDef_t;
 
 typedef struct cachedAssets_s {
@@ -533,6 +552,7 @@ void Display_ExpandMacros(char * buff);
 void Menu_Init(menuDef_t *menu);
 void Item_Init(itemDef_t *item);
 void Menu_PostParse(menuDef_t *menu);
+void Menu_SetPage( menuDef_t *menu, int page );
 menuDef_t *Menu_GetFocused();
 void Menu_HandleKey(menuDef_t *menu, int key, qboolean down);
 void Menu_HandleMouseMove(menuDef_t *menu, float x, float y);

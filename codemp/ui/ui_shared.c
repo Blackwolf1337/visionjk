@@ -754,6 +754,10 @@ void Window_Paint(windowDef_t *w, float fadeAmount, float fadeClamp, float fadeC
 			DC->drawHandlePic( fillRect.x, fillRect.y, fillRect.w, fillRect.h, w->background );
 			DC->setColor( NULL );
 		}
+		else if ( fillRect.h < 1.0f && fillRect.w > fillRect.h && Skin_Ready() ) {
+			// a line of the new look: one pixel, and whole on a menu that stands in the level (Skin_Line)
+			Skin_Line( fillRect.x, fillRect.y, fillRect.w, w->backColor );
+		}
 		else {
 			DC->fillRect( fillRect.x, fillRect.y, fillRect.w, fillRect.h, w->backColor );
 		}
@@ -877,6 +881,10 @@ void Item_SetScreenCoords(itemDef_t *item, float x, float y)
 	item->window.rect.y = y + item->window.rectClient.y;
 	item->window.rect.w = item->window.rectClient.w;
 	item->window.rect.h = item->window.rectClient.h;
+	// a row of the list of a page ("scroll 1") stands where the list has been moved to
+	if ( item->scroll && item->parent ) {
+		item->window.rect.y -= ( (const menuDef_t *)item->parent )->scrollShown;
+	}
 
 	// force the text rects to recompute
 	item->textRect.w = 0;
@@ -945,6 +953,22 @@ void Menu_PostParse(menuDef_t *menu) {
 		menu->window.rect.y = 0;
 		menu->window.rect.w = 640;
 		menu->window.rect.h = 480;
+	}
+	// a menu with pages opens on its first one, and one with an ITEM_TYPE_DESC explains its items there
+	{
+		int i, first = 0;
+
+		for ( i = 0; i < menu->itemCount; i++ ) {
+			if ( menu->items[i]->tab && ( !first || menu->items[i]->tab < first ) ) {
+				first = menu->items[i]->tab;
+			}
+			if ( menu->items[i]->type == ITEM_TYPE_DESC ) {
+				menu->descPane = qtrue;
+			}
+		}
+		if ( !menu->page ) {
+			menu->page = first;
+		}
 	}
 	Menu_UpdatePosition( menu );
 }
@@ -2107,6 +2131,16 @@ qboolean Script_playLooped(itemDef_t *item, char **args) {
 	return qtrue;
 }
 
+// setpage <n>: opens that page of the menu (the pages of an options screen, "tab" and "page" of its items)
+qboolean Script_SetPage( itemDef_t *item, char **args ) {
+	int page;
+
+	if ( Int_Parse( args, &page ) ) {
+		Menu_SetPage( (menuDef_t *)item->parent, page );
+	}
+	return qtrue;
+}
+
 commandDef_t commandList[] =
 {
   {"fadein", &Script_FadeIn},                   // group/name
@@ -2139,6 +2173,7 @@ commandDef_t commandList[] =
   {"defer",			&Script_Defer},				//
   {"rundeferred",	&Script_RunDeferred},		//
   {"transition2",	&Script_Transition2},			// group/name
+  {"setpage",		&Script_SetPage},			// number of the page
 };
 
 // Set all the items within a given menu, with the given itemName, to the given shader
@@ -2320,6 +2355,324 @@ qboolean Item_EnableShowViaCvar(itemDef_t *item, int flag) {
 }
 
 
+/*
+===============================================================================
+
+Pages, lists and rows (VisionJK: the options screens of the new look, docs/japlus/ui.md)
+
+A menu file can put its items on pages ("page <n>") that buttons open ("tab <n>"), the settings of a page into a
+list ("scroll 1") that may be longer than its window ("scrollRect" of the menu), and have a setting drawn as a
+row of that list ("row 1"): its name at the left, its widget at the right. The wheel, the bar beside the list
+(ITEM_TYPE_PAGESCROLL) and the keys move the list. A menu file without these words has none of it.
+
+===============================================================================
+*/
+
+#define ROW_PAD			8.0f		// from the edge of a row to its name and to its widget
+#define ROW_WIDGET		0.31f		// the part of the width of a row its widget has
+#define ROW_NUMBER		31.0f		// in front of the track of a slider: what it stands at
+#define ROW_ARROW		8.0f		// how high the arrows of a choice are
+#define ROW_SMALL		0.76f		// the size of the words of a widget, in that of the name of its row
+#define TAB_PAD			11.0f		// beside the word of the button of a page
+#define LIST_GLIDE_MSEC	35.0f		// the list covers most of its way to a new place in about three times this
+
+void Item_MouseLeave( itemDef_t *item );
+void Item_SetMouseOver( itemDef_t *item, qboolean focus );
+
+static qboolean Menu_HasList( const menuDef_t *menu ) {
+	return (qboolean)( menu->scrollRect.h > 0.0f && menu->page >= 0 && menu->page < MENU_PAGES );
+}
+
+static float Menu_ListStep( const menuDef_t *menu ) {
+	return menu->scrollStep > 0.0f ? menu->scrollStep : 20.0f;
+}
+
+// the window of the list of a menu, on the screen
+static void Menu_ListWindow( const menuDef_t *menu, rectDef_t *out ) {
+	*out = menu->scrollRect;
+	out->x += menu->window.rect.x;
+	out->y += menu->window.rect.y;
+	if ( menu->window.border != 0 ) {
+		out->x += menu->window.borderSize;
+		out->y += menu->window.borderSize;
+	}
+}
+
+static qboolean Item_OffPage( const itemDef_t *item ) {
+	const menuDef_t *menu = (const menuDef_t *)item->parent;
+
+	return (qboolean)( menu && item->page && item->page != menu->page );
+}
+
+// how long the list of the open page is: from the top of its window to the end of its last row
+static float Menu_ListLength( const menuDef_t *menu ) {
+	float	end = 0.0f;
+	int		i;
+
+	for ( i = 0; i < menu->itemCount; i++ ) {
+		const itemDef_t *item = menu->items[i];
+
+		if ( item->scroll && !Item_OffPage( item ) && ( item->window.flags & WINDOW_VISIBLE ) ) {
+			end = Q_max( end, item->window.rectClient.y + item->window.rectClient.h - menu->scrollRect.y );
+		}
+	}
+	return end;
+}
+
+// how far the list can be moved up: until its end stands at the end of its window, in whole rows
+static float Menu_ListMost( const menuDef_t *menu ) {
+	const float over = Menu_ListLength( menu ) - menu->scrollRect.h;
+
+	return over <= 0.5f ? 0.0f : ceilf( over / Menu_ListStep( menu ) - 0.01f ) * Menu_ListStep( menu );
+}
+
+// Is this item not there right now: on a page that is not open, a row of the list outside of its window, or the
+// bar of a list that needs none
+static qboolean Item_Away( const itemDef_t *item ) {
+	const menuDef_t *menu = (const menuDef_t *)item->parent;
+
+	if ( !menu || ( !item->page && !item->scroll && item->type != ITEM_TYPE_PAGESCROLL ) ) {
+		return qfalse;
+	}
+	if ( Item_OffPage( item ) ) {
+		return qtrue;
+	}
+	if ( !Menu_HasList( menu ) ) {
+		return qfalse;
+	}
+	if ( item->type == ITEM_TYPE_PAGESCROLL ) {
+		return (qboolean)( Menu_ListMost( menu ) <= 0.0f );
+	}
+	if ( item->scroll ) {
+		rectDef_t list;
+
+		Menu_ListWindow( menu, &list );
+		return (qboolean)( item->window.rect.y < list.y - 0.5f || item->window.rect.y + item->window.rect.h > list.y + list.h + 0.5f );
+	}
+	return qfalse;
+}
+
+// the rows of the list to where the list is shown (Item_SetScreenCoords)
+static void Menu_ListPlace( menuDef_t *menu ) {
+	int i;
+
+	for ( i = 0; i < menu->itemCount; i++ ) {
+		if ( menu->items[i]->scroll ) {
+			Item_UpdatePosition( menu->items[i] );
+		}
+	}
+}
+
+// Moves the list of the open page up by `to` units from its start, no further than it is long. jump: at once,
+// else it glides there (Menu_ScrollFrame).
+static void Menu_ScrollTo( menuDef_t *menu, float to, qboolean jump ) {
+	if ( !Menu_HasList( menu ) ) {
+		return;
+	}
+	to = Com_Clamp( 0.0f, Menu_ListMost( menu ), to );
+	menu->scrollTo[menu->page] = to;
+	if ( jump && menu->scrollShown != to ) {
+		menu->scrollShown = to;
+		Menu_ListPlace( menu );
+	}
+}
+
+static void Menu_ScrollBy( menuDef_t *menu, float rows ) {
+	if ( Menu_HasList( menu ) ) {
+		Menu_ScrollTo( menu, menu->scrollTo[menu->page] + rows * Menu_ListStep( menu ), qfalse );
+	}
+}
+
+// Brings a row into the window of its list, for the keys that walk through all rows. Upwards one row more
+// comes with it: the heading of a part stands above its first row.
+static void Menu_ScrollIntoView( menuDef_t *menu, const itemDef_t *item ) {
+	const float	step = Menu_ListStep( menu );
+	const float	top = item->window.rectClient.y - menu->scrollRect.y, bottom = top + item->window.rectClient.h;
+	float		to;
+
+	if ( !Menu_HasList( menu ) ) {
+		return;
+	}
+	to = menu->scrollTo[menu->page];
+	if ( top < to ) {
+		to = ( floorf( top / step + 0.01f ) - 1.0f ) * step;
+	} else if ( bottom > to + menu->scrollRect.h ) {
+		to = ceilf( ( bottom - menu->scrollRect.h ) / step - 0.01f ) * step;
+	}
+	Menu_ScrollTo( menu, to, qtrue );
+}
+
+// Once a frame: the list of the open page glides to where it is going, fast at first. Where it is going is
+// looked at again as well: the list is shorter after a row was hidden.
+static void Menu_ScrollFrame( menuDef_t *menu ) {
+	float to;
+
+	if ( !Menu_HasList( menu ) ) {
+		return;
+	}
+	Menu_ScrollTo( menu, menu->scrollTo[menu->page], qfalse );
+	to = menu->scrollTo[menu->page];
+	if ( menu->scrollShown == to ) {
+		return;
+	}
+	if ( DC->frameTime <= 0 || fabsf( to - menu->scrollShown ) < 0.5f ) {
+		menu->scrollShown = to;
+	} else {
+		menu->scrollShown += ( to - menu->scrollShown ) * Com_Clamp( 0.0f, 1.0f, DC->frameTime / LIST_GLIDE_MSEC );
+	}
+	Menu_ListPlace( menu );
+	if ( menu->scrollShown == to && !itemCapture ) {
+		// another row is under the mouse now
+		Menu_HandleMouseMove( menu, DC->cursorx, DC->cursory );
+	}
+}
+
+// the bar of the list of a page, where it is and how long its thumb is. False: the list needs none.
+static qboolean Item_PageScroll_Thumb( const itemDef_t *item, float *start, float *part ) {
+	const menuDef_t	*menu = (const menuDef_t *)item->parent;
+	const float		most = Menu_ListMost( menu );
+
+	if ( !Menu_HasList( menu ) || most <= 0.0f ) {
+		return qfalse;
+	}
+	*part = menu->scrollRect.h / ( menu->scrollRect.h + most );
+	*start = ( menu->scrollShown / most ) * ( 1.0f - *part );
+	return qtrue;
+}
+
+// while the mouse holds the bar: the list follows it
+static void Scroll_PageScroll_ThumbFunc( void *p ) {
+	scrollInfo_t	*si = (scrollInfo_t *)p;
+	menuDef_t		*menu = (menuDef_t *)si->item->parent;
+	const rectDef_t	*r = &si->item->window.rect;
+	const float		most = Menu_ListMost( menu );
+	float			start, part;
+
+	if ( !Item_PageScroll_Thumb( si->item, &start, &part ) || part >= 1.0f ) {
+		return;
+	}
+	// the middle of the thumb under the mouse, in whole rows
+	start = Com_Clamp( 0.0f, 1.0f, ( ( DC->cursory - r->y ) / r->h - part * 0.5f ) / ( 1.0f - part ) );
+	Menu_ScrollTo( menu, floorf( start * most / Menu_ListStep( menu ) + 0.5f ) * Menu_ListStep( menu ), qfalse );
+}
+
+// Opens a page of a menu. What had the mouse or the focus on the page that goes loses it.
+void Menu_SetPage( menuDef_t *menu, int page ) {
+	int i;
+
+	if ( !menu || page <= 0 || page >= MENU_PAGES || menu->page == page ) {
+		return;
+	}
+	menu->page = page;
+	for ( i = 0; i < menu->itemCount; i++ ) {
+		itemDef_t *item = menu->items[i];
+
+		if ( !Item_OffPage( item ) ) {
+			continue;
+		}
+		if ( item->window.flags & WINDOW_MOUSEOVER ) {
+			Item_MouseLeave( item );
+			Item_SetMouseOver( item, qfalse );
+		}
+		if ( item->window.flags & WINDOW_HASFOCUS ) {
+			item->window.flags &= ~WINDOW_HASFOCUS;
+			if ( item->leaveFocus ) {
+				Item_RunScript( item, item->leaveFocus );
+			}
+		}
+	}
+	// (the list of this page is where it was left)
+	menu->scrollShown = -1.0f;
+	Menu_ScrollTo( menu, menu->scrollTo[page], qtrue );
+	Menu_HandleMouseMove( menu, DC->cursorx, DC->cursory );
+}
+
+static qboolean Item_IsRow( const itemDef_t *item ) {
+	return (qboolean)( item->row && Item_Skinned( item ) );
+}
+
+// can this item not be used right now
+static qboolean Item_Off( itemDef_t *item ) {
+	return (qboolean)( item->disabled
+		|| ( ( item->cvarFlags & ( CVAR_ENABLE | CVAR_DISABLE ) ) && !Item_EnableShowViaCvar( item, CVAR_ENABLE ) ) );
+}
+
+// where the widget of a row is: at its right end, on the middle of its height
+static void Item_Row_Widget( const itemDef_t *item, rectDef_t *out ) {
+	const rectDef_t *r = &item->window.rect;
+
+	out->w = floorf( r->w * ROW_WIDGET );
+	out->h = Q_min( 14.0f, r->h - 6.0f );
+	out->x = r->x + r->w - ROW_PAD - out->w;
+	out->y = r->y + ( r->h - out->h ) * 0.5f;
+}
+
+// where the track of a slider starts and how long it is: behind its label, or in the widget of a row
+static float Item_Slider_Track( itemDef_t *item, float *width ) {
+	if ( Item_IsRow( item ) ) {
+		rectDef_t widget;
+
+		Item_Row_Widget( item, &widget );
+		*width = widget.w - ROW_NUMBER - 3.0f;
+		return widget.x + ROW_NUMBER;
+	}
+	*width = SLIDER_WIDTH;
+	return item->text ? item->textRect.x + item->textRect.w + 8 : item->window.rect.x;
+}
+
+// A text in capital letters, in place. Only where that is safe: text in UTF-8, or without a byte above 127 (a
+// byte of a letter of two bytes in another encoding may look like a small letter).
+static void Text_Caps( char *text ) {
+	const char	*c;
+	byte		*u;
+
+	for ( c = text; *c && !( *c & 0x80 ); c++ )
+		;
+	if ( *c && !DC->getCVarValue( "cl_utf8Text" ) ) {
+		return;
+	}
+	Q_strupr( text );
+	// (And the small letters with marks, a with grave to thorn without the division sign: the capital is 32
+	// lower. In UTF-8 they are two bytes, 0xC3 and the letter. The texts of the game itself come in
+	// Windows-1252, where they are one byte, which is no start of a UTF-8 letter unless bytes of its inside
+	// follow.)
+	for ( u = (byte *)text; *u; u++ ) {
+		if ( u[0] == 0xC3 && u[1] >= 0xA0 && u[1] <= 0xBE && u[1] != 0xB7 ) {
+			u[1] -= 0x20;
+			u++;
+		} else if ( u[0] >= 0xE0 && u[0] <= 0xFE && u[0] != 0xF7 && ( u[1] & 0xC0 ) != 0x80 ) {
+			u[0] -= 0x20;
+		}
+	}
+}
+
+// A text of a menu file as it is drawn, in a buffer: a reference into the texts of the game ("@MENUS_YES") is
+// looked up. label: the colon a name of a setting ends with in the old menus goes.
+static void Text_Word( const char *text, char *out, int size, qboolean caps, qboolean label ) {
+	if ( !text ) {
+		text = "";
+	}
+	if ( *text == '@' ) {
+		trap->SE_GetStringTextString( &text[1], out, size );
+	} else {
+		Q_strncpyz( out, text, size );
+	}
+	if ( label ) {
+		int len = (int)strlen( out );
+
+		// (with the space some languages set in front of it, which may be one that does not break)
+		while ( len > 0 && ( out[len - 1] == ':' || out[len - 1] == ' ' || (byte)out[len - 1] == 0xA0 ) ) {
+			if ( (byte)out[len - 1] == 0xA0 && len > 1 && (byte)out[len - 2] == 0xC2 ) {
+				len--;
+			}
+			out[--len] = '\0';
+		}
+	}
+	if ( caps ) {
+		Text_Caps( out );
+	}
+}
+
 // will optionaly set focus to this item
 qboolean Item_SetFocus(itemDef_t *item, float x, float y) {
 	int i;
@@ -2346,6 +2699,18 @@ qboolean Item_SetFocus(itemDef_t *item, float x, float y) {
 	}
 
 	if (item->cvarFlags & (CVAR_SHOW | CVAR_HIDE) && !Item_EnableShowViaCvar(item, CVAR_SHOW)) {
+		return qfalse;
+	}
+
+	// an item of a page that is not open is not there. A row of the list that stands outside of its window is
+	// brought into it: the keys walk through all of them (the mouse never gets to one, Menu_HandleMouseMove).
+	if ( Item_OffPage( item ) ) {
+		return qfalse;
+	}
+	if ( item->scroll && Item_Away( item ) ) {
+		Menu_ScrollIntoView( parent, item );
+	}
+	if ( Item_Away( item ) ) {
 		return qfalse;
 	}
 
@@ -2729,14 +3094,10 @@ int Item_ListBox_ThumbDrawPosition(itemDef_t *item)
 }
 
 float Item_Slider_ThumbPosition(itemDef_t *item) {
-	float value, range, x;
+	float value, range, x, width;
 	editFieldDef_t *editDef = item->typeData.edit;
 
-	if (item->text) {
-		x = item->textRect.x + item->textRect.w + 8;
-	} else {
-		x = item->window.rect.x;
-	}
+	x = Item_Slider_Track( item, &width );
 
 	if (!editDef || !item->cvar) {
 		return x;
@@ -2754,7 +3115,7 @@ float Item_Slider_ThumbPosition(itemDef_t *item) {
 	value -= editDef->minVal;
 	value /= range;
 	//value /= (editDef->maxVal - editDef->minVal);
-	value *= SLIDER_WIDTH;
+	value *= width;
 	x += value;
 	// vm fuckage
 	//x = x + (((float)value / editDef->maxVal) * SLIDER_WIDTH);
@@ -2763,6 +3124,14 @@ float Item_Slider_ThumbPosition(itemDef_t *item) {
 
 int Item_Slider_OverSlider(itemDef_t *item, float x, float y) {
 	rectDef_t r;
+
+	if ( Item_IsRow( item ) ) {
+		// all of the track of a row takes hold of its handle
+		r = item->window.rect;
+		r.x = Item_Slider_Track( item, &r.w ) - 4.0f;
+		r.w += 8.0f;
+		return Rect_ContainsPoint( &r, x, y ) ? WINDOW_LB_THUMB : 0;
+	}
 
 	r.x = Item_Slider_ThumbPosition(item) - (SLIDER_THUMB_WIDTH / 2);
 	r.y = item->window.rect.y - 2;
@@ -3447,6 +3816,30 @@ const char *Item_Multi_Setting(itemDef_t *item) {
 	return "@MENUS_CUSTOM";
 }
 
+// sets a choice to one of its settings
+static void Item_Multi_Set( itemDef_t *item, int current ) {
+	multiDef_t *multiPtr = item->typeData.multi;
+
+	if ( !multiPtr || current < 0 || current >= multiPtr->count ) {
+		return;
+	}
+	if ( multiPtr->strDef ) {
+		DC->setCVar( item->cvar, multiPtr->cvarStr[current] );
+	} else {
+		const float value = multiPtr->cvarValue[current];
+
+		if ( (float)( (int)value ) == value ) {
+			DC->setCVar( item->cvar, va( "%i", (int)value ) );
+		} else {
+			DC->setCVar( item->cvar, va( "%f", value ) );
+		}
+	}
+	if ( item->special ) {
+		// its a feeder?
+		DC->feederSelection( item->special, current, item );
+	}
+}
+
 qboolean Item_Multi_HandleKey(itemDef_t *item, int key)
 {
 	multiDef_t *multiPtr = item->typeData.multi;
@@ -3477,26 +3870,7 @@ qboolean Item_Multi_HandleKey(itemDef_t *item, int key)
 					}
 				}
 
-				if (multiPtr->strDef)
-				{
-					DC->setCVar(item->cvar, multiPtr->cvarStr[current]);
-				}
-				else
-				{
-					float value = multiPtr->cvarValue[current];
-					if (((float)((int) value)) == value)
-					{
-						DC->setCVar(item->cvar, va("%i", (int) value ));
-					}
-					else
-					{
-						DC->setCVar(item->cvar, va("%f", value ));
-					}
-				}
-				if (item->special)
-				{//its a feeder?
-					DC->feederSelection(item->special, current, item);
-				}
+				Item_Multi_Set( item, current );
 
 				return qtrue;
 			}
@@ -3921,26 +4295,29 @@ static const char *Item_Slider_String( const itemDef_t *item, float value ) {
 	return va( "%g", floorf( value * 100.0f + 0.5f ) / 100.0f );
 }
 
+// and what it stands at as it is written beside it: whole units, or percent on a short scale
+static const char *Item_Slider_Shown( const itemDef_t *item ) {
+	const float value = item->cvar ? DC->getCVarValue( item->cvar ) : 0.0f;
+
+	return Item_Slider_Units( item ) ? va( "%i", (int)floorf( value + 0.5f ) ) : va( "%i %%", (int)floorf( value * 100.0f + 0.5f ) );
+}
+
 static void Scroll_Slider_ThumbFunc(void *p) {
-	float x, value, cursorx;
+	float x, value, cursorx, width;
 	scrollInfo_t *si = (scrollInfo_t*)p;
 	editFieldDef_t *editDef = si->item->typeData.edit;
 
-	if (si->item->text) {
-		x = si->item->textRect.x + si->item->textRect.w + 8;
-	} else {
-		x = si->item->window.rect.x;
-	}
+	x = Item_Slider_Track( si->item, &width );
 
 	cursorx = DC->cursorx;
 
 	if (cursorx < x) {
 		cursorx = x;
-	} else if (cursorx > x + SLIDER_WIDTH) {
-		cursorx = x + SLIDER_WIDTH;
+	} else if (cursorx > x + width) {
+		cursorx = x + width;
 	}
 	value = cursorx - x;
-	value /= SLIDER_WIDTH;
+	value /= width;
 	value *= (editDef->maxVal - editDef->minVal);
 	value += editDef->minVal;
 	DC->setCVar(si->item->cvar, Item_Slider_String(si->item, value));
@@ -4002,6 +4379,16 @@ void Item_StartCapture(itemDef_t *item, int key)
 				captureFunc = &Scroll_TextScroll_ThumbFunc;
 				itemCapture = item;
 			}
+			break;
+
+		case ITEM_TYPE_PAGESCROLL:
+			scrollInfo.scrollKey = key;
+			scrollInfo.item = item;
+			scrollInfo.xStart = DC->cursorx;
+			scrollInfo.yStart = DC->cursory;
+			captureData = &scrollInfo;
+			captureFunc = &Scroll_PageScroll_ThumbFunc;
+			itemCapture = item;
 			break;
 
 		case ITEM_TYPE_SLIDER:
@@ -4066,6 +4453,147 @@ qboolean Item_Slider_HandleKey(itemDef_t *item, int key, qboolean down) {
 }
 
 
+// moves a slider by a twentieth of its range, for the keys
+static void Item_Slider_Nudge( itemDef_t *item, int dir ) {
+	const editFieldDef_t	*editDef = item->typeData.edit;
+	float					step, value;
+
+	if ( !editDef || !item->cvar ) {
+		return;
+	}
+	step = ( editDef->maxVal - editDef->minVal ) / 20.0f;
+	step = Item_Slider_Units( item ) ? Q_max( 1.0f, floorf( step + 0.5f ) ) : Q_max( 0.01f, step );
+	value = Com_Clamp( editDef->minVal, editDef->maxVal, DC->getCVarValue( item->cvar ) + dir * step );
+	DC->setCVar( item->cvar, Item_Slider_String( item, value ) );
+}
+
+/*
+=================
+Item_Row_Toggle
+
+A row with two states shows both and marks the one that is set: on and off, or the two settings of a choice
+whose names both have room. True: this row is one, with the two words (in capital letters), which of them is set
+and the scale they fit at.
+=================
+*/
+static qboolean Item_Row_Toggle( itemDef_t *item, const rectDef_t *widget, char names[2][64], int *sel, float *scale ) {
+	const float	room = widget->w * 0.5f - 5.0f;
+	float		widest;
+
+	if ( item->type == ITEM_TYPE_YESNO ) {
+		const qboolean set = (qboolean)( item->cvar && DC->getCVarValue( item->cvar ) != 0 );
+
+		Text_Word( "@MENUS_OFF", names[0], 64, qtrue, qfalse );
+		Text_Word( "@MENUS_ON", names[1], 64, qtrue, qfalse );
+		*sel = ( item->invertYesNo ? !set : set ) ? 1 : 0;
+	} else if ( item->type == ITEM_TYPE_MULTI && item->typeData.multi && item->typeData.multi->count == 2 && !item->special ) {
+		Text_Word( item->typeData.multi->cvarList[0], names[0], 64, qtrue, qfalse );
+		Text_Word( item->typeData.multi->cvarList[1], names[1], 64, qtrue, qfalse );
+		*sel = Item_Multi_FindCvarByValue( item );
+	} else {
+		return qfalse;
+	}
+	*scale = item->textscale * ROW_SMALL;
+	widest = Q_max( DC->textWidth( names[0], *scale, item->iMenuFont ), DC->textWidth( names[1], *scale, item->iMenuFont ) );
+	if ( widest > room ) {
+		// a little smaller is fine, much smaller is not: such a pair is shown one at a time, between arrows
+		if ( item->type == ITEM_TYPE_MULTI && widest > room * 1.12f ) {
+			return qfalse;
+		}
+		*scale *= room / widest;
+	}
+	return qtrue;
+}
+
+/*
+=================
+Item_Row_HandleKey
+
+The keys and the clicks of a switch, a choice or a slider that is drawn as a row. A click on a half of a switch
+sets that state, one on an arrow of a choice goes that way, and one on the track of a slider sets it. Left and
+right do the same from the keys. True: the setting was changed (the caller runs its action script).
+=================
+*/
+static qboolean Item_Row_HandleKey( itemDef_t *item, int key ) {
+	const qboolean	mouse = (qboolean)( key == A_MOUSE1 || key == A_MOUSE2 || key == A_MOUSE3 );
+	const qboolean	left = (qboolean)( key == A_CURSOR_LEFT || key == A_KP_4 ), right = (qboolean)( key == A_CURSOR_RIGHT || key == A_KP_6 );
+	const qboolean	enter = (qboolean)( key == A_ENTER || key == A_KP_ENTER );
+	const float		cx = DC->cursorx;
+	rectDef_t		widget;
+	qboolean		over;
+	char			names[2][64];
+	int				sel;
+	float			scale;
+
+	if ( !item->cvar || !( item->window.flags & WINDOW_HASFOCUS ) || ( !mouse && !left && !right && !enter ) ) {
+		return qfalse;
+	}
+	if ( mouse && !Rect_ContainsPoint( &item->window.rect, DC->cursorx, DC->cursory ) ) {
+		return qfalse;
+	}
+	Item_Row_Widget( item, &widget );
+	over = (qboolean)( mouse && cx >= widget.x && cx <= widget.x + widget.w );
+
+	if ( item->type == ITEM_TYPE_SLIDER ) {
+		const editFieldDef_t *editDef = item->typeData.edit;
+
+		if ( !editDef ) {
+			return qfalse;
+		}
+		if ( mouse ) {
+			float w, x = Item_Slider_Track( item, &w );
+
+			if ( cx < x - 4.0f || cx > x + w + 4.0f ) {
+				return qfalse;
+			}
+			DC->setCVar( item->cvar, Item_Slider_String( item,
+				editDef->minVal + Com_Clamp( 0.0f, 1.0f, ( cx - x ) / w ) * ( editDef->maxVal - editDef->minVal ) ) );
+			return qtrue;
+		}
+		if ( left || right ) {
+			Item_Slider_Nudge( item, right ? 1 : -1 );
+			return qtrue;
+		}
+		return qfalse;
+	}
+
+	if ( Item_Row_Toggle( item, &widget, names, &sel, &scale ) ) {
+		int to = !sel;
+
+		if ( over ) {
+			to = ( cx >= widget.x + widget.w * 0.5f );
+		} else if ( left || right ) {
+			to = right;
+		}
+		if ( to == sel ) {
+			return qfalse;
+		}
+		if ( item->type == ITEM_TYPE_YESNO ) {
+			DC->setCVar( item->cvar, va( "%i", item->invertYesNo ? !to : to ) );
+		} else {
+			Item_Multi_Set( item, to );
+		}
+		return qtrue;
+	}
+
+	if ( item->type == ITEM_TYPE_MULTI ) {
+		const int	count = Item_Multi_CountSettings( item );
+		int			dir = 1;
+
+		if ( count <= 0 ) {
+			return qfalse;
+		}
+		if ( over ) {
+			dir = ( cx < widget.x + widget.w * 0.5f ) ? -1 : 1;
+		} else if ( left || key == A_MOUSE2 ) {
+			dir = -1;
+		}
+		Item_Multi_Set( item, ( Item_Multi_FindCvarByValue( item ) + dir + count ) % count );
+		return qtrue;
+	}
+	return qfalse;
+}
+
 qboolean Item_HandleKey(itemDef_t *item, int key, qboolean down) {
 	if (itemCapture) {
 		Item_StopCapture(itemCapture);
@@ -4080,6 +4608,10 @@ qboolean Item_HandleKey(itemDef_t *item, int key, qboolean down) {
 
 	if (!down) {
 		return qfalse;
+	}
+
+	if ( Item_IsRow( item ) && ( item->type == ITEM_TYPE_YESNO || item->type == ITEM_TYPE_MULTI || item->type == ITEM_TYPE_SLIDER ) ) {
+		return Item_Row_HandleKey( item, key );
 	}
 
 	switch (item->type) {
@@ -4160,6 +4692,10 @@ qboolean Item_HandleAccept(itemDef_t * item)
 
 void Item_Action(itemDef_t *item) {
   if (item) {
+    // "tab <n>": the button opens that page of its menu
+    if ( item->tab ) {
+      Menu_SetPage( (menuDef_t *)item->parent, item->tab );
+    }
     Item_RunScript(item, item->action);
   }
 }
@@ -4438,6 +4974,20 @@ void Menu_HandleKey(menuDef_t *menu, int key, qboolean down) {
 			Menu_SetNextCursorItem(menu);
 			break;
 
+		// the list of a page: three rows for a notch of the wheel, a window less a row for the page keys
+		case A_MWHEELUP:
+		case A_MWHEELDOWN:
+			Menu_ScrollBy( menu, key == A_MWHEELUP ? -3.0f : 3.0f );
+			break;
+		case A_PAGE_UP:
+		case A_PAGE_DOWN:
+			if ( Menu_HasList( menu ) ) {
+				const float rows = floorf( menu->scrollRect.h / Menu_ListStep( menu ) ) - 1.0f;
+
+				Menu_ScrollBy( menu, key == A_PAGE_UP ? -rows : rows );
+			}
+			break;
+
 		case A_MOUSE1:
 		case A_MOUSE2:
 			if (item) {
@@ -4633,6 +5183,15 @@ void Item_TextColor(itemDef_t *item, vec4_t *newColor) {
 	if ( Item_Skinned( item ) ) {
 		// no pulse: the mark behind the item says where the focus is
 		Skin_TextColor( item, *newColor );
+		if ( item->tab && !item->disabled ) {
+			// (and the tab whose page is open is as bright as one in focus)
+			const float part = Q_max( item->skinFocus, item->skinValue );
+			int			i;
+
+			for ( i = 0; i < 3; i++ ) {
+				( *newColor )[i] = item->window.foreColor[i] + ( 1.0f - item->window.foreColor[i] ) * part;
+			}
+		}
 		if ( item->enableCvar && *item->enableCvar && item->cvarTest && *item->cvarTest
 			&& ( item->cvarFlags & ( CVAR_ENABLE | CVAR_DISABLE ) ) && !Item_EnableShowViaCvar( item, CVAR_ENABLE ) ) {
 			memcpy( newColor, &parent->disableColor, sizeof( vec4_t ) );
@@ -4835,34 +5394,13 @@ void Item_Text_Paint(itemDef_t *item) {
 		textPtr = text;
 	}
 
-	// "caps 1": in capital letters. Only where that is safe: text in UTF-8, or without a byte above 127 (a
-	// byte of a letter of two bytes in another encoding may look like a small letter)
+	// "caps 1": in capital letters
 	if ( item->caps ) {
-		const char *c;
-
-		for ( c = textPtr; *c && !( *c & 0x80 ); c++ )
-			;
-		if ( !*c || DC->getCVarValue( "cl_utf8Text" ) ) {
-			byte *u;
-
-			if ( textPtr != text ) {
-				Q_strncpyz( text, textPtr, sizeof( text ) );
-				textPtr = text;
-			}
-			Q_strupr( text );
-			// (And the small letters with marks, a with grave to thorn without the division sign: the capital
-			// is 32 lower. In UTF-8 they are two bytes, 0xC3 and the letter. The texts of the game itself come
-			// in Windows-1252, where they are one byte, which is no start of a UTF-8 letter unless bytes of
-			// its inside follow.)
-			for ( u = (byte *)text; *u; u++ ) {
-				if ( u[0] == 0xC3 && u[1] >= 0xA0 && u[1] <= 0xBE && u[1] != 0xB7 ) {
-					u[1] -= 0x20;
-					u++;
-				} else if ( u[0] >= 0xE0 && u[0] <= 0xFE && u[0] != 0xF7 && ( u[1] & 0xC0 ) != 0x80 ) {
-					u[0] -= 0x20;
-				}
-			}
+		if ( textPtr != text ) {
+			Q_strncpyz( text, textPtr, sizeof( text ) );
+			textPtr = text;
 		}
+		Text_Caps( text );
 	}
 
 	// this needs to go here as it sets extents for cvar types as well
@@ -5259,10 +5797,7 @@ void Item_Slider_Paint(itemDef_t *item) {
 	}
 	if ( Item_Skinned( item ) ) {
 		// the same track the mouse works on (SLIDER_WIDTH from x), with what it stands at written behind it
-		const float				value = item->cvar ? DC->getCVarValue( item->cvar ) : 0.0f;
-		const char				*number = Item_Slider_Units( item ) ? va( "%i", (int)floorf( value + 0.5f ) )
-									: va( "%i %%", (int)floorf( value * 100.0f + 0.5f ) );
-
+		const char				*number = Item_Slider_Shown( item );
 		float					lineY, lineH;
 
 		Item_SkinLine( item, &lineY, &lineH );
@@ -5357,6 +5892,428 @@ void Item_Bind_Paint(itemDef_t *item)
 	else
 	{
 		DC->drawText(item->textRect.x, item->textRect.y, item->textscale, newColor, (value != 0) ? "FIXME" : "FIXME", 0, maxChars, item->textStyle,item->iMenuFont);
+	}
+}
+
+/*
+===============================================================================
+
+The rows, the tabs, the bar and the explanation of a menu with pages (VisionJK)
+
+===============================================================================
+*/
+
+// A text on the middle of a height: from x on, around x or up to x (ITEM_ALIGN_*). It is set smaller where it
+// is longer than `room`.
+static void Row_Text( float x, float y, float h, float room, int align, float scale, vec4_t color, const char *text, int font ) {
+	float width = DC->textWidth( text, scale, font );
+
+	if ( room > 0.0f && width > room ) {
+		scale *= Q_max( 0.55f, room / width );
+		width = DC->textWidth( text, scale, font );
+	}
+	if ( align == ITEM_ALIGN_CENTER ) {
+		x -= width * 0.5f;
+	} else if ( align == ITEM_ALIGN_RIGHT ) {
+		x -= width;
+	}
+	DC->drawText( x, y + ( h - DC->textHeight( "A", scale, font ) ) * 0.5f, scale, color, text, 0, 0, 0, font );
+}
+
+static void Color_Mix( vec4_t out, const vec4_t from, const vec4_t to, float part ) {
+	int i;
+
+	for ( i = 0; i < 4; i++ ) {
+		out[i] = from[i] + ( to[i] - from[i] ) * part;
+	}
+}
+
+/*
+=================
+Item_Row_Paint
+
+A setting as a row of a list: its name at the left, its widget at the right, a line under it. The row in focus
+is filled with the colour of the menu, and what stands on it is drawn dark.
+=================
+*/
+static void Item_Row_Paint( itemDef_t *item ) {
+	static const vec4_t	dark = { 0.02f, 0.05f, 0.10f, 1.0f }, rule = { 1.0f, 1.0f, 1.0f, 0.07f }, white = { 0.95f, 0.98f, 1.0f, 1.0f };
+	menuDef_t			*parent = (menuDef_t *)item->parent;
+	const rectDef_t		*r = &item->window.rect;
+	const float			*accent = parent->focusColor;
+	const qboolean		off = Item_Off( item );
+	const int			font = item->iMenuFont;
+	rectDef_t			widget;
+	vec4_t				ink, text, color, edge;
+	char				word[256], names[2][64];
+	float				f, small, mid;
+	int					sel;
+
+	item->skinFocus = Skin_Ease( item->skinFocus, (qboolean)( ( item->window.flags & WINDOW_HASFOCUS ) && !off ), SKIN_EASE_MSEC );
+	f = item->skinFocus;
+	Item_Row_Widget( item, &widget );
+	mid = widget.y + widget.h * 0.5f;
+	small = item->textscale * ROW_SMALL;
+
+	if ( f > 0.0f ) {
+		Skin_Color( color, accent, 0.94f * f );
+		Skin_Panel( r->x, r->y, r->w, r->h - 1.0f, 1.5f, color, NULL );
+	}
+	Skin_Line( r->x, r->y + r->h - 1.0f, r->w, rule );
+
+	// what is drawn on the row: in the colour of the menu, dark on the row in focus
+	Color_Mix( ink, accent, dark, f );
+	ink[3] = off ? 0.35f : 1.0f;
+	if ( off ) {
+		VectorCopy4( parent->disableColor, text );
+	} else {
+		Color_Mix( text, item->window.foreColor, dark, f );
+		text[3] = item->window.foreColor[3];
+	}
+	Text_Word( item->text, word, sizeof( word ), qfalse, qtrue );
+	Row_Text( r->x + ROW_PAD, r->y, r->h - 1.0f, widget.x - 10.0f - ( r->x + ROW_PAD ), ITEM_ALIGN_LEFT, item->textscale, text, word, font );
+
+	switch ( item->type ) {
+	case ITEM_TYPE_YESNO:
+	case ITEM_TYPE_MULTI:
+		if ( Item_Row_Toggle( item, &widget, names, &sel, &small ) ) {
+			// a frame with two halves: the one that is set is filled, the other is dark on the row in focus
+			const float	in = 1.2f, half = ( widget.w - 2.0f * in ) * 0.5f;
+			int			i;
+
+			item->skinValue = Skin_Ease( item->skinValue, (qboolean)( sel != 0 ), SKIN_EASE_MSEC );
+			Skin_Color( color, dark, 0.40f + 0.60f * f );
+			Skin_Color( edge, ink, 0.85f );
+			Skin_Panel( widget.x, widget.y, widget.w, widget.h, 1.5f, color, edge );
+			Skin_Color( color, accent, off ? 0.35f : 1.0f );
+			Skin_Panel( widget.x + in + item->skinValue * half, widget.y + in, half, widget.h - 2.0f * in, 1.0f, color, NULL );
+			for ( i = 0; i < 2; i++ ) {
+				Color_Mix( color, accent, dark, i ? item->skinValue : 1.0f - item->skinValue );
+				color[3] = off ? 0.5f : 1.0f;
+				Row_Text( widget.x + in + half * ( i + 0.5f ), widget.y, widget.h, 0.0f, ITEM_ALIGN_CENTER, small, color, names[i], font );
+			}
+		} else {
+			// one of several: its name between two arrows
+			const float aw = ROW_ARROW * 0.62f;
+
+			Text_Word( Item_Multi_Setting( item ), word, sizeof( word ), qfalse, qfalse );
+			if ( word[0] == '*' ) {
+				// the name is in a cvar
+				DC->getCVarString( &word[1], names[0], sizeof( names[0] ) );
+				Q_strncpyz( word, names[0], sizeof( word ) );
+			}
+			// (in capital letters like the words of a switch, but not a size: 1280x720)
+			if ( !strpbrk( word, "0123456789" ) ) {
+				Text_Caps( word );
+			}
+			Skin_Arrow( widget.x + 1.0f, mid - ROW_ARROW * 0.5f, aw, ROW_ARROW, qtrue, ink );
+			Skin_Arrow( widget.x + widget.w - 1.0f - aw, mid - ROW_ARROW * 0.5f, aw, ROW_ARROW, qfalse, ink );
+			Row_Text( widget.x + widget.w * 0.5f, widget.y, widget.h, widget.w - 2.0f * aw - 10.0f, ITEM_ALIGN_CENTER, small, ink, word, font );
+		}
+		break;
+
+	case ITEM_TYPE_SLIDER: {
+		// what it stands at, and a track that is filled up to a handle
+		float w, x = Item_Slider_Track( item, &w );
+		const float part = Com_Clamp( 0.0f, 1.0f, ( Item_Slider_ThumbPosition( item ) - x ) / w );
+
+		Row_Text( widget.x + 1.0f, widget.y, widget.h, ROW_NUMBER - 5.0f, ITEM_ALIGN_LEFT, small, ink, Item_Slider_Shown( item ), font );
+		Skin_Color( color, ink, 0.35f );
+		Skin_Panel( x, mid - 0.75f, w, 1.5f, 0.75f, color, NULL );
+		Skin_Panel( x, mid - 0.75f, w * part, 1.5f, 0.75f, ink, NULL );
+		Color_Mix( color, white, dark, f );
+		color[3] = ink[3];
+		Skin_Panel( x + w * part - 1.5f, mid - 5.0f, 3.0f, 10.0f, 1.2f, color, NULL );
+		break;
+	}
+
+	case ITEM_TYPE_BIND: {
+		// the keys in a box, which is lit while the next key that is pressed will be taken
+		const qboolean waiting = (qboolean)( g_bindItem == item && g_waitingForKey );
+
+		BindingFromName( item->cvar );
+		Skin_Color( color, dark, waiting ? 1.0f : 0.35f + 0.65f * f );
+		Skin_Color( edge, waiting ? white : ink, waiting ? 1.0f : 0.45f );
+		Skin_Panel( widget.x, widget.y, widget.w, widget.h, 1.5f, color, edge );
+		if ( waiting ) {
+			Skin_Color( color, white, ( ( DC->realTime / BLINK_DIVISOR ) & 1 ) ? 1.0f : 0.35f );
+			Row_Text( widget.x + widget.w * 0.5f, widget.y, widget.h, 0.0f, ITEM_ALIGN_CENTER, small, color, "? ? ?", font );
+		} else if ( !Q_stricmp( g_nameBind, "???" ) ) {
+			Skin_Color( color, ink, 0.45f );
+			Skin_Panel( widget.x + widget.w * 0.5f - 4.0f, mid - 0.5f, 8.0f, 1.0f, 0.5f, f > 0.5f ? accent : color, NULL );
+		} else {
+			Color_Mix( color, item->window.foreColor, accent, f );
+			color[3] = off ? 0.5f : 1.0f;
+			Row_Text( widget.x + widget.w * 0.5f, widget.y, widget.h, widget.w - 8.0f, ITEM_ALIGN_CENTER, small, color, g_nameBind, font );
+		}
+		break;
+	}
+
+	case ITEM_TYPE_EDITFIELD:
+	case ITEM_TYPE_NUMERICFIELD: {
+		// what was typed, in a box. "row 2": it is not shown unless it is being typed (a password)
+		const qboolean			editing = (qboolean)( ( item->window.flags & WINDOW_HASFOCUS ) && g_editingField );
+		const editFieldDef_t	*editPtr = item->typeData.edit;
+		// (what the text calls take as a limit is a width: what does not fit into the box is not drawn)
+		const int				limit = (int)( widget.w - 8.0f );
+		int						start = 0;
+
+		word[0] = '\0';
+		if ( item->cvar ) {
+			DC->getCVarString( item->cvar, word, sizeof( word ) );
+		}
+		if ( item->row == 2 && !editing ) {
+			const int len = Q_min( (int)strlen( word ), 12 );
+
+			memset( word, '*', len );
+			word[len] = '\0';
+		}
+		if ( editPtr ) {
+			start = Com_Clampi( 0, (int)strlen( word ), editPtr->paintOffset );
+			if ( DC->getCVarValue( "cl_utf8Text" ) ) {
+				while ( ( word[start] & 0xC0 ) == 0x80 ) {
+					start++;
+				}
+			}
+		}
+		Skin_Color( color, dark, editing ? 1.0f : 0.35f + 0.65f * f );
+		Skin_Color( edge, editing ? white : ink, editing ? 1.0f : 0.45f );
+		Skin_Panel( widget.x, widget.y, widget.w, widget.h, 1.5f, color, edge );
+		Color_Mix( color, item->window.foreColor, accent, f );
+		color[3] = off ? 0.5f : 1.0f;
+		mid = widget.y + ( widget.h - DC->textHeight( "A", small, font ) ) * 0.5f;
+		if ( editing ) {
+			DC->drawTextWithCursor( widget.x + 5.0f, mid, small, color, word + start, Q_max( 0, item->cursorPos - start ),
+				DC->getOverstrikeMode() ? '_' : '|', limit, 0, font );
+		} else if ( word[start] ) {
+			DC->drawText( widget.x + 5.0f, mid, small, color, word + start, 0, limit, 0, font );
+		}
+		break;
+	}
+
+	default:
+		// something to click: an arrow says so
+		Skin_Arrow( widget.x + widget.w - 1.0f - ROW_ARROW * 0.62f, mid - ROW_ARROW * 0.5f, ROW_ARROW * 0.62f, ROW_ARROW, qfalse, ink );
+		break;
+	}
+}
+
+/*
+=================
+Item_Tab_Paint
+
+The mark of a button that opens a page ("tab <n>"): a line under the one whose page is open, a faint one under
+the one in focus. Its text is drawn by the caller, brighter by item->skinFocus and item->skinValue.
+=================
+*/
+static void Item_Tab_Paint( itemDef_t *item ) {
+	const menuDef_t	*parent = (const menuDef_t *)item->parent;
+	const rectDef_t	*r = &item->window.rect;
+	vec4_t			color;
+
+	item->skinFocus = Skin_Ease( item->skinFocus, (qboolean)( ( item->window.flags & WINDOW_HASFOCUS ) && !item->disabled ), SKIN_EASE_MSEC );
+	item->skinValue = Skin_Ease( item->skinValue, (qboolean)( parent->page == item->tab ), SKIN_EASE_MSEC );
+	if ( item->window.flags & WINDOW_DECORATION ) {
+		return;
+	}
+	Skin_Color( color, parent->focusColor, Q_max( item->skinValue, 0.35f * item->skinFocus ) );
+	Skin_Panel( r->x + TAB_PAD - 3.0f, r->y + r->h - 2.0f, r->w - 2.0f * ( TAB_PAD - 3.0f ), 2.0f, 1.0f, color, NULL );
+}
+
+// "flow 1": a short line between this button of a bar and the one in front of it (Menu_TabsLayout says whether
+// there is one)
+static void Item_Flow_Paint( const itemDef_t *item ) {
+	const menuDef_t	*parent = (const menuDef_t *)item->parent;
+	const rectDef_t	*r = &item->window.rect;
+	vec4_t			color;
+
+	if ( item->cursorPos ) {
+		Skin_Color( color, parent->focusColor, 0.25f );
+		Skin_Panel( r->x - 0.4f, r->y + r->h * 0.28f, 0.8f, r->h * 0.44f, 0.0f, color, NULL );
+	}
+}
+
+// is this button one of a row that is laid out by the width of its words
+static qboolean Item_Flows( const itemDef_t *item ) {
+	return (qboolean)( ( item->tab || item->flow ) && item->textalignment == ITEM_ALIGN_CENTER );
+}
+
+/*
+=================
+Menu_TabsLayout
+
+The buttons of the pages ("tab") and the buttons of a bar ("flow 1") that stand in a row (one after the other
+in the menu file, at the same height) are as wide as their words, which are of another length in every
+language: the first one stays where the file put it and the others follow it. A button that is hidden takes no
+room. Where the row is longer than the menu is wide, they move together.
+=================
+*/
+static void Menu_TabsLayout( menuDef_t *menu ) {
+	int i = 0;
+
+	if ( !menu->skin || !Skin_Ready() ) {
+		return;
+	}
+	while ( i < menu->itemCount ) {
+		const int	first = i;
+		float		widths[MENU_PAGES], sum = 0.0f, pad = TAB_PAD, x, room;
+		int			n, k;
+
+		if ( !Item_Flows( menu->items[i] ) ) {
+			i++;
+			continue;
+		}
+		for ( n = first, k = 0; n < menu->itemCount && n - first < MENU_PAGES && Item_Flows( menu->items[n] )
+			&& menu->items[n]->window.rectClient.y == menu->items[first]->window.rectClient.y; n++ ) {
+			itemDef_t	*item = menu->items[n];
+			char		word[256];
+
+			Text_Word( item->text, word, sizeof( word ), item->caps, qfalse );
+			widths[n - first] = DC->textWidth( word, item->skinScale > 0.0f ? item->skinScale : item->textscale, item->iMenuFont );
+			if ( ( item->window.flags & WINDOW_VISIBLE ) && Item_EnableShowViaCvar( item, CVAR_SHOW ) ) {
+				sum += widths[n - first];
+				k++;
+			} else {
+				widths[n - first] = -1.0f;
+			}
+		}
+		i = n;
+		// (one button of a page alone stays what the menu file made it, one of a bar is as wide as its word)
+		if ( n - first < 2 && !menu->items[first]->flow ) {
+			continue;
+		}
+		x = menu->items[first]->window.rectClient.x;
+		room = ( menu->fullScreen ? SCREEN_WIDTH : menu->window.rect.w ) - 2.0f * x;
+		if ( k > 0 && sum + 2.0f * pad * k > room ) {
+			pad = Q_max( 3.0f, ( room - sum ) / ( 2.0f * k ) );
+		}
+		for ( k = first; k < n; k++ ) {
+			itemDef_t	*item = menu->items[k];
+			const float	w = Q_max( 0.0f, widths[k - first] ) + 2.0f * pad;
+
+			if ( fabsf( item->window.rectClient.x - x ) > 0.01f || fabsf( item->window.rectClient.w - w ) > 0.01f ) {
+				item->window.rectClient.x = x;
+				item->window.rectClient.w = w;
+				item->textalignx = w * 0.5f;
+				Item_UpdatePosition( item );
+			}
+			// (the first one that can be seen has no line in front of it)
+			item->cursorPos = ( x > menu->items[first]->window.rectClient.x );
+			if ( widths[k - first] >= 0.0f ) {
+				x += w;
+			}
+		}
+	}
+}
+
+/*
+=================
+Text_PaintWrapped
+
+A text in lines that are no longer than `width`, broken at its spaces, at most `maxLines` of them (what is left
+then is cut). Returns where the line after the last one would begin.
+=================
+*/
+static float Text_PaintWrapped( float x, float y, float width, float scale, vec4_t color, const char *text, int font, int maxLines ) {
+	const float	lineH = DC->textHeight( "A", scale, font ) * 1.18f;
+	char		line[512];
+	int			len = 0, lastSpace = -1, lines = 0;
+	const char	*p = text, *afterSpace = NULL;
+
+	line[0] = '\0';
+	while ( lines < maxLines ) {
+		const qboolean end = (qboolean)( *p == '\0' || *p == '\n' );
+
+		if ( !end && len < (int)sizeof( line ) - 1 ) {
+			if ( *p == ' ' ) {
+				lastSpace = len;
+				afterSpace = p + 1;
+			}
+			line[len++] = *p++;
+			line[len] = '\0';
+			if ( DC->textWidth( line, scale, font ) <= width || lastSpace <= 0 ) {
+				continue;
+			}
+			// too long: back to the last space
+			line[lastSpace] = '\0';
+			p = afterSpace;
+		}
+		if ( line[0] ) {
+			DC->drawText( x, y, scale, color, line, 0, 0, 0, font );
+		}
+		y += lineH;
+		lines++;
+		if ( end && *p == '\0' ) {
+			break;
+		}
+		if ( end ) {
+			p++;
+		}
+		len = 0;
+		lastSpace = -1;
+		line[0] = '\0';
+	}
+	return y;
+}
+
+/*
+=================
+Item_Desc_Paint
+
+ITEM_TYPE_DESC: what the item in focus is for, in the rectangle of this item: its name in capital letters, a
+short line and its descText. While nothing with a descText is in focus, the same for the page that is open (its
+tab). A change fades in.
+=================
+*/
+static void Item_Desc_Paint( itemDef_t *item ) {
+	menuDef_t		*parent = (menuDef_t *)item->parent;
+	const rectDef_t	*r = &item->window.rect;
+	itemDef_t		*about = NULL;
+	char			title[256], body[1024];
+	vec4_t			color;
+	float			y;
+	int				i, index = -1;
+
+	for ( i = 0; i < parent->itemCount; i++ ) {
+		itemDef_t *it = parent->items[i];
+
+		if ( ( it->window.flags & WINDOW_HASFOCUS ) && ( it->window.flags & WINDOW_VISIBLE ) && it->descText && !Item_Away( it ) ) {
+			about = it;
+			index = i;
+		}
+	}
+	for ( i = 0; i < parent->itemCount && !about; i++ ) {
+		if ( parent->items[i]->tab && parent->items[i]->tab == parent->page && parent->items[i]->descText ) {
+			about = parent->items[i];
+			index = i;
+		}
+	}
+	if ( !about ) {
+		return;
+	}
+	if ( item->cursorPos != index + 1 ) {
+		item->cursorPos = index + 1;
+		item->skinValue = 0.0f;
+	}
+	item->skinValue = Skin_Ease( item->skinValue, qtrue, SKIN_EASE_MSEC );
+
+	Text_Word( about->text, title, sizeof( title ), qtrue, qtrue );
+	Text_Word( about->descText, body, sizeof( body ), qfalse, qfalse );
+	Skin_Color( color, item->window.foreColor, item->skinValue );
+	y = Text_PaintWrapped( r->x, r->y, r->w, item->textscale * 1.45f, color, title, item->iMenuFont, 3 );
+	Skin_Color( color, parent->focusColor, item->skinValue );
+	Skin_Panel( r->x, y + 3.0f, 26.0f, 1.5f, 0.75f, color, NULL );
+	Skin_Color( color, parent->descColor, item->skinValue );
+	Text_PaintWrapped( r->x, y + 11.0f, r->w, item->textscale, color, body, item->iMenuFont, 12 );
+}
+
+static void Item_PageScroll_Paint( itemDef_t *item ) {
+	const menuDef_t	*menu = (const menuDef_t *)item->parent;
+	const rectDef_t	*r = &item->window.rect;
+	float			start, part;
+
+	if ( Item_PageScroll_Thumb( item, &start, &part ) ) {
+		Skin_ScrollBar( r->x, r->y, r->w, r->h, start, part, qfalse, menu->focusColor );
 	}
 }
 
@@ -6737,6 +7694,11 @@ void Item_Paint(itemDef_t *item)
 		return;
 	}
 
+	// on a page that is not open, or a row of the list outside of its window
+	if ( Item_Away( item ) ) {
+		return;
+	}
+
 	// "showStat": only while that number of the game is above 0
 	if ( item->showStat ) {
 		float value, max;
@@ -6746,7 +7708,8 @@ void Item_Paint(itemDef_t *item)
 		}
 	}
 
-	if (item->window.flags & WINDOW_MOUSEOVER)
+	// (a menu with an ITEM_TYPE_DESC says there what the item in focus is for)
+	if ((item->window.flags & WINDOW_MOUSEOVER) && !parent->descPane)
 	{
 		if (item->descText && !Display_KeyBindPending())
 		{
@@ -6826,9 +7789,23 @@ void Item_Paint(itemDef_t *item)
 	// paint the rect first..
 	Window_Paint(&item->window, parent->fadeAmount , parent->fadeClamp, parent->fadeCycle);
 
-	// the mark of an item that has the focus, in a menu with the new look. A list marks its rows itself.
-	if ( Item_Skinned( item ) && item->type != ITEM_TYPE_LISTBOX && item->type != ITEM_TYPE_TEXTSCROLL && item->type != ITEM_TYPE_MODEL
-		&& item->type != ITEM_TYPE_OWNERDRAW && item->type != ITEM_TYPE_TEXT ) {
+	// a setting that is a row of a list draws all of itself
+	if ( Item_IsRow( item ) ) {
+		Item_Row_Paint( item );
+		DC->setColor( NULL );
+		return;
+	}
+
+	// the mark of an item that has the focus, in a menu with the new look. A list marks its rows itself, and
+	// the button of a page has a mark of its own.
+	if ( Item_Skinned( item ) && item->flow ) {
+		Item_Flow_Paint( item );
+	}
+	if ( Item_Skinned( item ) && item->tab ) {
+		Item_Tab_Paint( item );
+	} else if ( Item_Skinned( item ) && item->type != ITEM_TYPE_LISTBOX && item->type != ITEM_TYPE_TEXTSCROLL && item->type != ITEM_TYPE_MODEL
+		&& item->type != ITEM_TYPE_OWNERDRAW && item->type != ITEM_TYPE_TEXT && item->type != ITEM_TYPE_DESC
+		&& item->type != ITEM_TYPE_PAGESCROLL ) {
 		Skin_ItemBack( item );
 	}
 
@@ -6862,6 +7839,12 @@ void Item_Paint(itemDef_t *item)
 		break;
 	case ITEM_TYPE_LOGO:
 		Skin_Logo( item->window.rect.x, item->window.rect.y, item->window.rect.w, item->window.rect.h, item->window.foreColor[3] );
+		break;
+	case ITEM_TYPE_DESC:
+		Item_Desc_Paint( item );
+		break;
+	case ITEM_TYPE_PAGESCROLL:
+		Item_PageScroll_Paint( item );
 		break;
 	case ITEM_TYPE_TEXT:
 	case ITEM_TYPE_BUTTON:
@@ -7053,6 +8036,15 @@ void Menu_HandleMouseMove(menuDef_t *menu, float x, float y) {
         continue;
       }
 
+			// on a page that is not open, or a row of the list outside of its window
+			if ( Item_Away( menu->items[i] ) ) {
+				if ( menu->items[i]->window.flags & WINDOW_MOUSEOVER ) {
+					Item_MouseLeave( menu->items[i] );
+					Item_SetMouseOver( menu->items[i], qfalse );
+				}
+				continue;
+			}
+
 			if (menu->items[i]->disabled)
 			{
 				continue;
@@ -7143,6 +8135,11 @@ void Menu_Paint(menuDef_t *menu, qboolean forcePaint) {
 
 	// paint the background and or border
 	Window_Paint(&menu->window, menu->fadeAmount, menu->fadeClamp, menu->fadeCycle );
+
+	// the list of the open page glides to where the wheel sent it, and the buttons of the pages are as wide as
+	// their words are in the language of this frame
+	Menu_ScrollFrame( menu );
+	Menu_TabsLayout( menu );
 
 	// the items that are painted before the background of the menu lie under it
 	underBackground = 0;
@@ -8143,6 +9140,43 @@ qboolean ItemParse_caps( itemDef_t *item, int handle ) {
 	return qtrue;
 }
 
+// page <n>: the item is only there while that page of its menu is open. tab <n>: a button that opens that
+// page. scroll 1: the item stands in the list of its page. row 1: a setting drawn as a row of that list (row 2:
+// what was typed into it is not shown).
+qboolean ItemParse_page( itemDef_t *item, int handle ) {
+	return (qboolean)( PC_Int_Parse( handle, &item->page ) && item->page >= 0 && item->page < MENU_PAGES );
+}
+
+qboolean ItemParse_tab( itemDef_t *item, int handle ) {
+	return (qboolean)( PC_Int_Parse( handle, &item->tab ) && item->tab >= 0 && item->tab < MENU_PAGES );
+}
+
+qboolean ItemParse_scroll( itemDef_t *item, int handle ) {
+	int i;
+
+	if ( !PC_Int_Parse( handle, &i ) ) {
+		return qfalse;
+	}
+	item->scroll = (qboolean)( i != 0 );
+	return qtrue;
+}
+
+qboolean ItemParse_row( itemDef_t *item, int handle ) {
+	return PC_Int_Parse( handle, &item->row );
+}
+
+// flow 1: a button of a bar. The buttons of a row are as wide as their words and follow each other, with a
+// short line between them (Menu_TabsLayout).
+qboolean ItemParse_flow( itemDef_t *item, int handle ) {
+	int i;
+
+	if ( !PC_Int_Parse( handle, &i ) ) {
+		return qfalse;
+	}
+	item->flow = (qboolean)( i != 0 );
+	return qtrue;
+}
+
 qboolean ItemParse_bordersize( itemDef_t *item, int handle ) {
 	if (!PC_Float_Parse(handle, &item->window.borderSize)) {
 		return qfalse;
@@ -8970,6 +10004,11 @@ keywordHash_t itemParseKeywords[] = {
 	{"stat",			ItemParse_stat,				NULL	},
 	{"showStat",		ItemParse_showStat,			NULL	},
 	{"caps",			ItemParse_caps,				NULL	},
+	{"page",			ItemParse_page,				NULL	},
+	{"tab",				ItemParse_tab,				NULL	},
+	{"scroll",			ItemParse_scroll,			NULL	},
+	{"row",				ItemParse_row,				NULL	},
+	{"flow",			ItemParse_flow,				NULL	},
 	{"wide",			ItemParse_wide,				NULL	},
 	{"style",			ItemParse_style,			NULL	},
 	{"text",			ItemParse_text,				NULL	},
@@ -9412,6 +10451,16 @@ qboolean MenuParse_backdrop( itemDef_t *item, int handle ) {
 
 qboolean MenuParse_openSlide( itemDef_t *item, int handle ) {
 	return PC_Int_Parse( handle, &( (menuDef_t *)item )->openSlide );
+}
+
+// scrollRect <x y w h>: the window of the list of a page (the items with "scroll 1"), in the units of the menu.
+// scrollStep <units>: the height of a row of it, which is what the list moves by.
+qboolean MenuParse_scrollRect( itemDef_t *item, int handle ) {
+	return PC_Rect_Parse( handle, &( (menuDef_t *)item )->scrollRect );
+}
+
+qboolean MenuParse_scrollStep( itemDef_t *item, int handle ) {
+	return PC_Float_Parse( handle, &( (menuDef_t *)item )->scrollStep );
 }
 
 qboolean MenuParse_fullscreen( itemDef_t *item, int handle ) {
@@ -9859,6 +10908,8 @@ keywordHash_t menuParseKeywords[] = {
 	{"skin",				MenuParse_skin,			NULL	},
 	{"backdrop",			MenuParse_backdrop,		NULL	},
 	{"openSlide",			MenuParse_openSlide,	NULL	},
+	{"scrollRect",			MenuParse_scrollRect,	NULL	},
+	{"scrollStep",			MenuParse_scrollStep,	NULL	},
 	{"radius",				ItemParse_radius,		NULL	},
 	{"shadow",				ItemParse_shadow,		NULL	},
 	{"sheen",				ItemParse_sheen,		NULL	},
@@ -10085,6 +11136,10 @@ static qboolean Menu_OverActiveItem(menuDef_t *menu, float x, float y) {
 				}
 
 				if (menu->items[i]->window.flags & WINDOW_DECORATION) {
+					continue;
+				}
+
+				if ( Item_Away( menu->items[i] ) ) {
 					continue;
 				}
 

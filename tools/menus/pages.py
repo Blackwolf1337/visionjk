@@ -4,6 +4,7 @@ out anew."""
 import os
 
 import menufile as mf
+import options
 from menufile import Entry
 from theme import *         # noqa: F401,F403
 
@@ -95,21 +96,26 @@ def top_bar(m, here):
     return new
 
 
+FOOT = ['0.02', '0.04', '0.08', '0.50']         # the bar at the bottom of a page, and the row of tabs of an options screen
+
+
 def bottom_button(b, primary=False):
-    """A button of the row at the bottom: a pill, the one that goes on filled."""
-    text_center(b, 0.7, 4.5)
+    """A button of the bar at the bottom of a page: its word on the bar, and the one that goes on as a filled block."""
+    r = rect_of(b)
+    mf.put(b, 'font', FONT)
+    mf.put(b, 'textscale', '0.6')
+    mf.put(b, 'textalign', 'ITEM_ALIGN_CENTER')
+    mf.put(b, 'textalignx', mf.fmt(r[2] / 2))
+    mf.put(b, 'textaligny', mf.fmt((r[3] - 18.0 * 0.6) / 2))
     mf.put(b, 'caps', 1)
     if primary:
         mf.put(b, 'style', 'WINDOW_STYLE_PANEL')
-        mf.put(b, 'backcolor', *(ACCENT[:3] + ['0.20']))
-        mf.put(b, 'bordercolor', *(ACCENT[:3] + ['0.75']))
-        mf.put(b, 'radius', 11)
+        mf.put(b, 'backcolor', *(ACCENT[:3] + ['0.22']))
+        mf.put(b, 'bordercolor', *(ACCENT[:3] + ['0.8']))
+        mf.put(b, 'radius', 3)
         mf.put(b, 'forecolor', *BRIGHT)
     else:
-        mf.put(b, 'style', 'WINDOW_STYLE_PANEL')
-        mf.put(b, 'backcolor', '1', '1', '1', '0.04')
-        mf.put(b, 'bordercolor', *SOFT_EDGE)
-        mf.put(b, 'radius', 11)
+        mf.put(b, 'style', 'WINDOW_STYLE_EMPTY')
         mf.put(b, 'forecolor', *TEXT)
 
 
@@ -313,31 +319,43 @@ def shell(m, menu, had_logo):
     # height has no button that leaves the game: the first page has one, and the line about what the mouse is on
     # stands in its place.)
     row_y = 446 if not bb or bb[3] <= 440 else min(456, bb[3] + 5)
+    row_h = 480 - row_y
     if dense:
         for e in [e for e in bottom if name_of(e.block) == 'exitgamebutton']:
             bottom.remove(e)
             m.remove(e)
     left = sorted((e for e in bottom if not is_primary(e.block)), key=lambda e: rect_of(e.block)[0])
     right = sorted((e for e in bottom if is_primary(e.block)), key=lambda e: -rect_of(e.block)[0])
+    # a bar over the width of the screen: its buttons at the left as words with a line between them, the ones that
+    # go on at the right as blocks
+    foot = [item('vision_foot', (0, row_y, 640, row_h), ('style', 'WINDOW_STYLE_FILLED'), ('backcolor', *FOOT), ('wide', 1),
+                 ('decoration',)),
+            item('vision_foot_line', (0, row_y, 640, 0.67), ('style', 'WINDOW_STYLE_FILLED'),
+                 ('backcolor', *(ACCENT[:3] + ['0.18'])), ('wide', 1), ('decoration',))]
+    # (The words at the left are as wide as they are in the language of the player and follow each other: "flow",
+    # Menu_TabsLayout in ui_shared.c. The first begins where the content of a page does. Buttons that lie on each
+    # other take turns: the one that is hidden takes no room.)
+    for n, e in enumerate(left):
+        set_rect(e.block, 29 + 90 * n, row_y, 90, row_h)
+        bottom_button(e.block)
+        mf.put(e.block, 'flow', 1)
     seen = {}
-    for group, start, step in ((left, 40, 120), (right, 490, -120)):
-        for e in group:
-            b = e.block
-            old = round(rect_of(b)[0])
-            # (buttons that lie on each other take turns: they share a place)
-            x = seen.setdefault((id(group), old), start + step * len({k for k in seen if k[0] == id(group)}))
-            set_rect(b, x, row_y, 110, 22)
-            bottom_button(b, primary=group is right)
-    # (the row lies on everything: a figure of the page may reach down to it)
+    for e in right:
+        old = round(rect_of(e.block)[0])
+        x = seen.setdefault(old, 486 - 130 * len(seen))
+        set_rect(e.block, x, row_y + 6, 122, row_h - 12)
+        bottom_button(e.block, primary=True)
+    bottom = left + right
+    # (the bar lies on everything: a figure of the page may reach down to it)
     for e in bottom:
         m.remove(e)
-        m.append(e)
+    m.extend(foot + bottom)
+    left_end = 29 + 90 * len(left)
     # what the mouse is on is explained under the heading, on a page without one between the buttons
-    places = [rect_of(e.block)[0] for e in bottom]
-    gap0 = max([x + 110 for x in places if x < 320] or [40])
-    gap1 = min([x for x in places if x >= 320] or [600])
+    gap0 = max(left_end, 40)
+    gap1 = min([rect_of(e.block)[0] for e in right] or [608])
     mf.put(m, 'descX', mf.fmt(head_x) if not dense else mf.fmt((gap0 + gap1) / 2))
-    mf.put(m, 'descY', 80 if not dense else row_y + 6)
+    mf.put(m, 'descY', 80 if not dense else mf.fmt(row_y + (row_h - 10) / 2))
     mf.put(m, 'descAlignment', 'ITEM_ALIGN_LEFT' if not dense else 'ITEM_ALIGN_CENTER')
     mf.put(m, 'descScale', '0.8' if not dense else '0.55')
     first = next((i for i, e in enumerate(m) if e.k == 'itemdef'), len(m))
@@ -510,86 +528,10 @@ def ingame_bar(m):
     m[first:first] = new
 
 
-# ---- settings that had no entry: new tabs of the two setup menus, and more rows for the tab of the sound.
-# A row: (kind, label, cvar, what it is for, ...). slider: default, least, most. multi: pairs of name and value.
-TABS = [
-    ('interface', 'INTERFACE', 'How menus, HUD and camera look.', [
-        ('yesno', 'New HUD', 'cg_hud', 'The HUD of VisionJK. Off: the HUD of the game.'),
-        ('yesno', 'Classic Menus', 'ui_classic', 'The menus of the game as they were. Counts from the next start of the game.'),
-        ('yesno', 'Wide Screen Layout', 'r_2dAspect', 'Menus and HUD keep their shape on a wide window. Counts after a restart of the video.'),
-        ('yesno', 'Menu in the Level', 'cg_immersiveMenu', 'In a game an open menu stands in the level next to you.'),
-        ('slider', 'Menu Blur', 'r_menuBlur', 1, 0, 4, 'How far the level behind an open menu is out of focus.'),
-        ('slider', 'Field of View', 'cg_fov', 80, 60, 130, 'How wide you see.'),
-        ('slider', 'Camera Distance', 'cg_thirdPersonRange', 80, 40, 200, 'How far the camera is behind you in third person.'),
-        ('slider', 'Crosshair Size', 'cg_crosshairSize', 24, 12, 64, 'The size of the crosshair.'),
-        ('multi', 'Frame Limit', 'com_maxfps', [('60', 60), ('90', 90), ('125', 125), ('144', 144), ('165', 165), ('240', 240), ('None', 0)],
-         'The most frames a second the game draws.'),
-        ('yesno', 'Show Frame Rate', 'cg_drawFPS', 'Frames a second in the corner of the screen.'),
-        ('yesno', 'Show Timer', 'cg_drawTimer', 'The time of the level in the corner of the screen.'),
-        ('yesno', 'Show Lagometer', 'cg_lagometer', 'A graph of your connection.'),
-    ]),
-    ('social', 'CHAT & SOCIAL', 'The chat box, bubbles and what stands above the heads.', [
-        ('yesno', 'Chat Bubbles', 'cg_chatBubbles', 'What a player says stands above his head.'),
-        ('slider', 'Bubble Range', 'cg_bubbleRange', 1200, 300, 3000, 'How far away a bubble is still drawn.'),
-        ('yesno', 'Player Statuses', 'cg_playerStatuses', 'Away from keyboard and music above the heads of the others.'),
-        ('yesno', 'Show My Music', 'cg_shareMusic', 'Tell the others what you listen to. Everybody on the server reads it.'),
-        ('yesno', 'Select Players', 'cg_selectPlayers', 'With the mouse free, a click on a player opens a card with what you can do with him.'),
-        ('yesno', 'Selection Outline', 'cg_selectOutline', 'A glowing outline around the player under the mouse.'),
-        ('yesno', 'Own Chat Line', 'cg_chatInput', 'Type into the chat box of VisionJK, with history and links.'),
-        ('slider', 'Chat Box Width', 'cg_chatBoxWidth', 380, 200, 600, 'How wide the chat box is.'),
-        ('yesno', 'Chat Beep', 'cg_chatBeep', 'A sound when somebody says something.'),
-        ('yesno', 'Sharp Console Font', 'con_font', 'The console in a font with every character.'),
-        ('slider', 'Console Text Size', 'con_scale', 1, 0.5, 3, 'The size of the text of the console.'),
-        ('slider', 'Console Opacity', 'con_opacity', 1, 0.2, 1, 'How much of the game shows through the console.'),
-    ]),
-    ('network', 'NETWORK', 'Updates, downloads and security.', [
-        ('yesno', 'Check for Updates', 'cl_updateCheck', 'Ask at every start whether a newer version is out.'),
-        ('yesno', 'Allow Downloads', 'cl_allowDownload', 'Take files a server offers.'),
-        ('yesno', 'Intrusion Log', 'cl_ids', 'Write down what a server sends that no server of the game does, and leave one that keeps at it.'),
-        ('yesno', 'Key Login by Agent', 'cg_authAgent', 'The admin login asks your ssh-agent for the key (1Password, OpenSSH).'),
-        ('yesno', 'UTF-8 Text', 'cl_utf8', 'Every character in names and chat. Off for a language with a code page of its own.'),
-    ]),
-]
-MORE_ROWS = {
-    'sound': [
-        ('yesno', 'Spatial Audio', 's_spatial', 'Sound that knows the level: walls, rooms and corners. Counts after a restart of the sound.'),
-        ('yesno', 'Room Reflections', 's_spatialReflections', 'The room around you rings.'),
-        ('yesno', 'Sound Round Corners', 's_spatialPaths', 'A sound finds its way round corners.'),
-        ('yesno', 'Doppler', 's_doppler', 'What flies past changes its pitch.'),
-    ],
-}
-
-
-def quoted(s):
-    return '"%s"' % s
-
-
-def setting_row(group, spec, rect, alignx):
-    kind, text, cvar = spec[:3]
-    desc = spec[-1]
-    b = [Entry('name', ['%s_%s' % (group, cvar.lower())]), Entry('group', [group]),
-         Entry('type', [{'yesno': 'ITEM_TYPE_YESNO', 'slider': 'ITEM_TYPE_SLIDER', 'multi': 'ITEM_TYPE_MULTI'}[kind]]),
-         Entry('text', [quoted(text + ':')])]
-    if kind == 'slider':
-        b.append(Entry('cvarfloat', [quoted(cvar)] + [mf.fmt(v) for v in spec[3:6]]))
-    else:
-        b.append(Entry('cvar', [quoted(cvar)]))
-    if kind == 'multi':
-        words = []
-        for label_, value in spec[3]:
-            words += [quoted(label_), mf.fmt(value)]
-        b.append(Entry('cvarFloatList', [], words))
-    b += [Entry('rect', [mf.fmt(v) for v in rect]), Entry('textalign', ['ITEM_ALIGN_RIGHT']), Entry('textalignx', [mf.fmt(alignx)]),
-          Entry('textaligny', ['0']), Entry('font', ['4']), Entry('textscale', ['1']), Entry('forecolor', ['0.65', '0.65', '1', '1']),
-          Entry('visible', ['0']), Entry('descText', [quoted(desc)]),
-          Entry('action', [], ['play', '"sound/interface/button1.wav"', ';'])]
-    return Entry('itemDef', [], b)
-
-
 # Rows the new look leaves out, by group and cvar. Twice in Setup: bubbles and music are with the chat (Chat &
-# Social), downloads with the network. Read by nothing in this tree: the sway of the weapon (ui_disableWeaponSway)
-# and the axes of a joystick as buttons (joy_xbutton, joy_ybutton).
-LEFT_OUT = {('voicechat', 'cg_chatbubbles'), ('voicechat', 'cg_sharemusic'), ('options', 'cl_allowdownload'),
+# Social, tools/menus/options.py). Read by nothing in this tree: the sway of the weapon (ui_disableWeaponSway) and
+# the axes of a joystick as buttons (joy_xbutton, joy_ybutton).
+LEFT_OUT = {('voicechat', 'cg_chatbubbles'), ('voicechat', 'cg_sharemusic'),
             ('options', 'ui_disableweaponsway'), ('joycontrols', 'joy_xbutton'), ('joycontrols', 'joy_ybutton')}
 
 
@@ -614,103 +556,10 @@ def leave_out(m):
                 set_rect(x.block, xr[0], xr[1] - pitch, xr[2], xr[3])
 
 
-def setup_before(m):
-    """The new tabs and rows of a setup menu, written as the old ones are: the rules of theme.py then treat them
-    as their neighbours. Called before those rules."""
-    tabs = [e for e in items(m) if (mf.get(e.block, 'group') or [''])[0] == 'setup_submenu' and mf.find(e.block, 'action')]
-    sample = next((e for e in items(m) if (mf.get(e.block, 'group') or [''])[0] == 'voicechat' and mf.get(e.block, 'text')), None)
-    model = next((e for e in tabs if name_of(e.block) == 'voicechatmenubutton'), None)
-    if not tabs or not sample or not model:
-        return
-    row = rect_of(sample.block)                     # x, y of the first row, width, height of a row
-    alignx = mf.num(mf.get(sample.block, 'textalignx')[0])
-    top = min(rect_of(e.block)[1] for e in items(m) if (mf.get(e.block, 'group') or [''])[0] == 'voicechat' and rect_of(e.block))
-    tab_rects = sorted(rect_of(e.block) for e in tabs)
-    step = tab_rects[1][1] - tab_rects[0][1]
-    last = max(r[1] for r in tab_rects)
-    new = []
-    for n, (group, title, desc, rows) in enumerate(TABS):
-        # every tab that is there hides the new one
-        for e in tabs:
-            words = mf.find(e.block, 'action').block
-            at = next((i for i, w in enumerate(words) if w.lower() == 'setitemcolor'), len(words))
-            words[at:at] = ['hide', group, ';', mf.NL]
-        button = Entry('itemDef', [], [Entry(x.key, list(x.args), list(x.block) if x.block is not None else None) for x in model.block])
-        b = button.block
-        mf.put(b, 'name', group + 'menubutton')
-        mf.put(b, 'text', quoted(title))
-        mf.put(b, 'descText', quoted(desc))
-        r = rect_of(model.block)
-        set_rect(b, r[0], last + step * (n + 1), r[2], r[3])
-        mf.drop(b, 'mouseenter')
-        mf.drop(b, 'mouseexit')
-        words = mf.find(b, 'action').block
-        for i, w in enumerate(words):
-            if w == 'voicechatmenubutton':
-                words[i] = group + 'menubutton'
-            elif w == 'voicechat' and words[i - 1].lower() == 'show':
-                words[i - 1] = 'hide'
-        at = next((i for i, w in enumerate(words) if w.lower() == 'setitemcolor'), len(words))
-        words[at:at] = ['show', group, ';', mf.NL]
-        for other, _, _, _ in TABS:
-            if other != group and other not in words:
-                words[at:at] = ['hide', other, ';', mf.NL]
-        new.append(button)
-        for i, spec in enumerate(rows):
-            new.append(setting_row(group, spec, (row[0], top + i * row[3], row[2], row[3]), alignx))
-    opens = mf.find(m, 'onopen')
-    if opens is not None and isinstance(opens.block, list):
-        for group, _, _, _ in TABS:
-            opens.block[0:0] = ['hide', group, ';', mf.NL]
-    for group, rows in MORE_ROWS.items():
-        have = [rect_of(e.block) for e in items(m) if (mf.get(e.block, 'group') or [''])[0] == group and rect_of(e.block)]
-        if not have:
-            continue
-        y = max(r[1] for r in have) + row[3]
-        for i, spec in enumerate(rows):
-            new.append(setting_row(group, spec, (row[0], y + i * row[3], row[2], row[3]), alignx))
-    m.extend(new)
-
-
-def controls_before(m):
-    """The key that frees the mouse, as a row under the one of the clan radio."""
-    model = next((e for e in items(m) if (mf.get(e.block, 'cvar') or [''])[0] == '"+voiceclan"'), None)
-    if not model:
-        return
-    group = (mf.get(model.block, 'group') or [''])[0]
-    rows = [rect_of(e.block) for e in items(m) if (mf.get(e.block, 'group') or [''])[0] == group and rect_of(e.block)
-            and mf.get(e.block, 'cvar')]
-    r = rect_of(model.block)
-    row = Entry('itemDef', [], [Entry(x.key, list(x.args), list(x.block) if x.block is not None else None) for x in model.block])
-    b = row.block
-    mf.put(b, 'name', 'vision_cursorkey')
-    mf.put(b, 'text', quoted('Free the Mouse (Select Players)'))
-    mf.put(b, 'cvar', quoted('+cursor'))
-    mf.put(b, 'descText', quoted('hold to point at players with the mouse: a click opens what you can do with one'))
-    set_rect(b, r[0], max(x[1] for x in rows) + r[3], r[2], r[3])
-    for key in ('mouseenter', 'mouseexit'):
-        e = mf.find(b, key)
-        if e and isinstance(e.block, list):
-            # the bar that lit behind the row of the model is not this row's
-            words, out, i = e.block, [], 0
-            while i < len(words):
-                if words[i].lower() in ('show', 'hide') and i + 1 < len(words) and words[i + 1].lower().startswith('highlight'):
-                    i += 2
-                else:
-                    out.append(words[i])
-                    i += 1
-            e.block = out
-    m.append(row)
-
-
 def before(m, name, ingame):
     """What a page gets before the rules of theme.py."""
-    if name in ('setup.menu', 'ingame_setup.menu'):
+    if name in options.SCREENS:
         leave_out(m)
-        setup_before(m)
-    elif name in ('controls.menu', 'ingame_controls.menu'):
-        leave_out(m)
-        controls_before(m)
 
 
 LINE = 18.0                 # the height of a line of the new font at a scale of 1
@@ -721,6 +570,16 @@ def tidy(m):
     of the bar: the old menus had it a little above or below, on a picture of another height. A setting whose
     rectangle is much higher than its line is cut to the line: the mark under the mouse is as large as the
     rectangle, and reached into the rows around it."""
+    # the frames around the rows of a list of servers: a line under each row in their place
+    for e in items(m):
+        b = e.block
+        r = rect_of(b)
+        if r and name_of(b) == 'horizontalseparators' and mf.get(b, 'text') is None:
+            for key in ('bordercolor', 'radius', 'shadow', 'sheen', 'border', 'bordersize'):
+                mf.drop(b, key)
+            mf.put(b, 'style', 'WINDOW_STYLE_FILLED')
+            mf.put(b, 'backcolor', '1', '1', '1', '0.07')
+            set_rect(b, r[0], r[1] + r[3] - 1, r[2], 0.67)
     bars = [rect_of(e.block) for e in items(m) if rect_of(e.block) and mf.get(e.block, 'text') is None
             and (mf.get(e.block, 'style') or [''])[0] == 'WINDOW_STYLE_PANEL' and mf.get(e.block, 'backcolor') == HEAD
             and 10 <= rect_of(e.block)[3] <= 34]
@@ -758,6 +617,16 @@ def page(m, name, ingame):
             elif g in ('video', 'vidrestart'):
                 mf.put(e.block, 'visible', 0)
     full = mf.truth(mf.get(m, 'fullscreen'))
+    if name in options.SCREENS:
+        # Setup and Controls: one screen of tabs and lists (options.py), under the bar of the sections
+        nav = []
+        if not ingame:
+            if not {name_of(e.block) for e in items(m)} & set(NAV):
+                m.extend(nav_button(*n) for n in NAV_MAKE)
+            nav = top_bar(m, SECTION.get(menu))
+            nav += [e for e in items(m) if name_of(e.block) in NAV]
+        options.build(m, name, ingame, nav)
+        return
     if menu == 'main':
         main_page(m)
     elif menu == 'connect':

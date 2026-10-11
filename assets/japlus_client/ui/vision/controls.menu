@@ -8,42 +8,25 @@
 		rect					0 0 640 480
 		visible					0
 		focusColor				0.43 0.83 1 1
-		descX					40
-		descY					80
-		descScale				0.8
+		descX					320
+		descY					424
+		descScale				1
 		descColor				0.60 0.69 0.78 1
-		descAlignment			ITEM_ALIGN_LEFT
+		descAlignment			ITEM_ALIGN_CENTER
 		onOpen
 		{
 			uiScript loadControls;
-			show setup_background ;
-			show movecontrols ;
-			hide attackcontrols ;
-			hide weaponcontrols ;
-			hide forcecontrols ;
-			hide forcecontrols2 ;
-			hide quickcontrols ;
-			hide joycontrols ;
-			hide othercontrols ;
-			hide japluscontrols;
-			setitemcolor movementcontrolbutton forecolor 0.43 0.83 1 1 ;
-			setitemcolor attackcontrolbutton forecolor 0.86 0.92 0.97 1 ;
-			setitemcolor weaponscontrolbutton forecolor 0.86 0.92 0.97 1 ;
-			setitemcolor forcecontrolbutton forecolor 0.86 0.92 0.97 1 ;
-			setitemcolor forcecontrolbutton2 forecolor 0.86 0.92 0.97 1 ;
-			setitemcolor quickcontrolbutton forecolor 0.86 0.92 0.97 1 ;
-			setitemcolor mousejoystickcontrolbutton forecolor 0.86 0.92 0.97 1 ;
-			setitemcolor othercontrolbutton forecolor 0.86 0.92 0.97 1 ;
-			setitemcolor japluscontrolbutton forecolor 0.86 0.92 0.97 1 ;
 		}
 		onClose { uiScript saveControls }
 		onESC
 		{
 			play "sound/interface/menuroam.wav" ;
-			hide highlights ;
 			close controlsMenu ;
 			open main ;
 		}
+		skin					1
+		disableColor			0.36 0.42 0.50 1
+		backdrop				1
 
 		itemDef
 		{
@@ -222,417 +205,164 @@
 
 		itemDef
 		{
-			name					creditsbutton
-			group					othermain
-			descText				@MENUS_SHOW_GAME_CREDITS
-			type					ITEM_TYPE_BUTTON
-			style					WINDOW_STYLE_EMPTY
-			rect					200 144 256 256
-			font					2
-			textscale				1
-			textaligny				0
-			textalign				ITEM_ALIGN_CENTER
-			textalignx				46
-			backcolor				0 0 0 0
-			forecolor				1 .682 0 1
-			visible					0
-			mouseEnter {  }
-			mouseExit {  }
-			action
-			{
-				play "sound/interface/button1.wav" ;
-				close all ;
-				open creditsMenu
-			}
-		}
-
-		itemDef
-		{
-			name					control_title
-			group					none
-			style					WINDOW_STYLE_EMPTY
-			text					@MENUS_CONFIGURE_CONTROLS
-			rect					40 46 400 28
-			font					5
-			textscale				1.45
-			textalign				ITEM_ALIGN_LEFT
-			textalignx				0
-			textaligny				2
-			forecolor				1 1 1 1
+			name					vision_strip
+			rect					0 34 640 26
 			visible					1
+			style					WINDOW_STYLE_FILLED
+			backcolor				0.02 0.04 0.08 0.50
 			decoration
-			caps					1
+			wide					1
 		}
 
 		itemDef
 		{
-			name					vision_rail_185
-			rect					40 100 180 240
+			name					vision_strip_line
+			rect					0 60 640 0.67
 			visible					1
-			style					WINDOW_STYLE_PANEL
-			backcolor				0.035 0.07 0.12 0.55
-			bordercolor				0.43 0.83 1 0.16
-			radius					6
-			shadow					8
-			sheen					0.06
+			style					WINDOW_STYLE_FILLED
+			backcolor				0.43 0.83 1 0.18
 			decoration
+			wide					1
 		}
 
 		itemDef
 		{
-			name					movementcontrolbutton
-			group					none
+			name					vision_tab1
+			rect					29 34 82.29 26
+			visible					1
 			text					@MENUS_MOVEMENT
-			type					ITEM_TYPE_BUTTON
-			style					WINDOW_STYLE_EMPTY
-			rect					45 105 170 24
 			font					5
-			textscale				0.67
-			textalignx				12
-			textaligny				4.25
-			textalign				ITEM_ALIGN_LEFT
-			textstyle				0
-			forecolor				0.86 0.92 0.97 1
-			visible					1
-			descText				@MENUS_CONFIGURE_MOVEMENT_KEYS
-			mouseEnter { show movementcontrolbutton_glow }
-			mouseExit { hide movementcontrolbutton_glow }
-			action
-			{
-				play "sound/interface/button1.wav" ;
-				show setup_background ;
-				show movecontrols ;
-				hide attackcontrols ;
-				hide weaponcontrols ;
-				hide forcecontrols ;
-				hide forcecontrols2 ;
-				hide joycontrols ;
-				hide othercontrols ;
-				hide japluscontrols;
-				setitemcolor movementcontrolbutton forecolor 0.43 0.83 1 1 ;
-				setitemcolor attackcontrolbutton forecolor 0.86 0.92 0.97 1 ;
-				setitemcolor weaponscontrolbutton forecolor 0.86 0.92 0.97 1 ;
-				setitemcolor forcecontrolbutton forecolor 0.86 0.92 0.97 1 ;
-				setitemcolor forcecontrolbutton2 forecolor 0.86 0.92 0.97 1 ;
-				setitemcolor mousejoystickcontrolbutton forecolor 0.86 0.92 0.97 1 ;
-				setitemcolor othercontrolbutton forecolor 0.86 0.92 0.97 1 ;
-				setitemcolor japluscontrolbutton forecolor 0.86 0.92 0.97 1 ;
-			}
+			textscale				0.58
+			forecolor				0.60 0.69 0.78 1
+			type					ITEM_TYPE_BUTTON
 			caps					1
+			style					WINDOW_STYLE_EMPTY
+			tab						1
+			descText				@VISION_THE_KEYS_YOU_MOVE_WITH
+			action { play "sound/interface/button1.wav" ; }
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				41.14
+			textaligny				7.78
 		}
 
 		itemDef
 		{
-			name					attackcontrolbutton
-			group					none
+			name					vision_tab2
+			rect					111.29 34 82.29 26
+			visible					1
 			text					@MENUS_INTERACTION
-			type					ITEM_TYPE_BUTTON
-			style					WINDOW_STYLE_EMPTY
-			rect					45 129 170 24
 			font					5
-			textscale				0.67
-			textalignx				12
-			textaligny				4.25
-			textalign				ITEM_ALIGN_LEFT
-			textstyle				0
-			forecolor				0.86 0.92 0.97 1
-			visible					1
-			descText				@MENUS_INTERACTION_DESC
-			mouseEnter { show attackcontrolbutton_glow }
-			mouseExit { hide attackcontrolbutton_glow }
-			action
-			{
-				play "sound/interface/button1.wav" ;
-				show setup_background ;
-				hide movecontrols ;
-				show attackcontrols ;
-				hide weaponcontrols ;
-				hide forcecontrols ;
-				hide forcecontrols2 ;
-				hide joycontrols ;
-				hide othercontrols ;
-				hide japluscontrols;
-				setitemcolor movementcontrolbutton forecolor 0.86 0.92 0.97 1 ;
-				setitemcolor attackcontrolbutton forecolor 0.43 0.83 1 1 ;
-				setitemcolor weaponscontrolbutton forecolor 0.86 0.92 0.97 1 ;
-				setitemcolor forcecontrolbutton forecolor 0.86 0.92 0.97 1 ;
-				setitemcolor forcecontrolbutton2 forecolor 0.86 0.92 0.97 1 ;
-				setitemcolor mousejoystickcontrolbutton forecolor 0.86 0.92 0.97 1 ;
-				setitemcolor othercontrolbutton forecolor 0.86 0.92 0.97 1 ;
-				setitemcolor japluscontrolbutton forecolor 0.86 0.92 0.97 1 ;
-			}
+			textscale				0.58
+			forecolor				0.60 0.69 0.78 1
+			type					ITEM_TYPE_BUTTON
 			caps					1
+			style					WINDOW_STYLE_EMPTY
+			tab						2
+			descText				@VISION_ATTACK_USE_AND_LOOK
+			action { play "sound/interface/button1.wav" ; }
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				41.14
+			textaligny				7.78
 		}
 
 		itemDef
 		{
-			name					weaponscontrolbutton
-			group					none
+			name					vision_tab3
+			rect					193.57 34 82.29 26
+			visible					1
 			text					@MENUS_WEAPONS
-			type					ITEM_TYPE_BUTTON
-			style					WINDOW_STYLE_EMPTY
-			rect					45 153 170 24
 			font					5
-			textscale				0.67
-			textalignx				12
-			textaligny				4.25
-			textalign				ITEM_ALIGN_LEFT
-			textstyle				0
-			forecolor				0.86 0.92 0.97 1
-			visible					1
-			descText				@MENUS_CONFIGURE_WEAPON_CONTROLS
-			mouseEnter { show weaponscontrolbutton_glow }
-			mouseExit { hide weaponscontrolbutton_glow }
-			action
-			{
-				play "sound/interface/button1.wav" ;
-				show setup_background ;
-				hide movecontrols ;
-				hide attackcontrols ;
-				show weaponcontrols ;
-				hide forcecontrols ;
-				hide forcecontrols2 ;
-				hide joycontrols ;
-				hide othercontrols ;
-				hide japluscontrols;
-				setitemcolor movementcontrolbutton forecolor 0.86 0.92 0.97 1 ;
-				setitemcolor attackcontrolbutton forecolor 0.86 0.92 0.97 1 ;
-				setitemcolor weaponscontrolbutton forecolor 0.43 0.83 1 1 ;
-				setitemcolor forcecontrolbutton forecolor 0.86 0.92 0.97 1 ;
-				setitemcolor forcecontrolbutton2 forecolor 0.86 0.92 0.97 1 ;
-				setitemcolor mousejoystickcontrolbutton forecolor 0.86 0.92 0.97 1 ;
-				setitemcolor othercontrolbutton forecolor 0.86 0.92 0.97 1 ;
-				setitemcolor japluscontrolbutton forecolor 0.86 0.92 0.97 1 ;
-			}
+			textscale				0.58
+			forecolor				0.60 0.69 0.78 1
+			type					ITEM_TYPE_BUTTON
 			caps					1
+			style					WINDOW_STYLE_EMPTY
+			tab						3
+			descText				@VISION_THE_KEYS_OF_THE_WEAPONS
+			action { play "sound/interface/button1.wav" ; }
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				41.14
+			textaligny				7.78
 		}
 
 		itemDef
 		{
-			name					forcecontrolbutton
-			group					none
-			text					@MENUS_FORCE_POWERS_1
-			type					ITEM_TYPE_BUTTON
-			style					WINDOW_STYLE_EMPTY
-			rect					45 177 170 24
-			font					5
-			textscale				0.67
-			textalignx				12
-			textaligny				4.25
-			textalign				ITEM_ALIGN_LEFT
-			textstyle				0
-			forecolor				0.86 0.92 0.97 1
+			name					vision_tab4
+			rect					275.86 34 82.29 26
 			visible					1
-			descText				@MENUS_CONFIGURE_FORCE_POWER
-			mouseEnter { show forcecontrolbutton_glow }
-			mouseExit { hide forcecontrolbutton_glow }
-			action
-			{
-				play "sound/interface/button1.wav" ;
-				show setup_background ;
-				hide movecontrols ;
-				hide attackcontrols ;
-				hide weaponcontrols ;
-				show forcecontrols ;
-				hide forcecontrols2 ;
-				hide joycontrols ;
-				hide othercontrols ;
-				hide japluscontrols;
-				setitemcolor movementcontrolbutton forecolor 0.86 0.92 0.97 1 ;
-				setitemcolor attackcontrolbutton forecolor 0.86 0.92 0.97 1 ;
-				setitemcolor weaponscontrolbutton forecolor 0.86 0.92 0.97 1 ;
-				setitemcolor forcecontrolbutton forecolor 0.43 0.83 1 1 ;
-				setitemcolor forcecontrolbutton2 forecolor 0.86 0.92 0.97 1 ;
-				setitemcolor mousejoystickcontrolbutton forecolor 0.86 0.92 0.97 1 ;
-				setitemcolor othercontrolbutton forecolor 0.86 0.92 0.97 1 ;
-				setitemcolor japluscontrolbutton forecolor 0.86 0.92 0.97 1 ;
-			}
+			text					@VISION_FORCE_POWERS
+			font					5
+			textscale				0.58
+			forecolor				0.60 0.69 0.78 1
+			type					ITEM_TYPE_BUTTON
 			caps					1
+			style					WINDOW_STYLE_EMPTY
+			tab						4
+			descText				@VISION_THE_KEYS_OF_THE_FORCE_POWERS
+			action { play "sound/interface/button1.wav" ; }
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				41.14
+			textaligny				7.78
 		}
 
 		itemDef
 		{
-			name					forcecontrolbutton2
-			text					@MENUS_FORCE_POWERS_2
-			type					ITEM_TYPE_BUTTON
-			style					WINDOW_STYLE_EMPTY
-			rect					45 201 170 24
-			font					5
-			textscale				0.67
-			textalignx				12
-			textaligny				4.25
-			textalign				ITEM_ALIGN_LEFT
-			textstyle				0
-			forecolor				0.86 0.92 0.97 1
+			name					vision_tab5
+			rect					358.14 34 82.29 26
 			visible					1
-			descText				@MENUS_CONFIGURE_FORCE_POWER
-			mouseEnter { show forcecontrolbutton2_glow }
-			mouseExit { hide forcecontrolbutton2_glow }
-			action
-			{
-				play "sound/interface/button1.wav" ;
-				show setup_background ;
-				hide movecontrols ;
-				hide attackcontrols ;
-				hide weaponcontrols ;
-				hide forcecontrols ;
-				show forcecontrols2 ;
-				hide joycontrols ;
-				hide othercontrols ;
-				hide japluscontrols;
-				setitemcolor movementcontrolbutton forecolor 0.86 0.92 0.97 1 ;
-				setitemcolor attackcontrolbutton forecolor 0.86 0.92 0.97 1 ;
-				setitemcolor weaponscontrolbutton forecolor 0.86 0.92 0.97 1 ;
-				setitemcolor forcecontrolbutton forecolor 0.86 0.92 0.97 1 ;
-				setitemcolor forcecontrolbutton2 forecolor 0.43 0.83 1 1 ;
-				setitemcolor mousejoystickcontrolbutton forecolor 0.86 0.92 0.97 1 ;
-				setitemcolor othercontrolbutton forecolor 0.86 0.92 0.97 1 ;
-				setitemcolor japluscontrolbutton forecolor 0.86 0.92 0.97 1 ;
-			}
-			caps					1
-		}
-
-		itemDef
-		{
-			name					mousejoystickcontrolbutton
-			group					none
 			text					@MENUS_MOUSE_JOYSTICK
-			type					ITEM_TYPE_BUTTON
-			style					WINDOW_STYLE_EMPTY
-			rect					45 225 170 24
 			font					5
-			textscale				0.67
-			textalignx				12
-			textaligny				4.25
-			textalign				ITEM_ALIGN_LEFT
-			textstyle				0
-			forecolor				0.86 0.92 0.97 1
-			visible					1
-			descText				@MENUS_CONFIGURE_MOUSE_AND_JOYSTICK
-			mouseEnter { show mousejoystickcontrolbutton_glow }
-			mouseExit { hide mousejoystickcontrolbutton_glow }
-			action
-			{
-				play "sound/interface/button1.wav" ;
-				show setup_background ;
-				hide movecontrols ;
-				hide attackcontrols ;
-				hide weaponcontrols ;
-				hide forcecontrols ;
-				hide forcecontrols2 ;
-				show joycontrols ;
-				hide othercontrols ;
-				hide japluscontrols;
-				setitemcolor movementcontrolbutton forecolor 0.86 0.92 0.97 1 ;
-				setitemcolor attackcontrolbutton forecolor 0.86 0.92 0.97 1 ;
-				setitemcolor weaponscontrolbutton forecolor 0.86 0.92 0.97 1 ;
-				setitemcolor forcecontrolbutton forecolor 0.86 0.92 0.97 1 ;
-				setitemcolor forcecontrolbutton2 forecolor 0.86 0.92 0.97 1 ;
-				setitemcolor mousejoystickcontrolbutton forecolor 0.43 0.83 1 1 ;
-				setitemcolor othercontrolbutton forecolor 0.86 0.92 0.97 1 ;
-				setitemcolor japluscontrolbutton forecolor 0.86 0.92 0.97 1 ;
-			}
+			textscale				0.58
+			forecolor				0.60 0.69 0.78 1
+			type					ITEM_TYPE_BUTTON
 			caps					1
+			style					WINDOW_STYLE_EMPTY
+			tab						5
+			descText				@VISION_MOUSE_AND_JOYSTICK
+			action { play "sound/interface/button1.wav" ; }
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				41.14
+			textaligny				7.78
 		}
 
 		itemDef
 		{
-			name					othercontrolbutton
-			group					none
+			name					vision_tab6
+			rect					440.43 34 82.29 26
+			visible					1
 			text					@MENUS_OTHER
-			type					ITEM_TYPE_BUTTON
-			style					WINDOW_STYLE_EMPTY
-			rect					45 249 170 24
 			font					5
-			textscale				0.67
-			textalignx				12
-			textaligny				4.25
-			textalign				ITEM_ALIGN_LEFT
-			textstyle				0
-			forecolor				0.86 0.92 0.97 1
-			visible					1
-			descText				@MENUS_CONFIGURE_ADDITIONAL
-			mouseEnter { show othercontrolbutton_glow }
-			mouseExit { hide othercontrolbutton_glow }
-			action
-			{
-				play "sound/interface/button1.wav" ;
-				show setup_background ;
-				hide movecontrols ;
-				hide attackcontrols ;
-				hide weaponcontrols ;
-				hide forcecontrols ;
-				hide forcecontrols2 ;
-				hide joycontrols ;
-				show othercontrols ;
-				hide japluscontrols;
-				setitemcolor movementcontrolbutton forecolor 0.86 0.92 0.97 1 ;
-				setitemcolor attackcontrolbutton forecolor 0.86 0.92 0.97 1 ;
-				setitemcolor weaponscontrolbutton forecolor 0.86 0.92 0.97 1 ;
-				setitemcolor forcecontrolbutton forecolor 0.86 0.92 0.97 1 ;
-				setitemcolor forcecontrolbutton2 forecolor 0.86 0.92 0.97 1 ;
-				setitemcolor mousejoystickcontrolbutton forecolor 0.86 0.92 0.97 1 ;
-				setitemcolor othercontrolbutton forecolor 0.43 0.83 1 1 ;
-				setitemcolor japluscontrolbutton forecolor 0.86 0.92 0.97 1 ;
-			}
+			textscale				0.58
+			forecolor				0.60 0.69 0.78 1
+			type					ITEM_TYPE_BUTTON
 			caps					1
+			style					WINDOW_STYLE_EMPTY
+			tab						6
+			descText				@VISION_CHAT_SCORES_AND_GESTURES
+			action { play "sound/interface/button1.wav" ; }
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				41.14
+			textaligny				7.78
 		}
 
 		itemDef
 		{
-			name					japluscontrolbutton
-			group					none
-			text					"JA+ Control"
-			type					ITEM_TYPE_BUTTON
-			style					WINDOW_STYLE_EMPTY
-			rect					45 275 170 24
-			font					5
-			textscale				0.67
-			textalignx				12
-			textaligny				4.25
-			textalign				ITEM_ALIGN_LEFT
-			textstyle				0
-			forecolor				0.86 0.92 0.97 1
+			name					vision_tab7
+			rect					522.71 34 82.29 26
 			visible					1
-			descText				"Configure your JA+ Controls"
-			mouseEnter { show japluscontrolbutton_glow }
-			mouseExit { hide japluscontrolbutton_glow }
-			action
-			{
-				play "sound/interface/button1.wav" ;
-				show setup_background ;
-				hide movecontrols ;
-				hide attackcontrols ;
-				hide weaponcontrols ;
-				hide forcecontrols ;
-				hide forcecontrols2 ;
-				hide joycontrols ;
-				hide othercontrols ;
-				show japluscontrols;
-				setitemcolor movementcontrolbutton forecolor 0.86 0.92 0.97 1 ;
-				setitemcolor attackcontrolbutton forecolor 0.86 0.92 0.97 1 ;
-				setitemcolor weaponscontrolbutton forecolor 0.86 0.92 0.97 1 ;
-				setitemcolor forcecontrolbutton forecolor 0.86 0.92 0.97 1 ;
-				setitemcolor forcecontrolbutton2 forecolor 0.86 0.92 0.97 1 ;
-				setitemcolor mousejoystickcontrolbutton forecolor 0.86 0.92 0.97 1 ;
-				setitemcolor othercontrolbutton forecolor 0.86 0.92 0.97 1 ;
-				setitemcolor japluscontrolbutton forecolor 0.43 0.83 1 1 ;
-			}
+			text					@VISION_EXTRAS
+			font					5
+			textscale				0.58
+			forecolor				0.60 0.69 0.78 1
+			type					ITEM_TYPE_BUTTON
 			caps					1
-		}
-
-		itemDef
-		{
-			name					setup_background
-			group					none
-			style					WINDOW_STYLE_PANEL
-			rect					225 100 340 240
-			backcolor				0.035 0.07 0.12 0.55
-			forecolor				1 1 1 1
-			bordercolor				0.43 0.83 1 0.16
-			visible					0
-			decoration
-			radius					5
+			style					WINDOW_STYLE_EMPTY
+			tab						7
+			descText				@VISION_KEYS_FOR_WHAT_VISIONJK_AND_JA_ADD_TO
+			action { play "sound/interface/button1.wav" ; }
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				41.14
+			textaligny				7.78
 		}
 
 		itemDef
@@ -642,26 +372,16 @@
 			type					ITEM_TYPE_BIND
 			text					@MENUS_WALK_FORWARD
 			cvar					"+forward"
-			rect					225 108 340 14
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				174
-			textaligny				1
-			font					5
-			textscale				0.68
-			forecolor				0.60 0.69 0.78 1
-			visible					0
 			descText				@MENUS_MOVES_PLAYER_FORWARD
-			action { play sound/interface/button1 }
-			mouseenter
-			{
-				show highlight1
-				show keybindstatus
-			}
-			mouseexit
-			{
-				hide highlight1
-				hide keybindstatus
-			}
+			action { play "sound/interface/button1" }
+			rect					32 72 384 22
+			page					1
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
 		}
 
 		itemDef
@@ -671,26 +391,16 @@
 			type					ITEM_TYPE_BIND
 			text					@MENUS_BACKPEDAL
 			cvar					"+back"
-			rect					225 122 340 14
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				174
-			textaligny				1
-			font					5
-			textscale				0.68
-			forecolor				0.60 0.69 0.78 1
-			visible					0
 			descText				@MENUS_MOVES_PLAYER_BACKWARD
-			action { play sound/interface/button1 }
-			mouseenter
-			{
-				show highlight2
-				show keybindstatus
-			}
-			mouseexit
-			{
-				hide highlight2
-				hide keybindstatus
-			}
+			action { play "sound/interface/button1" }
+			rect					32 94 384 22
+			page					1
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
 		}
 
 		itemDef
@@ -700,26 +410,16 @@
 			type					ITEM_TYPE_BIND
 			text					@MENUS_TURN_LEFT
 			cvar					"+left"
-			rect					225 136 340 14
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				174
-			textaligny				1
-			font					5
-			textscale				0.68
-			forecolor				0.60 0.69 0.78 1
-			visible					0
 			descText				@MENUS_ROTATES_PLAYER_LEFT
-			action { play sound/interface/button1 }
-			mouseenter
-			{
-				show highlight3
-				show keybindstatus
-			}
-			mouseexit
-			{
-				hide highlight3
-				hide keybindstatus
-			}
+			action { play "sound/interface/button1" }
+			rect					32 116 384 22
+			page					1
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
 		}
 
 		itemDef
@@ -729,26 +429,16 @@
 			type					ITEM_TYPE_BIND
 			text					@MENUS_TURN_RIGHT
 			cvar					"+right"
-			rect					225 150 340 14
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				174
-			textaligny				1
-			font					5
-			textscale				0.68
-			forecolor				0.60 0.69 0.78 1
-			visible					0
 			descText				@MENUS_ROTATES_PLAYER_RIGHT
-			action { play sound/interface/button1 }
-			mouseenter
-			{
-				show highlight4
-				show keybindstatus
-			}
-			mouseexit
-			{
-				hide highlight4
-				hide keybindstatus
-			}
+			action { play "sound/interface/button1" }
+			rect					32 138 384 22
+			page					1
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
 		}
 
 		itemDef
@@ -758,26 +448,16 @@
 			type					ITEM_TYPE_BIND
 			text					@MENUS_RUN_WALK
 			cvar					"+speed"
-			rect					225 164 340 14
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				174
-			textaligny				1
-			font					5
-			textscale				0.68
-			forecolor				0.60 0.69 0.78 1
-			visible					0
 			descText				@MENUS_IF_HELD_TOGGLES_BETWEEN
-			action { play sound/interface/button1 }
-			mouseenter
-			{
-				show highlight5
-				show keybindstatus
-			}
-			mouseexit
-			{
-				hide highlight5
-				hide keybindstatus
-			}
+			action { play "sound/interface/button1" }
+			rect					32 160 384 22
+			page					1
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
 		}
 
 		itemDef
@@ -787,26 +467,16 @@
 			type					ITEM_TYPE_BIND
 			text					@MENUS_STEP_LEFT
 			cvar					"+moveleft"
-			rect					225 178 340 14
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				174
-			textaligny				1
-			font					5
-			textscale				0.68
-			forecolor				0.60 0.69 0.78 1
-			visible					0
 			descText				@MENUS_STEPS_PLAYER_TO_THE_LEFT
-			action { play sound/interface/button1 }
-			mouseenter
-			{
-				show highlight6
-				show keybindstatus
-			}
-			mouseexit
-			{
-				hide highlight6
-				hide keybindstatus
-			}
+			action { play "sound/interface/button1" }
+			rect					32 182 384 22
+			page					1
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
 		}
 
 		itemDef
@@ -816,26 +486,16 @@
 			type					ITEM_TYPE_BIND
 			text					@MENUS_STEP_RIGHT
 			cvar					"+moveright"
-			rect					225 192 340 14
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				174
-			textaligny				1
-			font					5
-			textscale				0.68
-			forecolor				0.60 0.69 0.78 1
-			visible					0
 			descText				@MENUS_STEPS_PLAYER_TO_THE_RIGHT
-			action { play sound/interface/button1 }
-			mouseenter
-			{
-				show highlight7
-				show keybindstatus
-			}
-			mouseexit
-			{
-				hide highlight7
-				hide keybindstatus
-			}
+			action { play "sound/interface/button1" }
+			rect					32 204 384 22
+			page					1
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
 		}
 
 		itemDef
@@ -845,26 +505,16 @@
 			type					ITEM_TYPE_BIND
 			text					@MENUS_SIDESTEP_TURN
 			cvar					"+strafe"
-			rect					225 206 340 14
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				174
-			textaligny				1
-			font					5
-			textscale				0.68
-			forecolor				0.60 0.69 0.78 1
-			visible					0
 			descText				@MENUS_HELD_ALLOWS_PLAYER_TO
-			action { play sound/interface/button1 }
-			mouseenter
-			{
-				show highlight8
-				show keybindstatus
-			}
-			mouseexit
-			{
-				hide highlight8
-				hide keybindstatus
-			}
+			action { play "sound/interface/button1" }
+			rect					32 226 384 22
+			page					1
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
 		}
 
 		itemDef
@@ -874,26 +524,16 @@
 			type					ITEM_TYPE_BIND
 			text					@MENUS_UP_JUMP
 			cvar					"+moveup"
-			rect					225 262 340 14
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				174
-			textaligny				1
-			font					5
-			textscale				0.68
-			forecolor				0.60 0.69 0.78 1
-			visible					0
 			descText				@MENUS_MAKES_PLAYER_JUMP_IF
-			action { play sound/interface/button1 }
-			mouseenter
-			{
-				show highlight12
-				show keybindstatus
-			}
-			mouseexit
-			{
-				hide highlight12
-				hide keybindstatus
-			}
+			action { play "sound/interface/button1" }
+			rect					32 248 384 22
+			page					1
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
 		}
 
 		itemDef
@@ -903,26 +543,16 @@
 			type					ITEM_TYPE_BIND
 			text					@MENUS_DOWN_CROUCH
 			cvar					"+movedown"
-			rect					225 276 340 14
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				174
-			textaligny				1
-			font					5
-			textscale				0.68
-			forecolor				0.60 0.69 0.78 1
-			visible					0
 			descText				@MENUS_MAKES_PLAYER_CROUCH_TO
-			action { play sound/interface/button1 }
-			mouseenter
-			{
-				show highlight13
-				show keybindstatus
-			}
-			mouseexit
-			{
-				hide highlight13
-				hide keybindstatus
-			}
+			action { play "sound/interface/button1" }
+			rect					32 270 384 22
+			page					1
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
 		}
 
 		itemDef
@@ -932,26 +562,16 @@
 			type					ITEM_TYPE_BIND
 			text					@MENUS_ATTACK
 			cvar					"+attack"
-			rect					225 108 340 14
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				174
-			textaligny				1
-			font					5
-			textscale				0.68
-			forecolor				0.60 0.69 0.78 1
-			visible					0
 			descText				@MENUS_ATTACKS_WITH_READIED
-			action { play sound/interface/button1 }
-			mouseenter
-			{
-				show highlight1
-				show keybindstatus
-			}
-			mouseexit
-			{
-				hide highlight1
-				hide keybindstatus
-			}
+			action { play "sound/interface/button1" }
+			rect					32 72 384 22
+			page					2
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
 		}
 
 		itemDef
@@ -961,26 +581,16 @@
 			type					ITEM_TYPE_BIND
 			text					@MENUS_ALT_ATTACK
 			cvar					"+altattack"
-			rect					225 122 340 14
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				174
-			textaligny				1
-			font					5
-			textscale				0.68
-			forecolor				0.60 0.69 0.78 1
-			visible					0
 			descText				@MENUS_ATTACKS_WITH_ALTERNATE
-			action { play sound/interface/button1 }
-			mouseenter
-			{
-				show highlight2
-				show keybindstatus
-			}
-			mouseexit
-			{
-				hide highlight2
-				hide keybindstatus
-			}
+			action { play "sound/interface/button1" }
+			rect					32 94 384 22
+			page					2
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
 		}
 
 		itemDef
@@ -990,26 +600,16 @@
 			type					ITEM_TYPE_BIND
 			text					@MENUS_LIGHTSABER_STYLE
 			cvar					"saberAttackCycle"
-			rect					225 136 340 14
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				174
-			textaligny				1
-			font					5
-			textscale				0.68
-			forecolor				0.60 0.69 0.78 1
-			visible					0
 			descText				@MENUS_CYCLES_BETWEEN_AVAILABLE
-			action { play sound/interface/button1 }
-			mouseenter
-			{
-				show highlight3
-				show keybindstatus
-			}
-			mouseexit
-			{
-				hide highlight3
-				hide keybindstatus
-			}
+			action { play "sound/interface/button1" }
+			rect					32 116 384 22
+			page					2
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
 		}
 
 		itemDef
@@ -1019,26 +619,16 @@
 			type					ITEM_TYPE_BIND
 			text					@MENUS_USE
 			cvar					"+use"
-			rect					225 164 340 14
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				174
-			textaligny				1
-			font					5
-			textscale				0.68
-			forecolor				0.60 0.69 0.78 1
-			visible					0
 			descText				@MENUS_ACTIVATES_WORLD_DEVICES
-			mouseenter
-			{
-				show highlight5
-				show keybindstatus
-			}
-			mouseexit
-			{
-				hide highlight5
-				hide keybindstatus
-			}
 			action { play "sound/interface/button1.wav" ; }
+			rect					32 138 384 22
+			page					2
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
 		}
 
 		itemDef
@@ -1048,26 +638,16 @@
 			type					ITEM_TYPE_BIND
 			text					@MENUS_USE_HELD_ITEM
 			cvar					"+button2"
-			rect					225 178 340 14
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				174
-			textaligny				1
-			font					5
-			textscale				0.68
-			forecolor				0.60 0.69 0.78 1
-			visible					0
 			descText				@MENUS_ACTIVATES_CURRENTLY_SELECTED
-			mouseenter
-			{
-				show highlight6
-				show keybindstatus
-			}
-			mouseexit
-			{
-				hide highlight6
-				hide keybindstatus
-			}
 			action { play "sound/interface/button1.wav" ; }
+			rect					32 160 384 22
+			page					2
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
 		}
 
 		itemDef
@@ -1077,26 +657,16 @@
 			type					ITEM_TYPE_BIND
 			text					@MENUS_NEXT_INVENTORY
 			cvar					"invnext"
-			rect					225 192 340 14
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				174
-			textaligny				1
-			font					5
-			textscale				0.68
-			forecolor				0.60 0.69 0.78 1
-			visible					0
 			descText				@MENUS_SELECTS_NEXT_USABLE_ITEM
-			mouseenter
-			{
-				show highlight7
-				show keybindstatus
-			}
-			mouseexit
-			{
-				hide highlight7
-				hide keybindstatus
-			}
 			action { play "sound/interface/button1.wav" ; }
+			rect					32 182 384 22
+			page					2
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
 		}
 
 		itemDef
@@ -1106,26 +676,16 @@
 			type					ITEM_TYPE_BIND
 			text					@MENUS_PREV_INVENTORY
 			cvar					"invprev"
-			rect					225 206 340 14
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				174
-			textaligny				1
-			font					5
-			textscale				0.68
-			forecolor				0.60 0.69 0.78 1
-			visible					0
 			descText				@MENUS_SELECTS_PREVIOUS_USABLE
-			mouseenter
-			{
-				show highlight8
-				show keybindstatus
-			}
-			mouseexit
-			{
-				hide highlight8
-				hide keybindstatus
-			}
 			action { play "sound/interface/button1.wav" ; }
+			rect					32 204 384 22
+			page					2
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
 		}
 
 		itemDef
@@ -1135,26 +695,16 @@
 			type					ITEM_TYPE_BIND
 			text					@MENUS_LOOK_UP
 			cvar					"+lookup"
-			rect					225 234 340 14
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				174
-			textaligny				1
-			font					5
-			textscale				0.68
-			forecolor				0.60 0.69 0.78 1
-			visible					0
 			descText				@MENUS_TILTS_VIEW_UPWARDS
-			mouseenter
-			{
-				show highlight10
-				show keybindstatus
-			}
-			mouseexit
-			{
-				hide highlight10
-				hide keybindstatus
-			}
 			action { play "sound/interface/button1.wav" ; }
+			rect					32 226 384 22
+			page					2
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
 		}
 
 		itemDef
@@ -1164,25 +714,16 @@
 			type					ITEM_TYPE_BIND
 			text					@MENUS_LOOK_DOWN
 			cvar					"+lookdown"
-			rect					225 248 340 14
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				174
-			textaligny				1
-			font					5
-			textscale				0.68
 			descText				@MENUS_TILTS_VIEW_DOWNWARDS
-			forecolor				0.60 0.69 0.78 1
-			mouseenter
-			{
-				show highlight11
-				show keybindstatus
-			}
-			mouseexit
-			{
-				hide highlight11
-				hide keybindstatus
-			}
 			action { play "sound/interface/button1.wav" ; }
+			rect					32 248 384 22
+			page					2
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
 		}
 
 		itemDef
@@ -1192,26 +733,16 @@
 			type					ITEM_TYPE_BIND
 			text					@MENUS_MOUSE_LOOK
 			cvar					"+mlook"
-			rect					225 262 340 14
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				174
-			textaligny				1
-			font					5
-			textscale				0.68
-			visible					0
 			descText				@MENUS_IF_HELD_ALLOWS_PLAYER
-			forecolor				0.60 0.69 0.78 1
-			mouseenter
-			{
-				show highlight12
-				show keybindstatus
-			}
-			mouseexit
-			{
-				hide highlight12
-				hide keybindstatus
-			}
 			action { play "sound/interface/button1.wav" ; }
+			rect					32 270 384 22
+			page					2
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
 		}
 
 		itemDef
@@ -1221,26 +752,16 @@
 			type					ITEM_TYPE_BIND
 			text					@MENUS_CENTER_VIEW
 			cvar					"centerview"
-			rect					225 276 340 14
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				174
-			textaligny				1
-			font					5
-			textscale				0.68
-			visible					0
 			descText				@MENUS_RETURNS_VIEW_TO_HORIZONTAL
-			forecolor				0.60 0.69 0.78 1
-			mouseenter
-			{
-				show highlight13
-				show keybindstatus
-			}
-			mouseexit
-			{
-				hide highlight13
-				hide keybindstatus
-			}
 			action { play "sound/interface/button1.wav" ; }
+			rect					32 292 384 22
+			page					2
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
 		}
 
 		itemDef
@@ -1250,26 +771,16 @@
 			type					ITEM_TYPE_BIND
 			text					@MENUS_MELEE_LIGHTSABER
 			cvar					"weapon 1"
-			rect					225 108 340 14
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				174
-			textaligny				1
-			font					5
-			textscale				0.68
-			visible					0
 			descText				@MENUS_READIES_LIGHTSABER
-			forecolor				0.60 0.69 0.78 1
-			mouseenter
-			{
-				show highlight1
-				show keybindstatus
-			}
-			mouseexit
-			{
-				hide highlight1
-				hide keybindstatus
-			}
 			action { play "sound/interface/button1.wav" ; }
+			rect					32 72 384 22
+			page					3
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
 		}
 
 		itemDef
@@ -1279,26 +790,16 @@
 			type					ITEM_TYPE_BIND
 			text					@MENUS_PISTOL
 			cvar					"weapon 2"
-			rect					225 122 340 14
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				174
-			textaligny				1
-			font					5
-			textscale				0.68
-			visible					0
 			descText				@MENUS_READIES_THE_BLASTER_PISTOL
-			forecolor				0.60 0.69 0.78 1
-			mouseenter
-			{
-				show highlight2
-				show keybindstatus
-			}
-			mouseexit
-			{
-				hide highlight2
-				hide keybindstatus
-			}
 			action { play "sound/interface/button1.wav" ; }
+			rect					32 94 384 22
+			page					3
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
 		}
 
 		itemDef
@@ -1308,26 +809,16 @@
 			type					ITEM_TYPE_BIND
 			text					@MENUS_RIFLE
 			cvar					"weapon 3"
-			rect					225 136 340 14
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				174
-			textaligny				1
-			font					5
-			textscale				0.68
-			visible					0
 			descText				@MENUS_READIES_THE_E_11_BLASTER
-			forecolor				0.60 0.69 0.78 1
-			mouseenter
-			{
-				show highlight3
-				show keybindstatus
-			}
-			mouseexit
-			{
-				hide highlight3
-				hide keybindstatus
-			}
 			action { play "sound/interface/button1.wav" ; }
+			rect					32 116 384 22
+			page					3
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
 		}
 
 		itemDef
@@ -1337,26 +828,16 @@
 			type					ITEM_TYPE_BIND
 			text					@MENUS_DISRUPTOR_RIFLE
 			cvar					"weapon 4"
-			rect					225 150 340 14
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				174
-			textaligny				1
-			font					5
-			textscale				0.68
-			forecolor				0.60 0.69 0.78 1
-			visible					0
 			descText				@MENUS_READIES_THE_TENLOSS_DXR_6
-			mouseenter
-			{
-				show highlight4
-				show keybindstatus
-			}
-			mouseexit
-			{
-				hide highlight4
-				hide keybindstatus
-			}
 			action { play "sound/interface/button1.wav" ; }
+			rect					32 138 384 22
+			page					3
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
 		}
 
 		itemDef
@@ -1366,26 +847,16 @@
 			type					ITEM_TYPE_BIND
 			text					@MENUS_BOWCASTER
 			cvar					"weapon 5"
-			rect					225 164 340 14
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				174
-			textaligny				1
-			font					5
-			textscale				0.68
-			forecolor				0.60 0.69 0.78 1
-			visible					0
 			descText				@MENUS_READIES_THE_WOOKIEE_BOWCASTER
-			mouseenter
-			{
-				show highlight5
-				show keybindstatus
-			}
-			mouseexit
-			{
-				hide highlight5
-				hide keybindstatus
-			}
 			action { play "sound/interface/button1.wav" ; }
+			rect					32 160 384 22
+			page					3
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
 		}
 
 		itemDef
@@ -1395,26 +866,16 @@
 			type					ITEM_TYPE_BIND
 			text					@MENUS_HEAVY_REPEATER
 			cvar					"weapon 6"
-			rect					225 178 340 14
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				174
-			textaligny				1
-			font					5
-			textscale				0.68
-			forecolor				0.60 0.69 0.78 1
-			visible					0
 			descText				@MENUS_READIES_THE_IMPERIAL
-			mouseenter
-			{
-				show highlight6
-				show keybindstatus
-			}
-			mouseexit
-			{
-				hide highlight6
-				hide keybindstatus
-			}
 			action { play "sound/interface/button1.wav" ; }
+			rect					32 182 384 22
+			page					3
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
 		}
 
 		itemDef
@@ -1424,26 +885,16 @@
 			type					ITEM_TYPE_BIND
 			text					@MENUS_DEMP_2
 			cvar					"weapon 7"
-			rect					225 192 340 14
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				174
-			textaligny				1
-			font					5
-			textscale				0.68
-			forecolor				0.60 0.69 0.78 1
-			visible					0
 			descText				@MENUS_READIES_THE_DEMP2_GUN
-			mouseenter
-			{
-				show highlight7
-				show keybindstatus
-			}
-			mouseexit
-			{
-				hide highlight7
-				hide keybindstatus
-			}
 			action { play "sound/interface/button1.wav" ; }
+			rect					32 204 384 22
+			page					3
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
 		}
 
 		itemDef
@@ -1453,26 +904,16 @@
 			type					ITEM_TYPE_BIND
 			text					@MENUS_FLECHETTE
 			cvar					"weapon 8"
-			rect					225 206 340 14
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				174
-			textaligny				1
-			font					5
-			textscale				0.68
-			forecolor				0.60 0.69 0.78 1
-			visible					0
 			descText				@MENUS_READIES_THE_GOLAN_ARMS
-			mouseenter
-			{
-				show highlight8
-				show keybindstatus
-			}
-			mouseexit
-			{
-				hide keybindstatus
-				hide highlight8
-			}
 			action { play "sound/interface/button1.wav" ; }
+			rect					32 226 384 22
+			page					3
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
 		}
 
 		itemDef
@@ -1482,26 +923,16 @@
 			type					ITEM_TYPE_BIND
 			text					@MENUS_CONC_RIFLE_SETUP
 			cvar					"weapon 13"
-			rect					225 220 340 14
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				174
-			textaligny				1
-			font					5
-			textscale				0.68
-			forecolor				0.60 0.69 0.78 1
-			visible					0
 			descText				@MENUS_READIES_THE_CONC_RIFLE
-			mouseenter
-			{
-				show highlight9
-				show keybindstatus
-			}
-			mouseexit
-			{
-				hide keybindstatus
-				hide highlight9
-			}
 			action { play "sound/interface/button1.wav" ; }
+			rect					32 248 384 22
+			page					3
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
 		}
 
 		itemDef
@@ -1511,26 +942,16 @@
 			type					ITEM_TYPE_BIND
 			text					@MENUS_MERR_SONN
 			cvar					"weapon 9"
-			rect					225 234 340 14
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				174
-			textaligny				1
-			font					5
-			textscale				0.68
-			forecolor				0.60 0.69 0.78 1
-			visible					0
 			descText				@MENUS_READIES_THE_MERR_SONN
-			mouseenter
-			{
-				show highlight10
-				show keybindstatus
-			}
-			mouseexit
-			{
-				hide highlight10
-				hide keybindstatus
-			}
 			action { play "sound/interface/button1.wav" ; }
+			rect					32 270 384 22
+			page					3
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
 		}
 
 		itemDef
@@ -1540,26 +961,16 @@
 			type					ITEM_TYPE_BIND
 			text					@MENUS_THROWABLE_WEAPONS
 			cvar					"weapon 10"
-			rect					225 248 340 14
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				174
-			textaligny				1
-			font					5
-			textscale				0.68
-			forecolor				0.60 0.69 0.78 1
-			visible					0
 			descText				@MENUS_TOGGLES_BETWEEN_DETONATORS
-			mouseenter
-			{
-				show highlight11
-				show keybindstatus
-			}
-			mouseexit
-			{
-				hide highlight11
-				hide keybindstatus
-			}
 			action { play "sound/interface/button1.wav" ; }
+			rect					32 292 384 22
+			page					3
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
 		}
 
 		itemDef
@@ -1569,26 +980,16 @@
 			type					ITEM_TYPE_BIND
 			text					@MENUS_NEXT_WEAPON
 			cvar					"weapnext"
-			rect					225 262 340 14
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				174
-			textaligny				1
-			font					5
-			textscale				0.68
-			forecolor				0.60 0.69 0.78 1
-			visible					0
 			descText				@MENUS_SELECTS_THE_NEXT_WEAPON
-			mouseenter
-			{
-				show highlight12
-				show keybindstatus
-			}
-			mouseexit
-			{
-				hide highlight12
-				hide keybindstatus
-			}
 			action { play "sound/interface/button1.wav" ; }
+			rect					32 314 384 22
+			page					3
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
 		}
 
 		itemDef
@@ -1598,26 +999,16 @@
 			type					ITEM_TYPE_BIND
 			text					@MENUS_PREVIOUS_WEAPON
 			cvar					"weapprev"
-			rect					225 276 340 14
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				174
-			textaligny				1
-			font					5
-			textscale				0.68
-			forecolor				0.60 0.69 0.78 1
-			visible					0
 			descText				@MENUS_SELECTS_THE_PREVIOUS
-			mouseenter
-			{
-				show highlight13
-				show keybindstatus
-			}
-			mouseexit
-			{
-				hide highlight13
-				hide keybindstatus
-			}
 			action { play "sound/interface/button1.wav" ; }
+			rect					32 336 384 22
+			page					3
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
 		}
 
 		itemDef
@@ -1627,26 +1018,16 @@
 			type					ITEM_TYPE_BIND
 			text					@MENUS_FORCE_PUSH
 			cvar					"force_throw"
-			rect					225 108 340 14
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				174
-			textaligny				1
-			font					5
-			textscale				0.68
-			forecolor				0.60 0.69 0.78 1
-			visible					0
 			descText				@MENUS_USES_FORCE_PUSH_ABILITY
-			mouseenter
-			{
-				show highlight1
-				show keybindstatus
-			}
-			mouseexit
-			{
-				hide highlight1
-				hide keybindstatus
-			}
 			action { play "sound/interface/button1.wav" ; }
+			rect					32 72 384 22
+			page					4
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
 		}
 
 		itemDef
@@ -1656,26 +1037,16 @@
 			type					ITEM_TYPE_BIND
 			text					@MENUS_FORCE_PULL
 			cvar					"force_pull"
-			rect					225 122 340 14
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				174
-			textaligny				1
-			font					5
-			textscale				0.68
-			forecolor				0.60 0.69 0.78 1
-			visible					0
 			descText				@MENUS_USES_FORCE_PULL_ABILITY
-			mouseenter
-			{
-				show highlight2
-				show keybindstatus
-			}
-			mouseexit
-			{
-				hide highlight2
-				hide keybindstatus
-			}
 			action { play "sound/interface/button1.wav" ; }
+			rect					32 94 384 22
+			page					4
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
 		}
 
 		itemDef
@@ -1685,26 +1056,16 @@
 			type					ITEM_TYPE_BIND
 			text					@MENUS_FORCE_SPEED
 			cvar					"force_speed"
-			rect					225 136 340 14
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				174
-			textaligny				1
-			font					5
-			textscale				0.68
-			forecolor				0.60 0.69 0.78 1
-			visible					0
 			descText				@MENUS_USES_FORCE_SPEED_ABILITY
-			mouseenter
-			{
-				show highlight3
-				show keybindstatus
-			}
-			mouseexit
-			{
-				hide highlight3
-				hide keybindstatus
-			}
 			action { play "sound/interface/button1.wav" ; }
+			rect					32 116 384 22
+			page					4
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
 		}
 
 		itemDef
@@ -1714,26 +1075,16 @@
 			type					ITEM_TYPE_BIND
 			text					@MENUS_FORCE_SIGHT
 			cvar					"force_seeing"
-			rect					225 150 340 14
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				174
-			textaligny				1
-			font					5
-			textscale				0.68
-			forecolor				0.60 0.69 0.78 1
-			visible					0
 			descText				@MENUS_USES_FORCE_SIGHT_ABILITY
-			mouseenter
-			{
-				show highlight4
-				show keybindstatus
-			}
-			mouseexit
-			{
-				hide highlight4
-				hide keybindstatus
-			}
 			action { play "sound/interface/button1.wav" ; }
+			rect					32 138 384 22
+			page					4
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
 		}
 
 		itemDef
@@ -1743,26 +1094,16 @@
 			type					ITEM_TYPE_BIND
 			text					@MENUS_USE_FORCE_POWER
 			cvar					"+useforce"
-			rect					225 220 340 14
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				174
-			textaligny				1
-			font					5
-			textscale				0.68
-			forecolor				0.60 0.69 0.78 1
-			visible					0
 			descText				@MENUS_USES_CURRENTLY_SELECTED
-			mouseenter
-			{
-				show highlight9
-				show keybindstatus
-			}
-			mouseexit
-			{
-				hide highlight9
-				hide keybindstatus
-			}
 			action { play "sound/interface/button1.wav" ; }
+			rect					32 160 384 22
+			page					4
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
 		}
 
 		itemDef
@@ -1772,26 +1113,16 @@
 			type					ITEM_TYPE_BIND
 			text					@MENUS_FORCE_NEXT
 			cvar					"forcenext"
-			rect					225 234 340 14
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				174
-			textaligny				1
-			font					5
-			textscale				0.68
-			forecolor				0.60 0.69 0.78 1
-			visible					0
 			descText				@MENUS_SELECTS_NEXT_AVAILABLE
-			mouseenter
-			{
-				show highlight10
-				show keybindstatus
-			}
-			mouseexit
-			{
-				hide highlight10
-				hide keybindstatus
-			}
 			action { play "sound/interface/button1.wav" ; }
+			rect					32 182 384 22
+			page					4
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
 		}
 
 		itemDef
@@ -1801,26 +1132,16 @@
 			type					ITEM_TYPE_BIND
 			text					@MENUS_FORCE_PREVIOUS
 			cvar					"forceprev"
-			rect					225 248 340 14
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				174
-			textaligny				1
-			font					5
-			textscale				0.68
-			forecolor				0.60 0.69 0.78 1
-			visible					0
 			descText				@MENUS_SELECTS_PREVIOUS_AVAILABLE
-			mouseenter
-			{
-				show highlight11
-				show keybindstatus
-			}
-			mouseexit
-			{
-				hide highlight11
-				hide keybindstatus
-			}
 			action { play "sound/interface/button1.wav" ; }
+			rect					32 204 384 22
+			page					4
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
 		}
 
 		itemDef
@@ -1829,26 +1150,16 @@
 			type					ITEM_TYPE_BIND
 			text					@MENUS_FORCE_PROTECT
 			cvar					"force_protect"
-			rect					225 108 340 14
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				174
-			textaligny				1
-			font					5
-			textscale				0.68
-			forecolor				0.60 0.69 0.78 1
-			visible					0
 			descText				@MENUS_USES_FORCE_PROTECT_ABILITY
-			mouseenter
-			{
-				show highlight1
-				show keybindstatus
-			}
-			mouseexit
-			{
-				hide highlight1
-				hide keybindstatus
-			}
 			action { play "sound/interface/button1.wav" ; }
+			rect					32 226 384 22
+			page					4
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
 		}
 
 		itemDef
@@ -1857,26 +1168,16 @@
 			type					ITEM_TYPE_BIND
 			text					@MENUS_FORCE_ABSORB
 			cvar					"force_absorb"
-			rect					225 122 340 14
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				174
-			textaligny				1
-			font					5
-			textscale				0.68
-			forecolor				0.60 0.69 0.78 1
-			visible					0
 			descText				@MENUS_USE_ABSORB
-			mouseenter
-			{
-				show highlight2
-				show keybindstatus
-			}
-			mouseexit
-			{
-				hide highlight2
-				hide keybindstatus
-			}
 			action { play "sound/interface/button1.wav" ; }
+			rect					32 248 384 22
+			page					4
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
 		}
 
 		itemDef
@@ -1885,26 +1186,16 @@
 			type					ITEM_TYPE_BIND
 			text					@MENUS_FORCE_HEAL
 			cvar					"force_heal"
-			rect					225 136 340 14
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				174
-			textaligny				1
-			font					5
-			textscale				0.68
-			forecolor				0.60 0.69 0.78 1
-			visible					0
 			descText				@MENUS_USES_FORCE_HEAL_ABILITY
-			mouseenter
-			{
-				show highlight3
-				show keybindstatus
-			}
-			mouseexit
-			{
-				hide highlight3
-				hide keybindstatus
-			}
 			action { play "sound/interface/button1.wav" ; }
+			rect					32 270 384 22
+			page					4
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
 		}
 
 		itemDef
@@ -1913,26 +1204,16 @@
 			type					ITEM_TYPE_BIND
 			text					@MENUS_HEAL_OTHER
 			cvar					"force_healother"
-			rect					225 150 340 14
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				174
-			textaligny				1
-			font					5
-			textscale				0.68
-			forecolor				0.60 0.69 0.78 1
-			visible					0
 			descText				@MENUS_USE_HEAL_OTHER
-			mouseenter
-			{
-				show highlight4
-				show keybindstatus
-			}
-			mouseexit
-			{
-				hide highlight4
-				hide keybindstatus
-			}
 			action { play "sound/interface/button1.wav" ; }
+			rect					32 292 384 22
+			page					4
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
 		}
 
 		itemDef
@@ -1941,26 +1222,16 @@
 			type					ITEM_TYPE_BIND
 			text					@MENUS_FORCE_MINDTRICK
 			cvar					"force_distract"
-			rect					225 164 340 14
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				174
-			textaligny				1
-			font					5
-			textscale				0.68
-			forecolor				0.60 0.69 0.78 1
-			visible					0
 			descText				@MENUS_USES_MIND_TRICK_ABILITY
-			mouseenter
-			{
-				show highlight5
-				show keybindstatus
-			}
-			mouseexit
-			{
-				hide highlight5
-				hide keybindstatus
-			}
 			action { play "sound/interface/button1.wav" ; }
+			rect					32 314 384 22
+			page					4
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
 		}
 
 		itemDef
@@ -1969,26 +1240,16 @@
 			type					ITEM_TYPE_BIND
 			text					@MENUS_FORCE_GRIP
 			cvar					"+force_grip"
-			rect					225 192 340 14
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				174
-			textaligny				1
-			font					5
-			textscale				0.68
-			forecolor				0.60 0.69 0.78 1
-			visible					0
 			descText				@MENUS_USES_GRIP_FORCE_ABILITY
-			mouseenter
-			{
-				show highlight7
-				show keybindstatus
-			}
-			mouseexit
-			{
-				hide highlight7
-				hide keybindstatus
-			}
 			action { play "sound/interface/button1.wav" ; }
+			rect					32 336 384 22
+			page					4
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
 		}
 
 		itemDef
@@ -1997,26 +1258,16 @@
 			type					ITEM_TYPE_BIND
 			text					@MENUS_FORCE_DRAIN
 			cvar					"+force_drain"
-			rect					225 206 340 14
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				174
-			textaligny				1
-			font					5
-			textscale				0.68
-			forecolor				0.60 0.69 0.78 1
-			visible					0
 			descText				@MENUS_USES_DRAIN_FORCE_ABILITY
-			mouseenter
-			{
-				show highlight8
-				show keybindstatus
-			}
-			mouseexit
-			{
-				hide highlight8
-				hide keybindstatus
-			}
 			action { play "sound/interface/button1.wav" ; }
+			rect					32 358 384 22
+			page					4
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
 		}
 
 		itemDef
@@ -2025,26 +1276,16 @@
 			type					ITEM_TYPE_BIND
 			text					@MENUS_FORCE_LIGHTNING
 			cvar					"+force_lightning"
-			rect					225 220 340 14
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				174
-			textaligny				1
-			font					5
-			textscale				0.68
-			forecolor				0.60 0.69 0.78 1
-			visible					0
 			descText				@MENUS_USES_LIGHTNING_FORCE
-			mouseenter
-			{
-				show highlight9
-				show keybindstatus
-			}
-			mouseexit
-			{
-				hide highlight9
-				hide keybindstatus
-			}
 			action { play "sound/interface/button1.wav" ; }
+			rect					32 380 384 22
+			page					4
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
 		}
 
 		itemDef
@@ -2053,26 +1294,16 @@
 			type					ITEM_TYPE_BIND
 			text					@MENUS_RAGE
 			cvar					"force_rage"
-			rect					225 234 340 14
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				174
-			textaligny				1
-			font					5
-			textscale				0.68
-			forecolor				0.60 0.69 0.78 1
-			visible					0
 			descText				@MENUS_USES_RAGE_FORCE_ABILITY
-			mouseenter
-			{
-				show highlight10
-				show keybindstatus
-			}
-			mouseexit
-			{
-				hide highlight10
-				hide keybindstatus
-			}
 			action { play "sound/interface/button1.wav" ; }
+			rect					32 402 384 22
+			page					4
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
 		}
 
 		itemDef
@@ -2081,26 +1312,16 @@
 			type					ITEM_TYPE_BIND
 			text					@MENUS_TEAM_POWER
 			cvar					"force_forcepowerother"
-			rect					225 250 340 14
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				174
-			textaligny				1
-			font					5
-			textscale				0.68
-			forecolor				0.60 0.69 0.78 1
-			visible					0
 			descText				@MENUS_USES_TEAM_POWER_FORCE
-			mouseenter
-			{
-				show highlight11
-				show keybindstatus
-			}
-			mouseexit
-			{
-				hide highlight11
-				hide keybindstatus
-			}
 			action { play "sound/interface/button1.wav" ; }
+			rect					32 424 384 22
+			page					4
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
 		}
 
 		itemDef
@@ -2110,18 +1331,16 @@
 			type					ITEM_TYPE_YESNO
 			text					@MENUS_FREE_LOOK
 			cvar					"cl_freelook"
-			rect					225 108 340 14
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				174
-			textaligny				1
-			font					5
-			textscale				0.68
-			forecolor				0.60 0.69 0.78 1
-			visible					0
 			descText				@MENUS_TOGGLE_TO_ALLOW_PLAYER
-			mouseenter { show highlight1 }
-			mouseexit { hide highlight1 }
 			action { play "sound/interface/button1.wav" ; }
+			rect					32 72 384 22
+			page					5
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
 		}
 
 		itemDef
@@ -2131,18 +1350,16 @@
 			type					ITEM_TYPE_SLIDER
 			text					@MENUS_SENSITIVITY
 			cvarfloat				"sensitivity" 5 2 30
-			rect					225 136 340 14
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				174
-			textaligny				1
-			font					5
-			textscale				0.68
-			forecolor				0.60 0.69 0.78 1
-			visible					0
 			descText				@MENUS_ADJUSTS_CHARACTER_REACTION
-			mouseenter { show highlight3 }
-			mouseexit { hide highlight3 }
 			action { play "sound/interface/button1.wav" ; }
+			rect					32 94 384 22
+			page					5
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
 		}
 
 		itemDef
@@ -2152,22 +1369,20 @@
 			type					ITEM_TYPE_YESNO
 			text					@MENUS_INVERT_MOUSE
 			cvar					"ui_mousePitch"
-			rect					225 164 340 14
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				174
-			textaligny				1
-			font					5
-			textscale				0.68
-			forecolor				0.60 0.69 0.78 1
-			visible					0
 			descText				@MENUS_TOGGLE_TO_TILT_VIEW_IN
 			action
 			{
 				play "sound/interface/button1.wav" ;
 				uiScript update ui_mousePitch
 			}
-			mouseenter { show highlight5 }
-			mouseexit { hide highlight5 }
+			rect					32 116 384 22
+			page					5
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
 		}
 
 		itemDef
@@ -2177,18 +1392,16 @@
 			type					ITEM_TYPE_YESNO
 			text					@MENUS_SMOOTH_MOUSE
 			cvar					"m_filter"
-			rect					225 178 340 14
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				174
-			textaligny				1
-			font					5
-			textscale				0.68
-			forecolor				0.60 0.69 0.78 1
-			visible					0
 			descText				@MENUS_WHEN_TURNED_ON_MOUSE
-			mouseenter { show highlight6 }
-			mouseexit { hide highlight6 }
 			action { play "sound/interface/button1.wav" ; }
+			rect					32 138 384 22
+			page					5
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
 		}
 
 		itemDef
@@ -2198,22 +1411,20 @@
 			type					ITEM_TYPE_YESNO
 			text					@MENUS_ENABLE_JOYSTICK
 			cvar					"in_joystick"
-			rect					225 220 340 14
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				174
-			textaligny				1
-			font					5
-			textscale				0.68
-			forecolor				0.60 0.69 0.78 1
-			visible					0
 			descText				@MENUS_TURNED_ON_GAME_SEARCHES
-			mouseenter { show highlight9 }
-			mouseexit { hide highlight9 }
 			action
 			{
 				play "sound/interface/button1.wav" ;
 				exec in_restart
 			}
+			rect					32 160 384 22
+			page					5
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
 		}
 
 		itemDef
@@ -2223,18 +1434,16 @@
 			type					ITEM_TYPE_SLIDER
 			text					@MENUS_JOYSTICK_THRESHOLD
 			cvarfloat				"joy_threshold" .15 .05 .75
-			rect					225 248 340 14
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				174
-			textaligny				1
-			font					5
-			textscale				0.68
-			forecolor				0.60 0.69 0.78 1
-			visible					0
 			descText				@MENUS_ADJUSTS_THE_SIZE_OF_THE
-			mouseenter { show highlight11 }
-			mouseexit { hide highlight11 }
 			action { play "sound/interface/button1.wav" ; }
+			rect					32 182 384 22
+			page					5
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
 		}
 
 		itemDef
@@ -2244,18 +1453,16 @@
 			type					ITEM_TYPE_YESNO
 			text					@MENUS_ALWAYS_RUN
 			cvar					"cl_run"
-			rect					225 108 340 14
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				174
-			textaligny				1
-			font					5
-			textscale				0.68
-			forecolor				0.60 0.69 0.78 1
-			visible					0
 			descText				@MENUS_WHEN_ON_PLAYER_ALWAYS
-			mouseenter { show highlight1 }
-			mouseexit { hide highlight1 }
 			action { play "sound/interface/button1.wav" ; }
+			rect					32 72 384 22
+			page					6
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
 		}
 
 		itemDef
@@ -2270,18 +1477,16 @@
 				@MENUS_BEST_SAFE_WEAPON 1
 				@MENUS_ALWAYS_BEST_WEAPON 2
 			}
-			rect					225 122 340 14
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				174
-			textaligny				1
-			font					5
-			textscale				0.68
-			forecolor				0.60 0.69 0.78 1
-			visible					0
 			descText				@MENUS_CHOOSE_WHETHER_TO_SWITCH
-			mouseenter { show highlight2 }
-			mouseexit { hide highlight2 }
 			action { play "sound/interface/button1.wav" }
+			rect					32 94 384 22
+			page					6
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
 		}
 
 		itemDef
@@ -2290,26 +1495,16 @@
 			type					ITEM_TYPE_BIND
 			text					@MENUS_CHAT
 			cvar					"messagemode"
-			rect					225 150 340 14
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				174
-			textaligny				1
-			font					5
-			textscale				0.68
-			forecolor				0.60 0.69 0.78 1
-			visible					0
 			descText				@MENUS_SENDS_A_CHAT_MESSAGE
-			mouseenter
-			{
-				show highlight4
-				show keybindstatus
-			}
-			mouseexit
-			{
-				hide highlight4
-				hide keybindstatus
-			}
 			action { play "sound/interface/button1.wav" ; }
+			rect					32 116 384 22
+			page					6
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
 		}
 
 		itemDef
@@ -2318,26 +1513,16 @@
 			type					ITEM_TYPE_BIND
 			text					@MENUS_TEAM_CHAT
 			cvar					"messagemode2"
-			rect					225 164 340 14
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				174
-			textaligny				1
-			font					5
-			textscale				0.68
-			forecolor				0.60 0.69 0.78 1
-			visible					0
 			descText				@MENUS_A_CHAT_MESSAGE_TO_EVERYONE
-			mouseenter
-			{
-				show highlight5
-				show keybindstatus
-			}
-			mouseexit
-			{
-				hide highlight5
-				hide keybindstatus
-			}
 			action { play "sound/interface/button1.wav" ; }
+			rect					32 138 384 22
+			page					6
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
 		}
 
 		itemDef
@@ -2346,26 +1531,16 @@
 			type					ITEM_TYPE_BIND
 			text					@MENUS_VC_CONTROLS
 			cvar					"voicechat"
-			rect					225 178 340 14
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				174
-			textaligny				1
-			font					5
-			textscale				0.68
-			forecolor				0.60 0.69 0.78 1
-			visible					0
 			descText				@MENUS_VC_CONTROLS_DESC
-			mouseenter
-			{
-				show highlight6
-				show keybindstatus
-			}
-			mouseexit
-			{
-				hide highlight6
-				hide keybindstatus
-			}
 			action { play "sound/interface/button1.wav" ; }
+			rect					32 160 384 22
+			page					6
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
 		}
 
 		itemDef
@@ -2374,26 +1549,16 @@
 			type					ITEM_TYPE_BIND
 			text					@MENUS_AUTOMAP
 			cvar					"automap_toggle"
-			rect					225 192 340 14
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				174
-			textaligny				1
-			font					5
-			textscale				0.68
-			forecolor				0.60 0.69 0.78 1
-			visible					0
 			descText				@MENUS_AUTOMAP_DESC
 			action { play "sound/interface/button1.wav" ; }
-			mouseenter
-			{
-				show highlight7
-				show keybindstatus
-			}
-			mouseexit
-			{
-				hide highlight7
-				hide keybindstatus
-			}
+			rect					32 182 384 22
+			page					6
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
 		}
 
 		itemDef
@@ -2402,26 +1567,16 @@
 			type					ITEM_TYPE_BIND
 			text					@MENUS_SHOW_SCORES
 			cvar					"+scores"
-			rect					225 206 340 14
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				174
-			textaligny				1
-			font					5
-			textscale				0.68
-			forecolor				0.60 0.69 0.78 1
-			visible					0
 			descText				@MENUS_SHOWS_THE_CURRENT_SCORES
-			mouseenter
-			{
-				show highlight8
-				show keybindstatus
-			}
-			mouseexit
-			{
-				hide highlight8
-				hide keybindstatus
-			}
 			action { play "sound/interface/button1.wav" ; }
+			rect					32 204 384 22
+			page					6
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
 		}
 
 		itemDef
@@ -2430,26 +1585,16 @@
 			type					ITEM_TYPE_BIND
 			text					@MENUS_SABER_CHALLENGE
 			cvar					"engage_duel"
-			rect					225 220 340 14
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				174
-			textaligny				1
-			font					5
-			textscale				0.68
-			forecolor				0.60 0.69 0.78 1
-			visible					0
 			descText				@MENUS_INFO_SABER_CHALLENGE
-			mouseenter
-			{
-				show highlight9
-				show keybindstatus
-			}
-			mouseexit
-			{
-				hide highlight9
-				hide keybindstatus
-			}
 			action { play "sound/interface/button1.wav" ; }
+			rect					32 226 384 22
+			page					6
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
 		}
 
 		itemDef
@@ -2458,26 +1603,16 @@
 			type					ITEM_TYPE_BIND
 			text					@MENUS_3RD_PERSON
 			cvar					"cg_thirdperson !"
-			rect					225 234 340 14
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				174
-			textaligny				1
-			font					5
-			textscale				0.68
-			forecolor				0.60 0.69 0.78 1
-			visible					0
 			descText				@MENUS_CHANGES_VIEW_BETWEEN
-			mouseenter
-			{
-				show highlight10
-				show keybindstatus
-			}
-			mouseexit
-			{
-				hide highlight10
-				hide keybindstatus
-			}
 			action { play "sound/interface/button1.wav" ; }
+			rect					32 248 384 22
+			page					6
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
 		}
 
 		itemDef
@@ -2486,26 +1621,16 @@
 			type					ITEM_TYPE_BIND
 			text					@MENUS_TAUNT
 			cvar					"taunt"
-			rect					225 262 340 14
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				174
-			textaligny				1
-			font					5
-			textscale				0.68
-			forecolor				0.60 0.69 0.78 1
-			visible					0
 			descText				@MENUS_TAUNT_DESC
-			mouseenter
-			{
-				show highlight12
-				show keybindstatus
-			}
-			mouseexit
-			{
-				hide highlight12
-				hide keybindstatus
-			}
 			action { play "sound/interface/button1.wav" ; }
+			rect					32 270 384 22
+			page					6
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
 		}
 
 		itemDef
@@ -2514,26 +1639,16 @@
 			type					ITEM_TYPE_BIND
 			text					@MENUS_BOW
 			cvar					"bow"
-			rect					225 276 340 14
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				174
-			textaligny				1
-			font					5
-			textscale				0.68
-			forecolor				0.60 0.69 0.78 1
-			visible					0
 			descText				@MENUS_BOW_DESC
-			mouseenter
-			{
-				show highlight13
-				show keybindstatus
-			}
-			mouseexit
-			{
-				hide highlight13
-				hide keybindstatus
-			}
 			action { play "sound/interface/button1.wav" ; }
+			rect					32 292 384 22
+			page					6
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
 		}
 
 		itemDef
@@ -2542,26 +1657,16 @@
 			type					ITEM_TYPE_BIND
 			text					@MENUS_MEDITATE
 			cvar					"meditate"
-			rect					225 292 340 14
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				174
-			textaligny				1
-			font					5
-			textscale				0.68
-			forecolor				0.60 0.69 0.78 1
-			visible					0
 			descText				@MENUS_MEDITATE_DESC
-			mouseenter
-			{
-				show highlight14
-				show keybindstatus
-			}
-			mouseexit
-			{
-				hide highlight14
-				hide keybindstatus
-			}
 			action { play "sound/interface/button1.wav" ; }
+			rect					32 314 384 22
+			page					6
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
 		}
 
 		itemDef
@@ -2570,26 +1675,16 @@
 			type					ITEM_TYPE_BIND
 			text					@MENUS_FLOURISH
 			cvar					"flourish"
-			rect					225 306 340 14
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				174
-			textaligny				1
-			font					5
-			textscale				0.68
-			forecolor				0.60 0.69 0.78 1
-			visible					0
 			descText				@MENUS_FLOURISH_DESC
-			mouseenter
-			{
-				show highlight15
-				show keybindstatus
-			}
-			mouseexit
-			{
-				hide highlight15
-				hide keybindstatus
-			}
 			action { play "sound/interface/button1.wav" ; }
+			rect					32 336 384 22
+			page					6
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
 		}
 
 		itemDef
@@ -2598,348 +1693,313 @@
 			type					ITEM_TYPE_BIND
 			text					@MENUS_GLOAT
 			cvar					"gloat"
-			rect					225 320 340 14
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				174
-			textaligny				1
-			font					5
-			textscale				0.68
-			forecolor				0.60 0.69 0.78 1
-			visible					0
 			descText				@MENUS_GLOAT_DESC
-			mouseenter
-			{
-				show highlight16
-				show keybindstatus
-			}
-			mouseexit
-			{
-				hide highlight16
-				hide keybindstatus
-			}
 			action { play "sound/interface/button1.wav" ; }
-		}
-
-		itemDef
-		{
-			group					japluscontrols
-			type					ITEM_TYPE_BIND
-			text					"Grapple Hook"
-			cvar					"+button12"
-			rect					225 108 340 14
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				174
-			textaligny				1
-			font					5
-			textscale				0.68
-			forecolor				0.60 0.69 0.78 1
-			visible					0
-			descText				"Grapple hook to throw on walls"
-			mouseenter
-			{
-				show highlight16
-				show keybindstatus
-			}
-			mouseexit
-			{
-				hide highlight16
-				hide keybindstatus
-			}
-			action { play "sound/interface/button1.wav" ; }
-		}
-
-		itemDef
-		{
-			group					japluscontrols
-			type					ITEM_TYPE_BIND
-			text					"JetPack"
-			cvar					"jetpack"
-			rect					225 122 340 14
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				174
-			textaligny				1
-			font					5
-			textscale				0.68
-			forecolor				0.60 0.69 0.78 1
-			visible					0
-			descText				"used to turn On/off the JetPack"
-			mouseenter
-			{
-				show highlight16
-				show keybindstatus
-			}
-			mouseexit
-			{
-				hide highlight16
-				hide keybindstatus
-			}
-			action { play "sound/interface/button1.wav" ; }
-		}
-
-		itemDef
-		{
-			group					japluscontrols
-			type					ITEM_TYPE_BIND
-			text					"Full Force Duel"
-			cvar					"engage_FullForceDuel"
-			rect					225 136 340 14
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				174
-			textaligny				1
-			font					5
-			textscale				0.68
-			forecolor				0.60 0.69 0.78 1
-			visible					0
-			descText				"used to engage a Duel with all allowed force powers"
-			mouseenter
-			{
-				show highlight16
-				show keybindstatus
-			}
-			mouseexit
-			{
-				hide highlight16
-				hide keybindstatus
-			}
-			action { play "sound/interface/button1.wav" ; }
-		}
-
-		itemDef
-		{
-			group					japluscontrols
-			type					ITEM_TYPE_BIND
-			text					"Message Mod"
-			cvar					"ui_openmenu modsay"
-			rect					225 150 340 14
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				174
-			textaligny				1
-			font					5
-			textscale				0.68
-			forecolor				0.60 0.69 0.78 1
-			visible					0
-			descText				"used to draw an interface for clan Say, private talk, amsay, ampsay..."
-			mouseenter
-			{
-				show highlight16
-				show keybindstatus
-			}
-			mouseexit
-			{
-				hide highlight16
-				hide keybindstatus
-			}
-			action { play "sound/interface/button1.wav" ; }
-		}
-
-		itemDef
-		{
-			group					japluscontrols
-			type					ITEM_TYPE_BIND
-			text					"Voice Chat (Talk)"
-			cvar					"+voice"
-			rect					225 164 340 14
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				174
-			textaligny				1
-			font					5
-			textscale				0.68
-			forecolor				0.60 0.69 0.78 1
-			visible					0
-			descText				"hold to talk in the voice chat (push to talk)"
-			mouseenter
-			{
-				show highlight5
-				show keybindstatus
-			}
-			mouseexit
-			{
-				hide highlight5
-				hide keybindstatus
-			}
-			action { play "sound/interface/button1.wav" ; }
-		}
-
-		itemDef
-		{
-			group					japluscontrols
-			type					ITEM_TYPE_BIND
-			text					"Bot Mode (On/Off)"
-			cvar					"cg_botMode !"
-			rect					225 178 340 14
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				174
-			textaligny				1
-			font					5
-			textscale				0.68
-			forecolor				0.60 0.69 0.78 1
-			visible					0
-			descText				"your client plays by itself, and stops (Setup, Bot Mode)"
-			mouseenter
-			{
-				show highlight6
-				show keybindstatus
-			}
-			mouseexit
-			{
-				hide highlight6
-				hide keybindstatus
-			}
-			action { play "sound/interface/button1.wav" ; }
-		}
-
-		itemDef
-		{
-			group					japluscontrols
-			type					ITEM_TYPE_BIND
-			text					"Clan Radio (Talk)"
-			cvar					"+voiceclan"
-			rect					225 192 340 14
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				174
-			textaligny				1
-			font					5
-			textscale				0.68
-			forecolor				0.60 0.69 0.78 1
-			visible					0
-			descText				"hold to talk to your clan over the radio, wherever they are"
-			mouseenter
-			{
-				show highlight7
-				show keybindstatus
-			}
-			mouseexit
-			{
-				hide highlight7
-				hide keybindstatus
-			}
-			action { play "sound/interface/button1.wav" ; }
-		}
-
-		itemDef
-		{
-			name					keyBindStatus
-			group					none
-			ownerdraw				250
-			text					@MENUS_BLANK_1
-			rect					340 354 0 0
-			textStyle				0
-			font					5
-			textscale				0.68
-			textalign				ITEM_ALIGN_CENTER
-			forecolor				0.86 0.92 0.97 1
-			visible					0
-			decoration
-			textaligny				1
-		}
-
-		itemDef
-		{
-			name					slider_message
-			group					none
-			text					@MENUS_MOVE_THE_SLIDER_TO_INCREASE
-			rect					340 354 0 0
-			textStyle				0
-			font					5
-			textscale				0.68
-			textalign				ITEM_ALIGN_CENTER
-			forecolor				0.86 0.92 0.97 1
-			visible					0
-			decoration
-			textaligny				1
-		}
-
-		itemDef
-		{
-			name					yesno_message
-			group					none
-			text					@MENUS_CLICK_ON_FIELD_TO_TOGGLE
-			rect					340 354 0 0
-			textStyle				0
-			font					5
-			textscale				0.68
-			textalign				ITEM_ALIGN_CENTER
-			forecolor				0.86 0.92 0.97 1
-			visible					0
-			decoration
-			textaligny				1
-		}
-
-		itemDef
-		{
-			name					multi_message
-			group					none
-			text					@MENUS_CLICK_ON_FIELD_TO_CHANGE
-			rect					340 354 0 0
-			textStyle				0
-			font					5
-			textscale				0.68
-			textalign				ITEM_ALIGN_CENTER
-			forecolor				0.86 0.92 0.97 1
-			visible					0
-			decoration
-			textaligny				1
-		}
-
-		itemDef
-		{
-			group					japluscontrols
-			type					ITEM_TYPE_BIND
-			text					"Free the Mouse (Select Players)"
-			cvar					"+cursor"
-			rect					260 286 340 14
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				174
-			textaligny				1
-			font					5
-			textscale				0.68
-			forecolor				0.60 0.69 0.78 1
-			visible					0
-			descText				"hold to point at players with the mouse: a click opens what you can do with one"
-			mouseenter
-			{
-				show keybindstatus
-			}
-			mouseexit
-			{
-				hide keybindstatus
-			}
-			action { play "sound/interface/button1.wav" ; }
-			name					vision_cursorkey
-		}
-		skin					1
-		disableColor			0.36 0.42 0.50 1
-		backdrop				1
-
-		itemDef
-		{
-			name					exitgamebutton
-			group					othermain
-			text					@MENUS_EXIT
-			descText				@MENUS_LEAVE_JEDI_KNIGHT_II
-			type					ITEM_TYPE_BUTTON
-			style					WINDOW_STYLE_PANEL
-			rect					40 446 110 22
+			rect					32 358 384 22
+			page					6
+			scroll					1
+			row						1
 			font					5
 			textscale				0.7
-			textalign				ITEM_ALIGN_CENTER
-			textstyle				0
-			textalignx				55
-			textaligny				4.5
 			forecolor				0.86 0.92 0.97 1
 			visible					1
-			mouseEnter { show exitgamebutton_glow }
-			mouseExit { hide exitgamebutton_glow }
+		}
+
+		itemDef
+		{
+			name					vision_head
+			rect					34 72 380 22
+			visible					1
+			text					@VISION_JA
+			font					5
+			textscale				0.54
+			forecolor				0.60 0.69 0.78 1
+			textaligny				9
+			caps					1
+			decoration
+			page					7
+			scroll					1
+		}
+
+		itemDef
+		{
+			name					vision_headline
+			rect					32 93 384 0.67
+			visible					1
+			style					WINDOW_STYLE_FILLED
+			backcolor				0.43 0.83 1 0.32
+			decoration
+			page					7
+			scroll					1
+		}
+
+		itemDef
+		{
+			group					japluscontrols
+			type					ITEM_TYPE_BIND
+			text					@VISION_GRAPPLE_HOOK
+			cvar					"+button12"
+			descText				@VISION_A_HOOK_ON_A_ROPE_THAT_PULLS_YOU_TO_W
+			action { play "sound/interface/button1.wav" ; }
+			rect					32 94 384 22
+			page					7
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+		}
+
+		itemDef
+		{
+			group					japluscontrols
+			type					ITEM_TYPE_BIND
+			text					@VISION_JETPACK
+			cvar					"jetpack"
+			descText				@VISION_TURNS_THE_JETPACK_ON_AND_OFF
+			action { play "sound/interface/button1.wav" ; }
+			rect					32 116 384 22
+			page					7
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+		}
+
+		itemDef
+		{
+			group					japluscontrols
+			type					ITEM_TYPE_BIND
+			text					@VISION_FULL_FORCE_DUEL
+			cvar					"engage_FullForceDuel"
+			descText				@VISION_CHALLENGES_TO_A_DUEL_WITH_EVERY_FORC
+			action { play "sound/interface/button1.wav" ; }
+			rect					32 138 384 22
+			page					7
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+		}
+
+		itemDef
+		{
+			group					japluscontrols
+			type					ITEM_TYPE_BIND
+			text					@VISION_MESSAGE_MENU
+			cvar					"ui_openmenu modsay"
+			descText				@VISION_A_MENU_FOR_CLAN_CHAT_PRIVATE_AND_ADM
+			action { play "sound/interface/button1.wav" ; }
+			rect					32 160 384 22
+			page					7
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+		}
+
+		itemDef
+		{
+			name					vision_head
+			rect					34 182 380 22
+			visible					1
+			text					@VISION_VISIONJK
+			font					5
+			textscale				0.54
+			forecolor				0.60 0.69 0.78 1
+			textaligny				9
+			caps					1
+			decoration
+			page					7
+			scroll					1
+		}
+
+		itemDef
+		{
+			name					vision_headline
+			rect					32 203 384 0.67
+			visible					1
+			style					WINDOW_STYLE_FILLED
+			backcolor				0.43 0.83 1 0.32
+			decoration
+			page					7
+			scroll					1
+		}
+
+		itemDef
+		{
+			group					japluscontrols
+			type					ITEM_TYPE_BIND
+			text					@VISION_VOICE_CHAT_TALK
+			cvar					"+voice"
+			descText				@VISION_HOLD_TO_TALK_IN_THE_VOICE_CHAT_PUSH
+			action { play "sound/interface/button1.wav" ; }
+			rect					32 204 384 22
+			page					7
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+		}
+
+		itemDef
+		{
+			group					japluscontrols
+			type					ITEM_TYPE_BIND
+			text					@VISION_CLAN_RADIO_TALK
+			cvar					"+voiceclan"
+			descText				@VISION_HOLD_TO_TALK_TO_YOUR_CLAN_OVER_THE_R
+			action { play "sound/interface/button1.wav" ; }
+			rect					32 226 384 22
+			page					7
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+		}
+
+		itemDef
+		{
+			group					japluscontrols
+			type					ITEM_TYPE_BIND
+			text					@VISION_BOT_MODE_ON_OFF
+			cvar					"cg_botMode !"
+			descText				@VISION_YOUR_CLIENT_PLAYS_BY_ITSELF_AND_STOP
+			action { play "sound/interface/button1.wav" ; }
+			rect					32 248 384 22
+			page					7
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+		}
+
+		itemDef
+		{
+			name					vision_bind_cursor
+			type					ITEM_TYPE_BIND
+			text					@VISION_FREE_THE_MOUSE_SELECT_PLAYERS
+			descText				@VISION_HOLD_TO_POINT_AT_PLAYERS_WITH_THE_MO
+			cvar					"+cursor"
+			action { play "sound/interface/button1.wav" ; }
+			rect					32 270 384 22
+			page					7
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+		}
+
+		itemDef
+		{
+			name					vision_scroll
+			rect					419 72 6 352
+			visible					1
+			type					ITEM_TYPE_PAGESCROLL
+		}
+
+		itemDef
+		{
+			name					vision_pane
+			rect					432 72 176 352
+			visible					1
+			style					WINDOW_STYLE_PANEL
+			backcolor				0.035 0.07 0.12 0.55
+			bordercolor				0.43 0.83 1 0.16
+			radius					4
+			decoration
+		}
+
+		itemDef
+		{
+			name					vision_about
+			rect					444 86 152 324
+			visible					1
+			text					""
+			font					5
+			textscale				0.6
+			forecolor				1 1 1 1
+			type					ITEM_TYPE_DESC
+			decoration
+		}
+
+		itemDef
+		{
+			name					vision_foot
+			rect					0 446 640 34
+			visible					1
+			style					WINDOW_STYLE_FILLED
+			backcolor				0.02 0.04 0.08 0.50
+			decoration
+			wide					1
+		}
+
+		itemDef
+		{
+			name					vision_foot_line
+			rect					0 446 640 0.67
+			visible					1
+			style					WINDOW_STYLE_FILLED
+			backcolor				0.43 0.83 1 0.18
+			decoration
+			wide					1
+		}
+
+		itemDef
+		{
+			name					vision_back
+			rect					29 446 72 34
+			visible					1
+			text					@MENUS_BACK
+			font					5
+			textscale				0.6
+			forecolor				0.86 0.92 0.97 1
+			type					ITEM_TYPE_BUTTON
+			style					WINDOW_STYLE_EMPTY
+			caps					1
+			descText				@MENUS_BACK
 			action
 			{
-				play "sound/weapons/saber/saberoff.mp3" ;
-				close all ;
-				open quitMenu
+				play "sound/interface/menuroam.wav" ;
+				close controlsMenu ;
+				open main ;
 			}
-			caps					1
-			backcolor				1 1 1 0.04
-			bordercolor				0.43 0.83 1 0.16
-			radius					11
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				36
+			textaligny				11.6
+			flow					1
 		}
+
+		itemDef
+		{
+			name					vision_hint
+			rect					308 446 300 34
+			visible					1
+			text					@VISION_ENTER_OR_CLICK_CHANGE_THE_KEY_BACKSP
+			font					5
+			textscale				0.5
+			forecolor				0.60 0.69 0.78 1
+			decoration
+			textalign				ITEM_ALIGN_RIGHT
+			textalignx				300
+			textaligny				12.5
+		}
+		scrollRect				32 72 384 352
+		scrollStep				22
 	}
 }

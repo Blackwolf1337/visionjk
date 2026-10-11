@@ -527,121 +527,101 @@
 		itemDef
 		{
 			name					horizontalseparators
-			rect					10 116 604 26
-			style					WINDOW_STYLE_PANEL
-			backcolor				0.035 0.07 0.12 0.55
+			rect					10 141 604 0.67
+			style					WINDOW_STYLE_FILLED
+			backcolor				1 1 1 0.07
 			visible					1
 			decoration
-			bordercolor				0.43 0.83 1 0.16
-			radius					5
 		}
 
 		itemDef
 		{
 			name					horizontalseparators
-			rect					10 142 604 26
-			style					WINDOW_STYLE_PANEL
-			backcolor				0.035 0.07 0.12 0.55
+			rect					10 167 604 0.67
+			style					WINDOW_STYLE_FILLED
+			backcolor				1 1 1 0.07
 			visible					1
 			decoration
-			bordercolor				0.43 0.83 1 0.16
-			radius					5
 		}
 
 		itemDef
 		{
 			name					horizontalseparators
-			rect					10 168 604 26
-			style					WINDOW_STYLE_PANEL
-			backcolor				0.035 0.07 0.12 0.55
+			rect					10 193 604 0.67
+			style					WINDOW_STYLE_FILLED
+			backcolor				1 1 1 0.07
 			visible					1
 			decoration
-			bordercolor				0.43 0.83 1 0.16
-			radius					5
 		}
 
 		itemDef
 		{
 			name					horizontalseparators
-			rect					10 194 604 26
-			style					WINDOW_STYLE_PANEL
-			backcolor				0.035 0.07 0.12 0.55
+			rect					10 219 604 0.67
+			style					WINDOW_STYLE_FILLED
+			backcolor				1 1 1 0.07
 			visible					1
 			decoration
-			bordercolor				0.43 0.83 1 0.16
-			radius					5
 		}
 
 		itemDef
 		{
 			name					horizontalseparators
-			rect					10 220 604 26
-			style					WINDOW_STYLE_PANEL
-			backcolor				0.035 0.07 0.12 0.55
+			rect					10 245 604 0.67
+			style					WINDOW_STYLE_FILLED
+			backcolor				1 1 1 0.07
 			visible					1
 			decoration
-			bordercolor				0.43 0.83 1 0.16
-			radius					5
 		}
 
 		itemDef
 		{
 			name					horizontalseparators
-			rect					10 246 604 26
-			style					WINDOW_STYLE_PANEL
-			backcolor				0.035 0.07 0.12 0.55
+			rect					10 271 604 0.67
+			style					WINDOW_STYLE_FILLED
+			backcolor				1 1 1 0.07
 			visible					1
 			decoration
-			bordercolor				0.43 0.83 1 0.16
-			radius					5
 		}
 
 		itemDef
 		{
 			name					horizontalseparators
-			rect					10 272 604 26
-			style					WINDOW_STYLE_PANEL
-			backcolor				0.035 0.07 0.12 0.55
+			rect					10 297 604 0.67
+			style					WINDOW_STYLE_FILLED
+			backcolor				1 1 1 0.07
 			visible					1
 			decoration
-			bordercolor				0.43 0.83 1 0.16
-			radius					5
 		}
 
 		itemDef
 		{
 			name					horizontalseparators
-			rect					10 298 604 26
-			style					WINDOW_STYLE_PANEL
-			backcolor				0.035 0.07 0.12 0.55
+			rect					10 323 604 0.67
+			style					WINDOW_STYLE_FILLED
+			backcolor				1 1 1 0.07
 			visible					1
 			decoration
-			bordercolor				0.43 0.83 1 0.16
-			radius					5
 		}
 
 		itemDef
 		{
 			name					horizontalseparators
-			rect					10 324 604 26
-			style					WINDOW_STYLE_PANEL
-			backcolor				0.035 0.07 0.12 0.55
+			rect					10 349 604 0.67
+			style					WINDOW_STYLE_FILLED
+			backcolor				1 1 1 0.07
 			visible					1
 			decoration
-			bordercolor				0.43 0.83 1 0.16
-			radius					5
 		}
 
 		itemDef
 		{
 			name					horizontalseparators
-			rect					10 350 604 26
-			style					WINDOW_STYLE_PANEL
-			backcolor				0.035 0.07 0.12 0.55
+			rect					10 375 604 0.67
+			style					WINDOW_STYLE_FILLED
+			backcolor				1 1 1 0.07
 			visible					1
 			decoration
-			bordercolor				0.43 0.83 1 0.16
-			radius					5
 		}
 
 		itemDef

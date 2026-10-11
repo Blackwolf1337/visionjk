@@ -1,0 +1,559 @@
+// The texts the menus of VisionJK add to the game. Made by tools/menus/build.py from tools/menus/texts.py:
+// change that file, not this one.
+//
+VERSION             "1"
+CONFIG              "W:\bin\stringed.cfg"
+FILENOTES           "Menus of VisionJK"
+
+REFERENCE           JA
+LANG_ENGLISH        "JA+"
+
+REFERENCE           GRAPPLE_HOOK
+LANG_ENGLISH        "Grapple Hook"
+
+REFERENCE           A_HOOK_ON_A_ROPE_THAT_PULLS_YOU_TO_W
+LANG_ENGLISH        "A hook on a rope that pulls you to where it hits."
+
+REFERENCE           JETPACK
+LANG_ENGLISH        "Jetpack"
+
+REFERENCE           TURNS_THE_JETPACK_ON_AND_OFF
+LANG_ENGLISH        "Turns the jetpack on and off."
+
+REFERENCE           FULL_FORCE_DUEL
+LANG_ENGLISH        "Full Force Duel"
+
+REFERENCE           CHALLENGES_TO_A_DUEL_WITH_EVERY_FORC
+LANG_ENGLISH        "Challenges to a duel with every force power that is allowed."
+
+REFERENCE           MESSAGE_MENU
+LANG_ENGLISH        "Message Menu"
+
+REFERENCE           A_MENU_FOR_CLAN_CHAT_PRIVATE_AND_ADM
+LANG_ENGLISH        "A menu for clan chat, private and admin messages."
+
+REFERENCE           VISIONJK
+LANG_ENGLISH        "VisionJK"
+
+REFERENCE           VOICE_CHAT_TALK
+LANG_ENGLISH        "Voice Chat (Talk)"
+
+REFERENCE           HOLD_TO_TALK_IN_THE_VOICE_CHAT_PUSH
+LANG_ENGLISH        "Hold to talk in the voice chat (push to talk)."
+
+REFERENCE           BOT_MODE_ON_OFF
+LANG_ENGLISH        "Bot Mode (On/Off)"
+
+REFERENCE           YOUR_CLIENT_PLAYS_BY_ITSELF_AND_STOP
+LANG_ENGLISH        "Your client plays by itself, and stops (Setup, Bot Mode)."
+
+REFERENCE           CLAN_RADIO_TALK
+LANG_ENGLISH        "Clan Radio (Talk)"
+
+REFERENCE           HOLD_TO_TALK_TO_YOUR_CLAN_OVER_THE_R
+LANG_ENGLISH        "Hold to talk to your clan over the radio, wherever they are."
+
+REFERENCE           FREE_THE_MOUSE_SELECT_PLAYERS
+LANG_ENGLISH        "Free the Mouse (Select Players)"
+
+REFERENCE           HOLD_TO_POINT_AT_PLAYERS_WITH_THE_MO
+LANG_ENGLISH        "Hold to point at players with the mouse: a click opens what you can do with one."
+
+REFERENCE           THE_KEYS_YOU_MOVE_WITH
+LANG_ENGLISH        "The keys you move with."
+
+REFERENCE           ATTACK_USE_AND_LOOK
+LANG_ENGLISH        "Attack, use and look."
+
+REFERENCE           THE_KEYS_OF_THE_WEAPONS
+LANG_ENGLISH        "The keys of the weapons."
+
+REFERENCE           FORCE_POWERS
+LANG_ENGLISH        "Force Powers"
+
+REFERENCE           THE_KEYS_OF_THE_FORCE_POWERS
+LANG_ENGLISH        "The keys of the force powers."
+
+REFERENCE           MOUSE_AND_JOYSTICK
+LANG_ENGLISH        "Mouse and joystick."
+
+REFERENCE           CHAT_SCORES_AND_GESTURES
+LANG_ENGLISH        "Chat, scores and gestures."
+
+REFERENCE           EXTRAS
+LANG_ENGLISH        "Extras"
+
+REFERENCE           KEYS_FOR_WHAT_VISIONJK_AND_JA_ADD_TO
+LANG_ENGLISH        "Keys for what VisionJK and JA+ add to the game."
+
+REFERENCE           ENTER_OR_CLICK_CHANGE_THE_KEY_BACKSP
+LANG_ENGLISH        "Enter or click: change the key. Backspace: clear it."
+
+REFERENCE           SCREEN
+LANG_ENGLISH        "Screen"
+
+REFERENCE           DISPLAY_MODE
+LANG_ENGLISH        "Display Mode"
+
+REFERENCE           A_WINDOW_THE_WHOLE_SCREEN_OR_A_WINDO
+LANG_ENGLISH        "A window, the whole screen, or a window without a border."
+
+REFERENCE           WINDOW
+LANG_ENGLISH        "Window"
+
+REFERENCE           FULLSCREEN
+LANG_ENGLISH        "Fullscreen"
+
+REFERENCE           BORDERLESS
+LANG_ENGLISH        "Borderless"
+
+REFERENCE           RENDERER
+LANG_ENGLISH        "Renderer"
+
+REFERENCE           DRAW_WITH_VULKAN_OR_WITH_OPENGL
+LANG_ENGLISH        "Draw with Vulkan or with OpenGL."
+
+REFERENCE           ANTI_ALIASING
+LANG_ENGLISH        "Anti-Aliasing"
+
+REFERENCE           SMOOTHS_THE_EDGES_COSTS_SPEED
+LANG_ENGLISH        "Smooths the edges, costs speed."
+
+REFERENCE           FRAME_LIMIT
+LANG_ENGLISH        "Frame Limit"
+
+REFERENCE           THE_MOST_FRAMES_A_SECOND_THE_GAME_DR
+LANG_ENGLISH        "The most frames a second the game draws."
+
+REFERENCE           NONE
+LANG_ENGLISH        "None"
+
+REFERENCE           WIDE_SCREEN_LAYOUT
+LANG_ENGLISH        "Wide Screen Layout"
+
+REFERENCE           MENUS_AND_HUD_KEEP_THEIR_SHAPE_ON_A
+LANG_ENGLISH        "Menus and HUD keep their shape on a wide window. Counts after a restart of the video."
+
+REFERENCE           DETAIL
+LANG_ENGLISH        "Detail"
+
+REFERENCE           DYNAMIC_GLOW
+LANG_ENGLISH        "Dynamic Glow"
+
+REFERENCE           LIGHTSABERS_AND_LIGHTS_GLOW
+LANG_ENGLISH        "Lightsabers and lights glow."
+
+REFERENCE           SHADOWS
+LANG_ENGLISH        "Shadows"
+
+REFERENCE           HOW_THE_SHADOWS_OF_THE_PLAYERS_ARE_D
+LANG_ENGLISH        "How the shadows of the players are drawn."
+
+REFERENCE           DEFAULT
+LANG_ENGLISH        "Default"
+
+REFERENCE           MORE_REALISTIC
+LANG_ENGLISH        "More Realistic"
+
+REFERENCE           REALISTIC
+LANG_ENGLISH        "Realistic"
+
+REFERENCE           RENDER_TO_TEXTURE_EFFECTS
+LANG_ENGLISH        "Render To Texture Effects"
+
+REFERENCE           OFF_NO_SLOW_EFFECTS_CLOAK_PUSH_BLUR
+LANG_ENGLISH        "Off: no slow effects (cloak, push blur, protection spheres) on graphics cards that have trouble with them."
+
+REFERENCE           VOLUME
+LANG_ENGLISH        "Volume"
+
+REFERENCE           3D_SOUND
+LANG_ENGLISH        "3D Sound"
+
+REFERENCE           STEAM_AUDIO_SOUND_THAT_KNOWS_THE_LEV
+LANG_ENGLISH        "Steam Audio: sound that knows the level. Needs its library next to the game."
+
+REFERENCE           OUTPUT
+LANG_ENGLISH        "Output"
+
+REFERENCE           3D_SOUND_DIRECTION_FOR_TWO_EARS_OR_P
+LANG_ENGLISH        "3D Sound: direction for two ears, or plain panning for speakers."
+
+REFERENCE           HEADPHONES
+LANG_ENGLISH        "Headphones"
+
+REFERENCE           SPEAKERS
+LANG_ENGLISH        "Speakers"
+
+REFERENCE           REVERB
+LANG_ENGLISH        "Reverb"
+
+REFERENCE           3D_SOUND_HOW_LOUD_THE_ROOMS_RING
+LANG_ENGLISH        "3D Sound: how loud the rooms ring."
+
+REFERENCE           ROOM_REFLECTIONS
+LANG_ENGLISH        "Room Reflections"
+
+REFERENCE           THE_ROOM_AROUND_YOU_RINGS
+LANG_ENGLISH        "The room around you rings."
+
+REFERENCE           SOUND_AROUND_CORNERS
+LANG_ENGLISH        "Sound Around Corners"
+
+REFERENCE           A_SOUND_FINDS_ITS_WAY_AROUND_CORNERS
+LANG_ENGLISH        "A sound finds its way around corners."
+
+REFERENCE           DOPPLER_EFFECT
+LANG_ENGLISH        "Doppler Effect"
+
+REFERENCE           WHAT_FLIES_PAST_CHANGES_ITS_PITCH
+LANG_ENGLISH        "What flies past changes its pitch."
+
+REFERENCE           VOICE_CHAT
+LANG_ENGLISH        "Voice Chat"
+
+REFERENCE           TALK_TO_AND_HEAR_OTHER_PLAYERS_WITH
+LANG_ENGLISH        "Talk to and hear other players with your microphone."
+
+REFERENCE           MODE
+LANG_ENGLISH        "Mode"
+
+REFERENCE           PUSH_TO_TALK_HOLD_THE_TALK_KEY_CONTR
+LANG_ENGLISH        "Push to talk: hold the talk key (Controls, Extras)."
+
+REFERENCE           PUSH_TO_TALK
+LANG_ENGLISH        "Push To Talk"
+
+REFERENCE           VOICE_ACTIVATION
+LANG_ENGLISH        "Voice Activation"
+
+REFERENCE           VOICE_CHAT_VOLUME
+LANG_ENGLISH        "Voice Chat Volume"
+
+REFERENCE           HOW_LOUD_THE_OTHER_PLAYERS_ARE
+LANG_ENGLISH        "How loud the other players are."
+
+REFERENCE           MICROPHONE_GAIN
+LANG_ENGLISH        "Microphone Gain"
+
+REFERENCE           HOW_LOUD_YOUR_MICROPHONE_IS_SENT
+LANG_ENGLISH        "How loud your microphone is sent."
+
+REFERENCE           ACTIVATION_LEVEL
+LANG_ENGLISH        "Activation Level"
+
+REFERENCE           VOICE_ACTIVATION_HOW_LOUD_YOU_HAVE_T
+LANG_ENGLISH        "Voice activation: how loud you have to be before you are sent."
+
+REFERENCE           MUFFLE_BEHIND_WALLS
+LANG_ENGLISH        "Muffle Behind Walls"
+
+REFERENCE           VOICES_BEHIND_WALLS_AND_UNDER_WATER
+LANG_ENGLISH        "Voices behind walls and under water sound muffled."
+
+REFERENCE           SHOW_WHO_TALKS
+LANG_ENGLISH        "Show Who Talks"
+
+REFERENCE           A_LIST_OF_THE_PLAYERS_WHO_ARE_TALKIN
+LANG_ENGLISH        "A list of the players who are talking on the HUD."
+
+REFERENCE           ON_OTHER_SERVERS
+LANG_ENGLISH        "On Other Servers"
+
+REFERENCE           SERVERS_WITHOUT_VOICE_USE_VOICE_JKA
+LANG_ENGLISH        "Servers without voice: use voice.jka.vision, which sees your address."
+
+REFERENCE           OWN_VOICE_IN_THE_ROOM
+LANG_ENGLISH        "Own Voice In The Room"
+
+REFERENCE           WITH_SPATIAL_SOUND_HOW_LOUD_THE_ROOM
+LANG_ENGLISH        "With spatial sound: how loud the room rings from what you say yourself."
+
+REFERENCE           RADIO_SOUND
+LANG_ENGLISH        "Radio Sound"
+
+REFERENCE           THE_CLAN_RADIO_SOUNDS_LIKE_ONE_NARRO
+LANG_ENGLISH        "The clan radio sounds like one: narrow, a little rough, with a click."
+
+REFERENCE           GAME
+LANG_ENGLISH        "Game"
+
+REFERENCE           LANGUAGE
+LANG_ENGLISH        "Language"
+
+REFERENCE           BOT_MODE
+LANG_ENGLISH        "Bot Mode"
+
+REFERENCE           YOUR_CLIENT_PLAYS_BY_ITSELF_ON_ANY_S
+LANG_ENGLISH        "Your client plays by itself, on any server: it walks the route of the map and fights."
+
+REFERENCE           SKILL
+LANG_ENGLISH        "Skill"
+
+REFERENCE           HOW_FAST_IT_TURNS_HOW_WELL_IT_AIMS_A
+LANG_ENGLISH        "How fast it turns, how well it aims and how soon it attacks."
+
+REFERENCE           INITIATE
+LANG_ENGLISH        "Initiate"
+
+REFERENCE           PADAWAN
+LANG_ENGLISH        "Padawan"
+
+REFERENCE           JEDI
+LANG_ENGLISH        "Jedi"
+
+REFERENCE           JEDI_KNIGHT
+LANG_ENGLISH        "Jedi Knight"
+
+REFERENCE           JEDI_MASTER
+LANG_ENGLISH        "Jedi Master"
+
+REFERENCE           FIGHT
+LANG_ENGLISH        "Fight"
+
+REFERENCE           WHOM_IT_ATTACKS_NOBODY_ONLY_THE_ONE
+LANG_ENGLISH        "Whom it attacks: nobody, only the one you are in a duel with, or every enemy it sees."
+
+REFERENCE           NEVER
+LANG_ENGLISH        "Never"
+
+REFERENCE           IN_DUELS
+LANG_ENGLISH        "In Duels"
+
+REFERENCE           ALWAYS
+LANG_ENGLISH        "Always"
+
+REFERENCE           WALK_THE_ROUTE
+LANG_ENGLISH        "Walk The Route"
+
+REFERENCE           OFF_IT_STAYS_WHERE_IT_IS_AND_ONLY_TU
+LANG_ENGLISH        "Off: it stays where it is and only turns and fights."
+
+REFERENCE           KEYS_TAKE_OVER
+LANG_ENGLISH        "Keys Take Over"
+
+REFERENCE           A_MOVE_OR_ATTACK_KEY_ENDS_THE_BOT_MO
+LANG_ENGLISH        "A move or attack key ends the bot mode. A key for on and off: Controls, Extras."
+
+REFERENCE           MENUS_AND_HUD
+LANG_ENGLISH        "Menus and HUD"
+
+REFERENCE           NEW_HUD
+LANG_ENGLISH        "New HUD"
+
+REFERENCE           THE_HUD_OF_VISIONJK_OFF_THE_HUD_OF_T
+LANG_ENGLISH        "The HUD of VisionJK. Off: the HUD of the game."
+
+REFERENCE           CLASSIC_MENUS
+LANG_ENGLISH        "Classic Menus"
+
+REFERENCE           THE_MENUS_OF_THE_GAME_AS_THEY_WERE_C
+LANG_ENGLISH        "The menus of the game as they were. Counts from the next start of the game."
+
+REFERENCE           MENU_IN_THE_LEVEL
+LANG_ENGLISH        "Menu in the Level"
+
+REFERENCE           IN_A_GAME_AN_OPEN_MENU_STANDS_IN_THE
+LANG_ENGLISH        "In a game an open menu stands in the level next to you."
+
+REFERENCE           MENU_BLUR
+LANG_ENGLISH        "Menu Blur"
+
+REFERENCE           HOW_FAR_THE_LEVEL_BEHIND_AN_OPEN_MEN
+LANG_ENGLISH        "How far the level behind an open menu is out of focus."
+
+REFERENCE           SHOW_FRAME_RATE
+LANG_ENGLISH        "Show Frame Rate"
+
+REFERENCE           FRAMES_A_SECOND_IN_THE_CORNER_OF_THE
+LANG_ENGLISH        "Frames a second in the corner of the screen."
+
+REFERENCE           SHOW_TIMER
+LANG_ENGLISH        "Show Timer"
+
+REFERENCE           THE_TIME_OF_THE_LEVEL_IN_THE_CORNER
+LANG_ENGLISH        "The time of the level in the corner of the screen."
+
+REFERENCE           SHOW_LAGOMETER
+LANG_ENGLISH        "Show Lagometer"
+
+REFERENCE           A_GRAPH_OF_YOUR_CONNECTION
+LANG_ENGLISH        "A graph of your connection."
+
+REFERENCE           VIEW
+LANG_ENGLISH        "View"
+
+REFERENCE           FIELD_OF_VIEW
+LANG_ENGLISH        "Field of View"
+
+REFERENCE           HOW_WIDE_YOU_SEE
+LANG_ENGLISH        "How wide you see."
+
+REFERENCE           CAMERA_DISTANCE
+LANG_ENGLISH        "Camera Distance"
+
+REFERENCE           HOW_FAR_THE_CAMERA_IS_BEHIND_YOU_IN
+LANG_ENGLISH        "How far the camera is behind you in third person."
+
+REFERENCE           CROSSHAIR_SIZE
+LANG_ENGLISH        "Crosshair Size"
+
+REFERENCE           THE_SIZE_OF_THE_CROSSHAIR
+LANG_ENGLISH        "The size of the crosshair."
+
+REFERENCE           PLAYERS
+LANG_ENGLISH        "Players"
+
+REFERENCE           CHAT_BUBBLES
+LANG_ENGLISH        "Chat Bubbles"
+
+REFERENCE           WHAT_A_PLAYER_SAYS_STANDS_ABOVE_HIS
+LANG_ENGLISH        "What a player says stands above his head."
+
+REFERENCE           BUBBLE_RANGE
+LANG_ENGLISH        "Bubble Range"
+
+REFERENCE           HOW_FAR_AWAY_A_BUBBLE_IS_STILL_DRAWN
+LANG_ENGLISH        "How far away a bubble is still drawn."
+
+REFERENCE           PLAYER_STATUSES
+LANG_ENGLISH        "Player Statuses"
+
+REFERENCE           AWAY_FROM_KEYBOARD_AND_MUSIC_ABOVE_T
+LANG_ENGLISH        "Away from keyboard and music above the heads of the others."
+
+REFERENCE           SHOW_MY_MUSIC
+LANG_ENGLISH        "Show My Music"
+
+REFERENCE           TELL_THE_OTHERS_WHAT_YOU_LISTEN_TO_E
+LANG_ENGLISH        "Tell the others what you listen to. Everybody on the server reads it."
+
+REFERENCE           SELECT_PLAYERS
+LANG_ENGLISH        "Select Players"
+
+REFERENCE           WITH_THE_MOUSE_FREE_A_CLICK_ON_A_PLA
+LANG_ENGLISH        "With the mouse free, a click on a player opens a card with what you can do with him."
+
+REFERENCE           SELECTION_OUTLINE
+LANG_ENGLISH        "Selection Outline"
+
+REFERENCE           A_GLOWING_OUTLINE_AROUND_THE_PLAYER
+LANG_ENGLISH        "A glowing outline around the player under the mouse."
+
+REFERENCE           CHAT
+LANG_ENGLISH        "Chat"
+
+REFERENCE           OWN_CHAT_LINE
+LANG_ENGLISH        "Own Chat Line"
+
+REFERENCE           TYPE_INTO_THE_CHAT_BOX_OF_VISIONJK_W
+LANG_ENGLISH        "Type into the chat box of VisionJK, with history and links."
+
+REFERENCE           CHAT_BOX_WIDTH
+LANG_ENGLISH        "Chat Box Width"
+
+REFERENCE           HOW_WIDE_THE_CHAT_BOX_IS
+LANG_ENGLISH        "How wide the chat box is."
+
+REFERENCE           CHAT_BEEP
+LANG_ENGLISH        "Chat Beep"
+
+REFERENCE           A_SOUND_WHEN_SOMEBODY_SAYS_SOMETHING
+LANG_ENGLISH        "A sound when somebody says something."
+
+REFERENCE           CONSOLE
+LANG_ENGLISH        "Console"
+
+REFERENCE           SHARP_CONSOLE_FONT
+LANG_ENGLISH        "Sharp Console Font"
+
+REFERENCE           THE_CONSOLE_IN_A_FONT_WITH_EVERY_CHA
+LANG_ENGLISH        "The console in a font with every character."
+
+REFERENCE           CONSOLE_TEXT_SIZE
+LANG_ENGLISH        "Console Text Size"
+
+REFERENCE           THE_SIZE_OF_THE_TEXT_OF_THE_CONSOLE
+LANG_ENGLISH        "The size of the text of the console."
+
+REFERENCE           CONSOLE_OPACITY
+LANG_ENGLISH        "Console Opacity"
+
+REFERENCE           HOW_MUCH_OF_THE_GAME_SHOWS_THROUGH_T
+LANG_ENGLISH        "How much of the game shows through the console."
+
+REFERENCE           CLAN
+LANG_ENGLISH        "Clan"
+
+REFERENCE           CLAN_PASSWORD
+LANG_ENGLISH        "Clan Password"
+
+REFERENCE           CLAN_CHAT_AND_CLAN_RADIO_REACH_EVERY
+LANG_ENGLISH        "Clan chat and clan radio reach everybody on the server who has the same one. The server sees it."
+
+REFERENCE           UPDATES_AND_DOWNLOADS
+LANG_ENGLISH        "Updates and Downloads"
+
+REFERENCE           CHECK_FOR_UPDATES
+LANG_ENGLISH        "Check for Updates"
+
+REFERENCE           ASK_AT_EVERY_START_WHETHER_A_NEWER_V
+LANG_ENGLISH        "Ask at every start whether a newer version is out."
+
+REFERENCE           SECURITY
+LANG_ENGLISH        "Security"
+
+REFERENCE           INTRUSION_LOG
+LANG_ENGLISH        "Intrusion Log"
+
+REFERENCE           WRITE_DOWN_WHAT_A_SERVER_SENDS_THAT
+LANG_ENGLISH        "Write down what a server sends that no server of the game does, and leave one that keeps at it."
+
+REFERENCE           KEY_LOGIN_BY_AGENT
+LANG_ENGLISH        "Key Login by Agent"
+
+REFERENCE           THE_ADMIN_LOGIN_ASKS_YOUR_SSH_AGENT
+LANG_ENGLISH        "The admin login asks your ssh-agent for the key (1Password, OpenSSH)."
+
+REFERENCE           KEY_FILE
+LANG_ENGLISH        "Key File"
+
+REFERENCE           THE_FILE_WITH_THE_KEY_FOR_THE_ADMIN
+LANG_ENGLISH        "The file with the key for the admin login, where no agent has it."
+
+REFERENCE           TEXT
+LANG_ENGLISH        "Text"
+
+REFERENCE           UTF_8_TEXT
+LANG_ENGLISH        "UTF-8 Text"
+
+REFERENCE           EVERY_CHARACTER_IN_NAMES_AND_CHAT_OF
+LANG_ENGLISH        "Every character in names and chat. Off for a language with a code page of its own."
+
+REFERENCE           INTERFACE
+LANG_ENGLISH        "Interface"
+
+REFERENCE           HOW_MENUS_HUD_AND_CAMERA_LOOK
+LANG_ENGLISH        "How menus, HUD and camera look."
+
+REFERENCE           CHAT_SOCIAL
+LANG_ENGLISH        "Chat & Social"
+
+REFERENCE           THE_CHAT_BOX_BUBBLES_AND_WHAT_STANDS
+LANG_ENGLISH        "The chat box, bubbles and what stands above the heads."
+
+REFERENCE           NETWORK
+LANG_ENGLISH        "Network"
+
+REFERENCE           UPDATES_DOWNLOADS_AND_SECURITY
+LANG_ENGLISH        "Updates, downloads and security."
+
+REFERENCE           GAME_FOLDERS_WITH_OTHER_MODS
+LANG_ENGLISH        "Game folders with other mods."
+
+REFERENCE           RESTART_THE_VIDEO_WITH_THESE_SETTING
+LANG_ENGLISH        "Restart the video with these settings."
+
+
+ENDMARKER
+

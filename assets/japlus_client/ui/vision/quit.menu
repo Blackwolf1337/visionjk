@@ -259,16 +259,38 @@
 
 		itemDef
 		{
+			name					vision_foot
+			rect					0 446 640 34
+			visible					1
+			style					WINDOW_STYLE_FILLED
+			backcolor				0.02 0.04 0.08 0.50
+			wide					1
+			decoration
+		}
+
+		itemDef
+		{
+			name					vision_foot_line
+			rect					0 446 640 0.67
+			visible					1
+			style					WINDOW_STYLE_FILLED
+			backcolor				0.43 0.83 1 0.18
+			wide					1
+			decoration
+		}
+
+		itemDef
+		{
 			name					quitgame_cancel
 			group					none
 			text					@MENUS_NO
 			type					ITEM_TYPE_BUTTON
-			style					WINDOW_STYLE_PANEL
-			rect					40 446 110 22
+			style					WINDOW_STYLE_EMPTY
+			rect					29 446 90 34
 			font					5
-			textscale				0.7
-			textalignx				55
-			textaligny				4.5
+			textscale				0.6
+			textalignx				45
+			textaligny				11.6
 			textalign				ITEM_ALIGN_CENTER
 			textstyle				0
 			descText				@MENUS_DO_NOT_LEAVE_JEDI_KNIGHT
@@ -283,9 +305,7 @@
 			mouseEnter { show quitgame_cancel_button }
 			mouseExit { hide quitgame_cancel_button }
 			caps					1
-			backcolor				1 1 1 0.04
-			bordercolor				0.43 0.83 1 0.16
-			radius					11
+			flow					1
 		}
 
 		itemDef
@@ -295,11 +315,11 @@
 			text					@MENUS_YES
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_PANEL
-			rect					490 446 110 22
+			rect					486 452 122 22
 			font					5
-			textscale				0.7
-			textalignx				55
-			textaligny				4.5
+			textscale				0.6
+			textalignx				61
+			textaligny				5.6
 			textalign				ITEM_ALIGN_CENTER
 			textstyle				0
 			descText				@MENUS_JEDI_KNIGHT_II
@@ -313,9 +333,9 @@
 			mouseEnter { show quitgame_yes_button }
 			mouseExit { hide quitgame_yes_button }
 			caps					1
-			backcolor				0.43 0.83 1 0.20
-			bordercolor				0.43 0.83 1 0.75
-			radius					11
+			backcolor				0.43 0.83 1 0.22
+			bordercolor				0.43 0.83 1 0.8
+			radius					3
 		}
 	}
 }

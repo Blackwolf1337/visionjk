@@ -8,8 +8,8 @@
 		rect					0 0 640 480
 		visible					1
 		focusColor				0.43 0.83 1 1
-		descX					380
-		descY					452
+		descX					347.5
+		descY					458
 		descScale				0.55
 		descColor				0.60 0.69 0.78 1
 		descAlignment			ITEM_ALIGN_CENTER
@@ -1283,17 +1283,39 @@
 
 		itemDef
 		{
+			name					vision_foot
+			rect					0 446 640 34
+			visible					1
+			style					WINDOW_STYLE_FILLED
+			backcolor				0.02 0.04 0.08 0.50
+			wide					1
+			decoration
+		}
+
+		itemDef
+		{
+			name					vision_foot_line
+			rect					0 446 640 0.67
+			visible					1
+			style					WINDOW_STYLE_FILLED
+			backcolor				0.43 0.83 1 0.18
+			wide					1
+			decoration
+		}
+
+		itemDef
+		{
 			name					back
 			text					@MENUS_BACK
 			descText				@MENUS_EXIT_TO_MAIN_MENU
 			type					ITEM_TYPE_BUTTON
 			font					5
-			textscale				0.7
+			textscale				0.6
 			textstyle				0
-			style					WINDOW_STYLE_PANEL
-			rect					40 446 110 22
-			textalignx				55
-			textaligny				4.5
+			style					WINDOW_STYLE_EMPTY
+			rect					29 446 90 34
+			textalignx				45
+			textaligny				11.6
 			textalign				ITEM_ALIGN_CENTER
 			forecolor				0.86 0.92 0.97 1
 			visible					1
@@ -1306,9 +1328,34 @@
 			mouseenter { show backButton }
 			mouseexit { hide backButton }
 			caps					1
-			backcolor				1 1 1 0.04
-			bordercolor				0.43 0.83 1 0.16
-			radius					11
+			flow					1
+		}
+
+		itemDef
+		{
+			name					advanced
+			text					@MENUS_ADVANCED
+			descText				@MENUS_UPDATE_ADVANCED_SERVER
+			type					ITEM_TYPE_BUTTON
+			font					5
+			textscale				0.6
+			textstyle				0
+			style					WINDOW_STYLE_EMPTY
+			rect					119 446 90 34
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				45
+			textaligny				11.6
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+			action
+			{
+				play "sound/interface/button1.wav"
+				open advancedcreateserver
+			}
+			mouseenter { show advancedButton }
+			mouseexit { hide advancedButton }
+			caps					1
+			flow					1
 		}
 
 		itemDef
@@ -1318,13 +1365,13 @@
 			descText				@MENUS_START_SERVER
 			type					ITEM_TYPE_BUTTON
 			font					5
-			textscale				0.7
+			textscale				0.6
 			textstyle				0
 			style					WINDOW_STYLE_PANEL
-			rect					490 446 110 22
+			rect					486 452 122 22
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				55
-			textaligny				4.5
+			textalignx				61
+			textaligny				5.6
 			forecolor				1 1 1 1
 			visible					1
 			action
@@ -1339,38 +1386,9 @@
 			mouseenter { show acceptButton }
 			mouseexit { hide acceptButton }
 			caps					1
-			backcolor				0.43 0.83 1 0.20
-			bordercolor				0.43 0.83 1 0.75
-			radius					11
-		}
-
-		itemDef
-		{
-			name					advanced
-			text					@MENUS_ADVANCED
-			descText				@MENUS_UPDATE_ADVANCED_SERVER
-			type					ITEM_TYPE_BUTTON
-			font					5
-			textscale				0.7
-			textstyle				0
-			style					WINDOW_STYLE_PANEL
-			rect					160 446 110 22
-			textalign				ITEM_ALIGN_CENTER
-			textalignx				55
-			textaligny				4.5
-			forecolor				0.86 0.92 0.97 1
-			visible					1
-			action
-			{
-				play "sound/interface/button1.wav"
-				open advancedcreateserver
-			}
-			mouseenter { show advancedButton }
-			mouseexit { hide advancedButton }
-			caps					1
-			backcolor				1 1 1 0.04
-			bordercolor				0.43 0.83 1 0.16
-			radius					11
+			backcolor				0.43 0.83 1 0.22
+			bordercolor				0.43 0.83 1 0.8
+			radius					3
 		}
 	}
 }

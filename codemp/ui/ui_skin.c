@@ -43,6 +43,7 @@ extern displayContextDef_t *DC;
 #define SKIN_MAX_RADIUS		120		// pixels: a corner that is rounder is drawn with this radius
 #define SKIN_SOFT_SIZE		64
 #define SKIN_STARS			150
+#define SKIN_ARROW_SIZE		32
 
 typedef enum {
 	SKIN_FILL,						// a disc
@@ -69,6 +70,7 @@ static struct {
 	qhandle_t	logo;				// the icon of the game, flat
 	qhandle_t	solid;				// a white picture for polygons in a scene
 	qboolean	logoTried;
+	qhandle_t	arrow;				// a triangle that points to the right
 } skin;
 
 static byte skinPic[256 * 256 * 4];
@@ -221,6 +223,20 @@ static void Skin_Pictures( void ) {
 		}
 	}
 	skin.sky = DC->registerShaderRGBA( "skin_sky", skinPic, 2, 64, RGBA_SHADER_OVER );
+
+	// a triangle that points to the right: its tip in the middle of the right edge, its base the left edge
+	for ( y = 0; y < SKIN_ARROW_SIZE; y++ ) {
+		for ( x = 0; x < SKIN_ARROW_SIZE; x++ ) {
+			// how far this pixel is inside of the two slanted edges, in pixels along their normal
+			const float	px = x + 0.5f, py = fabsf( y + 0.5f - SKIN_ARROW_SIZE * 0.5f );
+			const float	inside = ( ( SKIN_ARROW_SIZE - 1.0f - px ) * 0.5f - py ) * 0.894f;
+			byte		*out = &skinPic[( y * SKIN_ARROW_SIZE + x ) * 4];
+
+			out[0] = out[1] = out[2] = 255;
+			out[3] = (byte)( Com_Clamp( 0.0f, 1.0f, Q_min( inside + 0.5f, px ) ) * 255.0f + 0.5f );
+		}
+	}
+	skin.arrow = DC->registerShaderRGBA( "skin_arrow", skinPic, SKIN_ARROW_SIZE, SKIN_ARROW_SIZE, RGBA_SHADER_OVER );
 }
 
 /*
@@ -343,6 +359,50 @@ void Skin_Disc( float cx, float cy, float radius, const vec4_t color ) {
 	c = (float)shape->radius / shape->size;
 	DC->setColor( color );
 	DC->drawStretchPic( Skin_SnapX( cx - r ), Skin_SnapY( cy - r ), 2.0f * r, 2.0f * r, 0.5f - c, 0.5f - c, 0.5f + c, 0.5f + c, shape->shader );
+	DC->setColor( NULL );
+}
+
+// A line from left to right that is one pixel high, whatever the size of the window. While the menus stand on
+// a plane in the level (cl_uiPlane) a pixel of the 2D is less than one of the screen, and a line that thin
+// breaks into dashes: there it is a strip with soft edges, which the renderer can thin out evenly.
+void Skin_Line( float x, float y, float w, const vec4_t color ) {
+	static int		askedTime = -1;
+	static qboolean	plane;
+
+	if ( !Skin_Ready() || color[3] <= 0.0f ) {
+		return;
+	}
+	if ( askedTime != DC->realTime ) {
+		askedTime = DC->realTime;
+		plane = (qboolean)( DC->getCVarValue( "cl_uiPlane" ) != 0.0f );
+	}
+	if ( !plane ) {
+		DC->fillRect( Skin_SnapX( x ), Skin_SnapY( y ), w, 1.0f / Skin_ScaleY(), color );
+		return;
+	}
+	Skin_Pictures();
+	if ( skin.soft ) {
+		vec4_t strong;
+
+		// (the column through the middle of the round light: nothing, all, nothing)
+		Skin_Color( strong, color, 1.6f );
+		DC->setColor( strong );
+		DC->drawStretchPic( x, y - 1.0f, w, 2.6f, 0.5f, 0.0f, 0.5f, 1.0f, skin.soft );
+		DC->setColor( NULL );
+	}
+}
+
+// A triangle in a rectangle, pointing to its right edge or to its left
+void Skin_Arrow( float x, float y, float w, float h, qboolean left, const vec4_t color ) {
+	if ( !Skin_Ready() ) {
+		return;
+	}
+	Skin_Pictures();
+	if ( !skin.arrow || color[3] <= 0.0f ) {
+		return;
+	}
+	DC->setColor( color );
+	DC->drawStretchPic( Skin_SnapX( x ), Skin_SnapY( y ), w, h, left ? 1.0f : 0.0f, 0.0f, left ? 0.0f : 1.0f, 1.0f, skin.arrow );
 	DC->setColor( NULL );
 }
 

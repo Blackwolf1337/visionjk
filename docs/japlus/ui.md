@@ -21,14 +21,27 @@ HUD of its own gets them drawn as it always did, see "For mods".
 Both are in Setup under Interface.
 
 - Outside a game every page has a bar at the top with the four sections (Play, Profile, Controls, Setup), a
-  heading, the explanation of what the mouse is on under it, and its buttons at the bottom. The button that
-  goes on (Apply, Join, Next) is filled.
+  heading, the explanation of what the mouse is on under it, and a bar at the bottom with its buttons: what
+  goes back as words at the left, the button that goes on (Apply, Join, Next) as a filled block at the right.
+- Setup and Controls are options screens, outside a game and in one: the pages of the screen as a row of
+  tabs at the top, the settings of the open page as one list of rows, and beside the list the name of the
+  row under the mouse with what it is for. A row has its name at the left and its widget at the right: a
+  switch with both of its states (a click on a half sets it), a choice between two arrows, a slider with
+  what it stands at, the keys of a command, a line to type in. The row under the mouse is filled. A list
+  that is longer than its window moves with the wheel, the page keys, the bar at its right or the arrow
+  keys, which walk through every row. Left and right change the row in focus from the keyboard. The bar at
+  the bottom has the way back, the defaults, and the button that restarts the video once a video setting
+  was changed.
 - In a game the menus are panels over the level, which is out of focus behind them (`r_menuBlur`).
 - The HUD: health and shield at the bottom left, force at the bottom right with the ammo of the weapon or the
   stance of the saber under it, the score above. The health bar turns amber below half and red below a
   quarter.
-- Setup has three new tabs, Interface, Chat & Social and Network, and four more rows under Sound, for the
-  settings that only the console had: see the table at the end.
+- Setup has seven pages in place of eleven tabs: Video, Sound (with the 3D sound and the voice chat), Game
+  Options (with the language and the bot mode), Interface, Chat & Social, Network and Mods. Controls has
+  seven: Movement, Interaction, Weapons, Force Powers (both old tabs), Mouse/Joystick, Other and Extras
+  (what JA+ and VisionJK add). The settings that only the console had are in them: see the table at the end.
+- What this tree added to the menus is in the language of the game in English and German (`se_language`).
+  French and Spanish read the English until somebody translates `tools/menus/texts.py`.
 - The icon of the game is the box of the website (white lid, a yellow and a blue side). On the first page it
   is a body on a panel of its own, in the pose of the icon: seen over one edge from above, yellow at the
   left, blue at the right, the lid hinged on the yellow side and a little open. It sways a few degrees and
@@ -81,13 +94,26 @@ All optional. A file that uses none of them is read and drawn by the code of bef
 | itemDef | `showStat <name>` | the item is only there while that number is above 0 |
 | itemDef | `type ITEM_TYPE_CUBE`, `type ITEM_TYPE_LOGO` | the box of the icon in the rectangle of the item: as a body in the pose of the icon that sways and opens its lid, or as a flat picture (its `forecolor` gives the alpha) |
 | itemDef | `wide 1` | its window reaches the sides of a screen that is wider than the 640 units of a menu, as the background of a menu does: the bar at the top of a page. With the menu on its panel in the level it ends with the panel |
+| itemDef | `page <n>` | the item is only there while page n of its menu is open (1 to 15). An item without it is on every page |
+| itemDef | `tab <n>` | a button that opens page n when it is clicked, before its `action` runs. The one whose page is open is bright and has a line under it. The menu opens on the lowest page a tab names. Tabs that follow each other in the file at the same height are as wide as their words and stand in a row from where the first one is |
+| itemDef | `flow 1` | a button of a bar: laid out with its neighbours like tabs, with a short line between two of them. A hidden one takes no room |
+| menuDef | `scrollRect <x y w h>`, `scrollStep <units>` | the window of the list of a page and the height of one of its rows. The list is moved by whole rows |
+| itemDef | `scroll 1` | the item stands in that list: it moves with it and is only there while all of it is inside the window |
+| itemDef | `row 1` | a setting (yes/no, multi, slider, bind, edit field, button) drawn as a row: its `text` at the left without the colon of the old menus, its widget in the right third, filled while it has the focus. A multi with two settings whose names fit is a switch that shows both. `row 2`: an edit field that shows stars unless it is being typed in |
+| itemDef | `type ITEM_TYPE_DESC` | in its rectangle: the `text` of the item in focus in capitals and its `descText` in lines that fit, or those of the tab of the open page. A menu that has one does not draw the line of `descX` |
+| itemDef | `type ITEM_TYPE_PAGESCROLL` | the bar of the list of the open page in its rectangle, to be dragged. Not there while the list fits its window |
+| script | `setpage <n>` | opens that page |
 
 The numbers (`codemp/cgame/hud/cg_hud.c`): `health`, `armor`, `force`, `ammo` (not there with a saber),
 `saberstyle` (only with a saber), `jetpack`, `cloak`, `score`, `alive`, `spectator`, `team` (1 red, 2 blue),
 `duel`, `altdim`. Only the cgame has them: in a menu of the ui such an item draws nothing.
 
 `ui/jamp/menudef.h` has the new numbers (`WINDOW_STYLE_PANEL` 6, `ITEM_TYPE_BAR` 16, `ITEM_TYPE_VALUE` 17,
-`ITEM_TYPE_CUBE` 18, `ITEM_TYPE_LOGO` 19).
+`ITEM_TYPE_CUBE` 18, `ITEM_TYPE_LOGO` 19, `ITEM_TYPE_DESC` 20, `ITEM_TYPE_PAGESCROLL` 21).
+
+A filled window that is less than a unit high is drawn as a line of one pixel at any size of the window. While
+the menus stand on their panel in the level a line that thin would break into dashes, so there it is a strip
+with soft edges.
 
 ## How the menus are made
 
@@ -102,10 +128,11 @@ are.
 - `pages.py`, the layout:
   - A page outside a game (a menu that fills the screen) has the bar at the top with the four sections (made
     for a page that had no buttons for them), its heading under it in capitals, the line about what the mouse
-    is on under the heading, its content under that with its left edge under the heading, and its buttons in
-    one row at the bottom: what goes back at the left, what goes on at the right, filled. A page that needs
-    all of the height (the server browser, create server) has its heading in the bar after the name of the
-    game, no button that leaves the game, and the line about the mouse between the buttons.
+    is on under the heading, its content under that with its left edge under the heading, and a bar at the
+    bottom with its buttons: what goes back as words at the left (`flow 1`, the first begins where the
+    content does), what goes on as filled blocks at the right. A page that needs all of the height (the
+    server browser, create server) has its heading in the bar after the name of the game, no button that
+    leaves the game, and the line about the mouse between the buttons.
   - A column of four or more buttons (the sections of Setup, Controls and the rules, the choices of a page
     that is one list) is a list on a panel of its own, its texts at the left. The panel beside it begins and
     ends where the list does.
@@ -114,8 +141,15 @@ are.
     than the menu or lay beside it and are gone. The buttons in its lowest row are pills, buttons one under
     the other stay a list. The line about the mouse stands under the frame. Outside a game the page behind
     a window is darkened.
-  - The first page, the bar at the top in a game, the new tabs of the setup menus and the row of the new key
-    in Controls.
+  - The first page and the bar at the top in a game.
+- `options.py`, the options screens (Setup and Controls, outside a game and in one): two tables say which
+  pages a screen has and what is on each, as headings, rows of the old menu (by group, in an order that can
+  be given) and rows the old menus did not have. A row of the old menu keeps its cvar, its list and its
+  script, without the commands that showed and marked the old tabs. The layout is the same for all four: in a
+  game the screen is a window under the bar of the in-game menu.
+- `texts.py`, the texts this tree adds, English with German next to it. `build.py` writes them as a string
+  package of their own (`strings/<language>/vision.str`, `@VISION_<KEY>` in a menu file), and says which text
+  of an old menu has no entry.
 - `menufile.py` reads and writes a menu file as a tree.
 
 `ui/vision/hud.menu` is written by hand.
@@ -131,7 +165,7 @@ tools/menus/build.py [<assets1.pk3 of the game>]
 | File | |
 |------|---|
 | `ui/ui_skin.c`, `ui_skin.h` | the pictures (a disc and its rim for every radius in pixels, a soft light, the sky), panels, the widgets, the pointer of the mouse, the icon as a picture and as a box of polygons in a scene of its own, the panel of the connect and loading screens (`Skin_LoadPanel`). Built into ui and cgame |
-| `ui/ui_shared.c` | the new words, the panel style, the branches of the widgets, items bound to a number |
+| `ui/ui_shared.c` | the new words, the panel style, the branches of the widgets, items bound to a number, and the options screens: pages (`Menu_SetPage`), the list of a page (`Menu_ScrollTo`, `Menu_ScrollFrame`), a setting as a row (`Item_Row_Paint`, `Item_Row_HandleKey`), the buttons of a row by the width of their words (`Menu_TabsLayout`), what the item in focus is for (`Item_Desc_Paint`) |
 | `ui/ui_main.c` | which list is loaded (`UI_NewLookList`), the pointer |
 | `cgame/hud/cg_hud.c` | the numbers by name, loading and painting the HUD, the screen while a level loads (`cg_showLoading 1`, a cheat, holds it over the game to look at it) |
 | `client/cl_console.cpp` | the background of the console, unless `ui_classic 1` |
@@ -145,18 +179,23 @@ of the menus.
 
 ## Settings that got an entry
 
-| Tab | Entries |
-|-----|---------|
-| Interface | New HUD (`cg_hud`), Classic Menus (`ui_classic`), Wide Screen Layout (`r_2dAspect`), Menu in the Level (`cg_immersiveMenu`), Menu Blur (`r_menuBlur`), Field of View (`cg_fov`), Camera Distance (`cg_thirdPersonRange`), Crosshair Size (`cg_crosshairSize`), Frame Limit (`com_maxfps`), Show Frame Rate (`cg_drawFPS`), Show Timer (`cg_drawTimer`), Show Lagometer (`cg_lagometer`) |
-| Chat & Social | Chat Bubbles (`cg_chatBubbles`), Bubble Range (`cg_bubbleRange`), Player Statuses (`cg_playerStatuses`), Show My Music (`cg_shareMusic`), Select Players (`cg_selectPlayers`), Selection Outline (`cg_selectOutline`), Own Chat Line (`cg_chatInput`), Chat Box Width (`cg_chatBoxWidth`), Chat Beep (`cg_chatBeep`), Sharp Console Font (`con_font`), Console Text Size (`con_scale`), Console Opacity (`con_opacity`) |
-| Network | Check for Updates (`cl_updateCheck`), Allow Downloads (`cl_allowDownload`), Intrusion Log (`cl_ids`), Key Login by Agent (`cg_authAgent`), UTF-8 Text (`cl_utf8`) |
-| Sound | Spatial Audio (`s_spatial`), Room Reflections (`s_spatialReflections`), Sound Round Corners (`s_spatialPaths`), Doppler (`s_doppler`) |
-| Controls, JA+ Control | Free the Mouse (`+cursor`) |
+| Page of Setup | Entries the old menus did not have |
+|---------------|-------------------------------------|
+| Video | Frame Limit (`com_maxfps`), Wide Screen Layout (`r_2dAspect`), Dynamic Glow (`r_DynamicGlow`) |
+| Sound | Room Reflections (`s_spatialReflections`), Sound Around Corners (`s_spatialPaths`), Doppler Effect (`s_doppler`) |
+| Interface | New HUD (`cg_hud`), Classic Menus (`ui_classic`), Menu in the Level (`cg_immersiveMenu`), Menu Blur (`r_menuBlur`), Show Frame Rate (`cg_drawFPS`), Show Timer (`cg_drawTimer`), Show Lagometer (`cg_lagometer`), Field of View (`cg_fov`), Camera Distance (`cg_thirdPersonRange`), Crosshair Size (`cg_crosshairSize`) |
+| Chat & Social | Chat Bubbles (`cg_chatBubbles`), Bubble Range (`cg_bubbleRange`), Player Statuses (`cg_playerStatuses`), Show My Music (`cg_shareMusic`), Select Players (`cg_selectPlayers`), Selection Outline (`cg_selectOutline`), Own Chat Line (`cg_chatInput`), Chat Box Width (`cg_chatBoxWidth`), Chat Beep (`cg_chatBeep`), Sharp Console Font (`con_font`), Console Text Size (`con_scale`), Console Opacity (`con_opacity`), Clan Password (`cp_clanPwd`, shown as stars) |
+| Network | Check for Updates (`cl_updateCheck`), Intrusion Log (`cl_ids`), Key Login by Agent (`cg_authAgent`), Key File (`cg_authKeyFile`), UTF-8 Text (`cl_utf8`) |
+| Controls, Extras | Free the Mouse (`+cursor`) |
 
 Left to the console on purpose: the names of sound devices (`cg_voiceCapture`, `cg_voicePlayback`, a menu
-can not list them), addresses and paths (`cg_voiceMasterHost`, `cg_authKeyFile`, `cg_authAgentPath`,
-`cl_updateURL`), the finer numbers of the spatial sound and of the renderers, and what the game had no entry
-for either. The classic menus do not have the new entries.
+can not list them), addresses (`cg_voiceMasterHost`, `cg_authAgentPath`, `cl_updateURL`), the finer numbers
+of the spatial sound and of the renderers, and what the game had no entry for either. The classic menus do
+not have the new entries.
+
+A setting of the cgame (most of Interface and Chat & Social) does not exist before the first level of a
+session was loaded unless the stored config has it. Outside a game its row then shows it as off, whatever
+its default is, and a click sets it.
 
 ## Checked
 
@@ -238,12 +277,28 @@ then run with `+set se_language german` as well.
   names a cvar that the engine, a renderer or the cgame reads. The Vulkan renderer is built from the files of
   rd-vanilla that read the video settings, so those count for both.
 
-Not translated: the rows and tabs this tree added (Interface, Chat & Social, Network, the voice chat) are
-English in every language, the game has no strings for them.
+The options screens (2026-10-11 night, after "Maybe you could make a menu like this?" with a picture of an
+options screen: tabs at the top, a list of rows with switches, sliders and arrows, what a row is for beside
+it, a bar at the bottom, and "instead of lots of submenus"). Setup and Controls were laid out anew that way
+(`tools/menus/options.py`), every other page outside a game got the same bar at the bottom, and the rows of
+the server list a line in place of a frame each. Seen in hidden runs with rd-vulkan-vision, `r_DynamicGlow 1`,
+8 samples and `se_language german` at 1280 x 720: every page of both screens with the end of its list,
+outside a game, in a game as a window and in a game on the panel in the level (`clienttests/ui_options.cfg`,
+`ui_options_in.cfg`, and the full pass of `uitest/plan.py`, 116 and 92 pictures). Used by script
+(`ui_options_use.cfg`, the log says what the cvars stand at afterwards): a click on either half of a switch,
+both arrows of a choice, the track of a slider, down, left, right and enter from the keyboard, the arrow keys
+walking a list past the end of its window, the bar of a list dragged, a key waiting to be bound. Found on
+the way: the rows of Controls named their click sound without quotes, which the menu reader takes apart at
+the slashes (no sound, three lines in the console, in the game as shipped). They are quoted now.
+
+Not translated: French and Spanish read what this tree added in English.
 
 Not checked: the pages of siege in a game of siege (their pictures are missing outside one), most in-game
 windows standing in the level (`cg_immersiveMenu 1`, the default: Setup and the vote window were looked at
 that way, at 2560 x 1440), a mouse in a hand, the icon of the window
 and of the program on a desktop, a real download, the connect screen when a server refuses, another language
-than English, a mod's menus next to the new look, how it feels to use. Left as they were laid out: the inside
-of the profile pages (player, force powers), dense and built around pictures.
+than English and German, a mod's menus next to the new look, how it feels to use. Of the options screens:
+a line typed into (the clan password, the key file), the Mods page with a mod in it, the defaults and the
+video restart carried out, another size of window than 1280 x 720, Windows and the browser (built, not
+run). Left as they were laid out: the inside of the profile pages (player, force powers), dense and built
+around pictures.

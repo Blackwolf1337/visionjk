@@ -42,6 +42,8 @@ void		Skin_Color( vec4_t out, const vec4_t in, float alphaScale );
 void		Skin_Panel( float x, float y, float w, float h, float radius, const vec4_t fill, const vec4_t edge );
 void		Skin_Soft( float x, float y, float w, float h, float spread, const vec4_t color );
 void		Skin_Disc( float cx, float cy, float radius, const vec4_t color );
+void		Skin_Arrow( float x, float y, float w, float h, qboolean left, const vec4_t color );
+void		Skin_Line( float x, float y, float w, const vec4_t color );
 void		Skin_Backdrop( void );
 void		Skin_Cursor( float x, float y );
 void		Skin_Logo( float x, float y, float w, float h, float alpha );

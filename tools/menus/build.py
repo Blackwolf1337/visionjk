@@ -24,6 +24,7 @@ import zipfile
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import menufile as mf           # noqa: E402
 import pages                    # noqa: E402
+import texts                    # noqa: E402
 from theme import *             # noqa: E402,F401,F403
 import theme                    # noqa: E402
 
@@ -93,6 +94,10 @@ def main():
                 build(path, base, True)
     write_list('visionmenus.txt', outside, 'outside of a game')
     write_list('visioningame.txt', inside, 'in a game')
+    # the texts the new menus add to the game, in its languages
+    texts.write(os.path.join(TREE, 'assets', 'japlus_client', 'strings'))
+    for english in sorted(texts.missing):
+        print('no text in texts.py for %r: it stays English in every language' % english)
     print('%d menu files in %s' % (len(set(outside + inside)), os.path.relpath(OUT, TREE)))
 
 

@@ -9,8 +9,8 @@
 		rect					0 0 640 480
 		outOfBoundsClick
 		focusColor				0.43 0.83 1 1
-		descX					320
-		descY					453.0
+		descX					302.5
+		descY					458.5
 		descScale				0.55
 		descColor				0.60 0.69 0.78 1
 		descAlignment			ITEM_ALIGN_CENTER
@@ -560,121 +560,101 @@
 		itemDef
 		{
 			name					horizontalseparators
-			rect					10 136 604 26
-			style					WINDOW_STYLE_PANEL
-			backcolor				0.035 0.07 0.12 0.55
+			rect					10 161 604 0.67
+			style					WINDOW_STYLE_FILLED
+			backcolor				1 1 1 0.07
 			visible					1
 			decoration
-			bordercolor				0.43 0.83 1 0.16
-			radius					5
 		}
 
 		itemDef
 		{
 			name					horizontalseparators
-			rect					10 162 604 26
-			style					WINDOW_STYLE_PANEL
-			backcolor				0.035 0.07 0.12 0.55
+			rect					10 187 604 0.67
+			style					WINDOW_STYLE_FILLED
+			backcolor				1 1 1 0.07
 			visible					1
 			decoration
-			bordercolor				0.43 0.83 1 0.16
-			radius					5
 		}
 
 		itemDef
 		{
 			name					horizontalseparators
-			rect					10 188 604 26
-			style					WINDOW_STYLE_PANEL
-			backcolor				0.035 0.07 0.12 0.55
+			rect					10 213 604 0.67
+			style					WINDOW_STYLE_FILLED
+			backcolor				1 1 1 0.07
 			visible					1
 			decoration
-			bordercolor				0.43 0.83 1 0.16
-			radius					5
 		}
 
 		itemDef
 		{
 			name					horizontalseparators
-			rect					10 214 604 26
-			style					WINDOW_STYLE_PANEL
-			backcolor				0.035 0.07 0.12 0.55
+			rect					10 239 604 0.67
+			style					WINDOW_STYLE_FILLED
+			backcolor				1 1 1 0.07
 			visible					1
 			decoration
-			bordercolor				0.43 0.83 1 0.16
-			radius					5
 		}
 
 		itemDef
 		{
 			name					horizontalseparators
-			rect					10 240 604 26
-			style					WINDOW_STYLE_PANEL
-			backcolor				0.035 0.07 0.12 0.55
+			rect					10 265 604 0.67
+			style					WINDOW_STYLE_FILLED
+			backcolor				1 1 1 0.07
 			visible					1
 			decoration
-			bordercolor				0.43 0.83 1 0.16
-			radius					5
 		}
 
 		itemDef
 		{
 			name					horizontalseparators
-			rect					10 266 604 26
-			style					WINDOW_STYLE_PANEL
-			backcolor				0.035 0.07 0.12 0.55
+			rect					10 291 604 0.67
+			style					WINDOW_STYLE_FILLED
+			backcolor				1 1 1 0.07
 			visible					1
 			decoration
-			bordercolor				0.43 0.83 1 0.16
-			radius					5
 		}
 
 		itemDef
 		{
 			name					horizontalseparators
-			rect					10 292 604 26
-			style					WINDOW_STYLE_PANEL
-			backcolor				0.035 0.07 0.12 0.55
+			rect					10 317 604 0.67
+			style					WINDOW_STYLE_FILLED
+			backcolor				1 1 1 0.07
 			visible					1
 			decoration
-			bordercolor				0.43 0.83 1 0.16
-			radius					5
 		}
 
 		itemDef
 		{
 			name					horizontalseparators
-			rect					10 318 604 26
-			style					WINDOW_STYLE_PANEL
-			backcolor				0.035 0.07 0.12 0.55
+			rect					10 343 604 0.67
+			style					WINDOW_STYLE_FILLED
+			backcolor				1 1 1 0.07
 			visible					1
 			decoration
-			bordercolor				0.43 0.83 1 0.16
-			radius					5
 		}
 
 		itemDef
 		{
 			name					horizontalseparators
-			rect					10 344 604 26
-			style					WINDOW_STYLE_PANEL
-			backcolor				0.035 0.07 0.12 0.55
+			rect					10 369 604 0.67
+			style					WINDOW_STYLE_FILLED
+			backcolor				1 1 1 0.07
 			visible					1
 			decoration
-			bordercolor				0.43 0.83 1 0.16
-			radius					5
 		}
 
 		itemDef
 		{
 			name					horizontalseparators
-			rect					10 370 604 26
-			style					WINDOW_STYLE_PANEL
-			backcolor				0.035 0.07 0.12 0.55
+			rect					10 395 604 0.67
+			style					WINDOW_STYLE_FILLED
+			backcolor				1 1 1 0.07
 			visible					1
 			decoration
-			bordercolor				0.43 0.83 1 0.16
-			radius					5
 		}
 
 		itemDef
@@ -1059,17 +1039,39 @@
 
 		itemDef
 		{
+			name					vision_foot
+			rect					0 447 640 33
+			visible					1
+			style					WINDOW_STYLE_FILLED
+			backcolor				0.02 0.04 0.08 0.50
+			wide					1
+			decoration
+		}
+
+		itemDef
+		{
+			name					vision_foot_line
+			rect					0 447 640 0.67
+			visible					1
+			style					WINDOW_STYLE_FILLED
+			backcolor				0.43 0.83 1 0.18
+			wide					1
+			decoration
+		}
+
+		itemDef
+		{
 			name					back
 			text					@MENUS_BACK
 			descText				@MENUS_BACKUP_ONE_MENU
 			type					ITEM_TYPE_BUTTON
 			font					5
-			textscale				0.7
+			textscale				0.6
 			textstyle				0
-			style					WINDOW_STYLE_PANEL
-			rect					40 447 110 22
-			textalignx				55
-			textaligny				4.5
+			style					WINDOW_STYLE_EMPTY
+			rect					29 447 90 33
+			textalignx				45
+			textaligny				11.1
 			textalign				ITEM_ALIGN_CENTER
 			visible					1
 			forecolor				0.86 0.92 0.97 1
@@ -1086,9 +1088,7 @@
 			}
 			mouseExit { hide button_glow }
 			caps					1
-			backcolor				1 1 1 0.04
-			bordercolor				0.43 0.83 1 0.16
-			radius					11
+			flow					1
 		}
 
 		itemDef
@@ -1098,13 +1098,13 @@
 			descText				@MENUS_JOIN_CHOSEN_SERVER
 			type					ITEM_TYPE_BUTTON
 			font					5
-			textscale				0.7
+			textscale				0.6
 			textstyle				0
 			style					WINDOW_STYLE_PANEL
-			rect					490 447 110 22
+			rect					486 453 122 21
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				55
-			textaligny				4.5
+			textalignx				61
+			textaligny				5.1
 			forecolor				1 1 1 1
 			visible					1
 			action
@@ -1119,9 +1119,9 @@
 			}
 			mouseExit { hide button_glow }
 			caps					1
-			backcolor				0.43 0.83 1 0.20
-			bordercolor				0.43 0.83 1 0.75
-			radius					11
+			backcolor				0.43 0.83 1 0.22
+			bordercolor				0.43 0.83 1 0.8
+			radius					3
 		}
 	}
 }
