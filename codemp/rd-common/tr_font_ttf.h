@@ -27,3 +27,4 @@ void				R_FontTTF_Shutdown( void );
 const glyphInfo_t	*R_FontTTF_Glyph( unsigned int codePoint, int pointSize, int *shader );
 void				R_FontTTF_Flush( void );
 void				R_FontTTF_Info( void );
+bool				Font_TextIsUTF8( void );		// tr_font.cpp

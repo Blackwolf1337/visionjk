@@ -247,6 +247,16 @@ typedef struct refexport_s {
 		// A character of the font with a fixed width, in a cell of the console: place and size of the cell are
 		// pixels of the window. qfalse: there is no such font or it does not have the character, nothing is drawn.
 		qboolean			(*Font_DrawMonoChar)					( int x, int y, int cellWidth, int cellHeight, unsigned int codePoint );
+		// Text in the scene, from the TrueType font: polygons that are hidden by what is in front of them. The
+		// first letter stands at origin on the line of the text, which runs along right; up and the height of a
+		// letter are units of the level. A ^ with a digit colours what follows. Called between ClearScene and
+		// RenderScene. qfalse and a width of 0: there is no such font.
+		float				(*Font_Text3DWidth)						( const char *text, float height );
+		qboolean			(*Font_Text3D)							( const vec3_t origin, const vec3_t right, const vec3_t up, float height, const char *text, const float *rgba );
+		// A shader for a picture a module made itself, for polygons in the scene (see RE_RegisterSceneShader):
+		// width and height are powers of two. glow: it is added and glows. Its files need no pk3, so it is
+		// there on a pure server too.
+		qhandle_t			(*RegisterShaderRGBA)					( const char *name, const byte *rgba, int width, int height, qboolean glow );
 	} ext;
 
 } refexport_t;

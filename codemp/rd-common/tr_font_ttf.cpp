@@ -61,6 +61,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 typedef struct ttfPage_s {
 	image_t		*image;
 	qhandle_t	shader;
+	qhandle_t	shaderScene;			// for glyphs in the scene: hidden by what is in front of them
 	byte		*rgba;					// FONT_PAGE_SIZE x FONT_PAGE_SIZE, white with the glyphs in the alpha
 	int			x, y;					// where the next glyph goes
 	int			rowHeight;				// of the row that is being filled
@@ -70,6 +71,7 @@ typedef struct ttfPage_s {
 typedef struct ttfGlyph_s {
 	glyphInfo_t	info;
 	qhandle_t	shader;
+	qhandle_t	shaderScene;
 	qboolean	valid;					// qfalse: the font has no such character, or no page had room
 } ttfGlyph_t;
 
@@ -202,6 +204,9 @@ static ttfPage_t *R_FontTTF_Room( int width, int height ) {
 			return NULL;
 		}
 		page->shader = RE_RegisterShaderFromImage( name, (int *)lightmaps2d, (byte *)stylesDefault, page->image, qfalse );
+		// text in the scene is drawn last of all that is blended, over the panel it stands on
+		Com_sprintf( name, sizeof( name ), "*fontpage%i_scene", ttf.numPages );
+		page->shaderScene = RE_RegisterSceneShader( name, page->image, qfalse, SS_NEAREST );
 		page->x = page->y = 1;
 		page->dirty = qtrue;
 		ttf.numPages++;
@@ -246,6 +251,7 @@ static qboolean R_FontTTF_Make( const stbtt_fontinfo *font, unsigned int codePoi
 		glyph->info.width = glyph->info.height = 1;
 		glyph->info.s = glyph->info.t = glyph->info.s2 = glyph->info.t2 = 0.0f;
 		glyph->shader = ttf.pages[0].shader;
+		glyph->shaderScene = ttf.pages[0].shaderScene;
 		return qtrue;
 	}
 
@@ -281,6 +287,7 @@ static qboolean R_FontTTF_Make( const stbtt_fontinfo *font, unsigned int codePoi
 	glyph->info.s2 = (float)( page->x + cellW ) / FONT_PAGE_SIZE;
 	glyph->info.t2 = (float)( page->y + cellH ) / FONT_PAGE_SIZE;
 	glyph->shader = page->shader;
+	glyph->shaderScene = page->shaderScene;
 
 	page->x += cellW + 1;
 	if ( cellH > page->rowHeight ) {
@@ -374,6 +381,171 @@ qboolean RE_Font_DrawMonoChar( int x, int y, int cellWidth, int cellHeight, unsi
 		glyph->info.s, glyph->info.t, glyph->info.s2, glyph->info.t2, glyph->shader );
 	R_FontTTF_Flush();
 	return qtrue;
+}
+
+/*
+===============================================================================
+
+TEXT IN THE SCENE
+
+For what a module writes into the level (the chat bubbles of the cgame): glyphs of TTF_TEXT as polygons, made
+about as large as they are on the screen at a usual distance and scaled from there by the graphics card.
+
+===============================================================================
+*/
+
+// the pixels a letter of text in the scene is made with
+static int R_FontTTF_SceneSize( void ) {
+	return Com_Clampi( 16, 48, glConfig.vidHeight / 36 );
+}
+
+// The next character of a text for the scene. qfalse: it was a colour code, which is in color then (the alpha
+// stays). codePoint 0 ends the text.
+static qboolean R_FontTTF_SceneChar( const char **text, unsigned int *codePoint, float *color ) {
+	int advance;
+
+	if ( Q_IsColorString( *text ) ) {
+		if ( color ) {
+			VectorCopy( g_color_table[ColorIndex( (*text)[1] )], color );
+		}
+		*text += 2;
+		return qfalse;
+	}
+	*codePoint = AnyLanguage_ReadCharFromString( *text, &advance, NULL );
+	if ( !Font_TextIsUTF8() ) {
+		*codePoint = Q_CP1252ToUnicode( (int)*codePoint );
+	}
+	*text += advance;
+	return qtrue;
+}
+
+static const ttfGlyph_t *R_FontTTF_SceneGlyph( unsigned int codePoint, int size ) {
+	const ttfGlyph_t *glyph = R_FontTTF_Find( TTF_TEXT, codePoint, size, 1 );
+
+	return glyph ? glyph : R_FontTTF_Find( TTF_TEXT, '?', size, 1 );
+}
+
+/*
+===============
+RE_Font_Text3DWidth
+
+How wide a text is in the scene with letters of that height. 0 when there is no font.
+===============
+*/
+float RE_Font_Text3DWidth( const char *text, float height ) {
+	const int	size = R_FontTTF_SceneSize();
+	float		width = 0.0f;
+
+	if ( !ttf.fonts[TTF_TEXT].loaded || !text ) {
+		return 0.0f;
+	}
+	while ( *text ) {
+		unsigned int		codePoint;
+		const ttfGlyph_t	*glyph;
+
+		if ( !R_FontTTF_SceneChar( &text, &codePoint, NULL ) ) {
+			continue;
+		}
+		glyph = R_FontTTF_SceneGlyph( codePoint, size );
+		if ( glyph ) {
+			width += glyph->info.horizAdvance;
+		}
+	}
+	return width * height / size;
+}
+
+/*
+===============
+RE_Font_Text3D
+
+Adds a text to the scene: a polygon a glyph. The first letter stands at origin on the line of the text, which
+runs along right, up is up for the letters, both of length 1. qfalse: there is no font.
+===============
+*/
+qboolean RE_Font_Text3D( const vec3_t origin, const vec3_t right, const vec3_t up, float height, const char *text, const float *rgba ) {
+	const int	size = R_FontTTF_SceneSize();
+	const float	unit = height / size;		// units of the level a pixel of a glyph
+	vec4_t		color;
+	float		pen = 0.0f;
+
+	if ( !ttf.fonts[TTF_TEXT].loaded || !text ) {
+		return qfalse;
+	}
+	if ( rgba ) {
+		VectorCopy4( rgba, color );
+	} else {
+		VectorSet4( color, 1.0f, 1.0f, 1.0f, 1.0f );
+	}
+
+	while ( *text ) {
+		unsigned int		codePoint;
+		const ttfGlyph_t	*glyph;
+		polyVert_t			verts[4];
+		float				x[2], y[2];
+
+		if ( !R_FontTTF_SceneChar( &text, &codePoint, color ) ) {
+			continue;
+		}
+		glyph = R_FontTTF_SceneGlyph( codePoint, size );
+		if ( !glyph ) {
+			continue;
+		}
+		if ( glyph->info.s != glyph->info.s2 ) {
+			// left and right, top and bottom of the glyph, from the place of the pen on the line
+			x[0] = pen + glyph->info.horizOffset * unit;
+			x[1] = x[0] + glyph->info.width * unit;
+			y[0] = glyph->info.baseline * unit;
+			y[1] = y[0] - glyph->info.height * unit;
+
+			for ( int i = 0; i < 4; i++ ) {
+				const int	side = ( i == 1 || i == 2 ) ? 1 : 0;	// 0 1 2 3: top left, top right, bottom right, bottom left
+				const int	low = ( i >= 2 ) ? 1 : 0;
+
+				VectorMA( origin, x[side], right, verts[i].xyz );
+				VectorMA( verts[i].xyz, y[low], up, verts[i].xyz );
+				verts[i].st[0] = side ? glyph->info.s2 : glyph->info.s;
+				verts[i].st[1] = low ? glyph->info.t2 : glyph->info.t;
+				for ( int c = 0; c < 4; c++ ) {
+					verts[i].modulate[c] = (byte)( Com_Clamp( 0.0f, 1.0f, color[c] ) * 255.0f );
+				}
+			}
+			RE_AddPolyToScene( glyph->shaderScene, 4, verts, 1 );
+		}
+		pen += glyph->info.horizAdvance * unit;
+	}
+	R_FontTTF_Flush();
+	return qtrue;
+}
+
+/*
+===============
+RE_RegisterShaderRGBA
+
+A shader for a picture a module made itself, for polygons in the scene. The picture needs no file, so it is there
+on a pure server that does not have the pk3 of this tree. Width and height are powers of two up to 512. An
+image of that name from before the last restart of the renderer is found again and keeps its picture: a module
+hands in the same picture under the same name.
+===============
+*/
+qhandle_t RE_RegisterShaderRGBA( const char *name, const byte *rgba, int width, int height, qboolean glow ) {
+	char	imageName[MAX_QPATH];
+	image_t	*image;
+
+	if ( !name || !rgba || width < 1 || height < 1 || width > 512 || height > 512
+		|| ( width & ( width - 1 ) ) || ( height & ( height - 1 ) ) ) {
+		return 0;
+	}
+	// the star keeps the image over the change of a level, see R_FontTTF_Room()
+	Com_sprintf( imageName, sizeof( imageName ), "*rgba_%s", name );
+	if ( strchr( imageName, '/' ) ) {
+		return 0;
+	}
+	image = R_CreateImage( imageName, rgba, width, height, GL_RGBA, qtrue, qfalse, qfalse, GL_CLAMP );
+	if ( !image ) {
+		return 0;
+	}
+	// what glows is drawn before the rest a module draws, a plain picture before the text that stands on it
+	return RE_RegisterSceneShader( imageName, image, glow, glow ? SS_BLEND6 : SS_ALMOST_NEAREST );
 }
 
 // for fontlist

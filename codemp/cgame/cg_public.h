@@ -732,6 +732,16 @@ typedef struct cgameImport_s {
 		void			(*GetClipboard)							( char *buf, int size );
 		void			(*SetClipboard)							( const char *text );
 		qboolean		(*OpenURL)								( const char *url );
+		// Only an engine that sets the cvar cl_cgameScene to 1 has these three, the same way. For what the cgame
+		// writes and paints into the level itself (the chat bubbles, bubble/cg_bubble.c). Text from the
+		// TrueType font as polygons that are hidden by what is in front of them: the first letter stands at
+		// origin on the line of the text, which runs along right; up and the height of a letter are units of
+		// the level, a ^ with a digit colours what follows. Between R_ClearScene and R_RenderScene. A width of
+		// 0 and qfalse: there is no such font. And a shader for a picture the cgame made itself, width and
+		// height powers of two up to 512, for polygons in the scene; glow: it is added and glows.
+		float			(*R_Text3DWidth)						( const char *text, float height );
+		qboolean		(*R_Text3D)								( const vec3_t origin, const vec3_t right, const vec3_t up, float height, const char *text, const float *rgba );
+		qhandle_t		(*R_RegisterShaderRGBA)					( const char *name, const byte *rgba, int width, int height, qboolean glow );
 	} ext;
 } cgameImport_t;
 

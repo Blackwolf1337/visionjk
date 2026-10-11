@@ -2005,6 +2005,9 @@ void CL_BindCGame( void ) {
 		cgi.ext.GetClipboard					= CL_GetClipboard;
 		cgi.ext.SetClipboard					= CL_SetClipboard;
 		cgi.ext.OpenURL							= Sys_OpenURL;
+		cgi.ext.R_Text3DWidth					= re->ext.Font_Text3DWidth;
+		cgi.ext.R_Text3D						= re->ext.Font_Text3D;
+		cgi.ext.R_RegisterShaderRGBA			= re->ext.RegisterShaderRGBA;
 
 		GetCGameAPI = (GetCGameAPI_t)cgvm->GetModuleAPI;
 		ret = GetCGameAPI( CGAME_API_VERSION, &cgi );
