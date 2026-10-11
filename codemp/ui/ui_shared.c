@@ -674,6 +674,16 @@ void Fade(int *flags, float *f, float clamp, int *nextTime, int offsetTime, qboo
 	}
 }
 
+// A window over the whole 640 x 480 with a picture or a fill is a background: Window_Paint() makes it as wide as
+// a wide screen is
+static qboolean Window_IsBackground( const windowDef_t *w ) {
+	return (qboolean)( w->style != 0 && w->border == 0
+		&& w->rect.x == 0 && w->rect.y == 0 && w->rect.w == SCREEN_WIDTH && w->rect.h == SCREEN_HEIGHT );
+}
+
+// while Menu_Paint() paints the items that come before the background of their menu, which lie under it
+static qboolean window_underBackground;
+
 void Window_Paint(windowDef_t *w, float fadeAmount, float fadeClamp, float fadeCycle)
 {
 	//float bordersize = 0;
@@ -700,9 +710,18 @@ void Window_Paint(windowDef_t *w, float fadeAmount, float fadeClamp, float fadeC
 	}
 	// a window over the whole 640 x 480 is a background: it covers a wide screen too, where the grid is wider
 	// than 640 by DC->wide on either side
-	else if ( DC->wide > 0.0f && w->rect.x == 0 && w->rect.y == 0 && w->rect.w == SCREEN_WIDTH && w->rect.h == SCREEN_HEIGHT ) {
+	else if ( DC->wide > 0.0f && Window_IsBackground( w ) ) {
 		fillRect.x -= DC->wide;
 		fillRect.w += 2.0f * DC->wide;
+	}
+	// What lies under the left or the right edge of such a background and is seen through it (the columns of
+	// text of the main menus, under the holes of gfx/menus/main_background) is stretched as the background is.
+	// Left where it was, its hole in the wider picture stood over the base of the menu, which is white.
+	else if ( DC->wide > 0.0f && window_underBackground && ( w->rect.x <= 0.0f || w->rect.x + w->rect.w >= SCREEN_WIDTH ) ) {
+		const float scale = ( SCREEN_WIDTH + 2.0f * DC->wide ) / SCREEN_WIDTH;
+
+		fillRect.x = fillRect.x * scale - DC->wide;
+		fillRect.w *= scale;
 	}
 
 	if ( w->style == WINDOW_STYLE_FILLED ) {
@@ -6772,7 +6791,7 @@ void Menu_HandleMouseMove(menuDef_t *menu, float x, float y) {
 }
 
 void Menu_Paint(menuDef_t *menu, qboolean forcePaint) {
-	int i;
+	int i, underBackground;
 
 	if (menu == NULL) {
 		return;
@@ -6803,9 +6822,21 @@ void Menu_Paint(menuDef_t *menu, qboolean forcePaint) {
 	// paint the background and or border
 	Window_Paint(&menu->window, menu->fadeAmount, menu->fadeClamp, menu->fadeCycle );
 
+	// the items that are painted before the background of the menu lie under it
+	underBackground = 0;
+	if ( DC->wide > 0.0f ) {
+		for ( i = 0; i < menu->itemCount; i++ ) {
+			if ( ( menu->items[i]->window.flags & WINDOW_VISIBLE ) && Window_IsBackground( &menu->items[i]->window ) ) {
+				underBackground = i;
+				break;
+			}
+		}
+	}
+
 	// Loop through all items for the menu and paint them
 	for (i = 0; i < menu->itemCount; i++)
 	{
+		window_underBackground = (qboolean)( i < underBackground );
 		if (!menu->items[i]->appearanceSlot)
 		{
 			Item_Paint(menu->items[i]);
@@ -6824,6 +6855,7 @@ void Menu_Paint(menuDef_t *menu, qboolean forcePaint) {
 			}
 		}
 	}
+	window_underBackground = qfalse;
 
 	if (debugMode) {
 		vec4_t color;
