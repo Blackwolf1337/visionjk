@@ -58,7 +58,9 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "monocypher-ed25519.h"
 
 #define AUTH_MAX_CANDIDATES		8
-#define AUTH_SERVER_MSEC		8000		// the server answers within that, or it does not
+#define AUTH_RESEND_MSEC		3000		// no answer by then: the server dropped the command (Auth_FloodGap), once more
+#define AUTH_SENDS				3			// a command goes out that often, then the server does not answer
+#define AUTH_FLOOD_MARGIN		300			// on top of the gap of the server: packets do not arrive as evenly as they leave
 #define AUTH_AGENT_MSEC			120000		// the player may have to unlock his agent and say yes
 #define AUTH_KEY_NAME			"admin_ed25519"
 
@@ -92,6 +94,10 @@ static struct {
 	int				messageLen;
 	int				nonceTime;
 	char			address[AUTH_ADDRESS_SIZE];
+
+	char			command[AUTH_BASE64_SIZE + AUTH_ADDRESS_SIZE + 16];	// the "jpauth ..." of the step
+	int				sends;				// how often it went out
+	int				sendTime;			// trap->Milliseconds() of the last "jpauth" that went out, 0: none yet
 } auth;
 
 static void Auth_Say( const char *fmt, ... ) {
@@ -348,10 +354,41 @@ static qboolean Auth_ServerKnows( void ) {
 	return (qboolean)( ( atoi( Info_ValueForKey( CG_ConfigString( CS_SERVERINFO ), "g_visionCaps" ) ) & AUTH_CAPS_BIT ) != 0 );
 }
 
+/*
+=================
+Auth_FloodGap
+
+A server with flood protection drops a client command that comes within a second of the one before and says
+nothing (sv_floodProtect in SV_ClientCommand, every engine since Quake 3). The server answers a "jpauth" much
+faster than that, so the next one would always be dropped. The cvar is in the serverinfo: 0 is off, 1 is a
+second, any other number is msec in the engine of this tree.
+=================
+*/
+static int Auth_FloodGap( void ) {
+	const char	*value = Info_ValueForKey( CG_ConfigString( CS_SERVERINFO ), "sv_floodProtect" );
+	int			gap = atoi( value );
+
+	if ( !value[0] || gap == 1 ) {
+		gap = 1000;
+	}
+	return ( gap > 0 ) ? gap + AUTH_FLOOD_MARGIN : 0;
+}
+
+// A "jpauth" for the server. It goes out in CG_AuthFrame, as soon as the server takes one again.
+static void Auth_Send( authStep_t step, const char *command ) {
+	Q_strncpyz( auth.command, command, sizeof( auth.command ) );
+	auth.sends = 0;
+	Auth_Step( step );
+}
+
 // the server is told the next key the player has
 static void Auth_Hello( void ) {
 	char text[AUTH_BASE64_SIZE];
 
+	if ( auth.current == 1 && auth.numKeys > 1 && Auth_FloodGap() ) {
+		Auth_Say( "The server does not know your first key, asking for the other %i one after the other "
+			"(cg_authAgentKey names the right one)...", auth.numKeys - 1 );
+	}
 	if ( auth.current >= auth.numKeys ) {
 		if ( !auth.numKeys ) {
 			Auth_Say( "You have no key. \"amkey new\" makes one, or set cg_authAgent 1 to use the keys of your ssh-agent." );
@@ -362,16 +399,14 @@ static void Auth_Hello( void ) {
 		return;
 	}
 	BG_AuthEncode( auth.keys[auth.current].pub, AUTH_PUBLIC_SIZE, text, sizeof( text ) );
-	trap->SendClientCommand( va( "jpauth hello %s", text ) );
-	Auth_Step( AUTH_HELLO );
+	Auth_Send( AUTH_HELLO, va( "jpauth hello %s", text ) );
 }
 
 static void Auth_SendSignature( const byte *signature ) {
 	char text[AUTH_BASE64_SIZE];
 
 	BG_AuthEncode( signature, AUTH_SIGNATURE_SIZE, text, sizeof( text ) );
-	trap->SendClientCommand( va( "jpauth sign %s %s", text, auth.address ) );
-	Auth_Step( AUTH_SIGN );
+	Auth_Send( AUTH_SIGN, va( "jpauth sign %s %s", text, auth.address ) );
 }
 
 // the keys of the agent join the one of the file, if cg_authAgentKey lets them
@@ -463,8 +498,9 @@ CG_AuthServerCommand
 void CG_AuthServerCommand( void ) {
 	const char *what = CG_Argv( 1 );
 
-	// only as an answer: a server that sends one by itself gets nothing signed
-	if ( auth.step != AUTH_HELLO && auth.step != AUTH_SIGN ) {
+	// only as an answer: a server that sends one by itself gets nothing signed. Before the command of the step
+	// went out it can only be a second answer to the one before, which was sent twice.
+	if ( ( auth.step != AUTH_HELLO && auth.step != AUTH_SIGN ) || !auth.sends ) {
 		return;
 	}
 
@@ -626,10 +662,22 @@ void CG_AuthFrame( void ) {
 	}
 	case AUTH_HELLO:
 	case AUTH_SIGN:
-		if ( now - auth.stepTime > AUTH_SERVER_MSEC ) {
+		if ( auth.sends && now - auth.sendTime <= AUTH_RESEND_MSEC ) {
+			return;		// the answer is on its way
+		}
+		// Sent and nothing came back: another command of the player was too close to it (chat, a vote), and
+		// the server dropped this one.
+		if ( auth.sends == AUTH_SENDS ) {
 			Auth_Say( "The server did not answer the login." );
 			Auth_End();
+			return;
 		}
+		if ( auth.sendTime && now - auth.sendTime < Auth_FloodGap() ) {
+			return;
+		}
+		trap->SendClientCommand( auth.command );
+		auth.sends++;
+		auth.sendTime = now;
 		return;
 	default:
 		return;

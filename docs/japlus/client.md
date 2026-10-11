@@ -403,6 +403,13 @@ An admin logs in with an Ed25519 key, the kind ssh uses, and no password goes ov
   meanwhile the login runs once more by itself.
 - The client signs only for a server the player named with `amkey login`, and only right after it asked
   itself. A server that sends a question nobody asked for gets no answer.
+- A server with flood protection (`sv_floodProtect`, on by default) drops a command that comes within a second
+  of the one before and says nothing. So the commands of a login go out that far apart (the client reads the
+  cvar from the serverinfo), and one that gets no answer within three seconds is sent again, twice at most.
+  With several keys in the agent the server is asked for one after the other, about a second and a third each:
+  `cg_authAgentKey` names the right one. Until 2026-10-11 the commands went out at once, and on a server with
+  flood protection the login ended with "The server did not answer the login." unless the first key was the
+  right one and the agent took longer than a second to sign.
 - What is signed starts with the line `VisionJK admin login v1`. What ssh lets a key sign when it logs in
   somewhere starts with four bytes of a length, so no server can use this login to get a signature that opens
   an ssh account.
@@ -412,7 +419,9 @@ An admin logs in with an Ed25519 key, the kind ssh uses, and no password goes ov
 Run on 2026-10-11 against a server on this machine with scripted clients (`japlus_port/tools/sectest/e2e.sh`):
 a key file made with `amkey new` (mode 600, read back by `ssh-keygen`) and its login as council, a login as
 knight through an `ssh-agent` started for the test, a one-time code, and a rank password that is refused with
-a line that says why. Not run: an agent that asks its user first (1Password), Windows.
+a line that says why. Not run: an agent that asks its user first (1Password), Windows. That server had
+`sv_floodProtect 0`, which is why the run did not show the dropped commands. The spacing of the commands is
+not run against any server yet.
 
 ### Bot mode
 
