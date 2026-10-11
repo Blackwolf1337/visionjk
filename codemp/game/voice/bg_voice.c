@@ -49,6 +49,9 @@ static qboolean BG_VoiceBodyFits( int type, int bodyLen, qboolean toClient ) {
 		return ( bodyLen == 0 ) ? qtrue : qfalse;
 	case VOICE_AUDIO:
 		return ( bodyLen > 0 && bodyLen <= VOICE_MAX_FRAME ) ? qtrue : qfalse;
+	case VOICE_RADIO:
+		// only ever to the relay: a client gets what came over the radio as a VOICE_AUDIO with a flag
+		return ( !toClient && bodyLen > 0 && bodyLen <= VOICE_MAX_FRAME ) ? qtrue : qfalse;
 	case VOICE_STATE:
 		return ( bodyLen == ( toClient ? 0 : VOICE_STATE_BYTES ) ) ? qtrue : qfalse;
 	default:
@@ -350,4 +353,115 @@ void BG_VoiceMuffle( voiceFilter_t *f, float *samples, int count, float target )
 		}
 		samples[i] = in + f->mix * ( f->low[1] * VOICE_MUFFLE_GAIN - in );
 	}
+}
+
+/*
+===============================================================================
+
+A voice over the radio
+
+===============================================================================
+*/
+
+#define RADIO_LOW_HZ		300.0f		// what a radio lets through of a voice: the band of a telephone
+#define RADIO_HIGH_HZ		3400.0f
+#define RADIO_DRIVE			3.0f		// how hard the voice is pushed into the clipping
+#define RADIO_LEVEL			0.7f
+#define RADIO_HISS			0.003f
+
+// The five numbers of a filter of the second order (b0 b1 b2 a1 a2, by the first of the denominator): two that
+// cut off below RADIO_LOW_HZ and two that cut off above RADIO_HIGH_HZ, each of them flat up to its corner.
+static float radioCoef[4][5];
+static qboolean radioCoefDone;
+
+static void BG_VoiceRadioCoef( void ) {
+	int i;
+
+	for ( i = 0; i < 4; i++ ) {
+		const qboolean	high = ( i < 2 ) ? qtrue : qfalse;		// lets the high part through
+		const float		w = 2.0f * (float)M_PI * ( high ? RADIO_LOW_HZ : RADIO_HIGH_HZ ) / VOICE_RATE;
+		const float		cosw = cosf( w ), alpha = sinf( w ) / ( 2.0f * 0.7071f );
+		const float		a0 = 1.0f + alpha;
+		const float		b1 = high ? -( 1.0f + cosw ) : ( 1.0f - cosw );
+
+		radioCoef[i][0] = fabsf( b1 ) * 0.5f / a0;
+		radioCoef[i][1] = b1 / a0;
+		radioCoef[i][2] = fabsf( b1 ) * 0.5f / a0;
+		radioCoef[i][3] = -2.0f * cosw / a0;
+		radioCoef[i][4] = ( 1.0f - alpha ) / a0;
+	}
+	radioCoefDone = qtrue;
+}
+
+static float BG_VoiceRadioNoise( voiceRadio_t *r ) {
+	r->noise = r->noise * 1664525u + 1013904223u;
+	return (float)( ( r->noise >> 8 ) & 0xffff ) / 32768.0f - 1.0f;
+}
+
+/*
+=================
+BG_VoiceRadio
+
+The samples of a voice (VOICE_RATE a second) as they sound from a small speaker at the end of a radio link: only
+the band between RADIO_LOW_HZ and RADIO_HIGH_HZ, pushed until its peaks are rounded off, and a little hiss
+under it.
+=================
+*/
+void BG_VoiceRadio( voiceRadio_t *r, short *samples, int count ) {
+	int i, k;
+
+	if ( !radioCoefDone ) {
+		BG_VoiceRadioCoef();
+	}
+	for ( i = 0; i < count; i++ ) {
+		float x = samples[i] * ( 1.0f / 32768.0f );
+
+		for ( k = 0; k < 4; k++ ) {
+			const float	*c = radioCoef[k];
+			const float	y = c[0] * x + r->state[k][0];
+
+			r->state[k][0] = c[1] * x - c[3] * y + r->state[k][1];
+			r->state[k][1] = c[2] * x - c[4] * y;
+			x = y;
+		}
+		x *= RADIO_DRIVE;
+		if ( x > 1.0f ) {
+			x = 1.0f;
+		} else if ( x < -1.0f ) {
+			x = -1.0f;
+		}
+		// rounds the peaks off: straight in the middle, flat where it reaches 1
+		x = 1.5f * x - 0.5f * x * x * x;
+		x = x * RADIO_LEVEL + BG_VoiceRadioNoise( r ) * RADIO_HISS;
+		samples[i] = (short)( x * 32767.0f );
+	}
+}
+
+/*
+=================
+BG_VoiceRadioClick
+
+What a radio does when somebody presses its key, and when he lets go: a short crack, and at the end the
+rush of noise that is cut off. Up to max samples into out, returns how many. They are through the radio already.
+=================
+*/
+int BG_VoiceRadioClick( voiceRadio_t *r, short *out, int max, qboolean end ) {
+	const int	count = Q_min( max, end ? VOICE_RADIO_CLICK : VOICE_RATE * 25 / 1000 );
+	int			i;
+
+	for ( i = 0; i < count; i++ ) {
+		float level;
+
+		if ( end ) {
+			// a rush that holds for two thirds of its time and then falls away
+			const float left = (float)( count - i ) / count;
+
+			level = 0.08f * ( left < 0.33f ? left * 3.0f : 1.0f );
+		} else {
+			level = 0.16f * expf( -(float)i / ( VOICE_RATE * 0.006f ) );
+		}
+		out[i] = (short)( BG_VoiceRadioNoise( r ) * level * 32767.0f );
+	}
+	BG_VoiceRadio( r, out, count );
+	return count;
 }

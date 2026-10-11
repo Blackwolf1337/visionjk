@@ -4879,6 +4879,7 @@ static const char *g_bindCommands[] = {
 	"+use",
 	"+useforce",
 	"+voice",
+	"+voiceclan",
 	"automap_button",
 	"automap_toggle",
 	"bow",

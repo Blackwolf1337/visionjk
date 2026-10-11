@@ -2109,6 +2109,8 @@ void CG_VoiceServerInfo( const char *value );	// g_voice of the server info, "" 
 void CG_VoiceServerCommand( void );
 void CG_VoiceDown_f( void );
 void CG_VoiceUp_f( void );
+void CG_VoiceClanDown_f( void );
+void CG_VoiceClanUp_f( void );
 void CG_VoiceDevices_f( void );
 void CG_VoiceStatus_f( void );
 void CG_VoiceTest_f( void );

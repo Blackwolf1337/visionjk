@@ -25,6 +25,7 @@ Key: [-] removed, [+] added, [\*] modified
 * [+] `sv_antiWallhack` (off by default): a player no line of sight reaches is not sent to a client. Players behind walls are not heard then either.
 * [\*] The client answers an `echo` request only from the server it is connected to.
 * [\*] Voice chat: the room rings half as loud from the own voice as before (with `s_spatial`), and the setup menus have a slider for it (`cg_voiceOwnReverb`, "Own Voice In The Room").
+* [+] Voice chat: a clan radio. `+voiceclan` talks to the players with the same clan password (`cp_clanPwd`) wherever they are, without a place and with the sound of a radio (`cg_voiceRadioFX`). `g_voiceRadio 0` on the server switches it off. Not on servers without the game module.
 
 # Features
 

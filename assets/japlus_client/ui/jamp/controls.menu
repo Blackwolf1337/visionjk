@@ -3794,6 +3794,38 @@
 			}
 		}
 
+		itemDef 
+		{
+			group				japluscontrols
+			type				ITEM_TYPE_BIND
+			text				"Clan Radio (Talk)"
+			cvar				"+voiceclan"
+			rect				260 272 340 14
+			textalign			ITEM_ALIGN_RIGHT
+			textalignx			174
+			textaligny			0
+			font				4
+			textscale			1
+			forecolor			.615 .615 .956 1
+			visible				0
+			descText			"hold to talk to your clan over the radio, wherever they are"
+
+			mouseenter 
+			{ 
+				show			highlight7
+				show			keybindstatus
+			}
+			mouseexit 
+			{ 
+				hide			highlight7
+				hide			keybindstatus
+			}
+			action 
+			{ 
+				play			"sound/interface/button1.wav" ; 
+			}
+		}
+
 		//----------------------------------------------------------------------------------------------
 		//
 		//	Text

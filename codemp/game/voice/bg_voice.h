@@ -42,6 +42,14 @@ to a client		"VO" version type client token[4] sequence[2] flags distance
 room: the same bytes from every client of one game server (Voice_MasterRoom of cg_voice.c). hear and allow: a
 bit for every client number, whom this client wants to hear and who may hear it. The first one goes out with
 token 0, the answer carries the token of the session.
+
+The clan radio (2026-10-11): a frame a client sends as VOICE_RADIO in place of VOICE_AUDIO goes to the players
+who have the clan password of the speaker (cp_clanPwd, the group of the clan chat), wherever they are and
+whatever team they are on, and to nobody else. They get it as a VOICE_AUDIO with VOICE_FLAG_RADIO: a voice
+without a place, which the cgame plays through BG_VoiceRadio(). A relay says that it knows the radio in its
+answer to "jpvoice hello" (VOICE_CAP_RADIO), a client sends no VOICE_RADIO to one that does not. A cgame from
+before the radio does not know the flag: for it the frame has VOICE_FLAG_UNSEEN and a distance of 0 as well,
+which it plays as a voice close by behind a wall. Not through the voice master.
 */
 
 #pragma once
@@ -61,6 +69,7 @@ token 0, the answer carries the token of the session.
 #define VOICE_HELLO				0		// to the server: this is my address. To a client: the server has it
 #define VOICE_AUDIO				1
 #define VOICE_STATE				2		// the voice master only: where this client is and whom it hears, and the answer
+#define VOICE_RADIO				3		// to the server only: sound for the clan of the speaker
 
 #define VOICE_ROOM_BYTES		16
 #define VOICE_STATE_BYTES		( VOICE_ROOM_BYTES + 8 )	// what a VOICE_STATE to the master carries after its head
@@ -70,6 +79,8 @@ token 0, the answer carries the token of the session.
 #define VOICE_FLAG_UNSEEN		1		// to a client: the speaker is not in what the server shows him of the level
 #define VOICE_FLAG_TAKEN		2		// the answer of the master: another session speaks as this client number
 #define VOICE_FLAG_FULL			4		//	or it has no room for one more
+#define VOICE_FLAG_RADIO		8		// to a client: this came over the clan radio and has no place
+#define VOICE_CAP_RADIO			1		// in the answer to "jpvoice hello": the relay knows VOICE_RADIO
 #define VOICE_DISTANCE_STEP		16		// the distance byte counts in steps of this many units
 
 #define VOICE_MAX_PPS			60		// what the relay takes from one speaker in a second: datagrams
@@ -120,6 +131,14 @@ typedef struct voiceFilter_s {
 	float	mix;
 } voiceFilter_t;
 
+// a voice that comes over the radio: the state of its four filters, and where its noise is
+typedef struct voiceRadio_s {
+	float			state[4][2];
+	unsigned int	noise;
+} voiceRadio_t;
+
+#define VOICE_RADIO_CLICK		( VOICE_RATE * 90 / 1000 )		// samples of the longer click, the one at the end
+
 int			BG_VoicePack( byte *out, int outSize, const voicePacket_t *p, qboolean toClient );
 qboolean	BG_VoiceUnpack( const byte *in, int len, qboolean toClient, voicePacket_t *p );
 int			BG_VoiceSeqDelta( int a, int b );
@@ -134,3 +153,5 @@ int			BG_VoiceQueueGet( voiceQueue_t *q, const byte **data, const byte **after, 
 qboolean	BG_VoiceLimit( voiceLimit_t *l, int msec, int bytes );
 qboolean	BG_VoiceHears( const voiceEar_t *speaker, const voiceEar_t *listener, float range, qboolean teamOnly, float *distance );
 void		BG_VoiceMuffle( voiceFilter_t *f, float *samples, int count, float target );
+void		BG_VoiceRadio( voiceRadio_t *r, short *samples, int count );
+int			BG_VoiceRadioClick( voiceRadio_t *r, short *out, int max, qboolean end );

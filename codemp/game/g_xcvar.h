@@ -180,6 +180,8 @@ XCVAR_DEF( g_useWhileThrowing,			"1",			NULL,						CVAR_NONE,										qtrue )
 // The voice chat (g_voice.c). g_voice is in the server info: the cgame of this port asks for voice only where it reads it there.
 XCVAR_DEF( g_voice,						"1",			NULL,						CVAR_SERVERINFO|CVAR_ARCHIVE|CVAR_LATCH,		qfalse )
 XCVAR_DEF( g_voicePort,					"0",			NULL,						CVAR_ARCHIVE|CVAR_LATCH,						qfalse )
+// 1: players with the same clan password (cp_clanPwd) hear each other over the clan radio wherever they are (+voiceclan)
+XCVAR_DEF( g_voiceRadio,					"1",			NULL,						CVAR_ARCHIVE,									qfalse )
 XCVAR_DEF( g_voiceRange,				"1024",			NULL,						CVAR_ARCHIVE,									qtrue )
 XCVAR_DEF( g_voiceTeamOnly,				"0",			NULL,						CVAR_ARCHIVE,									qtrue )
 XCVAR_DEF( g_voteDelay,					"3000",			NULL,						CVAR_NONE,										qfalse )
