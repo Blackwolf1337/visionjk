@@ -2352,6 +2352,8 @@ void CG_LoadHudMenu()
 	}
 
 	CG_LoadMenus(hudSet);
+	// and the HUD of the new look (hud/cg_hud.c)
+	CG_HudLoad();
 
 }
 

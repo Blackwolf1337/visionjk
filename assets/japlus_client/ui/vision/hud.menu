@@ -1,0 +1,245 @@
+// The HUD of the new look: two menus the cgame paints at the left and at the right edge of the window, made of
+// items that show a number of the game (ITEM_TYPE_BAR, ITEM_TYPE_VALUE, "stat", "showStat") and of panels.
+// Written by hand, not by tools/menus/build.py. Everything here can be moved, recoloured or taken out: the
+// names of the numbers are in docs/japlus/ui.md. cg_hud 0 brings the HUD of the game back.
+#include "ui/jamp/menudef.h"
+{
+	menuDef
+	{
+		name					"visionhud_left"
+		fullScreen				0
+		rect					0 0 640 480
+		visible					1
+		skin					1
+
+		itemDef
+		{
+			name				panel
+			rect				10 432 172 38
+			style				WINDOW_STYLE_PANEL
+			backcolor			0.035 0.07 0.12 0.62
+			bordercolor			0.43 0.83 1 0.22
+			radius				7
+			shadow				8
+			showStat			alive
+			visible				1
+			decoration
+		}
+		// health: the number, and a bar that turns amber and then red
+		itemDef
+		{
+			name				health_value
+			type				ITEM_TYPE_VALUE
+			rect				18 435 40 20
+			stat				health
+			showStat			alive
+			font				5
+			textscale			1.05
+			textalign			ITEM_ALIGN_RIGHT
+			textalignx			36
+			textaligny			0
+			forecolor			1 1 1 1
+			addColorRange		0 25 1 0.38 0.33 1
+			visible				1
+			decoration
+		}
+		itemDef
+		{
+			name				health_bar
+			type				ITEM_TYPE_BAR
+			rect				62 440 110 6
+			stat				health
+			showStat			alive
+			forecolor			0.42 0.90 0.62 1
+			backcolor			1 1 1 0.10
+			addColorRange		0 25 1 0.38 0.33 1
+			addColorRange		26 50 1 0.74 0.30 1
+			visible				1
+			decoration
+		}
+		// shield
+		itemDef
+		{
+			name				armor_value
+			type				ITEM_TYPE_VALUE
+			rect				18 453 40 12
+			stat				armor
+			showStat			alive
+			font				5
+			textscale			0.62
+			textalign			ITEM_ALIGN_RIGHT
+			textalignx			36
+			textaligny			0
+			forecolor			0.43 0.83 1 1
+			visible				1
+			decoration
+		}
+		itemDef
+		{
+			name				armor_bar
+			type				ITEM_TYPE_BAR
+			rect				62 456 110 4
+			stat				armor
+			showStat			alive
+			forecolor			0.43 0.83 1 1
+			backcolor			1 1 1 0.10
+			visible				1
+			decoration
+		}
+		// JA+: the alternate dimension
+		itemDef
+		{
+			name				altdim
+			rect				12 418 120 12
+			text				"ALTERNATE DIMENSION"
+			showStat			altdim
+			font				5
+			textscale			0.5
+			forecolor			1 0.74 0.30 1
+			visible				1
+			decoration
+		}
+	}
+
+	menuDef
+	{
+		name					"visionhud_right"
+		fullScreen				0
+		rect					0 0 640 480
+		visible					1
+		skin					1
+
+		itemDef
+		{
+			name				panel
+			rect				458 432 172 38
+			style				WINDOW_STYLE_PANEL
+			backcolor			0.035 0.07 0.12 0.62
+			bordercolor			0.43 0.83 1 0.22
+			radius				7
+			shadow				8
+			showStat			alive
+			visible				1
+			decoration
+		}
+		// the force: a bar that is filled from the right
+		itemDef
+		{
+			name				force_bar
+			type				ITEM_TYPE_BAR
+			rect				468 440 110 6
+			stat				force
+			showStat			alive
+			align				ITEM_ALIGN_RIGHT
+			forecolor			0.58 0.64 1 1
+			backcolor			1 1 1 0.10
+			visible				1
+			decoration
+		}
+		itemDef
+		{
+			name				force_value
+			type				ITEM_TYPE_VALUE
+			rect				584 435 40 20
+			stat				force
+			showStat			alive
+			font				5
+			textscale			1.05
+			textalign			ITEM_ALIGN_LEFT
+			textalignx			0
+			textaligny			0
+			forecolor			1 1 1 1
+			visible				1
+			decoration
+		}
+		// what is in the weapon, or how the saber is held
+		itemDef
+		{
+			name				ammo_bar
+			type				ITEM_TYPE_BAR
+			rect				468 456 110 4
+			stat				ammo
+			showStat			ammo
+			align				ITEM_ALIGN_RIGHT
+			forecolor			1 0.74 0.30 1
+			backcolor			1 1 1 0.10
+			visible				1
+			decoration
+		}
+		itemDef
+		{
+			name				ammo_value
+			type				ITEM_TYPE_VALUE
+			rect				584 453 40 12
+			stat				ammo
+			showStat			ammo
+			font				5
+			textscale			0.62
+			textalign			ITEM_ALIGN_LEFT
+			textalignx			0
+			textaligny			0
+			forecolor			1 0.74 0.30 1
+			visible				1
+			decoration
+		}
+		itemDef
+		{
+			name				style_bar
+			type				ITEM_TYPE_BAR
+			rect				468 456 110 4
+			stat				saberstyle
+			showStat			saberstyle
+			align				ITEM_ALIGN_RIGHT
+			forecolor			0.43 0.83 1 1
+			backcolor			1 1 1 0.10
+			addColorRange		1 1 0.43 0.83 1 1
+			addColorRange		2 2 1 0.92 0.45 1
+			addColorRange		3 7 1 0.38 0.33 1
+			visible				1
+			decoration
+		}
+		itemDef
+		{
+			name				style_label
+			rect				584 453 44 12
+			text				"SABER"
+			showStat			saberstyle
+			font				5
+			textscale			0.5
+			textaligny			1
+			forecolor			0.60 0.69 0.78 1
+			visible				1
+			decoration
+		}
+		// the score of the player
+		itemDef
+		{
+			name				score_label
+			rect				560 418 40 12
+			text				"SCORE"
+			font				5
+			textscale			0.5
+			textalign			ITEM_ALIGN_RIGHT
+			textalignx			36
+			textaligny			1
+			forecolor			0.60 0.69 0.78 1
+			visible				1
+			decoration
+		}
+		itemDef
+		{
+			name				score_value
+			type				ITEM_TYPE_VALUE
+			rect				600 416 30 14
+			stat				score
+			font				5
+			textscale			0.72
+			textalign			ITEM_ALIGN_LEFT
+			textalignx			2
+			textaligny			0
+			forecolor			0.86 0.92 0.97 1
+			visible				1
+			decoration
+		}
+	}
+}

@@ -1777,6 +1777,9 @@ void		CG_Menu3DScene( void );
 
 // hud/cg_hud.c: the numbers of the game by name, for the items of a menu file that show one
 qboolean	CG_StatValue( const char *name, float *value, float *max );
+void		CG_HudLoad( void );
+void		CG_ParseMenu( const char *menuFile );		// cg_main.c
+qboolean	CG_HudDraw( void );
 
 // status/cg_status.c and cg_status_music.c: away and music above the heads
 void		CG_StatusInit( void );

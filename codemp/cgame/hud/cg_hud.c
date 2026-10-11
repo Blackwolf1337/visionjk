@@ -24,6 +24,82 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // hud.menu of his own can place them. Not from JA+, see docs/japlus/ui.md.
 
 #include "cgame/cg_local.h"
+#include "ui/ui_shared.h"
+#include "ui/ui_skin.h"
+
+#define HUD_FILE		"ui/vision/hud.menu"
+#define HUD_CLASSIC		"ui/hud.menu"
+
+static qboolean hudLoaded;
+
+/*
+=================
+CG_HudLoad
+
+The menus of the HUD of the new look, read in addition to the HUD files of the game (cg_hudFiles). Not in an
+engine that can not draw the look, and not when the HUD file of the game is not the one of this tree, which has
+a mark in its first line: then a mod brought a HUD of its own, and that is the one to draw.
+=================
+*/
+void CG_HudLoad( void ) {
+	fileHandle_t	f;
+	char			head[128];
+	int				len;
+
+	hudLoaded = qfalse;
+	if ( !Skin_Ready() ) {
+		return;
+	}
+	len = trap->FS_Open( HUD_CLASSIC, &f, FS_READ );
+	if ( !f ) {
+		return;
+	}
+	memset( head, 0, sizeof( head ) );
+	if ( len > 0 ) {
+		trap->FS_Read( head, Q_min( len, (int)sizeof( head ) - 1 ), f );
+	}
+	trap->FS_Close( f );
+	if ( !strstr( head, "visionjk-classic" ) ) {
+		return;
+	}
+	len = trap->FS_Open( HUD_FILE, &f, FS_READ );
+	if ( f ) {
+		trap->FS_Close( f );
+	}
+	if ( len <= 0 ) {
+		return;
+	}
+	CG_ParseMenu( HUD_FILE );
+	hudLoaded = qtrue;
+}
+
+/*
+=================
+CG_HudDraw
+
+The HUD of the new look in place of the one of the game: the two menus of ui/vision/hud.menu, the left one at
+the left edge of the window and the right one at the right edge. qfalse: it is switched off (cg_hud 0) or not
+there, and the caller draws the HUD of the game.
+=================
+*/
+qboolean CG_HudDraw( void ) {
+	menuDef_t *left, *right;
+
+	if ( !hudLoaded || !cg_hud.integer ) {
+		return qfalse;
+	}
+	left = Menus_FindByName( "visionhud_left" );
+	right = Menus_FindByName( "visionhud_right" );
+	if ( !left || !right ) {
+		return qfalse;
+	}
+	CG_Place2D( PLACE_LEFT );
+	Menu_Paint( left, qtrue );
+	CG_Place2D( PLACE_RIGHT );
+	Menu_Paint( right, qtrue );
+	CG_Place2D( PLACE_CENTER );
+	return qtrue;
+}
 
 /*
 =================
@@ -34,7 +110,7 @@ now (the ammo of a saber).
 
 health, armor, force, ammo, jetpack, cloak: what they say. saberstyle: 1 to 3 and up for the special ones.
 score: of the player. alive: 1 while he lives. spectator: 1 for somebody who watches. team: 1 red, 2 blue, 0
-neither. duel: 1 while he fights a duel.
+neither. duel: 1 while he fights a duel. altdim: 1 in the alternate dimension of JA+.
 =================
 */
 qboolean CG_StatValue( const char *name, float *value, float *max ) {
@@ -88,6 +164,9 @@ qboolean CG_StatValue( const char *name, float *value, float *max ) {
 		*max = 2.0f;
 	} else if ( !Q_stricmp( name, "duel" ) ) {
 		*value = ps->duelInProgress ? 1.0f : 0.0f;
+	} else if ( !Q_stricmp( name, "altdim" ) ) {
+		// JA+: the alternate dimension, which only free for all has
+		*value = ( cgs.gametype == GT_FFA && ( ps->eFlags & EF_ALT_DIM ) ) ? 1.0f : 0.0f;
 	} else {
 		return qfalse;
 	}

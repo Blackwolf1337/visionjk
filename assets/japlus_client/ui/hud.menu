@@ -1,3 +1,4 @@
+// visionjk-classic: the HUD file of this tree. A file of this name without this line is a mod's: the cgame then draws that HUD and not the new one (ui/vision/hud.menu), see docs/japlus/ui.md
 // In Game HUD 
 // 
 // defines from ui_shared.h

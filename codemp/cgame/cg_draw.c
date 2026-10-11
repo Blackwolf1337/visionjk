@@ -1362,6 +1362,12 @@ void CG_DrawHUD(centity_t	*cent)
 		return;
 	}
 
+	// the HUD of the new look in place of all that follows (hud/cg_hud.c), unless it is off or not there
+	if ( cg.predictedPlayerState.pm_type != PM_SPECTATOR && CG_HudDraw() )
+	{
+		return;
+	}
+
 	if (cg.predictedPlayerState.pm_type != PM_SPECTATOR)
 	{
 		// Draw the left HUD
