@@ -295,13 +295,22 @@ The tests before this did not find it because none of their releases changed a p
     version out: the update moved the module of the player aside on its way.
   - `same`: every file right and a module of the release in the folder of the player: nothing offered,
     nothing fetched, nothing touched.
+- The repair on Windows 11, 2026-10-11, in the test VM (`tools/updatetest/winfs.sh` makes the game folder
+  and a batch file that runs there and sends back what the game printed, what is left in the folders and the
+  SHA-256 of seven files of the game). Four runs, each with a fresh folder of the made up version 0.0.2:
+  `same`, `repair` and `shadow` as above, and an update from 0.0.1 with a ui module of the player in the way.
+  All four ended with "This is version 0.0.2, and the newest one is 0.0.2.", nothing left over, and the seven
+  files the ones of the release. `repair` fetched its three files and no other, `shadow` fetched none, the
+  update fetched the program and the `.cfg` that was new. A fifth run of `shadow` with `developer 1` shows
+  where the ui module came from: before the repair the game found none in `japlus` of either folder and
+  loaded the one in `base` of the folder of the player, that one was renamed while the game had it loaded,
+  and the start after it names that folder as having none and loads the one of the game. Windows asked its
+  firewall question at the first start and nothing else.
 
 Not checked:
 
-- The repair on a real Windows. It ran on Linux and with the Windows build under Wine, see above, and Wine
-  is another program: that a module the game has loaded can be given another name is what Windows is known
-  for, and was seen under Wine only. Nor an antivirus that takes a `.vjknew` away, which is the case the
-  repair is for: the tests put the wrong files there by hand.
+- An antivirus that takes a `.vjknew` away, which is the case the repair is for: the tests put the wrong
+  files there by hand. Defender said nothing in any of the runs.
 - A click on the line with a real mouse. The cursor of the game was moved onto it once (it lit up), a click
   through the two pointer devices of the virtual machine could not be sent cleanly. The runs typed `update`.
 - Windows 10, a Windows with a graphics driver, an antivirus other than Defender, and a program that was
