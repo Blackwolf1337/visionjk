@@ -12,7 +12,7 @@ The engine (`server/`, `qcommon/`, `client/`, `sys/`) is OpenJK 260c59c2 unchang
 bounded Huffman decode (`Huff_offsetReceive` with `maxoffset`), the fragment bounds in `Netchan_Process`, the
 field counts in `MSG_ReadDeltaEntity` and `MSG_ReadDeltaPlayerstate`, the 1022 byte cap in `SV_SendServerCommand`,
 the `cmdCount` and `reliableAcknowledge` checks, downloads limited to referenced pk3 (`FS_MV_VerifyDownloadPath`),
-the rate limit on connectionless packets and so on rcon (`sv_maxOOBRateIP`), the stateless challenge, the
+the rate limit on connectionless packets (`sv_maxOOBRateIP`), the stateless challenge, the
 userinfo check in the game (`G_ValidateUserinfo`), and vote strings without `;`.
 
 The attack surface this fork adds is the web admin panel (`codemp/game/webadmin/`, from JKAdmin, speaks HTTP to the
@@ -128,6 +128,23 @@ address of the game connection, a limit per speaker, no answer to anything that 
 and the server never decodes. 12000 malformed datagrams at the relay under valgrind gave no error. It was not
 part of the audit above and has not been looked at by anybody else.
 
+## Removed: rcon
+
+The server takes no rcon since 2026-10-11 (`SVC_NoRemoteCommand` in `server/sv_main.cpp`). The protocol has no
+way to be made safe: the password went over the wire in the clear with every command, a guess cost one packet,
+and what a command printed went back to whatever address the packet claimed to come from. An `rcon` packet is
+answered with one line (at most once a second) and counted by the intrusion detection.
+
+- The cvar `rconPassword` no longer exists on a dedicated server. A config that still sets it gets one yellow
+  line at the first map, the value does nothing.
+- What rcon was used for is done on the console of the server or in the web panel (`webadmin.md`), whose
+  console tab runs the same commands.
+- The client keeps its `rcon` command and its `rconPassword` and `rconAddress` cvars: they are for other
+  servers.
+- The JA+ rank named rcon stays, it is the name of the fourth admin rank and has nothing to do with the
+  protocol. The `rcon` flag in the command table of the game module stays too: it means "from the console of
+  the server".
+
 ## Recommended server settings
 
 ```
@@ -135,11 +152,12 @@ seta g_userinfoValidate "25165823"   // leave on: rejects a client ip field and 
 seta sv_legacyFixes "1"              // leave on: the engine clears out of range selections in the usercmd
 seta g_securityLog "2"               // security.log written line by line
 seta g_logClientCmds "1"             // client commands in security.log
-seta sv_maxOOBRateIP "1"             // the per address rate limit on connectionless packets and rcon
+seta sv_maxOOBRateIP "1"             // the per address rate limit on connectionless packets
 seta g_webBind "127.0.0.1"           // this machine only. The default is every interface: fine on your own network or behind a firewall
 seta g_webPassword "<long random>"   // the panel is off without it
-seta rconpassword "<long random>"    // or empty to disable rcon
 ```
+
+There is no `rconpassword` line: the server takes no rcon, see below.
 
 ## Tested
 

@@ -460,6 +460,16 @@ void SV_SpawnServer( char *server, qboolean killBots, ForceReload_e eForceReload
 
 	SV_SendMapChange();
 
+	// a config from before this server lost its rcon (SVC_NoRemoteCommand) still sets the password
+	if ( com_dedicated->integer && *Cvar_VariableString( "rconPassword" ) ) {
+		static qboolean said;
+
+		if ( !said ) {
+			said = qtrue;
+			Com_Printf( S_COLOR_YELLOW "rconPassword is set, but this server takes no rcon. Take the line out of the config, admins use the web panel (g_webPort)\n" );
+		}
+	}
+
 	Com_LoadBegin( server );
 	Com_LoadPush( "server: end of the level before", NULL );
 	re->RegisterMedia_LevelLoadBegin(server, eForceReload);
@@ -996,7 +1006,6 @@ void SV_Init (void) {
 	Cvar_Get ("sv_referencedPakNames", "", CVAR_SYSTEMINFO | CVAR_ROM );
 
 	// server vars
-	sv_rconPassword = Cvar_Get ("rconPassword", "", CVAR_TEMP );
 	sv_privatePassword = Cvar_Get ("sv_privatePassword", "", CVAR_TEMP );
 	sv_snapsMin = Cvar_Get ("sv_snapsMin", "10", CVAR_ARCHIVE_ND ); // 1 <=> sv_snapsMax
 	sv_snapsMax = Cvar_Get ("sv_snapsMax", "40", CVAR_ARCHIVE_ND ); // sv_snapsMin <=> sv_fps

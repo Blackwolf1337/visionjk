@@ -51,8 +51,8 @@ endfunction()
 
 # The configs of the JA+ 2.4 Build 7 package: the example of a server config (server.cfg with admin.cfg, jk2.cfg,
 # vstr.cfg, chat.cfg, saber.cfg), the scales of the player models, the blocking walls of four levels and the
-# texts of the auto replier. As they came, but for server.cfg: the passwords it set (rcon and the three admin
-# ranks) are empty here, the ones of the package can be looked up by everybody.
+# texts of the auto replier. As they came, but for server.cfg: the passwords it set for the three admin ranks are
+# empty here, the ones of the package can be looked up by everybody, and its rcon password is gone with rcon.
 jp_add_configs(configs)
 
 # Python packs them: cmake -E tar can not write the directory entries the engine needs

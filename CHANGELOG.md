@@ -16,6 +16,7 @@ Key: [-] removed, [+] added, [\*] modified
 * [+] Statuses above the heads: away from the keyboard (found out by the server, `g_afkTime`) and, when a player switches it on, the music he listens to (`cg_shareMusic`).
 * [+] The server browser can be opened in a game (SERVERS in the in-game menu). Both browsers can leave out servers on which only bots play (`ui_browserShowBotOnly`).
 * [+] While a menu is open in a game it stands in the level next to the player, seen over his shoulder, with the scene behind it out of focus and the sound muffled (`cg_immersiveMenu`, `r_menuBlur` for how far out of focus, rd-vulkan-vision).
+* [-] The server takes no rcon any more: the password went over the wire in the clear with every command. Use the web panel or the console of the server. A `rconpassword` line in a config does nothing, the client keeps its `rcon` command for other servers.
 
 # Features
 

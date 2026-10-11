@@ -142,7 +142,7 @@ the server: it reads the sabers and the animations from it.
 
 The configs of the JA+ package are in `assets/configs` and are not packed: `cmake --install` puts them into the
 same directory as loose files, and only where there is no file of that name yet, so a config an admin edited
-stays. `server.cfg` is the example of the package with its passwords (rcon and the three admin ranks) emptied:
+stays. `server.cfg` is the example of the package with the passwords of the three admin ranks emptied (and no rcon password, the server takes no rcon):
 the ones it came with can be looked up by everybody. Set your own before a server runs with it.
 
 ## Files needed at run time
