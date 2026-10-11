@@ -10162,17 +10162,15 @@ void UI_Init( qboolean inGameLoad ) {
 	// cache redundant calulations
 	trap->GetGlconfig( &uiInfo.uiDC.glconfig );
 
-	// for 640x480 virtualized screen
+	// for 640x480 virtualized screen. A renderer of this tree makes the grid wider than 640 on a wide window
+	// instead of stretching it, and says by how much in the cvar r_2dBias: x then runs from -bias to 640 + bias and
+	// the menus sit in the middle. Any other engine leaves the bias at 0.
 	uiInfo.uiDC.yscale = uiInfo.uiDC.glconfig.vidHeight * (1.0/480.0);
-	uiInfo.uiDC.xscale = uiInfo.uiDC.glconfig.vidWidth * (1.0/640.0);
-	if ( uiInfo.uiDC.glconfig.vidWidth * 480 > uiInfo.uiDC.glconfig.vidHeight * 640 ) {
-		// wide screen
-		uiInfo.uiDC.bias = 0.5 * ( uiInfo.uiDC.glconfig.vidWidth - ( uiInfo.uiDC.glconfig.vidHeight * (640.0/480.0) ) );
+	uiInfo.uiDC.bias = trap->Cvar_VariableValue( "r_2dBias" );
+	if ( uiInfo.uiDC.bias < 0.0f ) {
+		uiInfo.uiDC.bias = 0.0f;
 	}
-	else {
-		// no wide screen
-		uiInfo.uiDC.bias = 0;
-	}
+	uiInfo.uiDC.xscale = uiInfo.uiDC.glconfig.vidWidth / ( 640.0 + 2.0 * uiInfo.uiDC.bias );
 
 	//UI_Load();
 	uiInfo.uiDC.registerShaderNoMip				= UI_RegisterShaderNoMip;
@@ -10496,10 +10494,10 @@ void UI_MouseEvent( int dx, int dy )
 {
 	// update mouse screen position
 	uiInfo.uiDC.cursorx += dx;
-	if (uiInfo.uiDC.cursorx < 0)
-		uiInfo.uiDC.cursorx = 0;
-	else if (uiInfo.uiDC.cursorx > SCREEN_WIDTH)
-		uiInfo.uiDC.cursorx = SCREEN_WIDTH;
+	if (uiInfo.uiDC.cursorx < -(int)uiInfo.uiDC.bias)
+		uiInfo.uiDC.cursorx = -(int)uiInfo.uiDC.bias;
+	else if (uiInfo.uiDC.cursorx > SCREEN_WIDTH + (int)uiInfo.uiDC.bias)
+		uiInfo.uiDC.cursorx = SCREEN_WIDTH + (int)uiInfo.uiDC.bias;
 
 	uiInfo.uiDC.cursory += dy;
 	if (uiInfo.uiDC.cursory < 0)
@@ -10565,7 +10563,7 @@ static void UI_DisplayDownloadInfo( const char *downloadName, float centerPoint,
 
 	vec4_t colorLtGreyAlpha = {0, 0, 0, .5};
 
-	UI_FillRect( 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, colorLtGreyAlpha );
+	UI_FillRect( -uiInfo.uiDC.bias, 0, SCREEN_WIDTH + 2.0f * uiInfo.uiDC.bias, SCREEN_HEIGHT, colorLtGreyAlpha );
 
 	s = GetCRDelineatedString("MENUS","DOWNLOAD_STUFF", 0);	// "Downloading:"
 	Q_strncpyz(sDownLoading,s?s:"", sizeof(sDownLoading));

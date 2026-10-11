@@ -475,7 +475,7 @@ typedef struct displayContextDef_s {
 
 	float			yscale;
 	float			xscale;
-	float			bias;
+	float			bias;				// the grid of the 2D runs from -bias to 640 + bias on a wide screen (cvar r_2dBias)
 	int				realTime;
 	int				frameTime;
 	int				cursorx;

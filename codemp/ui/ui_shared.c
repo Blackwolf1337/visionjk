@@ -698,6 +698,12 @@ void Window_Paint(windowDef_t *w, float fadeAmount, float fadeClamp, float fadeC
 		fillRect.w -= w->borderSize + 1;
 		fillRect.h -= w->borderSize + 1;
 	}
+	// a window over the whole 640 x 480 is a background: it covers a wide screen too, where the grid is wider
+	// than 640 by DC->bias on either side
+	else if ( DC->bias > 0.0f && w->rect.x == 0 && w->rect.y == 0 && w->rect.w == SCREEN_WIDTH && w->rect.h == SCREEN_HEIGHT ) {
+		fillRect.x -= DC->bias;
+		fillRect.w += 2.0f * DC->bias;
+	}
 
 	if ( w->style == WINDOW_STYLE_FILLED ) {
 		// box, but possible a shader that needs filled
@@ -5350,7 +5356,7 @@ void Item_Model_Paint(itemDef_t *item)
 	w = item->window.rect.w-2;
 	h = item->window.rect.h-2;
 
-	refdef.x = x * DC->xscale;
+	refdef.x = ( x + DC->bias ) * DC->xscale;
 	refdef.y = y * DC->yscale;
 	refdef.width = w * DC->xscale;
 	refdef.height = h * DC->yscale;
@@ -6755,7 +6761,7 @@ void Menu_Paint(menuDef_t *menu, qboolean forcePaint) {
 	if (menu->fullScreen) {
 		// implies a background shader
 		// FIXME: make sure we have a default shader if fullscreen is set with no background
-		DC->drawHandlePic( 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, menu->window.background );
+		DC->drawHandlePic( -DC->bias, 0, SCREEN_WIDTH + 2.0f * DC->bias, SCREEN_HEIGHT, menu->window.background );
 	} else if (menu->window.background) {
 		// this allows a background shader without being full screen
 		//UI_DrawHandlePic(menu->window.rect.x, menu->window.rect.y, menu->window.rect.w, menu->window.rect.h, menu->backgroundShader);

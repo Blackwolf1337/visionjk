@@ -2322,6 +2322,7 @@ void CG_LoadHudMenu()
 	cgDC.drawCinematic					= &CG_DrawCinematic;
 	cgDC.runCinematicFrame				= &CG_RunCinematicFrame;
 	cgDC.ext.Font_StrLenPixels			= trap->ext.R_Font_StrLenPixels;
+	cgDC.bias							= cgs.bias2D;
 
 
 	Init_Display(&cgDC);
