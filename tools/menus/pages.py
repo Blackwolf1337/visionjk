@@ -5,6 +5,7 @@ import os
 
 import menufile as mf
 import options
+import profile
 from menufile import Entry
 from theme import *         # noqa: F401,F403
 
@@ -617,6 +618,16 @@ def page(m, name, ingame):
             elif g in ('video', 'vidrestart'):
                 mf.put(e.block, 'visible', 0)
     full = mf.truth(mf.get(m, 'fullscreen'))
+    if name in profile.SCREENS:
+        # the pages of the player: one frame for profile, character, lightsaber and force powers (profile.py)
+        nav = []
+        if not ingame:
+            if not {name_of(e.block) for e in items(m)} & set(NAV):
+                m.extend(nav_button(*n) for n in NAV_MAKE)
+            nav = top_bar(m, 'profilebutton')
+            nav += [e for e in items(m) if name_of(e.block) in NAV]
+        profile.build(m, name, ingame, nav)
+        return
     if name in options.SCREENS:
         # Setup and Controls: one screen of tabs and lists (options.py), under the bar of the sections
         nav = []

@@ -40,6 +40,14 @@ Both are in Setup under Interface.
   Options (with the language and the bot mode), Interface, Chat & Social, Network and Mods. Controls has
   seven: Movement, Interaction, Weapons, Force Powers (both old tabs), Mouse/Joystick, Other and Extras
   (what JA+ and VisionJK add). The settings that only the console had are in them: see the table at the end.
+- The pages of the player are one screen too: Profile, Character, Lightsaber, and in a game Force and Moves, as
+  a strip at the top that leads from one to the other and marks the one that is open. What is set stands at the
+  left, what it makes at the right: the figure in a pane of its own (profile, character), the powers (force),
+  the saber under both columns (lightsaber). The profile has the name, the team colour and the models as larger
+  pictures. The character has species, colour (the swatches and red, green and blue as sliders, both always
+  there) and head, torso and legs as three tabs. The lightsaber has type and hilt at the left and for each
+  blade its seven colours, the style of its core and red, green and blue at the right: the page of sliders
+  that was behind a button is gone. The bar at the bottom has the way back and the button that takes over.
 - What this tree added to the menus is in the language of the game in English and German (`se_language`).
   French and Spanish read the English until somebody translates `tools/menus/texts.py`.
 - The icon of the game is the box of the website (white lid, a yellow and a blue side). On the first page it
@@ -97,9 +105,10 @@ All optional. A file that uses none of them is read and drawn by the code of bef
 | itemDef | `page <n>` | the item is only there while page n of its menu is open (1 to 15). An item without it is on every page |
 | itemDef | `tab <n>` | a button that opens page n when it is clicked, before its `action` runs. The one whose page is open is bright and has a line under it. The menu opens on the lowest page a tab names. Tabs that follow each other in the file at the same height are as wide as their words and stand in a row from where the first one is |
 | itemDef | `flow 1` | a button of a bar: laid out with its neighbours like tabs, with a short line between two of them. A hidden one takes no room |
+| itemDef | `flow 2`, `flow 3` | an entry of a strip that leads to other menus, laid out the same way and drawn as a tab is: 2 a button, 3 the entry of the menu that is open (bright, a line under it) |
 | menuDef | `scrollRect <x y w h>`, `scrollStep <units>` | the window of the list of a page and the height of one of its rows. The list is moved by whole rows |
 | itemDef | `scroll 1` | the item stands in that list: it moves with it and is only there while all of it is inside the window |
-| itemDef | `row 1` | a setting (yes/no, multi, slider, bind, edit field, button) drawn as a row: its `text` at the left without the colon of the old menus, its widget in the right third, filled while it has the focus. A multi with two settings whose names fit is a switch that shows both. `row 2`: an edit field that shows stars unless it is being typed in |
+| itemDef | `row 1` | a setting (yes/no, multi, slider, bind, edit field, button) drawn as a row: its `text` at the left without the colon of the old menus, its widget in the right third, filled while it has the focus. A multi with two settings whose names fit is a switch that shows both. `row 2`: an edit field that shows stars unless it is being typed in. `row 3`: the widget has more than half of the row (a name) |
 | itemDef | `type ITEM_TYPE_DESC` | in its rectangle: the `text` of the item in focus in capitals and its `descText` in lines that fit, or those of the tab of the open page. A menu that has one does not draw the line of `descX` |
 | itemDef | `type ITEM_TYPE_PAGESCROLL` | the bar of the list of the open page in its rectangle, to be dragged. Not there while the list fits its window |
 | script | `setpage <n>` | opens that page |
@@ -147,6 +156,13 @@ are.
   be given) and rows the old menus did not have. A row of the old menu keeps its cvar, its list and its
   script, without the commands that showed and marked the old tabs. The layout is the same for all four: in a
   game the screen is a window under the bar of the in-game menu.
+- `profile.py`, the pages of the player (profile, character, lightsaber, force powers, outside a game and in
+  one). They stay menus of their own and every item keeps its name, group, cvar, feeder, owner draw and
+  script, because the code of the game finds, shows and hides them by name. The script puts them into one
+  frame (the strip, a column of settings, a pane, the bar at the bottom) and takes out what the old pages
+  needed to get around: the pictures to click for the other pages, the page of colour sliders behind a
+  button, and the commands that showed, hid and moved things for it. Head, torso and legs of the character
+  are pages of its menu (`tab`, `page`).
 - `texts.py`, the texts this tree adds, English with German next to it. `build.py` writes them as a string
   package of their own (`strings/<language>/vision.str`, `@VISION_<KEY>` in a menu file), and says which text
   of an old menu has no entry.
@@ -291,6 +307,14 @@ walking a list past the end of its window, the bar of a list dragged, a key wait
 the way: the rows of Controls named their click sound without quotes, which the menu reader takes apart at
 the slashes (no sound, three lines in the console, in the game as shipped). They are quoted now.
 
+The pages of the player (2026-10-11 night, after "Mach doch bitte aber das Profil deutlich besser, orientiere
+dich oben. Auch die Charakterauswahl, sowie Lichtschwerter und Force."): laid out anew on the frame of the
+options screens (`tools/menus/profile.py`). Seen in hidden runs with the same settings: the seven menus outside
+a game and in one, as a window and on the panel in the level, the three parts of the character, one and two
+sabers (`clienttests/ui_profile.cfg`, `ui_profile_in.cfg`, the full pass). Used by script
+(`ui_profile_use.cfg`): from the profile over the strip to the character and to the lightsaber, two sabers
+chosen, back to the profile, a model clicked (the figure changed), back to the first page.
+
 Not translated: French and Spanish read what this tree added in English.
 
 Not checked: the pages of siege in a game of siege (their pictures are missing outside one), most in-game
@@ -300,5 +324,6 @@ and of the program on a desktop, a real download, the connect screen when a serv
 than English and German, a mod's menus next to the new look, how it feels to use. Of the options screens:
 a line typed into (the clan password, the key file), the Mods page with a mod in it, the defaults and the
 video restart carried out, another size of window than 1280 x 720, Windows and the browser (built, not
-run). Left as they were laid out: the inside of the profile pages (player, force powers), dense and built
-around pictures.
+run). Of the pages of the player: the buttons that take over (apply, join a team, save a set of powers)
+carried out, a server without the force or with Jedi against mercenaries (the code hides and shows items
+there), siege, the colours of a blade set by the sliders in a fight, the moves list reached from the strip.

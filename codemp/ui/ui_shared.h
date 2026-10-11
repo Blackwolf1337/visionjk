@@ -345,7 +345,8 @@ typedef struct itemDef_s {
 	int			tab;
 	qboolean	scroll;
 	int			row;
-	qboolean	flow;				// "flow 1": in a row of buttons it is as wide as its word, with a line in front of it
+	int			flow;				// "flow 1": in a row of buttons it is as wide as its word, with a line in front of it.
+									//	2 and 3: an entry of a strip of menus, 3 the one of the menu that is open
 } itemDef_t;
 
 #define MENU_PAGES		16					// pages of a menu, counted from 1

@@ -5,6 +5,38 @@ VERSION             "1"
 CONFIG              "W:\bin\stringed.cfg"
 FILENOTES           "Menus of VisionJK"
 
+REFERENCE           CHARACTER
+LANG_ENGLISH        "Character"
+LANG_GERMAN         "Charakter"
+
+REFERENCE           BUILD_A_CHARACTER_OF_YOUR_OWN
+LANG_ENGLISH        "Build a character of your own."
+LANG_GERMAN         "Einen eigenen Charakter zusammenstellen."
+
+REFERENCE           HILT_AND_BLADE_OF_YOUR_LIGHTSABER
+LANG_ENGLISH        "Hilt and blade of your lightsaber."
+LANG_GERMAN         "Griff und Klinge Ihres Lichtschwerts."
+
+REFERENCE           PLAYER
+LANG_ENGLISH        "Player"
+LANG_GERMAN         "Spieler"
+
+REFERENCE           NAME_MODEL_AND_TEAM_COLOUR
+LANG_ENGLISH        "Name, model and team colour."
+LANG_GERMAN         "Name, Modell und Teamfarbe."
+
+REFERENCE           RED
+LANG_ENGLISH        "Red"
+LANG_GERMAN         "Rot"
+
+REFERENCE           GREEN
+LANG_ENGLISH        "Green"
+LANG_GERMAN         "Grün"
+
+REFERENCE           BLUE
+LANG_ENGLISH        "Blue"
+LANG_GERMAN         "Blau"
+
 REFERENCE           JA
 LANG_ENGLISH        "JA+"
 LANG_GERMAN         "#same"
@@ -736,6 +768,22 @@ LANG_GERMAN         "Spielordner mit anderen Mods."
 REFERENCE           RESTART_THE_VIDEO_WITH_THESE_SETTING
 LANG_ENGLISH        "Restart the video with these settings."
 LANG_GERMAN         "Die Grafik mit diesen Einstellungen neu starten."
+
+REFERENCE           BLADE_STYLE
+LANG_ENGLISH        "Blade Style"
+LANG_GERMAN         "Klingenstil"
+
+REFERENCE           YOUR_FORCE_POWERS
+LANG_ENGLISH        "Your force powers."
+LANG_GERMAN         "Ihre Machtkräfte."
+
+REFERENCE           THE_LIST_OF_MOVES
+LANG_ENGLISH        "The list of moves."
+LANG_GERMAN         "Die Liste der Aktionen."
+
+REFERENCE           HOLSTERS
+LANG_ENGLISH        "Holsters"
+LANG_GERMAN         "Holster"
 
 
 ENDMARKER

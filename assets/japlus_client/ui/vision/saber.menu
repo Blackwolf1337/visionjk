@@ -8,11 +8,11 @@
 		rect					0 0 640 480
 		visible					1
 		focusColor				0.43 0.83 1 1
-		descX					4
-		descY					80
-		descScale				0.8
+		descX					320
+		descY					458
+		descScale				0.55
 		descColor				0.60 0.69 0.78 1
-		descAlignment			ITEM_ALIGN_LEFT
+		descAlignment			ITEM_ALIGN_CENTER
 		onOpen
 		{
 			setcvar ui_saber "single_1"
@@ -29,34 +29,17 @@
 			setitemcolor typebut_dual forecolor 0.60 0.69 0.78 1
 			setitemcolor typebut_staff forecolor 0.60 0.69 0.78 1
 			uiScript getsaberhiltinfo
-			show typebut
-			show typebut_single
-			show typebut_dual
-			show typebut_staff
-			show hilttype
-			show hiltbut
-			show hiltbut1
-			show hiltbut2
-			show hiltbut_staves
-			show sabstyle
-			show sabericons
-			show sabericons2
-			show box1
-			show box3top
-			show box3middle
-			show box3bottom
-			hide rgbcolormenu
-			transition2 box3middle 418 126 219 0 20 5
-			transition2 box3bottom 418 126 219 60 20 5
-			transition2 saber 12 "-80" 615 615 20 10
 		}
 		onESC
 		{
 			play "sound/interface/menuroam.wav"
 			uiScript "updatesabercvars"
 			close saberMenu
-			open characterMenu
+			open playerMenu
 		}
+		skin					1
+		disableColor			0.36 0.42 0.50 1
+		backdrop				1
 
 		itemDef
 		{
@@ -123,104 +106,6 @@
 			backcolor				0.43 0.83 1 1
 			radius					1
 			decoration
-		}
-
-		itemDef
-		{
-			name					box1
-			group					none
-			style					WINDOW_STYLE_PANEL
-			rect					6 112 219 165
-			forecolor				1 1 1 1
-			visible					1
-			decoration
-			backcolor				0.035 0.07 0.12 0.55
-			bordercolor				0.43 0.83 1 0.16
-			radius					5
-		}
-
-		itemDef
-		{
-			name					box2top
-			group					none
-			style					WINDOW_STYLE_PANEL
-			rect					214 112 219 60
-			forecolor				1 1 1 1
-			visible					0
-			decoration
-			backcolor				0.035 0.07 0.12 0.55
-			bordercolor				0.43 0.83 1 0.16
-			radius					5
-		}
-
-		itemDef
-		{
-			name					box2middle
-			group					none
-			style					WINDOW_STYLE_PANEL
-			rect					214 172 219 0
-			forecolor				1 1 1 1
-			visible					0
-			decoration
-			backcolor				0.035 0.07 0.12 0.55
-			bordercolor				0.43 0.83 1 0.16
-			radius					5
-		}
-
-		itemDef
-		{
-			name					box2bottom
-			group					none
-			style					WINDOW_STYLE_PANEL
-			rect					214 172 219 60
-			forecolor				1 1 1 1
-			visible					0
-			decoration
-			backcolor				0.035 0.07 0.12 0.55
-			bordercolor				0.43 0.83 1 0.16
-			radius					5
-		}
-
-		itemDef
-		{
-			name					box3top
-			group					none
-			style					WINDOW_STYLE_PANEL
-			rect					420 112 219 60
-			forecolor				1 1 1 1
-			visible					1
-			decoration
-			backcolor				0.035 0.07 0.12 0.55
-			bordercolor				0.43 0.83 1 0.16
-			radius					5
-		}
-
-		itemDef
-		{
-			name					box3middle
-			group					none
-			style					WINDOW_STYLE_PANEL
-			rect					420 172 219 0
-			forecolor				1 1 1 1
-			visible					1
-			decoration
-			backcolor				0.035 0.07 0.12 0.55
-			bordercolor				0.43 0.83 1 0.16
-			radius					5
-		}
-
-		itemDef
-		{
-			name					box3bottom
-			group					none
-			style					WINDOW_STYLE_PANEL
-			rect					420 172 219 60
-			forecolor				1 1 1 1
-			visible					1
-			decoration
-			backcolor				0.035 0.07 0.12 0.55
-			bordercolor				0.43 0.83 1 0.16
-			radius					5
 		}
 
 		itemDef
@@ -347,20 +232,88 @@
 
 		itemDef
 		{
-			name					creation_title
-			group					title
-			style					WINDOW_STYLE_EMPTY
-			text					@MENUS_LIGHTSABER_CREATION
-			rect					4 46 400 28
-			font					5
-			textscale				1.45
-			textalign				ITEM_ALIGN_LEFT
-			textalignx				0
-			textaligny				2
-			forecolor				1 1 1 1
+			name					vision_strip
+			rect					0 34 640 26
 			visible					1
+			style					WINDOW_STYLE_FILLED
+			backcolor				0.02 0.04 0.08 0.50
+			decoration
+			wide					1
+		}
+
+		itemDef
+		{
+			name					vision_strip_line
+			rect					0 60 640 0.67
+			visible					1
+			style					WINDOW_STYLE_FILLED
+			backcolor				0.43 0.83 1 0.18
+			decoration
+			wide					1
+		}
+
+		itemDef
+		{
+			name					vision_to_profile
+			rect					29 34 80 26
+			visible					1
+			text					@MENUS_PROFILE
+			font					5
+			textscale				0.58
+			forecolor				0.60 0.69 0.78 1
+			type					ITEM_TYPE_BUTTON
+			flow					2
+			descText				@VISION_NAME_MODEL_AND_TEAM_COLOUR
+			action
+			{
+				play "sound/interface/button1.wav" ; uiScript "updatesabercvars" ; close saberMenu ; open playerMenu ;
+			}
+			caps					1
+			style					WINDOW_STYLE_EMPTY
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				40
+			textaligny				7.78
+		}
+
+		itemDef
+		{
+			name					vision_to_character
+			rect					109 34 80 26
+			visible					1
+			text					@VISION_CHARACTER
+			font					5
+			textscale				0.58
+			forecolor				0.60 0.69 0.78 1
+			type					ITEM_TYPE_BUTTON
+			flow					2
+			descText				@VISION_BUILD_A_CHARACTER_OF_YOUR_OWN
+			action
+			{
+				play "sound/interface/button1.wav" ; uiScript "updatesabercvars" ; close saberMenu ; open playerMenu2 ;
+			}
+			caps					1
+			style					WINDOW_STYLE_EMPTY
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				40
+			textaligny				7.78
+		}
+
+		itemDef
+		{
+			name					vision_here
+			rect					189 34 80 26
+			visible					1
+			text					@MENUS_LIGHTSABER_CAPS
+			font					5
+			textscale				0.58
+			forecolor				0.60 0.69 0.78 1
+			flow					3
 			decoration
 			caps					1
+			style					WINDOW_STYLE_EMPTY
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				40
+			textaligny				7.78
 		}
 
 		itemDef
@@ -370,18 +323,28 @@
 			text					@MENUS_SABER_TYPE
 			descText				@MENUS_SABER_TYPE_DESC
 			style					WINDOW_STYLE_EMPTY
-			rect					34 142 160 24
+			rect					34 72 266 22
 			font					5
-			textscale				0.74
+			textscale				0.54
 			textstyle				0
 			textalignx				0
-			textaligny				2.5
+			textaligny				9
 			textalign				ITEM_ALIGN_LEFT
-			backcolor				0 0 0 0
 			forecolor				0.60 0.69 0.78 1
 			visible					1
 			decoration
 			caps					1
+		}
+
+		itemDef
+		{
+			name					typebut
+			rect					32 93 270 0.67
+			visible					1
+			style					WINDOW_STYLE_FILLED
+			backcolor				0.43 0.83 1 0.32
+			decoration
+			group					none
 		}
 
 		itemDef
@@ -392,17 +355,12 @@
 			descText				@MENUS_SINGLESABER_DESC
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
-			rect					34 178 160 16
+			rect					32 94 270 22
 			font					5
-			textscale				0.68
+			textscale				0.7
 			textstyle				0
-			textalign				ITEM_ALIGN_LEFT
-			textalignx				0
-			textaligny				1
 			forecolor				0.43 0.83 1 1
 			visible					1
-			mouseEnter { show typebut_single_glow }
-			mouseExit { hide typebut_single_glow }
 			action
 			{
 				play "sound/interface/choose_saber.wav"
@@ -417,11 +375,8 @@
 				setitemcolor typebut_single forecolor 0.43 0.83 1 1
 				setitemcolor typebut_dual forecolor 0.60 0.69 0.78 1
 				setitemcolor typebut_staff forecolor 0.60 0.69 0.78 1
-				transition2 box3middle 418 126 219 0 20 5
-				transition2 box3bottom 418 126 219 60 20 5
-				show sabstyle
-				transition2 saber 12 "-80" 615 615 20 10
 			}
+			row						1
 		}
 
 		itemDef
@@ -432,17 +387,12 @@
 			descText				@MENUS_DUALSABERS_DESC
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
-			rect					34 198 160 16
+			rect					32 116 270 22
 			font					5
-			textscale				0.68
+			textscale				0.7
 			textstyle				0
-			textalign				ITEM_ALIGN_LEFT
-			textalignx				0
-			textaligny				1
 			forecolor				0.43 0.83 1 1
 			visible					1
-			mouseEnter { show typebut_dual_glow }
-			mouseExit { hide typebut_dual_glow }
 			action
 			{
 				play "sound/interface/choose_saber.wav"
@@ -457,11 +407,8 @@
 				setitemcolor typebut_single forecolor 0.60 0.69 0.78 1
 				setitemcolor typebut_dual forecolor 0.43 0.83 1 1
 				setitemcolor typebut_staff forecolor 0.60 0.69 0.78 1
-				transition2 box3middle 418 126 219 44 20 5
-				transition2 box3bottom 418 170 219 60 20 5
-				hide sabstyle
-				transition2 saber 12 "-130" 615 615 20 5
 			}
+			row						1
 		}
 
 		itemDef
@@ -472,17 +419,12 @@
 			descText				@MENUS_SABERSTAFF_DESC
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
-			rect					34 218 160 16
+			rect					32 138 270 22
 			font					5
-			textscale				0.68
+			textscale				0.7
 			textstyle				0
-			textalign				ITEM_ALIGN_LEFT
-			textalignx				0
-			textaligny				1
 			forecolor				0.43 0.83 1 1
 			visible					1
-			mouseEnter { show typebut_staff_glow }
-			mouseExit { hide typebut_staff_glow }
 			action
 			{
 				play "sound/interface/choose_saber.wav"
@@ -497,11 +439,8 @@
 				setitemcolor typebut_single forecolor 0.60 0.69 0.78 1
 				setitemcolor typebut_dual forecolor 0.60 0.69 0.78 1
 				setitemcolor typebut_staff forecolor 0.43 0.83 1 1
-				transition2 box3middle 418 126 219 0 20 5
-				transition2 box3bottom 418 126 219 60 20 5
-				hide sabstyle
-				transition2 saber 12 "-80" 615 615 20 10
 			}
+			row						1
 		}
 
 		itemDef
@@ -511,14 +450,13 @@
 			text					@MENUS_HILT1
 			descText				@MENUS_HILT1_DESC
 			style					WINDOW_STYLE_EMPTY
-			rect					242 126 160 24
+			rect					34 166 266 22
 			font					5
-			textscale				0.52
+			textscale				0.54
 			textstyle				0
-			textalignx				80
-			textaligny				1.75
-			textalign				ITEM_ALIGN_CENTER
-			backcolor				0 0 0 0
+			textalignx				0
+			textaligny				9
+			textalign				ITEM_ALIGN_LEFT
 			forecolor				0.60 0.69 0.78 1
 			visible					1
 			decoration
@@ -527,9 +465,55 @@
 
 		itemDef
 		{
+			name					hilttype
+			rect					32 187 270 0.67
+			visible					1
+			style					WINDOW_STYLE_FILLED
+			backcolor				0.43 0.83 1 0.32
+			decoration
+			group					none
+		}
+
+		itemDef
+		{
+			name					hilttype
+			group					none
+			text					@MENUS_HILT2
+			descText				@MENUS_HILT2_DESC
+			style					WINDOW_STYLE_EMPTY
+			rect					34 248 266 22
+			font					5
+			textscale				0.54
+			textstyle				0
+			textalignx				0
+			textaligny				9
+			textalign				ITEM_ALIGN_LEFT
+			forecolor				0.60 0.69 0.78 1
+			cvarTest				ui_saber_type
+			hideCvar { "single" ; "staff" }
+			visible					1
+			decoration
+			caps					1
+		}
+
+		itemDef
+		{
+			name					hilttype
+			rect					32 269 270 0.67
+			visible					1
+			style					WINDOW_STYLE_FILLED
+			backcolor				0.43 0.83 1 0.32
+			decoration
+			group					none
+			cvarTest				ui_saber_type
+			hideCvar { "single" ; "staff" }
+		}
+
+		itemDef
+		{
 			name					hiltbut
 			group					none
-			rect					242 141 160 120
+			rect					32 190 270 116
 			type					ITEM_TYPE_LISTBOX
 			style					WINDOW_STYLE_PANEL
 			elementwidth			120
@@ -562,7 +546,7 @@
 		{
 			name					hiltbut_staves
 			group					none
-			rect					242 141 160 120
+			rect					32 190 270 116
 			type					ITEM_TYPE_LISTBOX
 			style					WINDOW_STYLE_PANEL
 			elementwidth			120
@@ -591,32 +575,9 @@
 
 		itemDef
 		{
-			name					hilttype
-			group					none
-			text					@MENUS_HILT2
-			descText				@MENUS_HILT2_DESC
-			style					WINDOW_STYLE_EMPTY
-			rect					242 196 160 24
-			font					5
-			textscale				0.52
-			textstyle				0
-			textalignx				80
-			textaligny				1.75
-			textalign				ITEM_ALIGN_CENTER
-			backcolor				0 0 0 0
-			forecolor				0.60 0.69 0.78 1
-			cvarTest				ui_saber_type
-			hideCvar { "single" ; "staff" }
-			visible					1
-			decoration
-			caps					1
-		}
-
-		itemDef
-		{
 			name					hiltbut1
 			group					none
-			rect					242 141 160 54
+			rect					32 190 270 54
 			type					ITEM_TYPE_LISTBOX
 			style					WINDOW_STYLE_PANEL
 			elementwidth			120
@@ -649,7 +610,7 @@
 		{
 			name					hiltbut2
 			group					none
-			rect					242 211 160 54
+			rect					32 272 270 54
 			type					ITEM_TYPE_LISTBOX
 			style					WINDOW_STYLE_PANEL
 			elementwidth			120
@@ -678,276 +639,175 @@
 
 		itemDef
 		{
-			name					blackicon
-			group					sabericons
-			descText				@MENUS_COLOR1_DESC
-			style					WINDOW_STYLE_SHADER
-			type					ITEM_TYPE_BUTTON
-			rect					583 143 24 24
-			background				"gfx/menus/saber_icon_black"
-			forecolor				.75 .75 .75 1
-			border					1
-			bordersize				1
-			bordercolor				0.43 0.83 1 0.16
+			name					vision_blade
+			rect					324 72 282 22
 			visible					1
-			mouseEnter
-			{
-				setitemcolor blackicon forecolor 0.43 0.83 1 1
-				setitemcolor blackicon bordercolor 0.43 0.83 1 0.16
-			}
-			mouseExit
-			{
-				setitemcolor blackicon forecolor 0.86 0.92 0.97 1
-				setitemcolor blackicon bordercolor 0.43 0.83 1 0.16
-			}
-			action
-			{
-				play "sound/interface/choose_blade.wav"
-				setcvar ui_saber_color "black"
-			}
-		}
-
-		itemDef
-		{
-			name					blueicon
-			group					sabericons
-			descText				@MENUS_COLOR1_DESC
-			style					WINDOW_STYLE_SHADER
-			type					ITEM_TYPE_BUTTON
-			rect					448 167 24 24
-			background				"gfx/menus/saber_icon_blue"
-			forecolor				.75 .75 .75 1
-			border					1
-			bordersize				1
-			bordercolor				0.43 0.83 1 0.16
-			visible					1
-			mouseEnter
-			{
-				setitemcolor blueicon forecolor 0.43 0.83 1 1
-				setitemcolor blueicon bordercolor 0.43 0.83 1 0.16
-			}
-			mouseExit
-			{
-				setitemcolor blueicon forecolor 0.86 0.92 0.97 1
-				setitemcolor blueicon bordercolor 0.43 0.83 1 0.16
-			}
-			action
-			{
-				play "sound/interface/choose_blade.wav"
-				setcvar ui_saber_color "blue"
-			}
-		}
-
-		itemDef
-		{
-			name					greenicon
-			group					sabericons
-			descText				@MENUS_COLOR1_DESC
-			style					WINDOW_STYLE_SHADER
-			type					ITEM_TYPE_BUTTON
-			rect					475 167 24 24
-			background				"gfx/menus/saber_icon_green"
-			forecolor				.75 .75 .75 1
-			border					1
-			bordersize				1
-			bordercolor				0.43 0.83 1 0.16
-			visible					1
-			mouseEnter
-			{
-				setitemcolor greenicon forecolor 0.43 0.83 1 1
-				setitemcolor greenicon bordercolor 0.43 0.83 1 0.16
-			}
-			mouseExit
-			{
-				setitemcolor greenicon forecolor 0.86 0.92 0.97 1
-				setitemcolor greenicon bordercolor 0.43 0.83 1 0.16
-			}
-			action
-			{
-				play "sound/interface/choose_blade.wav"
-				setcvar ui_saber_color "green"
-			}
-		}
-
-		itemDef
-		{
-			name					orangeicon
-			group					sabericons
-			descText				@MENUS_COLOR1_DESC
-			style					WINDOW_STYLE_SHADER
-			type					ITEM_TYPE_BUTTON
-			rect					502 167 24 24
-			background				"gfx/menus/saber_icon_orange"
-			forecolor				.75 .75 .75 1
-			border					1
-			bordersize				1
-			bordercolor				0.43 0.83 1 0.16
-			visible					1
-			mouseEnter
-			{
-				setitemcolor orangeicon forecolor 0.43 0.83 1 1
-				setitemcolor orangeicon bordercolor 0.43 0.83 1 0.16
-			}
-			mouseExit
-			{
-				setitemcolor orangeicon forecolor 0.86 0.92 0.97 1
-				setitemcolor orangeicon bordercolor 0.43 0.83 1 0.16
-			}
-			action
-			{
-				play "sound/interface/choose_blade.wav"
-				setcvar ui_saber_color "orange"
-			}
-		}
-
-		itemDef
-		{
-			name					purpleicon
-			group					sabericons
-			descText				@MENUS_COLOR1_DESC
-			style					WINDOW_STYLE_SHADER
-			type					ITEM_TYPE_BUTTON
-			rect					529 167 24 24
-			background				"gfx/menus/saber_icon_purple"
-			forecolor				.75 .75 .75 1
-			border					1
-			bordersize				1
-			bordercolor				0.43 0.83 1 0.16
-			visible					1
-			mouseEnter
-			{
-				setitemcolor purpleicon forecolor 0.43 0.83 1 1
-				setitemcolor purpleicon bordercolor 0.43 0.83 1 0.16
-			}
-			mouseExit
-			{
-				setitemcolor purpleicon forecolor 0.86 0.92 0.97 1
-				setitemcolor purpleicon bordercolor 0.43 0.83 1 0.16
-			}
-			action
-			{
-				play "sound/interface/choose_blade.wav"
-				setcvar ui_saber_color "purple"
-			}
-		}
-
-		itemDef
-		{
-			name					yellowicon
-			group					sabericons
-			descText				@MENUS_COLOR1_DESC
-			style					WINDOW_STYLE_SHADER
-			type					ITEM_TYPE_BUTTON
-			rect					556 167 24 24
-			background				"gfx/menus/saber_icon_yellow"
-			forecolor				.75 .75 .75 1
-			border					1
-			bordersize				1
-			bordercolor				0.43 0.83 1 0.16
-			visible					1
-			mouseEnter
-			{
-				setitemcolor yellowicon forecolor 0.43 0.83 1 1
-				setitemcolor yellowicon bordercolor 0.43 0.83 1 0.16
-			}
-			mouseExit
-			{
-				setitemcolor yellowicon forecolor 0.86 0.92 0.97 1
-				setitemcolor yellowicon bordercolor 0.43 0.83 1 0.16
-			}
-			action
-			{
-				play "sound/interface/choose_blade.wav"
-				setcvar ui_saber_color "yellow"
-			}
-		}
-
-		itemDef
-		{
-			name					redicon
-			group					sabericons
-			descText				@MENUS_COLOR1_DESC
-			style					WINDOW_STYLE_SHADER
-			type					ITEM_TYPE_BUTTON
-			rect					583 167 24 24
-			background				"gfx/menus/saber_icon_red"
-			forecolor				.75 .75 .75 1
-			border					1
-			bordersize				1
-			bordercolor				0.43 0.83 1 0.16
-			visible					1
-			mouseEnter
-			{
-				setitemcolor redicon forecolor 0.43 0.83 1 1
-				setitemcolor redicon bordercolor 0.43 0.83 1 0.16
-			}
-			mouseExit
-			{
-				setitemcolor redicon forecolor 0.86 0.92 0.97 1
-				setitemcolor redicon bordercolor 0.43 0.83 1 0.16
-			}
-			action
-			{
-				play "sound/interface/choose_blade.wav"
-				setcvar ui_saber_color "red"
-			}
-		}
-
-		itemDef
-		{
-			name					rgb_color
-			group					sabericons2
-			text					"Color RGB"
-			type					ITEM_TYPE_BUTTON
-			style					WINDOW_STYLE_EMPTY
-			rect					492 146 100 24
+			text					@MENUS_BLADE_COLOR
 			font					5
-			textscale				0.68
-			textstyle				0
+			textscale				0.54
+			forecolor				0.60 0.69 0.78 1
+			style					WINDOW_STYLE_EMPTY
+			caps					1
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				0
-			textaligny				1
-			forecolor				0.43 0.83 1 1
+			textaligny				9
+			decoration
+		}
+
+		itemDef
+		{
+			name					vision_blade
+			rect					322 93 286 0.67
 			visible					1
-			mouseEnter
-			{
-				show rgb_color1_glow
-				setitemcolor rgbsetupbutton forecolor 0.43 0.83 1 1
-				setitemcolor rgbsetupbutton bordercolor 0.43 0.83 1 0.16
-			}
-			mouseExit
-			{
-				hide rgb_color1_glow
-				setitemcolor rgbsetupbutton forecolor 0.60 0.69 0.78 1
-				setitemcolor rgbsetupbutton bordercolor 0.43 0.83 1 0.16
-			}
+			style					WINDOW_STYLE_FILLED
+			backcolor				0.43 0.83 1 0.32
+			decoration
+		}
+
+		itemDef
+		{
+			name					blackicon
+			group					sabericons
+			descText				@MENUS_COLOR1_DESC
+			style					WINDOW_STYLE_SHADER
+			type					ITEM_TYPE_BUTTON
+			rect					486 96 22 22
+			background				"gfx/menus/saber_icon_black"
+			forecolor				.75 .75 .75 1
+			border					1
+			bordersize				1
+			bordercolor				0.43 0.83 1 0.16
+			visible					1
 			action
 			{
-				play "sound/interface/choose_saber.wav"
-				hide title
-				hide typebut
-				hide typebut_single
-				hide typebut_dual
-				hide typebut_staff
-				hide hilttype
-				hide hiltbut
-				hide hiltbut1
-				hide hiltbut2
-				hide hiltbut_staves
-				hide box1
-				hide box3top
-				hide box3middle
-				hide box3bottom
-				show slide_box
-				show slide_box2
-				show box3top
-				show box3middle
-				show box3bottom
-				show rgbcolormenu
-				show sabericons
-				show sabericones2
-				setcvar ui_saber_color "rgb"
-				setcvar ui_saber2_color "rgb"
+				play "sound/interface/choose_blade.wav"
+				setcvar ui_saber_color "black"
+			}
+		}
+
+		itemDef
+		{
+			name					blueicon
+			group					sabericons
+			descText				@MENUS_COLOR1_DESC
+			style					WINDOW_STYLE_SHADER
+			type					ITEM_TYPE_BUTTON
+			rect					324 96 22 22
+			background				"gfx/menus/saber_icon_blue"
+			forecolor				.75 .75 .75 1
+			border					1
+			bordersize				1
+			bordercolor				0.43 0.83 1 0.16
+			visible					1
+			action
+			{
+				play "sound/interface/choose_blade.wav"
+				setcvar ui_saber_color "blue"
+			}
+		}
+
+		itemDef
+		{
+			name					greenicon
+			group					sabericons
+			descText				@MENUS_COLOR1_DESC
+			style					WINDOW_STYLE_SHADER
+			type					ITEM_TYPE_BUTTON
+			rect					351 96 22 22
+			background				"gfx/menus/saber_icon_green"
+			forecolor				.75 .75 .75 1
+			border					1
+			bordersize				1
+			bordercolor				0.43 0.83 1 0.16
+			visible					1
+			action
+			{
+				play "sound/interface/choose_blade.wav"
+				setcvar ui_saber_color "green"
+			}
+		}
+
+		itemDef
+		{
+			name					orangeicon
+			group					sabericons
+			descText				@MENUS_COLOR1_DESC
+			style					WINDOW_STYLE_SHADER
+			type					ITEM_TYPE_BUTTON
+			rect					378 96 22 22
+			background				"gfx/menus/saber_icon_orange"
+			forecolor				.75 .75 .75 1
+			border					1
+			bordersize				1
+			bordercolor				0.43 0.83 1 0.16
+			visible					1
+			action
+			{
+				play "sound/interface/choose_blade.wav"
+				setcvar ui_saber_color "orange"
+			}
+		}
+
+		itemDef
+		{
+			name					purpleicon
+			group					sabericons
+			descText				@MENUS_COLOR1_DESC
+			style					WINDOW_STYLE_SHADER
+			type					ITEM_TYPE_BUTTON
+			rect					405 96 22 22
+			background				"gfx/menus/saber_icon_purple"
+			forecolor				.75 .75 .75 1
+			border					1
+			bordersize				1
+			bordercolor				0.43 0.83 1 0.16
+			visible					1
+			action
+			{
+				play "sound/interface/choose_blade.wav"
+				setcvar ui_saber_color "purple"
+			}
+		}
+
+		itemDef
+		{
+			name					yellowicon
+			group					sabericons
+			descText				@MENUS_COLOR1_DESC
+			style					WINDOW_STYLE_SHADER
+			type					ITEM_TYPE_BUTTON
+			rect					432 96 22 22
+			background				"gfx/menus/saber_icon_yellow"
+			forecolor				.75 .75 .75 1
+			border					1
+			bordersize				1
+			bordercolor				0.43 0.83 1 0.16
+			visible					1
+			action
+			{
+				play "sound/interface/choose_blade.wav"
+				setcvar ui_saber_color "yellow"
+			}
+		}
+
+		itemDef
+		{
+			name					redicon
+			group					sabericons
+			descText				@MENUS_COLOR1_DESC
+			style					WINDOW_STYLE_SHADER
+			type					ITEM_TYPE_BUTTON
+			rect					459 96 22 22
+			background				"gfx/menus/saber_icon_red"
+			forecolor				.75 .75 .75 1
+			border					1
+			bordersize				1
+			bordercolor				0.43 0.83 1 0.16
+			visible					1
+			action
+			{
+				play "sound/interface/choose_blade.wav"
+				setcvar ui_saber_color "red"
 			}
 		}
 
@@ -958,7 +818,7 @@
 			descText				@MENUS_COLOR1_DESC
 			style					WINDOW_STYLE_SHADER
 			type					ITEM_TYPE_BUTTON
-			rect					583 143 24 24
+			rect					486 96 22 22
 			background				"gfx/menus/saber_icon_black"
 			forecolor				.75 .75 .75 1
 			border					1
@@ -967,16 +827,6 @@
 			visible					1
 			cvarTest				ui_saber_type
 			hideCvar { "single" ; "staff" }
-			mouseEnter
-			{
-				setitemcolor blackicon forecolor 0.43 0.83 1 1
-				setitemcolor blackicon bordercolor 0.43 0.83 1 0.16
-			}
-			mouseExit
-			{
-				setitemcolor blackicon forecolor 0.86 0.92 0.97 1
-				setitemcolor blackicon bordercolor 0.43 0.83 1 0.16
-			}
 			action
 			{
 				play "sound/interface/choose_blade.wav"
@@ -991,7 +841,7 @@
 			descText				@MENUS_COLOR1_DESC
 			style					WINDOW_STYLE_SHADER
 			type					ITEM_TYPE_BUTTON
-			rect					448 167 24 24
+			rect					324 96 22 22
 			background				"gfx/menus/saber_icon_blue"
 			forecolor				.75 .75 .75 1
 			border					1
@@ -1000,16 +850,6 @@
 			visible					1
 			cvarTest				ui_saber_type
 			hideCvar { "single" ; "staff" }
-			mouseEnter
-			{
-				setitemcolor blueicon forecolor 0.43 0.83 1 1
-				setitemcolor blueicon bordercolor 0.43 0.83 1 0.16
-			}
-			mouseExit
-			{
-				setitemcolor blueicon forecolor 0.86 0.92 0.97 1
-				setitemcolor blueicon bordercolor 0.43 0.83 1 0.16
-			}
 			action
 			{
 				play "sound/interface/choose_blade.wav"
@@ -1024,7 +864,7 @@
 			descText				@MENUS_COLOR1_DESC
 			style					WINDOW_STYLE_SHADER
 			type					ITEM_TYPE_BUTTON
-			rect					475 167 24 24
+			rect					351 96 22 22
 			background				"gfx/menus/saber_icon_green"
 			forecolor				.75 .75 .75 1
 			border					1
@@ -1033,16 +873,6 @@
 			visible					1
 			cvarTest				ui_saber_type
 			hideCvar { "single" ; "staff" }
-			mouseEnter
-			{
-				setitemcolor greenicon forecolor 0.43 0.83 1 1
-				setitemcolor greenicon bordercolor 0.43 0.83 1 0.16
-			}
-			mouseExit
-			{
-				setitemcolor greenicon forecolor 0.86 0.92 0.97 1
-				setitemcolor greenicon bordercolor 0.43 0.83 1 0.16
-			}
 			action
 			{
 				play "sound/interface/choose_blade.wav"
@@ -1057,7 +887,7 @@
 			descText				@MENUS_COLOR1_DESC
 			style					WINDOW_STYLE_SHADER
 			type					ITEM_TYPE_BUTTON
-			rect					502 167 24 24
+			rect					378 96 22 22
 			background				"gfx/menus/saber_icon_orange"
 			forecolor				.75 .75 .75 1
 			border					1
@@ -1066,16 +896,6 @@
 			visible					1
 			cvarTest				ui_saber_type
 			hideCvar { "single" ; "staff" }
-			mouseEnter
-			{
-				setitemcolor orangeicon forecolor 0.43 0.83 1 1
-				setitemcolor orangeicon bordercolor 0.43 0.83 1 0.16
-			}
-			mouseExit
-			{
-				setitemcolor orangeicon forecolor 0.86 0.92 0.97 1
-				setitemcolor orangeicon bordercolor 0.43 0.83 1 0.16
-			}
 			action
 			{
 				play "sound/interface/choose_blade.wav"
@@ -1090,7 +910,7 @@
 			descText				@MENUS_COLOR1_DESC
 			style					WINDOW_STYLE_SHADER
 			type					ITEM_TYPE_BUTTON
-			rect					529 167 24 24
+			rect					405 96 22 22
 			background				"gfx/menus/saber_icon_purple"
 			forecolor				.75 .75 .75 1
 			border					1
@@ -1099,16 +919,6 @@
 			visible					1
 			cvarTest				ui_saber_type
 			hideCvar { "single" ; "staff" }
-			mouseEnter
-			{
-				setitemcolor purpleicon forecolor 0.43 0.83 1 1
-				setitemcolor purpleicon bordercolor 0.43 0.83 1 0.16
-			}
-			mouseExit
-			{
-				setitemcolor purpleicon forecolor 0.86 0.92 0.97 1
-				setitemcolor purpleicon bordercolor 0.43 0.83 1 0.16
-			}
 			action
 			{
 				play "sound/interface/choose_blade.wav"
@@ -1123,7 +933,7 @@
 			descText				@MENUS_COLOR1_DESC
 			style					WINDOW_STYLE_SHADER
 			type					ITEM_TYPE_BUTTON
-			rect					556 167 24 24
+			rect					432 96 22 22
 			background				"gfx/menus/saber_icon_yellow"
 			forecolor				.75 .75 .75 1
 			border					1
@@ -1132,16 +942,6 @@
 			visible					1
 			cvarTest				ui_saber_type
 			hideCvar { "single" ; "staff" }
-			mouseEnter
-			{
-				setitemcolor yellowicon forecolor 0.43 0.83 1 1
-				setitemcolor yellowicon bordercolor 0.43 0.83 1 0.16
-			}
-			mouseExit
-			{
-				setitemcolor yellowicon forecolor 0.86 0.92 0.97 1
-				setitemcolor yellowicon bordercolor 0.43 0.83 1 0.16
-			}
 			action
 			{
 				play "sound/interface/choose_blade.wav"
@@ -1156,7 +956,7 @@
 			descText				@MENUS_COLOR1_DESC
 			style					WINDOW_STYLE_SHADER
 			type					ITEM_TYPE_BUTTON
-			rect					583 167 24 24
+			rect					459 96 22 22
 			background				"gfx/menus/saber_icon_red"
 			forecolor				.75 .75 .75 1
 			border					1
@@ -1165,21 +965,115 @@
 			visible					1
 			cvarTest				ui_saber_type
 			hideCvar { "single" ; "staff" }
-			mouseEnter
-			{
-				setitemcolor redicon forecolor 0.43 0.83 1 1
-				setitemcolor redicon bordercolor 0.43 0.83 1 0.16
-			}
-			mouseExit
-			{
-				setitemcolor redicon forecolor 0.86 0.92 0.97 1
-				setitemcolor redicon bordercolor 0.43 0.83 1 0.16
-			}
 			action
 			{
 				play "sound/interface/choose_blade.wav"
 				setcvar ui_saber_color "red"
 			}
+		}
+
+		itemDef
+		{
+			name					rgbbladecolor_CoreStyle1
+			group					vision_rgb
+			type					ITEM_TYPE_MULTI
+			text					@VISION_BLADE_STYLE
+			rect					322 122 286 22
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			cvarStrList
+			{
+				"Normal" , "rgb" , "Flame" , "rgb2" , "Electric" , "rgb3" , "Flame2" , "rgb4" , "Electric2" , "rgb5"
+			}
+			descText				"Style of Saber Core line"
+			cvar					"ui_saber_color"
+			visible					1
+			action { play "sound/interface/button1.wav" ; }
+			style					WINDOW_STYLE_EMPTY
+			row						1
+		}
+
+		itemDef
+		{
+			name					red_bar
+			group					vision_rgb
+			type					ITEM_TYPE_SLIDER
+			text					@VISION_RED
+			cvarfloat				"ui_sbRed1" 255 1 255
+			rect					322 144 286 22
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+			action { play "sound/interface/button1.wav" ; }
+			style					WINDOW_STYLE_EMPTY
+			row						1
+		}
+
+		itemDef
+		{
+			name					green_bar
+			group					vision_rgb
+			type					ITEM_TYPE_SLIDER
+			text					@VISION_GREEN
+			cvarfloat				"ui_sbGreen1" 255 1 255
+			rect					322 166 286 22
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+			action { play "sound/interface/button1.wav" ; }
+			style					WINDOW_STYLE_EMPTY
+			row						1
+		}
+
+		itemDef
+		{
+			name					blue_bar
+			group					vision_rgb
+			type					ITEM_TYPE_SLIDER
+			text					@VISION_BLUE
+			cvarfloat				"ui_sbBlue1" 255 1 255
+			rect					322 188 286 22
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+			action { play "sound/interface/button1.wav" ; }
+			style					WINDOW_STYLE_EMPTY
+			row						1
+		}
+
+		itemDef
+		{
+			name					vision_blade2
+			rect					324 214 282 22
+			visible					1
+			text					@MENUS_COLOR2
+			font					5
+			textscale				0.54
+			forecolor				0.60 0.69 0.78 1
+			cvarTest				ui_saber_type
+			style					WINDOW_STYLE_EMPTY
+			caps					1
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				0
+			textaligny				9
+			decoration
+			hideCvar { "single" ; "staff" }
+		}
+
+		itemDef
+		{
+			name					vision_blade2
+			rect					322 235 286 0.67
+			visible					1
+			style					WINDOW_STYLE_FILLED
+			backcolor				0.43 0.83 1 0.32
+			decoration
+			cvarTest				ui_saber_type
+			hideCvar { "single" ; "staff" }
 		}
 
 		itemDef
@@ -1189,7 +1083,7 @@
 			descText				@MENUS_COLOR1_DESC
 			style					WINDOW_STYLE_SHADER
 			type					ITEM_TYPE_BUTTON
-			rect					583 191 24 24
+			rect					486 238 22 22
 			background				"gfx/menus/saber_icon_black"
 			forecolor				.75 .75 .75 1
 			border					1
@@ -1198,16 +1092,6 @@
 			visible					1
 			cvarTest				ui_saber_type
 			hideCvar { "single" ; "staff" }
-			mouseEnter
-			{
-				setitemcolor blackicon2 forecolor 0.43 0.83 1 1
-				setitemcolor blackicon2 bordercolor 0.43 0.83 1 0.16
-			}
-			mouseExit
-			{
-				setitemcolor blackicon2 forecolor 0.86 0.92 0.97 1
-				setitemcolor blackicon2 bordercolor 0.43 0.83 1 0.16
-			}
 			action
 			{
 				play "sound/interface/choose_blade.wav"
@@ -1222,7 +1106,7 @@
 			descText				@MENUS_COLOR1_DESC
 			style					WINDOW_STYLE_SHADER
 			type					ITEM_TYPE_BUTTON
-			rect					448 215 24 24
+			rect					324 238 22 22
 			background				"gfx/menus/saber_icon_blue"
 			forecolor				.75 .75 .75 1
 			border					1
@@ -1231,16 +1115,6 @@
 			visible					1
 			cvarTest				ui_saber_type
 			hideCvar { "single" ; "staff" }
-			mouseEnter
-			{
-				setitemcolor blueicon2 forecolor 0.43 0.83 1 1
-				setitemcolor blueicon2 bordercolor 0.43 0.83 1 0.16
-			}
-			mouseExit
-			{
-				setitemcolor blueicon2 forecolor 0.86 0.92 0.97 1
-				setitemcolor blueicon2 bordercolor 0.43 0.83 1 0.16
-			}
 			action
 			{
 				play "sound/interface/choose_blade.wav"
@@ -1255,7 +1129,7 @@
 			descText				@MENUS_COLOR1_DESC
 			style					WINDOW_STYLE_SHADER
 			type					ITEM_TYPE_BUTTON
-			rect					475 215 24 24
+			rect					351 238 22 22
 			background				"gfx/menus/saber_icon_green"
 			forecolor				.75 .75 .75 1
 			border					1
@@ -1264,16 +1138,6 @@
 			visible					1
 			cvarTest				ui_saber_type
 			hideCvar { "single" ; "staff" }
-			mouseEnter
-			{
-				setitemcolor greenicon2 forecolor 0.43 0.83 1 1
-				setitemcolor greenicon2 bordercolor 0.43 0.83 1 0.16
-			}
-			mouseExit
-			{
-				setitemcolor greenicon2 forecolor 0.86 0.92 0.97 1
-				setitemcolor greenicon2 bordercolor 0.43 0.83 1 0.16
-			}
 			action
 			{
 				play "sound/interface/choose_blade.wav"
@@ -1288,7 +1152,7 @@
 			descText				@MENUS_COLOR1_DESC
 			style					WINDOW_STYLE_SHADER
 			type					ITEM_TYPE_BUTTON
-			rect					502 215 24 24
+			rect					378 238 22 22
 			background				"gfx/menus/saber_icon_orange"
 			forecolor				.75 .75 .75 1
 			border					1
@@ -1297,16 +1161,6 @@
 			visible					1
 			cvarTest				ui_saber_type
 			hideCvar { "single" ; "staff" }
-			mouseEnter
-			{
-				setitemcolor orangeicon2 forecolor 0.43 0.83 1 1
-				setitemcolor orangeicon2 bordercolor 0.43 0.83 1 0.16
-			}
-			mouseExit
-			{
-				setitemcolor orangeicon2 forecolor 0.86 0.92 0.97 1
-				setitemcolor orangeicon2 bordercolor 0.43 0.83 1 0.16
-			}
 			action
 			{
 				play "sound/interface/choose_blade.wav"
@@ -1321,7 +1175,7 @@
 			descText				@MENUS_COLOR1_DESC
 			style					WINDOW_STYLE_SHADER
 			type					ITEM_TYPE_BUTTON
-			rect					529 215 24 24
+			rect					405 238 22 22
 			background				"gfx/menus/saber_icon_purple"
 			forecolor				.75 .75 .75 1
 			border					1
@@ -1330,16 +1184,6 @@
 			visible					1
 			cvarTest				ui_saber_type
 			hideCvar { "single" ; "staff" }
-			mouseEnter
-			{
-				setitemcolor purpleicon2 forecolor 0.43 0.83 1 1
-				setitemcolor purpleicon2 bordercolor 0.43 0.83 1 0.16
-			}
-			mouseExit
-			{
-				setitemcolor purpleicon2 forecolor 0.86 0.92 0.97 1
-				setitemcolor purpleicon2 bordercolor 0.43 0.83 1 0.16
-			}
 			action
 			{
 				play "sound/interface/choose_blade.wav"
@@ -1354,7 +1198,7 @@
 			descText				@MENUS_COLOR1_DESC
 			style					WINDOW_STYLE_SHADER
 			type					ITEM_TYPE_BUTTON
-			rect					556 215 24 24
+			rect					432 238 22 22
 			background				"gfx/menus/saber_icon_yellow"
 			forecolor				.75 .75 .75 1
 			border					1
@@ -1363,16 +1207,6 @@
 			visible					1
 			cvarTest				ui_saber_type
 			hideCvar { "single" ; "staff" }
-			mouseEnter
-			{
-				setitemcolor yellowicon2 forecolor 0.43 0.83 1 1
-				setitemcolor yellowicon2 bordercolor 0.43 0.83 1 0.16
-			}
-			mouseExit
-			{
-				setitemcolor yellowicon2 forecolor 0.86 0.92 0.97 1
-				setitemcolor yellowicon2 bordercolor 0.43 0.83 1 0.16
-			}
 			action
 			{
 				play "sound/interface/choose_blade.wav"
@@ -1387,7 +1221,7 @@
 			descText				@MENUS_COLOR1_DESC
 			style					WINDOW_STYLE_SHADER
 			type					ITEM_TYPE_BUTTON
-			rect					583 215 24 24
+			rect					459 238 22 22
 			background				"gfx/menus/saber_icon_red"
 			forecolor				.75 .75 .75 1
 			border					1
@@ -1396,16 +1230,6 @@
 			visible					1
 			cvarTest				ui_saber_type
 			hideCvar { "single" ; "staff" }
-			mouseEnter
-			{
-				setitemcolor redicon2 forecolor 0.43 0.83 1 1
-				setitemcolor redicon2 bordercolor 0.43 0.83 1 0.16
-			}
-			mouseExit
-			{
-				setitemcolor redicon2 forecolor 0.86 0.92 0.97 1
-				setitemcolor redicon2 bordercolor 0.43 0.83 1 0.16
-			}
 			action
 			{
 				play "sound/interface/choose_blade.wav"
@@ -1415,168 +1239,14 @@
 
 		itemDef
 		{
-			name					rgbapply
-			group					rgbcolormenu
-			text					"Apply"
-			descText				"Close and apply the rgb color"
-			type					ITEM_TYPE_BUTTON
-			style					WINDOW_STYLE_EMPTY
-			rect					302 246 100 24
-			font					5
-			textscale				0.95
-			textstyle				0
-			textalign				ITEM_ALIGN_LEFT
-			textalignx				0
-			textaligny				1.4
-			forecolor				0.60 0.69 0.78 1
-			visible					1
-			mouseEnter
-			{
-				setitemcolor rgbsetupapply forecolor 0.43 0.83 1 1
-				setitemcolor rgbsetupapply bordercolor 0.43 0.83 1 0.16
-			}
-			mouseExit
-			{
-				setitemcolor rgbsetupapply forecolor 0.60 0.69 0.78 1
-				setitemcolor rgbsetupapply bordercolor 0.43 0.83 1 0.16
-			}
-			action
-			{
-				play "sound/interface/choose_blade.wav"
-				show title
-				show typebut
-				show typebut_single
-				show typebut_dual
-				show typebut_staff
-				show hilttype
-				show hiltbut
-				show hiltbut1
-				show hiltbut2
-				show hiltbut_staves
-				show box1
-				show box3top
-				show box3middle
-				show box3bottom
-				hide rgbcolormenu
-				hide slide_box
-				hide slide_box2
-				uiScript "saber_color"
-				uiScript "saber2_color"
-			}
-		}
-
-		itemDef
-		{
-			name					rgbcolormenu_title
-			group					rgbcolormenu
-			style					WINDOW_STYLE_EMPTY
-			text					"RGB Color Creation"
-			rect					102 100 440 16
-			font					5
-			textscale				0.52
-			textalign				ITEM_ALIGN_CENTER
-			textalignx				225
-			textaligny				0.75
-			forecolor				0.60 0.69 0.78 1
-			visible					1
-			decoration
-			caps					1
-		}
-
-		itemDef
-		{
-			name					rgbbladecolortitle1
-			group					rgbcolormenu
-			text					"First Saber"
-			descText				@MENUS_DESC
-			style					WINDOW_STYLE_EMPTY
-			rect					75 122 160 24
-			font					5
-			textscale				0.69
-			textstyle				0
-			textalignx				0
-			textaligny				-2.8
-			textalign				ITEM_ALIGN_LEFT
-			backcolor				0 0 0 0
-			forecolor				0.60 0.69 0.78 1
-			visible					1
-			decoration
-		}
-
-		itemDef
-		{
-			name					rgbbladecolor_CoreStyle1
-			group					rgbcolormenu
-			type					ITEM_TYPE_MULTI
-			text					"Line: "
-			rect					95 218 50 14
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				0
-			textaligny				0.9
-			font					5
-			textscale				0.61
-			forecolor				0.60 0.69 0.78 1
-			cvarStrList
-			{
-				"Normal" , "rgb" , "Flame" , "rgb2" , "Electric" , "rgb3" , "Flame2" , "rgb4" , "Electric2" , "rgb5"
-			}
-			descText				"Style of Saber Core line"
-			cvar					"ui_saber_color"
-			visible					1
-			mouseenter { show highlight9 }
-			mouseexit { hide highlight9 }
-			action { play "sound/interface/button1.wav" ; }
-		}
-
-		itemDef
-		{
-			name					slide_box
-			group					rgbcolormenu
-			style					WINDOW_STYLE_PANEL
-			rect					2 112 219 130
-			forecolor				1 1 1 1
-			visible					1
-			decoration
-			backcolor				0.035 0.07 0.12 0.55
-			bordercolor				0.43 0.83 1 0.16
-			radius					5
-		}
-
-		itemDef
-		{
-			name					rgbbladecolortitle2
-			group					rgbcolormenu
-			text					"Second Saber"
-			descText				@MENUS_DESC
-			style					WINDOW_STYLE_EMPTY
-			rect					265 122 160 24
-			font					5
-			textscale				0.69
-			textstyle				0
-			textalignx				0
-			textaligny				-2.8
-			textalign				ITEM_ALIGN_LEFT
-			backcolor				0 0 0 0
-			forecolor				0.60 0.69 0.78 1
-			visible					1
-			cvarTest				ui_saber_type
-			hideCvar { "single" ; "staff" }
-			decoration
-		}
-
-		itemDef
-		{
 			name					rgbbladecolor_CoreStyle2
-			group					rgbcolormenu
+			group					vision_rgb
 			type					ITEM_TYPE_MULTI
-			text					"Line: "
-			rect					297 218 50 14
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				0
-			textaligny				0.9
+			text					@VISION_BLADE_STYLE
+			rect					322 264 286 22
 			font					5
-			textscale				0.61
-			forecolor				0.60 0.69 0.78 1
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
 			cvarStrList
 			{
 				"Normal" , "rgb" , "Flame" , "rgb2" , "Electric" , "rgb3" , "Flame2" , "rgb4" , "Electric2" , "rgb5"
@@ -1586,295 +1256,66 @@
 			visible					1
 			cvarTest				ui_saber_type
 			hideCvar { "single" ; "staff" }
-			mouseenter { show highlight9 }
-			mouseexit { hide highlight9 }
 			action { play "sound/interface/button1.wav" ; }
-		}
-
-		itemDef
-		{
-			name					slide_box2
-			group					rgbcolormenu
-			style					WINDOW_STYLE_PANEL
-			rect					202 112 219 130
-			forecolor				1 1 1 1
-			visible					1
-			cvarTest				ui_saber_type
-			hideCvar { "single" ; "staff" }
-			decoration
-			backcolor				0.035 0.07 0.12 0.55
-			bordercolor				0.43 0.83 1 0.16
-			radius					5
+			style					WINDOW_STYLE_EMPTY
+			row						1
 		}
 
 		itemDef
 		{
 			name					red_bar
-			group					rgbcolormenu
+			group					vision_rgb
 			type					ITEM_TYPE_SLIDER
-			text					Red
-			cvarfloat				"ui_sbRed1" 255 1 255
-			rect					62 146 105 18
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				0
-			textaligny				-2.8
-			font					5
-			textscale				0.69
-			forecolor				0.60 0.69 0.78 1
-			visible					0
-			action { play "sound/interface/button1.wav" ; }
-		}
-
-		itemDef
-		{
-			name					red
-			group					rgbcolormenu
-			type					ITEM_TYPE_EDITFIELD
-			text					@MENU
-			descText				@MENU_DESC
-			style					WINDOW_STYLE_PANEL
-			cvar					"ui_sbRed1"
-			maxchars				3
-			maxPaintChars			3
-			rect					157 146 30 20
-			textalign				ITEM_ALIGN_LEFT
-			textalignx				0
-			textaligny				-3.88
-			font					5
-			textscale				0.65
-			forecolor				0.60 0.69 0.78 1
-			outlinecolor			1 .5 .5 .5
-			backcolor				0 0 0 0
-			bordercolor				0.43 0.83 1 0.16
-			visible					1
-			radius					5
-		}
-
-		itemDef
-		{
-			name					green_bar
-			group					rgbcolormenu
-			type					ITEM_TYPE_SLIDER
-			text					Green
-			cvarfloat				"ui_sbGreen1" 255 1 255
-			rect					62 166 105 18
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				0
-			textaligny				-2.8
-			font					5
-			textscale				0.69
-			forecolor				0.60 0.69 0.78 1
-			visible					0
-			action { play "sound/interface/button1.wav" ; }
-		}
-
-		itemDef
-		{
-			name					green
-			group					rgbcolormenu
-			type					ITEM_TYPE_EDITFIELD
-			text					@MENU
-			descText				@MENU_DESC
-			style					WINDOW_STYLE_PANEL
-			cvar					"ui_sbGreen1"
-			maxchars				3
-			maxPaintChars			3
-			rect					157 166 30 20
-			textalign				ITEM_ALIGN_LEFT
-			textalignx				0
-			textaligny				-3.88
-			font					5
-			textscale				0.65
-			forecolor				0.60 0.69 0.78 1
-			outlinecolor			1 .5 .5 .5
-			backcolor				0 0 0 0
-			bordercolor				0.43 0.83 1 0.16
-			visible					1
-			radius					5
-		}
-
-		itemDef
-		{
-			name					blue_bar
-			group					rgbcolormenu
-			type					ITEM_TYPE_SLIDER
-			text					Blue
-			cvarfloat				"ui_sbBlue1" 255 1 255
-			rect					62 186 105 18
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				0
-			textaligny				-2.8
-			font					5
-			textscale				0.69
-			forecolor				0.60 0.69 0.78 1
-			visible					0
-			action { play "sound/interface/button1.wav" ; }
-		}
-
-		itemDef
-		{
-			name					blue
-			group					rgbcolormenu
-			type					ITEM_TYPE_EDITFIELD
-			text					@MENU
-			descText				@MENU_DESC
-			style					WINDOW_STYLE_PANEL
-			cvar					"ui_sbBlue1"
-			maxchars				3
-			maxPaintChars			3
-			rect					157 186 30 20
-			textalign				ITEM_ALIGN_LEFT
-			textalignx				0
-			textaligny				-3.88
-			font					5
-			textscale				0.65
-			forecolor				0.60 0.69 0.78 1
-			outlinecolor			1 .5 .5 .5
-			backcolor				0 0 0 0
-			bordercolor				0.43 0.83 1 0.16
-			visible					1
-			radius					5
-		}
-
-		itemDef
-		{
-			name					red_bar
-			group					rgbcolormenu
-			type					ITEM_TYPE_SLIDER
-			text					"Red"
+			text					@VISION_RED
 			cvarfloat				"ui_sbRed2" 255 1 255
-			rect					262 146 105 18
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				0
-			textaligny				-2.8
+			rect					322 286 286 22
 			font					5
-			textscale				0.69
-			forecolor				0.60 0.69 0.78 1
-			visible					0
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
 			cvarTest				ui_saber_type
 			hideCvar { "single" ; "staff" }
 			action { play "sound/interface/button1.wav" ; }
-		}
-
-		itemDef
-		{
-			name					red
-			group					rgbcolormenu
-			type					ITEM_TYPE_EDITFIELD
-			style					WINDOW_STYLE_PANEL
-			text					@MENU
-			descText				@MENU_DESC
-			cvar					"ui_sbRed2"
-			maxchars				3
-			maxPaintChars			3
-			rect					357 146 30 20
-			textalign				ITEM_ALIGN_LEFT
-			textalignx				0
-			textaligny				-3.88
-			font					5
-			textscale				0.65
-			forecolor				0.60 0.69 0.78 1
-			outlinecolor			1 .5 .5 .5
-			backcolor				0 0 0 0
-			bordercolor				0.43 0.83 1 0.16
-			cvarTest				ui_saber_type
-			hideCvar { "single" ; "staff" }
-			visible					1
-			radius					5
+			style					WINDOW_STYLE_EMPTY
+			row						1
 		}
 
 		itemDef
 		{
 			name					green_bar
-			group					rgbcolormenu
+			group					vision_rgb
 			type					ITEM_TYPE_SLIDER
-			text					"Green"
+			text					@VISION_GREEN
 			cvarfloat				"ui_sbGreen2" 255 1 255
-			rect					262 166 105 18
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				0
-			textaligny				-2.8
+			rect					322 308 286 22
 			font					5
-			textscale				0.69
-			forecolor				0.60 0.69 0.78 1
-			visible					0
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
 			cvarTest				ui_saber_type
 			hideCvar { "single" ; "staff" }
 			action { play "sound/interface/button1.wav" ; }
-		}
-
-		itemDef
-		{
-			name					green
-			group					rgbcolormenu
-			type					ITEM_TYPE_EDITFIELD
-			style					WINDOW_STYLE_PANEL
-			text					@MENU
-			descText				@MENU_DESC
-			cvar					"ui_sbGreen2"
-			maxchars				3
-			maxPaintChars			3
-			rect					357 166 30 20
-			textalign				ITEM_ALIGN_LEFT
-			textalignx				0
-			textaligny				-3.88
-			font					5
-			textscale				0.65
-			forecolor				0.60 0.69 0.78 1
-			outlinecolor			1 .5 .5 .5
-			backcolor				0 0 0 0
-			bordercolor				0.43 0.83 1 0.16
-			cvarTest				ui_saber_type
-			hideCvar { "single" ; "staff" }
-			visible					1
-			radius					5
+			style					WINDOW_STYLE_EMPTY
+			row						1
 		}
 
 		itemDef
 		{
 			name					blue_bar
-			group					rgbcolormenu
+			group					vision_rgb
 			type					ITEM_TYPE_SLIDER
-			text					"Blue"
+			text					@VISION_BLUE
 			cvarfloat				"ui_sbBlue2" 255 1 255
-			rect					262 186 105 18
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				0
-			textaligny				-2.8
+			rect					322 330 286 22
 			font					5
-			textscale				0.69
-			forecolor				0.60 0.69 0.78 1
-			visible					0
-			cvarTest				ui_saber_type
-			hideCvar { "single" ; "staff" }
-			action { play "sound/interface/button1.wav" ; }
-		}
-
-		itemDef
-		{
-			name					blue
-			group					rgbcolormenu
-			type					ITEM_TYPE_EDITFIELD
-			style					WINDOW_STYLE_PANEL
-			text					@MENU
-			descText				@MENU_DESC
-			cvar					"ui_sbBlue2"
-			maxchars				3
-			maxPaintChars			3
-			rect					357 186 30 20
-			textalign				ITEM_ALIGN_LEFT
-			textalignx				0
-			textaligny				-3.88
-			font					5
-			textscale				0.65
-			forecolor				0.60 0.69 0.78 1
-			outlinecolor			1 .5 .5 .5
-			backcolor				0 0 0 0
-			bordercolor				0.43 0.83 1 0.16
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
 			visible					1
 			cvarTest				ui_saber_type
 			hideCvar { "single" ; "staff" }
-			radius					5
+			action { play "sound/interface/button1.wav" ; }
+			style					WINDOW_STYLE_EMPTY
+			row						1
 		}
 
 		itemDef
@@ -1882,7 +1323,7 @@
 			name					saber
 			group					models
 			type					ITEM_TYPE_MODEL
-			rect					14 -34 615 615
+			rect					32 -9.68 576 576
 			asset_model				"models/weapons2/saber_reborn/saber_w.glm"
 			isSaber					1
 			model_angle				180
@@ -1900,7 +1341,7 @@
 			name					saber2
 			group					models
 			type					ITEM_TYPE_MODEL
-			rect					14 -4 615 615
+			rect					32 18.32 576 576
 			asset_model				"models/weapons2/saber_reborn/saber_w.glm"
 			isSaber2				1
 			model_angle				180
@@ -1914,9 +1355,6 @@
 			hideCvar { "single" ; "staff" }
 			decoration
 		}
-		skin					1
-		disableColor			0.36 0.42 0.50 1
-		backdrop				1
 
 		itemDef
 		{
@@ -1925,8 +1363,8 @@
 			visible					1
 			style					WINDOW_STYLE_FILLED
 			backcolor				0.02 0.04 0.08 0.50
-			wide					1
 			decoration
+			wide					1
 		}
 
 		itemDef
@@ -1936,37 +1374,27 @@
 			visible					1
 			style					WINDOW_STYLE_FILLED
 			backcolor				0.43 0.83 1 0.18
-			wide					1
 			decoration
+			wide					1
 		}
 
 		itemDef
 		{
-			name					exitgamebutton
-			group					exit
-			text					@MENUS_EXIT
-			descText				@MENUS_JEDI_KNIGHT_II
-			type					ITEM_TYPE_BUTTON
-			style					WINDOW_STYLE_EMPTY
-			rect					29 446 90 34
+			name					vision_back
+			rect					29 446 72 34
+			visible					1
+			text					@MENUS_BACK
 			font					5
 			textscale				0.6
-			textalign				ITEM_ALIGN_CENTER
-			textstyle				0
-			textalignx				45
-			textaligny				11.6
 			forecolor				0.86 0.92 0.97 1
-			visible					1
-			mouseEnter { show exitgamebutton_glow }
-			mouseExit { hide exitgamebutton_glow }
-			action
-			{
-				play "sound/weapons/saber/saberoff.mp3"
-				uiScript "updatesabercvars"
-				close all
-				open quitMenu
-			}
+			type					ITEM_TYPE_BUTTON
+			style					WINDOW_STYLE_EMPTY
 			caps					1
+			descText				@MENUS_BACK
+			action { play "sound/interface/menuroam.wav" uiScript "updatesabercvars" close saberMenu open playerMenu }
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				36
+			textaligny				11.6
 			flow					1
 		}
 
@@ -1978,10 +1406,10 @@
 			descText				@MENUS_APPLY_SABER_CHANGES
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_PANEL
-			rect					486 452 122 22
+			rect					476 452 132 22
 			font					5
 			textscale				0.6
-			textalignx				61
+			textalignx				66
 			textaligny				5.6
 			textalign				ITEM_ALIGN_CENTER
 			textstyle				0
@@ -1993,8 +1421,6 @@
 				close sabermenu
 				open main
 			}
-			mouseEnter { show begingamebutton_glow }
-			mouseExit { hide begingamebutton_glow }
 			caps					1
 			backcolor				0.43 0.83 1 0.22
 			bordercolor				0.43 0.83 1 0.8

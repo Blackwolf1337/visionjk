@@ -2370,6 +2370,7 @@ row of that list ("row 1"): its name at the left, its widget at the right. The w
 
 #define ROW_PAD			8.0f		// from the edge of a row to its name and to its widget
 #define ROW_WIDGET		0.31f		// the part of the width of a row its widget has
+#define ROW_WIDGET_WIDE	0.56f		// "row 3": a line to type a name in
 #define ROW_NUMBER		31.0f		// in front of the track of a slider: what it stands at
 #define ROW_ARROW		8.0f		// how high the arrows of a choice are
 #define ROW_SMALL		0.76f		// the size of the words of a widget, in that of the name of its row
@@ -2601,7 +2602,7 @@ static qboolean Item_Off( itemDef_t *item ) {
 static void Item_Row_Widget( const itemDef_t *item, rectDef_t *out ) {
 	const rectDef_t *r = &item->window.rect;
 
-	out->w = floorf( r->w * ROW_WIDGET );
+	out->w = floorf( r->w * ( item->row == 3 ? ROW_WIDGET_WIDE : ROW_WIDGET ) );
 	out->h = Q_min( 14.0f, r->h - 6.0f );
 	out->x = r->x + r->w - ROW_PAD - out->w;
 	out->y = r->y + ( r->h - out->h ) * 0.5f;
@@ -5183,7 +5184,7 @@ void Item_TextColor(itemDef_t *item, vec4_t *newColor) {
 	if ( Item_Skinned( item ) ) {
 		// no pulse: the mark behind the item says where the focus is
 		Skin_TextColor( item, *newColor );
-		if ( item->tab && !item->disabled ) {
+		if ( ( item->tab || item->flow >= 2 ) && !item->disabled ) {
 			// (and the tab whose page is open is as bright as one in focus)
 			const float part = Q_max( item->skinFocus, item->skinValue );
 			int			i;
@@ -6112,8 +6113,9 @@ static void Item_Tab_Paint( itemDef_t *item ) {
 	vec4_t			color;
 
 	item->skinFocus = Skin_Ease( item->skinFocus, (qboolean)( ( item->window.flags & WINDOW_HASFOCUS ) && !item->disabled ), SKIN_EASE_MSEC );
-	item->skinValue = Skin_Ease( item->skinValue, (qboolean)( parent->page == item->tab ), SKIN_EASE_MSEC );
-	if ( item->window.flags & WINDOW_DECORATION ) {
+	// ("flow 3": the entry of a strip of menus that stands for the menu that is open)
+	item->skinValue = Skin_Ease( item->skinValue, (qboolean)( item->flow == 3 || ( item->tab && parent->page == item->tab ) ), SKIN_EASE_MSEC );
+	if ( ( item->window.flags & WINDOW_DECORATION ) && item->flow != 3 ) {
 		return;
 	}
 	Skin_Color( color, parent->focusColor, Q_max( item->skinValue, 0.35f * item->skinFocus ) );
@@ -7798,10 +7800,10 @@ void Item_Paint(itemDef_t *item)
 
 	// the mark of an item that has the focus, in a menu with the new look. A list marks its rows itself, and
 	// the button of a page has a mark of its own.
-	if ( Item_Skinned( item ) && item->flow ) {
+	if ( Item_Skinned( item ) && item->flow == 1 ) {
 		Item_Flow_Paint( item );
 	}
-	if ( Item_Skinned( item ) && item->tab ) {
+	if ( Item_Skinned( item ) && ( item->tab || item->flow >= 2 ) ) {
 		Item_Tab_Paint( item );
 	} else if ( Item_Skinned( item ) && item->type != ITEM_TYPE_LISTBOX && item->type != ITEM_TYPE_TEXTSCROLL && item->type != ITEM_TYPE_MODEL
 		&& item->type != ITEM_TYPE_OWNERDRAW && item->type != ITEM_TYPE_TEXT && item->type != ITEM_TYPE_DESC
@@ -9166,15 +9168,10 @@ qboolean ItemParse_row( itemDef_t *item, int handle ) {
 }
 
 // flow 1: a button of a bar. The buttons of a row are as wide as their words and follow each other, with a
-// short line between them (Menu_TabsLayout).
+// short line between them (Menu_TabsLayout). flow 2: a button of a strip that leads to other menus, laid out the
+// same way and drawn as the button of a page is. flow 3: the entry of that strip for the menu that is open.
 qboolean ItemParse_flow( itemDef_t *item, int handle ) {
-	int i;
-
-	if ( !PC_Int_Parse( handle, &i ) ) {
-		return qfalse;
-	}
-	item->flow = (qboolean)( i != 0 );
-	return qtrue;
+	return PC_Int_Parse( handle, &item->flow );
 }
 
 qboolean ItemParse_bordersize( itemDef_t *item, int handle ) {

@@ -56,6 +56,8 @@ OLD = {
     'used to draw an interface for clan Say, private talk, amsay, ampsay...': 'A menu for clan chat, private and admin messages.',
     'hold to talk in the voice chat (push to talk)': 'Hold to talk in the voice chat (push to talk).',
     'your client plays by itself, and stops (Setup, Bot Mode)': 'Your client plays by itself, and stops (Setup, Bot Mode).',
+    'Red: ': 'Red', 'Red ': 'Red', 'Green: ': 'Green', 'Blue: ': 'Blue', 'Blue ': 'Blue',
+    'Line: ': 'Blade Style',
     'hold to talk to your clan over the radio, wherever they are': 'Hold to talk to your clan over the radio, wherever they are.',
 }
 
@@ -102,6 +104,20 @@ TR = {
     'JA+': 'JA+',
     'Enter or click: change the key. Backspace: clear it.': 'Enter oder Klick: Taste ändern. Rücktaste: Taste löschen.',
     'Restart the video with these settings.': 'Die Grafik mit diesen Einstellungen neu starten.',
+
+    # the pages of the player
+    'Player': 'Spieler',
+    'Character': 'Charakter',
+    'Name, model and team colour.': 'Name, Modell und Teamfarbe.',
+    'Build a character of your own.': 'Einen eigenen Charakter zusammenstellen.',
+    'Hilt and blade of your lightsaber.': 'Griff und Klinge Ihres Lichtschwerts.',
+    'Your force powers.': 'Ihre Machtkräfte.',
+    'The list of moves.': 'Die Liste der Aktionen.',
+    'Red': 'Rot',
+    'Green': 'Grün',
+    'Blue': 'Blau',
+    'Blade Style': 'Klingenstil',
+    'Holsters': 'Holster',
 
     # display
     'Display Mode': 'Anzeigemodus',

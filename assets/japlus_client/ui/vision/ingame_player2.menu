@@ -7,12 +7,12 @@
 		visible					0
 		fullscreen				0
 		outOfBoundsClick
-		rect					105 40 474 425
+		rect					16 30 608 436
 		focusColor				0.43 0.83 1 1
-		style					WINDOW_STYLE_EMPTY
-		descX					342
-		descY					457
-		descScale				0.7
+		style					WINDOW_STYLE_PANEL
+		descX					304
+		descY					415
+		descScale				0.55
 		descColor				0.60 0.69 0.78 1
 		descAlignment			ITEM_ALIGN_CENTER
 		onOpen
@@ -27,129 +27,179 @@
 			uiScript updateForceStatus
 			hide highlights
 		}
+		skin					1
+		disableColor			0.36 0.42 0.50 1
+		openSlide				8
+		backcolor				0.035 0.07 0.12 0.94
+		bordercolor				0.43 0.83 1 0.28
+		radius					6
+		shadow					14
+		sheen					0.08
 
 		itemDef
 		{
-			name					background_pic
-			group					none
-			style					WINDOW_STYLE_PANEL
-			rect					0 0 474 412
-			forecolor				1 1 1 1
+			name					vision_strip
+			rect					0 0 608 26
 			visible					1
+			style					WINDOW_STYLE_FILLED
+			backcolor				0.02 0.04 0.08 0.50
 			decoration
-			backcolor				0.035 0.07 0.12 0.94
-			bordercolor				0.43 0.83 1 0.28
-			radius					8
-			shadow					14
-			sheen					0.08
 		}
 
 		itemDef
 		{
-			name					playerconfigtitle
-			style					WINDOW_STYLE_EMPTY
-			text					@MENUS_CUSTOM_CHARACTER
-			rect					35 5 360 28
-			textalign				ITEM_ALIGN_CENTER
-			textalignx				180
-			textaligny				4.25
-			outlinecolor			1 .5 .5 .5
-			backcolor				0 0 0 0
+			name					vision_strip_line
+			rect					0 26 608 0.67
+			visible					1
+			style					WINDOW_STYLE_FILLED
+			backcolor				0.43 0.83 1 0.18
+			decoration
+		}
+
+		itemDef
+		{
+			name					vision_to_profile
+			rect					9 0 80 26
+			visible					1
+			text					@MENUS_PROFILE
 			font					5
-			textscale				0.67
+			textscale				0.58
 			forecolor				0.60 0.69 0.78 1
-			border					0
-			bordercolor				0.43 0.83 1 0.16
-			visible					1
-			caps					1
-		}
-
-		itemDef
-		{
-			name					character
-			group					models
-			type					ITEM_TYPE_MODEL
-			rect					270 84 200 225
-			model_g2anim			"BOTH_WALK1"
-			asset_model				"ui_char_model"
-			model_angle				180
-			model_g2mins			-30 -15 -14
-			model_g2maxs			20 15 30
-			model_rotation			50
-			model_fovx				50
-			model_fovy				50
-			isCharacter				1
-			visible					1
-			decoration
-		}
-
-		itemDef
-		{
-			name					species
-			group					none
 			type					ITEM_TYPE_BUTTON
+			flow					2
+			descText				@VISION_NAME_MODEL_AND_TEAM_COLOUR
+			action { play "sound/interface/button1.wav" ; close ingame_player2 ; open ingame_player ; }
+			caps					1
 			style					WINDOW_STYLE_EMPTY
-			rect					15 48 140 24
-			forecolor				0.60 0.69 0.78 1
-			text					@MENUS_SPECIES
-			textalign				ITEM_ALIGN_LEFT
-			textalignx				0
-			textaligny				1.5
-			font					5
-			textscale				0.74
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				40
+			textaligny				7.78
+		}
+
+		itemDef
+		{
+			name					vision_here
+			rect					89 0 80 26
 			visible					1
+			text					@VISION_CHARACTER
+			font					5
+			textscale				0.58
+			forecolor				0.60 0.69 0.78 1
+			flow					3
 			decoration
 			caps					1
+			style					WINDOW_STYLE_EMPTY
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				40
+			textaligny				7.78
+		}
+
+		itemDef
+		{
+			name					vision_to_saber
+			rect					169 0 80 26
+			visible					1
+			text					@MENUS_LIGHTSABER_CAPS
+			font					5
+			textscale				0.58
+			forecolor				0.60 0.69 0.78 1
+			type					ITEM_TYPE_BUTTON
+			flow					2
+			descText				@VISION_HILT_AND_BLADE_OF_YOUR_LIGHTSABER
+			action { play "sound/interface/button1.wav" ; close ingame_player2 ; open ingame_saber ; }
+			caps					1
+			style					WINDOW_STYLE_EMPTY
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				40
+			textaligny				7.78
+		}
+
+		itemDef
+		{
+			name					vision_to_force
+			rect					249 0 80 26
+			visible					1
+			text					@MENUS_DP_FORCE
+			font					5
+			textscale				0.58
+			forecolor				0.60 0.69 0.78 1
+			type					ITEM_TYPE_BUTTON
+			flow					2
+			descText				@VISION_YOUR_FORCE_POWERS
+			action { play "sound/interface/button1.wav" ; close ingame_player2 ; open ingame_playerforce ; }
+			caps					1
+			style					WINDOW_STYLE_EMPTY
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				40
+			textaligny				7.78
+			group					yesforce
+		}
+
+		itemDef
+		{
+			name					vision_pane
+			rect					340 38 256 352
+			visible					1
+			style					WINDOW_STYLE_PANEL
+			backcolor				0.035 0.07 0.12 0.55
+			bordercolor				0.43 0.83 1 0.16
+			radius					4
+			decoration
 		}
 
 		itemDef
 		{
 			name					speciesbut
 			group					none
-			text					" "
+			text					@MENUS_SPECIES
 			descText				@MENUS_CHOOSE_SPECIES
 			type					ITEM_TYPE_MULTI
 			style					WINDOW_STYLE_EMPTY
-			rect					161 52 150 16
+			rect					12 38 316 22
 			font					5
-			textscale				0.77
-			textaligny				-3.65
-			textalign				ITEM_ALIGN_LEFT
+			textscale				0.7
 			textstyle				0
-			textalignx				0
-			backcolor				0 0 0 0
-			forecolor				0.60 0.69 0.78 1
+			forecolor				0.86 0.92 0.97 1
 			feeder					19
 			cvar					"ui_char_model"
 			cvarStrList				feeder
 			visible					1
-			mouseEnter { show speciesbut_glow }
-			mouseExit { hide speciesbut_glow }
 			action
 			{
 				play "sound/interface/button1.wav"
 				uiScript "characterchanged"
 				uiScript "resetcharacterlistboxes"
 			}
+			row						3
 		}
 
 		itemDef
 		{
 			name					color
 			group					none
-			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
-			rect					15 80 160 24
+			rect					14 60 312 22
 			forecolor				0.60 0.69 0.78 1
 			text					@MENUS_COLOR
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				0
-			textaligny				1.5
+			textaligny				9
 			font					5
-			textscale				0.74
+			textscale				0.54
 			visible					1
 			decoration
 			caps					1
+		}
+
+		itemDef
+		{
+			name					color
+			rect					12 81 316 0.67
+			visible					1
+			style					WINDOW_STYLE_FILLED
+			backcolor				0.43 0.83 1 0.32
+			decoration
+			group					none
 		}
 
 		itemDef
@@ -165,7 +215,7 @@
 			horizontalscroll
 			backcolor				0 0 0 0.30
 			bordercolor				0.43 0.83 1 0.16
-			rect					15 104 292 48
+			rect					12 84 316 48
 			visible					1
 			action { play "sound/interface/choose_color.wav" }
 			radius					4
@@ -176,83 +226,20 @@
 
 		itemDef
 		{
-			name					Predefined
-			group					none
-			text					"Predefined"
-			descText				"Predefined colors"
-			type					ITEM_TYPE_BUTTON
-			style					WINDOW_STYLE_EMPTY
-			rect					111 85 90 16
-			font					5
-			textscale				0.77
-			textaligny				-3.65
-			textalign				ITEM_ALIGN_LEFT
-			textstyle				0
-			textalignx				0
-			backcolor				0 0 0 0
-			forecolor				0.43 0.83 1 1
-			visible					1
-			mouseEnter { show standard_glow }
-			mouseExit { hide standard_glow }
-			action
-			{
-				play "sound/interface/button1.wav"
-				show tints
-				hide tints2
-				setitemcolor perso forecolor 0.86 0.92 0.97 1
-				setitemcolor standard forecolor 0.43 0.83 1 1
-			}
-		}
-
-		itemDef
-		{
-			name					perso
-			group					none
-			text					"RGB Colors"
-			descText				"Customized RGB colors"
-			type					ITEM_TYPE_BUTTON
-			style					WINDOW_STYLE_EMPTY
-			rect					209 85 90 16
-			font					5
-			textscale				0.77
-			textaligny				-3.65
-			textalign				ITEM_ALIGN_LEFT
-			textstyle				0
-			textalignx				0
-			backcolor				0 0 0 0
-			forecolor				0.86 0.92 0.97 1
-			visible					1
-			mouseEnter { show perso_glow }
-			mouseExit { hide perso_glow }
-			action
-			{
-				play "sound/interface/button1.wav"
-				show tints2
-				hide tints
-				setitemcolor standard forecolor 0.86 0.92 0.97 1
-				setitemcolor perso forecolor 0.43 0.83 1 1
-			}
-		}
-
-		itemDef
-		{
 			name					barrerouge
 			group					tints2
 			type					ITEM_TYPE_SLIDER
-			text					"Red: "
+			text					@VISION_RED
 			cvarfloat				"ui_char_color_red" 50 0 255
-			rect					0 104 175 18
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				70
-			textaligny				1
+			rect					12 134 316 22
 			font					5
-			textscale				0.68
-			forecolor				0.60 0.69 0.78 1
-			visible					0
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
 			descText				"Red component in RGB colors"
-			mouseEnter { show barrerouge_glow }
-			mouseExit { hide barrerouge_glow }
 			action { play "sound/interface/button1" }
+			style					WINDOW_STYLE_EMPTY
+			row						1
 		}
 
 		itemDef
@@ -260,20 +247,17 @@
 			name					barrevert
 			group					tints2
 			type					ITEM_TYPE_SLIDER
-			text					"Green: "
+			text					@VISION_GREEN
 			cvarfloat				"ui_char_color_green" 50 0 255
-			rect					0 124 175 18
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				70
-			textaligny				1
+			rect					12 156 316 22
 			font					5
-			textscale				0.68
-			forecolor				0.60 0.69 0.78 1
-			visible					0
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
 			descText				"Green component in RGB colors"
-			mouseEnter { show barrevert_glow }
-			mouseExit { hide barrevert_glow }
 			action { play "sound/interface/button1" }
+			style					WINDOW_STYLE_EMPTY
+			row						1
 		}
 
 		itemDef
@@ -281,123 +265,46 @@
 			name					barrebleu
 			group					tints2
 			type					ITEM_TYPE_SLIDER
-			text					"Blue: "
+			text					@VISION_BLUE
 			cvarfloat				"ui_char_color_blue" 50 0 255
-			rect					0 144 175 18
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				70
-			textaligny				1
+			rect					12 178 316 22
 			font					5
-			textscale				0.68
-			forecolor				0.60 0.69 0.78 1
-			visible					0
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
 			descText				"Blue component in RGB colors"
-			mouseEnter { show barrebleu_glow }
-			mouseExit { hide barrebleu_glow }
 			action { play "sound/interface/button1" }
-		}
-
-		itemDef
-		{
-			name					barrered_value
-			group					tints2
-			type					ITEM_TYPE_EDITFIELD
-			style					WINDOW_STYLE_PANEL
-			text					"R:"
-			cvar					"ui_char_color_red"
-			maxchars				10
-			maxPaintChars			10
-			rect					197 104 100 18
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				15
-			textaligny				-1
-			font					5
-			textscale				0.68
-			forecolor				0.60 0.69 0.78 1
-			outlinecolor			1 .5 .5 .5
-			backcolor				0 0 0 0
-			bordercolor				0.43 0.83 1 0.16
-			visible					0
-			descText				"Red component Value"
-			mouseEnter { show barrered_glow }
-			mouseExit { hide barrered_glow }
-			action { play "sound/interface/button1" }
-			radius					5
-		}
-
-		itemDef
-		{
-			name					barregreen_value
-			group					tints2
-			type					ITEM_TYPE_EDITFIELD
-			style					WINDOW_STYLE_PANEL
-			text					"G:"
-			cvar					"ui_char_color_green"
-			maxchars				10
-			maxPaintChars			10
-			rect					197 124 100 18
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				15
-			textaligny				-1
-			font					5
-			textscale				0.68
-			forecolor				0.60 0.69 0.78 1
-			outlinecolor			1 .5 .5 .5
-			backcolor				0 0 0 0
-			bordercolor				0.43 0.83 1 0.16
-			visible					0
-			descText				"Green component Value"
-			mouseEnter { show barregreen_glow }
-			mouseExit { hide barregreen_glow }
-			action { play "sound/interface/button1" }
-			radius					5
-		}
-
-		itemDef
-		{
-			name					barrebleu_value
-			group					tints2
-			type					ITEM_TYPE_EDITFIELD
-			style					WINDOW_STYLE_PANEL
-			text					"B:"
-			cvar					"ui_char_color_blue"
-			maxchars				10
-			maxPaintChars			10
-			rect					197 144 100 18
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				15
-			textaligny				-1
-			font					5
-			textscale				0.68
-			forecolor				0.60 0.69 0.78 1
-			outlinecolor			1 .5 .5 .5
-			backcolor				0 0 0 0
-			bordercolor				0.43 0.83 1 0.16
-			visible					0
-			descText				"Blue component Value"
-			mouseEnter { show barrebleu_glow }
-			mouseExit { hide barrebleu_glow }
-			action { play "sound/interface/button1" }
-			radius					5
+			style					WINDOW_STYLE_EMPTY
+			row						1
 		}
 
 		itemDef
 		{
 			name					appear
 			group					none
-			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
-			rect					15 160 180 24
+			rect					14 202 312 22
 			forecolor				0.60 0.69 0.78 1
 			text					@MENUS_APPEARANCE
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				0
-			textaligny				1.5
+			textaligny				9
 			font					5
-			textscale				0.74
+			textscale				0.54
 			visible					1
 			decoration
 			caps					1
+		}
+
+		itemDef
+		{
+			name					appear
+			rect					12 223 316 0.67
+			visible					1
+			style					WINDOW_STYLE_FILLED
+			backcolor				0.43 0.83 1 0.32
+			decoration
+			group					none
 		}
 
 		itemDef
@@ -408,83 +315,21 @@
 			descText				@MENUS_SELECT_HEAD
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
-			rect					15 184 90 16
+			rect					9 226 70 22
 			font					5
-			textscale				0.77
-			textaligny				-3.65
-			textalign				ITEM_ALIGN_LEFT
+			textscale				0.58
+			textaligny				5.78
+			textalign				ITEM_ALIGN_CENTER
 			textstyle				0
-			textalignx				0
-			backcolor				0 0 0 0
-			forecolor				0.86 0.92 0.97 1
+			textalignx				35
+			forecolor				0.60 0.69 0.78 1
 			visible					1
-			mouseEnter { show headbut_glow }
-			mouseExit { hide headbut_glow }
 			action
 			{
 				play "sound/interface/button1.wav"
-				show heads
-				hide torso
-				hide lower
 			}
-		}
-
-		itemDef
-		{
-			name					torsobut
-			group					none
-			text					@MENUS_TORSO
-			descText				@MENUS_SELECT_TORSO
-			type					ITEM_TYPE_BUTTON
-			style					WINDOW_STYLE_EMPTY
-			rect					111 184 90 16
-			font					5
-			textscale				0.77
-			textaligny				-3.65
-			textalign				ITEM_ALIGN_LEFT
-			textstyle				0
-			textalignx				0
-			backcolor				0 0 0 0
-			forecolor				0.86 0.92 0.97 1
-			visible					1
-			mouseEnter { show torsobut_glow }
-			mouseExit { hide torsobut_glow }
-			action
-			{
-				play "sound/interface/button1.wav"
-				show torso
-				hide heads
-				hide lower
-			}
-		}
-
-		itemDef
-		{
-			name					legsbut
-			group					none
-			text					@MENUS_LEGS
-			descText				@MENUS_SELECT_LEGS
-			type					ITEM_TYPE_BUTTON
-			style					WINDOW_STYLE_EMPTY
-			rect					209 184 90 16
-			font					5
-			textscale				0.77
-			textaligny				-3.65
-			textalign				ITEM_ALIGN_LEFT
-			textstyle				0
-			textalignx				0
-			backcolor				0 0 0 0
-			forecolor				0.86 0.92 0.97 1
-			visible					1
-			mouseEnter { show legsbut_glow }
-			mouseExit { hide legsbut_glow }
-			action
-			{
-				play "sound/interface/button1.wav"
-				show lower
-				hide heads
-				hide torso
-			}
+			tab						1
+			caps					1
 		}
 
 		itemDef
@@ -501,7 +346,7 @@
 			backcolor				0 0 0 0.30
 			bordercolor				0.43 0.83 1 0.16
 			forecolor				-1
-			rect					15 206 292 93
+			rect					12 252 316 93
 			visible					1
 			action
 			{
@@ -512,6 +357,32 @@
 			outlinecolor			0.43 0.83 1 0.22
 			font					5
 			textscale				0.47
+			page					1
+		}
+
+		itemDef
+		{
+			name					torsobut
+			group					none
+			text					@MENUS_TORSO
+			descText				@MENUS_SELECT_TORSO
+			type					ITEM_TYPE_BUTTON
+			style					WINDOW_STYLE_EMPTY
+			rect					79 226 70 22
+			font					5
+			textscale				0.58
+			textaligny				5.78
+			textalign				ITEM_ALIGN_CENTER
+			textstyle				0
+			textalignx				35
+			forecolor				0.60 0.69 0.78 1
+			visible					1
+			action
+			{
+				play "sound/interface/button1.wav"
+			}
+			tab						2
+			caps					1
 		}
 
 		itemDef
@@ -528,8 +399,8 @@
 			backcolor				0 0 0 0.30
 			bordercolor				0.43 0.83 1 0.16
 			forecolor				-1
-			rect					15 206 292 93
-			visible					0
+			rect					12 252 316 93
+			visible					1
 			action
 			{
 				play "sound/interface/choose_torso.wav"
@@ -539,6 +410,32 @@
 			outlinecolor			0.43 0.83 1 0.22
 			font					5
 			textscale				0.47
+			page					2
+		}
+
+		itemDef
+		{
+			name					legsbut
+			group					none
+			text					@MENUS_LEGS
+			descText				@MENUS_SELECT_LEGS
+			type					ITEM_TYPE_BUTTON
+			style					WINDOW_STYLE_EMPTY
+			rect					149 226 70 22
+			font					5
+			textscale				0.58
+			textaligny				5.78
+			textalign				ITEM_ALIGN_CENTER
+			textstyle				0
+			textalignx				35
+			forecolor				0.60 0.69 0.78 1
+			visible					1
+			action
+			{
+				play "sound/interface/button1.wav"
+			}
+			tab						3
+			caps					1
 		}
 
 		itemDef
@@ -555,8 +452,8 @@
 			backcolor				0 0 0 0.30
 			bordercolor				0.43 0.83 1 0.16
 			forecolor				-1
-			rect					15 206 292 93
-			visible					0
+			rect					12 252 316 93
+			visible					1
 			action
 			{
 				play "sound/interface/choose_head.wav"
@@ -566,6 +463,46 @@
 			outlinecolor			0.43 0.83 1 0.22
 			font					5
 			textscale				0.47
+			page					3
+		}
+
+		itemDef
+		{
+			name					character
+			group					models
+			type					ITEM_TYPE_MODEL
+			rect					311.56 38 312.89 352
+			model_g2anim			"BOTH_WALK1"
+			asset_model				"ui_char_model"
+			model_angle				180
+			model_g2mins			-30 -15 -14
+			model_g2maxs			20 15 30
+			model_rotation			50
+			model_fovx				50
+			model_fovy				50
+			isCharacter				1
+			visible					1
+			decoration
+		}
+
+		itemDef
+		{
+			name					vision_foot
+			rect					0 404 608 32
+			visible					1
+			style					WINDOW_STYLE_FILLED
+			backcolor				0.02 0.04 0.08 0.50
+			decoration
+		}
+
+		itemDef
+		{
+			name					vision_foot_line
+			rect					0 404 608 0.67
+			visible					1
+			style					WINDOW_STYLE_FILLED
+			backcolor				0.43 0.83 1 0.18
+			decoration
 		}
 
 		itemDef
@@ -574,18 +511,16 @@
 			text					@MENUS_BACK
 			descText				@MENUS_RETURN_PREVIOUS
 			type					ITEM_TYPE_BUTTON
-			style					WINDOW_STYLE_PANEL
-			rect					30 376 110 20
+			style					WINDOW_STYLE_EMPTY
+			rect					9 404 72 32
 			font					5
-			textscale				0.64
+			textscale				0.6
 			textalign				ITEM_ALIGN_CENTER
 			textstyle				0
-			textalignx				55
-			textaligny				4
+			textalignx				36
+			textaligny				10.6
 			forecolor				0.86 0.92 0.97 1
 			visible					1
-			mouseEnter { show backButton }
-			mouseExit { hide backButton }
 			action
 			{
 				play "sound/interface/esc.wav" ;
@@ -593,9 +528,7 @@
 				open ingame_player ;
 			}
 			caps					1
-			radius					10
-			backcolor				1 1 1 0.05
-			bordercolor				0.43 0.83 1 0.16
+			flow					1
 		}
 
 		itemDef
@@ -605,12 +538,12 @@
 			text					@MENUS_APPLY
 			type					1
 			style					WINDOW_STYLE_PANEL
-			rect					290 376 110 20
+			rect					464 410 132 20
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				55
-			textaligny				4
+			textalignx				66
+			textaligny				4.6
 			font					5
-			textscale				0.64
+			textscale				0.6
 			forecolor				1 1 1 1
 			descText				@MENUS_APPLY_CHANGES_AND_JOIN
 			visible					1
@@ -622,15 +555,10 @@
 				close ingame_player2
 				open ingame_player
 			}
-			mouseEnter { show applyjoinButton }
-			mouseExit { hide applyjoinButton }
 			caps					1
-			radius					10
-			backcolor				0.43 0.83 1 0.20
-			bordercolor				0.43 0.83 1 0.75
+			backcolor				0.43 0.83 1 0.22
+			bordercolor				0.43 0.83 1 0.8
+			radius					3
 		}
-		skin					1
-		disableColor			0.36 0.42 0.50 1
-		openSlide				8
 	}
 }

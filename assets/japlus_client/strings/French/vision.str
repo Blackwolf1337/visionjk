@@ -5,6 +5,38 @@ VERSION             "1"
 CONFIG              "W:\bin\stringed.cfg"
 FILENOTES           "Menus of VisionJK"
 
+REFERENCE           CHARACTER
+LANG_ENGLISH        "Character"
+LANG_FRENCH         "#same"
+
+REFERENCE           BUILD_A_CHARACTER_OF_YOUR_OWN
+LANG_ENGLISH        "Build a character of your own."
+LANG_FRENCH         "#same"
+
+REFERENCE           HILT_AND_BLADE_OF_YOUR_LIGHTSABER
+LANG_ENGLISH        "Hilt and blade of your lightsaber."
+LANG_FRENCH         "#same"
+
+REFERENCE           PLAYER
+LANG_ENGLISH        "Player"
+LANG_FRENCH         "#same"
+
+REFERENCE           NAME_MODEL_AND_TEAM_COLOUR
+LANG_ENGLISH        "Name, model and team colour."
+LANG_FRENCH         "#same"
+
+REFERENCE           RED
+LANG_ENGLISH        "Red"
+LANG_FRENCH         "#same"
+
+REFERENCE           GREEN
+LANG_ENGLISH        "Green"
+LANG_FRENCH         "#same"
+
+REFERENCE           BLUE
+LANG_ENGLISH        "Blue"
+LANG_FRENCH         "#same"
+
 REFERENCE           JA
 LANG_ENGLISH        "JA+"
 LANG_FRENCH         "#same"
@@ -735,6 +767,22 @@ LANG_FRENCH         "#same"
 
 REFERENCE           RESTART_THE_VIDEO_WITH_THESE_SETTING
 LANG_ENGLISH        "Restart the video with these settings."
+LANG_FRENCH         "#same"
+
+REFERENCE           BLADE_STYLE
+LANG_ENGLISH        "Blade Style"
+LANG_FRENCH         "#same"
+
+REFERENCE           YOUR_FORCE_POWERS
+LANG_ENGLISH        "Your force powers."
+LANG_FRENCH         "#same"
+
+REFERENCE           THE_LIST_OF_MOVES
+LANG_ENGLISH        "The list of moves."
+LANG_FRENCH         "#same"
+
+REFERENCE           HOLSTERS
+LANG_ENGLISH        "Holsters"
 LANG_FRENCH         "#same"
 
 

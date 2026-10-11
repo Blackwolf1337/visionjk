@@ -490,12 +490,17 @@ def build(m, name, ingame, nav):
     mf.put(m, 'scrollRect', *[mf.fmt(v) for v in L.list])
     mf.put(m, 'scrollStep', ROW_H)
     if ingame:
-        mf.put(m, 'rect', *[mf.fmt(v) for v in L.menu])
-        mf.put(m, 'style', 'WINDOW_STYLE_PANEL')
-        mf.put(m, 'backcolor', *WINDOW)
-        mf.put(m, 'bordercolor', *PANEL_EDGE)
-        mf.put(m, 'radius', 6)
-        mf.put(m, 'shadow', 14)
-        mf.drop(m, 'border')
-        mf.drop(m, 'bordersize')
-        mf.drop(m, 'background')
+        window_frame(m, L)
+
+
+def window_frame(m, L):
+    """In a game a screen is a window under the bar of the in-game menu: the menu itself is its panel."""
+    mf.put(m, 'rect', *[mf.fmt(v) for v in L.menu])
+    mf.put(m, 'style', 'WINDOW_STYLE_PANEL')
+    mf.put(m, 'backcolor', *WINDOW)
+    mf.put(m, 'bordercolor', *PANEL_EDGE)
+    mf.put(m, 'radius', 6)
+    mf.put(m, 'shadow', 14)
+    mf.drop(m, 'border')
+    mf.drop(m, 'bordersize')
+    mf.drop(m, 'background')
