@@ -578,6 +578,9 @@ LANG_ENGLISH        "Game folders with other mods."
 REFERENCE           RESTART_THE_VIDEO_WITH_THESE_SETTING
 LANG_ENGLISH        "Restart the video with these settings."
 
+REFERENCE           FIXED_COLOR
+LANG_ENGLISH        "Fixed Color"
+
 REFERENCE           BLADE_STYLE
 LANG_ENGLISH        "Blade Style"
 

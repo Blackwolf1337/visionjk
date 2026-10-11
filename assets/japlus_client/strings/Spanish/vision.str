@@ -769,6 +769,10 @@ REFERENCE           RESTART_THE_VIDEO_WITH_THESE_SETTING
 LANG_ENGLISH        "Restart the video with these settings."
 LANG_SPANISH        "#same"
 
+REFERENCE           FIXED_COLOR
+LANG_ENGLISH        "Fixed Color"
+LANG_SPANISH        "#same"
+
 REFERENCE           BLADE_STYLE
 LANG_ENGLISH        "Blade Style"
 LANG_SPANISH        "#same"

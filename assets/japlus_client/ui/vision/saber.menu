@@ -990,6 +990,7 @@
 			cvar					"ui_saber_color"
 			visible					1
 			action { play "sound/interface/button1.wav" ; }
+			otherText				@VISION_FIXED_COLOR
 			style					WINDOW_STYLE_EMPTY
 			row						1
 		}
@@ -1257,6 +1258,7 @@
 			cvarTest				ui_saber_type
 			hideCvar { "single" ; "staff" }
 			action { play "sound/interface/button1.wav" ; }
+			otherText				@VISION_FIXED_COLOR
 			style					WINDOW_STYLE_EMPTY
 			row						1
 		}

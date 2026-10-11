@@ -348,6 +348,13 @@ A row is run with a click or with its number. A click beside the card, the right
 
 - Everything happens in your client. What a row sends is the command it stands for, and no other player sees
   that you pointed at him. An unchanged client has none of it and notices none of it.
+- Who points does not type. An engine marks its player as talking while anything holds his keys, the game
+  module shows that to everybody (the dots over his head) and holds him still for it. While the keys are held
+  for pointing only, the cgame says so (`cg_catchQuiet 1`) and an engine of this tree leaves the talk button
+  out of his commands (`CL_CmdButtons`). A key that was down when the mouse was freed stays down: who runs
+  keeps running. In another engine he is shown as talking, as it was until 2026-10-12 here too.
+- The three lines at the head of the card stay on the card: a long name or a long title of music is set a
+  little smaller, and what is still too long ends in three dots.
 - A player behind a wall, a dead one, a cloaked one and yourself can not be pointed at. A challenge to a duel
   is not on the card: the server wants your aim on the other player for that.
 - The outline is a thin line at the edge of the figure and a soft light around it, and nothing of either lies on
@@ -439,6 +446,10 @@ the hips, and the menu stands in the level to the right of him. The game goes on
 | `r_menuBlur` | 1 | how far the level behind the menu is out of focus (rd-vulkan-vision and the client in a browser): 0 not at all, 1 normal, up to 4 |
 | `s_muffle` | set by the cgame | 0 to 1: the sound of the game through a low pass. Not stored |
 
+- The panel behind the menu is as large as what is open on it: the bar at the top alone is a bar, and the
+  panel grows when a page opens under it. The ui says once a frame how much of the 640 x 480 its menus take
+  (the cvar `ui_openBox`, "x y w h", `Menus_OpenBox`), and the panel follows within a moment. With a ui that
+  says nothing it is the whole 640 x 480, as it was.
 - The menu is not painted onto a texture. The ui draws it as always, and the renderer puts that 2D onto a
   plane in the level (`Set2DPlane`, a matrix from the 2D grid to clip space). The cursor is drawn on the plane
   with the rest and the mouse moves it there. All menus work on it as they are.

@@ -117,6 +117,7 @@ TR = {
     'Green': 'Grün',
     'Blue': 'Blau',
     'Blade Style': 'Klingenstil',
+    'Fixed Color': 'Feste Farbe',
     'Holsters': 'Holster',
 
     # display

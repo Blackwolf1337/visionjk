@@ -71,6 +71,8 @@ static struct {
 	qhandle_t	solid;				// a white picture for polygons in a scene
 	qboolean	logoTried;
 	qhandle_t	arrow;				// a triangle that points to the right
+	qhandle_t	noPicture;			// the tile of somebody who has no picture
+	qboolean	noPictureTried;
 } skin;
 
 static byte skinPic[256 * 256 * 4];
@@ -237,6 +239,55 @@ static void Skin_Pictures( void ) {
 		}
 	}
 	skin.arrow = DC->registerShaderRGBA( "skin_arrow", skinPic, SKIN_ARROW_SIZE, SKIN_ARROW_SIZE, RGBA_SHADER_OVER );
+}
+
+/*
+=================
+Skin_NoPicture
+
+The tile of somebody who has no picture: the outline of a head and shoulders on dark glass. The list of models
+shows it for a skin without an icon, in place of the red question mark of JA+. 0: this engine makes no pictures.
+=================
+*/
+qhandle_t Skin_NoPicture( void ) {
+	const int	size = 64;
+	int			x, y, i, j;
+
+	if ( !Skin_Ready() ) {
+		return 0;
+	}
+	if ( skin.noPictureTried ) {
+		return skin.noPicture;
+	}
+	skin.noPictureTried = qtrue;
+	for ( y = 0; y < size; y++ ) {
+		for ( x = 0; x < size; x++ ) {
+			const float	t = y / (float)( size - 1 );
+			const float	back[3] = { 13.0f + 7.0f * t, 22.0f + 12.0f * t, 37.0f + 19.0f * t };
+			const float	figure[3] = { 70.0f, 102.0f, 136.0f };
+			float		cover = 0.0f;
+			byte		*out = &skinPic[( y * size + x ) * 4];
+
+			// how much of this pixel the figure covers, from sixteen places in it
+			for ( j = 0; j < 4; j++ ) {
+				for ( i = 0; i < 4; i++ ) {
+					const float	px = x + ( i + 0.5f ) * 0.25f, py = y + ( j + 0.5f ) * 0.25f;
+					const float	hx = px - 32.0f, hy = py - 24.0f;				// the head: a disc
+					const float	sx = ( px - 32.0f ) / 21.0f, sy = ( py - 65.0f ) / 24.0f;	// the shoulders: an oval at the lower edge
+
+					if ( hx * hx + hy * hy <= 11.0f * 11.0f || sx * sx + sy * sy <= 1.0f ) {
+						cover += 1.0f / 16.0f;
+					}
+				}
+			}
+			for ( i = 0; i < 3; i++ ) {
+				out[i] = (byte)( back[i] + ( figure[i] - back[i] ) * cover + 0.5f );
+			}
+			out[3] = 255;
+		}
+	}
+	skin.noPicture = DC->registerShaderRGBA( "skin_nopicture", skinPic, size, size, RGBA_SHADER_OVER );
+	return skin.noPicture;
 }
 
 /*

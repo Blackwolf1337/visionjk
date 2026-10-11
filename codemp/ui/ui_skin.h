@@ -48,6 +48,7 @@ void		Skin_Backdrop( void );
 void		Skin_Cursor( float x, float y );
 void		Skin_Logo( float x, float y, float w, float h, float alpha );
 void		Skin_Cube( float x, float y, float w, float h );
+qhandle_t	Skin_NoPicture( void );
 void		Skin_LoadPanel( const char *title, const char *about, const char *now, float fraction );
 
 // the widgets of a menu with "skin 1"

@@ -3814,7 +3814,7 @@ const char *Item_Multi_Setting(itemDef_t *item) {
  			}
  		}
 	}
-	return "@MENUS_CUSTOM";
+	return ( multiPtr && multiPtr->other ) ? multiPtr->other : "@MENUS_CUSTOM";
 }
 
 // sets a choice to one of its settings
@@ -9645,6 +9645,22 @@ static void Item_Multi_FeedVideoModes( multiDef_t *multiPtr ) {
 }
 #endif
 
+// otherText <text>: what a choice shows while its cvar has a value that is none of its settings, in place of
+// "Custom". (The style of a blade: a blade in one of the fixed colours has none.)
+qboolean ItemParse_otherText( itemDef_t *item, int handle ) {
+	const char *text;
+
+	if ( item->type != ITEM_TYPE_MULTI || !PC_String_Parse( handle, &text ) ) {
+		return qfalse;
+	}
+	Item_ValidateTypeData( item );
+	if ( !item->typeData.multi ) {
+		return qfalse;
+	}
+	item->typeData.multi->other = text;
+	return qtrue;
+}
+
 qboolean ItemParse_cvarStrList( itemDef_t *item, int handle ) {
 	pc_token_t token;
 	multiDef_t *multiPtr;
@@ -9951,6 +9967,7 @@ keywordHash_t itemParseKeywords[] = {
 	{"cvarFloat",		ItemParse_cvarFloat,		NULL	},
 	{"cvarFloatList",	ItemParse_cvarFloatList,	NULL	},
 	{"cvarStrList",		ItemParse_cvarStrList,		NULL	},
+	{"otherText",		ItemParse_otherText,		NULL	},
 	{"cvarTest",		ItemParse_cvarTest,			NULL	},
 	{"desctext",		ItemParse_descText,			NULL	},
 	{"decoration",		ItemParse_decoration,		NULL	},
@@ -11012,6 +11029,68 @@ void Menu_PaintAll() {
 		DC->drawText(5, 25, .75, v, va("fps: %f", DC->FPS), 0, 0, 0, 0);
 		DC->drawText(5, 45, .75, v, va("x: %d  y:%d", DC->cursorx,DC->cursory), 0, 0, 0, 0);
 	}
+}
+
+/*
+=================
+Menus_OpenBox
+
+How much of the 640 x 480 the menus that are open take: the rectangle around every menu that paints a window of
+its own and around every item of theirs that is shown. qfalse: nothing is open. The panel that stands behind a
+menu in the level (cgame/menu3d) is as large as that: the bar at the top alone is a bar and no empty wall.
+=================
+*/
+qboolean Menus_OpenBox( rectDef_t *box ) {
+	float		x0 = 0.0f, y0 = 0.0f, x1 = 0.0f, y1 = 0.0f;
+	qboolean	any = qfalse;
+	int			i, j;
+
+	for ( i = 0; i < menuCount; i++ ) {
+		const menuDef_t *menu = &Menus[i];
+
+		if ( !( menu->window.flags & WINDOW_VISIBLE )
+			|| ( menu->window.ownerDrawFlags && DC->ownerDrawVisible && !DC->ownerDrawVisible( menu->window.ownerDrawFlags ) ) ) {
+			continue;
+		}
+		// -1: the window of the menu itself, where it paints one
+		for ( j = -1; j < menu->itemCount; j++ ) {
+			const rectDef_t *r;
+
+			if ( j < 0 ) {
+				if ( !menu->fullScreen && !menu->backdrop && menu->window.style == WINDOW_STYLE_EMPTY && !menu->window.border ) {
+					continue;
+				}
+				r = &menu->window.rect;
+			} else {
+				itemDef_t *item = menu->items[j];
+
+				// (a row of a list that moves is inside the window of its menu wherever it is shown)
+				if ( !( item->window.flags & WINDOW_VISIBLE ) || item->scroll || Item_OffPage( item )
+					|| ( ( item->cvarFlags & ( CVAR_SHOW | CVAR_HIDE ) ) && !Item_EnableShowViaCvar( item, CVAR_SHOW ) ) ) {
+					continue;
+				}
+				r = &item->window.rect;
+			}
+			if ( r->w <= 0.0f || r->h <= 0.0f ) {
+				continue;
+			}
+			if ( !any ) {
+				x0 = r->x;	y0 = r->y;	x1 = r->x + r->w;	y1 = r->y + r->h;
+				any = qtrue;
+			} else {
+				x0 = Q_min( x0, r->x );				y0 = Q_min( y0, r->y );
+				x1 = Q_max( x1, r->x + r->w );		y1 = Q_max( y1, r->y + r->h );
+			}
+		}
+	}
+	if ( !any ) {
+		return qfalse;
+	}
+	box->x = Q_max( 0.0f, x0 );
+	box->y = Q_max( 0.0f, y0 );
+	box->w = Q_min( (float)SCREEN_WIDTH, x1 ) - box->x;
+	box->h = Q_min( (float)SCREEN_HEIGHT, y1 ) - box->y;
+	return (qboolean)( box->w > 0.0f && box->h > 0.0f );
 }
 
 void Menu_Reset(void) {

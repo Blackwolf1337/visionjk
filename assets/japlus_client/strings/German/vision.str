@@ -769,6 +769,10 @@ REFERENCE           RESTART_THE_VIDEO_WITH_THESE_SETTING
 LANG_ENGLISH        "Restart the video with these settings."
 LANG_GERMAN         "Die Grafik mit diesen Einstellungen neu starten."
 
+REFERENCE           FIXED_COLOR
+LANG_ENGLISH        "Fixed Color"
+LANG_GERMAN         "Feste Farbe"
+
 REFERENCE           BLADE_STYLE
 LANG_ENGLISH        "Blade Style"
 LANG_GERMAN         "Klingenstil"

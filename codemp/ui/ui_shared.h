@@ -220,6 +220,7 @@ typedef struct multiDef_s {
 	float cvarValue[MAX_MULTI_CVARS];
 	int count;
 	qboolean strDef;
+	const char *other;	// what it shows while its cvar has none of its settings, NULL: "Custom"
 } multiDef_t;
 
 typedef struct modelDef_s {
@@ -576,6 +577,7 @@ void Menu_PaintAll();
 menuDef_t *Menus_ActivateByName(const char *p);
 void Menu_Reset(void);
 qboolean Menus_AnyFullScreenVisible( void );
+qboolean Menus_OpenBox( rectDef_t *box );
 void  Menus_Activate(menuDef_t *menu);
 itemDef_t *Menu_FindItemByName(menuDef_t *menu, const char *p);
 void Menu_ShowGroup (menuDef_t *menu, const char *itemName, qboolean showFlag);

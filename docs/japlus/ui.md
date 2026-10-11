@@ -32,7 +32,14 @@ Both are in Setup under Interface.
   keys, which walk through every row. Left and right change the row in focus from the keyboard. The bar at
   the bottom has the way back, the defaults, and the button that restarts the video once a video setting
   was changed.
-- In a game the menus are panels over the level, which is out of focus behind them (`r_menuBlur`).
+- In a game the menus are panels over the level, which is out of focus behind them (`r_menuBlur`). Where the
+  menu stands in the level (`cg_immersiveMenu 1`) the panel behind it is as large as what is open: the bar
+  at the top alone is a bar.
+- A skin without an icon has a tile with the outline of a head in the list of models, in place of the red
+  question mark of JA+ (`Skin_NoPicture`).
+- A blade in one of the seven fixed colours has no style: its row says "Fixed Color". The moment one of its
+  three sliders is moved it gets the plain style of a mixed blade (`UI_SaberMixFrame`), so no slider of the
+  page is without effect, and a click on one of the seven colours makes it a fixed one again.
 - The HUD: health and shield at the bottom left, force at the bottom right with the ammo of the weapon or the
   stance of the saber under it, the score above. The health bar turns amber below half and red below a
   quarter.
@@ -112,6 +119,7 @@ All optional. A file that uses none of them is read and drawn by the code of bef
 | itemDef | `type ITEM_TYPE_DESC` | in its rectangle: the `text` of the item in focus in capitals and its `descText` in lines that fit, or those of the tab of the open page. A menu that has one does not draw the line of `descX` |
 | itemDef | `type ITEM_TYPE_PAGESCROLL` | the bar of the list of the open page in its rectangle, to be dragged. Not there while the list fits its window |
 | script | `setpage <n>` | opens that page |
+| itemDef | `otherText <text>` | what a choice (`ITEM_TYPE_MULTI`) shows while its cvar has a value that is none of its settings, in place of "Custom" |
 
 The numbers (`codemp/cgame/hud/cg_hud.c`): `health`, `armor`, `force`, `ammo` (not there with a saber),
 `saberstyle` (only with a saber), `jetpack`, `cloak`, `score`, `alive`, `spectator`, `team` (1 red, 2 blue),

@@ -375,6 +375,9 @@ def saber(f):
             cv = cvar_of(b)
             if cv == ('ui_saber2_color' if second else 'ui_saber_color') and mf.get(b, 'type', [''])[0] == 'ITEM_TYPE_MULTI':
                 mf.put(b, 'group', 'vision_rgb')
+                # (a blade in one of the seven colours has no style: the row says so, not "Custom". A slider that
+                # is moved gives it the plain style, UI_SaberMixFrame() of the ui.)
+                mf.put(b, 'otherText', texts.ref('Fixed Color'))
                 f.new.append(row(e, rx, top + 50, rw))
             for i, part in enumerate(('red', 'green', 'blue')):
                 if cv == 'ui_sb%s%d' % (part, 2 if second else 1) and mf.get(b, 'type', [''])[0] == 'ITEM_TYPE_SLIDER':

@@ -30,7 +30,9 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // (trap->ext.R_SetUIPlane), which the engine sets around the drawing of the menus. The cursor of the ui is
 // drawn on the plane with the rest and the mouse moves it there, so nothing has to find out what the mouse
 // points at. Behind the menu this file adds a panel to the scene, and it asks for the blur behind it
-// (trap->ext.R_SetDepthOfField) and for the muffled sound (the cvar s_muffle).
+// (trap->ext.R_SetDepthOfField) and for the muffled sound (the cvar s_muffle). The panel is as large as what is
+// open on it: the ui says how much of the 640 x 480 its menus take (the cvar ui_openBox), so the bar at the top
+// alone is a bar, and the panel grows when a page opens under it.
 //
 // It needs an engine of this tree (cvar cl_cgameUIPlane). Not while spectating, dead or at the end of a map:
 // the camera of the game has no player to stand behind then.
@@ -44,6 +46,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define MENU3D_PANEL_X		0.27f		// and the middle of the menu
 #define MENU3D_PANEL_DEPTH	64.0f		// how far in front of the camera the menu stands
 #define MENU3D_MARGIN		8.0f		// the panel behind the menu is larger by this on each side, in units of the 2D grid
+#define MENU3D_BOX_MSEC		70.0f		// the panel covers most of the way to a new size in about three times this
 
 static struct {
 	qboolean	open;				// a menu is open and is shown in the level
@@ -55,6 +58,8 @@ static struct {
 	// the panel, as long as blend is above 0
 	vec3_t		center, right, down;
 	float		unit;				// units of the level for one of the 2D grid
+	float		box[4];				// what of the 640 x 480 the panel is behind: x, y, width, height
+	qboolean	boxSet;
 } menu3d;
 
 void CG_Menu3DInit( void ) {
@@ -97,6 +102,26 @@ qboolean CG_Menu3DFrame( void ) {
 		menu3d.yaw = ps->viewangles[YAW];
 	} else if ( open ) {
 		menu3d.yaw = LerpAngle( menu3d.yaw, ps->viewangles[YAW], Q_min( 1.0f, (float)msec / 150.0f ) );
+	}
+	// How large the panel is: as what the ui says is open, the whole 640 x 480 where it says nothing (another
+	// ui). It follows a new size within a moment, and has the size at once when the menu comes up. (The ui
+	// says it after it painted, which is after this frame: for the first frame of a menu nothing is known yet,
+	// and between two menus neither. The size stays as it is then.)
+	if ( open ) {
+		char	said[64];
+		int		x, y, w, h, i;
+
+		trap->Cvar_VariableStringBuffer( "ui_openBox", said, sizeof( said ) );
+		if ( sscanf( said, "%i %i %i %i", &x, &y, &w, &h ) == 4 && w > 0 && h > 0 ) {
+			const float want[4] = { (float)x, (float)y, (float)w, (float)h };
+
+			for ( i = 0; i < 4; i++ ) {
+				menu3d.box[i] = menu3d.boxSet ? menu3d.box[i] + ( want[i] - menu3d.box[i] ) * ( 1.0f - expf( -msec / MENU3D_BOX_MSEC ) ) : want[i];
+			}
+			menu3d.boxSet = qtrue;
+		}
+	} else if ( menu3d.blend <= 0.0f ) {
+		menu3d.boxSet = qfalse;
 	}
 	menu3d.open = open;
 	if ( open ) {
@@ -224,24 +249,30 @@ void CG_Menu3DScene( void ) {
 	const float		zNear = 1.0f, zFar = 8192.0f;
 	float			model[16], view[16], projection[16], modelView[16], matrix[16];
 	vec3_t			corner, up, behind, normal;
-	float			alpha, halfW, halfH;
+	float			alpha, halfW, halfH, box[4] = { 0.0f, 0.0f, SCREEN_WIDTH, SCREEN_HEIGHT };
 
 	if ( menu3d.blend <= 0.0f ) {
 		return;
 	}
 	alpha = menu3d.blend;
 
-	// The panel behind the menu, a little farther from the camera than the menu itself. It has the size of the
-	// 640 x 480 the menus of a game stay in, not of the wider grid of a wide window: the player stands to the
-	// left of it.
-	halfW = ( SCREEN_WIDTH * 0.5f + MENU3D_MARGIN ) * menu3d.unit;
-	halfH = ( SCREEN_HEIGHT * 0.5f + MENU3D_MARGIN ) * menu3d.unit;
+	// The panel behind the menu, a little farther from the camera than the menu itself. It is behind what is
+	// open (CG_Menu3DFrame), at most the 640 x 480 the menus of a game stay in, not the wider grid of a wide
+	// window: the player stands to the left of it.
+	if ( menu3d.boxSet ) {
+		memcpy( box, menu3d.box, sizeof( box ) );
+	}
+	halfW = ( box[2] * 0.5f + MENU3D_MARGIN ) * menu3d.unit;
+	halfH = ( box[3] * 0.5f + MENU3D_MARGIN ) * menu3d.unit;
 	VectorNegate( menu3d.down, up );
 	CrossProduct( menu3d.right, up, normal );
 	VectorMA( menu3d.center, 0.5f, normal, behind );
 	if ( DotProduct( normal, fwd ) < 0.0f ) {
 		VectorMA( menu3d.center, -0.5f, normal, behind );
 	}
+	// (from the middle of the 640 x 480 to the middle of the box)
+	VectorMA( behind, ( box[0] + box[2] * 0.5f - SCREEN_WIDTH * 0.5f ) * menu3d.unit, menu3d.right, behind );
+	VectorMA( behind, ( box[1] + box[3] * 0.5f - SCREEN_HEIGHT * 0.5f ) * menu3d.unit, menu3d.down, behind );
 	CG_BubblePanelAt( behind, menu3d.right, up, halfW, halfH, 14.0f * menu3d.unit, fill, border, light, alpha );
 
 	// the blur of what is not at the distance of the panel

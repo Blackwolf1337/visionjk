@@ -5593,6 +5593,32 @@ static void UI_UpdateSaberColor( qboolean secondSaber )
 		trap->Cvar_Set( "cp_sbRGB2", "0" );
 }
 
+/*
+=================
+UI_SaberMixFrame
+
+Once a frame, with the menus of the new look. The three sliders of a blade mix a colour of one's own, and a
+blade in one of the seven fixed colours does not have one: it gets the plain style of a mixed blade the moment
+one of its sliders is moved, so no slider of the page is without effect. (The page of JA+ shows its sliders
+only after the button for a mixed colour was pressed.)
+=================
+*/
+static void UI_SaberMixFrame( void ) {
+	static int			seen[2] = { -1, -1 };
+	const vmCvar_t		*parts[2][3] = { { &ui_sbRed1, &ui_sbGreen1, &ui_sbBlue1 }, { &ui_sbRed2, &ui_sbGreen2, &ui_sbBlue2 } };
+	static const char	*styles[2] = { "ui_saber_color", "ui_saber2_color" };
+	int					blade;
+
+	for ( blade = 0; blade < 2; blade++ ) {
+		const int count = parts[blade][0]->modificationCount + parts[blade][1]->modificationCount + parts[blade][2]->modificationCount;
+
+		if ( seen[blade] != -1 && count != seen[blade] && Q_strncmp( UI_Cvar_VariableString( styles[blade] ), "rgb", 3 ) ) {
+			trap->Cvar_Set( styles[blade], "rgb" );
+		}
+		seen[blade] = count;
+	}
+}
+
 const char *SaberColorToString( saber_colors_t color );
 
 static void UI_GetSaberCvars ( void )
@@ -10396,6 +10422,11 @@ void UI_Init( qboolean inGameLoad ) {
 
 	trap->LAN_LoadCachedServers();
 
+	// A skin without an icon has the tile of the new look in its menus, not the question mark of JA+. (The list
+	// keeps the handle, so this comes before it is built.)
+	if ( uiNewLook && Skin_NoPicture() ) {
+		uiInfo.q3HeadHiddenIcon = Skin_NoPicture();
+	}
 	UI_BuildQ3Model_List();
 	UI_BuildHolster_List();	// JA+
 	UI_LoadBots();
@@ -10419,6 +10450,31 @@ void UI_Init( qboolean inGameLoad ) {
 }
 
 #define	UI_FPS_FRAMES	4
+/*
+=================
+UI_OpenBoxFrame
+
+Once a frame, after the menus were painted (their items are where they are shown then): the cvar ui_openBox says
+how much of the 640 x 480 they take, "x y w h", or nothing while none is open. The cgame reads it for the panel
+behind a menu that stands in the level.
+=================
+*/
+static void UI_OpenBoxFrame( void ) {
+	static char	said[64];
+	char		now[64];
+	rectDef_t	box;
+
+	if ( Menus_OpenBox( &box ) ) {
+		Com_sprintf( now, sizeof( now ), "%i %i %i %i", (int)box.x, (int)box.y, (int)( box.w + 0.99f ), (int)( box.h + 0.99f ) );
+	} else {
+		now[0] = '\0';
+	}
+	if ( strcmp( now, said ) ) {
+		Q_strncpyz( said, now, sizeof( said ) );
+		trap->Cvar_Set( "ui_openBox", now );
+	}
+}
+
 void UI_Refresh( int realtime )
 {
 	static int index;
@@ -10461,10 +10517,14 @@ void UI_Refresh( int realtime )
 	}
 
 	UI_UpdateCvars();
+	if ( uiNewLook ) {
+		UI_SaberMixFrame();
+	}
 
 	if (Menu_Count() > 0) {
 		// paint all the menus
 		Menu_PaintAll();
+		UI_OpenBoxFrame();
 		// refresh server browser list
 		UI_DoServerRefresh();
 		// refresh server status
