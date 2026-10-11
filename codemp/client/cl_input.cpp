@@ -1225,7 +1225,12 @@ void CL_CmdButtons( usercmd_t *cmd ) {
 	}
 
 	if ( Key_GetCatcher( ) ) {
-		cmd->buttons |= BUTTON_TALK;
+		// A cgame that holds the keys only to point at something says so (cg_catchQuiet 1, its pointer for
+		// players and for the scoreboard): its player does not type. He is not shown as talking then, and the
+		// game module does not hold him still for it.
+		if ( Key_GetCatcher( ) != KEYCATCH_CGAME || !Cvar_VariableIntegerValue( "cg_catchQuiet" ) ) {
+			cmd->buttons |= BUTTON_TALK;
+		}
 	}
 
 	// allow the game to know if any key at all is

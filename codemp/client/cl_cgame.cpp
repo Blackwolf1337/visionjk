@@ -494,6 +494,7 @@ CL_ShutdonwCGame
 void CL_ShutdownCGame( void ) {
 	Key_SetCatcher( Key_GetCatcher( ) & ~KEYCATCH_CGAME );
 	Cvar_Set( "cg_chatHandler", "0" );		// see Con_ChatByCgame()
+	Cvar_Set( "cg_catchQuiet", "0" );		// see CL_CmdButtons()
 
 	if ( !cls.cgameStarted )
 		return;
@@ -520,6 +521,8 @@ void CL_InitCGame( void ) {
 
 	// a cgame of this tree sets it again when it takes the chat line (Con_ChatByCgame())
 	Cvar_Set( "cg_chatHandler", "0" );
+	// and this one while it holds the keys without its player typing (CL_CmdButtons())
+	Cvar_Set( "cg_catchQuiet", "0" );
 
 	// put away the console
 	Con_Close();

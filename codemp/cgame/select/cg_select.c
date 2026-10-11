@@ -95,6 +95,7 @@ static struct {
 	qboolean	held;					// +cursor
 	qboolean	toggled;				// "cursor"
 	qboolean	catching;				// this file asked for the keys and the mouse
+	qboolean	quiet;					// and told the engine that its player does not type meanwhile (cg_catchQuiet)
 	int			hover;					// the player under the pointer, -1: none
 	int			selected;				// the player whose card is open, -1: none
 	// what the card and the name of the player under the pointer are drawn on: beside their player, a little late
@@ -580,6 +581,49 @@ static float Board_Width( const selectBoard_t *b, const char *text, float scale 
 	return CG_Text_Width( text, scale * b->unit, Skin_Ready() ? SKIN_FONT_SANS : FONT_SMALL2 ) / b->unit;
 }
 
+// A line that has to stay within `most` units of the card: it is set smaller as far as it stays readable, and
+// what is still too long ends in three dots.
+static void Board_TextFit( const selectBoard_t *b, float x, float y, float scale, const float *color, const char *text, float most ) {
+	char	line[160], value[8];
+	float	width = Board_Width( b, text, scale );
+	int		len;
+
+	if ( width > most ) {
+		const float smaller = Q_max( scale * 0.8f, scale * most / width );
+
+		width *= smaller / scale;
+		scale = smaller;
+	}
+	if ( width <= most ) {
+		Board_Text( b, x, y, scale, color, text );
+		return;
+	}
+	trap->Cvar_VariableStringBuffer( "cl_utf8Text", value, sizeof( value ) );
+	Q_strncpyz( line, text, sizeof( line ) - 4 );
+	for ( len = strlen( line ); len > 0; len = strlen( line ) ) {
+		// one letter less: a byte, or all bytes of a letter of UTF-8
+		if ( atoi( value ) == 1 ) {
+			Q_UTF8_Truncate( line, len - 1 );
+		} else {
+			line[len - 1] = '\0';
+		}
+		len = strlen( line );
+		// (not in the middle of a colour: its two letters go together)
+		if ( len > 0 && line[len - 1] == Q_COLOR_ESCAPE ) {
+			line[--len] = '\0';
+		}
+		while ( len > 0 && line[len - 1] == ' ' ) {
+			line[--len] = '\0';
+		}
+		Q_strcat( line, sizeof( line ), "..." );
+		if ( Board_Width( b, line, scale ) <= most ) {
+			break;
+		}
+		line[len] = '\0';
+	}
+	Board_Text( b, x, y, scale, color, line );
+}
+
 // where a place of a board is on the screen, in units of the HUD. qfalse: not in front of the camera
 static qboolean Board_Screen( const selectBoard_t *b, float x, float y, float *sx, float *sy ) {
 	vec3_t at;
@@ -762,7 +806,7 @@ static void Select_DrawCard( const selectBoard_t *b ) {
 		Skin_Soft( b->corner[0], b->corner[1] + 3.0f * b->unit, SELECT_CARD_W * b->unit, height * b->unit, 10.0f * b->unit, dark );
 	}
 	Board_Panel( b, 0.0f, 0.0f, SELECT_CARD_W, height, 6.0f, fill, edge );
-	Board_Text( b, 8.0f, 5.0f, 0.78f, colorWhite, ci->name );
+	Board_TextFit( b, 8.0f, 5.0f, 0.78f, colorWhite, ci->name, SELECT_CARD_W - 16.0f );
 	// what he is, and his score and ping if the scoreboard has a line of him
 	kind = ( ci->team == TEAM_RED ) ? "Red" : ( ci->team == TEAM_BLUE ) ? "Blue" : ( ci->team == TEAM_SPECTATOR ) ? "Spectator"
 		: ( ci->botSkill != -1 ) ? "Bot" : "Player";
@@ -773,9 +817,9 @@ static void Select_DrawCard( const selectBoard_t *b ) {
 			break;
 		}
 	}
-	Board_Text( b, 8.0f, 20.0f, 0.52f, dim, line );
+	Board_TextFit( b, 8.0f, 20.0f, 0.52f, dim, line, SELECT_CARD_W - 16.0f );
 	if ( CG_StatusLine( n, line, sizeof( line ) ) ) {
-		Board_Text( b, 8.0f, 30.0f, 0.52f, accent, line );
+		Board_TextFit( b, 8.0f, 30.0f, 0.52f, accent, line, SELECT_CARD_W - 16.0f );
 	}
 	Board_Panel( b, 6.0f, SELECT_HEAD_H - 3.0f, SELECT_CARD_W - 12.0f, 0.67f, 0.3f, edge, NULL );
 
@@ -1016,6 +1060,13 @@ void CG_SelectDraw( void ) {
 	// somebody else took the keys away (a menu, the console)
 	if ( sel.catching && !( trap->Key_GetCatcher() & KEYCATCH_CGAME ) ) {
 		sel.catching = sel.toggled = qfalse;
+	}
+	// Who points does not type. An engine of this tree leaves the talk button out of his commands while this
+	// says so (CL_CmdButtons()): no dots over his head for anybody, and the server does not hold him still. In
+	// another engine every catcher of keys is talking, as it always was.
+	if ( sel.quiet != sel.catching ) {
+		sel.quiet = sel.catching;
+		trap->Cvar_Set( "cg_catchQuiet", sel.quiet ? "1" : "0" );
 	}
 	if ( !free ) {
 		sel.hover = -1;
