@@ -54,6 +54,7 @@ int		CG_VoiceAudioWrite( int speaker, const short *samples, int count );
 void	CG_VoiceAudioMix( int speaker, float left, float right, float muffle );
 
 void	CG_VoiceAudioTap( int on );
+int		CG_VoiceAudioPlayed( void );
 int		CG_VoiceAudioTapRead( short *stereo, int maxFrames );
 
 #ifdef __EMSCRIPTEN__

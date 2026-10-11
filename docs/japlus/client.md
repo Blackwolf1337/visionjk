@@ -305,7 +305,8 @@ the machine of the master. Only clients of this tree with its engine draw the li
 | `statuses` | what stands above whom, and whether the server or the voice master tells it |
 | `status_test <text>`, `status_test stop` | said as the music of this player in place of what plays, for tests. `cg_shareMusic` still decides |
 
-Not run on Windows: the Windows code was compiled with mingw.
+On Windows the lines by the server, through a voice master and from the title of a window ran on 2026-10-11,
+see [windows.md](windows.md).
 
 ### Clickable players
 
@@ -482,7 +483,8 @@ An admin logs in with an Ed25519 key, the kind ssh uses, and no password goes ov
 Run on 2026-10-11 against a server on this machine with scripted clients (`japlus_port/tools/sectest/e2e.sh`):
 a key file made with `amkey new` (mode 600, read back by `ssh-keygen`) and its login as council, a login as
 knight through an `ssh-agent` started for the test, a one-time code, and a rank password that is refused with
-a line that says why. Not run: an agent that asks its user first (1Password), Windows. That server had
+a line that says why. Not run: an agent that asks its user first (1Password). On Windows the key file and the
+OpenSSH agent of Windows both logged in on 2026-10-11, see [windows.md](windows.md). That server had
 `sv_floodProtect 0`, which is why the run did not show the dropped commands. The spacing of the commands is
 not run against any server yet.
 

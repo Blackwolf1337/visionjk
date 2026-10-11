@@ -46,7 +46,7 @@ has room for.
 | `+voice` | talk while it is held |
 | `+voiceclan` | talk to the clan over the radio while it is held, see "The clan radio" |
 | `voice_devices` | the microphones and speakers there are |
-| `voice_status` | is the chat connected, who talks, who is muted, how many frames of each player were heard |
+| `voice_status` | is the chat connected, do the speakers play, who talks, who is muted, how many frames of each player were heard |
 | `voice_mute <player>`, `voice_unmute <player or all>` | do not hear one player. Holds until the level changes |
 | `voice_test tone`, `voice_test play <name>`, `voice_test stop` | a tone, or the file `voice/<name>.raw` again and again, in place of the microphone. For tests |
 | `voice_test record <name>` | what is played also goes into `voice/<name>.raw`, until `voice_test stop`. For tests |
@@ -457,8 +457,9 @@ muffled and at full loudness. So nobody of the clan is left out, some hear it du
   his music ended, and after a minute without a key the two who stayed were away for each other. The game
   server got no command of it.
 
-Not checked: the master on its real machine (it has to be deployed anew), the internet path, Windows, a real
-player of music on this path, how any of it sounds.
+Not checked: the master on its real machine (it has to be deployed anew), the internet path, a real player of
+music on this path, how any of it sounds. On Windows the relay, the master and the statuses ran the same day,
+see [windows.md](windows.md).
 
 2026-10-07, Linux, without sound hardware. The clan radio of 2026-10-11 has unit tests only (the datagram, what
 its sound lets through: 1000 Hz whole, 100 Hz and 8000 Hz at less than a tenth, the clicks), 145 checks with the
@@ -487,7 +488,7 @@ client whose `cp_clanPwd` is still "none" is now told so instead of sending to n
 - Builds: Linux 64, and with mingw for Windows 64. The Windows cgame imports `ws2_32` in addition to
   what it imported before.
 
-Not checked: a real microphone and real speakers, how it sounds, Windows at run time, the
+Not checked: a real microphone and real speakers, how it sounds, the
 original JA+ plugin as the client without it, macOS (not even built), more than two speakers, a connection with
 loss, a server over the internet.
 

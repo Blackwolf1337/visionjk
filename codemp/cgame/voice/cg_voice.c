@@ -1782,6 +1782,11 @@ void CG_VoiceStatus_f( void ) {
 			voice.linked ? "connected" : silent, voice.range,
 			cg_voiceMode.integer == 2 ? "voice activation" : "push to talk (+voice)",
 			CG_VoiceAudioCapturing() ? "open" : "closed", voice.sending ? ", sending" : "" );
+		// do the speakers run: the frames they took so far, in seconds
+		if ( !voice.audio || CG_VoiceAudioPlayed() < 0 )
+			trap->Print( "Speakers: none open, you do not hear the others\n" );
+		else
+			trap->Print( "Speakers: open, %.1f seconds played so far\n", CG_VoiceAudioPlayed() / (float)VOICE_RATE );
 		trap->Print( "Clan radio (+voiceclan): %s\n", !voice.radio ? ( voice.master ? "the voice master does not have it" : "not on this server" )
 			: voice.master ? "the voice master has it. It reaches the players of this server with your clan password (cp_clanPwd)"
 			: "the server has it. It reaches the players with your clan password (cp_clanPwd)" );

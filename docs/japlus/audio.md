@@ -483,7 +483,9 @@ Cost on mp/ffa3 with bots fighting (AMD Ryzen 9 5900X 12-Core Processor, two thr
 reflections and paths 21 ms, in its own thread, about seven a second. In the thread of the game the sound costs mostly under 0.5 ms a frame
 and up to 2 ms, most of it the reverb. The paths of mp/ffa3: 740 probes, under a second, a file of 660 kB.
 
-Builds: Linux 64, and the client and the modules for 64 bit Windows with mingw (built, never run).
+Builds: Linux 64, and the client and the modules for 64 bit Windows with mingw (run on Windows 11 on 2026-10-11
+with `s_spatial 1`: library loaded, level handed over, paths worked out and stored, see [windows.md](windows.md).
+Nobody listened).
 
 The library in the build, 2026-10-08: after a build it is next to the client, after an install too, on Linux 64
 and with mingw for Windows 64. The fetching was tried with the zip from the disk (`file://`): the library came
@@ -531,5 +533,6 @@ download itself was not run. The part for macOS and its application bundle is wr
   sound.
 - A voice is 0.1 s later than on the voice chat's own device. That number is from the code, not measured.
 - Not tried: more than one speaker at a time, a speaker who moves, a change of level while somebody talks.
-- Not run: Windows and macOS. Not built: macOS, 64 bit Windows.
+- Not run: macOS. Not built: macOS. On Windows it started and worked out the paths of a level (2026-10-11,
+  [windows.md](windows.md)), nobody has heard it there, and it is off by default there.
 - 22 kHz (`s_khz 22`) is refused.

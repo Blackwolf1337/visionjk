@@ -42,7 +42,7 @@ JA+ draw is drawn. What is open is what was never run, and a few cvars.
 | Automap | done |
 | `r_showtris`, `r_shownormals`, `r_showImages`, `r_vkStatic`, `gfxinfo`, `imagelist` | done |
 | Window: resized from outside, `r_swapInterval`, a window nobody sees, `vid_restart` between the renderers | done |
-| Windows DLL, 64 bit | builds, never loaded into a game |
+| Windows DLL, 64 bit | started on Windows 11 on Mesa's software Vulkan and drew the menus (2026-10-11, [windows.md](windows.md)). No level, no real graphics card |
 | Portals and mirrors, `alphaGen portal` | done, in a test room: no level of the base game has one (see "Checked") |
 | Videos: a `.roq` on the screen, `videoMap` in a shader | done |
 | Fullscreen, also at a size that is not the one of the desktop | done |
@@ -678,4 +678,5 @@ least 1 ms, in a `timedemo` too), so there is nothing to measure there. See [thr
 neither renderer is the limit at 60 or 125 frames a second on this machine. `tools/clienttests/rd_benchrec.cfg`
 records such a demo, `rd_bench.cfg` plays it.
 
-Not checked: other graphics cards and drivers, Windows at run time, macOS, a long game session, play by a person.
+Not checked: other graphics cards and drivers, Windows beyond the menus on a software Vulkan, macOS, a long game
+session, play by a person.

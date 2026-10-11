@@ -67,6 +67,7 @@ static audioSpeaker_t	audioSpeakers[VOICE_SPEAKERS];
 static ma_pcm_rb		audioMic;
 static ma_pcm_rb		audioTap;
 static ma_atomic_bool32	audioTapOn;
+static ma_atomic_uint32	audioPlayed;		// frames the speakers asked for since they were opened: do they run at all
 
 static short			audioSpeakerMem[VOICE_SPEAKERS][AUDIO_SPEAKER_SAMPLES];
 static short			audioMicMem[AUDIO_CAPTURE_SAMPLES];
@@ -249,6 +250,8 @@ static void Audio_Play( ma_device *device, void *output, const void *input, ma_u
 		else if ( out[s] < -1.0f )
 			out[s] = -1.0f;
 	}
+
+	ma_atomic_uint32_set( &audioPlayed, ma_atomic_uint32_get( &audioPlayed ) + frames );
 
 	// what is played, for the test that writes it to a file
 	if ( ma_atomic_bool32_get( &audioTapOn ) ) {
@@ -480,6 +483,12 @@ void CG_VoiceAudioTap( int on ) {
 	if ( on )
 		ma_pcm_rb_reset( &audioTap );
 	ma_atomic_bool32_set( &audioTapOn, on ? MA_TRUE : MA_FALSE );
+}
+
+// How many frames the speakers took since they were opened, -1: they are not open. A number that stands still
+// says the sound device does not run, whatever the system said when it was opened.
+int CG_VoiceAudioPlayed( void ) {
+	return audioReady ? (int)( ma_atomic_uint32_get( &audioPlayed ) & 0x7fffffff ) : -1;
 }
 
 // what was played since the last call: up to maxFrames pairs of 16 bit samples. Returns how many.
