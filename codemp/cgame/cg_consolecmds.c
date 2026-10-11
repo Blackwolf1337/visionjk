@@ -327,6 +327,8 @@ static consoleCommand_t	commands[] = {
 	{ "sizedown",					CG_SizeDown_f },
 	{ "sizeup",						CG_SizeUp_f },
 	{ "startOrbit",					CG_StartOrbit_f },
+	{ "status_test",				CG_StatusTest_f },
+	{ "statuses",					CG_StatusList_f },
 	{ "tcmd",						CG_TargetCommand_f },
 	{ "tell_attacker",				CG_TellAttacker_f },
 	{ "tell_target",				CG_TellTarget_f },

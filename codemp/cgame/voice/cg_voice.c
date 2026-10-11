@@ -135,6 +135,8 @@ static struct {
 	qboolean			stateDue;		//	whether it has to be told again,
 	int					refusedSince;	//	and since when it says no, 0: it does not
 	qboolean			toldRefused;
+	qboolean			social;			// the master knows the clan radio and the statuses (VOICE_FLAG_SOCIAL)
+	byte				clan[VOICE_CLAN_BYTES];	//	and this is what it is told as the clan of this client, all zero: none
 	qboolean			asked;			// "jpvoice hello" went to the server,
 	int					asks;			//	this many times
 	qboolean			answered;		// the server answered: port, token, range
@@ -712,19 +714,20 @@ static void Voice_SendFrame( const short *samples, int type ) {
 =================
 Voice_RadioKey
 
-+voiceclan is held, or not: whether what is said now goes over the clan radio. It does on a server whose relay
-knows the radio, for a player who has a clan password (the server decides who that reaches). The key cracks
-when it is pressed and when it is let go, as the key of a radio does, so the player knows he is on it.
++voiceclan is held, or not: whether what is said now goes over the clan radio. It does where the relay knows the
+radio (the one of the server, or the voice master), for a player who has a clan password: the server decides
+who that reaches, the master goes by what Voice_MasterClan() made of the password. The key cracks when it is
+pressed and when it is let go, as the key of a radio does, so the player knows he is on it.
 =================
 */
 static qboolean Voice_RadioKey( void ) {
 	char		pass[64];
 	qboolean	on = voice.clanDown;
 
-	if ( on && ( !voice.radio || voice.master ) ) {
+	if ( on && !voice.radio ) {
 		if ( !voice.toldNoRadio ) {
 			voice.toldNoRadio = qtrue;
-			trap->Print( "Voice chat: this server has no clan radio.\n" );
+			trap->Print( "Voice chat: %s has no clan radio.\n", voice.master ? "the voice master" : "this server" );
 		}
 		on = qfalse;
 	}
@@ -900,8 +903,16 @@ with it. With the same token: this client is in, or the flags say why not.
 =================
 */
 static void Voice_MasterAnswer( const voicePacket_t *p, int now ) {
+	const qboolean social = ( p->flags & VOICE_FLAG_SOCIAL ) ? qtrue : qfalse;
+
 	if ( p->client != cg.clientNum )
 		return;
+	// A master that knows the radio is told the clan of this client from now on, in the long state
+	if ( social != voice.social ) {
+		voice.social = voice.radio = social;
+		voice.toldNoRadio = qfalse;
+		voice.stateDue = qtrue;
+	}
 	if ( p->token != voice.token ) {
 		voice.token = p->token;
 		voice.linked = qfalse;
@@ -969,6 +980,15 @@ static void Voice_Receive( int now ) {
 		}
 		if ( p.client >= MAX_CLIENTS || p.client == cg.clientNum )
 			continue;
+		if ( p.type == VOICE_STATUS ) {
+			// what stands above the head of somebody, handed on by the voice master (status/cg_status.c)
+			char		text[VOICE_STATUS_TEXT];
+			qboolean	away;
+
+			if ( voice.master && BG_VoiceStatusUnpack( &p, &away, text, sizeof( text ) ) )
+				CG_StatusFromMaster( p.client, away, text );
+			continue;
+		}
 		sp = &voiceSpeakers[p.client];
 		if ( sp->muted || !sp->decoderOk )
 			continue;
@@ -1405,6 +1425,39 @@ static void Voice_MasterRoom( int now ) {
 
 /*
 =================
+Voice_MasterClan
+
+What the voice master is told as the clan of this client: eight bytes that are the same for everybody in this
+room with this clan password (cp_clanPwd, the group of the clan chat) and that say nothing about the password
+to somebody who does not have it. The room is part of them, so they are others with every level. All zero: this
+player has no clan password, and what he says over the radio reaches nobody.
+=================
+*/
+static void Voice_MasterClan( void ) {
+	char	pass[64], text[VOICE_ROOM_BYTES + sizeof( pass ) + 8];
+	byte	digest[WEB_SHA1_SIZE], clan[VOICE_CLAN_BYTES];
+	int		len;
+
+	memset( clan, 0, sizeof( clan ) );
+	trap->Cvar_VariableStringBuffer( "cp_clanPwd", pass, sizeof( pass ) );
+	// "none" is what the cvar has until the player sets it
+	if ( pass[0] && Q_stricmp( pass, "none" ) ) {
+		memcpy( text, "clan", 4 );
+		memcpy( text + 4, voice.room, VOICE_ROOM_BYTES );
+		len = (int)strlen( pass );
+		memcpy( text + 4 + VOICE_ROOM_BYTES, pass, (size_t)len );
+		Web_SHA1( text, (size_t)( 4 + VOICE_ROOM_BYTES + len ), digest );
+		memcpy( clan, digest, VOICE_CLAN_BYTES );
+		clan[0] |= 1;		// never all zero
+	}
+	if ( memcmp( clan, voice.clan, VOICE_CLAN_BYTES ) ) {
+		memcpy( voice.clan, clan, VOICE_CLAN_BYTES );
+		voice.stateDue = qtrue;
+	}
+}
+
+/*
+=================
 Voice_Hear
 
 Whom this client wants to hear and who may hear it, a bit per client number: the range of the voice chat, as
@@ -1468,7 +1521,8 @@ Voice_MasterFrame
 
 Keeps the master told: at once when the room or one of the masks changed, and once a second anyway, which is
 also what keeps the session there and the way through the router of the player open. Until the master
-answered, twice a second, and after ten seconds without an answer only every five.
+answered, twice a second, and after ten seconds without an answer only every five. The clan password is looked
+at with the room: it is part of what the master is told.
 =================
 */
 static void Voice_MasterFrame( int now ) {
@@ -1477,6 +1531,7 @@ static void Voice_MasterFrame( int now ) {
 	if ( now - voice.roomTime >= VOICE_ROOM_MSEC || !voice.roomTime ) {
 		voice.roomTime = now;
 		Voice_MasterRoom( now );
+		Voice_MasterClan();
 	}
 	if ( now - voice.hearTime >= VOICE_HEAR_MSEC ) {
 		voice.hearTime = now;
@@ -1488,10 +1543,12 @@ static void Voice_MasterFrame( int now ) {
 	else
 		every = ( now - voice.askTime > VOICE_NO_LINK_MSEC ) ? VOICE_KEEPALIVE_MSEC : VOICE_HELLO_MSEC;
 	if ( !voice.stateTime || now - voice.stateTime >= every || ( voice.stateDue && now - voice.stateTime >= VOICE_STATE_MIN_MSEC ) ) {
-		byte state[VOICE_STATE_BYTES];
+		byte state[VOICE_STATE_LONG_BYTES];
 
+		// the long one, with the clan, only to a master that said it reads it
 		BG_VoiceStatePack( state, voice.room, voice.hear, voice.allow );
-		Voice_Send( VOICE_STATE, state, sizeof( state ) );
+		memcpy( state + VOICE_STATE_BYTES, voice.clan, VOICE_CLAN_BYTES );
+		Voice_Send( VOICE_STATE, state, voice.social ? VOICE_STATE_LONG_BYTES : VOICE_STATE_BYTES );
 		voice.stateTime = now;
 		voice.stateDue = qfalse;
 	}
@@ -1601,6 +1658,32 @@ void CG_VoiceFrame( void ) {
 /*
 ===============================================================================
 
+For the statuses above the heads (status/cg_status.c), on a server whose game module does not pass them on
+
+===============================================================================
+*/
+
+// Does the voice master hand statuses on for this client right now?
+qboolean CG_VoiceSocial( void ) {
+#ifdef __EMSCRIPTEN__
+	return qfalse;
+#else
+	return ( voice.master && voice.linked && voice.social ) ? qtrue : qfalse;
+#endif
+}
+
+// What stands above the head of this player goes to the others of the room. text is UTF-8. The master takes one
+// a second.
+void CG_VoiceSendStatus( qboolean away, const char *text ) {
+	byte status[VOICE_STATUS_TEXT];
+
+	if ( CG_VoiceSocial() )
+		Voice_Send( VOICE_STATUS, status, BG_VoiceStatusPack( status, away, text ) );
+}
+
+/*
+===============================================================================
+
 Commands
 
 ===============================================================================
@@ -1680,8 +1763,9 @@ void CG_VoiceStatus_f( void ) {
 			voice.linked ? "connected" : silent, voice.range,
 			cg_voiceMode.integer == 2 ? "voice activation" : "push to talk (+voice)",
 			CG_VoiceAudioCapturing() ? "open" : "closed", voice.sending ? ", sending" : "" );
-		trap->Print( "Clan radio (+voiceclan): %s\n", ( voice.radio && !voice.master ) ? "the server has it. It reaches the players with your clan password (cp_clanPwd)"
-			: "not on this server" );
+		trap->Print( "Clan radio (+voiceclan): %s\n", !voice.radio ? ( voice.master ? "the voice master does not have it" : "not on this server" )
+			: voice.master ? "the voice master has it. It reaches the players of this server with your clan password (cp_clanPwd)"
+			: "the server has it. It reaches the players with your clan password (cp_clanPwd)" );
 	}
 #ifdef __EMSCRIPTEN__
 	if ( cg_voice.integer && voice.serverHas && CG_VoiceAudioNoMicrophone() )
@@ -1793,5 +1877,7 @@ void CG_VoiceMute_f( void ) {}
 void CG_VoiceUnmute_f( void ) {}
 void CG_VoiceDraw( void ) {}
 int CG_VoiceLip( int clientNum ) { (void)clientNum; return 0; }
+qboolean CG_VoiceSocial( void ) { return qfalse; }
+void CG_VoiceSendStatus( qboolean away, const char *text ) { (void)away; (void)text; }
 
 #endif // JP_VOICE

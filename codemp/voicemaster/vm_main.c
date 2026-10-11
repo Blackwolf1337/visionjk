@@ -28,6 +28,10 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // number, whom that client wants to hear and who may hear it. A voice goes from a speaker to a listener of the
 // same room if the listener wants to hear him and the speaker lets him. It never looks into the sound.
 //
+// Since 2026-10-11 it hands on two more things, for clients that say more in their VOICE_STATE: what a speaker
+// says for his clan (VOICE_RADIO) to the members of the room that named the same clan, and what stands above
+// the head of a player (VOICE_STATUS) to the others of his room. It keeps neither.
+//
 // A program by itself with nothing of the engine in it, one thread and one socket. It is no game, so it does
 // wait: in select(), for the next datagram, a second at most.
 
@@ -52,6 +56,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define VM_MAX_PER_WAKE			256		// datagrams taken before the clock is looked at again
 #define VM_DATAGRAM_OVERHEAD	28		// IPv4 and UDP in front of every datagram, counted into -maxkbps
 #define VM_DEFAULT_KBPS			4000
+#define VM_STATUS_MSEC			1000	// one VOICE_STATUS of a session is handed on in this time at most
 
 typedef struct vmSession_s {
 	qboolean			used;
@@ -60,6 +65,9 @@ typedef struct vmSession_s {
 	int					room;
 	int					client;			// the number he has on his game server, as he says
 	unsigned int		hear, allow;	// a bit per client number of his room
+	qboolean			social;			// he sends the long state: a client that knows VOICE_STATUS,
+	byte				clan[VOICE_CLAN_BYTES];	//	and this is his clan in that room, all zero: none
+	int64_t				statusTime;		// when his last VOICE_STATUS was handed on
 	voiceLimit_t		limit;
 	int64_t				lastHeard;
 	int					next;			// the next session in the same slot of vmByToken, -1: none
@@ -265,6 +273,8 @@ static qboolean VM_Send( const struct sockaddr_in *to, const voicePacket_t *p, i
 	return qtrue;
 }
 
+// Every answer says that this master knows the clan radio and the statuses: a client sends neither, and no
+// long state, until it read that.
 static void VM_Answer( const struct sockaddr_in *to, int client, unsigned int token, int flags, int64_t now ) {
 	voicePacket_t p;
 
@@ -272,7 +282,7 @@ static void VM_Answer( const struct sockaddr_in *to, int client, unsigned int to
 	p.type = VOICE_STATE;
 	p.client = client;
 	p.token = token;
-	p.flags = flags;
+	p.flags = flags | VOICE_FLAG_SOCIAL;
 	VM_Send( to, &p, now, qtrue );
 }
 
@@ -289,7 +299,7 @@ cg_voice.c): it has another token there and its session here ends by itself.
 =================
 */
 static void VM_State( const struct sockaddr_in *from, const voicePacket_t *p, int len, int64_t now ) {
-	const byte		*key;
+	const byte		*key, *clan;
 	unsigned int	hear, allow, token;
 	int				index, flags = 0;
 	vmSession_t		*s;
@@ -316,7 +326,42 @@ static void VM_State( const struct sockaddr_in *from, const voicePacket_t *p, in
 	s->hear = hear;
 	s->allow = allow;
 	s->lastHeard = now;
+	// the long state: he knows the statuses, and maybe he has a clan
+	s->social = ( p->dataLen == VOICE_STATE_LONG_BYTES ) ? qtrue : qfalse;
+	clan = BG_VoiceStateClan( p );
+	if ( clan )
+		memcpy( s->clan, clan, VOICE_CLAN_BYTES );
+	else
+		memset( s->clan, 0, VOICE_CLAN_BYTES );
 	VM_Answer( from, p->client, token, 0, now );
+}
+
+// The session a datagram with sound or a status came from, with what it sent counted. NULL: there is none, or
+// it sent more than a speaker may.
+static vmSession_t *VM_Speaker( const struct sockaddr_in *from, const voicePacket_t *p, int len, int64_t now ) {
+	const int	index = VM_FindSession( p->token, &from->sin_addr, p->client );
+	vmSession_t	*s;
+
+	if ( index < 0 ) {
+		vmOut.refused++;
+		return NULL;
+	}
+	s = &vmSessions[index];
+	if ( !BG_VoiceLimit( &s->limit, (int)( now & 0x7fffffff ), len ) ) {
+		vmOut.limited++;
+		return NULL;
+	}
+	s->addr = *from;
+	s->lastHeard = now;
+	return s;
+}
+
+static void VM_Pass( const vmSession_t *listener, voicePacket_t *out, int64_t now ) {
+	out->token = listener->token;
+	if ( VM_Send( &listener->addr, out, now, qfalse ) )
+		vmOut.relayed++;
+	else
+		vmOut.capped++;
 }
 
 /*
@@ -333,24 +378,13 @@ token, so this port can not be used to flood somebody else.
 =================
 */
 static void VM_Audio( const struct sockaddr_in *from, const voicePacket_t *p, int len, int64_t now ) {
-	const int		index = VM_FindSession( p->token, &from->sin_addr, p->client );
-	vmSession_t		*s;
-	const vmRoom_t	*room;
-	voicePacket_t	out = *p;
-	int				i;
+	const vmSession_t	*s = VM_Speaker( from, p, len, now );
+	const vmRoom_t		*room;
+	voicePacket_t		out = *p;
+	int					i;
 
-	if ( index < 0 ) {
-		vmOut.refused++;
+	if ( !s )
 		return;
-	}
-	s = &vmSessions[index];
-	if ( !BG_VoiceLimit( &s->limit, (int)( now & 0x7fffffff ), len ) ) {
-		vmOut.limited++;
-		return;
-	}
-	s->addr = *from;
-	s->lastHeard = now;
-
 	room = &vmRooms[s->room];
 	out.flags = 0;
 	// no relay here knows how far away he is. The listener does, from its game, as long as it is shown the
@@ -364,11 +398,80 @@ static void VM_Audio( const struct sockaddr_in *from, const voicePacket_t *p, in
 		listener = &vmSessions[room->member[i]];
 		if ( !( listener->hear & ( 1u << p->client ) ) || !( s->allow & ( 1u << i ) ) )
 			continue;
-		out.token = listener->token;
-		if ( VM_Send( &listener->addr, &out, now, qfalse ) )
-			vmOut.relayed++;
-		else
-			vmOut.capped++;
+		VM_Pass( listener, &out, now );
+	}
+}
+
+/*
+=================
+VM_Radio
+
+What one speaker said for his clan goes to the members of his room who named the same clan, wherever their game
+has them, and to nobody else: as a VOICE_AUDIO with the flags the relay of a game server gives such a frame
+(G_VoiceRadio of g_voice.c), so a client plays it the same from either. The masks of the range do not count
+here. A speaker without a clan reaches nobody.
+=================
+*/
+static void VM_Radio( const struct sockaddr_in *from, const voicePacket_t *p, int len, int64_t now ) {
+	static const byte	none[VOICE_CLAN_BYTES];
+	const vmSession_t	*s = VM_Speaker( from, p, len, now );
+	const vmRoom_t		*room;
+	voicePacket_t		out = *p;
+	int					i;
+
+	if ( !s || !memcmp( s->clan, none, VOICE_CLAN_BYTES ) )
+		return;
+	room = &vmRooms[s->room];
+	out.type = VOICE_AUDIO;
+	out.flags = VOICE_FLAG_RADIO | VOICE_FLAG_UNSEEN;
+	out.distance = 0;
+	for ( i = 0; i < MAX_CLIENTS; i++ ) {
+		const vmSession_t *listener;
+
+		if ( i == p->client || room->member[i] < 0 )
+			continue;
+		listener = &vmSessions[room->member[i]];
+		if ( memcmp( listener->clan, s->clan, VOICE_CLAN_BYTES ) )
+			continue;
+		VM_Pass( listener, &out, now );
+	}
+}
+
+/*
+=================
+VM_Status
+
+What stands above the head of one player (away, the music he listens to) goes to the other members of his room
+that know such a datagram, as it came. Nothing of it is kept or written down: a client says its status again
+every few seconds, which is also how somebody who joins later learns it. One a second from a session at most,
+and none with a control character in its text.
+=================
+*/
+static void VM_Status( const struct sockaddr_in *from, const voicePacket_t *p, int len, int64_t now ) {
+	vmSession_t		*s = VM_Speaker( from, p, len, now );
+	const vmRoom_t	*room;
+	voicePacket_t	out = *p;
+	char			text[VOICE_STATUS_TEXT];
+	qboolean		away;
+	int				i;
+
+	if ( !s )
+		return;
+	if ( !s->social || !BG_VoiceStatusUnpack( p, &away, text, sizeof( text ) ) ) {
+		vmOut.refused++;
+		return;
+	}
+	if ( s->statusTime && now - s->statusTime < VM_STATUS_MSEC ) {
+		vmOut.limited++;
+		return;
+	}
+	s->statusTime = now;
+	room = &vmRooms[s->room];
+	out.flags = out.distance = 0;
+	for ( i = 0; i < MAX_CLIENTS; i++ ) {
+		if ( i == p->client || room->member[i] < 0 || !vmSessions[room->member[i]].social )
+			continue;
+		VM_Pass( &vmSessions[room->member[i]], &out, now );
 	}
 }
 
@@ -396,6 +499,10 @@ static void VM_Receive( int64_t now ) {
 			VM_State( &from, &p, len, now );
 		else if ( p.type == VOICE_AUDIO )
 			VM_Audio( &from, &p, len, now );
+		else if ( p.type == VOICE_RADIO )
+			VM_Radio( &from, &p, len, now );
+		else if ( p.type == VOICE_STATUS )
+			VM_Status( &from, &p, len, now );
 		else
 			vmOut.refused++;
 	}

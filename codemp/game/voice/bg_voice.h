@@ -49,7 +49,22 @@ whatever team they are on, and to nobody else. They get it as a VOICE_AUDIO with
 without a place, which the cgame plays through BG_VoiceRadio(). A relay says that it knows the radio in its
 answer to "jpvoice hello" (VOICE_CAP_RADIO), a client sends no VOICE_RADIO to one that does not. A cgame from
 before the radio does not know the flag: for it the frame has VOICE_FLAG_UNSEEN and a distance of 0 as well,
-which it plays as a voice close by behind a wall. Not through the voice master.
+which it plays as a voice close by behind a wall.
+
+The voice master knows the radio too, and what stands above the head of a player (cg_status.c), since
+2026-10-11. It says so in every answer (VOICE_FLAG_SOCIAL), and only a client that saw that flag sends it
+anything of the following, so a master from before never gets a datagram it would not read:
+
+to the master	"VO" version 2 client token[4] sequence[2]							room[16] hear[4] allow[4] clan[8]
+to the master	"VO" version 3 client token[4] sequence[2]							frame
+to the master	"VO" version 4 client token[4] sequence[2]							flags text
+to a client		"VO" version 4 client token[4] sequence[2] flags distance			flags text
+
+clan: who has the same eight bytes as the speaker in the same room gets his VOICE_RADIO, as a relay sends it.
+They are worked out from the room and the clan password (Voice_MasterClan of cg_voice.c), all zero: no clan.
+The master never has the password. A VOICE_STATUS goes to the others of the room who sent the long state, as it
+came: one byte of flags (VOICE_STATUS_AWAY) and a text of up to VOICE_STATUS_TEXT - 1 bytes, UTF-8, which the
+master does not keep.
 */
 
 #pragma once
@@ -70,9 +85,14 @@ which it plays as a voice close by behind a wall. Not through the voice master.
 #define VOICE_AUDIO				1
 #define VOICE_STATE				2		// the voice master only: where this client is and whom it hears, and the answer
 #define VOICE_RADIO				3		// to the server only: sound for the clan of the speaker
+#define VOICE_STATUS			4		// through the voice master only: what stands above the head of a player
 
 #define VOICE_ROOM_BYTES		16
 #define VOICE_STATE_BYTES		( VOICE_ROOM_BYTES + 8 )	// what a VOICE_STATE to the master carries after its head
+#define VOICE_CLAN_BYTES		8		//	and what the long one carries in addition: the clan of the client
+#define VOICE_STATE_LONG_BYTES	( VOICE_STATE_BYTES + VOICE_CLAN_BYTES )
+#define VOICE_STATUS_TEXT		64		// the text of a status with its end, as STATUS_TEXT of cg_status.c
+#define VOICE_STATUS_AWAY		1		// in the first byte of a VOICE_STATUS: he is away from the keyboard
 #define VOICE_MASTER_PORT		29170	// UDP, where the voice master listens unless it is told another one
 #define VOICE_MASTER_RANGE		1024	// how far a voice carries through the master: the default of g_voiceRange
 
@@ -80,6 +100,7 @@ which it plays as a voice close by behind a wall. Not through the voice master.
 #define VOICE_FLAG_TAKEN		2		// the answer of the master: another session speaks as this client number
 #define VOICE_FLAG_FULL			4		//	or it has no room for one more
 #define VOICE_FLAG_RADIO		8		// to a client: this came over the clan radio and has no place
+#define VOICE_FLAG_SOCIAL		16		// the answer of the master: it knows the long state, VOICE_RADIO and VOICE_STATUS
 #define VOICE_CAP_RADIO			1		// in the answer to "jpvoice hello": the relay knows VOICE_RADIO
 #define VOICE_DISTANCE_STEP		16		// the distance byte counts in steps of this many units
 
@@ -144,6 +165,9 @@ qboolean	BG_VoiceUnpack( const byte *in, int len, qboolean toClient, voicePacket
 int			BG_VoiceSeqDelta( int a, int b );
 void		BG_VoiceStatePack( byte out[VOICE_STATE_BYTES], const byte room[VOICE_ROOM_BYTES], unsigned int hear, unsigned int allow );
 void		BG_VoiceStateUnpack( const voicePacket_t *p, const byte **room, unsigned int *hear, unsigned int *allow );
+const byte	*BG_VoiceStateClan( const voicePacket_t *p );
+int			BG_VoiceStatusPack( byte out[VOICE_STATUS_TEXT], qboolean away, const char *text );
+qboolean	BG_VoiceStatusUnpack( const voicePacket_t *p, qboolean *away, char *text, int textSize );
 
 void		BG_VoiceQueueReset( voiceQueue_t *q );
 qboolean	BG_VoiceQueuePut( voiceQueue_t *q, int seq, const byte *data, int len );

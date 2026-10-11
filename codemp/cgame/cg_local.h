@@ -1779,6 +1779,9 @@ void		CG_Menu3DScene( void );
 void		CG_StatusInit( void );
 void		CG_StatusFrame( void );
 void		CG_StatusServerCommand( void );
+void		CG_StatusFromMaster( int clientNum, qboolean away, const char *text );
+void		CG_StatusList_f( void );
+void		CG_StatusTest_f( void );
 
 // auth/cg_auth.c: admin login with a key
 void		CG_AuthInit( void );
@@ -2118,6 +2121,8 @@ void CG_VoiceMute_f( void );
 void CG_VoiceUnmute_f( void );
 void CG_VoiceDraw( void );
 int CG_VoiceLip( int clientNum );	// how far the mouth of a player is open by what he says, 0 to 4
+qboolean CG_VoiceSocial( void );	// the voice master hands statuses on for this client
+void CG_VoiceSendStatus( qboolean away, const char *text );
 
 void CG_JPAutoReplierInit( void );
 void CG_JPReplyDuelEvent( qboolean start );

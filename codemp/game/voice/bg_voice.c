@@ -42,7 +42,8 @@ sides.
 */
 
 // How long what follows the head has to be. A hello carries nothing, sound is never empty, and a VOICE_STATE
-// carries its fields on the way to the master and nothing on the way back.
+// carries its fields on the way to the master (with or without the clan) and nothing on the way back. A
+// VOICE_STATUS has its flags and maybe a text, both ways.
 static qboolean BG_VoiceBodyFits( int type, int bodyLen, qboolean toClient ) {
 	switch ( type ) {
 	case VOICE_HELLO:
@@ -53,7 +54,11 @@ static qboolean BG_VoiceBodyFits( int type, int bodyLen, qboolean toClient ) {
 		// only ever to the relay: a client gets what came over the radio as a VOICE_AUDIO with a flag
 		return ( !toClient && bodyLen > 0 && bodyLen <= VOICE_MAX_FRAME ) ? qtrue : qfalse;
 	case VOICE_STATE:
-		return ( bodyLen == ( toClient ? 0 : VOICE_STATE_BYTES ) ) ? qtrue : qfalse;
+		if ( toClient )
+			return ( bodyLen == 0 ) ? qtrue : qfalse;
+		return ( bodyLen == VOICE_STATE_BYTES || bodyLen == VOICE_STATE_LONG_BYTES ) ? qtrue : qfalse;
+	case VOICE_STATUS:
+		return ( bodyLen >= 1 && bodyLen <= VOICE_STATUS_TEXT ) ? qtrue : qfalse;
 	default:
 		return qfalse;
 	}
@@ -140,6 +145,53 @@ void BG_VoiceStateUnpack( const voicePacket_t *p, const byte **room, unsigned in
 	*room = p->data;
 	*hear = (unsigned int)in[0] | ( (unsigned int)in[1] << 8 ) | ( (unsigned int)in[2] << 16 ) | ( (unsigned int)in[3] << 24 );
 	*allow = (unsigned int)in[4] | ( (unsigned int)in[5] << 8 ) | ( (unsigned int)in[6] << 16 ) | ( (unsigned int)in[7] << 24 );
+}
+
+// The clan of a client that sent the long VOICE_STATE, VOICE_CLAN_BYTES inside the datagram. NULL: it sent the
+// short one, or has no clan (all zero).
+const byte *BG_VoiceStateClan( const voicePacket_t *p ) {
+	const byte	*clan = p->data + VOICE_STATE_BYTES;
+	int			i;
+
+	if ( p->dataLen != VOICE_STATE_LONG_BYTES )
+		return NULL;
+	for ( i = 0; i < VOICE_CLAN_BYTES; i++ ) {
+		if ( clan[i] )
+			return clan;
+	}
+	return NULL;
+}
+
+// What a VOICE_STATUS carries after its head. Returns its length. A text that is too long is cut where a
+// character of UTF-8 ends.
+int BG_VoiceStatusPack( byte out[VOICE_STATUS_TEXT], qboolean away, const char *text ) {
+	int len = (int)strlen( text );
+
+	if ( len > VOICE_STATUS_TEXT - 1 ) {
+		len = VOICE_STATUS_TEXT - 1;
+		while ( len > 0 && ( (byte)text[len] & 0xc0 ) == 0x80 )
+			len--;
+	}
+	out[0] = away ? VOICE_STATUS_AWAY : 0;
+	memcpy( out + 1, text, (size_t)len );
+	return 1 + len;
+}
+
+// And back. qfalse: the text has a control character in it or does not fit, nothing of it is to be shown.
+qboolean BG_VoiceStatusUnpack( const voicePacket_t *p, qboolean *away, char *text, int textSize ) {
+	const int	len = p->dataLen - 1;
+	int			i;
+
+	if ( p->type != VOICE_STATUS || len < 0 || len >= textSize )
+		return qfalse;
+	for ( i = 0; i < len; i++ ) {
+		if ( p->data[1 + i] < ' ' || p->data[1 + i] == 127 )
+			return qfalse;
+	}
+	*away = ( p->data[0] & VOICE_STATUS_AWAY ) ? qtrue : qfalse;
+	memcpy( text, p->data + 1, (size_t)len );
+	text[len] = '\0';
+	return qtrue;
 }
 
 // how far sequence number a is ahead of b. They wrap at 65536, so this holds while the two are less than
