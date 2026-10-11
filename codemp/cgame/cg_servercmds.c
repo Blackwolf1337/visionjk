@@ -1526,9 +1526,24 @@ static void CG_Print_f( void ) {
 	CG_JPReplyPrint( strEd );
 }
 
-void CG_ChatBox_AddString(char *chatStr);
+// a line for the chat box (chat/cg_chat.c): what kind it is and who said it are read from the line as the server
+// sent it, raw, before the marks of the game are taken out of what is shown. number: the argument in which a
+// server built on OpenJK names the client.
+static void CG_ChatLine( const char *cmd, const char *raw, int number, char *text ) {
+	char	arg[16];
+	int		clientNum = -1;
+
+	if ( trap->Cmd_Argc() > number ) {
+		trap->Cmd_Argv( number, arg, sizeof( arg ) );
+		clientNum = ( arg[0] >= '0' && arg[0] <= '9' ) ? atoi( arg ) : -1;
+	}
+	clientNum = CG_ChatSender( raw, clientNum );
+	CG_RemoveChatEscapeChar( text );
+	CG_ChatAdd( CG_ChatKind( cmd, raw ), clientNum, text );
+}
+
 static void CG_Chat_f( void ) {
-	char cmd[MAX_STRING_CHARS] = {0}, text[MAX_SAY_TEXT] = {0};
+	char cmd[MAX_STRING_CHARS] = {0}, text[MAX_SAY_TEXT] = {0}, raw[MAX_SAY_TEXT] = {0};
 
 	trap->Cmd_Argv( 0, cmd, sizeof( cmd ) );
 
@@ -1537,8 +1552,8 @@ static void CG_Chat_f( void ) {
 			if( cg_chatBeep.integer )
 				trap->S_StartLocalSound( cgs.media.talkSound, CHAN_LOCAL_SOUND );
 			trap->Cmd_Argv( 1, text, sizeof( text ) );
-			CG_RemoveChatEscapeChar( text );
-			CG_ChatBox_AddString( text );
+			Q_strncpyz( raw, text, sizeof( raw ) );
+			CG_ChatLine( cmd, raw, 2, text );
 			trap->Print( "*%s\n", text );
 		}
 	}
@@ -1562,8 +1577,7 @@ static void CG_Chat_f( void ) {
 			if( cg_chatBeep.integer )
 				trap->S_StartLocalSound( cgs.media.talkSound, CHAN_LOCAL_SOUND );
 			Com_sprintf( text, sizeof( text ), "%s^7<%s> ^%s%s", name, loc, color, message );
-			CG_RemoveChatEscapeChar( text );
-			CG_ChatBox_AddString( text );
+			CG_ChatLine( cmd, name, 5, text );
 			trap->Print( "*%s\n", text );
 		}
 	}
@@ -1571,8 +1585,8 @@ static void CG_Chat_f( void ) {
 		if( cg_teamChatBeep.integer )
 			trap->S_StartLocalSound( cgs.media.talkSound, CHAN_LOCAL_SOUND );
 		trap->Cmd_Argv( 1, text, sizeof( text ) );
-		CG_RemoveChatEscapeChar( text );
-		CG_ChatBox_AddString( text );
+		Q_strncpyz( raw, text, sizeof( raw ) );
+		CG_ChatLine( cmd, raw, 2, text );
 		trap->Print( "*%s\n", text );
 	}
 	else if ( !strcmp( cmd, "ltchat" ) ) {
@@ -1594,8 +1608,7 @@ static void CG_Chat_f( void ) {
 		if( cg_teamChatBeep.integer )
 			trap->S_StartLocalSound( cgs.media.talkSound, CHAN_LOCAL_SOUND );
 		Com_sprintf( text, sizeof( text ), "%s^7<%s> ^%s%s", name, loc, color, message );
-		CG_RemoveChatEscapeChar( text );
-		CG_ChatBox_AddString( text );
+		CG_ChatLine( cmd, name, 5, text );
 		trap->Print( "*%s\n", text );
 	}
 }

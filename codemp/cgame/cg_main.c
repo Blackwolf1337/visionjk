@@ -2630,6 +2630,7 @@ Ghoul2 Insert End
 	cgs.levelStartTime = atoi( s );
 
 	CG_VoiceInit();		// in front of the server info, which tells it whether this server has a voice chat
+	CG_ChatInit();
 	CG_ParseServerinfo();
 	CG_JPAutoReplierInit();
 
