@@ -155,6 +155,7 @@ qboolean VK_InitVulkan( void ) {
 	VK_CreateTarget( &vk.color, vk.width, vk.height, GL_RGBA8, GL_NEAREST, vk.samples );
 	VK_CreateTarget( &vk.final, vk.width, vk.height, GL_RGBA8, GL_NEAREST, 1 );
 	VK_CreateTarget( &vk.depth, vk.width, vk.height, GL_DEPTH24_STENCIL8, GL_NEAREST, vk.samples );
+	vk.depthReadable = qtrue;
 	VK_InitPost();
 	VK_InitFrames();
 	VK_InitImages();

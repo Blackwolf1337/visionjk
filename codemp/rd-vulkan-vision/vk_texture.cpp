@@ -40,6 +40,7 @@ static VkAccessFlags VK_LayoutAccess( VkImageLayout layout ) {
 	case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:			return VK_ACCESS_SHADER_READ_BIT;
 	case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:			return VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
 	case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:	return VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+	case VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL:	return VK_ACCESS_SHADER_READ_BIT;
 	default:												return 0;
 	}
 }
@@ -420,6 +421,29 @@ void VK_CreatePostTargets( int blurWidth, int blurHeight ) {
 		VK_CHECK( qvkAllocateDescriptorSets( vk.device, &alloc, sets[i] ) );
 		VK_WritePostSet( *sets[i], targets[i]->view );
 	}
+
+	// The depth of the scene for the depth of field: a view of the depth without the stencil, read pixel for
+	// pixel (not every device filters a depth format) while nothing draws into it.
+	if ( vk.depthReadable ) {
+		VkImageViewCreateInfo view = { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
+		VkDescriptorImageInfo image = { vk.postSampler, VK_NULL_HANDLE, VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL };
+		VkWriteDescriptorSet write = { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
+
+		view.image = vk.depth.image;
+		view.viewType = VK_IMAGE_VIEW_TYPE_2D;
+		view.format = vk.depth.format;
+		view.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+		view.subresourceRange.levelCount = 1;
+		view.subresourceRange.layerCount = 1;
+		VK_CHECK( qvkCreateImageView( vk.device, &view, NULL, &vk.depthView ) );
+		VK_CHECK( qvkAllocateDescriptorSets( vk.device, &alloc, &vk.depthSet ) );
+		image.imageView = vk.depthView;
+		write.dstSet = vk.depthSet;
+		write.descriptorCount = 1;
+		write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		write.pImageInfo = &image;
+		qvkUpdateDescriptorSets( vk.device, 1, &write, 0, NULL );
+	}
 }
 
 void VK_DestroyPostTargets( void ) {
@@ -430,5 +454,9 @@ void VK_DestroyPostTargets( void ) {
 	VK_DestroyTarget( &vk.blur[1] );
 	VK_DestroyTarget( &vk.soft[0] );
 	VK_DestroyTarget( &vk.soft[1] );
+	if ( vk.depthView ) {
+		qvkDestroyImageView( vk.device, vk.depthView, NULL );
+		vk.depthView = VK_NULL_HANDLE;
+	}
 	qvkDestroySampler( vk.device, vk.linearSampler, NULL );
 }

@@ -93,7 +93,7 @@ void VK_EndGlow( void ) {
 
 		VK_ClearColor( 0, 0, vk.width, vk.height, black );
 	}
-	VK_AddTarget( source, (qboolean)( r_DynamicGlowSoft->integer != 0 ) );
+	VK_AddTarget( source, r_DynamicGlowSoft->integer ? VKA_ADD_SOFT : VKA_ADD );
 
 	// the shaders that draw geometry have other sets and other state
 	VK_BindFrameSets();
@@ -105,23 +105,28 @@ void VK_EndGlow( void ) {
 ===============
 VK_BlurFrame
 
-Puts the frame as it is right now out of focus, for a module that asked with RE_SetDepthOfField(): the menu in
-the level of the cgame, which is drawn afterwards and stays sharp. It is no blur by depth, the whole scene is
-soft. amount is 0 to 1 from the module (the menu comes and goes), r_menuBlur is how soft the player wants it:
-0 not at all, 1 as it is meant, up to 4.
+The depth of field a module asked for with RE_SetDepthOfField(): the menu in the level of the cgame, which is
+drawn afterwards and stays sharp. What is farther from the eye than focus goes out of focus, the more the
+farther it is; what is nearer stays as it was drawn (the player next to the menu). amount is 0 to 1 from the
+module (the menu comes and goes), r_menuBlur is how soft the player wants it: 0 not at all, 1 as it is meant,
+up to 4.
 
 The frame goes into a buffer of half its size first: the four samples of that pass are the four pixels behind one
 of the buffer, so nothing flickers. Then passes in that size widen it, each half a pixel further out than the
 one before, three of them at r_menuBlur 1. The glow has buffers too (vk.blur), but they are 320 x 240 by
 default: the scene is unrecognisable after one pass through them, which is what the first version of this did.
-At the end the frame is cleared and the soft picture is added to it, the way r_DynamicGlow 2 shows the glow
-alone.
+
+A last pass gives every pixel of the soft picture how much of it shows, from the depth of the scene at that
+pixel (shaders/focus.frag), and the picture is laid over the frame by that. A device that can not read its
+depth gets the whole frame soft: it is cleared and the soft picture is added to it, the way r_DynamicGlow 2
+shows the glow alone.
 ===============
 */
-void VK_BlurFrame( float amount ) {
+void VK_BlurFrame( float amount, float focus ) {
 	const float	strength = Com_Clamp( 0.0f, 4.0f, r_menuBlur->value );
 	const int	passes = Com_Clampi( 1, 12, (int)( strength * 3.0f + 0.5f ) );
 	const float	black[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
+	const float	*projection = backEnd.viewParms.projectionMatrix;
 	vkTarget_t	*source = &vk.color;
 
 	if ( !vk.frame || amount <= 0.0f || strength <= 0.0f ) {
@@ -141,10 +146,22 @@ void VK_BlurFrame( float amount ) {
 		source = target;
 	}
 
-	// back to the frame, which is the soft picture from here on
-	VK_BeginTarget( &vk.color, &vk.depth, 2, qtrue );
-	VK_ClearColor( 0, 0, vk.width, vk.height, black );
-	VK_AddTarget( source, qfalse );
+	if ( vk.depthReadable && focus > 0.0f ) {
+		vkTarget_t *target = &vk.soft[source == &vk.soft[0] ? 1 : 0];
+		// What the depth buffer holds is ( z + 1 ) / 2 of the projection, 0 at zNear and 1 at zFar: the distance
+		// is m[14] / ( 2 depth - 1 + m[10] ). The effect is all there after the first third of the way in, the
+		// picture of half the size is soft from its first pass on.
+		const float parm[4] = { projection[14] * 0.5f, ( projection[10] - 1.0f ) * 0.5f, focus, Q_min( amount * 3.0f, 1.0f ) };
+
+		VK_FocusPass( source, target, parm );
+		VK_BeginTarget( &vk.color, &vk.depth, 2, qtrue );
+		VK_AddTarget( target, VKA_BLEND );
+	} else {
+		// back to the frame, which is the soft picture from here on
+		VK_BeginTarget( &vk.color, &vk.depth, 2, qtrue );
+		VK_ClearColor( 0, 0, vk.width, vk.height, black );
+		VK_AddTarget( source, VKA_ADD );
+	}
 
 	// the shaders that draw geometry have other sets and other state
 	VK_BindFrameSets();

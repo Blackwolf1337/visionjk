@@ -692,6 +692,11 @@ static void RB_CaptureForEntity( const trRefEntity_t *ent ) {
 	VK_SetRefraction( qtrue, cX, cY, rad );
 }
 
+// The scene is put out of focus when it is drawn (VK_BlurFrame): what stands over all of it (RGBA_SHADER_OVER,
+// the panel behind the menu in the level) is left out of it then and drawn onto the soft frame, so it is as
+// sharp as the menu on it. rb_sawOver: the list had such surfaces.
+static qboolean	rb_overLater, rb_sawOver;
+
 /*
 ===============
 RB_RenderDrawSurfList
@@ -728,8 +733,12 @@ static void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 			continue;
 		}
 		R_DecomposeSort( drawSurf->sort, &entityNum, &shader, &fogNum, &dlighted );
-		// if we're rendering glowing objects, and this shader has no stages with glow, skip it
-		if ( g_bRenderGlowingObjects && !shader->hasGlow ) {
+		if ( rb_overLater && shader->over ) {
+			rb_sawOver = qtrue;
+		}
+		// if we're rendering glowing objects, and this shader has no stages with glow, skip it. And what stands
+		// over the scene while that is put out of focus: RB_RenderOverSurfs() draws it
+		if ( ( g_bRenderGlowingObjects && !shader->hasGlow ) || ( rb_overLater && shader->over ) ) {
 			shader = oldShader;
 			entityNum = oldEntityNum;
 			fogNum = oldFogNum;
@@ -859,6 +868,61 @@ static void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 	}
 }
 
+/*
+===============
+RB_RenderOverSurfs
+
+The surfaces of the list that RB_RenderDrawSurfList() left out because they stand over the scene, onto the frame
+as it is now. They test no depth and leave none.
+===============
+*/
+static void RB_RenderOverSurfs( drawSurf_t *drawSurfs, int numDrawSurfs ) {
+	shader_t *shader = NULL, *oldShader = NULL;
+	int fogNum = 0, oldFogNum = -1;
+	int entityNum = 0, oldEntityNum = -1;
+	int dlighted = 0;
+	unsigned int oldSort = (unsigned int)-1;
+	const float originalTime = backEnd.refdef.floatTime;
+	drawSurf_t *drawSurf = drawSurfs;
+	qboolean over = qfalse;
+
+	SetViewportAndScissor();
+	for ( int i = 0; i < numDrawSurfs; i++, drawSurf++ ) {
+		if ( drawSurf->sort != oldSort ) {
+			oldSort = drawSurf->sort;
+			R_DecomposeSort( drawSurf->sort, &entityNum, &shader, &fogNum, &dlighted );
+			over = (qboolean)shader->over;
+			if ( !over ) {
+				continue;
+			}
+			if ( shader != oldShader || fogNum != oldFogNum || entityNum != oldEntityNum ) {
+				if ( oldShader != NULL ) {
+					RB_EndSurface();
+				}
+				RB_BeginSurface( shader, fogNum );
+				oldShader = shader;
+				oldFogNum = fogNum;
+			}
+			if ( entityNum != oldEntityNum ) {
+				RB_SetEntity( entityNum, originalTime );
+				oldEntityNum = entityNum;
+			}
+		} else if ( !over ) {
+			continue;
+		}
+		VK_AddSurface( drawSurf->surface );
+	}
+	if ( oldShader != NULL ) {
+		RB_EndSurface();
+	}
+	backEnd.refdef.floatTime = originalTime;
+
+	// go back to the world modelview matrix
+	backEnd.currentEntity = &tr.worldEntity;
+	backEnd.ori = backEnd.viewParms.world;
+	VK_InvalidateTransform();
+}
+
 static const void *RB_DrawSurfs( const void *data ) {
 	const drawSurfsCommand_t *cmd = (const drawSurfsCommand_t *)data;
 
@@ -869,6 +933,13 @@ static const void *RB_DrawSurfs( const void *data ) {
 	}
 	backEnd.refdef = cmd->refdef;
 	backEnd.viewParms = cmd->viewParms;
+	// A module asked for the scene out of focus (RE_SetDepthOfField): the view of the level itself, not a
+	// mirror in it, the sky of a portal or a model of the HUD. The 2D comes afterwards and is sharp.
+	const qboolean focus = (qboolean)( r_dofAmount > 0.0f && r_menuBlur->value > 0.0f && !backEnd.viewParms.isPortal
+		&& !( backEnd.refdef.rdflags & ( RDF_NOWORLDMODEL | RDF_SKYBOXPORTAL ) ) );
+
+	rb_overLater = focus;
+	rb_sawOver = qfalse;
 	RB_RenderDrawSurfList( cmd->drawSurfs, cmd->numDrawSurfs );
 	// the flares of this view want to know what the depth is where they are, before the next view clears it
 	VK_CopyProbes();
@@ -880,12 +951,13 @@ static const void *RB_DrawSurfs( const void *data ) {
 		g_bRenderGlowingObjects = false;
 		VK_EndGlow();
 	}
-	// A module asked for the scene out of focus (RE_SetDepthOfField): the view of the level itself, not a
-	// mirror in it, the sky of a portal or a model of the HUD. The 2D comes afterwards and is sharp.
-	if ( r_dofAmount > 0.0f && r_menuBlur->value > 0.0f && !backEnd.viewParms.isPortal
-		&& !( backEnd.refdef.rdflags & ( RDF_NOWORLDMODEL | RDF_SKYBOXPORTAL ) ) ) {
-		VK_BlurFrame( r_dofAmount );
+	if ( focus ) {
+		VK_BlurFrame( r_dofAmount, r_dofFocus );
+		if ( rb_sawOver ) {
+			RB_RenderOverSurfs( cmd->drawSurfs, cmd->numDrawSurfs );
+		}
 	}
+	rb_overLater = qfalse;
 	// the next picture has to set the 2D projection up again
 	tess.shader = NULL;
 	return (const void *)( cmd + 1 );

@@ -507,6 +507,7 @@ typedef struct shader_s {
 
 	// True if this shader has a stage with glow in it (just an optimization).
 	bool hasGlow;
+	bool over;							// RGBA_SHADER_OVER: drawn over all of the scene, also over its depth of field
 
 	struct shader_s *remappedShader;                  // current shader this one is remapped too
 	struct	shader_s	*next;

@@ -148,6 +148,11 @@ typedef struct vkDeviceState_s {	// see vkState_t
 	VkDescriptorSet				blurSets[2];
 	VkDescriptorSet				softSets[2];
 	VkSampler					linearSampler;
+	// the depth of the scene as a texture, for the depth of field (VK_FocusPass)
+	qboolean					depthReadable;		// the device lets its format be read in a shader
+	VkImageView					depthView;			// of the depth alone, without the stencil
+	VkDescriptorSet				depthSet;
+	VkPipelineLayout			focusPipelineLayout;	// two sets of the kind of postSet: a target and the depth
 
 	VkShaderModule				vertexShaders[VKP_NUM_PROGRAMS];
 	VkShaderModule				fragmentShaders[VKP_NUM_PROGRAMS];
@@ -157,7 +162,9 @@ typedef struct vkDeviceState_s {	// see vkState_t
 	VkShaderModule				blurFragmentShader;
 	VkShaderModule				copyFragmentShader;
 	VkPipeline					blurPipeline;
-	VkPipeline					glowPipelines[2];	// the blurred glow onto the frame: added, or added softly
+	VkPipeline					glowPipelines[3];	// a target onto the frame, vkAdd_t: added, added softly, by its alpha
+	VkShaderModule				focusFragmentShader;
+	VkPipeline					focusPipeline;
 	vkPipeline_t				pipelines[VK_MAX_PIPELINES];
 	int							numPipelines;
 	uint32_t					lastPipelineKey;	// what VK_FindPipeline() was asked last and what it answered

@@ -324,7 +324,7 @@ the hips, and the menu stands in the level to the right of him. The game goes on
 | Cvar | Default | Meaning |
 |------|---------|---------|
 | `cg_immersiveMenu` | 1 | 0: the flat menu of the base game |
-| `r_menuBlur` | 1 | how far the scene behind the menu is out of focus (rd-vulkan-vision only): 0 not at all, 1 normal, up to 4 |
+| `r_menuBlur` | 1 | how far the level behind the menu is out of focus (rd-vulkan-vision and the client in a browser): 0 not at all, 1 normal, up to 4 |
 | `s_muffle` | set by the cgame | 0 to 1: the sound of the game through a low pass. Not stored |
 
 - The menu is not painted onto a texture. The ui draws it as always, and the renderer puts that 2D onto a
@@ -339,18 +339,26 @@ the hips, and the menu stands in the level to the right of him. The game goes on
   narrow field of view the camera is farther back, so the player takes the same part of the picture.
 - A scene inside a menu (the model in the player menu) is a viewport and can not be tilted. The engine moves
   it to where its place is on the plane and gives it the size the plane has there (`CL_UIRenderScene`).
-- Behind the menu the cgame adds a panel with an edge and a glow to the scene. Its shaders do not test the
-  depth either (`RGBA_SHADER_OVER`) and are sorted last, so it stands over the whole scene like the menu: a
+- Behind the menu the cgame adds a panel with an edge and a soft light to the scene. Its shaders do not test
+  the depth either (`RGBA_SHADER_OVER`) and are sorted last, so it stands over the whole scene like the menu: a
   wall or a pillar between camera and panel took a piece out of the panel and left the menu in the air. Moving
   the panel towards the camera until the level has room for it was tried first and can not work where the
-  wall is next to the camera. The HUD is hidden meanwhile.
-- The scene is put out of focus by rd-vulkan-vision (`VK_BlurFrame`): the frame goes into a buffer of half its
-  size, then passes widen it, three at `r_menuBlur 1`. That is a blur of the whole picture, the player
-  included, not one by depth: a real depth of field needs a pass that reads the depth in both devices of the
-  renderer. rd-vanilla keeps the scene sharp. The first version (cvar `r_sceneBlur`) ended the game as soon as
-  a menu opened, because the pass asked for the descriptor set of the frame where only the sets of the glow
-  buffers were known, and after that was repaired it went through the 320 x 240 buffers of the glow, which
-  left nothing of the scene to recognise.
+  wall is next to the camera. The HUD is hidden meanwhile. The inside of the panel lets a tenth of the level
+  through and its light is blended, not added (`RGBA_SHADER_BEHIND`): at half and with an added light its rim
+  was white in front of a bright wall.
+- The level behind the menu is out of focus, by distance (`VK_BlurFrame` of rd-vulkan-vision, both of its
+  devices): the frame goes into a buffer of half its size, then passes widen it, three at `r_menuBlur 1`. A
+  last pass (`shaders/focus.frag`) reads the depth of the scene and gives every pixel of that soft picture how
+  much of it shows: nothing up to the distance of the menu, which the cgame hands over
+  (`R_SetDepthOfField`), all of it at two and a half times that distance. So the player next to the menu and
+  the floor he stands on stay sharp. The panel is left out of the scene while it is drawn and put onto the
+  frame afterwards, as sharp as the menu. What is blended and writes no depth (a saber blade, smoke) is as
+  soft as what is behind it. Around the player the soft picture has some of his colour in it: it is a blur of
+  the whole frame. rd-vanilla keeps the scene sharp. The first version (cvar `r_sceneBlur`) ended the game as
+  soon as a menu opened, because the pass asked for the descriptor set of the frame where only the sets of the
+  glow buffers were known, and after that was repaired it went through the 320 x 240 buffers of the glow,
+  which left nothing of the scene to recognise. Until 2026-10-11 the whole picture was soft, the player
+  included.
 - The sound of the game (effects, music, Steam Audio) and the voices of the voice chat are muffled. The low
   pass of the engine (`S_MufflePaint`) keeps what it has after a sample by the time of the sample: the mixer
   paints the same fifth of a second again with every frame, and a filter that just ran on from one paint
