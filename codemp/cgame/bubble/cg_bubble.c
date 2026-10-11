@@ -385,8 +385,8 @@ CG_BubbleBoard
 
 A panel as the bubbles have it, for something else that is a thing in the level as they are and is hidden by what
 is in front of it (the card of a player, select/cg_select.c): its inside, and its edge where one is given, around
-a point, along right and up, lifted that far toward the one who looks. qfalse: it can not be drawn (another
-engine). CG_BubbleReady() says so beforehand.
+a point, along right and up. qfalse: it can not be drawn (another engine). CG_BubbleReady() says so beforehand.
+(Inside and edge lie in one plane: none of them writes depth, and the edge is drawn after the inside.)
 =================
 */
 qboolean CG_BubbleReady( void ) {
@@ -396,7 +396,7 @@ qboolean CG_BubbleReady( void ) {
 	return bubbleArt.ready;
 }
 
-qboolean CG_BubbleBoard( const vec3_t center, const vec3_t right, const vec3_t up, float halfW, float halfH, float corner, float lift,
+qboolean CG_BubbleBoard( const vec3_t center, const vec3_t right, const vec3_t up, float halfW, float halfH, float corner,
 		const float *fill, const float *border ) {
 	bubbleView_t view;
 
@@ -408,10 +408,10 @@ qboolean CG_BubbleBoard( const vec3_t center, const vec3_t right, const vec3_t u
 	VectorCopy( up, view.up );
 	CrossProduct( right, up, view.toward );
 	if ( fill ) {
-		Bubble_Panel( bubbleArt.fill, &view, halfW, halfH, corner, lift, fill, 1.0f );
+		Bubble_Panel( bubbleArt.fill, &view, halfW, halfH, corner, 0.0f, fill, 1.0f );
 	}
 	if ( border ) {
-		Bubble_Panel( bubbleArt.border, &view, halfW, halfH, corner, lift + 0.1f, border, 1.0f );
+		Bubble_Panel( bubbleArt.border, &view, halfW, halfH, corner, 0.0f, border, 1.0f );
 	}
 	return qtrue;
 }

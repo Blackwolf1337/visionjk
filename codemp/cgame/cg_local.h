@@ -1766,7 +1766,7 @@ void		CG_BubbleInit( void );
 void		CG_BubbleSay( int clientNum, int kind, const char *message );
 qboolean	CG_BubbleDraw( centity_t *cent, qboolean dots );
 qboolean	CG_BubbleReady( void );
-qboolean	CG_BubbleBoard( const vec3_t center, const vec3_t right, const vec3_t up, float halfW, float halfH, float corner, float lift,
+qboolean	CG_BubbleBoard( const vec3_t center, const vec3_t right, const vec3_t up, float halfW, float halfH, float corner,
 				const float *fill, const float *border );
 qboolean	CG_BubblePanelAt( const vec3_t center, const vec3_t right, const vec3_t up, float halfW, float halfH, float corner,
 				const float *fill, const float *border, const float *light, float alpha );
@@ -1782,6 +1782,7 @@ void		CG_Menu3DScene( void );
 void		CG_SelectInit( void );
 void		CG_SelectDraw( void );
 void		CG_SelectScene( void );
+void		CG_SelectOverScene( void );
 void		CG_SelectDrawCursor( void );
 qboolean	CG_SelectKeyEvent( int key, qboolean down );
 void		CG_SelectOutline( int clientNum, const refEntity_t *model );

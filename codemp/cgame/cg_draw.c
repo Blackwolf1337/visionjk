@@ -8416,6 +8416,8 @@ void CG_DrawActive( stereoFrame_t stereoView ) {
 	CG_SelectScene();
 
 	trap->R_RenderScene( &cg.refdef );
+	// and what of them has grown for a player far away, over that scene
+	CG_SelectOverScene();
 
 	// restore original viewpoint if running stereo
 	if ( separation != 0 ) {
