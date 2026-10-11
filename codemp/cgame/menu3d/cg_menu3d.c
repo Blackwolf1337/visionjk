@@ -21,8 +21,9 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // cg_menu3d.c -- the menu in the level. Not from JA+.
 //
 // While a menu is open in a game the camera moves behind the right shoulder of the player, and the menu stands
-// in the level in front of him as a panel he looks at: the game goes on around it, a little out of focus and
-// muffled (cg_immersiveMenu 0: the flat menu of the game).
+// in the level to the right of him as a panel: the game goes on around it, a little out of focus and muffled
+// (cg_immersiveMenu 0: the flat menu of the game). The player is at the left edge of the picture and the menu
+// takes the rest, so neither is in front of the other.
 //
 // The menu is not painted onto a texture. The ui draws it as it always does, and the renderer puts that 2D onto
 // a plane in the level: this file says where the plane is by a matrix from the grid of the 2D to clip space
@@ -39,6 +40,10 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define MENU3D_IN_MSEC		350
 #define MENU3D_OUT_MSEC		250
 #define MENU3D_SCREEN_PART	0.72f		// how much of the height of the screen the menu takes
+#define MENU3D_PLAYER_X		-0.68f		// where the player is in the picture: -1 its left edge, 0 the middle, 1 the right edge
+#define MENU3D_PANEL_X		0.27f		// and the middle of the menu
+#define MENU3D_PANEL_DEPTH	64.0f		// how far in front of the camera the menu stands where the level has the room
+#define MENU3D_MARGIN		8.0f		// the panel behind the menu is larger by this on each side, in units of the 2D grid
 
 static struct {
 	qboolean	open;				// a menu is open and is shown in the level
@@ -121,16 +126,18 @@ static void Menu3D_Multiply( const float *a, const float *b, float *c ) {
 =================
 CG_Menu3DView
 
-After the view of the game is worked out: moves it towards the view of the menu, behind the right shoulder of
-the player with the panel in front of him.
+After the view of the game is worked out: moves it towards the view of the menu. The camera is behind the right
+shoulder of the player and looks past him, so far to the right that he is at the left edge of the picture. The
+panel is laid out in that picture, to the right of him, and then set into the level at that place.
 =================
 */
 void CG_Menu3DView( void ) {
 	playerState_t	*ps = &cg.predictedPlayerState;
-	vec3_t			angles, forward, right, up, head, camera, look, lookAngles, camRight, camUp;
+	const float		tanX = tanf( DEG2RAD( cg.refdef.fov_x * 0.5f ) ), tanY = tanf( DEG2RAD( cg.refdef.fov_y * 0.5f ) );
+	vec3_t			angles, forward, right, up, head, camera, look, lookAngles, camRight, camUp, toPlayer, spot;
 	trace_t			trace;
 	static vec3_t	mins = { -4, -4, -4 }, maxs = { 4, 4, 4 };
-	float			blend, distance, tilt;
+	float			blend, depth, tilt, room, halfW, halfH, back, panelX;
 	int				i;
 
 	if ( menu3d.blend <= 0.0f ) {
@@ -143,30 +150,62 @@ void CG_Menu3DView( void ) {
 	VectorCopy( ps->origin, head );
 	head[2] += ps->viewheight;
 
-	// the camera: behind him, to the right and a little higher, as far as the level lets it
-	VectorMA( head, -46.0f, forward, camera );
-	VectorMA( camera, 24.0f, right, camera );
-	VectorMA( camera, 6.0f, up, camera );
+	// The camera: behind him, to the right and a little higher, as far as the level lets it. With a narrow field
+	// of view it is farther back, so that he takes the same part of the picture (44 behind him at 16:9 and
+	// cg_fov 80).
+	back = Com_Clamp( 0.8f, 1.6f, 1.12f / tanX );
+	VectorMA( head, -44.0f * back, forward, camera );
+	VectorMA( camera, 20.0f * back, right, camera );
+	VectorMA( camera, 2.0f, up, camera );
 	CG_Trace( &trace, head, mins, maxs, camera, ps->clientNum, MASK_SOLID | CONTENTS_PLAYERCLIP );
 	VectorCopy( trace.endpos, camera );
 
-	// the panel: in front of him, a little to the right, where the camera looks past his shoulder
-	VectorMA( head, 30.0f, forward, menu3d.center );
-	VectorMA( menu3d.center, 13.0f, right, menu3d.center );
-	VectorMA( menu3d.center, -1.0f, up, menu3d.center );
+	// It looks to the right of him by the angle that puts him at MENU3D_PLAYER_X, and a little down: his head
+	// is above the middle of the picture then, and he is seen down to the hips.
+	VectorSubtract( head, camera, toPlayer );
+	if ( VectorLengthSquared( toPlayer ) < 1.0f ) {
+		VectorCopy( forward, toPlayer );		// no room behind him at all
+	}
+	vectoangles( toPlayer, lookAngles );
+	lookAngles[YAW] -= RAD2DEG( atanf( -MENU3D_PLAYER_X * tanX ) );
+	lookAngles[PITCH] = 6.0f;
+	lookAngles[ROLL] = 0.0f;
+	AngleVectors( lookAngles, look, camRight, camUp );
 
-	VectorMA( menu3d.center, -5.0f, right, look );
-	VectorSubtract( look, camera, look );
-	distance = VectorNormalize( look );
-	vectoangles( look, lookAngles );
-	AngleVectors( lookAngles, NULL, camRight, camUp );
-
-	// it faces the camera, turned a little so that its right edge is farther away
-	tilt = DEG2RAD( 10.0f );
+	// The panel faces the camera, turned a little towards the player: its left edge, the one next to him, is the
+	// farther one.
+	tilt = DEG2RAD( 8.0f );
 	VectorScale( camRight, cosf( tilt ), menu3d.right );
-	VectorMA( menu3d.right, sinf( tilt ), look, menu3d.right );
+	VectorMA( menu3d.right, -sinf( tilt ), look, menu3d.right );
 	VectorNegate( camUp, menu3d.down );
-	menu3d.unit = MENU3D_SCREEN_PART * 2.0f * distance * tanf( DEG2RAD( cg.refdef.fov_y * 0.5f ) ) / SCREEN_HEIGHT;
+
+	// Where it stands: seen from the camera its middle is at MENU3D_PANEL_X of the picture. How far away it is
+	// changes nothing in the picture, the size goes with the distance. So it is as far as the level has room
+	// for its middle and its four corners, and the panel behind the menu does not end up in a wall.
+	depth = MENU3D_PANEL_DEPTH;
+	menu3d.unit = MENU3D_SCREEN_PART * 2.0f * depth * tanY / SCREEN_HEIGHT;
+	// on a narrow window it moves left as far as it has to for its right edge
+	panelX = Q_min( MENU3D_PANEL_X, 0.97f - MENU3D_SCREEN_PART * ( (float)SCREEN_WIDTH / SCREEN_HEIGHT ) * tanY / tanX );
+	VectorMA( camera, depth, look, menu3d.center );
+	VectorMA( menu3d.center, panelX * tanX * depth, camRight, menu3d.center );
+	halfW = ( SCREEN_WIDTH * 0.5f + MENU3D_MARGIN ) * menu3d.unit;
+	halfH = ( SCREEN_HEIGHT * 0.5f + MENU3D_MARGIN ) * menu3d.unit;
+	room = 1.0f;
+	for ( i = 0; i < 5; i++ ) {
+		VectorCopy( menu3d.center, spot );
+		if ( i < 4 ) {
+			VectorMA( spot, ( i & 1 ) ? halfW : -halfW, menu3d.right, spot );
+			VectorMA( spot, ( i & 2 ) ? halfH : -halfH, menu3d.down, spot );
+		}
+		CG_Trace( &trace, camera, NULL, NULL, spot, ps->clientNum, MASK_SOLID );
+		room = Q_min( room, trace.fraction );
+	}
+	if ( room < 1.0f ) {
+		room = Q_max( 0.25f, room * 0.94f );
+		VectorSubtract( menu3d.center, camera, spot );
+		VectorMA( camera, room, spot, menu3d.center );
+		menu3d.unit *= room;
+	}
 
 	// from the view of the game to the view of the menu, slowly at both ends
 	blend = menu3d.blend * menu3d.blend * ( 3.0f - 2.0f * menu3d.blend );
@@ -201,9 +240,11 @@ void CG_Menu3DScene( void ) {
 	}
 	alpha = menu3d.blend;
 
-	// the panel behind the menu, a little farther from the camera than the menu itself
-	halfW = ( SCREEN_WIDTH * 0.5f + cgs.bias2D ) * menu3d.unit + 2.0f * menu3d.unit;
-	halfH = SCREEN_HEIGHT * 0.5f * menu3d.unit + 2.0f * menu3d.unit;
+	// The panel behind the menu, a little farther from the camera than the menu itself. It has the size of the
+	// 640 x 480 the menus of a game stay in, not of the wider grid of a wide window: the player stands to the
+	// left of it.
+	halfW = ( SCREEN_WIDTH * 0.5f + MENU3D_MARGIN ) * menu3d.unit;
+	halfH = ( SCREEN_HEIGHT * 0.5f + MENU3D_MARGIN ) * menu3d.unit;
 	VectorNegate( menu3d.down, up );
 	CrossProduct( menu3d.right, up, normal );
 	VectorMA( menu3d.center, 0.5f, normal, behind );
