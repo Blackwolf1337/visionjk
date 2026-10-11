@@ -112,6 +112,40 @@ Quality entries: the ui hides them (`Item_ApplyHacks`).
 
 None of the pages was looked at in the game after these changes: the rows were placed by their numbers.
 
+### Wide screens
+
+The game places all 2D (menus, HUD, console) on a grid of 640 x 480. Until 2026-10-11 both renderers stretched
+that grid over the window, so on 16:9 everything was a third too wide. Now the grid keeps its height of 480 and
+gets as wide as the window: at 16:9 it is 853 wide, the old 640 sit in the middle and x runs from `-bias` to
+`640 + bias` (`R_2DBias()` in `rd-vanilla/tr_init.cpp`, used by `RB_SetGL2D()` of both renderers).
+
+| Cvar | Default | Meaning |
+|------|---------|---------|
+| `r_2dAspect` | 1 | 1 the 2D keeps its shape on a wide window, 0 the old stretch. Latched, `vid_restart` |
+| `r_2dBias` | set by the renderer | read only: the width beside the 640, in units of the grid. 0 on a 4:3 window, with `r_2dAspect 0` and on an engine that does not have this |
+| `r_mode` | -2 (was 4) | a new install starts in the size of the desktop, not in 800 x 600 |
+| `r_noborder` | 1 (was 0) | and as a window without a border. A stored config keeps what it has |
+
+What goes where on a wide window:
+
+- Menus stay in the middle. A window of a menu that covers the whole 640 x 480 (a background) is drawn over the
+  whole window, the cursor reaches the margins.
+- HUD: health and armour, vote lines, voice talkers, chat box, holocron and power icons and the flag status are
+  at the left edge. Force and ammo, the upper right block (team overlay, fps, timer, radar, duel icons,
+  powerups), fuel bars, pickup icon, lagometer and timer bar are at the right edge (`CG_Place2D()` in
+  `cgame/cg_drawtools.c`). Crosshair, weapon, force and item selection, centre prints and the scoreboard stay
+  in the middle.
+- Fades, tints and the loading picture cover the whole window. The scopes (binoculars, disruptor) keep their
+  shape, with black beside them. A video keeps its 4:3 with black beside it.
+- The console is as wide as the window, as before.
+
+The modules read `r_2dBias`. In a stock `jamp.exe`, or with a renderer of another tree, the cvar is missing or
+0 and they draw as they always did.
+
+Not looked at in the game: it was built for Linux and nothing more. Open: the siege timer and the automap are
+placed by the grid but not moved to an edge, and the text of the stock fonts is as soft as before (they are
+bitmaps made for 640 x 480).
+
 ### Bot mode
 
 Not a JA+ feature, and client only (`cgame/botmode/cg_botmode.c`): no server knows of it, the game module and the
