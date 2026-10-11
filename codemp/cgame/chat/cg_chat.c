@@ -113,7 +113,7 @@ static struct {
 	float		x, width;
 	float		tabX[CHAT_NUM_KINDS + 1];
 	float		tabY;
-	qhandle_t	cursor;						// the picture of the mouse cursor
+	qhandle_t	pointer;					// the picture of the mouse cursor
 } chat;
 
 static const char *chatTabNames[CHAT_NUM_KINDS] = { "All", "Team", "Private" };
@@ -945,11 +945,11 @@ static void Chat_DrawOpen( float x, float bottom ) {
 
 	// The cursor of the menus. (cgs.media.cursor is no use: the base game registers a picture of Quake 3 Team
 	// Arena for it that this game does not have, so nothing was drawn.)
-	if ( !chat.cursor ) {
-		chat.cursor = trap->R_RegisterShaderNoMip( "cursor" );
+	if ( !chat.pointer ) {
+		chat.pointer = trap->R_RegisterShaderNoMip( "cursor" );
 	}
 	trap->R_SetColor( NULL );
-	CG_DrawPic( cgs.cursorX, cgs.cursorY, CHAT_CURSOR_SIZE, CHAT_CURSOR_SIZE, chat.cursor );
+	CG_DrawPic( cgs.cursorX, cgs.cursorY, CHAT_CURSOR_SIZE, CHAT_CURSOR_SIZE, chat.pointer );
 }
 
 /*
