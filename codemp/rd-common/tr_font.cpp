@@ -696,7 +696,7 @@ static int Thai_InitFields(int &iGlyphTPs, const char *&psLang)
 // UTF-8 as Windows-1252: text of the game's files and of legacy clients comes out right as well.
 static cvar_t *cl_utf8;
 
-static bool Font_TextIsUTF8( void )
+bool Font_TextIsUTF8( void )
 {
 	return cl_utf8 && cl_utf8->integer && GetLanguageEnum() == eWestern;
 }

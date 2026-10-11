@@ -3689,6 +3689,52 @@ qhandle_t RE_RegisterShaderFromImage(const char *name, int *lightmapIndex, byte 
   return sh->index;
 }
 
+/*
+====================
+RE_RegisterSceneShader
+
+A shader for a picture the program makes (a page of glyphs, a picture a module hands in), for polygons in the
+scene: blended over what is behind them and hidden by what is in front, seen from both sides, colour and alpha
+from the vertices. glow: added to what is behind instead, and the dynamic glow takes it. sort: where it is
+drawn among the other blended surfaces.
+====================
+*/
+qhandle_t RE_RegisterSceneShader( const char *name, image_t *image, qboolean glow, float sort ) {
+	int			i, hash;
+	shader_t	*sh;
+
+	hash = generateHashValue(name, FILE_HASH_SIZE);
+	for (sh=hashTable[hash]; sh; sh=sh->next) {
+		if (IsShader(sh, name, lightmapsNone, stylesDefault))
+		{
+			return sh->index;
+		}
+	}
+
+	// clear the global shader
+	memset( &shader, 0, sizeof( shader ) );
+	memset( &stages, 0, sizeof( stages ) );
+	Q_strncpyz(shader.name, name, sizeof(shader.name));
+	memcpy(shader.lightmapIndex, lightmapsNone, sizeof(shader.lightmapIndex));
+	memcpy(shader.styles, stylesDefault, sizeof(shader.styles));
+
+	for ( i = 0 ; i < MAX_SHADER_STAGES ; i++ ) {
+		stages[i].bundle[0].texMods = texMods[i];
+	}
+
+	stages[0].bundle[0].image = image;
+	stages[0].active = qtrue;
+	stages[0].rgbGen = CGEN_VERTEX;
+	stages[0].alphaGen = AGEN_VERTEX;
+	stages[0].stateBits = GLS_SRCBLEND_SRC_ALPHA | ( glow ? GLS_DSTBLEND_ONE : GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA );
+	stages[0].glow = glow ? true : false;
+	shader.cullType = CT_TWO_SIDED;
+	shader.sort = sort;
+
+	sh = FinishShader();
+	return sh->index;
+}
+
 
 /*
 ====================

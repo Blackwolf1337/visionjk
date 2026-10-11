@@ -4722,6 +4722,13 @@ static void CG_PlayerSprites( centity_t *cent ) {
 		return;
 	}
 
+	// The chat bubble of this tree (bubble/cg_bubble.c): what the player said, or dots while he types where
+	// nothing else is to be shown. Where it is not drawn (another engine, too far away) the balloon stays.
+	if ( cent->currentState.eType != ET_NPC && CG_BubbleDraw( cent, (qboolean)( cent->vChatTime <= cg.time ) ) )
+	{
+		return;
+	}
+
 	if (cent->vChatTime > cg.time)
 	{
 		CG_PlayerFloatSprite( cent, cgs.media.vchatShader );

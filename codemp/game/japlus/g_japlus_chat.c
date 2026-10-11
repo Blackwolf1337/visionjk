@@ -245,6 +245,7 @@ void JP_UserinfoChanged( gentity_t *ent, const char *userinfo ) {
 			ent->client->pers.jp.pluginDisable = disable;
 	}
 	ent->client->pers.jp.utf8 = atoi( Info_ValueForKey( userinfo, "cl_utf8Text" ) ) ? qtrue : qfalse;
+	G_StatusUserinfo( ent, userinfo );
 }
 
 /*

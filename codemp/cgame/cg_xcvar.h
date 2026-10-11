@@ -35,6 +35,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #endif
 
 XCVAR_DEF( bg_fighterAltControl,				"0",					NULL,					CVAR_SYSTEMINFO )
+// what this cgame draws that a server only sends to who asks for it, bit 0: statuses above the heads (status/cg_status.c)
+XCVAR_DEF( cjp_caps,							"1",					NULL,					CVAR_USERINFO|CVAR_ROM )
 XCVAR_DEF( cjp_client,							"1.4B4",				NULL,					CVAR_USERINFO|CVAR_ROM )
 XCVAR_DEF( cl_yawspeed,							"140",					NULL,					CVAR_ARCHIVE )	// (engine cvar, read by the JA+ yawspeed check)
 XCVAR_DEF( cp_pluginDisable,						"0",					NULL,					CVAR_USERINFO|CVAR_ARCHIVE )
@@ -69,6 +71,12 @@ XCVAR_DEF( cg_chatBoxHeight,					"350",					NULL,					CVAR_ARCHIVE )
 // the chat box of this tree (chat/cg_chat.c): its width, and whether the message mode keys open its line to type in
 XCVAR_DEF( cg_chatBoxWidth,						"380",					NULL,					CVAR_ARCHIVE )
 XCVAR_DEF( cg_chatInput,						"1",					NULL,					CVAR_ARCHIVE )
+// chat bubbles above the heads (bubble/cg_bubble.c), and how far away one still sees them
+XCVAR_DEF( cg_chatBubbles,						"1",					NULL,					CVAR_ARCHIVE )
+XCVAR_DEF( cg_bubbleRange,						"1200",					NULL,					CVAR_ARCHIVE )
+// statuses above the heads (status/cg_status.c): show the ones of the others, and tell them what music plays here
+XCVAR_DEF( cg_playerStatuses,					"1",					NULL,					CVAR_ARCHIVE )
+XCVAR_DEF( cg_shareMusic,						"0",					NULL,					CVAR_ARCHIVE )
 XCVAR_DEF( cg_crosshairHealth,					"0",					NULL,					CVAR_ARCHIVE )
 XCVAR_DEF( cg_crosshairSize,					"24",					NULL,					CVAR_ARCHIVE )
 XCVAR_DEF( cg_crosshairX,						"0",					NULL,					CVAR_ARCHIVE )

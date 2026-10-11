@@ -1529,9 +1529,12 @@ static void CG_Print_f( void ) {
 // a line for the chat box (chat/cg_chat.c): what kind it is and who said it are read from the line as the server
 // sent it, raw, before the marks of the game are taken out of what is shown. number: the argument in which a
 // server built on OpenJK names the client.
-static void CG_ChatLine( const char *cmd, const char *raw, int number, char *text ) {
-	char	arg[16];
-	int		clientNum = -1;
+// message: what was said, where the command has it apart from the name. NULL: it is what follows the last mark
+// and its colon in raw.
+static void CG_ChatLine( const char *cmd, const char *raw, int number, char *text, const char *message ) {
+	char		arg[16];
+	int			clientNum = -1;
+	const int	kind = CG_ChatKind( cmd, raw );
 
 	if ( trap->Cmd_Argc() > number ) {
 		trap->Cmd_Argv( number, arg, sizeof( arg ) );
@@ -1539,7 +1542,20 @@ static void CG_ChatLine( const char *cmd, const char *raw, int number, char *tex
 	}
 	clientNum = CG_ChatSender( raw, clientNum );
 	CG_RemoveChatEscapeChar( text );
-	CG_ChatAdd( CG_ChatKind( cmd, raw ), clientNum, text );
+	CG_ChatAdd( kind, clientNum, text );
+
+	// the bubble above the head of who said it (bubble/cg_bubble.c)
+	if ( !message ) {
+		message = strrchr( raw, '\x19' );
+		if ( message && message[1] == ':' && message[2] == ' ' ) {
+			message += 3;
+		} else {
+			message = NULL;
+		}
+	}
+	if ( message && clientNum >= 0 ) {
+		CG_BubbleSay( clientNum, kind, message );
+	}
 }
 
 static void CG_Chat_f( void ) {
@@ -1553,7 +1569,7 @@ static void CG_Chat_f( void ) {
 				trap->S_StartLocalSound( cgs.media.talkSound, CHAN_LOCAL_SOUND );
 			trap->Cmd_Argv( 1, text, sizeof( text ) );
 			Q_strncpyz( raw, text, sizeof( raw ) );
-			CG_ChatLine( cmd, raw, 2, text );
+			CG_ChatLine( cmd, raw, 2, text, NULL );
 			trap->Print( "*%s\n", text );
 		}
 	}
@@ -1577,7 +1593,7 @@ static void CG_Chat_f( void ) {
 			if( cg_chatBeep.integer )
 				trap->S_StartLocalSound( cgs.media.talkSound, CHAN_LOCAL_SOUND );
 			Com_sprintf( text, sizeof( text ), "%s^7<%s> ^%s%s", name, loc, color, message );
-			CG_ChatLine( cmd, name, 5, text );
+			CG_ChatLine( cmd, name, 5, text, message );
 			trap->Print( "*%s\n", text );
 		}
 	}
@@ -1586,7 +1602,7 @@ static void CG_Chat_f( void ) {
 			trap->S_StartLocalSound( cgs.media.talkSound, CHAN_LOCAL_SOUND );
 		trap->Cmd_Argv( 1, text, sizeof( text ) );
 		Q_strncpyz( raw, text, sizeof( raw ) );
-		CG_ChatLine( cmd, raw, 2, text );
+		CG_ChatLine( cmd, raw, 2, text, NULL );
 		trap->Print( "*%s\n", text );
 	}
 	else if ( !strcmp( cmd, "ltchat" ) ) {
@@ -1608,7 +1624,7 @@ static void CG_Chat_f( void ) {
 		if( cg_teamChatBeep.integer )
 			trap->S_StartLocalSound( cgs.media.talkSound, CHAN_LOCAL_SOUND );
 		Com_sprintf( text, sizeof( text ), "%s^7<%s> ^%s%s", name, loc, color, message );
-		CG_ChatLine( cmd, name, 5, text );
+		CG_ChatLine( cmd, name, 5, text, message );
 		trap->Print( "*%s\n", text );
 	}
 }
@@ -1645,6 +1661,7 @@ static serverCommand_t	commands[] = {
 	{ "cps",				CG_CenterPrintSE_f },
 	{ "cs",					CG_ConfigStringModified },
 	{ "ircg",				CG_RestoreClientGhoul_f },
+	{ "jpstatus",			CG_StatusServerCommand },
 	{ "jpvoice",			CG_VoiceServerCommand },
 	{ "kg2",				CG_KillGhoul2_f },
 	{ "kls",				CG_KillLoopSounds_f },

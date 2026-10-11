@@ -1905,6 +1905,11 @@ void ClientThink_real( gentity_t *ent ) {
 		return;
 	}
 
+	// a sign of life, or none: who is away has it above his head (status/g_status.c). What the web admin panel
+	// does with a player below is not his doing.
+	if ( ent->s.number < MAX_CLIENTS && !isNPC )
+		G_StatusInput( ent, &client->pers.cmd );
+
 	// a player who is moved from the web admin panel: his command is what the page says
 	if ( ent->s.number < MAX_CLIENTS )
 		WebAdmin_ClientCommand( ent, &client->pers.cmd );

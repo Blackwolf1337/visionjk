@@ -170,8 +170,9 @@ cvar_t	*r_2dAspect;
 
 // the limits apply to the sum of all scenes in a frame --
 // the main view, all the 3D icons, etc
-#define	DEFAULT_MAX_POLYS		600
-#define	DEFAULT_MAX_POLYVERTS	3000
+// were 600 and 3000. Text in the scene is a polygon a glyph (RE_Font_Text3D), next to the effects that take them.
+#define	DEFAULT_MAX_POLYS		4096
+#define	DEFAULT_MAX_POLYVERTS	16384
 cvar_t	*r_maxpolys;
 cvar_t	*r_maxpolyverts;
 int		max_polys;
@@ -2212,6 +2213,9 @@ Q_EXPORT refexport_t* QDECL GetRefAPI( int apiVersion, refimport_t *rimp ) {
 
 	re.ext.Font_StrLenPixels				= RE_Font_StrLenPixelsNew;
 	re.ext.Font_DrawMonoChar				= RE_Font_DrawMonoChar;
+	re.ext.Font_Text3DWidth					= RE_Font_Text3DWidth;
+	re.ext.Font_Text3D						= RE_Font_Text3D;
+	re.ext.RegisterShaderRGBA				= RE_RegisterShaderRGBA;
 
 	return &re;
 }

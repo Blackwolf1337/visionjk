@@ -18,6 +18,8 @@
 |---------|---------|
 | server info `jp_cinfo` | bit field of the settings the client needs to predict moves, see below. Built every frame in `g_japlus_misc.c` |
 | server info `jp_DuelAlpha`, `jp_gripSpeedScale`, `jp_forceCombo` | read by the cgame |
+| server info `g_visionCaps` | not from JA+. What this game module does for the clients of this tree: bit 0 chat in UTF-8 per recipient (`JP_ChatFor()`), bit 1 it passes statuses on. Read only |
+| server command `jpstatus <client> <away> "<music>"` | not from JA+. What stands above a player's head, see "Statuses" below. Only sent to a client whose userinfo has `cjp_caps` bit 0 |
 | `eFlags` bit 15 `EF_ALT_DIM` | player is in the alternate dimension |
 | `eFlags` bit 16 `EF_GRAPPLE_SUSPEND` | player hangs on the hook |
 | `eFlags` bit 17 `EF_FLAME` | flamethrower is on |
@@ -132,6 +134,21 @@ Game modes and rules
   from his spawn on until his first input, and again after `jp_inactivityProtectTimer` seconds), anti fake name list,
   userinfo flood protection, auto quit at a time of day (`jp_autoQUIT`), fake clients, download redirect URL,
   logging of plugin versions and IPs.
+
+### Statuses (not from JA+)
+
+`game/status/g_status.c`, the client part is in [client.md](client.md).
+
+| Cvar | Default | Meaning |
+|------|---------|---------|
+| `g_afkTime` | 60 | seconds without a key or a turn after which a player counts as away, 0 never |
+
+A player whose commands did not change for `g_afkTime` seconds is away until they do. The server finds that
+out itself, so it holds for legacy clients too. A client can say what its player listens to with the client
+command `jpstatus music <text>` and end it with `jpstatus none`: at most one every three seconds, 64 bytes,
+without colours, quotes and control characters. Both are passed on to every client whose cgame asked for
+statuses, and to nobody else, so a legacy client never gets a command it does not know. `jpstatus` is not
+written to the client command log. Not run.
 
 ## Not done on the server
 

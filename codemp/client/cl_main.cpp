@@ -2849,6 +2849,8 @@ void CL_Init( void ) {
 	cl_utf8Text = Cvar_Get( "cl_utf8Text", "0", CVAR_ROM|CVAR_USERINFO, "Whether text is UTF-8 right now, for the server" );
 	// tells a cgame of this tree that the engine has the calls of its chat box (ext of cgameImport_t)
 	Cvar_Get( "cl_cgameChat", "1", CVAR_ROM, "" );
+	// and the calls for text and pictures of its own in the scene
+	Cvar_Get( "cl_cgameScene", "1", CVAR_ROM, "" );
 	cl_consoleShiftRequirement = Cvar_Get( "cl_consoleShiftRequirement", "0", CVAR_ARCHIVE, "Require shift key to be pressed for native console key detection" );
 
 	cl_filterGames = Cvar_Get( "cl_filterGames", "MBII MBIIOpenBeta", CVAR_ARCHIVE_ND, "List of fs_game to filter (space separated)" );

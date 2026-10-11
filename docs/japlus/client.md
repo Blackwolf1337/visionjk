@@ -247,6 +247,55 @@ cgame import: the clipboard both ways and the address. In a stock `jamp.exe` the
 typing stays with the line of the engine. Not run: nobody has seen the box.
 
 
+### Chat bubbles
+
+`cgame/bubble/cg_bubble.c` (2026-10-11). What a player says in the chat stands above his head for 2.5 to 8
+seconds (longer for more text), in up to three lines, and three swelling dots stand there while he types. It is
+all in the 3D scene: panel, edge, a soft light around it, the tip towards the head and the text are polygons
+that face the camera and are hidden by walls.
+
+| Cvar | Default | Meaning |
+|------|---------|---------|
+| `cg_chatBubbles` | 1 | 0: the balloon of the game as before |
+| `cg_bubbleRange` | 1200 | how far away a bubble is still drawn. It fades over the last quarter |
+
+- A bubble pops up a little too large and settles, and rises and fades at its end. Up close it keeps about the
+  same size on the screen, then it gets smaller with the distance.
+- Team chat has the colour of the team around it. Private lines never get a bubble. No bubble on a dead or
+  cloaked player, and none on oneself in first person.
+- The light around a bubble is a glow surface: `r_DynamicGlow 1` makes it shine.
+- It works on any server: the cgame knows who said a line (the client number a server built on OpenJK appends,
+  else the name in the line).
+
+It needs the engine of this tree (`cl_cgameScene 1`): the text comes from its TrueType font as polygons
+(`R_Text3D`), and the pictures of the panel are computed in the cgame and handed to the renderer
+(`R_RegisterShaderRGBA`), so no file of a pk3 is involved and a pure server takes nothing away. In a stock
+`jamp.exe`, beyond the range and with `cg_chatBubbles 0` the balloon of the game stays. A legacy client on the
+same server sees the balloon as it always did. Not run: nobody has seen a bubble, the sizes and colours are
+numbers.
+
+### Statuses above the heads
+
+`cgame/status/` and `game/status/g_status.c` (2026-10-11). One line in smaller letters right above the head, a
+chat bubble stands on top of it.
+
+| Cvar | Default | Meaning |
+|------|---------|---------|
+| `cg_playerStatuses` | 1 | show the lines of the others |
+| `cg_shareMusic` | 0 | tell the server what music plays on this machine. Off by default: everybody on the server reads it |
+| `cjp_caps` | 1, read only | in the userinfo: this cgame draws statuses, the server sends them to nobody else |
+
+- "Away from keyboard": the server finds out who did not touch a key or the mouse for `g_afkTime` seconds, for
+  legacy players too.
+- "Listening to Spotify: artist - title", "Listening to YT Music: title", or "Listening to artist - title" for
+  any other player of music. On Linux it is asked from the players over D-Bus (MPRIS) every five seconds:
+  `libdbus-1.so.3` is loaded when `cg_shareMusic` is first 1 and is not needed otherwise, the questions are
+  sent without waiting for the answers. On Windows it is read from the window titles of Spotify and of
+  YouTube Music (the window has to show the tab). Not on macOS and not in the browser client.
+
+Only on a server with the game module of this tree (`g_visionCaps` bit 1), and only clients of this tree with
+its engine draw the lines. Not run: built for Linux, the Windows code was compiled with mingw.
+
 ### Bot mode
 
 Not a JA+ feature, and client only (`cgame/botmode/cg_botmode.c`): no server knows of it, the game module and the

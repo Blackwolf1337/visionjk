@@ -157,6 +157,21 @@ set(MPCGameChatFiles
 source_group("cgame/chat" FILES ${MPCGameChatFiles})
 set(MPCGameFiles ${MPCGameFiles} ${MPCGameChatFiles})
 
+# chat bubbles above the heads, in the 3D scene
+set(MPCGameBubbleFiles
+	"${MPDir}/cgame/bubble/cg_bubble.c"
+	)
+source_group("cgame/bubble" FILES ${MPCGameBubbleFiles})
+set(MPCGameFiles ${MPCGameFiles} ${MPCGameBubbleFiles})
+
+# away and music above the heads, the server part is game/status
+set(MPCGameStatusFiles
+	"${MPDir}/cgame/status/cg_status.c"
+	"${MPDir}/cgame/status/cg_status_music.c"
+	)
+source_group("cgame/status" FILES ${MPCGameStatusFiles})
+set(MPCGameFiles ${MPCGameFiles} ${MPCGameStatusFiles})
+
 # bot mode: the client plays by itself, all of it is in the cgame
 set(MPCGameBotmodeFiles
 	"${MPDir}/cgame/botmode/cg_botmode.c"
