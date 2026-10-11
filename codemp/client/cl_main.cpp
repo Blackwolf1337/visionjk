@@ -2306,6 +2306,10 @@ CL_InitRenderer
 ============
 */
 void CL_InitRenderer( void ) {
+	// a renderer that widens the 2D grid on a wide window says by how much, any other leaves the 0
+	Cvar_Get( "r_2dBias", "0", CVAR_ROM );
+	Cvar_Set( "r_2dBias", "0" );
+
 	// this sets up the renderer and calls R_Init
 	re->BeginRegistration( &cls.glconfig );
 
@@ -2321,6 +2325,7 @@ void CL_InitRenderer( void ) {
 	if ( !cls.glconfig.vidWidth ) {
 		Com_Error( ERR_FATAL, "The renderer made no window" );
 	}
+	cls.bias2D = Cvar_VariableValue( "r_2dBias" );
 
 	// load character sets
 	cls.charSetShader = re->RegisterShaderNoMip("gfx/2d/charsgrid_med");
@@ -4033,7 +4038,7 @@ void CL_DrawEngineMenus( void ) {
 void CL_UpdateCursorPosition( int dx, int dy ) {
 	if ( Key_GetCatcher( ) & KEYCATCH_CONSOLE ) return;
 
-	cls.cursorX = Com_Clampi( 0, SCREEN_WIDTH, cls.cursorX + dx );
+	cls.cursorX = Com_Clampi( (int)-cls.bias2D, SCREEN_WIDTH + (int)cls.bias2D, cls.cursorX + dx );
 	cls.cursorY = Com_Clampi( 0, SCREEN_HEIGHT, cls.cursorY + dy );
 }
 

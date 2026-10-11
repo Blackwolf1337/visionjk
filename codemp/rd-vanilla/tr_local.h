@@ -1262,6 +1262,9 @@ extern	cvar_t	*r_debugSort;
 extern	cvar_t	*r_marksOnTriangleMeshes;
 
 extern	cvar_t	*r_aspectCorrectFonts;
+extern	cvar_t	*r_2dAspect;
+
+float	R_2DBias( void );
 
 /*
 Ghoul2 Insert Start

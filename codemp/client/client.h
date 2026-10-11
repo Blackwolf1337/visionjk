@@ -324,6 +324,7 @@ typedef struct clientStatic_s {
 
 	// rendering info
 	glconfig_t	glconfig;
+	float		bias2D;			// the 2D grid runs from -bias2D to 640 + bias2D on a wide window (cvar r_2dBias of the renderer)
 	qhandle_t	charSetShader;
 	qhandle_t	whiteShader;
 	qhandle_t	consoleShader;

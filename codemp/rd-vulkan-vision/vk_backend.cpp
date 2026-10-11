@@ -41,21 +41,24 @@ qboolean	tr_distortionNegate = qfalse;	// negative blend mode
 ===============
 RB_SetGL2D
 
-Pictures are placed on a screen of 640 x 480, whatever the size of the frame
+Pictures are placed on a screen of 640 x 480, whatever the size of the frame. On a wide window the screen is wider
+than 640 by the bias on either side, see R_2DBias()
 ===============
 */
 static void RB_SetGL2D( void ) {
-	float ortho[16];
+	const float	bias = R_2DBias();
+	const float	width = 640.0f + 2.0f * bias;
+	float		ortho[16];
 
 	backEnd.projection2D = qtrue;
 	VK_SetViewport( 0, 0, glConfig.vidWidth, glConfig.vidHeight, 0.0f, 1.0f );
 
-	// glOrtho( 0, 640, 480, 0, 0, 1 )
+	// glOrtho( -bias, 640 + bias, 480, 0, 0, 1 )
 	memset( ortho, 0, sizeof( ortho ) );
-	ortho[0] = 2.0f / 640.0f;
+	ortho[0] = 2.0f / width;
 	ortho[5] = -2.0f / 480.0f;
 	ortho[10] = -2.0f;
-	ortho[12] = -1.0f;
+	ortho[12] = 2.0f * bias / width - 1.0f;
 	ortho[13] = 1.0f;
 	ortho[14] = -1.0f;
 	ortho[15] = 1.0f;
@@ -138,7 +141,8 @@ something on screen asap, the rest of the start takes a moment in which nothing 
 ===============
 */
 void VK_Splash( void ) {
-	image_t *image = R_FindImageFile( "menu/splash", qfalse, qfalse, qfalse, GL_CLAMP );
+	image_t		*image = R_FindImageFile( "menu/splash", qfalse, qfalse, qfalse, GL_CLAMP );
+	const float	bias = R_2DBias();		// over the whole window
 
 	if ( !image ) {
 		return;		// invalid paths?
@@ -153,13 +157,13 @@ void VK_Splash( void ) {
 	VK_GL_Color( 1.0f, 1.0f, 1.0f, 1.0f );
 	VK_GL_Begin( GL_TRIANGLE_STRIP );
 	VK_GL_TexCoord( 0.0f, 0.0f );
-	VK_GL_Vertex( 0.0f, 0.0f, 0.0f );
+	VK_GL_Vertex( -bias, 0.0f, 0.0f );
 	VK_GL_TexCoord( 1.0f, 0.0f );
-	VK_GL_Vertex( 640.0f, 0.0f, 0.0f );
+	VK_GL_Vertex( 640.0f + bias, 0.0f, 0.0f );
 	VK_GL_TexCoord( 0.0f, 1.0f );
-	VK_GL_Vertex( 0.0f, 480.0f, 0.0f );
+	VK_GL_Vertex( -bias, 480.0f, 0.0f );
 	VK_GL_TexCoord( 1.0f, 1.0f );
-	VK_GL_Vertex( 640.0f, 480.0f, 0.0f );
+	VK_GL_Vertex( 640.0f + bias, 480.0f, 0.0f );
 	VK_GL_End();
 	VK_EndFrame();
 	backEnd.projection2D = qfalse;

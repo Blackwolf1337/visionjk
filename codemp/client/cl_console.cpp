@@ -460,7 +460,7 @@ void Con_CheckResize (void)
 	con.charWidth = charWidth;
 	con.charHeight = scale * SMALLCHAR_HEIGHT;
 	con.linewidth = width;
-	con.xadjust = ((float)SCREEN_WIDTH) / cls.glconfig.vidWidth;
+	con.xadjust = ( SCREEN_WIDTH + 2.0f * cls.bias2D ) / cls.glconfig.vidWidth;
 	con.yadjust = ((float)SCREEN_HEIGHT) / cls.glconfig.vidHeight;
 	g_consoleField.widthInChars = width - 1; // Command prompt
 
@@ -794,7 +794,7 @@ void Con_DrawNotify (void)
 			//
 			// and print...
 			//
-			re->Font_DrawString(cl_conXOffset->integer + con.xadjust * (con.xadjust + con.charWidth), con.yadjust * v, sTemp,
+			re->Font_DrawString(cl_conXOffset->integer + con.xadjust * (con.xadjust + con.charWidth) - cls.bias2D, con.yadjust * v, sTemp,
 				g_color_table[currentColor], iFontIndex, -1, fFontScale);
 
 			v +=  iPixelHeightToAdvance;
@@ -832,17 +832,17 @@ void Con_DrawNotify (void)
 		if (chat_team)
 		{
 			chattext = SE_GetString("MP_SVGAME", "SAY_TEAM");
-			SCR_DrawBigString (8, v, chattext, 1.0f, qfalse );
+			SCR_DrawBigString (8 - (int)cls.bias2D, v, chattext, 1.0f, qfalse );
 			skip = strlen(chattext)+1;
 		}
 		else
 		{
 			chattext = SE_GetString("MP_SVGAME", "SAY");
-			SCR_DrawBigString (8, v, chattext, 1.0f, qfalse );
+			SCR_DrawBigString (8 - (int)cls.bias2D, v, chattext, 1.0f, qfalse );
 			skip = strlen(chattext)+1;
 		}
 
-		Field_BigDraw( &chatField, skip * BIGCHAR_WIDTH, v, qtrue, qtrue );
+		Field_BigDraw( &chatField, skip * BIGCHAR_WIDTH - (int)cls.bias2D, v, qtrue, qtrue );
 
 		v += BIGCHAR_HEIGHT;
 	}
@@ -889,13 +889,13 @@ void Con_DrawSolidConsole( float frac ) {
 		{
 			re->SetColor(NULL);
 		}
-		SCR_DrawPic( 0, 0, SCREEN_WIDTH, (float) y, cls.consoleShader );
+		SCR_DrawPic( -cls.bias2D, 0, SCREEN_WIDTH + 2.0f * cls.bias2D, (float) y, cls.consoleShader );
 	}
 
 	// draw the bottom bar and version number
 
 	re->SetColor( console_color );
-	re->DrawStretchPic( 0, y, SCREEN_WIDTH, 2, 0, 0, 0, 0, cls.whiteShader );
+	re->DrawStretchPic( -cls.bias2D, y, SCREEN_WIDTH + 2.0f * cls.bias2D, 2, 0, 0, 0, 0, cls.whiteShader );
 
 	i = strlen( JK_VERSION );
 
@@ -978,7 +978,7 @@ void Con_DrawSolidConsole( float frac ) {
 			//
 			// and print...
 			//
-			re->Font_DrawString(con.xadjust*(con.xadjust + con.charWidth), con.yadjust * y, sTemp, g_color_table[currentColor],
+			re->Font_DrawString(con.xadjust*(con.xadjust + con.charWidth) - cls.bias2D, con.yadjust * y, sTemp, g_color_table[currentColor],
 				iFontIndex, -1, fFontScale);
 		}
 		else

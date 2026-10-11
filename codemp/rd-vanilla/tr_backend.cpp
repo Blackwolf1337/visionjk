@@ -1184,6 +1184,8 @@ RB_SetGL2D
 ================
 */
 void	RB_SetGL2D (void) {
+	const float bias = R_2DBias();
+
 	backEnd.projection2D = qtrue;
 
 	// set 2D virtual screen size
@@ -1191,7 +1193,7 @@ void	RB_SetGL2D (void) {
 	qglScissor( 0, 0, glConfig.vidWidth, glConfig.vidHeight );
 	qglMatrixMode(GL_PROJECTION);
     qglLoadIdentity ();
-	qglOrtho (0, 640, 480, 0, 0, 1);
+	qglOrtho (-bias, 640 + bias, 480, 0, 0, 1);
 	qglMatrixMode(GL_MODELVIEW);
     qglLoadIdentity ();
 
