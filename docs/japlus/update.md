@@ -22,6 +22,20 @@ A click fetches the files that changed, the line shows how far that is, then the
 itself, twice in a row: once to put the files in place, once as the new version. Settings, binds and `.cfg`
 files are not touched.
 
+The same look is taken when the game is the newest version already, since 2026-10-11: a program of a version
+does not prove that its files are of it. Two lines can come of that, and a click on either puts it right:
+
+```
+Files of version 0.1.3 are missing or changed. Click here to repair (3.1 MB)
+Old modules are used in place of those of version 0.1.3. Click here to repair
+```
+
+The first names files in the folder of the game. The second names game modules (`cgame`, `ui`, `jampgame`) in
+the folder of the player (`Documents\My Games\VisionJK` on Windows, `~/.local/share/visionjk` on Linux): the
+game loads a module from there before its own, so one that was left there from an older version takes the
+place of the new one whatever the update brings. The repair gives them another name (`.vjkold` at the end)
+and deletes nothing. The console names the files.
+
 | Cvar | Default | Meaning |
 |------|---------|---------|
 | `cl_updateCheck` | 1 | 0: the website is not asked at the start |
@@ -93,6 +107,24 @@ engine is started and before any file is open, is to look for that journal (`CL_
 
 A swap that was cut short (the machine went off) is finished by the next start in the same way. On Linux a
 file keeps whether it can be run, a new one gets that by its name (`visionjk.x86_64`).
+
+**The repair.** The swap takes a file whose `.vjknew` is not there for one that was moved by a start before,
+which is what lets it finish a swap that was cut short. It also means that a `.vjknew` that went missing
+between the download and the next start (an antivirus that takes a new program file) is left out without a
+word: the program is the new one, that file is the old one, and a list of the same version was never compared.
+On 2026-10-11 a player had the program of 0.1.3 with the `cgame` of 0.1.2 that way or the next one. So the
+check compares the files also when the list is of the version that runs (`upd.repair`), and what differs is
+fetched and swapped like an update. That look is made at every start, so a file bigger than 16 MB (the asset
+pack, the library of Steam Audio) is taken by its size, the programs and modules are hashed. A `keep` file
+that is missing is not missed by a repair, its owner may have deleted it.
+
+The other way to the same state: the engine loads a game module from the folder of the player before the one
+in the folder of the game (`Sys_LoadGameDll`: `fs_homepath`, then `fs_basepath`). A module of an older version
+that lies there wins over every update. The check hashes the modules of the list that also exist there
+(`upd.shadow`), with an update and with a repair, and `update` gives the ones that differ the ending
+`.vjkold`. It is the one thing the updater touches outside the folder of the game: a file with the path of a
+module of the list, renamed, never deleted. If nothing else has to be fetched the game starts again once.
+A build that is no release (somebody's own, with modules in a folder of its own on purpose) is not checked.
 
 "Before any file is open" has to hold for the start the game makes of itself too, and up to version 0.1.2 it
 did not on Windows. Two things came together. The video of the main menu is read from the asset pack
@@ -251,6 +283,8 @@ The tests before this did not find it because none of their releases changed a p
 
 Not checked:
 
+- The repair and the look at the modules in the folder of the player (2026-10-11): built for Linux and
+  Windows, never run. The swap itself was not changed by them.
 - A click on the line with a real mouse. The cursor of the game was moved onto it once (it lit up), a click
   through the two pointer devices of the virtual machine could not be sent cleanly. The runs typed `update`.
 - Windows 10, a Windows with a graphics driver, an antivirus other than Defender, and a program that was

@@ -41,6 +41,13 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 //
 // Never replaced: a build between two releases (somebody's own), a file the list marks "keep" that is there
 // (the .cfg files), and anything outside the folder of the program.
+//
+// A program of the newest version is not proof that its files are: a file can stay behind (a swap leaves out
+// one whose .vjknew is gone, an antivirus may take it), and a module of the same name in the folder of the
+// player is loaded before the one of the game (Sys_LoadGameDll). So the list is compared with what is here
+// also when its version is this one, and what differs is offered as a repair, the same way as an update. A
+// module in the folder of the player that is not the one of the list is moved aside by that (.vjkold), never
+// deleted.
 
 #include "client.h"
 
@@ -75,6 +82,9 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define UPDATE_JOURNAL_HEAD		"visionjk-update-journal 1"
 #define UPDATE_TEXT_MSEC		250		// how often the line on the menu is written anew while files come in
 #define UPDATE_PATH				( MAX_OSPATH + UPD_MAX_PATH + 16 )
+// The look at the files of the version that runs is made at every start. A file bigger than this (the asset
+// pack, the library of Steam Audio) is taken by its size then, the programs and modules are hashed.
+#define UPDATE_QUICK_BYTES		( 16LL * 1024 * 1024 )
 
 // cl_updateState, which the ui module reads
 typedef enum {
@@ -94,6 +104,7 @@ static struct {
 	int				own[3];
 	qboolean		release;					// this build is a release, so there can be a newer one of it
 	qboolean		elsewhere;					// the game reads its files from another folder than the program's
+	char			home[MAX_OSPATH];			// the folder of the player (fs_homepath), "" if it is the program's
 
 	updateState_t	state;
 	SDL_Thread		*thread;
@@ -108,8 +119,11 @@ static struct {
 	qboolean		ok;
 	char			error[512];
 	updList_t		list;
+	qboolean		repair;						// the list is of the version that runs: what differs is damage, not news
 	byte			change[UPD_MAX_FILES];		// this file of the list has to be fetched
 	int				numChange;
+	byte			shadow[UPD_MAX_FILES];		// the folder of the player has another module of that name
+	int				numShadow;
 	long long		fetchBytes;					// all of those together
 	volatile long long	fetched;				// and how much of it came in so far
 
@@ -191,6 +205,36 @@ static qboolean Update_HashFile( const char *osPath, long long *bytes, byte dige
 	fclose( f );
 	Web_SHA256Final( &sha, digest );
 	return whole;
+}
+
+// Is the file there the one the list names: by its size, and if that is the same by its SHA-256. quick: a big
+// file is taken by its size alone (UPDATE_QUICK_BYTES).
+static qboolean Update_Matches( const char *osPath, const updFile_t *file, qboolean quick, const volatile int *cancel ) {
+	byte		digest[WEB_SHA256_SIZE];
+	long long	bytes;
+	struct stat	st;
+
+	if ( stat( osPath, &st ) != 0 || (long long)st.st_size != file->bytes )
+		return qfalse;
+	if ( quick && file->bytes > UPDATE_QUICK_BYTES )
+		return qtrue;
+	return ( Update_HashFile( osPath, &bytes, digest, cancel ) && bytes == file->bytes
+		&& !memcmp( digest, file->sha256, sizeof( digest ) ) ) ? qtrue : qfalse;
+}
+
+// The same file of a release in the folder of the player. qfalse: there is no such folder, or it is too long.
+static qboolean Update_HomePath( const char *path, const char *ending, char *out, size_t outSize ) {
+	const int len = snprintf( out, outSize, "%s/%s%s", upd.home, path, ending );
+
+	return ( upd.home[0] && len > 0 && (size_t)len < outSize ) ? qtrue : qfalse;
+}
+
+// A module of the game (cgame, ui, game): the engine takes the one in the folder of the player first, see
+// Sys_LoadGameDll(). The renderers and the libraries beside the program are not looked for there.
+static qboolean Update_IsModule( const char *path ) {
+	const size_t len = strlen( path ), ext = strlen( DLL_EXT );
+
+	return ( strchr( path, '/' ) && len > ext && !strcmp( path + len - ext, DLL_EXT ) ) ? qtrue : qfalse;
 }
 
 /*
@@ -462,18 +506,25 @@ Update_CheckThread
 Fetches the file list of this system. If its version is newer than this build, every file of it is compared
 with the one that is here: by its size, and if that is the same by its SHA-256. What differs or is missing
 has to be fetched. A "keep" file that is here is left alone whatever is in it.
+
+If its version is the one of this build the same is done (upd.repair), with the big files taken by their size:
+the program can be of a version its files are not. Both times the modules in the folder of the player are
+looked at too (upd.shadow).
 =================
 */
 static int Update_CheckThread( void *unused ) {
 	char		url[UPD_MAX_ADDRESS + 64], why[160], osPath[UPDATE_PATH];
 	const char	*wrong;
-	int			i;
+	int			i, newer;
 
 	(void)unused;
 	upd.ok = qfalse;
+	upd.repair = qfalse;
 	upd.numChange = 0;
+	upd.numShadow = 0;
 	upd.fetchBytes = 0;
 	memset( upd.change, 0, sizeof( upd.change ) );
+	memset( upd.shadow, 0, sizeof( upd.shadow ) );
 	updListLen = 0;
 
 	snprintf( url, sizeof( url ), "%s/%s.txt", upd.address, UPDATE_SYSTEM );
@@ -483,25 +534,26 @@ static int Update_CheckThread( void *unused ) {
 		Update_Error( "The file list of %s can not be used: %s", upd.address, wrong );
 	} else {
 		upd.ok = qtrue;
-		if ( UPD_CompareVersion( upd.list.version, upd.own ) > 0 ) {
+		newer = UPD_CompareVersion( upd.list.version, upd.own );
+		if ( newer >= 0 ) {
+			upd.repair = ( newer == 0 ) ? qtrue : qfalse;
 			for ( i = 0; i < upd.list.numFiles && !upd.cancel; i++ ) {
 				const updFile_t	*file = &upd.list.files[i];
-				byte			digest[WEB_SHA256_SIZE];
-				long long		bytes;
-				struct stat		st;
 
 				if ( !Update_Path( file->path, "", osPath, sizeof( osPath ) ) )
 					continue;
-				if ( stat( osPath, &st ) == 0 ) {
-					if ( file->keep )
-						continue;
-					if ( (long long)st.st_size == file->bytes && Update_HashFile( osPath, &bytes, digest, &upd.cancel )
-						&& bytes == file->bytes && !memcmp( digest, file->sha256, sizeof( digest ) ) )
-						continue;
+				// A "keep" file comes with an update if it is missing. A repair does not miss it: its owner may
+				// have deleted it.
+				if ( file->keep ? ( !upd.repair && !Update_Exists( osPath ) ) : !Update_Matches( osPath, file, upd.repair, &upd.cancel ) ) {
+					upd.change[i] = 1;
+					upd.numChange++;
+					upd.fetchBytes += file->bytes;
 				}
-				upd.change[i] = 1;
-				upd.numChange++;
-				upd.fetchBytes += file->bytes;
+				if ( !file->keep && Update_IsModule( file->path ) && Update_HomePath( file->path, "", osPath, sizeof( osPath ) )
+					&& Update_Exists( osPath ) && !Update_Matches( osPath, file, qfalse, &upd.cancel ) ) {
+					upd.shadow[i] = 1;
+					upd.numShadow++;
+				}
 			}
 		}
 	}
@@ -621,6 +673,10 @@ static const char *Update_VersionText( const int version[3] ) {
 	return va( "%i.%i.%i", version[0], version[1], version[2] );
 }
 
+static const char *Update_Verb( void ) {
+	return upd.repair ? "Repairing" : "Updating to";
+}
+
 static void Update_Start( int job, qboolean quiet ) {
 	upd.job = job;
 	upd.quiet = quiet;
@@ -635,18 +691,72 @@ static void Update_Start( int job, qboolean quiet ) {
 	}
 	if ( job == JOB_FETCH ) {
 		upd.textTime = 0;
-		Update_Say( UPDATE_WORKING, va( "Updating to version %s", Update_VersionText( upd.list.version ) ) );
+		Update_Say( UPDATE_WORKING, va( "%s version %s", Update_Verb(), Update_VersionText( upd.list.version ) ) );
 	}
 }
 
 static void Update_Available( void ) {
 	const char *version = Update_VersionText( upd.list.version );
 
-	Update_Say( UPDATE_AVAILABLE, va( "Version %s is out. Click here to update (%.1f MB)", version, upd.fetchBytes / 1048576.0 ) );
+	if ( !upd.repair )
+		Update_Say( UPDATE_AVAILABLE, va( "Version %s is out. Click here to update (%.1f MB)", version, upd.fetchBytes / 1048576.0 ) );
+	else if ( upd.numChange )
+		Update_Say( UPDATE_AVAILABLE, va( "Files of version %s are missing or changed. Click here to repair (%.1f MB)", version, upd.fetchBytes / 1048576.0 ) );
+	else
+		Update_Say( UPDATE_AVAILABLE, va( "Old modules are used in place of those of version %s. Click here to repair", version ) );
+}
+
+/*
+=================
+Update_Unshadow
+
+The modules in the folder of the player that are not the ones of the list get another name, so the engine
+loads the ones of the game from its next start on. Never deleted: somebody may have put them there on purpose.
+Windows lets a module that is loaded be renamed. Returns how many are still in the way.
+=================
+*/
+static int Update_Unshadow( void ) {
+	char	osPath[UPDATE_PATH], osOld[UPDATE_PATH];
+	int		i, left = 0;
+
+	for ( i = 0; i < upd.list.numFiles; i++ ) {
+		if ( !upd.shadow[i] )
+			continue;
+		if ( Update_HomePath( upd.list.files[i].path, "", osPath, sizeof( osPath ) )
+			&& Update_HomePath( upd.list.files[i].path, UPD_OLD_ENDING, osOld, sizeof( osOld ) ) && Update_Move( osPath, osOld ) ) {
+			Com_Printf( "%s was not the one of this version and is %s now.\n", osPath, osOld );
+			upd.shadow[i] = 0;
+			upd.numShadow--;
+		} else {
+			Com_Printf( S_COLOR_YELLOW "%s/%s is not the one of this version and could not be renamed. Delete it by hand.\n",
+				upd.home, upd.list.files[i].path );
+			left++;
+		}
+	}
+	return left;
+}
+
+// what "update" does with what the list showed: the files that differ are fetched, and if there are none of
+// those, only modules in the folder of the player, they are moved aside and the game starts again
+static void Update_Go( void ) {
+	if ( upd.numChange ) {
+		Update_Start( JOB_FETCH, qfalse );
+		return;
+	}
+	if ( Update_Unshadow() ) {
+		Update_Say( UPDATE_FAILED, "The repair failed, the console says why. Click here to try again" );
+		return;
+	}
+	Com_Printf( "The game starts again and loads its own modules.\n" );
+	Update_Say( UPDATE_RESTARTING, "Repaired, the game starts again" );
+	Sys_RestartOnExit();
+	Cbuf_AddText( "quit\n" );
 }
 
 // the file list is there, or is not
 static void Update_Checked( void ) {
+	int i;
+
 	if ( !upd.ok ) {
 		// The website is not there, or this machine has no line: not worth a word at every start
 		if ( !upd.quiet )
@@ -655,17 +765,32 @@ static void Update_Checked( void ) {
 			Com_DPrintf( "%s\n", upd.error );
 		return;
 	}
-	if ( !upd.numChange ) {
+	if ( !upd.numChange && !upd.numShadow ) {
 		if ( !upd.quiet )
 			Com_Printf( "This is version %s, and the newest one is %s.\n", Update_VersionText( upd.own ), Update_VersionText( upd.list.version ) );
 		Update_Say( UPDATE_NONE, "" );
 		return;
 	}
 	Update_Available();
-	Com_Printf( S_COLOR_CYAN "Version %s of the game is out, this is %s. To get it, type update here or click the line on the main menu "
-		"(%.1f MB in %i files).\n", Update_VersionText( upd.list.version ), Update_VersionText( upd.own ), upd.fetchBytes / 1048576.0, upd.numChange );
+	if ( !upd.repair ) {
+		Com_Printf( S_COLOR_CYAN "Version %s of the game is out, this is %s. To get it, type update here or click the line on the main menu "
+			"(%.1f MB in %i files).\n", Update_VersionText( upd.list.version ), Update_VersionText( upd.own ), upd.fetchBytes / 1048576.0, upd.numChange );
+	} else if ( upd.numChange ) {
+		for ( i = 0; i < upd.list.numFiles && !upd.change[i]; i++ ) {
+		}
+		Com_Printf( S_COLOR_YELLOW "This is version %s, but %i of its files are missing or are not the ones of that version (%s%s). "
+			"To put them right, type update here or click the line on the main menu (%.1f MB).\n", Update_VersionText( upd.own ),
+			upd.numChange, upd.list.files[i].path, upd.numChange > 1 ? " and more" : "", upd.fetchBytes / 1048576.0 );
+	}
+	if ( upd.numShadow ) {
+		for ( i = 0; i < upd.list.numFiles && !upd.shadow[i]; i++ ) {
+		}
+		Com_Printf( S_COLOR_YELLOW "%i game modules in %s are not the ones of version %s, and the game loads them in place of its own "
+			"(%s%s). update gives them another name.\n", upd.numShadow, upd.home, Update_VersionText( upd.list.version ),
+			upd.list.files[i].path, upd.numShadow > 1 ? " and more" : "" );
+	}
 	if ( upd.thenFetch && cls.state == CA_DISCONNECTED )
-		Update_Start( JOB_FETCH, qfalse );
+		Update_Go();
 }
 
 // the files are there, or are not
@@ -691,6 +816,8 @@ static void Update_Fetched( void ) {
 		Update_Say( UPDATE_FAILED, "The update failed, the console says why. Click here to try again" );
 		return;
 	}
+	// (one that can not be renamed is named on the console, and the next start offers the repair again)
+	Update_Unshadow();
 	Com_Printf( "Version %s is fetched. The game starts again and puts it in place.\n", Update_VersionText( upd.list.version ) );
 	Update_Say( UPDATE_RESTARTING, va( "Version %s is fetched, the game starts again", Update_VersionText( upd.list.version ) ) );
 	Sys_RestartOnExit();
@@ -722,7 +849,7 @@ void CL_UpdateFrame( void ) {
 	}
 	if ( upd.job == JOB_FETCH && cls.realtime - upd.textTime >= UPDATE_TEXT_MSEC ) {
 		upd.textTime = cls.realtime;
-		Cvar_Set( "cl_updateText", va( "Updating to version %s: %i %%", Update_VersionText( upd.list.version ),
+		Cvar_Set( "cl_updateText", va( "%s version %s: %i %%", Update_Verb(), Update_VersionText( upd.list.version ),
 			upd.fetchBytes > 0 ? (int)( upd.fetched * 100 / upd.fetchBytes ) : 0 ) );
 	}
 }
@@ -765,8 +892,8 @@ static void CL_Update_f( void ) {
 		Com_Printf( "Leave the server first: the update ends the game and starts it again.\n" );
 		return;
 	}
-	if ( upd.numChange && ( upd.state == UPDATE_AVAILABLE || upd.state == UPDATE_FAILED ) ) {
-		Update_Start( JOB_FETCH, qfalse );
+	if ( ( upd.numChange || upd.numShadow ) && ( upd.state == UPDATE_AVAILABLE || upd.state == UPDATE_FAILED ) ) {
+		Update_Go();
 	} else {
 		upd.thenFetch = qtrue;
 		Update_Start( JOB_CHECK, qfalse );
@@ -831,6 +958,10 @@ void CL_UpdateInit( void ) {
 	// The files of a release are replaced where the program is. A game that reads its files from somewhere
 	// else (fs_basepath) is set up by hand, and is left to that hand.
 	upd.elsewhere = Sys_SameFolder( Cvar_VariableString( "fs_basepath" ), Sys_ProgramFolder() ) ? qfalse : qtrue;
+	// copied for the thread, which reads no cvar
+	Q_strncpyz( upd.home, Cvar_VariableString( "fs_homepath" ), sizeof( upd.home ) );
+	if ( Sys_SameFolder( upd.home, Sys_ProgramFolder() ) )
+		upd.home[0] = '\0';
 	if ( upd.release && !upd.elsewhere && upd.address[0] && cl_updateCheck->integer )
 		Update_Start( JOB_CHECK, qtrue );
 }
