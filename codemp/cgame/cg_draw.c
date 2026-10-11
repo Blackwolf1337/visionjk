@@ -7870,6 +7870,12 @@ static void CG_Draw2D( void ) {
 		return;
 	}
 
+	// cg_showLoading 1 (a cheat): the screen of a level that loads over the game, to look at it at leisure
+	if ( cg_showLoading.integer ) {
+		CG_DrawInformation();
+		return;
+	}
+
 	// the clock of the menus of the HUD (ui/ui_shared.c): what fades and what eases there goes by it
 	cgDC.frameTime = cg.frametime;
 	cgDC.realTime = cg.time;

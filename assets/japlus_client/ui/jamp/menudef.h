@@ -23,6 +23,8 @@
 #define ITEM_TYPE_TEXTSCROLL	14		  // scrolls text
 #define ITEM_TYPE_BAR			16		// VisionJK: a bar filled by a number of the game ("stat"), for the HUD
 #define ITEM_TYPE_VALUE			17		// VisionJK: that number as text
+#define ITEM_TYPE_CUBE			18		// VisionJK: the box of the icon of the game, turning, in the rectangle of the item
+#define ITEM_TYPE_LOGO			19		// VisionJK: that icon as a flat picture
     
 #define ITEM_ALIGN_LEFT 0                 // left alignment
 #define ITEM_ALIGN_CENTER 1               // center alignment

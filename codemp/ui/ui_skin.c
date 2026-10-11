@@ -66,6 +66,9 @@ static struct {
 	qboolean	fontsTried;
 	qhandle_t	pointer;			// the arrow of the mouse
 	qboolean	pointerTried;
+	qhandle_t	logo;				// the icon of the game, flat
+	qhandle_t	solid;				// a white picture for polygons in a scene
+	qboolean	logoTried;
 } skin;
 
 static byte skinPic[256 * 256 * 4];
@@ -459,6 +462,211 @@ void Skin_Cursor( float x, float y ) {
 		DC->setColor( NULL );
 		DC->drawHandlePic( x - 2.0f, y - 1.5f, 21.0f, 21.0f, skin.pointer );
 	}
+}
+
+/*
+===============================================================================
+
+The icon of the game: a box seen from above, its lid white, its sides yellow and blue. The same three shapes
+the website has (img/logo.svg), flat as a picture, and as a body in a scene of its own that turns.
+
+===============================================================================
+*/
+
+#define LOGO_SIZE		128
+// the corners of the three faces in the drawing of the icon, which is 209 wide and 216 high from 100, 96
+static const float	logoFaces[3][4][2] = {
+	{ { 183, 102 }, { 279, 149 }, { 204, 209 }, { 107, 163 } },
+	{ { 107, 163 }, { 204, 209 }, { 204, 306 }, { 107, 261 } },
+	{ { 204, 209 }, { 302, 163 }, { 302, 260 }, { 204, 306 } },
+};
+static const byte	logoColors[3][3] = { { 255, 255, 255 }, { 227, 215, 92 }, { 0, 168, 255 } };
+
+static qboolean Skin_InQuad( const float quad[4][2], float x, float y ) {
+	qboolean	inside = qfalse;
+	int			i, j;
+
+	for ( i = 0, j = 3; i < 4; j = i++ ) {
+		if ( ( quad[i][1] > y ) != ( quad[j][1] > y )
+			&& x < ( quad[j][0] - quad[i][0] ) * ( y - quad[i][1] ) / ( quad[j][1] - quad[i][1] ) + quad[i][0] ) {
+			inside = !inside;
+		}
+	}
+	return inside;
+}
+
+static void Skin_LogoPictures( void ) {
+	int px, py, sx, sy, f;
+
+	if ( skin.logoTried ) {
+		return;
+	}
+	skin.logoTried = qtrue;
+	for ( py = 0; py < LOGO_SIZE; py++ ) {
+		for ( px = 0; px < LOGO_SIZE; px++ ) {
+			int		sum[4] = { 0, 0, 0, 0 };
+			byte	*out = &skinPic[( py * LOGO_SIZE + px ) * 4];
+
+			// sixteen places in the pixel, each in the drawing of the icon, which stands in the middle of the picture
+			for ( sy = 0; sy < 4; sy++ ) {
+				for ( sx = 0; sx < 4; sx++ ) {
+					const float	x = 96.5f + ( px + ( sx + 0.5f ) * 0.25f ) * ( 216.0f / LOGO_SIZE );
+					const float	y = 96.0f + ( py + ( sy + 0.5f ) * 0.25f ) * ( 216.0f / LOGO_SIZE );
+
+					for ( f = 0; f < 3; f++ ) {
+						if ( Skin_InQuad( logoFaces[f], x, y ) ) {
+							sum[0] += logoColors[f][0];
+							sum[1] += logoColors[f][1];
+							sum[2] += logoColors[f][2];
+							sum[3]++;
+							break;
+						}
+					}
+				}
+			}
+			out[0] = out[1] = out[2] = 255;
+			if ( sum[3] ) {
+				out[0] = (byte)( sum[0] / sum[3] );
+				out[1] = (byte)( sum[1] / sum[3] );
+				out[2] = (byte)( sum[2] / sum[3] );
+			}
+			out[3] = (byte)( sum[3] * 255 / 16 );
+		}
+	}
+	skin.logo = DC->registerShaderRGBA( "skin_logo", skinPic, LOGO_SIZE, LOGO_SIZE, RGBA_SHADER_OVER );
+	memset( skinPic, 255, 8 * 8 * 4 );
+	skin.solid = DC->registerShaderRGBA( "skin_solid", skinPic, 8, 8, 0 );
+}
+
+// the icon as a picture, as large as fits into the rectangle and in its middle
+void Skin_Logo( float x, float y, float w, float h, float alpha ) {
+	const float		size = Q_min( w, h );
+	const vec4_t	color = { 1.0f, 1.0f, 1.0f, alpha };
+
+	if ( !Skin_Ready() ) {
+		return;
+	}
+	Skin_LogoPictures();
+	if ( skin.logo ) {
+		DC->setColor( color );
+		DC->drawHandlePic( x + ( w - size ) * 0.5f, y + ( h - size ) * 0.5f, size, size, skin.logo );
+		DC->setColor( NULL );
+	}
+}
+
+/*
+=================
+Skin_Cube
+
+The box of the icon as a body: it turns slowly, its lid rises and sinks and lets a light out, and a glow stands
+behind it. A scene of its own in the rectangle, drawn where the 2D is. Where the engine gives no way to add a
+polygon to such a scene the flat icon stands there.
+=================
+*/
+void Skin_Cube( float x, float y, float w, float h ) {
+	static const float	corners[8][3] = {
+		{ -1, -1, -1 }, { 1, -1, -1 }, { 1, 1, -1 }, { -1, 1, -1 }, { -1, -1, 1 }, { 1, -1, 1 }, { 1, 1, 1 }, { -1, 1, 1 } };
+	// the four sides by turns in the two colours of the icon, so the two that are seen are never of one colour
+	static const int	sides[4][4] = { { 1, 2, 6, 5 }, { 2, 3, 7, 6 }, { 3, 0, 4, 7 }, { 0, 1, 5, 4 } };
+	static const float	sideNormals[4][3] = { { 1, 0, 0 }, { 0, 1, 0 }, { -1, 0, 0 }, { 0, -1, 0 } };
+	const float			t = DC->realTime * 0.001f;
+	const float			yaw = DEG2RAD( 45.0f + t * 22.0f ), pitch = DEG2RAD( -33.0f );
+	const float			cy = cosf( yaw ), sy = sinf( yaw ), cp = cosf( pitch ), sp = sinf( pitch );
+	const float			half = 20.0f, distance = 150.0f, lid = 4.0f + 3.5f * sinf( t * 1.4f );
+	const float			scaleX = Skin_ScaleX(), scaleY = Skin_ScaleY();
+	const float			pulse = 0.5f + 0.5f * sinf( t * 1.4f );
+	const vec3_t		light = { -0.45f, 0.35f, 0.82f };
+	vec4_t				glow;
+	refdef_t			refdef;
+	polyVert_t			verts[4];
+	float				turned[8][3];
+	int					i, k, f;
+
+	if ( !Skin_Ready() ) {
+		return;
+	}
+	Skin_LogoPictures();
+	if ( !skin.solid || !DC->addPolyToScene || !DC->clearScene || !DC->renderScene ) {
+		Skin_Logo( x, y, w, h, 1.0f );
+		return;
+	}
+
+	// the light behind the box: blue, and brighter while the lid is up
+	VectorSet( glow, 0.0f, 0.55f, 1.0f );
+	glow[3] = 0.16f + 0.10f * pulse;
+	Skin_Soft( x + w * 0.3f, y + h * 0.3f, w * 0.4f, h * 0.4f, Q_min( w, h ) * 0.42f, glow, qtrue );
+	// and its shadow on the ground it floats over
+	VectorSet( glow, 0.0f, 0.0f, 0.0f );
+	glow[3] = 0.35f;
+	Skin_Soft( x + w * 0.3f, y + h * 0.86f, w * 0.4f, h * 0.02f, h * 0.07f, glow, qfalse );
+
+	memset( &refdef, 0, sizeof( refdef ) );
+	refdef.rdflags = RDF_NOWORLDMODEL;
+	AxisClear( refdef.viewaxis );
+	refdef.x = (int)( ( x + DC->bias ) * scaleX );
+	refdef.y = (int)( y * scaleY );
+	refdef.width = (int)( w * scaleX );
+	refdef.height = (int)( h * scaleY );
+	if ( refdef.width < 8 || refdef.height < 8 ) {
+		return;
+	}
+	refdef.fov_y = 26.0f;
+	refdef.fov_x = RAD2DEG( 2.0f * atanf( tanf( DEG2RAD( refdef.fov_y ) * 0.5f ) * refdef.width / refdef.height ) );
+	refdef.time = DC->realTime;
+
+	// the corners: turned about the axis that points up, tipped toward the eye, set down in front of it. It
+	// bobs a little.
+	for ( i = 0; i < 8; i++ ) {
+		const float	px = ( corners[i][0] * cy - corners[i][1] * sy ) * half;
+		const float	py = ( corners[i][0] * sy + corners[i][1] * cy ) * half;
+		const float	pz = corners[i][2] * half;
+
+		turned[i][0] = px * cp + pz * sp + distance;
+		turned[i][1] = py;
+		turned[i][2] = -px * sp + pz * cp + sinf( t * 0.9f ) * 1.5f;
+	}
+
+	DC->clearScene();
+	memset( verts, 0, sizeof( verts ) );
+	for ( f = 0; f < 6; f++ ) {
+		float	normal[3], shade, lift = 0.0f;
+		byte	rgb[3];
+		int		corner[4];
+
+		if ( f < 4 ) {
+			// a side
+			const float	nx = sideNormals[f][0] * cy - sideNormals[f][1] * sy, ny = sideNormals[f][0] * sy + sideNormals[f][1] * cy;
+
+			VectorSet( normal, nx * cp, ny, -nx * sp );
+			for ( k = 0; k < 4; k++ ) {
+				corner[k] = sides[f][k];
+			}
+			// Only the sides that look at the eye: the polygons of a scene are drawn in the order they come in and
+			// do not hide each other by their depth, and of a box no two such sides overlap
+			if ( DotProduct( normal, turned[corner[0]] ) >= 0.0f ) {
+				continue;
+			}
+			memcpy( rgb, logoColors[1 + ( f & 1 )], sizeof( rgb ) );
+		} else {
+			// the light inside the box, and the lid above it
+			VectorSet( normal, sp, 0.0f, cp );
+			for ( k = 0; k < 4; k++ ) {
+				corner[k] = 4 + k;
+			}
+			lift = ( f == 4 ) ? -1.0f : lid;
+			memcpy( rgb, logoColors[0], sizeof( rgb ) );
+		}
+		shade = ( f == 4 ) ? 1.0f : 0.84f + 0.16f * Q_max( 0.0f, DotProduct( normal, light ) );
+		for ( k = 0; k < 4; k++ ) {
+			VectorMA( turned[corner[k]], lift, normal, verts[k].xyz );
+			verts[k].modulate[0] = (byte)( ( f == 4 ) ? 150 + 105 * pulse : rgb[0] * shade );
+			verts[k].modulate[1] = (byte)( ( f == 4 ) ? 215 + 40 * pulse : rgb[1] * shade );
+			verts[k].modulate[2] = (byte)( ( f == 4 ) ? 255 : rgb[2] * shade );
+			verts[k].modulate[3] = 255;
+		}
+		DC->addPolyToScene( skin.solid, 4, verts );
+	}
+	DC->renderScene( &refdef );
 }
 
 /*

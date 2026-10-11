@@ -29,6 +29,10 @@ Original mod by Slider (japlus.net). Everything JA+ specific is declared here.
 #define JP_GAMENAME			"JA+ Mod v2.4 B7"	// gamename cvar
 #define JP_SERVER_VERSION	"2.4B7"				// serverinfo cvar V, parsed by the client plugin as <version>B<build>
 #define JP_PLUGIN_VERSION	"1.4B4"		// latest client plugin version known to the server
+// What a player reads next to the name of JA+: the tree this server is built from, and where to get its client.
+// The texts of JA+ themselves and the cvars a client plugin looks at (gamename, V) stay what they were.
+#define JP_VISION_TITLE		"VisionJK ^7- ^5jka.vision"
+#define JP_VISION_SITE		"jka.vision"
 
 // clientSession_t.jpAdminLevel
 typedef enum {

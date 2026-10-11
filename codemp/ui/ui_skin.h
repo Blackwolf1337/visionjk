@@ -44,6 +44,8 @@ void		Skin_Soft( float x, float y, float w, float h, float spread, const vec4_t 
 void		Skin_Disc( float cx, float cy, float radius, const vec4_t color );
 void		Skin_Backdrop( void );
 void		Skin_Cursor( float x, float y );
+void		Skin_Logo( float x, float y, float w, float h, float alpha );
+void		Skin_Cube( float x, float y, float w, float h );
 
 // the widgets of a menu with "skin 1"
 void		Skin_ItemBack( itemDef_t *item );

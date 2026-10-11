@@ -284,6 +284,7 @@ chat bubble stands on top of it.
 | `cg_playerStatuses` | 1 | show the lines of the others |
 | `cg_shareMusic` | 0 | tell the server what music plays on this machine. Off by default: everybody on the server reads it. "Show My Music" in Setup, Voice Chat |
 | `cjp_caps` | 1, read only | in the userinfo: this cgame draws statuses, the server sends them to nobody else |
+| `cjp_vision` | the version, read only | in the userinfo: this is the client of VisionJK, and which one. A server of this tree greets it by that name and not as "client plugin 1.4B4". `cjp_client` stays 1.4B4: it is what a JA+ server of somebody else reads to switch the plugin features on |
 
 - "Away from keyboard": the server finds out who did not touch a key or the mouse for `g_afkTime` seconds, for
   legacy players too.

@@ -29,6 +29,13 @@ Both are in Setup under Interface.
   quarter.
 - Setup has three new tabs, Interface, Chat & Social and Network, and four more rows under Sound, for the
   settings that only the console had: see the table at the end.
+- The icon of the game is the box of the website (white lid, a yellow and a blue side). On the first page it
+  is a body that turns slowly on a panel of its own, its lid rising and sinking with a light under it. It
+  stands in the bar at the top of every page, turns on the screen while a level loads and while the game
+  connects, and it is the icon of the window and of the program.
+- While a level loads, its picture fills the window and a panel at the bottom says the name of the level,
+  the kind of game, the server, what is being loaded and how far it is.
+- The console is dark glass with a light blue line under it, in place of the picture of the game.
 
 It needs the engine of this tree (`cl_uiSkin 1`). In another engine the ui module loads the menus of before by
 itself, and the cgame draws the HUD of the game.
@@ -66,12 +73,14 @@ All optional. A file that uses none of them is read and drawn by the code of bef
 | itemDef | `caps 1` | its text in capital letters |
 | itemDef | `type ITEM_TYPE_BAR`, `type ITEM_TYPE_VALUE`, `stat <name>` | a bar that is filled by a number of the game, or that number as text. `forecolor` on `backcolor`, or the colour of the first `addColorRange` the number is in. `align ITEM_ALIGN_RIGHT` fills a bar from the right |
 | itemDef | `showStat <name>` | the item is only there while that number is above 0 |
+| itemDef | `type ITEM_TYPE_CUBE`, `type ITEM_TYPE_LOGO` | the box of the icon in the rectangle of the item: as a body that turns, or as a flat picture (its `forecolor` gives the alpha) |
 
 The numbers (`codemp/cgame/hud/cg_hud.c`): `health`, `armor`, `force`, `ammo` (not there with a saber),
 `saberstyle` (only with a saber), `jetpack`, `cloak`, `score`, `alive`, `spectator`, `team` (1 red, 2 blue),
 `duel`, `altdim`. Only the cgame has them: in a menu of the ui such an item draws nothing.
 
-`ui/jamp/menudef.h` has the new numbers (`WINDOW_STYLE_PANEL` 6, `ITEM_TYPE_BAR` 16, `ITEM_TYPE_VALUE` 17).
+`ui/jamp/menudef.h` has the new numbers (`WINDOW_STYLE_PANEL` 6, `ITEM_TYPE_BAR` 16, `ITEM_TYPE_VALUE` 17,
+`ITEM_TYPE_CUBE` 18, `ITEM_TYPE_LOGO` 19).
 
 ## How the menus are made
 
@@ -99,10 +108,12 @@ tools/menus/build.py [<assets1.pk3 of the game>]
 
 | File | |
 |------|---|
-| `ui/ui_skin.c`, `ui_skin.h` | the pictures (a disc and its rim for every radius in pixels, a soft light, the sky), panels, the widgets, the pointer of the mouse. Built into ui and cgame |
+| `ui/ui_skin.c`, `ui_skin.h` | the pictures (a disc and its rim for every radius in pixels, a soft light, the sky), panels, the widgets, the pointer of the mouse, the icon as a picture and as a box of six polygons in a scene of its own. Built into ui and cgame |
 | `ui/ui_shared.c` | the new words, the panel style, the branches of the widgets, items bound to a number |
 | `ui/ui_main.c` | which list is loaded (`UI_NewLookList`), the pointer |
-| `cgame/hud/cg_hud.c` | the numbers by name, loading and painting the HUD |
+| `cgame/hud/cg_hud.c` | the numbers by name, loading and painting the HUD, the screen while a level loads (`cg_showLoading 1`, a cheat, holds it over the game to look at it) |
+| `client/cl_console.cpp` | the background of the console, unless `ui_classic 1` |
+| `shared/sdl/sdl_icon.h`, `shared/icons/VisionJK.ico` | the icon of the window and of the Windows program, made from `img/logo-512.png` of the website |
 | `rd-common/tr_font.cpp`, `tr_font_ttf.cpp` | `vision_sans` and `vision_mono` as whole fonts for `R_RegisterFont` |
 | `client/cl_uiapi.cpp`, `ui/ui_public.h` | `R_RegisterShaderRGBA` in the ext block of the ui, announced by the cvar `cl_uiSkin` |
 
@@ -133,6 +144,11 @@ the first page, Play, the server browser, create server, solo game, demos, rules
 page, Setup with its old and new tabs, Controls, quit; in a game the bar at the top, Setup, Controls, the
 player page, call vote, about, the server browser; the HUD with a saber and with a gun.
 
-Not checked: a click on anything (the pictures are of pages a console command opened), the pages of siege and
+2026-10-11 later, the same way: the first page with the box at three moments of its turn, the icon in the bar
+at the top, the console over the menu, the loading screen held over a level (`ui_cube`, `ui_rice`,
+`ui_loading`).
+
+Not checked: the screen while the game connects, the icon of the window and of the program on a desktop, a
+click on anything (the pictures are of pages a console command opened), the pages of siege and
 of the force powers in a game, `rd-vanilla`, a window that is not 16:9, another language than English, a
 mod's menus next to the new look, how it feels to use.

@@ -106,6 +106,70 @@
 
 		itemDef
 		{
+			name					vision_hero
+			rect					336 96 256 296
+			visible					1
+			style					WINDOW_STYLE_PANEL
+			backcolor				0.035 0.07 0.12 0.55
+			bordercolor				0.43 0.83 1 0.28
+			radius					10
+			shadow					14
+			sheen					0.10
+			glowcolor				0 0.45 1 0.10
+			decoration
+		}
+
+		itemDef
+		{
+			name					vision_cube
+			rect					364 104 200 200
+			visible					1
+			type					ITEM_TYPE_CUBE
+			decoration
+		}
+
+		itemDef
+		{
+			name					vision_hero1
+			rect					336 312 256 18
+			visible					1
+			text					"Jedi Academy, rebuilt"
+			font					5
+			textscale				0.86
+			forecolor				1 1 1 1
+			decoration
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				128
+		}
+
+		itemDef
+		{
+			name					vision_hero2
+			rect					336 334 256 14
+			visible					1
+			text					"jka.vision"
+			font					5
+			textscale				0.66
+			forecolor				0.43 0.83 1 1
+			decoration
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				128
+		}
+
+		itemDef
+		{
+			name					vision_version
+			rect					584 372 0 12
+			visible					1
+			ownerdraw				UI_VERSION
+			font					5
+			textscale				0.5
+			forecolor				0.60 0.69 0.78 1
+			decoration
+		}
+
+		itemDef
+		{
 			name					playbutton
 			group					main_button
 			style					WINDOW_STYLE_EMPTY

@@ -693,7 +693,7 @@ static void Cmd_amwhois_f( gentity_t *ent, qboolean rcon ) {
 }
 
 static void JP_SetMotd( gclient_t *client ) {
-	Q_strncpyz( client->pers.jp.motd, va( "^5%s\n\n^7%s\n", JP_VERSION, jp_motd.string ), sizeof( client->pers.jp.motd ) );
+	Q_strncpyz( client->pers.jp.motd, va( "^5%s\n^5%s\n\n^7%s\n", JP_VISION_TITLE, JP_VERSION, jp_motd.string ), sizeof( client->pers.jp.motd ) );
 	JP_NewLines( client->pers.jp.motd );
 	client->pers.jp.motdTime = jp_motdtime.integer;
 }

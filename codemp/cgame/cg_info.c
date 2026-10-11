@@ -150,6 +150,11 @@ void CG_DrawInformation( void ) {
 	trap->R_SetColor( NULL );
 	CG_DrawPicWide( levelshot );
 
+	// the loading screen of the new look in place of all that follows (hud/cg_hud.c), where it can be drawn
+	if ( CG_HudLoading() ) {
+		return;
+	}
+
 	CG_LoadBar();
 
 	// draw the icons of things as they are loaded

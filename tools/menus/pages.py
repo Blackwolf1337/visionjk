@@ -75,8 +75,9 @@ def top_bar(m, here):
              ('decoration',)),
         item('vision_bar_line', (-400, 34, 1440, 0.67), ('style', 'WINDOW_STYLE_FILLED'), ('backcolor', *(ACCENT[:3] + ['0.22'])),
              ('decoration',)),
-        label('vision_mark', (24, 7, 120, 20), '"VISIONJK"', 1.0, BRIGHT),
-        label('vision_mark2', (112, 12, 160, 14), '"JEDI ACADEMY"', 0.5, DIM),
+        item('vision_logo', (22, 6, 22, 22), ('type', 'ITEM_TYPE_LOGO'), ('forecolor', '1', '1', '1', '1'), ('decoration',)),
+        label('vision_mark', (50, 7, 120, 20), '"VISIONJK"', 1.0, BRIGHT),
+        label('vision_mark2', (138, 12, 160, 14), '"JEDI ACADEMY"', 0.5, DIM),
     ]
     for e in items(m):
         b = e.block
@@ -181,6 +182,17 @@ def main_page(m):
         label('vision_mark2', (58, 146, 400, 16), '"JEDI ACADEMY  MULTIPLAYER"', 0.62, DIM),
         item('vision_rule', (58, 172, 64, 2), ('style', 'WINDOW_STYLE_PANEL'), ('backcolor', *ACCENT), ('radius', 1), ('decoration',)),
         box('vision_rail', (48, 196, 220, 196)),
+        # the box of the icon, turning, on a panel of its own with a light around it
+        item('vision_hero', (336, 96, 256, 296), ('style', 'WINDOW_STYLE_PANEL'), ('backcolor', '0.035', '0.07', '0.12', '0.55'),
+             ('bordercolor', *PANEL_EDGE), ('radius', 10), ('shadow', 14), ('sheen', '0.10'),
+             ('glowcolor', '0', '0.45', '1', '0.10'), ('decoration',)),
+        item('vision_cube', (364, 104, 200, 200), ('type', 'ITEM_TYPE_CUBE'), ('decoration',)),
+        label('vision_hero1', (336, 312, 256, 18), '"Jedi Academy, rebuilt"', 0.86, BRIGHT, ('textalign', 'ITEM_ALIGN_CENTER'),
+              ('textalignx', 128)),
+        label('vision_hero2', (336, 334, 256, 14), '"jka.vision"', 0.66, ACCENT, ('textalign', 'ITEM_ALIGN_CENTER'),
+              ('textalignx', 128)),
+        item('vision_version', (584, 372, 0, 12), ('ownerdraw', 'UI_VERSION'), ('font', FONT), ('textscale', '0.5'),
+             ('forecolor', *DIM), ('decoration',)),
     ]
     y = 208
     for n in ('playbutton', 'profilebutton', 'controlsbutton', 'setupbutton', 'exitgamebutton'):

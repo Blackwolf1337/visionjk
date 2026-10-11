@@ -492,6 +492,8 @@ typedef struct displayContextDef_s {
 	void			(*runCinematicFrame)				( int handle );
 	// NULL in an engine that can not make a picture a module computed (ui_skin.c)
 	qhandle_t		(*registerShaderRGBA)				( const char *name, const byte *rgba, int width, int height, int flags );
+	// a polygon for the scene that is being put together (clearScene, renderScene), for ui_skin.c
+	void			(*addPolyToScene)					( qhandle_t shader, int numVerts, const polyVert_t *verts );
 	// a number of the game by its name, for ITEM_TYPE_BAR and ITEM_TYPE_VALUE. NULL where there is no game (the ui)
 	qboolean		(*statValue)						( const char *name, float *value, float *max );
 

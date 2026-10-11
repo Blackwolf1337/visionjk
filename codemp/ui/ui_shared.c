@@ -6798,6 +6798,12 @@ void Item_Paint(itemDef_t *item)
 	case ITEM_TYPE_VALUE:
 		Item_Stat_Paint(item);
 		break;
+	case ITEM_TYPE_CUBE:
+		Skin_Cube( item->window.rect.x, item->window.rect.y, item->window.rect.w, item->window.rect.h );
+		break;
+	case ITEM_TYPE_LOGO:
+		Skin_Logo( item->window.rect.x, item->window.rect.y, item->window.rect.w, item->window.rect.h, item->window.foreColor[3] );
+		break;
 	case ITEM_TYPE_TEXT:
 	case ITEM_TYPE_BUTTON:
 		Item_Text_Paint(item);

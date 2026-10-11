@@ -1240,11 +1240,25 @@ void Con_DrawSolidConsole( float frac ) {
 		lines = cls.glconfig.vidHeight;
 
 	// draw the background
+	const vec4_t	themeLine = { 0.43f, 0.83f, 1.0f, 0.9f };
+	qboolean		themed = qfalse;
+
 	y = (int) (frac * SCREEN_HEIGHT - 2);
 	if ( y < 1 ) {
 		y = 0;
 	}
 	else {
+		// The look of the menus of this tree: dark glass in place of the picture of the game, unless the player
+		// asked for the menus of before (ui_classic 1)
+		if ( !Cvar_VariableIntegerValue( "ui_classic" ) )
+		{
+			const vec4_t glass = { 0.02f, 0.04f, 0.08f, 0.94f * ( ( frac < 1.0f ) ? Com_Clamp( 0.0f, 1.0f, con_opacity->value ) : 1.0f ) };
+
+			SCR_FillRect( -cls.bias2D, 0, SCREEN_WIDTH + 2.0f * cls.bias2D, (float) y, glass );
+			themed = qtrue;
+		}
+		else
+		{
 		// draw the background at full opacity only if fullscreen
 		if (frac < 1.0f)
 		{
@@ -1257,11 +1271,12 @@ void Con_DrawSolidConsole( float frac ) {
 			re->SetColor(NULL);
 		}
 		SCR_DrawPic( -cls.bias2D, 0, SCREEN_WIDTH + 2.0f * cls.bias2D, (float) y, cls.consoleShader );
+		}
 	}
 
 	// draw the bottom bar and version number
 
-	re->SetColor( console_color );
+	re->SetColor( themed ? themeLine : console_color );
 	re->DrawStretchPic( -cls.bias2D, y, SCREEN_WIDTH + 2.0f * cls.bias2D, 2, 0, 0, 0, 0, cls.whiteShader );
 
 	i = strlen( JK_VERSION );

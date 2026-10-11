@@ -2261,9 +2261,16 @@ CG_LoadHudMenu();
 
 =================
 */
-void CG_LoadHudMenu()
+static void CG_AddPolyToScene( qhandle_t shader, int numVerts, const polyVert_t *verts ) {
+	trap->R_AddPolysToScene( shader, numVerts, verts, 1 );
+}
+
+static qboolean cgDisplayReady;
+
+// What the menu code and the look of ui/ui_skin.c need to draw (cgDC). Before the HUD is loaded already, for
+// the loading screen.
+static void CG_DisplaySetup( void )
 {
-	const char *hudSet;
 	char buff[16];
 	qboolean hasSkin;
 
@@ -2338,10 +2345,26 @@ void CG_LoadHudMenu()
 	trap->Cvar_VariableStringBuffer( "cl_uiSkin", buff, sizeof( buff ) );
 	cgDC.registerShaderRGBA				= ( hasSkin && atoi( buff ) == 1 ) ? trap->ext.R_RegisterShaderRGBA : NULL;
 	cgDC.statValue						= &CG_StatValue;
+	cgDC.addPolyToScene					= &CG_AddPolyToScene;
 
 
 	Init_Display(&cgDC);
 	Skin_Reset();
+	cgDisplayReady = qtrue;
+}
+
+void CG_DisplayEnsure( void )
+{
+	if ( !cgDisplayReady ) {
+		CG_DisplaySetup();
+	}
+}
+
+void CG_LoadHudMenu()
+{
+	const char *hudSet;
+
+	CG_DisplaySetup();
 
 	Menu_Reset();
 

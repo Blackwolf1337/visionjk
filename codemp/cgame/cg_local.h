@@ -1795,6 +1795,8 @@ qboolean	CG_AuthIsAdmin( void );
 // hud/cg_hud.c: the numbers of the game by name, for the items of a menu file that show one
 qboolean	CG_StatValue( const char *name, float *value, float *max );
 void		CG_HudLoad( void );
+qboolean	CG_HudLoading( void );
+void		CG_DisplayEnsure( void );					// cg_main.c
 void		CG_ParseMenu( const char *menuFile );		// cg_main.c
 qboolean	CG_HudDraw( void );
 

@@ -1448,6 +1448,10 @@ qboolean Load_Menu(int handle) {
 	return qfalse;
 }
 
+static void UI_AddPolyToScene( qhandle_t shader, int numVerts, const polyVert_t *verts ) {
+	trap->R_AddPolysToScene( shader, numVerts, verts, 1 );
+}
+
 /*
 =================
 UI_OfferCursorKey
@@ -10342,6 +10346,7 @@ void UI_Init( qboolean inGameLoad ) {
 	// the engine of this tree says in a cvar that it has the call (ui_public.h), any other ends ext before it
 	uiInfo.uiDC.registerShaderRGBA				= ( trap->Cvar_VariableValue( "cl_uiSkin" ) == 1.0f ) ? trap->ext.R_RegisterShaderRGBA : NULL;
 	uiInfo.uiDC.statValue						= NULL;
+	uiInfo.uiDC.addPolyToScene					= &UI_AddPolyToScene;
 
 	Init_Display(&uiInfo.uiDC);
 	Skin_Reset();
@@ -10780,6 +10785,8 @@ void UI_DrawConnectScreen( qboolean overlay ) {
 	char sStringEdTemp[256];
 
 	menuDef_t *menu = Menus_FindByName("Connect");
+	// in the new look the lines are set in its font, and the box of the icon turns under them
+	const int font = uiNewLook ? SKIN_FONT_SANS : FONT_MEDIUM;
 
 
 	if ( !overlay && menu ) {
@@ -10797,6 +10804,10 @@ void UI_DrawConnectScreen( qboolean overlay ) {
 		return;
 	}
 
+	if ( uiNewLook ) {
+		Skin_Cube( 270.0f, 268.0f, 100.0f, 100.0f );
+	}
+
 	// see what information we should display
 	trap->GetClientState( &cstate );
 
@@ -10804,23 +10815,23 @@ void UI_DrawConnectScreen( qboolean overlay ) {
 	info[0] = '\0';
 	if( trap->GetConfigString( CS_SERVERINFO, info, sizeof(info) ) ) {
 		trap->SE_GetStringTextString("MENUS_LOADING_MAPNAME", sStringEdTemp, sizeof(sStringEdTemp));
-		Text_PaintCenter(centerPoint, yStart, scale, colorWhite, va( /*"Loading %s"*/sStringEdTemp, Info_ValueForKey( info, "mapname" )), 0, FONT_MEDIUM);
+		Text_PaintCenter(centerPoint, yStart, scale, colorWhite, va( /*"Loading %s"*/sStringEdTemp, Info_ValueForKey( info, "mapname" )), 0, font);
 	}
 
 	if (!Q_stricmp(cstate.servername,"localhost")) {
 		trap->SE_GetStringTextString("MENUS_STARTING_UP", sStringEdTemp, sizeof(sStringEdTemp));
-		Text_PaintCenter(centerPoint, yStart + 48, scale, colorWhite, sStringEdTemp, ITEM_TEXTSTYLE_SHADOWEDMORE, FONT_MEDIUM);
+		Text_PaintCenter(centerPoint, yStart + 48, scale, colorWhite, sStringEdTemp, ITEM_TEXTSTYLE_SHADOWEDMORE, font);
 	} else {
 		trap->SE_GetStringTextString("MENUS_CONNECTING_TO", sStringEdTemp, sizeof(sStringEdTemp));
 		Q_strncpyz(text, va(/*"Connecting to %s"*/sStringEdTemp, cstate.servername), sizeof(text));
-		Text_PaintCenter(centerPoint, yStart + 48, scale, colorWhite,text , ITEM_TEXTSTYLE_SHADOWEDMORE, FONT_MEDIUM);
+		Text_PaintCenter(centerPoint, yStart + 48, scale, colorWhite,text , ITEM_TEXTSTYLE_SHADOWEDMORE, font);
 	}
 
 	// display global MOTD at bottom
-	Text_PaintCenter(centerPoint, 425, scale, colorWhite, Info_ValueForKey( cstate.updateInfoString, "motd" ), 0, FONT_MEDIUM);
+	Text_PaintCenter(centerPoint, 425, scale, colorWhite, Info_ValueForKey( cstate.updateInfoString, "motd" ), 0, font);
 	// print any server info (server full, bad version, etc)
 	if ( cstate.connState < CA_CONNECTED ) {
-		Text_PaintCenter(centerPoint, yStart + 176, scale, colorWhite, cstate.messageString, 0, FONT_MEDIUM);
+		Text_PaintCenter(centerPoint, yStart + 176, scale, colorWhite, cstate.messageString, 0, font);
 	}
 
 	switch ( cstate.connState ) {
@@ -10841,7 +10852,7 @@ void UI_DrawConnectScreen( qboolean overlay ) {
 
 			trap->Cvar_VariableStringBuffer( "cl_downloadName", downloadName, sizeof(downloadName) );
 			if (*downloadName) {
-				UI_DisplayDownloadInfo( downloadName, centerPoint, yStart, scale, FONT_MEDIUM );
+				UI_DisplayDownloadInfo( downloadName, centerPoint, yStart, scale, font );
 				return;
 			}
 		}
@@ -10857,7 +10868,7 @@ void UI_DrawConnectScreen( qboolean overlay ) {
 	}
 
 	if (Q_stricmp(cstate.servername,"localhost")) {
-		Text_PaintCenter(centerPoint, yStart + 80, scale, colorWhite, s, 0, FONT_MEDIUM);
+		Text_PaintCenter(centerPoint, yStart + 80, scale, colorWhite, s, 0, font);
 	}
 	// password required / connection rejected information goes here
 }

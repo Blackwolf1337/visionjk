@@ -25,6 +25,7 @@ Rebuilt from jampgamei386.so (JA+ v2.4 Build 7).
 
 #include "game/g_local.h"
 #include "g_japlus.h"
+#include "qcommon/game_version.h"
 
 #define JP_PLUGIN_MESSAGE_VERSION	1.1f	// players with an older plugin get messages as center print
 
@@ -497,7 +498,7 @@ void JP_WelcomeSpawn( gentity_t *ent ) {
 
 	Q_strncpyz( welcome, jp_welcomeMSG.string, sizeof( welcome ) );
 	JP_NewLines( welcome );
-	trap->SendServerCommand( num, va( "print \"\n^3***********************************************\n^5%s\n^3Author^7: Slider\nType ^5/aminfo ^7in your console to display the Command list.\nType ^5/ammove ^7in your console to display the list of NEW MOVES.\nType ^5/amAltDim ^7to switch from 1st dimension to the alternate dimension(No Rules Dimension).\n^3***********************************************\n\n\n%s\n\n\"", "JA+ Mod v2.4 Build 7", welcome ) );
+	trap->SendServerCommand( num, va( "print \"\n^3***********************************************\n^5%s\n^3Author^7: Slider\n^3Server^7: VisionJK " GIT_TAG ", ^5" JP_VISION_SITE "\nType ^5/aminfo ^7in your console to display the Command list.\nType ^5/ammove ^7in your console to display the list of NEW MOVES.\nType ^5/amAltDim ^7to switch from 1st dimension to the alternate dimension(No Rules Dimension).\n^3***********************************************\n\n\n%s\n\n\"", "JA+ Mod v2.4 Build 7", welcome ) );
 	if ( d_saberSPStyleDamage.integer == 1 && jp_alterDMG.integer == 0 )
 		trap->SendServerCommand( num, "print \"^3Single Player Saber Damages (default in baseJKA) are activated!\n\"" );
 	else
@@ -700,6 +701,7 @@ void JP_DisplayLatestPluginVersion( gentity_t *ent ) {
 	const int clientNum = ent-g_entities;
 	const float have = ent->client->pers.jp.pluginVersion;
 	const char *plugin = G_ClientUsingJAPLUSClient( clientNum );
+	char userinfo[MAX_INFO_STRING], vision[32];
 	float latest = 0.0f;
 
 	if ( sscanf( JP_PLUGIN_VERSION, "%f", &latest ) != 1 || latest <= 0.0f )
@@ -708,8 +710,16 @@ void JP_DisplayLatestPluginVersion( gentity_t *ent ) {
 		plugin = "undefined";
 
 	trap->SendServerCommand( clientNum, "print \"^3---------------------\n\"" );
-	if ( have < 1.0f ) {
-		trap->SendServerCommand( clientNum, va( "print \"^5Your plugin version is ^5%s^7. You haven't the JA+ client plugin installed. Check the JA+ website to get it!!\n       Or check your client plugin installation (do not forget to remove all previous versions of the plugin and never put it in base folder but only JAPLUS folder).\n\"", plugin ) );
+	// A client of this tree says which one it is (cjp_vision of its cgame). It has the plugin built in, so there
+	// is nothing for it to install or to bring up to date.
+	trap->GetUserinfo( clientNum, userinfo, sizeof( userinfo ) );
+	Q_strncpyz( vision, Info_ValueForKey( userinfo, "cjp_vision" ), sizeof( vision ) );
+	Q_StripColor( vision );
+	if ( vision[0] ) {
+		trap->SendServerCommand( clientNum, va( "print \"Your client is ^5VisionJK %s ^7(^5" JP_VISION_SITE "^7), with the JA+ client plugin ^5%s ^7built in\n\"", vision, plugin ) );
+	}
+	else if ( have < 1.0f ) {
+		trap->SendServerCommand( clientNum, va( "print \"^5Your plugin version is ^5%s^7. You haven't the JA+ client plugin installed. The VisionJK client has it built in: ^5" JP_VISION_SITE "^7\n       Or check your client plugin installation (do not forget to remove all previous versions of the plugin and never put it in base folder but only JAPLUS folder).\n\"", plugin ) );
 	}
 	else if ( have < latest ) {
 		trap->SendServerCommand( clientNum, va( "print \"^5A new JA+ client plugin version is available. \n              Your client Plugin version is ^5%s ^7and the lastest version known by the server is ^5%s\n\"", plugin, JP_PLUGIN_VERSION ) );
@@ -769,11 +779,11 @@ void JP_ClientBeginInit( gentity_t *ent ) {
 		JP_DisplayLatestPluginVersion( ent );
 
 	if ( client->sess.sessionTeam != TEAM_SPECTATOR ) {
-		trap->SendServerCommand( clientNum, va( "cp \"^5%s\n\n\"", JP_VERSION ) );
+		trap->SendServerCommand( clientNum, va( "cp \"^5%s\n^5%s\n\n\"", JP_VISION_TITLE, JP_VERSION ) );
 		if ( JP_HighlanderOn() )
 			Q_strncpyz( jp->motd, va( "^5%s\n ^3\xac^1Highlander ^7FFA Modification^3\xac\n\n^7Kill all immortal\nGet their Forces Powers\n\n^5At the end, there can be only one\n", JP_VERSION ), sizeof( jp->motd ) );
 		else
-			Q_strncpyz( jp->motd, va( "^5%s\n\n^7%s\n", JP_VERSION, jp_motd.string ), sizeof( jp->motd ) );
+			Q_strncpyz( jp->motd, va( "^5%s\n^5%s\n\n^7%s\n", JP_VISION_TITLE, JP_VERSION, jp_motd.string ), sizeof( jp->motd ) );
 		JP_NewLines( jp->motd );
 		jp->motdTime = jp_motdtime.integer;
 	}
