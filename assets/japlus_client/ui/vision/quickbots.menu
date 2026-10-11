@@ -25,10 +25,11 @@
 		itemDef
 		{
 			name					vision_veil
-			rect					-1100 -50 2640 480
+			rect					-100 -50 640 480
 			visible					1
 			style					WINDOW_STYLE_FILLED
 			backcolor				0 0.01 0.03 0.6
+			wide					1
 			decoration
 		}
 
@@ -68,34 +69,20 @@
 
 		itemDef
 		{
-			name					vision_rail_55
-			rect					17 52 202 166
-			visible					1
-			style					WINDOW_STYLE_PANEL
-			backcolor				0.035 0.07 0.12 0.55
-			bordercolor				0.43 0.83 1 0.16
-			radius					6
-			shadow					8
-			sheen					0.06
-			decoration
-		}
-
-		itemDef
-		{
 			name					botlist_slot
-			style					WINDOW_STYLE_EMPTY
+			style					0
 			text					@MENUS_1_1
 			descText				@MENUS_CLICK_FOR_HUMAN_BOTS
 			ownerdraw				UI_BLUETEAM1
 			rect					20 55 196 20
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				12
+			textalignx				20
 			textaligny				-2.5
 			font					5
 			textscale				0.86
 			forecolor				0.60 0.69 0.78 1
 			border					0
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			visible					1
 			action { play "sound/interface/button1.wav" }
 			mouseEnter
@@ -109,19 +96,19 @@
 		itemDef
 		{
 			name					botlist_slot
-			style					WINDOW_STYLE_EMPTY
+			style					0
 			text					@MENUS_2_1
 			descText				@MENUS_CLICK_FOR_HUMAN_BOTS
 			ownerdraw				UI_REDTEAM1
 			rect					20 75 196 20
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				12
+			textalignx				20
 			textaligny				-2.5
 			font					5
 			textscale				0.86
 			forecolor				1 0.45 0.42 1
 			border					0
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			visible					1
 			action { play "sound/interface/button1.wav" }
 			mouseEnter
@@ -135,19 +122,19 @@
 		itemDef
 		{
 			name					botlist_slot
-			style					WINDOW_STYLE_EMPTY
+			style					0
 			text					@MENUS_3_1
 			descText				@MENUS_CLICK_FOR_HUMAN_BOTS
 			ownerdraw				UI_BLUETEAM2
 			rect					20 95 196 20
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				12
+			textalignx				20
 			textaligny				-2.5
 			font					5
 			textscale				0.86
 			forecolor				0.60 0.69 0.78 1
 			border					0
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			visible					1
 			action { play "sound/interface/button1.wav" }
 			mouseEnter
@@ -161,19 +148,19 @@
 		itemDef
 		{
 			name					botlist_slot
-			style					WINDOW_STYLE_EMPTY
+			style					0
 			text					@MENUS_4_1
 			descText				@MENUS_CLICK_FOR_HUMAN_BOTS
 			ownerdraw				UI_REDTEAM2
 			rect					20 115 196 20
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				12
+			textalignx				20
 			textaligny				-2.5
 			font					5
 			textscale				0.86
 			forecolor				1 0.45 0.42 1
 			border					0
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			visible					1
 			action { play "sound/interface/button1.wav" }
 			mouseEnter
@@ -187,19 +174,19 @@
 		itemDef
 		{
 			name					botlist_slot
-			style					WINDOW_STYLE_EMPTY
+			style					0
 			text					@MENUS_5_1
 			descText				@MENUS_CLICK_FOR_HUMAN_BOTS
 			ownerdraw				UI_BLUETEAM3
 			rect					20 135 196 20
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				12
+			textalignx				20
 			textaligny				-2.5
 			font					5
 			textscale				0.86
 			forecolor				0.60 0.69 0.78 1
 			border					0
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			visible					1
 			action { play "sound/interface/button1.wav" }
 			mouseEnter
@@ -213,19 +200,19 @@
 		itemDef
 		{
 			name					botlist_slot
-			style					WINDOW_STYLE_EMPTY
+			style					0
 			text					@MENUS_6_1
 			descText				@MENUS_CLICK_FOR_HUMAN_BOTS
 			ownerdraw				UI_REDTEAM3
 			rect					20 155 196 20
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				12
+			textalignx				20
 			textaligny				-2.5
 			font					5
 			textscale				0.86
 			forecolor				1 0.45 0.42 1
 			border					0
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			visible					1
 			action { play "sound/interface/button1.wav" }
 			mouseEnter
@@ -239,19 +226,19 @@
 		itemDef
 		{
 			name					botlist_slot
-			style					WINDOW_STYLE_EMPTY
+			style					0
 			text					@MENUS_7_1
 			descText				@MENUS_CLICK_FOR_HUMAN_BOTS
 			ownerdraw				UI_BLUETEAM4
 			rect					20 175 196 20
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				12
+			textalignx				20
 			textaligny				-2.5
 			font					5
 			textscale				0.86
 			forecolor				0.60 0.69 0.78 1
 			border					0
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			visible					1
 			action { play "sound/interface/button1.wav" }
 			mouseEnter
@@ -265,19 +252,19 @@
 		itemDef
 		{
 			name					botlist_slot
-			style					WINDOW_STYLE_EMPTY
+			style					0
 			text					@MENUS_8_1
 			descText				@MENUS_CLICK_FOR_HUMAN_BOTS
 			ownerdraw				UI_REDTEAM4
 			rect					20 195 196 20
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				12
+			textalignx				20
 			textaligny				-2.5
 			font					5
 			textscale				0.86
 			forecolor				1 0.45 0.42 1
 			border					0
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			visible					1
 			action { play "sound/interface/button1.wav" }
 			mouseEnter
@@ -290,34 +277,20 @@
 
 		itemDef
 		{
-			name					vision_rail_55
-			rect					217 52 202 166
-			visible					1
-			style					WINDOW_STYLE_PANEL
-			backcolor				0.035 0.07 0.12 0.55
-			bordercolor				0.43 0.83 1 0.16
-			radius					6
-			shadow					8
-			sheen					0.06
-			decoration
-		}
-
-		itemDef
-		{
 			name					botlist_slot
-			style					WINDOW_STYLE_EMPTY
+			style					0
 			text					@MENUS_9
 			descText				@MENUS_CLICK_FOR_HUMAN_BOTS
 			ownerdraw				UI_BLUETEAM5
 			rect					220 55 196 20
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				12
+			textalignx				20
 			textaligny				-2.5
 			font					5
 			textscale				0.86
 			forecolor				0.60 0.69 0.78 1
 			border					0
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			visible					1
 			action { play "sound/interface/button1.wav" }
 			mouseEnter
@@ -331,19 +304,19 @@
 		itemDef
 		{
 			name					botlist_slot
-			style					WINDOW_STYLE_EMPTY
+			style					0
 			text					@MENUS_10
 			descText				@MENUS_CLICK_FOR_HUMAN_BOTS
 			ownerdraw				UI_REDTEAM5
 			rect					220 75 196 20
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				12
+			textalignx				10
 			textaligny				-2.5
 			font					5
 			textscale				0.86
 			forecolor				1 0.45 0.42 1
 			border					0
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			visible					1
 			action { play "sound/interface/button1.wav" }
 			mouseEnter
@@ -357,19 +330,19 @@
 		itemDef
 		{
 			name					botlist_slot
-			style					WINDOW_STYLE_EMPTY
+			style					0
 			text					@MENUS_11
 			descText				@MENUS_CLICK_FOR_HUMAN_BOTS
 			ownerdraw				UI_BLUETEAM6
 			rect					220 95 196 20
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				12
+			textalignx				10
 			textaligny				-2.5
 			font					5
 			textscale				0.86
 			forecolor				0.60 0.69 0.78 1
 			border					0
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			visible					1
 			action { play "sound/interface/button1.wav" }
 			mouseEnter
@@ -383,19 +356,19 @@
 		itemDef
 		{
 			name					botlist_slot
-			style					WINDOW_STYLE_EMPTY
+			style					0
 			text					@MENUS_12
 			descText				@MENUS_CLICK_FOR_HUMAN_BOTS
 			ownerdraw				UI_REDTEAM6
 			rect					220 115 196 20
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				12
+			textalignx				10
 			textaligny				-2.5
 			font					5
 			textscale				0.86
 			forecolor				1 0.45 0.42 1
 			border					0
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			visible					1
 			action { play "sound/interface/button1.wav" }
 			mouseEnter
@@ -409,19 +382,19 @@
 		itemDef
 		{
 			name					botlist_slot
-			style					WINDOW_STYLE_EMPTY
+			style					0
 			text					@MENUS_13
 			descText				@MENUS_CLICK_FOR_HUMAN_BOTS
 			ownerdraw				UI_BLUETEAM7
 			rect					220 135 196 20
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				12
+			textalignx				10
 			textaligny				-2.5
 			font					5
 			textscale				0.86
 			forecolor				0.60 0.69 0.78 1
 			border					0
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			visible					1
 			action { play "sound/interface/button1.wav" }
 			mouseEnter
@@ -435,19 +408,19 @@
 		itemDef
 		{
 			name					botlist_slot
-			style					WINDOW_STYLE_EMPTY
+			style					0
 			text					@MENUS_14
 			descText				@MENUS_CLICK_FOR_HUMAN_BOTS
 			ownerdraw				UI_REDTEAM7
 			rect					220 155 196 20
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				12
+			textalignx				10
 			textaligny				-2.5
 			font					5
 			textscale				0.86
 			forecolor				1 0.45 0.42 1
 			border					0
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			visible					1
 			action { play "sound/interface/button1.wav" }
 			mouseEnter
@@ -461,19 +434,19 @@
 		itemDef
 		{
 			name					botlist_slot
-			style					WINDOW_STYLE_EMPTY
+			style					0
 			text					@MENUS_15
 			descText				@MENUS_CLICK_FOR_HUMAN_BOTS
 			ownerdraw				UI_BLUETEAM8
 			rect					220 175 196 20
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				12
+			textalignx				10
 			textaligny				-2.5
 			font					5
 			textscale				0.86
 			forecolor				0.60 0.69 0.78 1
 			border					0
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			visible					1
 			action { play "sound/interface/button1.wav" }
 			mouseEnter
@@ -487,19 +460,19 @@
 		itemDef
 		{
 			name					botlist_slot
-			style					WINDOW_STYLE_EMPTY
+			style					0
 			text					@MENUS_16
 			descText				@MENUS_CLICK_FOR_HUMAN_BOTS
 			ownerdraw				UI_REDTEAM8
 			rect					220 195 196 20
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				12
+			textalignx				10
 			textaligny				-2.5
 			font					5
 			textscale				0.86
 			forecolor				1 0.45 0.42 1
 			border					0
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			visible					1
 			action { play "sound/interface/button1.wav" }
 			mouseEnter

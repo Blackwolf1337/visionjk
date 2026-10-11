@@ -65,7 +65,7 @@
 			textscale				0.59
 			forecolor				0.60 0.69 0.78 1
 			border					0
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			visible					1
 			caps					1
 		}
@@ -161,10 +161,10 @@
 			text					"Text:"
 			cvar					"ui_modSayText"
 			maxchars				133
-			rect					10 53 570 15
+			rect					10 50.6 570 11.76
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				0
-			textaligny				0.6
+			textaligny				3
 			font					5
 			textscale				0.32
 			forecolor				0.86 0.92 0.97 1
@@ -177,12 +177,12 @@
 			mouseenter
 			{
 				hide highlight2
-				setitemcolor textToSend bordercolor .7 0 0 1
+				setitemcolor textToSend bordercolor 0.43 0.83 1 0.16
 			}
 			mouseexit
 			{
 				show highlight2
-				setitemcolor textToSend bordercolor 0 0 0 0
+				setitemcolor textToSend bordercolor 0.43 0.83 1 0.16
 			}
 			radius					5
 		}
@@ -212,12 +212,12 @@
 			mouseEnter
 			{
 				fadein message_arena ;
-				setitemcolor playerList bordercolor .7 0 0 1
+				setitemcolor playerList bordercolor 0.43 0.83 1 0.16
 			}
 			mouseExit
 			{
 				fadeout message_arena ;
-				setitemcolor playerList bordercolor .5 .5 .5 1
+				setitemcolor playerList bordercolor 0.43 0.83 1 0.16
 			}
 			action { play "sound/interface/button1.wav" ; }
 			radius					4

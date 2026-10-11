@@ -55,7 +55,7 @@
 			forecolor				.549 .854 1 1
 			visible					1
 			decoration
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			radius					3
 		}
 
@@ -86,7 +86,7 @@
 			backcolor				0.43 0.83 1 0.14
 			visible					1
 			decoration
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			radius					3
 		}
 
@@ -117,7 +117,7 @@
 			visible					1
 			decoration
 			caps					1
-			textaligny				2.5
+			textaligny				4.84
 		}
 
 		itemDef
@@ -172,7 +172,7 @@
 			backcolor				0.43 0.83 1 0.14
 			visible					1
 			decoration
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			radius					3
 		}
 
@@ -190,7 +190,7 @@
 			visible					1
 			decoration
 			caps					1
-			textaligny				2.5
+			textaligny				6.84
 		}
 
 		itemDef
@@ -214,8 +214,8 @@
 			notselectable
 			visible					1
 			columns					1 2 55 225
-			mouseEnter { setitemcolor moveslist bordercolor 1 1 1 1 }
-			mouseExit { setitemcolor moveslist bordercolor 0 0 .8 1 }
+			mouseEnter { setitemcolor moveslist bordercolor 0.43 0.83 1 0.6 }
+			mouseExit { setitemcolor moveslist bordercolor 0.43 0.83 1 0.16 }
 			doubleclick { play sound/interface/button1.wav }
 			radius					4
 		}

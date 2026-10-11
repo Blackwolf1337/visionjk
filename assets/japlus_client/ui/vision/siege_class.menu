@@ -45,8 +45,8 @@
 			setitemcolor team1_count forecolor 0.86 0.92 0.97 1
 			setitemcolor team2_count forecolor 0.86 0.92 0.97 1
 			setitemcolor siegeclassconfigtitle forecolor 0.86 0.92 0.97 1
-			setitemcolor team1obj_buttons bordercolor 0 0 0 0
-			setitemcolor team2obj_buttons bordercolor 0 0 0 0
+			setitemcolor team1obj_buttons bordercolor 0.43 0.83 1 0.16
+			setitemcolor team2obj_buttons bordercolor 0.43 0.83 1 0.16
 			setitemcolor team1obj_buttons forecolor 0.43 0.83 1 1
 			setitemcolor team2obj_buttons forecolor 0.43 0.83 1 1
 			disable team1obj_buttons 0
@@ -65,8 +65,8 @@
 			setitemcolor team1obj_buttons backcolor .7 0 0 1
 			setitemcolor team2obj_buttons forecolor 0.86 0.92 0.97 1
 			setitemcolor team2obj_buttons backcolor 0 0 .7 1
-			setitemcolor mapicons bordercolor 0 0 0 0
-			setitemcolor team1obj1_button bordercolor 1 1 1 1
+			setitemcolor mapicons bordercolor 0.43 0.83 1 0.16
+			setitemcolor team1obj1_button bordercolor 0.43 0.83 1 0.6
 			setitemcolor team1obj1_button backcolor 1 0 0 1
 			uiscript setsiegeobjbuttons tm1_icon1 team1_objective1_mapicon team1_objective1_litmapicon
 			uiscript setteamclassicons
@@ -111,7 +111,7 @@
 			forecolor				0.86 0.92 0.97 1
 			visible					1
 			decoration
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			radius					3
 			caps					1
 		}
@@ -157,7 +157,7 @@
 			forecolor				1 1 1 1
 			visible					1
 			border					1
-			bordercolor				.38 .51 .59 1
+			bordercolor				0.43 0.83 1 0.16
 			decoration
 			background				"*siege_mapgraphic"
 		}
@@ -199,7 +199,7 @@
 			backcolor				0.43 0.83 1 0.14
 			forecolor				0.86 0.92 0.97 1
 			visible					1
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			mouseEnter
 			{
 				setitemcolor team1obj1_button forecolor 0.43 0.83 1 1
@@ -222,10 +222,10 @@
 				setitemcolor team1obj_buttons backcolor .7 0 0 1
 				setitemcolor team2obj_buttons forecolor 0.86 0.92 0.97 1
 				setitemcolor team2obj_buttons backcolor 0 0 .7 1
-				setitemcolor team1obj_buttons bordercolor 0 0 0 0
-				setitemcolor team2obj_buttons bordercolor 0 0 0 0
+				setitemcolor team1obj_buttons bordercolor 0.43 0.83 1 0.16
+				setitemcolor team2obj_buttons bordercolor 0.43 0.83 1 0.16
 				setcvar currentObjButton "team1obj1_button"
-				setitemcolor team1obj1_button bordercolor 1 1 1 1
+				setitemcolor team1obj1_button bordercolor 0.43 0.83 1 0.6
 				setitemcolor team1obj1_button backcolor 1 0 0 1
 				hide completed_text
 				show text_tm1_obj1
@@ -251,7 +251,7 @@
 			backcolor				0.43 0.83 1 0.14
 			forecolor				0.86 0.92 0.97 1
 			visible					1
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			cvartest				"team1_objective2_inuse"
 			showcvar { "1" ; "2" }
 			mouseEnter
@@ -276,10 +276,10 @@
 				setitemcolor team1obj_buttons backcolor .7 0 0 1
 				setitemcolor team2obj_buttons forecolor 0.86 0.92 0.97 1
 				setitemcolor team2obj_buttons backcolor 0 0 .7 1
-				setitemcolor team1obj_buttons bordercolor 0 0 0 0
-				setitemcolor team2obj_buttons bordercolor 0 0 0 0
+				setitemcolor team1obj_buttons bordercolor 0.43 0.83 1 0.16
+				setitemcolor team2obj_buttons bordercolor 0.43 0.83 1 0.16
 				setcvar currentObjButton "team1obj2_button"
-				setitemcolor team1obj2_button bordercolor 1 1 1 1
+				setitemcolor team1obj2_button bordercolor 0.43 0.83 1 0.6
 				setitemcolor team1obj2_button backcolor 1 0 0 1
 				hide completed_text
 				show text_tm1_obj2
@@ -305,7 +305,7 @@
 			backcolor				0.43 0.83 1 0.14
 			forecolor				0.86 0.92 0.97 1
 			visible					1
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			cvartest				"team1_objective3_inuse"
 			showcvar { "1" ; "2" }
 			mouseEnter
@@ -330,10 +330,10 @@
 				setitemcolor team1obj_buttons backcolor .7 0 0 1
 				setitemcolor team2obj_buttons forecolor 0.86 0.92 0.97 1
 				setitemcolor team2obj_buttons backcolor 0 0 .7 1
-				setitemcolor team1obj_buttons bordercolor 0 0 0 0
-				setitemcolor team2obj_buttons bordercolor 0 0 0 0
+				setitemcolor team1obj_buttons bordercolor 0.43 0.83 1 0.16
+				setitemcolor team2obj_buttons bordercolor 0.43 0.83 1 0.16
 				setcvar currentObjButton "team1obj3_button"
-				setitemcolor team1obj3_button bordercolor 1 1 1 1
+				setitemcolor team1obj3_button bordercolor 0.43 0.83 1 0.6
 				setitemcolor team1obj3_button backcolor 1 0 0 1
 				hide completed_text
 				show text_tm1_obj3
@@ -359,7 +359,7 @@
 			backcolor				0.43 0.83 1 0.14
 			forecolor				0.86 0.92 0.97 1
 			visible					1
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			cvartest				"team1_objective4_inuse"
 			showcvar { "1" ; "2" }
 			mouseEnter
@@ -384,10 +384,10 @@
 				setitemcolor team1obj_buttons backcolor .7 0 0 1
 				setitemcolor team2obj_buttons forecolor 0.86 0.92 0.97 1
 				setitemcolor team2obj_buttons backcolor 0 0 .7 1
-				setitemcolor team1obj_buttons bordercolor 0 0 0 0
-				setitemcolor team2obj_buttons bordercolor 0 0 0 0
+				setitemcolor team1obj_buttons bordercolor 0.43 0.83 1 0.16
+				setitemcolor team2obj_buttons bordercolor 0.43 0.83 1 0.16
 				setcvar currentObjButton "team1obj4_button"
-				setitemcolor team1obj4_button bordercolor 1 1 1 1
+				setitemcolor team1obj4_button bordercolor 0.43 0.83 1 0.6
 				setitemcolor team1obj4_button backcolor 1 0 0 1
 				hide completed_text
 				show text_tm1_obj4
@@ -413,7 +413,7 @@
 			backcolor				0.43 0.83 1 0.14
 			forecolor				0.86 0.92 0.97 1
 			visible					1
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			cvartest				"team1_objective5_inuse"
 			showcvar { "1" ; "2" }
 			mouseEnter
@@ -438,10 +438,10 @@
 				setitemcolor team1obj_buttons backcolor .7 0 0 1
 				setitemcolor team2obj_buttons forecolor 0.86 0.92 0.97 1
 				setitemcolor team2obj_buttons backcolor 0 0 .7 1
-				setitemcolor team1obj_buttons bordercolor 0 0 0 0
-				setitemcolor team2obj_buttons bordercolor 0 0 0 0
+				setitemcolor team1obj_buttons bordercolor 0.43 0.83 1 0.16
+				setitemcolor team2obj_buttons bordercolor 0.43 0.83 1 0.16
 				setcvar currentObjButton "team1obj5_button"
-				setitemcolor team1obj5_button bordercolor 1 1 1 1
+				setitemcolor team1obj5_button bordercolor 0.43 0.83 1 0.6
 				setitemcolor team1obj5_button backcolor 1 0 0 1
 				hide completed_text
 				show text_tm1_obj5
@@ -467,7 +467,7 @@
 			backcolor				0.43 0.83 1 0.14
 			forecolor				0.86 0.92 0.97 1
 			visible					1
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			cvartest				"team1_objective6_inuse"
 			showcvar { "1" ; "2" }
 			mouseEnter
@@ -492,10 +492,10 @@
 				setitemcolor team1obj_buttons backcolor .7 0 0 1
 				setitemcolor team2obj_buttons forecolor 0.86 0.92 0.97 1
 				setitemcolor team2obj_buttons backcolor 0 0 .7 1
-				setitemcolor team1obj_buttons bordercolor 0 0 0 0
-				setitemcolor team2obj_buttons bordercolor 0 0 0 0
+				setitemcolor team1obj_buttons bordercolor 0.43 0.83 1 0.16
+				setitemcolor team2obj_buttons bordercolor 0.43 0.83 1 0.16
 				setcvar currentObjButton "team1obj6_button"
-				setitemcolor team1obj6_button bordercolor 1 1 1 1
+				setitemcolor team1obj6_button bordercolor 0.43 0.83 1 0.6
 				setitemcolor team1obj6_button backcolor 1 0 0 1
 				hide completed_text
 				show text_tm1_obj6
@@ -521,7 +521,7 @@
 			backcolor				0.43 0.83 1 0.14
 			forecolor				0.86 0.92 0.97 1
 			visible					1
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			cvartest				"team1_objective7_inuse"
 			showcvar { "1" ; "2" }
 			mouseEnter
@@ -546,10 +546,10 @@
 				setitemcolor team1obj_buttons backcolor .7 0 0 1
 				setitemcolor team2obj_buttons forecolor 0.86 0.92 0.97 1
 				setitemcolor team2obj_buttons backcolor 0 0 .7 1
-				setitemcolor team1obj_buttons bordercolor 0 0 0 0
-				setitemcolor team2obj_buttons bordercolor 0 0 0 0
+				setitemcolor team1obj_buttons bordercolor 0.43 0.83 1 0.16
+				setitemcolor team2obj_buttons bordercolor 0.43 0.83 1 0.16
 				setcvar currentObjButton "team1obj7_button"
-				setitemcolor team1obj7_button bordercolor 1 1 1 1
+				setitemcolor team1obj7_button bordercolor 0.43 0.83 1 0.6
 				setitemcolor team1obj7_button backcolor 1 0 0 1
 				hide completed_text
 				show text_tm1_obj7
@@ -575,7 +575,7 @@
 			backcolor				0.43 0.83 1 0.14
 			forecolor				0.86 0.92 0.97 1
 			visible					1
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			cvartest				"team1_objective8_inuse"
 			showcvar { "1" ; "2" }
 			mouseEnter
@@ -600,10 +600,10 @@
 				setitemcolor team1obj_buttons backcolor .7 0 0 1
 				setitemcolor team2obj_buttons forecolor 0.86 0.92 0.97 1
 				setitemcolor team2obj_buttons backcolor 0 0 .7 1
-				setitemcolor team1obj_buttons bordercolor 0 0 0 0
-				setitemcolor team2obj_buttons bordercolor 0 0 0 0
+				setitemcolor team1obj_buttons bordercolor 0.43 0.83 1 0.16
+				setitemcolor team2obj_buttons bordercolor 0.43 0.83 1 0.16
 				setcvar currentObjButton "team1obj8_button"
-				setitemcolor team1obj8_button bordercolor 1 1 1 1
+				setitemcolor team1obj8_button bordercolor 0.43 0.83 1 0.6
 				setitemcolor team1obj8_button backcolor 1 0 0 1
 				hide completed_text
 				show text_tm1_obj8
@@ -619,9 +619,8 @@
 			style					WINDOW_STYLE_SHADER
 			rect					22 120 24 24
 			forecolor				1 1 1 1
-			visible					1
 			border					1
-			bordercolor				1 1 1 1
+			bordercolor				0.43 0.83 1 0.16
 			background				"gfx/menus/x"
 			visible					1
 			cvartest				"team1_objective1"
@@ -636,9 +635,8 @@
 			style					WINDOW_STYLE_SHADER
 			rect					22 150 24 24
 			forecolor				1 1 1 1
-			visible					1
 			border					1
-			bordercolor				1 1 1 1
+			bordercolor				0.43 0.83 1 0.16
 			background				"gfx/menus/x"
 			visible					1
 			cvartest				"team1_objective2"
@@ -653,9 +651,8 @@
 			style					WINDOW_STYLE_SHADER
 			rect					22 180 24 24
 			forecolor				1 1 1 1
-			visible					1
 			border					1
-			bordercolor				1 1 1 1
+			bordercolor				0.43 0.83 1 0.16
 			background				"gfx/menus/x"
 			visible					1
 			cvartest				"team1_objective3"
@@ -670,9 +667,8 @@
 			style					WINDOW_STYLE_SHADER
 			rect					22 210 24 24
 			forecolor				1 1 1 1
-			visible					1
 			border					1
-			bordercolor				1 1 1 1
+			bordercolor				0.43 0.83 1 0.16
 			background				"gfx/menus/x"
 			visible					1
 			cvartest				"team1_objective4"
@@ -687,9 +683,8 @@
 			style					WINDOW_STYLE_SHADER
 			rect					22 240 24 24
 			forecolor				1 1 1 1
-			visible					1
 			border					1
-			bordercolor				1 1 1 1
+			bordercolor				0.43 0.83 1 0.16
 			background				"gfx/menus/x"
 			visible					1
 			cvartest				"team1_objective5"
@@ -704,9 +699,8 @@
 			style					WINDOW_STYLE_SHADER
 			rect					22 270 24 24
 			forecolor				1 1 1 1
-			visible					1
 			border					1
-			bordercolor				1 1 1 1
+			bordercolor				0.43 0.83 1 0.16
 			background				"gfx/menus/x"
 			visible					1
 			cvartest				"team1_objective6"
@@ -721,9 +715,8 @@
 			style					WINDOW_STYLE_SHADER
 			rect					22 300 24 24
 			forecolor				1 1 1 1
-			visible					1
 			border					1
-			bordercolor				1 1 1 1
+			bordercolor				0.43 0.83 1 0.16
 			background				"gfx/menus/x"
 			visible					1
 			cvartest				"team1_objective7"
@@ -738,9 +731,8 @@
 			style					WINDOW_STYLE_SHADER
 			rect					22 330 24 24
 			forecolor				1 1 1 1
-			visible					1
 			border					1
-			bordercolor				1 1 1 1
+			bordercolor				0.43 0.83 1 0.16
 			background				"gfx/menus/x"
 			visible					1
 			cvartest				"team1_objective8"
@@ -765,7 +757,7 @@
 			backcolor				0.43 0.83 1 0.14
 			forecolor				0.43 0.83 1 1
 			visible					1
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			mouseEnter
 			{
 				setitemcolor team2obj1_button forecolor 0.43 0.83 1 1
@@ -788,10 +780,10 @@
 				setitemcolor team1obj_buttons backcolor .7 0 0 1
 				setitemcolor team2obj_buttons forecolor 0.86 0.92 0.97 1
 				setitemcolor team2obj_buttons backcolor 0 0 .7 1
-				setitemcolor team1obj_buttons bordercolor 0 0 0 0
-				setitemcolor team2obj_buttons bordercolor 0 0 0 0
+				setitemcolor team1obj_buttons bordercolor 0.43 0.83 1 0.16
+				setitemcolor team2obj_buttons bordercolor 0.43 0.83 1 0.16
 				setcvar currentObjButton "team2obj1_button"
-				setitemcolor team2obj1_button bordercolor 1 1 1 1
+				setitemcolor team2obj1_button bordercolor 0.43 0.83 1 0.6
 				setitemcolor team2obj1_button backcolor 0 0 1 1
 				hide completed_text
 				show text_tm2_obj1
@@ -817,7 +809,7 @@
 			backcolor				0.43 0.83 1 0.14
 			forecolor				0.43 0.83 1 1
 			visible					1
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			cvartest				"team2_objective2_inuse"
 			showcvar { "1" ; "2" }
 			mouseEnter
@@ -842,10 +834,10 @@
 				setitemcolor team1obj_buttons backcolor .7 0 0 1
 				setitemcolor team2obj_buttons forecolor 0.86 0.92 0.97 1
 				setitemcolor team2obj_buttons backcolor 0 0 .7 1
-				setitemcolor team1obj_buttons bordercolor 0 0 0 0
-				setitemcolor team2obj_buttons bordercolor 0 0 0 0
+				setitemcolor team1obj_buttons bordercolor 0.43 0.83 1 0.16
+				setitemcolor team2obj_buttons bordercolor 0.43 0.83 1 0.16
 				setcvar currentObjButton "team2obj2_button"
-				setitemcolor team2obj2_button bordercolor 1 1 1 1
+				setitemcolor team2obj2_button bordercolor 0.43 0.83 1 0.6
 				setitemcolor team2obj2_button backcolor 0 0 1 1
 				hide completed_text
 				show text_tm2_obj2
@@ -871,7 +863,7 @@
 			backcolor				0.43 0.83 1 0.14
 			forecolor				0.43 0.83 1 1
 			visible					1
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			cvartest				"team2_objective3_inuse"
 			showcvar { "1" ; "2" }
 			mouseEnter
@@ -896,10 +888,10 @@
 				setitemcolor team1obj_buttons backcolor .7 0 0 1
 				setitemcolor team2obj_buttons forecolor 0.86 0.92 0.97 1
 				setitemcolor team2obj_buttons backcolor 0 0 .7 1
-				setitemcolor team1obj_buttons bordercolor 0 0 0 0
-				setitemcolor team2obj_buttons bordercolor 0 0 0 0
+				setitemcolor team1obj_buttons bordercolor 0.43 0.83 1 0.16
+				setitemcolor team2obj_buttons bordercolor 0.43 0.83 1 0.16
 				setcvar currentObjButton "team2obj3_button"
-				setitemcolor team2obj3_button bordercolor 1 1 1 1
+				setitemcolor team2obj3_button bordercolor 0.43 0.83 1 0.6
 				setitemcolor team2obj3_button backcolor 0 0 1 1
 				hide completed_text
 				show text_tm2_obj3
@@ -925,7 +917,7 @@
 			backcolor				0.43 0.83 1 0.14
 			forecolor				0.43 0.83 1 1
 			visible					1
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			cvartest				"team2_objective4_inuse"
 			showcvar { "1" ; "2" }
 			mouseEnter
@@ -950,10 +942,10 @@
 				setitemcolor team1obj_buttons backcolor .7 0 0 1
 				setitemcolor team2obj_buttons forecolor 0.86 0.92 0.97 1
 				setitemcolor team2obj_buttons backcolor 0 0 .7 1
-				setitemcolor team1obj_buttons bordercolor 0 0 0 0
-				setitemcolor team2obj_buttons bordercolor 0 0 0 0
+				setitemcolor team1obj_buttons bordercolor 0.43 0.83 1 0.16
+				setitemcolor team2obj_buttons bordercolor 0.43 0.83 1 0.16
 				setcvar currentObjButton "team2obj4_button"
-				setitemcolor team2obj4_button bordercolor 1 1 1 1
+				setitemcolor team2obj4_button bordercolor 0.43 0.83 1 0.6
 				setitemcolor team2obj4_button backcolor 0 0 1 1
 				hide completed_text
 				show text_tm2_obj4
@@ -979,7 +971,7 @@
 			backcolor				0.43 0.83 1 0.14
 			forecolor				0.43 0.83 1 1
 			visible					1
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			cvartest				"team2_objective5_inuse"
 			showcvar { "1" ; "2" }
 			mouseEnter
@@ -1004,10 +996,10 @@
 				setitemcolor team1obj_buttons backcolor .7 0 0 1
 				setitemcolor team2obj_buttons forecolor 0.86 0.92 0.97 1
 				setitemcolor team2obj_buttons backcolor 0 0 .7 1
-				setitemcolor team1obj_buttons bordercolor 0 0 0 0
-				setitemcolor team2obj_buttons bordercolor 0 0 0 0
+				setitemcolor team1obj_buttons bordercolor 0.43 0.83 1 0.16
+				setitemcolor team2obj_buttons bordercolor 0.43 0.83 1 0.16
 				setcvar currentObjButton "team2obj5_button"
-				setitemcolor team2obj5_button bordercolor 1 1 1 1
+				setitemcolor team2obj5_button bordercolor 0.43 0.83 1 0.6
 				setitemcolor team2obj5_button backcolor 0 0 1 1
 				hide completed_text
 				show text_tm2_obj5
@@ -1033,7 +1025,7 @@
 			backcolor				0.43 0.83 1 0.14
 			forecolor				0.43 0.83 1 1
 			visible					1
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			cvartest				"team2_objective6_inuse"
 			showcvar { "1" ; "2" }
 			mouseEnter
@@ -1058,10 +1050,10 @@
 				setitemcolor team1obj_buttons backcolor .7 0 0 1
 				setitemcolor team2obj_buttons forecolor 0.86 0.92 0.97 1
 				setitemcolor team2obj_buttons backcolor 0 0 .7 1
-				setitemcolor team1obj_buttons bordercolor 0 0 0 0
-				setitemcolor team2obj_buttons bordercolor 0 0 0 0
+				setitemcolor team1obj_buttons bordercolor 0.43 0.83 1 0.16
+				setitemcolor team2obj_buttons bordercolor 0.43 0.83 1 0.16
 				setcvar currentObjButton "team2obj6_button"
-				setitemcolor team2obj6_button bordercolor 1 1 1 1
+				setitemcolor team2obj6_button bordercolor 0.43 0.83 1 0.6
 				setitemcolor team2obj6_button backcolor 0 0 1 1
 				hide completed_text
 				show text_tm2_obj6
@@ -1087,7 +1079,7 @@
 			backcolor				0.43 0.83 1 0.14
 			forecolor				0.43 0.83 1 1
 			visible					1
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			cvartest				"team2_objective7_inuse"
 			showcvar { "1" ; "2" }
 			mouseEnter
@@ -1112,10 +1104,10 @@
 				setitemcolor team1obj_buttons backcolor .7 0 0 1
 				setitemcolor team2obj_buttons forecolor 0.86 0.92 0.97 1
 				setitemcolor team2obj_buttons backcolor 0 0 .7 1
-				setitemcolor team1obj_buttons bordercolor 0 0 0 0
-				setitemcolor team2obj_buttons bordercolor 0 0 0 0
+				setitemcolor team1obj_buttons bordercolor 0.43 0.83 1 0.16
+				setitemcolor team2obj_buttons bordercolor 0.43 0.83 1 0.16
 				setcvar currentObjButton "team2obj7_button"
-				setitemcolor team2obj7_button bordercolor 1 1 1 1
+				setitemcolor team2obj7_button bordercolor 0.43 0.83 1 0.6
 				setitemcolor team2obj7_button backcolor 0 0 1 1
 				hide completed_text
 				show text_tm2_obj7
@@ -1141,7 +1133,7 @@
 			backcolor				0.43 0.83 1 0.14
 			forecolor				0.43 0.83 1 1
 			visible					1
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			cvartest				"team2_objective8_inuse"
 			showcvar { "1" ; "2" }
 			mouseEnter
@@ -1166,10 +1158,10 @@
 				setitemcolor team1obj_buttons backcolor .7 0 0 1
 				setitemcolor team2obj_buttons forecolor 0.86 0.92 0.97 1
 				setitemcolor team2obj_buttons backcolor 0 0 .7 1
-				setitemcolor team1obj_buttons bordercolor 0 0 0 0
-				setitemcolor team2obj_buttons bordercolor 0 0 0 0
+				setitemcolor team1obj_buttons bordercolor 0.43 0.83 1 0.16
+				setitemcolor team2obj_buttons bordercolor 0.43 0.83 1 0.16
 				setcvar currentObjButton "team2obj8_button"
-				setitemcolor team2obj8_button bordercolor 1 1 1 1
+				setitemcolor team2obj8_button bordercolor 0.43 0.83 1 0.6
 				setitemcolor team2obj8_button backcolor 0 0 1 1
 				hide completed_text
 				show text_tm2_obj8
@@ -1185,9 +1177,8 @@
 			style					WINDOW_STYLE_SHADER
 			rect					273 120 24 24
 			forecolor				1 1 1 1
-			visible					1
 			border					1
-			bordercolor				1 1 1 1
+			bordercolor				0.43 0.83 1 0.16
 			background				"gfx/menus/x"
 			visible					1
 			cvartest				"team1_objective1"
@@ -1202,9 +1193,8 @@
 			style					WINDOW_STYLE_SHADER
 			rect					273 150 24 24
 			forecolor				1 1 1 1
-			visible					1
 			border					1
-			bordercolor				1 1 1 1
+			bordercolor				0.43 0.83 1 0.16
 			background				"gfx/menus/x"
 			visible					1
 			cvartest				"team1_objective2"
@@ -1219,9 +1209,8 @@
 			style					WINDOW_STYLE_SHADER
 			rect					273 180 24 24
 			forecolor				1 1 1 1
-			visible					1
 			border					1
-			bordercolor				1 1 1 1
+			bordercolor				0.43 0.83 1 0.16
 			background				"gfx/menus/x"
 			visible					1
 			cvartest				"team1_objective3"
@@ -1236,9 +1225,8 @@
 			style					WINDOW_STYLE_SHADER
 			rect					273 210 24 24
 			forecolor				1 1 1 1
-			visible					1
 			border					1
-			bordercolor				1 1 1 1
+			bordercolor				0.43 0.83 1 0.16
 			background				"gfx/menus/x"
 			visible					1
 			cvartest				"team1_objective4"
@@ -1253,9 +1241,8 @@
 			style					WINDOW_STYLE_SHADER
 			rect					273 240 24 24
 			forecolor				1 1 1 1
-			visible					1
 			border					1
-			bordercolor				1 1 1 1
+			bordercolor				0.43 0.83 1 0.16
 			background				"gfx/menus/x"
 			visible					1
 			cvartest				"team1_objective5"
@@ -1270,9 +1257,8 @@
 			style					WINDOW_STYLE_SHADER
 			rect					273 270 24 24
 			forecolor				1 1 1 1
-			visible					1
 			border					1
-			bordercolor				1 1 1 1
+			bordercolor				0.43 0.83 1 0.16
 			background				"gfx/menus/x"
 			visible					1
 			cvartest				"team1_objective6"
@@ -1287,9 +1273,8 @@
 			style					WINDOW_STYLE_SHADER
 			rect					273 300 24 24
 			forecolor				1 1 1 1
-			visible					1
 			border					1
-			bordercolor				1 1 1 1
+			bordercolor				0.43 0.83 1 0.16
 			background				"gfx/menus/x"
 			visible					1
 			cvartest				"team1_objective7"
@@ -1304,9 +1289,8 @@
 			style					WINDOW_STYLE_SHADER
 			rect					273 330 24 24
 			forecolor				1 1 1 1
-			visible					1
 			border					1
-			bordercolor				1 1 1 1
+			bordercolor				0.43 0.83 1 0.16
 			background				"gfx/menus/x"
 			visible					1
 			cvartest				"team1_objective8"
@@ -1529,7 +1513,6 @@
 			style					WINDOW_STYLE_SHADER
 			rectcvar				team1_objective1_mappos
 			forecolor				1 1 1 1
-			visible					1
 			background				"*team1_objective1_donemapicon"
 			visible					1
 			cvartest				"team1_objective1"
@@ -1544,7 +1527,6 @@
 			style					WINDOW_STYLE_SHADER
 			rectcvar				team1_objective2_mappos
 			forecolor				1 1 1 1
-			visible					1
 			background				"*team1_objective2_donemapicon"
 			visible					1
 			cvartest				"team1_objective2"
@@ -1559,7 +1541,6 @@
 			style					WINDOW_STYLE_SHADER
 			rectcvar				team1_objective3_mappos
 			forecolor				1 1 1 1
-			visible					1
 			background				"*team1_objective3_donemapicon"
 			visible					1
 			cvartest				"team1_objective3"
@@ -1574,7 +1555,6 @@
 			style					WINDOW_STYLE_SHADER
 			rectcvar				team1_objective4_mappos
 			forecolor				1 1 1 1
-			visible					1
 			background				"*team1_objective4_donemapicon"
 			visible					1
 			cvartest				"team1_objective4"
@@ -1589,7 +1569,6 @@
 			style					WINDOW_STYLE_SHADER
 			rectcvar				team1_objective5_mappos
 			forecolor				1 1 1 1
-			visible					1
 			background				"*team1_objective5_donemapicon"
 			visible					1
 			cvartest				"team1_objective5"
@@ -1604,7 +1583,6 @@
 			style					WINDOW_STYLE_SHADER
 			rectcvar				team1_objective6_mappos
 			forecolor				1 1 1 1
-			visible					1
 			background				"*team1_objective6_donemapicon"
 			visible					1
 			cvartest				"team1_objective6"
@@ -1619,7 +1597,6 @@
 			style					WINDOW_STYLE_SHADER
 			rectcvar				team1_objective7_mappos
 			forecolor				1 1 1 1
-			visible					1
 			background				"*team1_objective7_donemapicon"
 			visible					1
 			cvartest				"team1_objective7"
@@ -1634,7 +1611,6 @@
 			style					WINDOW_STYLE_SHADER
 			rectcvar				team1_objective8_mappos
 			forecolor				1 1 1 1
-			visible					1
 			background				"*team1_objective8_donemapicon"
 			visible					1
 			cvartest				"team1_objective8"
@@ -1649,7 +1625,6 @@
 			style					WINDOW_STYLE_SHADER
 			rectcvar				team2_objective1_mappos
 			forecolor				1 1 1 1
-			visible					1
 			background				"*team2_objective1_donemapicon"
 			visible					1
 			decoration
@@ -1664,7 +1639,6 @@
 			style					WINDOW_STYLE_SHADER
 			rectcvar				team2_objective2_mappos
 			forecolor				1 1 1 1
-			visible					1
 			background				"*team2_objective2_donemapicon"
 			visible					1
 			cvartest				"team1_objective2"
@@ -1679,7 +1653,6 @@
 			style					WINDOW_STYLE_SHADER
 			rectcvar				team2_objective3_mappos
 			forecolor				1 1 1 1
-			visible					1
 			background				"*team2_objective3_donemapicon"
 			visible					1
 			cvartest				"team1_objective3"
@@ -1694,7 +1667,6 @@
 			style					WINDOW_STYLE_SHADER
 			rectcvar				team2_objective4_mappos
 			forecolor				1 1 1 1
-			visible					1
 			background				"*team2_objective4_donemapicon"
 			visible					1
 			cvartest				"team1_objective4"
@@ -1709,7 +1681,6 @@
 			style					WINDOW_STYLE_SHADER
 			rectcvar				team2_objective5_mappos
 			forecolor				1 1 1 1
-			visible					1
 			background				"*team2_objective5_donemapicon"
 			visible					1
 			cvartest				"team1_objective5"
@@ -1724,7 +1695,6 @@
 			style					WINDOW_STYLE_SHADER
 			rectcvar				team2_objective6_mappos
 			forecolor				1 1 1 1
-			visible					1
 			background				"*team2_objective6_donemapicon"
 			visible					1
 			cvartest				"team1_objective6"
@@ -1739,7 +1709,6 @@
 			style					WINDOW_STYLE_SHADER
 			rectcvar				team2_objective7_mappos
 			forecolor				1 1 1 1
-			visible					1
 			background				"*team2_objective7_donemapicon"
 			visible					1
 			cvartest				"team1_objective7"
@@ -1754,7 +1723,6 @@
 			style					WINDOW_STYLE_SHADER
 			rectcvar				team2_objective8_mappos
 			forecolor				1 1 1 1
-			visible					1
 			background				"*team2_objective8_donemapicon"
 			visible					1
 			cvartest				"team1_objective8"
@@ -1776,7 +1744,7 @@
 			forecolor				0.86 0.92 0.97 1
 			visible					0
 			decoration
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			radius					3
 			textaligny				1.05
 		}
@@ -2197,7 +2165,7 @@
 			forecolor				0.86 0.92 0.97 1
 			visible					1
 			decoration
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			radius					3
 			caps					1
 		}
@@ -2266,7 +2234,7 @@
 				setitemcolor team_button backcolor .8 .48 0 1
 				setitemcolor team_count forecolor 0.86 0.92 0.97 1
 				setitemcolor team2name forecolor 0.86 0.92 0.97 1
-				setitemcolor autoteam bordercolor 0 0 0 0
+				setitemcolor autoteam bordercolor 0.43 0.83 1 0.16
 				disable team_button 0
 				disable autoteam 0
 				disable class_button 0
@@ -2293,7 +2261,7 @@
 				setitemcolor class_count forecolor 0.36 0.42 0.50 1
 				hide itemdescription
 			}
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			radius					3
 		}
 
@@ -2335,7 +2303,7 @@
 				setitemcolor team_button backcolor .8 .48 0 1
 				setitemcolor team_count forecolor 0.86 0.92 0.97 1
 				setitemcolor team2name forecolor 0.86 0.92 0.97 1
-				setitemcolor autoteam bordercolor 0 0 0 0
+				setitemcolor autoteam bordercolor 0.43 0.83 1 0.16
 				disable team_button 0
 				disable autoteam 0
 				disable class_button 0
@@ -2413,7 +2381,7 @@
 				setitemcolor team_button backcolor .8 .48 0 1
 				setitemcolor team_count forecolor 0.86 0.92 0.97 1
 				setitemcolor team1name forecolor 0.86 0.92 0.97 1
-				setitemcolor autoteam bordercolor 0 0 0 0
+				setitemcolor autoteam bordercolor 0.43 0.83 1 0.16
 				disable team_button 0
 				disable autoteam 0
 				disable class_button 0
@@ -2440,7 +2408,7 @@
 				setitemcolor class_count forecolor 0.36 0.42 0.50 1
 				hide itemdescription
 			}
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			radius					3
 		}
 
@@ -2482,7 +2450,7 @@
 				setitemcolor team_button backcolor .8 .48 0 1
 				setitemcolor team_count forecolor 0.86 0.92 0.97 1
 				setitemcolor team1name forecolor 0.86 0.92 0.97 1
-				setitemcolor autoteam bordercolor 0 0 0 0
+				setitemcolor autoteam bordercolor 0.43 0.83 1 0.16
 				disable team_button 0
 				disable autoteam 0
 				disable class_button 0
@@ -2524,7 +2492,7 @@
 			forecolor				0.86 0.92 0.97 1
 			visible					1
 			decoration
-			textaligny				1
+			textaligny				-14.12
 		}
 
 		itemDef
@@ -2554,7 +2522,7 @@
 				exec "cmd team s"
 				uiScript closeingame
 			}
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			radius					3
 		}
 
@@ -2589,7 +2557,7 @@
 				exec "cmd team free"
 				uiScript closeingame
 			}
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			radius					3
 		}
 
@@ -2606,7 +2574,7 @@
 			forecolor				0.86 0.92 0.97 1
 			visible					1
 			decoration
-			textaligny				1
+			textaligny				-14.12
 		}
 
 		itemDef
@@ -2624,7 +2592,7 @@
 			forecolor				0.86 0.92 0.97 1
 			visible					0
 			decoration
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			radius					3
 			caps					1
 		}
@@ -3246,7 +3214,7 @@
 			backcolor				0.43 0.83 1 0.14
 			visible					0
 			decoration
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			radius					3
 		}
 
@@ -3254,13 +3222,13 @@
 		{
 			name					health_disp
 			group					stats
-			rect					328 230 110 20
+			rect					328 227.7 110 14.64
 			type					ITEM_TYPE_EDITFIELD
 			text					@SIEGE_HEALTH
 			cvar					"ui_class_health"
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				0
-			textaligny				0.7
+			textaligny				3
 			font					5
 			textscale				0.48
 			visible					0
@@ -3272,13 +3240,13 @@
 		{
 			name					armor_disp
 			group					stats
-			rect					438 230 100 20
+			rect					438 227.7 100 14.64
 			type					ITEM_TYPE_EDITFIELD
 			text					@SIEGE_SHIELDS
 			cvar					"ui_class_armor"
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				0
-			textaligny				0.7
+			textaligny				3
 			font					5
 			textscale				0.48
 			forecolor				0.36 0.42 0.50 1
@@ -3290,13 +3258,13 @@
 		{
 			name					speed_disp
 			group					stats
-			rect					548 230 100 20
+			rect					548 227.7 100 14.64
 			type					ITEM_TYPE_EDITFIELD
 			text					@SIEGE_SPEED
 			cvar					"ui_class_speed"
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				0
-			textaligny				0.7
+			textaligny				3
 			font					5
 			textscale				0.48
 			visible					0

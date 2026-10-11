@@ -54,7 +54,7 @@
 			forecolor				.549 .854 1 1
 			visible					1
 			decoration
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			radius					3
 		}
 
@@ -73,7 +73,7 @@
 			textscale				0.74
 			forecolor				0.60 0.69 0.78 1
 			border					0
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			visible					1
 			caps					1
 		}
@@ -96,7 +96,7 @@
 			outlinecolor			1 .5 .5 .5
 			backcolor				0 0 0 0
 			border					0
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			descText				@MENUS_ENTER_YOUR_NAME_HERE
 			visible					1
 			action { play "sound/interface/button1" }
@@ -128,7 +128,7 @@
 			forecolor				.549 .854 1 1
 			visible					1
 			decoration
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			radius					3
 		}
 
@@ -146,10 +146,10 @@
 			textscale				0.86
 			forecolor				0.60 0.69 0.78 1
 			border					0
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			visible					1
 			action { play "sound/interface/button1" }
-			textaligny				1.5
+			textaligny				7.26
 		}
 
 		itemDef
@@ -168,7 +168,7 @@
 			textscale				0.69
 			forecolor				0.86 0.92 0.97 1
 			border					0
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			descText				@MENUS_CHOOSE_THE_COLOR_FOR
 			cvarTest				"ui_about_gametype"
 			hideCvar
@@ -198,7 +198,7 @@
 			textscale				0.69
 			forecolor				0.86 0.92 0.97 1
 			border					0
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			descText				@MENUS_CHOOSE_THE_COLOR_FOR
 			cvarTest				"ui_about_gametype"
 			showCvar
@@ -230,8 +230,8 @@
 			visible					1
 			textscale				0.6
 			action { play "sound/interface/button1" }
-			mouseenter { setitemcolor headlist bordercolor 1 0 0 1 }
-			mouseexit { setitemcolor headlist bordercolor 1 .682 0 .7 }
+			mouseenter { setitemcolor headlist bordercolor 0.43 0.83 1 0.16 }
+			mouseexit { setitemcolor headlist bordercolor 0.43 0.83 1 0.6 }
 			radius					4
 			outlinecolor			0.43 0.83 1 0.22
 			font					5
@@ -293,8 +293,8 @@
 			visible					1
 			textscale				0.6
 			action { play "sound/interface/button1" }
-			mouseenter { setitemcolor holsterlist bordercolor 1 0 0 1 }
-			mouseexit { setitemcolor holsterlist bordercolor 1 .682 0 .7 }
+			mouseenter { setitemcolor holsterlist bordercolor 0.43 0.83 1 0.16 }
+			mouseexit { setitemcolor holsterlist bordercolor 0.43 0.83 1 0.6 }
 			radius					4
 			outlinecolor			0.43 0.83 1 0.22
 			font					5
@@ -308,7 +308,7 @@
 			rect					425 75 150 26
 			textalign				ITEM_ALIGN_CENTER
 			textalignx				75
-			textaligny				-1.5
+			textaligny				-15.74
 			outlinecolor			1 .5 .5 .5
 			backcolor				0 0 0 0
 			font					5
@@ -413,7 +413,7 @@
 			forecolor				1 1 1 1
 			visible					1
 			decoration
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			radius					3
 		}
 
@@ -441,7 +441,7 @@
 			forecolor				1 1 1 1
 			visible					1
 			decoration
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			radius					3
 		}
 
@@ -453,7 +453,7 @@
 			rect					430 297 150 26
 			textalign				ITEM_ALIGN_CENTER
 			textalignx				75
-			textaligny				-1.5
+			textaligny				4.26
 			outlinecolor			1 .5 .5 .5
 			backcolor				0 0 0 0
 			font					5
@@ -499,7 +499,7 @@
 			rect					220 298 0 0
 			textalign				ITEM_ALIGN_CENTER
 			textalignx				0
-			textaligny				-2.5
+			textaligny				3.26
 			outlinecolor			1 .5 .5 .5
 			font					5
 			textscale				0.86
@@ -610,7 +610,7 @@
 			textscale				0.68
 			forecolor				0.43 0.83 1 1
 			border					0
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			descText				@MENUS_CHOOSE_JEDI_NONJEDI
 			visible					1
 			action { uiScript updateForceStatus }
@@ -660,7 +660,7 @@
 			textalignx				0
 			outlinecolor			1 .5 .5 .5
 			backcolor				0 0 0 0
-			textaligny				-2.5
+			textaligny				3.26
 			font					5
 			textscale				0.86
 			forecolor				0.86 0.92 0.97 1
@@ -709,7 +709,7 @@
 			textalign				ITEM_ALIGN_CENTER
 			textalignx				0
 			backcolor				0 0 0 0
-			textaligny				-2.5
+			textaligny				3.26
 			font					5
 			textscale				0.86
 			forecolor				0.86 0.92 0.97 1
@@ -792,7 +792,7 @@
 			textalignx				0
 			outlinecolor			1 .5 .5 .5
 			backcolor				0 0 0 0
-			textaligny				-2.5
+			textaligny				3.26
 			font					5
 			textscale				0.86
 			forecolor				0.86 0.92 0.97 1

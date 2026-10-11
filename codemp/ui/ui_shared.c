@@ -730,7 +730,9 @@ void Window_Paint(windowDef_t *w, float fadeAmount, float fadeClamp, float fadeC
 	}
 	// a window over the whole 640 x 480 is a background: it covers a wide screen too, where the grid is wider
 	// than 640 by DC->wide on either side
-	else if ( DC->wide > 0.0f && Window_IsBackground( w ) ) {
+	// ("wide 1" says the same of a window that is not that high: the bar at the top of a page. With the menu on
+	// its panel in the level there is nothing beside the 640 units, DC->wide is 0 and the window ends with them.)
+	else if ( DC->wide > 0.0f && ( Window_IsBackground( w ) || w->wide ) ) {
 		fillRect.x -= DC->wide;
 		fillRect.w += 2.0f * DC->wide;
 	}
@@ -3901,6 +3903,24 @@ static void Scroll_ListBox_ThumbFunc(void *p) {
 	}
 }
 
+// What a slider of a menu with "skin 1" sets and shows are whole numbers: whole units where it reaches over twelve
+// of them or more, whole hundredths on a shorter scale, which is shown as percent (1 is 100 %)
+static qboolean Item_Slider_Units( const itemDef_t *item ) {
+	const editFieldDef_t *editDef = item->typeData.edit;
+
+	return (qboolean)( editDef && editDef->maxVal - editDef->minVal >= 12.0f );
+}
+
+static const char *Item_Slider_String( const itemDef_t *item, float value ) {
+	if ( !Item_Skinned( item ) ) {
+		return va( "%f", value );
+	}
+	if ( Item_Slider_Units( item ) ) {
+		return va( "%i", (int)floorf( value + 0.5f ) );
+	}
+	return va( "%g", floorf( value * 100.0f + 0.5f ) / 100.0f );
+}
+
 static void Scroll_Slider_ThumbFunc(void *p) {
 	float x, value, cursorx;
 	scrollInfo_t *si = (scrollInfo_t*)p;
@@ -3923,7 +3943,7 @@ static void Scroll_Slider_ThumbFunc(void *p) {
 	value /= SLIDER_WIDTH;
 	value *= (editDef->maxVal - editDef->minVal);
 	value += editDef->minVal;
-	DC->setCVar(si->item->cvar, va("%f", value));
+	DC->setCVar(si->item->cvar, Item_Slider_String(si->item, value));
 }
 
 void Item_StartCapture(itemDef_t *item, int key)
@@ -4035,7 +4055,7 @@ qboolean Item_Slider_HandleKey(itemDef_t *item, int key, qboolean down) {
 					// vm fuckage
 					// value = (((float)(DC->cursorx - x)/ SLIDER_WIDTH) * (editDef->maxVal - editDef->minVal));
 					value += editDef->minVal;
-					DC->setCVar(item->cvar, va("%f", value));
+					DC->setCVar(item->cvar, Item_Slider_String(item, value));
 					return qtrue;
 				}
 			}
@@ -4541,7 +4561,34 @@ void Item_SetTextExtents(itemDef_t *item, int *width, int *height, const char *t
 #endif
 		)
 	{
-		int originalWidth = DC->textWidth(textPtr, item->textscale, item->iMenuFont);
+		int originalWidth;
+		float lift = 0.0f;
+
+		// "skin 1": a text that is too long for its place (the word of another language) is set smaller, down to
+		// six tenths, and stays on the middle of its line. Its place: the item for a text in its middle or at its
+		// left, and for one that ends at a mark (the label of a setting) what lies between the item's left edge
+		// and the mark.
+		if ( Item_Skinned( item ) && item->type != ITEM_TYPE_OWNERDRAW && item->text && textPtr != NULL ) {
+			float room, full;
+
+			if ( item->skinScale <= 0.0f ) {
+				item->skinScale = item->textscale;
+			}
+			item->textscale = item->skinScale;
+			full = DC->textWidth( textPtr, item->textscale, item->iMenuFont );
+			if ( item->textalignment == ITEM_ALIGN_CENTER ) {
+				room = item->window.rect.w - 4.0f;
+			} else if ( item->textalignment == ITEM_ALIGN_RIGHT ) {
+				room = item->textalignx - 2.0f;
+			} else {
+				room = item->window.rect.w - item->textalignx - 2.0f;
+			}
+			if ( room > 16.0f && full > room ) {
+				item->textscale *= Q_max( 0.6f, room / full );
+				lift = 9.0f * ( item->skinScale - item->textscale );
+			}
+		}
+		originalWidth = DC->textWidth(textPtr, item->textscale, item->iMenuFont);
 
 		if (item->type == ITEM_TYPE_OWNERDRAW && (item->textalignment == ITEM_ALIGN_CENTER || item->textalignment == ITEM_ALIGN_RIGHT))
 		{
@@ -4560,7 +4607,7 @@ void Item_SetTextExtents(itemDef_t *item, int *width, int *height, const char *t
 		item->textRect.w = *width;
 		item->textRect.h = *height;
 		item->textRect.x = item->textalignx;
-		item->textRect.y = item->textaligny;
+		item->textRect.y = item->textaligny + lift;
 		if (item->textalignment == ITEM_ALIGN_RIGHT) {
 			item->textRect.x = item->textalignx - originalWidth;
 		} else if (item->textalignment == ITEM_ALIGN_CENTER) {
@@ -4796,11 +4843,25 @@ void Item_Text_Paint(itemDef_t *item) {
 		for ( c = textPtr; *c && !( *c & 0x80 ); c++ )
 			;
 		if ( !*c || DC->getCVarValue( "cl_utf8Text" ) ) {
+			byte *u;
+
 			if ( textPtr != text ) {
 				Q_strncpyz( text, textPtr, sizeof( text ) );
 				textPtr = text;
 			}
 			Q_strupr( text );
+			// (And the small letters with marks, a with grave to thorn without the division sign: the capital
+			// is 32 lower. In UTF-8 they are two bytes, 0xC3 and the letter. The texts of the game itself come
+			// in Windows-1252, where they are one byte, which is no start of a UTF-8 letter unless bytes of
+			// its inside follow.)
+			for ( u = (byte *)text; *u; u++ ) {
+				if ( u[0] == 0xC3 && u[1] >= 0xA0 && u[1] <= 0xBE && u[1] != 0xB7 ) {
+					u[1] -= 0x20;
+					u++;
+				} else if ( u[0] >= 0xE0 && u[0] <= 0xFE && u[0] != 0xF7 && ( u[1] & 0xC0 ) != 0x80 ) {
+					u[0] -= 0x20;
+				}
+			}
 		}
 	}
 
@@ -5198,11 +5259,9 @@ void Item_Slider_Paint(itemDef_t *item) {
 	}
 	if ( Item_Skinned( item ) ) {
 		// the same track the mouse works on (SLIDER_WIDTH from x), with what it stands at written behind it
-		const editFieldDef_t	*editDef = item->typeData.edit;
 		const float				value = item->cvar ? DC->getCVarValue( item->cvar ) : 0.0f;
-		const float				range = editDef ? editDef->maxVal - editDef->minVal : 0.0f;
-		const char				*number = ( range > 0.0f && range <= 2.0f ) ? va( "%i %%", (int)( ( value - editDef->minVal ) / range * 100.0f + 0.5f ) )
-									: ( value == (int)value ) ? va( "%i", (int)value ) : va( "%.2f", value );
+		const char				*number = Item_Slider_Units( item ) ? va( "%i", (int)floorf( value + 0.5f ) )
+									: va( "%i %%", (int)floorf( value * 100.0f + 0.5f ) );
 
 		float					lineY, lineH;
 
@@ -8063,6 +8122,17 @@ qboolean ItemParse_showStat( itemDef_t *item, int handle ) {
 }
 
 // caps 1: the text of the item is drawn in capital letters
+// wide 1: the window of the item reaches the sides of a wide screen, as the background of a menu does
+qboolean ItemParse_wide( itemDef_t *item, int handle ) {
+	int i;
+
+	if ( !PC_Int_Parse( handle, &i ) ) {
+		return qfalse;
+	}
+	item->window.wide = (qboolean)( i != 0 );
+	return qtrue;
+}
+
 qboolean ItemParse_caps( itemDef_t *item, int handle ) {
 	int i;
 
@@ -8900,6 +8970,7 @@ keywordHash_t itemParseKeywords[] = {
 	{"stat",			ItemParse_stat,				NULL	},
 	{"showStat",		ItemParse_showStat,			NULL	},
 	{"caps",			ItemParse_caps,				NULL	},
+	{"wide",			ItemParse_wide,				NULL	},
 	{"style",			ItemParse_style,			NULL	},
 	{"text",			ItemParse_text,				NULL	},
 	{"textalign",		ItemParse_textalign,		NULL	},

@@ -28,20 +28,22 @@
 		itemDef
 		{
 			name					vision_bar
-			rect					-1000 0 2640 34
+			rect					0 0 640 34
 			visible					1
 			style					WINDOW_STYLE_FILLED
 			backcolor				0.02 0.04 0.08 0.55
+			wide					1
 			decoration
 		}
 
 		itemDef
 		{
 			name					vision_bar_line
-			rect					-1000 34 2640 0.67
+			rect					0 34 640 0.67
 			visible					1
 			style					WINDOW_STYLE_FILLED
 			backcolor				0.43 0.83 1 0.22
+			wide					1
 			decoration
 		}
 

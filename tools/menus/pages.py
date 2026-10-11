@@ -71,10 +71,10 @@ def top_bar(m, here):
     """The bar at the top of a page outside a game: the name of the game at the left, the four sections at the
     right, the one that is open marked. Returns what it adds, to be put in front of the other items."""
     new = [
-        item('vision_bar', (-1000, 0, 2640, 34), ('style', 'WINDOW_STYLE_FILLED'), ('backcolor', '0.02', '0.04', '0.08', '0.55'),
-             ('decoration',)),
-        item('vision_bar_line', (-1000, 34, 2640, 0.67), ('style', 'WINDOW_STYLE_FILLED'), ('backcolor', *(ACCENT[:3] + ['0.22'])),
-             ('decoration',)),
+        item('vision_bar', (0, 0, 640, 34), ('style', 'WINDOW_STYLE_FILLED'), ('backcolor', '0.02', '0.04', '0.08', '0.55'),
+             ('wide', 1), ('decoration',)),
+        item('vision_bar_line', (0, 34, 640, 0.67), ('style', 'WINDOW_STYLE_FILLED'), ('backcolor', *(ACCENT[:3] + ['0.22'])),
+             ('wide', 1), ('decoration',)),
         item('vision_logo', (22, 6, 22, 22), ('type', 'ITEM_TYPE_LOGO'), ('forecolor', '1', '1', '1', '1'), ('decoration',)),
         label('vision_mark', (50, 7, 120, 20), '"VISIONJK"', 1.0, BRIGHT),
         label('vision_mark2', (138, 12, 160, 14), '"JEDI ACADEMY"', 0.5, DIM),
@@ -178,7 +178,8 @@ def find_rails(m, floor=430):
         b = e.block
         r = rect_of(b)
         n = name_of(b)
-        if not r or not clickable(b) or hidden(b) or n in NAV or n.startswith('vision_') or r[1] >= floor or r[3] > 40:
+        if not r or not clickable(b) or hidden(b) or n in NAV or n.startswith('vision_') or r[1] >= floor or r[3] > 40 \
+                or kind_of(b) not in ('button', '1'):
             continue
         cols.setdefault((round(r[0]), round(r[2])), []).append(e)
     out = []
@@ -302,6 +303,11 @@ def shell(m, menu, had_logo):
             mf.put(b, 'style', 'WINDOW_STYLE_EMPTY')
             mf.put(b, 'caps', 1)
             mf.drop(b, 'background')
+    # a page whose content is wider than the column of the heading: the heading begins where the content does
+    head_x = 40 if not bb or dense else min(40, bb[0] + 2)
+    if head is not None and head_x != 40 and (head in m or head in new):
+        r = rect_of(head.block)
+        set_rect(head.block, head_x, r[1], r[2], r[3])
 
     # the row at the bottom: what goes back at the left, what goes on at the right. (A page that needs all of its
     # height has no button that leaves the game: the first page has one, and the line about what the mouse is on
@@ -330,7 +336,7 @@ def shell(m, menu, had_logo):
     places = [rect_of(e.block)[0] for e in bottom]
     gap0 = max([x + 110 for x in places if x < 320] or [40])
     gap1 = min([x for x in places if x >= 320] or [600])
-    mf.put(m, 'descX', 40 if not dense else mf.fmt((gap0 + gap1) / 2))
+    mf.put(m, 'descX', mf.fmt(head_x) if not dense else mf.fmt((gap0 + gap1) / 2))
     mf.put(m, 'descY', 80 if not dense else row_y + 6)
     mf.put(m, 'descAlignment', 'ITEM_ALIGN_LEFT' if not dense else 'ITEM_ALIGN_CENTER')
     mf.put(m, 'descScale', '0.8' if not dense else '0.55')
@@ -438,8 +444,8 @@ def window(m, menu, ingame):
     mf.put(m, 'descColor', *DIM)
     if not ingame:
         first = next((i for i, e in enumerate(m) if e.k == 'itemdef'), len(m))
-        m.insert(first, item('vision_veil', (-mr[0] - 1000, -mr[1], 2640, 480), ('style', 'WINDOW_STYLE_FILLED'),
-                             ('backcolor', '0', '0.01', '0.03', '0.6'), ('decoration',)))
+        m.insert(first, item('vision_veil', (-mr[0], -mr[1], 640, 480), ('style', 'WINDOW_STYLE_FILLED'),
+                             ('backcolor', '0', '0.01', '0.03', '0.6'), ('wide', 1), ('decoration',)))
 
 
 def main_page(m):
@@ -487,10 +493,10 @@ def main_page(m):
 def ingame_bar(m):
     """The row of buttons at the top of the screen in a game: a bar behind it, its texts in one line."""
     new = [
-        item('vision_bar', (-1000, 0, 2640, 26), ('style', 'WINDOW_STYLE_FILLED'), ('backcolor', '0.02', '0.04', '0.08', '0.72'),
-             ('decoration',)),
-        item('vision_bar_line', (-1000, 26, 2640, 0.67), ('style', 'WINDOW_STYLE_FILLED'), ('backcolor', *(ACCENT[:3] + ['0.22'])),
-             ('decoration',)),
+        item('vision_bar', (0, 0, 640, 26), ('style', 'WINDOW_STYLE_FILLED'), ('backcolor', '0.02', '0.04', '0.08', '0.72'),
+             ('wide', 1), ('decoration',)),
+        item('vision_bar_line', (0, 26, 640, 0.67), ('style', 'WINDOW_STYLE_FILLED'), ('backcolor', *(ACCENT[:3] + ['0.22'])),
+             ('wide', 1), ('decoration',)),
     ]
     for e in items(m):
         b = e.block
@@ -538,7 +544,6 @@ TABS = [
     ]),
     ('network', 'NETWORK', 'Updates, downloads and security.', [
         ('yesno', 'Check for Updates', 'cl_updateCheck', 'Ask at every start whether a newer version is out.'),
-        ('yesno', 'Voice Master', 'cg_voiceMaster', 'Voice chat, clan radio and statuses on servers that have none of their own.'),
         ('yesno', 'Allow Downloads', 'cl_allowDownload', 'Take files a server offers.'),
         ('yesno', 'Intrusion Log', 'cl_ids', 'Write down what a server sends that no server of the game does, and leave one that keeps at it.'),
         ('yesno', 'Key Login by Agent', 'cg_authAgent', 'The admin login asks your ssh-agent for the key (1Password, OpenSSH).'),
@@ -579,6 +584,34 @@ def setting_row(group, spec, rect, alignx):
           Entry('visible', ['0']), Entry('descText', [quoted(desc)]),
           Entry('action', [], ['play', '"sound/interface/button1.wav"', ';'])]
     return Entry('itemDef', [], b)
+
+
+# Rows the new look leaves out, by group and cvar. Twice in Setup: bubbles and music are with the chat (Chat &
+# Social), downloads with the network. Read by nothing in this tree: the sway of the weapon (ui_disableWeaponSway)
+# and the axes of a joystick as buttons (joy_xbutton, joy_ybutton).
+LEFT_OUT = {('voicechat', 'cg_chatbubbles'), ('voicechat', 'cg_sharemusic'), ('options', 'cl_allowdownload'),
+            ('options', 'ui_disableweaponsway'), ('joycontrols', 'joy_xbutton'), ('joycontrols', 'joy_ybutton')}
+
+
+def leave_out(m):
+    """Takes the rows of LEFT_OUT out of a menu and moves the rows under each of them up into its place."""
+    for e in list(items(m)):
+        b = e.block
+        cv = mf.get(b, 'cvar') or mf.get(b, 'cvarfloat')
+        r = rect_of(b)
+        if not cv or not r or (group_of(b), mf.unquote(cv[0]).lower()) not in LEFT_OUT or e not in m:
+            continue
+        twins = [x for x in items(m) if x is not e and group_of(x.block) == group_of(b) and rect_of(x.block)
+                 and rect_of(x.block)[1] == r[1] and (mf.get(x.block, 'cvar') or [''])[0] == cv[0]]
+        below = sorted({rect_of(x.block)[1] for x in items(m) if group_of(x.block) == group_of(b) and rect_of(x.block)
+                        and rect_of(x.block)[1] > r[1]})
+        pitch = below[0] - r[1] if below else r[3]
+        for x in [e] + twins:
+            m.remove(x)
+        for x in items(m):
+            xr = rect_of(x.block)
+            if group_of(x.block) == group_of(b) and xr and xr[1] > r[1]:
+                set_rect(x.block, xr[0], xr[1] - pitch, xr[2], xr[3])
 
 
 def setup_before(m):
@@ -625,6 +658,10 @@ def setup_before(m):
         new.append(button)
         for i, spec in enumerate(rows):
             new.append(setting_row(group, spec, (row[0], top + i * row[3], row[2], row[3]), alignx))
+    opens = mf.find(m, 'onopen')
+    if opens is not None and isinstance(opens.block, list):
+        for group, _, _, _ in TABS:
+            opens.block[0:0] = ['hide', group, ';', mf.NL]
     for group, rows in MORE_ROWS.items():
         have = [rect_of(e.block) for e in items(m) if (mf.get(e.block, 'group') or [''])[0] == group and rect_of(e.block)]
         if not have:
@@ -669,9 +706,45 @@ def controls_before(m):
 def before(m, name, ingame):
     """What a page gets before the rules of theme.py."""
     if name in ('setup.menu', 'ingame_setup.menu'):
+        leave_out(m)
         setup_before(m)
     elif name in ('controls.menu', 'ingame_controls.menu'):
+        leave_out(m)
         controls_before(m)
+
+
+LINE = 18.0                 # the height of a line of the new font at a scale of 1
+
+
+def tidy(m):
+    """Texts and the windows they belong to, for every menu. A caption that stands on a bar is put on the middle
+    of the bar: the old menus had it a little above or below, on a picture of another height. A setting whose
+    rectangle is much higher than its line is cut to the line: the mark under the mouse is as large as the
+    rectangle, and reached into the rows around it."""
+    bars = [rect_of(e.block) for e in items(m) if rect_of(e.block) and mf.get(e.block, 'text') is None
+            and (mf.get(e.block, 'style') or [''])[0] == 'WINDOW_STYLE_PANEL' and mf.get(e.block, 'backcolor') == HEAD
+            and 10 <= rect_of(e.block)[3] <= 34]
+    for e in items(m):
+        b = e.block
+        r = rect_of(b)
+        if not r or mf.get(b, 'text') is None or name_of(b).startswith('vision_'):
+            continue
+        scale = mf.num((mf.get(b, 'textscale') or ['0.5'])[0]) or 0.5
+        ay = mf.num((mf.get(b, 'textaligny') or ['0'])[0]) or 0.0
+        ax = mf.num((mf.get(b, 'textalignx') or ['0'])[0]) or 0.0
+        line = LINE * scale
+        k = kind_of(b)
+        if k in ('', 'text', '0') and r[3] <= 34:
+            # where its text stands: the caption of the bar that lies under that place
+            ty, tx = r[1] + ay, r[0] + ax
+            for bx, by, bw, bh in bars:
+                if bx - 2 <= tx <= bx + bw + 2 and by - 12 <= ty <= by + bh - 2 and line <= bh + 2:
+                    mf.put(b, 'textaligny', mf.fmt(by + (bh - line) / 2 - r[1]))
+                    break
+        elif k in ('editfield', 'numericfield', 'yesno', 'multi', 'slider', 'bind', '4', '9', '10', '11', '12', '13') \
+                and r[3] > line + 9:
+            set_rect(b, r[0], r[1] + ay - 3, r[2], line + 6)
+            mf.put(b, 'textaligny', 3)
 
 
 def page(m, name, ingame):
@@ -700,6 +773,7 @@ def page(m, name, ingame):
         shell(m, menu, HAD_LOGO.get(name, False))
     elif not full:
         window(m, menu, ingame)
+    tidy(m)
 
 
 # pages whose content began under the logo of the game, by file: noted before the rules took the logo away

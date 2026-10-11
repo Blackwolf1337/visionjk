@@ -50,7 +50,7 @@
 			textscale				0.67
 			forecolor				0.60 0.69 0.78 1
 			border					0
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			visible					1
 			decoration
 			caps					1
@@ -90,7 +90,7 @@
 			textscale				0.68
 			forecolor				0.86 0.92 0.97 1
 			border					0
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			visible					1
 			decoration
 		}
@@ -112,7 +112,7 @@
 			textscale				0.86
 			forecolor				0.60 0.69 0.78 1
 			border					0
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			descText				@MENUS_CHOOSE_THE_PATH_OF_THE
 			visible					1
 			action { play "sound/interface/button1.wav" ; }
@@ -135,7 +135,7 @@
 			outlinecolor			1 .5 .5 .5
 			backcolor				0 0 0 0
 			border					0
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			visible					1
 			decoration
 		}
@@ -156,7 +156,7 @@
 			textscale				0.68
 			forecolor				0.60 0.69 0.78 1
 			border					0
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			visible					1
 			decoration
 		}
@@ -183,8 +183,8 @@
 			descText				@MENUS_CHOOSE_A_PRE_MADE_ALLOCATION
 			visible					1
 			columns					1 2 190 250
-			mouseenter { setitemcolor fcflist bordercolor 1 0 0 1 }
-			mouseexit { setitemcolor fcflist bordercolor .5 .5 .5 1 }
+			mouseenter { setitemcolor fcflist bordercolor 0.43 0.83 1 0.16 }
+			mouseexit { setitemcolor fcflist bordercolor 0.43 0.83 1 0.16 }
 			action { play "sound/interface/button1.wav" ; }
 			radius					4
 		}
@@ -197,17 +197,17 @@
 			text					@MENUS_FILENAME
 			cvar					"ui_SaveFCF"
 			maxchars				12
-			rect					5 250 185 32
+			rect					5 248 185 18.24
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				0
-			textaligny				1
+			textaligny				3
 			font					5
 			textscale				0.68
 			forecolor				0.60 0.69 0.78 1
 			outlinecolor			1 .5 .5 .5
 			backcolor				0 0 0 0
 			border					0
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			descText				@MENUS_ENTER_THE_TITLE_FOR_YOUR
 			visible					1
 		}
@@ -277,7 +277,7 @@
 			textscale				0.68
 			forecolor				0.60 0.69 0.78 1
 			border					0
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			visible					1
 			decoration
 		}
@@ -298,7 +298,7 @@
 			textscale				0.68
 			forecolor				0.60 0.69 0.78 1
 			border					0
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			visible					1
 			decoration
 		}
@@ -319,7 +319,7 @@
 			outlinecolor			1 .5 .5 .5
 			backcolor				0 0 0 0
 			border					0
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			visible					1
 			decoration
 		}
@@ -339,7 +339,7 @@
 			backcolor				0 0 0 0
 			forecolor				0.60 0.69 0.78 1
 			border					0
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			descText				@MENUS_LEAP_TO_AMAZING_HEIGHTS
 			visible					1
 			action { play "sound/interface/button1.wav" ; }
@@ -364,7 +364,7 @@
 			outlinecolor			1 .5 .5 .5
 			backcolor				0 0 0 0
 			border					0
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			visible					1
 			decoration
 		}
@@ -384,7 +384,7 @@
 			backcolor				0 0 0 0
 			forecolor				0.60 0.69 0.78 1
 			border					0
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			descText				@MENUS_PUSH_YOUR_FOES_AWAY_AND
 			visible					1
 			action { play "sound/interface/button1.wav" ; }
@@ -409,7 +409,7 @@
 			outlinecolor			1 .5 .5 .5
 			backcolor				0 0 0 0
 			border					0
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			visible					1
 			decoration
 		}
@@ -429,7 +429,7 @@
 			backcolor				0 0 0 0
 			forecolor				0.60 0.69 0.78 1
 			border					0
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			descText				@MENUS_PULL_YOUR_FOES_TO_YOU
 			visible					1
 			action { play "sound/interface/button1.wav" ; }
@@ -454,7 +454,7 @@
 			outlinecolor			1 .5 .5 .5
 			backcolor				0 0 0 0
 			border					0
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			visible					1
 			decoration
 		}
@@ -474,7 +474,7 @@
 			backcolor				0 0 0 0
 			forecolor				0.60 0.69 0.78 1
 			border					0
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			descText				@MENUS_MOVE_AT_AN_ACCELERATED
 			visible					1
 			action { play "sound/interface/button1.wav" ; }
@@ -499,7 +499,7 @@
 			outlinecolor			1 .5 .5 .5
 			backcolor				0 0 0 0
 			border					0
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			visible					1
 			decoration
 		}
@@ -519,7 +519,7 @@
 			backcolor				0 0 0 0
 			forecolor				0.60 0.69 0.78 1
 			border					0
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			descText				@MENUS_SEE_ENEMIES_AT_ALL_TIMES
 			visible					1
 			action { play "sound/interface/button1.wav" ; }
@@ -544,7 +544,7 @@
 			outlinecolor			1 .5 .5 .5
 			backcolor				0 0 0 0
 			border					0
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			visible					1
 			decoration
 		}
@@ -563,7 +563,7 @@
 			backcolor				0 0 0 0
 			forecolor				0.60 0.69 0.78 1
 			border					0
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			descText				@MENUS_PROTECT_AGAINST_FORCE
 			visible					1
 			action { play "sound/interface/button1.wav" ; }
@@ -589,7 +589,7 @@
 			outlinecolor			1 .5 .5 .5
 			backcolor				0 0 0 0
 			border					0
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			visible					1
 			decoration
 		}
@@ -609,7 +609,7 @@
 			backcolor				0 0 0 0
 			forecolor				0.60 0.69 0.78 1
 			border					0
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			descText				@MENUS_HEAL_YOUR_BODY_WITH_THE
 			visible					1
 			action { play "sound/interface/button1.wav" ; }
@@ -634,7 +634,7 @@
 			textscale				0.68
 			forecolor				0.60 0.69 0.78 1
 			border					0
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			visible					1
 			decoration
 		}
@@ -654,7 +654,7 @@
 			backcolor				0 0 0 0
 			forecolor				0.60 0.69 0.78 1
 			border					0
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			descText				@MENUS_CREATE_AN_AURA_THAT_PROTECTS
 			visible					1
 			action { play "sound/interface/button1.wav" ; }
@@ -679,7 +679,7 @@
 			outlinecolor			1 .5 .5 .5
 			backcolor				0 0 0 0
 			border					0
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			visible					1
 			decoration
 		}
@@ -699,7 +699,7 @@
 			backcolor				0 0 0 0
 			forecolor				0.60 0.69 0.78 1
 			border					0
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			descText				@MENUS_RENDER_YOURSELF_INVISIBLE
 			visible					1
 			action { play "sound/interface/button1.wav" ; }
@@ -724,7 +724,7 @@
 			textscale				0.68
 			forecolor				0.60 0.69 0.78 1
 			border					0
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			visible					1
 			decoration
 			cvarTest				"ui_about_gametype"
@@ -753,7 +753,7 @@
 			backcolor				0 0 0 0
 			forecolor				0.60 0.69 0.78 1
 			border					0
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			descText				@MENUS_CHANNEL_THE_FORCE_TO
 			visible					1
 			cvarTest				"ui_about_gametype"
@@ -787,7 +787,7 @@
 			outlinecolor			1 .5 .5 .5
 			backcolor				0 0 0 0
 			border					0
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			visible					1
 			decoration
 		}
@@ -807,7 +807,7 @@
 			backcolor				0 0 0 0
 			forecolor				1 0.45 0.42 1
 			border					0
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			descText				@MENUS_IMMOBILIZE_OPPONENTS
 			visible					1
 			action { play "sound/interface/button1.wav" ; }
@@ -832,7 +832,7 @@
 			outlinecolor			1 .5 .5 .5
 			backcolor				0 0 0 0
 			border					0
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			visible					1
 			decoration
 		}
@@ -851,7 +851,7 @@
 			backcolor				0 0 0 0
 			forecolor				1 0.45 0.42 1
 			border					0
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			descText				@MENUS_DRAIN_THE_FORCE_POWER
 			visible					1
 			action { play "sound/interface/button1.wav" ; }
@@ -877,7 +877,7 @@
 			outlinecolor			1 .5 .5 .5
 			backcolor				0 0 0 0
 			border					0
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			visible					1
 			decoration
 		}
@@ -897,7 +897,7 @@
 			backcolor				0 0 0 0
 			forecolor				1 0.45 0.42 1
 			border					0
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			descText				@MENUS_UNLEASH_DEADLY_ELECTRICAL
 			visible					1
 			action { play "sound/interface/button1.wav" ; }
@@ -922,7 +922,7 @@
 			outlinecolor			1 .5 .5 .5
 			backcolor				0 0 0 0
 			border					0
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			visible					1
 			decoration
 		}
@@ -942,7 +942,7 @@
 			backcolor				0 0 0 0
 			forecolor				1 0.45 0.42 1
 			border					0
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			descText				@MENUS_BECOME_A_NEARLY_UNSTOPPABLE
 			visible					1
 			action { play "sound/interface/button1.wav" ; }
@@ -967,7 +967,7 @@
 			outlinecolor			1 .5 .5 .5
 			backcolor				0 0 0 0
 			border					0
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			visible					1
 			decoration
 			cvarTest				"ui_about_gametype"
@@ -996,7 +996,7 @@
 			backcolor				0 0 0 0
 			forecolor				1 0.45 0.42 1
 			border					0
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			descText				@MENUS_THE_FORCE_TO_BOOST_THE
 			visible					1
 			cvarTest				"ui_about_gametype"
@@ -1030,7 +1030,7 @@
 			outlinecolor			1 .5 .5 .5
 			backcolor				0 0 0 0
 			border					0
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			visible					1
 			decoration
 		}
@@ -1050,7 +1050,7 @@
 			backcolor				0 0 0 0
 			forecolor				0.60 0.69 0.78 1
 			border					0
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			descText				@MENUS_USE_MORE_POWERFUL_LIGHTSABER
 			visible					1
 			action { play "sound/interface/button1.wav" ; }
@@ -1075,7 +1075,7 @@
 			outlinecolor			1 .5 .5 .5
 			backcolor				0 0 0 0
 			border					0
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			visible					1
 			decoration
 		}
@@ -1095,7 +1095,7 @@
 			backcolor				0 0 0 0
 			forecolor				0.60 0.69 0.78 1
 			border					0
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			descText				@MENUS_USE_THE_LIGHTSABER_TO
 			visible					1
 			action { play "sound/interface/button1.wav" ; }
@@ -1120,7 +1120,7 @@
 			outlinecolor			1 .5 .5 .5
 			backcolor				0 0 0 0
 			border					0
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			visible					1
 			decoration
 		}
@@ -1141,7 +1141,7 @@
 			backcolor				0 0 0 0
 			forecolor				0.60 0.69 0.78 1
 			border					0
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			descText				@MENUS_THROW_YOUR_LIGHTSABER
 			visible					1
 			action { play "sound/interface/button1.wav" ; }
@@ -1167,7 +1167,7 @@
 			outlinecolor			1 .5 .5 .5
 			backcolor				0 0 0 0
 			border					0
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			descText				@MENUS_MUST_ACQUIRE_A_MINIMUM
 			visible					0
 			decoration
@@ -1190,7 +1190,7 @@
 			textscale				0.68
 			forecolor				0.36 0.42 0.50 1
 			border					0
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			descText				@MENUS_MUST_ACQUIRE_A_MINIMUM
 			visible					0
 			decoration

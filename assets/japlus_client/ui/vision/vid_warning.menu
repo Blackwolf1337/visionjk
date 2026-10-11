@@ -27,10 +27,11 @@
 		itemDef
 		{
 			name					vision_veil
-			rect					-1000 0 2640 480
+			rect					0 0 640 480
 			visible					1
 			style					WINDOW_STYLE_FILLED
 			backcolor				0 0.01 0.03 0.6
+			wide					1
 			decoration
 		}
 

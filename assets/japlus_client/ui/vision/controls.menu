@@ -48,20 +48,22 @@
 		itemDef
 		{
 			name					vision_bar
-			rect					-1000 0 2640 34
+			rect					0 0 640 34
 			visible					1
 			style					WINDOW_STYLE_FILLED
 			backcolor				0.02 0.04 0.08 0.55
+			wide					1
 			decoration
 		}
 
 		itemDef
 		{
 			name					vision_bar_line
-			rect					-1000 34 2640 0.67
+			rect					0 34 640 0.67
 			visible					1
 			style					WINDOW_STYLE_FILLED
 			backcolor				0.43 0.83 1 0.22
+			wide					1
 			decoration
 		}
 
@@ -1196,10 +1198,9 @@
 			textaligny				1
 			font					5
 			textscale				0.68
-			forecolor				0.60 0.69 0.78 1
 			visible					0
 			descText				@MENUS_IF_HELD_ALLOWS_PLAYER
-			forecolor				.615 .615 .956 1
+			forecolor				0.60 0.69 0.78 1
 			mouseenter
 			{
 				show highlight12
@@ -1226,10 +1227,9 @@
 			textaligny				1
 			font					5
 			textscale				0.68
-			forecolor				0.60 0.69 0.78 1
 			visible					0
 			descText				@MENUS_RETURNS_VIEW_TO_HORIZONTAL
-			forecolor				.615 .615 .956 1
+			forecolor				0.60 0.69 0.78 1
 			mouseenter
 			{
 				show highlight13
@@ -1256,10 +1256,9 @@
 			textaligny				1
 			font					5
 			textscale				0.68
-			forecolor				0.60 0.69 0.78 1
 			visible					0
 			descText				@MENUS_READIES_LIGHTSABER
-			forecolor				.615 .615 .956 1
+			forecolor				0.60 0.69 0.78 1
 			mouseenter
 			{
 				show highlight1
@@ -1286,10 +1285,9 @@
 			textaligny				1
 			font					5
 			textscale				0.68
-			forecolor				0.60 0.69 0.78 1
 			visible					0
 			descText				@MENUS_READIES_THE_BLASTER_PISTOL
-			forecolor				.615 .615 .956 1
+			forecolor				0.60 0.69 0.78 1
 			mouseenter
 			{
 				show highlight2
@@ -1316,10 +1314,9 @@
 			textaligny				1
 			font					5
 			textscale				0.68
-			forecolor				0.60 0.69 0.78 1
 			visible					0
 			descText				@MENUS_READIES_THE_E_11_BLASTER
-			forecolor				.615 .615 .956 1
+			forecolor				0.60 0.69 0.78 1
 			mouseenter
 			{
 				show highlight3
@@ -2237,48 +2234,6 @@
 			descText				@MENUS_ADJUSTS_THE_SIZE_OF_THE
 			mouseenter { show highlight11 }
 			mouseexit { hide highlight11 }
-			action { play "sound/interface/button1.wav" ; }
-		}
-
-		itemDef
-		{
-			name					mousejoystick
-			group					joycontrols
-			type					ITEM_TYPE_YESNO
-			text					@MENUS_X_AXIS_AS_BUTTONS
-			cvar					"joy_xbutton"
-			rect					225 276 340 14
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				174
-			textaligny				1
-			font					5
-			textscale				0.68
-			forecolor				0.60 0.69 0.78 1
-			visible					0
-			descText				@MENUS_WHEN_OFF_HORIZONTAL
-			mouseenter { show highlight13 }
-			mouseexit { hide highlight13 }
-			action { play "sound/interface/button1.wav" ; }
-		}
-
-		itemDef
-		{
-			name					mousejoystick
-			group					joycontrols
-			type					ITEM_TYPE_YESNO
-			text					@MENUS_Y_AXIS_AS_BUTTONS
-			cvar					"joy_ybutton"
-			rect					225 290 340 14
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				174
-			textaligny				1
-			font					5
-			textscale				0.68
-			forecolor				0.60 0.69 0.78 1
-			visible					0
-			descText				@MENUS_WHEN_OFF_VERTICAL_STICK
-			mouseenter { show highlight14 }
-			mouseexit { hide highlight14 }
 			action { play "sound/interface/button1.wav" ; }
 		}
 

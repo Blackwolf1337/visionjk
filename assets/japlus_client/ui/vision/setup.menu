@@ -16,6 +16,9 @@
 		descAlignment			ITEM_ALIGN_LEFT
 		onOpen
 		{
+			hide network ;
+			hide social ;
+			hide interface ;
 			uiScript getvideosetup
 			show setup_background
 			show video
@@ -43,20 +46,22 @@
 		itemDef
 		{
 			name					vision_bar
-			rect					-1000 0 2640 34
+			rect					0 0 640 34
 			visible					1
 			style					WINDOW_STYLE_FILLED
 			backcolor				0.02 0.04 0.08 0.55
+			wide					1
 			decoration
 		}
 
 		itemDef
 		{
 			name					vision_bar_line
-			rect					-1000 34 2640 0.67
+			rect					0 34 640 0.67
 			visible					1
 			style					WINDOW_STYLE_FILLED
 			backcolor				0.43 0.83 1 0.22
+			wide					1
 			decoration
 		}
 
@@ -1632,48 +1637,6 @@
 
 		itemDef
 		{
-			name					voicechat11
-			group					voicechat
-			type					ITEM_TYPE_YESNO
-			text					"Chat Bubbles:"
-			cvar					"cg_chatBubbles"
-			rect					225 288 340 14
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				174
-			textaligny				1
-			font					5
-			textscale				0.68
-			forecolor				0.60 0.69 0.78 1
-			visible					0
-			descText				"What a player says stands above his head, and dots while he types."
-			action { play "sound/interface/button1.wav" ; }
-			mouseenter { show voicelight11 }
-			mouseexit { hide voicelight11 }
-		}
-
-		itemDef
-		{
-			name					voicechat12
-			group					voicechat
-			type					ITEM_TYPE_YESNO
-			text					"Show My Music:"
-			cvar					"cg_shareMusic"
-			rect					225 306 340 14
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				174
-			textaligny				1
-			font					5
-			textscale				0.68
-			forecolor				0.60 0.69 0.78 1
-			visible					0
-			descText				"The others see above your head what you listen to (Spotify, YT Music)."
-			action { play "sound/interface/button1.wav" ; }
-			mouseenter { show voicelight12 }
-			mouseexit { hide voicelight12 }
-		}
-
-		itemDef
-		{
 			name					botmode1
 			group					botmode
 			type					ITEM_TYPE_YESNO
@@ -1939,96 +1902,6 @@
 
 		itemDef
 		{
-			name					weaponswayon
-			group					options
-			type					ITEM_TYPE_MULTI
-			text					@MENUS_VIEW_SWAYING
-			descText				@MENUS_VIEW_SWAYING_DESC
-			cvar					"ui_disableWeaponSway"
-			cvarFloatList
-			{
-				@MENUS_ON 0
-				@MENUS_OFF 1
-			}
-			cvarTest				"ui_disableWeaponSway"
-			showCvar { "0" }
-			rect					225 206 340 14
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				174
-			textaligny				1
-			font					5
-			textscale				0.68
-			forecolor				0.60 0.69 0.78 1
-			visible					0
-			action
-			{
-				play "sound/interface/button1.wav" ;
-				exec "exec noMotion.cfg"
-				show weaponswayoff
-				setfocus weaponswayoff
-			}
-			mouseenter { show highlight8 }
-			mouseexit { hide highlight8 }
-		}
-
-		itemDef
-		{
-			name					weaponswayoff
-			group					options
-			type					ITEM_TYPE_MULTI
-			text					@MENUS_VIEW_SWAYING
-			descText				@MENUS_VIEW_SWAYING_DESC
-			cvar					"ui_disableWeaponSway"
-			cvarFloatList
-			{
-				@MENUS_ON 0
-				@MENUS_OFF 1
-			}
-			cvarTest				"ui_disableWeaponSway"
-			hideCvar { "0" }
-			rect					225 206 340 14
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				174
-			textaligny				1
-			font					5
-			textscale				0.68
-			forecolor				0.60 0.69 0.78 1
-			visible					0
-			action
-			{
-				play "sound/interface/button1.wav" ;
-				exec "exec restoreMotion.cfg" ;
-				show weaponswayon ;
-				setfocus weaponswayon
-			}
-			mouseenter { show highlight8 }
-			mouseexit { hide highlight8 }
-		}
-
-		itemDef
-		{
-			name					allowdownload
-			group					options
-			type					ITEM_TYPE_MULTI
-			text					@MENUS_ALLOW_DOWNLOADS
-			descText				@MENUS_ALLOW_DOWNLOADS_INFO
-			cvar					"cl_allowDownload"
-			cvarFloatList { @MENUS_OFF 0 @MENUS_ON 1 }
-			rect					225 220 340 14
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				174
-			textaligny				1
-			font					5
-			textscale				0.68
-			forecolor				0.60 0.69 0.78 1
-			visible					1
-			action { play "sound/interface/button1.wav" ; }
-			mouseenter { show highlight9 }
-			mouseexit { hide highlight9 }
-		}
-
-		itemDef
-		{
 			name					footsteps
 			group					options
 			type					ITEM_TYPE_MULTI
@@ -2042,7 +1915,7 @@
 				@MENUS_SOUNDS_AND_EFFECTS 2
 				@MENUS_SOUNDS_EFFECTS_GRAPHICS 3
 			}
-			rect					225 234 340 14
+			rect					225 206 340 14
 			textalign				ITEM_ALIGN_RIGHT
 			textalignx				174
 			textaligny				1
@@ -2064,7 +1937,7 @@
 			cvar					"se_language"
 			feeder					40
 			cvarStrList				feeder
-			rect					225 248 340 14
+			rect					225 220 340 14
 			textalign				ITEM_ALIGN_RIGHT
 			textalignx				174
 			textaligny				1
@@ -2096,7 +1969,7 @@
 				Deutsch deutsch
 				"Español" espanol
 			}
-			rect					225 262 340 14
+			rect					225 234 340 14
 			textalign				ITEM_ALIGN_RIGHT
 			textalignx				174
 			textaligny				1
@@ -2117,7 +1990,7 @@
 			text					@MENUS_SET_LANGUAGE
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
-			rect					225 276 340 14
+			rect					225 248 340 14
 			textaligny				1
 			font					5
 			textscale				0.68
@@ -2924,31 +2797,12 @@
 
 		itemDef
 		{
-			name					network_cg_voicemaster
-			group					network
-			type					ITEM_TYPE_YESNO
-			text					"Voice Master:"
-			cvar					"cg_voiceMaster"
-			rect					225 122 340 14
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				174
-			textaligny				1
-			font					5
-			textscale				0.68
-			forecolor				0.60 0.69 0.78 1
-			visible					0
-			descText				"Voice chat, clan radio and statuses on servers that have none of their own."
-			action { play "sound/interface/button1.wav" ; }
-		}
-
-		itemDef
-		{
 			name					network_cl_allowdownload
 			group					network
 			type					ITEM_TYPE_YESNO
 			text					"Allow Downloads:"
 			cvar					"cl_allowDownload"
-			rect					225 136 340 14
+			rect					225 122 340 14
 			textalign				ITEM_ALIGN_RIGHT
 			textalignx				174
 			textaligny				1
@@ -2967,7 +2821,7 @@
 			type					ITEM_TYPE_YESNO
 			text					"Intrusion Log:"
 			cvar					"cl_ids"
-			rect					225 150 340 14
+			rect					225 136 340 14
 			textalign				ITEM_ALIGN_RIGHT
 			textalignx				174
 			textaligny				1
@@ -2986,7 +2840,7 @@
 			type					ITEM_TYPE_YESNO
 			text					"Key Login by Agent:"
 			cvar					"cg_authAgent"
-			rect					225 164 340 14
+			rect					225 150 340 14
 			textalign				ITEM_ALIGN_RIGHT
 			textalignx				174
 			textaligny				1
@@ -3005,7 +2859,7 @@
 			type					ITEM_TYPE_YESNO
 			text					"UTF-8 Text:"
 			cvar					"cl_utf8"
-			rect					225 178 340 14
+			rect					225 164 340 14
 			textalign				ITEM_ALIGN_RIGHT
 			textalignx				174
 			textaligny				1

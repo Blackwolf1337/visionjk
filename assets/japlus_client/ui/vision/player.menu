@@ -7,7 +7,7 @@
 		fullScreen				1
 		rect					0 0 640 480
 		focusColor				0.43 0.83 1 1
-		descX					40
+		descX					16
 		descY					80
 		descScale				0.8
 		descColor				0.60 0.69 0.78 1
@@ -24,20 +24,22 @@
 		itemDef
 		{
 			name					vision_bar
-			rect					-1000 0 2640 34
+			rect					0 0 640 34
 			visible					1
 			style					WINDOW_STYLE_FILLED
 			backcolor				0.02 0.04 0.08 0.55
+			wide					1
 			decoration
 		}
 
 		itemDef
 		{
 			name					vision_bar_line
-			rect					-1000 34 2640 0.67
+			rect					0 34 640 0.67
 			visible					1
 			style					WINDOW_STYLE_FILLED
 			backcolor				0.43 0.83 1 0.22
+			wide					1
 			decoration
 		}
 
@@ -89,7 +91,7 @@
 		itemDef
 		{
 			name					vision_title
-			rect					40 46 400 28
+			rect					16 46 400 28
 			visible					1
 			text					@MENUS_PROFILE
 			font					5
@@ -124,7 +126,7 @@
 			forecolor				1 1 1 1
 			visible					1
 			decoration
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			radius					3
 		}
 
@@ -244,17 +246,17 @@
 			text					@MENUS_NAME1
 			cvar					"ui_Name"
 			maxchars				26
-			rect					16 100 300 28
+			rect					16 93.5 300 21.48
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				0
-			textaligny				-3.5
+			textaligny				3
 			font					5
 			textscale				0.86
 			forecolor				0.60 0.69 0.78 1
 			outlinecolor			1 .5 .5 .5
 			backcolor				0 0 0 0
 			border					0
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			descText				@MENUS_ENTER_YOUR_NAME_HERE
 			visible					1
 			action { play "sound/interface/button1.wav" }
@@ -270,14 +272,14 @@
 			rect					321 121 0 0
 			textalign				ITEM_ALIGN_CENTER
 			textalignx				0
-			textaligny				-1.5
+			textaligny				4.26
 			outlinecolor			1 .5 .5 .5
 			backcolor				0 0 0 0
 			font					5
 			textscale				0.86
 			forecolor				0.60 0.69 0.78 1
 			border					0
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			visible					1
 			action { play "sound/interface/button1.wav" ; }
 		}
@@ -298,7 +300,7 @@
 			textscale				0.77
 			forecolor				0.60 0.69 0.78 1
 			border					0
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			descText				@MENUS_CHOOSE_THE_COLOR_FOR
 			visible					1
 			action { play "sound/interface/button1.wav" ; }
@@ -321,8 +323,8 @@
 			visible					1
 			textscale				0.6
 			action { play "sound/interface/button1.wav" ; }
-			mouseenter { setitemcolor headlist bordercolor 1 0 0 1 }
-			mouseexit { setitemcolor headlist bordercolor .5 .5 .5 1 }
+			mouseenter { setitemcolor headlist bordercolor 0.43 0.83 1 0.16 }
+			mouseexit { setitemcolor headlist bordercolor 0.43 0.83 1 0.16 }
 			radius					4
 			outlinecolor			0.43 0.83 1 0.22
 			font					5

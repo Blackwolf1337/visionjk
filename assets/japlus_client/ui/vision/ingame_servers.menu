@@ -61,7 +61,7 @@
 			rect					5 398 630 22
 			backcolor				1 1 1 0.03
 			forecolor				1 1 1 1
-			bordercolor				0 0 .6 1
+			bordercolor				0.43 0.83 1 0.16
 			visible					1
 			decoration
 		}
@@ -216,20 +216,6 @@
 
 		itemDef
 		{
-			name					vision_rail_24
-			rect					427 21 186 70
-			visible					1
-			style					WINDOW_STYLE_PANEL
-			backcolor				0.035 0.07 0.12 0.55
-			bordercolor				0.43 0.83 1 0.16
-			radius					6
-			shadow					8
-			sheen					0.06
-			decoration
-		}
-
-		itemDef
-		{
 			name					viewEmpty
 			type					ITEM_TYPE_YESNO
 			text					@MENUS_VIEW_EMPTY
@@ -238,7 +224,7 @@
 			font					5
 			textscale				0.68
 			rect					430 24 180 16
-			textalignx				12
+			textalignx				0
 			textaligny				1
 			textalign				ITEM_ALIGN_LEFT
 			forecolor				0.60 0.69 0.78 1
@@ -254,7 +240,6 @@
 				setitemrect button_glow2 422 23 200 18
 			}
 			mouseExit { hide button_glow2 }
-			style					WINDOW_STYLE_EMPTY
 		}
 
 		itemDef
@@ -267,7 +252,7 @@
 			font					5
 			textscale				0.68
 			rect					430 40 180 16
-			textalignx				12
+			textalignx				0
 			textaligny				1
 			textalign				ITEM_ALIGN_LEFT
 			forecolor				0.60 0.69 0.78 1
@@ -283,7 +268,6 @@
 				setitemrect button_glow2 422 39 200 18
 			}
 			mouseExit { hide button_glow2 }
-			style					WINDOW_STYLE_EMPTY
 		}
 
 		itemDef
@@ -296,7 +280,7 @@
 			font					5
 			textscale				0.68
 			rect					430 56 180 16
-			textalignx				12
+			textalignx				0
 			textaligny				1
 			textalign				ITEM_ALIGN_LEFT
 			forecolor				0.60 0.69 0.78 1
@@ -312,7 +296,6 @@
 				setitemrect button_glow2 422 55 200 18
 			}
 			mouseExit { hide button_glow2 }
-			style					WINDOW_STYLE_EMPTY
 		}
 
 		itemDef
@@ -331,7 +314,7 @@
 			textscale				0.68
 			rect					430 72 180 16
 			font					5
-			textalignx				12
+			textalignx				0
 			textaligny				1
 			textalign				ITEM_ALIGN_LEFT
 			forecolor				0.60 0.69 0.78 1
@@ -347,7 +330,6 @@
 				setitemrect button_glow2 422 71 200 18
 			}
 			mouseExit { hide button_glow2 }
-			style					WINDOW_STYLE_EMPTY
 		}
 
 		itemDef
@@ -371,7 +353,7 @@
 				uiScript ServerSort 0
 				setitemcolor grpTabs backcolor 0.6 0.6 0.6 1
 				setitemcolor server backcolor 1 1 1 1
-				setitemcolor grpTabs forecolor 1 0.74 0.30 1
+				setitemcolor grpTabs forecolor 0.86 0.92 0.97 1
 				setitemcolor server forecolor 0.43 0.83 1 1
 				setitemcolor grpColumn backcolor 0 0 0 0
 				setitemcolor serverColumn backcolor 0.1 0.1 0.5 0.5
@@ -380,12 +362,12 @@
 			{
 				show button_glow2
 				setitemrect button_glow2 7 90 265 24
-				setitemcolor serverColumn bordercolor .79 .64 .22 1
+				setitemcolor serverColumn bordercolor 0.43 0.83 1 0.6
 			}
 			mouseExit
 			{
 				hide button_glow2
-				setitemcolor serverColumn bordercolor 0.2 0.2 0.5 0.5
+				setitemcolor serverColumn bordercolor 0.43 0.83 1 0.16
 			}
 			font					5
 		}
@@ -411,7 +393,7 @@
 				uiScript ServerSort 1
 				setitemcolor grpTabs backcolor 0.6 0.6 0.6 1
 				setitemcolor map backcolor 1 1 1 1
-				setitemcolor grpTabs forecolor 1 0.74 0.30 1
+				setitemcolor grpTabs forecolor 0.86 0.92 0.97 1
 				setitemcolor map forecolor 0.43 0.83 1 1
 				setitemcolor grpColumn backcolor 0 0 0 0
 				setitemcolor mapColumn backcolor 0.1 0.1 0.5 0.5
@@ -420,9 +402,9 @@
 			{
 				show button_glow2
 				setitemrect button_glow2 272 90 134 24
-				setitemcolor mapColumn bordercolor .79 .64 .22 1
+				setitemcolor mapColumn bordercolor 0.43 0.83 1 0.6
 			}
-			mouseExit { setitemcolor mapColumn bordercolor 0.2 0.2 0.5 0.5 }
+			mouseExit { setitemcolor mapColumn bordercolor 0.43 0.83 1 0.16 }
 			font					5
 		}
 
@@ -447,7 +429,7 @@
 				uiScript ServerSort 2
 				setitemcolor grpTabs backcolor 0.6 0.6 0.6 1
 				setitemcolor Players backcolor 1 1 1 1
-				setitemcolor grpTabs forecolor 1 0.74 0.30 1
+				setitemcolor grpTabs forecolor 0.86 0.92 0.97 1
 				setitemcolor Players forecolor 0.43 0.83 1 1
 				setitemcolor grpColumn backcolor 0 0 0 0
 				setitemcolor playerColumn backcolor 0.1 0.1 0.5 0.5
@@ -456,9 +438,9 @@
 			{
 				show button_glow2
 				setitemrect button_glow2 397 90 68 24
-				setitemcolor playerColumn bordercolor .79 .64 .22 1
+				setitemcolor playerColumn bordercolor 0.43 0.83 1 0.6
 			}
-			mouseExit { setitemcolor playerColumn bordercolor 0.2 0.2 0.5 0.5 }
+			mouseExit { setitemcolor playerColumn bordercolor 0.43 0.83 1 0.16 }
 			font					5
 		}
 
@@ -483,7 +465,7 @@
 				uiScript ServerSort 3
 				setitemcolor grpTabs backcolor 0.6 0.6 0.6 1
 				setitemcolor Type backcolor 1 1 1 1
-				setitemcolor grpTabs forecolor 1 0.74 0.30 1
+				setitemcolor grpTabs forecolor 0.86 0.92 0.97 1
 				setitemcolor Type forecolor 0.43 0.83 1 1
 				setitemcolor grpColumn backcolor 0 0 0 0
 				setitemcolor typeColumn backcolor 0.1 0.1 0.5 0.5
@@ -492,12 +474,12 @@
 			{
 				show button_glow2
 				setitemrect button_glow2 457 90 110 24
-				setitemcolor typeColumn bordercolor .79 .64 .22 1
+				setitemcolor typeColumn bordercolor 0.43 0.83 1 0.6
 			}
 			mouseExit
 			{
 				hide button_glow2
-				setitemcolor typeColumn bordercolor 0.2 0.2 0.5 0.5
+				setitemcolor typeColumn bordercolor 0.43 0.83 1 0.16
 			}
 			font					5
 		}
@@ -523,7 +505,7 @@
 				uiScript ServerSort 4
 				setitemcolor grpTabs backcolor 0.6 0.6 0.6 1
 				setitemcolor Ping backcolor 1 1 1 1
-				setitemcolor grpTabs forecolor 1 0.74 0.30 1
+				setitemcolor grpTabs forecolor 0.86 0.92 0.97 1
 				setitemcolor Ping forecolor 0.43 0.83 1 1
 				setitemcolor grpColumn backcolor 0 0 0 0 ;
 				setitemcolor pingColumn backcolor 0.1 0.1 0.5 0.5
@@ -532,12 +514,12 @@
 			{
 				show button_glow2
 				setitemrect button_glow2 557 90 60 24
-				setitemcolor pingColumn bordercolor .79 .64 .22 1
+				setitemcolor pingColumn bordercolor 0.43 0.83 1 0.6
 			}
 			mouseExit
 			{
 				hide button_glow2
-				setitemcolor pingColumn bordercolor 0.2 0.2 0.5 0.5
+				setitemcolor pingColumn bordercolor 0.43 0.83 1 0.16
 			}
 			font					5
 		}
@@ -670,7 +652,7 @@
 			style					WINDOW_STYLE_EMPTY
 			backcolor				0 0 0 0
 			bordersize				1
-			bordercolor				0.2 0.2 0.5 0.5
+			bordercolor				0.43 0.83 1 0.16
 			visible					1
 			decoration
 		}
@@ -683,7 +665,7 @@
 			style					WINDOW_STYLE_EMPTY
 			backcolor				0 0 0 0
 			bordersize				1
-			bordercolor				0.2 0.2 0.5 0.5
+			bordercolor				0.43 0.83 1 0.16
 			visible					1
 			decoration
 		}
@@ -696,7 +678,7 @@
 			style					WINDOW_STYLE_EMPTY
 			backcolor				0 0 0 0
 			bordersize				1
-			bordercolor				0.2 0.2 0.5 0.5
+			bordercolor				0.43 0.83 1 0.16
 			visible					1
 			decoration
 		}
@@ -709,7 +691,7 @@
 			style					WINDOW_STYLE_EMPTY
 			backcolor				0 0 0 0
 			bordersize				1
-			bordercolor				0.2 0.2 0.5 0.5
+			bordercolor				0.43 0.83 1 0.16
 			visible					1
 			decoration
 		}
@@ -722,7 +704,7 @@
 			style					WINDOW_STYLE_EMPTY
 			backcolor				0 0 0 0
 			bordersize				1
-			bordercolor				0.2 0.2 0.5 0.5
+			bordercolor				0.43 0.83 1 0.16
 			visible					1
 			decoration
 		}
@@ -746,8 +728,8 @@
 			outlinecolor			0.43 0.83 1 0.22
 			visible					1
 			columns					5 2 40 258 270 40 104 388 5 64 450 20 100 560 20 47
-			mouseenter { setitemcolor serverlist bordercolor .79 .64 .22 1 }
-			mouseexit { setitemcolor serverlist bordercolor 0.2 0.2 0.5 0.5 }
+			mouseenter { setitemcolor serverlist bordercolor 0.43 0.83 1 0.6 }
+			mouseexit { setitemcolor serverlist bordercolor 0.43 0.83 1 0.16 }
 			doubleClick { open ingame_servers_confirm }
 			radius					4
 		}
@@ -950,7 +932,6 @@
 			textstyle				0
 			style					WINDOW_STYLE_PANEL
 			rect					69 446 110 20
-			textalign				ITEM_ALIGN_CENTER
 			textalignx				55
 			textaligny				4
 			textalign				ITEM_ALIGN_CENTER

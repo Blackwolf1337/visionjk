@@ -8,7 +8,7 @@
 		rect					0 0 640 480
 		visible					1
 		focusColor				0.43 0.83 1 1
-		descX					40
+		descX					4
 		descY					80
 		descScale				0.8
 		descColor				0.60 0.69 0.78 1
@@ -61,20 +61,22 @@
 		itemDef
 		{
 			name					vision_bar
-			rect					-1000 0 2640 34
+			rect					0 0 640 34
 			visible					1
 			style					WINDOW_STYLE_FILLED
 			backcolor				0.02 0.04 0.08 0.55
+			wide					1
 			decoration
 		}
 
 		itemDef
 		{
 			name					vision_bar_line
-			rect					-1000 34 2640 0.67
+			rect					0 34 640 0.67
 			visible					1
 			style					WINDOW_STYLE_FILLED
 			backcolor				0.43 0.83 1 0.22
+			wide					1
 			decoration
 		}
 
@@ -349,7 +351,7 @@
 			group					title
 			style					WINDOW_STYLE_EMPTY
 			text					@MENUS_LIGHTSABER_CREATION
-			rect					40 46 400 28
+			rect					4 46 400 28
 			font					5
 			textscale				1.45
 			textalign				ITEM_ALIGN_LEFT
@@ -656,13 +658,12 @@
 			textaligny				17
 			textscale				0.68
 			bordercolor				0.43 0.83 1 0.16
-			forecolor				0.60 0.69 0.78 1
 			backcolor				0 0 0 0.30
 			outlinecolor			0.43 0.83 1 0.22
 			elementtype				LISTBOX_TEXT
 			feeder					FEEDER_SABER_SINGLE_INFO
 			descText				@MENUS_HILT2_DESC
-			forecolor				.615 .615 .956 1
+			forecolor				0.60 0.69 0.78 1
 			cvarTest				ui_saber_type
 			hideCvar { "single" ; "staff" }
 			visible					1
@@ -687,17 +688,17 @@
 			forecolor				.75 .75 .75 1
 			border					1
 			bordersize				1
-			bordercolor				.33 .33 .5 1
+			bordercolor				0.43 0.83 1 0.16
 			visible					1
 			mouseEnter
 			{
 				setitemcolor blackicon forecolor 0.43 0.83 1 1
-				setitemcolor blackicon bordercolor .66 .66 1 1
+				setitemcolor blackicon bordercolor 0.43 0.83 1 0.16
 			}
 			mouseExit
 			{
 				setitemcolor blackicon forecolor 0.86 0.92 0.97 1
-				setitemcolor blackicon bordercolor .33 .33 .5 1
+				setitemcolor blackicon bordercolor 0.43 0.83 1 0.16
 			}
 			action
 			{
@@ -718,17 +719,17 @@
 			forecolor				.75 .75 .75 1
 			border					1
 			bordersize				1
-			bordercolor				.33 .33 .5 1
+			bordercolor				0.43 0.83 1 0.16
 			visible					1
 			mouseEnter
 			{
 				setitemcolor blueicon forecolor 0.43 0.83 1 1
-				setitemcolor blueicon bordercolor .66 .66 1 1
+				setitemcolor blueicon bordercolor 0.43 0.83 1 0.16
 			}
 			mouseExit
 			{
 				setitemcolor blueicon forecolor 0.86 0.92 0.97 1
-				setitemcolor blueicon bordercolor .33 .33 .5 1
+				setitemcolor blueicon bordercolor 0.43 0.83 1 0.16
 			}
 			action
 			{
@@ -749,17 +750,17 @@
 			forecolor				.75 .75 .75 1
 			border					1
 			bordersize				1
-			bordercolor				.33 .33 .5 1
+			bordercolor				0.43 0.83 1 0.16
 			visible					1
 			mouseEnter
 			{
 				setitemcolor greenicon forecolor 0.43 0.83 1 1
-				setitemcolor greenicon bordercolor .66 .66 1 1
+				setitemcolor greenicon bordercolor 0.43 0.83 1 0.16
 			}
 			mouseExit
 			{
 				setitemcolor greenicon forecolor 0.86 0.92 0.97 1
-				setitemcolor greenicon bordercolor .33 .33 .5 1
+				setitemcolor greenicon bordercolor 0.43 0.83 1 0.16
 			}
 			action
 			{
@@ -780,17 +781,17 @@
 			forecolor				.75 .75 .75 1
 			border					1
 			bordersize				1
-			bordercolor				.33 .33 .5 1
+			bordercolor				0.43 0.83 1 0.16
 			visible					1
 			mouseEnter
 			{
 				setitemcolor orangeicon forecolor 0.43 0.83 1 1
-				setitemcolor orangeicon bordercolor .66 .66 1 1
+				setitemcolor orangeicon bordercolor 0.43 0.83 1 0.16
 			}
 			mouseExit
 			{
 				setitemcolor orangeicon forecolor 0.86 0.92 0.97 1
-				setitemcolor orangeicon bordercolor .33 .33 .5 1
+				setitemcolor orangeicon bordercolor 0.43 0.83 1 0.16
 			}
 			action
 			{
@@ -811,17 +812,17 @@
 			forecolor				.75 .75 .75 1
 			border					1
 			bordersize				1
-			bordercolor				.33 .33 .5 1
+			bordercolor				0.43 0.83 1 0.16
 			visible					1
 			mouseEnter
 			{
 				setitemcolor purpleicon forecolor 0.43 0.83 1 1
-				setitemcolor purpleicon bordercolor .66 .66 1 1
+				setitemcolor purpleicon bordercolor 0.43 0.83 1 0.16
 			}
 			mouseExit
 			{
 				setitemcolor purpleicon forecolor 0.86 0.92 0.97 1
-				setitemcolor purpleicon bordercolor .33 .33 .5 1
+				setitemcolor purpleicon bordercolor 0.43 0.83 1 0.16
 			}
 			action
 			{
@@ -842,17 +843,17 @@
 			forecolor				.75 .75 .75 1
 			border					1
 			bordersize				1
-			bordercolor				.33 .33 .5 1
+			bordercolor				0.43 0.83 1 0.16
 			visible					1
 			mouseEnter
 			{
 				setitemcolor yellowicon forecolor 0.43 0.83 1 1
-				setitemcolor yellowicon bordercolor .66 .66 1 1
+				setitemcolor yellowicon bordercolor 0.43 0.83 1 0.16
 			}
 			mouseExit
 			{
 				setitemcolor yellowicon forecolor 0.86 0.92 0.97 1
-				setitemcolor yellowicon bordercolor .33 .33 .5 1
+				setitemcolor yellowicon bordercolor 0.43 0.83 1 0.16
 			}
 			action
 			{
@@ -873,17 +874,17 @@
 			forecolor				.75 .75 .75 1
 			border					1
 			bordersize				1
-			bordercolor				.33 .33 .5 1
+			bordercolor				0.43 0.83 1 0.16
 			visible					1
 			mouseEnter
 			{
 				setitemcolor redicon forecolor 0.43 0.83 1 1
-				setitemcolor redicon bordercolor .66 .66 1 1
+				setitemcolor redicon bordercolor 0.43 0.83 1 0.16
 			}
 			mouseExit
 			{
 				setitemcolor redicon forecolor 0.86 0.92 0.97 1
-				setitemcolor redicon bordercolor .33 .33 .5 1
+				setitemcolor redicon bordercolor 0.43 0.83 1 0.16
 			}
 			action
 			{
@@ -912,13 +913,13 @@
 			{
 				show rgb_color1_glow
 				setitemcolor rgbsetupbutton forecolor 0.43 0.83 1 1
-				setitemcolor rgbsetupbutton bordercolor .66 .66 1 1
+				setitemcolor rgbsetupbutton bordercolor 0.43 0.83 1 0.16
 			}
 			mouseExit
 			{
 				hide rgb_color1_glow
 				setitemcolor rgbsetupbutton forecolor 0.60 0.69 0.78 1
-				setitemcolor rgbsetupbutton bordercolor .33 .33 .5 1
+				setitemcolor rgbsetupbutton bordercolor 0.43 0.83 1 0.16
 			}
 			action
 			{
@@ -962,19 +963,19 @@
 			forecolor				.75 .75 .75 1
 			border					1
 			bordersize				1
-			bordercolor				.33 .33 .5 1
+			bordercolor				0.43 0.83 1 0.16
 			visible					1
 			cvarTest				ui_saber_type
 			hideCvar { "single" ; "staff" }
 			mouseEnter
 			{
 				setitemcolor blackicon forecolor 0.43 0.83 1 1
-				setitemcolor blackicon bordercolor .66 .66 1 1
+				setitemcolor blackicon bordercolor 0.43 0.83 1 0.16
 			}
 			mouseExit
 			{
 				setitemcolor blackicon forecolor 0.86 0.92 0.97 1
-				setitemcolor blackicon bordercolor .33 .33 .5 1
+				setitemcolor blackicon bordercolor 0.43 0.83 1 0.16
 			}
 			action
 			{
@@ -995,19 +996,19 @@
 			forecolor				.75 .75 .75 1
 			border					1
 			bordersize				1
-			bordercolor				.33 .33 .5 1
+			bordercolor				0.43 0.83 1 0.16
 			visible					1
 			cvarTest				ui_saber_type
 			hideCvar { "single" ; "staff" }
 			mouseEnter
 			{
 				setitemcolor blueicon forecolor 0.43 0.83 1 1
-				setitemcolor blueicon bordercolor .66 .66 1 1
+				setitemcolor blueicon bordercolor 0.43 0.83 1 0.16
 			}
 			mouseExit
 			{
 				setitemcolor blueicon forecolor 0.86 0.92 0.97 1
-				setitemcolor blueicon bordercolor .33 .33 .5 1
+				setitemcolor blueicon bordercolor 0.43 0.83 1 0.16
 			}
 			action
 			{
@@ -1028,19 +1029,19 @@
 			forecolor				.75 .75 .75 1
 			border					1
 			bordersize				1
-			bordercolor				.33 .33 .5 1
+			bordercolor				0.43 0.83 1 0.16
 			visible					1
 			cvarTest				ui_saber_type
 			hideCvar { "single" ; "staff" }
 			mouseEnter
 			{
 				setitemcolor greenicon forecolor 0.43 0.83 1 1
-				setitemcolor greenicon bordercolor .66 .66 1 1
+				setitemcolor greenicon bordercolor 0.43 0.83 1 0.16
 			}
 			mouseExit
 			{
 				setitemcolor greenicon forecolor 0.86 0.92 0.97 1
-				setitemcolor greenicon bordercolor .33 .33 .5 1
+				setitemcolor greenicon bordercolor 0.43 0.83 1 0.16
 			}
 			action
 			{
@@ -1061,19 +1062,19 @@
 			forecolor				.75 .75 .75 1
 			border					1
 			bordersize				1
-			bordercolor				.33 .33 .5 1
+			bordercolor				0.43 0.83 1 0.16
 			visible					1
 			cvarTest				ui_saber_type
 			hideCvar { "single" ; "staff" }
 			mouseEnter
 			{
 				setitemcolor orangeicon forecolor 0.43 0.83 1 1
-				setitemcolor orangeicon bordercolor .66 .66 1 1
+				setitemcolor orangeicon bordercolor 0.43 0.83 1 0.16
 			}
 			mouseExit
 			{
 				setitemcolor orangeicon forecolor 0.86 0.92 0.97 1
-				setitemcolor orangeicon bordercolor .33 .33 .5 1
+				setitemcolor orangeicon bordercolor 0.43 0.83 1 0.16
 			}
 			action
 			{
@@ -1094,19 +1095,19 @@
 			forecolor				.75 .75 .75 1
 			border					1
 			bordersize				1
-			bordercolor				.33 .33 .5 1
+			bordercolor				0.43 0.83 1 0.16
 			visible					1
 			cvarTest				ui_saber_type
 			hideCvar { "single" ; "staff" }
 			mouseEnter
 			{
 				setitemcolor purpleicon forecolor 0.43 0.83 1 1
-				setitemcolor purpleicon bordercolor .66 .66 1 1
+				setitemcolor purpleicon bordercolor 0.43 0.83 1 0.16
 			}
 			mouseExit
 			{
 				setitemcolor purpleicon forecolor 0.86 0.92 0.97 1
-				setitemcolor purpleicon bordercolor .33 .33 .5 1
+				setitemcolor purpleicon bordercolor 0.43 0.83 1 0.16
 			}
 			action
 			{
@@ -1127,19 +1128,19 @@
 			forecolor				.75 .75 .75 1
 			border					1
 			bordersize				1
-			bordercolor				.33 .33 .5 1
+			bordercolor				0.43 0.83 1 0.16
 			visible					1
 			cvarTest				ui_saber_type
 			hideCvar { "single" ; "staff" }
 			mouseEnter
 			{
 				setitemcolor yellowicon forecolor 0.43 0.83 1 1
-				setitemcolor yellowicon bordercolor .66 .66 1 1
+				setitemcolor yellowicon bordercolor 0.43 0.83 1 0.16
 			}
 			mouseExit
 			{
 				setitemcolor yellowicon forecolor 0.86 0.92 0.97 1
-				setitemcolor yellowicon bordercolor .33 .33 .5 1
+				setitemcolor yellowicon bordercolor 0.43 0.83 1 0.16
 			}
 			action
 			{
@@ -1160,19 +1161,19 @@
 			forecolor				.75 .75 .75 1
 			border					1
 			bordersize				1
-			bordercolor				.33 .33 .5 1
+			bordercolor				0.43 0.83 1 0.16
 			visible					1
 			cvarTest				ui_saber_type
 			hideCvar { "single" ; "staff" }
 			mouseEnter
 			{
 				setitemcolor redicon forecolor 0.43 0.83 1 1
-				setitemcolor redicon bordercolor .66 .66 1 1
+				setitemcolor redicon bordercolor 0.43 0.83 1 0.16
 			}
 			mouseExit
 			{
 				setitemcolor redicon forecolor 0.86 0.92 0.97 1
-				setitemcolor redicon bordercolor .33 .33 .5 1
+				setitemcolor redicon bordercolor 0.43 0.83 1 0.16
 			}
 			action
 			{
@@ -1193,19 +1194,19 @@
 			forecolor				.75 .75 .75 1
 			border					1
 			bordersize				1
-			bordercolor				.33 .33 .5 1
+			bordercolor				0.43 0.83 1 0.16
 			visible					1
 			cvarTest				ui_saber_type
 			hideCvar { "single" ; "staff" }
 			mouseEnter
 			{
 				setitemcolor blackicon2 forecolor 0.43 0.83 1 1
-				setitemcolor blackicon2 bordercolor .66 .66 1 1
+				setitemcolor blackicon2 bordercolor 0.43 0.83 1 0.16
 			}
 			mouseExit
 			{
 				setitemcolor blackicon2 forecolor 0.86 0.92 0.97 1
-				setitemcolor blackicon2 bordercolor .33 .33 .5 1
+				setitemcolor blackicon2 bordercolor 0.43 0.83 1 0.16
 			}
 			action
 			{
@@ -1226,19 +1227,19 @@
 			forecolor				.75 .75 .75 1
 			border					1
 			bordersize				1
-			bordercolor				.33 .33 .5 1
+			bordercolor				0.43 0.83 1 0.16
 			visible					1
 			cvarTest				ui_saber_type
 			hideCvar { "single" ; "staff" }
 			mouseEnter
 			{
 				setitemcolor blueicon2 forecolor 0.43 0.83 1 1
-				setitemcolor blueicon2 bordercolor .66 .66 1 1
+				setitemcolor blueicon2 bordercolor 0.43 0.83 1 0.16
 			}
 			mouseExit
 			{
 				setitemcolor blueicon2 forecolor 0.86 0.92 0.97 1
-				setitemcolor blueicon2 bordercolor .33 .33 .5 1
+				setitemcolor blueicon2 bordercolor 0.43 0.83 1 0.16
 			}
 			action
 			{
@@ -1259,19 +1260,19 @@
 			forecolor				.75 .75 .75 1
 			border					1
 			bordersize				1
-			bordercolor				.33 .33 .5 1
+			bordercolor				0.43 0.83 1 0.16
 			visible					1
 			cvarTest				ui_saber_type
 			hideCvar { "single" ; "staff" }
 			mouseEnter
 			{
 				setitemcolor greenicon2 forecolor 0.43 0.83 1 1
-				setitemcolor greenicon2 bordercolor .66 .66 1 1
+				setitemcolor greenicon2 bordercolor 0.43 0.83 1 0.16
 			}
 			mouseExit
 			{
 				setitemcolor greenicon2 forecolor 0.86 0.92 0.97 1
-				setitemcolor greenicon2 bordercolor .33 .33 .5 1
+				setitemcolor greenicon2 bordercolor 0.43 0.83 1 0.16
 			}
 			action
 			{
@@ -1292,19 +1293,19 @@
 			forecolor				.75 .75 .75 1
 			border					1
 			bordersize				1
-			bordercolor				.33 .33 .5 1
+			bordercolor				0.43 0.83 1 0.16
 			visible					1
 			cvarTest				ui_saber_type
 			hideCvar { "single" ; "staff" }
 			mouseEnter
 			{
 				setitemcolor orangeicon2 forecolor 0.43 0.83 1 1
-				setitemcolor orangeicon2 bordercolor .66 .66 1 1
+				setitemcolor orangeicon2 bordercolor 0.43 0.83 1 0.16
 			}
 			mouseExit
 			{
 				setitemcolor orangeicon2 forecolor 0.86 0.92 0.97 1
-				setitemcolor orangeicon2 bordercolor .33 .33 .5 1
+				setitemcolor orangeicon2 bordercolor 0.43 0.83 1 0.16
 			}
 			action
 			{
@@ -1325,19 +1326,19 @@
 			forecolor				.75 .75 .75 1
 			border					1
 			bordersize				1
-			bordercolor				.33 .33 .5 1
+			bordercolor				0.43 0.83 1 0.16
 			visible					1
 			cvarTest				ui_saber_type
 			hideCvar { "single" ; "staff" }
 			mouseEnter
 			{
 				setitemcolor purpleicon2 forecolor 0.43 0.83 1 1
-				setitemcolor purpleicon2 bordercolor .66 .66 1 1
+				setitemcolor purpleicon2 bordercolor 0.43 0.83 1 0.16
 			}
 			mouseExit
 			{
 				setitemcolor purpleicon2 forecolor 0.86 0.92 0.97 1
-				setitemcolor purpleicon2 bordercolor .33 .33 .5 1
+				setitemcolor purpleicon2 bordercolor 0.43 0.83 1 0.16
 			}
 			action
 			{
@@ -1358,19 +1359,19 @@
 			forecolor				.75 .75 .75 1
 			border					1
 			bordersize				1
-			bordercolor				.33 .33 .5 1
+			bordercolor				0.43 0.83 1 0.16
 			visible					1
 			cvarTest				ui_saber_type
 			hideCvar { "single" ; "staff" }
 			mouseEnter
 			{
 				setitemcolor yellowicon2 forecolor 0.43 0.83 1 1
-				setitemcolor yellowicon2 bordercolor .66 .66 1 1
+				setitemcolor yellowicon2 bordercolor 0.43 0.83 1 0.16
 			}
 			mouseExit
 			{
 				setitemcolor yellowicon2 forecolor 0.86 0.92 0.97 1
-				setitemcolor yellowicon2 bordercolor .33 .33 .5 1
+				setitemcolor yellowicon2 bordercolor 0.43 0.83 1 0.16
 			}
 			action
 			{
@@ -1391,19 +1392,19 @@
 			forecolor				.75 .75 .75 1
 			border					1
 			bordersize				1
-			bordercolor				.33 .33 .5 1
+			bordercolor				0.43 0.83 1 0.16
 			visible					1
 			cvarTest				ui_saber_type
 			hideCvar { "single" ; "staff" }
 			mouseEnter
 			{
 				setitemcolor redicon2 forecolor 0.43 0.83 1 1
-				setitemcolor redicon2 bordercolor .66 .66 1 1
+				setitemcolor redicon2 bordercolor 0.43 0.83 1 0.16
 			}
 			mouseExit
 			{
 				setitemcolor redicon2 forecolor 0.86 0.92 0.97 1
-				setitemcolor redicon2 bordercolor .33 .33 .5 1
+				setitemcolor redicon2 bordercolor 0.43 0.83 1 0.16
 			}
 			action
 			{
@@ -1432,12 +1433,12 @@
 			mouseEnter
 			{
 				setitemcolor rgbsetupapply forecolor 0.43 0.83 1 1
-				setitemcolor rgbsetupapply bordercolor .66 .66 1 1
+				setitemcolor rgbsetupapply bordercolor 0.43 0.83 1 0.16
 			}
 			mouseExit
 			{
 				setitemcolor rgbsetupapply forecolor 0.60 0.69 0.78 1
-				setitemcolor rgbsetupapply bordercolor .33 .33 .5 1
+				setitemcolor rgbsetupapply bordercolor 0.43 0.83 1 0.16
 			}
 			action
 			{

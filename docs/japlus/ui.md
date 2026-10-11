@@ -80,6 +80,7 @@ All optional. A file that uses none of them is read and drawn by the code of bef
 | itemDef | `type ITEM_TYPE_BAR`, `type ITEM_TYPE_VALUE`, `stat <name>` | a bar that is filled by a number of the game, or that number as text. `forecolor` on `backcolor`, or the colour of the first `addColorRange` the number is in. `align ITEM_ALIGN_RIGHT` fills a bar from the right |
 | itemDef | `showStat <name>` | the item is only there while that number is above 0 |
 | itemDef | `type ITEM_TYPE_CUBE`, `type ITEM_TYPE_LOGO` | the box of the icon in the rectangle of the item: as a body in the pose of the icon that sways and opens its lid, or as a flat picture (its `forecolor` gives the alpha) |
+| itemDef | `wide 1` | its window reaches the sides of a screen that is wider than the 640 units of a menu, as the background of a menu does: the bar at the top of a page. With the menu on its panel in the level it ends with the panel |
 
 The numbers (`codemp/cgame/hud/cg_hud.c`): `health`, `armor`, `force`, `ammo` (not there with a saber),
 `saberstyle` (only with a saber), `jetpack`, `cloak`, `score`, `alive`, `spectator`, `team` (1 red, 2 blue),
@@ -148,7 +149,7 @@ of the menus.
 |-----|---------|
 | Interface | New HUD (`cg_hud`), Classic Menus (`ui_classic`), Wide Screen Layout (`r_2dAspect`), Menu in the Level (`cg_immersiveMenu`), Menu Blur (`r_menuBlur`), Field of View (`cg_fov`), Camera Distance (`cg_thirdPersonRange`), Crosshair Size (`cg_crosshairSize`), Frame Limit (`com_maxfps`), Show Frame Rate (`cg_drawFPS`), Show Timer (`cg_drawTimer`), Show Lagometer (`cg_lagometer`) |
 | Chat & Social | Chat Bubbles (`cg_chatBubbles`), Bubble Range (`cg_bubbleRange`), Player Statuses (`cg_playerStatuses`), Show My Music (`cg_shareMusic`), Select Players (`cg_selectPlayers`), Selection Outline (`cg_selectOutline`), Own Chat Line (`cg_chatInput`), Chat Box Width (`cg_chatBoxWidth`), Chat Beep (`cg_chatBeep`), Sharp Console Font (`con_font`), Console Text Size (`con_scale`), Console Opacity (`con_opacity`) |
-| Network | Check for Updates (`cl_updateCheck`), Voice Master (`cg_voiceMaster`), Allow Downloads (`cl_allowDownload`), Intrusion Log (`cl_ids`), Key Login by Agent (`cg_authAgent`), UTF-8 Text (`cl_utf8`) |
+| Network | Check for Updates (`cl_updateCheck`), Allow Downloads (`cl_allowDownload`), Intrusion Log (`cl_ids`), Key Login by Agent (`cg_authAgent`), UTF-8 Text (`cl_utf8`) |
 | Sound | Spatial Audio (`s_spatial`), Room Reflections (`s_spatialReflections`), Sound Round Corners (`s_spatialPaths`), Doppler (`s_doppler`) |
 | Controls, JA+ Control | Free the Mouse (`+cursor`) |
 
@@ -210,6 +211,35 @@ Sections stood as texts set to the right with nothing around them. Windows had t
 picture frame of the old game at once. Their panels let the level and the page show through. Their buttons
 were bare words, and the line about the mouse lay across their content. A setting written `fullScreen
 MENU_FALSE` was read as yes. Rows of settings that were white in the old menus had the colour of a chosen tab.
+
+2026-10-11 late night, their reports from the game they play in German, with pictures: the mark under the mouse
+larger than the row it marks and "Charakter-Modell" above its bar (profile), sliders that showed 110.31,
+settings that stand twice or do nothing, a second panel behind the filters of the server browser, the bar at the
+top reaching out of the panel in the level, two tabs of Setup at once after coming back to it. All passes since
+then run with `+set se_language german` as well.
+
+- A slider of a menu with `skin 1` sets and shows whole numbers: whole units where its scale is twelve units or
+  longer (field of view, the colours), whole hundredths on a shorter one, shown as percent with 1 as 100 %.
+- A text that is too long for its place is set smaller, down to six tenths: the place is the item for a text in
+  its middle or at its left, and what lies between the left edge and the mark for the label of a setting.
+- `caps 1` knows the small letters with marks (it wrote ZURüCK).
+- `tidy()` in `pages.py`, for every menu: a caption that stands on a bar is put on the middle of the bar, and a
+  setting whose rectangle is much higher than its line is cut to the line, so the mark under the mouse is as
+  large as the row.
+- A list of sections is made of buttons only: the four switches of the server browser's filters had been taken
+  for one. The gold of the old menus that click scripts put on edges and on the heads of columns is translated.
+  A file that says `forecolor` twice (the game takes the last) keeps only that one: three rows of Controls had
+  the purple of the old game from it.
+- Setup hides the new tabs when it opens. It showed its first tab over the one left open.
+- Left out of the new look (`LEFT_OUT`): Chat Bubbles and Show My Music under Voice Chat (they are under Chat &
+  Social), Allow Downloads under Game Options (it is under Network), Voice Master under Network (it is "On
+  Other Servers" under Voice Chat), View Swaying (`ui_disableWeaponSway` is read by nothing in this tree) and the
+  axes of a joystick as buttons (`joy_xbutton`, `joy_ybutton`, the same). Every other row of Setup and Controls
+  names a cvar that the engine, a renderer or the cgame reads. The Vulkan renderer is built from the files of
+  rd-vanilla that read the video settings, so those count for both.
+
+Not translated: the rows and tabs this tree added (Interface, Chat & Social, Network, the voice chat) are
+English in every language, the game has no strings for them.
 
 Not checked: the pages of siege in a game of siege (their pictures are missing outside one), most in-game
 windows standing in the level (`cg_immersiveMenu 1`, the default: Setup and the vote window were looked at

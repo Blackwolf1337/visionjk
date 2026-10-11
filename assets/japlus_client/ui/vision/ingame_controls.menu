@@ -80,7 +80,7 @@
 			textscale				0.67
 			forecolor				0.60 0.69 0.78 1
 			border					0
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			visible					1
 			caps					1
 		}
@@ -2078,48 +2078,6 @@
 			action { play "sound/interface/button1.wav" ; }
 			mouseenter { show highlight9 }
 			mouseexit { hide highlight9 }
-		}
-
-		itemDef
-		{
-			name					mousejoystick
-			group					joycontrols
-			type					ITEM_TYPE_YESNO
-			text					@MENUS_X_AXIS_AS_BUTTONS
-			cvar					"joy_xbutton"
-			rect					220 221 300 20
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				151
-			textaligny				1
-			font					5
-			textscale				0.68
-			forecolor				0.60 0.69 0.78 1
-			visible					0
-			descText				@MENUS_WHEN_OFF_HORIZONTAL
-			action { play "sound/interface/button1.wav" ; }
-			mouseenter { show highlight10 }
-			mouseexit { hide highlight10 }
-		}
-
-		itemDef
-		{
-			name					mousejoystick
-			group					joycontrols
-			type					ITEM_TYPE_YESNO
-			text					@MENUS_Y_AXIS_AS_BUTTONS
-			cvar					"joy_ybutton"
-			rect					220 241 300 20
-			textalign				ITEM_ALIGN_RIGHT
-			textalignx				151
-			textaligny				1
-			font					5
-			textscale				0.68
-			forecolor				0.60 0.69 0.78 1
-			visible					0
-			descText				@MENUS_WHEN_OFF_VERTICAL_STICK
-			action { play "sound/interface/button1.wav" ; }
-			mouseenter { show highlight11 }
-			mouseexit { hide highlight11 }
 		}
 
 		itemDef

@@ -94,14 +94,21 @@ def recolor(c, chosen=ACCENT):
 
 def script_colors(words):
     """setitemcolor <item> forecolor r g b a inside a script: the colour of the theme in its place. These are
-    the scripts that mark the section or tab that is open."""
+    the scripts that mark the section or tab that is open. The same for the edge of an item (bordercolor),
+    which the old menus lit in gold under the mouse and left dark blue."""
     i = 0
     while i < len(words) - 6:
-        if words[i].lower() == 'setitemcolor' and words[i + 2].lower() == 'forecolor':
+        what = words[i + 2].lower()
+        if words[i].lower() == 'setitemcolor' and what in ('forecolor', 'bordercolor'):
             # (the last number often has the ";" of the command on it)
             end = ';' if words[i + 6].endswith(';') else ''
             c = rgba(words[i + 3:i + 6] + [words[i + 6].rstrip(';')])
-            new = recolor(c) if c else None
+            new = None
+            if c and what == 'forecolor':
+                # (gold is what the head of a column has that the list is not sorted by: a text like others)
+                new = TEXT[:3] + [mf.fmt(c[3])] if kind(c) == 'gold' else recolor(c)
+            elif c:
+                new = ACCENT[:3] + ['0.6'] if kind(c) in ('gold', 'orange', 'yellow', 'white') else SOFT_EDGE
             if new:
                 words[i + 3:i + 7] = new[:3] + [new[3] + end]
             i += 7
@@ -161,8 +168,17 @@ def retext(b):
         mf.put(b, 'textstyle', '0')
 
 
+# what an item may say only once: the game takes the last one where a file says it twice, the rules here the first
+ONCE = ('forecolor', 'backcolor', 'bordercolor', 'outlinecolor', 'rect', 'style', 'font', 'textscale', 'textalign',
+        'textalignx', 'textaligny', 'textstyle', 'visible', 'border', 'bordersize', 'background')
+
+
 def restyle_item(b):
     """One itemDef. Returns False when the item goes."""
+    for key in ONCE:
+        same = [e for e in b if e.k == key]
+        for e in same[:-1]:
+            b.remove(e)
     bg = mf.get(b, 'background')
     bg = mf.unquote(bg[0]).lower() if bg else ''
     has_text = mf.get(b, 'text') is not None or mf.get(b, 'cvar') is not None
@@ -210,6 +226,11 @@ def restyle_item(b):
             mf.put(b, 'style', 'WINDOW_STYLE_EMPTY')
     elif border and style != 'shader':
         panel(b, NONE, SOFT_EDGE, 5)
+
+    # an edge in a colour of the old menus that no rule above has replaced
+    edge = rgba(mf.get(b, 'bordercolor'))
+    if edge and not any(all(abs(float(p[i]) - edge[i]) < 0.02 for i in range(3)) for p in (ACCENT, SOFT_EDGE, PANEL_EDGE)):
+        mf.put(b, 'bordercolor', *SOFT_EDGE)
 
     fore = rgba(mf.get(b, 'forecolor'))
     if fore and (has_text or k in ('list', 'scroll', 'owner')):

@@ -30,10 +30,11 @@
 		itemDef
 		{
 			name					vision_veil
-			rect					-1125 -60 2640 480
+			rect					-125 -60 640 480
 			visible					1
 			style					WINDOW_STYLE_FILLED
 			backcolor				0 0.01 0.03 0.6
+			wide					1
 			decoration
 		}
 
@@ -97,13 +98,13 @@
 			textscale				0.77
 			type					ITEM_TYPE_EDITFIELD
 			cvar					"ui_findplayer"
-			rect					115 30 250 25
+			rect					115 28.35 250 19.86
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				5
-			textaligny				1.35
+			textaligny				3
 			forecolor				0.60 0.69 0.78 1
 			backcolor				0.43 0.83 1 0.14
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.16
 			visible					1
 			action { ui_script FindPlayer }
 			mouseenter { setitemcolor nameEntry backcolor .25 .25 .25 .75 }
@@ -128,8 +129,8 @@
 			feeder					FEEDER_FINDPLAYER
 			visible					1
 			textaligny				13.2
-			mouseenter { setitemcolor serverNameWindow bordercolor .7 0 0 1 }
-			mouseexit { setitemcolor serverNameWindow bordercolor .5 .5 .5 1 }
+			mouseenter { setitemcolor serverNameWindow bordercolor 0.43 0.83 1 0.16 }
+			mouseexit { setitemcolor serverNameWindow bordercolor 0.43 0.83 1 0.16 }
 			radius					4
 		}
 
@@ -181,8 +182,8 @@
 			notselectable
 			visible					1
 			columns					4 2 40 120 40 40 180 90 40 180 135 40 180
-			mouseenter { setitemcolor serverInfowindow bordercolor .7 0 0 1 }
-			mouseexit { setitemcolor serverInfowindow bordercolor .5 .5 .5 1 }
+			mouseenter { setitemcolor serverInfowindow bordercolor 0.43 0.83 1 0.16 }
+			mouseexit { setitemcolor serverInfowindow bordercolor 0.43 0.83 1 0.16 }
 			radius					4
 			outlinecolor			0.43 0.83 1 0.22
 		}
