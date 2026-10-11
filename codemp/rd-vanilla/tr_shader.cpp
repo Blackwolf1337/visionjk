@@ -3745,7 +3745,7 @@ qhandle_t RE_RegisterSceneShader( const char *name, image_t *image, int flags, f
 		memset( ds, 0, sizeof( *ds ) );
 		ds->deformation = DEFORM_WAVE;
 		ds->deformationWave.func = GF_SIN;
-		ds->deformationWave.base = 1.1f;
+		ds->deformationWave.base = ( ( flags >> 8 ) & 0xff ) ? ( ( flags >> 8 ) & 0xff ) * 0.1f : 1.1f;
 		shader.deforms[0] = ds;
 		shader.numDeforms = 1;
 		shader.cullType = CT_BACK_SIDED;

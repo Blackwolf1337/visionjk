@@ -1781,6 +1781,7 @@ void		CG_SelectDraw( void );
 void		CG_SelectDrawCursor( void );
 qboolean	CG_SelectKeyEvent( int key, qboolean down );
 void		CG_SelectOutline( int clientNum, const refEntity_t *model );
+qboolean	CG_SelectOutlined( int clientNum );
 void		CG_SelectCursorDown_f( void );
 void		CG_SelectCursorUp_f( void );
 void		CG_SelectCursor_f( void );

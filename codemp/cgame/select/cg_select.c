@@ -64,6 +64,8 @@ typedef enum {
 	ACT_ADMIN_BRING
 } selectAct_t;
 
+#define SELECT_SHELLS	6		// the shells of the outline
+
 static struct {
 	qboolean	held;					// +cursor
 	qboolean	toggled;				// "cursor"
@@ -74,7 +76,7 @@ static struct {
 	selectAct_t	rows[SELECT_MAX_ROWS];
 	int			numRows;
 	int			confirmTime;			// when the vote to kick was clicked first, 0: not yet
-	qhandle_t	hull;					// the shader of the outline, 0: none
+	qhandle_t	hull[SELECT_SHELLS];	// the shaders of the outline, from the model outward. The first 0: none
 	qboolean	hullTried;
 	qhandle_t	pointer;				// the pointer of the game, where the new one can not be drawn
 } sel;
@@ -203,24 +205,62 @@ The outline
 ===============================================================================
 */
 
+// The outline is a light that fades: the model again in shells that stand off it, the wider the fainter. The
+// innermost is added to what is behind it and glows (r_DynamicGlow), the others are blended.
+static const struct {
+	int		tenths;		// how far the shell stands off the model, in tenths of a unit
+	int		flags;
+	byte	alpha;
+} selectShells[SELECT_SHELLS] = {
+	{ 5, RGBA_SHADER_GLOW, 255 },
+	{ 10, RGBA_SHADER_BEHIND, 104 },
+	{ 16, RGBA_SHADER_BEHIND, 72 },
+	{ 23, RGBA_SHADER_BEHIND, 46 },
+	{ 31, RGBA_SHADER_BEHIND, 28 },
+	{ 40, RGBA_SHADER_BEHIND, 15 },
+};
+
 static void Select_Hull( void ) {
 	// (not const: the renderer scales the light of a picture in the memory it is given)
 	static byte			white[4 * 4 * 4];
 	char				value[8];
+	int					i;
 
 	if ( sel.hullTried ) {
 		return;
 	}
 	sel.hullTried = qtrue;
-	memset( white, 255, sizeof( white ) );
 	// the flag came with the engine that says cl_uiSkin
 	trap->Cvar_VariableStringBuffer( "cl_uiSkin", value, sizeof( value ) );
 	if ( atoi( value ) == 1 && Skin_Ready() ) {
-		sel.hull = trap->ext.R_RegisterShaderRGBA( "select_hull", white, 4, 4, RGBA_SHADER_GLOW | RGBA_SHADER_HULL );
+		for ( i = 0; i < SELECT_SHELLS; i++ ) {
+			memset( white, 255, sizeof( white ) );
+			sel.hull[i] = trap->ext.R_RegisterShaderRGBA( va( "select_hull_%i", selectShells[i].tenths ), white, 4, 4,
+				RGBA_SHADER_HULL_WIDTH( selectShells[i].tenths ) | selectShells[i].flags );
+		}
 	}
-	if ( !sel.hull ) {
-		sel.hull = trap->R_RegisterShader( "gfx/vision/select_hull" );
+	if ( !sel.hull[0] ) {
+		sel.hull[0] = trap->R_RegisterShader( "gfx/vision/select_hull" );
 	}
+}
+
+/*
+=================
+CG_SelectOutlined
+
+Does this player get an outline this frame: the one under the pointer and the one whose card is open. His model
+and the blades of his saber are then drawn after everything else (RF_FORCEPOST), so they lie on the shells of
+the outline, which are drawn before them and write no depth: what is left of the shells is what stands out
+around the figure, and no line of them crosses it.
+=================
+*/
+qboolean CG_SelectOutlined( int clientNum ) {
+	if ( clientNum < 0 || clientNum >= MAX_CLIENTS || !cg_selectOutline.integer
+		|| ( clientNum != sel.hover && clientNum != sel.selected ) || !Select_Free() ) {
+		return qfalse;
+	}
+	Select_Hull();
+	return (qboolean)( sel.hull[0] != 0 );
 }
 
 /*
@@ -234,18 +274,15 @@ open are added a second time as an outline.
 void CG_SelectOutline( int clientNum, const refEntity_t *model ) {
 	refEntity_t			hull;
 	const clientInfo_t	*ci;
+	const float			strength = ( clientNum == sel.selected ) ? 1.0f : 0.75f;
+	int					i;
 
-	if ( !cg_selectOutline.integer || ( clientNum != sel.hover && clientNum != sel.selected ) || !Select_Free() ) {
-		return;
-	}
-	Select_Hull();
-	if ( !sel.hull ) {
+	if ( !CG_SelectOutlined( clientNum ) ) {
 		return;
 	}
 	ci = &cgs.clientinfo[clientNum];
 	hull = *model;
-	hull.customShader = sel.hull;
-	hull.renderfx &= ~( RF_RGB_TINT | RF_FORCE_ENT_ALPHA | RF_NODEPTH );
+	hull.renderfx &= ~( RF_RGB_TINT | RF_FORCE_ENT_ALPHA | RF_NODEPTH | RF_FORCEPOST );
 	hull.renderfx |= RF_NOSHADOW;
 	// light blue, or the colour of his team
 	if ( cgs.gametype >= GT_TEAM && ci->team == TEAM_RED ) {
@@ -255,8 +292,13 @@ void CG_SelectOutline( int clientNum, const refEntity_t *model ) {
 	} else {
 		hull.shaderRGBA[0] = 110; hull.shaderRGBA[1] = 212; hull.shaderRGBA[2] = 255;
 	}
-	hull.shaderRGBA[3] = ( clientNum == sel.selected ) ? 255 : 190;
-	trap->R_AddRefEntityToScene( &hull );
+	for ( i = 0; i < SELECT_SHELLS; i++ ) {
+		if ( sel.hull[i] ) {
+			hull.customShader = sel.hull[i];
+			hull.shaderRGBA[3] = (byte)( selectShells[i].alpha * strength );
+			trap->R_AddRefEntityToScene( &hull );
+		}
+	}
 }
 
 /*
@@ -521,6 +563,11 @@ void CG_SelectDraw( void ) {
 	if ( !free ) {
 		sel.hover = -1;
 		Select_Close();
+		// (the chat box open with the selection of players switched off: its pointer)
+		if ( CG_ChatIsOpen() ) {
+			CG_Place2D( PLACE_CENTER );
+			CG_SelectDrawCursor();
+		}
 		return;
 	}
 	if ( sel.selected >= 0 && !cgs.clientinfo[sel.selected].infoValid ) {
@@ -535,7 +582,7 @@ void CG_SelectDraw( void ) {
 		const float		w = CG_Text_Width( name, 0.62f, Skin_Ready() ? SKIN_FONT_SANS : FONT_SMALL2 );
 
 		Select_Hull();
-		if ( !sel.hull || !cg_selectOutline.integer ) {
+		if ( !sel.hull[0] || !cg_selectOutline.integer ) {
 			Select_DrawCorners( sel.hover );
 		}
 		if ( Skin_Ready() ) {
@@ -549,10 +596,8 @@ void CG_SelectDraw( void ) {
 		Select_Rows( sel.selected );
 		Select_DrawCard();
 	}
-	// the chat box draws the pointer itself while it is open
-	if ( !CG_ChatIsOpen() ) {
-		CG_SelectDrawCursor();
-	}
+	// the pointer lies on everything, on the card as well
+	CG_SelectDrawCursor();
 }
 
 /*

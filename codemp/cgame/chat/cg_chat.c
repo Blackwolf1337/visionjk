@@ -946,8 +946,7 @@ static void Chat_DrawOpen( float x, float bottom ) {
 			CG_FillRect( x + promptW + textW, inputY + 1.0f, 1.0f, CHAT_ROW_HEIGHT - 2.0f, colorWhite );
 		}
 	}
-
-	CG_SelectDrawCursor();
+	// (the pointer is drawn by CG_SelectDraw(), after the card of a player: it lies on everything)
 }
 
 // The lines of one player are left out of the chat box from now on, or let in again. Until the level changes.

@@ -83,6 +83,9 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define RGBA_SHADER_BEHIND	4		// drawn before the pictures without it, where a glow is drawn, but blended as they are
 #define RGBA_SHADER_HULL	8		// for a model as its custom shader: an outline around it. Only what faces away is
 									// drawn, pushed out along the normals, in the colour of the entity
+// with RGBA_SHADER_HULL: how far the outline stands off the model, in tenths of a unit, in the bits above the
+// flags. Without it 1.1 units. Several of them around one model, the wider the fainter, are a soft light.
+#define RGBA_SHADER_HULL_WIDTH( tenths )	( RGBA_SHADER_HULL | ( ( ( tenths ) & 0xff ) << 8 ) )
 
 #define RDF_NOWORLDMODEL	1		// used for player configuration screen
 #define RDF_HYPERSPACE		4		// teleportation effect

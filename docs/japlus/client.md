@@ -347,9 +347,18 @@ A row is run with a click or with its number. A click beside the card, the right
   that you pointed at him. An unchanged client has none of it and notices none of it.
 - A player behind a wall, a dead one, a cloaked one and yourself can not be pointed at. A challenge to a duel
   is not on the card: the server wants your aim on the other player for that.
-- The outline is the model of the player drawn a second time with a shader that only shows a rim. The engine
-  of this tree makes it (`RGBA_SHADER_HULL`), so it is there on a pure server without the pack. Another
-  engine takes `gfx/vision/select_hull` from the pack, and without that the player gets four corners.
+- The outline is a soft light around the figure, and around nothing but its edge. The model of the player is
+  drawn six more times, each time with a shader that pushes it out along its normals a little further (0.5 to
+  4 units) and fainter. The innermost shell is added to what is behind it and glows with `r_DynamicGlow`, the
+  others are blended. None of them writes depth, and the figure itself, with the blades of its saber, is drawn
+  after everything else for as long as it has the outline (`RF_FORCEPOST`), so it lies on the shells: what is
+  left of them is what stands out around it, and no line of an arm crosses the body. The price: a blended thing
+  of somebody else that passes in front of that player (a blade, smoke) is covered by him while he is marked.
+  The engine of this tree makes the shaders (`RGBA_SHADER_HULL_WIDTH`), so the outline is there on a pure server
+  without the pack. Another engine takes `gfx/vision/select_hull` from the pack, one shell and no fade, and
+  without that the player gets four corners.
+- The pointer is drawn after the card, by `CG_SelectDraw()` also while the chat box is open, which used to draw
+  it itself before the card.
 
 Checked 2026-10-11 with two scripted clients on the test room (`tools/uitest/select.sh`): the outline around
 the other player, his name, the card with its seven rows beside him, also after the view turned away, and the
