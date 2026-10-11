@@ -3409,6 +3409,16 @@ void FS_Shutdown( qboolean closemfp, qboolean keepModuleFiles ) {
 			else if ( fsh[i].zipFile ) Com_Error(ERR_FATAL, "FS_Shutdown: tried to keep module files when at least one module file is inside of a pak");
 		}
 	}
+	// The game ends: whatever is still open is closed too. The loop above knows only the files of the modules.
+	// A cinematic that was running (the video of the main menu) keeps a handle of its own on its pk3, and with
+	// that handle open the updater of the client can not give the pk3 another name on Windows.
+	if ( closemfp ) {
+		for ( i = 1; i < MAX_FILE_HANDLES; i++ ) {
+			if ( fsh[i].handleFiles.file.o ) {
+				FS_FCloseFile( i );
+			}
+		}
+	}
 
 	// free everything
 	for ( p = fs_searchpaths ; p ; p = next ) {

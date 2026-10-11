@@ -94,6 +94,18 @@ engine is started and before any file is open, is to look for that journal (`CL_
 A swap that was cut short (the machine went off) is finished by the next start in the same way. On Linux a
 file keeps whether it can be run, a new one gets that by its name (`visionjk.x86_64`).
 
+"Before any file is open" has to hold for the start the game makes of itself too, and up to version 0.1.2 it
+did not on Windows. Two things came together. The video of the main menu is read from the asset pack
+(`japlus/zz_japlus_client_assets.pk3`) through a handle of its own, and nothing closed that handle when the game
+ended. And the game started its successor with "inherit handles", so that a log somebody sent its output to
+goes on: a process started that way gets every handle of its parent that can be inherited, and every file the
+C library opens can be. The successor held the asset pack without knowing it, the updater in it could not give
+the file another name (error 32, held by its own process), moved everything back and said "can not be
+replaced". The files were fetched and never put in place, whenever a release changed the asset pack. Since
+then `FS_Shutdown` closes every file that is still open when the game ends, and the successor gets the three
+standard handles and no other (`Sys_RelaunchWithOutput`, a handle list of `CreateProcess`), or none at all if
+that can not be done.
+
 **The web.** The engine brings no code for https. On Windows it asks WinHTTP, which is part of the system
 (`sys_http_win32.cpp`). Everywhere else it loads the `libcurl` of the system when it first needs it and is
 built without its headers (`sys_http_curl.cpp`). Both check the certificate of the server against what the
@@ -143,6 +155,11 @@ next start asks again. A download that breaks off changes no file.
 - A version with a suffix (`0.1.0-rc1`) gets no list and never updates itself.
 - `-DUpdateVersion=v0.0.1` makes a build take itself for that release, for a try against a server of one's
   own together with `-DUpdateURL=`. The address of a build may be `http://`, the one a player gives may not.
+- Windows, versions 0.1.1 and 0.1.2: their updater can not replace the asset pack (see "The swap"). A release
+  whose `japlus/zz_japlus_client_assets.pk3` is byte for byte the one they have reaches them, any other does
+  not. So the first release with the repaired updater has to bring the asset pack of 0.1.2 unchanged: the
+  players of 0.1.2 get it by themselves, and from there on every release reaches them. The players of 0.1.1
+  have another asset pack and need the zip from the website once.
 
 ## Checked
 
@@ -210,6 +227,23 @@ trusted"), the line of the menu lay over the top of the logo, and, only on the r
 by its bare name from a batch file took the folder it was called with, which is empty there, for its own,
 and refused to update as a game that reads its files from somewhere else. Wine names the whole path and did
 not show it.
+
+The same virtual machine again on 2026-10-11, after a player said that on Windows the files are written and
+not replaced, this time with the real releases and the website itself (`https://jka.vision`):
+
+- Release 0.1.1 as it is: 13 files came in, then "japlus/zz_japlus_client_assets.pk3 can not be replaced", and
+  the game was 0.1.1 still. A build that says why: the asset pack could not be moved aside, error 32, and the
+  one process that held it was the new one itself, also five seconds later.
+- The build with the repair, taking itself for 0.1.1, in a folder with the asset pack of 0.1.1: updated to
+  0.1.2, asset pack and program replaced, nothing left over. Once with its output sent to a file (the log has
+  the lines of all starts, so the standard handles still go on) and once started as a player starts it, with
+  no console and nothing redirected.
+- The updater as it is in 0.1.2, offered a release in which only the program differs: updated. That is the
+  way the players of 0.1.2 get the repair.
+- On Linux, what the game has open when it ends, read with strace: before the repair one handle on the asset
+  pack, after it none.
+
+The tests before this did not find it because none of their releases changed a pk3, and Wine was not asked.
 
 Not checked:
 

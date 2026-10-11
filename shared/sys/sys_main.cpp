@@ -309,6 +309,67 @@ void Sys_RestartOnExit( void ) {
 	sysRestart.wanted = qtrue;
 }
 
+#ifdef _WIN32
+/*
+=================
+Sys_RelaunchWithOutput
+
+Starts the program again with the three standard handles of this one and no other handle: what this one writes
+to goes on with the next one, a log somebody sent its output to has all of it.
+
+"No other handle" is the point. A process that is started with "inherit handles" gets every handle of its
+parent that can be inherited, and every file the C library opens can be. The first version of this did that:
+the game had a pk3 open when it started its successor (the video of the main menu), the successor held that
+pk3 without knowing it, and the updater in it could never give the file another name. qfalse: not started.
+=================
+*/
+static qboolean Sys_RelaunchWithOutput( char *commandLine ) {
+	const DWORD						which[3] = { STD_INPUT_HANDLE, STD_OUTPUT_HANDLE, STD_ERROR_HANDLE };
+	static byte						listBuffer[ 512 ];
+	LPPROC_THREAD_ATTRIBUTE_LIST	list = (LPPROC_THREAD_ATTRIBUTE_LIST)listBuffer;
+	STARTUPINFOEXA					startup;
+	PROCESS_INFORMATION				process;
+	HANDLE							handles[3];
+	DWORD							numHandles = 0, flags;
+	SIZE_T							size = sizeof( listBuffer );
+	BOOL							started;
+
+	memset( &startup, 0, sizeof( startup ) );
+	startup.StartupInfo.cb = sizeof( startup );
+	startup.StartupInfo.dwFlags = STARTF_USESTDHANDLES;
+	startup.StartupInfo.hStdInput = GetStdHandle( STD_INPUT_HANDLE );
+	startup.StartupInfo.hStdOutput = GetStdHandle( STD_OUTPUT_HANDLE );
+	startup.StartupInfo.hStdError = GetStdHandle( STD_ERROR_HANDLE );
+	// The list takes a handle once, and only one that can be inherited. A game that was started by a double
+	// click has none: then there is nothing to hand on.
+	for ( int i = 0; i < 3; i++ ) {
+		const HANDLE	h = GetStdHandle( which[i] );
+		DWORD			n;
+
+		if ( !h || h == INVALID_HANDLE_VALUE || !GetHandleInformation( h, &flags ) || !( flags & HANDLE_FLAG_INHERIT ) )
+			continue;
+		for ( n = 0; n < numHandles && handles[n] != h; n++ ) {
+		}
+		if ( n == numHandles )
+			handles[numHandles++] = h;
+	}
+	if ( !numHandles || !InitializeProcThreadAttributeList( list, 1, 0, &size ) )
+		return qfalse;
+	started = FALSE;
+	if ( UpdateProcThreadAttribute( list, 0, PROC_THREAD_ATTRIBUTE_HANDLE_LIST, handles, numHandles * sizeof( handles[0] ), NULL, NULL ) ) {
+		startup.lpAttributeList = list;
+		started = CreateProcessA( sysRestart.program, commandLine, NULL, NULL, TRUE, EXTENDED_STARTUPINFO_PRESENT, NULL, NULL,
+			&startup.StartupInfo, &process );
+	}
+	DeleteProcThreadAttributeList( list );
+	if ( !started )
+		return qfalse;
+	CloseHandle( process.hThread );
+	CloseHandle( process.hProcess );
+	return qtrue;
+}
+#endif
+
 // qfalse: it could not be started. On every system but Windows this does not come back if it could.
 static qboolean Sys_Relaunch( void ) {
 	if ( !sysRestart.program[0] )
@@ -322,14 +383,13 @@ static qboolean Sys_Relaunch( void ) {
 	if ( strlen( given ) >= sizeof( commandLine ) )
 		return qfalse;
 	Q_strncpyz( commandLine, given, sizeof( commandLine ) );
+	if ( Sys_RelaunchWithOutput( commandLine ) )
+		return qtrue;
+	// without its output, and with no handle of this one at all: that it starts counts for more
+	Q_strncpyz( commandLine, given, sizeof( commandLine ) );
 	memset( &startup, 0, sizeof( startup ) );
 	startup.cb = sizeof( startup );
-	// what this one writes to goes on with the next one: a log somebody sent its output to has all of it
-	startup.dwFlags = STARTF_USESTDHANDLES;
-	startup.hStdInput = GetStdHandle( STD_INPUT_HANDLE );
-	startup.hStdOutput = GetStdHandle( STD_OUTPUT_HANDLE );
-	startup.hStdError = GetStdHandle( STD_ERROR_HANDLE );
-	if ( !CreateProcessA( sysRestart.program, commandLine, NULL, NULL, TRUE, 0, NULL, NULL, &startup, &process ) )
+	if ( !CreateProcessA( sysRestart.program, commandLine, NULL, NULL, FALSE, 0, NULL, NULL, &startup, &process ) )
 		return qfalse;
 	CloseHandle( process.hThread );
 	CloseHandle( process.hProcess );

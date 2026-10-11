@@ -33,6 +33,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // thing the program does at its start, before it opens anything, is the swap: the old file is moved aside
 // (.vjkold), the new one (.vjknew) takes its name. Then it starts once more, now as the new program, and that
 // start deletes the old files. A swap that was cut short is finished the same way by the next start.
+// For that the program that starts must hold nothing of the one that ended: see FS_Shutdown() for what the game
+// closes at its end and Sys_Relaunch() for what its successor is given.
 //
 // Who is trusted: the server at the address this build was given, by its certificate (sys/sys_http.h). There
 // is no signature. A player can name another address on the command line and nowhere else, see CL_UpdateAddress().
