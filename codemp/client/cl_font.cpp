@@ -18,43 +18,58 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 ===========================================================================
 */
 
-// cl_font.cpp -- the font file for the characters the fonts of the game do not have.
+// cl_font.cpp -- the font files of this tree.
 //
 // The fonts of the game are pictures with 256 glyphs. The renderer draws any other character from a TrueType
-// font (rd-common/tr_font_ttf.cpp), which is a file in the pk3 of this tree. The engine reads it, not the
-// renderer, and reads it once:
+// font, and the console from one with a fixed width (rd-common/tr_font_ttf.cpp). Both are files in the pk3 of
+// this tree. The engine reads them, not the renderer, and reads each once:
 //
 // - A renderer starts anew with every level. On a pure server that does not have the pk3 of this tree the file
 //   system no longer hands out its files, so the font is read at the first start of the renderer, before any
 //   server was joined, and kept.
 // - A server can send a pk3 with a file of the same name, and the code that reads a font is not made for a
-//   hostile one. Only the file this build shipped is taken: its SHA-256 is compiled in (FONT_SHA256, from
-//   codemp/CMakeLists.txt). Any other file is refused with a line in the console.
+//   hostile one. Only the file this build shipped is taken: its SHA-256 is compiled in (FONT_SHA256 and
+//   FONT_MONO_SHA256, from codemp/CMakeLists.txt). Any other file is refused with a line in the console.
 
 #include "client.h"
 #include "web/web_http.h"
 
-#define FONT_FILE	"fonts/visionjk/NotoSans-Regular.ttf"
+typedef struct clFont_s {
+	const char	*file;
+	const char	*sha256;
+	byte		*data;
+	int			length;
+	qboolean	tried;
+} clFont_t;
 
-static byte		*cl_fontData;
-static int		cl_fontLength;
-static qboolean	cl_fontTried;
+// in the order of the fonts of rd-common/tr_font_ttf.h
+static clFont_t cl_fonts[] = {
+	{ "fonts/visionjk/NotoSans-Regular.ttf", FONT_SHA256, NULL, 0, qfalse },	// for what the fonts of the game lack
+	{ "fonts/visionjk/DejaVuSansMono.ttf", FONT_MONO_SHA256, NULL, 0, qfalse },	// fixed width, for the console
+};
 
 /*
 ====================
 CL_FontFile
 
-The bytes of the font and their count, NULL when there is no font. Stays valid until the program ends.
+The bytes of a font and their count, NULL when there is no such font. Stays valid until the program ends.
 ====================
 */
-const byte *CL_FontFile( int *length ) {
-	if ( !cl_fontTried ) {
-		void		*buffer = NULL;
-		const int	len = FS_ReadFile( FONT_FILE, &buffer );
+const byte *CL_FontFile( int font, int *length ) {
+	clFont_t *f;
 
-		cl_fontTried = qtrue;
+	*length = 0;
+	if ( font < 0 || font >= (int)ARRAY_LEN( cl_fonts ) ) {
+		return NULL;
+	}
+	f = &cl_fonts[font];
+	if ( !f->tried ) {
+		void		*buffer = NULL;
+		const int	len = FS_ReadFile( f->file, &buffer );
+
+		f->tried = qtrue;
 		if ( len <= 0 || !buffer ) {
-			Com_Printf( S_COLOR_YELLOW "No %s: characters the fonts of the game do not have are not drawn\n", FONT_FILE );
+			Com_Printf( S_COLOR_YELLOW "No %s: text is drawn without it\n", f->file );
 		} else {
 			webSha256_t		sha;
 			unsigned char	digest[WEB_SHA256_SIZE];
@@ -66,16 +81,16 @@ const byte *CL_FontFile( int *length ) {
 			for ( int i = 0; i < WEB_SHA256_SIZE; i++ ) {
 				Com_sprintf( hex + i * 2, 3, "%02x", digest[i] );
 			}
-			if ( Q_stricmp( hex, FONT_SHA256 ) ) {
-				Com_Printf( S_COLOR_YELLOW "%s is not the file of this build, it is not used\n", FONT_FILE );
+			if ( Q_stricmp( hex, f->sha256 ) ) {
+				Com_Printf( S_COLOR_YELLOW "%s is not the file of this build, it is not used\n", f->file );
 			} else {
-				cl_fontData = (byte *)Z_Malloc( len, TAG_STATIC, qfalse );
-				Com_Memcpy( cl_fontData, buffer, len );
-				cl_fontLength = len;
+				f->data = (byte *)Z_Malloc( len, TAG_STATIC, qfalse );
+				Com_Memcpy( f->data, buffer, len );
+				f->length = len;
 			}
 			FS_FreeFile( buffer );
 		}
 	}
-	*length = cl_fontLength;
-	return cl_fontData;
+	*length = f->length;
+	return f->data;
 }
