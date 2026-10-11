@@ -102,7 +102,6 @@ static const struct {
 	{ "a download path that leaves the game",			50 },	// IDS_DOWNLOAD_PATH
 	{ "a line break inside a command",					30 },	// IDS_TEXT_BREAK
 	{ "a path that goes up, in a command",				20 },	// IDS_TEXT_PATH
-	{ "a run of format marks",							35 },	// IDS_TEXT_FORMAT
 	{ "a run of bytes that is no text",					35 },	// IDS_TEXT_BINARY
 	{ "a userinfo that is too long",					25 },	// IDS_USERINFO
 	{ "moves ahead of the time of the server",			10 },	// IDS_MOVE_AHEAD
@@ -347,7 +346,8 @@ SV_IDS_Text
 
 A command of a player, or his userinfo: looks for what the known attacks on games of this engine look like.
 None of it does anything here (the game takes line breaks out of a command and checks every path), but nobody
-types it by accident.
+types it by accident. Format marks (%s, %n) are not among them: the engine turns every % into a dot when it
+reads a string from a message (MSG_ReadString), so none ever gets this far.
 =================
 */
 // Bytes above 127 are letters with accents from an old client and UTF-8 from one of this tree. What is neither:
@@ -376,13 +376,13 @@ static qboolean SV_IDS_BinaryRun( const unsigned char *run, int length ) {
 void SV_IDS_Text( client_t *cl, const char *text, qboolean userinfo ) {
 	const unsigned char	*s = (const unsigned char *)text;
 	const netadr_t		*from = &cl->netchan.remoteAddress;
-	int					formats = 0, formatEnd = -8, binary = 0, i;
-	qboolean			chat, lineBreak = qfalse, pathUp = qfalse, formatRun = qfalse, binaryRun = qfalse;
+	int					binary = 0, i;
+	qboolean			chat, lineBreak = qfalse, pathUp = qfalse, binaryRun = qfalse;
 
 	if ( !sv_ids || !sv_ids->integer || from->type != NA_IP ) {
 		return;
 	}
-	// what people write to each other may have dots and percent signs in it
+	// what people write to each other may have dots in it
 	chat = (qboolean)( !userinfo && ( !Q_stricmpn( text, "say", 3 ) || !Q_stricmpn( text, "tell", 4 ) || !Q_stricmpn( text, "amsay", 5 )
 		|| !Q_stricmpn( text, "ampsay", 6 ) || !Q_stricmpn( text, "clansay", 7 ) || !Q_stricmpn( text, "vsay", 4 ) || !Q_stricmpn( text, "jpstatus", 8 ) ) );
 
@@ -392,15 +392,6 @@ void SV_IDS_Text( client_t *cl, const char *text, qboolean userinfo ) {
 		}
 		if ( !chat && s[i] == '.' && s[i + 1] == '.' && ( s[i + 2] == '/' || s[i + 2] == '\\' ) ) {
 			pathUp = qtrue;
-		}
-		// In a printf %n writes to memory and a row of %s or %x reads the stack: one %n, or three marks with at
-		// most one character between them
-		if ( !chat && s[i] == '%' && ( ( s[i + 1] >= 'a' && s[i + 1] <= 'z' ) || ( s[i + 1] >= 'A' && s[i + 1] <= 'Z' ) ) ) {
-			formats = ( i - formatEnd <= 1 ) ? formats + 1 : 1;
-			formatEnd = i + 2;
-			if ( s[i + 1] == 'n' || formats >= 3 ) {
-				formatRun = qtrue;
-			}
 		}
 		if ( s[i] >= 0x80 ) {
 			binary++;
@@ -420,9 +411,6 @@ void SV_IDS_Text( client_t *cl, const char *text, qboolean userinfo ) {
 	}
 	if ( pathUp && cl->state >= CS_CONNECTED ) {
 		SV_IDS_Event( from, cl, IDS_TEXT_PATH, text );
-	}
-	if ( formatRun && cl->state >= CS_CONNECTED ) {
-		SV_IDS_Event( from, cl, IDS_TEXT_FORMAT, text );
 	}
 	if ( binaryRun && cl->state >= CS_CONNECTED ) {
 		SV_IDS_Event( from, cl, IDS_TEXT_BINARY, text );

@@ -49,7 +49,7 @@ static struct {
 	qboolean	open;				// a menu is open and is shown in the level
 	float		blend;				// 0 the view of the game, 1 the view of the menu
 	int			lastTime;
-	float		yaw;				// where the player looked when the menu opened: the panel stays there
+	float		yaw;				// where the player looks, followed slowly: the camera is behind that
 	float		muffle;				// what s_muffle was last set to
 
 	// the panel, as long as blend is above 0
@@ -89,8 +89,14 @@ qboolean CG_Menu3DFrame( void ) {
 		&& cg.snap->ps.stats[STAT_HEALTH] > 0 && !cg.snap->ps.zoomMode
 		&& Menu3D_Engine( "cl_cgameUIPlane" ) );
 
+	// The camera is behind where he looks. With a menu open he does not turn by himself (the mouse is the
+	// cursor's), but a teleporter, an admin or a respawn turn him: the camera then comes round within a moment.
+	// It stood where he looked when the menu opened once, and after such a turn it looked him in the face from
+	// inside a wall (seen in the check of 2026-10-11).
 	if ( open && !menu3d.open ) {
 		menu3d.yaw = ps->viewangles[YAW];
+	} else if ( open ) {
+		menu3d.yaw = LerpAngle( menu3d.yaw, ps->viewangles[YAW], Q_min( 1.0f, (float)msec / 150.0f ) );
 	}
 	menu3d.open = open;
 	if ( open ) {
@@ -145,7 +151,7 @@ void CG_Menu3DView( void ) {
 		return;
 	}
 
-	// the player, as he stood when the menu opened: he may be pushed around, but he does not turn
+	// the player, by where he looks (CG_Menu3DFrame)
 	VectorSet( angles, 0.0f, menu3d.yaw, 0.0f );
 	AngleVectors( angles, forward, right, up );
 	VectorCopy( ps->origin, head );

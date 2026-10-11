@@ -366,7 +366,10 @@ A voice over the radio
 #define RADIO_LOW_HZ		300.0f		// what a radio lets through of a voice: the band of a telephone
 #define RADIO_HIGH_HZ		3400.0f
 #define RADIO_DRIVE			3.0f		// how hard the voice is pushed into the clipping
-#define RADIO_LEVEL			0.7f
+// What comes out against what went in. With the push above a voice at its usual level comes out about as loud
+// as it went in, a quiet one a little louder and a loud one quieter. It was 0.7, which made the radio more than
+// twice as loud as a voice next to the listener (measured in the check of 2026-10-11).
+#define RADIO_LEVEL			0.4f
 #define RADIO_HISS			0.003f
 
 // The five numbers of a filter of the second order (b0 b1 b2 a1 a2, by the first of the denominator): two that

@@ -178,8 +178,15 @@ which only the reverse proxy is let in. `g_webPassword` is read once, to make th
   of the second step is kept as it is, the server has to work with it.
 - Tested apart from the game (`japlus_port/tools/authtest`): HMAC-SHA1 against RFC 2202, the codes against RFC
   6238, base32 against RFC 4648, Argon2id of the Monocypher of the tree against RFC 9106. The QR code of the
-  page was read back with zbarimg for texts of every size it takes. The login itself, the sessions and the
-  roles were not run against a server.
+  page was read back with zbarimg for texts of every size it takes.
+- Run on 2026-10-11 against a server on this machine (`japlus_port/tools/sectest/e2e.sh`, part 1: 59 checks
+  over HTTP, part 4: the pages in a headless browser). The login and what it refuses, the cookie, the roles
+  route by route, the token, the second step with the code that does not count twice and a recovery code that
+  works once, accounts made and refused, a signature made for the game refused by the panel, the login with a
+  key, the proxy mode both ways, a session after a change of the map. In the browser: the page of the login,
+  the tab Account, the QR code read back from the picture of the page, and a key the browser made. Two things
+  were changed for it: a request to add an account says what is wrong with it before it says "come again",
+  and what is typed on the console of the server no longer makes the next login wait.
 
 ## Added later: intrusion detection
 
@@ -213,11 +220,13 @@ connectionless packets are dropped unread, and a player the event came from is d
 | from a player: a download he may not have / one whose path leaves the game or is no pk3 | 10 / 50 |
 | from a player: a line break inside a command | 30 |
 | from a player: `../` in a command that is no chat | 20 |
-| from a player: `%n`, or three format marks in a row, in a command that is no chat | 35 |
 | from a player: 48 bytes above 127 in a row of which most are no UTF-8 | 35 |
 | from a player: a userinfo that is too long | 25 |
 | from a player: 30 moves in five seconds that are more than 250 ms ahead of the server | 10 |
 
+- Format marks (`%s`, `%n`) are not in the list: the engine turns every `%` into a dot when it reads a string
+  from a message, so none ever reaches a command. A first version looked for them and could never have found
+  one, which the check of 2026-10-11 showed.
 - Every event is a line in `ids.log` of the game folder and on the console: the time, the address, the player,
   what it was, and what came with it as plain characters. At most one line in two seconds for an address and
   an event (the rest is counted and named with the next line) and thirty a second overall, so a flood does not
@@ -266,8 +275,14 @@ Tested apart from the game (`japlus_port/tools/idstest`, 44 checks with a clock 
 weights add up and fall off, when an address is blocked and for how long, that connectionless events do not
 count against an address with a player, `sv_ids 1`, the machine itself, what is taken for an attack in a
 command and what is not (chat, percent signs, long words of Cyrillic, Chinese and accented letters), the
-strikes of the speed check. Neither side was run against real traffic, and `sv_antiWallhack` was not run at
-all.
+strikes of the speed check.
+
+Run on 2026-10-11 against a server on this machine (`japlus_port/tools/sectest/e2e.sh`): unknown, oversized
+and rcon packets written down, the address blocked after ten rcon packets and its packets not read,
+`idsstatus`, `idsunblock`, a userinfo with a path that goes up written down for the player who sent it and
+nobody dropped for one of them. `sv_antiWallhack 1` was on for the whole run with three players in two rooms
+and the server stayed up, what it hides was not looked at. The client side noted nothing about a server that
+does nothing wrong, and was not run against one that does. The speed check has its unit test only.
 
 ## Recommended server settings
 

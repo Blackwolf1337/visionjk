@@ -355,12 +355,16 @@ the hips, and the menu stands in the level to the right of him. The game goes on
   pass of the engine (`S_MufflePaint`) keeps what it has after a sample by the time of the sample: the mixer
   paints the same fifth of a second again with every frame, and a filter that just ran on from one paint
   into the next gave a crackle with every frame.
-- The camera is pulled in where a wall is behind the player.
+- The camera is pulled in where a wall is behind the player. It is behind where he looks, followed over a
+  moment: with a menu open he does not turn by himself, but a teleporter or an admin can turn him. At first
+  the camera stayed where he looked when the menu opened, and after such a turn it looked him in the face
+  from inside a wall.
 
 Not while spectating, dead, zoomed or at the end of a map (the camera has no player to stand behind), and not
 in another engine (`cl_cgameUIPlane`). The first version was seen in the game on 2026-10-11 and changed after
-that (silhouette of the player in the menu, camera, blur, crackle). The numbers of the layout as they are now
-have not been seen yet.
+that (silhouette of the player in the menu, camera, blur, crackle). The layout as it is now was seen in
+pictures of scripted clients the same day (rd-vanilla, so without the blur): the player at the left from
+behind, the menu to the right of him over the level, the model of the player menu inside its frame.
 
 ### Admin login with a key
 
@@ -397,7 +401,10 @@ An admin logs in with an Ed25519 key, the kind ssh uses, and no password goes ov
 - Works in a jamp.exe too (client commands, a file and a socket are all it needs). Not in the browser client:
   a page has neither a key file nor a way to an agent.
 
-Not run against a server. Tested apart from the game: see server.md.
+Run on 2026-10-11 against a server on this machine with scripted clients (`japlus_port/tools/sectest/e2e.sh`):
+a key file made with `amkey new` (mode 600, read back by `ssh-keygen`) and its login as council, a login as
+knight through an `ssh-agent` started for the test, a one-time code, and a rank password that is refused with
+a line that says why. Not run: an agent that asks its user first (1Password), Windows.
 
 ### Bot mode
 

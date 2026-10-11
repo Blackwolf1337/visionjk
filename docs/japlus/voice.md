@@ -405,7 +405,11 @@ muffled and at full loudness. So nobody of the clan is left out, some hear it du
 
 2026-10-07, Linux, without sound hardware. The clan radio of 2026-10-11 has unit tests only (the datagram, what
 its sound lets through: 1000 Hz whole, 100 Hz and 8000 Hz at less than a tenth, the clicks), 145 checks with the
-ones below. It was not run between two clients, and nobody has heard it.
+ones below. Run on 2026-10-11 between three scripted clients (`tools/sectest/e2e.sh`): one of the clan in the
+other room got the radio in both ears at the same level with both pitches of the test tone in it, somebody
+next to the speaker who is not of the clan got none of it and did get his plain voice. The level of the radio
+was turned down after that run (it came out more than twice as loud as a voice next to the listener), and a
+client whose `cp_clanPwd` is still "none" is now told so instead of sending to nobody. Nobody has heard it.
 
 - Unit tests of `bg_voice.c` (`tools/voicetest/run.sh`): 108 checks with the address and undefined behaviour
   sanitizers. Among them 800000 random datagrams in buffers of exactly their size, the queue with loss,

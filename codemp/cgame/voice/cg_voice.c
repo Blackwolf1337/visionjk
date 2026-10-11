@@ -729,8 +729,9 @@ static qboolean Voice_RadioKey( void ) {
 		on = qfalse;
 	}
 	if ( on ) {
+		// "none" is what the cvar has until the player sets it, and what the server takes for no password
 		trap->Cvar_VariableStringBuffer( "cp_clanPwd", pass, sizeof( pass ) );
-		if ( !pass[0] ) {
+		if ( !pass[0] || !Q_stricmp( pass, "none" ) ) {
 			if ( !voice.toldNoRadio ) {
 				voice.toldNoRadio = qtrue;
 				trap->Print( "Voice chat: the clan radio reaches the players with your clan password, and you have none (cp_clanPwd).\n" );
