@@ -335,12 +335,15 @@ the hips, and the menu stands in the level to the right of him. The game goes on
   stood between camera and menu, the player first of all (the text was not, it never tests the depth).
 - The layout is made in the picture, not in the level: the camera turns until the player is at
   `MENU3D_PLAYER_X` of the picture, the middle of the menu is at `MENU3D_PANEL_X`, and the menu takes
-  `MENU3D_SCREEN_PART` of the height. How far away the plane is then changes nothing one can see, so it is
-  as far as the level has room for it (five traces from the camera), at most 64 units. With a narrow field of
-  view the camera is farther back, so the player takes the same part of the picture.
+  `MENU3D_SCREEN_PART` of the height. How far away the plane is then changes nothing one can see. With a
+  narrow field of view the camera is farther back, so the player takes the same part of the picture.
 - A scene inside a menu (the model in the player menu) is a viewport and can not be tilted. The engine moves
   it to where its place is on the plane and gives it the size the plane has there (`CL_UIRenderScene`).
-- Behind the menu the cgame adds a panel with an edge and a glow to the scene. The HUD is hidden meanwhile.
+- Behind the menu the cgame adds a panel with an edge and a glow to the scene. Its shaders do not test the
+  depth either (`RGBA_SHADER_OVER`) and are sorted last, so it stands over the whole scene like the menu: a
+  wall or a pillar between camera and panel took a piece out of the panel and left the menu in the air. Moving
+  the panel towards the camera until the level has room for it was tried first and can not work where the
+  wall is next to the camera. The HUD is hidden meanwhile.
 - The scene is put out of focus by rd-vulkan-vision (`VK_BlurFrame`): the frame goes into a buffer of half its
   size, then passes widen it, three at `r_menuBlur 1`. That is a blur of the whole picture, the player
   included, not one by depth: a real depth of field needs a pass that reads the depth in both devices of the

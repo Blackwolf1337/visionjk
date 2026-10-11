@@ -738,10 +738,11 @@ typedef struct cgameImport_s {
 		// origin on the line of the text, which runs along right; up and the height of a letter are units of
 		// the level, a ^ with a digit colours what follows. Between R_ClearScene and R_RenderScene. A width of
 		// 0 and qfalse: there is no such font. And a shader for a picture the cgame made itself, width and
-		// height powers of two up to 512, for polygons in the scene; glow: it is added and glows.
+		// height powers of two up to 512, for polygons in the scene; flags: RGBA_SHADER_GLOW, it is added and
+		// glows. RGBA_SHADER_OVER, nothing of the scene hides it.
 		float			(*R_Text3DWidth)						( const char *text, float height );
 		qboolean		(*R_Text3D)								( const vec3_t origin, const vec3_t right, const vec3_t up, float height, const char *text, const float *rgba );
-		qhandle_t		(*R_RegisterShaderRGBA)					( const char *name, const byte *rgba, int width, int height, qboolean glow );
+		qhandle_t		(*R_RegisterShaderRGBA)					( const char *name, const byte *rgba, int width, int height, int flags );
 		// Only an engine that sets the cvar cl_cgameUIPlane to 1 has this one, the same way. The menus of this
 		// frame are drawn on a plane in the level and not flat on the screen (menu3d/cg_menu3d.c): matrix takes
 		// a place of the 2D grid to clip space, 16 values column by column. Called before the menus are drawn,

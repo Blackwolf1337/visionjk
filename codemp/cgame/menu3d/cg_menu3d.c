@@ -42,7 +42,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define MENU3D_SCREEN_PART	0.72f		// how much of the height of the screen the menu takes
 #define MENU3D_PLAYER_X		-0.68f		// where the player is in the picture: -1 its left edge, 0 the middle, 1 the right edge
 #define MENU3D_PANEL_X		0.27f		// and the middle of the menu
-#define MENU3D_PANEL_DEPTH	64.0f		// how far in front of the camera the menu stands where the level has the room
+#define MENU3D_PANEL_DEPTH	64.0f		// how far in front of the camera the menu stands
 #define MENU3D_MARGIN		8.0f		// the panel behind the menu is larger by this on each side, in units of the 2D grid
 
 static struct {
@@ -128,16 +128,17 @@ CG_Menu3DView
 
 After the view of the game is worked out: moves it towards the view of the menu. The camera is behind the right
 shoulder of the player and looks past him, so far to the right that he is at the left edge of the picture. The
-panel is laid out in that picture, to the right of him, and then set into the level at that place.
+panel is laid out in that picture, to the right of him, and then set into the level at that place. It is drawn
+over the level, whatever stands there.
 =================
 */
 void CG_Menu3DView( void ) {
 	playerState_t	*ps = &cg.predictedPlayerState;
 	const float		tanX = tanf( DEG2RAD( cg.refdef.fov_x * 0.5f ) ), tanY = tanf( DEG2RAD( cg.refdef.fov_y * 0.5f ) );
-	vec3_t			angles, forward, right, up, head, camera, look, lookAngles, camRight, camUp, toPlayer, spot;
+	vec3_t			angles, forward, right, up, head, camera, look, lookAngles, camRight, camUp, toPlayer;
 	trace_t			trace;
 	static vec3_t	mins = { -4, -4, -4 }, maxs = { 4, 4, 4 };
-	float			blend, depth, tilt, room, halfW, halfH, back, panelX;
+	float			blend, depth, tilt, back, panelX;
 	int				i;
 
 	if ( menu3d.blend <= 0.0f ) {
@@ -180,32 +181,14 @@ void CG_Menu3DView( void ) {
 	VectorNegate( camUp, menu3d.down );
 
 	// Where it stands: seen from the camera its middle is at MENU3D_PANEL_X of the picture. How far away it is
-	// changes nothing in the picture, the size goes with the distance. So it is as far as the level has room
-	// for its middle and its four corners, and the panel behind the menu does not end up in a wall.
+	// changes nothing in the picture, the size goes with the distance, and nothing of the level hides the menu
+	// or the panel behind it (CG_BubblePanelAt), so the level is not asked whether it has the room.
 	depth = MENU3D_PANEL_DEPTH;
 	menu3d.unit = MENU3D_SCREEN_PART * 2.0f * depth * tanY / SCREEN_HEIGHT;
 	// on a narrow window it moves left as far as it has to for its right edge
 	panelX = Q_min( MENU3D_PANEL_X, 0.97f - MENU3D_SCREEN_PART * ( (float)SCREEN_WIDTH / SCREEN_HEIGHT ) * tanY / tanX );
 	VectorMA( camera, depth, look, menu3d.center );
 	VectorMA( menu3d.center, panelX * tanX * depth, camRight, menu3d.center );
-	halfW = ( SCREEN_WIDTH * 0.5f + MENU3D_MARGIN ) * menu3d.unit;
-	halfH = ( SCREEN_HEIGHT * 0.5f + MENU3D_MARGIN ) * menu3d.unit;
-	room = 1.0f;
-	for ( i = 0; i < 5; i++ ) {
-		VectorCopy( menu3d.center, spot );
-		if ( i < 4 ) {
-			VectorMA( spot, ( i & 1 ) ? halfW : -halfW, menu3d.right, spot );
-			VectorMA( spot, ( i & 2 ) ? halfH : -halfH, menu3d.down, spot );
-		}
-		CG_Trace( &trace, camera, NULL, NULL, spot, ps->clientNum, MASK_SOLID );
-		room = Q_min( room, trace.fraction );
-	}
-	if ( room < 1.0f ) {
-		room = Q_max( 0.25f, room * 0.94f );
-		VectorSubtract( menu3d.center, camera, spot );
-		VectorMA( camera, room, spot, menu3d.center );
-		menu3d.unit *= room;
-	}
 
 	// from the view of the game to the view of the menu, slowly at both ends
 	blend = menu3d.blend * menu3d.blend * ( 3.0f - 2.0f * menu3d.blend );

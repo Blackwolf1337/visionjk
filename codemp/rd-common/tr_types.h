@@ -76,6 +76,11 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define RF_FORCEPOST		0x200000 //force it to post-render -rww
 
 // refdef flags
+// what a shader for a picture a module made is like (RE_RegisterShaderRGBA). The first one is the qtrue the
+// call took before it had flags.
+#define RGBA_SHADER_GLOW	1		// added to what is behind it, and the dynamic glow takes it
+#define RGBA_SHADER_OVER	2		// drawn over all of the scene: nothing in front of it hides it
+
 #define RDF_NOWORLDMODEL	1		// used for player configuration screen
 #define RDF_HYPERSPACE		4		// teleportation effect
 

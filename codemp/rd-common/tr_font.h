@@ -41,7 +41,7 @@ void RE_Font_DrawString(int ox, int oy, const char *psText, const float *rgba, c
 qboolean RE_Font_DrawMonoChar( int x, int y, int cellWidth, int cellHeight, unsigned int codePoint );	// tr_font_ttf.cpp
 float RE_Font_Text3DWidth( const char *text, float height );
 qboolean RE_Font_Text3D( const vec3_t origin, const vec3_t right, const vec3_t up, float height, const char *text, const float *rgba );
-qhandle_t RE_RegisterShaderRGBA( const char *name, const byte *rgba, int width, int height, qboolean glow );
+qhandle_t RE_RegisterShaderRGBA( const char *name, const byte *rgba, int width, int height, int flags );
 
 // Dammit, I can't use this more elegant form because of !@#@!$%% VM code... (can't alter passed in ptrs, only contents of)
 //
