@@ -785,8 +785,8 @@ static void Update_Checked( void ) {
 	if ( upd.numShadow ) {
 		for ( i = 0; i < upd.list.numFiles && !upd.shadow[i]; i++ ) {
 		}
-		Com_Printf( S_COLOR_YELLOW "%i game modules in %s are not the ones of version %s, and the game loads them in place of its own "
-			"(%s%s). update gives them another name.\n", upd.numShadow, upd.home, Update_VersionText( upd.list.version ),
+		Com_Printf( S_COLOR_YELLOW "Game modules in %s are not the ones of version %s, and the game loads them in place of its own "
+			"(%s%s). update gives them another name.\n", upd.home, Update_VersionText( upd.list.version ),
 			upd.list.files[i].path, upd.numShadow > 1 ? " and more" : "" );
 	}
 	if ( upd.thenFetch && cls.state == CA_DISCONNECTED )

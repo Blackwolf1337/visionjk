@@ -281,10 +281,27 @@ not replaced, this time with the real releases and the website itself (`https://
 
 The tests before this did not find it because none of their releases changed a pk3, and Wine was not asked.
 
+- The repair, 2026-10-11 (`e2e.sh repair shadow same`, three more runs, on Linux and with the Windows build
+  under Wine, 43 checks each time, and the nine older runs again after the change: 73 checks on Linux, all
+  twelve runs under Wine 117):
+  - `repair`: the program of 0.0.2 in a folder where one file was of 0.0.1, the game module had its size and
+    another last byte, and one file was missing. Named on the console and on the line of the menu, `update`
+    fetched those three and nothing else (not the program, not the asset pack, not a `.cfg` the player does
+    not have), the swap put them in place, and the start after it had nothing to say.
+  - `shadow`: a ui module with some bytes behind its end and a cgame module with another last byte in the
+    folder of the player, and a game module there that is the one of the release. The first two were named,
+    `update` gave them the ending `.vjkold` (the ui module while the game had it loaded), fetched nothing,
+    the game started again and had nothing to say. The third stayed. Then the same with 0.0.1 and a newer
+    version out: the update moved the module of the player aside on its way.
+  - `same`: every file right and a module of the release in the folder of the player: nothing offered,
+    nothing fetched, nothing touched.
+
 Not checked:
 
-- The repair and the look at the modules in the folder of the player (2026-10-11): built for Linux and
-  Windows, never run. The swap itself was not changed by them.
+- The repair on a real Windows. It ran on Linux and with the Windows build under Wine, see above, and Wine
+  is another program: that a module the game has loaded can be given another name is what Windows is known
+  for, and was seen under Wine only. Nor an antivirus that takes a `.vjknew` away, which is the case the
+  repair is for: the tests put the wrong files there by hand.
 - A click on the line with a real mouse. The cursor of the game was moved onto it once (it lit up), a click
   through the two pointer devices of the virtual machine could not be sent cleanly. The runs typed `update`.
 - Windows 10, a Windows with a graphics driver, an antivirus other than Defender, and a program that was
