@@ -22,6 +22,9 @@
 #   <!--#include name -->
 # is replaced by the file of that name next to it, as it is.
 # cmake -DINPUT=template -DOUTPUT=file -P BundlePage.cmake
+# A script run with -P has no CMakeLists.txt that sets the policies. Without them a cmake before 4.0 takes the
+# TRUE of while(TRUE) for a variable nobody set and never enters the loop (seen with 3.25 of Debian 12).
+cmake_minimum_required(VERSION 3.1...3.31)
 get_filename_component(dir "${INPUT}" DIRECTORY)
 file(READ "${INPUT}" text)
 set(out "")

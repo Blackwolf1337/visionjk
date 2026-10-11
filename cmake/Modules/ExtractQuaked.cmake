@@ -20,6 +20,9 @@
 # folder, one after the other, each closed by a line with */. That is what a map editor reads the classes
 # from, and what the editor of the web admin panel shows.
 # cmake -DDIR=folder -DOUTPUT=file -P ExtractQuaked.cmake
+# A script run with -P has no CMakeLists.txt that sets the policies. Without them a cmake before 4.0 takes the
+# TRUE of while(TRUE) for a variable nobody set and never enters the loop (seen with 3.25 of Debian 12).
+cmake_minimum_required(VERSION 3.1...3.31)
 file(GLOB_RECURSE sources "${DIR}/*.c")
 list(SORT sources)
 set(out "")

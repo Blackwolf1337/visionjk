@@ -25,6 +25,9 @@
 # cmake -DINPUT=shader -DOUTPUT=file -P BundleShader.cmake
 # With -DVALIDATOR=glslangValidator -DPREFIX=file -DSTAGE=vert or frag the result is compiled first, as that
 # stage and with the lines of the prefix file in front, and is only written if it has no error.
+# A script run with -P has no CMakeLists.txt that sets the policies. Without them a cmake before 4.0 takes the
+# TRUE of while(TRUE) for a variable nobody set and never enters the loop (seen with 3.25 of Debian 12).
+cmake_minimum_required(VERSION 3.1...3.31)
 get_filename_component(dir "${INPUT}" DIRECTORY)
 
 # by position and not with a regular expression or as a list of lines: the files have ; and [ ] in them

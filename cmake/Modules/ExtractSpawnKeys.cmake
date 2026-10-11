@@ -24,6 +24,9 @@
 # Vector, Boolean; the default is the one the call has, empty when it has none that is written out).
 # The line *item is for every class that is an item (G_SpawnItem).
 # cmake -DDIR=folder -DOUTPUT=file -P ExtractSpawnKeys.cmake
+# A script run with -P has no CMakeLists.txt that sets the policies. Without them a cmake before 4.0 takes the
+# TRUE of while(TRUE) for a variable nobody set and never enters the loop (seen with 3.25 of Debian 12).
+cmake_minimum_required(VERSION 3.1...3.31)
 file(GLOB_RECURSE sources "${DIR}/*.c")
 list(SORT sources)
 
