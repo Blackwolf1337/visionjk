@@ -315,6 +315,13 @@ sabers (`clienttests/ui_profile.cfg`, `ui_profile_in.cfg`, the full pass). Used 
 (`ui_profile_use.cfg`): from the profile over the strip to the character and to the lightsaber, two sabers
 chosen, back to the profile, a model clicked (the figure changed), back to the first page.
 
+The words of a text list (2026-10-12, a picture of the hilt list: "These are not centered"): they stood above
+the middle of their rows, by another amount in every list, because each menu file sets `textaligny` for the
+letters of the old fonts. In a menu of the new look the list code puts them on the middle of the row, where the
+mark of the chosen row is, and does not read that number. The same code draws all 25 text lists of the 14 menus
+that have one (hilts, maps, servers, demos, mods, players to vote on, sets of force powers, moves). Seen at
+2560 x 1440: the hilts, the maps of a new game, the sets of force powers, the maps of a vote.
+
 Not translated: French and Spanish read what this tree added in English.
 
 Not checked: the pages of siege in a game of siege (their pictures are missing outside one), most in-game

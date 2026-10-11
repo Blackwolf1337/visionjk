@@ -7041,6 +7041,12 @@ void Item_ListBox_Paint(itemDef_t *item) {
 //JLF END
 			{
 				const char *text;
+				// In a menu of the new look the text of a row stands on the middle of the row, where the mark of
+				// the chosen row is drawn. "textaligny" does not count there: the menu files set it for the
+				// letters of the old fonts, and the new ones stood above the middle with it.
+				const qboolean	centred = Item_Skinned( item );
+				const float		rowTextY = y + listPtr->elementHeight + 2
+									+ ( listPtr->elementHeight - DC->textHeight( "A", item->textscale, item->iMenuFont ) ) * 0.5f;
 				// always draw at least one
 				// which may overdraw the box if it is too small for the element
 				if (listPtr->numColumns > 0) {
@@ -7076,7 +7082,7 @@ void Item_ListBox_Paint(itemDef_t *item) {
 							textyOffset = 0;
 //							DC->drawText(x + 4 + listPtr->columnInfo[j].pos, y + listPtr->elementHeight, item->textscale, item->window.foreColor, text, 0, listPtr->columnInfo[j].maxChars, item->textStyle);
 	//WAS LAST						DC->drawText(x + 4 + listPtr->columnInfo[j].pos, y, item->textscale, item->window.foreColor, text, 0, listPtr->columnInfo[j].maxChars, item->textStyle, item->iMenuFont);
-							DC->drawText(x + 4 + listPtr->columnInfo[j].pos, y + listPtr->elementHeight+ textyOffset + item->textaligny, item->textscale, item->window.foreColor, text, 0,listPtr->columnInfo[j].maxChars, item->textStyle, item->iMenuFont);
+							DC->drawText(x + 4 + listPtr->columnInfo[j].pos, centred ? rowTextY : y + listPtr->elementHeight+ textyOffset + item->textaligny, item->textscale, item->window.foreColor, text, 0,listPtr->columnInfo[j].maxChars, item->textStyle, item->iMenuFont);
 
 
 //JLF END
@@ -7110,7 +7116,7 @@ void Item_ListBox_Paint(itemDef_t *item) {
 					else if (text)
 					{
 //						DC->drawText(x + 4, y + listPtr->elementHeight, item->textscale, item->window.foreColor, text, 0, 0, item->textStyle);
-						DC->drawText(x + 4, y + item->textaligny, item->textscale, item->window.foreColor, text, 0, 0, item->textStyle, item->iMenuFont);
+						DC->drawText(x + 4, centred ? rowTextY : y + item->textaligny, item->textscale, item->window.foreColor, text, 0, 0, item->textStyle, item->iMenuFont);
 					}
 				}
 
