@@ -1766,6 +1766,15 @@ void		CG_BubbleInit( void );
 void		CG_BubbleSay( int clientNum, int kind, const char *message );
 qboolean	CG_BubbleDraw( centity_t *cent, qboolean dots );
 
+// status/cg_status.c and cg_status_music.c: away and music above the heads
+void		CG_StatusInit( void );
+void		CG_StatusFrame( void );
+void		CG_StatusServerCommand( void );
+qboolean	CG_StatusLine( int clientNum, char *out, int outSize );
+void		CG_MusicFrame( void );
+void		CG_MusicShutdown( void );
+qboolean	CG_MusicNowPlaying( char *out, int outSize );
+
 // where on a wide window something of the 2D sits, see CG_Place2D()
 typedef enum {
 	PLACE_CENTER,

@@ -2632,6 +2632,7 @@ Ghoul2 Insert End
 	CG_VoiceInit();		// in front of the server info, which tells it whether this server has a voice chat
 	CG_ChatInit();
 	CG_BubbleInit();
+	CG_StatusInit();
 	CG_ParseServerinfo();
 	CG_JPAutoReplierInit();
 
@@ -2744,6 +2745,7 @@ void CG_Shutdown( void )
 {
 	// first of all: the threads of the voice chat run code of this module
 	CG_VoiceShutdown();
+	CG_MusicShutdown();
 
 	// the keys bot mode holds down are let go
 	CG_BotModeShutdown();

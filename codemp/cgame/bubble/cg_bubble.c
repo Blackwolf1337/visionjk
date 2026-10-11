@@ -359,16 +359,20 @@ qboolean CG_BubbleDraw( centity_t *cent, qboolean dots ) {
 	vec3_t			head, delta;
 	vec4_t			border, glow, color;
 	float			dist, range, height, alpha = 1.0f, grow = 1.0f, rise = 0.0f;
-	float			halfW, halfH, pad, tail, scale;
-	qboolean		talking;
+	float			halfW, halfH, pad, tail, scale, stack = 0.0f;
+	qboolean		talking, typing, hasStatus;
+	char			statusLine[128];
 	int				i;
 
-	if ( clientNum < 0 || clientNum >= MAX_CLIENTS || !cg_chatBubbles.integer || !cg.snap ) {
+	if ( clientNum < 0 || clientNum >= MAX_CLIENTS || !cg.snap ) {
 		return qfalse;
 	}
 	b = &bubbles[clientNum];
-	talking = (qboolean)( b->numLines > 0 && cg.time < b->endTime && cg.time >= b->startTime );
-	if ( !talking && !( dots && ( cent->currentState.eFlags & EF_TALK ) ) ) {
+	talking = (qboolean)( cg_chatBubbles.integer && b->numLines > 0 && cg.time < b->endTime && cg.time >= b->startTime );
+	typing = (qboolean)( cg_chatBubbles.integer && !talking && dots && ( cent->currentState.eFlags & EF_TALK ) );
+	// away, or the music he listens to (status/cg_status.c)
+	hasStatus = CG_StatusLine( clientNum, statusLine, sizeof( statusLine ) );
+	if ( !talking && !typing && !hasStatus ) {
 		return qfalse;
 	}
 	if ( !bubbleArt.tried ) {
@@ -401,6 +405,37 @@ qboolean CG_BubbleDraw( centity_t *cent, qboolean dots ) {
 	height = dist * tanf( DEG2RAD( cg.refdef.fov_y * 0.5f ) ) * 2.0f / 54.0f;
 	height = Com_Clamp( 2.2f, 12.0f, height );
 
+	VectorNegate( cg.refdef.viewaxis[1], view.right );
+	VectorCopy( cg.refdef.viewaxis[2], view.up );
+	VectorNegate( cg.refdef.viewaxis[0], view.toward );
+
+	if ( hasStatus ) {
+		// one line in smaller letters right above the head, the bubble stands on top of it
+		static vec4_t	statusFill = { 0.04f, 0.06f, 0.1f, 0.6f };
+		static vec4_t	statusText = { 0.8f, 0.88f, 1.0f, 1.0f };
+		const float		letter = height * 0.72f;
+		const float		width = trap->ext.R_Text3DWidth( statusLine, letter );
+		vec3_t			origin;
+
+		halfW = width * 0.5f + letter * 0.6f;
+		halfH = letter * 0.75f;
+		VectorCopy( head, view.center );
+		view.center[2] += halfH;
+		Bubble_Panel( bubbleArt.fill, &view, halfW, halfH, letter * 0.7f, 0.1f, statusFill, alpha );
+
+		VectorCopy4( statusText, color );
+		color[3] = alpha;
+		VectorMA( view.center, -width * 0.5f, view.right, origin );
+		VectorMA( origin, -letter * 0.36f, view.up, origin );
+		VectorMA( origin, 0.4f, view.toward, origin );
+		trap->ext.R_Text3D( origin, view.right, view.up, letter, statusLine, color );
+
+		stack = 2.0f * halfH + letter * 0.3f;
+	}
+	if ( !talking && !typing ) {
+		return qfalse;		// the caller may still have a sprite to show
+	}
+
 	if ( talking ) {
 		const int age = cg.time - b->startTime, left = b->endTime - cg.time;
 
@@ -430,20 +465,20 @@ qboolean CG_BubbleDraw( centity_t *cent, qboolean dots ) {
 		halfH = height * 0.8f;
 	}
 
-	VectorNegate( cg.refdef.viewaxis[1], view.right );
-	VectorCopy( cg.refdef.viewaxis[2], view.up );
-	VectorNegate( cg.refdef.viewaxis[0], view.toward );
 	VectorCopy( head, view.center );
-	view.center[2] += tail + halfH + rise;
+	view.center[2] += stack + tail + halfH + rise;
 
 	VectorCopy4( borderColor, border );
 	VectorCopy4( glowColor, glow );
 	if ( talking && b->team ) {
 		// the colour of the team around what was said to the team
-		const float *team = CG_TeamColor( cgs.clientinfo[clientNum].team );
+		static vec3_t	redTeam = { 1.0f, 0.38f, 0.32f }, blueTeam = { 0.35f, 0.55f, 1.0f };
+		const team_t	team = cgs.clientinfo[clientNum].team;
 
-		VectorCopy( team, border );
-		VectorCopy( team, glow );
+		if ( team == TEAM_RED || team == TEAM_BLUE ) {
+			VectorCopy( team == TEAM_RED ? redTeam : blueTeam, border );
+			VectorCopy( team == TEAM_RED ? redTeam : blueTeam, glow );
+		}
 	}
 
 	// from the back to the front: the light, the inside with its tip, the edge, and what stands on it
