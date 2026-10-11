@@ -177,9 +177,9 @@ Request helpers
 
 // the address of a peer as text, for the security log
 static const char *WA_AddrText( const waConnection_t *c ) {
-	const unsigned char *b = (const unsigned char *)&c->addr;		// network order: the bytes as they are written
+	const unsigned char *b = (const unsigned char *)&c->peer;		// network order: the bytes as they are written
 
-	return va( "%u.%u.%u.%u", b[0], b[1], b[2], b[3] );
+	return va( "%u.%u.%u.%u%s", b[0], b[1], b[2], b[3], c->proxied ? " (by the proxy)" : "" );
 }
 
 // Not in JKAdmin: what was done through the panel and from where, one line in the security log. The panel
@@ -192,37 +192,11 @@ void WA_LogUse( const waConnection_t *c, const char *what ) {
 	G_SecurityLogPrintf( "%s\n", line );
 }
 
-qboolean WA_CheckAuth( const char *head ) {
-	const char *auth = Web_FindHeader( head, "Authorization" );
-	char		decoded[256];
-	const char	*pass;
-
-	if ( !auth || Q_stricmpn( auth, "Basic ", 6 ) )
-		return qfalse;
-	if ( Web_Base64Decode( auth + 6, decoded, sizeof( decoded ) ) < 0 )
-		return qfalse;
-
-	pass = strchr( decoded, ':' );
-	if ( !pass || !g_webPassword.string[0] )
-		return qfalse;
-
-	// constant time: the time it takes does not tell how much of the password is right
-	{
-		const char	*a = pass + 1, *b = g_webPassword.string;
-		const int	la = (int)strlen( a ), lb = (int)strlen( b );
-		int			diff = la ^ lb, i;
-
-		for ( i = 0; i < la; i++ )
-			diff |= a[i] ^ b[i % lb];
-		return (qboolean)( diff == 0 );
-	}
-}
-
 /*
 =================
 WA_AuthThrottle
 
-Not in JKAdmin. Slows down guessing the panel password: after WA_AUTH_TRIES wrong tries an address has to wait,
+Not in JKAdmin. Slows down guessing a password of the panel: after WA_AUTH_TRIES wrong tries an address has to wait,
 and the wait doubles each time. WA_AuthThrottle tells if an address is waiting right now, WA_AuthResult records
 how a try went. A small table of addresses, the slot not seen for the longest is reused when it is full.
 =================

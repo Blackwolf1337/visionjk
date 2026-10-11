@@ -382,7 +382,15 @@ void WA_ApiAction( waConnection_t *c, const char *body ) {
 	WA_FormValue( body, "action", action, sizeof( action ) );
 	WA_FormValue( body, "value", value, sizeof( value ) );
 	WA_FormValue( body, "id", idStr, sizeof( idStr ) );
-	WA_LogUse( c, va( "action %s id %s value \"%.100s\"", action, idStr[0] ? idStr : "-", value ) );
+	WA_LogUse( c, va( "%s: action %s id %s value \"%.100s\"", c->user, action, idStr[0] ? idStr : "-", value ) );
+
+	// A moderator has the players. What makes an admin in the game, changes the map or is done to the server as
+	// a whole is for an admin of the panel.
+	if ( c->role < WA_ROLE_ADMIN && ( !strcmp( action, "admgrant" ) || !strcmp( action, "map" ) || !strcmp( action, "reload" )
+		|| !strcmp( action, "addbot" ) || !strcmp( action, "gravity" ) ) ) {
+		WA_ActionResult( c, qfalse, "your account may not do that" );
+		return;
+	}
 
 	if ( WA_ServerAction( c, action, value, body ) )
 		return;

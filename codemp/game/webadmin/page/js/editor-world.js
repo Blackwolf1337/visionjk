@@ -61,6 +61,7 @@ function setMode(m) {
 	document.body.classList.toggle('logOpen', m === 'log');
 	if (m === 'log') { select(-1); logPoll(); }
 	if (m === 'bans') banLoad();
+	if (m === 'account') { select(-1); accountLoad(); }
 	if (m === 'load') { select(-1); perfPoll(); }
 	if (m === 'config') { select(-1); if (!cfgLoaded) loadConfig(); }
 	if (m === 'files') { select(-1); if (!fsEdit) fsList(); }

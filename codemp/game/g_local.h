@@ -1280,6 +1280,7 @@ void WebAdmin_EntityFreed( int entityNum );
 int WebAdmin_LoadRemaps( void );	// the texture swaps of the map, from its file
 int WA_FreeEntities( void );		// entities the game can still spawn
 void WebAdmin_Chat( const char *mode, const gentity_t *from, const gentity_t *to, const char *text );
+qboolean WebAdmin_ConsoleCommand( const char *cmd );
 void WebAdmin_Log( const char *line );
 gameImport_t *WebAdmin_WrapImport( gameImport_t *import );
 // g_svcmds.c: the ban list, for the panel

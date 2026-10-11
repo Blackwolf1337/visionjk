@@ -30,6 +30,18 @@ function colorName(name) {
 	return out;
 }
 
+// A session ends after half an hour without a request, and at the latest after twelve hours: the server then
+// answers 401, and the page is loaded again, which is the page of the login.
+{
+	const plainFetch = window.fetch.bind(window);
+	let leaving = false;
+	window.fetch = async (...args) => {
+		const res = await plainFetch(...args);
+		if (res.status === 401 && !leaving) { leaving = true; location.reload(); }
+		return res;
+	};
+}
+
 function plainName(name) { return name.replace(/\^[0-9]/g, ''); }
 
 function toast(msg, ok = true) {

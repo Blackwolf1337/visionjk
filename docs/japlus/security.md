@@ -162,6 +162,25 @@ in `admin_keys.txt` or a one-time code.
   whenever it joins. If that server turns hostile it can pass the question of another server on, and only
   `jp_authHosts` on the other server stops that. So set it on a public server.
 
+## Added later: the web panel has accounts
+
+Since 2026-10-11 (`webadmin/wa_auth.c`, `wa_totp.c`, see webadmin.md). What was one password in every request
+is now: accounts with three roles, passwords as Argon2id hashes, sessions in a cookie no script and no other
+site gets, a second step by time, tokens for scripts, a login with a key of the browser, and a proxy mode in
+which only the reverse proxy is let in. `g_webPassword` is read once, to make the first owner.
+
+- A visitor who is not logged in gets the page of the login (a file of its own, 9 KB) and two requests:
+  `/api/login` and `/api/login/key`. Everything else answers 401.
+- Roles are checked on the server for every request, by its path, and for `/api/action` by the action.
+- The check that a POST comes from the page itself runs before the login too, so no other site can log a
+  visitor in to an account of its own.
+- What is kept on disk: hashes of passwords, of tokens, of recovery codes and of session cookies. The secret
+  of the second step is kept as it is, the server has to work with it.
+- Tested apart from the game (`japlus_port/tools/authtest`): HMAC-SHA1 against RFC 2202, the codes against RFC
+  6238, base32 against RFC 4648, Argon2id of the Monocypher of the tree against RFC 9106. The QR code of the
+  page was read back with zbarimg for texts of every size it takes. The login itself, the sessions and the
+  roles were not run against a server.
+
 ## Recommended server settings
 
 ```
@@ -171,7 +190,7 @@ seta g_securityLog "2"               // security.log written line by line
 seta g_logClientCmds "1"             // client commands in security.log
 seta sv_maxOOBRateIP "1"             // the per address rate limit on connectionless packets
 seta g_webBind "127.0.0.1"           // this machine only. The default is every interface: fine on your own network or behind a firewall
-seta g_webPassword "<long random>"   // the panel is off without it
+seta g_webProxy "<address>"          // or: the address of the reverse proxy with HTTPS in front of the panel, nobody else is let in
 seta jp_authHosts "<address:port ...>" // the addresses clients reach the server by, for the login with a key
 ```
 

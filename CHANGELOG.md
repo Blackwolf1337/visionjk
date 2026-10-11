@@ -19,6 +19,8 @@ Key: [-] removed, [+] added, [\*] modified
 * [-] The server takes no rcon any more: the password went over the wire in the clear with every command. Use the web panel or the console of the server. A `rconpassword` line in a config does nothing, the client keeps its `rcon` command for other servers.
 * [\*] The three admin rank passwords and `cp_login` only count with `jp_adminPasswords 1`. This changes a running server at the update: its admins need a line in `admin_keys.txt` or a one-time code.
 * [+] Admin login with an Ed25519 key instead of a password: `admin_keys.txt` on the server (lines as in authorized_keys behind a rank), `amkey new`, `amkey show` and `amkey login` on the client, from a key file or an ssh-agent such as 1Password (`cg_authAgent`). For clients that can not sign, `amcode <rank>` on the server console makes a code that works once within a minute (`amlogin <code>`).
+* [\*] The web admin panel has accounts in place of its one password: three roles (moderator, admin, owner), passwords as Argon2id hashes, sessions in a cookie, a second step by time with recovery codes, tokens for scripts, a login with a key of the browser, one-time codes for the admin login in the game. `g_webPassword` is read once, to make the first account `owner`. `webuser` on the server console manages the accounts.
+* [+] `g_webProxy`: behind a reverse proxy with HTTPS only the proxy is let in to the web admin panel, and the visitor is who the proxy says he is.
 
 # Features
 

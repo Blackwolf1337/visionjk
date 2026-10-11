@@ -184,10 +184,15 @@ XCVAR_DEF( g_voiceRange,				"1024",			NULL,						CVAR_ARCHIVE,									qtrue )
 XCVAR_DEF( g_voiceTeamOnly,				"0",			NULL,						CVAR_ARCHIVE,									qtrue )
 XCVAR_DEF( g_voteDelay,					"3000",			NULL,						CVAR_NONE,										qfalse )
 XCVAR_DEF( g_warmup,					"20",			NULL,						CVAR_ARCHIVE,									qtrue )
+// The accounts of the panel are in webadmin_users.dat (wa_auth.c). g_webBasicAuth 1: a script may send the token
+// of its account as the password of basic auth behind its name, besides "Bearer". g_webProxy: the address of the
+// reverse proxy in front of the panel. Then nobody else is let in, and the proxy says who the visitor is.
+XCVAR_DEF( g_webBasicAuth,				"0",			NULL,						CVAR_ARCHIVE,									qfalse )
 XCVAR_DEF( g_webBind,					"0.0.0.0",		NULL,						CVAR_ARCHIVE|CVAR_LATCH,						qfalse )
 XCVAR_DEF( g_webPassword,				"",				NULL,						CVAR_ARCHIVE|CVAR_LATCH,						qfalse )
 XCVAR_DEF( g_webRoot,					"",				NULL,						CVAR_ARCHIVE,									qfalse )
 XCVAR_DEF( g_webPort,					"80",			NULL,						CVAR_ARCHIVE|CVAR_LATCH,						qfalse )
+XCVAR_DEF( g_webProxy,					"",				NULL,						CVAR_ARCHIVE,									qfalse )
 XCVAR_DEF( g_weaponDisable,				"0",			NULL,						CVAR_SERVERINFO|CVAR_ARCHIVE|CVAR_LATCH,		qtrue )
 XCVAR_DEF( g_weaponRespawn,				"5",			NULL,						CVAR_NONE,										qtrue )
 XCVAR_DEF( gamedate,					SOURCE_DATE,	NULL,						CVAR_ROM,										qfalse )
