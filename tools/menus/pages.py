@@ -71,9 +71,9 @@ def top_bar(m, here):
     """The bar at the top of a page outside a game: the name of the game at the left, the four sections at the
     right, the one that is open marked. Returns what it adds, to be put in front of the other items."""
     new = [
-        item('vision_bar', (-400, 0, 1440, 34), ('style', 'WINDOW_STYLE_FILLED'), ('backcolor', '0.02', '0.04', '0.08', '0.55'),
+        item('vision_bar', (-1000, 0, 2640, 34), ('style', 'WINDOW_STYLE_FILLED'), ('backcolor', '0.02', '0.04', '0.08', '0.55'),
              ('decoration',)),
-        item('vision_bar_line', (-400, 34, 1440, 0.67), ('style', 'WINDOW_STYLE_FILLED'), ('backcolor', *(ACCENT[:3] + ['0.22'])),
+        item('vision_bar_line', (-1000, 34, 2640, 0.67), ('style', 'WINDOW_STYLE_FILLED'), ('backcolor', *(ACCENT[:3] + ['0.22'])),
              ('decoration',)),
         item('vision_logo', (22, 6, 22, 22), ('type', 'ITEM_TYPE_LOGO'), ('forecolor', '1', '1', '1', '1'), ('decoration',)),
         label('vision_mark', (50, 7, 120, 20), '"VISIONJK"', 1.0, BRIGHT),
@@ -97,8 +97,6 @@ def top_bar(m, here):
 
 def bottom_button(b, primary=False):
     """A button of the row at the bottom: a pill, the one that goes on filled."""
-    r = rect_of(b)
-    set_rect(b, r[0] + r[2] / 2 - 55, 446, 110, 22)
     text_center(b, 0.7, 4.5)
     mf.put(b, 'caps', 1)
     if primary:
@@ -122,53 +120,326 @@ SECTION = {'main': None, 'multiplayermenu': 'newgamebutton', 'joinserver': 'newg
            'playermenu': 'profilebutton', 'playermenu2': 'profilebutton', 'sabermenu': 'profilebutton',
            'controlsmenu': 'controlsbutton', 'setup_menu': 'setupbutton', 'quitmenu': None}
 
-
 # the heading of a page: the item of the old page that had it, or a text for a page that had none
 TITLE = {'setup_menu': 'setup_title', 'controlsmenu': 'control_title', 'multiplayermenu': 'title', 'quitmenu': 'quit_title',
          'playermenu': '@MENUS_PROFILE', 'demo': 'default_rulesheader', 'rulesmenu': 'default_rulesheader',
-         'rulesmenu_games': 'default_rulesheader', 'rulesmenu_force': 'default_rulesheader',
-         'rulesmenu_weapons': 'default_rulesheader', 'rulesmenu_items': 'default_rulesheader'}
+         'rulesmenu_games': 'game_rulesheader', 'rulesmenu_force': 'force_rulesheader',
+         'rulesmenu_weapons': 'weapon_rulesheader', 'rulesmenu_items': 'item_rulesheader',
+         'rulesmenu_moves': 'game_rulesheader', 'createserver': 'create_title', 'joinserver': 'join_title',
+         'playermenu2': 'creation_title', 'sabermenu': 'creation_title', 'quickgame': 'title', 'quickgame2': 'title'}
 PRIMARY = ('applybutton', 'apply', 'joinbutton', 'join_button', 'join', 'beginbutton', 'begin', 'acceptbutton', 'next',
            'next_button', 'newgame_begin', 'startserver', 'startbutton', 'advanced_begin', 'quitgame_yes')
+# what a button says that goes on with what the window is for
+PRIMARY_TEXT = ('@menus_ok', '@menus_apply', '@menus_yes', '@menus_join', '@menus_accept', '@menus_begin', '@menus_next',
+                '@menus_save', '"apply', '"ok', '"yes', '"join')
+
+# the four sections of the bar at the top, for a page that has no buttons for them
+NAV_MAKE = (('newgamebutton', '@MENUS_PLAY', '@MENUS_START_PLAYING_NOW', 'multiplayermenu'),
+            ('profilebutton', '@MENUS_PROFILE', '@MENUS_PROFILE_DESC', 'playerMenu'),
+            ('controlsbutton', '@MENUS_CONTROLS2', '@MENUS_CONFIGURE_GAME_CONTROLS', 'controlsMenu'),
+            ('setupbutton', '@MENUS_SETUP', '@MENUS_CONFIGURE_GAME_SETTINGS', 'setup_menu'))
+
+TOP = 100                   # where the content of a page begins under its heading,
+TOP_DENSE = 42              #	and on a page that needs all of the height: right under the bar
+FLOOR = 438                 # and where it ends, over the buttons at the bottom
+WINDOW = ['0.035', '0.07', '0.12', '0.94']      # a window on a page or on the level: nearly solid, its text has to be read
+
+
+def group_of(b):
+    return (mf.get(b, 'group') or [''])[0].lower()
+
+
+def hidden(b):
+    v = mf.get(b, 'visible')
+    return bool(v and v[0].lower() in ('0', 'menu_false'))
+
+
+def clickable(b):
+    return mf.get(b, 'text') is not None and mf.find(b, 'action') is not None
+
+
+def is_primary(b):
+    t = (mf.get(b, 'text') or [''])[0].lower()
+    return name_of(b) in PRIMARY or t.startswith(PRIMARY_TEXT)
+
+
+def nav_button(name, text, desc, target):
+    return Entry('itemDef', [], [
+        Entry('name', [name]), Entry('group', ['toprow']), Entry('style', ['WINDOW_STYLE_EMPTY']), Entry('type', ['ITEM_TYPE_BUTTON']),
+        Entry('rect', ['0', '0', '72', '20']), Entry('text', [text]), Entry('descText', [desc]), Entry('visible', ['1']),
+        Entry('action', [], ['play', '"sound/interface/button1.wav"', ';', mf.NL, 'close', 'all', ';', mf.NL, 'open', target, ';'])])
+
+
+def find_rails(m, floor=430):
+    """The columns of buttons of a menu: four or more that can be seen, one under the other, as wide as each other
+    and as far apart. The sections of a page (Setup, Controls, the rules) and plain lists of choices."""
+    cols = {}
+    for e in items(m):
+        b = e.block
+        r = rect_of(b)
+        n = name_of(b)
+        if not r or not clickable(b) or hidden(b) or n in NAV or n.startswith('vision_') or r[1] >= floor or r[3] > 40:
+            continue
+        cols.setdefault((round(r[0]), round(r[2])), []).append(e)
+    out = []
+    for col in cols.values():
+        col.sort(key=lambda e: rect_of(e.block)[1])
+        ys = [rect_of(e.block)[1] for e in col]
+        gaps = [b - a for a, b in zip(ys, ys[1:])]
+        if len(col) >= 4 and min(gaps) > 0 and max(gaps) - min(gaps) <= 3:
+            out.append(col)
+    return out
+
+
+def rail(m, col, pad=5):
+    """A column of buttons becomes a list on a panel of its own: its texts begin at the left, one under the other."""
+    rs = [rect_of(e.block) for e in col]
+    x, w = rs[0][0], rs[0][2]
+    y0, y1 = rs[0][1], rs[-1][1] + rs[-1][3]
+    for e in col:
+        b = e.block
+        mf.put(b, 'textalign', 'ITEM_ALIGN_LEFT')
+        mf.put(b, 'textalignx', 12)
+        mf.put(b, 'style', 'WINDOW_STYLE_EMPTY')
+    at = next(i for i, e in enumerate(m) if e is col[0])
+    mine = box('vision_rail_%d' % round(y0), (x - pad, y0 - pad, w + 2 * pad, y1 - y0 + 2 * pad), SOFT, SOFT_EDGE, 6, 8, '0.06')
+    m.insert(at, mine)
+    # the panel beside the list begins and ends where the list does
+    rx, ry, rw, rh = rect_of(mine.block)
+    top, bottom, beside = ry, ry + rh, []
+    for e in items(m):
+        b = e.block
+        r = rect_of(b)
+        if e is mine or not r or name_of(b).startswith('vision_') or mf.get(b, 'text') is not None or clickable(b) \
+                or (mf.get(b, 'style') or [''])[0] != 'WINDOW_STYLE_PANEL' or kind_of(b) in ('list', 'scroll') or r[3] < 60:
+            continue
+        over = min(r[1] + r[3], ry + rh) - max(r[1], ry)
+        if rx + rw - 2 <= r[0] <= rx + rw + 30 and over >= 0.5 * min(r[3], rh):
+            beside.append(b)
+            top, bottom = min(top, r[1]), max(bottom, r[1] + r[3])
+    for b in beside + [mine.block]:
+        r = rect_of(b)
+        set_rect(b, r[0], top, r[2], bottom - top)
+
+
+def content_box(m, floor=430):
+    """The items of a page that are its content, and the box around them: not the bar at the top, not the heading,
+    not the buttons at the bottom, not what lies behind everything."""
+    out, xs, ys = [], [], []
+    for e in items(m):
+        b = e.block
+        r = rect_of(b)
+        n = name_of(b)
+        if not r or n in NAV or (n.startswith('vision_') and not n.startswith('vision_rail')) or n == 'creditsbutton':
+            continue
+        if r[1] >= floor and clickable(b):
+            continue
+        out.append(e)
+        if r[2] >= 630 or r[0] < -50 or r[2] <= 0 or r[3] <= 0 or r[1] < -20 or r[1] + r[3] > 480:
+            continue                # behind everything, or parked outside the screen
+        xs += [r[0], r[0] + r[2]]
+        ys += [r[1], r[1] + r[3]]
+    return out, (min(xs), min(ys), max(xs), max(ys)) if xs else None
 
 
 def shell(m, menu, had_logo):
-    """The frame of a page outside a game."""
-    has_nav = any(name_of(e.block) in NAV for e in items(m))
-    new = top_bar(m, SECTION.get(menu)) if has_nav else []
+    """The frame of a page outside a game: the bar at the top with the four sections, the heading of the page under
+    it, the content under that and in the middle, the buttons in a row at the bottom."""
+    have = {name_of(e.block) for e in items(m)}
+    if not have & set(NAV):
+        m.extend(nav_button(*n) for n in NAV_MAKE)
+    new = top_bar(m, SECTION.get(menu))
+
+    # the heading: an item of the old page, or a text
     title = TITLE.get(menu, '')
-    title_done = False
+    head = None
     if title.startswith('@'):
-        new.append(label('vision_title', (40, 46, 400, 28), title, 1.45, BRIGHT, ('textaligny', 2)))
-        title_done = True
-    for e in items(m):
-        b = e.block
-        n = name_of(b)
-        r = rect_of(b)
-        if not r or n in NAV or n.startswith('vision_'):
-            continue
-        if r[1] >= 430 and mf.get(b, 'text') is not None and mf.find(b, 'action'):
-            bottom_button(b, primary=n in PRIMARY)
-            continue
-        if had_logo and 150 <= r[1] < 430:
-            if n == title and not title_done and mf.get(b, 'text') is not None:
-                # the heading of the page, large at the top left
-                title_done = True
-                set_rect(b, 40, 46, 400, 28)
-                text_left(b, 0, 1.45, 2)
-                mf.put(b, 'forecolor', *BRIGHT)
-                mf.put(b, 'style', 'WINDOW_STYLE_EMPTY')
-                mf.drop(b, 'caps')
-                continue
-            set_rect(b, r[0], r[1] + SHIFT, r[2], r[3])
-    if had_logo:
-        # what the mouse is on is explained under the heading
-        mf.put(m, 'descX', 40)
-        mf.put(m, 'descY', 80)
-        mf.put(m, 'descAlignment', 'ITEM_ALIGN_LEFT')
-        mf.put(m, 'descScale', '0.8')
+        head = label('vision_title', (40, 46, 400, 28), title, 1.45, BRIGHT, ('textaligny', 2), ('caps', 1))
+        new.append(head)
+    else:
+        head = next((e for e in items(m) if name_of(e.block) == title and mf.get(e.block, 'text') is not None), None)
+
+    # the buttons at the bottom
+    bottom = [e for e in items(m) if rect_of(e.block) and rect_of(e.block)[1] >= 430 and clickable(e.block)
+              and name_of(e.block) not in NAV]
+    for col in find_rails(m):
+        rail(m, col)
+    content, bb = content_box(m)
+    if head is not None and head in content:
+        content.remove(head)
+        _, bb = content_box([e for e in m if e is not head])
+
+    dense = False
+    if bb:
+        # the content under the heading where it fits, right under the bar where the page needs its height
+        dense = bb[3] - bb[1] > FLOOR - TOP
+        dy = (TOP_DENSE if dense else TOP) - bb[1]
+        if dense and bb[3] + dy > 446:
+            dy = 446 - bb[3]
+        # its left edge under the left edge of the heading, a page as wide as the screen in the middle
+        if bb[2] - bb[0] <= 560:
+            dx = 40 - bb[0]
+        else:
+            dx = round(320 - (bb[0] + bb[2]) / 2)
+        for e in content:
+            r = rect_of(e.block)
+            set_rect(e.block, r[0] + dx, r[1] + dy, r[2], r[3])
+        bb = (bb[0] + dx, bb[1] + dy, bb[2] + dx, bb[3] + dy)
+
+    if head is not None and not title.startswith('@'):
+        b = head.block
+        if dense:
+            # no room for a heading: its words stand in the bar, after the name of the game
+            for e in new:
+                if name_of(e.block) == 'vision_mark2':
+                    mf.put(e.block, 'text', *mf.get(b, 'text'))
+                    mf.put(e.block, 'caps', 1)
+            m.remove(head)
+        else:
+            set_rect(b, 40, 46, 400, 28)
+            text_left(b, 0, 1.45, 2)
+            mf.put(b, 'forecolor', *BRIGHT)
+            mf.put(b, 'style', 'WINDOW_STYLE_EMPTY')
+            mf.put(b, 'caps', 1)
+            mf.drop(b, 'background')
+
+    # the row at the bottom: what goes back at the left, what goes on at the right. (A page that needs all of its
+    # height has no button that leaves the game: the first page has one, and the line about what the mouse is on
+    # stands in its place.)
+    row_y = 446 if not bb or bb[3] <= 440 else min(456, bb[3] + 5)
+    if dense:
+        for e in [e for e in bottom if name_of(e.block) == 'exitgamebutton']:
+            bottom.remove(e)
+            m.remove(e)
+    left = sorted((e for e in bottom if not is_primary(e.block)), key=lambda e: rect_of(e.block)[0])
+    right = sorted((e for e in bottom if is_primary(e.block)), key=lambda e: -rect_of(e.block)[0])
+    seen = {}
+    for group, start, step in ((left, 40, 120), (right, 490, -120)):
+        for e in group:
+            b = e.block
+            old = round(rect_of(b)[0])
+            # (buttons that lie on each other take turns: they share a place)
+            x = seen.setdefault((id(group), old), start + step * len({k for k in seen if k[0] == id(group)}))
+            set_rect(b, x, row_y, 110, 22)
+            bottom_button(b, primary=group is right)
+    # (the row lies on everything: a figure of the page may reach down to it)
+    for e in bottom:
+        m.remove(e)
+        m.append(e)
+    # what the mouse is on is explained under the heading, on a page without one between the buttons
+    places = [rect_of(e.block)[0] for e in bottom]
+    gap0 = max([x + 110 for x in places if x < 320] or [40])
+    gap1 = min([x for x in places if x >= 320] or [600])
+    mf.put(m, 'descX', 40 if not dense else mf.fmt((gap0 + gap1) / 2))
+    mf.put(m, 'descY', 80 if not dense else row_y + 6)
+    mf.put(m, 'descAlignment', 'ITEM_ALIGN_LEFT' if not dense else 'ITEM_ALIGN_CENTER')
+    mf.put(m, 'descScale', '0.8' if not dense else '0.55')
     first = next((i for i, e in enumerate(m) if e.k == 'itemdef'), len(m))
     m[first:first] = new
+
+
+def window_button(b, primary):
+    """A button at the bottom of a window: a pill around its text."""
+    r = rect_of(b)
+    w = max(70, min(r[2], 110))
+    set_rect(b, r[0] + r[2] / 2 - w / 2, r[1] + r[3] / 2 - 10, w, 20)
+    text_center(b, 0.64, 4)
+    mf.put(b, 'caps', 1)
+    mf.put(b, 'style', 'WINDOW_STYLE_PANEL')
+    mf.put(b, 'radius', 10)
+    if primary:
+        mf.put(b, 'backcolor', *(ACCENT[:3] + ['0.20']))
+        mf.put(b, 'bordercolor', *(ACCENT[:3] + ['0.75']))
+        mf.put(b, 'forecolor', *BRIGHT)
+    else:
+        mf.put(b, 'backcolor', '1', '1', '1', '0.05')
+        mf.put(b, 'bordercolor', *SOFT_EDGE)
+        mf.put(b, 'forecolor', *TEXT)
+
+
+def window(m, menu, ingame):
+    """A menu that is a window on a page or on the level: one frame around it that hides what is behind it, its
+    columns of buttons as lists, the buttons at its bottom as pills, and under it the line about what the mouse
+    is on. A window on a page darkens the page."""
+    mr = rect_of(m)
+    if not mr or mr[2] <= 0 or mr[3] <= 0:
+        return
+    its = items(m)
+    # the frame of the old window: an item with nothing in it that covers most of the menu
+    frame = None
+    for e in its[:4]:
+        b = e.block
+        r = rect_of(b)
+        if r and mf.get(b, 'text') is None and mf.get(b, 'cvar') is None and not mf.find(b, 'action') \
+                and kind_of(b) in ('', 'text') and (mf.get(b, 'style') or [''])[0] == 'WINDOW_STYLE_PANEL' \
+                and r[2] * r[3] >= 0.45 * mr[2] * mr[3]:
+            frame = e
+            break
+    own = (mf.get(m, 'style') or [''])[0] == 'WINDOW_STYLE_PANEL'
+    if not frame and not own:
+        return                      # no window: a row of buttons, a notice
+    for col in find_rails(m, floor=10000):
+        rail(m, col, pad=3)
+    in_rail = {id(e) for col in find_rails(m, floor=10000) for e in col}
+    # The frame goes around what is in the window, with some air: the pictures of the old frames were larger than
+    # that or lay beside it. (A text that fills what room there is counts with its first lines.)
+    xs, ys, plain = [], [], False
+    for e in items(m):
+        b = e.block
+        r = rect_of(b)
+        if e is frame or not r or r[2] <= 0 or r[3] <= 0 or name_of(b).startswith('vision_rail'):
+            continue
+        k = kind_of(b)
+        shown = mf.get(b, 'text') is not None or mf.get(b, 'cvar') is not None or k in ('list', 'scroll', 'model', 'owner') \
+            or (mf.get(b, 'style') or [''])[0] in ('WINDOW_STYLE_PANEL', 'WINDOW_STYLE_SHADER', '3')
+        if not shown:
+            continue
+        h = r[3] if k in ('list', 'scroll', 'model', 'owner') or r[3] <= 60 or not (mf.get(b, 'text') or mf.get(b, 'cvar')) else 120
+        xs += [r[0], r[0] + r[2]]
+        ys += [r[1], r[1] + h]
+        plain = plain or not clickable(b)
+    if not xs:
+        return
+    x0, y0, x1, y1 = min(xs) - 10, min(ys) - 10, max(xs) + 10, max(ys) + 10
+    if frame:
+        # (no wider than the old frame where that one was the narrower: a title often has a line as wide as the menu)
+        r = rect_of(frame.block)
+        x0, x1 = max(x0, min(r[0], min(xs) - 4)), min(x1, max(r[0] + r[2], max(xs) + 4))
+    x0, y0 = max(x0, 0), max(y0, 0)
+    # The pills: the buttons in the lowest row of buttons, in a window that has more in it than buttons. Buttons one
+    # under the other are a list of things to do and stay rows of it.
+    low = [e for e in items(m) if rect_of(e.block) and clickable(e.block) and id(e) not in in_rail and rect_of(e.block)[3] <= 34
+           and rect_of(e.block)[2] <= 200 and kind_of(e.block) in ('button', '', 'text', '1')]
+    if plain and low:
+        floor = max(rect_of(e.block)[1] + rect_of(e.block)[3] for e in low)
+        row = [e for e in low if rect_of(e.block)[1] + rect_of(e.block)[3] >= floor - 10]
+        above = [e for e in low if e not in row and floor - 44 <= rect_of(e.block)[1] + rect_of(e.block)[3]]
+        if not above and floor >= max(ys) - 70:
+            for e in row:
+                window_button(e.block, is_primary(e.block))
+                y1 = max(y1, rect_of(e.block)[1] + 20 + 9)
+    if frame:
+        set_rect(frame.block, x0, y0, x1 - x0, y1 - y0)
+        panel(frame.block, WINDOW, PANEL_EDGE, 8, 14)
+        mf.put(frame.block, 'sheen', '0.08')
+        mf.put(frame.block, 'decoration')
+        for key in ('backcolor', 'bordercolor', 'radius', 'shadow', 'sheen', 'border', 'bordersize'):
+            mf.drop(m, key)
+        mf.put(m, 'style', 'WINDOW_STYLE_EMPTY')
+    else:
+        mf.put(m, 'backcolor', *WINDOW)
+    # (a click outside the rectangle of the menu is none on it: the rectangle follows the frame)
+    mf.put(m, 'rect', mf.fmt(mr[0]), mf.fmt(mr[1]), mf.fmt(max(mr[2], x1)), mf.fmt(max(mr[3], y1)))
+    under = mr[1] + y1 + 5
+    mf.put(m, 'descX', mf.fmt(mr[0] + (x0 + x1) / 2))
+    mf.put(m, 'descY', mf.fmt(under if under <= 462 else mr[1] + y0 - 15))
+    mf.put(m, 'descAlignment', 'ITEM_ALIGN_CENTER')
+    mf.put(m, 'descScale', '0.7')
+    mf.put(m, 'descColor', *DIM)
+    if not ingame:
+        first = next((i for i, e in enumerate(m) if e.k == 'itemdef'), len(m))
+        m.insert(first, item('vision_veil', (-mr[0] - 1000, -mr[1], 2640, 480), ('style', 'WINDOW_STYLE_FILLED'),
+                             ('backcolor', '0', '0.01', '0.03', '0.6'), ('decoration',)))
 
 
 def main_page(m):
@@ -216,9 +487,9 @@ def main_page(m):
 def ingame_bar(m):
     """The row of buttons at the top of the screen in a game: a bar behind it, its texts in one line."""
     new = [
-        item('vision_bar', (-400, 0, 1440, 26), ('style', 'WINDOW_STYLE_FILLED'), ('backcolor', '0.02', '0.04', '0.08', '0.72'),
+        item('vision_bar', (-1000, 0, 2640, 26), ('style', 'WINDOW_STYLE_FILLED'), ('backcolor', '0.02', '0.04', '0.08', '0.72'),
              ('decoration',)),
-        item('vision_bar_line', (-400, 26, 1440, 0.67), ('style', 'WINDOW_STYLE_FILLED'), ('backcolor', *(ACCENT[:3] + ['0.22'])),
+        item('vision_bar_line', (-1000, 26, 2640, 0.67), ('style', 'WINDOW_STYLE_FILLED'), ('backcolor', *(ACCENT[:3] + ['0.22'])),
              ('decoration',)),
     ]
     for e in items(m):
@@ -413,8 +684,7 @@ def page(m, name, ingame):
                 mf.put(e.block, 'visible', 1)
             elif g in ('video', 'vidrestart'):
                 mf.put(e.block, 'visible', 0)
-    full = mf.get(m, 'fullscreen')
-    full = bool(full and full[0] != '0')
+    full = mf.truth(mf.get(m, 'fullscreen'))
     if menu == 'main':
         main_page(m)
     elif menu == 'connect':
@@ -423,10 +693,13 @@ def page(m, name, ingame):
         # stand-in for a missing one over the sky.)
         m[:] = [e for e in m if e.k != 'itemdef']
         mf.drop(m, 'style')
+        mf.put(m, 'backdrop', 1)
     elif menu == 'ingame':
         ingame_bar(m)
     elif full and not ingame:
         shell(m, menu, HAD_LOGO.get(name, False))
+    elif not full:
+        window(m, menu, ingame)
 
 
 # pages whose content began under the logo of the game, by file: noted before the rules took the logo away

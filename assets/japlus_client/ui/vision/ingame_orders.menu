@@ -6,10 +6,10 @@
 		name					"ingame_orders"
 		visible					0
 		fullscreen				0
-		rect					45 30 200 240
+		rect					45 30 214 240
 		outOfBoundsClick
 		focusColor				0.43 0.83 1 1
-		style					WINDOW_STYLE_PANEL
+		style					WINDOW_STYLE_EMPTY
 		disableColor			0.36 0.42 0.50 1
 		onopen
 		{
@@ -20,13 +20,15 @@
 		itemDef
 		{
 			name					window
-			rect					10 15 180 225
+			rect					0 10 214 200
 			style					WINDOW_STYLE_PANEL
-			backcolor				0.43 0.83 1 0.14
+			backcolor				0.035 0.07 0.12 0.94
 			visible					1
 			decoration
-			bordercolor				0 0 0 0
-			radius					3
+			bordercolor				0.43 0.83 1 0.28
+			radius					8
+			shadow					14
+			sheen					0.08
 		}
 
 		itemDef
@@ -316,10 +318,10 @@
 		}
 		skin					1
 		openSlide				8
-		backcolor				0.035 0.07 0.12 0.80
-		bordercolor				0.43 0.83 1 0.28
-		radius					8
-		shadow					14
-		sheen					0.08
+		descX					152
+		descY					245
+		descAlignment			ITEM_ALIGN_CENTER
+		descScale				0.7
+		descColor				0.60 0.69 0.78 1
 	}
 }

@@ -26,7 +26,7 @@
 		itemDef
 		{
 			name					vision_bar
-			rect					-400 0 1440 34
+			rect					-1000 0 2640 34
 			visible					1
 			style					WINDOW_STYLE_FILLED
 			backcolor				0.02 0.04 0.08 0.55
@@ -36,7 +36,7 @@
 		itemDef
 		{
 			name					vision_bar_line
-			rect					-400 34 1440 0.67
+			rect					-1000 34 2640 0.67
 			visible					1
 			style					WINDOW_STYLE_FILLED
 			backcolor				0.43 0.83 1 0.22
@@ -232,6 +232,7 @@
 			forecolor				1 1 1 1
 			visible					1
 			decoration
+			caps					1
 		}
 
 		itemDef
@@ -242,7 +243,7 @@
 			font					5
 			textscale				0.86
 			textstyle				0
-			rect					95 202 450 20
+			rect					40 100 450 20
 			textalign				ITEM_ALIGN_CENTER
 			textalignx				225
 			textaligny				1.5
@@ -250,6 +251,9 @@
 			forecolor				0.86 0.92 0.97 1
 			visible					1
 		}
+		skin					1
+		disableColor			0.36 0.42 0.50 1
+		backdrop				1
 
 		itemDef
 		{
@@ -258,7 +262,7 @@
 			text					@MENUS_NO
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_PANEL
-			rect					69 446 110 22
+			rect					40 446 110 22
 			font					5
 			textscale				0.7
 			textalignx				55
@@ -289,7 +293,7 @@
 			text					@MENUS_YES
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_PANEL
-			rect					464 446 110 22
+			rect					490 446 110 22
 			font					5
 			textscale				0.7
 			textalignx				55
@@ -311,8 +315,5 @@
 			bordercolor				0.43 0.83 1 0.75
 			radius					11
 		}
-		skin					1
-		disableColor			0.36 0.42 0.50 1
-		backdrop				1
 	}
 }

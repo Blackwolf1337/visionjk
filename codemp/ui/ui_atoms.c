@@ -63,9 +63,24 @@ static void	UI_Cache_f( void ) {
 }
 
 static void UI_OpenMenu_f( void ) {
-	Menus_CloseAll();
+	// "over": on top of what is open, as a button of a page opens a window (for scripts that look at the menus)
+	if ( Q_stricmp( UI_Argv( 2 ), "over" ) )
+		Menus_CloseAll();
 	if ( Menus_ActivateByName( UI_Argv( 1 ) ) )
 		trap->Key_SetCatcher( KEYCATCH_UI );
+}
+
+void UI_MouseEvent( int dx, int dy );
+void UI_KeyEvent( int key, qboolean down );
+
+// For scripts that look at the menus (docs/japlus/ui.md, "Checked"): the pointer goes to a place in the 640 x 480
+// units of the menus, and with "click" the left button is pressed and let go there, as the mouse would do it.
+static void UI_Mouse_f( void ) {
+	UI_MouseEvent( atoi( UI_Argv( 1 ) ) - uiInfo.uiDC.cursorx, atoi( UI_Argv( 2 ) ) - uiInfo.uiDC.cursory );
+	if ( !Q_stricmp( UI_Argv( 3 ), "click" ) ) {
+		UI_KeyEvent( A_MOUSE1, qtrue );
+		UI_KeyEvent( A_MOUSE1, qfalse );
+	}
 }
 
 static void UI_OpenSiegeMenu_f( void ) {
@@ -301,6 +316,7 @@ static consoleCommand_t	commands[] = {
 	{ "ui_load",			UI_Load },
 	{ "ui_macroenable",		UI_JPMacroEnable_f },
 	{ "ui_macroscan",		UI_JPMacroScan_f },
+	{ "ui_mouse",			UI_Mouse_f },
 	{ "ui_openmenu",		UI_OpenMenu_f },
 	{ "ui_opensiegemenu",	UI_OpenSiegeMenu_f },
 	{ "ui_report",			UI_Report },

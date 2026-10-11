@@ -10,8 +10,8 @@
 		focusColor				0.43 0.83 1 1
 		outOfBoundsClick
 		descX					320
-		descY					434
-		descScale				1
+		descY					425
+		descScale				0.7
 		descColor				0.60 0.69 0.78 1
 		descAlignment			ITEM_ALIGN_CENTER
 		popup
@@ -26,16 +26,28 @@
 
 		itemDef
 		{
+			name					vision_veil
+			rect					-1000 0 2640 480
+			visible					1
+			style					WINDOW_STYLE_FILLED
+			backcolor				0 0.01 0.03 0.6
+			decoration
+		}
+
+		itemDef
+		{
 			name					warn_background
 			group					none
 			style					WINDOW_STYLE_PANEL
-			rect					100 100 440 320
+			rect					110 119 420 301
 			forecolor				1 1 1 1
 			visible					1
 			decoration
-			backcolor				0.035 0.07 0.12 0.55
-			bordercolor				0.43 0.83 1 0.16
-			radius					5
+			backcolor				0.035 0.07 0.12 0.94
+			bordercolor				0.43 0.83 1 0.28
+			radius					8
+			shadow					14
+			sheen					0.08
 		}
 
 		itemDef
@@ -67,7 +79,7 @@
 			textalignx				110
 			font					5
 			textscale				0.86
-			forecolor				.79 .64 .22 1
+			forecolor				1 0.74 0.30 1
 			visible					1
 			decoration
 			textaligny				1.5
@@ -83,7 +95,7 @@
 			textalignx				110
 			font					5
 			textscale				0.86
-			forecolor				.79 .64 .22 1
+			forecolor				1 0.74 0.30 1
 			visible					1
 			textaligny				1.5
 		}
@@ -94,15 +106,15 @@
 			group					vidwarn
 			text					@MENUS_DISCARD
 			type					ITEM_TYPE_BUTTON
-			style					WINDOW_STYLE_EMPTY
-			rect					180 386 120 24
+			style					WINDOW_STYLE_PANEL
+			rect					185 388 110 20
 			font					5
-			textscale				0.86
+			textscale				0.64
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				60
-			textaligny				-1.5
+			textalignx				55
+			textaligny				4
 			descText				@MENUS_DO_NOT_APPLY_CHANGES
-			forecolor				.79 .64 .22 1
+			forecolor				0.86 0.92 0.97 1
 			visible					1
 			action
 			{
@@ -113,6 +125,10 @@
 			}
 			mouseEnter { show vidwarn_no_button }
 			mouseExit { hide vidwarn_no_button }
+			caps					1
+			radius					10
+			backcolor				1 1 1 0.05
+			bordercolor				0.43 0.83 1 0.16
 		}
 
 		itemDef
@@ -121,15 +137,15 @@
 			group					vidwarn
 			text					@MENUS_APPLY
 			type					ITEM_TYPE_BUTTON
-			style					WINDOW_STYLE_EMPTY
-			rect					340 386 120 24
+			style					WINDOW_STYLE_PANEL
+			rect					345 388 110 20
 			font					5
-			textscale				0.86
+			textscale				0.64
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				60
-			textaligny				-1.5
+			textalignx				55
+			textaligny				4
 			descText				@MENUS_APPLY_CHANGES_AND_THEN
-			forecolor				.79 .64 .22 1
+			forecolor				1 1 1 1
 			visible					1
 			action
 			{
@@ -139,9 +155,14 @@
 			}
 			mouseEnter { show vidwarn_yes_button }
 			mouseExit { hide vidwarn_yes_button }
+			caps					1
+			radius					10
+			backcolor				0.43 0.83 1 0.20
+			bordercolor				0.43 0.83 1 0.75
 		}
 		skin					1
 		disableColor			0.36 0.42 0.50 1
 		openSlide				8
+		style					WINDOW_STYLE_EMPTY
 	}
 }

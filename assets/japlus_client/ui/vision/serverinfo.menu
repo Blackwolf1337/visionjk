@@ -9,10 +9,10 @@
 		outOfBoundsClick
 		rect					140 60 360 360
 		focusColor				0.43 0.83 1 1
-		style					WINDOW_STYLE_PANEL
+		style					WINDOW_STYLE_EMPTY
 		descX					320
-		descY					400
-		descScale				1
+		descY					415
+		descScale				0.7
 		descColor				0.60 0.69 0.78 1
 		descAlignment			ITEM_ALIGN_CENTER
 		popup
@@ -25,16 +25,28 @@
 
 		itemDef
 		{
+			name					vision_veil
+			rect					-1140 -60 2640 480
+			visible					1
+			style					WINDOW_STYLE_FILLED
+			backcolor				0 0.01 0.03 0.6
+			decoration
+		}
+
+		itemDef
+		{
 			name					setup_background
 			group					none
 			style					WINDOW_STYLE_PANEL
-			rect					0 0 360 360
-			backcolor				0.035 0.07 0.12 0.55
+			rect					0 0 360 350
+			backcolor				0.035 0.07 0.12 0.94
 			forecolor				1 1 1 1
-			bordercolor				0.43 0.83 1 0.16
+			bordercolor				0.43 0.83 1 0.28
 			visible					1
 			decoration
-			radius					5
+			radius					8
+			shadow					14
+			sheen					0.08
 		}
 
 		itemDef
@@ -82,12 +94,12 @@
 			descText				@MENUS_REFRESH_SERVER_LIST
 			type					1
 			font					5
-			textscale				0.59
-			style					WINDOW_STYLE_EMPTY
-			rect					10 310 170 30
+			textscale				0.64
+			style					WINDOW_STYLE_PANEL
+			rect					40 315 110 20
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				85
-			textaligny				7
+			textalignx				55
+			textaligny				4
 			forecolor				0.86 0.92 0.97 1
 			visible					1
 			action
@@ -102,6 +114,9 @@
 			}
 			mouseExit { hide button_glow }
 			caps					1
+			radius					10
+			backcolor				1 1 1 0.05
+			bordercolor				0.43 0.83 1 0.16
 		}
 
 		itemDef
@@ -111,12 +126,12 @@
 			descText				@MENUS_DONE_DESC
 			type					1
 			font					5
-			textscale				0.59
-			style					WINDOW_STYLE_EMPTY
-			rect					180 310 170 30
+			textscale				0.64
+			style					WINDOW_STYLE_PANEL
+			rect					210 315 110 20
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				85
-			textaligny				7
+			textalignx				55
+			textaligny				4
 			forecolor				0.86 0.92 0.97 1
 			visible					1
 			action
@@ -131,14 +146,12 @@
 			}
 			mouseExit { hide button_glow }
 			caps					1
+			radius					10
+			backcolor				1 1 1 0.05
+			bordercolor				0.43 0.83 1 0.16
 		}
 		skin					1
 		disableColor			0.36 0.42 0.50 1
 		openSlide				8
-		backcolor				0.035 0.07 0.12 0.80
-		bordercolor				0.43 0.83 1 0.28
-		radius					8
-		shadow					14
-		sheen					0.08
 	}
 }

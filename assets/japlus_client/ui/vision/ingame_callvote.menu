@@ -7,12 +7,12 @@
 		visible					0
 		fullscreen				0
 		outOfBoundsClick
-		rect					270 40 360 216
+		rect					270 40 361 228
 		focusColor				0.43 0.83 1 1
-		style					WINDOW_STYLE_PANEL
-		descX					450
-		descY					210
-		descScale				1
+		style					WINDOW_STYLE_EMPTY
+		descX					450.5
+		descY					273
+		descScale				0.7
 		descColor				0.60 0.69 0.78 1
 		descAlignment			ITEM_ALIGN_CENTER
 		onopen
@@ -36,13 +36,15 @@
 			name					background_pic
 			group					none
 			style					WINDOW_STYLE_PANEL
-			rect					0 0 360 210
+			rect					0 0 361 228
 			forecolor				1 1 1 1
 			visible					1
 			decoration
-			backcolor				0.035 0.07 0.12 0.55
-			bordercolor				0.43 0.83 1 0.16
-			radius					5
+			backcolor				0.035 0.07 0.12 0.94
+			bordercolor				0.43 0.83 1 0.28
+			radius					8
+			shadow					14
+			sheen					0.08
 		}
 
 		itemDef
@@ -70,13 +72,27 @@
 			name					setup_background2
 			group					none
 			style					WINDOW_STYLE_PANEL
-			rect					120 35 235 135
+			rect					120 32 235 186
 			backcolor				0.035 0.07 0.12 0.55
 			forecolor				1 1 1 1
 			bordercolor				0.43 0.83 1 0.16
 			visible					1
 			decoration
 			radius					5
+		}
+
+		itemDef
+		{
+			name					vision_rail_35
+			rect					7 32 109 186
+			visible					1
+			style					WINDOW_STYLE_PANEL
+			backcolor				0.035 0.07 0.12 0.55
+			bordercolor				0.43 0.83 1 0.16
+			radius					6
+			shadow					8
+			sheen					0.06
+			decoration
 		}
 
 		itemDef
@@ -90,10 +106,10 @@
 			rect					10 35 103 30
 			font					5
 			textscale				0.67
-			textalignx				100
+			textalignx				12
 			textaligny				7.25
 			textstyle				0
-			textalign				ITEM_ALIGN_RIGHT
+			textalign				ITEM_ALIGN_LEFT
 			forecolor				0.86 0.92 0.97 1
 			visible					1
 			action
@@ -120,10 +136,10 @@
 			rect					10 65 103 30
 			font					5
 			textscale				0.67
-			textalignx				100
+			textalignx				12
 			textaligny				7.25
 			textstyle				0
-			textalign				ITEM_ALIGN_RIGHT
+			textalign				ITEM_ALIGN_LEFT
 			forecolor				0.86 0.92 0.97 1
 			visible					1
 			action
@@ -151,10 +167,10 @@
 			rect					10 95 103 30
 			font					5
 			textscale				0.67
-			textalignx				100
+			textalignx				12
 			textaligny				7.25
 			textstyle				0
-			textalign				ITEM_ALIGN_RIGHT
+			textalign				ITEM_ALIGN_LEFT
 			forecolor				0.86 0.92 0.97 1
 			visible					1
 			action
@@ -182,10 +198,10 @@
 			rect					10 125 103 30
 			font					5
 			textscale				0.67
-			textalignx				100
+			textalignx				12
 			textaligny				7.25
 			textstyle				0
-			textalign				ITEM_ALIGN_RIGHT
+			textalign				ITEM_ALIGN_LEFT
 			forecolor				0.86 0.92 0.97 1
 			visible					1
 			action
@@ -212,10 +228,10 @@
 			rect					10 155 103 30
 			font					5
 			textscale				0.67
-			textalignx				100
+			textalignx				12
 			textaligny				7.25
 			textstyle				0
-			textalign				ITEM_ALIGN_RIGHT
+			textalign				ITEM_ALIGN_LEFT
 			forecolor				0.86 0.92 0.97 1
 			visible					1
 			action
@@ -242,10 +258,10 @@
 			rect					10 185 103 30
 			font					5
 			textscale				0.67
-			textalignx				100
+			textalignx				12
 			textaligny				7.25
 			textstyle				0
-			textalign				ITEM_ALIGN_RIGHT
+			textalign				ITEM_ALIGN_LEFT
 			forecolor				0.86 0.92 0.97 1
 			visible					1
 			action
@@ -355,14 +371,14 @@
 			text					@MENUS_OKAY
 			descText				@MENUS_BEGIN_VOTE_FOR_THIS_GAME
 			type					1
-			style					WINDOW_STYLE_EMPTY
-			rect					140 186 80 30
+			style					WINDOW_STYLE_PANEL
+			rect					140 191 80 20
 			textalign				ITEM_ALIGN_CENTER
 			textalignx				40
-			textaligny				2.5
+			textaligny				4
 			font					5
-			textscale				0.74
-			forecolor				0.86 0.92 0.97 1
+			textscale				0.64
+			forecolor				1 1 1 1
 			visible					1
 			action
 			{
@@ -373,6 +389,9 @@
 			mouseEnter { show doneButton }
 			mouseExit { hide doneButton }
 			caps					1
+			radius					10
+			backcolor				0.43 0.83 1 0.20
+			bordercolor				0.43 0.83 1 0.75
 		}
 
 		itemDef
@@ -434,14 +453,14 @@
 			descText				@MENUS_BEGIN_VOTE_TO_SWITCH
 			type					1
 			group					grpCallVote
-			style					WINDOW_STYLE_EMPTY
-			rect					140 186 80 30
+			style					WINDOW_STYLE_PANEL
+			rect					140 191 80 20
 			textalign				ITEM_ALIGN_CENTER
 			textalignx				40
-			textaligny				2.5
+			textaligny				4
 			font					5
-			textscale				0.74
-			forecolor				0.86 0.92 0.97 1
+			textscale				0.64
+			forecolor				1 1 1 1
 			visible					1
 			action
 			{
@@ -452,6 +471,9 @@
 			mouseEnter { show doneButton }
 			mouseExit { hide doneButton }
 			caps					1
+			radius					10
+			backcolor				0.43 0.83 1 0.20
+			bordercolor				0.43 0.83 1 0.75
 		}
 
 		itemDef
@@ -512,14 +534,14 @@
 			descText				@MENUS_BEGIN_VOTE_TO_BANISH
 			type					1
 			group					grpCallVote
-			style					WINDOW_STYLE_EMPTY
-			rect					140 186 80 30
+			style					WINDOW_STYLE_PANEL
+			rect					140 191 80 20
 			textalign				ITEM_ALIGN_CENTER
 			textalignx				40
-			textaligny				2.5
+			textaligny				4
 			font					5
-			textscale				0.74
-			forecolor				0.86 0.92 0.97 1
+			textscale				0.64
+			forecolor				1 1 1 1
 			visible					1
 			action
 			{
@@ -530,6 +552,9 @@
 			mouseEnter { show doneButton }
 			mouseExit { hide doneButton }
 			caps					1
+			radius					10
+			backcolor				0.43 0.83 1 0.20
+			bordercolor				0.43 0.83 1 0.75
 		}
 
 		itemDef
@@ -590,14 +615,14 @@
 			descText				"CallVote Silence Him"
 			type					1
 			group					grpCallVote
-			style					WINDOW_STYLE_EMPTY
-			rect					140 186 80 30
+			style					WINDOW_STYLE_PANEL
+			rect					140 191 80 20
 			textalign				ITEM_ALIGN_CENTER
 			textalignx				40
-			textaligny				2.5
+			textaligny				4
 			font					5
-			textscale				0.74
-			forecolor				0.86 0.92 0.97 1
+			textscale				0.64
+			forecolor				1 1 1 1
 			visible					1
 			action
 			{
@@ -608,6 +633,9 @@
 			mouseEnter { show doneButton }
 			mouseExit { hide doneButton }
 			caps					1
+			radius					10
+			backcolor				0.43 0.83 1 0.20
+			bordercolor				0.43 0.83 1 0.75
 		}
 
 		itemDef
@@ -668,14 +696,14 @@
 			descText				"CallVote Sleep Him"
 			type					1
 			group					grpCallVote
-			style					WINDOW_STYLE_EMPTY
-			rect					140 186 80 30
+			style					WINDOW_STYLE_PANEL
+			rect					140 191 80 20
 			textalign				ITEM_ALIGN_CENTER
 			textalignx				40
-			textaligny				2.5
+			textaligny				4
 			font					5
-			textscale				0.74
-			forecolor				0.86 0.92 0.97 1
+			textscale				0.64
+			forecolor				1 1 1 1
 			visible					1
 			action
 			{
@@ -686,14 +714,12 @@
 			mouseEnter { show doneButton }
 			mouseExit { hide doneButton }
 			caps					1
+			radius					10
+			backcolor				0.43 0.83 1 0.20
+			bordercolor				0.43 0.83 1 0.75
 		}
 		skin					1
 		disableColor			0.36 0.42 0.50 1
 		openSlide				8
-		backcolor				0.035 0.07 0.12 0.80
-		bordercolor				0.43 0.83 1 0.28
-		radius					8
-		shadow					14
-		sheen					0.08
 	}
 }

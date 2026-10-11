@@ -8,11 +8,11 @@
 		rect					0 0 640 480
 		visible					1
 		focusColor				0.43 0.83 1 1
-		descX					320
-		descY					424
-		descScale				1
+		descX					40
+		descY					80
+		descScale				0.8
 		descColor				0.60 0.69 0.78 1
-		descAlignment			ITEM_ALIGN_CENTER
+		descAlignment			ITEM_ALIGN_LEFT
 		onEsc
 		{
 			play "sound/interface/esc.wav" ;
@@ -32,17 +32,82 @@
 
 		itemDef
 		{
+			name					vision_bar
+			rect					-1000 0 2640 34
+			visible					1
+			style					WINDOW_STYLE_FILLED
+			backcolor				0.02 0.04 0.08 0.55
+			decoration
+		}
+
+		itemDef
+		{
+			name					vision_bar_line
+			rect					-1000 34 2640 0.67
+			visible					1
+			style					WINDOW_STYLE_FILLED
+			backcolor				0.43 0.83 1 0.22
+			decoration
+		}
+
+		itemDef
+		{
+			name					vision_logo
+			rect					22 6 22 22
+			visible					1
+			type					ITEM_TYPE_LOGO
+			forecolor				1 1 1 1
+			decoration
+		}
+
+		itemDef
+		{
+			name					vision_mark
+			rect					50 7 120 20
+			visible					1
+			text					"VISIONJK"
+			font					5
+			textscale				1
+			forecolor				1 1 1 1
+			decoration
+		}
+
+		itemDef
+		{
+			name					vision_mark2
+			rect					138 12 160 14
+			visible					1
+			text					"JEDI ACADEMY"
+			font					5
+			textscale				0.5
+			forecolor				0.60 0.69 0.78 1
+			decoration
+		}
+
+		itemDef
+		{
+			name					vision_here
+			rect					340 31 52 2
+			visible					1
+			style					WINDOW_STYLE_PANEL
+			backcolor				0.43 0.83 1 1
+			radius					1
+			decoration
+		}
+
+		itemDef
+		{
 			name					title
 			group					none
 			style					WINDOW_STYLE_EMPTY
 			text					@MENUS_SOLO_GAME
-			rect					50 14 540 16
+			rect					40 46 400 28
 			font					5
-			textscale				0.74
-			textalign				ITEM_ALIGN_CENTER
-			textalignx				270
-			textaligny				1.5
-			forecolor				0.60 0.69 0.78 1
+			textscale				1.45
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				0
+			textaligny				2
+			forecolor				1 1 1 1
 			visible					1
 			decoration
 			caps					1
@@ -56,7 +121,7 @@
 			text					@MENUS_GAME_TYPE
 			descText				@MENUS_ALLOWS_YOU_TO_SELECT
 			textstyle				0
-			rect					170 60 300 32
+			rect					165 100 300 32
 			textalign				ITEM_ALIGN_RIGHT
 			textalignx				85
 			textaligny				0.5
@@ -81,7 +146,7 @@
 			group					none
 			style					WINDOW_STYLE_EMPTY
 			text					@MENUS_MAP_LISTING
-			rect					30 105 200 24
+			rect					25 145 200 24
 			font					5
 			textscale				0.67
 			textalign				ITEM_ALIGN_CENTER
@@ -96,7 +161,7 @@
 		itemDef
 		{
 			name					maplist
-			rect					35 125 194 250
+			rect					30 165 194 250
 			type					ITEM_TYPE_LISTBOX
 			style					WINDOW_STYLE_PANEL
 			elementwidth			120
@@ -126,7 +191,7 @@
 			name					setup_background
 			group					none
 			style					WINDOW_STYLE_PANEL
-			rect					280 104 340 280
+			rect					275 144 340 280
 			backcolor				0.035 0.07 0.12 0.55
 			forecolor				1 1 1 1
 			bordercolor				0.43 0.83 1 0.16
@@ -140,7 +205,7 @@
 			name					mappreview
 			style					WINDOW_STYLE_PANEL
 			ownerdraw				UI_STARTMAPCINEMATIC
-			rect					290 124 320 240
+			rect					285 164 320 240
 			bordercolor				0.43 0.83 1 0.16
 			visible					1
 			backcolor				0 0 0 0
@@ -153,11 +218,114 @@
 		{
 			name					mappreview
 			style					WINDOW_STYLE_PANEL
-			rect					289 123 322 242
+			rect					284 163 322 242
 			bordercolor				0.43 0.83 1 0.16
 			visible					1
 			backcolor				0 0 0 0
 			radius					5
+		}
+		skin					1
+		disableColor			0.36 0.42 0.50 1
+		backdrop				1
+
+		itemDef
+		{
+			name					newgamebutton
+			group					toprow
+			style					WINDOW_STYLE_EMPTY
+			type					ITEM_TYPE_BUTTON
+			rect					330 7 72 20
+			text					@MENUS_PLAY
+			descText				@MENUS_START_PLAYING_NOW
+			visible					1
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				close all ;
+				open multiplayermenu ;
+			}
+			font					5
+			textscale				0.66
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				36
+			textaligny				4
+			caps					1
+			forecolor				0.43 0.83 1 1
+		}
+
+		itemDef
+		{
+			name					profilebutton
+			group					toprow
+			style					WINDOW_STYLE_EMPTY
+			type					ITEM_TYPE_BUTTON
+			rect					404 7 72 20
+			text					@MENUS_PROFILE
+			descText				@MENUS_PROFILE_DESC
+			visible					1
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				close all ;
+				open playerMenu ;
+			}
+			font					5
+			textscale				0.66
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				36
+			textaligny				4
+			caps					1
+			forecolor				0.86 0.92 0.97 1
+		}
+
+		itemDef
+		{
+			name					controlsbutton
+			group					toprow
+			style					WINDOW_STYLE_EMPTY
+			type					ITEM_TYPE_BUTTON
+			rect					478 7 72 20
+			text					@MENUS_CONTROLS2
+			descText				@MENUS_CONFIGURE_GAME_CONTROLS
+			visible					1
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				close all ;
+				open controlsMenu ;
+			}
+			font					5
+			textscale				0.66
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				36
+			textaligny				4
+			caps					1
+			forecolor				0.86 0.92 0.97 1
+		}
+
+		itemDef
+		{
+			name					setupbutton
+			group					toprow
+			style					WINDOW_STYLE_EMPTY
+			type					ITEM_TYPE_BUTTON
+			rect					552 7 72 20
+			text					@MENUS_SETUP
+			descText				@MENUS_CONFIGURE_GAME_SETTINGS
+			visible					1
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				close all ;
+				open setup_menu ;
+			}
+			font					5
+			textscale				0.66
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				36
+			textaligny				4
+			caps					1
+			forecolor				0.86 0.92 0.97 1
 		}
 
 		itemDef
@@ -168,7 +336,7 @@
 			descText				@MENUS_BACKUP_ONE_MENU
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_PANEL
-			rect					69 446 110 22
+			rect					40 446 110 22
 			font					5
 			textscale				0.7
 			textalign				ITEM_ALIGN_CENTER
@@ -203,7 +371,7 @@
 			descText				@MENUS_LEAVE_JEDI_KNIGHT_II
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_PANEL
-			rect					265 446 110 22
+			rect					160 446 110 22
 			font					5
 			textscale				0.7
 			textalign				ITEM_ALIGN_CENTER
@@ -240,7 +408,7 @@
 			textscale				0.7
 			textstyle				0
 			style					WINDOW_STYLE_PANEL
-			rect					500 446 110 22
+			rect					490 446 110 22
 			textalign				ITEM_ALIGN_CENTER
 			textalignx				55
 			textaligny				4.5
@@ -263,8 +431,5 @@
 			bordercolor				0.43 0.83 1 0.75
 			radius					11
 		}
-		skin					1
-		disableColor			0.36 0.42 0.50 1
-		backdrop				1
 	}
 }

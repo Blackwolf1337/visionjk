@@ -9,10 +9,10 @@
 		outOfBoundsClick
 		rect					105 40 430 425
 		focusColor				0.43 0.83 1 1
-		style					WINDOW_STYLE_PANEL
-		descX					320
-		descY					450
-		descScale				1
+		style					WINDOW_STYLE_EMPTY
+		descX					315
+		descY					457
+		descScale				0.7
 		descColor				0.60 0.69 0.78 1
 		descAlignment			ITEM_ALIGN_CENTER
 		onOpen { uiScript setForce "none" }
@@ -24,13 +24,15 @@
 			name					background_pic
 			group					none
 			style					WINDOW_STYLE_PANEL
-			rect					0 0 430 425
+			rect					0 0 420 412
 			forecolor				1 1 1 1
 			visible					1
 			decoration
-			backcolor				0.035 0.07 0.12 0.55
-			bordercolor				0.43 0.83 1 0.16
-			radius					5
+			backcolor				0.035 0.07 0.12 0.94
+			bordercolor				0.43 0.83 1 0.28
+			radius					8
+			shadow					14
+			sheen					0.08
 		}
 
 		itemDef
@@ -89,18 +91,6 @@
 			forecolor				0.86 0.92 0.97 1
 			border					0
 			bordercolor				0 0 0 0
-			visible					1
-			decoration
-		}
-
-		itemDef
-		{
-			name					forcedivdark
-			group					darkpowers
-			style					WINDOW_STYLE_SHADER
-			rect					00 85 225 20
-			background				"gfx/menus/menu_blendboxr"
-			forecolor				1 1 1 1
 			visible					1
 			decoration
 		}
@@ -793,7 +783,7 @@
 			textaligny				1
 			font					5
 			textscale				0.68
-			forecolor				1 0.2 0.2 1
+			forecolor				1 0.45 0.42 1
 			outlinecolor			1 .5 .5 .5
 			backcolor				0 0 0 0
 			border					0
@@ -815,14 +805,14 @@
 			textscale				0.21
 			outlinecolor			1 .5 .5 .5
 			backcolor				0 0 0 0
-			forecolor				1 0.2 0.2 1
+			forecolor				1 0.45 0.42 1
 			border					0
 			bordercolor				0 0 0 0
 			descText				@MENUS_IMMOBILIZE_OPPONENTS
 			visible					1
 			action { play "sound/interface/button1.wav" ; }
 			mouseenter { setitemcolor setfp_grip forecolor 1 0.7 0.7 1 }
-			mouseexit { setitemcolor setfp_grip forecolor 1 0.2 0.2 1 }
+			mouseexit { setitemcolor setfp_grip forecolor 1 0.45 0.42 1 }
 			font					5
 		}
 
@@ -838,7 +828,7 @@
 			textaligny				1
 			font					5
 			textscale				0.68
-			forecolor				1 0.2 0.2 1
+			forecolor				1 0.45 0.42 1
 			outlinecolor			1 .5 .5 .5
 			backcolor				0 0 0 0
 			border					0
@@ -859,14 +849,14 @@
 			textaligny				-5.17
 			outlinecolor			1 .5 .5 .5
 			backcolor				0 0 0 0
-			forecolor				1 0.2 0.2 1
+			forecolor				1 0.45 0.42 1
 			border					0
 			bordercolor				0 0 0 0
 			descText				@MENUS_DRAIN_THE_FORCE_POWER
 			visible					1
 			action { play "sound/interface/button1.wav" ; }
 			mouseenter { setitemcolor setfp_drain forecolor 1 0.7 0.7 1 }
-			mouseexit { setitemcolor setfp_drain forecolor 1 0.2 0.2 1 }
+			mouseexit { setitemcolor setfp_drain forecolor 1 0.45 0.42 1 }
 			font					5
 			textscale				0.47
 		}
@@ -883,7 +873,7 @@
 			textaligny				1
 			font					5
 			textscale				0.68
-			forecolor				1 0.2 0.2 1
+			forecolor				1 0.45 0.42 1
 			outlinecolor			1 .5 .5 .5
 			backcolor				0 0 0 0
 			border					0
@@ -905,14 +895,14 @@
 			textscale				0.21
 			outlinecolor			1 .5 .5 .5
 			backcolor				0 0 0 0
-			forecolor				1 0.2 0.2 1
+			forecolor				1 0.45 0.42 1
 			border					0
 			bordercolor				0 0 0 0
 			descText				@MENUS_UNLEASH_DEADLY_ELECTRICAL
 			visible					1
 			action { play "sound/interface/button1.wav" ; }
 			mouseenter { setitemcolor setfp_lightning forecolor 1 0.7 0.7 1 }
-			mouseexit { setitemcolor setfp_lightning forecolor 1 0.2 0.2 1 }
+			mouseexit { setitemcolor setfp_lightning forecolor 1 0.45 0.42 1 }
 			font					5
 		}
 
@@ -928,7 +918,7 @@
 			textaligny				1
 			font					5
 			textscale				0.68
-			forecolor				1 0.2 0.2 1
+			forecolor				1 0.45 0.42 1
 			outlinecolor			1 .5 .5 .5
 			backcolor				0 0 0 0
 			border					0
@@ -950,14 +940,14 @@
 			textscale				0.21
 			outlinecolor			1 .5 .5 .5
 			backcolor				0 0 0 0
-			forecolor				1 0.2 0.2 1
+			forecolor				1 0.45 0.42 1
 			border					0
 			bordercolor				0 0 0 0
 			descText				@MENUS_BECOME_A_NEARLY_UNSTOPPABLE
 			visible					1
 			action { play "sound/interface/button1.wav" ; }
 			mouseenter { setitemcolor setfp_rage forecolor 1 0.7 0.7 1 }
-			mouseexit { setitemcolor setfp_rage forecolor 1 0.2 0.2 1 }
+			mouseexit { setitemcolor setfp_rage forecolor 1 0.45 0.42 1 }
 			font					5
 		}
 
@@ -973,7 +963,7 @@
 			textaligny				1
 			font					5
 			textscale				0.68
-			forecolor				1 0.2 0.2 1
+			forecolor				1 0.45 0.42 1
 			outlinecolor			1 .5 .5 .5
 			backcolor				0 0 0 0
 			border					0
@@ -1004,7 +994,7 @@
 			textscale				0.21
 			outlinecolor			1 .5 .5 .5
 			backcolor				0 0 0 0
-			forecolor				1 0.2 0.2 1
+			forecolor				1 0.45 0.42 1
 			border					0
 			bordercolor				0 0 0 0
 			descText				@MENUS_THE_FORCE_TO_BOOST_THE
@@ -1020,7 +1010,7 @@
 			}
 			action { play "sound/interface/button1.wav" ; }
 			mouseenter { setitemcolor setfp_powerother forecolor 1 0.7 0.7 1 }
-			mouseexit { setitemcolor setfp_powerother forecolor 1 0.2 0.2 1 }
+			mouseexit { setitemcolor setfp_powerother forecolor 1 0.45 0.42 1 }
 			font					5
 		}
 
@@ -1173,7 +1163,7 @@
 			textaligny				1
 			font					5
 			textscale				0.68
-			forecolor				0.5 0.5 0.5 1
+			forecolor				0.36 0.42 0.50 1
 			outlinecolor			1 .5 .5 .5
 			backcolor				0 0 0 0
 			border					0
@@ -1198,7 +1188,7 @@
 			textaligny				1
 			font					5
 			textscale				0.68
-			forecolor				0.5 0.5 0.5 1
+			forecolor				0.36 0.42 0.50 1
 			border					0
 			bordercolor				0 0 0 0
 			descText				@MENUS_MUST_ACQUIRE_A_MINIMUM
@@ -1224,14 +1214,14 @@
 			group					"playerforcejoin"
 			text					@MENUS_APPLY_POWERS
 			type					1
-			style					WINDOW_STYLE_EMPTY
-			rect					140 370 150 32
-			textalign				1
-			textalignx				75
-			textaligny				3.5
+			style					WINDOW_STYLE_PANEL
+			rect					160 376 110 20
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				55
+			textaligny				4
 			font					5
-			textscale				0.86
-			forecolor				0.86 0.92 0.97 1
+			textscale				0.64
+			forecolor				1 1 1 1
 			descText				@MENUS_MAKE_THESE_CHANGES_TO
 			visible					1
 			action
@@ -1243,14 +1233,13 @@
 			}
 			mouseEnter { show applyjoinbutton }
 			mouseExit { hide applyjoinbutton }
+			caps					1
+			radius					10
+			backcolor				0.43 0.83 1 0.20
+			bordercolor				0.43 0.83 1 0.75
 		}
 		skin					1
 		disableColor			0.36 0.42 0.50 1
 		openSlide				8
-		backcolor				0.035 0.07 0.12 0.80
-		bordercolor				0.43 0.83 1 0.28
-		radius					8
-		shadow					14
-		sheen					0.08
 	}
 }

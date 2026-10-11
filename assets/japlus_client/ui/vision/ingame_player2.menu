@@ -7,12 +7,12 @@
 		visible					0
 		fullscreen				0
 		outOfBoundsClick
-		rect					105 40 430 425
+		rect					105 40 474 425
 		focusColor				0.43 0.83 1 1
-		style					WINDOW_STYLE_PANEL
-		descX					320
-		descY					450
-		descScale				1
+		style					WINDOW_STYLE_EMPTY
+		descX					342
+		descY					457
+		descScale				0.7
 		descColor				0.60 0.69 0.78 1
 		descAlignment			ITEM_ALIGN_CENTER
 		onOpen
@@ -33,13 +33,15 @@
 			name					background_pic
 			group					none
 			style					WINDOW_STYLE_PANEL
-			rect					0 0 430 425
+			rect					0 0 474 412
 			forecolor				1 1 1 1
 			visible					1
 			decoration
-			backcolor				0.035 0.07 0.12 0.55
-			bordercolor				0.43 0.83 1 0.16
-			radius					5
+			backcolor				0.035 0.07 0.12 0.94
+			bordercolor				0.43 0.83 1 0.28
+			radius					8
+			shadow					14
+			sheen					0.08
 		}
 
 		itemDef
@@ -311,7 +313,7 @@
 			textaligny				-1
 			font					5
 			textscale				0.68
-			forecolor				0.43 0.83 1 1
+			forecolor				0.60 0.69 0.78 1
 			outlinecolor			1 .5 .5 .5
 			backcolor				0 0 0 0
 			bordercolor				0.43 0.83 1 0.16
@@ -339,7 +341,7 @@
 			textaligny				-1
 			font					5
 			textscale				0.68
-			forecolor				0.43 0.83 1 1
+			forecolor				0.60 0.69 0.78 1
 			outlinecolor			1 .5 .5 .5
 			backcolor				0 0 0 0
 			bordercolor				0.43 0.83 1 0.16
@@ -367,7 +369,7 @@
 			textaligny				-1
 			font					5
 			textscale				0.68
-			forecolor				0.43 0.83 1 1
+			forecolor				0.60 0.69 0.78 1
 			outlinecolor			1 .5 .5 .5
 			backcolor				0 0 0 0
 			bordercolor				0.43 0.83 1 0.16
@@ -572,14 +574,14 @@
 			text					@MENUS_BACK
 			descText				@MENUS_RETURN_PREVIOUS
 			type					ITEM_TYPE_BUTTON
-			style					WINDOW_STYLE_EMPTY
-			rect					30 370 110 32
+			style					WINDOW_STYLE_PANEL
+			rect					30 376 110 20
 			font					5
-			textscale				0.77
+			textscale				0.64
 			textalign				ITEM_ALIGN_CENTER
 			textstyle				0
 			textalignx				55
-			textaligny				3.35
+			textaligny				4
 			forecolor				0.86 0.92 0.97 1
 			visible					1
 			mouseEnter { show backButton }
@@ -590,6 +592,10 @@
 				close ingame_player2 ;
 				open ingame_player ;
 			}
+			caps					1
+			radius					10
+			backcolor				1 1 1 0.05
+			bordercolor				0.43 0.83 1 0.16
 		}
 
 		itemDef
@@ -598,14 +604,14 @@
 			group					"playerapply"
 			text					@MENUS_APPLY
 			type					1
-			style					WINDOW_STYLE_EMPTY
-			rect					290 370 110 32
+			style					WINDOW_STYLE_PANEL
+			rect					290 376 110 20
 			textalign				ITEM_ALIGN_CENTER
 			textalignx				55
-			textaligny				3.35
+			textaligny				4
 			font					5
-			textscale				0.77
-			forecolor				0.86 0.92 0.97 1
+			textscale				0.64
+			forecolor				1 1 1 1
 			descText				@MENUS_APPLY_CHANGES_AND_JOIN
 			visible					1
 			action
@@ -618,14 +624,13 @@
 			}
 			mouseEnter { show applyjoinButton }
 			mouseExit { hide applyjoinButton }
+			caps					1
+			radius					10
+			backcolor				0.43 0.83 1 0.20
+			bordercolor				0.43 0.83 1 0.75
 		}
 		skin					1
 		disableColor			0.36 0.42 0.50 1
 		openSlide				8
-		backcolor				0.035 0.07 0.12 0.80
-		bordercolor				0.43 0.83 1 0.28
-		radius					8
-		shadow					14
-		sheen					0.08
 	}
 }

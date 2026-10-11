@@ -215,6 +215,11 @@ def drop(block, key):
     block[:] = [e for e in block if e.k != key]
 
 
+def truth(args):
+    """Whether the arguments of a key say yes: 1 or MENU_TRUE."""
+    return bool(args) and args[0].lower() not in ('0', 'menu_false')
+
+
 def unquote(s):
     return s[1:-1] if s and s[0] == '"' and s[-1] == '"' else s
 

@@ -40,10 +40,10 @@
 			disable team2_button 0
 			setitemcolor team1_button backcolor .8 .48 0 1
 			setitemcolor team2_button backcolor .8 .48 0 1
-			setitemcolor team1name forecolor .8 .48 0 1
-			setitemcolor team2name forecolor .8 .48 0 1
-			setitemcolor team1_count forecolor .8 .48 0 1
-			setitemcolor team2_count forecolor .8 .48 0 1
+			setitemcolor team1name forecolor 0.86 0.92 0.97 1
+			setitemcolor team2name forecolor 0.86 0.92 0.97 1
+			setitemcolor team1_count forecolor 0.86 0.92 0.97 1
+			setitemcolor team2_count forecolor 0.86 0.92 0.97 1
 			setitemcolor siegeclassconfigtitle forecolor 0.86 0.92 0.97 1
 			setitemcolor team1obj_buttons bordercolor 0 0 0 0
 			setitemcolor team2obj_buttons bordercolor 0 0 0 0
@@ -61,9 +61,9 @@
 			setitemtext obj_longdesc "*team1_objective1_longdesc"
 			setitembackground objective_pic "*team1_objective1_gfx"
 			setitembackground tm1_icon1 "*team1_objective1_mapicon"
-			setitemcolor team1obj_buttons forecolor .75 .75 .75 1
+			setitemcolor team1obj_buttons forecolor 0.86 0.92 0.97 1
 			setitemcolor team1obj_buttons backcolor .7 0 0 1
-			setitemcolor team2obj_buttons forecolor .75 .75 .75 1
+			setitemcolor team2obj_buttons forecolor 0.86 0.92 0.97 1
 			setitemcolor team2obj_buttons backcolor 0 0 .7 1
 			setitemcolor mapicons bordercolor 0 0 0 0
 			setitemcolor team1obj1_button bordercolor 1 1 1 1
@@ -197,7 +197,7 @@
 			textalignx				12
 			textaligny				0.2
 			backcolor				0.43 0.83 1 0.14
-			forecolor				.75 .75 .75 1
+			forecolor				0.86 0.92 0.97 1
 			visible					1
 			bordercolor				0 0 0 0
 			mouseEnter
@@ -207,7 +207,7 @@
 			}
 			mouseExit
 			{
-				setitemcolor team1obj1_button forecolor .75 .75 .75 1
+				setitemcolor team1obj1_button forecolor 0.86 0.92 0.97 1
 				setitemcolor team1obj1_button backcolor .7 0 0 1
 			}
 			action
@@ -218,9 +218,9 @@
 				setitemtext obj_minidesc @MENUS_OBJECTIVE_1
 				setitemtext obj_longdesc "*team1_objective1_longdesc"
 				setitembackground objective_pic "*team1_objective1_gfx"
-				setitemcolor team1obj_buttons forecolor .75 .75 .75 1
+				setitemcolor team1obj_buttons forecolor 0.86 0.92 0.97 1
 				setitemcolor team1obj_buttons backcolor .7 0 0 1
-				setitemcolor team2obj_buttons forecolor .75 .75 .75 1
+				setitemcolor team2obj_buttons forecolor 0.86 0.92 0.97 1
 				setitemcolor team2obj_buttons backcolor 0 0 .7 1
 				setitemcolor team1obj_buttons bordercolor 0 0 0 0
 				setitemcolor team2obj_buttons bordercolor 0 0 0 0
@@ -249,7 +249,7 @@
 			textalignx				12
 			textaligny				0.2
 			backcolor				0.43 0.83 1 0.14
-			forecolor				.75 .75 .75 1
+			forecolor				0.86 0.92 0.97 1
 			visible					1
 			bordercolor				0 0 0 0
 			cvartest				"team1_objective2_inuse"
@@ -261,7 +261,7 @@
 			}
 			mouseExit
 			{
-				setitemcolor team1obj2_button forecolor .75 .75 .75 1
+				setitemcolor team1obj2_button forecolor 0.86 0.92 0.97 1
 				setitemcolor team1obj2_button backcolor .7 0 0 1
 			}
 			action
@@ -272,9 +272,9 @@
 				setitemtext obj_minidesc @MENUS_OBJECTIVE_2
 				setitemtext obj_longdesc "*team1_objective2_longdesc"
 				setitembackground objective_pic "*team1_objective2_gfx"
-				setitemcolor team1obj_buttons forecolor .75 .75 .75 1
+				setitemcolor team1obj_buttons forecolor 0.86 0.92 0.97 1
 				setitemcolor team1obj_buttons backcolor .7 0 0 1
-				setitemcolor team2obj_buttons forecolor .75 .75 .75 1
+				setitemcolor team2obj_buttons forecolor 0.86 0.92 0.97 1
 				setitemcolor team2obj_buttons backcolor 0 0 .7 1
 				setitemcolor team1obj_buttons bordercolor 0 0 0 0
 				setitemcolor team2obj_buttons bordercolor 0 0 0 0
@@ -303,7 +303,7 @@
 			textalignx				12
 			textaligny				0.2
 			backcolor				0.43 0.83 1 0.14
-			forecolor				.75 .75 .75 1
+			forecolor				0.86 0.92 0.97 1
 			visible					1
 			bordercolor				0 0 0 0
 			cvartest				"team1_objective3_inuse"
@@ -315,7 +315,7 @@
 			}
 			mouseExit
 			{
-				setitemcolor team1obj3_button forecolor .75 .75 .75 1
+				setitemcolor team1obj3_button forecolor 0.86 0.92 0.97 1
 				setitemcolor team1obj3_button backcolor .7 0 0 1
 			}
 			action
@@ -326,9 +326,9 @@
 				setitemtext obj_minidesc @MENUS_OBJECTIVE_3
 				setitemtext obj_longdesc "*team1_objective3_longdesc"
 				setitembackground objective_pic "*team1_objective3_gfx"
-				setitemcolor team1obj_buttons forecolor .75 .75 .75 1
+				setitemcolor team1obj_buttons forecolor 0.86 0.92 0.97 1
 				setitemcolor team1obj_buttons backcolor .7 0 0 1
-				setitemcolor team2obj_buttons forecolor .75 .75 .75 1
+				setitemcolor team2obj_buttons forecolor 0.86 0.92 0.97 1
 				setitemcolor team2obj_buttons backcolor 0 0 .7 1
 				setitemcolor team1obj_buttons bordercolor 0 0 0 0
 				setitemcolor team2obj_buttons bordercolor 0 0 0 0
@@ -357,7 +357,7 @@
 			textalignx				12
 			textaligny				0.2
 			backcolor				0.43 0.83 1 0.14
-			forecolor				.75 .75 .75 1
+			forecolor				0.86 0.92 0.97 1
 			visible					1
 			bordercolor				0 0 0 0
 			cvartest				"team1_objective4_inuse"
@@ -369,7 +369,7 @@
 			}
 			mouseExit
 			{
-				setitemcolor team1obj4_button forecolor .75 .75 .75 1
+				setitemcolor team1obj4_button forecolor 0.86 0.92 0.97 1
 				setitemcolor team1obj4_button backcolor .7 0 0 1
 			}
 			action
@@ -380,9 +380,9 @@
 				setitemtext obj_minidesc @MENUS_OBJECTIVE_4
 				setitemtext obj_longdesc "*team1_objective4_longdesc"
 				setitembackground objective_pic "*team1_objective4_gfx"
-				setitemcolor team1obj_buttons forecolor .75 .75 .75 1
+				setitemcolor team1obj_buttons forecolor 0.86 0.92 0.97 1
 				setitemcolor team1obj_buttons backcolor .7 0 0 1
-				setitemcolor team2obj_buttons forecolor .75 .75 .75 1
+				setitemcolor team2obj_buttons forecolor 0.86 0.92 0.97 1
 				setitemcolor team2obj_buttons backcolor 0 0 .7 1
 				setitemcolor team1obj_buttons bordercolor 0 0 0 0
 				setitemcolor team2obj_buttons bordercolor 0 0 0 0
@@ -411,7 +411,7 @@
 			textalignx				12
 			textaligny				0.2
 			backcolor				0.43 0.83 1 0.14
-			forecolor				.75 .75 .75 1
+			forecolor				0.86 0.92 0.97 1
 			visible					1
 			bordercolor				0 0 0 0
 			cvartest				"team1_objective5_inuse"
@@ -423,7 +423,7 @@
 			}
 			mouseExit
 			{
-				setitemcolor team1obj5_button forecolor .75 .75 .75 1
+				setitemcolor team1obj5_button forecolor 0.86 0.92 0.97 1
 				setitemcolor team1obj5_button backcolor .7 0 0 1
 			}
 			action
@@ -434,9 +434,9 @@
 				setitemtext obj_minidesc @MENUS_OBJECTIVE_5
 				setitemtext obj_longdesc "*team1_objective5_longdesc"
 				setitembackground objective_pic "*team1_objective5_gfx"
-				setitemcolor team1obj_buttons forecolor .75 .75 .75 1
+				setitemcolor team1obj_buttons forecolor 0.86 0.92 0.97 1
 				setitemcolor team1obj_buttons backcolor .7 0 0 1
-				setitemcolor team2obj_buttons forecolor .75 .75 .75 1
+				setitemcolor team2obj_buttons forecolor 0.86 0.92 0.97 1
 				setitemcolor team2obj_buttons backcolor 0 0 .7 1
 				setitemcolor team1obj_buttons bordercolor 0 0 0 0
 				setitemcolor team2obj_buttons bordercolor 0 0 0 0
@@ -465,7 +465,7 @@
 			textalignx				12
 			textaligny				0.2
 			backcolor				0.43 0.83 1 0.14
-			forecolor				.75 .75 .75 1
+			forecolor				0.86 0.92 0.97 1
 			visible					1
 			bordercolor				0 0 0 0
 			cvartest				"team1_objective6_inuse"
@@ -477,7 +477,7 @@
 			}
 			mouseExit
 			{
-				setitemcolor team1obj6_button forecolor .75 .75 .75 1
+				setitemcolor team1obj6_button forecolor 0.86 0.92 0.97 1
 				setitemcolor team1obj6_button backcolor .7 0 0 1
 			}
 			action
@@ -488,9 +488,9 @@
 				setitemtext obj_minidesc @MENUS_OBJECTIVE_6
 				setitemtext obj_longdesc "*team1_objective6_longdesc"
 				setitembackground objective_pic "*team1_objective6_gfx"
-				setitemcolor team1obj_buttons forecolor .75 .75 .75 1
+				setitemcolor team1obj_buttons forecolor 0.86 0.92 0.97 1
 				setitemcolor team1obj_buttons backcolor .7 0 0 1
-				setitemcolor team2obj_buttons forecolor .75 .75 .75 1
+				setitemcolor team2obj_buttons forecolor 0.86 0.92 0.97 1
 				setitemcolor team2obj_buttons backcolor 0 0 .7 1
 				setitemcolor team1obj_buttons bordercolor 0 0 0 0
 				setitemcolor team2obj_buttons bordercolor 0 0 0 0
@@ -519,7 +519,7 @@
 			textalignx				12
 			textaligny				0.2
 			backcolor				0.43 0.83 1 0.14
-			forecolor				.75 .75 .75 1
+			forecolor				0.86 0.92 0.97 1
 			visible					1
 			bordercolor				0 0 0 0
 			cvartest				"team1_objective7_inuse"
@@ -531,7 +531,7 @@
 			}
 			mouseExit
 			{
-				setitemcolor team1obj7_button forecolor .75 .75 .75 1
+				setitemcolor team1obj7_button forecolor 0.86 0.92 0.97 1
 				setitemcolor team1obj7_button backcolor .7 0 0 1
 			}
 			action
@@ -542,9 +542,9 @@
 				setitemtext obj_minidesc @MENUS_OBJECTIVE_7
 				setitemtext obj_longdesc "*team1_objective7_longdesc"
 				setitembackground objective_pic "*team1_objective7_gfx"
-				setitemcolor team1obj_buttons forecolor .75 .75 .75 1
+				setitemcolor team1obj_buttons forecolor 0.86 0.92 0.97 1
 				setitemcolor team1obj_buttons backcolor .7 0 0 1
-				setitemcolor team2obj_buttons forecolor .75 .75 .75 1
+				setitemcolor team2obj_buttons forecolor 0.86 0.92 0.97 1
 				setitemcolor team2obj_buttons backcolor 0 0 .7 1
 				setitemcolor team1obj_buttons bordercolor 0 0 0 0
 				setitemcolor team2obj_buttons bordercolor 0 0 0 0
@@ -573,7 +573,7 @@
 			textalignx				12
 			textaligny				0.2
 			backcolor				0.43 0.83 1 0.14
-			forecolor				.75 .75 .75 1
+			forecolor				0.86 0.92 0.97 1
 			visible					1
 			bordercolor				0 0 0 0
 			cvartest				"team1_objective8_inuse"
@@ -585,7 +585,7 @@
 			}
 			mouseExit
 			{
-				setitemcolor team1obj8_button forecolor .75 .75 .75 1
+				setitemcolor team1obj8_button forecolor 0.86 0.92 0.97 1
 				setitemcolor team1obj8_button backcolor .7 0 0 1
 			}
 			action
@@ -596,9 +596,9 @@
 				setitemtext obj_minidesc @MENUS_OBJECTIVE_8
 				setitemtext obj_longdesc "*team1_objective8_longdesc"
 				setitembackground objective_pic "*team1_objective8_gfx"
-				setitemcolor team1obj_buttons forecolor .75 .75 .75 1
+				setitemcolor team1obj_buttons forecolor 0.86 0.92 0.97 1
 				setitemcolor team1obj_buttons backcolor .7 0 0 1
-				setitemcolor team2obj_buttons forecolor .75 .75 .75 1
+				setitemcolor team2obj_buttons forecolor 0.86 0.92 0.97 1
 				setitemcolor team2obj_buttons backcolor 0 0 .7 1
 				setitemcolor team1obj_buttons bordercolor 0 0 0 0
 				setitemcolor team2obj_buttons bordercolor 0 0 0 0
@@ -773,7 +773,7 @@
 			}
 			mouseExit
 			{
-				setitemcolor team2obj1_button forecolor .75 .75 .75 1
+				setitemcolor team2obj1_button forecolor 0.86 0.92 0.97 1
 				setitemcolor team2obj1_button backcolor 0 0 .7 1
 			}
 			action
@@ -784,9 +784,9 @@
 				setitemtext obj_minidesc @MENUS_OBJECTIVE_1
 				setitemtext obj_longdesc "*team2_objective1_longdesc"
 				setitembackground objective_pic "*team2_objective1_gfx"
-				setitemcolor team1obj_buttons forecolor .75 .75 .75 1
+				setitemcolor team1obj_buttons forecolor 0.86 0.92 0.97 1
 				setitemcolor team1obj_buttons backcolor .7 0 0 1
-				setitemcolor team2obj_buttons forecolor .75 .75 .75 1
+				setitemcolor team2obj_buttons forecolor 0.86 0.92 0.97 1
 				setitemcolor team2obj_buttons backcolor 0 0 .7 1
 				setitemcolor team1obj_buttons bordercolor 0 0 0 0
 				setitemcolor team2obj_buttons bordercolor 0 0 0 0
@@ -827,7 +827,7 @@
 			}
 			mouseExit
 			{
-				setitemcolor team2obj2_button forecolor .75 .75 .75 1
+				setitemcolor team2obj2_button forecolor 0.86 0.92 0.97 1
 				setitemcolor team2obj2_button backcolor 0 0 .7 1
 			}
 			action
@@ -838,9 +838,9 @@
 				setitemtext obj_minidesc @MENUS_OBJECTIVE_2
 				setitemtext obj_longdesc "*team2_objective2_longdesc"
 				setitembackground objective_pic "*team2_objective2_gfx"
-				setitemcolor team1obj_buttons forecolor .75 .75 .75 1
+				setitemcolor team1obj_buttons forecolor 0.86 0.92 0.97 1
 				setitemcolor team1obj_buttons backcolor .7 0 0 1
-				setitemcolor team2obj_buttons forecolor .75 .75 .75 1
+				setitemcolor team2obj_buttons forecolor 0.86 0.92 0.97 1
 				setitemcolor team2obj_buttons backcolor 0 0 .7 1
 				setitemcolor team1obj_buttons bordercolor 0 0 0 0
 				setitemcolor team2obj_buttons bordercolor 0 0 0 0
@@ -881,7 +881,7 @@
 			}
 			mouseExit
 			{
-				setitemcolor team2obj3_button forecolor .75 .75 .75 1
+				setitemcolor team2obj3_button forecolor 0.86 0.92 0.97 1
 				setitemcolor team2obj3_button backcolor 0 0 .7 1
 			}
 			action
@@ -892,9 +892,9 @@
 				setitemtext obj_minidesc @MENUS_OBJECTIVE_3
 				setitemtext obj_longdesc "*team2_objective3_longdesc"
 				setitembackground objective_pic "*team2_objective3_gfx"
-				setitemcolor team1obj_buttons forecolor .75 .75 .75 1
+				setitemcolor team1obj_buttons forecolor 0.86 0.92 0.97 1
 				setitemcolor team1obj_buttons backcolor .7 0 0 1
-				setitemcolor team2obj_buttons forecolor .75 .75 .75 1
+				setitemcolor team2obj_buttons forecolor 0.86 0.92 0.97 1
 				setitemcolor team2obj_buttons backcolor 0 0 .7 1
 				setitemcolor team1obj_buttons bordercolor 0 0 0 0
 				setitemcolor team2obj_buttons bordercolor 0 0 0 0
@@ -935,7 +935,7 @@
 			}
 			mouseExit
 			{
-				setitemcolor team2obj4_button forecolor .75 .75 .75 1
+				setitemcolor team2obj4_button forecolor 0.86 0.92 0.97 1
 				setitemcolor team2obj4_button backcolor 0 0 .7 1
 			}
 			action
@@ -946,9 +946,9 @@
 				setitemtext obj_minidesc @MENUS_OBJECTIVE_4
 				setitemtext obj_longdesc "*team2_objective4_longdesc"
 				setitembackground objective_pic "*team2_objective4_gfx"
-				setitemcolor team1obj_buttons forecolor .75 .75 .75 1
+				setitemcolor team1obj_buttons forecolor 0.86 0.92 0.97 1
 				setitemcolor team1obj_buttons backcolor .7 0 0 1
-				setitemcolor team2obj_buttons forecolor .75 .75 .75 1
+				setitemcolor team2obj_buttons forecolor 0.86 0.92 0.97 1
 				setitemcolor team2obj_buttons backcolor 0 0 .7 1
 				setitemcolor team1obj_buttons bordercolor 0 0 0 0
 				setitemcolor team2obj_buttons bordercolor 0 0 0 0
@@ -989,7 +989,7 @@
 			}
 			mouseExit
 			{
-				setitemcolor team2obj5_button forecolor .75 .75 .75 1
+				setitemcolor team2obj5_button forecolor 0.86 0.92 0.97 1
 				setitemcolor team2obj5_button backcolor 0 0 .7 1
 			}
 			action
@@ -1000,9 +1000,9 @@
 				setitemtext obj_minidesc @MENUS_OBJECTIVE_5
 				setitemtext obj_longdesc "*team2_objective5_longdesc"
 				setitembackground objective_pic "*team2_objective5_gfx"
-				setitemcolor team1obj_buttons forecolor .75 .75 .75 1
+				setitemcolor team1obj_buttons forecolor 0.86 0.92 0.97 1
 				setitemcolor team1obj_buttons backcolor .7 0 0 1
-				setitemcolor team2obj_buttons forecolor .75 .75 .75 1
+				setitemcolor team2obj_buttons forecolor 0.86 0.92 0.97 1
 				setitemcolor team2obj_buttons backcolor 0 0 .7 1
 				setitemcolor team1obj_buttons bordercolor 0 0 0 0
 				setitemcolor team2obj_buttons bordercolor 0 0 0 0
@@ -1043,7 +1043,7 @@
 			}
 			mouseExit
 			{
-				setitemcolor team2obj6_button forecolor .75 .75 .75 1
+				setitemcolor team2obj6_button forecolor 0.86 0.92 0.97 1
 				setitemcolor team2obj6_button backcolor 0 0 .7 1
 			}
 			action
@@ -1054,9 +1054,9 @@
 				setitemtext obj_minidesc @MENUS_OBJECTIVE_6
 				setitemtext obj_longdesc "*team2_objective6_longdesc"
 				setitembackground objective_pic "*team2_objective6_gfx"
-				setitemcolor team1obj_buttons forecolor .75 .75 .75 1
+				setitemcolor team1obj_buttons forecolor 0.86 0.92 0.97 1
 				setitemcolor team1obj_buttons backcolor .7 0 0 1
-				setitemcolor team2obj_buttons forecolor .75 .75 .75 1
+				setitemcolor team2obj_buttons forecolor 0.86 0.92 0.97 1
 				setitemcolor team2obj_buttons backcolor 0 0 .7 1
 				setitemcolor team1obj_buttons bordercolor 0 0 0 0
 				setitemcolor team2obj_buttons bordercolor 0 0 0 0
@@ -1097,7 +1097,7 @@
 			}
 			mouseExit
 			{
-				setitemcolor team2obj7_button forecolor .75 .75 .75 1
+				setitemcolor team2obj7_button forecolor 0.86 0.92 0.97 1
 				setitemcolor team2obj7_button backcolor 0 0 .7 1
 			}
 			action
@@ -1108,9 +1108,9 @@
 				setitemtext obj_minidesc @MENUS_OBJECTIVE_7
 				setitemtext obj_longdesc "*team2_objective7_longdesc"
 				setitembackground objective_pic "*team2_objective7_gfx"
-				setitemcolor team1obj_buttons forecolor .75 .75 .75 1
+				setitemcolor team1obj_buttons forecolor 0.86 0.92 0.97 1
 				setitemcolor team1obj_buttons backcolor .7 0 0 1
-				setitemcolor team2obj_buttons forecolor .75 .75 .75 1
+				setitemcolor team2obj_buttons forecolor 0.86 0.92 0.97 1
 				setitemcolor team2obj_buttons backcolor 0 0 .7 1
 				setitemcolor team1obj_buttons bordercolor 0 0 0 0
 				setitemcolor team2obj_buttons bordercolor 0 0 0 0
@@ -1151,7 +1151,7 @@
 			}
 			mouseExit
 			{
-				setitemcolor team2obj8_button forecolor .75 .75 .75 1
+				setitemcolor team2obj8_button forecolor 0.86 0.92 0.97 1
 				setitemcolor team2obj8_button backcolor 0 0 .7 1
 			}
 			action
@@ -1162,9 +1162,9 @@
 				setitemtext obj_minidesc @MENUS_OBJECTIVE_8
 				setitemtext obj_longdesc "*team2_objective8_longdesc"
 				setitembackground objective_pic "*team2_objective8_gfx"
-				setitemcolor team1obj_buttons forecolor .75 .75 .75 1
+				setitemcolor team1obj_buttons forecolor 0.86 0.92 0.97 1
 				setitemcolor team1obj_buttons backcolor .7 0 0 1
-				setitemcolor team2obj_buttons forecolor .75 .75 .75 1
+				setitemcolor team2obj_buttons forecolor 0.86 0.92 0.97 1
 				setitemcolor team2obj_buttons backcolor 0 0 .7 1
 				setitemcolor team1obj_buttons bordercolor 0 0 0 0
 				setitemcolor team2obj_buttons bordercolor 0 0 0 0
@@ -2176,7 +2176,7 @@
 			textalignx				0
 			font					5
 			textscale				0.68
-			forecolor				0.86 0.92 0.97 1
+			forecolor				0.60 0.69 0.78 1
 			visible					1
 			decoration
 			textaligny				1
@@ -2227,7 +2227,7 @@
 			textalignx				23
 			font					5
 			textscale				0.68
-			forecolor				.8 .48 0 1
+			forecolor				0.86 0.92 0.97 1
 			visible					1
 			decoration
 		}
@@ -2251,8 +2251,8 @@
 			mouseExit
 			{
 				setitemcolor team1_button backcolor .8 .48 0 1
-				setitemcolor team1_count forecolor .8 .48 0 1
-				setitemcolor team1name forecolor .8 .48 0 1
+				setitemcolor team1_count forecolor 0.86 0.92 0.97 1
+				setitemcolor team1name forecolor 0.86 0.92 0.97 1
 			}
 			action
 			{
@@ -2264,8 +2264,8 @@
 				uiscript updatesiegeclasscnt 1
 				uiscript updatesiegecvars
 				setitemcolor team_button backcolor .8 .48 0 1
-				setitemcolor team_count forecolor .8 .48 0 1
-				setitemcolor team2name forecolor .8 .48 0 1
+				setitemcolor team_count forecolor 0.86 0.92 0.97 1
+				setitemcolor team2name forecolor 0.86 0.92 0.97 1
 				setitemcolor autoteam bordercolor 0 0 0 0
 				disable team_button 0
 				disable autoteam 0
@@ -2275,7 +2275,7 @@
 				setitemcolor team1name forecolor 0.43 0.83 1 1
 				disable team1_button 1
 				show grey_button
-				setitemcolor class_button forecolor .5 .5 .5 1
+				setitemcolor class_button forecolor 0.36 0.42 0.50 1
 				setitemtext class1_count "*ui_tm1_c0_cnt"
 				setitemtext class2_count "*ui_tm1_c1_cnt"
 				setitemtext class3_count "*ui_tm1_c2_cnt"
@@ -2290,7 +2290,7 @@
 				hide forcepowerlevel
 				hide stats
 				hide classdescription
-				setitemcolor class_count forecolor .5 .5 .5 1
+				setitemcolor class_count forecolor 0.36 0.42 0.50 1
 				hide itemdescription
 			}
 			bordercolor				0 0 0 0
@@ -2308,7 +2308,7 @@
 			textalignx				24
 			font					5
 			textscale				0.68
-			forecolor				.8 .48 0 1
+			forecolor				0.86 0.92 0.97 1
 			visible					1
 			decoration
 		}
@@ -2333,8 +2333,8 @@
 				uiscript updatesiegeclasscnt 1
 				uiscript updatesiegecvars
 				setitemcolor team_button backcolor .8 .48 0 1
-				setitemcolor team_count forecolor .8 .48 0 1
-				setitemcolor team2name forecolor .8 .48 0 1
+				setitemcolor team_count forecolor 0.86 0.92 0.97 1
+				setitemcolor team2name forecolor 0.86 0.92 0.97 1
 				setitemcolor autoteam bordercolor 0 0 0 0
 				disable team_button 0
 				disable autoteam 0
@@ -2344,7 +2344,7 @@
 				setitemcolor team1name forecolor 0.43 0.83 1 1
 				disable team1_button 1
 				show grey_button
-				setitemcolor class_button forecolor .5 .5 .5 1
+				setitemcolor class_button forecolor 0.36 0.42 0.50 1
 				setitemtext class1_count "*ui_tm1_c0_cnt"
 				setitemtext class2_count "*ui_tm1_c1_cnt"
 				setitemtext class3_count "*ui_tm1_c2_cnt"
@@ -2359,7 +2359,7 @@
 				hide forcepowerlevel
 				hide stats
 				hide classdescription
-				setitemcolor class_count forecolor .5 .5 .5 1
+				setitemcolor class_count forecolor 0.36 0.42 0.50 1
 				hide itemdescription
 			}
 		}
@@ -2374,7 +2374,7 @@
 			textalignx				23
 			font					5
 			textscale				0.68
-			forecolor				.8 .48 0 1
+			forecolor				0.86 0.92 0.97 1
 			visible					1
 			decoration
 		}
@@ -2398,8 +2398,8 @@
 			mouseExit
 			{
 				setitemcolor team2_button backcolor .8 .48 0 1
-				setitemcolor team2_count forecolor .8 .48 0 1
-				setitemcolor team2name forecolor .8 .48 0 1
+				setitemcolor team2_count forecolor 0.86 0.92 0.97 1
+				setitemcolor team2name forecolor 0.86 0.92 0.97 1
 			}
 			action
 			{
@@ -2411,8 +2411,8 @@
 				uiscript updatesiegeclasscnt 2
 				uiscript updatesiegecvars
 				setitemcolor team_button backcolor .8 .48 0 1
-				setitemcolor team_count forecolor .8 .48 0 1
-				setitemcolor team1name forecolor .8 .48 0 1
+				setitemcolor team_count forecolor 0.86 0.92 0.97 1
+				setitemcolor team1name forecolor 0.86 0.92 0.97 1
 				setitemcolor autoteam bordercolor 0 0 0 0
 				disable team_button 0
 				disable autoteam 0
@@ -2422,7 +2422,7 @@
 				setitemcolor team2name forecolor 0.43 0.83 1 1
 				disable team2_button 1
 				show grey_button
-				setitemcolor class_button forecolor .5 .5 .5 1
+				setitemcolor class_button forecolor 0.36 0.42 0.50 1
 				setitemtext class1_count "*ui_tm2_c0_cnt"
 				setitemtext class2_count "*ui_tm2_c1_cnt"
 				setitemtext class3_count "*ui_tm2_c2_cnt"
@@ -2437,7 +2437,7 @@
 				hide forcepowerlevel
 				hide stats
 				hide classdescription
-				setitemcolor class_count forecolor .5 .5 .5 1
+				setitemcolor class_count forecolor 0.36 0.42 0.50 1
 				hide itemdescription
 			}
 			bordercolor				0 0 0 0
@@ -2455,7 +2455,7 @@
 			textalignx				24
 			font					5
 			textscale				0.68
-			forecolor				.8 .48 0 1
+			forecolor				0.86 0.92 0.97 1
 			visible					1
 			decoration
 		}
@@ -2480,8 +2480,8 @@
 				uiscript updatesiegeclasscnt 2
 				uiscript updatesiegecvars
 				setitemcolor team_button backcolor .8 .48 0 1
-				setitemcolor team_count forecolor .8 .48 0 1
-				setitemcolor team1name forecolor .8 .48 0 1
+				setitemcolor team_count forecolor 0.86 0.92 0.97 1
+				setitemcolor team1name forecolor 0.86 0.92 0.97 1
 				setitemcolor autoteam bordercolor 0 0 0 0
 				disable team_button 0
 				disable autoteam 0
@@ -2491,7 +2491,7 @@
 				setitemcolor team2name forecolor 0.43 0.83 1 1
 				disable team2_button 1
 				show grey_button
-				setitemcolor class_button forecolor .5 .5 .5 1
+				setitemcolor class_button forecolor 0.36 0.42 0.50 1
 				setitemtext class1_count "*ui_tm2_c0_cnt"
 				setitemtext class2_count "*ui_tm2_c1_cnt"
 				setitemtext class3_count "*ui_tm2_c2_cnt"
@@ -2506,7 +2506,7 @@
 				hide forcepowerlevel
 				hide stats
 				hide classdescription
-				setitemcolor class_count forecolor .5 .5 .5 1
+				setitemcolor class_count forecolor 0.36 0.42 0.50 1
 				hide itemdescription
 			}
 		}
@@ -2521,7 +2521,7 @@
 			textalignx				16
 			font					5
 			textscale				0.68
-			forecolor				.8 .48 0 1
+			forecolor				0.86 0.92 0.97 1
 			visible					1
 			decoration
 			textaligny				1
@@ -2545,7 +2545,7 @@
 			mouseExit
 			{
 				setitemcolor spectator_symbol backcolor .5 .5 .5 1
-				setitemcolor team3name forecolor .8 .48 0 1
+				setitemcolor team3name forecolor 0.86 0.92 0.97 1
 			}
 			action
 			{
@@ -2575,7 +2575,7 @@
 			mouseExit
 			{
 				setitemcolor autoteam_symbol backcolor .5 .5 .5 1
-				setitemcolor autoteamname forecolor .8 .48 0 1
+				setitemcolor autoteamname forecolor 0.86 0.92 0.97 1
 			}
 			action
 			{
@@ -2603,7 +2603,7 @@
 			textalignx				16
 			font					5
 			textscale				0.68
-			forecolor				.8 .48 0 1
+			forecolor				0.86 0.92 0.97 1
 			visible					1
 			decoration
 			textaligny				1
@@ -2655,7 +2655,7 @@
 			textalignx				22
 			font					5
 			textscale				0.34
-			forecolor				.5 .5 .5 1
+			forecolor				0.36 0.42 0.50 1
 			visible					1
 			decoration
 			textaligny				0.5
@@ -2682,18 +2682,18 @@
 			}
 			mouseExit
 			{
-				setitemcolor class1_button forecolor .5 .5 .5 1
-				setitemcolor class1_count forecolor .5 .5 .5 1
-				setitemcolor class1_desc forecolor .5 .5 .5 1
+				setitemcolor class1_button forecolor 0.36 0.42 0.50 1
+				setitemcolor class1_count forecolor 0.36 0.42 0.50 1
+				setitemcolor class1_desc forecolor 0.36 0.42 0.50 1
 			}
 			action
 			{
 				play "sound/interface/button1.wav"
 				setcvar ui_siege_class 0
 				uiscript updatesiegecvars
-				setitemcolor class_button forecolor .5 .5 .5 1
+				setitemcolor class_button forecolor 0.36 0.42 0.50 1
 				disable class_button 0
-				setitemcolor class_count forecolor .5 .5 .5 1
+				setitemcolor class_count forecolor 0.36 0.42 0.50 1
 				setitemcolor class1_button forecolor 0.43 0.83 1 1
 				setitemcolor class1_count forecolor 0.43 0.83 1 1
 				setitemcolor class1_desc forecolor 0.43 0.83 1 1
@@ -2754,7 +2754,7 @@
 			textalignx				20
 			font					5
 			textscale				0.34
-			forecolor				.5 .5 .5 1
+			forecolor				0.36 0.42 0.50 1
 			visible					1
 			decoration
 			textaligny				0.5
@@ -2781,18 +2781,18 @@
 			}
 			mouseExit
 			{
-				setitemcolor class2_button forecolor .5 .5 .5 1
-				setitemcolor class2_count forecolor .5 .5 .5 1
-				setitemcolor class2_desc forecolor .5 .5 .5 1
+				setitemcolor class2_button forecolor 0.36 0.42 0.50 1
+				setitemcolor class2_count forecolor 0.36 0.42 0.50 1
+				setitemcolor class2_desc forecolor 0.36 0.42 0.50 1
 			}
 			action
 			{
 				play "sound/interface/button1.wav"
 				setcvar ui_siege_class 5
 				uiscript updatesiegecvars
-				setitemcolor class_button forecolor .5 .5 .5 1
+				setitemcolor class_button forecolor 0.36 0.42 0.50 1
 				disable class_button 0
-				setitemcolor class_count forecolor .5 .5 .5 1
+				setitemcolor class_count forecolor 0.36 0.42 0.50 1
 				setitemcolor class2_button forecolor 0.43 0.83 1 1
 				setitemcolor class2_count forecolor 0.43 0.83 1 1
 				setitemcolor class2_desc forecolor 0.43 0.83 1 1
@@ -2853,7 +2853,7 @@
 			textalignx				19
 			font					5
 			textscale				0.34
-			forecolor				.5 .5 .5 1
+			forecolor				0.36 0.42 0.50 1
 			visible					1
 			decoration
 			textaligny				0.5
@@ -2880,18 +2880,18 @@
 			}
 			mouseExit
 			{
-				setitemcolor class3_button forecolor .5 .5 .5 1
-				setitemcolor class3_count forecolor .5 .5 .5 1
-				setitemcolor class3_desc forecolor .5 .5 .5 1
+				setitemcolor class3_button forecolor 0.36 0.42 0.50 1
+				setitemcolor class3_count forecolor 0.36 0.42 0.50 1
+				setitemcolor class3_desc forecolor 0.36 0.42 0.50 1
 			}
 			action
 			{
 				play "sound/interface/button1.wav"
 				setcvar ui_siege_class 4
 				uiscript updatesiegecvars
-				setitemcolor class_button forecolor .5 .5 .5 1
+				setitemcolor class_button forecolor 0.36 0.42 0.50 1
 				disable class_button 0
-				setitemcolor class_count forecolor .5 .5 .5 1
+				setitemcolor class_count forecolor 0.36 0.42 0.50 1
 				setitemcolor class3_button forecolor 0.43 0.83 1 1
 				setitemcolor class3_count forecolor 0.43 0.83 1 1
 				setitemcolor class3_desc forecolor 0.43 0.83 1 1
@@ -2952,7 +2952,7 @@
 			textalignx				21
 			font					5
 			textscale				0.34
-			forecolor				.5 .5 .5 1
+			forecolor				0.36 0.42 0.50 1
 			visible					1
 			decoration
 			textaligny				0.5
@@ -2979,18 +2979,18 @@
 			}
 			mouseExit
 			{
-				setitemcolor class4_button forecolor .5 .5 .5 1
-				setitemcolor class4_count forecolor .5 .5 .5 1
-				setitemcolor class4_desc forecolor .5 .5 .5 1
+				setitemcolor class4_button forecolor 0.36 0.42 0.50 1
+				setitemcolor class4_count forecolor 0.36 0.42 0.50 1
+				setitemcolor class4_desc forecolor 0.36 0.42 0.50 1
 			}
 			action
 			{
 				play "sound/interface/button1.wav"
 				setcvar ui_siege_class 1
 				uiscript updatesiegecvars
-				setitemcolor class_button forecolor .5 .5 .5 1
+				setitemcolor class_button forecolor 0.36 0.42 0.50 1
 				disable class_button 0
-				setitemcolor class_count forecolor .5 .5 .5 1
+				setitemcolor class_count forecolor 0.36 0.42 0.50 1
 				setitemcolor class4_button forecolor 0.43 0.83 1 1
 				setitemcolor class4_count forecolor 0.43 0.83 1 1
 				setitemcolor class4_desc forecolor 0.43 0.83 1 1
@@ -3051,7 +3051,7 @@
 			textalignx				21
 			font					5
 			textscale				0.34
-			forecolor				.5 .5 .5 1
+			forecolor				0.36 0.42 0.50 1
 			visible					1
 			decoration
 			textaligny				0.5
@@ -3078,18 +3078,18 @@
 			}
 			mouseExit
 			{
-				setitemcolor class5_button forecolor .5 .5 .5 1
-				setitemcolor class5_count forecolor .5 .5 .5 1
-				setitemcolor class5_desc forecolor .5 .5 .5 1
+				setitemcolor class5_button forecolor 0.36 0.42 0.50 1
+				setitemcolor class5_count forecolor 0.36 0.42 0.50 1
+				setitemcolor class5_desc forecolor 0.36 0.42 0.50 1
 			}
 			action
 			{
 				play "sound/interface/button1.wav"
 				setcvar ui_siege_class 2
 				uiscript updatesiegecvars
-				setitemcolor class_button forecolor .5 .5 .5 1
+				setitemcolor class_button forecolor 0.36 0.42 0.50 1
 				disable class_button 0
-				setitemcolor class_count forecolor .5 .5 .5 1
+				setitemcolor class_count forecolor 0.36 0.42 0.50 1
 				setitemcolor class5_button forecolor 0.43 0.83 1 1
 				setitemcolor class5_count forecolor 0.43 0.83 1 1
 				setitemcolor class5_desc forecolor 0.43 0.83 1 1
@@ -3150,7 +3150,7 @@
 			textalignx				21
 			font					5
 			textscale				0.34
-			forecolor				.5 .5 .5 1
+			forecolor				0.36 0.42 0.50 1
 			visible					1
 			decoration
 			textaligny				0.5
@@ -3177,18 +3177,18 @@
 			}
 			mouseExit
 			{
-				setitemcolor class6_button forecolor .5 .5 .5 1
-				setitemcolor class6_count forecolor .5 .5 .5 1
-				setitemcolor class6_desc forecolor .5 .5 .5 1
+				setitemcolor class6_button forecolor 0.36 0.42 0.50 1
+				setitemcolor class6_count forecolor 0.36 0.42 0.50 1
+				setitemcolor class6_desc forecolor 0.36 0.42 0.50 1
 			}
 			action
 			{
 				play "sound/interface/button1.wav"
 				setcvar ui_siege_class 3
 				uiscript updatesiegecvars
-				setitemcolor class_button forecolor .5 .5 .5 1
+				setitemcolor class_button forecolor 0.36 0.42 0.50 1
 				disable class_button 0
-				setitemcolor class_count forecolor .5 .5 .5 1
+				setitemcolor class_count forecolor 0.36 0.42 0.50 1
 				setitemcolor class6_button forecolor 0.43 0.83 1 1
 				setitemcolor class6_count forecolor 0.43 0.83 1 1
 				setitemcolor class6_desc forecolor 0.43 0.83 1 1
@@ -3264,7 +3264,7 @@
 			font					5
 			textscale				0.48
 			visible					0
-			forecolor				.5 .5 .5 1
+			forecolor				0.36 0.42 0.50 1
 			decoration
 		}
 
@@ -3281,7 +3281,7 @@
 			textaligny				0.7
 			font					5
 			textscale				0.48
-			forecolor				.5 .5 .5 1
+			forecolor				0.36 0.42 0.50 1
 			visible					0
 			decoration
 		}
@@ -3300,7 +3300,7 @@
 			font					5
 			textscale				0.48
 			visible					0
-			forecolor				.5 .5 .5 1
+			forecolor				0.36 0.42 0.50 1
 			decoration
 		}
 

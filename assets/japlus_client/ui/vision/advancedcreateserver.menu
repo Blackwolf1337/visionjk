@@ -5,12 +5,12 @@
 	{
 		name					"advancedcreateserver"
 		fullScreen				MENU_FALSE
-		rect					40 50 560 380
+		rect					40 50 569 392
 		visible					MENU_FALSE
 		focusColor				0.43 0.83 1 1
-		descX					320
-		descY					426
-		descScale				1
+		descX					324.5
+		descY					447
+		descScale				0.7
 		descColor				0.60 0.69 0.78 1
 		descAlignment			ITEM_ALIGN_CENTER
 		popup
@@ -25,16 +25,28 @@
 
 		itemDef
 		{
+			name					vision_veil
+			rect					-1040 -50 2640 480
+			visible					1
+			style					WINDOW_STYLE_FILLED
+			backcolor				0 0.01 0.03 0.6
+			decoration
+		}
+
+		itemDef
+		{
 			name					setup_background
 			group					none
 			style					WINDOW_STYLE_PANEL
-			rect					0 0 560 420
-			backcolor				0.43 0.83 1 0.14
+			rect					0 0 569 392
+			backcolor				0.035 0.07 0.12 0.94
 			forecolor				1 1 1 1
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.28
 			visible					1
 			decoration
-			radius					3
+			radius					8
+			shadow					14
+			sheen					0.08
 		}
 
 		itemDef
@@ -94,7 +106,7 @@
 			textaligny				1
 			font					5
 			textscale				0.68
-			forecolor				0.43 0.83 1 1
+			forecolor				0.60 0.69 0.78 1
 			visible					1
 			action { play "sound/interface/button1.wav" }
 			mouseEnter { show settingsButton1 }
@@ -115,7 +127,7 @@
 			textaligny				1
 			font					5
 			textscale				0.68
-			forecolor				0.43 0.83 1 1
+			forecolor				0.60 0.69 0.78 1
 			visible					1
 			cvarTest				"ui_netGameType"
 			hideCvar
@@ -143,7 +155,7 @@
 			textaligny				1
 			font					5
 			textscale				0.68
-			forecolor				0.43 0.83 1 1
+			forecolor				0.60 0.69 0.78 1
 			visible					1
 			cvarTest				"ui_netGameType"
 			showCvar
@@ -176,7 +188,7 @@
 			textaligny				1
 			font					5
 			textscale				0.68
-			forecolor				0.43 0.83 1 1
+			forecolor				0.60 0.69 0.78 1
 			visible					1
 			action { play "sound/interface/button1.wav" }
 			mouseEnter { show settingsButton3 }
@@ -226,7 +238,7 @@
 			textaligny				1
 			font					5
 			textscale				0.68
-			forecolor				0.43 0.83 1 1
+			forecolor				0.60 0.69 0.78 1
 			visible					1
 			action
 			{
@@ -264,7 +276,7 @@
 			textaligny				1
 			font					5
 			textscale				0.68
-			forecolor				0.43 0.83 1 1
+			forecolor				0.60 0.69 0.78 1
 			visible					1
 			action
 			{
@@ -289,7 +301,7 @@
 			textaligny				3
 			font					5
 			textscale				0.68
-			forecolor				0.43 0.83 1 1
+			forecolor				0.60 0.69 0.78 1
 			visible					1
 			action { play "sound/interface/button1.wav" }
 			mouseEnter { show settingsButton7 }
@@ -327,7 +339,7 @@
 			textaligny				3
 			font					5
 			textscale				0.68
-			forecolor				0.43 0.83 1 1
+			forecolor				0.60 0.69 0.78 1
 			visible					1
 			action { play "sound/interface/button1.wav" }
 			mouseEnter { show settingsButton8 }
@@ -354,7 +366,7 @@
 			textaligny				1
 			font					5
 			textscale				0.68
-			forecolor				0.43 0.83 1 1
+			forecolor				0.60 0.69 0.78 1
 			visible					1
 			action { play "sound/interface/button1.wav" }
 			mouseEnter { show settingsButton11 }
@@ -391,7 +403,7 @@
 			textaligny				1
 			font					5
 			textscale				0.68
-			forecolor				0.43 0.83 1 1
+			forecolor				0.60 0.69 0.78 1
 			visible					1
 			descText				@MENUS_AUTO_MAP_CYCLE_DESC
 			action { play "sound/interface/button1.wav" }
@@ -412,7 +424,7 @@
 			textaligny				1
 			font					5
 			textscale				0.68
-			forecolor				0.43 0.83 1 1
+			forecolor				0.60 0.69 0.78 1
 			visible					1
 			descText				@MENUS_THIS_ALLOWS_PLAYERS_TO
 			action { play "sound/interface/button1.wav" }
@@ -434,7 +446,7 @@
 			textaligny				1
 			font					5
 			textscale				0.68
-			forecolor				0.43 0.83 1 1
+			forecolor				0.60 0.69 0.78 1
 			visible					1
 			descText				@MENUS_A_DEDICATED_SERVER_IS
 			action { play "sound/interface/button1.wav" }
@@ -456,7 +468,7 @@
 			font					5
 			textscale				0.68
 			maxchars				8
-			forecolor				0.43 0.83 1 1
+			forecolor				0.60 0.69 0.78 1
 			visible					1
 			descText				@MENUS_SETS_PASSWORD_FOR_YOUR
 			action { play "sound/interface/button1.wav" }
@@ -495,7 +507,7 @@
 			textaligny				1
 			font					5
 			textscale				0.68
-			forecolor				0.43 0.83 1 1
+			forecolor				0.60 0.69 0.78 1
 			visible					1
 			action { play "sound/interface/button1.wav" }
 			mouseEnter { show settingsButton16 }
@@ -516,7 +528,7 @@
 			textaligny				1
 			font					5
 			textscale				0.68
-			forecolor				0.43 0.83 1 1
+			forecolor				0.60 0.69 0.78 1
 			visible					1
 			action { play "sound/interface/button1.wav" }
 			mouseEnter { show settingsButton17 }
@@ -538,7 +550,7 @@
 			textaligny				1
 			font					5
 			textscale				0.68
-			forecolor				0.43 0.83 1 1
+			forecolor				0.60 0.69 0.78 1
 			visible					1
 			action { play "sound/interface/button1.wav" }
 			mouseEnter { show settingsButton18 }
@@ -560,7 +572,7 @@
 			textaligny				1
 			font					5
 			textscale				0.68
-			forecolor				0.43 0.83 1 1
+			forecolor				0.60 0.69 0.78 1
 			visible					1
 			action { play "sound/interface/button1.wav" }
 			mouseEnter { show settingsButton19 }
@@ -581,7 +593,7 @@
 			textaligny				1
 			font					5
 			textscale				0.68
-			forecolor				0.43 0.83 1 1
+			forecolor				0.60 0.69 0.78 1
 			visible					1
 			action { play "sound/interface/button1.wav" }
 			mouseEnter { show settingsButton20 }
@@ -603,7 +615,7 @@
 			textaligny				1
 			font					5
 			textscale				0.68
-			forecolor				0.43 0.83 1 1
+			forecolor				0.60 0.69 0.78 1
 			visible					1
 			action { play "sound/interface/button1.wav" }
 			mouseEnter { show settingsButton21 }
@@ -617,11 +629,11 @@
 			descText				@MENUS_GO_BACK_TO_STANDARD_SETTINGS
 			type					ITEM_TYPE_BUTTON
 			font					5
-			textscale				0.74
-			style					WINDOW_STYLE_EMPTY
-			rect					200 352 160 30
-			textalignx				80
-			textaligny				2.5
+			textscale				0.64
+			style					WINDOW_STYLE_PANEL
+			rect					225 357 110 20
+			textalignx				55
+			textaligny				4
 			textalign				ITEM_ALIGN_CENTER
 			forecolor				0.86 0.92 0.97 1
 			visible					1
@@ -634,9 +646,13 @@
 			mouseEnter { show doneButton }
 			mouseExit { hide doneButton }
 			caps					1
+			radius					10
+			backcolor				1 1 1 0.05
+			bordercolor				0.43 0.83 1 0.16
 		}
 		skin					1
 		disableColor			0.36 0.42 0.50 1
-		backdrop				1
+		openSlide				8
+		style					WINDOW_STYLE_EMPTY
 	}
 }

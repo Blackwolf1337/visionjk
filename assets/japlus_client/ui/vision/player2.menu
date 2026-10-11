@@ -8,11 +8,11 @@
 		rect					0 0 640 480
 		visible					1
 		focusColor				0.43 0.83 1 1
-		descX					320
-		descY					430
-		descScale				1
+		descX					40
+		descY					80
+		descScale				0.8
 		descColor				0.60 0.69 0.78 1
-		descAlignment			ITEM_ALIGN_CENTER
+		descAlignment			ITEM_ALIGN_LEFT
 		onOpen
 		{
 			uiScript "getcharcvars"
@@ -28,7 +28,7 @@
 		itemDef
 		{
 			name					vision_bar
-			rect					-400 0 1440 34
+			rect					-1000 0 2640 34
 			visible					1
 			style					WINDOW_STYLE_FILLED
 			backcolor				0.02 0.04 0.08 0.55
@@ -38,7 +38,7 @@
 		itemDef
 		{
 			name					vision_bar_line
-			rect					-400 34 1440 0.67
+			rect					-1000 34 2640 0.67
 			visible					1
 			style					WINDOW_STYLE_FILLED
 			backcolor				0.43 0.83 1 0.22
@@ -96,13 +96,13 @@
 			group					title
 			style					WINDOW_STYLE_EMPTY
 			text					@MENUS_CHARACTER_CREATION
-			rect					100 54 440 16
+			rect					40 46 400 28
 			font					5
-			textscale				0.52
-			textalign				ITEM_ALIGN_CENTER
-			textalignx				225
-			textaligny				0.75
-			forecolor				0.60 0.69 0.78 1
+			textscale				1.45
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				0
+			textaligny				2
+			forecolor				1 1 1 1
 			visible					1
 			decoration
 			caps					1
@@ -113,7 +113,7 @@
 			name					character
 			group					models
 			type					ITEM_TYPE_MODEL
-			rect					52 84 900 1000
+			rect					62 96 900 1000
 			model_g2anim			"BOTH_WALK1"
 			asset_model				"ui_char_model"
 			model_angle				180
@@ -240,7 +240,7 @@
 			group					none
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
-			rect					30 88 140 24
+			rect					40 100 140 24
 			forecolor				0.60 0.69 0.78 1
 			text					@MENUS_SPECIES
 			textalign				ITEM_ALIGN_LEFT
@@ -261,7 +261,7 @@
 			descText				@MENUS_CHOOSE_SPECIES
 			type					ITEM_TYPE_MULTI
 			style					WINDOW_STYLE_EMPTY
-			rect					176 92 150 16
+			rect					186 104 150 16
 			font					5
 			textscale				0.77
 			textaligny				-3.65
@@ -290,7 +290,7 @@
 			group					none
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
-			rect					30 144 160 24
+			rect					40 156 160 24
 			text					@MENUS_COLOR
 			textalign				ITEM_ALIGN_LEFT
 			textalignx				0
@@ -311,7 +311,7 @@
 			descText				"Predefined colors"
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
-			rect					150 149 90 16
+			rect					160 161 90 16
 			font					5
 			textscale				0.77
 			textaligny				-3.65
@@ -341,7 +341,7 @@
 			descText				"Customized RGB colors"
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
-			rect					250 149 90 16
+			rect					260 161 90 16
 			font					5
 			textscale				0.77
 			textaligny				-3.65
@@ -370,7 +370,7 @@
 			type					ITEM_TYPE_SLIDER
 			text					"Red: "
 			cvarfloat				"ui_char_color_red" 50 0 255
-			rect					30 165 175 18
+			rect					40 177 175 18
 			textalign				ITEM_ALIGN_RIGHT
 			textalignx				70
 			textaligny				1
@@ -391,7 +391,7 @@
 			type					ITEM_TYPE_SLIDER
 			text					"Green: "
 			cvarfloat				"ui_char_color_green" 50 0 255
-			rect					30 183 175 18
+			rect					40 195 175 18
 			textalign				ITEM_ALIGN_RIGHT
 			textalignx				70
 			textaligny				1
@@ -412,7 +412,7 @@
 			type					ITEM_TYPE_SLIDER
 			text					"Blue: "
 			cvarfloat				"ui_char_color_blue" 50 0 255
-			rect					30 201 175 18
+			rect					40 213 175 18
 			textalign				ITEM_ALIGN_RIGHT
 			textalignx				70
 			textaligny				1
@@ -436,13 +436,13 @@
 			cvar					"ui_char_color_red"
 			maxchars				10
 			maxPaintChars			10
-			rect					227 165 100 18
+			rect					237 177 100 18
 			textalign				ITEM_ALIGN_RIGHT
 			textalignx				15
 			textaligny				-1
 			font					5
 			textscale				0.68
-			forecolor				0.43 0.83 1 1
+			forecolor				0.60 0.69 0.78 1
 			outlinecolor			1 .5 .5 .5
 			backcolor				0 0 0 0
 			bordercolor				0.43 0.83 1 0.16
@@ -464,13 +464,13 @@
 			cvar					"ui_char_color_green"
 			maxchars				10
 			maxPaintChars			10
-			rect					227 183 100 18
+			rect					237 195 100 18
 			textalign				ITEM_ALIGN_RIGHT
 			textalignx				15
 			textaligny				-1
 			font					5
 			textscale				0.68
-			forecolor				0.43 0.83 1 1
+			forecolor				0.60 0.69 0.78 1
 			outlinecolor			1 .5 .5 .5
 			backcolor				0 0 0 0
 			bordercolor				0.43 0.83 1 0.16
@@ -492,13 +492,13 @@
 			cvar					"ui_char_color_blue"
 			maxchars				10
 			maxPaintChars			10
-			rect					227 201 100 18
+			rect					237 213 100 18
 			textalign				ITEM_ALIGN_RIGHT
 			textalignx				15
 			textaligny				-1
 			font					5
 			textscale				0.68
-			forecolor				0.43 0.83 1 1
+			forecolor				0.60 0.69 0.78 1
 			outlinecolor			1 .5 .5 .5
 			backcolor				0 0 0 0
 			bordercolor				0.43 0.83 1 0.16
@@ -523,7 +523,7 @@
 			horizontalscroll
 			backcolor				0 0 0 0.30
 			bordercolor				0.43 0.83 1 0.16
-			rect					30 168 292 48
+			rect					40 180 292 48
 			visible					1
 			action { play "sound/interface/choose_color.wav" }
 			radius					4
@@ -538,7 +538,7 @@
 			group					none
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
-			rect					30 252 180 24
+			rect					40 264 180 24
 			forecolor				0.60 0.69 0.78 1
 			text					@MENUS_APPEARANCE
 			textalign				ITEM_ALIGN_LEFT
@@ -559,7 +559,7 @@
 			descText				@MENUS_SELECT_HEAD
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
-			rect					30 280 90 16
+			rect					40 292 90 16
 			font					5
 			textscale				0.77
 			textaligny				-3.65
@@ -589,7 +589,7 @@
 			descText				@MENUS_SELECT_TORSO
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
-			rect					126 280 90 16
+			rect					136 292 90 16
 			font					5
 			textscale				0.77
 			textaligny				-3.65
@@ -619,7 +619,7 @@
 			descText				@MENUS_SELECT_LEGS
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
-			rect					224 280 90 16
+			rect					234 292 90 16
 			font					5
 			textscale				0.77
 			textaligny				-3.65
@@ -655,7 +655,7 @@
 			backcolor				0 0 0 0.30
 			bordercolor				0.43 0.83 1 0.16
 			forecolor				-1
-			rect					30 306 292 93
+			rect					40 318 292 93
 			visible					1
 			action
 			{
@@ -682,7 +682,7 @@
 			backcolor				0 0 0 0.30
 			bordercolor				0.43 0.83 1 0.16
 			forecolor				-1
-			rect					30 306 292 93
+			rect					40 318 292 93
 			visible					0
 			action
 			{
@@ -709,7 +709,7 @@
 			backcolor				0 0 0 0.30
 			bordercolor				0.43 0.83 1 0.16
 			forecolor				-1
-			rect					30 306 292 93
+			rect					40 318 292 93
 			visible					0
 			action
 			{
@@ -721,6 +721,9 @@
 			font					5
 			textscale				0.47
 		}
+		skin					1
+		disableColor			0.36 0.42 0.50 1
+		backdrop				1
 
 		itemDef
 		{
@@ -730,7 +733,7 @@
 			descText				@MENUS_BACK_2_PROFILE
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_PANEL
-			rect					69 446 110 22
+			rect					40 446 110 22
 			font					5
 			textscale				0.7
 			textalign				ITEM_ALIGN_CENTER
@@ -761,7 +764,7 @@
 			descText				@MENUS_APPLY_PLAYER_SABER
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_PANEL
-			rect					465 446 110 22
+			rect					490 446 110 22
 			font					5
 			textscale				0.7
 			textalignx				55
@@ -784,8 +787,5 @@
 			bordercolor				0.43 0.83 1 0.75
 			radius					11
 		}
-		skin					1
-		disableColor			0.36 0.42 0.50 1
-		backdrop				1
 	}
 }

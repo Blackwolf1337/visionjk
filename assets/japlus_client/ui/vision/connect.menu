@@ -10,6 +10,7 @@
 		skin					1
 		focusColor				0.43 0.83 1 1
 		disableColor			0.36 0.42 0.50 1
+		openSlide				8
 		backdrop				1
 	}
 }

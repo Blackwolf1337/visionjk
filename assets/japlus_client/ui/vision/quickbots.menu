@@ -5,12 +5,12 @@
 	{
 		name					"quickbots"
 		fullScreen				MENU_FALSE
-		rect					100 50 440 380
+		rect					100 50 440 392
 		visible					MENU_FALSE
 		focusColor				0.43 0.83 1 1
-		descX					320
-		descY					380
-		descScale				1
+		descX					318
+		descY					447
+		descScale				0.7
 		descColor				0.60 0.69 0.78 1
 		descAlignment			ITEM_ALIGN_CENTER
 		popup
@@ -24,16 +24,28 @@
 
 		itemDef
 		{
+			name					vision_veil
+			rect					-1100 -50 2640 480
+			visible					1
+			style					WINDOW_STYLE_FILLED
+			backcolor				0 0.01 0.03 0.6
+			decoration
+		}
+
+		itemDef
+		{
 			name					frame_pic
 			group					none
 			style					WINDOW_STYLE_PANEL
-			rect					0 0 440 380
+			rect					10 0 416 392
 			forecolor				1 1 1 1
 			decoration
-			bordercolor				0.43 0.83 1 0.16
+			bordercolor				0.43 0.83 1 0.28
 			visible					1
-			backcolor				0.035 0.07 0.12 0.55
-			radius					5
+			backcolor				0.035 0.07 0.12 0.94
+			radius					8
+			shadow					14
+			sheen					0.08
 		}
 
 		itemDef
@@ -56,14 +68,28 @@
 
 		itemDef
 		{
+			name					vision_rail_55
+			rect					17 52 202 166
+			visible					1
+			style					WINDOW_STYLE_PANEL
+			backcolor				0.035 0.07 0.12 0.55
+			bordercolor				0.43 0.83 1 0.16
+			radius					6
+			shadow					8
+			sheen					0.06
+			decoration
+		}
+
+		itemDef
+		{
 			name					botlist_slot
-			style					0
+			style					WINDOW_STYLE_EMPTY
 			text					@MENUS_1_1
 			descText				@MENUS_CLICK_FOR_HUMAN_BOTS
 			ownerdraw				UI_BLUETEAM1
 			rect					20 55 196 20
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				20
+			textalignx				12
 			textaligny				-2.5
 			font					5
 			textscale				0.86
@@ -83,17 +109,17 @@
 		itemDef
 		{
 			name					botlist_slot
-			style					0
+			style					WINDOW_STYLE_EMPTY
 			text					@MENUS_2_1
 			descText				@MENUS_CLICK_FOR_HUMAN_BOTS
 			ownerdraw				UI_REDTEAM1
 			rect					20 75 196 20
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				20
+			textalignx				12
 			textaligny				-2.5
 			font					5
 			textscale				0.86
-			forecolor				1 0.2 0.2 1
+			forecolor				1 0.45 0.42 1
 			border					0
 			bordercolor				0 0 0 0
 			visible					1
@@ -109,13 +135,13 @@
 		itemDef
 		{
 			name					botlist_slot
-			style					0
+			style					WINDOW_STYLE_EMPTY
 			text					@MENUS_3_1
 			descText				@MENUS_CLICK_FOR_HUMAN_BOTS
 			ownerdraw				UI_BLUETEAM2
 			rect					20 95 196 20
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				20
+			textalignx				12
 			textaligny				-2.5
 			font					5
 			textscale				0.86
@@ -135,17 +161,17 @@
 		itemDef
 		{
 			name					botlist_slot
-			style					0
+			style					WINDOW_STYLE_EMPTY
 			text					@MENUS_4_1
 			descText				@MENUS_CLICK_FOR_HUMAN_BOTS
 			ownerdraw				UI_REDTEAM2
 			rect					20 115 196 20
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				20
+			textalignx				12
 			textaligny				-2.5
 			font					5
 			textscale				0.86
-			forecolor				1 0.2 0.2 1
+			forecolor				1 0.45 0.42 1
 			border					0
 			bordercolor				0 0 0 0
 			visible					1
@@ -161,13 +187,13 @@
 		itemDef
 		{
 			name					botlist_slot
-			style					0
+			style					WINDOW_STYLE_EMPTY
 			text					@MENUS_5_1
 			descText				@MENUS_CLICK_FOR_HUMAN_BOTS
 			ownerdraw				UI_BLUETEAM3
 			rect					20 135 196 20
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				20
+			textalignx				12
 			textaligny				-2.5
 			font					5
 			textscale				0.86
@@ -187,17 +213,17 @@
 		itemDef
 		{
 			name					botlist_slot
-			style					0
+			style					WINDOW_STYLE_EMPTY
 			text					@MENUS_6_1
 			descText				@MENUS_CLICK_FOR_HUMAN_BOTS
 			ownerdraw				UI_REDTEAM3
 			rect					20 155 196 20
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				20
+			textalignx				12
 			textaligny				-2.5
 			font					5
 			textscale				0.86
-			forecolor				1 0.2 0.2 1
+			forecolor				1 0.45 0.42 1
 			border					0
 			bordercolor				0 0 0 0
 			visible					1
@@ -213,13 +239,13 @@
 		itemDef
 		{
 			name					botlist_slot
-			style					0
+			style					WINDOW_STYLE_EMPTY
 			text					@MENUS_7_1
 			descText				@MENUS_CLICK_FOR_HUMAN_BOTS
 			ownerdraw				UI_BLUETEAM4
 			rect					20 175 196 20
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				20
+			textalignx				12
 			textaligny				-2.5
 			font					5
 			textscale				0.86
@@ -239,17 +265,17 @@
 		itemDef
 		{
 			name					botlist_slot
-			style					0
+			style					WINDOW_STYLE_EMPTY
 			text					@MENUS_8_1
 			descText				@MENUS_CLICK_FOR_HUMAN_BOTS
 			ownerdraw				UI_REDTEAM4
 			rect					20 195 196 20
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				20
+			textalignx				12
 			textaligny				-2.5
 			font					5
 			textscale				0.86
-			forecolor				1 0.2 0.2 1
+			forecolor				1 0.45 0.42 1
 			border					0
 			bordercolor				0 0 0 0
 			visible					1
@@ -264,14 +290,28 @@
 
 		itemDef
 		{
+			name					vision_rail_55
+			rect					217 52 202 166
+			visible					1
+			style					WINDOW_STYLE_PANEL
+			backcolor				0.035 0.07 0.12 0.55
+			bordercolor				0.43 0.83 1 0.16
+			radius					6
+			shadow					8
+			sheen					0.06
+			decoration
+		}
+
+		itemDef
+		{
 			name					botlist_slot
-			style					0
+			style					WINDOW_STYLE_EMPTY
 			text					@MENUS_9
 			descText				@MENUS_CLICK_FOR_HUMAN_BOTS
 			ownerdraw				UI_BLUETEAM5
 			rect					220 55 196 20
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				20
+			textalignx				12
 			textaligny				-2.5
 			font					5
 			textscale				0.86
@@ -291,17 +331,17 @@
 		itemDef
 		{
 			name					botlist_slot
-			style					0
+			style					WINDOW_STYLE_EMPTY
 			text					@MENUS_10
 			descText				@MENUS_CLICK_FOR_HUMAN_BOTS
 			ownerdraw				UI_REDTEAM5
 			rect					220 75 196 20
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				10
+			textalignx				12
 			textaligny				-2.5
 			font					5
 			textscale				0.86
-			forecolor				1 0.2 0.2 1
+			forecolor				1 0.45 0.42 1
 			border					0
 			bordercolor				0 0 0 0
 			visible					1
@@ -317,13 +357,13 @@
 		itemDef
 		{
 			name					botlist_slot
-			style					0
+			style					WINDOW_STYLE_EMPTY
 			text					@MENUS_11
 			descText				@MENUS_CLICK_FOR_HUMAN_BOTS
 			ownerdraw				UI_BLUETEAM6
 			rect					220 95 196 20
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				10
+			textalignx				12
 			textaligny				-2.5
 			font					5
 			textscale				0.86
@@ -343,17 +383,17 @@
 		itemDef
 		{
 			name					botlist_slot
-			style					0
+			style					WINDOW_STYLE_EMPTY
 			text					@MENUS_12
 			descText				@MENUS_CLICK_FOR_HUMAN_BOTS
 			ownerdraw				UI_REDTEAM6
 			rect					220 115 196 20
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				10
+			textalignx				12
 			textaligny				-2.5
 			font					5
 			textscale				0.86
-			forecolor				1 0.2 0.2 1
+			forecolor				1 0.45 0.42 1
 			border					0
 			bordercolor				0 0 0 0
 			visible					1
@@ -369,13 +409,13 @@
 		itemDef
 		{
 			name					botlist_slot
-			style					0
+			style					WINDOW_STYLE_EMPTY
 			text					@MENUS_13
 			descText				@MENUS_CLICK_FOR_HUMAN_BOTS
 			ownerdraw				UI_BLUETEAM7
 			rect					220 135 196 20
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				10
+			textalignx				12
 			textaligny				-2.5
 			font					5
 			textscale				0.86
@@ -395,17 +435,17 @@
 		itemDef
 		{
 			name					botlist_slot
-			style					0
+			style					WINDOW_STYLE_EMPTY
 			text					@MENUS_14
 			descText				@MENUS_CLICK_FOR_HUMAN_BOTS
 			ownerdraw				UI_REDTEAM7
 			rect					220 155 196 20
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				10
+			textalignx				12
 			textaligny				-2.5
 			font					5
 			textscale				0.86
-			forecolor				1 0.2 0.2 1
+			forecolor				1 0.45 0.42 1
 			border					0
 			bordercolor				0 0 0 0
 			visible					1
@@ -421,13 +461,13 @@
 		itemDef
 		{
 			name					botlist_slot
-			style					0
+			style					WINDOW_STYLE_EMPTY
 			text					@MENUS_15
 			descText				@MENUS_CLICK_FOR_HUMAN_BOTS
 			ownerdraw				UI_BLUETEAM8
 			rect					220 175 196 20
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				10
+			textalignx				12
 			textaligny				-2.5
 			font					5
 			textscale				0.86
@@ -447,17 +487,17 @@
 		itemDef
 		{
 			name					botlist_slot
-			style					0
+			style					WINDOW_STYLE_EMPTY
 			text					@MENUS_16
 			descText				@MENUS_CLICK_FOR_HUMAN_BOTS
 			ownerdraw				UI_REDTEAM8
 			rect					220 195 196 20
 			textalign				ITEM_ALIGN_LEFT
-			textalignx				10
+			textalignx				12
 			textaligny				-2.5
 			font					5
 			textscale				0.86
-			forecolor				1 0.2 0.2 1
+			forecolor				1 0.45 0.42 1
 			border					0
 			bordercolor				0 0 0 0
 			visible					1
@@ -477,11 +517,11 @@
 			descText				@MENUS_RETURN_PREVIOUS
 			type					ITEM_TYPE_BUTTON
 			font					5
-			textscale				0.74
-			style					WINDOW_STYLE_EMPTY
-			rect					140 352 160 30
-			textalignx				80
-			textaligny				2.5
+			textscale				0.64
+			style					WINDOW_STYLE_PANEL
+			rect					165 357 110 20
+			textalignx				55
+			textaligny				4
 			textalign				ITEM_ALIGN_CENTER
 			forecolor				0.86 0.92 0.97 1
 			visible					1
@@ -497,9 +537,13 @@
 			}
 			mouseExit { hide button_glow }
 			caps					1
+			radius					10
+			backcolor				1 1 1 0.05
+			bordercolor				0.43 0.83 1 0.16
 		}
 		skin					1
 		disableColor			0.36 0.42 0.50 1
-		backdrop				1
+		openSlide				8
+		style					WINDOW_STYLE_EMPTY
 	}
 }

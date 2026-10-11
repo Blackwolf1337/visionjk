@@ -43,7 +43,7 @@
 		itemDef
 		{
 			name					vision_bar
-			rect					-400 0 1440 26
+			rect					-1000 0 2640 26
 			visible					1
 			style					WINDOW_STYLE_FILLED
 			backcolor				0.02 0.04 0.08 0.72
@@ -53,7 +53,7 @@
 		itemDef
 		{
 			name					vision_bar_line
-			rect					-400 26 1440 0.67
+			rect					-1000 26 2640 0.67
 			visible					1
 			style					WINDOW_STYLE_FILLED
 			backcolor				0.43 0.83 1 0.22

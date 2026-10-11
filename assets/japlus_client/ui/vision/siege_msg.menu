@@ -6,9 +6,9 @@
 		name					"siege_popmenu"
 		visible					0
 		fullscreen				0
-		rect					158 80 320 320
+		rect					158 80 324 331
 		focusColor				0.43 0.83 1 1
-		style					WINDOW_STYLE_PANEL
+		style					WINDOW_STYLE_EMPTY
 		popup
 		onClose {  }
 		onOpen {  }
@@ -21,14 +21,16 @@
 		itemDef
 		{
 			name					window
-			rect					10 15 300 320
+			rect					0 40 324 291
 			style					WINDOW_STYLE_PANEL
-			backcolor				0.43 0.83 1 0.14
+			backcolor				0.035 0.07 0.12 0.94
 			forecolor				0 0 0 1
-			bordercolor				0 0 0 0
+			bordercolor				0.43 0.83 1 0.28
 			visible					1
 			decoration
-			radius					3
+			radius					8
+			shadow					14
+			sheen					0.08
 		}
 
 		itemDef
@@ -71,13 +73,13 @@
 			group					grpControlbutton
 			text					@MENUS_OKAY
 			type					1
-			textscale				0.86
+			textscale				0.64
 			type					ITEM_TYPE_BUTTON
-			style					WINDOW_STYLE_EMPTY
-			rect					138 295 45 26
-			textalign				1
-			textalignx				22
-			forecolor				.79 .64 .22 1
+			style					WINDOW_STYLE_PANEL
+			rect					125.5 298 70 20
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				35
+			forecolor				1 1 1 1
 			visible					1
 			action
 			{
@@ -87,15 +89,19 @@
 			mouseEnter { show button_glow }
 			mouseExit { hide button_glow }
 			font					5
-			textaligny				1.5
+			textaligny				4
+			caps					1
+			radius					10
+			backcolor				0.43 0.83 1 0.20
+			bordercolor				0.43 0.83 1 0.75
 		}
 		skin					1
 		disableColor			0.36 0.42 0.50 1
 		openSlide				8
-		backcolor				0.035 0.07 0.12 0.80
-		bordercolor				0.43 0.83 1 0.28
-		radius					8
-		shadow					14
-		sheen					0.08
+		descX					320
+		descY					416
+		descAlignment			ITEM_ALIGN_CENTER
+		descScale				0.7
+		descColor				0.60 0.69 0.78 1
 	}
 }

@@ -98,8 +98,23 @@ are.
 - `theme.py`, the rules for every menu: the pictures of the old frame go (backgrounds, side texts, the glow
   behind buttons), boxes become panels, every text gets the new font at the size and place it had, the
   colours of the old menus become the ones of the theme (also inside the scripts that mark the open tab).
-- `pages.py`, what single pages get: the frame of the pages outside a game, the first page, the bar at the top
-  in a game, the new tabs of the setup menus and the row of the new key in Controls.
+- `pages.py`, the layout:
+  - A page outside a game (a menu that fills the screen) has the bar at the top with the four sections (made
+    for a page that had no buttons for them), its heading under it in capitals, the line about what the mouse
+    is on under the heading, its content under that with its left edge under the heading, and its buttons in
+    one row at the bottom: what goes back at the left, what goes on at the right, filled. A page that needs
+    all of the height (the server browser, create server) has its heading in the bar after the name of the
+    game, no button that leaves the game, and the line about the mouse between the buttons.
+  - A column of four or more buttons (the sections of Setup, Controls and the rules, the choices of a page
+    that is one list) is a list on a panel of its own, its texts at the left. The panel beside it begins and
+    ends where the list does.
+  - A window (a menu that does not fill the screen: every window in a game, every question on a page) has one
+    frame, around what is in it, that hides what is behind it. The pictures of the old frames were larger
+    than the menu or lay beside it and are gone. The buttons in its lowest row are pills, buttons one under
+    the other stay a list. The line about the mouse stands under the frame. Outside a game the page behind
+    a window is darkened.
+  - The first page, the bar at the top in a game, the new tabs of the setup menus and the row of the new key
+    in Controls.
 - `menufile.py` reads and writes a menu file as a tree.
 
 `ui/vision/hud.menu` is written by hand.
@@ -171,7 +186,34 @@ no file was downloaded. What was wrong:
   so it has the outline of the icon, and it keeps that pose.
 - The connect screen had the box over the picture and the text of the old game.
 
-Not checked: the icon of the window and of the program on a desktop, a click on anything (the pictures are
-of pages a console command opened), the pages of siege and of the force powers in a game, most pages on
-`rd-vanilla` and in a window that is not 16:9, a real download, the connect screen when a server refuses,
-another language than English, a mod's menus next to the new look, how it feels to use.
+2026-10-11 night, after the second look at it in the real game ("Lots of menus have wrong colors or not
+proper layout. Not centered etc."), with two pictures: Setup with its sections in the orange of the old game,
+and the window of an error as two frames that did not fit each other, see-through, over the first page. Every
+picture before had been of a page a console command had opened, never of one after a click. So:
+
+- The ui has a command for scripts, `ui_mouse <x> <y> [click]`: the pointer goes to a place in the 640 x 480
+  units of the menus and the left button is pressed there. `ui_openmenu <menu> over` opens a menu on top of
+  what is open, as a button of a page does.
+- `agent/japlus_port/tools/uitest/plan.py` writes a script that opens every menu of both lists, clicks every
+  button of it that shows a group (the sections and tabs) and every button that opens a window, and takes a
+  picture after each step: 100 pictures outside a game, 78 in one. `uitest/sheets.sh` puts them on sheets of
+  nine with their names, `uitest/audit.py` lists every colour of the generated files that is not one of the
+  theme, `uitest/outline.py` prints a menu as one line an item.
+- All of them were looked at, on `rd-vulkan-vision` at 1280 x 720 with `r_DynamicGlow 1` and 8 samples, the
+  in-game ones with `cg_immersiveMenu 0`. The two screens of the report again at 2560 x 1440, 2560 x 1080 and
+  1280 x 1024 and on `rd-vanilla`, the error with the test error of the engine (`error`, `developer 1`).
+
+What was wrong, and is what the rules above are for: colours set by click scripts were only translated when
+written one way (`1 .682 0 1;` was missed), and greys, a dark orange, gold and the red and blue of the teams
+not at all. Pages without buttons for the sections had no bar and began at the top edge of the screen.
+Sections stood as texts set to the right with nothing around them. Windows had the frame of the menu and the
+picture frame of the old game at once. Their panels let the level and the page show through. Their buttons
+were bare words, and the line about the mouse lay across their content. A setting written `fullScreen
+MENU_FALSE` was read as yes. Rows of settings that were white in the old menus had the colour of a chosen tab.
+
+Not checked: the pages of siege in a game of siege (their pictures are missing outside one), most in-game
+windows standing in the level (`cg_immersiveMenu 1`, the default: Setup and the vote window were looked at
+that way, at 2560 x 1440), a mouse in a hand, the icon of the window
+and of the program on a desktop, a real download, the connect screen when a server refuses, another language
+than English, a mod's menus next to the new look, how it feels to use. Left as they were laid out: the inside
+of the profile pages (player, force powers), dense and built around pictures.

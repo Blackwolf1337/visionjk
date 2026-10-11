@@ -17,7 +17,7 @@
 		{
 			hide gamedesc ;
 			show ffa_desc ;
-			setitemcolor game_submenu forecolor 1 .682 0 1;
+			setitemcolor game_submenu forecolor 0.86 0.92 0.97 1;
 			setitemcolor ffamenubutton forecolor 0.43 0.83 1 1 ;
 		}
 		onESC
@@ -30,7 +30,7 @@
 		itemDef
 		{
 			name					vision_bar
-			rect					-400 0 1440 34
+			rect					-1000 0 2640 34
 			visible					1
 			style					WINDOW_STYLE_FILLED
 			backcolor				0.02 0.04 0.08 0.55
@@ -40,7 +40,7 @@
 		itemDef
 		{
 			name					vision_bar_line
-			rect					-400 34 1440 0.67
+			rect					-1000 34 2640 0.67
 			visible					1
 			style					WINDOW_STYLE_FILLED
 			backcolor				0.43 0.83 1 0.22
@@ -234,13 +234,356 @@
 
 		itemDef
 		{
+			name					game_rulesheader
+			group					rulesheader
+			style					WINDOW_STYLE_EMPTY
+			text					@MENUS_GAME_RULES_TITLE
+			rect					40 46 400 28
+			font					5
+			textscale				1.45
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				0
+			textaligny				2
+			forecolor				1 1 1 1
+			visible					1
+			decoration
+			caps					1
+		}
+
+		itemDef
+		{
+			name					vision_rail_185
+			rect					40 100 180 233
+			visible					1
+			style					WINDOW_STYLE_PANEL
+			backcolor				0.035 0.07 0.12 0.55
+			bordercolor				0.43 0.83 1 0.16
+			radius					6
+			shadow					8
+			sheen					0.06
+			decoration
+		}
+
+		itemDef
+		{
+			name					ffamenubutton
+			group					game_submenu
+			text					@MENUS_FFA_CAPS
+			type					ITEM_TYPE_BUTTON
+			style					WINDOW_STYLE_EMPTY
+			rect					45 105 170 30
+			font					5
+			textscale				0.69
+			textalignx				12
+			textaligny				6.2
+			textalign				ITEM_ALIGN_LEFT
+			textstyle				0
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+			descText				@MENUS_FREE_FOR_ALL_GAME_RULES
+			mouseEnter { show mainhighlight1 }
+			mouseExit { hide mainhighlight1 }
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				setitemcolor game_submenu forecolor 0.86 0.92 0.97 1;
+				setitemcolor ffamenubutton forecolor 0.43 0.83 1 1 ;
+				hide gamedesc ;
+				show ffa_desc ;
+			}
+		}
+
+		itemDef
+		{
+			name					duelmenubutton
+			group					game_submenu
+			text					@MENUS_DUEL_CAPS
+			type					ITEM_TYPE_BUTTON
+			style					WINDOW_STYLE_EMPTY
+			rect					45 135 170 30
+			font					5
+			textscale				0.69
+			textalignx				12
+			textaligny				6.2
+			textalign				ITEM_ALIGN_LEFT
+			textstyle				0
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+			descText				@MENUS_DUEL_GAMETYPE
+			mouseEnter { show mainhighlight2 }
+			mouseExit { hide mainhighlight2 }
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				setitemcolor game_submenu forecolor 0.86 0.92 0.97 1;
+				setitemcolor duelmenubutton forecolor 0.43 0.83 1 1 ;
+				hide gamedesc ;
+				show duel_desc ;
+			}
+		}
+
+		itemDef
+		{
+			name					pduelmenubutton
+			group					game_submenu
+			text					@MENUS_POWERDUEL_CAPS
+			type					ITEM_TYPE_BUTTON
+			style					WINDOW_STYLE_EMPTY
+			rect					45 165 170 30
+			font					5
+			textscale				0.69
+			textalignx				12
+			textaligny				6.2
+			textstyle				0
+			textalign				ITEM_ALIGN_LEFT
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+			descText				@MENUS_POWERDUEL_GAME_RULES
+			mouseEnter { show mainhighlight3 }
+			mouseExit { hide mainhighlight3 }
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				setitemcolor game_submenu forecolor 0.86 0.92 0.97 1;
+				setitemcolor pduelmenubutton forecolor 0.43 0.83 1 1 ;
+				hide gamedesc ;
+				show pduel_desc ;
+			}
+		}
+
+		itemDef
+		{
+			name					teamffamenubutton
+			group					game_submenu
+			text					@MENUS_TEAM_FFA_CAPS
+			type					ITEM_TYPE_BUTTON
+			style					WINDOW_STYLE_EMPTY
+			rect					45 195 170 30
+			font					5
+			textscale				0.69
+			textalignx				12
+			textaligny				6.2
+			textstyle				0
+			textalign				ITEM_ALIGN_LEFT
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+			descText				@MENUS_TEAM_FFA_GAMETYPE
+			mouseEnter { show mainhighlight4 }
+			mouseExit { hide mainhighlight4 }
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				setitemcolor game_submenu forecolor 0.86 0.92 0.97 1;
+				setitemcolor teamffamenubutton forecolor 0.43 0.83 1 1 ;
+				hide gamedesc ;
+				show teamffa_desc ;
+			}
+		}
+
+		itemDef
+		{
+			name					ctfmenubutton
+			group					game_submenu
+			text					@MENUS_CTF_CAPS
+			type					ITEM_TYPE_BUTTON
+			style					WINDOW_STYLE_EMPTY
+			rect					45 225 170 30
+			font					5
+			textscale				0.69
+			textalignx				12
+			textaligny				6.2
+			textalign				ITEM_ALIGN_LEFT
+			textstyle				0
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+			descText				@MENUS_CAPTURE_THE_FLAG_RULES
+			mouseEnter { show mainhighlight5 }
+			mouseExit { hide mainhighlight5 }
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				setitemcolor game_submenu forecolor 0.86 0.92 0.97 1;
+				setitemcolor ctfmenubutton forecolor 0.43 0.83 1 1 ;
+				hide gamedesc ;
+				show ctf_desc ;
+			}
+		}
+
+		itemDef
+		{
+			name					siegemenubutton
+			group					game_submenu
+			text					@MENUS_SIEGE_CAPS
+			type					ITEM_TYPE_BUTTON
+			style					WINDOW_STYLE_EMPTY
+			rect					45 255 170 30
+			font					5
+			textscale				0.69
+			textalignx				12
+			textaligny				6.2
+			textalign				ITEM_ALIGN_LEFT
+			textstyle				0
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+			descText				@MENUS_SIEGE_GAME_RULES
+			mouseEnter { show mainhighlight6 }
+			mouseExit { hide mainhighlight6 }
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				setitemcolor game_submenu forecolor 0.86 0.92 0.97 1 ;
+				setitemcolor siegemenubutton forecolor 0.43 0.83 1 1 ;
+				hide gamedesc ;
+				show siege_desc ;
+			}
+		}
+
+		itemDef
+		{
+			name					setup_background
+			group					none
+			style					WINDOW_STYLE_PANEL
+			rect					230 100 370 233
+			backcolor				0.035 0.07 0.12 0.55
+			forecolor				1 1 1 1
+			bordercolor				0.43 0.83 1 0.16
+			visible					1
+			decoration
+			radius					5
+		}
+
+		itemDef
+		{
+			group					gamedesc
+			name					duel_desc
+			text					@MENUS_THE_GAME_OF_DUEL_IS_ALSO
+			type					ITEM_TYPE_TEXTSCROLL
+			style					WINDOW_STYLE_EMPTY
+			visible					0
+			rect					240 107 360 225
+			font					5
+			textscale				0.68
+			textalign				ITEM_ALIGN_LEFT
+			textaligny				13
+			backcolor				0 0 1 0
+			forecolor				0.60 0.69 0.78 1
+			lineHeight				15
+			maxLineChars			45
+			outlinecolor			0.43 0.83 1 0.22
+		}
+
+		itemDef
+		{
+			group					gamedesc
+			name					teamffa_desc
+			text					@MENUS_THIS_GAME_PITS_TWO_JEDI
+			type					ITEM_TYPE_TEXTSCROLL
+			style					WINDOW_STYLE_EMPTY
+			visible					0
+			rect					240 107 360 225
+			font					5
+			textscale				0.68
+			textalign				ITEM_ALIGN_LEFT
+			textaligny				13
+			backcolor				0 0 1 0
+			forecolor				0.60 0.69 0.78 1
+			lineHeight				15
+			maxLineChars			45
+			outlinecolor			0.43 0.83 1 0.22
+		}
+
+		itemDef
+		{
+			group					gamedesc
+			name					ctf_desc
+			text					@MENUS_IN_CAPTURE_THE_FLAG_CTF
+			type					ITEM_TYPE_TEXTSCROLL
+			style					WINDOW_STYLE_EMPTY
+			visible					0
+			rect					240 107 360 225
+			font					5
+			textscale				0.68
+			textalign				ITEM_ALIGN_LEFT
+			textaligny				13
+			backcolor				0 0 1 0
+			forecolor				0.60 0.69 0.78 1
+			lineHeight				15
+			maxLineChars			45
+			outlinecolor			0.43 0.83 1 0.22
+		}
+
+		itemDef
+		{
+			group					gamedesc
+			name					siege_desc
+			text					@MENUS_SIEGE_GAME_RULES_DESC
+			type					ITEM_TYPE_TEXTSCROLL
+			style					WINDOW_STYLE_EMPTY
+			visible					0
+			rect					240 107 360 225
+			font					5
+			textscale				0.68
+			textalign				ITEM_ALIGN_LEFT
+			textaligny				13
+			backcolor				0 0 1 0
+			forecolor				0.60 0.69 0.78 1
+			lineHeight				15
+			maxLineChars			45
+			outlinecolor			0.43 0.83 1 0.22
+		}
+
+		itemDef
+		{
+			group					gamedesc
+			name					ffa_desc
+			text					@MENUS_THIS_GAME_IS_BEST_SUMMED
+			type					ITEM_TYPE_TEXTSCROLL
+			style					WINDOW_STYLE_EMPTY
+			visible					0
+			rect					240 107 360 225
+			font					5
+			textscale				0.68
+			textalign				ITEM_ALIGN_LEFT
+			textaligny				13
+			backcolor				0 0 1 0
+			forecolor				0.60 0.69 0.78 1
+			lineHeight				15
+			maxLineChars			45
+			outlinecolor			0.43 0.83 1 0.22
+		}
+
+		itemDef
+		{
+			group					gamedesc
+			name					pduel_desc
+			text					@MENUS_POWERDUEL_GAME_RULES_DESC
+			type					ITEM_TYPE_TEXTSCROLL
+			style					WINDOW_STYLE_EMPTY
+			visible					0
+			rect					240 107 360 225
+			font					5
+			textscale				0.68
+			textalign				ITEM_ALIGN_LEFT
+			textaligny				13
+			backcolor				0 0 1 0
+			forecolor				0.60 0.69 0.78 1
+			lineHeight				15
+			maxLineChars			45
+			outlinecolor			0.43 0.83 1 0.22
+		}
+		skin					1
+		disableColor			0.36 0.42 0.50 1
+		backdrop				1
+
+		itemDef
+		{
 			name					backbutton
 			group					fade_buttons
 			text					@MENUS_BACK
 			descText				@MENUS_BACKTORULES
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_PANEL
-			rect					69 446 110 22
+			rect					40 446 110 22
 			font					5
 			textscale				0.7
 			textalign				ITEM_ALIGN_CENTER
@@ -275,7 +618,7 @@
 			descText				@MENUS_LEAVE_JEDI_KNIGHT_II
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_PANEL
-			rect					265 446 110 22
+			rect					160 446 110 22
 			font					5
 			textscale				0.7
 			textalign				ITEM_ALIGN_CENTER
@@ -297,334 +640,5 @@
 			bordercolor				0.43 0.83 1 0.16
 			radius					11
 		}
-
-		itemDef
-		{
-			name					game_rulesheader
-			group					rulesheader
-			style					WINDOW_STYLE_EMPTY
-			text					@MENUS_GAME_RULES_TITLE
-			rect					100 116 440 16
-			font					5
-			textscale				0.52
-			textalign				ITEM_ALIGN_CENTER
-			textalignx				225
-			textaligny				0.75
-			forecolor				0.60 0.69 0.78 1
-			visible					1
-			decoration
-			caps					1
-		}
-
-		itemDef
-		{
-			name					ffamenubutton
-			group					game_submenu
-			text					@MENUS_FFA_CAPS
-			type					ITEM_TYPE_BUTTON
-			style					WINDOW_STYLE_EMPTY
-			rect					40 137 170 30
-			font					5
-			textscale				0.69
-			textalignx				170
-			textaligny				6.2
-			textalign				ITEM_ALIGN_RIGHT
-			textstyle				0
-			forecolor				0.86 0.92 0.97 1
-			visible					1
-			descText				@MENUS_FREE_FOR_ALL_GAME_RULES
-			mouseEnter { show mainhighlight1 }
-			mouseExit { hide mainhighlight1 }
-			action
-			{
-				play "sound/interface/button1.wav" ;
-				setitemcolor game_submenu forecolor 1 .682 0 1;
-				setitemcolor ffamenubutton forecolor 0.43 0.83 1 1 ;
-				hide gamedesc ;
-				show ffa_desc ;
-			}
-		}
-
-		itemDef
-		{
-			name					duelmenubutton
-			group					game_submenu
-			text					@MENUS_DUEL_CAPS
-			type					ITEM_TYPE_BUTTON
-			style					WINDOW_STYLE_EMPTY
-			rect					40 167 170 30
-			font					5
-			textscale				0.69
-			textalignx				170
-			textaligny				6.2
-			textalign				ITEM_ALIGN_RIGHT
-			textstyle				0
-			forecolor				0.86 0.92 0.97 1
-			visible					1
-			descText				@MENUS_DUEL_GAMETYPE
-			mouseEnter { show mainhighlight2 }
-			mouseExit { hide mainhighlight2 }
-			action
-			{
-				play "sound/interface/button1.wav" ;
-				setitemcolor game_submenu forecolor 1 .682 0 1;
-				setitemcolor duelmenubutton forecolor 0.43 0.83 1 1 ;
-				hide gamedesc ;
-				show duel_desc ;
-			}
-		}
-
-		itemDef
-		{
-			name					pduelmenubutton
-			group					game_submenu
-			text					@MENUS_POWERDUEL_CAPS
-			type					ITEM_TYPE_BUTTON
-			style					WINDOW_STYLE_EMPTY
-			rect					40 197 170 30
-			font					5
-			textscale				0.69
-			textalignx				170
-			textaligny				6.2
-			textstyle				0
-			textalign				ITEM_ALIGN_RIGHT
-			forecolor				0.86 0.92 0.97 1
-			visible					1
-			descText				@MENUS_POWERDUEL_GAME_RULES
-			mouseEnter { show mainhighlight3 }
-			mouseExit { hide mainhighlight3 }
-			action
-			{
-				play "sound/interface/button1.wav" ;
-				setitemcolor game_submenu forecolor 1 .682 0 1;
-				setitemcolor pduelmenubutton forecolor 0.43 0.83 1 1 ;
-				hide gamedesc ;
-				show pduel_desc ;
-			}
-		}
-
-		itemDef
-		{
-			name					teamffamenubutton
-			group					game_submenu
-			text					@MENUS_TEAM_FFA_CAPS
-			type					ITEM_TYPE_BUTTON
-			style					WINDOW_STYLE_EMPTY
-			rect					40 227 170 30
-			font					5
-			textscale				0.69
-			textalignx				170
-			textaligny				6.2
-			textstyle				0
-			textalign				ITEM_ALIGN_RIGHT
-			forecolor				0.86 0.92 0.97 1
-			visible					1
-			descText				@MENUS_TEAM_FFA_GAMETYPE
-			mouseEnter { show mainhighlight4 }
-			mouseExit { hide mainhighlight4 }
-			action
-			{
-				play "sound/interface/button1.wav" ;
-				setitemcolor game_submenu forecolor 1 .682 0 1;
-				setitemcolor teamffamenubutton forecolor 0.43 0.83 1 1 ;
-				hide gamedesc ;
-				show teamffa_desc ;
-			}
-		}
-
-		itemDef
-		{
-			name					ctfmenubutton
-			group					game_submenu
-			text					@MENUS_CTF_CAPS
-			type					ITEM_TYPE_BUTTON
-			style					WINDOW_STYLE_EMPTY
-			rect					40 257 170 30
-			font					5
-			textscale				0.69
-			textalignx				170
-			textaligny				6.2
-			textalign				ITEM_ALIGN_RIGHT
-			textstyle				0
-			forecolor				0.86 0.92 0.97 1
-			visible					1
-			descText				@MENUS_CAPTURE_THE_FLAG_RULES
-			mouseEnter { show mainhighlight5 }
-			mouseExit { hide mainhighlight5 }
-			action
-			{
-				play "sound/interface/button1.wav" ;
-				setitemcolor game_submenu forecolor 1 .682 0 1;
-				setitemcolor ctfmenubutton forecolor 0.43 0.83 1 1 ;
-				hide gamedesc ;
-				show ctf_desc ;
-			}
-		}
-
-		itemDef
-		{
-			name					siegemenubutton
-			group					game_submenu
-			text					@MENUS_SIEGE_CAPS
-			type					ITEM_TYPE_BUTTON
-			style					WINDOW_STYLE_EMPTY
-			rect					40 287 170 30
-			font					5
-			textscale				0.69
-			textalignx				170
-			textaligny				6.2
-			textalign				ITEM_ALIGN_RIGHT
-			textstyle				0
-			forecolor				0.86 0.92 0.97 1
-			visible					1
-			descText				@MENUS_SIEGE_GAME_RULES
-			mouseEnter { show mainhighlight6 }
-			mouseExit { hide mainhighlight6 }
-			action
-			{
-				play "sound/interface/button1.wav" ;
-				setitemcolor game_submenu forecolor 0.86 0.92 0.97 1 ;
-				setitemcolor siegemenubutton forecolor 0.43 0.83 1 1 ;
-				hide gamedesc ;
-				show siege_desc ;
-			}
-		}
-
-		itemDef
-		{
-			name					setup_background
-			group					none
-			style					WINDOW_STYLE_PANEL
-			rect					225 135 370 230
-			backcolor				0.035 0.07 0.12 0.55
-			forecolor				1 1 1 1
-			bordercolor				0.43 0.83 1 0.16
-			visible					1
-			decoration
-			radius					5
-		}
-
-		itemDef
-		{
-			group					gamedesc
-			name					duel_desc
-			text					@MENUS_THE_GAME_OF_DUEL_IS_ALSO
-			type					ITEM_TYPE_TEXTSCROLL
-			style					WINDOW_STYLE_EMPTY
-			visible					0
-			rect					235 139 360 225
-			font					5
-			textscale				0.68
-			textalign				ITEM_ALIGN_LEFT
-			textaligny				13
-			backcolor				0 0 1 0
-			forecolor				0.60 0.69 0.78 1
-			lineHeight				15
-			maxLineChars			45
-			outlinecolor			0.43 0.83 1 0.22
-		}
-
-		itemDef
-		{
-			group					gamedesc
-			name					teamffa_desc
-			text					@MENUS_THIS_GAME_PITS_TWO_JEDI
-			type					ITEM_TYPE_TEXTSCROLL
-			style					WINDOW_STYLE_EMPTY
-			visible					0
-			rect					235 139 360 225
-			font					5
-			textscale				0.68
-			textalign				ITEM_ALIGN_LEFT
-			textaligny				13
-			backcolor				0 0 1 0
-			forecolor				0.60 0.69 0.78 1
-			lineHeight				15
-			maxLineChars			45
-			outlinecolor			0.43 0.83 1 0.22
-		}
-
-		itemDef
-		{
-			group					gamedesc
-			name					ctf_desc
-			text					@MENUS_IN_CAPTURE_THE_FLAG_CTF
-			type					ITEM_TYPE_TEXTSCROLL
-			style					WINDOW_STYLE_EMPTY
-			visible					0
-			rect					235 139 360 225
-			font					5
-			textscale				0.68
-			textalign				ITEM_ALIGN_LEFT
-			textaligny				13
-			backcolor				0 0 1 0
-			forecolor				0.60 0.69 0.78 1
-			lineHeight				15
-			maxLineChars			45
-			outlinecolor			0.43 0.83 1 0.22
-		}
-
-		itemDef
-		{
-			group					gamedesc
-			name					siege_desc
-			text					@MENUS_SIEGE_GAME_RULES_DESC
-			type					ITEM_TYPE_TEXTSCROLL
-			style					WINDOW_STYLE_EMPTY
-			visible					0
-			rect					235 139 360 225
-			font					5
-			textscale				0.68
-			textalign				ITEM_ALIGN_LEFT
-			textaligny				13
-			backcolor				0 0 1 0
-			forecolor				0.60 0.69 0.78 1
-			lineHeight				15
-			maxLineChars			45
-			outlinecolor			0.43 0.83 1 0.22
-		}
-
-		itemDef
-		{
-			group					gamedesc
-			name					ffa_desc
-			text					@MENUS_THIS_GAME_IS_BEST_SUMMED
-			type					ITEM_TYPE_TEXTSCROLL
-			style					WINDOW_STYLE_EMPTY
-			visible					0
-			rect					235 139 360 225
-			font					5
-			textscale				0.68
-			textalign				ITEM_ALIGN_LEFT
-			textaligny				13
-			backcolor				0 0 1 0
-			forecolor				0.60 0.69 0.78 1
-			lineHeight				15
-			maxLineChars			45
-			outlinecolor			0.43 0.83 1 0.22
-		}
-
-		itemDef
-		{
-			group					gamedesc
-			name					pduel_desc
-			text					@MENUS_POWERDUEL_GAME_RULES_DESC
-			type					ITEM_TYPE_TEXTSCROLL
-			style					WINDOW_STYLE_EMPTY
-			visible					0
-			rect					235 139 360 225
-			font					5
-			textscale				0.68
-			textalign				ITEM_ALIGN_LEFT
-			textaligny				13
-			backcolor				0 0 1 0
-			forecolor				0.60 0.69 0.78 1
-			lineHeight				15
-			maxLineChars			45
-			outlinecolor			0.43 0.83 1 0.22
-		}
-		skin					1
-		disableColor			0.36 0.42 0.50 1
-		backdrop				1
 	}
 }

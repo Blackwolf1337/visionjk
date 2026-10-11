@@ -9,6 +9,8 @@ DIM = ['0.60', '0.69', '0.78', '1']             # labels and what is less import
 OFF = ['0.36', '0.42', '0.50', '1']             # what can not be used right now
 ACCENT = ['0.43', '0.83', '1', '1']             # what is chosen, switched on or in focus
 WARM = ['1', '0.74', '0.30', '1']               # what asks for attention
+RED = ['1', '0.45', '0.42', '1']                # the red team, and what went wrong
+BLUE = ['0.45', '0.66', '1', '1']               # the blue team
 PANEL = ['0.035', '0.07', '0.12', '0.80']       # a panel on the sky or on the level
 PANEL_EDGE = ['0.43', '0.83', '1', '0.28']
 SOFT = ['0.035', '0.07', '0.12', '0.55']        # a panel on a panel
@@ -28,6 +30,7 @@ GONE = {
     'gfx/menus/main_leftwindow', 'gfx/menus/main_rightwindow', 'gfx/menus/videologo', 'gfx/menus/menu_buttonback',
     'gfx/menus/menu_blendbox', 'gfx/menus/menu_blendbox2', 'gfx/menus/menu_blendbox3',
     'gfx/menus/menu_blendbox_extended', 'gfx/menus/sabermenu_back', 'gfx/menus/charmenu', 'gfx/menus/charmenu_bottom',
+    'gfx/menus/menu_blendboxr', 'menu/art/unknownmap_mp',
 }
 # boxes of the old frame: a panel in their place
 BOXES = {
@@ -57,7 +60,7 @@ def rgba(args):
 def kind(c):
     """What a colour of the old menus stands for."""
     r, g, b, a = c
-    if r >= 0.9 and 0.5 <= g <= 0.8 and b <= 0.25:
+    if r >= 0.75 and 0.4 <= g <= 0.8 and b <= 0.25 and r - g >= 0.2:
         return 'orange'             # what can be clicked
     if r >= 0.95 and g >= 0.95 and b >= 0.95:
         return 'white'              # what is chosen
@@ -65,13 +68,25 @@ def kind(c):
         return 'blue'               # labels and titles
     if r >= 0.9 and g >= 0.9 and b <= 0.3:
         return 'yellow'
+    if 0.7 <= r <= 0.9 and 0.55 <= g <= 0.75 and b <= 0.35:
+        return 'gold'               # headings of columns, notices
+    if r >= 0.9 and g <= 0.35 and b <= 0.35:
+        return 'red'
+    if b >= 0.9 and r <= 0.35 and g <= 0.35:
+        return 'teamblue'
+    if abs(r - g) <= 0.06 and abs(g - b) <= 0.06:
+        if 0.6 <= r < 0.95:
+            return 'grey'           # a choice that is not the chosen one
+        if 0.3 <= r < 0.6:
+            return 'dark'           # a choice that can not be made
     return None
 
 
 def recolor(c, chosen=ACCENT):
     """The colour of the theme for a colour of the old menus, with its alpha kept."""
     k = kind(c)
-    new = {'orange': TEXT, 'white': chosen, 'blue': DIM, 'yellow': WARM}.get(k)
+    new = {'orange': TEXT, 'white': chosen, 'blue': DIM, 'yellow': WARM, 'gold': WARM, 'red': RED, 'teamblue': BLUE,
+           'grey': TEXT, 'dark': OFF}.get(k)
     if not new:
         return None
     return new[:3] + [mf.fmt(c[3])]
@@ -83,10 +98,12 @@ def script_colors(words):
     i = 0
     while i < len(words) - 6:
         if words[i].lower() == 'setitemcolor' and words[i + 2].lower() == 'forecolor':
-            c = rgba(words[i + 3:i + 7])
+            # (the last number often has the ";" of the command on it)
+            end = ';' if words[i + 6].endswith(';') else ''
+            c = rgba(words[i + 3:i + 6] + [words[i + 6].rstrip(';')])
             new = recolor(c) if c else None
             if new:
-                words[i + 3:i + 7] = new
+                words[i + 3:i + 7] = new[:3] + [new[3] + end]
             i += 7
         else:
             i += 1
@@ -196,8 +213,12 @@ def restyle_item(b):
 
     fore = rgba(mf.get(b, 'forecolor'))
     if fore and (has_text or k in ('list', 'scroll', 'owner')):
-        # the white of an item that can be clicked marked the section that is open
-        new = recolor(fore, ACCENT if k == 'button' or mf.find(b, 'action') else TEXT)
+        # the white of an item that can be clicked marked the section that is open. (A row of settings that was
+        # white is a row like the others.)
+        if k in ('bind', 'yesno', 'multi', 'slider', 'editfield', 'numericfield', '4', '9', '10', '11', '12', '13'):
+            new = recolor(fore, DIM)
+        else:
+            new = recolor(fore, ACCENT if k == 'button' or mf.find(b, 'action') else TEXT)
         if new:
             mf.put(b, 'forecolor', *new)
     if has_text or k in ('list', 'scroll', 'owner'):
@@ -210,8 +231,7 @@ def restyle_item(b):
 
 def restyle(m, name, ingame):
     """One menuDef."""
-    full = mf.get(m, 'fullscreen')
-    full = bool(full and full[0] != '0')
+    full = mf.truth(mf.get(m, 'fullscreen'))
     mf.put(m, 'skin', 1)
     mf.put(m, 'focusColor', *ACCENT)
     mf.put(m, 'disableColor', *OFF)

@@ -9,10 +9,10 @@
 		outOfBoundsClick
 		rect					45 35 550 335
 		focusColor				0.43 0.83 1 1
-		style					WINDOW_STYLE_PANEL
-		descX					305
-		descY					360
-		descScale				1
+		style					WINDOW_STYLE_EMPTY
+		descX					320
+		descY					371
+		descScale				0.7
 		descColor				0.60 0.69 0.78 1
 		descAlignment			ITEM_ALIGN_CENTER
 		onClose
@@ -54,13 +54,15 @@
 			name					background_pic
 			group					none
 			style					WINDOW_STYLE_PANEL
-			rect					0 0 550 345
+			rect					10 0 530 331
 			forecolor				1 1 1 1
 			visible					1
 			decoration
-			backcolor				0.035 0.07 0.12 0.55
-			bordercolor				0.43 0.83 1 0.16
-			radius					5
+			backcolor				0.035 0.07 0.12 0.94
+			bordercolor				0.43 0.83 1 0.28
+			radius					8
+			shadow					14
+			sheen					0.08
 		}
 
 		itemDef
@@ -85,6 +87,20 @@
 
 		itemDef
 		{
+			name					vision_rail_43
+			rect					17 40 176 281
+			visible					1
+			style					WINDOW_STYLE_PANEL
+			backcolor				0.035 0.07 0.12 0.55
+			bordercolor				0.43 0.83 1 0.16
+			radius					6
+			shadow					8
+			sheen					0.06
+			decoration
+		}
+
+		itemDef
+		{
 			name					movementcontrolbutton
 			group					none
 			text					@MENUS_MOVEMENT
@@ -93,9 +109,9 @@
 			rect					20 43 170 30
 			font					5
 			textscale				0.59
-			textalignx				170
+			textalignx				12
 			textaligny				7
-			textalign				ITEM_ALIGN_RIGHT
+			textalign				ITEM_ALIGN_LEFT
 			textstyle				0
 			forecolor				0.60 0.69 0.78 1
 			visible					1
@@ -136,9 +152,9 @@
 			rect					20 73 170 30
 			font					5
 			textscale				0.59
-			textalignx				170
+			textalignx				12
 			textaligny				7
-			textalign				ITEM_ALIGN_RIGHT
+			textalign				ITEM_ALIGN_LEFT
 			textstyle				0
 			forecolor				0.60 0.69 0.78 1
 			visible					1
@@ -179,9 +195,9 @@
 			rect					20 103 170 30
 			font					5
 			textscale				0.59
-			textalignx				170
+			textalignx				12
 			textaligny				7
-			textalign				ITEM_ALIGN_RIGHT
+			textalign				ITEM_ALIGN_LEFT
 			textstyle				0
 			forecolor				0.86 0.92 0.97 1
 			visible					1
@@ -222,9 +238,9 @@
 			rect					20 133 170 30
 			font					5
 			textscale				0.59
-			textalignx				170
+			textalignx				12
 			textaligny				7
-			textalign				ITEM_ALIGN_RIGHT
+			textalign				ITEM_ALIGN_LEFT
 			textstyle				0
 			forecolor				0.60 0.69 0.78 1
 			visible					1
@@ -264,9 +280,9 @@
 			rect					20 163 170 30
 			font					5
 			textscale				0.59
-			textalignx				170
+			textalignx				12
 			textaligny				7
-			textalign				ITEM_ALIGN_RIGHT
+			textalign				ITEM_ALIGN_LEFT
 			textstyle				0
 			forecolor				0.60 0.69 0.78 1
 			visible					1
@@ -307,9 +323,9 @@
 			rect					20 193 170 30
 			font					5
 			textscale				0.59
-			textalignx				170
+			textalignx				12
 			textaligny				7
-			textalign				ITEM_ALIGN_RIGHT
+			textalign				ITEM_ALIGN_LEFT
 			textstyle				0
 			forecolor				0.60 0.69 0.78 1
 			visible					1
@@ -350,9 +366,9 @@
 			rect					20 223 170 30
 			font					5
 			textscale				0.59
-			textalignx				170
+			textalignx				12
 			textaligny				7
-			textalign				ITEM_ALIGN_RIGHT
+			textalign				ITEM_ALIGN_LEFT
 			textstyle				0
 			forecolor				0.60 0.69 0.78 1
 			visible					1
@@ -393,9 +409,9 @@
 			rect					20 253 170 30
 			font					5
 			textscale				0.59
-			textalignx				170
+			textalignx				12
 			textaligny				7
-			textalign				ITEM_ALIGN_RIGHT
+			textalign				ITEM_ALIGN_LEFT
 			textstyle				0
 			forecolor				0.60 0.69 0.78 1
 			visible					1
@@ -431,7 +447,7 @@
 			name					setup_background
 			group					none
 			style					WINDOW_STYLE_PANEL
-			rect					210 41 320 280
+			rect					210 40 320 281
 			backcolor				0.035 0.07 0.12 0.55
 			forecolor				1 1 1 1
 			bordercolor				0.43 0.83 1 0.16
@@ -2784,10 +2800,5 @@
 		skin					1
 		disableColor			0.36 0.42 0.50 1
 		openSlide				8
-		backcolor				0.035 0.07 0.12 0.80
-		bordercolor				0.43 0.83 1 0.28
-		radius					8
-		shadow					14
-		sheen					0.08
 	}
 }
