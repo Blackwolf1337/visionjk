@@ -105,36 +105,43 @@ void VK_EndGlow( void ) {
 ===============
 VK_BlurFrame
 
-Blurs the frame as it is right now, for a module that asked with RE_SetDepthOfField(): the menu in the level of
-the cgame, which is drawn afterwards and stays sharp. It is made of the passes the glow has and of nothing else:
-the frame is blurred into the two small buffers, then the frame is cleared and the blurred picture is added to
-it, the way r_DynamicGlow 2 shows the glow alone. So it is no blur by depth: the whole scene is out of focus,
-more of it with a larger amount (0 to 1). Only with r_menuBlur 1.
+Puts the frame as it is right now out of focus, for a module that asked with RE_SetDepthOfField(): the menu in
+the level of the cgame, which is drawn afterwards and stays sharp. It is no blur by depth, the whole scene is
+soft. amount is 0 to 1 from the module (the menu comes and goes), r_menuBlur is how soft the player wants it:
+0 not at all, 1 as it is meant, up to 4.
+
+The frame goes into a buffer of half its size first: the four samples of that pass are the four pixels behind one
+of the buffer, so nothing flickers. Then passes in that size widen it, each half a pixel further out than the
+one before, three of them at r_menuBlur 1. The glow has buffers too (vk.blur), but they are 320 x 240 by
+default: the scene is unrecognisable after one pass through them, which is what the first version of this did.
+At the end the frame is cleared and the soft picture is added to it, the way r_DynamicGlow 2 shows the glow
+alone.
 ===============
 */
 void VK_BlurFrame( float amount ) {
-	const int	passes = 2 + (int)( amount * 4.0f );
+	const float	strength = Com_Clamp( 0.0f, 4.0f, r_menuBlur->value );
+	const int	passes = Com_Clampi( 1, 12, (int)( strength * 3.0f + 0.5f ) );
 	const float	black[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
 	vkTarget_t	*source = &vk.color;
-	float		offset = 0.5f;		// in pixels of the source
 
-	if ( !vk.frame || amount <= 0.0f ) {
+	if ( !vk.frame || amount <= 0.0f || strength <= 0.0f ) {
 		return;
 	}
+	amount = Q_min( amount, 1.0f );
 	VK_EndTarget();
 
-	for ( int i = 0; i < passes; i++ ) {
-		vkTarget_t *target = &vk.blur[i & 1];
-		// four samples around a pixel, a quarter of each
+	for ( int i = 0; i <= passes; i++ ) {
+		vkTarget_t *target = &vk.soft[i & 1];
+		// in pixels of the source, four samples and a quarter of each
+		const float offset = i ? ( i - 0.5f ) * amount : 0.5f;
 		const float parm[4] = { offset / source->width, offset / source->height, 0.25f, 0.0f };
 
 		VK_BlurPass( source, target, parm );
 
 		source = target;
-		offset += amount;
 	}
 
-	// back to the frame, which is the blurred picture from here on
+	// back to the frame, which is the soft picture from here on
 	VK_BeginTarget( &vk.color, &vk.depth, 2, qtrue );
 	VK_ClearColor( 0, 0, vk.width, vk.height, black );
 	VK_AddTarget( source, qfalse );

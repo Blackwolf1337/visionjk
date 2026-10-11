@@ -578,7 +578,13 @@ static VkDescriptorSet VK_PostSet( const vkTarget_t *source ) {
 	if ( source == &vk.color ) {
 		return vk.postSet;
 	}
-	return ( source == &vk.glow ) ? vk.glowSet : vk.blurSets[source - vk.blur];
+	if ( source == &vk.glow ) {
+		return vk.glowSet;
+	}
+	if ( source == &vk.soft[0] || source == &vk.soft[1] ) {
+		return vk.softSets[source - vk.soft];
+	}
+	return vk.blurSets[source - vk.blur];
 }
 
 // the pipeline stays bound from one pass of the blur to the next

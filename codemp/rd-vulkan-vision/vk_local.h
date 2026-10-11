@@ -213,6 +213,7 @@ typedef struct vkState_s : vkDeviceState_t {
 	int							screenSlot;			// the entry of the texture table that shows it, -1: none yet
 	vkTarget_t					glow;				// r_DynamicGlow: the stages that glow, drawn again over the depth of the scene
 	vkTarget_t					blur[2];			// and blurred, r_DynamicGlowWidth x r_DynamicGlowHeight
+	vkTarget_t					soft[2];			// the frame out of focus at half its size, r_menuBlur (VK_BlurFrame)
 	qboolean					finalValid;			// a frame has been rendered into it
 
 	vkImage_t					images[VK_MAX_IMAGES];
@@ -383,7 +384,8 @@ void		VK_EndImageUpload( vkImage_t *vi );
 void		VK_WriteTexture( int slot );
 // the slot of the table shows the target from now on: filtered, clamped, and for vk.screen with an alpha of 1
 void		VK_ShowTarget( int slot, const vkTarget_t *target );
-// vk.glow and vk.screen in the size of the frame, vk.blur[] in the size given. vk.color, vk.depth and vk.final are
+// vk.glow and vk.screen in the size of the frame, vk.blur[] in the size given, vk.soft[] in half the size of the
+// frame. vk.color, vk.depth and vk.final are
 // made when the device starts.
 void		VK_CreatePostTargets( int blurWidth, int blurHeight );
 

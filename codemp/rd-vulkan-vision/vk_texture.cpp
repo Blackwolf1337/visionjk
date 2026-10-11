@@ -377,8 +377,8 @@ void VK_CreatePostTargets( int blurWidth, int blurHeight ) {
 	const VkImageUsageFlags usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 	VkSamplerCreateInfo sampler = { VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO };
 	VkDescriptorSetAllocateInfo alloc = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO };
-	VkDescriptorSet *sets[3] = { &vk.glowSet, &vk.blurSets[0], &vk.blurSets[1] };
-	vkTarget_t *targets[3] = { &vk.glow, &vk.blur[0], &vk.blur[1] };
+	VkDescriptorSet *sets[5] = { &vk.glowSet, &vk.blurSets[0], &vk.blurSets[1], &vk.softSets[0], &vk.softSets[1] };
+	vkTarget_t *targets[5] = { &vk.glow, &vk.blur[0], &vk.blur[1], &vk.soft[0], &vk.soft[1] };
 
 	VK_CreateTarget( &vk.glow, vk.width, vk.height, VK_FORMAT_R8G8B8A8_UNORM, usage, VK_IMAGE_ASPECT_COLOR_BIT, VK_SAMPLE_COUNT_1_BIT );
 	if ( vk.samples > VK_SAMPLE_COUNT_1_BIT ) {
@@ -404,6 +404,10 @@ void VK_CreatePostTargets( int blurWidth, int blurHeight ) {
 	}
 	VK_CreateTarget( &vk.blur[0], blurWidth, blurHeight, VK_FORMAT_R8G8B8A8_UNORM, usage, VK_IMAGE_ASPECT_COLOR_BIT, VK_SAMPLE_COUNT_1_BIT );
 	VK_CreateTarget( &vk.blur[1], blurWidth, blurHeight, VK_FORMAT_R8G8B8A8_UNORM, usage, VK_IMAGE_ASPECT_COLOR_BIT, VK_SAMPLE_COUNT_1_BIT );
+	for ( int i = 0; i < 2; i++ ) {
+		VK_CreateTarget( &vk.soft[i], Q_max( 1, vk.width / 2 ), Q_max( 1, vk.height / 2 ), VK_FORMAT_R8G8B8A8_UNORM, usage, VK_IMAGE_ASPECT_COLOR_BIT,
+			VK_SAMPLE_COUNT_1_BIT );
+	}
 
 	sampler.magFilter = sampler.minFilter = VK_FILTER_LINEAR;
 	sampler.addressModeU = sampler.addressModeV = sampler.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
@@ -412,7 +416,7 @@ void VK_CreatePostTargets( int blurWidth, int blurHeight ) {
 	alloc.descriptorPool = vk.descriptorPool;
 	alloc.descriptorSetCount = 1;
 	alloc.pSetLayouts = &vk.postSetLayout;
-	for ( int i = 0; i < 3; i++ ) {
+	for ( int i = 0; i < 5; i++ ) {
 		VK_CHECK( qvkAllocateDescriptorSets( vk.device, &alloc, sets[i] ) );
 		VK_WritePostSet( *sets[i], targets[i]->view );
 	}
@@ -424,5 +428,7 @@ void VK_DestroyPostTargets( void ) {
 	VK_DestroyTarget( &vk.screen );
 	VK_DestroyTarget( &vk.blur[0] );
 	VK_DestroyTarget( &vk.blur[1] );
+	VK_DestroyTarget( &vk.soft[0] );
+	VK_DestroyTarget( &vk.soft[1] );
 	qvkDestroySampler( vk.device, vk.linearSampler, NULL );
 }

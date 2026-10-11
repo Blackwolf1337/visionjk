@@ -1710,9 +1710,8 @@ void R_Register( void )
 	r_shadowRange						= ri.Cvar_Get( "r_shadowRange",					"1000",						CVAR_NONE, "" );
 	r_marksOnTriangleMeshes				= ri.Cvar_Get( "r_marksOnTriangleMeshes",			"0",						CVAR_ARCHIVE_ND, "" );
 	r_aspectCorrectFonts				= ri.Cvar_Get( "r_aspectCorrectFonts",				"0",						CVAR_ARCHIVE, "" );
-	// Off until the pass was seen to run: its first version ended the game (2026-10-11). The cvar had another name
-	// then (r_sceneBlur, on by default), so that a stored 1 of it does not switch this one on.
-	r_menuBlur							= ri.Cvar_Get( "r_menuBlur",						"0",						CVAR_ARCHIVE, "1 the scene behind the menu in the level is out of focus (rd-vulkan-vision), 0 it stays sharp" );
+	// it had another name once (r_sceneBlur), with a pass that ended the game, see VK_PostSet()
+	r_menuBlur							= ri.Cvar_Get( "r_menuBlur",						"1",						CVAR_ARCHIVE, "How far the scene behind the menu in the level is out of focus (rd-vulkan-vision): 0 not at all, 1 normal, up to 4" );
 	r_2dAspect							= ri.Cvar_Get( "r_2dAspect",						"1",						CVAR_ARCHIVE|CVAR_LATCH, "1 menus and HUD keep their shape on a wide window, 0 they are stretched over it (vid_restart)" );
 	r_maxpolys							= ri.Cvar_Get( "r_maxpolys",						XSTRING( DEFAULT_MAX_POLYS ),		CVAR_NONE, "" );
 	r_maxpolyverts						= ri.Cvar_Get( "r_maxpolyverts",					XSTRING( DEFAULT_MAX_POLYVERTS ),	CVAR_NONE, "" );
