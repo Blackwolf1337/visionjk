@@ -343,7 +343,7 @@ void VK_AddSurface( surfaceType_t *surface ) {
 			&& VK_AddDeviceMesh( rs->boneCache, mesh, qfalse, mesh->numTriangles * 3 ) ) {
 			// R_AddGhoulSurfaces() made this object for the frame and RB_SurfaceGhoul() frees it, which is not
 			// called on this way. It stays if the glow pass draws the surface a second time.
-			if ( !tess.shader->hasGlow || g_bRenderGlowingObjects || !g_bDynamicGlowSupported || !r_DynamicGlow->integer ) {
+			if ( R_GhoulSurfaceDone() ) {
 				delete rs;
 			}
 			return;

@@ -1637,6 +1637,11 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input )
 		{
 			continue;
 		}
+		// and a stage that is for the glow pass alone in every other pass
+		if ( !g_bRenderGlowingObjects && pStage->glowOnly )
+		{
+			continue;
+		}
 
 		if ( stage && r_lightmap->integer && !( pStage->bundle[0].isLightmap || pStage->bundle[1].isLightmap || pStage->bundle[0].vertexLightmap ) )
 		{

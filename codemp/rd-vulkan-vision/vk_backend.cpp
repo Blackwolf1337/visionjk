@@ -280,6 +280,16 @@ static const void *RB_RotatePic( const void *data, qboolean centered ) {
 	return (const void *)( cmd + 1 );
 }
 
+
+// RF_AFTERGLOW: the entities that are drawn after the glow has been added. The list of surfaces is run once more
+// for them, without them the first time.
+// (the first two are read by R_GhoulSurfaceDone())
+bool			rb_glowView;		// this view adds a glow
+bool			rb_lateEntities;	// this run of the list draws those entities and nothing else
+static qboolean	rb_sawLate;			// the first run left some out
+// a run of the list that draws into the picture and the depth of the run before it
+#define RB_KEEPS_FRAME()	( g_bRenderGlowingObjects || rb_lateEntities )
+
 /*
 ===============
 RB_BeginDrawingView
@@ -299,8 +309,8 @@ static void RB_BeginDrawingView( void ) {
 	VK_SetViewport( view->viewportX, view->viewportY, view->viewportWidth, view->viewportHeight, 0.0f, 1.0f );
 	VK_SetProjection( view->projectionMatrix );
 
-	// in the glow pass the depth of the scene stays
-	if ( !g_bRenderGlowingObjects ) {
+	// in the glow pass, and in the run for the entities that come after it, the depth of the scene stays
+	if ( !RB_KEEPS_FRAME() ) {
 		VK_ClearDepth( view->viewportX, view->viewportY, view->viewportWidth, view->viewportHeight );
 	}
 	if ( backEnd.refdef.rdflags & RDF_HYPERSPACE ) {
@@ -319,13 +329,13 @@ static void RB_BeginDrawingView( void ) {
 
 			VK_ClearColor( view->viewportX, view->viewportY, view->viewportWidth, view->viewportHeight, color );
 		}
-	} else if ( r_fastsky->integer && !( backEnd.refdef.rdflags & RDF_NOWORLDMODEL ) && !g_bRenderGlowingObjects ) {
+	} else if ( r_fastsky->integer && !( backEnd.refdef.rdflags & RDF_NOWORLDMODEL ) && !RB_KEEPS_FRAME() ) {
 		const float color[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
 
 		VK_ClearColor( view->viewportX, view->viewportY, view->viewportWidth, view->viewportHeight, color );
 	}
 	if ( ( ( tr.refdef.rdflags & RDF_AUTOMAP )
-		|| ( !( backEnd.refdef.rdflags & RDF_NOWORLDMODEL ) && r_DynamicGlow->integer && !g_bRenderGlowingObjects ) )
+		|| ( !( backEnd.refdef.rdflags & RDF_NOWORLDMODEL ) && r_DynamicGlow->integer && !RB_KEEPS_FRAME() ) )
 		&& tr.world && tr.world->globalFog != -1 ) {
 		// this is because of a bug in multiple scenes I think, it needs to clear for the second scene but it doesn't normally.
 		const fog_t *fog = &tr.world->fogs[tr.world->globalFog];
@@ -712,7 +722,7 @@ static void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 	const float originalTime = backEnd.refdef.floatTime;	// save original time for entity shader offsets
 	drawSurf_t *drawSurf = drawSurfs;
 	// the stencil shadows are darkened once, and not in the glow pass
-	qboolean didShadowPass = (qboolean)g_bRenderGlowingObjects;
+	qboolean didShadowPass = (qboolean)RB_KEEPS_FRAME();
 	// what VK_ShaderMergesEntities() says about a shader, asked once for a run of surfaces
 	const shader_t *mergeShader = NULL;
 	int shaderMerges = 0;
@@ -738,7 +748,19 @@ static void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 		}
 		// if we're rendering glowing objects, and this shader has no stages with glow, skip it. And what stands
 		// over the scene while that is put out of focus: RB_RenderOverSurfs() draws it
-		if ( ( g_bRenderGlowingObjects && !shader->hasGlow ) || ( rb_overLater && shader->over ) ) {
+		// And RF_AFTERGLOW, in a view that adds a glow: left out of the first run, and the only thing in the last.
+		// (The glow pass between them draws what glows of such an entity as of any other.)
+		qboolean wrongRun = qfalse;
+		if ( rb_glowView && !g_bRenderGlowingObjects ) {
+			const qboolean late = (qboolean)( entityNum != REFENTITYNUM_WORLD
+				&& ( backEnd.refdef.entities[entityNum].e.renderfx & RF_AFTERGLOW ) != 0 );
+
+			wrongRun = (qboolean)( late != (qboolean)rb_lateEntities );
+			if ( wrongRun && late ) {
+				rb_sawLate = qtrue;
+			}
+		}
+		if ( ( g_bRenderGlowingObjects && !shader->hasGlow ) || ( rb_overLater && shader->over ) || wrongRun ) {
 			shader = oldShader;
 			entityNum = oldEntityNum;
 			fogNum = oldFogNum;
@@ -940,6 +962,8 @@ static const void *RB_DrawSurfs( const void *data ) {
 
 	rb_overLater = focus;
 	rb_sawOver = qfalse;
+	rb_glowView = !( backEnd.refdef.rdflags & RDF_NOWORLDMODEL ) && r_DynamicGlow->integer;
+	rb_sawLate = qfalse;
 	RB_RenderDrawSurfList( cmd->drawSurfs, cmd->numDrawSurfs );
 	// the flares of this view want to know what the depth is where they are, before the next view clears it
 	VK_CopyProbes();
@@ -950,7 +974,14 @@ static const void *RB_DrawSurfs( const void *data ) {
 		RB_RenderDrawSurfList( cmd->drawSurfs, cmd->numDrawSurfs );
 		g_bRenderGlowingObjects = false;
 		VK_EndGlow();
+		// the entities that lie on that glow (RF_AFTERGLOW), into the frame and against the depth that are there
+		if ( rb_sawLate ) {
+			rb_lateEntities = true;
+			RB_RenderDrawSurfList( cmd->drawSurfs, cmd->numDrawSurfs );
+			rb_lateEntities = false;
+		}
 	}
+	rb_glowView = false;
 	if ( focus ) {
 		VK_BlurFrame( r_dofAmount, r_dofFocus );
 		if ( rb_sawOver ) {

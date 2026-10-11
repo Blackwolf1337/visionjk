@@ -713,6 +713,10 @@ qhandle_t RE_RegisterShaderRGBA( const char *name, const byte *rgba, int width, 
 	if ( flags & RGBA_SHADER_OVER ) {
 		return RE_RegisterSceneShader( imageName, image, flags, first ? SS_ALMOST_NEAREST : SS_NEAREST );
 	}
+	// what only the buffer of the glow gets comes before everything else that glows and is blended
+	if ( flags & RGBA_SHADER_BLUR ) {
+		return RE_RegisterSceneShader( imageName, image, flags, SS_SEE_THROUGH );
+	}
 	return RE_RegisterSceneShader( imageName, image, flags, first ? SS_BLEND6 : SS_ALMOST_NEAREST );
 }
 

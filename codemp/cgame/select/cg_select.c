@@ -65,6 +65,8 @@ typedef enum {
 } selectAct_t;
 
 #define SELECT_SHELLS	6		// the shells of the outline
+#define SELECT_BLUR_TENTHS	12	// how far the hull that the dynamic glow blurs stands off the model, in tenths of a unit,
+#define SELECT_BLUR_ALPHA	165	//	and how bright it is, of 255
 
 static struct {
 	qboolean	held;					// +cursor
@@ -77,6 +79,7 @@ static struct {
 	int			numRows;
 	int			confirmTime;			// when the vote to kick was clicked first, 0: not yet
 	qhandle_t	hull[SELECT_SHELLS];	// the shaders of the outline, from the model outward. The first 0: none
+	qhandle_t	blurHull;				// for the dynamic glow of the renderer: a hull that only its buffer gets, and blurs
 	qboolean	hullTried;
 	qhandle_t	pointer;				// the pointer of the game, where the new one can not be drawn
 } sel;
@@ -238,6 +241,8 @@ static void Select_Hull( void ) {
 			sel.hull[i] = trap->ext.R_RegisterShaderRGBA( va( "select_hull_%i", selectShells[i].tenths ), white, 4, 4,
 				RGBA_SHADER_HULL_WIDTH( selectShells[i].tenths ) | selectShells[i].flags );
 		}
+		memset( white, 255, sizeof( white ) );
+		sel.blurHull = trap->ext.R_RegisterShaderRGBA( "select_blur", white, 4, 4, RGBA_SHADER_HULL_WIDTH( SELECT_BLUR_TENTHS ) | RGBA_SHADER_BLUR );
 	}
 	if ( !sel.hull[0] ) {
 		sel.hull[0] = trap->R_RegisterShader( "gfx/vision/select_hull" );
@@ -275,6 +280,8 @@ void CG_SelectOutline( int clientNum, const refEntity_t *model ) {
 	refEntity_t			hull;
 	const clientInfo_t	*ci;
 	const float			strength = ( clientNum == sel.selected ) ? 1.0f : 0.75f;
+	char				value[8];
+	qboolean			blur;
 	int					i;
 
 	if ( !CG_SelectOutlined( clientNum ) ) {
@@ -282,7 +289,7 @@ void CG_SelectOutline( int clientNum, const refEntity_t *model ) {
 	}
 	ci = &cgs.clientinfo[clientNum];
 	hull = *model;
-	hull.renderfx &= ~( RF_RGB_TINT | RF_FORCE_ENT_ALPHA | RF_NODEPTH | RF_FORCEPOST );
+	hull.renderfx &= ~( RF_RGB_TINT | RF_FORCE_ENT_ALPHA | RF_NODEPTH | RF_FORCEPOST | RF_AFTERGLOW );
 	hull.renderfx |= RF_NOSHADOW;
 	// light blue, or the colour of his team
 	if ( cgs.gametype >= GT_TEAM && ci->team == TEAM_RED ) {
@@ -292,12 +299,24 @@ void CG_SelectOutline( int clientNum, const refEntity_t *model ) {
 	} else {
 		hull.shaderRGBA[0] = 110; hull.shaderRGBA[1] = 212; hull.shaderRGBA[2] = 255;
 	}
-	for ( i = 0; i < SELECT_SHELLS; i++ ) {
+	// With the dynamic glow of the renderer the light around the figure is a real blur: the figure goes into the
+	// buffer of the glow as a hull in the colour of the outline, the renderer blurs the buffer and adds it to the
+	// picture, and the player is drawn after that (RF_AFTERGLOW, see CG_SelectOutlined()), so the light lies
+	// around him and not on him. In the picture itself only the thin line at his edge is drawn. Without the glow
+	// (r_DynamicGlow 0, or an engine that does not know the flag) the fading shells are the light.
+	trap->Cvar_VariableStringBuffer( "r_DynamicGlow", value, sizeof( value ) );
+	blur = (qboolean)( sel.blurHull && atoi( value ) != 0 );
+	for ( i = 0; i < ( blur ? 1 : SELECT_SHELLS ); i++ ) {
 		if ( sel.hull[i] ) {
 			hull.customShader = sel.hull[i];
 			hull.shaderRGBA[3] = (byte)( selectShells[i].alpha * strength );
 			trap->R_AddRefEntityToScene( &hull );
 		}
+	}
+	if ( blur ) {
+		hull.customShader = sel.blurHull;
+		hull.shaderRGBA[3] = (byte)( SELECT_BLUR_ALPHA * strength );
+		trap->R_AddRefEntityToScene( &hull );
 	}
 }
 

@@ -74,6 +74,10 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define RF_ALPHA_DEPTH		0x100000 //depth write on alpha model
 
 #define RF_FORCEPOST		0x200000 //force it to post-render -rww
+// Drawn after the dynamic glow has been added to the picture, in a view that adds one (r_DynamicGlow): a light
+// that only the glow draws around the entity (RGBA_SHADER_BLUR) then lies behind it and not across it. In a view
+// without a glow the flag does nothing.
+#define RF_AFTERGLOW		0x400000
 
 // refdef flags
 // what a shader for a picture a module made is like (RE_RegisterShaderRGBA). The first one is the qtrue the
@@ -83,6 +87,9 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define RGBA_SHADER_BEHIND	4		// drawn before the pictures without it, where a glow is drawn, but blended as they are
 #define RGBA_SHADER_HULL	8		// for a model as its custom shader: an outline around it. Only what faces away is
 									// drawn, pushed out along the normals, in the colour of the entity
+#define RGBA_SHADER_BLUR	16		// Drawn into the buffer of the dynamic glow and nowhere else, in the colour of the
+									// entity: what is seen of it is the blurred light the renderer makes of that buffer
+									// (r_DynamicGlow), added to the picture. Nothing at all with r_DynamicGlow 0.
 // with RGBA_SHADER_HULL: how far the outline stands off the model, in tenths of a unit, in the bits above the
 // flags. Without it 1.1 units. Several of them around one model, the wider the fainter, are a soft light.
 #define RGBA_SHADER_HULL_WIDTH( tenths )	( RGBA_SHADER_HULL | ( ( ( tenths ) & 0xff ) << 8 ) )

@@ -347,16 +347,26 @@ A row is run with a click or with its number. A click beside the card, the right
   that you pointed at him. An unchanged client has none of it and notices none of it.
 - A player behind a wall, a dead one, a cloaked one and yourself can not be pointed at. A challenge to a duel
   is not on the card: the server wants your aim on the other player for that.
-- The outline is a soft light around the figure, and around nothing but its edge. The model of the player is
-  drawn six more times, each time with a shader that pushes it out along its normals a little further (0.5 to
-  4 units) and fainter. The innermost shell is added to what is behind it and glows with `r_DynamicGlow`, the
-  others are blended. None of them writes depth, and the figure itself, with the blades of its saber, is drawn
-  after everything else for as long as it has the outline (`RF_FORCEPOST`), so it lies on the shells: what is
-  left of them is what stands out around it, and no line of an arm crosses the body. The price: a blended thing
-  of somebody else that passes in front of that player (a blade, smoke) is covered by him while he is marked.
-  The engine of this tree makes the shaders (`RGBA_SHADER_HULL_WIDTH`), so the outline is there on a pure server
-  without the pack. Another engine takes `gfx/vision/select_hull` from the pack, one shell and no fade, and
-  without that the player gets four corners.
+- The outline is a thin line at the edge of the figure and a soft light around it, and nothing of either lies on
+  the figure.
+  - With the dynamic glow of the renderer (`r_DynamicGlow 1`) the light is a real blur. The model is added once
+    more with a shader that only the buffer of the glow gets (`RGBA_SHADER_BLUR`), pushed out a little along its
+    normals, in the colour of the outline. The renderer blurs that buffer as it does for every light of the game
+    and adds it to the picture. The player himself and the blades of his saber are drawn after that
+    (`RF_AFTERGLOW`: both renderers run their list a third time for such entities, after the glow has been
+    added), so he lies on the light. How wide and how strong it is follows `r_DynamicGlowPasses`,
+    `r_DynamicGlowDelta` and `r_DynamicGlowIntensity`, like every glow.
+  - Without it (`r_DynamicGlow 0`) the light is the model six more times, each pushed out further and fainter
+    (0.5 to 4 units), with the player drawn after everything else of the scene (`RF_FORCEPOST`).
+  - The line is the innermost of those shells in both cases.
+  - The price in both: a blended thing of somebody else that passes in front of that player (a blade, smoke) is
+    covered by him while he is marked.
+  - The engine of this tree makes the shaders (`RGBA_SHADER_HULL_WIDTH`), so the outline is there on a pure
+    server without the pack. Another engine takes `gfx/vision/select_hull` from the pack, one shell and no
+    fade, and without that the player gets four corners.
+  - Found while it was made: a model surface is freed the last time it is drawn in a view, which was "in the
+    glow pass if its shader glows". The hilt of a saber glows, was freed there and drawn again after the glow:
+    a crash on both renderers at the first outline. `R_GhoulSurfaceDone()` is the one rule now, for both.
 - The pointer is drawn after the card, by `CG_SelectDraw()` also while the chat box is open, which used to draw
   it itself before the card.
 

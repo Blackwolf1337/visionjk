@@ -428,6 +428,8 @@ typedef struct shaderStage_s {
 
 	// Whether this object emits a glow or not.
 	bool			glow;
+	// and whether it is drawn in the pass of the dynamic glow only (RGBA_SHADER_BLUR)
+	bool			glowOnly;
 } shaderStage_t;
 
 struct shaderCommands_s;
@@ -1723,6 +1725,7 @@ CRenderableSurface():
 
 void R_AddGhoulSurfaces( trRefEntity_t *ent );
 void RB_SurfaceGhoul( CRenderableSurface *surface );
+qboolean R_GhoulSurfaceDone( void );
 /*
 Ghoul2 Insert End
 */

@@ -6726,7 +6726,7 @@ JustDoIt:
 	//	scolor, renderfx, (qboolean)(saberNum==0&&bladeNum==0) );
 	// (the blade of a player with an outline is drawn after his figure, which is drawn after everything else then)
 	CG_DoSaber( org_, axis_[0], saberLen, client->saber[saberNum].blade[bladeNum].lengthMax, client->saber[saberNum].blade[bladeNum].radius,
-		scolor, renderfx | ( CG_SelectOutlined( cent->currentState.number ) ? RF_FORCEPOST : 0 ),
+		scolor, renderfx | ( CG_SelectOutlined( cent->currentState.number ) ? ( RF_FORCEPOST | RF_AFTERGLOW ) : 0 ),
 		(qboolean)(client->saber[saberNum].numBlades < 3 && !(client->saber[saberNum].saberFlags2&SFL2_NO_DLIGHT)) );
 }
 
@@ -9998,9 +9998,10 @@ void CG_Player( centity_t *cent ) {
 	VectorCopy( cent->lerpOrigin, legs.lightingOrigin );
 	legs.shadowPlane = shadowPlane;
 	legs.renderfx = renderfx;
-	// a player with an outline is drawn after it and on it (select/cg_select.c)
+	// a player with an outline is drawn after it and on it (select/cg_select.c): after the glow that is its light
+	// where the renderer adds one, after everything else of the scene where it adds none
 	if ( CG_SelectOutlined( cent->currentState.number ) ) {
-		legs.renderfx |= RF_FORCEPOST;
+		legs.renderfx |= RF_FORCEPOST | RF_AFTERGLOW;
 	}
 	if (cg_shadows.integer == 2 && (renderfx & RF_THIRD_PERSON))
 	{ //can see own shadow

@@ -3464,6 +3464,27 @@ static inline float G2_GetVertBoneWeightNotSlow( const mdxmVertex_t *pVert, cons
 
 //This is a slightly mangled version of the same function from the sof2sp base.
 //It provides a pretty significant performance increase over the existing one.
+/*
+==============
+R_GhoulSurfaceDone
+
+Was this the last time the surface that was just drawn is drawn in this view? The object R_AddGhoulSurfaces() made
+for it is freed then. A ghoul model may be drawn twice: in the scene and, where its shader has a stage that glows,
+in the pass of the dynamic glow, which comes second. An entity that comes after the glow has been added
+(RF_AFTERGLOW) is drawn in the run for those entities last, and maybe in the glow pass before it.
+==============
+*/
+qboolean R_GhoulSurfaceDone( void ) {
+	extern bool g_bRenderGlowingObjects;
+	extern bool g_bDynamicGlowSupported;
+	extern bool rb_glowView, rb_lateEntities;
+
+	if ( rb_glowView && backEnd.currentEntity && ( backEnd.currentEntity->e.renderfx & RF_AFTERGLOW ) ) {
+		return (qboolean)rb_lateEntities;
+	}
+	return (qboolean)( !tess.shader->hasGlow || g_bRenderGlowingObjects || !g_bDynamicGlowSupported || !r_DynamicGlow->integer );
+}
+
 void RB_SurfaceGhoul( CRenderableSurface *surf )
 {
 #ifdef G2_PERFORMANCE_ANALYSIS
@@ -3809,10 +3830,8 @@ void RB_SurfaceGhoul( CRenderableSurface *surf )
 
 	// NOTE: This is required because a ghoul model might need to be rendered twice a frame (don't cringe,
 	// it's not THAT bad), so we only delete it when doing the glow pass. Warning though, this assumes that
-	// the glow is rendered _second_!!! If that changes, change this!
-	extern bool g_bRenderGlowingObjects;
-	extern bool g_bDynamicGlowSupported;
-	if ( !tess.shader->hasGlow || g_bRenderGlowingObjects || !g_bDynamicGlowSupported || !r_DynamicGlow->integer )
+	// the glow is rendered _second_!!! If that changes, change this! (R_GhoulSurfaceDone() is that rule.)
+	if ( R_GhoulSurfaceDone() )
 	{
 		delete storeSurf;
 	}

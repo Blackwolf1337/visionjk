@@ -39,6 +39,15 @@ static void RB_BlurGlowTexture();
 // Whether we are currently rendering only glowing objects or not.
 bool g_bRenderGlowingObjects = false;
 
+// RF_AFTERGLOW: the entities that are drawn after the glow has been added. The list of surfaces is run a third
+// time for them, without them the first time.
+// (the first two are read by R_GhoulSurfaceDone())
+bool rb_glowView = false;				// this view adds a glow
+bool rb_lateEntities = false;			// this run of the list draws those entities and nothing else
+static bool rb_sawLate = false;			// the first run left some out
+// a run of the list that draws into the picture and the depth of the run before it
+#define RB_KEEPS_FRAME()	( g_bRenderGlowingObjects || rb_lateEntities )
+
 // Whether the current hardware supports dynamic glows/flares.
 bool g_bDynamicGlowSupported = false;
 
@@ -489,7 +498,7 @@ void RB_BeginDrawingView (void) {
 	}
 	else
 	{
-		if ( r_fastsky->integer && !( backEnd.refdef.rdflags & RDF_NOWORLDMODEL ) && !g_bRenderGlowingObjects )
+		if ( r_fastsky->integer && !( backEnd.refdef.rdflags & RDF_NOWORLDMODEL ) && !RB_KEEPS_FRAME() )
 		{
 			clearBits |= GL_COLOR_BUFFER_BIT;	// FIXME: only if sky shaders have been used
 #ifdef _DEBUG
@@ -516,6 +525,11 @@ void RB_BeginDrawingView (void) {
 	if ( g_bRenderGlowingObjects )
 	{
 		clearBits &= ~GL_DEPTH_BUFFER_BIT;
+	}
+	// and the run for the entities that come after the glow clears nothing at all
+	if ( rb_lateEntities )
+	{
+		clearBits = 0;
 	}
 
 	if (clearBits)
@@ -686,7 +700,7 @@ void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 	postRender_t	*pRender;
 	bool			didShadowPass = false;
 
-	if (g_bRenderGlowingObjects)
+	if (RB_KEEPS_FRAME())
 	{ //only shadow on initial passes
 		didShadowPass = true;
 	}
@@ -727,6 +741,23 @@ void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 			fogNum = oldFogNum;
 			dlighted = oldDlighted;
 			continue;
+		}
+		// RF_AFTERGLOW, in a view that adds a glow: left out of the first run, and the only thing in the last. (The
+		// glow pass between them draws what glows of such an entity as of any other.)
+		if ( rb_glowView && !g_bRenderGlowingObjects )
+		{
+			const bool late = entityNum != REFENTITYNUM_WORLD
+				&& ( backEnd.refdef.entities[entityNum].e.renderfx & RF_AFTERGLOW ) != 0;
+
+			if ( late != rb_lateEntities )
+			{
+				rb_sawLate = rb_sawLate || late;
+				shader = oldShader;
+				entityNum = oldEntityNum;
+				fogNum = oldFogNum;
+				dlighted = oldDlighted;
+				continue;
+			}
 		}
 
 		oldSort = drawSurf->sort;
@@ -1657,6 +1688,8 @@ const void	*RB_DrawSurfs( const void *data ) {
 	backEnd.refdef = cmd->refdef;
 	backEnd.viewParms = cmd->viewParms;
 
+	rb_glowView = !(backEnd.refdef.rdflags & RDF_NOWORLDMODEL) && g_bDynamicGlowSupported && r_DynamicGlow->integer;
+	rb_sawLate = false;
 	RB_RenderDrawSurfList( cmd->drawSurfs, cmd->numDrawSurfs );
 
 	// Dynamic Glow/Flares:
@@ -1724,7 +1757,16 @@ const void	*RB_DrawSurfs( const void *data ) {
 
 		// Draw the glow additively over the screen.
 		RB_DrawGlowOverlay();
+
+		// the entities that lie on that glow (RF_AFTERGLOW), into the picture and against the depth that are there
+		if ( rb_sawLate )
+		{
+			rb_lateEntities = true;
+			RB_RenderDrawSurfList( cmd->drawSurfs, cmd->numDrawSurfs );
+			rb_lateEntities = false;
+		}
 	}
+	rb_glowView = false;
 
 	return (const void *)(cmd + 1);
 }

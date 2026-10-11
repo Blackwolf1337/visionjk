@@ -884,8 +884,8 @@ void RB_StageIteratorGeneric( void ) {
 		if ( !pStage->active ) {
 			break;
 		}
-		// in the glow pass only the stages that glow
-		if ( g_bRenderGlowingObjects && !pStage->glow ) {
+		// in the glow pass only the stages that glow, and the stages that are for it alone in no other pass
+		if ( g_bRenderGlowingObjects ? !pStage->glow : pStage->glowOnly ) {
 			continue;
 		}
 		if ( stage && r_lightmap->integer
