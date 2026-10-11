@@ -324,7 +324,7 @@ The game goes on around it.
 | Cvar | Default | Meaning |
 |------|---------|---------|
 | `cg_immersiveMenu` | 1 | 0: the flat menu of the base game |
-| `r_sceneBlur` | 1 | the scene behind the menu is out of focus (rd-vulkan-vision only), 0 it stays sharp |
+| `r_menuBlur` | 0 | 1: the scene behind the menu is out of focus (rd-vulkan-vision only). Off by default, see below |
 | `s_muffle` | set by the cgame | 0 to 1: the sound of the game through a low pass. Not stored |
 
 - The menu is not painted onto a texture. The ui draws it as always, and the renderer puts that 2D onto a
@@ -333,7 +333,10 @@ The game goes on around it.
 - Behind the menu the cgame adds a panel with an edge and a glow to the scene. The HUD is hidden meanwhile.
 - The scene is blurred by rd-vulkan-vision with the passes its glow has. That is a blur of the whole picture,
   the player included, not one by depth: a real depth of field needs a new pass and shader in both devices of
-  the renderer, which was not written blind. rd-vanilla keeps the scene sharp.
+  the renderer, which was not written blind. rd-vanilla keeps the scene sharp. The blur is off by default: its
+  first version (cvar `r_sceneBlur`, on by default) ended the game as soon as a menu opened, because the pass
+  asked for the descriptor set of the frame where only the sets of the glow buffers were known. That is
+  repaired, but the pass was not seen running since, so it has to be asked for with `r_menuBlur 1`.
 - The sound of the game (effects, music, Steam Audio) and the voices of the voice chat are muffled.
 - The camera is pulled in where a wall is behind the player. The panel itself is not checked against the
   level: it is drawn over whatever is there.

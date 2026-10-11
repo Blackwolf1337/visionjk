@@ -109,7 +109,7 @@ Blurs the frame as it is right now, for a module that asked with RE_SetDepthOfFi
 the cgame, which is drawn afterwards and stays sharp. It is made of the passes the glow has and of nothing else:
 the frame is blurred into the two small buffers, then the frame is cleared and the blurred picture is added to
 it, the way r_DynamicGlow 2 shows the glow alone. So it is no blur by depth: the whole scene is out of focus,
-more of it with a larger amount (0 to 1). r_sceneBlur 0 turns it off.
+more of it with a larger amount (0 to 1). Only with r_menuBlur 1.
 ===============
 */
 void VK_BlurFrame( float amount ) {

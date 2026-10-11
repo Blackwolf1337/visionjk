@@ -879,7 +879,7 @@ static const void *RB_DrawSurfs( const void *data ) {
 	}
 	// A module asked for the scene out of focus (RE_SetDepthOfField): the view of the level itself, not a
 	// mirror in it, the sky of a portal or a model of the HUD. The 2D comes afterwards and is sharp.
-	if ( r_dofAmount > 0.0f && r_sceneBlur->integer && !backEnd.viewParms.isPortal
+	if ( r_dofAmount > 0.0f && r_menuBlur->integer && !backEnd.viewParms.isPortal
 		&& !( backEnd.refdef.rdflags & ( RDF_NOWORLDMODEL | RDF_SKYBOXPORTAL ) ) ) {
 		VK_BlurFrame( r_dofAmount );
 	}
