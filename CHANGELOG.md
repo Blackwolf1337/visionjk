@@ -12,6 +12,8 @@ Key: [-] removed, [+] added, [\*] modified
 * [+] Text inside the client is UTF-8 (`cl_utf8`). Characters the fonts of the game do not have are drawn from Noto Sans (Latin, Greek, Cyrillic). Chat is UTF-8 between clients of this tree on a server of this tree (`g_visionCaps`), legacy clients get Windows-1252 as before, and so does every other server.
 * [+] Text in the console can be marked with the mouse and copied (Ctrl+C or the right button), the input line with Shift and the arrow keys. The console is drawn with a TrueType font (`con_font`) and shows every character.
 * [+] A new chat box in the cgame: 256 lines of history with tabs, scrolling with the wheel, text that can be marked and copied, links that open after a question, and its own line to type in (`cg_chatInput`, `cg_chatBoxWidth`).
+* [+] Chat bubbles above the heads, in the 3D scene: what a player says, and dots while he types (`cg_chatBubbles`, `cg_bubbleRange`).
+* [+] Statuses above the heads: away from the keyboard (found out by the server, `g_afkTime`) and, when a player switches it on, the music he listens to (`cg_shareMusic`).
 
 # Features
 
