@@ -55,7 +55,7 @@ extern displayContextDef_t cgDC;
 #define CHAT_BAR_WIDTH		4.0f
 #define CHAT_FADE_MSEC		1000
 #define CHAT_SENT			16				// lines one sent that Up brings back
-#define CHAT_CURSOR_SIZE	32.0f
+#define CHAT_CURSOR_SIZE	40.0f			// as the ui draws its cursor
 
 typedef struct chatMsg_s {
 	char		text[CHAT_TEXT];
@@ -113,6 +113,7 @@ static struct {
 	float		x, width;
 	float		tabX[CHAT_NUM_KINDS + 1];
 	float		tabY;
+	qhandle_t	pointer;					// the picture of the mouse cursor
 } chat;
 
 static const char *chatTabNames[CHAT_NUM_KINDS] = { "All", "Team", "Private" };
@@ -942,8 +943,13 @@ static void Chat_DrawOpen( float x, float bottom ) {
 		}
 	}
 
+	// The cursor of the menus. (cgs.media.cursor is no use: the base game registers a picture of Quake 3 Team
+	// Arena for it that this game does not have, so nothing was drawn.)
+	if ( !chat.pointer ) {
+		chat.pointer = trap->R_RegisterShaderNoMip( "cursor" );
+	}
 	trap->R_SetColor( NULL );
-	CG_DrawPic( cgs.cursorX, cgs.cursorY, CHAT_CURSOR_SIZE, CHAT_CURSOR_SIZE, cgs.media.cursor );
+	CG_DrawPic( cgs.cursorX, cgs.cursorY, CHAT_CURSOR_SIZE, CHAT_CURSOR_SIZE, chat.pointer );
 }
 
 /*

@@ -61,6 +61,7 @@ static struct {
 	qboolean	tried;
 	qboolean	ready;
 	qhandle_t	fill, border, glow, dot, tail;
+	qhandle_t	overFill, overBorder, overGlow;		// the same pictures, drawn over all of the scene (CG_BubblePanelAt)
 } bubbleArt;
 
 /*
@@ -109,7 +110,8 @@ static void Bubble_InitArt( void ) {
 			Bubble_Pixel( pic, BUBBLE_TEX, x, y, 0.5f - Bubble_RoundRect( x + 0.5f, y + 0.5f, BUBBLE_TEX, 30.0f, 18.0f ) );
 		}
 	}
-	bubbleArt.fill = trap->ext.R_RegisterShaderRGBA( "bubble_fill", pic, BUBBLE_TEX, BUBBLE_TEX, qfalse );
+	bubbleArt.fill = trap->ext.R_RegisterShaderRGBA( "bubble_fill", pic, BUBBLE_TEX, BUBBLE_TEX, 0 );
+	bubbleArt.overFill = trap->ext.R_RegisterShaderRGBA( "bubble_fill_over", pic, BUBBLE_TEX, BUBBLE_TEX, RGBA_SHADER_OVER );
 
 	// the edge, two and a half pixels just inside the shape
 	for ( y = 0; y < BUBBLE_TEX; y++ ) {
@@ -117,7 +119,8 @@ static void Bubble_InitArt( void ) {
 			Bubble_Pixel( pic, BUBBLE_TEX, x, y, 1.75f - fabsf( Bubble_RoundRect( x + 0.5f, y + 0.5f, BUBBLE_TEX, 30.0f, 18.0f ) + 1.25f ) );
 		}
 	}
-	bubbleArt.border = trap->ext.R_RegisterShaderRGBA( "bubble_border", pic, BUBBLE_TEX, BUBBLE_TEX, qfalse );
+	bubbleArt.border = trap->ext.R_RegisterShaderRGBA( "bubble_border", pic, BUBBLE_TEX, BUBBLE_TEX, 0 );
+	bubbleArt.overBorder = trap->ext.R_RegisterShaderRGBA( "bubble_border_over", pic, BUBBLE_TEX, BUBBLE_TEX, RGBA_SHADER_OVER );
 
 	// the light around it: a smaller shape whose outside falls off softly
 	for ( y = 0; y < BUBBLE_TEX; y++ ) {
@@ -127,7 +130,8 @@ static void Bubble_InitArt( void ) {
 			Bubble_Pixel( pic, BUBBLE_TEX, x, y, 0.5f * expf( -( d * d ) / 30.0f ) );
 		}
 	}
-	bubbleArt.glow = trap->ext.R_RegisterShaderRGBA( "bubble_glow", pic, BUBBLE_TEX, BUBBLE_TEX, qtrue );
+	bubbleArt.glow = trap->ext.R_RegisterShaderRGBA( "bubble_glow", pic, BUBBLE_TEX, BUBBLE_TEX, RGBA_SHADER_GLOW );
+	bubbleArt.overGlow = trap->ext.R_RegisterShaderRGBA( "bubble_glow_over", pic, BUBBLE_TEX, BUBBLE_TEX, RGBA_SHADER_GLOW | RGBA_SHADER_OVER );
 
 	// a dot
 	for ( y = 0; y < BUBBLE_SMALL_TEX; y++ ) {
@@ -137,7 +141,7 @@ static void Bubble_InitArt( void ) {
 			Bubble_Pixel( pic, BUBBLE_SMALL_TEX, x, y, 13.5f - sqrtf( dx * dx + dy * dy ) );
 		}
 	}
-	bubbleArt.dot = trap->ext.R_RegisterShaderRGBA( "bubble_dot", pic, BUBBLE_SMALL_TEX, BUBBLE_SMALL_TEX, qfalse );
+	bubbleArt.dot = trap->ext.R_RegisterShaderRGBA( "bubble_dot", pic, BUBBLE_SMALL_TEX, BUBBLE_SMALL_TEX, 0 );
 
 	// the tip: as wide as the picture at its top, a point at its bottom
 	for ( y = 0; y < BUBBLE_SMALL_TEX; y++ ) {
@@ -147,7 +151,7 @@ static void Bubble_InitArt( void ) {
 			Bubble_Pixel( pic, BUBBLE_SMALL_TEX, x, y, half - fabsf( x + 0.5f - BUBBLE_SMALL_TEX * 0.5f ) + 0.5f );
 		}
 	}
-	bubbleArt.tail = trap->ext.R_RegisterShaderRGBA( "bubble_tail", pic, BUBBLE_SMALL_TEX, BUBBLE_SMALL_TEX, qfalse );
+	bubbleArt.tail = trap->ext.R_RegisterShaderRGBA( "bubble_tail", pic, BUBBLE_SMALL_TEX, BUBBLE_SMALL_TEX, 0 );
 
 	// and a font to write with
 	bubbleArt.ready = (qboolean)( bubbleArt.fill && bubbleArt.border && bubbleArt.glow && bubbleArt.dot && bubbleArt.tail
@@ -337,6 +341,39 @@ static void Bubble_Panel( qhandle_t shader, const bubbleView_t *view, float half
 		}
 	}
 	trap->R_AddPolysToScene( shader, 4, verts, 9 );
+}
+
+/*
+=================
+CG_BubblePanelAt
+
+A panel as the bubbles have it, for something else that stands in the level (the menu, menu3d/cg_menu3d.c):
+its soft light, its inside and its edge around a point, along right and up. Unlike a bubble it is drawn over all
+of the scene: the menu on it is too, and a wall or a pillar between the camera and the panel took a piece out
+of the panel and left the menu in the air. qfalse: it can not be drawn (another engine).
+=================
+*/
+qboolean CG_BubblePanelAt( const vec3_t center, const vec3_t right, const vec3_t up, float halfW, float halfH, float corner,
+		const float *fill, const float *border, const float *glow, float alpha ) {
+	bubbleView_t view;
+
+	if ( !bubbleArt.tried ) {
+		Bubble_InitArt();
+	}
+	if ( !bubbleArt.ready ) {
+		return qfalse;
+	}
+	VectorCopy( center, view.center );
+	VectorCopy( right, view.right );
+	VectorCopy( up, view.up );
+	CrossProduct( up, right, view.toward );
+	if ( !bubbleArt.overGlow || !bubbleArt.overFill || !bubbleArt.overBorder ) {
+		return qfalse;
+	}
+	Bubble_Panel( bubbleArt.overGlow, &view, halfW + corner, halfH + corner, corner * 1.8f, 0.0f, glow, alpha );
+	Bubble_Panel( bubbleArt.overFill, &view, halfW, halfH, corner, 0.0f, fill, alpha );
+	Bubble_Panel( bubbleArt.overBorder, &view, halfW, halfH, corner, 0.0f, border, alpha );
+	return qtrue;
 }
 
 /*

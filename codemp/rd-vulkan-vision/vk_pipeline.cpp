@@ -118,9 +118,10 @@ static void VK_CreateLayouts( void ) {
 	sizes[1].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
 	sizes[1].descriptorCount = VK_FRAMES * 3;
 	sizes[2].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	sizes[2].descriptorCount = VK_MAX_IMAGES + 4;
+	// the table of the textures, and one each for the frame, the glow, its two blur buffers and the two of r_menuBlur
+	sizes[2].descriptorCount = VK_MAX_IMAGES + 6;
 	pool.flags = VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT;
-	pool.maxSets = VK_FRAMES + 5;
+	pool.maxSets = VK_FRAMES + 7;
 	pool.poolSizeCount = 3;
 	pool.pPoolSizes = sizes;
 	VK_CHECK( qvkCreateDescriptorPool( vk.device, &pool, NULL, &vk.descriptorPool ) );

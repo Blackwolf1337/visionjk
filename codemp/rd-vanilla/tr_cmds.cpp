@@ -195,6 +195,49 @@ RE_SetColor
 Passing NULL will set the color to white
 =============
 */
+/*
+=============
+RE_Set2DPlane
+
+The 2D that is drawn from here on (pictures, text) does not go flat onto the screen but onto a plane in the level:
+matrix takes a place of the 2D grid (x to the right, y down, 640 x 480) to clip space, 16 values column by
+column as OpenGL has them. A module makes it from where the plane is and from the view of its scene. NULL: flat
+again. The engine sets it around the menus when the cgame shows them in the level.
+=============
+*/
+void	RE_Set2DPlane( const float *matrix ) {
+	set2DPlaneCommand_t	*cmd;
+
+	if ( !tr.registered ) {
+		return;
+	}
+	cmd = (set2DPlaneCommand_t *) R_GetCommandBuffer( sizeof( *cmd ) );
+	if ( !cmd ) {
+		return;
+	}
+	cmd->commandId = RC_SET_2D_PLANE;
+	cmd->active = matrix ? qtrue : qfalse;
+	if ( matrix ) {
+		memcpy( cmd->matrix, matrix, sizeof( cmd->matrix ) );
+	}
+}
+
+/*
+=============
+RE_SetDepthOfField
+
+A module wants the scene of this frame blurred where it is nearer or farther than focus (units of the level),
+amount 0 to 1. It holds for one frame: RE_BeginFrame() forgets it. rd-vulkan-vision has the pass (vk_post.cpp),
+rd-vanilla does nothing with it.
+=============
+*/
+float	r_dofFocus, r_dofAmount;
+
+void	RE_SetDepthOfField( float focus, float amount ) {
+	r_dofFocus = focus;
+	r_dofAmount = Com_Clamp( 0.0f, 1.0f, amount );
+}
+
 void	RE_SetColor( const float *rgba ) {
 	setColorCommand_t	*cmd;
 
@@ -347,6 +390,9 @@ void RE_BeginFrame( stereoFrame_t stereoFrame ) {
 	if ( !tr.registered ) {
 		return;
 	}
+
+	// what a module asked for with RE_SetDepthOfField() was for the frame before
+	r_dofAmount = 0.0f;
 	glState.finishCalled = qfalse;
 
 	tr.frameCount++;

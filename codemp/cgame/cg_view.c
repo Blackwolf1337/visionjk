@@ -2610,6 +2610,12 @@ void CG_DrawActiveFrame( int serverTime, stereoFrame_t stereoView, qboolean demo
 		cg.renderingThirdPerson = 0;
 	}
 
+	// the menu in the level: the camera stands behind the player (menu3d/cg_menu3d.c)
+	if ( CG_Menu3DFrame() )
+	{
+		cg.renderingThirdPerson = 1;
+	}
+
 	if (cg.snap->ps.persistant[PERS_TEAM] == TEAM_SPECTATOR)
 	{
 		cg.renderingThirdPerson = 0;
@@ -2617,6 +2623,7 @@ void CG_DrawActiveFrame( int serverTime, stereoFrame_t stereoView, qboolean demo
 
 	// build cg.refdef
 	inwater = CG_CalcViewValues();
+	CG_Menu3DView();
 	CG_SetupFrustum();
 
 	if (cg_linearFogOverride)

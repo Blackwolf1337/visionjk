@@ -961,6 +961,8 @@ typedef struct backEndState_s {
 	qboolean	skyRenderedThisView;	// flag for drawing sun
 
 	qboolean	projection2D;	// if qtrue, drawstretchpic doesn't need to change modes
+	qboolean	plane2D;		// the 2D is drawn on a plane in the level: planeMatrix takes its grid to clip space
+	float		planeMatrix[16];
 	byte		color2D[4];
 	qboolean	vertexes2D;		// shader needs to be finished
 	trRefEntity_t	entity2D;	// currentEntity will point at this when doing 2D rendering
@@ -1263,8 +1265,12 @@ extern	cvar_t	*r_marksOnTriangleMeshes;
 
 extern	cvar_t	*r_aspectCorrectFonts;
 extern	cvar_t	*r_2dAspect;
+extern	cvar_t	*r_menuBlur;
 
 float	R_2DBias( void );
+void	RE_Set2DPlane( const float *matrix );
+void	RE_SetDepthOfField( float focus, float amount );
+extern	float	r_dofFocus, r_dofAmount;		// what RE_SetDepthOfField asked for, for the frame that is being built
 
 /*
 Ghoul2 Insert Start
@@ -1431,7 +1437,7 @@ qhandle_t		 RE_RegisterShader( const char *name );
 qhandle_t		 RE_RegisterShaderNoMip( const char *name );
 const char		*RE_ShaderNameFromIndex(int index);
 qhandle_t RE_RegisterShaderFromImage(const char *name, int *lightmapIndex, byte *styles, image_t *image, qboolean mipRawImage);
-qhandle_t RE_RegisterSceneShader( const char *name, image_t *image, qboolean glow, float sort );
+qhandle_t RE_RegisterSceneShader( const char *name, image_t *image, int flags, float sort );
 
 shader_t	*R_FindShader( const char *name, const int *lightmapIndex, const byte *styles, qboolean mipRawImage );
 shader_t	*R_GetShaderByHandle( qhandle_t hShader );
@@ -1782,6 +1788,13 @@ typedef struct setColorCommand_s {
 	float	color[4];
 } setColorCommand_t;
 
+// The 2D that follows is drawn on a plane in the level, or flat on the screen again, see RE_Set2DPlane()
+typedef struct set2DPlaneCommand_s {
+	int			commandId;
+	qboolean	active;
+	float		matrix[16];
+} set2DPlaneCommand_t;
+
 typedef struct drawBufferCommand_s {
 	int		commandId;
 	int		buffer;
@@ -1851,7 +1864,8 @@ typedef enum {
 	RC_SWAP_BUFFERS,
 	RC_WORLD_EFFECTS,
 	RC_AUTO_MAP,
-	RC_VIDEOFRAME
+	RC_VIDEOFRAME,
+	RC_SET_2D_PLANE
 } renderCommand_t;
 
 

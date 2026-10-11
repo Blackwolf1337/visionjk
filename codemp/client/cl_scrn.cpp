@@ -502,9 +502,20 @@ void SCR_DrawScreenField( stereoFrame_t stereoFrame ) {
 		}
 	}
 
-	// the menu draws next
+	// the menu draws next: flat on the screen, or on a plane in the level where the cgame asked for that with
+	// this frame (CL_SetUIPlane)
 	if ( Key_GetCatcher( ) & KEYCATCH_UI && cls.uiStarted ) {
+		const qboolean plane = (qboolean)( cls.state == CA_ACTIVE && cls.uiPlaneFrame == cls.framecount );
+
+		if ( plane ) {
+			re->ext.Set2DPlane( cls.uiPlane );
+		}
+		cls.uiPlaneOn = plane;
 		UIVM_Refresh( cls.realtime );
+		cls.uiPlaneOn = qfalse;
+		if ( plane ) {
+			re->ext.Set2DPlane( NULL );
+		}
 	}
 
 	// Engine internal menu
@@ -517,6 +528,23 @@ void SCR_DrawScreenField( stereoFrame_t stereoFrame ) {
 	if ( cl_debuggraph->integer || cl_timegraph->integer || cl_debugMove->integer ) {
 		SCR_DrawDebugGraph ();
 	}
+}
+
+/*
+==================
+CL_SetUIPlane
+
+From the cgame, while it draws its frame: the menus of this frame go onto a plane in the level. matrix takes a
+place of the 2D grid to clip space (RE_Set2DPlane of the renderer).
+==================
+*/
+void CL_SetUIPlane( const float *matrix ) {
+	if ( !matrix ) {
+		cls.uiPlaneFrame = -1;
+		return;
+	}
+	memcpy( cls.uiPlane, matrix, sizeof( cls.uiPlane ) );
+	cls.uiPlaneFrame = cls.framecount;
 }
 
 /*

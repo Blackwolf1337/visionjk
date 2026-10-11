@@ -280,8 +280,12 @@ typedef struct serverInfo_s {
 	int			trueJedi;
 	int			weaponDisable;
 	int			forceDisable;
-	int			humans, bots;
+	int			humans, bots;		// humans -1: the server did not say, it was asked for its status (CL_AskHumans)
+	int			humansAskTime;		// when, 0: not in this refresh
 } serverInfo_t;
+
+// how long the browser waits for the status of a server before it shows it without knowing who is a bot
+#define HUMANS_WAIT_MSEC	2000
 
 typedef struct clientStatic_s {
 	connstate_t	state;				// connection status
@@ -325,6 +329,9 @@ typedef struct clientStatic_s {
 	// rendering info
 	glconfig_t	glconfig;
 	float		bias2D;			// the 2D grid runs from -bias2D to 640 + bias2D on a wide window (cvar r_2dBias of the renderer)
+	float		uiPlane[16];	// the cgame wants the menus of the frame uiPlaneFrame on a plane in the level (CL_SetUIPlane)
+	int			uiPlaneFrame;
+	qboolean	uiPlaneOn;		// right now: the menus are being drawn onto it
 	qhandle_t	charSetShader;
 	qhandle_t	whiteShader;
 	qhandle_t	consoleShader;
@@ -458,6 +465,7 @@ qboolean CL_UTF8( void );
 const byte *CL_FontFile( int font, int *length );		// cl_font.cpp
 void CL_GetClipboard( char *buf, int buflen );		// cl_uiapi.cpp
 void CL_SetClipboard( const char *text );
+void CL_SetUIPlane( const float *matrix );		// cl_scrn.cpp
 
 void CL_StartHunkUsers( void );
 

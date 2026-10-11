@@ -3695,11 +3695,13 @@ RE_RegisterSceneShader
 
 A shader for a picture the program makes (a page of glyphs, a picture a module hands in), for polygons in the
 scene: blended over what is behind them and hidden by what is in front, seen from both sides, colour and alpha
-from the vertices. glow: added to what is behind instead, and the dynamic glow takes it. sort: where it is
-drawn among the other blended surfaces.
+from the vertices. flags: RGBA_SHADER_GLOW, added to what is behind instead, and the dynamic glow takes it.
+RGBA_SHADER_OVER, the depth is not tested, so with a late sort it stands over the whole scene. sort: where it
+is drawn among the other blended surfaces.
 ====================
 */
-qhandle_t RE_RegisterSceneShader( const char *name, image_t *image, qboolean glow, float sort ) {
+qhandle_t RE_RegisterSceneShader( const char *name, image_t *image, int flags, float sort ) {
+	const qboolean glow = (qboolean)( ( flags & RGBA_SHADER_GLOW ) != 0 );
 	int			i, hash;
 	shader_t	*sh;
 
@@ -3727,6 +3729,9 @@ qhandle_t RE_RegisterSceneShader( const char *name, image_t *image, qboolean glo
 	stages[0].rgbGen = CGEN_VERTEX;
 	stages[0].alphaGen = AGEN_VERTEX;
 	stages[0].stateBits = GLS_SRCBLEND_SRC_ALPHA | ( glow ? GLS_DSTBLEND_ONE : GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA );
+	if ( flags & RGBA_SHADER_OVER ) {
+		stages[0].stateBits |= GLS_DEPTHTEST_DISABLE;
+	}
 	stages[0].glow = glow ? true : false;
 	shader.cullType = CT_TWO_SIDED;
 	shader.sort = sort;

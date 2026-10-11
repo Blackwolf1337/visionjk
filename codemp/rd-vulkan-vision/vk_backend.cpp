@@ -51,7 +51,10 @@ static void RB_SetGL2D( void ) {
 	float		ortho[16];
 
 	backEnd.projection2D = qtrue;
-	VK_SetViewport( 0, 0, glConfig.vidWidth, glConfig.vidHeight, 0.0f, 1.0f );
+	// On a plane in the level the 2D still lands at the front of the depth buffer, where the flat 2D is. With the
+	// depth of the plane, the stages that test it (most shader scripts of the menus do, their text does not) were
+	// cut out in the shape of what stands between the camera and the plane: the player.
+	VK_SetViewport( 0, 0, glConfig.vidWidth, glConfig.vidHeight, 0.0f, backEnd.plane2D ? 0.0f : 1.0f );
 
 	// glOrtho( -bias, 640 + bias, 480, 0, 0, 1 )
 	memset( ortho, 0, sizeof( ortho ) );
@@ -62,7 +65,8 @@ static void RB_SetGL2D( void ) {
 	ortho[13] = 1.0f;
 	ortho[14] = -1.0f;
 	ortho[15] = 1.0f;
-	VK_SetProjection( ortho );
+	// or on a plane in the level, see RE_Set2DPlane()
+	VK_SetProjection( backEnd.plane2D ? backEnd.planeMatrix : ortho );
 
 	memset( &backEnd.ori, 0, sizeof( backEnd.ori ) );
 	backEnd.ori.axis[0][0] = backEnd.ori.axis[1][1] = backEnd.ori.axis[2][2] = 1.0f;
@@ -218,6 +222,24 @@ static const void *RB_SetColor( const void *data ) {
 
 	for ( int i = 0; i < 4; i++ ) {
 		backEnd.color2D[i] = (byte)( cmd->color[i] * 255 );
+	}
+	return (const void *)( cmd + 1 );
+}
+
+// the 2D goes onto a plane in the level from here on, or flat onto the screen again (RE_Set2DPlane)
+static const void *RB_Set2DPlane( const void *data ) {
+	const set2DPlaneCommand_t *cmd = (const set2DPlaneCommand_t *)data;
+
+	// what waits to be drawn belongs to the projection that was
+	if ( tess.numIndexes ) {
+		RB_EndSurface();
+	}
+	backEnd.plane2D = cmd->active;
+	if ( cmd->active ) {
+		memcpy( backEnd.planeMatrix, cmd->matrix, sizeof( backEnd.planeMatrix ) );
+	}
+	if ( backEnd.projection2D ) {
+		RB_SetGL2D();
 	}
 	return (const void *)( cmd + 1 );
 }
@@ -858,6 +880,12 @@ static const void *RB_DrawSurfs( const void *data ) {
 		g_bRenderGlowingObjects = false;
 		VK_EndGlow();
 	}
+	// A module asked for the scene out of focus (RE_SetDepthOfField): the view of the level itself, not a
+	// mirror in it, the sky of a portal or a model of the HUD. The 2D comes afterwards and is sharp.
+	if ( r_dofAmount > 0.0f && r_menuBlur->value > 0.0f && !backEnd.viewParms.isPortal
+		&& !( backEnd.refdef.rdflags & ( RDF_NOWORLDMODEL | RDF_SKYBOXPORTAL ) ) ) {
+		VK_BlurFrame( r_dofAmount );
+	}
 	// the next picture has to set the 2D projection up again
 	tess.shader = NULL;
 	return (const void *)( cmd + 1 );
@@ -996,6 +1024,9 @@ void RB_ExecuteRenderCommands( const void *data ) {
 		switch ( *(const int *)data ) {
 		case RC_SET_COLOR:
 			data = RB_SetColor( data );
+			break;
+		case RC_SET_2D_PLANE:
+			data = RB_Set2DPlane( data );
 			break;
 		case RC_STRETCH_PIC:
 			data = RB_StretchPic( data );

@@ -7656,6 +7656,7 @@ static void UI_BuildServerDisplayList(int force) {
 	}
 
 	trap->Cvar_Update( &ui_browserFilterInvalidInfo );
+	trap->Cvar_Update( &ui_browserShowBotOnly );
 	trap->Cvar_Update( &ui_browserShowEmpty );
 	trap->Cvar_Update( &ui_browserShowFull );
 	trap->Cvar_Update( &ui_browserShowPasswordProtected );
@@ -7682,6 +7683,22 @@ static void UI_BuildServerDisplayList(int force) {
 			}
 
 			clients = atoi(Info_ValueForKey(info, "clients"));
+
+			// Servers where only bots play are left out with ui_browserShowBotOnly 0. An engine of this tree says how many of the players
+			// are people: 0 none, -1 it has asked the server and the answer may still come (the server is
+			// looked at again with the next pass), -2 it is not known. Another engine says nothing.
+			if ( !ui_browserShowBotOnly.integer && clients > 0 ) {
+				const char *humans = Info_ValueForKey( info, "g_humanplayers" );
+
+				if ( humans[0] && atoi( humans ) == -1 ) {
+					continue;
+				}
+				if ( humans[0] && atoi( humans ) == 0 ) {
+					trap->LAN_MarkServerVisible(lanSource, i, qfalse);
+					continue;
+				}
+			}
+
 			uiInfo.serverStatus.numPlayersOnServers += clients;
 
 			if (ui_browserShowEmpty.integer == 0) {

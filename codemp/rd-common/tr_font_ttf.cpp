@@ -206,7 +206,7 @@ static ttfPage_t *R_FontTTF_Room( int width, int height ) {
 		page->shader = RE_RegisterShaderFromImage( name, (int *)lightmaps2d, (byte *)stylesDefault, page->image, qfalse );
 		// text in the scene is drawn last of all that is blended, over the panel it stands on
 		Com_sprintf( name, sizeof( name ), "*fontpage%i_scene", ttf.numPages );
-		page->shaderScene = RE_RegisterSceneShader( name, page->image, qfalse, SS_NEAREST );
+		page->shaderScene = RE_RegisterSceneShader( name, page->image, 0, SS_NEAREST );
 		page->x = page->y = 1;
 		page->dirty = qtrue;
 		ttf.numPages++;
@@ -532,10 +532,11 @@ RE_RegisterShaderRGBA
 A shader for a picture a module made itself, for polygons in the scene. The picture needs no file, so it is there
 on a pure server that does not have the pk3 of this tree. Width and height are powers of two up to 512. An
 image of that name from before the last restart of the renderer is found again and keeps its picture: a module
-hands in the same picture under the same name.
+hands in the same picture under the same name. flags: RGBA_SHADER_GLOW, RGBA_SHADER_OVER.
 ===============
 */
-qhandle_t RE_RegisterShaderRGBA( const char *name, const byte *rgba, int width, int height, qboolean glow ) {
+qhandle_t RE_RegisterShaderRGBA( const char *name, const byte *rgba, int width, int height, int flags ) {
+	const qboolean glow = (qboolean)( ( flags & RGBA_SHADER_GLOW ) != 0 );
 	char	imageName[MAX_QPATH];
 	image_t	*image;
 
@@ -552,8 +553,12 @@ qhandle_t RE_RegisterShaderRGBA( const char *name, const byte *rgba, int width, 
 	if ( !image ) {
 		return 0;
 	}
-	// what glows is drawn before the rest a module draws, a plain picture before the text that stands on it
-	return RE_RegisterSceneShader( imageName, image, glow, glow ? SS_BLEND6 : SS_ALMOST_NEAREST );
+	// What glows is drawn before the rest a module draws, a plain picture before the text that stands on it.
+	// What stands over the scene comes a step later each, after everything that could be drawn across it.
+	if ( flags & RGBA_SHADER_OVER ) {
+		return RE_RegisterSceneShader( imageName, image, flags, glow ? SS_ALMOST_NEAREST : SS_NEAREST );
+	}
+	return RE_RegisterSceneShader( imageName, image, flags, glow ? SS_BLEND6 : SS_ALMOST_NEAREST );
 }
 
 // for fontlist

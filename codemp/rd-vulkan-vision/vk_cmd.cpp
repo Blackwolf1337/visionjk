@@ -571,9 +571,20 @@ static void VK_FullTarget( VkCommandBuffer cmd, const vkTarget_t *target ) {
 	qvkCmdSetScissor( cmd, 0, 1, &scissor );
 }
 
-// the descriptor set that shows a target to such a pass
+// The descriptor set that shows a target to such a pass. The frame itself has the set of the gamma pass
+// (VK_BlurFrame reads it): without that case its place in blurSets was worked out from an address that is not
+// in vk.blur, and the driver got a handle that is none.
 static VkDescriptorSet VK_PostSet( const vkTarget_t *source ) {
-	return ( source == &vk.glow ) ? vk.glowSet : vk.blurSets[source - vk.blur];
+	if ( source == &vk.color ) {
+		return vk.postSet;
+	}
+	if ( source == &vk.glow ) {
+		return vk.glowSet;
+	}
+	if ( source == &vk.soft[0] || source == &vk.soft[1] ) {
+		return vk.softSets[source - vk.soft];
+	}
+	return vk.blurSets[source - vk.blur];
 }
 
 // the pipeline stays bound from one pass of the blur to the next

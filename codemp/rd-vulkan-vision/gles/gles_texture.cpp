@@ -259,6 +259,9 @@ void VK_CreatePostTargets( int blurWidth, int blurHeight ) {
 	VK_CreateTarget( &vk.screen, vk.width, vk.height, GL_RGB8, GL_LINEAR, 1 );
 	VK_CreateTarget( &vk.blur[0], blurWidth, blurHeight, GL_RGBA8, GL_LINEAR, 1 );
 	VK_CreateTarget( &vk.blur[1], blurWidth, blurHeight, GL_RGBA8, GL_LINEAR, 1 );
+	for ( int i = 0; i < 2; i++ ) {
+		VK_CreateTarget( &vk.soft[i], Q_max( 1, vk.width / 2 ), Q_max( 1, vk.height / 2 ), GL_RGBA8, GL_LINEAR, 1 );
+	}
 }
 
 void VK_DestroyPostTargets( void ) {
@@ -266,4 +269,6 @@ void VK_DestroyPostTargets( void ) {
 	VK_DestroyTarget( &vk.screen );
 	VK_DestroyTarget( &vk.blur[0] );
 	VK_DestroyTarget( &vk.blur[1] );
+	VK_DestroyTarget( &vk.soft[0] );
+	VK_DestroyTarget( &vk.soft[1] );
 }

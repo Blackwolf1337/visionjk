@@ -1176,7 +1176,8 @@ static void Voice_Place( int now ) {
 		if ( !cg_voiceMuffle.integer )
 			muffled = qfalse;
 		// the same loudness from the middle as from a side: the two ears share it
-		CG_VoiceAudioMix( i, gain * sqrtf( 1.0f + pan ), gain * sqrtf( 1.0f - pan ), muffled ? 1.0f : 0.0f );
+		// also while the menu stands in the level (menu3d/cg_menu3d.c), as the sound of the game is then
+		CG_VoiceAudioMix( i, gain * sqrtf( 1.0f + pan ), gain * sqrtf( 1.0f - pan ), ( muffled || CG_Menu3DActive() ) ? 1.0f : 0.0f );
 	}
 }
 

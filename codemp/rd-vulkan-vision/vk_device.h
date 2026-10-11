@@ -146,6 +146,7 @@ typedef struct vkDeviceState_s {	// see vkState_t
 	VkSampler					postSampler;
 	VkDescriptorSet				glowSet;
 	VkDescriptorSet				blurSets[2];
+	VkDescriptorSet				softSets[2];
 	VkSampler					linearSampler;
 
 	VkShaderModule				vertexShaders[VKP_NUM_PROGRAMS];
