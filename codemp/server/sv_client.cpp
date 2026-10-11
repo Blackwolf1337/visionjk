@@ -342,7 +342,6 @@ gotnewcl:
 	NET_OutOfBandPrint( NS_SERVER, from, "connectResponse" );
 
 	Com_DPrintf( "Going from CS_FREE to CS_CONNECTED for %s\n", newcl->name );
-	SV_IDS_ClientConnect( newcl );
 
 	newcl->state = CS_CONNECTED;
 	newcl->nextSnapshotTime = svs.time;
@@ -1481,11 +1480,6 @@ static void SV_UserMove( client_t *cl, msg_t *msg, qboolean delta ) {
 		// these old cmds are included when cl_packetdup > 0
 		if ( cmds[i].serverTime <= cl->lastUsercmd.serverTime ) {
 			continue;
-		}
-		// a clock that runs ahead of the server, see sv_ids.cpp
-		SV_IDS_Move( cl, &cmds[i] );
-		if ( cl->state != CS_ACTIVE ) {
-			return;		// dropped by that
 		}
 		SV_ClientThink (cl, &cmds[ i ]);
 	}

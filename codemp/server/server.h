@@ -463,7 +463,6 @@ typedef enum idsEvent_e {
 	IDS_TEXT_PATH,
 	IDS_TEXT_BINARY,
 	IDS_USERINFO,
-	IDS_MOVE_AHEAD,
 	IDS_NUM_EVENTS
 } idsEvent_t;
 
@@ -472,8 +471,6 @@ void		SV_IDS_Shutdown( void );
 qboolean	SV_IDS_Blocked( const netadr_t *from );
 void		SV_IDS_Event( const netadr_t *from, client_t *cl, idsEvent_t event, const char *detail );
 void		SV_IDS_Text( client_t *cl, const char *text, qboolean userinfo );
-void		SV_IDS_Move( client_t *cl, const usercmd_t *cmd );
-void		SV_IDS_ClientConnect( client_t *cl );
 
 extern	cvar_t	*sv_antiWallhack;		// sv_snapshot.cpp
 
