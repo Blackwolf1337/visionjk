@@ -257,6 +257,12 @@ typedef struct refexport_s {
 		// width and height are powers of two. glow: it is added and glows. Its files need no pk3, so it is
 		// there on a pure server too.
 		qhandle_t			(*RegisterShaderRGBA)					( const char *name, const byte *rgba, int width, int height, qboolean glow );
+		// The 2D that follows is drawn on a plane in the level, not flat on the screen: matrix takes a place of
+		// the 2D grid to clip space (16 values, column by column). NULL: flat again.
+		void				(*Set2DPlane)							( const float *matrix );
+		// The scene of this frame is blurred where it is nearer or farther than focus (units of the level),
+		// amount 0 to 1. rd-vanilla has no such pass and does nothing.
+		void				(*SetDepthOfField)						( float focus, float amount );
 	} ext;
 
 } refexport_t;

@@ -103,6 +103,50 @@ void VK_EndGlow( void ) {
 
 /*
 ===============
+VK_BlurFrame
+
+Blurs the frame as it is right now, for a module that asked with RE_SetDepthOfField(): the menu in the level of
+the cgame, which is drawn afterwards and stays sharp. It is made of the passes the glow has and of nothing else:
+the frame is blurred into the two small buffers, then the frame is cleared and the blurred picture is added to
+it, the way r_DynamicGlow 2 shows the glow alone. So it is no blur by depth: the whole scene is out of focus,
+more of it with a larger amount (0 to 1). r_sceneBlur 0 turns it off.
+===============
+*/
+void VK_BlurFrame( float amount ) {
+	const int	passes = 2 + (int)( amount * 4.0f );
+	const float	black[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
+	vkTarget_t	*source = &vk.color;
+	float		offset = 0.5f;		// in pixels of the source
+
+	if ( !vk.frame || amount <= 0.0f ) {
+		return;
+	}
+	VK_EndTarget();
+
+	for ( int i = 0; i < passes; i++ ) {
+		vkTarget_t *target = &vk.blur[i & 1];
+		// four samples around a pixel, a quarter of each
+		const float parm[4] = { offset / source->width, offset / source->height, 0.25f, 0.0f };
+
+		VK_BlurPass( source, target, parm );
+
+		source = target;
+		offset += amount;
+	}
+
+	// back to the frame, which is the blurred picture from here on
+	VK_BeginTarget( &vk.color, &vk.depth, 2, qtrue );
+	VK_ClearColor( 0, 0, vk.width, vk.height, black );
+	VK_AddTarget( source, qfalse );
+
+	// the shaders that draw geometry have other sets and other state
+	VK_BindFrameSets();
+	vk.stateValid = qfalse;
+	VK_SetViewport( vk.viewport[0], vk.viewport[1], vk.viewport[2], vk.viewport[3], 0.0f, 1.0f );
+}
+
+/*
+===============
 VK_CaptureFrame
 
 Copies the frame as it is right now into vk.screen, which the stages of refraction surfaces then read through

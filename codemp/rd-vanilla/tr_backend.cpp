@@ -1192,8 +1192,13 @@ void	RB_SetGL2D (void) {
 	qglViewport( 0, 0, glConfig.vidWidth, glConfig.vidHeight );
 	qglScissor( 0, 0, glConfig.vidWidth, glConfig.vidHeight );
 	qglMatrixMode(GL_PROJECTION);
+	if ( backEnd.plane2D ) {
+		// on a plane in the level, see RE_Set2DPlane()
+		qglLoadMatrixf( backEnd.planeMatrix );
+	} else {
     qglLoadIdentity ();
 	qglOrtho (-bias, 640 + bias, 480, 0, 0, 1);
+	}
 	qglMatrixMode(GL_MODELVIEW);
     qglLoadIdentity ();
 
@@ -1334,6 +1339,24 @@ const void	*RB_SetColor( const void *data ) {
 RB_StretchPic
 =============
 */
+// the 2D goes onto a plane in the level from here on, or flat onto the screen again (RE_Set2DPlane)
+static const void *RB_Set2DPlane( const void *data ) {
+	const set2DPlaneCommand_t *cmd = (const set2DPlaneCommand_t *)data;
+
+	// what waits to be drawn belongs to the projection that was
+	if ( tess.numIndexes ) {
+		RB_EndSurface();
+	}
+	backEnd.plane2D = cmd->active;
+	if ( cmd->active ) {
+		memcpy( backEnd.planeMatrix, cmd->matrix, sizeof( backEnd.planeMatrix ) );
+	}
+	if ( backEnd.projection2D ) {
+		RB_SetGL2D();
+	}
+	return (const void *)( cmd + 1 );
+}
+
 const void *RB_StretchPic ( const void *data ) {
 	const stretchPicCommand_t	*cmd;
 	shader_t *shader;
@@ -1966,6 +1989,9 @@ void RB_ExecuteRenderCommands( const void *data ) {
 		switch ( *(const int *)data ) {
 		case RC_SET_COLOR:
 			data = RB_SetColor( data );
+			break;
+		case RC_SET_2D_PLANE:
+			data = RB_Set2DPlane( data );
 			break;
 		case RC_STRETCH_PIC:
 			data = RB_StretchPic( data );
