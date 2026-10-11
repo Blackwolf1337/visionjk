@@ -24,6 +24,7 @@ Key: [-] removed, [+] added, [\*] modified
 * [+] Intrusion detection in the engine. Server (`sv_ids`, on): packets no client of the game sends are written to `ids.log`, their address is blocked for a while and a player they come from is dropped; moves that run ahead of the server (speed hack) count as well. Client (`cl_ids`, on): what a server sends that no server of the game does is written down, and a server that keeps at it is left.
 * [+] `sv_antiWallhack` (off by default): a player no line of sight reaches is not sent to a client. Players behind walls are not heard then either.
 * [\*] The client answers an `echo` request only from the server it is connected to.
+* [\*] Voice chat: the room rings half as loud from the own voice as before (with `s_spatial`), and the setup menus have a slider for it (`cg_voiceOwnReverb`, "Own Voice In The Room").
 
 # Features
 

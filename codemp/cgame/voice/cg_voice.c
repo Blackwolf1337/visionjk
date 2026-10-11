@@ -80,7 +80,9 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define VOICE_FAR_GAIN			0.1f	// how loud a voice still is at the end of its range
 #define VOICE_MAX_PAN			0.8f	// how far a voice goes to one side: it is never gone from the other ear
 #define VOICE_HEAD				24.0f	// the mouth of a player above his origin
-#define VOICE_OWN_REVERB_GAIN	0.3f	// what the room gets of the own voice at cg_voiceOwnReverb 1, against a voice next to the listener
+// What the room gets of the own voice at cg_voiceOwnReverb 1, against a voice next to the listener. It was 0.3,
+// which the first one to play with it found too loud (2026-10-11): half of that now, the menu has a slider.
+#define VOICE_OWN_REVERB_GAIN	0.15f
 #define VOICE_OWN_REVERB_CAP	0.1f	//	a frame of it louder than this (Voice_Level) goes in this loud,
 #define VOICE_OWN_REVERB_RISE	0.1f	//	and after a loud one the gain comes back by this much a frame at most
 #define VOICE_LIP_FLOOR			0.004f	// a frame quieter than this (Voice_Level) leaves the mouth shut
