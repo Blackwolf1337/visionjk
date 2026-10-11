@@ -62,6 +62,7 @@ def build(path, base, ingame):
         elif top.k == 'menudef':
             pages.HAD_LOGO[name] = any('jediacademy' in ' '.join(mf.get(e.block, 'background') or []).lower()
                                        for e in top.block if e.k == 'itemdef')
+            pages.before(top.block, name, ingame)
             theme.restyle(top.block, name, ingame)
             pages.page(top.block, name, ingame)
     head = ('// %s in the new look. Made by tools/menus/build.py from ui/jamp/%s: change that script or its\n'

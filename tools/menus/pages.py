@@ -1,6 +1,8 @@
 """What single pages get beyond the rules of theme.py (tools/menus/build.py): the frame of the pages outside a
 game (a bar at the top with the four sections, a title, the buttons at the bottom), and the pages that are laid
 out anew."""
+import os
+
 import menufile as mf
 from menufile import Entry
 from theme import *         # noqa: F401,F403
@@ -220,8 +222,153 @@ def ingame_bar(m):
     m[first:first] = new
 
 
+# ---- settings that had no entry: new tabs of the two setup menus, and more rows for the tab of the sound.
+# A row: (kind, label, cvar, what it is for, ...). slider: default, least, most. multi: pairs of name and value.
+TABS = [
+    ('interface', 'INTERFACE', 'How menus, HUD and camera look.', [
+        ('yesno', 'New HUD', 'cg_hud', 'The HUD of VisionJK. Off: the HUD of the game.'),
+        ('yesno', 'Classic Menus', 'ui_classic', 'The menus of the game as they were. Counts from the next start of the game.'),
+        ('yesno', 'Wide Screen Layout', 'r_2dAspect', 'Menus and HUD keep their shape on a wide window. Counts after a restart of the video.'),
+        ('yesno', 'Menu in the Level', 'cg_immersiveMenu', 'In a game an open menu stands in the level next to you.'),
+        ('slider', 'Menu Blur', 'r_menuBlur', 1, 0, 4, 'How far the level behind an open menu is out of focus.'),
+        ('slider', 'Field of View', 'cg_fov', 80, 60, 130, 'How wide you see.'),
+        ('slider', 'Camera Distance', 'cg_thirdPersonRange', 80, 40, 200, 'How far the camera is behind you in third person.'),
+        ('slider', 'Crosshair Size', 'cg_crosshairSize', 24, 12, 64, 'The size of the crosshair.'),
+        ('multi', 'Frame Limit', 'com_maxfps', [('60', 60), ('90', 90), ('125', 125), ('144', 144), ('165', 165), ('240', 240), ('None', 0)],
+         'The most frames a second the game draws.'),
+        ('yesno', 'Show Frame Rate', 'cg_drawFPS', 'Frames a second in the corner of the screen.'),
+        ('yesno', 'Show Timer', 'cg_drawTimer', 'The time of the level in the corner of the screen.'),
+        ('yesno', 'Show Lagometer', 'cg_lagometer', 'A graph of your connection.'),
+    ]),
+    ('social', 'CHAT & SOCIAL', 'The chat box, bubbles and what stands above the heads.', [
+        ('yesno', 'Chat Bubbles', 'cg_chatBubbles', 'What a player says stands above his head.'),
+        ('slider', 'Bubble Range', 'cg_bubbleRange', 1200, 300, 3000, 'How far away a bubble is still drawn.'),
+        ('yesno', 'Player Statuses', 'cg_playerStatuses', 'Away from keyboard and music above the heads of the others.'),
+        ('yesno', 'Show My Music', 'cg_shareMusic', 'Tell the others what you listen to. Everybody on the server reads it.'),
+        ('yesno', 'Select Players', 'cg_selectPlayers', 'With the mouse free, a click on a player opens a card with what you can do with him.'),
+        ('yesno', 'Selection Outline', 'cg_selectOutline', 'A glowing outline around the player under the mouse.'),
+        ('yesno', 'Own Chat Line', 'cg_chatInput', 'Type into the chat box of VisionJK, with history and links.'),
+        ('slider', 'Chat Box Width', 'cg_chatBoxWidth', 380, 200, 600, 'How wide the chat box is.'),
+        ('yesno', 'Chat Beep', 'cg_chatBeep', 'A sound when somebody says something.'),
+        ('yesno', 'Sharp Console Font', 'con_font', 'The console in a font with every character.'),
+        ('slider', 'Console Text Size', 'con_scale', 1, 0.5, 3, 'The size of the text of the console.'),
+        ('slider', 'Console Opacity', 'con_opacity', 1, 0.2, 1, 'How much of the game shows through the console.'),
+    ]),
+    ('network', 'NETWORK', 'Updates, downloads and security.', [
+        ('yesno', 'Check for Updates', 'cl_updateCheck', 'Ask at every start whether a newer version is out.'),
+        ('yesno', 'Voice Master', 'cg_voiceMaster', 'Voice chat, clan radio and statuses on servers that have none of their own.'),
+        ('yesno', 'Allow Downloads', 'cl_allowDownload', 'Take files a server offers.'),
+        ('yesno', 'Intrusion Log', 'cl_ids', 'Write down what a server sends that no server of the game does, and leave one that keeps at it.'),
+        ('yesno', 'Key Login by Agent', 'cg_authAgent', 'The admin login asks your ssh-agent for the key (1Password, OpenSSH).'),
+        ('yesno', 'UTF-8 Text', 'cl_utf8', 'Every character in names and chat. Off for a language with a code page of its own.'),
+    ]),
+]
+MORE_ROWS = {
+    'sound': [
+        ('yesno', 'Spatial Audio', 's_spatial', 'Sound that knows the level: walls, rooms and corners. Counts after a restart of the sound.'),
+        ('yesno', 'Room Reflections', 's_spatialReflections', 'The room around you rings.'),
+        ('yesno', 'Sound Round Corners', 's_spatialPaths', 'A sound finds its way round corners.'),
+        ('yesno', 'Doppler', 's_doppler', 'What flies past changes its pitch.'),
+    ],
+}
+
+
+def quoted(s):
+    return '"%s"' % s
+
+
+def setting_row(group, spec, rect, alignx):
+    kind, text, cvar = spec[:3]
+    desc = spec[-1]
+    b = [Entry('name', ['%s_%s' % (group, cvar.lower())]), Entry('group', [group]),
+         Entry('type', [{'yesno': 'ITEM_TYPE_YESNO', 'slider': 'ITEM_TYPE_SLIDER', 'multi': 'ITEM_TYPE_MULTI'}[kind]]),
+         Entry('text', [quoted(text + ':')])]
+    if kind == 'slider':
+        b.append(Entry('cvarfloat', [quoted(cvar)] + [mf.fmt(v) for v in spec[3:6]]))
+    else:
+        b.append(Entry('cvar', [quoted(cvar)]))
+    if kind == 'multi':
+        words = []
+        for label_, value in spec[3]:
+            words += [quoted(label_), mf.fmt(value)]
+        b.append(Entry('cvarFloatList', [], words))
+    b += [Entry('rect', [mf.fmt(v) for v in rect]), Entry('textalign', ['ITEM_ALIGN_RIGHT']), Entry('textalignx', [mf.fmt(alignx)]),
+          Entry('textaligny', ['0']), Entry('font', ['4']), Entry('textscale', ['1']), Entry('forecolor', ['0.65', '0.65', '1', '1']),
+          Entry('visible', ['0']), Entry('descText', [quoted(desc)]),
+          Entry('action', [], ['play', '"sound/interface/button1.wav"', ';'])]
+    return Entry('itemDef', [], b)
+
+
+def setup_before(m):
+    """The new tabs and rows of a setup menu, written as the old ones are: the rules of theme.py then treat them
+    as their neighbours. Called before those rules."""
+    tabs = [e for e in items(m) if (mf.get(e.block, 'group') or [''])[0] == 'setup_submenu' and mf.find(e.block, 'action')]
+    sample = next((e for e in items(m) if (mf.get(e.block, 'group') or [''])[0] == 'voicechat' and mf.get(e.block, 'text')), None)
+    model = next((e for e in tabs if name_of(e.block) == 'voicechatmenubutton'), None)
+    if not tabs or not sample or not model:
+        return
+    row = rect_of(sample.block)                     # x, y of the first row, width, height of a row
+    alignx = mf.num(mf.get(sample.block, 'textalignx')[0])
+    top = min(rect_of(e.block)[1] for e in items(m) if (mf.get(e.block, 'group') or [''])[0] == 'voicechat' and rect_of(e.block))
+    tab_rects = sorted(rect_of(e.block) for e in tabs)
+    step = tab_rects[1][1] - tab_rects[0][1]
+    last = max(r[1] for r in tab_rects)
+    new = []
+    for n, (group, title, desc, rows) in enumerate(TABS):
+        # every tab that is there hides the new one
+        for e in tabs:
+            words = mf.find(e.block, 'action').block
+            at = next((i for i, w in enumerate(words) if w.lower() == 'setitemcolor'), len(words))
+            words[at:at] = ['hide', group, ';', mf.NL]
+        button = Entry('itemDef', [], [Entry(x.key, list(x.args), list(x.block) if x.block is not None else None) for x in model.block])
+        b = button.block
+        mf.put(b, 'name', group + 'menubutton')
+        mf.put(b, 'text', quoted(title))
+        mf.put(b, 'descText', quoted(desc))
+        r = rect_of(model.block)
+        set_rect(b, r[0], last + step * (n + 1), r[2], r[3])
+        mf.drop(b, 'mouseenter')
+        mf.drop(b, 'mouseexit')
+        words = mf.find(b, 'action').block
+        for i, w in enumerate(words):
+            if w == 'voicechatmenubutton':
+                words[i] = group + 'menubutton'
+            elif w == 'voicechat' and words[i - 1].lower() == 'show':
+                words[i - 1] = 'hide'
+        at = next((i for i, w in enumerate(words) if w.lower() == 'setitemcolor'), len(words))
+        words[at:at] = ['show', group, ';', mf.NL]
+        for other, _, _, _ in TABS:
+            if other != group and other not in words:
+                words[at:at] = ['hide', other, ';', mf.NL]
+        new.append(button)
+        for i, spec in enumerate(rows):
+            new.append(setting_row(group, spec, (row[0], top + i * row[3], row[2], row[3]), alignx))
+    for group, rows in MORE_ROWS.items():
+        have = [rect_of(e.block) for e in items(m) if (mf.get(e.block, 'group') or [''])[0] == group and rect_of(e.block)]
+        if not have:
+            continue
+        y = max(r[1] for r in have) + row[3]
+        for i, spec in enumerate(rows):
+            new.append(setting_row(group, spec, (row[0], y + i * row[3], row[2], row[3]), alignx))
+    m.extend(new)
+
+
+def before(m, name, ingame):
+    """What a page gets before the rules of theme.py."""
+    if name in ('setup.menu', 'ingame_setup.menu'):
+        setup_before(m)
+
+
 def page(m, name, ingame):
     menu = mf.unquote(mf.get(m, 'name')[0]).lower()
+    # for a picture of a tab nothing clicks on (tools/uishot.sh): UI_SHOW=<group> makes it the one that is open
+    if os.environ.get('UI_SHOW'):
+        for e in items(m):
+            g = (mf.get(e.block, 'group') or [''])[0]
+            if g == os.environ['UI_SHOW'] or name_of(e.block) == 'setup_background':
+                mf.put(e.block, 'visible', 1)
+            elif g in ('video', 'vidrestart'):
+                mf.put(e.block, 'visible', 0)
     full = mf.get(m, 'fullscreen')
     full = bool(full and full[0] != '0')
     if menu == 'main':

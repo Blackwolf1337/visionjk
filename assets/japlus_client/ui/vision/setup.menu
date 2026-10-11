@@ -316,6 +316,9 @@
 				hide options ;
 				hide mods ;
 				hide defaults ;
+				hide interface ;
+				hide social ;
+				hide network ;
 				setitemcolor setup_submenu forecolor 1 .682 0 1;
 				setitemcolor video1menubutton forecolor 0.43 0.83 1 1 ;
 			}
@@ -356,6 +359,9 @@
 				hide options ;
 				hide mods ;
 				hide defaults ;
+				hide interface ;
+				hide social ;
+				hide network ;
 				setitemcolor setup_submenu forecolor 0.86 0.92 0.97 1 ;
 				setitemcolor video2menubutton forecolor 0.43 0.83 1 1 ;
 			}
@@ -396,6 +402,9 @@
 				hide options ;
 				hide mods ;
 				hide defaults ;
+				hide interface ;
+				hide social ;
+				hide network ;
 				setitemcolor setup_submenu forecolor 0.86 0.92 0.97 1 ;
 				setitemcolor soundmenubutton forecolor 0.43 0.83 1 1 ;
 				uiScript getsoundsetup ;
@@ -437,6 +446,9 @@
 				hide options ;
 				hide mods ;
 				hide defaults ;
+				hide interface ;
+				hide social ;
+				hide network ;
 				setitemcolor setup_submenu forecolor 0.86 0.92 0.97 1 ;
 				setitemcolor voicechatmenubutton forecolor 0.43 0.83 1 1 ;
 			}
@@ -477,6 +489,9 @@
 				hide options ;
 				hide mods ;
 				hide defaults ;
+				hide interface ;
+				hide social ;
+				hide network ;
 				setitemcolor setup_submenu forecolor 0.86 0.92 0.97 1 ;
 				setitemcolor botmodemenubutton forecolor 0.43 0.83 1 1 ;
 			}
@@ -518,6 +533,9 @@
 				hide langapply
 				hide mods
 				hide defaults
+				hide interface ;
+				hide social ;
+				hide network ;
 				setitemcolor setup_submenu forecolor 0.86 0.92 0.97 1 ;
 				setitemcolor gameoptionmenubutton forecolor 0.43 0.83 1 1 ;
 			}
@@ -559,6 +577,9 @@
 				hide options ;
 				show mods ;
 				hide defaults ;
+				hide interface ;
+				hide social ;
+				hide network ;
 				setitemcolor setup_submenu forecolor 0.86 0.92 0.97 1 ;
 				setitemcolor modsmenubutton forecolor 0.43 0.83 1 1 ;
 			}
@@ -599,6 +620,9 @@
 				hide options ;
 				hide mods ;
 				show defaults ;
+				hide interface ;
+				hide social ;
+				hide network ;
 				setitemcolor setup_submenu forecolor 0.86 0.92 0.97 1 ;
 				setitemcolor gamedefaultsmenubutton forecolor 0.43 0.83 1 1 ;
 			}
@@ -2301,6 +2325,779 @@
 			}
 			mouseEnter { show default_no_button }
 			mouseExit { hide default_no_button }
+		}
+
+		itemDef
+		{
+			name					interfacemenubutton
+			group					setup_submenu
+			text					"INTERFACE"
+			type					ITEM_TYPE_BUTTON
+			style					WINDOW_STYLE_EMPTY
+			rect					80 329 170 24
+			font					5
+			textscale				0.67
+			textalignx				160
+			textaligny				4.25
+			textalign				ITEM_ALIGN_RIGHT
+			textstyle				0
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+			descText				"How menus, HUD and camera look."
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				defer VideoSetup videowarningMenu ;
+				show setup_background ;
+				hide video ;
+				hide applyChanges ;
+				hide video2 ;
+				hide vidrestart ;
+				hide sound ;
+				hide voicechat ;
+				hide botmode ;
+				hide options ;
+				hide mods ;
+				hide defaults ;
+				hide interface ;
+				hide network ;
+				hide social ;
+				show interface ;
+				setitemcolor setup_submenu forecolor 0.86 0.92 0.97 1 ;
+				setitemcolor interfacemenubutton forecolor 0.43 0.83 1 1 ;
+			}
+			caps					1
+		}
+
+		itemDef
+		{
+			name					interface_cg_hud
+			group					interface
+			type					ITEM_TYPE_YESNO
+			text					"New HUD:"
+			cvar					"cg_hud"
+			rect					260 140 340 14
+			textalign				ITEM_ALIGN_RIGHT
+			textalignx				174
+			textaligny				1
+			font					5
+			textscale				0.68
+			forecolor				0.60 0.69 0.78 1
+			visible					0
+			descText				"The HUD of VisionJK. Off: the HUD of the game."
+			action { play "sound/interface/button1.wav" ; }
+		}
+
+		itemDef
+		{
+			name					interface_ui_classic
+			group					interface
+			type					ITEM_TYPE_YESNO
+			text					"Classic Menus:"
+			cvar					"ui_classic"
+			rect					260 154 340 14
+			textalign				ITEM_ALIGN_RIGHT
+			textalignx				174
+			textaligny				1
+			font					5
+			textscale				0.68
+			forecolor				0.60 0.69 0.78 1
+			visible					0
+			descText				"The menus of the game as they were. Counts from the next start of the game."
+			action { play "sound/interface/button1.wav" ; }
+		}
+
+		itemDef
+		{
+			name					interface_r_2daspect
+			group					interface
+			type					ITEM_TYPE_YESNO
+			text					"Wide Screen Layout:"
+			cvar					"r_2dAspect"
+			rect					260 168 340 14
+			textalign				ITEM_ALIGN_RIGHT
+			textalignx				174
+			textaligny				1
+			font					5
+			textscale				0.68
+			forecolor				0.60 0.69 0.78 1
+			visible					0
+			descText				"Menus and HUD keep their shape on a wide window. Counts after a restart of the video."
+			action { play "sound/interface/button1.wav" ; }
+		}
+
+		itemDef
+		{
+			name					interface_cg_immersivemenu
+			group					interface
+			type					ITEM_TYPE_YESNO
+			text					"Menu in the Level:"
+			cvar					"cg_immersiveMenu"
+			rect					260 182 340 14
+			textalign				ITEM_ALIGN_RIGHT
+			textalignx				174
+			textaligny				1
+			font					5
+			textscale				0.68
+			forecolor				0.60 0.69 0.78 1
+			visible					0
+			descText				"In a game an open menu stands in the level next to you."
+			action { play "sound/interface/button1.wav" ; }
+		}
+
+		itemDef
+		{
+			name					interface_r_menublur
+			group					interface
+			type					ITEM_TYPE_SLIDER
+			text					"Menu Blur:"
+			cvarfloat				"r_menuBlur" 1 0 4
+			rect					260 196 340 14
+			textalign				ITEM_ALIGN_RIGHT
+			textalignx				174
+			textaligny				1
+			font					5
+			textscale				0.68
+			forecolor				0.60 0.69 0.78 1
+			visible					0
+			descText				"How far the level behind an open menu is out of focus."
+			action { play "sound/interface/button1.wav" ; }
+		}
+
+		itemDef
+		{
+			name					interface_cg_fov
+			group					interface
+			type					ITEM_TYPE_SLIDER
+			text					"Field of View:"
+			cvarfloat				"cg_fov" 80 60 130
+			rect					260 210 340 14
+			textalign				ITEM_ALIGN_RIGHT
+			textalignx				174
+			textaligny				1
+			font					5
+			textscale				0.68
+			forecolor				0.60 0.69 0.78 1
+			visible					0
+			descText				"How wide you see."
+			action { play "sound/interface/button1.wav" ; }
+		}
+
+		itemDef
+		{
+			name					interface_cg_thirdpersonrange
+			group					interface
+			type					ITEM_TYPE_SLIDER
+			text					"Camera Distance:"
+			cvarfloat				"cg_thirdPersonRange" 80 40 200
+			rect					260 224 340 14
+			textalign				ITEM_ALIGN_RIGHT
+			textalignx				174
+			textaligny				1
+			font					5
+			textscale				0.68
+			forecolor				0.60 0.69 0.78 1
+			visible					0
+			descText				"How far the camera is behind you in third person."
+			action { play "sound/interface/button1.wav" ; }
+		}
+
+		itemDef
+		{
+			name					interface_cg_crosshairsize
+			group					interface
+			type					ITEM_TYPE_SLIDER
+			text					"Crosshair Size:"
+			cvarfloat				"cg_crosshairSize" 24 12 64
+			rect					260 238 340 14
+			textalign				ITEM_ALIGN_RIGHT
+			textalignx				174
+			textaligny				1
+			font					5
+			textscale				0.68
+			forecolor				0.60 0.69 0.78 1
+			visible					0
+			descText				"The size of the crosshair."
+			action { play "sound/interface/button1.wav" ; }
+		}
+
+		itemDef
+		{
+			name					interface_com_maxfps
+			group					interface
+			type					ITEM_TYPE_MULTI
+			text					"Frame Limit:"
+			cvar					"com_maxfps"
+			cvarFloatList { "60" 60 "90" 90 "125" 125 "144" 144 "165" 165 "240" 240 "None" 0 }
+			rect					260 252 340 14
+			textalign				ITEM_ALIGN_RIGHT
+			textalignx				174
+			textaligny				1
+			font					5
+			textscale				0.68
+			forecolor				0.60 0.69 0.78 1
+			visible					0
+			descText				"The most frames a second the game draws."
+			action { play "sound/interface/button1.wav" ; }
+		}
+
+		itemDef
+		{
+			name					interface_cg_drawfps
+			group					interface
+			type					ITEM_TYPE_YESNO
+			text					"Show Frame Rate:"
+			cvar					"cg_drawFPS"
+			rect					260 266 340 14
+			textalign				ITEM_ALIGN_RIGHT
+			textalignx				174
+			textaligny				1
+			font					5
+			textscale				0.68
+			forecolor				0.60 0.69 0.78 1
+			visible					0
+			descText				"Frames a second in the corner of the screen."
+			action { play "sound/interface/button1.wav" ; }
+		}
+
+		itemDef
+		{
+			name					interface_cg_drawtimer
+			group					interface
+			type					ITEM_TYPE_YESNO
+			text					"Show Timer:"
+			cvar					"cg_drawTimer"
+			rect					260 280 340 14
+			textalign				ITEM_ALIGN_RIGHT
+			textalignx				174
+			textaligny				1
+			font					5
+			textscale				0.68
+			forecolor				0.60 0.69 0.78 1
+			visible					0
+			descText				"The time of the level in the corner of the screen."
+			action { play "sound/interface/button1.wav" ; }
+		}
+
+		itemDef
+		{
+			name					interface_cg_lagometer
+			group					interface
+			type					ITEM_TYPE_YESNO
+			text					"Show Lagometer:"
+			cvar					"cg_lagometer"
+			rect					260 294 340 14
+			textalign				ITEM_ALIGN_RIGHT
+			textalignx				174
+			textaligny				1
+			font					5
+			textscale				0.68
+			forecolor				0.60 0.69 0.78 1
+			visible					0
+			descText				"A graph of your connection."
+			action { play "sound/interface/button1.wav" ; }
+		}
+
+		itemDef
+		{
+			name					socialmenubutton
+			group					setup_submenu
+			text					"CHAT & SOCIAL"
+			type					ITEM_TYPE_BUTTON
+			style					WINDOW_STYLE_EMPTY
+			rect					80 353 170 24
+			font					5
+			textscale				0.67
+			textalignx				160
+			textaligny				4.25
+			textalign				ITEM_ALIGN_RIGHT
+			textstyle				0
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+			descText				"The chat box, bubbles and what stands above the heads."
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				defer VideoSetup videowarningMenu ;
+				show setup_background ;
+				hide video ;
+				hide applyChanges ;
+				hide video2 ;
+				hide vidrestart ;
+				hide sound ;
+				hide voicechat ;
+				hide botmode ;
+				hide options ;
+				hide mods ;
+				hide defaults ;
+				hide interface ;
+				hide social ;
+				hide network ;
+				show social ;
+				setitemcolor setup_submenu forecolor 0.86 0.92 0.97 1 ;
+				setitemcolor socialmenubutton forecolor 0.43 0.83 1 1 ;
+			}
+			caps					1
+		}
+
+		itemDef
+		{
+			name					social_cg_chatbubbles
+			group					social
+			type					ITEM_TYPE_YESNO
+			text					"Chat Bubbles:"
+			cvar					"cg_chatBubbles"
+			rect					260 140 340 14
+			textalign				ITEM_ALIGN_RIGHT
+			textalignx				174
+			textaligny				1
+			font					5
+			textscale				0.68
+			forecolor				0.60 0.69 0.78 1
+			visible					0
+			descText				"What a player says stands above his head."
+			action { play "sound/interface/button1.wav" ; }
+		}
+
+		itemDef
+		{
+			name					social_cg_bubblerange
+			group					social
+			type					ITEM_TYPE_SLIDER
+			text					"Bubble Range:"
+			cvarfloat				"cg_bubbleRange" 1200 300 3000
+			rect					260 154 340 14
+			textalign				ITEM_ALIGN_RIGHT
+			textalignx				174
+			textaligny				1
+			font					5
+			textscale				0.68
+			forecolor				0.60 0.69 0.78 1
+			visible					0
+			descText				"How far away a bubble is still drawn."
+			action { play "sound/interface/button1.wav" ; }
+		}
+
+		itemDef
+		{
+			name					social_cg_playerstatuses
+			group					social
+			type					ITEM_TYPE_YESNO
+			text					"Player Statuses:"
+			cvar					"cg_playerStatuses"
+			rect					260 168 340 14
+			textalign				ITEM_ALIGN_RIGHT
+			textalignx				174
+			textaligny				1
+			font					5
+			textscale				0.68
+			forecolor				0.60 0.69 0.78 1
+			visible					0
+			descText				"Away from keyboard and music above the heads of the others."
+			action { play "sound/interface/button1.wav" ; }
+		}
+
+		itemDef
+		{
+			name					social_cg_sharemusic
+			group					social
+			type					ITEM_TYPE_YESNO
+			text					"Show My Music:"
+			cvar					"cg_shareMusic"
+			rect					260 182 340 14
+			textalign				ITEM_ALIGN_RIGHT
+			textalignx				174
+			textaligny				1
+			font					5
+			textscale				0.68
+			forecolor				0.60 0.69 0.78 1
+			visible					0
+			descText				"Tell the others what you listen to. Everybody on the server reads it."
+			action { play "sound/interface/button1.wav" ; }
+		}
+
+		itemDef
+		{
+			name					social_cg_selectplayers
+			group					social
+			type					ITEM_TYPE_YESNO
+			text					"Select Players:"
+			cvar					"cg_selectPlayers"
+			rect					260 196 340 14
+			textalign				ITEM_ALIGN_RIGHT
+			textalignx				174
+			textaligny				1
+			font					5
+			textscale				0.68
+			forecolor				0.60 0.69 0.78 1
+			visible					0
+			descText				"With the mouse free, a click on a player opens a card with what you can do with him."
+			action { play "sound/interface/button1.wav" ; }
+		}
+
+		itemDef
+		{
+			name					social_cg_selectoutline
+			group					social
+			type					ITEM_TYPE_YESNO
+			text					"Selection Outline:"
+			cvar					"cg_selectOutline"
+			rect					260 210 340 14
+			textalign				ITEM_ALIGN_RIGHT
+			textalignx				174
+			textaligny				1
+			font					5
+			textscale				0.68
+			forecolor				0.60 0.69 0.78 1
+			visible					0
+			descText				"A glowing outline around the player under the mouse."
+			action { play "sound/interface/button1.wav" ; }
+		}
+
+		itemDef
+		{
+			name					social_cg_chatinput
+			group					social
+			type					ITEM_TYPE_YESNO
+			text					"Own Chat Line:"
+			cvar					"cg_chatInput"
+			rect					260 224 340 14
+			textalign				ITEM_ALIGN_RIGHT
+			textalignx				174
+			textaligny				1
+			font					5
+			textscale				0.68
+			forecolor				0.60 0.69 0.78 1
+			visible					0
+			descText				"Type into the chat box of VisionJK, with history and links."
+			action { play "sound/interface/button1.wav" ; }
+		}
+
+		itemDef
+		{
+			name					social_cg_chatboxwidth
+			group					social
+			type					ITEM_TYPE_SLIDER
+			text					"Chat Box Width:"
+			cvarfloat				"cg_chatBoxWidth" 380 200 600
+			rect					260 238 340 14
+			textalign				ITEM_ALIGN_RIGHT
+			textalignx				174
+			textaligny				1
+			font					5
+			textscale				0.68
+			forecolor				0.60 0.69 0.78 1
+			visible					0
+			descText				"How wide the chat box is."
+			action { play "sound/interface/button1.wav" ; }
+		}
+
+		itemDef
+		{
+			name					social_cg_chatbeep
+			group					social
+			type					ITEM_TYPE_YESNO
+			text					"Chat Beep:"
+			cvar					"cg_chatBeep"
+			rect					260 252 340 14
+			textalign				ITEM_ALIGN_RIGHT
+			textalignx				174
+			textaligny				1
+			font					5
+			textscale				0.68
+			forecolor				0.60 0.69 0.78 1
+			visible					0
+			descText				"A sound when somebody says something."
+			action { play "sound/interface/button1.wav" ; }
+		}
+
+		itemDef
+		{
+			name					social_con_font
+			group					social
+			type					ITEM_TYPE_YESNO
+			text					"Sharp Console Font:"
+			cvar					"con_font"
+			rect					260 266 340 14
+			textalign				ITEM_ALIGN_RIGHT
+			textalignx				174
+			textaligny				1
+			font					5
+			textscale				0.68
+			forecolor				0.60 0.69 0.78 1
+			visible					0
+			descText				"The console in a font with every character."
+			action { play "sound/interface/button1.wav" ; }
+		}
+
+		itemDef
+		{
+			name					social_con_scale
+			group					social
+			type					ITEM_TYPE_SLIDER
+			text					"Console Text Size:"
+			cvarfloat				"con_scale" 1 0.5 3
+			rect					260 280 340 14
+			textalign				ITEM_ALIGN_RIGHT
+			textalignx				174
+			textaligny				1
+			font					5
+			textscale				0.68
+			forecolor				0.60 0.69 0.78 1
+			visible					0
+			descText				"The size of the text of the console."
+			action { play "sound/interface/button1.wav" ; }
+		}
+
+		itemDef
+		{
+			name					social_con_opacity
+			group					social
+			type					ITEM_TYPE_SLIDER
+			text					"Console Opacity:"
+			cvarfloat				"con_opacity" 1 0.2 1
+			rect					260 294 340 14
+			textalign				ITEM_ALIGN_RIGHT
+			textalignx				174
+			textaligny				1
+			font					5
+			textscale				0.68
+			forecolor				0.60 0.69 0.78 1
+			visible					0
+			descText				"How much of the game shows through the console."
+			action { play "sound/interface/button1.wav" ; }
+		}
+
+		itemDef
+		{
+			name					networkmenubutton
+			group					setup_submenu
+			text					"NETWORK"
+			type					ITEM_TYPE_BUTTON
+			style					WINDOW_STYLE_EMPTY
+			rect					80 377 170 24
+			font					5
+			textscale				0.67
+			textalignx				160
+			textaligny				4.25
+			textalign				ITEM_ALIGN_RIGHT
+			textstyle				0
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+			descText				"Updates, downloads and security."
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				defer VideoSetup videowarningMenu ;
+				show setup_background ;
+				hide video ;
+				hide applyChanges ;
+				hide video2 ;
+				hide vidrestart ;
+				hide sound ;
+				hide voicechat ;
+				hide botmode ;
+				hide options ;
+				hide mods ;
+				hide defaults ;
+				hide interface ;
+				hide social ;
+				hide network ;
+				show network ;
+				setitemcolor setup_submenu forecolor 0.86 0.92 0.97 1 ;
+				setitemcolor networkmenubutton forecolor 0.43 0.83 1 1 ;
+			}
+			caps					1
+		}
+
+		itemDef
+		{
+			name					network_cl_updatecheck
+			group					network
+			type					ITEM_TYPE_YESNO
+			text					"Check for Updates:"
+			cvar					"cl_updateCheck"
+			rect					260 140 340 14
+			textalign				ITEM_ALIGN_RIGHT
+			textalignx				174
+			textaligny				1
+			font					5
+			textscale				0.68
+			forecolor				0.60 0.69 0.78 1
+			visible					0
+			descText				"Ask at every start whether a newer version is out."
+			action { play "sound/interface/button1.wav" ; }
+		}
+
+		itemDef
+		{
+			name					network_cg_voicemaster
+			group					network
+			type					ITEM_TYPE_YESNO
+			text					"Voice Master:"
+			cvar					"cg_voiceMaster"
+			rect					260 154 340 14
+			textalign				ITEM_ALIGN_RIGHT
+			textalignx				174
+			textaligny				1
+			font					5
+			textscale				0.68
+			forecolor				0.60 0.69 0.78 1
+			visible					0
+			descText				"Voice chat, clan radio and statuses on servers that have none of their own."
+			action { play "sound/interface/button1.wav" ; }
+		}
+
+		itemDef
+		{
+			name					network_cl_allowdownload
+			group					network
+			type					ITEM_TYPE_YESNO
+			text					"Allow Downloads:"
+			cvar					"cl_allowDownload"
+			rect					260 168 340 14
+			textalign				ITEM_ALIGN_RIGHT
+			textalignx				174
+			textaligny				1
+			font					5
+			textscale				0.68
+			forecolor				0.60 0.69 0.78 1
+			visible					0
+			descText				"Take files a server offers."
+			action { play "sound/interface/button1.wav" ; }
+		}
+
+		itemDef
+		{
+			name					network_cl_ids
+			group					network
+			type					ITEM_TYPE_YESNO
+			text					"Intrusion Log:"
+			cvar					"cl_ids"
+			rect					260 182 340 14
+			textalign				ITEM_ALIGN_RIGHT
+			textalignx				174
+			textaligny				1
+			font					5
+			textscale				0.68
+			forecolor				0.60 0.69 0.78 1
+			visible					0
+			descText				"Write down what a server sends that no server of the game does, and leave one that keeps at it."
+			action { play "sound/interface/button1.wav" ; }
+		}
+
+		itemDef
+		{
+			name					network_cg_authagent
+			group					network
+			type					ITEM_TYPE_YESNO
+			text					"Key Login by Agent:"
+			cvar					"cg_authAgent"
+			rect					260 196 340 14
+			textalign				ITEM_ALIGN_RIGHT
+			textalignx				174
+			textaligny				1
+			font					5
+			textscale				0.68
+			forecolor				0.60 0.69 0.78 1
+			visible					0
+			descText				"The admin login asks your ssh-agent for the key (1Password, OpenSSH)."
+			action { play "sound/interface/button1.wav" ; }
+		}
+
+		itemDef
+		{
+			name					network_cl_utf8
+			group					network
+			type					ITEM_TYPE_YESNO
+			text					"UTF-8 Text:"
+			cvar					"cl_utf8"
+			rect					260 210 340 14
+			textalign				ITEM_ALIGN_RIGHT
+			textalignx				174
+			textaligny				1
+			font					5
+			textscale				0.68
+			forecolor				0.60 0.69 0.78 1
+			visible					0
+			descText				"Every character in names and chat. Off for a language with a code page of its own."
+			action { play "sound/interface/button1.wav" ; }
+		}
+
+		itemDef
+		{
+			name					sound_s_spatial
+			group					sound
+			type					ITEM_TYPE_YESNO
+			text					"Spatial Audio:"
+			cvar					"s_spatial"
+			rect					260 294 340 14
+			textalign				ITEM_ALIGN_RIGHT
+			textalignx				174
+			textaligny				1
+			font					5
+			textscale				0.68
+			forecolor				0.60 0.69 0.78 1
+			visible					0
+			descText				"Sound that knows the level: walls, rooms and corners. Counts after a restart of the sound."
+			action { play "sound/interface/button1.wav" ; }
+		}
+
+		itemDef
+		{
+			name					sound_s_spatialreflections
+			group					sound
+			type					ITEM_TYPE_YESNO
+			text					"Room Reflections:"
+			cvar					"s_spatialReflections"
+			rect					260 308 340 14
+			textalign				ITEM_ALIGN_RIGHT
+			textalignx				174
+			textaligny				1
+			font					5
+			textscale				0.68
+			forecolor				0.60 0.69 0.78 1
+			visible					0
+			descText				"The room around you rings."
+			action { play "sound/interface/button1.wav" ; }
+		}
+
+		itemDef
+		{
+			name					sound_s_spatialpaths
+			group					sound
+			type					ITEM_TYPE_YESNO
+			text					"Sound Round Corners:"
+			cvar					"s_spatialPaths"
+			rect					260 322 340 14
+			textalign				ITEM_ALIGN_RIGHT
+			textalignx				174
+			textaligny				1
+			font					5
+			textscale				0.68
+			forecolor				0.60 0.69 0.78 1
+			visible					0
+			descText				"A sound finds its way round corners."
+			action { play "sound/interface/button1.wav" ; }
+		}
+
+		itemDef
+		{
+			name					sound_s_doppler
+			group					sound
+			type					ITEM_TYPE_YESNO
+			text					"Doppler:"
+			cvar					"s_doppler"
+			rect					260 336 340 14
+			textalign				ITEM_ALIGN_RIGHT
+			textalignx				174
+			textaligny				1
+			font					5
+			textscale				0.68
+			forecolor				0.60 0.69 0.78 1
+			visible					0
+			descText				"What flies past changes its pitch."
+			action { play "sound/interface/button1.wav" ; }
 		}
 		skin					1
 		disableColor			0.36 0.42 0.50 1
