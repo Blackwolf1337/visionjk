@@ -40,12 +40,13 @@ float		Skin_Ease( float value, qboolean on, int msec );
 void		Skin_Color( vec4_t out, const vec4_t in, float alphaScale );
 
 void		Skin_Panel( float x, float y, float w, float h, float radius, const vec4_t fill, const vec4_t edge );
-void		Skin_Soft( float x, float y, float w, float h, float spread, const vec4_t color, qboolean add );
+void		Skin_Soft( float x, float y, float w, float h, float spread, const vec4_t color );
 void		Skin_Disc( float cx, float cy, float radius, const vec4_t color );
 void		Skin_Backdrop( void );
 void		Skin_Cursor( float x, float y );
 void		Skin_Logo( float x, float y, float w, float h, float alpha );
 void		Skin_Cube( float x, float y, float w, float h );
+void		Skin_LoadPanel( const char *title, const char *about, const char *now, float fraction );
 
 // the widgets of a menu with "skin 1"
 void		Skin_ItemBack( itemDef_t *item );

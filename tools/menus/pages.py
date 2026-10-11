@@ -184,9 +184,8 @@ def main_page(m):
         box('vision_rail', (48, 196, 220, 196)),
         # the box of the icon, turning, on a panel of its own with a light around it
         item('vision_hero', (336, 96, 256, 296), ('style', 'WINDOW_STYLE_PANEL'), ('backcolor', '0.035', '0.07', '0.12', '0.55'),
-             ('bordercolor', *PANEL_EDGE), ('radius', 10), ('shadow', 14), ('sheen', '0.10'),
-             ('glowcolor', '0', '0.45', '1', '0.10'), ('decoration',)),
-        item('vision_cube', (364, 104, 200, 200), ('type', 'ITEM_TYPE_CUBE'), ('decoration',)),
+             ('bordercolor', *PANEL_EDGE), ('radius', 10), ('shadow', 14), ('sheen', '0.10'), ('decoration',)),
+        item('vision_cube', (364, 102, 200, 200), ('type', 'ITEM_TYPE_CUBE'), ('decoration',)),
         label('vision_hero1', (336, 312, 256, 18), '"Jedi Academy, rebuilt"', 0.86, BRIGHT, ('textalign', 'ITEM_ALIGN_CENTER'),
               ('textalignx', 128)),
         label('vision_hero2', (336, 334, 256, 14), '"jka.vision"', 0.66, ACCENT, ('textalign', 'ITEM_ALIGN_CENTER'),
@@ -418,6 +417,12 @@ def page(m, name, ingame):
     full = bool(full and full[0] != '0')
     if menu == 'main':
         main_page(m)
+    elif menu == 'connect':
+        # the sky of the menus (backdrop) under the panel the code draws (UI_ConnectPanel), no picture of the game.
+        # (The window of the menu was a picture frame as well: left without a picture it draws the engine's
+        # stand-in for a missing one over the sky.)
+        m[:] = [e for e in m if e.k != 'itemdef']
+        mf.drop(m, 'style')
     elif menu == 'ingame':
         ingame_bar(m)
     elif full and not ingame:

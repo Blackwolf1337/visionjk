@@ -115,14 +115,13 @@
 			radius					10
 			shadow					14
 			sheen					0.10
-			glowcolor				0 0.45 1 0.10
 			decoration
 		}
 
 		itemDef
 		{
 			name					vision_cube
-			rect					364 104 200 200
+			rect					364 102 200 200
 			visible					1
 			type					ITEM_TYPE_CUBE
 			decoration

@@ -421,7 +421,7 @@ static void Select_DrawCard( void ) {
 	if ( Skin_Ready() ) {
 		const vec4_t dark = { 0.0f, 0.0f, 0.0f, 0.4f };
 
-		Skin_Soft( x, y + 3.0f, SELECT_CARD_W, height, 10.0f, dark, qfalse );
+		Skin_Soft( x, y + 3.0f, SELECT_CARD_W, height, 10.0f, dark );
 		Skin_Panel( x, y, SELECT_CARD_W, height, 6.0f, fill, edge );
 	} else {
 		CG_FillRect( x, y, SELECT_CARD_W, height, (float *)fill );

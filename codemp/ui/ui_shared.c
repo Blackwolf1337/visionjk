@@ -765,10 +765,10 @@ void Window_Paint(windowDef_t *w, float fadeAmount, float fadeClamp, float fadeC
 			if ( w->shadow > 0.0f ) {
 				const vec4_t dark = { 0.0f, 0.0f, 0.0f, 0.45f * w->backColor[3] };
 
-				Skin_Soft( w->rect.x, w->rect.y + w->shadow * 0.25f, w->rect.w, w->rect.h, w->shadow, dark, qfalse );
+				Skin_Soft( w->rect.x, w->rect.y + w->shadow * 0.25f, w->rect.w, w->rect.h, w->shadow, dark );
 			}
 			if ( w->glowColor[3] > 0.0f ) {
-				Skin_Soft( w->rect.x, w->rect.y, w->rect.w, w->rect.h, 10.0f, w->glowColor, qtrue );
+				Skin_Soft( w->rect.x, w->rect.y, w->rect.w, w->rect.h, 10.0f, w->glowColor );
 			}
 			Skin_Panel( w->rect.x, w->rect.y, w->rect.w, w->rect.h, w->radius, w->backColor, w->borderColor );
 			if ( w->sheen > 0.0f && w->rect.w > 2.0f * w->radius ) {

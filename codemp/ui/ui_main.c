@@ -10677,17 +10677,69 @@ void Text_PaintCenter(float x, float y, float scale, vec4_t color, const char *t
 	Text_Paint(x - len / 2, y, scale, color, text, 0, 0, ITEM_TEXTSTYLE_SHADOWEDMORE, iMenuFont);
 }
 
+// what a download screen says of the file that comes: how much of it is here, how long it will take, how fast it is
+typedef struct downloadTexts_s {
+	char	copied[128];		// "(1.2 MB of 5.0 MB copied)"
+	char	left[64];			// the time left, or "estimating"
+	char	rate[64];			// "310 KB/sec", empty while nobody knows
+	int		size, count;		// of the file and of what is here, in bytes
+} downloadTexts_t;
+
+static void UI_DownloadTexts( downloadTexts_t *d ) {
+	char		sOf[20], sCopied[256], sSec[20];
+	char		dlSizeBuf[64], totalSizeBuf[64], xferRateBuf[64];
+	const int	downloadTime = trap->Cvar_VariableValue( "cl_downloadTime" );
+	int			xferRate = 0;
+	qboolean	early;
+	const char	*s;
+
+	s = GetCRDelineatedString("MENUS","DOWNLOAD_STUFF", 3);	// "of"
+	Q_strncpyz(sOf,s?s:"", sizeof(sOf));
+	s = GetCRDelineatedString("MENUS","DOWNLOAD_STUFF", 4);	// "copied"
+	Q_strncpyz(sCopied,s?s:"", sizeof(sCopied));
+	s = GetCRDelineatedString("MENUS","DOWNLOAD_STUFF", 5);	// "sec."
+	Q_strncpyz(sSec,s?s:"", sizeof(sSec));
+
+	d->size = trap->Cvar_VariableValue( "cl_downloadSize" );
+	d->count = trap->Cvar_VariableValue( "cl_downloadCount" );
+	early = (qboolean)( d->count < 4096 || !downloadTime );
+
+	UI_ReadableSize( dlSizeBuf,		sizeof dlSizeBuf,		d->count );
+	UI_ReadableSize( totalSizeBuf,	sizeof totalSizeBuf,	d->size );
+
+	if ( !early && (uiInfo.uiDC.realTime - downloadTime) / 1000 ) {
+		xferRate = d->count / ((uiInfo.uiDC.realTime - downloadTime) / 1000);
+	}
+
+	if ( early || d->size ) {
+		Com_sprintf( d->copied, sizeof( d->copied ), "(%s %s %s %s)", dlSizeBuf, sOf, totalSizeBuf, sCopied );
+	} else {
+		Com_sprintf( d->copied, sizeof( d->copied ), "(%s %s)", dlSizeBuf, sCopied );
+	}
+
+	// Extrapolate estimated completion time
+	if ( !early && d->size && xferRate ) {
+		int n = d->size / xferRate; // estimated time for entire d/l in secs
+
+		// We do it in K (/1024) because we'd overflow around 4MB
+		UI_PrintTime ( d->left, sizeof( d->left ),
+			(n - (((d->count/1024) * n) / (d->size/1024))) * 1000);
+	} else {
+		Q_strncpyz( d->left, "estimating", sizeof( d->left ) );
+	}
+
+	d->rate[0] = '\0';
+	if ( xferRate ) {
+		UI_ReadableSize( xferRateBuf, sizeof xferRateBuf, xferRate );
+		Com_sprintf( d->rate, sizeof( d->rate ), "%s/%s", xferRateBuf, sSec );
+	}
+}
+
 static void UI_DisplayDownloadInfo( const char *downloadName, float centerPoint, float yStart, float scale, int iMenuFont) {
 	char sDownLoading[256];
 	char sEstimatedTimeLeft[256];
 	char sTransferRate[256];
-	char sOf[20];
-	char sCopied[256];
-	char sSec[20];
-	//
-	int downloadSize, downloadCount, downloadTime;
-	char dlSizeBuf[64], totalSizeBuf[64], xferRateBuf[64], dlTimeBuf[64];
-	int xferRate;
+	downloadTexts_t d;
 	int leftWidth;
 	const char *s;
 
@@ -10701,16 +10753,8 @@ static void UI_DisplayDownloadInfo( const char *downloadName, float centerPoint,
 	Q_strncpyz(sEstimatedTimeLeft,s?s:"", sizeof(sEstimatedTimeLeft));
 	s = GetCRDelineatedString("MENUS","DOWNLOAD_STUFF", 2);	// "Transfer rate:"
 	Q_strncpyz(sTransferRate,s?s:"", sizeof(sTransferRate));
-	s = GetCRDelineatedString("MENUS","DOWNLOAD_STUFF", 3);	// "of"
-	Q_strncpyz(sOf,s?s:"", sizeof(sOf));
-	s = GetCRDelineatedString("MENUS","DOWNLOAD_STUFF", 4);	// "copied"
-	Q_strncpyz(sCopied,s?s:"", sizeof(sCopied));
-	s = GetCRDelineatedString("MENUS","DOWNLOAD_STUFF", 5);	// "sec."
-	Q_strncpyz(sSec,s?s:"", sizeof(sSec));
 
-	downloadSize = trap->Cvar_VariableValue( "cl_downloadSize" );
-	downloadCount = trap->Cvar_VariableValue( "cl_downloadCount" );
-	downloadTime = trap->Cvar_VariableValue( "cl_downloadTime" );
+	UI_DownloadTexts( &d );
 
 	leftWidth = 320;
 
@@ -10720,51 +10764,82 @@ static void UI_DisplayDownloadInfo( const char *downloadName, float centerPoint,
 	Text_PaintCenter(centerPoint, yStart + 192, scale, colorWhite, sEstimatedTimeLeft, 0, iMenuFont);
 	Text_PaintCenter(centerPoint, yStart + 248, scale, colorWhite, sTransferRate, 0, iMenuFont);
 
-	if (downloadSize > 0) {
-		s = va( "%s (%d%%)", downloadName, (int)( (float)downloadCount * 100.0f / downloadSize ) );
+	if (d.size > 0) {
+		s = va( "%s (%d%%)", downloadName, (int)( (float)d.count * 100.0f / d.size ) );
 	} else {
 		s = downloadName;
 	}
 
 	Text_PaintCenter(centerPoint, yStart+136, scale, colorWhite, s, 0, iMenuFont);
+	Text_PaintCenter(leftWidth, yStart+160, scale, colorWhite, d.copied, 0, iMenuFont);
+	Text_PaintCenter(leftWidth, yStart+216, scale, colorWhite, d.left, 0, iMenuFont);
+	if (d.rate[0]) {
+		Text_PaintCenter(leftWidth, yStart+272, scale, colorWhite, d.rate, 0, iMenuFont);
+	}
+}
 
-	UI_ReadableSize( dlSizeBuf,		sizeof dlSizeBuf,		downloadCount );
-	UI_ReadableSize( totalSizeBuf,	sizeof totalSizeBuf,	downloadSize );
+/*
+========================
+UI_ConnectPanel
 
-	if (downloadCount < 4096 || !downloadTime) {
-		Text_PaintCenter(leftWidth, yStart+216, scale, colorWhite, "estimating", 0, iMenuFont);
-		Text_PaintCenter(leftWidth, yStart+160, scale, colorWhite, va("(%s %s %s %s)", dlSizeBuf, sOf, totalSizeBuf, sCopied), 0, iMenuFont);
+The connect screen in the new look: over the sky of the menus the panel the cgame shows while the level loads
+(Skin_LoadPanel), with the server in it, how far the connection is and what the server says (it is full, the
+password is wrong). While a file comes from the server: its name, how much of it is here, how fast it comes
+and how long it will take, with the bar for the part that is here.
+========================
+*/
+static void UI_ConnectPanel( const uiClientState_t *cstate ) {
+	char		title[256], about[256], now[MAX_STRING_CHARS], format[256];
+	float		fraction = -1.0f;
+
+	about[0] = now[0] = '\0';
+	if ( !Q_stricmp( cstate->servername, "localhost" ) ) {
+		trap->SE_GetStringTextString( "MENUS_STARTING_UP", title, sizeof( title ) );
 	} else {
-		if ((uiInfo.uiDC.realTime - downloadTime) / 1000) {
-			xferRate = downloadCount / ((uiInfo.uiDC.realTime - downloadTime) / 1000);
-		} else {
-			xferRate = 0;
-		}
-		UI_ReadableSize( xferRateBuf, sizeof xferRateBuf, xferRate );
+		trap->SE_GetStringTextString( "MENUS_CONNECTING_TO", format, sizeof( format ) );
+		Com_sprintf( title, sizeof( title ), format, cstate->servername );
 
-		// Extrapolate estimated completion time
-		if (downloadSize && xferRate) {
-			int n = downloadSize / xferRate; // estimated time for entire d/l in secs
-
-			// We do it in K (/1024) because we'd overflow around 4MB
-			UI_PrintTime ( dlTimeBuf, sizeof dlTimeBuf,
-				(n - (((downloadCount/1024) * n) / (downloadSize/1024))) * 1000);
-
-			Text_PaintCenter(leftWidth, yStart+216, scale, colorWhite, dlTimeBuf, 0, iMenuFont);
-			Text_PaintCenter(leftWidth, yStart+160, scale, colorWhite, va("(%s %s %s %s)", dlSizeBuf, sOf, totalSizeBuf, sCopied), 0, iMenuFont);
-		} else {
-			Text_PaintCenter(leftWidth, yStart+216, scale, colorWhite, "estimating", 0, iMenuFont);
-			if (downloadSize) {
-				Text_PaintCenter(leftWidth, yStart+160, scale, colorWhite, va("(%s %s %s %s)", dlSizeBuf, sOf, totalSizeBuf, sCopied), 0, iMenuFont);
-			} else {
-				Text_PaintCenter(leftWidth, yStart+160, scale, colorWhite, va("(%s %s)", dlSizeBuf, sCopied), 0, iMenuFont);
-			}
-		}
-
-		if (xferRate) {
-			Text_PaintCenter(leftWidth, yStart+272, scale, colorWhite, va("%s/%s", xferRateBuf,sSec), 0, iMenuFont);
+		switch ( cstate->connState ) {
+		case CA_CONNECTING:
+			trap->SE_GetStringTextString( "MENUS_AWAITING_CONNECTION", format, sizeof( format ) );
+			Com_sprintf( about, sizeof( about ), format, cstate->connectPacketCount );
+			break;
+		case CA_CHALLENGING:
+			trap->SE_GetStringTextString( "MENUS_AWAITING_CHALLENGE", format, sizeof( format ) );
+			Com_sprintf( about, sizeof( about ), format, cstate->connectPacketCount );
+			break;
+		case CA_CONNECTED:
+			trap->SE_GetStringTextString( "MENUS_AWAITING_GAMESTATE", about, sizeof( about ) );
+			break;
+		default:
+			break;
 		}
 	}
+
+	if ( cstate->connState == CA_CONNECTED ) {
+		char	downloadName[MAX_INFO_VALUE];
+
+		trap->Cvar_VariableStringBuffer( "cl_downloadName", downloadName, sizeof( downloadName ) );
+		if ( downloadName[0] ) {
+			downloadTexts_t	d;
+			const char		*s;
+
+			UI_DownloadTexts( &d );
+			Q_strncpyz( title, downloadName, sizeof( title ) );
+			Com_sprintf( about, sizeof( about ), "%s  %s", d.copied, d.rate );
+			// (asked for after the other texts: every one of these strings is handed out in the same memory)
+			s = GetCRDelineatedString( "MENUS", "DOWNLOAD_STUFF", 1 );	// "Estimated time left:"
+			Com_sprintf( now, sizeof( now ), "%s %s", s ? s : "", d.left );
+			fraction = ( d.size > 0 ) ? (float)d.count / d.size : 0.0f;
+		}
+	} else if ( cstate->connState < CA_CONNECTED ) {
+		// what the server said (server full, bad version, etc)
+		Q_strncpyz( now, cstate->messageString, sizeof( now ) );
+	}
+	if ( !now[0] ) {
+		Q_strncpyz( now, Info_ValueForKey( cstate->updateInfoString, "motd" ), sizeof( now ) );
+	}
+	Skin_LoadPanel( title, about, now, fraction );
 }
 
 /*
@@ -10785,8 +10860,6 @@ void UI_DrawConnectScreen( qboolean overlay ) {
 	char sStringEdTemp[256];
 
 	menuDef_t *menu = Menus_FindByName("Connect");
-	// in the new look the lines are set in its font, and the box of the icon turns under them
-	const int font = uiNewLook ? SKIN_FONT_SANS : FONT_MEDIUM;
 
 
 	if ( !overlay && menu ) {
@@ -10804,34 +10877,35 @@ void UI_DrawConnectScreen( qboolean overlay ) {
 		return;
 	}
 
-	if ( uiNewLook ) {
-		Skin_Cube( 270.0f, 268.0f, 100.0f, 100.0f );
-	}
-
 	// see what information we should display
 	trap->GetClientState( &cstate );
+
+	if ( uiNewLook ) {
+		UI_ConnectPanel( &cstate );
+		return;
+	}
 
 
 	info[0] = '\0';
 	if( trap->GetConfigString( CS_SERVERINFO, info, sizeof(info) ) ) {
 		trap->SE_GetStringTextString("MENUS_LOADING_MAPNAME", sStringEdTemp, sizeof(sStringEdTemp));
-		Text_PaintCenter(centerPoint, yStart, scale, colorWhite, va( /*"Loading %s"*/sStringEdTemp, Info_ValueForKey( info, "mapname" )), 0, font);
+		Text_PaintCenter(centerPoint, yStart, scale, colorWhite, va( /*"Loading %s"*/sStringEdTemp, Info_ValueForKey( info, "mapname" )), 0, FONT_MEDIUM);
 	}
 
 	if (!Q_stricmp(cstate.servername,"localhost")) {
 		trap->SE_GetStringTextString("MENUS_STARTING_UP", sStringEdTemp, sizeof(sStringEdTemp));
-		Text_PaintCenter(centerPoint, yStart + 48, scale, colorWhite, sStringEdTemp, ITEM_TEXTSTYLE_SHADOWEDMORE, font);
+		Text_PaintCenter(centerPoint, yStart + 48, scale, colorWhite, sStringEdTemp, ITEM_TEXTSTYLE_SHADOWEDMORE, FONT_MEDIUM);
 	} else {
 		trap->SE_GetStringTextString("MENUS_CONNECTING_TO", sStringEdTemp, sizeof(sStringEdTemp));
 		Q_strncpyz(text, va(/*"Connecting to %s"*/sStringEdTemp, cstate.servername), sizeof(text));
-		Text_PaintCenter(centerPoint, yStart + 48, scale, colorWhite,text , ITEM_TEXTSTYLE_SHADOWEDMORE, font);
+		Text_PaintCenter(centerPoint, yStart + 48, scale, colorWhite,text , ITEM_TEXTSTYLE_SHADOWEDMORE, FONT_MEDIUM);
 	}
 
 	// display global MOTD at bottom
-	Text_PaintCenter(centerPoint, 425, scale, colorWhite, Info_ValueForKey( cstate.updateInfoString, "motd" ), 0, font);
+	Text_PaintCenter(centerPoint, 425, scale, colorWhite, Info_ValueForKey( cstate.updateInfoString, "motd" ), 0, FONT_MEDIUM);
 	// print any server info (server full, bad version, etc)
 	if ( cstate.connState < CA_CONNECTED ) {
-		Text_PaintCenter(centerPoint, yStart + 176, scale, colorWhite, cstate.messageString, 0, font);
+		Text_PaintCenter(centerPoint, yStart + 176, scale, colorWhite, cstate.messageString, 0, FONT_MEDIUM);
 	}
 
 	switch ( cstate.connState ) {
@@ -10852,7 +10926,7 @@ void UI_DrawConnectScreen( qboolean overlay ) {
 
 			trap->Cvar_VariableStringBuffer( "cl_downloadName", downloadName, sizeof(downloadName) );
 			if (*downloadName) {
-				UI_DisplayDownloadInfo( downloadName, centerPoint, yStart, scale, font );
+				UI_DisplayDownloadInfo( downloadName, centerPoint, yStart, scale, FONT_MEDIUM );
 				return;
 			}
 		}
@@ -10868,7 +10942,7 @@ void UI_DrawConnectScreen( qboolean overlay ) {
 	}
 
 	if (Q_stricmp(cstate.servername,"localhost")) {
-		Text_PaintCenter(centerPoint, yStart + 80, scale, colorWhite, s, 0, font);
+		Text_PaintCenter(centerPoint, yStart + 80, scale, colorWhite, s, 0, FONT_MEDIUM);
 	}
 	// password required / connection rejected information goes here
 }

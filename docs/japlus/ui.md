@@ -30,11 +30,17 @@ Both are in Setup under Interface.
 - Setup has three new tabs, Interface, Chat & Social and Network, and four more rows under Sound, for the
   settings that only the console had: see the table at the end.
 - The icon of the game is the box of the website (white lid, a yellow and a blue side). On the first page it
-  is a body that turns slowly on a panel of its own, its lid rising and sinking with a light under it. It
-  stands in the bar at the top of every page, turns on the screen while a level loads and while the game
-  connects, and it is the icon of the window and of the program.
-- While a level loads, its picture fills the window and a panel at the bottom says the name of the level,
-  the kind of game, the server, what is being loaded and how far it is.
+  is a body on a panel of its own, in the pose of the icon: seen over one edge from above, yellow at the
+  left, blue at the right, the lid hinged on the yellow side and a little open. It sways a few degrees and
+  its lid opens and closes slowly, it does not spin. It stands in the bar at the top of every page, in the
+  panel of the screens while the game connects and while a level loads, and it is the icon of the window and
+  of the program.
+- While the game connects, the sky of the menus fills the window and a panel at the bottom says the server,
+  how far the connection is and what the server answers (full, wrong password), with a piece of a bar that
+  runs to and fro. While a file comes from the server the same panel has its name, how much of it is
+  here, how fast it comes and how long it will take.
+- While a level loads, its picture fills the window and the same panel at the same place says the name of
+  the level, the kind of game, the server, what is being loaded and how far it is.
 - The console is dark glass with a light blue line under it, in place of the picture of the game.
 
 It needs the engine of this tree (`cl_uiSkin 1`). In another engine the ui module loads the menus of before by
@@ -68,12 +74,12 @@ All optional. A file that uses none of them is read and drawn by the code of bef
 | menuDef | `backdrop 1` | the sky with stars behind the menu |
 | menuDef | `openSlide <units>` | the menu comes up from that far below when it opens |
 | menuDef, itemDef | `style WINDOW_STYLE_PANEL` | a panel with round corners: `backcolor` its fill, `bordercolor` its rim (one pixel, when its alpha is above 0) |
-| menuDef, itemDef | `radius <units>`, `shadow <units>`, `sheen <alpha>`, `glowcolor <r g b a>` | of such a panel: how round, how far its shadow reaches, a light line along its top, a light around it |
+| menuDef, itemDef | `radius <units>`, `shadow <units>`, `sheen <alpha>`, `glowcolor <r g b a>` | of such a panel: how round, how far its shadow reaches, a light line along its top, a light around it (blended, see below) |
 | itemDef | `font 5`, `font 6` | Noto Sans and DejaVu Sans Mono, every letter from the TrueType font and made for the size it has in the window. 18 units at `textscale 1` |
 | itemDef | `caps 1` | its text in capital letters |
 | itemDef | `type ITEM_TYPE_BAR`, `type ITEM_TYPE_VALUE`, `stat <name>` | a bar that is filled by a number of the game, or that number as text. `forecolor` on `backcolor`, or the colour of the first `addColorRange` the number is in. `align ITEM_ALIGN_RIGHT` fills a bar from the right |
 | itemDef | `showStat <name>` | the item is only there while that number is above 0 |
-| itemDef | `type ITEM_TYPE_CUBE`, `type ITEM_TYPE_LOGO` | the box of the icon in the rectangle of the item: as a body that turns, or as a flat picture (its `forecolor` gives the alpha) |
+| itemDef | `type ITEM_TYPE_CUBE`, `type ITEM_TYPE_LOGO` | the box of the icon in the rectangle of the item: as a body in the pose of the icon that sways and opens its lid, or as a flat picture (its `forecolor` gives the alpha) |
 
 The numbers (`codemp/cgame/hud/cg_hud.c`): `health`, `armor`, `force`, `ammo` (not there with a saber),
 `saberstyle` (only with a saber), `jetpack`, `cloak`, `score`, `alive`, `spectator`, `team` (1 red, 2 blue),
@@ -108,7 +114,7 @@ tools/menus/build.py [<assets1.pk3 of the game>]
 
 | File | |
 |------|---|
-| `ui/ui_skin.c`, `ui_skin.h` | the pictures (a disc and its rim for every radius in pixels, a soft light, the sky), panels, the widgets, the pointer of the mouse, the icon as a picture and as a box of six polygons in a scene of its own. Built into ui and cgame |
+| `ui/ui_skin.c`, `ui_skin.h` | the pictures (a disc and its rim for every radius in pixels, a soft light, the sky), panels, the widgets, the pointer of the mouse, the icon as a picture and as a box of polygons in a scene of its own, the panel of the connect and loading screens (`Skin_LoadPanel`). Built into ui and cgame |
 | `ui/ui_shared.c` | the new words, the panel style, the branches of the widgets, items bound to a number |
 | `ui/ui_main.c` | which list is loaded (`UI_NewLookList`), the pointer |
 | `cgame/hud/cg_hud.c` | the numbers by name, loading and painting the HUD, the screen while a level loads (`cg_showLoading 1`, a cheat, holds it over the game to look at it) |
@@ -148,7 +154,24 @@ player page, call vote, about, the server browser; the HUD with a saber and with
 at the top, the console over the menu, the loading screen held over a level (`ui_cube`, `ui_rice`,
 `ui_loading`).
 
-Not checked: the screen while the game connects, the icon of the window and of the program on a desktop, a
-click on anything (the pictures are of pages a console command opened), the pages of siege and
-of the force powers in a game, `rd-vanilla`, a window that is not 16:9, another language than English, a
-mod's menus next to the new look, how it feels to use.
+2026-10-11 evening, after the first look at it in the real game ("it looks weird"): the first page, the
+screen while the game connects (a server that is not there keeps it up, `ui_connect`) and the loading screen,
+on `rd-vulkan-vision` and `rd-vanilla` with `r_DynamicGlow 1` and 8 samples at 2560 x 1440, and on
+`rd-vulkan-vision` at 1280 x 1024 and 2560 x 1080. The panel of a download with the cvars of a download set
+by hand and a line in the ui, for that picture only, that took the state for "connected" (`ui_connect_dl`):
+no file was downloaded. What was wrong:
+
+- A light that was added to what is behind it (the glow of a panel, of the box, of the tip of a slider) was
+  a picture marked `RGBA_SHADER_GLOW`, the only way to an added picture. What that marks also goes through
+  the dynamic glow of the renderer, which smeared it into a row of blots beside the panel. Every test
+  picture before had been taken with `r_DynamicGlow 0`. The soft light is blended now, everywhere, and
+  `glowcolor` with it.
+- The box was seen through a wide lens from close by and turned all the way round: most of the time it
+  showed one side, and its lid floated flat above it. Now it is seen from far away through a narrow lens,
+  so it has the outline of the icon, and it keeps that pose.
+- The connect screen had the box over the picture and the text of the old game.
+
+Not checked: the icon of the window and of the program on a desktop, a click on anything (the pictures are
+of pages a console command opened), the pages of siege and of the force powers in a game, most pages on
+`rd-vanilla` and in a window that is not 16:9, a real download, the connect screen when a server refuses,
+another language than English, a mod's menus next to the new look, how it feels to use.

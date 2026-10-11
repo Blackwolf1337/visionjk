@@ -186,11 +186,9 @@ The caller has drawn the picture of the level. qfalse: this look can not be draw
 =================
 */
 qboolean CG_HudLoading( void ) {
-	const vec4_t	veil = { 0.0f, 0.0f, 0.0f, 0.38f }, fill = { 0.035f, 0.07f, 0.12f, 0.80f }, edge = { 0.43f, 0.83f, 1.0f, 0.28f };
-	const vec4_t	dark = { 0.0f, 0.0f, 0.0f, 0.45f }, bar = { 0.43f, 0.83f, 1.0f, 1.0f }, track = { 1.0f, 1.0f, 1.0f, 0.10f };
-	const vec4_t	text = { 0.86f, 0.92f, 0.97f, 1.0f }, dim = { 0.60f, 0.69f, 0.78f, 1.0f };
+	const vec4_t	veil = { 0.0f, 0.0f, 0.0f, 0.38f };
 	const char		*info = CG_ConfigString( CS_SERVERINFO );
-	char			value[8], line[256], host[128];
+	char			value[8], title[256], about[256], now[256], host[128];
 
 	CG_DisplayEnsure();
 	trap->Cvar_VariableStringBuffer( "ui_classic", value, sizeof( value ) );
@@ -203,31 +201,25 @@ qboolean CG_HudLoading( void ) {
 
 	CG_Place2D( PLACE_CENTER );
 	CG_FillRect( -cgs.bias2D, 0.0f, SCREEN_WIDTH + 2.0f * cgs.bias2D, SCREEN_HEIGHT, (float *)veil );
-	Skin_Soft( 24.0f, 362.0f, 592.0f, 96.0f, 14.0f, dark, qfalse );
-	Skin_Panel( 24.0f, 358.0f, 592.0f, 96.0f, 9.0f, fill, edge );
-	Skin_Cube( 30.0f, 360.0f, 92.0f, 92.0f );
 
 	// the name of the level, as the level says it or as its file is called
-	Q_strncpyz( line, CG_ConfigString( CS_MESSAGE ), sizeof( line ) );
-	if ( !line[0] ) {
-		Q_strncpyz( line, Info_ValueForKey( info, "mapname" ), sizeof( line ) );
+	Q_strncpyz( title, CG_ConfigString( CS_MESSAGE ), sizeof( title ) );
+	if ( !title[0] ) {
+		Q_strncpyz( title, Info_ValueForKey( info, "mapname" ), sizeof( title ) );
 	}
-	Q_StripColor( line );
-	CG_Text_Paint( 130.0f, 366.0f, 1.15f, colorWhite, line, 0, 0, 0, SKIN_FONT_SANS );
+	Q_StripColor( title );
 
 	Q_strncpyz( host, Info_ValueForKey( info, "sv_hostname" ), sizeof( host ) );
 	Q_StripColor( host );
-	Com_sprintf( line, sizeof( line ), "%s  |  %s", BG_GetGametypeString( cgs.gametype ), host );
-	CG_Text_Paint( 130.0f, 392.0f, 0.62f, (float *)dim, line, 0, 0, 0, SKIN_FONT_SANS );
+	Com_sprintf( about, sizeof( about ), "%s  |  %s", BG_GetGametypeString( cgs.gametype ), host );
 
 	if ( cg.infoScreenText[0] ) {
-		Com_sprintf( line, sizeof( line ), "Loading %s", cg.infoScreenText );
+		Com_sprintf( now, sizeof( now ), "Loading %s", cg.infoScreenText );
 	} else {
-		Q_strncpyz( line, "Waiting for the server", sizeof( line ) );
+		Q_strncpyz( now, "Waiting for the server", sizeof( now ) );
 	}
-	CG_Text_Paint( 130.0f, 410.0f, 0.62f, (float *)text, line, 0, 0, 0, SKIN_FONT_SANS );
 	// (the game counts nine steps of loading)
-	Skin_Bar( 130.0f, 432.0f, 470.0f, 5.0f, cg.loadLCARSStage / 9.0f, bar, track );
+	Skin_LoadPanel( title, about, now, cg.loadLCARSStage / 9.0f );
 	trap->R_SetColor( NULL );
 	return qtrue;
 }

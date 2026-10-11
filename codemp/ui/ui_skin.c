@@ -59,7 +59,7 @@ typedef struct skinShape_s {
 static struct {
 	skinShape_t	shapes[SKIN_MAX_SHAPES];
 	int			numShapes;
-	qhandle_t	soft, softAdd;		// a round light that fades to its rim, blended and added
+	qhandle_t	soft;				// a round light that fades to its rim
 	qhandle_t	sky;				// the colours behind the menus, top to bottom
 	qboolean	tried;
 	qhandle_t	fonts[2];			// SKIN_FONT_SANS and SKIN_FONT_MONO
@@ -202,8 +202,10 @@ static void Skin_Pictures( void ) {
 			out[3] = (byte)( a * a * ( 3.0f - 2.0f * a ) * 255.0f + 0.5f );
 		}
 	}
+	// (Blended, never added to what is behind it: the only way to a picture that is added is RGBA_SHADER_GLOW,
+	// and what that marks also goes through the dynamic glow of the renderer (r_DynamicGlow), which smeared a
+	// soft light in the 2D into a row of blots beside it.)
 	skin.soft = DC->registerShaderRGBA( "skin_soft", skinPic, SKIN_SOFT_SIZE, SKIN_SOFT_SIZE, RGBA_SHADER_OVER );
-	skin.softAdd = DC->registerShaderRGBA( "skin_soft_add", skinPic, SKIN_SOFT_SIZE, SKIN_SOFT_SIZE, RGBA_SHADER_OVER | RGBA_SHADER_GLOW );
 
 	// the sky behind the menus: nearly black at the top, a deep blue at the bottom
 	for ( y = 0; y < 64; y++ ) {
@@ -300,12 +302,11 @@ void Skin_Panel( float x, float y, float w, float h, float radius, const vec4_t 
 =================
 Skin_Soft
 
-A light without an edge around a rectangle: full inside it, gone `spread` units outside of it. Blended it is a
-shadow, added it is a glow.
+A light without an edge around a rectangle: full inside it, gone `spread` units outside of it. A dark one is a
+shadow, a bright one a glow. Blended in both cases.
 =================
 */
-void Skin_Soft( float x, float y, float w, float h, float spread, const vec4_t color, qboolean add ) {
-	const qhandle_t	shader = add ? skin.softAdd : skin.soft;
+void Skin_Soft( float x, float y, float w, float h, float spread, const vec4_t color ) {
 	const float		in = Q_min( spread, Q_min( w, h ) * 0.5f );
 	const float		xs[4] = { x - spread, x + in, x + w - in, x + w + spread };
 	const float		ys[4] = { y - spread, y + in, y + h - in, y + h + spread };
@@ -316,14 +317,14 @@ void Skin_Soft( float x, float y, float w, float h, float spread, const vec4_t c
 		return;
 	}
 	Skin_Pictures();
-	if ( !shader || color[3] <= 0.0f ) {
+	if ( !skin.soft || color[3] <= 0.0f ) {
 		return;
 	}
 	DC->setColor( color );
 	for ( j = 0; j < 3; j++ ) {
 		for ( i = 0; i < 3; i++ ) {
 			if ( xs[i + 1] > xs[i] && ys[j + 1] > ys[j] ) {
-				DC->drawStretchPic( xs[i], ys[j], xs[i + 1] - xs[i], ys[j + 1] - ys[j], ss[i], ss[j], ss[i + 1], ss[j + 1], shader );
+				DC->drawStretchPic( xs[i], ys[j], xs[i + 1] - xs[i], ys[j + 1] - ys[j], ss[i], ss[j], ss[i + 1], ss[j + 1], skin.soft );
 			}
 		}
 	}
@@ -558,29 +559,57 @@ void Skin_Logo( float x, float y, float w, float h, float alpha ) {
 =================
 Skin_Cube
 
-The box of the icon as a body: it turns slowly, its lid rises and sinks and lets a light out, and a glow stands
-behind it. A scene of its own in the rectangle, drawn where the 2D is. Where the engine gives no way to add a
-polygon to such a scene the flat icon stands there.
+The box of the icon as a body, in the pose the icon has: seen from above over one edge, the yellow side at the
+left, the blue one at the right, the white lid hinged on the yellow side and a little open, the dark of its
+inside in the gap. It is alive without leaving that pose: it sways a few degrees and the lid opens and closes
+slowly. A scene of its own in the rectangle, seen from far away through a narrow lens, so its edges
+run side by side as in the drawing. Where the engine gives no way to add a polygon to such a scene the flat
+icon stands there.
 =================
 */
+#define CUBE_HALF		20.0f		// half the width of the box, in units of its scene
+#define CUBE_HEIGHT		0.8f		//	its height against its width: the box of the icon is a little flat
+#define CUBE_LID		0.9f		//	the lid against the top
+#define CUBE_FOV		9.0f		// the lens,
+#define CUBE_DISTANCE	520.0f		//	and how far the eye is: what is seen is about 80 units high
+#define CUBE_PITCH		28.0f		// how far above the box the eye is, as in the drawing
+#define CUBE_YAW		135.0f		// the turn in which the yellow side is at the left
+
+// a corner of the box, turned and set down in front of the eye
+static void Skin_CubePoint( float px, float py, float pz, float cy, float sy, float cp, float sp, vec3_t out ) {
+	const float x = px * cy - py * sy, y = px * sy + py * cy;
+
+	out[0] = x * cp - pz * sp + CUBE_DISTANCE;
+	out[1] = y;
+	out[2] = x * sp + pz * cp;
+}
+
+static void Skin_CubeVert( polyVert_t *v, const vec3_t at, const byte *rgb, float shade ) {
+	VectorCopy( at, v->xyz );
+	v->modulate[0] = (byte)( rgb[0] * shade );
+	v->modulate[1] = (byte)( rgb[1] * shade );
+	v->modulate[2] = (byte)( rgb[2] * shade );
+	v->modulate[3] = 255;
+}
+
 void Skin_Cube( float x, float y, float w, float h ) {
-	static const float	corners[8][3] = {
-		{ -1, -1, -1 }, { 1, -1, -1 }, { 1, 1, -1 }, { -1, 1, -1 }, { -1, -1, 1 }, { 1, -1, 1 }, { 1, 1, 1 }, { -1, 1, 1 } };
-	// the four sides by turns in the two colours of the icon, so the two that are seen are never of one colour
-	static const int	sides[4][4] = { { 1, 2, 6, 5 }, { 2, 3, 7, 6 }, { 3, 0, 4, 7 }, { 0, 1, 5, 4 } };
-	static const float	sideNormals[4][3] = { { 1, 0, 0 }, { 0, 1, 0 }, { -1, 0, 0 }, { 0, -1, 0 } };
+	// the four sides: where they stand, and their two colours by turns
+	static const float	sideAt[4][2][2] = { { { 1, -1 }, { 1, 1 } }, { { 1, 1 }, { -1, 1 } }, { { -1, 1 }, { -1, -1 } }, { { -1, -1 }, { 1, -1 } } };
+	static const float	sideNormal[4][2] = { { 1, 0 }, { 0, 1 }, { -1, 0 }, { 0, -1 } };
+	static const byte	inside[3] = { 26, 60, 104 };
 	const float			t = DC->realTime * 0.001f;
-	const float			yaw = DEG2RAD( 45.0f + t * 22.0f ), pitch = DEG2RAD( -33.0f );
+	const float			yaw = DEG2RAD( CUBE_YAW + 9.0f * sinf( t * 0.55f ) ), pitch = DEG2RAD( CUBE_PITCH );
 	const float			cy = cosf( yaw ), sy = sinf( yaw ), cp = cosf( pitch ), sp = sinf( pitch );
-	const float			half = 20.0f, distance = 150.0f, lid = 4.0f + 3.5f * sinf( t * 1.4f );
+	const float			open = 0.5f + 0.5f * sinf( t * 0.8f );					// 0 nearly shut, 1 as open as it gets
+	const float			lid = DEG2RAD( 7.0f + 17.0f * open );
+	const float			top = CUBE_HALF * CUBE_HEIGHT, bob = sinf( t * 0.7f ) * 0.8f;
 	const float			scaleX = Skin_ScaleX(), scaleY = Skin_ScaleY();
-	const float			pulse = 0.5f + 0.5f * sinf( t * 1.4f );
-	const vec3_t		light = { -0.45f, 0.35f, 0.82f };
+	const float			size = Q_min( w, h ), cx = x + w * 0.5f, cyy = y + h * 0.5f;
 	vec4_t				glow;
 	refdef_t			refdef;
 	polyVert_t			verts[4];
-	float				turned[8][3];
-	int					i, k, f;
+	vec3_t				at;
+	int					f;
 
 	if ( !Skin_Ready() ) {
 		return;
@@ -591,82 +620,112 @@ void Skin_Cube( float x, float y, float w, float h ) {
 		return;
 	}
 
-	// the light behind the box: blue, and brighter while the lid is up
-	VectorSet( glow, 0.0f, 0.55f, 1.0f );
-	glow[3] = 0.16f + 0.10f * pulse;
-	Skin_Soft( x + w * 0.3f, y + h * 0.3f, w * 0.4f, h * 0.4f, Q_min( w, h ) * 0.42f, glow, qtrue );
-	// and its shadow on the ground it floats over
+	// a light behind the box, brighter while the lid is open, and its shadow under it
+	VectorSet( glow, 0.10f, 0.55f, 1.0f );
+	glow[3] = 0.10f + 0.10f * open;
+	Skin_Soft( cx - size * 0.16f, cyy - size * 0.20f, size * 0.32f, size * 0.32f, size * 0.34f, glow );
 	VectorSet( glow, 0.0f, 0.0f, 0.0f );
-	glow[3] = 0.35f;
-	Skin_Soft( x + w * 0.3f, y + h * 0.86f, w * 0.4f, h * 0.02f, h * 0.07f, glow, qfalse );
+	glow[3] = 0.40f;
+	Skin_Soft( cx - size * 0.20f, cyy + size * 0.36f, size * 0.40f, size * 0.01f, size * 0.06f, glow );
 
 	memset( &refdef, 0, sizeof( refdef ) );
 	refdef.rdflags = RDF_NOWORLDMODEL;
 	AxisClear( refdef.viewaxis );
-	refdef.x = (int)( ( x + DC->bias ) * scaleX );
-	refdef.y = (int)( y * scaleY );
-	refdef.width = (int)( w * scaleX );
-	refdef.height = (int)( h * scaleY );
-	if ( refdef.width < 8 || refdef.height < 8 ) {
+	// a square in the middle of the rectangle, on whole pixels
+	refdef.width = refdef.height = (int)( size * scaleY );
+	refdef.x = (int)( ( cx + DC->bias ) * scaleX ) - refdef.width / 2;
+	refdef.y = (int)( cyy * scaleY ) - refdef.height / 2;
+	if ( refdef.width < 8 ) {
 		return;
 	}
-	refdef.fov_y = 26.0f;
-	refdef.fov_x = RAD2DEG( 2.0f * atanf( tanf( DEG2RAD( refdef.fov_y ) * 0.5f ) * refdef.width / refdef.height ) );
+	refdef.fov_x = refdef.fov_y = CUBE_FOV;
 	refdef.time = DC->realTime;
 
-	// the corners: turned about the axis that points up, tipped toward the eye, set down in front of it. It
-	// bobs a little.
-	for ( i = 0; i < 8; i++ ) {
-		const float	px = ( corners[i][0] * cy - corners[i][1] * sy ) * half;
-		const float	py = ( corners[i][0] * sy + corners[i][1] * cy ) * half;
-		const float	pz = corners[i][2] * half;
-
-		turned[i][0] = px * cp + pz * sp + distance;
-		turned[i][1] = py;
-		turned[i][2] = -px * sp + pz * cp + sinf( t * 0.9f ) * 1.5f;
-	}
-
+	// The polygons of a scene are drawn in the order they come in and do not hide each other by their depth.
+	// So: the sides that look at the eye (of a box no two of those overlap), its opening, the lid.
 	DC->clearScene();
 	memset( verts, 0, sizeof( verts ) );
-	for ( f = 0; f < 6; f++ ) {
-		float	normal[3], shade, lift = 0.0f;
-		byte	rgb[3];
-		int		corner[4];
+	for ( f = 0; f < 4; f++ ) {
+		const float	nx = sideNormal[f][0] * cy - sideNormal[f][1] * sy;
+		const byte	*rgb = logoColors[1 + ( f & 1 )];
 
-		if ( f < 4 ) {
-			// a side
-			const float	nx = sideNormals[f][0] * cy - sideNormals[f][1] * sy, ny = sideNormals[f][0] * sy + sideNormals[f][1] * cy;
-
-			VectorSet( normal, nx * cp, ny, -nx * sp );
-			for ( k = 0; k < 4; k++ ) {
-				corner[k] = sides[f][k];
-			}
-			// Only the sides that look at the eye: the polygons of a scene are drawn in the order they come in and
-			// do not hide each other by their depth, and of a box no two such sides overlap
-			if ( DotProduct( normal, turned[corner[0]] ) >= 0.0f ) {
-				continue;
-			}
-			memcpy( rgb, logoColors[1 + ( f & 1 )], sizeof( rgb ) );
-		} else {
-			// the light inside the box, and the lid above it
-			VectorSet( normal, sp, 0.0f, cp );
-			for ( k = 0; k < 4; k++ ) {
-				corner[k] = 4 + k;
-			}
-			lift = ( f == 4 ) ? -1.0f : lid;
-			memcpy( rgb, logoColors[0], sizeof( rgb ) );
+		// (the eye is in front of the box and above it: a side looks at it when it looks back along the view)
+		if ( nx * cp >= 0.0f ) {
+			continue;
 		}
-		shade = ( f == 4 ) ? 1.0f : 0.84f + 0.16f * Q_max( 0.0f, DotProduct( normal, light ) );
-		for ( k = 0; k < 4; k++ ) {
-			VectorMA( turned[corner[k]], lift, normal, verts[k].xyz );
-			verts[k].modulate[0] = (byte)( ( f == 4 ) ? 150 + 105 * pulse : rgb[0] * shade );
-			verts[k].modulate[1] = (byte)( ( f == 4 ) ? 215 + 40 * pulse : rgb[1] * shade );
-			verts[k].modulate[2] = (byte)( ( f == 4 ) ? 255 : rgb[2] * shade );
-			verts[k].modulate[3] = 255;
-		}
+		Skin_CubePoint( sideAt[f][0][0] * CUBE_HALF, sideAt[f][0][1] * CUBE_HALF, -top + bob, cy, sy, cp, sp, at );
+		Skin_CubeVert( &verts[0], at, rgb, 0.86f );
+		Skin_CubePoint( sideAt[f][1][0] * CUBE_HALF, sideAt[f][1][1] * CUBE_HALF, -top + bob, cy, sy, cp, sp, at );
+		Skin_CubeVert( &verts[1], at, rgb, 0.86f );
+		Skin_CubePoint( sideAt[f][1][0] * CUBE_HALF, sideAt[f][1][1] * CUBE_HALF, top + bob, cy, sy, cp, sp, at );
+		Skin_CubeVert( &verts[2], at, rgb, 1.0f );
+		Skin_CubePoint( sideAt[f][0][0] * CUBE_HALF, sideAt[f][0][1] * CUBE_HALF, top + bob, cy, sy, cp, sp, at );
+		Skin_CubeVert( &verts[3], at, rgb, 1.0f );
 		DC->addPolyToScene( skin.solid, 4, verts );
 	}
+	// the opening: the dark inside the box, darker still toward the side the lid is hinged on
+	for ( f = 0; f < 4; f++ ) {
+		Skin_CubePoint( sideAt[f][0][0] * CUBE_HALF, sideAt[f][0][1] * CUBE_HALF, top + bob, cy, sy, cp, sp, at );
+		Skin_CubeVert( &verts[f], at, inside, ( sideAt[f][0][0] > 0.0f ? 0.50f : 0.85f ) + 0.15f * open );
+	}
+	DC->addPolyToScene( skin.solid, 4, verts );
+	// the lid: hinged on the top edge of the first side, the yellow one of the pose, and swung up from there
+	for ( f = 0; f < 4; f++ ) {
+		const float	away = ( f == 1 || f == 2 ) ? 2.0f * CUBE_HALF * CUBE_LID : 0.0f;		// how far this corner is from the hinge
+		const float	along = ( f < 2 ) ? CUBE_HALF : -CUBE_HALF;
+
+		Skin_CubePoint( CUBE_HALF - away * cosf( lid ), along, top + bob + away * sinf( lid ), cy, sy, cp, sp, at );
+		Skin_CubeVert( &verts[f], at, logoColors[0], ( away > 0.0f ) ? 1.0f : 0.93f );
+	}
+	DC->addPolyToScene( skin.solid, 4, verts );
 	DC->renderScene( &refdef );
+}
+
+/*
+=================
+Skin_LoadPanel
+
+The panel at the bottom of the screens that wait for a level, the one of the ui while it connects and the one of
+the cgame while it loads, so the second follows the first without a jump: the box of the icon, a title, a line
+about it, a line that says what happens now, and a bar. fraction is how far it is. Below 0 nobody knows: then a
+piece of the bar runs to and fro.
+=================
+*/
+#define LOAD_TEXT_X		130.0f
+#define LOAD_TEXT_W		470.0f
+
+// a line of the panel: one that is too long (the name of a server, what a server says) is set smaller and stays in it
+static void Skin_LoadLine( float y, float scale, const vec4_t color, const char *text ) {
+	const float	width = DC->textWidth( text, scale, SKIN_FONT_SANS );
+	const float	fit = ( width > LOAD_TEXT_W ) ? LOAD_TEXT_W / width : 1.0f;
+
+	DC->drawText( LOAD_TEXT_X, y + ( 1.0f - fit ) * scale * 9.0f, scale * fit, (float *)color, text, 0, 0, 0, SKIN_FONT_SANS );
+}
+
+void Skin_LoadPanel( const char *title, const char *about, const char *now, float fraction ) {
+	static const vec4_t	fill = { 0.035f, 0.07f, 0.12f, 0.80f }, edge = { 0.43f, 0.83f, 1.0f, 0.28f }, dark = { 0.0f, 0.0f, 0.0f, 0.45f };
+	static const vec4_t	bar = { 0.43f, 0.83f, 1.0f, 1.0f }, track = { 1.0f, 1.0f, 1.0f, 0.10f };
+	static const vec4_t	bright = { 1.0f, 1.0f, 1.0f, 1.0f }, text = { 0.86f, 0.92f, 0.97f, 1.0f }, dim = { 0.60f, 0.69f, 0.78f, 1.0f };
+
+	if ( !Skin_Ready() ) {
+		return;
+	}
+	Skin_Soft( 24.0f, 362.0f, 592.0f, 96.0f, 14.0f, dark );
+	Skin_Panel( 24.0f, 358.0f, 592.0f, 96.0f, 9.0f, fill, edge );
+	Skin_Cube( 30.0f, 360.0f, 92.0f, 92.0f );
+
+	Skin_LoadLine( 366.0f, 1.15f, bright, title );
+	Skin_LoadLine( 392.0f, 0.62f, dim, about );
+	Skin_LoadLine( 410.0f, 0.62f, text, now );
+	if ( fraction >= 0.0f ) {
+		Skin_Bar( LOAD_TEXT_X, 432.0f, LOAD_TEXT_W, 5.0f, fraction, bar, track );
+	} else {
+		const float	piece = LOAD_TEXT_W * 0.2f, at = 0.5f - 0.5f * cosf( DC->realTime * 0.0025f );
+
+		Skin_Bar( LOAD_TEXT_X, 432.0f, LOAD_TEXT_W, 5.0f, 0.0f, bar, track );
+		Skin_Bar( LOAD_TEXT_X + at * ( LOAD_TEXT_W - piece ), 432.0f, piece, 5.0f, 1.0f, bar, NULL );
+	}
+	DC->setColor( NULL );
 }
 
 /*
@@ -749,7 +808,7 @@ void Skin_Slider( itemDef_t *item, float x, float y, float width, float height, 
 	Skin_Panel( x, mid - 1.0f, width * fraction, 2.0f, 1.0f, accent, NULL );
 	if ( item->skinFocus > 0.0f ) {
 		Skin_Color( glow, accent, 0.35f * item->skinFocus );
-		Skin_Soft( x + width * fraction - 1.0f, mid - 1.0f, 2.0f, 2.0f, 7.0f, glow, qtrue );
+		Skin_Soft( x + width * fraction - 1.0f, mid - 1.0f, 2.0f, 2.0f, 7.0f, glow );
 	}
 	Skin_Disc( x + width * fraction, mid, knobR, knob );
 }
