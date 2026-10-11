@@ -293,8 +293,19 @@ chat bubble stands on top of it.
   sent without waiting for the answers. On Windows it is read from the window titles of Spotify and of
   YouTube Music (the window has to show the tab). Not on macOS and not in the browser client.
 
-Only on a server with the game module of this tree (`g_visionCaps` bit 1), and only clients of this tree with
-its engine draw the lines. Not run: built for Linux, the Windows code was compiled with mingw.
+On a server with the game module of this tree (`g_visionCaps` bit 1) the server passes the statuses on. On
+any other server they go through the voice master since 2026-10-11 ([voice.md](voice.md), "On a server without
+it"), for the players whose voice chat is connected to it (`cg_voice 1`, `cg_voiceMaster 1`): every client says
+its own status there every five seconds and finds out by itself whether its player is away (a minute without
+a key or a turn of the view). The music is still only told with `cg_shareMusic 1`, and there it also passes
+the machine of the master. Only clients of this tree with its engine draw the lines.
+
+| Command | |
+|---------|---|
+| `statuses` | what stands above whom, and whether the server or the voice master tells it |
+| `status_test <text>`, `status_test stop` | said as the music of this player in place of what plays, for tests. `cg_shareMusic` still decides |
+
+Not run on Windows: the Windows code was compiled with mingw.
 
 ### The server browser in a game, and servers with bots only
 

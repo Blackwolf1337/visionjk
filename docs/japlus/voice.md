@@ -83,8 +83,11 @@ you (`cp_clanPwd` in the client, or `/clanpass` in the game): the ones your clan
 - The room still rings from what you say into the radio (`cg_voiceOwnReverb`): you say it aloud where you
   stand. Players next to you who are not in your clan do not hear it.
 - The key is in the menu under Controls, JA+ Control, the switch for the sound in Setup under Voice Chat.
-- Not on a server without the game module of this tree (the voice master does not know clans), and not on one
-  with `g_voiceRadio 0`: the key then says so once.
+- On a server without the game module of this tree the radio goes through the voice master (since
+  2026-10-11, see "On a server without it"): there your clan are the players of that server with your clan
+  password, whatever the server itself knows of clans.
+- Not on a server with `g_voiceRadio 0`, and not through a voice master from before that day: the key then
+  says so once.
 
 ## For the server
 
@@ -187,6 +190,7 @@ the rings and the queues are static memory. `CG_Shutdown` stops the devices befo
 | `cgame/voice/cg_voice_web.c` | in a browser: the WebSocket to the web host in place of the UDP socket |
 | `server/web/sv_web_voice.cpp` | in the dedicated server: `/voice` of the web host, between that WebSocket and the relay |
 | `voicemaster/vm_main.c` | the voice master, a program by itself |
+| `cgame/status/cg_status.c` | the statuses above the heads, which go through the voice master where the server passes none on |
 
 `-DBuildJPVoice=OFF` builds the cgame without it (and without the two libraries).
 
@@ -245,6 +249,30 @@ say that somebody else speaks as this client number in this room (2) or that the
 the datagram of the own relay, both ways. The master names 255 as the distance, the end of the range: that is
 what is left of a speaker in the moment after he went out of sight.
 
+**The clan radio and the statuses** (2026-10-11). The master says in every answer that it knows them
+(`VOICE_FLAG_SOCIAL`, 16, in the flags). A client that read that sends the long state, a client from before
+keeps the short one, and a master from before is never sent anything of this:
+
+```
+to the master   "VO" version 2 client token[4] sequence[2]   room[16] hear[4] allow[4] clan[8]
+to the master   "VO" version 3 client token[4] sequence[2]   frame
+both ways       "VO" version 4 client token[4] sequence[2] (flags distance)   flags text
+```
+
+- `clan` is the first eight bytes of the SHA-1 of "clan", the room and `cp_clanPwd`, all zero for a player
+  without a clan password. Players of one server with the same password say the same bytes, the master never
+  has the password, and the bytes are others with every level. A frame sent as type 3 (`VOICE_RADIO`) goes to
+  the members of the room that said the same clan, wherever their game has them, as the relay of a game server
+  sends it: a `VOICE_AUDIO` with the flags of the radio and a distance of 0. The two masks do not count for it.
+- Type 4 (`VOICE_STATUS`) is what stands above the head of a player ([client.md](client.md), "Statuses above
+  the heads"): one byte of flags (1: away from the keyboard) and up to 63 bytes of text in UTF-8, the music he
+  shares. The master hands it to the other members of the room that sent the long state, one a second from a
+  session at most, and none with a control character in it. It keeps nothing of it: every client says its
+  status every five seconds, which is also how somebody who joins later learns it, and a status that was not
+  said again for fifteen seconds is over for whoever saw it.
+- Away is not found out by anybody there, so every client says it of itself: no key and no turn of the view
+  for a minute. A legacy player on such a server never shows as away.
+
 **The master** (`visionjk-voicemaster`, `-DBuildVoiceMaster=ON`) is one program with one thread and one UDP
 socket, with nothing of the engine in it. It never decodes sound and writes no address and no room into its
 log, only one line a minute with numbers while something happens, and one when it is stopped.
@@ -270,7 +298,11 @@ What is different from a server with its own relay:
   a game server sends him muffled and without a direction.
 - A changed client that is a spectator can ask for all players at once and gets them, since every player lets
   every spectator hear him. Between players the range holds.
-- `g_voiceRange`, `g_voiceTeamOnly` and `amsilence` do not exist there.
+- `g_voiceRange`, `g_voiceTeamOnly`, `g_voiceRadio` and `amsilence` do not exist there.
+- The clan of the radio is whoever knows the clan password, as on a server with the module. Somebody who
+  runs the master could try passwords against the eight bytes it is told.
+- The master reads the status of every player who shares one (the title of his music) on its way through.
+  It is not written down. `cg_shareMusic` is off by default.
 - Players who reach the game server under another address than the others (its own network) are in a room of
   their own.
 - A voice travels to the master and back, not to the game server: players far from the master hear it later.
@@ -389,6 +421,8 @@ Nothing of the voice chat is in the game protocol.
   keeps nothing for it. It sends sound only to addresses that came back with their token, one datagram out for
   one in per member of a room, so it can not be used to flood somebody else. `-maxkbps` caps what leaves it.
 - Through the master nobody checks who is who: see the list in "On a server without it".
+- A status that came through the master is text somebody else wrote. The master refuses control characters,
+  the cgame refuses them again, strips colour codes, and draws at most 63 bytes of it.
 - A player whose sound takes another way out of his network than his game (two lines, some carrier NATs) is
   refused by the address check and has no voice.
 
@@ -398,12 +432,33 @@ A client sends a frame for its clan as `VOICE_RADIO` (type 3) in place of `VOICE
 said it knows the radio: the answer to `jpvoice hello` has a fifth number for that (`VOICE_CAP_RADIO`), which a
 cgame from before does not read. The relay (`G_VoiceRadio`) hands the frame to the clients whose clan password
 is the one of the speaker, as a `VOICE_AUDIO` with `VOICE_FLAG_RADIO`, `VOICE_FLAG_UNSEEN` and a distance of 0.
-A cgame that knows the first flag plays it without a place through `BG_VoiceRadio()`. One from before the radio
+The voice master does the same for the members of a room that named the clan of the speaker (`VM_Radio`), so a
+client plays the radio the same from either. A cgame that knows the first flag plays it without a place through `BG_VoiceRadio()`. One from before the radio
 (release 0.1.1) knows the second: for it the frame is a voice close by that it is not shown, which it plays
 muffled and at full loudness. So nobody of the clan is left out, some hear it duller. The limits of a speaker
 (60 datagrams and 14000 bytes a second) count for both kinds of frame together.
 
 ## Checked
+
+2026-10-11, the clan radio and the statuses through the voice master, Linux, without sound hardware:
+
+- Unit tests (`tools/voicetest/run.sh`, 209 checks with the ones below): the long state and the short one,
+  every length between them, a clan of zeros, a status there and back both ways, a text cut at the end of a
+  character, control characters.
+- The master alone (`tools/voicetest/master.sh`, 62 checks, sanitizers): the radio reaches the same clan in the
+  same room and nobody else (another clan, a client that sent the short state, one without a clan, the same
+  clan in another room), whatever the masks say; a status reaches the others of the room that sent the long
+  state, one a second, none with a control character; a client from before next to new ones hears and is heard
+  as before.
+- Three scripted clients on a server that says nothing of voice (`SOCIAL=1 tools/voicetest/e2e_master.sh`):
+  one of the clan in the other room got the radio in both ears at the same level with both pitches of the tone,
+  the plain voice came dull through the wall; somebody next to the speaker without the clan password got none
+  of the radio and did get the plain voice; both read "Listening to ..." above the speaker, the line went when
+  his music ended, and after a minute without a key the two who stayed were away for each other. The game
+  server got no command of it.
+
+Not checked: the master on its real machine (it has to be deployed anew), the internet path, Windows, a real
+player of music on this path, how any of it sounds.
 
 2026-10-07, Linux, without sound hardware. The clan radio of 2026-10-11 has unit tests only (the datagram, what
 its sound lets through: 1000 Hz whole, 100 Hz and 8000 Hz at less than a tenth, the clicks), 145 checks with the
