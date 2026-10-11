@@ -2269,7 +2269,10 @@ void CG_DrawAutoMap(void)
 	w = r_autoMapW.value;
 	h = r_autoMapH.value;
 
-	refdef.x = ( x + cgs.bias2D ) * hScale;
+	// on a wide window it goes to the edge of the window it is nearer to, as the HUD of that side does
+	CG_Place2D( x + w * 0.5f > SCREEN_WIDTH * 0.5f ? PLACE_RIGHT : PLACE_LEFT );
+
+	refdef.x = ( x + cgs.bias2D + cgs.shift2D ) * hScale;
 	refdef.y = y*vScale;
 	refdef.width = w*hScale;
 	refdef.height = h*vScale;
@@ -2278,6 +2281,7 @@ void CG_DrawAutoMap(void)
 	CG_DrawPic(x+w, y, SIDEFRAME_WIDTH, h, cgs.media.wireframeAutomapFrame_right);
 	CG_DrawPic(x-SIDEFRAME_WIDTH, y-SIDEFRAME_HEIGHT, w+(SIDEFRAME_WIDTH*2), SIDEFRAME_HEIGHT, cgs.media.wireframeAutomapFrame_top);
 	CG_DrawPic(x-SIDEFRAME_WIDTH, y+h, w+(SIDEFRAME_WIDTH*2), SIDEFRAME_HEIGHT, cgs.media.wireframeAutomapFrame_bottom);
+	CG_Place2D( PLACE_CENTER );
 
 	refdef.time = cg.time;
 
