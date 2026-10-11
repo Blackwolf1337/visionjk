@@ -294,6 +294,15 @@ void CG_StatusList_f( void ) {
 			count++;
 		}
 	}
+	// what this machine plays, as it would be told: the answer to "why does nobody see my music"
+	if ( !cg_shareMusic.integer ) {
+		trap->Print( "Your music is not told to anybody (cg_shareMusic 0).\n" );
+	} else {
+		char music[STATUS_TEXT];
+
+		Status_Music( music, sizeof( music ) );
+		trap->Print( "Your music: %s\n", music[0] ? music : "nothing is found playing" );
+	}
 	if ( !cg_playerStatuses.integer ) {
 		trap->Print( "The statuses of the others are off (cg_playerStatuses 0).\n" );
 	} else if ( atoi( Info_ValueForKey( CG_ConfigString( CS_SERVERINFO ), "g_visionCaps" ) ) & 2 ) {
