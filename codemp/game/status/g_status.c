@@ -24,7 +24,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // What one player's client knows has to reach the others through the server. A cgame of this tree says in its
 // userinfo that it draws statuses (cjp_caps bit 0), and only such a client is ever sent the server command
 //
-//   jpstatus <client> <kind> "<text>"		kind: 0 nothing, 1 away, 2 music
+//   jpstatus <client> <away> "<music>"		away: 1 or 0, music: what he listens to, or nothing
 //
 // so a legacy client never sees a command it does not know. The game module says in the server info that it
 // passes statuses on (g_visionCaps bit 1).
@@ -39,41 +39,20 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #define STATUS_CMD_MSEC		3000
 
-enum {
-	STATUS_NONE,
-	STATUS_AWAY,
-	STATUS_MUSIC
-};
-
 static int statusFrameTime;
 
-// What the others are told about a player. Away comes first: who is not there does not listen.
-static int G_StatusOf( const gentity_t *ent, const char **text ) {
-	const jpClient_t *jp = &ent->client->pers.jp;
-
-	*text = "";
-	if ( jp->statusAway ) {
-		return STATUS_AWAY;
-	}
-	if ( jp->statusMusic[0] ) {
-		*text = jp->statusMusic;
-		return STATUS_MUSIC;
-	}
-	return STATUS_NONE;
-}
-
-// tells one client about one player, if its cgame draws statuses
+// Tells one client about one player, if its cgame draws statuses. Both parts always go out: the cgame shows
+// away first, and the client the music is from sees by it that its command arrived.
 static void G_StatusTell( const gentity_t *ent, const gentity_t *other ) {
-	const char	*text;
-	char		legacy[sizeof( ent->client->pers.jp.statusMusic )];
-	const int	kind = G_StatusOf( ent, &text );
+	const jpClient_t	*jp = &ent->client->pers.jp;
+	char				legacy[sizeof( jp->statusMusic )];
 
 	if ( !other->inuse || !other->client || other->client->pers.connected != CON_CONNECTED
 		|| !( other->client->pers.jp.statusCaps & 1 ) ) {
 		return;
 	}
-	trap->SendServerCommand( other - g_entities, va( "jpstatus %i %i \"%s\"", (int)( ent - g_entities ), kind,
-		JP_ChatFor( ent, other, text, legacy, sizeof( legacy ) ) ) );
+	trap->SendServerCommand( other - g_entities, va( "jpstatus %i %i \"%s\"", (int)( ent - g_entities ), jp->statusAway ? 1 : 0,
+		JP_ChatFor( ent, other, jp->statusMusic, legacy, sizeof( legacy ) ) ) );
 }
 
 static void G_StatusBroadcast( const gentity_t *ent ) {
@@ -101,10 +80,9 @@ void G_StatusUserinfo( gentity_t *ent, const char *userinfo ) {
 		jp->statusCaps = caps;
 		for ( i = 0; i < level.maxclients; i++ ) {
 			const gentity_t	*other = &g_entities[i];
-			const char		*text;
 
 			if ( other->inuse && other->client && other->client->pers.connected == CON_CONNECTED
-				&& G_StatusOf( other, &text ) != STATUS_NONE ) {
+				&& ( other->client->pers.jp.statusAway || other->client->pers.jp.statusMusic[0] ) ) {
 				G_StatusTell( other, ent );
 			}
 		}

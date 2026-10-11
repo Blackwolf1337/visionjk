@@ -330,6 +330,10 @@ const glyphInfo_t *R_FontTTF_Glyph( unsigned int codePoint, int pointSize, int *
 	const ttfGlyph_t *glyph = R_FontTTF_Find( TTF_TEXT, codePoint, pointSize, ttf.oversample );
 
 	if ( !glyph ) {
+		// a sign the font for text lacks may be in the one with the fixed width
+		glyph = R_FontTTF_Find( TTF_MONO, codePoint, pointSize, ttf.oversample );
+	}
+	if ( !glyph ) {
 		return NULL;
 	}
 	if ( shader ) {
@@ -422,6 +426,10 @@ static qboolean R_FontTTF_SceneChar( const char **text, unsigned int *codePoint,
 static const ttfGlyph_t *R_FontTTF_SceneGlyph( unsigned int codePoint, int size ) {
 	const ttfGlyph_t *glyph = R_FontTTF_Find( TTF_TEXT, codePoint, size, 1 );
 
+	if ( !glyph ) {
+		// a sign the font for text lacks may be in the one with the fixed width
+		glyph = R_FontTTF_Find( TTF_MONO, codePoint, size, 1 );
+	}
 	return glyph ? glyph : R_FontTTF_Find( TTF_TEXT, '?', size, 1 );
 }
 

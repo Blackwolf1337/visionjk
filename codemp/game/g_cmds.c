@@ -3787,7 +3787,8 @@ client sends. Commands that carry a password are logged without their arguments.
 =================
 */
 static void G_LogClientCommand( const gentity_t *ent, const char *cmd ) {
-	static const char *const skip[] = { "say", "say_team", "tell", "score" };
+	// jpstatus: what the cgame of a client sends by itself with every new song, see status/g_status.c
+	static const char *const skip[] = { "say", "say_team", "tell", "score", "jpstatus" };
 	static const char *const secret[] = { "amlogin", "clanpass" };
 	char	name[64], args[200];
 	size_t	i;
