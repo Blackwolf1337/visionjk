@@ -624,6 +624,15 @@ void CL_ConsolePrint( const char *txt) {
 			continue;
 		}
 
+		if ( CL_UTF8() ) {
+			// a cell holds one byte and the console font is Windows-1252: a character it does not have is a '?'
+			unsigned int	codePoint;
+			const int		len = Q_UTF8_Decode( txt, &codePoint );
+			const int		byte = Q_UnicodeToCP1252( codePoint );
+
+			txt += len;
+			c = (char)( byte < 0 ? '?' : byte );
+		} else
 		txt++;
 
 		switch (c)

@@ -97,6 +97,8 @@ cvar_t	*cl_autolodscale;
 
 cvar_t	*cl_consoleKeys;
 cvar_t	*cl_consoleUseScanCode;
+cvar_t	*cl_utf8;
+static cvar_t	*cl_utf8Text;
 cvar_t	*cl_consoleShiftRequirement;
 
 cvar_t  *cl_lanForcePackets;
@@ -172,6 +174,41 @@ CLIENT RELIABLE COMMAND COMMUNICATION
 
 /*
 ======================
+CL_UTF8
+
+Whether text is UTF-8 right now: what is typed, what the renderer draws (it asks the same way, tr_font.cpp) and
+what goes to a server that says it knows UTF-8. Not with a language whose fonts have a code page of their own
+(Russian, Polish, the Asian ones): text is that code page then, as it always was. The answer is also in the
+userinfo as cl_utf8Text, by which a server of this tree knows what a client sends and reads.
+======================
+*/
+qboolean CL_UTF8( void ) {
+	static int		utf8Count = -1, languageCount = -1;
+	static qboolean	active = qfalse;
+
+	if ( !cl_utf8 || !se_language ) {
+		return qfalse;
+	}
+	if ( cl_utf8->modificationCount != utf8Count || se_language->modificationCount != languageCount ) {
+		utf8Count = cl_utf8->modificationCount;
+		languageCount = se_language->modificationCount;
+		active = (qboolean)( cl_utf8->integer && !Language_IsRussian() && !Language_IsPolish() && !Language_IsKorean()
+			&& !Language_IsTaiwanese() && !Language_IsJapanese() && !Language_IsChinese() && !Language_IsThai() );
+		Cvar_Set( "cl_utf8Text", active ? "1" : "0" );
+	}
+	return active;
+}
+
+// a server of this tree says in its server info what it knows, bit 0: chat in UTF-8 (g_visionCaps of the game module)
+static qboolean CL_ServerKnowsUTF8( void ) {
+	if ( cls.state < CA_PRIMED ) {
+		return qfalse;
+	}
+	return (qboolean)( atoi( Info_ValueForKey( cl.gameState.stringData + cl.gameState.stringOffsets[CS_SERVERINFO], "g_visionCaps" ) ) & 1 );
+}
+
+/*
+======================
 CL_AddReliableCommand
 
 The given command will be transmitted to the server, and is gauranteed to
@@ -192,6 +229,14 @@ void CL_AddReliableCommand( const char *cmd, qboolean isDisconnectCmd ) {
 			return;
 		else
 			Com_Error(ERR_DROP, "Client command overflow");
+	}
+
+	// any other server and its clients read one byte as one character (Windows-1252): what was typed here as UTF-8
+	// goes out that way, '?' for what Windows-1252 does not have
+	if ( CL_UTF8() && !CL_ServerKnowsUTF8() ) {
+		Q_UTF8_ToCP1252( cmd, clc.reliableCommands[++clc.reliableSequence & (MAX_RELIABLE_COMMANDS - 1)],
+			sizeof(*clc.reliableCommands) );
+		return;
 	}
 
 	Q_strncpyz(clc.reliableCommands[++clc.reliableSequence & (MAX_RELIABLE_COMMANDS - 1)],
@@ -2158,6 +2203,7 @@ void CL_Frame ( int msec ) {
 	}
 
 	SE_CheckForLanguageUpdates();	// will take zero time to execute unless language changes, then will reload strings.
+	CL_UTF8();						// keeps cl_utf8Text right for the input code and the userinfo
 									//	of course this still doesn't work for menus...
 
 	CL_UpdateFrame();
@@ -2784,6 +2830,8 @@ void CL_Init( void ) {
 	// ~ and `, as keys and characters
 	cl_consoleKeys = Cvar_Get( "cl_consoleKeys", "~ ` 0x7e 0x60 0xb2", CVAR_ARCHIVE, "Which keys are used to toggle the console");
 	cl_consoleUseScanCode = Cvar_Get( "cl_consoleUseScanCode", "1", CVAR_ARCHIVE, "Use native console key detection" );
+	cl_utf8 = Cvar_Get( "cl_utf8", "1", CVAR_ARCHIVE, "Text is UTF-8 inside the client. 0 or a language with a code page of its own (se_language): one byte a character, as in the original game" );
+	cl_utf8Text = Cvar_Get( "cl_utf8Text", "0", CVAR_ROM|CVAR_USERINFO, "Whether text is UTF-8 right now, for the server" );
 	cl_consoleShiftRequirement = Cvar_Get( "cl_consoleShiftRequirement", "0", CVAR_ARCHIVE, "Require shift key to be pressed for native console key detection" );
 
 	cl_filterGames = Cvar_Get( "cl_filterGames", "MBII MBIIOpenBeta", CVAR_ARCHIVE_ND, "List of fs_game to filter (space separated)" );

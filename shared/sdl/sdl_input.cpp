@@ -863,6 +863,17 @@ static void IN_ProcessEvents( void )
 								Sys_QueEvent( 0, SE_KEY, A_CONSOLE, qtrue, 0, NULL );
 								Sys_QueEvent( 0, SE_KEY, A_CONSOLE, qfalse, 0, NULL );
 							}
+							else if( Cvar_VariableIntegerValue( "cl_utf8Text" ) )
+							{
+								// text is UTF-8 inside the client (CL_UTF8()): the bytes of the character, one
+								// event each. The edit fields put them together again, and a module gets them
+								// with K_CHAR_FLAG as it always got a byte.
+								char bytes[4];
+								const int count = Q_UTF8_Encode( utf32, bytes );
+
+								for( int i = 0; i < count; i++ )
+									Sys_QueEvent( 0, SE_CHAR, (unsigned char)bytes[i], 0, 0, NULL );
+							}
 							else
 							{
 								uint8_t encoded = ConvertUTF32ToExpectedCharset( utf32 );

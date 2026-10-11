@@ -434,6 +434,7 @@ extern	cvar_t	*cl_inGameVideo;
 
 extern	cvar_t	*cl_consoleKeys;
 extern	cvar_t	*cl_consoleUseScanCode;
+extern	cvar_t	*cl_utf8;
 extern	cvar_t	*cl_consoleShiftRequirement;
 
 extern  cvar_t  *cl_lanForcePackets;
@@ -452,6 +453,7 @@ void CL_Init (void);
 void CL_FlushMemory(void);
 void CL_ShutdownAll( qboolean shutdownRef );
 void CL_AddReliableCommand( const char *cmd, qboolean isDisconnectCmd );
+qboolean CL_UTF8( void );
 
 void CL_StartHunkUsers( void );
 
