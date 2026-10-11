@@ -51,7 +51,10 @@ static void RB_SetGL2D( void ) {
 	float		ortho[16];
 
 	backEnd.projection2D = qtrue;
-	VK_SetViewport( 0, 0, glConfig.vidWidth, glConfig.vidHeight, 0.0f, 1.0f );
+	// On a plane in the level the 2D still lands at the front of the depth buffer, where the flat 2D is. With the
+	// depth of the plane, the stages that test it (most shader scripts of the menus do, their text does not) were
+	// cut out in the shape of what stands between the camera and the plane: the player.
+	VK_SetViewport( 0, 0, glConfig.vidWidth, glConfig.vidHeight, 0.0f, backEnd.plane2D ? 0.0f : 1.0f );
 
 	// glOrtho( -bias, 640 + bias, 480, 0, 0, 1 )
 	memset( ortho, 0, sizeof( ortho ) );

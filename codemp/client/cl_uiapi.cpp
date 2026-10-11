@@ -157,6 +157,58 @@ static void CL_GetGlconfig( glconfig_t *config ) {
 	*config = cls.glconfig;
 }
 
+/*
+====================
+CL_UIRenderScene
+
+A scene inside a menu (the model of a player) has its place in pixels of the flat screen. While the menus are
+drawn onto a plane in the level (CL_SetUIPlane), the scene goes to where the middle of that place is on the
+plane, in the size the plane has there. It stays upright: a viewport can not be tilted.
+====================
+*/
+static void CL_UIRenderScene( const refdef_t *fd ) {
+	const float	*m = cls.uiPlane;
+	const float	toGridX = ( SCREEN_WIDTH + 2.0f * cls.bias2D ) / cls.glconfig.vidWidth;
+	const float	toGridY = (float)SCREEN_HEIGHT / cls.glconfig.vidHeight;
+	const float	gx = ( fd->x + fd->width * 0.5f ) * toGridX - cls.bias2D;
+	const float	gy[3] = { fd->y * toGridY, ( fd->y + fd->height * 0.5f ) * toGridY, ( fd->y + fd->height ) * toGridY };
+	float		sx = 0.0f, sy[3], scale;
+	refdef_t	moved;
+	int			i;
+
+	if ( !cls.uiPlaneOn || fd->width <= 0 || fd->height <= 0 ) {
+		re->RenderScene( fd );
+		return;
+	}
+
+	// the upper edge, the middle and the lower edge of the place: through the matrix of the plane to pixels
+	for ( i = 0; i < 3; i++ ) {
+		const float w = m[3] * gx + m[7] * gy[i] + m[15];
+
+		if ( w <= 0.0f ) {
+			return;		// behind the camera
+		}
+		sy[i] = ( 0.5f - 0.5f * ( m[1] * gx + m[5] * gy[i] + m[13] ) / w ) * cls.glconfig.vidHeight;
+		if ( i == 1 ) {
+			sx = ( 0.5f + 0.5f * ( m[0] * gx + m[4] * gy[i] + m[12] ) / w ) * cls.glconfig.vidWidth;
+		}
+	}
+	scale = ( sy[2] - sy[0] ) / fd->height;
+
+	moved = *fd;
+	moved.width = (int)( fd->width * scale );
+	moved.height = (int)( fd->height * scale );
+	moved.x = (int)( sx - moved.width * 0.5f );
+	moved.y = (int)( sy[1] - moved.height * 0.5f );
+	// Not while a part of it is off the screen (the view is still on its way to the menu): the renderers clear the
+	// depth of the place, and a place that is cut would bend the picture.
+	if ( moved.width < 1 || moved.height < 1 || moved.x < 0 || moved.y < 0
+		|| moved.x + moved.width > cls.glconfig.vidWidth || moved.y + moved.height > cls.glconfig.vidHeight ) {
+		return;
+	}
+	re->RenderScene( &moved );
+}
+
 // the clipboard of the system as the text the client has: UTF-8, or the bytes of the code page of the language
 void CL_GetClipboard( char *buf, int buflen ) {
 	char	*cbd, *c;
@@ -928,7 +980,7 @@ intptr_t CL_UISystemCalls( intptr_t *args ) {
 		return 0;
 
 	case UI_R_RENDERSCENE:
-		re->RenderScene( (const refdef_t *)VMA(1) );
+		CL_UIRenderScene( (const refdef_t *)VMA(1) );
 		return 0;
 
 	case UI_R_SETCOLOR:
@@ -1412,7 +1464,7 @@ void CL_BindUI( void ) {
 		uii.R_RegisterShaderNoMip				= re->RegisterShaderNoMip;
 		uii.R_RegisterSkin						= re->RegisterSkin;
 		uii.R_RemapShader						= re->RemapShader;
-		uii.R_RenderScene						= re->RenderScene;
+		uii.R_RenderScene						= CL_UIRenderScene;
 		uii.R_SetColor							= re->SetColor;
 		uii.R_ShaderNameFromIndex				= CL_R_ShaderNameFromIndex;
 

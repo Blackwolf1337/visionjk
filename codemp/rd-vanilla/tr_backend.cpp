@@ -456,6 +456,8 @@ void RB_BeginDrawingView (void) {
 	// we will need to change the projection matrix before drawing
 	// 2D images again
 	backEnd.projection2D = qfalse;
+	// the 2D on a plane in the level leaves no depth range behind (RB_SetGL2D)
+	qglDepthRange( 0, 1 );
 
 	//
 	// set the modelview matrix for the viewer
@@ -1193,11 +1195,15 @@ void	RB_SetGL2D (void) {
 	qglScissor( 0, 0, glConfig.vidWidth, glConfig.vidHeight );
 	qglMatrixMode(GL_PROJECTION);
 	if ( backEnd.plane2D ) {
-		// on a plane in the level, see RE_Set2DPlane()
+		// On a plane in the level, see RE_Set2DPlane(). It still lands at the front of the depth buffer, where the
+		// flat 2D is: with the depth of the plane, the stages that test it were cut out in the shape of what stands
+		// between the camera and the plane.
 		qglLoadMatrixf( backEnd.planeMatrix );
+		qglDepthRange( 0, 0 );
 	} else {
     qglLoadIdentity ();
 	qglOrtho (-bias, 640 + bias, 480, 0, 0, 1);
+		qglDepthRange( 0, 1 );
 	}
 	qglMatrixMode(GL_MODELVIEW);
     qglLoadIdentity ();
