@@ -214,9 +214,11 @@ plane of the menu is, for this frame.
 =================
 */
 void CG_Menu3DScene( void ) {
-	static vec4_t	fill = { 0.03f, 0.06f, 0.12f, 0.55f };
-	static vec4_t	border = { 0.45f, 0.75f, 1.0f, 0.9f };
-	static vec4_t	glow = { 0.2f, 0.45f, 1.0f, 0.3f };
+	// The inside lets little of the level through: at half it took the colour of what stood behind it, and the
+	// rim around the menu was white in front of a bright wall.
+	static vec4_t	fill = { 0.02f, 0.04f, 0.1f, 0.9f };
+	static vec4_t	border = { 0.25f, 0.45f, 0.9f, 0.85f };
+	static vec4_t	light = { 0.15f, 0.35f, 0.9f, 0.5f };
 	const float		*org = cg.refdef.vieworg;
 	const float		*fwd = cg.refdef.viewaxis[0], *left = cg.refdef.viewaxis[1], *upAxis = cg.refdef.viewaxis[2];
 	const float		zNear = 1.0f, zFar = 8192.0f;
@@ -240,7 +242,7 @@ void CG_Menu3DScene( void ) {
 	if ( DotProduct( normal, fwd ) < 0.0f ) {
 		VectorMA( menu3d.center, -0.5f, normal, behind );
 	}
-	CG_BubblePanelAt( behind, menu3d.right, up, halfW, halfH, 14.0f * menu3d.unit, fill, border, glow, alpha );
+	CG_BubblePanelAt( behind, menu3d.right, up, halfW, halfH, 14.0f * menu3d.unit, fill, border, light, alpha );
 
 	// the blur of what is not at the distance of the panel
 	if ( Menu3D_Engine( "cl_cgameDoF" ) ) {

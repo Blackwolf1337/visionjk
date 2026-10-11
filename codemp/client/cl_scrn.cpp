@@ -510,6 +510,10 @@ void SCR_DrawScreenField( stereoFrame_t stereoFrame ) {
 		if ( plane ) {
 			re->ext.Set2DPlane( cls.uiPlane );
 		}
+		if ( plane != cls.uiPlaneTold ) {
+			cls.uiPlaneTold = plane;
+			Cvar_Set( "cl_uiPlane", plane ? "1" : "0" );
+		}
 		cls.uiPlaneOn = plane;
 		UIVM_Refresh( cls.realtime );
 		cls.uiPlaneOn = qfalse;

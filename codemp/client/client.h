@@ -332,6 +332,7 @@ typedef struct clientStatic_s {
 	float		uiPlane[16];	// the cgame wants the menus of the frame uiPlaneFrame on a plane in the level (CL_SetUIPlane)
 	int			uiPlaneFrame;
 	qboolean	uiPlaneOn;		// right now: the menus are being drawn onto it
+	qboolean	uiPlaneTold;	// what the cvar cl_uiPlane says to the ui
 	qhandle_t	charSetShader;
 	qhandle_t	whiteShader;
 	qhandle_t	consoleShader;

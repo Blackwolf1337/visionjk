@@ -1766,7 +1766,7 @@ void		CG_BubbleInit( void );
 void		CG_BubbleSay( int clientNum, int kind, const char *message );
 qboolean	CG_BubbleDraw( centity_t *cent, qboolean dots );
 qboolean	CG_BubblePanelAt( const vec3_t center, const vec3_t right, const vec3_t up, float halfW, float halfH, float corner,
-				const float *fill, const float *border, const float *glow, float alpha );
+				const float *fill, const float *border, const float *light, float alpha );
 
 // menu3d/cg_menu3d.c: the menu in the level
 void		CG_Menu3DInit( void );
