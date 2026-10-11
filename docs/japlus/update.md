@@ -243,6 +243,10 @@ not replaced, this time with the real releases and the website itself (`https://
 - On Linux, what the game has open when it ends, read with strace: before the repair one handle on the asset
   pack, after it none.
 
+- After 0.1.3 was on the website: release 0.1.2 exactly as it was shipped, started with no console, saw
+  "Version 0.1.3 is out" (23.7 MB, eleven files, the asset pack not among them), fetched it and was 0.1.3
+  after its two starts, with nothing left over.
+
 The tests before this did not find it because none of their releases changed a pk3, and Wine was not asked.
 
 Not checked:
