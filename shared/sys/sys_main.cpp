@@ -627,6 +627,22 @@ enum SearchPathFlag
 	SEARCH_PATH_ROOT	= 1 << 3
 };
 
+// One of the folders a module is looked for in did not give it. A folder that has no such file is the usual
+// case (the folder of the player comes first and has none) and no failure: the next one is tried.
+static void Sys_DllFailed( const char *callerName, const char *fn )
+{
+	const char *why = Sys_LibraryError();
+	FILE *f = fopen( fn, "rb" );
+
+	if ( !f )
+	{
+		Com_DPrintf( "%s: no %s\n", callerName, fn );
+		return;
+	}
+	fclose( f );
+	Com_Printf( "%s(%s) failed: \"%s\"\n", callerName, fn, why );
+}
+
 static void *Sys_LoadDllFromPaths( const char *filename, const char *gamedir, const char **searchPaths,
 									size_t numPaths, uint32_t searchFlags, const char *callerName )
 {
@@ -646,7 +662,7 @@ static void *Sys_LoadDllFromPaths( const char *filename, const char *gamedir, co
 			if ( libHandle )
 				return libHandle;
 
-			Com_Printf( "%s(%s) failed: \"%s\"\n", callerName, fn, Sys_LibraryError() );
+			Sys_DllFailed( callerName, fn );
 		}
 	}
 
@@ -663,7 +679,7 @@ static void *Sys_LoadDllFromPaths( const char *filename, const char *gamedir, co
 			if ( libHandle )
 				return libHandle;
 
-			Com_Printf( "%s(%s) failed: \"%s\"\n", callerName, fn, Sys_LibraryError() );
+			Sys_DllFailed( callerName, fn );
 		}
 	}
 
@@ -680,7 +696,7 @@ static void *Sys_LoadDllFromPaths( const char *filename, const char *gamedir, co
 			if ( libHandle )
 				return libHandle;
 
-			Com_Printf( "%s(%s) failed: \"%s\"\n", callerName, fn, Sys_LibraryError() );
+			Sys_DllFailed( callerName, fn );
 		}
 	}
 
@@ -697,7 +713,7 @@ static void *Sys_LoadDllFromPaths( const char *filename, const char *gamedir, co
 			if ( libHandle )
 				return libHandle;
 
-			Com_Printf( "%s(%s) failed: \"%s\"\n", callerName, fn, Sys_LibraryError() );
+			Sys_DllFailed( callerName, fn );
 		}
 	}
 
