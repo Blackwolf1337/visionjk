@@ -70,7 +70,7 @@ qboolean CG_AgentRequestSign( const char *path, const byte *pub, const byte *dat
 }
 
 agentState_t	CG_AgentPoll( void ) { return AGENT_IDLE; }
-int				CG_AgentKeys( agentKey_t *out, int max ) { (void)out; (void)max; return 0; }
+int				CG_AgentKeys( agentKey_t *out, int max, int *total ) { (void)out; (void)max; *total = 0; return 0; }
 qboolean		CG_AgentSignature( byte *signature ) { (void)signature; return qfalse; }
 void			CG_AgentClose( void ) {}
 
@@ -380,12 +380,13 @@ agentState_t CG_AgentPoll( void ) {
 CG_AgentKeys
 =================
 */
-int CG_AgentKeys( agentKey_t *out, int max ) {
+int CG_AgentKeys( agentKey_t *out, int max, int *total ) {
 	const byte		*buf = agent.in + 4, *blob, *comment;
 	const int		size = agent.inLen - 4;
 	unsigned int	count, i;
 	int				pos = 5, blobLen, commentLen, n = 0, c;
 
+	*total = 0;
 	if ( agent.state != AGENT_DONE || agent.request != AGENT_REQUEST_IDENTITIES || size < 5 || buf[0] != AGENT_IDENTITIES_ANSWER ) {
 		return 0;
 	}
@@ -394,6 +395,7 @@ int CG_AgentKeys( agentKey_t *out, int max ) {
 		if ( !Agent_GetString( buf, size, &pos, &blob, &blobLen ) || !Agent_GetString( buf, size, &pos, &comment, &commentLen ) ) {
 			break;
 		}
+		( *total )++;
 		// keys of other kinds (RSA, ECDSA) are of no use here
 		if ( blobLen != AGENT_BLOB_SIZE || Agent_GetLong( blob ) != AGENT_KEY_TYPE_LEN || memcmp( blob + 4, AGENT_KEY_TYPE, AGENT_KEY_TYPE_LEN )
 			|| Agent_GetLong( blob + 4 + AGENT_KEY_TYPE_LEN ) != 32 ) {

@@ -45,9 +45,10 @@ qboolean		CG_AgentRequestSign( const char *path, const byte *pub, const byte *da
 // once a frame while a question is out
 agentState_t	CG_AgentPoll( void );
 
-// after AGENT_DONE: the Ed25519 keys the agent has, and the 64 bytes of the signature. qfalse: the agent said no
-// (the player did not allow it, or the key is gone).
-int				CG_AgentKeys( agentKey_t *out, int max );
+// after AGENT_DONE: the Ed25519 keys the agent has (*total: its keys of every kind, to tell the player why none
+// is used), and the 64 bytes of the signature. qfalse: the agent said no (the player did not allow it, or the
+// key is gone).
+int				CG_AgentKeys( agentKey_t *out, int max, int *total );
 qboolean		CG_AgentSignature( byte *signature );
 
 void			CG_AgentClose( void );

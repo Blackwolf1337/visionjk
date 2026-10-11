@@ -412,9 +412,18 @@ static void Auth_SendSignature( const byte *signature ) {
 // the keys of the agent join the one of the file, if cg_authAgentKey lets them
 static void Auth_AddAgentKeys( void ) {
 	static agentKey_t	keys[AGENT_MAX_KEYS];
-	const int			count = CG_AgentKeys( keys, AGENT_MAX_KEYS );
+	int					total;
+	const int			count = CG_AgentKeys( keys, AGENT_MAX_KEYS, &total );
 	int					i, k;
 
+	// 1Password hands out RSA keys as well, and the server only checks Ed25519: without this line the agent
+	// looks as if it was never asked
+	if ( !count && total ) {
+		Auth_Say( "Your ssh-agent has %i key%s, but no Ed25519 key: this login takes no other kind (no RSA, no ECDSA).",
+			total, total == 1 ? "" : "s" );
+	} else if ( !total ) {
+		Auth_Say( "Your ssh-agent has no keys." );
+	}
 	for ( i = 0; i < count && auth.numKeys < AUTH_MAX_CANDIDATES; i++ ) {
 		char line[AUTH_LINE_SIZE];
 

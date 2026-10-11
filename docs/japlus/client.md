@@ -401,6 +401,9 @@ An admin logs in with an Ed25519 key, the kind ssh uses, and no password goes ov
   pipe is the one of OpenSSH). It asks before it signs, and nothing waits for that: the question is sent and
   looked at once a frame, the game goes on. Two minutes are given, and if the 30 seconds of the server ran out
   meanwhile the login runs once more by itself.
+- Only Ed25519 keys of the agent are used, the server checks no other kind. An agent that has only RSA or
+  ECDSA keys gets a line that says so from `amkey show` and `amkey login` (1Password offers the keys of the
+  vaults its `agent.toml` names, of whatever kind they are).
 - The client signs only for a server the player named with `amkey login`, and only right after it asked
   itself. A server that sends a question nobody asked for gets no answer.
 - A server with flood protection (`sv_floodProtect`, on by default) drops a command that comes within a second
