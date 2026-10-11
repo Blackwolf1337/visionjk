@@ -381,9 +381,16 @@ A row is run with a click or with its number. A click beside the card, the right
   is no jump of theirs. The card opens where the name stood.
 - A row is clicked through the level: the way of the pointer from the eye is cut with the plane of the card
   (`Board_Pointer()`), and the place on it says which row.
-- What it costs to be a thing in the level: far away the card is as small as the player and can not be read, a
-  figure in front of it covers it (your own in third person too), and the marked player is drawn over it where
-  an arm of his reaches into it.
+- Too far away to be read in the level, the card comes out of it onto the screen (`Select_Card()`): when its
+  rows would be lower than 15 pixels it pops out, a little too large for a moment (180 ms), to the size it was
+  made for, where nothing hides it, and stays beside its player there. It goes back the same way when its rows
+  in the level would be higher than 17.5 pixels again. The measure is pixels, so the distance depends on the
+  window: about 330 units at 2560 x 1440, 250 at 1920 x 1080, 165 at 1280 x 720 with a field of view of 80.
+  On the screen its rows are at least 18.5 pixels high, so coming out never makes it smaller.
+- The name of a far player does the same without a jump: its letters are never lower than 14 pixels. From the
+  distance where they would be, it is drawn on the screen at that height, at the place it has in the level.
+- What it costs to be a thing in the level, while the card is in it: a figure in front of it covers it (your
+  own in third person too), and the marked player is drawn over it where an arm of his reaches into it.
 - An engine that can not write in the scene gets name and card on the screen with the HUD, at one size, at the
   same place beside the player. That path is the code of before and was not run again.
 - The pointer is drawn after the card, by `CG_SelectDraw()` also while the chat box is open, which used to draw

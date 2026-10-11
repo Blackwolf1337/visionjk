@@ -72,6 +72,11 @@ typedef enum {
 #define SELECT_LINE			18.0f	// a line of text of the HUD is this high at a scale of 1, in its units,
 #define SELECT_BASE			0.857f	//	and its letters stand on this part of it
 #define SELECT_NUDGE		40.0f	// how far a card is lifted or lowered at most to stay on the screen, in units of the level
+#define SELECT_FLAT_PX		15.0f	// A card in the level whose rows are lower than this on the screen, in pixels, is hard to
+#define SELECT_WORLD_PX		17.5f	//	read and to hit: it comes out onto the screen, and goes back when they are higher than this.
+#define SELECT_FLAT_MIN_PX	18.5f	// On the screen its rows are at least this high, so coming out never makes it smaller.
+#define SELECT_POP_MSEC		180		// how long it takes on its way out and back
+#define SELECT_TAG_PX		14.0f	// the letters of a name in the level are never lower than this on the screen, in pixels
 #define SELECT_FOLLOW_MSEC	90.0f	// how late they follow him: a step of his is no jump of theirs
 #define SELECT_SHELLS	6		// the shells of the outline
 #define SELECT_BLUR_TENTHS	12	// how far the hull that the dynamic glow blurs stands off the model, in tenths of a unit,
@@ -80,8 +85,9 @@ typedef enum {
 // What the name and the card of a player are drawn on. In the level it is a thing there as a chat bubble is:
 // as large at any distance, upright, turned to the one who looks about its upright axis only.
 typedef struct selectBoard_s {
-	qboolean	world;					// in the level. qfalse: on the screen (an engine without text in the scene)
+	qboolean	world;					// in the level. qfalse: on the screen
 	vec3_t		corner;					// its top left corner: a place in the level, or x and y in the units of the HUD
+	float		unit;					// what a unit of the card is on it: units of the level, or of the HUD
 	vec3_t		right, up, toward;		// in the level: along its lines, up them, and to the one who looks
 } selectBoard_t;
 
@@ -94,8 +100,16 @@ static struct {
 	// what the card and the name of the player under the pointer are drawn on: beside their player, a little late
 	selectBoard_t	card;
 	qboolean	cardPlaced;				// the card has a place: it moves on from there and does not jump
+	// the card of a player who is too far away for it to be read in the level is on the screen
+	qboolean	flat;					// it is there, or on its way there. qfalse: in the level, or on its way back
+	int			flatTime;				// when it set out
+	float		flatFrom;				// what a unit of it was in units of the HUD when it set out
+	selectBoard_t	screen;				// what it is drawn on meanwhile
+	selectBoard_t	shown;				// what the card was drawn on last: the pointer is looked for on that
 	selectBoard_t	tag;
 	int			tagFor;					// the player the name has its place for, -1: none
+	selectBoard_t	tagShown;			// what the name is drawn on this frame, and how wide it is in units of the card
+	float		tagWidth;
 	selectAct_t	rows[SELECT_MAX_ROWS];
 	int			numRows;
 	int			confirmTime;			// when the vote to kick was clicked first, 0: not yet
@@ -358,7 +372,8 @@ The card
 static void Select_Close( void ) {
 	sel.selected = -1;
 	sel.confirmTime = 0;
-	sel.cardPlaced = qfalse;
+	sel.cardPlaced = sel.flat = qfalse;
+	sel.flatTime = 0;
 }
 
 /*
@@ -468,6 +483,7 @@ static qboolean Select_World( void ) {
 // what a board is drawn on this frame: where the engine can in the level, upright and turned to the camera
 static void Board_Begin( selectBoard_t *b ) {
 	b->world = Select_World();
+	b->unit = b->world ? SELECT_UNIT : 1.0f;
 	if ( !b->world ) {
 		return;
 	}
@@ -501,24 +517,25 @@ static qboolean Board_Place( selectBoard_t *b, int clientNum, float w, float h, 
 
 // a place on a board in the level: x to the right and y down from its top left corner, in units of the card
 static void Board_Point( const selectBoard_t *b, float x, float y, float lift, vec3_t out ) {
-	VectorMA( b->corner, x * SELECT_UNIT, b->right, out );
-	VectorMA( out, -y * SELECT_UNIT, b->up, out );
+	VectorMA( b->corner, x * b->unit, b->right, out );
+	VectorMA( out, -y * b->unit, b->up, out );
 	VectorMA( out, lift, b->toward, out );
 }
 
 static void Board_Panel( const selectBoard_t *b, float x, float y, float w, float h, float radius, float lift, const float *fill, const float *edge ) {
+	const float u = b->unit;
+
 	if ( b->world ) {
 		vec3_t center;
 
 		Board_Point( b, x + w * 0.5f, y + h * 0.5f, 0.0f, center );
-		CG_BubbleBoard( center, b->right, b->up, w * 0.5f * SELECT_UNIT, h * 0.5f * SELECT_UNIT,
-			Q_min( radius, Q_min( w, h ) * 0.5f ) * SELECT_UNIT, lift, fill, edge );
+		CG_BubbleBoard( center, b->right, b->up, w * 0.5f * u, h * 0.5f * u, Q_min( radius, Q_min( w, h ) * 0.5f ) * u, lift, fill, edge );
 	} else if ( Skin_Ready() ) {
-		Skin_Panel( b->corner[0] + x, b->corner[1] + y, w, h, radius, fill, edge );
+		Skin_Panel( b->corner[0] + x * u, b->corner[1] + y * u, w * u, h * u, radius * u, fill, edge );
 	} else {
-		CG_FillRect( b->corner[0] + x, b->corner[1] + y, w, h, (float *)fill );
+		CG_FillRect( b->corner[0] + x * u, b->corner[1] + y * u, w * u, h * u, (float *)fill );
 		if ( edge ) {
-			CG_DrawRect( b->corner[0] + x, b->corner[1] + y, w, h, 1.0f, (float *)edge );
+			CG_DrawRect( b->corner[0] + x * u, b->corner[1] + y * u, w * u, h * u, 1.0f, (float *)edge );
 		}
 	}
 }
@@ -528,17 +545,44 @@ static void Board_Text( const selectBoard_t *b, float x, float y, float scale, c
 		vec3_t at;
 
 		Board_Point( b, x, y + SELECT_LINE * SELECT_BASE * scale, 0.4f, at );
-		trap->ext.R_Text3D( at, b->right, b->up, SELECT_LINE * scale * SELECT_UNIT, text, color );
+		trap->ext.R_Text3D( at, b->right, b->up, SELECT_LINE * scale * b->unit, text, color );
 	} else {
-		CG_Text_Paint( b->corner[0] + x, b->corner[1] + y, scale, (float *)color, text, 0, 0, 0, Skin_Ready() ? SKIN_FONT_SANS : FONT_SMALL2 );
+		CG_Text_Paint( b->corner[0] + x * b->unit, b->corner[1] + y * b->unit, scale * b->unit, (float *)color, text, 0, 0, 0,
+			Skin_Ready() ? SKIN_FONT_SANS : FONT_SMALL2 );
 	}
 }
 
 static float Board_Width( const selectBoard_t *b, const char *text, float scale ) {
 	if ( b->world ) {
-		return trap->ext.R_Text3DWidth( text, SELECT_LINE * scale * SELECT_UNIT ) / SELECT_UNIT;
+		return trap->ext.R_Text3DWidth( text, SELECT_LINE * scale * b->unit ) / b->unit;
 	}
-	return CG_Text_Width( text, scale, Skin_Ready() ? SKIN_FONT_SANS : FONT_SMALL2 );
+	return CG_Text_Width( text, scale * b->unit, Skin_Ready() ? SKIN_FONT_SANS : FONT_SMALL2 ) / b->unit;
+}
+
+// how many pixels a unit of a board in the level is on the screen, where it stands. 0: it is not in front of the camera
+static float Board_Pixels( const selectBoard_t *b ) {
+	vec3_t	to;
+	float	z;
+
+	VectorSubtract( b->corner, cg.refdef.vieworg, to );
+	z = DotProduct( to, cg.refdef.viewaxis[0] );
+	if ( z < 8.0f ) {
+		return 0.0f;
+	}
+	return b->unit * cgs.glconfig.vidHeight * 0.5f / ( z * tanf( DEG2RAD( cg.refdef.fov_y ) * 0.5f ) );
+}
+
+// where a place of a board is on the screen, in units of the HUD. qfalse: not in front of the camera
+static qboolean Board_Screen( const selectBoard_t *b, float x, float y, float *sx, float *sy ) {
+	vec3_t at;
+
+	if ( !b->world ) {
+		*sx = b->corner[0] + x * b->unit;
+		*sy = b->corner[1] + y * b->unit;
+		return qtrue;
+	}
+	Board_Point( b, x, y, 0.0f, at );
+	return CG_WorldCoordToScreenCoordFloat( at, sx, sy );
 }
 
 // where the pointer is on the card, in its units from its top left corner. qfalse: nowhere on it
@@ -547,8 +591,8 @@ static qboolean Board_Pointer( const selectBoard_t *b, float *x, float *y ) {
 	float	toward, t;
 
 	if ( !b->world ) {
-		*x = cgs.cursorX - b->corner[0];
-		*y = cgs.cursorY - b->corner[1];
+		*x = ( cgs.cursorX - b->corner[0] ) / b->unit;
+		*y = ( cgs.cursorY - b->corner[1] ) / b->unit;
 		return qtrue;
 	}
 	// the way of the pointer through the board, which looks at the camera
@@ -564,8 +608,8 @@ static qboolean Board_Pointer( const selectBoard_t *b, float *x, float *y ) {
 	}
 	VectorMA( cg.refdef.vieworg, t, dir, hit );
 	VectorSubtract( hit, b->corner, to );
-	*x = DotProduct( to, b->right ) / SELECT_UNIT;
-	*y = -DotProduct( to, b->up ) / SELECT_UNIT;
+	*x = DotProduct( to, b->right ) / b->unit;
+	*y = -DotProduct( to, b->up ) / b->unit;
 	return qtrue;
 }
 
@@ -683,7 +727,7 @@ static int Select_RowAt( void ) {
 	float	x, y;
 	int		row;
 
-	if ( sel.selected < 0 || !sel.cardPlaced || !Board_Pointer( &sel.card, &x, &y )
+	if ( sel.selected < 0 || !sel.cardPlaced || !Board_Pointer( &sel.shown, &x, &y )
 		|| x < 0.0f || x >= SELECT_CARD_W || y < SELECT_HEAD_H ) {
 		return -1;
 	}
@@ -707,7 +751,7 @@ static void Select_DrawCard( const selectBoard_t *b ) {
 	if ( !b->world && Skin_Ready() ) {
 		const vec4_t dark = { 0.0f, 0.0f, 0.0f, 0.4f };
 
-		Skin_Soft( b->corner[0], b->corner[1] + 3.0f, SELECT_CARD_W, height, 10.0f, dark );
+		Skin_Soft( b->corner[0], b->corner[1] + 3.0f * b->unit, SELECT_CARD_W * b->unit, height * b->unit, 10.0f * b->unit, dark );
 	}
 	Board_Panel( b, 0.0f, 0.0f, SELECT_CARD_W, height, 6.0f, 0.1f, fill, edge );
 	Board_Text( b, 8.0f, 5.0f, 0.78f, colorWhite, ci->name );
@@ -740,54 +784,139 @@ static void Select_DrawCard( const selectBoard_t *b ) {
 	}
 }
 
+static void Select_DrawTag( const selectBoard_t *b, const char *name, float w ) {
+	const vec4_t back = { 0.0f, 0.0f, 0.0f, 0.55f };
+
+	Board_Panel( b, 0.0f, 0.0f, w, 15.0f, 4.0f, 0.1f, back, NULL );
+	Board_Text( b, 5.0f, 2.0f, 0.62f, colorWhite, name );
+}
+
 /*
 =================
-Select_Boards
+Select_Tag
 
-The name of the player under the pointer and the card of the one that was clicked, each beside its player. For
-an engine that writes in the scene they are things in the level and this is called while the scene is put
-together (CG_SelectScene()), for another one they are drawn on the screen with the HUD.
+The name of the player under the pointer, beside him, once a frame: where it is, and on what it is drawn
+(sel.tagShown). In the level it is drawn here. The name of somebody far away would be too small to read there:
+from where its letters would be lower than SELECT_TAG_PX it is on the screen at that height, at the place it has
+in the level, and CG_SelectDraw() draws it with the HUD. No jump between the two: at that distance it is as
+large there as here.
 =================
 */
-static void Select_Boards( void ) {
-	if ( sel.hover >= 0 && sel.hover != sel.selected && Select_Valid( sel.hover ) ) {
-		const vec4_t	back = { 0.0f, 0.0f, 0.0f, 0.55f };
-		const char		*name = cgs.clientinfo[sel.hover].name;
-		float			w;
+static void Select_Tag( void ) {
+	const char	*name;
+	float		letters;
 
-		Board_Begin( &sel.tag );
-		w = Board_Width( &sel.tag, name, 0.62f ) + 10.0f;
-		if ( Board_Place( &sel.tag, sel.hover, w, 15.0f, (qboolean)( sel.tagFor != sel.hover ) ) ) {
-			sel.tagFor = sel.hover;
-		}
-		if ( sel.tagFor == sel.hover ) {
-			selectBoard_t at = sel.tag;
-
-			if ( !at.world ) {
-				Select_Pixels( &at.corner[0], &at.corner[1] );
-			}
-			Board_Panel( &at, 0.0f, 0.0f, w, 15.0f, 4.0f, 0.1f, back, NULL );
-			Board_Text( &at, 5.0f, 2.0f, 0.62f, colorWhite, name );
-		}
-	} else {
+	if ( sel.hover < 0 || sel.hover == sel.selected || !Select_Valid( sel.hover ) ) {
 		sel.tagFor = -1;
+		return;
 	}
-	if ( sel.selected >= 0 ) {
-		selectBoard_t at;
+	name = cgs.clientinfo[sel.hover].name;
+	Board_Begin( &sel.tag );
+	sel.tagWidth = Board_Width( &sel.tag, name, 0.62f ) + 10.0f;
+	if ( Board_Place( &sel.tag, sel.hover, sel.tagWidth, 15.0f, (qboolean)( sel.tagFor != sel.hover ) ) ) {
+		sel.tagFor = sel.hover;
+	}
+	if ( sel.tagFor != sel.hover ) {
+		return;
+	}
+	sel.tagShown = sel.tag;
+	if ( !sel.tag.world ) {
+		return;
+	}
+	letters = SELECT_LINE * 0.62f * Board_Pixels( &sel.tag );
+	if ( letters > 0.0f && letters < SELECT_TAG_PX
+		&& CG_WorldCoordToScreenCoordFloat( sel.tag.corner, &sel.tagShown.corner[0], &sel.tagShown.corner[1] ) ) {
+		sel.tagShown.world = qfalse;
+		sel.tagShown.unit = SELECT_TAG_PX / ( SELECT_LINE * 0.62f ) * SCREEN_HEIGHT / cgs.glconfig.vidHeight;
+		sel.tagWidth = Board_Width( &sel.tagShown, name, 0.62f ) + 10.0f;
+		return;
+	}
+	Select_DrawTag( &sel.tagShown, name, sel.tagWidth );
+}
 
-		Select_Rows( sel.selected );
-		Board_Begin( &sel.card );
-		// beside the player while he is in front of the camera, where it was otherwise
-		if ( Select_Valid( sel.selected ) && Board_Place( &sel.card, sel.selected, SELECT_CARD_W,
-				SELECT_HEAD_H + sel.numRows * SELECT_ROW_H + 5.0f, (qboolean)!sel.cardPlaced ) ) {
-			sel.cardPlaced = qtrue;
-		}
-		at = sel.card;
-		if ( !at.world ) {
-			Select_Pixels( &at.corner[0], &at.corner[1] );
-		}
-		Select_DrawCard( &at );
+// What a unit of the card is on the screen, in units of the HUD: 1, the size it was made for. More in a window of
+// so few pixels that its rows would then be lower than the rows of a card that is sent back into the level.
+static float Select_FlatUnit( void ) {
+	const float row = SELECT_LINE * SELECT_SCALE * cgs.glconfig.vidHeight / SCREEN_HEIGHT;
+
+	return Q_max( 1.0f, SELECT_FLAT_MIN_PX / row );
+}
+
+// 0 to 1 over the time of a pop, a little past 1 on the way: what pops out is too large for a moment
+static float Select_Pop( int age ) {
+	const float t = Com_Clamp( 0.0f, 1.0f, (float)age / SELECT_POP_MSEC ) - 1.0f;
+
+	return 1.0f + 2.7f * t * t * t + 1.7f * t * t;
+}
+
+/*
+=================
+Select_Card
+
+The card of the player that was clicked, once a frame: where it is, and on what it is drawn (sel.shown). It is a
+thing in the level beside him and is drawn here then. Too far away to be read there, its rows lower than
+SELECT_FLAT_PX pixels, it comes out of the level onto the screen, where it has the size it was made for and
+nothing hides it: it pops out, a little too large for a moment, and goes back the same way when he is near
+again. On the screen it is drawn with the HUD, by CG_SelectDraw(), as it is for an engine that writes nothing
+in the scene.
+=================
+*/
+static void Select_Card( void ) {
+	vec3_t	to = { 0.0f, 0.0f, 0.0f };
+	float	h, px, k = 0.0f;
+	int		age;
+
+	Select_Rows( sel.selected );
+	h = SELECT_HEAD_H + sel.numRows * SELECT_ROW_H + 5.0f;
+	Board_Begin( &sel.card );
+	// beside the player while he is in front of the camera, where it was otherwise
+	if ( Select_Valid( sel.selected ) && Board_Place( &sel.card, sel.selected, SELECT_CARD_W, h, (qboolean)!sel.cardPlaced ) ) {
+		sel.cardPlaced = qtrue;
 	}
+	sel.shown = sel.card;
+	if ( !sel.card.world ) {
+		return;
+	}
+	px = Board_Pixels( &sel.card );
+	if ( px > 0.0f ) {
+		// (a row of the card in pixels, and a unit of the card in units of the HUD)
+		const float row = SELECT_LINE * SELECT_SCALE * px;
+
+		k = px * SCREEN_HEIGHT / cgs.glconfig.vidHeight;
+		if ( !sel.flat && row < SELECT_FLAT_PX ) {
+			sel.flat = qtrue;
+			sel.flatTime = cg.time;
+			sel.flatFrom = k;
+			// it sets out from where it is in the level
+			CG_WorldCoordToScreenCoordFloat( sel.card.corner, &sel.screen.corner[0], &sel.screen.corner[1] );
+		} else if ( sel.flat && row > SELECT_WORLD_PX ) {
+			sel.flat = qfalse;
+			sel.flatTime = cg.time;
+			sel.flatFrom = sel.screen.unit;
+		}
+	}
+	age = cg.time - sel.flatTime;
+	if ( !sel.flat && ( age < 0 || age >= SELECT_POP_MSEC || px <= 0.0f ) ) {
+		Select_DrawCard( &sel.card );
+		return;
+	}
+
+	// on the screen, or between the two
+	sel.screen.world = qfalse;
+	sel.screen.unit = Q_max( 0.05f, sel.flatFrom + ( ( sel.flat ? Select_FlatUnit() : k ) - sel.flatFrom ) * Select_Pop( age ) );
+	if ( sel.flat ) {
+		if ( Select_Valid( sel.selected )
+			&& Select_Beside( sel.selected, SELECT_CARD_W * sel.screen.unit, h * sel.screen.unit, &to[0], &to[1] ) ) {
+			Select_Follow( sel.screen.corner, to, qfalse );
+		}
+	} else if ( CG_WorldCoordToScreenCoordFloat( sel.card.corner, &to[0], &to[1] ) ) {
+		// on its way back: it arrives where it stands in the level
+		const float part = Com_Clamp( 0.0f, 1.0f, (float)age / SELECT_POP_MSEC );
+
+		sel.screen.corner[0] += ( to[0] - sel.screen.corner[0] ) * part;
+		sel.screen.corner[1] += ( to[1] - sel.screen.corner[1] ) * part;
+	}
+	sel.shown = sel.screen;
 }
 
 /*
@@ -799,7 +928,10 @@ Once a frame while the scene is put together, before it is drawn
 */
 void CG_SelectScene( void ) {
 	if ( Select_Free() && Select_World() ) {
-		Select_Boards();
+		Select_Tag();
+		if ( sel.selected >= 0 ) {
+			Select_Card();
+		}
 	}
 }
 
@@ -883,7 +1015,24 @@ void CG_SelectDraw( void ) {
 		}
 	}
 	if ( !Select_World() ) {
-		Select_Boards();
+		Select_Tag();
+		if ( sel.selected >= 0 ) {
+			Select_Card();
+		}
+	}
+	// the name and the card where they are on the screen: a player too far away, or an engine that writes nothing
+	// in the scene
+	if ( sel.hover >= 0 && sel.hover != sel.selected && sel.tagFor == sel.hover && !sel.tagShown.world ) {
+		selectBoard_t at = sel.tagShown;
+
+		Select_Pixels( &at.corner[0], &at.corner[1] );
+		Select_DrawTag( &at, cgs.clientinfo[sel.hover].name, sel.tagWidth );
+	}
+	if ( sel.selected >= 0 && sel.cardPlaced && !sel.shown.world ) {
+		selectBoard_t at = sel.shown;
+
+		Select_Pixels( &at.corner[0], &at.corner[1] );
+		Select_DrawCard( &at );
 	}
 	// the pointer lies on everything, on the card as well
 	CG_SelectDrawCursor();
@@ -913,6 +1062,8 @@ qboolean CG_SelectKeyEvent( int key, qboolean down ) {
 		if ( sel.hover >= 0 ) {
 			sel.selected = sel.hover;
 			sel.confirmTime = 0;
+			sel.flat = qfalse;
+			sel.flatTime = 0;
 			// the card opens where his name stood
 			sel.cardPlaced = (qboolean)( sel.tagFor == sel.hover );
 			if ( sel.cardPlaced ) {
@@ -999,6 +1150,17 @@ void CG_SelectCursor_f( void ) {
 		}
 	} else if ( !Q_stricmp( what, "click" ) ) {
 		CG_SelectKeyEvent( A_MOUSE1, qtrue );
+	} else if ( !Q_stricmp( what, "over" ) ) {
+		// the pointer onto the middle of a row of the card that is open, wherever the card is (for scripts)
+		const int row = atoi( CG_Argv( 2 ) ) - 1;
+
+		float x, y;
+
+		if ( sel.selected >= 0 && row >= 0 && row < sel.numRows
+			&& Board_Screen( &sel.shown, SELECT_CARD_W * 0.5f, SELECT_HEAD_H + ( row + 0.5f ) * SELECT_ROW_H, &x, &y ) ) {
+			cgs.cursorX = (int)x;
+			cgs.cursorY = (int)y;
+		}
 	} else if ( !Q_stricmp( what, "row" ) ) {
 		// a row of the card that is open, by its number
 		const int row = atoi( CG_Argv( 2 ) ) - 1;
