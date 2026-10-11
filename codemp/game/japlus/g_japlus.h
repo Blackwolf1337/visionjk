@@ -62,6 +62,16 @@ typedef struct jpClient_s {
 	char		sayTeamMode[32];		// say_team_mod: "", normal, clan, admin or ampsay
 	char		clanPass[64];			// clanpass, clan chat reaches players with the same pass
 	qboolean	utf8;					// the client reads and writes UTF-8 (cl_utf8Text of its userinfo), see JP_ChatFor()
+
+	// what stands above the head (status/g_status.c)
+	int			statusCaps;				// cjp_caps of the userinfo: what the cgame of the client draws, bit 0 statuses
+	qboolean	statusAway;				// no sign of life for g_afkTime seconds
+	char		statusMusic[64];		// what the client says its player listens to
+	int			statusCmdTime;			// of its last jpstatus command
+	int			statusInputTime;		// when its commands last changed, 0: none came yet
+	int			statusButtons;			// the command they are compared with
+	signed char	statusMove[3];
+	int			statusAngles[2];
 	int			clanTagWarnTime;		// next warning about a protected clan tag in the name
 	int			clanTagWarnState;		// 0..2: warnings sent since clanTagWarnTime was set
 	int			testAnim;				// amtest: next animation
@@ -155,6 +165,10 @@ void		JP_ClanTagThink( gentity_t *ent );
 void		JP_SanitizeString( char *out, const char *in, size_t outSize, int maxIn );
 #define JP_NAME_CHARS	31	// the original name compares look at this many characters
 void		JP_UserinfoChanged( gentity_t *ent, const char *userinfo );
+void		G_StatusUserinfo( gentity_t *ent, const char *userinfo );		// status/g_status.c
+void		G_StatusInput( gentity_t *ent, const usercmd_t *ucmd );
+void		G_StatusFrame( void );
+void		Cmd_JPStatus_f( gentity_t *ent );
 void		JP_ChatCopy( const gentity_t *from, const char *text, char *out, int outSize );
 const char	*JP_ChatFor( const gentity_t *from, const gentity_t *other, const char *text, char *buffer, int bufferSize );
 qboolean	JP_ChatIgnored( gentity_t *speaker, gentity_t *listener );

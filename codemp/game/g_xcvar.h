@@ -67,6 +67,8 @@ XCVAR_DEF( dmflags,						"0",			NULL,						CVAR_SERVERINFO|CVAR_ARCHIVE,					qtr
 XCVAR_DEF( duel_fraglimit,				"10",			NULL,						CVAR_SERVERINFO|CVAR_ARCHIVE|CVAR_NORESTART,	qtrue )
 XCVAR_DEF( fraglimit,					"20",			NULL,						CVAR_SERVERINFO|CVAR_ARCHIVE|CVAR_NORESTART,	qtrue )
 XCVAR_DEF( g_adaptRespawn,				"1",			NULL,						CVAR_NONE,										qtrue )
+// seconds without a key or a turn after which a player counts as away (status/g_status.c), 0: never
+XCVAR_DEF( g_afkTime,					"60",			NULL,						CVAR_ARCHIVE,									qtrue )
 XCVAR_DEF( g_allowDuelSuicide,			"0",			NULL,						CVAR_ARCHIVE,									qtrue )
 XCVAR_DEF( g_allowHighPingDuelist,		"1",			NULL,						CVAR_NONE,										qtrue )
 XCVAR_DEF( g_allowNPC,					"1",			NULL,						CVAR_ARCHIVE,										qtrue )
@@ -171,8 +173,9 @@ XCVAR_DEF( g_teamForceBalance,			"3",			NULL,						CVAR_ARCHIVE,									qfalse 
 XCVAR_DEF( g_timeouttospec,				"70",			NULL,						CVAR_ARCHIVE,									qfalse )
 XCVAR_DEF( g_userinfoValidate,			"25165823",		NULL,						CVAR_ARCHIVE,									qfalse )
 // What this game module knows that a stock one does not, for the clients of this tree, in the server info. Bit 0:
-// chat in UTF-8 (JP_ChatFor() in g_japlus_chat.c), a client sends UTF-8 only where it reads this bit.
-XCVAR_DEF( g_visionCaps,				"1",			NULL,						CVAR_SERVERINFO|CVAR_ROM,						qfalse )
+// chat in UTF-8 (JP_ChatFor() in g_japlus_chat.c), a client sends UTF-8 only where it reads this bit. Bit 1: it
+// passes on what stands above the heads (status/g_status.c).
+XCVAR_DEF( g_visionCaps,				"3",			NULL,						CVAR_SERVERINFO|CVAR_ROM,						qfalse )
 XCVAR_DEF( g_useWhileThrowing,			"1",			NULL,						CVAR_NONE,										qtrue )
 // The voice chat (g_voice.c). g_voice is in the server info: the cgame of this port asks for voice only where it reads it there.
 XCVAR_DEF( g_voice,						"1",			NULL,						CVAR_SERVERINFO|CVAR_ARCHIVE|CVAR_LATCH,		qfalse )

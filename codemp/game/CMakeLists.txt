@@ -168,6 +168,13 @@ set(MPGameJaplusFiles
 source_group("game/japlus" FILES ${MPGameJaplusFiles})
 set(MPGameFiles ${MPGameFiles} ${MPGameJaplusFiles})
 
+# what stands above the head of a player: away, music
+set(MPGameStatusFiles
+	"${MPDir}/game/status/g_status.c"
+	)
+source_group("game/status" FILES ${MPGameStatusFiles})
+set(MPGameFiles ${MPGameFiles} ${MPGameStatusFiles})
+
 # the relay of the voice chat, bg_voice.c is built into the cgame too
 set(MPGameVoiceFiles
 	"${MPDir}/game/voice/bg_voice.c"

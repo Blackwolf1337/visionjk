@@ -2992,6 +2992,7 @@ void G_RunFrame( int levelTime ) {
 
 	WebAdmin_Frame();
 	G_VoiceFrame();
+	G_StatusFrame();
 	G_SchizoFrame();
 	G_FlatulenceFrame();
 	G_DisorientFrame();
