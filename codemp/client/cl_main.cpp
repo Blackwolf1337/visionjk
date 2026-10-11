@@ -2852,6 +2852,9 @@ void CL_Init( void ) {
 	Cvar_Get( "cl_cgameChat", "1", CVAR_ROM, "" );
 	// and the calls for text and pictures of its own in the scene
 	Cvar_Get( "cl_cgameScene", "1", CVAR_ROM, "" );
+	// the menus on a plane in the level, and the blur of the scene around a distance
+	Cvar_Get( "cl_cgameUIPlane", "1", CVAR_ROM, "" );
+	Cvar_Get( "cl_cgameDoF", "1", CVAR_ROM, "" );
 	cl_consoleShiftRequirement = Cvar_Get( "cl_consoleShiftRequirement", "0", CVAR_ARCHIVE, "Require shift key to be pressed for native console key detection" );
 
 	cl_filterGames = Cvar_Get( "cl_filterGames", "MBII MBIIOpenBeta", CVAR_ARCHIVE_ND, "List of fs_game to filter (space separated)" );

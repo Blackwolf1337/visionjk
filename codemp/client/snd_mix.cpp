@@ -98,6 +98,53 @@ void S_TransferStereo16 (unsigned long *pbuf, int endtime)
 
 /*
 ===================
+S_MufflePaint
+
+s_muffle, 0 to 1: the whole mix of the game goes through a low pass, the more the higher the value. At 1 what
+is above about 600 Hz is damped, at 0 nothing is done. A module sets it while something stands in front of the
+game: the menu in the level of the cgame (cgame/menu3d). The value is approached over a fifth of a second, so
+nothing clicks. Sounds, music and the sounds of snd_spatial.cpp all pass here.
+===================
+*/
+static void S_MufflePaint( int count ) {
+	static cvar_t	*s_muffle;
+	static float	now, state[2], pass = 1.0f;
+	float			target, step;
+	int				i;
+
+	if ( !s_muffle ) {
+		s_muffle = Cvar_Get( "s_muffle", "0", CVAR_TEMP, "0 to 1: the sound of the game is muffled, set by the cgame while its menu stands in the level" );
+	}
+	target = Com_Clamp( 0.0f, 1.0f, s_muffle->value );
+	if ( target <= 0.0f && now <= 0.001f ) {
+		now = 0.0f;
+		return;
+	}
+	if ( count > PAINTBUFFER_SIZE ) {
+		count = PAINTBUFFER_SIZE;
+	}
+	step = 1.0f / ( 0.2f * dma.speed );
+	for ( i = 0; i < count; i++ ) {
+		if ( !( i & 63 ) ) {
+			// the corner of the low pass goes from 16 kHz down to 600 Hz, evenly for the ear
+			const float cutoff = 16000.0f * powf( 600.0f / 16000.0f, now );
+
+			pass = 1.0f - expf( -2.0f * M_PI * cutoff / dma.speed );
+		}
+		if ( now < target ) {
+			now = Q_min( target, now + step );
+		} else if ( now > target ) {
+			now = Q_max( target, now - step );
+		}
+		state[0] += pass * ( paintbuffer[i].left - state[0] );
+		state[1] += pass * ( paintbuffer[i].right - state[1] );
+		paintbuffer[i].left = (int)state[0];
+		paintbuffer[i].right = (int)state[1];
+	}
+}
+
+/*
+===================
 S_TransferPaintBuffer
 
 ===================
@@ -486,6 +533,9 @@ void S_PaintChannels( int endtime ) {
 		if ( S_SpatialActive() ) {
 			S_SpatialPaint( s_paintedtime, end, paintbuffer );
 		}
+
+		// muffled while a module asks for it
+		S_MufflePaint( end - s_paintedtime );
 
 		// transfer out according to DMA format
 		S_TransferPaintBuffer( end );

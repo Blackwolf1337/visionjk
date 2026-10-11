@@ -742,6 +742,15 @@ typedef struct cgameImport_s {
 		float			(*R_Text3DWidth)						( const char *text, float height );
 		qboolean		(*R_Text3D)								( const vec3_t origin, const vec3_t right, const vec3_t up, float height, const char *text, const float *rgba );
 		qhandle_t		(*R_RegisterShaderRGBA)					( const char *name, const byte *rgba, int width, int height, qboolean glow );
+		// Only an engine that sets the cvar cl_cgameUIPlane to 1 has this one, the same way. The menus of this
+		// frame are drawn on a plane in the level and not flat on the screen (menu3d/cg_menu3d.c): matrix takes
+		// a place of the 2D grid to clip space, 16 values column by column. Called before the menus are drawn,
+		// every frame it is wanted.
+		void			(*R_SetUIPlane)							( const float *matrix );
+		// Only an engine that sets the cvar cl_cgameDoF to 1 has this one, the same way. The scene of this
+		// frame is blurred where it is nearer or farther than focus (units of the level), amount 0 to 1. Called
+		// before R_RenderScene, every frame it is wanted. A renderer without the effect does nothing.
+		void			(*R_SetDepthOfField)					( float focus, float amount );
 	} ext;
 } cgameImport_t;
 
