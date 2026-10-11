@@ -104,42 +104,94 @@ s_muffle, 0 to 1: the whole mix of the game goes through a low pass, the more th
 is above about 600 Hz is damped, at 0 nothing is done. A module sets it while something stands in front of the
 game: the menu in the level of the cgame (cgame/menu3d). The value is approached over a fifth of a second, so
 nothing clicks. Sounds, music and the sounds of snd_spatial.cpp all pass here.
+
+The mixer paints ahead of what is heard and starts again right in front of it with every frame
+(S_GetSoundtime), so most samples are painted many times. A filter that just runs on would begin each of those
+paints with what it had at the end of the one before, a fifth of a second later in the sound: the samples then
+come out different every time, and where the device goes from one paint to the next the wave jumps. That was a
+crackle with every frame. So what the filter has after a sample is kept by the time of the sample, as
+snd_spatial.cpp keeps its ring, and a paint goes on from the sample in front of its first.
 ===================
 */
-static void S_MufflePaint( int count ) {
+#define MUFFLE_RING		32768		// samples, a power of two: more than the mixer is ever ahead
+#define MUFFLE_STEPS	128
+
+static void S_MufflePaint( int from, int to ) {
 	static cvar_t	*s_muffle;
-	static float	now, state[2], pass = 1.0f;
-	float			target, step;
-	int				i;
+	static struct muffleSample_s {
+		float	left, right;		// what the filter gave for this sample
+		float	amount;				// and how far it was muffled, 0 to 1
+	} ring[MUFFLE_RING];
+	static int		ringFrom, ringTo;			// the ring has the samples of these times
+	static float	pass[MUFFLE_STEPS + 1];		// the part of a new sample the filter takes, by the amount
+	static int		passSpeed;
+	float			target, step, left, right, amount = 0.0f;
+	int				t;
 
 	if ( !s_muffle ) {
 		s_muffle = Cvar_Get( "s_muffle", "0", CVAR_TEMP, "0 to 1: the sound of the game is muffled, set by the cgame while its menu stands in the level" );
 	}
 	target = Com_Clamp( 0.0f, 1.0f, s_muffle->value );
-	if ( target <= 0.0f && now <= 0.001f ) {
-		now = 0.0f;
+	if ( to - from > PAINTBUFFER_SIZE ) {
+		to = from + PAINTBUFFER_SIZE;
+	}
+	if ( to <= from ) {
 		return;
 	}
-	if ( count > PAINTBUFFER_SIZE ) {
-		count = PAINTBUFFER_SIZE;
-	}
-	step = 1.0f / ( 0.2f * dma.speed );
-	for ( i = 0; i < count; i++ ) {
-		if ( !( i & 63 ) ) {
-			// the corner of the low pass goes from 16 kHz down to 600 Hz, evenly for the ear
-			const float cutoff = 16000.0f * powf( 600.0f / 16000.0f, now );
 
-			pass = 1.0f - expf( -2.0f * M_PI * cutoff / dma.speed );
+	// where the filter stood one sample earlier
+	left = (float)paintbuffer[0].left;
+	right = (float)paintbuffer[0].right;
+	if ( from > ringFrom && from <= ringTo ) {
+		const struct muffleSample_s *last = &ring[( from - 1 ) & ( MUFFLE_RING - 1 )];
+
+		left = last->left;
+		right = last->right;
+		amount = last->amount;
+	} else {
+		ringFrom = ringTo = from;		// nothing is known of that sample: the sound started, or it was not muffled
+	}
+	if ( target <= 0.0f && amount <= 0.0f ) {
+		ringFrom = ringTo = from;
+		return;
+	}
+
+	if ( passSpeed != dma.speed ) {
+		passSpeed = dma.speed;
+		pass[0] = 1.0f;		// all of the new sample: nothing is changed
+		for ( t = 1; t <= MUFFLE_STEPS; t++ ) {
+			// the corner of the low pass goes from 16 kHz down to 600 Hz, evenly for the ear
+			const float cutoff = 16000.0f * powf( 600.0f / 16000.0f, (float)t / MUFFLE_STEPS );
+
+			pass[t] = 1.0f - expf( -2.0f * M_PI * cutoff / dma.speed );
 		}
-		if ( now < target ) {
-			now = Q_min( target, now + step );
-		} else if ( now > target ) {
-			now = Q_max( target, now - step );
+	}
+
+	step = 1.0f / ( 0.2f * dma.speed );
+	for ( t = from; t < to; t++ ) {
+		portable_samplepair_t		*pair = &paintbuffer[t - from];
+		struct muffleSample_s		*slot = &ring[t & ( MUFFLE_RING - 1 )];
+		float						take;
+
+		if ( amount < target ) {
+			amount = Q_min( target, amount + step );
+		} else if ( amount > target ) {
+			amount = Q_max( target, amount - step );
 		}
-		state[0] += pass * ( paintbuffer[i].left - state[0] );
-		state[1] += pass * ( paintbuffer[i].right - state[1] );
-		paintbuffer[i].left = (int)state[0];
-		paintbuffer[i].right = (int)state[1];
+		take = pass[(int)( amount * MUFFLE_STEPS + 0.5f )];
+		left += take * ( pair->left - left );
+		right += take * ( pair->right - right );
+		pair->left = (int)left;
+		pair->right = (int)right;
+		slot->left = left;
+		slot->right = right;
+		slot->amount = amount;
+	}
+	if ( to > ringTo ) {
+		ringTo = to;
+	}
+	if ( ringTo - ringFrom > MUFFLE_RING ) {
+		ringFrom = ringTo - MUFFLE_RING;
 	}
 }
 
@@ -535,7 +587,7 @@ void S_PaintChannels( int endtime ) {
 		}
 
 		// muffled while a module asks for it
-		S_MufflePaint( end - s_paintedtime );
+		S_MufflePaint( s_paintedtime, end );
 
 		// transfer out according to DMA format
 		S_TransferPaintBuffer( end );
