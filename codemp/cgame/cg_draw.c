@@ -8412,6 +8412,8 @@ void CG_DrawActive( stereoFrame_t stereoView ) {
 	// draw 3D view
 	// the panel of the menu in the level, and where the engine is to draw the menu (menu3d/cg_menu3d.c)
 	CG_Menu3DScene();
+	// the name and the card of a player the mouse points at, which are things in the level (select/cg_select.c)
+	CG_SelectScene();
 
 	trap->R_RenderScene( &cg.refdef );
 

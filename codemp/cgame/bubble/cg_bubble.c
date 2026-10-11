@@ -381,6 +381,43 @@ qboolean CG_BubblePanelAt( const vec3_t center, const vec3_t right, const vec3_t
 
 /*
 =================
+CG_BubbleBoard
+
+A panel as the bubbles have it, for something else that is a thing in the level as they are and is hidden by what
+is in front of it (the card of a player, select/cg_select.c): its inside, and its edge where one is given, around
+a point, along right and up, lifted that far toward the one who looks. qfalse: it can not be drawn (another
+engine). CG_BubbleReady() says so beforehand.
+=================
+*/
+qboolean CG_BubbleReady( void ) {
+	if ( !bubbleArt.tried ) {
+		Bubble_InitArt();
+	}
+	return bubbleArt.ready;
+}
+
+qboolean CG_BubbleBoard( const vec3_t center, const vec3_t right, const vec3_t up, float halfW, float halfH, float corner, float lift,
+		const float *fill, const float *border ) {
+	bubbleView_t view;
+
+	if ( !CG_BubbleReady() ) {
+		return qfalse;
+	}
+	VectorCopy( center, view.center );
+	VectorCopy( right, view.right );
+	VectorCopy( up, view.up );
+	CrossProduct( right, up, view.toward );
+	if ( fill ) {
+		Bubble_Panel( bubbleArt.fill, &view, halfW, halfH, corner, lift, fill, 1.0f );
+	}
+	if ( border ) {
+		Bubble_Panel( bubbleArt.border, &view, halfW, halfH, corner, lift + 0.1f, border, 1.0f );
+	}
+	return qtrue;
+}
+
+/*
+=================
 CG_BubbleDraw
 
 Adds what stands above the head of a player to the scene: what he said, or three dots while he types (dots:

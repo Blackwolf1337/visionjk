@@ -370,11 +370,22 @@ A row is run with a click or with its number. A click beside the card, the right
   - Found while it was made: a model surface is freed the last time it is drawn in a view, which was "in the
     glow pass if its shader glows". The hilt of a saber glows, was freed there and drawn again after the glow:
     a crash on both renderers at the first outline. `R_GhoulSurfaceDone()` is the one rule now, for both.
-- The name and the card stand beside their player: at his right as the camera sees him, their top at the height
-  of his head, at his left where the screen ends at his right. The place is one in the level (13 units beside
-  his middle), so they are as near to him at any distance, and they follow it a little late (most of the way in
-  90 ms), so a step of his is no jump of theirs. Their size on the screen is always the same: they are read and
-  clicked, a card of the size of the player could be neither from far away. The card opens where the name stood.
+- The name and the card are things in the level, as the chat bubbles are (`Select_Boards()`, called while the
+  scene is put together): as large there at any distance (a unit of the card is 0.3 units of the level, which
+  gives its name letters as tall as those of a bubble and makes the card about 45 units wide and 42 high with
+  seven rows), upright, turned to the one who looks about their upright axis only, and hidden by what is in
+  front of them. They stand beside their player: at his right as the camera sees him, 13 units from his middle,
+  their top at the height of his head. At his left where the screen ends at his right, and lifted or lowered a
+  little where they would reach over the top or the bottom of the screen: the view can not be turned to them
+  while the mouse is free. They follow their place a little late (most of the way in 90 ms), so a step of his
+  is no jump of theirs. The card opens where the name stood.
+- A row is clicked through the level: the way of the pointer from the eye is cut with the plane of the card
+  (`Board_Pointer()`), and the place on it says which row.
+- What it costs to be a thing in the level: far away the card is as small as the player and can not be read, a
+  figure in front of it covers it (your own in third person too), and the marked player is drawn over it where
+  an arm of his reaches into it.
+- An engine that can not write in the scene gets name and card on the screen with the HUD, at one size, at the
+  same place beside the player. That path is the code of before and was not run again.
 - The pointer is drawn after the card, by `CG_SelectDraw()` also while the chat box is open, which used to draw
   it itself before the card.
 
