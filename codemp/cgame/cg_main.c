@@ -2631,6 +2631,7 @@ Ghoul2 Insert End
 
 	CG_VoiceInit();		// in front of the server info, which tells it whether this server has a voice chat
 	CG_ChatInit();
+	CG_BubbleInit();
 	CG_ParseServerinfo();
 	CG_JPAutoReplierInit();
 

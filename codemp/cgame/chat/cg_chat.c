@@ -57,13 +57,6 @@ extern displayContextDef_t cgDC;
 #define CHAT_SENT			16				// lines one sent that Up brings back
 #define CHAT_CURSOR_SIZE	32.0f
 
-typedef enum {
-	CHAT_ALL,
-	CHAT_TEAM,			// team chat, and the clan and admin chat of JA+
-	CHAT_TELL,
-	CHAT_NUM_KINDS
-} chatKind_t;
-
 typedef struct chatMsg_s {
 	char		text[CHAT_TEXT];
 	int			time;						// cg.time when it came

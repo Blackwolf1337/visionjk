@@ -1744,6 +1744,13 @@ Ghoul2 Insert End
 // cg_drawtools.c
 //
 // chat/cg_chat.c: the chat box
+typedef enum {
+	CHAT_ALL,
+	CHAT_TEAM,			// team chat, and the clan and admin chat of JA+
+	CHAT_TELL,
+	CHAT_NUM_KINDS
+} chatKind_t;
+
 void		CG_ChatInit( void );
 void		CG_ChatDraw( void );
 void		CG_ChatAdd( int kind, int clientNum, const char *text );
@@ -1753,6 +1760,11 @@ void		CG_ChatBox_AddString( char *chatStr );
 qboolean	CG_ChatKeyEvent( int key, qboolean down );
 void		CG_ChatOpen_f( void );
 void		CG_ChatClose( void );
+
+// bubble/cg_bubble.c: chat bubbles above the heads
+void		CG_BubbleInit( void );
+void		CG_BubbleSay( int clientNum, int kind, const char *message );
+qboolean	CG_BubbleDraw( centity_t *cent, qboolean dots );
 
 // where on a wide window something of the 2D sits, see CG_Place2D()
 typedef enum {
