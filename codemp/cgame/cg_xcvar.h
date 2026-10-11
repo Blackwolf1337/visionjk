@@ -71,6 +71,8 @@ XCVAR_DEF( cg_chatBoxHeight,					"350",					NULL,					CVAR_ARCHIVE )
 // the chat box of this tree (chat/cg_chat.c): its width, and whether the message mode keys open its line to type in
 XCVAR_DEF( cg_chatBoxWidth,						"380",					NULL,					CVAR_ARCHIVE )
 XCVAR_DEF( cg_chatInput,						"1",					NULL,					CVAR_ARCHIVE )
+// the menu in the level while in a game (menu3d/cg_menu3d.c), 0: flat on the screen as in the base game
+XCVAR_DEF( cg_immersiveMenu,					"1",					NULL,					CVAR_ARCHIVE )
 // chat bubbles above the heads (bubble/cg_bubble.c), and how far away one still sees them
 XCVAR_DEF( cg_chatBubbles,						"1",					NULL,					CVAR_ARCHIVE )
 XCVAR_DEF( cg_bubbleRange,						"1200",					NULL,					CVAR_ARCHIVE )

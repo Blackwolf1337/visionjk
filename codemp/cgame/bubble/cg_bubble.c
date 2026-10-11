@@ -341,6 +341,35 @@ static void Bubble_Panel( qhandle_t shader, const bubbleView_t *view, float half
 
 /*
 =================
+CG_BubblePanelAt
+
+A panel as the bubbles have it, for something else that stands in the level (the menu, menu3d/cg_menu3d.c):
+its soft light, its inside and its edge around a point, along right and up. qfalse: it can not be drawn (another
+engine).
+=================
+*/
+qboolean CG_BubblePanelAt( const vec3_t center, const vec3_t right, const vec3_t up, float halfW, float halfH, float corner,
+		const float *fill, const float *border, const float *glow, float alpha ) {
+	bubbleView_t view;
+
+	if ( !bubbleArt.tried ) {
+		Bubble_InitArt();
+	}
+	if ( !bubbleArt.ready ) {
+		return qfalse;
+	}
+	VectorCopy( center, view.center );
+	VectorCopy( right, view.right );
+	VectorCopy( up, view.up );
+	CrossProduct( up, right, view.toward );
+	Bubble_Panel( bubbleArt.glow, &view, halfW + corner, halfH + corner, corner * 1.8f, 0.0f, glow, alpha );
+	Bubble_Panel( bubbleArt.fill, &view, halfW, halfH, corner, 0.0f, fill, alpha );
+	Bubble_Panel( bubbleArt.border, &view, halfW, halfH, corner, 0.0f, border, alpha );
+	return qtrue;
+}
+
+/*
+=================
 CG_BubbleDraw
 
 Adds what stands above the head of a player to the scene: what he said, or three dots while he types (dots:

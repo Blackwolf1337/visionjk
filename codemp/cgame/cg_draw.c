@@ -7857,6 +7857,11 @@ static void CG_Draw2D( void ) {
 		return;
 	}
 
+	// nothing of the HUD while the view is at the menu in the level or on its way (menu3d/cg_menu3d.c)
+	if ( CG_Menu3DActive() ) {
+		return;
+	}
+
 	if (cgs.clientinfo[cg.snap->ps.clientNum].team == TEAM_SPECTATOR)
 	{
 		cgRageTime = 0;
@@ -8375,6 +8380,9 @@ void CG_DrawActive( stereoFrame_t stereoView ) {
 	CG_DrawMiscStaticModels();
 
 	// draw 3D view
+	// the panel of the menu in the level, and where the engine is to draw the menu (menu3d/cg_menu3d.c)
+	CG_Menu3DScene();
+
 	trap->R_RenderScene( &cg.refdef );
 
 	// restore original viewpoint if running stereo

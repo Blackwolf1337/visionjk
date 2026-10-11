@@ -172,6 +172,13 @@ set(MPCGameStatusFiles
 source_group("cgame/status" FILES ${MPCGameStatusFiles})
 set(MPCGameFiles ${MPCGameFiles} ${MPCGameStatusFiles})
 
+# the menu in the level: shoulder camera, panel, blur and muffled sound while a menu is open
+set(MPCGameMenu3DFiles
+	"${MPDir}/cgame/menu3d/cg_menu3d.c"
+	)
+source_group("cgame/menu3d" FILES ${MPCGameMenu3DFiles})
+set(MPCGameFiles ${MPCGameFiles} ${MPCGameMenu3DFiles})
+
 # bot mode: the client plays by itself, all of it is in the cgame
 set(MPCGameBotmodeFiles
 	"${MPDir}/cgame/botmode/cg_botmode.c"

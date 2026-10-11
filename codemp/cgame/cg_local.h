@@ -1765,6 +1765,15 @@ void		CG_ChatClose( void );
 void		CG_BubbleInit( void );
 void		CG_BubbleSay( int clientNum, int kind, const char *message );
 qboolean	CG_BubbleDraw( centity_t *cent, qboolean dots );
+qboolean	CG_BubblePanelAt( const vec3_t center, const vec3_t right, const vec3_t up, float halfW, float halfH, float corner,
+				const float *fill, const float *border, const float *glow, float alpha );
+
+// menu3d/cg_menu3d.c: the menu in the level
+void		CG_Menu3DInit( void );
+qboolean	CG_Menu3DFrame( void );
+qboolean	CG_Menu3DActive( void );
+void		CG_Menu3DView( void );
+void		CG_Menu3DScene( void );
 
 // status/cg_status.c and cg_status_music.c: away and music above the heads
 void		CG_StatusInit( void );
