@@ -175,6 +175,27 @@ set(MPGameStatusFiles
 source_group("game/status" FILES ${MPGameStatusFiles})
 set(MPGameFiles ${MPGameFiles} ${MPGameStatusFiles})
 
+# Admin login with a key or a one-time code, bg_auth.c is built into the cgame too. Monocypher checks the
+# signatures (and makes them in the cgame), and hashes the passwords of the web panel.
+set(MPGameAuthFiles
+	"${MPDir}/game/auth/bg_auth.c"
+	"${MPDir}/game/auth/g_auth.c"
+	"${MPDir}/game/auth/bg_auth.h"
+	"${VisionJKLibDir}/monocypher/monocypher.c"
+	"${VisionJKLibDir}/monocypher/monocypher.h"
+	"${VisionJKLibDir}/monocypher/monocypher-ed25519.c"
+	"${VisionJKLibDir}/monocypher/monocypher-ed25519.h"
+	"${SharedDir}/web/web_sha256.c"
+	)
+source_group("game/auth" FILES ${MPGameAuthFiles})
+set(MPGameFiles ${MPGameFiles} ${MPGameAuthFiles})
+set(MPGameIncludeDirectories ${MPGameIncludeDirectories} "${VisionJKLibDir}/monocypher")
+# gcc warns of reads behind an array in the SHA-512 of Monocypher where it works out a call with 32 bytes: the
+# branch it means is never taken with that length. The file is left as its authors ship it.
+if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
+	set_source_files_properties("${VisionJKLibDir}/monocypher/monocypher-ed25519.c" PROPERTIES COMPILE_OPTIONS "-Wno-array-bounds")
+endif()
+
 # the relay of the voice chat, bg_voice.c is built into the cgame too
 set(MPGameVoiceFiles
 	"${MPDir}/game/voice/bg_voice.c"

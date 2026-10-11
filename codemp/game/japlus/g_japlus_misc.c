@@ -744,7 +744,7 @@ void JP_ClientBeginInit( gentity_t *ent ) {
 		if ( client->sess.jpAdminLevel == JPADM_NONE ) {
 			v = Info_ValueForKey( userinfo, "cp_login" );
 			if ( v[0] && Q_stricmp( v, "NOT SET" ) )
-				G_amlogin( ent, v, qtrue );
+				G_amlogin( ent, v, qtrue, qtrue );
 		}
 		if ( !jp->clanPass[0] ) {
 			v = Info_ValueForKey( userinfo, "cp_clanPwd" );

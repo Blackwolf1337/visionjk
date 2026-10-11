@@ -145,6 +145,23 @@ answered with one line (at most once a second) and counted by the intrusion dete
   protocol. The `rcon` flag in the command table of the game module stays too: it means "from the console of
   the server".
 
+## Added later: admin login without a password
+
+Since 2026-10-11 (`game/auth`, `cgame/auth`, see server.md and client.md). The three rank passwords of JA+ and
+`cp_login` are off unless `jp_adminPasswords 1`: this changes a server at the update, its admins need a line
+in `admin_keys.txt` or a one-time code.
+
+- Signatures are Ed25519 from Monocypher 4.0.2 (`lib/monocypher`, as its authors ship it, compared with the
+  tag on GitHub). Nonces and codes come from the system (`/dev/urandom`, `CryptGenRandom`), a server without
+  random bytes lets nobody in.
+- A nonce is good for one answer and 30 seconds, per client. A client may name eight keys in 30 seconds.
+- A code has 40 bits, lives 60 seconds, works once, and wrong ones run into the wait of wrong passwords.
+- `admin_keys.txt` is read through the file system of the game, public keys are no secret. Comments from it
+  and from key files are printed without `^`, `"` and `%`.
+- Open: a client that was told to log in on a server by itself (`amkey login`) signs for that server again
+  whenever it joins. If that server turns hostile it can pass the question of another server on, and only
+  `jp_authHosts` on the other server stops that. So set it on a public server.
+
 ## Recommended server settings
 
 ```
@@ -155,9 +172,10 @@ seta g_logClientCmds "1"             // client commands in security.log
 seta sv_maxOOBRateIP "1"             // the per address rate limit on connectionless packets
 seta g_webBind "127.0.0.1"           // this machine only. The default is every interface: fine on your own network or behind a firewall
 seta g_webPassword "<long random>"   // the panel is off without it
+seta jp_authHosts "<address:port ...>" // the addresses clients reach the server by, for the login with a key
 ```
 
-There is no `rconpassword` line: the server takes no rcon, see below.
+There is no `rconpassword` line: the server takes no rcon, see above. `jp_adminPasswords` stays 0.
 
 ## Tested
 

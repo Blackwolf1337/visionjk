@@ -17,6 +17,8 @@ Key: [-] removed, [+] added, [\*] modified
 * [+] The server browser can be opened in a game (SERVERS in the in-game menu). Both browsers can leave out servers on which only bots play (`ui_browserShowBotOnly`).
 * [+] While a menu is open in a game it stands in the level next to the player, seen over his shoulder, with the scene behind it out of focus and the sound muffled (`cg_immersiveMenu`, `r_menuBlur` for how far out of focus, rd-vulkan-vision).
 * [-] The server takes no rcon any more: the password went over the wire in the clear with every command. Use the web panel or the console of the server. A `rconpassword` line in a config does nothing, the client keeps its `rcon` command for other servers.
+* [\*] The three admin rank passwords and `cp_login` only count with `jp_adminPasswords 1`. This changes a running server at the update: its admins need a line in `admin_keys.txt` or a one-time code.
+* [+] Admin login with an Ed25519 key instead of a password: `admin_keys.txt` on the server (lines as in authorized_keys behind a rank), `amkey new`, `amkey show` and `amkey login` on the client, from a key file or an ssh-agent such as 1Password (`cg_authAgent`). For clients that can not sign, `amcode <rank>` on the server console makes a code that works once within a minute (`amlogin <code>`).
 
 # Features
 

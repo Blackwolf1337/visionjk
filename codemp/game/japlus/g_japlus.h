@@ -151,7 +151,11 @@ qboolean	G_ClientAdminCmdAllowed( gentity_t *ent, const char *cmd, qboolean noti
 qboolean	G_ClientAdminCmdAllowedOn( gentity_t *ent, gentity_t *target, qboolean notify, qboolean checkAbuse );
 qboolean	G_ClientCheckAdminAbuse( gentity_t *ent, qboolean notify );
 int			G_getClientNumberForString( const char *s );
-int			G_amlogin( gentity_t *ent, const char *password, qboolean notify );
+int			G_amlogin( gentity_t *ent, const char *password, qboolean notify, qboolean fromUserinfo );
+qboolean	G_AdminLoginBlocked( gentity_t *ent, qboolean notify );
+void		G_AdminLoginFailed( gentity_t *ent, const char *what );
+void		G_AdminLoginDone( gentity_t *ent, int adminLevel, qboolean notify, const char *how );
+void		G_AdminLoginEffect( gentity_t *ent );
 const char	*G_ClientUsingJAPLUSClient( int clientNum );
 void		G_seeGhost( gentity_t *ent, qboolean see );
 qboolean	JP_AdminGun( gentity_t *ent, const char *cmd );

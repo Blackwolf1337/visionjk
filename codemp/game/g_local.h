@@ -1294,6 +1294,20 @@ qboolean G_CleanIP( const char *in, char *out, int outSize );
 
 // g_voice.c: the relay of the voice chat
 void G_VoiceInit( qboolean restart );
+
+// auth/g_auth.c: admin login with a key or a one-time code
+void		G_AuthInit( void );
+void		G_AuthClientGone( int clientNum );
+void		Cmd_JPAuth_f( gentity_t *ent );
+qboolean	G_AuthConsoleCommand( const char *cmd );
+int			G_AuthTakeCode( const char *text );
+qboolean	G_AuthNewCode( int adminLevel, char *out, int outSize );
+const char	*G_AuthRankName( int adminLevel );
+int			G_AuthRankLevel( const char *name );
+int			G_AuthKeyLevel( const byte *pub, const char **comment );
+qboolean	G_AuthCheck( const byte *signature, const byte *pub, const byte *message, int length );
+int			G_AuthNumKeys( void );
+qboolean	G_AuthKeyInfo( int index, int *adminLevel, char *fingerprint, int fingerprintSize, const char **comment );
 void G_VoiceShutdown( qboolean restart );
 void G_VoiceFrame( void );
 void G_VoiceClientGone( int clientNum );
