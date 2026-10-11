@@ -128,6 +128,19 @@ char *Sys_GetClipboardData( void ) {
 }
 
 /*
+==================
+Sys_SetClipboardData
+
+Puts a text (UTF-8) on the clipboard of the system
+==================
+*/
+void Sys_SetClipboardData( const char *text ) {
+#ifndef DEDICATED
+	SDL_SetClipboardText( text );
+#endif
+}
+
+/*
 =================
 Sys_ConsoleInput
 

@@ -343,12 +343,13 @@ typedef struct clientStatic_s {
 #define	CON_TEXTSIZE	0x30000 //was 32768
 #define	NUM_CON_TIMES	4
 
+// a cell of the console: a code point where text is UTF-8 (CL_UTF8()), else a byte of the code page of the language
 typedef union {
 	struct {
-		unsigned char	color;
-		char			character;
+		unsigned int	color : 8;
+		unsigned int	character : 24;
 	} f;
-	unsigned short	compare;
+	unsigned int	compare;
 } conChar_t;
 
 typedef struct {
@@ -552,6 +553,15 @@ void Con_ClearNotify (void);
 void Con_RunConsole (void);
 void Con_DrawConsole (void);
 void Con_PageUp( void );
+// the mouse of the console and its selection (cl_console.cpp)
+extern cvar_t *con_font;
+void Con_MouseEvent( int dx, int dy );
+void Con_MouseDown( void );
+void Con_SelectAll( void );
+qboolean Con_CopySelection( void );
+void Con_ClearSelection( void );
+qboolean IN_MousePosition( int *x, int *y );		// sdl_input.cpp
+void SCR_DrawConChar( int x, int y, unsigned int ch );
 void Con_PageDown( void );
 void Con_Top( void );
 void Con_Bottom( void );

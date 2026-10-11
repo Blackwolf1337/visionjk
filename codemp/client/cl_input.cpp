@@ -922,7 +922,10 @@ CL_MouseEvent
 =================
 */
 void CL_MouseEvent( int dx, int dy, int time ) {
-	if (cls.cursorActive) {
+	if ( Key_GetCatcher( ) & KEYCATCH_CONSOLE ) {
+		// the console is down: the mouse moves its cursor, with which text is selected
+		Con_MouseEvent( dx, dy );
+	} else if (cls.cursorActive) {
 		CL_UpdateCursorPosition( dx, dy );
 	} else if (g_clAutoMapMode && cls.cgameStarted)
 	{ //automap input

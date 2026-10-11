@@ -126,6 +126,7 @@ void	Sys_RestartOnExit( void );		// client: when the program has ended it starts
 const char *Sys_ProgramFolder( void );	// client: the folder the program file is in, as the system names it
 qboolean Sys_SameFolder( const char *a, const char *b );
 char	*Sys_GetClipboardData( void );	// note that this isn't journaled...
+void	Sys_SetClipboardData( const char *text );	// UTF-8
 
 void	Sys_Print( const char *msg );
 
