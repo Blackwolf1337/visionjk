@@ -40,6 +40,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define BUBBLE_WRAP			15.0f		// the width of a line, in heights of a letter
 #define BUBBLE_LINE_SPACE	1.25f		// from one line to the next, in heights of a letter
 #define BUBBLE_HEAD			56.0f		// above the feet of a player of normal size
+#define BUBBLE_LETTER		4.2f		// how tall a letter is, in units of the level
 #define BUBBLE_POP_MSEC		180
 #define BUBBLE_OUT_MSEC		400
 #define BUBBLE_TEX			64			// the pictures of the panel, and the part of them that is a corner
@@ -288,7 +289,7 @@ DRAWING
 
 typedef struct bubbleView_s {
 	vec3_t	center;				// the middle of the panel
-	vec3_t	right, up, toward;	// of the camera: the panel faces it
+	vec3_t	right, up, toward;	// of the panel: upright, and turned to the camera about its upright axis
 } bubbleView_t;
 
 static void Bubble_Vert( polyVert_t *vert, const bubbleView_t *view, float x, float y, float depth, float s, float t, const byte *rgba ) {
@@ -439,14 +440,18 @@ qboolean CG_BubbleDraw( centity_t *cent, qboolean dots ) {
 		alpha = ( range - dist ) / ( range * 0.25f );
 	}
 
-	// A letter is as tall as it has to be to take about the same room on the screen at any distance, within
-	// limits: up close a bubble does not shrink to nothing, far away it does not grow over the player.
-	height = dist * tanf( DEG2RAD( cg.refdef.fov_y * 0.5f ) ) * 2.0f / 54.0f;
-	height = Com_Clamp( 2.2f, 12.0f, height );
-
+	// A bubble is a thing in the level: its letters are as tall there at any distance, so it is small far away
+	// and large up close as the player under it is. And it stands upright: it turns to the one who looks about
+	// its upright axis only, and does not lean with a look up or down.
+	height = BUBBLE_LETTER;
+	VectorSet( view.up, 0.0f, 0.0f, 1.0f );
 	VectorNegate( cg.refdef.viewaxis[1], view.right );
-	VectorCopy( cg.refdef.viewaxis[2], view.up );
-	VectorNegate( cg.refdef.viewaxis[0], view.toward );
+	view.right[2] = 0.0f;
+	if ( VectorNormalize( view.right ) < 0.01f ) {
+		// (a camera that lies on its side)
+		VectorSet( view.right, 0.0f, -1.0f, 0.0f );
+	}
+	CrossProduct( view.right, view.up, view.toward );
 
 	if ( hasStatus ) {
 		// one line in smaller letters right above the head, the bubble stands on top of it

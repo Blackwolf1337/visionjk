@@ -252,15 +252,18 @@ typing stays with the line of the engine. Not run: nobody has seen the box.
 `cgame/bubble/cg_bubble.c` (2026-10-11). What a player says in the chat stands above his head for 2.5 to 8
 seconds (longer for more text), in up to three lines, and three swelling dots stand there while he types. It is
 all in the 3D scene: panel, edge, a soft light around it, the tip towards the head and the text are polygons
-that face the camera and are hidden by walls.
+that are hidden by walls. A bubble is a thing in the level: a letter of it is 4.2 units tall at any distance, so
+it is small far away and large up close as the player under it is, and it stands upright. It turns to the one
+who looks about its upright axis only and does not lean with a look up or down.
 
 | Cvar | Default | Meaning |
 |------|---------|---------|
 | `cg_chatBubbles` | 1 | 0: the balloon of the game as before |
 | `cg_bubbleRange` | 1200 | how far away a bubble is still drawn. It fades over the last quarter |
 
-- A bubble pops up a little too large and settles, and rises and fades at its end. Up close it keeps about the
-  same size on the screen, then it gets smaller with the distance.
+- A bubble pops up a little too large and settles, and rises and fades at its end.
+- Seen in a mirror of the level a bubble is turned as far as the mirror turns the view: it faces the one who
+  looks, not his reflection.
 - Team chat has the colour of the team around it. Private lines never get a bubble. No bubble on a dead or
   cloaked player, and none on oneself in first person.
 - The light around a bubble is a glow surface: `r_DynamicGlow 1` makes it shine.
@@ -312,7 +315,7 @@ see [windows.md](windows.md).
 ### Clickable players
 
 `cgame/select/cg_select.c` (2026-10-11). While the mouse is free, the player under the pointer has a glowing
-outline and his name beside the pointer, and a click on him opens a card: who he is, his team, score and ping,
+outline and his name beside him, and a click on him opens a card: who he is, his team, score and ping,
 what stands above his head, and what you can do about him.
 
 The mouse is free while the key of `+cursor` is held (Controls, JA+ Control, "Free the Mouse"; the left Alt
@@ -367,6 +370,11 @@ A row is run with a click or with its number. A click beside the card, the right
   - Found while it was made: a model surface is freed the last time it is drawn in a view, which was "in the
     glow pass if its shader glows". The hilt of a saber glows, was freed there and drawn again after the glow:
     a crash on both renderers at the first outline. `R_GhoulSurfaceDone()` is the one rule now, for both.
+- The name and the card stand beside their player: at his right as the camera sees him, their top at the height
+  of his head, at his left where the screen ends at his right. The place is one in the level (13 units beside
+  his middle), so they are as near to him at any distance, and they follow it a little late (most of the way in
+  90 ms), so a step of his is no jump of theirs. Their size on the screen is always the same: they are read and
+  clicked, a card of the size of the player could be neither from far away. The card opens where the name stood.
 - The pointer is drawn after the card, by `CG_SelectDraw()` also while the chat box is open, which used to draw
   it itself before the card.
 

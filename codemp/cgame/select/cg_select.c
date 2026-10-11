@@ -64,6 +64,10 @@ typedef enum {
 	ACT_ADMIN_BRING
 } selectAct_t;
 
+#define SELECT_BESIDE		13.0f	// how far beside the middle of a player his card and his name stand, in units of the level,
+#define SELECT_ABOVE		36.0f	//	how far above his middle their top edge is,
+#define SELECT_GAP			5.0f	//	and how far from that place they begin, on the screen
+#define SELECT_FOLLOW_MSEC	90.0f	// how late they follow him: a step of his is no jump of theirs
 #define SELECT_SHELLS	6		// the shells of the outline
 #define SELECT_BLUR_TENTHS	12	// how far the hull that the dynamic glow blurs stands off the model, in tenths of a unit,
 #define SELECT_BLUR_ALPHA	165	//	and how bright it is, of 255
@@ -74,7 +78,11 @@ static struct {
 	qboolean	catching;				// this file asked for the keys and the mouse
 	int			hover;					// the player under the pointer, -1: none
 	int			selected;				// the player whose card is open, -1: none
+	// where the card and the name of the player under the pointer are drawn: beside their player, a little late
 	float		cardX, cardY;
+	qboolean	cardPlaced;				// the card has a place: it moves on from there and does not jump
+	float		tagX, tagY;
+	int			tagFor;					// the player the name has its place for, -1: none
 	selectAct_t	rows[SELECT_MAX_ROWS];
 	int			numRows;
 	int			confirmTime;			// when the vote to kick was clicked first, 0: not yet
@@ -86,7 +94,7 @@ static struct {
 
 void CG_SelectInit( void ) {
 	memset( &sel, 0, sizeof( sel ) );
-	sel.hover = sel.selected = -1;
+	sel.hover = sel.selected = sel.tagFor = -1;
 }
 
 // is the mouse free for pointing at players
@@ -331,6 +339,57 @@ The card
 static void Select_Close( void ) {
 	sel.selected = -1;
 	sel.confirmTime = 0;
+	sel.cardPlaced = qfalse;
+}
+
+/*
+=================
+Select_Beside
+
+Where something w wide and h high stands on the screen to be beside a player: at his right as the camera sees
+him, its top at the height of his head, at his left where the screen ends at his right. The place is one in the
+level, so it is as near to him at any distance. qfalse: he is not in front of the camera.
+=================
+*/
+static qboolean Select_Beside( int clientNum, float w, float h, float *x, float *y ) {
+	const centity_t	*cent = &cg_entities[clientNum];
+	const float		scale = ( cent->modelScale[2] > 0.01f ) ? cent->modelScale[2] : 1.0f;
+	const float		least = 4.0f - cgs.bias2D, most = SCREEN_WIDTH + cgs.bias2D - w - 4.0f;
+	vec3_t			at;
+	float			sx, sy, other;
+
+	VectorCopy( cent->lerpOrigin, at );
+	at[2] += SELECT_ABOVE * scale;
+	VectorMA( at, -SELECT_BESIDE * scale, cg.refdef.viewaxis[1], at );
+	if ( !CG_WorldCoordToScreenCoordFloat( at, &sx, &sy ) ) {
+		return qfalse;
+	}
+	*x = sx + SELECT_GAP;
+	if ( *x > most ) {
+		VectorMA( at, 2.0f * SELECT_BESIDE * scale, cg.refdef.viewaxis[1], at );
+		if ( CG_WorldCoordToScreenCoordFloat( at, &sx, &other ) ) {
+			*x = sx - SELECT_GAP - w;
+		}
+	}
+	*x = Com_Clamp( least, most, *x );
+	*y = Com_Clamp( 30.0f, SCREEN_HEIGHT - h - 44.0f, sy );
+	return qtrue;
+}
+
+// moves a place on the screen toward where it should be: most of the way within SELECT_FOLLOW_MSEC
+static void Select_Follow( float *x, float *y, float toX, float toY, qboolean jump ) {
+	const float part = jump ? 1.0f : 1.0f - expf( -cg.frametime / SELECT_FOLLOW_MSEC );
+
+	*x += ( toX - *x ) * part;
+	*y += ( toY - *y ) * part;
+}
+
+// a place on the screen on whole pixels: text that moves stays sharp
+static void Select_Pixels( float *x, float *y ) {
+	const float px = ( SCREEN_WIDTH + 2.0f * cgs.bias2D ) / cgs.glconfig.vidWidth, py = (float)SCREEN_HEIGHT / cgs.glconfig.vidHeight;
+
+	*x = floorf( *x / px + 0.5f ) * px;
+	*y = floorf( *y / py + 0.5f ) * py;
 }
 
 // what the card of a player offers, in this order
@@ -465,19 +524,17 @@ static void Select_DrawCard( void ) {
 	const int			over = Select_RowAt();
 	char				line[128];
 	const char			*kind;
-	vec3_t				head;
 	float				x, y;
 	int					i;
 
-	// beside the player while he is on the screen, where it was otherwise
-	VectorCopy( cg_entities[n].lerpOrigin, head );
-	head[2] += 20.0f;
-	if ( Select_Valid( n ) && CG_WorldCoordToScreenCoordFloat( head, &x, &y ) ) {
-		sel.cardX = Com_Clamp( 4.0f - cgs.bias2D, SCREEN_WIDTH + cgs.bias2D - SELECT_CARD_W - 4.0f, x + 36.0f );
-		sel.cardY = Com_Clamp( 30.0f, SCREEN_HEIGHT - height - 44.0f, y - 30.0f );
+	// beside the player while he is on the screen, where it was otherwise. It follows him a little late.
+	if ( Select_Valid( n ) && Select_Beside( n, SELECT_CARD_W, height, &x, &y ) ) {
+		Select_Follow( &sel.cardX, &sel.cardY, x, y, (qboolean)!sel.cardPlaced );
+		sel.cardPlaced = qtrue;
 	}
 	x = sel.cardX;
 	y = sel.cardY;
+	Select_Pixels( &x, &y );
 
 	if ( Skin_Ready() ) {
 		const vec4_t dark = { 0.0f, 0.0f, 0.0f, 0.4f };
@@ -599,17 +656,30 @@ void CG_SelectDraw( void ) {
 		const vec4_t	back = { 0.0f, 0.0f, 0.0f, 0.55f };
 		const char		*name = cgs.clientinfo[sel.hover].name;
 		const float		w = CG_Text_Width( name, 0.62f, Skin_Ready() ? SKIN_FONT_SANS : FONT_SMALL2 );
+		float			x, y;
 
 		Select_Hull();
 		if ( !sel.hull[0] || !cg_selectOutline.integer ) {
 			Select_DrawCorners( sel.hover );
 		}
-		if ( Skin_Ready() ) {
-			Skin_Panel( cgs.cursorX + 14.0f, cgs.cursorY + 10.0f, w + 10.0f, 15.0f, 4.0f, back, NULL );
-		} else {
-			CG_FillRect( cgs.cursorX + 14.0f, cgs.cursorY + 10.0f, w + 10.0f, 15.0f, (float *)back );
+		// his name, beside him as his card would be: at the pointer it lay on what is pointed at
+		if ( Select_Beside( sel.hover, w + 10.0f, 15.0f, &x, &y ) ) {
+			Select_Follow( &sel.tagX, &sel.tagY, x, y, (qboolean)( sel.tagFor != sel.hover ) );
+			sel.tagFor = sel.hover;
 		}
-		Select_Text( cgs.cursorX + 19.0f, cgs.cursorY + 12.0f, 0.62f, colorWhite, name );
+		if ( sel.tagFor == sel.hover ) {
+			x = sel.tagX;
+			y = sel.tagY;
+			Select_Pixels( &x, &y );
+			if ( Skin_Ready() ) {
+				Skin_Panel( x, y, w + 10.0f, 15.0f, 4.0f, back, NULL );
+			} else {
+				CG_FillRect( x, y, w + 10.0f, 15.0f, (float *)back );
+			}
+			Select_Text( x + 5.0f, y + 2.0f, 0.62f, colorWhite, name );
+		}
+	} else {
+		sel.tagFor = -1;
 	}
 	if ( sel.selected >= 0 ) {
 		Select_Rows( sel.selected );
@@ -643,6 +713,12 @@ qboolean CG_SelectKeyEvent( int key, qboolean down ) {
 		if ( sel.hover >= 0 ) {
 			sel.selected = sel.hover;
 			sel.confirmTime = 0;
+			// the card opens where his name stood
+			sel.cardPlaced = (qboolean)( sel.tagFor == sel.hover );
+			if ( sel.cardPlaced ) {
+				sel.cardX = sel.tagX;
+				sel.cardY = sel.tagY;
+			}
 			return qtrue;
 		}
 		if ( sel.selected >= 0 ) {
