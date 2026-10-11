@@ -27,6 +27,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "cg_local.h"
 
 #include "ui/ui_shared.h"
+#include "ui/ui_skin.h"
 
 NORETURN_PTR void (*Com_Error)( int level, const char *error, ... );
 void (*Com_Printf)( const char *msg, ... );
@@ -2263,6 +2264,8 @@ CG_LoadHudMenu();
 void CG_LoadHudMenu()
 {
 	const char *hudSet;
+	char buff[16];
+	qboolean hasSkin;
 
 	cgDC.registerShaderNoMip			= trap->R_RegisterShaderNoMip;
 	cgDC.setColor						= trap->R_SetColor;
@@ -2324,9 +2327,21 @@ void CG_LoadHudMenu()
 	cgDC.ext.Font_StrLenPixels			= trap->ext.R_Font_StrLenPixels;
 	cgDC.bias							= cgs.bias2D;
 	cgDC.wide							= cgs.bias2D;
+	// For the look of ui/ui_skin.c in the HUD: the size of the window, and the call that makes a shader from a
+	// picture, which only the engine of this tree has. It says so in two cvars (cg_public.h, ui_public.h: the
+	// second one stands for the fonts of that look).
+	cgDC.glconfig						= cgs.glconfig;
+	cgDC.yscale							= cgs.glconfig.vidHeight * ( 1.0f / 480.0f );
+	cgDC.xscale							= cgs.glconfig.vidWidth / ( 640.0f + 2.0f * cgs.bias2D );
+	trap->Cvar_VariableStringBuffer( "cl_cgameScene", buff, sizeof( buff ) );
+	hasSkin = (qboolean)( atoi( buff ) == 1 );
+	trap->Cvar_VariableStringBuffer( "cl_uiSkin", buff, sizeof( buff ) );
+	cgDC.registerShaderRGBA				= ( hasSkin && atoi( buff ) == 1 ) ? trap->ext.R_RegisterShaderRGBA : NULL;
+	cgDC.statValue						= &CG_StatValue;
 
 
 	Init_Display(&cgDC);
+	Skin_Reset();
 
 	Menu_Reset();
 

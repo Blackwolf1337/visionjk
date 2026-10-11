@@ -33,6 +33,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #endif
 
 #include "ui_shared.h"
+#include "ui_skin.h"
 #include "game/bg_public.h"
 #include "game/anims.h"
 #include "ghoul2/G2.h"
@@ -674,6 +675,13 @@ void Fade(int *flags, float *f, float clamp, int *nextTime, int offsetTime, qboo
 	}
 }
 
+#define MENU_OPEN_MSEC	180		// how long a menu with "openSlide" takes to come up
+
+// Is this item drawn in the look of ui_skin.c? Its menu asks for it ("skin 1") and the engine can.
+static qboolean Item_Skinned( const itemDef_t *item ) {
+	return (qboolean)( item->parent && ( (const menuDef_t *)item->parent )->skin && Skin_Ready() );
+}
+
 // A window over the whole 640 x 480 with a picture or a fill is a background: Window_Paint() makes it as wide as
 // a wide screen is
 static qboolean Window_IsBackground( const windowDef_t *w ) {
@@ -738,6 +746,32 @@ void Window_Paint(windowDef_t *w, float fadeAmount, float fadeClamp, float fadeC
 	}
 	else if ( w->style == WINDOW_STYLE_GRADIENT ) {
 		GradientBar_Paint(&fillRect, w->backColor);
+	}
+	else if ( w->style == WINDOW_STYLE_PANEL ) {
+		Fade( &w->flags, &w->backColor[3], fadeClamp, &w->nextTime, fadeCycle, qtrue, fadeAmount );
+		if ( Skin_Ready() ) {
+			if ( w->shadow > 0.0f ) {
+				const vec4_t dark = { 0.0f, 0.0f, 0.0f, 0.45f * w->backColor[3] };
+
+				Skin_Soft( w->rect.x, w->rect.y + w->shadow * 0.25f, w->rect.w, w->rect.h, w->shadow, dark, qfalse );
+			}
+			if ( w->glowColor[3] > 0.0f ) {
+				Skin_Soft( w->rect.x, w->rect.y, w->rect.w, w->rect.h, 10.0f, w->glowColor, qtrue );
+			}
+			Skin_Panel( w->rect.x, w->rect.y, w->rect.w, w->rect.h, w->radius, w->backColor, w->borderColor );
+			if ( w->sheen > 0.0f && w->rect.w > 2.0f * w->radius ) {
+				const vec4_t light = { 1.0f, 1.0f, 1.0f, w->sheen };
+
+				DC->fillRect( w->rect.x + w->radius, w->rect.y + 1.0f / DC->yscale, w->rect.w - 2.0f * w->radius, 1.0f / DC->yscale, light );
+			}
+		} else {
+			// an engine that can not make the pictures: the same panel with square corners
+			DC->fillRect( w->rect.x, w->rect.y, w->rect.w, w->rect.h, w->backColor );
+			if ( w->borderColor[3] > 0.0f ) {
+				DC->drawRect( w->rect.x, w->rect.y, w->rect.w, w->rect.h, 1, w->borderColor );
+			}
+		}
+		return;
 	}
 	else if ( w->style == WINDOW_STYLE_SHADER ) {
 #ifndef _CGAME
@@ -4202,6 +4236,7 @@ void  Menus_Activate(menuDef_t *menu) {
 	}
 
 	menu->appearanceTime = 0;
+	menu->openTime = DC->realTime;
 	Display_CloseCinematics();
 
 }
@@ -4536,6 +4571,16 @@ void Item_TextColor(itemDef_t *item, vec4_t *newColor) {
 
 	Fade(&item->window.flags, &item->window.foreColor[3], parent->fadeClamp, &item->window.nextTime, parent->fadeCycle, qtrue, parent->fadeAmount);
 
+	if ( Item_Skinned( item ) ) {
+		// no pulse: the mark behind the item says where the focus is
+		Skin_TextColor( item, *newColor );
+		if ( item->enableCvar && *item->enableCvar && item->cvarTest && *item->cvarTest
+			&& ( item->cvarFlags & ( CVAR_ENABLE | CVAR_DISABLE ) ) && !Item_EnableShowViaCvar( item, CVAR_ENABLE ) ) {
+			memcpy( newColor, &parent->disableColor, sizeof( vec4_t ) );
+		}
+		return;
+	}
+
 	if (item->window.flags & WINDOW_HASFOCUS) {
 		lowLight[0] = 0.8 * parent->focusColor[0];
 		lowLight[1] = 0.8 * parent->focusColor[1];
@@ -4789,6 +4834,14 @@ void Item_TextField_Paint(itemDef_t *item) {
 	}
 
 	offset = (item->text && *item->text) ? 8 : 0;
+	if ( Item_Skinned( item ) ) {
+		// the box the text is typed into, from where the label ends to the end of the item
+		const float boxX = item->textRect.x + item->textRect.w + offset - 3.0f;
+
+		Item_TextColor( item, &newColor );
+		Skin_Field( item, boxX, item->window.rect.y + 1.0f, item->window.rect.x + item->window.rect.w - boxX - 2.0f, item->window.rect.h - 2.0f,
+			(qboolean)( ( item->window.flags & WINDOW_HASFOCUS ) && g_editingField ) );
+	}
 	// the text that is painted does not start in the middle of a character of UTF-8 (Item_TextField_CharLen)
 	paintOffset = Com_Clampi( 0, (int)strlen( buff ), editPtr->paintOffset );
 	if ( DC->getCVarValue( "cl_utf8Text" ) ) {
@@ -4823,6 +4876,18 @@ void Item_YesNo_Paint(itemDef_t *item) {
 		yesnovalue = (value != 0) ? sYES : sNO;
 
 	Item_TextColor(item, &color);
+	if ( Item_Skinned( item ) ) {
+		// a switch in place of the word
+		const qboolean on = (qboolean)( item->invertYesNo ? ( value == 0 ) : ( value != 0 ) );
+
+		if ( item->text ) {
+			Item_Text_Paint( item );
+			Skin_Switch( item, item->textRect.x + item->textRect.w + 8, item->window.rect.y, item->window.rect.h, on );
+		} else {
+			Skin_Switch( item, item->window.rect.x + 2, item->window.rect.y, item->window.rect.h, on );
+		}
+		return;
+	}
 	if (item->text)
 	{
 		Item_Text_Paint(item);
@@ -5100,6 +5165,21 @@ void Item_Slider_Paint(itemDef_t *item) {
 	} else {
 		x = item->window.rect.x;
 	}
+	if ( Item_Skinned( item ) ) {
+		// the same track the mouse works on (SLIDER_WIDTH from x), with what it stands at written behind it
+		const editFieldDef_t	*editDef = item->typeData.edit;
+		const float				value = item->cvar ? DC->getCVarValue( item->cvar ) : 0.0f;
+		const float				range = editDef ? editDef->maxVal - editDef->minVal : 0.0f;
+		const char				*number = ( range > 0.0f && range <= 2.0f ) ? va( "%i %%", (int)( ( value - editDef->minVal ) / range * 100.0f + 0.5f ) )
+									: ( value == (int)value ) ? va( "%i", (int)value ) : va( "%.2f", value );
+
+		Item_TextColor( item, &newColor );
+		Skin_Slider( item, x, y, SLIDER_WIDTH, item->window.rect.h, ( Item_Slider_ThumbPosition( item ) - x ) / SLIDER_WIDTH );
+		if ( item->cvar ) {
+			DC->drawText( x + SLIDER_WIDTH + 8, item->textRect.y, item->textscale, newColor, number, 0, 0, item->textStyle, item->iMenuFont );
+		}
+		return;
+	}
 	DC->setColor(newColor);
 	DC->drawHandlePic( x, y, SLIDER_WIDTH, SLIDER_HEIGHT, DC->Assets.sliderBar );
 
@@ -5171,6 +5251,12 @@ void Item_Bind_Paint(itemDef_t *item)
 			yAdj = textHeight - DC->textHeight(g_nameBind, textScale, item->iMenuFont);
 		}
 
+		if ( Item_Skinned( item ) ) {
+			// the key stands in a box, which is lit while the next key pressed will be taken for it
+			Item_TextColor( item, &newColor );
+			Skin_Field( item, startingXPos - 4, item->window.rect.y + 1.0f, textWidth + 8, item->window.rect.h - 2.0f,
+				(qboolean)( g_bindItem == item && g_waitingForKey ) );
+		}
 		DC->drawText(startingXPos, item->textRect.y + yAdj, textScale, newColor, g_nameBind, 0, maxChars, item->textStyle,item->iMenuFont);
 	}
 	else
@@ -5641,6 +5727,15 @@ void Item_ListBox_Paint(itemDef_t *item) {
 			{
 				x = item->window.rect.x + 1;
 				y = item->window.rect.y + item->window.rect.h - SCROLLBAR_SIZE - 1;
+				if ( Item_Skinned( item ) ) {
+					// a thin bar over the same track the mouse works on
+					const float track = item->window.rect.w - SCROLLBAR_SIZE * 3;
+
+					thumb = Item_ListBox_ThumbDrawPosition( item );
+					Skin_ScrollBar( x + SCROLLBAR_SIZE, y, item->window.rect.w - SCROLLBAR_SIZE * 2, SCROLLBAR_SIZE,
+						( track > 0.0f ) ? ( thumb - x - SCROLLBAR_SIZE ) / ( track + SCROLLBAR_SIZE ) : 0.0f,
+						( track > 0.0f ) ? SCROLLBAR_SIZE / ( track + SCROLLBAR_SIZE ) : 1.0f, qtrue, ( (menuDef_t *)item->parent )->focusColor );
+				} else {
 				DC->drawHandlePic(x, y, SCROLLBAR_SIZE, SCROLLBAR_SIZE, DC->Assets.scrollBarArrowLeft);
 				x += SCROLLBAR_SIZE - 1;
 				sizeWidth = item->window.rect.w - (SCROLLBAR_SIZE * 2);
@@ -5653,6 +5748,7 @@ void Item_ListBox_Paint(itemDef_t *item) {
 					thumb = x - SCROLLBAR_SIZE - 1;
 				}
 				DC->drawHandlePic(thumb, y, SCROLLBAR_SIZE, SCROLLBAR_SIZE, DC->Assets.scrollBarThumb);
+				}
 			}
 			else if (listPtr->startPos > 0)
 			{
@@ -5737,6 +5833,18 @@ void Item_ListBox_Paint(itemDef_t *item) {
 				x -= 2;
 
 			y = item->window.rect.y + 1;
+			if ( Item_Skinned( item ) ) {
+				// a thin bar over the same track the mouse works on, and only when there is something to scroll
+				const float track = item->window.rect.h - SCROLLBAR_SIZE * 3;
+
+				listPtr->endPos = listPtr->startPos;
+				if ( Item_ListBox_MaxScroll( item ) > 0 ) {
+					thumb = Item_ListBox_ThumbDrawPosition( item );
+					Skin_ScrollBar( x, y + SCROLLBAR_SIZE, SCROLLBAR_SIZE, item->window.rect.h - SCROLLBAR_SIZE * 2,
+						( track > 0.0f ) ? ( thumb - y - SCROLLBAR_SIZE ) / ( track + SCROLLBAR_SIZE ) : 0.0f,
+						( track > 0.0f ) ? SCROLLBAR_SIZE / ( track + SCROLLBAR_SIZE ) : 1.0f, qfalse, ( (menuDef_t *)item->parent )->focusColor );
+				}
+			} else {
 			DC->drawHandlePic(x, y, SCROLLBAR_SIZE, SCROLLBAR_SIZE, DC->Assets.scrollBarArrowUp);
 			y += SCROLLBAR_SIZE - 1;
 
@@ -5751,6 +5859,7 @@ void Item_ListBox_Paint(itemDef_t *item) {
 				thumb = y - SCROLLBAR_SIZE - 1;
 			}
 			DC->drawHandlePic(x, thumb, SCROLLBAR_SIZE, SCROLLBAR_SIZE, DC->Assets.scrollBarThumb);
+			}
 		}
 //JLF end
 
@@ -5940,7 +6049,16 @@ void Item_ListBox_Paint(itemDef_t *item) {
 					}
 				}
 
-				if (i == item->cursorPos)
+				if ( Item_Skinned( item ) ) {
+					// the chosen row is filled, the one under the mouse is lit
+					const float		rowY = y + listPtr->elementHeight + 2, rowW = item->window.rect.w - SCROLLBAR_SIZE - 4;
+					const qboolean	under = (qboolean)( DC->cursorx >= x + 2 && DC->cursorx < x + 2 + rowW && DC->cursory >= rowY
+										&& DC->cursory < rowY + listPtr->elementHeight && ( item->window.flags & WINDOW_MOUSEOVER ) );
+
+					Skin_Row( x + 2, rowY, rowW, listPtr->elementHeight, ( (menuDef_t *)item->parent )->focusColor,
+						(qboolean)( i == item->cursorPos && !listPtr->notselectable ), under ? 1.0f : 0.0f );
+				}
+				else if (i == item->cursorPos)
 				{
 					DC->fillRect(x + 2, y + listPtr->elementHeight + 2, item->window.rect.w - SCROLLBAR_SIZE - 4, listPtr->elementHeight, item->window.outlineColor);
 				}
@@ -6017,6 +6135,60 @@ void Item_OwnerDraw_Paint(itemDef_t *item) {
 	}
 }
 
+
+/*
+=================
+Item_Stat_Paint
+
+ITEM_TYPE_BAR and ITEM_TYPE_VALUE: a number of the game ("stat health", given by the cgame through
+DC->statValue) as a bar that is filled to its part of the most it can be, or as text. The bar has the forecolor
+of the item on its backcolor, or the colour of the first "addColorRange" the number is in. With "align
+ITEM_ALIGN_RIGHT" it is filled from the right.
+=================
+*/
+static void Item_Stat_Paint( itemDef_t *item ) {
+	const rectDef_t	*r = &item->window.rect;
+	float			value, max, part;
+	vec4_t			color;
+	int				i;
+
+	if ( !item->stat || !DC->statValue || !DC->statValue( item->stat, &value, &max ) ) {
+		return;
+	}
+	VectorCopy4( item->window.foreColor, color );
+	for ( i = 0; i < item->numColors; i++ ) {
+		if ( value >= item->colorRanges[i].low && value <= item->colorRanges[i].high ) {
+			VectorCopy4( item->colorRanges[i].color, color );
+			break;
+		}
+	}
+	if ( item->type == ITEM_TYPE_VALUE ) {
+		const char	*text = va( "%i", (int)value );
+		float		x = item->textalignx;
+
+		if ( item->textalignment == ITEM_ALIGN_RIGHT ) {
+			x -= DC->textWidth( text, item->textscale, item->iMenuFont );
+		} else if ( item->textalignment == ITEM_ALIGN_CENTER ) {
+			x -= DC->textWidth( text, item->textscale, item->iMenuFont ) * 0.5f;
+		}
+		DC->drawText( r->x + x, r->y + item->textaligny, item->textscale, color, text, 0, 0, item->textStyle, item->iMenuFont );
+		return;
+	}
+	part = ( max > 0.0f ) ? Com_Clamp( 0.0f, 1.0f, value / max ) : 0.0f;
+	if ( Skin_Ready() ) {
+		if ( item->alignment == ITEM_ALIGN_RIGHT ) {
+			const float w = ( part > 0.0f ) ? Q_max( r->h, r->w * part ) : 0.0f;
+
+			Skin_Bar( r->x, r->y, r->w, r->h, 0.0f, color, item->window.backColor );
+			Skin_Bar( r->x + r->w - w, r->y, w, r->h, ( w > 0.0f ) ? 1.0f : 0.0f, color, NULL );
+		} else {
+			Skin_Bar( r->x, r->y, r->w, r->h, part, color, item->window.backColor );
+		}
+	} else {
+		DC->fillRect( r->x, r->y, r->w, r->h, item->window.backColor );
+		DC->fillRect( ( item->alignment == ITEM_ALIGN_RIGHT ) ? r->x + r->w * ( 1.0f - part ) : r->x, r->y, r->w * part, r->h, color );
+	}
+}
 
 void Item_Paint(itemDef_t *item)
 {
@@ -6459,6 +6631,14 @@ void Item_Paint(itemDef_t *item)
 		return;
 	}
 
+	// "showStat": only while that number of the game is above 0
+	if ( item->showStat ) {
+		float value, max;
+
+		if ( !DC->statValue || !DC->statValue( item->showStat, &value, &max ) || value <= 0.0f ) {
+			return;
+		}
+	}
 
 	if (item->window.flags & WINDOW_MOUSEOVER)
 	{
@@ -6534,6 +6714,12 @@ void Item_Paint(itemDef_t *item)
 	// paint the rect first..
 	Window_Paint(&item->window, parent->fadeAmount , parent->fadeClamp, parent->fadeCycle);
 
+	// the mark of an item that has the focus, in a menu with the new look. A list marks its rows itself.
+	if ( Item_Skinned( item ) && item->type != ITEM_TYPE_LISTBOX && item->type != ITEM_TYPE_TEXTSCROLL && item->type != ITEM_TYPE_MODEL
+		&& item->type != ITEM_TYPE_OWNERDRAW && item->type != ITEM_TYPE_TEXT ) {
+		Skin_ItemBack( item );
+	}
+
 	// Draw box to show rectangle extents, in debug mode
 	if (debugMode)
 	{
@@ -6554,6 +6740,10 @@ void Item_Paint(itemDef_t *item)
 	switch (item->type) {
 	case ITEM_TYPE_OWNERDRAW:
 		Item_OwnerDraw_Paint(item);
+		break;
+	case ITEM_TYPE_BAR:
+	case ITEM_TYPE_VALUE:
+		Item_Stat_Paint(item);
 		break;
 	case ITEM_TYPE_TEXT:
 	case ITEM_TYPE_BUTTON:
@@ -6792,6 +6982,7 @@ void Menu_HandleMouseMove(menuDef_t *menu, float x, float y) {
 
 void Menu_Paint(menuDef_t *menu, qboolean forcePaint) {
 	int i, underBackground;
+	float slide;
 
 	if (menu == NULL) {
 		return;
@@ -6809,8 +7000,21 @@ void Menu_Paint(menuDef_t *menu, qboolean forcePaint) {
 		menu->window.flags |= WINDOW_FORCED;
 	}
 
+	// "openSlide": a menu that just opened comes up from below, fast at first and then slower. Its place is
+	// moved for this one frame and put back at the end of it.
+	slide = 0.0f;
+	if ( menu->openSlide && menu->openTime && DC->realTime - menu->openTime < MENU_OPEN_MSEC && DC->realTime >= menu->openTime ) {
+		const float left = 1.0f - (float)( DC->realTime - menu->openTime ) / MENU_OPEN_MSEC;
+
+		slide = menu->openSlide * left * left;
+		menu->window.rect.y += slide;
+		Menu_UpdatePosition( menu );
+	}
+
 	// draw the background if necessary
-	if (menu->fullScreen) {
+	if ( menu->backdrop && Skin_Ready() ) {
+		Skin_Backdrop();
+	} else if (menu->fullScreen) {
 		// implies a background shader
 		// FIXME: make sure we have a default shader if fullscreen is set with no background
 		DC->drawHandlePic( -DC->wide, 0, SCREEN_WIDTH + 2.0f * DC->wide, SCREEN_HEIGHT, menu->window.background );
@@ -6862,6 +7066,11 @@ void Menu_Paint(menuDef_t *menu, qboolean forcePaint) {
 		color[0] = color[2] = color[3] = 1;
 		color[1] = 0;
 		DC->drawRect(menu->window.rect.x, menu->window.rect.y, menu->window.rect.w, menu->window.rect.h, 1, color);
+	}
+
+	if ( slide != 0.0f ) {
+		menu->window.rect.y -= slide;
+		Menu_UpdatePosition( menu );
 	}
 }
 
@@ -7766,6 +7975,34 @@ qboolean ItemParse_border( itemDef_t *item, int handle ) {
 	return qtrue;
 }
 
+// radius <units>, shadow <units>, sheen <alpha>, glowcolor <r g b a>: of a window with the style
+// WINDOW_STYLE_PANEL (ui_skin.c). For an item and for a menu, which both begin with their window.
+qboolean ItemParse_radius( itemDef_t *item, int handle ) {
+	return PC_Float_Parse( handle, &item->window.radius );
+}
+
+qboolean ItemParse_shadow( itemDef_t *item, int handle ) {
+	return PC_Float_Parse( handle, &item->window.shadow );
+}
+
+qboolean ItemParse_sheen( itemDef_t *item, int handle ) {
+	return PC_Float_Parse( handle, &item->window.sheen );
+}
+
+qboolean ItemParse_glowcolor( itemDef_t *item, int handle ) {
+	return PC_Color_Parse( handle, &item->window.glowColor );
+}
+
+// stat <name>: the number of the game an ITEM_TYPE_BAR or ITEM_TYPE_VALUE shows. showStat <name>: the item is
+// only there while that number is above 0.
+qboolean ItemParse_stat( itemDef_t *item, int handle ) {
+	return PC_String_Parse( handle, &item->stat );
+}
+
+qboolean ItemParse_showStat( itemDef_t *item, int handle ) {
+	return PC_String_Parse( handle, &item->showStat );
+}
+
 qboolean ItemParse_bordersize( itemDef_t *item, int handle ) {
 	if (!PC_Float_Parse(handle, &item->window.borderSize)) {
 		return qfalse;
@@ -8586,6 +8823,12 @@ keywordHash_t itemParseKeywords[] = {
 	{"rectcvar",		ItemParse_rectcvar,			NULL	},
 	{"showCvar",		ItemParse_showCvar,			NULL	},
 	{"special",			ItemParse_special,			NULL	},
+	{"radius",			ItemParse_radius,			NULL	},
+	{"shadow",			ItemParse_shadow,			NULL	},
+	{"sheen",			ItemParse_sheen,			NULL	},
+	{"glowcolor",		ItemParse_glowcolor,		NULL	},
+	{"stat",			ItemParse_stat,				NULL	},
+	{"showStat",		ItemParse_showStat,			NULL	},
 	{"style",			ItemParse_style,			NULL	},
 	{"text",			ItemParse_text,				NULL	},
 	{"textalign",		ItemParse_textalign,		NULL	},
@@ -8999,6 +9242,34 @@ qboolean MenuParse_name( itemDef_t *item, int handle ) {
 		//menu->window.flags |= WINDOW_HASFOCUS;
 	}
 	return qtrue;
+}
+
+// skin 1: the items of this menu are drawn by ui_skin.c. backdrop 1: its sky is behind the menu. openSlide
+// <units>: the menu comes up from that far below when it opens.
+qboolean MenuParse_skin( itemDef_t *item, int handle ) {
+	menuDef_t	*menu = (menuDef_t *)item;
+	int			i;
+
+	if ( !PC_Int_Parse( handle, &i ) ) {
+		return qfalse;
+	}
+	menu->skin = (qboolean)( i != 0 );
+	return qtrue;
+}
+
+qboolean MenuParse_backdrop( itemDef_t *item, int handle ) {
+	menuDef_t	*menu = (menuDef_t *)item;
+	int			i;
+
+	if ( !PC_Int_Parse( handle, &i ) ) {
+		return qfalse;
+	}
+	menu->backdrop = (qboolean)( i != 0 );
+	return qtrue;
+}
+
+qboolean MenuParse_openSlide( itemDef_t *item, int handle ) {
+	return PC_Int_Parse( handle, &( (menuDef_t *)item )->openSlide );
 }
 
 qboolean MenuParse_fullscreen( itemDef_t *item, int handle ) {
@@ -9443,6 +9714,13 @@ keywordHash_t menuParseKeywords[] = {
 	{"popup",				MenuParse_popup,		NULL	},
 	{"rect",				MenuParse_rect,			NULL	},
 	{"soundLoop",			MenuParse_soundLoop,	NULL	},
+	{"skin",				MenuParse_skin,			NULL	},
+	{"backdrop",			MenuParse_backdrop,		NULL	},
+	{"openSlide",			MenuParse_openSlide,	NULL	},
+	{"radius",				ItemParse_radius,		NULL	},
+	{"shadow",				ItemParse_shadow,		NULL	},
+	{"sheen",				ItemParse_sheen,		NULL	},
+	{"glowcolor",			ItemParse_glowcolor,	NULL	},
 	{"style",				MenuParse_style,		NULL	},
 	{"visible",				MenuParse_visible,		NULL	},
 	{0,						0,						0		}

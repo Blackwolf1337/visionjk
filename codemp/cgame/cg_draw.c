@@ -30,6 +30,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "game/bg_saga.h"
 
 #include "ui/ui_shared.h"
+#include "ui/ui_skin.h"
 #include "ui/ui_public.h"
 
 extern float CG_RadiusForCent( centity_t *cent );
@@ -123,6 +124,12 @@ int UI_ParseAnimationFile(const char *filename, animation_t *animset, qboolean i
 
 int MenuFontToHandle(int iMenuFont)
 {
+	// the fonts of the new look, where the engine has them (ui/ui_skin.c)
+	const qhandle_t skinFont = Skin_FontHandle( iMenuFont );
+
+	if ( skinFont ) {
+		return skinFont;
+	}
 	switch (iMenuFont)
 	{
 		case FONT_SMALL:	return cgDC.Assets.qhSmallFont;
@@ -7856,6 +7863,10 @@ static void CG_Draw2D( void ) {
 	if ( cg.levelShot ) {
 		return;
 	}
+
+	// the clock of the menus of the HUD (ui/ui_shared.c): what fades and what eases there goes by it
+	cgDC.frameTime = cg.frametime;
+	cgDC.realTime = cg.time;
 
 	// nothing of the HUD while the view is at the menu in the level or on its way (menu3d/cg_menu3d.c)
 	if ( CG_Menu3DActive() ) {

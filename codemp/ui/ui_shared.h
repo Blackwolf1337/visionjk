@@ -153,6 +153,12 @@ typedef struct windowDef_s {
   vec4_t borderColor;             // border color
   vec4_t outlineColor;            // border color
   qhandle_t background;           // background asset
+  // WINDOW_STYLE_PANEL (ui_skin.c): how round its corners are, how far its shadow reaches, a light around it,
+  // and how bright the line along its top is. All 0 unless the menu file says so.
+  float radius;
+  float shadow;
+  float sheen;
+  vec4_t glowColor;
 } windowDef_t;
 
 typedef struct colorRangeDef_s {
@@ -321,6 +327,13 @@ typedef struct itemDef_s {
 	int			xoffset;
 
 	qboolean disabledHidden;				// hide the item when 'disabled' is true (for generic image items)
+
+	// a menu with "skin 1" (ui_skin.c): how far the mark of the focus and the knob of a switch have come, 0 to 1
+	float		skinFocus;
+	float		skinValue;
+	// ITEM_TYPE_BAR, ITEM_TYPE_VALUE and "showStat": the number of the game this item shows, by name
+	const char	*stat;
+	const char	*showStat;
 } itemDef_t;
 
 typedef struct menuDef_s {
@@ -352,6 +365,10 @@ typedef struct menuDef_s {
 	float		appearanceTime;				//	when next item should appear
 	int			appearanceCnt;				//	current item displayed
 	float		appearanceIncrement;		//
+	qboolean	skin;						// "skin 1": its items are drawn by ui_skin.c
+	qboolean	backdrop;					// "backdrop 1": the sky of ui_skin.c is behind it
+	int			openSlide;					// "openSlide <units>": it comes up from that far below when it opens,
+	int			openTime;					//	which was then
 } menuDef_t;
 
 typedef struct cachedAssets_s {
@@ -472,6 +489,10 @@ typedef struct displayContextDef_s {
 	void			(*stopCinematic)					( int handle );
 	void			(*drawCinematic)					( int handle, float x, float y, float w, float h );
 	void			(*runCinematicFrame)				( int handle );
+	// NULL in an engine that can not make a picture a module computed (ui_skin.c)
+	qhandle_t		(*registerShaderRGBA)				( const char *name, const byte *rgba, int width, int height, int flags );
+	// a number of the game by its name, for ITEM_TYPE_BAR and ITEM_TYPE_VALUE. NULL where there is no game (the ui)
+	qboolean		(*statValue)						( const char *name, float *value, float *max );
 
 	float			yscale;
 	float			xscale;

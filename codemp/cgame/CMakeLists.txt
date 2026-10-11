@@ -201,6 +201,13 @@ set(MPCGameStatusFiles
 source_group("cgame/status" FILES ${MPCGameStatusFiles})
 set(MPCGameFiles ${MPCGameFiles} ${MPCGameStatusFiles})
 
+# the numbers of the game for the items of a menu file that show one: what the HUD of this tree is made of
+set(MPCGameHudFiles
+	"${MPDir}/cgame/hud/cg_hud.c"
+	)
+source_group("cgame/hud" FILES ${MPCGameHudFiles})
+set(MPCGameFiles ${MPCGameFiles} ${MPCGameHudFiles})
+
 # the menu in the level: shoulder camera, panel, blur and muffled sound while a menu is open
 set(MPCGameMenu3DFiles
 	"${MPDir}/cgame/menu3d/cg_menu3d.c"
@@ -235,9 +242,11 @@ set(MPCGameFiles ${MPCGameFiles} ${MPCGameCommonSafeFiles})
 
 set(MPCGameUiFiles
 	"${MPDir}/ui/ui_shared.c"
+	"${MPDir}/ui/ui_skin.c"
 	"${MPDir}/ui/keycodes.h"
 	"${MPDir}/ui/menudef.h"
 	"${MPDir}/ui/ui_shared.h"
+	"${MPDir}/ui/ui_skin.h"
 	)
 source_group("ui" FILES ${MPCGameUiFiles})
 set(MPCGameFiles ${MPCGameFiles} ${MPCGameUiFiles})

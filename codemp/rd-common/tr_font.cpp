@@ -235,6 +235,7 @@ public:
 	int				m_numVariants;
 	int				m_handle;
 	qboolean		m_isVariant;
+	int				m_iTTF;			// -1, or the TrueType font every letter of this one comes from (tr_font_ttf.cpp)
 
 	CFontInfo(const char *fontName);
 //	CFontInfo(int fill) { memset(this, fill, sizeof(*this)); }	// wtf?
@@ -905,6 +906,28 @@ CFontInfo::CFontInfo(const char *_fontName)
 	m_bIsFakeAlienLanguage = !strcmp(_fontName,"aurabesh");	// dont try and make SBCS or asian overrides for this
 	m_isVariant = qfalse;
 
+	// A font that is a TrueType font as a whole ("vision_sans", "vision_mono"): it has no file of glyphs and
+	// no picture. Its point size is what a scale of 1 stands for, as with the fonts of the game.
+	m_iTTF = R_FontTTF_ByName( _fontName );
+	if ( m_iTTF >= 0 )
+	{
+		memset( mGlyphs, 0, sizeof( mGlyphs ) );
+		mPointSize = 18;
+		mHeight = 18;
+		mAscender = 15;
+		mDescender = 3;
+		mbRoundCalcs = false;
+		mShader = 0;
+		m_bIsFakeAlienLanguage = true;
+		m_numVariants = 0;
+		Q_strncpyz( m_sFontName, _fontName, sizeof( m_sFontName ) );
+		FlagNoAsianGlyphs();
+		g_vFontArray.resize( g_iCurrentFontIndex + 1 );
+		m_handle = g_iCurrentFontIndex;
+		g_vFontArray[g_iCurrentFontIndex++] = this;
+		return;
+	}
+
 	len = ri.FS_ReadFile(fontName, NULL);
 	if (len == sizeof(dfontdat_t))
 	{
@@ -1467,6 +1490,9 @@ float RE_Font_StrLenPixelsNew( const char *psText, const int iFontHandle, const 
 	if ( !curfont ) {
 		return 0.0f;
 	}
+	if ( curfont->m_iTTF >= 0 ) {
+		return R_FontTTF_StringWidth( curfont->m_iTTF, psText, curfont->GetPointSize() * fScale );
+	}
 	curfont = RE_Font_GetVariant(curfont, &fScale);
 
 	float fScaleAsian = fScale;
@@ -1651,6 +1677,20 @@ void RE_Font_DrawString(int ox, int oy, const char *psText, const float *rgba, c
 	CFontInfo *curfont = GetFont(iFontHandle);
 	if(!curfont || !psText)
 	{
+		return;
+	}
+	if ( curfont->m_iTTF >= 0 )
+	{
+		const float size = curfont->GetPointSize() * fScale;
+
+		if ( iFontHandle & STYLE_DROPSHADOW )
+		{
+			const vec4_t	dark = { 0.0f, 0.0f, 0.0f, ( rgba ? rgba[3] : 1.0f ) * 0.6f };
+			const float		off = Q_max( 0.5f, size * 0.06f );
+
+			R_FontTTF_DrawString( curfont->m_iTTF, ox + off, oy + off, psText, dark, size, iMaxPixelWidth, qtrue );
+		}
+		R_FontTTF_DrawString( curfont->m_iTTF, ox, oy, psText, rgba, size, iMaxPixelWidth, qfalse );
 		return;
 	}
 	curfont = RE_Font_GetVariant(curfont, &fScale);

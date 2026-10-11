@@ -44,6 +44,7 @@ USER INTERFACE MAIN
 #include "cgame/animtable.h" //we want this to be compiled into the module because we access it in the shared module.
 #include "game/bg_saga.h"
 #include "ui_shared.h"
+#include "ui_skin.h"
 
 NORETURN_PTR void (*Com_Error)( int level, const char *error, ... );
 void (*Com_Printf)( const char *msg, ... );
@@ -707,6 +708,12 @@ void _UI_DrawRect( float x, float y, float width, float height, float size, cons
 
 int MenuFontToHandle(int iMenuFont)
 {
+	// the fonts of the new look, where the engine has them
+	const qhandle_t skinFont = Skin_FontHandle( iMenuFont );
+
+	if ( skinFont ) {
+		return skinFont;
+	}
 	switch (iMenuFont)
 	{
 		case 1: return uiInfo.uiDC.Assets.qhSmallFont;
@@ -10250,8 +10257,12 @@ void UI_Init( qboolean inGameLoad ) {
 	uiInfo.uiDC.drawCinematic					= &UI_DrawCinematic;
 	uiInfo.uiDC.runCinematicFrame				= &UI_RunCinematicFrame;
 	uiInfo.uiDC.ext.Font_StrLenPixels			= trap->ext.R_Font_StrLenPixels;
+	// the engine of this tree says in a cvar that it has the call (ui_public.h), any other ends ext before it
+	uiInfo.uiDC.registerShaderRGBA				= ( trap->Cvar_VariableValue( "cl_uiSkin" ) == 1.0f ) ? trap->ext.R_RegisterShaderRGBA : NULL;
+	uiInfo.uiDC.statValue						= NULL;
 
 	Init_Display(&uiInfo.uiDC);
+	Skin_Reset();
 
 	UI_BuildPlayerModel_List(inGameLoad);
 

@@ -46,6 +46,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define ITEM_TYPE_BIND			13		// multiple list setting, enumerated
 #define ITEM_TYPE_TEXTSCROLL	14		// scrolls text
 #define ITEM_TYPE_INTSLIDER		15		// mouse speed, volume, etc.
+#define ITEM_TYPE_BAR			16		// VisionJK: a bar filled by a number of the game ("stat"), for the HUD
+#define ITEM_TYPE_VALUE			17		// VisionJK: that number as text
 
 #define ITEM_ALIGN_LEFT 0                 // left alignment
 #define ITEM_ALIGN_CENTER 1               // center alignment
@@ -71,6 +73,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define WINDOW_STYLE_SHADER   3           // gradient bar based on background color
 #define WINDOW_STYLE_TEAMCOLOR 4          // team color
 #define WINDOW_STYLE_CINEMATIC 5          // cinematic
+#define WINDOW_STYLE_PANEL 6              // VisionJK: a panel with round corners ("radius", "shadow", "glowcolor", "sheen")
 
 #define MENU_TRUE 1                       // uh.. true
 #define MENU_FALSE 0                      // and false

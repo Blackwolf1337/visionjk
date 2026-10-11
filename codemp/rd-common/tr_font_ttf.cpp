@@ -33,6 +33,11 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 //
 // TTF_MONO, with a fixed width, for the console of the engine (RE_Font_DrawMonoChar): a character in a cell
 // that is given in pixels of the window, made in exactly that size.
+//
+// Both are also fonts of the menus as a whole, under the names "vision_sans" and "vision_mono" (RE_RegisterFont
+// in tr_font.cpp, R_FontTTF_DrawString here): every letter of a text from the TrueType font, made in the size
+// the text has in pixels of the window, so it is sharp at every scale. The menus with the new look are set in
+// them (ui/ui_skin.c).
 
 #include "tr_local.h"
 #include "tr_font_ttf.h"
@@ -385,6 +390,155 @@ qboolean RE_Font_DrawMonoChar( int x, int y, int cellWidth, int cellHeight, unsi
 		glyph->info.s, glyph->info.t, glyph->info.s2, glyph->info.t2, glyph->shader );
 	R_FontTTF_Flush();
 	return qtrue;
+}
+
+/*
+===============================================================================
+
+A WHOLE FONT OF THE MENUS
+
+"vision_sans" and "vision_mono": text of the 2D screen with every letter from a TrueType font. A size is the
+height of the font in units of the 480 the screen is high; the letters are made for the pixels that is in the
+window and are placed on whole pixels.
+
+===============================================================================
+*/
+
+// where the line the letters stand on is, below the top of a line of text, as a part of its size: so that a
+// capital letter (0.714 of the size in Noto Sans) stands in the middle of a line that is as high as the size
+#define TTF_MENU_BASELINE	0.857f
+
+// TTF_TEXT or TTF_MONO for the names the menus know the two fonts by, -1: no such font, or its file is not there
+int R_FontTTF_ByName( const char *name ) {
+	const int font = !Q_stricmp( name, "vision_sans" ) ? TTF_TEXT : !Q_stricmp( name, "vision_mono" ) ? TTF_MONO : -1;
+
+	return ( font >= 0 && ttf.fonts[font].loaded ) ? font : -1;
+}
+
+// the size in pixels of the window a text of that size in units is made in
+static int R_FontTTF_MenuPixels( float size ) {
+	return Com_Clampi( 4, FONT_MAX_GLYPH, (int)( size * glConfig.vidHeight / SCREEN_HEIGHT + 0.5f ) );
+}
+
+// The next character of a text and its glyph. qfalse: the text is over. *glyph is NULL for a character that
+// draws nothing here (a colour code, which sets *colour, a line feed, a character no font has).
+static qboolean R_FontTTF_MenuChar( int font, const char **text, int pixels, const ttfGlyph_t **glyph, int *colour, qboolean *newLine ) {
+	unsigned int	codePoint;
+	const byte		*in = (const byte *)*text;
+
+	*glyph = NULL;
+	*colour = -1;
+	*newLine = qfalse;
+	if ( !in[0] ) {
+		return qfalse;
+	}
+	if ( in[0] == '^' && in[1] >= '0' && in[1] <= '9' ) {
+		*colour = ColorIndex( in[1] );
+		*text += 2;
+		return qtrue;
+	}
+	if ( in[0] >= 0x80 && Font_TextIsUTF8() ) {
+		*text += Q_UTF8_Decode( *text, &codePoint );
+	} else {
+		codePoint = Q_CP1252ToUnicode( in[0] );
+		*text += 1;
+	}
+	if ( codePoint == '\n' ) {
+		*newLine = qtrue;
+		return qtrue;
+	}
+	if ( codePoint < ' ' ) {
+		return qtrue;
+	}
+	*glyph = R_FontTTF_Find( font, codePoint, pixels, 1 );
+	if ( !*glyph ) {
+		// a sign this font lacks may be in the other one
+		*glyph = R_FontTTF_Find( font == TTF_TEXT ? TTF_MONO : TTF_TEXT, codePoint, pixels, 1 );
+	}
+	if ( !*glyph ) {
+		*glyph = R_FontTTF_Find( font, '?', pixels, 1 );
+	}
+	return qtrue;
+}
+
+// units of the 2D screen for a pixel of the window, which is 480 high and as wide as R_2DBias() makes it
+static void R_FontTTF_MenuScale( float *xScale, float *yScale, float *bias ) {
+	*bias = R_2DBias();
+	*xScale = ( SCREEN_WIDTH + 2.0f * *bias ) / glConfig.vidWidth;
+	*yScale = (float)SCREEN_HEIGHT / glConfig.vidHeight;
+}
+
+// how wide a text of that size is, in units: its widest line
+float R_FontTTF_StringWidth( int font, const char *text, float size ) {
+	const int			pixels = R_FontTTF_MenuPixels( size );
+	const ttfGlyph_t	*glyph;
+	float				xScale, yScale, bias;
+	int					colour, width = 0, widest = 0;
+	qboolean			newLine;
+
+	while ( R_FontTTF_MenuChar( font, &text, pixels, &glyph, &colour, &newLine ) ) {
+		if ( newLine ) {
+			width = 0;
+		} else if ( glyph ) {
+			width += glyph->info.horizAdvance;
+			if ( width > widest ) {
+				widest = width;
+			}
+		}
+	}
+	R_FontTTF_MenuScale( &xScale, &yScale, &bias );
+	return widest * xScale;
+}
+
+/*
+===============
+R_FontTTF_DrawString
+
+A text of the menus, its first line with its top at y. maxWidth: units after which no further letter is drawn,
+-1 for all of it. With shadow the text is drawn in one colour and a ^ with a digit changes nothing.
+===============
+*/
+void R_FontTTF_DrawString( int font, float x, float y, const char *text, const float *rgba, float size, int maxWidth, qboolean shadow ) {
+	const int			pixels = R_FontTTF_MenuPixels( size );
+	const ttfGlyph_t	*glyph;
+	float				xScale, yScale, bias;
+	int					colour, penX, startX, baseline, limit;
+	qboolean			newLine;
+
+	R_FontTTF_MenuScale( &xScale, &yScale, &bias );
+	startX = penX = (int)floorf( ( x + bias ) / xScale + 0.5f );
+	baseline = (int)floorf( ( y + size * TTF_MENU_BASELINE ) / yScale + 0.5f );
+	limit = ( maxWidth < 0 ) ? -1 : (int)( maxWidth / xScale );
+
+	RE_SetColor( rgba );
+	while ( R_FontTTF_MenuChar( font, &text, pixels, &glyph, &colour, &newLine ) ) {
+		if ( colour >= 0 ) {
+			if ( !shadow ) {
+				vec4_t tint;
+
+				Com_Memcpy( tint, g_color_table[colour], sizeof( tint ) );
+				tint[3] = rgba ? rgba[3] : 1.0f;
+				RE_SetColor( tint );
+			}
+			continue;
+		}
+		if ( newLine ) {
+			penX = startX;
+			baseline += pixels;
+			continue;
+		}
+		if ( !glyph ) {
+			continue;
+		}
+		if ( limit >= 0 && penX + glyph->info.horizAdvance - startX > limit ) {
+			break;
+		}
+		RE_StretchPic( ( penX + glyph->info.horizOffset ) * xScale - bias, ( baseline - glyph->info.baseline ) * yScale,
+			glyph->info.width * xScale, glyph->info.height * yScale,
+			glyph->info.s, glyph->info.t, glyph->info.s2, glyph->info.t2, glyph->shader );
+		penX += glyph->info.horizAdvance;
+	}
+	R_FontTTF_Flush();
 }
 
 /*
