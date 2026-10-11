@@ -4974,6 +4974,7 @@ static const char *g_bindCommands[] = {
 	"+back",
 	"+button12",				// JA+: grapple hook
 	"+button2",
+	"+cursor",					// VisionJK: the mouse is free while it is held, to point at players
 	"+force_drain",
 	"+force_grip",
 	"+force_lightning",

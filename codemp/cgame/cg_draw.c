@@ -8291,6 +8291,8 @@ static void CG_Draw2D( void ) {
 
 	// always draw chat
 	CG_ChatDraw();
+	// and what the mouse points at while it is free (select/cg_select.c)
+	CG_SelectDraw();
 }
 
 qboolean CG_CullPointAndRadius( const vec3_t pt, float radius);

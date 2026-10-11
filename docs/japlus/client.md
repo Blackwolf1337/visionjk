@@ -307,6 +307,55 @@ the machine of the master. Only clients of this tree with its engine draw the li
 
 Not run on Windows: the Windows code was compiled with mingw.
 
+### Clickable players
+
+`cgame/select/cg_select.c` (2026-10-11). While the mouse is free, the player under the pointer has a glowing
+outline and his name beside the pointer, and a click on him opens a card: who he is, his team, score and ping,
+what stands above his head, and what you can do about him.
+
+The mouse is free while the key of `+cursor` is held (Controls, JA+ Control, "Free the Mouse"; the left Alt
+key on a new install if it was free), after `cursor` until `cursor` again or Escape, and while the chat box is
+open. While it is free the view does not turn and the game does not get the keys.
+
+| On the card | |
+|-------------|---|
+| Mute his voice, Hear his voice again | `voice_mute`, for you alone |
+| Voice quieter, Voice louder | this player from silent to twice as loud, in quarters, for you alone and until the level changes |
+| Hide his chat lines, Show them again | his lines are left out of your chat box |
+| Whisper to him | the chat box opens for a line only he gets |
+| Copy his name | to the clipboard, without colours |
+| Watch him | as a spectator |
+| Call a vote to kick him | asks for a second click |
+| Admin: kick, silence, sleep, slap, go to him, bring him here | only after a login with a key (`amkey login`) said you are an admin. The server decides as always |
+
+A row is run with a click or with its number. A click beside the card, the right button or Escape closes it.
+
+| Cvar | Default | |
+|------|---------|---|
+| `cg_selectPlayers` | 1 | 0: none of it |
+| `cg_selectOutline` | 1 | 0: no outline, four corners around the player in its place |
+
+| Command | |
+|---------|---|
+| `+cursor` | the mouse is free while it is held |
+| `cursor` | switches that on and off |
+| `cursor on <player>`, `cursor at <x> <y>`, `cursor click`, `cursor row <n>` | the pointer onto a player or a place, a click, a row of the open card: for a key or a script in place of a mouse |
+
+- Everything happens in your client. What a row sends is the command it stands for, and no other player sees
+  that you pointed at him. An unchanged client has none of it and notices none of it.
+- A player behind a wall, a dead one, a cloaked one and yourself can not be pointed at. A challenge to a duel
+  is not on the card: the server wants your aim on the other player for that.
+- The outline is the model of the player drawn a second time with a shader that only shows a rim. The engine
+  of this tree makes it (`RGBA_SHADER_HULL`), so it is there on a pure server without the pack. Another
+  engine takes `gfx/vision/select_hull` from the pack, and without that the player gets four corners.
+
+Checked 2026-10-11 with two scripted clients on the test room (`tools/uitest/select.sh`): the outline around
+the other player, his name, the card with its seven rows beside him, also after the view turned away, and the
+rows for his loudness and his chat lines changing what the card says. It found
+a crash at the first outline, fixed before it was committed (the picture of the shader was handed to the
+renderer from memory that can not be written to). Not checked: a real mouse and the key, a team game, the
+admin rows, another engine.
+
 ### The server browser in a game, and servers with bots only
 
 2026-10-11. The bar of the in-game menu has a tenth button, SERVERS (`ui/jamp/ingame.menu`, the file of the base

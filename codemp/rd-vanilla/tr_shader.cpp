@@ -3736,6 +3736,22 @@ qhandle_t RE_RegisterSceneShader( const char *name, image_t *image, int flags, f
 	shader.over = ( flags & RGBA_SHADER_OVER ) != 0;
 	shader.cullType = CT_TWO_SIDED;
 	shader.sort = sort;
+	if ( flags & RGBA_SHADER_HULL ) {
+		// An outline for a model that is drawn a second time with this shader: its vertices move out along their
+		// normals and only the faces that look away are drawn, so the model itself covers all of it but a rim.
+		// The colour is the one of the entity.
+		deformStage_t *ds = (deformStage_t *)Hunk_Alloc( sizeof( deformStage_t ), h_low );
+
+		memset( ds, 0, sizeof( *ds ) );
+		ds->deformation = DEFORM_WAVE;
+		ds->deformationWave.func = GF_SIN;
+		ds->deformationWave.base = 1.1f;
+		shader.deforms[0] = ds;
+		shader.numDeforms = 1;
+		shader.cullType = CT_BACK_SIDED;
+		stages[0].rgbGen = CGEN_ENTITY;
+		stages[0].alphaGen = AGEN_ENTITY;
+	}
 
 	sh = FinishShader();
 	return sh->index;

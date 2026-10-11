@@ -1,0 +1,673 @@
+/*
+===========================================================================
+Copyright (C) 2026, VisionJK contributors
+
+This file is part of the VisionJK source code.
+
+VisionJK is free software; you can redistribute it and/or modify it
+under the terms of the GNU General Public License version 2 as
+published by the Free Software Foundation.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, see <http://www.gnu.org/licenses/>.
+===========================================================================
+*/
+
+// cg_select.c -- players that can be clicked. Not from JA+, see docs/japlus/client.md, "Clickable players".
+//
+// While the mouse is free (the key of +cursor is held, "cursor" switched it on, or the chat box is open) the
+// player under the pointer has a glowing outline, and a click on him opens a card beside him: who he is, and
+// what this player can do about him (his voice, his chat lines, a whisper, a vote, what an admin may).
+//
+// All of it happens in this client. Nothing is sent that the commands it uses would not send when typed, and
+// no other client sees any of it.
+//
+// The outline is the model of the player drawn a second time with a shader that only shows a rim around it. An
+// engine of this tree makes that shader from a flag (RGBA_SHADER_HULL), so it is there on a pure server
+// without the pack. Elsewhere the same shader comes from the pack (gfx/vision/select_hull), and where that is
+// missing too the player under the pointer gets four corners in the 2D.
+
+#include "cgame/cg_local.h"
+#include "ui/ui_shared.h"
+#include "ui/ui_skin.h"
+
+qboolean CG_WorldCoordToScreenCoordFloat( vec3_t worldCoord, float *x, float *y );		// cg_draw.c
+
+#define SELECT_RANGE		4096.0f		// how far away a player can still be picked
+#define SELECT_GROW			6.0f		// the box of a player is this much larger for the pointer
+#define SELECT_CARD_W		150.0f
+#define SELECT_ROW_H		13.0f
+#define SELECT_HEAD_H		44.0f
+#define SELECT_MAX_ROWS		14
+#define SELECT_SCALE		0.6f		// of the text of the card
+#define SELECT_CONFIRM_MSEC	4000		// a vote to kick has to be clicked twice within this time
+
+typedef enum {
+	ACT_MUTE,
+	ACT_QUIETER,
+	ACT_LOUDER,
+	ACT_HIDE_CHAT,
+	ACT_WHISPER,
+	ACT_WATCH,
+	ACT_COPY,
+	ACT_VOTE_KICK,
+	ACT_ADMIN_KICK,
+	ACT_ADMIN_SILENCE,
+	ACT_ADMIN_SLEEP,
+	ACT_ADMIN_SLAP,
+	ACT_ADMIN_GOTO,
+	ACT_ADMIN_BRING
+} selectAct_t;
+
+static struct {
+	qboolean	held;					// +cursor
+	qboolean	toggled;				// "cursor"
+	qboolean	catching;				// this file asked for the keys and the mouse
+	int			hover;					// the player under the pointer, -1: none
+	int			selected;				// the player whose card is open, -1: none
+	float		cardX, cardY;
+	selectAct_t	rows[SELECT_MAX_ROWS];
+	int			numRows;
+	int			confirmTime;			// when the vote to kick was clicked first, 0: not yet
+	qhandle_t	hull;					// the shader of the outline, 0: none
+	qboolean	hullTried;
+	qhandle_t	pointer;				// the pointer of the game, where the new one can not be drawn
+} sel;
+
+void CG_SelectInit( void ) {
+	memset( &sel, 0, sizeof( sel ) );
+	sel.hover = sel.selected = -1;
+}
+
+// is the mouse free for pointing at players
+static qboolean Select_Free( void ) {
+	return (qboolean)( cg_selectPlayers.integer && cg.snap && !cg.demoPlayback && ( sel.held || sel.toggled || CG_ChatIsOpen() ) );
+}
+
+/*
+=================
+CG_SelectDrawCursor
+
+The pointer of the mouse in the HUD: the one of the new look where it can be drawn, else the one of the menus
+=================
+*/
+void CG_SelectDrawCursor( void ) {
+	if ( Skin_Ready() ) {
+		Skin_Cursor( cgs.cursorX, cgs.cursorY );
+		return;
+	}
+	// (cgs.media.cursor is no use: the base game registers a picture of Quake 3 Team Arena for it that this
+	// game does not have)
+	if ( !sel.pointer ) {
+		sel.pointer = trap->R_RegisterShaderNoMip( "cursor" );
+	}
+	trap->R_SetColor( NULL );
+	CG_DrawPic( cgs.cursorX, cgs.cursorY, 40.0f, 40.0f, sel.pointer );
+}
+
+// can this player be pointed at: he is in what the server shows, alive, and can be seen
+static qboolean Select_Valid( int clientNum ) {
+	const centity_t *cent;
+
+	if ( clientNum < 0 || clientNum >= MAX_CLIENTS || clientNum == cg.snap->ps.clientNum || !cgs.clientinfo[clientNum].infoValid ) {
+		return qfalse;
+	}
+	cent = &cg_entities[clientNum];
+	if ( !cent->currentValid || cent->currentState.eType != ET_PLAYER || ( cent->currentState.eFlags & ( EF_DEAD | EF_NODRAW ) ) ) {
+		return qfalse;
+	}
+	// cloaked, or hidden from this player by a mind trick
+	if ( cent->currentState.powerups & ( 1 << PW_CLOAKED ) ) {
+		return qfalse;
+	}
+	return qtrue;
+}
+
+/*
+=================
+Select_Pick
+
+The player the pointer is on: a ray from the eye through the pointer against the boxes of the players that are
+shown, the nearest one wins, and a wall between the eye and him keeps him from being picked. -1: nobody.
+=================
+*/
+static int Select_Pick( void ) {
+	const float	nx = ( cgs.cursorX + cgs.bias2D ) / ( SCREEN_WIDTH + 2.0f * cgs.bias2D ) * 2.0f - 1.0f;
+	const float	ny = 1.0f - cgs.cursorY / (float)SCREEN_HEIGHT * 2.0f;
+	vec3_t		dir, end;
+	float		bestT = SELECT_RANGE;
+	int			i, k, best = -1;
+	trace_t		tr;
+
+	// (axis 1 of a view points to the left)
+	VectorMA( cg.refdef.viewaxis[0], -nx * tanf( DEG2RAD( cg.refdef.fov_x ) * 0.5f ), cg.refdef.viewaxis[1], dir );
+	VectorMA( dir, ny * tanf( DEG2RAD( cg.refdef.fov_y ) * 0.5f ), cg.refdef.viewaxis[2], dir );
+	VectorNormalize( dir );
+
+	for ( i = 0; i < MAX_CLIENTS; i++ ) {
+		const centity_t	*cent = &cg_entities[i];
+		float			tNear = 0.0f, tFar = bestT;
+
+		if ( !Select_Valid( i ) ) {
+			continue;
+		}
+		for ( k = 0; k < 3; k++ ) {
+			const float	lo = cent->lerpOrigin[k] + ( k == 2 ? -24.0f : -15.0f ) - SELECT_GROW;
+			const float	hi = cent->lerpOrigin[k] + ( k == 2 ? 40.0f : 15.0f ) + SELECT_GROW;
+			float		t0, t1;
+
+			if ( fabsf( dir[k] ) < 0.0001f ) {
+				if ( cg.refdef.vieworg[k] < lo || cg.refdef.vieworg[k] > hi ) {
+					tNear = tFar + 1.0f;
+				}
+				continue;
+			}
+			t0 = ( lo - cg.refdef.vieworg[k] ) / dir[k];
+			t1 = ( hi - cg.refdef.vieworg[k] ) / dir[k];
+			if ( t0 > t1 ) {
+				const float swap = t0;
+
+				t0 = t1;
+				t1 = swap;
+			}
+			tNear = Q_max( tNear, t0 );
+			tFar = Q_min( tFar, t1 );
+		}
+		if ( tNear <= tFar && tNear < bestT ) {
+			bestT = tNear;
+			best = i;
+		}
+	}
+	if ( best < 0 ) {
+		return -1;
+	}
+	// nothing of the level between the eye and where the ray meets his box
+	VectorMA( cg.refdef.vieworg, bestT, dir, end );
+	CG_Trace( &tr, cg.refdef.vieworg, NULL, NULL, end, cg.snap->ps.clientNum, MASK_SOLID );
+	if ( tr.fraction < 1.0f && tr.entityNum != best ) {
+		return -1;
+	}
+	return best;
+}
+
+/*
+===============================================================================
+
+The outline
+
+===============================================================================
+*/
+
+static void Select_Hull( void ) {
+	// (not const: the renderer scales the light of a picture in the memory it is given)
+	static byte			white[4 * 4 * 4];
+	char				value[8];
+
+	if ( sel.hullTried ) {
+		return;
+	}
+	sel.hullTried = qtrue;
+	memset( white, 255, sizeof( white ) );
+	// the flag came with the engine that says cl_uiSkin
+	trap->Cvar_VariableStringBuffer( "cl_uiSkin", value, sizeof( value ) );
+	if ( atoi( value ) == 1 && Skin_Ready() ) {
+		sel.hull = trap->ext.R_RegisterShaderRGBA( "select_hull", white, 4, 4, RGBA_SHADER_GLOW | RGBA_SHADER_HULL );
+	}
+	if ( !sel.hull ) {
+		sel.hull = trap->R_RegisterShader( "gfx/vision/select_hull" );
+	}
+}
+
+/*
+=================
+CG_SelectOutline
+
+Called while a player is added to the scene, with his model: the one under the pointer and the one whose card is
+open are added a second time as an outline.
+=================
+*/
+void CG_SelectOutline( int clientNum, const refEntity_t *model ) {
+	refEntity_t			hull;
+	const clientInfo_t	*ci;
+
+	if ( !cg_selectOutline.integer || ( clientNum != sel.hover && clientNum != sel.selected ) || !Select_Free() ) {
+		return;
+	}
+	Select_Hull();
+	if ( !sel.hull ) {
+		return;
+	}
+	ci = &cgs.clientinfo[clientNum];
+	hull = *model;
+	hull.customShader = sel.hull;
+	hull.renderfx &= ~( RF_RGB_TINT | RF_FORCE_ENT_ALPHA | RF_NODEPTH );
+	hull.renderfx |= RF_NOSHADOW;
+	// light blue, or the colour of his team
+	if ( cgs.gametype >= GT_TEAM && ci->team == TEAM_RED ) {
+		hull.shaderRGBA[0] = 255; hull.shaderRGBA[1] = 96; hull.shaderRGBA[2] = 84;
+	} else if ( cgs.gametype >= GT_TEAM && ci->team == TEAM_BLUE ) {
+		hull.shaderRGBA[0] = 96; hull.shaderRGBA[1] = 150; hull.shaderRGBA[2] = 255;
+	} else {
+		hull.shaderRGBA[0] = 110; hull.shaderRGBA[1] = 212; hull.shaderRGBA[2] = 255;
+	}
+	hull.shaderRGBA[3] = ( clientNum == sel.selected ) ? 255 : 190;
+	trap->R_AddRefEntityToScene( &hull );
+}
+
+/*
+===============================================================================
+
+The card
+
+===============================================================================
+*/
+
+static void Select_Close( void ) {
+	sel.selected = -1;
+	sel.confirmTime = 0;
+}
+
+// what the card of a player offers, in this order
+static void Select_Rows( int clientNum ) {
+	char value[8];
+
+	sel.numRows = 0;
+	sel.rows[sel.numRows++] = ACT_MUTE;
+	sel.rows[sel.numRows++] = ACT_QUIETER;
+	sel.rows[sel.numRows++] = ACT_LOUDER;
+	sel.rows[sel.numRows++] = ACT_HIDE_CHAT;
+	trap->Cvar_VariableStringBuffer( "cl_cgameChat", value, sizeof( value ) );
+	if ( atoi( value ) == 1 ) {
+		if ( cg_chatInput.integer ) {
+			sel.rows[sel.numRows++] = ACT_WHISPER;
+		}
+		sel.rows[sel.numRows++] = ACT_COPY;
+	}
+	if ( cgs.clientinfo[cg.clientNum].team == TEAM_SPECTATOR && cgs.clientinfo[clientNum].team != TEAM_SPECTATOR ) {
+		sel.rows[sel.numRows++] = ACT_WATCH;
+	}
+	sel.rows[sel.numRows++] = ACT_VOTE_KICK;
+	if ( CG_AuthIsAdmin() ) {
+		sel.rows[sel.numRows++] = ACT_ADMIN_KICK;
+		sel.rows[sel.numRows++] = ACT_ADMIN_SILENCE;
+		sel.rows[sel.numRows++] = ACT_ADMIN_SLEEP;
+		sel.rows[sel.numRows++] = ACT_ADMIN_SLAP;
+		sel.rows[sel.numRows++] = ACT_ADMIN_GOTO;
+		sel.rows[sel.numRows++] = ACT_ADMIN_BRING;
+	}
+}
+
+static const char *Select_Label( selectAct_t act, int clientNum ) {
+	switch ( act ) {
+	case ACT_MUTE:			return CG_VoiceMuted( clientNum ) ? "Hear his voice again" : "Mute his voice";
+	case ACT_QUIETER:		return va( "Voice quieter (%i %%)", CG_VoiceLouder( clientNum, 0 ) );
+	case ACT_LOUDER:		return va( "Voice louder (%i %%)", CG_VoiceLouder( clientNum, 0 ) );
+	case ACT_HIDE_CHAT:		return CG_ChatHidden( clientNum ) ? "Show his chat lines again" : "Hide his chat lines";
+	case ACT_WHISPER:		return "Whisper to him";
+	case ACT_WATCH:			return "Watch him";
+	case ACT_COPY:			return "Copy his name";
+	case ACT_VOTE_KICK:		return ( sel.confirmTime && cg.time - sel.confirmTime < SELECT_CONFIRM_MSEC ) ? "Click again to call the vote" : "Call a vote to kick him";
+	case ACT_ADMIN_KICK:	return "Admin: kick";
+	case ACT_ADMIN_SILENCE:	return "Admin: silence";
+	case ACT_ADMIN_SLEEP:	return "Admin: sleep";
+	case ACT_ADMIN_SLAP:	return "Admin: slap";
+	case ACT_ADMIN_GOTO:	return "Admin: go to him";
+	case ACT_ADMIN_BRING:	return "Admin: bring him here";
+	}
+	return "";
+}
+
+// One row of the card was chosen. What it does is what the command it runs does when it is typed: the server
+// decides as always who may.
+static void Select_Run( selectAct_t act, int clientNum ) {
+	char name[MAX_NETNAME];
+
+	switch ( act ) {
+	case ACT_MUTE:
+		trap->SendConsoleCommand( va( "%s %i\n", CG_VoiceMuted( clientNum ) ? "voice_unmute" : "voice_mute", clientNum ) );
+		return;
+	case ACT_QUIETER:
+		CG_VoiceLouder( clientNum, -1 );
+		return;
+	case ACT_LOUDER:
+		CG_VoiceLouder( clientNum, 1 );
+		return;
+	case ACT_HIDE_CHAT:
+		CG_ChatHide( clientNum, (qboolean)!CG_ChatHidden( clientNum ) );
+		return;
+	case ACT_WHISPER:
+		Select_Close();
+		trap->SendConsoleCommand( va( "cg_chatopen 2 %i\n", clientNum ) );
+		return;
+	case ACT_WATCH:
+		trap->SendClientCommand( va( "follow %i", clientNum ) );
+		break;
+	case ACT_COPY:
+		Q_strncpyz( name, cgs.clientinfo[clientNum].name, sizeof( name ) );
+		Q_StripColor( name );
+		trap->ext.SetClipboard( name );
+		break;
+	case ACT_VOTE_KICK:
+		if ( !sel.confirmTime || cg.time - sel.confirmTime >= SELECT_CONFIRM_MSEC ) {
+			sel.confirmTime = cg.time ? cg.time : 1;
+			return;
+		}
+		trap->SendClientCommand( va( "callvote clientkick %i", clientNum ) );
+		break;
+	case ACT_ADMIN_KICK:
+		trap->SendClientCommand( va( "amkick %i", clientNum ) );
+		break;
+	case ACT_ADMIN_SILENCE:
+		trap->SendClientCommand( va( "amsilence %i", clientNum ) );
+		break;
+	case ACT_ADMIN_SLEEP:
+		trap->SendClientCommand( va( "amsleep %i", clientNum ) );
+		break;
+	case ACT_ADMIN_SLAP:
+		trap->SendClientCommand( va( "amslap %i", clientNum ) );
+		break;
+	case ACT_ADMIN_GOTO:
+		trap->SendClientCommand( va( "amtele %i %i", cg.clientNum, clientNum ) );
+		break;
+	case ACT_ADMIN_BRING:
+		trap->SendClientCommand( va( "amtele %i %i", clientNum, cg.clientNum ) );
+		break;
+	}
+	Select_Close();
+}
+
+// the row of the card the pointer is on, -1: none
+static int Select_RowAt( void ) {
+	const float y = cgs.cursorY - ( sel.cardY + SELECT_HEAD_H );
+
+	if ( sel.selected < 0 || cgs.cursorX < sel.cardX || cgs.cursorX >= sel.cardX + SELECT_CARD_W || y < 0.0f ) {
+		return -1;
+	}
+	return ( (int)( y / SELECT_ROW_H ) < sel.numRows ) ? (int)( y / SELECT_ROW_H ) : -1;
+}
+
+static void Select_Text( float x, float y, float scale, const vec4_t color, const char *text ) {
+	CG_Text_Paint( x, y, scale, (float *)color, text, 0, 0, 0, Skin_Ready() ? SKIN_FONT_SANS : FONT_SMALL2 );
+}
+
+static void Select_DrawCard( void ) {
+	const vec4_t		fill = { 0.035f, 0.07f, 0.12f, 0.88f }, edge = { 0.43f, 0.83f, 1.0f, 0.35f };
+	const vec4_t		text = { 0.86f, 0.92f, 0.97f, 1.0f }, dim = { 0.60f, 0.69f, 0.78f, 1.0f }, accent = { 0.43f, 0.83f, 1.0f, 1.0f };
+	const int			n = sel.selected;
+	const clientInfo_t	*ci = &cgs.clientinfo[n];
+	const float			height = SELECT_HEAD_H + sel.numRows * SELECT_ROW_H + 5.0f;
+	const int			over = Select_RowAt();
+	char				line[128];
+	const char			*kind;
+	vec3_t				head;
+	float				x, y;
+	int					i;
+
+	// beside the player while he is on the screen, where it was otherwise
+	VectorCopy( cg_entities[n].lerpOrigin, head );
+	head[2] += 20.0f;
+	if ( Select_Valid( n ) && CG_WorldCoordToScreenCoordFloat( head, &x, &y ) ) {
+		sel.cardX = Com_Clamp( 4.0f - cgs.bias2D, SCREEN_WIDTH + cgs.bias2D - SELECT_CARD_W - 4.0f, x + 36.0f );
+		sel.cardY = Com_Clamp( 30.0f, SCREEN_HEIGHT - height - 44.0f, y - 30.0f );
+	}
+	x = sel.cardX;
+	y = sel.cardY;
+
+	if ( Skin_Ready() ) {
+		const vec4_t dark = { 0.0f, 0.0f, 0.0f, 0.4f };
+
+		Skin_Soft( x, y + 3.0f, SELECT_CARD_W, height, 10.0f, dark, qfalse );
+		Skin_Panel( x, y, SELECT_CARD_W, height, 6.0f, fill, edge );
+	} else {
+		CG_FillRect( x, y, SELECT_CARD_W, height, (float *)fill );
+		CG_DrawRect( x, y, SELECT_CARD_W, height, 1.0f, (float *)edge );
+	}
+	Select_Text( x + 8.0f, y + 5.0f, 0.78f, colorWhite, ci->name );
+	// what he is, and his score and ping if the scoreboard has a line of him
+	kind = ( ci->team == TEAM_RED ) ? "Red" : ( ci->team == TEAM_BLUE ) ? "Blue" : ( ci->team == TEAM_SPECTATOR ) ? "Spectator"
+		: ( ci->botSkill != -1 ) ? "Bot" : "Player";
+	Q_strncpyz( line, kind, sizeof( line ) );
+	for ( i = 0; i < cg.numScores; i++ ) {
+		if ( cg.scores[i].client == n ) {
+			Com_sprintf( line, sizeof( line ), "%s   score %i   ping %i", kind, cg.scores[i].score, cg.scores[i].ping );
+			break;
+		}
+	}
+	Select_Text( x + 8.0f, y + 20.0f, 0.52f, dim, line );
+	if ( CG_StatusLine( n, line, sizeof( line ) ) ) {
+		Select_Text( x + 8.0f, y + 30.0f, 0.52f, accent, line );
+	}
+	CG_FillRect( x + 6.0f, y + SELECT_HEAD_H - 3.0f, SELECT_CARD_W - 12.0f, 0.67f, (float *)edge );
+
+	for ( i = 0; i < sel.numRows; i++ ) {
+		const float rowY = y + SELECT_HEAD_H + i * SELECT_ROW_H;
+
+		if ( i == over ) {
+			if ( Skin_Ready() ) {
+				Skin_Row( x + 3.0f, rowY, SELECT_CARD_W - 6.0f, SELECT_ROW_H, accent, qfalse, 1.5f );
+			} else {
+				const vec4_t lit = { 0.43f, 0.83f, 1.0f, 0.15f };
+
+				CG_FillRect( x + 3.0f, rowY, SELECT_CARD_W - 6.0f, SELECT_ROW_H, (float *)lit );
+			}
+		}
+		Select_Text( x + 8.0f, rowY + 1.5f, 0.5f, dim, va( "%i", ( i + 1 ) % 10 ) );
+		Select_Text( x + 20.0f, rowY + 1.5f, SELECT_SCALE, ( i == over ) ? colorWhite : text, Select_Label( sel.rows[i], n ) );
+	}
+}
+
+// four corners around a player, for an engine and a server that leave no shader for the outline
+static void Select_DrawCorners( int clientNum ) {
+	const vec4_t	color = { 0.43f, 0.83f, 1.0f, 0.9f };
+	vec3_t			top, bottom;
+	float			x0, y0, x1, y1, half;
+
+	VectorCopy( cg_entities[clientNum].lerpOrigin, top );
+	VectorCopy( top, bottom );
+	top[2] += 44.0f;
+	bottom[2] -= 26.0f;
+	if ( !CG_WorldCoordToScreenCoordFloat( top, &x0, &y0 ) || !CG_WorldCoordToScreenCoordFloat( bottom, &x1, &y1 ) || y1 <= y0 ) {
+		return;
+	}
+	half = ( y1 - y0 ) * 0.28f;
+	x0 = ( x0 + x1 ) * 0.5f - half;
+	x1 = x0 + 2.0f * half;
+	CG_FillRect( x0, y0, 6.0f, 1.0f, (float *)color );		CG_FillRect( x0, y0, 1.0f, 6.0f, (float *)color );
+	CG_FillRect( x1 - 6.0f, y0, 6.0f, 1.0f, (float *)color );	CG_FillRect( x1 - 1.0f, y0, 1.0f, 6.0f, (float *)color );
+	CG_FillRect( x0, y1 - 1.0f, 6.0f, 1.0f, (float *)color );	CG_FillRect( x0, y1 - 6.0f, 1.0f, 6.0f, (float *)color );
+	CG_FillRect( x1 - 6.0f, y1 - 1.0f, 6.0f, 1.0f, (float *)color );	CG_FillRect( x1 - 1.0f, y1 - 6.0f, 1.0f, 6.0f, (float *)color );
+}
+
+/*
+===============================================================================
+
+Once a frame, keys, commands
+
+===============================================================================
+*/
+
+/*
+=================
+CG_SelectDraw
+
+Once a frame, in the 2D of the HUD: asks for the mouse or gives it back, finds the player under the pointer,
+and draws his name, the card and the pointer
+=================
+*/
+void CG_SelectDraw( void ) {
+	const qboolean free = Select_Free();
+
+	// the keys and the mouse, while the mouse is free. The chat box asks for them itself while it is open.
+	if ( free && !CG_ChatIsOpen() && !sel.catching ) {
+		sel.catching = qtrue;
+		cgs.cursorX = SCREEN_WIDTH / 2;
+		cgs.cursorY = SCREEN_HEIGHT / 2;
+		trap->Key_SetCatcher( trap->Key_GetCatcher() | KEYCATCH_CGAME );
+	} else if ( sel.catching && ( !free || CG_ChatIsOpen() ) ) {
+		sel.catching = qfalse;
+		if ( !CG_ChatIsOpen() ) {
+			trap->Key_SetCatcher( trap->Key_GetCatcher() & ~KEYCATCH_CGAME );
+		}
+	}
+	// somebody else took the keys away (a menu, the console)
+	if ( sel.catching && !( trap->Key_GetCatcher() & KEYCATCH_CGAME ) ) {
+		sel.catching = sel.toggled = qfalse;
+	}
+	if ( !free ) {
+		sel.hover = -1;
+		Select_Close();
+		return;
+	}
+	if ( sel.selected >= 0 && !cgs.clientinfo[sel.selected].infoValid ) {
+		Select_Close();
+	}
+
+	CG_Place2D( PLACE_CENTER );
+	sel.hover = ( Select_RowAt() >= 0 ) ? -1 : Select_Pick();
+	if ( sel.hover >= 0 && sel.hover != sel.selected ) {
+		const vec4_t	back = { 0.0f, 0.0f, 0.0f, 0.55f };
+		const char		*name = cgs.clientinfo[sel.hover].name;
+		const float		w = CG_Text_Width( name, 0.62f, Skin_Ready() ? SKIN_FONT_SANS : FONT_SMALL2 );
+
+		Select_Hull();
+		if ( !sel.hull || !cg_selectOutline.integer ) {
+			Select_DrawCorners( sel.hover );
+		}
+		if ( Skin_Ready() ) {
+			Skin_Panel( cgs.cursorX + 14.0f, cgs.cursorY + 10.0f, w + 10.0f, 15.0f, 4.0f, back, NULL );
+		} else {
+			CG_FillRect( cgs.cursorX + 14.0f, cgs.cursorY + 10.0f, w + 10.0f, 15.0f, (float *)back );
+		}
+		Select_Text( cgs.cursorX + 19.0f, cgs.cursorY + 12.0f, 0.62f, colorWhite, name );
+	}
+	if ( sel.selected >= 0 ) {
+		Select_Rows( sel.selected );
+		Select_DrawCard();
+	}
+	// the chat box draws the pointer itself while it is open
+	if ( !CG_ChatIsOpen() ) {
+		CG_SelectDrawCursor();
+	}
+}
+
+/*
+=================
+CG_SelectKeyEvent
+
+A key or a button of the mouse while the mouse is free. qtrue: it was for this file.
+=================
+*/
+qboolean CG_SelectKeyEvent( int key, qboolean down ) {
+	if ( !Select_Free() ) {
+		return qfalse;
+	}
+	if ( !down ) {
+		return (qboolean)!CG_ChatIsOpen();
+	}
+	if ( key == A_MOUSE1 ) {
+		const int row = Select_RowAt();
+
+		if ( row >= 0 ) {
+			Select_Run( sel.rows[row], sel.selected );
+			return qtrue;
+		}
+		if ( sel.hover >= 0 ) {
+			sel.selected = sel.hover;
+			sel.confirmTime = 0;
+			return qtrue;
+		}
+		if ( sel.selected >= 0 ) {
+			Select_Close();
+			return qtrue;
+		}
+		return (qboolean)!CG_ChatIsOpen();
+	}
+	if ( sel.selected >= 0 ) {
+		if ( key == A_MOUSE2 || key == A_ESCAPE ) {
+			Select_Close();
+			return qtrue;
+		}
+		// the rows by their number: 1 to 9, then 0
+		if ( key >= A_0 && key <= A_9 && !CG_ChatIsOpen() ) {
+			const int row = ( key == A_0 ) ? 9 : key - A_1;
+
+			if ( row < sel.numRows ) {
+				Select_Run( sel.rows[row], sel.selected );
+			}
+			return qtrue;
+		}
+	}
+	if ( CG_ChatIsOpen() ) {
+		return qfalse;
+	}
+	if ( key == A_ESCAPE || key == A_MOUSE2 ) {
+		sel.toggled = qfalse;
+	}
+	// every other key is swallowed while the mouse is free: the game does not get it
+	return qtrue;
+}
+
+void CG_SelectCursorDown_f( void ) {
+	sel.held = qtrue;
+}
+
+void CG_SelectCursorUp_f( void ) {
+	sel.held = qfalse;
+}
+
+/*
+=================
+CG_SelectCursor_f
+
+cursor: the mouse is free, or the game has it back. cursor at <x> <y>: the pointer goes there, in the 640 x 480
+of the HUD. cursor on <player>: onto that player. cursor click: a click of the left button where the pointer
+is. cursor row <n>: that row of the card that is open. All but the first are for a key or a script in place of
+a mouse.
+=================
+*/
+void CG_SelectCursor_f( void ) {
+	const char *what = CG_Argv( 1 );
+
+	if ( !Q_stricmp( what, "at" ) ) {
+		cgs.cursorX = Com_Clampi( -(int)cgs.bias2D, SCREEN_WIDTH + (int)cgs.bias2D, atoi( CG_Argv( 2 ) ) );
+		cgs.cursorY = Com_Clampi( 0, SCREEN_HEIGHT, atoi( CG_Argv( 3 ) ) );
+	} else if ( !Q_stricmp( what, "on" ) ) {
+		// onto a player, by his name or number, if he is on the screen
+		const int	n = ( CG_Argv( 2 )[0] >= '0' && CG_Argv( 2 )[0] <= '9' ) ? atoi( CG_Argv( 2 ) ) : CG_ClientNumFromName( CG_Argv( 2 ) );
+		vec3_t		chest;
+		float		x, y;
+
+		if ( n < 0 || n >= MAX_CLIENTS || !cg.snap || !cgs.clientinfo[n].infoValid ) {
+			trap->Print( "cursor on: no such player\n" );
+		} else if ( !Select_Valid( n ) ) {
+			trap->Print( "cursor on: %s^7 can not be pointed at (%s)\n", cgs.clientinfo[n].name, n == cg.snap->ps.clientNum ? "that is you"
+				: !cg_entities[n].currentValid ? "the server does not show him here"
+				: ( cg_entities[n].currentState.eFlags & EF_DEAD ) ? "he is dead" : "he can not be seen" );
+		} else {
+			VectorCopy( cg_entities[n].lerpOrigin, chest );
+			chest[2] += 8.0f;
+			if ( CG_WorldCoordToScreenCoordFloat( chest, &x, &y ) ) {
+				cgs.cursorX = (int)x;
+				cgs.cursorY = (int)y;
+			} else {
+				trap->Print( "cursor on: %s^7 is not on the screen\n", cgs.clientinfo[n].name );
+			}
+		}
+	} else if ( !Q_stricmp( what, "click" ) ) {
+		CG_SelectKeyEvent( A_MOUSE1, qtrue );
+	} else if ( !Q_stricmp( what, "row" ) ) {
+		// a row of the card that is open, by its number
+		const int row = atoi( CG_Argv( 2 ) ) - 1;
+
+		if ( sel.selected >= 0 && row >= 0 && row < sel.numRows ) {
+			Select_Run( sel.rows[row], sel.selected );
+		}
+	} else {
+		sel.toggled = (qboolean)!sel.toggled;
+	}
+}

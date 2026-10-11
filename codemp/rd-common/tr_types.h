@@ -81,6 +81,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define RGBA_SHADER_GLOW	1		// added to what is behind it, and the dynamic glow takes it
 #define RGBA_SHADER_OVER	2		// drawn over all of the scene: nothing in front of it hides it
 #define RGBA_SHADER_BEHIND	4		// drawn before the pictures without it, where a glow is drawn, but blended as they are
+#define RGBA_SHADER_HULL	8		// for a model as its custom shader: an outline around it. Only what faces away is
+									// drawn, pushed out along the normals, in the colour of the entity
 
 #define RDF_NOWORLDMODEL	1		// used for player configuration screen
 #define RDF_HYPERSPACE		4		// teleportation effect

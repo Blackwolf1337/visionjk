@@ -686,7 +686,8 @@ RE_RegisterShaderRGBA
 A shader for a picture a module made itself, for polygons in the scene. The picture needs no file, so it is there
 on a pure server that does not have the pk3 of this tree. Width and height are powers of two up to 512. An
 image of that name from before the last restart of the renderer is found again and keeps its picture: a module
-hands in the same picture under the same name. flags: RGBA_SHADER_GLOW, RGBA_SHADER_OVER, RGBA_SHADER_BEHIND.
+hands in the same picture under the same name. flags: RGBA_SHADER_GLOW, RGBA_SHADER_OVER, RGBA_SHADER_BEHIND,
+and RGBA_SHADER_HULL for a shader a model is drawn with a second time, as an outline around it.
 ===============
 */
 qhandle_t RE_RegisterShaderRGBA( const char *name, const byte *rgba, int width, int height, int flags ) {

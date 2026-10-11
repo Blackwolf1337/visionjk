@@ -201,6 +201,13 @@ set(MPCGameStatusFiles
 source_group("cgame/status" FILES ${MPCGameStatusFiles})
 set(MPCGameFiles ${MPCGameFiles} ${MPCGameStatusFiles})
 
+# players that can be clicked while the mouse is free: the outline, the card
+set(MPCGameSelectFiles
+	"${MPDir}/cgame/select/cg_select.c"
+	)
+source_group("cgame/select" FILES ${MPCGameSelectFiles})
+set(MPCGameFiles ${MPCGameFiles} ${MPCGameSelectFiles})
+
 # the numbers of the game for the items of a menu file that show one: what the HUD of this tree is made of
 set(MPCGameHudFiles
 	"${MPDir}/cgame/hud/cg_hud.c"

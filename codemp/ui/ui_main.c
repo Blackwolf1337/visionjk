@@ -1448,6 +1448,31 @@ qboolean Load_Menu(int handle) {
 	return qfalse;
 }
 
+/*
+=================
+UI_OfferCursorKey
+
+The key that frees the mouse to point at players (+cursor of the cgame): the left Alt key, once, and only if
+that key does nothing yet and no key has the command. Whoever takes the bind away afterwards keeps it away.
+=================
+*/
+static void UI_OfferCursorKey( void ) {
+	char	bound[MAX_STRING_CHARS];
+	int		key;
+
+	if ( ui_cursorKeyOffered.integer ) {
+		return;
+	}
+	trap->Cvar_Set( "ui_cursorKeyOffered", "1" );
+	for ( key = 0; key < MAX_KEYS; key++ ) {
+		trap->Key_GetBindingBuf( key, bound, sizeof( bound ) );
+		if ( !Q_stricmp( bound, "+cursor" ) || ( key == A_ALT && bound[0] ) ) {
+			return;
+		}
+	}
+	trap->Key_SetBinding( A_ALT, "+cursor" );
+}
+
 // Is this file of the old look the one of this tree? Those carry a mark in their first line. Without it the
 // file is somebody else's: a mod that brings menus of its own.
 static qboolean UI_FileIsOurs( const char *path ) {
@@ -10320,6 +10345,7 @@ void UI_Init( qboolean inGameLoad ) {
 
 	Init_Display(&uiInfo.uiDC);
 	Skin_Reset();
+	UI_OfferCursorKey();
 
 	UI_BuildPlayerModel_List(inGameLoad);
 

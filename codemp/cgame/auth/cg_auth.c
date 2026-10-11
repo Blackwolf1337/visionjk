@@ -497,6 +497,14 @@ static void Auth_Start( qboolean quiet, qboolean showOnly ) {
 	Auth_Hello();
 }
 
+// The server said this client is an admin by its key, in this level: the card of a player then offers what an
+// admin can do with him (select/cg_select.c).
+static qboolean authIsAdmin;
+
+qboolean CG_AuthIsAdmin( void ) {
+	return authIsAdmin;
+}
+
 /*
 =================
 CG_AuthServerCommand
@@ -555,6 +563,7 @@ void CG_AuthServerCommand( void ) {
 	}
 
 	if ( !Q_stricmp( what, "ok" ) ) {
+		authIsAdmin = qtrue;
 		// said even after a login that ran by itself, but not after every map: "kept" is the rank from before
 		if ( !auth.quiet || Q_stricmp( CG_Argv( 3 ), "kept" ) ) {
 			trap->Print( va( "Logged in with your key as admin (%s).\n", CG_Argv( 2 ) ) );
@@ -697,6 +706,7 @@ void CG_AuthFrame( void ) {
 void CG_AuthInit( void ) {
 	Auth_End();
 	auth.joined = qfalse;
+	authIsAdmin = qfalse;
 }
 
 /*
@@ -757,6 +767,7 @@ void CG_AuthCommand_f( void ) {
 #else	// __EMSCRIPTEN__
 
 void CG_AuthInit( void ) {}
+qboolean CG_AuthIsAdmin( void ) { return qfalse; }
 void CG_AuthFrame( void ) {}
 void CG_AuthServerCommand( void ) {}
 

@@ -1775,6 +1775,23 @@ qboolean	CG_Menu3DActive( void );
 void		CG_Menu3DView( void );
 void		CG_Menu3DScene( void );
 
+// select/cg_select.c: players that can be clicked while the mouse is free
+void		CG_SelectInit( void );
+void		CG_SelectDraw( void );
+void		CG_SelectDrawCursor( void );
+qboolean	CG_SelectKeyEvent( int key, qboolean down );
+void		CG_SelectOutline( int clientNum, const refEntity_t *model );
+void		CG_SelectCursorDown_f( void );
+void		CG_SelectCursorUp_f( void );
+void		CG_SelectCursor_f( void );
+// what the card of a player uses of the chat box, the voice chat and the key login
+qboolean	CG_ChatIsOpen( void );
+qboolean	CG_ChatHidden( int clientNum );
+void		CG_ChatHide( int clientNum, qboolean hide );
+qboolean	CG_VoiceMuted( int clientNum );
+int			CG_VoiceLouder( int clientNum, int steps );
+qboolean	CG_AuthIsAdmin( void );
+
 // hud/cg_hud.c: the numbers of the game by name, for the items of a menu file that show one
 qboolean	CG_StatValue( const char *name, float *value, float *max );
 void		CG_HudLoad( void );

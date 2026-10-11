@@ -101,6 +101,7 @@ typedef struct voiceSpeaker_s {
 	int				flags, distance;	// of his last datagram: is he in what the server shows, and how far away
 	int				heard;			// frames of him that were played, for voice_status
 	qboolean		muted;			// by this player (voice_mute)
+	int				gainSteps;		// how much louder or quieter this player wants him, in quarters: 0 is as he is
 	qboolean		muffled;		// something is between him and the listener
 	int				traceTime;		//	and when that was looked at last
 	qboolean		inLevel;		// what he says now is played by the engine as a sound in the level, see Voice_InLevel()
@@ -420,10 +421,12 @@ static void Voice_Close( void ) {
 #endif
 	// who was muted stays muted while the module does
 	for ( i = 0; i < MAX_CLIENTS; i++ ) {
-		const qboolean muted = voiceSpeakers[i].muted;
+		const qboolean	muted = voiceSpeakers[i].muted;
+		const int		gainSteps = voiceSpeakers[i].gainSteps;
 
 		memset( &voiceSpeakers[i], 0, sizeof( voiceSpeakers[i] ) );
 		voiceSpeakers[i].muted = muted;
+		voiceSpeakers[i].gainSteps = gainSteps;
 	}
 	memset( &voice, 0, sizeof( voice ) );
 	voice.sock = BG_INVALID_SOCKET;
@@ -1122,7 +1125,7 @@ static void Voice_Mouth( int speaker ) {
 		sp->mouth[2] += VOICE_HEAD;
 	}
 	distance = Com_Clamp( 0.0f, 1.0f, 1.0f - Distance( sp->mouth, cg.refdef.vieworg ) / voice.range );
-	sp->volume = cg_voiceVolume.value * ( VOICE_FAR_GAIN + ( 1.0f - VOICE_FAR_GAIN ) * distance * distance );
+	sp->volume = cg_voiceVolume.value * ( 1.0f + 0.25f * sp->gainSteps ) * ( VOICE_FAR_GAIN + ( 1.0f - VOICE_FAR_GAIN ) * distance * distance );
 }
 
 /*
@@ -1269,6 +1272,7 @@ static void Voice_Place( int now ) {
 			continue;
 		// over the radio: in both ears, as loud wherever he is, and nothing over his head that would say where
 		if ( sp->radio ) {
+			gain *= 1.0f + 0.25f * sp->gainSteps;
 			CG_VoiceAudioMix( i, gain, gain, CG_Menu3DActive() ? 1.0f : 0.0f );
 			continue;
 		}
@@ -1307,6 +1311,7 @@ static void Voice_Place( int now ) {
 			muffled = qfalse;
 		// the same loudness from the middle as from a side: the two ears share it
 		// also while the menu stands in the level (menu3d/cg_menu3d.c), as the sound of the game is then
+		gain *= 1.0f + 0.25f * sp->gainSteps;
 		CG_VoiceAudioMix( i, gain * sqrtf( 1.0f + pan ), gain * sqrtf( 1.0f - pan ), ( muffled || CG_Menu3DActive() ) ? 1.0f : 0.0f );
 	}
 }
@@ -1663,6 +1668,20 @@ For the statuses above the heads (status/cg_status.c), on a server whose game mo
 ===============================================================================
 */
 
+// Is this player muted (voice_mute)?
+qboolean CG_VoiceMuted( int clientNum ) {
+	return ( clientNum >= 0 && clientNum < MAX_CLIENTS && voiceSpeakers[clientNum].muted ) ? qtrue : qfalse;
+}
+
+// One player louder or quieter than the others by a quarter, from silent to twice as loud, for this player
+// alone and until the level changes. Returns how loud he is now, in percent.
+int CG_VoiceLouder( int clientNum, int steps ) {
+	if ( clientNum < 0 || clientNum >= MAX_CLIENTS )
+		return 100;
+	voiceSpeakers[clientNum].gainSteps = Com_Clampi( -4, 4, voiceSpeakers[clientNum].gainSteps + steps );
+	return 100 + 25 * voiceSpeakers[clientNum].gainSteps;
+}
+
 // Does the voice master hand statuses on for this client right now?
 qboolean CG_VoiceSocial( void ) {
 #ifdef __EMSCRIPTEN__
@@ -1878,6 +1897,8 @@ void CG_VoiceUnmute_f( void ) {}
 void CG_VoiceDraw( void ) {}
 int CG_VoiceLip( int clientNum ) { (void)clientNum; return 0; }
 qboolean CG_VoiceSocial( void ) { return qfalse; }
+qboolean CG_VoiceMuted( int clientNum ) { (void)clientNum; return qfalse; }
+int CG_VoiceLouder( int clientNum, int steps ) { (void)clientNum; (void)steps; return 100; }
 void CG_VoiceSendStatus( qboolean away, const char *text ) { (void)away; (void)text; }
 
 #endif // JP_VOICE

@@ -11792,6 +11792,11 @@ stillDoSaber:
 		legs.renderfx &= ~RF_NODEPTH;
 	}
 
+	// the outline of the player the mouse points at (select/cg_select.c)
+	if ( cent->currentState.number < MAX_CLIENTS ) {
+		CG_SelectOutline( cent->currentState.number, &legs );
+	}
+
 	if ((cg.snap->ps.fd.forcePowersActive & (1 << FP_SEE)) && cg.snap->ps.clientNum != cent->currentState.number && cg_auraShell.integer)
 	{
 		if (cgs.gametype == GT_SIEGE)

@@ -55,7 +55,6 @@ extern displayContextDef_t cgDC;
 #define CHAT_BAR_WIDTH		4.0f
 #define CHAT_FADE_MSEC		1000
 #define CHAT_SENT			16				// lines one sent that Up brings back
-#define CHAT_CURSOR_SIZE	40.0f			// as the ui draws its cursor
 
 typedef struct chatMsg_s {
 	char		text[CHAT_TEXT];
@@ -113,7 +112,6 @@ static struct {
 	float		x, width;
 	float		tabX[CHAT_NUM_KINDS + 1];
 	float		tabY;
-	qhandle_t	pointer;					// the picture of the mouse cursor
 } chat;
 
 static const char *chatTabNames[CHAT_NUM_KINDS] = { "All", "Team", "Private" };
@@ -301,7 +299,13 @@ A chat line came, text without the 0x19 marks
 =================
 */
 void CG_ChatAdd( int kind, int clientNum, const char *text ) {
-	chatMsg_t *m = Chat_Msg( chat.count );
+	chatMsg_t *m;
+
+	// somebody this player does not want to read (the card of select/cg_select.c)
+	if ( CG_ChatHidden( clientNum ) ) {
+		return;
+	}
+	m = Chat_Msg( chat.count );
 
 	memset( m, 0, sizeof( *m ) );
 	Q_strncpyz( m->text, text, sizeof( m->text ) );
@@ -943,13 +947,24 @@ static void Chat_DrawOpen( float x, float bottom ) {
 		}
 	}
 
-	// The cursor of the menus. (cgs.media.cursor is no use: the base game registers a picture of Quake 3 Team
-	// Arena for it that this game does not have, so nothing was drawn.)
-	if ( !chat.pointer ) {
-		chat.pointer = trap->R_RegisterShaderNoMip( "cursor" );
+	CG_SelectDrawCursor();
+}
+
+// The lines of one player are left out of the chat box from now on, or let in again. Until the level changes.
+static qboolean chatHidden[MAX_CLIENTS];
+
+qboolean CG_ChatHidden( int clientNum ) {
+	return (qboolean)( clientNum >= 0 && clientNum < MAX_CLIENTS && chatHidden[clientNum] );
+}
+
+void CG_ChatHide( int clientNum, qboolean hide ) {
+	if ( clientNum >= 0 && clientNum < MAX_CLIENTS ) {
+		chatHidden[clientNum] = hide;
 	}
-	trap->R_SetColor( NULL );
-	CG_DrawPic( cgs.cursorX, cgs.cursorY, CHAT_CURSOR_SIZE, CHAT_CURSOR_SIZE, chat.pointer );
+}
+
+qboolean CG_ChatIsOpen( void ) {
+	return chat.open;
 }
 
 /*

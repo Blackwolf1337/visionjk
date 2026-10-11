@@ -353,10 +353,43 @@ def setup_before(m):
     m.extend(new)
 
 
+def controls_before(m):
+    """The key that frees the mouse, as a row under the one of the clan radio."""
+    model = next((e for e in items(m) if (mf.get(e.block, 'cvar') or [''])[0] == '"+voiceclan"'), None)
+    if not model:
+        return
+    group = (mf.get(model.block, 'group') or [''])[0]
+    rows = [rect_of(e.block) for e in items(m) if (mf.get(e.block, 'group') or [''])[0] == group and rect_of(e.block)
+            and mf.get(e.block, 'cvar')]
+    r = rect_of(model.block)
+    row = Entry('itemDef', [], [Entry(x.key, list(x.args), list(x.block) if x.block is not None else None) for x in model.block])
+    b = row.block
+    mf.put(b, 'name', 'vision_cursorkey')
+    mf.put(b, 'text', quoted('Free the Mouse (Select Players)'))
+    mf.put(b, 'cvar', quoted('+cursor'))
+    mf.put(b, 'descText', quoted('hold to point at players with the mouse: a click opens what you can do with one'))
+    set_rect(b, r[0], max(x[1] for x in rows) + r[3], r[2], r[3])
+    for key in ('mouseenter', 'mouseexit'):
+        e = mf.find(b, key)
+        if e and isinstance(e.block, list):
+            # the bar that lit behind the row of the model is not this row's
+            words, out, i = e.block, [], 0
+            while i < len(words):
+                if words[i].lower() in ('show', 'hide') and i + 1 < len(words) and words[i + 1].lower().startswith('highlight'):
+                    i += 2
+                else:
+                    out.append(words[i])
+                    i += 1
+            e.block = out
+    m.append(row)
+
+
 def before(m, name, ingame):
     """What a page gets before the rules of theme.py."""
     if name in ('setup.menu', 'ingame_setup.menu'):
         setup_before(m)
+    elif name in ('controls.menu', 'ingame_controls.menu'):
+        controls_before(m)
 
 
 def page(m, name, ingame):

@@ -2754,6 +2754,33 @@
 			decoration
 			textaligny				1.05
 		}
+
+		itemDef
+		{
+			name					vision_cursorkey
+			group					japluscontrols
+			type					ITEM_TYPE_BIND
+			text					"Free the Mouse (Select Players)"
+			cvar					"+cursor"
+			rect					220 181 300 20
+			textalign				ITEM_ALIGN_RIGHT
+			textalignx				151
+			textaligny				1
+			font					5
+			textscale				0.68
+			forecolor				0.60 0.69 0.78 1
+			visible					0
+			descText				"hold to point at players with the mouse: a click opens what you can do with one"
+			mouseenter
+			{
+				show keybindstatus
+			}
+			mouseexit
+			{
+				hide keybindstatus
+			}
+			action { play "sound/interface/button1.wav" ; }
+		}
 		skin					1
 		disableColor			0.36 0.42 0.50 1
 		openSlide				8

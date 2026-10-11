@@ -833,6 +833,11 @@ void CG_EventHandling(int type) {
 
 void CG_KeyEvent(int key, qboolean down) {
 
+	// a click on a player or on his card while the mouse is free (select/cg_select.c)
+	if ( CG_SelectKeyEvent( key, down ) ) {
+		return;
+	}
+
 	// the chat box takes every key while it is open (chat/cg_chat.c)
 	if ( CG_ChatKeyEvent( key, down ) ) {
 		return;

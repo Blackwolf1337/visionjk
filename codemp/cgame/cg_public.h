@@ -740,6 +740,8 @@ typedef struct cgameImport_s {
 		// 0 and qfalse: there is no such font. And a shader for a picture the cgame made itself, width and
 		// height powers of two up to 512, for polygons in the scene; flags: RGBA_SHADER_GLOW, it is added and
 		// glows. RGBA_SHADER_OVER, nothing of the scene hides it. RGBA_SHADER_BEHIND, drawn before the others.
+		// RGBA_SHADER_HULL (an engine with the cvar cl_uiSkin): as the custom shader of a model that is added a
+		// second time it draws an outline around it, in the colour of the entity.
 		float			(*R_Text3DWidth)						( const char *text, float height );
 		qboolean		(*R_Text3D)								( const vec3_t origin, const vec3_t right, const vec3_t up, float height, const char *text, const float *rgba );
 		qhandle_t		(*R_RegisterShaderRGBA)					( const char *name, const byte *rgba, int width, int height, int flags );
