@@ -141,6 +141,35 @@ void Sys_SetClipboardData( const char *text ) {
 }
 
 /*
+==================
+Sys_OpenURL
+
+Hands a web address to the system, which opens it in the browser of the user. Only http and https, and only
+an address without blanks, quotes and control characters: it comes from a chat line, which anybody can write.
+The caller asks the player first. qfalse: it was not handed on.
+==================
+*/
+qboolean Sys_OpenURL( const char *url ) {
+#ifdef DEDICATED
+	return qfalse;
+#else
+	const size_t len = strlen( url );
+
+	if ( len > 1024 || ( Q_strncmp( url, "https://", 8 ) && Q_strncmp( url, "http://", 7 ) ) ) {
+		return qfalse;
+	}
+	for ( size_t i = 0; i < len; i++ ) {
+		const unsigned char c = (unsigned char)url[i];
+
+		if ( c <= ' ' || c == 127 || c == '"' || c == '\'' || c == '`' || c == '\\' || c == '<' || c == '>' ) {
+			return qfalse;
+		}
+	}
+	return (qboolean)( SDL_OpenURL( url ) == 0 );
+#endif
+}
+
+/*
 =================
 Sys_ConsoleInput
 

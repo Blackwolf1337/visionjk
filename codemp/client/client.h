@@ -456,6 +456,8 @@ void CL_ShutdownAll( qboolean shutdownRef );
 void CL_AddReliableCommand( const char *cmd, qboolean isDisconnectCmd );
 qboolean CL_UTF8( void );
 const byte *CL_FontFile( int font, int *length );		// cl_font.cpp
+void CL_GetClipboard( char *buf, int buflen );		// cl_uiapi.cpp
+void CL_SetClipboard( const char *text );
 
 void CL_StartHunkUsers( void );
 

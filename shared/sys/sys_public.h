@@ -127,6 +127,7 @@ const char *Sys_ProgramFolder( void );	// client: the folder the program file is
 qboolean Sys_SameFolder( const char *a, const char *b );
 char	*Sys_GetClipboardData( void );	// note that this isn't journaled...
 void	Sys_SetClipboardData( const char *text );	// UTF-8
+qboolean Sys_OpenURL( const char *url );
 
 void	Sys_Print( const char *msg );
 

@@ -90,10 +90,30 @@ void Con_ToggleMenu_f( void ) {
 
 /*
 ================
+Con_ChatByCgame
+
+A cgame of this tree has a chat box with its own line to type in (cgame/chat/cg_chat.c) and says so by setting
+cg_chatHandler, which the engine clears whenever a cgame is loaded. The message mode commands open that box
+then, not the line of the engine. mode: 0 to all, 1 to the team, 2 to the player `player`.
+================
+*/
+static qboolean Con_ChatByCgame( int mode, int player ) {
+	if ( !cls.cgameStarted || cls.state != CA_ACTIVE || !Cvar_VariableIntegerValue( "cg_chatHandler" ) ) {
+		return qfalse;
+	}
+	Cbuf_ExecuteText( EXEC_NOW, va( "cg_chatopen %i %i\n", mode, player ) );
+	return qtrue;
+}
+
+/*
+================
 Con_MessageMode_f
 ================
 */
 void Con_MessageMode_f (void) {	//yell
+	if ( Con_ChatByCgame( 0, -1 ) ) {
+		return;
+	}
 	chat_playerNum = -1;
 	chat_team = qfalse;
 	Field_Clear( &chatField );
@@ -108,6 +128,9 @@ Con_MessageMode2_f
 ================
 */
 void Con_MessageMode2_f (void) {	//team chat
+	if ( Con_ChatByCgame( 1, -1 ) ) {
+		return;
+	}
 	chat_playerNum = -1;
 	chat_team = qtrue;
 	Field_Clear( &chatField );
@@ -133,6 +156,10 @@ void Con_MessageMode3_f (void)
 		chat_playerNum = -1;
 		return;
 	}
+	if ( Con_ChatByCgame( 2, chat_playerNum ) ) {
+		chat_playerNum = -1;
+		return;
+	}
 	chat_team = qfalse;
 	Field_Clear( &chatField );
 	chatField.widthInChars = 30;
@@ -154,6 +181,10 @@ void Con_MessageMode4_f (void)
 
 	chat_playerNum = CGVM_LastAttacker();
 	if ( chat_playerNum < 0 || chat_playerNum >= MAX_CLIENTS ) {
+		chat_playerNum = -1;
+		return;
+	}
+	if ( Con_ChatByCgame( 2, chat_playerNum ) ) {
 		chat_playerNum = -1;
 		return;
 	}
