@@ -48,6 +48,9 @@ XCVAR_DEF( cg_selectedPlayer,				"0",					NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
 XCVAR_DEF( cg_selectedPlayerName,			"",						NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
 // the voice chat of the cgame, for the setup menu: there they have to be there before a level was loaded.
 // The defaults are the ones of cg_xcvar.h.
+// the two of the chat that the voice chat tab of the setup menus has as well (bubble/cg_bubble.c, status/cg_status.c)
+XCVAR_DEF( cg_chatBubbles,					"1",					NULL,				CVAR_ARCHIVE )
+XCVAR_DEF( cg_shareMusic,					"0",					NULL,				CVAR_ARCHIVE )
 XCVAR_DEF( cg_voice,						"1",					NULL,				CVAR_ARCHIVE )
 XCVAR_DEF( cg_voiceDrawTalkers,				"1",					NULL,				CVAR_ARCHIVE )
 XCVAR_DEF( cg_voiceMaster,					"1",					NULL,				CVAR_ARCHIVE )

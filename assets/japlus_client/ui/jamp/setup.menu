@@ -1161,7 +1161,7 @@
 			name				voicelight2
 			group				highlights
 			style				WINDOW_STYLE_SHADER
-			rect				260 214 340 14
+			rect				260 208 340 14
 			background			"gfx/menus/menu_blendbox"
 			forecolor			1 1 1 1
 			visible			0
@@ -1173,7 +1173,7 @@
 			name				voicelight3
 			group				highlights
 			style				WINDOW_STYLE_SHADER
-			rect				260 238 340 14
+			rect				260 226 340 14
 			background			"gfx/menus/menu_blendbox"
 			forecolor			1 1 1 1
 			visible			0
@@ -1185,7 +1185,7 @@
 			name				voicelight4
 			group				highlights
 			style				WINDOW_STYLE_SHADER
-			rect				260 262 340 14
+			rect				260 244 340 14
 			background			"gfx/menus/menu_blendbox"
 			forecolor			1 1 1 1
 			visible			0
@@ -1197,7 +1197,7 @@
 			name				voicelight5
 			group				highlights
 			style				WINDOW_STYLE_SHADER
-			rect				260 286 340 14
+			rect				260 262 340 14
 			background			"gfx/menus/menu_blendbox"
 			forecolor			1 1 1 1
 			visible			0
@@ -1209,7 +1209,7 @@
 			name				voicelight6
 			group				highlights
 			style				WINDOW_STYLE_SHADER
-			rect				260 310 340 14
+			rect				260 280 340 14
 			background			"gfx/menus/menu_blendbox"
 			forecolor			1 1 1 1
 			visible			0
@@ -1221,7 +1221,7 @@
 			name				voicelight7
 			group				highlights
 			style				WINDOW_STYLE_SHADER
-			rect				260 334 340 14
+			rect				260 298 340 14
 			background			"gfx/menus/menu_blendbox"
 			forecolor			1 1 1 1
 			visible			0
@@ -1233,7 +1233,7 @@
 			name				voicelight8
 			group				highlights
 			style				WINDOW_STYLE_SHADER
-			rect				260 358 340 14
+			rect				260 316 340 14
 			background			"gfx/menus/menu_blendbox"
 			forecolor			1 1 1 1
 			visible			0
@@ -1245,7 +1245,7 @@
 			name				voicelight9
 			group				highlights
 			style				WINDOW_STYLE_SHADER
-			rect				260 382 340 14
+			rect				260 334 340 14
 			background			"gfx/menus/menu_blendbox"
 			forecolor			1 1 1 1
 			visible			0
@@ -1257,7 +1257,31 @@
 			name				voicelight10
 			group				highlights
 			style				WINDOW_STYLE_SHADER
-			rect				260 406 340 14
+			rect				260 352 340 14
+			background			"gfx/menus/menu_blendbox"
+			forecolor			1 1 1 1
+			visible			0
+			decoration
+		}
+
+		itemDef
+		{
+			name				voicelight11
+			group				highlights
+			style				WINDOW_STYLE_SHADER
+			rect				260 370 340 14
+			background			"gfx/menus/menu_blendbox"
+			forecolor			1 1 1 1
+			visible			0
+			decoration
+		}
+
+		itemDef
+		{
+			name				voicelight12
+			group				highlights
+			style				WINDOW_STYLE_SHADER
+			rect				260 388 340 14
 			background			"gfx/menus/menu_blendbox"
 			forecolor			1 1 1 1
 			visible			0
@@ -2446,7 +2470,7 @@
 			text				"Mode:"
 			cvar				"cg_voiceMode"
 			cvarFloatList		{ "Push To Talk" 1 "Voice Activation" 2 }
-			rect				260 212 340 14
+			rect				260 206 340 14
 			textalign			ITEM_ALIGN_RIGHT
 			textalignx			174
 			textaligny			0
@@ -2476,7 +2500,7 @@
 			type				ITEM_TYPE_SLIDER
 			text				"Volume:"
 			cvarfloat			"cg_voiceVolume" 1 0 2
-			rect				260 236 340 14
+			rect				260 224 340 14
 			textalign			ITEM_ALIGN_RIGHT
 			textalignx			174
 			textaligny			0
@@ -2506,7 +2530,7 @@
 			type				ITEM_TYPE_SLIDER
 			text				"Microphone Gain:"
 			cvarfloat			"cg_voiceMicGain" 1 0 3
-			rect				260 260 340 14
+			rect				260 242 340 14
 			textalign			ITEM_ALIGN_RIGHT
 			textalignx			174
 			textaligny			0
@@ -2536,7 +2560,7 @@
 			type				ITEM_TYPE_SLIDER
 			text				"Activation Level:"
 			cvarfloat			"cg_voiceThreshold" 0.02 0 0.2
-			rect				260 284 340 14
+			rect				260 260 340 14
 			textalign			ITEM_ALIGN_RIGHT
 			textalignx			174
 			textaligny			0
@@ -2566,7 +2590,7 @@
 			type				ITEM_TYPE_YESNO
 			text				"Muffle Behind Walls:"
 			cvar				"cg_voiceMuffle"
-			rect				260 308 340 14
+			rect				260 278 340 14
 			textalign			ITEM_ALIGN_RIGHT
 			textalignx			174
 			textaligny			0
@@ -2596,7 +2620,7 @@
 			type				ITEM_TYPE_YESNO
 			text				"Show Who Talks:"
 			cvar				"cg_voiceDrawTalkers"
-			rect				260 332 340 14
+			rect				260 296 340 14
 			textalign			ITEM_ALIGN_RIGHT
 			textalignx			174
 			textaligny			0
@@ -2626,7 +2650,7 @@
 			type				ITEM_TYPE_YESNO
 			text				"On Other Servers:"
 			cvar				"cg_voiceMaster"
-			rect				260 356 340 14
+			rect				260 314 340 14
 			textalign			ITEM_ALIGN_RIGHT
 			textalignx			174
 			textaligny			0
@@ -2656,7 +2680,7 @@
 			type				ITEM_TYPE_SLIDER
 			text				"Own Voice In The Room:"
 			cvarfloat			"cg_voiceOwnReverb" 1 0 2
-			rect				260 380 340 14
+			rect				260 332 340 14
 			textalign			ITEM_ALIGN_RIGHT
 			textalignx			174
 			textaligny			0
@@ -2686,7 +2710,7 @@
 			type				ITEM_TYPE_YESNO
 			text				"Radio Sound:"
 			cvar				"cg_voiceRadioFX"
-			rect				260 404 340 14
+			rect				260 350 340 14
 			textalign			ITEM_ALIGN_RIGHT
 			textalignx			174
 			textaligny			0
@@ -2706,6 +2730,66 @@
 			mouseexit
 			{
 				hide			voicelight10
+			}
+		}
+
+		itemDef
+		{
+			name				voicechat11
+			group				voicechat
+			type				ITEM_TYPE_YESNO
+			text				"Chat Bubbles:"
+			cvar				"cg_chatBubbles"
+			rect				260 368 340 14
+			textalign			ITEM_ALIGN_RIGHT
+			textalignx			174
+			textaligny			0
+			font				4
+			textscale			1
+			forecolor			0.65 0.65 1 1
+			visible				0
+			descText			"What a player says stands above his head, and dots while he types."
+			action
+			{
+				play			"sound/interface/button1.wav" ;
+			}
+			mouseenter
+			{
+				show			voicelight11
+			}
+			mouseexit
+			{
+				hide			voicelight11
+			}
+		}
+
+		itemDef
+		{
+			name				voicechat12
+			group				voicechat
+			type				ITEM_TYPE_YESNO
+			text				"Show My Music:"
+			cvar				"cg_shareMusic"
+			rect				260 386 340 14
+			textalign			ITEM_ALIGN_RIGHT
+			textalignx			174
+			textaligny			0
+			font				4
+			textscale			1
+			forecolor			0.65 0.65 1 1
+			visible				0
+			descText			"The others see above your head what you listen to (Spotify, YT Music)."
+			action
+			{
+				play			"sound/interface/button1.wav" ;
+			}
+			mouseenter
+			{
+				show			voicelight12
+			}
+			mouseexit
+			{
+				hide			voicelight12
 			}
 		}
 

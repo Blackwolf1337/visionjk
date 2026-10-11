@@ -282,7 +282,7 @@ chat bubble stands on top of it.
 | Cvar | Default | Meaning |
 |------|---------|---------|
 | `cg_playerStatuses` | 1 | show the lines of the others |
-| `cg_shareMusic` | 0 | tell the server what music plays on this machine. Off by default: everybody on the server reads it |
+| `cg_shareMusic` | 0 | tell the server what music plays on this machine. Off by default: everybody on the server reads it. "Show My Music" in Setup, Voice Chat |
 | `cjp_caps` | 1, read only | in the userinfo: this cgame draws statuses, the server sends them to nobody else |
 
 - "Away from keyboard": the server finds out who did not touch a key or the mouse for `g_afkTime` seconds, for
