@@ -135,6 +135,7 @@ void CL_ParsePacketEntities( msg_t *msg, clSnapshot_t *oldframe, clSnapshot_t *n
 		}
 
 		if ( msg->readcount > msg->cursize ) {
+			CL_IDS_Event( CLIDS_MESSAGE, NULL, "the entities of a snapshot end early" );
 			Com_Error (ERR_DROP,"CL_ParsePacketEntities: end of message");
 		}
 
@@ -290,6 +291,7 @@ void CL_ParseSnapshot( msg_t *msg ) {
 
 	if((unsigned)len > sizeof(newSnap.areamask))
 	{
+		CL_IDS_Event( CLIDS_MESSAGE, NULL, "an area mask of a wrong size" );
 		Com_Error (ERR_DROP,"CL_ParseSnapshot: Invalid size %d for areamask", len);
 		return;
 	}
@@ -394,6 +396,7 @@ void CL_ParseSetGame( msg_t *msg )
 	if(FS_CheckDirTraversal(newGameDir))
 	{
 		Com_Printf(S_COLOR_YELLOW "WARNING: Server sent invalid fs_game value %s\n", newGameDir);
+		CL_IDS_Event( CLIDS_GAMEDIR, NULL, newGameDir );
 		return;
 	}
 
@@ -478,6 +481,7 @@ void CL_SystemInfoChanged( void ) {
 			if(FS_CheckDirTraversal(value))
 			{
 				Com_Printf(S_COLOR_YELLOW "WARNING: Server sent invalid fs_game value %s\n", value);
+				CL_IDS_Event( CLIDS_GAMEDIR, NULL, value );
 				continue;
 			}
 
@@ -536,6 +540,7 @@ void CL_ParseGamestate( msg_t *msg ) {
 
 			i = MSG_ReadShort( msg );
 			if ( i < 0 || i >= MAX_CONFIGSTRINGS ) {
+				CL_IDS_Event( CLIDS_MESSAGE, NULL, "a config string past the last one" );
 				Com_Error( ERR_DROP, "configstring > MAX_CONFIGSTRINGS" );
 			}
 			s = MSG_ReadBigString( msg );
@@ -578,6 +583,7 @@ void CL_ParseGamestate( msg_t *msg ) {
 			len = strlen( s );
 
 			if ( len + 1 + cl.gameState.dataCount > MAX_GAMESTATE_CHARS ) {
+				CL_IDS_Event( CLIDS_MESSAGE, NULL, "more config strings than there is room for" );
 				Com_Error( ERR_DROP, "MAX_GAMESTATE_CHARS exceeded" );
 			}
 
@@ -588,12 +594,14 @@ void CL_ParseGamestate( msg_t *msg ) {
 		} else if ( cmd == svc_baseline ) {
 			newnum = MSG_ReadBits( msg, GENTITYNUM_BITS );
 			if ( newnum < 0 || newnum >= MAX_GENTITIES ) {
+				CL_IDS_Event( CLIDS_MESSAGE, NULL, "a baseline past the last entity" );
 				Com_Error( ERR_DROP, "Baseline number out of range: %i", newnum );
 			}
 			Com_Memset (&nullstate, 0, sizeof(nullstate));
 			es = &cl.entityBaselines[ newnum ];
 			MSG_ReadDeltaEntity( msg, &nullstate, es, newnum );
 		} else {
+			CL_IDS_Event( CLIDS_MESSAGE, NULL, "an unknown command in the game state" );
 			Com_Error( ERR_DROP, "CL_ParseGamestate: bad command byte" );
 		}
 	}
@@ -643,6 +651,7 @@ void CL_ParseDownload ( msg_t *msg ) {
 	if (!*clc.downloadTempName) {
 		Com_Printf("Server sending download, but no download was requested\n");
 		CL_AddReliableCommand("stopdl", qfalse);
+		CL_IDS_Event( CLIDS_DOWNLOAD, NULL, NULL );
 		return;
 	}
 
@@ -666,6 +675,7 @@ void CL_ParseDownload ( msg_t *msg ) {
 	size = /*(unsigned short)*/MSG_ReadShort ( msg );
 	if (size < 0 || size > (int)sizeof(data))
 	{
+		CL_IDS_Event( CLIDS_MESSAGE, NULL, "a block of a download of a wrong size" );
 		Com_Error(ERR_DROP, "CL_ParseDownload: Invalid size %d for download chunk", size);
 		return;
 	}
@@ -750,6 +760,7 @@ void CL_ParseCommandString( msg_t *msg ) {
 		return;
 	}
 	clc.serverCommandSequence = seq;
+	CL_IDS_ServerCommand( s );
 
 	index = seq & (MAX_RELIABLE_COMMANDS-1);
 	/*
@@ -831,6 +842,7 @@ void CL_ParseServerMessage( msg_t *msg ) {
 	//
 	while ( 1 ) {
 		if ( msg->readcount > msg->cursize ) {
+			CL_IDS_Event( CLIDS_MESSAGE, NULL, "a message that ends early" );
 			Com_Error (ERR_DROP,"CL_ParseServerMessage: read past end of server message");
 			break;
 		}
@@ -853,6 +865,7 @@ void CL_ParseServerMessage( msg_t *msg ) {
 	// other commands
 		switch ( cmd ) {
 		default:
+			CL_IDS_Event( CLIDS_MESSAGE, NULL, "an unknown command" );
 			Com_Error (ERR_DROP,"CL_ParseServerMessage: Illegible server message\n");
 			break;
 		case svc_nop:

@@ -212,7 +212,7 @@ static waRole_t WA_RouteRole( const char *method, const char *path ) {
 		return WA_ROLE_OWNER;
 	}
 	// what the console and the log print: addresses, and what the admins did
-	if ( !strcmp( path, "/api/console" ) || !strcmp( path, "/api/log" ) ) {
+	if ( !strcmp( path, "/api/console" ) || !strcmp( path, "/api/log" ) || !strcmp( path, "/api/ids" ) ) {
 		return WA_ROLE_ADMIN;
 	}
 	// every other change but the actions: the editor, the clips, the textures, the routes, a controlled player
@@ -345,6 +345,8 @@ static void WA_HandleRequest( waConnection_t *c, char *head, char *body, int bod
 		WA_ApiLog( c, query );
 	} else if ( !strcmp( method, "GET" ) && !strcmp( path, "/api/console" ) ) {
 		WA_ApiConsole( c, query );
+	} else if ( !strcmp( method, "GET" ) && !strcmp( path, "/api/ids" ) ) {
+		WA_ApiIds( c, query );
 	} else if ( !strcmp( method, "POST" ) && !strcmp( path, "/api/command" ) ) {
 		WA_ApiCommand( c, body );
 	} else if ( !strcmp( method, "GET" ) && !strcmp( path, "/api/clips" ) ) {

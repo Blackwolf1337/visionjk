@@ -60,7 +60,7 @@ had one password for everybody, which the browser sent with every request (HTTP 
 | Role | May |
 |------|-----|
 | moderator | look at the game, and everything that is done to a player: kick, ban, team, sleep, teleport and the like, the bans |
-| admin | also the editor, the clips, the textures, the routes, a controlled player, change the map, add bots, make a player an admin of the game, read the log and the console, make one-time codes for the three ranks of JA+ |
+| admin | also the editor, the clips, the textures, the routes, a controlled player, change the map, add bots, make a player an admin of the game, read the log, the console and what the intrusion detection wrote down, make one-time codes for the three ranks of JA+ |
 | owner | also run commands on the console, the server config, the file manager, the accounts, one-time codes for the rank with every right |
 
 The page does not show what a role may not use, and the server refuses it whatever the page shows

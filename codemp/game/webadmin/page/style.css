@@ -417,3 +417,5 @@ body.role-moderator #appMode, body.role-moderator #botForm, body.role-moderator 
 body.role-moderator #tabs button[data-tab="log"], body.role-moderator #tabs button[data-tab="load"] { display: none !important; }
 body.role-moderator #tabs button[data-tab="config"], body.role-moderator #tabs button[data-tab="files"],
 body.role-admin #tabs button[data-tab="config"], body.role-admin #tabs button[data-tab="files"] { display: none !important; }
+/* the line that runs a command on the console is the owner's */
+body.role-moderator #logCmd, body.role-admin #logCmd { display: none !important; }

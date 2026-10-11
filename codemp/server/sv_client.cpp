@@ -222,6 +222,7 @@ void SV_DirectConnect( const netadr_t *from ) {
 		// Verify the received challenge against the expected challenge
 		if (!SV_VerifyChallenge(challenge, from))
 		{
+			SV_IDS_Event( from, NULL, IDS_BAD_CHALLENGE, NULL );
 			NET_OutOfBandPrint( NS_SERVER, from, "print\nIncorrect challenge for your address.\n" );
 			return;
 		}
@@ -341,6 +342,7 @@ gotnewcl:
 	NET_OutOfBandPrint( NS_SERVER, from, "connectResponse" );
 
 	Com_DPrintf( "Going from CS_FREE to CS_CONNECTED for %s\n", newcl->name );
+	SV_IDS_ClientConnect( newcl );
 
 	newcl->state = CS_CONNECTED;
 	newcl->nextSnapshotTime = svs.time;
@@ -746,6 +748,14 @@ void SV_WriteDownloadToClient(client_t *cl, msg_t *msg)
 			// cannot auto-download file
 			if( !allowDownload )
 			{
+				// a name that leaves the folders of the game, or that is no pk3, is not what a client asks for
+				// that just lacks a file
+				SV_IDS_Event( &cl->netchan.remoteAddress, cl, ( strstr( cl->downloadName, ".." ) || cl->downloadName[0] == '/'
+					|| strchr( cl->downloadName, ':' ) || strchr( cl->downloadName, '\\' ) || Q_stricmp( COM_GetExtension( cl->downloadName ), "pk3" ) )
+					? IDS_DOWNLOAD_PATH : IDS_DOWNLOAD, cl->downloadName );
+				if ( cl->state < CS_CONNECTED ) {
+					return;		// the intrusion detection dropped it
+				}
 				Com_Printf("clientDownload: %d : \"%s\" is not referenced and cannot be downloaded.\n", (int) (cl - svs.clients), cl->downloadName);
 				Com_sprintf(errorMessage, sizeof(errorMessage), "File \"%s\" is not referenced and cannot be downloaded.", cl->downloadName);
 			} else if ( !sv_allowDownload->integer ) {
@@ -1148,8 +1158,11 @@ void SV_UserinfoChanged( client_t *cl ) {
 	else
 		len = strlen( ip ) + 4 + strlen( cl->userinfo );
 
-	if( len >= MAX_INFO_STRING )
-		SV_DropClient( cl, "userinfo string length exceeded" );
+	if( len >= MAX_INFO_STRING ) {
+		SV_IDS_Event( &cl->netchan.remoteAddress, cl, IDS_USERINFO, NULL );
+		if ( cl->state >= CS_CONNECTED )
+			SV_DropClient( cl, "userinfo string length exceeded" );
+	}
 	else
 		Info_SetValueForKey( cl->userinfo, "ip", ip );
 }
@@ -1277,7 +1290,9 @@ static qboolean SV_ClientCommand( client_t *cl, msg_t *msg ) {
 	if ( seq > cl->lastClientCommand + 1 ) {
 		Com_Printf( "Client %s lost %i clientCommands\n", cl->name,
 			seq - cl->lastClientCommand + 1 );
-		SV_DropClient( cl, "Lost reliable commands" );
+		SV_IDS_Event( &cl->netchan.remoteAddress, cl, IDS_LOST_COMMANDS, NULL );
+		if ( cl->state >= CS_CONNECTED )
+			SV_DropClient( cl, "Lost reliable commands" );
 		return qfalse;
 	}
 
@@ -1297,6 +1312,7 @@ static qboolean SV_ClientCommand( client_t *cl, msg_t *msg ) {
 			// ignore any other text messages from this client but let them keep playing
 			// TTimo - moved the ignored verbose to the actual processing in SV_ExecuteClientCommand, only printing if the core doesn't intercept
 			clientOk = qfalse;
+			SV_IDS_Event( &cl->netchan.remoteAddress, cl, IDS_CMD_FLOOD, NULL );
 		}
 		else {
 			cl->lastReliableTime = svs.time;
@@ -1304,6 +1320,12 @@ static qboolean SV_ClientCommand( client_t *cl, msg_t *msg ) {
 		if ( sv_floodProtectSlow->integer ) {
 			cl->lastReliableTime = svs.time;
 		}
+	}
+
+	// what the known attacks look like, see sv_ids.cpp. The command is run all the same: nothing of it does harm.
+	SV_IDS_Text( cl, s, (qboolean)!Q_stricmpn( s, "userinfo", 8 ) );
+	if ( cl->state < CS_CONNECTED ) {
+		return qfalse;		// dropped by that
 	}
 
 	SV_ExecuteClientCommand( cl, s, clientOk );
@@ -1353,6 +1375,7 @@ static void SV_UserMove( client_t *cl, msg_t *msg, qboolean delta ) {
 	usercmd_t	nullcmd;
 	usercmd_t	cmds[MAX_PACKET_USERCMDS];
 	usercmd_t	*cmd, *oldcmd;
+	qboolean	outOfRange = qfalse;		// one event for a packet, however many of its moves have it
 
 	if ( delta ) {
 		cl->deltaMessage = cl->messageAcknowledge;
@@ -1364,11 +1387,13 @@ static void SV_UserMove( client_t *cl, msg_t *msg, qboolean delta ) {
 
 	if ( cmdCount < 1 ) {
 		Com_Printf( "cmdCount < 1\n" );
+		SV_IDS_Event( &cl->netchan.remoteAddress, cl, IDS_BAD_COUNT, "none" );
 		return;
 	}
 
 	if ( cmdCount > MAX_PACKET_USERCMDS ) {
 		Com_Printf( "cmdCount > MAX_PACKET_USERCMDS\n" );
+		SV_IDS_Event( &cl->netchan.remoteAddress, cl, IDS_BAD_COUNT, va( "%i", cmdCount ) );
 		return;
 	}
 
@@ -1384,8 +1409,17 @@ static void SV_UserMove( client_t *cl, msg_t *msg, qboolean delta ) {
 	for ( i = 0 ; i < cmdCount ; i++ ) {
 		cmd = &cmds[i];
 		MSG_ReadDeltaUsercmdKey( msg, key, oldcmd, cmd );
+		if ( cmd->weapon >= WP_NUM_WEAPONS && !outOfRange ) {
+			outOfRange = qtrue;
+			SV_IDS_Event( &cl->netchan.remoteAddress, cl, IDS_USERCMD, va( "weapon %i", cmd->weapon ) );
+		}
 		if ( sv_legacyFixes->integer ) {
-			// block "charge jump" and other nonsense
+			// block "charge jump" and other nonsense. 0xFF is what this sets and what a client sends for
+			// "none", anything else past the last power is an index into nothing.
+			if ( cmd->forcesel >= NUM_FORCE_POWERS && cmd->forcesel != 0xFFu && !outOfRange ) {
+				outOfRange = qtrue;
+				SV_IDS_Event( &cl->netchan.remoteAddress, cl, IDS_USERCMD, va( "force power %i", cmd->forcesel ) );
+			}
 			if ( cmd->forcesel == FP_LEVITATION || cmd->forcesel >= NUM_FORCE_POWERS ) {
 				cmd->forcesel = 0xFFu;
 			}
@@ -1448,6 +1482,11 @@ static void SV_UserMove( client_t *cl, msg_t *msg, qboolean delta ) {
 		if ( cmds[i].serverTime <= cl->lastUsercmd.serverTime ) {
 			continue;
 		}
+		// a clock that runs ahead of the server, see sv_ids.cpp
+		SV_IDS_Move( cl, &cmds[i] );
+		if ( cl->state != CS_ACTIVE ) {
+			return;		// dropped by that
+		}
 		SV_ClientThink (cl, &cmds[ i ]);
 	}
 }
@@ -1481,6 +1520,7 @@ void SV_ExecuteClientMessage( client_t *cl, msg_t *msg ) {
 		// usually only hackers create messages like this
 		// it is more annoying for them to let them hanging
 		//SV_DropClient( cl, "illegible client message" );
+		SV_IDS_Event( &cl->netchan.remoteAddress, cl, IDS_BAD_ACK, va( "message %i", cl->messageAcknowledge ) );
 		return;
 	}
 
@@ -1493,6 +1533,7 @@ void SV_ExecuteClientMessage( client_t *cl, msg_t *msg ) {
 		// usually only hackers create messages like this
 		// it is more annoying for them to let them hanging
 		//SV_DropClient( cl, "illegible client message" );
+		SV_IDS_Event( &cl->netchan.remoteAddress, cl, IDS_BAD_ACK, va( "command %i of %i", cl->reliableAcknowledge, cl->reliableSequence ) );
 		cl->reliableAcknowledge = cl->reliableSequence;
 		return;
 	}
@@ -1555,6 +1596,7 @@ void SV_ExecuteClientMessage( client_t *cl, msg_t *msg ) {
 		SV_UserMove( cl, msg, qfalse );
 	} else if ( c != clc_EOF ) {
 		Com_Printf( "WARNING: bad command byte for client %i\n", cl - svs.clients );
+		SV_IDS_Event( &cl->netchan.remoteAddress, cl, IDS_BAD_MESSAGE, va( "command byte %i", c ) );
 	}
 //	if ( msg->readcount != msg->cursize ) {
 //		Com_Printf( "WARNING: Junk at end of packet for client %i\n", cl - svs.clients );

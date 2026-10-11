@@ -202,6 +202,7 @@ void Netchan_Transmit( netchan_t *chan, int length, const byte *data );
 void Netchan_TransmitNextFragment( netchan_t *chan );
 
 qboolean Netchan_Process( netchan_t *chan, msg_t *msg );
+extern qboolean netchan_anomaly;		// the packet it just threw away was not lost or late, it was wrong
 
 
 /*

@@ -181,6 +181,94 @@ which only the reverse proxy is let in. `g_webPassword` is read once, to make th
   page was read back with zbarimg for texts of every size it takes. The login itself, the sessions and the
   roles were not run against a server.
 
+## Added later: intrusion detection
+
+Since 2026-10-11. `server/sv_ids.cpp` and `client/cl_ids.cpp`, in the engine, so it is there for every game
+module. The bounds checks of the engine and the game keep a bad packet from doing harm: it is thrown away. The
+detection is told about each of them, so that somebody who keeps sending them is written down and, on the
+server, no longer listened to. It finds what looks like the known attacks on games of this engine and what no
+client of the game sends. It does not find a hole nobody knows.
+
+### On the server
+
+| Cvar | Default | Meaning |
+|------|---------|---------|
+| `sv_ids` | 2 | 0: off. 1: events are written down. 2: addresses are blocked and players dropped as well |
+| `sv_antiWallhack` | 0 | 1: a player no line of sight reaches is not sent to a client, see below |
+
+Every event has a weight. The weights add up for the address and fall off again, two a second. At 100 the
+address is blocked for a minute, and for twice as long each time it happens again, up to an hour: its
+connectionless packets are dropped unread, and a player the event came from is dropped.
+
+| Event | Weight |
+|-------|--------|
+| a connectionless packet that is no command, or one over 1400 bytes | 5 |
+| rcon (the server takes none) | 10 |
+| connectionless packets past the rate limit of the address (`sv_maxOOBRateIP`) | 1 |
+| a connect with a wrong challenge | 3 |
+| from a player: a message that can not be read, a number of moves or an acknowledgement out of range, a fragment that does not fit | 25 |
+| from a player: reliable commands that are missing | 10 |
+| from a player: a weapon or a force power in a move that does not exist | 5 |
+| from a player: commands past the flood protection | 1 |
+| from a player: a download he may not have / one whose path leaves the game or is no pk3 | 10 / 50 |
+| from a player: a line break inside a command | 30 |
+| from a player: `../` in a command that is no chat | 20 |
+| from a player: `%n`, or three format marks in a row, in a command that is no chat | 35 |
+| from a player: 48 bytes above 127 in a row of which most are no UTF-8 | 35 |
+| from a player: a userinfo that is too long | 25 |
+| from a player: 30 moves in five seconds that are more than 250 ms ahead of the server | 10 |
+
+- Every event is a line in `ids.log` of the game folder and on the console: the time, the address, the player,
+  what it was, and what came with it as plain characters. At most one line in two seconds for an address and
+  an event (the rest is counted and named with the next line) and thirty a second overall, so a flood does not
+  fill the disk. The web panel shows the file (Log tab, "Intrusions", for an admin and up).
+- `idsstatus` on the console lists the addresses with their scores and blocks, `idsunblock <address|all>`
+  lifts a block.
+- The address of a packet can be made up, and a connectionless packet is taken without an answer. So a block
+  only ever stops connectionless packets (getinfo, getstatus, connect), never the game of somebody who is on
+  the server, and connectionless events do not count at all for an address that has a player on the server.
+  The worst somebody can do with made up addresses is keep a stranger from connecting for a while, which a
+  flood does too. Packets inside a connection can be made up as well by somebody who guesses the port number
+  of the client (65536 tries); he could throw that player off before this, by the sequence numbers.
+- Players behind one address are one address: when one of them is blocked, the others play on, but none of
+  them can connect again until the block ends.
+- The speed check: a client keeps the time of its moves close to the time the server tells it. Moves that
+  are a quarter of a second ahead come from a client whose clock runs fast, which is what a speed hack does.
+  The game cuts such a move back to 200 ms ahead anyway, so the hack gains little; three windows of five
+  seconds in a row with thirty such moves each and the player is dropped.
+- `sv_antiWallhack 1`: the map tells a client of every player in the rooms it can see into, and a cheat draws
+  them through the walls. With the cvar a player is left out of a snapshot when no line from the eye of the
+  client reaches his box (its middle, top, bottom and corners, widened by 16 units and by where he will be in
+  a fifth of a second). Only brushes of the map stop a line, and none that are seen through or not drawn;
+  doors never hide anybody. Never hidden: a player within 384 units, anybody from a spectator, anybody from
+  a player who uses Force Sight. Off by default because it changes the game: a client that is not told of a
+  player does not hear him either, so steps and sabers behind a wall are silent until he comes into view.
+  It costs up to eleven traces for a pair of players each snapshot.
+
+### On the client
+
+| Cvar | Default | Meaning |
+|------|---------|---------|
+| `cl_ids` | 1 | what a server sends that no server of the game does is written to `ids.log`, and a server that keeps at it is left. 0: off |
+
+- Written down, and the client leaves: a path in the place of the game folder (at once), data of a download
+  that was not asked for and fragments that do not fit (at the third).
+- Written down: a message the engine ends the connection for (an index past its table, a message that ends
+  early, an unknown command), more than 400 commands in a second, an escape character in a command (it is
+  taken out: it means nothing to the game and is there for the terminal a console may be printed to).
+- Written down and never acted on: a connectionless packet that claims to be from the server and comes from
+  another address (print, disconnect, connectResponse, challengeResponse). Leaving for those would let
+  anybody throw a player off any server.
+- Changed besides: the client answers an `echo` request only from its server. It answered anybody with
+  whatever the packet asked for, to wherever the packet said it came from.
+
+Tested apart from the game (`japlus_port/tools/idstest`, 44 checks with a clock the test sets): how the
+weights add up and fall off, when an address is blocked and for how long, that connectionless events do not
+count against an address with a player, `sv_ids 1`, the machine itself, what is taken for an attack in a
+command and what is not (chat, percent signs, long words of Cyrillic, Chinese and accented letters), the
+strikes of the speed check. Neither side was run against real traffic, and `sv_antiWallhack` was not run at
+all.
+
 ## Recommended server settings
 
 ```

@@ -242,7 +242,9 @@ the security log and of the echo on the console, which is in a file too.
 #define WA_CONSOLE_FILE	"qconsole.log"
 #define WA_COMMAND_MAX	480
 
-void WA_ApiConsole( waConnection_t *c, const char *query ) {
+// the end of a text file of the game folder that grows, from a place on: the console, and what the intrusion
+// detection of the engine wrote down
+static void WA_TailFile( waConnection_t *c, const char *query, const char *file ) {
 	static char	data[WA_LOG_CHUNK + 1];
 	char		path[MAX_OSPATH], value[32];
 	qboolean	exists, isDir;
@@ -251,10 +253,7 @@ void WA_ApiConsole( waConnection_t *c, const char *query ) {
 	waBuffer_t	b = { 0 };
 	FILE		*f;
 
-	if ( !trap->Cvar_VariableIntegerValue( "logfile" ) )
-		trap->Cvar_Set( "logfile", "2" );
-
-	if ( !WA_FsResolve( qfalse, WA_CONSOLE_FILE, qfalse, path, sizeof( path ), &exists ) || !WA_FsStat( path, &isDir, &size, NULL ) || isDir )
+	if ( !WA_FsResolve( qfalse, file, qfalse, path, sizeof( path ), &exists ) || !WA_FsStat( path, &isDir, &size, NULL ) || isDir )
 		size = 0;
 	if ( WA_FormValue( query, "from", value, sizeof( value ) ) && value[0] )
 		from = atof( value );
@@ -273,6 +272,17 @@ void WA_ApiConsole( waConnection_t *c, const char *query ) {
 	WA_BufAppend( &b, "}", 1 );
 	WA_RespondJson( c, &b );
 	WA_BufFree( &b );
+}
+
+void WA_ApiConsole( waConnection_t *c, const char *query ) {
+	if ( !trap->Cvar_VariableIntegerValue( "logfile" ) )
+		trap->Cvar_Set( "logfile", "2" );
+	WA_TailFile( c, query, WA_CONSOLE_FILE );
+}
+
+// GET /api/ids: ids.log, what the intrusion detection of the server noticed (server/sv_ids.cpp)
+void WA_ApiIds( waConnection_t *c, const char *query ) {
+	WA_TailFile( c, query, "ids.log" );
 }
 
 void WA_ApiCommand( waConnection_t *c, const char *body ) {

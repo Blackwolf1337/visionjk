@@ -440,6 +440,44 @@ int SV_PointContents( const vec3_t p, int passEntityNum );
 
 
 void SV_Trace( trace_t *results, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int passEntityNum, int contentmask, int capsule, int traceFlags, int useLod );
+
+//
+// sv_ids.cpp: the intrusion detection. The order is the one of its table of names and weights.
+//
+typedef enum idsEvent_e {
+	IDS_OOB_UNKNOWN,
+	IDS_OOB_SIZE,
+	IDS_RCON,
+	IDS_OOB_FLOOD,
+	IDS_BAD_CHALLENGE,
+	IDS_BAD_MESSAGE,
+	IDS_BAD_COUNT,
+	IDS_BAD_ACK,
+	IDS_LOST_COMMANDS,
+	IDS_FRAGMENT,
+	IDS_USERCMD,
+	IDS_CMD_FLOOD,
+	IDS_DOWNLOAD,
+	IDS_DOWNLOAD_PATH,
+	IDS_TEXT_BREAK,
+	IDS_TEXT_PATH,
+	IDS_TEXT_FORMAT,
+	IDS_TEXT_BINARY,
+	IDS_USERINFO,
+	IDS_MOVE_AHEAD,
+	IDS_NUM_EVENTS
+} idsEvent_t;
+
+void		SV_IDS_Init( void );
+void		SV_IDS_Shutdown( void );
+qboolean	SV_IDS_Blocked( const netadr_t *from );
+void		SV_IDS_Event( const netadr_t *from, client_t *cl, idsEvent_t event, const char *detail );
+void		SV_IDS_Text( client_t *cl, const char *text, qboolean userinfo );
+void		SV_IDS_Move( client_t *cl, const usercmd_t *cmd );
+void		SV_IDS_ClientConnect( client_t *cl );
+
+extern	cvar_t	*sv_antiWallhack;		// sv_snapshot.cpp
+
 // mins and maxs are relative
 
 // if the entire move stays in a solid volume, trace.allsolid will be set,

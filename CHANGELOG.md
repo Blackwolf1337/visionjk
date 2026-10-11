@@ -21,6 +21,9 @@ Key: [-] removed, [+] added, [\*] modified
 * [+] Admin login with an Ed25519 key instead of a password: `admin_keys.txt` on the server (lines as in authorized_keys behind a rank), `amkey new`, `amkey show` and `amkey login` on the client, from a key file or an ssh-agent such as 1Password (`cg_authAgent`). For clients that can not sign, `amcode <rank>` on the server console makes a code that works once within a minute (`amlogin <code>`).
 * [\*] The web admin panel has accounts in place of its one password: three roles (moderator, admin, owner), passwords as Argon2id hashes, sessions in a cookie, a second step by time with recovery codes, tokens for scripts, a login with a key of the browser, one-time codes for the admin login in the game. `g_webPassword` is read once, to make the first account `owner`. `webuser` on the server console manages the accounts.
 * [+] `g_webProxy`: behind a reverse proxy with HTTPS only the proxy is let in to the web admin panel, and the visitor is who the proxy says he is.
+* [+] Intrusion detection in the engine. Server (`sv_ids`, on): packets no client of the game sends are written to `ids.log`, their address is blocked for a while and a player they come from is dropped; moves that run ahead of the server (speed hack) count as well. Client (`cl_ids`, on): what a server sends that no server of the game does is written down, and a server that keeps at it is left.
+* [+] `sv_antiWallhack` (off by default): a player no line of sight reaches is not sent to a client. Players behind walls are not heard then either.
+* [\*] The client answers an `echo` request only from the server it is connected to.
 
 # Features
 

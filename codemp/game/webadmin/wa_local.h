@@ -186,6 +186,7 @@ void WA_ChatInit( void );
 void WA_ApiChat( waConnection_t *c, const char *query );
 void WA_ApiLog( waConnection_t *c, const char *query );
 void WA_ApiConsole( waConnection_t *c, const char *query );
+void WA_ApiIds( waConnection_t *c, const char *query );
 void WA_ApiCommand( waConnection_t *c, const char *body );
 
 // wa_routes.c

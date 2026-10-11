@@ -1,12 +1,13 @@
 // ---- the log of the game and the console of the server: /api/log and /api/console give their text from a place on,
 // the view asks on from where the last answer ended. A line typed under it goes to /api/command.
 
-// The two sources, each with its own lines, its place in the text and the line that has not ended yet. first: nothing
+// The three sources, each with its own lines, its place in the text and the line that has not ended yet. first: nothing
 // of it was shown yet, again: it was asked for while a request was on its way.
 const logSource = (api, none) => ({ api, none, next: -1, lines: [], partial: '', first: true, busy: false, again: false, state: '' });
 const LOG_SOURCES = {
 	log: logSource('api/log', 'This game module has no log view.'),
-	console: logSource('api/console', 'This game module does not show its console.')
+	console: logSource('api/console', 'This game module does not show its console.'),
+	ids: logSource('api/ids', 'This game module does not show what the intrusion detection wrote down.')
 };
 // the one that is shown: the filter, "follow the end" and "Clear view" (their listeners are in js/load.js) work on it
 let logView = LOG_SOURCES.log;
