@@ -189,8 +189,8 @@ passed on.
 
 Tested: `japlus_port/tools/authtest/run.sh` (66 checks: the three test vectors of RFC 8032 through the
 Monocypher of the tree, the signed message, the key lines, key files in both directions against `ssh-keygen`,
-and the agent protocol against an `ssh-agent` started for the test). The login itself was not run against a
-server.
+and the agent protocol against an `ssh-agent` started for the test). The logins themselves ran against a server
+on 2026-10-11, see client.md.
 
 ## Not done on the server
 

@@ -49,7 +49,7 @@ static struct {
 	qboolean	open;				// a menu is open and is shown in the level
 	float		blend;				// 0 the view of the game, 1 the view of the menu
 	int			lastTime;
-	float		yaw;				// where the player looked when the menu opened: the panel stays there
+	float		yaw;				// where the player looks, followed slowly: the camera is behind that
 	float		muffle;				// what s_muffle was last set to
 
 	// the panel, as long as blend is above 0
@@ -89,8 +89,14 @@ qboolean CG_Menu3DFrame( void ) {
 		&& cg.snap->ps.stats[STAT_HEALTH] > 0 && !cg.snap->ps.zoomMode
 		&& Menu3D_Engine( "cl_cgameUIPlane" ) );
 
+	// The camera is behind where he looks. With a menu open he does not turn by himself (the mouse is the
+	// cursor's), but a teleporter, an admin or a respawn turn him: the camera then comes round within a moment.
+	// It stood where he looked when the menu opened once, and after such a turn it looked him in the face from
+	// inside a wall (seen in the check of 2026-10-11).
 	if ( open && !menu3d.open ) {
 		menu3d.yaw = ps->viewangles[YAW];
+	} else if ( open ) {
+		menu3d.yaw = LerpAngle( menu3d.yaw, ps->viewangles[YAW], Q_min( 1.0f, (float)msec / 150.0f ) );
 	}
 	menu3d.open = open;
 	if ( open ) {
@@ -145,7 +151,7 @@ void CG_Menu3DView( void ) {
 		return;
 	}
 
-	// the player, as he stood when the menu opened: he may be pushed around, but he does not turn
+	// the player, by where he looks (CG_Menu3DFrame)
 	VectorSet( angles, 0.0f, menu3d.yaw, 0.0f );
 	AngleVectors( angles, forward, right, up );
 	VectorCopy( ps->origin, head );
@@ -208,9 +214,11 @@ plane of the menu is, for this frame.
 =================
 */
 void CG_Menu3DScene( void ) {
-	static vec4_t	fill = { 0.03f, 0.06f, 0.12f, 0.55f };
-	static vec4_t	border = { 0.45f, 0.75f, 1.0f, 0.9f };
-	static vec4_t	glow = { 0.2f, 0.45f, 1.0f, 0.3f };
+	// The inside lets little of the level through: at half it took the colour of what stood behind it, and the
+	// rim around the menu was white in front of a bright wall.
+	static vec4_t	fill = { 0.02f, 0.04f, 0.1f, 0.9f };
+	static vec4_t	border = { 0.25f, 0.45f, 0.9f, 0.85f };
+	static vec4_t	light = { 0.15f, 0.35f, 0.9f, 0.5f };
 	const float		*org = cg.refdef.vieworg;
 	const float		*fwd = cg.refdef.viewaxis[0], *left = cg.refdef.viewaxis[1], *upAxis = cg.refdef.viewaxis[2];
 	const float		zNear = 1.0f, zFar = 8192.0f;
@@ -234,7 +242,7 @@ void CG_Menu3DScene( void ) {
 	if ( DotProduct( normal, fwd ) < 0.0f ) {
 		VectorMA( menu3d.center, -0.5f, normal, behind );
 	}
-	CG_BubblePanelAt( behind, menu3d.right, up, halfW, halfH, 14.0f * menu3d.unit, fill, border, glow, alpha );
+	CG_BubblePanelAt( behind, menu3d.right, up, halfW, halfH, 14.0f * menu3d.unit, fill, border, light, alpha );
 
 	// the blur of what is not at the distance of the panel
 	if ( Menu3D_Engine( "cl_cgameDoF" ) ) {

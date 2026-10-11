@@ -80,7 +80,9 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define VOICE_FAR_GAIN			0.1f	// how loud a voice still is at the end of its range
 #define VOICE_MAX_PAN			0.8f	// how far a voice goes to one side: it is never gone from the other ear
 #define VOICE_HEAD				24.0f	// the mouth of a player above his origin
-#define VOICE_OWN_REVERB_GAIN	0.3f	// what the room gets of the own voice at cg_voiceOwnReverb 1, against a voice next to the listener
+// What the room gets of the own voice at cg_voiceOwnReverb 1, against a voice next to the listener. It was 0.3,
+// which the first one to play with it found too loud (2026-10-11): half of that now, the menu has a slider.
+#define VOICE_OWN_REVERB_GAIN	0.15f
 #define VOICE_OWN_REVERB_CAP	0.1f	//	a frame of it louder than this (Voice_Level) goes in this loud,
 #define VOICE_OWN_REVERB_RISE	0.1f	//	and after a loud one the gain comes back by this much a frame at most
 #define VOICE_LIP_FLOOR			0.004f	// a frame quieter than this (Voice_Level) leaves the mouth shut
@@ -107,6 +109,8 @@ typedef struct voiceSpeaker_s {
 	float			lipPeak;		// Voice_Lip: the loudest frame of him lately,
 	int				lipLevel;		//	how far that opens his mouth now, 0 to 4,
 	int				lipTime;		//	and since when
+	qboolean		radio;			// what is played of him now came over the clan radio (VOICE_FLAG_RADIO): it has no place
+	voiceRadio_t	radioFx;		//	and this is how it sounds (cg_voiceRadioFX)
 } voiceSpeaker_t;
 
 // a block of memory for a state of Opus, as well aligned as anything can ask for
@@ -150,6 +154,13 @@ static struct {
 	qboolean			encoderOk;
 	int					seq;
 	qboolean			keyDown;		// +voice
+	qboolean			clanDown;		// +voiceclan: what is said goes to the clan, over the radio
+	qboolean			radio;			// the relay of the server knows the clan radio (VOICE_CAP_RADIO)
+	qboolean			sendingRadio;	// the frames that go out now go over it
+	qboolean			toldNoRadio;
+	voiceRadio_t		ownRadio;		// the clicks of the own key
+	qhandle_t			radioShader;	// the mark of a voice from the radio in the list of who talks, 0: none
+	qboolean			radioShaderTried;
 	qboolean			sending;
 	float				ownGain;		// Voice_OwnReverb: what the cap left of the last frame
 	int					sentTime;		// when the last frame of the microphone went out
@@ -525,6 +536,8 @@ void CG_VoiceServerCommand( void ) {
 	voice.port = port;
 	voice.token = token;
 	voice.range = atoi( CG_Argv( 4 ) );
+	// what the relay knows beyond the protocol, nothing from a server of before
+	voice.radio = ( atoi( CG_Argv( 5 ) ) & VOICE_CAP_RADIO ) ? qtrue : qfalse;
 	Voice_Open( port );
 }
 
@@ -679,18 +692,65 @@ static void Voice_OwnReverb( const short *samples ) {
 }
 
 // one frame of sound goes out
-static void Voice_SendFrame( const short *samples ) {
+// type: VOICE_AUDIO for everybody in range, VOICE_RADIO for the clan
+static void Voice_SendFrame( const short *samples, int type ) {
 	byte		frame[VOICE_MAX_FRAME];
 	const int	len = opus_encode( (OpusEncoder *)&voiceEncoder, samples, VOICE_FRAME_SAMPLES, frame, sizeof( frame ) );
 
+	// he talks in the room he stands in either way
 	Voice_OwnReverb( samples );
 	Voice_Lip( cg.clientNum, samples );
 
 	// two bytes and less is a frame the codec found nothing in
 	if ( len > 2 ) {
-		Voice_Send( VOICE_AUDIO, frame, len );
+		Voice_Send( type, frame, len );
 		voice.seq = ( voice.seq + 1 ) & 0xffff;
 	}
+}
+
+/*
+=================
+Voice_RadioKey
+
++voiceclan is held, or not: whether what is said now goes over the clan radio. It does on a server whose relay
+knows the radio, for a player who has a clan password (the server decides who that reaches). The key cracks
+when it is pressed and when it is let go, as the key of a radio does, so the player knows he is on it.
+=================
+*/
+static qboolean Voice_RadioKey( void ) {
+	char		pass[64];
+	qboolean	on = voice.clanDown;
+
+	if ( on && ( !voice.radio || voice.master ) ) {
+		if ( !voice.toldNoRadio ) {
+			voice.toldNoRadio = qtrue;
+			trap->Print( "Voice chat: this server has no clan radio.\n" );
+		}
+		on = qfalse;
+	}
+	if ( on ) {
+		// "none" is what the cvar has until the player sets it, and what the server takes for no password
+		trap->Cvar_VariableStringBuffer( "cp_clanPwd", pass, sizeof( pass ) );
+		if ( !pass[0] || !Q_stricmp( pass, "none" ) ) {
+			if ( !voice.toldNoRadio ) {
+				voice.toldNoRadio = qtrue;
+				trap->Print( "Voice chat: the clan radio reaches the players with your clan password, and you have none (cp_clanPwd).\n" );
+			}
+			on = qfalse;
+		}
+	}
+	if ( on != voice.sendingRadio ) {
+		voice.sendingRadio = on;
+		if ( cg_voiceRadioFX.integer && voice.audio ) {
+			short	click[VOICE_RADIO_CLICK];
+			const int count = BG_VoiceRadioClick( &voice.ownRadio, click, VOICE_RADIO_CLICK, on ? qfalse : qtrue );
+
+			// the place of this client among the voices is free: nobody hears himself
+			CG_VoiceAudioMix( cg.clientNum, cg_voiceVolume.value * 0.5f, cg_voiceVolume.value * 0.5f, 0.0f );
+			CG_VoiceAudioWrite( cg.clientNum, click, count );
+		}
+	}
+	return on;
 }
 
 // voice_test play: the file from its start. qfalse: there is not one frame in it.
@@ -751,7 +811,9 @@ cg_voiceThreshold is sent.
 */
 static void Voice_Capture( int now ) {
 	const qboolean	activation = ( cg_voiceMode.integer == 2 ) ? qtrue : qfalse;
-	const qboolean	wanted = ( activation || voice.keyDown || now < voice.micUntil ) ? qtrue : qfalse;
+	// the radio is always by its key, also for a player whose voice is sent as soon as he talks
+	const qboolean	radio = Voice_RadioKey();
+	const qboolean	wanted = ( activation || voice.keyDown || radio || now < voice.micUntil ) ? qtrue : qfalse;
 	short			samples[VOICE_FRAME_SAMPLES];
 	int				count, i;
 
@@ -760,7 +822,7 @@ static void Voice_Capture( int now ) {
 		if ( !voice.testNext || now - voice.testNext > 500 )
 			voice.testNext = now;
 		for ( count = 0; count < VOICE_MAX_PER_FRAME && now >= voice.testNext && Voice_TestFrame( samples ); count++ ) {
-			Voice_SendFrame( samples );
+			Voice_SendFrame( samples, radio ? VOICE_RADIO : VOICE_AUDIO );
 			voice.testNext += VOICE_FRAME_MSEC;
 		}
 		voice.sending = voice.test ? qtrue : qfalse;
@@ -782,20 +844,20 @@ static void Voice_Capture( int now ) {
 			if ( CG_VoiceAudioAsking() )
 				return;
 			why = CG_VoiceAudioNoMicrophone();
-			if ( voice.keyDown || activation )
+			if ( voice.keyDown || voice.clanDown || activation )
 				trap->Print( "Voice chat: this page has no microphone: %s\n", why ? why : "it does not open" );
 #else
-			if ( voice.keyDown || activation )
+			if ( voice.keyDown || voice.clanDown || activation )
 				trap->Print( "Voice chat: no microphone (voice_devices lists what there is, cg_voiceCapture chooses)\n" );
 #endif
-			voice.keyDown = qfalse;
+			voice.keyDown = voice.clanDown = qfalse;
 			voice.micUntil = 0;
 			if ( activation )
 				trap->Cvar_Set( "cg_voiceMode", "1" );
 			return;
 		}
 	}
-	if ( voice.keyDown )
+	if ( voice.keyDown || radio )
 		voice.micUntil = now + VOICE_MIC_HOLD_MSEC;
 
 	for ( count = 0; count < VOICE_MAX_PER_FRAME && CG_VoiceAudioRead( samples, VOICE_FRAME_SAMPLES ); count++ ) {
@@ -805,8 +867,8 @@ static void Voice_Capture( int now ) {
 		}
 		if ( activation && Voice_Level( samples ) > cg_voiceThreshold.value )
 			voice.talkUntil = now + VOICE_VAD_HOLD_MSEC;
-		if ( activation ? ( now < voice.talkUntil ) : voice.keyDown ) {
-			Voice_SendFrame( samples );
+		if ( radio || ( activation ? ( now < voice.talkUntil ) : voice.keyDown ) ) {
+			Voice_SendFrame( samples, radio ? VOICE_RADIO : VOICE_AUDIO );
 			voice.sending = qtrue;
 			voice.sentTime = now;
 		}
@@ -942,7 +1004,8 @@ static qboolean Voice_InLevel( int speaker ) {
 	const voiceSpeaker_t	*sp = &voiceSpeakers[speaker];
 	const centity_t			*cent = &cg_entities[speaker];
 
-	if ( voice.range <= 0 || cgs.clientinfo[speaker].team == TEAM_SPECTATOR || !cent->currentValid || ( sp->flags & VOICE_FLAG_UNSEEN ) )
+	if ( voice.range <= 0 || cgs.clientinfo[speaker].team == TEAM_SPECTATOR || !cent->currentValid
+		|| ( sp->flags & ( VOICE_FLAG_UNSEEN | VOICE_FLAG_RADIO ) ) )
 		return qfalse;
 	if ( !cg_voiceMuffle.integer || !Voice_EngineTakesVoices() )
 		return qfalse;
@@ -987,7 +1050,43 @@ static void Voice_PlayFrame( int speaker, qboolean makeUp ) {
 	Voice_Lip( speaker, samples );
 	if ( sp->inLevel && trap->ext.S_SpatialVoice( speaker, sp->mouth, sp->volume, samples, VOICE_FRAME_SAMPLES, VOICE_RATE ) >= 0 )
 		return;
+	if ( sp->radio && cg_voiceRadioFX.integer )
+		BG_VoiceRadio( &sp->radioFx, samples, VOICE_FRAME_SAMPLES );
 	CG_VoiceAudioWrite( speaker, samples, VOICE_FRAME_SAMPLES );
+}
+
+static void Voice_Mouth( int speaker );
+
+// The crack of a radio in front of what somebody says over it, and the rush that is cut off behind it
+static void Voice_RadioClick( int speaker, qboolean end ) {
+	short click[VOICE_RADIO_CLICK];
+
+	if ( !cg_voiceRadioFX.integer )
+		return;
+	CG_VoiceAudioWrite( speaker, click, BG_VoiceRadioClick( &voiceSpeakers[speaker].radioFx, click, VOICE_RADIO_CLICK, end ) );
+}
+
+// Does what he says now come over the radio? A speaker can change from one to the other in the middle of a word
+// (he has two keys), so this is looked at with every frame of the game and not only when he starts to talk.
+static void Voice_RadioState( int speaker ) {
+	voiceSpeaker_t	*sp = &voiceSpeakers[speaker];
+	const qboolean	radio = ( sp->playing && ( sp->flags & VOICE_FLAG_RADIO ) ) ? qtrue : qfalse;
+
+	if ( radio == sp->radio )
+		return;
+	sp->radio = radio;
+	if ( radio ) {
+		// from here on it has no place: not through the engine, which would put it where he stands
+		sp->inLevel = qfalse;
+		Voice_RadioClick( speaker, qfalse );
+	} else {
+		Voice_RadioClick( speaker, qtrue );
+		if ( sp->playing ) {
+			sp->inLevel = Voice_InLevel( speaker );
+			if ( sp->inLevel )
+				Voice_Mouth( speaker );
+		}
+	}
 }
 
 // Where the mouth of a speaker is and how loud he is, for a voice the engine plays in the level. How loud at
@@ -1032,8 +1131,12 @@ static void Voice_Play( int now ) {
 		const int		span = BG_VoiceQueueSpan( &sp->queue );
 
 		if ( !sp->playing ) {
-			if ( !span )
+			if ( !span ) {
+				// his voice ran dry in a word over the radio and did not come back: the radio is let go
+				if ( sp->radio && now - sp->lastHeard > VOICE_SILENT_MSEC )
+					Voice_RadioState( i );
 				continue;
+			}
 			if ( sp->lead < VOICE_LEAD_FRAMES )
 				sp->lead = VOICE_LEAD_FRAMES;
 			if ( span < sp->lead && now - sp->waitSince < sp->lead * VOICE_FRAME_MSEC )
@@ -1045,6 +1148,7 @@ static void Voice_Play( int now ) {
 			if ( sp->inLevel )
 				Voice_Mouth( i );
 		}
+		Voice_RadioState( i );
 
 #ifdef __EMSCRIPTEN__
 		// (the sound device of a page takes VOICE_PAGE_PERIOD samples at a time, which have to wait there too)
@@ -1066,6 +1170,7 @@ static void Voice_Play( int now ) {
 			if ( now - sp->lastHeard > VOICE_SILENT_MSEC ) {
 				// he stopped talking
 				sp->playing = qfalse;
+				Voice_RadioState( i );
 				BG_VoiceQueueReset( &sp->queue );
 				if ( sp->lead > VOICE_LEAD_FRAMES )
 					sp->lead--;
@@ -1142,6 +1247,11 @@ static void Voice_Place( int now ) {
 
 		if ( !sp->playing )
 			continue;
+		// over the radio: in both ears, as loud wherever he is, and nothing over his head that would say where
+		if ( sp->radio ) {
+			CG_VoiceAudioMix( i, gain, gain, CG_Menu3DActive() ? 1.0f : 0.0f );
+			continue;
+		}
 		// the mark over his head, as long as his voice comes in (CG_Player)
 		cg_entities[i].vChatTime = cg.time + 250;
 
@@ -1188,6 +1298,41 @@ CG_VoiceDraw
 On the HUD: who is talking, and a line for this player while his own voice goes out.
 =================
 */
+// The mark of a voice from the radio: a dot with three waves that leave it. Drawn here and handed to the
+// renderer, where an engine of this tree takes a picture a module made (cl_cgameScene). 0: there is none.
+static qhandle_t Voice_RadioShader( void ) {
+	enum { SIZE = 32 };
+	static byte	pic[SIZE * SIZE * 4];
+	char		value[8];
+	int			x, y;
+
+	if ( voice.radioShaderTried )
+		return voice.radioShader;
+	voice.radioShaderTried = qtrue;
+	trap->Cvar_VariableStringBuffer( "cl_cgameScene", value, sizeof( value ) );
+	if ( atoi( value ) != 1 )
+		return 0;
+	for ( y = 0; y < SIZE; y++ ) {
+		for ( x = 0; x < SIZE; x++ ) {
+			// from the lower left corner, up and to the right
+			const float	dx = x + 0.5f - 5.0f, dy = ( SIZE - 5.0f ) - ( y + 0.5f );
+			const float	d = sqrtf( dx * dx + dy * dy );
+			float		alpha = Com_Clamp( 0.0f, 1.0f, 3.5f - d );
+			int			ring;
+
+			if ( dx > -1.0f && dy > -1.0f ) {
+				for ( ring = 0; ring < 3; ring++ ) {
+					alpha = Q_max( alpha, Com_Clamp( 0.0f, 1.0f, 1.8f - fabsf( d - ( 10.0f + ring * 7.0f ) ) ) );
+				}
+			}
+			pic[( y * SIZE + x ) * 4 + 0] = pic[( y * SIZE + x ) * 4 + 1] = pic[( y * SIZE + x ) * 4 + 2] = 255;
+			pic[( y * SIZE + x ) * 4 + 3] = (byte)( alpha * 255.0f );
+		}
+	}
+	voice.radioShader = trap->ext.R_RegisterShaderRGBA( "voice_radio", pic, SIZE, SIZE, RGBA_SHADER_OVER );
+	return voice.radioShader;
+}
+
 void CG_VoiceDraw( void ) {
 	const int	x = 8, height = SMALLCHAR_HEIGHT + 2;
 	int			y = 232, i;
@@ -1195,15 +1340,22 @@ void CG_VoiceDraw( void ) {
 	if ( !voice.answered || !cg_voiceDrawTalkers.integer )
 		return;
 	if ( voice.sending && cgs.clientinfo[cg.clientNum].infoValid ) {
-		CG_DrawPic( x, y, SMALLCHAR_HEIGHT, SMALLCHAR_HEIGHT, cgs.media.vchatShader );
-		CG_DrawSmallString( x + SMALLCHAR_HEIGHT + 4, y, va( "%s ^7(you)", cgs.clientinfo[cg.clientNum].name ), 1.0f );
+		const qhandle_t radio = voice.sendingRadio ? Voice_RadioShader() : 0;
+
+		CG_DrawPic( x, y, SMALLCHAR_HEIGHT, SMALLCHAR_HEIGHT, radio ? radio : cgs.media.vchatShader );
+		CG_DrawSmallString( x + SMALLCHAR_HEIGHT + 4, y, va( "%s ^7(you%s)", cgs.clientinfo[cg.clientNum].name,
+			voice.sendingRadio ? ", clan radio" : "" ), 1.0f );
 		y += height;
 	}
 	for ( i = 0; i < MAX_CLIENTS && y < 400; i++ ) {
+		const qhandle_t radio = voiceSpeakers[i].radio ? Voice_RadioShader() : 0;
+
 		if ( !voiceSpeakers[i].playing || !cgs.clientinfo[i].infoValid )
 			continue;
-		CG_DrawPic( x, y, SMALLCHAR_HEIGHT, SMALLCHAR_HEIGHT, cgs.media.vchatShader );
-		CG_DrawSmallString( x + SMALLCHAR_HEIGHT + 4, y, cgs.clientinfo[i].name, 1.0f );
+		CG_DrawPic( x, y, SMALLCHAR_HEIGHT, SMALLCHAR_HEIGHT, radio ? radio : cgs.media.vchatShader );
+		// without the picture the line says it
+		CG_DrawSmallString( x + SMALLCHAR_HEIGHT + 4, y, ( voiceSpeakers[i].radio && !radio ) ? va( "%s ^7(radio)", cgs.clientinfo[i].name )
+			: cgs.clientinfo[i].name, 1.0f );
 		y += height;
 	}
 }
@@ -1462,6 +1614,16 @@ void CG_VoiceUp_f( void ) {
 	voice.keyDown = qfalse;
 }
 
+// +voiceclan: to the clan, over the radio
+void CG_VoiceClanDown_f( void ) {
+	voice.clanDown = qtrue;
+}
+
+void CG_VoiceClanUp_f( void ) {
+	voice.clanDown = qfalse;
+	voice.toldNoRadio = qfalse;		// said again at the next try
+}
+
 // voice_devices: the microphones and speakers there are. cg_voiceCapture and cg_voicePlayback take a name.
 void CG_VoiceDevices_f( void ) {
 	static char	names[VOICE_MAX_DEVICES][VOICE_DEVICE_NAME];
@@ -1518,6 +1680,8 @@ void CG_VoiceStatus_f( void ) {
 			voice.linked ? "connected" : silent, voice.range,
 			cg_voiceMode.integer == 2 ? "voice activation" : "push to talk (+voice)",
 			CG_VoiceAudioCapturing() ? "open" : "closed", voice.sending ? ", sending" : "" );
+		trap->Print( "Clan radio (+voiceclan): %s\n", ( voice.radio && !voice.master ) ? "the server has it. It reaches the players with your clan password (cp_clanPwd)"
+			: "not on this server" );
 	}
 #ifdef __EMSCRIPTEN__
 	if ( cg_voice.integer && voice.serverHas && CG_VoiceAudioNoMicrophone() )
@@ -1525,7 +1689,8 @@ void CG_VoiceStatus_f( void ) {
 #endif
 	for ( i = 0; i < MAX_CLIENTS; i++ ) {
 		if ( cgs.clientinfo[i].infoValid && ( voiceSpeakers[i].playing || voiceSpeakers[i].muted || voiceSpeakers[i].heard ) )
-			trap->Print( "  %2i %s^7%s%s, %i frames heard\n", i, cgs.clientinfo[i].name, voiceSpeakers[i].playing ? " talks" : "",
+			trap->Print( "  %2i %s^7%s%s%s, %i frames heard\n", i, cgs.clientinfo[i].name, voiceSpeakers[i].playing ? " talks" : "",
+				( voiceSpeakers[i].playing && voiceSpeakers[i].radio ) ? " over the radio" : "",
 				voiceSpeakers[i].muted ? " (muted by you)" : "", voiceSpeakers[i].heard );
 	}
 }
@@ -1619,6 +1784,8 @@ void CG_VoiceServerInfo( const char *value ) { (void)value; }
 void CG_VoiceServerCommand( void ) {}
 void CG_VoiceDown_f( void ) {}
 void CG_VoiceUp_f( void ) {}
+void CG_VoiceClanDown_f( void ) {}
+void CG_VoiceClanUp_f( void ) {}
 void CG_VoiceDevices_f( void ) {}
 void CG_VoiceStatus_f( void ) {}
 void CG_VoiceTest_f( void ) {}

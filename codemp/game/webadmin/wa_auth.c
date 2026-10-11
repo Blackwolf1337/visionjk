@@ -1065,25 +1065,33 @@ The accounts, for an owner
 ==============================================================================
 */
 
+// Can there be an account of that name and role? qfalse and a reason: no.
+static qboolean WA_UserAddable( const char *name, waRole_t role, const char **why ) {
+	if ( !WA_NameValid( name ) ) {
+		*why = "name";		// letters, digits, _ - . and 23 of them at most
+		return qfalse;
+	}
+	if ( role == WA_ROLE_NONE ) {
+		*why = "role";
+		return qfalse;
+	}
+	if ( WA_FindUser( name ) ) {
+		*why = "exists";
+		return qfalse;
+	}
+	if ( waNumUsers == WA_MAX_USERS ) {
+		*why = "full";
+		return qfalse;
+	}
+	return qtrue;
+}
+
 // A new account with a password the game makes: the owner hands it on, the new one changes it. NULL and a
 // reason: there is none.
 static waUser_t *WA_AddUser( const char *name, waRole_t role, char *password, const char **why ) {
 	waUser_t *user;
 
-	if ( !WA_NameValid( name ) ) {
-		*why = "name";		// letters, digits, _ - . and 23 of them at most
-		return NULL;
-	}
-	if ( role == WA_ROLE_NONE ) {
-		*why = "role";
-		return NULL;
-	}
-	if ( WA_FindUser( name ) ) {
-		*why = "exists";
-		return NULL;
-	}
-	if ( waNumUsers == WA_MAX_USERS ) {
-		*why = "full";
+	if ( !WA_UserAddable( name, role, why ) ) {
 		return NULL;
 	}
 	user = &waUsers[waNumUsers];
@@ -1149,6 +1157,11 @@ static void WA_ApiUsers( waConnection_t *c, const char *what, const char *body )
 	user = WA_FindUser( name );
 
 	if ( !strcmp( what, "add" ) ) {
+		// what is wrong with the request is said first: "come again" is for one that would work
+		if ( !WA_UserAddable( name, role, &why ) ) {
+			WA_AuthAnswer( c, 400, "Bad Request", why );
+			return;
+		}
 		if ( WA_HashBusy() ) {
 			WA_AuthAnswer( c, 429, "Too Many Requests", "busy" );
 			return;
@@ -1397,5 +1410,8 @@ qboolean WA_AuthConsoleCommand( const char *cmd ) {
 		trap->Print( "webuser add <name> <moderator|admin|owner>, webuser reset <name>, webuser role <name> <role>, webuser token <name>, webuser remove <name>\n" );
 	}
 	crypto_wipe( password, sizeof( password ) );
+	// The wait between two passwords that are hashed is against a visitor who makes the server work. What was
+	// typed on its console is not his: the first login after it does not have to come again.
+	waHashed = qfalse;
 	return qtrue;
 }

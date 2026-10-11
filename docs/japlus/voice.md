@@ -21,7 +21,9 @@ bind v +voice
 Hold the key to talk. What the others say is heard without a key. The key is also in the menu under Controls,
 JA+ Control, and the settings a player needs most are in Setup under Voice Chat, in the main menu and in the
 game (the menus are in `assets/japlus_client/ui/jamp`, the ui module registers the cvars so they are there
-before a level was loaded).
+before a level was loaded). The same tab has the two switches of the chat above the heads, "Chat Bubbles"
+(`cg_chatBubbles`) and "Show My Music" (`cg_shareMusic`): twelve rows, which is what the tab of the main menu
+has room for.
 
 | Cvar | Default | Meaning |
 |------|---------|---------|
@@ -31,16 +33,18 @@ before a level was loaded).
 | `cg_voiceMicGain` | 1 | how loud the own microphone is sent |
 | `cg_voiceThreshold` | 0.02 | voice activation: from which level on, 0 to 1 |
 | `cg_voiceMuffle` | 1 | 0: voices behind walls are not muffled, and the engine's `s_spatial` leaves them alone |
-| `cg_voiceOwnReverb` | 1 | with the engine's `s_spatial`: how loud the room rings from what you say yourself. 0: not at all, 0.5: half, 2: twice. See [audio.md](audio.md) |
+| `cg_voiceOwnReverb` | 1 | with the engine's `s_spatial`: how loud the room rings from what you say yourself. 0: not at all, 0.5: half, 2: twice. A slider in the setup menus. At 1 it is half as loud as it was until 2026-10-11. See [audio.md](audio.md) |
 | `cg_voiceDrawTalkers` | 1 | the list of who is talking on the HUD |
 | `cg_voiceCapture`, `cg_voicePlayback` | "" | the name of the microphone and of the speakers, empty: the ones the system uses. `voice_devices` lists the names |
 | `cg_voiceBackend` | "" | `null`: a sound system that plays into nothing, for tests |
+| `cg_voiceRadioFX` | 1 | the clan radio sounds like a radio: only the band of a telephone, a little rough, with a click at both ends. 0: as clear as any voice |
 | `cg_voiceMaster` | 1 | 0: no voice chat on servers that have none of their own. 1: there it goes through the voice master |
 | `cg_voiceMasterHost` | voice.jka.vision | the voice master, a name or an address, with `:port` if it is not 29170 |
 
 | Command | |
 |---------|---|
 | `+voice` | talk while it is held |
+| `+voiceclan` | talk to the clan over the radio while it is held, see "The clan radio" |
 | `voice_devices` | the microphones and speakers there are |
 | `voice_status` | is the chat connected, who talks, who is muted, how many frames of each player were heard |
 | `voice_mute <player>`, `voice_unmute <player or all>` | do not hear one player. Holds until the level changes |
@@ -59,6 +63,29 @@ Who talks has the voice sprite of the game over his head and is in a list at the
 
 Use headphones. There is no echo cancellation: with speakers the others hear themselves.
 
+### The clan radio
+
+```
+bind b +voiceclan
+```
+
+Since 2026-10-11. Hold the key and what you say goes to the players of your clan and to nobody else, wherever
+they are on the map and whatever team they are on. Your clan are the players with the same clan password as
+you (`cp_clanPwd` in the client, or `/clanpass` in the game): the ones your clan chat reaches.
+
+- A voice from the radio has no place. It is in both ears, as loud for everybody, is not muffled by walls and
+  puts no mark over the head of who talks: it says nothing about where he is. In the list of who talks it has
+  the mark of a radio.
+- It sounds like a radio (`cg_voiceRadioFX`): the band from 300 to 3400 Hz, pushed until its peaks are rounded
+  off, a little hiss, a crack when the key is pressed and a rush that is cut off when it is let go. The player
+  who talks hears the two clicks of his own key.
+- The radio is always by its key, also with voice activation. With both keys held it is the radio.
+- The room still rings from what you say into the radio (`cg_voiceOwnReverb`): you say it aloud where you
+  stand. Players next to you who are not in your clan do not hear it.
+- The key is in the menu under Controls, JA+ Control, the switch for the sound in Setup under Voice Chat.
+- Not on a server without the game module of this tree (the voice master does not know clans), and not on one
+  with `g_voiceRadio 0`: the key then says so once.
+
 ## For the server
 
 | Cvar | Default | Meaning |
@@ -67,6 +94,7 @@ Use headphones. There is no echo cancellation: with speakers the others hear the
 | `g_voicePort` | 0 | the UDP port of the relay, 0: the game port plus 1 (latched) |
 | `g_voiceRange` | 1024 | how far a voice carries, in units. 0: all over the level, without direction and without muffling |
 | `g_voiceTeamOnly` | 0 | 1: in team games only the own team hears a player |
+| `g_voiceRadio` | 1 | 0: no clan radio. With 1 a frame a client sends for its clan goes to the players with the same clan password, whatever `g_voiceRange` and `g_voiceTeamOnly` say. A silenced player has no radio either |
 | `g_voiceRelay` | | read only, set by the game module: where the relay listens for the web host of the same server, `address:port`. Empty: no relay |
 
 The voice chat is on unless a server switches it off (since 2026-10-07, before that `g_voice` was 0). So every
@@ -364,9 +392,26 @@ Nothing of the voice chat is in the game protocol.
 - A player whose sound takes another way out of his network than his game (two lines, some carrier NATs) is
   refused by the address check and has no voice.
 
+## The clan radio in the protocol
+
+A client sends a frame for its clan as `VOICE_RADIO` (type 3) in place of `VOICE_AUDIO`, only to a relay that
+said it knows the radio: the answer to `jpvoice hello` has a fifth number for that (`VOICE_CAP_RADIO`), which a
+cgame from before does not read. The relay (`G_VoiceRadio`) hands the frame to the clients whose clan password
+is the one of the speaker, as a `VOICE_AUDIO` with `VOICE_FLAG_RADIO`, `VOICE_FLAG_UNSEEN` and a distance of 0.
+A cgame that knows the first flag plays it without a place through `BG_VoiceRadio()`. One from before the radio
+(release 0.1.1) knows the second: for it the frame is a voice close by that it is not shown, which it plays
+muffled and at full loudness. So nobody of the clan is left out, some hear it duller. The limits of a speaker
+(60 datagrams and 14000 bytes a second) count for both kinds of frame together.
+
 ## Checked
 
-2026-10-07, Linux, without sound hardware.
+2026-10-07, Linux, without sound hardware. The clan radio of 2026-10-11 has unit tests only (the datagram, what
+its sound lets through: 1000 Hz whole, 100 Hz and 8000 Hz at less than a tenth, the clicks), 145 checks with the
+ones below. Run on 2026-10-11 between three scripted clients (`tools/sectest/e2e.sh`): one of the clan in the
+other room got the radio in both ears at the same level with both pitches of the test tone in it, somebody
+next to the speaker who is not of the clan got none of it and did get his plain voice. The level of the radio
+was turned down after that run (it came out more than twice as loud as a voice next to the listener), and a
+client whose `cp_clanPwd` is still "none" is now told so instead of sending to nobody. Nobody has heard it.
 
 - Unit tests of `bg_voice.c` (`tools/voicetest/run.sh`): 108 checks with the address and undefined behaviour
   sanitizers. Among them 800000 random datagrams in buffers of exactly their size, the queue with loss,

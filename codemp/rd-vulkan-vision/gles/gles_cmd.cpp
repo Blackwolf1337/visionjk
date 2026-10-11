@@ -85,6 +85,7 @@ typedef enum {
 	GC_STENCIL,
 	GC_DRAW,
 	GC_BLUR,
+	GC_FOCUS,
 	GC_ADD,
 	GC_COPY,
 	GC_PROBES
@@ -134,7 +135,7 @@ typedef struct glesCommand_s {
 		} blur;
 		struct {
 			vkTarget_t	*source;
-			qboolean	soft;
+			vkAdd_t		how;
 		} add;
 		struct {
 			vkTarget_t	*source, *dest;
@@ -378,12 +379,22 @@ void VK_BlurPass( vkTarget_t *source, vkTarget_t *target, const float *parm ) {
 	}
 }
 
-void VK_AddTarget( vkTarget_t *source, qboolean soft ) {
+void VK_FocusPass( vkTarget_t *source, vkTarget_t *target, const float *parm ) {
+	glesCommand_t *cmd = GLES_Command( GC_FOCUS );
+
+	if ( cmd ) {
+		cmd->blur.source = source;
+		cmd->blur.target = target;
+		VectorCopy4( parm, cmd->blur.parm );
+	}
+}
+
+void VK_AddTarget( vkTarget_t *source, vkAdd_t how ) {
 	glesCommand_t *cmd = GLES_Command( GC_ADD );
 
 	if ( cmd ) {
 		cmd->add.source = source;
-		cmd->add.soft = soft;
+		cmd->add.how = how;
 	}
 }
 
@@ -546,6 +557,30 @@ static void GLES_Resolve( vkTarget_t *target ) {
 	// the scissor cuts a blit too
 	glDisable( GL_SCISSOR_TEST );
 	glBlitFramebuffer( 0, 0, target->width, target->height, 0, 0, target->width, target->height, GL_COLOR_BUFFER_BIT, GL_NEAREST );
+	glEnable( GL_SCISSOR_TEST );
+}
+
+/*
+===============
+GLES_ResolveDepth
+
+The texture of vk.depth gets a sample of every pixel of its renderbuffer of several. Only the depth of field reads
+that texture, so this is done when it asks and not with every pass, as GLES_Resolve() is for a color.
+===============
+*/
+static void GLES_ResolveDepth( void ) {
+	GLuint samples, plain;
+
+	if ( !vk.depth.renderbuffer ) {
+		return;
+	}
+	samples = VK_TargetFramebuffer( &vk.color, &vk.depth );
+	plain = VK_DepthFramebuffer();
+	glBindFramebuffer( GL_READ_FRAMEBUFFER, samples );
+	glBindFramebuffer( GL_DRAW_FRAMEBUFFER, plain );
+	// the scissor cuts a blit too
+	glDisable( GL_SCISSOR_TEST );
+	glBlitFramebuffer( 0, 0, vk.depth.width, vk.depth.height, 0, 0, vk.depth.width, vk.depth.height, GL_DEPTH_BUFFER_BIT, GL_NEAREST );
 	glEnable( GL_SCISSOR_TEST );
 }
 
@@ -883,9 +918,25 @@ static void GLES_Replay( vkFrame_t *frame ) {
 			GLES_DrawPass( GLP_BLUR, cmd->blur.source->texture, cmd->blur.parm );
 			GLES_DrawViewport();
 			break;
+		case GC_FOCUS:
+			GLES_Resolve( cmd->blur.source );
+			GLES_ResolveDepth();
+			glBindFramebuffer( GL_FRAMEBUFFER, VK_TargetFramebuffer( cmd->blur.target, NULL ) );
+			GLES_PassState( cmd->blur.target->width, cmd->blur.target->height, 0, 0 );
+			GLES_Texture( 1, vk.depth.texture );
+			GLES_DrawPass( GLP_FOCUS, cmd->blur.source->texture, cmd->blur.parm );
+			// Not left there: without several samples the scene is drawn into this very texture, and a browser
+			// refuses a draw whose program could read what it draws into.
+			GLES_Texture( 1, 0 );
+			GLES_DrawViewport();
+			break;
 		case GC_ADD:
 			// onto the target that is drawn into, all of it
-			GLES_PassState( vk.width, vk.height, GL_ONE, cmd->add.soft ? GL_ONE_MINUS_SRC_COLOR : GL_ONE );
+			if ( cmd->add.how == VKA_BLEND ) {
+				GLES_PassState( vk.width, vk.height, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
+			} else {
+				GLES_PassState( vk.width, vk.height, GL_ONE, cmd->add.how == VKA_ADD_SOFT ? GL_ONE_MINUS_SRC_COLOR : GL_ONE );
+			}
 			GLES_DrawPass( GLP_COPY, cmd->add.source->texture, NULL );
 			GLES_DrawViewport();
 			break;

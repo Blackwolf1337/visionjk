@@ -131,6 +131,7 @@ typedef enum {
 	GLP_GAMMA,						// the passes over a whole target, shaders/post.vert with one fragment shader each
 	GLP_BLUR,
 	GLP_COPY,
+	GLP_FOCUS,						// and one that reads the depth of the scene next to its target
 	GLP_PRESENT,					// the copy again, turned upside down: what the window gets
 	GLP_NUM_PROGRAMS
 } glesProgram_t;
@@ -150,6 +151,7 @@ typedef struct vkDeviceState_s {	// see vkState_t
 	int							boneAlign;			// a skeleton starts at a multiple of that many bones
 	float						maxAnisotropy;		// with vk.anisotropy: how much of the filter there is
 	int							samples;			// r_ext_multisample: samples a pixel of the scene and its glow, 1: no renderbuffers
+	qboolean					depthReadable;		// the depth of the scene can be read as a texture (VK_FocusPass): always here
 
 	GLuint						programs[GLP_NUM_PROGRAMS];
 	GLint						programParm[GLP_NUM_PROGRAMS];	// where u_parm of a pass is, -1: it has none
@@ -189,4 +191,5 @@ void		VK_CreateTarget( vkTarget_t *target, int width, int height, GLenum format,
 void		VK_DestroyTarget( vkTarget_t *target );
 void		VK_DestroyPostTargets( void );
 GLuint		VK_TargetFramebuffer( vkTarget_t *color, vkTarget_t *depth );
+GLuint		VK_DepthFramebuffer( void );
 GLuint		VK_SlotTexture( uint32_t slot );

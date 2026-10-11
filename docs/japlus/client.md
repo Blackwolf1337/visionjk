@@ -282,7 +282,7 @@ chat bubble stands on top of it.
 | Cvar | Default | Meaning |
 |------|---------|---------|
 | `cg_playerStatuses` | 1 | show the lines of the others |
-| `cg_shareMusic` | 0 | tell the server what music plays on this machine. Off by default: everybody on the server reads it |
+| `cg_shareMusic` | 0 | tell the server what music plays on this machine. Off by default: everybody on the server reads it. "Show My Music" in Setup, Voice Chat |
 | `cjp_caps` | 1, read only | in the userinfo: this cgame draws statuses, the server sends them to nobody else |
 
 - "Away from keyboard": the server finds out who did not touch a key or the mouse for `g_afkTime` seconds, for
@@ -324,7 +324,7 @@ the hips, and the menu stands in the level to the right of him. The game goes on
 | Cvar | Default | Meaning |
 |------|---------|---------|
 | `cg_immersiveMenu` | 1 | 0: the flat menu of the base game |
-| `r_menuBlur` | 1 | how far the scene behind the menu is out of focus (rd-vulkan-vision only): 0 not at all, 1 normal, up to 4 |
+| `r_menuBlur` | 1 | how far the level behind the menu is out of focus (rd-vulkan-vision and the client in a browser): 0 not at all, 1 normal, up to 4 |
 | `s_muffle` | set by the cgame | 0 to 1: the sound of the game through a low pass. Not stored |
 
 - The menu is not painted onto a texture. The ui draws it as always, and the renderer puts that 2D onto a
@@ -339,28 +339,40 @@ the hips, and the menu stands in the level to the right of him. The game goes on
   narrow field of view the camera is farther back, so the player takes the same part of the picture.
 - A scene inside a menu (the model in the player menu) is a viewport and can not be tilted. The engine moves
   it to where its place is on the plane and gives it the size the plane has there (`CL_UIRenderScene`).
-- Behind the menu the cgame adds a panel with an edge and a glow to the scene. Its shaders do not test the
-  depth either (`RGBA_SHADER_OVER`) and are sorted last, so it stands over the whole scene like the menu: a
+- Behind the menu the cgame adds a panel with an edge and a soft light to the scene. Its shaders do not test
+  the depth either (`RGBA_SHADER_OVER`) and are sorted last, so it stands over the whole scene like the menu: a
   wall or a pillar between camera and panel took a piece out of the panel and left the menu in the air. Moving
   the panel towards the camera until the level has room for it was tried first and can not work where the
-  wall is next to the camera. The HUD is hidden meanwhile.
-- The scene is put out of focus by rd-vulkan-vision (`VK_BlurFrame`): the frame goes into a buffer of half its
-  size, then passes widen it, three at `r_menuBlur 1`. That is a blur of the whole picture, the player
-  included, not one by depth: a real depth of field needs a pass that reads the depth in both devices of the
-  renderer. rd-vanilla keeps the scene sharp. The first version (cvar `r_sceneBlur`) ended the game as soon as
-  a menu opened, because the pass asked for the descriptor set of the frame where only the sets of the glow
-  buffers were known, and after that was repaired it went through the 320 x 240 buffers of the glow, which
-  left nothing of the scene to recognise.
+  wall is next to the camera. The HUD is hidden meanwhile. The inside of the panel lets a tenth of the level
+  through and its light is blended, not added (`RGBA_SHADER_BEHIND`): at half and with an added light its rim
+  was white in front of a bright wall.
+- The level behind the menu is out of focus, by distance (`VK_BlurFrame` of rd-vulkan-vision, both of its
+  devices): the frame goes into a buffer of half its size, then passes widen it, three at `r_menuBlur 1`. A
+  last pass (`shaders/focus.frag`) reads the depth of the scene and gives every pixel of that soft picture how
+  much of it shows: nothing up to the distance of the menu, which the cgame hands over
+  (`R_SetDepthOfField`), all of it at two and a half times that distance. So the player next to the menu and
+  the floor he stands on stay sharp. The panel is left out of the scene while it is drawn and put onto the
+  frame afterwards, as sharp as the menu. What is blended and writes no depth (a saber blade, smoke) is as
+  soft as what is behind it. Around the player the soft picture has some of his colour in it: it is a blur of
+  the whole frame. rd-vanilla keeps the scene sharp. The first version (cvar `r_sceneBlur`) ended the game as
+  soon as a menu opened, because the pass asked for the descriptor set of the frame where only the sets of the
+  glow buffers were known, and after that was repaired it went through the 320 x 240 buffers of the glow,
+  which left nothing of the scene to recognise. Until 2026-10-11 the whole picture was soft, the player
+  included.
 - The sound of the game (effects, music, Steam Audio) and the voices of the voice chat are muffled. The low
   pass of the engine (`S_MufflePaint`) keeps what it has after a sample by the time of the sample: the mixer
   paints the same fifth of a second again with every frame, and a filter that just ran on from one paint
   into the next gave a crackle with every frame.
-- The camera is pulled in where a wall is behind the player.
+- The camera is pulled in where a wall is behind the player. It is behind where he looks, followed over a
+  moment: with a menu open he does not turn by himself, but a teleporter or an admin can turn him. At first
+  the camera stayed where he looked when the menu opened, and after such a turn it looked him in the face
+  from inside a wall.
 
 Not while spectating, dead, zoomed or at the end of a map (the camera has no player to stand behind), and not
 in another engine (`cl_cgameUIPlane`). The first version was seen in the game on 2026-10-11 and changed after
-that (silhouette of the player in the menu, camera, blur, crackle). The numbers of the layout as they are now
-have not been seen yet.
+that (silhouette of the player in the menu, camera, blur, crackle). The layout as it is now was seen in
+pictures of scripted clients the same day (rd-vanilla, so without the blur): the player at the left from
+behind, the menu to the right of him over the level, the model of the player menu inside its frame.
 
 ### Admin login with a key
 
@@ -397,7 +409,10 @@ An admin logs in with an Ed25519 key, the kind ssh uses, and no password goes ov
 - Works in a jamp.exe too (client commands, a file and a socket are all it needs). Not in the browser client:
   a page has neither a key file nor a way to an agent.
 
-Not run against a server. Tested apart from the game: see server.md.
+Run on 2026-10-11 against a server on this machine with scripted clients (`japlus_port/tools/sectest/e2e.sh`):
+a key file made with `amkey new` (mode 600, read back by `ssh-keygen`) and its login as council, a login as
+knight through an `ssh-agent` started for the test, a one-time code, and a rank password that is refused with
+a line that says why. Not run: an agent that asks its user first (1Password), Windows.
 
 ### Bot mode
 

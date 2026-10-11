@@ -8235,7 +8235,10 @@ static void CG_Draw2D( void ) {
 				isMyTeam = qtrue;
 			}
 
+			// the timer of the HUD file stands at the right edge of the 640, on a wide window it goes to the edge
+			CG_Place2D( PLACE_RIGHT );
 			CG_DrawSiegeTimer(timeRemaining, isMyTeam);
+			CG_Place2D( PLACE_CENTER );
 		}
 	}
 	else
@@ -8258,7 +8261,9 @@ static void CG_Draw2D( void ) {
 			timeRemaining /= 1000;
 		}
 
+		CG_Place2D( PLACE_RIGHT );
 		CG_DrawSiegeDeathTimer( timeRemaining );
+		CG_Place2D( PLACE_CENTER );
 	}
 
 	// don't draw center string if scoreboard is up

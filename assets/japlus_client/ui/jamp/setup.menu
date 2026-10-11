@@ -1144,6 +1144,150 @@
 			decoration
 		}
 
+		itemDef
+		{
+			name				voicelight1
+			group				highlights
+			style				WINDOW_STYLE_SHADER
+			rect				260 190 340 14
+			background			"gfx/menus/menu_blendbox"
+			forecolor			1 1 1 1
+			visible			0
+			decoration
+		}
+
+		itemDef
+		{
+			name				voicelight2
+			group				highlights
+			style				WINDOW_STYLE_SHADER
+			rect				260 208 340 14
+			background			"gfx/menus/menu_blendbox"
+			forecolor			1 1 1 1
+			visible			0
+			decoration
+		}
+
+		itemDef
+		{
+			name				voicelight3
+			group				highlights
+			style				WINDOW_STYLE_SHADER
+			rect				260 226 340 14
+			background			"gfx/menus/menu_blendbox"
+			forecolor			1 1 1 1
+			visible			0
+			decoration
+		}
+
+		itemDef
+		{
+			name				voicelight4
+			group				highlights
+			style				WINDOW_STYLE_SHADER
+			rect				260 244 340 14
+			background			"gfx/menus/menu_blendbox"
+			forecolor			1 1 1 1
+			visible			0
+			decoration
+		}
+
+		itemDef
+		{
+			name				voicelight5
+			group				highlights
+			style				WINDOW_STYLE_SHADER
+			rect				260 262 340 14
+			background			"gfx/menus/menu_blendbox"
+			forecolor			1 1 1 1
+			visible			0
+			decoration
+		}
+
+		itemDef
+		{
+			name				voicelight6
+			group				highlights
+			style				WINDOW_STYLE_SHADER
+			rect				260 280 340 14
+			background			"gfx/menus/menu_blendbox"
+			forecolor			1 1 1 1
+			visible			0
+			decoration
+		}
+
+		itemDef
+		{
+			name				voicelight7
+			group				highlights
+			style				WINDOW_STYLE_SHADER
+			rect				260 298 340 14
+			background			"gfx/menus/menu_blendbox"
+			forecolor			1 1 1 1
+			visible			0
+			decoration
+		}
+
+		itemDef
+		{
+			name				voicelight8
+			group				highlights
+			style				WINDOW_STYLE_SHADER
+			rect				260 316 340 14
+			background			"gfx/menus/menu_blendbox"
+			forecolor			1 1 1 1
+			visible			0
+			decoration
+		}
+
+		itemDef
+		{
+			name				voicelight9
+			group				highlights
+			style				WINDOW_STYLE_SHADER
+			rect				260 334 340 14
+			background			"gfx/menus/menu_blendbox"
+			forecolor			1 1 1 1
+			visible			0
+			decoration
+		}
+
+		itemDef
+		{
+			name				voicelight10
+			group				highlights
+			style				WINDOW_STYLE_SHADER
+			rect				260 352 340 14
+			background			"gfx/menus/menu_blendbox"
+			forecolor			1 1 1 1
+			visible			0
+			decoration
+		}
+
+		itemDef
+		{
+			name				voicelight11
+			group				highlights
+			style				WINDOW_STYLE_SHADER
+			rect				260 370 340 14
+			background			"gfx/menus/menu_blendbox"
+			forecolor			1 1 1 1
+			visible			0
+			decoration
+		}
+
+		itemDef
+		{
+			name				voicelight12
+			group				highlights
+			style				WINDOW_STYLE_SHADER
+			rect				260 388 340 14
+			background			"gfx/menus/menu_blendbox"
+			forecolor			1 1 1 1
+			visible			0
+			decoration
+		}
+
 //----------------------------------------------------------------------------------------------
 //
 //	VIDEO 1 MENU BUTTONS
@@ -2310,11 +2454,11 @@
 			}
 			mouseenter
 			{
-				show			highlight1
+				show			voicelight1
 			}
 			mouseexit
 			{
-				hide			highlight1
+				hide			voicelight1
 			}
 		}
 
@@ -2326,7 +2470,7 @@
 			text				"Mode:"
 			cvar				"cg_voiceMode"
 			cvarFloatList		{ "Push To Talk" 1 "Voice Activation" 2 }
-			rect				260 216 340 14
+			rect				260 206 340 14
 			textalign			ITEM_ALIGN_RIGHT
 			textalignx			174
 			textaligny			0
@@ -2341,11 +2485,11 @@
 			}
 			mouseenter
 			{
-				show			highlight3
+				show			voicelight2
 			}
 			mouseexit
 			{
-				hide			highlight3
+				hide			voicelight2
 			}
 		}
 
@@ -2356,7 +2500,7 @@
 			type				ITEM_TYPE_SLIDER
 			text				"Volume:"
 			cvarfloat			"cg_voiceVolume" 1 0 2
-			rect				260 244 340 14
+			rect				260 224 340 14
 			textalign			ITEM_ALIGN_RIGHT
 			textalignx			174
 			textaligny			0
@@ -2371,11 +2515,11 @@
 			}
 			mouseenter
 			{
-				show			highlight5
+				show			voicelight3
 			}
 			mouseexit
 			{
-				hide			highlight5
+				hide			voicelight3
 			}
 		}
 
@@ -2386,7 +2530,7 @@
 			type				ITEM_TYPE_SLIDER
 			text				"Microphone Gain:"
 			cvarfloat			"cg_voiceMicGain" 1 0 3
-			rect				260 272 340 14
+			rect				260 242 340 14
 			textalign			ITEM_ALIGN_RIGHT
 			textalignx			174
 			textaligny			0
@@ -2401,11 +2545,11 @@
 			}
 			mouseenter
 			{
-				show			highlight7
+				show			voicelight4
 			}
 			mouseexit
 			{
-				hide			highlight7
+				hide			voicelight4
 			}
 		}
 
@@ -2416,7 +2560,7 @@
 			type				ITEM_TYPE_SLIDER
 			text				"Activation Level:"
 			cvarfloat			"cg_voiceThreshold" 0.02 0 0.2
-			rect				260 300 340 14
+			rect				260 260 340 14
 			textalign			ITEM_ALIGN_RIGHT
 			textalignx			174
 			textaligny			0
@@ -2431,11 +2575,11 @@
 			}
 			mouseenter
 			{
-				show			highlight9
+				show			voicelight5
 			}
 			mouseexit
 			{
-				hide			highlight9
+				hide			voicelight5
 			}
 		}
 
@@ -2446,7 +2590,7 @@
 			type				ITEM_TYPE_YESNO
 			text				"Muffle Behind Walls:"
 			cvar				"cg_voiceMuffle"
-			rect				260 328 340 14
+			rect				260 278 340 14
 			textalign			ITEM_ALIGN_RIGHT
 			textalignx			174
 			textaligny			0
@@ -2461,11 +2605,11 @@
 			}
 			mouseenter
 			{
-				show			highlight11
+				show			voicelight6
 			}
 			mouseexit
 			{
-				hide			highlight11
+				hide			voicelight6
 			}
 		}
 
@@ -2476,7 +2620,7 @@
 			type				ITEM_TYPE_YESNO
 			text				"Show Who Talks:"
 			cvar				"cg_voiceDrawTalkers"
-			rect				260 356 340 14
+			rect				260 296 340 14
 			textalign			ITEM_ALIGN_RIGHT
 			textalignx			174
 			textaligny			0
@@ -2491,11 +2635,11 @@
 			}
 			mouseenter
 			{
-				show			highlight13
+				show			voicelight7
 			}
 			mouseexit
 			{
-				hide			highlight13
+				hide			voicelight7
 			}
 		}
 
@@ -2506,7 +2650,7 @@
 			type				ITEM_TYPE_YESNO
 			text				"On Other Servers:"
 			cvar				"cg_voiceMaster"
-			rect				260 384 340 14
+			rect				260 314 340 14
 			textalign			ITEM_ALIGN_RIGHT
 			textalignx			174
 			textaligny			0
@@ -2521,11 +2665,131 @@
 			}
 			mouseenter
 			{
-				show			highlight15
+				show			voicelight8
 			}
 			mouseexit
 			{
-				hide			highlight15
+				hide			voicelight8
+			}
+		}
+
+		itemDef
+		{
+			name				voicechat9
+			group				voicechat
+			type				ITEM_TYPE_SLIDER
+			text				"Own Voice In The Room:"
+			cvarfloat			"cg_voiceOwnReverb" 1 0 2
+			rect				260 332 340 14
+			textalign			ITEM_ALIGN_RIGHT
+			textalignx			174
+			textaligny			0
+			font				4
+			textscale			1
+			forecolor			0.65 0.65 1 1
+			visible				0
+			descText			"With spatial sound: how loud the room rings from what you say yourself."
+			action
+			{
+				play			"sound/interface/button1.wav" ;
+			}
+			mouseenter
+			{
+				show			voicelight9
+			}
+			mouseexit
+			{
+				hide			voicelight9
+			}
+		}
+
+		itemDef
+		{
+			name				voicechat10
+			group				voicechat
+			type				ITEM_TYPE_YESNO
+			text				"Radio Sound:"
+			cvar				"cg_voiceRadioFX"
+			rect				260 350 340 14
+			textalign			ITEM_ALIGN_RIGHT
+			textalignx			174
+			textaligny			0
+			font				4
+			textscale			1
+			forecolor			0.65 0.65 1 1
+			visible				0
+			descText			"The clan radio sounds like one: narrow, a little rough, with a click."
+			action
+			{
+				play			"sound/interface/button1.wav" ;
+			}
+			mouseenter
+			{
+				show			voicelight10
+			}
+			mouseexit
+			{
+				hide			voicelight10
+			}
+		}
+
+		itemDef
+		{
+			name				voicechat11
+			group				voicechat
+			type				ITEM_TYPE_YESNO
+			text				"Chat Bubbles:"
+			cvar				"cg_chatBubbles"
+			rect				260 368 340 14
+			textalign			ITEM_ALIGN_RIGHT
+			textalignx			174
+			textaligny			0
+			font				4
+			textscale			1
+			forecolor			0.65 0.65 1 1
+			visible				0
+			descText			"What a player says stands above his head, and dots while he types."
+			action
+			{
+				play			"sound/interface/button1.wav" ;
+			}
+			mouseenter
+			{
+				show			voicelight11
+			}
+			mouseexit
+			{
+				hide			voicelight11
+			}
+		}
+
+		itemDef
+		{
+			name				voicechat12
+			group				voicechat
+			type				ITEM_TYPE_YESNO
+			text				"Show My Music:"
+			cvar				"cg_shareMusic"
+			rect				260 386 340 14
+			textalign			ITEM_ALIGN_RIGHT
+			textalignx			174
+			textaligny			0
+			font				4
+			textscale			1
+			forecolor			0.65 0.65 1 1
+			visible				0
+			descText			"The others see above your head what you listen to (Spotify, YT Music)."
+			action
+			{
+				play			"sound/interface/button1.wav" ;
+			}
+			mouseenter
+			{
+				show			voicelight12
+			}
+			mouseexit
+			{
+				hide			voicelight12
 			}
 		}
 

@@ -160,9 +160,10 @@ void G_VoiceClientGone( int clientNum ) {
 Cmd_JPVoice_f
 
 jpvoice hello <protocol>: the cgame of a client asks for voice. The answer is the server command
-jpvoice <protocol> <port> <token> <range>, and it is the only thing of the voice chat that ever goes through
-the game connection. A client is told the protocol of this server even if his is another one, he then stays
-silent by himself.
+jpvoice <protocol> <port> <token> <range> <caps>, and it is the only thing of the voice chat that ever goes
+through the game connection. A client is told the protocol of this server even if his is another one, he then
+stays silent by himself. caps: what this relay knows beyond the protocol (VOICE_CAP_RADIO), a cgame from before
+that does not look at it.
 =================
 */
 void Cmd_JPVoice_f( gentity_t *ent ) {
@@ -195,8 +196,8 @@ void Cmd_JPVoice_f( gentity_t *ent ) {
 		vc->gameAddr.s_addr = htonl( INADDR_LOOPBACK );
 		vc->gameAddrKnown = qtrue;
 	}
-	trap->SendServerCommand( ent - g_entities, va( "jpvoice %i %i %u %i", VOICE_PROTOCOL, voicePort, token,
-		g_voiceRange.integer > 0 ? g_voiceRange.integer : 0 ) );
+	trap->SendServerCommand( ent - g_entities, va( "jpvoice %i %i %u %i %i", VOICE_PROTOCOL, voicePort, token,
+		g_voiceRange.integer > 0 ? g_voiceRange.integer : 0, g_voiceRadio.integer ? VOICE_CAP_RADIO : 0 ) );
 }
 
 // a player as BG_VoiceHears() wants him
@@ -242,6 +243,45 @@ static void G_VoiceRelay( int speaker, const voicePacket_t *in ) {
 		// A voice must not say where somebody behind a wall stands.
 		out.flags = trap->InPVS( ear.origin, mouth.origin ) ? 0 : VOICE_FLAG_UNSEEN;
 		out.distance = (int)( distance / VOICE_DISTANCE_STEP );
+		len = BG_VoicePack( datagram, sizeof( datagram ), &out, qtrue );
+		if ( len )
+			sendto( voiceSocket, (const char *)datagram, len, BG_SEND_FLAGS, (const struct sockaddr *)&vc->addr, sizeof( vc->addr ) );
+	}
+	voiceClients[speaker].relayed++;
+}
+
+/*
+=================
+G_VoiceRadio
+
+What one speaker said into the clan radio goes to the players of his clan: the ones with his clan password
+(cp_clanPwd of the client, or /clanpass), who are the ones his clan chat reaches. Where they are and which
+team they are on does not matter, nobody else gets it, and it says nothing about where he is.
+=================
+*/
+static void G_VoiceRadio( int speaker, const voicePacket_t *in ) {
+	const gclient_t	*client = g_entities[speaker].client;
+	voicePacket_t	out = *in;
+	byte			datagram[VOICE_MAX_DATAGRAM];
+	int				i, len;
+
+	if ( !g_voiceRadio.integer || !voiceClients[speaker].ready || client->pers.connected != CON_CONNECTED
+		|| client->pers.jp.silenced || !client->pers.jp.clanPass[0] )
+		return;
+	out.type = VOICE_AUDIO;
+	out.client = speaker;
+	// a cgame from before the radio takes it for a voice close by that it is not shown, see bg_voice.h
+	out.flags = VOICE_FLAG_RADIO | VOICE_FLAG_UNSEEN;
+	out.distance = 0;
+
+	for ( i = 0; i < level.maxclients; i++ ) {
+		const voiceClient_t	*vc = &voiceClients[i];
+		const gentity_t		*other = &g_entities[i];
+
+		if ( i == speaker || !vc->ready || !other->inuse || !other->client || other->client->pers.connected != CON_CONNECTED
+			|| Q_stricmp( client->pers.jp.clanPass, other->client->pers.jp.clanPass ) )
+			continue;
+		out.token = vc->token;
 		len = BG_VoicePack( datagram, sizeof( datagram ), &out, qtrue );
 		if ( len )
 			sendto( voiceSocket, (const char *)datagram, len, BG_SEND_FLAGS, (const struct sockaddr *)&vc->addr, sizeof( vc->addr ) );
@@ -336,7 +376,10 @@ void G_VoiceFrame( void ) {
 				sendto( voiceSocket, (const char *)out, outLen, BG_SEND_FLAGS, (const struct sockaddr *)&from, sizeof( from ) );
 			continue;
 		}
-		G_VoiceRelay( p.client, &p );
+		if ( p.type == VOICE_RADIO )
+			G_VoiceRadio( p.client, &p );
+		else
+			G_VoiceRelay( p.client, &p );
 	}
 }
 
@@ -348,8 +391,8 @@ void Svcmd_VoiceStatus_f( void ) {
 		trap->Print( "Voice chat is off (g_voice %i)\n", g_voice.integer );
 		return;
 	}
-	trap->Print( "Voice chat on UDP port %i, range %i, %s. %i datagrams refused.\n", voicePort, g_voiceRange.integer,
-		( g_voiceTeamOnly.integer && level.gametype >= GT_TEAM ) ? "team only" : "everybody in range", voiceRefused );
+	trap->Print( "Voice chat on UDP port %i, range %i, %s, clan radio %s. %i datagrams refused.\n", voicePort, g_voiceRange.integer,
+		( g_voiceTeamOnly.integer && level.gametype >= GT_TEAM ) ? "team only" : "everybody in range", g_voiceRadio.integer ? "on" : "off", voiceRefused );
 	for ( i = 0; i < level.maxclients; i++ ) {
 		const voiceClient_t *vc = &voiceClients[i];
 

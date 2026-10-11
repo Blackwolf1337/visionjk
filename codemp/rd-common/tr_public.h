@@ -255,7 +255,8 @@ typedef struct refexport_s {
 		qboolean			(*Font_Text3D)							( const vec3_t origin, const vec3_t right, const vec3_t up, float height, const char *text, const float *rgba );
 		// A shader for a picture a module made itself, for polygons in the scene (see RE_RegisterSceneShader):
 		// width and height are powers of two. flags: RGBA_SHADER_GLOW, it is added and glows. RGBA_SHADER_OVER,
-		// nothing of the scene hides it. Its files need no pk3, so it is there on a pure server too.
+		// nothing of the scene hides it. RGBA_SHADER_BEHIND, drawn before the others. Its files need no pk3, so it
+		// is there on a pure server too.
 		qhandle_t			(*RegisterShaderRGBA)					( const char *name, const byte *rgba, int width, int height, int flags );
 		// The 2D that follows is drawn on a plane in the level, not flat on the screen: matrix takes a place of
 		// the 2D grid to clip space (16 values, column by column). NULL: flat again.

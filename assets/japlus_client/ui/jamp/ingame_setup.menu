@@ -2082,6 +2082,126 @@
 			}
 		}
 
+		itemDef
+		{
+			name				voicechat9
+			group				voicechat
+			type				ITEM_TYPE_SLIDER
+			text				"Own Voice In The Room:"
+			cvarfloat			"cg_voiceOwnReverb" 1 0 2
+			rect				220 201 300 20
+			textalign			ITEM_ALIGN_RIGHT
+			textalignx			165
+			textaligny			0
+			font				4
+			textscale			1
+			forecolor			.615 .615 .956 1
+			visible				0
+			descText			"With spatial sound: how loud the room rings from what you say yourself."
+			action
+			{
+				play			"sound/interface/button1"
+			}
+			mouseenter
+			{
+				show			highlight9
+			}
+			mouseexit
+			{
+				hide			highlight9
+			}
+		}
+
+		itemDef
+		{
+			name				voicechat10
+			group				voicechat
+			type				ITEM_TYPE_YESNO
+			text				"Radio Sound:"
+			cvar				"cg_voiceRadioFX"
+			rect				220 221 300 20
+			textalign			ITEM_ALIGN_RIGHT
+			textalignx			165
+			textaligny			0
+			font				4
+			textscale			1
+			forecolor			.615 .615 .956 1
+			visible				0
+			descText			"The clan radio sounds like one: narrow, a little rough, with a click."
+			action
+			{
+				play			"sound/interface/button1"
+			}
+			mouseenter
+			{
+				show			highlight10
+			}
+			mouseexit
+			{
+				hide			highlight10
+			}
+		}
+
+		itemDef
+		{
+			name				voicechat11
+			group				voicechat
+			type				ITEM_TYPE_YESNO
+			text				"Chat Bubbles:"
+			cvar				"cg_chatBubbles"
+			rect				220 241 300 20
+			textalign			ITEM_ALIGN_RIGHT
+			textalignx			165
+			textaligny			0
+			font				4
+			textscale			1
+			forecolor			.615 .615 .956 1
+			visible				0
+			descText			"What a player says stands above his head, and dots while he types."
+			action
+			{
+				play			"sound/interface/button1"
+			}
+			mouseenter
+			{
+				show			highlight11
+			}
+			mouseexit
+			{
+				hide			highlight11
+			}
+		}
+
+		itemDef
+		{
+			name				voicechat12
+			group				voicechat
+			type				ITEM_TYPE_YESNO
+			text				"Show My Music:"
+			cvar				"cg_shareMusic"
+			rect				220 261 300 20
+			textalign			ITEM_ALIGN_RIGHT
+			textalignx			165
+			textaligny			0
+			font				4
+			textscale			1
+			forecolor			.615 .615 .956 1
+			visible				0
+			descText			"The others see above your head what you listen to (Spotify, YT Music)."
+			action
+			{
+				play			"sound/interface/button1"
+			}
+			mouseenter
+			{
+				show			highlight12
+			}
+			mouseexit
+			{
+				hide			highlight12
+			}
+		}
+
 		//----------------------------------------------------------------------------------------------
 		//
 		//	BOT MODE FIELDS (cg_botmode.c of the port, not a JA+ menu)

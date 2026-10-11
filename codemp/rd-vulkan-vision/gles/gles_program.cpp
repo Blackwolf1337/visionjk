@@ -38,6 +38,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "shaders/gamma_frag_es.inc"
 #include "shaders/blur_frag_es.inc"
 #include "shaders/copy_frag_es.inc"
+#include "shaders/focus_frag_es.inc"
 
 static const struct {
 	const char			*name;				// for what the console says when it does not compile
@@ -49,6 +50,7 @@ static const struct {
 	{ "gamma", vk_es_post_vert, vk_es_gamma_frag, "" },
 	{ "blur", vk_es_post_vert, vk_es_blur_frag, "" },
 	{ "copy", vk_es_post_vert, vk_es_copy_frag, "" },
+	{ "focus", vk_es_post_vert, vk_es_focus_frag, "" },
 	{ "present", vk_es_post_vert, vk_es_copy_frag, "#define POST_UPSIDE_DOWN\n" },
 };
 
@@ -145,6 +147,7 @@ static GLuint VK_LinkProgram( glesProgram_t which ) {
 	VK_BindSampler( program, "u_tex0", 0 );
 	VK_BindSampler( program, "u_tex1", 1 );
 	VK_BindSampler( program, "u_image", 0 );
+	VK_BindSampler( program, "u_depth", 1 );
 	vk.programParm[which] = glGetUniformLocation( program, "u_parm" );
 	return program;
 }

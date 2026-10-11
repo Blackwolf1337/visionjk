@@ -61,7 +61,7 @@ static struct {
 	qboolean	tried;
 	qboolean	ready;
 	qhandle_t	fill, border, glow, dot, tail;
-	qhandle_t	overFill, overBorder, overGlow;		// the same pictures, drawn over all of the scene (CG_BubblePanelAt)
+	qhandle_t	overFill, overBorder, overLight;	// the same pictures, drawn over all of the scene (CG_BubblePanelAt)
 } bubbleArt;
 
 /*
@@ -131,7 +131,9 @@ static void Bubble_InitArt( void ) {
 		}
 	}
 	bubbleArt.glow = trap->ext.R_RegisterShaderRGBA( "bubble_glow", pic, BUBBLE_TEX, BUBBLE_TEX, RGBA_SHADER_GLOW );
-	bubbleArt.overGlow = trap->ext.R_RegisterShaderRGBA( "bubble_glow_over", pic, BUBBLE_TEX, BUBBLE_TEX, RGBA_SHADER_GLOW | RGBA_SHADER_OVER );
+	// Not added to what is behind it as the glow of a bubble is: a panel as large as the one of the menu turned
+	// white with it wherever a bright wall stood behind its rim.
+	bubbleArt.overLight = trap->ext.R_RegisterShaderRGBA( "bubble_light_over", pic, BUBBLE_TEX, BUBBLE_TEX, RGBA_SHADER_OVER | RGBA_SHADER_BEHIND );
 
 	// a dot
 	for ( y = 0; y < BUBBLE_SMALL_TEX; y++ ) {
@@ -348,13 +350,13 @@ static void Bubble_Panel( qhandle_t shader, const bubbleView_t *view, float half
 CG_BubblePanelAt
 
 A panel as the bubbles have it, for something else that stands in the level (the menu, menu3d/cg_menu3d.c):
-its soft light, its inside and its edge around a point, along right and up. Unlike a bubble it is drawn over all
+a soft edge of light, its inside and its edge around a point, along right and up. Unlike a bubble it is drawn over all
 of the scene: the menu on it is too, and a wall or a pillar between the camera and the panel took a piece out
 of the panel and left the menu in the air. qfalse: it can not be drawn (another engine).
 =================
 */
 qboolean CG_BubblePanelAt( const vec3_t center, const vec3_t right, const vec3_t up, float halfW, float halfH, float corner,
-		const float *fill, const float *border, const float *glow, float alpha ) {
+		const float *fill, const float *border, const float *light, float alpha ) {
 	bubbleView_t view;
 
 	if ( !bubbleArt.tried ) {
@@ -367,10 +369,10 @@ qboolean CG_BubblePanelAt( const vec3_t center, const vec3_t right, const vec3_t
 	VectorCopy( right, view.right );
 	VectorCopy( up, view.up );
 	CrossProduct( up, right, view.toward );
-	if ( !bubbleArt.overGlow || !bubbleArt.overFill || !bubbleArt.overBorder ) {
+	if ( !bubbleArt.overLight || !bubbleArt.overFill || !bubbleArt.overBorder ) {
 		return qfalse;
 	}
-	Bubble_Panel( bubbleArt.overGlow, &view, halfW + corner, halfH + corner, corner * 1.8f, 0.0f, glow, alpha );
+	Bubble_Panel( bubbleArt.overLight, &view, halfW + corner, halfH + corner, corner * 1.8f, 0.0f, light, alpha );
 	Bubble_Panel( bubbleArt.overFill, &view, halfW, halfH, corner, 0.0f, fill, alpha );
 	Bubble_Panel( bubbleArt.overBorder, &view, halfW, halfH, corner, 0.0f, border, alpha );
 	return qtrue;

@@ -194,11 +194,12 @@ What the own player says goes the same way as his other sounds: into the reverb 
 hands every frame of the microphone that goes out to the engine too (`ext.S_SpatialOwnVoice`, a second call,
 which an engine has that sets the cvar `s_spatialOwnVoice` to 1). He does not hear his voice, he hears the room
 he stands in ring from it. That room is in his ears a moment after the word, while he talks on, so it gets
-little of him: at `cg_voiceOwnReverb 1` three tenths of what the voice of a player next to him would give it
-(`VOICE_OWN_REVERB_GAIN`). And it has a cap: a frame of the microphone that is louder than a tenth of full
+little of him: at `cg_voiceOwnReverb 1` 0.15 of what the voice of a player next to him would give it
+(`VOICE_OWN_REVERB_GAIN`, 0.3 until 2026-10-11, which was found too loud in the game). And it has a cap: a frame of the microphone that is louder than a tenth of full
 scale (`VOICE_OWN_REVERB_CAP`, as the voice activation measures it) goes in that loud and no louder, turned
 down within the frame, and comes back over the next frames, so a raised voice does not raise the room.
-`cg_voiceOwnReverb` scales what the room gets, 0 turns it off. Not handed over: a spectator's voice, and a chat
+`cg_voiceOwnReverb` scales what the room gets, 0 turns it off, and the voice part of the setup menus has a
+slider for it ("Own Voice In The Room", 0 to 2). Not handed over: a spectator's voice, and a chat
 without a range.
 
 The other sounds are there ahead of time, a voice is not. It is rendered as far as what arrived of it reaches,

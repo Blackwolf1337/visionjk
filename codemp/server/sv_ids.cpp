@@ -40,8 +40,13 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // all for an address that has a player on the server: at worst the attacker keeps a stranger from connecting
 // for a while, which he could do with a flood anyway.
 //
-// The cheat checks that go by what a client sends are here too: moves that are ahead of the time of the server
-// (SV_IDS_Move). sv_antiWallhack is in sv_snapshot.cpp, it goes by what a client is sent.
+// No speed check is here, though one was (2026-10-11): it counted the moves of a player that are ahead of the time
+// of the server, which is what a clock that runs fast would give. A client whose clock runs three times too fast
+// was tried against it and never got there: the client keeps the time of its moves at the time the server tells
+// it, a few frames ahead at most, and the game cuts a move back to 200 msec ahead anyway (ClientThink_real). So
+// the hack gains nothing in this game and there is nothing to catch. What such a count does catch is every
+// player after the server stood still for a moment: their moves of that moment are all ahead of its time.
+// sv_antiWallhack is in sv_snapshot.cpp.
 
 #include "server.h"
 
@@ -57,11 +62,6 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define IDS_LINES_SECOND	30
 #define IDS_DETAIL			96
 
-#define IDS_AHEAD_MSEC		250			// a move may be that far ahead of the time of the server
-#define IDS_MOVE_WINDOW		5000
-#define IDS_MOVE_COUNT		30			// that many such moves in a window is one strike
-#define IDS_MOVE_STRIKES	3
-
 typedef struct idsEntry_s {
 	byte		ip[4];
 	qboolean	inUse;
@@ -75,12 +75,6 @@ typedef struct idsEntry_s {
 	int			lineEvent;			//	for which event,
 	int			lineSkipped;		//	and how many of that event were not written since
 } idsEntry_t;
-
-typedef struct idsMove_s {
-	int			windowTime;
-	int			ahead;
-	int			strikes;
-} idsMove_t;
 
 static const struct {
 	const char	*name;
@@ -102,15 +96,12 @@ static const struct {
 	{ "a download path that leaves the game",			50 },	// IDS_DOWNLOAD_PATH
 	{ "a line break inside a command",					30 },	// IDS_TEXT_BREAK
 	{ "a path that goes up, in a command",				20 },	// IDS_TEXT_PATH
-	{ "a run of format marks",							35 },	// IDS_TEXT_FORMAT
 	{ "a run of bytes that is no text",					35 },	// IDS_TEXT_BINARY
 	{ "a userinfo that is too long",					25 },	// IDS_USERINFO
-	{ "moves ahead of the time of the server",			10 },	// IDS_MOVE_AHEAD
 };
 
 static cvar_t		*sv_ids;
 static idsEntry_t	ids_entries[IDS_ENTRIES];
-static idsMove_t	ids_moves[MAX_CLIENTS];
 static fileHandle_t	ids_file;
 static int			ids_lineSecond, ids_lines, ids_linesLost;
 
@@ -347,7 +338,8 @@ SV_IDS_Text
 
 A command of a player, or his userinfo: looks for what the known attacks on games of this engine look like.
 None of it does anything here (the game takes line breaks out of a command and checks every path), but nobody
-types it by accident.
+types it by accident. Format marks (%s, %n) are not among them: the engine turns every % into a dot when it
+reads a string from a message (MSG_ReadString), so none ever gets this far.
 =================
 */
 // Bytes above 127 are letters with accents from an old client and UTF-8 from one of this tree. What is neither:
@@ -376,13 +368,13 @@ static qboolean SV_IDS_BinaryRun( const unsigned char *run, int length ) {
 void SV_IDS_Text( client_t *cl, const char *text, qboolean userinfo ) {
 	const unsigned char	*s = (const unsigned char *)text;
 	const netadr_t		*from = &cl->netchan.remoteAddress;
-	int					formats = 0, formatEnd = -8, binary = 0, i;
-	qboolean			chat, lineBreak = qfalse, pathUp = qfalse, formatRun = qfalse, binaryRun = qfalse;
+	int					binary = 0, i;
+	qboolean			chat, lineBreak = qfalse, pathUp = qfalse, binaryRun = qfalse;
 
 	if ( !sv_ids || !sv_ids->integer || from->type != NA_IP ) {
 		return;
 	}
-	// what people write to each other may have dots and percent signs in it
+	// what people write to each other may have dots in it
 	chat = (qboolean)( !userinfo && ( !Q_stricmpn( text, "say", 3 ) || !Q_stricmpn( text, "tell", 4 ) || !Q_stricmpn( text, "amsay", 5 )
 		|| !Q_stricmpn( text, "ampsay", 6 ) || !Q_stricmpn( text, "clansay", 7 ) || !Q_stricmpn( text, "vsay", 4 ) || !Q_stricmpn( text, "jpstatus", 8 ) ) );
 
@@ -392,15 +384,6 @@ void SV_IDS_Text( client_t *cl, const char *text, qboolean userinfo ) {
 		}
 		if ( !chat && s[i] == '.' && s[i + 1] == '.' && ( s[i + 2] == '/' || s[i + 2] == '\\' ) ) {
 			pathUp = qtrue;
-		}
-		// In a printf %n writes to memory and a row of %s or %x reads the stack: one %n, or three marks with at
-		// most one character between them
-		if ( !chat && s[i] == '%' && ( ( s[i + 1] >= 'a' && s[i + 1] <= 'z' ) || ( s[i + 1] >= 'A' && s[i + 1] <= 'Z' ) ) ) {
-			formats = ( i - formatEnd <= 1 ) ? formats + 1 : 1;
-			formatEnd = i + 2;
-			if ( s[i + 1] == 'n' || formats >= 3 ) {
-				formatRun = qtrue;
-			}
 		}
 		if ( s[i] >= 0x80 ) {
 			binary++;
@@ -421,61 +404,8 @@ void SV_IDS_Text( client_t *cl, const char *text, qboolean userinfo ) {
 	if ( pathUp && cl->state >= CS_CONNECTED ) {
 		SV_IDS_Event( from, cl, IDS_TEXT_PATH, text );
 	}
-	if ( formatRun && cl->state >= CS_CONNECTED ) {
-		SV_IDS_Event( from, cl, IDS_TEXT_FORMAT, text );
-	}
 	if ( binaryRun && cl->state >= CS_CONNECTED ) {
 		SV_IDS_Event( from, cl, IDS_TEXT_BINARY, text );
-	}
-}
-
-/*
-=================
-SV_IDS_Move
-
-A move of a player that is about to be run. Its time is the one the client thinks the server has. A client
-keeps that close to what the server tells it, so a move that is a quarter of a second ahead comes from a
-client whose clock runs fast: a speed hack, which makes the client live faster than the server. The game
-cuts such a move back to 200 msec ahead, which is all the hack gains; this notices who tries. Thirty of them
-in five seconds is a strike, three strikes in a row and the player is dropped (with sv_ids 2).
-=================
-*/
-void SV_IDS_Move( client_t *cl, const usercmd_t *cmd ) {
-	const int	clientNum = (int)( cl - svs.clients );
-	const int	now = Sys_Milliseconds();
-	idsMove_t	*m;
-
-	if ( !sv_ids || !sv_ids->integer || clientNum < 0 || clientNum >= MAX_CLIENTS || cl->netchan.remoteAddress.type != NA_IP ) {
-		return;
-	}
-	m = &ids_moves[clientNum];
-	if ( now - m->windowTime > IDS_MOVE_WINDOW || now < m->windowTime ) {
-		if ( m->ahead >= IDS_MOVE_COUNT ) {
-			m->strikes++;
-			SV_IDS_Event( &cl->netchan.remoteAddress, cl, IDS_MOVE_AHEAD, va( "%i moves in %i seconds, strike %i of %i", m->ahead,
-				IDS_MOVE_WINDOW / 1000, m->strikes, IDS_MOVE_STRIKES ) );
-			if ( m->strikes >= IDS_MOVE_STRIKES && sv_ids->integer >= 2 && cl->state >= CS_CONNECTED ) {
-				memset( m, 0, sizeof( *m ) );
-				SV_DropClient( cl, "was dropped: the clock of the client runs ahead of the server (speed hack?)" );
-				return;
-			}
-		} else {
-			m->strikes = 0;
-		}
-		m->windowTime = now;
-		m->ahead = 0;
-	}
-	if ( cmd->serverTime > sv.time + IDS_AHEAD_MSEC ) {
-		m->ahead++;
-	}
-}
-
-// a new player in that place
-void SV_IDS_ClientConnect( client_t *cl ) {
-	const int clientNum = (int)( cl - svs.clients );
-
-	if ( clientNum >= 0 && clientNum < MAX_CLIENTS ) {
-		memset( &ids_moves[clientNum], 0, sizeof( ids_moves[0] ) );
 	}
 }
 

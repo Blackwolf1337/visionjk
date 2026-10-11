@@ -607,11 +607,30 @@ void VK_BlurPass( vkTarget_t *source, vkTarget_t *target, const float *parm ) {
 	VK_TargetLayout( cmd, target, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
 }
 
-void VK_AddTarget( vkTarget_t *source, qboolean soft ) {
+// The depth is not drawn into while the pass reads it: the pass that follows takes it back (VK_BeginTarget).
+void VK_FocusPass( vkTarget_t *source, vkTarget_t *target, const float *parm ) {
+	VkCommandBuffer cmd = vk.frame->cmd;
+	const VkDescriptorSet sets[2] = { VK_PostSet( source ), vk.depthSet };
+
+	VK_TargetLayout( cmd, source, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
+	VK_TargetLayout( cmd, &vk.depth, VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL );
+	qvkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.focusPipeline );
+	vk.boundPipeline = vk.focusPipeline;
+	VK_TargetLayout( cmd, target, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
+	VK_BeginRendering( cmd, target, NULL, 0, qfalse );
+	VK_FullTarget( cmd, target );
+	qvkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.focusPipelineLayout, 0, 2, sets, 0, NULL );
+	qvkCmdPushConstants( cmd, vk.focusPipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof( float ) * 4, parm );
+	qvkCmdDraw( cmd, 3, 1, 0, 0 );
+	qvkCmdEndRendering( cmd );
+	VK_TargetLayout( cmd, target, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
+}
+
+void VK_AddTarget( vkTarget_t *source, vkAdd_t how ) {
 	VkCommandBuffer cmd = vk.frame->cmd;
 	const VkDescriptorSet sourceSet = VK_PostSet( source );
 
-	qvkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.glowPipelines[soft ? 1 : 0] );
+	qvkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.glowPipelines[how] );
 	qvkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.postPipelineLayout, 0, 1, &sourceSet, 0, NULL );
 	VK_FullTarget( cmd, &vk.color );
 	qvkCmdDraw( cmd, 3, 1, 0, 0 );

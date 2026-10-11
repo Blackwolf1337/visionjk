@@ -10188,6 +10188,7 @@ void UI_Init( qboolean inGameLoad ) {
 		uiInfo.uiDC.bias = 0.0f;
 	}
 	uiInfo.uiDC.xscale = uiInfo.uiDC.glconfig.vidWidth / ( 640.0 + 2.0 * uiInfo.uiDC.bias );
+	uiInfo.uiDC.wide = uiInfo.uiDC.bias;
 
 	//UI_Load();
 	uiInfo.uiDC.registerShaderNoMip				= UI_RegisterShaderNoMip;
@@ -10334,6 +10335,16 @@ void UI_Refresh( int realtime )
 
 	uiInfo.uiDC.frameTime = realtime - uiInfo.uiDC.realTime;
 	uiInfo.uiDC.realTime = realtime;
+
+	// The cgame of this tree puts the menus of a running game onto a panel in the level, and the engine says so:
+	// the panel is as wide as a menu is, so nothing reaches past the 640 there, whatever the window is like.
+	uiInfo.uiDC.wide = trap->Cvar_VariableValue( "cl_uiPlane" ) ? 0.0f : uiInfo.uiDC.bias;
+	if ( uiInfo.uiDC.cursorx < -(int)uiInfo.uiDC.wide ) {
+		uiInfo.uiDC.cursorx = -(int)uiInfo.uiDC.wide;
+	}
+	else if ( uiInfo.uiDC.cursorx > SCREEN_WIDTH + (int)uiInfo.uiDC.wide ) {
+		uiInfo.uiDC.cursorx = SCREEN_WIDTH + (int)uiInfo.uiDC.wide;
+	}
 
 	previousTimes[index % UI_FPS_FRAMES] = uiInfo.uiDC.frameTime;
 	index++;
@@ -10511,10 +10522,10 @@ void UI_MouseEvent( int dx, int dy )
 {
 	// update mouse screen position
 	uiInfo.uiDC.cursorx += dx;
-	if (uiInfo.uiDC.cursorx < -(int)uiInfo.uiDC.bias)
-		uiInfo.uiDC.cursorx = -(int)uiInfo.uiDC.bias;
-	else if (uiInfo.uiDC.cursorx > SCREEN_WIDTH + (int)uiInfo.uiDC.bias)
-		uiInfo.uiDC.cursorx = SCREEN_WIDTH + (int)uiInfo.uiDC.bias;
+	if (uiInfo.uiDC.cursorx < -(int)uiInfo.uiDC.wide)
+		uiInfo.uiDC.cursorx = -(int)uiInfo.uiDC.wide;
+	else if (uiInfo.uiDC.cursorx > SCREEN_WIDTH + (int)uiInfo.uiDC.wide)
+		uiInfo.uiDC.cursorx = SCREEN_WIDTH + (int)uiInfo.uiDC.wide;
 
 	uiInfo.uiDC.cursory += dy;
 	if (uiInfo.uiDC.cursory < 0)

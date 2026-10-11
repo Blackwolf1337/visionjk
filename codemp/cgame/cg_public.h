@@ -739,7 +739,7 @@ typedef struct cgameImport_s {
 		// the level, a ^ with a digit colours what follows. Between R_ClearScene and R_RenderScene. A width of
 		// 0 and qfalse: there is no such font. And a shader for a picture the cgame made itself, width and
 		// height powers of two up to 512, for polygons in the scene; flags: RGBA_SHADER_GLOW, it is added and
-		// glows. RGBA_SHADER_OVER, nothing of the scene hides it.
+		// glows. RGBA_SHADER_OVER, nothing of the scene hides it. RGBA_SHADER_BEHIND, drawn before the others.
 		float			(*R_Text3DWidth)						( const char *text, float height );
 		qboolean		(*R_Text3D)								( const vec3_t origin, const vec3_t right, const vec3_t up, float height, const char *text, const float *rgba );
 		qhandle_t		(*R_RegisterShaderRGBA)					( const char *name, const byte *rgba, int width, int height, int flags );

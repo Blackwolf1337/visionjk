@@ -246,6 +246,31 @@ GLuint VK_TargetFramebuffer( vkTarget_t *color, vkTarget_t *depth ) {
 
 /*
 ===============
+VK_DepthFramebuffer
+
+The texture of vk.depth alone, to bring its several samples a pixel down into it (GLES_ResolveDepth() in
+gles_cmd.cpp). Leaves it bound as GL_FRAMEBUFFER when it had to be made.
+===============
+*/
+GLuint VK_DepthFramebuffer( void ) {
+	if ( !vk.depth.framebuffer ) {
+		const GLenum none = GL_NONE;
+
+		glGenFramebuffers( 1, &vk.depth.framebuffer );
+		vk.statFramebuffers++;
+		glBindFramebuffer( GL_FRAMEBUFFER, vk.depth.framebuffer );
+		glFramebufferTexture2D( GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_TEXTURE_2D, vk.depth.texture, 0 );
+		glDrawBuffers( 1, &none );
+		glReadBuffer( GL_NONE );
+		if ( glCheckFramebufferStatus( GL_FRAMEBUFFER ) != GL_FRAMEBUFFER_COMPLETE ) {
+			ri.Printf( PRINT_ALL, S_COLOR_RED "OpenGL ES: the framebuffer of the depth alone is not complete\n" );
+		}
+	}
+	return vk.depth.framebuffer;
+}
+
+/*
+===============
 VK_CreatePostTargets
 
 OpenGL copies a frame buffer that has no alpha into the texture of a refraction surface, and such a texture reads

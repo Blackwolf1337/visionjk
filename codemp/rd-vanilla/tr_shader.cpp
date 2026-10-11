@@ -3733,6 +3733,7 @@ qhandle_t RE_RegisterSceneShader( const char *name, image_t *image, int flags, f
 		stages[0].stateBits |= GLS_DEPTHTEST_DISABLE;
 	}
 	stages[0].glow = glow ? true : false;
+	shader.over = ( flags & RGBA_SHADER_OVER ) != 0;
 	shader.cullType = CT_TWO_SIDED;
 	shader.sort = sort;
 
