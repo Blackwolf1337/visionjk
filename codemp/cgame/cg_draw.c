@@ -167,7 +167,7 @@ void CG_Text_Paint(float x, float y, float scale, vec4_t color, const char *text
 	case  ITEM_TEXTSTYLE_SHADOWEDMORE:		iStyleOR = (int)STYLE_DROPSHADOW;break;	// JK2 drop shadow ( need a color for this )
 	}
 
-	trap->R_Font_DrawString(	x,		// int ox
+	trap->R_Font_DrawString(	x + cgs.shift2D,		// int ox
 							y,		// int oy
 							text,	// const char *text
 							color,	// paletteRGBA_c c
@@ -275,6 +275,7 @@ static void CG_DrawZoomMask( void )
 		trap->R_SetColor( color1 );
 
 		CG_DrawPic( 0, 0, 640, 480, cgs.media.binocularMask );
+		CG_FillSides( colorBlack );
 
 		CG_DrawPic( 4, 282 - level, 16, 16, cgs.media.binocularArrow );
 
@@ -314,6 +315,7 @@ static void CG_DrawZoomMask( void )
 		// Draw target mask
 		trap->R_SetColor( colorTable[CT_WHITE] );
 		CG_DrawPic( 0, 0, 640, 480, cgs.media.disruptorMask );
+		CG_FillSides( colorBlack );
 
 		// apparently 99.0f is the full zoom level
 		if ( level >= 99 )
@@ -510,10 +512,7 @@ void CG_DrawFlagModel( float x, float y, float w, float h, int team, qboolean fo
 	qhandle_t		handle;
 
 	if ( !force2D && cg_draw3DIcons.integer ) {
-		x *= cgs.screenXScale;
-		y *= cgs.screenYScale;
-		w *= cgs.screenXScale;
-		h *= cgs.screenYScale;
+		CG_AdjustFrom640( &x, &y, &w, &h );
 
 		VectorClear( angles );
 
@@ -1336,16 +1335,19 @@ void CG_DrawHUD(centity_t	*cent)
 
 		if (cg.predictedPlayerState.pm_type != PM_SPECTATOR)
 		{
+			CG_Place2D( PLACE_LEFT );
 			CG_DrawProportionalString( x+16, y+40, va( "%i", cg.snap->ps.stats[STAT_HEALTH] ), UI_SMALLFONT|UI_DROPSHADOW, colorTable[CT_HUD_RED] );
 
 			CG_DrawProportionalString( x+18+14, y+40+14, va( "%i", cg.snap->ps.stats[STAT_ARMOR] ), UI_SMALLFONT|UI_DROPSHADOW, colorTable[CT_HUD_GREEN] );
 
+			CG_Place2D( PLACE_RIGHT );
 			CG_DrawSimpleForcePower( cent );
 
 			if ( cent->currentState.weapon == WP_SABER )
 				CG_DrawSimpleSaberStyle( cent );
 			else
 				CG_DrawSimpleAmmo( cent );
+			CG_Place2D( PLACE_CENTER );
 
 			//TODO Add score line
 		}
@@ -1356,6 +1358,7 @@ void CG_DrawHUD(centity_t	*cent)
 	if (cg.predictedPlayerState.pm_type != PM_SPECTATOR)
 	{
 		// Draw the left HUD
+		CG_Place2D( PLACE_LEFT );
 		menuHUD = Menus_FindByName("lefthud");
 		Menu_Paint( menuHUD, qtrue );
 
@@ -1454,6 +1457,7 @@ void CG_DrawHUD(centity_t	*cent)
 			scoreStr = va("%s: %i", CG_GetStringEdString("MP_INGAME", "SCORE"), cg.snap->ps.persistant[PERS_SCORE]);
 		}
 
+		CG_Place2D( PLACE_RIGHT );
 		menuHUD = Menus_FindByName("righthud");
 		Menu_Paint( menuHUD, qtrue );
 
@@ -1517,6 +1521,7 @@ void CG_DrawHUD(centity_t	*cent)
 		{
 			//trap->Error( ERR_DROP, "CG_ChatBox_ArrayInsert: unable to locate HUD menu file ");
 		}
+		CG_Place2D( PLACE_CENTER );
 	}
 }
 
@@ -4299,7 +4304,9 @@ static void CG_DrawDisconnect( void ) {
 	x = 640 - 48;
 	y = 480 - 48;
 
+	CG_Place2D( PLACE_RIGHT );
 	CG_DrawPic( x, y, 48, 48, trap->R_RegisterShader("gfx/2d/net.tga" ) );
+	CG_Place2D( PLACE_CENTER );
 }
 
 
@@ -4330,9 +4337,10 @@ static void CG_DrawLagometer( void ) {
 	y = 480 - 144;
 
 	trap->R_SetColor( NULL );
+	CG_Place2D( PLACE_RIGHT );
 	CG_DrawPic( x, y, 48, 48, cgs.media.lagometerShader );
 
-	ax = x;
+	ax = x + cgs.shift2D;		// the graph is drawn with calls of the renderer
 	ay = y;
 	aw = 48;
 	ah = 48;
@@ -4406,8 +4414,9 @@ static void CG_DrawLagometer( void ) {
 	trap->R_SetColor( NULL );
 
 	if ( cg_noPredict.integer || g_synchronousClients.integer ) {
-		CG_DrawBigString( ax, ay, "snc", 1.0 );
+		CG_DrawBigString( x, ay, "snc", 1.0 );
 	}
+	CG_Place2D( PLACE_CENTER );
 
 	CG_DrawDisconnect();
 }
@@ -5286,7 +5295,9 @@ static void CG_DrawCrosshair( vec3_t worldPoint, int chEntValid ) {
 
 	if (cg_genericTimerBar > cg.time)
 	{ //draw generic timing bar, can be used for whatever
+		CG_Place2D( PLACE_RIGHT );
 		CG_DrawGenericTimerBar();
+		CG_Place2D( PLACE_CENTER );
 	}
 
 	if ( corona ) // drawing extra bits
@@ -5328,7 +5339,8 @@ qboolean CG_WorldCoordToScreenCoordFloat(vec3_t worldCoord, float *x, float *y)
     if (z <= 0.001)
         return qfalse;
 
-    *x = xc - DotProduct(trans, cg.refdef.viewaxis[1])*xc/(z*px);
+	// the edges of the view are at -bias and 640 + bias of the 2D grid on a wide window
+    *x = xc - DotProduct(trans, cg.refdef.viewaxis[1])*(xc + cgs.bias2D)/(z*px);
     *y = yc - DotProduct(trans, cg.refdef.viewaxis[2])*yc/(z*py);
 
     return qtrue;
@@ -5759,7 +5771,7 @@ static void CG_DrawActivePowers(void)
 		{
 			if ( forcePowerSorted[i] == FP_SEE && !(cp_pluginDisable.integer & (1 << 7)) )
 			{ // JA+ client plugin: Plugin_NewForceSight_effect
-				CG_DrawPic( 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, cgs.media.jpSense );
+				CG_DrawPicWide( cgs.media.jpSense );
 			}
 			CG_DrawPic( startx, starty, endx, endy, cgs.media.forcePowerIcons[forcePowerSorted[i]]);
 			startx += (icon_size+2); //+2 for spacing
@@ -6484,11 +6496,15 @@ static void CG_DrawSpectator(void)
 		trap->R_SetColor( colorTable[CT_WHITE] );
 		if ( cgs.clientinfo[cgs.duelist1].modelIcon )
 		{
+			CG_Place2D( PLACE_LEFT );
 			CG_DrawPic( 10, SCREEN_HEIGHT-(size*1.5), size, size, cgs.clientinfo[cgs.duelist1].modelIcon );
+			CG_Place2D( PLACE_CENTER );
 		}
 		if ( cgs.clientinfo[cgs.duelist2].modelIcon )
 		{
+			CG_Place2D( PLACE_RIGHT );
 			CG_DrawPic( SCREEN_WIDTH-size-10, SCREEN_HEIGHT-(size*1.5), size, size, cgs.clientinfo[cgs.duelist2].modelIcon );
+			CG_Place2D( PLACE_CENTER );
 		}
 
 // nmckenzie: DUEL_HEALTH
@@ -6496,25 +6512,35 @@ static void CG_DrawSpectator(void)
 		{
 			if ( cgs.showDuelHealths >= 1)
 			{	// draw the healths on the two guys - how does this interact with power duel, though?
+				CG_Place2D( PLACE_LEFT );
 				CG_DrawDuelistHealth ( 10, SCREEN_HEIGHT-(size*1.5) - 12, 64, 8, 1 );
+				CG_Place2D( PLACE_CENTER );
+				CG_Place2D( PLACE_RIGHT );
 				CG_DrawDuelistHealth ( SCREEN_WIDTH-size-10, SCREEN_HEIGHT-(size*1.5) - 12, 64, 8, 2 );
+				CG_Place2D( PLACE_CENTER );
 			}
 		}
 
 		if (cgs.gametype != GT_POWERDUEL)
 		{
 			Com_sprintf(text, sizeof(text), "%i/%i", cgs.clientinfo[cgs.duelist1].score, cgs.fraglimit );
+			CG_Place2D( PLACE_LEFT );
 			CG_Text_Paint( 42 - CG_Text_Width( text, 1.0f, 2 ) / 2, SCREEN_HEIGHT-(size*1.5) + 64, 1.0f, colorWhite, text, 0, 0, 0, 2 );
+			CG_Place2D( PLACE_CENTER );
 
 			Com_sprintf(text, sizeof(text), "%i/%i", cgs.clientinfo[cgs.duelist2].score, cgs.fraglimit );
+			CG_Place2D( PLACE_RIGHT );
 			CG_Text_Paint( SCREEN_WIDTH-size+22 - CG_Text_Width( text, 1.0f, 2 ) / 2, SCREEN_HEIGHT-(size*1.5) + 64, 1.0f, colorWhite, text, 0, 0, 0, 2 );
+			CG_Place2D( PLACE_CENTER );
 		}
 
 		if (cgs.gametype == GT_POWERDUEL && cgs.duelist3 != -1)
 		{
 			if ( cgs.clientinfo[cgs.duelist3].modelIcon )
 			{
+				CG_Place2D( PLACE_RIGHT );
 				CG_DrawPic( SCREEN_WIDTH-size-10, SCREEN_HEIGHT-(size*2.8), size, size, cgs.clientinfo[cgs.duelist3].modelIcon );
+				CG_Place2D( PLACE_CENTER );
 			}
 		}
 	}
@@ -7579,7 +7605,7 @@ static void CG_Draw2DScreenTints( void )
 		if ( (cg.snap->ps.eFlags & EF_ALT_DIM) && (cp_pluginDisable.integer & (1 << 8)) )
 		{ // Plugin_NoAltDim_effect: plain full screen overlay in the alternate dimension
 			trap->R_SetColor( NULL );
-			CG_DrawPic( 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, cgs.media.altDimShader );
+			CG_DrawPicWide( cgs.media.altDimShader );
 		}
 		if (cg.snap->ps.fd.forcePowersActive & (1 << FP_RAGE))
 		{
@@ -8035,7 +8061,9 @@ static void CG_Draw2D( void ) {
 
 	if ( cg.snap->ps.pm_type == PM_INTERMISSION ) {
 		CG_DrawIntermission();
+		CG_Place2D( PLACE_LEFT );
 		CG_ChatBox_DrawStrings();
+		CG_Place2D( PLACE_CENTER );
 		return;
 	}
 
@@ -8048,20 +8076,28 @@ static void CG_Draw2D( void ) {
 
 	if (cg.snap->ps.holocronBits)
 	{
+		CG_Place2D( PLACE_LEFT );
 		CG_DrawHolocronIcons();
+		CG_Place2D( PLACE_CENTER );
 	}
 	if (cg.snap->ps.fd.forcePowersActive || cg.snap->ps.fd.forceRageRecoveryTime > cg.time)
 	{
+		CG_Place2D( PLACE_LEFT );
 		CG_DrawActivePowers();
+		CG_Place2D( PLACE_CENTER );
 	}
 
 	if (cg.snap->ps.jetpackFuel < 100)
 	{ //draw it as long as it isn't full
+        CG_Place2D( PLACE_RIGHT );
         CG_DrawJetpackFuel();
+        CG_Place2D( PLACE_CENTER );
 	}
 	if (cg.snap->ps.cloakFuel < 100)
 	{ //draw it as long as it isn't full
+		CG_Place2D( PLACE_RIGHT );
 		CG_DrawCloakFuel();
+		CG_Place2D( PLACE_CENTER );
 	}
 	if (cg.predictedPlayerState.emplacedIndex > 0)
 	{
@@ -8069,7 +8105,9 @@ static void CG_Draw2D( void ) {
 
 		if (eweb->currentState.weapon == WP_NONE)
 		{ //using an e-web, draw its health
+			CG_Place2D( PLACE_RIGHT );
 			CG_DrawEWebHealth();
+			CG_Place2D( PLACE_CENTER );
 		}
 	}
 
@@ -8143,7 +8181,9 @@ static void CG_Draw2D( void ) {
 				//Powerups now done with upperright stuff
 				//CG_DrawPowerupIcons();
 
+				CG_Place2D( PLACE_LEFT );
 				CG_DrawFlagStatus();
+				CG_Place2D( PLACE_CENTER );
 			}
 
 			CG_SaberClashFlare();
@@ -8153,7 +8193,9 @@ static void CG_Draw2D( void ) {
 				CG_DrawStats();
 			}
 
+			CG_Place2D( PLACE_RIGHT );
 			CG_DrawPickupItem();
+			CG_Place2D( PLACE_CENTER );
 			//Do we want to use this system again at some point?
 			//CG_DrawReward();
 		}
@@ -8199,9 +8241,11 @@ static void CG_Draw2D( void ) {
 		}
 	}
 
+	CG_Place2D( PLACE_LEFT );
 	CG_DrawVote();
 	CG_DrawTeamVote();
 	CG_VoiceDraw();
+	CG_Place2D( PLACE_CENTER );
 	CG_BotModeDraw();
 
 	CG_DrawLagometer();
@@ -8209,7 +8253,9 @@ static void CG_Draw2D( void ) {
 
 	if (!cl_paused.integer) {
 		CG_DrawBracketedEntities();
+		CG_Place2D( PLACE_RIGHT );
 		CG_DrawUpperRight();
+		CG_Place2D( PLACE_CENTER );
 	}
 
 	if ( !CG_DrawFollow() ) {
@@ -8392,7 +8438,9 @@ static void CG_Draw2D( void ) {
 	}
 
 	// always draw chat
+	CG_Place2D( PLACE_LEFT );
 	CG_ChatBox_DrawStrings();
+	CG_Place2D( PLACE_CENTER );
 }
 
 qboolean CG_CullPointAndRadius( const vec3_t pt, float radius);

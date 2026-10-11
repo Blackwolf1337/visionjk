@@ -148,7 +148,7 @@ void CG_DrawInformation( void ) {
 		levelshot = trap->R_RegisterShaderNoMip( "menu/art/unknownmap_mp" );
 	}
 	trap->R_SetColor( NULL );
-	CG_DrawPic( 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, levelshot );
+	CG_DrawPicWide( levelshot );
 
 	CG_LoadBar();
 

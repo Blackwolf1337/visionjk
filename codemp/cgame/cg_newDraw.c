@@ -757,10 +757,10 @@ void CG_MouseEvent(int x, int y) {
 	*/
 
 	cgs.cursorX+= x;
-	if (cgs.cursorX < 0)
-		cgs.cursorX = 0;
-	else if (cgs.cursorX > 640)
-		cgs.cursorX = 640;
+	if (cgs.cursorX < -(int)cgs.bias2D)
+		cgs.cursorX = -(int)cgs.bias2D;
+	else if (cgs.cursorX > 640 + (int)cgs.bias2D)
+		cgs.cursorX = 640 + (int)cgs.bias2D;
 
 	cgs.cursorY += y;
 	if (cgs.cursorY < 0)
