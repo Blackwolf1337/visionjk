@@ -2578,6 +2578,7 @@ void CL_InitRef( void ) {
 	ri.LoadPush = Com_LoadPush;
 	ri.LoadPop = Com_LoadPop;
 	ri.FS_FileSource = FS_FileSource;
+	ri.FontFile = CL_FontFile;
 
 	ret = GetRefAPI( REF_API_VERSION, &ri );
 

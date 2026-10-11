@@ -362,6 +362,10 @@ typedef struct refimport_s {
 	// Where a read of a file would get it from: 0 nowhere, 1 a pak (with the length of the file and the checksum
 	// of the pak), 2 a directory. FS_FileSource() of the engine, for the textures rd-vulkan-vision keeps.
 	int				(*FS_FileSource)					( const char *qpath, int *length, int *pakChecksum );
+
+	// The TrueType font for the characters the fonts of the game do not have, read and checked by the engine
+	// (client/cl_font.cpp). NULL when there is none. The bytes stay where they are until the program ends.
+	const byte *	(*FontFile)							( int *length );
 } refimport_t;
 
 // this is the only function actually exported at the linker level
