@@ -820,6 +820,7 @@ type 0 - no event handling
 void CG_EventHandling(int type) {
 	cgs.eventHandling = type;
 	if (type == CGAME_EVENT_NONE) {
+		CG_ChatClose();		// Escape: the engine took the keys back
 		CG_HideTeamMenu();
 	} else if (type == CGAME_EVENT_TEAMMENU) {
 		//CG_ShowTeamMenu();
@@ -831,6 +832,11 @@ void CG_EventHandling(int type) {
 
 
 void CG_KeyEvent(int key, qboolean down) {
+
+	// the chat box takes every key while it is open (chat/cg_chat.c)
+	if ( CG_ChatKeyEvent( key, down ) ) {
+		return;
+	}
 
 	if (!down) {
 		return;

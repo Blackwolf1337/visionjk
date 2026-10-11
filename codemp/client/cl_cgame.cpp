@@ -493,6 +493,7 @@ CL_ShutdonwCGame
 */
 void CL_ShutdownCGame( void ) {
 	Key_SetCatcher( Key_GetCatcher( ) & ~KEYCATCH_CGAME );
+	Cvar_Set( "cg_chatHandler", "0" );		// see Con_ChatByCgame()
 
 	if ( !cls.cgameStarted )
 		return;
@@ -516,6 +517,9 @@ void CL_InitCGame( void ) {
 	int					t1, t2;
 
 	t1 = Sys_Milliseconds();
+
+	// a cgame of this tree sets it again when it takes the chat line (Con_ChatByCgame())
+	Cvar_Set( "cg_chatHandler", "0" );
 
 	// put away the console
 	Con_Close();

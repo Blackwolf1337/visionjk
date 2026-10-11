@@ -302,6 +302,7 @@ static consoleCommand_t	commands[] = {
 	{ "admCmdNext",					CG_JPAdmCycleCmd_f },
 	{ "admCmdPrev",					CG_JPAdmCycleCmd_f },
 	{ "briefing",					CG_SiegeBriefing_f },
+	{ "cg_chatopen",				CG_ChatOpen_f },
 	{ "clientlist",					CG_ClientList_f },
 	{ "forcenext",					CG_NextForcePower_f },
 	{ "forceprev",					CG_PrevForcePower_f },

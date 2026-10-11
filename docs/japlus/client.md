@@ -178,12 +178,74 @@ western languages, and so do all legacy clients and servers. What follows from t
   `game/japlus/g_japlus_chat.c`): what a UTF-8 client wrote reaches a legacy client as Windows-1252. Umlauts
   and accents arrive there as they should, Cyrillic or Greek as `?`. Nothing else is converted.
 
-Limits. The console and the chat input line are still drawn with the charset picture of the game, which has
-Windows-1252 only: a Cyrillic letter is a `?` there until both are redrawn with fonts (the chat box and the
-menus show it). The chat box of the cgame still wraps by bytes. Names can not hold characters outside
-Windows-1252. None of this was run: it is built for Linux, the decoder and the conversions passed a short
-native test, and the size and place of the TrueType glyphs next to the letters of the game were only checked as
-numbers.
+Limits. The chat line of the engine (what a stock cgame or `cg_chatInput 0` types in) is drawn with the charset
+picture of the game, which has Windows-1252 only: a Cyrillic letter is a `?` there. The console and the chat box
+of this tree show it, see below. Names can not hold characters outside Windows-1252. None of this was run: it is
+built for Linux, the decoder and the conversions passed a short native test, and the size and place of the
+TrueType glyphs next to the letters of the game were only checked as numbers.
+
+### The console
+
+`client/cl_console.cpp`, reworked on 2026-10-11.
+
+- A cell holds a code point, so the console shows every character the fonts have. `condump` writes UTF-8.
+- With `con_font 1` (the default) the console and its input line are drawn from DejaVu Sans Mono
+  (`fonts/visionjk/DejaVuSansMono.ttf`, read and checked by the engine like the other font) in the size of a
+  cell: sharp at any `con_scale`. `con_font 0`, a language with a code page of its own and a renderer without
+  the font keep the letters of the game.
+- The mouse belongs to the console while it is down. In a window the system draws its cursor, in fullscreen
+  the console draws its own.
+
+| Input | What it does |
+|-------|--------------|
+| hold the left button and move | marks text, from where the button went down to where the cursor is. Past the upper or lower edge the text scrolls |
+| double click, third click | marks the word, then the line (with the rows the console wrapped it into) |
+| Shift and a click | moves the end of what is marked |
+| Ctrl+A | marks everything |
+| Ctrl+C, right button | puts what is marked on the clipboard: without colours, a wrapped line as one line. The right button pastes into the input line when nothing is marked |
+| Shift with left, right, Home, End | marks in the input line. Typing replaces it, Ctrl+C copies, Ctrl+X cuts, Ctrl+V pastes |
+| Ctrl with left or right | jumps by word in the input line |
+
+Ctrl+C with nothing marked anywhere clears the input line, as it always did. Text of an Asian language can not
+be marked: its rows are drawn as strings of another height. Not run: nobody has seen the console of this build.
+
+### The chat box
+
+`cgame/chat/cg_chat.c` replaces the chat box of the base game (2026-10-11).
+
+| Cvar | Default | Meaning |
+|------|---------|---------|
+| `cg_chatBox` | 10000 | as before: milliseconds a line stands at the lower left while nobody types, 0 none |
+| `cg_chatBoxHeight` | 350 | as before: the lower edge of the lines |
+| `cg_chatBoxWidth` | 380 | the width lines are wrapped to, 200 to 600 |
+| `cg_chatInput` | 1 | the message mode keys open the box of the cgame. 0: the line of the engine, as in the base game |
+
+The box keeps the last 256 lines with their kind and who said them (the client number a server built on OpenJK
+appends, else the name in the line). While nobody types the newest six rows stand there and fade out. The
+message mode keys (`messagemode` to `messagemode4`) open it: a frame with ten rows of history, three tabs
+(All, Team with the clan and admin chat of JA+, Private), a bar that shows the place in the history, and the
+line to type in with `Say:`, `Team:` or `To <name>:` in front.
+
+| Input | What it does |
+|-------|--------------|
+| wheel, Page Up, Page Down | scroll the history |
+| Tab, a click on a tab | another tab |
+| hold the left button and move | marks text |
+| Ctrl+C, right button | copy what is marked, a line of the history a line, without colours |
+| a click on an underlined address | asks "Open ... ?" with the whole address. Enter opens it in the browser of the system, any other key does not |
+| Up, Down | what was sent before (the last 16) |
+| Ctrl+V | pastes |
+| Enter, Escape | send, close |
+
+Only an address that starts with `http://` or `https://` is a link, and the engine checks it once more before
+it hands it to the system (`Sys_OpenURL()`: no blanks, quotes or control characters, nothing but those two
+schemes). Nothing is ever opened without the question.
+
+It needs the engine of this tree, which says `cl_cgameChat 1`, hands its message mode commands to the cgame
+(`cg_chatopen`, while the cgame has set `cg_chatHandler`) and has three more calls in the `ext` block of the
+cgame import: the clipboard both ways and the address. In a stock `jamp.exe` the box shows the lines, and
+typing stays with the line of the engine. Not run: nobody has seen the box.
+
 
 ### Bot mode
 

@@ -2211,6 +2211,7 @@ Q_EXPORT refexport_t* QDECL GetRefAPI( int apiVersion, refimport_t *rimp ) {
 	//re.G2VertSpaceServer	= G2VertSpaceServer;
 
 	re.ext.Font_StrLenPixels				= RE_Font_StrLenPixelsNew;
+	re.ext.Font_DrawMonoChar				= RE_Font_DrawMonoChar;
 
 	return &re;
 }

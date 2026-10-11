@@ -421,6 +421,74 @@ static int Field_PrevChar( const field_t *edit, int pos ) {
 	return Q_UTF8_PrevChar( edit->buffer, pos );
 }
 
+// how many characters lie between two bytes of a field
+static int Field_CountChars( const field_t *edit, int from, int to ) {
+	int count = 0;
+
+	while ( from < to ) {
+		const int charLen = Field_CharLen( edit, from );
+
+		if ( !charLen ) {
+			break;
+		}
+		from += charLen;
+		count++;
+	}
+	return count;
+}
+
+/*
+===================
+Field_Selection
+
+What is marked in a field: Shift with the arrow keys, Home or End marks from where the cursor was to where it
+goes. Typing replaces it, Ctrl+C copies it, Ctrl+X cuts it. From the byte `from` up to the byte `to`, qfalse
+when nothing is marked.
+===================
+*/
+static qboolean Field_Selection( const field_t *edit, int *from, int *to ) {
+	const int len = strlen( edit->buffer );
+
+	if ( edit->selAnchor < 0 || edit->selAnchor > len || edit->selAnchor == edit->cursor ) {
+		return qfalse;
+	}
+	*from = Q_min( edit->selAnchor, edit->cursor );
+	*to = Q_max( edit->selAnchor, edit->cursor );
+	return qtrue;
+}
+
+static void Field_DeleteSelection( field_t *edit ) {
+	int from, to;
+
+	if ( Field_Selection( edit, &from, &to ) ) {
+		memmove( edit->buffer + from, edit->buffer + to, strlen( edit->buffer + to ) + 1 );
+		edit->cursor = from;
+		if ( edit->scroll > edit->cursor ) {
+			edit->scroll = edit->cursor;
+		}
+	}
+	edit->selAnchor = -1;
+}
+
+// puts what is marked on the clipboard, qfalse when nothing is
+static qboolean Field_CopySelection( const field_t *edit ) {
+	char	text[MAX_EDIT_LINE], utf8[MAX_EDIT_LINE * 3];
+	int		from, to;
+
+	if ( !Field_Selection( edit, &from, &to ) ) {
+		return qfalse;
+	}
+	Q_strncpyz( text, edit->buffer + from, Q_min( (int)sizeof( text ), to - from + 1 ) );
+	if ( CL_UTF8() ) {
+		Sys_SetClipboardData( text );
+	} else {
+		// the clipboard is UTF-8: a byte of a code page goes there as the character it is in Windows-1252
+		Q_UTF8_FromCP1252( text, utf8, sizeof( utf8 ) );
+		Sys_SetClipboardData( utf8 );
+	}
+	return qtrue;
+}
+
 void Field_VariableSizeDraw( field_t *edit, int x, int y, int size, qboolean showCursor, qboolean noColorEscape ) {
 	int		len;
 	int		drawLen;
@@ -460,8 +528,9 @@ void Field_VariableSizeDraw( field_t *edit, int x, int y, int size, qboolean sho
 
 	cursorColumn = edit->cursor - prestep;
 	if ( CL_UTF8() ) {
-		// the charset picture these fields are drawn with has a cell for a byte of Windows-1252: a character it
-		// does not have shows as '?'. The cursor is as many cells in as there are characters before it.
+		// The cursor is as many cells in as there are characters before it. The big letters (the chat line) are
+		// drawn with the charset picture, which has a cell for a byte of Windows-1252: a character it does not
+		// have shows as '?' there.
 		char utf8[MAX_STRING_CHARS];
 
 		while ( ( edit->buffer[prestep] & 0xC0 ) == 0x80 ) {
@@ -469,21 +538,31 @@ void Field_VariableSizeDraw( field_t *edit, int x, int y, int size, qboolean sho
 		}
 		Q_strncpyz( utf8, edit->buffer + prestep, sizeof( utf8 ) );
 		Q_UTF8_Truncate( utf8, drawLen );
-		Q_UTF8_ToCP1252( utf8, str, sizeof( str ) );
-		drawLen = strlen( str );
-
-		cursorColumn = 0;
-		for ( i = prestep; i < edit->cursor; cursorColumn++ ) {
-			const int charLen = Field_CharLen( edit, i );
-
-			if ( !charLen ) {
-				break;
-			}
-			i += charLen;
+		if ( size == con.charWidth ) {
+			// the console draws any character (SCR_DrawConChar)
+			Q_strncpyz( str, utf8, sizeof( str ) );
+		} else {
+			Q_UTF8_ToCP1252( utf8, str, sizeof( str ) );
 		}
+		drawLen = strlen( str );
+		cursorColumn = Field_CountChars( edit, prestep, edit->cursor );
 	} else {
 	Com_Memcpy( str, edit->buffer + prestep, drawLen );
 	str[ drawLen ] = 0;
+	}
+
+	// what is marked, behind the text (x and y of the small letters are pixels of the window)
+	if ( size == con.charWidth ) {
+		static vec4_t	selColor = { 0.25f, 0.45f, 0.85f, 0.65f };
+		int				from, to;
+
+		if ( Field_Selection( edit, &from, &to ) && to > prestep && from < prestep + drawLen ) {
+			const int first = Field_CountChars( edit, prestep, Q_max( from, prestep ) );
+			const int count = Field_CountChars( edit, Q_max( from, prestep ), Q_min( to, prestep + drawLen ) );
+
+			SCR_FillRect( ( x + first * size ) * con.xadjust - cls.bias2D, y * con.yadjust,
+				count * size * con.xadjust, con.charHeight * con.yadjust, selColor );
+		}
 	}
 
 	// draw it
@@ -575,6 +654,7 @@ Key events are used for non-printable characters, others are gotten from char ev
 */
 void Field_KeyDownEvent( field_t *edit, int key ) {
 	int		len;
+	int		selFrom, selTo;
 
 	// shift-insert is paste
 	if ( ( ( key == A_INSERT ) || ( key == A_KP_0 ) ) && kg.keys[A_SHIFT].down ) {
@@ -585,25 +665,55 @@ void Field_KeyDownEvent( field_t *edit, int key ) {
 	key = tolower( key );
 	len = strlen( edit->buffer );
 
+	// Shift with a key that moves the cursor marks from where the cursor is, without Shift nothing stays marked
+	if ( key == A_CURSOR_RIGHT || key == A_CURSOR_LEFT || key == A_HOME || key == A_END ) {
+		if ( !kg.keys[A_SHIFT].down ) {
+			edit->selAnchor = -1;
+		} else if ( edit->selAnchor < 0 || edit->selAnchor > len ) {
+			edit->selAnchor = edit->cursor;
+		}
+	}
+
 	switch ( key ) {
 		case A_DELETE:
-			if ( edit->cursor < len ) {
+			if ( Field_Selection( edit, &selFrom, &selTo ) ) {
+				Field_DeleteSelection( edit );
+			} else if ( edit->cursor < len ) {
 				const int charLen = Field_CharLen( edit, edit->cursor );
 
 				memmove( edit->buffer + edit->cursor,
 					edit->buffer + edit->cursor + charLen, len - edit->cursor - charLen + 1 );
 			}
+			edit->selAnchor = -1;
 			break;
 
 		case A_CURSOR_RIGHT:
 			if ( edit->cursor < len ) {
 				edit->cursor += Field_CharLen( edit, edit->cursor );
 			}
+			if ( kg.keys[A_CTRL].down ) {
+				// to the start of the next word
+				while ( edit->cursor < len && edit->buffer[edit->cursor] != ' ' ) {
+					edit->cursor += Field_CharLen( edit, edit->cursor );
+				}
+				while ( edit->cursor < len && edit->buffer[edit->cursor] == ' ' ) {
+					edit->cursor++;
+				}
+			}
 			break;
 
 		case A_CURSOR_LEFT:
 			if ( edit->cursor > 0 ) {
 				edit->cursor = Field_PrevChar( edit, edit->cursor );
+			}
+			if ( kg.keys[A_CTRL].down ) {
+				// to the start of this word, or of the one before
+				while ( edit->cursor > 0 && edit->buffer[edit->cursor] == ' ' ) {
+					edit->cursor--;
+				}
+				while ( edit->cursor > 0 && edit->buffer[edit->cursor - 1] != ' ' ) {
+					edit->cursor = Field_PrevChar( edit, edit->cursor );
+				}
 			}
 			break;
 
@@ -638,16 +748,44 @@ Field_CharEvent
 */
 void Field_CharEvent( field_t *edit, int ch ) {
 	int		len;
+	int		selFrom, selTo;
 
 	if ( ch == 'v' - 'a' + 1 ) {	// ctrl-v is paste
 		Field_Paste( edit );
 		return;
 	}
 
-	if ( ch == 'c' - 'a' + 1 ) {	// ctrl-c clears the field
+	if ( ch == 'c' - 'a' + 1 ) {
+		// ctrl-c copies what is marked: in the field, else in the text of the console above it. With nothing
+		// marked it clears the field, as it always did.
+		if ( Field_CopySelection( edit ) ) {
+			return;
+		}
+		if ( edit == &g_consoleField && Con_CopySelection() ) {
+			return;
+		}
 		Field_Clear( edit );
 		return;
 	}
+
+	if ( ch == 'x' - 'a' + 1 ) {	// ctrl-x cuts what is marked
+		if ( Field_CopySelection( edit ) ) {
+			Field_DeleteSelection( edit );
+		}
+		return;
+	}
+
+	if ( ch == 'h' - 'a' + 1 && Field_Selection( edit, &selFrom, &selTo ) ) {
+		// backspace takes what is marked
+		Field_DeleteSelection( edit );
+		return;
+	}
+
+	// what is typed takes the place of what is marked. Of a character of several bytes the first one does that.
+	if ( ch >= 32 && ( !CL_UTF8() || ( ch & 0xC0 ) != 0x80 ) ) {
+		Field_DeleteSelection( edit );
+	}
+	edit->selAnchor = -1;
 
 	len = strlen( edit->buffer );
 
@@ -736,6 +874,24 @@ Handles history and console scrollback
 ====================
 */
 void Console_Key( int key ) {
+	// The mouse marks text of the console (cl_console.cpp). The right button puts what is marked on the
+	// clipboard, and pastes into the input line when nothing is marked.
+	if ( key == A_MOUSE1 ) {
+		Con_MouseDown();
+		return;
+	}
+	if ( key == A_MOUSE2 ) {
+		if ( !Con_CopySelection() ) {
+			Field_Paste( &g_consoleField );
+		}
+		return;
+	}
+	// ctrl-A marks all of it (the input line also gets its ctrl-a, which is home)
+	if ( keynames[key].lower == 'a' && kg.keys[A_CTRL].down ) {
+		Con_SelectAll();
+		return;
+	}
+
 	// ctrl-L clears screen
 	if ( keynames[key].lower == 'l' && kg.keys[A_CTRL].down ) {
 		Cbuf_AddText( "clear\n" );
@@ -807,6 +963,7 @@ void Console_Key( int key ) {
 	// tab completion
 	if ( key == A_TAB ) {
 		Field_AutoComplete( &g_consoleField );
+		g_consoleField.selAnchor = -1;
 		return;
 	}
 
@@ -818,6 +975,7 @@ void Console_Key( int key ) {
 		if ( nextHistoryLine - historyLine < COMMAND_HISTORY && historyLine > 0 )
 			historyLine--;
 		g_consoleField = historyEditLines[historyLine % COMMAND_HISTORY];
+		g_consoleField.selAnchor = -1;
 
 		return;
 	}
@@ -834,6 +992,7 @@ void Console_Key( int key ) {
 			return;
 		}
 		g_consoleField = historyEditLines[historyLine % COMMAND_HISTORY];
+		g_consoleField.selAnchor = -1;
 		return;
 	}
 

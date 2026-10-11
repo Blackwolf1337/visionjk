@@ -672,7 +672,9 @@ if(BuildMPEngine)
 	# The font for the characters the fonts of the game do not have (client/cl_font.cpp): the engine takes the
 	# file of the client assets only when it has the checksum of the one this tree ships.
 	file(SHA256 "${CMAKE_SOURCE_DIR}/assets/japlus_client/fonts/visionjk/NotoSans-Regular.ttf" MPEngineFontHash)
-	set_source_files_properties("${MPDir}/client/cl_font.cpp" PROPERTIES COMPILE_DEFINITIONS "FONT_SHA256=\"${MPEngineFontHash}\"")
+	file(SHA256 "${CMAKE_SOURCE_DIR}/assets/japlus_client/fonts/visionjk/DejaVuSansMono.ttf" MPEngineFontMonoHash)
+	set_source_files_properties("${MPDir}/client/cl_font.cpp" PROPERTIES COMPILE_DEFINITIONS
+		"FONT_SHA256=\"${MPEngineFontHash}\";FONT_MONO_SHA256=\"${MPEngineFontMonoHash}\"")
 	if(EMSCRIPTEN)
 		# the updater below brings the checksum code where there is an updater
 		set(MPEngineFiles ${MPEngineFiles} "${SharedDir}/web/web_http.h" "${SharedDir}/web/web_sha256.c")

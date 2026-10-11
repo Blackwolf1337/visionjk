@@ -1192,6 +1192,33 @@ void IN_Frame (void) {
 
 /*
 ===============
+IN_MousePosition
+
+Where the mouse is in the window, in pixels of the frame, while the game does not hold it (IN_DeactivateMouse():
+the console is down in a window, and the system draws its own cursor). qfalse while the game holds the mouse:
+then it only gets movements (SE_MOUSE).
+===============
+*/
+qboolean IN_MousePosition( int *x, int *y )
+{
+	int w, h;
+
+	if( mouseActive || !SDL_window )
+		return qfalse;
+
+	SDL_GetMouseState( x, y );
+	SDL_GetWindowSize( SDL_window, &w, &h );
+	if( w > 0 && h > 0 )
+	{
+		// a window can have more pixels than the units its size is counted in
+		*x = *x * cls.glconfig.vidWidth / w;
+		*y = *y * cls.glconfig.vidHeight / h;
+	}
+	return qtrue;
+}
+
+/*
+===============
 IN_ShutdownJoystick
 ===============
 */

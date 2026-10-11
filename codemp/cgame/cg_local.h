@@ -755,14 +755,6 @@ typedef struct skulltrail_s {
 #define MAX_PREDICTED_EVENTS	16
 
 
-#define	MAX_CHATBOX_ITEMS		5
-typedef struct chatBoxItem_s
-{
-	char	string[MAX_SAY_TEXT];
-	int		time;
-	int		lines;
-} chatBoxItem_t;
-
 typedef struct cg_s {
 	int			clientFrame;		// incremented each frame
 
@@ -1029,8 +1021,6 @@ Ghoul2 Insert End
 
 	float				distanceCull;
 
-	chatBoxItem_t		chatItems[MAX_CHATBOX_ITEMS];
-	int					chatItemActive;
 
 #if 0
 	int					snapshotTimeoutTime;
@@ -1753,6 +1743,17 @@ Ghoul2 Insert End
 //
 // cg_drawtools.c
 //
+// chat/cg_chat.c: the chat box
+void		CG_ChatInit( void );
+void		CG_ChatDraw( void );
+void		CG_ChatAdd( int kind, int clientNum, const char *text );
+int			CG_ChatKind( const char *cmd, const char *raw );
+int			CG_ChatSender( const char *raw, int clientNum );
+void		CG_ChatBox_AddString( char *chatStr );
+qboolean	CG_ChatKeyEvent( int key, qboolean down );
+void		CG_ChatOpen_f( void );
+void		CG_ChatClose( void );
+
 // where on a wide window something of the 2D sits, see CG_Place2D()
 typedef enum {
 	PLACE_CENTER,

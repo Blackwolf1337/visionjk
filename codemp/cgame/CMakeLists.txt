@@ -150,6 +150,13 @@ endif()
 source_group("cgame/voice" FILES ${MPCGameVoiceFiles})
 set(MPCGameFiles ${MPCGameFiles} ${MPCGameVoiceFiles})
 
+# the chat box: history, tabs, marking and copying, links, and its own line to type in
+set(MPCGameChatFiles
+	"${MPDir}/cgame/chat/cg_chat.c"
+	)
+source_group("cgame/chat" FILES ${MPCGameChatFiles})
+set(MPCGameFiles ${MPCGameFiles} ${MPCGameChatFiles})
+
 # bot mode: the client plays by itself, all of it is in the cgame
 set(MPCGameBotmodeFiles
 	"${MPDir}/cgame/botmode/cg_botmode.c"

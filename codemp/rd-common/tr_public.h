@@ -244,6 +244,9 @@ typedef struct refexport_s {
 
 	struct {
 		float				(*Font_StrLenPixels)					( const char *text, const int iFontIndex, const float scale );
+		// A character of the font with a fixed width, in a cell of the console: place and size of the cell are
+		// pixels of the window. qfalse: there is no such font or it does not have the character, nothing is drawn.
+		qboolean			(*Font_DrawMonoChar)					( int x, int y, int cellWidth, int cellHeight, unsigned int codePoint );
 	} ext;
 
 } refexport_t;
@@ -363,9 +366,10 @@ typedef struct refimport_s {
 	// of the pak), 2 a directory. FS_FileSource() of the engine, for the textures rd-vulkan-vision keeps.
 	int				(*FS_FileSource)					( const char *qpath, int *length, int *pakChecksum );
 
-	// The TrueType font for the characters the fonts of the game do not have, read and checked by the engine
-	// (client/cl_font.cpp). NULL when there is none. The bytes stay where they are until the program ends.
-	const byte *	(*FontFile)							( int *length );
+	// A TrueType font of this tree, read and checked by the engine (client/cl_font.cpp): 0 the one for the
+	// characters the fonts of the game do not have, 1 the one with a fixed width. NULL when there is none. The
+	// bytes stay where they are until the program ends.
+	const byte *	(*FontFile)							( int font, int *length );
 } refimport_t;
 
 // this is the only function actually exported at the linker level

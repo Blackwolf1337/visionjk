@@ -157,8 +157,14 @@ static void CL_GetGlconfig( glconfig_t *config ) {
 	*config = cls.glconfig;
 }
 
-static void GetClipboardData( char *buf, int buflen ) {
+// the clipboard of the system as the text the client has: UTF-8, or the bytes of the code page of the language
+void CL_GetClipboard( char *buf, int buflen ) {
 	char	*cbd, *c;
+
+	if ( buflen < 1 ) {
+		return;
+	}
+	memset( buf, 0, buflen );
 
 	c = cbd = Sys_GetClipboardData();
 	if ( !cbd ) {
@@ -182,6 +188,19 @@ static void GetClipboardData( char *buf, int buflen ) {
 	}
 
 	Z_Free( cbd );
+}
+
+// text of the client onto the clipboard of the system, which is UTF-8
+void CL_SetClipboard( const char *text ) {
+	if ( CL_UTF8() ) {
+		Sys_SetClipboardData( text );
+	} else {
+		// a byte of a code page goes there as the character it is in Windows-1252
+		static char utf8[MAX_STRING_CHARS * 3];
+
+		Q_UTF8_FromCP1252( text, utf8, sizeof( utf8 ) );
+		Sys_SetClipboardData( utf8 );
+	}
 }
 
 static int GetConfigString(int index, char *buf, int size)
@@ -973,7 +992,7 @@ intptr_t CL_UISystemCalls( intptr_t *args ) {
 		return 0;
 
 	case UI_GETCLIPBOARDDATA:
-		GetClipboardData( (char *)VMA(1), args[2] );
+		CL_GetClipboard( (char *)VMA(1), args[2] );
 		return 0;
 
 	case UI_GETCLIENTSTATE:
@@ -1316,7 +1335,7 @@ void CL_BindUI( void ) {
 		uii.FS_Write							= FS_Write;
 
 		uii.GetClientState						= CL_GetClientState;
-		uii.GetClipboardData					= GetClipboardData;
+		uii.GetClipboardData					= CL_GetClipboard;
 		uii.GetConfigString						= GetConfigString;
 		uii.GetGlconfig							= CL_GetGlconfig;
 		uii.UpdateScreen						= SCR_UpdateScreen;

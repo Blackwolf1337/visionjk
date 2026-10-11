@@ -724,6 +724,14 @@ typedef struct cgameImport_s {
 		// Only an engine that sets the cvar s_spatialOwnVoice to 1 has this one, the same way. What the own
 		// player says into the voice chat: he does not hear the voice, the room he stands in rings from it.
 		void			(*S_SpatialOwnVoice)					( float volume, const short *samples, int numSamples, int rate );
+		// Only an engine that sets the cvar cl_cgameChat to 1 has these three, the same way. For the chat box
+		// (cgame/chat/cg_chat.c): the clipboard of the system, as the text the client has (UTF-8 where
+		// cl_utf8Text is 1), and a web address handed to the system to open, http and https only. Such an
+		// engine also hands its message mode commands to the cgame command cg_chatopen while the cvar
+		// cg_chatHandler is 1.
+		void			(*GetClipboard)							( char *buf, int size );
+		void			(*SetClipboard)							( const char *text );
+		qboolean		(*OpenURL)								( const char *url );
 	} ext;
 } cgameImport_t;
 

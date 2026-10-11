@@ -18,18 +18,21 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 ===========================================================================
 */
 
-// tr_font_ttf.cpp -- glyphs from a TrueType font for the characters the fonts of the game do not have.
+// tr_font_ttf.cpp -- glyphs from the TrueType fonts of this tree.
 //
-// A font of the game (CFontInfo in tr_font.cpp) is a picture with the 256 characters of Windows-1252. Where
-// text is UTF-8, a character outside of them is drawn from the TrueType font the engine hands out (ri.FontFile,
-// client/cl_font.cpp): its outline is made into a small picture, and the pictures are collected on pages,
-// textures of FONT_PAGE_SIZE. A page that got new glyphs is sent to the graphics card once, by
-// R_FontTTF_Flush(), before the frame that uses them is drawn.
+// The engine hands out two font files (ri.FontFile, client/cl_font.cpp). The outline of a character is made
+// into a small picture, and the pictures are collected on pages, textures of FONT_PAGE_SIZE. A page that got
+// new glyphs is sent to the graphics card once, by R_FontTTF_Flush(), before the frame that uses them is drawn.
 //
-// A glyph is made for the point size of the font of the game it stands in, so it sits on the same line and
-// is about as tall. The fonts of the game are pictures made for a screen of 640 x 480; these glyphs are made
-// with as many pixels a unit of that screen as the window has (ttf.oversample), so they are sharp where the
-// letters of the game are not.
+// TTF_TEXT, for the characters the fonts of the game do not have. A font of the game (CFontInfo in tr_font.cpp)
+// is a picture with the 256 characters of Windows-1252. Where text is UTF-8, a character outside of them comes
+// from here (R_FontTTF_Glyph), made for the point size of the font of the game it stands in, so it sits on the
+// same line and is about as tall. The fonts of the game are pictures made for a screen of 640 x 480; these
+// glyphs are made with as many pixels a unit of that screen as the window has (ttf.oversample), so they are
+// sharp where the letters of the game are not.
+//
+// TTF_MONO, with a fixed width, for the console of the engine (RE_Font_DrawMonoChar): a character in a cell
+// that is given in pixels of the window, made in exactly that size.
 
 #include "tr_local.h"
 #include "tr_font_ttf.h"
@@ -72,13 +75,26 @@ typedef struct ttfGlyph_s {
 
 typedef std::map<uint64_t, ttfGlyph_t> ttfGlyphMap_t;
 
-static struct {
+// the fonts, in the order the engine has them (cl_fonts in client/cl_font.cpp)
+enum {
+	TTF_TEXT,							// for the characters the fonts of the game do not have
+	TTF_MONO,							// fixed width, for the console
+	TTF_NUM_FONTS
+};
+
+typedef struct ttfFont_s {
 	qboolean		loaded;
-	stbtt_fontinfo	font;
+	stbtt_fontinfo	info;
+	int				ascent, descent;	// of the font, in its own units
+	float			advance;			// of a letter, as a part of the size of the font (TTF_MONO: of every letter)
+} ttfFont_t;
+
+static struct {
+	ttfFont_t		fonts[TTF_NUM_FONTS];
 	int				oversample;			// pixels of a page for one unit of the 640 x 480 screen
 	ttfPage_t		pages[FONT_MAX_PAGES];
 	int				numPages;
-	ttfGlyphMap_t	*glyphs;			// by point size and code point
+	ttfGlyphMap_t	*glyphs;			// by font, size and code point
 } ttf;
 
 /*
@@ -87,20 +103,27 @@ R_FontTTF_Init
 ===============
 */
 void R_FontTTF_Init( void ) {
-	int			length = 0;
-	const byte	*data = ri.FontFile ? ri.FontFile( &length ) : NULL;
-
 	memset( &ttf, 0, sizeof( ttf ) );
-	if ( !data || length <= 0 ) {
-		return;
-	}
-	if ( !stbtt_InitFont( &ttf.font, data, stbtt_GetFontOffsetForIndex( data, 0 ) ) ) {
-		ri.Printf( PRINT_WARNING, "R_FontTTF_Init: the font file can not be read\n" );
-		return;
-	}
 	ttf.oversample = Com_Clampi( 1, FONT_MAX_OVERSAMPLE, ( glConfig.vidHeight + SCREEN_HEIGHT - 1 ) / SCREEN_HEIGHT );
 	ttf.glyphs = new ttfGlyphMap_t;
-	ttf.loaded = qtrue;
+
+	for ( int i = 0; i < TTF_NUM_FONTS; i++ ) {
+		ttfFont_t	*font = &ttf.fonts[i];
+		int			length = 0, advance, bearing, lineGap;
+		const byte	*data = ri.FontFile ? ri.FontFile( i, &length ) : NULL;
+
+		if ( !data || length <= 0 ) {
+			continue;
+		}
+		if ( !stbtt_InitFont( &font->info, data, stbtt_GetFontOffsetForIndex( data, 0 ) ) ) {
+			ri.Printf( PRINT_WARNING, "R_FontTTF_Init: font file %i can not be read\n", i );
+			continue;
+		}
+		stbtt_GetFontVMetrics( &font->info, &font->ascent, &font->descent, &lineGap );
+		stbtt_GetCodepointHMetrics( &font->info, 'M', &advance, &bearing );
+		font->advance = advance * stbtt_ScaleForMappingEmToPixels( &font->info, 1.0f );
+		font->loaded = qtrue;
+	}
 }
 
 /*
@@ -195,21 +218,22 @@ static int CeilDiv( int a, int b ) {
 	return -FloorDiv( -a, b );
 }
 
-// makes the picture of a glyph and fills in where it is and how it is placed, qfalse when that can not be done
-static qboolean R_FontTTF_Make( unsigned int codePoint, int pointSize, ttfGlyph_t *glyph ) {
+// Makes the picture of a glyph and fills in where it is and how it is placed, qfalse when that can not be done.
+// The glyph is `size` units tall and is made with k pixels a unit: what comes back (width, height, offset,
+// baseline, advance) is in units.
+static qboolean R_FontTTF_Make( const stbtt_fontinfo *font, unsigned int codePoint, int size, int k, ttfGlyph_t *glyph ) {
 	static byte	coverage[FONT_MAX_GLYPH * FONT_MAX_GLYPH];
-	const int	k = ttf.oversample;
-	const int	index = stbtt_FindGlyphIndex( &ttf.font, (int)codePoint );
-	const float	scale = stbtt_ScaleForMappingEmToPixels( &ttf.font, (float)( pointSize * k ) );
+	const int	index = stbtt_FindGlyphIndex( font, (int)codePoint );
+	const float	scale = stbtt_ScaleForMappingEmToPixels( font, (float)( size * k ) );
 	int			x0, y0, x1, y1, advance, bearing;
 	int			cellX, cellY, cellW, cellH;
 	ttfPage_t	*page;
 
-	if ( !index || pointSize < 1 ) {
+	if ( !index || size < 1 ) {
 		return qfalse;
 	}
-	stbtt_GetGlyphHMetrics( &ttf.font, index, &advance, &bearing );
-	stbtt_GetGlyphBitmapBox( &ttf.font, index, scale, scale, &x0, &y0, &x1, &y1 );
+	stbtt_GetGlyphHMetrics( font, index, &advance, &bearing );
+	stbtt_GetGlyphBitmapBox( font, index, scale, scale, &x0, &y0, &x1, &y1 );
 
 	glyph->info.horizAdvance = (short)Q_max( 1, (int)( advance * scale / k + 0.5f ) );
 	if ( x1 <= x0 || y1 <= y0 ) {
@@ -225,8 +249,8 @@ static qboolean R_FontTTF_Make( unsigned int codePoint, int pointSize, ttfGlyph_
 		return qtrue;
 	}
 
-	// the cell of the glyph starts and ends on whole units of the 640 x 480 screen, so the quad the font code
-	// draws (in such units) covers exactly the pixels of the cell
+	// the cell of the glyph starts and ends on whole units, so a quad that is drawn in units covers exactly the
+	// pixels of the cell
 	cellX = FloorDiv( x0, k ) * k;
 	cellY = FloorDiv( y0, k ) * k;
 	cellW = CeilDiv( x1 - cellX, k ) * k;
@@ -239,7 +263,7 @@ static qboolean R_FontTTF_Make( unsigned int codePoint, int pointSize, ttfGlyph_
 		return qfalse;
 	}
 
-	stbtt_MakeGlyphBitmap( &ttf.font, coverage, x1 - x0, y1 - y0, FONT_MAX_GLYPH, scale, scale, index );
+	stbtt_MakeGlyphBitmap( font, coverage, x1 - x0, y1 - y0, FONT_MAX_GLYPH, scale, scale, index );
 	for ( int y = 0; y < y1 - y0; y++ ) {
 		byte *out = page->rgba + ( ( page->y + ( y0 - cellY ) + y ) * FONT_PAGE_SIZE + page->x + ( x0 - cellX ) ) * 4;
 
@@ -266,45 +290,102 @@ static qboolean R_FontTTF_Make( unsigned int codePoint, int pointSize, ttfGlyph_
 	return qtrue;
 }
 
-/*
-===============
-R_FontTTF_Glyph
-
-The glyph of a character for a font of the game of that point size. NULL when there is no TrueType font, it
-does not have the character, or the pages are full: the caller draws what it draws for an unknown character.
-The pointer stays valid until the fonts are shut down.
-===============
-*/
-const glyphInfo_t *R_FontTTF_Glyph( unsigned int codePoint, int pointSize, int *shader ) {
-	if ( !ttf.loaded ) {
+// The glyph of a character in a font, `size` units tall and made with k pixels a unit. NULL when the font is
+// not there, does not have the character, or the pages are full. The pointer stays valid until the fonts are
+// shut down.
+static const ttfGlyph_t *R_FontTTF_Find( int font, unsigned int codePoint, int size, int k ) {
+	if ( !ttf.fonts[font].loaded || size < 1 || size > 0xFFFF ) {
 		return NULL;
 	}
 
-	const uint64_t			key = ( (uint64_t)(unsigned int)pointSize << 32 ) | codePoint;
+	const uint64_t			key = ( (uint64_t)font << 56 ) | ( (uint64_t)k << 48 ) | ( (uint64_t)size << 32 ) | codePoint;
 	ttfGlyphMap_t::iterator	it = ttf.glyphs->find( key );
 
 	if ( it == ttf.glyphs->end() ) {
 		ttfGlyph_t glyph;
 
 		memset( &glyph, 0, sizeof( glyph ) );
-		glyph.valid = R_FontTTF_Make( codePoint, pointSize, &glyph );
+		glyph.valid = R_FontTTF_Make( &ttf.fonts[font].info, codePoint, size, k, &glyph );
 		it = ttf.glyphs->insert( std::make_pair( key, glyph ) ).first;
 	}
-	if ( !it->second.valid ) {
+	return it->second.valid ? &it->second : NULL;
+}
+
+/*
+===============
+R_FontTTF_Glyph
+
+The glyph of a character for a font of the game of that point size. NULL when there is no TrueType font, it
+does not have the character, or the pages are full: the caller draws what it draws for an unknown character.
+===============
+*/
+const glyphInfo_t *R_FontTTF_Glyph( unsigned int codePoint, int pointSize, int *shader ) {
+	const ttfGlyph_t *glyph = R_FontTTF_Find( TTF_TEXT, codePoint, pointSize, ttf.oversample );
+
+	if ( !glyph ) {
 		return NULL;
 	}
 	if ( shader ) {
-		*shader = it->second.shader;
+		*shader = glyph->shader;
 	}
-	return &it->second.info;
+	return &glyph->info;
+}
+
+/*
+===============
+RE_Font_DrawMonoChar
+
+A character of the font with a fixed width in a cell of the console. Place and size of the cell are pixels of the
+window: the glyph is made in the size in which a letter is as wide as the cell, and is drawn pixel for pixel. A
+character the fixed width font does not have is taken from the other font, which may reach into the next cell.
+qfalse: nothing was drawn, there is no font or none has the character.
+===============
+*/
+qboolean RE_Font_DrawMonoChar( int x, int y, int cellWidth, int cellHeight, unsigned int codePoint ) {
+	const ttfFont_t		*mono = &ttf.fonts[TTF_MONO];
+	const ttfFont_t		*font = mono;
+	const ttfGlyph_t	*glyph;
+	int					size, baseline;
+	float				scale, xScale, yScale, bias;
+
+	if ( !mono->loaded || mono->advance <= 0.0f || cellWidth < 1 || cellHeight < 1 ) {
+		return qfalse;
+	}
+	size = (int)( cellWidth / mono->advance + 0.5f );
+	glyph = R_FontTTF_Find( TTF_MONO, codePoint, size, 1 );
+	if ( !glyph ) {
+		font = &ttf.fonts[TTF_TEXT];
+		glyph = R_FontTTF_Find( TTF_TEXT, codePoint, size, 1 );
+		if ( !glyph ) {
+			return qfalse;
+		}
+	}
+
+	// the line the letters stand on: where it is when the height of the font sits in the middle of the cell
+	scale = stbtt_ScaleForMappingEmToPixels( &font->info, (float)size );
+	baseline = y + (int)( ( cellHeight - ( font->ascent - font->descent ) * scale ) * 0.5f + font->ascent * scale + 0.5f );
+
+	// from pixels of the window to the screen of the 2D, which is 480 high and as wide as R_2DBias() makes it
+	bias = R_2DBias();
+	xScale = ( SCREEN_WIDTH + 2.0f * bias ) / glConfig.vidWidth;
+	yScale = (float)SCREEN_HEIGHT / glConfig.vidHeight;
+	RE_StretchPic( ( x + glyph->info.horizOffset ) * xScale - bias, ( baseline - glyph->info.baseline ) * yScale,
+		glyph->info.width * xScale, glyph->info.height * yScale,
+		glyph->info.s, glyph->info.t, glyph->info.s2, glyph->info.t2, glyph->shader );
+	R_FontTTF_Flush();
+	return qtrue;
 }
 
 // for fontlist
 void R_FontTTF_Info( void ) {
-	if ( !ttf.loaded ) {
+	if ( !ttf.fonts[TTF_TEXT].loaded ) {
 		ri.Printf( PRINT_ALL, "No TrueType font: characters the fonts of the game do not have are not drawn\n" );
-		return;
 	}
-	ri.Printf( PRINT_ALL, "TrueType font: %i glyphs made on %i pages of %i x %i, %i pixels a unit of the 2D screen\n",
-		(int)ttf.glyphs->size(), ttf.numPages, FONT_PAGE_SIZE, FONT_PAGE_SIZE, ttf.oversample );
+	if ( !ttf.fonts[TTF_MONO].loaded ) {
+		ri.Printf( PRINT_ALL, "No TrueType font with a fixed width: the console uses the letters of the game\n" );
+	}
+	if ( ttf.glyphs ) {
+		ri.Printf( PRINT_ALL, "TrueType: %i glyphs made on %i pages of %i x %i, %i pixels a unit of the 2D screen\n",
+			(int)ttf.glyphs->size(), ttf.numPages, FONT_PAGE_SIZE, FONT_PAGE_SIZE, ttf.oversample );
+	}
 }

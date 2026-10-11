@@ -746,6 +746,7 @@ typedef struct field_s {
 	int		scroll;
 	int		widthInChars;
 	char	buffer[MAX_EDIT_LINE];
+	int		selAnchor;		// what is marked runs from here to the cursor (Shift and the arrow keys), -1: nothing
 } field_t;
 
 void Field_Clear( field_t *edit );

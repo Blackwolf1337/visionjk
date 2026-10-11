@@ -10,6 +10,8 @@ Key: [-] removed, [+] added, [\*] modified
 * [\*] A new install starts in the size of the desktop as a window without a border (`r_mode -2`, `r_noborder 1`) and not in 800 x 600. A stored config keeps its values.
 * [\*] The SDL2 that ships with the Windows build is 2.32.10 (was 2.0.12 from 2020).
 * [+] Text inside the client is UTF-8 (`cl_utf8`). Characters the fonts of the game do not have are drawn from Noto Sans (Latin, Greek, Cyrillic). Chat is UTF-8 between clients of this tree on a server of this tree (`g_visionCaps`), legacy clients get Windows-1252 as before, and so does every other server.
+* [+] Text in the console can be marked with the mouse and copied (Ctrl+C or the right button), the input line with Shift and the arrow keys. The console is drawn with a TrueType font (`con_font`) and shows every character.
+* [+] A new chat box in the cgame: 256 lines of history with tabs, scrolling with the wheel, text that can be marked and copied, links that open after a question, and its own line to type in (`cg_chatInput`, `cg_chatBoxWidth`).
 
 # Features
 
