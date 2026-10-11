@@ -1,0 +1,138 @@
+# Menus and HUD: the new look
+
+Since 2026-10-11 the menus and the HUD of the client have a look of their own: dark panels with round corners
+that let the level or a sky of stars show through, thin light blue lines, a clean font (Noto Sans), switches
+and sliders in place of the words "Yes" and "No" and of pictures. It is not from JA+ and not from the game.
+
+Nothing of it is painted. Every shape is a picture the code computes (`codemp/ui/ui_skin.c`) and hands to the
+renderer, so no file of a pk3 is involved and a pure server takes nothing away.
+
+The menus of the game and of JA+ are still there, untouched, and one cvar away. A mod that brings menus or a
+HUD of its own gets them drawn as it always did, see "For mods".
+
+## For players
+
+| Cvar | Default | Meaning |
+|------|---------|---------|
+| `ui_classic` | 0 | 1: the menus as they were (the JA+ ones). Counts from the next start of the game, or after `vid_restart` |
+| `cg_hud` | 1 | 0: the HUD of the game |
+| `cg_hudFiles` | ui/jahud.txt | as before. 1 is still the HUD of plain numbers and wins over `cg_hud` |
+
+Both are in Setup under Interface.
+
+- Outside a game every page has a bar at the top with the four sections (Play, Profile, Controls, Setup), a
+  heading, the explanation of what the mouse is on under it, and its buttons at the bottom. The button that
+  goes on (Apply, Join, Next) is filled.
+- In a game the menus are panels over the level, which is out of focus behind them (`r_menuBlur`).
+- The HUD: health and shield at the bottom left, force at the bottom right with the ammo of the weapon or the
+  stance of the saber under it, the score above. The health bar turns amber below half and red below a
+  quarter.
+- Setup has three new tabs, Interface, Chat & Social and Network, and four more rows under Sound, for the
+  settings that only the console had: see the table at the end.
+
+It needs the engine of this tree (`cl_uiSkin 1`). In another engine the ui module loads the menus of before by
+itself, and the cgame draws the HUD of the game.
+
+## For mods
+
+What the ui loads:
+
+| | New look | With `ui_classic 1`, in another engine, or with a mod's menus |
+|---|----------|------|
+| outside a game | `ui/visionmenus.txt`, which lists `ui/vision/*.menu` | `ui/jampmenus.txt`, which lists `ui/jamp/*.menu` |
+| in a game | `ui/visioningame.txt` | `ui/jampingame.txt` |
+| HUD | `ui/vision/hud.menu` in addition to the HUD files of the game | only the HUD files of the game (`cg_hudFiles`) |
+
+The files of the old look that this tree ships carry a mark in their first line, `visionjk-classic`:
+`ui/jampmenus.txt`, `ui/jamp/main.menu`, `ui/jampingame.txt`, `ui/jamp/ingame.menu` and `ui/hud.menu`. When the
+file the game finds under one of those names does not have the mark, somebody else's pk3 put it there, and the
+ui (or the cgame, for the HUD) takes the old path: your menus are loaded and drawn exactly as a stock client
+draws them. So a mod made for the game keeps working without knowing any of this.
+
+To change the new look, replace files under `ui/vision/`. They are plain menu files.
+
+### New words of the menu files
+
+All optional. A file that uses none of them is read and drawn by the code of before.
+
+| Where | Word | |
+|-------|------|---|
+| menuDef | `skin 1` | its items are drawn in the new form: yes/no is a switch, a slider a thin track with its value behind it, an edit field and a bound key stand in a box, lists have a thin scroll bar and lit rows, and the item in focus has a mark behind it in place of text that pulses. `focusColor` is the colour of all that |
+| menuDef | `backdrop 1` | the sky with stars behind the menu |
+| menuDef | `openSlide <units>` | the menu comes up from that far below when it opens |
+| menuDef, itemDef | `style WINDOW_STYLE_PANEL` | a panel with round corners: `backcolor` its fill, `bordercolor` its rim (one pixel, when its alpha is above 0) |
+| menuDef, itemDef | `radius <units>`, `shadow <units>`, `sheen <alpha>`, `glowcolor <r g b a>` | of such a panel: how round, how far its shadow reaches, a light line along its top, a light around it |
+| itemDef | `font 5`, `font 6` | Noto Sans and DejaVu Sans Mono, every letter from the TrueType font and made for the size it has in the window. 18 units at `textscale 1` |
+| itemDef | `caps 1` | its text in capital letters |
+| itemDef | `type ITEM_TYPE_BAR`, `type ITEM_TYPE_VALUE`, `stat <name>` | a bar that is filled by a number of the game, or that number as text. `forecolor` on `backcolor`, or the colour of the first `addColorRange` the number is in. `align ITEM_ALIGN_RIGHT` fills a bar from the right |
+| itemDef | `showStat <name>` | the item is only there while that number is above 0 |
+
+The numbers (`codemp/cgame/hud/cg_hud.c`): `health`, `armor`, `force`, `ammo` (not there with a saber),
+`saberstyle` (only with a saber), `jetpack`, `cloak`, `score`, `alive`, `spectator`, `team` (1 red, 2 blue),
+`duel`, `altdim`. Only the cgame has them: in a menu of the ui such an item draws nothing.
+
+`ui/jamp/menudef.h` has the new numbers (`WINDOW_STYLE_PANEL` 6, `ITEM_TYPE_BAR` 16, `ITEM_TYPE_VALUE` 17).
+
+## How the menus are made
+
+`tools/menus/build.py` reads every menu of the two lists of the game (the JA+ ones of this tree, and the rest
+out of `assets1.pk3` of the game), changes it and writes it to `assets/japlus_client/ui/vision/`. 54 files.
+What an item does is never changed: its cvar, its scripts, its feeder and its owner draw are taken as they
+are.
+
+- `theme.py`, the rules for every menu: the pictures of the old frame go (backgrounds, side texts, the glow
+  behind buttons), boxes become panels, every text gets the new font at the size and place it had, the
+  colours of the old menus become the ones of the theme (also inside the scripts that mark the open tab).
+- `pages.py`, what single pages get: the frame of the pages outside a game, the first page, the bar at the top
+  in a game, the new tabs of the setup menus and the row of the new key in Controls.
+- `menufile.py` reads and writes a menu file as a tree.
+
+`ui/vision/hud.menu` is written by hand.
+
+Run it again after a change to a menu of the old look or to the rules, and commit what it writes:
+
+```
+tools/menus/build.py [<assets1.pk3 of the game>]
+```
+
+## In the code
+
+| File | |
+|------|---|
+| `ui/ui_skin.c`, `ui_skin.h` | the pictures (a disc and its rim for every radius in pixels, a soft light, the sky), panels, the widgets, the pointer of the mouse. Built into ui and cgame |
+| `ui/ui_shared.c` | the new words, the panel style, the branches of the widgets, items bound to a number |
+| `ui/ui_main.c` | which list is loaded (`UI_NewLookList`), the pointer |
+| `cgame/hud/cg_hud.c` | the numbers by name, loading and painting the HUD |
+| `rd-common/tr_font.cpp`, `tr_font_ttf.cpp` | `vision_sans` and `vision_mono` as whole fonts for `R_RegisterFont` |
+| `client/cl_uiapi.cpp`, `ui/ui_public.h` | `R_RegisterShaderRGBA` in the ext block of the ui, announced by the cvar `cl_uiSkin` |
+
+A shape with a round corner is made for the pixels its radius has in the window and is put on whole pixels,
+so its edge is as sharp at any size of the window. Nothing keeps time by itself: what moves goes by the clock
+of the menus.
+
+## Settings that got an entry
+
+| Tab | Entries |
+|-----|---------|
+| Interface | New HUD (`cg_hud`), Classic Menus (`ui_classic`), Wide Screen Layout (`r_2dAspect`), Menu in the Level (`cg_immersiveMenu`), Menu Blur (`r_menuBlur`), Field of View (`cg_fov`), Camera Distance (`cg_thirdPersonRange`), Crosshair Size (`cg_crosshairSize`), Frame Limit (`com_maxfps`), Show Frame Rate (`cg_drawFPS`), Show Timer (`cg_drawTimer`), Show Lagometer (`cg_lagometer`) |
+| Chat & Social | Chat Bubbles (`cg_chatBubbles`), Bubble Range (`cg_bubbleRange`), Player Statuses (`cg_playerStatuses`), Show My Music (`cg_shareMusic`), Select Players (`cg_selectPlayers`), Selection Outline (`cg_selectOutline`), Own Chat Line (`cg_chatInput`), Chat Box Width (`cg_chatBoxWidth`), Chat Beep (`cg_chatBeep`), Sharp Console Font (`con_font`), Console Text Size (`con_scale`), Console Opacity (`con_opacity`) |
+| Network | Check for Updates (`cl_updateCheck`), Voice Master (`cg_voiceMaster`), Allow Downloads (`cl_allowDownload`), Intrusion Log (`cl_ids`), Key Login by Agent (`cg_authAgent`), UTF-8 Text (`cl_utf8`) |
+| Sound | Spatial Audio (`s_spatial`), Room Reflections (`s_spatialReflections`), Sound Round Corners (`s_spatialPaths`), Doppler (`s_doppler`) |
+| Controls, JA+ Control | Free the Mouse (`+cursor`) |
+
+Left to the console on purpose: the names of sound devices (`cg_voiceCapture`, `cg_voicePlayback`, a menu
+can not list them), addresses and paths (`cg_voiceMasterHost`, `cg_authKeyFile`, `cg_authAgentPath`,
+`cl_updateURL`), the finer numbers of the spatial sound and of the renderers, and what the game had no entry
+for either. The classic menus do not have the new entries.
+
+## Checked
+
+2026-10-11, Linux, hidden windows, both by pictures the game took of itself (`tools/uishot.sh` with the scripts
+`ui_pages_a`, `ui_pages_b`, `ui_ingame`, `ui_hud` of `tools/clienttests`, on `rd-vulkan-vision` at 1280 x 720):
+the first page, Play, the server browser, create server, solo game, demos, rules, the profile pages, the saber
+page, Setup with its old and new tabs, Controls, quit; in a game the bar at the top, Setup, Controls, the
+player page, call vote, about, the server browser; the HUD with a saber and with a gun.
+
+Not checked: a click on anything (the pictures are of pages a console command opened), the pages of siege and
+of the force powers in a game, `rd-vanilla`, a window that is not 16:9, another language than English, a
+mod's menus next to the new look, how it feels to use.
