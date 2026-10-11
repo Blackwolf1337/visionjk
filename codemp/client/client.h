@@ -280,8 +280,12 @@ typedef struct serverInfo_s {
 	int			trueJedi;
 	int			weaponDisable;
 	int			forceDisable;
-	int			humans, bots;
+	int			humans, bots;		// humans -1: the server did not say, it was asked for its status (CL_AskHumans)
+	int			humansAskTime;		// when, 0: not in this refresh
 } serverInfo_t;
+
+// how long the browser waits for the status of a server before it shows it without knowing who is a bot
+#define HUMANS_WAIT_MSEC	2000
 
 typedef struct clientStatic_s {
 	connstate_t	state;				// connection status

@@ -316,7 +316,9 @@ void LAN_GetServerInfo( int source, int n, char *buf, int buflen ) {
 		Info_SetValueForKey( info, "game", server->game);
 		Info_SetValueForKey( info, "gametype", va("%i",server->gameType));
 		Info_SetValueForKey( info, "addr", NET_AdrToString(&server->adr));
-		Info_SetValueForKey( info, "g_humanplayers", va( "%i", server->humans ) );
+		// -1: the server was asked who of its players is a bot and may still answer. -2: it is not known.
+		Info_SetValueForKey( info, "g_humanplayers", va( "%i", ( server->humans == -1
+			&& ( !server->humansAskTime || cls.realtime - server->humansAskTime >= HUMANS_WAIT_MSEC ) ) ? -2 : server->humans ) );
 		Info_SetValueForKey( info, "bots", va( "%i", server->bots ) );
 //		Info_SetValueForKey( info, "sv_allowAnonymous", va("%i", server->allowAnonymous));
 //		Info_SetValueForKey( info, "pure", va("%i", server->pure ) );

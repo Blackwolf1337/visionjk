@@ -1732,6 +1732,7 @@ void CL_InitServerInfo( serverInfo_t *server, const netadr_t *address ) {
 	server->game[0] = '\0';
 	server->gameType = 0;
 	server->humans = server->bots = 0;
+	server->humansAskTime = 0;
 }
 
 #define MAX_SERVERSPERPACKET	256
@@ -3030,12 +3031,119 @@ static void CL_SetServerInfo(serverInfo_t *server, const char *info, int ping) {
 			server->trueJedi = atoi(Info_ValueForKey(info, "truejedi" ));
 			server->weaponDisable = atoi(Info_ValueForKey(info, "wdisable" ));
 			server->forceDisable = atoi(Info_ValueForKey(info, "fdisable" ));
-			server->humans = atoi( Info_ValueForKey( info, "g_humanplayers" ) );
-			server->bots = atoi( Info_ValueForKey( info, "bots" ) );
+			// How many of the players are people, for the browser that leaves out servers with bots only. A
+			// server built on OpenJK says it, some say how many are bots. Any other with players is asked for
+			// its status (CL_AskHumans): until that answer comes, or if it never does, the number is -1.
+			{
+				const char *humans = Info_ValueForKey( info, "g_humanplayers" );
+				const char *bots = Info_ValueForKey( info, "bots" );
+
+				server->bots = atoi( bots );
+				if ( humans[0] ) {
+					server->humans = atoi( humans );
+				} else if ( bots[0] ) {
+					server->humans = Q_max( 0, server->clients - server->bots );
+				} else if ( server->clients <= 0 ) {
+					server->humans = 0;
+				} else if ( !server->humansAskTime ) {
+					server->humans = -1;
+				}
+			}
 //			server->pure = (qboolean)atoi(Info_ValueForKey(info, "pure" ));
 		}
 		server->ping = ping;
 	}
+}
+
+// calls a function for every entry of the server lists that is the server at an address
+static void CL_ForServersAt( const netadr_t *from, void (*func)( serverInfo_t *server, int value ), int value ) {
+	int i;
+
+	for (i = 0; i < MAX_OTHER_SERVERS; i++) {
+		if (NET_CompareAdr(from, &cls.localServers[i].adr)) {
+			func( &cls.localServers[i], value );
+		}
+	}
+	for (i = 0; i < MAX_GLOBAL_SERVERS; i++) {
+		if (NET_CompareAdr(from, &cls.globalServers[i].adr)) {
+			func( &cls.globalServers[i], value );
+		}
+	}
+	for (i = 0; i < MAX_OTHER_SERVERS; i++) {
+		if (NET_CompareAdr(from, &cls.favoriteServers[i].adr)) {
+			func( &cls.favoriteServers[i], value );
+		}
+	}
+}
+
+static int cl_humansWaiting;
+
+static void CL_HumansAsked( serverInfo_t *server, int time ) {
+	if ( server->humans == -1 && !server->humansAskTime ) {
+		server->humansAskTime = time;
+		cl_humansWaiting++;
+	}
+}
+
+static void CL_HumansWaiting( serverInfo_t *server, int unused ) {
+	if ( server->humans == -1 && server->humansAskTime ) {
+		cl_humansWaiting++;
+	}
+}
+
+static void CL_HumansAnswered( serverInfo_t *server, int humans ) {
+	if ( server->humans == -1 && server->humansAskTime ) {
+		server->humans = humans;
+	}
+}
+
+/*
+===================
+CL_AskHumans
+
+The info of a server came and does not say who of its players is a bot (the original server and JA+ on it do
+not). The status of a server lists its players with their pings, and a bot has none: it is asked for, once a
+refresh. The answer goes through CL_HumansFromStatus().
+===================
+*/
+static void CL_AskHumans( const netadr_t *from ) {
+	cl_humansWaiting = 0;
+	CL_ForServersAt( from, CL_HumansAsked, cls.realtime ? cls.realtime : 1 );
+	if ( cl_humansWaiting ) {
+		NET_OutOfBandPrint( NS_CLIENT, from, "getstatus" );
+	}
+}
+
+/*
+===================
+CL_HumansFromStatus
+
+A status answer came. If the browser waits for it, its players with a ping are counted. The message is left as
+it was for whoever else reads it.
+===================
+*/
+static void CL_HumansFromStatus( const netadr_t *from, msg_t *msg ) {
+	const int	readcount = msg->readcount, bit = msg->bit;
+	int			humans = 0;
+	char		*s;
+
+	cl_humansWaiting = 0;
+	CL_ForServersAt( from, CL_HumansWaiting, 0 );
+	if ( !cl_humansWaiting ) {
+		return;
+	}
+	MSG_ReadStringLine( msg );		// the settings of the server
+	for ( s = MSG_ReadStringLine( msg ); *s; s = MSG_ReadStringLine( msg ) ) {
+		int score = 0, ping = 0;
+
+		sscanf( s, "%d %d", &score, &ping );
+		if ( ping > 0 ) {
+			humans++;
+		}
+	}
+	msg->readcount = readcount;
+	msg->bit = bit;
+	CL_ForServersAt( from, CL_HumansAnswered, humans );
 }
 
 static void CL_SetServerInfoByAddress(const netadr_t *from, const char *info, int ping) {
@@ -3057,6 +3165,10 @@ static void CL_SetServerInfoByAddress(const netadr_t *from, const char *info, in
 		if (NET_CompareAdr(from, &cls.favoriteServers[i].adr)) {
 			CL_SetServerInfo(&cls.favoriteServers[i], info, ping);
 		}
+	}
+
+	if ( info ) {
+		CL_AskHumans( from );
 	}
 }
 
@@ -3273,6 +3385,9 @@ void CL_ServerStatusResponse( const netadr_t *from, msg_t *msg ) {
 	int		i, l, score, ping;
 	int		len;
 	serverStatus_t *serverStatus;
+
+	// the browser may have asked, to tell bots from people
+	CL_HumansFromStatus( from, msg );
 
 	serverStatus = NULL;
 	for (i = 0; i < MAX_SERVERSTATUSREQUESTS; i++) {
@@ -3770,6 +3885,19 @@ qboolean CL_UpdateVisiblePings_f(int source) {
 		if (pingTime != 0) {
 			CL_ClearPing(i);
 			status = qtrue;
+		}
+	}
+
+	// the refresh is not over while a server was asked who of its players is a bot and may still answer
+	if ( !status ) {
+		serverInfo_t	*server = ( source == AS_LOCAL ) ? cls.localServers : ( source == AS_GLOBAL ) ? cls.globalServers : cls.favoriteServers;
+		const int		count = ( source == AS_LOCAL ) ? cls.numlocalservers : ( source == AS_GLOBAL ) ? cls.numglobalservers : cls.numfavoriteservers;
+
+		for ( i = 0; i < count; i++ ) {
+			if ( server[i].humans == -1 && server[i].humansAskTime && cls.realtime - server[i].humansAskTime < HUMANS_WAIT_MSEC ) {
+				status = qtrue;
+				break;
+			}
 		}
 	}
 
