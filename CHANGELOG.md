@@ -14,6 +14,8 @@ Key: [-] removed, [+] added, [\*] modified
 * [+] A new chat box in the cgame: 256 lines of history with tabs, scrolling with the wheel, text that can be marked and copied, links that open after a question, and its own line to type in (`cg_chatInput`, `cg_chatBoxWidth`).
 * [+] Chat bubbles above the heads, in the 3D scene: what a player says, and dots while he types (`cg_chatBubbles`, `cg_bubbleRange`).
 * [+] Statuses above the heads: away from the keyboard (found out by the server, `g_afkTime`) and, when a player switches it on, the music he listens to (`cg_shareMusic`).
+* [+] The server browser can be opened in a game (SERVERS in the in-game menu). Both browsers can leave out servers on which only bots play (`ui_browserShowBotOnly`).
+* [+] While a menu is open in a game it stands in the level in front of the player, seen over his shoulder, with the scene blurred and the sound muffled (`cg_immersiveMenu`, `r_sceneBlur`).
 
 # Features
 

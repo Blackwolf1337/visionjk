@@ -296,6 +296,52 @@ chat bubble stands on top of it.
 Only on a server with the game module of this tree (`g_visionCaps` bit 1), and only clients of this tree with
 its engine draw the lines. Not run: built for Linux, the Windows code was compiled with mingw.
 
+### The server browser in a game, and servers with bots only
+
+2026-10-11. The bar of the in-game menu has a tenth button, SERVERS (`ui/jamp/ingame.menu`, the file of the base
+game with buttons 63 wide where they were 70). It opens `ui/jamp/ingame_servers.menu`: the browser of the main
+menu on a dark pane over the game, with all its filters and pop-ups. Back and Escape return to the bar. Joining
+asks first, since it leaves the server one is on.
+
+Both browsers have "View Bots Only" (`ui_browserShowBotOnly`, default 1). With 0 a server on which nobody but
+bots plays is left out. How the client knows:
+
+- A server built on OpenJK says how many of its players are people (`g_humanplayers` in its info answer), some
+  others say how many are bots (`bots`).
+- A server that says neither (the original server, and JA+ on it) and has players is asked for its status,
+  once a refresh: a bot has no ping there. The refresh goes on for up to two seconds while such answers may
+  still come. A server that does not answer in time is shown.
+
+The filter needs the engine of this tree. In a stock `jamp.exe` the switch does nothing. The menu files were
+placed by their numbers and not looked at.
+
+### The menu in the level
+
+`cgame/menu3d/cg_menu3d.c` (2026-10-11). While a menu is open in a game, the view moves within a third of a
+second to a camera behind the right shoulder of the player, and the menu stands in the level in front of him.
+The game goes on around it.
+
+| Cvar | Default | Meaning |
+|------|---------|---------|
+| `cg_immersiveMenu` | 1 | 0: the flat menu of the base game |
+| `r_sceneBlur` | 1 | the scene behind the menu is out of focus (rd-vulkan-vision only), 0 it stays sharp |
+| `s_muffle` | set by the cgame | 0 to 1: the sound of the game through a low pass. Not stored |
+
+- The menu is not painted onto a texture. The ui draws it as always, and the renderer puts that 2D onto a
+  plane in the level (`Set2DPlane`, a matrix from the 2D grid to clip space). The cursor is drawn on the plane
+  with the rest and the mouse moves it there. All menus work on it as they are.
+- Behind the menu the cgame adds a panel with an edge and a glow to the scene. The HUD is hidden meanwhile.
+- The scene is blurred by rd-vulkan-vision with the passes its glow has. That is a blur of the whole picture,
+  the player included, not one by depth: a real depth of field needs a new pass and shader in both devices of
+  the renderer, which was not written blind. rd-vanilla keeps the scene sharp.
+- The sound of the game (effects, music, Steam Audio) and the voices of the voice chat are muffled.
+- The camera is pulled in where a wall is behind the player. The panel itself is not checked against the
+  level: it is drawn over whatever is there.
+
+Not while spectating, dead, zoomed or at the end of a map (the camera has no player to stand behind), and not
+in another engine (`cl_cgameUIPlane`). Not run: where camera and panel sit and how large the menu is are
+numbers nobody has seen yet.
+
 ### Bot mode
 
 Not a JA+ feature, and client only (`cgame/botmode/cg_botmode.c`): no server knows of it, the game module and the
