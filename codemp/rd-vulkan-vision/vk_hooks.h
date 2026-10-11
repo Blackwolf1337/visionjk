@@ -48,6 +48,7 @@ void VK_GoreFreed( const void *goreData );
 void VK_ImageLevel( int level, int internalFormat, int width, int height, const byte *rgba );
 void VK_ImageParm( int name, int value );
 void VK_ImageDelete( unsigned int texnum );
+void VK_UpdateImage( image_t *image, int width, int height, const byte *rgba );	// for the glyph pages of rd-common/tr_font_ttf.cpp
 
 // vk_texcache.cpp: the texture of an image file as an earlier run packed it, see there for the order of the calls
 qboolean VK_TexCacheFind( const char *name, qboolean mipmap, qboolean allowPicmip, qboolean allowTC, int *width, int *height );

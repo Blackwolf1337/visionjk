@@ -1567,6 +1567,8 @@ typedef struct cgs_s {
 	glconfig_t		glconfig;			// rendering configuration
 	float			screenXScale;		// derived from glconfig
 	float			screenYScale;
+	float			bias2D;				// the grid of the 2D runs from -bias2D to 640 + bias2D on a wide window (cvar r_2dBias)
+	float			shift2D;			// what CG_Place2D() moves the 2D by right now
 	float			screenXBias;
 
 	int				serverCommandSequence;	// reliable command stream counter
@@ -1751,6 +1753,19 @@ Ghoul2 Insert End
 //
 // cg_drawtools.c
 //
+// where on a wide window something of the 2D sits, see CG_Place2D()
+typedef enum {
+	PLACE_CENTER,
+	PLACE_LEFT,
+	PLACE_RIGHT
+} place2D_t;
+
+void CG_Place2D( place2D_t place );
+void CG_AdjustFrom640( float *x, float *y, float *w, float *h );
+void CG_FillSides( const float *color );
+void CG_DrawPicWide( qhandle_t hShader );
+void CG_DrawStretchPic( float x, float y, float w, float h, float s1, float t1, float s2, float t2, qhandle_t hShader );
+void CG_Font_DrawString( int ox, int oy, const char *text, const float *rgba, const int setIndex, int iCharLimit, const float scale );
 void CG_FillRect( float x, float y, float width, float height, const float *color );
 void CG_DrawPic( float x, float y, float width, float height, qhandle_t hShader );
 void CG_DrawRotatePic( float x, float y, float width, float height,float angle, qhandle_t hShader );

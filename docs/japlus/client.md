@@ -112,6 +112,79 @@ Quality entries: the ui hides them (`Item_ApplyHacks`).
 
 None of the pages was looked at in the game after these changes: the rows were placed by their numbers.
 
+### Wide screens
+
+The game places all 2D (menus, HUD, console) on a grid of 640 x 480. Until 2026-10-11 both renderers stretched
+that grid over the window, so on 16:9 everything was a third too wide. Now the grid keeps its height of 480 and
+gets as wide as the window: at 16:9 it is 853 wide, the old 640 sit in the middle and x runs from `-bias` to
+`640 + bias` (`R_2DBias()` in `rd-vanilla/tr_init.cpp`, used by `RB_SetGL2D()` of both renderers).
+
+| Cvar | Default | Meaning |
+|------|---------|---------|
+| `r_2dAspect` | 1 | 1 the 2D keeps its shape on a wide window, 0 the old stretch. Latched, `vid_restart` |
+| `r_2dBias` | set by the renderer | read only: the width beside the 640, in units of the grid. 0 on a 4:3 window, with `r_2dAspect 0` and on an engine that does not have this |
+| `r_mode` | -2 (was 4) | a new install starts in the size of the desktop, not in 800 x 600 |
+| `r_noborder` | 1 (was 0) | and as a window without a border. A stored config keeps what it has |
+
+What goes where on a wide window:
+
+- Menus stay in the middle. A window of a menu that covers the whole 640 x 480 (a background) is drawn over the
+  whole window, the cursor reaches the margins.
+- HUD: health and armour, vote lines, voice talkers, chat box, holocron and power icons and the flag status are
+  at the left edge. Force and ammo, the upper right block (team overlay, fps, timer, radar, duel icons,
+  powerups), fuel bars, pickup icon, lagometer and timer bar are at the right edge (`CG_Place2D()` in
+  `cgame/cg_drawtools.c`). Crosshair, weapon, force and item selection, centre prints and the scoreboard stay
+  in the middle.
+- Fades, tints and the loading picture cover the whole window. The scopes (binoculars, disruptor) keep their
+  shape, with black beside them. A video keeps its 4:3 with black beside it.
+- The console is as wide as the window, as before.
+
+The modules read `r_2dBias`. In a stock `jamp.exe`, or with a renderer of another tree, the cvar is missing or
+0 and they draw as they always did.
+
+Not looked at in the game: it was built for Linux and nothing more. Open: the siege timer and the automap are
+placed by the grid but not moved to an edge, and the text of the stock fonts is as soft as before (they are
+bitmaps made for 640 x 480).
+
+### UTF-8
+
+Text inside the client is UTF-8 (2026-10-11). The original game knows one byte a character, Windows-1252 in the
+western languages, and so do all legacy clients and servers. What follows from that:
+
+| Cvar | Default | Meaning |
+|------|---------|---------|
+| `cl_utf8` | 1 | text is UTF-8 inside the client. 0: one byte a character as in the original game |
+| `cl_utf8Text` | set by the engine | read only, in the userinfo: 1 while text really is UTF-8. It is 0 with `cl_utf8 0` and with a language that has a code page of its own (`se_language` russian, polish, korean, taiwanese, japanese, chinese, thai), where everything stays as it was |
+| `g_visionCaps` | 1, game module | read only, in the server info. Bit 0: the server passes UTF-8 chat on |
+
+- Typing: a character arrives as the bytes of UTF-8, one char event each, so the modules get what they always
+  got (`K_CHAR_FLAG`). The edit fields of the engine and of the menus move and delete by character.
+- Reading: one decoder (`Q_UTF8_Decode()` in `shared/qcommon/q_string.c`) takes a byte that starts no valid
+  UTF-8 sequence as Windows-1252. So names and chat of legacy players, the strings of the game and old configs
+  show right without being converted anywhere.
+- Drawing (`rd-common/tr_font.cpp`, both renderers): a character of Windows-1252 that the picture of a font has
+  comes from that picture as before. Any other character is made from Noto Sans
+  (`fonts/visionjk/NotoSans-Regular.ttf` in the client assets, OFL) with stb_truetype (`rd-common/tr_font_ttf.cpp`),
+  in the point size of the font it stands in. That covers Latin, Greek and Cyrillic. A character Noto Sans does
+  not have (Chinese, Japanese, Korean) is a `?`. `fontlist` says how many glyphs were made.
+- The font file: the engine reads it once at its start and keeps it (`client/cl_font.cpp`), because a renderer
+  that starts on a pure server can not read the pk3 of this tree. A file with another SHA-256 than the one the
+  build shipped is refused: a server can send a pk3 with a file of that name. So another font can not be
+  dropped in without building the client anew.
+- Sending: chat goes out as UTF-8 only to a server whose server info has `g_visionCaps` bit 0. To any other
+  server every command is converted to Windows-1252 on the way out, with `?` for what that lacks. The userinfo
+  (the name) goes out as Windows-1252 to every server, since a name is handed to all clients alike.
+- On a server of this tree the game module gives each recipient its form (`JP_ChatFor()` in
+  `game/japlus/g_japlus_chat.c`): what a UTF-8 client wrote reaches a legacy client as Windows-1252. Umlauts
+  and accents arrive there as they should, Cyrillic or Greek as `?`. Nothing else is converted.
+
+Limits. The console and the chat input line are still drawn with the charset picture of the game, which has
+Windows-1252 only: a Cyrillic letter is a `?` there until both are redrawn with fonts (the chat box and the
+menus show it). The chat box of the cgame still wraps by bytes. Names can not hold characters outside
+Windows-1252. None of this was run: it is built for Linux, the decoder and the conversions passed a short
+native test, and the size and place of the TrueType glyphs next to the letters of the game were only checked as
+numbers.
+
 ### Bot mode
 
 Not a JA+ feature, and client only (`cgame/botmode/cg_botmode.c`): no server knows of it, the game module and the

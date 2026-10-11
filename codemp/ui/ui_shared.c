@@ -698,6 +698,12 @@ void Window_Paint(windowDef_t *w, float fadeAmount, float fadeClamp, float fadeC
 		fillRect.w -= w->borderSize + 1;
 		fillRect.h -= w->borderSize + 1;
 	}
+	// a window over the whole 640 x 480 is a background: it covers a wide screen too, where the grid is wider
+	// than 640 by DC->bias on either side
+	else if ( DC->bias > 0.0f && w->rect.x == 0 && w->rect.y == 0 && w->rect.w == SCREEN_WIDTH && w->rect.h == SCREEN_HEIGHT ) {
+		fillRect.x -= DC->bias;
+		fillRect.w += 2.0f * DC->bias;
+	}
 
 	if ( w->style == WINDOW_STYLE_FILLED ) {
 		// box, but possible a shader that needs filled
@@ -3461,10 +3467,28 @@ void Item_TextField_Paste( itemDef_t *item ) {
 	// send as if typed, so insert / overstrike works properly
 	pasteLen = strlen( buff );
 	for ( i = 0; i < pasteLen; i++ ) {
-		Item_TextField_HandleKey( item, buff[i]|K_CHAR_FLAG );
+		Item_TextField_HandleKey( item, (unsigned char)buff[i]|K_CHAR_FLAG );
 	}
 }
 #endif
+
+// Text is UTF-8 with an engine of this tree that says so (cl_utf8Text, CL_UTF8() there): a character has 1 to 4
+// bytes then, which arrive as one char event each, and the cursor of a field stands between two characters.
+static int Item_TextField_CharLen( const char *buff, int pos ) {
+	unsigned int codePoint;
+
+	if ( !buff[pos] ) {
+		return 0;
+	}
+	return DC->getCVarValue( "cl_utf8Text" ) ? Q_UTF8_Decode( buff + pos, &codePoint ) : 1;
+}
+
+static int Item_TextField_PrevChar( const char *buff, int pos ) {
+	if ( pos <= 0 ) {
+		return 0;
+	}
+	return DC->getCVarValue( "cl_utf8Text" ) ? Q_UTF8_PrevChar( buff, pos ) : pos - 1;
+}
 
 qboolean Item_TextField_HandleKey(itemDef_t *item, int key) {
 	char buff[2048];
@@ -3492,10 +3516,12 @@ qboolean Item_TextField_HandleKey(itemDef_t *item, int key) {
 
 			if (key == 'h' - 'a' + 1 )	{	// ctrl-h is backspace
 				if ( item->cursorPos > 0 ) {
-					memmove( &buff[item->cursorPos - 1], &buff[item->cursorPos], len + 1 - item->cursorPos);
-					item->cursorPos--;
+					const int prev = Item_TextField_PrevChar( buff, item->cursorPos );
+
+					memmove( &buff[prev], &buff[item->cursorPos], len + 1 - item->cursorPos);
+					item->cursorPos = prev;
 					if (item->cursorPos < editPtr->paintOffset) {
-						editPtr->paintOffset--;
+						editPtr->paintOffset = item->cursorPos;
 					}
 				}
 				DC->setCVar(item->cvar, buff);
@@ -3551,7 +3577,9 @@ qboolean Item_TextField_HandleKey(itemDef_t *item, int key) {
 
 			if ( key == A_DELETE || key == A_KP_PERIOD ) {
 				if ( item->cursorPos < len ) {
-					memmove( buff + item->cursorPos, buff + item->cursorPos + 1, len - item->cursorPos);
+					const int charLen = Item_TextField_CharLen( buff, item->cursorPos );
+
+					memmove( buff + item->cursorPos, buff + item->cursorPos + charLen, len - item->cursorPos - charLen + 1);
 					DC->setCVar(item->cvar, buff);
 				}
 				return qtrue;
@@ -3559,13 +3587,15 @@ qboolean Item_TextField_HandleKey(itemDef_t *item, int key) {
 
 			if ( key == A_CURSOR_RIGHT || key == A_KP_6 )
 			{
+				const int charLen = Item_TextField_CharLen( buff, item->cursorPos );
+
 				if (editPtr->maxPaintChars && item->cursorPos >= editPtr->maxPaintChars && item->cursorPos < len) {
-					item->cursorPos++;
-					editPtr->paintOffset++;
+					item->cursorPos += charLen;
+					editPtr->paintOffset += charLen;
 					return qtrue;
 				}
 				if (item->cursorPos < len) {
-					item->cursorPos++;
+					item->cursorPos += charLen;
 				}
 				return qtrue;
 			}
@@ -3573,10 +3603,10 @@ qboolean Item_TextField_HandleKey(itemDef_t *item, int key) {
 			if ( key == A_CURSOR_LEFT || key == A_KP_4 )
 			{
 				if ( item->cursorPos > 0 ) {
-					item->cursorPos--;
+					item->cursorPos = Item_TextField_PrevChar( buff, item->cursorPos );
 				}
 				if (item->cursorPos < editPtr->paintOffset) {
-					editPtr->paintOffset--;
+					editPtr->paintOffset = item->cursorPos;
 				}
 				return qtrue;
 			}
@@ -4709,6 +4739,7 @@ void Item_Text_Paint(itemDef_t *item) {
 
 void Item_TextField_Paint(itemDef_t *item) {
 	char buff[1024];
+	int paintOffset;
 	vec4_t newColor, lowLight;
 	int offset;
 	menuDef_t *parent = (menuDef_t*)item->parent;
@@ -4739,11 +4770,18 @@ void Item_TextField_Paint(itemDef_t *item) {
 	}
 
 	offset = (item->text && *item->text) ? 8 : 0;
+	// the text that is painted does not start in the middle of a character of UTF-8 (Item_TextField_CharLen)
+	paintOffset = Com_Clampi( 0, (int)strlen( buff ), editPtr->paintOffset );
+	if ( DC->getCVarValue( "cl_utf8Text" ) ) {
+		while ( ( buff[paintOffset] & 0xC0 ) == 0x80 ) {
+			paintOffset++;
+		}
+	}
 	if (item->window.flags & WINDOW_HASFOCUS && g_editingField) {
 		char cursor = DC->getOverstrikeMode() ? '_' : '|';
-		DC->drawTextWithCursor(item->textRect.x + item->textRect.w + offset, item->textRect.y, item->textscale, newColor, buff + editPtr->paintOffset, item->cursorPos - editPtr->paintOffset , cursor, item->window.rect.w, item->textStyle, item->iMenuFont);
+		DC->drawTextWithCursor(item->textRect.x + item->textRect.w + offset, item->textRect.y, item->textscale, newColor, buff + paintOffset, Q_max( 0, item->cursorPos - paintOffset ), cursor, item->window.rect.w, item->textStyle, item->iMenuFont);
 	} else {
-		DC->drawText(item->textRect.x + item->textRect.w + offset, item->textRect.y, item->textscale, newColor, buff + editPtr->paintOffset, 0, item->window.rect.w, item->textStyle,item->iMenuFont);
+		DC->drawText(item->textRect.x + item->textRect.w + offset, item->textRect.y, item->textscale, newColor, buff + paintOffset, 0, item->window.rect.w, item->textStyle,item->iMenuFont);
 	}
 }
 
@@ -5350,7 +5388,7 @@ void Item_Model_Paint(itemDef_t *item)
 	w = item->window.rect.w-2;
 	h = item->window.rect.h-2;
 
-	refdef.x = x * DC->xscale;
+	refdef.x = ( x + DC->bias ) * DC->xscale;
 	refdef.y = y * DC->yscale;
 	refdef.width = w * DC->xscale;
 	refdef.height = h * DC->yscale;
@@ -6755,7 +6793,7 @@ void Menu_Paint(menuDef_t *menu, qboolean forcePaint) {
 	if (menu->fullScreen) {
 		// implies a background shader
 		// FIXME: make sure we have a default shader if fullscreen is set with no background
-		DC->drawHandlePic( 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, menu->window.background );
+		DC->drawHandlePic( -DC->bias, 0, SCREEN_WIDTH + 2.0f * DC->bias, SCREEN_HEIGHT, menu->window.background );
 	} else if (menu->window.background) {
 		// this allows a background shader without being full screen
 		//UI_DrawHandlePic(menu->window.rect.x, menu->window.rect.y, menu->window.rect.w, menu->window.rect.h, menu->backgroundShader);

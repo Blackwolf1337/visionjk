@@ -40,6 +40,18 @@ const char *Q_strchrs( const char *string, const char *search );
 
 void Q_strstrip( char *string, const char *strip, const char *repl );
 
+// UTF-8. Text inside the client is UTF-8, text of legacy clients and of the game's files is Windows-1252 (one
+// byte a character). Q_UTF8_Decode() reads both: a byte that starts no valid UTF-8 sequence is taken as
+// Windows-1252.
+unsigned int Q_CP1252ToUnicode( int c );
+int Q_UnicodeToCP1252( unsigned int codePoint );
+int Q_UTF8_Decode( const char *s, unsigned int *codePoint );
+int Q_UTF8_Encode( unsigned int codePoint, char *out );
+int Q_UTF8_PrevChar( const char *string, int offset );
+void Q_UTF8_Truncate( char *string, int maxBytes );
+void Q_UTF8_FromCP1252( const char *in, char *out, int outSize );
+void Q_UTF8_ToCP1252( const char *in, char *out, int outSize );
+
 #if defined (_MSC_VER)
 	// vsnprintf is ISO/IEC 9899:1999
 	// abstracting this to make it portable

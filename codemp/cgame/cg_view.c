@@ -2261,7 +2261,7 @@ void CG_DrawAutoMap(void)
 	trap->R_GetRealRes(&vWidth, &vHeight);
 
 	//set scaling values so that the 640x480 will result at 1.0/1.0
-	hScale = vWidth/640.0f;
+	hScale = vWidth / ( 640.0f + 2.0f * cgs.bias2D );
 	vScale = vHeight/480.0f;
 
 	x = r_autoMapX.value;
@@ -2269,7 +2269,7 @@ void CG_DrawAutoMap(void)
 	w = r_autoMapW.value;
 	h = r_autoMapH.value;
 
-	refdef.x = x*hScale;
+	refdef.x = ( x + cgs.bias2D ) * hScale;
 	refdef.y = y*vScale;
 	refdef.width = w*hScale;
 	refdef.height = h*vScale;

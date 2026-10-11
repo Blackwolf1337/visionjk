@@ -166,6 +166,15 @@ static void GetClipboardData( char *buf, int buflen ) {
 		return;
 	}
 
+	if ( CL_UTF8() )
+	{
+		// the clipboard is UTF-8 and so is the text of the client: as it is, cut between two characters
+		Q_UTF8_Truncate( cbd, buflen - 1 );
+		Q_strncpyz( buf, cbd, buflen );
+		Z_Free( cbd );
+		return;
+	}
+
 	for ( int i = 0, end = buflen - 1; *c && i < end; i++ )
 	{
 		uint32_t utf32 = ConvertUTF8ToUTF32( c, &c );

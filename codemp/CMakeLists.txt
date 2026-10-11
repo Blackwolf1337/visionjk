@@ -523,6 +523,7 @@ if(BuildMPEngine)
 		"${MPDir}/client/cl_cgameapi.h"
 		"${MPDir}/client/cl_cin.cpp"
 		"${MPDir}/client/cl_console.cpp"
+		"${MPDir}/client/cl_font.cpp"
 		"${MPDir}/client/cl_input.cpp"
 		"${MPDir}/client/cl_keys.cpp"
 		"${MPDir}/client/cl_lan.cpp"
@@ -667,6 +668,15 @@ if(BuildMPEngine)
 
 	set(MPEngineFiles ${MPEngineFiles} ${MPEngineSysFiles})
 	source_group("sys" FILES ${MPEngineSysFiles})
+
+	# The font for the characters the fonts of the game do not have (client/cl_font.cpp): the engine takes the
+	# file of the client assets only when it has the checksum of the one this tree ships.
+	file(SHA256 "${CMAKE_SOURCE_DIR}/assets/japlus_client/fonts/visionjk/NotoSans-Regular.ttf" MPEngineFontHash)
+	set_source_files_properties("${MPDir}/client/cl_font.cpp" PROPERTIES COMPILE_DEFINITIONS "FONT_SHA256=\"${MPEngineFontHash}\"")
+	if(EMSCRIPTEN)
+		# the updater below brings the checksum code where there is an updater
+		set(MPEngineFiles ${MPEngineFiles} "${SharedDir}/web/web_http.h" "${SharedDir}/web/web_sha256.c")
+	endif()
 
 	# The updater of the client (client/cl_update.cpp, docs/japlus/update.md): the file list of a release and
 	# the checksum of a file, both plain C. A page is the newest version whenever it is loaded and has none.

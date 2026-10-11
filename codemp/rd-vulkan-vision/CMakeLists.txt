@@ -187,6 +187,8 @@ set(MPVulkanVisionRdCommonFiles
 	"${MPDir}/rd-common/tr_common.h"
 	"${MPDir}/rd-common/tr_font.cpp"
 	"${MPDir}/rd-common/tr_font.h"
+	"${MPDir}/rd-common/tr_font_ttf.cpp"
+	"${MPDir}/rd-common/tr_font_ttf.h"
 	"${MPDir}/rd-common/tr_image_load.cpp"
 	"${MPDir}/rd-common/tr_image_jpg.cpp"
 	"${MPDir}/rd-common/tr_image_tga.cpp"

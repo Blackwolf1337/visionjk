@@ -61,6 +61,7 @@ typedef struct jpClient_s {
 	int			badWordCount;			// detections of the word filter
 	char		sayTeamMode[32];		// say_team_mod: "", normal, clan, admin or ampsay
 	char		clanPass[64];			// clanpass, clan chat reaches players with the same pass
+	qboolean	utf8;					// the client reads and writes UTF-8 (cl_utf8Text of its userinfo), see JP_ChatFor()
 	int			clanTagWarnTime;		// next warning about a protected clan tag in the name
 	int			clanTagWarnState;		// 0..2: warnings sent since clanTagWarnTime was set
 	int			testAnim;				// amtest: next animation
@@ -154,6 +155,8 @@ void		JP_ClanTagThink( gentity_t *ent );
 void		JP_SanitizeString( char *out, const char *in, size_t outSize, int maxIn );
 #define JP_NAME_CHARS	31	// the original name compares look at this many characters
 void		JP_UserinfoChanged( gentity_t *ent, const char *userinfo );
+void		JP_ChatCopy( const gentity_t *from, const char *text, char *out, int outSize );
+const char	*JP_ChatFor( const gentity_t *from, const gentity_t *other, const char *text, char *buffer, int bufferSize );
 qboolean	JP_ChatIgnored( gentity_t *speaker, gentity_t *listener );
 void		JP_ShowMessage( const char *text, int seconds, qboolean pluginlessOnly );
 void		JP_NewLines( char *text );

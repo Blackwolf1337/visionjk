@@ -402,6 +402,25 @@ x, y, amd width are in pixels
 ===================
 */
 extern console_t con;
+
+// The bytes of the character at pos and the offset of the character before pos. Where text is UTF-8 (CL_UTF8())
+// a character has 1 to 4 bytes, and cursor and scroll of a field stand between two characters.
+static int Field_CharLen( const field_t *edit, int pos ) {
+	unsigned int codePoint;
+
+	if ( !CL_UTF8() ) {
+		return edit->buffer[pos] ? 1 : 0;
+	}
+	return Q_UTF8_Decode( edit->buffer + pos, &codePoint );
+}
+
+static int Field_PrevChar( const field_t *edit, int pos ) {
+	if ( !CL_UTF8() ) {
+		return pos > 0 ? pos - 1 : 0;
+	}
+	return Q_UTF8_PrevChar( edit->buffer, pos );
+}
+
 void Field_VariableSizeDraw( field_t *edit, int x, int y, int size, qboolean showCursor, qboolean noColorEscape ) {
 	int		len;
 	int		drawLen;
@@ -409,6 +428,7 @@ void Field_VariableSizeDraw( field_t *edit, int x, int y, int size, qboolean sho
 	int		cursorChar;
 	char	str[MAX_STRING_CHARS];
 	int		i;
+	int		cursorColumn;
 
 	drawLen = edit->widthInChars - 1; // - 1 so there is always a space for the cursor
 	len = strlen( edit->buffer );
@@ -438,8 +458,33 @@ void Field_VariableSizeDraw( field_t *edit, int x, int y, int size, qboolean sho
 		Com_Error( ERR_DROP, "drawLen >= MAX_STRING_CHARS" );
 	}
 
+	cursorColumn = edit->cursor - prestep;
+	if ( CL_UTF8() ) {
+		// the charset picture these fields are drawn with has a cell for a byte of Windows-1252: a character it
+		// does not have shows as '?'. The cursor is as many cells in as there are characters before it.
+		char utf8[MAX_STRING_CHARS];
+
+		while ( ( edit->buffer[prestep] & 0xC0 ) == 0x80 ) {
+			prestep++;		// not into the middle of a character
+		}
+		Q_strncpyz( utf8, edit->buffer + prestep, sizeof( utf8 ) );
+		Q_UTF8_Truncate( utf8, drawLen );
+		Q_UTF8_ToCP1252( utf8, str, sizeof( str ) );
+		drawLen = strlen( str );
+
+		cursorColumn = 0;
+		for ( i = prestep; i < edit->cursor; cursorColumn++ ) {
+			const int charLen = Field_CharLen( edit, i );
+
+			if ( !charLen ) {
+				break;
+			}
+			i += charLen;
+		}
+	} else {
 	Com_Memcpy( str, edit->buffer + prestep, drawLen );
 	str[ drawLen ] = 0;
+	}
 
 	// draw it
 	if ( size == con.charWidth ) {
@@ -467,11 +512,11 @@ void Field_VariableSizeDraw( field_t *edit, int x, int y, int size, qboolean sho
 		i = drawLen - strlen( str );
 
 		if ( size == con.charWidth ) {
-			SCR_DrawSmallChar( x + ( edit->cursor - prestep - i ) * size, y, cursorChar );
+			SCR_DrawSmallChar( x + ( cursorColumn - i ) * size, y, cursorChar );
 		} else {
 			str[0] = cursorChar;
 			str[1] = 0;
-			SCR_DrawBigString( x + ( edit->cursor - prestep - i ) * size, y, str, 1.0, qfalse );
+			SCR_DrawBigString( x + ( cursorColumn - i ) * size, y, str, 1.0, qfalse );
 		}
 	}
 }
@@ -501,6 +546,14 @@ void Field_Paste( field_t *edit ) {
 	}
 
 	// send as if typed, so insert / overstrike works properly
+	if ( CL_UTF8() ) {
+		// the clipboard is UTF-8 and so is the field: byte by byte, without control characters
+		for ( ; *c; c++ ) {
+			if ( (unsigned char)*c >= 32 && *c != 127 ) {
+				Field_CharEvent( edit, (unsigned char)*c );
+			}
+		}
+	} else
 	while( *c )
 	{
 		uint32_t utf32 = ConvertUTF8ToUTF32( c, &c );
@@ -535,20 +588,22 @@ void Field_KeyDownEvent( field_t *edit, int key ) {
 	switch ( key ) {
 		case A_DELETE:
 			if ( edit->cursor < len ) {
+				const int charLen = Field_CharLen( edit, edit->cursor );
+
 				memmove( edit->buffer + edit->cursor,
-					edit->buffer + edit->cursor + 1, len - edit->cursor );
+					edit->buffer + edit->cursor + charLen, len - edit->cursor - charLen + 1 );
 			}
 			break;
 
 		case A_CURSOR_RIGHT:
 			if ( edit->cursor < len ) {
-				edit->cursor++;
+				edit->cursor += Field_CharLen( edit, edit->cursor );
 			}
 			break;
 
 		case A_CURSOR_LEFT:
 			if ( edit->cursor > 0 ) {
-				edit->cursor--;
+				edit->cursor = Field_PrevChar( edit, edit->cursor );
 			}
 			break;
 
@@ -598,12 +653,14 @@ void Field_CharEvent( field_t *edit, int ch ) {
 
 	if ( ch == 'h' - 'a' + 1 )	{	// ctrl-h is backspace
 		if ( edit->cursor > 0 ) {
-			memmove( edit->buffer + edit->cursor - 1,
+			const int prev = Field_PrevChar( edit, edit->cursor );
+
+			memmove( edit->buffer + prev,
 				edit->buffer + edit->cursor, len + 1 - edit->cursor );
-			edit->cursor--;
+			edit->cursor = prev;
 			if ( edit->cursor < edit->scroll )
 			{
-				edit->scroll--;
+				edit->scroll = edit->cursor;
 			}
 		}
 		return;
@@ -628,7 +685,24 @@ void Field_CharEvent( field_t *edit, int ch ) {
 		return;
 	}
 
-	if ( kg.key_overstrikeMode ) {
+	if ( kg.key_overstrikeMode && CL_UTF8() ) {
+		// the first byte of a character takes the place of the whole character under the cursor, the bytes
+		// that follow it are put in behind it
+		if ( ( ch & 0xC0 ) != 0x80 && edit->cursor < len ) {
+			const int charLen = Field_CharLen( edit, edit->cursor );
+
+			memmove( edit->buffer + edit->cursor,
+				edit->buffer + edit->cursor + charLen, len - edit->cursor - charLen + 1 );
+			len -= charLen;
+		}
+		if ( len == MAX_EDIT_LINE - 2 ) {
+			return; // all full
+		}
+		memmove( edit->buffer + edit->cursor + 1,
+			edit->buffer + edit->cursor, len + 1 - edit->cursor );
+		edit->buffer[edit->cursor] = ch;
+		edit->cursor++;
+	} else if ( kg.key_overstrikeMode ) {
 		// - 2 to leave room for the leading slash and trailing \0
 		if ( edit->cursor == MAX_EDIT_LINE - 2 )
 			return;

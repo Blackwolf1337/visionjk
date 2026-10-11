@@ -23,6 +23,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "qcommon/sstring.h"	// stl string class won't compile in here (MS shite), so use Gil's.
 #include "tr_local.h"
 #include "tr_font.h"
+#include "tr_font_ttf.h"
 
 #include "qcommon/stringed_ingame.h"
 
@@ -690,10 +691,30 @@ static int Thai_InitFields(int &iGlyphTPs, const char *&psLang)
 //
 // Note that I have to have this 3-param form instead of advancing a passed-in "const char **psText" because of VM-crap where you can only change ptr-contents, not ptrs themselves. Bleurgh. Ditto the qtrue:qfalse crap instead of just returning stuff straight through.
 //
+// Whether text is UTF-8, as CL_UTF8() of the engine has it: with cl_utf8 and a language without a code page of
+// its own. A letter is a code point of Unicode then, read by Q_UTF8_Decode(), which takes a byte that is no
+// UTF-8 as Windows-1252: text of the game's files and of legacy clients comes out right as well.
+static cvar_t *cl_utf8;
+
+static bool Font_TextIsUTF8( void )
+{
+	return cl_utf8 && cl_utf8->integer && GetLanguageEnum() == eWestern;
+}
+
 unsigned int AnyLanguage_ReadCharFromString( const char *psText, int *piAdvanceCount, qboolean *pbIsTrailingPunctuation /* = NULL */)
 {
 	const byte *psString = (const byte *) psText;	// avoid sign-promote bug
 	unsigned int uiLetter;
+
+	if ( psString[0] >= 0x80 && Font_TextIsUTF8() )
+	{
+		*piAdvanceCount = Q_UTF8_Decode( psText, &uiLetter );
+		if ( pbIsTrailingPunctuation )
+		{
+			*pbIsTrailingPunctuation = qfalse;
+		}
+		return uiLetter;
+	}
 
 	switch ( GetLanguageEnum() )
 	{
@@ -1288,7 +1309,29 @@ const glyphInfo_t *CFontInfo::GetLetter(const unsigned int uiLetter, int *piShad
 		*piShader = GetShader();
 	}
 
-	const glyphInfo_t *pGlyph = &mGlyphs[ uiLetter & 0xff ];
+	unsigned int uiGlyph = uiLetter & 0xff;
+	if ( uiLetter >= 0x80 && Font_TextIsUTF8() )
+	{
+		// a code point: from the picture of this font when it is a character of Windows-1252 the picture has,
+		// else from the TrueType font, else a '?'
+		const int iByte = Q_UnicodeToCP1252( uiLetter );
+
+		if ( iByte >= 0 && mGlyphs[ iByte ].width )
+		{
+			uiGlyph = iByte;
+		}
+		else
+		{
+			const glyphInfo_t *pTTFGlyph = R_FontTTF_Glyph( uiLetter, GetPointSize(), piShader );
+			if ( pTTFGlyph )
+			{
+				return pTTFGlyph;
+			}
+			uiGlyph = '?';
+		}
+	}
+
+	const glyphInfo_t *pGlyph = &mGlyphs[ uiGlyph ];
 	//
 	// SBCS language substitution?...
 	//
@@ -1432,6 +1475,9 @@ float RE_Font_StrLenPixelsNew( const char *psText, const int iFontHandle, const 
 		fScaleAsian = fScale * 0.75f;
 	}
 
+	// on the wide 2D screen of this renderer (R_2DBias) the letters have their shape without it
+	const int iAspectCorrect = ( R_2DBias() > 0.0f ) ? 0 : r_aspectCorrectFonts->integer;
+
 	float maxLineWidth = 0.0f;
 	float thisLineWidth = 0.0f;
 	while ( *psText ) {
@@ -1455,17 +1501,17 @@ float RE_Font_StrLenPixelsNew( const char *psText, const int iFontHandle, const 
 
 			float fValue = iPixelAdvance * ((uiLetter > (unsigned)g_iNonScaledCharRange) ? fScaleAsian : fScale);
 
-			if ( r_aspectCorrectFonts->integer == 1 ) {
+			if ( iAspectCorrect == 1 ) {
 				fValue *= ((float)(SCREEN_WIDTH * glConfig.vidHeight) / (float)(SCREEN_HEIGHT * glConfig.vidWidth));
 			}
-			else if ( r_aspectCorrectFonts->integer == 2 ) {
+			else if ( iAspectCorrect == 2 ) {
 				fValue = ceilf(
 					fValue * ((float)(SCREEN_WIDTH * glConfig.vidHeight) / (float)(SCREEN_HEIGHT * glConfig.vidWidth))
 				);
 			}
 			thisLineWidth += curfont->mbRoundCalcs
 				? roundf( fValue )
-				: (r_aspectCorrectFonts->integer == 2)
+				: (iAspectCorrect == 2)
 					? ceilf( fValue )
 					: fValue;
 			if ( thisLineWidth > maxLineWidth ) {
@@ -1632,6 +1678,9 @@ void RE_Font_DrawString(int ox, int oy, const char *psText, const float *rgba, c
 
 	RE_SetColor( rgba );
 
+	// on the wide 2D screen of this renderer (R_2DBias) the letters have their shape without it
+	const int iAspectCorrect = ( R_2DBias() > 0.0f ) ? 0 : r_aspectCorrectFonts->integer;
+
 	// Now we take off the training wheels and become a big font renderer
 	// It's all floats from here on out
 	fox = ox;
@@ -1727,11 +1776,11 @@ void RE_Font_DrawString(int ox, int oy, const char *psText, const float *rgba, c
 								//lastcolour.c,
 								hShader							// qhandle_t hShader
 								);
-				if ( r_aspectCorrectFonts->integer == 1 ) {
+				if ( iAspectCorrect == 1 ) {
 					fx += fAdvancePixels
 						* ((float)(SCREEN_WIDTH * glConfig.vidHeight) / (float)(SCREEN_HEIGHT * glConfig.vidWidth));
 				}
-				else if ( r_aspectCorrectFonts->integer == 2 ) {
+				else if ( iAspectCorrect == 2 ) {
 					fx += ceilf( fAdvancePixels
 						* ((float)(SCREEN_WIDTH * glConfig.vidHeight) / (float)(SCREEN_HEIGHT * glConfig.vidWidth)) );
 				}
@@ -1743,6 +1792,9 @@ void RE_Font_DrawString(int ox, int oy, const char *psText, const float *rgba, c
 		}
 	}
 	//let it remember the old color //RE_SetColor(NULL);
+
+	// glyphs of the TrueType font that were made for this string go to the graphics card
+	R_FontTTF_Flush();
 }
 
 static int RE_RegisterFont_Real(const char *psName)
@@ -1810,6 +1862,9 @@ void R_InitFonts(void)
 	g_iNonScaledCharRange = INT_MAX;	// default all chars to have no special scaling (other than user supplied)
 
 	r_fontSharpness = ri.Cvar_Get( "r_fontSharpness", "1", CVAR_ARCHIVE_ND, "" );
+	cl_utf8 = ri.Cvar_Get( "cl_utf8", "1", CVAR_ARCHIVE, "" );		// the cvar of the engine, see Font_TextIsUTF8()
+
+	R_FontTTF_Init();
 }
 
 /*
@@ -1830,6 +1885,7 @@ void R_FontList_f( void ) {
 				font->mPointSize, font->mHeight, font->mAscender, font->mDescender);
 		}
 	}
+	R_FontTTF_Info();
 	Com_Printf ("------------------------------------\n");
 }
 
@@ -1844,6 +1900,8 @@ void R_ShutdownFonts(void)
 	g_iCurrentFontIndex = 1;	// entry 0 is reserved for "missing/invalid"
 
 	g_ThaiCodes.Clear();
+
+	R_FontTTF_Shutdown();
 }
 
 // this is only really for debugging while tinkering with fonts, but harmless to leave in...

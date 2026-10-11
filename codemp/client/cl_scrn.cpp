@@ -124,7 +124,7 @@ static void SCR_DrawChar( int x, int y, float size, int ch ) {
 
 /*
 ** SCR_DrawSmallChar
-** small chars are drawn at native screen resolution
+** small chars are drawn at native screen resolution: x and y are pixels of the window
 */
 void SCR_DrawSmallChar( int x, int y, int ch ) {
 	int row, col;
@@ -154,7 +154,7 @@ void SCR_DrawSmallChar( int x, int y, int ch ) {
 
 	size2 = 0.0625;
 
-	re->DrawStretchPic( x * con.xadjust, y * con.yadjust,
+	re->DrawStretchPic( x * con.xadjust - cls.bias2D, y * con.yadjust,
 					   con.charWidth * con.xadjust, con.charHeight * con.yadjust,
 					   fcol, frow,
 					   fcol + size, frow + size2,

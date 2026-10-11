@@ -324,6 +324,7 @@ typedef struct clientStatic_s {
 
 	// rendering info
 	glconfig_t	glconfig;
+	float		bias2D;			// the 2D grid runs from -bias2D to 640 + bias2D on a wide window (cvar r_2dBias of the renderer)
 	qhandle_t	charSetShader;
 	qhandle_t	whiteShader;
 	qhandle_t	consoleShader;
@@ -433,6 +434,7 @@ extern	cvar_t	*cl_inGameVideo;
 
 extern	cvar_t	*cl_consoleKeys;
 extern	cvar_t	*cl_consoleUseScanCode;
+extern	cvar_t	*cl_utf8;
 extern	cvar_t	*cl_consoleShiftRequirement;
 
 extern  cvar_t  *cl_lanForcePackets;
@@ -451,6 +453,8 @@ void CL_Init (void);
 void CL_FlushMemory(void);
 void CL_ShutdownAll( qboolean shutdownRef );
 void CL_AddReliableCommand( const char *cmd, qboolean isDisconnectCmd );
+qboolean CL_UTF8( void );
+const byte *CL_FontFile( int *length );		// cl_font.cpp
 
 void CL_StartHunkUsers( void );
 

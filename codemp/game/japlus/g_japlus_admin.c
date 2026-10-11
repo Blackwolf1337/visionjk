@@ -667,7 +667,7 @@ static void Cmd_amsay_f( gentity_t *ent, qboolean rcon ) {
 	if ( trap->Argc() < 2 )
 		return;
 
-	Q_strncpyz( text, ConcatArgs( 1 ), sizeof( text ) );
+	JP_ChatCopy( ent, ConcatArgs( 1 ), text, sizeof( text ) );
 	G_LogPrintf( "say_admin: %s: %s\n", ent->client->pers.netname, text );
 	Com_sprintf( name, sizeof( name ), EC"(%s%c%c"EC")"EC": ", ent->client->pers.netname, Q_COLOR_ESCAPE, COLOR_WHITE );
 
@@ -679,9 +679,11 @@ static void Cmd_amsay_f( gentity_t *ent, qboolean rcon ) {
 	for ( i = 0; i < level.maxclients; i++ ) {
 		gentity_t *other = JP_ValidClient( i );
 
+		char legacy[sizeof( text )];
+
 		if ( !other || (i != ent-g_entities && other->client->sess.jpAdminLevel <= JPADM_NONE) )
 			continue;
-		trap->SendServerCommand( i, va( "chat \"^3<Admin>^7%s^3%s\"", name, text ) );
+		trap->SendServerCommand( i, va( "chat \"^3<Admin>^7%s^3%s\"", name, JP_ChatFor( ent, other, text, legacy, sizeof( legacy ) ) ) );
 	}
 }
 

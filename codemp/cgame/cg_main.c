@@ -2267,7 +2267,7 @@ void CG_LoadHudMenu()
 	cgDC.registerShaderNoMip			= trap->R_RegisterShaderNoMip;
 	cgDC.setColor						= trap->R_SetColor;
 	cgDC.drawHandlePic					= &CG_DrawPic;
-	cgDC.drawStretchPic					= trap->R_DrawStretchPic;
+	cgDC.drawStretchPic					= &CG_DrawStretchPic;
 	cgDC.drawText						= &CG_Text_Paint;
 	cgDC.textWidth						= &CG_Text_Width;
 	cgDC.textHeight						= &CG_Text_Height;
@@ -2284,7 +2284,7 @@ void CG_LoadHudMenu()
 	cgDC.Font_StrLenPixels				= trap->R_Font_StrLenPixels;
 	cgDC.Font_StrLenChars				= trap->R_Font_StrLenChars;
 	cgDC.Font_HeightPixels				= trap->R_Font_HeightPixels;
-	cgDC.Font_DrawString				= trap->R_Font_DrawString;
+	cgDC.Font_DrawString				= &CG_Font_DrawString;
 	cgDC.Language_IsAsian				= trap->R_Language_IsAsian;
 	cgDC.Language_UsesSpaces			= trap->R_Language_UsesSpaces;
 	cgDC.AnyLanguage_ReadCharFromString	= trap->R_AnyLanguage_ReadCharFromString;
@@ -2322,6 +2322,7 @@ void CG_LoadHudMenu()
 	cgDC.drawCinematic					= &CG_DrawCinematic;
 	cgDC.runCinematicFrame				= &CG_RunCinematicFrame;
 	cgDC.ext.Font_StrLenPixels			= trap->ext.R_Font_StrLenPixels;
+	cgDC.bias							= cgs.bias2D;
 
 
 	Init_Display(&cgDC);
@@ -2600,7 +2601,18 @@ Ghoul2 Insert End
 
 	// get the rendering configuration from the client system
 	trap->GetGlconfig( &cgs.glconfig );
-	cgs.screenXScale = cgs.glconfig.vidWidth / 640.0;
+	// a renderer of this tree widens the grid of the 2D on a wide window and says by how much, see CG_Place2D()
+	{
+		char bias[32];
+
+		trap->Cvar_VariableStringBuffer( "r_2dBias", bias, sizeof( bias ) );
+		cgs.bias2D = atof( bias );
+		if ( cgs.bias2D < 0.0f ) {
+			cgs.bias2D = 0.0f;
+		}
+		cgs.shift2D = 0.0f;
+	}
+	cgs.screenXScale = cgs.glconfig.vidWidth / ( 640.0 + 2.0 * cgs.bias2D );
 	cgs.screenYScale = cgs.glconfig.vidHeight / 480.0;
 
 	// get the gamestate from the client system

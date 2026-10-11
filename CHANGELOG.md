@@ -6,6 +6,10 @@ Key: [-] removed, [+] added, [\*] modified
 * [\*] The project is named VisionJK: binaries `visionjk.<arch>` and `visionjkded.<arch>`, configs `visionjk.cfg` and `visionjk_server.cfg`, home folder `visionjk` (`VisionJK` on Windows and macOS). Everything below this section is the history of OpenJK, which VisionJK is based on.
 * [-] Removed the `ja_guid` userinfo field, the key file `jakey` it was made from, and the cvars `cl_enableGuid` and `cl_guidServerUniq`. The client no longer identifies itself to servers.
 * [\*] `cl_motd` is 0 by default: the client does not contact the update server on connect unless it is switched on.
+* [\*] Menus, HUD and console keep their shape on a wide window instead of being stretched over it (`r_2dAspect`, on by default). HUD blocks sit at the edges of the window, menus in the middle.
+* [\*] A new install starts in the size of the desktop as a window without a border (`r_mode -2`, `r_noborder 1`) and not in 800 x 600. A stored config keeps its values.
+* [\*] The SDL2 that ships with the Windows build is 2.32.10 (was 2.0.12 from 2020).
+* [+] Text inside the client is UTF-8 (`cl_utf8`). Characters the fonts of the game do not have are drawn from Noto Sans (Latin, Greek, Cyrillic). Chat is UTF-8 between clients of this tree on a server of this tree (`g_visionCaps`), legacy clients get Windows-1252 as before, and so does every other server.
 
 # Features
 
