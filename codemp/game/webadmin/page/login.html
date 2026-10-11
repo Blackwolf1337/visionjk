@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>VisionJK Web Admin</title>
+<style>
+:root { --bg: #0d0d0f; --panel: #16161a; --line: #2a2a31; --text: #e4e4e7; --muted: #8b8b94; --accent: #d50c2d; --accent2: #ff2f4f; }
+* { box-sizing: border-box; }
+html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--text); font: 14px/1.4 -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+body { display: flex; align-items: center; justify-content: center; padding: 24px; }
+main { width: 340px; max-width: 100%; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 22px; }
+h1 { margin: 0 0 16px; font-size: 16px; display: flex; align-items: center; gap: 8px; }
+h1 i { width: 10px; height: 10px; background: var(--accent); border-radius: 2px; }
+label { display: block; color: var(--muted); font-size: 12px; margin-top: 10px; }
+input { width: 100%; margin-top: 3px; font: inherit; color: inherit; background: #0f0f12; border: 1px solid var(--line); border-radius: 3px; padding: 7px 8px; }
+input:focus { outline: none; border-color: var(--accent); }
+button { width: 100%; margin-top: 14px; font: inherit; color: #fff; background: var(--accent); border: 1px solid var(--accent); border-radius: 3px; padding: 8px; cursor: pointer; }
+button:hover { background: var(--accent2); }
+button.plain { background: transparent; border-color: var(--line); color: var(--text); }
+button.plain:hover { border-color: #44444d; background: #1d1d22; }
+button:disabled { opacity: .5; cursor: default; }
+#message { min-height: 20px; margin-top: 12px; color: #ff8b8b; font-size: 13px; }
+#message.ok { color: var(--muted); }
+hr { border: 0; border-top: 1px solid var(--line); margin: 18px 0 4px; }
+.hint { color: var(--muted); font-size: 12px; margin-top: 8px; }
+textarea { width: 100%; height: 74px; margin-top: 8px; font: 11px/1.3 ui-monospace, Menlo, Consolas, monospace; color: inherit; background: #0f0f12; border: 1px solid var(--line); border-radius: 3px; padding: 6px; resize: none; }
+[hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<main>
+	<h1><i></i>VisionJK Admin</h1>
+	<form id="form" autocomplete="on">
+		<label>Account<input id="name" name="username" autocomplete="username" autocapitalize="none" spellcheck="false" maxlength="23" required autofocus></label>
+		<label>Password<input id="password" name="password" type="password" autocomplete="current-password" maxlength="128" required></label>
+		<label id="codeRow" hidden>Code of your authenticator app, or a recovery code<input id="code" name="code" inputmode="numeric" autocomplete="one-time-code" spellcheck="false" maxlength="16"></label>
+		<button id="go">Log in</button>
+	</form>
+	<div id="message"></div>
+	<div id="keyPart" hidden>
+		<hr>
+		<button class="plain" id="keyLogin" hidden>Log in with the key of this browser</button>
+		<button class="plain" id="keyNew" hidden>Make a key for this browser</button>
+		<div id="keyShown" hidden>
+			<textarea id="keyLine" readonly spellcheck="false"></textarea>
+			<div class="hint">The public line of the key of this browser. It is no secret: the owner of the server puts it into admin_keys.txt behind a rank (rcon, council, knight or instructor). The key itself never leaves this browser.</div>
+		</div>
+	</div>
+</main>
+<script>
+'use strict';
+const $ = id => document.getElementById(id);
+const WHY = {
+	wrong: 'Wrong account or password.',
+	code: 'This account asks for a code as well.',
+	badcode: 'That code is not right, or it was used already.',
+	wait: 'Too many wrong tries for this account. Wait a moment.',
+	busy: 'Another login is being checked. Try again in a second.',
+	unknown: 'The server does not have the key of this browser in its admin_keys.txt.',
+	signature: 'The server refused the signature.',
+	late: 'That took too long. Try again.',
+	form: 'The form is not complete.',
+	random: 'The server has no random numbers.',
+};
+
+function say(text, ok) {
+	$('message').textContent = text;
+	$('message').className = ok ? 'ok' : '';
+}
+
+async function post(path, fields) {
+	const res = await fetch(path, { method: 'POST', body: new URLSearchParams(fields), cache: 'no-store' });
+	if (res.status === 429 && !(res.headers.get('Content-Type') || '').includes('json')) return { ok: false, why: 'address' };
+	if (res.status === 403 && !(res.headers.get('Content-Type') || '').includes('json')) return { ok: false, why: 'site' };
+	return res.json();
+}
+
+function failed(json) {
+	if (json.why === 'address') say('Too many wrong logins from your address. Wait, it gets longer with every one.');
+	else if (json.why === 'site') say('The server refused the request: it does not come from this page (a reverse proxy has to pass the Host on).');
+	else say(WHY[json.why] || 'The login was refused (' + json.why + ').');
+}
+
+$('form').addEventListener('submit', async e => {
+	e.preventDefault();
+	$('go').disabled = true;
+	say('');
+	try {
+		const fields = { name: $('name').value.trim(), password: $('password').value };
+		if (!$('codeRow').hidden && $('code').value.trim()) fields.code = $('code').value.trim();
+		const json = await post('api/login', fields);
+		if (json.ok) { location.reload(); return; }
+		if (json.why === 'code') {
+			$('codeRow').hidden = false;
+			$('code').focus();
+			say(WHY.code, true);
+		} else {
+			failed(json);
+		}
+	} catch (err) {
+		say('The server did not answer.');
+	}
+	$('go').disabled = false;
+});
+
+// ---- a key of this browser instead of a password. The browser makes an Ed25519 key it can not hand out and
+// keeps it in its own storage for this address; the server knows its public line from admin_keys.txt.
+
+const b64 = bytes => btoa(String.fromCharCode(...bytes));
+const unb64 = text => Uint8Array.from(atob(text), c => c.charCodeAt(0));
+
+function keyStore() {
+	return new Promise((resolve, reject) => {
+		const open = indexedDB.open('vjk-admin', 1);
+		open.onupgradeneeded = () => open.result.createObjectStore('keys');
+		open.onsuccess = () => resolve(open.result);
+		open.onerror = () => reject(open.error);
+	});
+}
+async function keyGet() {
+	const db = await keyStore();
+	return new Promise((resolve, reject) => {
+		const get = db.transaction('keys').objectStore('keys').get('login');
+		get.onsuccess = () => resolve(get.result || null);
+		get.onerror = () => reject(get.error);
+	});
+}
+async function keyPut(pair) {
+	const db = await keyStore();
+	return new Promise((resolve, reject) => {
+		const tx = db.transaction('keys', 'readwrite');
+		tx.objectStore('keys').put(pair, 'login');
+		tx.oncomplete = () => resolve();
+		tx.onerror = () => reject(tx.error);
+	});
+}
+async function keyPublic(pair) {
+	return new Uint8Array(await crypto.subtle.exportKey('raw', pair.publicKey));
+}
+// as a line of authorized_keys: the name of the kind and the 32 bytes, each behind its length
+function keyLine(pub) {
+	const name = new TextEncoder().encode('ssh-ed25519');
+	const blob = new Uint8Array(4 + name.length + 4 + pub.length);
+	blob[3] = name.length;
+	blob.set(name, 4);
+	blob[4 + name.length + 3] = pub.length;
+	blob.set(pub, 4 + name.length + 4);
+	return 'ssh-ed25519 ' + b64(blob) + ' browser-' + location.hostname;
+}
+
+async function keyInit() {
+	// not every browser signs with Ed25519, and none does on a page without HTTPS that is not this machine
+	if (!window.isSecureContext || !crypto.subtle || !window.indexedDB) return;
+	let pair = null;
+	try {
+		pair = await keyGet();
+		if (!pair) {
+			// asked once without keeping anything: does this browser know the kind of key at all
+			await crypto.subtle.generateKey({ name: 'Ed25519' }, false, ['sign', 'verify']);
+		}
+	} catch (err) {
+		return;
+	}
+	$('keyPart').hidden = false;
+	$('keyLogin').hidden = !pair;
+	$('keyNew').hidden = !!pair;
+	if (pair) $('keyLine').value = keyLine(await keyPublic(pair));
+}
+
+$('keyNew').addEventListener('click', async () => {
+	try {
+		const pair = await crypto.subtle.generateKey({ name: 'Ed25519' }, false, ['sign', 'verify']);
+		await keyPut(pair);
+		$('keyLine').value = keyLine(await keyPublic(pair));
+		$('keyShown').hidden = false;
+		$('keyNew').hidden = true;
+		$('keyLogin').hidden = false;
+		say('The key is made. Once its line is in admin_keys.txt, this browser logs in with one click.', true);
+	} catch (err) {
+		say('This browser could not make a key.');
+	}
+});
+
+$('keyLogin').addEventListener('click', async () => {
+	$('keyLogin').disabled = true;
+	say('');
+	try {
+		const pair = await keyGet();
+		const pub = b64(await keyPublic(pair));
+		const asked = await post('api/login/key', { pub });
+		if (!asked.ok) {
+			failed(asked);
+			if (asked.why === 'unknown') $('keyShown').hidden = false;
+		} else {
+			// a first line of text, what the server asked, and the name this page has: see WA_PanelMessage()
+			const first = new TextEncoder().encode('VisionJK panel login v1\n'), nonce = unb64(asked.nonce), host = new TextEncoder().encode(location.host);
+			const message = new Uint8Array(first.length + nonce.length + host.length);
+			message.set(first);
+			message.set(nonce, first.length);
+			message.set(host, first.length + nonce.length);
+			const sig = b64(new Uint8Array(await crypto.subtle.sign({ name: 'Ed25519' }, pair.privateKey, message)));
+			const json = await post('api/login/key', { pub, sig });
+			if (json.ok) { location.reload(); return; }
+			failed(json);
+		}
+	} catch (err) {
+		say('The login with the key did not work in this browser.');
+	}
+	$('keyLogin').disabled = false;
+});
+
+keyInit();
+</script>
+</body>
+</html>

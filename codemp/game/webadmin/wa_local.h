@@ -23,7 +23,9 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // and the functions one file has for the others. The panel is not from JA+.
 //
 //   g_webadmin.c    the connections, which request goes where, and what the game calls (WebAdmin_*)
-//   wa_http.c       buffers, answers, and what a request is made of: the login, its values
+//   wa_http.c       buffers, answers, and what a request is made of: its values, the wait after wrong logins
+//   wa_auth.c       accounts, roles and sessions, the login with a password or a key, the second step
+//   wa_totp.c       the codes by time of the second step
 //   wa_state.c      /api/state, what the page draws ten times a second
 //   wa_actions.c    /api/action, what is done to a player or to the server, and the bans
 //   wa_entities.c   the entity editor: the list, placing and changing, what comes back after a reload
@@ -41,11 +43,14 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "game/bg_net.h"		// the sockets, in front of everything else
 #include "game/g_local.h"
 #include "web/web_http.h"		// the headers of a request and base64, shared with the web host of the dedicated server
+#include "game/webadmin/wa_totp.h"
 
 #define WA_MAX_CONNECTIONS	32
 #define WA_MAX_REQUEST		65536		// head and body. The largest body is the text of the server config.
 #define WA_TIMEOUT_MS		15000
 #define WA_MAX_FILE			( 64 * 1024 * 1024 )
+
+#define WA_USER_NAME		24
 
 #define WA_BOOL( x )		( ( x ) ? "true" : "false" )
 #define WA_ENTITY_RESERVE	64		// free entities the editor leaves to the game: shots, effects, bodies
@@ -56,10 +61,25 @@ typedef struct waBuffer_s {
 	int		size;
 } waBuffer_t;
 
+// what an account may do, each role what the one before it may and more (wa_auth.c)
+typedef enum waRole_e {
+	WA_ROLE_NONE,			// not logged in
+	WA_ROLE_MODERATOR,		// the players
+	WA_ROLE_ADMIN,			// and the editor, the map, the log
+	WA_ROLE_OWNER			// and the console, the config, the files, the accounts
+} waRole_t;
+
 typedef struct waConnection_s {
 	qboolean		inUse;
 	bgSocket_t		sock;
-	unsigned int	addr;			// IPv4 of the peer, for the login throttle
+	unsigned int	addr;			// IPv4 of the peer
+	// of the request, filled in before it is handled
+	unsigned int	peer;			// who asks, for the wait after wrong logins and the log: addr, or behind g_webProxy who the proxy says it is
+	qboolean		proxied;		// it came through g_webProxy
+	qboolean		https;			// and the visitor speaks HTTPS with the proxy
+	waRole_t		role;
+	char			user[WA_USER_NAME];
+	int				session;		// the session it is logged in by, -1: none or a token
 	char		request[WA_MAX_REQUEST + 1];
 	int			requestLen;
 	waBuffer_t	response;
@@ -85,7 +105,6 @@ void WA_Respond( waConnection_t *c, int status, const char *statusText, const ch
 void WA_RespondText( waConnection_t *c, int status, const char *statusText, const char *text );
 void WA_RespondJson( waConnection_t *c, waBuffer_t *json );
 void WA_LogUse( const waConnection_t *c, const char *what );
-qboolean WA_CheckAuth( const char *head );
 qboolean WA_AuthThrottle( unsigned int addr );
 void WA_AuthResult( unsigned int addr, qboolean ok );
 qboolean WA_FormValue( const char *form, const char *key, char *out, int outSize );
@@ -94,6 +113,15 @@ char *WA_ReadGameFile( const char *path, int *outLen );
 void WA_BufLatin1AsUtf8( waBuffer_t *b, const char *text, int len );
 int WA_TextBody( char *text );
 qboolean WA_WriteGameFile( const char *path, const char *data, int len );
+
+// wa_auth.c
+const char *WA_RoleName( waRole_t role );
+void WA_AuthInit( void );
+void WA_AuthShutdown( void );
+qboolean WA_AuthHasUsers( void );
+void WA_AuthRequest( waConnection_t *c, const char *head );
+qboolean WA_AuthRoute( waConnection_t *c, const char *method, const char *path, const char *head, const char *body );
+qboolean WA_AuthConsoleCommand( const char *cmd );
 
 // wa_state.c
 const char *WA_TeamName( team_t team );
@@ -158,6 +186,7 @@ void WA_ChatInit( void );
 void WA_ApiChat( waConnection_t *c, const char *query );
 void WA_ApiLog( waConnection_t *c, const char *query );
 void WA_ApiConsole( waConnection_t *c, const char *query );
+void WA_ApiIds( waConnection_t *c, const char *query );
 void WA_ApiCommand( waConnection_t *c, const char *body );
 
 // wa_routes.c

@@ -57,6 +57,9 @@ order of the template, so a file may only use there what a file before it has ma
 | `js/editor-remaps.js` | the texture swap: a shader of the map drawn as another one, for every player, with the pictures of the shaders and the marks on the map |
 | `js/editor-textures.js` | for the texture swap: the textures of the game to choose from, below the map view, and the test object that is drawn with one |
 | `js/bans.js` | the bans |
+| `js/qr.js` | a QR code for a short text, for the address an authenticator app scans |
+| `js/account.js` | the tab Account: the password, the second step of the login, tokens, one-time codes for the game, the accounts; and what a role does not show |
+| `login.html` | the page of the login, a file of its own that is not part of the template: a visitor who is not logged in gets it and nothing else |
 | `js/editor-select.js` | several entities at once |
 | `js/editor-history.js` | undo and redo |
 | `js/g2.js` | Ghoul2 models with their animations |

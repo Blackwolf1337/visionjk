@@ -460,6 +460,16 @@ void SV_SpawnServer( char *server, qboolean killBots, ForceReload_e eForceReload
 
 	SV_SendMapChange();
 
+	// a config from before this server lost its rcon (SVC_NoRemoteCommand) still sets the password
+	if ( com_dedicated->integer && *Cvar_VariableString( "rconPassword" ) ) {
+		static qboolean said;
+
+		if ( !said ) {
+			said = qtrue;
+			Com_Printf( S_COLOR_YELLOW "rconPassword is set, but this server takes no rcon. Take the line out of the config, admins use the web panel (g_webPort)\n" );
+		}
+	}
+
 	Com_LoadBegin( server );
 	Com_LoadPush( "server: end of the level before", NULL );
 	re->RegisterMedia_LevelLoadBegin(server, eForceReload);
@@ -986,6 +996,8 @@ void SV_Init (void) {
 	sv_maxPing = Cvar_Get ("sv_maxPing", "0", CVAR_ARCHIVE_ND | CVAR_SERVERINFO );
 	sv_floodProtect = Cvar_Get ("sv_floodProtect", "1", CVAR_ARCHIVE | CVAR_SERVERINFO, "Protect against flooding of server commands" );
 	sv_floodProtectSlow = Cvar_Get ("sv_floodProtectSlow", "1", CVAR_ARCHIVE | CVAR_SERVERINFO, "Use original method of delaying commands with flood protection" );
+	SV_IDS_Init();
+	sv_antiWallhack = Cvar_Get( "sv_antiWallhack", "0", CVAR_ARCHIVE, "1: a player no line of sight reaches is not sent to a client. Against wallhacks, and players behind walls are not heard either" );
 	// systeminfo
 	Cvar_Get ("sv_cheats", "1", CVAR_SYSTEMINFO | CVAR_ROM, "Allow cheats on server if set to 1" );
 	sv_serverid = Cvar_Get ("sv_serverid", "0", CVAR_SYSTEMINFO | CVAR_ROM );
@@ -996,7 +1008,6 @@ void SV_Init (void) {
 	Cvar_Get ("sv_referencedPakNames", "", CVAR_SYSTEMINFO | CVAR_ROM );
 
 	// server vars
-	sv_rconPassword = Cvar_Get ("rconPassword", "", CVAR_TEMP );
 	sv_privatePassword = Cvar_Get ("sv_privatePassword", "", CVAR_TEMP );
 	sv_snapsMin = Cvar_Get ("sv_snapsMin", "10", CVAR_ARCHIVE_ND ); // 1 <=> sv_snapsMax
 	sv_snapsMax = Cvar_Get ("sv_snapsMax", "40", CVAR_ARCHIVE_ND ); // sv_snapsMin <=> sv_fps
@@ -1117,6 +1128,7 @@ void SV_Shutdown( char *finalmsg )
 	SV_RemoveOperatorCommands();
 	SV_MasterShutdown();
 	SV_ChallengeShutdown();
+	SV_IDS_Shutdown();
 	SV_ShutdownGameProgs();
 	svs.gameStarted = qfalse;
 /*

@@ -37,7 +37,6 @@ cvar_t	*sv_snapsPolicy;		// 0-2
 cvar_t	*sv_fps = NULL;				// time rate for running non-clients
 cvar_t	*sv_timeout;			// seconds without any message
 cvar_t	*sv_zombietime;			// seconds to sink messages after disconnect
-cvar_t	*sv_rconPassword;		// password for remote server commands
 cvar_t	*sv_privatePassword;	// password for the privateClient slots
 cvar_t	*sv_maxclients;
 cvar_t	*sv_privateClients;		// number of clients reserved for password
@@ -556,73 +555,30 @@ void SVC_Info( const netadr_t *from ) {
 }
 
 /*
-================
-SVC_FlushRedirect
-
-================
-*/
-void SV_FlushRedirect( char *outputbuf ) {
-	NET_OutOfBandPrint( NS_SERVER, &svs.redirectAddress, "print\n%s", outputbuf );
-}
-
-/*
 ===============
-SVC_RemoteCommand
+SVC_NoRemoteCommand
 
-An rcon packet arrived from the network.
-Shift down the remaining args
-Redirect all printfs
+An rcon packet arrived from the network. This server takes none: the password went over the wire in the clear
+with every command, anybody could try passwords at the rate of the limiter, and what a command printed went
+back to an address nobody had checked. The web panel of the game module does that work (docs/japlus/webadmin.md),
+the console of the server stays. The sender is told so, at most once a second, and the intrusion detection
+counts every one of them.
 ===============
 */
-void SVC_RemoteCommand( const netadr_t *from, msg_t *msg ) {
-	qboolean	valid;
-	char		remaining[1024];
-	// TTimo - scaled down to accumulate, but not overflow anything network wise, print wise etc.
-	// (OOB messages are the bottleneck here)
-#define	SV_OUTPUTBUF_LENGTH	(1024 - 16)
-	char		sv_outputbuf[SV_OUTPUTBUF_LENGTH];
-	char		*cmd_aux;
+static void SVC_NoRemoteCommand( const netadr_t *from ) {
+	static int	lastTime;
+	const int	now = Sys_Milliseconds();
 
-	if ( !strlen( sv_rconPassword->string ) ||
-		strcmp (Cmd_Argv(1), sv_rconPassword->string) ) {
-		valid = qfalse;
-		Com_Printf ("Bad rcon from %s: %s\n", NET_AdrToString (from), Cmd_ArgsFrom(2) );
-	} else {
-		valid = qtrue;
-		Com_Printf ("Rcon from %s: %s\n", NET_AdrToString (from), Cmd_ArgsFrom(2) );
+	if ( now - lastTime < 1000 && now >= lastTime ) {
+		return;
 	}
-
-	// start redirecting all print outputs to the packet
-	svs.redirectAddress = *from;
-	Com_BeginRedirect (sv_outputbuf, SV_OUTPUTBUF_LENGTH, SV_FlushRedirect);
-
-	if ( !strlen( sv_rconPassword->string ) ) {
-		Com_Printf ("No rconpassword set.\n");
-	} else if ( !valid ) {
-		Com_Printf ("Bad rconpassword.\n");
-	} else {
-		remaining[0] = 0;
-
-		// https://zerowing.idsoftware.com/bugzilla/show_bug.cgi?id=543
-		// get the command directly, "rcon <pass> <command>" to avoid quoting issues
-		// extract the command by walking
-		// since the cmd formatting can fuckup (amount of spaces), using a dumb step by step parsing
-		cmd_aux = Cmd_Cmd();
-		cmd_aux+=4;
-		while(cmd_aux[0]==' ')
-			cmd_aux++;
-		while(cmd_aux[0] && cmd_aux[0]!=' ') // password
-			cmd_aux++;
-		while(cmd_aux[0]==' ')
-			cmd_aux++;
-
-		Q_strcat( remaining, sizeof(remaining), cmd_aux);
-
-		Cmd_ExecuteString (remaining);
-	}
-
-	Com_EndRedirect ();
+	lastTime = now;
+	Com_Printf( "rcon from %s: this server takes no remote commands\n", NET_AdrToString( from ) );
+	NET_OutOfBandPrint( NS_SERVER, from, "print\nThis server has no rcon.\n" );
 }
+
+// a connectionless packet is a few words, the longest (connect, with a userinfo) well under this
+#define SVC_MAX_SIZE	1400
 
 // dos protection whitelist
 
@@ -714,6 +670,7 @@ void SV_ConnectionlessPacket( const netadr_t *from, msg_t *msg ) {
 			if (com_developer && com_developer->integer) {
 				Com_Printf("SV_ConnectionlessPacket: Rate limit from %s exceeded, dropping request\n", NET_AdrToString(from));
 			}
+			SV_IDS_Event( from, NULL, IDS_OOB_FLOOD, NULL );
 			return;
 		}
 	}
@@ -736,6 +693,11 @@ void SV_ConnectionlessPacket( const netadr_t *from, msg_t *msg ) {
 		Com_Printf("SV_ConnectionlessPacket: Rate limit exceeded, dropped %d requests\n", dropped);
 		dropped = 0;
 		lastMsg = now;
+	}
+
+	if ( msg->cursize > SVC_MAX_SIZE ) {
+		SV_IDS_Event( from, NULL, IDS_OOB_SIZE, va( "%i bytes", msg->cursize ) );
+		return;
 	}
 
 	MSG_BeginReadingOOB( msg );
@@ -764,7 +726,8 @@ void SV_ConnectionlessPacket( const netadr_t *from, msg_t *msg ) {
 	} else if (!Q_stricmp(c, "ipAuthorize")) {
 		// ...
 	} else if (!Q_stricmp(c, "rcon")) {
-		SVC_RemoteCommand( from, msg );
+		SV_IDS_Event( from, NULL, IDS_RCON, NULL );
+		SVC_NoRemoteCommand( from );
 	} else if (!Q_stricmp(c, "disconnect")) {
 		// if a client starts up a local server, we may see some spurious
 		// server disconnect messages when their new server sees our final
@@ -774,6 +737,7 @@ void SV_ConnectionlessPacket( const netadr_t *from, msg_t *msg ) {
 			Com_Printf( "bad connectionless packet from %s:\n%s\n",
 				NET_AdrToString( from ), s );
 		}
+		SV_IDS_Event( from, NULL, IDS_OOB_UNKNOWN, s );
 	}
 }
 
@@ -792,6 +756,10 @@ void SV_PacketEvent( const netadr_t *from, msg_t *msg ) {
 
 	// check for connectionless packet (0xffffffff) first
 	if ( msg->cursize >= 4 && *(int *)msg->data == -1) {
+		// not from an address the intrusion detection has blocked, see sv_ids.cpp
+		if ( SV_IDS_Blocked( from ) ) {
+			return;
+		}
 		SV_ConnectionlessPacket( from, msg );
 		return;
 	}
@@ -843,6 +811,8 @@ void SV_PacketEvent( const netadr_t *from, msg_t *msg ) {
 				cl->lastPacketTime = svs.time;	// don't timeout
 				SV_ExecuteClientMessage( cl, msg );
 			}
+		} else if ( netchan_anomaly && cl->state != CS_ZOMBIE ) {
+			SV_IDS_Event( from, cl, IDS_FRAGMENT, NULL );
 		}
 		return;
 	}

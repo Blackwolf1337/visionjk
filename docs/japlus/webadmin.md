@@ -28,23 +28,95 @@ The page is compiled into `jampgame`, the server needs no extra files and no ext
 
 ## Turning it on
 
-The panel only starts when a password is set. In the server config:
+The panel starts when it has an account and a port. On the console of the server:
 
 ```
-seta g_webPassword "something long"
+webuser add emir owner
+```
+
+prints a password once. In the server config:
+
+```
 seta g_webPort 8080
 seta g_webBind "0.0.0.0"
 ```
 
 | Cvar | Default | Meaning |
 |------|---------|---------|
-| `g_webPassword` | empty | password of the panel. Empty: the panel is off |
 | `g_webPort` | 80 | TCP port. Below 1024 needs root on Linux |
 | `g_webBind` | 0.0.0.0 | IPv4 address to listen on. `0.0.0.0` or empty: every interface, the panel is reached from the network. `127.0.0.1`: this machine only. A value that is no address: 127.0.0.1, with a line in the log |
+| `g_webProxy` | empty | the IPv4 address of the reverse proxy in front of the panel. Then only that address is let in, see "Behind a reverse proxy" |
+| `g_webBasicAuth` | 0 | 1: a script may send the token of its account as the password of basic auth behind the name of the account |
+| `g_webPassword` | empty | from before the accounts. A server that has it and no account yet gets the account `owner` with that password at its next map, once. It is not read after that: take it out of the config |
 | `g_webRoot` | empty | folder with the files of the page (`codemp/game/webadmin/page` of the source), served instead of the built in page, for working on the page: the server puts `index.html` and the files it includes together at every load |
 
-The first three are latched, they take effect at the next map start. Open `http://server:8080/` and log in with
-any user name and the password (HTTP basic auth).
+Port and bind are latched, they take effect at the next map start. Open `http://server:8080/` and log in.
+
+## Accounts and logging in
+
+`wa_auth.c`, `wa_totp.c`, the page of the login is `page/login.html`. Since 2026-10-11. Before that the panel
+had one password for everybody, which the browser sent with every request (HTTP basic auth).
+
+| Role | May |
+|------|-----|
+| moderator | look at the game, and everything that is done to a player: kick, ban, team, sleep, teleport and the like, the bans |
+| admin | also the editor, the clips, the textures, the routes, a controlled player, change the map, add bots, make a player an admin of the game, read the log, the console and what the intrusion detection wrote down, make one-time codes for the three ranks of JA+ |
+| owner | also run commands on the console, the server config, the file manager, the accounts, one-time codes for the rank with every right |
+
+The page does not show what a role may not use, and the server refuses it whatever the page shows
+(`WA_RouteRole`, and for the actions `WA_ApiAction`).
+
+- An account is a name, a role and a password. The password is kept as an Argon2id hash (12 MiB, three passes,
+  a salt of 16 bytes) in `webadmin_users.dat` of the game folder. Hashing takes some 20 ms of the frame it
+  happens in, so one password is hashed in a second for the whole server at most, a second try at the same
+  time is told to come again.
+- `webuser` on the console of the server lists the accounts. `webuser add <name> <moderator|admin|owner>`,
+  `webuser reset <name>` (a new password, the second step and the token off, the sessions closed),
+  `webuser role <name> <role>`, `webuser token <name>` (a token for a script, shown once),
+  `webuser remove <name>`. An owner does the same on the Account tab. A password the server makes is shown once
+  and meant to be changed. The first account opens the port right away, no new map is needed.
+- A login gives a session: 32 random bytes in a cookie (`HttpOnly`, `SameSite=Strict`, `Secure` behind a proxy
+  that speaks HTTPS). It ends after 30 minutes without a request and after 12 hours at the latest. The server
+  keeps the SHA-256 of the cookie, also over a change of the map (`webadmin_sessions.dat`). A page whose
+  session ran out loads the login again.
+- The second step (Account tab, "Set up"): the server makes a secret, an authenticator app scans it as a QR
+  code or a password manager takes its `otpauth://` address, and a first code switches it on. From then on the
+  login asks for the code of six digits (RFC 6238, SHA-1, 30 seconds, the step before and after count too, no
+  code twice). Eight recovery codes are shown once, each opens the account one time.
+- A script gets a token of its account (Account tab): `curl -H "Authorization: Bearer <token>" .../api/state`.
+  It may do what the account may and never has the password.
+- A browser can log in with a key in place of a password: the page of the login makes an Ed25519 key the
+  browser can not hand out, its public line goes into `admin_keys.txt` of the game folder behind a rank (the
+  file of the login in the game, see server.md), and the browser signs what the server asks. `rcon` is an
+  owner, `council` an admin, `knight` and `instructor` a moderator. Browsers only do that on HTTPS (or on the
+  machine itself), and not all of them know this kind of key: where one does not, the page does not offer it.
+- Wrong logins make an address wait (five, then 30 seconds that double) and the account as well (five, then 30
+  seconds that double up to five minutes). Every login and every wrong one is in the security log with the
+  address and the account.
+- A one-time code for the game (Account tab, an admin and up): for an admin in the game whose client can not
+  log in with a key. He types `amlogin <code>` within a minute, it works once.
+
+## Behind a reverse proxy
+
+The panel speaks plain HTTP. On a network that is not your own it belongs behind a reverse proxy that speaks
+HTTPS, and it should never be reachable from the internet without one: a session cookie that crosses the
+network in the clear can be taken along.
+
+```
+seta g_webBind "0.0.0.0"          // or the address of the interface the proxy reaches
+seta g_webProxy "192.168.20.20"   // the address the proxy connects from
+```
+
+With `g_webProxy` set only that address is let in, every other connection is closed at once. The proxy says
+who the visitor is: `X-Real-IP`, else the last entry of `X-Forwarded-For`. That address gets the wait after
+wrong logins and stands in the log. With `X-Forwarded-Proto: https` the cookie of a session is marked `Secure`.
+
+Nginx Proxy Manager: a proxy host for the name of the panel, scheme `http`, the address and port of the game
+server, "Block Common Exploits" on, "Websockets Support" off (the panel has none). On the SSL tab a
+certificate, "Force SSL", "HTTP/2 Support" and "HSTS Enabled". It sends `Host`, `X-Real-IP`,
+`X-Forwarded-For` and `X-Forwarded-Proto` by itself, nothing has to go into the Advanced tab. An access list
+(a second password of the proxy, or addresses that may come) in front of it does no harm. Opening the port of
+the proxy to the internet is a rule of the router and the firewall, which this text does not change.
 
 ## What the page does
 
@@ -1866,18 +1938,22 @@ To take a later JKAdmin commit: apply its diff and keep the `JA+` blocks in `WA_
   every class the editor offers is placed bare by a check (`steps_guard.js`) and the server has to be there
   after it. What that does not cover: keys with values that are wrong, and other game types.
 - The lights of a map can not be shown: the compiler takes them out of the map file.
-- Plain HTTP with basic auth, and it listens on every interface unless `g_webBind` says otherwise: the password
-  crosses the network as it is with every request. Where that network is not your own, set `g_webBind 127.0.0.1`
-  and use an SSH tunnel, or put a reverse proxy with HTTPS in front. The security pass had made localhost the
-  default; since 2026-10-08 it is every interface again, by decision of the owner of this fork, who opens the
-  panel from other machines. A config that still has `g_webBind ""` from that time listens on every interface
-  now.
-- `g_webPassword` is an archived cvar. The server writes it in clear text into `visionjk_server.cfg` in its home
-  path, and it shows in the process list when it is given on the command line.
+- Plain HTTP, and it listens on every interface unless `g_webBind` says otherwise: the password of a login and
+  the cookie of a session cross the network as they are. Where that network is not your own, put a reverse
+  proxy with HTTPS in front (`g_webProxy`, see "Behind a reverse proxy"), or set `g_webBind 127.0.0.1` and use
+  an SSH tunnel. The security pass had made localhost the default; since 2026-10-08 it is every interface
+  again, by decision of the owner of this fork, who opens the panel from other machines. A config that still
+  has `g_webBind ""` from that time listens on every interface now.
+- A password is hashed in the frame of the game it arrives in: about 20 ms in which the server does nothing
+  else. One a second at most, so a flood of logins costs every player at most one late frame a second.
+- An owner of the panel owns the server: the console runs anything, the file manager writes any file of the
+  game folder. An admin does not have those two, but he can make a player an admin of the game and change the
+  map.
+- A visitor behind the proxy who has no IPv4 address is told apart by a number made from the text of his
+  address, which stands in the log in place of it.
 - Whoever can connect can occupy the 32 connections, then the panel does not answer until they time out. The game
   is not affected.
-- With the panel off the server prints one line at every map start ("Web admin is off, set g_webPassword to
-  start it").
+- With the panel off the server prints one line at every map start ("Web admin is off: it has no account").
 - Entities the game code made itself (JA+ blocking walls, hooks, effects) have no keys. The editor can only delete
   them, and the JA+ code is not told about it.
 - The chat view shows team chat, tells, clan chat and admin chat too, like `games.log` does. The server keeps 128
@@ -1886,8 +1962,9 @@ To take a later JKAdmin commit: apply its diff and keep the `JA+` blocks in `WA_
 The panel went through the security pass in [security.md](security.md). Fixed there: the `Content-Length`
 overflow, requests from other sites (an `Origin` check on every POST), the password compare (now constant time)
 and a wait after wrong passwords, guarded allocations, the base64 decoder, and the localhost default bind. The IP
-of a ban is checked before it goes into a console line. Open items above (plain HTTP, the editor ending the
-server) stand.
+of a ban is checked before it goes into a console line. Since 2026-10-11 the one password is gone: accounts with
+roles, sessions, a second step, tokens and a proxy mode took its place (see "Accounts and logging in"). Open
+items above (plain HTTP without a proxy, the editor ending the server) stand.
 
 ## What was tested
 

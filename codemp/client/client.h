@@ -467,6 +467,27 @@ void CL_GetClipboard( char *buf, int buflen );		// cl_uiapi.cpp
 void CL_SetClipboard( const char *text );
 void CL_SetUIPlane( const float *matrix );		// cl_scrn.cpp
 
+//
+// cl_ids.cpp: the intrusion detection. The order is the one of its table of names.
+//
+typedef enum clIdsEvent_e {
+	CLIDS_OOB_SOURCE,
+	CLIDS_ECHO,
+	CLIDS_MESSAGE,
+	CLIDS_DOWNLOAD,
+	CLIDS_FRAGMENT,
+	CLIDS_GAMEDIR,
+	CLIDS_COMMAND_FLOOD,
+	CLIDS_COMMAND_TEXT,
+	CLIDS_NUM_EVENTS
+} clIdsEvent_t;
+
+void CL_IDS_Init( void );
+void CL_IDS_Shutdown( void );
+void CL_IDS_Connect( void );
+void CL_IDS_Event( clIdsEvent_t event, const netadr_t *from, const char *detail );
+void CL_IDS_ServerCommand( char *text );
+
 void CL_StartHunkUsers( void );
 
 qboolean CL_GetSnapshot( int snapshotNumber, snapshot_t *snapshot );

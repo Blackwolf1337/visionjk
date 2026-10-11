@@ -150,6 +150,35 @@ endif()
 source_group("cgame/voice" FILES ${MPCGameVoiceFiles})
 set(MPCGameFiles ${MPCGameFiles} ${MPCGameVoiceFiles})
 
+# Admin login with a key: the command amkey, the key file, the ssh-agent. bg_auth.c is the part the game module
+# shares, Monocypher signs. A browser has neither a key file nor an agent, there the command only says so.
+set(MPCGameAuthFiles
+	"${MPDir}/cgame/auth/cg_auth.c"
+	"${MPDir}/cgame/auth/cg_auth_agent.c"
+	"${MPDir}/cgame/auth/cg_auth_agent.h"
+	"${MPDir}/game/auth/bg_auth.h"
+	)
+if(NOT EMSCRIPTEN)
+	set(MPCGameAuthFiles ${MPCGameAuthFiles}
+		"${MPDir}/game/auth/bg_auth.c"
+		"${VisionJKLibDir}/monocypher/monocypher.c"
+		"${VisionJKLibDir}/monocypher/monocypher.h"
+		"${VisionJKLibDir}/monocypher/monocypher-ed25519.c"
+		"${VisionJKLibDir}/monocypher/monocypher-ed25519.h"
+		"${SharedDir}/web/web_base64.c"
+		"${SharedDir}/web/web_sha256.c"
+		"${SharedDir}/web/web_http.h"
+		)
+	set(MPCGameIncludeDirectories ${MPCGameIncludeDirectories} "${VisionJKLibDir}/monocypher")
+endif()
+# gcc warns of reads behind an array in the SHA-512 of Monocypher where it works out a call with 32 bytes: the
+# branch it means is never taken with that length. The file is left as its authors ship it.
+if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
+	set_source_files_properties("${VisionJKLibDir}/monocypher/monocypher-ed25519.c" PROPERTIES COMPILE_OPTIONS "-Wno-array-bounds")
+endif()
+source_group("cgame/auth" FILES ${MPCGameAuthFiles})
+set(MPCGameFiles ${MPCGameFiles} ${MPCGameAuthFiles})
+
 # the chat box: history, tabs, marking and copying, links, and its own line to type in
 set(MPCGameChatFiles
 	"${MPDir}/cgame/chat/cg_chat.c"

@@ -403,3 +403,19 @@ tr.ent.draft .tn { opacity: .7; }
 #dbg input { width: auto; }
 #dbg select { padding: 1px 4px; }
 body.app-admin #dbg, body.app-admin .editorOnly, body.app-admin #tabs button[data-app="editor"], body.app-editor #tabs button[data-app="admin"] { display: none; }
+
+/* the tab Account, and what the role of an account does not show (js/account.js). The server refuses it anyway. */
+#pane-account h3 { margin: 0; padding: 8px 10px 0; font-size: 12px; text-transform: uppercase; letter-spacing: .4px; color: var(--muted); }
+#pane-account .tools input, #pane-account .tools select { width: 100%; }
+#pane-account .tools .inline select { flex: 1; }
+#pane-account textarea { width: 100%; height: 150px; font: 12px/1.35 ui-monospace, Menlo, Consolas, monospace; color: inherit; background: #0f0f12; border: 1px solid var(--line); border-radius: 3px; padding: 6px; resize: vertical; }
+#pane-account canvas { display: block; margin: 0 auto 6px; image-rendering: pixelated; border-radius: 3px; }
+#pane-account table { width: 100%; }
+#acctCode { font: 14px/1.4 ui-monospace, Menlo, Consolas, monospace; min-height: 20px; user-select: all; }
+#acctTotpSecret { user-select: all; color: var(--text); }
+body.role-moderator #appMode, body.role-moderator #botForm, body.role-moderator #mapForm, body.role-moderator #gravForm,
+body.role-moderator #tabs button[data-tab="log"], body.role-moderator #tabs button[data-tab="load"] { display: none !important; }
+body.role-moderator #tabs button[data-tab="config"], body.role-moderator #tabs button[data-tab="files"],
+body.role-admin #tabs button[data-tab="config"], body.role-admin #tabs button[data-tab="files"] { display: none !important; }
+/* the line that runs a command on the console is the owner's */
+body.role-moderator #logCmd, body.role-admin #logCmd { display: none !important; }

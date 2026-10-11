@@ -27,7 +27,7 @@
 
 <div id="side">
 	<div id="sideGrip" title="Drag to change the width of the side panel. A double click sets the usual width again."></div>
-	<div id="tabs"><button data-tab="players" data-app="admin" class="on">Players</button><button data-tab="world" data-app="editor">World</button><button data-tab="models" data-app="editor">Physical props</button><button data-tab="clips" data-app="editor">Clips</button><button data-tab="remaps" data-app="editor">Textures</button><button data-tab="routes" data-app="editor">Routes</button><button data-tab="mapinfo" data-app="editor">Map info</button><button data-tab="config" data-app="admin">Config</button><button data-tab="files" data-app="admin">Files</button><button data-tab="log" data-app="admin">Log</button><button data-tab="bans" data-app="admin">Bans</button><button data-tab="load" data-app="admin">Performance</button></div>
+	<div id="tabs"><button data-tab="players" data-app="admin" class="on">Players</button><button data-tab="world" data-app="editor">World</button><button data-tab="models" data-app="editor">Physical props</button><button data-tab="clips" data-app="editor">Clips</button><button data-tab="remaps" data-app="editor">Textures</button><button data-tab="routes" data-app="editor">Routes</button><button data-tab="mapinfo" data-app="editor">Map info</button><button data-tab="config" data-app="admin">Config</button><button data-tab="files" data-app="admin">Files</button><button data-tab="log" data-app="admin">Log</button><button data-tab="bans" data-app="admin">Bans</button><button data-tab="load" data-app="admin">Performance</button><button data-tab="account" data-app="admin">Account</button></div>
 	<div class="pane on" id="pane-players">
 		<h2><span>Players</span><span id="playerCount">0</span></h2>
 		<div class="scroll">
@@ -133,6 +133,66 @@
 		<div class="scroll"><table><tbody id="banRows"></tbody></table></div>
 		<div class="hint" style="padding:8px 10px">The addresses that may not connect (banIPs.txt of the server). A * stands for any number. "Ban" in the panel of a player puts his address here and kicks him, "Unban" lets an address connect again.</div>
 	</div>
+	<div class="pane" id="pane-account">
+		<h2><span>Account</span><span id="acctWho"></span></h2>
+		<div class="scroll">
+			<div class="tools"><button id="acctLogout">Log out</button></div>
+			<div id="acctOnce" class="tools" hidden>
+				<div class="hint" id="acctOnceTitle" style="margin:0"></div>
+				<textarea id="acctOnceText" readonly spellcheck="false"></textarea>
+				<button id="acctOnceClose">I have it, hide it</button>
+			</div>
+			<div id="acctOwn">
+				<h3>Password</h3>
+				<form class="tools" id="acctPassForm" autocomplete="off">
+					<input type="password" id="acctPassOld" placeholder="The password you have" autocomplete="current-password" maxlength="128" required>
+					<input type="password" id="acctPassNew" placeholder="The new one, ten characters at least" autocomplete="new-password" minlength="10" maxlength="128" required>
+					<input type="password" id="acctPassAgain" placeholder="The new one again" autocomplete="new-password" maxlength="128" required>
+					<button>Change password</button>
+				</form>
+				<h3>Second step of the login</h3>
+				<div class="tools">
+					<div class="hint" id="acctTotpState" style="margin:0"></div>
+					<button id="acctTotpStart">Set up</button>
+					<button id="acctTotpOff" class="danger" hidden>Switch off</button>
+					<div id="acctTotpSetup" hidden>
+						<canvas id="acctTotpQr"></canvas>
+						<div class="hint">Scan this with an authenticator app, or copy the address below into your password manager. By hand: the secret <b id="acctTotpSecret"></b>, by time, SHA-1, six digits, 30 seconds.</div>
+						<input id="acctTotpUri" readonly spellcheck="false">
+						<form class="inline" id="acctTotpForm" autocomplete="off"><input id="acctTotpCode" placeholder="The code the app shows" inputmode="numeric" maxlength="7" required><button>Switch on</button></form>
+					</div>
+					<div class="hint" style="margin:0">A code of six digits from an app on your phone or from your password manager, a new one every 30 seconds, asked for after the password.</div>
+				</div>
+				<h3>Token for scripts</h3>
+				<div class="tools">
+					<div class="hint" id="acctTokenState" style="margin:0"></div>
+					<div class="inline"><button id="acctTokenNew">Make a token</button><button id="acctTokenOff" class="danger" hidden>Remove it</button></div>
+					<div class="hint" style="margin:0">A script sends it as "Authorization: Bearer &lt;token&gt;" and may do what this account may. It never gets the password.</div>
+				</div>
+			</div>
+			<div id="acctCodes">
+				<h3>One-time code for the game</h3>
+				<div class="tools">
+					<form class="inline" id="acctCodeForm"><select id="acctCodeRank"><option value="instructor">instructor</option><option value="knight">knight</option><option value="council">council</option><option value="rcon">rcon (every right)</option></select><button>Make a code</button></form>
+					<div id="acctCode"></div>
+					<div class="hint" id="acctCodeHint" style="margin:0"></div>
+				</div>
+			</div>
+			<div id="acctOwner">
+				<h3>Accounts of the panel</h3>
+				<div class="tools">
+					<table><tbody id="acctUsers"></tbody></table>
+					<form class="inline" id="acctAddForm" autocomplete="off"><input id="acctAddName" placeholder="Name" maxlength="23" spellcheck="false" required><select id="acctAddRole"><option>moderator</option><option>admin</option><option>owner</option></select><button>Add</button></form>
+					<div class="hint" style="margin:0">A moderator has the players (kick, ban, team and the like). An admin has the editor, the map and the log as well. An owner also has the console of the server, its config, its files and these accounts. A new account gets a password from the server, which is shown once.</div>
+				</div>
+				<h3>Keys of admin_keys.txt</h3>
+				<div class="tools">
+					<table><tbody id="acctKeys"></tbody></table>
+					<div class="hint" style="margin:0">These keys log in to the game with "amkey login" and to this panel from the page of the login: rcon as an owner, council as an admin, knight and instructor as a moderator. The file is in the game folder of the server and is read with every map.</div>
+				</div>
+			</div>
+		</div>
+	</div>
 	<div class="pane" id="pane-load">
 		<h2><span>Server load</span><span id="perfSpan"></span></h2>
 		<div class="scroll">
@@ -144,13 +204,14 @@
 	<div class="pane" id="pane-log">
 		<h2><span>Server log</span><span id="logSize"></span></h2>
 		<div class="tools">
-			<div id="logSource"><button data-log="log" class="on" title="The log of the game: who came and went, kills, chat, the commands of admins">Game log</button><button data-log="console" title="What the server prints on its console">Server console</button></div>
+			<div id="logSource"><button data-log="log" class="on" title="The log of the game: who came and went, kills, chat, the commands of admins">Game log</button><button data-log="console" title="What the server prints on its console">Server console</button><button data-log="ids" title="What the intrusion detection of the server noticed: packets no client of the game sends, and who was blocked for them">Intrusions</button></div>
 			<div class="inline"><input id="logFilter" placeholder="Show only lines with" spellcheck="false" autocomplete="off"></div>
 			<div class="inline"><label class="hint" style="margin:0"><input type="checkbox" id="logFollow" checked style="width:auto"> follow the end</label><button id="logClear" style="margin-left:auto" title="Empties the view of what is shown, the server keeps its text">Clear view</button></div>
 			<div class="hint" id="logState" style="margin:0"></div>
 		</div>
 		<div class="hint" style="padding:0 10px">Game log is the log of the game as the server writes it: who came and went, kills, chat, the commands of admins. The whole file is games.log in the Files tab. Server console shows what the server prints on its console.</div>
-		<div class="hint" style="padding:0 10px">Both start with their last lines and follow the text as it grows. A command typed into the line under the text runs as if it was typed on the server console, and the view goes to the console for its answer. The arrow keys up and down bring back the commands typed before.</div>
+		<div class="hint" style="padding:0 10px">Intrusions is ids.log: what arrived that no client of the game sends, from which address, and which addresses were blocked for it (sv_ids). "idsstatus" on the console lists the addresses, "idsunblock" lifts a block.</div>
+		<div class="hint" style="padding:0 10px">All three start with their last lines and follow the text as it grows. A command typed into the line under the text runs as if it was typed on the server console, and the view goes to the console for its answer. The arrow keys up and down bring back the commands typed before.</div>
 	</div>
 	<div class="pane" id="pane-files">
 		<h2><span>Files</span><span id="fsCount"></span></h2>
@@ -394,6 +455,8 @@
 <!--#include js/editor-remaps.js -->
 <!--#include js/editor-textures.js -->
 <!--#include js/bans.js -->
+<!--#include js/qr.js -->
+<!--#include js/account.js -->
 <!--#include js/editor-select.js -->
 <!--#include js/editor-history.js -->
 <!--#include js/g2.js -->

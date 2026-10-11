@@ -357,6 +357,85 @@ static void SV_AddEntToSnapshot( svEntity_t *svEnt, sharedEntity_t *gEnt, snapsh
 
 /*
 ===============
+SV_PlayerHidden
+
+sv_antiWallhack. A client is told of every player the map lets through to where it stands (the PVS, which goes by
+rooms and not by walls), and a cheat draws those players through the walls. With the cvar on, a player nobody
+could see from the eye of the client is not in its snapshot at all, so there is nothing to draw.
+
+"Could see" errs on the side of sending him: lines from the eye to the middle of his box, to its top and bottom
+and to its eight corners, the box widened by 16 units and by where he will be in a fifth of a second. One line
+that is not stopped by the world is enough. Only the brushes of the map stop a line, and none that are drawn
+through (glass, grates) or not drawn (an unseen wall): doors and movers never hide anybody. Never hidden: a
+player closer than SV_WALLHACK_NEAR, anybody from somebody who watches (a spectator), and anybody from a
+player who uses Force Sight, which shows players through walls by the rules of the game.
+
+What it costs, and why it is off by default: a client that is not told of a player does not hear him either.
+Steps, sabers and shots behind a wall are silent until he comes into view.
+===============
+*/
+#define SV_WALLHACK_NEAR	384.0f
+#define SV_WALLHACK_AHEAD	0.2f		// seconds
+
+cvar_t	*sv_antiWallhack;
+
+static qboolean SV_SightLine( const vec3_t eye, const vec3_t point ) {
+	trace_t trace;
+
+	CM_BoxTrace( &trace, eye, point, vec3_origin, vec3_origin, 0, CONTENTS_SOLID, qfalse );
+	if ( trace.fraction == 1.0f || trace.startsolid ) {
+		return qtrue;
+	}
+	// stopped by something one sees through, or by something that is not drawn
+	return (qboolean)( ( trace.contents & CONTENTS_TRANSLUCENT ) || ( trace.surfaceFlags & ( SURF_NODRAW | SURF_SKY ) ) );
+}
+
+static qboolean SV_PlayerHidden( const vec3_t eye, const playerState_t *viewer, const sharedEntity_t *ent ) {
+	vec3_t	mins, maxs, point, delta;
+	int		i;
+
+	if ( ent->s.eType != ET_PLAYER ) {
+		return qfalse;
+	}
+	if ( viewer->pm_type == PM_SPECTATOR || viewer->pm_type == PM_INTERMISSION || ( viewer->pm_flags & PMF_FOLLOW )
+		|| ( viewer->fd.forcePowersActive & ( 1 << FP_SEE ) ) ) {
+		return qfalse;
+	}
+
+	// his box, with room for where he and the eye will be when the snapshot is drawn
+	for ( i = 0; i < 3; i++ ) {
+		const float ahead = fabsf( ent->s.pos.trDelta[i] ) * SV_WALLHACK_AHEAD + fabsf( viewer->velocity[i] ) * SV_WALLHACK_AHEAD + 16.0f;
+
+		mins[i] = ent->r.absmin[i] - ahead;
+		maxs[i] = ent->r.absmax[i] + ahead;
+		point[i] = ( mins[i] + maxs[i] ) * 0.5f;
+	}
+	VectorSubtract( point, eye, delta );
+	if ( VectorLengthSquared( delta ) < SV_WALLHACK_NEAR * SV_WALLHACK_NEAR ) {
+		return qfalse;
+	}
+
+	if ( SV_SightLine( eye, point ) ) {
+		return qfalse;
+	}
+	// the top and the bottom of the box above its middle, then its corners
+	for ( i = 0; i < 2; i++ ) {
+		point[2] = i ? mins[2] : maxs[2];
+		if ( SV_SightLine( eye, point ) ) {
+			return qfalse;
+		}
+	}
+	for ( i = 0; i < 8; i++ ) {
+		VectorSet( point, ( i & 1 ) ? maxs[0] : mins[0], ( i & 2 ) ? maxs[1] : mins[1], ( i & 4 ) ? maxs[2] : mins[2] );
+		if ( SV_SightLine( eye, point ) ) {
+			return qfalse;
+		}
+	}
+	return qtrue;
+}
+
+/*
+===============
 SV_AddEntitiesVisibleFromPoint
 ===============
 */
@@ -508,6 +587,11 @@ static void SV_AddEntitiesVisibleFromPoint( vec3_t origin, clientSnapshot_t *fra
 			{ //then don't add it
 				continue;
 			}
+		}
+
+		// a player no line of sight reaches, see SV_PlayerHidden()
+		if ( sv_antiWallhack->integer && e < sv_maxclients->integer && SV_PlayerHidden( origin, &frame->ps, ent ) ) {
+			continue;
 		}
 
 		// add it

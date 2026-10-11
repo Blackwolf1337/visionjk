@@ -14,3 +14,5 @@ if (!gl) {
 	try { wanted = localStorage.getItem('appMode') || 'admin'; } catch (e) { /* the administration then */ }
 	setAppMode(wanted);
 }
+// who is logged in: what his role may not use is taken off the page
+accountLoad();

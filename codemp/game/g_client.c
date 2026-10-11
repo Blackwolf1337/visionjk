@@ -4104,6 +4104,7 @@ void ClientDisconnect( int clientNum ) {
 	// hasn't spawned yet
 	G_RemoveQueuedBotBegin( clientNum );
 	G_VoiceClientGone( clientNum );
+	G_AuthClientGone( clientNum );
 
 	ent = g_entities + clientNum;
 	if ( !ent->client || ent->client->pers.connected == CON_DISCONNECTED ) {

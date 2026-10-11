@@ -26,14 +26,15 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // the map's .bsp and its textures, the live game state as JSON and a set of
 // admin actions (kick, ban, set health, scale, teleport, ...).
 //
-// It only starts when g_webPassword is set. Every request needs HTTP basic
-// auth with that password (any user name).
+// It only starts when it has an account (wa_auth.c). A visitor who is not logged in gets the page of the
+// login and nothing else.
 //
 // This file is the server itself: the connections, which request goes to which file, and what the game calls.
 // What the files are is in wa_local.h.
 
 #include "game/webadmin/wa_local.h"
 #include "webadmin_html.h"
+#include "webadmin_login.h"
 
 // A file of the game is read as it is sent, so much in a frame for one connection and so much for all of them.
 // Read in one go, a big one (the animations of the players, 8 MB out of a pk3) took a frame of 30 ms.
@@ -149,6 +150,90 @@ static qboolean WA_PageFromDisk( waBuffer_t *page ) {
 	return whole;
 }
 
+/*
+=================
+WA_Visitor
+
+Who asks. Behind a reverse proxy (g_webProxy) every connection is the proxy's, and the proxy says in a header
+whom it serves: X-Real-IP, which nginx writes itself, or the last entry of X-Forwarded-For, which is the proxy's
+too (what stands in front of it came from the visitor and can be anything). That address gets the wait after
+wrong logins and stands in the log. An address that is not IPv4 gets a number made from its text.
+=================
+*/
+static void WA_Visitor( waConnection_t *c, const char *head ) {
+	char			value[256];
+	const char		*text = value, *comma;
+	struct in_addr	address;
+
+	c->peer = c->addr;
+	c->proxied = c->https = qfalse;
+	if ( !g_webProxy.string[0] ) {
+		return;
+	}
+	c->proxied = qtrue;
+	if ( Web_HeaderValue( head, "X-Forwarded-Proto", value, sizeof( value ) ) && !Q_stricmp( value, "https" ) ) {
+		c->https = qtrue;
+	}
+	if ( !Web_HeaderValue( head, "X-Real-IP", value, sizeof( value ) ) ) {
+		if ( !Web_HeaderValue( head, "X-Forwarded-For", value, sizeof( value ) ) ) {
+			return;
+		}
+		comma = strrchr( value, ',' );
+		if ( comma ) {
+			text = comma + 1;
+		}
+	}
+	while ( *text == ' ' ) {
+		text++;
+	}
+	if ( inet_pton( AF_INET, text, &address ) == 1 ) {
+		c->peer = (unsigned int)address.s_addr;
+	} else if ( text[0] ) {
+		unsigned int hash = 2166136261u;
+
+		for ( ; *text; text++ ) {
+			hash = ( hash ^ (unsigned char)tolower( (unsigned char)*text ) ) * 16777619u;
+		}
+		c->peer = hash | 0xf0u;		// its first byte as it is printed is above 239: no address of a machine
+	}
+}
+
+/*
+=================
+WA_RouteRole
+
+What a request needs at least. Everybody who is logged in may look at the game. Who may change what, and what
+is nobody's business but the owner's, is said here and for the actions on players in WA_ApiAction().
+=================
+*/
+static waRole_t WA_RouteRole( const char *method, const char *path ) {
+	// the console runs anything, the config and the files hold the passwords of the server
+	if ( !strcmp( path, "/api/command" ) || !strcmp( path, "/api/config" ) || !strncmp( path, "/api/fs/", 8 ) ) {
+		return WA_ROLE_OWNER;
+	}
+	// what the console and the log print: addresses, and what the admins did
+	if ( !strcmp( path, "/api/console" ) || !strcmp( path, "/api/log" ) || !strcmp( path, "/api/ids" ) ) {
+		return WA_ROLE_ADMIN;
+	}
+	// every other change but the actions: the editor, the clips, the textures, the routes, a controlled player
+	if ( !strcmp( method, "POST" ) && strcmp( path, "/api/action" ) ) {
+		return WA_ROLE_ADMIN;
+	}
+	return WA_ROLE_MODERATOR;
+}
+
+// the page of the login, for a visitor who is not logged in
+static void WA_LoginPage( waConnection_t *c ) {
+	waBuffer_t page = { 0 };
+
+	if ( g_webRoot.string[0] && WA_PageFile( &page, "login.html" ) && page.len ) {
+		WA_Respond( c, 200, "OK", "text/html; charset=utf-8", "Cache-Control: no-store\r\n", page.data, page.len );
+	} else {
+		WA_Respond( c, 200, "OK", "text/html; charset=utf-8", "Cache-Control: no-store\r\n", webadmin_login, (int)webadmin_login_len );
+	}
+	WA_BufFree( &page );
+}
+
 static void WA_HandleRequest( waConnection_t *c, char *head, char *body, int bodyLen ) {
 	char	method[8], path[4096];
 	char	*query;
@@ -163,24 +248,12 @@ static void WA_HandleRequest( waConnection_t *c, char *head, char *body, int bod
 		return;
 	}
 
-	if ( WA_AuthThrottle( c->addr ) ) {
-		WA_Respond( c, 429, "Too Many Requests", "text/plain", "Retry-After: 30\r\n", "too many wrong passwords, wait", 30 );
+	WA_Visitor( c, head );
+	if ( WA_AuthThrottle( c->peer ) ) {
+		WA_Respond( c, 429, "Too Many Requests", "text/plain", "Retry-After: 30\r\n", "too many wrong logins, wait", 27 );
 		return;
 	}
-	if ( !WA_CheckAuth( head ) ) {
-		const qboolean tried = ( Web_FindHeader( head, "Authorization" ) != NULL );
-
-		// only count a wrong password, not the first request a browser sends without one
-		if ( tried ) {
-			WA_AuthResult( c->addr, qfalse );
-			WA_LogUse( c, "wrong password" );
-		}
-		WA_Respond( c, 401, "Unauthorized", "text/plain", "WWW-Authenticate: Basic realm=\"VisionJK web admin\"\r\n",
-			"login required", 14 );
-		return;
-	}
-	WA_AuthResult( c->addr, qtrue );
-
+	// before anything else, the login included: another site must not log a visitor in either
 	if ( !strcmp( method, "POST" ) && !Web_SameOrigin( head ) ) {
 		WA_RespondText( c, 403, "Forbidden", "request from another site refused" );
 		return;
@@ -191,6 +264,24 @@ static void WA_HandleRequest( waConnection_t *c, char *head, char *body, int bod
 		*query++ = '\0';
 	else
 		query = (char *)"";
+
+	WA_AuthRequest( c, head );
+	if ( WA_AuthRoute( c, method, path, head, body ) ) {
+		return;
+	}
+	if ( c->role == WA_ROLE_NONE ) {
+		// the page of the login for a browser that asks for a page, a plain no for everything else
+		if ( !strcmp( method, "GET" ) && strncmp( path, "/api/", 5 ) ) {
+			WA_LoginPage( c );
+		} else {
+			WA_Respond( c, 401, "Unauthorized", "application/json", "Cache-Control: no-store\r\n", "{\"ok\":false,\"why\":\"login\"}", 26 );
+		}
+		return;
+	}
+	if ( c->role < WA_RouteRole( method, path ) ) {
+		WA_Respond( c, 403, "Forbidden", "application/json", "Cache-Control: no-store\r\n", "{\"ok\":false,\"why\":\"role\"}", 25 );
+		return;
+	}
 
 	if ( !strcmp( method, "GET" ) && ( !strcmp( path, "/" ) || !strcmp( path, "/index.html" ) ) ) {
 		// g_webRoot serves the page from disk instead, for working on it without a restart
@@ -254,6 +345,8 @@ static void WA_HandleRequest( waConnection_t *c, char *head, char *body, int bod
 		WA_ApiLog( c, query );
 	} else if ( !strcmp( method, "GET" ) && !strcmp( path, "/api/console" ) ) {
 		WA_ApiConsole( c, query );
+	} else if ( !strcmp( method, "GET" ) && !strcmp( path, "/api/ids" ) ) {
+		WA_ApiIds( c, query );
 	} else if ( !strcmp( method, "POST" ) && !strcmp( path, "/api/command" ) ) {
 		WA_ApiCommand( c, body );
 	} else if ( !strcmp( method, "GET" ) && !strcmp( path, "/api/clips" ) ) {
@@ -390,6 +483,17 @@ static void WA_Accept( void ) {
 		if ( s == BG_INVALID_SOCKET )
 			return;
 
+		// With g_webProxy only the proxy is let in: it alone says who the visitor is (WA_Visitor), and anybody
+		// else who reached this port could say the same.
+		if ( g_webProxy.string[0] ) {
+			struct in_addr proxy;
+
+			if ( inet_pton( AF_INET, g_webProxy.string, &proxy ) != 1 || proxy.s_addr != from.sin_addr.s_addr ) {
+				BG_CloseSocket( s );
+				continue;
+			}
+		}
+
 		BG_SocketNonBlocking( s );
 #ifdef SO_NOSIGPIPE
 		{
@@ -423,23 +527,13 @@ Public
 ==============================================================================
 */
 
-void WebAdmin_Init( void ) {
+// Opens the port. With the first account, which may be made while a map runs ("webuser add" on the console).
+static void WA_Listen( void ) {
 	struct sockaddr_in	addr;
-	int					on = 1, i;
+	int					on = 1;
 	const char			*bindTo = "0.0.0.0";
 
-	for ( i = 0; i < WA_MAX_CONNECTIONS; i++ )
-		connections[i].sock = BG_INVALID_SOCKET;
-
-	// before anything can keep the panel off: the file of a reload must not wait for a later start of this map
-	WA_ReloadRead();
-
-	if ( !g_webPassword.string[0] ) {
-		if ( g_webPort.integer > 0 )
-			trap->Print( "Web admin is off, set g_webPassword to start it\n" );
-		return;
-	}
-	if ( g_webPort.integer <= 0 || g_webPort.integer > 65535 )
+	if ( WA_Running() || g_webPort.integer <= 0 || g_webPort.integer > 65535 )
 		return;
 
 	BG_NetStart();
@@ -480,6 +574,33 @@ void WebAdmin_Init( void ) {
 	WA_ChatInit();
 	listenPort = g_webPort.integer;
 	trap->Print( "Web admin listening on http://%s:%d/\n", bindTo, listenPort );
+	if ( g_webProxy.string[0] ) {
+		struct in_addr proxy;
+
+		if ( inet_pton( AF_INET, g_webProxy.string, &proxy ) == 1 ) {
+			trap->Print( "Web admin: only the reverse proxy %s is let in (g_webProxy)\n", g_webProxy.string );
+		} else {
+			trap->Print( S_COLOR_YELLOW "Web admin: g_webProxy \"%s\" is no IPv4 address, so nobody is let in\n", g_webProxy.string );
+		}
+	}
+}
+
+void WebAdmin_Init( void ) {
+	int i;
+
+	for ( i = 0; i < WA_MAX_CONNECTIONS; i++ )
+		connections[i].sock = BG_INVALID_SOCKET;
+
+	// before anything can keep the panel off: the file of a reload must not wait for a later start of this map
+	WA_ReloadRead();
+
+	WA_AuthInit();
+	if ( !WA_AuthHasUsers() ) {
+		if ( g_webPort.integer > 0 )
+			trap->Print( "Web admin is off: it has no account. \"webuser add <name> owner\" on this console makes the first one\n" );
+		return;
+	}
+	WA_Listen();
 }
 
 void WebAdmin_Frame( void ) {
@@ -538,7 +659,17 @@ void WebAdmin_Shutdown( void ) {
 		listenSocket = BG_INVALID_SOCKET;
 	}
 
+	WA_AuthShutdown();
 	WA_EntitiesShutdown();
 	WA_AssetsShutdown();
+}
+
+// "webuser" on the console of the server. The first account starts the panel.
+qboolean WebAdmin_ConsoleCommand( const char *cmd ) {
+	if ( !WA_AuthConsoleCommand( cmd ) )
+		return qfalse;
+	if ( WA_AuthHasUsers() )
+		WA_Listen();
+	return qtrue;
 }
 

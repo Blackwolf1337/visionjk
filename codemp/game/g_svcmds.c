@@ -687,6 +687,12 @@ qboolean	ConsoleCommand( void ) {
 	if ( JP_ConsoleCommand( cmd ) )
 		return qtrue;
 
+	if ( G_AuthConsoleCommand( cmd ) )
+		return qtrue;
+
+	if ( WebAdmin_ConsoleCommand( cmd ) )
+		return qtrue;
+
 	command = (svcmd_t *)Q_LinearSearch( cmd, svcmds, numsvcmds, sizeof( svcmds[0] ), svcmdcmp );
 	if ( !command )
 		return qfalse;

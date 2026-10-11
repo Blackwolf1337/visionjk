@@ -35,6 +35,9 @@ Same X-macro format as g_xcvar.h.
 #endif
 
 XCVAR_DEF( jp_admLoginEffect, "1", NULL, CVAR_ARCHIVE, qtrue )
+// not in JA+: the three rank passwords (amlogin, cp_login of a plugin) only count with 1. Without it an admin
+// logs in with a key (admin_keys.txt) or with a one-time code of the web panel, see auth/g_auth.c
+XCVAR_DEF( jp_adminPasswords, "0", NULL, CVAR_ARCHIVE, qfalse )
 XCVAR_DEF( jp_admScript, "1", NULL, CVAR_ARCHIVE, qtrue )
 XCVAR_DEF( jp_admUsableOn, "0", NULL, CVAR_ARCHIVE, qtrue )
 XCVAR_DEF( jp_allowAmDropSaber, "0", NULL, CVAR_ARCHIVE, qtrue )
@@ -68,6 +71,9 @@ XCVAR_DEF( jp_antiAdmAbuseTimer, "0", NULL, CVAR_ARCHIVE, qtrue )
 XCVAR_DEF( jp_antiHackModel, "1", NULL, CVAR_ARCHIVE, qtrue )
 XCVAR_DEF( jp_autoDuelBOW, "1", NULL, CVAR_ARCHIVE, qtrue )
 XCVAR_DEF( jp_autoQUIT, "10-06:00", NULL, CVAR_ARCHIVE, qtrue )
+// not in JA+: the addresses this server is reached by ("1.2.3.4:29070 192.168.0.5:29070"), for the login with a
+// key. A signature made for another address is refused, see auth/g_auth.c. Empty: not looked at.
+XCVAR_DEF( jp_authHosts, "", NULL, CVAR_ARCHIVE, qfalse )
 XCVAR_DEF( jp_banAdminIPs, "", NULL, CVAR_ARCHIVE, qfalse )
 XCVAR_DEF( jp_cinfo, "0", NULL, CVAR_SERVERINFO|CVAR_ROM, qtrue )
 XCVAR_DEF( jp_clanPass, "", NULL, CVAR_INTERNAL, qfalse )

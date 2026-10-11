@@ -52,7 +52,8 @@ Admin system (`g_japlus_admin.c`, `g_japlus_admin2.c`, `g_japlus_fx.c`, `g_japlu
 
 - Three ranks with passwords (`jp_councilPass`, `jp_knightPass`, `jp_instructorPass`) and a mask of allowed commands
   per rank (`jp_councilAllowedCMD` and so on). rcon is the fourth rank. `amlogin`, `amlogout`, automatic login with
-  the plugin (`cp_login`).
+  the plugin (`cp_login`). Not as in JA+: the passwords only count with `jp_adminPasswords 1`, see "Admin login
+  without a password" below.
 - The bit of a command in the allowed masks is its position in this list, starting at 1: amkick, amban, amShowMotd,
   amorigin, amslap, amsleep, amwake, amghost, amdenyvote, amprotect, amsilence, amunsilence, amUnForceAltDim,
   amForceAltDim, amempower, ammerc, ammindtrick, then amtele, amstatus, amwhois, ammap, ampsay, npc, amrename,
@@ -149,6 +150,47 @@ command `jpstatus music <text>` and end it with `jpstatus none`: at most one eve
 without colours, quotes and control characters. Both are passed on to every client whose cgame asked for
 statuses, and to nobody else, so a legacy client never gets a command it does not know. `jpstatus` is not
 written to the client command log. Not run.
+
+### Admin login without a password (not from JA+)
+
+`game/auth/g_auth.c` and `game/auth/bg_auth.c`, the client part is in [client.md](client.md). Since 2026-10-11.
+
+| Cvar | Default | Meaning |
+|------|---------|---------|
+| `jp_adminPasswords` | 0 | 1: the three rank passwords count again (`amlogin <password>`, `cp_login` of a plugin) |
+| `jp_authHosts` | empty | the addresses the server is reached by, `"1.2.3.4:29070 192.168.0.5:29070"`. A key login signed for another address is refused |
+
+A rank password is the same for everybody of the rank, it is typed into a console that logs, the JA+ plugin
+sends it to every server it joins in the userinfo, and whoever has seen it once has it for good. So the
+passwords are off unless the owner switches them on, and an admin logs in one of two ways:
+
+- With a key. The file `admin_keys.txt` in the game folder has a line for each admin:
+
+  ```
+  # rank       what "amkey show" of the client prints, or the line of a .pub file of ssh-keygen
+  council      ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAI... emir
+  rcon         ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAI... owner
+  ```
+
+  The rank is `council`, `knight`, `instructor` or `rcon` (every right). The client says which key it has
+  (`jpauth hello`), gets 32 random bytes that are good for one answer and 30 seconds, and sends a signature
+  over them (`jpauth sign`). The signed text starts with a fixed line, so the signature is worth nothing
+  anywhere else, and it has the address of the server as the client sees it and the number of the client in
+  it. A wrong signature counts as a wrong try: three of them and the player waits, as with wrong passwords.
+  Who has the rank of his key already (it is kept over a change of the map) is not asked or announced again.
+  `amkeys` on the console of the server reads the file again and lists it, it is also read with every map.
+- With a one-time code, for admins whose client can not sign (jamp.exe, the JA+ plugin): `amcode <rank>` on
+  the console of the server, or the web panel, makes a code of eight letters and digits. It is typed as
+  `amlogin <code>` within a minute and works once.
+
+`g_visionCaps` has bit 2 for the key login, a client only offers it where it reads the bit. Set `jp_authHosts`
+on a public server: without it the server can not tell a signature that was made for another server and
+passed on.
+
+Tested: `japlus_port/tools/authtest/run.sh` (66 checks: the three test vectors of RFC 8032 through the
+Monocypher of the tree, the signed message, the key lines, key files in both directions against `ssh-keygen`,
+and the agent protocol against an `ssh-agent` started for the test). The login itself was not run against a
+server.
 
 ## Not done on the server
 

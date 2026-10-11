@@ -2417,6 +2417,7 @@ void CG_DrawActiveFrame( int serverTime, stereoFrame_t stereoView, qboolean demo
 	CG_JPMacroScanFrame();
 	CG_VoiceFrame();
 	CG_StatusFrame();
+	CG_AuthFrame();
 	int		inwater;
 	const char *cstr;
 	float mSensitivity = cg.zoomSensitivity;

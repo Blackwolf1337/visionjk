@@ -1661,6 +1661,7 @@ static serverCommand_t	commands[] = {
 	{ "cps",				CG_CenterPrintSE_f },
 	{ "cs",					CG_ConfigStringModified },
 	{ "ircg",				CG_RestoreClientGhoul_f },
+	{ "jpauth",				CG_AuthServerCommand },
 	{ "jpstatus",			CG_StatusServerCommand },
 	{ "jpvoice",			CG_VoiceServerCommand },
 	{ "kg2",				CG_KillGhoul2_f },

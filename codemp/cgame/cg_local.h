@@ -1779,6 +1779,12 @@ void		CG_Menu3DScene( void );
 void		CG_StatusInit( void );
 void		CG_StatusFrame( void );
 void		CG_StatusServerCommand( void );
+
+// auth/cg_auth.c: admin login with a key
+void		CG_AuthInit( void );
+void		CG_AuthFrame( void );
+void		CG_AuthServerCommand( void );
+void		CG_AuthCommand_f( void );
 qboolean	CG_StatusLine( int clientNum, char *out, int outSize );
 void		CG_MusicFrame( void );
 void		CG_MusicShutdown( void );

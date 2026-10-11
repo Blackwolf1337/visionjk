@@ -1033,6 +1033,9 @@ void CL_Connect_f( void ) {
 	// save arguments for reconnect
 	Cvar_Set("cl_reconnectArgs", Cmd_Args());
 
+	// what the last server did is not held against this one
+	CL_IDS_Connect();
+
 	Cvar_Set("ui_singlePlayerActive", "0");
 
 	// fire a message off to the motd server
@@ -1665,6 +1668,9 @@ void CL_DisconnectPacket( const netadr_t *from ) {
 
 	// if not from our server, ignore it
 	if ( !NET_CompareAdr( from, &clc.netchan.remoteAddress ) ) {
+		if ( cls.state >= CA_CONNECTED ) {
+			CL_IDS_Event( CLIDS_OOB_SOURCE, from, "disconnect" );
+		}
 		return;
 	}
 
@@ -1964,6 +1970,7 @@ void CL_ConnectionlessPacket( const netadr_t *from, msg_t *msg ) {
 			if(!*c || challenge != clc.challenge)
 			{
 				Com_DPrintf("Challenge response received from unexpected source. Ignored.\n");
+				CL_IDS_Event( CLIDS_OOB_SOURCE, from, "challengeResponse" );
 				return;
 			}
 		}
@@ -1993,6 +2000,7 @@ void CL_ConnectionlessPacket( const netadr_t *from, msg_t *msg ) {
 		}
 		if ( !NET_CompareAdr( from, &clc.serverAddress ) ) {
 			Com_Printf( "connectResponse from wrong address. Ignored.\n" );
+			CL_IDS_Event( CLIDS_OOB_SOURCE, from, "connectResponse" );
 			return;
 		}
 		Netchan_Setup (NS_CLIENT, &clc.netchan, from, Cvar_VariableValue( "net_qport" ) );
@@ -2020,8 +2028,14 @@ void CL_ConnectionlessPacket( const netadr_t *from, msg_t *msg ) {
 		return;
 	}
 
-	// echo request from server
+	// Echo request from server. Only from the server: the answer is whatever the packet asks for, sent to
+	// wherever the packet says it came from, so anybody could have a client send a packet of his choice to an
+	// address of his choice.
 	if ( !Q_stricmp(c, "echo") ) {
+		if ( cls.state < CA_CONNECTING || !NET_CompareAdr( from, &clc.serverAddress ) ) {
+			CL_IDS_Event( CLIDS_ECHO, from, Cmd_Argv(1) );
+			return;
+		}
 		NET_OutOfBandPrint( NS_CLIENT, from, "%s", Cmd_Argv(1) );
 		return;
 	}
@@ -2050,6 +2064,11 @@ void CL_ConnectionlessPacket( const netadr_t *from, msg_t *msg ) {
 			CL_CheckSVStringEdRef(sTemp, s);
 			Q_strncpyz( clc.serverMessage, sTemp, sizeof( clc.serverMessage ) );
 			Com_Printf( "%s", sTemp );
+		}
+		else if ( cls.state >= CA_CONNECTED )
+		{
+			// a line for the screen of a player from somebody who is not his server
+			CL_IDS_Event( CLIDS_OOB_SOURCE, from, "print" );
 		}
 		return;
 	}
@@ -2103,6 +2122,9 @@ void CL_PacketEvent( const netadr_t *from, msg_t *msg ) {
 	}
 
 	if (!CL_Netchan_Process( &clc.netchan, msg) ) {
+		if ( netchan_anomaly ) {
+			CL_IDS_Event( CLIDS_FRAGMENT, NULL, NULL );
+		}
 		return;		// out of order, duplicated, etc
 	}
 
@@ -2846,6 +2868,7 @@ void CL_Init( void ) {
 	// ~ and `, as keys and characters
 	cl_consoleKeys = Cvar_Get( "cl_consoleKeys", "~ ` 0x7e 0x60 0xb2", CVAR_ARCHIVE, "Which keys are used to toggle the console");
 	cl_consoleUseScanCode = Cvar_Get( "cl_consoleUseScanCode", "1", CVAR_ARCHIVE, "Use native console key detection" );
+	CL_IDS_Init();
 	cl_utf8 = Cvar_Get( "cl_utf8", "1", CVAR_ARCHIVE, "Text is UTF-8 inside the client. 0 or a language with a code page of its own (se_language): one byte a character, as in the original game" );
 	cl_utf8Text = Cvar_Get( "cl_utf8Text", "0", CVAR_ROM|CVAR_USERINFO, "Whether text is UTF-8 right now, for the server" );
 	// tells a cgame of this tree that the engine has the calls of its chat box (ext of cgameImport_t)
@@ -2966,6 +2989,7 @@ void CL_Shutdown( void ) {
 	CL_Disconnect( qtrue );
 
 	CL_UpdateShutdown();
+	CL_IDS_Shutdown();
 
 	// RJ: added the shutdown all to close down the cgame (to free up some memory, such as in the fx system)
 	CL_ShutdownAll( qtrue );

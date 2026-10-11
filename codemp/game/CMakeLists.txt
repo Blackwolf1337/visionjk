@@ -175,6 +175,27 @@ set(MPGameStatusFiles
 source_group("game/status" FILES ${MPGameStatusFiles})
 set(MPGameFiles ${MPGameFiles} ${MPGameStatusFiles})
 
+# Admin login with a key or a one-time code, bg_auth.c is built into the cgame too. Monocypher checks the
+# signatures (and makes them in the cgame), and hashes the passwords of the web panel.
+set(MPGameAuthFiles
+	"${MPDir}/game/auth/bg_auth.c"
+	"${MPDir}/game/auth/g_auth.c"
+	"${MPDir}/game/auth/bg_auth.h"
+	"${VisionJKLibDir}/monocypher/monocypher.c"
+	"${VisionJKLibDir}/monocypher/monocypher.h"
+	"${VisionJKLibDir}/monocypher/monocypher-ed25519.c"
+	"${VisionJKLibDir}/monocypher/monocypher-ed25519.h"
+	"${SharedDir}/web/web_sha256.c"
+	)
+source_group("game/auth" FILES ${MPGameAuthFiles})
+set(MPGameFiles ${MPGameFiles} ${MPGameAuthFiles})
+set(MPGameIncludeDirectories ${MPGameIncludeDirectories} "${VisionJKLibDir}/monocypher")
+# gcc warns of reads behind an array in the SHA-512 of Monocypher where it works out a call with 32 bytes: the
+# branch it means is never taken with that length. The file is left as its authors ship it.
+if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
+	set_source_files_properties("${VisionJKLibDir}/monocypher/monocypher-ed25519.c" PROPERTIES COMPILE_OPTIONS "-Wno-array-bounds")
+endif()
+
 # the relay of the voice chat, bg_voice.c is built into the cgame too
 set(MPGameVoiceFiles
 	"${MPDir}/game/voice/bg_voice.c"
@@ -194,6 +215,9 @@ set(MPGameWebadminFiles
 	"${MPDir}/game/webadmin/wa_local.h"
 	"${MPDir}/game/webadmin/g_webadmin.c"
 	"${MPDir}/game/webadmin/wa_http.c"
+	"${MPDir}/game/webadmin/wa_auth.c"
+	"${MPDir}/game/webadmin/wa_totp.c"
+	"${MPDir}/game/webadmin/wa_totp.h"
 	"${MPDir}/game/webadmin/wa_state.c"
 	"${MPDir}/game/webadmin/wa_actions.c"
 	"${MPDir}/game/webadmin/wa_entities.c"
@@ -211,11 +235,12 @@ source_group("game/webadmin/page" FILES ${MPGameWebadminPageFiles})
 set(MPGameFiles ${MPGameFiles} ${MPGameWebadminFiles} ${MPGameWebadminPageFiles})
 
 # what the web admin panel reads a request with. The web host of the dedicated server is built with the same
-# files (codemp/server/web/sources.cmake), and with web_sha1.c, which nothing of the game asks for.
+# files (codemp/server/web/sources.cmake). SHA-1 is for the codes by time of the login (wa_totp.c).
 set(MPGameSharedWebFiles
 	"${SharedDir}/web/web_http.h"
 	"${SharedDir}/web/web_http.c"
 	"${SharedDir}/web/web_base64.c"
+	"${SharedDir}/web/web_sha1.c"
 	)
 source_group("shared/web" FILES ${MPGameSharedWebFiles})
 set(MPGameFiles ${MPGameFiles} ${MPGameSharedWebFiles})
@@ -317,6 +342,13 @@ add_custom_command(
 	DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/webadmin_page.html" "${CMAKE_SOURCE_DIR}/cmake/Modules/EmbedFile.cmake"
 	COMMENT "Embedding web admin page")
 set(MPGameFiles ${MPGameFiles} "${CMAKE_CURRENT_BINARY_DIR}/webadmin_html.h")
+# the page of the login is a file by itself: a visitor who is not logged in gets nothing of the panel
+add_custom_command(
+	OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/webadmin_login.h"
+	COMMAND ${CMAKE_COMMAND} -DINPUT="${MPDir}/game/webadmin/page/login.html" -DOUTPUT="${CMAKE_CURRENT_BINARY_DIR}/webadmin_login.h" -DNAME=webadmin_login -P "${CMAKE_SOURCE_DIR}/cmake/Modules/EmbedFile.cmake"
+	DEPENDS "${MPDir}/game/webadmin/page/login.html" "${CMAKE_SOURCE_DIR}/cmake/Modules/EmbedFile.cmake"
+	COMMENT "Embedding the login page of the web admin")
+set(MPGameFiles ${MPGameFiles} "${CMAKE_CURRENT_BINARY_DIR}/webadmin_login.h")
 
 # and so are the entity definitions of the game code (its QUAKED comments), which the editor of the page shows
 add_custom_command(

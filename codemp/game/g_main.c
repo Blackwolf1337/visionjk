@@ -214,6 +214,7 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 	G_ProcessAdminIPBans();
 	JP_HighlanderMapStart();
 
+	G_AuthInit();
 	WebAdmin_Init();
 	G_VoiceInit( restart ? qtrue : qfalse );
 

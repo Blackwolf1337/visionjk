@@ -350,13 +350,14 @@ void G_seeGhost( gentity_t *ent, qboolean see ) {
 
 /*
 =================
-G_amlogin
+G_AdminLogin*
 
-checks the password against the three admin passwords, returns the admin level
+Every way to become an admin goes through these three: a rank password, a one-time code of the web panel and a
+key (auth/g_auth.c).
 =================
 */
-// not in JA+: slow down guessing the admin passwords. After JP_LOGIN_TRIES wrong tries a player has to wait,
-// the wait doubles. Static arrays by client number, reset when the module is loaded again (every map).
+// not in JA+: slow down guessing. After JP_LOGIN_TRIES wrong tries a player has to wait, the wait doubles.
+// Static arrays by client number, reset when the module is loaded again (every map).
 #define JP_LOGIN_TRIES		3
 #define JP_LOGIN_BASE_MS	30000
 #define JP_LOGIN_MAX_MS		1800000
@@ -364,96 +365,86 @@ checks the password against the three admin passwords, returns the admin level
 static int jpLoginFails[MAX_CLIENTS];
 static int jpLoginUntil[MAX_CLIENTS];
 
-int G_amlogin( gentity_t *ent, const char *password, qboolean notify ) {
+// qtrue: this player may not try right now, he is admin-banned or has to wait after wrong tries
+qboolean G_AdminLoginBlocked( gentity_t *ent, qboolean notify ) {
 	gclient_t *client = ent->client;
-	char msg[MAX_STRING_CHARS];
-	const char *loginMsg = NULL, *rank = NULL;
 	const int clientNum = ent - g_entities;
 
 	if ( G_AdminFilterPacket( client->sess.IP ) ) {
 		client->sess.jpAdminLevel = JPADM_NONE;
 		if ( notify )
 			trap->SendServerCommand( ent-g_entities, "print \"^3 You are admin-banned ! \n\"" );
-		return client->sess.jpAdminLevel;
+		return qtrue;
 	}
 
 	if ( clientNum >= 0 && clientNum < MAX_CLIENTS && jpLoginUntil[clientNum] > level.time ) {
 		if ( notify )
-			trap->SendServerCommand( clientNum, "print \"^3 Too many wrong passwords, wait a moment. \n\"" );
-		return client->sess.jpAdminLevel;
+			trap->SendServerCommand( clientNum, "print \"^3 Too many wrong tries, wait a moment. \n\"" );
+		return qtrue;
 	}
+	return qfalse;
+}
 
-	if ( jp_councilPass.string[0] && !strcmp( password, jp_councilPass.string ) ) {
-		client->sess.jpAdminLevel = JPADM_COUNCIL;
-		loginMsg = jp_councilLoginMSG.string;
-		rank = "^3admin council";
-	}
-	else if ( jp_knightPass.string[0] && !strcmp( password, jp_knightPass.string ) ) {
-		client->sess.jpAdminLevel = JPADM_KNIGHT;
-		loginMsg = jp_knightLoginMSG.string;
-		rank = "^5admin knight";
-	}
-	else if ( jp_instructorPass.string[0] && !strcmp( password, jp_instructorPass.string ) ) {
-		client->sess.jpAdminLevel = JPADM_INSTRUCTOR;
-		loginMsg = jp_instructorLoginMSG.string;
-		rank = "^5admin instructor";
-	}
-	else {
-		client->sess.jpAdminLevel = JPADM_NONE;
-		if ( clientNum >= 0 && clientNum < MAX_CLIENTS ) {
-			jpLoginFails[clientNum]++;
-			if ( jpLoginFails[clientNum] >= JP_LOGIN_TRIES ) {
-				const int steps = jpLoginFails[clientNum] - JP_LOGIN_TRIES;
-				int wait = JP_LOGIN_BASE_MS;
+// a wrong try: what names it in the security log ("wrong password", "bad signature")
+void G_AdminLoginFailed( gentity_t *ent, const char *what ) {
+	gclient_t *client = ent->client;
+	const int clientNum = ent - g_entities;
 
-				if ( steps < 16 )
-					wait <<= steps;
-				if ( wait > JP_LOGIN_MAX_MS || wait <= 0 )
-					wait = JP_LOGIN_MAX_MS;
-				jpLoginUntil[clientNum] = level.time + wait;
-			}
-			G_SecurityLogPrintf( "amlogin: wrong password from %s [%s]\n", client->pers.netname, client->sess.IP );
-		}
-		if ( notify )
-			trap->SendServerCommand( ent-g_entities, "print \"^3 Bad Password ! \n\"" );
-		return client->sess.jpAdminLevel;
-	}
+	if ( clientNum < 0 || clientNum >= MAX_CLIENTS )
+		return;
+	jpLoginFails[clientNum]++;
+	if ( jpLoginFails[clientNum] >= JP_LOGIN_TRIES ) {
+		const int steps = jpLoginFails[clientNum] - JP_LOGIN_TRIES;
+		int wait = JP_LOGIN_BASE_MS;
 
+		if ( steps < 16 )
+			wait <<= steps;
+		if ( wait > JP_LOGIN_MAX_MS || wait <= 0 )
+			wait = JP_LOGIN_MAX_MS;
+		jpLoginUntil[clientNum] = level.time + wait;
+	}
+	G_SecurityLogPrintf( "amlogin: %s from %s [%s]\n", what, client->pers.netname, client->sess.IP );
+}
+
+// The player is an admin of that rank from now on. how: by what, for the logs ("password", "one-time code",
+// "key SHA256:...").
+void G_AdminLoginDone( gentity_t *ent, int adminLevel, qboolean notify, const char *how ) {
+	gclient_t *client = ent->client;
+	char msg[MAX_STRING_CHARS];
+	const char *loginMsg = NULL, *rank;
+	const int clientNum = ent - g_entities;
+
+	switch ( adminLevel ) {
+	case JPADM_COUNCIL:		loginMsg = jp_councilLoginMSG.string;		rank = "^3admin council";		break;
+	case JPADM_KNIGHT:		loginMsg = jp_knightLoginMSG.string;		rank = "^5admin knight";		break;
+	case JPADM_INSTRUCTOR:	loginMsg = jp_instructorLoginMSG.string;	rank = "^5admin instructor";	break;
+	case JPADM_RCON:		rank = "^1admin with every right";			break;
+	default:
+		return;
+	}
+	client->sess.jpAdminLevel = (jpAdminLevel_t)adminLevel;
 	if ( clientNum >= 0 && clientNum < MAX_CLIENTS ) {
 		jpLoginFails[clientNum] = 0;
 		jpLoginUntil[clientNum] = 0;
 	}
 
-	if ( notify ) {
+	if ( notify && loginMsg ) {
 		JP_FormatName( msg, sizeof( msg ), loginMsg, client->pers.netname );
 		JP_NewLines( msg );
 		trap->SendServerCommand( -1, va( "print \"^7%s\n\"", msg ) );
 	}
+	else if ( notify ) {
+		// JA+ has no line for this rank: it had no login, only the console of the server
+		trap->SendServerCommand( clientNum, "print \"^7You are logged in as an ^1admin with every right^7.\n\"" );
+	}
 	G_LogPrintf( "%s is logged as an %s.\n", client->pers.netname, rank );
-
-	return client->sess.jpAdminLevel;
+	G_SecurityLogPrintf( "amlogin: %s [%s] is admin of rank %i by %s\n", client->pers.netname, client->sess.IP, adminLevel, how );
 }
 
-/*
-=================
-Cmd_amlogin_f
-=================
-*/
-static void Cmd_amlogin_f( gentity_t *ent, qboolean rcon ) {
-	char password[MAX_TOKEN_CHARS];
+// the effect a login has on the player, and what an admin sees from then on
+void G_AdminLoginEffect( gentity_t *ent ) {
 	gclient_t *client = ent->client;
 	int i;
-
-	if ( trap->Argc() < 2 )
-		return;
-
-	trap->Argv( 1, password, sizeof( password ) );
-	if ( !Q_stricmp( password, "NOT SET" ) ) {
-		trap->SendServerCommand( ent-g_entities, "print \"^3 Hey! try to hack me? :) ! \n\"" );
-		return;
-	}
-
-	G_amlogin( ent, password, qtrue );
 
 	if ( client->sess.jpAdminLevel <= JPADM_RCON )
 		return;
@@ -471,6 +462,83 @@ static void Cmd_amlogin_f( gentity_t *ent, qboolean rcon ) {
 
 	if ( client->pers.jp.canSeeGhosts )
 		G_seeGhost( ent, qtrue );
+}
+
+/*
+=================
+G_amlogin
+
+What a player typed behind amlogin, or what his plugin sent by itself (cp_login, fromUserinfo): a one-time code
+of the web panel, or one of the three rank passwords. Returns the admin level.
+
+Not in JA+: the passwords only count with jp_adminPasswords 1. A password is the same for everybody of a rank,
+it is typed into a console that logs, plugins send it to every server in the userinfo (cp_login), and whoever
+has it once has it for good. Without the cvar an admin logs in with a key (amkey login of the client of this
+tree) or with a code the web panel makes, which works once within a minute.
+=================
+*/
+int G_amlogin( gentity_t *ent, const char *password, qboolean notify, qboolean fromUserinfo ) {
+	gclient_t *client = ent->client;
+	int adminLevel;
+
+	// a plugin that sends a password by itself is no try of the player: without passwords it is not looked at
+	if ( fromUserinfo && !jp_adminPasswords.integer )
+		return client->sess.jpAdminLevel;
+
+	if ( G_AdminLoginBlocked( ent, notify ) )
+		return client->sess.jpAdminLevel;
+
+	adminLevel = fromUserinfo ? JPADM_NONE : G_AuthTakeCode( password );
+	if ( adminLevel != JPADM_NONE ) {
+		G_AdminLoginDone( ent, adminLevel, notify, "one-time code" );
+		return client->sess.jpAdminLevel;
+	}
+
+	if ( !jp_adminPasswords.integer ) {
+		client->sess.jpAdminLevel = JPADM_NONE;
+		G_AdminLoginFailed( ent, "wrong one-time code" );
+		if ( notify )
+			trap->SendServerCommand( ent-g_entities, "print \"^3 No such code. This server takes no admin passwords: log in with ^7amkey login^3, or with a one-time code from the web panel. \n\"" );
+		return client->sess.jpAdminLevel;
+	}
+
+	if ( jp_councilPass.string[0] && !strcmp( password, jp_councilPass.string ) )
+		adminLevel = JPADM_COUNCIL;
+	else if ( jp_knightPass.string[0] && !strcmp( password, jp_knightPass.string ) )
+		adminLevel = JPADM_KNIGHT;
+	else if ( jp_instructorPass.string[0] && !strcmp( password, jp_instructorPass.string ) )
+		adminLevel = JPADM_INSTRUCTOR;
+	else {
+		client->sess.jpAdminLevel = JPADM_NONE;
+		G_AdminLoginFailed( ent, "wrong password" );
+		if ( notify )
+			trap->SendServerCommand( ent-g_entities, "print \"^3 Bad Password ! \n\"" );
+		return client->sess.jpAdminLevel;
+	}
+
+	G_AdminLoginDone( ent, adminLevel, notify, "password" );
+	return client->sess.jpAdminLevel;
+}
+
+/*
+=================
+Cmd_amlogin_f
+=================
+*/
+static void Cmd_amlogin_f( gentity_t *ent, qboolean rcon ) {
+	char password[MAX_TOKEN_CHARS];
+
+	if ( trap->Argc() < 2 )
+		return;
+
+	trap->Argv( 1, password, sizeof( password ) );
+	if ( !Q_stricmp( password, "NOT SET" ) ) {
+		trap->SendServerCommand( ent-g_entities, "print \"^3 Hey! try to hack me? :) ! \n\"" );
+		return;
+	}
+
+	G_amlogin( ent, password, qtrue, qfalse );
+	G_AdminLoginEffect( ent );
 }
 
 static void Cmd_amlogout_f( gentity_t *ent, qboolean rcon ) {

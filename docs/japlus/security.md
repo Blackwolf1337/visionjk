@@ -12,7 +12,7 @@ The engine (`server/`, `qcommon/`, `client/`, `sys/`) is OpenJK 260c59c2 unchang
 bounded Huffman decode (`Huff_offsetReceive` with `maxoffset`), the fragment bounds in `Netchan_Process`, the
 field counts in `MSG_ReadDeltaEntity` and `MSG_ReadDeltaPlayerstate`, the 1022 byte cap in `SV_SendServerCommand`,
 the `cmdCount` and `reliableAcknowledge` checks, downloads limited to referenced pk3 (`FS_MV_VerifyDownloadPath`),
-the rate limit on connectionless packets and so on rcon (`sv_maxOOBRateIP`), the stateless challenge, the
+the rate limit on connectionless packets (`sv_maxOOBRateIP`), the stateless challenge, the
 userinfo check in the game (`G_ValidateUserinfo`), and vote strings without `;`.
 
 The attack surface this fork adds is the web admin panel (`codemp/game/webadmin/`, from JKAdmin, speaks HTTP to the
@@ -128,6 +128,147 @@ address of the game connection, a limit per speaker, no answer to anything that 
 and the server never decodes. 12000 malformed datagrams at the relay under valgrind gave no error. It was not
 part of the audit above and has not been looked at by anybody else.
 
+## Removed: rcon
+
+The server takes no rcon since 2026-10-11 (`SVC_NoRemoteCommand` in `server/sv_main.cpp`). The protocol has no
+way to be made safe: the password went over the wire in the clear with every command, a guess cost one packet,
+and what a command printed went back to whatever address the packet claimed to come from. An `rcon` packet is
+answered with one line (at most once a second) and counted by the intrusion detection.
+
+- The cvar `rconPassword` no longer exists on a dedicated server. A config that still sets it gets one yellow
+  line at the first map, the value does nothing.
+- What rcon was used for is done on the console of the server or in the web panel (`webadmin.md`), whose
+  console tab runs the same commands.
+- The client keeps its `rcon` command and its `rconPassword` and `rconAddress` cvars: they are for other
+  servers.
+- The JA+ rank named rcon stays, it is the name of the fourth admin rank and has nothing to do with the
+  protocol. The `rcon` flag in the command table of the game module stays too: it means "from the console of
+  the server".
+
+## Added later: admin login without a password
+
+Since 2026-10-11 (`game/auth`, `cgame/auth`, see server.md and client.md). The three rank passwords of JA+ and
+`cp_login` are off unless `jp_adminPasswords 1`: this changes a server at the update, its admins need a line
+in `admin_keys.txt` or a one-time code.
+
+- Signatures are Ed25519 from Monocypher 4.0.2 (`lib/monocypher`, as its authors ship it, compared with the
+  tag on GitHub). Nonces and codes come from the system (`/dev/urandom`, `CryptGenRandom`), a server without
+  random bytes lets nobody in.
+- A nonce is good for one answer and 30 seconds, per client. A client may name eight keys in 30 seconds.
+- A code has 40 bits, lives 60 seconds, works once, and wrong ones run into the wait of wrong passwords.
+- `admin_keys.txt` is read through the file system of the game, public keys are no secret. Comments from it
+  and from key files are printed without `^`, `"` and `%`.
+- Open: a client that was told to log in on a server by itself (`amkey login`) signs for that server again
+  whenever it joins. If that server turns hostile it can pass the question of another server on, and only
+  `jp_authHosts` on the other server stops that. So set it on a public server.
+
+## Added later: the web panel has accounts
+
+Since 2026-10-11 (`webadmin/wa_auth.c`, `wa_totp.c`, see webadmin.md). What was one password in every request
+is now: accounts with three roles, passwords as Argon2id hashes, sessions in a cookie no script and no other
+site gets, a second step by time, tokens for scripts, a login with a key of the browser, and a proxy mode in
+which only the reverse proxy is let in. `g_webPassword` is read once, to make the first owner.
+
+- A visitor who is not logged in gets the page of the login (a file of its own, 9 KB) and two requests:
+  `/api/login` and `/api/login/key`. Everything else answers 401.
+- Roles are checked on the server for every request, by its path, and for `/api/action` by the action.
+- The check that a POST comes from the page itself runs before the login too, so no other site can log a
+  visitor in to an account of its own.
+- What is kept on disk: hashes of passwords, of tokens, of recovery codes and of session cookies. The secret
+  of the second step is kept as it is, the server has to work with it.
+- Tested apart from the game (`japlus_port/tools/authtest`): HMAC-SHA1 against RFC 2202, the codes against RFC
+  6238, base32 against RFC 4648, Argon2id of the Monocypher of the tree against RFC 9106. The QR code of the
+  page was read back with zbarimg for texts of every size it takes. The login itself, the sessions and the
+  roles were not run against a server.
+
+## Added later: intrusion detection
+
+Since 2026-10-11. `server/sv_ids.cpp` and `client/cl_ids.cpp`, in the engine, so it is there for every game
+module. The bounds checks of the engine and the game keep a bad packet from doing harm: it is thrown away. The
+detection is told about each of them, so that somebody who keeps sending them is written down and, on the
+server, no longer listened to. It finds what looks like the known attacks on games of this engine and what no
+client of the game sends. It does not find a hole nobody knows.
+
+### On the server
+
+| Cvar | Default | Meaning |
+|------|---------|---------|
+| `sv_ids` | 2 | 0: off. 1: events are written down. 2: addresses are blocked and players dropped as well |
+| `sv_antiWallhack` | 0 | 1: a player no line of sight reaches is not sent to a client, see below |
+
+Every event has a weight. The weights add up for the address and fall off again, two a second. At 100 the
+address is blocked for a minute, and for twice as long each time it happens again, up to an hour: its
+connectionless packets are dropped unread, and a player the event came from is dropped.
+
+| Event | Weight |
+|-------|--------|
+| a connectionless packet that is no command, or one over 1400 bytes | 5 |
+| rcon (the server takes none) | 10 |
+| connectionless packets past the rate limit of the address (`sv_maxOOBRateIP`) | 1 |
+| a connect with a wrong challenge | 3 |
+| from a player: a message that can not be read, a number of moves or an acknowledgement out of range, a fragment that does not fit | 25 |
+| from a player: reliable commands that are missing | 10 |
+| from a player: a weapon or a force power in a move that does not exist | 5 |
+| from a player: commands past the flood protection | 1 |
+| from a player: a download he may not have / one whose path leaves the game or is no pk3 | 10 / 50 |
+| from a player: a line break inside a command | 30 |
+| from a player: `../` in a command that is no chat | 20 |
+| from a player: `%n`, or three format marks in a row, in a command that is no chat | 35 |
+| from a player: 48 bytes above 127 in a row of which most are no UTF-8 | 35 |
+| from a player: a userinfo that is too long | 25 |
+| from a player: 30 moves in five seconds that are more than 250 ms ahead of the server | 10 |
+
+- Every event is a line in `ids.log` of the game folder and on the console: the time, the address, the player,
+  what it was, and what came with it as plain characters. At most one line in two seconds for an address and
+  an event (the rest is counted and named with the next line) and thirty a second overall, so a flood does not
+  fill the disk. The web panel shows the file (Log tab, "Intrusions", for an admin and up).
+- `idsstatus` on the console lists the addresses with their scores and blocks, `idsunblock <address|all>`
+  lifts a block.
+- The address of a packet can be made up, and a connectionless packet is taken without an answer. So a block
+  only ever stops connectionless packets (getinfo, getstatus, connect), never the game of somebody who is on
+  the server, and connectionless events do not count at all for an address that has a player on the server.
+  The worst somebody can do with made up addresses is keep a stranger from connecting for a while, which a
+  flood does too. Packets inside a connection can be made up as well by somebody who guesses the port number
+  of the client (65536 tries); he could throw that player off before this, by the sequence numbers.
+- Players behind one address are one address: when one of them is blocked, the others play on, but none of
+  them can connect again until the block ends.
+- The speed check: a client keeps the time of its moves close to the time the server tells it. Moves that
+  are a quarter of a second ahead come from a client whose clock runs fast, which is what a speed hack does.
+  The game cuts such a move back to 200 ms ahead anyway, so the hack gains little; three windows of five
+  seconds in a row with thirty such moves each and the player is dropped.
+- `sv_antiWallhack 1`: the map tells a client of every player in the rooms it can see into, and a cheat draws
+  them through the walls. With the cvar a player is left out of a snapshot when no line from the eye of the
+  client reaches his box (its middle, top, bottom and corners, widened by 16 units and by where he will be in
+  a fifth of a second). Only brushes of the map stop a line, and none that are seen through or not drawn;
+  doors never hide anybody. Never hidden: a player within 384 units, anybody from a spectator, anybody from
+  a player who uses Force Sight. Off by default because it changes the game: a client that is not told of a
+  player does not hear him either, so steps and sabers behind a wall are silent until he comes into view.
+  It costs up to eleven traces for a pair of players each snapshot.
+
+### On the client
+
+| Cvar | Default | Meaning |
+|------|---------|---------|
+| `cl_ids` | 1 | what a server sends that no server of the game does is written to `ids.log`, and a server that keeps at it is left. 0: off |
+
+- Written down, and the client leaves: a path in the place of the game folder (at once), data of a download
+  that was not asked for and fragments that do not fit (at the third).
+- Written down: a message the engine ends the connection for (an index past its table, a message that ends
+  early, an unknown command), more than 400 commands in a second, an escape character in a command (it is
+  taken out: it means nothing to the game and is there for the terminal a console may be printed to).
+- Written down and never acted on: a connectionless packet that claims to be from the server and comes from
+  another address (print, disconnect, connectResponse, challengeResponse). Leaving for those would let
+  anybody throw a player off any server.
+- Changed besides: the client answers an `echo` request only from its server. It answered anybody with
+  whatever the packet asked for, to wherever the packet said it came from.
+
+Tested apart from the game (`japlus_port/tools/idstest`, 44 checks with a clock the test sets): how the
+weights add up and fall off, when an address is blocked and for how long, that connectionless events do not
+count against an address with a player, `sv_ids 1`, the machine itself, what is taken for an attack in a
+command and what is not (chat, percent signs, long words of Cyrillic, Chinese and accented letters), the
+strikes of the speed check. Neither side was run against real traffic, and `sv_antiWallhack` was not run at
+all.
+
 ## Recommended server settings
 
 ```
@@ -135,11 +276,13 @@ seta g_userinfoValidate "25165823"   // leave on: rejects a client ip field and 
 seta sv_legacyFixes "1"              // leave on: the engine clears out of range selections in the usercmd
 seta g_securityLog "2"               // security.log written line by line
 seta g_logClientCmds "1"             // client commands in security.log
-seta sv_maxOOBRateIP "1"             // the per address rate limit on connectionless packets and rcon
+seta sv_maxOOBRateIP "1"             // the per address rate limit on connectionless packets
 seta g_webBind "127.0.0.1"           // this machine only. The default is every interface: fine on your own network or behind a firewall
-seta g_webPassword "<long random>"   // the panel is off without it
-seta rconpassword "<long random>"    // or empty to disable rcon
+seta g_webProxy "<address>"          // or: the address of the reverse proxy with HTTPS in front of the panel, nobody else is let in
+seta jp_authHosts "<address:port ...>" // the addresses clients reach the server by, for the login with a key
 ```
+
+There is no `rconpassword` line: the server takes no rcon, see above. `jp_adminPasswords` stays 0.
 
 ## Tested
 

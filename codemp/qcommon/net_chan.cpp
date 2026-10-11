@@ -208,6 +208,11 @@ void Netchan_Transmit( netchan_t *chan, int length, const byte *data ) {
 	}
 }
 
+// Set by Netchan_Process() when it throws a packet away for a reason no loss on the way explains: a fragment
+// whose length does not fit its packet or its message. The intrusion detection of the two sides reads it
+// (sv_ids.cpp, cl_ids.cpp). 0 after a packet that was taken, or thrown away for being late or twice.
+qboolean netchan_anomaly;
+
 /*
 =================
 Netchan_Process
@@ -225,6 +230,8 @@ qboolean Netchan_Process( netchan_t *chan, msg_t *msg ) {
 	//int			qport;
 	int			fragmentStart, fragmentLength;
 	qboolean	fragmented;
+
+	netchan_anomaly = qfalse;
 
 	// get sequence numbers
 	MSG_BeginReadingOOB( msg );
@@ -336,6 +343,7 @@ qboolean Netchan_Process( netchan_t *chan, msg_t *msg ) {
 				Com_Printf ("%s:illegal fragment length\n"
 				, NET_AdrToString (&chan->remoteAddress ) );
 			}
+			netchan_anomaly = qtrue;
 			return qfalse;
 		}
 
@@ -353,6 +361,7 @@ qboolean Netchan_Process( netchan_t *chan, msg_t *msg ) {
 			Com_Printf( "%s:fragmentLength %i > msg->maxsize\n"
 				, NET_AdrToString (&chan->remoteAddress ),
 				chan->fragmentLength+4 );
+			netchan_anomaly = qtrue;
 			return qfalse;
 		}
 

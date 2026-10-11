@@ -79,6 +79,15 @@ XCVAR_DEF( cg_bubbleRange,						"1200",					NULL,					CVAR_ARCHIVE )
 // statuses above the heads (status/cg_status.c): show the ones of the others, and tell them what music plays here
 XCVAR_DEF( cg_playerStatuses,					"1",					NULL,					CVAR_ARCHIVE )
 XCVAR_DEF( cg_shareMusic,						"0",					NULL,					CVAR_ARCHIVE )
+// Admin login with a key (auth/cg_auth.c, the command amkey). The key file, by default admin_ed25519 in the home
+// folder of the game. cg_authAgent 1: the keys of the ssh-agent are used too, at cg_authAgentPath if that is
+// not where the system says, and only the one cg_authAgentKey names (a part of its comment or of its line).
+// cg_authServers: where the player logs in by himself, kept by "amkey login" and "amkey forget".
+XCVAR_DEF( cg_authAgent,						"0",					NULL,					CVAR_ARCHIVE )
+XCVAR_DEF( cg_authAgentKey,						"",						NULL,					CVAR_ARCHIVE )
+XCVAR_DEF( cg_authAgentPath,					"",						NULL,					CVAR_ARCHIVE )
+XCVAR_DEF( cg_authKeyFile,						"",						NULL,					CVAR_ARCHIVE )
+XCVAR_DEF( cg_authServers,						"",						NULL,					CVAR_ARCHIVE )
 XCVAR_DEF( cg_crosshairHealth,					"0",					NULL,					CVAR_ARCHIVE )
 XCVAR_DEF( cg_crosshairSize,					"24",					NULL,					CVAR_ARCHIVE )
 XCVAR_DEF( cg_crosshairX,						"0",					NULL,					CVAR_ARCHIVE )

@@ -175,7 +175,7 @@ XCVAR_DEF( g_userinfoValidate,			"25165823",		NULL,						CVAR_ARCHIVE,									q
 // What this game module knows that a stock one does not, for the clients of this tree, in the server info. Bit 0:
 // chat in UTF-8 (JP_ChatFor() in g_japlus_chat.c), a client sends UTF-8 only where it reads this bit. Bit 1: it
 // passes on what stands above the heads (status/g_status.c).
-XCVAR_DEF( g_visionCaps,				"3",			NULL,						CVAR_SERVERINFO|CVAR_ROM,						qfalse )
+XCVAR_DEF( g_visionCaps,				"7",			NULL,						CVAR_SERVERINFO|CVAR_ROM,						qfalse )
 XCVAR_DEF( g_useWhileThrowing,			"1",			NULL,						CVAR_NONE,										qtrue )
 // The voice chat (g_voice.c). g_voice is in the server info: the cgame of this port asks for voice only where it reads it there.
 XCVAR_DEF( g_voice,						"1",			NULL,						CVAR_SERVERINFO|CVAR_ARCHIVE|CVAR_LATCH,		qfalse )
@@ -184,10 +184,15 @@ XCVAR_DEF( g_voiceRange,				"1024",			NULL,						CVAR_ARCHIVE,									qtrue )
 XCVAR_DEF( g_voiceTeamOnly,				"0",			NULL,						CVAR_ARCHIVE,									qtrue )
 XCVAR_DEF( g_voteDelay,					"3000",			NULL,						CVAR_NONE,										qfalse )
 XCVAR_DEF( g_warmup,					"20",			NULL,						CVAR_ARCHIVE,									qtrue )
+// The accounts of the panel are in webadmin_users.dat (wa_auth.c). g_webBasicAuth 1: a script may send the token
+// of its account as the password of basic auth behind its name, besides "Bearer". g_webProxy: the address of the
+// reverse proxy in front of the panel. Then nobody else is let in, and the proxy says who the visitor is.
+XCVAR_DEF( g_webBasicAuth,				"0",			NULL,						CVAR_ARCHIVE,									qfalse )
 XCVAR_DEF( g_webBind,					"0.0.0.0",		NULL,						CVAR_ARCHIVE|CVAR_LATCH,						qfalse )
 XCVAR_DEF( g_webPassword,				"",				NULL,						CVAR_ARCHIVE|CVAR_LATCH,						qfalse )
 XCVAR_DEF( g_webRoot,					"",				NULL,						CVAR_ARCHIVE,									qfalse )
 XCVAR_DEF( g_webPort,					"80",			NULL,						CVAR_ARCHIVE|CVAR_LATCH,						qfalse )
+XCVAR_DEF( g_webProxy,					"",				NULL,						CVAR_ARCHIVE,									qfalse )
 XCVAR_DEF( g_weaponDisable,				"0",			NULL,						CVAR_SERVERINFO|CVAR_ARCHIVE|CVAR_LATCH,		qtrue )
 XCVAR_DEF( g_weaponRespawn,				"5",			NULL,						CVAR_NONE,										qtrue )
 XCVAR_DEF( gamedate,					SOURCE_DATE,	NULL,						CVAR_ROM,										qfalse )

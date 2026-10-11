@@ -362,6 +362,43 @@ in another engine (`cl_cgameUIPlane`). The first version was seen in the game on
 that (silhouette of the player in the menu, camera, blur, crackle). The numbers of the layout as they are now
 have not been seen yet.
 
+### Admin login with a key
+
+`cgame/auth/cg_auth.c`, `cgame/auth/cg_auth_agent.c` (2026-10-11), the server part is in [server.md](server.md).
+An admin logs in with an Ed25519 key, the kind ssh uses, and no password goes over the wire.
+
+| Command | What it does |
+|---------|--------------|
+| `amkey new [comment]` | makes a key and writes it to a file only the player can read, in the format of OpenSSH, with its `.pub` next to it |
+| `amkey show` | prints the public lines of the keys there are. The owner of a server puts one into his `admin_keys.txt` |
+| `amkey login` | logs in on this server, and from then on by itself whenever the player joins it |
+| `amkey forget` | not by itself on this server any more |
+
+| Cvar | Default | Meaning |
+|------|---------|---------|
+| `cg_authKeyFile` | empty | the key file, `~/` is the home folder of the user. Empty: `admin_ed25519` in the home folder of the game |
+| `cg_authAgent` | 0 | 1: the Ed25519 keys of the ssh-agent are used too |
+| `cg_authAgentPath` | empty | where the agent listens. Empty: `SSH_AUTH_SOCK` (Linux, macOS), the pipe of OpenSSH (Windows) |
+| `cg_authAgentKey` | empty | only the key of the agent whose comment or line has this text. Empty: each in turn, eight at most |
+| `cg_authServers` | empty | where the login runs by itself, kept by `amkey login` and `amkey forget` |
+
+- The key file is what `ssh-keygen -t ed25519` writes, so an existing key can be named with
+  `cg_authKeyFile ~/.ssh/id_ed25519`. A key with a passphrase is not read: that is what the agent is for.
+- With `cg_authAgent 1` the secret half never reaches the game: the agent signs. 1Password is such an agent
+  (Linux: `cg_authAgentPath ~/.1password/agent.sock` unless `SSH_AUTH_SOCK` points there already, Windows: its
+  pipe is the one of OpenSSH). It asks before it signs, and nothing waits for that: the question is sent and
+  looked at once a frame, the game goes on. Two minutes are given, and if the 30 seconds of the server ran out
+  meanwhile the login runs once more by itself.
+- The client signs only for a server the player named with `amkey login`, and only right after it asked
+  itself. A server that sends a question nobody asked for gets no answer.
+- What is signed starts with the line `VisionJK admin login v1`. What ssh lets a key sign when it logs in
+  somewhere starts with four bytes of a length, so no server can use this login to get a signature that opens
+  an ssh account.
+- Works in a jamp.exe too (client commands, a file and a socket are all it needs). Not in the browser client:
+  a page has neither a key file nor a way to an agent.
+
+Not run against a server. Tested apart from the game: see server.md.
+
 ### Bot mode
 
 Not a JA+ feature, and client only (`cgame/botmode/cg_botmode.c`): no server knows of it, the game module and the
