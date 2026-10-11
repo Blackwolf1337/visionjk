@@ -318,32 +318,46 @@ placed by their numbers and not looked at.
 ### The menu in the level
 
 `cgame/menu3d/cg_menu3d.c` (2026-10-11). While a menu is open in a game, the view moves within a third of a
-second to a camera behind the right shoulder of the player, and the menu stands in the level in front of him.
-The game goes on around it.
+second to a camera behind the right shoulder of the player. He is at the left edge of the picture, seen down to
+the hips, and the menu stands in the level to the right of him. The game goes on around it.
 
 | Cvar | Default | Meaning |
 |------|---------|---------|
 | `cg_immersiveMenu` | 1 | 0: the flat menu of the base game |
-| `r_menuBlur` | 0 | 1: the scene behind the menu is out of focus (rd-vulkan-vision only). Off by default, see below |
+| `r_menuBlur` | 1 | how far the scene behind the menu is out of focus (rd-vulkan-vision only): 0 not at all, 1 normal, up to 4 |
 | `s_muffle` | set by the cgame | 0 to 1: the sound of the game through a low pass. Not stored |
 
 - The menu is not painted onto a texture. The ui draws it as always, and the renderer puts that 2D onto a
   plane in the level (`Set2DPlane`, a matrix from the 2D grid to clip space). The cursor is drawn on the plane
   with the rest and the mouse moves it there. All menus work on it as they are.
+- The plane has a place in the level, but no depth: its 2D lands at the front of the depth buffer like the
+  flat 2D. With the depth of the plane, the frames and fills of a menu were cut out in the shape of whatever
+  stood between camera and menu, the player first of all (the text was not, it never tests the depth).
+- The layout is made in the picture, not in the level: the camera turns until the player is at
+  `MENU3D_PLAYER_X` of the picture, the middle of the menu is at `MENU3D_PANEL_X`, and the menu takes
+  `MENU3D_SCREEN_PART` of the height. How far away the plane is then changes nothing one can see, so it is
+  as far as the level has room for it (five traces from the camera), at most 64 units. With a narrow field of
+  view the camera is farther back, so the player takes the same part of the picture.
+- A scene inside a menu (the model in the player menu) is a viewport and can not be tilted. The engine moves
+  it to where its place is on the plane and gives it the size the plane has there (`CL_UIRenderScene`).
 - Behind the menu the cgame adds a panel with an edge and a glow to the scene. The HUD is hidden meanwhile.
-- The scene is blurred by rd-vulkan-vision with the passes its glow has. That is a blur of the whole picture,
-  the player included, not one by depth: a real depth of field needs a new pass and shader in both devices of
-  the renderer, which was not written blind. rd-vanilla keeps the scene sharp. The blur is off by default: its
-  first version (cvar `r_sceneBlur`, on by default) ended the game as soon as a menu opened, because the pass
-  asked for the descriptor set of the frame where only the sets of the glow buffers were known. That is
-  repaired, but the pass was not seen running since, so it has to be asked for with `r_menuBlur 1`.
-- The sound of the game (effects, music, Steam Audio) and the voices of the voice chat are muffled.
-- The camera is pulled in where a wall is behind the player. The panel itself is not checked against the
-  level: it is drawn over whatever is there.
+- The scene is put out of focus by rd-vulkan-vision (`VK_BlurFrame`): the frame goes into a buffer of half its
+  size, then passes widen it, three at `r_menuBlur 1`. That is a blur of the whole picture, the player
+  included, not one by depth: a real depth of field needs a pass that reads the depth in both devices of the
+  renderer. rd-vanilla keeps the scene sharp. The first version (cvar `r_sceneBlur`) ended the game as soon as
+  a menu opened, because the pass asked for the descriptor set of the frame where only the sets of the glow
+  buffers were known, and after that was repaired it went through the 320 x 240 buffers of the glow, which
+  left nothing of the scene to recognise.
+- The sound of the game (effects, music, Steam Audio) and the voices of the voice chat are muffled. The low
+  pass of the engine (`S_MufflePaint`) keeps what it has after a sample by the time of the sample: the mixer
+  paints the same fifth of a second again with every frame, and a filter that just ran on from one paint
+  into the next gave a crackle with every frame.
+- The camera is pulled in where a wall is behind the player.
 
 Not while spectating, dead, zoomed or at the end of a map (the camera has no player to stand behind), and not
-in another engine (`cl_cgameUIPlane`). Not run: where camera and panel sit and how large the menu is are
-numbers nobody has seen yet.
+in another engine (`cl_cgameUIPlane`). The first version was seen in the game on 2026-10-11 and changed after
+that (silhouette of the player in the menu, camera, blur, crackle). The numbers of the layout as they are now
+have not been seen yet.
 
 ### Bot mode
 

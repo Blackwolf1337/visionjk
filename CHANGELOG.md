@@ -15,7 +15,7 @@ Key: [-] removed, [+] added, [\*] modified
 * [+] Chat bubbles above the heads, in the 3D scene: what a player says, and dots while he types (`cg_chatBubbles`, `cg_bubbleRange`).
 * [+] Statuses above the heads: away from the keyboard (found out by the server, `g_afkTime`) and, when a player switches it on, the music he listens to (`cg_shareMusic`).
 * [+] The server browser can be opened in a game (SERVERS in the in-game menu). Both browsers can leave out servers on which only bots play (`ui_browserShowBotOnly`).
-* [+] While a menu is open in a game it stands in the level in front of the player, seen over his shoulder, with the sound muffled (`cg_immersiveMenu`). `r_menuBlur 1` blurs the scene behind it (rd-vulkan-vision, off by default).
+* [+] While a menu is open in a game it stands in the level next to the player, seen over his shoulder, with the scene behind it out of focus and the sound muffled (`cg_immersiveMenu`, `r_menuBlur` for how far out of focus, rd-vulkan-vision).
 
 # Features
 
