@@ -38,5 +38,13 @@
 	loadMenu { "ui/jamp/UrlRedirectBackground.menu" }
 	
 	loadMenu { "ui/jamp/modsay.menu" }
+
+	// the server browser while in a game, and the pop-ups of the base game its buttons open
+	loadMenu { "ui/jamp/ingame_servers.menu" }
+	loadMenu { "ui/jamp/password.menu" }
+	loadMenu { "ui/jamp/password_request.menu" }
+	loadMenu { "ui/jamp/serverinfo.menu" }
+	loadMenu { "ui/jamp/findplayer.menu" }
+	loadMenu { "ui/jamp/createfavorite.menu" }
 }
 
