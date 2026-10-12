@@ -365,6 +365,11 @@ void WP_InitForcePowers( gentity_t *ent ) {
 			trap->SendServerCommand( ent-g_entities, "scl" );
 		}
 	}
+	else if ( g_visionTemple.integer ) {
+		// nobody sets up powers for the Vision Temple (status/g_temple.c): no menu for it, and nobody waits
+		// as a spectator
+		ent->client->sess.setForce = qtrue;
+	}
 	else {
 		if ( warnClient || !ent->client->sess.setForce ) {
 			// the client's rank is too high for the server and has been autocapped, so tell them

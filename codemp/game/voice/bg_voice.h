@@ -80,6 +80,11 @@ that took the same number are told apart. An answer of the master has no place i
 VOICE_FLAG_TAKEN or VOICE_FLAG_FULL); what another member sent comes with his number and his place, as it came.
 place: x, y and z as whole numbers of 16 bit, the yaw in 256 steps, a byte of flags (none yet), and a name of
 up to VOICE_TEMPLE_NAME - 1 bytes. A master from before does not know the type and does not answer.
+
+The temple can be a game server too (game/status/g_temple.c), where the members are players and not lights. A
+master that was told of one (-temple) names it in its answers: VOICE_TEMPLE_SERVER bytes in the place of
+nothing, the address and the port as they go over the network, an address of zeros for the master's own. A
+client that can keep its server meanwhile goes there (client/cl_visit.cpp).
 */
 
 #pragma once
@@ -111,6 +116,7 @@ up to VOICE_TEMPLE_NAME - 1 bytes. A master from before does not know the type a
 #define VOICE_STATUS_AWAY		1		// in the first byte of a VOICE_STATUS: he is away from the keyboard
 #define VOICE_TEMPLE_NAME		32		// the name in a VOICE_TEMPLE with its end
 #define VOICE_TEMPLE_BYTES		( 8 + VOICE_TEMPLE_NAME )	// the place in one: x, y, z, yaw, flags, name
+#define VOICE_TEMPLE_SERVER		6		// in an answer of the master: the game server that is the temple, address[4] port[2]
 #define VOICE_MASTER_PORT		29170	// UDP, where the voice master listens unless it is told another one
 #define VOICE_MASTER_RANGE		1024	// how far a voice carries through the master: the default of g_voiceRange
 

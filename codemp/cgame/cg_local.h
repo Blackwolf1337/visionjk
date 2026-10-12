@@ -1820,6 +1820,7 @@ qboolean	CG_FocusKeyEvent( int key, qboolean down );
 void		CG_FocusDraw( void );
 void		CG_FocusScene( void );
 void		CG_FocusTint( void );
+qboolean	CG_FocusLoading( void );
 float		CG_FocusMuffle( void );
 void		CG_FocusServerCommand( void );
 // who else is in the Vision Temple: the link to the voice master for it (voice/cg_voice.c) and what it brings
@@ -1831,6 +1832,7 @@ typedef enum {
 	TEMPLE_LINK_FULL		// it has no place for one more
 } templeLink_t;
 templeLink_t	CG_VoiceTempleFrame( qboolean there, const float *origin, float yaw, const char *name );
+qboolean		CG_VoiceTempleServer( char *address, int size );
 void		CG_FocusPlace( int member, const float *origin, float yaw, const char *name );
 
 // hud/cg_hud.c: the numbers of the game by name, for the items of a menu file that show one

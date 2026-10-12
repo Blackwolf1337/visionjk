@@ -8026,7 +8026,8 @@ static void CG_Draw2D( void ) {
 
 	// Focus (focus/cg_focus.c): the world stands still, and the numbers of the HUD would too. Drawn is what goes
 	// on: votes, who talks, what the server prints in the middle, the chat, and how to come back.
-	if ( CG_FocusActive() ) {
+	// (The same on the server that is the Vision Temple, where nobody fights.)
+	if ( CG_FocusActive() || bg_visionTemple ) {
 		CG_Place2D( PLACE_LEFT );
 		CG_DrawVote();
 		CG_DrawTeamVote();

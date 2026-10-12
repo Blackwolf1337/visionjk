@@ -821,6 +821,12 @@ LANG_ENGLISH        "Vision Temple. %s or Esc: back"
 REFERENCE           VISION_TEMPLE_ESC_BACK
 LANG_ENGLISH        "Vision Temple. Esc: back"
 
+REFERENCE           VISION_TEMPLE_S_BACK
+LANG_ENGLISH        "Vision Temple. %s: back"
+
+REFERENCE           VISION_TEMPLE_TEMPLE_BACK
+LANG_ENGLISH        "Vision Temple. /temple: back"
+
 REFERENCE           I_OTHERS_ARE_HERE
 LANG_ENGLISH        "%i others are here."
 

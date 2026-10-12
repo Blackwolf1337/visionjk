@@ -242,6 +242,11 @@ void G_InitSessionData( gclient_t *client, char *userinfo, qboolean isBot ) {
 		}
 	}
 
+	// (everybody who comes to the Vision Temple is there, status/g_temple.c)
+	if ( g_visionTemple.integer ) {
+		sess->sessionTeam = TEAM_FREE;
+	}
+
 	sess->spectatorState = SPECTATOR_FREE;
 	AddTournamentQueue(client);
 

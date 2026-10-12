@@ -101,6 +101,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define TEMPLE_WAY_START	-516.0f		//	and where that way begins
 #define TEMPLE_SPEED		190.0f		//	units a second,
 #define TEMPLE_IN_MSEC		1800		//	and the time in which the place comes out of light
+#define TEMPLE_GO_MSEC		900			// that long in it before the client goes on to the server that is the temple,
+#define TEMPLE_ARRIVE_MSEC	1400		//	and the light of such a visit is gone after this long
 #define TEMPLE_WISP_MSEC	3000		// nothing of somebody for this long: he left
 #define TEMPLE_WISP_SIZE	64			// the picture a wisp is made of, a side of it
 #define TEMPLE_NAME			32			// a name there with its end (VOICE_TEMPLE_NAME of bg_voice.h)
@@ -128,6 +130,9 @@ typedef struct focus_s {
 	qboolean	temple;					// and in the Vision Temple, not in the still of the level
 	qboolean	watcher;				// he has no body in the level: he only watches there
 	qboolean	fromMenu;				// the game behind it was started by the main menu for this and ends with it
+	qboolean	visit;					// the engine was told to go to the server that is the temple
+	qboolean	arrived;				// the first frame with a game was seen
+	int			arriveMsec;				// out of the light of a visit since then: into the temple server, or back from it
 	qboolean	resync;					// it ended: the still stays until the snapshots are read anew
 	qboolean	reselect;				// the snapshots were read anew this frame: the weapon bar is not to show for it
 	int			selectTime;				//	cg.weaponSelectTime as it was
@@ -428,6 +433,15 @@ static void Focus_Command( qboolean temple ) {
 	const char	*refused;
 	const int	want = trap->Cmd_Argc() > 1 ? ( atoi( CG_Argv( 1 ) ) ? 1 : 0 ) : -1;
 
+	// On the server that is the Vision Temple (game/status/g_temple.c) nobody leaves a body, and the temple is
+	// where one is: its command is the way back, to the server the engine kept (client/cl_visit.cpp) or to
+	// the main menu.
+	if ( bg_visionTemple ) {
+		if ( temple && want != 1 ) {
+			trap->SendConsoleCommand( "disconnect\n" );
+		}
+		return;
+	}
 	if ( focus.active ) {
 		if ( want != 1 ) {
 			Focus_End( "the command" );
@@ -673,6 +687,25 @@ qboolean CG_FocusFrame( void ) {
 		focus.reselect = qfalse;
 		cg.weaponSelectTime = focus.selectTime;
 	}
+	// The first frame of a game that is the end of a way through the light: on the server that is the temple, or
+	// back from it on the server the engine kept (cl_visitBack, client/cl_visit.cpp). That one may still
+	// protect the body: it is told that the player is back.
+	if ( !focus.arrived && cg.snap && !( cg.snap->snapFlags & SNAPFLAG_NOT_ACTIVE ) ) {
+		const qboolean back = (qboolean)( Focus_Cvar( "cl_visitBack" ) != 0.0f );
+
+		focus.arrived = qtrue;
+		if ( back ) {
+			trap->Cvar_Set( "cl_visitBack", "0" );
+		}
+		if ( bg_visionTemple || back ) {
+			focus.arriveMsec = trap->Milliseconds();
+		}
+		if ( back && !bg_visionTemple
+			&& ( atoi( Info_ValueForKey( CG_ConfigString( CS_SERVERINFO ), "g_visionCaps" ) ) & 16 ) ) {
+			focusBack.owed = qtrue;
+			focusBack.msec = focusBack.asks = 0;
+		}
+	}
 	// "Vision Temple" of the main menu: it started this game only to stand behind the temple, and said so in a
 	// cvar. Into the temple with the first frame there is, and back to the menu when it can not be.
 	if ( cg_templeStart.integer && !focus.active && !focus.resync && cg.snap && !( cg.snap->snapFlags & SNAPFLAG_NOT_ACTIVE ) ) {
@@ -883,6 +916,37 @@ static void Temple_Wisps( int now ) {
 
 /*
 =================
+Temple_Visit
+
+The temple one sees in a level is drawn into the picture, and the others in it are lights. Where the voice
+master names a game server that is the temple (CG_VoiceTempleServer()), that is the start of the way only: the
+client goes on to that server, where everybody is a player. The engine keeps the server one is on meanwhile
+("visit", client/cl_visit.cpp) and the body stays in it, so that server is asked to protect it first. The game
+the main menu started for the temple is nothing to come back to: that one is left.
+=================
+*/
+static void Temple_Visit( int now ) {
+	char address[64];
+
+	if ( !focus.temple || !focus.active || focus.visit || now - focus.startMsec < TEMPLE_GO_MSEC ) {
+		return;
+	}
+	if ( !focus.fromMenu && ( !Focus_Engine( "cl_cgameVisit" ) || Focus_Cvar( "sv_running" ) ) ) {
+		return;
+	}
+	// the answer of the server about the body, as long as one can come
+	if ( focus.server && focus.answer < 0 && focus.asks < FOCUS_ASKS ) {
+		return;
+	}
+	if ( !CG_VoiceTempleServer( address, sizeof( address ) ) ) {
+		return;
+	}
+	focus.visit = qtrue;
+	trap->SendConsoleCommand( va( "%s %s\n", focus.fromMenu ? "connect" : "visit", address ) );
+}
+
+/*
+=================
 CG_FocusScene
 
 Once a frame before the scene is rendered: how much of the look it has, and the renderer is asked for it
@@ -895,6 +959,7 @@ void CG_FocusScene( void ) {
 	// who else is in the Vision Temple: asked while one is there, and told once that one left
 	if ( focus.temple && focus.active ) {
 		templeLink = CG_VoiceTempleFrame( qtrue, focus.origin, focus.angles[YAW], cgs.clientinfo[focus.clientNum].name );
+		Temple_Visit( now );
 	} else if ( templeLink != TEMPLE_LINK_OFF ) {
 		templeLink = CG_VoiceTempleFrame( qfalse, vec3_origin, 0.0f, "" );
 		memset( templeWisps, 0, sizeof( templeWisps ) );
@@ -987,6 +1052,28 @@ static qhandle_t Focus_Smoke( void ) {
 
 /*
 =================
+CG_FocusLoading
+
+While a level loads (CG_DrawInformation()): on the way to the server that is the Vision Temple, or back from a
+visit to it (client/cl_visit.cpp), the screen is the light one goes through and nothing else. The first frames
+of the game come out of that light (focus.arriveMsec). qtrue: it was drawn.
+=================
+*/
+qboolean CG_FocusLoading( void ) {
+	static const vec4_t light = { 1.0f, 0.93f, 0.78f, 1.0f };
+
+	if ( !Focus_Cvar( "cl_visit" ) && !Focus_Cvar( "cl_visitBack" )
+		&& !atoi( Info_ValueForKey( CG_ConfigString( CS_SERVERINFO ), "g_visionTemple" ) ) ) {
+		return qfalse;
+	}
+	trap->R_SetColor( light );
+	CG_DrawPicWide( trap->R_RegisterShaderNoMip( "white" ) );
+	trap->R_SetColor( NULL );
+	return qtrue;
+}
+
+/*
+=================
 CG_FocusTint
 
 Once a frame under the 2D: the plain look, where the renderer has no pass for it
@@ -1000,6 +1087,19 @@ void CG_FocusTint( void ) {
 	qhandle_t			smoke;
 	int					layer;
 
+	if ( focus.arriveMsec ) {
+		// out of the light of a visit: the screen was that light while the level loaded
+		const float	gone = ( trap->Milliseconds() - focus.arriveMsec ) / (float)TEMPLE_ARRIVE_MSEC;
+		vec4_t		light = { 1.0f, 0.93f, 0.78f, 0.0f };
+
+		if ( gone >= 1.0f ) {
+			focus.arriveMsec = 0;
+		} else {
+			light[3] = 1.0f - gone * gone * ( 3.0f - 2.0f * gone );
+			CG_Place2D( PLACE_CENTER );
+			CG_FillRect( left, 0.0f, width, SCREEN_HEIGHT, light );
+		}
+	}
 	if ( focus.look > 0.0f && focus.temple && !CG_FocusActive() ) {
 		// back from the Vision Temple: the light one came out of, once more, and gone within a moment
 		vec4_t light = { 1.0f, 0.93f, 0.78f, 0.0f };
@@ -1106,6 +1206,20 @@ void CG_FocusDraw( void ) {
 	vec4_t			strip = { 0.02f, 0.04f, 0.10f, 0.55f };
 	float			width, top = 439.0f;
 
+	if ( bg_visionTemple ) {
+		// the server that is the temple: how to leave it
+		key = CG_KeyLabel( trap->Key_GetKey( "temple" ) );
+		text = key ? CG_VisionTextWith( "Vision Temple. %s: back", key ) : CG_VisionText( "Vision Temple. /temple: back" );
+		width = CG_Text_Width( text, scale, font ) + 20.0f;
+		top = 452.0f;
+		if ( skin && Skin_Ready() ) {
+			Skin_Panel( ( SCREEN_WIDTH - width ) * 0.5f, top, width, 470.0f - top, 5.0f, strip, NULL );
+		} else {
+			CG_FillRect( ( SCREEN_WIDTH - width ) * 0.5f, top, width, 470.0f - top, strip );
+		}
+		CG_Text_Paint( ( SCREEN_WIDTH - CG_Text_Width( text, scale, font ) ) * 0.5f, top + 3.0f, scale, color, text, 0, 0, 0, font );
+		return;
+	}
 	if ( !focus.active ) {
 		return;
 	}
@@ -1215,6 +1329,14 @@ void CG_FocusStatus_f( void ) {
 			if ( templeWisps[i].heardMsec ) {
 				trap->Print( "  %2i %s at %.0f %.0f %.0f\n", i, templeWisps[i].name, templeWisps[i].target[0], templeWisps[i].target[1], templeWisps[i].target[2] );
 			}
+		}
+		{
+			char address[64];
+
+			trap->Print( "  the temple as a server: %s, the engine %s a server meanwhile, this one is %s, on the way: %s\n",
+				CG_VoiceTempleServer( address, sizeof( address ) ) ? address : "none named",
+				Focus_Engine( "cl_cgameVisit" ) ? "keeps" : "can not keep", Focus_Cvar( "sv_running" ) ? "of this program" : "another program",
+				focus.visit ? "yes" : "no" );
 		}
 	}
 	trap->Print( "Focus: out of the body for %.1f s, %.0f units from it, the world stands still at %i. The server: %s.\n",

@@ -1940,6 +1940,8 @@ static struct {
 	int					seq, tries;
 	int					sendTime, heardTime, startTime;
 	templeLink_t		state;
+	byte				server[VOICE_TEMPLE_SERVER];	// the game server that is the temple, as the master named it
+	qboolean			serverKnown;
 } voiceTemple;
 
 static void Voice_TempleClose( void ) {
@@ -1970,11 +1972,16 @@ static void Voice_TempleReceive( int now ) {
 			continue;
 		if ( !BG_VoiceUnpack( datagram, len, qtrue, &p ) || p.type != VOICE_TEMPLE || p.client >= MAX_CLIENTS )
 			continue;
-		if ( !p.dataLen ) {
+		if ( p.dataLen != VOICE_TEMPLE_BYTES ) {
 			// an answer: the token of this session, or why there is none
 			if ( p.client != voiceTemple.client )
 				continue;
 			voiceTemple.heardTime = now;
+			// and the game server that is the temple, if the master knows one
+			if ( p.dataLen == VOICE_TEMPLE_SERVER ) {
+				memcpy( voiceTemple.server, p.data, VOICE_TEMPLE_SERVER );
+				voiceTemple.serverKnown = qtrue;
+			}
 			if ( p.flags & VOICE_FLAG_FULL ) {
 				voiceTemple.state = TEMPLE_LINK_FULL;
 			} else if ( p.flags & VOICE_FLAG_TAKEN ) {
@@ -2010,6 +2017,28 @@ Once a frame while the Vision Temple is on the screen, and once with there qfals
 place and takes in the places of the others (CG_FocusPlace()). Returns how the link stands.
 =================
 */
+/*
+===============
+CG_VoiceTempleServer
+
+The game server that is the Vision Temple, as "address:port", if the master named one. That server is the place
+everybody is in: somebody with a word of his own (cg_templeLink) meets those who know it as lights, not there.
+===============
+*/
+qboolean CG_VoiceTempleServer( char *address, int size ) {
+	const byte *ip = voiceTemple.server;
+
+	if ( !voiceTemple.open || !voiceTemple.serverKnown || Q_stricmp( voiceTemple.word, "1" ) ) {
+		return qfalse;
+	}
+	// (zeros: the host of the master)
+	if ( !( ip[0] | ip[1] | ip[2] | ip[3] ) ) {
+		ip = (const byte *)&voiceTemple.master.sin_addr.s_addr;
+	}
+	Com_sprintf( address, size, "%i.%i.%i.%i:%i", ip[0], ip[1], ip[2], ip[3], ( voiceTemple.server[4] << 8 ) | voiceTemple.server[5] );
+	return qtrue;
+}
+
 templeLink_t CG_VoiceTempleFrame( qboolean there, const float *origin, float yaw, const char *name ) {
 	const int		now = trap->Milliseconds();
 	voicePacket_t	p;
@@ -2103,6 +2132,10 @@ templeLink_t CG_VoiceTempleFrame( qboolean there, const float *origin, float yaw
 	(void)there; (void)origin; (void)yaw; (void)name;
 	return TEMPLE_LINK_OFF;
 }
+qboolean CG_VoiceTempleServer( char *address, int size ) {
+	(void)address; (void)size;
+	return qfalse;
+}
 
 #endif // __EMSCRIPTEN__
 
@@ -2112,6 +2145,10 @@ templeLink_t CG_VoiceTempleFrame( qboolean there, const float *origin, float yaw
 templeLink_t CG_VoiceTempleFrame( qboolean there, const float *origin, float yaw, const char *name ) {
 	(void)there; (void)origin; (void)yaw; (void)name;
 	return TEMPLE_LINK_OFF;
+}
+qboolean CG_VoiceTempleServer( char *address, int size ) {
+	(void)address; (void)size;
+	return qfalse;
 }
 void CG_VoiceInit( void ) {}
 void CG_VoiceShutdown( void ) {}

@@ -1093,6 +1093,14 @@ REFERENCE           VISION_TEMPLE_ESC_BACK
 LANG_ENGLISH        "Vision Temple. Esc: back"
 LANG_SPANISH        "Templo de la Visión. Esc: volver"
 
+REFERENCE           VISION_TEMPLE_S_BACK
+LANG_ENGLISH        "Vision Temple. %s: back"
+LANG_SPANISH        "Templo de la Visión. %s: volver"
+
+REFERENCE           VISION_TEMPLE_TEMPLE_BACK
+LANG_ENGLISH        "Vision Temple. /temple: back"
+LANG_SPANISH        "Templo de la Visión. /temple: volver"
+
 REFERENCE           I_OTHERS_ARE_HERE
 LANG_ENGLISH        "%i others are here."
 LANG_SPANISH        "Hay %i más aquí."

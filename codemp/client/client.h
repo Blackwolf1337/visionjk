@@ -151,7 +151,10 @@ typedef struct clientActive_s {
 	char			*mSharedMemory;
 } clientActive_t;
 
-extern	clientActive_t		cl;
+// The state of a connection has two places: while the player visits another server (cl_visit.cpp) the one he
+// came from is kept in the other one. cl and clc are the place the client works on.
+extern	clientActive_t		*clAt;
+#define	cl					( *clAt )
 
 #define MAX_HEIGHTMAP_SIZE	16000
 
@@ -245,7 +248,8 @@ typedef struct clientConnection_s {
 	netchan_t	netchan;
 } clientConnection_t;
 
-extern	clientConnection_t clc;
+extern	clientConnection_t *clcAt;
+#define	clc					( *clcAt )
 
 /*
 ==================================================================
@@ -558,6 +562,22 @@ extern int cl_connectedToPureServer;
 extern int cl_connectedToCheatServer;
 
 void CL_SystemInfoChanged( void );
+void CL_ParseGamestate( msg_t *msg );
+void CL_DownloadsComplete( void );
+
+//
+// cl_visit.cpp: a visit to another server while the one the player is on is kept
+//
+void CL_VisitInit( void );
+void CL_VisitShutdown( void );
+void CL_VisitFrame( void );
+qboolean CL_Visiting( void );
+qboolean CL_VisitParsing( void );
+qboolean CL_VisitPacket( const netadr_t *from, msg_t *msg );
+void CL_VisitGamestate( const msg_t *msg );
+void CL_VisitDrop( void );
+void CL_VisitBroken( void );
+void CL_VisitDisconnected( void );
 void CL_ClipOffChanged( const char *list );
 void CL_ParseServerMessage( msg_t *msg );
 

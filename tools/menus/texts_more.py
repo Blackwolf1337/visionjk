@@ -307,6 +307,8 @@ MORE = {
          'Meditas hacia el templo sobre las nubes, donde encuentras a otros jugadores de VisionJK como fuegos fatuos. La misma tecla o Esc te devuelve.'),
     'Vision Temple. %s or Esc: back': ('Temple de la Vision. %s ou Échap : retour', 'Templo de la Visión. %s o Esc: volver'),
     'Vision Temple. Esc: back': ('Temple de la Vision. Échap : retour', 'Templo de la Visión. Esc: volver'),
+    'Vision Temple. %s: back': ('Temple de la Vision. %s : retour', 'Templo de la Visión. %s: volver'),
+    'Vision Temple. /temple: back': ('Temple de la Vision. /temple : retour', 'Templo de la Visión. /temple: volver'),
     '%i others are here.': ('%i autres sont ici.', 'Hay %i más aquí.'),
     'One other is here.': ('Un autre est ici.', 'Hay uno más aquí.'),
     'Looking for the others ...': ('Recherche des autres ...', 'Buscando a los demás ...'),

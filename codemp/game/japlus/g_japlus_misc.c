@@ -779,7 +779,8 @@ void JP_ClientBeginInit( gentity_t *ent ) {
 	if ( !(ent->r.svFlags & SVF_BOT) )
 		JP_DisplayLatestPluginVersion( ent );
 
-	if ( client->sess.sessionTeam != TEAM_SPECTATOR ) {
+	// (not in the Vision Temple, status/g_temple.c: nobody is greeted in the middle of the screen there)
+	if ( client->sess.sessionTeam != TEAM_SPECTATOR && !g_visionTemple.integer ) {
 		trap->SendServerCommand( clientNum, va( "cp \"^5%s\n^5%s\n\n\"", JP_VISION_TITLE, JP_VERSION ) );
 		if ( JP_HighlanderOn() )
 			Q_strncpyz( jp->motd, va( "^5%s\n ^3\xac^1Highlander ^7FFA Modification^3\xac\n\n^7Kill all immortal\nGet their Forces Powers\n\n^5At the end, there can be only one\n", JP_VERSION ), sizeof( jp->motd ) );

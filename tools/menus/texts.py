@@ -399,6 +399,8 @@ CGAME = {
     # the Vision Temple (the same file)
     'Vision Temple. %s or Esc: back': 'Vision-Tempel. %s oder Esc: zurück',
     'Vision Temple. Esc: back': 'Vision-Tempel. Esc: zurück',
+    'Vision Temple. %s: back': 'Vision-Tempel. %s: zurück',
+    'Vision Temple. /temple: back': 'Vision-Tempel. /temple: zurück',
     '%i others are here.': '%i andere sind hier.',
     'One other is here.': 'Ein anderer ist hier.',
     'Looking for the others ...': 'Suche die anderen ...',

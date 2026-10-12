@@ -88,6 +88,8 @@ static int			vmSessionCount, vmRoomCount;
 static bgSocket_t	vmSocket = BG_INVALID_SOCKET;
 static byte			vmSecret[16];					// what the tokens are made with, new with every start
 static int			vmCapBytes;						// what may go out in a second, 0: anything
+static byte			vmTemple[VOICE_TEMPLE_SERVER];	// the game server that is the Vision Temple (-temple),
+static qboolean		vmTempleKnown;					//	if there is one
 static volatile sig_atomic_t	vmQuit;
 
 static struct {
@@ -529,6 +531,11 @@ static void VM_Temple( const struct sockaddr_in *from, const voicePacket_t *p, i
 	s->lastHeard = now;
 	if ( !s->statusTime || now - s->statusTime >= VM_STATUS_MSEC ) {
 		s->statusTime = now;
+		// (with the game server that is the temple, where there is one)
+		if ( vmTempleKnown ) {
+			out.data = vmTemple;
+			out.dataLen = sizeof( vmTemple );
+		}
 		VM_Send( from, &out, now, qtrue );
 	}
 
@@ -606,7 +613,8 @@ static void VM_Signal( int sig ) {
 }
 
 static void VM_Usage( const char *name ) {
-	fprintf( stderr, "usage: %s [-port <UDP port, %i>] [-ip <address to listen on, all>] [-maxkbps <what may go out, %i, 0: anything>]\n",
+	fprintf( stderr, "usage: %s [-port <UDP port, %i>] [-ip <address to listen on, all>] [-maxkbps <what may go out, %i, 0: anything>]\n"
+		"	[-temple <[address:]port of the game server that is the Vision Temple, on this host without an address>]\n",
 		name, VOICE_MASTER_PORT, VM_DEFAULT_KBPS );
 }
 
@@ -616,6 +624,31 @@ static long VM_Number( const char *text, long min, long max ) {
 	const long	value = strtol( text, &end, 10 );
 
 	return ( end != text && !*end && value >= min && value <= max ) ? value : -1;
+}
+
+// "<address>:<port>" or "<port>" of the game server that is the Vision Temple, as the bytes of an answer
+static qboolean VM_TempleServer( const char *text ) {
+	char			host[64];
+	const char		*colon = strrchr( text, ':' );
+	struct in_addr	address;
+	long			port;
+
+	memset( &address, 0, sizeof( address ) );
+	if ( colon ) {
+		if ( colon == text || (size_t)( colon - text ) >= sizeof( host ) )
+			return qfalse;
+		memcpy( host, text, colon - text );
+		host[colon - text] = 0;
+		if ( inet_pton( AF_INET, host, &address ) != 1 )
+			return qfalse;
+	}
+	port = VM_Number( colon ? colon + 1 : text, 1, 65535 );
+	if ( port < 0 )
+		return qfalse;
+	memcpy( vmTemple, &address.s_addr, 4 );
+	vmTemple[4] = (byte)( port >> 8 );
+	vmTemple[5] = (byte)( port & 0xff );
+	return vmTempleKnown = qtrue;
 }
 
 int main( int argc, char **argv ) {
@@ -635,6 +668,8 @@ int main( int argc, char **argv ) {
 		} else if ( !strcmp( argv[i], "-maxkbps" ) && ( kbps = VM_Number( value, 0, 1000000 ) ) >= 0 ) {
 			i++;
 		} else if ( !strcmp( argv[i], "-ip" ) && inet_pton( AF_INET, value, &addr.sin_addr ) == 1 ) {
+			i++;
+		} else if ( !strcmp( argv[i], "-temple" ) && VM_TempleServer( value ) ) {
 			i++;
 		} else {
 			VM_Usage( argv[0] );

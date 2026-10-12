@@ -10943,6 +10943,16 @@ void UI_DrawConnectScreen( qboolean overlay ) {
 
 	menuDef_t *menu = Menus_FindByName("Connect");
 
+	// On the way of a visit (client/cl_visit.cpp, the way into the Vision Temple) the screen is the light the
+	// cgame shows while the level loads (CG_FocusLoading()), and nothing is written on it.
+	if ( trap->Cvar_VariableValue( "cl_visit" ) ) {
+		static const vec4_t light = { 1.0f, 0.93f, 0.78f, 1.0f };
+
+		if ( !overlay ) {
+			UI_FillRect( -640.0f, 0.0f, 1920.0f, 480.0f, light );
+		}
+		return;
+	}
 
 	if ( !overlay && menu ) {
 		Menu_Paint(menu, qtrue);

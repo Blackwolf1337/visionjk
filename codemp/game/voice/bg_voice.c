@@ -62,7 +62,7 @@ static qboolean BG_VoiceBodyFits( int type, int bodyLen, qboolean toClient ) {
 	case VOICE_TEMPLE:
 		// to the master: the room and the place. To a client: the place of somebody, or nothing (an answer)
 		if ( toClient )
-			return ( bodyLen == 0 || bodyLen == VOICE_TEMPLE_BYTES ) ? qtrue : qfalse;
+			return ( bodyLen == 0 || bodyLen == VOICE_TEMPLE_SERVER || bodyLen == VOICE_TEMPLE_BYTES ) ? qtrue : qfalse;
 		return ( bodyLen == VOICE_ROOM_BYTES + VOICE_TEMPLE_BYTES ) ? qtrue : qfalse;
 	default:
 		return qfalse;
