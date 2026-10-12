@@ -248,7 +248,7 @@ void VK_TempleFrame( float amount, float seconds ) {
 	VectorCopy( view->ori.axis[0], &parm[4] );
 	parm[7] = amount;
 	VectorScale( view->ori.axis[1], -tanX, &parm[8] );
-	parm[11] = 0.0f;
+	parm[11] = Com_Clamp( 0.0f, 2.0f, r_templeDetail->value );
 	VectorScale( view->ori.axis[2], tanY, &parm[12] );
 	parm[15] = 0.0f;
 	if ( !VK_TemplePass( parm ) ) {
@@ -258,6 +258,50 @@ void VK_TempleFrame( float amount, float seconds ) {
 	VK_BindFrameSets();
 	vk.stateValid = qfalse;
 	VK_SetViewport( view->viewportX, view->viewportY, view->viewportWidth, view->viewportHeight, 0.0f, 1.0f );
+}
+
+/*
+===============
+VK_BloomFrame
+
+The light of what is bright in the frame, around it: the Vision Temple has a sun, rings of light and gold that
+mirrors both, and a screen can not be brighter than white. What is brighter than a threshold goes into a buffer
+of half the size of the frame, passes widen it there, each further out than the one before, and the result is
+added to the frame softly (it never goes over white). The buffers are the ones of the depth of field, which a
+view of the temple does not use. What is drawn in 2D afterwards has none of it. amount: 0 none, 1 as it is meant.
+===============
+*/
+#define BLOOM_PASSES		9
+#define BLOOM_THRESHOLD		0.76f
+
+void VK_BloomFrame( float amount ) {
+	vkTarget_t *source = &vk.color;
+
+	if ( !vk.frame || amount <= 0.0f ) {
+		return;
+	}
+	VK_EndTarget();
+
+	for ( int i = 0; i < BLOOM_PASSES; i++ ) {
+		vkTarget_t *target = &vk.soft[i & 1];
+		// In pixels of the source, four samples each. The first pass takes the four pixels of the frame behind
+		// one of the buffer and only what is bright in them, the last one weighs the whole.
+		const float offset = i ? ( i - 0.5f ) * 1.3f : 0.5f;
+		const float parm[4] = { offset / source->width, offset / source->height,
+			( i == BLOOM_PASSES - 1 ) ? 0.25f * Q_min( amount, 2.0f ) : 0.25f, i ? 0.0f : BLOOM_THRESHOLD };
+
+		VK_BlurPass( source, target, parm );
+		source = target;
+	}
+
+	// back to the frame, with what is in it
+	VK_BeginTarget( &vk.color, &vk.depth, 2, qtrue );
+	VK_AddTarget( source, VKA_ADD_SOFT );
+
+	// the shaders that draw geometry have other sets and other state
+	VK_BindFrameSets();
+	vk.stateValid = qfalse;
+	VK_SetViewport( vk.viewport[0], vk.viewport[1], vk.viewport[2], vk.viewport[3], 0.0f, 1.0f );
 }
 
 /*

@@ -168,6 +168,8 @@ cvar_t	*r_marksOnTriangleMeshes;
 cvar_t	*r_aspectCorrectFonts;
 cvar_t	*r_2dAspect;
 cvar_t	*r_menuBlur;
+cvar_t	*r_templeBloom;
+cvar_t	*r_templeDetail;
 
 // the limits apply to the sum of all scenes in a frame --
 // the main view, all the 3D icons, etc
@@ -1712,6 +1714,8 @@ void R_Register( void )
 	r_aspectCorrectFonts				= ri.Cvar_Get( "r_aspectCorrectFonts",				"0",						CVAR_ARCHIVE, "" );
 	// it had another name once (r_sceneBlur), with a pass that ended the game, see VK_PostSet()
 	r_menuBlur							= ri.Cvar_Get( "r_menuBlur",						"1",						CVAR_ARCHIVE, "How far the scene behind the menu in the level is out of focus (rd-vulkan-vision): 0 not at all, 1 normal, up to 4" );
+	r_templeBloom						= ri.Cvar_Get( "r_templeBloom",					"1",						CVAR_ARCHIVE, "How much the bright things of the Vision Temple shine around themselves (rd-vulkan-vision): 0 not at all, 1 as it is meant, up to 2" );
+	r_templeDetail						= ri.Cvar_Get( "r_templeDetail",					"2",						CVAR_ARCHIVE, "How much of the Vision Temple is worked out for a pixel (rd-vulkan-vision): 2 all of it, 1 less of what costs most, 0 the least" );
 	r_2dAspect							= ri.Cvar_Get( "r_2dAspect",						"1",						CVAR_ARCHIVE|CVAR_LATCH, "1 menus and HUD keep their shape on a wide window, 0 they are stretched over it (vid_restart)" );
 	r_maxpolys							= ri.Cvar_Get( "r_maxpolys",						XSTRING( DEFAULT_MAX_POLYS ),		CVAR_NONE, "" );
 	r_maxpolyverts						= ri.Cvar_Get( "r_maxpolyverts",					XSTRING( DEFAULT_MAX_POLYVERTS ),	CVAR_NONE, "" );

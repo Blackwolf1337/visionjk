@@ -67,9 +67,9 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // scene of the frame is one without a level (RDF_NOWORLDMODEL) with the flag RDF_VISION_TEMPLE, and the renderer
 // works a place above the clouds out behind it (trap->ext.R_SetTempleScene, an engine with the cvar
 // cl_cgameTemple; so far only the Vulkan device of rd-vulkan-vision can, shaders/temple.frag). The camera
-// walks there on the ground: on the clouds, up the three steps of the podium, no farther from it than
-// TEMPLE_FAR. Where the podium is and how high its steps are stands in that shader and in Temple_Ground()
-// here, and the two have to match. Keys, the server, the body and the ways back are the ones of Focus.
+// walks there on the gold: the way, the terrace around the podium and up its five steps, not on the clouds that
+// heap up around them (Temple_Keep()). Where those are and how high the steps are stands in that shader and
+// in Temple_Ground() and Temple_Keep() here, and the two have to match. Keys, the server, the body and the ways back are the ones of Focus.
 //
 // Who else is there. Clients of this tree that are in the temple meet at the voice master, whatever server each
 // of them plays on (CG_VoiceTempleFrame() of voice/cg_voice.c has the link, cg_templeLink says with whom: 1
@@ -96,7 +96,9 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define FOCUS_OUT_MSEC		320			//	and goes in this one after the world is back
 #define FOCUS_MUFFLE		0.7f		// s_muffle while the look is all there
 #define TEMPLE_EYE			44.0f		// the Vision Temple: the eye above the ground,
-#define TEMPLE_FAR			640.0f		//	how far from the middle of the podium one can go,
+#define TEMPLE_TERRACE		203.0f		//	how far from the middle of the podium the terrace around it goes for a walker,
+#define TEMPLE_WAY_HALF		23.0f		//	how wide the way to it is to each side of its middle,
+#define TEMPLE_WAY_START	-516.0f		//	and where that way begins
 #define TEMPLE_SPEED		190.0f		//	units a second,
 #define TEMPLE_IN_MSEC		1800		//	and the time in which the place comes out of light
 #define TEMPLE_WISP_MSEC	3000		// nothing of somebody for this long: he left
@@ -289,6 +291,31 @@ static float Temple_Ground( float x, float y ) {
 	const float r = sqrtf( x * x + y * y );
 
 	return r >= 170.0f ? 0.0f : 6.0f * Q_min( 5.0f, floorf( ( 180.0f - r ) / 10.0f ) );
+}
+
+// One walks on gold there, not on the clouds: on the terrace around the podium and on the way that leads to it
+// (terrace() and way() of shaders/temple.frag). A place outside of both is put to the nearest one inside.
+static void Temple_Keep( vec3_t origin ) {
+	const float	r = sqrtf( origin[0] * origin[0] + origin[1] * origin[1] );
+	vec2_t		onTerrace, onWay;
+	float		toTerrace, toWay;
+
+	if ( r <= TEMPLE_TERRACE || ( origin[0] >= TEMPLE_WAY_START && origin[0] <= 0.0f && fabsf( origin[1] ) <= TEMPLE_WAY_HALF ) ) {
+		return;
+	}
+	onTerrace[0] = origin[0] * TEMPLE_TERRACE / r;
+	onTerrace[1] = origin[1] * TEMPLE_TERRACE / r;
+	onWay[0] = Com_Clamp( TEMPLE_WAY_START, 0.0f, origin[0] );
+	onWay[1] = Com_Clamp( -TEMPLE_WAY_HALF, TEMPLE_WAY_HALF, origin[1] );
+	toTerrace = r - TEMPLE_TERRACE;
+	toWay = sqrtf( ( origin[0] - onWay[0] ) * ( origin[0] - onWay[0] ) + ( origin[1] - onWay[1] ) * ( origin[1] - onWay[1] ) );
+	if ( toWay < toTerrace ) {
+		origin[0] = onWay[0];
+		origin[1] = onWay[1];
+	} else {
+		origin[0] = onTerrace[0];
+		origin[1] = onTerrace[1];
+	}
 }
 
 static void Focus_Begin( qboolean temple ) {
@@ -596,7 +623,7 @@ static void Focus_Move( void ) {
 	}
 	if ( focus.temple ) {
 		// On the ground of the Vision Temple: where one looks decides only the direction on it, the ground how
-		// high the eye is, and nobody goes farther from the podium than TEMPLE_FAR.
+		// high the eye is, and nobody leaves the gold (Temple_Keep()).
 		float ground;
 
 		wish[2] = 0.0f;
@@ -607,11 +634,7 @@ static void Focus_Move( void ) {
 		focus.velocity[2] = 0.0f;
 		focus.origin[0] += focus.velocity[0] * seconds;
 		focus.origin[1] += focus.velocity[1] * seconds;
-		dist = sqrtf( focus.origin[0] * focus.origin[0] + focus.origin[1] * focus.origin[1] );
-		if ( dist > TEMPLE_FAR ) {
-			focus.origin[0] *= TEMPLE_FAR / dist;
-			focus.origin[1] *= TEMPLE_FAR / dist;
-		}
+		Temple_Keep( focus.origin );
 		// (a step is taken within a moment, and one sways a little as somebody who floats)
 		ground = Temple_Ground( focus.origin[0], focus.origin[1] ) + TEMPLE_EYE + 1.5f * sinf( now * 0.0016f );
 		focus.origin[2] += ( ground - focus.origin[2] ) * Q_min( 1.0f, 9.0f * seconds );

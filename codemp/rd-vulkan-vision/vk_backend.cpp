@@ -999,6 +999,10 @@ static const void *RB_DrawSurfs( const void *data ) {
 	if ( ( focus || spirit ) && rb_sawOver ) {
 		RB_RenderOverSurfs( cmd->drawSurfs, cmd->numDrawSurfs );
 	}
+	// the Vision Temple and what stands in it shine (vk_post.cpp)
+	if ( ( backEnd.refdef.rdflags & RDF_VISION_TEMPLE ) && r_templeAmount > 0.0f && !backEnd.viewParms.isPortal ) {
+		VK_BloomFrame( r_templeBloom->value * r_templeAmount );
+	}
 	rb_overLater = qfalse;
 	// the next picture has to set the 2D projection up again
 	tess.shader = NULL;

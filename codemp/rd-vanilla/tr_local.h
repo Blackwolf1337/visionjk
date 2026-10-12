@@ -1269,6 +1269,8 @@ extern	cvar_t	*r_marksOnTriangleMeshes;
 extern	cvar_t	*r_aspectCorrectFonts;
 extern	cvar_t	*r_2dAspect;
 extern	cvar_t	*r_menuBlur;
+extern	cvar_t	*r_templeBloom;
+extern	cvar_t	*r_templeDetail;
 
 float	R_2DBias( void );
 void	RE_Set2DPlane( const float *matrix );

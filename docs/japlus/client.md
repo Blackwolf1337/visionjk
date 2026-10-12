@@ -665,8 +665,17 @@ written anew the same day: the clouds are a volume the ray is marched through, l
 is free, the gold is a metal with a highlight, mirrored sky, shadows and engraved lines, a ring is strands of
 light with running heads. The head of `temple.frag` says how. The techniques are the ones of well-known scenes on
 shadertoy.com, the code is of this tree: what is published there is under a licence that does not go with the
-one of the game unless its author says otherwise. About 170 frames a second at 2560 x 1440 with 8 samples on an
-RTX 4070 SUPER (the first version: 300, the level it was entered from: 850). One arrives out of light on the way to the podium, walks with the movement keys on the ground (the
+one of the game unless its author says otherwise.
+
+Third pass the same day, for what still differed from the pictures the owner had given: the clouds heap up right
+beside what one walks on, as high as a man and higher, so one stands among them (and walks on the gold only, see
+below); the frame of a view of the temple gets a bloom (`VK_BloomFrame()`: what is brighter than a threshold,
+widened in the half-size buffers of the depth of field and added softly; `r_templeBloom`, 0 to 2, default 1);
+the sun is no disc any more but a burning heart with flames, rays in two sets, a ring of light far around it
+and a streak along the horizon. `r_templeDetail` (2, 1, 0) leaves out what costs most for a weaker card: the
+second look towards the sun in the clouds and two layers of the sky at 1, the shadows on the gold and a layer of
+the clouds at 0. Frames a second at 2560 x 1440 with 8 samples on an RTX 4070 SUPER: about 150 at detail 2, 160
+at 1, 180 at 0 (the first version of the shader: 300, the level the temple was entered from: 900). One arrives out of light on the way to the podium, walks with the movement keys on the ground (the
 clouds, the steps; no farther than 640 units from the middle) and looks around with the mouse. Where the
 podium is stands in the shader and in `Temple_Ground()`, the two have to match.
 

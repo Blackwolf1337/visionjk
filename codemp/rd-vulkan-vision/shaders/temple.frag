@@ -20,7 +20,9 @@
 // - What is far goes over into a haze, bright things run out softly (a film curve).
 //
 // VIEW: 0: xyz the eye, w seconds. 1: xyz where it looks, w how much of the place is there, 0 to 1 (it comes out
-// of light). 2: xyz to the right, as long as the tangent of half the angle of view. 3: xyz up, the same.
+// of light). 2: xyz to the right, as long as the tangent of half the angle of view, w how much is worked out
+// (r_templeDetail: 2 all of it, 1 less of what costs most, 0 the least that still is the place). 3: xyz up,
+// as long as the tangent of half the angle of view.
 #include "dialect.glsl"
 
 #ifdef VK_GLES
@@ -46,7 +48,7 @@ const vec3	RING_RIGHT = vec3( 150.0, -430.0, 135.0 );
 const vec3	RING_HALO = vec3( 0.0, 0.0, 330.0 );
 const vec3	AXIS_LEFT = vec3( 0.5, 0.8660254, 0.0 );
 const vec3	AXIS_RIGHT = vec3( 0.5, -0.8660254, 0.0 );
-const float	CLOUD_ROOF = 250.0;							// no cloud is higher than this
+const float	CLOUD_ROOF = 266.0;							// no cloud is higher than this
 
 /*
 ===============================================================================
@@ -126,8 +128,49 @@ vec3 haze( vec3 rd ) {
 	return mix( vec3( 0.075, 0.09, 0.13 ), vec3( 0.58, 0.20, 0.04 ), sunward( rd ) );
 }
 
+// The sun. No disc with an edge: a small burning heart with tongues of flame around it, light that runs out
+// softly, long thin rays in two sets that shimmer, rays of it through the haze, a faint ring of light far around
+// it, and a streak along the horizon. fine: all of that. Else only the light around it, for a mirror of gold.
+vec3 sunLight( vec3 rd, float seconds, bool fine ) {
+	float mu = dot( rd, SUN );
+
+	if ( mu < 0.0 ) {
+		return vec3( 0.0 );
+	}
+	// how far from its middle a direction is, about in radians, and where around it
+	float off = sqrt( max( 2.0 - 2.0 * mu, 0.0 ) );
+	vec3 light = vec3( 1.0, 0.44, 0.12 ) * 0.42 * exp( -off * 4.5 ) + vec3( 1.0, 0.70, 0.36 ) * 1.3 * exp( -off * 17.0 );
+
+	if ( !fine ) {
+		return light + vec3( 1.0, 0.9, 0.7 ) * 6.0 * exp( -off * off * 900.0 );
+	}
+	// (where around it: as an angle for what repeats around it, as a direction for the noise, which would have a
+	// seam where an angle begins anew)
+	vec2 beside = vec2( rd.y, rd.z - SUN.z );
+	vec2 way = beside / max( length( beside ), 0.00001 );
+	float around = atan( beside.y, beside.x );
+	// its heart, and the flames that lick out of it
+	float flames = layered( beside * 36.0 - way * seconds * 0.22, 4 );
+
+	light += vec3( 1.0, 0.96, 0.86 ) * 26.0 * exp( -off * off * 2400.0 );
+	light += vec3( 1.0, 0.62, 0.22 ) * 9.0 * flames * flames * exp( -off * 34.0 );
+	// rays as a lens draws them: six long ones and ten short ones that turn a little, each shimmering
+	float shimmer = 0.55 + 0.45 * noise( way * 5.0 + vec2( seconds * 0.7, 3.0 ) );
+	float longRays = pow( abs( cos( around * 3.0 + 0.4 ) ), 110.0 ) * exp( -off * 7.5 );
+	float shortRays = pow( abs( cos( around * 5.0 + 1.3 + 0.08 * sin( seconds * 0.5 ) ) ), 240.0 ) * exp( -off * 13.0 );
+
+	light += vec3( 1.0, 0.86, 0.60 ) * ( 1.5 * longRays + 1.0 * shortRays ) * shimmer;
+	// rays through the haze, broad and soft
+	light += vec3( 1.0, 0.46, 0.13 ) * pow( mu, 14.0 ) * 0.42 * noise( way * 3.2 + vec2( seconds * 0.04, 0.0 ) ) * noise( way * 8.0 + vec2( 4.0, seconds * 0.03 ) );
+	// a ring of light far around it, red inside and pale outside
+	light += vec3( 1.0, 0.40, 0.12 ) * 0.10 * exp( -pow( ( off - 0.330 ) / 0.020, 2.0 ) ) + vec3( 0.9, 0.8, 0.7 ) * 0.07 * exp( -pow( ( off - 0.352 ) / 0.016, 2.0 ) );
+	// and the streak along the horizon
+	light += vec3( 1.0, 0.66, 0.30 ) * exp( -abs( rd.z - SUN.z ) * 90.0 ) * pow( mu, 20.0 ) * 0.40;
+	return light;
+}
+
 // The sky in a direction. fine: with its clouds and stars, which a mirror of rough gold does not show.
-vec3 sky( vec3 rd, float seconds, bool fine ) {
+vec3 sky( vec3 rd, float seconds, bool fine, float detail ) {
 	float up = max( rd.z, 0.0 );
 	float mu = max( dot( rd, SUN ), 0.0 );
 	float side = sunward( rd );
@@ -141,9 +184,9 @@ vec3 sky( vec3 rd, float seconds, bool fine ) {
 		// heap that faces the sun burns, the other one is dark, and where a cloud is thin the light of the sun
 		// comes through it when it stands behind.
 		vec2 at = uv * 0.50 + vec2( seconds * 0.005, 0.0 ) + 0.25 * vec2( noise( uv * 0.7 + 3.1 ), noise( uv * 0.7 + 8.4 ) );
-		float f = layered( at, 6 );
+		float f = layered( at, detail > 1.5 ? 6 : 4 );
 		float cover = smoothstep( 0.50, 0.66, f );
-		float facing = smoothstep( -0.015, 0.075, f - layered( at + vec2( 0.11, 0.0 ), 4 ) );
+		float facing = smoothstep( -0.015, 0.075, f - layered( at + vec2( 0.11, 0.0 ), detail > 0.5 ? 4 : 3 ) );
 		float thin = cover * ( 1.0 - smoothstep( 0.52, 0.78, f ) );
 		vec3 fire = mix( vec3( 0.11, 0.028, 0.020 ) * ( 0.45 + side ), vec3( 1.45, 0.46, 0.07 ) * ( 0.18 + 0.42 * side + 0.45 * mu * mu ), facing );
 
@@ -156,15 +199,7 @@ vec3 sky( vec3 rd, float seconds, bool fine ) {
 		c += vec3( 0.05, 0.02, 0.07 ) * smoothstep( 0.45, 0.8, layered( uv * 0.35 + 9.0, 3 ) ) * smoothstep( 0.3, 0.8, up );
 		c = mix( c, fire, cover * smoothstep( 0.01, 0.14, rd.z ) * 0.94 );
 	}
-	// the sun: its disc, the light around it, rays of it through the haze, and a streak of it along the horizon
-	float around = atan( rd.z - SUN.z, rd.y );
-	float rays = fine ? noise( vec2( around * 5.0, seconds * 0.04 ) ) * noise( vec2( around * 13.0 + 4.0, seconds * 0.03 ) ) : 0.25;
-
-	c += vec3( 1.0, 0.46, 0.13 ) * pow( mu, 14.0 ) * ( 0.05 + 0.45 * rays );
-	c += vec3( 1.0, 0.78, 0.46 ) * pow( mu, 150.0 ) * 0.9;
-	c += vec3( 1.0, 0.95, 0.85 ) * pow( mu, 1400.0 ) * 18.0;
-	c += vec3( 1.0, 0.66, 0.30 ) * exp( -abs( rd.z - SUN.z ) * 90.0 ) * pow( mu, 20.0 ) * 0.35;
-	return c;
+	return c + sunLight( rd, seconds, fine );
 }
 
 /*
@@ -176,29 +211,31 @@ The clouds
 */
 
 // How high the clouds stand at a place, and in heap how high that is among what they can be there, 0 to 1 (their
-// hollows are 0). Around the temple they are low heaps one can walk between, never over the way and the podium;
-// farther out they pile up as high as towers.
+// hollows are 0). They lap at the edge of what one walks on, the terrace around the podium and the way to it,
+// and heap up right beside it, as high as a man and higher: one stands among them. Farther out they pile up as
+// high as towers.
 float cloudTop( vec2 xy, float seconds, int layers, out float heap ) {
-	float far = smoothstep( 470.0, 1350.0, length( xy ) );
+	float r = length( xy );
+	float far = smoothstep( 470.0, 1350.0, r );
 	vec2 drift = vec2( seconds * 0.004, seconds * 0.0015 );
 	float low = far < 1.0 ? heaped( xy * 0.0044 + drift * 2.0, layers ) : 0.0;
 	float high = far > 0.0 ? heaped( xy * 0.0018 + drift + 5.0, layers ) : 0.0;
+	// how far outside of the gold a place is
+	float outside = min( r - 208.0, max( abs( xy.y ) - 28.0, max( -524.0 - xy.x, xy.x + 170.0 ) ) );
+	float rise = smoothstep( 2.0, 84.0, outside );
 
 	heap = mix( low, high, far );
-	return mix( -52.0 + 52.0 * low, -90.0 + 350.0 * high * high, far );
+	return mix( mix( -11.0 + 8.0 * low, -24.0 + 92.0 * low, rise ), -90.0 + 350.0 * high * high, far );
 }
 
-// The clouds between the eye and tMax: their light in rgb, already weighed by what covers it, and in a how much
-// of what is behind them still shows. jitter: 0 to 1, another one for every pixel, so the steps do not show
-// as bands.
 // the small stuff of a cloud at a place: what crinkles its edge like a cauliflower. About -0.5 to 0.5.
 float crinkle( vec3 p ) {
-	vec2 q = p.xy * 0.050 + p.z * vec2( 0.031, 0.043 );
-
-	return 0.62 * noise( q ) + 0.38 * noise( q * 2.3 + 11.0 ) - 0.5;
+	// (each layer leans another way with the height: one way for all of them shows as streaks along it)
+	return 0.52 * noise( p.xy * 0.034 + p.z * vec2( 0.027, 0.039 ) ) + 0.30 * noise( p.xy * 0.078 + p.z * vec2( -0.051, 0.024 ) + 11.0 )
+		+ 0.18 * noise( p.yx * 0.170 + p.z * vec2( 0.070, -0.090 ) + 23.0 ) - 0.5;
 }
 
-vec4 clouds( vec3 ro, vec3 rd, float tMax, float seconds, float jitter ) {
+vec4 clouds( vec3 ro, vec3 rd, float tMax, float seconds, float jitter, float detail ) {
 	float tEnd = rd.z > 0.0001 ? min( tMax, ( CLOUD_ROOF - ro.z ) / rd.z ) : tMax;
 	float t = 2.0 + 8.0 * jitter;
 	float through = 1.0;
@@ -214,8 +251,9 @@ vec4 clouds( vec3 ro, vec3 rd, float tMax, float seconds, float jitter ) {
 			break;
 		}
 		vec3 p = ro + rd * t;
-		int layers = t > 4200.0 ? 3 : ( t > 1500.0 ? 4 : 5 );
-		float soft = 9.0 + t * 0.014;
+		// (near by the crinkle is the small stuff, the heights need no fifth layer for it)
+		int layers = ( t > 4200.0 || detail < 0.5 ) ? 3 : 4;
+		float soft = 5.0 + t * 0.014;
 		float above = p.z - cloudTop( p.xy, seconds, layers, heap );
 
 		if ( above > soft + 8.0 ) {
@@ -226,20 +264,26 @@ vec4 clouds( vec3 ro, vec3 rd, float tMax, float seconds, float jitter ) {
 		// (near by the edge of a cloud is crinkled, far away that is finer than a pixel)
 		float fray = t < 1800.0 ? crinkle( p ) : 0.0;
 
-		above += fray * 15.0;
+		above += fray * 22.0;
 		float dense = clamp( ( soft - above ) / ( 2.0 * soft ), 0.0, 1.0 );
 		float pace = 4.0 + t * 0.022;
 		// Is the way to the sun free a little further on, or is a heap in it? The sun stands low: what is
 		// higher than the ray there by a hand's breadth shades this place.
 		vec3 q = p + SUN * ( 64.0 + t * 0.04 );
 		float shade = smoothstep( -5.0, 9.0 + t * 0.01, cloudTop( q.xy, seconds, 3, heapSun ) - q.z );
+
+		// (and close by, where a small heap of its own stands in the light of a place)
+		if ( t < 900.0 && detail > 1.5 ) {
+			q = p + SUN * 20.0;
+			shade = max( shade, 0.85 * smoothstep( -2.0, 6.0, cloudTop( q.xy, seconds, 3, heapSun ) - q.z + fray * 22.0 ) );
+		}
 		// what the sun gives, what the sky gives from above, and less of both deep inside and in the hollows
-		vec3 lit = vec3( 1.30, 0.80, 0.46 ) * ( 1.0 - shade ) * forward * ( 0.30 + 0.70 * ( 1.0 - dense ) )
-			* ( 0.42 + 0.95 * heap ) * ( 1.0 - 1.2 * fray );
+		vec3 lit = vec3( 1.55, 0.98, 0.58 ) * ( 1.0 - shade ) * forward * ( 0.30 + 0.70 * ( 1.0 - dense ) )
+			* ( 0.42 + 0.95 * heap ) * ( 1.0 - 1.3 * fray );
 		float open = clamp( 0.5 + above / ( 2.0 * soft ), 0.0, 1.0 ) * ( 0.22 + 0.78 * smoothstep( 0.04, 0.50, heap ) );
 		float cover = 1.0 - exp( -dense * dense * pace * 0.13 );
 
-		lit += mix( vec3( 0.035, 0.018, 0.024 ), vec3( 0.22, 0.14, 0.17 ), open );
+		lit += mix( vec3( 0.022, 0.012, 0.018 ), vec3( 0.135, 0.090, 0.115 ), open );
 		// far away it goes over into the haze
 		lit = mix( lit, far, 1.0 - exp( -t / 4200.0 ) );
 		light += through * cover * lit;
@@ -344,8 +388,13 @@ float sideColumns( vec3 p ) {
 	return min( d, column( q - vec3( -9.0, -10.0, 0.0 ), 3.5, 30.0 ) );
 }
 
+// the terrace the podium stands on: what one walks on around it (Temple_Keep() of the cgame)
+float terrace( vec3 p ) {
+	return cylinder( p + vec3( 0.0, 0.0, 3.0 ), 208.0, 4.5 ) - 0.5;
+}
+
 float gold( vec3 p ) {
-	return min( min( podium( p ), way( p ) ), min( columns( p ), sideColumns( p ) ) );
+	return min( min( podium( p ), terrace( p ) ), min( way( p ), min( columns( p ), sideColumns( p ) ) ) );
 }
 
 vec3 goldNormal( vec3 p ) {
@@ -508,7 +557,7 @@ float nearness( vec3 p, vec3 n ) {
 	return clamp( 1.0 - dark, 0.0, 1.0 );
 }
 
-vec3 goldLit( vec3 p, vec3 rd, float seconds ) {
+vec3 goldLit( vec3 p, vec3 rd, float seconds, float detail ) {
 	vec3 n = goldNormal( p );
 	float r = length( p.xy );
 	float rough = 0.24;
@@ -517,11 +566,11 @@ vec3 goldLit( vec3 p, vec3 rd, float seconds ) {
 	// steps of the podium many fine ones. Faces that lie flat have lines engraved: rings and rays on the
 	// podium, bars across the way.
 	if ( abs( n.z ) < 0.6 ) {
-		float turn = ( r < 176.0 ? 0.20 * cos( atan( p.y, p.x ) * 140.0 ) : 0.30 * cos( atan( n.y, n.x ) * 16.0 ) );
+		float turn = ( r < 212.0 && p.z < 32.0 ? 0.20 * cos( atan( p.y, p.x ) * 140.0 ) : 0.30 * cos( atan( n.y, n.x ) * 16.0 ) );
 
 		n.xy = vec2( n.x * cos( turn ) - n.y * sin( turn ), n.x * sin( turn ) + n.y * cos( turn ) );
 	} else if ( n.z > 0.6 ) {
-		if ( p.x < -172.0 && r > 172.0 ) {
+		if ( p.x < -172.0 && r > 209.0 ) {
 			n.x += 0.10 * cos( p.x * 0.42 );
 		} else {
 			vec2 out_ = p.xy / max( r, 0.001 );
@@ -547,13 +596,13 @@ vec3 goldLit( vec3 p, vec3 rd, float seconds ) {
 	// of them hide each other, and how much more a metal mirrors at a flat angle
 	float mirrors = a2 / ( 3.14159 * spread * spread ) * 0.25 / ( ( nl * ( 1.0 - k ) + k ) * ( nv * ( 1.0 - k ) + k ) );
 	vec3 flat_ = GOLD + ( 1.0 - GOLD ) * pow( 1.0 - max( dot( v, h ), 0.0 ), 5.0 );
-	float sun = nl > 0.0 ? sunShadow( p + n * 0.6 ) : 0.0;
+	float sun = nl > 0.0 ? ( detail > 0.5 ? sunShadow( p + n * 0.6 ) : 1.0 ) : 0.0;
 	float open = nearness( p, n );
 	vec3 color = min( SUN_LIGHT * 3.2 * sun * nl * mirrors * flat_, vec3( 24.0 ) );
 
 	// what it mirrors of the world: the sky, or the clouds under it, less sharply the rougher it is
 	vec3 back = reflect( rd, n );
-	vec3 world = back.z > -0.02 ? sky( normalize( vec3( back.xy, max( back.z, 0.0 ) ) ), seconds, false ) : vec3( 0.0 );
+	vec3 world = back.z > -0.02 ? sky( normalize( vec3( back.xy, max( back.z, 0.0 ) ) ), seconds, false, 0.0 ) : vec3( 0.0 );
 	vec3 below = mix( vec3( 0.34, 0.20, 0.16 ), vec3( 1.25, 0.82, 0.52 ), sunward( back ) );
 	vec3 mirror = GOLD + ( 1.0 - GOLD ) * pow( 1.0 - nv, 5.0 ) * ( 1.0 - rough );
 
@@ -624,18 +673,18 @@ void main() {
 	vec3 color;
 
 	if ( what == 1 ) {
-		color = goldLit( ro + rd * tEnd, rd, seconds );
+		color = goldLit( ro + rd * tEnd, rd, seconds, VIEW( 2 ).w );
 		color = mix( color, haze( rd ), 1.0 - exp( -tEnd / 6000.0 ) );
 	} else {
-		color = sky( rd, seconds, true );
+		color = sky( rd, seconds, true, VIEW( 2 ).w );
 	}
 
 	// the clouds in front of that, and the light of the rings in front of them
-	vec4 sea = clouds( ro, rd, tEnd, seconds, jitter );
+	vec4 sea = clouds( ro, rd, tEnd, seconds, jitter, VIEW( 2 ).w );
 
 	color = sea.rgb + sea.a * color;
 	color += ringLight( ro, rd, tEnd, seconds ) * ( 0.35 + 0.65 * sea.a );
-	color += vec3( 1.0, 0.40, 0.06 ) * ( 1.10 / ( 1.0 + ringNear * ringNear * 0.006 ) + 0.14 / ( 1.0 + ringNear * 0.03 ) ) * sea.a;
+	color += vec3( 1.0, 0.40, 0.06 ) * ( 0.95 / ( 1.0 + ringNear * ringNear * 0.008 ) + 0.10 / ( 1.0 + ringNear * 0.03 ) ) * sea.a;
 	color += vec3( 1.0, 0.80, 0.46 ) * curtain( ro, rd, tEnd, seconds ) * 0.50;
 	color += vec3( 1.0, 0.84, 0.56 ) * beam( ro, rd, tEnd ) * 0.22;
 
