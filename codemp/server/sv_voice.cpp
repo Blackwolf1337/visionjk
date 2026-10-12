@@ -166,8 +166,11 @@ void SV_VoiceInit( void ) {
 	} else {
 		Com_Printf( "No voice master: the system gives no random numbers, so nobody could be given a token\n" );
 	}
+#elif defined( DEDICATED )
+	sv_voiceShared = Cvar_Get( "sv_voiceShared", "1", CVAR_INIT, "1: the voice chat comes in on the UDP port of the game, the server needs no second port. 0: on a port of its own (g_voicePort)" );
 #else
-	sv_voiceShared = Cvar_Get( "sv_voiceShared", "0", CVAR_INIT, "1: the voice chat comes in on the UDP port of the game, the server needs no second port" );
+	// (a game this program starts for its own player keeps the port of its own)
+	sv_voiceShared = Cvar_Get( "sv_voiceShared", "0", CVAR_INIT, "1: the voice chat comes in on the UDP port of the game, the server needs no second port. 0: on a port of its own (g_voicePort)" );
 #endif
 	// what the game module answers (g_voice.c): it takes its datagrams from here
 	Cvar_Get( "g_voiceShared", "0", CVAR_ROM, "" );

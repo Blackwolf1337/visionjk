@@ -209,10 +209,39 @@ from the numbers of the shader that draws the place (`rd-vulkan-vision/shaders/t
 compiler: change a size in both. A client without that renderer (a legacy client, `rd-vanilla`, the browser)
 sees players in an empty sky there.
 
-Clients find the server through the voice master: started with `-temple <port>` (the same host) or
-`-temple <address>:<port>`, it names the server in its answers to clients that enter the temple
-(`VOICE_TEMPLE_SERVER`, `game/voice/bg_voice.h`). A master without the option names none, and its clients stay
-in the temple that is drawn into their own game.
+`assets/configs/temple.cfg` has the settings of a temple server: `+exec temple.cfg +map vision_temple`.
+
+Clients find the server through the voice master, which names it in its answers to clients that enter the
+temple (`VOICE_TEMPLE_SERVER`, `game/voice/bg_voice.h`). The masterserver (below) names itself. The voice master
+as a program by itself names the server it was started with (`-temple <port>` for one on the same host, or
+`-temple <address>:<port>`) and none without that option: its clients then stay in the temple that is drawn
+into their own game.
+
+### The masterserver (not from JA+)
+
+`server/sv_voice.cpp`, `voicemaster/vm_core.c`. Built 2026-10-12, run hidden on Linux on one machine (the checks
+are in [voice.md](voice.md), "Checked"). Never run on a public address so far.
+
+One program on one UDP port that is everything central of VisionJK: the Vision Temple as a game server for the
+players of servers without this game module, and the voice master with the voice chat, the clan radio and the
+statuses of those servers. It is the dedicated server of this tree built with `-DBuildMasterServer=ON` (target
+`visionjk-master`, off unless asked for, with no install rule: it is for the hosts of VisionJK itself and no
+part of a release).
+
+```
+visionjk-master.x86_64 +set dedicated 1 +set net_port 29170 +exec temple.cfg +map vision_temple
+```
+
+What comes in on its port:
+
+- a packet of the game: a player in the temple, as on any server
+- a datagram of the voice chat of one of those players: the relay of its game module, as on any dedicated
+  server of this tree
+- any other datagram of the voice chat: the voice master. `sv_masterKbps` (4000, command line only) is what it
+  may send in a second, 0: anything
+
+A client that asks the voice master for the temple is told the port of the game of this very program, so the
+client goes on to it with a visit. 29170 is the port the clients of 0.1.5 know the voice master on.
 
 Not there: rooms for those who use a word of their own, a list of who is in the temple, more than the 32
 players one server holds.

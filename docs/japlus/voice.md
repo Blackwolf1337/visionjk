@@ -94,21 +94,40 @@ you (`cp_clanPwd` in the client, or `/clanpass` in the game): the ones your clan
 | Cvar | Default | Meaning |
 |------|---------|---------|
 | `g_voice` | 1 | 0: no voice chat, no port is opened (latched: from the next level on). It is in the server info |
-| `g_voicePort` | 0 | the UDP port of the relay, 0: the game port plus 1 (latched) |
+| `g_voicePort` | 0 | a UDP port of its own for the relay (latched). 0: none where the engine takes the voice chat on the port of the game (`sv_voiceShared`), else the game port plus 1 |
+| `sv_voiceShared` | 1 | of the engine, command line only. 1: the voice chat comes in on the UDP port of the game and leaves from it, the server needs no second port. The dedicated server of this tree has 1, a game a player starts from the menu 0. 0: the relay opens a port of its own |
+| `g_voiceShared` | | read only, set by the game module: 1 while its relay takes the datagrams from the engine |
 | `g_voiceRange` | 1024 | how far a voice carries, in units. 0: all over the level, without direction and without muffling |
 | `g_voiceTeamOnly` | 0 | 1: in team games only the own team hears a player |
 | `g_voiceRadio` | 1 | 0: no clan radio. With 1 a frame a client sends for its clan goes to the players with the same clan password, whatever `g_voiceRange` and `g_voiceTeamOnly` say. A silenced player has no radio either |
 | `g_voiceRelay` | | read only, set by the game module: where the relay listens for the web host of the same server, `address:port`. Empty: no relay |
 
-The voice chat is on unless a server switches it off (since 2026-10-07, before that `g_voice` was 0). So every
-server of this module opens the voice port, also a game a player starts from the menu. If the port can not be
-opened the server says so in one line and runs without voice. A server that has `g_voice 0` stored in its config
-keeps that.
+The voice chat is on unless a server switches it off (since 2026-10-07, before that `g_voice` was 0). A server
+that has `g_voice 0` stored in its config keeps that.
+
+**One port (since 2026-10-12).** On the dedicated server of this tree the voice chat has no port of its own: its
+datagrams come in on the UDP port of the game and the answers leave from it. A client is told the port in the
+answer to `jpvoice hello`, as before, so one from before this change follows by itself. Nothing has to be
+forwarded for the voice chat any more, and the port after the game port is free.
+
+The relay opens a port of its own, the game port plus 1 unless `g_voicePort` names one, in three cases: the
+game module runs in another engine (the original dedicated server, another fork), a player started the game from
+the menu, or the owner set `sv_voiceShared 0` or a `g_voicePort`. That port has to be reachable from outside
+like the game port: UDP, forwarded and open in the firewall. If it can not be opened the server says so in one
+line and runs without voice.
+
+How the engine tells the two apart (`server/sv_voice.cpp`, `SV_PacketEvent()`): a datagram of the voice chat
+starts with `VO` and the version of its protocol. A packet of the game starts with its sequence number, and one
+of them has the same four bytes: number 85846 of every client. So the server first looks whether a packet comes
+from the address and port of one of its clients with his qport, and only what does not is read as voice. Only
+after that it looks for a client by address and qport alone (a client whose router gave him a new port), since
+bytes 4 and 5 of a voice datagram would otherwise be read as a qport. The engine hands a datagram to the game
+module through an addition to the module interface that neither side touches unless the other one says so in a
+cvar (`ext` in `game/g_public.h`), so the module runs in any other engine as before.
 
 A server without this game module can say no to the voice chat as well: `sets g_voice 0` puts the key into
 its server info, and the cgame then leaves the voice master alone there.
 
-The voice port has to be reachable from outside like the game port: UDP, forwarded and open in the firewall.
 `voicestatus` on the server console lists who has voice, how many datagrams of each were handed on, and how many
 were refused.
 
@@ -189,7 +208,9 @@ the rings and the queues are static memory. `CG_Shutdown` stops the devices befo
 
 | `cgame/voice/cg_voice_web.c` | in a browser: the WebSocket to the web host in place of the UDP socket |
 | `server/web/sv_web_voice.cpp` | in the dedicated server: `/voice` of the web host, between that WebSocket and the relay |
-| `voicemaster/vm_main.c` | the voice master, a program by itself |
+| `server/sv_voice.cpp` | in the engine: the voice chat on the UDP port of the game, and the voice master inside the masterserver |
+| `voicemaster/vm_core.c` | the voice master: sessions, rooms, what is handed on. No socket of its own |
+| `voicemaster/vm_main.c` | the voice master as a program by itself, around `vm_core.c` |
 | `cgame/status/cg_status.c` | the statuses above the heads, which go through the voice master where the server passes none on |
 
 `-DBuildJPVoice=OFF` builds the cgame without it (and without the two libraries).
@@ -273,9 +294,17 @@ both ways       "VO" version 4 client token[4] sequence[2] (flags distance)   fl
 - Away is not found out by anybody there, so every client says it of itself: no key and no turn of the view
   for a minute. A legacy player on such a server never shows as away.
 
-**The master** (`visionjk-voicemaster`, `-DBuildVoiceMaster=ON`) is one program with one thread and one UDP
-socket, with nothing of the engine in it. It never decodes sound and writes no address and no room into its
-log, only one line a minute with numbers while something happens, and one when it is stopped.
+**The master** is `voicemaster/vm_core.c`. It never decodes sound and writes no address and no room into its
+log, only one line a minute with numbers while something happens, and one when it is stopped. Two programs
+carry it:
+
+- The masterserver (`visionjk-master`, `-DBuildMasterServer=ON`, since 2026-10-12): a dedicated server that is
+  the Vision Temple and answers for the voice master on its game port, see [server.md](server.md), "The
+  masterserver". This is what runs for the players. `sv_masterKbps` is its `-maxkbps`.
+- `visionjk-voicemaster` (`-DBuildVoiceMaster=ON`): the master by itself, one thread and one UDP socket and
+  nothing of the engine. The checks of the voice chat start it.
+
+Neither is part of a release.
 
 ```
 visionjk-voicemaster.x86_64 [-port 29170] [-ip <address to listen on>] [-maxkbps 4000]
@@ -384,7 +413,8 @@ Nothing of the voice chat is in the game protocol.
   that is required, no file a client has to have.
 - The server command `jpvoice` only goes to a client that sent the client command of that name. A client
   without this cgame never does, so it never gets a command it does not know.
-- The sound goes over the second port. A client that never sent there with a valid token gets nothing from it.
+- The sound goes over datagrams of its own, on the port of the game or on a second one. A client that never
+  sent one with a valid token gets none.
 - The one thing every client can see is the key `g_voice` in the server info. Clients ignore keys they do not
   know.
 - The mark over a speaker is drawn by the cgame of the listener. No flag is set on the player.
@@ -439,6 +469,35 @@ muffled and at full loudness. So nobody of the clan is left out, some hear it du
 (60 datagrams and 14000 bytes a second) count for both kinds of frame together.
 
 ## Checked
+
+2026-10-12, the voice chat on the port of the game and the masterserver, Linux, hidden and without sound
+hardware, everything on one machine over 127.0.0.1:
+
+- The relay both ways (`tools/voicetest/e2e.sh`, and with `SV_ARGS="+set sv_voiceShared 0"`): the listener got
+  the tone open, through the wall and with muffling off as before, no gap, on the port the server named: the
+  port of the game, or the one after it.
+- A client from before the change (`OLD_LISTENER=1 SV_ARGS="+set sv_floodProtect 1" tools/voicetest/e2e.sh`, the
+  listener with the cgame that was installed, v0.1.6-dev.2): it followed the port the server told it and heard
+  the same.
+- Telling voice from game (`tools/voicetest/gate.sh`, flood protection on): one client sent until it was past
+  its packet 85846 and stayed connected with its voice chat. Five datagrams with its qport in bytes 4 and 5
+  from another port of its address and 4000 datagrams of junk (`flood.py`) were refused: the relay counted
+  2405, which are those five and the 2400 of the junk that have the shape of a voice datagram, so that packet
+  was not among them. The server never took the port of the client for another one.
+- The sockets (`tools/voicetest/sockets.sh`): a dedicated server holds one UDP socket, the one of the game. With
+  the web host on it has a second one on 127.0.0.1 for that host and names it in `g_voiceRelay`. With
+  `sv_voiceShared 0` it has the port after the game port as before.
+- The masterserver (`tools/voicetest/masterserver.sh`): the 62 checks of the voice master, against the
+  dedicated server that carries it, on its game port. The same 62 pass against the master by itself
+  (`master.sh`, sanitizers). One of them was changed for it: a game server answers a packet it knows no client
+  for with "disconnect", which is no answer of the voice master.
+- The way to the temple through it (`MASTER=1 tools/uitest/visit.sh live`): the temple key in a level, the
+  master names its own port, the client visits it, walks, and is back in its body.
+
+Not checked: voice of a client in a browser through the web host of a server with one port (the socket for it
+is there, nobody talked through it), the masterserver on its real machine and over a real network, Windows,
+how any of it sounds. Seen on the way and not changed: the dedicated server does not catch SIGTERM, so a
+service that is stopped ends without telling its players.
 
 2026-10-11, the clan radio and the statuses through the voice master, Linux, without sound hardware:
 

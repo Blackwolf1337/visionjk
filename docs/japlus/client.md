@@ -651,7 +651,7 @@ Not checked: how it steers with real keys and a real mouse, how it sounds, the b
 ### The Vision Temple
 
 Not from JA+: an idea of the owner of this tree (2026-10-12). `cgame/focus/cg_focus.c` (the state is the one of
-Focus above), `rd-vulkan-vision/shaders/temple.frag`, `voice/cg_voice.c` and `voicemaster/vm_main.c` for who else
+Focus above), `rd-vulkan-vision/shaders/temple.frag`, `voice/cg_voice.c` and `voicemaster/vm_core.c` for who else
 is there. **Built and run on Linux with rd-vulkan-vision only** (hidden, 2026-10-12), played by nobody yet.
 
 The command `temple` (`temple 1`, `temple 0`; a key under Controls, Extras) takes the player to a temple above
