@@ -56,7 +56,8 @@ typedef struct voiceClient_s {
 } voiceClient_t;
 
 static voiceClient_t	voiceClients[MAX_CLIENTS];
-static bgSocket_t		voiceSocket = BG_INVALID_SOCKET;
+static qboolean			voiceOn;			// there is a relay
+static bgSocket_t		voiceSocket = BG_INVALID_SOCKET;	// its own socket. The shared way has one only for the web host
 static int				voicePort;			// of the socket
 static qboolean			voiceShared;		// the engine hands over what comes in on the port of the game (sv_voiceShared)
 static int				voiceGamePort;		//	and this is that port
@@ -94,7 +95,7 @@ void G_VoiceShutdown( qboolean restart ) {
 		voiceSocket = BG_INVALID_SOCKET;
 	}
 	G_VoiceTell( qfalse );
-	voiceShared = qfalse;
+	voiceOn = voiceShared = qfalse;
 	trap->Cvar_Set( "g_voiceShared", "0" );
 	memset( voiceClients, 0, sizeof( voiceClients ) );
 }
@@ -113,7 +114,7 @@ void G_VoiceInit( qboolean restart ) {
 	char				text[MAX_INFO_STRING];
 	qboolean			shared;
 
-	if ( restart && voiceSocket != BG_INVALID_SOCKET )
+	if ( restart && voiceOn )
 		return;
 	trap->Cvar_Register( NULL, "g_voiceShared", "0", CVAR_ROM );
 	G_VoiceShutdown( qfalse );
@@ -133,44 +134,48 @@ void G_VoiceInit( qboolean restart ) {
 		return;
 	}
 
-	BG_NetStart();
-	voiceSocket = socket( AF_INET, SOCK_DGRAM, IPPROTO_UDP );
-	if ( voiceSocket == BG_INVALID_SOCKET ) {
-		trap->Print( "Voice chat is off: no socket\n" );
-		return;
-	}
-	memset( &addr, 0, sizeof( addr ) );
-	addr.sin_family = AF_INET;
-	addr.sin_port = htons( (unsigned short)voicePort );
-	// on the address the game itself listens on, if it was given one
-	trap->Cvar_VariableStringBuffer( "net_ip", text, sizeof( text ) );
-	if ( shared )
-		addr.sin_addr.s_addr = htonl( INADDR_LOOPBACK );
-	else if ( inet_pton( AF_INET, text, &addr.sin_addr ) != 1 )
-		addr.sin_addr.s_addr = htonl( INADDR_ANY );
-	if ( bind( voiceSocket, (struct sockaddr *)&addr, sizeof( addr ) ) != 0
-		|| ( shared && getsockname( voiceSocket, (struct sockaddr *)&addr, &addrLen ) != 0 ) ) {
-		trap->Print( shared ? "Voice chat is off: no UDP port on this machine can be opened\n"
-			: "Voice chat is off: UDP port %i can not be opened (g_voicePort)\n", voicePort );
-		BG_CloseSocket( voiceSocket );
-		voiceSocket = BG_INVALID_SOCKET;
-		return;
-	}
-	BG_SocketNonBlocking( voiceSocket );
-	if ( shared ) {
+	// the shared way needs a socket of its own only for the web host of the server (sv_webPort)
+	if ( !shared || trap->Cvar_VariableIntegerValue( "sv_webPort" ) > 0 ) {
+		BG_NetStart();
+		voiceSocket = socket( AF_INET, SOCK_DGRAM, IPPROTO_UDP );
+		if ( voiceSocket == BG_INVALID_SOCKET ) {
+			trap->Print( "Voice chat is off: no socket\n" );
+			return;
+		}
+		memset( &addr, 0, sizeof( addr ) );
+		addr.sin_family = AF_INET;
+		addr.sin_port = htons( (unsigned short)voicePort );
+		// on the address the game itself listens on, if it was given one
+		trap->Cvar_VariableStringBuffer( "net_ip", text, sizeof( text ) );
+		if ( shared )
+			addr.sin_addr.s_addr = htonl( INADDR_LOOPBACK );
+		else if ( inet_pton( AF_INET, text, &addr.sin_addr ) != 1 )
+			addr.sin_addr.s_addr = htonl( INADDR_ANY );
+		if ( bind( voiceSocket, (struct sockaddr *)&addr, sizeof( addr ) ) != 0
+			|| ( shared && getsockname( voiceSocket, (struct sockaddr *)&addr, &addrLen ) != 0 ) ) {
+			trap->Print( shared ? "Voice chat is off: no UDP port on this machine can be opened\n"
+				: "Voice chat is off: UDP port %i can not be opened (g_voicePort)\n", voicePort );
+			BG_CloseSocket( voiceSocket );
+			voiceSocket = BG_INVALID_SOCKET;
+			return;
+		}
+		BG_SocketNonBlocking( voiceSocket );
 		voicePort = ntohs( addr.sin_port );
+
+		// on every address: the web host of this server reaches the relay on the one no network has
+		voiceSelf = addr.sin_addr;
+		if ( voiceSelf.s_addr == htonl( INADDR_ANY ) )
+			voiceSelf.s_addr = htonl( INADDR_LOOPBACK );
+		G_VoiceTell( qtrue );
+	}
+	voiceOn = qtrue;
+	if ( shared ) {
 		voiceShared = qtrue;
 		trap->Cvar_Set( "g_voiceShared", "1" );
 		trap->Print( "Voice chat on the UDP port of the game, %i\n", voiceGamePort );
 	} else {
 		trap->Print( "Voice chat on UDP port %i\n", voicePort );
 	}
-
-	// on every address: the web host of this server reaches the relay on the one no network has
-	voiceSelf = addr.sin_addr;
-	if ( voiceSelf.s_addr == htonl( INADDR_ANY ) )
-		voiceSelf.s_addr = htonl( INADDR_LOOPBACK );
-	G_VoiceTell( qtrue );
 
 	// the cgame only asks for voice on a server that says in its server info that it has it
 	trap->GetServerinfo( text, sizeof( text ) );
@@ -201,7 +206,7 @@ void Cmd_JPVoice_f( gentity_t *ent ) {
 	unsigned int	token = 0;
 
 	trap->Argv( 1, arg, sizeof( arg ) );
-	if ( voiceSocket == BG_INVALID_SOCKET || Q_stricmp( arg, "hello" ) || ( ent->r.svFlags & SVF_BOT ) )
+	if ( !voiceOn || Q_stricmp( arg, "hello" ) || ( ent->r.svFlags & SVF_BOT ) )
 		return;
 
 	// a number nobody can guess: with it a datagram counts as his
@@ -372,7 +377,7 @@ static qboolean G_VoiceDatagram( const struct sockaddr_in *from, const byte *dat
 	vc = &voiceClients[p.client];
 	if ( !vc->token || p.token != vc->token || !g_entities[p.client].inuse || !g_entities[p.client].client
 		|| g_entities[p.client].client->pers.connected == CON_DISCONNECTED
-		|| ( vc->gameAddrKnown && from->sin_addr.s_addr != vc->gameAddr.s_addr && !G_VoiceFromWebHost( from ) ) ) {
+		|| ( vc->gameAddrKnown && from->sin_addr.s_addr != vc->gameAddr.s_addr && ( viaGame || !G_VoiceFromWebHost( from ) ) ) ) {
 		voiceRefused++;
 		return qfalse;
 	}
@@ -409,7 +414,7 @@ static qboolean G_VoiceDatagram( const struct sockaddr_in *from, const byte *dat
 qboolean G_VoiceFromGame( const byte *ip, int port, const byte *data, int length ) {
 	struct sockaddr_in from;
 
-	if ( !voiceShared || voiceSocket == BG_INVALID_SOCKET )
+	if ( !voiceShared )
 		return qfalse;
 	memset( &from, 0, sizeof( from ) );
 	from.sin_family = AF_INET;
@@ -456,7 +461,7 @@ void G_VoiceFrame( void ) {
 void Svcmd_VoiceStatus_f( void ) {
 	int i, count = 0;
 
-	if ( voiceSocket == BG_INVALID_SOCKET ) {
+	if ( !voiceOn ) {
 		trap->Print( "Voice chat is off (g_voice %i)\n", g_voice.integer );
 		return;
 	}

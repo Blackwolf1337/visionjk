@@ -878,4 +878,21 @@ if(BuildMPDed)
 	set_target_properties(${MPDed} PROPERTIES INCLUDE_DIRECTORIES "${MPDedIncludeDirectories}")
 	set_target_properties(${MPDed} PROPERTIES PROJECT_LABEL "MP Dedicated Server")
 	target_link_libraries(${MPDed} ${MPDedLibraries})
+
+	# The masterserver: the same program with the voice master inside (server/sv_voice.cpp,
+	# voicemaster/vm_core.c), one UDP port for the Vision Temple and for the voice chat of the servers
+	# without the game module of this tree. For the hosts of VisionJK itself: there is no install rule.
+	if(BuildMasterServer)
+		set(MasterServerFiles
+			${MPDedFiles}
+			"${MPDir}/voicemaster/vm_core.c"
+			"${MPDir}/voicemaster/vm_core.h"
+			)
+		add_executable(${MasterServer} ${MasterServerFiles})
+		set_target_properties(${MasterServer} PROPERTIES COMPILE_DEFINITIONS "${MPDedDefines};VISION_MASTER")
+		set_property(TARGET ${MasterServer} APPEND PROPERTY COMPILE_OPTIONS ${VISIONJK_VISIBILITY_FLAGS})
+		set_target_properties(${MasterServer} PROPERTIES INCLUDE_DIRECTORIES "${MPDedIncludeDirectories}")
+		set_target_properties(${MasterServer} PROPERTIES PROJECT_LABEL "Masterserver")
+		target_link_libraries(${MasterServer} ${MPDedLibraries})
+	endif(BuildMasterServer)
 endif(BuildMPDed)

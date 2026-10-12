@@ -478,6 +478,7 @@ qboolean	SV_VoicePacket( const netadr_t *from, msg_t *msg );
 void		SV_GameSendDatagram( const byte *ip, int port, const byte *data, int length );
 #ifdef VISION_MASTER
 void		SV_VoiceFrame( void );
+void		SV_VoiceShutdown( void );
 #endif
 
 extern	cvar_t	*sv_antiWallhack;		// sv_snapshot.cpp

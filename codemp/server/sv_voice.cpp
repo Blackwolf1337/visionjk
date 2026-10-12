@@ -118,6 +118,13 @@ void SV_VoiceFrame( void ) {
 		Com_Printf( "Voice master: this server is the Vision Temple it names\n" );
 	}
 }
+
+// the server ends: what the voice master did since its last line of numbers
+void SV_VoiceShutdown( void ) {
+	if ( sv_masterUp ) {
+		VM_Shutdown( SV_MasterMsec() );
+	}
+}
 #endif
 
 /*

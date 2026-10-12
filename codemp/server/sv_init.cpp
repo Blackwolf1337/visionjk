@@ -1130,6 +1130,9 @@ void SV_Shutdown( char *finalmsg )
 	SV_MasterShutdown();
 	SV_ChallengeShutdown();
 	SV_IDS_Shutdown();
+#ifdef VISION_MASTER
+	SV_VoiceShutdown();
+#endif
 	SV_ShutdownGameProgs();
 	svs.gameStarted = qfalse;
 /*
