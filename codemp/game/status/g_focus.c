@@ -129,7 +129,12 @@ void Cmd_JPFocus_f( gentity_t *ent ) {
 
 	trap->Argv( 1, arg, sizeof( arg ) );
 	if ( !atoi( arg ) ) {
-		G_FocusEnd( ent, FOCUS_ENDED );
+		if ( jp->focus ) {
+			G_FocusEnd( ent, FOCUS_ENDED );
+		} else {
+			// (nothing to end, after a new level for one: said all the same, or he asks until he gives up)
+			Focus_Tell( ent, qfalse, FOCUS_ENDED );
+		}
 		return;
 	}
 	trap->Argv( 2, arg, sizeof( arg ) );

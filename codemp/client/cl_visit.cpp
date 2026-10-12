@@ -62,7 +62,8 @@ extern cvar_t	*cl_timeout;
 void CL_StopRecord_f( void );
 
 #define VISIT_KEEP_MSEC		50			// between two commands to the first server
-#define VISIT_CONNECT_MSEC	15000		// a visit the other server did not answer after this long is given up
+#define VISIT_CONNECT_MSEC	15000		// a visit the other server did not answer after this long is given up,
+#define VISIT_TUNNEL_MSEC	8000		//	sooner where it is the temple of the server one is on: that one is next to it
 
 // the two places of a connection (client.h), 0 is the one the client starts with
 static clientActive_t		visit_cl[2];
@@ -388,7 +389,8 @@ void CL_VisitFrame( void ) {
 		visit.arrived = qtrue;
 		Cvar_Set( "cl_visitFailed", "0" );
 	}
-	if ( !visit.back && cls.state < CA_CONNECTED && cls.realtime - visit.startTime > VISIT_CONNECT_MSEC ) {
+	if ( !visit.back && cls.state < CA_CONNECTED
+		&& cls.realtime - visit.startTime > ( visit.tunnel ? VISIT_TUNNEL_MSEC : VISIT_CONNECT_MSEC ) ) {
 		Cvar_Set( "cl_visitFailed", "1" );
 		Visit_Back( "no answer", qfalse );
 	}

@@ -18,7 +18,7 @@
 |---------|---------|
 | server info `jp_cinfo` | bit field of the settings the client needs to predict moves, see below. Built every frame in `g_japlus_misc.c` |
 | server info `jp_DuelAlpha`, `jp_gripSpeedScale`, `jp_forceCombo` | read by the cgame |
-| server info `g_visionCaps` | not from JA+. What this game module does for the clients of this tree: bit 0 chat in UTF-8 per recipient (`JP_ChatFor()`), bit 1 it passes statuses on, bit 2 the key login, bit 3 it tells who plays with a client of this tree and answers `jpstatus all`, bit 4 it protects the body of a player who is out of it (Focus), bit 5 it is the Vision Temple (`g_visionTemple`). Read only |
+| server info `g_visionCaps` | not from JA+. What this game module does for the clients of this tree: bit 0 chat in UTF-8 per recipient (`JP_ChatFor()`), bit 1 it passes statuses on, bit 2 the key login, bit 3 it tells who plays with a client of this tree and answers `jpstatus all`, bit 4 it protects the body of a player who is out of it (Focus), bit 5 it is the Vision Temple (`g_visionTemple`), bit 6 it has a temple of its own for its players (`sv_templeInstance` of its engine). Read only |
 | server command `jpclient <client> <version> [<client> <version> ...]` | not from JA+. With which VisionJK a player plays (`cjp_vision` of his userinfo, letters, digits and `. - _` only), "-" for any other client. Only sent to a client whose userinfo has `cjp_caps` bit 1: one player when his userinfo says something new, everybody in one command as the answer to the client command `jpstatus all`, which a cgame sends once when it has started (at most every two seconds) and which is also answered with the statuses of everybody. See client.md, "Who plays with VisionJK" |
 | server command `jpstatus <client> <away> "<music>"` | not from JA+. What stands above a player's head, see "Statuses" below. Only sent to a client whose userinfo has `cjp_caps` bit 0 |
 | `eFlags` bit 15 `EF_ALT_DIM` | player is in the alternate dimension |
@@ -216,6 +216,74 @@ temple (`VOICE_TEMPLE_SERVER`, `game/voice/bg_voice.h`). The masterserver (below
 as a program by itself names the server it was started with (`-temple <port>` for one on the same host, or
 `-temple <address>:<port>`) and none without that option: its clients then stay in the temple that is drawn
 into their own game.
+
+### The temple of a server (not from JA+)
+
+`server/sv_instance.cpp`, `qcommon/net_link.h`, `qcommon/net_ip.cpp`, the client part is in
+[client.md](client.md), "The Vision Temple as a server, and the visit". Built 2026-10-12 for Linux, run hidden
+on one machine with one and two clients. Played by nobody, never over a real network. A server on Windows or
+macOS starts no temple yet (`Sys_StartSelf()` is written for Linux).
+
+A dedicated server of this tree has a Vision Temple of its own: the temple key of one of its players leads
+there, and to the masterserver (below) only from a server that has none. The players of one server are among
+themselves in it.
+
+| Cvar | Default | Meaning |
+|------|---------|---------|
+| `sv_templeInstance` | 1 | of the engine. 0: no temple of its own, the players go to the masterserver. 1: started when the first player asks for it. 2: started with the server |
+| `sv_templeIdle` | 5 | minutes without a player after which a temple that was asked for ends, until somebody asks again. 0: never |
+
+`templeinstance` on the console starts it by hand, `templeinstance stop` ends it.
+
+**What it is.** A level and a server are one thing in this engine, so the temple is the same program a second
+time, started by the server as a temple server on the map `vision_temple` (`+exec temple.cfg`). It reads what
+its server reads, in the same order: the game module, the level, `temple.cfg`, the settings the server stored
+and the lists of its admins and bans are the same for both. It writes into the folder `temple` inside the
+folder its server writes to, stores no settings of its own, and says what it does in `temple/temple.log`
+there. It ends when its server tells it to, when it does not hear of its server for half a minute, or when
+nobody was in it for `sv_templeIdle` minutes.
+
+**One port.** The temple has no port a player could reach, and the server needs none for it:
+
+- The link: both programs have a UDP socket on 127.0.0.1. The server names its port and a key of 8 random
+  bytes in the environment of the program it starts. Every datagram of the link carries the key and the
+  address of the player it is from or for, so the temple sees every player with the address he has. Each end
+  takes nothing without the key and nothing from another port than the one that said hello with it.
+- The tunnel: a player in the temple sends to the port of the game of the server, with five bytes in front of
+  every packet (the four of the number -2, which no packet of the game starts with, and a 1). The server takes
+  such a packet only from an address one of its players plays from, and passes it on over the link. What the
+  temple sends comes back over the link and leaves from the port of the game with the same five bytes.
+- The voice chat of the temple goes the same way without the five bytes: a datagram of it that is none of a
+  player in the level is passed to the temple, and the answers of the temple leave as they are. The socket of
+  the voice chat in the client knows no tunnel.
+
+So who is not let onto a server is not let into its temple, and nobody reaches the temple from outside.
+
+Checked on 2026-10-12, hidden on Linux, everything on one machine over 127.0.0.1 (the scripts are in
+`tools/templetest` and `tools/uitest` of the test tools):
+
+- Without a client (`instance.sh`): the temple comes up when asked and says hello over the link. The server
+  holds its game port and one socket on 127.0.0.1, the temple one socket on 127.0.0.1 and nothing else. A
+  packet of the tunnel from an address nobody plays from gets no answer. `templeinstance stop` ends it, it is
+  started again when asked, and it ends with its server.
+- One client (`INSTANCE=1 uitest/visit.sh live`): the temple key in a level, the server starts its temple, the
+  client is in it about a second later, walks, and is back in its body with the temple key.
+- Two clients of one server (`pair.sh`): both are in the temple with the addresses they have, the test tone
+  of one arrives at the other without a gap (the voice chat of the temple on the port of the game), both are
+  back. With `PAIR_MAP=1` the server changes its level meanwhile and both come back into the new one.
+- A temple that does not answer (`fallback.sh`): the client gives the visit up after 8 seconds, is back in its
+  body, and the next temple key leads to the masterserver. With `FALLBACK_OFF=1` (`sv_templeInstance 0`) the
+  first key does.
+- The end by itself (`idle.sh`): a temple that was asked for ends after `sv_templeIdle` minutes without a
+  player, one that was started with the server stays.
+
+Not checked: a real network, more than two players, a server under load, a level that takes long to load,
+Windows and macOS (no temple is started there), a client in a browser.
+
+What an owner should know: while the server loads a level its players in the temple stand still, since their
+packets pass through it. A second server uses memory while it runs. A server with `sv_voiceShared 0` or a
+`g_voicePort` has no voice chat in its temple. The game module in another engine, or a game a player started
+from the menu, has no temple of its own: its players go to the masterserver.
 
 ### The masterserver (not from JA+)
 

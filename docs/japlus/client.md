@@ -716,13 +716,24 @@ one is on). `client/cl_visit.cpp`, `cgame/focus/cg_focus.c`, the server part is 
 `tools/uitest/visit.sh` of the test tools: two dedicated servers, a voice master and one or two clients on one
 machine. Played by nobody yet, and never over a real network.
 
-Where the voice master names a game server that is the temple (below), the temple of the part above is the
-start of the way only. The client goes on to that server, where everybody is a player with his model, his
-animations and the movement of the game, and where one can talk and use the emotes. The way, as a player has it:
+The temple of the part above is the start of the way only where there is a server that is the temple. The
+client goes on to that server, where everybody is a player with his model, his animations and the movement of
+the game, and where one can talk and use the emotes. Which server that is (since 2026-10-12):
 
-1. The temple key on a server. The light temple begins, the server is asked to protect the body (`jpfocus 1`),
-   and the voice master is asked who is there. Its answer carries the address of the temple server.
-2. After 0.9 seconds, and when the server has answered about the body, the cgame runs `visit <address>`. The
+- **The temple of the server one is on**, where its server info says that it has one (bit 6 of `g_visionCaps`,
+  a dedicated server of this tree). Only the players of that server are there.
+- **The masterserver** from any other server: one that does not run this game module, one whose owner switched
+  its temple off, and after a visit to the temple of a server that got no answer. The voice master in it names
+  it (`VOICE_TEMPLE_SERVER`), and the players of all such servers meet there.
+- Neither: the temple stays the light one.
+
+The way, as a player has it:
+
+1. The temple key on a server. The light temple begins, the server is asked to protect the body (`jpfocus 1`,
+   or `jpfocus 1 1` where it has a temple of its own: that starts it unless it runs), and the voice master is
+   asked who is there. Its answer carries the address of the masterserver.
+2. After 0.9 seconds, and when the server has answered about the body, the cgame runs `visit <address of the
+   server one is on> 1` for the temple of that server, or `visit <address>` for the masterserver. The
    screen is light while the temple server is joined and its level loads (`CG_FocusLoading()`, the connect
    screen of the ui does the same), and the temple comes out of that light.
 3. The temple key there (`temple`, the hint names it) runs `disconnect`. The engine is back on the first
@@ -737,6 +748,15 @@ strings are kept up. Coming back is what a `vid_restart` does while connected: t
 cgame starts with the state that was kept. `cl_visit` is 1 while a visit lasts, `cl_visitBack` is set to 1 when
 one ended at the first server (the cgame reads and clears it).
 
+**The tunnel** (`cl_cgameTunnel` says that the engine has it). The temple of a server has no address of its
+own. `visit <address> 1` goes through the port of the server one is on: every packet of the visit leaves with
+five bytes in front (`qcommon/net_link.h`, `NET_SendPacket()`), and what the temple sends comes from that port
+with the same five bytes, which are taken off before anything else looks at the packet (`CL_PacketEvent()`).
+The two servers of such a visit have one address, so the mark is what tells their packets apart, where the
+address does it for any other visit. A packet with the mark that nobody waits for is dropped. A temple that
+was just started is asked every half second, and given up after 8 seconds (`cl_visitFailed` is 1 then, and the
+next temple key goes to the masterserver until a visit arrived again).
+
 What ends a visit without the player:
 
 - the first server changes or restarts its level: the client comes back and loads it
@@ -745,7 +765,8 @@ What ends a visit without the player:
   load first, which takes as long as it takes
 - the first server drops the player or is silent for `cl_timeout` seconds: there is nothing to come back to,
   and the client ends in the main menu with what that connection would have said
-- the temple server does not answer within 15 seconds, drops the player or is full: back on the first server
+- the temple server does not answer within 15 seconds (8 for the temple of the server one is on), drops the
+  player or is full: back on the first server
 
 Limits, said plainly:
 
@@ -756,8 +777,9 @@ Limits, said plainly:
   (`connect`), and the temple key leads back to the main menu.
 - **Only the open temple.** With a word of one's own (`cg_templeLink`) or with 0 one stays in the light temple:
   the server has no rooms.
-- **Only where the voice master names a server.** The one on the owner's host does not yet (it is from before),
-  so every client is in the light temple until it is updated and a temple server runs.
+- **Only where there is such a server.** From a server without a temple of its own that is the masterserver
+  the voice master names. The one on the owner's host is from before and names none, so from there every
+  client is in the light temple until the masterserver runs.
 
 On the temple server the cgame draws no fight HUD (votes, who talks, chat and the hint are left), shows every
 player as his own model at once (no deferred load), and the camera goes through the fences nobody sees.
