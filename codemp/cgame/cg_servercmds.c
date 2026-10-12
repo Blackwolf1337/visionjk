@@ -166,7 +166,7 @@ void CG_ParseServerinfo( void ) {
 	// a server cvar is only visible as a cvar of the client on a listen server
 	bg_jpFeatures = cgs.jpVersion > 0.0f ? atoi( Info_ValueForKey( info, "jp_cinfo" ) ) : 0;
 	// Not from JA+: the server is the Vision Temple (game/status/g_temple.c)
-	bg_visionTemple = atoi( Info_ValueForKey( info, "g_visionTemple" ) );
+	bg_visionTemple = ( atoi( Info_ValueForKey( info, "g_visionCaps" ) ) & VISION_CAPS_TEMPLE ) ? 1 : 0;
 	bg_jpGripSpeedScale = cgs.jpVersion > 0.0f ? atof( Info_ValueForKey( info, "jp_gripSpeedScale" ) ) : 0.4f;
 	bg_jpForceCombo = atoi( Info_ValueForKey( info, "jp_forceCombo" ) );
 	cgs.jpDuelAlpha = cgs.jpVersion >= 2.0f ? atoi( Info_ValueForKey( info, "jp_DuelAlpha" ) ) : -1;

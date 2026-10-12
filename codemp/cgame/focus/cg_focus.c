@@ -1063,7 +1063,7 @@ qboolean CG_FocusLoading( void ) {
 	static const vec4_t light = { 1.0f, 0.93f, 0.78f, 1.0f };
 
 	if ( !Focus_Cvar( "cl_visit" ) && !Focus_Cvar( "cl_visitBack" )
-		&& !atoi( Info_ValueForKey( CG_ConfigString( CS_SERVERINFO ), "g_visionTemple" ) ) ) {
+		&& !( atoi( Info_ValueForKey( CG_ConfigString( CS_SERVERINFO ), "g_visionCaps" ) ) & VISION_CAPS_TEMPLE ) ) {
 		return qfalse;
 	}
 	trap->R_SetColor( light );

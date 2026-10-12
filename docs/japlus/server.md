@@ -18,7 +18,7 @@
 |---------|---------|
 | server info `jp_cinfo` | bit field of the settings the client needs to predict moves, see below. Built every frame in `g_japlus_misc.c` |
 | server info `jp_DuelAlpha`, `jp_gripSpeedScale`, `jp_forceCombo` | read by the cgame |
-| server info `g_visionCaps` | not from JA+. What this game module does for the clients of this tree: bit 0 chat in UTF-8 per recipient (`JP_ChatFor()`), bit 1 it passes statuses on, bit 2 the key login, bit 3 it tells who plays with a client of this tree and answers `jpstatus all`, bit 4 it protects the body of a player who is out of it (Focus). Read only |
+| server info `g_visionCaps` | not from JA+. What this game module does for the clients of this tree: bit 0 chat in UTF-8 per recipient (`JP_ChatFor()`), bit 1 it passes statuses on, bit 2 the key login, bit 3 it tells who plays with a client of this tree and answers `jpstatus all`, bit 4 it protects the body of a player who is out of it (Focus), bit 5 it is the Vision Temple (`g_visionTemple`). Read only |
 | server command `jpclient <client> <version> [<client> <version> ...]` | not from JA+. With which VisionJK a player plays (`cjp_vision` of his userinfo, letters, digits and `. - _` only), "-" for any other client. Only sent to a client whose userinfo has `cjp_caps` bit 1: one player when his userinfo says something new, everybody in one command as the answer to the client command `jpstatus all`, which a cgame sends once when it has started (at most every two seconds) and which is also answered with the statuses of everybody. See client.md, "Who plays with VisionJK" |
 | server command `jpstatus <client> <away> "<music>"` | not from JA+. What stands above a player's head, see "Statuses" below. Only sent to a client whose userinfo has `cjp_caps` bit 0 |
 | `eFlags` bit 15 `EF_ALT_DIM` | player is in the alternate dimension |
@@ -191,7 +191,7 @@ on one machine. Played by nobody, never run on a public address.
 
 | Cvar | Default | Meaning |
 |------|---------|---------|
-| `g_visionTemple` | 0 | 1: this server is the temple. In the server info, read at the start of a level |
+| `g_visionTemple` | 0 | 1: this server is the temple. Read at the start of a level. The clients see it as bit 5 of `g_visionCaps` in the server info |
 
 A temple server is a server of this tree with `+set g_visionTemple 1 +map vision_temple` (free for all). What
 the mode does:

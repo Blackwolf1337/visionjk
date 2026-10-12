@@ -176,10 +176,10 @@ XCVAR_DEF( g_userinfoValidate,			"25165823",		NULL,						CVAR_ARCHIVE,									q
 // chat in UTF-8 (JP_ChatFor() in g_japlus_chat.c), a client sends UTF-8 only where it reads this bit. Bit 1: it
 // passes on what stands above the heads (status/g_status.c).
 // Bit 4: it protects the body of a player who is out of it (status/g_focus.c).
-XCVAR_DEF( g_visionCaps,				"31",			NULL,						CVAR_SERVERINFO|CVAR_ROM,						qfalse )
+XCVAR_DEF( g_visionCaps,				VISION_CAPS,	NULL,						CVAR_SERVERINFO|CVAR_ROM,						qfalse )
 // Focus of a client of this tree: the body of its player can not be hurt while he is out of it. 0: never, 1: in a
 // free for all (as jp_inactivityProtectTimer), 2: in every kind of game.
-XCVAR_DEF( g_visionTemple,				"0",			NULL,						CVAR_SERVERINFO|CVAR_LATCH,						qfalse )
+XCVAR_DEF( g_visionTemple,				"0",			NULL,						CVAR_LATCH,										qfalse )
 XCVAR_DEF( g_visionFocus,				"1",			NULL,						CVAR_ARCHIVE,									qtrue )
 XCVAR_DEF( g_useWhileThrowing,			"1",			NULL,						CVAR_NONE,										qtrue )
 // The voice chat (g_voice.c). g_voice is in the server info: the cgame of this port asks for voice only where it reads it there.
