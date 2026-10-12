@@ -229,7 +229,7 @@ front of the line to type in are in the language of the game (`CG_VisionText`, s
 | Cvar | Default | Meaning |
 |------|---------|---------|
 | `cg_chatBox` | 10000 | as before: milliseconds a line stands at the lower left while nobody types, 0 none |
-| `cg_chatBoxHeight` | 350 | as before: the lower edge of the lines |
+| `cg_chatBoxHeight` | 350 | as before: the lower edge of the lines. While the scoreboard shows, the lines of the closed box stand at the bottom of the screen. The open box stays where it is, also over a scoreboard that is kept open, and never lower than its input line has room (2026-10-12: it moved down with the lines, and what one typed was under the edge of the screen) |
 | `cg_chatBoxWidth` | 380 | the width lines are wrapped to at a size of 1, 200 to 600 |
 | `cg_chatBoxScale` | 0.85 | the size of the box with everything in it, the letters first of all: 0.6 to 1.6. Since 2026-10-12, when the box was 1 and "quite big" |
 | `cg_chatBoxRows` | 10 | rows of history in the open box, 4 to 24, and no more than fit under the top of the screen |

@@ -1131,7 +1131,7 @@ Once a frame, in the 2D of the HUD
 =================
 */
 void CG_ChatDraw( void ) {
-	const float	bottom = cg.scoreBoardShowing ? 475.0f : cg_chatBoxHeight.value;
+	float		bottom;
 	char		value[8];
 
 	// which engine this is, and whether its message mode commands are to open the box
@@ -1149,6 +1149,13 @@ void CG_ChatDraw( void ) {
 	// how large it is: everything by cg_chatBoxScale, and as many rows as fit under the top of the screen
 	chat.size = Com_Clamp( CHAT_MIN_SCALE, CHAT_MAX_SCALE, cg_chatBoxScale.value );
 	chat.rowH = CHAT_ROW_HEIGHT * chat.size;
+	// Where the last row stands. The lines of the closed box move down while the scoreboard shows, the HUD is gone
+	// then. The open box stays where it always is, also over a scoreboard that is kept open, and it keeps room for
+	// its input line: at 475 that line was under the edge of the screen and nobody saw what he typed.
+	bottom = ( cg.scoreBoardShowing && !chat.open ) ? 475.0f : cg_chatBoxHeight.value;
+	if ( chat.open ) {
+		bottom = Q_min( bottom, SCREEN_HEIGHT - 4.0f - CHAT_INPUT_HEIGHT * chat.size - 2.0f * CHAT_PAD );
+	}
 	// (no wider than the screen has room, whatever width and size say together)
 	chat.width = Q_min( Com_Clamp( 200.0f, 600.0f, cg_chatBoxWidth.value ) * chat.size,
 		SCREEN_WIDTH + 2.0f * cgs.bias2D - 2.0f * CHAT_X - CHAT_BAR_WIDTH - 3.0f * CHAT_PAD );
