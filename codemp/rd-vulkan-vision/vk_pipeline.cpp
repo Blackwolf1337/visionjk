@@ -157,8 +157,8 @@ static void VK_CreateLayouts( void ) {
 	layout.setLayoutCount = 2;
 	layout.pSetLayouts = sets;
 	VK_CHECK( qvkCreatePipelineLayout( vk.device, &layout, NULL, &vk.focusPipelineLayout ) );
-	// and the pass of the Vision Temple reads nothing and gets sixteen numbers
-	push.size = sizeof( float ) * 16;
+	// and the pass of the Vision Temple reads nothing and gets twenty numbers
+	push.size = sizeof( float ) * 20;
 	layout.setLayoutCount = 0;
 	layout.pSetLayouts = NULL;
 	VK_CHECK( qvkCreatePipelineLayout( vk.device, &layout, NULL, &vk.templePipelineLayout ) );
@@ -222,7 +222,7 @@ VK_CreatePipeline
 
 post: 0 geometry. 1 a pass over a whole target of its own without vertices (gamma, blur). 2 such a pass onto the
 frame while it is being drawn, blended as the state bits say (the glow). 3 as 1, and it reads the depth of the
-scene too (the depth of field). 4 as 2, with the layout of the Vision Temple.
+scene too (the depth of field). 4 as 2, with the layout of the Vision Temple, and it writes the depth it works out.
 ===============
 */
 VkPipeline VK_CreatePipeline( VkShaderModule vertex, VkShaderModule fragment, uint32_t stateBits, int post, qboolean skinned ) {
@@ -320,6 +320,12 @@ VkPipeline VK_CreatePipeline( VkShaderModule vertex, VkShaderModule fragment, ui
 	// what goes into the frame of the game has its number of samples, the passes into targets of their own have one
 	multisample.rasterizationSamples = alone ? VK_SAMPLE_COUNT_1_BIT : vk.samples;
 	depth.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
+	if ( post == 4 ) {
+		// the place is behind everything of the view, and what stands in it is hidden by its gold
+		depth.depthTestEnable = VK_TRUE;
+		depth.depthWriteEnable = VK_TRUE;
+		depth.depthCompareOp = VK_COMPARE_OP_ALWAYS;
+	}
 	// the stencil test of the shadows is dynamic state, all bits take part
 	depth.front.compareMask = depth.back.compareMask = 0xff;
 	depth.front.writeMask = depth.back.writeMask = 0xff;

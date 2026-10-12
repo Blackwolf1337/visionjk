@@ -179,6 +179,7 @@ XCVAR_DEF( g_userinfoValidate,			"25165823",		NULL,						CVAR_ARCHIVE,									q
 XCVAR_DEF( g_visionCaps,				"31",			NULL,						CVAR_SERVERINFO|CVAR_ROM,						qfalse )
 // Focus of a client of this tree: the body of its player can not be hurt while he is out of it. 0: never, 1: in a
 // free for all (as jp_inactivityProtectTimer), 2: in every kind of game.
+XCVAR_DEF( g_visionTemple,				"0",			NULL,						CVAR_SERVERINFO|CVAR_LATCH,						qfalse )
 XCVAR_DEF( g_visionFocus,				"1",			NULL,						CVAR_ARCHIVE,									qtrue )
 XCVAR_DEF( g_useWhileThrowing,			"1",			NULL,						CVAR_NONE,										qtrue )
 // The voice chat (g_voice.c). g_voice is in the server info: the cgame of this port asks for voice only where it reads it there.

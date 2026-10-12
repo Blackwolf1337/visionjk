@@ -172,6 +172,7 @@ set(MPGameFiles ${MPGameFiles} ${MPGameJaplusFiles})
 set(MPGameStatusFiles
 	"${MPDir}/game/status/g_status.c"
 	"${MPDir}/game/status/g_focus.c"
+	"${MPDir}/game/status/g_temple.c"
 	)
 source_group("game/status" FILES ${MPGameStatusFiles})
 set(MPGameFiles ${MPGameFiles} ${MPGameStatusFiles})

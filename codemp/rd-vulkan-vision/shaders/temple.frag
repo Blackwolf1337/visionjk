@@ -22,15 +22,16 @@
 // VIEW: 0: xyz the eye, w seconds. 1: xyz where it looks, w how much of the place is there, 0 to 1 (it comes out
 // of light). 2: xyz to the right, as long as the tangent of half the angle of view, w how much is worked out
 // (r_templeDetail: 2 all of it, 1 less of what costs most, 0 the least that still is the place). 3: xyz up,
-// as long as the tangent of half the angle of view.
+// as long as the tangent of half the angle of view. 4: x and y give the depth of a thing d ahead as the view's
+// projection does, x - y / d: what stands in the place (player models) is drawn after it with that depth.
 #include "dialect.glsl"
 
 #ifdef VK_GLES
-uniform vec4 u_view[4];
+uniform vec4 u_view[5];
 #define VIEW( i )	u_view[i]
 #else
 layout( push_constant ) uniform Push {
-	vec4	view[4];
+	vec4	view[5];
 } push;
 #define VIEW( i )	push.view[i]
 #endif
@@ -704,4 +705,6 @@ void main() {
 	color = film( color * 0.62 );
 	color += ( hash( gl_FragCoord.xy ) - 0.5 ) / 255.0;
 	o_color = vec4( color, 1.0 );
+	// the gold is in the way of what is drawn behind it, sky and clouds of nothing
+	gl_FragDepth = what == 1 ? clamp( VIEW( 4 ).x - VIEW( 4 ).y / max( tEnd * dot( rd, VIEW( 1 ).xyz ), 0.001 ), 0.0, 1.0 ) : 1.0;
 }

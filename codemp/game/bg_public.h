@@ -300,6 +300,7 @@ extern int forcePowerSorted[NUM_FORCE_POWERS];
 #define JPF_SPFORCES		(1<<18)	// jp_allowSPForces > 0
 
 extern int bg_jpFeatures;
+extern int bg_visionTemple;
 extern float bg_jpGripSpeedScale;
 extern int bg_jpForceCombo;
 float BG_scaleModelFactor( int clientNum );	// jp_allowModelScale: scale of the player model, 1 is the normal size

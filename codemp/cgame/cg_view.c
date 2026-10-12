@@ -27,7 +27,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "cg_local.h"
 #include "game/bg_saga.h"
 
-#define MASK_CAMERACLIP (MASK_SOLID|CONTENTS_PLAYERCLIP)
+// (Not from JA+: the fences of the Vision Temple are for feet. Nobody sees them, so the camera goes through.)
+#define MASK_CAMERACLIP (bg_visionTemple ? MASK_SOLID : (MASK_SOLID|CONTENTS_PLAYERCLIP))
 #define CAMERA_SIZE	4
 
 

@@ -2106,6 +2106,10 @@ void ClientThink_real( gentity_t *ent ) {
 		if ( !ClientInactivityTimer( client ) ) {
 			return;
 		}
+		// the Vision Temple as a server: what a player can not do there (status/g_temple.c)
+		if ( !G_TempleThink( ent, ucmd ) ) {
+			return;
+		}
 		// the body of a player who is out of it (Focus, status/g_focus.c)
 		G_FocusThink( ent, ucmd );
 		JP_InactivityProtect( ent );

@@ -209,6 +209,7 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 	trap->SetConfigstring(CS_LEGACY_FIXES, "0");
 
 	G_RegisterCvars();
+	G_TempleInit();
 
 	G_ProcessIPBans();
 	G_ProcessAdminIPBans();

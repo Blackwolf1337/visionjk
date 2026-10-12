@@ -226,7 +226,9 @@ VK_TempleFrame
 The Vision Temple a module asked for with RE_SetTempleScene(): a place above the clouds that shaders/temple.frag
 works out for every pixel of the frame, seen from where the view of the back end is seen from. Drawn when a view
 with the flag RDF_VISION_TEMPLE begins (RB_BeginDrawingView), in the place of a level, so what the view holds is
-drawn on it. The depth is not written: nothing of the place hides a thing of the view.
+drawn on it. The pass writes the depth of its gold as the projection of the view would, so a player model that
+stands in the place is hidden by a column before it and stands before the one behind it. Sky and clouds are
+behind everything.
 ===============
 */
 qboolean VK_TempleReady( void ) {
@@ -237,7 +239,9 @@ void VK_TempleFrame( float amount, float seconds ) {
 	const viewParms_t	*view = &backEnd.viewParms;
 	// half the angles of view, as their tangents: a pixel at the edge looks that far to the side for one ahead
 	const float			tanX = tanf( DEG2RAD( view->fovX * 0.5f ) ), tanY = tanf( DEG2RAD( view->fovY * 0.5f ) );
-	float				parm[16];
+	// what the depth buffer holds of a thing d ahead: zFar * ( d - zNear ) / ( ( zFar - zNear ) * d )
+	const float			zNear = r_znear->value, zFar = Q_max( view->zFar, zNear + 1.0f );
+	float				parm[20];
 
 	if ( !vk.frame ) {
 		return;
@@ -251,6 +255,9 @@ void VK_TempleFrame( float amount, float seconds ) {
 	parm[11] = Com_Clamp( 0.0f, 2.0f, r_templeDetail->value );
 	VectorScale( view->ori.axis[2], tanY, &parm[12] );
 	parm[15] = 0.0f;
+	parm[16] = zFar / ( zFar - zNear );
+	parm[17] = zFar * zNear / ( zFar - zNear );
+	parm[18] = parm[19] = 0.0f;
 	if ( !VK_TemplePass( parm ) ) {
 		return;
 	}

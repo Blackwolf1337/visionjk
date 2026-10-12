@@ -47,6 +47,10 @@ static void Focus_Tell( const gentity_t *ent, qboolean held, focusWhy_t why ) {
 
 // the kind of game has it: g_visionFocus 1 a free for all only, 2 every kind
 static qboolean Focus_On( void ) {
+	// (nobody leaves his body in the Vision Temple: that is where one goes from it, status/g_temple.c)
+	if ( g_visionTemple.integer ) {
+		return qfalse;
+	}
 	return (qboolean)( g_visionFocus.integer > 1 || ( g_visionFocus.integer == 1 && level.gametype == GT_FFA ) );
 }
 

@@ -646,7 +646,7 @@ qboolean VK_TemplePass( const float *view ) {
 	qvkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.templePipeline );
 	vk.boundPipeline = vk.templePipeline;
 	VK_FullTarget( cmd, &vk.color );
-	qvkCmdPushConstants( cmd, vk.templePipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof( float ) * 16, view );
+	qvkCmdPushConstants( cmd, vk.templePipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof( float ) * 20, view );
 	qvkCmdDraw( cmd, 3, 1, 0, 0 );
 	return qtrue;
 }

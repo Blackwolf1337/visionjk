@@ -911,6 +911,12 @@ void CG_FocusScene( void ) {
 		focus.look = 0.0f;
 	}
 	focus.pass = qfalse;
+	// A server that is the Vision Temple (game/status/g_temple.c): its map has no picture, the renderer draws the
+	// place behind the players of the scene.
+	if ( bg_visionTemple && Focus_Engine( "cl_cgameTemple" ) ) {
+		cg.refdef.rdflags |= RDF_VISION_TEMPLE;
+		trap->ext.R_SetTempleScene( 1.0f, cg.time * 0.001f );
+	}
 	if ( focus.look <= 0.0f ) {
 		focus.look = 0.0f;
 		return;

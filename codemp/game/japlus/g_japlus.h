@@ -189,6 +189,11 @@ void		Cmd_JPFocus_f( gentity_t *ent );								// status/g_focus.c
 void		G_FocusThink( gentity_t *ent, const usercmd_t *ucmd );
 void		G_FocusEnd( gentity_t *ent, focusWhy_t why );
 void		G_FocusFight( gentity_t *targ, gentity_t *attacker );
+
+// status/g_temple.c: the Vision Temple as a server (g_visionTemple)
+void		G_TempleInit( void );
+void		G_TempleSpawn( gentity_t *ent );
+qboolean	G_TempleThink( gentity_t *ent, usercmd_t *ucmd );
 void		JP_ChatCopy( const gentity_t *from, const char *text, char *out, int outSize );
 const char	*JP_ChatFor( const gentity_t *from, const gentity_t *other, const char *text, char *buffer, int bufferSize );
 qboolean	JP_ChatIgnored( gentity_t *speaker, gentity_t *listener );
