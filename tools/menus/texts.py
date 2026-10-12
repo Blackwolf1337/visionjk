@@ -7,6 +7,8 @@ somebody translates them: their files say "#same", which is how a string package
 import os
 import re
 
+from texts_more import MORE
+
 # what an old menu file of this tree says in English, where the new menus say it better
 OLD = {
     'Shadows Type': 'Shadows',
@@ -414,6 +416,15 @@ def write(strings_dir):
     """The string packages, one per language."""
     for english, german in CGAME.items():
         TR.setdefault(english, german)
+    # what the two other languages say has to be a text of this file, with the same values in it, in letters
+    # the string files can hold, and without a quote
+    for english, more in MORE.items():
+        if english not in TR:
+            raise KeyError('texts_more.py has %r, which is no text of texts.py' % english)
+        for text in more:
+            text.encode('cp1252')
+            if re.findall(r'%[is%]', text) != re.findall(r'%[is%]', english) or '"' in text:
+                raise ValueError('texts_more.py: %r does not have the values of %r' % (text, english))
         plain = re.sub(r'[^A-Z0-9]+', '_', english.upper()).strip('_')[:36].strip('_')
         if ref(english) != '@VISION_' + plain:
             raise KeyError('the cgame can not find %r: another text has its key %s' % (english, plain))
@@ -427,7 +438,9 @@ def write(strings_dir):
             if lang == 'LANG_GERMAN':
                 lines.append('%-19s "%s"' % (lang, TR[english] if TR[english] != english else '#same'))
             elif lang:
-                lines.append('%-19s "#same"' % lang)
+                # (French and Spanish: tools/menus/texts_more.py. What is not in there reads English)
+                text = MORE.get(english, (english, english))[0 if lang == 'LANG_FRENCH' else 1]
+                lines.append('%-19s "%s"' % (lang, text if text != english else '#same'))
             lines.append('')
         lines += ['', 'ENDMARKER', '', '']
         os.makedirs(os.path.join(strings_dir, folder), exist_ok=True)

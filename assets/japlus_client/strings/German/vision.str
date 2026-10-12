@@ -821,6 +821,18 @@ REFERENCE           HOLSTERS
 LANG_ENGLISH        "Holsters"
 LANG_GERMAN         "Holster"
 
+REFERENCE           LIGHT_SIDE
+LANG_ENGLISH        "Light Side"
+LANG_GERMAN         "Helle Seite"
+
+REFERENCE           DARK_SIDE
+LANG_ENGLISH        "Dark Side"
+LANG_GERMAN         "Dunkle Seite"
+
+REFERENCE           BOTH_SIDES
+LANG_ENGLISH        "Both Sides"
+LANG_GERMAN         "Beide Seiten"
+
 REFERENCE           MUTE_HIS_VOICE
 LANG_ENGLISH        "Mute his voice"
 LANG_GERMAN         "Stimme stummschalten"

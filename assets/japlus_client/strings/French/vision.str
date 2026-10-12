@@ -7,35 +7,35 @@ FILENOTES           "Menus of VisionJK"
 
 REFERENCE           CHARACTER
 LANG_ENGLISH        "Character"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Personnage"
 
 REFERENCE           BUILD_A_CHARACTER_OF_YOUR_OWN
 LANG_ENGLISH        "Build a character of your own."
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Créer son propre personnage."
 
 REFERENCE           HILT_AND_BLADE_OF_YOUR_LIGHTSABER
 LANG_ENGLISH        "Hilt and blade of your lightsaber."
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Poignée et lame de votre sabre laser."
 
 REFERENCE           PLAYER
 LANG_ENGLISH        "Player"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Joueur"
 
 REFERENCE           NAME_MODEL_AND_TEAM_COLOUR
 LANG_ENGLISH        "Name, model and team colour."
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Nom, modèle et couleur d'équipe."
 
 REFERENCE           RED
 LANG_ENGLISH        "Red"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Rouge"
 
 REFERENCE           GREEN
 LANG_ENGLISH        "Green"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Vert"
 
 REFERENCE           BLUE
 LANG_ENGLISH        "Blue"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Bleu"
 
 REFERENCE           JA
 LANG_ENGLISH        "JA+"
@@ -43,11 +43,11 @@ LANG_FRENCH         "#same"
 
 REFERENCE           GRAPPLE_HOOK
 LANG_ENGLISH        "Grapple Hook"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Grappin"
 
 REFERENCE           A_HOOK_ON_A_ROPE_THAT_PULLS_YOU_TO_W
 LANG_ENGLISH        "A hook on a rope that pulls you to where it hits."
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Un crochet au bout d'une corde qui vous tire là où il touche."
 
 REFERENCE           JETPACK
 LANG_ENGLISH        "Jetpack"
@@ -55,23 +55,23 @@ LANG_FRENCH         "#same"
 
 REFERENCE           TURNS_THE_JETPACK_ON_AND_OFF
 LANG_ENGLISH        "Turns the jetpack on and off."
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Allume et éteint le jetpack."
 
 REFERENCE           FULL_FORCE_DUEL
 LANG_ENGLISH        "Full Force Duel"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Duel pleine Force"
 
 REFERENCE           CHALLENGES_TO_A_DUEL_WITH_EVERY_FORC
 LANG_ENGLISH        "Challenges to a duel with every force power that is allowed."
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Défie en duel avec tous les pouvoirs de la Force autorisés."
 
 REFERENCE           MESSAGE_MENU
 LANG_ENGLISH        "Message Menu"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Menu des messages"
 
 REFERENCE           A_MENU_FOR_CLAN_CHAT_PRIVATE_AND_ADM
 LANG_ENGLISH        "A menu for clan chat, private and admin messages."
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Un menu pour le chat de clan, les messages privés et admin."
 
 REFERENCE           VISIONJK
 LANG_ENGLISH        "VisionJK"
@@ -79,71 +79,71 @@ LANG_FRENCH         "#same"
 
 REFERENCE           VOICE_CHAT_TALK
 LANG_ENGLISH        "Voice Chat (Talk)"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Chat vocal (parler)"
 
 REFERENCE           HOLD_TO_TALK_IN_THE_VOICE_CHAT_PUSH
 LANG_ENGLISH        "Hold to talk in the voice chat (push to talk)."
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Maintenir pour parler dans le chat vocal."
 
 REFERENCE           BOT_MODE_ON_OFF
 LANG_ENGLISH        "Bot Mode (On/Off)"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Mode bot (marche/arrêt)"
 
 REFERENCE           YOUR_CLIENT_PLAYS_BY_ITSELF_AND_STOP
 LANG_ENGLISH        "Your client plays by itself, and stops (Setup, Bot Mode)."
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Votre client joue tout seul, puis s'arrête (Configuration, Mode bot)."
 
 REFERENCE           CLAN_RADIO_TALK
 LANG_ENGLISH        "Clan Radio (Talk)"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Radio du clan (parler)"
 
 REFERENCE           HOLD_TO_TALK_TO_YOUR_CLAN_OVER_THE_R
 LANG_ENGLISH        "Hold to talk to your clan over the radio, wherever they are."
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Maintenir pour parler à votre clan par radio, où qu'il soit."
 
 REFERENCE           FREE_THE_MOUSE_SELECT_PLAYERS
 LANG_ENGLISH        "Free the Mouse (Select Players)"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Libérer la souris (sélection)"
 
 REFERENCE           HOLD_TO_POINT_AT_PLAYERS_WITH_THE_MO
 LANG_ENGLISH        "Hold to point at players with the mouse: a click opens what you can do with one."
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Maintenir pour pointer les joueurs à la souris : un clic montre ce que vous pouvez faire."
 
 REFERENCE           SCOREBOARD_WITH_MOUSE
 LANG_ENGLISH        "Scoreboard with Mouse"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Tableau avec souris"
 
 REFERENCE           OPENS_THE_SCOREBOARD_WITH_THE_MOUSE
 LANG_ENGLISH        "Opens the scoreboard with the mouse free: a click on a row opens what you can do with that player."
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Ouvre le tableau des scores, souris libre : un clic sur une ligne montre ce que vous pouvez faire avec ce joueur."
 
 REFERENCE           THE_KEYS_YOU_MOVE_WITH
 LANG_ENGLISH        "The keys you move with."
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Les touches de déplacement."
 
 REFERENCE           ATTACK_USE_AND_LOOK
 LANG_ENGLISH        "Attack, use and look."
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Attaquer, utiliser et regarder."
 
 REFERENCE           THE_KEYS_OF_THE_WEAPONS
 LANG_ENGLISH        "The keys of the weapons."
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Les touches des armes."
 
 REFERENCE           FORCE_POWERS
 LANG_ENGLISH        "Force Powers"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Pouvoirs de la Force"
 
 REFERENCE           THE_KEYS_OF_THE_FORCE_POWERS
 LANG_ENGLISH        "The keys of the force powers."
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Les touches des pouvoirs de la Force."
 
 REFERENCE           MOUSE_AND_JOYSTICK
 LANG_ENGLISH        "Mouse and joystick."
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Souris et joystick."
 
 REFERENCE           CHAT_SCORES_AND_GESTURES
 LANG_ENGLISH        "Chat, scores and gestures."
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Chat, scores et gestes."
 
 REFERENCE           EXTRAS
 LANG_ENGLISH        "Extras"
@@ -151,111 +151,111 @@ LANG_FRENCH         "#same"
 
 REFERENCE           KEYS_FOR_WHAT_VISIONJK_AND_JA_ADD_TO
 LANG_ENGLISH        "Keys for what VisionJK and JA+ add to the game."
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Les touches de ce que VisionJK et JA+ ajoutent au jeu."
 
 REFERENCE           ENTER_OR_CLICK_CHANGE_THE_KEY_BACKSP
 LANG_ENGLISH        "Enter or click: change the key. Backspace: clear it."
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Entrée ou clic : changer la touche. Retour arrière : effacer."
 
 REFERENCE           SCREEN
 LANG_ENGLISH        "Screen"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Écran"
 
 REFERENCE           DISPLAY_MODE
 LANG_ENGLISH        "Display Mode"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Mode d'affichage"
 
 REFERENCE           A_WINDOW_THE_WHOLE_SCREEN_OR_A_WINDO
 LANG_ENGLISH        "A window, the whole screen, or a window without a border."
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Une fenêtre, le plein écran ou une fenêtre sans bordure."
 
 REFERENCE           WINDOW
 LANG_ENGLISH        "Window"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Fenêtre"
 
 REFERENCE           FULLSCREEN
 LANG_ENGLISH        "Fullscreen"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Plein écran"
 
 REFERENCE           BORDERLESS
 LANG_ENGLISH        "Borderless"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Sans bordure"
 
 REFERENCE           RENDERER
 LANG_ENGLISH        "Renderer"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Moteur de rendu"
 
 REFERENCE           DRAW_WITH_VULKAN_OR_WITH_OPENGL
 LANG_ENGLISH        "Draw with Vulkan or with OpenGL."
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Afficher avec Vulkan ou OpenGL."
 
 REFERENCE           ANTI_ALIASING
 LANG_ENGLISH        "Anti-Aliasing"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Anticrénelage"
 
 REFERENCE           SMOOTHS_THE_EDGES_COSTS_SPEED
 LANG_ENGLISH        "Smooths the edges, costs speed."
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Lisse les contours, coûte des performances."
 
 REFERENCE           FRAME_LIMIT
 LANG_ENGLISH        "Frame Limit"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Limite d'images"
 
 REFERENCE           THE_MOST_FRAMES_A_SECOND_THE_GAME_DR
 LANG_ENGLISH        "The most frames a second the game draws."
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Le nombre maximal d'images par seconde."
 
 REFERENCE           NONE
 LANG_ENGLISH        "None"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Aucune"
 
 REFERENCE           WIDE_SCREEN_LAYOUT
 LANG_ENGLISH        "Wide Screen Layout"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Mise en page écran large"
 
 REFERENCE           MENUS_AND_HUD_KEEP_THEIR_SHAPE_ON_A
 LANG_ENGLISH        "Menus and HUD keep their shape on a wide window. Counts after a restart of the video."
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Menus et HUD gardent leurs proportions sur une fenêtre large. Effectif après redémarrage de l'affichage."
 
 REFERENCE           DETAIL
 LANG_ENGLISH        "Detail"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Détails"
 
 REFERENCE           DYNAMIC_GLOW
 LANG_ENGLISH        "Dynamic Glow"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Lueur dynamique"
 
 REFERENCE           LIGHTSABERS_AND_LIGHTS_GLOW
 LANG_ENGLISH        "Lightsabers and lights glow."
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Les sabres laser et les lumières brillent."
 
 REFERENCE           SHADOWS
 LANG_ENGLISH        "Shadows"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Ombres"
 
 REFERENCE           HOW_THE_SHADOWS_OF_THE_PLAYERS_ARE_D
 LANG_ENGLISH        "How the shadows of the players are drawn."
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Le rendu des ombres des joueurs."
 
 REFERENCE           DEFAULT
 LANG_ENGLISH        "Default"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Par défaut"
 
 REFERENCE           MORE_REALISTIC
 LANG_ENGLISH        "More Realistic"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Plus réaliste"
 
 REFERENCE           REALISTIC
 LANG_ENGLISH        "Realistic"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Réaliste"
 
 REFERENCE           RENDER_TO_TEXTURE_EFFECTS
 LANG_ENGLISH        "Render To Texture Effects"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Effets de rendu sur texture"
 
 REFERENCE           OFF_NO_SLOW_EFFECTS_CLOAK_PUSH_BLUR
 LANG_ENGLISH        "Off: no slow effects (cloak, push blur, protection spheres) on graphics cards that have trouble with them."
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Désactivé : pas d'effets lents (camouflage, flou de poussée, sphères de protection) sur les cartes graphiques qui les gèrent mal."
 
 REFERENCE           VOLUME
 LANG_ENGLISH        "Volume"
@@ -263,67 +263,67 @@ LANG_FRENCH         "#same"
 
 REFERENCE           3D_SOUND
 LANG_ENGLISH        "3D Sound"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Son 3D"
 
 REFERENCE           STEAM_AUDIO_SOUND_THAT_KNOWS_THE_LEV
 LANG_ENGLISH        "Steam Audio: sound that knows the level. Needs its library next to the game."
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Steam Audio : un son qui connaît le niveau. Nécessite sa bibliothèque à côté du jeu."
 
 REFERENCE           OUTPUT
 LANG_ENGLISH        "Output"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Sortie"
 
 REFERENCE           3D_SOUND_DIRECTION_FOR_TWO_EARS_OR_P
 LANG_ENGLISH        "3D Sound: direction for two ears, or plain panning for speakers."
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Son 3D : direction pour deux oreilles, ou simple panoramique pour haut-parleurs."
 
 REFERENCE           HEADPHONES
 LANG_ENGLISH        "Headphones"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Casque"
 
 REFERENCE           SPEAKERS
 LANG_ENGLISH        "Speakers"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Haut-parleurs"
 
 REFERENCE           REVERB
 LANG_ENGLISH        "Reverb"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Réverbération"
 
 REFERENCE           3D_SOUND_HOW_LOUD_THE_ROOMS_RING
 LANG_ENGLISH        "3D Sound: how loud the rooms ring."
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Son 3D : la force de la résonance des pièces."
 
 REFERENCE           ROOM_REFLECTIONS
 LANG_ENGLISH        "Room Reflections"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Réflexions de la pièce"
 
 REFERENCE           THE_ROOM_AROUND_YOU_RINGS
 LANG_ENGLISH        "The room around you rings."
-LANG_FRENCH         "#same"
+LANG_FRENCH         "La pièce autour de vous résonne."
 
 REFERENCE           SOUND_AROUND_CORNERS
 LANG_ENGLISH        "Sound Around Corners"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Son autour des angles"
 
 REFERENCE           A_SOUND_FINDS_ITS_WAY_AROUND_CORNERS
 LANG_ENGLISH        "A sound finds its way around corners."
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Un son contourne les angles."
 
 REFERENCE           DOPPLER_EFFECT
 LANG_ENGLISH        "Doppler Effect"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Effet Doppler"
 
 REFERENCE           WHAT_FLIES_PAST_CHANGES_ITS_PITCH
 LANG_ENGLISH        "What flies past changes its pitch."
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Ce qui passe en volant change de hauteur."
 
 REFERENCE           VOICE_CHAT
 LANG_ENGLISH        "Voice Chat"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Chat vocal"
 
 REFERENCE           TALK_TO_AND_HEAR_OTHER_PLAYERS_WITH
 LANG_ENGLISH        "Talk to and hear other players with your microphone."
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Parler aux autres joueurs et les entendre avec votre microphone."
 
 REFERENCE           MODE
 LANG_ENGLISH        "Mode"
@@ -331,107 +331,107 @@ LANG_FRENCH         "#same"
 
 REFERENCE           PUSH_TO_TALK_HOLD_THE_TALK_KEY_CONTR
 LANG_ENGLISH        "Push to talk: hold the talk key (Controls, Extras)."
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Appuyer pour parler : maintenir la touche (Commandes, Extras)."
 
 REFERENCE           PUSH_TO_TALK
 LANG_ENGLISH        "Push To Talk"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Appuyer pour parler"
 
 REFERENCE           VOICE_ACTIVATION
 LANG_ENGLISH        "Voice Activation"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Activation vocale"
 
 REFERENCE           VOICE_CHAT_VOLUME
 LANG_ENGLISH        "Voice Chat Volume"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Volume du chat vocal"
 
 REFERENCE           HOW_LOUD_THE_OTHER_PLAYERS_ARE
 LANG_ENGLISH        "How loud the other players are."
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Le volume des autres joueurs."
 
 REFERENCE           MICROPHONE_GAIN
 LANG_ENGLISH        "Microphone Gain"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Gain du microphone"
 
 REFERENCE           HOW_LOUD_YOUR_MICROPHONE_IS_SENT
 LANG_ENGLISH        "How loud your microphone is sent."
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Le volume auquel votre microphone est envoyé."
 
 REFERENCE           ACTIVATION_LEVEL
 LANG_ENGLISH        "Activation Level"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Seuil d'activation"
 
 REFERENCE           VOICE_ACTIVATION_HOW_LOUD_YOU_HAVE_T
 LANG_ENGLISH        "Voice activation: how loud you have to be before you are sent."
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Activation vocale : le volume à atteindre pour être transmis."
 
 REFERENCE           MUFFLE_BEHIND_WALLS
 LANG_ENGLISH        "Muffle Behind Walls"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Étouffer derrière les murs"
 
 REFERENCE           VOICES_BEHIND_WALLS_AND_UNDER_WATER
 LANG_ENGLISH        "Voices behind walls and under water sound muffled."
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Les voix derrière les murs et sous l'eau sont étouffées."
 
 REFERENCE           SHOW_WHO_TALKS
 LANG_ENGLISH        "Show Who Talks"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Afficher qui parle"
 
 REFERENCE           A_LIST_OF_THE_PLAYERS_WHO_ARE_TALKIN
 LANG_ENGLISH        "A list of the players who are talking on the HUD."
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Une liste des joueurs qui parlent sur le HUD."
 
 REFERENCE           ON_OTHER_SERVERS
 LANG_ENGLISH        "On Other Servers"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Sur d'autres serveurs"
 
 REFERENCE           SERVERS_WITHOUT_VOICE_USE_VOICE_JKA
 LANG_ENGLISH        "Servers without voice: use voice.jka.vision, which sees your address."
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Serveurs sans voix : utiliser voice.jka.vision, qui voit votre adresse."
 
 REFERENCE           OWN_VOICE_IN_THE_ROOM
 LANG_ENGLISH        "Own Voice In The Room"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Sa propre voix dans la pièce"
 
 REFERENCE           WITH_SPATIAL_SOUND_HOW_LOUD_THE_ROOM
 LANG_ENGLISH        "With spatial sound: how loud the room rings from what you say yourself."
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Avec le son spatial : la résonance de la pièce pour ce que vous dites."
 
 REFERENCE           RADIO_SOUND
 LANG_ENGLISH        "Radio Sound"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Son radio"
 
 REFERENCE           THE_CLAN_RADIO_SOUNDS_LIKE_ONE_NARRO
 LANG_ENGLISH        "The clan radio sounds like one: narrow, a little rough, with a click."
-LANG_FRENCH         "#same"
+LANG_FRENCH         "La radio du clan sonne comme une radio : étroite, un peu rêche, avec un clic."
 
 REFERENCE           GAME
 LANG_ENGLISH        "Game"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Jeu"
 
 REFERENCE           LANGUAGE
 LANG_ENGLISH        "Language"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Langue"
 
 REFERENCE           BOT_MODE
 LANG_ENGLISH        "Bot Mode"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Mode bot"
 
 REFERENCE           YOUR_CLIENT_PLAYS_BY_ITSELF_ON_ANY_S
 LANG_ENGLISH        "Your client plays by itself, on any server: it walks the route of the map and fights."
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Votre client joue tout seul, sur n'importe quel serveur : il suit le parcours de la carte et se bat."
 
 REFERENCE           SKILL
 LANG_ENGLISH        "Skill"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Niveau"
 
 REFERENCE           HOW_FAST_IT_TURNS_HOW_WELL_IT_AIMS_A
 LANG_ENGLISH        "How fast it turns, how well it aims and how soon it attacks."
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Sa vitesse de rotation, sa précision et sa rapidité d'attaque."
 
 REFERENCE           INITIATE
 LANG_ENGLISH        "Initiate"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Initié"
 
 REFERENCE           PADAWAN
 LANG_ENGLISH        "Padawan"
@@ -443,195 +443,195 @@ LANG_FRENCH         "#same"
 
 REFERENCE           JEDI_KNIGHT
 LANG_ENGLISH        "Jedi Knight"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Chevalier Jedi"
 
 REFERENCE           JEDI_MASTER
 LANG_ENGLISH        "Jedi Master"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Maître Jedi"
 
 REFERENCE           FIGHT
 LANG_ENGLISH        "Fight"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Combat"
 
 REFERENCE           WHOM_IT_ATTACKS_NOBODY_ONLY_THE_ONE
 LANG_ENGLISH        "Whom it attacks: nobody, only the one you are in a duel with, or every enemy it sees."
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Qui il attaque : personne, seulement votre adversaire en duel, ou tout ennemi qu'il voit."
 
 REFERENCE           NEVER
 LANG_ENGLISH        "Never"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Jamais"
 
 REFERENCE           IN_DUELS
 LANG_ENGLISH        "In Duels"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "En duel"
 
 REFERENCE           ALWAYS
 LANG_ENGLISH        "Always"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Toujours"
 
 REFERENCE           WALK_THE_ROUTE
 LANG_ENGLISH        "Walk The Route"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Suivre le parcours"
 
 REFERENCE           OFF_IT_STAYS_WHERE_IT_IS_AND_ONLY_TU
 LANG_ENGLISH        "Off: it stays where it is and only turns and fights."
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Désactivé : il reste sur place, se tourne et se bat seulement."
 
 REFERENCE           KEYS_TAKE_OVER
 LANG_ENGLISH        "Keys Take Over"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Les touches reprennent la main"
 
 REFERENCE           A_MOVE_OR_ATTACK_KEY_ENDS_THE_BOT_MO
 LANG_ENGLISH        "A move or attack key ends the bot mode. A key for on and off: Controls, Extras."
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Une touche de déplacement ou d'attaque arrête le mode bot. Touche marche/arrêt : Commandes, Extras."
 
 REFERENCE           MENUS_AND_HUD
 LANG_ENGLISH        "Menus and HUD"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Menus et HUD"
 
 REFERENCE           NEW_HUD
 LANG_ENGLISH        "New HUD"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Nouveau HUD"
 
 REFERENCE           THE_HUD_OF_VISIONJK_OFF_THE_HUD_OF_T
 LANG_ENGLISH        "The HUD of VisionJK. Off: the HUD of the game."
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Le HUD de VisionJK. Désactivé : le HUD du jeu."
 
 REFERENCE           CLASSIC_MENUS
 LANG_ENGLISH        "Classic Menus"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Menus classiques"
 
 REFERENCE           THE_MENUS_OF_THE_GAME_AS_THEY_WERE_C
 LANG_ENGLISH        "The menus of the game as they were. Counts from the next start of the game."
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Les menus du jeu tels qu'ils étaient. Effectif au prochain démarrage du jeu."
 
 REFERENCE           MENU_IN_THE_LEVEL
 LANG_ENGLISH        "Menu in the Level"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Menu dans le niveau"
 
 REFERENCE           IN_A_GAME_AN_OPEN_MENU_STANDS_IN_THE
 LANG_ENGLISH        "In a game an open menu stands in the level next to you."
-LANG_FRENCH         "#same"
+LANG_FRENCH         "En jeu, un menu ouvert se tient dans le niveau à côté de vous."
 
 REFERENCE           MENU_BLUR
 LANG_ENGLISH        "Menu Blur"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Flou du menu"
 
 REFERENCE           HOW_FAR_THE_LEVEL_BEHIND_AN_OPEN_MEN
 LANG_ENGLISH        "How far the level behind an open menu is out of focus."
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Le flou du niveau derrière un menu ouvert."
 
 REFERENCE           SHOW_FRAME_RATE
 LANG_ENGLISH        "Show Frame Rate"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Afficher les images par seconde"
 
 REFERENCE           FRAMES_A_SECOND_IN_THE_CORNER_OF_THE
 LANG_ENGLISH        "Frames a second in the corner of the screen."
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Les images par seconde dans le coin de l'écran."
 
 REFERENCE           SHOW_TIMER
 LANG_ENGLISH        "Show Timer"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Afficher le chronomètre"
 
 REFERENCE           THE_TIME_OF_THE_LEVEL_IN_THE_CORNER
 LANG_ENGLISH        "The time of the level in the corner of the screen."
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Le temps du niveau dans le coin de l'écran."
 
 REFERENCE           SHOW_LAGOMETER
 LANG_ENGLISH        "Show Lagometer"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Afficher le lagomètre"
 
 REFERENCE           A_GRAPH_OF_YOUR_CONNECTION
 LANG_ENGLISH        "A graph of your connection."
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Un graphique de votre connexion."
 
 REFERENCE           VIEW
 LANG_ENGLISH        "View"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Vue"
 
 REFERENCE           FIELD_OF_VIEW
 LANG_ENGLISH        "Field of View"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Champ de vision"
 
 REFERENCE           HOW_WIDE_YOU_SEE
 LANG_ENGLISH        "How wide you see."
-LANG_FRENCH         "#same"
+LANG_FRENCH         "La largeur de votre vue."
 
 REFERENCE           CAMERA_DISTANCE
 LANG_ENGLISH        "Camera Distance"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Distance de la caméra"
 
 REFERENCE           HOW_FAR_THE_CAMERA_IS_BEHIND_YOU_IN
 LANG_ENGLISH        "How far the camera is behind you in third person."
-LANG_FRENCH         "#same"
+LANG_FRENCH         "La distance de la caméra derrière vous à la troisième personne."
 
 REFERENCE           CROSSHAIR_SIZE
 LANG_ENGLISH        "Crosshair Size"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Taille du viseur"
 
 REFERENCE           THE_SIZE_OF_THE_CROSSHAIR
 LANG_ENGLISH        "The size of the crosshair."
-LANG_FRENCH         "#same"
+LANG_FRENCH         "La taille du viseur."
 
 REFERENCE           PLAYERS
 LANG_ENGLISH        "Players"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Joueurs"
 
 REFERENCE           CHAT_BUBBLES
 LANG_ENGLISH        "Chat Bubbles"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Bulles de chat"
 
 REFERENCE           WHAT_A_PLAYER_SAYS_STANDS_ABOVE_HIS
 LANG_ENGLISH        "What a player says stands above his head."
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Ce qu'un joueur dit s'affiche au-dessus de sa tête."
 
 REFERENCE           BUBBLE_RANGE
 LANG_ENGLISH        "Bubble Range"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Portée des bulles"
 
 REFERENCE           HOW_FAR_AWAY_A_BUBBLE_IS_STILL_DRAWN
 LANG_ENGLISH        "How far away a bubble is still drawn."
-LANG_FRENCH         "#same"
+LANG_FRENCH         "La distance à laquelle une bulle est encore affichée."
 
 REFERENCE           PLAYER_STATUSES
 LANG_ENGLISH        "Player Statuses"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Statuts des joueurs"
 
 REFERENCE           AWAY_FROM_KEYBOARD_AND_MUSIC_ABOVE_T
 LANG_ENGLISH        "Away from keyboard and music above the heads of the others."
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Absence et musique au-dessus des têtes des autres."
 
 REFERENCE           SHOW_MY_MUSIC
 LANG_ENGLISH        "Show My Music"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Montrer ma musique"
 
 REFERENCE           TELL_THE_OTHERS_WHAT_YOU_LISTEN_TO_E
 LANG_ENGLISH        "Tell the others what you listen to. Everybody on the server reads it."
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Dire aux autres ce que vous écoutez. Tout le serveur le lit."
 
 REFERENCE           SELECT_PLAYERS
 LANG_ENGLISH        "Select Players"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Sélectionner des joueurs"
 
 REFERENCE           WITH_THE_MOUSE_FREE_A_CLICK_ON_A_PLA
 LANG_ENGLISH        "With the mouse free, a click on a player opens a card with what you can do with him."
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Souris libre, un clic sur un joueur ouvre une fiche avec ce que vous pouvez faire."
 
 REFERENCE           SELECTION_OUTLINE
 LANG_ENGLISH        "Selection Outline"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Contour de sélection"
 
 REFERENCE           A_GLOWING_OUTLINE_AROUND_THE_PLAYER
 LANG_ENGLISH        "A glowing outline around the player under the mouse."
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Un contour lumineux autour du joueur sous la souris."
 
 REFERENCE           KEEP_SCOREBOARD_ON_DOUBLE_TAP
 LANG_ENGLISH        "Keep Scoreboard on Double Tap"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Garder le tableau (double appui)"
 
 REFERENCE           THE_SCOREBOARD_KEY_PRESSED_TWICE_QUI
 LANG_ENGLISH        "The scoreboard key pressed twice quickly keeps the board open, with the mouse free to click a player."
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Deux appuis rapides sur la touche du tableau le gardent ouvert, souris libre pour cliquer un joueur."
 
 REFERENCE           CHAT
 LANG_ENGLISH        "Chat"
@@ -639,43 +639,43 @@ LANG_FRENCH         "#same"
 
 REFERENCE           OWN_CHAT_LINE
 LANG_ENGLISH        "Own Chat Line"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Ligne de chat propre"
 
 REFERENCE           TYPE_INTO_THE_CHAT_BOX_OF_VISIONJK_W
 LANG_ENGLISH        "Type into the chat box of VisionJK, with history and links."
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Écrire dans le chat de VisionJK, avec historique et liens."
 
 REFERENCE           CHAT_BOX_SIZE
 LANG_ENGLISH        "Chat Box Size"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Taille du chat"
 
 REFERENCE           HOW_LARGE_THE_CHAT_BOX_AND_ITS_TEXT
 LANG_ENGLISH        "How large the chat box and its text are. In the open box Ctrl and the mouse wheel change it too."
-LANG_FRENCH         "#same"
+LANG_FRENCH         "La taille du chat et de son texte. Chat ouvert, Ctrl et la molette la changent aussi."
 
 REFERENCE           CHAT_BOX_WIDTH
 LANG_ENGLISH        "Chat Box Width"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Largeur du chat"
 
 REFERENCE           HOW_WIDE_THE_CHAT_BOX_IS
 LANG_ENGLISH        "How wide the chat box is."
-LANG_FRENCH         "#same"
+LANG_FRENCH         "La largeur du chat."
 
 REFERENCE           CHAT_BOX_ROWS
 LANG_ENGLISH        "Chat Box Rows"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Lignes du chat"
 
 REFERENCE           HOW_MANY_LINES_THE_OPEN_CHAT_BOX_SHO
 LANG_ENGLISH        "How many lines the open chat box shows. Its upper right corner can also be dragged with the mouse."
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Le nombre de lignes du chat ouvert. Son coin supérieur droit se tire aussi à la souris."
 
 REFERENCE           CHAT_BEEP
 LANG_ENGLISH        "Chat Beep"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Bip du chat"
 
 REFERENCE           A_SOUND_WHEN_SOMEBODY_SAYS_SOMETHING
 LANG_ENGLISH        "A sound when somebody says something."
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Un son quand quelqu'un dit quelque chose."
 
 REFERENCE           CONSOLE
 LANG_ENGLISH        "Console"
@@ -683,27 +683,27 @@ LANG_FRENCH         "#same"
 
 REFERENCE           SHARP_CONSOLE_FONT
 LANG_ENGLISH        "Sharp Console Font"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Police de console nette"
 
 REFERENCE           THE_CONSOLE_IN_A_FONT_WITH_EVERY_CHA
 LANG_ENGLISH        "The console in a font with every character."
-LANG_FRENCH         "#same"
+LANG_FRENCH         "La console dans une police avec tous les caractères."
 
 REFERENCE           CONSOLE_TEXT_SIZE
 LANG_ENGLISH        "Console Text Size"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Taille du texte de la console"
 
 REFERENCE           THE_SIZE_OF_THE_TEXT_OF_THE_CONSOLE
 LANG_ENGLISH        "The size of the text of the console."
-LANG_FRENCH         "#same"
+LANG_FRENCH         "La taille du texte de la console."
 
 REFERENCE           CONSOLE_OPACITY
 LANG_ENGLISH        "Console Opacity"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Opacité de la console"
 
 REFERENCE           HOW_MUCH_OF_THE_GAME_SHOWS_THROUGH_T
 LANG_ENGLISH        "How much of the game shows through the console."
-LANG_FRENCH         "#same"
+LANG_FRENCH         "La part du jeu visible à travers la console."
 
 REFERENCE           CLAN
 LANG_ENGLISH        "Clan"
@@ -711,63 +711,63 @@ LANG_FRENCH         "#same"
 
 REFERENCE           CLAN_PASSWORD
 LANG_ENGLISH        "Clan Password"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Mot de passe du clan"
 
 REFERENCE           CLAN_CHAT_AND_CLAN_RADIO_REACH_EVERY
 LANG_ENGLISH        "Clan chat and clan radio reach everybody on the server who has the same one. The server sees it."
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Le chat et la radio du clan atteignent tous ceux du serveur qui ont le même. Le serveur le voit."
 
 REFERENCE           UPDATES_AND_DOWNLOADS
 LANG_ENGLISH        "Updates and Downloads"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Mises à jour et téléchargements"
 
 REFERENCE           CHECK_FOR_UPDATES
 LANG_ENGLISH        "Check for Updates"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Rechercher les mises à jour"
 
 REFERENCE           ASK_AT_EVERY_START_WHETHER_A_NEWER_V
 LANG_ENGLISH        "Ask at every start whether a newer version is out."
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Demander à chaque démarrage s'il existe une version plus récente."
 
 REFERENCE           SECURITY
 LANG_ENGLISH        "Security"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Sécurité"
 
 REFERENCE           INTRUSION_LOG
 LANG_ENGLISH        "Intrusion Log"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Journal d'intrusion"
 
 REFERENCE           WRITE_DOWN_WHAT_A_SERVER_SENDS_THAT
 LANG_ENGLISH        "Write down what a server sends that no server of the game does, and leave one that keeps at it."
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Noter ce qu'un serveur envoie d'inhabituel pour le jeu, et quitter celui qui insiste."
 
 REFERENCE           KEY_LOGIN_BY_AGENT
 LANG_ENGLISH        "Key Login by Agent"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Connexion par clé via agent"
 
 REFERENCE           THE_ADMIN_LOGIN_ASKS_YOUR_SSH_AGENT
 LANG_ENGLISH        "The admin login asks your ssh-agent for the key (1Password, OpenSSH)."
-LANG_FRENCH         "#same"
+LANG_FRENCH         "La connexion admin demande la clé à votre ssh-agent (1Password, OpenSSH)."
 
 REFERENCE           KEY_FILE
 LANG_ENGLISH        "Key File"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Fichier de clé"
 
 REFERENCE           THE_FILE_WITH_THE_KEY_FOR_THE_ADMIN
 LANG_ENGLISH        "The file with the key for the admin login, where no agent has it."
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Le fichier contenant la clé de connexion admin, si aucun agent ne l'a."
 
 REFERENCE           TEXT
 LANG_ENGLISH        "Text"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Texte"
 
 REFERENCE           UTF_8_TEXT
 LANG_ENGLISH        "UTF-8 Text"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Texte UTF-8"
 
 REFERENCE           EVERY_CHARACTER_IN_NAMES_AND_CHAT_OF
 LANG_ENGLISH        "Every character in names and chat. Off for a language with a code page of its own."
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Tous les caractères dans les noms et le chat. Désactivé pour une langue avec sa propre page de codes."
 
 REFERENCE           INTERFACE
 LANG_ENGLISH        "Interface"
@@ -775,123 +775,135 @@ LANG_FRENCH         "#same"
 
 REFERENCE           HOW_MENUS_HUD_AND_CAMERA_LOOK
 LANG_ENGLISH        "How menus, HUD and camera look."
-LANG_FRENCH         "#same"
+LANG_FRENCH         "L'apparence des menus, du HUD et de la caméra."
 
 REFERENCE           CHAT_SOCIAL
 LANG_ENGLISH        "Chat & Social"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Chat et social"
 
 REFERENCE           THE_CHAT_BOX_BUBBLES_AND_WHAT_STANDS
 LANG_ENGLISH        "The chat box, bubbles and what stands above the heads."
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Le chat, les bulles et ce qui est affiché au-dessus des têtes."
 
 REFERENCE           NETWORK
 LANG_ENGLISH        "Network"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Réseau"
 
 REFERENCE           UPDATES_DOWNLOADS_AND_SECURITY
 LANG_ENGLISH        "Updates, downloads and security."
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Mises à jour, téléchargements et sécurité."
 
 REFERENCE           GAME_FOLDERS_WITH_OTHER_MODS
 LANG_ENGLISH        "Game folders with other mods."
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Dossiers de jeu contenant d'autres mods."
 
 REFERENCE           RESTART_THE_VIDEO_WITH_THESE_SETTING
 LANG_ENGLISH        "Restart the video with these settings."
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Redémarrer l'affichage avec ces réglages."
 
 REFERENCE           FIXED_COLOR
 LANG_ENGLISH        "Fixed Color"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Couleur fixe"
 
 REFERENCE           BLADE_STYLE
 LANG_ENGLISH        "Blade Style"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Style de lame"
 
 REFERENCE           YOUR_FORCE_POWERS
 LANG_ENGLISH        "Your force powers."
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Vos pouvoirs de la Force."
 
 REFERENCE           THE_LIST_OF_MOVES
 LANG_ENGLISH        "The list of moves."
-LANG_FRENCH         "#same"
+LANG_FRENCH         "La liste des mouvements."
 
 REFERENCE           HOLSTERS
 LANG_ENGLISH        "Holsters"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Étuis"
+
+REFERENCE           LIGHT_SIDE
+LANG_ENGLISH        "Light Side"
+LANG_FRENCH         "Côté lumineux"
+
+REFERENCE           DARK_SIDE
+LANG_ENGLISH        "Dark Side"
+LANG_FRENCH         "Côté obscur"
+
+REFERENCE           BOTH_SIDES
+LANG_ENGLISH        "Both Sides"
+LANG_FRENCH         "Les deux côtés"
 
 REFERENCE           MUTE_HIS_VOICE
 LANG_ENGLISH        "Mute his voice"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Couper sa voix"
 
 REFERENCE           HEAR_HIS_VOICE_AGAIN
 LANG_ENGLISH        "Hear his voice again"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Réentendre sa voix"
 
 REFERENCE           VOICE_QUIETER_I
 LANG_ENGLISH        "Voice quieter (%i %%)"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Voix moins forte (%i %%)"
 
 REFERENCE           VOICE_LOUDER_I
 LANG_ENGLISH        "Voice louder (%i %%)"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Voix plus forte (%i %%)"
 
 REFERENCE           HIDE_HIS_CHAT_LINES
 LANG_ENGLISH        "Hide his chat lines"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Masquer ses messages"
 
 REFERENCE           SHOW_HIS_CHAT_LINES_AGAIN
 LANG_ENGLISH        "Show his chat lines again"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Réafficher ses messages"
 
 REFERENCE           WHISPER_TO_HIM
 LANG_ENGLISH        "Whisper to him"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Lui chuchoter"
 
 REFERENCE           WATCH_HIM
 LANG_ENGLISH        "Watch him"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Le regarder"
 
 REFERENCE           COPY_HIS_NAME
 LANG_ENGLISH        "Copy his name"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Copier son nom"
 
 REFERENCE           CALL_A_VOTE_TO_KICK_HIM
 LANG_ENGLISH        "Call a vote to kick him"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Vote pour l'expulser"
 
 REFERENCE           CLICK_AGAIN_TO_CALL_THE_VOTE
 LANG_ENGLISH        "Click again to call the vote"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Recliquer pour lancer le vote"
 
 REFERENCE           ADMIN_KICK
 LANG_ENGLISH        "Admin: kick"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Admin : expulser"
 
 REFERENCE           ADMIN_SILENCE
 LANG_ENGLISH        "Admin: silence"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Admin : faire taire"
 
 REFERENCE           ADMIN_SLEEP
 LANG_ENGLISH        "Admin: sleep"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Admin : endormir"
 
 REFERENCE           ADMIN_SLAP
 LANG_ENGLISH        "Admin: slap"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Admin : gifler"
 
 REFERENCE           ADMIN_GO_TO_HIM
 LANG_ENGLISH        "Admin: go to him"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Admin : aller à lui"
 
 REFERENCE           ADMIN_BRING_HIM_HERE
 LANG_ENGLISH        "Admin: bring him here"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Admin : l'amener ici"
 
 REFERENCE           YOU
 LANG_ENGLISH        "You"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Vous"
 
 REFERENCE           BOT
 LANG_ENGLISH        "Bot"
@@ -899,7 +911,7 @@ LANG_FRENCH         "#same"
 
 REFERENCE           SPECTATOR
 LANG_ENGLISH        "Spectator"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Spectateur"
 
 REFERENCE           SCORE_I
 LANG_ENGLISH        "Score %i"
@@ -915,51 +927,51 @@ LANG_FRENCH         "#same"
 
 REFERENCE           ANOTHER_CLIENT
 LANG_ENGLISH        "Another client"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Autre client"
 
 REFERENCE           AWAY_FROM_KEYBOARD
 LANG_ENGLISH        "Away from keyboard"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Absent du clavier"
 
 REFERENCE           LISTENING_TO_S
 LANG_ENGLISH        "Listening to %s"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Écoute %s"
 
 REFERENCE           SPECTATORS
 LANG_ENGLISH        "Spectators"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Spectateurs"
 
 REFERENCE           CONNECTING
 LANG_ENGLISH        "connecting"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "connexion"
 
 REFERENCE           AND_I_MORE
 LANG_ENGLISH        "and %i more"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "et %i de plus"
 
 REFERENCE           THE_SCORES_KEY
 LANG_ENGLISH        "The scores key"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "La touche des scores"
 
 REFERENCE           S_TWICE_PICK_A_PLAYER
 LANG_ENGLISH        "%s twice: pick a player"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "%s deux fois : choisir un joueur"
 
 REFERENCE           CLICK_A_PLAYER_S_OR_ESC_CLOSES
 LANG_ENGLISH        "Click a player. %s or Esc closes."
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Cliquez un joueur. %s ou Échap ferme."
 
 REFERENCE           NEW_MENUS
 LANG_ENGLISH        "New Menus"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Nouveaux menus"
 
 REFERENCE           THE_MENUS_AND_THE_HUD_OF_VISIONJK_TH
 LANG_ENGLISH        "The menus and the HUD of VisionJK. The video restarts."
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Les menus et le HUD de VisionJK. L'affichage redémarre."
 
 REFERENCE           YOU_CLAN_RADIO
 LANG_ENGLISH        "You, clan radio"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Vous, radio du clan"
 
 REFERENCE           RADIO
 LANG_ENGLISH        "radio"
@@ -967,27 +979,27 @@ LANG_FRENCH         "#same"
 
 REFERENCE           ALL
 LANG_ENGLISH        "All"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Tous"
 
 REFERENCE           TEAM
 LANG_ENGLISH        "Team"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Équipe"
 
 REFERENCE           PRIVATE
 LANG_ENGLISH        "Private"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Privé"
 
 REFERENCE           SAY
 LANG_ENGLISH        "Say"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Dire"
 
 REFERENCE           TO_S
 LANG_ENGLISH        "To %s"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "À %s"
 
 REFERENCE           OPEN_S_ENTER_YES_ANY_OTHER_KEY_NO
 LANG_ENGLISH        "Open %s ? Enter: yes, any other key: no"
-LANG_FRENCH         "#same"
+LANG_FRENCH         "Ouvrir %s ? Entrée : oui, autre touche : non"
 
 
 ENDMARKER

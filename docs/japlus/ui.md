@@ -81,8 +81,9 @@ Both are in Setup under Interface.
   there) and head, torso and legs as three tabs. The lightsaber has type and hilt at the left and for each
   blade its seven colours, the style of its core and red, green and blue at the right: the page of sliders
   that was behind a button is gone. The bar at the bottom has the way back and the button that takes over.
-- What this tree added to the menus is in the language of the game in English and German (`se_language`).
-  French and Spanish read the English until somebody translates `tools/menus/texts.py`.
+- What this tree added to the menus, and what its cgame writes by itself, is in the language of the game:
+  English, German (`tools/menus/texts.py`), and since 2026-10-12 French and Spanish
+  (`tools/menus/texts_more.py`). Nobody who speaks French or Spanish as a first language has read those two.
 - The icon of the game is the box of the website (white lid, a yellow and a blue side). On the first page it
   is a body on a panel of its own, in the pose of the icon: seen over one edge from above, yellow at the
   left, blue at the right, the lid hinged on the yellow side and a little open. It sways a few degrees and
@@ -358,7 +359,7 @@ mark of the chosen row is, and does not read that number. The same code draws al
 that have one (hilts, maps, servers, demos, mods, players to vote on, sets of force powers, moves). Seen at
 2560 x 1440: the hilts, the maps of a new game, the sets of force powers, the maps of a vote.
 
-Not translated: French and Spanish read what this tree added in English.
+French and Spanish (2026-10-12): the options screens were looked at in both, at 1920 x 1080 (`clienttests/ui_lang.cfg`).
 
 Not checked: the pages of siege in a game of siege (their pictures are missing outside one), most in-game
 windows standing in the level (`cg_immersiveMenu 1`, the default: Setup and the vote window were looked at

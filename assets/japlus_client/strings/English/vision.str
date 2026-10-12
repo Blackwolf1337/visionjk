@@ -617,6 +617,15 @@ LANG_ENGLISH        "The list of moves."
 REFERENCE           HOLSTERS
 LANG_ENGLISH        "Holsters"
 
+REFERENCE           LIGHT_SIDE
+LANG_ENGLISH        "Light Side"
+
+REFERENCE           DARK_SIDE
+LANG_ENGLISH        "Dark Side"
+
+REFERENCE           BOTH_SIDES
+LANG_ENGLISH        "Both Sides"
+
 REFERENCE           MUTE_HIS_VOICE
 LANG_ENGLISH        "Mute his voice"
 
