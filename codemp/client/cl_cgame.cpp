@@ -495,6 +495,7 @@ void CL_ShutdownCGame( void ) {
 	Key_SetCatcher( Key_GetCatcher( ) & ~KEYCATCH_CGAME );
 	Cvar_Set( "cg_chatHandler", "0" );		// see Con_ChatByCgame()
 	Cvar_Set( "cg_catchQuiet", "0" );		// see CL_CmdButtons()
+	Cvar_Set( "s_muffle", "0" );			// see S_MufflePaint(): nobody is left who would take it back
 
 	if ( !cls.cgameStarted )
 		return;

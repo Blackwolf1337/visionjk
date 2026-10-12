@@ -64,6 +64,10 @@ static struct {
 
 void CG_Menu3DInit( void ) {
 	memset( &menu3d, 0, sizeof( menu3d ) );
+	// What the cgame before this one set stays in the cvar when it ends (a level change, a visit to the Vision
+	// Temple and the way back, each while Focus or a menu muffled the sound), and this one would take it for 0:
+	// the sound stayed dull until a menu was opened and closed.
+	trap->Cvar_Set( "s_muffle", "0" );
 }
 
 static qboolean Menu3D_Engine( const char *cvar ) {

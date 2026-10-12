@@ -623,6 +623,14 @@ is then the one of that moment. Nothing of the time in between is played after.
 - **The sound**: the mix of the game is muffled (`s_muffle` at 0.7, set by `menu3d/cg_menu3d.c` for the menu in
   the level and for this), with the loop of the Force Sight of the game as a hum, and its sound when it
   begins and ends. Chosen by their names, nobody listened. The voice chat is not touched.
+  The cvar is put back to 0 when a cgame starts (`CG_Menu3DInit()`) and when the engine ends one
+  (`CL_ShutdownCGame()`). Until 2026-10-12 it was not: the cgame remembers what it set and only sets what
+  differs, and a new one took the cvar for 0. So the sound stayed dull, until a menu was opened and closed,
+  after every restart of the cgame that came while Focus or the menu in the level muffled it: on the way into
+  the Vision Temple of a server and back (0.69 in the temple and after it), and after a `vid_restart` with a
+  menu open, which is what changing the picture in Setup does (1.00). The owner heard it ("Sometimes the sound
+  sounds dull before or after temple visit"). Read as the value of the cvar in the level, in the temple and
+  back, by `VISIT_PROBE=s_muffle` of the test tool `uitest/visit.sh`, before the fix and after it.
 - **Not**: as a spectator, dead, in the air, in a vehicle, zoomed, in a duel, in a demo, with a menu open.
 - **The body.** On a server with the game module of this tree (`g_visionCaps` bit 4) it is protected meanwhile,
   see [server.md](server.md), "Focus". The client says `jpfocus 1` when its player leaves and `jpfocus 0` when
