@@ -183,6 +183,40 @@ the server command `jpfocus <held> <why>`: 1 the body is protected, or 0 with th
 - A legacy client sees a player who meditates inside the shell of a protected one.
 - For the rules on idle players (`g_inactivity`, `g_afkTime`) the body is idle.
 
+### The Vision Temple as a server (not from JA+)
+
+`game/status/g_temple.c`, `tools/temple/build.py`, the client part is in [client.md](client.md), "The Vision
+Temple as a server, and the visit". Run hidden on Linux on 2026-10-12 with one and two clients and with bots,
+on one machine. Played by nobody, never run on a public address.
+
+| Cvar | Default | Meaning |
+|------|---------|---------|
+| `g_visionTemple` | 0 | 1: this server is the temple. In the server info, read at the start of a level |
+
+A temple server is a server of this tree with `+set g_visionTemple 1 +map vision_temple` (free for all). What
+the mode does:
+
+- Everybody who connects plays at once: no force setup, no join menu, no welcome in the middle of the screen.
+- Nobody has a weapon (the fists, and they do not strike), a force power but the jump, or an item. Nobody
+  takes damage, nobody can be challenged to a duel, Focus is off.
+- Players do not stand in each other's way. That and the attack buttons are in the shared movement code
+  (`PmoveSingle()`, `bg_visionTemple`), so the client predicts both.
+- Somebody who gets under the floors starts again.
+
+The map `maps/vision_temple.bsp` is in the asset pack. It has brushes and no surfaces: the terrace, the five
+steps of the podium, the way, and fences that keep players from the clouds. `tools/temple/build.py` writes it
+from the numbers of the shader that draws the place (`rd-vulkan-vision/shaders/temple.frag`), without a map
+compiler: change a size in both. A client without that renderer (a legacy client, `rd-vanilla`, the browser)
+sees players in an empty sky there.
+
+Clients find the server through the voice master: started with `-temple <port>` (the same host) or
+`-temple <address>:<port>`, it names the server in its answers to clients that enter the temple
+(`VOICE_TEMPLE_SERVER`, `game/voice/bg_voice.h`). A master without the option names none, and its clients stay
+in the temple that is drawn into their own game.
+
+Not there: rooms for those who use a word of their own, a list of who is in the temple, more than the 32
+players one server holds.
+
 ### Admin login without a password (not from JA+)
 
 `game/auth/g_auth.c` and `game/auth/bg_auth.c`, the client part is in [client.md](client.md). Since 2026-10-11.

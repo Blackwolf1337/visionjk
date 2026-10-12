@@ -707,6 +707,61 @@ have to match.
   browser, `rd-vanilla` and so macOS (the command says "only with the Vulkan renderer for now", and the entry of
   the main menu then ends in that menu again with the line in the console), Windows was not built with it.
 
+### The Vision Temple as a server, and the visit
+
+Not from JA+ or OpenJK (2026-10-12, the owner: "replace the wisps with the actual playermodels they're using
+including the animations and game logic and movement but just without fighting", and without leaving the server
+one is on). `client/cl_visit.cpp`, `cgame/focus/cg_focus.c`, the server part is in [server.md](server.md),
+"The Vision Temple as a server". **Built and run on Linux with rd-vulkan-vision only**, hidden, with
+`tools/uitest/visit.sh` of the test tools: two dedicated servers, a voice master and one or two clients on one
+machine. Played by nobody yet, and never over a real network.
+
+Where the voice master names a game server that is the temple (below), the temple of the part above is the
+start of the way only. The client goes on to that server, where everybody is a player with his model, his
+animations and the movement of the game, and where one can talk and use the emotes. The way, as a player has it:
+
+1. The temple key on a server. The light temple begins, the server is asked to protect the body (`jpfocus 1`),
+   and the voice master is asked who is there. Its answer carries the address of the temple server.
+2. After 0.9 seconds, and when the server has answered about the body, the cgame runs `visit <address>`. The
+   screen is light while the temple server is joined and its level loads (`CG_FocusLoading()`, the connect
+   screen of the ui does the same), and the temple comes out of that light.
+3. The temple key there (`temple`, the hint names it) runs `disconnect`. The engine is back on the first
+   server, its level loads behind the same light, and the server is told that the player is back (`jpfocus 0`).
+
+**The visit** is a thing of the engine (`cl_cgameVisit` says that it has it). `visit <address>` connects like
+`connect`, and the connection the player has is kept: its state stays in a place of its own (`cl` and `clc` are
+two places, `client.h`), its packets are read into that place, and twenty times a second it gets a command of
+a player who does nothing. A server can not tell that from a player who stands still. The cgame of the first
+server is ended, so what that server sent for the screen meanwhile (chat, prints) is not shown later; config
+strings are kept up. Coming back is what a `vid_restart` does while connected: the level is loaded and the
+cgame starts with the state that was kept. `cl_visit` is 1 while a visit lasts, `cl_visitBack` is set to 1 when
+one ended at the first server (the cgame reads and clears it).
+
+What ends a visit without the player:
+
+- the first server changes or restarts its level: the client comes back and loads it
+- the body is hurt or dies there (the damage count or the kind of movement of its player state changes). A
+  server of this tree protects the body, any other does not: a hit brings the player back, and the level has to
+  load first, which takes as long as it takes
+- the first server drops the player or is silent for `cl_timeout` seconds: there is nothing to come back to,
+  and the client ends in the main menu with what that connection would have said
+- the temple server does not answer within 15 seconds, drops the player or is full: back on the first server
+
+Limits, said plainly:
+
+- **A load each way.** On one machine with both servers local it was a second each way. Over a network and
+  with a big level it is longer. There is no way around it while the engine holds one level at a time.
+- **Not from a game of this program** (a listen server): its level is the one the collision code holds. There
+  the temple stays the light one. The game the main menu starts for the temple is left for good instead
+  (`connect`), and the temple key leads back to the main menu.
+- **Only the open temple.** With a word of one's own (`cg_templeLink`) or with 0 one stays in the light temple:
+  the server has no rooms.
+- **Only where the voice master names a server.** The one on the owner's host does not yet (it is from before),
+  so every client is in the light temple until it is updated and a temple server runs.
+
+On the temple server the cgame draws no fight HUD (votes, who talks, chat and the hint are left), shows every
+player as his own model at once (no deferred load), and the camera goes through the fences nobody sees.
+
 ### Admin login with a key
 
 `cgame/auth/cg_auth.c`, `cgame/auth/cg_auth_agent.c` (2026-10-11), the server part is in [server.md](server.md).
