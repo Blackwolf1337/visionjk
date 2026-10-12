@@ -34,10 +34,23 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // - Music is told by the client, which alone knows it: the client command "jpstatus music <text>" (the cgame
 //   sends it only when its player switched that on), "jpstatus none" ends it. At most one every three seconds,
 //   64 bytes, without colours and control characters.
+//
+// Who plays with a client of this tree is told the same way. A cgame of this tree names itself in its userinfo
+// (cjp_vision, its version), and one that draws a mark for the others says so (cjp_caps bit 1). Only such a
+// client is sent
+//
+//   jpclient <client> <version> [<client> <version> ...]		version: of his VisionJK, "-" for any other client
+//
+// with one player when his userinfo says something new, and with everybody in one command when it asks for all
+// of it: a cgame that has just started knows nothing (a new level, but also a restart of the video, of which
+// the server hears nothing), so it sends the client command "jpstatus all" once and is told who plays with what
+// and what stands above everybody. The game module says in the server info that it does this (g_visionCaps bit
+// 3). The userinfo is what the client says of itself: a mark, nothing to rely on.
 
 #include "game/g_local.h"
 
 #define STATUS_CMD_MSEC		3000
+#define STATUS_ALL_MSEC		2000	// "jpstatus all" is answered this often at most
 
 static int statusFrameTime;
 
@@ -63,6 +76,52 @@ static void G_StatusBroadcast( const gentity_t *ent ) {
 	}
 }
 
+// what a client is, as the command says it
+static const char *G_PeerWord( const gentity_t *ent ) {
+	return ent->client->pers.jp.vision[0] ? ent->client->pers.jp.vision : "-";
+}
+
+// does the cgame of this client draw who plays with what, and is it there to be told
+static qboolean G_PeerAsks( const gentity_t *ent ) {
+	return (qboolean)( ent->inuse && ent->client && ent->client->pers.connected == CON_CONNECTED
+		&& ( ent->client->pers.jp.statusCaps & 2 ) );
+}
+
+// Tells one client about everybody, in one command: a level begins with enough of them.
+static void G_PeerTellAll( const gentity_t *to ) {
+	char	cmd[MAX_STRING_CHARS - 64];
+	int		i;
+
+	if ( !G_PeerAsks( to ) ) {
+		return;
+	}
+	Q_strncpyz( cmd, "jpclient", sizeof( cmd ) );
+	for ( i = 0; i < level.maxclients; i++ ) {
+		const gentity_t *ent = &g_entities[i];
+
+		if ( ent->inuse && ent->client && ent->client->pers.connected != CON_DISCONNECTED && ent->client->pers.jp.visionSet ) {
+			Q_strcat( cmd, sizeof( cmd ), va( " %i %s", i, G_PeerWord( ent ) ) );
+		}
+	}
+	trap->SendServerCommand( to - g_entities, cmd );
+}
+
+// The cgame of a client has just started and asks for all of it: what stands above everybody and who plays
+// with what, as far as it draws them.
+static void G_StatusAll( gentity_t *ent ) {
+	int i;
+
+	for ( i = 0; i < level.maxclients; i++ ) {
+		const gentity_t	*other = &g_entities[i];
+
+		if ( other->inuse && other->client && other->client->pers.connected == CON_CONNECTED
+			&& ( other->client->pers.jp.statusAway || other->client->pers.jp.statusMusic[0] ) ) {
+			G_StatusTell( other, ent );
+		}
+	}
+	G_PeerTellAll( ent );
+}
+
 /*
 =================
 G_StatusUserinfo
@@ -74,7 +133,27 @@ above everybody.
 void G_StatusUserinfo( gentity_t *ent, const char *userinfo ) {
 	jpClient_t	*jp = &ent->client->pers.jp;
 	const int	caps = atoi( Info_ValueForKey( userinfo, "cjp_caps" ) );
-	int			i;
+	char		vision[sizeof( jp->vision )];
+	const char	*in;
+	int			i, len = 0;
+
+	// Which VisionJK he says he has: letters, digits and the marks of a version, as one word of a command. A
+	// new one is told to everybody who asks. (Who enters the level later is told all of them then.)
+	for ( in = Info_ValueForKey( userinfo, "cjp_vision" ); *in && len < (int)sizeof( vision ) - 1; in++ ) {
+		if ( ( *in >= '0' && *in <= '9' ) || ( *in >= 'a' && *in <= 'z' ) || ( *in >= 'A' && *in <= 'Z' ) || *in == '.' || *in == '-' || *in == '_' ) {
+			vision[len++] = *in;
+		}
+	}
+	vision[len] = '\0';
+	if ( !jp->visionSet || strcmp( vision, jp->vision ) ) {
+		Q_strncpyz( jp->vision, vision, sizeof( jp->vision ) );
+		jp->visionSet = qtrue;
+		for ( i = 0; i < level.maxclients; i++ ) {
+			if ( G_PeerAsks( &g_entities[i] ) ) {
+				trap->SendServerCommand( i, va( "jpclient %i %s", (int)( ent - g_entities ), G_PeerWord( ent ) ) );
+			}
+		}
+	}
 
 	if ( ( caps & 1 ) && !( jp->statusCaps & 1 ) ) {
 		jp->statusCaps = caps;
@@ -157,7 +236,8 @@ void G_StatusFrame( void ) {
 =================
 Cmd_JPStatus_f
 
-jpstatus music <text> / jpstatus none: the cgame of a client tells what its player listens to
+jpstatus music <text> / jpstatus none: the cgame of a client tells what its player listens to.
+jpstatus all: a cgame that has just started asks for what stands above everybody and who plays with what
 =================
 */
 void Cmd_JPStatus_f( gentity_t *ent ) {
@@ -165,12 +245,20 @@ void Cmd_JPStatus_f( gentity_t *ent ) {
 	char		kind[16], text[sizeof( jp->statusMusic )];
 	char		*in, *out;
 
+	trap->Argv( 1, kind, sizeof( kind ) );
+	if ( !Q_stricmp( kind, "all" ) ) {
+		// (a clock of its own: it must not keep the music of the same moment from being told)
+		if ( !jp->statusAllTime || level.time - jp->statusAllTime >= STATUS_ALL_MSEC || level.time < jp->statusAllTime ) {
+			jp->statusAllTime = level.time;
+			G_StatusAll( ent );
+		}
+		return;
+	}
 	if ( jp->statusCmdTime && level.time - jp->statusCmdTime < STATUS_CMD_MSEC && level.time >= jp->statusCmdTime ) {
 		return;		// the cgame asks again when it does not hear its own status back
 	}
 	jp->statusCmdTime = level.time;
 
-	trap->Argv( 1, kind, sizeof( kind ) );
 	text[0] = '\0';
 	if ( !Q_stricmp( kind, "music" ) ) {
 		JP_ChatCopy( ent, ConcatArgs( 2 ), text, sizeof( text ) );
