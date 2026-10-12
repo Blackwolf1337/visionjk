@@ -125,6 +125,14 @@ REFERENCE           THE_WORLD_STANDS_STILL_AND_YOU_LEAVE
 LANG_ENGLISH        "The world stands still and you leave your body. The same key or Esc brings you back."
 LANG_GERMAN         "Die Welt steht still und Sie verlassen Ihren Körper. Dieselbe Taste oder Esc bringt Sie zurück."
 
+REFERENCE           VISION_TEMPLE_MEDITATE
+LANG_ENGLISH        "Vision Temple (Meditate)"
+LANG_GERMAN         "Vision-Tempel (Meditieren)"
+
+REFERENCE           YOU_MEDITATE_TOWARDS_THE_TEMPLE_ABOV
+LANG_ENGLISH        "You meditate towards the temple above the clouds, where you meet other VisionJK players as wisps. The same key or Esc brings you back."
+LANG_GERMAN         "Sie meditieren zum Tempel über den Wolken, wo Sie andere VisionJK-Spieler als Irrlichter treffen. Dieselbe Taste oder Esc bringt Sie zurück."
+
 REFERENCE           THE_KEYS_YOU_MOVE_WITH
 LANG_ENGLISH        "The keys you move with."
 LANG_GERMAN         "Die Tasten, mit denen Sie sich bewegen."
@@ -1060,6 +1068,58 @@ LANG_GERMAN         "Fokus: nicht im Duell."
 REFERENCE           FOCUS_NOT_WHILE_A_MENU_IS_OPEN
 LANG_ENGLISH        "Focus: not while a menu is open."
 LANG_GERMAN         "Fokus: nicht bei offenem Menü."
+
+REFERENCE           VISION_TEMPLE_S_OR_ESC_BACK
+LANG_ENGLISH        "Vision Temple. %s or Esc: back"
+LANG_GERMAN         "Vision-Tempel. %s oder Esc: zurück"
+
+REFERENCE           VISION_TEMPLE_ESC_BACK
+LANG_ENGLISH        "Vision Temple. Esc: back"
+LANG_GERMAN         "Vision-Tempel. Esc: zurück"
+
+REFERENCE           I_OTHERS_ARE_HERE
+LANG_ENGLISH        "%i others are here."
+LANG_GERMAN         "%i andere sind hier."
+
+REFERENCE           ONE_OTHER_IS_HERE
+LANG_ENGLISH        "One other is here."
+LANG_GERMAN         "Ein anderer ist hier."
+
+REFERENCE           LOOKING_FOR_THE_OTHERS
+LANG_ENGLISH        "Looking for the others ..."
+LANG_GERMAN         "Suche die anderen ..."
+
+REFERENCE           THE_VOICE_SERVER_DOES_NOT_ANSWER_YOU
+LANG_ENGLISH        "The voice server does not answer: you are alone here."
+LANG_GERMAN         "Der Sprachserver antwortet nicht: Sie sind hier allein."
+
+REFERENCE           THE_TEMPLE_IS_FULL_YOU_ARE_ALONE_HER
+LANG_ENGLISH        "The temple is full: you are alone here."
+LANG_GERMAN         "Der Tempel ist voll: Sie sind hier allein."
+
+REFERENCE           YOU_ARE_ALONE_HERE
+LANG_ENGLISH        "You are alone here."
+LANG_GERMAN         "Sie sind hier allein."
+
+REFERENCE           VISION_TEMPLE_ONLY_WHILE_YOU_PLAY
+LANG_ENGLISH        "Vision Temple: only while you play."
+LANG_GERMAN         "Vision-Tempel: nur während Sie spielen."
+
+REFERENCE           VISION_TEMPLE_NOT_NOW
+LANG_ENGLISH        "Vision Temple: not now."
+LANG_GERMAN         "Vision-Tempel: jetzt nicht."
+
+REFERENCE           VISION_TEMPLE_NOT_IN_A_DUEL
+LANG_ENGLISH        "Vision Temple: not in a duel."
+LANG_GERMAN         "Vision-Tempel: nicht im Duell."
+
+REFERENCE           VISION_TEMPLE_NOT_WHILE_A_MENU_IS_OP
+LANG_ENGLISH        "Vision Temple: not while a menu is open."
+LANG_GERMAN         "Vision-Tempel: nicht bei offenem Menü."
+
+REFERENCE           VISION_TEMPLE_ONLY_WITH_THE_VULKAN_R
+LANG_ENGLISH        "Vision Temple: only with the Vulkan renderer for now."
+LANG_GERMAN         "Vision-Tempel: vorerst nur mit dem Vulkan-Renderer."
 
 REFERENCE           SABER
 LANG_ENGLISH        "Saber"

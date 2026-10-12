@@ -5652,6 +5652,7 @@ static const char *g_bindCommands[] = {
 	"saberAttackCycle",
 	"scores_pick",				// VisionJK: the scoreboard kept open with the mouse free
 	"taunt",
+	"temple",					// VisionJK: the Vision Temple, and back
 	"ui_openmenu modsay",		// JA+: the message menu
 	"use_bacta",
 	"use_electrobinoculars",

@@ -133,6 +133,9 @@ TR = {
     'Opens the scoreboard with the mouse free: a click on a row opens what you can do with that player.':
         'Öffnet die Punktetafel mit freier Maus: Ein Klick auf eine Zeile öffnet, was Sie mit dem Spieler tun können.',
     'Focus (Leave Your Body)': 'Fokus (Körper verlassen)',
+    'Vision Temple (Meditate)': 'Vision-Tempel (Meditieren)',
+    'You meditate towards the temple above the clouds, where you meet other VisionJK players as wisps. The same key or Esc brings you back.':
+        'Sie meditieren zum Tempel über den Wolken, wo Sie andere VisionJK-Spieler als Irrlichter treffen. Dieselbe Taste oder Esc bringt Sie zurück.',
     'The world stands still and you leave your body. The same key or Esc brings you back.':
         'Die Welt steht still und Sie verlassen Ihren Körper. Dieselbe Taste oder Esc bringt Sie zurück.',
     'Holsters': 'Holster',
@@ -387,6 +390,20 @@ CGAME = {
     'Focus: not now.': 'Fokus: jetzt nicht.',
     'Focus: not in a duel.': 'Fokus: nicht im Duell.',
     'Focus: not while a menu is open.': 'Fokus: nicht bei offenem Menü.',
+    # the Vision Temple (the same file)
+    'Vision Temple. %s or Esc: back': 'Vision-Tempel. %s oder Esc: zurück',
+    'Vision Temple. Esc: back': 'Vision-Tempel. Esc: zurück',
+    '%i others are here.': '%i andere sind hier.',
+    'One other is here.': 'Ein anderer ist hier.',
+    'Looking for the others ...': 'Suche die anderen ...',
+    'The voice server does not answer: you are alone here.': 'Der Sprachserver antwortet nicht: Sie sind hier allein.',
+    'The temple is full: you are alone here.': 'Der Tempel ist voll: Sie sind hier allein.',
+    'You are alone here.': 'Sie sind hier allein.',
+    'Vision Temple: only while you play.': 'Vision-Tempel: nur während Sie spielen.',
+    'Vision Temple: not now.': 'Vision-Tempel: jetzt nicht.',
+    'Vision Temple: not in a duel.': 'Vision-Tempel: nicht im Duell.',
+    'Vision Temple: not while a menu is open.': 'Vision-Tempel: nicht bei offenem Menü.',
+    'Vision Temple: only with the Vulkan renderer for now.': 'Vision-Tempel: vorerst nur mit dem Vulkan-Renderer.',
     # the HUD (ui/vision/hud.menu, written by hand: @VISION_SABER, @VISION_ALTERNATE_DIMENSION)
     'Saber': 'Schwert',
     'Alternate Dimension': 'Andere Dimension',

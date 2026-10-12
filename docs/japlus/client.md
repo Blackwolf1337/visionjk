@@ -648,6 +648,40 @@ what was changed for it: the idle animation of JA+ broke the pose every ten seco
 way back, the two lines of the hint stood unreadable on the own body, the smoke of the plain look hid the level.
 Not checked: how it steers with real keys and a real mouse, how it sounds, the browser, Windows, macOS.
 
+### The Vision Temple
+
+Not from JA+: an idea of the owner of this tree (2026-10-12). `cgame/focus/cg_focus.c` (the state is the one of
+Focus above), `rd-vulkan-vision/shaders/temple.frag`, `voice/cg_voice.c` and `voicemaster/vm_main.c` for who else
+is there. **Built and run on Linux with rd-vulkan-vision only** (hidden, 2026-10-12), played by nobody yet.
+
+The command `temple` (`temple 1`, `temple 0`; a key under Controls, Extras) takes the player to a temple above
+the clouds while the game goes on. The level is not drawn: the scene of the frame has no level and the flag
+`RDF_VISION_TEMPLE`, and the renderer works the place out behind it for every pixel
+(`trap->ext.R_SetTempleScene`, cvar `cl_cgameTemple`; `RE_SetTempleScene()`, `VK_TempleFrame()`): a sea of clouds,
+a podium of gold in three steps with spires around it, rings of light, a low sun behind the greatest ring. No
+model and no texture is part of it. About 300 frames a second at 2560 x 1440 with 8 samples on an RTX 4070
+SUPER. One arrives out of light on the way to the podium, walks with the movement keys on the ground (the
+clouds, the steps; no farther than 640 units from the middle) and looks around with the mouse. Where the
+podium is stands in the shader and in `Temple_Ground()`, the two have to match.
+
+- **Keys, body, ways back**: as in Focus. The body is protected where the server does that (`jpfocus`), a hit
+  brings the player back elsewhere, and one comes back through a light that goes within a moment.
+- **Who else is there.** Clients of this tree that are in the temple meet at the voice master
+  (`cg_voiceMasterHost`), whatever server each plays on and whether that server has a voice chat of its own.
+  `cg_templeLink`: 1 everybody (the default), any other text those who have the same text, 0 nobody, and then the
+  master is not asked at all (`cg_voiceMaster 0` does the same). The link is a socket of its own that is open
+  only while the player is there. Ten times a second it says where he stands and his name (`VOICE_TEMPLE`,
+  `game/voice/bg_voice.h`), and the master hands that to the others of the room. The master sees an address
+  and a place in the temple, as it sees the address of anybody who talks through it, and keeps neither. A
+  client takes its number in the room itself and another one when that is taken, 32 fit into a room. A voice
+  master from before the temple does not answer: the hint then says that one is alone.
+- **The others** are wisps: a ball of blue light with smoke of it that rises, and the name over it. Nobody is a
+  figure there. The place has no depth, so a wisp shows through a spire it is behind.
+- **The hint**: how to come back, how many others are there, what happens to the body.
+- **Not yet**: talking to each other there (the voice chat stays the one of the level), the entry in the main
+  menu with a game of its own behind it, the device for the browser, `rd-vanilla` and so macOS (the command
+  says "only with the Vulkan renderer for now" there), Windows was not built with it.
+
 ### Admin login with a key
 
 `cgame/auth/cg_auth.c`, `cgame/auth/cg_auth_agent.c` (2026-10-11), the server part is in [server.md](server.md).

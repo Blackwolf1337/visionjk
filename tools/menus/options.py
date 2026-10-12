@@ -163,6 +163,8 @@ CONTROLS = [
          'Opens the scoreboard with the mouse free: a click on a row opens what you can do with that player.'),
         ('bind', 'Focus (Leave Your Body)', 'focus',
          'The world stands still and you leave your body. The same key or Esc brings you back.'),
+        ('bind', 'Vision Temple (Meditate)', 'temple',
+         'You meditate towards the temple above the clouds, where you meet other VisionJK players as wisps. The same key or Esc brings you back.'),
     ]),
 ]
 

@@ -125,6 +125,14 @@ REFERENCE           THE_WORLD_STANDS_STILL_AND_YOU_LEAVE
 LANG_ENGLISH        "The world stands still and you leave your body. The same key or Esc brings you back."
 LANG_SPANISH        "El mundo se detiene y dejas tu cuerpo. La misma tecla o Esc te devuelve."
 
+REFERENCE           VISION_TEMPLE_MEDITATE
+LANG_ENGLISH        "Vision Temple (Meditate)"
+LANG_SPANISH        "Templo de la Visión (meditar)"
+
+REFERENCE           YOU_MEDITATE_TOWARDS_THE_TEMPLE_ABOV
+LANG_ENGLISH        "You meditate towards the temple above the clouds, where you meet other VisionJK players as wisps. The same key or Esc brings you back."
+LANG_SPANISH        "Meditas hacia el templo sobre las nubes, donde encuentras a otros jugadores de VisionJK como fuegos fatuos. La misma tecla o Esc te devuelve."
+
 REFERENCE           THE_KEYS_YOU_MOVE_WITH
 LANG_ENGLISH        "The keys you move with."
 LANG_SPANISH        "Las teclas de movimiento."
@@ -1060,6 +1068,58 @@ LANG_SPANISH        "Foco: no en un duelo."
 REFERENCE           FOCUS_NOT_WHILE_A_MENU_IS_OPEN
 LANG_ENGLISH        "Focus: not while a menu is open."
 LANG_SPANISH        "Foco: no con un menú abierto."
+
+REFERENCE           VISION_TEMPLE_S_OR_ESC_BACK
+LANG_ENGLISH        "Vision Temple. %s or Esc: back"
+LANG_SPANISH        "Templo de la Visión. %s o Esc: volver"
+
+REFERENCE           VISION_TEMPLE_ESC_BACK
+LANG_ENGLISH        "Vision Temple. Esc: back"
+LANG_SPANISH        "Templo de la Visión. Esc: volver"
+
+REFERENCE           I_OTHERS_ARE_HERE
+LANG_ENGLISH        "%i others are here."
+LANG_SPANISH        "Hay %i más aquí."
+
+REFERENCE           ONE_OTHER_IS_HERE
+LANG_ENGLISH        "One other is here."
+LANG_SPANISH        "Hay uno más aquí."
+
+REFERENCE           LOOKING_FOR_THE_OTHERS
+LANG_ENGLISH        "Looking for the others ..."
+LANG_SPANISH        "Buscando a los demás ..."
+
+REFERENCE           THE_VOICE_SERVER_DOES_NOT_ANSWER_YOU
+LANG_ENGLISH        "The voice server does not answer: you are alone here."
+LANG_SPANISH        "El servidor de voz no responde: estás solo aquí."
+
+REFERENCE           THE_TEMPLE_IS_FULL_YOU_ARE_ALONE_HER
+LANG_ENGLISH        "The temple is full: you are alone here."
+LANG_SPANISH        "El templo está lleno: estás solo aquí."
+
+REFERENCE           YOU_ARE_ALONE_HERE
+LANG_ENGLISH        "You are alone here."
+LANG_SPANISH        "Estás solo aquí."
+
+REFERENCE           VISION_TEMPLE_ONLY_WHILE_YOU_PLAY
+LANG_ENGLISH        "Vision Temple: only while you play."
+LANG_SPANISH        "Templo de la Visión: solo mientras juegas."
+
+REFERENCE           VISION_TEMPLE_NOT_NOW
+LANG_ENGLISH        "Vision Temple: not now."
+LANG_SPANISH        "Templo de la Visión: ahora no."
+
+REFERENCE           VISION_TEMPLE_NOT_IN_A_DUEL
+LANG_ENGLISH        "Vision Temple: not in a duel."
+LANG_SPANISH        "Templo de la Visión: no en un duelo."
+
+REFERENCE           VISION_TEMPLE_NOT_WHILE_A_MENU_IS_OP
+LANG_ENGLISH        "Vision Temple: not while a menu is open."
+LANG_SPANISH        "Templo de la Visión: no con un menú abierto."
+
+REFERENCE           VISION_TEMPLE_ONLY_WITH_THE_VULKAN_R
+LANG_ENGLISH        "Vision Temple: only with the Vulkan renderer for now."
+LANG_SPANISH        "Templo de la Visión: por ahora solo con el renderizador Vulkan."
 
 REFERENCE           SABER
 LANG_ENGLISH        "Saber"
