@@ -24,6 +24,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // cg_drawtools.c -- helper functions called by cg_draw, cg_scoreboard, cg_info, etc
 #include "cg_local.h"
 #include "qcommon/q_shared.h"
+#include "ui/ui_shared.h"
+#include "ui/ui_skin.h"
 
 
 /*
@@ -301,8 +303,51 @@ Coordinates are at 640 by 480 virtual resolution
 ==================
 */
 #include "ui/menudef.h"	// for "ITEM_TEXTSTYLE_SHADOWED"
+// what scale the letters of the new look are written at where the game writes its fixed letters charHeight high
+#define STRING_LOOK_SCALE( charHeight )		( (charHeight) * 1.05f / 18.0f )
+
+/*
+=================
+CG_StringWidth
+
+How wide CG_DrawStringExt() writes a line with letters of that size: so many letters of charWidth, or with the
+HUD of the new look what its letters take. For whoever puts such a line in the middle or at the right.
+=================
+*/
+int CG_StringWidth( const char *str, int charWidth, int charHeight ) {
+	if ( CG_HudNewLook() ) {
+		return CG_Text_Width( str, STRING_LOOK_SCALE( charHeight ), SKIN_FONT_SANS );
+	}
+	return CG_DrawStrlen( str ) * charWidth;
+}
+
 void CG_DrawStringExt( int x, int y, const char *string, const float *setColor, qboolean forceColor, qboolean shadow, int charWidth, int charHeight, int maxChars )
 {
+	// With the HUD of the new look the fixed letters of the game are the letters of that look, as high as they
+	// were and as wide as they are.
+	if ( CG_HudNewLook() ) {
+		char		line[1024];
+		vec4_t		color;
+		const char	*in;
+		int			n = 0, chars = 0;
+
+		for ( in = string; *in && n < (int)sizeof( line ) - 3 && ( maxChars <= 0 || chars < maxChars ); ) {
+			if ( Q_IsColorString( in ) ) {
+				if ( !forceColor ) {
+					line[n++] = in[0];
+					line[n++] = in[1];
+				}
+				in += 2;
+				continue;
+			}
+			line[n++] = *in++;
+			chars++;
+		}
+		line[n] = '\0';
+		memcpy( color, setColor, sizeof( color ) );
+		CG_Text_Paint( x, y - charHeight * 0.1f, STRING_LOOK_SCALE( charHeight ), color, line, 0, 0, shadow ? ITEM_TEXTSTYLE_SHADOWED : 0, SKIN_FONT_SANS );
+		return;
+	}
 	if (trap->R_Language_IsAsian())
 	{
 		// hack-a-doodle-do (post-release quick fix code)...

@@ -949,6 +949,22 @@ REFERENCE           CLICK_A_PLAYER_S_OR_ESC_CLOSES
 LANG_ENGLISH        "Click a player. %s or Esc closes."
 LANG_SPANISH        "#same"
 
+REFERENCE           NEW_MENUS
+LANG_ENGLISH        "New Menus"
+LANG_SPANISH        "#same"
+
+REFERENCE           THE_MENUS_AND_THE_HUD_OF_VISIONJK_TH
+LANG_ENGLISH        "The menus and the HUD of VisionJK. The video restarts."
+LANG_SPANISH        "#same"
+
+REFERENCE           YOU_CLAN_RADIO
+LANG_ENGLISH        "You, clan radio"
+LANG_SPANISH        "#same"
+
+REFERENCE           RADIO
+LANG_ENGLISH        "radio"
+LANG_SPANISH        "#same"
+
 REFERENCE           ALL
 LANG_ENGLISH        "All"
 LANG_SPANISH        "#same"

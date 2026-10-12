@@ -353,6 +353,12 @@ CGAME = {
     'The scores key': 'Die Punktetaste',
     '%s twice: pick a player': '%s zweimal: Spieler auswählen',
     'Click a player. %s or Esc closes.': 'Spieler anklicken. %s oder Esc schließt.',
+    # the classic Setup menu (ui/jamp/setup.menu), which is written by hand: its way back
+    'New Menus': 'Neue Menüs',
+    'The menus and the HUD of VisionJK. The video restarts.': 'Die Menüs und das HUD von VisionJK. Das Video startet neu.',
+    # who talks ("You" is above)
+    'You, clan radio': 'Sie, Clan-Funk',
+    'radio': 'Funk',
     # the chat box
     'All': 'Alle',
     'Team': 'Team',

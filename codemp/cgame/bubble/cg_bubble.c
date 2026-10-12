@@ -425,6 +425,72 @@ the caller has nothing else to show there). qfalse: nothing was added, the calle
 game if the player talks.
 =================
 */
+// The status lines that were placed this frame, as they lie on the screen. Two players who stand close have
+// their lines at the same height: the one that would lie on another is lifted above it.
+#define BUBBLE_LINES	24
+
+static struct {
+	int		frame;
+	int		count;
+	float	rect[BUBBLE_LINES][4];		// left, top, right, bottom, in units of the HUD
+} bubbleLines;
+
+qboolean CG_WorldCoordToScreenCoordFloat( vec3_t worldCoord, float *x, float *y );		// cg_draw.c
+
+// where a board with its middle at `center` lies on the screen. qfalse: it is not before the camera
+static qboolean Bubble_ScreenRect( vec3_t center, float halfW, float halfH, float *rect ) {
+	vec3_t	to;
+	float	x, y, z, perUnit;
+
+	VectorSubtract( center, cg.refdef.vieworg, to );
+	z = DotProduct( to, cg.refdef.viewaxis[0] );
+	if ( z < 8.0f || !CG_WorldCoordToScreenCoordFloat( center, &x, &y ) ) {
+		return qfalse;
+	}
+	perUnit = SCREEN_HEIGHT * 0.5f / ( z * tanf( DEG2RAD( cg.refdef.fov_y ) * 0.5f ) );
+	rect[0] = x - halfW * perUnit;
+	rect[1] = y - halfH * perUnit;
+	rect[2] = x + halfW * perUnit;
+	rect[3] = y + halfH * perUnit;
+	return qtrue;
+}
+
+// How far a status line has to be lifted so that it lies on none that was placed before it this frame, in
+// units of the level. Its place is taken note of.
+static float Bubble_LiftLine( const vec3_t center, float halfW, float halfH ) {
+	const float	step = 2.0f * halfH * 1.12f;
+	float		rect[4], lift = 0.0f;
+	vec3_t		at;
+	int			i, tries;
+
+	if ( bubbleLines.frame != cg.clientFrame ) {
+		bubbleLines.frame = cg.clientFrame;
+		bubbleLines.count = 0;
+	}
+	for ( tries = 0; tries < 4; tries++ ) {
+		VectorCopy( center, at );
+		at[2] += lift;
+		if ( !Bubble_ScreenRect( at, halfW, halfH, rect ) ) {
+			return 0.0f;
+		}
+		for ( i = 0; i < bubbleLines.count; i++ ) {
+			const float *other = bubbleLines.rect[i];
+
+			if ( rect[0] < other[2] && rect[2] > other[0] && rect[1] < other[3] && rect[3] > other[1] ) {
+				break;
+			}
+		}
+		if ( i == bubbleLines.count ) {
+			break;
+		}
+		lift += step;
+	}
+	if ( bubbleLines.count < BUBBLE_LINES ) {
+		memcpy( bubbleLines.rect[bubbleLines.count++], rect, sizeof( rect ) );
+	}
+	return lift;
+}
+
 qboolean CG_BubbleDraw( centity_t *cent, qboolean dots ) {
 	static vec4_t	fillColor = { 0.04f, 0.06f, 0.1f, 0.78f };
 	static vec4_t	borderColor = { 0.55f, 0.75f, 1.0f, 0.95f };
@@ -447,8 +513,9 @@ qboolean CG_BubbleDraw( centity_t *cent, qboolean dots ) {
 	b = &bubbles[clientNum];
 	talking = (qboolean)( cg_chatBubbles.integer && b->numLines > 0 && cg.time < b->endTime && cg.time >= b->startTime );
 	typing = (qboolean)( cg_chatBubbles.integer && !talking && dots && ( cent->currentState.eFlags & EF_TALK ) );
-	// away, or the music he listens to (status/cg_status.c)
-	hasStatus = CG_StatusLine( clientNum, statusLine, sizeof( statusLine ) );
+	// Away, or the music he listens to (status/cg_status.c). Not of the player the view is behind: his line
+	// stood right before the camera, as large as a wall, and he knows what it says.
+	hasStatus = (qboolean)( clientNum != cg.snap->ps.clientNum && CG_StatusLine( clientNum, statusLine, sizeof( statusLine ) ) );
 	if ( !talking && !typing && !hasStatus ) {
 		return qfalse;
 	}
@@ -498,10 +565,15 @@ qboolean CG_BubbleDraw( centity_t *cent, qboolean dots ) {
 		const float		width = trap->ext.R_Text3DWidth( statusLine, letter );
 		vec3_t			origin;
 
+		float			lift;
+
 		halfW = width * 0.5f + letter * 0.6f;
 		halfH = letter * 0.75f;
 		VectorCopy( head, view.center );
 		view.center[2] += halfH;
+		// (above the line of somebody who stands close, where it would lie on it)
+		lift = Bubble_LiftLine( view.center, halfW, halfH );
+		view.center[2] += lift;
 		Bubble_Panel( bubbleArt.fill, &view, halfW, halfH, letter * 0.7f, 0.1f, statusFill, alpha );
 
 		VectorCopy4( statusText, color );
@@ -511,7 +583,7 @@ qboolean CG_BubbleDraw( centity_t *cent, qboolean dots ) {
 		VectorMA( origin, 0.4f, view.toward, origin );
 		trap->ext.R_Text3D( origin, view.right, view.up, letter, statusLine, color );
 
-		stack = 2.0f * halfH + letter * 0.3f;
+		stack = lift + 2.0f * halfH + letter * 0.3f;
 	}
 	if ( !talking && !typing ) {
 		return qfalse;		// the caller may still have a sprite to show

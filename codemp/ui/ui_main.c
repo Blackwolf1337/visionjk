@@ -1509,6 +1509,11 @@ mod brought its own menus, and those are what its player wants to see.
 */
 static qboolean uiNewLook;		// the menus that are loaded are the ones of the new look
 
+// are the menus that are loaded the ones of the new look (for what is drawn over them by code, ui_update.c)
+qboolean UI_NewLook( void ) {
+	return uiNewLook;
+}
+
 static const char *UI_NewLookList( const char *menuFile ) {
 	static const struct {
 		const char *stock, *vision, *first;

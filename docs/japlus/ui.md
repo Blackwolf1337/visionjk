@@ -50,6 +50,22 @@ Both are in Setup under Interface.
   rows can be clicked: see client.md, "Clickable players". The score of the leader at the upper right has the
   letters of the new look too.
 - The chat box has the look as well: see client.md, "The chat box".
+- Every line the HUD writes is in the letters of the look (since 2026-10-12, `CG_NewLookFont` in
+  `cgame/cg_draw.c`): the message of the day and the other centre prints, the name under the crosshair, the
+  names of weapons, force powers and items in their bars, what a spectator and somebody who follows is told,
+  the warm-up, frames a second and the timer, the team overlay. A font of the game goes in, the font of the look
+  comes out at a scale that takes about the same room, so what was laid out for the old letters still fits.
+  The fixed letters of the game (`CG_DrawStringExt`) are replaced the same way, and whoever centred such a line
+  by counting its letters asks for its width now (`CG_StringWidth`). The pictures of those parts (the icons of
+  the bars, the flags, the radar, the health of a duel, everything of siege) are the pictures of the game.
+- A vote is a panel at the left edge: what it is about, how it stands, how to answer, and a bar that empties
+  with the time it still runs. The team vote is a line in the new letters.
+- The list of who talks in the voice chat has a dark strip under each line, as the lines of the chat do.
+- The line on the first page that says a new version is out is a pill of the glass under the two panels.
+- Black letters (`^0`) are a dark grey in the letters of the look, wherever they are written: they stand on
+  dark glass, where black can not be read (`R_FontTTF_CodeColor`).
+- The Setup of the classic menus has an entry "New Menus" at the end of its list: it switches `ui_classic` off
+  and `cg_hud` on and restarts the video. Without it the way back was the console.
 - The HUD: health and shield at the bottom left, force at the bottom right with the ammo of the weapon or the
   stance of the saber under it, the score above. The health bar turns amber below half and red below a
   quarter.

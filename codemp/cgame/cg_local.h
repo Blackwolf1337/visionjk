@@ -1876,6 +1876,7 @@ void CG_DrawSmallString( int x, int y, const char *s, float alpha );
 void CG_DrawSmallStringColor( int x, int y, const char *s, vec4_t color );
 
 int CG_DrawStrlen( const char *str );
+int CG_StringWidth( const char *str, int charWidth, int charHeight );
 
 float	*CG_FadeColor( int startMsec, int totalMsec );
 float *CG_TeamColor( int team );

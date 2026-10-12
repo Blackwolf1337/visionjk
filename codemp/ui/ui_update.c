@@ -33,6 +33,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // in both.
 
 #include "ui_local.h"
+#include "ui_skin.h"
 
 #define NOTICE_FONT		4		// the small font of the menus
 #define NOTICE_SCALE	1.0f
@@ -76,12 +77,34 @@ void UI_UpdateNoticeDraw( void ) {
 	if ( !text[0] )
 		return;
 
+	notice.shown = qtrue;
+	notice.clickable = ( state == NOTICE_AVAILABLE || state == NOTICE_FAILED ) ? qtrue : qfalse;
+
+	// With the menus of the new look: a pill of its glass under its two panels, with its letters. Lit while the
+	// mouse is on it.
+	if ( UI_NewLook() ) {
+		const vec4_t	glass = { 0.035f, 0.07f, 0.12f, 0.86f }, rim = { 0.43f, 0.83f, 1.0f, 0.45f };
+		const vec4_t	litGlass = { 0.1f, 0.2f, 0.3f, 0.92f }, litRim = { 0.43f, 0.83f, 1.0f, 0.95f };
+		vec4_t			bright = { 0.86f, 0.92f, 0.97f, 1.0f }, amber = { 1.0f, 0.72f, 0.3f, 1.0f };
+		const float		scale = 0.62f;
+		qboolean		over;
+
+		notice.w = (float)uiInfo.uiDC.textWidth( text, scale, SKIN_FONT_SANS ) + 28.0f;
+		notice.h = 18.0f;
+		notice.x = ( SCREEN_WIDTH - notice.w ) * 0.5f;
+		notice.y = NOTICE_Y;
+		over = (qboolean)( notice.clickable && UI_UpdateNoticeHover() );
+		Skin_Panel( notice.x, notice.y, notice.w, notice.h, notice.h * 0.5f, over ? litGlass : glass, over ? litRim : rim );
+		uiInfo.uiDC.drawText( notice.x + 14.0f, notice.y + 3.4f, scale, ( state == NOTICE_FAILED ) ? amber : ( over ? lit : bright ),
+			text, 0.0f, 0, 0, SKIN_FONT_SANS );
+		trap->R_SetColor( NULL );
+		return;
+	}
+
 	notice.w = (float)uiInfo.uiDC.textWidth( text, NOTICE_SCALE, NOTICE_FONT ) + NOTICE_PAD_X * 2.0f;
 	notice.h = (float)uiInfo.uiDC.textHeight( text, NOTICE_SCALE, NOTICE_FONT ) + NOTICE_PAD_Y * 2.0f;
 	notice.x = ( SCREEN_WIDTH - notice.w ) * 0.5f;
 	notice.y = NOTICE_Y;
-	notice.shown = qtrue;
-	notice.clickable = ( state == NOTICE_AVAILABLE || state == NOTICE_FAILED ) ? qtrue : qfalse;
 
 	uiInfo.uiDC.fillRect( notice.x, notice.y, notice.w, notice.h, back );
 	uiInfo.uiDC.drawRect( notice.x, notice.y, notice.w, notice.h, 1.0f, edge );

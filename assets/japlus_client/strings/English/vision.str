@@ -713,6 +713,18 @@ LANG_ENGLISH        "%s twice: pick a player"
 REFERENCE           CLICK_A_PLAYER_S_OR_ESC_CLOSES
 LANG_ENGLISH        "Click a player. %s or Esc closes."
 
+REFERENCE           NEW_MENUS
+LANG_ENGLISH        "New Menus"
+
+REFERENCE           THE_MENUS_AND_THE_HUD_OF_VISIONJK_TH
+LANG_ENGLISH        "The menus and the HUD of VisionJK. The video restarts."
+
+REFERENCE           YOU_CLAN_RADIO
+LANG_ENGLISH        "You, clan radio"
+
+REFERENCE           RADIO
+LANG_ENGLISH        "radio"
+
 REFERENCE           ALL
 LANG_ENGLISH        "All"
 

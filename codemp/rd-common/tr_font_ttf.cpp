@@ -416,6 +416,15 @@ int R_FontTTF_ByName( const char *name ) {
 }
 
 // the size in pixels of the window a text of that size in units is made in
+// The colour of a colour code for the letters of the new look. Wherever they are used they stand on something
+// dark (the glass of the menus and of the HUD, a bubble in the level), where the black of ^0 can not be read:
+// for them it is a grey that can. (A name in black and red was half a name in the list of servers.)
+static const float *R_FontTTF_CodeColor( int index ) {
+	static const vec4_t darkGrey = { 0.38f, 0.41f, 0.46f, 1.0f };
+
+	return ( index == 0 ) ? darkGrey : g_color_table[index];
+}
+
 static int R_FontTTF_MenuPixels( float size ) {
 	return Com_Clampi( 4, FONT_MAX_GLYPH, (int)( size * glConfig.vidHeight / SCREEN_HEIGHT + 0.5f ) );
 }
@@ -516,7 +525,7 @@ void R_FontTTF_DrawString( int font, float x, float y, const char *text, const f
 			if ( !shadow ) {
 				vec4_t tint;
 
-				Com_Memcpy( tint, g_color_table[colour], sizeof( tint ) );
+				Com_Memcpy( tint, R_FontTTF_CodeColor( colour ), sizeof( tint ) );
 				tint[3] = rgba ? rgba[3] : 1.0f;
 				RE_SetColor( tint );
 			}
@@ -564,7 +573,7 @@ static qboolean R_FontTTF_SceneChar( const char **text, unsigned int *codePoint,
 
 	if ( Q_IsColorString( *text ) ) {
 		if ( color ) {
-			VectorCopy( g_color_table[ColorIndex( (*text)[1] )], color );
+			VectorCopy( R_FontTTF_CodeColor( ColorIndex( (*text)[1] ) ), color );
 		}
 		*text += 2;
 		return qfalse;

@@ -949,6 +949,22 @@ REFERENCE           CLICK_A_PLAYER_S_OR_ESC_CLOSES
 LANG_ENGLISH        "Click a player. %s or Esc closes."
 LANG_GERMAN         "Spieler anklicken. %s oder Esc schließt."
 
+REFERENCE           NEW_MENUS
+LANG_ENGLISH        "New Menus"
+LANG_GERMAN         "Neue Menüs"
+
+REFERENCE           THE_MENUS_AND_THE_HUD_OF_VISIONJK_TH
+LANG_ENGLISH        "The menus and the HUD of VisionJK. The video restarts."
+LANG_GERMAN         "Die Menüs und das HUD von VisionJK. Das Video startet neu."
+
+REFERENCE           YOU_CLAN_RADIO
+LANG_ENGLISH        "You, clan radio"
+LANG_GERMAN         "Sie, Clan-Funk"
+
+REFERENCE           RADIO
+LANG_ENGLISH        "radio"
+LANG_GERMAN         "Funk"
+
 REFERENCE           ALL
 LANG_ENGLISH        "All"
 LANG_GERMAN         "Alle"

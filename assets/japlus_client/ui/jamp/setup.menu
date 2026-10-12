@@ -946,6 +946,35 @@
 			}
 		}
 
+		// VisionJK: the way back to its own menus and HUD. This file is the Setup of the look of before
+		// (ui_classic 1), which has no entry for that otherwise.
+		itemDef
+		{
+			name				visionlookmenubutton
+			group				setup_submenu
+			text				@VISION_NEW_MENUS
+			type				ITEM_TYPE_BUTTON
+			style				WINDOW_STYLE_EMPTY
+			rect				80 377 170 24
+			font				3
+			textscale			0.9
+			textalignx			160
+			textaligny			2
+			textalign			ITEM_ALIGN_RIGHT
+			textstyle			0
+			forecolor			1 .682 0 1
+			visible			1
+			descText			@VISION_THE_MENUS_AND_THE_HUD_OF_VISIONJK_TH
+
+			action
+			{
+				play			"sound/interface/button1.wav" ;
+				setcvar			ui_classic 0 ;
+				setcvar			cg_hud 1 ;
+				exec			"vid_restart" ;
+			}
+		}
+
 		itemDef 
 		{
 			name				setup_background

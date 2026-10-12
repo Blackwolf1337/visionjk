@@ -949,6 +949,22 @@ REFERENCE           CLICK_A_PLAYER_S_OR_ESC_CLOSES
 LANG_ENGLISH        "Click a player. %s or Esc closes."
 LANG_FRENCH         "#same"
 
+REFERENCE           NEW_MENUS
+LANG_ENGLISH        "New Menus"
+LANG_FRENCH         "#same"
+
+REFERENCE           THE_MENUS_AND_THE_HUD_OF_VISIONJK_TH
+LANG_ENGLISH        "The menus and the HUD of VisionJK. The video restarts."
+LANG_FRENCH         "#same"
+
+REFERENCE           YOU_CLAN_RADIO
+LANG_ENGLISH        "You, clan radio"
+LANG_FRENCH         "#same"
+
+REFERENCE           RADIO
+LANG_ENGLISH        "radio"
+LANG_FRENCH         "#same"
+
 REFERENCE           ALL
 LANG_ENGLISH        "All"
 LANG_FRENCH         "#same"

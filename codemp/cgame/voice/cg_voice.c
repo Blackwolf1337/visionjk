@@ -37,6 +37,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include "game/bg_net.h"		// the sockets, in front of everything else
 #include "cgame/cg_local.h"
+#include "ui/ui_shared.h"
+#include "ui/ui_skin.h"
 #include "game/voice/bg_voice.h"
 #include "cg_voice.h"
 
@@ -1360,6 +1362,18 @@ static qhandle_t Voice_RadioShader( void ) {
 	return voice.radioShader;
 }
 
+// one line of the list of who talks: the picture of the voice chat or of the radio, and the name. With the HUD of
+// the new look it lies on a dark strip, as the lines of the chat do.
+static void Voice_DrawTalker( int x, int y, qhandle_t picture, const char *text ) {
+	if ( CG_HudNewLook() ) {
+		const vec4_t strip = { 0.02f, 0.04f, 0.08f, 0.46f };
+
+		Skin_Panel( x - 3.0f, y - 1.0f, SMALLCHAR_HEIGHT + 4.0f + CG_StringWidth( text, SMALLCHAR_WIDTH, SMALLCHAR_HEIGHT ) + 8.0f, SMALLCHAR_HEIGHT + 1.0f, 3.0f, strip, NULL );
+	}
+	CG_DrawPic( x, y, SMALLCHAR_HEIGHT, SMALLCHAR_HEIGHT, picture );
+	CG_DrawSmallString( x + SMALLCHAR_HEIGHT + 4, y, text, 1.0f );
+}
+
 void CG_VoiceDraw( void ) {
 	const int	x = 8, height = SMALLCHAR_HEIGHT + 2;
 	int			y = 232, i;
@@ -1369,9 +1383,8 @@ void CG_VoiceDraw( void ) {
 	if ( voice.sending && cgs.clientinfo[cg.clientNum].infoValid ) {
 		const qhandle_t radio = voice.sendingRadio ? Voice_RadioShader() : 0;
 
-		CG_DrawPic( x, y, SMALLCHAR_HEIGHT, SMALLCHAR_HEIGHT, radio ? radio : cgs.media.vchatShader );
-		CG_DrawSmallString( x + SMALLCHAR_HEIGHT + 4, y, va( "%s ^7(you%s)", cgs.clientinfo[cg.clientNum].name,
-			voice.sendingRadio ? ", clan radio" : "" ), 1.0f );
+		Voice_DrawTalker( x, y, radio ? radio : cgs.media.vchatShader, va( "%s ^7(%s)", cgs.clientinfo[cg.clientNum].name,
+			CG_VisionText( voice.sendingRadio ? "You, clan radio" : "You" ) ) );
 		y += height;
 	}
 	for ( i = 0; i < MAX_CLIENTS && y < 400; i++ ) {
@@ -1379,10 +1392,9 @@ void CG_VoiceDraw( void ) {
 
 		if ( !voiceSpeakers[i].playing || !cgs.clientinfo[i].infoValid )
 			continue;
-		CG_DrawPic( x, y, SMALLCHAR_HEIGHT, SMALLCHAR_HEIGHT, radio ? radio : cgs.media.vchatShader );
 		// without the picture the line says it
-		CG_DrawSmallString( x + SMALLCHAR_HEIGHT + 4, y, ( voiceSpeakers[i].radio && !radio ) ? va( "%s ^7(radio)", cgs.clientinfo[i].name )
-			: cgs.clientinfo[i].name, 1.0f );
+		Voice_DrawTalker( x, y, radio ? radio : cgs.media.vchatShader, ( voiceSpeakers[i].radio && !radio )
+			? va( "%s ^7(%s)", cgs.clientinfo[i].name, CG_VisionText( "radio" ) ) : cgs.clientinfo[i].name );
 		y += height;
 	}
 }

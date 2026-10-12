@@ -69,7 +69,7 @@ typedef enum {
 	ACT_ADMIN_BRING
 } selectAct_t;
 
-#define SELECT_BESIDE		13.0f	// how far beside the middle of a player his card and his name stand, in units of the level,
+#define SELECT_BESIDE		21.0f	// how far beside the middle of a player his card and his name stand, in units of the level,
 #define SELECT_ABOVE		36.0f	//	how far above his middle their top edge is,
 #define SELECT_GAP			5.0f	//	and how far from that place they begin, in units of the card
 #define SELECT_UNIT			0.3f	// What a unit of the card is in the level, where the card is a thing there: the name on it

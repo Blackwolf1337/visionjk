@@ -303,6 +303,10 @@ chat bubble stands on top of it.
 | `cjp_caps` | 3, read only | in the userinfo, what this cgame draws that a server sends to nobody else: bit 0 statuses, bit 1 who plays with a client of this tree ("Who plays with VisionJK") |
 | `cjp_vision` | the version, read only | in the userinfo: this is the client of VisionJK, and which one. A server of this tree greets it by that name and not as "client plugin 1.4B4". `cjp_client` stays 1.4B4: it is what a JA+ server of somebody else reads to switch the plugin features on |
 
+- The line of the player the view is behind (oneself in third person, or whom one follows) is not drawn since
+  2026-10-12: it stood right before the camera, as large as a wall. The card and the scoreboard say it.
+- Two players who stand close have their lines at the same height. The one that would lie on another on the
+  screen is lifted above it (`Bubble_LiftLine`), and a bubble stands on top of that.
 - "Away from keyboard": the server finds out who did not touch a key or the mouse for `g_afkTime` seconds, for
   legacy players too.
 - "Listening to Spotify: artist - title", "Listening to YT Music: title", or "Listening to artist - title" for
@@ -407,7 +411,7 @@ A row is run with a click or with its number. A click beside the card, the right
   scene is put together): as large there at any distance (a unit of the card is 0.3 units of the level, which
   gives its name letters as tall as those of a bubble and makes the card about 45 units wide and 42 high with
   seven rows), upright, turned to the one who looks about their upright axis only, and hidden by what is in
-  front of them. They stand beside their player: at his right as the camera sees him, 13 units from his middle,
+  front of them. They stand beside their player: at his right as the camera sees him, 21 units from his middle (13 until 2026-10-12, where they lay on his arm),
   their top at the height of his head. At his left where the screen ends at his right, and lifted or lowered a
   little where they would reach over the top or the bottom of the screen: the view can not be turned to them
   while the mouse is free. They follow their place a little late (most of the way in 90 ms), so a step of his

@@ -143,16 +143,47 @@ int MenuFontToHandle(int iMenuFont)
 }
 
 
+/*
+=================
+CG_NewLookFont
+
+With the HUD of the new look every line the cgame writes in a font of the game is written in the letters of
+that look: the centre prints, the name under the crosshair, the names of weapons and powers, what a spectator
+is told. A line takes about the room it took, so what was laid out for the old letters still fits. The font of
+the game and its scale go in and come out as the font and the scale to write with. (The pieces of the new look
+name their font themselves and are not touched.)
+=================
+*/
+static void CG_NewLookFont( int *iMenuFont, float *scale ) {
+	if ( !CG_HudNewLook() ) {
+		return;
+	}
+	switch ( *iMenuFont ) {
+	case FONT_SMALL:	*scale *= 0.92f;	break;	// ocr_a, 21 high
+	case FONT_SMALL2:	*scale *= 0.8f;		break;	// arialnb
+	case FONT_MEDIUM:
+	case FONT_LARGE:	*scale *= 1.0f;		break;	// ergoec, 22 high
+	default:			return;
+	}
+	*iMenuFont = SKIN_FONT_SANS;
+}
+
 int CG_Text_Width(const char *text, float scale, int iMenuFont)
 {
-	int iFontIndex = MenuFontToHandle(iMenuFont);
+	int iFontIndex;
+
+	CG_NewLookFont( &iMenuFont, &scale );
+	iFontIndex = MenuFontToHandle(iMenuFont);
 
 	return trap->R_Font_StrLenPixels(text, iFontIndex, scale);
 }
 
 int CG_Text_Height(const char *text, float scale, int iMenuFont)
 {
-	int iFontIndex = MenuFontToHandle(iMenuFont);
+	int iFontIndex;
+
+	CG_NewLookFont( &iMenuFont, &scale );
+	iFontIndex = MenuFontToHandle(iMenuFont);
 
 	return trap->R_Font_HeightPixels(iFontIndex, scale);
 }
@@ -161,7 +192,10 @@ int CG_Text_Height(const char *text, float scale, int iMenuFont)
 void CG_Text_Paint(float x, float y, float scale, vec4_t color, const char *text, float adjust, int limit, int style, int iMenuFont)
 {
 	int iStyleOR = 0;
-	int iFontIndex = MenuFontToHandle(iMenuFont);
+	int iFontIndex;
+
+	CG_NewLookFont( &iMenuFont, &scale );
+	iFontIndex = MenuFontToHandle(iMenuFont);
 
 	switch (style)
 	{
@@ -3175,7 +3209,7 @@ static float CG_DrawSnapshot( float y ) {
 
 	s = va( "time:%i snap:%i cmd:%i", cg.snap->serverTime,
 		cg.latestSnapshotNum, cgs.serverCommandSequence );
-	w = CG_DrawStrlen( s ) * BIGCHAR_WIDTH;
+	w = CG_StringWidth( s, BIGCHAR_WIDTH, BIGCHAR_HEIGHT );
 
 	CG_DrawBigString( 635 - w + xOffset, y + 2, s, 1.0F);
 
@@ -3221,7 +3255,7 @@ static float CG_DrawFPS( float y ) {
 	fps = 1000 * FPS_FRAMES / total;
 
 	s = va( "%ifps", fps );
-	w = CG_DrawStrlen( s ) * BIGCHAR_WIDTH;
+	w = CG_StringWidth( s, BIGCHAR_WIDTH, BIGCHAR_HEIGHT );
 
 	CG_DrawBigString( 635 - w + xOffset, y + 2, s, 1.0F);
 
@@ -3868,7 +3902,7 @@ static float CG_DrawTimer( float y ) {
 	seconds -= tens * 10;
 
 	s = va( "%i:%i%i", mins, tens, seconds );
-	w = CG_DrawStrlen( s ) * BIGCHAR_WIDTH;
+	w = CG_StringWidth( s, BIGCHAR_WIDTH, BIGCHAR_HEIGHT );
 
 	CG_DrawBigString( 635 - w + xOffset, y + 2, s, 1.0F);
 
@@ -4207,7 +4241,7 @@ static void CG_DrawReward( void ) {
 		x = 320 - ICON_SIZE/2;
 		CG_DrawPic( x, y, ICON_SIZE-4, ICON_SIZE-4, cg.rewardShader[0] );
 		Com_sprintf(buf, sizeof(buf), "%d", cg.rewardCount[0]);
-		x = ( SCREEN_WIDTH - SMALLCHAR_WIDTH * CG_DrawStrlen( buf ) ) / 2;
+		x = ( SCREEN_WIDTH - CG_StringWidth( buf, SMALLCHAR_WIDTH, SMALLCHAR_HEIGHT ) ) / 2;
 		CG_DrawStringExt( x, y+ICON_SIZE, buf, color, qfalse, qtrue,
 								SMALLCHAR_WIDTH, SMALLCHAR_HEIGHT, 0 );
 	}
@@ -4302,11 +4336,11 @@ static void CG_DrawDisconnect( void ) {
 	if (cg.mMapChange)
 	{
 		s = CG_GetStringEdString("MP_INGAME", "SERVER_CHANGING_MAPS");	// s = "Server Changing Maps";
-		w = CG_DrawStrlen( s ) * BIGCHAR_WIDTH;
+		w = CG_StringWidth( s, BIGCHAR_WIDTH, BIGCHAR_HEIGHT );
 		CG_DrawBigString( 320 - w/2, 100, s, 1.0F);
 
 		s = CG_GetStringEdString("MP_INGAME", "PLEASE_WAIT");	// s = "Please wait...";
-		w = CG_DrawStrlen( s ) * BIGCHAR_WIDTH;
+		w = CG_StringWidth( s, BIGCHAR_WIDTH, BIGCHAR_HEIGHT );
 		CG_DrawBigString( 320 - w/2, 200, s, 1.0F);
 		return;
 	}
@@ -4321,7 +4355,7 @@ static void CG_DrawDisconnect( void ) {
 
 	// also add text in center of screen
 	s = CG_GetStringEdString("MP_INGAME", "CONNECTION_INTERRUPTED"); // s = "Connection Interrupted"; // bk 010215 - FIXME
-	w = CG_DrawStrlen( s ) * BIGCHAR_WIDTH;
+	w = CG_StringWidth( s, BIGCHAR_WIDTH, BIGCHAR_HEIGHT );
 	CG_DrawBigString( 320 - w/2, 100, s, 1.0F);
 
 	// blink the icon
@@ -6595,6 +6629,43 @@ static void CG_DrawSpectator(void)
 CG_DrawVote
 =================
 */
+static float CG_VoteWidth( const char *text, void *arg ) {
+	return (float)CG_Text_Width( text, *(const float *)arg, SKIN_FONT_SANS );
+}
+
+/*
+=================
+CG_DrawVotePanel
+
+A vote as a panel of the new look, at the left edge: what it is about, how it stands, how to answer where
+that is said, and a bar that empties with the time it still runs.
+=================
+*/
+static void CG_DrawVotePanel( float y, const char *title, const char *question, int sec, const char *yesWord, int yes, const char *noWord, int no, const char *hint ) {
+	static const vec4_t	fill = { 0.035f, 0.07f, 0.12f, 0.82f }, edge = { 0.43f, 0.83f, 1.0f, 0.35f }, track = { 1.0f, 1.0f, 1.0f, 0.08f };
+	static vec4_t		accent = { 0.43f, 0.83f, 1.0f, 1.0f }, dim = { 0.60f, 0.69f, 0.78f, 1.0f }, bright = { 0.86f, 0.92f, 0.97f, 1.0f };
+	const float			x = 6.0f, most = 300.0f, h = ( hint && hint[0] ) ? 50.0f : 41.0f;
+	float				headScale = 0.46f, askScale = 0.6f, countScale = 0.5f, hintScale = 0.42f, w;
+	char				head[64], ask[160], counts[96], say[160];
+
+	Com_sprintf( head, sizeof( head ), "%s   %i s", title, sec );
+	Q_strupr( head );
+	Com_sprintf( counts, sizeof( counts ), "%s %i      %s %i", yesWord, yes, noWord, no );
+	CG_TextCut( question, most, CG_VoteWidth, &askScale, ask, sizeof( ask ) );
+	CG_TextCut( ( hint && hint[0] ) ? hint : "", most, CG_VoteWidth, &hintScale, say, sizeof( say ) );
+	w = Q_max( Q_max( CG_VoteWidth( head, &headScale ), CG_VoteWidth( ask, &askScale ) ), Q_max( CG_VoteWidth( counts, &countScale ), CG_VoteWidth( say, &hintScale ) ) ) + 18.0f;
+
+	Skin_Panel( x, y, w, h, 5.0f, fill, edge );
+	CG_Text_Paint( x + 9.0f, y + 4.0f, headScale, accent, head, 0, 0, 0, SKIN_FONT_SANS );
+	CG_Text_Paint( x + 9.0f, y + 13.0f, askScale, colorWhite, ask, 0, 0, 0, SKIN_FONT_SANS );
+	CG_Text_Paint( x + 9.0f, y + 25.5f, countScale, bright, counts, 0, 0, 0, SKIN_FONT_SANS );
+	if ( say[0] ) {
+		CG_Text_Paint( x + 9.0f, y + 35.5f, hintScale, dim, say, 0, 0, 0, SKIN_FONT_SANS );
+	}
+	Skin_Bar( x + 9.0f, y + h - 4.5f, w - 18.0f, 1.5f, Com_Clamp( 0.0f, 1.0f, sec * 1000.0f / VOTE_TIME ), accent, track );
+	trap->R_SetColor( NULL );
+}
+
 static void CG_DrawVote(void) {
 	const char *s = NULL, *sParm = NULL;
 	int sec;
@@ -6664,6 +6735,15 @@ static void CG_DrawVote(void) {
 	trap->SE_GetStringTextString( "MENUS_YES", sYes, sizeof( sYes ) );
 	trap->SE_GetStringTextString( "MENUS_NO", sNo, sizeof( sNo ) );
 
+	// the panel of the new look with its HUD
+	if ( CG_HudNewLook() ) {
+		char ask[160];
+
+		Q_strncpyz( ask, ( sParm && sParm[0] ) ? va( "%s %s", sCmd, sParm ) : sCmd, sizeof( ask ) );
+		CG_DrawVotePanel( 56.0f, sVote, ask, sec, sYes, cgs.voteYes, sNo, cgs.voteNo,
+			( cgs.clientinfo[cg.clientNum].team != TEAM_SPECTATOR ) ? CG_GetStringEdString( "MP_INGAME", "OR_PRESS_ESC_THEN_CLICK_VOTE" ) : "" );
+		return;
+	}
 	if (sParm && sParm[0])
 		s = va( "%s(%i):<%s %s> %s:%i %s:%i", sVote, sec, sCmd, sParm, sYes, cgs.voteYes, sNo, cgs.voteNo);
 	else
@@ -6872,7 +6952,7 @@ static void CG_DrawAmmoWarning( void ) {
 	} else {
 		s = "LOW AMMO WARNING";
 	}
-	w = CG_DrawStrlen( s ) * BIGCHAR_WIDTH;
+	w = CG_StringWidth( s, BIGCHAR_WIDTH, BIGCHAR_HEIGHT );
 	CG_DrawBigString(320 - w / 2, 64, s, 1.0F);
 #endif
 }
@@ -6897,7 +6977,7 @@ static void CG_DrawWarmup( void ) {
 	if ( sec < 0 ) {
 //		s = "Waiting for players";
 		s = CG_GetStringEdString("MP_INGAME", "WAITING_FOR_PLAYERS");
-		w = CG_DrawStrlen( s ) * BIGCHAR_WIDTH;
+		w = CG_StringWidth( s, BIGCHAR_WIDTH, BIGCHAR_HEIGHT );
 		CG_DrawBigString(320 - w / 2, 24, s, 1.0F);
 		cg.warmupCount = 0;
 		return;

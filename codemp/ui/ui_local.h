@@ -425,6 +425,7 @@ qboolean UI_SaberTypeForSaber( const char *saberName, char *saberType );
 //
 
 void UI_UpdateNoticeDraw( void );
+qboolean	UI_NewLook( void );												// ui_main.c
 qboolean UI_UpdateNoticeKey( int key, qboolean down );
 
 
