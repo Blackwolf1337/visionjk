@@ -11,8 +11,8 @@
 		focusColor				0.43 0.83 1 1
 		style					1
 		descX					480
-		descY					444
-		descScale				1
+		descY					447
+		descScale				0.6
 		descColor				0.60 0.69 0.78 1
 		descAlignment			ITEM_ALIGN_CENTER
 		backColor				.05 .07 .09 1

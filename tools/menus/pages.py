@@ -653,6 +653,11 @@ def page(m, name, ingame):
         shell(m, menu, HAD_LOGO.get(name, False))
     elif not full:
         window(m, menu, ingame)
+    if menu == 'ingame_siegeclass':
+        # what the item under the mouse is for stands between Cancel and Okay at the bottom of this menu: in the
+        # size it had it reached into their row
+        mf.put(m, 'descScale', '0.6')
+        mf.put(m, 'descY', '447')
     tidy(m)
 
 
