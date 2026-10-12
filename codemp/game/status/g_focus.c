@@ -63,7 +63,8 @@ static qboolean Focus_Allowed( const gentity_t *ent, focusWhy_t *why ) {
 	if ( client->sess.sessionTeam == TEAM_SPECTATOR || client->tempSpectate >= level.time
 		|| ent->health <= 0 || ps->stats[STAT_HEALTH] <= 0 || ps->pm_type != PM_NORMAL
 		|| ps->duelInProgress || ps->m_iVehicleNum || ps->groundEntityNum == ENTITYNUM_NONE
-		|| ps->forceHandExtend != HANDEXTEND_NONE || jp->sleeping
+		// (in the pose of this file he may be: he came back and has not moved since)
+		|| ( ps->forceHandExtend != HANDEXTEND_NONE && ps->legsAnim != BOTH_MEDITATE ) || jp->sleeping
 		|| ps->powerups[PW_REDFLAG] || ps->powerups[PW_BLUEFLAG] || ps->powerups[PW_NEUTRALFLAG] ) {
 		return qfalse;
 	}
@@ -96,6 +97,13 @@ void G_FocusEnd( gentity_t *ent, focusWhy_t why ) {
 	jp->focus = qfalse;
 	jp->focusNext = level.time + FOCUS_AGAIN_MSEC;
 	ent->client->invulnerableTimer = level.time;
+	// Up from the pose, as the first key of a player ends an emote of JA+ (PM_JPEmoteEndAnim()): his player is
+	// back and may not touch a key for a while.
+	if ( ent->client->ps.legsAnim == BOTH_MEDITATE && ent->health > 0 ) {
+		ent->client->ps.forceHandExtend = HANDEXTEND_NONE;
+		ent->client->ps.forceHandExtendTime = 0;
+		G_SetAnim( ent, NULL, SETANIM_BOTH, BOTH_MEDITATE_END, SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD, 0 );
+	}
 	Focus_Tell( ent, qfalse, why );
 }
 
@@ -157,6 +165,12 @@ void G_FocusThink( gentity_t *ent, const usercmd_t *ucmd ) {
 	}
 	client->ps.eFlags |= EF_INVULNERABLE;
 	client->invulnerableTimer = level.time + 1000;
+	// The pose again where something ended it: the hook of another player or the level pulled the body off its
+	// feet. Once it stands and does nothing.
+	if ( client->ps.forceHandExtend == HANDEXTEND_NONE && client->ps.legsAnim != BOTH_MEDITATE
+		&& client->ps.legsTimer <= 0 && client->ps.torsoTimer <= 0 && client->ps.groundEntityNum != ENTITYNUM_NONE ) {
+		JP_EmoteExec( ent, BOTH_MEDITATE );
+	}
 }
 
 // a player was hit by another one: neither of them leaves his body for a while

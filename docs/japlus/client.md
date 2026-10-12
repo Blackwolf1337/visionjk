@@ -586,8 +586,8 @@ behind, the menu to the right of him over the level, the model of the player men
 
 ### Focus
 
-Not from JA+: an idea of the owner of this tree (2026-10-12), `cgame/focus/cg_focus.c`. **Written and built, never
-run** (2026-10-12): everything below says what the code is meant to do.
+Not from JA+: an idea of the owner of this tree (2026-10-12), `cgame/focus/cg_focus.c`. Run hidden and without
+sound on 2026-10-12 (see "Checked" at the end of this part), played by nobody yet.
 
 The command `focus` stops the world on the own screen. The moment it was called stays as a still, and the player
 leaves his body as a camera that he steers with his movement keys and the mouse. The game goes on: the server
@@ -631,6 +631,22 @@ is then the one of that moment. Nothing of the time in between is played after.
   protected, or it is not and why. On any other server nothing is sent and a hit brings the player back.
 - **Others** see a player who stands still, or who meditates where the server protects him. Nothing else of this
   reaches another client.
+- **Commands**: `focus` switches, `focus 1` only leaves the body and `focus 0` only comes back (for a script or
+  two keys). `focus_status` says where the player is, what the server answered and what brought him back the
+  last time; with `developer 1` also where the players of the snapshot are. `cg_focusmove <forward> <right> <up>
+  <msec>` and `cg_focusturn <yaw> <pitch>` steer the camera for the scripts of the test tools, which can not
+  hold a key or move the mouse.
+
+Checked 2026-10-12, hidden and silent, Linux build, `rd-vulkan-vision` (clienttests `focus_a` to `focus_e`, and
+two real clients on a test server with `focus_cam`, `focus_watch`, `focus_two_b`): the still is one (the
+snapshot it is made of stays the same for 25 seconds while the newest one moves on), chat arrives in it, the
+leash holds at 512, the way back shows the world of now without a burst, a hit on a body nobody protects brings
+its player back, the chat box opens and closes in it, a menu, a restart of the video, a restart of the level and
+the death of the body end it. The server protects the body against the saber of another player for half a minute
+and answers "a fight a moment ago" and "your last time a moment ago" when it should. What the runs found and
+what was changed for it: the idle animation of JA+ broke the pose every ten seconds, the weapon bar showed on the
+way back, the two lines of the hint stood unreadable on the own body, the smoke of the plain look hid the level.
+Not checked: how it steers with real keys and a real mouse, how it sounds, the browser, Windows, macOS.
 
 ### Admin login with a key
 

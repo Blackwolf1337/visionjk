@@ -154,8 +154,8 @@ written to the client command log. Not run.
 
 ### Focus: the body of a player who is out of it (not from JA+)
 
-`game/status/g_focus.c`, the client part is in [client.md](client.md), "Focus". **Written and built, never run**
-(2026-10-12).
+`game/status/g_focus.c`, the client part is in [client.md](client.md), "Focus". Run with bots and with two real
+clients on 2026-10-12, see there.
 
 | Cvar | Default | Meaning |
 |------|---------|---------|
@@ -171,8 +171,11 @@ the server command `jpfocus <held> <why>`: 1 the body is protected, or 0 with th
   was not hit by a player and hit none for five seconds (`G_FocusFight()` in `G_Damage()`), ten seconds after
   his last time at the earliest. So it is no way out of a fight.
 - While it holds the body has the invulnerability a fresh spawn has (`EF_INVULNERABLE`, renewed with every
-  command of the client), its saber is away and it meditates (`BOTH_MEDITATE`, held as the emotes of JA+ are).
-  What the level does to it, a fall or lava, still hurts.
+  command of the client), its saber is away and it meditates (`BOTH_MEDITATE`, held as the emotes of JA+ are,
+  set again where something ended it; the sitting animation the inactivity protection plays now and then is
+  left out for it). Force powers, a punch and a kick in the face of other players do not work on it, as on a
+  player an admin protects. What the level does to it, a fall or lava, still hurts. When its player is back it
+  stands up (`BOTH_MEDITATE_END`).
 - It ends with `jpfocus 0`, with the first move, attack or use of the client (a client in Focus sends none, so
   that is also the end when its command was dropped by the flood protection), with a duel and with death.
 - The command is open to every client, a legacy one too: typed into the console it protects somebody who

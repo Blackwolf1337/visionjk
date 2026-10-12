@@ -629,8 +629,9 @@ void JP_ClientSecondActions( gentity_t *ent ) {
 
 	if ( jp->inactProtectState && jp->inactProtectCount > 0 )
 		jp->inactProtectCount--;
-	else if ( jp->inactProtectState && client->sess.sessionTeam != TEAM_SPECTATOR ) {
-		// idle and protected: a sitting animation now and then
+	else if ( jp->inactProtectState && client->sess.sessionTeam != TEAM_SPECTATOR && !jp->focus ) {
+		// idle and protected: a sitting animation now and then (not for a body whose player is out of it, which
+		// has its pose: status/g_focus.c)
 		client->ps.forceDodgeAnim = BOTH_CONSOLE2;
 		client->ps.forceHandExtend = HANDEXTEND_TAUNT;
 		client->ps.forceHandExtendTime = level.time + 3000;

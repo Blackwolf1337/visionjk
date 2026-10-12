@@ -103,6 +103,8 @@ static const char *const focusChat[] = { "messagemode", "messagemode2", "message
 typedef struct focus_s {
 	qboolean	active;					// the player is out of his body
 	qboolean	resync;					// it ended: the still stays until the snapshots are read anew
+	qboolean	reselect;				// the snapshots were read anew this frame: the weapon bar is not to show for it
+	int			selectTime;				//	cg.weaponSelectTime as it was
 	qboolean	swapped;				// cg.time is the time of the still right now
 	qboolean	binds;					// the engine says what a key is bound to
 	qboolean	keyUp;					// the key of "focus" was let go since it began
@@ -128,7 +130,14 @@ typedef struct focus_s {
 static struct {
 	qboolean	owed;					// "jpfocus 0" was not answered yet
 	int			msec, asks;
+	const char	*ended;					// what brought him back the last time, for "focus_status"
 } focusBack;
+
+// for the scripts of tools/clienttests, which have no keys and no mouse: the camera steered by a command
+static struct {
+	vec3_t		wish;					// forward, right, up, as held keys would say it
+	int			until;					// trap->Milliseconds()
+} focusTest;
 
 static focus_t		focus;
 static snapshot_t	focusPeek;			// the newest snapshot, looked at and not taken in
@@ -261,10 +270,11 @@ Back into the body. The still stays on the screen until the snapshots are read a
 between two frames nothing may find the cgame without a snapshot.
 =================
 */
-void CG_FocusEnd( void ) {
+static void Focus_End( const char *why ) {
 	if ( !focus.active ) {
 		return;
 	}
+	focusBack.ended = why;
 	focus.active = qfalse;
 	focus.resync = qtrue;
 	focus.endMsec = trap->Milliseconds();
@@ -277,6 +287,11 @@ void CG_FocusEnd( void ) {
 	if ( !CG_ChatIsOpen() ) {
 		trap->Key_SetCatcher( trap->Key_GetCatcher() & ~KEYCATCH_CGAME );
 	}
+}
+
+// what the engine or another file of the cgame ends it with: Escape, a level that begins anew
+void CG_FocusEnd( void ) {
+	Focus_End( "Escape, or the level began anew" );
 }
 
 // how much the sound of the game is muffled, for s_muffle (menu3d/cg_menu3d.c sets it)
@@ -298,17 +313,20 @@ int CG_FocusTime( int time ) {
 =================
 CG_Focus_f
 
-"focus": out of the body, or back into it
+"focus": out of the body, or back into it. "focus 1" only out of it, "focus 0" only back.
 =================
 */
 void CG_Focus_f( void ) {
-	const char *refused;
+	const char	*refused;
+	const int	want = trap->Cmd_Argc() > 1 ? ( atoi( CG_Argv( 1 ) ) ? 1 : 0 ) : -1;
 
 	if ( focus.active ) {
-		CG_FocusEnd();
+		if ( want != 1 ) {
+			Focus_End( "the command" );
+		}
 		return;
 	}
-	if ( focus.resync ) {
+	if ( focus.resync || want == 0 ) {
 		return;
 	}
 	refused = Focus_Refused();
@@ -330,6 +348,9 @@ void CG_FocusServerCommand( void ) {
 	const qboolean	held = (qboolean)( atoi( CG_Argv( 1 ) ) != 0 );
 	const int		why = atoi( CG_Argv( 2 ) );
 
+	if ( Focus_Cvar( "developer" ) ) {
+		trap->Print( "Focus: the server says %i (%i)\n", held, why );
+	}
 	if ( !held ) {
 		focusBack.owed = qfalse;
 	}
@@ -373,12 +394,17 @@ static void Focus_Check( const playerState_t *ps ) {
 		focus.eyes[2] += ps->viewheight;
 	}
 	VectorSubtract( ps->origin, focus.body, delta );
-	if ( ps->clientNum != focus.clientNum || ( ps->pm_flags & PMF_FOLLOW ) || ps->pm_type != focus.pmType
-		|| ps->stats[STAT_HEALTH] <= 0 || ps->duelInProgress
+	if ( ps->clientNum == focus.clientNum && ps->stats[STAT_HEALTH] <= 0 ) {
+		Focus_End( "the body died" );
+	} else if ( ps->clientNum != focus.clientNum || ( ps->pm_flags & PMF_FOLLOW ) || ps->pm_type != focus.pmType ) {
+		Focus_End( "the player no longer plays as he did (watching, the end of the level)" );
+	} else if ( ps->duelInProgress ) {
+		Focus_End( "a duel" );
+	} else if ( ps->damageEvent != focus.damageEvent ) {
 		// (a hit, and not health that runs down by itself: the server counts every hit in here)
-		|| ps->damageEvent != focus.damageEvent
-		|| VectorLength( delta ) > FOCUS_MOVED ) {
-		CG_FocusEnd();
+		Focus_End( "a hit on the body" );
+	} else if ( VectorLength( delta ) > FOCUS_MOVED ) {
+		Focus_End( "the body was moved" );
 	}
 }
 
@@ -415,6 +441,9 @@ qboolean CG_FocusSnapshots( void ) {
 		cg.snap = NULL;
 		cg.nextSnap = NULL;
 		cgs.processedSnapshotNum = cg.latestSnapshotNum - 1;
+		// (that way shows the weapons as after a respawn, CG_Respawn(): CG_FocusFrame() takes it back)
+		focus.selectTime = cg.weaponSelectTime;
+		focus.reselect = qtrue;
 	}
 	return qfalse;
 }
@@ -457,12 +486,17 @@ static void Focus_Move( void ) {
 	focus.turn[PITCH] = Focus_Cvar( "m_pitch" ) * sensitivity;
 
 	VectorClear( wish );
+	AngleVectors( focus.angles, forward, right, NULL );
 	// nobody steers while he types
 	if ( !CG_ChatIsOpen() && !( trap->Key_GetCatcher() & KEYCATCH_CONSOLE ) ) {
-		AngleVectors( focus.angles, forward, right, NULL );
 		VectorMA( wish, Focus_Held( MOVE_FORWARD ) - Focus_Held( MOVE_BACK ), forward, wish );
 		VectorMA( wish, Focus_Held( MOVE_RIGHT ) - Focus_Held( MOVE_LEFT ), right, wish );
 		wish[2] += Focus_Held( MOVE_UP ) - Focus_Held( MOVE_DOWN );
+	}
+	if ( now < focusTest.until ) {
+		VectorMA( wish, focusTest.wish[0], forward, wish );
+		VectorMA( wish, focusTest.wish[1], right, wish );
+		wish[2] += focusTest.wish[2];
 	}
 	speed = VectorNormalize( wish ) > 0.0f ? FOCUS_SPEED * ( Focus_Held( MOVE_WALK ) ? FOCUS_WALK : 1.0f ) : 0.0f;
 	VectorScale( wish, speed, wish );
@@ -493,12 +527,15 @@ at, until CG_FocusReal().
 =================
 */
 qboolean CG_FocusFrame( void ) {
+	if ( focus.reselect ) {
+		focus.reselect = qfalse;
+		cg.weaponSelectTime = focus.selectTime;
+	}
 	if ( focus.active ) {
 		const int catcher = trap->Key_GetCatcher();
 
 		if ( ( catcher & KEYCATCH_UI ) || cg.demoPlayback ) {
-			// a menu came up
-			CG_FocusEnd();
+			Focus_End( "a menu" );
 		} else {
 			// (the chat box gives the keys back when it closes, and they are this file's again)
 			if ( !( catcher & KEYCATCH_CGAME ) && !CG_ChatIsOpen() ) {
@@ -638,14 +675,15 @@ void CG_FocusTint( void ) {
 		return;
 	}
 	CG_Place2D( PLACE_CENTER );
-	color[3] = 0.58f * focus.look;
+	color[3] = 0.46f * focus.look;
 	CG_FillRect( left, 0.0f, width, SCREEN_HEIGHT, color );
 
 	smoke = Focus_Smoke();
 	if ( !smoke ) {
 		return;
 	}
-	VectorSet4( color, 1.0f, 1.0f, 1.0f, 0.55f * focus.look );
+	// (thin: it lies over the whole picture and knows no distance, the first try hid the level behind it)
+	VectorSet4( color, 1.0f, 1.0f, 1.0f, 0.26f * focus.look );
 	trap->R_SetColor( color );
 	for ( layer = 0; layer < 2; layer++ ) {
 		const float	tile = tiles[layer];
@@ -698,7 +736,7 @@ qboolean CG_FocusKeyEvent( int key, qboolean down ) {
 		if ( !down ) {
 			focus.keyUp = qtrue;
 		} else if ( focus.keyUp || trap->Milliseconds() - focus.startMsec > FOCUS_KEY_MSEC ) {
-			CG_FocusEnd();
+			Focus_End( "the key" );
 		}
 		return qtrue;
 	}
@@ -725,21 +763,22 @@ void CG_FocusDraw( void ) {
 	const qboolean	skin = CG_HudNewLook();
 	const int		font = skin ? SKIN_FONT_SANS : FONT_SMALL;
 	const float		scale = skin ? 0.5f : 0.6f;
-	const char		*key, *text;
-	vec4_t			color = { 0.78f, 0.86f, 1.0f, 0.85f };
+	const char		*key, *text, *body;
+	vec4_t			color = { 0.82f, 0.90f, 1.0f, 0.95f };
+	vec4_t			strip = { 0.02f, 0.04f, 0.10f, 0.55f };
+	float			width;
 
 	if ( !focus.active ) {
 		return;
 	}
 	key = CG_KeyLabel( trap->Key_GetKey( "focus" ) );
 	text = key ? CG_VisionTextWith( "Focus. %s or Esc: back", key ) : CG_VisionText( "Focus. Esc: back" );
-	CG_Text_Paint( ( SCREEN_WIDTH - CG_Text_Width( text, scale, font ) ) * 0.5f, 444.0f, scale, color, text, 0, 0, 0, font );
 
 	// and what happens to the body meanwhile
 	if ( focus.answer > 0 ) {
-		text = CG_VisionText( "Your body is protected." );
+		body = CG_VisionText( "Your body is protected." );
 	} else if ( !focus.server || focus.answer < 0 ) {
-		text = CG_VisionText( "A hit on your body brings you back." );
+		body = CG_VisionText( "A hit on your body brings you back." );
 	} else {
 		static const char *const why[] = {
 			"Your body is not protected.",									// FOCUS_ENDED
@@ -749,14 +788,89 @@ void CG_FocusDraw( void ) {
 			"Your body is not protected right now.",						// FOCUS_NOTNOW
 		};
 
-		text = CG_VisionText( why[focus.why] );
+		body = CG_VisionText( why[focus.why] );
 	}
-	color[3] = 0.6f;
-	CG_Text_Paint( ( SCREEN_WIDTH - CG_Text_Width( text, scale * 0.85f, font ) ) * 0.5f, 456.0f, scale * 0.85f, color, text, 0, 0, 0, font );
+	// both on a dark strip: the own body often stands right behind them
+	width = Q_max( CG_Text_Width( text, scale, font ), CG_Text_Width( body, scale * 0.85f, font ) ) + 20.0f;
+	if ( skin && Skin_Ready() ) {
+		Skin_Panel( ( SCREEN_WIDTH - width ) * 0.5f, 439.0f, width, 31.0f, 5.0f, strip, NULL );
+	} else {
+		CG_FillRect( ( SCREEN_WIDTH - width ) * 0.5f, 439.0f, width, 31.0f, strip );
+	}
+	CG_Text_Paint( ( SCREEN_WIDTH - CG_Text_Width( text, scale, font ) ) * 0.5f, 442.0f, scale, color, text, 0, 0, 0, font );
+	color[3] = 0.75f;
+	CG_Text_Paint( ( SCREEN_WIDTH - CG_Text_Width( body, scale * 0.85f, font ) ) * 0.5f, 455.0f, scale * 0.85f, color, body, 0, 0, 0, font );
+}
+
+/*
+=================
+CG_FocusStatus_f
+
+"focus_status": where the player is and what the server said, as "voice_status" and "peers" say theirs
+=================
+*/
+void CG_FocusStatus_f( void ) {
+	// (for whoever looks into it: where the players of the snapshot are and what they do)
+	if ( cg.snap && Focus_Cvar( "developer" ) ) {
+		int i;
+
+		trap->Print( "  own body: at %.0f %.0f %.0f, legs %i, eFlags %x\n", cg.snap->ps.origin[0], cg.snap->ps.origin[1],
+			cg.snap->ps.origin[2], cg.snap->ps.legsAnim, cg.snap->ps.eFlags );
+		for ( i = 0; i < cg.snap->numEntities; i++ ) {
+			const entityState_t *es = &cg.snap->entities[i];
+
+			if ( es->number < MAX_CLIENTS && es->eType == ET_PLAYER ) {
+				trap->Print( "  %2i %-12s at %.0f %.0f %.0f, legs %i, eFlags %x\n", es->number, cgs.clientinfo[es->number].name,
+					es->pos.trBase[0], es->pos.trBase[1], es->pos.trBase[2], es->legsAnim, es->eFlags );
+			}
+		}
+	}
+	if ( !focus.active ) {
+		trap->Print( "Focus: in the body%s%s.\n", focusBack.ended ? ", back by: " : "", focusBack.ended ? focusBack.ended : "" );
+		return;
+	}
+	trap->Print( "Focus: out of the body for %.1f s, %.0f units from it, the world stands still at %i. The server: %s.\n",
+		( trap->Milliseconds() - focus.startMsec ) * 0.001f, Distance( focus.origin, focus.eyes ), focus.worldTime,
+		!focus.server ? "protects no body" : focus.answer > 0 ? "protects the body" : focus.answer < 0 ? "has not answered"
+		: va( "does not protect the body (%i)", (int)focus.why ) );
+	// (for whoever looks into it: the snapshot the still is made of, and the newest one that was looked at)
+	if ( Focus_Cvar( "developer" ) ) {
+		trap->Print( "  still: snapshot of %i, legs %i torso %i, predicted legs %i torso %i. newest: %i of %i, legs %i torso %i, at %.0f %.0f %.0f, eFlags %x\n",
+			cg.snap->serverTime, cg.snap->ps.legsAnim, cg.snap->ps.torsoAnim, cg.predictedPlayerState.legsAnim,
+			cg.predictedPlayerState.torsoAnim, focus.peekNum, focusPeek.serverTime, focusPeek.ps.legsAnim, focusPeek.ps.torsoAnim,
+			focusPeek.ps.origin[0], focusPeek.ps.origin[1], focusPeek.ps.origin[2], focusPeek.ps.eFlags );
+	}
+}
+
+/*
+=================
+CG_FocusMove_f, CG_FocusTurn_f
+
+For the scripts of tools/clienttests, which can not hold a key or move the mouse.
+"cg_focusmove <forward> <right> <up> <msec>": the camera goes that way for that time, each -1 to 1.
+"cg_focusturn <yaw> <pitch>": it turns by that many degrees, left and down are positive.
+=================
+*/
+void CG_FocusMove_f( void ) {
+	int i;
+
+	for ( i = 0; i < 3; i++ ) {
+		focusTest.wish[i] = Com_Clamp( -1.0f, 1.0f, atof( CG_Argv( 1 + i ) ) );
+	}
+	focusTest.until = trap->Milliseconds() + atoi( CG_Argv( 4 ) );
+}
+
+void CG_FocusTurn_f( void ) {
+	if ( !focus.active ) {
+		return;
+	}
+	focus.angles[YAW] = AngleNormalize360( focus.angles[YAW] + atof( CG_Argv( 1 ) ) );
+	focus.angles[PITCH] = Com_Clamp( -89.0f, 89.0f, focus.angles[PITCH] + atof( CG_Argv( 2 ) ) );
 }
 
 // the cgame was loaded anew, or the level begins anew: in the body
 void CG_FocusInit( void ) {
 	memset( &focus, 0, sizeof( focus ) );
 	memset( &focusBack, 0, sizeof( focusBack ) );
+	memset( &focusTest, 0, sizeof( focusTest ) );
 }

@@ -562,6 +562,9 @@ int ForcePowerUsableOn(gentity_t *attacker, gentity_t *other, forcePowers_t forc
 
 		if ( jp->quickening || jp->down || jp->protectedByAdmin || jp->isGhost || jp->sleeping || jp->mindtricked || level.time < jp->teleTime )
 			return 0;
+		// nor on the body of a player who is out of it (Focus, status/g_focus.c)
+		if ( jp->focus )
+			return 0;
 	}
 	if ( JP_IsConnectedClient( attacker ) )
 	{

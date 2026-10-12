@@ -1803,6 +1803,9 @@ qboolean	CG_AuthIsAdmin( void );
 // focus/cg_focus.c: the world stands still and the player leaves his body as a camera
 void		CG_FocusInit( void );
 void		CG_Focus_f( void );
+void		CG_FocusStatus_f( void );
+void		CG_FocusMove_f( void );
+void		CG_FocusTurn_f( void );
 void		CG_FocusEnd( void );
 qboolean	CG_FocusActive( void );
 int			CG_FocusTime( int time );
