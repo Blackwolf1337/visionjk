@@ -805,7 +805,12 @@ void Window_Paint(windowDef_t *w, float fadeAmount, float fadeClamp, float fadeC
 
 		if ( w->flags & WINDOW_FORECOLORSET )
 			DC->setColor(w->foreColor);
-		DC->drawHandlePic( fillRect.x, fillRect.y, fillRect.w, fillRect.h, w->background );
+		// No picture (the name came from a cvar that is empty, or the file is not there): the game drew the default
+		// image of the renderer, a grey box in a white frame. Seen in the siege objectives, whose main picture no
+		// level of the game sets.
+		if ( w->background || !Skin_Ready() ) {
+			DC->drawHandlePic( fillRect.x, fillRect.y, fillRect.w, fillRect.h, w->background );
+		}
 		DC->setColor( NULL );
 	}
 	else if ( w->style == WINDOW_STYLE_TEAMCOLOR ) {
