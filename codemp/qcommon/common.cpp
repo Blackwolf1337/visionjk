@@ -28,6 +28,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "stringed_ingame.h"
 #include "qcommon/cm_public.h"
 #include "qcommon/game_version.h"
+#include "qcommon/net_link.h"
 #include "../server/NPCNav/navigator.h"
 #include "../shared/sys/sys_local.h"
 #if defined(_WIN32)
@@ -1376,6 +1377,13 @@ void Com_WriteConfiguration( void ) {
 	}
 	cvar_modifiedFlags &= ~CVAR_ARCHIVE;
 
+#ifdef DEDICATED
+	// The temple a server started for its players (server/sv_instance.cpp) keeps no settings of its own: it
+	// reads the ones of its server at every start, and a file of its own would hide those from then on.
+	if ( NET_LinkActive() ) {
+		return;
+	}
+#endif
 	Com_WriteConfigToFile( Q3CONFIG_CFG );
 }
 

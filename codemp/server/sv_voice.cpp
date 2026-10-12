@@ -34,6 +34,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "server.h"
 #include "sv_gameapi.h"
 #include "qcommon/net_local.h"
+#include "qcommon/net_link.h"
 #include "game/voice/bg_voice.h"
 
 #ifdef VISION_MASTER
@@ -65,7 +66,15 @@ void SV_GameSendDatagram( const byte *ip, int port, const byte *data, int length
 	to.type = NA_IP;
 	Com_Memcpy( to.ip, ip, sizeof( to.ip ) );
 	to.port = BigShort( (short)port );
+#ifdef DEDICATED
+	// From the temple of a server this goes out of the port of that server without the mark of the tunnel: the
+	// socket of the voice chat in the client knows none (qcommon/net_link.h).
+	NET_LinkPlain( qtrue );
 	NET_SendPacket( NS_SERVER, length, data, &to );
+	NET_LinkPlain( qfalse );
+#else
+	NET_SendPacket( NS_SERVER, length, data, &to );
+#endif
 }
 
 #ifdef VISION_MASTER
@@ -149,6 +158,11 @@ qboolean SV_VoicePacket( const netadr_t *from, msg_t *msg ) {
 #ifdef VISION_MASTER
 	if ( !GVM_VoiceDatagram( from, data, msg->cursize ) ) {
 		SV_MasterDatagram( from, data, msg->cursize );
+	}
+#elif defined( DEDICATED )
+	// (none of a player in this level: he may be in the temple of this server, sv_instance.cpp)
+	if ( !GVM_VoiceDatagram( from, data, msg->cursize ) ) {
+		SV_InstanceVoice( from, data, msg->cursize );
 	}
 #else
 	GVM_VoiceDatagram( from, data, msg->cursize );

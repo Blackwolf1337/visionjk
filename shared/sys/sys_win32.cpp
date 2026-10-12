@@ -219,6 +219,18 @@ void Sys_SetProcessorAffinity( void ) {
 		Com_DPrintf( "Setting affinity mask failed (%s)\n", GetErrorString( GetLastError() ) );
 }
 
+// The temple a dedicated server starts for its players (codemp/server/sv_instance.cpp) is not written for
+// Windows yet: no release has a dedicated server for it.
+int Sys_StartSelf( char **argv, const char *envName, const char *envValue, const char *logFile ) {
+	(void)argv; (void)envName; (void)envValue; (void)logFile;
+	return 0;
+}
+
+qboolean Sys_ProcessEnded( int process ) {
+	(void)process;
+	return qtrue;
+}
+
 /*
 ==================
 Sys_LowPhysicalMemory()

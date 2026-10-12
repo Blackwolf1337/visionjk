@@ -26,6 +26,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "qcommon/qcommon.h"
 
 #include "qcommon/net_local.h"
+#include "qcommon/net_link.h"
 
 #ifdef _WIN32
 	static WSADATA	winsockdata;
@@ -204,6 +205,154 @@ Receive one packet
 int	recvfromCount;
 #endif
 
+#ifdef DEDICATED
+/*
+==================
+The link of a temple instance (net_link.h)
+
+A dedicated server that was started by another one for its players has no socket on a network. Its packets go
+over one on this machine to the server that started it, each with the address of its player in front, so the
+rest of this program sees every player with the address he has.
+==================
+*/
+static qboolean				usingLink;
+static struct sockaddr_in	linkAddr;				// the end of the server that started this one
+static byte					linkKey[NET_LINK_KEY];
+static qboolean				linkPlain;
+static int					linkHeard, linkSaid;
+
+// (The link is opened with the network, which is after the server looked at its settings: the environment says
+// it from the first moment on.)
+qboolean NET_LinkActive( void ) {
+	const char *env = getenv( NET_LINK_ENV );
+
+	return ( usingLink || ( env && env[0] ) ) ? qtrue : qfalse;
+}
+
+void NET_LinkPlain( qboolean plain ) {
+	linkPlain = plain;
+}
+
+static void NET_LinkSend( int flags, const netadr_t *to, const void *data, int length ) {
+	static byte buffer[NET_LINK_HEAD + MAX_MSGLEN];
+
+	if ( length < 0 || length > MAX_MSGLEN ) {
+		return;
+	}
+	memcpy( buffer, linkKey, NET_LINK_KEY );
+	buffer[NET_LINK_KEY] = (byte)flags;
+	memset( buffer + NET_LINK_KEY + 1, 0, 6 );
+	if ( to ) {
+		memcpy( buffer + NET_LINK_KEY + 1, to->ip, 4 );
+		memcpy( buffer + NET_LINK_KEY + 5, &to->port, 2 );
+	}
+	if ( length ) {
+		memcpy( buffer + NET_LINK_HEAD, data, length );
+	}
+	sendto( ip_socket, (const char *)buffer, NET_LINK_HEAD + length, 0, (const struct sockaddr *)&linkAddr, sizeof( linkAddr ) );
+}
+
+// What came in on the socket of the link. qtrue: it is a packet of a player, and the message holds it.
+static qboolean NET_LinkTake( const struct sockaddr_in *from, netadr_t *net_from, msg_t *net_message, int length ) {
+	byte		*data = net_message->data;
+	const int	flags = ( length >= NET_LINK_HEAD ) ? data[NET_LINK_KEY] : 0;
+
+	if ( length < NET_LINK_HEAD || from->sin_addr.s_addr != linkAddr.sin_addr.s_addr || from->sin_port != linkAddr.sin_port
+		|| memcmp( data, linkKey, NET_LINK_KEY ) ) {
+		return qfalse;
+	}
+	linkHeard = Sys_Milliseconds();
+	if ( flags & NET_LINK_QUIT ) {
+		Com_Printf( "The server this temple belongs to ends\n" );
+		Cbuf_AddText( "quit\n" );
+		return qfalse;
+	}
+	if ( flags & NET_LINK_HELLO ) {
+		return qfalse;
+	}
+	Com_Memset( net_from, 0, sizeof( *net_from ) );
+	net_from->type = NA_IP;
+	memcpy( net_from->ip, data + NET_LINK_KEY + 1, 4 );
+	memcpy( &net_from->port, data + NET_LINK_KEY + 5, 2 );
+	length -= NET_LINK_HEAD;
+	memmove( data, data + NET_LINK_HEAD, length );
+	net_message->readcount = 0;
+	net_message->cursize = length;
+	return qtrue;
+}
+
+// Opens the end of this program if it was started as an instance. qfalse: it was not. (An instance whose end
+// can not be made has no network at all, and ends as one whose server is gone.)
+static qboolean NET_LinkOpen( void ) {
+	const char			*env = getenv( NET_LINK_ENV );
+	unsigned int		port = 0;
+	char				key[NET_LINK_KEY * 2 + 1] = { 0 };
+	struct sockaddr_in	address;
+	u_long				_true = 1;
+	int					i;
+
+	if ( !env || !env[0] ) {
+		return qfalse;
+	}
+	if ( sscanf( env, "%u:%16s", &port, key ) != 2 || !port || port > 65535 || strlen( key ) != NET_LINK_KEY * 2 ) {
+		Com_Printf( "WARNING: %s is set and is no link\n", NET_LINK_ENV );
+		return qfalse;
+	}
+	for ( i = 0; i < NET_LINK_KEY; i++ ) {
+		unsigned int value = 0;
+
+		sscanf( key + i * 2, "%2x", &value );
+		linkKey[i] = (byte)value;
+	}
+	memset( &address, 0, sizeof( address ) );
+	address.sin_family = AF_INET;
+	address.sin_addr.s_addr = htonl( INADDR_LOOPBACK );
+	linkAddr = address;
+	linkAddr.sin_port = htons( (unsigned short)port );
+	usingLink = qtrue;
+	linkHeard = linkSaid = Sys_Milliseconds();
+
+	if ( ( ip_socket = socket( AF_INET, SOCK_DGRAM, IPPROTO_UDP ) ) == INVALID_SOCKET ) {
+		Com_Printf( "WARNING: NET_LinkOpen: socket: %s\n", NET_ErrorString() );
+		return qtrue;
+	}
+	if ( ioctlsocket( ip_socket, FIONBIO, &_true ) == SOCKET_ERROR
+		|| bind( ip_socket, (const struct sockaddr *)&address, sizeof( address ) ) == SOCKET_ERROR ) {
+		Com_Printf( "WARNING: NET_LinkOpen: %s\n", NET_ErrorString() );
+		closesocket( ip_socket );
+		ip_socket = INVALID_SOCKET;
+		return qtrue;
+	}
+	NET_LinkSend( NET_LINK_HELLO, NULL, NULL, 0 );
+	Com_Printf( "This server is the temple of the one on UDP port %i: no port of its own, its packets go through that one\n", net_port->integer );
+	return qtrue;
+}
+
+/*
+==================
+NET_LinkFrame
+
+Once a frame of an instance: it says that it is there, and ends when the server that started it is gone.
+==================
+*/
+void NET_LinkFrame( void ) {
+	const int now = Sys_Milliseconds();
+
+	if ( !usingLink ) {
+		return;
+	}
+	if ( now - linkSaid >= NET_LINK_HELLO_MSEC ) {
+		linkSaid = now;
+		NET_LinkSend( NET_LINK_HELLO, NULL, NULL, 0 );
+	}
+	if ( now - linkHeard >= NET_LINK_LOST_MSEC ) {
+		linkHeard = now;
+		Com_Printf( "Nothing from the server this temple belongs to: it is gone\n" );
+		Cbuf_AddText( "quit\n" );
+	}
+}
+#endif
+
 qboolean NET_GetPacket( netadr_t *net_from, msg_t *net_message, fd_set *fdr ) {
 	int ret, err;
 	socklen_t fromlen;
@@ -231,6 +380,11 @@ qboolean NET_GetPacket( netadr_t *net_from, msg_t *net_message, fd_set *fdr ) {
 
 	memset( from.sin_zero, 0, 8 );
 
+#ifdef DEDICATED
+	if ( usingLink ) {
+		return NET_LinkTake( &from, net_from, net_message, ret );
+	}
+#endif
 	if ( usingSocks && memcmp( &from, &socksRelayAddr, fromlen ) == 0 ) {
 		if ( ret < 10 || net_message->data[0] != 0 || net_message->data[1] != 0 || net_message->data[2] != 0 || net_message->data[3] != 1 ) {
 			return qfalse;
@@ -286,6 +440,12 @@ void Sys_SendPacket( int length, const void *data, const netadr_t *to ) {
 	if ( ip_socket == INVALID_SOCKET ) {
 		return;
 	}
+#ifdef DEDICATED
+	if ( usingLink ) {
+		NET_LinkSend( linkPlain ? NET_LINK_PLAIN : 0, to, data, length );
+		return;
+	}
+#endif
 
 	NetadrToSockadr( to, &addr );
 
@@ -784,6 +944,12 @@ void NET_OpenIP( void )
 	int port = net_port->integer;
 	int err;
 
+#ifdef DEDICATED
+	// a temple another server started for its players has no socket on a network (net_link.h)
+	if ( NET_LinkOpen() ) {
+		return;
+	}
+#endif
 	NET_GetLocalAddress();
 
 	// automatically scan for a valid port, so multiple
@@ -1037,6 +1203,9 @@ void NET_Sleep( int msec ) {
 	FD_ZERO(&webWriteSet);
 	SV_WebFDSet(&fdset, &webWriteSet, &highestfd);
 	writeSet = &webWriteSet;
+	// and the link to the temple of this server (codemp/server/sv_instance.cpp): its packets are passed on
+	// when they come
+	SV_InstanceFDSet(&fdset, &highestfd);
 #endif
 
 #ifdef _WIN32
@@ -1063,6 +1232,8 @@ void NET_Sleep( int msec ) {
 	// also when nothing is ready: it looks at its timeouts
 	if(retval != SOCKET_ERROR)
 		SV_WebEvent(&fdset, &webWriteSet);
+	if(retval > 0)
+		SV_InstanceEvent(&fdset);
 #endif
 }
 

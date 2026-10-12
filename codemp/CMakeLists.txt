@@ -792,6 +792,14 @@ if(BuildMPDed)
 	set(MPDedFiles ${MPEngineAndDedFiles})
 	set(MPDedDefines ${MPSharedDefines} "_CONSOLE" "DEDICATED")
 
+	# the temple a dedicated server starts for its players, and the link to it
+	set(MPDedInstanceFiles
+		"${MPDir}/server/sv_instance.cpp"
+		"${MPDir}/qcommon/net_link.h"
+		)
+	source_group("server" FILES ${MPDedInstanceFiles})
+	set(MPDedFiles ${MPDedFiles} ${MPDedInstanceFiles})
+
 	# Dedicated renderer is compiled with the server.
 	set(MPDedicatedRendererFiles
 		"${MPDir}/ghoul2/G2_gore.cpp"

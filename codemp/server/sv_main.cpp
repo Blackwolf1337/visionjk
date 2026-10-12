@@ -27,6 +27,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include "ghoul2/ghoul2_shared.h"
 #include "sv_gameapi.h"
+#include "qcommon/net_link.h"
 
 serverStatic_t	svs;				// persistant server info
 server_t		sv;					// local server
@@ -777,6 +778,14 @@ void SV_PacketEvent( const netadr_t *from, msg_t *msg ) {
 		return;
 	}
 
+#ifdef DEDICATED
+	// a packet of the tunnel to the temple of this server (sv_instance.cpp, qcommon/net_link.h)
+	if ( msg->cursize >= 4 && *(int *)msg->data == NET_TUNNEL_MARK ) {
+		SV_InstancePacket( from, msg );
+		return;
+	}
+#endif
+
 	// read the qport out of the message so we can fix up
 	// stupid address translating routers
 	MSG_BeginReadingOOB( msg );
@@ -1168,6 +1177,9 @@ void SV_Frame( int msec ) {
 
 #ifdef VISION_MASTER
 	SV_VoiceFrame();
+#endif
+#ifdef DEDICATED
+	SV_InstanceFrame();
 #endif
 
 	// if it isn't time for the next frame, do nothing

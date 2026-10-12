@@ -33,6 +33,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include <sched.h>
 #include <signal.h>
 #include <sys/resource.h>
+#include <sys/wait.h>
 
 #include "qcommon/q_version.h"
 #include "qcommon/qcommon.h"
@@ -40,6 +41,66 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "sys_local.h"
 
 qboolean stdinIsATTY = qfalse;
+
+/*
+=================
+Sys_StartSelf
+
+The file this program runs from is started again: with these arguments, one more variable in its environment,
+no input, its output at the end of logFile, and none of the files and sockets this program has open (it would
+keep the ports of this one bound after its end).
+=================
+*/
+int Sys_StartSelf( char **argv, const char *envName, const char *envValue, const char *logFile ) {
+#ifdef __linux__
+	static char		program[ PATH_MAX ];
+	const ssize_t	len = readlink( "/proc/self/exe", program, sizeof( program ) - 1 );
+	const int		maxFiles = (int)sysconf( _SC_OPEN_MAX );
+	pid_t			pid;
+
+	if ( len <= 0 ) {
+		return 0;
+	}
+	program[len] = '\0';
+	argv[0] = program;
+	// (before the fork: between it and the new program only calls a signal handler may make)
+	setenv( envName, envValue, 1 );
+	pid = fork();
+	if ( pid == 0 ) {
+		int fd = open( "/dev/null", O_RDONLY );
+
+		if ( fd >= 0 ) {
+			dup2( fd, STDIN_FILENO );
+		}
+		fd = open( logFile, O_WRONLY | O_CREAT | O_APPEND, 0644 );
+		if ( fd < 0 ) {
+			fd = open( "/dev/null", O_WRONLY );
+		}
+		if ( fd >= 0 ) {
+			dup2( fd, STDOUT_FILENO );
+			dup2( fd, STDERR_FILENO );
+		}
+		for ( fd = STDERR_FILENO + 1; fd < maxFiles; fd++ ) {
+			close( fd );
+		}
+		execv( program, argv );
+		_exit( 127 );
+	}
+	unsetenv( envName );
+	return ( pid > 0 ) ? (int)pid : 0;
+#else
+	// (only Linux says by itself which file a program runs from. Not written for the others yet.)
+	(void)argv; (void)envName; (void)envValue; (void)logFile;
+	return 0;
+#endif
+}
+
+// has it ended? Asked once, a program that ended is forgotten by the system.
+qboolean Sys_ProcessEnded( int process ) {
+	int status;
+
+	return ( waitpid( (pid_t)process, &status, WNOHANG ) != 0 ) ? qtrue : qfalse;
+}
 
 // Used to determine where to store user-specific files
 static char homePath[ MAX_OSPATH ] = { 0 };
