@@ -213,6 +213,13 @@ be marked: its rows are drawn as strings of another height. Not run: nobody has 
 
 `cgame/chat/cg_chat.c` replaces the chat box of the base game (2026-10-11).
 
+With the HUD of the new look (`cg_hud 1`, [ui.md](ui.md)) the box has that look too, since 2026-10-12: a panel
+of dark glass with the letters of the menus, the tabs as words with a line under the open one, a thin bar for
+where in the history one is. The lines that stand at the lower left while nobody types each lie on a dark strip
+as wide as their words, so green text can be read on a bright floor. The names of the tabs and the words in
+front of the line to type in are in the language of the game (`CG_VisionText`, see "Clickable players"). With
+`cg_hud 0`, in another engine and next to the HUD of a mod the box is drawn as before.
+
 | Cvar | Default | Meaning |
 |------|---------|---------|
 | `cg_chatBox` | 10000 | as before: milliseconds a line stands at the lower left while nobody types, 0 none |
@@ -286,7 +293,7 @@ chat bubble stands on top of it.
 |------|---------|---------|
 | `cg_playerStatuses` | 1 | show the lines of the others |
 | `cg_shareMusic` | 0 | tell the server what music plays on this machine. Off by default: everybody on the server reads it. "Show My Music" in Setup, Voice Chat |
-| `cjp_caps` | 1, read only | in the userinfo: this cgame draws statuses, the server sends them to nobody else |
+| `cjp_caps` | 3, read only | in the userinfo, what this cgame draws that a server sends to nobody else: bit 0 statuses, bit 1 who plays with a client of this tree ("Who plays with VisionJK") |
 | `cjp_vision` | the version, read only | in the userinfo: this is the client of VisionJK, and which one. A server of this tree greets it by that name and not as "client plugin 1.4B4". `cjp_client` stays 1.4B4: it is what a JA+ server of somebody else reads to switch the plugin features on |
 
 - "Away from keyboard": the server finds out who did not touch a key or the mouse for `g_afkTime` seconds, for
@@ -315,12 +322,21 @@ see [windows.md](windows.md).
 ### Clickable players
 
 `cgame/select/cg_select.c` (2026-10-11). While the mouse is free, the player under the pointer has a glowing
-outline and his name beside him, and a click on him opens a card: who he is, his team, score and ping,
-what stands above his head, and what you can do about him.
+outline and his name beside him, and a click on him opens a card: who he is and with what he plays, his score,
+ping and time, what stands above his head, his model and saber, and what you can do about him.
 
-The mouse is free while the key of `+cursor` is held (Controls, JA+ Control, "Free the Mouse"; the left Alt
-key on a new install if it was free), after `cursor` until `cursor` again or Escape, and while the chat box is
-open. While it is free the view does not turn and the game does not get the keys.
+The mouse is free while the key of `+cursor` is held (Controls, Extras, "Free the Mouse"; the left Alt key on
+a new install if it was free), after `cursor` until `cursor` again or Escape, while the chat box is open, and
+while the scoreboard is kept open (below). While it is free the view does not turn and the game does not get
+the keys.
+
+The scoreboard (2026-10-12, `cgame/hud/cg_scores.c`, see [ui.md](ui.md)): a click on the row of a player opens
+the same card beside the board, also for somebody who is not in sight, who watches, or for oneself (the own
+card says who one is and offers nothing). The key of the scoreboard is held while the board shows and the mouse
+turns the view, and holding it together with left Alt switches windows on most desktops, so the board can be
+kept: its key pressed twice within 350 ms, or the command `scores_pick` (Controls, Extras, "Scoreboard with
+Mouse"), leaves it standing with the mouse free. The key again, Escape or the right button lets go of it. The
+head of the board says which. `cg_scoresPick 0`: no double tap.
 
 | On the card | |
 |-------------|---|
@@ -339,11 +355,14 @@ A row is run with a click or with its number. A click beside the card, the right
 |------|---------|---|
 | `cg_selectPlayers` | 1 | 0: none of it |
 | `cg_selectOutline` | 1 | 0: no outline, four corners around the player in its place |
+| `cg_scoresPick` | 1 | 0: the key of the scoreboard pressed twice does not keep the board open |
 
 | Command | |
 |---------|---|
 | `+cursor` | the mouse is free while it is held |
 | `cursor` | switches that on and off |
+| `scores_pick` | the scoreboard stays open with the mouse free, or lets go of it |
+| `peers` | who plays with what, as this client knows it, and from where |
 | `cursor on <player>`, `cursor at <x> <y>`, `cursor click`, `cursor row <n>` | the pointer onto a player or a place, a click, a row of the open card: for a key or a script in place of a mouse |
 
 - Everything happens in your client. What a row sends is the command it stands for, and no other player sees
@@ -414,6 +433,41 @@ rows for his loudness and his chat lines changing what the card says. It found
 a crash at the first outline, fixed before it was committed (the picture of the shader was handed to the
 renderer from memory that can not be written to). Not checked: a real mouse and the key, a team game, the
 admin rows, another engine.
+
+What the card says and offers was written in English only until 2026-10-12. Now the cgame asks for its texts
+in the language of the game: `CG_VisionText( "english" )` looks in `strings/<language>/vision.str` under a key
+made from the English, as `tools/menus/texts.py` makes it, which has the list (`CGAME`) and the German. A text
+with a value in it (`CG_VisionTextWith`) gets the value where it has `%i` or `%s`. It is never handed to printf
+as a format: the file can come out of the pk3 of anybody. The same holds for the scoreboard, the chat box and
+the lines above the heads.
+
+### Who plays with VisionJK
+
+`cgame/status/cg_peers.c`, `game/status/g_status.c` (2026-10-12). The scoreboard has the icon of the game before
+the name of a player who has a client of this tree, and the card of a player says "VisionJK" with its version,
+or "Another client".
+
+- On a server with the game module of this tree: the cgame names itself in its userinfo (`cjp_vision`), and the
+  game module tells a cgame that asks (`cjp_caps` bit 1) with the server command `jpclient <client> <version>
+  [...]`, "-" for any other client. One player when his userinfo says something new, everybody in one command
+  when a cgame asks for all of it: a cgame that has just started knows nothing (a new level, but also a restart
+  of the video, of which the server hears nothing), so it sends `jpstatus all` once and is told who plays with
+  what and what stands above everybody. The server info says that the module does this (`g_visionCaps` bit 3).
+  An older module is not asked.
+- On any other server nobody tells. There a client of this tree is known by what comes from it through the
+  voice chat: its voice, or what stands above its head, which every client says to the voice master every five
+  seconds. So it is known of the players whose voice chat is linked to the master (`cg_voice 1`,
+  `cg_voiceMaster 1`, how a client starts out), within some seconds, and without a version. That somebody
+  plays with something else is never known there: who was not heard may have the voice chat switched off. The
+  card says nothing then.
+- A bot is no client. The own player is always known.
+- It is what a client says of itself. A mark, nothing an admin can rely on.
+
+Checked 2026-10-12 with four scripted clients of the build on a server of the build (`BUILD=1
+CAM=ui_scores_cam.cfg tools/sitescene3.sh` of the work folder): the icon before all four names, also after the
+one who looks restarted his video, the version on the cards, and `peers` naming the server as the source. Not
+checked: a client that is no client of this tree on such a server (no such program was run, bots stand in),
+the internet.
 
 ### The server browser in a game, and servers with bots only
 

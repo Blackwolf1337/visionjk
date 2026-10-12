@@ -35,9 +35,14 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // - Up and Down bring back what was sent before, Ctrl+V pastes
 //
 // In any other engine the box only shows the lines, and typing stays with the line of the engine.
+//
+// With the HUD of the new look (CG_HudNewLook) the box has that look too: a panel of dark glass, the letters of
+// the menus, the tabs as words with a line under the open one, and the lines that stand there while nobody
+// types each on a dark strip, so they can be read on a bright floor.
 
 #include "cgame/cg_local.h"
 #include "ui/ui_shared.h"
+#include "ui/ui_skin.h"
 
 extern displayContextDef_t cgDC;
 
@@ -45,6 +50,7 @@ extern displayContextDef_t cgDC;
 #define CHAT_TEXT			320				// a line as it came: name, colours, text
 #define CHAT_MAX_ROWS		8				// rows a line takes at most when it is wrapped
 #define CHAT_SCALE			0.65f
+#define CHAT_SKIN_SCALE		0.6f			// of the letters of the new look
 #define CHAT_ROW_HEIGHT		13.0f
 #define CHAT_OPEN_ROWS		10				// rows of history in the open box
 #define CHAT_CLOSED_ROWS	6				// rows that stand there while nobody types
@@ -85,6 +91,7 @@ static struct {
 	int			count;						// lines that ever came, line n is history[n % CHAT_HISTORY]
 
 	qboolean	engine;						// the engine has the calls of the box (cl_cgameChat)
+	qboolean	skin;						// the box is drawn in the new look
 	qboolean	utf8;						// text is UTF-8 (cl_utf8Text)
 	int			handlerCount;				// cg_chatInput as it was when cg_chatHandler was last set
 
@@ -116,6 +123,26 @@ static struct {
 
 static const char *chatTabNames[CHAT_NUM_KINDS] = { "All", "Team", "Private" };
 
+static const vec4_t chatGlass = { 0.035f, 0.07f, 0.12f, 0.84f }, chatRim = { 0.43f, 0.83f, 1.0f, 0.35f };
+static const vec4_t chatAccent = { 0.43f, 0.83f, 1.0f, 1.0f }, chatDim = { 0.60f, 0.69f, 0.78f, 1.0f };
+
+// the letters of the box: the small font of the game, or the font of the new look
+static int Chat_Font( void ) {
+	return chat.skin ? SKIN_FONT_SANS : FONT_SMALL;
+}
+
+static float Chat_Scale( void ) {
+	return chat.skin ? CHAT_SKIN_SCALE : CHAT_SCALE;
+}
+
+// the name of a tab in the language of the game, in capitals in the new look
+static const char *Chat_TabName( int tab ) {
+	static char name[CHAT_NUM_KINDS][32];
+
+	Q_strncpyz( name[tab], CG_VisionText( chatTabNames[tab] ), sizeof( name[0] ) );
+	return chat.skin ? Q_strupr( name[tab] ) : name[tab];
+}
+
 /*
 ===============================================================================
 
@@ -125,7 +152,7 @@ TEXT
 */
 
 static float Chat_Width( const char *text ) {
-	return trap->ext.R_Font_StrLenPixels( text, cgDC.Assets.qhSmallFont, CHAT_SCALE );
+	return trap->ext.R_Font_StrLenPixels( text, chat.skin ? Skin_FontHandle( SKIN_FONT_SANS ) : cgDC.Assets.qhSmallFont, Chat_Scale() );
 }
 
 // the bytes of the character at s
@@ -174,7 +201,7 @@ static void Chat_Wrap( chatMsg_t *m, float width ) {
 	char	color = COLOR_WHITE, spaceColor = COLOR_WHITE;
 	float	w = 0.0f;
 
-	m->wrapWidth = (int)width;
+	m->wrapWidth = (int)width + ( chat.skin ? 100000 : 0 );
 	m->numRows = 0;
 	m->rowStart[0] = 0;
 	m->rowColor[0] = COLOR_WHITE;
@@ -228,7 +255,8 @@ static int Chat_Rows( chatMsg_t *m ) {
 	if ( chat.width < 1.0f ) {
 		return 1;		// nothing was drawn yet
 	}
-	if ( m->wrapWidth != (int)chat.width || m->numRows < 1 ) {
+	// (measured for this width and these letters)
+	if ( m->wrapWidth != (int)chat.width + ( chat.skin ? 100000 : 0 ) || m->numRows < 1 ) {
 		Chat_Wrap( m, chat.width );
 	}
 	return m->numRows;
@@ -770,19 +798,30 @@ static void Chat_DrawRow( int index, int row, float x, float y, float alpha, qbo
 	color[3] = alpha;
 
 	if ( open && Chat_Selection( &start, &end ) && index >= start.msg && index <= end.msg ) {
-		static vec4_t	selColor = { 0.25f, 0.45f, 0.85f, 0.65f };
+		static vec4_t	selColor = { 0.25f, 0.45f, 0.85f, 0.65f }, selSkin = { 0.43f, 0.83f, 1.0f, 0.32f };
 		const int		a = Q_max( from, ( index == start.msg ) ? start.offset : 0 );
 		const int		b = Q_min( to, ( index == end.msg ) ? end.offset : to );
 
 		if ( b > a ) {
-			CG_FillRect( x + Chat_WidthOf( m->text, from, a ), y, Chat_WidthOf( m->text, a, b ), CHAT_ROW_HEIGHT, selColor );
+			CG_FillRect( x + Chat_WidthOf( m->text, from, a ), y, Chat_WidthOf( m->text, a, b ), CHAT_ROW_HEIGHT, chat.skin ? selSkin : selColor );
+		}
+	}
+	// over the game, with nobody typing: a dark strip under the row, as wide as its words
+	if ( !open && chat.skin ) {
+		const vec4_t	strip = { 0.02f, 0.04f, 0.08f, 0.46f * alpha };
+		const float		w = Chat_WidthOf( m->text, from, to );
+
+		if ( w > 0.0f ) {
+			Skin_Panel( x - 4.0f, y, w + 8.0f, CHAT_ROW_HEIGHT, 3.0f, strip, NULL );
 		}
 	}
 
 	text[0] = Q_COLOR_ESCAPE;
 	text[1] = m->rowColor[row];
 	Q_strncpyz( text + 2, m->text + from, Q_min( (int)sizeof( text ) - 2, to - from + 1 ) );
-	CG_Text_Paint( x, y, CHAT_SCALE, color, text, 0, 0, ITEM_TEXTSTYLE_OUTLINED, FONT_SMALL );
+	// (the letters of the new look are lower than their row, and need no shadow on the glass of the open box)
+	CG_Text_Paint( x, y + ( chat.skin ? 1.0f : 0.0f ), Chat_Scale(), color, text, 0, 0,
+		( chat.skin && open ) ? ITEM_TEXTSTYLE_NORMAL : ITEM_TEXTSTYLE_OUTLINED, Chat_Font() );
 
 	if ( !open || !chat.engine ) {
 		return;
@@ -834,22 +873,38 @@ static void Chat_DrawOpen( float x, float bottom ) {
 	const float		inputY = bottom + CHAT_PAD;
 	int				i, total = 0, skip, rows = 0;
 	float			y = bottom, tx;
-	char			prompt[MAX_NETNAME + 16];
+	char			prompt[MAX_NETNAME + 48];
 
-	CG_FillRect( boxX, boxY, boxW, boxH, backColor );
-	CG_DrawRect( boxX, boxY, boxW, boxH, 1.0f, frameColor );
+	if ( chat.skin ) {
+		const vec4_t shade = { 0.0f, 0.0f, 0.0f, 0.4f };
 
-	// the tabs
+		Skin_Soft( boxX, boxY + 3.0f, boxW, boxH, 10.0f, shade );
+		Skin_Panel( boxX, boxY, boxW, boxH, 6.0f, chatGlass, chatRim );
+	} else {
+		CG_FillRect( boxX, boxY, boxW, boxH, backColor );
+		CG_DrawRect( boxX, boxY, boxW, boxH, 1.0f, frameColor );
+	}
+
+	// the tabs: a filled one for the open tab, or in the new look its word bright with a line under it
 	chat.tabY = boxY + 1.0f;
 	tx = x;
 	for ( i = 0; i < CHAT_NUM_KINDS; i++ ) {
-		const float w = Chat_Width( chatTabNames[i] ) + 2.0f * CHAT_PAD;
+		const char		*name = Chat_TabName( i );
+		const float		w = Chat_Width( name ) + 2.0f * CHAT_PAD;
+		const qboolean	open = (qboolean)( chat.tab == (chatKind_t)i );
 
 		chat.tabX[i] = tx;
-		if ( chat.tab == (chatKind_t)i ) {
-			CG_FillRect( tx, chat.tabY, w, CHAT_TAB_HEIGHT, tabColor );
+		if ( chat.skin ) {
+			if ( open ) {
+				Skin_Panel( tx + CHAT_PAD, chat.tabY + CHAT_TAB_HEIGHT - 1.5f, w - 2.0f * CHAT_PAD, 1.3f, 0.65f, chatAccent, NULL );
+			}
+			CG_Text_Paint( tx + CHAT_PAD, chat.tabY + 1.0f, Chat_Scale(), (float *)( open ? colorWhite : chatDim ), name, 0, 0, 0, Chat_Font() );
+		} else {
+			if ( open ) {
+				CG_FillRect( tx, chat.tabY, w, CHAT_TAB_HEIGHT, tabColor );
+			}
+			CG_Text_Paint( tx + CHAT_PAD, chat.tabY, CHAT_SCALE, open ? colorWhite : dimColor, name, 0, 0, 0, FONT_SMALL );
 		}
-		CG_Text_Paint( tx + CHAT_PAD, chat.tabY, CHAT_SCALE, ( chat.tab == (chatKind_t)i ) ? colorWhite : dimColor, chatTabNames[i], 0, 0, 0, FONT_SMALL );
 		tx += w + 2.0f;
 	}
 	chat.tabX[CHAT_NUM_KINDS] = tx;
@@ -902,34 +957,43 @@ static void Chat_DrawOpen( float x, float bottom ) {
 		const float thumbH = Q_max( 6.0f, barH * CHAT_OPEN_ROWS / total );
 		const float thumbY = top + ( barH - thumbH ) * ( 1.0f - (float)chat.scroll / ( total - CHAT_OPEN_ROWS ) );
 
-		CG_FillRect( x + chat.width + CHAT_PAD, top, CHAT_BAR_WIDTH, barH, tabColor );
-		CG_FillRect( x + chat.width + CHAT_PAD, thumbY, CHAT_BAR_WIDTH, thumbH, frameColor );
+		if ( chat.skin ) {
+			Skin_ScrollBar( x + chat.width + CHAT_PAD, top, CHAT_BAR_WIDTH, barH, ( thumbY - top ) / barH, thumbH / barH, qfalse, chatAccent );
+		} else {
+			CG_FillRect( x + chat.width + CHAT_PAD, top, CHAT_BAR_WIDTH, barH, tabColor );
+			CG_FillRect( x + chat.width + CHAT_PAD, thumbY, CHAT_BAR_WIDTH, thumbH, frameColor );
+		}
 	}
 
 	// the line to type in, or the question about a link
-	CG_FillRect( boxX + 1.0f, inputY - 1.0f, boxW - 2.0f, 1.0f, frameColor );
+	if ( chat.skin ) {
+		Skin_Line( boxX + 4.0f, inputY - 1.0f, boxW - 8.0f, chatRim );
+	} else {
+		CG_FillRect( boxX + 1.0f, inputY - 1.0f, boxW - 2.0f, 1.0f, frameColor );
+	}
 	if ( chat.url[0] ) {
 		char	question[sizeof( chat.url ) + 64];
 		int		len;
 
-		Com_sprintf( question, sizeof( question ), "Open %s ? Enter: yes, any other key: no", chat.url );
+		Q_strncpyz( question, CG_VisionTextWith( "Open %s ? Enter: yes, any other key: no", chat.url ), sizeof( question ) );
 		// what does not fit is cut, the start of the address is what matters
 		for ( len = strlen( question ); len > 0 && Chat_Width( question ) > chat.width; len-- ) {
 			question[len - 1] = '\0';
 		}
-		CG_Text_Paint( x, inputY, CHAT_SCALE, colorYellow, question, 0, 0, 0, FONT_SMALL );
+		CG_Text_Paint( x, inputY + ( chat.skin ? 1.0f : 0.0f ), Chat_Scale(), colorYellow, question, 0, 0, 0, Chat_Font() );
 	} else {
-		float	promptW, textW;
-		int		start = 0;
-		char	shown[MAX_SAY_TEXT];
+		const float	down = chat.skin ? 1.0f : 0.0f;
+		float		promptW, textW;
+		int			start = 0;
+		char		shown[MAX_SAY_TEXT];
 
 		if ( chat.mode == 2 ) {
-			Com_sprintf( prompt, sizeof( prompt ), "To %s^7: ", cgs.clientinfo[chat.target].name );
+			Com_sprintf( prompt, sizeof( prompt ), "%s^7: ", CG_VisionTextWith( "To %s", cgs.clientinfo[chat.target].name ) );
 		} else {
-			Q_strncpyz( prompt, chat.mode == 1 ? "Team: " : "Say: ", sizeof( prompt ) );
+			Com_sprintf( prompt, sizeof( prompt ), "%s: ", CG_VisionText( chat.mode == 1 ? "Team" : "Say" ) );
 		}
 		promptW = Chat_Width( prompt );
-		CG_Text_Paint( x, inputY, CHAT_SCALE, dimColor, prompt, 0, 0, 0, FONT_SMALL );
+		CG_Text_Paint( x, inputY + down, Chat_Scale(), (float *)( chat.skin ? chatDim : dimColor ), prompt, 0, 0, 0, Chat_Font() );
 
 		// a text that is wider than the line is shown from where the cursor still fits
 		while ( start < chat.cursor && Chat_WidthOf( chat.input, start, chat.cursor ) > chat.width - promptW - 6.0f ) {
@@ -941,9 +1005,9 @@ static void Chat_DrawOpen( float x, float bottom ) {
 		}
 		// a ^ with a digit colours what follows while it is typed, as the line will look when it is sent
 		textW = Chat_WidthOf( chat.input, start, chat.cursor );
-		CG_Text_Paint( x + promptW, inputY, CHAT_SCALE, colorWhite, shown, 0, 0, 0, FONT_SMALL );
+		CG_Text_Paint( x + promptW, inputY + down, Chat_Scale(), colorWhite, shown, 0, 0, 0, Chat_Font() );
 		if ( ( trap->Milliseconds() >> 8 ) & 1 ) {
-			CG_FillRect( x + promptW + textW, inputY + 1.0f, 1.0f, CHAT_ROW_HEIGHT - 2.0f, colorWhite );
+			CG_FillRect( x + promptW + textW, inputY + 1.0f, 1.0f, CHAT_ROW_HEIGHT - 2.0f, (float *)( chat.skin ? chatAccent : colorWhite ) );
 		}
 	}
 	// (the pointer is drawn by CG_SelectDraw(), after the card of a player: it lies on everything)
@@ -987,6 +1051,7 @@ void CG_ChatDraw( void ) {
 		trap->Cvar_Set( "cg_chatHandler", ( chat.engine && cg_chatInput.integer ) ? "1" : "0" );
 	}
 
+	chat.skin = CG_HudNewLook();
 	chat.x = CHAT_X - cgs.bias2D;
 	chat.width = Com_Clamp( 200.0f, 600.0f, cg_chatBoxWidth.value );
 

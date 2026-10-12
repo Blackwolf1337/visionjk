@@ -35,8 +35,9 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #endif
 
 XCVAR_DEF( bg_fighterAltControl,				"0",					NULL,					CVAR_SYSTEMINFO )
-// what this cgame draws that a server only sends to who asks for it, bit 0: statuses above the heads (status/cg_status.c)
-XCVAR_DEF( cjp_caps,							"1",					NULL,					CVAR_USERINFO|CVAR_ROM )
+// what this cgame draws that a server only sends to who asks for it, bit 0: statuses above the heads (status/cg_status.c),
+// bit 1: who plays with a client of this tree (status/cg_peers.c)
+XCVAR_DEF( cjp_caps,							"3",					NULL,					CVAR_USERINFO|CVAR_ROM )
 XCVAR_DEF( cjp_client,							"1.4B4",				NULL,					CVAR_USERINFO|CVAR_ROM )
 XCVAR_DEF( cjp_vision,							GIT_TAG,				NULL,					CVAR_USERINFO|CVAR_ROM )
 XCVAR_DEF( cl_yawspeed,							"140",					NULL,					CVAR_ARCHIVE )	// (engine cvar, read by the JA+ yawspeed check)
@@ -163,6 +164,7 @@ XCVAR_DEF( cg_saberDynamicMarkTime,				"60000",				NULL,					CVAR_NONE )
 XCVAR_DEF( cg_saberModelTraceEffect,			"0",					NULL,					CVAR_NONE )
 XCVAR_DEF( cg_saberTrail,						"1",					NULL,					CVAR_ARCHIVE )
 XCVAR_DEF( cg_scoreboardBots,					"1",					NULL,					CVAR_ARCHIVE )
+XCVAR_DEF( cg_scoresPick,						"1",					NULL,					CVAR_ARCHIVE )
 XCVAR_DEF( cg_scorePlums,						"1",					NULL,					CVAR_ARCHIVE )
 XCVAR_DEF( cg_stereoSeparation,					"0.4",					NULL,					CVAR_ARCHIVE )
 XCVAR_DEF( cg_shadows,							"1",					NULL,					CVAR_ARCHIVE )

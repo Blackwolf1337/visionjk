@@ -195,6 +195,7 @@ set(MPCGameFiles ${MPCGameFiles} ${MPCGameBubbleFiles})
 
 # away and music above the heads, the server part is game/status
 set(MPCGameStatusFiles
+	"${MPDir}/cgame/status/cg_peers.c"
 	"${MPDir}/cgame/status/cg_status.c"
 	"${MPDir}/cgame/status/cg_status_music.c"
 	)
@@ -211,6 +212,7 @@ set(MPCGameFiles ${MPCGameFiles} ${MPCGameSelectFiles})
 # the numbers of the game for the items of a menu file that show one: what the HUD of this tree is made of
 set(MPCGameHudFiles
 	"${MPDir}/cgame/hud/cg_hud.c"
+	"${MPDir}/cgame/hud/cg_scores.c"
 	)
 source_group("cgame/hud" FILES ${MPCGameHudFiles})
 set(MPCGameFiles ${MPCGameFiles} ${MPCGameHudFiles})

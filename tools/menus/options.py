@@ -112,6 +112,8 @@ SETUP = [
         ('yesno', 'Select Players', 'cg_selectPlayers',
          'With the mouse free, a click on a player opens a card with what you can do with him.'),
         ('yesno', 'Selection Outline', 'cg_selectOutline', 'A glowing outline around the player under the mouse.'),
+        ('yesno', 'Keep Scoreboard on Double Tap', 'cg_scoresPick',
+         'The scoreboard key pressed twice quickly keeps the board open, with the mouse free to click a player.'),
         ('head', 'Chat'),
         ('yesno', 'Own Chat Line', 'cg_chatInput', 'Type into the chat box of VisionJK, with history and links.'),
         ('slider', 'Chat Box Width', 'cg_chatBoxWidth', 380, 200, 600, 'How wide the chat box is.'),
@@ -153,6 +155,8 @@ CONTROLS = [
         ('old', 'japluscontrols', ('+voice', '+voiceclan', 'cg_botmode !')),
         ('bind', 'Free the Mouse (Select Players)', '+cursor',
          'Hold to point at players with the mouse: a click opens what you can do with one.'),
+        ('bind', 'Scoreboard with Mouse', 'scores_pick',
+         'Opens the scoreboard with the mouse free: a click on a row opens what you can do with that player.'),
     ]),
 ]
 

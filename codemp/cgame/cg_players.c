@@ -1588,6 +1588,7 @@ void CG_NewClientInfo( int clientNum, qboolean entitiesInitialized ) {
 		}
 
 		memset( ci, 0, sizeof( *ci ) );
+		CG_PeerLeft( clientNum );	// whoever gets the number next is somebody else (status/cg_peers.c)
 		return;		// player just left
 	}
 

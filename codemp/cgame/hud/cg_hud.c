@@ -105,6 +105,154 @@ qboolean CG_HudDraw( void ) {
 
 /*
 =================
+CG_HudNewLook
+
+Is the HUD of the new look the one that is drawn? What belongs to it follows: the chat box, the scoreboard. Not
+with cg_hud 0, not in an engine that can not draw the look, and not next to the HUD of a mod.
+=================
+*/
+qboolean CG_HudNewLook( void ) {
+	return (qboolean)( hudLoaded && cg_hud.integer && Skin_Ready() );
+}
+
+/*
+=================
+CG_VisionText
+
+A text of this tree in the language of the game. The cgame asks for it by its English, tools/menus/texts.py has
+what it is in the other languages (its list CGAME) and writes it into strings/<language>/vision.str under a key
+that it makes from the English, as this does. Without such a string: the English text itself.
+=================
+*/
+const char *CG_VisionText( const char *english ) {
+	static char	text[8][256];
+	static int	index;
+	char		*out = text[index++ & 7];
+	char		key[256], found[256], value[8];
+	const char	*in;
+	qboolean	gap = qfalse;
+	int			n = 0;
+
+	// capitals and digits, one _ for whatever is between them, 36 letters at most, no _ at either end
+	for ( in = english; *in && n < (int)sizeof( key ) - 2; in++ ) {
+		const char c = ( *in >= 'a' && *in <= 'z' ) ? (char)( *in - 'a' + 'A' ) : *in;
+
+		if ( ( c >= 'A' && c <= 'Z' ) || ( c >= '0' && c <= '9' ) ) {
+			if ( gap && n > 0 ) {
+				key[n++] = '_';
+			}
+			gap = qfalse;
+			key[n++] = c;
+		} else {
+			gap = qtrue;
+		}
+	}
+	n = Q_min( n, 36 );
+	while ( n > 0 && key[n - 1] == '_' ) {
+		n--;
+	}
+	key[n] = '\0';
+
+	found[0] = '\0';
+	if ( n > 0 ) {
+		trap->SE_GetStringTextString( va( "VISION_%s", key ), found, sizeof( found ) );
+	}
+	if ( !found[0] ) {
+		Q_strncpyz( out, english, sizeof( text[0] ) );
+		return out;
+	}
+	// (the files of the strings are in the code page of the game)
+	trap->Cvar_VariableStringBuffer( "cl_utf8Text", value, sizeof( value ) );
+	if ( atoi( value ) == 1 ) {
+		Q_UTF8_FromCP1252( found, out, sizeof( text[0] ) );
+	} else {
+		Q_strncpyz( out, found, sizeof( text[0] ) );
+	}
+	return out;
+}
+
+/*
+=================
+CG_VisionTextWith
+
+A text of this tree with one value in it: the value stands where the text has its first %i or %s, and %% is a
+percent sign. The text is never handed to printf as a format: it comes from a file that a pk3 of anybody can
+replace.
+=================
+*/
+const char *CG_VisionTextWith( const char *english, const char *value ) {
+	static char	text[4][384];
+	static int	index;
+	char		*out = text[index++ & 3];
+	const char	*in = CG_VisionText( english );
+	qboolean	placed = qfalse;
+	int			n = 0;
+
+	while ( *in && n < (int)sizeof( text[0] ) - 1 ) {
+		if ( in[0] == '%' && in[1] == '%' ) {
+			out[n++] = '%';
+			in += 2;
+		} else if ( in[0] == '%' && ( in[1] == 'i' || in[1] == 's' ) ) {
+			if ( !placed ) {
+				const char *v;
+
+				for ( v = value; *v && n < (int)sizeof( text[0] ) - 1; v++ ) {
+					out[n++] = *v;
+				}
+				placed = qtrue;
+			}
+			in += 2;
+		} else {
+			out[n++] = *in++;
+		}
+	}
+	out[n] = '\0';
+	return out;
+}
+
+/*
+=================
+CG_TextCut
+
+A text that may be `most` wide at most, as `width` measures it: letters are taken from its end until it fits
+with three dots in their place. A text that fits is copied as it is.
+=================
+*/
+void CG_TextCut( const char *text, float most, float (*width)( const char *text, void *arg ), void *arg, char *out, int outSize ) {
+	char	value[8];
+	int		len;
+
+	Q_strncpyz( out, text, outSize );
+	if ( width( out, arg ) <= most || outSize < 8 ) {
+		return;
+	}
+	trap->Cvar_VariableStringBuffer( "cl_utf8Text", value, sizeof( value ) );
+	out[outSize - 4] = '\0';
+	for ( len = strlen( out ); len > 0; len = strlen( out ) ) {
+		// one letter less: a byte, or all bytes of a letter of UTF-8
+		if ( atoi( value ) == 1 ) {
+			Q_UTF8_Truncate( out, len - 1 );
+		} else {
+			out[len - 1] = '\0';
+		}
+		len = strlen( out );
+		// (not in the middle of a colour: its two letters go together)
+		if ( len > 0 && out[len - 1] == Q_COLOR_ESCAPE ) {
+			out[--len] = '\0';
+		}
+		while ( len > 0 && out[len - 1] == ' ' ) {
+			out[--len] = '\0';
+		}
+		Q_strcat( out, outSize, "..." );
+		if ( width( out, arg ) <= most ) {
+			return;
+		}
+		out[len] = '\0';
+	}
+}
+
+/*
+=================
 CG_StatValue
 
 A number of the player who is watched and the most it can be. qfalse: no such name, or it does not apply right

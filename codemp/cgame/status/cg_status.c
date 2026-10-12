@@ -57,6 +57,7 @@ static struct {
 	int			inputButtons;
 	signed char	inputMove[3];
 	char		test[STATUS_TEXT];		// status_test: said in place of what the players of music say
+	qboolean	asked;					// the server was asked for everything since this cgame started
 } status;
 
 void CG_StatusInit( void ) {
@@ -132,12 +133,12 @@ qboolean CG_StatusLine( int clientNum, char *out, int outSize ) {
 		return qfalse;
 	}
 	if ( status.away[clientNum] ) {
-		Q_strncpyz( out, "Away from keyboard", outSize );
+		Q_strncpyz( out, CG_VisionText( "Away from keyboard" ), outSize );
 		return qtrue;
 	}
 	if ( status.music[clientNum][0] ) {
 		// with a note in front (U+266A) where text is UTF-8
-		Com_sprintf( out, outSize, "%sListening to %s", status.utf8 ? "\xE2\x99\xAA " : "", status.music[clientNum] );
+		Com_sprintf( out, outSize, "%s%s", status.utf8 ? "\xE2\x99\xAA " : "", CG_VisionTextWith( "Listening to %s", status.music[clientNum] ) );
 		return qtrue;
 	}
 	return qfalse;
@@ -240,6 +241,15 @@ void CG_StatusFrame( void ) {
 
 	if ( !cg.snap || cg.demoPlayback ) {
 		return;
+	}
+	// A cgame that has just started knows nothing of the others: a new level, but also a restart of the video,
+	// of which the server hears nothing. A game module that answers it (g_visionCaps bit 3) is asked once for
+	// what stands above everybody and for who plays with what (status/cg_peers.c).
+	if ( !status.asked ) {
+		status.asked = qtrue;
+		if ( atoi( Info_ValueForKey( CG_ConfigString( CS_SERVERINFO ), "g_visionCaps" ) ) & 8 ) {
+			trap->SendClientCommand( "jpstatus all" );
+		}
 	}
 	// only a game module of this tree passes statuses on, and says so. Anywhere else the voice master may.
 	server = (qboolean)( ( atoi( Info_ValueForKey( CG_ConfigString( CS_SERVERINFO ), "g_visionCaps" ) ) & 2 ) != 0 );

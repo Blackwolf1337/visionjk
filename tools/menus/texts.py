@@ -118,6 +118,12 @@ TR = {
     'Blue': 'Blau',
     'Blade Style': 'Klingenstil',
     'Fixed Color': 'Feste Farbe',
+    'Keep Scoreboard on Double Tap': 'Punktetafel bei Doppeltipp halten',
+    'The scoreboard key pressed twice quickly keeps the board open, with the mouse free to click a player.':
+        'Die Taste der Punktetafel zweimal schnell gedrückt hält die Tafel offen, mit freier Maus zum Anklicken eines Spielers.',
+    'Scoreboard with Mouse': 'Punktetafel mit Maus',
+    'Opens the scoreboard with the mouse free: a click on a row opens what you can do with that player.':
+        'Öffnet die Punktetafel mit freier Maus: Ein Klick auf eine Zeile öffnet, was Sie mit dem Spieler tun können.',
     'Holsters': 'Holster',
 
     # display
@@ -301,6 +307,55 @@ TR = {
         'Halten, um mit der Maus auf Spieler zu zeigen: Ein Klick öffnet, was Sie mit einem tun können.',
 }
 
+# What the cgame says by itself: the card of a player, the scoreboard, the chat box, what stands above a head.
+# It asks for a text by its English (CG_VisionText() of cgame/hud/cg_hud.c makes the key from it as key_of() does
+# here), so none of these may need a number behind its key.
+CGAME = {
+    # the card of a player
+    'Mute his voice': 'Stimme stummschalten',
+    'Hear his voice again': 'Stimme wieder hören',
+    'Voice quieter (%i %%)': 'Stimme leiser (%i %%)',
+    'Voice louder (%i %%)': 'Stimme lauter (%i %%)',
+    'Hide his chat lines': 'Chatzeilen ausblenden',
+    'Show his chat lines again': 'Chatzeilen wieder zeigen',
+    'Whisper to him': 'Ihm flüstern',
+    'Watch him': 'Ihm zuschauen',
+    'Copy his name': 'Namen kopieren',
+    'Call a vote to kick him': 'Abstimmen: hinauswerfen',
+    'Click again to call the vote': 'Nochmal klicken: abstimmen',
+    'Admin: kick': 'Admin: hinauswerfen',
+    'Admin: silence': 'Admin: stummschalten',
+    'Admin: sleep': 'Admin: schlafen legen',
+    'Admin: slap': 'Admin: Ohrfeige',
+    'Admin: go to him': 'Admin: zu ihm gehen',
+    'Admin: bring him here': 'Admin: herholen',
+    'You': 'Sie',
+    'Player': 'Spieler',
+    'Bot': 'Bot',
+    'Spectator': 'Zuschauer',
+    'Score %i': 'Punkte %i',
+    'Ping %i': 'Ping %i',
+    '%i min': '%i Min.',
+    'Another client': 'Anderer Client',
+    # what stands above a head
+    'Away from keyboard': 'Nicht an der Tastatur',
+    'Listening to %s': 'Hört %s',
+    # the scoreboard
+    'Spectators': 'Zuschauer',
+    'connecting': 'verbindet',
+    'and %i more': 'und %i weitere',
+    'The scores key': 'Die Punktetaste',
+    '%s twice: pick a player': '%s zweimal: Spieler auswählen',
+    'Click a player. %s or Esc closes.': 'Spieler anklicken. %s oder Esc schließt.',
+    # the chat box
+    'All': 'Alle',
+    'Team': 'Team',
+    'Private': 'Privat',
+    'Say': 'Sagen',
+    'To %s': 'An %s',
+    'Open %s ? Enter: yes, any other key: no': '%s öffnen? Enter: ja, jede andere Taste: nein',
+}
+
 # names that are the same in every language
 SAME = {'2x', '4x', '8x', 'Vulkan', 'OpenGL', 'Español'}
 
@@ -345,6 +400,11 @@ def old(word):
 
 def write(strings_dir):
     """The string packages, one per language."""
+    for english, german in CGAME.items():
+        TR.setdefault(english, german)
+        plain = re.sub(r'[^A-Z0-9]+', '_', english.upper()).strip('_')[:36].strip('_')
+        if ref(english) != '@VISION_' + plain:
+            raise KeyError('the cgame can not find %r: another text has its key %s' % (english, plain))
     for folder, lang in LANGUAGES:
         lines = ['// The texts the menus of VisionJK add to the game. Made by tools/menus/build.py from tools/menus/texts.py:',
                  '// change that file, not this one.', '//',

@@ -83,6 +83,12 @@ LANG_ENGLISH        "Free the Mouse (Select Players)"
 REFERENCE           HOLD_TO_POINT_AT_PLAYERS_WITH_THE_MO
 LANG_ENGLISH        "Hold to point at players with the mouse: a click opens what you can do with one."
 
+REFERENCE           SCOREBOARD_WITH_MOUSE
+LANG_ENGLISH        "Scoreboard with Mouse"
+
+REFERENCE           OPENS_THE_SCOREBOARD_WITH_THE_MOUSE
+LANG_ENGLISH        "Opens the scoreboard with the mouse free: a click on a row opens what you can do with that player."
+
 REFERENCE           THE_KEYS_YOU_MOVE_WITH
 LANG_ENGLISH        "The keys you move with."
 
@@ -464,6 +470,12 @@ LANG_ENGLISH        "Selection Outline"
 REFERENCE           A_GLOWING_OUTLINE_AROUND_THE_PLAYER
 LANG_ENGLISH        "A glowing outline around the player under the mouse."
 
+REFERENCE           KEEP_SCOREBOARD_ON_DOUBLE_TAP
+LANG_ENGLISH        "Keep Scoreboard on Double Tap"
+
+REFERENCE           THE_SCOREBOARD_KEY_PRESSED_TWICE_QUI
+LANG_ENGLISH        "The scoreboard key pressed twice quickly keeps the board open, with the mouse free to click a player."
+
 REFERENCE           CHAT
 LANG_ENGLISH        "Chat"
 
@@ -592,6 +604,120 @@ LANG_ENGLISH        "The list of moves."
 
 REFERENCE           HOLSTERS
 LANG_ENGLISH        "Holsters"
+
+REFERENCE           MUTE_HIS_VOICE
+LANG_ENGLISH        "Mute his voice"
+
+REFERENCE           HEAR_HIS_VOICE_AGAIN
+LANG_ENGLISH        "Hear his voice again"
+
+REFERENCE           VOICE_QUIETER_I
+LANG_ENGLISH        "Voice quieter (%i %%)"
+
+REFERENCE           VOICE_LOUDER_I
+LANG_ENGLISH        "Voice louder (%i %%)"
+
+REFERENCE           HIDE_HIS_CHAT_LINES
+LANG_ENGLISH        "Hide his chat lines"
+
+REFERENCE           SHOW_HIS_CHAT_LINES_AGAIN
+LANG_ENGLISH        "Show his chat lines again"
+
+REFERENCE           WHISPER_TO_HIM
+LANG_ENGLISH        "Whisper to him"
+
+REFERENCE           WATCH_HIM
+LANG_ENGLISH        "Watch him"
+
+REFERENCE           COPY_HIS_NAME
+LANG_ENGLISH        "Copy his name"
+
+REFERENCE           CALL_A_VOTE_TO_KICK_HIM
+LANG_ENGLISH        "Call a vote to kick him"
+
+REFERENCE           CLICK_AGAIN_TO_CALL_THE_VOTE
+LANG_ENGLISH        "Click again to call the vote"
+
+REFERENCE           ADMIN_KICK
+LANG_ENGLISH        "Admin: kick"
+
+REFERENCE           ADMIN_SILENCE
+LANG_ENGLISH        "Admin: silence"
+
+REFERENCE           ADMIN_SLEEP
+LANG_ENGLISH        "Admin: sleep"
+
+REFERENCE           ADMIN_SLAP
+LANG_ENGLISH        "Admin: slap"
+
+REFERENCE           ADMIN_GO_TO_HIM
+LANG_ENGLISH        "Admin: go to him"
+
+REFERENCE           ADMIN_BRING_HIM_HERE
+LANG_ENGLISH        "Admin: bring him here"
+
+REFERENCE           YOU
+LANG_ENGLISH        "You"
+
+REFERENCE           BOT
+LANG_ENGLISH        "Bot"
+
+REFERENCE           SPECTATOR
+LANG_ENGLISH        "Spectator"
+
+REFERENCE           SCORE_I
+LANG_ENGLISH        "Score %i"
+
+REFERENCE           PING_I
+LANG_ENGLISH        "Ping %i"
+
+REFERENCE           I_MIN
+LANG_ENGLISH        "%i min"
+
+REFERENCE           ANOTHER_CLIENT
+LANG_ENGLISH        "Another client"
+
+REFERENCE           AWAY_FROM_KEYBOARD
+LANG_ENGLISH        "Away from keyboard"
+
+REFERENCE           LISTENING_TO_S
+LANG_ENGLISH        "Listening to %s"
+
+REFERENCE           SPECTATORS
+LANG_ENGLISH        "Spectators"
+
+REFERENCE           CONNECTING
+LANG_ENGLISH        "connecting"
+
+REFERENCE           AND_I_MORE
+LANG_ENGLISH        "and %i more"
+
+REFERENCE           THE_SCORES_KEY
+LANG_ENGLISH        "The scores key"
+
+REFERENCE           S_TWICE_PICK_A_PLAYER
+LANG_ENGLISH        "%s twice: pick a player"
+
+REFERENCE           CLICK_A_PLAYER_S_OR_ESC_CLOSES
+LANG_ENGLISH        "Click a player. %s or Esc closes."
+
+REFERENCE           ALL
+LANG_ENGLISH        "All"
+
+REFERENCE           TEAM
+LANG_ENGLISH        "Team"
+
+REFERENCE           PRIVATE
+LANG_ENGLISH        "Private"
+
+REFERENCE           SAY
+LANG_ENGLISH        "Say"
+
+REFERENCE           TO_S
+LANG_ENGLISH        "To %s"
+
+REFERENCE           OPEN_S_ENTER_YES_ANY_OTHER_KEY_NO
+LANG_ENGLISH        "Open %s ? Enter: yes, any other key: no"
 
 
 ENDMARKER

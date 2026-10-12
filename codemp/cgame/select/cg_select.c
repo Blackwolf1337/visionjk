@@ -20,9 +20,11 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 // cg_select.c -- players that can be clicked. Not from JA+, see docs/japlus/client.md, "Clickable players".
 //
-// While the mouse is free (the key of +cursor is held, "cursor" switched it on, or the chat box is open) the
-// player under the pointer has a glowing outline, and a click on him opens a card beside him: who he is, and
-// what this player can do about him (his voice, his chat lines, a whisper, a vote, what an admin may).
+// While the mouse is free (the key of +cursor is held, "cursor" switched it on, the chat box is open or the
+// scoreboard is kept open) the player under the pointer has a glowing outline, and a click on him opens a card
+// beside him: who he is, with what he plays, and what this player can do about him (his voice, his chat lines, a
+// whisper, a vote, what an admin may). A click on a row of the scoreboard opens the same card beside the board
+// (hud/cg_scores.c), for a player who is not in sight as well.
 //
 // All of it happens in this client. Nothing is sent that the commands it uses would not send when typed, and
 // no other client sees any of it.
@@ -42,7 +44,10 @@ qboolean CG_WorldCoordToScreenCoordFloat( vec3_t worldCoord, float *x, float *y 
 #define SELECT_GROW			6.0f		// the box of a player is this much larger for the pointer
 #define SELECT_CARD_W		150.0f
 #define SELECT_ROW_H		13.0f
-#define SELECT_HEAD_H		44.0f
+#define SELECT_HEAD_NAME	20.0f		// the name at the head of the card takes this much of it,
+#define SELECT_HEAD_LINE	10.0f		//	every line under it this much,
+#define SELECT_HEAD_END		4.0f		//	and this much is below the last one
+#define SELECT_HEAD_LINES	5
 #define SELECT_MAX_ROWS		14
 #define SELECT_SCALE		0.6f		// of the text of the card
 #define SELECT_CONFIRM_MSEC	4000		// a vote to kick has to be clicked twice within this time
@@ -114,6 +119,18 @@ static struct {
 	selectBoard_t	tagShown;			// what the name is drawn on this frame, and how wide it is in units of the card
 	float		tagWidth;
 	qboolean	tagOver;				// it has grown and is drawn over the scene
+	// the card of a player that was clicked in the scoreboard: on the screen, beside the board
+	qboolean	anchored;
+	float		anchorX, anchorY;
+	// the lines under the name at the head of the card, and how high the head is with them
+	struct {
+		char		text[128];
+		const float	*color;
+		char		more[64];			// a second part of the line in a colour of its own, "": none
+		const float	*moreColor;
+	} head[SELECT_HEAD_LINES];
+	int			numHead;
+	float		headH;
 	selectAct_t	rows[SELECT_MAX_ROWS];
 	int			numRows;
 	int			confirmTime;			// when the vote to kick was clicked first, 0: not yet
@@ -123,14 +140,19 @@ static struct {
 	qhandle_t	pointer;				// the pointer of the game, where the new one can not be drawn
 } sel;
 
+static const vec4_t selectText = { 0.86f, 0.92f, 0.97f, 1.0f }, selectDim = { 0.60f, 0.69f, 0.78f, 1.0f };
+static const vec4_t selectAccent = { 0.43f, 0.83f, 1.0f, 1.0f }, selectGold = { 0.89f, 0.84f, 0.36f, 1.0f };
+
 void CG_SelectInit( void ) {
 	memset( &sel, 0, sizeof( sel ) );
 	sel.hover = sel.selected = sel.tagFor = -1;
+	sel.headH = SELECT_HEAD_NAME + SELECT_HEAD_END;
 }
 
 // is the mouse free for pointing at players
 static qboolean Select_Free( void ) {
-	return (qboolean)( cg_selectPlayers.integer && cg.snap && !cg.demoPlayback && ( sel.held || sel.toggled || CG_ChatIsOpen() ) );
+	return (qboolean)( cg_selectPlayers.integer && cg.snap && !cg.demoPlayback
+		&& ( sel.held || sel.toggled || CG_ChatIsOpen() || CG_ScoresPicking() ) );
 }
 
 /*
@@ -376,7 +398,7 @@ The card
 static void Select_Close( void ) {
 	sel.selected = -1;
 	sel.confirmTime = 0;
-	sel.cardPlaced = sel.flat = sel.over = qfalse;
+	sel.cardPlaced = sel.flat = sel.over = sel.anchored = qfalse;
 	sel.flatTime = 0;
 	sel.cardUnit = sel.apparent = 0.0f;
 }
@@ -581,46 +603,30 @@ static float Board_Width( const selectBoard_t *b, const char *text, float scale 
 	return CG_Text_Width( text, scale * b->unit, Skin_Ready() ? SKIN_FONT_SANS : FONT_SMALL2 ) / b->unit;
 }
 
+typedef struct boardFit_s {
+	const selectBoard_t	*board;
+	float				scale;
+} boardFit_t;
+
+static float Board_FitWidth( const char *text, void *arg ) {
+	const boardFit_t *fit = (const boardFit_t *)arg;
+
+	return Board_Width( fit->board, text, fit->scale );
+}
+
 // A line that has to stay within `most` units of the card: it is set smaller as far as it stays readable, and
 // what is still too long ends in three dots.
 static void Board_TextFit( const selectBoard_t *b, float x, float y, float scale, const float *color, const char *text, float most ) {
-	char	line[160], value[8];
-	float	width = Board_Width( b, text, scale );
-	int		len;
+	const float	width = Board_Width( b, text, scale );
+	boardFit_t	fit;
+	char		line[160];
 
 	if ( width > most ) {
-		const float smaller = Q_max( scale * 0.8f, scale * most / width );
-
-		width *= smaller / scale;
-		scale = smaller;
+		scale = Q_max( scale * 0.8f, scale * most / width );
 	}
-	if ( width <= most ) {
-		Board_Text( b, x, y, scale, color, text );
-		return;
-	}
-	trap->Cvar_VariableStringBuffer( "cl_utf8Text", value, sizeof( value ) );
-	Q_strncpyz( line, text, sizeof( line ) - 4 );
-	for ( len = strlen( line ); len > 0; len = strlen( line ) ) {
-		// one letter less: a byte, or all bytes of a letter of UTF-8
-		if ( atoi( value ) == 1 ) {
-			Q_UTF8_Truncate( line, len - 1 );
-		} else {
-			line[len - 1] = '\0';
-		}
-		len = strlen( line );
-		// (not in the middle of a colour: its two letters go together)
-		if ( len > 0 && line[len - 1] == Q_COLOR_ESCAPE ) {
-			line[--len] = '\0';
-		}
-		while ( len > 0 && line[len - 1] == ' ' ) {
-			line[--len] = '\0';
-		}
-		Q_strcat( line, sizeof( line ), "..." );
-		if ( Board_Width( b, line, scale ) <= most ) {
-			break;
-		}
-		line[len] = '\0';
-	}
+	fit.board = b;
+	fit.scale = scale;
+	CG_TextCut( text, most, Board_FitWidth, &fit, line, sizeof( line ) );
 	Board_Text( b, x, y, scale, color, line );
 }
 
@@ -670,9 +676,16 @@ static void Select_Rows( int clientNum ) {
 	char value[8];
 
 	sel.numRows = 0;
-	sel.rows[sel.numRows++] = ACT_MUTE;
-	sel.rows[sel.numRows++] = ACT_QUIETER;
-	sel.rows[sel.numRows++] = ACT_LOUDER;
+	// (the own card, opened in the scoreboard, says who one is and offers nothing)
+	if ( clientNum == cg.clientNum ) {
+		return;
+	}
+	// his voice, unless he is known to have none: a bot, or a client the server says is no client of this tree
+	if ( CG_PeerVision( clientNum, NULL ) != 0 ) {
+		sel.rows[sel.numRows++] = ACT_MUTE;
+		sel.rows[sel.numRows++] = ACT_QUIETER;
+		sel.rows[sel.numRows++] = ACT_LOUDER;
+	}
 	sel.rows[sel.numRows++] = ACT_HIDE_CHAT;
 	trap->Cvar_VariableStringBuffer( "cl_cgameChat", value, sizeof( value ) );
 	if ( atoi( value ) == 1 ) {
@@ -697,22 +710,92 @@ static void Select_Rows( int clientNum ) {
 
 static const char *Select_Label( selectAct_t act, int clientNum ) {
 	switch ( act ) {
-	case ACT_MUTE:			return CG_VoiceMuted( clientNum ) ? "Hear his voice again" : "Mute his voice";
-	case ACT_QUIETER:		return va( "Voice quieter (%i %%)", CG_VoiceLouder( clientNum, 0 ) );
-	case ACT_LOUDER:		return va( "Voice louder (%i %%)", CG_VoiceLouder( clientNum, 0 ) );
-	case ACT_HIDE_CHAT:		return CG_ChatHidden( clientNum ) ? "Show his chat lines again" : "Hide his chat lines";
-	case ACT_WHISPER:		return "Whisper to him";
-	case ACT_WATCH:			return "Watch him";
-	case ACT_COPY:			return "Copy his name";
-	case ACT_VOTE_KICK:		return ( sel.confirmTime && cg.time - sel.confirmTime < SELECT_CONFIRM_MSEC ) ? "Click again to call the vote" : "Call a vote to kick him";
-	case ACT_ADMIN_KICK:	return "Admin: kick";
-	case ACT_ADMIN_SILENCE:	return "Admin: silence";
-	case ACT_ADMIN_SLEEP:	return "Admin: sleep";
-	case ACT_ADMIN_SLAP:	return "Admin: slap";
-	case ACT_ADMIN_GOTO:	return "Admin: go to him";
-	case ACT_ADMIN_BRING:	return "Admin: bring him here";
+	case ACT_MUTE:			return CG_VisionText( CG_VoiceMuted( clientNum ) ? "Hear his voice again" : "Mute his voice" );
+	case ACT_QUIETER:		return CG_VisionTextWith( "Voice quieter (%i %%)", va( "%i", CG_VoiceLouder( clientNum, 0 ) ) );
+	case ACT_LOUDER:		return CG_VisionTextWith( "Voice louder (%i %%)", va( "%i", CG_VoiceLouder( clientNum, 0 ) ) );
+	case ACT_HIDE_CHAT:		return CG_VisionText( CG_ChatHidden( clientNum ) ? "Show his chat lines again" : "Hide his chat lines" );
+	case ACT_WHISPER:		return CG_VisionText( "Whisper to him" );
+	case ACT_WATCH:			return CG_VisionText( "Watch him" );
+	case ACT_COPY:			return CG_VisionText( "Copy his name" );
+	case ACT_VOTE_KICK:		return CG_VisionText( ( sel.confirmTime && cg.time - sel.confirmTime < SELECT_CONFIRM_MSEC ) ? "Click again to call the vote" : "Call a vote to kick him" );
+	case ACT_ADMIN_KICK:	return CG_VisionText( "Admin: kick" );
+	case ACT_ADMIN_SILENCE:	return CG_VisionText( "Admin: silence" );
+	case ACT_ADMIN_SLEEP:	return CG_VisionText( "Admin: sleep" );
+	case ACT_ADMIN_SLAP:	return CG_VisionText( "Admin: slap" );
+	case ACT_ADMIN_GOTO:	return CG_VisionText( "Admin: go to him" );
+	case ACT_ADMIN_BRING:	return CG_VisionText( "Admin: bring him here" );
 	}
 	return "";
+}
+
+/*
+=================
+Select_Head
+
+The lines under the name at the head of the card, once a frame: what he is and with what he plays, as far as
+that is known (status/cg_peers.c); his score, ping and time if the scoreboard has a line of him; what stands
+above his head; his model and saber.
+=================
+*/
+static void Select_HeadLine( const char *text, const float *color ) {
+	if ( sel.numHead < SELECT_HEAD_LINES ) {
+		Q_strncpyz( sel.head[sel.numHead].text, text, sizeof( sel.head[0].text ) );
+		sel.head[sel.numHead].color = color;
+		sel.head[sel.numHead].more[0] = '\0';
+		sel.numHead++;
+	}
+}
+
+static void Select_Head( int n ) {
+	const clientInfo_t	*ci = &cgs.clientinfo[n];
+	const char			*version;
+	char				line[128];
+	int					i, vision;
+
+	sel.numHead = 0;
+	Select_HeadLine( CG_VisionText( ( n == cg.clientNum ) ? "You" : ( ci->botSkill != -1 ) ? "Bot" : ( ci->team == TEAM_RED ) ? "Red"
+		: ( ci->team == TEAM_BLUE ) ? "Blue" : ( ci->team == TEAM_SPECTATOR ) ? "Spectator" : "Player" ), selectDim );
+	vision = CG_PeerVision( n, &version );
+	if ( vision == 1 ) {
+		Com_sprintf( sel.head[0].more, sizeof( sel.head[0].more ), "VisionJK%s%s", version[0] ? " " : "", version );
+		sel.head[0].moreColor = selectGold;
+	} else if ( vision == 0 && ci->botSkill == -1 ) {
+		Q_strncpyz( sel.head[0].more, CG_VisionText( "Another client" ), sizeof( sel.head[0].more ) );
+		sel.head[0].moreColor = selectDim;
+	}
+
+	for ( i = 0; i < cg.numScores; i++ ) {
+		if ( cg.scores[i].client == n && cg.scores[i].ping != -1 ) {
+			Q_strncpyz( line, CG_VisionTextWith( "Score %i", va( "%i", cg.scores[i].score ) ), sizeof( line ) );
+			if ( ci->botSkill == -1 ) {
+				Q_strcat( line, sizeof( line ), "   " );
+				Q_strcat( line, sizeof( line ), CG_VisionTextWith( "Ping %i", va( "%i", cg.scores[i].ping ) ) );
+			}
+			Q_strcat( line, sizeof( line ), "   " );
+			Q_strcat( line, sizeof( line ), CG_VisionTextWith( "%i min", va( "%i", cg.scores[i].time ) ) );
+			Select_HeadLine( line, selectDim );
+			break;
+		}
+	}
+	if ( CG_StatusLine( n, line, sizeof( line ) ) ) {
+		Select_HeadLine( line, selectAccent );
+	}
+	// his model, with its skin where that is one word, and his saber or sabers
+	if ( ci->modelName[0] ) {
+		Q_strncpyz( line, ci->modelName, sizeof( line ) );
+		if ( ci->skinName[0] && Q_stricmp( ci->skinName, "default" ) && !strchr( ci->skinName, '|' ) ) {
+			Q_strcat( line, sizeof( line ), va( "/%s", ci->skinName ) );
+		}
+		if ( ci->saberName[0] && Q_stricmp( ci->saberName, "none" ) ) {
+			Q_strcat( line, sizeof( line ), va( "  |  %s", ci->saberName ) );
+			if ( ci->saber2Name[0] && Q_stricmp( ci->saber2Name, "none" ) ) {
+				Q_strcat( line, sizeof( line ), va( " + %s", ci->saber2Name ) );
+			}
+		}
+		Q_StripColor( line );
+		Select_HeadLine( line, selectDim );
+	}
+	sel.headH = SELECT_HEAD_NAME + sel.numHead * SELECT_HEAD_LINE + SELECT_HEAD_END;
 }
 
 // One row of the card was chosen. What it does is what the command it runs does when it is typed: the server
@@ -780,24 +863,21 @@ static int Select_RowAt( void ) {
 	int		row;
 
 	if ( sel.selected < 0 || !sel.cardPlaced || !Board_Pointer( &sel.shown, &x, &y )
-		|| x < 0.0f || x >= SELECT_CARD_W || y < SELECT_HEAD_H ) {
+		|| x < 0.0f || x >= SELECT_CARD_W || y < sel.headH ) {
 		return -1;
 	}
-	row = (int)( ( y - SELECT_HEAD_H ) / SELECT_ROW_H );
+	row = (int)( ( y - sel.headH ) / SELECT_ROW_H );
 	return ( row < sel.numRows ) ? row : -1;
 }
 
 // the card of the player that was clicked, on its board
 static void Select_DrawCard( const selectBoard_t *b ) {
 	const vec4_t		fill = { 0.035f, 0.07f, 0.12f, 0.88f }, edge = { 0.43f, 0.83f, 1.0f, 0.35f };
-	const vec4_t		text = { 0.86f, 0.92f, 0.97f, 1.0f }, dim = { 0.60f, 0.69f, 0.78f, 1.0f }, accent = { 0.43f, 0.83f, 1.0f, 1.0f };
 	const vec4_t		lit = { 0.43f, 0.83f, 1.0f, 0.15f };
 	const int			n = sel.selected;
 	const clientInfo_t	*ci = &cgs.clientinfo[n];
-	const float			height = SELECT_HEAD_H + sel.numRows * SELECT_ROW_H + 5.0f;
+	const float			height = sel.headH + sel.numRows * SELECT_ROW_H + ( sel.numRows ? 5.0f : 0.0f );
 	const int			over = Select_RowAt();
-	char				line[128];
-	const char			*kind;
 	int					i;
 
 	if ( !b->world && Skin_Ready() ) {
@@ -807,32 +887,33 @@ static void Select_DrawCard( const selectBoard_t *b ) {
 	}
 	Board_Panel( b, 0.0f, 0.0f, SELECT_CARD_W, height, 6.0f, fill, edge );
 	Board_TextFit( b, 8.0f, 5.0f, 0.78f, colorWhite, ci->name, SELECT_CARD_W - 16.0f );
-	// what he is, and his score and ping if the scoreboard has a line of him
-	kind = ( ci->team == TEAM_RED ) ? "Red" : ( ci->team == TEAM_BLUE ) ? "Blue" : ( ci->team == TEAM_SPECTATOR ) ? "Spectator"
-		: ( ci->botSkill != -1 ) ? "Bot" : "Player";
-	Q_strncpyz( line, kind, sizeof( line ) );
-	for ( i = 0; i < cg.numScores; i++ ) {
-		if ( cg.scores[i].client == n ) {
-			Com_sprintf( line, sizeof( line ), "%s   score %i   ping %i", kind, cg.scores[i].score, cg.scores[i].ping );
-			break;
+	for ( i = 0; i < sel.numHead; i++ ) {
+		const float	lineY = SELECT_HEAD_NAME + i * SELECT_HEAD_LINE;
+		float		at = 8.0f;
+
+		if ( sel.head[i].more[0] ) {
+			// two parts: the first as it is, the second in what is left of the line
+			Board_Text( b, at, lineY, 0.52f, sel.head[i].color, sel.head[i].text );
+			at += Board_Width( b, sel.head[i].text, 0.52f ) + 7.0f;
+			Board_TextFit( b, at, lineY, 0.52f, sel.head[i].moreColor, sel.head[i].more, SELECT_CARD_W - 8.0f - at );
+		} else {
+			Board_TextFit( b, at, lineY, 0.52f, sel.head[i].color, sel.head[i].text, SELECT_CARD_W - 16.0f );
 		}
 	}
-	Board_TextFit( b, 8.0f, 20.0f, 0.52f, dim, line, SELECT_CARD_W - 16.0f );
-	if ( CG_StatusLine( n, line, sizeof( line ) ) ) {
-		Board_TextFit( b, 8.0f, 30.0f, 0.52f, accent, line, SELECT_CARD_W - 16.0f );
+	if ( sel.numRows ) {
+		Board_Panel( b, 6.0f, sel.headH - 2.0f, SELECT_CARD_W - 12.0f, 0.67f, 0.3f, edge, NULL );
 	}
-	Board_Panel( b, 6.0f, SELECT_HEAD_H - 3.0f, SELECT_CARD_W - 12.0f, 0.67f, 0.3f, edge, NULL );
 
 	for ( i = 0; i < sel.numRows; i++ ) {
-		const float rowY = SELECT_HEAD_H + i * SELECT_ROW_H;
+		const float rowY = sel.headH + i * SELECT_ROW_H;
 
 		if ( i == over ) {
 			// lit, with a bar at its left
 			Board_Panel( b, 3.0f, rowY, SELECT_CARD_W - 6.0f, SELECT_ROW_H, 3.0f, lit, NULL );
-			Board_Panel( b, 3.0f, rowY + 2.0f, 1.5f, SELECT_ROW_H - 4.0f, 0.75f, accent, NULL );
+			Board_Panel( b, 3.0f, rowY + 2.0f, 1.5f, SELECT_ROW_H - 4.0f, 0.75f, selectAccent, NULL );
 		}
-		Board_Text( b, 8.0f, rowY + 1.5f, 0.5f, dim, va( "%i", ( i + 1 ) % 10 ) );
-		Board_Text( b, 20.0f, rowY + 1.5f, SELECT_SCALE, ( i == over ) ? colorWhite : text, Select_Label( sel.rows[i], n ) );
+		Board_Text( b, 8.0f, rowY + 1.5f, 0.5f, selectDim, va( "%i", ( i + 1 ) % 10 ) );
+		Board_TextFit( b, 20.0f, rowY + 1.5f, SELECT_SCALE, ( i == over ) ? colorWhite : selectText, Select_Label( sel.rows[i], n ), SELECT_CARD_W - 26.0f );
 	}
 }
 
@@ -918,7 +999,19 @@ static void Select_Card( void ) {
 	float			h, perUnit;
 
 	Select_Rows( sel.selected );
-	h = SELECT_HEAD_H + sel.numRows * SELECT_ROW_H + 5.0f;
+	Select_Head( sel.selected );
+	h = sel.headH + sel.numRows * SELECT_ROW_H + 5.0f;
+	if ( sel.anchored ) {
+		// clicked in the scoreboard: on the screen beside the board, as far to its right as the screen has room
+		memset( &sel.card, 0, sizeof( sel.card ) );
+		sel.card.unit = 1.0f;
+		sel.card.corner[0] = Com_Clamp( 4.0f - cgs.bias2D, SCREEN_WIDTH + cgs.bias2D - SELECT_CARD_W - 4.0f, sel.anchorX );
+		sel.card.corner[1] = Com_Clamp( 30.0f, SCREEN_HEIGHT - h - 44.0f, sel.anchorY );
+		sel.cardPlaced = qtrue;
+		sel.flat = sel.over = qfalse;
+		sel.shown = sel.card;
+		return;
+	}
 	Board_Begin( &sel.card );
 	if ( sel.card.world && seen && Select_Away( sel.selected, &perUnit ) ) {
 		// what a unit of the card is on the screen where it stands in the level, in units of the HUD, and a row
@@ -969,7 +1062,7 @@ Once a frame while the scene is put together, before it is drawn
 void CG_SelectScene( void ) {
 	if ( Select_Free() && Select_World() ) {
 		Select_Tag();
-		if ( sel.selected >= 0 ) {
+		if ( sel.selected >= 0 && !sel.anchored ) {
 			Select_Card();
 		}
 	}
@@ -1060,6 +1153,7 @@ void CG_SelectDraw( void ) {
 	// somebody else took the keys away (a menu, the console)
 	if ( sel.catching && !( trap->Key_GetCatcher() & KEYCATCH_CGAME ) ) {
 		sel.catching = sel.toggled = qfalse;
+		CG_ScoresLetGo();
 	}
 	// Who points does not type. An engine of this tree leaves the talk button out of his commands while this
 	// says so (CL_CmdButtons()): no dots over his head for anybody, and the server does not hold him still. In
@@ -1078,12 +1172,14 @@ void CG_SelectDraw( void ) {
 		}
 		return;
 	}
-	if ( sel.selected >= 0 && !cgs.clientinfo[sel.selected].infoValid ) {
+	// he left, or the board his card stands beside is gone
+	if ( sel.selected >= 0 && ( !cgs.clientinfo[sel.selected].infoValid || ( sel.anchored && !CG_ScoresShown() ) ) ) {
 		Select_Close();
 	}
 
 	CG_Place2D( PLACE_CENTER );
-	sel.hover = ( Select_RowAt() >= 0 ) ? -1 : Select_Pick();
+	// (nobody is picked in the level through the card or through the scoreboard)
+	sel.hover = ( Select_RowAt() >= 0 || CG_ScoresPointerOver() ) ? -1 : Select_Pick();
 	if ( sel.hover >= 0 && sel.hover != sel.selected ) {
 		Select_Hull();
 		if ( !sel.hull[0] || !cg_selectOutline.integer ) {
@@ -1092,11 +1188,12 @@ void CG_SelectDraw( void ) {
 	}
 	if ( !Select_World() ) {
 		Select_Tag();
-		if ( sel.selected >= 0 ) {
-			Select_Card();
-		}
 	}
-	// the name and the card on the screen: an engine that writes nothing in the scene
+	if ( sel.selected >= 0 && ( sel.anchored || !Select_World() ) ) {
+		Select_Card();
+	}
+	// the name and the card on the screen: an engine that writes nothing in the scene, and the card of a player
+	// that was clicked in the scoreboard
 	if ( sel.hover >= 0 && sel.hover != sel.selected && sel.tagFor == sel.hover && !sel.tagShown.world ) {
 		selectBoard_t at = sel.tagShown;
 
@@ -1132,6 +1229,20 @@ qboolean CG_SelectKeyEvent( int key, qboolean down ) {
 
 		if ( row >= 0 ) {
 			Select_Run( sel.rows[row], sel.selected );
+			return qtrue;
+		}
+		// a row of the scoreboard: the card of that player beside the board. The board beside its rows: nothing.
+		if ( CG_ScoresPointerOver() ) {
+			float		x, y;
+			const int	n = CG_ScoresClientAt( &x, &y );
+
+			Select_Close();
+			if ( n >= 0 ) {
+				sel.selected = n;
+				sel.anchored = qtrue;
+				sel.anchorX = x;
+				sel.anchorY = y;
+			}
 			return qtrue;
 		}
 		if ( sel.hover >= 0 ) {
@@ -1170,6 +1281,10 @@ qboolean CG_SelectKeyEvent( int key, qboolean down ) {
 	}
 	if ( CG_ChatIsOpen() ) {
 		return qfalse;
+	}
+	// the scoreboard that is kept open goes with its key, Escape or the right button
+	if ( CG_ScoresKeyEvent( key ) ) {
+		return qtrue;
 	}
 	if ( key == A_ESCAPE || key == A_MOUSE2 ) {
 		sel.toggled = qfalse;
@@ -1233,7 +1348,7 @@ void CG_SelectCursor_f( void ) {
 		float x, y;
 
 		if ( sel.selected >= 0 && row >= 0 && row < sel.numRows
-			&& Board_Screen( &sel.shown, SELECT_CARD_W * 0.5f, SELECT_HEAD_H + ( row + 0.5f ) * SELECT_ROW_H, &x, &y ) ) {
+			&& Board_Screen( &sel.shown, SELECT_CARD_W * 0.5f, sel.headH + ( row + 0.5f ) * SELECT_ROW_H, &x, &y ) ) {
 			cgs.cursorX = (int)x;
 			cgs.cursorY = (int)y;
 		}

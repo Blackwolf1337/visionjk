@@ -92,6 +92,8 @@ CG_ScoresDown_f
 */
 static void CG_ScoresDown_f( void ) {
 
+	// twice quickly keeps the scoreboard open, with the mouse free for its rows (hud/cg_scores.c)
+	CG_ScoresTap();
 	CG_BuildSpectatorString();
 	if ( cg.scoresRequestTime + 2000 < cg.time ) {
 		// the scores are more than two seconds out of data,
@@ -119,6 +121,9 @@ CG_ScoresUp_f
 =================
 */
 static void CG_ScoresUp_f( void ) {
+	if ( CG_ScoresKept() ) {
+		return;
+	}
 	if ( cg.showScores ) {
 		cg.showScores = qfalse;
 		cg.scoreFadeTime = cg.time;
@@ -318,12 +323,14 @@ static consoleCommand_t	commands[] = {
 	{ "loadhud",					CG_LoadHud_f },
 	{ "nextframe",					CG_TestModelNextFrame_f },
 	{ "nextskin",					CG_TestModelNextSkin_f },
+	{ "peers",						CG_PeerList_f },
 	{ "playerNext",					CG_JPAdmCyclePlayer_f },
 	{ "playerPrev",					CG_JPAdmCyclePlayer_f },
 	{ "pluginDisable",				CG_JPPluginDisable_f },
 	{ "prevframe",					CG_TestModelPrevFrame_f },
 	{ "prevskin",					CG_TestModelPrevSkin_f },
 	{ "reloadReplier",				CG_JPReloadReplier_f },
+	{ "scores_pick",				CG_ScoresPick_f },
 	{ "showPlayerID",				CG_JPShowPlayerID_f },
 	{ "siegeCompleteCvarUpdate",	CG_SiegeCompleteCvarUpdate_f },
 	{ "siegeCvarUpdate",			CG_SiegeCvarUpdate_f },

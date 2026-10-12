@@ -109,6 +109,14 @@ REFERENCE           HOLD_TO_POINT_AT_PLAYERS_WITH_THE_MO
 LANG_ENGLISH        "Hold to point at players with the mouse: a click opens what you can do with one."
 LANG_GERMAN         "Halten, um mit der Maus auf Spieler zu zeigen: Ein Klick öffnet, was Sie mit einem tun können."
 
+REFERENCE           SCOREBOARD_WITH_MOUSE
+LANG_ENGLISH        "Scoreboard with Mouse"
+LANG_GERMAN         "Punktetafel mit Maus"
+
+REFERENCE           OPENS_THE_SCOREBOARD_WITH_THE_MOUSE
+LANG_ENGLISH        "Opens the scoreboard with the mouse free: a click on a row opens what you can do with that player."
+LANG_GERMAN         "Öffnet die Punktetafel mit freier Maus: Ein Klick auf eine Zeile öffnet, was Sie mit dem Spieler tun können."
+
 REFERENCE           THE_KEYS_YOU_MOVE_WITH
 LANG_ENGLISH        "The keys you move with."
 LANG_GERMAN         "Die Tasten, mit denen Sie sich bewegen."
@@ -617,6 +625,14 @@ REFERENCE           A_GLOWING_OUTLINE_AROUND_THE_PLAYER
 LANG_ENGLISH        "A glowing outline around the player under the mouse."
 LANG_GERMAN         "Ein leuchtender Umriss um den Spieler unter der Maus."
 
+REFERENCE           KEEP_SCOREBOARD_ON_DOUBLE_TAP
+LANG_ENGLISH        "Keep Scoreboard on Double Tap"
+LANG_GERMAN         "Punktetafel bei Doppeltipp halten"
+
+REFERENCE           THE_SCOREBOARD_KEY_PRESSED_TWICE_QUI
+LANG_ENGLISH        "The scoreboard key pressed twice quickly keeps the board open, with the mouse free to click a player."
+LANG_GERMAN         "Die Taste der Punktetafel zweimal schnell gedrückt hält die Tafel offen, mit freier Maus zum Anklicken eines Spielers."
+
 REFERENCE           CHAT
 LANG_ENGLISH        "Chat"
 LANG_GERMAN         "#same"
@@ -788,6 +804,158 @@ LANG_GERMAN         "Die Liste der Aktionen."
 REFERENCE           HOLSTERS
 LANG_ENGLISH        "Holsters"
 LANG_GERMAN         "Holster"
+
+REFERENCE           MUTE_HIS_VOICE
+LANG_ENGLISH        "Mute his voice"
+LANG_GERMAN         "Stimme stummschalten"
+
+REFERENCE           HEAR_HIS_VOICE_AGAIN
+LANG_ENGLISH        "Hear his voice again"
+LANG_GERMAN         "Stimme wieder hören"
+
+REFERENCE           VOICE_QUIETER_I
+LANG_ENGLISH        "Voice quieter (%i %%)"
+LANG_GERMAN         "Stimme leiser (%i %%)"
+
+REFERENCE           VOICE_LOUDER_I
+LANG_ENGLISH        "Voice louder (%i %%)"
+LANG_GERMAN         "Stimme lauter (%i %%)"
+
+REFERENCE           HIDE_HIS_CHAT_LINES
+LANG_ENGLISH        "Hide his chat lines"
+LANG_GERMAN         "Chatzeilen ausblenden"
+
+REFERENCE           SHOW_HIS_CHAT_LINES_AGAIN
+LANG_ENGLISH        "Show his chat lines again"
+LANG_GERMAN         "Chatzeilen wieder zeigen"
+
+REFERENCE           WHISPER_TO_HIM
+LANG_ENGLISH        "Whisper to him"
+LANG_GERMAN         "Ihm flüstern"
+
+REFERENCE           WATCH_HIM
+LANG_ENGLISH        "Watch him"
+LANG_GERMAN         "Ihm zuschauen"
+
+REFERENCE           COPY_HIS_NAME
+LANG_ENGLISH        "Copy his name"
+LANG_GERMAN         "Namen kopieren"
+
+REFERENCE           CALL_A_VOTE_TO_KICK_HIM
+LANG_ENGLISH        "Call a vote to kick him"
+LANG_GERMAN         "Abstimmen: hinauswerfen"
+
+REFERENCE           CLICK_AGAIN_TO_CALL_THE_VOTE
+LANG_ENGLISH        "Click again to call the vote"
+LANG_GERMAN         "Nochmal klicken: abstimmen"
+
+REFERENCE           ADMIN_KICK
+LANG_ENGLISH        "Admin: kick"
+LANG_GERMAN         "Admin: hinauswerfen"
+
+REFERENCE           ADMIN_SILENCE
+LANG_ENGLISH        "Admin: silence"
+LANG_GERMAN         "Admin: stummschalten"
+
+REFERENCE           ADMIN_SLEEP
+LANG_ENGLISH        "Admin: sleep"
+LANG_GERMAN         "Admin: schlafen legen"
+
+REFERENCE           ADMIN_SLAP
+LANG_ENGLISH        "Admin: slap"
+LANG_GERMAN         "Admin: Ohrfeige"
+
+REFERENCE           ADMIN_GO_TO_HIM
+LANG_ENGLISH        "Admin: go to him"
+LANG_GERMAN         "Admin: zu ihm gehen"
+
+REFERENCE           ADMIN_BRING_HIM_HERE
+LANG_ENGLISH        "Admin: bring him here"
+LANG_GERMAN         "Admin: herholen"
+
+REFERENCE           YOU
+LANG_ENGLISH        "You"
+LANG_GERMAN         "Sie"
+
+REFERENCE           BOT
+LANG_ENGLISH        "Bot"
+LANG_GERMAN         "#same"
+
+REFERENCE           SPECTATOR
+LANG_ENGLISH        "Spectator"
+LANG_GERMAN         "Zuschauer"
+
+REFERENCE           SCORE_I
+LANG_ENGLISH        "Score %i"
+LANG_GERMAN         "Punkte %i"
+
+REFERENCE           PING_I
+LANG_ENGLISH        "Ping %i"
+LANG_GERMAN         "#same"
+
+REFERENCE           I_MIN
+LANG_ENGLISH        "%i min"
+LANG_GERMAN         "%i Min."
+
+REFERENCE           ANOTHER_CLIENT
+LANG_ENGLISH        "Another client"
+LANG_GERMAN         "Anderer Client"
+
+REFERENCE           AWAY_FROM_KEYBOARD
+LANG_ENGLISH        "Away from keyboard"
+LANG_GERMAN         "Nicht an der Tastatur"
+
+REFERENCE           LISTENING_TO_S
+LANG_ENGLISH        "Listening to %s"
+LANG_GERMAN         "Hört %s"
+
+REFERENCE           SPECTATORS
+LANG_ENGLISH        "Spectators"
+LANG_GERMAN         "Zuschauer"
+
+REFERENCE           CONNECTING
+LANG_ENGLISH        "connecting"
+LANG_GERMAN         "verbindet"
+
+REFERENCE           AND_I_MORE
+LANG_ENGLISH        "and %i more"
+LANG_GERMAN         "und %i weitere"
+
+REFERENCE           THE_SCORES_KEY
+LANG_ENGLISH        "The scores key"
+LANG_GERMAN         "Die Punktetaste"
+
+REFERENCE           S_TWICE_PICK_A_PLAYER
+LANG_ENGLISH        "%s twice: pick a player"
+LANG_GERMAN         "%s zweimal: Spieler auswählen"
+
+REFERENCE           CLICK_A_PLAYER_S_OR_ESC_CLOSES
+LANG_ENGLISH        "Click a player. %s or Esc closes."
+LANG_GERMAN         "Spieler anklicken. %s oder Esc schließt."
+
+REFERENCE           ALL
+LANG_ENGLISH        "All"
+LANG_GERMAN         "Alle"
+
+REFERENCE           TEAM
+LANG_ENGLISH        "Team"
+LANG_GERMAN         "#same"
+
+REFERENCE           PRIVATE
+LANG_ENGLISH        "Private"
+LANG_GERMAN         "Privat"
+
+REFERENCE           SAY
+LANG_ENGLISH        "Say"
+LANG_GERMAN         "Sagen"
+
+REFERENCE           TO_S
+LANG_ENGLISH        "To %s"
+LANG_GERMAN         "An %s"
+
+REFERENCE           OPEN_S_ENTER_YES_ANY_OTHER_KEY_NO
+LANG_ENGLISH        "Open %s ? Enter: yes, any other key: no"
+LANG_GERMAN         "%s öffnen? Enter: ja, jede andere Taste: nein"
 
 
 ENDMARKER

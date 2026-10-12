@@ -1805,8 +1805,29 @@ qboolean	CG_HudLoading( void );
 void		CG_DisplayEnsure( void );					// cg_main.c
 void		CG_ParseMenu( const char *menuFile );		// cg_main.c
 qboolean	CG_HudDraw( void );
+qboolean	CG_HudNewLook( void );
+const char	*CG_VisionText( const char *english );
+const char	*CG_VisionTextWith( const char *english, const char *value );
+void		CG_TextCut( const char *text, float most, float (*width)( const char *text, void *arg ), void *arg, char *out, int outSize );
+qboolean	CG_ScoresDraw( void );											// hud/cg_scores.c
+qboolean	CG_ScoresPicking( void );
+qboolean	CG_ScoresShown( void );
+qboolean	CG_ScoresPointerOver( void );
+int			CG_ScoresClientAt( float *cardX, float *cardY );
+qboolean	CG_ScoresKeyEvent( int key );
+void		CG_ScoresLetGo( void );
+qboolean	CG_ScoresTap( void );
+qboolean	CG_ScoresKept( void );
+void		CG_ScoresPick_f( void );
+void		CG_ScoresInit( void );
 
 // status/cg_status.c and cg_status_music.c: away and music above the heads
+void		CG_PeerInit( void );											// status/cg_peers.c
+void		CG_PeerServerCommand( void );
+void		CG_PeerHeard( int clientNum );
+void		CG_PeerLeft( int clientNum );
+int			CG_PeerVision( int clientNum, const char **version );
+void		CG_PeerList_f( void );
 void		CG_StatusInit( void );
 void		CG_StatusFrame( void );
 void		CG_StatusServerCommand( void );

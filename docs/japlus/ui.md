@@ -40,6 +40,16 @@ Both are in Setup under Interface.
 - A blade in one of the seven fixed colours has no style: its row says "Fixed Color". The moment one of its
   three sliders is moved it gets the plain style of a mixed blade (`UI_SaberMixFrame`), so no slider of the
   page is without effect, and a click on one of the seven colours makes it a fixed one again.
+- The scoreboard (`cg_hud 1`, since 2026-10-12): one panel in the middle of the screen. At its head the server,
+  the kind of game and the level, at the right who leads or where one stands. Then a row for every player with
+  the picture of his model (or the flag he carries, his class in a siege), his name, score (with deaths on a
+  JA+ server), ping and time, by team in a team game with a line for each team and what it has, and who
+  watches at the end. The own row is marked. Before the name of a player with a client of this tree stands the
+  icon of the game, and what stands above his head is written after his name. Rows are as high as there is
+  room, down to a limit, and everybody the server knows is listed, also who is not in the scores it sends. The
+  rows can be clicked: see client.md, "Clickable players". The score of the leader at the upper right has the
+  letters of the new look too.
+- The chat box has the look as well: see client.md, "The chat box".
 - The HUD: health and shield at the bottom left, force at the bottom right with the ammo of the weapon or the
   stance of the saber under it, the score above. The health bar turns amber below half and red below a
   quarter.
@@ -191,7 +201,9 @@ tools/menus/build.py [<assets1.pk3 of the game>]
 | `ui/ui_skin.c`, `ui_skin.h` | the pictures (a disc and its rim for every radius in pixels, a soft light, the sky), panels, the widgets, the pointer of the mouse, the icon as a picture and as a box of polygons in a scene of its own, the panel of the connect and loading screens (`Skin_LoadPanel`). Built into ui and cgame |
 | `ui/ui_shared.c` | the new words, the panel style, the branches of the widgets, items bound to a number, and the options screens: pages (`Menu_SetPage`), the list of a page (`Menu_ScrollTo`, `Menu_ScrollFrame`), a setting as a row (`Item_Row_Paint`, `Item_Row_HandleKey`), the buttons of a row by the width of their words (`Menu_TabsLayout`), what the item in focus is for (`Item_Desc_Paint`) |
 | `ui/ui_main.c` | which list is loaded (`UI_NewLookList`), the pointer |
-| `cgame/hud/cg_hud.c` | the numbers by name, loading and painting the HUD, the screen while a level loads (`cg_showLoading 1`, a cheat, holds it over the game to look at it) |
+| `cgame/hud/cg_hud.c` | the numbers by name, loading and painting the HUD, the screen while a level loads (`cg_showLoading 1`, a cheat, holds it over the game to look at it), whether the new look is the one drawn (`CG_HudNewLook`), texts in the language of the game (`CG_VisionText`) and cut to a width (`CG_TextCut`) |
+| `cgame/hud/cg_scores.c` | the scoreboard of the new look, its rows for the pointer, keeping it open |
+| `cgame/chat/cg_chat.c`, `cgame/select/cg_select.c` | the chat box and the card of a player, which draw with the same pieces |
 | `client/cl_console.cpp` | the background of the console, unless `ui_classic 1` |
 | `shared/sdl/sdl_icon.h`, `shared/icons/VisionJK.ico` | the icon of the window and of the Windows program, made from `img/logo-512.png` of the website |
 | `rd-common/tr_font.cpp`, `tr_font_ttf.cpp` | `vision_sans` and `vision_mono` as whole fonts for `R_RegisterFont` |
@@ -208,9 +220,9 @@ of the menus.
 | Video | Frame Limit (`com_maxfps`), Wide Screen Layout (`r_2dAspect`), Dynamic Glow (`r_DynamicGlow`) |
 | Sound | Room Reflections (`s_spatialReflections`), Sound Around Corners (`s_spatialPaths`), Doppler Effect (`s_doppler`) |
 | Interface | New HUD (`cg_hud`), Classic Menus (`ui_classic`), Menu in the Level (`cg_immersiveMenu`), Menu Blur (`r_menuBlur`), Show Frame Rate (`cg_drawFPS`), Show Timer (`cg_drawTimer`), Show Lagometer (`cg_lagometer`), Field of View (`cg_fov`), Camera Distance (`cg_thirdPersonRange`), Crosshair Size (`cg_crosshairSize`) |
-| Chat & Social | Chat Bubbles (`cg_chatBubbles`), Bubble Range (`cg_bubbleRange`), Player Statuses (`cg_playerStatuses`), Show My Music (`cg_shareMusic`), Select Players (`cg_selectPlayers`), Selection Outline (`cg_selectOutline`), Own Chat Line (`cg_chatInput`), Chat Box Width (`cg_chatBoxWidth`), Chat Beep (`cg_chatBeep`), Sharp Console Font (`con_font`), Console Text Size (`con_scale`), Console Opacity (`con_opacity`), Clan Password (`cp_clanPwd`, shown as stars) |
+| Chat & Social | Chat Bubbles (`cg_chatBubbles`), Bubble Range (`cg_bubbleRange`), Player Statuses (`cg_playerStatuses`), Show My Music (`cg_shareMusic`), Keep Scoreboard on Double Tap (`cg_scoresPick`), Select Players (`cg_selectPlayers`), Selection Outline (`cg_selectOutline`), Own Chat Line (`cg_chatInput`), Chat Box Width (`cg_chatBoxWidth`), Chat Beep (`cg_chatBeep`), Sharp Console Font (`con_font`), Console Text Size (`con_scale`), Console Opacity (`con_opacity`), Clan Password (`cp_clanPwd`, shown as stars) |
 | Network | Check for Updates (`cl_updateCheck`), Intrusion Log (`cl_ids`), Key Login by Agent (`cg_authAgent`), Key File (`cg_authKeyFile`), UTF-8 Text (`cl_utf8`) |
-| Controls, Extras | Free the Mouse (`+cursor`) |
+| Controls, Extras | Free the Mouse (`+cursor`), Scoreboard with Mouse (`scores_pick`) |
 
 Left to the console on purpose: the names of sound devices (`cg_voiceCapture`, `cg_voicePlayback`, a menu
 can not list them), addresses (`cg_voiceMasterHost`, `cg_authAgentPath`, `cl_updateURL`), the finer numbers

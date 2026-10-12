@@ -2922,6 +2922,17 @@ void CG_DrawTeamBackground( int x, int y, int w, int h, float alpha, int team )
 ===========================================================================================
 */
 
+// A line of the block at the upper right that ends at x: in the letters of the new look with its HUD, with a
+// shadow under them (they stand over the level), or as the game draws it.
+static void CG_UpperRightText( float x, float y, const char *text, float scale, int font, int style ) {
+	if ( CG_HudNewLook() ) {
+		scale = 0.6f;
+		font = SKIN_FONT_SANS;
+		style = ITEM_TEXTSTYLE_SHADOWED;
+	}
+	CG_Text_Paint( x - CG_Text_Width( text, scale, font ), y, scale, colorWhite, text, 0, 0, style, font );
+}
+
 /*
 ================
 CG_DrawMiniScoreboard
@@ -2949,7 +2960,7 @@ static float CG_DrawMiniScoreboard ( float y )
 		Q_strcat( temp, sizeof( temp ), va( " %s: ", CG_GetStringEdString( "MP_INGAME", "BLUE" ) ) );
 		Q_strcat( temp, sizeof( temp ), cgs.scores2 == SCORE_NOT_PRESENT ? "-" : (va( "%i", cgs.scores2 )) );
 
-		CG_Text_Paint( 630 - CG_Text_Width ( temp, 0.7f, FONT_MEDIUM ) + xOffset, y, 0.7f, colorWhite, temp, 0, 0, ITEM_TEXTSTYLE_SHADOWEDMORE, FONT_MEDIUM );
+		CG_UpperRightText( 630 + xOffset, y, temp, 0.7f, FONT_MEDIUM, ITEM_TEXTSTYLE_SHADOWEDMORE );
 		y += 15;
 	}
 	else
@@ -2961,7 +2972,11 @@ static float CG_DrawMiniScoreboard ( float y )
 		Q_strcat ( temp, MAX_QPATH, " 2nd: " );
 		Q_strcat ( temp, MAX_QPATH, cgs.scores2==SCORE_NOT_PRESENT?"-":(va("%i",cgs.scores2)) );
 
-		CG_Text_Paint( 630 - CG_Text_Width ( temp, 0.7f, FONT_SMALL ), y, 0.7f, colorWhite, temp, 0, 0, ITEM_TEXTSTYLE_SHADOWEDMORE, FONT_MEDIUM );
+		if ( CG_HudNewLook() ) {
+			CG_UpperRightText( 630, y, temp, 0.7f, FONT_MEDIUM, ITEM_TEXTSTYLE_SHADOWEDMORE );
+		} else {
+			CG_Text_Paint( 630 - CG_Text_Width ( temp, 0.7f, FONT_SMALL ), y, 0.7f, colorWhite, temp, 0, 0, ITEM_TEXTSTYLE_SHADOWEDMORE, FONT_MEDIUM );
+		}
 		y += 15;
 		*/
 		//rww - no longer doing this. Since the attacker now shows who is first, we print the score there.
@@ -3025,11 +3040,11 @@ static float CG_DrawEnemyInfo ( float y )
 			y += size;
 
 			/*
-			CG_Text_Paint( 630 - CG_Text_Width ( ci->name, 0.7f, FONT_MEDIUM ), y, 0.7f, colorWhite, ci->name, 0, 0, 0, FONT_MEDIUM );
+			CG_UpperRightText( 630, y, ci->name, 0.7f, FONT_MEDIUM, 0 );
 			y += 15;
 			*/
 
-			CG_Text_Paint( 630 - CG_Text_Width ( title, 0.7f, FONT_MEDIUM ) + xOffset, y, 0.7f, colorWhite, title, 0, 0, 0, FONT_MEDIUM );
+			CG_UpperRightText( 630 + xOffset, y, title, 0.7f, FONT_MEDIUM, 0 );
 
 			return y + BIGCHAR_HEIGHT + 2;
 		}
@@ -3117,18 +3132,18 @@ static float CG_DrawEnemyInfo ( float y )
 	y += size;
 
 //	CG_Text_Paint( 630 - CG_Text_Width ( ci->name, 0.7f, FONT_MEDIUM ) + xOffset, y, 0.7f, colorWhite, ci->name, 0, 0, 0, FONT_MEDIUM );
-	CG_Text_Paint( 630 - CG_Text_Width ( ci->name, 1.0f, FONT_SMALL2 ) + xOffset, y, 1.0f, colorWhite, ci->name, 0, 0, 0, FONT_SMALL2 );
+	CG_UpperRightText( 630 + xOffset, y, ci->name, 1.0f, FONT_SMALL2, 0 );
 
 	y += 15;
 //	CG_Text_Paint( 630 - CG_Text_Width ( title, 0.7f, FONT_MEDIUM ) + xOffset, y, 0.7f, colorWhite, title, 0, 0, 0, FONT_MEDIUM );
-	CG_Text_Paint( 630 - CG_Text_Width ( title, 1.0f, FONT_SMALL2 ) + xOffset, y, 1.0f, colorWhite, title, 0, 0, 0, FONT_SMALL2 );
+	CG_UpperRightText( 630 + xOffset, y, title, 1.0f, FONT_SMALL2, 0 );
 
 	if ( (cgs.gametype == GT_DUEL || cgs.gametype == GT_POWERDUEL) && cgs.clientinfo[cg.snap->ps.clientNum].team != TEAM_SPECTATOR)
 	{//also print their score
 		char text[1024];
 		y += 15;
 		Com_sprintf(text, sizeof(text), "%i/%i", cgs.clientinfo[clientNum].score, cgs.fraglimit );
-		CG_Text_Paint( 630 - CG_Text_Width ( text, 0.7f, FONT_MEDIUM ) + xOffset, y, 0.7f, colorWhite, text, 0, 0, 0, FONT_MEDIUM );
+		CG_UpperRightText( 630 + xOffset, y, text, 0.7f, FONT_MEDIUM, 0 );
 	}
 
 // nmckenzie: DUEL_HEALTH - fixme - need checks and such here.  And this is coded to duelist 1 right now, which is wrongly.
@@ -6734,6 +6749,10 @@ static void CG_DrawTeamVote(void) {
 }
 
 static qboolean CG_DrawScoreboard() {
+	// the one of the new look goes with its HUD (hud/cg_scores.c)
+	if ( CG_HudNewLook() ) {
+		return CG_ScoresDraw();
+	}
 	return CG_DrawOldScoreboard();
 }
 
@@ -7917,6 +7936,8 @@ static void CG_Draw2D( void ) {
 	if ( cg.snap->ps.pm_type == PM_INTERMISSION ) {
 		CG_DrawIntermission();
 		CG_ChatDraw();
+		// (the rows of the scoreboard can be clicked at the end of a level too)
+		CG_SelectDraw();
 		return;
 	}
 

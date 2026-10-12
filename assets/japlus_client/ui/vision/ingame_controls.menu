@@ -1744,6 +1744,24 @@
 
 		itemDef
 		{
+			name					vision_bind_scores_pick
+			type					ITEM_TYPE_BIND
+			text					@VISION_SCOREBOARD_WITH_MOUSE
+			descText				@VISION_OPENS_THE_SCOREBOARD_WITH_THE_MOUSE
+			cvar					"scores_pick"
+			action { play "sound/interface/button1.wav" ; }
+			rect					12 258 380 22
+			page					7
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+		}
+
+		itemDef
+		{
 			name					vision_scroll
 			rect					395 38 6 352
 			visible					1

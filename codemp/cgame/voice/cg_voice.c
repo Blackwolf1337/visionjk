@@ -983,6 +983,8 @@ static void Voice_Receive( int now ) {
 		}
 		if ( p.client >= MAX_CLIENTS || p.client == cg.clientNum )
 			continue;
+		// whoever speaks here plays with a client of this tree (status/cg_peers.c)
+		CG_PeerHeard( p.client );
 		if ( p.type == VOICE_STATUS ) {
 			// what stands above the head of somebody, handed on by the voice master (status/cg_status.c)
 			char		text[VOICE_STATUS_TEXT];
