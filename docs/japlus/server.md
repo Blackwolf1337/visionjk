@@ -203,14 +203,17 @@ the mode does:
   (`PmoveSingle()`, `bg_visionTemple`), so the client predicts both.
 - Somebody who gets under the floors starts again.
 
-The map `maps/vision_temple.bsp` is in the asset pack. It has brushes and no surfaces: the terrace, the five
-steps of the podium, the way, and fences that keep players from the clouds. `tools/temple/build.py` writes it
-from the numbers of the shader that draws the gold (`rd-vulkan-vision/shaders/temple.frag`), without a map
-compiler: change a size in both. Since 2026-10-12 the clouds are a brush of the map: a fog whose shader script
-(`textures/vision/temple_clouds`) says `q3map_vision clouds`, see [renderer.md](renderer.md), "Brushes that
-only this renderer fills". A client without that renderer (a legacy client, `rd-vanilla`, the browser) sees
-the players in the fog of that script and nothing else: the map has no surfaces and no sky yet, so nothing
-clears its picture between two frames (seen with `rd-vanilla` on 2026-10-12).
+The map `maps/vision_temple.bsp` is in the asset pack. `tools/temple/build.py` writes it without a map
+compiler. What one stands on are brushes: the terrace, the five steps of the podium, the way, and fences that
+keep players from the clouds. Since 2026-10-12 what one sees is in the map too: the gold as surfaces (the
+terrace, the steps, the way and its kerbs, the columns), and the clouds and the light in the air as two fog
+brushes. Their shader scripts (`textures/vision/temple_gold`, `temple_clouds`, `temple_light` in
+`shaders/vision.shader`) say `q3map_vision`, see [renderer.md](renderer.md), "What only this renderer draws of
+a level": rd-vulkan-vision draws the place with them, and its shaders have the same shapes as the map (the
+shadows on the gold are worked out from them), so a size is changed in both. A client without that renderer (a
+legacy client, `rd-vanilla`, the browser) gets what else the scripts say: the gold in one plain colour and a
+fog. The map has no sky of its own yet, so with `rd-vanilla` nothing clears the picture behind the gold between
+two frames (seen 2026-10-12 before the gold was surfaces, not looked at since).
 
 `assets/configs/temple.cfg` has the settings of a temple server: `+exec temple.cfg +map vision_temple`.
 

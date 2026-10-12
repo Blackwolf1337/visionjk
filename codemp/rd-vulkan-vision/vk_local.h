@@ -93,6 +93,7 @@ typedef struct vkTransform_s {	// once per view and entity
 #define VKD_FOG_SHIFT		20				// fog over the whole stage as glFog did it: 0 none, 1 exp2, 2 linear
 #define VKD_ACFF_SHIFT		22				// acff_t: the color fades with the way through a fog volume
 #define VKD_DEFORM_SHIFT	24				// deformVertexes: 0 none, 1 along the normal, 2 all vertices by one vector
+#define VKD_VISION_SHIFT	26				// q3map_vision of the script of a surface: 0 none, 1 the gold of the Vision Temple
 
 typedef struct vkDraw_s {		// once per draw
 	uint32_t	transform;			// index into the transforms of the frame
@@ -329,11 +330,13 @@ void		VK_EndGlow( void );
 void		VK_BlurFrame( float amount, float focus );
 void		VK_SpiritFrame( float amount, float seconds );
 void		VK_TempleFrame( float amount, float seconds );
-// The volumes of the level that only this renderer fills (q3map_vision of a shader script). Ready: the level has
-// one, the device can draw it and r_visionVolumes is on. A fog of that kind gets no fog pass here either way.
+// What only this renderer draws of a level (q3map_vision of a shader script). The volumes: the brushes of fogs,
+// which get no fog pass here. Ready: the level has one and the device can draw it. The gold: surfaces that are
+// shaded by where they are (VKD_VISION_SHIFT), on a device that has that in its shaders.
 qboolean	VK_VolumeReady( void );
 qboolean	VK_FogIsVolume( int fogNum );
 void		VK_VolumeFrame( void );
+qboolean	VK_GoldSurface( const shader_t *shader );
 void		VK_BloomFrame( float amount );
 void		VK_CaptureFrame( void );
 void		VK_ClearFlares( void );

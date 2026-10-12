@@ -470,7 +470,11 @@ typedef enum visionKind_e {
 	VISION_NONE,
 	// The brush of a fog: a sea of clouds in it (rd-vulkan-vision/shaders/volume.frag). Numbers: x, y and the
 	// radius of a round place the clouds leave free, then a lane along x at that y: from x, to x, half its width
-	VISION_CLOUDS
+	VISION_CLOUDS,
+	// The brush of a fog: the light that stands in the air of the Vision Temple (shaders/light.glsl). No numbers
+	VISION_LIGHT,
+	// A surface: the gold of the Vision Temple, shaded by where a place on it is (shaders/gold.glsl). No numbers
+	VISION_GOLD
 } visionKind_t;
 
 typedef struct visionParms_s {
@@ -1290,7 +1294,6 @@ extern	cvar_t	*r_2dAspect;
 extern	cvar_t	*r_menuBlur;
 extern	cvar_t	*r_templeBloom;
 extern	cvar_t	*r_templeDetail;
-extern	cvar_t	*r_visionVolumes;
 
 float	R_2DBias( void );
 void	RE_Set2DPlane( const float *matrix );

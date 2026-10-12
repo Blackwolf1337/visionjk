@@ -1,7 +1,8 @@
 #version 460
-// A volume of a level that its shader script fills with something only this renderer draws ("q3map_vision" of the
-// script, rd-vanilla/tr_shader.cpp; VK_VolumeFrame): the brush of a fog whose script says clouds. Any other
-// renderer draws the plain fog of the same script there.
+// The volumes of a level that their shader scripts fill with something only this renderer draws ("q3map_vision"
+// of a script, rd-vanilla/tr_shader.cpp; VK_VolumeFrame): the brush of a fog whose script says clouds, and one
+// whose script says light, the light that stands in the air of the Vision Temple (light.glsl). Any other
+// renderer draws the plain fog of the same scripts there.
 //
 // The pass comes after what is solid in the view. It reads the frame and its depth, marches the part of the ray
 // of a pixel that lies inside the brush, as far as to what stands there, and gives the pixel back with the clouds
@@ -12,9 +13,10 @@
 // clouds are laid over it in light, and the sum goes through the curve again. Laid over it as colours of the
 // screen their thin edges would come out too bright.
 //
-// VIEW 0 to 4: as shaders/temple.frag has them. 5: xyz the low corner of the brush, w the x of the middle of the
-// place the clouds leave free. 6: xyz its high corner, w the y of that middle. 7: x the radius of that place,
-// yzw the lane they leave free (from x, to x, half its width). The last four are the numbers of the script.
+// VIEW 0 to 3: as shaders/temple.frag has them. 4: xy the depth as there, z 1: there are clouds, w 1: there is
+// the light. 5: xyz the low corner of the brush of the clouds, w the x of the middle of the place they leave
+// free. 6: xyz its high corner, w the y of that middle. 7: x the radius of that place, yzw the lane they leave
+// free (from x, to x, half its width). Those last numbers are the ones of the script.
 #include "dialect.glsl"
 
 BINDING( 0, 0 ) uniform sampler2D u_image;
@@ -37,6 +39,7 @@ layout( location = 0 ) out vec4 o_color;
 #define CLOUD_DISC	vec3( VIEW( 5 ).w, VIEW( 6 ).w, VIEW( 7 ).x )
 #define CLOUD_LANE	VIEW( 7 ).yzw
 #include "vision.glsl"
+#include "light.glsl"
 
 void main() {
 	float seconds = VIEW( 0 ).w;
@@ -49,25 +52,36 @@ void main() {
 	float depth = texture( u_depth, v_texCoord ).r;
 	// how far along the ray the thing of this pixel is: its depth is x - y / d for a thing d ahead
 	float tScene = depth < 0.999999 ? VIEW( 4 ).y / max( ( VIEW( 4 ).x - depth ) * dot( rd, VIEW( 1 ).xyz ), 1.0e-6 ) : 1.0e9;
-	// the part of the ray inside the brush
-	// (a ray along a side of it: a little off that, so nothing is divided by 0)
-	vec3 inv = 1.0 / ( rd + ( 1.0 - step( vec3( 1.0e-6 ), abs( rd ) ) ) * 1.0e-6 );
-	vec3 a = ( VIEW( 5 ).xyz - ro ) * inv;
-	vec3 b = ( VIEW( 6 ).xyz - ro ) * inv;
-	vec3 lo = min( a, b );
-	vec3 hi = max( a, b );
-	float tIn = max( max( lo.x, lo.y ), max( lo.z, 0.0 ) );
-	float tOut = min( min( hi.x, hi.y ), min( hi.z, tScene ) );
+	// the part of the ray inside the brush of the clouds
+	vec4 sea = vec4( 0.0, 0.0, 0.0, 1.0 );
 
-	if ( tOut <= tIn ) {
+	if ( VIEW( 4 ).z > 0.5 ) {
+		// (a ray along a side of it: a little off that, so nothing is divided by 0)
+		vec3 inv = 1.0 / ( rd + ( 1.0 - step( vec3( 1.0e-6 ), abs( rd ) ) ) * 1.0e-6 );
+		vec3 a = ( VIEW( 5 ).xyz - ro ) * inv;
+		vec3 b = ( VIEW( 6 ).xyz - ro ) * inv;
+		vec3 lo = min( a, b );
+		vec3 hi = max( a, b );
+		float tIn = max( max( lo.x, lo.y ), max( lo.z, 0.0 ) );
+		float tOut = min( min( hi.x, hi.y ), min( hi.z, tScene ) );
+
+		if ( tOut > tIn ) {
+			sea = clouds( ro, rd, tIn, tOut, seconds, jitter, VIEW( 2 ).w );
+		}
+	}
+	bool lit = VIEW( 4 ).w > 0.5;
+
+	if ( sea.a > 0.9999 && !lit ) {
+		// nothing of this pass is in front of the pixel: it stays as it is
 		o_color = vec4( frame, 0.0 );
 		return;
 	}
-	vec4 sea = clouds( ro, rd, tIn, tOut, seconds, jitter, VIEW( 2 ).w );
 	// (the two things temple.frag does to its light in front of the curve: a little darker towards the corners)
 	float scale = 0.62 * ( 1.0 - 0.22 * dot( at, at ) );
-	vec3 color = film( scale * sea.rgb + sea.a * unfilm( frame ) );
+	vec3 light = sea.rgb;
 
-	// a pixel no cloud is in front of stays as it is
-	o_color = vec4( color, clamp( ( 1.0 - sea.a ) * 40.0, 0.0, 1.0 ) );
+	if ( lit ) {
+		light += templeLight( ro, rd, tScene, seconds, sea.a, ringNearest( ro, rd, tScene ) );
+	}
+	o_color = vec4( film( scale * light + sea.a * unfilm( frame ) ), lit ? 1.0 : clamp( ( 1.0 - sea.a ) * 40.0, 0.0, 1.0 ) );
 }

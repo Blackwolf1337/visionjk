@@ -386,12 +386,11 @@ left in these views are the effects of the game (flames, smoke, light cones) and
   went from 1541 to 661 ms with it, a player who joins from a frame of 22 to 28 ms to one of 4 to 6.5.
   [loading.md](loading.md) has how that was measured and what the cache is named after.
 
-## Brushes that only this renderer fills (q3map_vision)
+## What only this renderer draws of a level (q3map_vision)
 
 Not from OpenJK. 2026-10-12, the owner: the place of the Vision Temple "should stay .bsp, but we will add new
-brushes like the old ones (volumetric fog) which is q3 shader, but instead a new shader for the clouds". The
-first kind is there, clouds. Vulkan device only, run hidden on Linux, see "Checked" of [server.md](server.md),
-"The temple of a server", for the runs it was in.
+brushes like the old ones (volumetric fog) which is q3 shader, but instead a new shader for the clouds etc.".
+Three kinds are there. Vulkan device only, run hidden on Linux.
 
 **The keyword.** A shader script can say `q3map_vision <kind> <numbers>` among its general lines
 (`rd-vanilla/tr_shader.cpp`, `ParseVision()`, the file both renderers of this tree read scripts with). The name
@@ -402,29 +401,50 @@ and a level that uses it loads everywhere.
 | Kind | Where | Numbers | What rd-vulkan-vision draws | What every other renderer draws |
 |------|-------|---------|-----------------------------|----------------------------------|
 | `clouds` | the script of a fog brush (`surfaceparm fog`) | x, y and radius of a round place the clouds leave free, then a lane along x at that y: from x, to x, half its width | a sea of clouds in the brush, lit by a low sun in +x | the fog of `fogparms` |
+| `light` | the script of a fog brush | none | the light that stands in the air of the Vision Temple: four rings of strands, the threads that fall from the highest, the light over the podium, sparks | the fog of `fogparms` (the script of the temple has one nobody sees) |
+| `gold` | the script of a surface | none | the gold of the Vision Temple: a place on the surface is shaded by where it is (sun, sky, the rings, shadows), not by a texture | the stages of the script |
 
-**How it is drawn.** `R_LoadFogs()` keeps what the script of a fog says (`fog_t.vision`). Such a fog gets no fog
-pass in this renderer. After what is solid in a view each one is a pass of `shaders/volume.frag`
-(`VK_VolumeFrame()`, `vk_post.cpp`): it reads the frame and its depth, marches the part of the ray of a pixel
-that lies inside the brush as far as to what stands there, and gives the pixel back with the clouds in front of
-it. So a player behind a heap of cloud is hidden and one in front of it is not. What a module draws over the
-scene (`shader->over`) comes after it. The cloud code itself is `shaders/vision.glsl`, which
-`shaders/temple.frag` includes too.
+`light` and `gold` are the temple's own so far: where the rings stand and where the shadows on the gold fall
+are numbers of the shaders (`shaders/light.glsl`, `shaders/gold.glsl`), which `tools/temple/build.py` makes
+the map from. `clouds` takes its place from the script and its extent from its brush.
 
-| Cvar | Default | Meaning |
-|------|---------|---------|
-| `r_visionVolumes` | 1 | 0: these brushes are not drawn. The Vision Temple then has its clouds behind everything, as before they were a brush |
-| `r_templeDetail` | 2 | below 2 the pass works at half the size of the frame |
+**How it is drawn.**
+
+- `R_LoadFogs()` keeps what the script of a fog says (`fog_t.vision`). Such a fog gets no fog pass here. After
+  what is solid in a view all of them are one pass of `shaders/volume.frag` (`VK_VolumeFrame()`, `vk_post.cpp`):
+  it reads the frame and its depth, marches the part of the ray of a pixel that lies inside the brush of the
+  clouds as far as to what stands there, adds the light as far as to there too, and gives the pixel back. So a
+  player behind a heap of cloud is hidden and one in front of it is not, and a ring of light lies over a player
+  who stands behind it. What a module draws over the scene (`shader->over`) comes after the pass.
+- A surface whose script says `gold` goes through the stages as any surface, with a bit in its draw
+  (`VKD_VISION_SHIFT`): `shaders/generic.frag` then shades it with `goldLit()` in the place of its texture.
+- Where a module asked for the Vision Temple behind the scene (`RE_SetTempleScene`, `shaders/temple.frag`) and
+  the level has all of this itself, that pass is the sky alone. Without a level (the temple one enters from
+  any server) it is the whole place as before.
+- The code is shared: `vision.glsl` (noise, sky, clouds, the film curve), `light.glsl`, `gold.glsl`, included by
+  `temple.frag`, `volume.frag` and `generic.frag`.
+
+`r_templeDetail` below 2 lets the pass of the volumes work at half the size of the frame.
 
 Frames a second on a server that is the Vision Temple, 2560 x 1440 with 8 samples and the glow on, an RTX 4070
-SUPER, the average of 25 seconds each in one run (`tools/templetest/fps.sh` of the test tools): 120 with the
-clouds as a volume, 125 with `r_visionVolumes 0`, 200 with `r_templeDetail 1`.
+SUPER, from where one arrives (`tools/templetest/fps.sh` of the test tools, a line of `cg_stats` a frame): 103
+on average over half a minute and 133 in the best second, 250 and 304 with `r_templeDetail 1`. With the place
+drawn by one pass and only the clouds as a volume the same run had 120 on average.
 
-Limits: one sun, the one of the temple, and no number of the script moves it. A surface that is not solid and
+Found on the way, 2026-10-12: with more than about 400 frames a second, some frames had the whole scene
+missing and only the sky left. The pass of `temple.frag` writes the depth of its gold (`gl_FragDepth`), and in
+such a frame the depth buffer had the depth of the triangle of the pass in the place of that, which was the
+nearest there is: nothing drawn after it passed the depth test. Why the written depth is not there in some
+frames at that rate is not found. The triangle of `shaders/post.vert` is as far away as there is now, so a
+frame like that keeps everything and only loses the depth of gold that `temple.frag` draws itself (the temple
+without a level, where nothing but the lights of the others stands in the place). Checked with 22 pictures in a
+row at a limit of 1000 frames a second, all whole, where up to half of a dozen had been empty.
+
+Limits: one sun, the one of the temple, and no number of a script moves it. A surface that is not solid and
 stands in front of a cloud (a sprite, a blade) is drawn before the pass and gets the cloud behind it laid over
 it. At an edge of a model against far clouds a pixel can be a little off with several samples a pixel (the
 depth the pass reads is the one of the first sample). Not on the WebGL device and not in rd-vanilla: they draw
-the fog.
+what else the scripts say. Nobody but scripts has looked at any of it yet.
 
 ## Not done
 

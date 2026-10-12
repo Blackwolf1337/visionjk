@@ -2049,6 +2049,8 @@ static void ParseVision( const char **text ) {
 		visionKind_t	kind;
 	} kinds[] = {
 		{ "clouds", VISION_CLOUDS },
+		{ "light", VISION_LIGHT },
+		{ "gold", VISION_GOLD },
 	};
 	const char		*token = COM_ParseExt( text, qfalse );
 	visionKind_t	kind = VISION_NONE;

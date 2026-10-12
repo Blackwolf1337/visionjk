@@ -29,7 +29,7 @@ struct Draw {
 	vec4	texTurb1;
 	vec4	tcGenVec0[2];
 	vec4	tcGenVec1[2];
-	vec4	parm;			// x: portal range, y: time of the shader. Dynamic light: origin in model space, w: radius
+	vec4	parm;			// x: portal range, y: time of the shader, z: r_templeDetail for gold. Dynamic light: origin in model space, w: radius
 	vec4	fogColor;
 	vec4	fogParm;		// exp2: x: density. linear: x: start, y: end. z: fog volume, where the eye is
 	vec4	fogVec[2];		// fog volume: distance and depth vector
@@ -84,6 +84,7 @@ layout( set = 0, binding = 2, std430 ) readonly buffer Draws {
 #define FOG( flags )		( ( ( flags ) >> 20 ) & 3u )
 #define ACFF( flags )		( ( ( flags ) >> 22 ) & 3u )
 #define DEFORM( flags )		( ( ( flags ) >> 24 ) & 3u )
+#define VISION( flags )		( ( ( flags ) >> 26 ) & 3u )
 
 // texCoordGen_t
 #define TCGEN_IDENTITY		1u

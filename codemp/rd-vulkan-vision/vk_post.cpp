@@ -235,6 +235,43 @@ qboolean VK_TempleReady( void ) {
 	return VK_TemplePass( NULL );
 }
 
+// What the level has of the things only this renderer draws (q3map_vision of a shader script, see
+// VK_VolumeFrame below).
+static struct {
+	char		name[MAX_QPATH];	// the level this was looked up for
+	const void	*surfaces;
+	int			clouds, light;		// the fog whose script says that, 0: none
+	qboolean	gold;				// surfaces of it are the gold
+} vk_vision;
+
+// what the level has of this, looked up once for a level
+static void VK_VisionOfLevel( void ) {
+	if ( !tr.world ) {
+		memset( &vk_vision, 0, sizeof( vk_vision ) );
+		return;
+	}
+	if ( vk_vision.surfaces == tr.world->surfaces && !strcmp( vk_vision.name, tr.world->name ) ) {
+		return;
+	}
+	memset( &vk_vision, 0, sizeof( vk_vision ) );
+	Q_strncpyz( vk_vision.name, tr.world->name, sizeof( vk_vision.name ) );
+	vk_vision.surfaces = tr.world->surfaces;
+	for ( int i = 1; i < tr.world->numfogs; i++ ) {
+		const visionParms_t *vision = tr.world->fogs[i].vision;
+
+		if ( vision && vision->kind == VISION_CLOUDS && !vk_vision.clouds ) {
+			vk_vision.clouds = i;
+		} else if ( vision && vision->kind == VISION_LIGHT && !vk_vision.light ) {
+			vk_vision.light = i;
+		}
+	}
+	for ( int i = 0; i < tr.world->numsurfaces && !vk_vision.gold; i++ ) {
+		const shader_t *shader = tr.world->surfaces[i].shader;
+
+		vk_vision.gold = (qboolean)( shader && shader->vision && shader->vision->kind == VISION_GOLD );
+	}
+}
+
 // the twenty numbers shaders/temple.frag and shaders/volume.frag see the view of the back end by
 static void VK_ViewNumbers( float *parm, float amount, float seconds ) {
 	const viewParms_t	*view = &backEnd.viewParms;
@@ -265,10 +302,12 @@ void VK_TempleFrame( float amount, float seconds ) {
 		return;
 	}
 	VK_ViewNumbers( parm, amount, seconds );
-	// the clouds of a level that has them as a volume of its own come later, in front of what stands in them
-	// (VK_VolumeFrame)
+	// What the level has itself is not drawn here. Its clouds are a volume that comes later, in front of what
+	// stands in them (VK_VolumeFrame). Its gold are surfaces, and the light in the air a volume too, which has
+	// to come after that gold: the pass is the sky alone then.
 	if ( !( backEnd.refdef.rdflags & RDF_NOWORLDMODEL ) && VK_VolumeReady() ) {
-		parm[15] = 1.0f;
+		parm[15] = vk_vision.clouds ? 1.0f : 0.0f;
+		parm[18] = ( vk_vision.gold && vk_vision.light ) ? 1.0f : 0.0f;
 	}
 	if ( !VK_TemplePass( parm ) ) {
 		return;
@@ -284,50 +323,47 @@ void VK_TempleFrame( float amount, float seconds ) {
 VK_VolumeFrame
 
 The volumes of the level that a shader script fills with something only this renderer draws ("q3map_vision" of
-the script, rd-vanilla/tr_shader.cpp): the brush of a fog whose script says clouds, which gets no fog pass here.
-After what is solid in the view each of them is one pass of shaders/volume.frag: it reads the frame and its
-depth and gives the frame back with the clouds in front of what stands in them or behind them. At the size of
-the frame, or at half of it where r_templeDetail asks for less. Only on a device that lets a shader read its
-depth.
+the script, rd-vanilla/tr_shader.cpp): the brush of a fog whose script says clouds, and one whose script says
+light. They get no fog pass here. After what is solid in the view they are one pass of shaders/volume.frag: it
+reads the frame and its depth and gives the frame back with the clouds and the light in front of what stands in
+them or behind them. At the size of the frame, or at half of it where r_templeDetail asks for less. Only on a
+device that lets a shader read its depth.
 ===============
 */
-static qboolean VK_FogHasClouds( const fog_t *fog ) {
-	return (qboolean)( fog->vision && fog->vision->kind == VISION_CLOUDS );
-}
-
 qboolean VK_FogIsVolume( int fogNum ) {
-	return (qboolean)( tr.world && fogNum > 0 && fogNum < tr.world->numfogs && VK_FogHasClouds( &tr.world->fogs[fogNum] )
-		&& VK_VolumePass( NULL, NULL, NULL ) );
+	const visionParms_t *vision;
+
+	if ( !tr.world || fogNum <= 0 || fogNum >= tr.world->numfogs || !VK_VolumePass( NULL, NULL, NULL ) ) {
+		return qfalse;
+	}
+	vision = tr.world->fogs[fogNum].vision;
+	return (qboolean)( vision && ( vision->kind == VISION_CLOUDS || vision->kind == VISION_LIGHT ) );
 }
 
 qboolean VK_VolumeReady( void ) {
-	if ( !tr.world || !r_visionVolumes->integer ) {
-		return qfalse;
-	}
-	for ( int i = 1; i < tr.world->numfogs; i++ ) {
-		if ( VK_FogIsVolume( i ) ) {
-			return qtrue;
-		}
-	}
-	return qfalse;
+	VK_VisionOfLevel();
+	return (qboolean)( ( vk_vision.clouds || vk_vision.light ) && VK_VolumePass( NULL, NULL, NULL ) );
+}
+
+// a surface with this script is shaded as the gold of the Vision Temple, shaders/generic.frag
+qboolean VK_GoldSurface( const shader_t *shader ) {
+	return (qboolean)( shader->vision && shader->vision->kind == VISION_GOLD && VK_TemplePass( NULL ) );
 }
 
 void VK_VolumeFrame( void ) {
 	vkTarget_t	*target = ( r_templeDetail->value >= 2.0f ) ? &vk.wide : &vk.soft[0];
-	qboolean	drawn = qfalse;
+	float		parm[32];
 
-	if ( !vk.frame || !tr.world ) {
+	if ( !vk.frame || !VK_VolumeReady() ) {
 		return;
 	}
-	for ( int i = 1; i < tr.world->numfogs; i++ ) {
-		const fog_t	*fog = &tr.world->fogs[i];
-		float		parm[32];
+	memset( parm, 0, sizeof( parm ) );
+	VK_ViewNumbers( parm, 1.0f, backEnd.refdef.floatTime );
+	if ( vk_vision.clouds ) {
+		const fog_t *fog = &tr.world->fogs[vk_vision.clouds];
 
-		if ( !VK_FogIsVolume( i ) ) {
-			continue;
-		}
-		VK_ViewNumbers( parm, 1.0f, backEnd.refdef.floatTime );
 		// the brush, and the numbers of the script (visionKind_t): a place and a lane the clouds leave free
+		parm[18] = 1.0f;
 		VectorCopy( fog->bounds[0], &parm[20] );
 		parm[23] = fog->vision->parm[0];
 		VectorCopy( fog->bounds[1], &parm[24] );
@@ -336,20 +372,18 @@ void VK_VolumeFrame( void ) {
 		parm[29] = fog->vision->parm[3];
 		parm[30] = fog->vision->parm[4];
 		parm[31] = fog->vision->parm[5];
+	}
+	parm[19] = vk_vision.light ? 1.0f : 0.0f;
 
-		VK_EndTarget();
-		VK_VolumePass( &vk.color, target, parm );
-		// back to the frame, with what is in it
-		VK_BeginTarget( &vk.color, &vk.depth, 2, qtrue );
-		VK_AddTarget( target, VKA_BLEND );
-		drawn = qtrue;
-	}
-	if ( drawn ) {
-		// the shaders that draw geometry have other sets and other state
-		VK_BindFrameSets();
-		vk.stateValid = qfalse;
-		VK_SetViewport( vk.viewport[0], vk.viewport[1], vk.viewport[2], vk.viewport[3], 0.0f, 1.0f );
-	}
+	VK_EndTarget();
+	VK_VolumePass( &vk.color, target, parm );
+	// back to the frame, with what is in it
+	VK_BeginTarget( &vk.color, &vk.depth, 2, qtrue );
+	VK_AddTarget( target, VKA_BLEND );
+	// the shaders that draw geometry have other sets and other state
+	VK_BindFrameSets();
+	vk.stateValid = qfalse;
+	VK_SetViewport( vk.viewport[0], vk.viewport[1], vk.viewport[2], vk.viewport[3], 0.0f, 1.0f );
 }
 
 /*

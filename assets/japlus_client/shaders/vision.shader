@@ -29,3 +29,27 @@ textures/vision/temple_clouds
 	fogparms ( 0.80 0.62 0.48 ) 3000
 	q3map_vision clouds 0 0 208 -524 -170 28
 }
+
+// The gold of the Vision Temple, on the surfaces of its map: the renderer of VisionJK shades it by where a place
+// on it is, any other one draws this colour.
+textures/vision/temple_gold
+{
+	surfaceparm	nolightmap
+	q3map_vision gold
+	{
+		map $whiteimage
+		rgbGen const ( 0.80 0.58 0.22 )
+	}
+}
+
+// The light that stands in the air of the Vision Temple (the rings, what falls from the highest of them, the
+// light over the podium): a brush of fog around it. Any other renderer has a fog there that nobody sees.
+textures/vision/temple_light
+{
+	surfaceparm	trans
+	surfaceparm	nonsolid
+	surfaceparm	fog
+	surfaceparm	nolightmap
+	fogparms ( 1.0 0.8 0.5 ) 400000
+	q3map_vision light
+}

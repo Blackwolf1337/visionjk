@@ -228,6 +228,8 @@ set(MPVulkanVisionShaderIncludes
 	"${MPDir}/rd-vulkan-vision/shaders/post.glsl"
 	"${MPDir}/rd-vulkan-vision/shaders/stage.glsl"
 	"${MPDir}/rd-vulkan-vision/shaders/vision.glsl"
+	"${MPDir}/rd-vulkan-vision/shaders/light.glsl"
+	"${MPDir}/rd-vulkan-vision/shaders/gold.glsl"
 	)
 set(MPVulkanVisionShaderOutputs)
 if(MPVulkanVisionVulkanTarget)
