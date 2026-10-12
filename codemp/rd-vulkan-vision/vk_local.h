@@ -330,6 +330,7 @@ void		VK_EndGlow( void );
 void		VK_BlurFrame( float amount, float focus );
 void		VK_SpiritFrame( float amount, float seconds );
 void		VK_TempleFrame( float amount, float seconds );
+qboolean	VK_LevelSky( void );
 // What only this renderer draws of a level (q3map_vision of a shader script). The volumes: the brushes of fogs,
 // which get no fog pass here. Ready: the level has one and the device can draw it. The gold: surfaces that are
 // shaded by where they are (VKD_VISION_SHIFT), on a device that has that in its shaders.

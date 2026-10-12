@@ -328,9 +328,11 @@ void R_SetupEntityLighting( const trRefdef_t *refdef, trRefEntity_t *ent ) {
 		VectorCopy( ent->e.origin, lightOrigin );
 	}
 
-	if ( refdef->rdflags & RDF_VISION_TEMPLE ) {
-		// The Vision Temple (RE_SetTempleScene) is drawn by a shader and has no light grid: what stands in it
-		// is lit as its gold is, by the low sun of shaders/temple.frag and the warm sky around it
+	if ( ( refdef->rdflags & RDF_VISION_TEMPLE )
+		|| ( tr.world && tr.world->visionSky && !( refdef->rdflags & RDF_NOWORLDMODEL ) ) ) {
+		// The Vision Temple (RE_SetTempleScene, or a level whose sky is the one of it, q3map_vision sky) has no
+		// light grid: what stands in it is lit as its gold is, by the low sun of shaders/vision.glsl and the
+		// warm sky around it
 		VectorSet( ent->ambientLight, tr.identityLight * 92, tr.identityLight * 70, tr.identityLight * 56 );
 		VectorSet( ent->directedLight, tr.identityLight * 255, tr.identityLight * 186, tr.identityLight * 104 );
 		VectorSet( ent->lightDir, 0.99504f, 0.0f, 0.0995f );

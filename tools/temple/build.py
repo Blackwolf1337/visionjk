@@ -12,7 +12,9 @@ The clouds are a brush of the map: a fog whose shader script (textures/vision/te
 assets/japlus_client/shaders/vision.shader) says "q3map_vision clouds" with the place they leave free, which
 are numbers of this file too. rd-vulkan-vision fills the brush with clouds, any other renderer with the fog
 of that script. The light in the air of the place (the rings and what falls from them) is a second brush of
-that kind, textures/vision/temple_light with "q3map_vision light".
+that kind, textures/vision/temple_light with "q3map_vision light". And a box of sky stands around everything,
+textures/vision/temple_sky with "q3map_vision sky": rd-vulkan-vision draws the sky of the place where it shows,
+any other renderer the plain sky of that script.
 
 Without an argument the map goes to assets/japlus_client/maps/vision_temple.bsp.
 """
@@ -70,6 +72,7 @@ TERRACE_LOW = -3.5
 ROUND = 96				# sides of a round thing one sees: a step, the terrace
 COLUMN_SIDES = 16
 MAX_VERTS = 900			# of one surface: the renderer takes fewer than 1000 (ParseTriSurf())
+SKY_FAR = 6000.0		# the box of sky around everything, seen from inside: nearer than the far end of a view
 
 # game/surfaceflags.h
 CONTENTS_SOLID = 0x1
@@ -79,6 +82,7 @@ SURF_NODAMAGE = 0x40000
 SURF_NOIMPACT = 0x80000
 SURF_NOMARKS = 0x100000
 SURF_NODRAW = 0x200000
+SURF_SKY = 0x2000
 MATERIAL_MARBLE = 12
 
 SHADERS = (
@@ -87,8 +91,9 @@ SHADERS = (
     ("textures/vision/temple_clouds", SURF_NODAMAGE | SURF_NOIMPACT | SURF_NOMARKS, CONTENTS_FOG),
     ("textures/vision/temple_light", SURF_NODAMAGE | SURF_NOIMPACT | SURF_NOMARKS, CONTENTS_FOG),
     ("textures/vision/temple_gold", SURF_NODAMAGE | SURF_NOMARKS | MATERIAL_MARBLE, CONTENTS_SOLID),
+    ("textures/vision/temple_sky", SURF_NODAMAGE | SURF_NOIMPACT | SURF_NOMARKS | SURF_SKY, CONTENTS_SOLID),
 )
-FLOOR, CLIP, CLOUDS, LIGHT, GOLD = 0, 1, 2, 3, 4
+FLOOR, CLIP, CLOUDS, LIGHT, GOLD, SKY = 0, 1, 2, 3, 4, 5
 
 SPAWNS = [(x, y) for x in (-490.0, -450.0, -410.0, -370.0) for y in (-10.0, 10.0)]
 
@@ -254,6 +259,20 @@ class Mesh:
         return self.pieces
 
 
+def sky():
+    """A box around everything whose inside is sky (textures/vision/temple_sky): where it shows, a renderer
+    draws its sky. The script culls no side of it."""
+    s = Mesh()
+    f = SKY_FAR
+    corners = [(x, y, z) for x in (-f, f) for y in (-f, f) for z in (-f, f)]
+    for axis in range(3):
+        for sign in (-f, f):
+            face = [c for c in corners if c[axis] == sign]
+            normal = tuple(-1.0 if i == axis and sign > 0 else (1.0 if i == axis else 0.0) for i in range(3))
+            s.grid([[(face[0], normal), (face[1], normal)], [(face[2], normal), (face[3], normal)]])
+    return s.done()
+
+
 def hash2(x, y):
     """hash() of vision.glsl, in the numbers of a graphics card: 32 bit."""
     f = numpy.float32
@@ -334,18 +353,27 @@ def entities():
     return "".join(text).encode("ascii") + b"\0"
 
 
+def baked(normal):
+    """The colour of a point of gold for a renderer that only has the script (rgbGen exactVertex): the low sun in
+    +x and the warm sky of the place on a side that looks along that normal. rd-vulkan-vision does not read it."""
+    sun = max(normal[0] * 0.99504 + normal[2] * 0.0995, 0.0) * 0.9
+    above = 0.45 + 0.35 * normal[2]
+    light = (above * 1.0 + sun * 1.0, above * 0.82 + sun * 0.80, above * 0.62 + sun * 0.50)
+    return [min(int(round(255.0 * c * l)), 255) for c, l in zip((0.80, 0.58, 0.22), light)] + [255]
+
+
 def surfaces(pieces):
-    """The lumps of what is drawn: every piece a surface of triangles that brings its light in its points (white:
-    the script says the colour), in no fog."""
+    """The lumps of what is drawn: every piece (shader, points, indexes) a surface of triangles that brings its
+    light in its points (the gold a baked one, baked(); white else: the script says the colour), in no fog."""
     verts, indexes, out = [], [], []
-    for points, tris in pieces:
-        out.append(struct.pack("<7i8B4i8i2i3f9f2i", GOLD, -1, MST_TRIANGLE_SOUP, len(verts), len(points), len(indexes), len(tris),
+    for shader, points, tris in pieces:
+        out.append(struct.pack("<7i8B4i8i2i3f9f2i", shader, -1, MST_TRIANGLE_SOUP, len(verts), len(points), len(indexes), len(tris),
                                LS_NONE, LS_NONE, LS_NONE, LS_NONE, LS_NORMAL, LS_NONE, LS_NONE, LS_NONE,
                                LIGHTMAP_BY_VERTEX, LIGHTMAP_BY_VERTEX, LIGHTMAP_BY_VERTEX, LIGHTMAP_BY_VERTEX,
                                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.0, 0.0, 0.0, *([0.0] * 9), 0, 0))
         for place, normal in points:
             verts.append(struct.pack("<3f2f8f3f16B", *place, 0.0, 0.0, *([0.0] * 8), *normal,
-                                     255, 255, 255, 255, *([0] * 12)))
+                                     *(baked(normal) if shader == GOLD else (255, 255, 255, 255)), *([0] * 12)))
         indexes.extend(tris)
     return b"".join(verts), struct.pack("<%di" % len(indexes), *indexes), b"".join(out), len(out)
 
@@ -359,8 +387,8 @@ def write(m, path):
     under = len(m.planes)
     planes = m.planes + [((0.0, 0.0, 1.0), DEEP - 4096.0), ((0.0, 0.0, -1.0), -(DEEP - 4096.0))]
 
-    pieces = gold()
-    for points, _ in pieces:
+    pieces = [(GOLD, points, tris) for points, tris in gold()] + [(SKY, points, tris) for points, tris in sky()]
+    for _, points, _ in pieces:
         for place, _ in points:
             for axis in range(3):
                 m.mins[axis] = min(m.mins[axis], place[axis])

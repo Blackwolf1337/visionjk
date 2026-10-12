@@ -474,7 +474,10 @@ typedef enum visionKind_e {
 	// The brush of a fog: the light that stands in the air of the Vision Temple (shaders/light.glsl). No numbers
 	VISION_LIGHT,
 	// A surface: the gold of the Vision Temple, shaded by where a place on it is (shaders/gold.glsl). No numbers
-	VISION_GOLD
+	VISION_GOLD,
+	// The script of a sky: the sky of the Vision Temple with its low sun (shaders/vision.glsl), behind
+	// everything of a view of the level. What stands in such a level is lit by that sun (tr_light.cpp). No numbers
+	VISION_SKY
 } visionKind_t;
 
 typedef struct visionParms_s {
@@ -859,6 +862,8 @@ typedef struct world_s {
 	int			numfogs;
 	fog_t		*fogs;
 	int			globalFog;
+
+	qboolean	visionSky;		// VisionJK: a surface of the level has a sky whose script says q3map_vision sky
 
 
 	vec3_t		lightGridOrigin;

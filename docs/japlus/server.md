@@ -206,14 +206,15 @@ the mode does:
 The map `maps/vision_temple.bsp` is in the asset pack. `tools/temple/build.py` writes it without a map
 compiler. What one stands on are brushes: the terrace, the five steps of the podium, the way, and fences that
 keep players from the clouds. Since 2026-10-12 what one sees is in the map too: the gold as surfaces (the
-terrace, the steps, the way and its kerbs, the columns), and the clouds and the light in the air as two fog
-brushes. Their shader scripts (`textures/vision/temple_gold`, `temple_clouds`, `temple_light` in
-`shaders/vision.shader`) say `q3map_vision`, see [renderer.md](renderer.md), "What only this renderer draws of
-a level": rd-vulkan-vision draws the place with them, and its shaders have the same shapes as the map (the
-shadows on the gold are worked out from them), so a size is changed in both. A client without that renderer (a
-legacy client, `rd-vanilla`, the browser) gets what else the scripts say: the gold in one plain colour and a
-fog. The map has no sky of its own yet, so with `rd-vanilla` nothing clears the picture behind the gold between
-two frames (seen 2026-10-12 before the gold was surfaces, not looked at since).
+terrace, the steps, the way and its kerbs, the columns), the clouds and the light in the air as two fog
+brushes, and a box of sky around all of it. Their shader scripts (`textures/vision/temple_gold`,
+`temple_clouds`, `temple_light`, `temple_sky` in `shaders/vision.shader`) say `q3map_vision`, see
+[renderer.md](renderer.md), "What only this renderer draws of a level": rd-vulkan-vision draws the place with
+them, and its shaders have the same shapes as the map (the shadows on the gold are worked out from them), so a
+size is changed in both. A client without that renderer (a legacy client, `rd-vanilla`, the browser) gets what
+else the scripts say: the gold in the colours the map has in its points (a sun and a sky baked into them by
+`build.py`, so a column has a bright and a dark side), a fog and a sky of one colour. Seen so with `rd-vanilla`
+in a hidden run on 2026-10-12.
 
 `assets/configs/temple.cfg` has the settings of a temple server: `+exec temple.cfg +map vision_temple`.
 

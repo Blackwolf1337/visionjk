@@ -346,9 +346,14 @@ static void RB_BeginDrawingView( void ) {
 	backEnd.isHyperspace = qfalse;
 	// we haven't drawn anything yet this view
 	backEnd.skyRenderedThisView = qfalse;
-	// the Vision Temple in the place of a level (RE_SetTempleScene, vk_post.cpp)
-	if ( ( backEnd.refdef.rdflags & RDF_VISION_TEMPLE ) && r_templeAmount > 0.0f && !RB_KEEPS_FRAME() ) {
-		VK_TempleFrame( r_templeAmount, r_templeTime );
+	// the Vision Temple in the place of a level (RE_SetTempleScene, vk_post.cpp), or its sky behind a level that
+	// asks for it by the script of its own sky
+	if ( !RB_KEEPS_FRAME() ) {
+		if ( VK_LevelSky() ) {
+			VK_TempleFrame( 1.0f, backEnd.refdef.floatTime );
+		} else if ( ( backEnd.refdef.rdflags & RDF_VISION_TEMPLE ) && r_templeAmount > 0.0f ) {
+			VK_TempleFrame( r_templeAmount, r_templeTime );
+		}
 	}
 }
 
@@ -1014,9 +1019,13 @@ static const void *RB_DrawSurfs( const void *data ) {
 	if ( ( focus || spirit || volumes ) && rb_sawOver ) {
 		RB_RenderOverSurfs( cmd->drawSurfs, cmd->numDrawSurfs );
 	}
-	// the Vision Temple and what stands in it shine (vk_post.cpp)
-	if ( ( backEnd.refdef.rdflags & RDF_VISION_TEMPLE ) && r_templeAmount > 0.0f && !backEnd.viewParms.isPortal ) {
-		VK_BloomFrame( r_templeBloom->value * r_templeAmount );
+	// the Vision Temple and what stands in it shine (vk_post.cpp), and so does a level with its sky
+	if ( !backEnd.viewParms.isPortal ) {
+		if ( VK_LevelSky() ) {
+			VK_BloomFrame( r_templeBloom->value );
+		} else if ( ( backEnd.refdef.rdflags & RDF_VISION_TEMPLE ) && r_templeAmount > 0.0f ) {
+			VK_BloomFrame( r_templeBloom->value * r_templeAmount );
+		}
 	}
 	rb_overLater = qfalse;
 	// the next picture has to set the 2D projection up again

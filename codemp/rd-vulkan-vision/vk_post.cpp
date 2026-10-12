@@ -235,6 +235,13 @@ qboolean VK_TempleReady( void ) {
 	return VK_TemplePass( NULL );
 }
 
+// The view of the back end is one of a level whose sky is the one of the Vision Temple by its own script
+// (q3map_vision sky): the pass of temple.frag draws it behind everything, whether a module asked or not.
+qboolean VK_LevelSky( void ) {
+	return (qboolean)( tr.world && tr.world->visionSky && !( backEnd.refdef.rdflags & ( RDF_NOWORLDMODEL | RDF_SKYBOXPORTAL ) )
+		&& VK_TemplePass( NULL ) );
+}
+
 // What the level has of the things only this renderer draws (q3map_vision of a shader script, see
 // VK_VolumeFrame below).
 static struct {
@@ -304,8 +311,11 @@ void VK_TempleFrame( float amount, float seconds ) {
 	VK_ViewNumbers( parm, amount, seconds );
 	// What the level has itself is not drawn here. Its clouds are a volume that comes later, in front of what
 	// stands in them (VK_VolumeFrame). Its gold are surfaces, and the light in the air a volume too, which has
-	// to come after that gold: the pass is the sky alone then.
-	if ( !( backEnd.refdef.rdflags & RDF_NOWORLDMODEL ) && VK_VolumeReady() ) {
+	// to come after that gold: the pass is the sky alone then. So it is for a level that asks for the sky by
+	// its own script (VK_LevelSky).
+	if ( VK_LevelSky() ) {
+		parm[15] = parm[18] = 1.0f;
+	} else if ( !( backEnd.refdef.rdflags & RDF_NOWORLDMODEL ) && VK_VolumeReady() ) {
 		parm[15] = vk_vision.clouds ? 1.0f : 0.0f;
 		parm[18] = ( vk_vision.gold && vk_vision.light ) ? 1.0f : 0.0f;
 	}

@@ -31,14 +31,15 @@ textures/vision/temple_clouds
 }
 
 // The gold of the Vision Temple, on the surfaces of its map: the renderer of VisionJK shades it by where a place
-// on it is, any other one draws this colour.
+// on it is, any other one draws the colours the map has in its points (a sun and a sky baked into them,
+// tools/temple/build.py).
 textures/vision/temple_gold
 {
 	surfaceparm	nolightmap
 	q3map_vision gold
 	{
 		map $whiteimage
-		rgbGen const ( 0.80 0.58 0.22 )
+		rgbGen exactVertex
 	}
 }
 
@@ -52,4 +53,20 @@ textures/vision/temple_light
 	surfaceparm	nolightmap
 	fogparms ( 1.0 0.8 0.5 ) 400000
 	q3map_vision light
+}
+
+// The sky of the Vision Temple, on the box around its map: the renderer of VisionJK draws its sky with the low
+// sun there, any other one this plain sky.
+textures/vision/temple_sky
+{
+	surfaceparm	sky
+	surfaceparm	noimpact
+	surfaceparm	nolightmap
+	cull	disable
+	q3map_vision sky
+	skyparms - 512 -
+	{
+		map $whiteimage
+		rgbGen const ( 0.62 0.36 0.14 )
+	}
 }

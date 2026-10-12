@@ -794,6 +794,14 @@ void RB_StageIteratorSky( void )
 	if ( g_bRenderGlowingObjects )
 		return;
 
+#ifdef RD_VULKAN_VISION
+	// A sky whose script says q3map_vision sky was drawn when the view began, behind everything
+	// (RB_BeginDrawingView, vk_post.cpp): nothing of the rest of the script is drawn where it shows.
+	if ( tess.shader->vision && tess.shader->vision->kind == VISION_SKY && VK_TempleReady() ) {
+		return;
+	}
+#endif
+
 	if ( r_fastsky->integer ) {
 		return;
 	}
