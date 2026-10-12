@@ -5649,6 +5649,7 @@ static const char *g_bindCommands[] = {
 	"messagemode3",
 	"messagemode4",
 	"saberAttackCycle",
+	"scores_pick",				// VisionJK: the scoreboard kept open with the mouse free
 	"taunt",
 	"ui_openmenu modsay",		// JA+: the message menu
 	"use_bacta",
