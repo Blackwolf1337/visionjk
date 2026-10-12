@@ -507,6 +507,10 @@ static struct {
 
 static std::atomic<int>	spatialBakeState;		// BAKE_*
 static std::atomic<int>	spatialBakeProgress;	// 0 to 100
+// The game told the bake that runs to stop (S_SpatialCancelBake). Steam Audio 4.8.1 leaves the paths half made in
+// the probes then (PathBaker::bake adds what a stopped BakedPathData has), and writing those out is a crash in
+// the thread of the bake: what a stopped bake has is thrown away unread.
+static std::atomic<int>	spatialBakeCancel;
 
 // one for every player, and one more for what the own player says (S_SpatialOwnVoice)
 #define SPATIAL_OWN_STREAM	MAX_CLIENTS
@@ -779,8 +783,13 @@ static int SDLCALL S_SpatialBaker( void *unused ) {
 			qiplProbeBatchRelease( &spatialBake.batch );
 		}
 #endif
-		if ( spatialBake.batch && spatialBake.numProbes >= SPATIAL_MIN_PROBES ) {
+		if ( spatialBake.batch && spatialBake.numProbes >= SPATIAL_MIN_PROBES && !spatialBakeCancel.load() ) {
 			qiplPathBakerBake( spatial.context, &bake, S_SpatialBakeProgress, NULL );
+		}
+		// stopped: see spatialBakeCancel
+		if ( spatialBake.batch && spatialBakeCancel.load() ) {
+			qiplProbeBatchRelease( &spatialBake.batch );
+			spatialBake.batch = NULL;
 		}
 
 		// as it goes into the file. The game writes it, the file system of the engine is not for this thread.
@@ -798,6 +807,12 @@ static int SDLCALL S_SpatialBaker( void *unused ) {
 	spatialBake.msec = ( S_SpatialUsec() - start ) / 1000;
 	spatialBakeState.store( BAKE_DONE );
 	return 0;
+}
+
+// tells the bake that runs to stop. It does not wait for it.
+static void S_SpatialCancelBake( void ) {
+	spatialBakeCancel.store( 1 );
+	qiplPathBakerCancelBake( spatial.context );
 }
 
 // the probes of this level from its file, if it has one
@@ -890,6 +905,7 @@ static void S_SpatialThinkPaths( void ) {
 		spatialBake.maxs = spatial.maxs;
 		spatialBake.sceneNumber = spatial.sceneNumber;
 		spatialBakeProgress.store( 0 );
+		spatialBakeCancel.store( 0 );
 		spatialBakeState.store( BAKE_RUNNING );
 #ifdef __EMSCRIPTEN__
 		// done when this returns, and picked up by the next call of this function
@@ -941,7 +957,7 @@ static void S_SpatialTakeScene( void ) {
 	spatial.probesWait = qfalse;
 	spatial.numProbes = 0;
 	if ( spatialBakeState.load() == BAKE_RUNNING ) {
-		qiplPathBakerCancelBake( spatial.context );
+		S_SpatialCancelBake();
 	}
 
 	S_SpatialReleaseScene( &spatial.scene, &spatial.mesh );
@@ -2253,7 +2269,7 @@ static void S_SpatialRelease( void ) {
 
 	// a bake is told to stop and waited for the same way. What it had is thrown away.
 	if ( spatialBake.thread ) {
-		qiplPathBakerCancelBake( spatial.context );
+		S_SpatialCancelBake();
 		SDL_WaitThread( spatialBake.thread, NULL );
 		spatialBake.thread = NULL;
 		if ( spatialBake.batch ) {

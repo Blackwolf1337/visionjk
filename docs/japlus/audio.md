@@ -187,6 +187,24 @@ file in the owner's profile has 32 bytes). Seen as five core dumps of the owner'
 with a hidden and silent client (`s_initsound 1`, the sound device of SDL that plays nothing), and run again
 with the fix, once without a file and once with the 32 bytes of the run before: both to their end.
 
+A level that is left while its paths are still worked out, a restart of the sound and the end of the game tell
+the bake to stop (`S_SpatialCancelBake()`). What a stopped bake has is thrown away unread. Until 2026-10-12 the
+thread wrote it out for the file all the same, and Steam Audio 4.8.1 leaves the paths half made in the probes
+when it is stopped (`PathBaker::bake()` adds what the stopped `BakedPathData` has): a crash in the thread of the
+bake, in `iplProbeBatchSave`. Found with a bake of mp/ffa3 that took 3.8 s in an experiment and a restart of
+the picture two seconds into it, and run again with the fix: the first bake is stopped, the second one ends.
+With the 0.1 s the paths of mp/ffa3 take as the code is, nobody leaves in time; a large level takes longer.
+
+Found on the way and not changed, 2026-10-12: the probes do not stand all over a level. Steam Audio spreads
+them over the cube from -0.5 to 0.5 as the matrix places it (`generateUniformFloorProbes()`), and
+`S_SpatialBaker()` gives it the matrix of a cube from 0 to 1: the box of the probes has its middle at the lowest
+corner of the level. So only the quarter of a level next to that corner has probes, on floors below half its
+height, and sounds find their way round corners only there. (That is also why the Vision Temple has none.)
+With the box where the level is, in an experiment that is not in the tree: mp/ffa3 has 3960 probes in the place
+of 740, its paths take 3.8 s in the place of 0.1 s and its file 16.5 MB in the place of 0.66 MB, and the temple
+has 12. The files of the largest levels are over 100 MB already with a quarter of their probes, so putting the
+box right needs a wider grid or a limit with it, and every file there is has to be worked out again.
+
 **The voice chat.** The cgame plays the voices of its voice chat on a sound device of its own, which the
 engine knows nothing of. With `s_spatial` on, the engine sets the cvar `s_spatialVoice` to 1 and the cgame
 hands over what it decoded of a player, 20 ms at a time, with where his mouth is and how loud he is at his
