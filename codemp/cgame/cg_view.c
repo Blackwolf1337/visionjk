@@ -2427,7 +2427,7 @@ void CG_DrawActiveFrame( int serverTime, stereoFrame_t stereoView, qboolean demo
 	float mSensitivity = cg.zoomSensitivity;
 	float mPitchOverride = 0.0f;
 	float mYawOverride = 0.0f;
-	qboolean focused;
+	qboolean focused, temple;
 	static centity_t *veh = NULL;
 #ifdef VEH_CONTROL_SCHEME_4
 	float mSensitivityOverride = 0.0f;
@@ -2664,9 +2664,11 @@ void CG_DrawActiveFrame( int serverTime, stereoFrame_t stereoView, qboolean demo
 		trap->R_SetRangedFog(0.0f);
 	}
 
+	// (in the Vision Temple nothing of the level is drawn, focus/cg_focus.c)
+	temple = CG_FocusTemple();
 	cstr = CG_ConfigString(CS_SKYBOXORG);
 
-	if (cstr && cstr[0])
+	if (cstr && cstr[0] && !temple)
 	{ //we have a skyportal
 		CG_DrawSkyBoxPortal(cstr);
 	}
@@ -2679,13 +2681,15 @@ void CG_DrawActiveFrame( int serverTime, stereoFrame_t stereoView, qboolean demo
 	}
 
 	// build the render lists
-	if ( !cg.hyperspace ) {
+	if ( !cg.hyperspace && !temple ) {
 		CG_AddPacketEntities(qfalse);			// adter calcViewValues, so predicted player state is correct
 		CG_AddMarks();
 	}
-	CG_AddViewWeapon( &cg.predictedPlayerState );
+	if ( !temple ) {
+		CG_AddViewWeapon( &cg.predictedPlayerState );
+	}
 
-	if ( !cg.hyperspace)
+	if ( !cg.hyperspace && !temple )
 	{
 		trap->FX_AddScheduledEffects(qfalse);
 	}
@@ -2694,11 +2698,11 @@ void CG_DrawActiveFrame( int serverTime, stereoFrame_t stereoView, qboolean demo
 	CG_PlayBufferedSounds();
 
 	// finish up the rest of the refdef
-	if ( cg.testModelEntity.hModel ) {
+	if ( cg.testModelEntity.hModel && !temple ) {
 		CG_AddTestModel();
 	}
 
-	if ( !cg.hyperspace ) {
+	if ( !cg.hyperspace && !temple ) {
 		CG_AddLocalEntities();
 	}
 
@@ -2729,7 +2733,7 @@ void CG_DrawActiveFrame( int serverTime, stereoFrame_t stereoView, qboolean demo
 	//This is done from the vieworg to get origin for non-attenuated sounds
 	cstr = CG_ConfigString( CS_GLOBAL_AMBIENT_SET );
 
-	if (cstr && cstr[0])
+	if (cstr && cstr[0] && !temple)
 	{
 		trap->S_UpdateAmbientSet( cstr, cg.refdef.vieworg );
 	}

@@ -219,6 +219,7 @@ set(MPVulkanVisionShaders
 	copy.frag
 	focus.frag
 	spirit.frag
+	temple.frag
 	)
 set(MPVulkanVisionShaderIncludes
 	"${MPDir}/rd-vulkan-vision/shaders/common.glsl"

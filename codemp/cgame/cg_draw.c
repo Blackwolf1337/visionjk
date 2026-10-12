@@ -8527,7 +8527,10 @@ void CG_DrawActive( stereoFrame_t stereoView ) {
 
 	cg.refdef.rdflags |= RDF_DRAWSKYBOX;
 
-	CG_DrawMiscStaticModels();
+	// (the level's own models, not in the Vision Temple: focus/cg_focus.c)
+	if ( !CG_FocusTemple() ) {
+		CG_DrawMiscStaticModels();
+	}
 
 	// draw 3D view
 	// the panel of the menu in the level, and where the engine is to draw the menu (menu3d/cg_menu3d.c)

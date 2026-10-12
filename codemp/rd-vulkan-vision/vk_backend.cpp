@@ -346,6 +346,10 @@ static void RB_BeginDrawingView( void ) {
 	backEnd.isHyperspace = qfalse;
 	// we haven't drawn anything yet this view
 	backEnd.skyRenderedThisView = qfalse;
+	// the Vision Temple in the place of a level (RE_SetTempleScene, vk_post.cpp)
+	if ( ( backEnd.refdef.rdflags & RDF_VISION_TEMPLE ) && r_templeAmount > 0.0f && !RB_KEEPS_FRAME() ) {
+		VK_TempleFrame( r_templeAmount, r_templeTime );
+	}
 }
 
 /*

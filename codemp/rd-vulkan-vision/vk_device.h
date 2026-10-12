@@ -167,6 +167,9 @@ typedef struct vkDeviceState_s {	// see vkState_t
 	VkPipeline					focusPipeline;
 	VkShaderModule				spiritFragmentShader;	// with the layout of the focus pass
 	VkPipeline					spiritPipeline;
+	VkPipelineLayout			templePipelineLayout;	// no set, sixteen numbers (shaders/temple.frag)
+	VkShaderModule				templeFragmentShader;
+	VkPipeline					templePipeline;
 	vkPipeline_t				pipelines[VK_MAX_PIPELINES];
 	int							numPipelines;
 	uint32_t					lastPipelineKey;	// what VK_FindPipeline() was asked last and what it answered

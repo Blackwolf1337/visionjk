@@ -381,6 +381,7 @@ static consoleCommand_t	commands[] = {
 	{ "tcmd",						CG_TargetCommand_f },
 	{ "tell_attacker",				CG_TellAttacker_f },
 	{ "tell_target",				CG_TellTarget_f },
+	{ "temple",						CG_Temple_f },
 	{ "testgun",					CG_TestGun_f },
 	{ "testmodel",					CG_TestModel_f },
 	{ "viewpos",					CG_Viewpos_f },

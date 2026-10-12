@@ -635,6 +635,22 @@ void VK_SpiritPass( vkTarget_t *source, vkTarget_t *target, const float *parm ) 
 	VK_DepthPass( vk.spiritPipeline, source, target, parm );
 }
 
+// NULL: only whether the device has the pass
+qboolean VK_TemplePass( const float *view ) {
+	VkCommandBuffer cmd;
+
+	if ( !view ) {
+		return qtrue;
+	}
+	cmd = vk.frame->cmd;
+	qvkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.templePipeline );
+	vk.boundPipeline = vk.templePipeline;
+	VK_FullTarget( cmd, &vk.color );
+	qvkCmdPushConstants( cmd, vk.templePipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof( float ) * 16, view );
+	qvkCmdDraw( cmd, 3, 1, 0, 0 );
+	return qtrue;
+}
+
 void VK_AddTarget( vkTarget_t *source, vkAdd_t how ) {
 	VkCommandBuffer cmd = vk.frame->cmd;
 	const VkDescriptorSet sourceSet = VK_PostSet( source );

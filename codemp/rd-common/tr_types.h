@@ -103,6 +103,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define RDF_AUTOMAP			32		//means this scene is to draw the automap -rww
 #define	RDF_NOFOG			64		//no global fog in this scene (but still brush fog) -rww
 #define RDF_ForceSightOn	128		//using force sight
+#define RDF_VISION_TEMPLE	256		// VisionJK: a scene without a level whose background is the Vision Temple (RE_SetTempleScene)
 
 extern int	skyboxportal;
 extern int	drawskyboxportal;

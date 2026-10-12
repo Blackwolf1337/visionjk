@@ -2012,6 +2012,7 @@ void CL_BindCGame( void ) {
 		cgi.ext.R_SetDepthOfField				= re->ext.SetDepthOfField;
 		cgi.ext.Key_GetBindingBuf				= Key_GetBindingBuf;
 		cgi.ext.R_SetSpiritWorld				= re->ext.SetSpiritWorld;
+		cgi.ext.R_SetTempleScene				= re->ext.SetTempleScene;
 
 		GetCGameAPI = (GetCGameAPI_t)cgvm->GetModuleAPI;
 		ret = GetCGameAPI( CGAME_API_VERSION, &cgi );

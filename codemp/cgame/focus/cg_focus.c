@@ -62,6 +62,14 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 //
 // Everything else happens in this client. Another client sees a player who stands still, or meditates where the
 // server protects him.
+//
+// The Vision Temple ("temple") is the same state with another place in it. The level is not drawn at all: the
+// scene of the frame is one without a level (RDF_NOWORLDMODEL) with the flag RDF_VISION_TEMPLE, and the renderer
+// works a place above the clouds out behind it (trap->ext.R_SetTempleScene, an engine with the cvar
+// cl_cgameTemple; so far only the Vulkan device of rd-vulkan-vision can, shaders/temple.frag). The camera
+// walks there on the ground: on the clouds, up the three steps of the podium, no farther from it than
+// TEMPLE_FAR. Where the podium is and how high its steps are stands in that shader and in Temple_Ground()
+// here, and the two have to match. Keys, the server, the body and the ways back are the ones of Focus.
 
 #include "cgame/cg_local.h"
 #include "ui/ui_shared.h"
@@ -81,6 +89,10 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define FOCUS_IN_MSEC		550			// the look comes in this time,
 #define FOCUS_OUT_MSEC		320			//	and goes in this one after the world is back
 #define FOCUS_MUFFLE		0.7f		// s_muffle while the look is all there
+#define TEMPLE_EYE			44.0f		// the Vision Temple: the eye above the ground,
+#define TEMPLE_FAR			640.0f		//	how far from the middle of the podium one can go,
+#define TEMPLE_SPEED		190.0f		//	units a second,
+#define TEMPLE_IN_MSEC		1800		//	and the time in which the place comes out of light
 #define FOCUS_SMOKE			64			// the picture of the smoke of the plain look, a side of it
 #define FOCUS_SMOKE_GRID	8			//	and the cells of the pattern it is made of
 
@@ -102,6 +114,7 @@ static const char *const focusChat[] = { "messagemode", "messagemode2", "message
 
 typedef struct focus_s {
 	qboolean	active;					// the player is out of his body
+	qboolean	temple;					// and in the Vision Temple, not in the still of the level
 	qboolean	resync;					// it ended: the still stays until the snapshots are read anew
 	qboolean	reselect;				// the snapshots were read anew this frame: the weapon bar is not to show for it
 	int			selectTime;				//	cg.weaponSelectTime as it was
@@ -204,31 +217,54 @@ static float Focus_Held( focusMove_t move ) {
 	return 0.0f;
 }
 
+// does the engine have that call of the import table?
+static qboolean Focus_Engine( const char *cvar ) {
+	return (qboolean)( Focus_Cvar( cvar ) == 1.0f );
+}
+
 // why it can not begin now, NULL: it can
-static const char *Focus_Refused( void ) {
-	const playerState_t *ps;
+static const char *Focus_Refused( qboolean temple ) {
+	static const char *const texts[2][4] = {
+		{ "Focus: only while you play.", "Focus: not now.", "Focus: not in a duel.", "Focus: not while a menu is open." },
+		{ "Vision Temple: only while you play.", "Vision Temple: not now.", "Vision Temple: not in a duel.",
+			"Vision Temple: not while a menu is open." },
+	};
+	const char *const		*text = texts[temple ? 1 : 0];
+	const playerState_t		*ps;
 
 	if ( !cg.snap || cg.demoPlayback || ( cg.snap->snapFlags & SNAPFLAG_NOT_ACTIVE ) ) {
-		return "Focus: only while you play.";
+		return text[0];
 	}
 	ps = &cg.snap->ps;
 	if ( ps->persistant[PERS_TEAM] == TEAM_SPECTATOR || ( ps->pm_flags & PMF_FOLLOW ) ) {
-		return "Focus: only while you play.";
+		return text[0];
 	}
 	if ( ps->stats[STAT_HEALTH] <= 0 || ps->pm_type != PM_NORMAL || ps->m_iVehicleNum || ps->zoomMode
 		|| ps->groundEntityNum == ENTITYNUM_NONE ) {
-		return "Focus: not now.";
+		return text[1];
 	}
 	if ( ps->duelInProgress ) {
-		return "Focus: not in a duel.";
+		return text[2];
 	}
 	if ( ( trap->Key_GetCatcher() & KEYCATCH_UI ) || CG_Menu3DActive() ) {
-		return "Focus: not while a menu is open.";
+		return text[3];
+	}
+	// (asked for nothing yet: whether the renderer of this engine can draw the place)
+	if ( temple && !( Focus_Engine( "cl_cgameTemple" ) && trap->ext.R_SetTempleScene( 0.0f, 0.0f ) ) ) {
+		return "Vision Temple: only with the Vulkan renderer for now.";
 	}
 	return NULL;
 }
 
-static void Focus_Begin( void ) {
+// How high the ground of the Vision Temple is at a place: the clouds, and the three steps of the podium in its
+// middle. The numbers of gold() in shaders/temple.frag.
+static float Temple_Ground( float x, float y ) {
+	const float r = sqrtf( x * x + y * y );
+
+	return r < 110.0f ? 24.0f : r < 140.0f ? 16.0f : r < 170.0f ? 8.0f : 0.0f;
+}
+
+static void Focus_Begin( qboolean temple ) {
 	const playerState_t *ps = &cg.snap->ps;
 
 	// the mouse is the camera's now: no pointer, no kept scoreboard
@@ -250,6 +286,12 @@ static void Focus_Begin( void ) {
 	VectorCopy( cg.refdef.vieworg, focus.origin );
 	VectorCopy( cg.refdef.viewangles, focus.angles );
 	focus.angles[ROLL] = 0.0f;
+	focus.temple = temple;
+	if ( temple ) {
+		// one arrives on the way to the podium, the great ring and the sun ahead
+		VectorSet( focus.origin, -470.0f, 0.0f, TEMPLE_EYE );
+		VectorSet( focus.angles, -4.0f, 0.0f, 0.0f );
+	}
 	// the server protects the body where it says that it does
 	focus.server = (qboolean)( ( atoi( Info_ValueForKey( CG_ConfigString( CS_SERVERINFO ), "g_visionCaps" ) ) & 16 ) != 0 );
 	focus.answer = -1;
@@ -304,6 +346,11 @@ qboolean CG_FocusActive( void ) {
 	return (qboolean)( focus.active || focus.resync );
 }
 
+// and what is on the screen is the Vision Temple: nothing of the level is drawn
+qboolean CG_FocusTemple( void ) {
+	return (qboolean)( focus.temple && CG_FocusActive() );
+}
+
 // the time the world is drawn with: the one it stopped at, or the one of the game
 int CG_FocusTime( int time ) {
 	return CG_FocusActive() ? focus.worldTime : time;
@@ -314,9 +361,10 @@ int CG_FocusTime( int time ) {
 CG_Focus_f
 
 "focus": out of the body, or back into it. "focus 1" only out of it, "focus 0" only back.
+"temple": the same into the Vision Temple.
 =================
 */
-void CG_Focus_f( void ) {
+static void Focus_Command( qboolean temple ) {
 	const char	*refused;
 	const int	want = trap->Cmd_Argc() > 1 ? ( atoi( CG_Argv( 1 ) ) ? 1 : 0 ) : -1;
 
@@ -329,12 +377,20 @@ void CG_Focus_f( void ) {
 	if ( focus.resync || want == 0 ) {
 		return;
 	}
-	refused = Focus_Refused();
+	refused = Focus_Refused( temple );
 	if ( refused ) {
 		trap->Print( "%s\n", CG_VisionText( refused ) );
 		return;
 	}
-	Focus_Begin();
+	Focus_Begin( temple );
+}
+
+void CG_Focus_f( void ) {
+	Focus_Command( qfalse );
+}
+
+void CG_Temple_f( void ) {
+	Focus_Command( qtrue );
 }
 
 /*
@@ -498,6 +554,29 @@ static void Focus_Move( void ) {
 		VectorMA( wish, focusTest.wish[1], right, wish );
 		wish[2] += focusTest.wish[2];
 	}
+	if ( focus.temple ) {
+		// On the ground of the Vision Temple: where one looks decides only the direction on it, the ground how
+		// high the eye is, and nobody goes farther from the podium than TEMPLE_FAR.
+		float ground;
+
+		wish[2] = 0.0f;
+		speed = VectorNormalize( wish ) > 0.0f ? TEMPLE_SPEED * ( Focus_Held( MOVE_WALK ) ? FOCUS_WALK : 1.0f ) : 0.0f;
+		VectorScale( wish, speed, wish );
+		VectorSubtract( wish, focus.velocity, delta );
+		VectorMA( focus.velocity, Q_min( 1.0f, FOCUS_ACCEL * seconds ), delta, focus.velocity );
+		focus.velocity[2] = 0.0f;
+		focus.origin[0] += focus.velocity[0] * seconds;
+		focus.origin[1] += focus.velocity[1] * seconds;
+		dist = sqrtf( focus.origin[0] * focus.origin[0] + focus.origin[1] * focus.origin[1] );
+		if ( dist > TEMPLE_FAR ) {
+			focus.origin[0] *= TEMPLE_FAR / dist;
+			focus.origin[1] *= TEMPLE_FAR / dist;
+		}
+		// (a step is taken within a moment, and one sways a little as somebody who floats)
+		ground = Temple_Ground( focus.origin[0], focus.origin[1] ) + TEMPLE_EYE + 1.5f * sinf( now * 0.0016f );
+		focus.origin[2] += ( ground - focus.origin[2] ) * Q_min( 1.0f, 9.0f * seconds );
+		return;
+	}
 	speed = VectorNormalize( wish ) > 0.0f ? FOCUS_SPEED * ( Focus_Held( MOVE_WALK ) ? FOCUS_WALK : 1.0f ) : 0.0f;
 	VectorScale( wish, speed, wish );
 	VectorSubtract( wish, focus.velocity, delta );
@@ -574,11 +653,6 @@ void CG_FocusView( void ) {
 	AnglesToAxis( focus.angles, cg.refdef.viewaxis );
 }
 
-// does the engine have that call of the import table?
-static qboolean Focus_Engine( const char *cvar ) {
-	return (qboolean)( Focus_Cvar( cvar ) == 1.0f );
-}
-
 /*
 =================
 CG_FocusScene
@@ -604,6 +678,19 @@ void CG_FocusScene( void ) {
 	focus.pass = qfalse;
 	if ( focus.look <= 0.0f ) {
 		focus.look = 0.0f;
+		return;
+	}
+	if ( focus.temple ) {
+		// The Vision Temple: while one is there the scene is one without a level, whatever was put into it, and
+		// the renderer draws the place behind it. (Back in the level nothing of it is left but a light that
+		// goes, CG_FocusTint().)
+		if ( CG_FocusActive() ) {
+			trap->R_ClearScene();
+			cg.refdef.rdflags = RDF_NOWORLDMODEL | RDF_VISION_TEMPLE;
+			trap->ext.R_SetTempleScene( Com_Clamp( 0.0f, 1.0f, ( now - focus.startMsec ) / (float)TEMPLE_IN_MSEC ),
+				( now - focus.startMsec ) * 0.001f );
+		}
+		focus.pass = qtrue;
 		return;
 	}
 	if ( Focus_Engine( "cl_cgameSpirit" ) ) {
@@ -671,6 +758,15 @@ void CG_FocusTint( void ) {
 	qhandle_t			smoke;
 	int					layer;
 
+	if ( focus.look > 0.0f && focus.temple && !CG_FocusActive() ) {
+		// back from the Vision Temple: the light one came out of, once more, and gone within a moment
+		vec4_t light = { 1.0f, 0.93f, 0.78f, 0.0f };
+
+		CG_Place2D( PLACE_CENTER );
+		light[3] = 0.85f * focus.look;
+		CG_FillRect( left, 0.0f, width, SCREEN_HEIGHT, light );
+		return;
+	}
 	if ( focus.look <= 0.0f || focus.pass ) {
 		return;
 	}
@@ -731,7 +827,7 @@ qboolean CG_FocusKeyEvent( int key, qboolean down ) {
 	if ( !focus.active ) {
 		return qfalse;
 	}
-	if ( Focus_KeyIs( key, "focus" ) ) {
+	if ( Focus_KeyIs( key, focus.temple ? "temple" : "focus" ) ) {
 		// the key that began it is still down, and a key that is held comes again and again
 		if ( !down ) {
 			focus.keyUp = qtrue;
@@ -771,8 +867,13 @@ void CG_FocusDraw( void ) {
 	if ( !focus.active ) {
 		return;
 	}
-	key = CG_KeyLabel( trap->Key_GetKey( "focus" ) );
-	text = key ? CG_VisionTextWith( "Focus. %s or Esc: back", key ) : CG_VisionText( "Focus. Esc: back" );
+	if ( focus.temple ) {
+		key = CG_KeyLabel( trap->Key_GetKey( "temple" ) );
+		text = key ? CG_VisionTextWith( "Vision Temple. %s or Esc: back", key ) : CG_VisionText( "Vision Temple. Esc: back" );
+	} else {
+		key = CG_KeyLabel( trap->Key_GetKey( "focus" ) );
+		text = key ? CG_VisionTextWith( "Focus. %s or Esc: back", key ) : CG_VisionText( "Focus. Esc: back" );
+	}
 
 	// and what happens to the body meanwhile
 	if ( focus.answer > 0 ) {
@@ -828,6 +929,9 @@ void CG_FocusStatus_f( void ) {
 	if ( !focus.active ) {
 		trap->Print( "Focus: in the body%s%s.\n", focusBack.ended ? ", back by: " : "", focusBack.ended ? focusBack.ended : "" );
 		return;
+	}
+	if ( focus.temple ) {
+		trap->Print( "Vision Temple: at %.0f %.0f %.0f, looking %.0f.\n", focus.origin[0], focus.origin[1], focus.origin[2], focus.angles[YAW] );
 	}
 	trap->Print( "Focus: out of the body for %.1f s, %.0f units from it, the world stands still at %i. The server: %s.\n",
 		( trap->Milliseconds() - focus.startMsec ) * 0.001f, Distance( focus.origin, focus.eyes ), focus.worldTime,

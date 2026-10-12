@@ -38,6 +38,8 @@ const void *RB_TakeVideoFrameCmd( const void *data );
 qboolean VK_FlareVisible( const float *point, int x, int y, float eyeZ );
 // and whether the pass of RE_SetSpiritWorld() can be drawn (tr_cmds.cpp)
 qboolean VK_SpiritReady( void );
+// and the one of RE_SetTempleScene()
+qboolean VK_TempleReady( void );
 
 // tr_ghoul2.cpp, for vk_model.cpp: the bone cache is a class of that file
 int G2_BoneMatrices( CBoneCache *boneCache, float *out, int maxBones );

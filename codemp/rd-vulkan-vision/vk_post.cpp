@@ -221,6 +221,47 @@ void VK_SpiritFrame( float amount, float seconds ) {
 
 /*
 ===============
+VK_TempleFrame
+
+The Vision Temple a module asked for with RE_SetTempleScene(): a place above the clouds that shaders/temple.frag
+works out for every pixel of the frame, seen from where the view of the back end is seen from. Drawn when a view
+with the flag RDF_VISION_TEMPLE begins (RB_BeginDrawingView), in the place of a level, so what the view holds is
+drawn on it. The depth is not written: nothing of the place hides a thing of the view.
+===============
+*/
+qboolean VK_TempleReady( void ) {
+	return VK_TemplePass( NULL );
+}
+
+void VK_TempleFrame( float amount, float seconds ) {
+	const viewParms_t	*view = &backEnd.viewParms;
+	// half the angles of view, as their tangents: a pixel at the edge looks that far to the side for one ahead
+	const float			tanX = tanf( DEG2RAD( view->fovX * 0.5f ) ), tanY = tanf( DEG2RAD( view->fovY * 0.5f ) );
+	float				parm[16];
+
+	if ( !vk.frame ) {
+		return;
+	}
+	// the eye and the clock, ahead and how much, to the right (axis 1 is to the left), up
+	VectorCopy( view->ori.origin, &parm[0] );
+	parm[3] = seconds;
+	VectorCopy( view->ori.axis[0], &parm[4] );
+	parm[7] = amount;
+	VectorScale( view->ori.axis[1], -tanX, &parm[8] );
+	parm[11] = 0.0f;
+	VectorScale( view->ori.axis[2], tanY, &parm[12] );
+	parm[15] = 0.0f;
+	if ( !VK_TemplePass( parm ) ) {
+		return;
+	}
+	// the shaders that draw geometry have other sets and other state
+	VK_BindFrameSets();
+	vk.stateValid = qfalse;
+	VK_SetViewport( view->viewportX, view->viewportY, view->viewportWidth, view->viewportHeight, 0.0f, 1.0f );
+}
+
+/*
+===============
 VK_CaptureFrame
 
 Copies the frame as it is right now into vk.screen, which the stages of refraction surfaces then read through

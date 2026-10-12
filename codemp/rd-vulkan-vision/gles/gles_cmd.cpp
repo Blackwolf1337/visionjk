@@ -399,6 +399,12 @@ void VK_SpiritPass( vkTarget_t *source, vkTarget_t *target, const float *parm ) 
 	GLES_DepthPass( GLP_SPIRIT, source, target, parm );
 }
 
+// The Vision Temple (shaders/temple.frag): this device does not draw it yet, the program and its sixteen numbers
+// are still to be made here. The module that asks is told so (RE_SetTempleScene).
+qboolean VK_TemplePass( const float * ) {
+	return qfalse;
+}
+
 void VK_AddTarget( vkTarget_t *source, vkAdd_t how ) {
 	glesCommand_t *cmd = GLES_Command( GC_ADD );
 
