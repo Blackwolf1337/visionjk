@@ -645,6 +645,14 @@ REFERENCE           TYPE_INTO_THE_CHAT_BOX_OF_VISIONJK_W
 LANG_ENGLISH        "Type into the chat box of VisionJK, with history and links."
 LANG_GERMAN         "In die Chatbox von VisionJK tippen, mit Verlauf und Links."
 
+REFERENCE           CHAT_BOX_SIZE
+LANG_ENGLISH        "Chat Box Size"
+LANG_GERMAN         "Größe der Chatbox"
+
+REFERENCE           HOW_LARGE_THE_CHAT_BOX_AND_ITS_TEXT
+LANG_ENGLISH        "How large the chat box and its text are. In the open box Ctrl and the mouse wheel change it too."
+LANG_GERMAN         "Wie groß die Chatbox und ihr Text sind. In der offenen Box ändern es auch Strg und das Mausrad."
+
 REFERENCE           CHAT_BOX_WIDTH
 LANG_ENGLISH        "Chat Box Width"
 LANG_GERMAN         "Breite der Chatbox"
@@ -652,6 +660,14 @@ LANG_GERMAN         "Breite der Chatbox"
 REFERENCE           HOW_WIDE_THE_CHAT_BOX_IS
 LANG_ENGLISH        "How wide the chat box is."
 LANG_GERMAN         "Wie breit die Chatbox ist."
+
+REFERENCE           CHAT_BOX_ROWS
+LANG_ENGLISH        "Chat Box Rows"
+LANG_GERMAN         "Zeilen der Chatbox"
+
+REFERENCE           HOW_MANY_LINES_THE_OPEN_CHAT_BOX_SHO
+LANG_ENGLISH        "How many lines the open chat box shows. Its upper right corner can also be dragged with the mouse."
+LANG_GERMAN         "Wie viele Zeilen die offene Chatbox zeigt. Ihre obere rechte Ecke lässt sich auch mit der Maus ziehen."
 
 REFERENCE           CHAT_BEEP
 LANG_ENGLISH        "Chat Beep"

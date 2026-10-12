@@ -1759,6 +1759,7 @@ int			CG_ChatSender( const char *raw, int clientNum );
 void		CG_ChatBox_AddString( char *chatStr );
 qboolean	CG_ChatKeyEvent( int key, qboolean down );
 void		CG_ChatOpen_f( void );
+void		CG_ChatDrag_f( void );
 void		CG_ChatClose( void );
 
 // bubble/cg_bubble.c: chat bubbles above the heads

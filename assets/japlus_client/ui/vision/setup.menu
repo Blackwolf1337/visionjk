@@ -2240,13 +2240,49 @@
 
 		itemDef
 		{
+			name					vision_slider_cg_chatboxscale
+			type					ITEM_TYPE_SLIDER
+			text					@VISION_CHAT_BOX_SIZE
+			descText				@VISION_HOW_LARGE_THE_CHAT_BOX_AND_ITS_TEXT
+			cvarfloat				"cg_chatBoxScale" 0.85 0.6 1.6
+			action { play "sound/interface/button1.wav" ; }
+			rect					32 292 384 22
+			page					5
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+		}
+
+		itemDef
+		{
 			name					vision_slider_cg_chatboxwidth
 			type					ITEM_TYPE_SLIDER
 			text					@VISION_CHAT_BOX_WIDTH
 			descText				@VISION_HOW_WIDE_THE_CHAT_BOX_IS
 			cvarfloat				"cg_chatBoxWidth" 380 200 600
 			action { play "sound/interface/button1.wav" ; }
-			rect					32 292 384 22
+			rect					32 314 384 22
+			page					5
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+		}
+
+		itemDef
+		{
+			name					vision_slider_cg_chatboxrows
+			type					ITEM_TYPE_SLIDER
+			text					@VISION_CHAT_BOX_ROWS
+			descText				@VISION_HOW_MANY_LINES_THE_OPEN_CHAT_BOX_SHO
+			cvarfloat				"cg_chatBoxRows" 10 4 24
+			action { play "sound/interface/button1.wav" ; }
+			rect					32 336 384 22
 			page					5
 			scroll					1
 			row						1
@@ -2264,7 +2300,7 @@
 			descText				@VISION_A_SOUND_WHEN_SOMEBODY_SAYS_SOMETHING
 			cvar					"cg_chatBeep"
 			action { play "sound/interface/button1.wav" ; }
-			rect					32 314 384 22
+			rect					32 358 384 22
 			page					5
 			scroll					1
 			row						1
@@ -2277,7 +2313,7 @@
 		itemDef
 		{
 			name					vision_head
-			rect					34 336 380 22
+			rect					34 380 380 22
 			visible					1
 			text					@VISION_CONSOLE
 			font					5
@@ -2293,7 +2329,7 @@
 		itemDef
 		{
 			name					vision_headline
-			rect					32 357 384 0.67
+			rect					32 401 384 0.67
 			visible					1
 			style					WINDOW_STYLE_FILLED
 			backcolor				0.43 0.83 1 0.32
@@ -2310,7 +2346,7 @@
 			descText				@VISION_THE_CONSOLE_IN_A_FONT_WITH_EVERY_CHA
 			cvar					"con_font"
 			action { play "sound/interface/button1.wav" ; }
-			rect					32 358 384 22
+			rect					32 402 384 22
 			page					5
 			scroll					1
 			row						1
@@ -2328,7 +2364,7 @@
 			descText				@VISION_THE_SIZE_OF_THE_TEXT_OF_THE_CONSOLE
 			cvarfloat				"con_scale" 1 0.5 3
 			action { play "sound/interface/button1.wav" ; }
-			rect					32 380 384 22
+			rect					32 424 384 22
 			page					5
 			scroll					1
 			row						1
@@ -2346,7 +2382,7 @@
 			descText				@VISION_HOW_MUCH_OF_THE_GAME_SHOWS_THROUGH_T
 			cvarfloat				"con_opacity" 1 0.2 1
 			action { play "sound/interface/button1.wav" ; }
-			rect					32 402 384 22
+			rect					32 446 384 22
 			page					5
 			scroll					1
 			row						1
@@ -2359,7 +2395,7 @@
 		itemDef
 		{
 			name					vision_head
-			rect					34 424 380 22
+			rect					34 468 380 22
 			visible					1
 			text					@VISION_CLAN
 			font					5
@@ -2375,7 +2411,7 @@
 		itemDef
 		{
 			name					vision_headline
-			rect					32 445 384 0.67
+			rect					32 489 384 0.67
 			visible					1
 			style					WINDOW_STYLE_FILLED
 			backcolor				0.43 0.83 1 0.32
@@ -2394,7 +2430,7 @@
 			maxChars				32
 			maxPaintChars			24
 			action { play "sound/interface/button1.wav" ; }
-			rect					32 446 384 22
+			rect					32 490 384 22
 			page					5
 			scroll					1
 			row						2

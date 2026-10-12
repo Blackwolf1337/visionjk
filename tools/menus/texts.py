@@ -118,6 +118,12 @@ TR = {
     'Blue': 'Blau',
     'Blade Style': 'Klingenstil',
     'Fixed Color': 'Feste Farbe',
+    'Chat Box Size': 'Größe der Chatbox',
+    'How large the chat box and its text are. In the open box Ctrl and the mouse wheel change it too.':
+        'Wie groß die Chatbox und ihr Text sind. In der offenen Box ändern es auch Strg und das Mausrad.',
+    'Chat Box Rows': 'Zeilen der Chatbox',
+    'How many lines the open chat box shows. Its upper right corner can also be dragged with the mouse.':
+        'Wie viele Zeilen die offene Chatbox zeigt. Ihre obere rechte Ecke lässt sich auch mit der Maus ziehen.',
     'Keep Scoreboard on Double Tap': 'Punktetafel bei Doppeltipp halten',
     'The scoreboard key pressed twice quickly keeps the board open, with the mouse free to click a player.':
         'Die Taste der Punktetafel zweimal schnell gedrückt hält die Tafel offen, mit freier Maus zum Anklicken eines Spielers.',

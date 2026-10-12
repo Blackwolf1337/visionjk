@@ -645,12 +645,28 @@ REFERENCE           TYPE_INTO_THE_CHAT_BOX_OF_VISIONJK_W
 LANG_ENGLISH        "Type into the chat box of VisionJK, with history and links."
 LANG_FRENCH         "#same"
 
+REFERENCE           CHAT_BOX_SIZE
+LANG_ENGLISH        "Chat Box Size"
+LANG_FRENCH         "#same"
+
+REFERENCE           HOW_LARGE_THE_CHAT_BOX_AND_ITS_TEXT
+LANG_ENGLISH        "How large the chat box and its text are. In the open box Ctrl and the mouse wheel change it too."
+LANG_FRENCH         "#same"
+
 REFERENCE           CHAT_BOX_WIDTH
 LANG_ENGLISH        "Chat Box Width"
 LANG_FRENCH         "#same"
 
 REFERENCE           HOW_WIDE_THE_CHAT_BOX_IS
 LANG_ENGLISH        "How wide the chat box is."
+LANG_FRENCH         "#same"
+
+REFERENCE           CHAT_BOX_ROWS
+LANG_ENGLISH        "Chat Box Rows"
+LANG_FRENCH         "#same"
+
+REFERENCE           HOW_MANY_LINES_THE_OPEN_CHAT_BOX_SHO
+LANG_ENGLISH        "How many lines the open chat box shows. Its upper right corner can also be dragged with the mouse."
 LANG_FRENCH         "#same"
 
 REFERENCE           CHAT_BEEP

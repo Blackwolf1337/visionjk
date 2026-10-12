@@ -312,6 +312,7 @@ static consoleCommand_t	commands[] = {
 	{ "admCmdPrev",					CG_JPAdmCycleCmd_f },
 	{ "amkey",						CG_AuthCommand_f },
 	{ "briefing",					CG_SiegeBriefing_f },
+	{ "cg_chatdrag",				CG_ChatDrag_f },
 	{ "cg_chatopen",				CG_ChatOpen_f },
 	{ "cursor",						CG_SelectCursor_f },
 	{ "clientlist",					CG_ClientList_f },

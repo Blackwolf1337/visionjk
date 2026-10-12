@@ -39,6 +39,11 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // With the HUD of the new look (CG_HudNewLook) the box has that look too: a panel of dark glass, the letters of
 // the menus, the tabs as words with a line under the open one, and the lines that stand there while nobody
 // types each on a dark strip, so they can be read on a bright floor.
+//
+// How large it is (2026-10-12): cg_chatBoxScale is the size of the box with everything in it, the letters first
+// of all; cg_chatBoxWidth how wide it is at a size of 1; cg_chatBoxRows how many rows of history the open box
+// has. All three are in Setup. With the box open they are also set by hand: its upper right corner is dragged
+// (width and rows), and Ctrl with the wheel changes the size.
 
 #include "cgame/cg_local.h"
 #include "ui/ui_shared.h"
@@ -51,8 +56,12 @@ extern displayContextDef_t cgDC;
 #define CHAT_MAX_ROWS		8				// rows a line takes at most when it is wrapped
 #define CHAT_SCALE			0.65f
 #define CHAT_SKIN_SCALE		0.6f			// of the letters of the new look
-#define CHAT_ROW_HEIGHT		13.0f
-#define CHAT_OPEN_ROWS		10				// rows of history in the open box
+#define CHAT_ROW_HEIGHT		13.0f			// this and the heights below at a size of 1 (cg_chatBoxScale)
+#define CHAT_MAX_OPEN_ROWS	24				// rows of history in the open box at most (cg_chatBoxRows),
+#define CHAT_MIN_OPEN_ROWS	4				//	and at least
+#define CHAT_MIN_SCALE		0.6f			// cg_chatBoxScale
+#define CHAT_MAX_SCALE		1.6f
+#define CHAT_GRIP			9.0f			// the corner of the open box that is dragged to make it larger
 #define CHAT_CLOSED_ROWS	6				// rows that stand there while nobody types
 #define CHAT_X				30.0f
 #define CHAT_PAD			4.0f
@@ -92,6 +101,15 @@ static struct {
 
 	qboolean	engine;						// the engine has the calls of the box (cl_cgameChat)
 	qboolean	skin;						// the box is drawn in the new look
+	// how large it is this frame
+	float		size;						// cg_chatBoxScale
+	float		rowH;						// the height of a row
+	int			openRows;					// rows of history in the open box
+	// its upper right corner is dragged with the mouse
+	qboolean	resizing;
+	float		grabX, grabY, grabWidth;	// where the pointer was when the button went down, and how wide the box
+	int			grabRows;					//	and how many rows
+	float		gripX, gripY;				// where that corner is, from the last draw
 	qboolean	utf8;						// text is UTF-8 (cl_utf8Text)
 	int			handlerCount;				// cg_chatInput as it was when cg_chatHandler was last set
 
@@ -114,7 +132,7 @@ static struct {
 	char		url[256];					// a link was clicked: the question whether to open it stands there
 
 	// where things are on the screen, from the last draw, for the mouse
-	chatRow_t	rows[CHAT_OPEN_ROWS];
+	chatRow_t	rows[CHAT_MAX_OPEN_ROWS];
 	int			numRows;
 	float		x, width;
 	float		tabX[CHAT_NUM_KINDS + 1];
@@ -132,7 +150,12 @@ static int Chat_Font( void ) {
 }
 
 static float Chat_Scale( void ) {
-	return chat.skin ? CHAT_SKIN_SCALE : CHAT_SCALE;
+	return ( chat.skin ? CHAT_SKIN_SCALE : CHAT_SCALE ) * chat.size;
+}
+
+// a row was measured for this: the width of the box, its letters and their size
+static int Chat_WrapKey( float width ) {
+	return (int)width + ( chat.skin ? 100000 : 0 ) + (int)( chat.size * 100.0f + 0.5f ) * 1000000;
 }
 
 // the name of a tab in the language of the game, in capitals in the new look
@@ -201,7 +224,7 @@ static void Chat_Wrap( chatMsg_t *m, float width ) {
 	char	color = COLOR_WHITE, spaceColor = COLOR_WHITE;
 	float	w = 0.0f;
 
-	m->wrapWidth = (int)width + ( chat.skin ? 100000 : 0 );
+	m->wrapWidth = Chat_WrapKey( width );
 	m->numRows = 0;
 	m->rowStart[0] = 0;
 	m->rowColor[0] = COLOR_WHITE;
@@ -255,8 +278,7 @@ static int Chat_Rows( chatMsg_t *m ) {
 	if ( chat.width < 1.0f ) {
 		return 1;		// nothing was drawn yet
 	}
-	// (measured for this width and these letters)
-	if ( m->wrapWidth != (int)chat.width + ( chat.skin ? 100000 : 0 ) || m->numRows < 1 ) {
+	if ( m->wrapWidth != Chat_WrapKey( chat.width ) || m->numRows < 1 ) {
 		Chat_Wrap( m, chat.width );
 	}
 	return m->numRows;
@@ -473,7 +495,7 @@ static qboolean Chat_URLAt( const chatPos_t *pos, char *url, int urlSize ) {
 
 // puts what is marked on the clipboard, a line of the history a line, without the colours
 static void Chat_Copy( void ) {
-	static char	text[CHAT_OPEN_ROWS * 8 * CHAT_TEXT];
+	static char	text[CHAT_MAX_OPEN_ROWS * 8 * CHAT_TEXT];
 	chatPos_t	start, end;
 	int			i, len = 0;
 
@@ -676,6 +698,9 @@ qboolean CG_ChatKeyEvent( int key, qboolean down ) {
 		return qtrue;
 	}
 	if ( !down ) {
+		if ( key == A_MOUSE1 ) {
+			chat.resizing = qfalse;
+		}
 		if ( key == A_MOUSE1 && chat.selecting ) {
 			chat.selecting = qfalse;
 			// a click that marked nothing: on a link it asks whether to open it
@@ -734,16 +759,23 @@ qboolean CG_ChatKeyEvent( int key, qboolean down ) {
 		}
 		break;
 	case A_PAGE_UP:
-		chat.scroll += CHAT_OPEN_ROWS - 1;		// the draw keeps it inside the history
+		chat.scroll += chat.openRows - 1;		// the draw keeps it inside the history
 		break;
 	case A_PAGE_DOWN:
-		chat.scroll = Q_max( 0, chat.scroll - ( CHAT_OPEN_ROWS - 1 ) );
+		chat.scroll = Q_max( 0, chat.scroll - ( chat.openRows - 1 ) );
 		break;
 	case A_MWHEELUP:
-		chat.scroll += 2;
-		break;
 	case A_MWHEELDOWN:
-		chat.scroll = Q_max( 0, chat.scroll - 2 );
+		// with Ctrl: the box and its letters larger or smaller
+		if ( trap->Key_IsDown( A_CTRL ) ) {
+			const float size = Com_Clamp( CHAT_MIN_SCALE, CHAT_MAX_SCALE, chat.size + ( key == A_MWHEELUP ? 0.05f : -0.05f ) );
+
+			trap->Cvar_Set( "cg_chatBoxScale", va( "%.2f", size ) );
+		} else if ( key == A_MWHEELUP ) {
+			chat.scroll += 2;
+		} else {
+			chat.scroll = Q_max( 0, chat.scroll - 2 );
+		}
 		break;
 	case A_TAB:
 		chat.tab = (chatKind_t)( ( chat.tab + 1 ) % CHAT_NUM_KINDS );
@@ -751,8 +783,19 @@ qboolean CG_ChatKeyEvent( int key, qboolean down ) {
 		chat.selecting = chat.selected = qfalse;
 		break;
 	case A_MOUSE1:
+		// the corner of the box: it is dragged until the button is let go (Chat_DrawOpen)
+		if ( cgs.cursorX >= chat.gripX - 3.0f && cgs.cursorX < chat.gripX + CHAT_GRIP + 3.0f
+			&& cgs.cursorY >= chat.gripY - 3.0f && cgs.cursorY < chat.gripY + CHAT_GRIP + 3.0f ) {
+			chat.resizing = qtrue;
+			chat.grabX = cgs.cursorX;
+			chat.grabY = cgs.cursorY;
+			chat.grabWidth = chat.width;
+			chat.grabRows = chat.openRows;
+			chat.selecting = chat.selected = qfalse;
+			break;
+		}
 		// a tab
-		if ( cgs.cursorY >= chat.tabY && cgs.cursorY < chat.tabY + CHAT_TAB_HEIGHT ) {
+		if ( cgs.cursorY >= chat.tabY && cgs.cursorY < chat.tabY + CHAT_TAB_HEIGHT * chat.size ) {
 			for ( i = 0; i < CHAT_NUM_KINDS; i++ ) {
 				if ( cgs.cursorX >= chat.tabX[i] && cgs.cursorX < chat.tabX[i + 1] ) {
 					chat.tab = (chatKind_t)i;
@@ -786,6 +829,34 @@ DRAWING
 ===============================================================================
 */
 
+/*
+=================
+Chat_Resize
+
+The upper right corner of the open box was moved by dx and dy from where the box was `width` wide and had
+`rows` rows: to the right it gets wider, upwards it gets more rows. What it is set to is what the settings say
+from the next frame on.
+=================
+*/
+static void Chat_Resize( float width, int rows, float dx, float dy ) {
+	const int newWidth = (int)Com_Clamp( 200.0f, 600.0f, ( width + dx ) / chat.size );
+	const int newRows = Com_Clampi( CHAT_MIN_OPEN_ROWS, CHAT_MAX_OPEN_ROWS, rows + (int)floorf( -dy / chat.rowH + 0.5f ) );
+
+	if ( newWidth != (int)cg_chatBoxWidth.value ) {
+		trap->Cvar_Set( "cg_chatBoxWidth", va( "%i", newWidth ) );
+	}
+	if ( newRows != cg_chatBoxRows.integer ) {
+		trap->Cvar_Set( "cg_chatBoxRows", va( "%i", newRows ) );
+	}
+}
+
+// cg_chatdrag <dx> <dy>: the corner of the open box moved by that much, for a script in place of a mouse
+void CG_ChatDrag_f( void ) {
+	if ( chat.open ) {
+		Chat_Resize( chat.width, chat.openRows, atof( CG_Argv( 1 ) ), atof( CG_Argv( 2 ) ) );
+	}
+}
+
 // one row of a line, with what is marked behind it and its links underlined
 static void Chat_DrawRow( int index, int row, float x, float y, float alpha, qboolean open ) {
 	const chatMsg_t	*m = Chat_Msg( index );
@@ -803,7 +874,7 @@ static void Chat_DrawRow( int index, int row, float x, float y, float alpha, qbo
 		const int		b = Q_min( to, ( index == end.msg ) ? end.offset : to );
 
 		if ( b > a ) {
-			CG_FillRect( x + Chat_WidthOf( m->text, from, a ), y, Chat_WidthOf( m->text, a, b ), CHAT_ROW_HEIGHT, chat.skin ? selSkin : selColor );
+			CG_FillRect( x + Chat_WidthOf( m->text, from, a ), y, Chat_WidthOf( m->text, a, b ), chat.rowH, chat.skin ? selSkin : selColor );
 		}
 	}
 	// over the game, with nobody typing: a dark strip under the row, as wide as its words
@@ -812,7 +883,7 @@ static void Chat_DrawRow( int index, int row, float x, float y, float alpha, qbo
 		const float		w = Chat_WidthOf( m->text, from, to );
 
 		if ( w > 0.0f ) {
-			Skin_Panel( x - 4.0f, y, w + 8.0f, CHAT_ROW_HEIGHT, 3.0f, strip, NULL );
+			Skin_Panel( x - 4.0f, y, w + 8.0f, chat.rowH, 3.0f, strip, NULL );
 		}
 	}
 
@@ -820,7 +891,7 @@ static void Chat_DrawRow( int index, int row, float x, float y, float alpha, qbo
 	text[1] = m->rowColor[row];
 	Q_strncpyz( text + 2, m->text + from, Q_min( (int)sizeof( text ) - 2, to - from + 1 ) );
 	// (the letters of the new look are lower than their row, and need no shadow on the glass of the open box)
-	CG_Text_Paint( x, y + ( chat.skin ? 1.0f : 0.0f ), Chat_Scale(), color, text, 0, 0,
+	CG_Text_Paint( x, y + ( chat.skin ? chat.size : 0.0f ), Chat_Scale(), color, text, 0, 0,
 		( chat.skin && open ) ? ITEM_TEXTSTYLE_NORMAL : ITEM_TEXTSTYLE_OUTLINED, Chat_Font() );
 
 	if ( !open || !chat.engine ) {
@@ -831,7 +902,7 @@ static void Chat_DrawRow( int index, int row, float x, float y, float alpha, qbo
 		const int		a = Q_max( from, urlStart ), b = Q_min( to, urlEnd );
 
 		if ( b > a ) {
-			CG_FillRect( x + Chat_WidthOf( m->text, from, a ), y + CHAT_ROW_HEIGHT - 1.5f, Chat_WidthOf( m->text, a, b ), 1.0f, linkColor );
+			CG_FillRect( x + Chat_WidthOf( m->text, from, a ), y + chat.rowH - 1.5f, Chat_WidthOf( m->text, a, b ), 1.0f, linkColor );
 		}
 		urlFrom = urlEnd;
 	}
@@ -854,7 +925,7 @@ static void Chat_DrawClosed( float x, float bottom ) {
 		}
 		alpha = ( left < CHAT_FADE_MSEC ) ? (float)left / CHAT_FADE_MSEC : 1.0f;
 		for ( row = Chat_Rows( m ) - 1; row >= 0 && rows < CHAT_CLOSED_ROWS; row--, rows++ ) {
-			y -= CHAT_ROW_HEIGHT;
+			y -= chat.rowH;
 			Chat_DrawRow( i, row, x, y, alpha, qfalse );
 		}
 	}
@@ -866,14 +937,24 @@ static void Chat_DrawOpen( float x, float bottom ) {
 	static vec4_t	tabColor = { 0.25f, 0.35f, 0.6f, 0.8f };
 	static vec4_t	dimColor = { 0.7f, 0.7f, 0.7f, 1.0f };
 	const int		first = Chat_First();
-	const float		top = bottom - CHAT_OPEN_ROWS * CHAT_ROW_HEIGHT;
-	const float		boxX = x - CHAT_PAD, boxY = top - CHAT_TAB_HEIGHT - CHAT_PAD;
+	const float		tabH = CHAT_TAB_HEIGHT * chat.size, inputH = CHAT_INPUT_HEIGHT * chat.size;
+	const float		top = bottom - chat.openRows * chat.rowH;
+	const float		boxX = x - CHAT_PAD, boxY = top - tabH - CHAT_PAD;
 	const float		boxW = chat.width + CHAT_BAR_WIDTH + 3.0f * CHAT_PAD;
-	const float		boxH = CHAT_TAB_HEIGHT + CHAT_OPEN_ROWS * CHAT_ROW_HEIGHT + CHAT_INPUT_HEIGHT + 3.0f * CHAT_PAD;
+	const float		boxH = tabH + chat.openRows * chat.rowH + inputH + 3.0f * CHAT_PAD;
 	const float		inputY = bottom + CHAT_PAD;
 	int				i, total = 0, skip, rows = 0;
 	float			y = bottom, tx;
 	char			prompt[MAX_NETNAME + 48];
+
+	// the corner is dragged, as far as the pointer went since the button was pressed on it
+	if ( chat.resizing ) {
+		if ( !trap->Key_IsDown( A_MOUSE1 ) ) {
+			chat.resizing = qfalse;
+		} else {
+			Chat_Resize( chat.grabWidth, chat.grabRows, cgs.cursorX - chat.grabX, cgs.cursorY - chat.grabY );
+		}
+	}
 
 	if ( chat.skin ) {
 		const vec4_t shade = { 0.0f, 0.0f, 0.0f, 0.4f };
@@ -896,18 +977,30 @@ static void Chat_DrawOpen( float x, float bottom ) {
 		chat.tabX[i] = tx;
 		if ( chat.skin ) {
 			if ( open ) {
-				Skin_Panel( tx + CHAT_PAD, chat.tabY + CHAT_TAB_HEIGHT - 1.5f, w - 2.0f * CHAT_PAD, 1.3f, 0.65f, chatAccent, NULL );
+				Skin_Panel( tx + CHAT_PAD, chat.tabY + tabH - 1.5f, w - 2.0f * CHAT_PAD, 1.3f, 0.65f, chatAccent, NULL );
 			}
-			CG_Text_Paint( tx + CHAT_PAD, chat.tabY + 1.0f, Chat_Scale(), (float *)( open ? colorWhite : chatDim ), name, 0, 0, 0, Chat_Font() );
+			CG_Text_Paint( tx + CHAT_PAD, chat.tabY + chat.size, Chat_Scale(), (float *)( open ? colorWhite : chatDim ), name, 0, 0, 0, Chat_Font() );
 		} else {
 			if ( open ) {
-				CG_FillRect( tx, chat.tabY, w, CHAT_TAB_HEIGHT, tabColor );
+				CG_FillRect( tx, chat.tabY, w, tabH, tabColor );
 			}
-			CG_Text_Paint( tx + CHAT_PAD, chat.tabY, CHAT_SCALE, open ? colorWhite : dimColor, name, 0, 0, 0, FONT_SMALL );
+			CG_Text_Paint( tx + CHAT_PAD, chat.tabY, Chat_Scale(), open ? colorWhite : dimColor, name, 0, 0, 0, FONT_SMALL );
 		}
 		tx += w + 2.0f;
 	}
 	chat.tabX[CHAT_NUM_KINDS] = tx;
+
+	// the corner that is dragged: two short lines at the upper right, bright under the pointer and while it is held
+	chat.gripX = boxX + boxW - CHAT_GRIP - 3.0f;
+	chat.gripY = boxY + 3.0f;
+	{
+		const qboolean	over = (qboolean)( chat.resizing || ( cgs.cursorX >= chat.gripX - 3.0f && cgs.cursorX < chat.gripX + CHAT_GRIP + 3.0f
+			&& cgs.cursorY >= chat.gripY - 3.0f && cgs.cursorY < chat.gripY + CHAT_GRIP + 3.0f ) );
+		const float		*color = chat.skin ? ( over ? chatAccent : chatDim ) : ( over ? colorWhite : dimColor );
+
+		CG_FillRect( chat.gripX, chat.gripY, CHAT_GRIP, 1.2f, (float *)color );
+		CG_FillRect( chat.gripX + CHAT_GRIP - 1.2f, chat.gripY, 1.2f, CHAT_GRIP, (float *)color );
+	}
 
 	// the history, from the lowest row up: `scroll` rows of the newest lines are below the box
 	for ( i = first; i < chat.count; i++ ) {
@@ -915,22 +1008,22 @@ static void Chat_DrawOpen( float x, float bottom ) {
 			total += Chat_Rows( Chat_Msg( i ) );
 		}
 	}
-	chat.scroll = Com_Clampi( 0, Q_max( 0, total - CHAT_OPEN_ROWS ), chat.scroll );
+	chat.scroll = Com_Clampi( 0, Q_max( 0, total - chat.openRows ), chat.scroll );
 	skip = chat.scroll;
 	chat.numRows = 0;
-	for ( i = chat.count - 1; i >= first && rows < CHAT_OPEN_ROWS; i-- ) {
+	for ( i = chat.count - 1; i >= first && rows < chat.openRows; i-- ) {
 		chatMsg_t	*m = Chat_Msg( i );
 		int			row;
 
 		if ( !Chat_Shown( m ) ) {
 			continue;
 		}
-		for ( row = Chat_Rows( m ) - 1; row >= 0 && rows < CHAT_OPEN_ROWS; row-- ) {
+		for ( row = Chat_Rows( m ) - 1; row >= 0 && rows < chat.openRows; row-- ) {
 			if ( skip > 0 ) {
 				skip--;
 				continue;
 			}
-			y -= CHAT_ROW_HEIGHT;
+			y -= chat.rowH;
 			chat.rows[rows].msg = i;
 			chat.rows[rows].row = row;
 			chat.rows[rows].y = y;
@@ -952,10 +1045,10 @@ static void Chat_DrawOpen( float x, float bottom ) {
 	}
 
 	// where in the history the box is
-	if ( total > CHAT_OPEN_ROWS ) {
-		const float barH = CHAT_OPEN_ROWS * CHAT_ROW_HEIGHT;
-		const float thumbH = Q_max( 6.0f, barH * CHAT_OPEN_ROWS / total );
-		const float thumbY = top + ( barH - thumbH ) * ( 1.0f - (float)chat.scroll / ( total - CHAT_OPEN_ROWS ) );
+	if ( total > chat.openRows ) {
+		const float barH = chat.openRows * chat.rowH;
+		const float thumbH = Q_max( 6.0f, barH * chat.openRows / total );
+		const float thumbY = top + ( barH - thumbH ) * ( 1.0f - (float)chat.scroll / ( total - chat.openRows ) );
 
 		if ( chat.skin ) {
 			Skin_ScrollBar( x + chat.width + CHAT_PAD, top, CHAT_BAR_WIDTH, barH, ( thumbY - top ) / barH, thumbH / barH, qfalse, chatAccent );
@@ -980,9 +1073,9 @@ static void Chat_DrawOpen( float x, float bottom ) {
 		for ( len = strlen( question ); len > 0 && Chat_Width( question ) > chat.width; len-- ) {
 			question[len - 1] = '\0';
 		}
-		CG_Text_Paint( x, inputY + ( chat.skin ? 1.0f : 0.0f ), Chat_Scale(), colorYellow, question, 0, 0, 0, Chat_Font() );
+		CG_Text_Paint( x, inputY + ( chat.skin ? chat.size : 0.0f ), Chat_Scale(), colorYellow, question, 0, 0, 0, Chat_Font() );
 	} else {
-		const float	down = chat.skin ? 1.0f : 0.0f;
+		const float	down = chat.skin ? chat.size : 0.0f;
 		float		promptW, textW;
 		int			start = 0;
 		char		shown[MAX_SAY_TEXT];
@@ -1007,7 +1100,7 @@ static void Chat_DrawOpen( float x, float bottom ) {
 		textW = Chat_WidthOf( chat.input, start, chat.cursor );
 		CG_Text_Paint( x + promptW, inputY + down, Chat_Scale(), colorWhite, shown, 0, 0, 0, Chat_Font() );
 		if ( ( trap->Milliseconds() >> 8 ) & 1 ) {
-			CG_FillRect( x + promptW + textW, inputY + 1.0f, 1.0f, CHAT_ROW_HEIGHT - 2.0f, (float *)( chat.skin ? chatAccent : colorWhite ) );
+			CG_FillRect( x + promptW + textW, inputY + 1.0f, 1.0f, chat.rowH - 2.0f, (float *)( chat.skin ? chatAccent : colorWhite ) );
 		}
 	}
 	// (the pointer is drawn by CG_SelectDraw(), after the card of a player: it lies on everything)
@@ -1053,7 +1146,12 @@ void CG_ChatDraw( void ) {
 
 	chat.skin = CG_HudNewLook();
 	chat.x = CHAT_X - cgs.bias2D;
-	chat.width = Com_Clamp( 200.0f, 600.0f, cg_chatBoxWidth.value );
+	// how large it is: everything by cg_chatBoxScale, and as many rows as fit under the top of the screen
+	chat.size = Com_Clamp( CHAT_MIN_SCALE, CHAT_MAX_SCALE, cg_chatBoxScale.value );
+	chat.rowH = CHAT_ROW_HEIGHT * chat.size;
+	chat.width = Com_Clamp( 200.0f, 600.0f, cg_chatBoxWidth.value ) * chat.size;
+	chat.openRows = Com_Clampi( CHAT_MIN_OPEN_ROWS, Q_max( CHAT_MIN_OPEN_ROWS,
+		Q_min( CHAT_MAX_OPEN_ROWS, (int)( ( bottom - CHAT_TAB_HEIGHT * chat.size - 2.0f * CHAT_PAD - 4.0f ) / chat.rowH ) ) ), cg_chatBoxRows.integer );
 
 	CG_Place2D( PLACE_CENTER );
 	if ( chat.open ) {

@@ -213,6 +213,11 @@ be marked: its rows are drawn as strings of another height. Not run: nobody has 
 
 `cgame/chat/cg_chat.c` replaces the chat box of the base game (2026-10-11).
 
+The size of the box is set in Setup (Chat & Social: Chat Box Size, Width and Rows) and by hand while it is
+open: its upper right corner, marked by two short lines, is dragged with the left button (to the right it gets
+wider, upwards it gets more rows), and Ctrl with the wheel makes the box and its letters larger or smaller in
+steps of 5 %. Both write the three cvars. `cg_chatdrag <dx> <dy>` moves the corner for a script.
+
 With the HUD of the new look (`cg_hud 1`, [ui.md](ui.md)) the box has that look too, since 2026-10-12: a panel
 of dark glass with the letters of the menus, the tabs as words with a line under the open one, a thin bar for
 where in the history one is. The lines that stand at the lower left while nobody types each lie on a dark strip
@@ -224,7 +229,9 @@ front of the line to type in are in the language of the game (`CG_VisionText`, s
 |------|---------|---------|
 | `cg_chatBox` | 10000 | as before: milliseconds a line stands at the lower left while nobody types, 0 none |
 | `cg_chatBoxHeight` | 350 | as before: the lower edge of the lines |
-| `cg_chatBoxWidth` | 380 | the width lines are wrapped to, 200 to 600 |
+| `cg_chatBoxWidth` | 380 | the width lines are wrapped to at a size of 1, 200 to 600 |
+| `cg_chatBoxScale` | 0.85 | the size of the box with everything in it, the letters first of all: 0.6 to 1.6. Since 2026-10-12, when the box was 1 and "quite big" |
+| `cg_chatBoxRows` | 10 | rows of history in the open box, 4 to 24, and no more than fit under the top of the screen |
 | `cg_chatInput` | 1 | the message mode keys open the box of the cgame. 0: the line of the engine, as in the base game |
 
 The box keeps the last 256 lines with their kind and who said them (the client number a server built on OpenJK
