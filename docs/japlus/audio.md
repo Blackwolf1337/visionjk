@@ -177,6 +177,16 @@ once per level, in another thread, the first time the level is loaded, and kept 
 `steamaudio/<level>_<checksum of its walls>.paths` in the profile. Until it is done the level has no paths.
 How loud a sound is at the end of a way is what the game makes of a sound at that distance.
 
+A level where no floor is found for a probe has no paths, and the console says so. Its file is written all the
+same (32 bytes), so the next load does not look again. The simulator is never given a set of fewer than two
+probes (`SPATIAL_MIN_PROBES`). Until 2026-10-12 it was, and the game crashed a second after such a level was
+loaded with `s_spatial` on, in the thread of the reflections: a pass asks every set it has for the probes near
+the listener (`SimulationManager::lookupBakedReflections()` of Steam Audio 4.8.1), and one without a probe has
+no tree to ask, which is a read at address 0. The map of the Vision Temple is such a level, t2_wedge too (its
+file in the owner's profile has 32 bytes). Seen as five core dumps of the owner's game that day, reproduced
+with a hidden and silent client (`s_initsound 1`, the sound device of SDL that plays nothing), and run again
+with the fix, once without a file and once with the 32 bytes of the run before: both to their end.
+
 **The voice chat.** The cgame plays the voices of its voice chat on a sound device of its own, which the
 engine knows nothing of. With `s_spatial` on, the engine sets the cvar `s_spatialVoice` to 1 and the cgame
 hands over what it decoded of a player, 20 ms at a time, with where his mouth is and how loud he is at his

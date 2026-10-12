@@ -308,6 +308,11 @@ enum {
 #define SPATIAL_PATH_THRESHOLD		0.1f
 #define SPATIAL_PATH_VIS_RANGE		30.0f	// two probes further apart than this are not asked, in metres
 #define SPATIAL_PATH_RANGE			100.0f	// a way longer than this is no way
+// Fewer probes than this are no paths, and the simulator is never given them: a pass of the reflections asks
+// every batch it has which probes are near the listener (SimulationManager::lookupBakedReflections), and one
+// without a probe has no tree to ask, which is a read at address 0 in Steam Audio 4.8.1. A level where no floor
+// was found for a probe has such a batch (the Vision Temple, t2_wedge).
+#define SPATIAL_MIN_PROBES			2
 // A page has no thread to work the paths out next to the game. It does it while the level loads, when it stands
 // still anyway, and only for a level of up to this many probes: the work and the memory it takes grow with their
 // square. mp/ffa3 has 740 and takes 0.4 s (Ryzen 9 5900X), so this is about 3 s. A larger level has no paths
@@ -774,7 +779,7 @@ static int SDLCALL S_SpatialBaker( void *unused ) {
 			qiplProbeBatchRelease( &spatialBake.batch );
 		}
 #endif
-		if ( spatialBake.batch && spatialBake.numProbes > 1 ) {
+		if ( spatialBake.batch && spatialBake.numProbes >= SPATIAL_MIN_PROBES ) {
 			qiplPathBakerBake( spatial.context, &bake, S_SpatialBakeProgress, NULL );
 		}
 
@@ -811,11 +816,17 @@ static qboolean S_SpatialLoadPaths( void ) {
 	serialized.size = (IPLsize)size;
 	if ( qiplSerializedObjectCreate( spatial.context, &serialized, &object ) == IPL_STATUS_SUCCESS ) {
 		if ( qiplProbeBatchLoad( spatial.context, object, &spatial.nextProbes ) == IPL_STATUS_SUCCESS ) {
-			qiplProbeBatchCommit( spatial.nextProbes );
-			spatial.numProbes = qiplProbeBatchGetNumProbes( spatial.nextProbes );
 			spatial.bakeMsec = 0;
-			spatial.probesWait = qtrue;
 			loaded = qtrue;
+			if ( qiplProbeBatchGetNumProbes( spatial.nextProbes ) >= SPATIAL_MIN_PROBES ) {
+				qiplProbeBatchCommit( spatial.nextProbes );
+				spatial.numProbes = qiplProbeBatchGetNumProbes( spatial.nextProbes );
+				spatial.probesWait = qtrue;
+			} else {
+				// the file of a level without paths: it is not worked out again, and has none
+				qiplProbeBatchRelease( &spatial.nextProbes );
+				spatial.nextProbes = NULL;
+			}
 		} else {
 			spatial.nextProbes = NULL;
 		}
@@ -843,14 +854,19 @@ static void S_SpatialThinkPaths( void ) {
 		spatialBakeState.store( BAKE_NONE );
 
 		if ( spatialBake.sceneNumber == spatial.sceneNumber && spatialBake.batch && spatialBake.saved && !spatial.sceneWaits ) {
+			// (also the file of a level without paths, so that its next load does not look for them again)
 			FS_WriteFile( spatial.pathFile, qiplSerializedObjectGetData( spatialBake.saved ), (int)qiplSerializedObjectGetSize( spatialBake.saved ) );
-			spatial.nextProbes = spatialBake.batch;
-			spatial.numProbes = spatialBake.numProbes;
-			spatial.bakeMsec = Q_max( 1, spatialBake.msec );
-			spatial.probesWait = qtrue;
-			spatialBake.batch = NULL;
-			Com_Printf( "s_spatial: the paths of this level are worked out, %i probes in %.1f s, kept in %s\n", spatial.numProbes,
-				spatial.bakeMsec * 0.001f, spatial.pathFile );
+			if ( spatialBake.numProbes >= SPATIAL_MIN_PROBES ) {
+				spatial.nextProbes = spatialBake.batch;
+				spatial.numProbes = spatialBake.numProbes;
+				spatial.bakeMsec = Q_max( 1, spatialBake.msec );
+				spatial.probesWait = qtrue;
+				spatialBake.batch = NULL;
+				Com_Printf( "s_spatial: the paths of this level are worked out, %i probes in %.1f s, kept in %s\n", spatial.numProbes,
+					spatial.bakeMsec * 0.001f, spatial.pathFile );
+			} else {
+				Com_Printf( "s_spatial: no place for probes was found in this level: no sound round corners here\n" );
+			}
 		}
 #ifdef __EMSCRIPTEN__
 		else if ( spatialBake.sceneNumber == spatial.sceneNumber && spatialBake.numProbes > SPATIAL_PAGE_PROBES ) {
