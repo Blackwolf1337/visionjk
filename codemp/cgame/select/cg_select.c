@@ -77,6 +77,7 @@ typedef enum {
 #define SELECT_LINE			18.0f	// a line of text of the HUD is this high at a scale of 1, in its units,
 #define SELECT_BASE			0.857f	//	and its letters stand on this part of it
 #define SELECT_NUDGE		40.0f	// how far a card is lifted or lowered at most to stay on the screen, in units of the level
+#define SELECT_FLOOR		60.0f	// a card ends this far above the lower edge of the screen: the bars of the HUD are below
 #define SELECT_FLAT_PX		15.0f	// A card whose rows are lower than this on the screen, in pixels, is hard to read and to
 #define SELECT_WORLD_PX		17.5f	//	hit: it grows to the size it was made for, and shrinks back when they are higher than this.
 #define SELECT_FLAT_MIN_PX	18.5f	// Grown, its rows are at least this high, so growing never makes it smaller.
@@ -327,7 +328,8 @@ around the figure, and no line of them crosses it.
 =================
 */
 qboolean CG_SelectOutlined( int clientNum ) {
-	if ( clientNum < 0 || clientNum >= MAX_CLIENTS || !cg_selectOutline.integer
+	// (not the own figure: the own card, opened in the scoreboard, is no reason to light oneself up)
+	if ( clientNum < 0 || clientNum >= MAX_CLIENTS || !cg_selectOutline.integer || !cg.snap || clientNum == cg.snap->ps.clientNum
 		|| ( clientNum != sel.hover && clientNum != sel.selected ) || !Select_Free() ) {
 		return qfalse;
 	}
@@ -433,7 +435,7 @@ static qboolean Select_Beside( int clientNum, float w, float h, float *x, float 
 		}
 	}
 	*x = Com_Clamp( least, most, *x );
-	*y = Com_Clamp( 30.0f, SCREEN_HEIGHT - h - 44.0f, sy );
+	*y = Com_Clamp( 30.0f, SCREEN_HEIGHT - h - SELECT_FLOOR, sy );
 	return qtrue;
 }
 
@@ -468,7 +470,7 @@ static qboolean Select_BesideWorld( int clientNum, float w, float h, const selec
 	}
 	// (units of the HUD a unit of the level, at its distance)
 	perUnit = SCREEN_HEIGHT * 0.5f / ( z * tanf( DEG2RAD( cg.refdef.fov_y ) * 0.5f ) );
-	over = sy + h * b->unit * perUnit - ( SCREEN_HEIGHT - 44.0f );
+	over = sy + h * b->unit * perUnit - ( SCREEN_HEIGHT - SELECT_FLOOR );
 	// (a board that has grown may be moved further: it is that much larger there)
 	if ( over > 0.0f ) {
 		corner[2] += Q_min( SELECT_NUDGE * b->unit / SELECT_UNIT, over / perUnit );
@@ -621,8 +623,10 @@ static void Board_TextFit( const selectBoard_t *b, float x, float y, float scale
 	boardFit_t	fit;
 	char		line[160];
 
+	// (a little smaller than it has to be: set to fit exactly, it is too wide again by what a float is off, and
+	// was cut although it had room)
 	if ( width > most ) {
-		scale = Q_max( scale * 0.8f, scale * most / width );
+		scale = Q_max( scale * 0.8f, scale * most / width * 0.98f );
 	}
 	fit.board = b;
 	fit.scale = scale;
@@ -822,6 +826,8 @@ static void Select_Run( selectAct_t act, int clientNum ) {
 		return;
 	case ACT_WATCH:
 		trap->SendClientCommand( va( "follow %i", clientNum ) );
+		// (to watch him: a scoreboard that is kept would be in the way)
+		CG_ScoresLetGo();
 		break;
 	case ACT_COPY:
 		Q_strncpyz( name, cgs.clientinfo[clientNum].name, sizeof( name ) );
@@ -849,9 +855,11 @@ static void Select_Run( selectAct_t act, int clientNum ) {
 		break;
 	case ACT_ADMIN_GOTO:
 		trap->SendClientCommand( va( "amtele %i %i", cg.clientNum, clientNum ) );
+		CG_ScoresLetGo();
 		break;
 	case ACT_ADMIN_BRING:
 		trap->SendClientCommand( va( "amtele %i %i", clientNum, cg.clientNum ) );
+		CG_ScoresLetGo();
 		break;
 	}
 	Select_Close();
@@ -1006,7 +1014,7 @@ static void Select_Card( void ) {
 		memset( &sel.card, 0, sizeof( sel.card ) );
 		sel.card.unit = 1.0f;
 		sel.card.corner[0] = Com_Clamp( 4.0f - cgs.bias2D, SCREEN_WIDTH + cgs.bias2D - SELECT_CARD_W - 4.0f, sel.anchorX );
-		sel.card.corner[1] = Com_Clamp( 30.0f, SCREEN_HEIGHT - h - 44.0f, sel.anchorY );
+		sel.card.corner[1] = Com_Clamp( 30.0f, SCREEN_HEIGHT - h - SELECT_FLOOR, sel.anchorY );
 		sel.cardPlaced = qtrue;
 		sel.flat = sel.over = qfalse;
 		sel.shown = sel.card;

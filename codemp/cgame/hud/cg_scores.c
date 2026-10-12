@@ -131,8 +131,9 @@ static float Scores_TextFit( float x, float y, float h, float scale, const vec4_
 	if ( most <= 0.0f ) {
 		return 0.0f;
 	}
+	// (a little smaller than it has to be: set to fit exactly, it is too wide again by what a float is off)
 	if ( width > most ) {
-		scale = Q_max( scale * 0.82f, scale * most / width );
+		scale = Q_max( scale * 0.82f, scale * most / width * 0.98f );
 	}
 	CG_TextCut( text, most, Scores_FitWidth, &scale, line, sizeof( line ) );
 	Scores_Text( x, y, h, scale, color, fade, 0, line );

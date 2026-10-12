@@ -368,6 +368,10 @@ off.
 | Admin: kick, silence, sleep, slap, go to him, bring him here | only after a login with a key (`amkey login`) said you are an admin. The server decides as always |
 
 A row is run with a click or with its number. A click beside the card, the right button or Escape closes it.
+"Watch him" and the two admin rows that move somebody also let go of a scoreboard that is kept: it would be in
+the way of what was asked for. A card ends 60 units above the lower edge of the screen, above the bars of the
+HUD. A row or a line of the head that is a little too long is set smaller (down to 80 %), and only what is
+still too long is cut. The own figure is never lit, also not while the own card is open.
 
 | Cvar | Default | |
 |------|---------|---|
