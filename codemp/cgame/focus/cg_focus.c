@@ -124,6 +124,8 @@ static const char *const focusChat[] = { "messagemode", "messagemode2", "message
 typedef struct focus_s {
 	qboolean	active;					// the player is out of his body
 	qboolean	temple;					// and in the Vision Temple, not in the still of the level
+	qboolean	watcher;				// he has no body in the level: he only watches there
+	qboolean	fromMenu;				// the game behind it was started by the main menu for this and ends with it
 	qboolean	resync;					// it ended: the still stays until the snapshots are read anew
 	qboolean	reselect;				// the snapshots were read anew this frame: the weapon bar is not to show for it
 	int			selectTime;				//	cg.weaponSelectTime as it was
@@ -256,17 +258,22 @@ static const char *Focus_Refused( qboolean temple ) {
 		return text[0];
 	}
 	ps = &cg.snap->ps;
-	if ( ps->persistant[PERS_TEAM] == TEAM_SPECTATOR || ( ps->pm_flags & PMF_FOLLOW ) ) {
+	// (somebody who only watches has no body to leave in Focus. Into the temple he can go, unless he follows
+	// somebody: then what he sees is not his own state.)
+	if ( ( ps->pm_flags & PMF_FOLLOW ) || ( ps->persistant[PERS_TEAM] == TEAM_SPECTATOR && !temple ) ) {
 		return text[0];
 	}
-	if ( ps->stats[STAT_HEALTH] <= 0 || ps->pm_type != PM_NORMAL || ps->m_iVehicleNum || ps->zoomMode
-		|| ps->groundEntityNum == ENTITYNUM_NONE ) {
-		return text[1];
+	if ( ps->persistant[PERS_TEAM] != TEAM_SPECTATOR ) {
+		if ( ps->stats[STAT_HEALTH] <= 0 || ps->pm_type != PM_NORMAL || ps->m_iVehicleNum || ps->zoomMode
+			|| ps->groundEntityNum == ENTITYNUM_NONE ) {
+			return text[1];
+		}
+		if ( ps->duelInProgress ) {
+			return text[2];
+		}
 	}
-	if ( ps->duelInProgress ) {
-		return text[2];
-	}
-	if ( ( trap->Key_GetCatcher() & KEYCATCH_UI ) || CG_Menu3DActive() ) {
+	// (the game the main menu started for the temple opens the menu of a new player: that one is closed for it)
+	if ( !( temple && cg_templeStart.integer ) && ( ( trap->Key_GetCatcher() & KEYCATCH_UI ) || CG_Menu3DActive() ) ) {
 		return text[3];
 	}
 	// (asked for nothing yet: whether the renderer of this engine can draw the place)
@@ -313,7 +320,9 @@ static void Focus_Begin( qboolean temple ) {
 		VectorSet( focus.angles, -4.0f, 0.0f, 0.0f );
 	}
 	// the server protects the body where it says that it does
-	focus.server = (qboolean)( ( atoi( Info_ValueForKey( CG_ConfigString( CS_SERVERINFO ), "g_visionCaps" ) ) & 16 ) != 0 );
+	focus.watcher = (qboolean)( ps->persistant[PERS_TEAM] == TEAM_SPECTATOR );
+	focus.server = (qboolean)( !focus.watcher
+		&& ( atoi( Info_ValueForKey( CG_ConfigString( CS_SERVERINFO ), "g_visionCaps" ) ) & 16 ) != 0 );
 	focus.answer = -1;
 	focusBack.owed = qfalse;
 	Focus_FindKeys();
@@ -348,6 +357,10 @@ static void Focus_End( const char *why ) {
 	trap->S_StartLocalSound( Focus_Sound( qfalse ), CHAN_LOCAL_SOUND );
 	if ( !CG_ChatIsOpen() ) {
 		trap->Key_SetCatcher( trap->Key_GetCatcher() & ~KEYCATCH_CGAME );
+	}
+	// the game the main menu started for the temple has nothing else to show: back to that menu
+	if ( focus.fromMenu ) {
+		trap->SendConsoleCommand( "disconnect\n" );
 	}
 }
 
@@ -463,6 +476,13 @@ static void Focus_Server( int now ) {
 static void Focus_Check( const playerState_t *ps ) {
 	vec3_t delta;
 
+	// (who only watches has no body that could be hit or moved, he is back when he no longer watches)
+	if ( focus.watcher ) {
+		if ( ps->clientNum != focus.clientNum || ( ps->pm_flags & PMF_FOLLOW ) || ps->persistant[PERS_TEAM] != TEAM_SPECTATOR ) {
+			Focus_End( "the player no longer watches as he did" );
+		}
+		return;
+	}
 	// it ran when the world stopped: where it comes to a stop is where it stands
 	if ( trap->Milliseconds() - focus.startMsec < FOCUS_SETTLE_MSEC ) {
 		VectorCopy( ps->origin, focus.body );
@@ -630,10 +650,30 @@ qboolean CG_FocusFrame( void ) {
 		focus.reselect = qfalse;
 		cg.weaponSelectTime = focus.selectTime;
 	}
+	// "Vision Temple" of the main menu: it started this game only to stand behind the temple, and said so in a
+	// cvar. Into the temple with the first frame there is, and back to the menu when it can not be.
+	if ( cg_templeStart.integer && !focus.active && !focus.resync && cg.snap && !( cg.snap->snapFlags & SNAPFLAG_NOT_ACTIVE ) ) {
+		const char *refused = Focus_Refused( qtrue );
+
+		trap->Cvar_Set( "cg_templeStart", "0" );
+		trap->OpenUIMenu( 0 );		// UIMENU_NONE: the menu a new player gets
+		if ( refused ) {
+			trap->Print( "%s\n", CG_VisionText( refused ) );
+			trap->SendConsoleCommand( "disconnect\n" );
+		} else {
+			Focus_Begin( qtrue );
+			focus.fromMenu = qtrue;
+			trap->S_StopBackgroundTrack();
+		}
+	}
 	if ( focus.active ) {
 		const int catcher = trap->Key_GetCatcher();
 
-		if ( ( catcher & KEYCATCH_UI ) || cg.demoPlayback ) {
+		if ( ( catcher & KEYCATCH_UI ) && focus.fromMenu ) {
+			// in the game the main menu started for the temple no menu has a say: the one a new player gets comes
+			// a moment after his first frame
+			trap->OpenUIMenu( 0 );
+		} else if ( ( catcher & KEYCATCH_UI ) || cg.demoPlayback ) {
 			Focus_End( "a menu" );
 		} else {
 			// (the chat box gives the keys back when it closes, and they are this file's again)
@@ -1049,7 +1089,9 @@ void CG_FocusDraw( void ) {
 	}
 
 	// and what happens to the body meanwhile
-	if ( focus.answer > 0 ) {
+	if ( focus.watcher ) {
+		body = NULL;
+	} else if ( focus.answer > 0 ) {
 		body = CG_VisionText( "Your body is protected." );
 	} else if ( !focus.server || focus.answer < 0 ) {
 		body = CG_VisionText( "A hit on your body brings you back." );
@@ -1083,6 +1125,11 @@ void CG_FocusDraw( void ) {
 		}
 	}
 	// all on a dark strip: the own body often stands right behind them
+	// (who has no body in the level gets no line about one: what is said of the others stands in its place)
+	if ( !body ) {
+		body = others ? others : "";
+		others = NULL;
+	}
 	width = Q_max( CG_Text_Width( text, scale, font ), CG_Text_Width( body, scale * 0.85f, font ) );
 	if ( others ) {
 		width = Q_max( width, CG_Text_Width( others, scale * 0.85f, font ) );

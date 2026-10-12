@@ -173,12 +173,12 @@
 			group					main_button
 			style					WINDOW_STYLE_EMPTY
 			type					ITEM_TYPE_BUTTON
-			rect					58 208 200 32
+			rect					58 205 200 30
 			text					@MENUS_PLAY
 			descText				@MENUS_START_PLAYING_NOW
 			font					5
 			textscale				1
-			textaligny				7
+			textaligny				6
 			textalign				ITEM_ALIGN_LEFT
 			textstyle				0
 			textalignx				16
@@ -206,14 +206,40 @@
 
 		itemDef
 		{
+			name					vision_templebutton
+			rect					58 236 200 30
+			visible					1
+			group					main_button
+			type					ITEM_TYPE_BUTTON
+			text					@VISION_VISION_TEMPLE
+			descText				@VISION_TO_THE_TEMPLE_ABOVE_THE_CLOUDS_OTHER
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				setcvar cg_templeStart "1" ;
+				close all ;
+				exec "map mp/duel1" ;
+			}
+			font					5
+			textscale				1
+			textalign				ITEM_ALIGN_LEFT
+			textalignx				16
+			textaligny				6
+			caps					1
+			forecolor				0.43 0.83 1 1
+			style					WINDOW_STYLE_EMPTY
+		}
+
+		itemDef
+		{
 			name					profilebutton
 			group					main_button
 			text					@MENUS_PROFILE
 			descText				@MENUS_PROFILE_DESC
 			style					WINDOW_STYLE_EMPTY
 			type					ITEM_TYPE_BUTTON
-			rect					58 243 200 32
-			textaligny				7
+			rect					58 267 200 30
+			textaligny				6
 			font					5
 			textscale				1
 			textalign				ITEM_ALIGN_LEFT
@@ -249,10 +275,10 @@
 			descText				@MENUS_CONFIGURE_GAME_CONTROLS
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
-			rect					58 278 200 32
+			rect					58 298 200 30
 			font					5
 			textscale				1
-			textaligny				7
+			textaligny				6
 			textalign				ITEM_ALIGN_LEFT
 			textstyle				0
 			textalignx				16
@@ -287,10 +313,10 @@
 			descText				@MENUS_CONFIGURE_GAME_SETTINGS
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
-			rect					58 313 200 32
+			rect					58 329 200 30
 			font					5
 			textscale				1
-			textaligny				7
+			textaligny				6
 			textalign				ITEM_ALIGN_LEFT
 			textstyle				0
 			textalignx				16
@@ -325,13 +351,13 @@
 			descText				@MENUS_LEAVE_JEDI_KNIGHT_II
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
-			rect					58 348 200 32
+			rect					58 360 200 30
 			font					5
 			textscale				1
 			textalign				ITEM_ALIGN_LEFT
 			textstyle				0
 			textalignx				16
-			textaligny				7
+			textaligny				6
 			forecolor				0.86 0.92 0.97 1
 			visible					1
 			mouseEnter

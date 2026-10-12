@@ -5,6 +5,14 @@ VERSION             "1"
 CONFIG              "W:\bin\stringed.cfg"
 FILENOTES           "Menus of VisionJK"
 
+REFERENCE           VISION_TEMPLE
+LANG_ENGLISH        "Vision Temple"
+LANG_SPANISH        "Templo de la Visión"
+
+REFERENCE           TO_THE_TEMPLE_ABOVE_THE_CLOUDS_OTHER
+LANG_ENGLISH        "To the temple above the clouds. Other VisionJK players who are there are wisps."
+LANG_SPANISH        "Al templo sobre las nubes. Los otros jugadores de VisionJK que están allí son fuegos fatuos."
+
 REFERENCE           CHARACTER
 LANG_ENGLISH        "Character"
 LANG_SPANISH        "Personaje"

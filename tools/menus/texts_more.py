@@ -294,6 +294,10 @@ MORE = {
     'Focus: not while a menu is open.': ("Focus : pas quand un menu est ouvert.", 'Foco: no con un menú abierto.'),
     # the Vision Temple
     'Vision Temple (Meditate)': ('Temple de la Vision (méditer)', 'Templo de la Visión (meditar)'),
+    'Vision Temple': ('Temple de la Vision', 'Templo de la Visión'),
+    'To the temple above the clouds. Other VisionJK players who are there are wisps.':
+        ("Vers le temple au-dessus des nuages. Les autres joueurs VisionJK qui s'y trouvent sont des feux follets.",
+         'Al templo sobre las nubes. Los otros jugadores de VisionJK que están allí son fuegos fatuos.'),
     'You meditate towards the temple above the clouds, where you meet other VisionJK players as wisps. The same key or Esc brings you back.':
         ("Vous méditez vers le temple au-dessus des nuages, où vous retrouvez d'autres joueurs VisionJK sous forme de feux follets. La même touche ou Échap vous ramène.",
          'Meditas hacia el templo sobre las nubes, donde encuentras a otros jugadores de VisionJK como fuegos fatuos. La misma tecla o Esc te devuelve.'),

@@ -204,6 +204,9 @@ XCVAR_DEF( cg_voiceMasterHost,					"voice.jka.vision",		NULL,					CVAR_ARCHIVE )
 // The Vision Temple (focus/cg_focus.c): whom one meets there, through the voice master. 1: everybody who is there.
 // Any other text: those who have the same text. 0: nobody, and the voice master is not asked.
 XCVAR_DEF( cg_templeLink,						"1",					NULL,					CVAR_ARCHIVE )
+// set by the entry Vision Temple of the main menu before it starts a game: that game is only there to stand behind
+// the temple, the cgame goes there with its first frame and leaves the game when the temple is left
+XCVAR_DEF( cg_templeStart,						"0",					NULL,					CVAR_TEMP )
 XCVAR_DEF( cg_voiceMicGain,						"1",					NULL,					CVAR_ARCHIVE )
 XCVAR_DEF( cg_voiceMode,						"1",					NULL,					CVAR_ARCHIVE )
 XCVAR_DEF( cg_voiceMuffle,						"1",					NULL,					CVAR_ARCHIVE )

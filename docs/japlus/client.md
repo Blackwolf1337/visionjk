@@ -678,9 +678,15 @@ podium is stands in the shader and in `Temple_Ground()`, the two have to match.
 - **The others** are wisps: a ball of blue light with smoke of it that rises, and the name over it. Nobody is a
   figure there. The place has no depth, so a wisp shows through a spire it is behind.
 - **The hint**: how to come back, how many others are there, what happens to the body.
-- **Not yet**: talking to each other there (the voice chat stays the one of the level), the entry in the main
-  menu with a game of its own behind it, the device for the browser, `rd-vanilla` and so macOS (the command
-  says "only with the Vulkan renderer for now" there), Windows was not built with it.
+- **From the main menu.** The entry Vision Temple under Play sets `cg_templeStart 1` and starts a game on this
+  machine (`map mp/duel1`) that is only there to stand behind the temple. The cgame goes there with its first
+  frame, as somebody who watches (the menu a new player gets is closed for it, the music of the level is
+  stopped), and leaves that game when the temple is left: back in the main menu. Somebody who watches on a
+  server can go to the temple too, he has no body there that could be hit, and the hint has no line about one.
+  The level behind it takes as long to load as it does, and a moment of it shows on the way back.
+- **Not yet**: talking to each other there (the voice chat stays the one of the level), the device for the
+  browser, `rd-vanilla` and so macOS (the command says "only with the Vulkan renderer for now", and the entry of
+  the main menu then ends in that menu again with the line in the console), Windows was not built with it.
 
 ### Admin login with a key
 

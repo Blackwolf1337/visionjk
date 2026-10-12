@@ -203,6 +203,9 @@ are.
   of an old menu has no entry.
 - `menufile.py` reads and writes a menu file as a tree.
 
+The main menu has an entry of its own that is no page: Vision Temple, under Play (`main_page()` of `pages.py`,
+see [client.md](client.md), "The Vision Temple").
+
 `ui/vision/hud.menu` is written by hand. Its three words are in the language of the game since 2026-10-12: the
 score with the word of the game (`@MP_INGAME_SCORE`), the saber and the alternate dimension with texts of
 `texts.py` (`@VISION_SABER`, `@VISION_ALTERNATE_DIMENSION`), all three with `caps 1`.

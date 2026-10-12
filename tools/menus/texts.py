@@ -134,6 +134,9 @@ TR = {
         'Öffnet die Punktetafel mit freier Maus: Ein Klick auf eine Zeile öffnet, was Sie mit dem Spieler tun können.',
     'Focus (Leave Your Body)': 'Fokus (Körper verlassen)',
     'Vision Temple (Meditate)': 'Vision-Tempel (Meditieren)',
+    'Vision Temple': 'Vision-Tempel',
+    'To the temple above the clouds. Other VisionJK players who are there are wisps.':
+        'Zum Tempel über den Wolken. Andere VisionJK-Spieler, die dort sind, sind Irrlichter.',
     'You meditate towards the temple above the clouds, where you meet other VisionJK players as wisps. The same key or Esc brings you back.':
         'Sie meditieren zum Tempel über den Wolken, wo Sie andere VisionJK-Spieler als Irrlichter treffen. Dieselbe Taste oder Esc bringt Sie zurück.',
     'The world stands still and you leave your body. The same key or Esc brings you back.':
