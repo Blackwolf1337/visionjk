@@ -302,7 +302,8 @@ extern int forcePowerSorted[NUM_FORCE_POWERS];
 extern int bg_jpFeatures;
 extern int bg_visionTemple;
 #define VISION_CAPS				"31"	// g_visionCaps of a server of this tree, see docs/japlus/server.md,
-#define VISION_CAPS_TEMPLE		32		//	and the bit a server that is the Vision Temple adds (status/g_temple.c)
+#define VISION_CAPS_TEMPLE		32		//	the bit a server that is the Vision Temple adds (status/g_temple.c),
+#define VISION_CAPS_INSTANCE	64		//	and the one of a server that starts a temple of its own for its players
 extern float bg_jpGripSpeedScale;
 extern int bg_jpForceCombo;
 float BG_scaleModelFactor( int clientNum );	// jp_allowModelScale: scale of the player model, 1 is the normal size

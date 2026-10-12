@@ -45,8 +45,16 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // Not with a server of this program (a listen server): its level is the one the collision code holds, and the
 // client would load another one over it. cl_visit is 1 while a visit lasts, cl_visitBack is set to 1 when one
 // ended at the first server (the cgame reads and clears it), cl_cgameVisit tells that the engine has all this.
+//
+// The temple of the server the player is on ("visit <address of that server> 1", server/sv_instance.cpp) has no
+// address of its own: it is reached through the port of that server, with a mark in front of every packet of
+// the visit, and what it sends comes from that port with the same mark (the tunnel, qcommon/net_link.h). So the
+// two servers of such a visit have one address, and the mark is what tells their packets apart, where the
+// address does it for any other visit. cl_cgameTunnel tells that the engine knows this, cl_visitFailed is 1
+// after a visit that got no answer and 0 after one that arrived.
 
 #include "client.h"
+#include "qcommon/net_link.h"
 #include "qcommon/stringed_ingame.h"
 #include "cl_uiapi.h"
 
@@ -69,6 +77,8 @@ static struct {
 	qboolean	back;					// the visit is over: back at the start of the next frame
 	qboolean	lost;					// and there is nothing to come back to
 	qboolean	gamestateHeld;			// the first server sent a game state: it is read when the client is back
+	qboolean	arrived;				// the other server answered
+	int			tunnel;					// the visit goes through the port of the first server: which of its instances, 0: none
 	int			there;					// the place of the visit, the other one is the first server's
 	int			startTime, keepTime;
 	int			damageEvent, pmType;	// of the body when the player left
@@ -88,6 +98,40 @@ qboolean CL_Visiting( void ) {
 // the state of the first server is being read: nothing of it reaches the game on the screen
 qboolean CL_VisitParsing( void ) {
 	return visit.home;
+}
+
+/*
+===============
+CL_VisitTunnel
+
+A packet is about to leave for this address (NET_SendPacket()). Not 0: it is one of a visit that goes through
+the tunnel, and this is the instance it is for. A packet for the first server goes out while cl and clc are its
+place, and has no mark.
+===============
+*/
+int CL_VisitTunnel( const netadr_t *to ) {
+	if ( !visit.held || !visit.tunnel || visit.home || !NET_CompareAdr( to, &visit_clc[visit.there].serverAddress ) ) {
+		return 0;
+	}
+	return visit.tunnel;
+}
+
+/*
+===============
+CL_VisitUntunnel
+
+A packet with the mark of the tunnel arrived (CL_PacketEvent()). qtrue: it is one of the visit, and the mark is
+off it. qfalse: there is no such visit, and nobody wants the packet.
+===============
+*/
+qboolean CL_VisitUntunnel( const netadr_t *from, msg_t *msg ) {
+	if ( !visit.held || !visit.tunnel || visit.back || msg->cursize < NET_TUNNEL_HEAD || msg->data[4] != visit.tunnel
+		|| !NET_CompareAdr( from, &visit_clc[visit.there].serverAddress ) ) {
+		return qfalse;
+	}
+	msg->cursize -= NET_TUNNEL_HEAD;
+	memmove( msg->data, msg->data + NET_TUNNEL_HEAD, msg->cursize );
+	return qtrue;
 }
 
 static void Visit_Home( qboolean home ) {
@@ -340,7 +384,12 @@ void CL_VisitFrame( void ) {
 	if ( !visit.held ) {
 		return;
 	}
+	if ( !visit.arrived && cls.state >= CA_CONNECTED ) {
+		visit.arrived = qtrue;
+		Cvar_Set( "cl_visitFailed", "0" );
+	}
 	if ( !visit.back && cls.state < CA_CONNECTED && cls.realtime - visit.startTime > VISIT_CONNECT_MSEC ) {
+		Cvar_Set( "cl_visitFailed", "1" );
 		Visit_Back( "no answer", qfalse );
 	}
 	if ( visit.back ) {
@@ -357,16 +406,17 @@ void CL_VisitFrame( void ) {
 ===============
 CL_Visit_f
 
-visit <address>
+visit <address> [instance]
 ===============
 */
 static void CL_Visit_f( void ) {
 	const char	*server = Cmd_Argv( 1 );
+	const int	tunnel = atoi( Cmd_Argv( 2 ) );
 	const char	*serverString;
 	netadr_t	to;
 
-	if ( Cmd_Argc() != 2 ) {
-		Com_Printf( "usage: visit [server]\n" );
+	if ( Cmd_Argc() < 2 || Cmd_Argc() > 3 || ( tunnel && tunnel != NET_TUNNEL_TEMPLE ) ) {
+		Com_Printf( "usage: visit <server> [%i: the temple of the server one is on]\n", NET_TUNNEL_TEMPLE );
 		return;
 	}
 	if ( visit.held ) {
@@ -385,8 +435,9 @@ static void CL_Visit_f( void ) {
 	if ( to.port == 0 ) {
 		to.port = BigShort( PORT_SERVER );
 	}
-	if ( NET_CompareAdr( &to, &clc.netchan.remoteAddress ) ) {
-		Com_Printf( "visit: that is the server one is on\n" );
+	// (the temple of a server is reached through that server and no other)
+	if ( NET_CompareAdr( &to, &clc.netchan.remoteAddress ) != ( tunnel ? qtrue : qfalse ) ) {
+		Com_Printf( tunnel ? "visit: the temple of a server is visited from that server\n" : "visit: that is the server one is on\n" );
 		return;
 	}
 
@@ -400,6 +451,7 @@ static void CL_Visit_f( void ) {
 
 	Com_Memset( &visit, 0, sizeof( visit ) );
 	visit.held = qtrue;
+	visit.tunnel = tunnel;
 	visit.there = ( clAt == &visit_cl[0] );
 	visit.startTime = visit.keepTime = cls.realtime;
 	visit.damageEvent = cl.snap.ps.damageEvent;
@@ -417,7 +469,7 @@ static void CL_Visit_f( void ) {
 	Q_strncpyz( cls.servername, server, sizeof( cls.servername ) );
 	clc.serverAddress = to;
 	serverString = NET_AdrToString( &clc.serverAddress );
-	Com_Printf( "Visiting %s\n", serverString );
+	Com_Printf( tunnel ? "Visiting the temple of %s\n" : "Visiting %s\n", serverString );
 	if ( NET_IsLocalAddress( &clc.serverAddress ) ) {
 		cls.state = CA_CHALLENGING;
 	} else {
@@ -434,7 +486,9 @@ static void CL_Visit_f( void ) {
 void CL_VisitInit( void ) {
 	cl_visit = Cvar_Get( "cl_visit", "0", CVAR_ROM, "1 while the server one is on is a visit and the one before it is kept" );
 	Cvar_Get( "cl_visitBack", "0", CVAR_TEMP, "set to 1 when a visit ended at the server one came from" );
+	Cvar_Get( "cl_visitFailed", "0", CVAR_TEMP, "1 after a visit the other server did not answer, 0 after one that arrived" );
 	Cvar_Get( "cl_cgameVisit", "1", CVAR_ROM, "" );
+	Cvar_Get( "cl_cgameTunnel", "1", CVAR_ROM, "" );
 	Cmd_AddCommand( "visit", CL_Visit_f, "Connect to a server and keep the one the player is on, to come back to" );
 }
 

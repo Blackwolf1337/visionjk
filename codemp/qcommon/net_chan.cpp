@@ -47,6 +47,7 @@ to the new value before sending out any replies.
 */
 
 #include "qcommon/qcommon.h"
+#include "qcommon/net_link.h"
 
 #define	MAX_PACKETLEN			1400		// max size of a network packet
 #define	FRAGMENT_SIZE			(MAX_PACKETLEN - 100)
@@ -583,6 +584,25 @@ void NET_SendPacket( netsrc_t sock, int length, const void *data, const netadr_t
 	if ( to->type == NA_BAD ) {
 		return;
 	}
+
+#ifndef DEDICATED
+	// to the temple of the server the player is on: through the port of that server, with the mark of the
+	// tunnel in front (client/cl_visit.cpp, net_link.h)
+	if ( sock == NS_CLIENT ) {
+		const int instance = CL_VisitTunnel( to );
+
+		if ( instance && length >= 0 && length <= MAX_MSGLEN ) {
+			static byte	tunneled[NET_TUNNEL_HEAD + MAX_MSGLEN];
+			const int	mark = NET_TUNNEL_MARK;
+
+			memcpy( tunneled, &mark, 4 );
+			tunneled[4] = (byte)instance;
+			memcpy( tunneled + NET_TUNNEL_HEAD, data, length );
+			Sys_SendPacket( length + NET_TUNNEL_HEAD, tunneled, to );
+			return;
+		}
+	}
+#endif
 
 	Sys_SendPacket( length, data, to );
 }

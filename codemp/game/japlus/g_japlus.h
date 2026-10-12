@@ -191,6 +191,7 @@ void		G_FocusEnd( gentity_t *ent, focusWhy_t why );
 void		G_FocusFight( gentity_t *targ, gentity_t *attacker );
 
 // status/g_temple.c: the Vision Temple as a server (g_visionTemple)
+qboolean G_TempleInstance( void );
 void		G_TempleInit( void );
 void		G_TempleSpawn( gentity_t *ent );
 qboolean	G_TempleThink( gentity_t *ent, usercmd_t *ucmd );

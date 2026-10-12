@@ -131,6 +131,7 @@ typedef struct focus_s {
 	qboolean	watcher;				// he has no body in the level: he only watches there
 	qboolean	fromMenu;				// the game behind it was started by the main menu for this and ends with it
 	qboolean	visit;					// the engine was told to go to the server that is the temple
+	qboolean	instance;				// that server is the temple of the one the player is on, reached through it
 	qboolean	arrived;				// the first frame with a game was seen
 	int			arriveMsec;				// out of the light of a visit since then: into the temple server, or back from it
 	qboolean	resync;					// it ended: the still stays until the snapshots are read anew
@@ -324,7 +325,8 @@ static void Temple_Keep( vec3_t origin ) {
 }
 
 static void Focus_Begin( qboolean temple ) {
-	const playerState_t *ps = &cg.snap->ps;
+	const playerState_t	*ps = &cg.snap->ps;
+	int					caps;
 
 	// the mouse is the camera's now: no pointer, no kept scoreboard
 	CG_SelectLetGo();
@@ -352,9 +354,17 @@ static void Focus_Begin( qboolean temple ) {
 		VectorSet( focus.angles, -4.0f, 0.0f, 0.0f );
 	}
 	// the server protects the body where it says that it does
+	caps = atoi( Info_ValueForKey( CG_ConfigString( CS_SERVERINFO ), "g_visionCaps" ) );
 	focus.watcher = (qboolean)( ps->persistant[PERS_TEAM] == TEAM_SPECTATOR );
-	focus.server = (qboolean)( !focus.watcher
-		&& ( atoi( Info_ValueForKey( CG_ConfigString( CS_SERVERINFO ), "g_visionCaps" ) ) & 16 ) != 0 );
+	focus.server = (qboolean)( !focus.watcher && ( caps & 16 ) != 0 );
+	// The temple of this very server, where it has one and the engine can go there (the tunnel of
+	// client/cl_visit.cpp). The server starts it when it is asked, so it is asked also for somebody who only
+	// watches. One that did not answer the last time is left out until another visit arrived.
+	focus.instance = (qboolean)( temple && ( caps & VISION_CAPS_INSTANCE ) && Focus_Engine( "cl_cgameVisit" )
+		&& Focus_Engine( "cl_cgameTunnel" ) && !Focus_Cvar( "sv_running" ) && !Focus_Cvar( "cl_visitFailed" ) );
+	if ( focus.instance ) {
+		focus.server = qtrue;
+	}
 	focus.answer = -1;
 	focusBack.owed = qfalse;
 	Focus_FindKeys();
@@ -500,7 +510,7 @@ static void Focus_Server( int now ) {
 		&& ( !focus.asks || now - focus.askMsec >= FOCUS_ASK_MSEC ) ) {
 		focus.asks++;
 		focus.askMsec = now;
-		trap->SendClientCommand( "jpfocus 1" );
+		trap->SendClientCommand( focus.instance ? "jpfocus 1 1" : "jpfocus 1" );
 	} else if ( !focus.active && focusBack.owed && ( !focusBack.asks || now - focusBack.msec >= FOCUS_ASK_MSEC ) ) {
 		if ( focusBack.asks >= FOCUS_ASKS ) {
 			// (the first move of the player ends it for the server too)
@@ -937,6 +947,15 @@ static void Temple_Visit( int now ) {
 	// the answer of the server about the body, as long as one can come
 	if ( focus.server && focus.answer < 0 && focus.asks < FOCUS_ASKS ) {
 		return;
+	}
+	// the temple of the server one is on: through that server (its address as the engine has it, in numbers)
+	if ( focus.instance && !focus.fromMenu ) {
+		trap->Cvar_VariableStringBuffer( "cl_currentServerIP", address, sizeof( address ) );
+		if ( address[0] ) {
+			focus.visit = qtrue;
+			trap->SendConsoleCommand( va( "visit %s 1\n", address ) );
+			return;
+		}
 	}
 	if ( !CG_VoiceTempleServer( address, sizeof( address ) ) ) {
 		return;

@@ -972,6 +972,9 @@ void CL_MouseEvent( int dx, int dy, int time );
 void CL_JoystickEvent( int axis, int value, int time );
 
 void CL_PacketEvent( const netadr_t *from, msg_t *msg );
+// client/cl_visit.cpp: not 0 for a packet that goes through the tunnel to the temple of the server the player
+// is on, and then the instance it is for (net_link.h)
+int CL_VisitTunnel( const netadr_t *to );
 
 void CL_ConsolePrint( const char *text );
 

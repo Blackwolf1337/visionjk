@@ -27,6 +27,10 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // server command of the same name, so the client knows that its command arrived (the flood protection of the
 // server may drop one): "jpfocus 1 0", the body is protected, or "jpfocus 0 <why>" (focusWhy_t), it is not.
 //
+// "jpfocus 1 1" is the same from a player who goes to the Vision Temple. Where this server has a temple of its
+// own (bit 6 of g_visionCaps, status/g_temple.c) that one is started for him unless it runs, whatever the answer
+// about his body is: somebody who only watches gets a no and goes all the same.
+//
 // It is no way out of a fight. It is granted to somebody who stands on the ground alive, in no duel and with
 // no flag, who was not hit by a player and hit none for five seconds, ten seconds after his last time at the
 // earliest, and by default in a free for all only (g_visionFocus, as the inactivity protection of JA+). The
@@ -127,6 +131,10 @@ void Cmd_JPFocus_f( gentity_t *ent ) {
 	if ( !atoi( arg ) ) {
 		G_FocusEnd( ent, FOCUS_ENDED );
 		return;
+	}
+	trap->Argv( 2, arg, sizeof( arg ) );
+	if ( atoi( arg ) && G_TempleInstance() ) {
+		trap->SendConsoleCommand( EXEC_APPEND, "templeinstance\n" );
 	}
 	if ( jp->focus ) {
 		// asked again: the answer did not arrive

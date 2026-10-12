@@ -33,6 +33,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "qcommon/MiniHeap.h"
 #include "qcommon/stringed_ingame.h"
 #include "qcommon/game_version.h"
+#include "qcommon/net_link.h"
 #include "cl_cgameapi.h"
 #include "cl_uiapi.h"
 #include "cl_lan.h"
@@ -1622,7 +1623,9 @@ void CL_CheckForResend( void ) {
 		return;
 	}
 
-	if ( cls.realtime - clc.connectTime < RETRANSMIT_TIMEOUT ) {
+	// (the temple of a server may still be starting when its first player asks for it: asked again sooner,
+	// cl_visit.cpp)
+	if ( cls.realtime - clc.connectTime < ( CL_VisitTunnel( &clc.serverAddress ) ? RETRANSMIT_TIMEOUT / 6 : RETRANSMIT_TIMEOUT ) ) {
 		return;
 	}
 
@@ -2111,8 +2114,15 @@ A packet has arrived from the main event loop
 void CL_PacketEvent( const netadr_t *from, msg_t *msg ) {
 	int		headerBytes;
 
-	// from the server the player came from while he visits another one (cl_visit.cpp)
-	if ( CL_VisitPacket( from, msg ) ) {
+	// From the temple of the server the player is on: it comes through the port of that server with a mark
+	// in front (cl_visit.cpp). One nobody waits for is dropped: its first bytes are no sequence number.
+	if ( msg->cursize >= 4 && *(int *)msg->data == NET_TUNNEL_MARK ) {
+		if ( !CL_VisitUntunnel( from, msg ) ) {
+			return;
+		}
+	}
+	// from the server the player came from while he visits another one
+	else if ( CL_VisitPacket( from, msg ) ) {
 		return;
 	}
 

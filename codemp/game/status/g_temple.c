@@ -31,11 +31,24 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #define TEMPLE_LOST		-512.0f		// nobody gets under the floors: who is there anyway starts again
 
+// A server that is no temple can have one of its own: its engine starts it for its players, a second server
+// behind the port of this one (sv_templeInstance of a dedicated server of this tree, server/sv_instance.cpp).
+qboolean G_TempleInstance( void ) {
+	return (qboolean)( !g_visionTemple.integer && trap->Cvar_VariableIntegerValue( "sv_templeInstance" ) > 0 );
+}
+
 // The clients read the mode from g_visionCaps of the server info, as they read what else this module does for
 // them: one more key of its own would be one more in a server info that has little room.
 void G_TempleInit( void ) {
+	int caps = atoi( VISION_CAPS );
+
 	bg_visionTemple = g_visionTemple.integer;
-	trap->Cvar_Set( "g_visionCaps", bg_visionTemple ? va( "%i", atoi( VISION_CAPS ) | VISION_CAPS_TEMPLE ) : VISION_CAPS );
+	if ( bg_visionTemple ) {
+		caps |= VISION_CAPS_TEMPLE;
+	} else if ( G_TempleInstance() ) {
+		caps |= VISION_CAPS_INSTANCE;
+	}
+	trap->Cvar_Set( "g_visionCaps", va( "%i", caps ) );
 	trap->Cvar_Update( &g_visionCaps );
 }
 

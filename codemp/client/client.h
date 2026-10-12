@@ -574,6 +574,7 @@ void CL_VisitFrame( void );
 qboolean CL_Visiting( void );
 qboolean CL_VisitParsing( void );
 qboolean CL_VisitPacket( const netadr_t *from, msg_t *msg );
+qboolean CL_VisitUntunnel( const netadr_t *from, msg_t *msg );
 void CL_VisitGamestate( const msg_t *msg );
 void CL_VisitDrop( void );
 void CL_VisitBroken( void );
