@@ -58,6 +58,16 @@ itself, the rest is read while the game runs. "Output" is `s_spatialHrtf` (Headp
 slider on `s_spatialReverb`. The menu does not know whether the library is there: without it the console says
 so and the sound stays as it is.
 
+The entry is a cvar of the ui (`ui_s_spatialQuality`) that is worked out from the cvars of the engine by
+`uiScript getsoundsetup`, and it is not stored itself. The menus of the game run that script when the tab of the
+sound is clicked. The Setup screens of the new look (`ui/vision/setup.menu`, `ingame_setup.menu`) have no such
+tab action, and until 2026-10-12 nothing ran it there: the entry said "Off" after every start of the game,
+whatever the engine had stored, and the owner read that as "they don't get saved" (his config had Very High all
+along). A click on the entry then went on from Off and wrote that preset over what was stored. Now
+`tools/menus/options.py` puts the script into what the screen does when it opens. Checked with a hidden client
+whose config has Very High (`tools/uitest/soundsetup.sh` of the test tools): the cvar did not exist with the
+screen open before, it is 4 now and the row says Very High.
+
 `s_spatialInfo` says whether it runs, what the level is made of, every sound with how much of it is in sight,
 what the threads take and the state of the paths. One of its lines is what the sound of the level took of the
 thread of the game since the command was last given: the frames, the sounds in them, the microseconds of a frame

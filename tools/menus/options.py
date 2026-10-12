@@ -502,6 +502,14 @@ def build(m, name, ingame, nav):
         e = mf.find(m, key)
         if e and isinstance(e.block, list):
             e.block = clean(e.block)
+    if setup:
+        # The old menu read the 3D sound of the engine into its entry when the page of the sound was opened
+        # (uiScript getsoundsetup in the action of that tab, which went with the tabs). Here all pages are one
+        # screen, so it is read when the screen opens. Without it the entry said "Off" after every start of the
+        # game, whatever the engine had, and looked as if nothing had been saved.
+        e = mf.find(m, 'onopen')
+        if e and isinstance(e.block, list):
+            e.block = ['uiScript', 'getsoundsetup', mf.NL] + e.block
     mf.put(m, 'scrollRect', *[mf.fmt(v) for v in L.list])
     mf.put(m, 'scrollStep', ROW_H)
     if ingame:

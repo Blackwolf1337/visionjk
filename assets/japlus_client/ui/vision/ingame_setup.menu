@@ -17,6 +17,7 @@
 		descAlignment			ITEM_ALIGN_CENTER
 		onOpen
 		{
+			uiScript getsoundsetup
 			uiScript getvideosetup
 			hide applyChanges
 		}
