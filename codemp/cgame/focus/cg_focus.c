@@ -606,8 +606,12 @@ static void Focus_Slide( float seconds ) {
 		VectorMA( focus.origin, seconds, focus.velocity, end );
 		CG_Trace( &tr, focus.origin, mins, maxs, end, focus.clientNum, MASK_SOLID );
 		if ( tr.startsolid ) {
-			// it stands in something (the camera of the game may, behind a player at a wall): out of it first
-			VectorCopy( end, focus.origin );
+			// It stands in something (the camera of the game may, behind a player at a wall): back to where the
+			// way from the eyes of the body is free. It used to go on as it was steered until it was out, which
+			// with a step backwards was out of the level, and from there one looked into its rooms.
+			CG_Trace( &tr, focus.eyes, mins, maxs, focus.origin, focus.clientNum, MASK_SOLID );
+			VectorCopy( tr.startsolid ? focus.eyes : tr.endpos, focus.origin );
+			VectorClear( focus.velocity );
 			return;
 		}
 		VectorCopy( tr.endpos, focus.origin );
