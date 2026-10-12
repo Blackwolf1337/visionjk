@@ -171,6 +171,56 @@ void VK_BlurFrame( float amount, float focus ) {
 
 /*
 ===============
+VK_SpiritFrame
+
+The look a module asked for with RE_SetSpiritWorld(): a world that stands still, the Focus of the cgame. The
+frame goes into the buffers of the depth of field, half its size and a little soft, and a pass makes of it
+what is laid over the frame (shaders/spirit.frag): its light in dark blue, in a fog that is thicker with the
+distance and drifts. What a module draws over the scene and the 2D come afterwards and keep their colours.
+Only on a device that lets a shader read its depth (VK_SpiritReady()).
+===============
+*/
+qboolean VK_SpiritReady( void ) {
+	return vk.depthReadable;
+}
+
+void VK_SpiritFrame( float amount, float seconds ) {
+	const float	*projection = backEnd.viewParms.projectionMatrix;
+	vkTarget_t	*source = &vk.color;
+
+	if ( !vk.frame || amount <= 0.0f || !vk.depthReadable ) {
+		return;
+	}
+	VK_EndTarget();
+
+	for ( int i = 0; i < 2; i++ ) {
+		vkTarget_t *target = &vk.soft[i];
+		// in pixels of the source, four samples and a quarter of each, as VK_BlurFrame() does it
+		const float offset = i ? 1.0f : 0.5f;
+		const float parm[4] = { offset / source->width, offset / source->height, 0.25f, 0.0f };
+
+		VK_BlurPass( source, target, parm );
+		source = target;
+	}
+
+	{
+		vkTarget_t *target = &vk.soft[0];
+		// the depth of a pixel to its distance, see VK_BlurFrame(). (A clock of hours loses nothing as a float.)
+		const float parm[4] = { projection[14] * 0.5f, ( projection[10] - 1.0f ) * 0.5f, seconds, Q_min( amount, 1.0f ) };
+
+		VK_SpiritPass( source, target, parm );
+		VK_BeginTarget( &vk.color, &vk.depth, 2, qtrue );
+		VK_AddTarget( target, VKA_BLEND );
+	}
+
+	// the shaders that draw geometry have other sets and other state
+	VK_BindFrameSets();
+	vk.stateValid = qfalse;
+	VK_SetViewport( vk.viewport[0], vk.viewport[1], vk.viewport[2], vk.viewport[3], 0.0f, 1.0f );
+}
+
+/*
+===============
 VK_CaptureFrame
 
 Copies the frame as it is right now into vk.screen, which the stages of refraction surfaces then read through

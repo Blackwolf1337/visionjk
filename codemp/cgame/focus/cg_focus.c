@@ -43,6 +43,17 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // "focus" and of the chat are looked up when they are pressed. Escape never arrives as a key, the engine takes
 // the keys back and says so (CG_EventHandling() calls CG_FocusEnd()).
 //
+// The look. The renderer is asked for the scene as a world that stands still looks, dark blue and in drifting
+// fog (trap->ext.R_SetSpiritWorld, an engine with the cvar cl_cgameSpirit; rd-vulkan-vision and the client in
+// the browser have the pass). Where there is no such pass, rd-vanilla and any other engine, this file lays a
+// dark blue tint and two layers of smoke over the picture, made here and plainer. Both come in over half a
+// second and go out in a third after the world is back.
+//
+// The sound. The mix of the game is muffled as it is behind the menu in the level (s_muffle of the engine, which
+// menu3d/cg_menu3d.c sets for both), and a low hum lies under it: the sounds of the Force Sight of the game,
+// one when it begins and when it ends, its loop in between. Chosen by their names, nobody listened yet. The
+// voice chat is not touched.
+//
 // All of it happens in this client. Another client sees a player who stands still.
 
 #include "cgame/cg_local.h"
@@ -58,6 +69,11 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define FOCUS_SETTLE_MSEC	1000		// the body comes to a stop in this time, where it stands then is its place
 #define FOCUS_KEYS			4			// keys of one command that are looked at
 #define FOCUS_KEY_MSEC		1500		// the key of "focus" ends it after this time even if it was never let go
+#define FOCUS_IN_MSEC		550			// the look comes in this time,
+#define FOCUS_OUT_MSEC		320			//	and goes in this one after the world is back
+#define FOCUS_MUFFLE		0.7f		// s_muffle while the look is all there
+#define FOCUS_SMOKE			64			// the picture of the smoke of the plain look, a side of it
+#define FOCUS_SMOKE_GRID	8			//	and the cells of the pattern it is made of
 
 typedef enum {
 	MOVE_FORWARD,
@@ -84,6 +100,9 @@ typedef struct focus_s {
 	int			worldTime;				// cg.time of the moment the world stopped
 	int			realTime;				// cg.time of the game, while swapped
 	int			startMsec, lastMsec;	// trap->Milliseconds()
+	int			endMsec;				// when it ended, while the look still fades
+	float		look, lookAtEnd;		// how much of the look this frame has, and had when it ended
+	qboolean	pass;					// the renderer draws the look, this file does not
 	int			peekNum;				// the snapshot that was looked at last
 	int			clientNum, pmType, damageEvent;		// of the body when it began
 	vec3_t		body, eyes;				// where it stood
@@ -94,6 +113,19 @@ typedef struct focus_s {
 
 static focus_t		focus;
 static snapshot_t	focusPeek;			// the newest snapshot, looked at and not taken in
+
+// sounds of the game: it has them loaded for the Force Sight
+static sfxHandle_t Focus_Sound( qboolean loop ) {
+	static sfxHandle_t	sounds[2];
+	static qboolean		loaded;
+
+	if ( !loaded ) {
+		loaded = qtrue;
+		sounds[0] = trap->S_RegisterSound( "sound/weapons/force/see.wav" );
+		sounds[1] = trap->S_RegisterSound( "sound/weapons/force/seeloop.wav" );
+	}
+	return sounds[loop ? 1 : 0];
+}
 
 static float Focus_Cvar( const char *name ) {
 	char value[32];
@@ -195,6 +227,7 @@ static void Focus_Begin( void ) {
 	// buttons are let go for it (a button command without a key lets go of all of them).
 	trap->SendConsoleCommand( "-forward;-back;-moveleft;-moveright;-moveup;-movedown;-left;-right;-attack;-altattack;-use\n" );
 	trap->Key_SetCatcher( trap->Key_GetCatcher() | KEYCATCH_CGAME );
+	trap->S_StartLocalSound( Focus_Sound( qfalse ), CHAN_LOCAL_SOUND );
 }
 
 /*
@@ -211,9 +244,17 @@ void CG_FocusEnd( void ) {
 	}
 	focus.active = qfalse;
 	focus.resync = qtrue;
+	focus.endMsec = trap->Milliseconds();
+	focus.lookAtEnd = focus.look;
+	trap->S_StartLocalSound( Focus_Sound( qfalse ), CHAN_LOCAL_SOUND );
 	if ( !CG_ChatIsOpen() ) {
 		trap->Key_SetCatcher( trap->Key_GetCatcher() & ~KEYCATCH_CGAME );
 	}
+}
+
+// how much the sound of the game is muffled, for s_muffle (menu3d/cg_menu3d.c sets it)
+float CG_FocusMuffle( void ) {
+	return focus.look * FOCUS_MUFFLE;
 }
 
 // the still is on the screen: out of the body, or just back and not yet at the newest snapshot
@@ -399,6 +440,9 @@ qboolean CG_FocusFrame( void ) {
 	if ( !CG_FocusActive() ) {
 		return qfalse;
 	}
+	// the hum, on the listener himself so it has no place (after the loops of the frame were cleared, before
+	// the sound takes them)
+	trap->S_AddLoopingSound( cg.snap->ps.clientNum, focus.origin, vec3_origin, Focus_Sound( qtrue ) );
 	focus.realTime = cg.time;
 	cg.time = focus.worldTime;
 	focus.swapped = qtrue;
@@ -421,6 +465,130 @@ void CG_FocusView( void ) {
 	VectorCopy( focus.origin, cg.refdef.vieworg );
 	VectorCopy( focus.angles, cg.refdef.viewangles );
 	AnglesToAxis( focus.angles, cg.refdef.viewaxis );
+}
+
+// does the engine have that call of the import table?
+static qboolean Focus_Engine( const char *cvar ) {
+	return (qboolean)( Focus_Cvar( cvar ) == 1.0f );
+}
+
+/*
+=================
+CG_FocusScene
+
+Once a frame before the scene is rendered: how much of the look it has, and the renderer is asked for it
+=================
+*/
+void CG_FocusScene( void ) {
+	const int now = trap->Milliseconds();
+
+	if ( CG_FocusActive() ) {
+		focus.look = Com_Clamp( 0.0f, 1.0f, ( now - focus.startMsec ) / (float)FOCUS_IN_MSEC );
+	} else if ( focus.endMsec ) {
+		focus.look = focus.lookAtEnd * ( 1.0f - ( now - focus.endMsec ) / (float)FOCUS_OUT_MSEC );
+		if ( focus.look <= 0.0f ) {
+			focus.endMsec = 0;
+		}
+	} else {
+		focus.look = 0.0f;
+	}
+	focus.pass = qfalse;
+	if ( focus.look <= 0.0f ) {
+		focus.look = 0.0f;
+		return;
+	}
+	if ( Focus_Engine( "cl_cgameSpirit" ) ) {
+		focus.pass = trap->ext.R_SetSpiritWorld( focus.look, ( now - focus.startMsec ) * 0.001f );
+	}
+}
+
+// The smoke of the plain look: a picture of soft patches that fits to itself at its edges, made once. 0: the
+// engine can not make a shader of a picture (cl_cgameScene).
+static qhandle_t Focus_Smoke( void ) {
+	static qhandle_t	shader;
+	static qboolean		tried;
+	static byte			rgba[FOCUS_SMOKE * FOCUS_SMOKE * 4];
+	float				grid[FOCUS_SMOKE_GRID][FOCUS_SMOKE_GRID];
+	unsigned int		seed = 20261012u;
+	int					x, y;
+
+	if ( tried ) {
+		return shader;
+	}
+	tried = qtrue;
+	if ( !Focus_Engine( "cl_cgameScene" ) ) {
+		return 0;
+	}
+	for ( y = 0; y < FOCUS_SMOKE_GRID; y++ ) {
+		for ( x = 0; x < FOCUS_SMOKE_GRID; x++ ) {
+			seed = seed * 1664525u + 1013904223u;
+			grid[y][x] = ( ( seed >> 8 ) & 0xFFFF ) / 65535.0f;
+		}
+	}
+	for ( y = 0; y < FOCUS_SMOKE; y++ ) {
+		for ( x = 0; x < FOCUS_SMOKE; x++ ) {
+			const float	gx = x * ( FOCUS_SMOKE_GRID / (float)FOCUS_SMOKE ), gy = y * ( FOCUS_SMOKE_GRID / (float)FOCUS_SMOKE );
+			const int	x0 = (int)gx, y0 = (int)gy;
+			const int	x1 = ( x0 + 1 ) % FOCUS_SMOKE_GRID, y1 = ( y0 + 1 ) % FOCUS_SMOKE_GRID;
+			float		fx = gx - x0, fy = gy - y0, v;
+			byte		*out = &rgba[( y * FOCUS_SMOKE + x ) * 4];
+
+			fx = fx * fx * ( 3.0f - 2.0f * fx );
+			fy = fy * fy * ( 3.0f - 2.0f * fy );
+			v = ( grid[y0][x0] * ( 1.0f - fx ) + grid[y0][x1] * fx ) * ( 1.0f - fy )
+				+ ( grid[y1][x0] * ( 1.0f - fx ) + grid[y1][x1] * fx ) * fy;
+			out[0] = 140;
+			out[1] = 175;
+			out[2] = 255;
+			out[3] = (byte)( v * v * 150.0f );
+		}
+	}
+	shader = trap->ext.R_RegisterShaderRGBA( "*focus_smoke", rgba, FOCUS_SMOKE, FOCUS_SMOKE, 0 );
+	return shader;
+}
+
+/*
+=================
+CG_FocusTint
+
+Once a frame under the 2D: the plain look, where the renderer has no pass for it
+=================
+*/
+void CG_FocusTint( void ) {
+	static const float	tiles[2] = { 520.0f, 300.0f }, drift[2][2] = { { 9.0f, -14.0f }, { -17.0f, -23.0f } };
+	const float			left = -cgs.bias2D, width = SCREEN_WIDTH + 2.0f * cgs.bias2D;
+	const float			seconds = ( trap->Milliseconds() - focus.startMsec ) * 0.001f;
+	vec4_t				color = { 0.02f, 0.06f, 0.22f, 0.0f };
+	qhandle_t			smoke;
+	int					layer;
+
+	if ( focus.look <= 0.0f || focus.pass ) {
+		return;
+	}
+	CG_Place2D( PLACE_CENTER );
+	color[3] = 0.58f * focus.look;
+	CG_FillRect( left, 0.0f, width, SCREEN_HEIGHT, color );
+
+	smoke = Focus_Smoke();
+	if ( !smoke ) {
+		return;
+	}
+	VectorSet4( color, 1.0f, 1.0f, 1.0f, 0.55f * focus.look );
+	trap->R_SetColor( color );
+	for ( layer = 0; layer < 2; layer++ ) {
+		const float	tile = tiles[layer];
+		// the picture fits to itself at its edges: tiles of it that wander, begun one tile outside of the screen
+		const float	x0 = left - tile + fmodf( fmodf( seconds * drift[layer][0], tile ) + tile, tile );
+		const float	y0 = -tile + fmodf( fmodf( seconds * drift[layer][1], tile ) + tile, tile );
+		float		x, y;
+
+		for ( y = y0; y < SCREEN_HEIGHT; y += tile ) {
+			for ( x = x0; x < left + width; x += tile ) {
+				CG_DrawPic( x, y, tile, tile, smoke );
+			}
+		}
+	}
+	trap->R_SetColor( NULL );
 }
 
 /*

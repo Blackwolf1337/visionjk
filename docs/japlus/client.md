@@ -612,6 +612,17 @@ is then the one of that moment. Nothing of the time in between is played after.
   `cl_cgameBinds`), another one only the first key of a command.
 - **The screen**: votes, who talks, what the server prints in the middle, the chat box and a line that says how
   to come back. No HUD: its numbers would be the ones of the still.
+- **The look**: the world dark blue, nearly without its colours, in a fog that is thicker with the distance and
+  drifts like smoke, dark towards the edges of the picture. It comes in over half a second and goes within a
+  third after the world is back. `rd-vulkan-vision` and the client in the browser draw it as a pass over the
+  scene (`trap->ext.R_SetSpiritWorld`, cvar `cl_cgameSpirit`; `RE_SetSpiritWorld()`, `VK_SpiritFrame()` in
+  `vk_post.cpp`, `shaders/spirit.frag`), under what a module writes into the level and under the 2D, on a
+  device that lets a shader read its depth. Everywhere else (`rd-vanilla`, so macOS too, and another engine)
+  the cgame lays a dark blue tint and two layers of smoke over the picture (`CG_FocusTint()`): plainer, and
+  the fog there knows no distance.
+- **The sound**: the mix of the game is muffled (`s_muffle` at 0.7, set by `menu3d/cg_menu3d.c` for the menu in
+  the level and for this), with the loop of the Force Sight of the game as a hum, and its sound when it
+  begins and ends. Chosen by their names, nobody listened. The voice chat is not touched.
 - **Not**: as a spectator, dead, in the air, in a vehicle, zoomed, in a duel, in a demo, with a menu open.
 - **Others** see a player who stands still. Nothing of this reaches another client.
 

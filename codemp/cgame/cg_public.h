@@ -758,6 +758,11 @@ typedef struct cgameImport_s {
 		// to, as the menus read it: for a cgame that holds the keys itself (focus/cg_focus.c). The engine runs
 		// no bound command meanwhile, and Key_GetKey() knows only the first key of a command.
 		void			(*Key_GetBindingBuf)					( int keynum, char *buf, int buflen );
+		// Only an engine that sets the cvar cl_cgameSpirit to 1 has this one, the same way. The scene of this
+		// frame as a world that stands still looks: dark blue, in drifting fog (focus/cg_focus.c). amount 0 to
+		// 1, seconds: a clock for the drift. Called before R_RenderScene, every frame it is wanted. qfalse: the
+		// renderer has no such pass.
+		qboolean		(*R_SetSpiritWorld)						( float amount, float seconds );
 	} ext;
 } cgameImport_t;
 

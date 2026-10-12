@@ -8013,6 +8013,9 @@ static void CG_Draw2D( void ) {
 		return;
 	}
 
+	// under everything: the plain look of a world that stands still, where the renderer has none (focus/cg_focus.c)
+	CG_FocusTint();
+
 	if ( cg.snap->ps.pm_type == PM_INTERMISSION ) {
 		CG_DrawIntermission();
 		CG_ChatDraw();
@@ -8531,6 +8534,8 @@ void CG_DrawActive( stereoFrame_t stereoView ) {
 	CG_Menu3DScene();
 	// the name and the card of a player the mouse points at, which are things in the level (select/cg_select.c)
 	CG_SelectScene();
+	// the look of a world that stands still (focus/cg_focus.c)
+	CG_FocusScene();
 
 	trap->R_RenderScene( &cg.refdef );
 	// and what of them has grown for a player far away, over that scene

@@ -39,6 +39,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "shaders/blur_frag_es.inc"
 #include "shaders/copy_frag_es.inc"
 #include "shaders/focus_frag_es.inc"
+#include "shaders/spirit_frag_es.inc"
 
 static const struct {
 	const char			*name;				// for what the console says when it does not compile
@@ -51,6 +52,7 @@ static const struct {
 	{ "blur", vk_es_post_vert, vk_es_blur_frag, "" },
 	{ "copy", vk_es_post_vert, vk_es_copy_frag, "" },
 	{ "focus", vk_es_post_vert, vk_es_focus_frag, "" },
+	{ "spirit", vk_es_post_vert, vk_es_spirit_frag, "" },
 	{ "present", vk_es_post_vert, vk_es_copy_frag, "#define POST_UPSIDE_DOWN\n" },
 };
 

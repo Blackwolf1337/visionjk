@@ -1813,6 +1813,9 @@ void		CG_FocusView( void );
 qboolean	CG_FocusMouseEvent( int dx, int dy );
 qboolean	CG_FocusKeyEvent( int key, qboolean down );
 void		CG_FocusDraw( void );
+void		CG_FocusScene( void );
+void		CG_FocusTint( void );
+float		CG_FocusMuffle( void );
 
 // hud/cg_hud.c: the numbers of the game by name, for the items of a menu file that show one
 qboolean	CG_StatValue( const char *name, float *value, float *max );

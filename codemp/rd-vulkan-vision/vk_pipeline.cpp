@@ -54,6 +54,9 @@ static const uint32_t vk_copyFrag[] =
 static const uint32_t vk_focusFrag[] =
 #include "shaders/focus_frag.inc"
 ;
+static const uint32_t vk_spiritFrag[] =
+#include "shaders/spirit_frag.inc"
+;
 
 static VkShaderModule VK_CreateShader( const uint32_t *code, size_t size ) {
 	VkShaderModuleCreateInfo info = { VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO };
@@ -396,6 +399,8 @@ void VK_InitPipelines( void ) {
 	vk.glowPipelines[2] = VK_CreatePipeline( vk.postVertexShader, vk.copyFragmentShader, GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA, 2, qfalse );
 	vk.focusFragmentShader = VK_CreateShader( vk_focusFrag, sizeof( vk_focusFrag ) );
 	vk.focusPipeline = VK_CreatePipeline( vk.postVertexShader, vk.focusFragmentShader, 0, 3, qfalse );
+	vk.spiritFragmentShader = VK_CreateShader( vk_spiritFrag, sizeof( vk_spiritFrag ) );
+	vk.spiritPipeline = VK_CreatePipeline( vk.postVertexShader, vk.spiritFragmentShader, 0, 3, qfalse );
 }
 
 void VK_ShutdownPipelines( void ) {
@@ -411,6 +416,8 @@ void VK_ShutdownPipelines( void ) {
 	qvkDestroyPipeline( vk.device, vk.glowPipelines[2], NULL );
 	qvkDestroyPipeline( vk.device, vk.focusPipeline, NULL );
 	qvkDestroyShaderModule( vk.device, vk.focusFragmentShader, NULL );
+	qvkDestroyPipeline( vk.device, vk.spiritPipeline, NULL );
+	qvkDestroyShaderModule( vk.device, vk.spiritFragmentShader, NULL );
 	qvkDestroyShaderModule( vk.device, vk.blurFragmentShader, NULL );
 	qvkDestroyShaderModule( vk.device, vk.copyFragmentShader, NULL );
 	for ( int i = 0; i < VKP_NUM_PROGRAMS; i++ ) {

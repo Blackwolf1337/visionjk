@@ -2221,6 +2221,7 @@ Q_EXPORT refexport_t* QDECL GetRefAPI( int apiVersion, refimport_t *rimp ) {
 	re.ext.RegisterShaderRGBA				= RE_RegisterShaderRGBA;
 	re.ext.Set2DPlane						= RE_Set2DPlane;
 	re.ext.SetDepthOfField					= RE_SetDepthOfField;
+	re.ext.SetSpiritWorld					= RE_SetSpiritWorld;
 
 	return &re;
 }

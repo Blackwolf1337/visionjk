@@ -326,6 +326,7 @@ void		VK_InitPost( void );
 void		VK_BeginGlow( void );
 void		VK_EndGlow( void );
 void		VK_BlurFrame( float amount, float focus );
+void		VK_SpiritFrame( float amount, float seconds );
 void		VK_CaptureFrame( void );
 void		VK_ClearFlares( void );
 void		VK_CopyProbes( void );
@@ -429,6 +430,8 @@ void		VK_BlurPass( vkTarget_t *source, vkTarget_t *target, const float *parm );
 // The same with shaders/focus.frag, which reads the depth of the scene (vk.depth) next to source. Only with
 // vk.depthReadable.
 void		VK_FocusPass( vkTarget_t *source, vkTarget_t *target, const float *parm );
+// And with shaders/spirit.frag, which reads it too.
+void		VK_SpiritPass( vkTarget_t *source, vkTarget_t *target, const float *parm );
 // source over the whole of the target that is drawn into: added to what is there, added softly (GL_ONE,
 // GL_ONE_MINUS_SRC_COLOR), or laid over it by its alpha
 typedef enum { VKA_ADD, VKA_ADD_SOFT, VKA_BLEND } vkAdd_t;

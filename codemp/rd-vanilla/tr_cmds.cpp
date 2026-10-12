@@ -238,6 +238,29 @@ void	RE_SetDepthOfField( float focus, float amount ) {
 	r_dofAmount = Com_Clamp( 0.0f, 1.0f, amount );
 }
 
+/*
+=============
+RE_SetSpiritWorld
+
+A module wants the scene of this frame as a world that stands still looks: dark blue, in drifting fog (the Focus
+of the cgame). amount 0 to 1, seconds: a clock for the drift. It holds for one frame, as the depth of field does.
+qfalse: this renderer has no such pass, and the module may paint something of its own over the picture.
+rd-vulkan-vision has it (vk_post.cpp) on a device that lets a shader read the depth, rd-vanilla has not.
+=============
+*/
+float	r_spiritAmount, r_spiritTime;
+
+qboolean	RE_SetSpiritWorld( float amount, float seconds ) {
+#ifdef RD_VULKAN_VISION
+	if ( VK_SpiritReady() ) {
+		r_spiritAmount = Com_Clamp( 0.0f, 1.0f, amount );
+		r_spiritTime = seconds;
+		return qtrue;
+	}
+#endif
+	return qfalse;
+}
+
 void	RE_SetColor( const float *rgba ) {
 	setColorCommand_t	*cmd;
 
@@ -393,6 +416,7 @@ void RE_BeginFrame( stereoFrame_t stereoFrame ) {
 
 	// what a module asked for with RE_SetDepthOfField() was for the frame before
 	r_dofAmount = 0.0f;
+	r_spiritAmount = 0.0f;
 	glState.finishCalled = qfalse;
 
 	tr.frameCount++;

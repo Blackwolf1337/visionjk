@@ -960,7 +960,11 @@ static const void *RB_DrawSurfs( const void *data ) {
 	const qboolean focus = (qboolean)( r_dofAmount > 0.0f && r_menuBlur->value > 0.0f && !backEnd.viewParms.isPortal
 		&& !( backEnd.refdef.rdflags & ( RDF_NOWORLDMODEL | RDF_SKYBOXPORTAL ) ) );
 
-	rb_overLater = focus;
+	// The same view as a world that stands still looks (RE_SetSpiritWorld, vk_post.cpp).
+	const qboolean spirit = (qboolean)( r_spiritAmount > 0.0f && !backEnd.viewParms.isPortal
+		&& !( backEnd.refdef.rdflags & ( RDF_NOWORLDMODEL | RDF_SKYBOXPORTAL ) ) );
+
+	rb_overLater = (qboolean)( focus || spirit );
 	rb_sawOver = qfalse;
 	rb_glowView = !( backEnd.refdef.rdflags & RDF_NOWORLDMODEL ) && r_DynamicGlow->integer;
 	rb_sawLate = qfalse;
@@ -982,11 +986,14 @@ static const void *RB_DrawSurfs( const void *data ) {
 		}
 	}
 	rb_glowView = false;
+	if ( spirit ) {
+		VK_SpiritFrame( r_spiritAmount, r_spiritTime );
+	}
 	if ( focus ) {
 		VK_BlurFrame( r_dofAmount, r_dofFocus );
-		if ( rb_sawOver ) {
-			RB_RenderOverSurfs( cmd->drawSurfs, cmd->numDrawSurfs );
-		}
+	}
+	if ( ( focus || spirit ) && rb_sawOver ) {
+		RB_RenderOverSurfs( cmd->drawSurfs, cmd->numDrawSurfs );
 	}
 	rb_overLater = qfalse;
 	// the next picture has to set the 2D projection up again

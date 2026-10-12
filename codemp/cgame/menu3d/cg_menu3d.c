@@ -130,10 +130,15 @@ qboolean CG_Menu3DFrame( void ) {
 		menu3d.blend = Q_max( 0.0f, menu3d.blend - (float)msec / MENU3D_OUT_MSEC );
 	}
 
-	// the sound of the game is muffled while the menu is there (s_muffle of the engine, 0 to 1)
-	if ( fabsf( menu3d.blend - menu3d.muffle ) > 0.02f || ( menu3d.blend != menu3d.muffle && ( menu3d.blend == 0.0f || menu3d.blend == 1.0f ) ) ) {
-		menu3d.muffle = menu3d.blend;
-		trap->Cvar_Set( "s_muffle", va( "%.2f", menu3d.muffle ) );
+	// the sound of the game is muffled while the menu is there (s_muffle of the engine, 0 to 1), and while the
+	// world stands still (focus/cg_focus.c): one place sets it for both
+	{
+		const float want = Q_max( menu3d.blend, CG_FocusMuffle() );
+
+		if ( fabsf( want - menu3d.muffle ) > 0.02f || ( want != menu3d.muffle && ( want == 0.0f || want == 1.0f ) ) ) {
+			menu3d.muffle = want;
+			trap->Cvar_Set( "s_muffle", va( "%.2f", menu3d.muffle ) );
+		}
 	}
 	return (qboolean)( menu3d.blend > 0.0f );
 }

@@ -2889,6 +2889,8 @@ void CL_Init( void ) {
 	Cvar_Get( "cl_cgameDoF", "1", CVAR_ROM, "" );
 	// what a key is bound to, for a cgame that holds the keys itself
 	Cvar_Get( "cl_cgameBinds", "1", CVAR_ROM, "" );
+	// and the look of a world that stands still
+	Cvar_Get( "cl_cgameSpirit", "1", CVAR_ROM, "" );
 	// for the ui: 1 while its menus are drawn onto that plane, which has the 640 x 480 of a menu and no more
 	Cvar_Get( "cl_uiPlane", "0", CVAR_ROM, "" );
 	// tells the ui and the cgame that the engine can draw their new look: pictures the ui computes
