@@ -308,8 +308,8 @@ LANG_ENGLISH        "A list of the players who are talking on the HUD."
 REFERENCE           ON_OTHER_SERVERS
 LANG_ENGLISH        "On Other Servers"
 
-REFERENCE           SERVERS_WITHOUT_VOICE_USE_VOICE_JKA
-LANG_ENGLISH        "Servers without voice: use voice.jka.vision, which sees your address."
+REFERENCE           SERVERS_WITHOUT_VOICE_USE_MASTER_JKA
+LANG_ENGLISH        "Servers without voice: use master.jka.vision, which sees your address."
 
 REFERENCE           OWN_VOICE_IN_THE_ROOM
 LANG_ENGLISH        "Own Voice In The Room"

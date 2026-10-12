@@ -791,7 +791,7 @@ Limits, said plainly:
 - **Only the open temple.** With a word of one's own (`cg_templeLink`) or with 0 one stays in the light temple:
   the server has no rooms.
 - **Only where there is such a server.** From a server without a temple of its own that is the masterserver
-  (`cg_voiceMasterHost`, `voice.jka.vision`). It runs on the owner's host since 2026-10-12 21:43. Where it does
+  (`cg_voiceMasterHost`, `master.jka.vision`, or `voice.jka.vision` for a client up to 0.1.6). It runs on the owner's host since 2026-10-12 21:43. Where it does
   not answer, the temple stays the light one.
 
 On the temple server the cgame draws no fight HUD (votes, who talks, chat and the hint are left), shows every

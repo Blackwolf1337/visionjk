@@ -206,8 +206,8 @@ TR = {
     'Show Who Talks': 'Sprecher anzeigen',
     'A list of the players who are talking on the HUD.': 'Eine Liste der Spieler, die gerade sprechen, im HUD.',
     'On Other Servers': 'Auf anderen Servern',
-    'Servers without voice: use voice.jka.vision, which sees your address.':
-        'Server ohne Sprach-Chat: voice.jka.vision nutzen, das Ihre Adresse sieht.',
+    'Servers without voice: use master.jka.vision, which sees your address.':
+        'Server ohne Sprach-Chat: master.jka.vision nutzen, das Ihre Adresse sieht.',
     'Own Voice In The Room': 'Eigene Stimme im Raum',
     'With spatial sound: how loud the room rings from what you say yourself.':
         'Mit 3D-Sound: wie laut der Raum von dem nachklingt, was Sie selbst sagen.',

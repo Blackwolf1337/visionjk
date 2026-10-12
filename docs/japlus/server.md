@@ -319,7 +319,7 @@ What comes in on its port:
 
 A client that asks the relay for the temple is told the port of the game of this very program, so the client
 goes on to it with a visit. 29170 is the port the clients of 0.1.5 know for the voice chat on servers without
-the module (`cg_voiceMasterHost`, `voice.jka.vision`).
+the module (`cg_voiceMasterHost`: `voice.jka.vision` up to 0.1.6, `master.jka.vision` after it, the same host).
 
 Not there: rooms for those who use a word of their own, a list of who is in the temple, more than the 32
 players one server holds.

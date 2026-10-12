@@ -39,7 +39,7 @@ has room for.
 | `cg_voiceBackend` | "" | `null`: a sound system that plays into nothing, for tests |
 | `cg_voiceRadioFX` | 1 | the clan radio sounds like a radio: only the band of a telephone, a little rough, with a click at both ends. 0: as clear as any voice |
 | `cg_voiceMaster` | 1 | 0: no voice chat on servers that have none of their own. 1: there it goes through the masterserver |
-| `cg_voiceMasterHost` | voice.jka.vision | the masterserver, a name or an address, with `:port` if it is not 29170 |
+| `cg_voiceMasterHost` | master.jka.vision | the masterserver, a name or an address, with `:port` if it is not 29170. Up to version 0.1.6 the default was voice.jka.vision, and every player from then has that name stored in his config: both names have to lead to the masterserver for good |
 
 | Command | |
 |---------|---|
@@ -217,7 +217,7 @@ the rings and the queues are static memory. `CG_Shutdown` stops the devices befo
 
 A server that does not run the game module of this tree has no relay, hands out no token and tells nobody who
 stands near whom. There the cgame sends the same sound to the masterserver: one relay for all such servers,
-`voice.jka.vision` on UDP port 29170. Added 2026-10-10, see "Checked" for what was run of it.
+`master.jka.vision` on UDP port 29170 (`voice.jka.vision` up to version 0.1.6, the same host). Added 2026-10-10, see "Checked" for what was run of it.
 
 When it is used:
 

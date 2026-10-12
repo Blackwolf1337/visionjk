@@ -409,9 +409,9 @@ REFERENCE           ON_OTHER_SERVERS
 LANG_ENGLISH        "On Other Servers"
 LANG_GERMAN         "Auf anderen Servern"
 
-REFERENCE           SERVERS_WITHOUT_VOICE_USE_VOICE_JKA
-LANG_ENGLISH        "Servers without voice: use voice.jka.vision, which sees your address."
-LANG_GERMAN         "Server ohne Sprach-Chat: voice.jka.vision nutzen, das Ihre Adresse sieht."
+REFERENCE           SERVERS_WITHOUT_VOICE_USE_MASTER_JKA
+LANG_ENGLISH        "Servers without voice: use master.jka.vision, which sees your address."
+LANG_GERMAN         "Server ohne Sprach-Chat: master.jka.vision nutzen, das Ihre Adresse sieht."
 
 REFERENCE           OWN_VOICE_IN_THE_ROOM
 LANG_ENGLISH        "Own Voice In The Room"

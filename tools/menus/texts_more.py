@@ -123,7 +123,7 @@ MORE = {
     'Show Who Talks': ('Afficher qui parle', 'Mostrar quién habla'),
     'A list of the players who are talking on the HUD.': ('Une liste des joueurs qui parlent sur le HUD.', 'Una lista de los jugadores que hablan en el HUD.'),
     'On Other Servers': ("Sur d'autres serveurs", 'En otros servidores'),
-    'Servers without voice: use voice.jka.vision, which sees your address.': ('Serveurs sans voix : utiliser voice.jka.vision, qui voit votre adresse.', 'Servidores sin voz: usar voice.jka.vision, que ve tu dirección.'),
+    'Servers without voice: use master.jka.vision, which sees your address.': ('Serveurs sans voix : utiliser master.jka.vision, qui voit votre adresse.', 'Servidores sin voz: usar master.jka.vision, que ve tu dirección.'),
     'Own Voice In The Room': ('Sa propre voix dans la pièce', 'Tu voz en la sala'),
     'With spatial sound: how loud the room rings from what you say yourself.': ('Avec le son spatial : la résonance de la pièce pour ce que vous dites.', 'Con sonido espacial: cuánto resuena la sala con lo que dices.'),
     'Radio Sound': ('Son radio', 'Sonido de radio'),

@@ -409,9 +409,9 @@ REFERENCE           ON_OTHER_SERVERS
 LANG_ENGLISH        "On Other Servers"
 LANG_FRENCH         "Sur d'autres serveurs"
 
-REFERENCE           SERVERS_WITHOUT_VOICE_USE_VOICE_JKA
-LANG_ENGLISH        "Servers without voice: use voice.jka.vision, which sees your address."
-LANG_FRENCH         "Serveurs sans voix : utiliser voice.jka.vision, qui voit votre adresse."
+REFERENCE           SERVERS_WITHOUT_VOICE_USE_MASTER_JKA
+LANG_ENGLISH        "Servers without voice: use master.jka.vision, which sees your address."
+LANG_FRENCH         "Serveurs sans voix : utiliser master.jka.vision, qui voit votre adresse."
 
 REFERENCE           OWN_VOICE_IN_THE_ROOM
 LANG_ENGLISH        "Own Voice In The Room"

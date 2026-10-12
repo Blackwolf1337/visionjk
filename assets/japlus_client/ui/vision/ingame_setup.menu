@@ -1112,7 +1112,7 @@
 			type					ITEM_TYPE_YESNO
 			text					@VISION_ON_OTHER_SERVERS
 			cvar					"cg_voiceMaster"
-			descText				@VISION_SERVERS_WITHOUT_VOICE_USE_VOICE_JKA
+			descText				@VISION_SERVERS_WITHOUT_VOICE_USE_MASTER_JKA
 			action { play "sound/interface/button1" }
 			rect					12 456 380 22
 			page					2

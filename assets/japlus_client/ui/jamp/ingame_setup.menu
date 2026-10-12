@@ -2067,7 +2067,7 @@
 			textscale			1
 			forecolor			.615 .615 .956 1
 			visible				0
-			descText			"Servers without voice: use voice.jka.vision, which sees your address."
+			descText			"Servers without voice: use master.jka.vision, which sees your address."
 			action
 			{
 				play			"sound/interface/button1"
