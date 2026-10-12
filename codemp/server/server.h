@@ -472,6 +472,14 @@ qboolean	SV_IDS_Blocked( const netadr_t *from );
 void		SV_IDS_Event( const netadr_t *from, client_t *cl, idsEvent_t event, const char *detail );
 void		SV_IDS_Text( client_t *cl, const char *text, qboolean userinfo );
 
+// sv_voice.cpp: the voice chat on the UDP port of the game
+void		SV_VoiceInit( void );
+qboolean	SV_VoicePacket( const netadr_t *from, msg_t *msg );
+void		SV_GameSendDatagram( const byte *ip, int port, const byte *data, int length );
+#ifdef VISION_MASTER
+void		SV_VoiceFrame( void );
+#endif
+
 extern	cvar_t	*sv_antiWallhack;		// sv_snapshot.cpp
 
 // mins and maxs are relative

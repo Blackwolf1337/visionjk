@@ -83,7 +83,9 @@ static void WA_SendServerCommand( int clientNum, const char *text ) {
 }
 
 gameImport_t *WebAdmin_WrapImport( gameImport_t *import ) {
-	waImport = *import;
+	// (the table of an engine that does not say sv_voiceShared ends before ext, g_public.h)
+	memset( &waImport, 0, sizeof( waImport ) );
+	memcpy( &waImport, import, import->Cvar_VariableIntegerValue( "sv_voiceShared" ) ? sizeof( waImport ) : offsetof( gameImport_t, ext ) );
 	waSendServerCommand = import->SendServerCommand;
 	waImport.SendServerCommand = WA_SendServerCommand;
 	return &waImport;

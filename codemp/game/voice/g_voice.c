@@ -30,6 +30,12 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 //
 // A client that runs in a browser sends the same datagrams through the web host of the dedicated server
 // (codemp/server/web/sv_web_voice.cpp), which passes them on to this port as they are.
+//
+// Where the datagrams come in. A dedicated server of this tree that says sv_voiceShared 1 takes them on the UDP
+// port of the game and hands them over (ext.VoiceDatagram of the exports, codemp/server/sv_voice.cpp), and what
+// goes to such a client leaves from that port again (ext.SendDatagram of the imports): the server needs one
+// port. The socket of this file is then one on this machine only, for the web host. With any other engine, or
+// with a g_voicePort, the socket is the relay: the port of the game plus one, or the one that cvar names.
 
 #include "game/bg_net.h"		// the sockets, in front of everything else
 #include "game/g_local.h"
@@ -40,6 +46,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 typedef struct voiceClient_s {
 	unsigned int		token;		// what the server gave him for this connection, 0: he did not ask for voice
 	qboolean			ready;		// a datagram with his token came: addr is where he listens
+	qboolean			viaGame;	// it came in on the port of the game: what goes to him leaves from there
 	struct sockaddr_in	addr;
 	struct in_addr		gameAddr;	// where his game connection comes from
 	qboolean			gameAddrKnown;
@@ -50,7 +57,9 @@ typedef struct voiceClient_s {
 
 static voiceClient_t	voiceClients[MAX_CLIENTS];
 static bgSocket_t		voiceSocket = BG_INVALID_SOCKET;
-static int				voicePort;
+static int				voicePort;			// of the socket
+static qboolean			voiceShared;		// the engine hands over what comes in on the port of the game (sv_voiceShared)
+static int				voiceGamePort;		//	and this is that port
 static int				voiceRefused;		// datagrams that were no voice of a client of this server, since the socket was made
 static struct in_addr	voiceSelf;			// the address of this machine the web host of the server reaches the relay on
 
@@ -85,6 +94,8 @@ void G_VoiceShutdown( qboolean restart ) {
 		voiceSocket = BG_INVALID_SOCKET;
 	}
 	G_VoiceTell( qfalse );
+	voiceShared = qfalse;
+	trap->Cvar_Set( "g_voiceShared", "0" );
 	memset( voiceClients, 0, sizeof( voiceClients ) );
 }
 
@@ -98,19 +109,26 @@ runs as it would without voice.
 */
 void G_VoiceInit( qboolean restart ) {
 	struct sockaddr_in	addr;
+	socklen_t			addrLen = sizeof( addr );
 	char				text[MAX_INFO_STRING];
+	qboolean			shared;
 
 	if ( restart && voiceSocket != BG_INVALID_SOCKET )
 		return;
+	trap->Cvar_Register( NULL, "g_voiceShared", "0", CVAR_ROM );
 	G_VoiceShutdown( qfalse );
 	voiceRefused = 0;
 	if ( !g_voice.integer )
 		return;
 
+	voiceGamePort = trap->Cvar_VariableIntegerValue( "net_port" );
+	shared = ( trap->Cvar_VariableIntegerValue( "sv_voiceShared" ) && g_voicePort.integer <= 0 ) ? qtrue : qfalse;
 	voicePort = g_voicePort.integer;
-	if ( voicePort <= 0 )
-		voicePort = trap->Cvar_VariableIntegerValue( "net_port" ) + 1;
-	if ( voicePort <= 0 || voicePort > 65535 ) {
+	if ( shared )
+		voicePort = 0;		// any free one: nobody outside of this machine sends to it
+	else if ( voicePort <= 0 )
+		voicePort = voiceGamePort + 1;
+	if ( voicePort < 0 || voicePort > 65535 || ( !shared && !voicePort ) ) {
 		trap->Print( "Voice chat is off: %i is no port\n", voicePort );
 		return;
 	}
@@ -126,16 +144,27 @@ void G_VoiceInit( qboolean restart ) {
 	addr.sin_port = htons( (unsigned short)voicePort );
 	// on the address the game itself listens on, if it was given one
 	trap->Cvar_VariableStringBuffer( "net_ip", text, sizeof( text ) );
-	if ( inet_pton( AF_INET, text, &addr.sin_addr ) != 1 )
+	if ( shared )
+		addr.sin_addr.s_addr = htonl( INADDR_LOOPBACK );
+	else if ( inet_pton( AF_INET, text, &addr.sin_addr ) != 1 )
 		addr.sin_addr.s_addr = htonl( INADDR_ANY );
-	if ( bind( voiceSocket, (struct sockaddr *)&addr, sizeof( addr ) ) != 0 ) {
-		trap->Print( "Voice chat is off: UDP port %i can not be opened (g_voicePort)\n", voicePort );
+	if ( bind( voiceSocket, (struct sockaddr *)&addr, sizeof( addr ) ) != 0
+		|| ( shared && getsockname( voiceSocket, (struct sockaddr *)&addr, &addrLen ) != 0 ) ) {
+		trap->Print( shared ? "Voice chat is off: no UDP port on this machine can be opened\n"
+			: "Voice chat is off: UDP port %i can not be opened (g_voicePort)\n", voicePort );
 		BG_CloseSocket( voiceSocket );
 		voiceSocket = BG_INVALID_SOCKET;
 		return;
 	}
 	BG_SocketNonBlocking( voiceSocket );
-	trap->Print( "Voice chat on UDP port %i\n", voicePort );
+	if ( shared ) {
+		voicePort = ntohs( addr.sin_port );
+		voiceShared = qtrue;
+		trap->Cvar_Set( "g_voiceShared", "1" );
+		trap->Print( "Voice chat on the UDP port of the game, %i\n", voiceGamePort );
+	} else {
+		trap->Print( "Voice chat on UDP port %i\n", voicePort );
+	}
 
 	// on every address: the web host of this server reaches the relay on the one no network has
 	voiceSelf = addr.sin_addr;
@@ -196,8 +225,16 @@ void Cmd_JPVoice_f( gentity_t *ent ) {
 		vc->gameAddr.s_addr = htonl( INADDR_LOOPBACK );
 		vc->gameAddrKnown = qtrue;
 	}
-	trap->SendServerCommand( ent - g_entities, va( "jpvoice %i %i %u %i %i", VOICE_PROTOCOL, voicePort, token,
+	trap->SendServerCommand( ent - g_entities, va( "jpvoice %i %i %u %i %i", VOICE_PROTOCOL, voiceShared ? voiceGamePort : voicePort, token,
 		g_voiceRange.integer > 0 ? g_voiceRange.integer : 0, g_voiceRadio.integer ? VOICE_CAP_RADIO : 0 ) );
+}
+
+// one datagram to a client, the way his come in
+static void G_VoiceSend( const voiceClient_t *vc, const byte *datagram, int len ) {
+	if ( vc->viaGame )
+		trap->ext.SendDatagram( (const byte *)&vc->addr.sin_addr.s_addr, ntohs( vc->addr.sin_port ), datagram, len );
+	else
+		sendto( voiceSocket, (const char *)datagram, len, BG_SEND_FLAGS, (const struct sockaddr *)&vc->addr, sizeof( vc->addr ) );
 }
 
 // a player as BG_VoiceHears() wants him
@@ -245,7 +282,7 @@ static void G_VoiceRelay( int speaker, const voicePacket_t *in ) {
 		out.distance = (int)( distance / VOICE_DISTANCE_STEP );
 		len = BG_VoicePack( datagram, sizeof( datagram ), &out, qtrue );
 		if ( len )
-			sendto( voiceSocket, (const char *)datagram, len, BG_SEND_FLAGS, (const struct sockaddr *)&vc->addr, sizeof( vc->addr ) );
+			G_VoiceSend( vc, datagram, len );
 	}
 	voiceClients[speaker].relayed++;
 }
@@ -284,7 +321,7 @@ static void G_VoiceRadio( int speaker, const voicePacket_t *in ) {
 		out.token = vc->token;
 		len = BG_VoicePack( datagram, sizeof( datagram ), &out, qtrue );
 		if ( len )
-			sendto( voiceSocket, (const char *)datagram, len, BG_SEND_FLAGS, (const struct sockaddr *)&vc->addr, sizeof( vc->addr ) );
+			G_VoiceSend( vc, datagram, len );
 	}
 	voiceClients[speaker].relayed++;
 }
@@ -309,17 +346,85 @@ static qboolean G_VoiceFromWebHost( const struct sockaddr_in *from ) {
 
 /*
 =================
-G_VoiceFrame
+G_VoiceDatagram
 
-Takes what came in on the voice port and hands it on. Called with every server frame and with every move a
-client sends (ClientThink), so a voice does not wait for the next server frame. No call waits, and one call
-takes a limited number of datagrams.
+One datagram of the voice chat that came in: on the socket of this file, or on the port of the game (viaGame,
+G_VoiceFromGame()). qfalse: it is none of a client of this server.
 
 A datagram counts only if it is a whole one of this protocol, names a client who is connected, carries the
 token that client was given, and comes from the address his game connection comes from (or from the web host
 of this server, which looked at that address itself). Everything else is dropped without an answer. One
 datagram in is at most one out per listener, and only to addresses that proved themselves with a token, so the
 port can not be used to flood somebody else.
+=================
+*/
+static qboolean G_VoiceDatagram( const struct sockaddr_in *from, const byte *datagram, int len, qboolean viaGame ) {
+	voicePacket_t	p;
+	voiceClient_t	*vc;
+
+	// (a VOICE_STATE and a VOICE_STATUS are for the voice master: this relay knows from the game where
+	// everybody is, and the statuses of a server with it go through the game connection, status/g_status.c)
+	if ( from->sin_family != AF_INET || !BG_VoiceUnpack( datagram, len, qfalse, &p ) || p.type == VOICE_STATE
+		|| p.type == VOICE_STATUS || p.type == VOICE_TEMPLE || p.client >= level.maxclients ) {
+		voiceRefused++;
+		return qfalse;
+	}
+	vc = &voiceClients[p.client];
+	if ( !vc->token || p.token != vc->token || !g_entities[p.client].inuse || !g_entities[p.client].client
+		|| g_entities[p.client].client->pers.connected == CON_DISCONNECTED
+		|| ( vc->gameAddrKnown && from->sin_addr.s_addr != vc->gameAddr.s_addr && !G_VoiceFromWebHost( from ) ) ) {
+		voiceRefused++;
+		return qfalse;
+	}
+	if ( !BG_VoiceLimit( &vc->limit, trap->Milliseconds(), len ) ) {
+		vc->dropped++;
+		return qtrue;
+	}
+
+	// this is where he listens. His router may give him another port after a while, so it is taken anew
+	// every time.
+	vc->addr = *from;
+	vc->viaGame = viaGame;
+	vc->ready = qtrue;
+
+	if ( p.type == VOICE_HELLO ) {
+		// the answer tells him that the way is open in both directions
+		voicePacket_t	ack = p;
+		byte			out[VOICE_MAX_DATAGRAM];
+		int				outLen;
+
+		ack.flags = ack.distance = 0;
+		outLen = BG_VoicePack( out, sizeof( out ), &ack, qtrue );
+		if ( outLen )
+			G_VoiceSend( vc, out, outLen );
+	} else if ( p.type == VOICE_RADIO ) {
+		G_VoiceRadio( p.client, &p );
+	} else {
+		G_VoiceRelay( p.client, &p );
+	}
+	return qtrue;
+}
+
+// ext.VoiceDatagram of the exports (g_public.h): what came in on the UDP port of the game
+qboolean G_VoiceFromGame( const byte *ip, int port, const byte *data, int length ) {
+	struct sockaddr_in from;
+
+	if ( !voiceShared || voiceSocket == BG_INVALID_SOCKET )
+		return qfalse;
+	memset( &from, 0, sizeof( from ) );
+	from.sin_family = AF_INET;
+	memcpy( &from.sin_addr.s_addr, ip, 4 );
+	from.sin_port = htons( (unsigned short)port );
+	return G_VoiceDatagram( &from, data, length, qtrue );
+}
+
+/*
+=================
+G_VoiceFrame
+
+Takes what came in on the socket of this file and hands it on. Called with every server frame and with every
+move a client sends (ClientThink), so a voice does not wait for the next server frame. No call waits, and one
+call takes a limited number of datagrams.
 =================
 */
 void G_VoiceFrame( void ) {
@@ -332,8 +437,6 @@ void G_VoiceFrame( void ) {
 		byte				datagram[VOICE_MAX_DATAGRAM + 1];	// one more: a longer one shows as too long
 		struct sockaddr_in	from;
 		socklen_t			fromLen = sizeof( from );
-		voicePacket_t		p;
-		voiceClient_t		*vc;
 		const int			len = (int)recvfrom( voiceSocket, (char *)datagram, sizeof( datagram ), 0, (struct sockaddr *)&from, &fromLen );
 
 		if ( len < 0 ) {
@@ -341,47 +444,11 @@ void G_VoiceFrame( void ) {
 				continue;
 			break;
 		}
-		// (a VOICE_STATE and a VOICE_STATUS are for the voice master: this relay knows from the game where
-		// everybody is, and the statuses of a server with it go through the game connection, status/g_status.c)
-		if ( fromLen < (socklen_t)sizeof( from ) || from.sin_family != AF_INET
-			|| !BG_VoiceUnpack( datagram, len, qfalse, &p ) || p.type == VOICE_STATE || p.type == VOICE_STATUS
-			|| p.client >= level.maxclients ) {
+		if ( fromLen < (socklen_t)sizeof( from ) ) {
 			voiceRefused++;
 			continue;
 		}
-		vc = &voiceClients[p.client];
-		if ( !vc->token || p.token != vc->token || !g_entities[p.client].inuse || !g_entities[p.client].client
-			|| g_entities[p.client].client->pers.connected == CON_DISCONNECTED
-			|| ( vc->gameAddrKnown && from.sin_addr.s_addr != vc->gameAddr.s_addr && !G_VoiceFromWebHost( &from ) ) ) {
-			voiceRefused++;
-			continue;
-		}
-		if ( !BG_VoiceLimit( &vc->limit, trap->Milliseconds(), len ) ) {
-			vc->dropped++;
-			continue;
-		}
-
-		// this is where he listens. His router may give him another port after a while, so it is taken anew
-		// every time.
-		vc->addr = from;
-		vc->ready = qtrue;
-
-		if ( p.type == VOICE_HELLO ) {
-			// the answer tells him that the way is open in both directions
-			voicePacket_t	ack = p;
-			byte			out[VOICE_MAX_DATAGRAM];
-			int				outLen;
-
-			ack.flags = ack.distance = 0;
-			outLen = BG_VoicePack( out, sizeof( out ), &ack, qtrue );
-			if ( outLen )
-				sendto( voiceSocket, (const char *)out, outLen, BG_SEND_FLAGS, (const struct sockaddr *)&from, sizeof( from ) );
-			continue;
-		}
-		if ( p.type == VOICE_RADIO )
-			G_VoiceRadio( p.client, &p );
-		else
-			G_VoiceRelay( p.client, &p );
+		G_VoiceDatagram( &from, datagram, len, qfalse );
 	}
 }
 
@@ -393,7 +460,8 @@ void Svcmd_VoiceStatus_f( void ) {
 		trap->Print( "Voice chat is off (g_voice %i)\n", g_voice.integer );
 		return;
 	}
-	trap->Print( "Voice chat on UDP port %i, range %i, %s, clan radio %s. %i datagrams refused.\n", voicePort, g_voiceRange.integer,
+	trap->Print( "Voice chat on UDP port %i%s, range %i, %s, clan radio %s. %i datagrams refused.\n",
+		voiceShared ? voiceGamePort : voicePort, voiceShared ? " (the port of the game)" : "", g_voiceRange.integer,
 		( g_voiceTeamOnly.integer && level.gametype >= GT_TEAM ) ? "team only" : "everybody in range", g_voiceRadio.integer ? "on" : "off", voiceRefused );
 	for ( i = 0; i < level.maxclients; i++ ) {
 		const voiceClient_t *vc = &voiceClients[i];

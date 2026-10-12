@@ -401,6 +401,17 @@ int GVM_BG_GetItemIndexByTag( int tag, int type ) {
 	return ge->BG_GetItemIndexByTag( tag, type );
 }
 
+// Not from OpenJK: a datagram of the voice chat that came in on the UDP port of the game (sv_voice.cpp), for
+// the relay of a module that says g_voiceShared 1. Any other module has no such export (g_public.h).
+// qfalse: there is no such module, or the datagram is none of a client of this server.
+qboolean GVM_VoiceDatagram( const netadr_t *from, const byte *data, int length ) {
+	if ( !gvm || gvm->isLegacy || !ge || !svs.gameStarted || sv.state != SS_GAME || !Cvar_VariableIntegerValue( "g_voiceShared" ) )
+		return qfalse;
+	VMSwap v( gvm );
+
+	return ge->ext.VoiceDatagram( from->ip, (unsigned short)BigShort( (short)from->port ), data, length );
+}
+
 //
 // game syscalls
 //	only used by legacy mods!
@@ -3118,6 +3129,7 @@ void SV_BindGame( void ) {
 		gi.G2API_CleanEntAttachments			= SV_G2API_CleanEntAttachments;
 		gi.G2API_OverrideServer					= SV_G2API_OverrideServer;
 		gi.G2API_GetSurfaceName					= SV_G2API_GetSurfaceName;
+		gi.ext.SendDatagram						= SV_GameSendDatagram;
 
 		GetGameAPI = (GetGameAPI_t)gvm->GetModuleAPI;
 		ret = GetGameAPI( GAME_API_VERSION, &gi );
@@ -3143,6 +3155,8 @@ void SV_UnbindGame( void ) {
 	GVM_ShutdownGame( qfalse );
 	VM_Free( gvm );
 	gvm = NULL;
+	// (the next module may be one without ext.VoiceDatagram)
+	Cvar_Set( "g_voiceShared", "0" );
 }
 
 void SV_RestartGame( void ) {

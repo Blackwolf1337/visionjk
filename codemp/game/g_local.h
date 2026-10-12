@@ -1311,6 +1311,7 @@ int			G_AuthNumKeys( void );
 qboolean	G_AuthKeyInfo( int index, int *adminLevel, char *fingerprint, int fingerprintSize, const char **comment );
 void G_VoiceShutdown( qboolean restart );
 void G_VoiceFrame( void );
+qboolean G_VoiceFromGame( const byte *ip, int port, const byte *data, int length );
 void G_VoiceClientGone( int clientNum );
 void Cmd_JPVoice_f( gentity_t *ent );
 void Svcmd_VoiceStatus_f( void );

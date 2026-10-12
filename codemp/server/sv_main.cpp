@@ -749,6 +749,19 @@ void SV_ConnectionlessPacket( const netadr_t *from, msg_t *msg ) {
 SV_ReadPackets
 =================
 */
+// qtrue: a client plays from this very address and port with this qport
+static qboolean SV_PacketFromClient( const netadr_t *from, int qport ) {
+	int			i;
+	client_t	*cl;
+
+	for ( i = 0, cl = svs.clients; i < sv_maxclients->integer; i++, cl++ ) {
+		if ( cl->state != CS_FREE && cl->netchan.qport == qport && NET_CompareAdr( from, &cl->netchan.remoteAddress ) ) {
+			return qtrue;
+		}
+	}
+	return qfalse;
+}
+
 void SV_PacketEvent( const netadr_t *from, msg_t *msg ) {
 	int			i;
 	client_t	*cl;
@@ -769,6 +782,15 @@ void SV_PacketEvent( const netadr_t *from, msg_t *msg ) {
 	MSG_BeginReadingOOB( msg );
 	MSG_ReadLong( msg );				// sequence number
 	qport = MSG_ReadShort( msg ) & 0xffff;
+
+	// The voice chat can come in on this socket too (sv_voice.cpp). Its datagrams are looked for in this place
+	// and no other: after the packets of a client whose address and port are known, because the packet with
+	// the sequence number 85846 of every client starts with the bytes of such a datagram, and before a client
+	// is looked for by address and qport alone, because two bytes of such a datagram would be read as a qport
+	// and pull the port of that client over to the socket of his voice chat.
+	if ( !SV_PacketFromClient( from, qport ) && SV_VoicePacket( from, msg ) ) {
+		return;
+	}
 
 	// find which client the message is from
 	for (i=0, cl=svs.clients ; i < sv_maxclients->integer ; i++,cl++) {
@@ -1143,6 +1165,10 @@ void SV_Frame( int msec ) {
 	if ( SV_CheckPaused() ) {
 		return;
 	}
+
+#ifdef VISION_MASTER
+	SV_VoiceFrame();
+#endif
 
 	// if it isn't time for the next frame, do nothing
 	if ( sv_fps->integer < 1 ) {

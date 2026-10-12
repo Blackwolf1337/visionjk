@@ -1093,6 +1093,14 @@ typedef struct gameImport_s {
 	void		(*G2API_CleanEntAttachments)			( void );
 	qboolean	(*G2API_OverrideServer)					( void *serverInstance );
 	void		(*G2API_GetSurfaceName)					( void *ghoul2, int surfNumber, int modelIndex, char *fillBuf );
+
+	// Not from OpenJK. Only an engine that sets the cvar sv_voiceShared to 1 has this block, any other ends
+	// the structure before it: look at the cvar before touching it.
+	struct {
+		// One datagram out of the UDP socket of the game: answers of the voice chat that came in there
+		// (ext.VoiceDatagram of the exports). ip: the four bytes of an IPv4 address as they go over the network.
+		void		(*SendDatagram)							( const byte *ip, int port, const byte *data, int length );
+	} ext;
 } gameImport_t;
 
 typedef struct gameExport_s {
@@ -1136,6 +1144,14 @@ typedef struct gameExport_s {
 	qboolean	(*NAV_EntIsRemovableUsable)			( int entNum );
 	void		(*NAV_FindCombatPointWaypoints)		( void );
 	int			(*BG_GetItemIndexByTag)				( int tag, int type );
+
+	// Not from OpenJK. Only a module that sets the cvar g_voiceShared to 1 has this block, any other ends
+	// the structure before it: the engine looks at the cvar before touching it.
+	struct {
+		// A datagram of the voice chat (game/voice/bg_voice.h) that came in on the UDP socket of the game.
+		// qfalse: it is none of a client of this server.
+		qboolean	(*VoiceDatagram)					( const byte *ip, int port, const byte *data, int length );
+	} ext;
 } gameExport_t;
 
 
