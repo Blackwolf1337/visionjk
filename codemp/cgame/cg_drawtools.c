@@ -303,8 +303,10 @@ Coordinates are at 640 by 480 virtual resolution
 ==================
 */
 #include "ui/menudef.h"	// for "ITEM_TEXTSTYLE_SHADOWED"
-// what scale the letters of the new look are written at where the game writes its fixed letters charHeight high
-#define STRING_LOOK_SCALE( charHeight )		( (charHeight) * 1.05f / 18.0f )
+// What scale the letters of the new look are written at where the game writes its fixed letters charHeight high:
+// a line of them (18 units at a scale of 1) is a little lower than a row of the fixed ones, so two rows that
+// follow each other without a gap, as in the team overlay, do not touch.
+#define STRING_LOOK_SCALE( charHeight )		( (charHeight) * ( (charHeight) <= 8 ? 0.86f : 0.94f ) / 18.0f )
 
 /*
 =================
@@ -345,7 +347,9 @@ void CG_DrawStringExt( int x, int y, const char *string, const float *setColor, 
 		}
 		line[n] = '\0';
 		memcpy( color, setColor, sizeof( color ) );
-		CG_Text_Paint( x, y - charHeight * 0.1f, STRING_LOOK_SCALE( charHeight ), color, line, 0, 0, shadow ? ITEM_TEXTSTYLE_SHADOWED : 0, SKIN_FONT_SANS );
+		// (in the middle of the row the fixed letters would take)
+		CG_Text_Paint( x, y + ( charHeight - 18.0f * STRING_LOOK_SCALE( charHeight ) ) * 0.5f, STRING_LOOK_SCALE( charHeight ), color, line, 0, 0,
+			shadow ? ITEM_TEXTSTYLE_SHADOWED : 0, SKIN_FONT_SANS );
 		return;
 	}
 	if (trap->R_Language_IsAsian())

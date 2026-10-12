@@ -216,7 +216,8 @@ be marked: its rows are drawn as strings of another height. Not run: nobody has 
 The size of the box is set in Setup (Chat & Social: Chat Box Size, Width and Rows) and by hand while it is
 open: its upper right corner, marked by two short lines, is dragged with the left button (to the right it gets
 wider, upwards it gets more rows), and Ctrl with the wheel makes the box and its letters larger or smaller in
-steps of 5 %. Both write the three cvars. `cg_chatdrag <dx> <dy>` moves the corner for a script.
+steps of 5 %. Both write the three cvars. `cg_chatdrag <dx> <dy>` moves the corner for a script. The box is
+never wider than the screen, whatever width and size say together.
 
 With the HUD of the new look (`cg_hud 1`, [ui.md](ui.md)) the box has that look too, since 2026-10-12: a panel
 of dark glass with the letters of the menus, the tabs as words with a line under the open one, a thin bar for
@@ -276,6 +277,9 @@ who looks about its upright axis only and does not lean with a look up or down.
 | `cg_bubbleRange` | 1200 | how far away a bubble is still drawn. It fades over the last quarter |
 
 - A bubble pops up a little too large and settles, and rises and fades at its end.
+- Over the own head it is no larger on the screen than it is with the camera 80 units away, where it usually
+  is: a wall behind the player pushes the camera up to his neck, and what he had just written stood across the
+  whole screen.
 - Seen in a mirror of the level a bubble is turned as far as the mirror turns the view: it faces the one who
   looks, not his reflection.
 - Team chat has the colour of the team around it. Private lines never get a bubble. No bubble on a dead or
@@ -347,7 +351,10 @@ card says who one is and offers nothing). The key of the scoreboard is held whil
 turns the view, and holding it together with left Alt switches windows on most desktops, so the board can be
 kept: its key pressed twice within 350 ms, or the command `scores_pick` (Controls, Extras, "Scoreboard with
 Mouse"), leaves it standing with the mouse free. The key again, Escape or the right button lets go of it. The
-head of the board says which. `cg_scoresPick 0`: no double tap.
+head of the board says which. `cg_scoresPick 0`: no double tap. On a window that has no room for the card at
+the right of the board (4:3) the board stands further left while it is kept. When the level restarts the mouse
+goes back to the game: the board is let go, an open card closes, and a pointer that `cursor` switched on is
+off.
 
 | On the card | |
 |-------------|---|
@@ -373,6 +380,7 @@ A row is run with a click or with its number. A click beside the card, the right
 | `+cursor` | the mouse is free while it is held |
 | `cursor` | switches that on and off |
 | `scores_pick` | the scoreboard stays open with the mouse free, or lets go of it |
+| `cg_key <key> [up]` | a key or a mouse button for the cgame while it has the keys, by name (esc, tab, enter, mouse1, mouse2, wheelup, wheeldown, pgup, pgdn) or number: for a script in place of a hand, as `ui_key` is for the menus |
 | `peers` | who plays with what, as this client knows it, and from where |
 | `cursor on <player>`, `cursor at <x> <y>`, `cursor click`, `cursor row <n>` | the pointer onto a player or a place, a click, a row of the open card: for a key or a script in place of a mouse |
 
@@ -462,9 +470,13 @@ or "Another client".
   game module tells a cgame that asks (`cjp_caps` bit 1) with the server command `jpclient <client> <version>
   [...]`, "-" for any other client. One player when his userinfo says something new, everybody in one command
   when a cgame asks for all of it: a cgame that has just started knows nothing (a new level, but also a restart
-  of the video, of which the server hears nothing), so it sends `jpstatus all` once and is told who plays with
+  of the video, of which the server hears nothing), so it sends `jpstatus all` and is told who plays with
   what and what stands above everybody. The server info says that the module does this (`g_visionCaps` bit 3).
   An older module is not asked.
+- The question is not sent in the first moment, when the voice chat says its hello, and it is sent again while
+  no answer came (after 1.5 s, then every 3.5 s, six times at most): the flood protection of a server
+  (`sv_floodProtect`, on by default) drops a command that comes within a second of another one without a word.
+  The first version asked once and was only ever run against servers with the protection off.
 - On any other server nobody tells. There a client of this tree is known by what comes from it through the
   voice chat: its voice, or what stands above its head, which every client says to the voice master every five
   seconds. So it is known of the players whose voice chat is linked to the master (`cg_voice 1`,

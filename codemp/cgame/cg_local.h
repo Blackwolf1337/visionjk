@@ -1781,6 +1781,7 @@ void		CG_Menu3DScene( void );
 
 // select/cg_select.c: players that can be clicked while the mouse is free
 void		CG_SelectInit( void );
+void		CG_SelectLetGo( void );
 void		CG_SelectDraw( void );
 void		CG_SelectScene( void );
 void		CG_SelectOverScene( void );
@@ -1832,6 +1833,7 @@ void		CG_PeerList_f( void );
 void		CG_StatusInit( void );
 void		CG_StatusFrame( void );
 void		CG_StatusServerCommand( void );
+void		CG_StatusAnswered( void );
 void		CG_StatusFromMaster( int clientNum, qboolean away, const char *text );
 void		CG_StatusList_f( void );
 void		CG_StatusTest_f( void );

@@ -39,6 +39,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "game/bg_saga.h"
 
 #define SCORES_W			470.0f
+#define SCORES_CARD_GAP		6.0f		// between the board and the card of a player that was clicked on it,
+#define SCORES_CARD_W		154.0f		//	and the room that card needs, with its distance to the edge of the screen
 #define SCORES_TOP			64.0f		// of the panel
 #define SCORES_BOTTOM		414.0f		// it ends above this: the bars of the HUD and the lines of the chat are below
 #define SCORES_HEAD_H		36.0f		// the server and the game
@@ -481,8 +483,8 @@ player is dead, at the end of a level, and fading out afterwards. qtrue: it was 
 */
 qboolean CG_ScoresDraw( void ) {
 	const vec4_t	shade = { 0.0f, 0.0f, 0.0f, 0.42f };
-	const float		x = ( SCREEN_WIDTH - SCORES_W ) * 0.5f;
 	const float		avail = SCORES_BOTTOM - SCORES_TOP - SCORES_HEAD_H - SCORES_COLS_H - SCORES_PAD;
+	float			x = ( SCREEN_WIDTH - SCORES_W ) * 0.5f;
 	scoreLine_t		lines[MAX_CLIENTS + 3];
 	char			text[256];
 	float			fade, rowH, fixed = 0.0f, content = 0.0f, y, height, nameX;
@@ -552,10 +554,17 @@ qboolean CG_ScoresDraw( void ) {
 	}
 	height = SCORES_HEAD_H + SCORES_COLS_H + content + SCORES_PAD;
 
+	// While it is kept for the pointer the card of a player opens at its right. Where the screen has no room
+	// for that (a window of 4:3), the board stands as far to the left as the card needs, from the moment it is
+	// kept: its rows do not move under the pointer when one is clicked.
+	if ( scores.kept ) {
+		x = Q_max( 4.0f - cgs.bias2D, Q_min( x, SCREEN_WIDTH + cgs.bias2D - SCORES_CARD_W - SCORES_CARD_GAP - SCORES_W ) );
+	}
+
 	CG_Place2D( PLACE_CENTER );
 	Scores_Above( text, sizeof( text ) );
 	if ( text[0] ) {
-		Scores_Pill( SCREEN_WIDTH * 0.5f, SCORES_TOP - 26.0f, 0.66f, colorWhite, fade, text );
+		Scores_Pill( x + SCORES_W * 0.5f, SCORES_TOP - 26.0f, 0.66f, colorWhite, fade, text );
 	}
 	Skin_Color( c, shade, fade );
 	Skin_Soft( x, SCORES_TOP + 5.0f, SCORES_W, height, 16.0f, c );
@@ -660,7 +669,7 @@ int CG_ScoresClientAt( float *cardX, float *cardY ) {
 	for ( i = 0; i < scores.numRows; i++ ) {
 		if ( cgs.cursorY >= scores.rows[i].y && cgs.cursorY < scores.rows[i].y + scores.rows[i].h ) {
 			if ( cardX && cardY ) {
-				*cardX = scores.x + scores.w + 6.0f;
+				*cardX = scores.x + scores.w + SCORES_CARD_GAP;
 				*cardY = scores.rows[i].y - 4.0f;
 			}
 			return scores.rows[i].client;

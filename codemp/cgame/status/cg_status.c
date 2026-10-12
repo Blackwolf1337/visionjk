@@ -42,6 +42,9 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define STATUS_MASTER_MSEC	5000	// through the voice master: the own status is said this often, and when it changed
 #define STATUS_MASTER_KEEP	15000	//	and one of somebody else that was not said again for this long is over
 #define STATUS_AWAY_MSEC	60000	//	and this long without a key or a turn of the view is away: the default of g_afkTime
+#define STATUS_ASK_FIRST	1500	// "jpstatus all" goes to the server this long after the cgame has its first frame,
+#define STATUS_ASK_MSEC		3500	//	again this often while no answer came,
+#define STATUS_MAX_ASKS		6		//	and this many times at most
 
 static struct {
 	qboolean	away[MAX_CLIENTS];
@@ -57,7 +60,11 @@ static struct {
 	int			inputButtons;
 	signed char	inputMove[3];
 	char		test[STATUS_TEXT];		// status_test: said in place of what the players of music say
-	qboolean	asked;					// the server was asked for everything since this cgame started
+	// "jpstatus all": the server is asked for everything once this cgame has started
+	int			askStart;				// when its first frame was, by the clock of the system
+	int			askTime;				// when it was last asked
+	int			asks;					// how often
+	qboolean	answered;				// its answer came
 } status;
 
 void CG_StatusInit( void ) {
@@ -87,6 +94,11 @@ void CG_StatusServerCommand( void ) {
 	status.away[clientNum] = (qboolean)( atoi( arg ) != 0 );
 	trap->Cmd_Argv( 3, status.music[clientNum], sizeof( status.music[clientNum] ) );
 	Q_StripColor( status.music[clientNum] );
+}
+
+// the answer to "jpstatus all" came (the server command jpclient with everybody in it, status/cg_peers.c)
+void CG_StatusAnswered( void ) {
+	status.answered = qtrue;
 }
 
 /*
@@ -243,12 +255,21 @@ void CG_StatusFrame( void ) {
 		return;
 	}
 	// A cgame that has just started knows nothing of the others: a new level, but also a restart of the video,
-	// of which the server hears nothing. A game module that answers it (g_visionCaps bit 3) is asked once for
-	// what stands above everybody and for who plays with what (status/cg_peers.c).
-	if ( !status.asked ) {
-		status.asked = qtrue;
-		if ( atoi( Info_ValueForKey( CG_ConfigString( CS_SERVERINFO ), "g_visionCaps" ) ) & 8 ) {
+	// of which the server hears nothing. A game module that answers it (g_visionCaps bit 3) is asked for what
+	// stands above everybody and for who plays with what (status/cg_peers.c). Not in the first moment, when the
+	// voice chat says its hello, and again while no answer came: the flood protection of a server
+	// (sv_floodProtect, on by default) drops a command that comes within a second of another one without a word.
+	if ( !status.answered && status.asks < STATUS_MAX_ASKS
+		&& ( atoi( Info_ValueForKey( CG_ConfigString( CS_SERVERINFO ), "g_visionCaps" ) ) & 8 ) ) {
+		const int now = trap->Milliseconds();
+
+		if ( !status.askStart ) {
+			status.askStart = now ? now : 1;
+		}
+		if ( now - status.askStart >= STATUS_ASK_FIRST && ( !status.asks || now - status.askTime >= STATUS_ASK_MSEC ) ) {
 			trap->SendClientCommand( "jpstatus all" );
+			status.askTime = now;
+			status.asks++;
 		}
 	}
 	// only a game module of this tree passes statuses on, and says so. Anywhere else the voice master may.

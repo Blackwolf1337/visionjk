@@ -584,6 +584,15 @@ void CL_PlayDemo_f( void ) {
 
 	CL_Disconnect( qtrue );
 
+	// A server of this program ends here and now. Left to the next frame of the server (sv_killserver), it ended
+	// after the demo below had loaded its level, and took the collision map of that level with it
+	// (SV_Shutdown() clears it): the first trace of the cgame then stopped the demo with "CM_ClipHandleToModel:
+	// bad handle". So whoever played a level by himself could not start a demo from its console.
+	if ( com_sv_running->integer ) {
+		SV_Shutdown( "Server was killed.\n" );
+		Cvar_Set( "sv_killserver", "0" );
+	}
+
 	Com_sprintf(extension, sizeof(extension), ".dm_%d", PROTOCOL_VERSION);
 	if ( !Q_stricmp( arg + strlen(arg) - strlen(extension), extension ) ) {
 		Com_sprintf (name, sizeof(name), "demos/%s", arg);

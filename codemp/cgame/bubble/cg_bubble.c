@@ -41,6 +41,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define BUBBLE_LINE_SPACE	1.25f		// from one line to the next, in heights of a letter
 #define BUBBLE_HEAD			56.0f		// above the feet of a player of normal size
 #define BUBBLE_LETTER		4.2f		// how tall a letter is, in units of the level
+#define BUBBLE_OWN_DIST		80.0f	// the bubble over the own head is as large as from this far, at most
 #define BUBBLE_POP_MSEC		180
 #define BUBBLE_OUT_MSEC		400
 #define BUBBLE_TEX			64			// the pictures of the panel, and the part of them that is a corner
@@ -548,6 +549,11 @@ qboolean CG_BubbleDraw( centity_t *cent, qboolean dots ) {
 	// and large up close as the player under it is. And it stands upright: it turns to the one who looks about
 	// its upright axis only, and does not lean with a look up or down.
 	height = BUBBLE_LETTER;
+	// Over the own head it is no larger on the screen than it is with the camera where it usually is: a wall
+	// behind the player pushes the camera up to his neck, and what he just wrote stood across the whole screen.
+	if ( clientNum == cg.snap->ps.clientNum && dist < BUBBLE_OWN_DIST ) {
+		height *= Q_max( 0.25f, dist / BUBBLE_OWN_DIST );
+	}
 	VectorSet( view.up, 0.0f, 0.0f, 1.0f );
 	VectorNegate( cg.refdef.viewaxis[1], view.right );
 	view.right[2] = 0.0f;

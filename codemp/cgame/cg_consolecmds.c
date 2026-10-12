@@ -130,6 +130,39 @@ static void CG_ScoresUp_f( void ) {
 	}
 }
 
+/*
+=================
+CG_Key_f
+
+cg_key <key> [up]: a key or a button of the mouse for the cgame, as the engine hands one over while the cgame
+has the keys (the chat box, the card of a player, the scoreboard that is kept). For a script in place of a
+hand, as ui_key is for the menus. By name (esc, tab, enter, mouse1, mouse2, wheelup, wheeldown, pgup, pgdn) or
+by its number.
+=================
+*/
+static void CG_Key_f( void ) {
+	static const struct {
+		const char	*name;
+		int			key;
+	} names[] = {
+		{ "esc", A_ESCAPE }, { "tab", A_TAB }, { "enter", A_ENTER }, { "mouse1", A_MOUSE1 }, { "mouse2", A_MOUSE2 },
+		{ "wheelup", A_MWHEELUP }, { "wheeldown", A_MWHEELDOWN }, { "pgup", A_PAGE_UP }, { "pgdn", A_PAGE_DOWN },
+	};
+	const char	*arg = CG_Argv( 1 );
+	int			key = atoi( arg );
+	size_t		i;
+
+	for ( i = 0; i < ARRAY_LEN( names ); i++ ) {
+		if ( !Q_stricmp( arg, names[i].name ) ) {
+			key = names[i].key;
+		}
+	}
+	if ( key <= 0 || key >= MAX_KEYS || !( trap->Key_GetCatcher() & KEYCATCH_CGAME ) ) {
+		return;
+	}
+	CG_KeyEvent( key, (qboolean)( Q_stricmp( CG_Argv( 2 ), "up" ) != 0 ) );
+}
+
 void CG_ClientList_f( void )
 {
 	clientInfo_t *ci;
@@ -299,13 +332,13 @@ int cmdcmp( const void *a, const void *b ) {
 }
 
 static consoleCommand_t	commands[] = {
+	{ "+cursor",					CG_SelectCursorDown_f },
 	{ "+scores",					CG_ScoresDown_f },
 	{ "+voice",						CG_VoiceDown_f },
-	{ "+cursor",					CG_SelectCursorDown_f },
 	{ "+voiceclan",					CG_VoiceClanDown_f },
+	{ "-cursor",					CG_SelectCursorUp_f },
 	{ "-scores",					CG_ScoresUp_f },
 	{ "-voice",						CG_VoiceUp_f },
-	{ "-cursor",					CG_SelectCursorUp_f },
 	{ "-voiceclan",					CG_VoiceClanUp_f },
 	{ "admCmdEXE",					CG_JPAdmCmdExe_f },
 	{ "admCmdNext",					CG_JPAdmCycleCmd_f },
@@ -314,8 +347,9 @@ static consoleCommand_t	commands[] = {
 	{ "briefing",					CG_SiegeBriefing_f },
 	{ "cg_chatdrag",				CG_ChatDrag_f },
 	{ "cg_chatopen",				CG_ChatOpen_f },
-	{ "cursor",						CG_SelectCursor_f },
+	{ "cg_key",						CG_Key_f },
 	{ "clientlist",					CG_ClientList_f },
+	{ "cursor",						CG_SelectCursor_f },
 	{ "forcenext",					CG_NextForcePower_f },
 	{ "forceprev",					CG_PrevForcePower_f },
 	{ "invnext",					CG_NextInventory_f },

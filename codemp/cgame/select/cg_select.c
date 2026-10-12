@@ -1293,6 +1293,22 @@ qboolean CG_SelectKeyEvent( int key, qboolean down ) {
 	return qtrue;
 }
 
+/*
+=================
+CG_SelectLetGo
+
+The level restarts: a pointer that was switched on stays with nobody (the card is closed, "cursor" is off, the
+scoreboard is no longer kept). A key that is held for it (+cursor) is still held. The keys go back to the game
+with the next frame.
+=================
+*/
+void CG_SelectLetGo( void ) {
+	sel.toggled = qfalse;
+	sel.hover = -1;
+	Select_Close();
+	CG_ScoresLetGo();
+}
+
 void CG_SelectCursorDown_f( void ) {
 	sel.held = qtrue;
 }

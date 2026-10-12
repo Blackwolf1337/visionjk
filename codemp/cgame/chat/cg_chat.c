@@ -574,7 +574,7 @@ void CG_ChatClose( void ) {
 		return;
 	}
 	chat.open = qfalse;
-	chat.selecting = chat.selected = qfalse;
+	chat.selecting = chat.selected = chat.resizing = qfalse;
 	chat.url[0] = '\0';
 	chat.scroll = 0;
 	trap->Key_SetCatcher( trap->Key_GetCatcher() & ~KEYCATCH_CGAME );
@@ -1149,7 +1149,9 @@ void CG_ChatDraw( void ) {
 	// how large it is: everything by cg_chatBoxScale, and as many rows as fit under the top of the screen
 	chat.size = Com_Clamp( CHAT_MIN_SCALE, CHAT_MAX_SCALE, cg_chatBoxScale.value );
 	chat.rowH = CHAT_ROW_HEIGHT * chat.size;
-	chat.width = Com_Clamp( 200.0f, 600.0f, cg_chatBoxWidth.value ) * chat.size;
+	// (no wider than the screen has room, whatever width and size say together)
+	chat.width = Q_min( Com_Clamp( 200.0f, 600.0f, cg_chatBoxWidth.value ) * chat.size,
+		SCREEN_WIDTH + 2.0f * cgs.bias2D - 2.0f * CHAT_X - CHAT_BAR_WIDTH - 3.0f * CHAT_PAD );
 	chat.openRows = Com_Clampi( CHAT_MIN_OPEN_ROWS, Q_max( CHAT_MIN_OPEN_ROWS,
 		Q_min( CHAT_MAX_OPEN_ROWS, (int)( ( bottom - CHAT_TAB_HEIGHT * chat.size - 2.0f * CHAT_PAD - 4.0f ) / chat.rowH ) ) ), cg_chatBoxRows.integer );
 

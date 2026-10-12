@@ -1102,6 +1102,9 @@ static void CG_MapRestart( void ) {
 
 	cg.mapRestart = qtrue;
 
+	// a round begins: the mouse is the game's again, whatever held it (select/cg_select.c)
+	CG_SelectLetGo();
+
 	CG_StartMusic(qtrue);
 
 	trap->S_ClearLoopingSounds();

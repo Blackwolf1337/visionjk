@@ -84,6 +84,10 @@ void CG_PeerServerCommand( void ) {
 	char	arg[64];
 	int		i;
 
+	// with more than one player in it, or with this one: the answer to "jpstatus all", which is no longer asked
+	if ( trap->Cmd_Argc() > 3 ) {
+		CG_StatusAnswered();
+	}
 	for ( i = 1; i + 1 < trap->Cmd_Argc(); i += 2 ) {
 		int clientNum;
 
@@ -91,6 +95,9 @@ void CG_PeerServerCommand( void ) {
 		clientNum = atoi( arg );
 		if ( clientNum < 0 || clientNum >= MAX_CLIENTS || arg[0] < '0' || arg[0] > '9' ) {
 			continue;
+		}
+		if ( clientNum == cg.clientNum ) {
+			CG_StatusAnswered();
 		}
 		trap->Cmd_Argv( i + 1, arg, sizeof( arg ) );
 		Q_StripColor( arg );
