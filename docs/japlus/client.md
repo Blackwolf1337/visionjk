@@ -340,8 +340,11 @@ see [windows.md](windows.md).
 outline and his name beside him, and a click on him opens a card: who he is and with what he plays, his score,
 ping and time, what stands above his head, his model and saber, and what you can do about him.
 
-The mouse is free while the key of `+cursor` is held (Controls, Extras, "Free the Mouse"; the left Alt key on
-a new install if it was free), after `cursor` until `cursor` again or Escape, while the chat box is open, and
+The mouse is free while the key of `+cursor` is held (Controls, Extras, "Free the Mouse"). The left Alt key
+gets it once, the first time the menus start, if no key has the command and Alt can be spared: it is free, or
+it holds the `+altattack` of the game's defaults while another key (the second mouse button there) fires the
+same. Before 2026-10-12 only a free Alt was taken, and since the defaults bind it a new install had no key.
+Any other bind on Alt stays. The mouse is also free after `cursor` until `cursor` again or Escape, while the chat box is open, and
 while the scoreboard is kept open (below). While it is free the view does not turn and the game does not get
 the keys.
 

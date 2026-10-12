@@ -1456,23 +1456,40 @@ static void UI_AddPolyToScene( qhandle_t shader, int numVerts, const polyVert_t 
 =================
 UI_OfferCursorKey
 
-The key that frees the mouse to point at players (+cursor of the cgame): the left Alt key, once, and only if
-that key does nothing yet and no key has the command. Whoever takes the bind away afterwards keeps it away.
+The key that frees the mouse to point at players (+cursor of the cgame): the left Alt key, once, if no key has
+the command and Alt can be spared. It can where it does nothing, and where it holds what the defaults of the game
+give it (+altattack, mpdefault.cfg) while another key does the same (the second mouse button in those defaults):
+without that a new install had no key for it at all. Any other bind on Alt is somebody's own and stays. Whoever
+takes the bind away afterwards keeps it away.
 =================
 */
 static void UI_OfferCursorKey( void ) {
-	char	bound[MAX_STRING_CHARS];
-	int		key;
+	char		bound[MAX_STRING_CHARS], alt[MAX_STRING_CHARS];
+	int			key;
+	qboolean	twice = qfalse;
 
 	if ( ui_cursorKeyOffered.integer ) {
 		return;
 	}
 	trap->Cvar_Set( "ui_cursorKeyOffered", "1" );
+	trap->Key_GetBindingBuf( A_ALT, alt, sizeof( alt ) );
+	if ( alt[0] && Q_stricmp( alt, "+altattack" ) ) {
+		return;
+	}
 	for ( key = 0; key < MAX_KEYS; key++ ) {
+		if ( key == A_ALT ) {
+			continue;
+		}
 		trap->Key_GetBindingBuf( key, bound, sizeof( bound ) );
-		if ( !Q_stricmp( bound, "+cursor" ) || ( key == A_ALT && bound[0] ) ) {
+		if ( !Q_stricmp( bound, "+cursor" ) ) {
 			return;
 		}
+		if ( alt[0] && !Q_stricmp( bound, alt ) ) {
+			twice = qtrue;
+		}
+	}
+	if ( alt[0] && !twice ) {
+		return;
 	}
 	trap->Key_SetBinding( A_ALT, "+cursor" );
 }
