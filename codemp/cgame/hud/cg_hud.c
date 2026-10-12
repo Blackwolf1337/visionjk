@@ -172,6 +172,30 @@ const char *CG_VisionText( const char *english ) {
 
 /*
 =================
+CG_KeyLabel
+
+A key as a hint names it: TAB, or the letter or sign on it. NULL for a key that has no such name (the cgame can
+not ask the engine for the names of keys), and for no key.
+=================
+*/
+const char *CG_KeyLabel( int key ) {
+	static char	name[4][2];
+	static int	index;
+	char		*out = name[index++ & 3];
+
+	if ( key == A_TAB ) {
+		return "TAB";
+	}
+	if ( key > ' ' && key < 127 ) {
+		out[0] = ( key >= 'a' && key <= 'z' ) ? (char)( key - 'a' + 'A' ) : (char)key;
+		out[1] = '\0';
+		return out;
+	}
+	return NULL;
+}
+
+/*
+=================
 CG_VisionTextWith
 
 A text of this tree with one value in it: the value stands where the text has its first %i or %s, and %% is a

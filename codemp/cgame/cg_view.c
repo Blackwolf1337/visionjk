@@ -2427,6 +2427,7 @@ void CG_DrawActiveFrame( int serverTime, stereoFrame_t stereoView, qboolean demo
 	float mSensitivity = cg.zoomSensitivity;
 	float mPitchOverride = 0.0f;
 	float mYawOverride = 0.0f;
+	qboolean focused;
 	static centity_t *veh = NULL;
 #ifdef VEH_CONTROL_SCHEME_4
 	float mSensitivityOverride = 0.0f;
@@ -2472,9 +2473,12 @@ void CG_DrawActiveFrame( int serverTime, stereoFrame_t stereoView, qboolean demo
 		return;
 	}
 
-	trap->FX_AdjustTime( cg.time );
+	// (Focus, focus/cg_focus.c: while the world stands still its effects and its lights do too)
+	trap->FX_AdjustTime( CG_FocusTime( cg.time ) );
 
-	CG_RunLightStyles();
+	if ( !CG_FocusActive() ) {
+		CG_RunLightStyles();
+	}
 
 	// any looped sounds will be respecified as entities
 	// are added to the render list
@@ -2575,8 +2579,14 @@ void CG_DrawActiveFrame( int serverTime, stereoFrame_t stereoView, qboolean demo
 	// this counter will be bumped for every valid scene we generate
 	cg.clientFrame++;
 
+	// Focus (focus/cg_focus.c): the world stands still and the player is out of his body. From here until
+	// CG_FocusReal() cg.time is the moment it stopped at, and the body is not predicted on.
+	focused = CG_FocusFrame();
+
 	// update cg.predictedPlayerState
-	CG_PredictPlayerState();
+	if ( !focused ) {
+		CG_PredictPlayerState();
+	}
 
 	// decide on third person view
 	cg.renderingThirdPerson = cg_thirdPerson.integer || (cg.snap->ps.stats[STAT_HEALTH] <= 0);
@@ -2621,6 +2631,12 @@ void CG_DrawActiveFrame( int serverTime, stereoFrame_t stereoView, qboolean demo
 		cg.renderingThirdPerson = 1;
 	}
 
+	// out of the body: it is seen from outside
+	if ( focused )
+	{
+		cg.renderingThirdPerson = 1;
+	}
+
 	if (cg.snap->ps.persistant[PERS_TEAM] == TEAM_SPECTATOR)
 	{
 		cg.renderingThirdPerson = 0;
@@ -2629,6 +2645,7 @@ void CG_DrawActiveFrame( int serverTime, stereoFrame_t stereoView, qboolean demo
 	// build cg.refdef
 	inwater = CG_CalcViewValues();
 	CG_Menu3DView();
+	CG_FocusView();
 	CG_SetupFrustum();
 
 	if (cg_linearFogOverride)
@@ -2687,6 +2704,9 @@ void CG_DrawActiveFrame( int serverTime, stereoFrame_t stereoView, qboolean demo
 
 	cg.refdef.time = cg.time;
 	memcpy( cg.refdef.areamask, cg.snap->areamask, sizeof( cg.refdef.areamask ) );
+
+	// the scene of a world that stands still is built: the time of the game again
+	CG_FocusReal();
 
 	// warning sounds when powerup is wearing off
 	CG_PowerupTimerSounds();

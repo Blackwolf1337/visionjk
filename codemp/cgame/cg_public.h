@@ -754,6 +754,10 @@ typedef struct cgameImport_s {
 		// frame is blurred where it is nearer or farther than focus (units of the level), amount 0 to 1. Called
 		// before R_RenderScene, every frame it is wanted. A renderer without the effect does nothing.
 		void			(*R_SetDepthOfField)					( float focus, float amount );
+		// Only an engine that sets the cvar cl_cgameBinds to 1 has this one, the same way. What a key is bound
+		// to, as the menus read it: for a cgame that holds the keys itself (focus/cg_focus.c). The engine runs
+		// no bound command meanwhile, and Key_GetKey() knows only the first key of a command.
+		void			(*Key_GetBindingBuf)					( int keynum, char *buf, int buflen );
 	} ext;
 } cgameImport_t;
 

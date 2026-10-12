@@ -8021,6 +8021,22 @@ static void CG_Draw2D( void ) {
 		return;
 	}
 
+	// Focus (focus/cg_focus.c): the world stands still, and the numbers of the HUD would too. Drawn is what goes
+	// on: votes, who talks, what the server prints in the middle, the chat, and how to come back.
+	if ( CG_FocusActive() ) {
+		CG_Place2D( PLACE_LEFT );
+		CG_DrawVote();
+		CG_DrawTeamVote();
+		CG_VoiceDraw();
+		CG_Place2D( PLACE_CENTER );
+		cg.scoreBoardShowing = qfalse;
+		CG_DrawCenterString();
+		CG_FocusDraw();
+		CG_ChatDraw();
+		CG_SelectDraw();
+		return;
+	}
+
 	CG_Draw2DScreenTints();
 
 	if (cg.snap->ps.rocketLockIndex != ENTITYNUM_NONE && (cg.time - cg.snap->ps.rocketLockTime) > 0)

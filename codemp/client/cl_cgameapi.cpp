@@ -2010,6 +2010,7 @@ void CL_BindCGame( void ) {
 		cgi.ext.R_RegisterShaderRGBA			= re->ext.RegisterShaderRGBA;
 		cgi.ext.R_SetUIPlane					= CL_SetUIPlane;
 		cgi.ext.R_SetDepthOfField				= re->ext.SetDepthOfField;
+		cgi.ext.Key_GetBindingBuf				= Key_GetBindingBuf;
 
 		GetCGameAPI = (GetCGameAPI_t)cgvm->GetModuleAPI;
 		ret = GetCGameAPI( CGAME_API_VERSION, &cgi );

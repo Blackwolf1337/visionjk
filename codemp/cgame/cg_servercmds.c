@@ -1104,6 +1104,7 @@ static void CG_MapRestart( void ) {
 
 	// a round begins: the mouse is the game's again, whatever held it (select/cg_select.c)
 	CG_SelectLetGo();
+	CG_FocusEnd();
 
 	CG_StartMusic(qtrue);
 

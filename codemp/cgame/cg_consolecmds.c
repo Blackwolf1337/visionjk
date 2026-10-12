@@ -350,6 +350,7 @@ static consoleCommand_t	commands[] = {
 	{ "cg_key",						CG_Key_f },
 	{ "clientlist",					CG_ClientList_f },
 	{ "cursor",						CG_SelectCursor_f },
+	{ "focus",						CG_Focus_f },
 	{ "forcenext",					CG_NextForcePower_f },
 	{ "forceprev",					CG_PrevForcePower_f },
 	{ "invnext",					CG_NextInventory_f },

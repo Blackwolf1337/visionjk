@@ -584,6 +584,37 @@ that (silhouette of the player in the menu, camera, blur, crackle). The layout a
 pictures of scripted clients the same day (rd-vanilla, so without the blur): the player at the left from
 behind, the menu to the right of him over the level, the model of the player menu inside its frame.
 
+### Focus
+
+Not from JA+: an idea of the owner of this tree (2026-10-12), `cgame/focus/cg_focus.c`. **Written and built, never
+run** (2026-10-12): everything below says what the code is meant to do.
+
+The command `focus` stops the world on the own screen. The moment it was called stays as a still, and the player
+leaves his body as a camera that he steers with his movement keys and the mouse. The game goes on: the server
+is asked for nothing, the body stands where it stood, chat, votes and the voice chat keep coming. The command
+again, Escape, a hit, a death, a teleport, a duel, a menu or the end of the level bring him back, and the world
+is then the one of that moment. Nothing of the time in between is played after.
+
+- **The still.** While it holds, `CG_ProcessSnapshots()` takes in no snapshot (`CG_FocusSnapshots()`). The newest
+  one is only looked at: its server commands are run, and its player state says whether the body was hit
+  (`damageEvent`, not the health, which may run down by itself) or stands somewhere else. The scene is built
+  with the time the world stopped at (`CG_FocusFrame()`, `CG_FocusReal()` in `CG_DrawActiveFrame()`), effects
+  and lights with it, the 2D with the time of the game. The way back sets the cgame onto the newest snapshot as
+  after connecting, at the start of the next frame.
+- **The camera** leaves from where the view of the game was, slides along walls (a box of 12 units) and stays
+  within 512 units of the eyes of the body. The still holds nothing the client was not told, and with walls
+  and leash it shows nothing one could not have walked to.
+- **The keys.** The cgame holds them (`KEYCATCH_CGAME`), so the body gets no command, and with an engine of this
+  tree it shows no talk sign (`cg_catchQuiet`). The buttons that were held when it began are let go. The engine
+  runs no bound command meanwhile: the camera reads the keys of `+forward`, `+back`, `+moveleft`, `+moveright`,
+  `+moveup`, `+movedown` and `+speed` itself, and the keys of `focus` and of the chat are looked up when they
+  are pressed. An engine of this tree says what a key is bound to (`trap->ext.Key_GetBindingBuf`, cvar
+  `cl_cgameBinds`), another one only the first key of a command.
+- **The screen**: votes, who talks, what the server prints in the middle, the chat box and a line that says how
+  to come back. No HUD: its numbers would be the ones of the still.
+- **Not**: as a spectator, dead, in the air, in a vehicle, zoomed, in a duel, in a demo, with a menu open.
+- **Others** see a player who stands still. Nothing of this reaches another client.
+
 ### Admin login with a key
 
 `cgame/auth/cg_auth.c`, `cgame/auth/cg_auth_agent.c` (2026-10-11), the server part is in [server.md](server.md).

@@ -1800,6 +1800,20 @@ qboolean	CG_VoiceMuted( int clientNum );
 int			CG_VoiceLouder( int clientNum, int steps );
 qboolean	CG_AuthIsAdmin( void );
 
+// focus/cg_focus.c: the world stands still and the player leaves his body as a camera
+void		CG_FocusInit( void );
+void		CG_Focus_f( void );
+void		CG_FocusEnd( void );
+qboolean	CG_FocusActive( void );
+int			CG_FocusTime( int time );
+qboolean	CG_FocusSnapshots( void );
+qboolean	CG_FocusFrame( void );
+void		CG_FocusReal( void );
+void		CG_FocusView( void );
+qboolean	CG_FocusMouseEvent( int dx, int dy );
+qboolean	CG_FocusKeyEvent( int key, qboolean down );
+void		CG_FocusDraw( void );
+
 // hud/cg_hud.c: the numbers of the game by name, for the items of a menu file that show one
 qboolean	CG_StatValue( const char *name, float *value, float *max );
 void		CG_HudLoad( void );
@@ -1810,6 +1824,7 @@ qboolean	CG_HudDraw( void );
 qboolean	CG_HudNewLook( void );
 const char	*CG_VisionText( const char *english );
 const char	*CG_VisionTextWith( const char *english, const char *value );
+const char	*CG_KeyLabel( int key );
 void		CG_TextCut( const char *text, float most, float (*width)( const char *text, void *arg ), void *arg, char *out, int outSize );
 qboolean	CG_ScoresDraw( void );											// hud/cg_scores.c
 qboolean	CG_ScoresPicking( void );

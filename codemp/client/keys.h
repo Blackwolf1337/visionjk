@@ -67,6 +67,7 @@ void	Field_BigDraw		( field_t *edit, int x, int y, qboolean showCursor, qboolean
 
 void		Key_SetBinding			( int keynum, const char *binding );
 char *		Key_GetBinding			( int keynum );
+void		Key_GetBindingBuf		( int keynum, char *buf, int buflen );		// cl_uiapi.cpp
 qboolean	Key_IsDown				( int keynum );
 int			Key_StringToKeynum		( char *str );
 qboolean	Key_GetOverstrikeMode	( void );

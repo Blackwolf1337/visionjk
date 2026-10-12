@@ -2677,6 +2677,7 @@ Ghoul2 Insert End
 	CG_PeerInit();
 	CG_SelectInit();
 	CG_ScoresInit();
+	CG_FocusInit();
 	CG_AuthInit();
 	CG_Menu3DInit();
 	CG_ParseServerinfo();

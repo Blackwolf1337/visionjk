@@ -209,6 +209,13 @@ set(MPCGameSelectFiles
 source_group("cgame/select" FILES ${MPCGameSelectFiles})
 set(MPCGameFiles ${MPCGameFiles} ${MPCGameSelectFiles})
 
+# Focus: the world stands still on the own screen and the player leaves his body as a camera
+set(MPCGameFocusFiles
+	"${MPDir}/cgame/focus/cg_focus.c"
+	)
+source_group("cgame/focus" FILES ${MPCGameFocusFiles})
+set(MPCGameFiles ${MPCGameFiles} ${MPCGameFocusFiles})
+
 # the numbers of the game for the items of a menu file that show one: what the HUD of this tree is made of
 set(MPCGameHudFiles
 	"${MPDir}/cgame/hud/cg_hud.c"

@@ -142,17 +142,9 @@ static float Scores_TextFit( float x, float y, float h, float scale, const vec4_
 
 // the name of the key of the scoreboard, as a hint says it
 static const char *Scores_KeyName( void ) {
-	static char	name[2];
-	const int	key = trap->Key_GetKey( "+scores" );
+	const char *name = CG_KeyLabel( trap->Key_GetKey( "+scores" ) );
 
-	if ( key == A_TAB ) {
-		return "TAB";
-	}
-	if ( key > ' ' && key < 127 ) {
-		name[0] = ( key >= 'a' && key <= 'z' ) ? (char)( key - 'a' + 'A' ) : (char)key;
-		return name;
-	}
-	return CG_VisionText( "The scores key" );
+	return name ? name : CG_VisionText( "The scores key" );
 }
 
 /*
