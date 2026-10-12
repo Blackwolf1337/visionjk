@@ -462,6 +462,22 @@ typedef struct fogParms_s {
 	float	depthForOpaque;
 } fogParms_t;
 
+// Not from OpenJK. What a script says with "q3map_vision <kind> <numbers>" (tr_shader.cpp): something only the
+// renderer of VisionJK draws, in the place of what the rest of the script says, which is what every other
+// renderer draws. The numbers are the ones behind the kind, 0 where the script has none.
+#define VISION_PARMS	8
+typedef enum visionKind_e {
+	VISION_NONE,
+	// The brush of a fog: a sea of clouds in it (rd-vulkan-vision/shaders/volume.frag). Numbers: x, y and the
+	// radius of a round place the clouds leave free, then a lane along x at that y: from x, to x, half its width
+	VISION_CLOUDS
+} visionKind_t;
+
+typedef struct visionParms_s {
+	visionKind_t	kind;
+	float			parm[VISION_PARMS];
+} visionParms_t;
+
 typedef struct shader_s {
 	char		name[MAX_QPATH];		// game path, including extension
 	int			lightmapIndex[MAXLIGHTMAPS];	// for a shader to match, both name and lightmapIndex must match
@@ -485,6 +501,7 @@ typedef struct shader_s {
 
 	skyParms_t	*sky;
 	fogParms_t	*fogParms;
+	visionParms_t	*vision;			// VisionJK: q3map_vision of the script, NULL: none
 
 	float		portalRange;			// distance to fog out at
 
@@ -590,6 +607,8 @@ typedef struct fog_s {
 	// for clipping distance in fog when outside
 	qboolean	hasSurface;
 	float		surface[4];
+
+	const visionParms_t	*vision;		// VisionJK: q3map_vision of its script, NULL: a plain fog
 } fog_t;
 
 typedef struct viewParms_s {
@@ -1271,6 +1290,7 @@ extern	cvar_t	*r_2dAspect;
 extern	cvar_t	*r_menuBlur;
 extern	cvar_t	*r_templeBloom;
 extern	cvar_t	*r_templeDetail;
+extern	cvar_t	*r_visionVolumes;
 
 float	R_2DBias( void );
 void	RE_Set2DPlane( const float *matrix );

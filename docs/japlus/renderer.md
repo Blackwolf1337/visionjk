@@ -386,6 +386,46 @@ left in these views are the effects of the game (flames, smoke, light cones) and
   went from 1541 to 661 ms with it, a player who joins from a frame of 22 to 28 ms to one of 4 to 6.5.
   [loading.md](loading.md) has how that was measured and what the cache is named after.
 
+## Brushes that only this renderer fills (q3map_vision)
+
+Not from OpenJK. 2026-10-12, the owner: the place of the Vision Temple "should stay .bsp, but we will add new
+brushes like the old ones (volumetric fog) which is q3 shader, but instead a new shader for the clouds". The
+first kind is there, clouds. Vulkan device only, run hidden on Linux, see "Checked" of [server.md](server.md),
+"The temple of a server", for the runs it was in.
+
+**The keyword.** A shader script can say `q3map_vision <kind> <numbers>` among its general lines
+(`rd-vanilla/tr_shader.cpp`, `ParseVision()`, the file both renderers of this tree read scripts with). The name
+begins as the keywords of the map compiler do, and every renderer skips those: rd-vanilla, the original game
+and any other fork read past the line and draw what else the script says. So one script serves all of them,
+and a level that uses it loads everywhere.
+
+| Kind | Where | Numbers | What rd-vulkan-vision draws | What every other renderer draws |
+|------|-------|---------|-----------------------------|----------------------------------|
+| `clouds` | the script of a fog brush (`surfaceparm fog`) | x, y and radius of a round place the clouds leave free, then a lane along x at that y: from x, to x, half its width | a sea of clouds in the brush, lit by a low sun in +x | the fog of `fogparms` |
+
+**How it is drawn.** `R_LoadFogs()` keeps what the script of a fog says (`fog_t.vision`). Such a fog gets no fog
+pass in this renderer. After what is solid in a view each one is a pass of `shaders/volume.frag`
+(`VK_VolumeFrame()`, `vk_post.cpp`): it reads the frame and its depth, marches the part of the ray of a pixel
+that lies inside the brush as far as to what stands there, and gives the pixel back with the clouds in front of
+it. So a player behind a heap of cloud is hidden and one in front of it is not. What a module draws over the
+scene (`shader->over`) comes after it. The cloud code itself is `shaders/vision.glsl`, which
+`shaders/temple.frag` includes too.
+
+| Cvar | Default | Meaning |
+|------|---------|---------|
+| `r_visionVolumes` | 1 | 0: these brushes are not drawn. The Vision Temple then has its clouds behind everything, as before they were a brush |
+| `r_templeDetail` | 2 | below 2 the pass works at half the size of the frame |
+
+Frames a second on a server that is the Vision Temple, 2560 x 1440 with 8 samples and the glow on, an RTX 4070
+SUPER, the average of 25 seconds each in one run (`tools/templetest/fps.sh` of the test tools): 120 with the
+clouds as a volume, 125 with `r_visionVolumes 0`, 200 with `r_templeDetail 1`.
+
+Limits: one sun, the one of the temple, and no number of the script moves it. A surface that is not solid and
+stands in front of a cloud (a sprite, a blade) is drawn before the pass and gets the cloud behind it laid over
+it. At an edge of a model against far clouds a pixel can be a little off with several samples a pixel (the
+depth the pass reads is the one of the first sample). Not on the WebGL device and not in rd-vanilla: they draw
+the fog.
+
 ## Not done
 
 The Windows DLL builds with mingw-w64 for 64 bit and imports nothing but the C runtime, kernel32 and

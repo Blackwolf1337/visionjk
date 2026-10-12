@@ -747,6 +747,10 @@ static void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 			continue;
 		}
 		R_DecomposeSort( drawSurf->sort, &entityNum, &shader, &fogNum, &dlighted );
+		// (a fog whose script fills its brush with something of this renderer has no fog pass: vk_post.cpp)
+		if ( fogNum && VK_FogIsVolume( fogNum ) ) {
+			fogNum = 0;
+		}
 		if ( rb_overLater && shader->over ) {
 			rb_sawOver = qtrue;
 		}
@@ -917,6 +921,9 @@ static void RB_RenderOverSurfs( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 		if ( drawSurf->sort != oldSort ) {
 			oldSort = drawSurf->sort;
 			R_DecomposeSort( drawSurf->sort, &entityNum, &shader, &fogNum, &dlighted );
+			if ( fogNum && VK_FogIsVolume( fogNum ) ) {
+				fogNum = 0;
+			}
 			over = (qboolean)shader->over;
 			if ( !over ) {
 				continue;
@@ -968,7 +975,12 @@ static const void *RB_DrawSurfs( const void *data ) {
 	const qboolean spirit = (qboolean)( r_spiritAmount > 0.0f && !backEnd.viewParms.isPortal
 		&& !( backEnd.refdef.rdflags & ( RDF_NOWORLDMODEL | RDF_SKYBOXPORTAL ) ) );
 
-	rb_overLater = (qboolean)( focus || spirit );
+	// The volumes of the level that only this renderer fills (q3map_vision of a shader script, vk_post.cpp):
+	// drawn after what is solid, which hides them or stands in them.
+	const qboolean volumes = (qboolean)( !backEnd.viewParms.isPortal
+		&& !( backEnd.refdef.rdflags & ( RDF_NOWORLDMODEL | RDF_SKYBOXPORTAL ) ) && VK_VolumeReady() );
+
+	rb_overLater = (qboolean)( focus || spirit || volumes );
 	rb_sawOver = qfalse;
 	rb_glowView = !( backEnd.refdef.rdflags & RDF_NOWORLDMODEL ) && r_DynamicGlow->integer;
 	rb_sawLate = qfalse;
@@ -990,13 +1002,16 @@ static const void *RB_DrawSurfs( const void *data ) {
 		}
 	}
 	rb_glowView = false;
+	if ( volumes ) {
+		VK_VolumeFrame();
+	}
 	if ( spirit ) {
 		VK_SpiritFrame( r_spiritAmount, r_spiritTime );
 	}
 	if ( focus ) {
 		VK_BlurFrame( r_dofAmount, r_dofFocus );
 	}
-	if ( ( focus || spirit ) && rb_sawOver ) {
+	if ( ( focus || spirit || volumes ) && rb_sawOver ) {
 		RB_RenderOverSurfs( cmd->drawSurfs, cmd->numDrawSurfs );
 	}
 	// the Vision Temple and what stands in it shine (vk_post.cpp)

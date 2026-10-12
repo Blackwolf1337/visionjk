@@ -205,9 +205,12 @@ the mode does:
 
 The map `maps/vision_temple.bsp` is in the asset pack. It has brushes and no surfaces: the terrace, the five
 steps of the podium, the way, and fences that keep players from the clouds. `tools/temple/build.py` writes it
-from the numbers of the shader that draws the place (`rd-vulkan-vision/shaders/temple.frag`), without a map
-compiler: change a size in both. A client without that renderer (a legacy client, `rd-vanilla`, the browser)
-sees players in an empty sky there.
+from the numbers of the shader that draws the gold (`rd-vulkan-vision/shaders/temple.frag`), without a map
+compiler: change a size in both. Since 2026-10-12 the clouds are a brush of the map: a fog whose shader script
+(`textures/vision/temple_clouds`) says `q3map_vision clouds`, see [renderer.md](renderer.md), "Brushes that
+only this renderer fills". A client without that renderer (a legacy client, `rd-vanilla`, the browser) sees
+the players in the fog of that script and nothing else: the map has no surfaces and no sky yet, so nothing
+clears its picture between two frames (seen with `rd-vanilla` on 2026-10-12).
 
 `assets/configs/temple.cfg` has the settings of a temple server: `+exec temple.cfg +map vision_temple`.
 

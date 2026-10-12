@@ -214,6 +214,7 @@ typedef struct vkState_s : vkDeviceState_t {
 	vkTarget_t					glow;				// r_DynamicGlow: the stages that glow, drawn again over the depth of the scene
 	vkTarget_t					blur[2];			// and blurred, r_DynamicGlowWidth x r_DynamicGlowHeight
 	vkTarget_t					soft[2];			// the frame out of focus at half its size, r_menuBlur (VK_BlurFrame)
+	vkTarget_t					wide;				// a pass of the size of the frame that is laid over it: a volume of the level (VK_VolumeFrame)
 	qboolean					finalValid;			// a frame has been rendered into it
 
 	vkImage_t					images[VK_MAX_IMAGES];
@@ -328,6 +329,11 @@ void		VK_EndGlow( void );
 void		VK_BlurFrame( float amount, float focus );
 void		VK_SpiritFrame( float amount, float seconds );
 void		VK_TempleFrame( float amount, float seconds );
+// The volumes of the level that only this renderer fills (q3map_vision of a shader script). Ready: the level has
+// one, the device can draw it and r_visionVolumes is on. A fog of that kind gets no fog pass here either way.
+qboolean	VK_VolumeReady( void );
+qboolean	VK_FogIsVolume( int fogNum );
+void		VK_VolumeFrame( void );
 void		VK_BloomFrame( float amount );
 void		VK_CaptureFrame( void );
 void		VK_ClearFlares( void );
@@ -437,6 +443,10 @@ void		VK_SpiritPass( vkTarget_t *source, vkTarget_t *target, const float *parm )
 // shaders/temple.frag over the whole of the target that is drawn into, with its sixteen numbers. qfalse: this
 // device has no such pass, nothing was drawn.
 qboolean	VK_TemplePass( const float *view );
+// shaders/volume.frag over the whole of target with its thirty-two numbers, reading source and the depth of the
+// scene. No target is begun before and after. qfalse: this device has no such pass. With parm NULL nothing is
+// drawn, the answer is whether it has.
+qboolean	VK_VolumePass( vkTarget_t *source, vkTarget_t *target, const float *parm );
 // source over the whole of the target that is drawn into: added to what is there, added softly (GL_ONE,
 // GL_ONE_MINUS_SRC_COLOR), or laid over it by its alpha
 typedef enum { VKA_ADD, VKA_ADD_SOFT, VKA_BLEND } vkAdd_t;

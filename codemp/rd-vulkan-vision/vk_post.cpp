@@ -235,17 +235,14 @@ qboolean VK_TempleReady( void ) {
 	return VK_TemplePass( NULL );
 }
 
-void VK_TempleFrame( float amount, float seconds ) {
+// the twenty numbers shaders/temple.frag and shaders/volume.frag see the view of the back end by
+static void VK_ViewNumbers( float *parm, float amount, float seconds ) {
 	const viewParms_t	*view = &backEnd.viewParms;
 	// half the angles of view, as their tangents: a pixel at the edge looks that far to the side for one ahead
 	const float			tanX = tanf( DEG2RAD( view->fovX * 0.5f ) ), tanY = tanf( DEG2RAD( view->fovY * 0.5f ) );
 	// what the depth buffer holds of a thing d ahead: zFar * ( d - zNear ) / ( ( zFar - zNear ) * d )
 	const float			zNear = r_znear->value, zFar = Q_max( view->zFar, zNear + 1.0f );
-	float				parm[20];
 
-	if ( !vk.frame ) {
-		return;
-	}
 	// the eye and the clock, ahead and how much, to the right (axis 1 is to the left), up
 	VectorCopy( view->ori.origin, &parm[0] );
 	parm[3] = seconds;
@@ -258,6 +255,21 @@ void VK_TempleFrame( float amount, float seconds ) {
 	parm[16] = zFar / ( zFar - zNear );
 	parm[17] = zFar * zNear / ( zFar - zNear );
 	parm[18] = parm[19] = 0.0f;
+}
+
+void VK_TempleFrame( float amount, float seconds ) {
+	const viewParms_t	*view = &backEnd.viewParms;
+	float				parm[20];
+
+	if ( !vk.frame ) {
+		return;
+	}
+	VK_ViewNumbers( parm, amount, seconds );
+	// the clouds of a level that has them as a volume of its own come later, in front of what stands in them
+	// (VK_VolumeFrame)
+	if ( !( backEnd.refdef.rdflags & RDF_NOWORLDMODEL ) && VK_VolumeReady() ) {
+		parm[15] = 1.0f;
+	}
 	if ( !VK_TemplePass( parm ) ) {
 		return;
 	}
@@ -265,6 +277,79 @@ void VK_TempleFrame( float amount, float seconds ) {
 	VK_BindFrameSets();
 	vk.stateValid = qfalse;
 	VK_SetViewport( view->viewportX, view->viewportY, view->viewportWidth, view->viewportHeight, 0.0f, 1.0f );
+}
+
+/*
+===============
+VK_VolumeFrame
+
+The volumes of the level that a shader script fills with something only this renderer draws ("q3map_vision" of
+the script, rd-vanilla/tr_shader.cpp): the brush of a fog whose script says clouds, which gets no fog pass here.
+After what is solid in the view each of them is one pass of shaders/volume.frag: it reads the frame and its
+depth and gives the frame back with the clouds in front of what stands in them or behind them. At the size of
+the frame, or at half of it where r_templeDetail asks for less. Only on a device that lets a shader read its
+depth.
+===============
+*/
+static qboolean VK_FogHasClouds( const fog_t *fog ) {
+	return (qboolean)( fog->vision && fog->vision->kind == VISION_CLOUDS );
+}
+
+qboolean VK_FogIsVolume( int fogNum ) {
+	return (qboolean)( tr.world && fogNum > 0 && fogNum < tr.world->numfogs && VK_FogHasClouds( &tr.world->fogs[fogNum] )
+		&& VK_VolumePass( NULL, NULL, NULL ) );
+}
+
+qboolean VK_VolumeReady( void ) {
+	if ( !tr.world || !r_visionVolumes->integer ) {
+		return qfalse;
+	}
+	for ( int i = 1; i < tr.world->numfogs; i++ ) {
+		if ( VK_FogIsVolume( i ) ) {
+			return qtrue;
+		}
+	}
+	return qfalse;
+}
+
+void VK_VolumeFrame( void ) {
+	vkTarget_t	*target = ( r_templeDetail->value >= 2.0f ) ? &vk.wide : &vk.soft[0];
+	qboolean	drawn = qfalse;
+
+	if ( !vk.frame || !tr.world ) {
+		return;
+	}
+	for ( int i = 1; i < tr.world->numfogs; i++ ) {
+		const fog_t	*fog = &tr.world->fogs[i];
+		float		parm[32];
+
+		if ( !VK_FogIsVolume( i ) ) {
+			continue;
+		}
+		VK_ViewNumbers( parm, 1.0f, backEnd.refdef.floatTime );
+		// the brush, and the numbers of the script (visionKind_t): a place and a lane the clouds leave free
+		VectorCopy( fog->bounds[0], &parm[20] );
+		parm[23] = fog->vision->parm[0];
+		VectorCopy( fog->bounds[1], &parm[24] );
+		parm[27] = fog->vision->parm[1];
+		parm[28] = fog->vision->parm[2];
+		parm[29] = fog->vision->parm[3];
+		parm[30] = fog->vision->parm[4];
+		parm[31] = fog->vision->parm[5];
+
+		VK_EndTarget();
+		VK_VolumePass( &vk.color, target, parm );
+		// back to the frame, with what is in it
+		VK_BeginTarget( &vk.color, &vk.depth, 2, qtrue );
+		VK_AddTarget( target, VKA_BLEND );
+		drawn = qtrue;
+	}
+	if ( drawn ) {
+		// the shaders that draw geometry have other sets and other state
+		VK_BindFrameSets();
+		vk.stateValid = qfalse;
+		VK_SetViewport( vk.viewport[0], vk.viewport[1], vk.viewport[2], vk.viewport[3], 0.0f, 1.0f );
+	}
 }
 
 /*

@@ -1,9 +1,14 @@
 #!/usr/bin/env python3
 """Writes the map of the Vision Temple: tools/temple/build.py [output.bsp]
 
-The place itself is drawn by a shader of the renderer (codemp/rd-vulkan-vision/shaders/temple.frag). This map
-is what the game needs of it: what one stands on and where one starts. It has brushes and no surfaces, so no
+The gold of the place is drawn by a shader of the renderer (codemp/rd-vulkan-vision/shaders/temple.frag). This
+map is what the game needs of it: what one stands on and where one starts. It has brushes and no surfaces, so no
 map compiler is needed, and its numbers are the ones of the shader: change them in both places.
+
+The clouds are a brush of the map: a fog whose shader script (textures/vision/temple_clouds in
+assets/japlus_client/shaders/vision.shader) says "q3map_vision clouds" with the place they leave free, which
+are numbers of this file too. rd-vulkan-vision fills the brush with clouds, any other renderer with the fog
+of that script.
 
 Without an argument the map goes to assets/japlus_client/maps/vision_temple.bsp.
 """
@@ -34,9 +39,16 @@ FENCE_INSIDE = 215.0
 FENCE_OUTSIDE = 239.0
 WAY_FENCE = 35.0		# the way is open between -this and this
 FENCE_THICK = 24.0
+# The sea of clouds: as far as anybody sees, from under everything up to the roof no cloud is higher than
+# (CLOUD_ROOF of the shaders). What they leave free is in the shader script: a round place of TERRACE_RADIUS
+# around the middle, and the way with its kerbs, from -524 to -170 and 28 to each side.
+CLOUDS_FAR = 16384.0
+CLOUDS_DEEP = -512.0
+CLOUDS_ROOF = 266.0
 
 # game/surfaceflags.h
 CONTENTS_SOLID = 0x1
+CONTENTS_FOG = 0x8
 CONTENTS_PLAYERCLIP = 0x10
 SURF_NODAMAGE = 0x40000
 SURF_NOIMPACT = 0x80000
@@ -47,8 +59,9 @@ MATERIAL_MARBLE = 12
 SHADERS = (
     ("textures/vision/temple_floor", SURF_NODAMAGE | SURF_NOMARKS | SURF_NODRAW | MATERIAL_MARBLE, CONTENTS_SOLID),
     ("textures/system/clip", SURF_NODAMAGE | SURF_NOIMPACT | SURF_NOMARKS | SURF_NODRAW, CONTENTS_PLAYERCLIP),
+    ("textures/vision/temple_clouds", SURF_NODAMAGE | SURF_NOIMPACT | SURF_NOMARKS, CONTENTS_FOG),
 )
-FLOOR, CLIP = 0, 1
+FLOOR, CLIP, CLOUDS = 0, 1, 2
 
 SPAWNS = [(x, y) for x in (-490.0, -450.0, -410.0, -370.0) for y in (-10.0, 10.0)]
 
@@ -56,6 +69,7 @@ SPAWNS = [(x, y) for x in (-490.0, -450.0, -410.0, -370.0) for y in (-10.0, 10.0
 LUMPS = 18
 (LUMP_ENTITIES, LUMP_SHADERS, LUMP_PLANES, LUMP_NODES, LUMP_LEAFS, LUMP_LEAFSURFACES, LUMP_LEAFBRUSHES,
  LUMP_MODELS, LUMP_BRUSHES, LUMP_BRUSHSIDES) = range(10)
+LUMP_FOGS = 12
 
 
 class Map:
@@ -63,6 +77,7 @@ class Map:
         self.planes = []
         self.sides = []
         self.brushes = []
+        self.fogs = []
         self.mins = [1.0e9] * 3
         self.maxs = [-1.0e9] * 3
 
@@ -92,6 +107,11 @@ class Map:
 
     def box(self, shader, mins, maxs):
         self.brush(shader, (mins, maxs))
+
+    def fog(self, shader, mins, maxs):
+        """A box of fog. Its side to the sky (the sixth of the sides along the axes) is the one seen from outside."""
+        self.box(shader, mins, maxs)
+        self.fogs.append((SHADERS[shader][0], len(self.brushes) - 1, 5))
 
     def disc(self, shader, radius, bottom, top):
         """A round slab: its flat sides touch the circle, so nothing of the circle sticks out of it."""
@@ -142,6 +162,8 @@ def temple():
         ys = sorted((side * WAY_FENCE, side * (WAY_FENCE + FENCE_THICK)))
         m.box(CLIP, (back, ys[0], DEEP), (meet, ys[1], FENCE_TOP))
     m.box(CLIP, (back, -WAY_FENCE - FENCE_THICK, DEEP), (WAY_START + 4.0, WAY_FENCE + FENCE_THICK, FENCE_TOP))
+
+    m.fog(CLOUDS, (-CLOUDS_FAR, -CLOUDS_FAR, CLOUDS_DEEP), (CLOUDS_FAR, CLOUDS_FAR, CLOUDS_ROOF))
     return m
 
 
@@ -175,6 +197,7 @@ def write(m, path):
     lumps[LUMP_MODELS] = struct.pack("<6f4i", *m.mins, *m.maxs, 0, 0, 0, len(m.brushes))
     lumps[LUMP_BRUSHES] = b"".join(struct.pack("<3i", *brush) for brush in m.brushes)
     lumps[LUMP_BRUSHSIDES] = b"".join(struct.pack("<3i", plane, shader, -1) for plane, shader in m.sides)
+    lumps[LUMP_FOGS] = b"".join(struct.pack("<64s2i", name.encode("ascii"), brush, side) for name, brush, side in m.fogs)
 
     offset = 8 + 8 * LUMPS
     header = [b"RBSP", struct.pack("<i", 1)]

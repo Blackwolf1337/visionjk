@@ -15,3 +15,17 @@ gfx/vision/select_hull
 		glow
 	}
 }
+
+// The sea of clouds of the Vision Temple (maps/vision_temple.bsp, tools/temple/build.py): the brush of a fog.
+// The renderer of VisionJK fills it with clouds (q3map_vision, docs/japlus/renderer.md), any other one
+// with this fog. The numbers: the round place the clouds leave free (x, y, radius: the terrace around the
+// podium) and the lane (from x, to x, half its width: the way to it).
+textures/vision/temple_clouds
+{
+	surfaceparm	trans
+	surfaceparm	nonsolid
+	surfaceparm	fog
+	surfaceparm	nolightmap
+	fogparms ( 0.80 0.62 0.48 ) 3000
+	q3map_vision clouds 0 0 208 -524 -170 28
+}

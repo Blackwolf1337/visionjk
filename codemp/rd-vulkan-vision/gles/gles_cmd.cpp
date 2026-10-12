@@ -405,6 +405,12 @@ qboolean VK_TemplePass( const float * ) {
 	return qfalse;
 }
 
+// And the volumes of a level that only this renderer fills (shaders/volume.frag): not on this device yet either,
+// it draws the plain fog of their scripts.
+qboolean VK_VolumePass( vkTarget_t *, vkTarget_t *, const float * ) {
+	return qfalse;
+}
+
 void VK_AddTarget( vkTarget_t *source, vkAdd_t how ) {
 	glesCommand_t *cmd = GLES_Command( GC_ADD );
 

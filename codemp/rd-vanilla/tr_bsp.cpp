@@ -1760,6 +1760,8 @@ static	void R_LoadFogs( lump_t *l, lump_t *brushesLump, lump_t *sidesLump, world
 
 		// get information from the shader for fog parameters
 		shader = R_FindShader( fogs->shader, lightmaps, stylesDefault, qtrue );
+		// (and what only the renderer of VisionJK draws in its brush, tr_shader.cpp)
+		out->vision = shader->vision;
 
 		if (!shader->fogParms)
 		{//bad shader!!

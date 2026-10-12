@@ -584,6 +584,9 @@ static VkDescriptorSet VK_PostSet( const vkTarget_t *source ) {
 	if ( source == &vk.soft[0] || source == &vk.soft[1] ) {
 		return vk.softSets[source - vk.soft];
 	}
+	if ( source == &vk.wide ) {
+		return vk.wideSet;
+	}
 	return vk.blurSets[source - vk.blur];
 }
 
@@ -609,7 +612,7 @@ void VK_BlurPass( vkTarget_t *source, vkTarget_t *target, const float *parm ) {
 
 // A pass that reads the depth of the scene next to its source. The depth is not drawn into while the pass reads
 // it: the pass that follows takes it back (VK_BeginTarget).
-static void VK_DepthPass( VkPipeline pipeline, vkTarget_t *source, vkTarget_t *target, const float *parm ) {
+static void VK_DepthPass( VkPipeline pipeline, VkPipelineLayout layout, vkTarget_t *source, vkTarget_t *target, const float *parm, int numbers ) {
 	VkCommandBuffer cmd = vk.frame->cmd;
 	const VkDescriptorSet sets[2] = { VK_PostSet( source ), vk.depthSet };
 
@@ -620,19 +623,30 @@ static void VK_DepthPass( VkPipeline pipeline, vkTarget_t *source, vkTarget_t *t
 	VK_TargetLayout( cmd, target, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
 	VK_BeginRendering( cmd, target, NULL, 0, qfalse );
 	VK_FullTarget( cmd, target );
-	qvkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.focusPipelineLayout, 0, 2, sets, 0, NULL );
-	qvkCmdPushConstants( cmd, vk.focusPipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof( float ) * 4, parm );
+	qvkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, 0, 2, sets, 0, NULL );
+	qvkCmdPushConstants( cmd, layout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof( float ) * numbers, parm );
 	qvkCmdDraw( cmd, 3, 1, 0, 0 );
 	qvkCmdEndRendering( cmd );
 	VK_TargetLayout( cmd, target, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
 }
 
 void VK_FocusPass( vkTarget_t *source, vkTarget_t *target, const float *parm ) {
-	VK_DepthPass( vk.focusPipeline, source, target, parm );
+	VK_DepthPass( vk.focusPipeline, vk.focusPipelineLayout, source, target, parm, 4 );
 }
 
 void VK_SpiritPass( vkTarget_t *source, vkTarget_t *target, const float *parm ) {
-	VK_DepthPass( vk.spiritPipeline, source, target, parm );
+	VK_DepthPass( vk.spiritPipeline, vk.focusPipelineLayout, source, target, parm, 4 );
+}
+
+// NULL: only whether the device has the pass
+qboolean VK_VolumePass( vkTarget_t *source, vkTarget_t *target, const float *parm ) {
+	if ( !vk.depthReadable ) {
+		return qfalse;
+	}
+	if ( parm ) {
+		VK_DepthPass( vk.volumePipeline, vk.volumePipelineLayout, source, target, parm, 32 );
+	}
+	return qtrue;
 }
 
 // NULL: only whether the device has the pass

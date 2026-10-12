@@ -220,12 +220,14 @@ set(MPVulkanVisionShaders
 	focus.frag
 	spirit.frag
 	temple.frag
+	volume.frag
 	)
 set(MPVulkanVisionShaderIncludes
 	"${MPDir}/rd-vulkan-vision/shaders/common.glsl"
 	"${MPDir}/rd-vulkan-vision/shaders/dialect.glsl"
 	"${MPDir}/rd-vulkan-vision/shaders/post.glsl"
 	"${MPDir}/rd-vulkan-vision/shaders/stage.glsl"
+	"${MPDir}/rd-vulkan-vision/shaders/vision.glsl"
 	)
 set(MPVulkanVisionShaderOutputs)
 if(MPVulkanVisionVulkanTarget)
