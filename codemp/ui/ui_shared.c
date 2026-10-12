@@ -5626,6 +5626,7 @@ static const char *g_bindCommands[] = {
 	"engage_duel",
 	"engage_FullForceDuel",		// JA+
 	"flourish",
+	"focus",					// VisionJK: the world stands still and the player leaves his body
 	"force_absorb",
 	"force_distract",
 	"force_forcepowerother",

@@ -270,6 +270,28 @@ MORE = {
     'Say': ('Dire', 'Decir'),
     'To %s': ('À %s', 'A %s'),
     'Open %s ? Enter: yes, any other key: no': ('Ouvrir %s ? Entrée : oui, autre touche : non', '¿Abrir %s? Intro: sí, otra tecla: no'),
+    # Focus
+    'Focus (Leave Your Body)': ('Focus (quitter son corps)', 'Foco (dejar el cuerpo)'),
+    'The world stands still and you leave your body. The same key or Esc brings you back.':
+        ('Le monde se fige et vous quittez votre corps. La même touche ou Échap vous ramène.',
+         'El mundo se detiene y dejas tu cuerpo. La misma tecla o Esc te devuelve.'),
+    'Focus. %s or Esc: back': ('Focus. %s ou Échap : retour', 'Foco. %s o Esc: volver'),
+    'Focus. Esc: back': ('Focus. Échap : retour', 'Foco. Esc: volver'),
+    'Your body is protected.': ('Votre corps est protégé.', 'Tu cuerpo está protegido.'),
+    'A hit on your body brings you back.': ('Un coup porté à votre corps vous ramène.', 'Un golpe a tu cuerpo te devuelve.'),
+    'Your body is not protected.': ("Votre corps n'est pas protégé.", 'Tu cuerpo no está protegido.'),
+    'This server does not protect your body here.': ('Ce serveur ne protège pas votre corps ici.', 'Este servidor no protege tu cuerpo aquí.'),
+    'Your body is not protected: you were in a fight a moment ago.':
+        ("Votre corps n'est pas protégé : vous étiez au combat il y a un instant.",
+         'Tu cuerpo no está protegido: estabas luchando hace un momento.'),
+    'Your body is not protected: your last time was a moment ago.':
+        ("Votre corps n'est pas protégé : la dernière fois date d'un instant.",
+         'Tu cuerpo no está protegido: la última vez fue hace un momento.'),
+    'Your body is not protected right now.': ("Votre corps n'est pas protégé pour l'instant.", 'Tu cuerpo no está protegido ahora mismo.'),
+    'Focus: only while you play.': ('Focus : seulement pendant que vous jouez.', 'Foco: solo mientras juegas.'),
+    'Focus: not now.': ('Focus : pas maintenant.', 'Foco: ahora no.'),
+    'Focus: not in a duel.': ('Focus : pas en duel.', 'Foco: no en un duelo.'),
+    'Focus: not while a menu is open.': ("Focus : pas quand un menu est ouvert.", 'Foco: no con un menú abierto.'),
     # the HUD
     'Saber': ('Sabre', 'Sable'),
     'Alternate Dimension': ('Autre dimension', 'Otra dimensión'),

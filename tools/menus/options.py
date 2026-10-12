@@ -161,6 +161,8 @@ CONTROLS = [
          'Hold to point at players with the mouse: a click opens what you can do with one.'),
         ('bind', 'Scoreboard with Mouse', 'scores_pick',
          'Opens the scoreboard with the mouse free: a click on a row opens what you can do with that player.'),
+        ('bind', 'Focus (Leave Your Body)', 'focus',
+         'The world stands still and you leave your body. The same key or Esc brings you back.'),
     ]),
 ]
 

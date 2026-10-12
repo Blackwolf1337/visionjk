@@ -249,7 +249,7 @@ of the menus.
 | Interface | New HUD (`cg_hud`), Classic Menus (`ui_classic`), Menu in the Level (`cg_immersiveMenu`), Menu Blur (`r_menuBlur`), Show Frame Rate (`cg_drawFPS`), Show Timer (`cg_drawTimer`), Show Lagometer (`cg_lagometer`), Field of View (`cg_fov`), Camera Distance (`cg_thirdPersonRange`), Crosshair Size (`cg_crosshairSize`) |
 | Chat & Social | Chat Bubbles (`cg_chatBubbles`), Bubble Range (`cg_bubbleRange`), Player Statuses (`cg_playerStatuses`), Show My Music (`cg_shareMusic`), Keep Scoreboard on Double Tap (`cg_scoresPick`), Chat Box Size (`cg_chatBoxScale`), Chat Box Rows (`cg_chatBoxRows`), Select Players (`cg_selectPlayers`), Selection Outline (`cg_selectOutline`), Own Chat Line (`cg_chatInput`), Chat Box Width (`cg_chatBoxWidth`), Chat Beep (`cg_chatBeep`), Sharp Console Font (`con_font`), Console Text Size (`con_scale`), Console Opacity (`con_opacity`), Clan Password (`cp_clanPwd`, shown as stars) |
 | Network | Check for Updates (`cl_updateCheck`), Intrusion Log (`cl_ids`), Key Login by Agent (`cg_authAgent`), Key File (`cg_authKeyFile`), UTF-8 Text (`cl_utf8`) |
-| Controls, Extras | Free the Mouse (`+cursor`), Scoreboard with Mouse (`scores_pick`) |
+| Controls, Extras | Free the Mouse (`+cursor`), Scoreboard with Mouse (`scores_pick`), Focus (`focus`) |
 
 Left to the console on purpose: the names of sound devices (`cg_voiceCapture`, `cg_voicePlayback`, a menu
 can not list them), addresses (`cg_voiceMasterHost`, `cg_authAgentPath`, `cl_updateURL`), the finer numbers

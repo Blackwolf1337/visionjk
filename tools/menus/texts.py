@@ -132,6 +132,9 @@ TR = {
     'Scoreboard with Mouse': 'Punktetafel mit Maus',
     'Opens the scoreboard with the mouse free: a click on a row opens what you can do with that player.':
         'Öffnet die Punktetafel mit freier Maus: Ein Klick auf eine Zeile öffnet, was Sie mit dem Spieler tun können.',
+    'Focus (Leave Your Body)': 'Fokus (Körper verlassen)',
+    'The world stands still and you leave your body. The same key or Esc brings you back.':
+        'Die Welt steht still und Sie verlassen Ihren Körper. Dieselbe Taste oder Esc bringt Sie zurück.',
     'Holsters': 'Holster',
 
     # display
@@ -368,6 +371,22 @@ CGAME = {
     'Say': 'Sagen',
     'To %s': 'An %s',
     'Open %s ? Enter: yes, any other key: no': '%s öffnen? Enter: ja, jede andere Taste: nein',
+    # Focus (cgame/focus/cg_focus.c): the lines on the screen and what the console says when it can not begin
+    'Focus. %s or Esc: back': 'Fokus. %s oder Esc: zurück',
+    'Focus. Esc: back': 'Fokus. Esc: zurück',
+    'Your body is protected.': 'Ihr Körper ist geschützt.',
+    'A hit on your body brings you back.': 'Ein Treffer auf Ihren Körper holt Sie zurück.',
+    'Your body is not protected.': 'Ihr Körper ist nicht geschützt.',
+    'This server does not protect your body here.': 'Dieser Server schützt Ihren Körper hier nicht.',
+    'Your body is not protected: you were in a fight a moment ago.':
+        'Ihr Körper ist nicht geschützt: Sie waren eben noch im Kampf.',
+    'Your body is not protected: your last time was a moment ago.':
+        'Ihr Körper ist nicht geschützt: Das letzte Mal ist erst einen Moment her.',
+    'Your body is not protected right now.': 'Ihr Körper ist gerade nicht geschützt.',
+    'Focus: only while you play.': 'Fokus: nur während Sie spielen.',
+    'Focus: not now.': 'Fokus: jetzt nicht.',
+    'Focus: not in a duel.': 'Fokus: nicht im Duell.',
+    'Focus: not while a menu is open.': 'Fokus: nicht bei offenem Menü.',
     # the HUD (ui/vision/hud.menu, written by hand: @VISION_SABER, @VISION_ALTERNATE_DIMENSION)
     'Saber': 'Schwert',
     'Alternate Dimension': 'Andere Dimension',

@@ -117,6 +117,14 @@ REFERENCE           OPENS_THE_SCOREBOARD_WITH_THE_MOUSE
 LANG_ENGLISH        "Opens the scoreboard with the mouse free: a click on a row opens what you can do with that player."
 LANG_GERMAN         "Öffnet die Punktetafel mit freier Maus: Ein Klick auf eine Zeile öffnet, was Sie mit dem Spieler tun können."
 
+REFERENCE           FOCUS_LEAVE_YOUR_BODY
+LANG_ENGLISH        "Focus (Leave Your Body)"
+LANG_GERMAN         "Fokus (Körper verlassen)"
+
+REFERENCE           THE_WORLD_STANDS_STILL_AND_YOU_LEAVE
+LANG_ENGLISH        "The world stands still and you leave your body. The same key or Esc brings you back."
+LANG_GERMAN         "Die Welt steht still und Sie verlassen Ihren Körper. Dieselbe Taste oder Esc bringt Sie zurück."
+
 REFERENCE           THE_KEYS_YOU_MOVE_WITH
 LANG_ENGLISH        "The keys you move with."
 LANG_GERMAN         "Die Tasten, mit denen Sie sich bewegen."
@@ -1000,6 +1008,58 @@ LANG_GERMAN         "An %s"
 REFERENCE           OPEN_S_ENTER_YES_ANY_OTHER_KEY_NO
 LANG_ENGLISH        "Open %s ? Enter: yes, any other key: no"
 LANG_GERMAN         "%s öffnen? Enter: ja, jede andere Taste: nein"
+
+REFERENCE           FOCUS_S_OR_ESC_BACK
+LANG_ENGLISH        "Focus. %s or Esc: back"
+LANG_GERMAN         "Fokus. %s oder Esc: zurück"
+
+REFERENCE           FOCUS_ESC_BACK
+LANG_ENGLISH        "Focus. Esc: back"
+LANG_GERMAN         "Fokus. Esc: zurück"
+
+REFERENCE           YOUR_BODY_IS_PROTECTED
+LANG_ENGLISH        "Your body is protected."
+LANG_GERMAN         "Ihr Körper ist geschützt."
+
+REFERENCE           A_HIT_ON_YOUR_BODY_BRINGS_YOU_BACK
+LANG_ENGLISH        "A hit on your body brings you back."
+LANG_GERMAN         "Ein Treffer auf Ihren Körper holt Sie zurück."
+
+REFERENCE           YOUR_BODY_IS_NOT_PROTECTED
+LANG_ENGLISH        "Your body is not protected."
+LANG_GERMAN         "Ihr Körper ist nicht geschützt."
+
+REFERENCE           THIS_SERVER_DOES_NOT_PROTECT_YOUR_BO
+LANG_ENGLISH        "This server does not protect your body here."
+LANG_GERMAN         "Dieser Server schützt Ihren Körper hier nicht."
+
+REFERENCE           YOUR_BODY_IS_NOT_PROTECTED_YOU_WERE
+LANG_ENGLISH        "Your body is not protected: you were in a fight a moment ago."
+LANG_GERMAN         "Ihr Körper ist nicht geschützt: Sie waren eben noch im Kampf."
+
+REFERENCE           YOUR_BODY_IS_NOT_PROTECTED_YOUR_LAST
+LANG_ENGLISH        "Your body is not protected: your last time was a moment ago."
+LANG_GERMAN         "Ihr Körper ist nicht geschützt: Das letzte Mal ist erst einen Moment her."
+
+REFERENCE           YOUR_BODY_IS_NOT_PROTECTED_RIGHT_NOW
+LANG_ENGLISH        "Your body is not protected right now."
+LANG_GERMAN         "Ihr Körper ist gerade nicht geschützt."
+
+REFERENCE           FOCUS_ONLY_WHILE_YOU_PLAY
+LANG_ENGLISH        "Focus: only while you play."
+LANG_GERMAN         "Fokus: nur während Sie spielen."
+
+REFERENCE           FOCUS_NOT_NOW
+LANG_ENGLISH        "Focus: not now."
+LANG_GERMAN         "Fokus: jetzt nicht."
+
+REFERENCE           FOCUS_NOT_IN_A_DUEL
+LANG_ENGLISH        "Focus: not in a duel."
+LANG_GERMAN         "Fokus: nicht im Duell."
+
+REFERENCE           FOCUS_NOT_WHILE_A_MENU_IS_OPEN
+LANG_ENGLISH        "Focus: not while a menu is open."
+LANG_GERMAN         "Fokus: nicht bei offenem Menü."
 
 REFERENCE           SABER
 LANG_ENGLISH        "Saber"

@@ -89,6 +89,12 @@ LANG_ENGLISH        "Scoreboard with Mouse"
 REFERENCE           OPENS_THE_SCOREBOARD_WITH_THE_MOUSE
 LANG_ENGLISH        "Opens the scoreboard with the mouse free: a click on a row opens what you can do with that player."
 
+REFERENCE           FOCUS_LEAVE_YOUR_BODY
+LANG_ENGLISH        "Focus (Leave Your Body)"
+
+REFERENCE           THE_WORLD_STANDS_STILL_AND_YOU_LEAVE
+LANG_ENGLISH        "The world stands still and you leave your body. The same key or Esc brings you back."
+
 REFERENCE           THE_KEYS_YOU_MOVE_WITH
 LANG_ENGLISH        "The keys you move with."
 
@@ -751,6 +757,45 @@ LANG_ENGLISH        "To %s"
 
 REFERENCE           OPEN_S_ENTER_YES_ANY_OTHER_KEY_NO
 LANG_ENGLISH        "Open %s ? Enter: yes, any other key: no"
+
+REFERENCE           FOCUS_S_OR_ESC_BACK
+LANG_ENGLISH        "Focus. %s or Esc: back"
+
+REFERENCE           FOCUS_ESC_BACK
+LANG_ENGLISH        "Focus. Esc: back"
+
+REFERENCE           YOUR_BODY_IS_PROTECTED
+LANG_ENGLISH        "Your body is protected."
+
+REFERENCE           A_HIT_ON_YOUR_BODY_BRINGS_YOU_BACK
+LANG_ENGLISH        "A hit on your body brings you back."
+
+REFERENCE           YOUR_BODY_IS_NOT_PROTECTED
+LANG_ENGLISH        "Your body is not protected."
+
+REFERENCE           THIS_SERVER_DOES_NOT_PROTECT_YOUR_BO
+LANG_ENGLISH        "This server does not protect your body here."
+
+REFERENCE           YOUR_BODY_IS_NOT_PROTECTED_YOU_WERE
+LANG_ENGLISH        "Your body is not protected: you were in a fight a moment ago."
+
+REFERENCE           YOUR_BODY_IS_NOT_PROTECTED_YOUR_LAST
+LANG_ENGLISH        "Your body is not protected: your last time was a moment ago."
+
+REFERENCE           YOUR_BODY_IS_NOT_PROTECTED_RIGHT_NOW
+LANG_ENGLISH        "Your body is not protected right now."
+
+REFERENCE           FOCUS_ONLY_WHILE_YOU_PLAY
+LANG_ENGLISH        "Focus: only while you play."
+
+REFERENCE           FOCUS_NOT_NOW
+LANG_ENGLISH        "Focus: not now."
+
+REFERENCE           FOCUS_NOT_IN_A_DUEL
+LANG_ENGLISH        "Focus: not in a duel."
+
+REFERENCE           FOCUS_NOT_WHILE_A_MENU_IS_OPEN
+LANG_ENGLISH        "Focus: not while a menu is open."
 
 REFERENCE           SABER
 LANG_ENGLISH        "Saber"
