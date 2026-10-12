@@ -1872,6 +1872,16 @@ extern int forcePowerDarkLight[NUM_FORCE_POWERS];
 #define	HYPERSPACE_SPEED			10000.0f//was 30000
 #define	HYPERSPACE_TURN_RATE		45.0f
 
+// Focus of this tree (cgame/focus/cg_focus.c, game/status/g_focus.c): why the body of a player who is out of it is
+// not protected, in the server command "jpfocus 0 <why>"
+typedef enum {
+	FOCUS_ENDED,		// he is back, or it never began
+	FOCUS_OFF,			// not on this server, or not in this kind of game (g_visionFocus)
+	FOCUS_FIGHT,		// he was in a fight a moment ago
+	FOCUS_WAIT,			// his last time was a moment ago
+	FOCUS_NOTNOW		// dead, in a duel, in the air, with a flag
+} focusWhy_t;
+
 extern const char *gametypeStringShort[GT_MAX_GAME_TYPE];
 const char *BG_GetGametypeString( int gametype );
 int BG_GetGametypeForString( const char *gametype );

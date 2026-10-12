@@ -1667,6 +1667,7 @@ static serverCommand_t	commands[] = {
 	{ "ircg",				CG_RestoreClientGhoul_f },
 	{ "jpauth",				CG_AuthServerCommand },
 	{ "jpclient",			CG_PeerServerCommand },
+	{ "jpfocus",			CG_FocusServerCommand },
 	{ "jpstatus",			CG_StatusServerCommand },
 	{ "jpvoice",			CG_VoiceServerCommand },
 	{ "kg2",				CG_KillGhoul2_f },

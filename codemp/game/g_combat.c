@@ -5285,6 +5285,8 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_
 		targ->client->lasthurt_client = attacker->s.number;
 		targ->client->lasthurt_mod = mod;
 	}
+	// and when two players last fought (status/g_focus.c)
+	G_FocusFight( targ, attacker );
 
 	if ( !(dflags & DAMAGE_NO_PROTECTION) )
 	{//protect overridden by no_protection

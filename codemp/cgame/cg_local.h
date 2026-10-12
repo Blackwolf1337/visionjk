@@ -1816,6 +1816,7 @@ void		CG_FocusDraw( void );
 void		CG_FocusScene( void );
 void		CG_FocusTint( void );
 float		CG_FocusMuffle( void );
+void		CG_FocusServerCommand( void );
 
 // hud/cg_hud.c: the numbers of the game by name, for the items of a menu file that show one
 qboolean	CG_StatValue( const char *name, float *value, float *max );

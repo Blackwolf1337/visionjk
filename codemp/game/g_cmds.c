@@ -3749,6 +3749,7 @@ command_t commands[] = {
 	{ "giveother",			Cmd_GiveOther_f,			CMD_CHEAT|CMD_NOINTERMISSION },
 	{ "god",				Cmd_God_f,					CMD_CHEAT|CMD_ALIVE|CMD_NOINTERMISSION },
 	{ "jpauth",				Cmd_JPAuth_f,				0 },
+	{ "jpfocus",			Cmd_JPFocus_f,				0 },
 	{ "jpstatus",			Cmd_JPStatus_f,				0 },
 	{ "jpvoice",			Cmd_JPVoice_f,				0 },
 	{ "kill",				Cmd_Kill_f,					CMD_ALIVE|CMD_NOINTERMISSION },

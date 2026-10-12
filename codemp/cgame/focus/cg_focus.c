@@ -54,7 +54,14 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // one when it begins and when it ends, its loop in between. Chosen by their names, nobody listened yet. The
 // voice chat is not touched.
 //
-// All of it happens in this client. Another client sees a player who stands still.
+// The body. On a server with the game module of this tree it is protected meanwhile (game/status/g_focus.c):
+// where the server info says so (g_visionCaps bit 4) the server is told "jpfocus 1" when the player leaves and
+// "jpfocus 0" when he is back, and it answers with a server command of the same name. The flood protection of
+// a server may drop a command, so each is said again until its answer is there. The line on the screen says
+// what the answer was. On any other server nothing is sent: the body can be hit, and a hit brings one back.
+//
+// Everything else happens in this client. Another client sees a player who stands still, or meditates where the
+// server protects him.
 
 #include "cgame/cg_local.h"
 #include "ui/ui_shared.h"
@@ -69,6 +76,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define FOCUS_SETTLE_MSEC	1000		// the body comes to a stop in this time, where it stands then is its place
 #define FOCUS_KEYS			4			// keys of one command that are looked at
 #define FOCUS_KEY_MSEC		1500		// the key of "focus" ends it after this time even if it was never let go
+#define FOCUS_ASK_MSEC		1300		// a command for the server is said again after this time without an answer,
+#define FOCUS_ASKS			4			//	this often at most
 #define FOCUS_IN_MSEC		550			// the look comes in this time,
 #define FOCUS_OUT_MSEC		320			//	and goes in this one after the world is back
 #define FOCUS_MUFFLE		0.7f		// s_muffle while the look is all there
@@ -109,7 +118,17 @@ typedef struct focus_s {
 	vec3_t		origin, angles, velocity;			// of the camera
 	float		turn[2];				// degrees for a count of the mouse, yaw and pitch
 	int			keys[MOVE_COUNT][FOCUS_KEYS];		// the keys of the movement commands, -1: none
+	qboolean	server;					// this server protects a body
+	int			answer;					// what it said: -1 nothing yet, 0 not protected, 1 protected
+	focusWhy_t	why;					//	and why not
+	int			askMsec, asks;			// "jpfocus 1" and when it was last said
 } focus_t;
+
+// What has to outlast the player's time out of his body: the server still has to hear that he is back.
+static struct {
+	qboolean	owed;					// "jpfocus 0" was not answered yet
+	int			msec, asks;
+} focusBack;
 
 static focus_t		focus;
 static snapshot_t	focusPeek;			// the newest snapshot, looked at and not taken in
@@ -222,6 +241,10 @@ static void Focus_Begin( void ) {
 	VectorCopy( cg.refdef.vieworg, focus.origin );
 	VectorCopy( cg.refdef.viewangles, focus.angles );
 	focus.angles[ROLL] = 0.0f;
+	// the server protects the body where it says that it does
+	focus.server = (qboolean)( ( atoi( Info_ValueForKey( CG_ConfigString( CS_SERVERINFO ), "g_visionCaps" ) ) & 16 ) != 0 );
+	focus.answer = -1;
+	focusBack.owed = qfalse;
 	Focus_FindKeys();
 	// A key that is held stays held for the engine until it is let go: the body would walk on, or strike. Its
 	// buttons are let go for it (a button command without a key lets go of all of them).
@@ -246,6 +269,10 @@ void CG_FocusEnd( void ) {
 	focus.resync = qtrue;
 	focus.endMsec = trap->Milliseconds();
 	focus.lookAtEnd = focus.look;
+	if ( focus.server && focus.asks ) {
+		focusBack.owed = qtrue;
+		focusBack.msec = focusBack.asks = 0;
+	}
 	trap->S_StartLocalSound( Focus_Sound( qfalse ), CHAN_LOCAL_SOUND );
 	if ( !CG_ChatIsOpen() ) {
 		trap->Key_SetCatcher( trap->Key_GetCatcher() & ~KEYCATCH_CGAME );
@@ -290,6 +317,49 @@ void CG_Focus_f( void ) {
 		return;
 	}
 	Focus_Begin();
+}
+
+/*
+=================
+CG_FocusServerCommand
+
+"jpfocus <held> <why>" of the server: the body is protected, or it is not (focusWhy_t)
+=================
+*/
+void CG_FocusServerCommand( void ) {
+	const qboolean	held = (qboolean)( atoi( CG_Argv( 1 ) ) != 0 );
+	const int		why = atoi( CG_Argv( 2 ) );
+
+	if ( !held ) {
+		focusBack.owed = qfalse;
+	}
+	if ( focus.active ) {
+		focus.answer = held ? 1 : 0;
+		focus.why = ( why >= FOCUS_ENDED && why <= FOCUS_NOTNOW ) ? (focusWhy_t)why : FOCUS_NOTNOW;
+	} else if ( held && !focusBack.owed ) {
+		// it protects somebody who is back already: his "jpfocus 0" overtook this answer
+		focusBack.owed = qtrue;
+		focusBack.msec = focusBack.asks = 0;
+	}
+}
+
+// what the server still has to hear: that the body is to be protected, or that its player is back
+static void Focus_Server( int now ) {
+	if ( focus.active && focus.server && focus.answer < 0 && focus.asks < FOCUS_ASKS
+		&& ( !focus.asks || now - focus.askMsec >= FOCUS_ASK_MSEC ) ) {
+		focus.asks++;
+		focus.askMsec = now;
+		trap->SendClientCommand( "jpfocus 1" );
+	} else if ( !focus.active && focusBack.owed && ( !focusBack.asks || now - focusBack.msec >= FOCUS_ASK_MSEC ) ) {
+		if ( focusBack.asks >= FOCUS_ASKS ) {
+			// (the first move of the player ends it for the server too)
+			focusBack.owed = qfalse;
+			return;
+		}
+		focusBack.asks++;
+		focusBack.msec = now;
+		trap->SendClientCommand( "jpfocus 0" );
+	}
 }
 
 // what the newest snapshot says of the body: was it hit, moved, or is the game somewhere else by now
@@ -482,6 +552,8 @@ Once a frame before the scene is rendered: how much of the look it has, and the 
 void CG_FocusScene( void ) {
 	const int now = trap->Milliseconds();
 
+	Focus_Server( now );
+
 	if ( CG_FocusActive() ) {
 		focus.look = Com_Clamp( 0.0f, 1.0f, ( now - focus.startMsec ) / (float)FOCUS_IN_MSEC );
 	} else if ( focus.endMsec ) {
@@ -661,10 +733,30 @@ void CG_FocusDraw( void ) {
 	}
 	key = CG_KeyLabel( trap->Key_GetKey( "focus" ) );
 	text = key ? CG_VisionTextWith( "Focus. %s or Esc: back", key ) : CG_VisionText( "Focus. Esc: back" );
-	CG_Text_Paint( ( SCREEN_WIDTH - CG_Text_Width( text, scale, font ) ) * 0.5f, 452.0f, scale, color, text, 0, 0, 0, font );
+	CG_Text_Paint( ( SCREEN_WIDTH - CG_Text_Width( text, scale, font ) ) * 0.5f, 444.0f, scale, color, text, 0, 0, 0, font );
+
+	// and what happens to the body meanwhile
+	if ( focus.answer > 0 ) {
+		text = CG_VisionText( "Your body is protected." );
+	} else if ( !focus.server || focus.answer < 0 ) {
+		text = CG_VisionText( "A hit on your body brings you back." );
+	} else {
+		static const char *const why[] = {
+			"Your body is not protected.",									// FOCUS_ENDED
+			"This server does not protect your body here.",					// FOCUS_OFF
+			"Your body is not protected: you were in a fight a moment ago.",	// FOCUS_FIGHT
+			"Your body is not protected: your last time was a moment ago.",	// FOCUS_WAIT
+			"Your body is not protected right now.",						// FOCUS_NOTNOW
+		};
+
+		text = CG_VisionText( why[focus.why] );
+	}
+	color[3] = 0.6f;
+	CG_Text_Paint( ( SCREEN_WIDTH - CG_Text_Width( text, scale * 0.85f, font ) ) * 0.5f, 456.0f, scale * 0.85f, color, text, 0, 0, 0, font );
 }
 
 // the cgame was loaded anew, or the level begins anew: in the body
 void CG_FocusInit( void ) {
 	memset( &focus, 0, sizeof( focus ) );
+	memset( &focusBack, 0, sizeof( focusBack ) );
 }

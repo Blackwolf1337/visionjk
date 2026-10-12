@@ -18,7 +18,7 @@
 |---------|---------|
 | server info `jp_cinfo` | bit field of the settings the client needs to predict moves, see below. Built every frame in `g_japlus_misc.c` |
 | server info `jp_DuelAlpha`, `jp_gripSpeedScale`, `jp_forceCombo` | read by the cgame |
-| server info `g_visionCaps` | not from JA+. What this game module does for the clients of this tree: bit 0 chat in UTF-8 per recipient (`JP_ChatFor()`), bit 1 it passes statuses on, bit 2 the key login, bit 3 it tells who plays with a client of this tree and answers `jpstatus all`. Read only |
+| server info `g_visionCaps` | not from JA+. What this game module does for the clients of this tree: bit 0 chat in UTF-8 per recipient (`JP_ChatFor()`), bit 1 it passes statuses on, bit 2 the key login, bit 3 it tells who plays with a client of this tree and answers `jpstatus all`, bit 4 it protects the body of a player who is out of it (Focus). Read only |
 | server command `jpclient <client> <version> [<client> <version> ...]` | not from JA+. With which VisionJK a player plays (`cjp_vision` of his userinfo, letters, digits and `. - _` only), "-" for any other client. Only sent to a client whose userinfo has `cjp_caps` bit 1: one player when his userinfo says something new, everybody in one command as the answer to the client command `jpstatus all`, which a cgame sends once when it has started (at most every two seconds) and which is also answered with the statuses of everybody. See client.md, "Who plays with VisionJK" |
 | server command `jpstatus <client> <away> "<music>"` | not from JA+. What stands above a player's head, see "Statuses" below. Only sent to a client whose userinfo has `cjp_caps` bit 0 |
 | `eFlags` bit 15 `EF_ALT_DIM` | player is in the alternate dimension |
@@ -151,6 +151,34 @@ command `jpstatus music <text>` and end it with `jpstatus none`: at most one eve
 without colours, quotes and control characters. Both are passed on to every client whose cgame asked for
 statuses, and to nobody else, so a legacy client never gets a command it does not know. `jpstatus` is not
 written to the client command log. Not run.
+
+### Focus: the body of a player who is out of it (not from JA+)
+
+`game/status/g_focus.c`, the client part is in [client.md](client.md), "Focus". **Written and built, never run**
+(2026-10-12).
+
+| Cvar | Default | Meaning |
+|------|---------|---------|
+| `g_visionFocus` | 1 | the body of a player in Focus can not be hurt by players: 0 never, 1 in a free for all (as `jp_inactivityProtectTimer`), 2 in every kind of game |
+
+Focus itself happens in the client and needs nothing from a server: the world stands still on its screen while
+the body stands in the level. This game module protects that body. A client asks with the client command
+`jpfocus 1` where it reads bit 4 of `g_visionCaps`, and says `jpfocus 0` when its player is back. The answer is
+the server command `jpfocus <held> <why>`: 1 the body is protected, or 0 with the reason (`focusWhy_t` in
+`bg_public.h`: back, not here, a fight a moment ago, the last time a moment ago, not now).
+
+- It is granted to somebody who stands on the ground alive, in no duel, in no vehicle and with no flag, who
+  was not hit by a player and hit none for five seconds (`G_FocusFight()` in `G_Damage()`), ten seconds after
+  his last time at the earliest. So it is no way out of a fight.
+- While it holds the body has the invulnerability a fresh spawn has (`EF_INVULNERABLE`, renewed with every
+  command of the client), its saber is away and it meditates (`BOTH_MEDITATE`, held as the emotes of JA+ are).
+  What the level does to it, a fall or lava, still hurts.
+- It ends with `jpfocus 0`, with the first move, attack or use of the client (a client in Focus sends none, so
+  that is also the end when its command was dropped by the flood protection), with a duel and with death.
+- The command is open to every client, a legacy one too: typed into the console it protects somebody who
+  stands still under the same rules, which is what the inactivity protection does after its time.
+- A legacy client sees a player who meditates inside the shell of a protected one.
+- For the rules on idle players (`g_inactivity`, `g_afkTime`) the body is idle.
 
 ### Admin login without a password (not from JA+)
 

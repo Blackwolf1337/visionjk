@@ -2106,6 +2106,8 @@ void ClientThink_real( gentity_t *ent ) {
 		if ( !ClientInactivityTimer( client ) ) {
 			return;
 		}
+		// the body of a player who is out of it (Focus, status/g_focus.c)
+		G_FocusThink( ent, ucmd );
 		JP_InactivityProtect( ent );
 	}
 

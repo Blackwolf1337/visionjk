@@ -624,7 +624,13 @@ is then the one of that moment. Nothing of the time in between is played after.
   the level and for this), with the loop of the Force Sight of the game as a hum, and its sound when it
   begins and ends. Chosen by their names, nobody listened. The voice chat is not touched.
 - **Not**: as a spectator, dead, in the air, in a vehicle, zoomed, in a duel, in a demo, with a menu open.
-- **Others** see a player who stands still. Nothing of this reaches another client.
+- **The body.** On a server with the game module of this tree (`g_visionCaps` bit 4) it is protected meanwhile,
+  see [server.md](server.md), "Focus". The client says `jpfocus 1` when its player leaves and `jpfocus 0` when
+  he is back, each again every 1.3 seconds until the server answered (four times at most: the flood
+  protection of a server may drop a command). A second line on the screen says what the answer was: the body is
+  protected, or it is not and why. On any other server nothing is sent and a hit brings the player back.
+- **Others** see a player who stands still, or who meditates where the server protects him. Nothing else of this
+  reaches another client.
 
 ### Admin login with a key
 
