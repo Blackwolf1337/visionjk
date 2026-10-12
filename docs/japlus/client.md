@@ -354,7 +354,12 @@ card says who one is and offers nothing). The key of the scoreboard is held whil
 turns the view, and holding it together with left Alt switches windows on most desktops, so the board can be
 kept: its key pressed twice within 350 ms, or the command `scores_pick` (Controls, Extras, "Scoreboard with
 Mouse"), leaves it standing with the mouse free. The key again, Escape or the right button lets go of it. The
-head of the board says which. `cg_scoresPick 0`: no double tap. On a window that has no room for the card at
+head of the board says which. `cg_scoresPick 0`: no double tap. A press is the key going down: what the system
+sends again while a key is held (key repeat, as `+scores` without a `-scores` between, or as the key itself
+while the cgame has the keys) is none (`CG_ScoresPress()`, `CG_ScoresRelease()`). Until 2026-10-12 it counted,
+so a key that was held was a double tap after a moment, and from then on the repeats kept the board and let go
+of it by turns: the owner saw the board "spamming" while he held Tab. Checked with a script that sends what a
+held key sends (`clienttests/scores_hold.cfg` of the test tools, four pictures, before and after). On a window that has no room for the card at
 the right of the board (4:3) the board stands further left while it is kept. When the level restarts the mouse
 goes back to the game: the board is let go, an open card closes, and a pointer that `cursor` switched on is
 off.

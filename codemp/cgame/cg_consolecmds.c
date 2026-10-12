@@ -93,7 +93,9 @@ CG_ScoresDown_f
 static void CG_ScoresDown_f( void ) {
 
 	// twice quickly keeps the scoreboard open, with the mouse free for its rows (hud/cg_scores.c)
-	CG_ScoresTap();
+	if ( !CG_ScoresPress() ) {
+		return;
+	}
 	CG_BuildSpectatorString();
 	if ( cg.scoresRequestTime + 2000 < cg.time ) {
 		// the scores are more than two seconds out of data,
@@ -121,6 +123,7 @@ CG_ScoresUp_f
 =================
 */
 static void CG_ScoresUp_f( void ) {
+	CG_ScoresRelease();
 	if ( CG_ScoresKept() ) {
 		return;
 	}

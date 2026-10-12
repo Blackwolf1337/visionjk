@@ -75,6 +75,10 @@ typedef struct scoreLine_s {
 static struct {
 	qboolean	kept;					// it stays open with the mouse free
 	int			tapTime;				// when its key was last pressed, by the clock of the system
+	// Its key is held. While a key is held the system sends it again and again (key repeat), as +scores or,
+	// while the cgame has the keys, as the key: none of that is a new press.
+	qboolean	keyDown;
+	qboolean	keyDone;				//	and this press let go of the kept board: it shows nothing until the key is up
 	qboolean	shown;					// it was drawn this frame,
 	float		x, y, w, h;				//	the panel there,
 	struct {
@@ -691,29 +695,56 @@ static qboolean Scores_Keep( void ) {
 
 /*
 =================
-CG_ScoresTap
+CG_ScoresPress
 
-The key of the scoreboard was pressed. Twice quickly keeps the board. qtrue: it is kept from now on.
++scores: the key of the scoreboard is down. A press of it, twice quickly, keeps the board. What a held key sends
+after its press is no press: it used to count as one, so a key that was held was a double tap, and from then on
+kept the board and let go of it by turns for as long as it was held. qfalse: nothing is to be shown for this,
+the press let go of the kept board.
 =================
 */
-qboolean CG_ScoresTap( void ) {
-	const int		now = trap->Milliseconds();
-	const qboolean	twice = (qboolean)( scores.tapTime && now >= scores.tapTime && now - scores.tapTime < SCORES_TAP_MSEC );
+qboolean CG_ScoresPress( void ) {
+	const int	now = trap->Milliseconds();
+	qboolean	twice;
 
+	if ( scores.keyDown ) {
+		return (qboolean)!scores.keyDone;
+	}
+	scores.keyDown = qtrue;
+	scores.keyDone = qfalse;
+	twice = (qboolean)( scores.tapTime && now >= scores.tapTime && now - scores.tapTime < SCORES_TAP_MSEC );
 	scores.tapTime = twice ? 0 : now;
-	return (qboolean)( twice && cg_scoresPick.integer && Scores_Keep() );
+	if ( twice && cg_scoresPick.integer ) {
+		Scores_Keep();
+	}
+	return qtrue;
+}
+
+// -scores: the key is up. The engine says so also while the cgame has the keys.
+void CG_ScoresRelease( void ) {
+	scores.keyDown = scores.keyDone = qfalse;
 }
 
 /*
 =================
 CG_ScoresKeyEvent
 
-A key while the board is kept and no card is open. qtrue: it let go of the board.
+A key while the board is kept and no card is open. qtrue: it was one of the board's (its key, Escape, the right
+button) and let go of it, unless it is the key of the board still held from the press that kept it.
 =================
 */
 qboolean CG_ScoresKeyEvent( int key ) {
-	if ( !scores.kept || ( key != A_ESCAPE && key != A_MOUSE2 && key != trap->Key_GetKey( "+scores" ) ) ) {
+	const qboolean own = (qboolean)( key == trap->Key_GetKey( "+scores" ) );
+
+	if ( !scores.kept || ( key != A_ESCAPE && key != A_MOUSE2 && !own ) ) {
 		return qfalse;
+	}
+	if ( own ) {
+		if ( scores.keyDown ) {
+			return qtrue;
+		}
+		// this press is held too, and what it sends from here on comes as +scores again
+		scores.keyDown = scores.keyDone = qtrue;
 	}
 	CG_ScoresLetGo();
 	return qtrue;
