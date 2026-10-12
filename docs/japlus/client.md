@@ -782,7 +782,9 @@ Limits, said plainly:
   client is in the light temple until the masterserver runs.
 
 On the temple server the cgame draws no fight HUD (votes, who talks, chat and the hint are left), shows every
-player as his own model at once (no deferred load), and the camera goes through the fences nobody sees.
+player as his own model at once (no deferred load), and the camera goes through the fences nobody sees. The
+place itself it draws as any level: what it looks like is in the shader scripts of the map
+([renderer.md](renderer.md), "What only this renderer draws of a level").
 
 ### Admin login with a key
 
