@@ -283,12 +283,12 @@ static const char *Focus_Refused( qboolean temple ) {
 	return NULL;
 }
 
-// How high the ground of the Vision Temple is at a place: the clouds, and the three steps of the podium in its
-// middle. The numbers of gold() in shaders/temple.frag.
+// How high the ground of the Vision Temple is at a place: the clouds, and the five steps of the podium in its
+// middle, each 6 high and 10 deep. The numbers of podium() in shaders/temple.frag.
 static float Temple_Ground( float x, float y ) {
 	const float r = sqrtf( x * x + y * y );
 
-	return r < 110.0f ? 24.0f : r < 140.0f ? 16.0f : r < 170.0f ? 8.0f : 0.0f;
+	return r >= 170.0f ? 0.0f : 6.0f * Q_min( 5.0f, floorf( ( 180.0f - r ) / 10.0f ) );
 }
 
 static void Focus_Begin( qboolean temple ) {

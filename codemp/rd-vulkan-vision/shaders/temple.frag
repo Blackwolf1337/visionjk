@@ -1,12 +1,23 @@
 #version 460
 // The Vision Temple (RE_SetTempleScene, focus/cg_focus.c of the cgame): a place above the clouds that is worked out
-// here for every pixel, nothing of it is a model or a texture. A sea of clouds to walk on, a round podium of gold
-// with pillars around it, rings of light, and a low sun behind the greatest of them. The pass fills the frame of
-// a view without a level before the things of that view are drawn, so what the cgame adds (the others, as wisps)
-// lies on it.
+// here for every pixel, nothing of it is a model or a texture. A sea of clouds with a clearing in it, in the
+// clearing a round podium of gold with groups of columns around it and a way that leads to it, rings of light,
+// and a low sun behind the greatest of them. The pass fills the frame of a view without a level before the
+// things of that view are drawn, so what the cgame adds (the others, as wisps) lies on it.
 //
 // Lengths are units of the game, z is up, the sun stands in +x. The cgame walks on the same places: the podium and
-// how far one can go are numbers in focus/cg_focus.c that have to match the ones here.
+// how far one can go are numbers in focus/cg_focus.c that have to match the ones here (podium(), cloudTop()).
+//
+// How it is made, second version (2026-10-12, the first one looked cheap: fog for clouds, gold without a
+// highlight, rings that were white bands):
+// - The clouds are a volume. Their tops are heights worked out from folded noise, a ray is marched to where it
+//   enters them (in steps as long as what is left above the tops allows) and then through them in short steps,
+//   each lit by whether the way to the sun is free a little further on, until nothing shows through any more.
+// - The gold is a metal: a highlight of the sun by its roughness, the sky and the clouds mirrored in it, the
+//   light of the rings on it, shadows the columns throw on each other, and dark where things meet. Its surface
+//   has flutes and engraved lines that only the shading knows.
+// - A ring is strands of light with heads that run around it and tails behind them, and a glow around all of it.
+// - What is far goes over into a haze, bright things run out softly (a film curve).
 //
 // VIEW: 0: xyz the eye, w seconds. 1: xyz where it looks, w how much of the place is there, 0 to 1 (it comes out
 // of light). 2: xyz to the right, as long as the tangent of half the angle of view. 3: xyz up, the same.
@@ -26,13 +37,24 @@ VARYING( 0 ) in vec2 v_texCoord;
 layout( location = 0 ) out vec4 o_color;
 
 const vec3	SUN = vec3( 0.99504, 0.0, 0.09950 );
-const float	SECTOR = 0.5235988;			// the pillars stand in twelve groups around the podium
+const vec3	SUN_LIGHT = vec3( 2.6, 1.55, 0.80 );		// what it gives to what it shines on
+const vec3	GOLD = vec3( 1.0, 0.71, 0.29 );				// what the metal mirrors, head on
+const float	SECTOR = 0.5235988;							// the columns stand in twelve groups around the podium
 const vec3	RING_GREAT = vec3( 340.0, 0.0, 175.0 );
 const vec3	RING_LEFT = vec3( 150.0, 430.0, 135.0 );
 const vec3	RING_RIGHT = vec3( 150.0, -430.0, 135.0 );
 const vec3	RING_HALO = vec3( 0.0, 0.0, 330.0 );
 const vec3	AXIS_LEFT = vec3( 0.5, 0.8660254, 0.0 );
 const vec3	AXIS_RIGHT = vec3( 0.5, -0.8660254, 0.0 );
+const float	CLOUD_ROOF = 250.0;							// no cloud is higher than this
+
+/*
+===============================================================================
+
+Noise
+
+===============================================================================
+*/
 
 float hash( vec2 p ) {
 	p = fract( p * vec2( 0.1031, 0.1030 ) );
@@ -49,8 +71,13 @@ float noise( vec2 p ) {
 		mix( hash( i + vec2( 0.0, 1.0 ) ), hash( i + vec2( 1.0, 1.0 ) ), f.x ), f.y );
 }
 
-// layers of it, each twice as fine and half as strong: 0 to 1
-float clouds( vec2 p, int layers ) {
+// from one layer to the next: twice as fine, and turned, so the grid of the noise does not show
+vec2 finer( vec2 p ) {
+	return vec2( 1.6 * p.x - 1.2 * p.y, 1.2 * p.x + 1.6 * p.y ) + vec2( 7.3, 2.9 );
+}
+
+// layers of noise, each half as strong as the one before: 0 to 1
+float layered( vec2 p, int layers ) {
 	float sum = 0.0;
 	float part = 0.5;
 	float all = 0.0;
@@ -58,11 +85,177 @@ float clouds( vec2 p, int layers ) {
 	for ( int i = 0; i < layers; i++ ) {
 		sum += part * noise( p );
 		all += part;
-		p = p * 2.03 + vec2( 17.0, 9.0 );
+		p = finer( p );
 		part *= 0.5;
 	}
 	return sum / all;
 }
+
+// the same folded: round heaps with creases between them, as a cloud has them. 0 to 1.
+float heaped( vec2 p, int layers ) {
+	float sum = 0.0;
+	float part = 0.5;
+	float all = 0.0;
+
+	for ( int i = 0; i < layers; i++ ) {
+		sum += part * abs( 2.0 * noise( p ) - 1.0 );
+		all += part;
+		p = finer( p );
+		part *= 0.54;
+	}
+	return sum / all;
+}
+
+/*
+===============================================================================
+
+The sky
+
+===============================================================================
+*/
+
+// how much a direction looks towards the side of the sun, 0 to 1
+float sunward( vec3 rd ) {
+	float s = 0.5 + 0.5 * rd.x / max( length( rd.xy ), 0.0001 );
+
+	return s * s;
+}
+
+// the haze where the sky meets the clouds: gold towards the sun, a cool grey away from it
+vec3 haze( vec3 rd ) {
+	return mix( vec3( 0.075, 0.09, 0.13 ), vec3( 0.58, 0.20, 0.04 ), sunward( rd ) );
+}
+
+// The sky in a direction. fine: with its clouds and stars, which a mirror of rough gold does not show.
+vec3 sky( vec3 rd, float seconds, bool fine ) {
+	float up = max( rd.z, 0.0 );
+	float mu = max( dot( rd, SUN ), 0.0 );
+	float side = sunward( rd );
+	vec3 c = mix( haze( rd ), mix( vec3( 0.07, 0.025, 0.05 ), vec3( 0.30, 0.065, 0.010 ), side ), smoothstep( 0.0, 0.26, up ) );
+
+	c = mix( c, vec3( 0.006, 0.006, 0.020 ), smoothstep( 0.16, 0.74, up ) );
+	if ( fine && rd.z > 0.01 ) {
+		// a plane far above, a little bent down towards the horizon so it does not run out in a line
+		vec2 uv = rd.xy / ( rd.z + 0.14 );
+		// Clouds in the sky: many layers of noise, so their edges are ragged down to the pixel. The side of a
+		// heap that faces the sun burns, the other one is dark, and where a cloud is thin the light of the sun
+		// comes through it when it stands behind.
+		vec2 at = uv * 0.50 + vec2( seconds * 0.005, 0.0 ) + 0.25 * vec2( noise( uv * 0.7 + 3.1 ), noise( uv * 0.7 + 8.4 ) );
+		float f = layered( at, 6 );
+		float cover = smoothstep( 0.50, 0.66, f );
+		float facing = smoothstep( -0.015, 0.075, f - layered( at + vec2( 0.11, 0.0 ), 4 ) );
+		float thin = cover * ( 1.0 - smoothstep( 0.52, 0.78, f ) );
+		vec3 fire = mix( vec3( 0.11, 0.028, 0.020 ) * ( 0.45 + side ), vec3( 1.45, 0.46, 0.07 ) * ( 0.18 + 0.42 * side + 0.45 * mu * mu ), facing );
+
+		fire += vec3( 1.9, 0.92, 0.26 ) * thin * ( 0.04 + 0.16 * side + 0.85 * mu * mu * mu );
+		vec2 cell = floor( uv * 150.0 );
+		float star = step( 0.9955, hash( cell ) ) * smoothstep( 0.30, 0.70, up ) * ( 1.0 - cover );
+
+		c += vec3( 0.9, 0.85, 0.8 ) * star * ( 0.45 + 0.55 * sin( seconds * 2.0 + hash( cell + 3.0 ) * 40.0 ) );
+		// a breath of colour in the dark between the stars
+		c += vec3( 0.05, 0.02, 0.07 ) * smoothstep( 0.45, 0.8, layered( uv * 0.35 + 9.0, 3 ) ) * smoothstep( 0.3, 0.8, up );
+		c = mix( c, fire, cover * smoothstep( 0.01, 0.14, rd.z ) * 0.94 );
+	}
+	// the sun: its disc, the light around it, rays of it through the haze, and a streak of it along the horizon
+	float around = atan( rd.z - SUN.z, rd.y );
+	float rays = fine ? noise( vec2( around * 5.0, seconds * 0.04 ) ) * noise( vec2( around * 13.0 + 4.0, seconds * 0.03 ) ) : 0.25;
+
+	c += vec3( 1.0, 0.46, 0.13 ) * pow( mu, 14.0 ) * ( 0.05 + 0.45 * rays );
+	c += vec3( 1.0, 0.78, 0.46 ) * pow( mu, 150.0 ) * 0.9;
+	c += vec3( 1.0, 0.95, 0.85 ) * pow( mu, 1400.0 ) * 18.0;
+	c += vec3( 1.0, 0.66, 0.30 ) * exp( -abs( rd.z - SUN.z ) * 90.0 ) * pow( mu, 20.0 ) * 0.35;
+	return c;
+}
+
+/*
+===============================================================================
+
+The clouds
+
+===============================================================================
+*/
+
+// How high the clouds stand at a place, and in heap how high that is among what they can be there, 0 to 1 (their
+// hollows are 0). Around the temple they are low heaps one can walk between, never over the way and the podium;
+// farther out they pile up as high as towers.
+float cloudTop( vec2 xy, float seconds, int layers, out float heap ) {
+	float far = smoothstep( 470.0, 1350.0, length( xy ) );
+	vec2 drift = vec2( seconds * 0.004, seconds * 0.0015 );
+	float low = far < 1.0 ? heaped( xy * 0.0044 + drift * 2.0, layers ) : 0.0;
+	float high = far > 0.0 ? heaped( xy * 0.0018 + drift + 5.0, layers ) : 0.0;
+
+	heap = mix( low, high, far );
+	return mix( -52.0 + 52.0 * low, -90.0 + 350.0 * high * high, far );
+}
+
+// The clouds between the eye and tMax: their light in rgb, already weighed by what covers it, and in a how much
+// of what is behind them still shows. jitter: 0 to 1, another one for every pixel, so the steps do not show
+// as bands.
+// the small stuff of a cloud at a place: what crinkles its edge like a cauliflower. About -0.5 to 0.5.
+float crinkle( vec3 p ) {
+	vec2 q = p.xy * 0.050 + p.z * vec2( 0.031, 0.043 );
+
+	return 0.62 * noise( q ) + 0.38 * noise( q * 2.3 + 11.0 ) - 0.5;
+}
+
+vec4 clouds( vec3 ro, vec3 rd, float tMax, float seconds, float jitter ) {
+	float tEnd = rd.z > 0.0001 ? min( tMax, ( CLOUD_ROOF - ro.z ) / rd.z ) : tMax;
+	float t = 2.0 + 8.0 * jitter;
+	float through = 1.0;
+	vec3 light = vec3( 0.0 );
+	float mu = max( dot( rd, SUN ), 0.0 );
+	vec3 far = haze( rd );
+	// seen against the sun a cloud shines through at its edges
+	float forward = 0.75 + 1.5 * pow( mu, 5.0 );
+	float heap, heapSun;
+
+	for ( int i = 0; i < 64; i++ ) {
+		if ( t > tEnd || through < 0.03 ) {
+			break;
+		}
+		vec3 p = ro + rd * t;
+		int layers = t > 4200.0 ? 3 : ( t > 1500.0 ? 4 : 5 );
+		float soft = 9.0 + t * 0.014;
+		float above = p.z - cloudTop( p.xy, seconds, layers, heap );
+
+		if ( above > soft + 8.0 ) {
+			// nothing here: on by a part of what is left above the tops, which are steep
+			t += max( ( above - soft - 8.0 ) * 0.34, 3.0 + t * 0.012 );
+			continue;
+		}
+		// (near by the edge of a cloud is crinkled, far away that is finer than a pixel)
+		float fray = t < 1800.0 ? crinkle( p ) : 0.0;
+
+		above += fray * 15.0;
+		float dense = clamp( ( soft - above ) / ( 2.0 * soft ), 0.0, 1.0 );
+		float pace = 4.0 + t * 0.022;
+		// Is the way to the sun free a little further on, or is a heap in it? The sun stands low: what is
+		// higher than the ray there by a hand's breadth shades this place.
+		vec3 q = p + SUN * ( 64.0 + t * 0.04 );
+		float shade = smoothstep( -5.0, 9.0 + t * 0.01, cloudTop( q.xy, seconds, 3, heapSun ) - q.z );
+		// what the sun gives, what the sky gives from above, and less of both deep inside and in the hollows
+		vec3 lit = vec3( 1.30, 0.80, 0.46 ) * ( 1.0 - shade ) * forward * ( 0.30 + 0.70 * ( 1.0 - dense ) )
+			* ( 0.42 + 0.95 * heap ) * ( 1.0 - 1.2 * fray );
+		float open = clamp( 0.5 + above / ( 2.0 * soft ), 0.0, 1.0 ) * ( 0.22 + 0.78 * smoothstep( 0.04, 0.50, heap ) );
+		float cover = 1.0 - exp( -dense * dense * pace * 0.13 );
+
+		lit += mix( vec3( 0.035, 0.018, 0.024 ), vec3( 0.22, 0.14, 0.17 ), open );
+		// far away it goes over into the haze
+		lit = mix( lit, far, 1.0 - exp( -t / 4200.0 ) );
+		light += through * cover * lit;
+		through *= 1.0 - cover;
+		t += pace;
+	}
+	return vec4( light, through );
+}
+
+/*
+===============================================================================
+
+What is of gold
+
+===============================================================================
+*/
 
 // an upright cylinder that stands on z 0 and is h high
 float cylinder( vec3 p, float r, float h ) {
@@ -77,24 +270,45 @@ float slab( vec3 p, vec3 half_ ) {
 	return min( max( d.x, max( d.y, d.z ) ), 0.0 ) + length( max( d, 0.0 ) );
 }
 
-// a ring of radius R around the origin, in the plane across axis
-float ring( vec3 p, vec3 axis, float R, float r ) {
-	float along = dot( p, axis );
-
-	return length( vec2( along, length( p - along * axis ) - R ) ) - r;
+// a column: a shaft with a ball on its top
+float column( vec3 p, float r, float h ) {
+	return min( cylinder( p, r, h ), length( p - vec3( 0.0, 0.0, h + r * 0.5 ) ) - r * 1.3 );
 }
 
-// a spire that stands on z 0 and is h high: r thick at its foot, a needle at its top. (Not the true distance,
-// a little less: the march takes shorter steps for it.)
-float spire( vec3 p, float r, float h ) {
-	float thin = clamp( 1.0 - p.z / h, 0.0, 1.0 );
-	float d = length( p.xy ) - r * ( 0.12 + 0.88 * thin * thin );
+// The podium: five round steps, each 6 high and 10 deep, the top one 130 wide. (Temple_Ground() of the cgame.)
+float podium( vec3 p ) {
+	float r = length( p.xy );
+	float d = 1.0e9;
 
-	return max( d, max( p.z - h, -p.z ) ) * 0.8;
+	if ( r > 190.0 ) {
+		return r - 172.0;
+	}
+	for ( int i = 0; i < 5; i++ ) {
+		float high = 3.0 * float( i + 1 );
+		vec2 q = abs( vec2( r, p.z - high ) ) - vec2( 170.0 - 10.0 * float( i ), high );
+
+		d = min( d, min( max( q.x, q.y ), 0.0 ) + length( max( q, 0.0 ) ) );
+	}
+	return d - 0.5;
 }
 
-// the spires of one group, and no group on the way in and before the great ring
-float pillars( vec3 p ) {
+// the way to it, with a kerb at each side
+float way( vec3 p ) {
+	vec3 q = vec3( p.x + 345.0, abs( p.y ), p.z );
+
+	return min( slab( q - vec3( 0.0, 0.0, 1.0 ), vec3( 175.0, 26.0, 1.5 ) ),
+		slab( q - vec3( 0.0, 27.5, 2.5 ), vec3( 175.0, 2.0, 3.0 ) ) - 0.4 );
+}
+
+// the columns of one group, and no group on the way in and before the great ring
+float columns( vec3 p ) {
+	float r = length( p.xy );
+	// they stand in a band around the podium: away from it this is as good as their distance
+	float band = max( 222.0 - r, r - 312.0 );
+
+	if ( band > 24.0 ) {
+		return band;
+	}
 	float sector = floor( atan( p.y, p.x ) / SECTOR + 0.5 );
 
 	if ( abs( sector ) < 0.5 || abs( sector ) > 5.5 ) {
@@ -104,77 +318,69 @@ float pillars( vec3 p ) {
 	float s = sin( sector * SECTOR );
 	vec3 q = vec3( c * p.x + s * p.y, c * p.y - s * p.x, p.z );
 	float tall = 0.7 + 0.7 * hash( vec2( sector + 20.0, 7.0 ) );
-	float d = spire( q - vec3( 255.0, 0.0, 0.0 ), 7.0, 270.0 * tall );
+	float d = column( q - vec3( 255.0, 0.0, 0.0 ), 6.5, 270.0 * tall );
 
-	d = min( d, spire( q - vec3( 272.0, 15.0, 0.0 ), 5.5, 190.0 * tall ) );
-	d = min( d, spire( q - vec3( 240.0, -13.0, 0.0 ), 5.0, 150.0 * tall ) );
-	d = min( d, spire( q - vec3( 286.0, -9.0, 0.0 ), 4.5, 110.0 * tall ) );
-	d = min( d, spire( q - vec3( 262.0, -24.0, 0.0 ), 4.0, 80.0 * tall ) );
-	return min( d, spire( q - vec3( 246.0, 22.0, 0.0 ), 3.5, 56.0 * tall ) );
+	d = min( d, column( q - vec3( 272.0, 15.0, 0.0 ), 5.5, 196.0 * tall ) );
+	d = min( d, column( q - vec3( 240.0, -13.0, 0.0 ), 5.0, 150.0 * tall ) );
+	d = min( d, column( q - vec3( 286.0, -9.0, 0.0 ), 4.5, 118.0 * tall ) );
+	d = min( d, column( q - vec3( 262.0, -24.0, 0.0 ), 4.5, 88.0 * tall ) );
+	d = min( d, column( q - vec3( 246.0, 22.0, 0.0 ), 4.0, 62.0 * tall ) );
+	return min( d, column( q - vec3( 297.0, 10.0, 0.0 ), 3.5, 42.0 * tall ) );
 }
 
-// what is of gold: the podium in three steps, the way to it, the pillars
+// and a small group under each of the two rings at the sides
+float sideColumns( vec3 p ) {
+	vec3 q = vec3( p.x - 150.0, abs( p.y ) - 430.0, p.z );
+	float r = length( q.xy );
+
+	if ( r > 60.0 ) {
+		return r - 36.0;
+	}
+	float d = column( q, 5.0, 86.0 );
+
+	d = min( d, column( q - vec3( 14.0, 6.0, 0.0 ), 4.0, 58.0 ) );
+	d = min( d, column( q - vec3( -12.0, 9.0, 0.0 ), 4.0, 68.0 ) );
+	d = min( d, column( q - vec3( 6.0, -13.0, 0.0 ), 3.5, 42.0 ) );
+	return min( d, column( q - vec3( -9.0, -10.0, 0.0 ), 3.5, 30.0 ) );
+}
+
 float gold( vec3 p ) {
-	float d = cylinder( p, 170.0, 8.0 );
-
-	d = min( d, cylinder( p, 140.0, 16.0 ) );
-	d = min( d, cylinder( p, 110.0, 24.0 ) );
-	d = min( d, slab( p - vec3( -345.0, 0.0, 1.0 ), vec3( 175.0, 26.0, 1.5 ) ) );
-	return min( d, pillars( p ) );
-}
-
-// each ring is two, a thin one inside the other
-float rings( vec3 p ) {
-	float d = ring( p - RING_GREAT, vec3( 1.0, 0.0, 0.0 ), 190.0, 4.5 );
-
-	d = min( d, ring( p - RING_GREAT, vec3( 1.0, 0.0, 0.0 ), 174.0, 1.6 ) );
-	d = min( d, ring( p - RING_LEFT, AXIS_LEFT, 118.0, 3.4 ) );
-	d = min( d, ring( p - RING_LEFT, AXIS_LEFT, 107.0, 1.2 ) );
-	d = min( d, ring( p - RING_RIGHT, AXIS_RIGHT, 118.0, 3.4 ) );
-	d = min( d, ring( p - RING_RIGHT, AXIS_RIGHT, 107.0, 1.2 ) );
-	return min( d, ring( p - RING_HALO, vec3( 0.0, 0.0, 1.0 ), 105.0, 2.6 ) );
+	return min( min( podium( p ), way( p ) ), min( columns( p ), sideColumns( p ) ) );
 }
 
 vec3 goldNormal( vec3 p ) {
-	const vec2 e = vec2( 0.35, -0.35 );
+	const vec2 e = vec2( 0.25, -0.25 );
 
 	return normalize( e.xyy * gold( p + e.xyy ) + e.yyx * gold( p + e.yyx ) + e.yxy * gold( p + e.yxy ) + e.xxx * gold( p + e.xxx ) );
 }
 
-// the sky in a direction: the light of the sun low in +x, clouds that burn in it, stars where it is dark
-vec3 sky( vec3 rd, float seconds ) {
-	float up = clamp( rd.z, 0.0, 1.0 );
-	float toSun = max( dot( rd, SUN ), 0.0 );
-	vec3 c = mix( vec3( 1.0, 0.50, 0.13 ), vec3( 0.66, 0.20, 0.04 ), smoothstep( 0.0, 0.22, up ) );
+/*
+===============================================================================
 
-	c = mix( c, vec3( 0.07, 0.03, 0.06 ), smoothstep( 0.16, 0.80, up ) );
-	if ( rd.z > 0.015 ) {
-		vec2 uv = rd.xy / rd.z;
-		float billow = clouds( uv * 1.1 + vec2( seconds * 0.004, 0.0 ), 5 );
-		float cover = smoothstep( 0.44, 0.74, billow ) * smoothstep( 0.015, 0.16, rd.z );
-		// the clouds burn where the sun is near and glow dark red away from it, bright at their edges
-		vec3 lit = mix( vec3( 0.78, 0.20, 0.03 ), vec3( 1.0, 0.70, 0.30 ), pow( toSun, 2.5 ) );
-		vec2 cell = floor( uv * 140.0 );
-		float star = step( 0.9960, hash( cell ) ) * smoothstep( 0.30, 0.75, up );
+The rings
 
-		lit *= 0.62 + 0.75 * smoothstep( 0.74, 0.50, billow );
-		c += vec3( 1.0, 0.95, 0.85 ) * star * ( 0.5 + 0.5 * sin( seconds * 2.0 + hash( cell + 3.0 ) * 40.0 ) );
-		c = mix( c, lit, cover * 0.85 );
-	}
-	// the sun, the light around it, and rays of it through the haze
-	vec3 side = vec3( 0.0, 1.0, 0.0 );
-	vec3 over = cross( SUN, side );
-	float around = atan( dot( rd, over ), dot( rd, side ) );
-	float rays = noise( vec2( around * 7.0, seconds * 0.05 ) ) * noise( vec2( around * 19.0 + 4.0, seconds * 0.03 ) );
+===============================================================================
+*/
 
-	c += vec3( 1.0, 0.62, 0.24 ) * pow( toSun, 10.0 ) * ( 0.22 + 0.85 * rays );
-	c += vec3( 1.0, 0.86, 0.60 ) * pow( toSun, 110.0 ) * 1.2;
-	c += vec3( 1.0, 1.0, 0.94 ) * pow( toSun, 1100.0 ) * 6.0;
-	return c;
+// a ring of radius R around the origin, in the plane across axis
+float ring( vec3 p, vec3 axis, float R, float r ) {
+	float along = dot( p, axis );
+
+	return length( vec2( along, length( p - along * axis ) - R ) ) - r;
 }
 
-// The light around a ring, and a shimmer inside it, as the ray goes through its plane. tMax: where the ray ends.
-vec3 ringLight( vec3 ro, vec3 rd, float tMax, vec3 center, vec3 axis, float R, float seconds ) {
+// how far it is to the line in the middle of the nearest ring
+float rings( vec3 p ) {
+	float d = ring( p - RING_GREAT, vec3( 1.0, 0.0, 0.0 ), 190.0, 0.0 );
+
+	d = min( d, ring( p - RING_LEFT, AXIS_LEFT, 118.0, 0.0 ) );
+	d = min( d, ring( p - RING_RIGHT, AXIS_RIGHT, 118.0, 0.0 ) );
+	return min( d, ring( p - RING_HALO, vec3( 0.0, 0.0, 1.0 ), 105.0, 0.0 ) );
+}
+
+// The strands of light of a ring, where the ray goes through its plane before tMax: each with a head that runs
+// around it and a tail behind the head, some one way and some the other, and a glow around all of them.
+vec3 strands( vec3 ro, vec3 rd, float tMax, vec3 center, vec3 axis, float R, float seconds, float seed ) {
 	float along = dot( rd, axis );
 
 	if ( abs( along ) < 0.0001 ) {
@@ -187,20 +393,43 @@ vec3 ringLight( vec3 ro, vec3 rd, float tMax, vec3 center, vec3 axis, float R, f
 	}
 	vec3 p = ro + rd * t - center;
 	float r = length( p );
-	float d = abs( r - R );
-	float d2 = abs( r - R * 0.915 );
-	// where on the ring: light wanders around it, one way on the outer line and the other way on the inner one
+
+	if ( r > R * 1.6 ) {
+		return vec3( 0.0 );
+	}
 	vec3 u = normalize( cross( axis, vec3( 0.0, 0.0, 1.0 ) + axis.zxy * 0.001 ) );
 	float where = atan( dot( p, cross( axis, u ) ), dot( p, u ) );
-	float wander = 0.55 + 0.9 * pow( 0.5 + 0.5 * sin( where * 2.0 - seconds * 0.7 ), 3.0 );
-	float wander2 = 0.45 + 1.1 * pow( 0.5 + 0.5 * sin( where * 3.0 + seconds * 1.1 ), 4.0 );
-	float glow = wander * ( 1.1 * exp( -d * 0.20 ) + 0.42 * exp( -d * 0.035 ) ) + wander2 * 0.6 * exp( -d2 * 0.45 );
-	float inside = smoothstep( R, R * 0.2, r ) * 0.09 * ( 0.6 + 0.4 * noise( p.yz * 0.05 + p.xy * 0.05 + seconds * 0.3 ) );
+	float core = 0.0;
+	float glow = 0.0;
 
-	return vec3( 1.0, 0.80, 0.45 ) * glow + vec3( 1.0, 0.90, 0.68 ) * inside;
+	for ( int i = 0; i < 6; i++ ) {
+		float fi = float( i );
+		float back = mod( fi, 2.0 ) > 0.5 ? -1.0 : 1.0;
+		// where this strand runs: around the ring, in and out of it, so the strands cross each other
+		float ri = R * ( 0.90 + 0.030 * fi ) + R * 0.028 * sin( where * ( 2.0 + fi ) + back * seconds * ( 0.25 + 0.06 * fi ) + fi * 1.9 + seed );
+		float d = abs( r - ri );
+		float run = fract( where / 6.28318 * ( 1.0 + mod( fi, 3.0 ) ) + back * seconds * ( 0.045 + 0.017 * fi ) + fi * 0.37 + seed );
+		float tail = 0.22 + 0.78 * run * run * run;
+
+		core += tail * exp( -d * d * 0.30 );
+		glow += tail * ( 0.75 / ( 1.0 + d * d * 0.010 ) + 0.22 / ( 1.0 + d * 0.05 ) );
+	}
+	// sparks on the strands, and a shimmer in the middle of the ring
+	float spark = step( 0.93, noise( vec2( where * 40.0 + seed * 9.0, floor( seconds * 6.0 ) ) ) ) * exp( -abs( r - R ) * 0.12 );
+	float inside = smoothstep( R * 0.9, R * 0.1, r ) * ( 0.035 + 0.035 * noise( vec2( where * 3.0, r * 0.04 - seconds * 0.4 ) ) );
+
+	return vec3( 1.0, 0.74, 0.30 ) * ( core * 2.4 + spark * 2.2 ) + vec3( 1.0, 0.34, 0.045 ) * glow * 0.30 + vec3( 1.0, 0.75, 0.40 ) * inside;
 }
 
-// the curtain of light that falls from the halo over the podium: where the ray goes through it
+// all four of them, as a ray sees them up to tMax
+vec3 ringLight( vec3 ro, vec3 rd, float tMax, float seconds ) {
+	return strands( ro, rd, tMax, RING_GREAT, vec3( 1.0, 0.0, 0.0 ), 190.0, seconds, 0.0 )
+		+ strands( ro, rd, tMax, RING_LEFT, AXIS_LEFT, 118.0, seconds, 2.1 ) * 0.85
+		+ strands( ro, rd, tMax, RING_RIGHT, AXIS_RIGHT, 118.0, seconds, 4.3 ) * 0.85
+		+ strands( ro, rd, tMax, RING_HALO, vec3( 0.0, 0.0, 1.0 ), 105.0, seconds, 6.2 ) * 0.9;
+}
+
+// the light that falls in threads from the halo onto the podium: where the ray goes through that curtain
 float curtain( vec3 ro, vec3 rd, float tMax, float seconds ) {
 	float a = dot( rd.xy, rd.xy );
 	float b = dot( ro.xy, rd.xy );
@@ -218,19 +447,17 @@ float curtain( vec3 ro, vec3 rd, float tMax, float seconds ) {
 		if ( t > 0.0 && t < tMax ) {
 			vec3 p = ro + rd * t;
 
-			if ( p.z > 24.0 && p.z < 330.0 ) {
-				float streak = noise( vec2( atan( p.y, p.x ) * 22.0, p.z * 0.01 - seconds * 0.35 ) );
+			if ( p.z > 30.0 && p.z < 330.0 ) {
+				float where = atan( p.y, p.x ) * 34.0;
+				// thin threads, each as bright as it is, with drops of light that fall along them
+				float thread = pow( noise( vec2( where, 3.0 ) ), 4.0 );
+				float drops = 0.35 + 0.65 * noise( vec2( where, p.z * 0.035 + seconds * 1.1 + hash( vec2( floor( where ), 1.0 ) ) * 9.0 ) );
 
-				light += streak * streak * smoothstep( 24.0, 120.0, p.z ) * 0.16;
+				light += thread * drops * pow( smoothstep( 30.0, 330.0, p.z ), 1.4 );
 			}
 		}
 	}
 	return light;
-}
-
-// how high the clouds of the floor stand at a place: a little under the feet and down from there
-float floorHeight( vec2 xy, float seconds, int layers ) {
-	return -30.0 + 34.0 * clouds( xy * 0.0034 + vec2( seconds * 0.006, seconds * 0.002 ), layers );
 }
 
 // the light that stands over the middle of the podium: how near the ray comes to that line
@@ -243,7 +470,113 @@ float beam( vec3 ro, vec3 rd, float tMax ) {
 	float t = clamp( -dot( ro.xy, rd.xy ) / along, 0.0, tMax );
 	vec3 p = ro + rd * t;
 
-	return exp( -length( p.xy ) * 0.055 ) * smoothstep( 20.0, 90.0, p.z ) * smoothstep( 520.0, 200.0, p.z );
+	return exp( -length( p.xy ) * 0.05 ) * smoothstep( 26.0, 90.0, p.z ) * smoothstep( 520.0, 200.0, p.z );
+}
+
+/*
+===============================================================================
+
+The gold, lit
+
+===============================================================================
+*/
+
+// how much of the sun reaches a place on the gold: the columns throw long shadows, it stands low
+float sunShadow( vec3 p ) {
+	float t = 3.0;
+	float lit = 1.0;
+
+	for ( int i = 0; i < 14; i++ ) {
+		float d = gold( p + SUN * t );
+
+		lit = min( lit, 9.0 * d / t );
+		if ( lit < 0.02 || t > 420.0 ) {
+			break;
+		}
+		t += clamp( d, 3.0, 50.0 );
+	}
+	return clamp( lit, 0.0, 1.0 );
+}
+
+// dark where things stand close to each other
+float nearness( vec3 p, vec3 n ) {
+	float dark = 0.0;
+
+	dark += ( 2.5 - gold( p + n * 2.5 ) ) * 0.20;
+	dark += ( 8.0 - gold( p + n * 8.0 ) ) * 0.07;
+	dark += ( 22.0 - gold( p + n * 22.0 ) ) * 0.025;
+	return clamp( 1.0 - dark, 0.0, 1.0 );
+}
+
+vec3 goldLit( vec3 p, vec3 rd, float seconds ) {
+	vec3 n = goldNormal( p );
+	float r = length( p.xy );
+	float rough = 0.24;
+
+	// What only the shading knows of the surface. Upright faces have flutes: the columns sixteen each, the
+	// steps of the podium many fine ones. Faces that lie flat have lines engraved: rings and rays on the
+	// podium, bars across the way.
+	if ( abs( n.z ) < 0.6 ) {
+		float turn = ( r < 176.0 ? 0.20 * cos( atan( p.y, p.x ) * 140.0 ) : 0.30 * cos( atan( n.y, n.x ) * 16.0 ) );
+
+		n.xy = vec2( n.x * cos( turn ) - n.y * sin( turn ), n.x * sin( turn ) + n.y * cos( turn ) );
+	} else if ( n.z > 0.6 ) {
+		if ( p.x < -172.0 && r > 172.0 ) {
+			n.x += 0.10 * cos( p.x * 0.42 );
+		} else {
+			vec2 out_ = p.xy / max( r, 0.001 );
+
+			n.xy += out_ * 0.09 * cos( r * 0.9 ) + vec2( -out_.y, out_.x ) * 0.05 * cos( atan( p.y, p.x ) * 36.0 ) * smoothstep( 20.0, 60.0, r );
+		}
+		rough = 0.30;
+	}
+	n = normalize( n );
+	// (worn here and polished there)
+	rough += 0.10 * noise( p.xy * 0.11 + p.z * 0.07 );
+
+	vec3 v = -rd;
+	float nv = max( dot( n, v ), 0.03 );
+	float nl = max( dot( n, SUN ), 0.0 );
+	vec3 h = normalize( SUN + v );
+	float nh = max( dot( n, h ), 0.0 );
+	float a = rough * rough;
+	float a2 = a * a;
+	float spread = nh * nh * ( a2 - 1.0 ) + 1.0;
+	float k = a * 0.5;
+	// the highlight of the sun: how many of its small mirrors face the middle between sun and eye, how many
+	// of them hide each other, and how much more a metal mirrors at a flat angle
+	float mirrors = a2 / ( 3.14159 * spread * spread ) * 0.25 / ( ( nl * ( 1.0 - k ) + k ) * ( nv * ( 1.0 - k ) + k ) );
+	vec3 flat_ = GOLD + ( 1.0 - GOLD ) * pow( 1.0 - max( dot( v, h ), 0.0 ), 5.0 );
+	float sun = nl > 0.0 ? sunShadow( p + n * 0.6 ) : 0.0;
+	float open = nearness( p, n );
+	vec3 color = min( SUN_LIGHT * 3.2 * sun * nl * mirrors * flat_, vec3( 24.0 ) );
+
+	// what it mirrors of the world: the sky, or the clouds under it, less sharply the rougher it is
+	vec3 back = reflect( rd, n );
+	vec3 world = back.z > -0.02 ? sky( normalize( vec3( back.xy, max( back.z, 0.0 ) ) ), seconds, false ) : vec3( 0.0 );
+	vec3 below = mix( vec3( 0.34, 0.20, 0.16 ), vec3( 1.25, 0.82, 0.52 ), sunward( back ) );
+	vec3 mirror = GOLD + ( 1.0 - GOLD ) * pow( 1.0 - nv, 5.0 ) * ( 1.0 - rough );
+
+	world = mix( below, world, smoothstep( -0.12, 0.10, back.z ) );
+	world = mix( world, vec3( 0.55, 0.26, 0.10 ), rough * 0.55 );
+	color += mirror * open * ( world + ringLight( p + n * 0.5, back, 900.0, seconds ) * 0.55 );
+	// and a little of the light that falls on it comes back from it in all directions
+	color += GOLD * 0.07 * ( SUN_LIGHT * nl * sun + vec3( 0.30, 0.18, 0.14 ) ) * open;
+	return color;
+}
+
+/*
+===============================================================================
+
+A pixel
+
+===============================================================================
+*/
+
+// bright things run out softly and keep their colour (a curve as film has it), then the steps of a screen
+vec3 film( vec3 c ) {
+	c = clamp( ( c * ( 2.51 * c + 0.03 ) ) / ( c * ( 2.43 * c + 0.59 ) + 0.14 ), 0.0, 1.0 );
+	return pow( c, vec3( 0.4545 ) );
 }
 
 void main() {
@@ -251,102 +584,75 @@ void main() {
 	vec3 ro = VIEW( 0 ).xyz;
 	vec2 at = vec2( v_texCoord.x * 2.0 - 1.0, 1.0 - v_texCoord.y * 2.0 );
 	vec3 rd = normalize( VIEW( 1 ).xyz + at.x * VIEW( 2 ).xyz + at.y * VIEW( 3 ).xyz );
-	// The floor of clouds lies between z 4 and z -30. Where the ray meets it: a march over its heights from the
-	// plane of its top on, in steps that grow with what is left above it.
-	float tFloor = 1.0e9;
+	// another number for every pixel, for the steps through the clouds
+	float jitter = fract( 52.9829189 * fract( dot( gl_FragCoord.xy, vec2( 0.06711056, 0.00583715 ) ) ) );
 	float t = 0.0;
-	int what = 0;			// 1 gold, 2 a ring
+	float tEnd = 1.0e9;
+	int what = 0;				// 1: the ray ends on gold
+	float ringNear = 1.0e9;		// how near the ray came to such a line
 
-	if ( rd.z < -0.0001 ) {
-		float fall = max( -rd.z, 0.06 );
+	// The gold and the rings stand inside a ball around the temple: a ray that misses it is not marched at all,
+	// one that meets it only through it.
+	vec3 mid = ro - vec3( 60.0, 0.0, 150.0 );
+	float b = dot( mid, rd );
+	float inBall = b * b - dot( mid, mid ) + 650.0 * 650.0;
 
-		tFloor = max( ( ro.z - 4.0 ) / -rd.z, 0.0 );
-		for ( int i = 0; i < 14; i++ ) {
-			vec3 p = ro + rd * tFloor;
-			float over = p.z - floorHeight( p.xy, seconds, tFloor > 1400.0 ? 2 : 4 );
+	if ( inBall > 0.0 ) {
+		float tOut = -b + sqrt( inBall );
 
-			if ( over < 0.4 ) {
+		t = max( -b - sqrt( inBall ), 0.0 );
+		for ( int i = 0; i < 90; i++ ) {
+			if ( t > tOut ) {
 				break;
 			}
-			tFloor += max( over * 0.75 / fall, 1.0 );
-		}
-	}
+			vec3 p = ro + rd * t;
+			float dGold = gold( p );
+			float dRing = rings( p );
+			float d = min( dGold, dRing );
 
-	for ( int i = 0; i < 96; i++ ) {
-		vec3 p = ro + rd * t;
-		float dGold = gold( p );
-		float dRing = rings( p );
-		float d = min( dGold, dRing );
-
-		if ( d < 0.03 + t * 0.0006 ) {
-			what = dRing < dGold ? 2 : 1;
-			break;
-		}
-		t += min( d, 70.0 );
-		if ( t > tFloor || t > 3000.0 ) {
-			break;
+			ringNear = min( ringNear, dRing );
+			if ( dGold < 0.03 + t * 0.0005 ) {
+				what = 1;
+				tEnd = t;
+				break;
+			}
+			// (a ring is light: the ray goes through its line, in short steps while it is near it)
+			t += min( max( d, 1.5 ), 80.0 );
 		}
 	}
 
 	vec3 color;
-	float tEnd;
 
-	if ( what != 0 && t < tFloor ) {
-		vec3 p = ro + rd * t;
-
-		tEnd = t;
-		if ( what == 2 ) {
-			color = vec3( 1.9, 1.7, 1.25 );
-		} else {
-			vec3 n = goldNormal( p );
-			vec3 back = reflect( rd, n );
-			// what the gold mirrors: the sky, or the clouds below it
-			vec3 mirrored = back.z > 0.0 ? sky( back, seconds ) : vec3( 0.80, 0.52, 0.30 );
-			float edge = pow( 1.0 - max( dot( -rd, n ), 0.0 ), 3.0 );
-			float lit = max( dot( n, SUN ), 0.0 );
-
-			color = vec3( 1.0, 0.66, 0.22 ) * ( mirrored * ( 0.42 + 0.58 * edge ) + vec3( 1.0, 0.82, 0.55 ) * lit * 0.50 + 0.08 );
-			// a little dark where the gold meets the clouds
-			color *= 0.75 + 0.25 * smoothstep( 0.0, 5.0, p.z );
-		}
-		color = mix( color, vec3( 1.0, 0.62, 0.26 ), 1.0 - exp( -t / 5200.0 ) );
-	} else if ( tFloor < 1.0e8 ) {
-		vec3 p = ro + rd * tFloor;
-		int layers = tFloor > 1400.0 ? 2 : 4;
-		float here = floorHeight( p.xy, seconds, layers );
-		// which way the cloud faces there, from its heights around the place
-		float e = 3.0 + tFloor * 0.004;
-		vec3 n = normalize( vec3( here - floorHeight( p.xy + vec2( e, 0.0 ), seconds, layers ),
-			here - floorHeight( p.xy + vec2( 0.0, e ), seconds, layers ), e * 0.55 ) );
-		float lit = clamp( dot( n, SUN ) * 1.6 + 0.35, 0.0, 1.0 );
-		float high = smoothstep( -30.0, 4.0, here );
-		float far = length( p.xy );
-
-		tEnd = tFloor;
-		// warm where the low sun reaches it, a red brown in its hollows, and pale on its tops
-		color = mix( vec3( 0.42, 0.17, 0.09 ), vec3( 1.0, 0.72, 0.42 ), lit );
-		color = mix( color, vec3( 1.0, 0.90, 0.78 ), high * high * 0.55 );
-		// the light of the podium and of the way to it lies on the clouds around them
-		color += vec3( 1.0, 0.66, 0.26 ) * ( 0.20 * exp( -far / 240.0 ) + 0.08 * exp( -abs( p.y ) / 60.0 ) * step( p.x, 0.0 ) * exp( -far / 600.0 ) );
-		// far away the clouds go over into the light of the horizon
-		color = mix( color, sky( normalize( vec3( rd.xy, 0.001 ) ), seconds ), 1.0 - exp( -tFloor / 2600.0 ) );
+	if ( what == 1 ) {
+		color = goldLit( ro + rd * tEnd, rd, seconds );
+		color = mix( color, haze( rd ), 1.0 - exp( -tEnd / 6000.0 ) );
 	} else {
-		tEnd = 1.0e9;
-		color = sky( rd, seconds );
+		color = sky( rd, seconds, true );
 	}
 
-	color += ringLight( ro, rd, tEnd, RING_GREAT, vec3( 1.0, 0.0, 0.0 ), 190.0, seconds );
-	color += ringLight( ro, rd, tEnd, RING_LEFT, AXIS_LEFT, 118.0, seconds ) * 0.8;
-	color += ringLight( ro, rd, tEnd, RING_RIGHT, AXIS_RIGHT, 118.0, seconds ) * 0.8;
-	color += ringLight( ro, rd, tEnd, RING_HALO, vec3( 0.0, 0.0, 1.0 ), 105.0, seconds ) * 0.7;
-	color += vec3( 1.0, 0.85, 0.55 ) * curtain( ro, rd, tEnd, seconds );
-	color += vec3( 1.0, 0.88, 0.62 ) * beam( ro, rd, tEnd ) * 0.30;
+	// the clouds in front of that, and the light of the rings in front of them
+	vec4 sea = clouds( ro, rd, tEnd, seconds, jitter );
+
+	color = sea.rgb + sea.a * color;
+	color += ringLight( ro, rd, tEnd, seconds ) * ( 0.35 + 0.65 * sea.a );
+	color += vec3( 1.0, 0.40, 0.06 ) * ( 1.10 / ( 1.0 + ringNear * ringNear * 0.006 ) + 0.14 / ( 1.0 + ringNear * 0.03 ) ) * sea.a;
+	color += vec3( 1.0, 0.80, 0.46 ) * curtain( ro, rd, tEnd, seconds ) * 0.50;
+	color += vec3( 1.0, 0.84, 0.56 ) * beam( ro, rd, tEnd ) * 0.22;
+
+	// sparks of gold in the air, where one looks along the clouds
+	vec2 air = vec2( atan( rd.y, rd.x ) * 30.0, rd.z * 46.0 + seconds * 0.12 );
+	vec2 cell = floor( air );
+	float mote = hash( cell );
+	vec2 off = fract( air ) - 0.5 - ( vec2( hash( cell + 1.3 ), hash( cell + 7.1 ) ) - 0.5 ) * 0.7;
+
+	color += vec3( 1.0, 0.80, 0.42 ) * step( 0.90, mote ) * ( 0.5 + 0.5 * sin( seconds * ( 1.0 + 3.0 * mote ) + mote * 40.0 ) )
+		* exp( -dot( off, off ) * 1400.0 ) * smoothstep( 0.30, 0.0, abs( rd.z - 0.05 ) ) * 1.6 * sea.a;
 
 	// one arrives out of light
-	color = mix( vec3( 1.6, 1.45, 1.15 ), color, smoothstep( 0.0, 1.0, VIEW( 1 ).w ) );
-	// bright things run out softly, the colours keep their strength, and the sky has no steps
-	color = 1.0 - exp( -color * 1.30 );
-	color = max( mix( vec3( dot( color, vec3( 0.299, 0.587, 0.114 ) ) ), color, 1.22 ), 0.0 );
+	color = mix( vec3( 7.0, 6.0, 4.4 ), color, smoothstep( 0.0, 1.0, VIEW( 1 ).w ) );
+	// a little darker towards the corners
+	color *= 1.0 - 0.22 * dot( at, at );
+	color = film( color * 0.62 );
 	color += ( hash( gl_FragCoord.xy ) - 0.5 ) / 255.0;
 	o_color = vec4( color, 1.0 );
 }

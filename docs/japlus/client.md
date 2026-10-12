@@ -657,10 +657,16 @@ is there. **Built and run on Linux with rd-vulkan-vision only** (hidden, 2026-10
 The command `temple` (`temple 1`, `temple 0`; a key under Controls, Extras) takes the player to a temple above
 the clouds while the game goes on. The level is not drawn: the scene of the frame has no level and the flag
 `RDF_VISION_TEMPLE`, and the renderer works the place out behind it for every pixel
-(`trap->ext.R_SetTempleScene`, cvar `cl_cgameTemple`; `RE_SetTempleScene()`, `VK_TempleFrame()`): a sea of clouds,
-a podium of gold in three steps with spires around it, rings of light, a low sun behind the greatest ring. No
-model and no texture is part of it. About 300 frames a second at 2560 x 1440 with 8 samples on an RTX 4070
-SUPER. One arrives out of light on the way to the podium, walks with the movement keys on the ground (the
+(`trap->ext.R_SetTempleScene`, cvar `cl_cgameTemple`; `RE_SetTempleScene()`, `VK_TempleFrame()`): a sea of clouds
+with a clearing in it, a podium of gold in five steps with groups of fluted columns around it, rings of light, a
+low sun behind the greatest ring. No model and no texture is part of it. The first version of the shader "looked
+cheap" (the owner, 2026-10-12: fog for clouds, gold without a highlight, rings that were white bands) and was
+written anew the same day: the clouds are a volume the ray is marched through, lit by whether the way to the sun
+is free, the gold is a metal with a highlight, mirrored sky, shadows and engraved lines, a ring is strands of
+light with running heads. The head of `temple.frag` says how. The techniques are the ones of well-known scenes on
+shadertoy.com, the code is of this tree: what is published there is under a licence that does not go with the
+one of the game unless its author says otherwise. About 170 frames a second at 2560 x 1440 with 8 samples on an
+RTX 4070 SUPER (the first version: 300, the level it was entered from: 850). One arrives out of light on the way to the podium, walks with the movement keys on the ground (the
 clouds, the steps; no farther than 640 units from the middle) and looks around with the mouse. Where the
 podium is stands in the shader and in `Temple_Ground()`, the two have to match.
 
