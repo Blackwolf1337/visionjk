@@ -25,6 +25,8 @@ endif(NOT InVisionJK)
 # (docs/japlus/voice.md). A program by itself: the datagram of the voice chat, SHA-1 and nothing of the engine.
 set(VoiceMasterFiles
 	"${MPDir}/voicemaster/vm_main.c"
+	"${MPDir}/voicemaster/vm_core.c"
+	"${MPDir}/voicemaster/vm_core.h"
 	"${MPDir}/game/voice/bg_voice.c"
 	"${MPDir}/game/voice/bg_voice.h"
 	"${MPDir}/game/bg_net.h"
