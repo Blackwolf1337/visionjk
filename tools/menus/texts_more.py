@@ -270,4 +270,7 @@ MORE = {
     'Say': ('Dire', 'Decir'),
     'To %s': ('À %s', 'A %s'),
     'Open %s ? Enter: yes, any other key: no': ('Ouvrir %s ? Entrée : oui, autre touche : non', '¿Abrir %s? Intro: sí, otra tecla: no'),
+    # the HUD
+    'Saber': ('Sabre', 'Sable'),
+    'Alternate Dimension': ('Autre dimension', 'Otra dimensión'),
 }

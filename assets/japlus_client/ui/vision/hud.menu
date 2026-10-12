@@ -91,7 +91,8 @@
 		{
 			name				altdim
 			rect				12 418 120 12
-			text				"ALTERNATE DIMENSION"
+			text				@VISION_ALTERNATE_DIMENSION
+			caps				1
 			showStat			altdim
 			font				5
 			textscale			0.5
@@ -202,7 +203,8 @@
 		{
 			name				style_label
 			rect				584 453 44 12
-			text				"SABER"
+			text				@VISION_SABER
+			caps				1
 			showStat			saberstyle
 			font				5
 			textscale			0.5
@@ -216,7 +218,8 @@
 		{
 			name				score_label
 			rect				560 418 40 12
-			text				"SCORE"
+			text				@MP_INGAME_SCORE
+			caps				1
 			font				5
 			textscale			0.5
 			textalign			ITEM_ALIGN_RIGHT

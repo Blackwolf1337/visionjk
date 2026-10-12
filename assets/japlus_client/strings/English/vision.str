@@ -752,6 +752,12 @@ LANG_ENGLISH        "To %s"
 REFERENCE           OPEN_S_ENTER_YES_ANY_OTHER_KEY_NO
 LANG_ENGLISH        "Open %s ? Enter: yes, any other key: no"
 
+REFERENCE           SABER
+LANG_ENGLISH        "Saber"
+
+REFERENCE           ALTERNATE_DIMENSION
+LANG_ENGLISH        "Alternate Dimension"
+
 
 ENDMARKER
 

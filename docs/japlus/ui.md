@@ -203,7 +203,9 @@ are.
   of an old menu has no entry.
 - `menufile.py` reads and writes a menu file as a tree.
 
-`ui/vision/hud.menu` is written by hand.
+`ui/vision/hud.menu` is written by hand. Its three words are in the language of the game since 2026-10-12: the
+score with the word of the game (`@MP_INGAME_SCORE`), the saber and the alternate dimension with texts of
+`texts.py` (`@VISION_SABER`, `@VISION_ALTERNATE_DIMENSION`), all three with `caps 1`.
 
 Run it again after a change to a menu of the old look or to the rules, and commit what it writes:
 

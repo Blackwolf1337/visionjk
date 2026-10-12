@@ -368,6 +368,9 @@ CGAME = {
     'Say': 'Sagen',
     'To %s': 'An %s',
     'Open %s ? Enter: yes, any other key: no': '%s öffnen? Enter: ja, jede andere Taste: nein',
+    # the HUD (ui/vision/hud.menu, written by hand: @VISION_SABER, @VISION_ALTERNATE_DIMENSION)
+    'Saber': 'Schwert',
+    'Alternate Dimension': 'Andere Dimension',
 }
 
 # names that are the same in every language
