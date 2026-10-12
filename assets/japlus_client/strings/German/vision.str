@@ -741,6 +741,14 @@ REFERENCE           CLAN_CHAT_AND_CLAN_RADIO_REACH_EVERY
 LANG_ENGLISH        "Clan chat and clan radio reach everybody on the server who has the same one. The server sees it."
 LANG_GERMAN         "Clan-Chat und Clan-Funk erreichen jeden auf dem Server, der dasselbe hat. Der Server sieht es."
 
+REFERENCE           MEET_IN_THE_TEMPLE
+LANG_ENGLISH        "Meet in the Temple"
+LANG_GERMAN         "Im Tempel treffen"
+
+REFERENCE           WHOM_YOU_MEET_IN_THE_VISION_TEMPLE_1
+LANG_ENGLISH        "Whom you meet in the Vision Temple. 1: everybody who is there. A word of your own: only those who typed the same word. 0: nobody, you are alone."
+LANG_GERMAN         "Wen Sie im Vision-Tempel treffen. 1: alle, die dort sind. Ein eigenes Wort: nur wer dasselbe Wort eingegeben hat. 0: niemanden, Sie sind allein."
+
 REFERENCE           UPDATES_AND_DOWNLOADS
 LANG_ENGLISH        "Updates and Downloads"
 LANG_GERMAN         "Updates und Downloads"

@@ -2016,7 +2016,10 @@ templeLink_t CG_VoiceTempleFrame( qboolean there, const float *origin, float yaw
 	byte			body[VOICE_ROOM_BYTES + VOICE_TEMPLE_BYTES], datagram[VOICE_MAX_DATAGRAM];
 	int				len;
 
-	if ( !there || !cg_voiceMaster.integer || !cg_templeLink.string[0] || !Q_stricmp( cg_templeLink.string, "0" ) ) {
+	// (an empty word is the one everybody has: somebody cleared the field in Setup)
+	const char		*word = cg_templeLink.string[0] ? cg_templeLink.string : "1";
+
+	if ( !there || !cg_voiceMaster.integer || !Q_stricmp( word, "0" ) ) {
 		Voice_TempleClose();
 		return TEMPLE_LINK_OFF;
 	}
@@ -2050,11 +2053,11 @@ templeLink_t CG_VoiceTempleFrame( qboolean there, const float *origin, float yaw
 		voiceTemple.client = now % MAX_CLIENTS;
 	}
 	// the room of the word, and another one when the word changes
-	if ( Q_stricmp( voiceTemple.word, cg_templeLink.string ) || !voiceTemple.word[0] ) {
+	if ( Q_stricmp( voiceTemple.word, word ) || !voiceTemple.word[0] ) {
 		char	text[96];
 		byte	digest[WEB_SHA1_SIZE];
 
-		Q_strncpyz( voiceTemple.word, cg_templeLink.string, sizeof( voiceTemple.word ) );
+		Q_strncpyz( voiceTemple.word, word, sizeof( voiceTemple.word ) );
 		Com_sprintf( text, sizeof( text ), "vision temple %s", voiceTemple.word );
 		Web_SHA1( text, strlen( text ), digest );
 		memcpy( voiceTemple.room, digest, VOICE_ROOM_BYTES );

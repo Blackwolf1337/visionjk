@@ -129,6 +129,9 @@ SETUP = [
         ('head', 'Clan'),
         ('secret', 'Clan Password', 'cp_clanPwd', 32,
          'Clan chat and clan radio reach everybody on the server who has the same one. The server sees it.'),
+        ('head', 'Vision Temple'),
+        ('edit', 'Meet in the Temple', 'cg_templeLink', 32,
+         'Whom you meet in the Vision Temple. 1: everybody who is there. A word of your own: only those who typed the same word. 0: nobody, you are alone.'),
     ]),
     ('Network', 'Updates, downloads and security.', [
         ('head', 'Updates and Downloads'),

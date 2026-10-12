@@ -2252,6 +2252,54 @@
 		itemDef
 		{
 			name					vision_head
+			rect					14 478 376 22
+			visible					1
+			text					@VISION_VISION_TEMPLE
+			font					5
+			textscale				0.54
+			forecolor				0.60 0.69 0.78 1
+			textaligny				9
+			caps					1
+			decoration
+			page					5
+			scroll					1
+		}
+
+		itemDef
+		{
+			name					vision_headline
+			rect					12 499 380 0.67
+			visible					1
+			style					WINDOW_STYLE_FILLED
+			backcolor				0.43 0.83 1 0.32
+			decoration
+			page					5
+			scroll					1
+		}
+
+		itemDef
+		{
+			name					vision_edit_cg_templelink
+			type					ITEM_TYPE_EDITFIELD
+			text					@VISION_MEET_IN_THE_TEMPLE
+			descText				@VISION_WHOM_YOU_MEET_IN_THE_VISION_TEMPLE_1
+			cvar					"cg_templeLink"
+			maxChars				32
+			maxPaintChars			24
+			action { play "sound/interface/button1.wav" ; }
+			rect					12 500 380 22
+			page					5
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+		}
+
+		itemDef
+		{
+			name					vision_head
 			rect					14 38 376 22
 			visible					1
 			text					@VISION_UPDATES_AND_DOWNLOADS

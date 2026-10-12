@@ -135,6 +135,9 @@ TR = {
     'Focus (Leave Your Body)': 'Fokus (Körper verlassen)',
     'Vision Temple (Meditate)': 'Vision-Tempel (Meditieren)',
     'Vision Temple': 'Vision-Tempel',
+    'Meet in the Temple': 'Im Tempel treffen',
+    'Whom you meet in the Vision Temple. 1: everybody who is there. A word of your own: only those who typed the same word. 0: nobody, you are alone.':
+        'Wen Sie im Vision-Tempel treffen. 1: alle, die dort sind. Ein eigenes Wort: nur wer dasselbe Wort eingegeben hat. 0: niemanden, Sie sind allein.',
     'To the temple above the clouds. Other VisionJK players who are there are wisps.':
         'Zum Tempel über den Wolken. Andere VisionJK-Spieler, die dort sind, sind Irrlichter.',
     'You meditate towards the temple above the clouds, where you meet other VisionJK players as wisps. The same key or Esc brings you back.':

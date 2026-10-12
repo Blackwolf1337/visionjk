@@ -263,6 +263,9 @@ A setting of the cgame (most of Interface and Chat & Social) does not exist befo
 session was loaded unless the stored config has it. Outside a game its row then shows it as off, whatever
 its default is, and a click sets it.
 
+The meeting word of the Vision Temple (`cg_templeLink`) has a row under Setup, Chat & Social, Vision Temple
+(2026-10-12).
+
 ## Checked
 
 2026-10-11, Linux, hidden windows, both by pictures the game took of itself (`tools/uishot.sh` with the scripts
