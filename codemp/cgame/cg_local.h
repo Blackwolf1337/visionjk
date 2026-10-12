@@ -1822,6 +1822,16 @@ void		CG_FocusScene( void );
 void		CG_FocusTint( void );
 float		CG_FocusMuffle( void );
 void		CG_FocusServerCommand( void );
+// who else is in the Vision Temple: the link to the voice master for it (voice/cg_voice.c) and what it brings
+typedef enum {
+	TEMPLE_LINK_OFF,		// nobody is asked: not in the temple, or the player wants to be alone (cg_templeLink 0, cg_voiceMaster 0)
+	TEMPLE_LINK_ASKING,		// the master is looked up or was not heard from yet
+	TEMPLE_LINK_OPEN,		// in the room: the places of the others come
+	TEMPLE_LINK_NONE,		// the master does not answer: not there, or one from before the temple
+	TEMPLE_LINK_FULL		// it has no place for one more
+} templeLink_t;
+templeLink_t	CG_VoiceTempleFrame( qboolean there, const float *origin, float yaw, const char *name );
+void		CG_FocusPlace( int member, const float *origin, float yaw, const char *name );
 
 // hud/cg_hud.c: the numbers of the game by name, for the items of a menu file that show one
 qboolean	CG_StatValue( const char *name, float *value, float *max );

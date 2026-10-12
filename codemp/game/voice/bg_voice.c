@@ -59,6 +59,11 @@ static qboolean BG_VoiceBodyFits( int type, int bodyLen, qboolean toClient ) {
 		return ( bodyLen == VOICE_STATE_BYTES || bodyLen == VOICE_STATE_LONG_BYTES ) ? qtrue : qfalse;
 	case VOICE_STATUS:
 		return ( bodyLen >= 1 && bodyLen <= VOICE_STATUS_TEXT ) ? qtrue : qfalse;
+	case VOICE_TEMPLE:
+		// to the master: the room and the place. To a client: the place of somebody, or nothing (an answer)
+		if ( toClient )
+			return ( bodyLen == 0 || bodyLen == VOICE_TEMPLE_BYTES ) ? qtrue : qfalse;
+		return ( bodyLen == VOICE_ROOM_BYTES + VOICE_TEMPLE_BYTES ) ? qtrue : qfalse;
 	default:
 		return qfalse;
 	}
@@ -160,6 +165,45 @@ const byte *BG_VoiceStateClan( const voicePacket_t *p ) {
 			return clan;
 	}
 	return NULL;
+}
+
+// Where somebody is in the Vision Temple, as the bytes of a VOICE_TEMPLE: what does not fit into 16 bit is at
+// the edge of what does, a name that is too long is cut where a character of UTF-8 ends.
+void BG_VoiceTemplePack( byte out[VOICE_TEMPLE_BYTES], const float *origin, float yaw, const char *name ) {
+	int i, len = (int)strlen( name );
+
+	for ( i = 0; i < 3; i++ ) {
+		const int v = (int)( origin[i] < -32768.0f ? -32768.0f : ( origin[i] > 32767.0f ? 32767.0f : origin[i] ) );
+
+		out[i * 2] = (byte)( v & 0xff );
+		out[i * 2 + 1] = (byte)( ( v >> 8 ) & 0xff );
+	}
+	out[6] = (byte)( (int)( yaw * ( 256.0f / 360.0f ) ) & 0xff );
+	out[7] = 0;
+	if ( len > VOICE_TEMPLE_NAME - 1 ) {
+		len = VOICE_TEMPLE_NAME - 1;
+		while ( len > 0 && ( (byte)name[len] & 0xc0 ) == 0x80 )
+			len--;
+	}
+	memset( out + 8, 0, VOICE_TEMPLE_NAME );
+	memcpy( out + 8, name, (size_t)len );
+}
+
+// and back. qfalse: not the bytes of a place.
+qboolean BG_VoiceTempleUnpack( const byte *in, int len, float *origin, float *yaw, char *name, int nameSize ) {
+	int i, n;
+
+	if ( len != VOICE_TEMPLE_BYTES || nameSize < 1 )
+		return qfalse;
+	for ( i = 0; i < 3; i++ )
+		origin[i] = (float)(short)( in[i * 2] | ( in[i * 2 + 1] << 8 ) );
+	*yaw = in[6] * ( 360.0f / 256.0f );
+	for ( n = 0; n < VOICE_TEMPLE_NAME - 1 && n < nameSize - 1 && in[8 + n]; n++ ) {
+		// (no control characters: the name is drawn)
+		name[n] = ( in[8 + n] < ' ' ) ? ' ' : (char)in[8 + n];
+	}
+	name[n] = '\0';
+	return qtrue;
 }
 
 // What a VOICE_STATUS carries after its head. Returns its length. A text that is too long is cut where a

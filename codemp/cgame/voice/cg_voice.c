@@ -444,8 +444,15 @@ void CG_VoiceInit( void ) {
 }
 
 // the module is about to be unloaded (the level changes, vid_restart, the game ends): nothing of it may run after
+#ifndef __EMSCRIPTEN__
+static void Voice_TempleClose( void );		// the link of the Vision Temple, below
+#endif
+
 void CG_VoiceShutdown( void ) {
 	Voice_Close();
+#ifndef __EMSCRIPTEN__
+	Voice_TempleClose();
+#endif
 }
 
 // From the server info, the value of g_voice: does this server have a voice chat? Only then is it asked for one.
@@ -1896,9 +1903,213 @@ void CG_VoiceTest_f( void ) {
 	}
 }
 
+/*
+===============================================================================
+
+The Vision Temple: who else is there
+
+A client that is in the Vision Temple (focus/cg_focus.c) meets the others at the voice master, whatever server
+it plays on and whether that server has a voice chat of its own or not. It is a link of its own, on a socket of
+its own, and only while the player is there: nothing goes to the master for it before and after. The room is
+the one of a word (cg_templeLink: 1 the one everybody is in, any other text a room for those who know it, 0
+nobody is asked and one is alone), and the master sees an address and where in the temple it stands, as it
+sees them of anybody who talks through it. cg_voiceMaster 0 switches this off with the rest.
+
+One datagram a tenth of a second says the place (VOICE_TEMPLE of bg_voice.h), which is the state of the session
+at once. The number this client has in the room is one it took itself: the master says when it is taken, and
+the next one is tried.
+
+===============================================================================
+*/
+
+#ifndef __EMSCRIPTEN__
+
+#define TEMPLE_PLACE_MSEC	100			// the own place is said this often,
+#define TEMPLE_ASK_MSEC		400			//	and this often while the master has not let this client in yet
+#define TEMPLE_LOST_MSEC	5000		// nothing from the master for this long: it is not there, or does not know the temple
+
+static struct {
+	qboolean			open;
+	bgSocket_t			sock;
+	struct sockaddr_in	master;
+	qboolean			masterKnown;
+	byte				room[VOICE_ROOM_BYTES];
+	char				word[64];
+	int					client;			// the number this client took in that room
+	unsigned int		token, sentToken;
+	int					seq, tries;
+	int					sendTime, heardTime, startTime;
+	templeLink_t		state;
+} voiceTemple;
+
+static void Voice_TempleClose( void ) {
+	if ( voiceTemple.open )
+		BG_CloseSocket( voiceTemple.sock );
+	memset( &voiceTemple, 0, sizeof( voiceTemple ) );
+}
+
+// what came from the master since the last frame
+static void Voice_TempleReceive( int now ) {
+	int count;
+
+	for ( count = 0; count < VOICE_MAX_PER_FRAME; count++ ) {
+		byte				datagram[VOICE_MAX_DATAGRAM + 1];
+		struct sockaddr_in	from;
+		socklen_t			fromLen = sizeof( from );
+		voicePacket_t		p;
+		const int			len = (int)recvfrom( voiceTemple.sock, (char *)datagram, sizeof( datagram ), 0, (struct sockaddr *)&from, &fromLen );
+
+		if ( len < 0 ) {
+			if ( BG_SocketReset() )
+				continue;
+			break;
+		}
+		// only the master speaks here: its address and its port
+		if ( fromLen < (socklen_t)sizeof( from ) || from.sin_addr.s_addr != voiceTemple.master.sin_addr.s_addr
+			|| from.sin_port != voiceTemple.master.sin_port )
+			continue;
+		if ( !BG_VoiceUnpack( datagram, len, qtrue, &p ) || p.type != VOICE_TEMPLE || p.client >= MAX_CLIENTS )
+			continue;
+		if ( !p.dataLen ) {
+			// an answer: the token of this session, or why there is none
+			if ( p.client != voiceTemple.client )
+				continue;
+			voiceTemple.heardTime = now;
+			if ( p.flags & VOICE_FLAG_FULL ) {
+				voiceTemple.state = TEMPLE_LINK_FULL;
+			} else if ( p.flags & VOICE_FLAG_TAKEN ) {
+				// somebody else is that number there: the next one, and all of them once before it is given up
+				voiceTemple.client = ( voiceTemple.client + 1 ) % MAX_CLIENTS;
+				voiceTemple.token = 0;
+				voiceTemple.state = ( ++voiceTemple.tries >= MAX_CLIENTS ) ? TEMPLE_LINK_FULL : TEMPLE_LINK_ASKING;
+			} else {
+				// (in: the master took a datagram that came with the token it had named)
+				if ( p.token == voiceTemple.sentToken && voiceTemple.sentToken )
+					voiceTemple.state = TEMPLE_LINK_OPEN;
+				voiceTemple.token = p.token;
+			}
+			continue;
+		}
+		if ( voiceTemple.state == TEMPLE_LINK_OPEN && p.token == voiceTemple.token && p.client != voiceTemple.client ) {
+			vec3_t	origin;
+			float	yaw;
+			char	name[VOICE_TEMPLE_NAME];
+
+			voiceTemple.heardTime = now;
+			if ( BG_VoiceTempleUnpack( p.data, p.dataLen, origin, &yaw, name, sizeof( name ) ) )
+				CG_FocusPlace( p.client, origin, yaw, name );
+		}
+	}
+}
+
+/*
+=================
+CG_VoiceTempleFrame
+
+Once a frame while the Vision Temple is on the screen, and once with there qfalse when it is left. Says the own
+place and takes in the places of the others (CG_FocusPlace()). Returns how the link stands.
+=================
+*/
+templeLink_t CG_VoiceTempleFrame( qboolean there, const float *origin, float yaw, const char *name ) {
+	const int		now = trap->Milliseconds();
+	voicePacket_t	p;
+	byte			body[VOICE_ROOM_BYTES + VOICE_TEMPLE_BYTES], datagram[VOICE_MAX_DATAGRAM];
+	int				len;
+
+	if ( !there || !cg_voiceMaster.integer || !cg_templeLink.string[0] || !Q_stricmp( cg_templeLink.string, "0" ) ) {
+		Voice_TempleClose();
+		return TEMPLE_LINK_OFF;
+	}
+	if ( voiceTemple.state == TEMPLE_LINK_NONE || voiceTemple.state == TEMPLE_LINK_FULL )
+		return voiceTemple.state;
+
+	if ( !voiceTemple.masterKnown ) {
+		char	host[256];
+		int		port = VOICE_MASTER_PORT, found;
+
+		Q_strncpyz( host, cg_voiceMasterHost.string, sizeof( host ) );
+		found = Voice_SplitAddress( host, sizeof( host ), &port ) ? Voice_Lookup( host, &voiceTemple.master.sin_addr ) : -1;
+		if ( found < 0 )
+			voiceTemple.state = TEMPLE_LINK_NONE;
+		if ( found <= 0 )
+			return voiceTemple.state = ( found < 0 ) ? TEMPLE_LINK_NONE : TEMPLE_LINK_ASKING;
+		voiceTemple.master.sin_family = AF_INET;
+		voiceTemple.master.sin_port = htons( (unsigned short)port );
+		voiceTemple.masterKnown = qtrue;
+	}
+	if ( !voiceTemple.open ) {
+		BG_NetStart();
+		voiceTemple.sock = socket( AF_INET, SOCK_DGRAM, IPPROTO_UDP );
+		if ( voiceTemple.sock == BG_INVALID_SOCKET )
+			return voiceTemple.state = TEMPLE_LINK_NONE;
+		BG_SocketNonBlocking( voiceTemple.sock );
+		voiceTemple.open = qtrue;
+		voiceTemple.startTime = voiceTemple.heardTime = now;
+		voiceTemple.state = TEMPLE_LINK_ASKING;
+		// (any number to begin with: the clock is as good as dice here)
+		voiceTemple.client = now % MAX_CLIENTS;
+	}
+	// the room of the word, and another one when the word changes
+	if ( Q_stricmp( voiceTemple.word, cg_templeLink.string ) || !voiceTemple.word[0] ) {
+		char	text[96];
+		byte	digest[WEB_SHA1_SIZE];
+
+		Q_strncpyz( voiceTemple.word, cg_templeLink.string, sizeof( voiceTemple.word ) );
+		Com_sprintf( text, sizeof( text ), "vision temple %s", voiceTemple.word );
+		Web_SHA1( text, strlen( text ), digest );
+		memcpy( voiceTemple.room, digest, VOICE_ROOM_BYTES );
+		voiceTemple.token = voiceTemple.sentToken = 0;
+		voiceTemple.tries = 0;
+		voiceTemple.state = TEMPLE_LINK_ASKING;
+		voiceTemple.heardTime = now;
+	}
+
+	Voice_TempleReceive( now );
+	if ( voiceTemple.state == TEMPLE_LINK_FULL )
+		return voiceTemple.state;
+	if ( now - voiceTemple.heardTime > TEMPLE_LOST_MSEC ) {
+		// no answer: nothing more is sent this time
+		BG_CloseSocket( voiceTemple.sock );
+		voiceTemple.open = qfalse;
+		return voiceTemple.state = TEMPLE_LINK_NONE;
+	}
+	if ( voiceTemple.sendTime && now - voiceTemple.sendTime < ( voiceTemple.state == TEMPLE_LINK_OPEN ? TEMPLE_PLACE_MSEC : TEMPLE_ASK_MSEC )
+		&& now >= voiceTemple.sendTime )
+		return voiceTemple.state;
+	voiceTemple.sendTime = now;
+
+	memcpy( body, voiceTemple.room, VOICE_ROOM_BYTES );
+	BG_VoiceTemplePack( body + VOICE_ROOM_BYTES, origin, yaw, name );
+	memset( &p, 0, sizeof( p ) );
+	p.type = VOICE_TEMPLE;
+	p.client = voiceTemple.client;
+	p.token = voiceTemple.sentToken = voiceTemple.token;
+	p.seq = voiceTemple.seq = ( voiceTemple.seq + 1 ) & 0xffff;
+	p.data = body;
+	p.dataLen = sizeof( body );
+	len = BG_VoicePack( datagram, sizeof( datagram ), &p, qfalse );
+	if ( len )
+		sendto( voiceTemple.sock, (const char *)datagram, len, BG_SEND_FLAGS, (const struct sockaddr *)&voiceTemple.master, sizeof( voiceTemple.master ) );
+	return voiceTemple.state;
+}
+
+#else // __EMSCRIPTEN__
+
+// a page can not send UDP: alone there for now
+templeLink_t CG_VoiceTempleFrame( qboolean there, const float *origin, float yaw, const char *name ) {
+	(void)there; (void)origin; (void)yaw; (void)name;
+	return TEMPLE_LINK_OFF;
+}
+
+#endif // __EMSCRIPTEN__
+
 #else // JP_VOICE
 
 // built without the voice chat (BuildJPVoice off)
+templeLink_t CG_VoiceTempleFrame( qboolean there, const float *origin, float yaw, const char *name ) {
+	(void)there; (void)origin; (void)yaw; (void)name;
+	return TEMPLE_LINK_OFF;
+}
 void CG_VoiceInit( void ) {}
 void CG_VoiceShutdown( void ) {}
 void CG_VoiceFrame( void ) {}

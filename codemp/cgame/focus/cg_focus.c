@@ -70,6 +70,12 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // walks there on the ground: on the clouds, up the three steps of the podium, no farther from it than
 // TEMPLE_FAR. Where the podium is and how high its steps are stands in that shader and in Temple_Ground()
 // here, and the two have to match. Keys, the server, the body and the ways back are the ones of Focus.
+//
+// Who else is there. Clients of this tree that are in the temple meet at the voice master, whatever server each
+// of them plays on (CG_VoiceTempleFrame() of voice/cg_voice.c has the link, cg_templeLink says with whom: 1
+// everybody, a word those who know it, 0 nobody). Each says where it stands ten times a second, and the others
+// are drawn where they stand as wisps: a ball of blue light with a little smoke of it, and the name over it.
+// Nobody is a figure there. The place is not drawn with a depth, so a wisp is seen through a spire it is behind.
 
 #include "cgame/cg_local.h"
 #include "ui/ui_shared.h"
@@ -93,6 +99,9 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define TEMPLE_FAR			640.0f		//	how far from the middle of the podium one can go,
 #define TEMPLE_SPEED		190.0f		//	units a second,
 #define TEMPLE_IN_MSEC		1800		//	and the time in which the place comes out of light
+#define TEMPLE_WISP_MSEC	3000		// nothing of somebody for this long: he left
+#define TEMPLE_WISP_SIZE	64			// the picture a wisp is made of, a side of it
+#define TEMPLE_NAME			32			// a name there with its end (VOICE_TEMPLE_NAME of bg_voice.h)
 #define FOCUS_SMOKE			64			// the picture of the smoke of the plain look, a side of it
 #define FOCUS_SMOKE_GRID	8			//	and the cells of the pattern it is made of
 
@@ -154,6 +163,17 @@ static struct {
 
 static focus_t		focus;
 static snapshot_t	focusPeek;			// the newest snapshot, looked at and not taken in
+
+// somebody else in the Vision Temple, by the number he has at the voice master
+typedef struct templeWisp_s {
+	int			heardMsec;				// when his place came last, 0: nobody
+	vec3_t		target, shown;			// where he said he is, and where he is drawn on his way there
+	char		name[TEMPLE_NAME];
+} templeWisp_t;
+
+static templeWisp_t	templeWisps[MAX_CLIENTS];
+static templeLink_t	templeLink;			// how the link to the others stands
+static int			templeMsec;			// when the wisps were moved last
 
 // sounds of the game: it has them loaded for the Force Sight
 static sfxHandle_t Focus_Sound( qboolean loop ) {
@@ -655,6 +675,151 @@ void CG_FocusView( void ) {
 
 /*
 =================
+CG_FocusPlace
+
+The voice master handed on where somebody else is in the Vision Temple (voice/cg_voice.c)
+=================
+*/
+void CG_FocusPlace( int member, const float *origin, float yaw, const char *name ) {
+	templeWisp_t *wisp;
+
+	(void)yaw;		// (a wisp looks nowhere)
+	if ( member < 0 || member >= MAX_CLIENTS ) {
+		return;
+	}
+	wisp = &templeWisps[member];
+	VectorCopy( origin, wisp->target );
+	if ( !wisp->heardMsec || trap->Milliseconds() - wisp->heardMsec > TEMPLE_WISP_MSEC ) {
+		// he is new here: he does not come flying from where somebody else with that number stood
+		VectorCopy( origin, wisp->shown );
+	}
+	wisp->heardMsec = trap->Milliseconds();
+	Q_strncpyz( wisp->name, name, sizeof( wisp->name ) );
+}
+
+// how many others are in the Vision Temple right now
+static int Temple_Others( int now ) {
+	int i, count = 0;
+
+	for ( i = 0; i < MAX_CLIENTS; i++ ) {
+		if ( templeWisps[i].heardMsec && now - templeWisps[i].heardMsec <= TEMPLE_WISP_MSEC ) {
+			count++;
+		}
+	}
+	return count;
+}
+
+// The picture a wisp is made of: a ball of light that is bright in its middle and runs out softly. Made once,
+// 0: the engine can not make a shader of a picture (cl_cgameScene).
+static qhandle_t Temple_WispShader( void ) {
+	static qhandle_t	shader;
+	static qboolean		tried;
+	static byte			rgba[TEMPLE_WISP_SIZE * TEMPLE_WISP_SIZE * 4];
+	int					x, y;
+
+	if ( tried ) {
+		return shader;
+	}
+	tried = qtrue;
+	if ( !Focus_Engine( "cl_cgameScene" ) ) {
+		return 0;
+	}
+	for ( y = 0; y < TEMPLE_WISP_SIZE; y++ ) {
+		for ( x = 0; x < TEMPLE_WISP_SIZE; x++ ) {
+			const float	dx = ( x + 0.5f ) / ( TEMPLE_WISP_SIZE * 0.5f ) - 1.0f, dy = ( y + 0.5f ) / ( TEMPLE_WISP_SIZE * 0.5f ) - 1.0f;
+			const float	r = sqrtf( dx * dx + dy * dy );
+			const float	soft = r < 1.0f ? ( 1.0f - r ) * ( 1.0f - r ) : 0.0f;
+			const float	core = r < 0.5f ? ( 1.0f - r / 0.5f ) : 0.0f;
+			byte		*out = &rgba[( y * TEMPLE_WISP_SIZE + x ) * 4];
+
+			// Laid over what is behind it by its alpha, not added to it: the place is bright and warm, and
+			// light added to that is white whatever its colour. A deep blue that is nearly white in its middle.
+			out[0] = (byte)( 255.0f * ( 0.06f + 0.86f * core * core ) );
+			out[1] = (byte)( 255.0f * ( 0.34f + 0.64f * core ) );
+			out[2] = 255;
+			out[3] = (byte)( 255.0f * Q_min( 1.0f, soft * 1.7f ) );
+		}
+	}
+	shader = trap->ext.R_RegisterShaderRGBA( "*temple_wisp", rgba, TEMPLE_WISP_SIZE, TEMPLE_WISP_SIZE, 0 );
+	return shader;
+}
+
+// one ball of that light into the scene, facing the eye
+static void Temple_Ball( qhandle_t shader, const vec3_t at, float radius, float light ) {
+	polyVert_t	verts[4];
+	const byte	c = (byte)( 255.0f * Com_Clamp( 0.0f, 1.0f, light ) );
+	int			i;
+
+	for ( i = 0; i < 4; i++ ) {
+		const float side = ( i == 0 || i == 3 ) ? 1.0f : -1.0f, high = ( i < 2 ) ? 1.0f : -1.0f;
+
+		// (axis 1 of a view is to its left)
+		VectorMA( at, side * radius, cg.refdef.viewaxis[1], verts[i].xyz );
+		VectorMA( verts[i].xyz, high * radius, cg.refdef.viewaxis[2], verts[i].xyz );
+		verts[i].st[0] = ( side > 0.0f ) ? 0.0f : 1.0f;
+		verts[i].st[1] = ( high > 0.0f ) ? 0.0f : 1.0f;
+		verts[i].modulate[0] = verts[i].modulate[1] = verts[i].modulate[2] = 255;
+		verts[i].modulate[3] = c;
+	}
+	trap->R_AddPolysToScene( shader, 4, verts, 1 );
+}
+
+// The others, into the scene of the Vision Temple: each a wisp where he is, with a little smoke that rises from
+// it, and his name over it.
+static void Temple_Wisps( int now ) {
+	const qhandle_t	shader = Temple_WispShader();
+	const float		seconds = Com_Clamp( 0.0f, 0.1f, ( now - templeMsec ) * 0.001f );
+	const qboolean	text = Focus_Engine( "cl_cgameScene" );
+	int				i, puff;
+
+	templeMsec = now;
+	if ( !shader ) {
+		return;
+	}
+	for ( i = 0; i < MAX_CLIENTS; i++ ) {
+		templeWisp_t	*wisp = &templeWisps[i];
+		const float		beat = now * 0.001f + i * 1.7f;
+		vec3_t			at, delta;
+
+		if ( !wisp->heardMsec || now - wisp->heardMsec > TEMPLE_WISP_MSEC ) {
+			wisp->heardMsec = 0;
+			continue;
+		}
+		// he is told ten times a second and drawn every frame: on his way to where he said he is
+		VectorSubtract( wisp->target, wisp->shown, delta );
+		VectorMA( wisp->shown, Q_min( 1.0f, 9.0f * seconds ), delta, wisp->shown );
+		VectorCopy( wisp->shown, at );
+		at[2] += -8.0f + 1.5f * sinf( beat * 1.3f );
+		Temple_Ball( shader, at, 24.0f, 0.50f + 0.10f * sinf( beat * 2.1f ) );
+		Temple_Ball( shader, at, 12.0f + 0.8f * sinf( beat * 3.7f ), 1.0f );
+		// smoke of the same light that rises from it and thins out
+		for ( puff = 0; puff < 5; puff++ ) {
+			const float	age = fmodf( beat * 0.45f + puff * 0.2f, 1.0f );
+			vec3_t		up;
+
+			VectorCopy( at, up );
+			up[0] += 5.0f * sinf( beat * 1.9f + puff * 2.4f ) * age;
+			up[1] += 5.0f * cosf( beat * 1.6f + puff * 1.3f ) * age;
+			up[2] += 6.0f + 24.0f * age;
+			Temple_Ball( shader, up, 8.0f * ( 1.0f - 0.55f * age ), 0.75f * ( 1.0f - age ) );
+		}
+		if ( text && wisp->name[0] ) {
+			// (dark: the sky behind it is bright)
+			const float		height = 5.5f, width = trap->ext.R_Text3DWidth( wisp->name, height );
+			const vec4_t	color = { 0.03f, 0.10f, 0.32f, 0.95f };
+			vec3_t			right, from;
+
+			VectorScale( cg.refdef.viewaxis[1], -1.0f, right );
+			VectorCopy( at, from );
+			from[2] += 22.0f;
+			VectorMA( from, -0.5f * width, right, from );
+			trap->ext.R_Text3D( from, right, cg.refdef.viewaxis[2], height, wisp->name, color );
+		}
+	}
+}
+
+/*
+=================
 CG_FocusScene
 
 Once a frame before the scene is rendered: how much of the look it has, and the renderer is asked for it
@@ -664,6 +829,13 @@ void CG_FocusScene( void ) {
 	const int now = trap->Milliseconds();
 
 	Focus_Server( now );
+	// who else is in the Vision Temple: asked while one is there, and told once that one left
+	if ( focus.temple && focus.active ) {
+		templeLink = CG_VoiceTempleFrame( qtrue, focus.origin, focus.angles[YAW], cgs.clientinfo[focus.clientNum].name );
+	} else if ( templeLink != TEMPLE_LINK_OFF ) {
+		templeLink = CG_VoiceTempleFrame( qfalse, vec3_origin, 0.0f, "" );
+		memset( templeWisps, 0, sizeof( templeWisps ) );
+	}
 
 	if ( CG_FocusActive() ) {
 		focus.look = Com_Clamp( 0.0f, 1.0f, ( now - focus.startMsec ) / (float)FOCUS_IN_MSEC );
@@ -689,6 +861,7 @@ void CG_FocusScene( void ) {
 			cg.refdef.rdflags = RDF_NOWORLDMODEL | RDF_VISION_TEMPLE;
 			trap->ext.R_SetTempleScene( Com_Clamp( 0.0f, 1.0f, ( now - focus.startMsec ) / (float)TEMPLE_IN_MSEC ),
 				( now - focus.startMsec ) * 0.001f );
+			Temple_Wisps( now );
 		}
 		focus.pass = qtrue;
 		return;
@@ -859,10 +1032,10 @@ void CG_FocusDraw( void ) {
 	const qboolean	skin = CG_HudNewLook();
 	const int		font = skin ? SKIN_FONT_SANS : FONT_SMALL;
 	const float		scale = skin ? 0.5f : 0.6f;
-	const char		*key, *text, *body;
+	const char		*key, *text, *body, *others = NULL;
 	vec4_t			color = { 0.82f, 0.90f, 1.0f, 0.95f };
 	vec4_t			strip = { 0.02f, 0.04f, 0.10f, 0.55f };
-	float			width;
+	float			width, top = 439.0f;
 
 	if ( !focus.active ) {
 		return;
@@ -891,15 +1064,41 @@ void CG_FocusDraw( void ) {
 
 		body = CG_VisionText( why[focus.why] );
 	}
-	// both on a dark strip: the own body often stands right behind them
-	width = Q_max( CG_Text_Width( text, scale, font ), CG_Text_Width( body, scale * 0.85f, font ) ) + 20.0f;
-	if ( skin && Skin_Ready() ) {
-		Skin_Panel( ( SCREEN_WIDTH - width ) * 0.5f, 439.0f, width, 31.0f, 5.0f, strip, NULL );
-	} else {
-		CG_FillRect( ( SCREEN_WIDTH - width ) * 0.5f, 439.0f, width, 31.0f, strip );
+	// in the Vision Temple: who else is there, in a line between the two
+	if ( focus.temple ) {
+		const int count = Temple_Others( trap->Milliseconds() );
+
+		if ( count > 1 ) {
+			others = CG_VisionTextWith( "%i others are here.", va( "%i", count ) );
+		} else if ( count == 1 ) {
+			others = CG_VisionText( "One other is here." );
+		} else if ( templeLink == TEMPLE_LINK_ASKING ) {
+			others = CG_VisionText( "Looking for the others ..." );
+		} else if ( templeLink == TEMPLE_LINK_NONE ) {
+			others = CG_VisionText( "The voice server does not answer: you are alone here." );
+		} else if ( templeLink == TEMPLE_LINK_FULL ) {
+			others = CG_VisionText( "The temple is full: you are alone here." );
+		} else {
+			others = CG_VisionText( "You are alone here." );
+		}
 	}
-	CG_Text_Paint( ( SCREEN_WIDTH - CG_Text_Width( text, scale, font ) ) * 0.5f, 442.0f, scale, color, text, 0, 0, 0, font );
+	// all on a dark strip: the own body often stands right behind them
+	width = Q_max( CG_Text_Width( text, scale, font ), CG_Text_Width( body, scale * 0.85f, font ) );
+	if ( others ) {
+		width = Q_max( width, CG_Text_Width( others, scale * 0.85f, font ) );
+		top -= 12.0f;
+	}
+	width += 20.0f;
+	if ( skin && Skin_Ready() ) {
+		Skin_Panel( ( SCREEN_WIDTH - width ) * 0.5f, top, width, 470.0f - top, 5.0f, strip, NULL );
+	} else {
+		CG_FillRect( ( SCREEN_WIDTH - width ) * 0.5f, top, width, 470.0f - top, strip );
+	}
+	CG_Text_Paint( ( SCREEN_WIDTH - CG_Text_Width( text, scale, font ) ) * 0.5f, top + 3.0f, scale, color, text, 0, 0, 0, font );
 	color[3] = 0.75f;
+	if ( others ) {
+		CG_Text_Paint( ( SCREEN_WIDTH - CG_Text_Width( others, scale * 0.85f, font ) ) * 0.5f, top + 16.0f, scale * 0.85f, color, others, 0, 0, 0, font );
+	}
 	CG_Text_Paint( ( SCREEN_WIDTH - CG_Text_Width( body, scale * 0.85f, font ) ) * 0.5f, 455.0f, scale * 0.85f, color, body, 0, 0, 0, font );
 }
 
@@ -931,7 +1130,16 @@ void CG_FocusStatus_f( void ) {
 		return;
 	}
 	if ( focus.temple ) {
-		trap->Print( "Vision Temple: at %.0f %.0f %.0f, looking %.0f.\n", focus.origin[0], focus.origin[1], focus.origin[2], focus.angles[YAW] );
+		static const char *const links[] = { "nobody is asked", "asking the voice master", "open", "the voice master does not answer", "the voice master is full" };
+		int i;
+
+		trap->Print( "Vision Temple: at %.0f %.0f %.0f, looking %.0f. The others: %s, %i here.\n", focus.origin[0], focus.origin[1],
+			focus.origin[2], focus.angles[YAW], links[templeLink], Temple_Others( trap->Milliseconds() ) );
+		for ( i = 0; i < MAX_CLIENTS; i++ ) {
+			if ( templeWisps[i].heardMsec ) {
+				trap->Print( "  %2i %s at %.0f %.0f %.0f\n", i, templeWisps[i].name, templeWisps[i].target[0], templeWisps[i].target[1], templeWisps[i].target[2] );
+			}
+		}
 	}
 	trap->Print( "Focus: out of the body for %.1f s, %.0f units from it, the world stands still at %i. The server: %s.\n",
 		( trap->Milliseconds() - focus.startMsec ) * 0.001f, Distance( focus.origin, focus.eyes ), focus.worldTime,
@@ -977,4 +1185,7 @@ void CG_FocusInit( void ) {
 	memset( &focus, 0, sizeof( focus ) );
 	memset( &focusBack, 0, sizeof( focusBack ) );
 	memset( &focusTest, 0, sizeof( focusTest ) );
+	memset( templeWisps, 0, sizeof( templeWisps ) );
+	// (a link that is open is closed by the voice chat when the module ends, CG_VoiceShutdown())
+	templeLink = TEMPLE_LINK_OFF;
 }

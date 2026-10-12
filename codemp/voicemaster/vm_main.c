@@ -475,6 +475,74 @@ static void VM_Status( const struct sockaddr_in *from, const voicePacket_t *p, i
 	}
 }
 
+/*
+=================
+VM_Temple
+
+Somebody says where he is in the Vision Temple (bg_voice.h): the state of a session and what is handed on in one
+datagram. The room is the one of a word, not of a game server, and its members took their numbers themselves.
+The token of such a session also has the port in it, so two clients behind one address who took the same number
+are two: the second one is told that the number is taken and takes another one.
+
+Without its token the sender is told the token and nothing else happens, as with a VOICE_STATE. With it the
+session begins or goes on, the sender gets an answer once a second (that is how he knows that he is in), and the
+place goes to the other members of the room as it came.
+=================
+*/
+static void VM_Temple( const struct sockaddr_in *from, const voicePacket_t *p, int len, int64_t now ) {
+	const byte		*key = p->data;
+	byte			mixed[VOICE_ROOM_BYTES];
+	unsigned int	token;
+	int				index, i, flags = 0;
+	vmSession_t		*s;
+	const vmRoom_t	*room;
+	voicePacket_t	out;
+
+	// (the port goes into the token by way of the room it is worked out with)
+	memcpy( mixed, key, VOICE_ROOM_BYTES );
+	mixed[0] ^= (byte)( from->sin_port & 0xff );
+	mixed[1] ^= (byte)( ( from->sin_port >> 8 ) & 0xff );
+	token = VM_Token( &from->sin_addr, mixed, p->client );
+
+	memset( &out, 0, sizeof( out ) );
+	out.type = VOICE_TEMPLE;
+	out.client = p->client;
+	out.token = token;
+	if ( p->token != token ) {
+		VM_Send( from, &out, now, qtrue );
+		return;
+	}
+	index = VM_FindSession( token, &from->sin_addr, p->client );
+	if ( index < 0 )
+		index = VM_Join( from, key, p->client, token, &flags );
+	if ( index < 0 ) {
+		out.flags = flags;
+		VM_Send( from, &out, now, qtrue );
+		return;
+	}
+	s = &vmSessions[index];
+	if ( !BG_VoiceLimit( &s->limit, (int)( now & 0x7fffffff ), len ) ) {
+		vmOut.limited++;
+		return;
+	}
+	s->addr = *from;
+	s->lastHeard = now;
+	if ( !s->statusTime || now - s->statusTime >= VM_STATUS_MSEC ) {
+		s->statusTime = now;
+		VM_Send( from, &out, now, qtrue );
+	}
+
+	room = &vmRooms[s->room];
+	out.seq = p->seq;
+	out.data = p->data + VOICE_ROOM_BYTES;
+	out.dataLen = VOICE_TEMPLE_BYTES;
+	for ( i = 0; i < MAX_CLIENTS; i++ ) {
+		if ( i == p->client || room->member[i] < 0 )
+			continue;
+		VM_Pass( &vmSessions[room->member[i]], &out, now );
+	}
+}
+
 static void VM_Receive( int64_t now ) {
 	int count;
 
@@ -503,6 +571,8 @@ static void VM_Receive( int64_t now ) {
 			VM_Radio( &from, &p, len, now );
 		else if ( p.type == VOICE_STATUS )
 			VM_Status( &from, &p, len, now );
+		else if ( p.type == VOICE_TEMPLE )
+			VM_Temple( &from, &p, len, now );
 		else
 			vmOut.refused++;
 	}
