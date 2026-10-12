@@ -211,6 +211,14 @@ Run it again after a change to a menu of the old look or to the rules, and commi
 tools/menus/build.py [<assets1.pk3 of the game>]
 ```
 
+It stops with the file and the line when a script of a menu is longer than the menu code keeps
+(`MAX_SCRIPT_CHARS` in `ui/ui_shared.c`, 4096 since 2026-10-12). The game kept 2048 characters, every word
+counted with its quotes and a blank, and dropped what ran over without a word. The script that opens its siege
+menu needs 2033 of them, and with the colours of the new look, which have more digits, 2161: its last two
+commands were lost, the ones that show the team and the class of somebody who opens the menu while he plays
+(found 2026-10-12 by a run of siege in both looks; `ingame_objectives` was over too). A menu file of a mod that
+is longer than that now gets a warning in the console when it is read.
+
 ## In the code
 
 | File | |

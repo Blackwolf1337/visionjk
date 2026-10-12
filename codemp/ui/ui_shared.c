@@ -583,9 +583,16 @@ qboolean PC_String_Parse(int handle, const char **out)
 PC_Script_Parse
 =================
 */
+// The longest script of a menu, as it is kept: every word of it in quotes. The game had 2048, and what ran over
+// was dropped without a word. The script that opens its siege menu fills 2033 of them, so the same script with the
+// colours of the new look (more digits) lost its end: the commands that show the team and the class of somebody
+// who is on a team already. tools/menus/build.py refuses a script that does not fit.
+#define MAX_SCRIPT_CHARS		4096
+
 qboolean PC_Script_Parse(int handle, const char **out) {
-	char script[2048];
+	char script[MAX_SCRIPT_CHARS];
 	pc_token_t token;
+	qboolean cut = qfalse;
 
 	script[0] = 0;
 	// scripts start with { and have ; separated command lists.. commands are command, arg..
@@ -602,16 +609,26 @@ qboolean PC_Script_Parse(int handle, const char **out) {
 			return qfalse;
 
 		if (Q_stricmp(token.string, "}") == 0) {
+			if ( cut ) {
+				Com_Printf( S_COLOR_YELLOW "WARNING: a menu script is longer than %i characters, its end is lost\n", (int)sizeof( script ) - 1 );
+			}
 			*out = String_Alloc(script);
 			return qtrue;
 		}
 
-		if (token.string[1] != '\0') {
-			Q_strcat(script, 2048, va("\"%s\"", token.string));
-		} else {
-			Q_strcat(script, 2048, token.string);
+		// Q_strcat leaves out a word that does not fit and takes the shorter ones after it: the script ends at
+		// the first word that does not fit, not with a hole in it
+		if ( cut || strlen( script ) + strlen( token.string ) + 4 > sizeof( script ) ) {
+			cut = qtrue;
+			continue;
 		}
-		Q_strcat(script, 2048, " ");
+
+		if (token.string[1] != '\0') {
+			Q_strcat(script, sizeof(script), va("\"%s\"", token.string));
+		} else {
+			Q_strcat(script, sizeof(script), token.string);
+		}
+		Q_strcat(script, sizeof(script), " ");
 	}
 	return qfalse;
 }
@@ -1722,7 +1739,7 @@ void Menu_Transition3ItemByName(menuDef_t *menu, const char *p, const float minx
 
 #endif
 
-#define MAX_DEFERRED_SCRIPT		2048
+#define MAX_DEFERRED_SCRIPT		MAX_SCRIPT_CHARS
 
 char		ui_deferredScript [ MAX_DEFERRED_SCRIPT ];
 itemDef_t*	ui_deferredScriptItem = NULL;
@@ -2270,7 +2287,7 @@ int scriptCommandCount = sizeof(commandList) / sizeof(commandDef_t);
 
 void Item_RunScript(itemDef_t *item, const char *s)
 {
-	char script[2048], *p;
+	char script[MAX_SCRIPT_CHARS], *p;
 	int i;
 	qboolean bRan;
 
@@ -2278,7 +2295,7 @@ void Item_RunScript(itemDef_t *item, const char *s)
 
 	if (item && s && s[0])
 	{
-		Q_strcat(script, 2048, s);
+		Q_strcat(script, sizeof(script), s);
 		p = script;
 
 		while (1)

@@ -18,6 +18,7 @@ are. What changes is how it looks, see docs/japlus/ui.md:
 A page that needs more than the rules is changed by a function of its own in pages.py.
 """
 import os
+import re
 import sys
 import zipfile
 
@@ -54,6 +55,30 @@ def source(path, base):
     return base.read(path).decode('latin-1')
 
 
+SCRIPTS = re.compile(r'\b(onOpen|onClose|onESC|onAccept|action|mouseEnter|mouseExit|mouseEnterText|mouseExitText|'
+                     r'onFocus|leaveFocus|doubleClick|accept)\s*\{([^}]*)\}', re.I)
+
+
+def script_limit():
+    """How long a script may be for the menu code (MAX_SCRIPT_CHARS of codemp/ui/ui_shared.c)."""
+    with open(os.path.join(TREE, 'codemp', 'ui', 'ui_shared.c'), encoding='latin-1') as f:
+        return int(re.search(r'#define\s+MAX_SCRIPT_CHARS\s+(\d+)', f.read()).group(1))
+
+
+def check_scripts(name, text, limit):
+    """The menu code keeps a script in a buffer of fixed size, every word in quotes with a blank behind it, and
+    drops what does not fit without stopping. The colours of the new look are longer than the ones of the game,
+    so a script that fit there may not fit here (the siege menu did not, and lost its last commands)."""
+    for m in SCRIPTS.finditer(text):
+        words = re.findall(r'"[^"]*"|[^\s;]+|;', m.group(2))
+        # counted on the safe side: a sign or an @ before a word may be a word of its own for the reader
+        kept = sum(len(w.strip('"')) + 3 + 2 * (w[0] in '-@') for w in words)
+        if kept >= limit:
+            line = text.count('\n', 0, m.start()) + 1
+            sys.exit('%s line %d: the script of %s needs %d characters, the menu code keeps %d (MAX_SCRIPT_CHARS)'
+                     % (name, line, m.group(1), kept, limit - 1))
+
+
 def build(path, base, ingame):
     name = os.path.basename(path)
     tree = mf.parse(source(path, base))
@@ -68,9 +93,11 @@ def build(path, base, ingame):
             pages.page(top.block, name, ingame)
     head = ('// %s in the new look. Made by tools/menus/build.py from ui/jamp/%s: change that script or its\n'
             '// rules, not this file. See docs/japlus/ui.md.\n' % (name, name))
+    text = head + mf.dump(tree)
+    check_scripts(name, text, script_limit())
     os.makedirs(OUT, exist_ok=True)
     with open(os.path.join(OUT, name), 'w', encoding='latin-1', newline='\n') as f:
-        f.write(head + mf.dump(tree))
+        f.write(text)
 
 
 def write_list(name, files, what):
