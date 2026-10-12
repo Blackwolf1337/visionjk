@@ -340,7 +340,7 @@ then run with `+set se_language german` as well.
   the purple of the old game from it.
 - Setup hides the new tabs when it opens. It showed its first tab over the one left open.
 - Left out of the new look (`LEFT_OUT`): Chat Bubbles and Show My Music under Voice Chat (they are under Chat &
-  Social), Allow Downloads under Game Options (it is under Network), Voice Master under Network (it is "On
+  Social), Allow Downloads under Game Options (it is under Network), the row of `cg_voiceMaster` under Network (it is "On
   Other Servers" under Voice Chat), View Swaying (`ui_disableWeaponSway` is read by nothing in this tree) and the
   axes of a joystick as buttons (`joy_xbutton`, `joy_ybutton`, the same). Every other row of Setup and Controls
   names a cvar that the engine, a renderer or the cgame reads. The Vulkan renderer is built from the files of

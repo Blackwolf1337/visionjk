@@ -218,11 +218,11 @@ in a hidden run on 2026-10-12.
 
 `assets/configs/temple.cfg` has the settings of a temple server: `+exec temple.cfg +map vision_temple`.
 
-Clients find the server through the voice master, which names it in its answers to clients that enter the
-temple (`VOICE_TEMPLE_SERVER`, `game/voice/bg_voice.h`). The masterserver (below) names itself. The voice master
-as a program by itself names the server it was started with (`-temple <port>` for one on the same host, or
-`-temple <address>:<port>`) and none without that option: its clients then stay in the temple that is drawn
-into their own game.
+Clients find such a server through the masterserver (below), which is one itself and names its own port in its
+answers to clients that enter the temple (`VOICE_TEMPLE_SERVER`, `game/voice/bg_voice.h`). A temple server
+that is no masterserver is named by nobody since 2026-10-12: the program that could name one (the voice master,
+as it was called, started with `-temple`) is gone from the tree. Where no temple server is named the clients
+stay in the temple that is drawn into their own game.
 
 ### The temple of a server (not from JA+)
 
@@ -294,12 +294,14 @@ from the menu, has no temple of its own: its players go to the masterserver.
 
 ### The masterserver (not from JA+)
 
-`server/sv_voice.cpp`, `voicemaster/vm_core.c`. Built 2026-10-12, run hidden on Linux on one machine (the checks
-are in [voice.md](voice.md), "Checked"). Never run on a public address so far.
+`server/sv_voice.cpp`, `master/ms_relay.c`. Built 2026-10-12, run hidden on Linux on one machine (the checks
+are in [voice.md](voice.md), "Checked"), and on the host of VisionJK since 2026-10-12 21:43, where it took the
+place of two programs: the voice master, as its relay was called while it was a program of its own, and a
+temple server.
 
 One program on one UDP port that is everything central of VisionJK: the Vision Temple as a game server for the
-players of servers without this game module, and the voice master with the voice chat, the clan radio and the
-statuses of those servers. It is the dedicated server of this tree built with `-DBuildMasterServer=ON` (target
+players of servers without this game module, and the relay for those servers: their voice chat, their clan
+radio and their statuses (`master/ms_relay.c`). It is the dedicated server of this tree built with `-DBuildMasterServer=ON` (target
 `visionjk-master`, off unless asked for, with no install rule: it is for the hosts of VisionJK itself and no
 part of a release).
 
@@ -312,11 +314,12 @@ What comes in on its port:
 - a packet of the game: a player in the temple, as on any server
 - a datagram of the voice chat of one of those players: the relay of its game module, as on any dedicated
   server of this tree
-- any other datagram of the voice chat: the voice master. `sv_masterKbps` (4000, command line only) is what it
-  may send in a second, 0: anything
+- any other datagram of the voice chat: its relay for the other servers. `sv_masterKbps` (4000, command line
+  only) is what that may send in a second, 0: anything
 
-A client that asks the voice master for the temple is told the port of the game of this very program, so the
-client goes on to it with a visit. 29170 is the port the clients of 0.1.5 know the voice master on.
+A client that asks the relay for the temple is told the port of the game of this very program, so the client
+goes on to it with a visit. 29170 is the port the clients of 0.1.5 know for the voice chat on servers without
+the module (`cg_voiceMasterHost`, `voice.jka.vision`).
 
 Not there: rooms for those who use a word of their own, a list of who is in the temple, more than the 32
 players one server holds.

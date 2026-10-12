@@ -26,7 +26,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // and plays what comes back from there: the voices of the players the server lets this one hear.
 //
 // A server without the game module of this tree has no such port. There the same sound goes through the voice
-// master, one relay for all those servers (cg_voiceMaster, see "The voice master" below).
+// master, one relay for all those servers (cg_voiceMaster, see "The masterserver" below).
 //
 // Nothing in here waits. The socket does not block, the sound devices run in threads of the audio library,
 // and CG_VoiceFrame() moves a little of everything along once a frame.
@@ -50,7 +50,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 	#include <netdb.h>
 #endif
 #ifndef __EMSCRIPTEN__
-	#include "web/web_http.h"	// Web_SHA1, for the name of the room at the voice master
+	#include "web/web_http.h"	// Web_SHA1, for the name of the room at the masterserver
 #endif
 
 #define VOICE_ENCODER_BYTES		40960	// room for the state of the Opus encoder. What it needs is asked and checked
@@ -63,13 +63,13 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define VOICE_MAX_ASKS			10		//	and this many times at most
 #define VOICE_HELLO_MSEC		500		// a hello datagram this often until the server answers one,
 #define VOICE_KEEPALIVE_MSEC	5000	//	and this often after that: the router of the player keeps the way open
-#define VOICE_NO_LINK_MSEC		10000	// no answer from the relay for this long: it is said once, and a voice master is asked less often
-#define VOICE_STATE_MSEC		1000	// the voice master is told this often where this client is and whom it hears,
+#define VOICE_NO_LINK_MSEC		10000	// no answer from the relay for this long: it is said once, and a masterserver is asked less often
+#define VOICE_STATE_MSEC		1000	// the masterserver is told this often where this client is and whom it hears,
 #define VOICE_STATE_MIN_MSEC	100		//	and when that changes at once, but not more often than this
-#define VOICE_HEAR_MSEC			100		// how often it is looked at who is near, for the voice master
+#define VOICE_HEAR_MSEC			100		// how often it is looked at who is near, for the masterserver
 #define VOICE_ROOM_MSEC			1000	//	and whether the game server started another level
 #define VOICE_HEAR_MARGIN		1.1f	// who is near reaches this much further than a voice, so that nobody is cut off at its end
-#define VOICE_REFUSED_MSEC		10000	// the voice master says no for this long before it is said: a player who just left keeps his number there for a moment
+#define VOICE_REFUSED_MSEC		10000	// the masterserver says no for this long before it is said: a player who just left keeps his number there for a moment
 #define VOICE_GAME_PORT			29070	// the port of a game server whose address names none
 #define VOICE_LEAD_FRAMES		3		// frames of a speaker that wait before he is played: 60 ms for late datagrams
 #define VOICE_MAX_LEAD_FRAMES	8		//	what that grows to when his voice keeps running dry
@@ -125,10 +125,10 @@ typedef union voiceMem_u {
 
 static struct {
 	qboolean			serverHas;		// the server info says g_voice
-	qboolean			serverSays;		//	or at least says something about it: g_voice 0 is a no, also to the voice master
-	qboolean			master;			// this server has no relay, the voice goes through the voice master
+	qboolean			serverSays;		//	or at least says something about it: g_voice 0 is a no, also to the masterserver
+	qboolean			master;			// this server has no relay, the voice goes through the masterserver
 	qboolean			local;			//	or would, but the game runs on this machine
-	struct in_addr		game;			// voice master: the address of the game server,
+	struct in_addr		game;			// masterserver: the address of the game server,
 	int					gamePort;
 	qboolean			gameKnown;
 	byte				room[VOICE_ROOM_BYTES];		//	the name of its room there,
@@ -199,7 +199,7 @@ keeps in a cvar: OpenJK as numbers (cl_currentServerIP), jamp only as the player
 (cl_currentServerAddress). A name has to be looked up, and a lookup can take seconds, so it runs in a thread
 that does nothing else. The game only asks whether it is done.
 
-A server without a relay of its own is not asked anything: there the voice goes through the voice master
+A server without a relay of its own is not asked anything: there the voice goes through the masterserver
 (cg_voiceMasterHost), whose name is looked up the same way.
 
 ===============================================================================
@@ -363,7 +363,7 @@ static qboolean Voice_FindServer( void ) {
 		return ( found > 0 ) ? qtrue : qfalse;
 	}
 
-	// The voice master. The room there is named after the game server (Voice_MasterRoom), so that one first.
+	// The masterserver. The room there is named after the game server (Voice_MasterRoom), so that one first.
 	if ( !voice.gameKnown ) {
 		voice.gamePort = VOICE_GAME_PORT;
 		found = Voice_GameServer( &voice.game, &voice.gamePort );
@@ -382,7 +382,7 @@ static qboolean Voice_FindServer( void ) {
 	port = VOICE_MASTER_PORT;
 	found = Voice_SplitAddress( host, sizeof( host ), &port ) ? Voice_Lookup( host, &voice.server.sin_addr ) : -1;
 	if ( found < 0 ) {
-		trap->Print( "Voice chat: the voice master \"%s\" could not be looked up (cg_voiceMasterHost)\n", cg_voiceMasterHost.string );
+		trap->Print( "Voice chat: the masterserver \"%s\" could not be looked up (cg_voiceMasterHost)\n", cg_voiceMasterHost.string );
 		voice.failed = qtrue;
 	}
 	if ( found <= 0 )
@@ -456,7 +456,7 @@ void CG_VoiceShutdown( void ) {
 }
 
 // From the server info, the value of g_voice: does this server have a voice chat? Only then is it asked for one.
-// A server that does not say the key at all has no relay, and the voice goes through the voice master. One that
+// A server that does not say the key at all has no relay, and the voice goes through the masterserver. One that
 // says 0 wants no voice chat, and that holds for the master too.
 void CG_VoiceServerInfo( const char *value ) {
 	voice.serverHas = atoi( value ) ? qtrue : qfalse;
@@ -467,7 +467,7 @@ void CG_VoiceServerInfo( const char *value ) {
 =================
 Voice_Open
 
-The relay is known: its port, and with it the token and the range, or that it is the voice master. From here
+The relay is known: its port, and with it the token and the range, or that it is the masterserver. From here
 on there is a socket, and the speakers are open. qfalse: something is missing for good (voice.failed).
 =================
 */
@@ -500,7 +500,7 @@ static qboolean Voice_Open( int port ) {
 	}
 	voice.sockOpen = qtrue;
 	BG_SocketNonBlocking( voice.sock );
-	// (the address of the voice master is in there by now, the one of a game server follows: Voice_FindServer)
+	// (the address of the masterserver is in there by now, the one of a game server follows: Voice_FindServer)
 	voice.server.sin_family = AF_INET;
 	voice.server.sin_port = htons( (unsigned short)port );
 #else
@@ -555,7 +555,7 @@ void CG_VoiceServerCommand( void ) {
 	Voice_Open( port );
 }
 
-// Does the voice go through the voice master on this server? Only where the server says nothing about a voice
+// Does the voice go through the masterserver on this server? Only where the server says nothing about a voice
 // chat: one of this tree relays itself or says no with g_voice 0, and so can any other (sets g_voice 0).
 static qboolean Voice_WantsMaster( void ) {
 #ifdef __EMSCRIPTEN__
@@ -571,7 +571,7 @@ static qboolean Voice_WantsMaster( void ) {
 =================
 Voice_MasterStart
 
-Nobody to ask on this server: the voice goes through the voice master, once it is known where that is. The
+Nobody to ask on this server: the voice goes through the masterserver, once it is known where that is. The
 player is told, since the master is another machine than the one he chose to play on. qtrue: it is open.
 =================
 */
@@ -584,7 +584,7 @@ static qboolean Voice_MasterStart( int now ) {
 	}
 	voice.range = VOICE_MASTER_RANGE;
 	voice.askTime = now;
-	trap->Print( "Voice chat: this server has none of its own, so it goes through the voice master %s (cg_voiceMaster 0: not at all)\n",
+	trap->Print( "Voice chat: this server has none of its own, so it goes through the masterserver %s (cg_voiceMaster 0: not at all)\n",
 		cg_voiceMasterHost.string );
 	return Voice_Open( voice.port );
 }
@@ -727,7 +727,7 @@ static void Voice_SendFrame( const short *samples, int type ) {
 Voice_RadioKey
 
 +voiceclan is held, or not: whether what is said now goes over the clan radio. It does where the relay knows the
-radio (the one of the server, or the voice master), for a player who has a clan password: the server decides
+radio (the one of the server, or the masterserver), for a player who has a clan password: the server decides
 who that reaches, the master goes by what Voice_MasterClan() made of the password. The key cracks when it is
 pressed and when it is let go, as the key of a radio does, so the player knows he is on it.
 =================
@@ -739,7 +739,7 @@ static qboolean Voice_RadioKey( void ) {
 	if ( on && !voice.radio ) {
 		if ( !voice.toldNoRadio ) {
 			voice.toldNoRadio = qtrue;
-			trap->Print( "Voice chat: %s has no clan radio.\n", voice.master ? "the voice master" : "this server" );
+			trap->Print( "Voice chat: %s has no clan radio.\n", voice.master ? "the masterserver" : "this server" );
 		}
 		on = qfalse;
 	}
@@ -909,7 +909,7 @@ In: the voices of the others
 =================
 Voice_MasterAnswer
 
-What the voice master says to a VOICE_STATE. With another token than the one it was sent with: that is the
+What the masterserver says to a VOICE_STATE. With another token than the one it was sent with: that is the
 token this address has there for its room and number, and the master keeps nothing until it is told again
 with it. With the same token: this client is in, or the flags say why not.
 =================
@@ -936,7 +936,7 @@ static void Voice_MasterAnswer( const voicePacket_t *p, int now ) {
 		if ( !voice.refusedSince )
 			voice.refusedSince = now ? now : 1;
 		if ( !voice.toldRefused && now - voice.refusedSince > VOICE_REFUSED_MSEC ) {
-			trap->Print( "Voice chat: the voice master does not let you in, %s\n", ( p->flags & VOICE_FLAG_TAKEN )
+			trap->Print( "Voice chat: the masterserver does not let you in, %s\n", ( p->flags & VOICE_FLAG_TAKEN )
 				? "another player of this server speaks there under your client number" : "it is full" );
 			voice.toldRefused = qtrue;
 		}
@@ -978,7 +978,7 @@ static void Voice_Receive( int now ) {
 		if ( !BG_VoiceUnpack( datagram, len, qtrue, &p ) )
 			continue;
 		if ( p.type == VOICE_STATE ) {
-			// only the voice master says these, and its first one names the token
+			// only the masterserver says these, and its first one names the token
 			if ( voice.master )
 				Voice_MasterAnswer( &p, now );
 			continue;
@@ -995,7 +995,7 @@ static void Voice_Receive( int now ) {
 		// whoever speaks here plays with a client of this tree (status/cg_peers.c)
 		CG_PeerHeard( p.client );
 		if ( p.type == VOICE_STATUS ) {
-			// what stands above the head of somebody, handed on by the voice master (status/cg_status.c)
+			// what stands above the head of somebody, handed on by the masterserver (status/cg_status.c)
 			char		text[VOICE_STATUS_TEXT];
 			qboolean	away;
 
@@ -1264,7 +1264,7 @@ On a server with a range (g_voiceRange) a voice gets quieter with the distance a
 speaker is on. A speaker behind a wall, behind a closed door or on the other side of a water surface is
 muffled: one line from the eye of the listener to his head is looked at ten times a second. A speaker the
 server does not show at all is muffled too and comes from no direction, at the distance the server named:
-no more is known of him, on purpose. (The voice master names the end of the range for everybody. Through it
+no more is known of him, on purpose. (The masterserver names the end of the range for everybody. Through it
 only a speaker this client is shown is asked for, so that is for the moment after he went out of sight.)
 
 Without a range, and among spectators, a voice is the same everywhere, like a radio.
@@ -1410,10 +1410,10 @@ void CG_VoiceDraw( void ) {
 /*
 ===============================================================================
 
-The voice master
+The masterserver
 
 A game server without the game module of this tree has no relay, hands out no token and tells nobody who is
-near whom. There the voice goes through one relay for all such servers (codemp/voicemaster), which knows no
+near whom. There the voice goes through one relay for all such servers (codemp/master), which knows no
 game server. So this client tells it what a relay of a game server knows by itself, in a VOICE_STATE: which
 room it is in, and who is near it.
 
@@ -1424,7 +1424,7 @@ room it is in, and who is near it.
 =================
 Voice_MasterRoom
 
-The name of the room of this game server at the voice master: the same bytes on every client of that server,
+The name of the room of this game server at the masterserver: the same bytes on every client of that server,
 and nothing somebody could work out who is not connected to it. sv_serverid is in the system info, which a
 server only sends to its clients, and is another number with every level it starts. The master gets the hash
 and never the address.
@@ -1453,7 +1453,7 @@ static void Voice_MasterRoom( int now ) {
 =================
 Voice_MasterClan
 
-What the voice master is told as the clan of this client: eight bytes that are the same for everybody in this
+What the masterserver is told as the clan of this client: eight bytes that are the same for everybody in this
 room with this clan password (cp_clanPwd, the group of the clan chat) and that say nothing about the password
 to somebody who does not have it. The room is part of them, so they are others with every level. All zero: this
 player has no clan password, and what he says over the radio reaches nobody.
@@ -1579,7 +1579,7 @@ static void Voice_MasterFrame( int now ) {
 		voice.stateDue = qfalse;
 	}
 	if ( !voice.linked && !voice.refusedSince && !voice.toldNoLink && now - voice.askTime > VOICE_NO_LINK_MSEC ) {
-		trap->Print( "Voice chat: no answer from the voice master %s (UDP port %i)\n", cg_voiceMasterHost.string, voice.port );
+		trap->Print( "Voice chat: no answer from the masterserver %s (UDP port %i)\n", cg_voiceMasterHost.string, voice.port );
 		voice.toldNoLink = qtrue;
 	}
 }
@@ -1613,7 +1613,7 @@ void CG_VoiceFrame( void ) {
 	const int		now = trap->Milliseconds();
 	const qboolean	master = Voice_WantsMaster();
 
-	// the player does not want the voice master any more, or the server says something about voice now
+	// the player does not want the masterserver any more, or the server says something about voice now
 	if ( voice.master && !master ) {
 		if ( voice.answered )
 			Voice_Close();
@@ -1703,7 +1703,7 @@ int CG_VoiceLouder( int clientNum, int steps ) {
 	return 100 + 25 * voiceSpeakers[clientNum].gainSteps;
 }
 
-// Does the voice master hand statuses on for this client right now?
+// Does the masterserver hand statuses on for this client right now?
 qboolean CG_VoiceSocial( void ) {
 #ifdef __EMSCRIPTEN__
 	return qfalse;
@@ -1775,13 +1775,13 @@ void CG_VoiceStatus_f( void ) {
 		trap->Print( "Voice chat is off (cg_voice 0)\n" );
 	} else if ( !voice.serverHas && !master ) {
 		trap->Print( "This server has no voice chat%s\n", voice.serverSays ? " and wants none (g_voice 0)"
-			: ( cg.demoPlayback ? "" : ", and the voice master is switched off (cg_voiceMaster 0)" ) );
+			: ( cg.demoPlayback ? "" : ", and the masterserver is switched off (cg_voiceMaster 0)" ) );
 	} else if ( voice.local ) {
 		trap->Print( "This game runs on this machine and has no voice chat\n" );
 	} else if ( voice.failed ) {
 		trap->Print( "Voice chat could not start, see the lines above in the console\n" );
 	} else if ( !voice.answered ) {
-		trap->Print( master ? "Voice chat: this server has none, looking for the voice master\n" : "Voice chat: asked the server, no answer yet\n" );
+		trap->Print( master ? "Voice chat: this server has none, looking for the masterserver\n" : "Voice chat: asked the server, no answer yet\n" );
 	} else {
 		char		way[128];
 		const char	*silent = "no answer from that port yet";
@@ -1791,7 +1791,7 @@ void CG_VoiceStatus_f( void ) {
 		silent = "no answer from it yet";
 #else
 		if ( voice.master ) {
-			Com_sprintf( way, sizeof( way ), "through the voice master %s, UDP port %i", cg_voiceMasterHost.string, voice.port );
+			Com_sprintf( way, sizeof( way ), "through the masterserver %s, UDP port %i", cg_voiceMasterHost.string, voice.port );
 			if ( voice.refusedSince )
 				silent = "it does not let this client in";
 		} else {
@@ -1808,8 +1808,8 @@ void CG_VoiceStatus_f( void ) {
 			trap->Print( "Speakers: none open, you do not hear the others\n" );
 		else
 			trap->Print( "Speakers: open, %.1f seconds played so far\n", CG_VoiceAudioPlayed() / (float)VOICE_RATE );
-		trap->Print( "Clan radio (+voiceclan): %s\n", !voice.radio ? ( voice.master ? "the voice master does not have it" : "not on this server" )
-			: voice.master ? "the voice master has it. It reaches the players of this server with your clan password (cp_clanPwd)"
+		trap->Print( "Clan radio (+voiceclan): %s\n", !voice.radio ? ( voice.master ? "the masterserver does not have it" : "not on this server" )
+			: voice.master ? "the masterserver has it. It reaches the players of this server with your clan password (cp_clanPwd)"
 			: "the server has it. It reaches the players with your clan password (cp_clanPwd)" );
 	}
 #ifdef __EMSCRIPTEN__
@@ -1908,7 +1908,7 @@ void CG_VoiceTest_f( void ) {
 
 The Vision Temple: who else is there
 
-A client that is in the Vision Temple (focus/cg_focus.c) meets the others at the voice master, whatever server
+A client that is in the Vision Temple (focus/cg_focus.c) meets the others at the masterserver, whatever server
 it plays on and whether that server has a voice chat of its own or not. It is a link of its own, on a socket of
 its own, and only while the player is there: nothing goes to the master for it before and after. The room is
 the one of a word (cg_templeLink: 1 the one everybody is in, any other text a room for those who know it, 0

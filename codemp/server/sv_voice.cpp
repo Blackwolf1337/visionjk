@@ -27,9 +27,9 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // server then needs one port. Nothing changes for a client: it sends to the port the server names in "jpvoice".
 //
 // The masterserver (the program built with VISION_MASTER) is a dedicated server that is the Vision Temple and
-// carries the voice master too (codemp/voicemaster/vm_core.c): the relay for the servers without the game
-// module of this tree, which hears the same kind of datagram. What the module of the masterserver does not
-// take as one of its own players goes to it.
+// carries a relay of its own too (codemp/master/ms_relay.c): the one for the servers without the game module
+// of this tree, which hears the same kind of datagram. What the module of the masterserver does not take as
+// one of its own players goes to it.
 
 #include "server.h"
 #include "sv_gameapi.h"
@@ -39,11 +39,11 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #ifdef VISION_MASTER
 #include <chrono>
-#include "voicemaster/vm_core.h"
+#include "master/ms_relay.h"
 
 static cvar_t	*sv_masterKbps;
 static qboolean	sv_masterUp;
-static qboolean	sv_masterTemple;		// the voice master was told that this server is the Vision Temple
+static qboolean	sv_masterTemple;		// the relay was told that this server is the Vision Temple
 #endif
 
 static cvar_t	*sv_voiceShared;
@@ -78,7 +78,7 @@ void SV_GameSendDatagram( const byte *ip, int port, const byte *data, int length
 }
 
 #ifdef VISION_MASTER
-// milliseconds of a clock that never goes backwards, for the voice master
+// milliseconds of a clock that never goes backwards, for the relay
 static int64_t SV_MasterMsec( void ) {
 	return std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::steady_clock::now().time_since_epoch() ).count();
 }
@@ -88,7 +88,7 @@ static void SV_MasterSend( const struct sockaddr_in *to, const byte *data, int l
 }
 
 static void SV_MasterPrint( const char *line ) {
-	Com_Printf( "Voice master: %s", line );
+	Com_Printf( "Masterserver: %s", line );
 }
 
 static void SV_MasterDatagram( const netadr_t *from, const byte *data, int length ) {
@@ -101,14 +101,14 @@ static void SV_MasterDatagram( const netadr_t *from, const byte *data, int lengt
 	addr.sin_family = AF_INET;
 	Com_Memcpy( &addr.sin_addr.s_addr, from->ip, 4 );
 	addr.sin_port = from->port;		// both as they go over the network
-	VM_Datagram( &addr, data, length, SV_MasterMsec() );
+	MS_Datagram( &addr, data, length, SV_MasterMsec() );
 }
 
 /*
 ===============
 SV_VoiceFrame
 
-Once a frame of the program: the voice master forgets who was not heard of and writes its line of numbers.
+Once a frame of the program: the relay forgets who was not heard of and writes its line of numbers.
 A server that is the Vision Temple is named to the clients that ask the master for the temple: itself, by the
 port of the game (an address of zeros is the master's own, bg_voice.h).
 ===============
@@ -117,21 +117,21 @@ void SV_VoiceFrame( void ) {
 	if ( !sv_masterUp ) {
 		return;
 	}
-	VM_Frame( SV_MasterMsec() );
+	MS_Frame( SV_MasterMsec() );
 	if ( !sv_masterTemple && sv.state == SS_GAME && Cvar_VariableIntegerValue( "g_visionTemple" ) ) {
 		const int	port = Cvar_VariableIntegerValue( "net_port" );
 		const byte	server[VOICE_TEMPLE_SERVER] = { 0, 0, 0, 0, (byte)( port >> 8 ), (byte)( port & 0xff ) };
 
-		VM_SetTemple( server );
+		MS_SetTemple( server );
 		sv_masterTemple = qtrue;
-		Com_Printf( "Voice master: this server is the Vision Temple it names\n" );
+		Com_Printf( "Masterserver: this server is the Vision Temple it names\n" );
 	}
 }
 
-// the server ends: what the voice master did since its last line of numbers
+// the server ends: what the relay did since its last line of numbers
 void SV_VoiceShutdown( void ) {
 	if ( sv_masterUp ) {
-		VM_Shutdown( SV_MasterMsec() );
+		MS_Shutdown( SV_MasterMsec() );
 	}
 }
 #endif
@@ -173,12 +173,12 @@ qboolean SV_VoicePacket( const netadr_t *from, msg_t *msg ) {
 void SV_VoiceInit( void ) {
 #ifdef VISION_MASTER
 	sv_voiceShared = Cvar_Get( "sv_voiceShared", "1", CVAR_ROM, "The voice chat comes in on the UDP port of the game" );
-	sv_masterKbps = Cvar_Get( "sv_masterKbps", va( "%i", VM_DEFAULT_KBPS ), CVAR_INIT, "What the voice master may send, kbit/s. 0: anything" );
-	if ( VM_Init( SV_MasterSend, SV_MasterPrint, Q_max( sv_masterKbps->integer, 0 ) * 125, SV_MasterMsec() ) ) {
+	sv_masterKbps = Cvar_Get( "sv_masterKbps", va( "%i", MS_DEFAULT_KBPS ), CVAR_INIT, "What the relay of the masterserver may send, kbit/s. 0: anything" );
+	if ( MS_Init( SV_MasterSend, SV_MasterPrint, Q_max( sv_masterKbps->integer, 0 ) * 125, SV_MasterMsec() ) ) {
 		sv_masterUp = qtrue;
-		Com_Printf( "Voice master on the UDP port of the game\n" );
+		Com_Printf( "Masterserver: its relay listens on the UDP port of the game\n" );
 	} else {
-		Com_Printf( "No voice master: the system gives no random numbers, so nobody could be given a token\n" );
+		Com_Printf( "Masterserver: no relay, the system gives no random numbers, so nobody could be given a token\n" );
 	}
 #elif defined( DEDICATED )
 	sv_voiceShared = Cvar_Get( "sv_voiceShared", "1", CVAR_INIT, "1: the voice chat comes in on the UDP port of the game, the server needs no second port. 0: on a port of its own (g_voicePort)" );

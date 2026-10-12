@@ -1823,7 +1823,7 @@ void		CG_FocusTint( void );
 qboolean	CG_FocusLoading( void );
 float		CG_FocusMuffle( void );
 void		CG_FocusServerCommand( void );
-// who else is in the Vision Temple: the link to the voice master for it (voice/cg_voice.c) and what it brings
+// who else is in the Vision Temple: the link to the masterserver for it (voice/cg_voice.c) and what it brings
 typedef enum {
 	TEMPLE_LINK_OFF,		// nobody is asked: not in the temple, or the player wants to be alone (cg_templeLink 0, cg_voiceMaster 0)
 	TEMPLE_LINK_ASKING,		// the master is looked up or was not heard from yet
@@ -2214,7 +2214,7 @@ void CG_VoiceMute_f( void );
 void CG_VoiceUnmute_f( void );
 void CG_VoiceDraw( void );
 int CG_VoiceLip( int clientNum );	// how far the mouth of a player is open by what he says, 0 to 4
-qboolean CG_VoiceSocial( void );	// the voice master hands statuses on for this client
+qboolean CG_VoiceSocial( void );	// the masterserver hands statuses on for this client
 void CG_VoiceSendStatus( qboolean away, const char *text );
 
 void CG_JPAutoReplierInit( void );

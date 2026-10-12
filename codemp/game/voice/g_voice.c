@@ -367,7 +367,7 @@ static qboolean G_VoiceDatagram( const struct sockaddr_in *from, const byte *dat
 	voicePacket_t	p;
 	voiceClient_t	*vc;
 
-	// (a VOICE_STATE and a VOICE_STATUS are for the voice master: this relay knows from the game where
+	// (a VOICE_STATE and a VOICE_STATUS are for the masterserver: this relay knows from the game where
 	// everybody is, and the statuses of a server with it go through the game connection, status/g_status.c)
 	if ( from->sin_family != AF_INET || !BG_VoiceUnpack( datagram, len, qfalse, &p ) || p.type == VOICE_STATE
 		|| p.type == VOICE_STATUS || p.type == VOICE_TEMPLE || p.client >= level.maxclients ) {

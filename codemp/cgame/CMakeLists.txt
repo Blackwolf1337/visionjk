@@ -137,7 +137,7 @@ set(MPCGameVoiceFiles
 	"${MPDir}/cgame/voice/cg_voice.h"
 	)
 if(BuildJPVoice AND NOT EMSCRIPTEN)
-	# SHA-1: the name of the room at the voice master, for servers without the game module of this tree
+	# SHA-1: the name of the room at the masterserver, for servers without the game module of this tree
 	set(MPCGameVoiceFiles ${MPCGameVoiceFiles}
 		"${SharedDir}/web/web_sha1.c"
 		"${SharedDir}/web/web_http.h"

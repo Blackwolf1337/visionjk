@@ -39,7 +39,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define STATUS_TEXT			64		// as statusMusic of the game module
 #define STATUS_POLL_MSEC	2000
 #define STATUS_SEND_MSEC	6000
-#define STATUS_MASTER_MSEC	5000	// through the voice master: the own status is said this often, and when it changed
+#define STATUS_MASTER_MSEC	5000	// through the masterserver: the own status is said this often, and when it changed
 #define STATUS_MASTER_KEEP	15000	//	and one of somebody else that was not said again for this long is over
 #define STATUS_AWAY_MSEC	60000	//	and this long without a key or a turn of the view is away: the default of g_afkTime
 #define STATUS_ASK_FIRST	1500	// "jpstatus all" goes to the server this long after the cgame has its first frame,
@@ -52,7 +52,7 @@ static struct {
 	int			pollTime;
 	int			sendTime;
 	qboolean	utf8;					// text is UTF-8 (cl_utf8Text)
-	int			masterTime[MAX_CLIENTS];	// when the voice master last said his status, 0: it is not from there
+	int			masterTime[MAX_CLIENTS];	// when the masterserver last said his status, 0: it is not from there
 	qboolean	masterAway;				// what the master was last told of this player,
 	char		masterMusic[STATUS_TEXT];
 	int			inputTime;				// when this player last pressed a key or turned,
@@ -105,7 +105,7 @@ void CG_StatusAnswered( void ) {
 =================
 CG_StatusFromMaster
 
-The voice master handed on what stands above the head of somebody. The text is UTF-8 there, whatever the text
+The masterserver handed on what stands above the head of somebody. The text is UTF-8 there, whatever the text
 of this client is.
 =================
 */
@@ -137,7 +137,7 @@ qboolean CG_StatusLine( int clientNum, char *out, int outSize ) {
 	}
 	if ( !cgs.clientinfo[clientNum].infoValid
 		|| ( status.masterTime[clientNum] && ( cg.time - status.masterTime[clientNum] > STATUS_MASTER_KEEP || cg.time < status.masterTime[clientNum] ) ) ) {
-		// he left, the slot may be somebody else's next. Or the voice master did not say his status again:
+		// he left, the slot may be somebody else's next. Or the masterserver did not say his status again:
 		// he left its room, or has nothing above his head any more
 		status.away[clientNum] = qfalse;
 		status.music[clientNum][0] = '\0';
@@ -220,7 +220,7 @@ static void Status_Music( char *out, int outSize ) {
 =================
 Status_MasterFrame
 
-A server that passes no statuses on, and a voice master that does: it is told what stands above this player
+A server that passes no statuses on, and a masterserver that does: it is told what stands above this player
 =================
 */
 static void Status_MasterFrame( qboolean away, const char *music ) {
@@ -242,7 +242,7 @@ static void Status_MasterFrame( qboolean away, const char *music ) {
 =================
 CG_StatusFrame
 
-Once a frame: keeps the server told what this player listens to, or the voice master
+Once a frame: keeps the server told what this player listens to, or the masterserver
 =================
 */
 void CG_StatusFrame( void ) {
@@ -272,7 +272,7 @@ void CG_StatusFrame( void ) {
 			status.asks++;
 		}
 	}
-	// only a game module of this tree passes statuses on, and says so. Anywhere else the voice master may.
+	// only a game module of this tree passes statuses on, and says so. Anywhere else the masterserver may.
 	server = (qboolean)( ( atoi( Info_ValueForKey( CG_ConfigString( CS_SERVERINFO ), "g_visionCaps" ) ) & 2 ) != 0 );
 	if ( !server ) {
 		if ( !CG_VoiceSocial() ) {
@@ -339,9 +339,9 @@ void CG_StatusList_f( void ) {
 	} else if ( atoi( Info_ValueForKey( CG_ConfigString( CS_SERVERINFO ), "g_visionCaps" ) ) & 2 ) {
 		trap->Print( "%i statuses, told by the server.\n", count );
 	} else if ( CG_VoiceSocial() ) {
-		trap->Print( "%i statuses, handed on by the voice master: this server passes none on.\n", count );
+		trap->Print( "%i statuses, handed on by the masterserver: this server passes none on.\n", count );
 	} else {
-		trap->Print( "No statuses here: this server passes none on, and the voice master is not connected (cg_voice, cg_voiceMaster).\n" );
+		trap->Print( "No statuses here: this server passes none on, and the masterserver is not connected (cg_voice, cg_voiceMaster).\n" );
 	}
 }
 

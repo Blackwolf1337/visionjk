@@ -34,11 +34,6 @@ if(BuildMPCGame)
 	add_subdirectory("${MPDir}/cgame")
 endif(BuildMPCGame)
 
-#    Add Voice Master Project (a page can not be one: no UDP there)
-if(BuildVoiceMaster AND NOT EMSCRIPTEN)
-	add_subdirectory("${MPDir}/voicemaster")
-endif()
-
 #    Add UI Project
 if(BuildMPUI)
 	add_subdirectory("${MPDir}/ui")
@@ -887,14 +882,15 @@ if(BuildMPDed)
 	set_target_properties(${MPDed} PROPERTIES PROJECT_LABEL "MP Dedicated Server")
 	target_link_libraries(${MPDed} ${MPDedLibraries})
 
-	# The masterserver: the same program with the voice master inside (server/sv_voice.cpp,
-	# voicemaster/vm_core.c), one UDP port for the Vision Temple and for the voice chat of the servers
-	# without the game module of this tree. For the hosts of VisionJK itself: there is no install rule.
+	# The masterserver: the same program with the relay for the servers without the game module of this
+	# tree inside (server/sv_voice.cpp, master/ms_relay.c), one UDP port for the Vision Temple and for the
+	# voice chat, the clan radio and the statuses of those servers. For the hosts of VisionJK itself: there
+	# is no install rule.
 	if(BuildMasterServer)
 		set(MasterServerFiles
 			${MPDedFiles}
-			"${MPDir}/voicemaster/vm_core.c"
-			"${MPDir}/voicemaster/vm_core.h"
+			"${MPDir}/master/ms_relay.c"
+			"${MPDir}/master/ms_relay.h"
 			)
 		add_executable(${MasterServer} ${MasterServerFiles})
 		set_target_properties(${MasterServer} PROPERTIES COMPILE_DEFINITIONS "${MPDedDefines};VISION_MASTER")

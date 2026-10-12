@@ -71,7 +71,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // heap up around them (Temple_Keep()). Where those are and how high the steps are stands in that shader and
 // in Temple_Ground() and Temple_Keep() here, and the two have to match. Keys, the server, the body and the ways back are the ones of Focus.
 //
-// Who else is there. Clients of this tree that are in the temple meet at the voice master, whatever server each
+// Who else is there. Clients of this tree that are in the temple meet at the masterserver, whatever server each
 // of them plays on (CG_VoiceTempleFrame() of voice/cg_voice.c has the link, cg_templeLink says with whom: 1
 // everybody, a word those who know it, 0 nobody). Each says where it stands ten times a second, and the others
 // are drawn where they stand as wisps: a ball of blue light with a little smoke of it, and the name over it.
@@ -174,7 +174,7 @@ static struct {
 static focus_t		focus;
 static snapshot_t	focusPeek;			// the newest snapshot, looked at and not taken in
 
-// somebody else in the Vision Temple, by the number he has at the voice master
+// somebody else in the Vision Temple, by the number he has at the masterserver
 typedef struct templeWisp_s {
 	int			heardMsec;				// when his place came last, 0: nobody
 	vec3_t		target, shown;			// where he said he is, and where he is drawn on his way there
@@ -783,7 +783,7 @@ void CG_FocusView( void ) {
 =================
 CG_FocusPlace
 
-The voice master handed on where somebody else is in the Vision Temple (voice/cg_voice.c)
+The masterserver handed on where somebody else is in the Vision Temple (voice/cg_voice.c)
 =================
 */
 void CG_FocusPlace( int member, const float *origin, float yaw, const char *name ) {
@@ -1335,7 +1335,7 @@ void CG_FocusStatus_f( void ) {
 		return;
 	}
 	if ( focus.temple ) {
-		static const char *const links[] = { "nobody is asked", "asking the voice master", "open", "the voice master does not answer", "the voice master is full" };
+		static const char *const links[] = { "nobody is asked", "asking the masterserver", "open", "the masterserver does not answer", "the masterserver is full" };
 		int i;
 
 		trap->Print( "Vision Temple: at %.0f %.0f %.0f, looking %.0f. The others: %s, %i here.\n", focus.origin[0], focus.origin[1],

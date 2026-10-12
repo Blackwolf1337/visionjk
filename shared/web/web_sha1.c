@@ -22,8 +22,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // the hash of it: nothing is kept safe with it there.
 //
 // The voice chat uses it too, on servers without the game module of this tree: the cgame makes the name of its
-// room with it (Voice_MasterRoom of cg_voice.c), and the voice master its tokens, 32 bits of the hash of a
-// secret and an address (codemp/voicemaster). Nobody has to find two texts with one hash for either.
+// room with it (Voice_MasterRoom of cg_voice.c), and the masterserver its tokens, 32 bits of the hash of a
+// secret and an address (codemp/master). Nobody has to find two texts with one hash for either.
 
 #include "web_http.h"
 

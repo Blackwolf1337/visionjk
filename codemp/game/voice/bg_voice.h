@@ -32,7 +32,7 @@ to a client		"VO" version type speaker token[4] sequence[2] flags distance			fra
 The token is the one the server gave that client over the game connection, in both directions: it is what
 tells the server who sends and tells the client that it is the server that sends.
 
-On a server without this game module the cgame goes through the voice master (codemp/voicemaster), one relay
+On a server without this game module the cgame goes through the masterserver (codemp/master), one relay
 for all such servers. There nobody hands out a token over a game connection and nobody knows where a player
 stands, so the client says both in a datagram of its own, VOICE_STATE:
 
@@ -51,7 +51,7 @@ answer to "jpvoice hello" (VOICE_CAP_RADIO), a client sends no VOICE_RADIO to on
 before the radio does not know the flag: for it the frame has VOICE_FLAG_UNSEEN and a distance of 0 as well,
 which it plays as a voice close by behind a wall.
 
-The voice master knows the radio too, and what stands above the head of a player (cg_status.c), since
+The masterserver knows the radio too, and what stands above the head of a player (cg_status.c), since
 2026-10-11. It says so in every answer (VOICE_FLAG_SOCIAL), and only a client that saw that flag sends it
 anything of the following, so a master from before never gets a datagram it would not read:
 
@@ -67,7 +67,7 @@ came: one byte of flags (VOICE_STATUS_AWAY) and a text of up to VOICE_STATUS_TEX
 master does not keep.
 
 The Vision Temple (2026-10-12, cgame/focus/cg_focus.c): a place a client of this tree can go to from any server,
-and where it sees who else is there. They meet at the voice master, in a room that has nothing to do with a game
+and where it sees who else is there. They meet at the masterserver, in a room that has nothing to do with a game
 server: the same sixteen bytes from everybody who uses the same word (cg_templeLink). One datagram is the state
 and the place at once:
 
@@ -103,10 +103,10 @@ client that can keep its server meanwhile goes there (client/cl_visit.cpp).
 
 #define VOICE_HELLO				0		// to the server: this is my address. To a client: the server has it
 #define VOICE_AUDIO				1
-#define VOICE_STATE				2		// the voice master only: where this client is and whom it hears, and the answer
+#define VOICE_STATE				2		// the masterserver only: where this client is and whom it hears, and the answer
 #define VOICE_RADIO				3		// to the server only: sound for the clan of the speaker
-#define VOICE_STATUS			4		// through the voice master only: what stands above the head of a player
-#define VOICE_TEMPLE			5		// through the voice master only: where somebody is in the Vision Temple
+#define VOICE_STATUS			4		// through the masterserver only: what stands above the head of a player
+#define VOICE_TEMPLE			5		// through the masterserver only: where somebody is in the Vision Temple
 
 #define VOICE_ROOM_BYTES		16
 #define VOICE_STATE_BYTES		( VOICE_ROOM_BYTES + 8 )	// what a VOICE_STATE to the master carries after its head
@@ -117,7 +117,7 @@ client that can keep its server meanwhile goes there (client/cl_visit.cpp).
 #define VOICE_TEMPLE_NAME		32		// the name in a VOICE_TEMPLE with its end
 #define VOICE_TEMPLE_BYTES		( 8 + VOICE_TEMPLE_NAME )	// the place in one: x, y, z, yaw, flags, name
 #define VOICE_TEMPLE_SERVER		6		// in an answer of the master: the game server that is the temple, address[4] port[2]
-#define VOICE_MASTER_PORT		29170	// UDP, where the voice master listens unless it is told another one
+#define VOICE_MASTER_PORT		29170	// UDP, where the masterserver listens unless it is told another one
 #define VOICE_MASTER_RANGE		1024	// how far a voice carries through the master: the default of g_voiceRange
 
 #define VOICE_FLAG_UNSEEN		1		// to a client: the speaker is not in what the server shows him of the level

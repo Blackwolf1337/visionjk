@@ -33,10 +33,10 @@ scenarios in the VM and sends back logs and pictures.
 | Spatial sound (`s_spatial 1`) | `phonon.dll` is loaded (Steam Audio 4.8.1), the level is handed over (50749 triangles of mp/ffa3 in 96 ms) and its paths are worked out in the background (740 probes) and stored. It is off by default on Windows |
 | Voice chat, devices | `voice_devices` lists the microphone and the speakers of Windows by name |
 | Voice chat, two games | one game is the server and sends the test tone, a second one joins it over the loopback address: "Padawan talks, 8583 frames heard". Relay of the Windows game module, both ends on Windows. What the second game played was written to a file: the tone, both pitches, without a gap in 4 seconds on the sound device of Windows and in 22 seconds on the device that plays into nothing. `voice_status` says the speakers run ("16.4 seconds played so far", 4 seconds later 20.4) |
-| Clan radio | both the relay and a voice master say they have it. Not talked over |
+| Clan radio | both the relay of a server and the one for servers without the module (the masterserver's, a program of its own then) say they have it. Not talked over |
 | Statuses, by the server | both players read the music of the other (`status_test`), and each is "Away from keyboard" after a minute without a key |
 | Music from a window title | a window whose title ends in " - YouTube Music" (Notepad with a file of that name stood in for the browser): "Listening to YT Music: Test Band Windows Song" above the player. `statuses` now also says what music the game finds |
-| Voice master | a Windows build of the master ran in the VM. A game on a server that says nothing of voice (a stand-in game module) and reached by the address of the network links to it: "through the voice master ... connected", and its statuses go through it. With one player there, so nobody was heard that way |
+| The relay for servers without the module | a Windows build of it as a program of its own ("the master", the voice master of then) ran in the VM. A game on a server that says nothing of voice (a stand-in game module) and reached by the address of the network links to it: "through the voice master ... connected" (the line of then), and its statuses go through it. With one player there, so nobody was heard that way |
 | Admin login, key file | `amkey new` writes the key, the server reads it from `admin_keys.txt`, `amkey login` logs in, with `sv_floodProtect 1` |
 | Admin login, ssh-agent | the OpenSSH agent of Windows (its service has to be switched on, which asks for the administrator once) holds an Ed25519 key, `cg_authAgent 1`: "Waiting for your ssh-agent to sign", then logged in |
 | Chat | a line with umlauts, the euro sign and Greek letters is sent and comes back as it was typed |
@@ -66,7 +66,7 @@ Nothing in the Windows code had to be changed.
 - Anything heard: how voices, the radio and the spatial sound sound, a real microphone, echo.
 - A mouse and a keyboard in a person's hands: clicks in the menus, the pointer on a player, the card, the
   console marked with the mouse, a link opened from the chat.
-- The internet: the server browser with real servers, the voice master at its real address, a download.
+- The internet: the server browser with real servers, the masterserver at its real address, a download.
 - The music status from Spotify itself (only the window of a browser with YouTube Music was imitated).
 - A dedicated server for Windows (the tree builds none), bot mode, siege, a team game.
 - Windows 10, a Windows in another language than German, a user without administrator rights (apart from the

@@ -195,8 +195,8 @@ void CG_PeerList_f( void ) {
 	if ( server ) {
 		trap->Print( "%i with VisionJK, told by the server.\n", count );
 	} else if ( CG_VoiceSocial() ) {
-		trap->Print( "%i with VisionJK. This server tells nothing: known is who was heard through the voice master.\n", count );
+		trap->Print( "%i with VisionJK. This server tells nothing: known is who was heard through the masterserver.\n", count );
 	} else {
-		trap->Print( "%i with VisionJK. This server tells nothing, and the voice master is not connected (cg_voice, cg_voiceMaster).\n", count );
+		trap->Print( "%i with VisionJK. This server tells nothing, and the masterserver is not connected (cg_voice, cg_voiceMaster).\n", count );
 	}
 }

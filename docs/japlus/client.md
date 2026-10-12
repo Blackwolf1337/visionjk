@@ -320,7 +320,7 @@ chat bubble stands on top of it.
   YouTube Music (the window has to show the tab). Not on macOS and not in the browser client.
 
 On a server with the game module of this tree (`g_visionCaps` bit 1) the server passes the statuses on. On
-any other server they go through the voice master since 2026-10-11 ([voice.md](voice.md), "On a server without
+any other server they go through the masterserver since 2026-10-11 ([voice.md](voice.md), "On a server without
 it"), for the players whose voice chat is connected to it (`cg_voice 1`, `cg_voiceMaster 1`): every client says
 its own status there every five seconds and finds out by itself whether its player is away (a minute without
 a key or a turn of the view). The music is still only told with `cg_shareMusic 1`, and there it also passes
@@ -328,10 +328,10 @@ the machine of the master. Only clients of this tree with its engine draw the li
 
 | Command | |
 |---------|---|
-| `statuses` | what stands above whom, and whether the server or the voice master tells it |
+| `statuses` | what stands above whom, and whether the server or the masterserver tells it |
 | `status_test <text>`, `status_test stop` | said as the music of this player in place of what plays, for tests. `cg_shareMusic` still decides |
 
-On Windows the lines by the server, through a voice master and from the title of a window ran on 2026-10-11,
+On Windows the lines by the server, through the relay for servers without the module and from the title of a window ran on 2026-10-11,
 see [windows.md](windows.md).
 
 ### Clickable players
@@ -490,7 +490,7 @@ or "Another client".
   (`sv_floodProtect`, on by default) drops a command that comes within a second of another one without a word.
   The first version asked once and was only ever run against servers with the protection off.
 - On any other server nobody tells. There a client of this tree is known by what comes from it through the
-  voice chat: its voice, or what stands above its head, which every client says to the voice master every five
+  voice chat: its voice, or what stands above its head, which every client says to the masterserver every five
   seconds. So it is known of the players whose voice chat is linked to the master (`cg_voice 1`,
   `cg_voiceMaster 1`, how a client starts out), within some seconds, and without a version. That somebody
   plays with something else is never known there: who was not heard may have the voice chat switched off. The
@@ -501,10 +501,10 @@ or "Another client".
 Checked 2026-10-12 with four scripted clients of the build on a server of the build (`BUILD=1
 CAM=ui_scores_cam.cfg tools/sitescene3.sh` of the work folder): the icon before all four names, also after the
 one who looks restarted his video, the version on the cards, and `peers` naming the server as the source. And
-with three scripted clients on a server that tells nothing, linked through a voice master on this machine
+with three scripted clients on a server that tells nothing, linked through the relay of the masterserver on this machine (a program of its own then)
 (`SOCIAL=1 tools/voicetest/e2e_master.sh`, three new checks): each knows of the two others that they play with
-VisionJK, and that the voice master is where it knows it from. Not checked: a client that is no client of
-this tree on either server (no such program was run, bots stand in), the voice master on its real machine, the
+VisionJK, and that the masterserver is where it knows it from. Not checked: a client that is no client of
+this tree on either server (no such program was run, bots stand in), the masterserver on its real machine, the
 internet.
 
 ### The server browser in a game, and servers with bots only
@@ -664,7 +664,7 @@ Not checked: how it steers with real keys and a real mouse, how it sounds, the b
 ### The Vision Temple
 
 Not from JA+: an idea of the owner of this tree (2026-10-12). `cgame/focus/cg_focus.c` (the state is the one of
-Focus above), `rd-vulkan-vision/shaders/temple.frag`, `voice/cg_voice.c` and `voicemaster/vm_core.c` for who else
+Focus above), `rd-vulkan-vision/shaders/temple.frag`, `voice/cg_voice.c` and `master/ms_relay.c` for who else
 is there. **Built and run on Linux with rd-vulkan-vision only** (hidden, 2026-10-12), played by nobody yet.
 
 The command `temple` (`temple 1`, `temple 0`; a key under Controls, Extras) takes the player to a temple above
@@ -698,7 +698,7 @@ have to match.
 
 - **Keys, body, ways back**: as in Focus. The body is protected where the server does that (`jpfocus`), a hit
   brings the player back elsewhere, and one comes back through a light that goes within a moment.
-- **Who else is there.** Clients of this tree that are in the temple meet at the voice master
+- **Who else is there.** Clients of this tree that are in the temple meet at the masterserver
   (`cg_voiceMasterHost`), whatever server each plays on and whether that server has a voice chat of its own.
   `cg_templeLink`: 1 everybody (the default), any other text those who have the same text, 0 nobody, and then the
   master is not asked at all (`cg_voiceMaster 0` does the same). The link is a socket of its own that is open
@@ -726,7 +726,7 @@ Not from JA+ or OpenJK (2026-10-12, the owner: "replace the wisps with the actua
 including the animations and game logic and movement but just without fighting", and without leaving the server
 one is on). `client/cl_visit.cpp`, `cgame/focus/cg_focus.c`, the server part is in [server.md](server.md),
 "The Vision Temple as a server". **Built and run on Linux with rd-vulkan-vision only**, hidden, with
-`tools/uitest/visit.sh` of the test tools: two dedicated servers, a voice master and one or two clients on one
+`tools/uitest/visit.sh` of the test tools: two dedicated servers, the relay that names the second one and one or two clients on one
 machine. Played by nobody yet, and never over a real network.
 
 The temple of the part above is the start of the way only where there is a server that is the temple. The
@@ -736,14 +736,14 @@ the game, and where one can talk and use the emotes. Which server that is (since
 - **The temple of the server one is on**, where its server info says that it has one (bit 6 of `g_visionCaps`,
   a dedicated server of this tree). Only the players of that server are there.
 - **The masterserver** from any other server: one that does not run this game module, one whose owner switched
-  its temple off, and after a visit to the temple of a server that got no answer. The voice master in it names
-  it (`VOICE_TEMPLE_SERVER`), and the players of all such servers meet there.
+  its temple off, and after a visit to the temple of a server that got no answer. Its relay names its own port
+  (`VOICE_TEMPLE_SERVER`), and the players of all such servers meet there.
 - Neither: the temple stays the light one.
 
 The way, as a player has it:
 
 1. The temple key on a server. The light temple begins, the server is asked to protect the body (`jpfocus 1`,
-   or `jpfocus 1 1` where it has a temple of its own: that starts it unless it runs), and the voice master is
+   or `jpfocus 1 1` where it has a temple of its own: that starts it unless it runs), and the masterserver is
    asked who is there. Its answer carries the address of the masterserver.
 2. After 0.9 seconds, and when the server has answered about the body, the cgame runs `visit <address of the
    server one is on> 1` for the temple of that server, or `visit <address>` for the masterserver. The
@@ -791,8 +791,8 @@ Limits, said plainly:
 - **Only the open temple.** With a word of one's own (`cg_templeLink`) or with 0 one stays in the light temple:
   the server has no rooms.
 - **Only where there is such a server.** From a server without a temple of its own that is the masterserver
-  the voice master names. The one on the owner's host is from before and names none, so from there every
-  client is in the light temple until the masterserver runs.
+  (`cg_voiceMasterHost`, `voice.jka.vision`). It runs on the owner's host since 2026-10-12 21:43. Where it does
+  not answer, the temple stays the light one.
 
 On the temple server the cgame draws no fight HUD (votes, who talks, chat and the hint are left), shows every
 player as his own model at once (no deferred load), and the camera goes through the fences nobody sees. The
