@@ -153,11 +153,10 @@ const char *CG_VisionText( const char *english ) {
 	}
 	key[n] = '\0';
 
+	// (for a reference it does not have the engine writes "??" and says no: the pack of this client is older
+	// than its cgame, or the pack of a mod took its place)
 	found[0] = '\0';
-	if ( n > 0 ) {
-		trap->SE_GetStringTextString( va( "VISION_%s", key ), found, sizeof( found ) );
-	}
-	if ( !found[0] ) {
+	if ( n <= 0 || !trap->SE_GetStringTextString( va( "VISION_%s", key ), found, sizeof( found ) ) || !found[0] ) {
 		Q_strncpyz( out, english, sizeof( text[0] ) );
 		return out;
 	}

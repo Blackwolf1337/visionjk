@@ -465,9 +465,12 @@ or "Another client".
 
 Checked 2026-10-12 with four scripted clients of the build on a server of the build (`BUILD=1
 CAM=ui_scores_cam.cfg tools/sitescene3.sh` of the work folder): the icon before all four names, also after the
-one who looks restarted his video, the version on the cards, and `peers` naming the server as the source. Not
-checked: a client that is no client of this tree on such a server (no such program was run, bots stand in),
-the internet.
+one who looks restarted his video, the version on the cards, and `peers` naming the server as the source. And
+with three scripted clients on a server that tells nothing, linked through a voice master on this machine
+(`SOCIAL=1 tools/voicetest/e2e_master.sh`, three new checks): each knows of the two others that they play with
+VisionJK, and that the voice master is where it knows it from. Not checked: a client that is no client of
+this tree on either server (no such program was run, bots stand in), the voice master on its real machine, the
+internet.
 
 ### The server browser in a game, and servers with bots only
 
