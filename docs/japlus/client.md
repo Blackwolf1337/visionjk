@@ -675,9 +675,13 @@ the sun is no disc any more but a burning heart with flames, rays in two sets, a
 and a streak along the horizon. `r_templeDetail` (2, 1, 0) leaves out what costs most for a weaker card: the
 second look towards the sun in the clouds and two layers of the sky at 1, the shadows on the gold and a layer of
 the clouds at 0. Frames a second at 2560 x 1440 with 8 samples on an RTX 4070 SUPER: about 150 at detail 2, 160
-at 1, 180 at 0 (the first version of the shader: 300, the level the temple was entered from: 900). One arrives out of light on the way to the podium, walks with the movement keys on the ground (the
-clouds, the steps; no farther than 640 units from the middle) and looks around with the mouse. Where the
-podium is stands in the shader and in `Temple_Ground()`, the two have to match.
+at 1, 180 at 0 (the first version of the shader: 300, the level the temple was entered from: 900).
+
+One arrives out of light on the way to the podium, walks with the movement keys and looks around with the
+mouse. One walks on the gold only: the way, the terrace around the podium (203 units from its middle) and up its
+five steps. The clouds heap up beside them, and a walker who would leave the gold is kept at its edge
+(`Temple_Keep()`). Where the gold is stands in the shader and in `Temple_Ground()` and `Temple_Keep()`, the two
+have to match.
 
 - **Keys, body, ways back**: as in Focus. The body is protected where the server does that (`jpfocus`), a hit
   brings the player back elsewhere, and one comes back through a light that goes within a moment.
