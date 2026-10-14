@@ -96,6 +96,10 @@ cvar_t	*com_validateZone;
 
 zone_t	TheZone = {};
 
+// Set once Com_ShutdownZoneMemory() has freed every block. exit() still destroys C++ objects after that, and one
+// that frees a block of its own would read the header of freed memory ("Z_Free(): Corrupt zone header!" on quit).
+static qboolean zoneShutDown = qfalse;
+
 
 // Scans through the linked list of mallocs and makes sure no data has been overwritten
 
@@ -439,6 +443,11 @@ void Z_Free(void *pvAddress)
 		return;
 	}
 
+	if (zoneShutDown)
+	{
+		return;
+	}
+
 	zoneHeader_t *pMemory = ((zoneHeader_t *)pvAddress) - 1;
 
 	if (pMemory->eTag == TAG_STATIC)
@@ -600,6 +609,7 @@ void Com_ShutdownZoneMemory(void)
 		assert(!TheZone.Stats.iCount);
 		assert(!TheZone.Stats.iCurrent);
 	}
+	zoneShutDown = qtrue;
 }
 
 // Initialises the zone memory system
@@ -608,6 +618,7 @@ void Com_InitZoneMemory( void )
 {
 	memset(&TheZone, 0, sizeof(TheZone));
 	TheZone.Header.iMagic = ZONE_MAGIC;
+	zoneShutDown = qfalse;
 }
 
 void Com_InitZoneMemoryVars( void ) {
