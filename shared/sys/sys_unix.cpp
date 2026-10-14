@@ -113,7 +113,12 @@ void Sys_PlatformInit( int argc, char *argv[] )
 {
 	const char* term = getenv( "TERM" );
 
+#ifdef DEDICATED
 	signal( SIGHUP, Sys_SigHandler );
+#else
+	// the client has its window: it plays on when the terminal it was started from closes (CON_Input() lets go of it)
+	signal( SIGHUP, SIG_IGN );
+#endif
 	signal( SIGQUIT, Sys_SigHandler );
 	signal( SIGTRAP, Sys_SigHandler );
 	signal( SIGABRT, Sys_SigHandler );

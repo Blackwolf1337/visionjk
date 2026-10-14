@@ -934,6 +934,11 @@ void *Sys_LoadGameDll( const char *name, GetModuleAPIProc **moduleAPI )
 	return libHandle;
 }
 
+// A signal that asks the program to end, for the main loop: it quits there at the start of the next frame. The
+// handler runs in whichever thread got the signal, and a shutdown in there pulled the zone from under a frame of
+// the main thread (2026-10-14: "Z_Free(): Corrupt zone header!", then the process hung).
+static volatile sig_atomic_t sys_quitSignal;
+
 /*
 =================
 Sys_SigHandler
@@ -942,6 +947,13 @@ Sys_SigHandler
 void Sys_SigHandler( int signal )
 {
 	static qboolean signalcaught = qfalse;
+
+#ifndef _WIN32
+	if ( signal == SIGHUP || signal == SIGQUIT ) {
+		sys_quitSignal = signal;
+		return;
+	}
+#endif
 
 	if( signalcaught )
 	{
@@ -1087,6 +1099,11 @@ int main ( int argc, char* argv[] )
 			{
 				Sys_Sleep( 5 );
 			}
+		}
+
+		if ( sys_quitSignal ) {
+			Com_Printf( "Received signal %d, quitting\n", (int)sys_quitSignal );
+			Cbuf_ExecuteText( EXEC_NOW, "quit\n" );
 		}
 
 		// run the game
