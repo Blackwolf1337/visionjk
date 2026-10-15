@@ -207,6 +207,25 @@ set(MPGameVoiceFiles
 source_group("game/voice" FILES ${MPGameVoiceFiles})
 set(MPGameFiles ${MPGameFiles} ${MPGameVoiceFiles})
 
+# the boombox, on that relay. It codes the songs it plays with Opus, the library of the voice chat of the cgame:
+# without it (BuildJPVoice OFF) there are no boxes.
+set(MPGameBoomboxFiles
+	"${MPDir}/game/boombox/g_boombox.c"
+	"${MPDir}/game/boombox/g_boombox_fetch.c"
+	"${MPDir}/game/boombox/bg_boombox.h"
+	"${MPDir}/game/boombox/g_boombox.h"
+	)
+source_group("game/boombox" FILES ${MPGameBoomboxFiles})
+set(MPGameFiles ${MPGameFiles} ${MPGameBoomboxFiles})
+if(BuildJPVoice)
+	if(NOT TARGET bundled_opus)
+		add_subdirectory("${VisionJKLibDir}/opus" "${CMAKE_BINARY_DIR}/lib/opus")
+	endif()
+	set(MPGameIncludeDirectories ${MPGameIncludeDirectories} "${VisionJKLibDir}/opus/include")
+	set(MPGameDefines ${MPGameDefines} "JP_BOOMBOX")
+	set(MPGameLibraries ${MPGameLibraries} bundled_opus)
+endif(BuildJPVoice)
+
 # the web admin panel and its page: a template, a style sheet and one script file for each part of the page
 file(GLOB_RECURSE MPGameWebadminPageFiles CONFIGURE_DEPENDS
 	"${MPDir}/game/webadmin/page/*.html"

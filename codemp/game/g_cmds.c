@@ -3736,6 +3736,7 @@ int cmdcmp( const void *a, const void *b ) {
 
 command_t commands[] = {
 	{ "addbot",				Cmd_AddBot_f,				0 },
+	{ "boombox",			Cmd_Boombox_f,				0 },
 	{ "callteamvote",		Cmd_CallTeamVote_f,			CMD_NOINTERMISSION },
 	{ "callvote",			Cmd_CallVote_f,				CMD_NOINTERMISSION },
 	{ "debugBMove_Back",	Cmd_BotMoveBack_f,			CMD_CHEAT|CMD_ALIVE|CMD_UNKNOWN_IF_DENIED },
@@ -3755,6 +3756,7 @@ command_t commands[] = {
 	{ "giveother",			Cmd_GiveOther_f,			CMD_CHEAT|CMD_NOINTERMISSION },
 	{ "god",				Cmd_God_f,					CMD_CHEAT|CMD_ALIVE|CMD_NOINTERMISSION },
 	{ "jpauth",				Cmd_JPAuth_f,				0 },
+	{ "jpbox",				Cmd_JPBox_f,				0 },
 	{ "jpfocus",			Cmd_JPFocus_f,				0 },
 	{ "jpstatus",			Cmd_JPStatus_f,				0 },
 	{ "jpvoice",			Cmd_JPVoice_f,				0 },
@@ -3796,7 +3798,8 @@ client sends. Commands that carry a password are logged without their arguments.
 */
 static void G_LogClientCommand( const gentity_t *ent, const char *cmd ) {
 	// jpstatus: what the cgame of a client sends by itself with every new song, see status/g_status.c
-	static const char *const skip[] = { "say", "say_team", "tell", "score", "jpstatus" };
+	// jpbox: what it sends when it starts, see boombox/g_boombox.c
+	static const char *const skip[] = { "say", "say_team", "tell", "score", "jpstatus", "jpbox" };
 	static const char *const secret[] = { "amlogin", "clanpass" };
 	char	name[64], args[200];
 	size_t	i;

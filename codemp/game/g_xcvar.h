@@ -181,6 +181,17 @@ XCVAR_DEF( g_visionCaps,				VISION_CAPS,	NULL,						CVAR_SERVERINFO|CVAR_ROM,			
 // free for all (as jp_inactivityProtectTimer), 2: in every kind of game.
 XCVAR_DEF( g_visionTemple,				"0",			NULL,						CVAR_LATCH,										qfalse )
 XCVAR_DEF( g_visionFocus,				"1",			NULL,						CVAR_ARCHIVE,									qtrue )
+// The boombox (boombox/g_boombox.c), on the relay of the voice chat. g_boombox is in the server info: the cgame of this
+// tree asks for boxes only where it reads it there. The programs that fetch the songs can only be named while the
+// server starts (CVAR_INIT: server.cfg or the command line), so nobody can make a running server start another one.
+XCVAR_DEF( g_boombox,					"1",			NULL,						CVAR_SERVERINFO|CVAR_ARCHIVE,					qfalse )
+XCVAR_DEF( g_boomboxFfmpeg,				"ffmpeg",		NULL,						CVAR_INIT,										qfalse )
+XCVAR_DEF( g_boomboxMax,				"4",			NULL,						CVAR_ARCHIVE,									qfalse )
+XCVAR_DEF( g_boomboxMaxSeconds,			"600",			NULL,						CVAR_ARCHIVE,									qfalse )
+XCVAR_DEF( g_boomboxQueue,				"10",			NULL,						CVAR_ARCHIVE,									qfalse )
+XCVAR_DEF( g_boomboxRange,				"1536",			NULL,						CVAR_ARCHIVE,									qfalse )
+XCVAR_DEF( g_boomboxYtdlp,				"yt-dlp",		NULL,						CVAR_INIT,										qfalse )
+XCVAR_DEF( g_boomboxYtdlpArgs,			"",				NULL,						CVAR_INIT,										qfalse )
 XCVAR_DEF( g_useWhileThrowing,			"1",			NULL,						CVAR_NONE,										qtrue )
 // The voice chat (g_voice.c). g_voice is in the server info: the cgame of this port asks for voice only where it reads it there.
 XCVAR_DEF( g_voice,						"1",			NULL,						CVAR_SERVERINFO|CVAR_ARCHIVE|CVAR_LATCH,		qfalse )

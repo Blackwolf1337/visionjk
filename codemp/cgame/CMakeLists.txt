@@ -36,7 +36,10 @@ set(MPCGameDefines ${MPSharedDefines} "_CGAME" )
 # The voice chat (cg_voice.c). It records and plays sound and has a codec, none of which the engine offers to
 # a module, so the two libraries for that are built into the module: nothing a player has to install.
 if(BuildJPVoice)
-	add_subdirectory("${VisionJKLibDir}/opus" "${CMAKE_BINARY_DIR}/lib/opus")
+	# (the game module may have it already, for the boombox)
+	if(NOT TARGET bundled_opus)
+		add_subdirectory("${VisionJKLibDir}/opus" "${CMAKE_BINARY_DIR}/lib/opus")
+	endif()
 	set(MPCGameIncludeDirectories ${MPCGameIncludeDirectories} "${VisionJKLibDir}/opus/include" "${VisionJKLibDir}/miniaudio")
 	set(MPCGameDefines ${MPCGameDefines} "JP_VOICE")
 	set(MPCGameLibraries ${MPCGameLibraries} bundled_opus)

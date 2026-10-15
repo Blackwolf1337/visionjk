@@ -42,7 +42,7 @@ option(BuildMPDed "Whether to create projects for the MP dedicated server (visio
 option(BuildMPGame "Whether to create projects for the MP server-side gamecode (jampgamex86_64.dll)" ON)
 option(BuildMPCGame "Whether to create projects for the MP clientside gamecode (cgamex86_64.dll)" ON)
 option(BuildMPUI "Whether to create projects for the MP UI code (uix86_64.dll)" ON)
-option(BuildJPVoice "Whether the MP clientside gamecode gets the voice chat (Opus and miniaudio from lib/ are built into it)" ON)
+option(BuildJPVoice "Whether the MP clientside gamecode gets the voice chat (Opus and miniaudio from lib/ are built into it), and the MP server-side gamecode the boombox (Opus)" ON)
 option(BuildMasterServer "Whether to create projects for the masterserver (visionjk-master.exe): the MP dedicated server with the relay for servers without the MP server-side gamecode of this tree inside (voice chat, clan radio, statuses), for the hosts of VisionJK itself. Never part of a release, it is not installed" OFF)
 set(UpdateURL "https://jka.vision/downloads/update" CACHE STRING "Where the MP client asks for a newer version of itself (docs/japlus/update.md)")
 set(UpdateVersion "" CACHE STRING "For a test of the updater: the version the MP client takes itself for, as a tag (v0.0.1). Empty: the tag the build was made from")

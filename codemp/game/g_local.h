@@ -1315,6 +1315,18 @@ qboolean G_VoiceFromGame( const byte *ip, int port, const byte *data, int length
 void G_VoiceClientGone( int clientNum );
 void Cmd_JPVoice_f( gentity_t *ent );
 void Svcmd_VoiceStatus_f( void );
+qboolean G_VoiceOn( void );
+qboolean G_VoiceReady( int clientNum );
+void G_VoiceSendBox( int clientNum, int speaker, int seq, int distance, const byte *frame, int len );
+
+// boombox/g_boombox.c: boxes that play songs of YouTube, for the clients of this tree
+void G_BoomboxInit( qboolean restart );
+void G_BoomboxShutdown( qboolean restart );
+void G_BoomboxFrame( void );
+void G_BoomboxClientGone( int clientNum );
+void Cmd_JPBox_f( gentity_t *ent );
+void Cmd_Boombox_f( gentity_t *ent );
+void Svcmd_Boombox_f( void );
 
 // g_props.c: the entities misc_ball and misc_cube
 void G_PropFrame( void );

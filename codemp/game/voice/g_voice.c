@@ -457,6 +457,45 @@ void G_VoiceFrame( void ) {
 	}
 }
 
+/*
+===============================================================================
+
+For the boombox (boombox/g_boombox.c), whose songs go out over this relay
+
+===============================================================================
+*/
+
+qboolean G_VoiceOn( void ) {
+	return voiceOn;
+}
+
+// does this client listen on the relay: his cgame asked for voice and its datagrams came
+qboolean G_VoiceReady( int clientNum ) {
+	return ( voiceOn && clientNum >= 0 && clientNum < MAX_CLIENTS && voiceClients[clientNum].ready ) ? qtrue : qfalse;
+}
+
+// one frame of a song to a client, as the voice of the speaker number the box has (BOX_SPEAKER_BASE of bg_boombox.h)
+void G_VoiceSendBox( int clientNum, int speaker, int seq, int distance, const byte *frame, int len ) {
+	const voiceClient_t	*vc = &voiceClients[clientNum];
+	voicePacket_t		out;
+	byte				datagram[VOICE_MAX_DATAGRAM];
+	int					outLen;
+
+	if ( !G_VoiceReady( clientNum ) )
+		return;
+	memset( &out, 0, sizeof( out ) );
+	out.type = VOICE_AUDIO;
+	out.client = speaker;
+	out.token = vc->token;
+	out.seq = seq;
+	out.distance = distance;
+	out.data = frame;
+	out.dataLen = len;
+	outLen = BG_VoicePack( datagram, sizeof( datagram ), &out, qtrue );
+	if ( outLen )
+		G_VoiceSend( vc, datagram, outLen );
+}
+
 // the server command voicestatus: who has voice and what the relay did
 void Svcmd_VoiceStatus_f( void ) {
 	int i, count = 0;
