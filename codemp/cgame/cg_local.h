@@ -1759,6 +1759,7 @@ int			CG_ChatSender( const char *raw, int clientNum );
 void		CG_ChatBox_AddString( char *chatStr );
 qboolean	CG_ChatKeyEvent( int key, qboolean down );
 void		CG_ChatOpen_f( void );
+qboolean	CG_ChatOpenFor( int mode, int target );
 void		CG_ChatDrag_f( void );
 void		CG_ChatClose( void );
 
@@ -1789,6 +1790,8 @@ void		CG_SelectDrawCursor( void );
 qboolean	CG_SelectKeyEvent( int key, qboolean down );
 void		CG_SelectOutline( int clientNum, const refEntity_t *model );
 qboolean	CG_SelectOutlined( int clientNum );
+void		CG_SelectBoxOutline( int box, const refEntity_t *model );
+qboolean	CG_SelectBoxOutlined( int box );
 void		CG_SelectCursorDown_f( void );
 void		CG_SelectCursorUp_f( void );
 void		CG_SelectCursor_f( void );
@@ -2305,5 +2308,8 @@ void	CG_SetLightstyle (int i);
 /*
 Ghoul2 Insert End
 */
+
+// boombox/cg_boombox.c: boxes that play songs of YouTube
+#include "cgame/boombox/cg_boombox.h"
 
 extern cgameImport_t *trap;

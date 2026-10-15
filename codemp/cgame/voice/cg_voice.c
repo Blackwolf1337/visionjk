@@ -41,6 +41,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "ui/ui_skin.h"
 #include "game/voice/bg_voice.h"
 #include "cg_voice.h"
+#include "cgame/boombox/cg_boombox.h"
 
 #ifdef JP_VOICE
 
@@ -92,6 +93,14 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define VOICE_LIP_HOLD_MSEC		120		// the mouth keeps what a frame gave it this long
 #define VOICE_FILE_FRAME		( VOICE_FRAME_SAMPLES * 4 )	// voice_test: the bytes of one frame in a file, two channels
 
+// The songs of the boxes of the boombox (boombox/cg_boombox.c) come over the relay as the voices of the speakers
+// behind the players: speaker MAX_CLIENTS + the box. They are played like a voice, with more of them waiting
+// before they start: a song has no pauses to catch up in.
+#define VOICE_ALL				( MAX_CLIENTS + BOX_MAX )
+#define VOICE_BOX_LEAD_FRAMES	6		// 120 ms
+#define VOICE_BOX_MAX_LEAD_FRAMES	12
+#define VOICE_BOX_BEATS			16		// how loud the last frames of a song were, and when they are heard
+
 typedef struct voiceSpeaker_s {
 	voiceQueue_t	queue;
 	qboolean		decoderOk;
@@ -114,6 +123,9 @@ typedef struct voiceSpeaker_s {
 	int				lipTime;		//	and since when
 	qboolean		radio;			// what is played of him now came over the clan radio (VOICE_FLAG_RADIO): it has no place
 	voiceRadio_t	radioFx;		//	and this is how it sounds (cg_voiceRadioFX)
+	float			beat[VOICE_BOX_BEATS];		// a box: how loud a frame of its song is (Voice_Beat()),
+	int				beatAt[VOICE_BOX_BEATS];	//	and when it is heard
+	int				beatNext;
 } voiceSpeaker_t;
 
 // a block of memory for a state of Opus, as well aligned as anything can ask for
@@ -181,8 +193,8 @@ static struct {
 	fileHandle_t		record;			// voice_test record: what is played goes into this file
 } voice;
 
-static voiceSpeaker_t	voiceSpeakers[MAX_CLIENTS];
-static voiceMem_t		voiceDecoders[MAX_CLIENTS];
+static voiceSpeaker_t	voiceSpeakers[VOICE_ALL];
+static voiceMem_t		voiceDecoders[VOICE_ALL];
 static union {
 	double	align;
 	void	*alignToo;
@@ -422,7 +434,7 @@ static void Voice_Close( void ) {
 		BG_CloseSocket( voice.sock );
 #endif
 	// who was muted stays muted while the module does
-	for ( i = 0; i < MAX_CLIENTS; i++ ) {
+	for ( i = 0; i < VOICE_ALL; i++ ) {
 		const qboolean	muted = voiceSpeakers[i].muted;
 		const int		gainSteps = voiceSpeakers[i].gainSteps;
 
@@ -487,7 +499,7 @@ static qboolean Voice_Open( int port ) {
 	opus_encoder_ctl( (OpusEncoder *)&voiceEncoder, OPUS_SET_INBAND_FEC( 1 ) );
 	opus_encoder_ctl( (OpusEncoder *)&voiceEncoder, OPUS_SET_PACKET_LOSS_PERC( 10 ) );
 	voice.encoderOk = qtrue;
-	for ( i = 0; i < MAX_CLIENTS; i++ )
+	for ( i = 0; i < VOICE_ALL; i++ )
 		voiceSpeakers[i].decoderOk = ( opus_decoder_init( (OpusDecoder *)&voiceDecoders[i], VOICE_RATE, 1 ) == OPUS_OK ) ? qtrue : qfalse;
 
 #ifndef __EMSCRIPTEN__		// (the WebSocket of a page is asked for by Voice_FindServer)
@@ -511,11 +523,13 @@ static qboolean Voice_Open( int port ) {
 		trap->Print( "Voice chat: no sound device to play on, you will not hear the others\n" );
 	} else {
 		voice.audio = qtrue;
-		for ( i = 0; i < MAX_CLIENTS; i++ )
+		for ( i = 0; i < VOICE_ALL; i++ )
 			CG_VoiceAudioMix( i, cg_voiceVolume.value, cg_voiceVolume.value, 0.0f );
 	}
 	voice.answered = qtrue;
-	trap->Print( "Voice chat: on. bind a key to +voice to talk (cg_voiceMode 2 sends whenever you speak)\n" );
+	// (switched off, the way is open for the songs of the boombox alone)
+	if ( cg_voice.integer )
+		trap->Print( "Voice chat: on. bind a key to +voice to talk (cg_voiceMode 2 sends whenever you speak)\n" );
 	return qtrue;
 }
 
@@ -562,7 +576,7 @@ static qboolean Voice_WantsMaster( void ) {
 	// a page can not send UDP, and the servers it can play on are of this tree
 	return qfalse;
 #else
-	return ( !voice.serverSays && cg_voiceMaster.integer && !cg.demoPlayback ) ? qtrue : qfalse;
+	return ( !voice.serverSays && cg_voice.integer && cg_voiceMaster.integer && !cg.demoPlayback ) ? qtrue : qfalse;
 #endif
 }
 
@@ -990,18 +1004,27 @@ static void Voice_Receive( int now ) {
 				voice.linked = qtrue;
 			continue;
 		}
-		if ( p.client >= MAX_CLIENTS || p.client == cg.clientNum )
+		if ( p.client >= VOICE_ALL || p.client == cg.clientNum )
 			continue;
-		// whoever speaks here plays with a client of this tree (status/cg_peers.c)
-		CG_PeerHeard( p.client );
-		if ( p.type == VOICE_STATUS ) {
-			// what stands above the head of somebody, handed on by the masterserver (status/cg_status.c)
-			char		text[VOICE_STATUS_TEXT];
-			qboolean	away;
+		if ( p.client >= MAX_CLIENTS ) {
+			// the song of a box of the boombox, from the relay of a game server only
+			if ( voice.master || p.type != VOICE_AUDIO || !CG_BoomboxHears( p.client - MAX_CLIENTS ) )
+				continue;
+		} else {
+			// (the voice chat is off, the way is open for the songs alone)
+			if ( !cg_voice.integer )
+				continue;
+			// whoever speaks here plays with a client of this tree (status/cg_peers.c)
+			CG_PeerHeard( p.client );
+			if ( p.type == VOICE_STATUS ) {
+				// what stands above the head of somebody, handed on by the masterserver (status/cg_status.c)
+				char		text[VOICE_STATUS_TEXT];
+				qboolean	away;
 
-			if ( voice.master && BG_VoiceStatusUnpack( &p, &away, text, sizeof( text ) ) )
-				CG_StatusFromMaster( p.client, away, text );
-			continue;
+				if ( voice.master && BG_VoiceStatusUnpack( &p, &away, text, sizeof( text ) ) )
+					CG_StatusFromMaster( p.client, away, text );
+				continue;
+			}
 		}
 		sp = &voiceSpeakers[p.client];
 		if ( sp->muted || !sp->decoderOk )
@@ -1037,7 +1060,15 @@ static qboolean Voice_EngineTakesVoices( void ) {
 static qboolean Voice_InLevel( int speaker ) {
 	const voiceSpeaker_t	*sp = &voiceSpeakers[speaker];
 	const centity_t			*cent = &cg_entities[speaker];
+	char					boxes[8];
 
+	// a box of the boombox, in an engine that takes that many (s_spatialBoxes)
+	if ( speaker >= MAX_CLIENTS ) {
+		trap->Cvar_VariableStringBuffer( "s_spatialBoxes", boxes, sizeof( boxes ) );
+		if ( atoi( boxes ) <= speaker - MAX_CLIENTS || !Voice_EngineTakesVoices() )
+			return qfalse;
+		return ( trap->ext.S_SpatialVoice( speaker, NULL, 0.0f, NULL, 0, VOICE_RATE ) >= 0 ) ? qtrue : qfalse;
+	}
 	if ( voice.range <= 0 || cgs.clientinfo[speaker].team == TEAM_SPECTATOR || !cent->currentValid
 		|| ( sp->flags & ( VOICE_FLAG_UNSEEN | VOICE_FLAG_RADIO ) ) )
 		return qfalse;
@@ -1057,6 +1088,16 @@ static int Voice_Queued( int speaker ) {
 		voiceSpeakers[speaker].inLevel = qfalse;
 	}
 	return CG_VoiceAudioQueued( speaker );
+}
+
+// For the speakers of a box that pulse with its song (boombox/cg_boombox.c): how loud a frame of it is that was
+// just decoded, and when it is heard, which is after what waits of it already.
+static void Voice_Beat( int speaker, const short *samples ) {
+	voiceSpeaker_t	*sp = &voiceSpeakers[speaker];
+	const int		slot = sp->beatNext++ % VOICE_BOX_BEATS;
+
+	sp->beat[slot] = Voice_Level( samples );
+	sp->beatAt[slot] = trap->Milliseconds() + Voice_Queued( speaker ) * 1000 / VOICE_RATE;
 }
 
 // the next 20 ms of a speaker into what is played: the frame whose turn it is, or what the codec makes up for it
@@ -1081,7 +1122,10 @@ static void Voice_PlayFrame( int speaker, qboolean makeUp ) {
 	// a frame of another length than this chat uses, or one the codec refuses, is silence
 	if ( got != VOICE_FRAME_SAMPLES )
 		memset( samples, 0, sizeof( samples ) );
-	Voice_Lip( speaker, samples );
+	if ( speaker < MAX_CLIENTS )
+		Voice_Lip( speaker, samples );
+	else
+		Voice_Beat( speaker, samples );
 	if ( sp->inLevel && trap->ext.S_SpatialVoice( speaker, sp->mouth, sp->volume, samples, VOICE_FRAME_SAMPLES, VOICE_RATE ) >= 0 )
 		return;
 	if ( sp->radio && cg_voiceRadioFX.integer )
@@ -1128,8 +1172,17 @@ static void Voice_RadioState( int speaker ) {
 static void Voice_Mouth( int speaker ) {
 	voiceSpeaker_t	*sp = &voiceSpeakers[speaker];
 	const centity_t	*cent = &cg_entities[speaker];
-	float			distance;
+	float			distance, gain;
 
+	// A box of the boombox: where its speakers are, as loud as the player wants songs and the box is set, and
+	// down to nothing at the end of its range, where the server stops sending it.
+	if ( speaker >= MAX_CLIENTS ) {
+		if ( !CG_BoomboxMouth( speaker - MAX_CLIENTS, sp->mouth, &gain ) )
+			gain = 0.0f;
+		distance = Com_Clamp( 0.0f, 1.0f, 1.0f - Distance( sp->mouth, cg.refdef.vieworg ) / CG_BoomboxRange() );
+		sp->volume = gain * distance * distance;
+		return;
+	}
 	// a speaker the server stopped showing in the middle of a word stays where he was
 	if ( cent->currentValid ) {
 		VectorCopy( cent->lerpOrigin, sp->mouth );
@@ -1160,9 +1213,11 @@ static void Voice_Play( int now ) {
 		ahead = 250;
 	ahead = ahead * ( VOICE_RATE / 1000 );
 
-	for ( i = 0; i < MAX_CLIENTS; i++ ) {
+	for ( i = 0; i < VOICE_ALL; i++ ) {
 		voiceSpeaker_t	*sp = &voiceSpeakers[i];
 		const int		span = BG_VoiceQueueSpan( &sp->queue );
+		const int		leastLead = ( i >= MAX_CLIENTS ) ? VOICE_BOX_LEAD_FRAMES : VOICE_LEAD_FRAMES;
+		const int		mostLead = ( i >= MAX_CLIENTS ) ? VOICE_BOX_MAX_LEAD_FRAMES : VOICE_MAX_LEAD_FRAMES;
 
 		if ( !sp->playing ) {
 			if ( !span ) {
@@ -1171,8 +1226,8 @@ static void Voice_Play( int now ) {
 					Voice_RadioState( i );
 				continue;
 			}
-			if ( sp->lead < VOICE_LEAD_FRAMES )
-				sp->lead = VOICE_LEAD_FRAMES;
+			if ( sp->lead < leastLead )
+				sp->lead = leastLead;
 			if ( span < sp->lead && now - sp->waitSince < sp->lead * VOICE_FRAME_MSEC )
 				continue;
 			sp->playing = qtrue;
@@ -1206,12 +1261,12 @@ static void Voice_Play( int now ) {
 				sp->playing = qfalse;
 				Voice_RadioState( i );
 				BG_VoiceQueueReset( &sp->queue );
-				if ( sp->lead > VOICE_LEAD_FRAMES )
+				if ( sp->lead > leastLead )
 					sp->lead--;
 			} else if ( sp->concealed >= 3 ) {
 				// his voice ran dry while he talks: the way from him is uneven, more of it waits next time
 				sp->playing = qfalse;
-				if ( sp->lead < VOICE_MAX_LEAD_FRAMES )
+				if ( sp->lead < mostLead )
 					sp->lead++;
 			}
 		}
@@ -1256,6 +1311,37 @@ static qboolean Voice_Blocked( int speaker, const vec3_t origin ) {
 
 /*
 =================
+Voice_PlaceBox
+
+How the song of a box of the boombox is heard in this frame. It has a place everybody knows: the engine plays it
+there (Voice_InLevel()), or it comes from the side the box is on here, muffled behind a wall like a voice.
+=================
+*/
+static void Voice_PlaceBox( int speaker, int now ) {
+	voiceSpeaker_t	*sp = &voiceSpeakers[speaker];
+	vec3_t			to;
+	float			pan;
+	trace_t			tr;
+
+	Voice_Mouth( speaker );
+	if ( sp->inLevel ) {
+		trap->ext.S_SpatialVoice( speaker, sp->mouth, sp->volume, NULL, 0, VOICE_RATE );
+		return;
+	}
+	VectorSubtract( sp->mouth, cg.refdef.vieworg, to );
+	pan = ( VectorNormalize( to ) > 1.0f ) ? Com_Clamp( -VOICE_MAX_PAN, VOICE_MAX_PAN, DotProduct( to, cg.refdef.viewaxis[1] ) ) : 0.0f;
+	if ( now - sp->traceTime >= VOICE_TRACE_MSEC ) {
+		sp->traceTime = now;
+		CG_Trace( &tr, cg.refdef.vieworg, NULL, NULL, sp->mouth, cg.snap->ps.clientNum, MASK_SOLID );
+		sp->muffled = ( tr.fraction < 1.0f || ( ( CG_PointContents( cg.refdef.vieworg, -1 ) ^ CG_PointContents( sp->mouth, -1 ) ) & MASK_WATER ) )
+			? qtrue : qfalse;
+	}
+	CG_VoiceAudioMix( speaker, sp->volume * sqrtf( 1.0f + pan ), sp->volume * sqrtf( 1.0f - pan ),
+		( ( sp->muffled && cg_voiceMuffle.integer ) || CG_Menu3DActive() ) ? 1.0f : 0.0f );
+}
+
+/*
+=================
 Voice_Place
 
 How every voice that plays is heard in this frame: how loud on each side, and whether muffled.
@@ -1273,7 +1359,7 @@ Without a range, and among spectators, a voice is the same everywhere, like a ra
 static void Voice_Place( int now ) {
 	int i;
 
-	for ( i = 0; i < MAX_CLIENTS; i++ ) {
+	for ( i = 0; i < VOICE_ALL; i++ ) {
 		voiceSpeaker_t	*sp = &voiceSpeakers[i];
 		float			gain = cg_voiceVolume.value, pan = 0.0f, distance;
 		qboolean		muffled = qfalse;
@@ -1281,6 +1367,10 @@ static void Voice_Place( int now ) {
 
 		if ( !sp->playing )
 			continue;
+		if ( i >= MAX_CLIENTS ) {
+			Voice_PlaceBox( i, now );
+			continue;
+		}
 		// over the radio: in both ears, as loud wherever he is, and nothing over his head that would say where
 		if ( sp->radio ) {
 			gain *= 1.0f + 0.25f * sp->gainSteps;
@@ -1609,6 +1699,11 @@ static void Voice_Hello( int now ) {
 	}
 }
 
+// The way to the relay is wanted for the voice chat, or with the chat switched off for the songs of the boombox alone
+static qboolean Voice_Wanted( void ) {
+	return ( cg_voice.integer || CG_BoomboxWantsLink() ) ? qtrue : qfalse;
+}
+
 void CG_VoiceFrame( void ) {
 	const int		now = trap->Milliseconds();
 	const qboolean	master = Voice_WantsMaster();
@@ -1620,9 +1715,9 @@ void CG_VoiceFrame( void ) {
 		voice.master = qfalse;
 		return;
 	}
-	if ( !cg_voice.integer || ( !voice.serverHas && !master ) || voice.failed || !cg.snap ) {
+	if ( !Voice_Wanted() || ( !voice.serverHas && !master ) || voice.failed || !cg.snap ) {
 		// switched off while it ran
-		if ( voice.answered && !cg_voice.integer )
+		if ( voice.answered && !Voice_Wanted() )
 			Voice_Close();
 		return;
 	}
@@ -1668,8 +1763,14 @@ void CG_VoiceFrame( void ) {
 		Voice_Play( now );
 		Voice_Place( now );
 	}
-	if ( voice.linked && voice.encoderOk )
+	if ( voice.linked && voice.encoderOk && cg_voice.integer ) {
 		Voice_Capture( now );
+	} else if ( CG_VoiceAudioCapturing() ) {
+		// the chat was switched off while the way stays open for the songs
+		CG_VoiceAudioCloseCapture();
+		voice.keyDown = voice.clanDown = voice.sending = qfalse;
+		voice.micUntil = 0;
+	}
 
 	// voice_test record: what the speakers got since the last frame, as it is
 	if ( voice.record ) {
@@ -1679,6 +1780,62 @@ void CG_VoiceFrame( void ) {
 		while ( ( frames = CG_VoiceAudioTapRead( stereo, 1024 ) ) > 0 )
 			trap->FS_Write( stereo, frames * 2 * (int)sizeof( short ), voice.record );
 	}
+}
+
+/*
+===============================================================================
+
+For the boombox (boombox/cg_boombox.c)
+
+===============================================================================
+*/
+
+// how loud the song of a box is in what is heard now, 0 to 1: the newest frame whose time has come
+float CG_VoiceBoxBeat( int box ) {
+	const voiceSpeaker_t	*sp;
+	const int				now = trap->Milliseconds();
+	int						i, best = -1;
+
+	if ( box < 0 || box >= BOX_MAX )
+		return 0.0f;
+	sp = &voiceSpeakers[MAX_CLIENTS + box];
+	if ( !sp->playing )
+		return 0.0f;
+	for ( i = 0; i < VOICE_BOX_BEATS; i++ ) {
+		if ( sp->beatAt[i] <= now && ( best < 0 || sp->beatAt[i] > sp->beatAt[best] ) )
+			best = i;
+	}
+	return ( best >= 0 ) ? sp->beat[best] : 0.0f;
+}
+
+qboolean CG_VoiceBoxMuted( int box ) {
+	return ( box >= 0 && box < BOX_MAX && voiceSpeakers[MAX_CLIENTS + box].muted ) ? qtrue : qfalse;
+}
+
+// this player does not want to hear that box, or wants to again
+void CG_VoiceBoxMute( int box, qboolean mute ) {
+	voiceSpeaker_t *sp;
+
+	if ( box < 0 || box >= BOX_MAX )
+		return;
+	sp = &voiceSpeakers[MAX_CLIENTS + box];
+	sp->muted = mute;
+	if ( mute ) {
+		sp->playing = qfalse;
+		BG_VoiceQueueReset( &sp->queue );
+	}
+}
+
+// the box is gone: what waits of it is dropped, and the next box of that number is heard
+void CG_VoiceBoxReset( int box ) {
+	voiceSpeaker_t *sp;
+
+	if ( box < 0 || box >= BOX_MAX )
+		return;
+	sp = &voiceSpeakers[MAX_CLIENTS + box];
+	sp->playing = sp->muted = qfalse;
+	sp->lead = 0;
+	BG_VoiceQueueReset( &sp->queue );
 }
 
 /*

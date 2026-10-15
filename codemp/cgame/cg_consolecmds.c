@@ -347,6 +347,7 @@ static consoleCommand_t	commands[] = {
 	{ "admCmdNext",					CG_JPAdmCycleCmd_f },
 	{ "admCmdPrev",					CG_JPAdmCycleCmd_f },
 	{ "amkey",						CG_AuthCommand_f },
+	{ "boombox",					CG_Boombox_f },
 	{ "briefing",					CG_SiegeBriefing_f },
 	{ "cg_chatdrag",				CG_ChatDrag_f },
 	{ "cg_chatopen",				CG_ChatOpen_f },

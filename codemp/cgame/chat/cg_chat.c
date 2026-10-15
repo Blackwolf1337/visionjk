@@ -48,6 +48,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "cgame/cg_local.h"
 #include "ui/ui_shared.h"
 #include "ui/ui_skin.h"
+#include "cgame/boombox/cg_boombox.h"
 
 extern displayContextDef_t cgDC;
 
@@ -592,7 +593,10 @@ static void Chat_Send( void ) {
 		}
 	}
 	if ( text[0] ) {
-		if ( chat.mode == 2 ) {
+		if ( chat.mode == 3 ) {
+			// a song for a box of the boombox (boombox/cg_boombox.c)
+			CG_BoomboxAsk( chat.target, text );
+		} else if ( chat.mode == 2 ) {
 			trap->SendClientCommand( va( "tell %i \"%s\"", chat.target, text ) );
 		} else if ( chat.mode == 1 ) {
 			trap->SendClientCommand( va( "say_team \"%s\"", text ) );
@@ -607,23 +611,20 @@ static void Chat_Send( void ) {
 
 /*
 =================
-CG_ChatOpen_f
+CG_ChatOpenFor
 
-cg_chatopen <mode> <client>: run by the engine for its message mode commands while cg_chatHandler is 1
+The box opens to type in. mode 0: say, 1: team, 2: a whisper to client target, 3: a song for box target of the
+boombox (boombox/cg_boombox.c). qfalse: this engine leaves typing to its own line (or cg_chatInput 0).
 =================
 */
-void CG_ChatOpen_f( void ) {
-	char arg[16];
-
+qboolean CG_ChatOpenFor( int mode, int target ) {
 	if ( !chat.engine || !cg_chatInput.integer || cg.demoPlayback || !cg.snap ) {
-		return;
+		return qfalse;
 	}
-	trap->Cmd_Argv( 1, arg, sizeof( arg ) );
-	chat.mode = Com_Clampi( 0, 2, atoi( arg ) );
-	trap->Cmd_Argv( 2, arg, sizeof( arg ) );
-	chat.target = atoi( arg );
+	chat.mode = Com_Clampi( 0, 3, mode );
+	chat.target = target;
 	if ( chat.mode == 2 && ( chat.target < 0 || chat.target >= MAX_CLIENTS || !cgs.clientinfo[chat.target].infoValid ) ) {
-		return;
+		return qfalse;
 	}
 
 	chat.open = qtrue;
@@ -638,6 +639,16 @@ void CG_ChatOpen_f( void ) {
 	cgs.cursorX = (int)( CHAT_X - cgs.bias2D + 60.0f );
 	cgs.cursorY = Q_max( 40, cg_chatBoxHeight.integer - 40 );
 	trap->Key_SetCatcher( trap->Key_GetCatcher() | KEYCATCH_CGAME );
+	return qtrue;
+}
+
+// cg_chatopen <mode> <target>: run by the engine for its message mode commands while cg_chatHandler is 1
+void CG_ChatOpen_f( void ) {
+	char mode[16], target[16];
+
+	trap->Cmd_Argv( 1, mode, sizeof( mode ) );
+	trap->Cmd_Argv( 2, target, sizeof( target ) );
+	CG_ChatOpenFor( atoi( mode ), atoi( target ) );
 }
 
 // a character was typed (also Ctrl with a letter, which comes as its place in the alphabet)
@@ -1080,7 +1091,9 @@ static void Chat_DrawOpen( float x, float bottom ) {
 		int			start = 0;
 		char		shown[MAX_SAY_TEXT];
 
-		if ( chat.mode == 2 ) {
+		if ( chat.mode == 3 ) {
+			Com_sprintf( prompt, sizeof( prompt ), "%s: ", CG_VisionText( "Boombox, link or song" ) );
+		} else if ( chat.mode == 2 ) {
 			Com_sprintf( prompt, sizeof( prompt ), "%s^7: ", CG_VisionTextWith( "To %s", cgs.clientinfo[chat.target].name ) );
 		} else {
 			Com_sprintf( prompt, sizeof( prompt ), "%s: ", CG_VisionText( chat.mode == 1 ? "Team" : "Say" ) );

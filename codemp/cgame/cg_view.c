@@ -2421,6 +2421,7 @@ void CG_DrawActiveFrame( int serverTime, stereoFrame_t stereoView, qboolean demo
 	CG_JPReplyFrame();
 	CG_JPMacroScanFrame();
 	CG_VoiceFrame();
+	CG_BoomboxFrame();
 	CG_StatusFrame();
 	CG_AuthFrame();
 	int		inwater;
@@ -2685,6 +2686,8 @@ void CG_DrawActiveFrame( int serverTime, stereoFrame_t stereoView, qboolean demo
 	if ( !cg.hyperspace && !temple ) {
 		CG_AddPacketEntities(qfalse);			// adter calcViewValues, so predicted player state is correct
 		CG_AddMarks();
+		// the boxes of the boombox, which are no entities (boombox/cg_boombox.c)
+		CG_BoomboxScene();
 	}
 	if ( !temple ) {
 		CG_AddViewWeapon( &cg.predictedPlayerState );

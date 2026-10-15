@@ -212,6 +212,15 @@ set(MPCGameSelectFiles
 source_group("cgame/select" FILES ${MPCGameSelectFiles})
 set(MPCGameFiles ${MPCGameFiles} ${MPCGameSelectFiles})
 
+# the boombox: boxes that play songs, which the server sends over the relay of the voice chat
+set(MPCGameBoomboxFiles
+	"${MPDir}/cgame/boombox/cg_boombox.c"
+	"${MPDir}/cgame/boombox/cg_boombox.h"
+	"${MPDir}/game/boombox/bg_boombox.h"
+	)
+source_group("cgame/boombox" FILES ${MPCGameBoomboxFiles})
+set(MPCGameFiles ${MPCGameFiles} ${MPCGameBoomboxFiles})
+
 # Focus: the world stands still on the own screen and the player leaves his body as a camera
 set(MPCGameFocusFiles
 	"${MPDir}/cgame/focus/cg_focus.c"
