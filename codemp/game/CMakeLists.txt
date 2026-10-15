@@ -211,9 +211,10 @@ set(MPGameFiles ${MPGameFiles} ${MPGameVoiceFiles})
 # without it (BuildJPVoice OFF) there are no boxes.
 set(MPGameBoomboxFiles
 	"${MPDir}/game/boombox/g_boombox.c"
-	"${MPDir}/game/boombox/g_boombox_fetch.c"
+	"${MPDir}/game/boombox/bg_boombox_core.c"
+	"${MPDir}/game/boombox/bg_boombox_fetch.c"
 	"${MPDir}/game/boombox/bg_boombox.h"
-	"${MPDir}/game/boombox/g_boombox.h"
+	"${MPDir}/game/boombox/bg_boombox_core.h"
 	)
 source_group("game/boombox" FILES ${MPGameBoomboxFiles})
 set(MPGameFiles ${MPGameFiles} ${MPGameBoomboxFiles})

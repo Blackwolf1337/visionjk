@@ -18,7 +18,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 ===========================================================================
 */
 
-// g_boombox_fetch.c -- the programs that find and fetch the songs of the boombox: yt-dlp, which looks a song up on
+// bg_boombox_fetch.c -- the programs that find and fetch the songs of the boombox: yt-dlp, which looks a song up on
 // YouTube and fetches it, and ffmpeg, which decodes it. Not from JA+, see docs/japlus/boombox.md and bg_boombox.h.
 //
 // They run beside the server and never in its way: what they say comes through pipes that do not block, and
@@ -27,8 +27,9 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // where they can not be an option. An address of anything but YouTube is refused: yt-dlp would fetch any
 // address it is given, also one inside the network of the server.
 //
-// The programs to start are named by cvars that can only be set while the server starts (CVAR_INIT): whoever can
-// set a cvar later (rcon, an admin of the panel) can not make the server start a program of his choice.
+// The programs to start are named by the host (boxTools_t), from cvars that can only be set while the server starts
+// (CVAR_INIT): whoever can set a cvar later (rcon, an admin of the panel) can not make the server start a program of
+// his choice. Built into the game module and into the masterserver.
 //
 // Not on Windows yet: a server there can not fetch songs and says so.
 
@@ -40,9 +41,9 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 	#include <sys/types.h>
 	#include <sys/wait.h>
 #endif
-#include "game/g_local.h"
+#include "qcommon/q_shared.h"
 #include "bg_boombox.h"
-#include "g_boombox.h"
+#include "bg_boombox_core.h"
 
 #define BOX_LOOKUP_MSEC		45000		// a lookup that takes longer than this has failed
 #define BOX_MAX_ARGS		48			// words a program is started with, its name among them
@@ -181,7 +182,7 @@ Starts first, and second with what first writes as its input. What the last one 
 what both say from p->err. Neither waits for the other or for the server: nothing comes in.
 =================
 */
-static qboolean Box_ProcStart( boxProc_t *p, char *const *first, char *const *second ) {
+static qboolean Box_ProcStart( boxProc_t *p, char *const *first, char *const *second, int now ) {
 	int		out[2] = { -1, -1 }, err[2] = { -1, -1 }, link[2] = { -1, -1 };
 	int		null = -1, maxFiles;
 	long	most = sysconf( _SC_OPEN_MAX );
@@ -230,7 +231,7 @@ static qboolean Box_ProcStart( boxProc_t *p, char *const *first, char *const *se
 	p->group = p->middle = (int)pid;
 	p->out = out[0];
 	p->err = err[0];
-	p->started = trap->Milliseconds();
+	p->started = now;
 	return qtrue;
 }
 
@@ -481,7 +482,7 @@ qboolean Box_Target( const char *asked, char *target, int targetSize, char *why,
 #ifndef _WIN32
 
 // the words of yt-dlp for a lookup and for a fetch alike, after its name
-static void Box_ArgsYtdlp( boxArgs_t *a, const char *path ) {
+static void Box_ArgsYtdlp( boxArgs_t *a, const char *path, const boxTools_t *tools ) {
 	Box_Arg( a, path );
 	Box_Arg( a, "--ignore-config" );
 	Box_Arg( a, "--no-playlist" );
@@ -493,7 +494,7 @@ static void Box_ArgsYtdlp( boxArgs_t *a, const char *path ) {
 	Box_Arg( a, "-f" );
 	Box_Arg( a, "bestaudio" );
 	// what the owner of the server adds (a JavaScript program other than deno, cookies, a proxy)
-	Box_ArgWords( a, g_boomboxYtdlpArgs.string );
+	Box_ArgWords( a, tools->ytdlpArgs );
 }
 
 #endif
@@ -524,17 +525,17 @@ yt-dlp looks up what a player asked for (a target of Box_Target()) and prints fo
 seconds, whether it is live, its title. Nothing is fetched yet.
 =================
 */
-qboolean Box_LookupStart( boxLookup_t *l, const char *target, char *why, int whySize ) {
+qboolean Box_LookupStart( boxLookup_t *l, const boxTools_t *tools, const char *target, int now, char *why, int whySize ) {
 #ifndef _WIN32
 	boxArgs_t	a;
 	char		path[MAX_OSPATH];
 
-	if ( !Box_ToolPath( g_boomboxYtdlp.string, path, sizeof( path ) ) ) {
+	if ( !Box_ToolPath( tools->ytdlp, path, sizeof( path ) ) ) {
 		Q_strncpyz( why, "this server can not fetch songs: it has no yt-dlp", whySize );
 		return qfalse;
 	}
 	Box_ArgsBegin( &a );
-	Box_ArgsYtdlp( &a, path );
+	Box_ArgsYtdlp( &a, path, tools );
 	Box_Arg( &a, "--print" );
 	Box_Arg( &a, "id" );
 	Box_Arg( &a, "--print" );
@@ -546,18 +547,19 @@ qboolean Box_LookupStart( boxLookup_t *l, const char *target, char *why, int why
 	Box_Arg( &a, "--" );
 	Box_Arg( &a, target );
 	if ( a.full ) {
-		Q_strncpyz( why, "g_boomboxYtdlpArgs has too many words", whySize );
+		Q_strncpyz( why, "the words for yt-dlp are too many (g_boomboxYtdlpArgs)", whySize );
 		return qfalse;
 	}
 	l->len = 0;
 	l->text[0] = '\0';
-	if ( !Box_ProcStart( &l->proc, a.argv, NULL ) ) {
+	if ( !Box_ProcStart( &l->proc, a.argv, NULL, now ) ) {
 		Q_strncpyz( why, "this server could not start yt-dlp", whySize );
 		return qfalse;
 	}
 	l->busy = qtrue;
 	return qtrue;
 #else
+	(void)l; (void)tools; (void)target; (void)now;
 	Q_strncpyz( why, "a server on Windows can not fetch songs yet", whySize );
 	return qfalse;
 #endif
@@ -584,7 +586,7 @@ Once a frame for a lookup that runs. 0: it still does. 1: song is what was found
 was, why says what.
 =================
 */
-int Box_LookupFrame( boxLookup_t *l, boxSong_t *song, char *why, int whySize ) {
+int Box_LookupFrame( boxLookup_t *l, boxSong_t *song, int now, char *why, int whySize ) {
 #ifndef _WIN32
 	char	*line[4], *s;
 	int		n, lines;
@@ -600,7 +602,7 @@ int Box_LookupFrame( boxLookup_t *l, boxSong_t *song, char *why, int whySize ) {
 			n = -1;		// more than four lines say: the rest does not matter
 		}
 		if ( n == 0 ) {
-			if ( trap->Milliseconds() - l->proc.started < BOX_LOOKUP_MSEC )
+			if ( now - l->proc.started < BOX_LOOKUP_MSEC )
 				return 0;
 			Box_ProcStop( &l->proc );
 			l->busy = qfalse;
@@ -643,6 +645,7 @@ int Box_LookupFrame( boxLookup_t *l, boxSong_t *song, char *why, int whySize ) {
 		Q_strncpyz( song->title, song->id, sizeof( song->title ) );
 	return 1;
 #else
+	(void)l; (void)song; (void)now; (void)why; (void)whySize;
 	return -1;
 #endif
 }
@@ -668,7 +671,8 @@ where in the song to begin (ffmpeg decodes what is before and drops it), for a s
 keepRing: what was fetched before stays, and what comes is put behind it.
 =================
 */
-qboolean Box_StreamStart( boxStream_t *s, const char *id, int fromSample, qboolean keepRing, char *why, int whySize ) {
+qboolean Box_StreamStart( boxStream_t *s, const boxTools_t *tools, const char *id, int fromSample, qboolean keepRing, int now,
+	char *why, int whySize ) {
 #ifndef _WIN32
 	boxArgs_t	fetch, decode;
 	char		ytdlp[MAX_OSPATH], ffmpeg[MAX_OSPATH];
@@ -679,17 +683,17 @@ qboolean Box_StreamStart( boxStream_t *s, const char *id, int fromSample, qboole
 	s->fetched = fromSample;
 	s->odd = -1;
 	s->ended = qtrue;
-	if ( !Box_ToolPath( g_boomboxYtdlp.string, ytdlp, sizeof( ytdlp ) ) ) {
+	if ( !Box_ToolPath( tools->ytdlp, ytdlp, sizeof( ytdlp ) ) ) {
 		Q_strncpyz( why, "this server can not fetch songs: it has no yt-dlp", whySize );
 		return qfalse;
 	}
-	if ( !Box_ToolPath( g_boomboxFfmpeg.string, ffmpeg, sizeof( ffmpeg ) ) ) {
+	if ( !Box_ToolPath( tools->ffmpeg, ffmpeg, sizeof( ffmpeg ) ) ) {
 		Q_strncpyz( why, "this server can not play songs: it has no ffmpeg", whySize );
 		return qfalse;
 	}
 
 	Box_ArgsBegin( &fetch );
-	Box_ArgsYtdlp( &fetch, ytdlp );
+	Box_ArgsYtdlp( &fetch, ytdlp, tools );
 	Box_Arg( &fetch, "--quiet" );
 	Box_Arg( &fetch, "--no-progress" );
 	Box_Arg( &fetch, "-o" );
@@ -720,16 +724,17 @@ qboolean Box_StreamStart( boxStream_t *s, const char *id, int fromSample, qboole
 	Box_Arg( &decode, "pipe:1" );
 
 	if ( fetch.full || decode.full ) {
-		Q_strncpyz( why, "g_boomboxYtdlpArgs has too many words", whySize );
+		Q_strncpyz( why, "the words for yt-dlp are too many (g_boomboxYtdlpArgs)", whySize );
 		return qfalse;
 	}
-	if ( !Box_ProcStart( &s->proc, fetch.argv, decode.argv ) ) {
+	if ( !Box_ProcStart( &s->proc, fetch.argv, decode.argv, now ) ) {
 		Q_strncpyz( why, "this server could not start yt-dlp and ffmpeg", whySize );
 		return qfalse;
 	}
 	s->ended = qfalse;
 	return qtrue;
 #else
+	(void)tools; (void)id; (void)keepRing; (void)now;
 	Q_strncpyz( why, "a server on Windows can not fetch songs yet", whySize );
 	return qfalse;
 #endif

@@ -27,74 +27,36 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // player whose cgame draws boxes may do everything with every box: put one down, ask for songs, pause, skip,
 // stop, move it, make it louder or quieter for everybody, take it away.
 //
-// A song plays for everybody at once: the server fetches it (g_boombox_fetch.c), codes 20 ms of it at a time
-// with Opus as they are due by the clock, and sends each frame to every player in range. Nothing in here waits.
+// A song plays for everybody at once: the server fetches it, codes 20 ms of it at a time with Opus as they are due
+// by the clock (bg_boombox_core.c, bg_boombox_fetch.c, which the masterserver plays the boxes of other servers
+// with), and this file sends each frame to every player in range. Nothing in here waits.
 
 #include "game/g_local.h"
 #include "game/voice/bg_voice.h"
 #include "bg_boombox.h"
-#include "g_boombox.h"
-
-#ifdef JP_BOOMBOX
-	#include <opus.h>
-#endif
+#include "bg_boombox_core.h"
 
 char *ConcatArgs( int start );		// g_cmds.c
 
 #define BOX_LOOKUPS			4			// lookups that run at once, for all players together
 #define BOX_ASK_MSEC		3000		// a player asks for a song this often at most
-#define BOX_START_SAMPLES	( BOX_RATE / 2 )	// what has to be there of a song before it starts: half a second
-#define BOX_FETCH_MSEC		20000		// a song of which nothing came for this long is skipped
-#define BOX_RESTARTS		3			// times a fetch that broke off is begun again further in
-#define BOX_RESTART_SLACK	( BOX_RATE * 3 )	// a fetch that ends this close to the length of the song ended
-#define BOX_BURST			8			// frames that go out at once at most, after the server stood still
 #define BOX_FRAME_MSEC		10			// G_BoomboxFrame() works at most this often: it is called with every move of a player
-#define BOX_BITRATE			64000		// what a song is coded with: Opus, one channel
-#define BOX_ENCODER_BYTES	40960		// room for the state of the encoder of one box. What it needs is asked and checked
 #define BOX_VOLUME			80			// how loud a new box is, of 100
 #define BOX_APART			24.0f		// two boxes stand at least this far apart
 #define BOX_NOTE_RANGE		1.25f		// what happens to a box is told to the players this much further away than it is heard
-
-typedef struct box_s {
-	qboolean	inuse;
-	int			rev;			// one up with every change the clients are told
-	vec3_t		origin;			// on the floor
-	float		yaw;
-	int			volume;			// for everybody, 0 to 100
-	boxSong_t	songs[BOX_QUEUE];	// the line: songs[0] plays
-	int			numSongs;
-	int			looking;		// songs for it that are looked up
-	qboolean	paused;
-	// the song that plays
-	qboolean	streaming;		// its programs were started
-	qboolean	started;		// enough of it came: its frames go out
-	int			startMsec;		// trap->Milliseconds() when its first frame would have gone out, if it had never waited
-	int			frames;			// frames of it that went out
-	int			waitSince;		// when its fetch began
-	int			restarts;		// times its fetch broke off and was begun again further in
-	int			seq;			// of the datagrams of this box, one up with every frame
-	qboolean	encoderOk;
-} box_t;
 
 typedef struct boxClient_s {
 	qboolean	hears;			// his cgame said "jpbox hello": it draws boxes, and he wants to hear them
 	int			askTime;		// when he last asked for a song
 } boxClient_t;
 
-// a block of memory for the state of an encoder, as well aligned as anything can ask for
-typedef union boxEncoder_u {
-	double	align;
-	void	*alignToo;
-	byte	bytes[BOX_ENCODER_BYTES];
-} boxEncoder_t;
-
 static qboolean		boxOn;
 static int			boxFrameTime;
 static box_t		boxes[BOX_MAX];
-static boxStream_t	boxStreams[BOX_MAX];
-static boxEncoder_t	boxEncoders[BOX_MAX];
+static boxPlayer_t	boxPlayers[BOX_MAX];	// one for every box: here no box ever waits for one
 static boxLookup_t	boxLookups[BOX_LOOKUPS];
 static boxClient_t	boxClients[MAX_CLIENTS];
+static boxHost_t	boxHost;
 
 static int Box_Max( void ) {
 	return Com_Clampi( 0, BOX_MAX, g_boomboxMax.integer );
@@ -146,21 +108,12 @@ static const char *Box_TextFor( int clientNum, const char *text, char *buffer, i
 static void Box_TellTo( int b, int clientNum ) {
 	const box_t	*box = &boxes[b];
 	char		title[BOX_TITLE], next[BOX_TITLE];
-	int			flags = 0;
+	const int	flags = Box_Flags( box );
 
 	if ( !box->inuse ) {
 		trap->SendServerCommand( clientNum, va( "jpbox gone %i", b ) );
 		return;
 	}
-	if ( box->numSongs ) {
-		flags |= BOX_PLAYING;
-		if ( box->paused )
-			flags |= BOX_PAUSED;
-		if ( !box->started )
-			flags |= BOX_LOADING;
-	}
-	if ( box->looking )
-		flags |= BOX_LOOKING;
 	Box_TextFor( clientNum, box->numSongs ? box->songs[0].title : "", title, sizeof( title ) );
 	Box_TextFor( clientNum, box->numSongs > 1 ? box->songs[1].title : "", next, sizeof( next ) );
 	trap->SendServerCommand( clientNum, va( "jpbox set %i %i %i %i %i %i %i %i %i %i %i \"%s\" \"%s\"", b, box->rev,
@@ -170,14 +123,19 @@ static void Box_TellTo( int b, int clientNum ) {
 }
 
 // what a box is now, to everybody the boxes are for
-static void Box_Tell( int b ) {
+static void Box_TellAll( int b ) {
 	int i;
 
-	boxes[b].rev++;
 	for ( i = 0; i < level.maxclients; i++ ) {
 		if ( Box_Hears( i ) )
 			Box_TellTo( b, i );
 	}
+}
+
+// a box changed here (put down, moved, louder): one up and told
+static void Box_Changed( int b ) {
+	boxes[b].rev++;
+	Box_TellAll( b );
 }
 
 // a line in the chat box of one player
@@ -204,94 +162,52 @@ static void Box_NoteNear( int b, int also, const char *text ) {
 	}
 }
 
-static const char *Box_Length( int seconds ) {
-	return va( "%i:%02i", seconds / 60, seconds % 60 );
-}
-
 /*
 ===============================================================================
 
-The songs of a box
+The host of the core: how the songs of the boxes of this level reach the players
 
 ===============================================================================
 */
 
-// the song that played is through, or was skipped: the next one in the line, if there is one
-static void Box_Next( int b ) {
-	box_t *box = &boxes[b];
-
-	Box_StreamStop( &boxStreams[b] );
-	if ( box->numSongs > 0 ) {
-		memmove( &box->songs[0], &box->songs[1], ( box->numSongs - 1 ) * sizeof( box->songs[0] ) );
-		box->numSongs--;
-	}
-	box->streaming = box->started = box->paused = qfalse;
-	box->frames = box->restarts = 0;
-	Box_Tell( b );
+// the programs, as the owner of the server named them (CVAR_INIT)
+static void G_BoxTools( boxTools_t *out ) {
+	Q_strncpyz( out->ytdlp, g_boomboxYtdlp.string, sizeof( out->ytdlp ) );
+	Q_strncpyz( out->ffmpeg, g_boomboxFfmpeg.string, sizeof( out->ffmpeg ) );
+	Q_strncpyz( out->ytdlpArgs, g_boomboxYtdlpArgs.string, sizeof( out->ytdlpArgs ) );
 }
 
-static void Box_Stop( int b ) {
-	boxes[b].numSongs = 0;
-	Box_Next( b );
+static boxPlayer_t *G_BoxBorrow( boxHost_t *host ) {
+	int i;
+
+	(void)host;
+	for ( i = 0; i < BOX_MAX; i++ ) {
+		if ( !boxPlayers[i].inuse )
+			return &boxPlayers[i];
+	}
+	return NULL;
 }
 
-// the encoder of a box, the first time it is needed
-static qboolean Box_Encoder( int b ) {
-#ifdef JP_BOOMBOX
-	OpusEncoder *enc = (OpusEncoder *)&boxEncoders[b];
-
-	if ( boxes[b].encoderOk )
-		return qtrue;
-	if ( opus_encoder_get_size( 1 ) > (int)sizeof( boxEncoders[b] ) || opus_encoder_init( enc, BOX_RATE, 1, OPUS_APPLICATION_AUDIO ) != OPUS_OK )
-		return qfalse;
-	opus_encoder_ctl( enc, OPUS_SET_BITRATE( BOX_BITRATE ) );
-	opus_encoder_ctl( enc, OPUS_SET_SIGNAL( OPUS_SIGNAL_MUSIC ) );
-	// every frame carries a small copy of the one before it, so one lost datagram can be made good
-	opus_encoder_ctl( enc, OPUS_SET_INBAND_FEC( 1 ) );
-	opus_encoder_ctl( enc, OPUS_SET_PACKET_LOSS_PERC( 5 ) );
-	boxes[b].encoderOk = qtrue;
-	return qtrue;
-#else
-	(void)b;
-	return qfalse;
-#endif
+static void G_BoxTell( boxHost_t *host, int b ) {
+	(void)host;
+	Box_TellAll( b );
 }
 
-// the programs of the first song in the line start
-static void Box_Begin( int b, int now ) {
-	box_t	*box = &boxes[b];
-	char	why[128];
-
-	if ( !Box_Encoder( b ) ) {
-		Box_NoteNear( b, -1, "^5Boombox^7: the server can not code sound" );
-		Box_Stop( b );
-		return;
-	}
-	if ( !Box_StreamStart( &boxStreams[b], box->songs[0].id, 0, qfalse, why, sizeof( why ) ) ) {
-		Box_NoteNear( b, -1, va( "^5Boombox^7: %s is not played, %s", box->songs[0].title, why ) );
-		Box_Next( b );
-		return;
-	}
-	box->streaming = qtrue;
-	box->started = qfalse;
-	box->frames = box->restarts = 0;
-	box->waitSince = now;
-	Box_Tell( b );
+static void G_BoxNote( boxHost_t *host, int b, int client, const char *text ) {
+	(void)host;
+	if ( b >= 0 )
+		Box_NoteNear( b, client, text );
+	else
+		Box_Note( client, text );
 }
 
 // one frame of a song to everybody in range
-static void Box_Send( int b, const short *samples ) {
-#ifdef JP_BOOMBOX
-	box_t		*box = &boxes[b];
-	byte		frame[VOICE_MAX_FRAME];
-	const int	len = opus_encode( (OpusEncoder *)&boxEncoders[b], samples, VOICE_FRAME_SAMPLES, frame, sizeof( frame ) );
+static void G_BoxSend( boxHost_t *host, int b, const byte *frame, int len ) {
+	const box_t	*box = &boxes[b];
 	vec3_t		mouth;
 	int			i;
 
-	box->seq = ( box->seq + 1 ) & 0xffff;
-	box->frames++;
-	if ( len <= 0 )
-		return;
+	(void)host;
 	Box_Mouth( box, mouth );
 	for ( i = 0; i < level.maxclients; i++ ) {
 		float distance;
@@ -302,115 +218,6 @@ static void Box_Send( int b, const short *samples ) {
 		if ( distance <= Box_Range() )
 			G_VoiceSendBox( i, BOX_SPEAKER_BASE + b, box->seq, (int)( distance / VOICE_DISTANCE_STEP ), frame, len );
 	}
-#else
-	(void)b;
-	(void)samples;
-#endif
-}
-
-/*
-=================
-Box_Run
-
-Once a frame for a box with songs: its programs are started, what they made is taken, and the frames that are
-due by the clock go out. A song that is fetched too slowly waits, and everybody hears it wait. One whose fetch
-broke off in the middle is fetched again from where it was.
-=================
-*/
-static void Box_Run( int b, int now ) {
-	box_t		*box = &boxes[b];
-	boxStream_t	*s = &boxStreams[b];
-	short		samples[VOICE_FRAME_SAMPLES];
-	char		why[128];
-	int			due;
-
-	if ( !box->streaming ) {
-		Box_Begin( b, now );
-		return;
-	}
-	Box_StreamFill( s );
-	if ( s->ended && box->restarts < BOX_RESTARTS && s->fetched < box->songs[0].seconds * BOX_RATE - BOX_RESTART_SLACK
-		&& ( box->started || s->fetched > 0 ) ) {
-		box->restarts++;
-		Box_StreamStart( s, box->songs[0].id, s->fetched, qtrue, why, sizeof( why ) );
-	}
-
-	if ( !box->started ) {
-		if ( Box_StreamQueued( s ) >= BOX_START_SAMPLES || ( s->ended && Box_StreamQueued( s ) > 0 ) ) {
-			box->started = qtrue;
-			box->startMsec = now;
-			box->frames = 0;
-			Box_Tell( b );
-		} else if ( s->ended || now - box->waitSince > BOX_FETCH_MSEC ) {
-			Box_StreamWhy( s, "nothing of it came", why, sizeof( why ) );
-			Box_NoteNear( b, -1, va( "^5Boombox^7: %s is not played, %s", box->songs[0].title, why ) );
-			Box_Next( b );
-		}
-		return;
-	}
-	if ( box->paused )
-		return;
-
-	due = ( now - box->startMsec ) / VOICE_FRAME_MSEC - box->frames;
-	if ( due > BOX_BURST ) {
-		box->startMsec += ( due - BOX_BURST ) * VOICE_FRAME_MSEC;
-		due = BOX_BURST;
-	}
-	for ( ; due > 0; due-- ) {
-		const int queued = Box_StreamQueued( s );
-
-		if ( queued < VOICE_FRAME_SAMPLES && !s->ended ) {
-			// not fetched yet: the song waits for it
-			box->startMsec += due * VOICE_FRAME_MSEC;
-			return;
-		}
-		if ( !queued ) {
-			Box_Next( b );
-			return;
-		}
-		memset( samples, 0, sizeof( samples ) );
-		Box_StreamTake( s, samples, VOICE_FRAME_SAMPLES );
-		Box_Send( b, samples );
-	}
-}
-
-/*
-=================
-Box_LookupDone
-
-A lookup ended: the song goes into the line of its box, or the player who asked is told why not.
-=================
-*/
-static void Box_LookupDone( boxLookup_t *l ) {
-	box_t		*box = &boxes[l->box];
-	boxSong_t	song;
-	char		why[128];
-	const int	result = Box_LookupFrame( l, &song, why, sizeof( why ) );
-	const int	most = g_boomboxMaxSeconds.integer;
-
-	if ( result == 0 )
-		return;
-	if ( box->looking > 0 )
-		box->looking--;
-	if ( result < 0 ) {
-		Box_Note( l->client, va( "^5Boombox^7: not played, %s", why ) );
-	} else if ( !box->inuse ) {
-		Box_Note( l->client, va( "^5Boombox^7: %s is not played, the boombox is gone", song.title ) );
-	} else if ( most > 0 && song.seconds > most ) {
-		Box_Note( l->client, va( "^5Boombox^7: %s is too long (%s, at most %s)", song.title, Box_Length( song.seconds ), Box_Length( most ) ) );
-	} else if ( box->numSongs >= Box_QueueMax() ) {
-		Box_Note( l->client, va( "^5Boombox^7: %s is not played, the line is full", song.title ) );
-	} else {
-		Q_strncpyz( song.by, l->by, sizeof( song.by ) );
-		box->songs[box->numSongs++] = song;
-		if ( box->numSongs == 1 )
-			Box_NoteNear( l->box, l->client, va( "^5Boombox^7: %s^7 put on %s (%s)", song.by, song.title, Box_Length( song.seconds ) ) );
-		else
-			Box_NoteNear( l->box, l->client, va( "^5Boombox^7: %s^7 added %s (%s), number %i in the line", song.by, song.title,
-				Box_Length( song.seconds ), box->numSongs - 1 ) );
-	}
-	if ( box->inuse )
-		Box_Tell( l->box );
 }
 
 /*
@@ -428,15 +235,12 @@ void G_BoomboxFrame( void ) {
 	if ( !boxOn || ( boxFrameTime && now - boxFrameTime < BOX_FRAME_MSEC ) )
 		return;
 	boxFrameTime = now;
+	boxHost.queueMax = Box_QueueMax();
+	boxHost.maxSeconds = g_boomboxMaxSeconds.integer;
 	Box_ReapAll();
-	for ( i = 0; i < BOX_LOOKUPS; i++ ) {
-		if ( boxLookups[i].busy )
-			Box_LookupDone( &boxLookups[i] );
-	}
-	for ( i = 0; i < BOX_MAX; i++ ) {
-		if ( boxes[i].inuse && boxes[i].numSongs )
-			Box_Run( i, now );
-	}
+	Box_Lookups( boxLookups, BOX_LOOKUPS, now );
+	for ( i = 0; i < BOX_MAX; i++ )
+		Box_Run( &boxHost, i, now );
 }
 
 /*
@@ -452,11 +256,13 @@ void G_BoomboxShutdown( qboolean restart ) {
 	if ( restart )
 		return;
 	for ( i = 0; i < BOX_MAX; i++ )
-		Box_StreamStop( &boxStreams[i] );
+		Box_StreamStop( &boxPlayers[i].stream );
 	for ( i = 0; i < BOX_LOOKUPS; i++ )
 		Box_ProcStop( &boxLookups[i].proc );
 	Box_ReapAll();
 	memset( boxes, 0, sizeof( boxes ) );
+	for ( i = 0; i < BOX_MAX; i++ )
+		boxPlayers[i].inuse = qfalse;
 	memset( boxLookups, 0, sizeof( boxLookups ) );
 	memset( boxClients, 0, sizeof( boxClients ) );
 	boxOn = qfalse;
@@ -471,7 +277,14 @@ void G_BoomboxInit( qboolean restart ) {
 		return;
 	G_BoomboxShutdown( qfalse );
 	for ( i = 0; i < BOX_MAX; i++ )
-		boxStreams[i].odd = -1;
+		boxPlayers[i].stream.odd = -1;
+	memset( &boxHost, 0, sizeof( boxHost ) );
+	boxHost.boxes = boxes;
+	boxHost.tools = G_BoxTools;
+	boxHost.borrow = G_BoxBorrow;
+	boxHost.tell = G_BoxTell;
+	boxHost.note = G_BoxNote;
+	boxHost.send = G_BoxSend;
 	if ( !g_boombox.integer )
 		return;
 #ifndef JP_BOOMBOX
@@ -597,13 +410,12 @@ static int Box_Place( gentity_t *ent, const vec3_t wanted, float yaw ) {
 	}
 	for ( i = 0; i < BOX_MAX && boxes[i].inuse; i++ )
 		;
-	Box_StreamStop( &boxStreams[i] );
 	memset( &boxes[i], 0, sizeof( boxes[i] ) );
 	boxes[i].inuse = qtrue;
 	VectorCopy( spot, boxes[i].origin );
 	boxes[i].yaw = AngleNormalize360( yaw );
 	boxes[i].volume = BOX_VOLUME;
-	Box_Tell( i );
+	Box_Changed( i );
 	return i;
 }
 
@@ -632,25 +444,19 @@ static int Box_Nearest( const gentity_t *ent ) {
 }
 
 // what a player asked for is looked up, and put into the line of box b when it is found (-1: the box near him)
-static void Box_Ask( gentity_t *ent, int b, const char *asked ) {
+static void Box_AskFor( gentity_t *ent, int b, const char *asked ) {
 	const int		clientNum = ent - g_entities;
 	const int		now = trap->Milliseconds();
 	boxClient_t		*bc = &boxClients[clientNum];
-	char			target[BOX_ASK + 32], why[128];
-	int				i;
+	char			why[128], target[BOX_ASK + 32];
 
 	if ( bc->askTime && now - bc->askTime < BOX_ASK_MSEC ) {
 		Box_Note( clientNum, "^5Boombox^7: wait a moment before you ask for the next song" );
 		return;
 	}
+	// (said before a box is put down for it)
 	if ( !Box_Target( asked, target, sizeof( target ), why, sizeof( why ) ) ) {
 		Box_Note( clientNum, va( "^5Boombox^7: %s", why ) );
-		return;
-	}
-	for ( i = 0; i < BOX_LOOKUPS && boxLookups[i].busy; i++ )
-		;
-	if ( i == BOX_LOOKUPS ) {
-		Box_Note( clientNum, "^5Boombox^7: the server looks up too many songs right now, try again in a moment" );
 		return;
 	}
 	if ( b < 0 )
@@ -659,21 +465,14 @@ static void Box_Ask( gentity_t *ent, int b, const char *asked ) {
 		b = Box_PlaceInFront( ent );
 	if ( b < 0 )
 		return;
-	if ( boxes[b].numSongs + boxes[b].looking >= Box_QueueMax() ) {
-		Box_Note( clientNum, "^5Boombox^7: the line of that boombox is full" );
-		return;
-	}
-	if ( !Box_LookupStart( &boxLookups[i], target, why, sizeof( why ) ) ) {
+	boxHost.queueMax = Box_QueueMax();
+	boxHost.maxSeconds = g_boomboxMaxSeconds.integer;
+	if ( !Box_Ask( &boxHost, boxLookups, BOX_LOOKUPS, b, clientNum, ent->client->pers.netname, asked, now, why, sizeof( why ) ) ) {
 		Box_Note( clientNum, va( "^5Boombox^7: %s", why ) );
 		return;
 	}
-	boxLookups[i].box = b;
-	boxLookups[i].client = clientNum;
-	Q_strncpyz( boxLookups[i].by, ent->client->pers.netname, sizeof( boxLookups[i].by ) );
-	boxes[b].looking++;
 	bc->askTime = now;
 	Box_Note( clientNum, "^5Boombox^7: looking it up..." );
-	Box_Tell( b );
 }
 
 static float Box_ArgFloat( int n ) {
@@ -762,7 +561,7 @@ void Cmd_Boombox_f( gentity_t *ent ) {
 	if ( !Q_stricmp( what, "play" ) ) {
 		if ( b >= BOX_MAX || ( b >= 0 && !boxes[b].inuse ) )
 			b = -1;
-		Box_Ask( ent, b, ConcatArgs( 3 ) );
+		Box_AskFor( ent, b, ConcatArgs( 3 ) );
 		return;
 	}
 	if ( b < 0 || b >= BOX_MAX || !boxes[b].inuse ) {
@@ -770,34 +569,23 @@ void Cmd_Boombox_f( gentity_t *ent ) {
 		return;
 	}
 	box = &boxes[b];
-	if ( !Q_stricmp( what, "pause" ) ) {
-		if ( box->numSongs && !box->paused ) {
-			box->paused = qtrue;
-			Box_Tell( b );
-		}
-	} else if ( !Q_stricmp( what, "resume" ) ) {
-		if ( box->paused ) {
-			box->paused = qfalse;
-			box->startMsec = trap->Milliseconds() - box->frames * VOICE_FRAME_MSEC;
-			Box_Tell( b );
-		}
+	if ( !Q_stricmp( what, "pause" ) || !Q_stricmp( what, "resume" ) ) {
+		Box_Pause( &boxHost, b, (qboolean)!Q_stricmp( what, "pause" ), trap->Milliseconds() );
 	} else if ( !Q_stricmp( what, "skip" ) ) {
 		if ( box->numSongs ) {
 			Box_NoteNear( b, clientNum, va( "^5Boombox^7: %s^7 skipped %s", ent->client->pers.netname, box->songs[0].title ) );
-			Box_Next( b );
+			Box_Next( &boxHost, b );
 		}
 	} else if ( !Q_stricmp( what, "stop" ) ) {
 		if ( box->numSongs ) {
 			Box_NoteNear( b, clientNum, va( "^5Boombox^7: %s^7 stopped the music", ent->client->pers.netname ) );
-			Box_Stop( b );
+			Box_Stop( &boxHost, b );
 		}
 	} else if ( !Q_stricmp( what, "remove" ) ) {
-		Box_StreamStop( &boxStreams[b] );
-		memset( box, 0, sizeof( *box ) );
-		Box_Tell( b );
+		Box_Remove( &boxHost, b );
 	} else if ( !Q_stricmp( what, "volume" ) ) {
 		box->volume = Com_Clampi( 0, 100, (int)Box_ArgFloat( 3 ) );
-		Box_Tell( b );
+		Box_Changed( b );
 	} else if ( !Q_stricmp( what, "move" ) ) {
 		VectorSet( at, Box_ArgFloat( 3 ), Box_ArgFloat( 4 ), Box_ArgFloat( 5 ) );
 		if ( !Box_Spot( ent, at, b, spot, why, sizeof( why ) ) ) {
@@ -808,7 +596,7 @@ void Cmd_Boombox_f( gentity_t *ent ) {
 		}
 		VectorCopy( spot, box->origin );
 		box->yaw = AngleNormalize360( Box_ArgFloat( 6 ) );
-		Box_Tell( b );
+		Box_Changed( b );
 	} else {
 		Box_Usage( clientNum );
 	}
@@ -826,11 +614,8 @@ void Svcmd_Boombox_f( void ) {
 	}
 	if ( !Q_stricmp( arg, "clear" ) ) {
 		for ( i = 0; i < BOX_MAX; i++ ) {
-			if ( boxes[i].inuse ) {
-				Box_StreamStop( &boxStreams[i] );
-				memset( &boxes[i], 0, sizeof( boxes[i] ) );
-				Box_Tell( i );
-			}
+			if ( boxes[i].inuse )
+				Box_Remove( &boxHost, i );
 		}
 		trap->Print( "All boomboxes are gone\n" );
 		return;
@@ -847,8 +632,8 @@ void Svcmd_Boombox_f( void ) {
 			trap->Print( "  %s %s %s (%s), from %s\n", k ? va( "%2i.", k ) : "now", box->songs[k].id, box->songs[k].title,
 				Box_Length( box->songs[k].seconds ), box->songs[k].by );
 		}
-		if ( box->streaming && boxStreams[i].proc.errLine[0] )
-			trap->Print( "  last word of yt-dlp or ffmpeg: %s\n", boxStreams[i].proc.errLine );
+		if ( box->player && box->player->stream.proc.errLine[0] )
+			trap->Print( "  last word of yt-dlp or ffmpeg: %s\n", box->player->stream.proc.errLine );
 	}
 	for ( i = k = 0; i < MAX_CLIENTS; i++ ) {
 		if ( Box_Hears( i ) )
