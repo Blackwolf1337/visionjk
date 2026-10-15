@@ -25,6 +25,7 @@ The port starts from OpenJK commit 260c59c2 (2026-09-29) and is the commits on t
 | [ui.md](ui.md) | The new look of menus and HUD (not a JA+ feature): what a player sees, what a mod's files get, the new words of the menu files, how the menus are made |
 | [windows.md](windows.md) | The Windows client run as a whole on Windows 11: what ran, what it found, what is still unchecked |
 | [voice.md](voice.md) | Voice chat with the microphone (not a JA+ feature): in the cgame, relayed by the game module, engine unchanged, clients without it unaffected |
+| [boombox.md](boombox.md) | Boxes that play songs of YouTube (not a JA+ feature): fetched by the server, sent over the relay of the voice chat, a sound of the level with `s_spatial`, only VisionJK players see and hear them. Never run |
 | [audio.md](audio.md) | Sound that knows the level (not a JA+ feature): `s_spatial`, with Steam Audio in the engine. Walls muffle, rooms ring, sounds come round corners. Measured, not listened to yet |
 | [renderer.md](renderer.md) | rd-vulkan-vision, a Vulkan renderer next to rd-vanilla (not a JA+ feature): how it is built, the state of each part, what runs on the GPU, differences, what is left |
 | [web.md](web.md) | The client in a browser (not a JA+ feature): built as WebAssembly, handed out by the dedicated server itself (`sv_webPort`), packets through a WebSocket. What runs and what never ran |

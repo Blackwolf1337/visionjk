@@ -213,6 +213,14 @@ the rings and the queues are static memory. `CG_Shutdown` stops the devices befo
 
 `-DBuildJPVoice=OFF` builds the cgame without it (and without the two libraries).
 
+## The boombox
+
+The relay also carries the songs of the boombox ([boombox.md](boombox.md)): the server codes them itself and
+sends them as `VOICE_AUDIO` with a speaker number behind the players, `MAX_CLIENTS` + the box, only to clients
+that asked for boxes (`jpbox hello`). A cgame from before drops a speaker number that is no client number. A
+client whose voice chat is off (`cg_voice 0`) still opens the way to the relay for the songs, without the
+microphone, and drops the voices.
+
 ## On a server without it
 
 A server that does not run the game module of this tree has no relay, hands out no token and tells nobody who

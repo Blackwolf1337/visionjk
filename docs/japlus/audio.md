@@ -224,6 +224,11 @@ the walls, the reverb, the ways round corners. How loud a voice is at its distan
 makes of it (`g_voiceRange`, `cg_voiceVolume`), and `s_volume` does not change it. A voice is decided when its
 speaker starts to talk and stays on its way until he stops.
 
+**The boombox.** Its songs come to the cgame as the voices of speakers behind the players ([boombox.md](boombox.md)),
+and the same call takes them: clientNum `MAX_CLIENTS` and up are eight more streams, behind the one of the own
+voice. The engine says how many in the cvar `s_spatialBoxes` (8 while `s_spatial` runs, else 0); an engine that
+does not say it gets no box, and the cgame plays the songs on its own device.
+
 Not handed over, and played by the cgame as before: a chat without a range (`g_voiceRange 0`), a speaker the
 server does not show, a spectator, and every voice for a player with `cg_voiceMuffle 0`, who does not want
 voices muffled. The same goes for any other engine, and for this one with `s_spatial 0` or without the library.

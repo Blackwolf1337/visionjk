@@ -1,0 +1,133 @@
+# Boombox
+
+A box in the level that plays songs of YouTube and YouTube Music, for everybody near it. It is not a JA+
+feature. Only players with the client of this tree see the box and hear it, on a server with the game module of
+this tree. A client of any other kind (stock jamp, the JA+ plugin, another fork) is told nothing of it: it sees no
+box, hears nothing, and its players walk through the box as everybody does (it is no entity and not solid).
+
+Everybody whose client draws boxes may do everything with every box.
+
+## For players
+
+Hold the key of the pointer (`+cursor`, the left Alt key by default) and:
+
+- **click** a box for its card: what it plays and how far into the song it is, what comes next, and the rows
+  Play a song (Add a song while one plays), Pause or Resume, Skip this song, Stop the music, Quieter and Louder
+  for everybody, Mute it for me, Move it, Take it away (click twice). The rows also go by their number keys.
+- **drag** a box over the floor to another place. It follows the pointer and turns to you, with a red outline
+  where it can not be put (no floor, further than 320 units from your eye, another box too close).
+
+"Play a song" opens the chat box with the prompt "Boombox, link or song": paste a link with Ctrl+V, or type what
+to look for, and Enter. A link of `youtube.com`, `music.youtube.com`, `youtu.be` (also `/shorts/`, `/live/`,
+`/embed/`) plays that video, anything else is looked up on YouTube and the first hit plays. Live streams and songs
+longer than the server allows are refused, and the chat box says why.
+
+The console command does the same without the pointer:
+
+```
+boombox play "https://music.youtube.com/watch?v=..."    into the line of the box near you, or a new box in front of you
+boombox play synthwave mix                               looked up on YouTube
+boombox place                                            a new box where the crosshair points
+boombox pause | resume | skip | stop | remove [box]      the box near you, or that number
+boombox volume <0 to 100> [box]                          for everybody
+boombox list                                             the boxes and their lines, in the console
+```
+
+A link typed into the console needs quotes: the console ends a command at `//`. The command says so when that
+happened. The chat box needs no quotes.
+
+| Cvar | Default | Meaning |
+|------|---------|---------|
+| `cg_boombox` | 1 | 0: no boxes, nothing of them heard, the server stops sending |
+| `cg_boomboxVolume` | 0.6 | how loud the songs are for you, 0 to 1. Also in Setup, Sound |
+
+Both are in Setup, Sound, under Boombox. With the voice chat switched off (`cg_voice 0`) the songs still come:
+the way to the relay is opened for them alone, without the microphone.
+
+### How it sounds
+
+With this engine and `s_spatial 1` ([audio.md](audio.md)) a box is a sound of the level: walls muffle it, it
+finds its way round corners, the HRTF or the panning gives it its side, and the room you stand in rings from it
+(the reverb is the one of the listener, as for every other sound). The engine says so in `s_spatialBoxes`.
+Elsewhere it plays on the sound device of the voice chat, by side and distance, muffled behind a wall
+(`cg_voiceMuffle`). Either way it gets quieter with the distance and is gone at the end of the range of the
+server (`g_boomboxRange`, 1536 units).
+
+The two speakers of the box push out with the loudness of what you hear of it.
+
+## For server owners
+
+The server fetches every song itself and needs three programs for it, in the `PATH` of the server or named by
+the cvars below:
+
+- `yt-dlp`, recent: YouTube changes often, an old one fails. The package of a distribution is often too old,
+  the release binary of yt-dlp updates itself (`yt-dlp -U`).
+- a JavaScript runtime for yt-dlp: `deno` (what yt-dlp looks for by default), or another one named in
+  `g_boomboxYtdlpArgs` (`--js-runtimes node`).
+- `ffmpeg`.
+
+```
+apt install ffmpeg            # Debian
+yay -S yt-dlp deno            # Arch
+```
+
+Without yt-dlp the boxes are still there, and a player who asks for a song is told that the server can not fetch
+songs. The boombox needs the voice chat (`g_voice 1`): the songs go out over its relay. Windows servers can not
+fetch songs yet.
+
+| Cvar | Default | Meaning |
+|------|---------|---------|
+| `g_boombox` | 1 | in the server info. 0: no boxes |
+| `g_boomboxMax` | 4 | boxes a level has at most (8 at most) |
+| `g_boomboxRange` | 1536 | how far a box is heard, in units |
+| `g_boomboxMaxSeconds` | 600 | the longest song, in seconds. 0: any length |
+| `g_boomboxQueue` | 10 | songs in the line of one box (16 at most) |
+| `g_boomboxYtdlp` | yt-dlp | the program, a name in the `PATH` or a path |
+| `g_boomboxFfmpeg` | ffmpeg | the same |
+| `g_boomboxYtdlpArgs` | | words for yt-dlp in addition, split at spaces: `--js-runtimes node`, `--cookies <file>`, `--proxy <url>` |
+
+The last three can only be set while the server starts (`CVAR_INIT`: in `server.cfg` or on the command line):
+whoever can set a cvar later (rcon, an admin of the panel) can not make the server start a program of his choice.
+
+The server command `boombox` lists the boxes, their lines and the last word of yt-dlp and ffmpeg for a song
+that plays. `boombox clear` takes every box away.
+
+A song costs the server one Opus encoder (64 kbit, one channel) and about 70 kbit a second to every player in
+range of the box. Boxes go with the level; a `map_restart` keeps them.
+
+Playing YouTube on a server is your call: the terms of YouTube allow its videos only in its own player, and
+music played to the public can need the rights for it.
+
+## How it works
+
+`codemp/game/boombox` (server), `codemp/cgame/boombox` (client), the protocol in `game/boombox/bg_boombox.h`.
+
+A box is no entity. A cgame of this tree on a server that says `g_boombox` asks `jpbox hello` and is answered
+`jpbox on`, the state of every box (`jpbox set`), every change of it, and `jpbox gone`; lines for the chat box
+come as `jpbox note`. Nothing of it goes to a client that did not ask. What a player does is the client command
+`boombox`, of which the cgame sends one a second at most (the flood protection of the server drops a command
+that comes within a second of another one); five clicks on Louder go out as one.
+
+A song: `yt-dlp` looks it up first (`--print` of its id, length, whether it is live, and title: nothing is
+fetched), and when its turn comes `yt-dlp -o -` fetches the audio and hands it to `ffmpeg`, which makes one
+channel of 16 bit at 48 kHz of it (`game/boombox/g_boombox_fetch.c`). The programs run in a process group of
+their own, started by a go-between that ends at once, never through a shell, and with pipes that do not block:
+nothing of the server waits for them. A stopped song is one kill of that group. Of what a player typed only the
+address of a YouTube video, made anew from its eleven characters, or `ytsearch1:` with the words reaches yt-dlp,
+behind `--`: any other address is refused, so the server never fetches an address inside its own network.
+
+The server codes 20 ms of the song at a time with Opus as they are due by the clock and sends each frame to every
+player in range, over the relay of the voice chat, as the voice of speaker `MAX_CLIENTS` + the number of the box
+(`G_VoiceSendBox`, a `VOICE_AUDIO` datagram as [voice.md](voice.md) has it). Everybody hears the same moment. A
+song that is fetched too slowly waits for everybody, a fetch that breaks off is begun again where it was (three
+times a song). The cgame keeps 120 ms of a song before it plays it (the voices: 60).
+
+## Not done, not checked
+
+- Nothing of it was run: built for Linux only, never started, nobody has heard a song or clicked a box. The model
+  was looked at in a picture the files were drawn into by a small script, never in the game.
+- Windows: the server can not fetch songs (no process code for it yet), the client is not built for it.
+- A server without the game module of this tree (the voice through the masterserver) has no boxes.
+- The browser client: the code is the same, the songs would come through the web host of the server as the
+  voices do; not built (the browser client is off).
+- One channel: a box is one point in the level.

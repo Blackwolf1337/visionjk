@@ -413,7 +413,7 @@ qboolean Box_Target( const char *asked, char *target, int targetSize, char *why,
 	}
 
 	// An address has a scheme, or its first word has a dot and goes on with a path or begins with www.
-	// "never gonna" and "song.mp3" are words to look for.
+	// "lofi beats" and "song.mp3" are words to look for.
 	rest = s;
 	scheme = qtrue;
 	if ( !Q_stricmpn( rest, "https://", 8 ) )

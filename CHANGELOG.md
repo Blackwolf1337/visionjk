@@ -57,6 +57,7 @@ Key: [-] removed, [+] added, [\*] modified
 * [\*] The client answers an `echo` request only from the server it is connected to.
 * [\*] Voice chat: the room rings half as loud from the own voice as before (with `s_spatial`), and the setup menus have a slider for it (`cg_voiceOwnReverb`, "Own Voice In The Room").
 * [+] Voice chat: a clan radio. `+voiceclan` talks to the players with the same clan password (`cp_clanPwd`) wherever they are, without a place and with the sound of a radio (`cg_voiceRadioFX`). `g_voiceRadio 0` on the server switches it off. Not on servers without the game module.
+* [+] The boombox: boxes in the level that play songs of YouTube and YouTube Music for everybody near them (`boombox play <link or words>`, or click a box with the pointer for its card, drag it to move it). Only VisionJK players see and hear them, legacy clients are told nothing. The server fetches the songs (yt-dlp and ffmpeg) and sends them over the relay of the voice chat, with `s_spatial` a box is a sound of the level that rings in the room. `cg_boombox`, `cg_boomboxVolume`, `g_boombox*`, see docs/japlus/boombox.md. Built for Linux, never run.
 
 # Features
 
