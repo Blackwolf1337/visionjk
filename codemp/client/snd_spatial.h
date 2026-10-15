@@ -46,7 +46,8 @@ void		S_SpatialAddLoop( int entnum, sfx_t *sfx, const vec3_t origin, float volum
 void		S_SpatialEndFrame( int from, int target );
 float		S_SpatialAhead( void );
 
-// from the cgame (ext.S_SpatialVoice): the voice of a player of the voice chat as a sound in the level.
+// from the cgame (ext.S_SpatialVoice): the voice of a player of the voice chat as a sound in the level, or the song
+// of a box of the boombox (clientNum MAX_CLIENTS and up, s_spatialBoxes of them).
 // Returns the samples of him that wait, at his rate, or -1 if the cgame has to play him itself.
 int			S_SpatialVoice( int clientNum, const vec3_t origin, float volume, const short *samples, int numSamples, int rate );
 // from the cgame (ext.S_SpatialOwnVoice): what the own player says into the voice chat, only for the reverb

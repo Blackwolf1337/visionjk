@@ -512,9 +512,11 @@ static std::atomic<int>	spatialBakeProgress;	// 0 to 100
 // the thread of the bake: what a stopped bake has is thrown away unread.
 static std::atomic<int>	spatialBakeCancel;
 
-// one for every player, and one more for what the own player says (S_SpatialOwnVoice)
+// One for every player, one more for what the own player says (S_SpatialOwnVoice), and one for every box of the
+// boombox (cgame/boombox): its songs come as the voice of speaker MAX_CLIENTS + the box. BOX_MAX of bg_boombox.h.
 #define SPATIAL_OWN_STREAM	MAX_CLIENTS
-static spatialStream_t	spatialStreams[MAX_CLIENTS + 1];
+#define SPATIAL_BOXES		8
+static spatialStream_t	spatialStreams[MAX_CLIENTS + 1 + SPATIAL_BOXES];
 
 // what the game and the thread of the reflections both touch
 static std::atomic<int>	spatialWorkerState;		// WORKER_*
@@ -1302,8 +1304,12 @@ level does not run, the cgame plays him itself.
 ===============
 */
 int S_SpatialVoice( int clientNum, const vec3_t origin, float volume, const short *samples, int numSamples, int rate ) {
-	if ( !S_SpatialActive() || clientNum < 0 || clientNum >= MAX_CLIENTS || rate < 8000 || rate > 48000 ) {
+	if ( !S_SpatialActive() || clientNum < 0 || clientNum >= MAX_CLIENTS + SPATIAL_BOXES || rate < 8000 || rate > 48000 ) {
 		return -1;
+	}
+	// a box of the boombox: behind the stream of the own voice
+	if ( clientNum >= MAX_CLIENTS ) {
+		return S_SpatialStreamWrite( &spatialStreams[clientNum + 1], origin, volume, samples, numSamples, rate );
 	}
 	return S_SpatialStreamWrite( &spatialStreams[clientNum], origin, volume, samples, numSamples, rate );
 }
@@ -2472,6 +2478,8 @@ void S_SpatialInit( void ) {
 	Cvar_Set( "s_spatialVoice", "0" );
 	Cvar_Get( "s_spatialOwnVoice", "0", CVAR_ROM, "1: this engine lets the room ring from what the own player says into the voice chat (s_spatial)" );
 	Cvar_Set( "s_spatialOwnVoice", "0" );
+	Cvar_Get( "s_spatialBoxes", "0", CVAR_ROM, "How many boxes of the boombox this engine plays as sounds in the level (s_spatial), as speakers MAX_CLIENTS and up" );
+	Cvar_Set( "s_spatialBoxes", "0" );
 	// also with s_spatial 0: it may be turned on later, at a server where the file can not be read
 	S_SpatialLoadMaterials();
 	if ( !s_spatial->integer ) {
@@ -2535,6 +2543,8 @@ void S_SpatialInit( void ) {
 	// for the reverb (ext.S_SpatialOwnVoice)
 	Cvar_Set( "s_spatialVoice", "1" );
 	Cvar_Set( "s_spatialOwnVoice", "1" );
+	// and the songs of the boxes of the boombox, through the same call
+	Cvar_Set( "s_spatialBoxes", va( "%i", SPATIAL_BOXES ) );
 	// the sound system was started again in the middle of a level
 	S_SpatialLoadMap( Cvar_VariableString( "mapname" ) );
 	S_SpatialInfo_f();
@@ -2545,6 +2555,7 @@ void S_SpatialShutdown( void ) {
 	Cmd_RemoveCommand( "s_spatialCapture" );
 	Cvar_Set( "s_spatialVoice", "0" );
 	Cvar_Set( "s_spatialOwnVoice", "0" );
+	Cvar_Set( "s_spatialBoxes", "0" );
 	S_SpatialRelease();
 }
 
