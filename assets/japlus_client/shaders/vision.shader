@@ -70,3 +70,37 @@ textures/vision/temple_sky
 		rgbGen const ( 0.62 0.36 0.14 )
 	}
 }
+
+// The boombox (codemp/cgame/boombox/cg_boombox.c; model and pictures from tools/boombox/build.py). The box, whose
+// dial and lights glow where the renderer has the dynamic glow:
+models/map_objects/vision/boombox
+{
+	{
+		map models/map_objects/vision/boombox
+		rgbGen lightingDiffuse
+	}
+	{
+		map models/map_objects/vision/boombox_lights
+		blendFunc GL_ONE GL_ONE
+		glow
+	}
+}
+
+// its handle, knobs and antenna: chrome, which shows what it reflects
+models/map_objects/vision/boombox_chrome
+{
+	{
+		map models/map_objects/vision/boombox_env
+		tcGen environment
+		rgbGen lightingDiffuse
+	}
+}
+
+// its two speakers (boombox_cone.md3, stretched with the song by the cgame)
+models/map_objects/vision/boombox_cone
+{
+	{
+		map models/map_objects/vision/boombox_cone
+		rgbGen lightingDiffuse
+	}
+}
