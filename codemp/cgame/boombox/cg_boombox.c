@@ -465,14 +465,14 @@ void CG_BoomboxDraw( void ) {
 			continue;
 		}
 		if ( b->flags & BOX_LOADING ) {
-			Q_strncpyz( text, CG_VisionText( "Loading..." ), sizeof( text ) );
+			Q_strncpyz( text, CG_VisionText( "Loading ..." ), sizeof( text ) );
 		} else if ( b->flags & BOX_PLAYING ) {
 			Q_strncpyz( text, b->title, sizeof( text ) );
 			if ( b->flags & BOX_PAUSED ) {
-				Q_strcat( text, sizeof( text ), va( "  (%s)", CG_VisionText( "paused" ) ) );
+				Q_strcat( text, sizeof( text ), va( "  (%s)", CG_VisionText( "Paused" ) ) );
 			}
 		} else if ( b->flags & BOX_LOOKING ) {
-			Q_strncpyz( text, CG_VisionText( "Looking it up..." ), sizeof( text ) );
+			Q_strncpyz( text, CG_VisionText( "Looking a song up ..." ), sizeof( text ) );
 		} else {
 			continue;
 		}

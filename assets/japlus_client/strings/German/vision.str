@@ -429,6 +429,26 @@ REFERENCE           THE_CLAN_RADIO_SOUNDS_LIKE_ONE_NARRO
 LANG_ENGLISH        "The clan radio sounds like one: narrow, a little rough, with a click."
 LANG_GERMAN         "Der Clan-Funk klingt wie Funk: schmal, etwas rau, mit einem Klick."
 
+REFERENCE           BOOMBOX
+LANG_ENGLISH        "Boombox"
+LANG_GERMAN         "#same"
+
+REFERENCE           BOOMBOXES
+LANG_ENGLISH        "Boomboxes"
+LANG_GERMAN         "Boomboxen"
+
+REFERENCE           SEE_AND_HEAR_THE_BOOMBOXES_ON_A_VISI
+LANG_ENGLISH        "See and hear the boomboxes on a VisionJK server, which play songs of YouTube."
+LANG_GERMAN         "Die Boomboxen auf einem VisionJK-Server sehen und hören, die Lieder von YouTube spielen."
+
+REFERENCE           BOOMBOX_VOLUME
+LANG_ENGLISH        "Boombox Volume"
+LANG_GERMAN         "Lautstärke Boombox"
+
+REFERENCE           HOW_LOUD_THE_SONGS_OF_THE_BOOMBOXES
+LANG_ENGLISH        "How loud the songs of the boomboxes are for you."
+LANG_GERMAN         "Wie laut die Lieder der Boomboxen für Sie sind."
+
 REFERENCE           GAME
 LANG_ENGLISH        "Game"
 LANG_GERMAN         "Spiel"
@@ -864,6 +884,94 @@ LANG_GERMAN         "Dunkle Seite"
 REFERENCE           BOTH_SIDES
 LANG_ENGLISH        "Both Sides"
 LANG_GERMAN         "Beide Seiten"
+
+REFERENCE           PLAY_A_SONG
+LANG_ENGLISH        "Play a song ..."
+LANG_GERMAN         "Lied abspielen ..."
+
+REFERENCE           ADD_A_SONG
+LANG_ENGLISH        "Add a song ..."
+LANG_GERMAN         "Lied hinzufügen ..."
+
+REFERENCE           PAUSE
+LANG_ENGLISH        "Pause"
+LANG_GERMAN         "#same"
+
+REFERENCE           RESUME
+LANG_ENGLISH        "Resume"
+LANG_GERMAN         "Weiter"
+
+REFERENCE           SKIP_THIS_SONG
+LANG_ENGLISH        "Skip this song"
+LANG_GERMAN         "Lied überspringen"
+
+REFERENCE           STOP_THE_MUSIC
+LANG_ENGLISH        "Stop the music"
+LANG_GERMAN         "Musik stoppen"
+
+REFERENCE           QUIETER_FOR_EVERYBODY_I
+LANG_ENGLISH        "Quieter for everybody (%i %%)"
+LANG_GERMAN         "Leiser für alle (%i %%)"
+
+REFERENCE           LOUDER_FOR_EVERYBODY_I
+LANG_ENGLISH        "Louder for everybody (%i %%)"
+LANG_GERMAN         "Lauter für alle (%i %%)"
+
+REFERENCE           MUTE_IT_FOR_ME
+LANG_ENGLISH        "Mute it for me"
+LANG_GERMAN         "Für mich stumm"
+
+REFERENCE           HEAR_IT_AGAIN
+LANG_ENGLISH        "Hear it again"
+LANG_GERMAN         "Wieder hören"
+
+REFERENCE           MOVE_IT
+LANG_ENGLISH        "Move it"
+LANG_GERMAN         "Verschieben"
+
+REFERENCE           TAKE_IT_AWAY
+LANG_ENGLISH        "Take it away"
+LANG_GERMAN         "Wegnehmen"
+
+REFERENCE           CLICK_AGAIN_TO_TAKE_IT_AWAY
+LANG_ENGLISH        "Click again to take it away"
+LANG_GERMAN         "Nochmal klicken: wegnehmen"
+
+REFERENCE           PLAYS
+LANG_ENGLISH        "Plays"
+LANG_GERMAN         "Spielt"
+
+REFERENCE           PAUSED
+LANG_ENGLISH        "Paused"
+LANG_GERMAN         "Pausiert"
+
+REFERENCE           LOADING
+LANG_ENGLISH        "Loading ..."
+LANG_GERMAN         "Lädt ..."
+
+REFERENCE           SILENT
+LANG_ENGLISH        "Silent"
+LANG_GERMAN         "Still"
+
+REFERENCE           NEXT_S
+LANG_ENGLISH        "Next: %s"
+LANG_GERMAN         "Danach: %s"
+
+REFERENCE           LOOKING_A_SONG_UP
+LANG_ENGLISH        "Looking a song up ..."
+LANG_GERMAN         "Sucht ein Lied ..."
+
+REFERENCE           VOLUME_I
+LANG_ENGLISH        "Volume %i %%"
+LANG_GERMAN         "Lautstärke %i %%"
+
+REFERENCE           MUTED_FOR_YOU
+LANG_ENGLISH        "muted for you"
+LANG_GERMAN         "für Sie stumm"
+
+REFERENCE           BOOMBOX_LINK_OR_SONG
+LANG_ENGLISH        "Boombox, link or song"
+LANG_GERMAN         "Boombox, Link oder Lied"
 
 REFERENCE           MUTE_HIS_VOICE
 LANG_ENGLISH        "Mute his voice"

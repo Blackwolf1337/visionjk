@@ -858,7 +858,7 @@ static const char *Select_Label( selectAct_t act, int clientNum ) {
 		return "";
 	}
 	switch ( act ) {
-	case ACT_BOX_PLAY:		return CG_VisionText( ( info.flags & BOX_PLAYING ) ? "Add a song..." : "Play a song..." );
+	case ACT_BOX_PLAY:		return CG_VisionText( ( info.flags & BOX_PLAYING ) ? "Add a song ..." : "Play a song ..." );
 	case ACT_BOX_PAUSE:		return CG_VisionText( ( info.flags & BOX_PAUSED ) ? "Resume" : "Pause" );
 	case ACT_BOX_SKIP:		return CG_VisionText( "Skip this song" );
 	case ACT_BOX_STOP:		return CG_VisionText( "Stop the music" );
@@ -918,7 +918,7 @@ static void Select_BoxHead( int box ) {
 		return;
 	}
 	if ( info.flags & BOX_PLAYING ) {
-		Select_HeadLine( CG_VisionText( ( info.flags & BOX_LOADING ) ? "Loading..." : ( info.flags & BOX_PAUSED ) ? "Paused" : "Plays" ), selectDim );
+		Select_HeadLine( CG_VisionText( ( info.flags & BOX_LOADING ) ? "Loading ..." : ( info.flags & BOX_PAUSED ) ? "Paused" : "Plays" ), selectDim );
 		Com_sprintf( sel.head[0].more, sizeof( sel.head[0].more ), "%s / %s", Select_Time( info.msec / 1000 ), Select_Time( info.length ) );
 		sel.head[0].moreColor = selectGold;
 		Select_HeadLine( info.title, selectAccent );
@@ -933,7 +933,7 @@ static void Select_BoxHead( int box ) {
 		Select_HeadLine( CG_VisionText( "Silent" ), selectDim );
 	}
 	if ( info.flags & BOX_LOOKING ) {
-		Select_HeadLine( CG_VisionText( "Looking a song up..." ), selectDim );
+		Select_HeadLine( CG_VisionText( "Looking a song up ..." ), selectDim );
 	}
 	Select_HeadLine( CG_VisionTextWith( "Volume %i %%", va( "%i", info.volume ) ), selectDim );
 	if ( info.muted ) {

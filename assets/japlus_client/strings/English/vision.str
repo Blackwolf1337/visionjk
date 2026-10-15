@@ -323,6 +323,21 @@ LANG_ENGLISH        "Radio Sound"
 REFERENCE           THE_CLAN_RADIO_SOUNDS_LIKE_ONE_NARRO
 LANG_ENGLISH        "The clan radio sounds like one: narrow, a little rough, with a click."
 
+REFERENCE           BOOMBOX
+LANG_ENGLISH        "Boombox"
+
+REFERENCE           BOOMBOXES
+LANG_ENGLISH        "Boomboxes"
+
+REFERENCE           SEE_AND_HEAR_THE_BOOMBOXES_ON_A_VISI
+LANG_ENGLISH        "See and hear the boomboxes on a VisionJK server, which play songs of YouTube."
+
+REFERENCE           BOOMBOX_VOLUME
+LANG_ENGLISH        "Boombox Volume"
+
+REFERENCE           HOW_LOUD_THE_SONGS_OF_THE_BOOMBOXES
+LANG_ENGLISH        "How loud the songs of the boomboxes are for you."
+
 REFERENCE           GAME
 LANG_ENGLISH        "Game"
 
@@ -649,6 +664,72 @@ LANG_ENGLISH        "Dark Side"
 
 REFERENCE           BOTH_SIDES
 LANG_ENGLISH        "Both Sides"
+
+REFERENCE           PLAY_A_SONG
+LANG_ENGLISH        "Play a song ..."
+
+REFERENCE           ADD_A_SONG
+LANG_ENGLISH        "Add a song ..."
+
+REFERENCE           PAUSE
+LANG_ENGLISH        "Pause"
+
+REFERENCE           RESUME
+LANG_ENGLISH        "Resume"
+
+REFERENCE           SKIP_THIS_SONG
+LANG_ENGLISH        "Skip this song"
+
+REFERENCE           STOP_THE_MUSIC
+LANG_ENGLISH        "Stop the music"
+
+REFERENCE           QUIETER_FOR_EVERYBODY_I
+LANG_ENGLISH        "Quieter for everybody (%i %%)"
+
+REFERENCE           LOUDER_FOR_EVERYBODY_I
+LANG_ENGLISH        "Louder for everybody (%i %%)"
+
+REFERENCE           MUTE_IT_FOR_ME
+LANG_ENGLISH        "Mute it for me"
+
+REFERENCE           HEAR_IT_AGAIN
+LANG_ENGLISH        "Hear it again"
+
+REFERENCE           MOVE_IT
+LANG_ENGLISH        "Move it"
+
+REFERENCE           TAKE_IT_AWAY
+LANG_ENGLISH        "Take it away"
+
+REFERENCE           CLICK_AGAIN_TO_TAKE_IT_AWAY
+LANG_ENGLISH        "Click again to take it away"
+
+REFERENCE           PLAYS
+LANG_ENGLISH        "Plays"
+
+REFERENCE           PAUSED
+LANG_ENGLISH        "Paused"
+
+REFERENCE           LOADING
+LANG_ENGLISH        "Loading ..."
+
+REFERENCE           SILENT
+LANG_ENGLISH        "Silent"
+
+REFERENCE           NEXT_S
+LANG_ENGLISH        "Next: %s"
+
+REFERENCE           LOOKING_A_SONG_UP
+LANG_ENGLISH        "Looking a song up ..."
+
+REFERENCE           VOLUME_I
+LANG_ENGLISH        "Volume %i %%"
+
+REFERENCE           MUTED_FOR_YOU
+LANG_ENGLISH        "muted for you"
+
+REFERENCE           BOOMBOX_LINK_OR_SONG
+LANG_ENGLISH        "Boombox, link or song"
 
 REFERENCE           MUTE_HIS_VOICE
 LANG_ENGLISH        "Mute his voice"

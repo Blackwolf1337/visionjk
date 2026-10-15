@@ -429,6 +429,26 @@ REFERENCE           THE_CLAN_RADIO_SOUNDS_LIKE_ONE_NARRO
 LANG_ENGLISH        "The clan radio sounds like one: narrow, a little rough, with a click."
 LANG_FRENCH         "La radio du clan sonne comme une radio : étroite, un peu rêche, avec un clic."
 
+REFERENCE           BOOMBOX
+LANG_ENGLISH        "Boombox"
+LANG_FRENCH         "Radiocassette"
+
+REFERENCE           BOOMBOXES
+LANG_ENGLISH        "Boomboxes"
+LANG_FRENCH         "Radiocassettes"
+
+REFERENCE           SEE_AND_HEAR_THE_BOOMBOXES_ON_A_VISI
+LANG_ENGLISH        "See and hear the boomboxes on a VisionJK server, which play songs of YouTube."
+LANG_FRENCH         "Voir et entendre les radiocassettes d'un serveur VisionJK, qui jouent des chansons de YouTube."
+
+REFERENCE           BOOMBOX_VOLUME
+LANG_ENGLISH        "Boombox Volume"
+LANG_FRENCH         "Volume des radiocassettes"
+
+REFERENCE           HOW_LOUD_THE_SONGS_OF_THE_BOOMBOXES
+LANG_ENGLISH        "How loud the songs of the boomboxes are for you."
+LANG_FRENCH         "Le volume des chansons des radiocassettes pour vous."
+
 REFERENCE           GAME
 LANG_ENGLISH        "Game"
 LANG_FRENCH         "Jeu"
@@ -864,6 +884,94 @@ LANG_FRENCH         "Côté obscur"
 REFERENCE           BOTH_SIDES
 LANG_ENGLISH        "Both Sides"
 LANG_FRENCH         "Les deux côtés"
+
+REFERENCE           PLAY_A_SONG
+LANG_ENGLISH        "Play a song ..."
+LANG_FRENCH         "Jouer une chanson ..."
+
+REFERENCE           ADD_A_SONG
+LANG_ENGLISH        "Add a song ..."
+LANG_FRENCH         "Ajouter une chanson ..."
+
+REFERENCE           PAUSE
+LANG_ENGLISH        "Pause"
+LANG_FRENCH         "#same"
+
+REFERENCE           RESUME
+LANG_ENGLISH        "Resume"
+LANG_FRENCH         "Reprendre"
+
+REFERENCE           SKIP_THIS_SONG
+LANG_ENGLISH        "Skip this song"
+LANG_FRENCH         "Passer cette chanson"
+
+REFERENCE           STOP_THE_MUSIC
+LANG_ENGLISH        "Stop the music"
+LANG_FRENCH         "Arrêter la musique"
+
+REFERENCE           QUIETER_FOR_EVERYBODY_I
+LANG_ENGLISH        "Quieter for everybody (%i %%)"
+LANG_FRENCH         "Moins fort pour tous (%i %%)"
+
+REFERENCE           LOUDER_FOR_EVERYBODY_I
+LANG_ENGLISH        "Louder for everybody (%i %%)"
+LANG_FRENCH         "Plus fort pour tous (%i %%)"
+
+REFERENCE           MUTE_IT_FOR_ME
+LANG_ENGLISH        "Mute it for me"
+LANG_FRENCH         "Couper pour moi"
+
+REFERENCE           HEAR_IT_AGAIN
+LANG_ENGLISH        "Hear it again"
+LANG_FRENCH         "L'entendre à nouveau"
+
+REFERENCE           MOVE_IT
+LANG_ENGLISH        "Move it"
+LANG_FRENCH         "Déplacer"
+
+REFERENCE           TAKE_IT_AWAY
+LANG_ENGLISH        "Take it away"
+LANG_FRENCH         "Enlever"
+
+REFERENCE           CLICK_AGAIN_TO_TAKE_IT_AWAY
+LANG_ENGLISH        "Click again to take it away"
+LANG_FRENCH         "Cliquer encore pour enlever"
+
+REFERENCE           PLAYS
+LANG_ENGLISH        "Plays"
+LANG_FRENCH         "Joue"
+
+REFERENCE           PAUSED
+LANG_ENGLISH        "Paused"
+LANG_FRENCH         "En pause"
+
+REFERENCE           LOADING
+LANG_ENGLISH        "Loading ..."
+LANG_FRENCH         "Chargement ..."
+
+REFERENCE           SILENT
+LANG_ENGLISH        "Silent"
+LANG_FRENCH         "Silencieux"
+
+REFERENCE           NEXT_S
+LANG_ENGLISH        "Next: %s"
+LANG_FRENCH         "Ensuite : %s"
+
+REFERENCE           LOOKING_A_SONG_UP
+LANG_ENGLISH        "Looking a song up ..."
+LANG_FRENCH         "Recherche d'une chanson ..."
+
+REFERENCE           VOLUME_I
+LANG_ENGLISH        "Volume %i %%"
+LANG_FRENCH         "#same"
+
+REFERENCE           MUTED_FOR_YOU
+LANG_ENGLISH        "muted for you"
+LANG_FRENCH         "coupé pour vous"
+
+REFERENCE           BOOMBOX_LINK_OR_SONG
+LANG_ENGLISH        "Boombox, link or song"
+LANG_FRENCH         "Radiocassette, lien ou chanson"
 
 REFERENCE           MUTE_HIS_VOICE
 LANG_ENGLISH        "Mute his voice"

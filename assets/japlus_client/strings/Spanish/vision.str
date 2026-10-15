@@ -429,6 +429,26 @@ REFERENCE           THE_CLAN_RADIO_SOUNDS_LIKE_ONE_NARRO
 LANG_ENGLISH        "The clan radio sounds like one: narrow, a little rough, with a click."
 LANG_SPANISH        "La radio del clan suena como tal: estrecha, algo áspera, con un clic."
 
+REFERENCE           BOOMBOX
+LANG_ENGLISH        "Boombox"
+LANG_SPANISH        "Radiocasete"
+
+REFERENCE           BOOMBOXES
+LANG_ENGLISH        "Boomboxes"
+LANG_SPANISH        "Radiocasetes"
+
+REFERENCE           SEE_AND_HEAR_THE_BOOMBOXES_ON_A_VISI
+LANG_ENGLISH        "See and hear the boomboxes on a VisionJK server, which play songs of YouTube."
+LANG_SPANISH        "Ver y oír los radiocasetes de un servidor VisionJK, que ponen canciones de YouTube."
+
+REFERENCE           BOOMBOX_VOLUME
+LANG_ENGLISH        "Boombox Volume"
+LANG_SPANISH        "Volumen de los radiocasetes"
+
+REFERENCE           HOW_LOUD_THE_SONGS_OF_THE_BOOMBOXES
+LANG_ENGLISH        "How loud the songs of the boomboxes are for you."
+LANG_SPANISH        "Lo alto que suenan para usted las canciones de los radiocasetes."
+
 REFERENCE           GAME
 LANG_ENGLISH        "Game"
 LANG_SPANISH        "Juego"
@@ -864,6 +884,94 @@ LANG_SPANISH        "Lado oscuro"
 REFERENCE           BOTH_SIDES
 LANG_ENGLISH        "Both Sides"
 LANG_SPANISH        "Ambos lados"
+
+REFERENCE           PLAY_A_SONG
+LANG_ENGLISH        "Play a song ..."
+LANG_SPANISH        "Poner una canción ..."
+
+REFERENCE           ADD_A_SONG
+LANG_ENGLISH        "Add a song ..."
+LANG_SPANISH        "Añadir una canción ..."
+
+REFERENCE           PAUSE
+LANG_ENGLISH        "Pause"
+LANG_SPANISH        "Pausa"
+
+REFERENCE           RESUME
+LANG_ENGLISH        "Resume"
+LANG_SPANISH        "Reanudar"
+
+REFERENCE           SKIP_THIS_SONG
+LANG_ENGLISH        "Skip this song"
+LANG_SPANISH        "Saltar esta canción"
+
+REFERENCE           STOP_THE_MUSIC
+LANG_ENGLISH        "Stop the music"
+LANG_SPANISH        "Parar la música"
+
+REFERENCE           QUIETER_FOR_EVERYBODY_I
+LANG_ENGLISH        "Quieter for everybody (%i %%)"
+LANG_SPANISH        "Más bajo para todos (%i %%)"
+
+REFERENCE           LOUDER_FOR_EVERYBODY_I
+LANG_ENGLISH        "Louder for everybody (%i %%)"
+LANG_SPANISH        "Más alto para todos (%i %%)"
+
+REFERENCE           MUTE_IT_FOR_ME
+LANG_ENGLISH        "Mute it for me"
+LANG_SPANISH        "Silenciar para mí"
+
+REFERENCE           HEAR_IT_AGAIN
+LANG_ENGLISH        "Hear it again"
+LANG_SPANISH        "Volver a oírlo"
+
+REFERENCE           MOVE_IT
+LANG_ENGLISH        "Move it"
+LANG_SPANISH        "Mover"
+
+REFERENCE           TAKE_IT_AWAY
+LANG_ENGLISH        "Take it away"
+LANG_SPANISH        "Quitar"
+
+REFERENCE           CLICK_AGAIN_TO_TAKE_IT_AWAY
+LANG_ENGLISH        "Click again to take it away"
+LANG_SPANISH        "Clic otra vez para quitar"
+
+REFERENCE           PLAYS
+LANG_ENGLISH        "Plays"
+LANG_SPANISH        "Suena"
+
+REFERENCE           PAUSED
+LANG_ENGLISH        "Paused"
+LANG_SPANISH        "En pausa"
+
+REFERENCE           LOADING
+LANG_ENGLISH        "Loading ..."
+LANG_SPANISH        "Cargando ..."
+
+REFERENCE           SILENT
+LANG_ENGLISH        "Silent"
+LANG_SPANISH        "En silencio"
+
+REFERENCE           NEXT_S
+LANG_ENGLISH        "Next: %s"
+LANG_SPANISH        "Después: %s"
+
+REFERENCE           LOOKING_A_SONG_UP
+LANG_ENGLISH        "Looking a song up ..."
+LANG_SPANISH        "Buscando una canción ..."
+
+REFERENCE           VOLUME_I
+LANG_ENGLISH        "Volume %i %%"
+LANG_SPANISH        "Volumen %i %%"
+
+REFERENCE           MUTED_FOR_YOU
+LANG_ENGLISH        "muted for you"
+LANG_SPANISH        "silenciado para usted"
+
+REFERENCE           BOOMBOX_LINK_OR_SONG
+LANG_ENGLISH        "Boombox, link or song"
+LANG_SPANISH        "Radiocasete, enlace o canción"
 
 REFERENCE           MUTE_HIS_VOICE
 LANG_ENGLISH        "Mute his voice"

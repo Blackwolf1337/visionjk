@@ -1383,6 +1383,70 @@
 		itemDef
 		{
 			name					vision_head
+			rect					34 556 380 22
+			visible					1
+			text					@VISION_BOOMBOX
+			font					5
+			textscale				0.54
+			forecolor				0.60 0.69 0.78 1
+			textaligny				9
+			caps					1
+			decoration
+			page					2
+			scroll					1
+		}
+
+		itemDef
+		{
+			name					vision_headline
+			rect					32 577 384 0.67
+			visible					1
+			style					WINDOW_STYLE_FILLED
+			backcolor				0.43 0.83 1 0.32
+			decoration
+			page					2
+			scroll					1
+		}
+
+		itemDef
+		{
+			name					vision_yesno_cg_boombox
+			type					ITEM_TYPE_YESNO
+			text					@VISION_BOOMBOXES
+			descText				@VISION_SEE_AND_HEAR_THE_BOOMBOXES_ON_A_VISI
+			cvar					"cg_boombox"
+			action { play "sound/interface/button1.wav" ; }
+			rect					32 578 384 22
+			page					2
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+		}
+
+		itemDef
+		{
+			name					vision_slider_cg_boomboxvolume
+			type					ITEM_TYPE_SLIDER
+			text					@VISION_BOOMBOX_VOLUME
+			descText				@VISION_HOW_LOUD_THE_SONGS_OF_THE_BOOMBOXES
+			cvarfloat				"cg_boomboxVolume" 0.6 0 1
+			action { play "sound/interface/button1.wav" ; }
+			rect					32 600 384 22
+			page					2
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+		}
+
+		itemDef
+		{
+			name					vision_head
 			rect					34 72 380 22
 			visible					1
 			text					@VISION_GAME

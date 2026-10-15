@@ -80,6 +80,9 @@ SETUP = [
         ('yesno', 'Doppler Effect', 's_doppler', 'What flies past changes its pitch.'),
         ('head', 'Voice Chat'),
         ('old', 'voicechat'),
+        ('head', 'Boombox'),
+        ('yesno', 'Boomboxes', 'cg_boombox', 'See and hear the boomboxes on a VisionJK server, which play songs of YouTube.'),
+        ('slider', 'Boombox Volume', 'cg_boomboxVolume', 0.6, 0, 1, 'How loud the songs of the boomboxes are for you.'),
     ]),
     ('@MENUS_OPTIONS', '@MENUS_CONFIGURE_GAME_OPTIONS', [
         ('head', 'Game'),
