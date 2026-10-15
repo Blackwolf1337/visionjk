@@ -48,9 +48,9 @@ qboolean CG_WorldCoordToScreenCoordFloat( vec3_t worldCoord, float *x, float *y 
 #define BOX_LABEL_ABOVE		12.0f		// and this far above its top
 #define BOX_BEAT_GAIN		4.0f		// the speakers push out by the loudness of the song times this, at most all the way
 #define BOX_BEAT_FALL_MSEC	90.0f		// and come back in about this time
-#define BOX_CONE_X			5.4f		// where the speakers sit in the model: in front of its middle,
-#define BOX_CONE_Y			8.6f		//	to each side,
-#define BOX_CONE_Z			10.0f		//	and above its floor (tools/boombox/build.py)
+#define BOX_CONE_X			6.02f		// where the speakers sit in the model: in front of its middle,
+#define BOX_CONE_Y			9.75f		//	to each side,
+#define BOX_CONE_Z			9.0f		//	and above its floor: CONE_X, CONE_Y and CONE_Z of tools/boombox/build.py
 #define BOX_MODEL			"models/map_objects/vision/boombox.md3"
 #define BOX_CONE_MODEL		"models/map_objects/vision/boombox_cone.md3"
 

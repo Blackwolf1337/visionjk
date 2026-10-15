@@ -33,24 +33,27 @@ SHADER_DIR = "models/map_objects/vision/"
 BODY_LO = (-6.0, -16.0, 1.0)
 BODY_HI = (6.0, 16.0, 19.0)
 BEVEL = 0.8
-# the speakers on its front (cg_boombox.c), and how large they are
-CONE_X = 6.0
-CONE_Y = 10.0
+# The speakers on its front (cg_boombox.c: BOX_CONE_X, BOX_CONE_Y, BOX_CONE_Z), and how large they are. They fit
+# between the door of the cassette and the cut edge of the box with their bezel (BEZEL_R): 4.3 to 15.2 across.
+CONE_X = 6.02			# (a hair in front of the face: the edge of the speaker does not flicker on it)
+CONE_Y = 9.75
 CONE_Z = 9.0
-CONE_R = 6.0
+CONE_R = 5.0
+BEZEL_R = 5.4
 # what stands out of the front: the door of the cassette and the strip of the dial
 DOOR_LO = (6.0, -4.3, 3.6)
 DOOR_HI = (6.35, 4.3, 12.6)
 DIAL_LO = (6.0, -14.6, 15.2)
 DIAL_HI = (6.25, 14.6, 18.2)
 
-ATLAS = 512
-# where the faces are in boombox.png, in pixels: x0, y0, x1, y1
-R_FRONT = (0, 0, 512, 256)		# the front of the box
-R_PLASTIC = (0, 256, 512, 384)	# every other face of it
-R_DOOR = (0, 384, 256, 512)		# the door of the cassette
-R_DIAL = (256, 384, 512, 448)	# the dial
-R_KEYS = (256, 448, 512, 512)	# the keys on the top
+ATLAS = 1024
+# Where the faces are in boombox.png, in pixels: x0, y0, x1, y1. Each region has the shape of its face, so what is
+# painted round is round on the box: 32 pixels a unit, the dial 19.7.
+R_FRONT = (0, 0, 1024, 576)			# the front of the box, 32 by 18 units
+R_PLASTIC = (0, 576, 448, 1024)		# every other face of it (a grain over 50 by 50 units)
+R_DOOR = (448, 576, 724, 864)		# the door of the cassette, 8.6 by 9 units
+R_KEYS = (724, 576, 1024, 688)		# the six keys on the top, each 1.6 by 3.6 units
+R_DIAL = (448, 864, 1024, 923)		# the dial, 29.2 by 3 units
 
 SIDES = 16						# of a round thing
 
@@ -291,7 +294,8 @@ def keys_uv(lo, hi, index, count):
 	def uv(p, normal):
 		if normal[2] > 0.5:
 			s = (index + (p[1] - lo[1]) / (hi[1] - lo[1])) / count
-			t = (hi[0] - p[0]) / (hi[0] - lo[0])
+			# (the back of the key is up in the picture: so it is seen from in front of the box)
+			t = (p[0] - lo[0]) / (hi[0] - lo[0])
 			return region_uv(R_KEYS, s, t)
 		return plastic_uv(p, normal)
 	return uv
@@ -325,22 +329,24 @@ def build_box():
 	return [body, chrome]
 
 
-# the speaker, turned round its axis +x from the edge in: (radius, height out of the box)
+# the speaker, turned round its axis +x from the edge in: (part of CONE_R, height out of the box in units)
 CONE_PROFILE = [
-	(6.0, 0.0), (5.95, 0.18), (5.75, 0.25),		# the ring of chrome it is held by
-	(5.6, 0.25), (5.35, 0.55), (5.0, 0.7), (4.65, 0.55), (4.45, 0.3),	# the rubber round it
-	(4.0, 0.28), (3.3, 0.22), (2.6, 0.16), (2.0, 0.12),	# the cone
-	(1.9, 0.14), (1.6, 0.5), (1.15, 0.78), (0.6, 0.94), (0.0, 1.0),	# the cap in its middle
+	(1.0, 0.0), (0.992, 0.15), (0.958, 0.21),		# the ring of chrome it is held by
+	(0.933, 0.21), (0.892, 0.46), (0.833, 0.58), (0.775, 0.46), (0.742, 0.25),	# the rubber round it
+	(0.667, 0.23), (0.55, 0.18), (0.433, 0.13), (0.333, 0.10),	# the cone
+	(0.317, 0.12), (0.267, 0.42), (0.192, 0.65), (0.1, 0.78), (0.0, 0.83),	# the cap in its middle
 ]
+RING_IN, RUBBER_IN, CAP_OUT = 0.958, 0.742, 0.317	# where its picture changes, the same parts
 
 
 def build_cone():
 	cone = Surface("cone", SHADER_DIR + "boombox_cone")
 	rows = []
-	for i, (r, h) in enumerate(CONE_PROFILE):
+	profile = [(r * CONE_R, h) for r, h in CONE_PROFILE]
+	for i, (r, h) in enumerate(profile):
 		# the normal of the profile: across its slope, outward
-		prev = CONE_PROFILE[max(0, i - 1)]
-		nxt = CONE_PROFILE[min(len(CONE_PROFILE) - 1, i + 1)]
+		prev = profile[max(0, i - 1)]
+		nxt = profile[min(len(profile) - 1, i + 1)]
 		dr, dh = nxt[0] - prev[0], nxt[1] - prev[1]
 		# across the profile, out of the box: (dh, -dr) for a profile that goes toward the middle (dr < 0)
 		nr, nh = dh, -dr
@@ -432,124 +438,191 @@ def to_image(rgb):
 	return Image.fromarray(numpy.clip(rgb, 0, 255).astype(numpy.uint8), "RGB")
 
 
-def front_place(y, z):
-	"""a place of the front of the box in pixels of the picture"""
-	s = (y - BODY_LO[1]) / (BODY_HI[1] - BODY_LO[1])
-	t = (BODY_HI[2] - z) / (BODY_HI[2] - BODY_LO[2])
-	x0, y0, x1, y1 = R_FRONT
-	return (x0 + s * (x1 - x0), y0 + t * (y1 - y0))
+def outside(d, edge, width):
+	"""0 within edge, 1 beyond it, soft over width: an edge without steps"""
+	return numpy.clip((d - edge) / width + 0.5, 0.0, 1.0)
+
+
+class Face:
+	"""A region of the atlas and the face it lies on: places in units of the face (u across it from the left as one
+	looks at it, v up it) to pixels of the picture"""
+
+	def __init__(self, region, u0, u1, v0, v1):
+		self.x0, self.y0, self.x1, self.y1 = region
+		self.u0, self.u1, self.v0, self.v1 = u0, u1, v0, v1
+		self.px = (self.x1 - self.x0) / (u1 - u0)
+		self.py = (self.y1 - self.y0) / (v1 - v0)
+
+	def at(self, u, v):
+		return (self.x0 + (u - self.u0) * self.px, self.y0 + (self.v1 - v) * self.py)
+
+	def rect(self, u0, v0, u1, v1):
+		a, b = self.at(u0, v1), self.at(u1, v0)
+		return (a[0], a[1], b[0] - 1, b[1] - 1)
+
+	def circle(self, u, v, r):
+		cx, cy = self.at(u, v)
+		return (cx - r * self.px, cy - r * self.py, cx + r * self.px, cy + r * self.py)
+
+	def grid(self):
+		"""the units of every pixel of the region"""
+		u = self.u0 + (numpy.arange(self.x1 - self.x0) + 0.5) / self.px
+		v = self.v1 - (numpy.arange(self.y1 - self.y0) + 0.5) / self.py
+		return numpy.meshgrid(u, v)
+
+
+FRONT = Face(R_FRONT, BODY_LO[1], BODY_HI[1], BODY_LO[2], BODY_HI[2])
+DOOR = Face(R_DOOR, DOOR_LO[1], DOOR_HI[1], DOOR_LO[2], DOOR_HI[2])
+DIAL = Face(R_DIAL, DIAL_LO[1], DIAL_HI[1], DIAL_LO[2], DIAL_HI[2])
+
+
+def paint_front(img, draw, glow):
+	f = FRONT
+	u, v = f.grid()
+	h, w = u.shape
+	# brushed silver: streaks along it, a little darker toward the bottom
+	value = 166 + 36 * (v - BODY_LO[2]) / (BODY_HI[2] - BODY_LO[2]) + numpy.repeat(noise(1, h, 6.0, 1), w, axis=1) + noise(w, h, 2.0, 2)
+	rgb = numpy.stack([value, value + 2, value + 6], axis=2)
+	# Each speaker stands in a dark gap with a bezel round it. The bezel is lit from above: bright on its upper
+	# side, dark on its lower one.
+	edge = 1.0 / f.px
+	for side in (-1, 1):
+		du, dv = u - side * CONE_Y, v - CONE_Z
+		d = numpy.hypot(du, dv)
+		gap = 1.0 - outside(d, CONE_R + 0.12, edge)
+		bezel = (1.0 - outside(d, BEZEL_R, edge)) - gap
+		shade = 72 + 95 * (0.5 + 0.5 * dv / numpy.maximum(d, 1e-6))
+		for c, k in enumerate((1.0, 1.0, 1.05)):
+			rgb[..., c] = rgb[..., c] * (1.0 - bezel - gap) + shade * k * bezel + 12 * gap
+	img.paste(to_image(rgb), (f.x0, f.y0))
+
+	# a level meter between the door and the dial, green to red
+	for k in range(7):
+		color = (90, 230, 120) if k < 4 else (240, 200, 70) if k < 6 else (250, 80, 60)
+		draw.ellipse(f.circle(-3.0 + k * 1.0, 13.9, 0.28), fill=(40, 42, 46))
+		draw.ellipse(f.circle(-3.0 + k * 1.0, 13.9, 0.19), fill=tuple(c // 3 for c in color))
+		glow.ellipse(f.circle(-3.0 + k * 1.0, 13.9, 0.19), fill=color)
+	# two screws below the speakers, and the power light
+	for y in (-14.6, 14.6):
+		draw.ellipse(f.circle(y, 2.4, 0.32), fill=(128, 130, 134), outline=(76, 78, 82), width=2)
+		a, b = f.at(y - 0.2, 2.4), f.at(y + 0.2, 2.4)
+		draw.line((a[0], a[1], b[0], b[1]), fill=(64, 66, 70), width=3)
+	draw.ellipse(f.circle(-12.8, 2.4, 0.26), fill=(40, 42, 46))
+	draw.ellipse(f.circle(-12.8, 2.4, 0.17), fill=(120, 30, 20))
+	glow.ellipse(f.circle(-12.8, 2.4, 0.17), fill=(255, 70, 40))
+
+
+def paint_plastic(img):
+	x0, y0, x1, y1 = R_PLASTIC
+	grain = 44 + noise(x1 - x0, y1 - y0, 4.0, 3)
+	img.paste(to_image(numpy.stack([grain, grain + 1, grain + 4], axis=2)), (x0, y0))
+
+
+def paint_door(img):
+	"""the door of the cassette: a frame, a smoked window, and the cassette behind it as large as a real one is to the
+	box (7 by 4.4 units)"""
+	d = DOOR
+	x0, y0, x1, y1 = R_DOOR
+	door = Image.new("RGBA", (x1 - x0, y1 - y0), (156, 158, 164, 255))
+	draw = ImageDraw.Draw(door)
+
+	def r(u0, v0, u1, v1):
+		a = d.rect(u0, v0, u1, v1)
+		return (a[0] - x0, a[1] - y0, a[2] - x0, a[3] - y0)
+
+	def c(u, v, rad):
+		a = d.circle(u, v, rad)
+		return (a[0] - x0, a[1] - y0, a[2] - x0, a[3] - y0)
+
+	draw.rectangle(r(-3.85, 4.15, 3.85, 12.05), fill=(24, 26, 32))
+	# the cassette
+	draw.rounded_rectangle(r(-3.5, 5.9, 3.5, 10.3), radius=0.25 * d.px, fill=(196, 188, 170))
+	draw.rectangle(r(-3.1, 8.5, 3.1, 10.0), fill=(236, 228, 206))
+	draw.rectangle(r(-3.1, 9.05, 3.1, 9.6), fill=(228, 120, 60))
+	draw.rounded_rectangle(r(-2.0, 6.6, 2.0, 8.25), radius=0.35 * d.px, fill=(38, 34, 32))
+	for u in (-1.25, 1.25):
+		draw.ellipse(c(u, 7.42, 0.62), fill=(222, 222, 222))
+		draw.ellipse(c(u, 7.42, 0.3), fill=(38, 34, 32))
+		cu, cv = d.at(u, 7.42)
+		for k in range(6):
+			a = k * math.pi / 3
+			draw.line((cu - x0 + 0.27 * d.px * math.cos(a), cv - y0 + 0.27 * d.py * math.sin(a),
+				cu - x0 + 0.55 * d.px * math.cos(a), cv - y0 + 0.55 * d.py * math.sin(a)), fill=(150, 150, 150), width=3)
+	for u in (-2.7, 2.7):
+		draw.ellipse(c(u, 6.35, 0.17), fill=(70, 66, 60))
+	# the window is smoked glass: darker, with a shine across it
+	smoke = Image.new("RGBA", door.size, (0, 0, 0, 0))
+	ImageDraw.Draw(smoke).rectangle(r(-3.85, 4.15, 3.85, 12.05), fill=(10, 12, 18, 70))
+	door = Image.alpha_composite(door, smoke)
+	shine = Image.new("L", door.size, 0)
+	a = r(-3.85, 4.15, 3.85, 12.05)
+	ImageDraw.Draw(shine).polygon([(a[0] + 0.6 * d.px, a[1]), (a[0] + 2.2 * d.px, a[1]), (a[0] + 0.6 * d.px, a[3]),
+		(a[0] - 1.0 * d.px, a[3])], fill=46)
+	shine = shine.filter(ImageFilter.GaussianBlur(0.25 * d.px))
+	door.paste((255, 255, 255, 255), (0, 0), shine)
+	img.paste(door.convert("RGB"), (x0, y0))
+
+
+def paint_dial(draw, glow):
+	g = DIAL
+	draw.rectangle(g.rect(DIAL_LO[1], DIAL_LO[2], DIAL_HI[1], DIAL_HI[2]), fill=(18, 18, 22))
+	draw.rectangle(g.rect(DIAL_LO[1] + 0.08, DIAL_LO[2] + 0.08, DIAL_HI[1] - 0.08, DIAL_HI[2] - 0.08), outline=(110, 112, 118),
+		width=2)
+	width = max(1, int(round(0.07 * g.px)))
+	for k in range(55):
+		u = -13.5 + k * 27.0 / 54
+		top = 17.25 if k % 5 == 0 else 16.85
+		a, b = g.at(u, 16.35), g.at(u, top)
+		draw.line((a[0], a[1], b[0], b[1]), fill=(110, 140, 150), width=width)
+		glow.line((a[0], a[1], b[0], b[1]), fill=(40, 120, 150), width=width)
+	# the bands
+	for k in range(4):
+		u = -12.5 + k * 6.6
+		draw.rectangle(g.rect(u, 15.7, u + 4.2, 15.9), fill=(60, 80, 90))
+		glow.rectangle(g.rect(u, 15.7, u + 4.2, 15.9), fill=(30, 90, 110))
+	# the needle
+	draw.rectangle(g.rect(3.4, 15.45, 3.55, 17.95), fill=(255, 120, 40))
+	glow.rectangle(g.rect(3.4, 15.45, 3.55, 17.95), fill=(255, 110, 30))
+
+
+def paint_keys(draw):
+	"""six silver keys, each with its sign, the back of a key up"""
+	x0, y0, x1, y1 = R_KEYS
+	kw = (x1 - x0) / 6.0
+	s = kw / 50.0
+	dark = (50, 52, 58)
+	for k in range(6):
+		kx = x0 + k * kw
+		draw.rectangle((kx, y0, kx + kw - 1, y1 - 1), fill=(186, 188, 194))
+		draw.rectangle((kx, y1 - 10 * s, kx + kw - 1, y1 - 1), fill=(214, 216, 222))
+		cx, cy = kx + kw / 2.0, y0 + (y1 - y0) * 0.55
+		if k == 0:		# record
+			draw.ellipse((cx - 8 * s, cy - 8 * s, cx + 8 * s, cy + 8 * s), fill=(200, 40, 30))
+		elif k == 1:	# play
+			draw.polygon([(cx - 7 * s, cy - 9 * s), (cx - 7 * s, cy + 9 * s), (cx + 9 * s, cy)], fill=dark)
+		elif k == 2:	# back
+			draw.polygon([(cx + 9 * s, cy - 8 * s), (cx + 9 * s, cy + 8 * s), (cx, cy)], fill=dark)
+			draw.polygon([(cx, cy - 8 * s), (cx, cy + 8 * s), (cx - 9 * s, cy)], fill=dark)
+		elif k == 3:	# forward
+			draw.polygon([(cx - 9 * s, cy - 8 * s), (cx - 9 * s, cy + 8 * s), (cx, cy)], fill=dark)
+			draw.polygon([(cx, cy - 8 * s), (cx, cy + 8 * s), (cx + 9 * s, cy)], fill=dark)
+		elif k == 4:	# stop
+			draw.rectangle((cx - 7 * s, cy - 7 * s, cx + 7 * s, cy + 7 * s), fill=dark)
+		else:			# pause
+			draw.rectangle((cx - 7 * s, cy - 8 * s, cx - 2 * s, cy + 8 * s), fill=dark)
+			draw.rectangle((cx + 2 * s, cy - 8 * s, cx + 7 * s, cy + 8 * s), fill=dark)
 
 
 def paint_atlas():
 	img = Image.new("RGB", (ATLAS, ATLAS), (40, 42, 46))
 	lights = Image.new("RGB", (ATLAS, ATLAS), (0, 0, 0))
-	draw = ImageDraw.Draw(img)
 	glow = ImageDraw.Draw(lights)
-
-	# the front: brushed silver, a little darker toward the bottom
-	x0, y0, x1, y1 = R_FRONT
-	w, h = x1 - x0, y1 - y0
-	ramp = numpy.linspace(205, 168, h)[:, None] * numpy.ones((1, w))
-	brushed = ramp + noise(w, 1, 6.0, 1) + noise(w, h, 2.5, 2)
-	front = numpy.stack([brushed, brushed + 2, brushed + 6], axis=2)
-	img.paste(to_image(front), (x0, y0))
-	# a dark grille behind each speaker, wider than it. (A unit of the box is more pixels across the picture than
-	# down it: a circle on the box is an ellipse here.)
-	sx = (x1 - x0) / (BODY_HI[1] - BODY_LO[1])
-	sy = (y1 - y0) / (BODY_HI[2] - BODY_LO[2])
-	for side in (-1, 1):
-		cx, cy = front_place(side * CONE_Y, CONE_Z)
-		rx, ry = (CONE_R + 0.6) * sx, (CONE_R + 0.6) * sy
-		draw.ellipse((cx - rx, cy - ry, cx + rx, cy + ry), fill=(28, 29, 32))
-		for gy in range(int(cy - ry), int(cy + ry), 4):
-			for gx in range(int(cx - rx), int(cx + rx), 4):
-				if ((gx - cx) / (rx - 2)) ** 2 + ((gy - cy) / (ry - 2)) ** 2 < 1.0:
-					draw.ellipse((gx, gy, gx + 1.6, gy + 1.6), fill=(64, 66, 72))
-		draw.ellipse((cx - rx, cy - ry, cx + rx, cy + ry), outline=(120, 122, 128), width=2)
-	# a line of small lights over the door of the cassette: a level meter, green to red
-	for k in range(7):
-		lx, ly = front_place(-3.0 + k * 1.0, 13.6)
-		color = (90, 230, 120) if k < 4 else (240, 200, 70) if k < 6 else (250, 80, 60)
-		draw.ellipse((lx - 2.5, ly - 2.5, lx + 2.5, ly + 2.5), fill=tuple(c // 2 for c in color))
-		glow.ellipse((lx - 2.5, ly - 2.5, lx + 2.5, ly + 2.5), fill=color)
-	# screws in the corners
-	for y, z in ((-15.0, 18.0), (15.0, 18.0), (-15.0, 2.0), (15.0, 2.0)):
-		sx, sy = front_place(y, z)
-		draw.ellipse((sx - 3, sy - 3, sx + 3, sy + 3), fill=(120, 122, 126), outline=(70, 72, 76))
-		draw.line((sx - 2, sy, sx + 2, sy), fill=(60, 62, 66), width=1)
-	# a power light at the lower left
-	px, py = front_place(-14.6, 2.6)
-	draw.ellipse((px - 2.5, py - 2.5, px + 2.5, py + 2.5), fill=(120, 30, 20))
-	glow.ellipse((px - 2.5, py - 2.5, px + 2.5, py + 2.5), fill=(255, 70, 40))
-
-	# the plastic: black-grey with a fine grain
-	x0, y0, x1, y1 = R_PLASTIC
-	w, h = x1 - x0, y1 - y0
-	grain = 44 + noise(w, h, 4.0, 3)
-	img.paste(to_image(numpy.stack([grain, grain + 1, grain + 4], axis=2)), (x0, y0))
-
-	# the door of the cassette: a smoked window over a cassette with two reels
-	x0, y0, x1, y1 = R_DOOR
-	draw.rectangle((x0, y0, x1 - 1, y1 - 1), fill=(150, 152, 158))
-	draw.rectangle((x0 + 6, y0 + 6, x1 - 7, y1 - 7), fill=(30, 32, 38))
-	draw.rounded_rectangle((x0 + 26, y0 + 22, x1 - 27, y1 - 24), radius=6, fill=(196, 188, 170))
-	draw.rectangle((x0 + 40, y0 + 30, x1 - 41, y0 + 54), fill=(228, 120, 60))
-	draw.rounded_rectangle((x0 + 60, y0 + 62, x1 - 61, y0 + 96), radius=14, fill=(36, 34, 32))
-	for cx in (x0 + 86, x1 - 87):
-		cy = y0 + 79
-		draw.ellipse((cx - 13, cy - 13, cx + 13, cy + 13), fill=(220, 220, 220))
-		draw.ellipse((cx - 6, cy - 6, cx + 6, cy + 6), fill=(36, 34, 32))
-		for k in range(6):
-			a = k * math.pi / 3
-			draw.line((cx, cy, cx + 10 * math.cos(a), cy + 10 * math.sin(a)), fill=(150, 150, 150), width=2)
-	# the shine on the smoked glass
-	shine = Image.new("L", (x1 - x0, y1 - y0), 0)
-	sd = ImageDraw.Draw(shine)
-	sd.polygon([(30, 6), (90, 6), (40, y1 - y0 - 7), (-20, y1 - y0 - 7)], fill=60)
-	shine = shine.filter(ImageFilter.GaussianBlur(4))
-	img.paste((255, 255, 255), (x0, y0), shine)
-
-	# the dial: black, with marks, a scale of light and a needle
-	x0, y0, x1, y1 = R_DIAL
-	draw.rectangle((x0, y0, x1 - 1, y1 - 1), fill=(18, 18, 22))
-	draw.rectangle((x0 + 2, y0 + 2, x1 - 3, y1 - 3), outline=(110, 112, 118))
-	for k in range(41):
-		mx = x0 + 12 + k * (x1 - x0 - 24) / 40.0
-		tall = 10 if k % 5 == 0 else 5
-		draw.line((mx, y0 + 18, mx, y0 + 18 + tall), fill=(110, 140, 150), width=1)
-		glow.line((mx, y0 + 18, mx, y0 + 18 + tall), fill=(40, 120, 150), width=1)
-	for k in range(4):
-		bx = x0 + 24 + k * 56
-		draw.rectangle((bx, y0 + 40, bx + 30, y0 + 44), fill=(60, 80, 90))
-		glow.rectangle((bx, y0 + 40, bx + 30, y0 + 44), fill=(30, 90, 110))
-	nx = x0 + (x1 - x0) * 0.62
-	draw.line((nx, y0 + 8, nx, y1 - 8), fill=(255, 120, 40), width=3)
-	glow.line((nx, y0 + 8, nx, y1 - 8), fill=(255, 110, 30), width=3)
-
-	# the keys: silver, each with its sign
-	x0, y0, x1, y1 = R_KEYS
-	kw = (x1 - x0) / 6.0
-	for k in range(6):
-		kx = x0 + k * kw
-		draw.rectangle((kx, y0, kx + kw - 1, y1 - 1), fill=(186, 188, 194))
-		draw.rectangle((kx, y0, kx + kw - 1, y0 + 6), fill=(214, 216, 222))
-		cx, cy = kx + kw / 2.0, y0 + (y1 - y0) / 2.0 + 4
-		dark = (50, 52, 58)
-		if k == 0:		# record
-			draw.ellipse((cx - 6, cy - 6, cx + 6, cy + 6), fill=(200, 40, 30))
-		elif k == 1:	# play
-			draw.polygon([(cx - 6, cy - 8), (cx - 6, cy + 8), (cx + 8, cy)], fill=dark)
-		elif k == 2:	# back
-			draw.polygon([(cx + 8, cy - 7), (cx + 8, cy + 7), (cx, cy)], fill=dark)
-			draw.polygon([(cx, cy - 7), (cx, cy + 7), (cx - 8, cy)], fill=dark)
-		elif k == 3:	# forward
-			draw.polygon([(cx - 8, cy - 7), (cx - 8, cy + 7), (cx, cy)], fill=dark)
-			draw.polygon([(cx, cy - 7), (cx, cy + 7), (cx + 8, cy)], fill=dark)
-		elif k == 4:	# stop
-			draw.rectangle((cx - 6, cy - 6, cx + 6, cy + 6), fill=dark)
-		else:			# pause
-			draw.rectangle((cx - 6, cy - 7, cx - 2, cy + 7), fill=dark)
-			draw.rectangle((cx + 2, cy - 7, cx + 6, cy + 7), fill=dark)
+	paint_front(img, ImageDraw.Draw(img), glow)
+	paint_plastic(img)
+	paint_door(img)
+	draw = ImageDraw.Draw(img)
+	paint_dial(draw, glow)
+	paint_keys(draw)
 	return img, lights
 
 
@@ -560,34 +633,29 @@ def paint_env():
 	sky = 235 - 70 * v
 	floor = 60 + 30 * (1.0 - v)
 	value = numpy.where(v < 0.5, sky, floor)
-	band = numpy.exp(-((v - 0.5) / 0.04) ** 2) * 60
-	value = value + band
-	rgb = numpy.stack([value * 0.96, value * 0.98, value * 1.04], axis=2)
-	return to_image(rgb)
+	value = value + numpy.exp(-((v - 0.5) / 0.04) ** 2) * 60
+	return to_image(numpy.stack([value * 0.96, value * 0.98, value * 1.04], axis=2))
 
 
 def paint_cone():
-	size = 256
+	"""the speaker as seen from the front, its edge at the edge of the picture: the parts as CONE_PROFILE has them"""
+	size = 512
 	c = (size - 1) / 2.0
 	yy, xx = numpy.mgrid[0:size, 0:size]
-	r = numpy.hypot(xx - c, yy - c) / c * CONE_R		# in units of the model
-	value = numpy.full((size, size), 40.0)
-	# the chrome ring
-	ring = (r > 5.72) & (r <= 6.0)
-	value[ring] = 190
-	# the rubber
-	rubber = (r > 4.45) & (r <= 5.72)
-	value[rubber] = 30 + 10 * numpy.cos((r[rubber] - 4.45) / 1.27 * math.pi * 2)
-	# the cone, with rings in it
-	paper = (r > 1.9) & (r <= 4.45)
-	value[paper] = 52 + 8 * numpy.sin(r[paper] * 9.0)
-	# the cap, with a light on it
-	cap = r <= 1.9
-	shine = numpy.exp(-(((xx - c * 0.88) ** 2 + (yy - c * 0.88) ** 2) / (2 * (c * 0.12) ** 2)))
-	value[cap] = 34 + 90 * shine[cap]
-	value += noise(size, size, 2.0, 4)
-	rgb = numpy.stack([value, value, value * 1.06], axis=2)
-	return to_image(rgb)
+	r = numpy.hypot(xx - c, yy - c) / c
+	edge = 1.5 / c
+	ring = outside(r, RING_IN, edge)
+	rubber = outside(r, RUBBER_IN, edge) - ring
+	cap = 1.0 - outside(r, CAP_OUT, edge)
+	paper = 1.0 - ring - rubber - cap
+	# the rubber is lit on its upper side, the cone has rings pressed into it, the cap a light on it
+	upper = 0.5 - 0.5 * (yy - c) / numpy.maximum(numpy.hypot(xx - c, yy - c), 1e-6)
+	rubber_value = 24 + 22 * upper
+	paper_value = 60 + 9 * numpy.sin(r * 70.0)
+	shine = numpy.exp(-(((xx - c * 0.9) ** 2 + (yy - c * 0.86) ** 2) / (2 * (c * 0.07) ** 2)))
+	cap_value = 30 + 110 * shine
+	value = ring * 190 + rubber * rubber_value + paper * paper_value + cap * cap_value + noise(size, size, 1.5, 4)
+	return to_image(numpy.stack([value, value, value * 1.05], axis=2))
 
 
 def main():
