@@ -297,6 +297,12 @@ void Box_ReapAll( void ) {
 void Box_ProcStop( boxProc_t *p ) {
 	int i;
 
+	// A record that never ran is zeros: its 0 is no pipe but the stdin of the server, which closing would take away
+	// from the console (and a file opened later would get that number and be closed by the next stop).
+	if ( p->group <= 0 && p->middle <= 0 && p->out <= 0 && p->err <= 0 ) {
+		p->out = p->err = -1;
+		return;
+	}
 	if ( p->group > 0 )
 		kill( -(pid_t)p->group, SIGKILL );
 	Box_Close( &p->out );
