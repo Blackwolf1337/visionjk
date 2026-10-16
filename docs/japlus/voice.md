@@ -221,6 +221,10 @@ that asked for boxes (`jpbox hello`). A cgame from before drops a speaker number
 client whose voice chat is off (`cg_voice 0`) still opens the way to the relay for the songs, without the
 microphone, and drops the voices.
 
+On a server without the game module the masterserver plays the boxes: the state to it may carry one more byte,
+the boxes the client hears, and `VOICE_BOX` (type 6) carries what a player does with a box and what a box is now,
+for clients and masters that said they know it (`VOICE_FLAG_BOXES`). See [boombox.md](boombox.md).
+
 ## On a server without it
 
 A server that does not run the game module of this tree has no relay, hands out no token and tells nobody who

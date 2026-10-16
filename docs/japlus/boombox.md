@@ -1,8 +1,9 @@
 # Boombox
 
 A box in the level that plays songs of YouTube and YouTube Music, for everybody near it. It is not a JA+
-feature. Only players with the client of this tree see the box and hear it, on a server with the game module of
-this tree. A client of any other kind (stock jamp, the JA+ plugin, another fork) is told nothing of it: it sees no
+feature. Only players with the client of this tree see the box and hear it, on any server: a server with the game
+module of this tree keeps its boxes itself, on every other one the masterserver keeps them for its players (see
+"Through the masterserver"). A client of any other kind (stock jamp, the JA+ plugin, another fork) is told nothing of it: it sees no
 box, hears nothing, and its players walk through the box as everybody does (it is no entity and not solid).
 
 Everybody whose client draws boxes may do everything with every box.
@@ -98,6 +99,23 @@ range of the box. Boxes go with the level; a `map_restart` keeps them.
 Playing YouTube on a server is your call: the terms of YouTube allow its videos only in its own player, and
 music played to the public can need the rights for it.
 
+## Through the masterserver
+
+On a server without the game module of this tree the masterserver keeps the boxes of that server
+(`codemp/master/ms_boombox.c`), up to four, and plays their songs. A player sees no difference, but for three:
+what is put on is announced only to the players near the box, the masterserver plays a few songs at once for all
+servers together (a song waits when they all play), and it does not know the level, so a box stands where the
+client of the player found a floor. It needs the voice link to the masterserver (`cg_voiceMaster 1`, the
+default), also with the voice chat switched off.
+
+| Cvar of the masterserver | Default | Meaning |
+|------|---------|---------|
+| `sv_masterBoxes` | 8 | songs it plays at once for all servers, 16 at most. 0: no boxes |
+
+It starts the programs the owner named for its game module (`g_boomboxYtdlp`, `g_boomboxFfmpeg`,
+`g_boomboxYtdlpArgs`) and takes its limits (`g_boomboxMaxSeconds`, `g_boomboxQueue`), once a second. Its line of
+numbers says once a minute how many rooms have boxes and how many songs play.
+
 ## How it works
 
 `codemp/game/boombox` (server), `codemp/cgame/boombox` (client), the protocol in `game/boombox/bg_boombox.h`.
@@ -110,7 +128,7 @@ that comes within a second of another one); five clicks on Louder go out as one.
 
 A song: `yt-dlp` looks it up first (`--print` of its id, length, whether it is live, and title: nothing is
 fetched), and when its turn comes `yt-dlp -o -` fetches the audio and hands it to `ffmpeg`, which makes one
-channel of 16 bit at 48 kHz of it (`game/boombox/g_boombox_fetch.c`). The programs run in a process group of
+channel of 16 bit at 48 kHz of it (`game/boombox/bg_boombox_fetch.c`). The programs run in a process group of
 their own, started by a go-between that ends at once, never through a shell, and with pipes that do not block:
 nothing of the server waits for them. A stopped song is one kill of that group. Of what a player typed only the
 address of a YouTube video, made anew from its eleven characters, or `ytsearch1:` with the words reaches yt-dlp,
@@ -122,12 +140,24 @@ player in range, over the relay of the voice chat, as the voice of speaker `MAX_
 song that is fetched too slowly waits for everybody, a fetch that breaks off is begun again where it was (three
 times a song). The cgame keeps 120 ms of a song before it plays it (the voices: 60).
 
+The game module and the masterserver play the songs with the same code (`game/boombox/bg_boombox_core.c`): the
+line of a box, the lookups, the pacing and the encoder. Each is its host (`boxHost_t`) and says how its clients
+are told and who hears a frame.
+
+Through the masterserver everything goes over the way of the voice chat to it ([voice.md](voice.md), "The
+boombox"): a master that plays boxes says so in every answer (`VOICE_FLAG_BOXES`), and only a client that read
+it sends the state with one more byte (the boxes it hears, which the client works out from where the boxes
+stand and the range, 1536) and `VOICE_BOX` datagrams with what its player does and his name. The master answers
+with the state of a box, its end, or a line for the chat box, at once and every box again every two seconds.
+The bytes are in `game/boombox/bg_boombox.h`, packed and checked in `bg_boombox.c`.
+
 ## Not done, not checked
 
 - Nothing of it was run: built for Linux only, never started, nobody has heard a song or clicked a box. The model
   was looked at in a picture the files were drawn into by a small script, never in the game.
 - Windows: the server can not fetch songs (no process code for it yet), the client is not built for it.
-- A server without the game module of this tree (the voice through the masterserver) has no boxes.
+- The masterserver part was never run either. A client there can put a box anywhere in the room of its own
+  server (the master has no level to check it against).
 - The browser client: the code is the same, the songs would come through the web host of the server as the
   voices do; not built (the browser client is off).
 - One channel: a box is one point in the level.
