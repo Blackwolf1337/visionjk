@@ -30,6 +30,11 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // With the pointer (select/cg_select.c) a box is clicked for its card, and dragged to another place. Everything a
 // player does is a client command, of which this file sends one a second at most: the flood protection of the
 // server drops a command that comes within a second of another one.
+//
+// On a server without the game module of this tree the masterserver keeps the boxes of the server (codemp/master,
+// ms_boombox.c), when it says it plays boxes (VOICE_FLAG_BOXES). Then all of it goes through the way of the voice
+// chat to the master (voice/cg_voice.c): what the player does as a VOICE_BOX, what a box is now back the same way,
+// and the boxes this client hears in its state, since the master does not know where anybody stands.
 
 #include "cgame/cg_local.h"
 #include "ui/ui_shared.h"
@@ -76,7 +81,8 @@ static struct {
 	qboolean	serverHas;		// g_boombox in the server info
 	qboolean	asked;
 	int			asks, askTime;
-	qboolean	on;				// the server answered: it has boxes
+	qboolean	on;				// the server answered: it has boxes,
+	qboolean	viaMaster;		//	or the masterserver keeps them, for a server without the game module of this tree
 	qboolean	toldProtocol;
 	int			most, range;
 	char		pending[BOX_PENDING][BOX_ASK + 64];
@@ -92,6 +98,10 @@ static struct {
 } bx;
 
 static cgBox_t	cgBoxes[BOX_MAX];
+
+static qboolean	Box_Spot( const vec3_t start, const vec3_t dir, int self, vec3_t at, float *yaw );
+static int		Box_Near( void );
+static void		Box_Forget( void );
 
 void CG_BoomboxInit( void ) {
 	const qboolean serverHas = bx.serverHas;
@@ -148,9 +158,72 @@ static qboolean Box_Valid( int box ) {
 	return ( box >= 0 && box < BOX_MAX && cgBoxes[box].inuse ) ? qtrue : qfalse;
 }
 
+// the words of the client command boombox, by BOX_DO_*
+static const char *const boxVerbs[] = { "", "play", "place", "move", "pause", "resume", "skip", "stop", "remove", "volume" };
+
+/*
+=================
+Box_Do
+
+What this player does with a box (BOX_DO_*): the client command boombox to a server of this tree, a VOICE_BOX to
+the masterserver. at and yaw: where it goes (place, move, and play into box 255: a new box). value: the volume.
+text: what to play.
+=================
+*/
+static void Box_Do( int what, int box, const vec3_t at, float yaw, int value, const char *text ) {
+	if ( bx.viaMaster ) {
+		boxDo_t	d;
+		int		k;
+
+		memset( &d, 0, sizeof( d ) );
+		d.what = what;
+		d.box = box;
+		Q_strncpyz( d.name, cgs.clientinfo[cg.clientNum].name, sizeof( d.name ) );
+		if ( at ) {
+			for ( k = 0; k < 3; k++ )
+				d.origin[k] = (int)at[k];
+			d.yaw = yaw;
+		}
+		d.volume = value;
+		if ( text )
+			Q_strncpyz( d.text, text, sizeof( d.text ) );
+		if ( !CG_VoiceBoxSend( &d ) )
+			trap->Print( "Boombox: no answer from the masterserver right now\n" );
+		return;
+	}
+	switch ( what ) {
+	case BOX_DO_PLAY:
+		// (in quotes: a link has "//" in it, which ends a command outside of them)
+		Box_Send( va( "boombox play %i \"%s\"", ( box == 255 ) ? -1 : box, text ), 0 );
+		break;
+	case BOX_DO_PLACE:
+		Box_Send( va( "boombox place %i %i %i %i", (int)at[0], (int)at[1], (int)at[2], (int)yaw ), 0 );
+		break;
+	case BOX_DO_MOVE:
+		Box_Send( va( "boombox move %i %i %i %i %i", box, (int)at[0], (int)at[1], (int)at[2], (int)yaw ),
+			(int)strlen( va( "boombox move %i ", box ) ) );
+		break;
+	case BOX_DO_VOLUME:
+		Box_Send( va( "boombox volume %i %i", box, value ), (int)strlen( va( "boombox volume %i ", box ) ) );
+		break;
+	default:
+		Box_Send( va( "boombox %s %i", boxVerbs[what], box ), 0 );
+		break;
+	}
+}
+
+// pause, resume, skip, stop or remove, from the card of a box
 void CG_BoomboxDo( int box, const char *what ) {
-	if ( Box_Valid( box ) )
-		Box_Send( va( "boombox %s %i", what, box ), 0 );
+	int i;
+
+	if ( !Box_Valid( box ) )
+		return;
+	for ( i = 1; i < (int)ARRAY_LEN( boxVerbs ); i++ ) {
+		if ( !Q_stricmp( what, boxVerbs[i] ) ) {
+			Box_Do( i, box, NULL, 0.0f, 0, NULL );
+			return;
+		}
+	}
 }
 
 // louder or quieter for everybody by a tenth a step. Shown at once, the server says it to the others.
@@ -161,13 +234,26 @@ void CG_BoomboxLouder( int box, int steps ) {
 		return;
 	b = &cgBoxes[box];
 	b->volume = Com_Clampi( 0, 100, ( b->volume + 5 ) / 10 * 10 + steps * 10 );
-	Box_Send( va( "boombox volume %i %i", box, b->volume ), (int)strlen( va( "boombox volume %i ", box ) ) );
+	Box_Do( BOX_DO_VOLUME, box, NULL, 0.0f, b->volume, NULL );
 }
 
-// What a player typed into the chat box opened for a box, or after "boombox play". The text goes in quotes:
-// a link has "//" in it, which ends a command outside of quotes.
+// a place for a new box in front of the player: looking down a little, on the floor there
+static qboolean Box_InFront( vec3_t at, float *yaw ) {
+	vec3_t dir;
+
+	VectorSet( dir, cg.refdef.viewaxis[0][0], cg.refdef.viewaxis[0][1], 0.0f );
+	VectorNormalize( dir );
+	dir[2] = -0.6f;
+	VectorNormalize( dir );
+	return Box_Spot( cg.refdef.vieworg, dir, -1, at, yaw );
+}
+
+// What a player typed into the chat box opened for a box, or after "boombox play". Without a box: the one near,
+// else a new one in front of him (a server of this tree finds both itself).
 void CG_BoomboxAsk( int box, const char *text ) {
-	char asked[BOX_ASK];
+	char	asked[BOX_ASK];
+	vec3_t	at;
+	float	yaw;
 
 	Q_strncpyz( asked, text, sizeof( asked ) );
 	Q_strstrip( asked, "\"\n\r;", "'  " );
@@ -175,8 +261,20 @@ void CG_BoomboxAsk( int box, const char *text ) {
 		trap->Print( "This server has no boombox\n" );
 		return;
 	}
-	Box_Send( va( "boombox play %i \"%s\"", Box_Valid( box ) ? box : -1, asked ), 0 );
+	if ( !Box_Valid( box ) && bx.viaMaster ) {
+		box = Box_Near();
+		if ( box < 0 ) {
+			if ( !Box_InFront( at, &yaw ) ) {
+				trap->Print( "Boombox: there is no floor for a boombox in front of you\n" );
+				return;
+			}
+			Box_Do( BOX_DO_PLAY, 255, at, yaw, 0, asked );
+			return;
+		}
+	}
+	Box_Do( BOX_DO_PLAY, Box_Valid( box ) ? box : 255, NULL, 0.0f, 0, asked );
 }
+
 
 /*
 ===============================================================================
@@ -218,54 +316,19 @@ static void Box_Note( const char *text ) {
 	CG_ChatAdd( CHAT_ALL, -1, line );
 }
 
-/*
-=================
-CG_BoomboxServerCommand
+// a box is gone
+static void Box_Gone( int n ) {
+	if ( n == bx.held )
+		bx.held = -1;
+	memset( &cgBoxes[n], 0, sizeof( cgBoxes[n] ) );
+	CG_VoiceBoxReset( n );
+}
 
-jpbox on|set|gone|note, see bg_boombox.h
-=================
-*/
-void CG_BoomboxServerCommand( void ) {
-	char	what[8];
-	cgBox_t	*b;
-	vec3_t	origin;
-	float	yaw;
-	int		n;
+// what a box is now, from the server or the master
+static void Box_Set( int n, int rev, const vec3_t origin, float yaw, int volume, int flags, int msec, int length, int waiting,
+	const char *title, const char *next ) {
+	cgBox_t *b = &cgBoxes[n];
 
-	Q_strncpyz( what, CG_Argv( 1 ), sizeof( what ) );
-	if ( !Q_stricmp( what, "on" ) ) {
-		if ( atoi( CG_Argv( 2 ) ) != BOX_PROTOCOL ) {
-			if ( !bx.toldProtocol )
-				trap->Print( "Boombox: the server speaks version %s of it, this client version %i\n", CG_Argv( 2 ), BOX_PROTOCOL );
-			bx.toldProtocol = qtrue;
-			bx.asks = BOX_MAX_ASKS;
-			return;
-		}
-		bx.on = qtrue;
-		bx.most = atoi( CG_Argv( 3 ) );
-		bx.range = atoi( CG_Argv( 4 ) );
-		return;
-	}
-	if ( !Q_stricmp( what, "note" ) ) {
-		Box_Note( CG_Argv( 2 ) );
-		return;
-	}
-	n = atoi( CG_Argv( 2 ) );
-	if ( n < 0 || n >= BOX_MAX )
-		return;
-	b = &cgBoxes[n];
-	if ( !Q_stricmp( what, "gone" ) ) {
-		if ( n == bx.held )
-			bx.held = -1;
-		memset( b, 0, sizeof( *b ) );
-		CG_VoiceBoxReset( n );
-		return;
-	}
-	if ( Q_stricmp( what, "set" ) )
-		return;
-
-	VectorSet( origin, (float)atof( CG_Argv( 4 ) ), (float)atof( CG_Argv( 5 ) ), (float)atof( CG_Argv( 6 ) ) );
-	yaw = (float)atof( CG_Argv( 7 ) );
 	if ( !b->inuse ) {
 		// a new box: nothing of the one before it is heard
 		CG_VoiceBoxReset( n );
@@ -280,17 +343,123 @@ void CG_BoomboxServerCommand( void ) {
 		b->slideTime = 0;
 	}
 	b->inuse = qtrue;
-	b->rev = atoi( CG_Argv( 3 ) );
+	b->rev = rev;
 	VectorCopy( origin, b->origin );
 	b->yaw = yaw;
-	b->volume = Com_Clampi( 0, 100, atoi( CG_Argv( 8 ) ) );
-	b->flags = atoi( CG_Argv( 9 ) );
-	b->msec = atoi( CG_Argv( 10 ) );
+	b->volume = Com_Clampi( 0, 100, volume );
+	b->flags = flags;
+	b->msec = msec;
 	b->msecTime = cg.time;
-	b->length = atoi( CG_Argv( 11 ) );
-	b->waiting = atoi( CG_Argv( 12 ) );
-	Q_strncpyz( b->title, CG_Argv( 13 ), sizeof( b->title ) );
-	Q_strncpyz( b->next, CG_Argv( 14 ), sizeof( b->next ) );
+	b->length = length;
+	b->waiting = waiting;
+	Q_strncpyz( b->title, title, sizeof( b->title ) );
+	Q_strncpyz( b->next, next, sizeof( b->next ) );
+}
+
+/*
+=================
+CG_BoomboxServerCommand
+
+jpbox on|set|gone|note, see bg_boombox.h
+=================
+*/
+void CG_BoomboxServerCommand( void ) {
+	char	what[8], title[BOX_TITLE];
+	vec3_t	origin;
+	int		n;
+
+	Q_strncpyz( what, CG_Argv( 1 ), sizeof( what ) );
+	if ( !Q_stricmp( what, "on" ) ) {
+		if ( atoi( CG_Argv( 2 ) ) != BOX_PROTOCOL ) {
+			if ( !bx.toldProtocol )
+				trap->Print( "Boombox: the server speaks version %s of it, this client version %i\n", CG_Argv( 2 ), BOX_PROTOCOL );
+			bx.toldProtocol = qtrue;
+			bx.asks = BOX_MAX_ASKS;
+			return;
+		}
+		bx.on = qtrue;
+		bx.viaMaster = qfalse;
+		bx.most = atoi( CG_Argv( 3 ) );
+		bx.range = atoi( CG_Argv( 4 ) );
+		return;
+	}
+	if ( !Q_stricmp( what, "note" ) ) {
+		Box_Note( CG_Argv( 2 ) );
+		return;
+	}
+	n = atoi( CG_Argv( 2 ) );
+	if ( n < 0 || n >= BOX_MAX || bx.viaMaster )
+		return;
+	if ( !Q_stricmp( what, "gone" ) ) {
+		Box_Gone( n );
+		return;
+	}
+	if ( Q_stricmp( what, "set" ) )
+		return;
+	VectorSet( origin, (float)atof( CG_Argv( 4 ) ), (float)atof( CG_Argv( 5 ) ), (float)atof( CG_Argv( 6 ) ) );
+	// (CG_Argv has one buffer: the title is copied before the next one is read)
+	Q_strncpyz( title, CG_Argv( 13 ), sizeof( title ) );
+	Box_Set( n, atoi( CG_Argv( 3 ) ), origin, (float)atof( CG_Argv( 7 ) ), atoi( CG_Argv( 8 ) ), atoi( CG_Argv( 9 ) ), atoi( CG_Argv( 10 ) ),
+		atoi( CG_Argv( 11 ) ), atoi( CG_Argv( 12 ) ), title, CG_Argv( 14 ) );
+}
+
+/*
+===============================================================================
+
+Through the masterserver
+
+===============================================================================
+*/
+
+// The master the voice chat reaches plays boxes, or it no longer does (the way to it closed). On a server of this
+// tree the boxes are the server's own and none of this counts.
+void CG_BoomboxMasterReady( qboolean ready ) {
+	if ( ready && cg_boombox.integer && !bx.serverHas ) {
+		bx.on = bx.viaMaster = qtrue;
+		bx.range = BOX_RANGE;
+		bx.most = BOX_MASTER_MAX;
+	} else if ( !ready && bx.viaMaster ) {
+		Box_Forget();
+		bx.viaMaster = qfalse;
+	}
+}
+
+// a VOICE_BOX of the master: what a box is now, that it is gone, or a line for the chat box
+void CG_BoomboxFromMaster( const byte *data, int len ) {
+	boxSay_t	say;
+	vec3_t		origin;
+
+	if ( !bx.viaMaster || !BG_BoxSayUnpack( data, len, &say ) )
+		return;
+	if ( say.what == BOX_SAY_NOTE ) {
+		Box_Note( say.text );
+		return;
+	}
+	if ( say.box < 0 || say.box >= BOX_MASTER_MAX )
+		return;
+	if ( say.what == BOX_SAY_GONE ) {
+		if ( cgBoxes[say.box].inuse )
+			Box_Gone( say.box );
+		return;
+	}
+	VectorSet( origin, (float)say.origin[0], (float)say.origin[1], (float)say.origin[2] );
+	Box_Set( say.box, say.rev, origin, say.yaw, say.volume, say.flags, say.msec, say.length, say.waiting, say.title, say.next );
+}
+
+// the boxes of the master this client hears, a bit each: the ones whose speakers are near enough the camera
+int CG_BoomboxHearMask( void ) {
+	const float	range = CG_BoomboxRange() * 1.1f;
+	vec3_t		mouth;
+	float		gain;
+	int			i, mask = 0;
+
+	if ( !bx.viaMaster || !cg_boombox.integer || cg_boomboxVolume.value <= 0.0f )
+		return 0;
+	for ( i = 0; i < BOX_MASTER_MAX; i++ ) {
+		if ( !CG_VoiceBoxMuted( i ) && CG_BoomboxMouth( i, mouth, &gain ) && Distance( mouth, cg.refdef.vieworg ) <= range )
+			mask |= 1 << i;
+	}
+	return mask;
 }
 
 /*
@@ -321,9 +490,14 @@ void CG_BoomboxFrame( void ) {
 	int				i;
 
 	if ( !wanted && bx.on ) {
+		if ( !bx.viaMaster )
+			Box_Send( "jpbox off", 0 );
 		Box_Forget();
-		Box_Send( "jpbox off", 0 );
+		bx.viaMaster = qfalse;
 	}
+	// switched on again where the master plays the boxes
+	if ( wanted && !bx.on && !bx.serverHas && CG_VoiceMasterBoxes() )
+		CG_BoomboxMasterReady( qtrue );
 	// asked again while there is no answer: the flood protection of the server may have dropped it
 	if ( wanted && bx.serverHas && !bx.on && cg.snap && bx.asks < BOX_MAX_ASKS && ( !bx.asked || now - bx.askTime >= BOX_ASK_MSEC ) ) {
 		trap->SendClientCommand( va( "jpbox hello %i", BOX_PROTOCOL ) );
@@ -507,9 +681,10 @@ For the voice chat, which plays the songs
 ===============================================================================
 */
 
-// the way to the relay is wanted for the songs, also with the voice chat off
+// The way to the relay is wanted for the songs, also with the voice chat off: on a server of this tree once it said
+// it has boxes, on any other one to ask the masterserver for them.
 qboolean CG_BoomboxWantsLink( void ) {
-	return ( bx.on && cg_boombox.integer ) ? qtrue : qfalse;
+	return ( cg_boombox.integer && !cg.demoPlayback && ( bx.on || !bx.serverHas ) ) ? qtrue : qfalse;
 }
 
 // is the song of this box to be played
@@ -710,8 +885,7 @@ void CG_BoomboxDrop( qboolean place ) {
 		VectorCopy( bx.heldAt, b->movedTo );
 		b->movedYaw = bx.heldYaw;
 		b->movedTime = cg.time;
-		Box_Send( va( "boombox move %i %i %i %i %i", bx.held, (int)bx.heldAt[0], (int)bx.heldAt[1], (int)bx.heldAt[2], (int)bx.heldYaw ),
-			(int)strlen( va( "boombox move %i ", bx.held ) ) );
+		Box_Do( BOX_DO_MOVE, bx.held, bx.heldAt, bx.heldYaw, 0, NULL );
 	} else if ( place ) {
 		trap->Print( "Boombox: it can not be put there\n" );
 	}
@@ -800,11 +974,22 @@ void CG_Boombox_f( void ) {
 			trap->Print( "Boombox: it can not be put where you look: look at a floor near you\n" );
 			return;
 		}
-		Box_Send( va( "boombox place %i %i %i %i", (int)at[0], (int)at[1], (int)at[2], (int)yaw ), 0 );
+		Box_Do( BOX_DO_PLACE, 0, at, yaw, 0, NULL );
 		return;
 	}
 	if ( !Q_stricmp( what, "list" ) ) {
-		Box_Send( "boombox list", 0 );
+		int i;
+
+		if ( !bx.viaMaster ) {
+			Box_Send( "boombox list", 0 );
+			return;
+		}
+		// (the masterserver does not answer it: what this client knows)
+		for ( i = 0; i < BOX_MASTER_MAX; i++ ) {
+			if ( cgBoxes[i].inuse )
+				trap->Print( "Boombox %i, volume %i: %s%s\n", i, cgBoxes[i].volume, ( cgBoxes[i].flags & BOX_PLAYING ) ? cgBoxes[i].title : "silent",
+					cgBoxes[i].waiting ? va( ", %i more in the line", cgBoxes[i].waiting ) : "" );
+		}
 		return;
 	}
 	if ( !Q_stricmp( what, "volume" ) ) {
@@ -814,7 +999,7 @@ void CG_Boombox_f( void ) {
 			return;
 		}
 		cgBoxes[box].volume = Com_Clampi( 0, 100, atoi( CG_Argv( 2 ) ) );
-		Box_Send( va( "boombox volume %i %i", box, cgBoxes[box].volume ), (int)strlen( va( "boombox volume %i ", box ) ) );
+		Box_Do( BOX_DO_VOLUME, box, NULL, 0.0f, cgBoxes[box].volume, NULL );
 		return;
 	}
 	if ( !Q_stricmp( what, "pause" ) || !Q_stricmp( what, "resume" ) || !Q_stricmp( what, "skip" ) || !Q_stricmp( what, "stop" )

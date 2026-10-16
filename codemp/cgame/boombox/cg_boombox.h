@@ -44,8 +44,11 @@ void		CG_BoomboxDraw( void );							// the titles over them, in the 2D
 void		CG_Boombox_f( void );							// the console command boombox
 void		CG_BoomboxAsk( int box, const char *text );		// a song for that box (-1: the one near), from the chat box
 
-// for the voice chat (voice/cg_voice.c), which plays the songs
+// for the voice chat (voice/cg_voice.c), which plays the songs and is the way to the masterserver
 qboolean	CG_BoomboxWantsLink( void );
+void		CG_BoomboxMasterReady( qboolean ready );
+void		CG_BoomboxFromMaster( const byte *data, int len );
+int			CG_BoomboxHearMask( void );
 qboolean	CG_BoomboxHears( int box );
 qboolean	CG_BoomboxMouth( int box, vec3_t mouth, float *gain );
 float		CG_BoomboxRange( void );
@@ -64,8 +67,10 @@ void		CG_BoomboxDrop( qboolean place );
 int			CG_BoomboxHeld( void );
 qboolean	CG_BoomboxHeldBad( void );
 
-// voice/cg_voice.c: the songs as they are played
+// voice/cg_voice.c: the songs as they are played, and the way to the masterserver
 float		CG_VoiceBoxBeat( int box );
+qboolean	CG_VoiceBoxSend( const boxDo_t *d );
+qboolean	CG_VoiceMasterBoxes( void );
 qboolean	CG_VoiceBoxMuted( int box );
 void		CG_VoiceBoxMute( int box, qboolean mute );
 void		CG_VoiceBoxReset( int box );

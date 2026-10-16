@@ -152,6 +152,8 @@ static struct {
 	qboolean			toldRefused;
 	qboolean			social;			// the master knows the clan radio and the statuses (VOICE_FLAG_SOCIAL)
 	byte				clan[VOICE_CLAN_BYTES];	//	and this is what it is told as the clan of this client, all zero: none
+	qboolean			boxes;			// the master plays boxes of the boombox (VOICE_FLAG_BOXES),
+	int					boxHear;		//	and this is what it is told of the boxes this client hears, a bit each
 	qboolean			asked;			// "jpvoice hello" went to the server,
 	int					asks;			//	this many times
 	qboolean			answered;		// the server answered: port, token, range
@@ -433,6 +435,9 @@ static void Voice_Close( void ) {
 	if ( voice.sockOpen )
 		BG_CloseSocket( voice.sock );
 #endif
+	// the boxes the masterserver played are gone with the way to it
+	if ( voice.boxes )
+		CG_BoomboxMasterReady( qfalse );
 	// who was muted stays muted while the module does
 	for ( i = 0; i < VOICE_ALL; i++ ) {
 		const qboolean	muted = voiceSpeakers[i].muted;
@@ -576,7 +581,8 @@ static qboolean Voice_WantsMaster( void ) {
 	// a page can not send UDP, and the servers it can play on are of this tree
 	return qfalse;
 #else
-	return ( !voice.serverSays && cg_voice.integer && cg_voiceMaster.integer && !cg.demoPlayback ) ? qtrue : qfalse;
+	// (also for the boxes of the boombox alone: the master plays them)
+	return ( !voice.serverSays && ( cg_voice.integer || cg_boombox.integer ) && cg_voiceMaster.integer && !cg.demoPlayback ) ? qtrue : qfalse;
 #endif
 }
 
@@ -930,6 +936,7 @@ with it. With the same token: this client is in, or the flags say why not.
 */
 static void Voice_MasterAnswer( const voicePacket_t *p, int now ) {
 	const qboolean social = ( p->flags & VOICE_FLAG_SOCIAL ) ? qtrue : qfalse;
+	const qboolean boxes = ( social && ( p->flags & VOICE_FLAG_BOXES ) ) ? qtrue : qfalse;
 
 	if ( p->client != cg.clientNum )
 		return;
@@ -938,6 +945,14 @@ static void Voice_MasterAnswer( const voicePacket_t *p, int now ) {
 		voice.social = voice.radio = social;
 		voice.toldNoRadio = qfalse;
 		voice.stateDue = qtrue;
+	}
+	// A master that plays boxes is told the boxes this client hears, in the state with the boxes, and gets what
+	// its player does with them (boombox/cg_boombox.c)
+	if ( boxes != voice.boxes ) {
+		voice.boxes = boxes;
+		voice.boxHear = 0;
+		voice.stateDue = qtrue;
+		CG_BoomboxMasterReady( boxes );
 	}
 	if ( p->token != voice.token ) {
 		voice.token = p->token;
@@ -1004,11 +1019,17 @@ static void Voice_Receive( int now ) {
 				voice.linked = qtrue;
 			continue;
 		}
+		if ( p.type == VOICE_BOX ) {
+			// what a box of the masterserver is now (boombox/cg_boombox.c)
+			if ( voice.master && voice.boxes )
+				CG_BoomboxFromMaster( p.data, p.dataLen );
+			continue;
+		}
 		if ( p.client >= VOICE_ALL || p.client == cg.clientNum )
 			continue;
 		if ( p.client >= MAX_CLIENTS ) {
-			// the song of a box of the boombox, from the relay of a game server only
-			if ( voice.master || p.type != VOICE_AUDIO || !CG_BoomboxHears( p.client - MAX_CLIENTS ) )
+			// the song of a box of the boombox: from the relay of a game server, or from a master that plays boxes
+			if ( ( voice.master && !voice.boxes ) || p.type != VOICE_AUDIO || !CG_BoomboxHears( p.client - MAX_CLIENTS ) )
 				continue;
 		} else {
 			// (the voice chat is off, the way is open for the songs alone)
@@ -1624,9 +1645,17 @@ static void Voice_Hear( void ) {
 		if ( BG_VoiceHears( &mouth, &other, range, qfalse, &distance ) )
 			allow |= 1u << i;
 	}
+	// with the voice chat off the way is open for the boxes alone: nobody is heard, nobody hears this client
+	if ( !cg_voice.integer )
+		hear = allow = 0;
 	if ( hear != voice.hear || allow != voice.allow ) {
 		voice.hear = hear;
 		voice.allow = allow;
+		voice.stateDue = qtrue;
+	}
+	// the boxes of the masterserver near enough to be heard (boombox/cg_boombox.c)
+	if ( voice.boxes && CG_BoomboxHearMask() != voice.boxHear ) {
+		voice.boxHear = CG_BoomboxHearMask();
 		voice.stateDue = qtrue;
 	}
 }
@@ -1659,12 +1688,14 @@ static void Voice_MasterFrame( int now ) {
 	else
 		every = ( now - voice.askTime > VOICE_NO_LINK_MSEC ) ? VOICE_KEEPALIVE_MSEC : VOICE_HELLO_MSEC;
 	if ( !voice.stateTime || now - voice.stateTime >= every || ( voice.stateDue && now - voice.stateTime >= VOICE_STATE_MIN_MSEC ) ) {
-		byte state[VOICE_STATE_LONG_BYTES];
+		byte state[VOICE_STATE_BOX_BYTES];
 
-		// the long one, with the clan, only to a master that said it reads it
+		// the long one, with the clan, only to a master that said it reads it, and the boxes to one that plays them
 		BG_VoiceStatePack( state, voice.room, voice.hear, voice.allow );
 		memcpy( state + VOICE_STATE_BYTES, voice.clan, VOICE_CLAN_BYTES );
-		Voice_Send( VOICE_STATE, state, voice.social ? VOICE_STATE_LONG_BYTES : VOICE_STATE_BYTES );
+		state[VOICE_STATE_LONG_BYTES] = (byte)voice.boxHear;
+		Voice_Send( VOICE_STATE, state, ( voice.boxes && cg_boombox.integer ) ? VOICE_STATE_BOX_BYTES
+			: voice.social ? VOICE_STATE_LONG_BYTES : VOICE_STATE_BYTES );
 		voice.stateTime = now;
 		voice.stateDue = qfalse;
 	}
@@ -1806,6 +1837,26 @@ float CG_VoiceBoxBeat( int box ) {
 			best = i;
 	}
 	return ( best >= 0 ) ? sp->beat[best] : 0.0f;
+}
+
+// does the masterserver the voice chat reaches play boxes
+qboolean CG_VoiceMasterBoxes( void ) {
+	return ( voice.master && voice.linked && voice.boxes ) ? qtrue : qfalse;
+}
+
+// What the player does with a box of the masterserver, to the master. qfalse: there is no master that plays boxes.
+qboolean CG_VoiceBoxSend( const boxDo_t *d ) {
+	byte		body[VOICE_MAX_FRAME];
+	const int	len = BG_BoxDoPack( body, sizeof( body ), d );
+
+	if ( !voice.master || !voice.linked || !voice.boxes || !len )
+		return qfalse;
+#ifndef __EMSCRIPTEN__
+	Voice_Send( VOICE_BOX, body, len );
+	return qtrue;
+#else
+	return qfalse;
+#endif
 }
 
 qboolean CG_VoiceBoxMuted( int box ) {

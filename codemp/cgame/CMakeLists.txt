@@ -216,6 +216,7 @@ set(MPCGameFiles ${MPCGameFiles} ${MPCGameSelectFiles})
 set(MPCGameBoomboxFiles
 	"${MPDir}/cgame/boombox/cg_boombox.c"
 	"${MPDir}/cgame/boombox/cg_boombox.h"
+	"${MPDir}/game/boombox/bg_boombox.c"
 	"${MPDir}/game/boombox/bg_boombox.h"
 	)
 source_group("cgame/boombox" FILES ${MPCGameBoomboxFiles})
