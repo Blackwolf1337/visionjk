@@ -47,6 +47,22 @@ after the one that plays, next: the title of the first of them.
 
 What a player does with a box is a client command, "boombox <what> <box> ...", see Cmd_Boombox_f() of
 g_boombox.c. Everybody may do everything with every box.
+
+On a server without the game module of this tree the masterserver keeps the boxes of its room (all clients of one
+game server, codemp/master/ms_boombox.c), and everything goes through the datagrams of the voice chat:
+VOICE_BOX of bg_voice.h, after the head, every number with its low byte first:
+
+to the master	what box nameLen name[nameLen]		and for BOX_DO_PLACE and BOX_DO_MOVE x[4] y[4] z[4] yaw[2],
+													for BOX_DO_PLAY the text (box 255: a new box, its place
+													before the text), for BOX_DO_VOLUME volume[1]
+to a client		BOX_SAY_SET box rev[2] x[4] y[4] z[4] yaw[2] volume flags msec[4] length[2] waiting
+					titleLen title nextLen next
+to a client		BOX_SAY_GONE box
+to a client		BOX_SAY_NOTE box text				(box 255: no box in particular)
+
+The master has no level: where a box may stand is what the client found (Box_Spot of cg_boombox.c). It does not
+know who is near a box either: the client says it in its state (bg_voice.h), and the master sends the song of a
+box only to who said he hears it. A yaw is 65536 steps a turn, x, y and z are whole units.
 */
 
 #pragma once
@@ -66,8 +82,53 @@ g_boombox.c. Everybody may do everything with every box.
 #define BOX_HEIGHT			26.0f		//	and from the floor to the top of its handle. Its origin is on the floor.
 #define BOX_SPEAKER_HEIGHT	9.0f		// where its speakers are, above its origin: where the sound comes from
 
+#define BOX_MASTER_MAX		4			// boxes a room of the masterserver has at most
+#define BOX_NAME_MAX		35			// bytes of the name in a VOICE_BOX to the master at most
+
+// what a client does with a box through the masterserver
+#define BOX_DO_PLAY			1
+#define BOX_DO_PLACE		2
+#define BOX_DO_MOVE			3
+#define BOX_DO_PAUSE		4
+#define BOX_DO_RESUME		5
+#define BOX_DO_SKIP			6
+#define BOX_DO_STOP			7
+#define BOX_DO_REMOVE		8
+#define BOX_DO_VOLUME		9
+
+// what the masterserver says to a client
+#define BOX_SAY_SET			1
+#define BOX_SAY_GONE		2
+#define BOX_SAY_NOTE		3
+
 // the flags of "jpbox set"
 #define BOX_PLAYING			1			// a song plays, or is about to
 #define BOX_PAUSED			2
 #define BOX_LOADING			4			// the song is being fetched: nothing is heard yet
 #define BOX_LOOKING			8			// a song that was asked for is being looked up
+
+// a VOICE_BOX to the master, unpacked
+typedef struct boxDo_s {
+	int		what, box;
+	char	name[BOX_NAME_MAX + 1];
+	int		origin[3];
+	float	yaw;
+	int		volume;
+	char	text[BOX_ASK];
+} boxDo_t;
+
+// a VOICE_BOX to a client, unpacked
+typedef struct boxSay_s {
+	int		what, box;
+	int		rev;
+	int		origin[3];
+	float	yaw;
+	int		volume, flags, msec, length, waiting;
+	char	title[BOX_TITLE], next[BOX_TITLE];
+	char	text[256];			// of a note
+} boxSay_t;
+
+int			BG_BoxDoPack( byte *out, int outSize, const boxDo_t *d );
+qboolean	BG_BoxDoUnpack( const byte *in, int len, boxDo_t *d );
+int			BG_BoxSayPack( byte *out, int outSize, const boxSay_t *s );
+qboolean	BG_BoxSayUnpack( const byte *in, int len, boxSay_t *s );

@@ -85,6 +85,18 @@ The temple can be a game server too (game/status/g_temple.c), where the members 
 master that was told of one (-temple) names it in its answers: VOICE_TEMPLE_SERVER bytes in the place of
 nothing, the address and the port as they go over the network, an address of zeros for the master's own. A
 client that can keep its server meanwhile goes there (client/cl_visit.cpp).
+
+The boombox (2026-10-15, game/boombox/bg_boombox.h): on a server without the game module of this tree the
+masterserver keeps the boxes of a room and plays their songs (master/ms_boombox.c). A master that does says so in
+every answer (VOICE_FLAG_BOXES), and only a client that saw that flag sends it the state with one byte more, the
+boxes it hears (a bit for every box, as near as its game shows them), and what its player does with a box:
+
+to the master	"VO" version 2 client token[4] sequence[2]							room[16] hear[4] allow[4] clan[8] boxes[1]
+to the master	"VO" version 6 client token[4] sequence[2]							what box name what is done
+to a client		"VO" version 6 client token[4] sequence[2] flags distance			what box what it is now, or a line
+
+The songs come as VOICE_AUDIO of speaker MAX_CLIENTS + the box, to the clients that hear the box. What the bytes
+of type 6 are is in bg_boombox.h.
 */
 
 #pragma once
@@ -107,11 +119,13 @@ client that can keep its server meanwhile goes there (client/cl_visit.cpp).
 #define VOICE_RADIO				3		// to the server only: sound for the clan of the speaker
 #define VOICE_STATUS			4		// through the masterserver only: what stands above the head of a player
 #define VOICE_TEMPLE			5		// through the masterserver only: where somebody is in the Vision Temple
+#define VOICE_BOX				6		// through the masterserver only: a box of the boombox (bg_boombox.h)
 
 #define VOICE_ROOM_BYTES		16
 #define VOICE_STATE_BYTES		( VOICE_ROOM_BYTES + 8 )	// what a VOICE_STATE to the master carries after its head
 #define VOICE_CLAN_BYTES		8		//	and what the long one carries in addition: the clan of the client
 #define VOICE_STATE_LONG_BYTES	( VOICE_STATE_BYTES + VOICE_CLAN_BYTES )
+#define VOICE_STATE_BOX_BYTES	( VOICE_STATE_LONG_BYTES + 1 )	//	and one byte more: the boxes it hears (VOICE_FLAG_BOXES)
 #define VOICE_STATUS_TEXT		64		// the text of a status with its end, as STATUS_TEXT of cg_status.c
 #define VOICE_STATUS_AWAY		1		// in the first byte of a VOICE_STATUS: he is away from the keyboard
 #define VOICE_TEMPLE_NAME		32		// the name in a VOICE_TEMPLE with its end
@@ -125,6 +139,7 @@ client that can keep its server meanwhile goes there (client/cl_visit.cpp).
 #define VOICE_FLAG_FULL			4		//	or it has no room for one more
 #define VOICE_FLAG_RADIO		8		// to a client: this came over the clan radio and has no place
 #define VOICE_FLAG_SOCIAL		16		// the answer of the master: it knows the long state, VOICE_RADIO and VOICE_STATUS
+#define VOICE_FLAG_BOXES		32		// the answer of the master: it plays boxes, it knows VOICE_BOX and the state with the boxes
 #define VOICE_CAP_RADIO			1		// in the answer to "jpvoice hello": the relay knows VOICE_RADIO
 #define VOICE_DISTANCE_STEP		16		// the distance byte counts in steps of this many units
 
@@ -192,6 +207,7 @@ int			BG_VoiceSeqDelta( int a, int b );
 void		BG_VoiceStatePack( byte out[VOICE_STATE_BYTES], const byte room[VOICE_ROOM_BYTES], unsigned int hear, unsigned int allow );
 void		BG_VoiceStateUnpack( const voicePacket_t *p, const byte **room, unsigned int *hear, unsigned int *allow );
 const byte	*BG_VoiceStateClan( const voicePacket_t *p );
+qboolean	BG_VoiceStateBoxes( const voicePacket_t *p, int *boxes );
 int			BG_VoiceStatusPack( byte out[VOICE_STATUS_TEXT], qboolean away, const char *text );
 qboolean	BG_VoiceStatusUnpack( const voicePacket_t *p, qboolean *away, char *text, int textSize );
 

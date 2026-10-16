@@ -160,6 +160,7 @@ void		Box_StreamStop( boxStream_t *s );
 void		Box_StreamWhy( const boxStream_t *s, const char *otherwise, char *why, int whySize );
 
 // bg_boombox_core.c
+const char	*Box_Va( const char *format, ... );
 void		Box_Run( boxHost_t *host, int box, int now );
 void		Box_Next( boxHost_t *host, int box );
 void		Box_Stop( boxHost_t *host, int box );

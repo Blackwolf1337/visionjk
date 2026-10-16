@@ -56,7 +56,10 @@ static qboolean BG_VoiceBodyFits( int type, int bodyLen, qboolean toClient ) {
 	case VOICE_STATE:
 		if ( toClient )
 			return ( bodyLen == 0 ) ? qtrue : qfalse;
-		return ( bodyLen == VOICE_STATE_BYTES || bodyLen == VOICE_STATE_LONG_BYTES ) ? qtrue : qfalse;
+		return ( bodyLen == VOICE_STATE_BYTES || bodyLen == VOICE_STATE_LONG_BYTES || bodyLen == VOICE_STATE_BOX_BYTES ) ? qtrue : qfalse;
+	case VOICE_BOX:
+		// to the master: what, box and the length of a name at least. To a client: what and box at least
+		return ( bodyLen >= ( toClient ? 2 : 3 ) && bodyLen <= VOICE_MAX_FRAME ) ? qtrue : qfalse;
 	case VOICE_STATUS:
 		return ( bodyLen >= 1 && bodyLen <= VOICE_STATUS_TEXT ) ? qtrue : qfalse;
 	case VOICE_TEMPLE:
@@ -152,13 +155,21 @@ void BG_VoiceStateUnpack( const voicePacket_t *p, const byte **room, unsigned in
 	*allow = (unsigned int)in[4] | ( (unsigned int)in[5] << 8 ) | ( (unsigned int)in[6] << 16 ) | ( (unsigned int)in[7] << 24 );
 }
 
+// The boxes a client hears, from the state with the boxes: a bit for every box. qfalse: it sent another state.
+qboolean BG_VoiceStateBoxes( const voicePacket_t *p, int *boxes ) {
+	if ( p->dataLen != VOICE_STATE_BOX_BYTES )
+		return qfalse;
+	*boxes = p->data[VOICE_STATE_LONG_BYTES];
+	return qtrue;
+}
+
 // The clan of a client that sent the long VOICE_STATE, VOICE_CLAN_BYTES inside the datagram. NULL: it sent the
 // short one, or has no clan (all zero).
 const byte *BG_VoiceStateClan( const voicePacket_t *p ) {
 	const byte	*clan = p->data + VOICE_STATE_BYTES;
 	int			i;
 
-	if ( p->dataLen != VOICE_STATE_LONG_BYTES )
+	if ( p->dataLen < VOICE_STATE_LONG_BYTES )
 		return NULL;
 	for ( i = 0; i < VOICE_CLAN_BYTES; i++ ) {
 		if ( clan[i] )

@@ -42,6 +42,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "master/ms_relay.h"
 
 static cvar_t	*sv_masterKbps;
+static cvar_t	*sv_masterBoxes;
 static qboolean	sv_masterUp;
 static qboolean	sv_masterTemple;		// the relay was told that this server is the Vision Temple
 #endif
@@ -114,10 +115,25 @@ port of the game (an address of zeros is the master's own, bg_voice.h).
 ===============
 */
 void SV_VoiceFrame( void ) {
+	static int64_t	boxSetTime;
+	const int64_t	now = SV_MasterMsec();
+
 	if ( !sv_masterUp ) {
 		return;
 	}
-	MS_Frame( SV_MasterMsec() );
+	// The boxes of the boombox (ms_boombox.c) play with what the owner set for the game module of this server: the
+	// programs (CVAR_INIT, so nobody changes them later), the longest song and the line. Taken again once a second.
+	if ( !boxSetTime || now - boxSetTime >= 1000 ) {
+		char ytdlp[MAX_OSPATH], ffmpeg[MAX_OSPATH], args[256];
+
+		Cvar_VariableStringBuffer( "g_boomboxYtdlp", ytdlp, sizeof( ytdlp ) );
+		Cvar_VariableStringBuffer( "g_boomboxFfmpeg", ffmpeg, sizeof( ffmpeg ) );
+		Cvar_VariableStringBuffer( "g_boomboxYtdlpArgs", args, sizeof( args ) );
+		MS_BoxSetup( sv_masterBoxes->integer, Cvar_VariableString( "g_boomboxMaxSeconds" )[0] ? Cvar_VariableIntegerValue( "g_boomboxMaxSeconds" ) : 600,
+			Cvar_VariableString( "g_boomboxQueue" )[0] ? Cvar_VariableIntegerValue( "g_boomboxQueue" ) : 10, ytdlp, ffmpeg, args, now );
+		boxSetTime = now;
+	}
+	MS_Frame( now );
 	if ( !sv_masterTemple && sv.state == SS_GAME && Cvar_VariableIntegerValue( "g_visionTemple" ) ) {
 		const int	port = Cvar_VariableIntegerValue( "net_port" );
 		const byte	server[VOICE_TEMPLE_SERVER] = { 0, 0, 0, 0, (byte)( port >> 8 ), (byte)( port & 0xff ) };
@@ -174,6 +190,7 @@ void SV_VoiceInit( void ) {
 #ifdef VISION_MASTER
 	sv_voiceShared = Cvar_Get( "sv_voiceShared", "1", CVAR_ROM, "The voice chat comes in on the UDP port of the game" );
 	sv_masterKbps = Cvar_Get( "sv_masterKbps", va( "%i", MS_DEFAULT_KBPS ), CVAR_INIT, "What the relay of the masterserver may send, kbit/s. 0: anything" );
+	sv_masterBoxes = Cvar_Get( "sv_masterBoxes", "8", CVAR_ARCHIVE, "Songs of the boombox the masterserver plays at once for the servers without the game module of VisionJK, at most 16. 0: no boxes" );
 	if ( MS_Init( SV_MasterSend, SV_MasterPrint, Q_max( sv_masterKbps->integer, 0 ) * 125, SV_MasterMsec() ) ) {
 		sv_masterUp = qtrue;
 		Com_Printf( "Masterserver: its relay listens on the UDP port of the game\n" );

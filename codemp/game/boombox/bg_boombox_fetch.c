@@ -337,7 +337,7 @@ qboolean Box_ToolPath( const char *name, char *out, int outSize ) {
 			end = path + strlen( path );
 		if ( end == path )
 			continue;
-		Com_sprintf( out, outSize, "%.*s/%s", (int)( end - path ), path, name );
+		snprintf( out, outSize, "%.*s/%s", (int)( end - path ), path, name );
 		if ( access( out, X_OK ) == 0 )
 			return qtrue;
 	}
@@ -427,7 +427,7 @@ qboolean Box_Target( const char *asked, char *target, int targetSize, char *why,
 	Q_strncpyz( host, rest, Q_min( hostLen + 1, (int)sizeof( host ) ) );
 	Q_strlwr( host );
 	if ( !scheme && !( strchr( host, '.' ) && ( rest[hostLen] == '/' || rest[hostLen] == '?' || !Q_strncmp( host, "www.", 4 ) ) ) ) {
-		Com_sprintf( target, targetSize, "ytsearch1:%s", s );
+		snprintf( target, targetSize, "ytsearch1:%s", s );
 		return qtrue;
 	}
 
@@ -475,7 +475,7 @@ qboolean Box_Target( const char *asked, char *target, int targetSize, char *why,
 		Q_strncpyz( why, "that link names no video", whySize );
 		return qfalse;
 	}
-	Com_sprintf( target, targetSize, "https://www.youtube.com/watch?v=%.11s", id );
+	snprintf( target, targetSize, "https://www.youtube.com/watch?v=%.11s", id );
 	return qtrue;
 }
 
@@ -699,7 +699,7 @@ qboolean Box_StreamStart( boxStream_t *s, const boxTools_t *tools, const char *i
 	Box_Arg( &fetch, "-o" );
 	Box_Arg( &fetch, "-" );
 	Box_Arg( &fetch, "--" );
-	Box_Arg( &fetch, va( "https://www.youtube.com/watch?v=%s", id ) );
+	Box_Arg( &fetch, Box_Va( "https://www.youtube.com/watch?v=%s", id ) );
 
 	Box_ArgsBegin( &decode );
 	Box_Arg( &decode, ffmpeg );
@@ -712,13 +712,13 @@ qboolean Box_StreamStart( boxStream_t *s, const boxTools_t *tools, const char *i
 	if ( fromSample > 0 ) {
 		// (behind -i: decoded and dropped, which a pipe allows, and to the sample)
 		Box_Arg( &decode, "-ss" );
-		Box_Arg( &decode, va( "%.3f", (double)fromSample / BOX_RATE ) );
+		Box_Arg( &decode, Box_Va( "%.3f", (double)fromSample / BOX_RATE ) );
 	}
 	Box_Arg( &decode, "-vn" );
 	Box_Arg( &decode, "-ac" );
 	Box_Arg( &decode, "1" );
 	Box_Arg( &decode, "-ar" );
-	Box_Arg( &decode, va( "%i", BOX_RATE ) );
+	Box_Arg( &decode, Box_Va( "%i", BOX_RATE ) );
 	Box_Arg( &decode, "-f" );
 	Box_Arg( &decode, "s16le" );
 	Box_Arg( &decode, "pipe:1" );

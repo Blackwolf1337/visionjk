@@ -43,8 +43,28 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define BOX_BURST			8			// frames that go out at once at most, after the host stood still
 #define BOX_BITRATE			64000		// what a song is coded with: Opus, one channel
 
+/*
+=================
+Box_Va
+
+va() for these files. They are built into the masterserver too, where va() and Com_sprintf() are functions of C++
+(qcommon/q_shared.cpp) that a file of C can not call. Eight buffers in turn.
+=================
+*/
+const char *Box_Va( const char *format, ... ) {
+	static char	text[8][1024];
+	static int	index;
+	char		*out = text[index++ & 7];
+	va_list		args;
+
+	va_start( args, format );
+	vsnprintf( out, sizeof( text[0] ), format, args );
+	va_end( args );
+	return out;
+}
+
 const char *Box_Length( int seconds ) {
-	return va( "%i:%02i", seconds / 60, seconds % 60 );
+	return Box_Va( "%i:%02i", seconds / 60, seconds % 60 );
 }
 
 // what the clients are told a box does (BOX_PLAYING and the others of bg_boombox.h)
@@ -159,7 +179,7 @@ static void Box_Begin( boxHost_t *host, int b, int now ) {
 		box->player = host->borrow( host );
 		if ( !box->player ) {
 			if ( !box->waitTold )
-				host->note( host, b, -1, va( "^5Boombox^7: %s waits, as many songs play as can right now", box->songs[0].title ) );
+				host->note( host, b, -1, Box_Va( "^5Boombox^7: %s waits, as many songs play as can right now", box->songs[0].title ) );
 			box->waitTold = qtrue;
 			return;
 		}
@@ -173,7 +193,7 @@ static void Box_Begin( boxHost_t *host, int b, int now ) {
 	}
 	host->tools( &tools );
 	if ( !Box_StreamStart( &box->player->stream, &tools, box->songs[0].id, 0, qfalse, now, why, sizeof( why ) ) ) {
-		host->note( host, b, -1, va( "^5Boombox^7: %s is not played, %s", box->songs[0].title, why ) );
+		host->note( host, b, -1, Box_Va( "^5Boombox^7: %s is not played, %s", box->songs[0].title, why ) );
 		Box_Next( host, b );
 		return;
 	}
@@ -241,7 +261,7 @@ void Box_Run( boxHost_t *host, int b, int now ) {
 			Box_Tell( host, b );
 		} else if ( s->ended || now - box->waitSince > BOX_FETCH_MSEC ) {
 			Box_StreamWhy( s, "nothing of it came", why, sizeof( why ) );
-			host->note( host, b, -1, va( "^5Boombox^7: %s is not played, %s", box->songs[0].title, why ) );
+			host->note( host, b, -1, Box_Va( "^5Boombox^7: %s is not played, %s", box->songs[0].title, why ) );
 			Box_Next( host, b );
 		}
 		return;
@@ -324,21 +344,21 @@ static void Box_LookupDone( boxLookup_t *l, int now ) {
 	if ( box->looking > 0 )
 		box->looking--;
 	if ( result < 0 ) {
-		host->note( host, -1, l->client, va( "^5Boombox^7: not played, %s", why ) );
+		host->note( host, -1, l->client, Box_Va( "^5Boombox^7: not played, %s", why ) );
 	} else if ( !box->inuse ) {
-		host->note( host, -1, l->client, va( "^5Boombox^7: %s is not played, the boombox is gone", song.title ) );
+		host->note( host, -1, l->client, Box_Va( "^5Boombox^7: %s is not played, the boombox is gone", song.title ) );
 	} else if ( host->maxSeconds > 0 && song.seconds > host->maxSeconds ) {
-		host->note( host, -1, l->client, va( "^5Boombox^7: %s is too long (%s, at most %s)", song.title, Box_Length( song.seconds ),
+		host->note( host, -1, l->client, Box_Va( "^5Boombox^7: %s is too long (%s, at most %s)", song.title, Box_Length( song.seconds ),
 			Box_Length( host->maxSeconds ) ) );
 	} else if ( box->numSongs >= host->queueMax ) {
-		host->note( host, -1, l->client, va( "^5Boombox^7: %s is not played, the line is full", song.title ) );
+		host->note( host, -1, l->client, Box_Va( "^5Boombox^7: %s is not played, the line is full", song.title ) );
 	} else {
 		Q_strncpyz( song.by, l->by, sizeof( song.by ) );
 		box->songs[box->numSongs++] = song;
 		if ( box->numSongs == 1 )
-			host->note( host, l->box, l->client, va( "^5Boombox^7: %s^7 put on %s (%s)", song.by, song.title, Box_Length( song.seconds ) ) );
+			host->note( host, l->box, l->client, Box_Va( "^5Boombox^7: %s^7 put on %s (%s)", song.by, song.title, Box_Length( song.seconds ) ) );
 		else
-			host->note( host, l->box, l->client, va( "^5Boombox^7: %s^7 added %s (%s), number %i in the line", song.by, song.title,
+			host->note( host, l->box, l->client, Box_Va( "^5Boombox^7: %s^7 added %s (%s), number %i in the line", song.by, song.title,
 				Box_Length( song.seconds ), box->numSongs - 1 ) );
 	}
 	if ( box->inuse )

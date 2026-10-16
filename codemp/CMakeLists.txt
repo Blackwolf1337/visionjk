@@ -887,16 +887,33 @@ if(BuildMPDed)
 	# voice chat, the clan radio and the statuses of those servers. For the hosts of VisionJK itself: there
 	# is no install rule.
 	if(BuildMasterServer)
+		# It plays the boxes of the boombox of those servers with the core of the game module, and codes their
+		# songs with the Opus of the voice chat (BuildJPVoice).
 		set(MasterServerFiles
 			${MPDedFiles}
 			"${MPDir}/master/ms_relay.c"
 			"${MPDir}/master/ms_relay.h"
+			"${MPDir}/master/ms_boombox.c"
+			"${MPDir}/master/ms_local.h"
+			"${MPDir}/game/boombox/bg_boombox.c"
+			"${MPDir}/game/boombox/bg_boombox_core.c"
+			"${MPDir}/game/boombox/bg_boombox_fetch.c"
+			"${MPDir}/game/boombox/bg_boombox.h"
+			"${MPDir}/game/boombox/bg_boombox_core.h"
 			)
+		set(MasterServerDefines ${MPDedDefines} "VISION_MASTER")
+		set(MasterServerIncludes ${MPDedIncludeDirectories})
+		set(MasterServerLibraries ${MPDedLibraries})
+		if(TARGET bundled_opus)
+			set(MasterServerDefines ${MasterServerDefines} "JP_BOOMBOX")
+			set(MasterServerIncludes ${MasterServerIncludes} "${VisionJKLibDir}/opus/include")
+			set(MasterServerLibraries ${MasterServerLibraries} bundled_opus)
+		endif()
 		add_executable(${MasterServer} ${MasterServerFiles})
-		set_target_properties(${MasterServer} PROPERTIES COMPILE_DEFINITIONS "${MPDedDefines};VISION_MASTER")
+		set_target_properties(${MasterServer} PROPERTIES COMPILE_DEFINITIONS "${MasterServerDefines}")
 		set_property(TARGET ${MasterServer} APPEND PROPERTY COMPILE_OPTIONS ${VISIONJK_VISIBILITY_FLAGS})
-		set_target_properties(${MasterServer} PROPERTIES INCLUDE_DIRECTORIES "${MPDedIncludeDirectories}")
+		set_target_properties(${MasterServer} PROPERTIES INCLUDE_DIRECTORIES "${MasterServerIncludes}")
 		set_target_properties(${MasterServer} PROPERTIES PROJECT_LABEL "Masterserver")
-		target_link_libraries(${MasterServer} ${MPDedLibraries})
+		target_link_libraries(${MasterServer} ${MasterServerLibraries})
 	endif(BuildMasterServer)
 endif(BuildMPDed)
