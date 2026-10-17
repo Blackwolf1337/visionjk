@@ -330,14 +330,15 @@ static fakeAscii_t IN_TranslateSDLToJKKey( SDL_Keysym *keysym, qboolean down ) {
 			case SDLK_DELETE:       key = A_DELETE;        break;
 			case SDLK_PAUSE:        key = A_PAUSE;         break;
 
-			case SDLK_LSHIFT:
-			case SDLK_RSHIFT:       key = A_SHIFT;         break;
+			// the right keys have codes of their own, for binds (CL_KeyDownEvent counts them as the left ones too)
+			case SDLK_LSHIFT:       key = A_SHIFT;         break;
+			case SDLK_RSHIFT:       key = A_SHIFT2;        break;
 
-			case SDLK_LCTRL:
-			case SDLK_RCTRL:        key = A_CTRL;          break;
+			case SDLK_LCTRL:        key = A_CTRL;          break;
+			case SDLK_RCTRL:        key = A_CTRL2;         break;
 
-			case SDLK_RALT:
 			case SDLK_LALT:         key = A_ALT;           break;
+			case SDLK_RALT:         key = A_ALT2;          break;
 
 			case SDLK_KP_5:         key = A_KP_5;          break;
 			case SDLK_INSERT:       key = A_INSERT;        break;

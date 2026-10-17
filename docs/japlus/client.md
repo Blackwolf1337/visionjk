@@ -206,9 +206,29 @@ TrueType glyphs next to the letters of the game were only checked as numbers.
 | Ctrl+C, right button | puts what is marked on the clipboard: without colours, a wrapped line as one line. The right button pastes into the input line when nothing is marked |
 | Shift with left, right, Home, End | marks in the input line. Typing replaces it, Ctrl+C copies, Ctrl+X cuts, Ctrl+V pastes |
 | Ctrl with left or right | jumps by word in the input line |
+| Ctrl with Backspace or Delete | deletes the word before or after the cursor, also in the chat line and the chat box (2026-10-17, as TaystJK) |
 
 Ctrl+C with nothing marked anywhere clears the input line, as it always did. Text of an Asian language can not
 be marked: its rows are drawn as strings of another height. Not run: nobody has seen the console of this build.
+
+### Keys
+
+`client/cl_keys.cpp`, `shared/sdl/sdl_input.cpp` (2026-10-17, taken over from TaystJK).
+
+- A key can have a bind with a modifier as well as its plain one: `bind ctrl+x kill`, `bind alt+1 "say hi"`,
+  `bind shift+mouse2 +use`. `unbind ctrl+x`, `bindlist` and the config know them (`bind "CTRL+X" "kill"`).
+- Only the left Alt, Ctrl and Shift make such binds. With several held, Alt counts before Ctrl, Ctrl before
+  Shift. A key that has no bind for what is held runs its plain one, so Shift for walking and a key pressed with
+  it keep working as before. A key that goes up ends what it started when it went down, also when the modifier
+  was let go first.
+- A modifier itself can not be bound with a modifier (`ctrl+shift` is refused).
+- The right keys are keys of their own: `RCTRL`, `RALT`, `RSHIFT`. `bind rctrl +attack` binds the right one only.
+  A right key without a bind runs the bind of the left one, so `bind ctrl ...` covers both, as before.
+  Everything else (Ctrl+C in the console, the chat box, the menus) takes either key as Ctrl, and the menus and the
+  cgame are told the left key's code for a right key.
+- The bind menu of Setup still shows and sets the plain binds only.
+
+Not run with real keys: a hidden window gets none, so the right keys and the modifiers were only built.
 
 ### The chat box
 

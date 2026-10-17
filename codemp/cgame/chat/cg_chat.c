@@ -652,6 +652,34 @@ void CG_ChatOpen_f( void ) {
 }
 
 // a character was typed (also Ctrl with a letter, which comes as its place in the alphabet)
+// Ctrl with left or right, Backspace or Delete goes or deletes by word, as in the console
+static int Chat_WordLeft( int pos ) {
+	while ( pos > 0 && chat.input[pos - 1] == ' ' ) {
+		pos--;
+	}
+	while ( pos > 0 && chat.input[pos - 1] != ' ' ) {
+		pos = Chat_PrevChar( pos );
+	}
+	return pos;
+}
+
+static int Chat_WordRight( int pos ) {
+	while ( chat.input[pos] && chat.input[pos] != ' ' ) {
+		pos += Chat_CharLen( chat.input + pos );
+	}
+	while ( chat.input[pos] == ' ' ) {
+		pos++;
+	}
+	return pos;
+}
+
+static void Chat_DeleteRange( int from, int to ) {
+	if ( from < to ) {
+		memmove( chat.input + from, chat.input + to, strlen( chat.input + to ) + 1 );
+		chat.cursor = from;
+	}
+}
+
 static void Chat_CharEvent( int ch ) {
 	if ( chat.url[0] ) {
 		chat.url[0] = '\0';		// anything but Enter is a no
@@ -676,11 +704,10 @@ static void Chat_CharEvent( int ch ) {
 	}
 	if ( ch == 'h' - 'a' + 1 ) {
 		// backspace
-		if ( chat.cursor > 0 ) {
-			const int prev = Chat_PrevChar( chat.cursor );
-
-			memmove( chat.input + prev, chat.input + chat.cursor, strlen( chat.input + chat.cursor ) + 1 );
-			chat.cursor = prev;
+		if ( trap->Key_IsDown( A_CTRL ) ) {
+			Chat_DeleteRange( Chat_WordLeft( chat.cursor ), chat.cursor );
+		} else if ( chat.cursor > 0 ) {
+			Chat_DeleteRange( Chat_PrevChar( chat.cursor ), chat.cursor );
 		}
 		return;
 	}
@@ -738,17 +765,19 @@ qboolean CG_ChatKeyEvent( int key, qboolean down ) {
 		Chat_Send();
 		break;
 	case A_DELETE:
-		if ( chat.input[chat.cursor] ) {
+		if ( trap->Key_IsDown( A_CTRL ) ) {
+			Chat_DeleteRange( chat.cursor, Chat_WordRight( chat.cursor ) );
+		} else if ( chat.input[chat.cursor] ) {
 			const int len = Chat_CharLen( chat.input + chat.cursor );
 
 			memmove( chat.input + chat.cursor, chat.input + chat.cursor + len, strlen( chat.input + chat.cursor + len ) + 1 );
 		}
 		break;
 	case A_CURSOR_LEFT:
-		chat.cursor = Chat_PrevChar( chat.cursor );
+		chat.cursor = trap->Key_IsDown( A_CTRL ) ? Chat_WordLeft( chat.cursor ) : Chat_PrevChar( chat.cursor );
 		break;
 	case A_CURSOR_RIGHT:
-		chat.cursor += Chat_CharLen( chat.input + chat.cursor );
+		chat.cursor = trap->Key_IsDown( A_CTRL ) ? Chat_WordRight( chat.cursor ) : chat.cursor + Chat_CharLen( chat.input + chat.cursor );
 		break;
 	case A_HOME:
 		chat.cursor = 0;
