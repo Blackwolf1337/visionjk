@@ -1897,7 +1897,7 @@ and the sounds of the own player, of which snd_spatial.cpp only gets what goes i
 */
 static void S_SpatialGather( void ) {
 	channel_t	*ch = s_channels;
-	vec3_t		origin, source_vec;
+	vec3_t		origin;
 	float		fade;
 	qboolean	voiceVolume;
 	int			i;
@@ -1925,7 +1925,7 @@ static void S_SpatialGather( void ) {
 		} else {
 			VectorCopy( s_entityPosition[ ch->entnum ], origin );
 		}
-		fade = S_AttenuateOrigin( origin, ch->entchannel, source_vec );
+		fade = S_SpatialFade( Distance( origin, listener_origin ), ch->entchannel );
 		if ( fade <= 0.0f ) {
 			continue;
 		}
@@ -1938,7 +1938,7 @@ static void S_SpatialGather( void ) {
 		if ( !loop->sfx || !loop->sfx->bInMemory ) {
 			continue;
 		}
-		fade = S_AttenuateOrigin( loop->origin, CHAN_AUTO, source_vec );
+		fade = S_SpatialFade( Distance( loop->origin, listener_origin ), CHAN_AUTO );
 		if ( fade <= 0.0f ) {
 			continue;
 		}

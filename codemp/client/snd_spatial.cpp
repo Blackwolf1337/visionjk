@@ -292,6 +292,9 @@ static const char *spatialShockPaths[] = {
 #define SPATIAL_DOPPLER_SAMPLES		1024	// the distance is measured at least this far apart in the time of the mixer
 #define SPATIAL_DOPPLER_SMOOTH		0.5f	//	and each measure moves the speed this much of the way
 #define SPATIAL_MAX_TAIL			( 4 * 44100 )	// samples a channel stays at most after its end, see S_SpatialTail()
+// v_spatialPhysical: a sound fades as a real one does, by 1/r from where the game stops playing it at full volume,
+// and is not heard below this (-50 dB)
+#define SPATIAL_PHYSICAL_QUIET		0.00316f
 
 #define SPATIAL_REFLECT_SLOTS		16		// the most v_spatialSources can be. A slot is about 7 MB (its impulse
 											//	response, partitioned, and its convolution)
@@ -398,6 +401,7 @@ typedef struct spatialVoice_s {
 	float		lastDistance;		//	and when it was last measured for the doppler,
 	int			lastTime;			//	at this time of the mixer, -1: not yet
 	float		approach;			// units a second it comes closer to the listener, smoothed
+	int			delay;				// samples it begins later than the game started it: the time it takes to get here
 
 	// where, and how loud the game wants it at that distance
 	vec3_t		origin;
@@ -448,6 +452,7 @@ static cvar_t	*v_spatialPaths;
 static cvar_t	*v_spatialPathLoss;
 static cvar_t	*v_spatialShock;
 static cvar_t	*v_spatialSources;
+static cvar_t	*v_spatialPhysical;
 #ifdef __EMSCRIPTEN__
 static cvar_t	*v_spatialBudget;
 #endif
@@ -1309,6 +1314,13 @@ static void S_SpatialPlaceVoice( spatialVoice_t *v, channel_t *channel, int entc
 		v->lastDistance = dist;
 	}
 
+	// With v_spatialPhysical a sound the game starts is heard when it got here, at the speed of sound. Decided
+	// until its first block is rendered. A voice of the chat and a loop are not late, the own player is where the
+	// listener is.
+	if ( v->fresh ) {
+		v->delay = ( v_spatialPhysical->integer && channel && !v->loop ) ? (int)( dist / SPATIAL_SOUND_SPEED * spatial.audio.samplingRate ) : 0;
+	}
+
 	// For its own reflections. Valve's impulse response is that of a source as loud at 1 m as it is, falling with
 	// 1/r, and the model of the source starts that where the game stops playing it at full volume
 	// (S_FullVolumeDistance, 1 m for a voice of the chat, whose fade is the cgame's). The sound goes in as loud
@@ -1334,7 +1346,7 @@ static int S_SpatialTail( const spatialVoice_t *v, const channel_t *ch ) {
 	double end;
 
 	if ( v->fresh ) {
-		end = ch->startSample + length / rate;
+		end = ch->startSample + v->delay + length / rate;
 	} else {
 		end = v->rendered + ( length - v->readPos ) / rate;
 	}
@@ -1507,10 +1519,30 @@ what the walls in between let through. Cheap, every frame, in the thread of the 
 ===============================================================================
 */
 
-// Called by Steam Audio in the thread of S_SpatialWorker(), with the length of a way in metres. What it calls
-// touches nothing but its arguments.
+/*
+===============
+S_SpatialFade
+
+What is left of a sound of a kind of channel at a distance in units. The game's fade (S_AttenuateDistance), or
+with v_spatialPhysical that of a real source: full volume as far as the game has it, then 1/r, so a sound twice
+as far away is 6 dB quieter and does not end at 38 m, and nothing below SPATIAL_PHYSICAL_QUIET. Touches nothing
+but its arguments and a cvar: the thread of the reflections asks it for the length of a way round a corner.
+===============
+*/
+float S_SpatialFade( float dist, int channel ) {
+	if ( v_spatialPhysical && v_spatialPhysical->integer ) {
+		float dist_mult;
+		const float full = S_FullVolumeDistance( channel, &dist_mult );
+		const float fade = ( full < 0.0f || dist <= full ) ? 1.0f : full / dist;
+
+		return fade >= SPATIAL_PHYSICAL_QUIET ? fade : 0.0f;
+	}
+	return S_AttenuateDistance( dist, channel );
+}
+
+// Called by Steam Audio in the thread of S_SpatialWorker(), with the length of a way in metres
 static float IPLCALL S_SpatialPathFade( IPLfloat32 distance, void *userData ) {
-	const float fade = S_AttenuateDistance( distance * ( 1.0f / SPATIAL_UNIT ), (int)(intptr_t)userData );
+	const float fade = S_SpatialFade( distance * ( 1.0f / SPATIAL_UNIT ), (int)(intptr_t)userData );
 
 	return fade > 0.0f ? fade : 0.0f;
 }
@@ -1632,7 +1664,9 @@ static void S_SpatialSimulate( void ) {
 		memset( &inputs, 0, sizeof( inputs ) );
 		if ( v->active && v->frame == spatial.frame && !v->sendOnly ) {
 			inputs.flags = IPL_SIMULATIONFLAGS_DIRECT;
-			inputs.directFlags = (IPLDirectSimulationFlags)( IPL_DIRECTSIMULATIONFLAGS_OCCLUSION | IPL_DIRECTSIMULATIONFLAGS_TRANSMISSION );
+			// with v_spatialPhysical a far sound loses its highs in the air too (Valve's default model)
+			inputs.directFlags = (IPLDirectSimulationFlags)( IPL_DIRECTSIMULATIONFLAGS_OCCLUSION | IPL_DIRECTSIMULATIONFLAGS_TRANSMISSION
+				| ( v_spatialPhysical->integer ? IPL_DIRECTSIMULATIONFLAGS_AIRABSORPTION : 0 ) );
 			S_SpatialPoint( v->origin, &inputs.source.origin );
 			inputs.source.right.x = 1.0f;
 			inputs.source.up.y = 1.0f;
@@ -1680,7 +1714,8 @@ static void S_SpatialSimulate( void ) {
 		qiplSourceGetOutputs( v->source, IPL_SIMULATIONFLAGS_DIRECT, &outputs );
 		v->directParams = outputs.direct;
 		// how loud a sound is at its distance stays what the game makes of it (v->gain)
-		v->directParams.flags = (IPLDirectEffectFlags)( IPL_DIRECTEFFECTFLAGS_APPLYOCCLUSION | IPL_DIRECTEFFECTFLAGS_APPLYTRANSMISSION );
+		v->directParams.flags = (IPLDirectEffectFlags)( IPL_DIRECTEFFECTFLAGS_APPLYOCCLUSION | IPL_DIRECTEFFECTFLAGS_APPLYTRANSMISSION
+			| ( v_spatialPhysical->integer ? IPL_DIRECTEFFECTFLAGS_APPLYAIRABSORPTION : 0 ) );
 		v->directParams.transmissionType = IPL_TRANSMISSIONTYPE_FREQDEPENDENT;
 	}
 }
@@ -1777,7 +1812,7 @@ static qboolean S_SpatialSamples( spatialVoice_t *v, float *out ) {
 // the next block of a voice into the ring, getting from the gain of its last block to this one
 static void S_SpatialRenderBlock( spatialVoice_t *v, float gain ) {
 	static float mono[SPATIAL_FRAME], direct[SPATIAL_FRAME], left[SPATIAL_FRAME], right[SPATIAL_FRAME];
-	static float whole[SPATIAL_FRAME], pathLeft[SPATIAL_FRAME], pathRight[SPATIAL_FRAME];
+	static float whole[SPATIAL_FRAME], pathLeft[SPATIAL_FRAME], pathRight[SPATIAL_FRAME], early[SPATIAL_FRAME];
 	float *monoData = mono, *directData = direct, *stereoData[2] = { left, right };
 	float *wholeData = whole, *pathData[2] = { pathLeft, pathRight };
 	IPLAudioBuffer in = { 1, SPATIAL_FRAME, &monoData };
@@ -1792,12 +1827,13 @@ static void S_SpatialRenderBlock( spatialVoice_t *v, float gain ) {
 	const qboolean fresh = v->fresh;
 	qboolean pathed = qfalse;
 	float volume, hidden, send;
+	const float *reflectIn;
 
 	if ( v->fresh ) {
 		v->dryRead = c;
 		// where in its sound it begins: a loop where the time of the mixer is in it, as the mixer plays loops
 		if ( v->sfx && v->sfx->iSoundLengthInSamples > 0 ) {
-			v->readPos = v->loop ? fmod( (double)c, (double)v->sfx->iSoundLengthInSamples ) : (double)( c - v->startSample );
+			v->readPos = v->loop ? fmod( (double)c, (double)v->sfx->iSoundLengthInSamples ) : (double)( c - v->startSample - v->delay );
 		}
 	}
 	v->rate = S_SpatialRate( v );
@@ -1814,6 +1850,17 @@ static void S_SpatialRenderBlock( spatialVoice_t *v, float gain ) {
 	for ( int i = 0; i < SPATIAL_FRAME; i++ ) {
 		mono[i] *= from + step * i;
 		whole[i] = mono[i] * unfade;
+	}
+	// A sound that is late by the way here (v_spatialPhysical) goes into its own reflections as the game plays it:
+	// their impulse response has the time to the walls and from them in it. An MP3 can only be read once.
+	reflectIn = whole;
+	if ( v->delay && v->reflect && v->sfx->eSoundCompressionMethod == ct_16 ) {
+		const int got = S_SampleRun( v->sfx, NULL, (double)( c - v->startSample ), 1.0f, SPATIAL_FRAME, qfalse, early );
+
+		for ( int i = 0; i < SPATIAL_FRAME; i++ ) {
+			early[i] = i < got ? early[i] * ( from + step * i ) * unfade : 0.0f;
+		}
+		reflectIn = early;
 	}
 
 	// A voice of the chat is as loud as the cgame said, s_volume is not for it. Against the other sounds it is
@@ -1863,7 +1910,7 @@ static void S_SpatialRenderBlock( spatialVoice_t *v, float gain ) {
 	// gets to hear. Its own reflections get the sound as it leaves it: their impulse response has the walls.
 	for ( int i = 0; i < SPATIAL_FRAME; i++ ) {
 		v->dry[( c + i ) & ( SPATIAL_DRY - 1 )] = ( direct[i] + ( pathed ? ( pathLeft[i] + pathRight[i] ) * 0.5f * hidden : 0.0f ) ) * send;
-		v->own[( c + i ) & ( SPATIAL_DRY - 1 )] = whole[i] * send * v->ownScale;
+		v->own[( c + i ) & ( SPATIAL_DRY - 1 )] = reflectIn[i] * send * v->ownScale;
 	}
 	volume = ( v->stream ? 1.0f : send ) * ( 32768.0f * 256.0f );
 	if ( v_spatialHrtf->integer ) {
@@ -2531,6 +2578,9 @@ static void S_SpatialInfo_f( void ) {
 	Com_Printf( "%i sounds in the level, rendered %i ms ahead. Last frame: %i us for what is in the way, %i us to render (most so far: %i us)\n",
 		spatial.numVoices, (int)( S_SpatialAhead() * 1000.0f ), spatial.simulateUsec, spatial.renderUsec, spatial.peakRenderUsec );
 	spatial.peakRenderUsec = 0;
+	Com_Printf( "fade with the distance: %s, doppler %s (s_doppler)\n",
+		v_spatialPhysical->integer ? "of a real source, with the air and the speed of sound (v_spatialPhysical 1)" : "the game's (v_spatialPhysical 0)",
+		s_doppler->integer ? "on" : "off" );
 	// What it took of the thread of the game since this was last asked. A browser counts time in steps of 0.1 ms
 	// or more: the averages are of many frames and hold, the one frame that took most is that coarse.
 	if ( spatial.costFrames ) {
@@ -2587,9 +2637,10 @@ static void S_SpatialInfo_f( void ) {
 			Com_Printf( "  %-40s own, reverb only, gain %.2f\n", v->stream ? "voice chat" : v->sfx->sSoundName, v->gain );
 			continue;
 		}
-		Com_Printf( "  %-40s at %.0f %.0f %.0f, %5.0f units away, gain %.2f, doppler %.3f, %3.0f %% in sight, through what hides it: %.3f %.3f %.3f%s%s\n",
+		Com_Printf( "  %-40s at %.0f %.0f %.0f, %5.0f units away, gain %.2f, doppler %.3f, %.0f ms late, %3.0f %% in sight, through what hides it: %.3f %.3f %.3f%s%s\n",
 			v->stream ? va( "voice of player %i", (int)( v->stream - spatialStreams ) ) : v->sfx->sSoundName,
-			v->origin[0], v->origin[1], v->origin[2], v->distance, v->gain, v->rate, v->directParams.occlusion * 100.0f,
+			v->origin[0], v->origin[1], v->origin[2], v->distance, v->gain, v->rate, v->delay * 1000.0f / spatial.audio.samplingRate,
+			v->directParams.occlusion * 100.0f,
 			v->directParams.transmission[0], v->directParams.transmission[1], v->directParams.transmission[2],
 			( v->shock && v_spatialShock->value > 0.0f ) ? ", thump" : "",
 			v->reflect ? ( S_SpatialReflectReady( v->reflect ) ? ", own reflections" : ", own reflections soon" ) : "" );
@@ -2839,6 +2890,7 @@ void S_SpatialInit( void ) {
 	v_spatialBounces = Cvar_Get( "v_spatialBounces", SPATIAL_DEFAULT_BOUNCES, CVAR_ARCHIVE, "v_spatial: how often a ray is followed off a wall" );
 	v_spatialPathLoss = Cvar_Get( "v_spatialPathLoss", "1", CVAR_ARCHIVE, "v_spatial: 1 a sound loses on its way round a corner what Steam Audio works out. 0 it only gets duller, and is as loud as the game makes a sound that far away" );
 	v_spatialSources = Cvar_Get( "v_spatialSources", "8", CVAR_ARCHIVE, "v_spatial: how many of the loudest sounds have reflections of their own, 0 to 16. The others ring with the room of the listener" );
+	v_spatialPhysical = Cvar_Get( "v_spatialPhysical", "0", CVAR_ARCHIVE, "v_spatial: 1 sounds fade with the distance as real ones do and not as the game fades them, lose their highs in the air, and arrive at the speed of sound" );
 	v_spatialShock = Cvar_Get( "v_spatialShock", "1", CVAR_ARCHIVE, "v_spatial: how strong the thump of an explosion is, its lows in both ears. 0 none" );
 	Cmd_AddCommand( "v_spatialInfo", S_SpatialInfo_f, "What v_spatial is doing" );
 	Cmd_AddCommand( "v_spatialCapture", S_SpatialCapture_f, "v_spatial: what the sounds of the level give the mixer for so many seconds, into steamaudio/capture.wav" );
@@ -2980,6 +3032,7 @@ qboolean	S_SpatialActive( void ) { return qfalse; }
 void		S_SpatialLoadMap( const char *mapname ) {}
 void		S_SpatialUpdate( void ) {}
 void		S_SpatialBeginFrame( const vec3_t origin, matrix3_t axis ) {}
+float		S_SpatialFade( float dist, int channel ) { return S_AttenuateDistance( dist, channel ); }
 qboolean	S_SpatialAddChannel( channel_t *ch, const vec3_t origin, float volume, float fade, qboolean voiceVolume ) { return qfalse; }
 void		S_SpatialAddSend( channel_t *ch, float volume, qboolean voiceVolume ) {}
 void		S_SpatialAddLoop( int entnum, sfx_t *sfx, const vec3_t origin, float volume, float fade ) {}
