@@ -168,18 +168,22 @@ vs_look <client> <hat> <cape>
 =================
 */
 void CG_LookServerCommand( void ) {
-	const int client = atoi( CG_Argv( 1 ) );
+	const int	client = atoi( CG_Argv( 1 ) );
+	char		hat[LOOK_NAME], cape[LOOK_NAME];
 
 	if ( client < 0 || client >= MAX_CLIENTS ) {
 		return;
 	}
-	Look_Set( client, CG_Argv( 2 ), CG_Argv( 3 ) );
+	// (CG_Argv gives the same buffer every time)
+	Q_strncpyz( hat, CG_Argv( 2 ), sizeof( hat ) );
+	Q_strncpyz( cape, CG_Argv( 3 ), sizeof( cape ) );
+	Look_Set( client, hat, cape );
 	look.clients[client].masterTime = 0;
 	if ( cg.snap && client == cg.snap->ps.clientNum ) {
 		char own[sizeof( look.sent )];
 
 		Look_Own( own, sizeof( own ) );
-		look.confirmed = (qboolean)!Q_stricmp( own, va( "%s %s", CG_Argv( 2 ), CG_Argv( 3 ) ) );
+		look.confirmed = (qboolean)!Q_stricmp( own, va( "%s %s", hat, cape ) );
 	}
 }
 
@@ -598,8 +602,10 @@ v_cosmetics clear: neither
 =================
 */
 void CG_Cosmetics_f( void ) {
-	const char	*what = CG_Argv( 1 );
-	int			kind, i;
+	char	what[16];
+	int		kind, i;
+
+	Q_strncpyz( what, CG_Argv( 1 ), sizeof( what ) );		// (CG_Argv gives the same buffer every time)
 
 	if ( !look.listed ) {
 		Look_List();
