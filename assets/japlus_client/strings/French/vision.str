@@ -649,6 +649,98 @@ REFERENCE           LOOKS
 LANG_ENGLISH        "Looks"
 LANG_FRENCH         "Apparence"
 
+REFERENCE           HAT
+LANG_ENGLISH        "Hat"
+LANG_FRENCH         "Chapeau"
+
+REFERENCE           WHAT_YOU_WEAR_ON_YOUR_HEAD_OTHER_PLA
+LANG_ENGLISH        "What you wear on your head. Other players of VisionJK see it."
+LANG_FRENCH         "Ce que vous portez sur la tête. Les autres joueurs de VisionJK le voient."
+
+REFERENCE           AFRO
+LANG_ENGLISH        "Afro"
+LANG_FRENCH         "#same"
+
+REFERENCE           BEARD
+LANG_ENGLISH        "Beard"
+LANG_FRENCH         "Barbe"
+
+REFERENCE           BUCKET
+LANG_ENGLISH        "Bucket"
+LANG_FRENCH         "Seau"
+
+REFERENCE           CAP
+LANG_ENGLISH        "Cap"
+LANG_FRENCH         "Casquette"
+
+REFERENCE           PROPELLER_CAP
+LANG_ENGLISH        "Propeller Cap"
+LANG_FRENCH         "Casquette à hélice"
+
+REFERENCE           CROWN
+LANG_ENGLISH        "Crown"
+LANG_FRENCH         "Couronne"
+
+REFERENCE           FEDORA
+LANG_ENGLISH        "Fedora"
+LANG_FRENCH         "#same"
+
+REFERENCE           FEDORA_2
+LANG_ENGLISH        "Fedora 2"
+LANG_FRENCH         "#same"
+
+REFERENCE           FEDORA_3
+LANG_ENGLISH        "Fedora 3"
+LANG_FRENCH         "#same"
+
+REFERENCE           FEDORA_4
+LANG_ENGLISH        "Fedora 4"
+LANG_FRENCH         "#same"
+
+REFERENCE           GLASSES
+LANG_ENGLISH        "Glasses"
+LANG_FRENCH         "Lunettes"
+
+REFERENCE           GRADUATION_CAP
+LANG_ENGLISH        "Graduation Cap"
+LANG_FRENCH         "Toque de diplômé"
+
+REFERENCE           HORNS
+LANG_ENGLISH        "Horns"
+LANG_FRENCH         "Cornes"
+
+REFERENCE           METAL_HELMET
+LANG_ENGLISH        "Metal Helmet"
+LANG_FRENCH         "Casque de métal"
+
+REFERENCE           PLAGUE_MASK
+LANG_ENGLISH        "Plague Mask"
+LANG_FRENCH         "Masque de peste"
+
+REFERENCE           SANTA_HAT
+LANG_ENGLISH        "Santa Hat"
+LANG_FRENCH         "Bonnet de Noël"
+
+REFERENCE           SOMBRERO
+LANG_ENGLISH        "Sombrero"
+LANG_FRENCH         "#same"
+
+REFERENCE           TOP_HAT
+LANG_ENGLISH        "Top Hat"
+LANG_FRENCH         "Haut-de-forme"
+
+REFERENCE           CAPE
+LANG_ENGLISH        "Cape"
+LANG_FRENCH         "#same"
+
+REFERENCE           WHAT_YOU_WEAR_ON_YOUR_BACK_OTHER_PLA
+LANG_ENGLISH        "What you wear on your back. Other players of VisionJK see it."
+LANG_FRENCH         "Ce que vous portez sur le dos. Les autres joueurs de VisionJK le voient."
+
+REFERENCE           ROYAL_CAPE
+LANG_ENGLISH        "Royal Cape"
+LANG_FRENCH         "Cape royale"
+
 REFERENCE           HATS_AND_CAPES
 LANG_ENGLISH        "Hats and Capes"
 LANG_FRENCH         "Chapeaux et capes"

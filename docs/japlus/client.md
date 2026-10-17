@@ -393,15 +393,14 @@ Since 2026-10-17 (`tools/menus/options.py`, texts in four languages):
   - Killfeed and Team Overlay Size under Menus and HUD.
   - Crosshair Colour and Name Opacity under View.
   - A new head Movement: Speedometer, Strafe Helper, Snap HUD, Pitch HUD and Strafe Trails.
-  - A new head Looks: Hats and Capes (`v_showCosmetics`), Seasonal Hats, Enemy Model, Ally Model, Saber Team
+  - A new head Looks: Hat, Cape, Hats and Capes (`v_showCosmetics`), Seasonal Hats, Enemy Model, Ally Model, Saber Team
     Colours, Two-Coloured Staff, Jedi Outcast Shots and Disruptor Beam.
 - Chat & Social: Chat Emoji and Chat Log under Chat, Console Clock under Console.
 
 Crosshair Colour is a row of a new kind of the generator (`multistr`, a `cvarStrList`), since its cvar holds a text.
 The ui registers the cvars of the cgame that have a row (`ui_xcvar.h`), so the menus outside a game show their
 defaults. Clicked in a hidden run on 2026-10-17: every row set its cvar as clicked
-(`agent/japlus_port/tools/clienttests/ui_taystjk_rows.cfg`). The rows for wearing a hat or a cape wait for the
-models.
+(`agent/japlus_port/tools/clienttests/ui_taystjk_rows.cfg`). Hat and Cape came the same day, with the models.
 
 ### Looks of TaystJK
 
@@ -436,7 +435,11 @@ and jaPRO. Their files are laid out the same way, so their paks work:
   world. Here they go along the bolt: x forward, y right, z up. For a file that only lifts or lowers, that is the
   same.
 
-This tree ships no models yet: see "Not done".
+This tree ships 18 hats and one cape of jaPRO and TaystJK, with the permission of both projects (2026-10-17):
+afro, beard, bucket, cap, cringe (a propeller cap), crown, fedora to fedora4, glasses, gradcap, horns,
+metalhelm, plaguemask, santahat, sombrero, tophat, and the cape royalcape (`assets/japlus_client/models/cosmetics`,
+with a README of where they come from, and `shaders/vision_cosmetics.shader`). Their other pieces are taken from
+other games and films and are not shipped. Setup, Interface, Looks has the rows Hat and Cape with these names.
 
 | Cvar or command | Default | Meaning |
 |-----------------|---------|---------|
@@ -465,7 +468,9 @@ stand-in hat and cape (a coffee pot of the game, copied into the test profiles o
 through the masterserver of the build on a server with the stand-in for a foreign module. The first runs found
 two faults: the arguments of `vs_look` were read from one buffer, so the cape came as the hat, and
 `BG_VoiceUnpack` refused the new packet type. In a level the stand-in hat sat on the head of a bot
-(`v_showCosmetics 2`) and the cape on his back. A real hat model has not been tried.
+(`v_showCosmetics 2`) and the cape on his back. All 18 hats and the cape were then looked at on the own player in a level, from the front and the side
+(`clienttests/lvl_hats.cfg`, `lvl_cape.cfg`): each sits where it should on the default model, the beard on the
+chin, the glasses and the plague mask on the face. Other player models and their skins were not looked at.
 
 ### Chat bubbles
 
@@ -868,9 +873,6 @@ only on a listen server.
 - Grip speed and the force combo setting are read from the server info as well.
 
 ## Not done
-
-- Hats and capes ship without models. The jaPRO and TaystJK set has no licence of its own, and several of its
-  pieces are taken from other games and films. Which of them may be shipped waits for a decision.
 
 - The download of files over an URL: the plugin ui embeds libcurl, a download screen, a cache file
   (`japlus/urlRedirect_cache.txt`) and three menu scripts, and its cgame asks for the download when the server

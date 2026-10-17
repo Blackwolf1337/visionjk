@@ -649,6 +649,98 @@ REFERENCE           LOOKS
 LANG_ENGLISH        "Looks"
 LANG_SPANISH        "Apariencia"
 
+REFERENCE           HAT
+LANG_ENGLISH        "Hat"
+LANG_SPANISH        "Sombrero"
+
+REFERENCE           WHAT_YOU_WEAR_ON_YOUR_HEAD_OTHER_PLA
+LANG_ENGLISH        "What you wear on your head. Other players of VisionJK see it."
+LANG_SPANISH        "Lo que llevas en la cabeza. Los demás jugadores de VisionJK lo ven."
+
+REFERENCE           AFRO
+LANG_ENGLISH        "Afro"
+LANG_SPANISH        "#same"
+
+REFERENCE           BEARD
+LANG_ENGLISH        "Beard"
+LANG_SPANISH        "Barba"
+
+REFERENCE           BUCKET
+LANG_ENGLISH        "Bucket"
+LANG_SPANISH        "Cubo"
+
+REFERENCE           CAP
+LANG_ENGLISH        "Cap"
+LANG_SPANISH        "Gorra"
+
+REFERENCE           PROPELLER_CAP
+LANG_ENGLISH        "Propeller Cap"
+LANG_SPANISH        "Gorra de hélice"
+
+REFERENCE           CROWN
+LANG_ENGLISH        "Crown"
+LANG_SPANISH        "Corona"
+
+REFERENCE           FEDORA
+LANG_ENGLISH        "Fedora"
+LANG_SPANISH        "#same"
+
+REFERENCE           FEDORA_2
+LANG_ENGLISH        "Fedora 2"
+LANG_SPANISH        "#same"
+
+REFERENCE           FEDORA_3
+LANG_ENGLISH        "Fedora 3"
+LANG_SPANISH        "#same"
+
+REFERENCE           FEDORA_4
+LANG_ENGLISH        "Fedora 4"
+LANG_SPANISH        "#same"
+
+REFERENCE           GLASSES
+LANG_ENGLISH        "Glasses"
+LANG_SPANISH        "Gafas"
+
+REFERENCE           GRADUATION_CAP
+LANG_ENGLISH        "Graduation Cap"
+LANG_SPANISH        "Birrete"
+
+REFERENCE           HORNS
+LANG_ENGLISH        "Horns"
+LANG_SPANISH        "Cuernos"
+
+REFERENCE           METAL_HELMET
+LANG_ENGLISH        "Metal Helmet"
+LANG_SPANISH        "Casco de metal"
+
+REFERENCE           PLAGUE_MASK
+LANG_ENGLISH        "Plague Mask"
+LANG_SPANISH        "Máscara de peste"
+
+REFERENCE           SANTA_HAT
+LANG_ENGLISH        "Santa Hat"
+LANG_SPANISH        "Gorro de Papá Noel"
+
+REFERENCE           SOMBRERO
+LANG_ENGLISH        "Sombrero"
+LANG_SPANISH        "Sombrero mexicano"
+
+REFERENCE           TOP_HAT
+LANG_ENGLISH        "Top Hat"
+LANG_SPANISH        "Sombrero de copa"
+
+REFERENCE           CAPE
+LANG_ENGLISH        "Cape"
+LANG_SPANISH        "Capa"
+
+REFERENCE           WHAT_YOU_WEAR_ON_YOUR_BACK_OTHER_PLA
+LANG_ENGLISH        "What you wear on your back. Other players of VisionJK see it."
+LANG_SPANISH        "Lo que llevas en la espalda. Los demás jugadores de VisionJK lo ven."
+
+REFERENCE           ROYAL_CAPE
+LANG_ENGLISH        "Royal Cape"
+LANG_SPANISH        "Capa real"
+
 REFERENCE           HATS_AND_CAPES
 LANG_ENGLISH        "Hats and Capes"
 LANG_SPANISH        "Sombreros y capas"

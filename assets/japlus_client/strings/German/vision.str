@@ -649,6 +649,98 @@ REFERENCE           LOOKS
 LANG_ENGLISH        "Looks"
 LANG_GERMAN         "Aussehen"
 
+REFERENCE           HAT
+LANG_ENGLISH        "Hat"
+LANG_GERMAN         "Hut"
+
+REFERENCE           WHAT_YOU_WEAR_ON_YOUR_HEAD_OTHER_PLA
+LANG_ENGLISH        "What you wear on your head. Other players of VisionJK see it."
+LANG_GERMAN         "Was Sie auf dem Kopf tragen. Andere Spieler von VisionJK sehen es."
+
+REFERENCE           AFRO
+LANG_ENGLISH        "Afro"
+LANG_GERMAN         "#same"
+
+REFERENCE           BEARD
+LANG_ENGLISH        "Beard"
+LANG_GERMAN         "Bart"
+
+REFERENCE           BUCKET
+LANG_ENGLISH        "Bucket"
+LANG_GERMAN         "Eimer"
+
+REFERENCE           CAP
+LANG_ENGLISH        "Cap"
+LANG_GERMAN         "Kappe"
+
+REFERENCE           PROPELLER_CAP
+LANG_ENGLISH        "Propeller Cap"
+LANG_GERMAN         "Propellermütze"
+
+REFERENCE           CROWN
+LANG_ENGLISH        "Crown"
+LANG_GERMAN         "Krone"
+
+REFERENCE           FEDORA
+LANG_ENGLISH        "Fedora"
+LANG_GERMAN         "#same"
+
+REFERENCE           FEDORA_2
+LANG_ENGLISH        "Fedora 2"
+LANG_GERMAN         "#same"
+
+REFERENCE           FEDORA_3
+LANG_ENGLISH        "Fedora 3"
+LANG_GERMAN         "#same"
+
+REFERENCE           FEDORA_4
+LANG_ENGLISH        "Fedora 4"
+LANG_GERMAN         "#same"
+
+REFERENCE           GLASSES
+LANG_ENGLISH        "Glasses"
+LANG_GERMAN         "Brille"
+
+REFERENCE           GRADUATION_CAP
+LANG_ENGLISH        "Graduation Cap"
+LANG_GERMAN         "Doktorhut"
+
+REFERENCE           HORNS
+LANG_ENGLISH        "Horns"
+LANG_GERMAN         "Hörner"
+
+REFERENCE           METAL_HELMET
+LANG_ENGLISH        "Metal Helmet"
+LANG_GERMAN         "Metallhelm"
+
+REFERENCE           PLAGUE_MASK
+LANG_ENGLISH        "Plague Mask"
+LANG_GERMAN         "Pestmaske"
+
+REFERENCE           SANTA_HAT
+LANG_ENGLISH        "Santa Hat"
+LANG_GERMAN         "Weihnachtsmütze"
+
+REFERENCE           SOMBRERO
+LANG_ENGLISH        "Sombrero"
+LANG_GERMAN         "#same"
+
+REFERENCE           TOP_HAT
+LANG_ENGLISH        "Top Hat"
+LANG_GERMAN         "Zylinder"
+
+REFERENCE           CAPE
+LANG_ENGLISH        "Cape"
+LANG_GERMAN         "Umhang"
+
+REFERENCE           WHAT_YOU_WEAR_ON_YOUR_BACK_OTHER_PLA
+LANG_ENGLISH        "What you wear on your back. Other players of VisionJK see it."
+LANG_GERMAN         "Was Sie auf dem Rücken tragen. Andere Spieler von VisionJK sehen es."
+
+REFERENCE           ROYAL_CAPE
+LANG_ENGLISH        "Royal Cape"
+LANG_GERMAN         "Königsumhang"
+
 REFERENCE           HATS_AND_CAPES
 LANG_ENGLISH        "Hats and Capes"
 LANG_GERMAN         "Hüte und Umhänge"

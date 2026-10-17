@@ -2258,6 +2258,47 @@
 
 		itemDef
 		{
+			name					vision_multistr_v_hat
+			type					ITEM_TYPE_MULTI
+			text					@VISION_HAT
+			descText				@VISION_WHAT_YOU_WEAR_ON_YOUR_HEAD_OTHER_PLA
+			cvar					"v_hat"
+			cvarStrList
+			{
+				@VISION_NONE "" @VISION_AFRO "afro" @VISION_BEARD "beard" @VISION_BUCKET "bucket" @VISION_CAP "cap" @VISION_PROPELLER_CAP "cringe" @VISION_CROWN "crown" @VISION_FEDORA "fedora" @VISION_FEDORA_2 "fedora2" @VISION_FEDORA_3 "fedora3" @VISION_FEDORA_4 "fedora4" @VISION_GLASSES "glasses" @VISION_GRADUATION_CAP "gradcap" @VISION_HORNS "horns" @VISION_METAL_HELMET "metalhelm" @VISION_PLAGUE_MASK "plaguemask" @VISION_SANTA_HAT "santahat" @VISION_SOMBRERO "sombrero" @VISION_TOP_HAT "tophat"
+			}
+			action { play "sound/interface/button1.wav" ; }
+			rect					32 578 384 22
+			page					4
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+		}
+
+		itemDef
+		{
+			name					vision_multistr_v_cape
+			type					ITEM_TYPE_MULTI
+			text					@VISION_CAPE
+			descText				@VISION_WHAT_YOU_WEAR_ON_YOUR_BACK_OTHER_PLA
+			cvar					"v_cape"
+			cvarStrList { @VISION_NONE "" @VISION_ROYAL_CAPE "royalcape" }
+			action { play "sound/interface/button1.wav" ; }
+			rect					32 600 384 22
+			page					4
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+		}
+
+		itemDef
+		{
 			name					vision_multi_v_showcosmetics
 			type					ITEM_TYPE_MULTI
 			text					@VISION_HATS_AND_CAPES
@@ -2265,7 +2306,7 @@
 			cvar					"v_showCosmetics"
 			cvarFloatList { @VISION_OFF 0 @VISION_EVERYBODY_S 1 @VISION_MINE_ON_EVERYBODY 2 }
 			action { play "sound/interface/button1.wav" ; }
-			rect					32 578 384 22
+			rect					32 622 384 22
 			page					4
 			scroll					1
 			row						1
@@ -2283,7 +2324,7 @@
 			descText				@VISION_A_SANTA_HAT_AT_CHRISTMAS_AND_A_PUMPK
 			cvar					"v_seasonalCosmetics"
 			action { play "sound/interface/button1.wav" ; }
-			rect					32 600 384 22
+			rect					32 644 384 22
 			page					4
 			scroll					1
 			row						1
@@ -2303,7 +2344,7 @@
 			maxChars				32
 			maxPaintChars			24
 			action { play "sound/interface/button1.wav" ; }
-			rect					32 622 384 22
+			rect					32 666 384 22
 			page					4
 			scroll					1
 			row						1
@@ -2323,7 +2364,7 @@
 			maxChars				32
 			maxPaintChars			24
 			action { play "sound/interface/button1.wav" ; }
-			rect					32 644 384 22
+			rect					32 688 384 22
 			page					4
 			scroll					1
 			row						1
@@ -2341,7 +2382,7 @@
 			descText				@VISION_IN_TEAM_GAMES_EVERY_BLADE_IN_THE_COL
 			cvar					"v_saberTeamColors"
 			action { play "sound/interface/button1.wav" ; }
-			rect					32 666 384 22
+			rect					32 710 384 22
 			page					4
 			scroll					1
 			row						1
@@ -2359,7 +2400,7 @@
 			descText				@VISION_THE_SECOND_BLADE_OF_A_STAFF_IN_THE_S
 			cvar					"v_saberStaffColors"
 			action { play "sound/interface/button1.wav" ; }
-			rect					32 688 384 22
+			rect					32 732 384 22
 			page					4
 			scroll					1
 			row						1
@@ -2377,7 +2418,7 @@
 			descText				@VISION_SHOTS_DRAWN_AS_CRISPLY_AS_IN_JEDI_OU
 			cvar					"v_jk2Effects"
 			action { play "sound/interface/button1.wav" ; }
-			rect					32 710 384 22
+			rect					32 754 384 22
 			page					4
 			scroll					1
 			row						1
@@ -2396,7 +2437,7 @@
 			cvar					"v_disruptorBeam"
 			cvarFloatList { @VISION_GAME 0 @VISION_LINE 1 @VISION_SPIRAL 2 }
 			action { play "sound/interface/button1.wav" ; }
-			rect					32 732 384 22
+			rect					32 776 384 22
 			page					4
 			scroll					1
 			row						1

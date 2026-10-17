@@ -488,6 +488,75 @@ LANG_ENGLISH        "Everybody"
 REFERENCE           LOOKS
 LANG_ENGLISH        "Looks"
 
+REFERENCE           HAT
+LANG_ENGLISH        "Hat"
+
+REFERENCE           WHAT_YOU_WEAR_ON_YOUR_HEAD_OTHER_PLA
+LANG_ENGLISH        "What you wear on your head. Other players of VisionJK see it."
+
+REFERENCE           AFRO
+LANG_ENGLISH        "Afro"
+
+REFERENCE           BEARD
+LANG_ENGLISH        "Beard"
+
+REFERENCE           BUCKET
+LANG_ENGLISH        "Bucket"
+
+REFERENCE           CAP
+LANG_ENGLISH        "Cap"
+
+REFERENCE           PROPELLER_CAP
+LANG_ENGLISH        "Propeller Cap"
+
+REFERENCE           CROWN
+LANG_ENGLISH        "Crown"
+
+REFERENCE           FEDORA
+LANG_ENGLISH        "Fedora"
+
+REFERENCE           FEDORA_2
+LANG_ENGLISH        "Fedora 2"
+
+REFERENCE           FEDORA_3
+LANG_ENGLISH        "Fedora 3"
+
+REFERENCE           FEDORA_4
+LANG_ENGLISH        "Fedora 4"
+
+REFERENCE           GLASSES
+LANG_ENGLISH        "Glasses"
+
+REFERENCE           GRADUATION_CAP
+LANG_ENGLISH        "Graduation Cap"
+
+REFERENCE           HORNS
+LANG_ENGLISH        "Horns"
+
+REFERENCE           METAL_HELMET
+LANG_ENGLISH        "Metal Helmet"
+
+REFERENCE           PLAGUE_MASK
+LANG_ENGLISH        "Plague Mask"
+
+REFERENCE           SANTA_HAT
+LANG_ENGLISH        "Santa Hat"
+
+REFERENCE           SOMBRERO
+LANG_ENGLISH        "Sombrero"
+
+REFERENCE           TOP_HAT
+LANG_ENGLISH        "Top Hat"
+
+REFERENCE           CAPE
+LANG_ENGLISH        "Cape"
+
+REFERENCE           WHAT_YOU_WEAR_ON_YOUR_BACK_OTHER_PLA
+LANG_ENGLISH        "What you wear on your back. Other players of VisionJK see it."
+
+REFERENCE           ROYAL_CAPE
+LANG_ENGLISH        "Royal Cape"
+
 REFERENCE           HATS_AND_CAPES
 LANG_ENGLISH        "Hats and Capes"
 
