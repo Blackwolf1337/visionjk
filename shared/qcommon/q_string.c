@@ -18,6 +18,13 @@ int Q_isprint( int c )
 	return ( 0 );
 }
 
+// a character that may stand in a log or on a console as it is: printable ASCII without the quote, the percent
+// sign and the caret of the colour codes (VisionJK)
+int Q_isLogChar( int c )
+{
+	return ( c >= ' ' && c < 127 && c != '"' && c != '%' && c != '^' );
+}
+
 int Q_isprintext( int c )
 {
 	if ( c >= 0x20 && c <= 0x7E )

@@ -404,8 +404,7 @@ int CG_AgentKeys( agentKey_t *out, int max, int *total ) {
 		memcpy( out[n].pub, blob + 4 + AGENT_KEY_TYPE_LEN + 4, 32 );
 		for ( c = 0; c < commentLen && c < AGENT_COMMENT_SIZE - 1; c++ ) {
 			// it is printed on the console
-			out[n].comment[c] = ( comment[c] >= ' ' && comment[c] < 127 && comment[c] != '"' && comment[c] != '^' && comment[c] != '%' )
-				? (char)comment[c] : '_';
+			out[n].comment[c] = Q_isLogChar( comment[c] ) ? (char)comment[c] : '_';
 		}
 		out[n].comment[c] = '\0';
 		n++;

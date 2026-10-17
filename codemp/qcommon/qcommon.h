@@ -793,6 +793,8 @@ void	Com_LoadFrameEnd( void );
 int			Com_Filter(char *filter, char *name, int casesensitive);
 int			Com_FilterPath(char *filter, char *name, int casesensitive);
 int			Com_RealTime(qtime_t *qtime);
+const char	*Com_IDSDetail( const char *detail, int max );
+void		Com_IDSLine( fileHandle_t *file, const char *path, const char *line );
 qboolean	Com_SafeMode( void );
 void		Com_RunAndTimeServerPacket(const netadr_t *evFrom, msg_t *buf);
 

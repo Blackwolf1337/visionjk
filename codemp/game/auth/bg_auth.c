@@ -212,7 +212,7 @@ qboolean BG_AuthParsePublicLine( const char *line, byte *pub, char *comment, int
 		}
 		for ( n = 0; *p && *p != '\r' && *p != '\n' && n < commentSize - 1; p++ ) {
 			// it is printed on consoles and in the panel
-			comment[n++] = ( *p >= ' ' && *p < 127 && *p != '"' && *p != '^' && *p != '%' ) ? *p : '_';
+			comment[n++] = Q_isLogChar( (unsigned char)*p ) ? *p : '_';
 		}
 		comment[n] = '\0';
 	}
@@ -343,7 +343,7 @@ qboolean BG_AuthReadKeyFile( const char *text, byte *secret, char *comment, int 
 	memcpy( secret, data, AUTH_SECRET_SIZE );
 	if ( comment && commentSize > 0 && Auth_GetString( inner, innerSize, &pos, &data, &len ) ) {
 		for ( n = 0; n < len && n < commentSize - 1; n++ ) {
-			comment[n] = ( data[n] >= ' ' && data[n] < 127 && data[n] != '"' && data[n] != '^' && data[n] != '%' ) ? (char)data[n] : '_';
+			comment[n] = Q_isLogChar( data[n] ) ? (char)data[n] : '_';
 		}
 		comment[n] = '\0';
 	}

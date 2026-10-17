@@ -8,6 +8,7 @@ extern "C" {
 
 int Q_isprint( int c );
 int Q_isprintext( int c );
+int Q_isLogChar( int c );
 int Q_isgraph( int c );
 int Q_islower( int c );
 int Q_isupper( int c );

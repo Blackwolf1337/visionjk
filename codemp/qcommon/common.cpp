@@ -715,6 +715,52 @@ int Com_RealTime(qtime_t *qtime) {
 	return t;
 }
 
+/*
+================
+Com_IDSDetail
+
+What came with an event of the intrusion detection (client/cl_ids.cpp, server/sv_ids.cpp), as it may stand in
+a log and on a console: plain characters, at most max of them, and ".." when there was more.
+================
+*/
+const char *Com_IDSDetail( const char *detail, int max ) {
+	static char	clean[256 + 4];
+	int			n = 0;
+
+	if ( !detail ) {
+		return "";
+	}
+	max = Com_Clampi( 0, 256, max );
+	for ( ; *detail && n < max; detail++ ) {
+		clean[n++] = Q_isLogChar( (unsigned char)*detail ) ? *detail : '.';
+	}
+	if ( *detail ) {
+		clean[n++] = '.';
+		clean[n++] = '.';
+	}
+	clean[n] = '\0';
+	return clean;
+}
+
+// a line of the intrusion detection: into its log file, with the time in front, and onto the console
+void Com_IDSLine( fileHandle_t *file, const char *path, const char *line ) {
+	if ( !*file ) {
+		FS_FOpenFileByMode( path, file, FS_APPEND );
+	}
+	if ( *file ) {
+		qtime_t	t = {};		// (zeros where the system has no local time)
+		char	stamp[32];
+
+		Com_RealTime( &t );
+		Com_sprintf( stamp, sizeof( stamp ), "%04i-%02i-%02i %02i:%02i:%02i ", 1900 + t.tm_year, 1 + t.tm_mon, t.tm_mday, t.tm_hour, t.tm_min, t.tm_sec );
+		FS_Write( stamp, (int)strlen( stamp ), *file );
+		FS_Write( line, (int)strlen( line ), *file );
+		FS_Write( "\n", 1, *file );
+		FS_Flush( *file );
+	}
+	Com_Printf( S_COLOR_YELLOW "IDS: %s\n", line );
+}
+
 
 /*
 ===================================================================

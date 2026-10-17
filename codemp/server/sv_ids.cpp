@@ -151,21 +151,7 @@ static idsEntry_t *SV_IDS_Find( const netadr_t *from, qboolean create, int now )
 
 // a line into ids.log and onto the console
 static void SV_IDS_Write( const char *line ) {
-	if ( !ids_file ) {
-		FS_FOpenFileByMode( IDS_LOG, &ids_file, FS_APPEND );
-	}
-	if ( ids_file ) {
-		qtime_t	t;
-		char	stamp[32];
-
-		Com_RealTime( &t );
-		Com_sprintf( stamp, sizeof( stamp ), "%04i-%02i-%02i %02i:%02i:%02i ", 1900 + t.tm_year, 1 + t.tm_mon, t.tm_mday, t.tm_hour, t.tm_min, t.tm_sec );
-		FS_Write( stamp, (int)strlen( stamp ), ids_file );
-		FS_Write( line, (int)strlen( line ), ids_file );
-		FS_Write( "\n", 1, ids_file );
-		FS_Flush( ids_file );
-	}
-	Com_Printf( S_COLOR_YELLOW "IDS: %s\n", line );
+	Com_IDSLine( &ids_file, IDS_LOG, line );
 }
 
 // qtrue: there is room for another line in this second
@@ -188,27 +174,6 @@ static qboolean SV_IDS_LineRoom( int now ) {
 	}
 	ids_lines++;
 	return qtrue;
-}
-
-// what came with an event, as it may stand in a log and on a console: plain characters and not too many
-static const char *SV_IDS_Detail( const char *detail ) {
-	static char	clean[IDS_DETAIL + 4];
-	int			n = 0;
-
-	if ( !detail ) {
-		return "";
-	}
-	for ( ; *detail && n < IDS_DETAIL; detail++ ) {
-		const unsigned char c = (unsigned char)*detail;
-
-		clean[n++] = ( c >= ' ' && c < 127 && c != '"' && c != '%' && c != '^' ) ? (char)c : '.';
-	}
-	if ( *detail ) {
-		clean[n++] = '.';
-		clean[n++] = '.';
-	}
-	clean[n] = '\0';
-	return clean;
 }
 
 static qboolean SV_IDS_HasClient( const netadr_t *from ) {
@@ -265,10 +230,10 @@ void SV_IDS_Event( const netadr_t *from, client_t *cl, idsEvent_t event, const c
 	} else if ( SV_IDS_LineRoom( now ) ) {
 		char line[512];
 
-		Com_sprintf( line, sizeof( line ), "%s%s%s sent %s", NET_AdrToString( from ), cl ? " " : "", cl ? SV_IDS_Detail( cl->name ) : "",
+		Com_sprintf( line, sizeof( line ), "%s%s%s sent %s", NET_AdrToString( from ), cl ? " " : "", cl ? Com_IDSDetail( cl->name, IDS_DETAIL ) : "",
 			ids_events[event].name );
 		if ( detail && detail[0] ) {
-			Q_strcat( line, sizeof( line ), va( ": %s", SV_IDS_Detail( detail ) ) );
+			Q_strcat( line, sizeof( line ), va( ": %s", Com_IDSDetail( detail, IDS_DETAIL ) ) );
 		}
 		if ( e->lineSkipped && e->lineEvent == event ) {
 			Q_strcat( line, sizeof( line ), va( " (and %i more of it)", e->lineSkipped ) );

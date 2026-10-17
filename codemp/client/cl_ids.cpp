@@ -88,8 +88,7 @@ May not return: with cl_ids 1 the connection ends here when the server did it on
 */
 void CL_IDS_Event( clIdsEvent_t event, const netadr_t *from, const char *detail ) {
 	const int	now = Sys_Milliseconds();
-	char		line[512], clean[CLIDS_DETAIL + 4];
-	int			n = 0;
+	char		line[512];
 
 	if ( !cl_ids || !cl_ids->integer || event < 0 || event >= CLIDS_NUM_EVENTS ) {
 		return;
@@ -103,18 +102,10 @@ void CL_IDS_Event( clIdsEvent_t event, const netadr_t *from, const char *detail 
 		return;
 	}
 
-	// what came with it as it may stand in a log and on a console
-	for ( ; detail && *detail && n < CLIDS_DETAIL; detail++ ) {
-		const unsigned char c = (unsigned char)*detail;
-
-		clean[n++] = ( c >= ' ' && c < 127 && c != '"' && c != '%' && c != '^' ) ? (char)c : '.';
-	}
-	clean[n] = '\0';
-
 	Com_sprintf( line, sizeof( line ), "%s sent %s", from ? NET_AdrToString( from ) : va( "the server %s", NET_AdrToString( &clc.serverAddress ) ),
 		clIds_events[event].name );
-	if ( n ) {
-		Q_strcat( line, sizeof( line ), va( ": %s", clean ) );
+	if ( detail && *detail ) {
+		Q_strcat( line, sizeof( line ), va( ": %s", Com_IDSDetail( detail, CLIDS_DETAIL ) ) );
 	}
 	if ( clIds_skipped[event] ) {
 		Q_strcat( line, sizeof( line ), va( " (and %i more of it)", clIds_skipped[event] ) );
@@ -122,21 +113,7 @@ void CL_IDS_Event( clIdsEvent_t event, const netadr_t *from, const char *detail 
 	clIds_lineTime[event] = now ? now : 1;
 	clIds_skipped[event] = 0;
 
-	if ( !clIds_file ) {
-		FS_FOpenFileByMode( CLIDS_LOG, &clIds_file, FS_APPEND );
-	}
-	if ( clIds_file ) {
-		qtime_t	t;
-		char	stamp[32];
-
-		Com_RealTime( &t );
-		Com_sprintf( stamp, sizeof( stamp ), "%04i-%02i-%02i %02i:%02i:%02i ", 1900 + t.tm_year, 1 + t.tm_mon, t.tm_mday, t.tm_hour, t.tm_min, t.tm_sec );
-		FS_Write( stamp, (int)strlen( stamp ), clIds_file );
-		FS_Write( line, (int)strlen( line ), clIds_file );
-		FS_Write( "\n", 1, clIds_file );
-		FS_Flush( clIds_file );
-	}
-	Com_Printf( S_COLOR_YELLOW "IDS: %s\n", line );
+	Com_IDSLine( &clIds_file, CLIDS_LOG, line );
 
 	// only for what came over the connection: a connectionless packet can name any sender
 	if ( !from && clIds_events[event].leaveAt && clIds_counts[event] >= clIds_events[event].leaveAt
