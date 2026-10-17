@@ -281,6 +281,7 @@ static void CG_Obituary( entityState_t *ent ) {
 		message = (char *)CG_GetStringEdString("MP_INGAME", message);
 
 		trap->Print( "%s %s\n", targetName, message);
+		CG_KillfeedAdd( ENTITYNUM_WORLD, target, mod, va( "%s %s", targetName, message ) );
 		return;
 	}
 
@@ -460,12 +461,14 @@ clientkilled:
 
 			trap->Print( "%s %s %s\n",
 				targetName, message, attackerName);
+			CG_KillfeedAdd( attacker, target, mod, va( "%s %s %s", targetName, message, attackerName ) );
 			return;
 		}
 	}
 
 	// we don't know what it was
 	trap->Print( "%s %s\n", targetName, (char *)CG_GetStringEdString("MP_INGAME", "DIED_GENERIC") );
+	CG_KillfeedAdd( ENTITYNUM_WORLD, target, mod, va( "%s %s", targetName, CG_GetStringEdString( "MP_INGAME", "DIED_GENERIC" ) ) );
 }
 
 //==========================================================================

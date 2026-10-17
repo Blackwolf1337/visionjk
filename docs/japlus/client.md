@@ -316,6 +316,24 @@ cgame import: the clipboard both ways and the address. In a stock `jamp.exe` the
 typing stays with the line of the engine. Not run: nobody has seen the box.
 
 
+### HUD parts of TaystJK
+
+Taken over from TaystJK on 2026-10-17. They are drawn by this tree's cgame, so they work on every server it runs
+on, and nobody has to download anything for them.
+
+The killfeed (`cgame/hud/cg_killfeed.c`, after TaystJK's `hud_obituary.c`) is at the right edge, under the FPS,
+the timer and the team overlay. Each line shows who killed whom with what, and fades out. The icons are the weapon
+icons of the game, plus the sentry and the dark force. A death without a weapon to show (a fall, lava, a
+telefrag, a death by oneself) is the console's sentence, in the language of the game. The box behind a name has
+the team colour, green for oneself and grey for everyone else. The obituary line in the console stays as it was.
+
+| Cvar | Default | Meaning |
+|------|---------|---------|
+| `v_killfeed` | 1 | the killfeed, 0 none |
+| `v_killfeedSize` | 1 | its size, 0.5 to 2 |
+| `v_killfeedTime` | 5000 | milliseconds a line stays, the last second fading |
+| `v_killfeedX`, `v_killfeedY` | 0 | moves it left and down |
+
 ### Chat bubbles
 
 `cgame/bubble/cg_bubble.c` (2026-10-11). What a player says in the chat stands above his head for 2.5 to 8

@@ -4183,6 +4183,8 @@ static void CG_DrawUpperRight( void ) {
 
 	y = CG_DrawMiniScoreboard ( y );
 
+	y = CG_KillfeedDraw( y );
+
 	CG_DrawPowerupIcons(y);
 }
 
