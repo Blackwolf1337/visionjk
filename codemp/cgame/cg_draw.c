@@ -3928,6 +3928,9 @@ static float CG_DrawTeamOverlay( float y, qboolean right, qboolean upper ) {
 	gitem_t	*item;
 	int ret_y, count;
 	int xOffset = 0;
+	// the size of the overlay (v_teamOverlayScale, 2026-10-17 as TaystJK)
+	const float scale = Com_Clamp( 0.5f, 2.5f, v_teamOverlayScale.value );
+	const int cw = (int)( TINYCHAR_WIDTH * scale + 0.5f ), ch = (int)( TINYCHAR_HEIGHT * scale + 0.5f );
 
 	if ( !cg_drawTeamOverlay.integer ) {
 		return y;
@@ -3975,14 +3978,14 @@ static float CG_DrawTeamOverlay( float y, qboolean right, qboolean upper ) {
 	if (lwidth > TEAM_OVERLAY_MAXLOCATION_WIDTH)
 		lwidth = TEAM_OVERLAY_MAXLOCATION_WIDTH;
 
-	w = (pwidth + lwidth + 4 + 7) * TINYCHAR_WIDTH;
+	w = (pwidth + lwidth + 4 + 7) * cw;
 
 	if ( right )
 		x = 640 - w;
 	else
 		x = 0;
 
-	h = plyrs * TINYCHAR_HEIGHT;
+	h = plyrs * ch;
 
 	if ( upper ) {
 		ret_y = y + h;
@@ -4012,11 +4015,11 @@ static float CG_DrawTeamOverlay( float y, qboolean right, qboolean upper ) {
 
 			hcolor[0] = hcolor[1] = hcolor[2] = hcolor[3] = 1.0;
 
-			xx = x + TINYCHAR_WIDTH;
+			xx = x + cw;
 
 			CG_DrawStringExt( xx + xOffset, y,
 				ci->name, hcolor, qfalse, qfalse,
-				TINYCHAR_WIDTH, TINYCHAR_HEIGHT, TEAM_OVERLAY_MAXNAME_WIDTH);
+				cw, ch, TEAM_OVERLAY_MAXNAME_WIDTH);
 
 			if (lwidth) {
 				p = CG_GetLocationString(CG_ConfigString(CS_LOCATIONS+ci->location));
@@ -4026,11 +4029,11 @@ static float CG_DrawTeamOverlay( float y, qboolean right, qboolean upper ) {
 				if (len > lwidth)
 					len = lwidth;
 
-//				xx = x + TINYCHAR_WIDTH * 2 + TINYCHAR_WIDTH * pwidth +
-//					((lwidth/2 - len/2) * TINYCHAR_WIDTH);
-				xx = x + TINYCHAR_WIDTH * 2 + TINYCHAR_WIDTH * pwidth;
+//				xx = x + cw * 2 + cw * pwidth +
+//					((lwidth/2 - len/2) * cw);
+				xx = x + cw * 2 + cw * pwidth;
 				CG_DrawStringExt( xx + xOffset, y,
-					p, hcolor, qfalse, qfalse, TINYCHAR_WIDTH, TINYCHAR_HEIGHT,
+					p, hcolor, qfalse, qfalse, cw, ch,
 					TEAM_OVERLAY_MAXLOCATION_WIDTH);
 			}
 
@@ -4038,29 +4041,40 @@ static float CG_DrawTeamOverlay( float y, qboolean right, qboolean upper ) {
 
 			Com_sprintf (st, sizeof(st), "%3i %3i", ci->health,	ci->armor);
 
-			xx = x + TINYCHAR_WIDTH * 3 +
-				TINYCHAR_WIDTH * pwidth + TINYCHAR_WIDTH * lwidth;
+			xx = x + cw * 3 +
+				cw * pwidth + cw * lwidth;
 
 			CG_DrawStringExt( xx + xOffset, y,
 				st, hcolor, qfalse, qfalse,
-				TINYCHAR_WIDTH, TINYCHAR_HEIGHT, 0 );
+				cw, ch, 0 );
 
-			// draw weapon icon
-			xx += TINYCHAR_WIDTH * 3;
+			// health and armour as a bar under the numbers (v_teamOverlayBar), full at v_teamOverlayMaxHP
+			if ( v_teamOverlayBar.integer ) {
+				const float full = Q_max( 1.0f, v_teamOverlayMaxHP.value );
+				const float frac = Com_Clamp( 0.0f, 1.0f, ( ci->health + ci->armor ) / full );
 
-			if ( cg_weapons[ci->curWeapon].weaponIcon ) {
-				CG_DrawPic( xx + xOffset, y, TINYCHAR_WIDTH, TINYCHAR_HEIGHT,
-					cg_weapons[ci->curWeapon].weaponIcon );
-			} else {
-				CG_DrawPic( xx + xOffset, y, TINYCHAR_WIDTH, TINYCHAR_HEIGHT,
-					cgs.media.deferShader );
+				hcolor[3] = 0.8f;
+				CG_FillRect( xx + xOffset, y + ch - Q_max( 1.0f, scale ), cw * 7 * frac, Q_max( 1.0f, scale ), hcolor );
+			}
+
+			// draw weapon icon: after the seven characters of the numbers (the game put it on the armour), with the
+			// icons of all weapons registered at the start (cg_weapons[] has only those seen yet)
+			xx += cw * 7;
+
+			if ( v_teamOverlayWeapons.integer && ci->curWeapon > WP_NONE && ci->curWeapon < WP_NUM_WEAPONS ) {
+				const qhandle_t icon = cgs.media.weaponIcons[ci->curWeapon] ? cgs.media.weaponIcons[ci->curWeapon]
+					: cg_weapons[ci->curWeapon].weaponIcon;
+
+				if ( icon ) {
+					CG_DrawPic( xx + xOffset, y, cw, ch, icon );
+				}
 			}
 
 			// Draw powerup icons
 			if (right) {
 				xx = x;
 			} else {
-				xx = x + w - TINYCHAR_WIDTH;
+				xx = x + w - cw;
 			}
 			for (j = 0; j < PW_NUM_POWERUPS; j++) {
 				if (ci->powerups & (1 << j)) {
@@ -4068,18 +4082,18 @@ static float CG_DrawTeamOverlay( float y, qboolean right, qboolean upper ) {
 					item = BG_FindItemForPowerup( j );
 
 					if (item) {
-						CG_DrawPic( xx + xOffset, y, TINYCHAR_WIDTH, TINYCHAR_HEIGHT,
+						CG_DrawPic( xx + xOffset, y, cw, ch,
 						trap->R_RegisterShader( item->icon ) );
 						if (right) {
-							xx -= TINYCHAR_WIDTH;
+							xx -= cw;
 						} else {
-							xx += TINYCHAR_WIDTH;
+							xx += cw;
 						}
 					}
 				}
 			}
 
-			y += TINYCHAR_HEIGHT;
+			y += ch;
 		}
 	}
 

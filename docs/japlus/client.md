@@ -356,6 +356,17 @@ he wishes is his full one.
 Not tried in the game: how it feels while running, and whether the angles of the bars are right to the degree.
 They were only checked against the formulas.
 
+The team overlay (`cg_drawTeamOverlay 1`, `CG_DrawTeamOverlay` in `cg_draw.c`) got TaystJK's extras:
+
+| Cvar | Default | Meaning |
+|------|---------|---------|
+| `v_teamOverlayScale` | 1 | its size, 0.5 to 2.5 |
+| `v_teamOverlayWeapons` | 1 | the weapon each one holds, after the numbers. The game drew it on the armour number, and with a `?` for a weapon not seen yet. Now it uses the icons of all weapons, registered at the start |
+| `v_teamOverlayBar` | 1 | health and armour as a thin bar under the numbers, in their colour |
+| `v_teamOverlayMaxHP` | 200 | health and armour that fill the bar |
+
+There are no force points: only jaPRO servers send them.
+
 ### Chat bubbles
 
 `cgame/bubble/cg_bubble.c` (2026-10-11). What a player says in the chat stands above his head for 2.5 to 8
