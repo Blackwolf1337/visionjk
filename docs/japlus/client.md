@@ -398,6 +398,8 @@ Taken over from TaystJK on 2026-10-17. They only change what this player sees.
 | `v_jk2Effects` | 0 | engine (`client/FxScheduler.cpp`, TaystJK's `fx_jk2`): the parts of 30 shot effects (blaster, bryar, flechette, repeater, rocket, turrets, vehicles ...) live one millisecond where their file gives no life, so a shot is drawn where it is in this frame without the smear of the frames before, as in Jedi Outcast. Counts from the next level (the effects are read at a level's start). No files of Jedi Outcast are needed |
 | `v_disruptorBeam` | 0 | the disruptor shot as a line with a glow, 1, or with a spiral of sparks around it as the rail of Quake 3, 2 (TaystJK's `cg_disruptorNew` and `cg_disruptorSpiral`). 0 the shot of the game |
 | `v_disruptorColor` | empty | its colour, `r g b` from 0 to 1, empty cyan. In team games the team's colour |
+| `v_strafeTrail` | 0 | strafe trails as jaPRO and TaystJK have them (`cg_strafetrail.c`): a glowing line on the ground along where a player ran, 1 oneself, 2 everybody. Oneself green, the teams in their colours, the others white. Only from the places this client sees anyway |
+| `v_strafeTrailLife` | 3 | seconds a trail takes to fade, 0.5 to 30 |
 
 These work without `cg_forceModel`, which puts everybody in one's own model. When both are set, these two win for the players they cover. A model
 this machine lacks shows as the model of the game, as with any player. When one's own team changes, everybody

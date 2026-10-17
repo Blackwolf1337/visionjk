@@ -1876,6 +1876,9 @@ float CG_KillfeedDraw( float y );
 qboolean CG_IsAlly( team_t team );
 void CG_ForcedModelsCheck( void );
 
+// cg_strafetrail.c
+void CG_StrafeTrailsAdd( void );
+
 // hud/cg_movehud.c
 void CG_MoveHudDraw( void );
 void CG_DrawStretchPic( float x, float y, float w, float h, float s1, float t1, float s2, float t2, qhandle_t hShader );
