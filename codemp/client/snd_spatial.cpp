@@ -165,9 +165,10 @@ SPATIAL_FUNCTIONS( X )
 // few standard materials (phonon.h, IPLMaterial). Which material of the game goes with which of them is a
 // choice made here. The last entry is the sky: what reaches it is gone, open air gives no echo.
 //
-// A wall of a level is a brush, and a sound that goes through it crosses two of its sides. Valve's numbers for
-// what a material lets through are taken for the wall as a whole, so the mesh gets the square root of each for
-// a side (S_SpatialLoadMap): the two sides together are the number again.
+// A wall of a level is a brush, and a sound that goes through it crosses two of its sides. Steam Audio takes the
+// square root of what all the sides it crossed let through when there are more than one
+// (DirectSimulator::transmission), so Valve's numbers are for a wall and go into the mesh as they are. Until
+// 2026-10-17 the mesh had their square root, and a wall let through the square root of the number.
 enum {
 	SPATIAL_GENERIC, SPATIAL_BRICK, SPATIAL_CONCRETE, SPATIAL_CERAMIC, SPATIAL_GRAVEL, SPATIAL_CARPET, SPATIAL_GLASS,
 	SPATIAL_PLASTER, SPATIAL_WOOD, SPATIAL_METAL, SPATIAL_ROCK, SPATIAL_SKY, SPATIAL_NUM_MATERIALS
@@ -1134,13 +1135,7 @@ void S_SpatialLoadMap( const char *mapname ) {
 			Com_BlockChecksum( build.vertices, build.count * 3 * (int)sizeof( IPLVector3 ) ) );
 	}
 
-	// what a side of a wall lets through, see spatialMaterials
-	for ( int i = 0; i < SPATIAL_NUM_MATERIALS; i++ ) {
-		materials[i] = spatialMaterials[i];
-		for ( int k = 0; k < IPL_NUM_BANDS; k++ ) {
-			materials[i].transmission[k] = sqrtf( spatialMaterials[i].transmission[k] );
-		}
-	}
+	memcpy( materials, spatialMaterials, sizeof( materials ) );
 
 	memset( &meshSettings, 0, sizeof( meshSettings ) );
 	meshSettings.numVertices = build.count * 3;
