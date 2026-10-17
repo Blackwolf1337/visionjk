@@ -460,15 +460,33 @@ Who sees them is every player of this tree, on any server:
   chat linked to the master, as the statuses do. The master hands it only to clients that send looks themselves,
   so a VisionJK client from before never gets a type it does not know. A look the master did not say again for 15
   seconds is over.
+- TaystJK's way, so its players and those of this tree see each other's hats on any server (2026-10-18): the name
+  after the digits of the saber colours. `color1` "3tophat" is the saber colour 3 and the hat tophat, `color2` the
+  cape. The cgame writes the own hat and cape there once a second (a server keeps 15 characters, so a name that
+  does not fit with the digits is left out, TaystJK takes 14 at most) and reads the others' from `c1` and `c2` of
+  their info. The game module, a stock one and as far as known any other passes the text on as it is. Everything
+  that reads a saber colour reads the number in front alone (`atoi`), the menus too, so the colour stays.
+- On a server of jaPRO: `c5` of a player's info, a bit for every jaPRO cosmetic he unlocked there (the userinfo
+  `cp_cosmetics`, which the server checks). All 32 bits are models shipped here. A mask, a beard, the plague mask
+  or the glasses are worn with a hat, the goose with a cape, as TaystJK draws them. `cp_cosmetics` is written from
+  the own hat and cape, so a jaPRO server shows them where its player unlocked them.
+- What decides: what a player says through the server or the masterserver, else the names in his saber colours,
+  else the bits of jaPRO. `tay_cosmetics` lists for each player what he wears and how it came.
 - A player whose hat this machine lacks wears none here. Legacy clients see no hat at all: they would need the
   models by download.
+
+Nothing else passes between TaystJK clients: they share the stock JA+ things (RGB sabers in `c3` and `c4`, the
+typing flag) with this tree already, the camera and net settings in their userinfo go to the server alone, and
+the emoji are text in the chat (TaystJK's emotes of Twitch stay text here).
 
 The server part (game module and masterserver) only works once those run this build on the host.
 
 Checked on 2026-10-17 with two hidden clients of the build (`agent/japlus_port/tools/looktest.sh`). One wore a
 stand-in hat and cape (a coffee pot of the game, copied into the test profiles only), the other said with
 `tay_cosmetics` what it heard: "hat coffeepot, cape potcape", through the server of the build, and with `MASTER=1`
-through the masterserver of the build on a server with the stand-in for a foreign module. The first runs found
+through the masterserver of the build on a server with the stand-in for a foreign module. On 2026-10-18 the
+same with `MASTER=1 NOMASTER=1`, a server that passes nothing on and no master: "hat crown, cape goose, in the saber
+colours (TaystJK)". The bits of jaPRO were not tried, there is no jaPRO server here. The first runs found
 two faults: the arguments of `tay_look` were read from one buffer, so the cape came as the hat, and
 `BG_VoiceUnpack` refused the new packet type. In a level the stand-in hat sat on the head of a bot
 (`tay_showCosmetics 2`) and the cape on his back. All hats and capes were then looked at on the own player in a level, the hats from the front, the capes from

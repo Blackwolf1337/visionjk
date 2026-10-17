@@ -1628,6 +1628,10 @@ void CG_NewClientInfo( int clientNum, qboolean entitiesInitialized ) {
 	// JA+ RGB sabers
 	newInfo.sbRGB[0] = atoi( Info_ValueForKey( configstring, "c3" ) );
 	newInfo.sbRGB[1] = atoi( Info_ValueForKey( configstring, "c4" ) );
+
+	// TaystJK's hats after the digits of the saber colours, and the cosmetics of a jaPRO server (look/cg_look.c)
+	CG_LookPlayerInfo( clientNum, Info_ValueForKey( configstring, "c1" ), Info_ValueForKey( configstring, "c2" ),
+		Info_ValueForKey( configstring, "c5" ) );
 	// (the plugin takes model 1 when the server names none)
 	v = Info_ValueForKey( configstring, "hm" );
 	newInfo.holsterModel = v[0] ? atoi( v ) : 1;

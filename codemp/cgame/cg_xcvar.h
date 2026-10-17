@@ -44,6 +44,8 @@ XCVAR_DEF( cl_yawspeed,							"140",					NULL,					CVAR_ARCHIVE )	// (engine cva
 XCVAR_DEF( cp_pluginDisable,						"0",					NULL,					CVAR_USERINFO|CVAR_ARCHIVE )
 XCVAR_DEF( cp_sbRGB1,							"0",					NULL,					CVAR_USERINFO|CVAR_ARCHIVE )
 XCVAR_DEF( cp_sbRGB2,							"0",					NULL,					CVAR_USERINFO|CVAR_ARCHIVE )
+// the cosmetics of a jaPRO server for the own hat and cape, written by look/cg_look.c (the name of jaPRO and TaystJK)
+XCVAR_DEF( cp_cosmetics,						"0",					NULL,					CVAR_USERINFO )
 XCVAR_DEF( cp_holster,							"1",					NULL,					CVAR_USERINFO )
 XCVAR_DEF( cp_login,							"NOT SET",				NULL,					CVAR_USERINFO|CVAR_ARCHIVE )
 XCVAR_DEF( cp_clanPwd,							"none",					NULL,					CVAR_USERINFO|CVAR_ARCHIVE )

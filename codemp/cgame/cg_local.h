@@ -1885,6 +1885,7 @@ void CG_LookFrame( void );
 void CG_LookServerCommand( void );
 void CG_LookFromMaster( int client, const char *text );
 void CG_LookClear( int client );
+void CG_LookPlayerInfo( int client, const char *c1, const char *c2, const char *c5 );
 void CG_LookDraw( centity_t *cent, clientInfo_t *ci, const refEntity_t *body );
 void CG_Cosmetics_f( void );
 qboolean CG_VoiceLooks( void );

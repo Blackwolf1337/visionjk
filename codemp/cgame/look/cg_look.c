@@ -26,6 +26,13 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // this tree through the game module (status/g_status.c, the commands tay_look), on any other through the
 // masterserver (VOICE_LOOK, voice/cg_voice.c). Legacy clients see nothing: they would need the models. A player
 // whose hat this machine lacks wears none here.
+//
+// And TaystJK's ways, so its players and these see each other's hats (2026-10-17):
+// - the name after the digits of the saber colours: color1 "3tophat" is the saber colour 3 and the hat tophat,
+//   color2 the cape. Every server hands the colours to every player as they are (c1, c2 of the player's info),
+//   a legacy client reads the number alone. This file writes the own hat and cape there and reads the others'.
+// - on a server of jaPRO, c5: a bit for every jaPRO cosmetic the player unlocked there (cp_cosmetics of his
+//   userinfo, which the server checks). Read here, and cp_cosmetics is written from the own hat and cape.
 
 #include "cgame/cg_local.h"
 
@@ -51,13 +58,47 @@ typedef struct {
 	qhandle_t	model;			// registered when first worn, -1: it does not load
 } lookItem_t;
 
+// where a piece sits: the hat and the cape, and from the bits of jaPRO also a mask or a beard with a hat and the
+// goose with a cape
+typedef enum {
+	LOOK_SLOT_HAT,
+	LOOK_SLOT_CAPE,
+	LOOK_SLOT_FACE,
+	LOOK_SLOT_PET,
+	LOOK_SLOTS
+} lookSlot_t;
+
 typedef struct {
-	char		worn[LOOK_KINDS][LOOK_NAME];	// what he says he wears, "" none
-	int			masterTime;						// when the masterserver last said it, 0: from the server or nobody
+	char			worn[LOOK_KINDS][LOOK_NAME];	// what he says he wears, "" none
+	int				masterTime;						// when the masterserver last said it, 0: from the server or nobody
+	char			saber[LOOK_KINDS][LOOK_NAME];	// the names after the digits of his saber colours (TaystJK)
+	unsigned int	japro;							// c5 of his info, the cosmetics of a jaPRO server
 	// the offsets of the .cosmetic file for what he wears on his model and skin
-	char		offsetKey[LOOK_KINDS][LOOK_NAME + MAX_QPATH * 2];
-	vec3_t		offset[LOOK_KINDS];
+	char			offsetKey[LOOK_SLOTS][LOOK_NAME + MAX_QPATH * 2];
+	vec3_t			offset[LOOK_SLOTS];
 } lookClient_t;
+
+// the bits of c5 (JAPRO_COSMETIC_* of jaPRO and TaystJK), each with its piece and slot. Of several in one slot the
+// first one here is worn, as TaystJK draws them
+static const struct {
+	const char	*name;
+	lookSlot_t	slot;
+	int			bit;
+} lookJapro[] = {
+	{ "santahat", LOOK_SLOT_HAT, 0 }, { "pumpkin", LOOK_SLOT_HAT, 1 }, { "cap", LOOK_SLOT_HAT, 2 },
+	{ "fedora", LOOK_SLOT_HAT, 3 }, { "cringe", LOOK_SLOT_HAT, 4 }, { "sombrero", LOOK_SLOT_HAT, 5 },
+	{ "tophat", LOOK_SLOT_HAT, 6 }, { "gradcap", LOOK_SLOT_HAT, 8 }, { "fedora2", LOOK_SLOT_HAT, 10 },
+	{ "fedora3", LOOK_SLOT_HAT, 11 }, { "fedora4", LOOK_SLOT_HAT, 12 }, { "headcrab", LOOK_SLOT_HAT, 13 },
+	{ "horns", LOOK_SLOT_HAT, 16 }, { "metalhelm", LOOK_SLOT_HAT, 17 }, { "afro", LOOK_SLOT_HAT, 18 },
+	{ "bucket", LOOK_SLOT_HAT, 20 }, { "crown", LOOK_SLOT_HAT, 22 }, { "mario", LOOK_SLOT_HAT, 28 },
+	{ "predatorhelm", LOOK_SLOT_HAT, 30 }, { "supersaiyan", LOOK_SLOT_HAT, 31 },
+	{ "mask", LOOK_SLOT_FACE, 7 }, { "beard", LOOK_SLOT_FACE, 24 }, { "plaguemask", LOOK_SLOT_FACE, 26 },
+	{ "glasses", LOOK_SLOT_FACE, 27 },
+	{ "goose", LOOK_SLOT_PET, 9 },
+	{ "vadercape", LOOK_SLOT_CAPE, 14 }, { "yodacape", LOOK_SLOT_CAPE, 15 }, { "ak47", LOOK_SLOT_CAPE, 19 },
+	{ "crowbar", LOOK_SLOT_CAPE, 21 }, { "royalcape", LOOK_SLOT_CAPE, 23 }, { "grogucape", LOOK_SLOT_CAPE, 25 },
+	{ "rpg", LOOK_SLOT_CAPE, 29 },
+};
 
 static struct {
 	lookItem_t		items[LOOK_KINDS][LOOK_MAX_ITEMS];
@@ -71,6 +112,7 @@ static struct {
 	int				sendTime;
 	int				firstFrame;
 	int				masterTime;					// when it was last said to the masterserver
+	int				saberTime;					// when the saber colours and cp_cosmetics were last looked at
 } look;
 
 static void Look_List( void ) {
@@ -198,10 +240,78 @@ void CG_LookFromMaster( int client, const char *text ) {
 	look.clients[client].masterTime = cg.time ? cg.time : 1;
 }
 
+// the name after the digits of a saber colour, "" none
+static void Look_SaberName( const char *color, char *out, int outSize ) {
+	while ( *color >= '0' && *color <= '9' ) {
+		color++;
+	}
+	Look_Clean( color, out, outSize );
+}
+
+/*
+=================
+CG_LookPlayerInfo
+
+From CG_NewClientInfo: the saber colours and c5 of a player's info (TaystJK's hats, see the top of this file)
+=================
+*/
+void CG_LookPlayerInfo( int client, const char *c1, const char *c2, const char *c5 ) {
+	lookClient_t *lc;
+
+	if ( client < 0 || client >= MAX_CLIENTS ) {
+		return;
+	}
+	lc = &look.clients[client];
+	Look_SaberName( c1, lc->saber[LOOK_HAT], sizeof( lc->saber[0] ) );
+	Look_SaberName( c2, lc->saber[LOOK_CAPE], sizeof( lc->saber[0] ) );
+	lc->japro = (unsigned int)strtoul( c5, NULL, 10 );
+}
+
 // a player left, or this slot is somebody else now (CG_NewClientInfo)
 void CG_LookClear( int client ) {
 	if ( client >= 0 && client < MAX_CLIENTS ) {
 		memset( &look.clients[client], 0, sizeof( look.clients[0] ) );
+	}
+}
+
+// The own hat or cape after the digits of a saber colour, for TaystJK. A server keeps 15 characters of it: a
+// name that does not fit is left out (TaystJK takes 14 at most)
+static void Look_WriteSaber( const char *cvar, const char *wearing ) {
+	char	value[64], wanted[64], name[LOOK_NAME];
+	int		digits = 0;
+
+	trap->Cvar_VariableStringBuffer( cvar, value, sizeof( value ) );
+	while ( value[digits] >= '0' && value[digits] <= '9' && digits < 8 ) {
+		digits++;
+	}
+	if ( !digits ) {
+		return;		// no colour to hang it on
+	}
+	Look_Clean( wearing, name, sizeof( name ) );
+	Q_strncpyz( wanted, value, digits + 1 );
+	if ( name[0] && digits + strlen( name ) <= 15 ) {
+		Q_strcat( wanted, sizeof( wanted ), name );
+	}
+	if ( strcmp( wanted, value ) ) {
+		trap->Cvar_Set( cvar, wanted );
+	}
+}
+
+// cp_cosmetics: the bits of jaPRO for the own hat and cape. A jaPRO server shows those its player unlocked
+static void Look_WriteJapro( void ) {
+	char			hat[LOOK_NAME], cape[LOOK_NAME];
+	unsigned int	bits = 0;
+	size_t			i;
+
+	Look_Clean( tay_hat.string, hat, sizeof( hat ) );
+	Look_Clean( tay_cape.string, cape, sizeof( cape ) );
+	for ( i = 0; i < ARRAY_LEN( lookJapro ); i++ ) {
+		if ( ( hat[0] && !Q_stricmp( hat, lookJapro[i].name ) ) || ( cape[0] && !Q_stricmp( cape, lookJapro[i].name ) ) ) {
+			bits |= 1u << lookJapro[i].bit;
+		}
+	}
+	if ( (unsigned int)strtoul( cp_cosmetics.string, NULL, 10 ) != bits ) {
+		trap->Cvar_Set( "cp_cosmetics", va( "%u", bits ) );
 	}
 }
 
@@ -244,6 +354,13 @@ void CG_LookFrame( void ) {
 	} else if ( CG_VoiceLooks() && ( !look.masterTime || now - look.masterTime >= LOOK_MASTER_MSEC ) ) {
 		CG_VoiceSendLook( own );
 		look.masterTime = now;
+	}
+
+	if ( !look.saberTime || now - look.saberTime >= 1000 ) {
+		look.saberTime = now ? now : 1;
+		Look_WriteSaber( "color1", tay_hat.string );
+		Look_WriteSaber( "color2", tay_cape.string );
+		Look_WriteJapro();
 	}
 
 	for ( i = 0; i < MAX_CLIENTS; i++ ) {
@@ -488,29 +605,42 @@ Drawing
 ===============================================================================
 */
 
-// what this player wears here: his own, or with tay_showCosmetics 2 the own one; a seasonal hat for one without
-static const char *Look_Worn( int client, lookKind_t kind ) {
-	const int	source = ( tay_showCosmetics.integer == 2 || ( cg.snap && client == cg.snap->ps.clientNum ) ) ? -1 : client;
-	static char	own[LOOK_NAME];
-	const char	*name;
+// What this player wears here, by slot: his own (oneself, or everybody with tay_showCosmetics 2 the own ones), else
+// what he says through the server or the masterserver, else the names in his saber colours (TaystJK), else the
+// bits of a jaPRO server; and a seasonal hat for one without. "" none
+static void Look_Wears( int client, const char *out[LOOK_SLOTS] ) {
+	static char			own[LOOK_KINDS][LOOK_NAME];
+	const lookClient_t	*lc = &look.clients[client];
+	int					slot;
+	size_t				i;
 
-	if ( source < 0 ) {
-		Look_Clean( kind == LOOK_HAT ? tay_hat.string : tay_cape.string, own, sizeof( own ) );
-		name = own;
-	} else {
-		name = look.clients[source].worn[kind];
+	for ( slot = 0; slot < LOOK_SLOTS; slot++ ) {
+		out[slot] = "";
 	}
-	if ( !name[0] && kind == LOOK_HAT && tay_seasonalCosmetics.integer ) {
+	if ( tay_showCosmetics.integer == 2 || ( cg.snap && client == cg.snap->ps.clientNum ) ) {
+		Look_Clean( tay_hat.string, own[LOOK_HAT], sizeof( own[0] ) );
+		Look_Clean( tay_cape.string, own[LOOK_CAPE], sizeof( own[0] ) );
+		out[LOOK_SLOT_HAT] = own[LOOK_HAT];
+		out[LOOK_SLOT_CAPE] = own[LOOK_CAPE];
+	} else {
+		out[LOOK_SLOT_HAT] = lc->worn[LOOK_HAT][0] ? lc->worn[LOOK_HAT] : lc->saber[LOOK_HAT];
+		out[LOOK_SLOT_CAPE] = lc->worn[LOOK_CAPE][0] ? lc->worn[LOOK_CAPE] : lc->saber[LOOK_CAPE];
+		for ( i = 0; i < ARRAY_LEN( lookJapro ); i++ ) {
+			if ( ( lc->japro & ( 1u << lookJapro[i].bit ) ) && !out[lookJapro[i].slot][0] ) {
+				out[lookJapro[i].slot] = lookJapro[i].name;
+			}
+		}
+	}
+	if ( !out[LOOK_SLOT_HAT][0] && tay_seasonalCosmetics.integer ) {
 		qtime_t now;
 
 		trap->RealTime( &now );
 		if ( ( now.tm_mon == 10 && now.tm_mday > 21 ) || now.tm_mon == 11 || ( now.tm_mon == 0 && now.tm_mday < 8 ) ) {
-			name = "santahat";
+			out[LOOK_SLOT_HAT] = "santahat";
 		} else if ( now.tm_mon == 9 && now.tm_mday == 31 ) {
-			name = "pumpkin";
+			out[LOOK_SLOT_HAT] = "pumpkin";
 		}
 	}
-	return name;
 }
 
 /*
@@ -522,7 +652,8 @@ From CG_Player, with the refEntity of the body
 */
 void CG_LookDraw( centity_t *cent, clientInfo_t *ci, const refEntity_t *body ) {
 	const int	client = cent->currentState.number;
-	int			kind;
+	const char	*wears[LOOK_SLOTS];
+	int			slot;
 
 	if ( !tay_showCosmetics.integer || client < 0 || client >= MAX_CLIENTS || !cent->ghoul2 || !cg.snap ) {
 		return;
@@ -542,8 +673,11 @@ void CG_LookDraw( centity_t *cent, clientInfo_t *ci, const refEntity_t *body ) {
 		return;
 	}
 
-	for ( kind = 0; kind < LOOK_KINDS; kind++ ) {
-		lookItem_t		*item = Look_Find( (lookKind_t)kind, Look_Worn( client, (lookKind_t)kind ) );
+	Look_Wears( client, wears );
+	for ( slot = 0; slot < LOOK_SLOTS; slot++ ) {
+		// a mask or a beard is a hat of jaPRO, the goose a cape: their folders and bolts
+		const lookKind_t kind = ( slot == LOOK_SLOT_CAPE || slot == LOOK_SLOT_PET ) ? LOOK_CAPE : LOOK_HAT;
+		lookItem_t		*item = wears[slot][0] ? Look_Find( kind, wears[slot] ) : NULL;
 		lookClient_t	*lc = &look.clients[client];
 		char			key[sizeof( lc->offsetKey[0] )];
 		mdxaBone_t		matrix;
@@ -551,13 +685,13 @@ void CG_LookDraw( centity_t *cent, clientInfo_t *ci, const refEntity_t *body ) {
 		refEntity_t		re;
 		int				bolt;
 
-		if ( !item || !Look_Model( (lookKind_t)kind, item ) ) {
+		if ( !item || !Look_Model( kind, item ) ) {
 			continue;
 		}
 		Com_sprintf( key, sizeof( key ), "%s %s %s", item->name, ci->modelName, ci->skinName );
-		if ( strcmp( key, lc->offsetKey[kind] ) ) {
-			Q_strncpyz( lc->offsetKey[kind], key, sizeof( lc->offsetKey[kind] ) );
-			Look_LoadOffsets( (lookKind_t)kind, item->name, ci->modelName, ci->skinName, lc->offset[kind] );
+		if ( strcmp( key, lc->offsetKey[slot] ) ) {
+			Q_strncpyz( lc->offsetKey[slot], key, sizeof( lc->offsetKey[slot] ) );
+			Look_LoadOffsets( kind, item->name, ci->modelName, ci->skinName, lc->offset[slot] );
 		}
 
 		bolt = trap->G2API_AddBolt( cent->ghoul2, 0, lookBolt[kind] );
@@ -575,11 +709,11 @@ void CG_LookDraw( centity_t *cent, clientInfo_t *ci, const refEntity_t *body ) {
 		BG_GiveMeVectorFromMatrix( &matrix, POSITIVE_Y, re.axis[1] );
 		BG_GiveMeVectorFromMatrix( &matrix, POSITIVE_Z, re.axis[2] );
 
-		VectorMA( origin, -2.0f + lc->offset[kind][2], re.axis[2], origin );
-		VectorMA( origin, lc->offset[kind][0], re.axis[0], origin );
-		VectorMA( origin, lc->offset[kind][1], re.axis[1], origin );
+		VectorMA( origin, -2.0f + lc->offset[slot][2], re.axis[2], origin );
+		VectorMA( origin, lc->offset[slot][0], re.axis[0], origin );
+		VectorMA( origin, lc->offset[slot][1], re.axis[1], origin );
 
-		re.hModel = Look_Model( (lookKind_t)kind, item );
+		re.hModel = Look_Model( kind, item );
 		VectorCopy( origin, re.origin );
 		VectorCopy( origin, re.lightingOrigin );
 		re.renderfx = body->renderfx;
@@ -642,17 +776,30 @@ void CG_Cosmetics_f( void ) {
 	trap->Print( "You wear: hat %s, cape %s. tay_cosmetics hats <name>, tay_cosmetics capes <name>, tay_cosmetics clear\n",
 		tay_hat.string[0] ? tay_hat.string : "none", tay_cape.string[0] ? tay_cape.string : "none" );
 
-	// what the others say they wear, and whether this machine has it
+	// what the others wear and how it came, and whether this machine has it
 	for ( i = 0; i < MAX_CLIENTS; i++ ) {
-		const lookClient_t *lc = &look.clients[i];
+		const lookClient_t	*lc = &look.clients[i];
+		const char			*hat, *cape, *from;
 
-		if ( ( !cg.snap || i != cg.snap->ps.clientNum ) && ( lc->worn[LOOK_HAT][0] || lc->worn[LOOK_CAPE][0] ) ) {
-			trap->Print( "%s" S_COLOR_WHITE ": hat %s%s, cape %s%s, %s\n", cgs.clientinfo[i].name,
-				lc->worn[LOOK_HAT][0] ? lc->worn[LOOK_HAT] : "none",
-				lc->worn[LOOK_HAT][0] && !Look_Find( LOOK_HAT, lc->worn[LOOK_HAT] ) ? " (not here)" : "",
-				lc->worn[LOOK_CAPE][0] ? lc->worn[LOOK_CAPE] : "none",
-				lc->worn[LOOK_CAPE][0] && !Look_Find( LOOK_CAPE, lc->worn[LOOK_CAPE] ) ? " (not here)" : "",
-				lc->masterTime ? "through the masterserver" : "through the server" );
+		if ( cg.snap && i == cg.snap->ps.clientNum ) {
+			continue;
 		}
+		if ( lc->worn[LOOK_HAT][0] || lc->worn[LOOK_CAPE][0] ) {
+			hat = lc->worn[LOOK_HAT];
+			cape = lc->worn[LOOK_CAPE];
+			from = lc->masterTime ? "through the masterserver" : "through the server";
+		} else if ( lc->saber[LOOK_HAT][0] || lc->saber[LOOK_CAPE][0] ) {
+			hat = lc->saber[LOOK_HAT];
+			cape = lc->saber[LOOK_CAPE];
+			from = "in the saber colours (TaystJK)";
+		} else if ( lc->japro ) {
+			trap->Print( "%s" S_COLOR_WHITE ": the cosmetics %u of the jaPRO server\n", cgs.clientinfo[i].name, lc->japro );
+			continue;
+		} else {
+			continue;
+		}
+		trap->Print( "%s" S_COLOR_WHITE ": hat %s%s, cape %s%s, %s\n", cgs.clientinfo[i].name,
+			hat[0] ? hat : "none", hat[0] && !Look_Find( LOOK_HAT, hat ) ? " (not here)" : "",
+			cape[0] ? cape : "none", cape[0] && !Look_Find( LOOK_CAPE, cape ) ? " (not here)" : "", from );
 	}
 }
