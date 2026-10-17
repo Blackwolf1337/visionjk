@@ -385,21 +385,57 @@ static int Box_Span( const char *s, const char *stop ) {
 	return (int)strcspn( s, stop );
 }
 
+// a playlist: 2 to 64 characters (PL..., OLAK5uy_... of YouTube Music, RD... of a mix)
+static qboolean Box_ListId( const char *s, int len ) {
+	int i;
+
+	if ( len < 2 || len > 64 )
+		return qfalse;
+	for ( i = 0; i < len; i++ ) {
+		if ( !isalnum( (unsigned char)s[i] ) && s[i] != '-' && s[i] != '_' )
+			return qfalse;
+	}
+	return qtrue;
+}
+
+// the value of name= among the arguments of an address (rest: from its path on), and its length. NULL: not there
+static const char *Box_Query( const char *rest, const char *name, int *len ) {
+	const char	*arg = strchr( rest, '?' );
+	const int	nameLen = (int)strlen( name );
+
+	if ( !arg )
+		return NULL;
+	for ( arg++; *arg && *arg != '#'; ) {
+		const int argLen = Box_Span( arg, "&#" );
+
+		if ( argLen > nameLen && !Q_strncmp( arg, name, nameLen ) && arg[nameLen] == '=' ) {
+			*len = argLen - nameLen - 1;
+			return arg + nameLen + 1;
+		}
+		arg += argLen;
+		if ( *arg == '&' )
+			arg++;
+	}
+	return NULL;
+}
+
 /*
 =================
 Box_Target
 
 What yt-dlp is asked for, from what a player typed: a link of YouTube or YouTube Music (youtube.com/watch?v=,
 youtu.be/, /shorts/, /live/, /embed/, with or without www., m. or music.) becomes the address of that video, and
-anything else that looks like no address the words to look for on YouTube. qfalse: an address of something else.
+anything else that looks like no address the words to look for on YouTube. A link with list= (/playlist?list=, or
+a video in a playlist or a mix) becomes the address of that playlist: with its video it begins there
+(Box_LookupStart knows it by "list="). qfalse: an address of something else.
 =================
 */
 qboolean Box_Target( const char *asked, char *target, int targetSize, char *why, int whySize ) {
 	static const char *const subs[] = { "www.", "m.", "music." };
 	static const char *const paths[] = { "/shorts/", "/live/", "/embed/", "/v/" };
 	char		text[BOX_ASK], host[64];
-	const char	*s, *rest, *arg, *id = NULL;
-	int			hostLen, idLen = 0, i, len;
+	const char	*s, *rest, *id = NULL, *list = NULL;
+	int			hostLen, idLen = 0, listLen = 0, i, len;
 	qboolean	scheme;
 
 	// without the colours, the characters that are no text, and the spaces at both ends
@@ -449,20 +485,15 @@ qboolean Box_Target( const char *asked, char *target, int targetSize, char *why,
 			id = rest + 1;
 			idLen = Box_Span( id, "/?#&" );
 		}
+		list = Box_Query( rest, "list", &listLen );
 	} else if ( !strcmp( host, "youtube.com" ) ) {
+		list = Box_Query( rest, "list", &listLen );
 		if ( !Q_stricmpn( rest, "/watch?", 7 ) || !Q_stricmpn( rest, "/watch/?", 8 ) ) {
-			// v= among the arguments
-			for ( arg = strchr( rest, '?' ) + 1; *arg; ) {
-				const int argLen = Box_Span( arg, "&#" );
-
-				if ( !Q_strncmp( arg, "v=", 2 ) ) {
-					id = arg + 2;
-					idLen = argLen - 2;
-					break;
-				}
-				arg += argLen;
-				if ( *arg )
-					arg++;
+			id = Box_Query( rest, "v", &idLen );
+		} else if ( !Q_stricmpn( rest, "/playlist?", 10 ) ) {
+			if ( !list || !Box_ListId( list, listLen ) ) {
+				Q_strncpyz( why, "that link names no playlist", whySize );
+				return qfalse;
 			}
 		} else {
 			for ( i = 0; i < (int)ARRAY_LEN( paths ); i++ ) {
@@ -477,7 +508,20 @@ qboolean Box_Target( const char *asked, char *target, int targetSize, char *why,
 		Q_strncpyz( why, "only links of YouTube and YouTube Music are played", whySize );
 		return qfalse;
 	}
-	if ( !id || !Box_VideoId( id, idLen ) ) {
+	if ( list && !Box_ListId( list, listLen ) )
+		list = NULL;
+	if ( id && !Box_VideoId( id, idLen ) )
+		id = NULL;
+	// (a mix can only be asked for with its video: it has no page of its own)
+	if ( list && id ) {
+		snprintf( target, targetSize, "https://www.youtube.com/watch?v=%.11s&list=%.*s", id, listLen, list );
+		return qtrue;
+	}
+	if ( list ) {
+		snprintf( target, targetSize, "https://www.youtube.com/playlist?list=%.*s", listLen, list );
+		return qtrue;
+	}
+	if ( !id ) {
 		Q_strncpyz( why, "that link names no video", whySize );
 		return qfalse;
 	}
@@ -487,11 +531,11 @@ qboolean Box_Target( const char *asked, char *target, int targetSize, char *why,
 
 #ifndef _WIN32
 
-// the words of yt-dlp for a lookup and for a fetch alike, after its name
-static void Box_ArgsYtdlp( boxArgs_t *a, const char *path, const boxTools_t *tools ) {
+// the words of yt-dlp for a lookup and for a fetch alike, after its name. list: the lookup of a playlist
+static void Box_ArgsYtdlp( boxArgs_t *a, const char *path, const boxTools_t *tools, qboolean list ) {
 	Box_Arg( a, path );
 	Box_Arg( a, "--ignore-config" );
-	Box_Arg( a, "--no-playlist" );
+	Box_Arg( a, list ? "--yes-playlist" : "--no-playlist" );
 	Box_Arg( a, "--no-warnings" );
 	Box_Arg( a, "--encoding" );
 	Box_Arg( a, "utf-8" );
@@ -528,20 +572,33 @@ static void Box_Why( const boxProc_t *p, const char *otherwise, char *why, int w
 Box_LookupStart
 
 yt-dlp looks up what a player asked for (a target of Box_Target()) and prints four lines: the video, its length in
-seconds, whether it is live, its title. Nothing is fetched yet.
+seconds, whether it is live, its title. Nothing is fetched yet. For a playlist it prints them for each of its
+first BOX_LIST videos, as the page of the playlist has them (--flat-playlist: no video is opened), and
+l->start is the video of the link, where it begins.
 =================
 */
 qboolean Box_LookupStart( boxLookup_t *l, const boxTools_t *tools, const char *target, int now, char *why, int whySize ) {
 #ifndef _WIN32
 	boxArgs_t	a;
 	char		path[MAX_OSPATH];
+	const char	*v = strstr( target, "watch?v=" );
 
 	if ( !Box_ToolPath( tools->ytdlp, path, sizeof( path ) ) ) {
 		Q_strncpyz( why, "this server can not fetch songs: it has no yt-dlp", whySize );
 		return qfalse;
 	}
+	// (Box_Target made the address: list= is a playlist, a video in front of it is where it begins)
+	l->list = ( strstr( target, "list=" ) != NULL ) ? qtrue : qfalse;
+	l->start[0] = '\0';
+	if ( l->list && v )
+		Q_strncpyz( l->start, v + 8, Q_min( 12, (int)sizeof( l->start ) ) );
 	Box_ArgsBegin( &a );
-	Box_ArgsYtdlp( &a, path, tools );
+	Box_ArgsYtdlp( &a, path, tools, l->list );
+	if ( l->list ) {
+		Box_Arg( &a, "--flat-playlist" );
+		Box_Arg( &a, "--playlist-items" );
+		Box_Arg( &a, Box_Va( "1:%i", BOX_LIST ) );
+	}
 	Box_Arg( &a, "--print" );
 	Box_Arg( &a, "id" );
 	Box_Arg( &a, "--print" );
@@ -588,14 +645,17 @@ static void Box_CleanTitle( const char *in, char *out, int outSize ) {
 =================
 Box_LookupFrame
 
-Once a frame for a lookup that runs. 0: it still does. 1: song is what was found. -1: nothing that can be played
+Once a frame for a lookup that runs. 0: it still does. 1 or more: that many songs were found, at most maxSongs
+(more than 1 only for a playlist; what of it can not be played is left out). -1: nothing that can be played
 was, why says what.
 =================
 */
-int Box_LookupFrame( boxLookup_t *l, boxSong_t *song, int now, char *why, int whySize ) {
+int Box_LookupFrame( boxLookup_t *l, boxSong_t *songs, int maxSongs, int now, char *why, int whySize ) {
 #ifndef _WIN32
-	char	*line[4], *s;
-	int		n, lines;
+	char		*line[4], *s;
+	int			n, lines, found = 0;
+	qboolean	full = qfalse;
+	const char	*notPlayed = NULL;	// why the videos that were found are not played
 
 	Box_ProcErrors( &l->proc );
 	for ( ;; ) {
@@ -605,7 +665,8 @@ int Box_LookupFrame( boxLookup_t *l, boxSong_t *song, int now, char *why, int wh
 			l->text[l->len] = '\0';
 			if ( l->len < (int)sizeof( l->text ) - 1 )
 				continue;
-			n = -1;		// more than four lines say: the rest does not matter
+			n = -1;		// the rest does not matter: four lines of a video, as many videos as fit of a playlist
+			full = qtrue;
 		}
 		if ( n == 0 ) {
 			if ( now - l->proc.started < BOX_LOOKUP_MSEC )
@@ -620,38 +681,57 @@ int Box_LookupFrame( boxLookup_t *l, boxSong_t *song, int now, char *why, int wh
 	Box_ProcErrors( &l->proc );
 	Box_ProcStop( &l->proc );
 	l->busy = qfalse;
+	// (a line that was cut off is no line)
+	if ( full && ( s = strrchr( l->text, '\n' ) ) != NULL )
+		s[1] = '\0';
 
-	// the four lines
-	for ( lines = 0, s = l->text; lines < 4 && *s; lines++ ) {
-		line[lines] = s;
-		s += strcspn( s, "\r\n" );
-		if ( *s ) {
-			*s++ = '\0';
-			while ( *s == '\r' || *s == '\n' )
-				s++;
+	// four lines a video
+	for ( s = l->text; *s && found < maxSongs; ) {
+		boxSong_t *song = &songs[found];
+
+		for ( lines = 0; lines < 4 && *s; lines++ ) {
+			line[lines] = s;
+			s += strcspn( s, "\r\n" );
+			if ( *s ) {
+				*s++ = '\0';
+				while ( *s == '\r' || *s == '\n' )
+					s++;
+			}
 		}
+		if ( lines < 4 || !Box_VideoId( line[0], (int)strlen( line[0] ) ) ) {
+			break;
+		}
+		if ( !Q_stricmp( line[2], "is_live" ) || !Q_stricmp( line[2], "is_upcoming" ) || !Q_stricmp( line[2], "post_live" ) ) {
+			notPlayed = "live streams are not played";
+			continue;
+		}
+		// (a video of a playlist that was taken down or made private has no length)
+		if ( !Q_stricmp( line[1], "NA" ) || atof( line[1] ) <= 0.0 ) {
+			notPlayed = "it has no length";
+			continue;
+		}
+		memset( song, 0, sizeof( *song ) );
+		Q_strncpyz( song->id, line[0], sizeof( song->id ) );
+		song->seconds = (int)( atof( line[1] ) + 0.5 );
+		Box_CleanTitle( line[3], song->title, sizeof( song->title ) );
+		if ( !song->title[0] )
+			Q_strncpyz( song->title, song->id, sizeof( song->title ) );
+		found++;
+		if ( !l->list )
+			break;
 	}
-	if ( lines < 4 || !Box_VideoId( line[0], (int)strlen( line[0] ) ) ) {
-		Box_Why( &l->proc, "nothing was found", why, whySize );
+	if ( !found ) {
+		if ( l->list && s != l->text )
+			Q_strncpyz( why, "nothing of that playlist can be played", whySize );
+		else if ( notPlayed )
+			Q_strncpyz( why, notPlayed, whySize );
+		else
+			Box_Why( &l->proc, "nothing was found", why, whySize );
 		return -1;
 	}
-	if ( !Q_stricmp( line[2], "is_live" ) || !Q_stricmp( line[2], "is_upcoming" ) || !Q_stricmp( line[2], "post_live" ) ) {
-		Q_strncpyz( why, "live streams are not played", whySize );
-		return -1;
-	}
-	if ( !Q_stricmp( line[1], "NA" ) || atof( line[1] ) <= 0.0 ) {
-		Q_strncpyz( why, "it has no length", whySize );
-		return -1;
-	}
-	memset( song, 0, sizeof( *song ) );
-	Q_strncpyz( song->id, line[0], sizeof( song->id ) );
-	song->seconds = (int)( atof( line[1] ) + 0.5 );
-	Box_CleanTitle( line[3], song->title, sizeof( song->title ) );
-	if ( !song->title[0] )
-		Q_strncpyz( song->title, song->id, sizeof( song->title ) );
-	return 1;
+	return found;
 #else
-	(void)l; (void)song; (void)now; (void)why; (void)whySize;
+	(void)l; (void)songs; (void)maxSongs; (void)now; (void)why; (void)whySize;
 	return -1;
 #endif
 }
@@ -699,7 +779,7 @@ qboolean Box_StreamStart( boxStream_t *s, const boxTools_t *tools, const char *i
 	}
 
 	Box_ArgsBegin( &fetch );
-	Box_ArgsYtdlp( &fetch, ytdlp, tools );
+	Box_ArgsYtdlp( &fetch, ytdlp, tools, qfalse );
 	Box_Arg( &fetch, "--quiet" );
 	Box_Arg( &fetch, "--no-progress" );
 	Box_Arg( &fetch, "-o" );

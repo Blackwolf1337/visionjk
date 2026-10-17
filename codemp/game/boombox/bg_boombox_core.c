@@ -91,6 +91,21 @@ int Box_Msec( const box_t *box ) {
 	return (int)( (long long)box->offset * 1000 / BOX_RATE ) + box->frames * VOICE_FRAME_MSEC;
 }
 
+// how many songs wait after the one that plays: in the line, and of playlists behind it
+int Box_Waiting( const box_t *box ) {
+	return Q_max( 0, box->numSongs - 1 ) + box->listNum - box->listAt;
+}
+
+// what waits of playlists moves into the line as far as it has room
+static void Box_Fill( boxHost_t *host, box_t *box ) {
+	while ( box->numSongs < host->queueMax && box->listAt < box->listNum ) {
+		box->songs[box->numSongs++] = box->list[box->listAt++];
+		box->lineRev++;
+	}
+	if ( box->listAt == box->listNum )
+		box->listAt = box->listNum = 0;
+}
+
 static void Box_Tell( boxHost_t *host, int b ) {
 	host->boxes[b].rev++;
 	host->tell( host, b );
@@ -123,6 +138,7 @@ void Box_Next( boxHost_t *host, int b ) {
 		box->numSongs--;
 		box->lineRev++;
 	}
+	Box_Fill( host, box );
 	if ( !box->numSongs )
 		Box_GiveBack( box );
 	box->streaming = box->started = box->paused = qfalse;
@@ -132,6 +148,7 @@ void Box_Next( boxHost_t *host, int b ) {
 
 void Box_Stop( boxHost_t *host, int b ) {
 	host->boxes[b].numSongs = 0;
+	host->boxes[b].listAt = host->boxes[b].listNum = 0;
 	Box_Next( host, b );
 }
 
@@ -195,6 +212,7 @@ void Box_Drop( boxHost_t *host, int b, int index ) {
 	memmove( &box->songs[index], &box->songs[index + 1], ( box->numSongs - index - 1 ) * sizeof( box->songs[0] ) );
 	box->numSongs--;
 	box->lineRev++;
+	Box_Fill( host, box );
 	Box_Tell( host, b );
 }
 
@@ -365,7 +383,8 @@ qboolean Box_Ask( boxHost_t *host, boxLookup_t *lookups, int numLookups, int b, 
 		Q_strncpyz( why, "the server looks up too many songs right now, try again in a moment", whySize );
 		return qfalse;
 	}
-	if ( box->numSongs + box->looking >= host->queueMax ) {
+	// (a playlist goes behind the line, as far as there is room)
+	if ( strstr( target, "list=" ) ? box->listNum - box->listAt >= BOX_LIST : box->numSongs + box->looking >= host->queueMax ) {
 		Q_strncpyz( why, "the line of that boombox is full", whySize );
 		return qfalse;
 	}
@@ -381,22 +400,69 @@ qboolean Box_Ask( boxHost_t *host, boxLookup_t *lookups, int numLookups, int b, 
 	return qtrue;
 }
 
-// A lookup ended: the song goes into the line of its box, or the player who asked is told why not.
-static void Box_LookupDone( boxLookup_t *l, int now ) {
+// The songs of a playlist that was looked up: into the line as far as it has room, the rest behind it. The
+// player who asked is told how many, and how many were left out.
+static void Box_ListDone( boxLookup_t *l, boxSong_t *songs, int found ) {
 	boxHost_t	*host = l->host;
 	box_t		*box = &host->boxes[l->box];
-	boxSong_t	song;
-	char		why[128];
-	const int	result = Box_LookupFrame( l, &song, now, why, sizeof( why ) );
+	int			i, first = 0, added = 0, tooLong = 0, noRoom = 0;
+
+	// (the video of the link is where it begins, if it is among them)
+	for ( i = 0; l->start[0] && i < found; i++ ) {
+		if ( !Q_strncmp( songs[i].id, l->start, sizeof( songs[i].id ) ) ) {
+			first = i;
+			break;
+		}
+	}
+	if ( box->listAt > 0 ) {
+		memmove( &box->list[0], &box->list[box->listAt], ( box->listNum - box->listAt ) * sizeof( box->list[0] ) );
+		box->listNum -= box->listAt;
+		box->listAt = 0;
+	}
+	for ( i = first; i < found; i++ ) {
+		if ( host->maxSeconds > 0 && songs[i].seconds > host->maxSeconds ) {
+			tooLong++;
+			continue;
+		}
+		if ( box->listNum >= BOX_LIST ) {
+			noRoom++;
+			continue;
+		}
+		Q_strncpyz( songs[i].by, l->by, sizeof( songs[i].by ) );
+		box->list[box->listNum++] = songs[i];
+		added++;
+	}
+	Box_Fill( host, box );
+	if ( !added ) {
+		host->note( host, -1, l->client, tooLong ? Box_Va( "^5Boombox^7: the songs of that playlist are too long (at most %s)",
+			Box_Length( host->maxSeconds ) ) : "^5Boombox^7: the line of that boombox is full" );
+		return;
+	}
+	host->note( host, -1, l->client, Box_Va( "^5Boombox^7: %i %s of the playlist in the line%s%s", added, ( added == 1 ) ? "song" : "songs",
+		tooLong ? Box_Va( ", %i too long", tooLong ) : "", noRoom ? Box_Va( ", %i did not fit", noRoom ) : "" ) );
+}
+
+// A lookup ended: the song goes into the line of its box, or the player who asked is told why not.
+static void Box_LookupDone( boxLookup_t *l, int now ) {
+	static boxSong_t	songs[BOX_LIST];	// (large for a stack, and only one lookup ends at a time)
+	boxHost_t			*host = l->host;
+	box_t				*box = &host->boxes[l->box];
+	boxSong_t			song;
+	char				why[128];
+	const int			result = Box_LookupFrame( l, songs, l->list ? BOX_LIST : 1, now, why, sizeof( why ) );
 
 	if ( result == 0 )
 		return;
 	if ( box->looking > 0 )
 		box->looking--;
+	song = songs[0];
 	if ( result < 0 ) {
 		host->note( host, -1, l->client, Box_Va( "^5Boombox^7: not played, %s", why ) );
 	} else if ( !box->inuse ) {
-		host->note( host, -1, l->client, Box_Va( "^5Boombox^7: %s is not played, the boombox is gone", song.title ) );
+		host->note( host, -1, l->client, Box_Va( "^5Boombox^7: %s is not played, the boombox is gone",
+			l->list ? "the playlist" : song.title ) );
+	} else if ( l->list ) {
+		Box_ListDone( l, songs, result );
 	} else if ( host->maxSeconds > 0 && song.seconds > host->maxSeconds ) {
 		host->note( host, -1, l->client, Box_Va( "^5Boombox^7: %s is too long (%s, at most %s)", song.title, Box_Length( song.seconds ),
 			Box_Length( host->maxSeconds ) ) );

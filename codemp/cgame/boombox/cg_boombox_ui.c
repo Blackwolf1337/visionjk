@@ -372,8 +372,8 @@ void CG_BoomboxWindowDraw( void ) {
 	Win_Line( x + WIN_PAD, y, inner );
 	y += 6.0f;
 
-	// the line of songs after the one that plays
-	Win_Text( x + WIN_PAD, y, 0.55f, winText, 0, more ? CG_VisionTextWith( "In the line: %s", va( "%i", Q_max( 0, songs - 1 ) ) )
+	// the line of songs after the one that plays (waiting also counts what waits of playlists behind it)
+	Win_Text( x + WIN_PAD, y, 0.55f, winText, 0, more ? CG_VisionTextWith( "In the line: %s", va( "%i", Q_max( songs - 1, info.waiting ) ) )
 		: CG_VisionText( "In the line" ), inner );
 	y += 16.0f;
 	if ( !shown ) {

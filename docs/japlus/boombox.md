@@ -30,6 +30,14 @@ to look for, and Enter. A link of `youtube.com`, `music.youtube.com`, `youtu.be`
 `/embed/`) plays that video, anything else is looked up on YouTube and the first hit plays. Live streams and songs
 longer than the server allows are refused, and the card and the window say why.
 
+A link with `list=` is a playlist: `/playlist?list=`, a video in a playlist or a mix (`watch?v=...&list=...`, it
+begins with that video), an album of YouTube Music. Its first 100 videos are read from the page of the list in
+one lookup (`--flat-playlist`, no video is opened), what can not be played (taken down, private, live, too long)
+is left out, and the rest goes into the line as far as it has room (`vs_boomboxQueue`). What does not fit waits
+behind the line, up to 100 songs a box, and moves into it as songs end, are skipped or taken out. The window and
+the card count those too; Stop takes them away with the line. Needs a server or masterserver of this version: an
+older one plays only the video of the link (or says that a playlist link names no video).
+
 The card says who put the box down and who asked for the song that plays. What a box does (a song put on or
 added, skipped, stopped) is no longer written into the chat box of everybody near it (2026-10-17: "they're just
 spamming"): the card and the window show it. A line the server has for you alone (what became of your song, why
@@ -147,8 +155,9 @@ fetched), and when its turn comes `yt-dlp -o -` fetches the audio and hands it t
 channel of 16 bit at 48 kHz of it (`game/boombox/bg_boombox_fetch.c`). The programs run in a process group of
 their own, started by a go-between that ends at once, never through a shell, and with pipes that do not block:
 nothing of the server waits for them. A stopped song is one kill of that group. Of what a player typed only the
-address of a YouTube video, made anew from its eleven characters, or `ytsearch1:` with the words reaches yt-dlp,
-behind `--`: any other address is refused, so the server never fetches an address inside its own network.
+address of a YouTube video, made anew from its eleven characters, the address of a playlist made anew from its
+id (with the video it begins with), or `ytsearch1:` with the words reaches yt-dlp, behind `--`: any other address
+is refused, so the server never fetches an address inside its own network.
 
 The server codes 20 ms of the song at a time with Opus as they are due by the clock and sends each frame to every
 player in range, over the relay of the voice chat, as the voice of speaker `MAX_CLIENTS` + the number of the box

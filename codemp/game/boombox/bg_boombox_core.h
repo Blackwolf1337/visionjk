@@ -39,6 +39,8 @@ extern "C" {
 #define BOX_ERROR			160					// a line of what a program said on its way out, with the end
 #define BOX_ENCODER_BYTES	40960				// room for the state of the encoder of one player. What it needs is asked and checked
 #define BOX_NAME			36					// who asked for a song, with the end (MAX_NETNAME)
+#define BOX_LIST			100					// songs of playlists that wait behind the line of a box, at most
+#define BOX_LOOKUP_TEXT		16384				// what yt-dlp prints for a lookup: four lines a video, BOX_LIST of a playlist
 
 // the programs a host names, as the owner of the server set them
 typedef struct boxTools_s {
@@ -102,6 +104,9 @@ typedef struct box_s {
 	char		owner[BOX_NAME];	// who put it down, as he was called then
 	boxSong_t	songs[BOX_QUEUE];	// the line: songs[0] plays
 	int			numSongs;
+	boxSong_t	list[BOX_LIST];	// what came of playlists and did not fit into the line: list[listAt] is the next,
+	int			listAt, listNum;	//	it moves into the line when there is room. The clients see only how many
+								//	there are (waiting): the line they are told of is BOX_QUEUE long
 	int			lineRev;		// one up with every change of the line: the hosts send it again to who wants it
 	int			looking;		// songs for it that are looked up
 	qboolean	paused;
@@ -141,8 +146,10 @@ typedef struct boxLookup_s {
 	int			box;			//	this one,
 	int			client;			//	this player asked for it,
 	char		by[BOX_NAME];	//	who was called that
+	qboolean	list;			// a playlist,
+	char		start[12];		//	that begins with this video, "": with its first
 	boxProc_t	proc;
-	char		text[1024];		// what yt-dlp printed so far
+	char		text[BOX_LOOKUP_TEXT];	// what yt-dlp printed so far
 	int			len;
 } boxLookup_t;
 
@@ -153,7 +160,7 @@ void		Box_ProcErrors( boxProc_t *p );
 void		Box_ReapAll( void );
 qboolean	Box_Target( const char *asked, char *target, int targetSize, char *why, int whySize );
 qboolean	Box_LookupStart( boxLookup_t *l, const boxTools_t *tools, const char *target, int now, char *why, int whySize );
-int			Box_LookupFrame( boxLookup_t *l, boxSong_t *song, int now, char *why, int whySize );
+int			Box_LookupFrame( boxLookup_t *l, boxSong_t *songs, int maxSongs, int now, char *why, int whySize );
 qboolean	Box_StreamStart( boxStream_t *s, const boxTools_t *tools, const char *id, int fromSample, qboolean keepRing, int now,
 				char *why, int whySize );
 void		Box_StreamFill( boxStream_t *s );
@@ -173,6 +180,7 @@ void		Box_Seek( boxHost_t *host, int box, int seconds, int now );
 void		Box_Drop( boxHost_t *host, int box, int index );
 int			Box_Flags( const box_t *box );
 int			Box_Msec( const box_t *box );
+int			Box_Waiting( const box_t *box );
 qboolean	Box_Ask( boxHost_t *host, boxLookup_t *lookups, int numLookups, int box, int client, const char *by, const char *asked,
 				int now, char *why, int whySize );
 void		Box_Lookups( boxLookup_t *lookups, int numLookups, int now );

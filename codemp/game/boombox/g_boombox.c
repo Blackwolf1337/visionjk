@@ -147,7 +147,7 @@ static void Box_TellTo( int b, int clientNum ) {
 	// (who put it down and who asked for the song at the end: a cgame of 0.1.7 or 0.1.8 reads no further than next)
 	trap->SendServerCommand( clientNum, va( "vs_box set %i %i %i %i %i %i %i %i %i %i %i \"%s\" \"%s\" \"%s\" \"%s\"", b, box->rev,
 		(int)box->origin[0], (int)box->origin[1], (int)box->origin[2], (int)box->yaw, box->volume, flags,
-		Box_Msec( box ), box->numSongs ? box->songs[0].seconds : 0, box->numSongs > 1 ? box->numSongs - 1 : 0,
+		Box_Msec( box ), box->numSongs ? box->songs[0].seconds : 0, Box_Waiting( box ),
 		title, next, owner, by ) );
 	if ( boxClients[clientNum].watch == b + 1 && boxClients[clientNum].watchRev != box->lineRev )
 		Box_LineTo( b, clientNum );
