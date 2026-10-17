@@ -146,10 +146,8 @@ async function fireEntities() {
 	const ids = selectedIds().filter(id => !drafts.has(id));
 	let done = 0, said = '';
 	for (const id of ids) {
-		try {
-			const json = await (await fetch('api/entity', { method: 'POST', body: new URLSearchParams({ op: 'use', id }) })).json();
-			if (json.ok) done++; else said = json.message;
-		} catch (e) { said = e.message; }
+		const json = await apiPost('api/entity', { op: 'use', id });
+		if (json.ok) done++; else said = json.message;
 	}
 	if (ids.length === 1) toast(done ? 'Fired' : said, !!done);
 	else toast('Fired ' + done + (done < ids.length ? ', ' + (ids.length - done) + ' refused: ' + said : ''), done === ids.length);

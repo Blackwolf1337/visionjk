@@ -52,17 +52,23 @@ function toast(msg, ok = true) {
 	setTimeout(() => t.remove(), 3500);
 }
 
-async function action(params) {
+// A POST to the server: fields as a form, or a text as it is. The answer as an object, and { ok: false,
+// message } when there is none. missing: what to say when the server does not know the address (404).
+async function apiPost(path, fields, missing) {
 	try {
-		const res = await fetch('api/action', { method: 'POST', body: new URLSearchParams(params) });
-		const json = await res.json();
-		toast(json.message, json.ok);
-		pollState();
-		return json.ok;
+		const res = await fetch(path, { method: 'POST', body: typeof fields === 'string' ? fields : new URLSearchParams(fields || {}) });
+		if (res.status === 404 && missing) return { ok: false, message: missing };
+		return await res.json();
 	} catch (e) {
-		toast('Request failed: ' + e.message, false);
-		return false;
+		return { ok: false, message: 'Request failed: ' + e.message };
 	}
+}
+
+async function action(params) {
+	const json = await apiPost('api/action', params);
+	toast(json.message, json.ok);
+	pollState();
+	return json.ok;
 }
 
 /* ------------------------------------------------------------------ */

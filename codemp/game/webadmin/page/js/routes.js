@@ -150,15 +150,10 @@ function wpRender() {
 }
 
 async function wpOp(params) {
-	try {
-		const json = await (await fetch('api/waypoint', { method: 'POST', body: new URLSearchParams(params) })).json();
-		toast(json.message, json.ok);
-		await wpLoad();
-		return json.ok;
-	} catch (e) {
-		toast('Request failed: ' + e.message, false);
-		return false;
-	}
+	const json = await apiPost('api/waypoint', params);
+	toast(json.message, json.ok);
+	await wpLoad();
+	return json.ok;
 }
 
 // which waypoints a request is for: one by its number, as a game module before the lists knows it, several as a list

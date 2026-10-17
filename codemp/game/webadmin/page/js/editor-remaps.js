@@ -304,12 +304,7 @@ setInterval(remapPoll, 2000);
 
 // a change is sent: what the server says of it, { ok, message }
 async function remapPost(params) {
-	try {
-		const res = await fetch('api/remap', { method: 'POST', body: new URLSearchParams(params) });
-		return res.status === 404 ? { ok: false, message: 'This game module has no texture swap.' } : await res.json();
-	} catch (e) {
-		return { ok: false, message: 'Request failed: ' + e.message };
-	}
+	return apiPost('api/remap', params, 'This game module has no texture swap.');
 }
 async function remapOp(params) {
 	const json = await remapPost(params);

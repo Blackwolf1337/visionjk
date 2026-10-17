@@ -93,13 +93,7 @@ $('logCmd').addEventListener('submit', async e => {
 	$('logCmdText').value = '';
 	// where the answer is printed
 	logShow('console');
-	let json;
-	try {
-		const res = await fetch('api/command', { method: 'POST', body: new URLSearchParams({ cmd }) });
-		json = res.status === 404 ? { ok: false, message: 'This game module does not take console commands.' } : await res.json();
-	} catch (err) {
-		json = { ok: false, message: 'Request failed: ' + err.message };
-	}
+	const json = await apiPost('api/command', { cmd }, 'This game module does not take console commands.');
 	if (!json.ok) { toast(json.message, false); return; }
 	// The command runs in the next frame of the server: what the console has now, and again when its answer is in it.
 	logPoll();

@@ -94,11 +94,9 @@ function renderLayout(l) {
 }
 
 async function layoutOp(op) {
-	try {
-		const json = await (await fetch('api/layout', { method: 'POST', body: new URLSearchParams({ op }) })).json();
-		toast(json.message, json.ok);
-		pollEntities();
-	} catch (e) { toast('Request failed: ' + e.message, false); }
+	const json = await apiPost('api/layout', { op });
+	toast(json.message, json.ok);
+	pollEntities();
 }
 $('layoutSave').addEventListener('click', () => layoutOp('save'));
 $('layoutForget').addEventListener('click', () => { if (confirmed($('layoutForget'))) layoutOp('forget'); });

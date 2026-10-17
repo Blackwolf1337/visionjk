@@ -95,14 +95,9 @@ async function saveConfig(run) {
 	if (!cfgLoaded) { toast('The config was never loaded, nothing to save', false); return; }
 	if (cfgBytes(text) > CFG_MAX_BYTES) { toast('The config is larger than ' + CFG_MAX_BYTES + ' bytes, the server does not take it', false); return; }
 	if (run && !confirm('Save server.cfg and run it on the server now?')) return;
-	try {
-		const res = await fetch('api/config' + (run ? '?exec=1' : ''), { method: 'POST', body: text });
-		const json = await res.json();
-		toast(json.message, json.ok);
-		if (json.ok) cfgSaved = text;
-	} catch (e) {
-		toast('Request failed: ' + e.message, false);
-	}
+	const json = await apiPost('api/config' + (run ? '?exec=1' : ''), text);
+	toast(json.message, json.ok);
+	if (json.ok) cfgSaved = text;
 	cfgShowState();
 }
 $('cfgText').addEventListener('input', cfgShowState);

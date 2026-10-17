@@ -15,15 +15,9 @@ const ACCOUNT_WHY = {
 function roleAtLeast(role) { return ROLE_RANK[me.role] >= ROLE_RANK[role]; }
 
 async function accountPost(path, fields) {
-	try {
-		const res = await fetch(path, { method: 'POST', body: new URLSearchParams(fields || {}), cache: 'no-store' });
-		const json = await res.json();
-		if (!json.ok) toast(ACCOUNT_WHY[json.why] || 'Refused (' + json.why + ').', false);
-		return json;
-	} catch (e) {
-		toast('Request failed: ' + e.message, false);
-		return { ok: false };
-	}
+	const json = await apiPost(path, fields);
+	if (!json.ok) toast(ACCOUNT_WHY[json.why] || (json.why ? 'Refused (' + json.why + ').' : json.message), false);
+	return json;
 }
 
 // what the role of the account may not use is not shown

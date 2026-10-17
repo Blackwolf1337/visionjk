@@ -134,18 +134,12 @@ setInterval(clipPoll, 1000);
 // A change. The answer of the server is shown, and what it has now is asked for at once: a clip is turned off
 // in its next frame, so once more a moment later.
 async function clipOp(params) {
-	try {
-		const res = await fetch('api/clip', { method: 'POST', body: new URLSearchParams(params) });
-		const json = res.status === 404 ? { ok: false, message: 'This game module has no clip editor.' } : await res.json();
-		toast(json.message, json.ok);
-		clip.key = '';
-		await clipPoll();
-		setTimeout(clipPoll, 250);
-		return json;
-	} catch (e) {
-		toast('Request failed: ' + e.message, false);
-		return { ok: false };
-	}
+	const json = await apiPost('api/clip', params, 'This game module has no clip editor.');
+	toast(json.message, json.ok);
+	clip.key = '';
+	await clipPoll();
+	setTimeout(clipPoll, 250);
+	return json;
 }
 const clipSet = (numbers, on) => clipOp({ op: on ? 'on' : 'off', brush: numbers.join(' ') });
 

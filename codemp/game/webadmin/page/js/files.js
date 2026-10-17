@@ -23,11 +23,7 @@ function fsParent(path) { return path.includes('/') ? path.slice(0, path.lastInd
 function fsSize(n) { return n < 1024 ? n + ' B' : n < 1048576 ? (n / 1024).toFixed(1) + ' KB' : (n / 1048576).toFixed(1) + ' MB'; }
 function fsUrl(op, params) { return 'api/fs/' + op + '?' + new URLSearchParams(params); }
 async function fsPost(op, params, body = '') {
-	try {
-		return await (await fetch(fsUrl(op, params), { method: 'POST', body })).json();
-	} catch (e) {
-		return { ok: false, message: 'Request failed: ' + e.message };
-	}
+	return apiPost(fsUrl(op, params), body);
 }
 
 // A folder as the server lists it, null when it does not. What the tree has of it is taken, fresh asks the server anew.

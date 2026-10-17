@@ -24,13 +24,7 @@ const controlWrap = a => ((a + 180) % 360 + 360) % 360 - 180;
 const controlHolds = (json, id) => typeof json.id !== 'number' || json.id === id;
 async function controlPost(params) {
 	control.asked = performance.now();
-	try {
-		const res = await fetch('api/control', { method: 'POST', body: new URLSearchParams(params) });
-		if (res.status === 404) return { ok: false, message: 'This game module can not control a player.', id: -1 };
-		return await res.json();
-	} catch (e) {
-		return { ok: false, message: 'Request failed: ' + e.message };
-	}
+	return apiPost('api/control', params, 'This game module can not control a player.');
 }
 
 async function controlStart(id) {

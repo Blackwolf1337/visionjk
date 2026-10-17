@@ -41,13 +41,8 @@ $('entImportFile').addEventListener('change', async () => {
 	if (!confirm('Place ' + list.length + ' entities of ' + file.name + '?' + (all.length > list.length ? ' ' + (all.length - list.length) + ' are left out (worldspawn, brush models).' : ''))) return;
 	let placed = 0, refused = 0, why = '';
 	for (const keys of list) {
-		try {
-			const json = await (await fetch('api/entity', { method: 'POST', body: new URLSearchParams({ op: 'spawn', kv: keysText(keys) }) })).json();
-			if (json.ok) placed++; else { refused++; why = why || value(keys, 'classname') + ': ' + json.message; }
-		} catch (e) {
-			refused++;
-			why = why || e.message;
-		}
+		const json = await apiPost('api/entity', { op: 'spawn', kv: keysText(keys) });
+		if (json.ok) placed++; else { refused++; why = why || value(keys, 'classname') + ': ' + json.message; }
 	}
 	// that many at once are not one step of undo, and the steps before name numbers that may be taken now
 	histClear();
