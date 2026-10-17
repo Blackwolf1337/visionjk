@@ -81,6 +81,10 @@ box only to who said he hears it. A yaw is 65536 steps a turn, x, y and z are wh
 #define BOX_HALF_DEPTH		6.0f		//	to its front and back,
 #define BOX_HEIGHT			26.0f		//	and from the floor to the top of its handle. Its origin is on the floor.
 #define BOX_SPEAKER_HEIGHT	9.0f		// where its speakers are, above its origin: where the sound comes from
+#define BOX_APART			24.0f		// two boxes stand at least this far apart
+#define BOX_FOOT			12.0f		// where a box is put: the box from its middle to its sides that must fit on the floor,
+#define BOX_FOOT_HEIGHT		20.0f		//	how high that box is,
+#define BOX_DROP			96.0f		//	and how far below the place the floor is looked for
 
 #define BOX_MASTER_MAX		4			// boxes a room of the masterserver has at most
 #define BOX_NAME_MAX		35			// bytes of the name in a VOICE_BOX to the master at most

@@ -821,7 +821,7 @@ out of reach of the eye of the player, or another box stands there. at is where 
 =================
 */
 static qboolean Box_Spot( const vec3_t start, const vec3_t dir, int self, vec3_t at, float *yaw ) {
-	const vec3_t	mins = { -12.0f, -12.0f, 0.0f }, maxs = { 12.0f, 12.0f, 20.0f };
+	const vec3_t	mins = { -BOX_FOOT, -BOX_FOOT, 0.0f }, maxs = { BOX_FOOT, BOX_FOOT, BOX_FOOT_HEIGHT };
 	vec3_t			end, eye, from;
 	trace_t			tr;
 	int				i;
@@ -834,7 +834,7 @@ static qboolean Box_Spot( const vec3_t start, const vec3_t dir, int self, vec3_t
 	VectorMA( tr.endpos, -8.0f, dir, from );
 	from[2] += 12.0f;
 	VectorCopy( from, end );
-	end[2] -= 96.0f + 12.0f;
+	end[2] -= BOX_DROP + 12.0f;
 	CG_Trace( &tr, from, mins, maxs, end, ENTITYNUM_NONE, MASK_SOLID );
 	VectorCopy( tr.endpos, at );
 	at[0] = floorf( at[0] + 0.5f );
@@ -846,7 +846,7 @@ static qboolean Box_Spot( const vec3_t start, const vec3_t dir, int self, vec3_t
 		return qfalse;
 	}
 	for ( i = 0; i < BOX_MAX; i++ ) {
-		if ( i != self && cgBoxes[i].inuse && Distance( cgBoxes[i].origin, at ) < 24.0f ) {
+		if ( i != self && cgBoxes[i].inuse && Distance( cgBoxes[i].origin, at ) < BOX_APART ) {
 			return qfalse;
 		}
 	}

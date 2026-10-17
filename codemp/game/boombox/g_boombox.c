@@ -42,7 +42,6 @@ char *ConcatArgs( int start );		// g_cmds.c
 #define BOX_ASK_MSEC		3000		// a player asks for a song this often at most
 #define BOX_FRAME_MSEC		10			// G_BoomboxFrame() works at most this often: it is called with every move of a player
 #define BOX_VOLUME			80			// how loud a new box is, of 100
-#define BOX_APART			24.0f		// two boxes stand at least this far apart
 #define BOX_NOTE_RANGE		1.25f		// what happens to a box is told to the players this much further away than it is heard
 
 typedef struct boxClient_s {
@@ -349,7 +348,7 @@ eye sees it. qfalse: nowhere there, why says why.
 =================
 */
 static qboolean Box_Spot( const gentity_t *ent, const vec3_t wanted, int self, vec3_t spot, char *why, int whySize ) {
-	const vec3_t	mins = { -12.0f, -12.0f, 0.0f }, maxs = { 12.0f, 12.0f, 20.0f };
+	const vec3_t	mins = { -BOX_FOOT, -BOX_FOOT, 0.0f }, maxs = { BOX_FOOT, BOX_FOOT, BOX_FOOT_HEIGHT };
 	vec3_t			eye, start, end;
 	trace_t			tr;
 	int				i;
@@ -370,7 +369,7 @@ static qboolean Box_Spot( const gentity_t *ent, const vec3_t wanted, int self, v
 	VectorCopy( wanted, start );
 	start[2] += 12.0f;
 	VectorCopy( wanted, end );
-	end[2] -= 96.0f;
+	end[2] -= BOX_DROP;
 	trap->Trace( &tr, start, mins, maxs, end, ENTITYNUM_NONE, MASK_SOLID, qfalse, 0, 0 );
 	if ( tr.startsolid || tr.allsolid || tr.fraction >= 1.0f || tr.plane.normal[2] < 0.7f ) {
 		Q_strncpyz( why, "there is no floor for it there", whySize );
