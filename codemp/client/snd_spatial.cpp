@@ -298,7 +298,8 @@ static const char *spatialShockPaths[] = {
 
 #define SPATIAL_REFLECT_SLOTS		16		// the most v_spatialSources can be. A slot is about 7 MB (its impulse
 											//	response, partitioned, and its convolution)
-#define SPATIAL_REFLECT_KEEP		2.0f	// a sound that has one keeps it against one up to this much louder
+#define SPATIAL_REFLECT_KEEP		2.0f	// a sound that has one keeps it against one up to this much louder,
+#define SPATIAL_REFLECT_HOLD		1000	//	and against any for this many ms after it got it
 
 // A page does a pass in the thread of the game, a slice of it in a frame (S_SpatialSlice), so a pass takes as
 // many frames as it has rays to trace. Its defaults there are the "Medium" of the menu: such a pass is 20 ms of
@@ -334,6 +335,9 @@ enum {
 #define SPATIAL_PATH_THRESHOLD		0.1f
 #define SPATIAL_PATH_VIS_RANGE		30.0f	// two probes further apart than this are not asked, in metres
 #define SPATIAL_PATH_RANGE			100.0f	// a way longer than this is no way
+// Steam Audio puts a way that was found or lost in at once, from one block to the next: each block moves this much
+// of the way to what it found, so a way comes and goes over about 100 ms and does not click in or cut off
+#define SPATIAL_PATH_SMOOTH			0.3f
 // Fewer probes than this are no paths, and the simulator is never given them: a pass of the reflections asks
 // every batch it has which probes are near the listener (SimulationManager::lookupBakedReflections), and one
 // without a probe has no tree to ask, which is a read at address 0 in Steam Audio 4.8.1. A level where no floor
@@ -425,12 +429,12 @@ typedef struct spatialVoice_s {
 	float		dry[SPATIAL_DRY];
 	int			dryRead;			// up to which sample the reverb has taken it, of dry and of own
 
-	// its reflections of its own, NULL: it goes through the reverb of the listener. They get the sound as it
-	// leaves it (own), and Valve's impulse response has the walls and the distance in it.
+	// its reflections of its own, NULL: it goes through the reverb of the listener. They get the sound as the
+	// game plays it at its distance without the walls in the way (own): Valve's impulse response has the walls.
 	spatialReflect_t	*reflect;
+	int			reflectSince;		// Sys_Milliseconds() it got them
 	float		own[SPATIAL_DRY];
-	float		reflectMinDistance;	// metres: as loud as at this distance closer than it, see S_SpatialPlaceVoice()
-	float		ownScale;			//	and what the sound is scaled by for them
+	float		ownMix;				// how much of the last block went to them and not to the reverb of the listener
 
 	IPLSource				source;
 	IPLDirectEffect			direct;
@@ -439,6 +443,8 @@ typedef struct spatialVoice_s {
 	IPLPathEffect			path;
 	IPLDirectEffectParams	directParams;
 	qboolean				pathing;	// this frame its way round the corners is asked for
+	float					pathSh[SPATIAL_REVERB_CHANNELS];	// of that way, smoothed from block to block
+	float					lastHidden;	// how much of it the walls hid in the last block
 } spatialVoice_t;
 
 static cvar_t	*v_spatial;
@@ -585,7 +591,6 @@ static struct {
 	qboolean			reverb;							// the source where the listener stands
 	qboolean			own[SPATIAL_REFLECT_SLOTS];		// the slots that render a sound
 	IPLCoordinateSpace3	source[SPATIAL_REFLECT_SLOTS];
-	float				minDistance[SPATIAL_REFLECT_SLOTS];
 } spatialPass;
 
 // what the game and the thread of the reflections both touch
@@ -1268,6 +1273,7 @@ static spatialVoice_t *S_SpatialFindVoice( spatialStream_t *stream, channel_t *c
 		unused->sendOnly = qfalse;
 		unused->shock = channel ? S_SpatialIsExplosion( sfx ) : qfalse;
 		unused->rate = 1.0f;
+		unused->ownMix = 0.0f;
 		unused->lastTime = -1;
 		unused->approach = 0.0f;
 	}
@@ -1276,7 +1282,7 @@ static spatialVoice_t *S_SpatialFindVoice( spatialStream_t *stream, channel_t *c
 
 static void S_SpatialPlaceVoice( spatialVoice_t *v, channel_t *channel, int entchannel, const vec3_t origin, float volume, float fade,
 	qboolean voiceVolume ) {
-	float dist_mult, full, dist;
+	float dist;
 	vec3_t d;
 
 	v->frame = spatial.frame;
@@ -1321,13 +1327,6 @@ static void S_SpatialPlaceVoice( spatialVoice_t *v, channel_t *channel, int entc
 		v->delay = ( v_spatialPhysical->integer && channel && !v->loop ) ? (int)( dist / SPATIAL_SOUND_SPEED * spatial.audio.samplingRate ) : 0;
 	}
 
-	// For its own reflections. Valve's impulse response is that of a source as loud at 1 m as it is, falling with
-	// 1/r, and the model of the source starts that where the game stops playing it at full volume
-	// (S_FullVolumeDistance, 1 m for a voice of the chat, whose fade is the cgame's). The sound goes in as loud
-	// as the game plays it, times its distance: what comes back is to it as it would be to a real source there.
-	full = S_FullVolumeDistance( entchannel, &dist_mult ) * SPATIAL_UNIT;
-	v->reflectMinDistance = Q_max( 1.0f, full );
-	v->ownScale = fade * Q_max( v->reflectMinDistance, dist * SPATIAL_UNIT );
 }
 
 // samples of its sound a voice reads per sample heard: the doppler of how fast it comes closer
@@ -1586,13 +1585,14 @@ static qboolean S_SpatialReflectReady( const spatialReflect_t *r ) {
 S_SpatialChooseReflects
 
 Once a frame: the loudest v_spatialSources sounds have reflections of their own. One that has them counts
-SPATIAL_REFLECT_KEEP times as loud, so that two of about the same loudness do not take them from each other
-frame after frame. A sound that gets them goes on through the reverb of the listener until a pass with it in it
+SPATIAL_REFLECT_KEEP times as loud, and keeps them SPATIAL_REFLECT_HOLD while it plays, so that sounds of about
+the same loudness do not take them from each other frame after frame. A sound that gets them goes on through the reverb of the listener until a pass with it in it
 is done (S_SpatialReflectReady).
 ===============
 */
 static void S_SpatialChooseReflects( void ) {
 	const int want = v_spatialReflections->integer ? Com_Clampi( 0, spatial.numReflectSlots, v_spatialSources->integer ) : 0;
+	const int now = Sys_Milliseconds();
 	qboolean chosen[SPATIAL_VOICES];
 
 	memset( chosen, 0, sizeof( chosen ) );
@@ -1608,6 +1608,9 @@ static void S_SpatialChooseReflects( void ) {
 				continue;
 			}
 			score = v->gain * ( v->reflect ? SPATIAL_REFLECT_KEEP : 1.0f );
+			if ( v->reflect && now - v->reflectSince < SPATIAL_REFLECT_HOLD ) {
+				score += 1000.0f;
+			}
 			if ( score > bestScore ) {
 				bestScore = score;
 				best = i;
@@ -1639,6 +1642,7 @@ static void S_SpatialChooseReflects( void ) {
 				r->voice = v;
 				r->askedPass = -1;
 				v->reflect = r;
+				v->reflectSince = now;
 			}
 		}
 		if ( v->reflect ) {
@@ -1826,7 +1830,7 @@ static void S_SpatialRenderBlock( spatialVoice_t *v, float gain ) {
 	const float unfade = ( v->gain > 0.001f ) ? v->volume / v->gain : 0.0f;
 	const qboolean fresh = v->fresh;
 	qboolean pathed = qfalse;
-	float volume, hidden, send;
+	float volume, hidden, hiddenFrom, send;
 	const float *reflectIn;
 
 	if ( v->fresh ) {
@@ -1853,12 +1857,12 @@ static void S_SpatialRenderBlock( spatialVoice_t *v, float gain ) {
 	}
 	// A sound that is late by the way here (v_spatialPhysical) goes into its own reflections as the game plays it:
 	// their impulse response has the time to the walls and from them in it. An MP3 can only be read once.
-	reflectIn = whole;
+	reflectIn = mono;
 	if ( v->delay && v->reflect && v->sfx->eSoundCompressionMethod == ct_16 ) {
 		const int got = S_SampleRun( v->sfx, NULL, (double)( c - v->startSample ), 1.0f, SPATIAL_FRAME, qfalse, early );
 
 		for ( int i = 0; i < SPATIAL_FRAME; i++ ) {
-			early[i] = i < got ? early[i] * ( from + step * i ) * unfade : 0.0f;
+			early[i] = i < got ? early[i] * ( from + step * i ) : 0.0f;
 		}
 		reflectIn = early;
 	}
@@ -1880,9 +1884,12 @@ static void S_SpatialRenderBlock( spatialVoice_t *v, float gain ) {
 	qiplDirectEffectApply( v->direct, &v->directParams, &in, &mid );
 
 	// The way round the corners, for as much of the sound as the walls hide: what is in sight needs no way
-	// round. Steam Audio gives it the direction it arrives from, which is the last corner.
+	// round. Steam Audio gives it the direction it arrives from, which is the last corner. The effect runs while
+	// the sound is in sight too, so that it goes on from where it was when the sound goes behind a wall.
 	hidden = 1.0f - v->directParams.occlusion;
-	if ( v->pathing && hidden > 0.01f ) {
+	hiddenFrom = fresh ? hidden : v->lastHidden;
+	v->lastHidden = hidden;
+	if ( v->pathing ) {
 		IPLSimulationOutputs outputs;
 		IPLPathEffectParams params;
 		vec3_t rightAxis;
@@ -1891,6 +1898,10 @@ static void S_SpatialRenderBlock( spatialVoice_t *v, float gain ) {
 		qiplSourceGetOutputs( v->source, IPL_SIMULATIONFLAGS_PATHING, &outputs );
 		params = outputs.pathing;
 		if ( params.shCoeffs ) {
+			for ( int i = 0; i < SPATIAL_REVERB_CHANNELS; i++ ) {
+				v->pathSh[i] = fresh ? params.shCoeffs[i] : v->pathSh[i] + ( params.shCoeffs[i] - v->pathSh[i] ) * SPATIAL_PATH_SMOOTH;
+			}
+			params.shCoeffs = v->pathSh;
 			params.order = SPATIAL_REVERB_ORDER;
 			params.binaural = v_spatialHrtf->integer ? IPL_TRUE : IPL_FALSE;
 			params.hrtf = spatial.hrtf;
@@ -1909,8 +1920,10 @@ static void S_SpatialRenderBlock( spatialVoice_t *v, float gain ) {
 	// What the walls in the way left of it, and what came round them, is what the room around the listener
 	// gets to hear. Its own reflections get the sound as it leaves it: their impulse response has the walls.
 	for ( int i = 0; i < SPATIAL_FRAME; i++ ) {
-		v->dry[( c + i ) & ( SPATIAL_DRY - 1 )] = ( direct[i] + ( pathed ? ( pathLeft[i] + pathRight[i] ) * 0.5f * hidden : 0.0f ) ) * send;
-		v->own[( c + i ) & ( SPATIAL_DRY - 1 )] = reflectIn[i] * send * v->ownScale;
+		const float through = hiddenFrom + ( hidden - hiddenFrom ) * i * ( 1.0f / SPATIAL_FRAME );
+
+		v->dry[( c + i ) & ( SPATIAL_DRY - 1 )] = ( direct[i] + ( pathed ? ( pathLeft[i] + pathRight[i] ) * 0.5f * through : 0.0f ) ) * send;
+		v->own[( c + i ) & ( SPATIAL_DRY - 1 )] = reflectIn[i] * send;
 	}
 	volume = ( v->stream ? 1.0f : send ) * ( 32768.0f * 256.0f );
 	if ( v_spatialHrtf->integer ) {
@@ -1943,8 +1956,10 @@ static void S_SpatialRenderBlock( spatialVoice_t *v, float gain ) {
 		for ( int i = 0; i < SPATIAL_FRAME; i++ ) {
 			float *slot = spatial.ring[( c + i ) & ( SPATIAL_RING - 1 )];
 
-			slot[0] += pathLeft[i] * hidden * volume;
-			slot[1] += pathRight[i] * hidden * volume;
+			const float through = hiddenFrom + ( hidden - hiddenFrom ) * i * ( 1.0f / SPATIAL_FRAME );
+
+			slot[0] += pathLeft[i] * through * volume;
+			slot[1] += pathRight[i] * through * volume;
 		}
 	}
 
@@ -2019,8 +2034,6 @@ static void S_SpatialPassInputs( void ) {
 			inputs.flags = IPL_SIMULATIONFLAGS_REFLECTIONS;
 			inputs.source = spatialPass.source[i];
 			inputs.reverbScale[0] = inputs.reverbScale[1] = inputs.reverbScale[2] = 1.0f;
-			inputs.distanceAttenuationModel.type = IPL_DISTANCEATTENUATIONTYPE_INVERSEDISTANCE;
-			inputs.distanceAttenuationModel.minDistance = spatialPass.minDistance[i];
 		}
 		qiplSourceSetInputs( spatial.reflects[i].source, IPL_SIMULATIONFLAGS_REFLECTIONS, &inputs );
 	}
@@ -2047,7 +2060,6 @@ static void S_SpatialFillPass( void ) {
 		spatialPass.source[i].right.x = 1.0f;
 		spatialPass.source[i].up.y = 1.0f;
 		spatialPass.source[i].ahead.z = -1.0f;
-		spatialPass.minDistance[i] = v->reflectMinDistance;
 		// the pass that is asked now is the first with it in it
 		if ( r->askedPass < 0 ) {
 			r->askedPass = passes;
@@ -2207,6 +2219,7 @@ static void S_SpatialRenderReverb( int c ) {
 	memset( in, 0, sizeof( in ) );
 	for ( int i = 0; i < SPATIAL_VOICES; i++ ) {
 		spatialVoice_t *v = &spatial.voices[i];
+		float mixFrom, mixTo;
 		int count;
 
 		if ( !v->active || v->fresh ) {
@@ -2220,20 +2233,26 @@ static void S_SpatialRenderReverb( int c ) {
 		if ( v->reflect && S_SpatialReflectReady( v->reflect ) ) {
 			qiplSourceGetOutputs( v->reflect->source, IPL_SIMULATIONFLAGS_REFLECTIONS, &outputs );
 		}
+		// From the one to the other within a block: a sound that begins in the middle of a convolution is a click.
+		// What a sound gave its own goes on ringing there when it goes back to the room of the listener.
+		mixFrom = v->ownMix;
+		mixTo = outputs.reflections.ir ? 1.0f : 0.0f;
+		v->ownMix = mixTo;
+		for ( int k = 0; k < count; k++ ) {
+			const float mix = mixFrom + ( mixTo - mixFrom ) * k * ( 1.0f / SPATIAL_FRAME );
+
+			in[k] += v->dry[( v->dryRead + k ) & ( SPATIAL_DRY - 1 )] * ( 1.0f - mix );
+		}
 		if ( outputs.reflections.ir ) {
 			memset( own, 0, sizeof( own ) );
 			for ( int k = 0; k < count; k++ ) {
-				own[k] = v->own[( v->dryRead + k ) & ( SPATIAL_DRY - 1 )];
+				own[k] = v->own[( v->dryRead + k ) & ( SPATIAL_DRY - 1 )] * ( mixFrom + ( mixTo - mixFrom ) * k * ( 1.0f / SPATIAL_FRAME ) );
 			}
 			params = outputs.reflections;
 			params.type = IPL_REFLECTIONEFFECTTYPE_CONVOLUTION;
 			params.numChannels = SPATIAL_REVERB_CHANNELS;
 			params.irSize = (int)( SPATIAL_REVERB_SECONDS * spatial.audio.samplingRate );
 			qiplReflectionEffectApply( v->reflect->effect, &params, &ownBuffer, &scratchBuffer, spatial.reflectMixer );
-		} else {
-			for ( int k = 0; k < count; k++ ) {
-				in[k] += v->dry[( v->dryRead + k ) & ( SPATIAL_DRY - 1 )];
-			}
 		}
 		v->dryRead += count;
 	}
