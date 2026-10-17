@@ -5047,9 +5047,17 @@ static void CG_DrawCrosshair( vec3_t worldPoint, int chEntValid ) {
 	else
 	{
 		//set color based on what kind of ent is under crosshair
+		// with nothing under it the colour of v_crosshairColor ("r g b a", empty white), as TaystJK
+		vec4_t idle;
+
+		if ( sscanf( v_crosshairColor.string, "%f %f %f %f", &idle[0], &idle[1], &idle[2], &idle[3] ) == 4 ) {
+			trap->R_SetColor( idle );
+		} else {
+			trap->R_SetColor( NULL );
+		}
 		if ( cg.crosshairClientNum >= ENTITYNUM_WORLD )
 		{
-			trap->R_SetColor( NULL );
+			// nothing under it: the colour just set
 		}
 		//rwwFIXMEFIXME: Write this a different way, it's getting a bit too sloppy looking
 		else if (chEntValid &&
@@ -6525,7 +6533,7 @@ static void CG_DrawCrosshairNames( void ) {
 	tcolor[0] = colorTable[baseColor][0];
 	tcolor[1] = colorTable[baseColor][1];
 	tcolor[2] = colorTable[baseColor][2];
-	tcolor[3] = color[3]*0.5f;
+	tcolor[3] = color[3] * Com_Clamp( 0.0f, 1.0f, v_crosshairNamesOpacity.value );	// the game had 0.5
 
 	if (isVeh)
 	{

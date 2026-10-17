@@ -342,6 +342,29 @@ int CG_ChatSender( const char *raw, int clientNum ) {
 	return -1;
 }
 
+// v_chatLog (as TaystJK's cg_logChat): every line that is shown, without colours, appended to
+// chatlogs/<date>.log in the home folder of the game, opened and closed for each line
+static void Chat_Log( int kind, const char *text ) {
+	static const char	*kinds[CHAT_NUM_KINDS] = { "", "team ", "private " };
+	char				line[MAX_SAY_TEXT * 2];
+	qtime_t				now;
+	fileHandle_t		f;
+
+	if ( !v_chatLog.integer ) {
+		return;
+	}
+	trap->RealTime( &now );
+	Com_sprintf( line, sizeof( line ), "[%02i:%02i:%02i] %s%s", now.tm_hour, now.tm_min, now.tm_sec,
+		kinds[Com_Clampi( 0, CHAT_NUM_KINDS - 1, kind )], text );
+	Q_StripColor( line );
+	Q_strcat( line, sizeof( line ), "\n" );
+	if ( trap->FS_Open( va( "chatlogs/%04i-%02i-%02i.log", now.tm_year + 1900, now.tm_mon + 1, now.tm_mday ), &f, FS_APPEND ) >= 0
+		&& f ) {
+		trap->FS_Write( line, strlen( line ), f );
+		trap->FS_Close( f );
+	}
+}
+
 /*
 =================
 CG_ChatAdd
@@ -367,6 +390,7 @@ void CG_ChatAdd( int kind, int clientNum, const char *text ) {
 	m->kind = (chatKind_t)Com_Clampi( 0, CHAT_NUM_KINDS - 1, kind );
 	m->clientNum = clientNum;
 	chat.count++;
+	Chat_Log( kind, text );
 
 	// what is marked and the place one scrolled to stay where they are
 	if ( chat.open && chat.scroll > 0 && Chat_Shown( m ) ) {

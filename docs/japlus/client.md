@@ -367,6 +367,14 @@ The team overlay (`cg_drawTeamOverlay 1`, `CG_DrawTeamOverlay` in `cg_draw.c`) g
 
 There are no force points: only jaPRO servers send them.
 
+Smaller ones:
+
+| Cvar | Default | Meaning |
+|------|---------|---------|
+| `v_crosshairColor` | empty | the colour of the crosshair with nothing under it, `r g b a` from 0 to 1 (`1 0.5 0 1` orange). Empty: white, as before. Over players and things it keeps the colours of the game (red, green, yellow), and `cg_crosshairHealth 1` still wins |
+| `v_crosshairNamesOpacity` | 0.5 | how opaque the name of the player under the crosshair is, 0 to 1. The game had 0.5 |
+| `v_chatLog` | 0 | every chat line the box shows, without colours and with the time, appended to `chatlogs/<date>.log` in the game's home folder (`~/.local/share/visionjk/japlus/chatlogs` on Linux). Lines of hidden players are not written |
+
 ### Chat bubbles
 
 `cgame/bubble/cg_bubble.c` (2026-10-11). What a player says in the chat stands above his head for 2.5 to 8
