@@ -490,18 +490,8 @@ def main_page(m):
         item('vision_version', (584, 372, 0, 12), ('ownerdraw', 'UI_VERSION'), ('font', FONT), ('textscale', '0.5'),
              ('forecolor', *DIM), ('decoration',)),
     ]
-    # The Vision Temple, right under Play: a place of this tree and no page of a menu. It starts a small game that
-    # is only there to stand behind the temple (cg_templeStart, cgame/focus/cg_focus.c), the cgame goes there
-    # with its first frame and comes back to this menu when the temple is left.
-    keep['vision_templebutton'] = item(
-        'vision_templebutton', (58, 0, 200, 30), ('group', 'main_button'), ('type', 'ITEM_TYPE_BUTTON'),
-        ('text', texts.ref('Vision Temple')),
-        ('descText', texts.ref('To the temple above the clouds. Other VisionJK players who are there are wisps.')))
-    keep['vision_templebutton'].block.append(Entry('action', [], [
-        'play', '"sound/interface/button1.wav"', ';', mf.NL, 'setcvar', 'cg_templeStart', '"1"', ';', mf.NL,
-        'close', 'all', ';', mf.NL, 'exec', '"map mp/duel1"', ';']))
     y = 205
-    for n in ('playbutton', 'vision_templebutton', 'profilebutton', 'controlsbutton', 'setupbutton', 'exitgamebutton'):
+    for n in ('playbutton', 'profilebutton', 'controlsbutton', 'setupbutton', 'exitgamebutton'):
         e = keep.get(n)
         if not e:
             continue
@@ -509,7 +499,7 @@ def main_page(m):
         set_rect(b, 58, y, 200, 30)
         text_left(b, 16, 1.0, 6)
         mf.put(b, 'caps', 1)
-        mf.put(b, 'forecolor', *(BRIGHT if n == 'playbutton' else ACCENT if n == 'vision_templebutton' else TEXT))
+        mf.put(b, 'forecolor', *(BRIGHT if n == 'playbutton' else TEXT))
         mf.put(b, 'style', 'WINDOW_STYLE_EMPTY')
         new.append(e)
         y += 31

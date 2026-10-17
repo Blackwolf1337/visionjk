@@ -206,39 +206,13 @@
 
 		itemDef
 		{
-			name					vision_templebutton
-			rect					58 236 200 30
-			visible					1
-			group					main_button
-			type					ITEM_TYPE_BUTTON
-			text					@VISION_VISION_TEMPLE
-			descText				@VISION_TO_THE_TEMPLE_ABOVE_THE_CLOUDS_OTHER
-			action
-			{
-				play "sound/interface/button1.wav" ;
-				setcvar cg_templeStart "1" ;
-				close all ;
-				exec "map mp/duel1" ;
-			}
-			font					5
-			textscale				1
-			textalign				ITEM_ALIGN_LEFT
-			textalignx				16
-			textaligny				6
-			caps					1
-			forecolor				0.43 0.83 1 1
-			style					WINDOW_STYLE_EMPTY
-		}
-
-		itemDef
-		{
 			name					profilebutton
 			group					main_button
 			text					@MENUS_PROFILE
 			descText				@MENUS_PROFILE_DESC
 			style					WINDOW_STYLE_EMPTY
 			type					ITEM_TYPE_BUTTON
-			rect					58 267 200 30
+			rect					58 236 200 30
 			textaligny				6
 			font					5
 			textscale				1
@@ -275,7 +249,7 @@
 			descText				@MENUS_CONFIGURE_GAME_CONTROLS
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
-			rect					58 298 200 30
+			rect					58 267 200 30
 			font					5
 			textscale				1
 			textaligny				6
@@ -313,7 +287,7 @@
 			descText				@MENUS_CONFIGURE_GAME_SETTINGS
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
-			rect					58 329 200 30
+			rect					58 298 200 30
 			font					5
 			textscale				1
 			textaligny				6
@@ -351,7 +325,7 @@
 			descText				@MENUS_LEAVE_JEDI_KNIGHT_II
 			type					ITEM_TYPE_BUTTON
 			style					WINDOW_STYLE_EMPTY
-			rect					58 360 200 30
+			rect					58 329 200 30
 			font					5
 			textscale				1
 			textalign				ITEM_ALIGN_LEFT

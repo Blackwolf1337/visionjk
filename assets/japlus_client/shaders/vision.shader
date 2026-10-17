@@ -16,61 +16,6 @@ gfx/vision/select_hull
 	}
 }
 
-// The sea of clouds of the Vision Temple (maps/vision_temple.bsp, tools/temple/build.py): the brush of a fog.
-// The renderer of VisionJK fills it with clouds (q3map_vision, docs/japlus/renderer.md), any other one
-// with this fog. The numbers: the round place the clouds leave free (x, y, radius: the terrace around the
-// podium) and the lane (from x, to x, half its width: the way to it).
-textures/vision/temple_clouds
-{
-	surfaceparm	trans
-	surfaceparm	nonsolid
-	surfaceparm	fog
-	surfaceparm	nolightmap
-	fogparms ( 0.80 0.62 0.48 ) 3000
-	q3map_vision clouds 0 0 208 -524 -170 28
-}
-
-// The gold of the Vision Temple, on the surfaces of its map: the renderer of VisionJK shades it by where a place
-// on it is, any other one draws the colours the map has in its points (a sun and a sky baked into them,
-// tools/temple/build.py).
-textures/vision/temple_gold
-{
-	surfaceparm	nolightmap
-	q3map_vision gold
-	{
-		map $whiteimage
-		rgbGen exactVertex
-	}
-}
-
-// The light that stands in the air of the Vision Temple (the rings, what falls from the highest of them, the
-// light over the podium): a brush of fog around it. Any other renderer has a fog there that nobody sees.
-textures/vision/temple_light
-{
-	surfaceparm	trans
-	surfaceparm	nonsolid
-	surfaceparm	fog
-	surfaceparm	nolightmap
-	fogparms ( 1.0 0.8 0.5 ) 400000
-	q3map_vision light
-}
-
-// The sky of the Vision Temple, on the box around its map: the renderer of VisionJK draws its sky with the low
-// sun there, any other one this plain sky.
-textures/vision/temple_sky
-{
-	surfaceparm	sky
-	surfaceparm	noimpact
-	surfaceparm	nolightmap
-	cull	disable
-	q3map_vision sky
-	skyparms - 512 -
-	{
-		map $whiteimage
-		rgbGen const ( 0.62 0.36 0.14 )
-	}
-}
-
 // The boombox (codemp/cgame/boombox/cg_boombox.c; model and pictures from tools/boombox/build.py). The box, whose
 // dial and lights glow where the renderer has the dynamic glow:
 models/map_objects/vision/boombox

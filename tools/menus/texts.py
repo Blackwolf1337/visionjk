@@ -132,18 +132,6 @@ TR = {
     'Scoreboard with Mouse': 'Punktetafel mit Maus',
     'Opens the scoreboard with the mouse free: a click on a row opens what you can do with that player.':
         'Öffnet die Punktetafel mit freier Maus: Ein Klick auf eine Zeile öffnet, was Sie mit dem Spieler tun können.',
-    'Focus (Leave Your Body)': 'Fokus (Körper verlassen)',
-    'Vision Temple (Meditate)': 'Vision-Tempel (Meditieren)',
-    'Vision Temple': 'Vision-Tempel',
-    'Meet in the Temple': 'Im Tempel treffen',
-    'Whom you meet in the Vision Temple. 1: everybody who is there. A word of your own: only those who typed the same word. 0: nobody, you are alone.':
-        'Wen Sie im Vision-Tempel treffen. 1: alle, die dort sind. Ein eigenes Wort: nur wer dasselbe Wort eingegeben hat. 0: niemanden, Sie sind allein.',
-    'To the temple above the clouds. Other VisionJK players who are there are wisps.':
-        'Zum Tempel über den Wolken. Andere VisionJK-Spieler, die dort sind, sind Irrlichter.',
-    'You meditate towards the temple above the clouds, where you meet other VisionJK players as wisps. The same key or Esc brings you back.':
-        'Sie meditieren zum Tempel über den Wolken, wo Sie andere VisionJK-Spieler als Irrlichter treffen. Dieselbe Taste oder Esc bringt Sie zurück.',
-    'The world stands still and you leave your body. The same key or Esc brings you back.':
-        'Die Welt steht still und Sie verlassen Ihren Körper. Dieselbe Taste oder Esc bringt Sie zurück.',
     'Holsters': 'Holster',
 
     # display
@@ -386,38 +374,6 @@ CGAME = {
     'Say': 'Sagen',
     'To %s': 'An %s',
     'Open %s ? Enter: yes, any other key: no': '%s öffnen? Enter: ja, jede andere Taste: nein',
-    # Focus (cgame/focus/cg_focus.c): the lines on the screen and what the console says when it can not begin
-    'Focus. %s or Esc: back': 'Fokus. %s oder Esc: zurück',
-    'Focus. Esc: back': 'Fokus. Esc: zurück',
-    'Your body is protected.': 'Ihr Körper ist geschützt.',
-    'A hit on your body brings you back.': 'Ein Treffer auf Ihren Körper holt Sie zurück.',
-    'Your body is not protected.': 'Ihr Körper ist nicht geschützt.',
-    'This server does not protect your body here.': 'Dieser Server schützt Ihren Körper hier nicht.',
-    'Your body is not protected: you were in a fight a moment ago.':
-        'Ihr Körper ist nicht geschützt: Sie waren eben noch im Kampf.',
-    'Your body is not protected: your last time was a moment ago.':
-        'Ihr Körper ist nicht geschützt: Das letzte Mal ist erst einen Moment her.',
-    'Your body is not protected right now.': 'Ihr Körper ist gerade nicht geschützt.',
-    'Focus: only while you play.': 'Fokus: nur während Sie spielen.',
-    'Focus: not now.': 'Fokus: jetzt nicht.',
-    'Focus: not in a duel.': 'Fokus: nicht im Duell.',
-    'Focus: not while a menu is open.': 'Fokus: nicht bei offenem Menü.',
-    # the Vision Temple (the same file)
-    'Vision Temple. %s or Esc: back': 'Vision-Tempel. %s oder Esc: zurück',
-    'Vision Temple. Esc: back': 'Vision-Tempel. Esc: zurück',
-    'Vision Temple. %s: back': 'Vision-Tempel. %s: zurück',
-    'Vision Temple. /temple: back': 'Vision-Tempel. /temple: zurück',
-    '%i others are here.': '%i andere sind hier.',
-    'One other is here.': 'Ein anderer ist hier.',
-    'Looking for the others ...': 'Suche die anderen ...',
-    'The voice server does not answer: you are alone here.': 'Der Sprachserver antwortet nicht: Sie sind hier allein.',
-    'The temple is full: you are alone here.': 'Der Tempel ist voll: Sie sind hier allein.',
-    'You are alone here.': 'Sie sind hier allein.',
-    'Vision Temple: only while you play.': 'Vision-Tempel: nur während Sie spielen.',
-    'Vision Temple: not now.': 'Vision-Tempel: jetzt nicht.',
-    'Vision Temple: not in a duel.': 'Vision-Tempel: nicht im Duell.',
-    'Vision Temple: not while a menu is open.': 'Vision-Tempel: nicht bei offenem Menü.',
-    'Vision Temple: only with the Vulkan renderer for now.': 'Vision-Tempel: vorerst nur mit dem Vulkan-Renderer.',
     # the boombox (cgame/boombox/cg_boombox.c): its card, the line over it, the chat box asking for a song
     'Play a song ...': 'Lied abspielen ...',
     'Add a song ...': 'Lied hinzufügen ...',

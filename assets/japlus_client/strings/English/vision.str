@@ -5,12 +5,6 @@ VERSION             "1"
 CONFIG              "W:\bin\stringed.cfg"
 FILENOTES           "Menus of VisionJK"
 
-REFERENCE           VISION_TEMPLE
-LANG_ENGLISH        "Vision Temple"
-
-REFERENCE           TO_THE_TEMPLE_ABOVE_THE_CLOUDS_OTHER
-LANG_ENGLISH        "To the temple above the clouds. Other VisionJK players who are there are wisps."
-
 REFERENCE           CHARACTER
 LANG_ENGLISH        "Character"
 
@@ -94,18 +88,6 @@ LANG_ENGLISH        "Scoreboard with Mouse"
 
 REFERENCE           OPENS_THE_SCOREBOARD_WITH_THE_MOUSE
 LANG_ENGLISH        "Opens the scoreboard with the mouse free: a click on a row opens what you can do with that player."
-
-REFERENCE           FOCUS_LEAVE_YOUR_BODY
-LANG_ENGLISH        "Focus (Leave Your Body)"
-
-REFERENCE           THE_WORLD_STANDS_STILL_AND_YOU_LEAVE
-LANG_ENGLISH        "The world stands still and you leave your body. The same key or Esc brings you back."
-
-REFERENCE           VISION_TEMPLE_MEDITATE
-LANG_ENGLISH        "Vision Temple (Meditate)"
-
-REFERENCE           YOU_MEDITATE_TOWARDS_THE_TEMPLE_ABOV
-LANG_ENGLISH        "You meditate towards the temple above the clouds, where you meet other VisionJK players as wisps. The same key or Esc brings you back."
 
 REFERENCE           THE_KEYS_YOU_MOVE_WITH
 LANG_ENGLISH        "The keys you move with."
@@ -572,12 +554,6 @@ LANG_ENGLISH        "Clan Password"
 REFERENCE           CLAN_CHAT_AND_CLAN_RADIO_REACH_EVERY
 LANG_ENGLISH        "Clan chat and clan radio reach everybody on the server who has the same one. The server sees it."
 
-REFERENCE           MEET_IN_THE_TEMPLE
-LANG_ENGLISH        "Meet in the Temple"
-
-REFERENCE           WHOM_YOU_MEET_IN_THE_VISION_TEMPLE_1
-LANG_ENGLISH        "Whom you meet in the Vision Temple. 1: everybody who is there. A word of your own: only those who typed the same word. 0: nobody, you are alone."
-
 REFERENCE           UPDATES_AND_DOWNLOADS
 LANG_ENGLISH        "Updates and Downloads"
 
@@ -856,90 +832,6 @@ LANG_ENGLISH        "To %s"
 
 REFERENCE           OPEN_S_ENTER_YES_ANY_OTHER_KEY_NO
 LANG_ENGLISH        "Open %s ? Enter: yes, any other key: no"
-
-REFERENCE           FOCUS_S_OR_ESC_BACK
-LANG_ENGLISH        "Focus. %s or Esc: back"
-
-REFERENCE           FOCUS_ESC_BACK
-LANG_ENGLISH        "Focus. Esc: back"
-
-REFERENCE           YOUR_BODY_IS_PROTECTED
-LANG_ENGLISH        "Your body is protected."
-
-REFERENCE           A_HIT_ON_YOUR_BODY_BRINGS_YOU_BACK
-LANG_ENGLISH        "A hit on your body brings you back."
-
-REFERENCE           YOUR_BODY_IS_NOT_PROTECTED
-LANG_ENGLISH        "Your body is not protected."
-
-REFERENCE           THIS_SERVER_DOES_NOT_PROTECT_YOUR_BO
-LANG_ENGLISH        "This server does not protect your body here."
-
-REFERENCE           YOUR_BODY_IS_NOT_PROTECTED_YOU_WERE
-LANG_ENGLISH        "Your body is not protected: you were in a fight a moment ago."
-
-REFERENCE           YOUR_BODY_IS_NOT_PROTECTED_YOUR_LAST
-LANG_ENGLISH        "Your body is not protected: your last time was a moment ago."
-
-REFERENCE           YOUR_BODY_IS_NOT_PROTECTED_RIGHT_NOW
-LANG_ENGLISH        "Your body is not protected right now."
-
-REFERENCE           FOCUS_ONLY_WHILE_YOU_PLAY
-LANG_ENGLISH        "Focus: only while you play."
-
-REFERENCE           FOCUS_NOT_NOW
-LANG_ENGLISH        "Focus: not now."
-
-REFERENCE           FOCUS_NOT_IN_A_DUEL
-LANG_ENGLISH        "Focus: not in a duel."
-
-REFERENCE           FOCUS_NOT_WHILE_A_MENU_IS_OPEN
-LANG_ENGLISH        "Focus: not while a menu is open."
-
-REFERENCE           VISION_TEMPLE_S_OR_ESC_BACK
-LANG_ENGLISH        "Vision Temple. %s or Esc: back"
-
-REFERENCE           VISION_TEMPLE_ESC_BACK
-LANG_ENGLISH        "Vision Temple. Esc: back"
-
-REFERENCE           VISION_TEMPLE_S_BACK
-LANG_ENGLISH        "Vision Temple. %s: back"
-
-REFERENCE           VISION_TEMPLE_TEMPLE_BACK
-LANG_ENGLISH        "Vision Temple. /temple: back"
-
-REFERENCE           I_OTHERS_ARE_HERE
-LANG_ENGLISH        "%i others are here."
-
-REFERENCE           ONE_OTHER_IS_HERE
-LANG_ENGLISH        "One other is here."
-
-REFERENCE           LOOKING_FOR_THE_OTHERS
-LANG_ENGLISH        "Looking for the others ..."
-
-REFERENCE           THE_VOICE_SERVER_DOES_NOT_ANSWER_YOU
-LANG_ENGLISH        "The voice server does not answer: you are alone here."
-
-REFERENCE           THE_TEMPLE_IS_FULL_YOU_ARE_ALONE_HER
-LANG_ENGLISH        "The temple is full: you are alone here."
-
-REFERENCE           YOU_ARE_ALONE_HERE
-LANG_ENGLISH        "You are alone here."
-
-REFERENCE           VISION_TEMPLE_ONLY_WHILE_YOU_PLAY
-LANG_ENGLISH        "Vision Temple: only while you play."
-
-REFERENCE           VISION_TEMPLE_NOT_NOW
-LANG_ENGLISH        "Vision Temple: not now."
-
-REFERENCE           VISION_TEMPLE_NOT_IN_A_DUEL
-LANG_ENGLISH        "Vision Temple: not in a duel."
-
-REFERENCE           VISION_TEMPLE_NOT_WHILE_A_MENU_IS_OP
-LANG_ENGLISH        "Vision Temple: not while a menu is open."
-
-REFERENCE           VISION_TEMPLE_ONLY_WITH_THE_VULKAN_R
-LANG_ENGLISH        "Vision Temple: only with the Vulkan renderer for now."
 
 REFERENCE           SABER
 LANG_ENGLISH        "Saber"

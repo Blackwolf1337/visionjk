@@ -1925,42 +1925,6 @@
 
 		itemDef
 		{
-			name					vision_bind_focus
-			type					ITEM_TYPE_BIND
-			text					@VISION_FOCUS_LEAVE_YOUR_BODY
-			descText				@VISION_THE_WORLD_STANDS_STILL_AND_YOU_LEAVE
-			cvar					"focus"
-			action { play "sound/interface/button1.wav" ; }
-			rect					32 314 384 22
-			page					7
-			scroll					1
-			row						1
-			font					5
-			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
-			visible					1
-		}
-
-		itemDef
-		{
-			name					vision_bind_temple
-			type					ITEM_TYPE_BIND
-			text					@VISION_VISION_TEMPLE_MEDITATE
-			descText				@VISION_YOU_MEDITATE_TOWARDS_THE_TEMPLE_ABOV
-			cvar					"temple"
-			action { play "sound/interface/button1.wav" ; }
-			rect					32 336 384 22
-			page					7
-			scroll					1
-			row						1
-			font					5
-			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
-			visible					1
-		}
-
-		itemDef
-		{
 			name					vision_scroll
 			rect					419 72 6 352
 			visible					1
