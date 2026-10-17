@@ -384,9 +384,9 @@ qboolean CG_BubblePanelAt( const vec3_t center, const vec3_t right, const vec3_t
 =================
 CG_BubbleBoard
 
-A panel as the bubbles have it, for something else that is a thing in the level as they are and is hidden by what
-is in front of it (the card of a player, select/cg_select.c): its inside, and its edge where one is given, around
-a point, along right and up. qfalse: it can not be drawn (another engine). CG_BubbleReady() says so beforehand.
+A panel as the bubbles have it, for something else that is a thing in the level as they are (the card of a
+player, select/cg_select.c, which draws it in a scene of its own): its inside, and its edge where one is given,
+around a point, along right and up. qfalse: it can not be drawn (another engine). CG_BubbleReady() says so beforehand.
 (Inside and edge lie in one plane: none of them writes depth, and the edge is drawn after the inside.)
 =================
 */

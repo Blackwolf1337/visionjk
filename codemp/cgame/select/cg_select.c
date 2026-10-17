@@ -130,13 +130,11 @@ static struct {
 	float		flatFrom;				// what a unit of it was on the screen then, in units of the HUD,
 	float		apparent;				//	and what it is now
 	float		cardUnit;				// what a unit of it is in the level now, where it stands beside its player
-	qboolean	over;					// it is drawn over the scene and not in it (CG_SelectOverScene())
 	selectBoard_t	shown;				// what the card was drawn on last: the pointer is looked for on that
 	selectBoard_t	tag;
 	int			tagFor;					// the player the name has its place for, -1: none
 	selectBoard_t	tagShown;			// what the name is drawn on this frame, and how wide it is in units of the card
 	float		tagWidth;
-	qboolean	tagOver;				// it has grown and is drawn over the scene
 	// the card of a player that was clicked in the scoreboard: on the screen, beside the board
 	qboolean	anchored;
 	float		anchorX, anchorY;
@@ -495,7 +493,7 @@ The card
 static void Select_Close( void ) {
 	sel.selected = -1;
 	sel.confirmTime = 0;
-	sel.cardPlaced = sel.flat = sel.over = sel.anchored = qfalse;
+	sel.cardPlaced = sel.flat = sel.anchored = qfalse;
 	sel.flatTime = 0;
 	sel.cardUnit = sel.apparent = 0.0f;
 }
@@ -504,7 +502,7 @@ static void Select_Close( void ) {
 static void Select_Open( int n ) {
 	sel.selected = n;
 	sel.confirmTime = 0;
-	sel.flat = sel.over = qfalse;
+	sel.flat = qfalse;
 	sel.flatTime = 0;
 	sel.cardUnit = sel.apparent = 0.0f;
 	sel.cardPlaced = (qboolean)( sel.tagFor == n );
@@ -822,8 +820,9 @@ static void Select_Rows( int clientNum ) {
 	if ( clientNum == cg.clientNum ) {
 		return;
 	}
-	// his voice, unless he is known to have none: a bot, or a client the server says is no client of this tree
-	if ( CG_PeerVision( clientNum, NULL ) != 0 ) {
+	// his voice: only a client of this tree has one, so only who is known to play with it (a bot, another client
+	// and one nobody knows about yet get none of these rows)
+	if ( CG_PeerVision( clientNum, NULL ) == 1 ) {
 		sel.rows[sel.numRows++] = ACT_MUTE;
 		sel.rows[sel.numRows++] = ACT_QUIETER;
 		sel.rows[sel.numRows++] = ACT_LOUDER;
@@ -1175,9 +1174,9 @@ Select_Tag
 
 The name of the player under the pointer, beside him, once a frame. A thing in the level where the engine can.
 The name of somebody far away would be too small to read: from where its letters would be lower than
-SELECT_TAG_PX pixels it grows as much as he is further away, so it keeps that height. It stays a plane beside
-him, drawn over the scene then (CG_SelectOverScene()). For an engine that writes nothing in the scene
-CG_SelectDraw() draws it with the HUD.
+SELECT_TAG_PX pixels it grows as much as he is further away, so it keeps that height. It is a plane beside him,
+drawn over the scene (CG_SelectOverScene()), so no floor or wall beside him cuts it. For an engine that writes
+nothing in the scene CG_SelectDraw() draws it with the HUD.
 =================
 */
 static void Select_Tag( void ) {
@@ -1185,7 +1184,6 @@ static void Select_Tag( void ) {
 	const char	*name;
 	float		perUnit;
 
-	sel.tagOver = qfalse;
 	if ( sel.hover < 0 || sel.hover == sel.selected || !Select_Valid( sel.hover ) ) {
 		sel.tagFor = -1;
 		return;
@@ -1195,7 +1193,6 @@ static void Select_Tag( void ) {
 	// (least: what a unit of it has to be on the screen for letters of that height, in units of the HUD)
 	if ( sel.tag.world && Select_Away( sel.hover, &perUnit ) && SELECT_UNIT * perUnit < least ) {
 		sel.tag.unit = least / perUnit;
-		sel.tagOver = qtrue;
 	}
 	sel.tagWidth = Board_Width( &sel.tag, name, 0.62f ) + 10.0f;
 	if ( Board_Place( &sel.tag, sel.hover, sel.tagWidth, 15.0f, (qboolean)( sel.tagFor != sel.hover ) ) ) {
@@ -1205,9 +1202,6 @@ static void Select_Tag( void ) {
 		return;
 	}
 	sel.tagShown = sel.tag;
-	if ( sel.tag.world && !sel.tagOver ) {
-		Select_DrawTag( &sel.tagShown, name, sel.tagWidth );
-	}
 }
 
 // What a unit of the card that has grown is on the screen, in units of the HUD: 1, the size it was made for. More
@@ -1234,9 +1228,9 @@ The card of the player that was clicked, once a frame: where it is, how large, a
 SELECT_FLAT_PX pixels, it pops: it grows to the size it was made for, a little too large for a moment, and keeps
 that size on the screen however far away he is. It shrinks back the same way when he is near again. Grown, it is
 still a plane beside him, seen by the camera of the scene and moving with it (drawn flat on the screen it
-trembled against the level with every move of the camera). But where it stands it would reach into floors and
-walls at that size, so it is drawn over the scene and not in it (CG_SelectOverScene()). For an engine that
-writes nothing in the scene CG_SelectDraw() draws it with the HUD.
+trembled against the level with every move of the camera). At any size it is drawn over the scene and not in
+it (CG_SelectOverScene()): in the scene the floor and the walls beside him cut it. For an engine that writes
+nothing in the scene CG_SelectDraw() draws it with the HUD.
 =================
 */
 static void Select_Card( void ) {
@@ -1253,7 +1247,7 @@ static void Select_Card( void ) {
 		sel.card.corner[0] = Com_Clamp( 4.0f - cgs.bias2D, SCREEN_WIDTH + cgs.bias2D - SELECT_CARD_W - 4.0f, sel.anchorX );
 		sel.card.corner[1] = Com_Clamp( 30.0f, SCREEN_HEIGHT - h - SELECT_FLOOR, sel.anchorY );
 		sel.cardPlaced = qtrue;
-		sel.flat = sel.over = qfalse;
+		sel.flat = qfalse;
 		sel.shown = sel.card;
 		return;
 	}
@@ -1277,10 +1271,8 @@ static void Select_Card( void ) {
 		age = cg.time - sel.flatTime;
 		if ( !sel.flat && ( age < 0 || age >= SELECT_POP_MSEC ) ) {
 			sel.apparent = k;
-			sel.over = qfalse;
 		} else {
 			sel.apparent = Q_max( 0.02f, sel.flatFrom + ( ( sel.flat ? Select_FlatUnit() : k ) - sel.flatFrom ) * Select_Pop( age ) );
-			sel.over = qtrue;
 		}
 		sel.cardUnit = sel.apparent / perUnit;
 	}
@@ -1292,9 +1284,6 @@ static void Select_Card( void ) {
 		sel.cardPlaced = qtrue;
 	}
 	sel.shown = sel.card;
-	if ( sel.card.world && sel.cardPlaced && !sel.over ) {
-		Select_DrawCard( &sel.shown );
-	}
 }
 
 /*
@@ -1317,14 +1306,14 @@ void CG_SelectScene( void ) {
 =================
 CG_SelectOverScene
 
-Right after the scene was drawn: the name and the card that have grown for a player far away, in a scene of
-their own with the same camera and nothing else in it. They are the planes they were, and nothing of the level,
-no figure and no light that is added to the picture afterwards lies on them.
+Right after the scene was drawn: the name and the card, in a scene of their own with the same camera and
+nothing else in it. They are planes beside their player in the level, and nothing of the level, no figure and
+no light that is added to the picture afterwards lies on them.
 =================
 */
 void CG_SelectOverScene( void ) {
-	const qboolean	tag = (qboolean)( sel.tagOver && sel.hover >= 0 && sel.hover != sel.selected && sel.tagFor == sel.hover && sel.tagShown.world );
-	const qboolean	card = (qboolean)( sel.over && sel.selected >= 0 && sel.cardPlaced && sel.shown.world );
+	const qboolean	tag = (qboolean)( sel.hover >= 0 && sel.hover != sel.selected && sel.tagFor == sel.hover && sel.tagShown.world );
+	const qboolean	card = (qboolean)( sel.selected >= 0 && !sel.anchored && sel.cardPlaced && sel.shown.world );
 	refdef_t		refdef;
 
 	if ( ( !tag && !card ) || !Select_Free() || !Select_World() ) {
