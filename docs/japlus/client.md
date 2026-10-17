@@ -425,11 +425,12 @@ still too long is cut. The own figure is never lit, also not while the own card 
 - The name and the card are things in the level, as the chat bubbles are (`Select_Boards()`, called while the
   scene is put together): as large there at any distance (a unit of the card is 0.3 units of the level, which
   gives its name letters as tall as those of a bubble and makes the card about 45 units wide and 42 high with
-  seven rows), upright, turned to the one who looks about their upright axis only, and hidden by what is in
-  front of them. They stand beside their player: at his right as the camera sees him, 21 units from his middle (13 until 2026-10-12, where they lay on his arm),
-  their top at the height of his head. At his left where the screen ends at his right, and lifted or lowered a
-  little where they would reach over the top or the bottom of the screen: the view can not be turned to them
-  while the mouse is free. They follow their place a little late (most of the way in 90 ms), so a step of his
+  seven rows), upright, turned to the one who looks about their upright axis only. They stand beside their player: at his right as the camera sees him, 21 units from his middle (13 until 2026-10-12, where they lay on his arm),
+  their top at the height of his head. At his left where the screen ends at his right, and lifted, lowered or
+  moved aside as far as they would reach over an edge of the screen (since 2026-10-17; before it was 40 units at
+  most, and the card of a box at the feet of the player hung over the edge): the view can not be turned to them
+  while the mouse is free. Very near they are never larger than 1.5 times the size they were made for
+  (`SELECT_NEAR_MAX`, 2026-10-17): a step in front of a box they were larger than the screen. They follow their place a little late (most of the way in 90 ms), so a step of his
   is no jump of theirs. The card opens where the name stood.
 - A row is clicked through the level: the way of the pointer from the eye is cut with the plane of the card
   (`Board_Pointer()`), and the place on it says which row.
@@ -441,13 +442,19 @@ still too long is cut. The own figure is never lit, also not while the own card 
   at least 18.5 pixels high, so growing never makes it smaller.
 - Grown, it is still the plane beside its player, seen by the camera of the scene and moving with it. A first
   version drew it flat on the screen with the HUD: it trembled against the level with every move of the camera
-  ("very jittery"). But where it stands it would reach into floors and walls at that size, so it is drawn in a
-  scene of its own right after the scene, with the same camera and nothing else in it
-  (`CG_SelectOverScene()`): nothing of the level, no figure and no light added afterwards lies on it.
+  ("very jittery").
+- Name and card are drawn in a scene of their own right after the scene, with the same camera and nothing else
+  in it (`CG_SelectOverScene()`): nothing of the level, no figure and no light added afterwards lies on them.
+  Until 2026-10-17 only a grown card was drawn there, and a card at the size of a thing in the level was in the
+  scene and depth tested: the floor and the walls beside its player cut it ("half of the menu appears in the
+  ground or walls"). Seen in a hidden run since: the rows of a card that reach over the floor are whole.
 - The name of a far player does the same without a pop: its letters are never lower than 14 pixels. From the
   distance where they would be it grows as much as he is further away.
-- What it costs to be a thing in the level, while the card is in it: a figure in front of it covers it (your
-  own in third person too), and the marked player is drawn over it where an arm of his reaches into it.
+- Since they are drawn over the scene, a figure or a wall in front of them no longer covers them.
+- The rows for his voice (mute, quieter, louder) are only there for a player known to play with VisionJK
+  (`CG_PeerVision() == 1`, 2026-10-17). Before, everybody nobody knew about got them, which on a legacy server
+  is nearly everybody. Whisper (`tell`), hiding his chat lines, copying his name, watching, the vote and the
+  admin rows work with any client and stay.
 - An engine that can not write in the scene gets name and card on the screen with the HUD, at one size, at the
   same place beside the player. That path is the code of before and was not run again.
 - The pointer is drawn after the card, by `CG_SelectDraw()` also while the chat box is open, which used to draw

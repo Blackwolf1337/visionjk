@@ -39,6 +39,7 @@ and the key login only work between versions from after the change.
 | [boombox.md](boombox.md) | Boxes that play songs of YouTube (not a JA+ feature): fetched by the server, sent over the relay of the voice chat, a sound of the level with `v_spatial`, only VisionJK players see and hear them. Never run |
 | [audio.md](audio.md) | Sound that knows the level (not a JA+ feature): `v_spatial`, with Steam Audio in the engine. Walls muffle, rooms ring, sounds come round corners. Measured, not listened to yet |
 | [renderer.md](renderer.md) | rd-vulkan-vision, a Vulkan renderer next to rd-vanilla (not a JA+ feature): how it is built, the state of each part, what runs on the GPU, differences, what is left |
+| [downloads.md](downloads.md) | Downloads from a server (not a JA+ feature): a window to choose the paks, kept or for one session, what is in them before they are used, programs blocked |
 | [web.md](web.md) | The client in a browser (not a JA+ feature): built as WebAssembly, handed out by the dedicated server itself (`vs_clientWebPort`), packets through a WebSocket. What runs and what never ran |
 
 ## Where the code is

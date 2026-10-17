@@ -15,13 +15,25 @@ Hold the key of the pointer (`+v_cursor`, the left Alt key by default) and:
 - **click** a box for its card: what it plays and how far into the song it is, what comes next, and the rows
   Play a song (Add a song while one plays), Pause or Resume, Skip this song, Stop the music, Quieter and Louder
   for everybody, Mute it for me, Move it, Take it away (click twice). The rows also go by their number keys.
+- **Open the player** (the first row of the card, or `boombox window` near a box) opens the window of the box in
+  the middle of the screen (2026-10-17, `cgame/boombox/cg_boombox_ui.c`): who put it down, the song and who asked
+  for it, a bar to jump in the song (click or drag it, for everybody), Pause or Resume, Skip, Stop, Mute (for you),
+  the volume for everybody as a bar, the line of songs with a cross to take one out, Add a song, Move it and
+  Take it away (click twice), and the last line the server had for you. The wheel moves a long line. Esc, the
+  right button or its cross close it. On a server or master of 0.1.7 or 0.1.8 it shows only the next song and has
+  no bar to jump with.
 - **drag** a box over the floor to another place. It follows the pointer and turns to you, with a red outline
   where it can not be put (no floor, further than 320 units from your eye, another box too close).
 
 "Play a song" opens the chat box with the prompt "Boombox, link or song": paste a link with Ctrl+V, or type what
 to look for, and Enter. A link of `youtube.com`, `music.youtube.com`, `youtu.be` (also `/shorts/`, `/live/`,
 `/embed/`) plays that video, anything else is looked up on YouTube and the first hit plays. Live streams and songs
-longer than the server allows are refused, and the chat box says why.
+longer than the server allows are refused, and the card and the window say why.
+
+The card says who put the box down and who asked for the song that plays. What a box does (a song put on or
+added, skipped, stopped) is no longer written into the chat box of everybody near it (2026-10-17: "they're just
+spamming"): the card and the window show it. A line the server has for you alone (what became of your song, why
+it is not played) goes into the console and onto the card and the window for 8 seconds.
 
 The console command does the same without the pointer:
 
@@ -31,6 +43,7 @@ boombox play synthwave mix                               looked up on YouTube
 boombox place                                            a new box where the crosshair points
 boombox pause | resume | skip | stop | remove [box]      the box near you, or that number
 boombox volume <0 to 100> [box]                          for everybody
+boombox window [box]                                     the window of the box near you, or of that number
 boombox list                                             the boxes and their lines, in the console
 ```
 
@@ -121,8 +134,11 @@ numbers says once a minute how many rooms have boxes and how many songs play.
 `codemp/game/boombox` (server), `codemp/cgame/boombox` (client), the protocol in `game/boombox/bg_boombox.h`.
 
 A box is no entity. A cgame of this tree on a server that says `vs_boombox` asks `vs_box hello` and is answered
-`vs_box on`, the state of every box (`vs_box set`), every change of it, and `vs_box gone`; lines for the chat box
-come as `vs_box note`. Nothing of it goes to a client that did not ask. What a player does is the client command
+`vs_box on`, the state of every box (`vs_box set`), every change of it, and `vs_box gone`; lines for the player
+come as `vs_box note`. Since 0.1.9 `vs_box on` says `BOX_CAP_MORE` in a fifth word, `vs_box set` ends with who
+put the box down and who asked for the song (a cgame of 0.1.7 or 0.1.8 reads no further), and a client that
+watches a box (`vs_boxaction watch`, while its window is open) gets its line as `vs_box list` whenever it
+changes. `vs_boxaction seek` and `drop` jump in the song and take a waiting one out. Nothing of it goes to a client that did not ask. What a player does is the client command
 `vs_boxaction`, of which the cgame sends one a second at most (the flood protection of the server drops a command
 that comes within a second of another one); five clicks on Louder go out as one.
 
@@ -148,13 +164,27 @@ Through the masterserver everything goes over the way of the voice chat to it ([
 boombox"): a master that plays boxes says so in every answer (`VOICE_FLAG_BOXES`), and only a client that read
 it sends the state with one more byte (the boxes it hears, which the client works out from where the boxes
 stand and the range, 1536) and `VOICE_BOX` datagrams with what its player does and his name. The master answers
-with the state of a box, its end, or a line for the chat box, at once and every box again every two seconds.
-The bytes are in `game/boombox/bg_boombox.h`, packed and checked in `bg_boombox.c`.
+with the state of a box, its end, or a line for the player, at once and every box again every two seconds.
+Since 0.1.9 a master says `VOICE_FLAG_BOXLIST` too and sends `BOX_SAY_INFO` (who put it down, who asked for the
+song) after every `BOX_SAY_SET`, which itself never grows (a client of 0.1.7 or 0.1.8 checks its length to the
+byte and drops what it does not know), and the line of a watched box as `BOX_SAY_LIST`, a song a datagram, again
+every two seconds. `BOX_DO_SEEK`, `BOX_DO_DROP` and `BOX_DO_WATCH` come from the client. The bytes are in
+`game/boombox/bg_boombox.h`, packed and checked in `bg_boombox.c`.
+
+A jump (`Box_Seek()`) begins the programs of the song again at that second: `ffmpeg` decodes what is before and
+drops it, so the further in, the longer the song waits for its start (the wait it is given before it is skipped
+grows with the jump). In the hidden run of 2026-10-17 a jump to 3:23 of a song of 6:46 played again within a few
+seconds.
 
 ## Not done, not checked
 
-- Nothing of it was run: built for Linux only, never started, nobody has heard a song or clicked a box. The model
-  was looked at in a picture the files were drawn into by a small script, never in the game.
+- 2026-10-17, hidden and silent runs on Linux (`uitest/boxui.sh` of the test tools, a server of this tree with
+  yt-dlp, one client): three songs looked up and put into the line, the card with its new lines, the window, a
+  jump into the middle of the song, pause. Nobody has heard a song (the runs have no sound), the masterserver
+  path of the window (watch, list, seek, drop) was never run, nor two clients at one box, nor a cross in the
+  line clicked.
+- Before 2026-10-17 nothing of it was run. The model was looked at in a picture the files were drawn into by a
+  small script, never in the game.
 - Windows: the server can not fetch songs (no process code for it yet), the client is not built for it.
 - The masterserver part was never run either. A client there can put a box anywhere in the room of its own
   server (the master has no level to check it against).
