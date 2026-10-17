@@ -385,6 +385,19 @@ emotes of Twitch, which can not be shipped. TaystJK's smileys `#:)` `#:(` `#:D` 
 that have a picture here. `v_chatEmoji 0` shows the text. Only the chat box draws them: the bubbles above the
 heads and the console show the text, and so does a client of another tree.
 
+### Looks of TaystJK
+
+Taken over from TaystJK on 2026-10-17. They only change what this player sees.
+
+| Cvar | Default | Meaning |
+|------|---------|---------|
+| `v_forceEnemyModel` | empty | every opponent in this model, `model/skin` (`kyle/default`) or a model alone (its skin `default`). In a game without teams everybody is an opponent |
+| `v_forceAllyModel` | empty | every team mate in this model |
+
+These work without `cg_forceModel`, which puts everybody in one's own model. When both are set, these two win for the players they cover. A model
+this machine lacks shows as the model of the game, as with any player. When one's own team changes, everybody
+is looked at again (`CG_ForcedModelsCheck`).
+
 ### Chat bubbles
 
 `cgame/bubble/cg_bubble.c` (2026-10-11). What a player says in the chat stands above his head for 2.5 to 8

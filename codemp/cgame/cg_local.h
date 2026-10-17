@@ -1872,6 +1872,10 @@ qhandle_t CG_WidePicture( const char *name, const char *wideName );
 void CG_KillfeedAdd( int killer, int victim, int mod, const char *text );
 float CG_KillfeedDraw( float y );
 
+// v_forceEnemyModel, v_forceAllyModel (cg_players.c, cg_cvar.c)
+qboolean CG_IsAlly( team_t team );
+void CG_ForcedModelsCheck( void );
+
 // hud/cg_movehud.c
 void CG_MoveHudDraw( void );
 void CG_DrawStretchPic( float x, float y, float w, float h, float s1, float t1, float s2, float t2, qhandle_t hShader );

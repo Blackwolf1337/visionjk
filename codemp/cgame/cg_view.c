@@ -2487,6 +2487,9 @@ void CG_DrawActiveFrame( int serverTime, stereoFrame_t stereoView, qboolean demo
 	// set up cg.snap and possibly cg.nextSnap
 	CG_ProcessSnapshots();
 
+	// the forced models of the others when this player changed teams (cg_cvar.c)
+	CG_ForcedModelsCheck();
+
 	trap->ROFF_UpdateEntities();
 
 	// if we haven't received any snapshots yet, all

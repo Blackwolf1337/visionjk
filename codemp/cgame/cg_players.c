@@ -1549,6 +1549,13 @@ CG_NewClientInfo
 */
 void WP_SetSaber( int entNum, saberInfo_t *sabers, int saberNum, const char *saberName );
 
+// does a player of this team play with this player? Not in a game without teams
+qboolean CG_IsAlly( team_t team ) {
+	const team_t own = cg.snap ? (team_t)cg.snap->ps.persistant[PERS_TEAM] : cgs.clientinfo[cg.clientNum].team;
+
+	return (qboolean)( cgs.gametype >= GT_TEAM && team == own && team != TEAM_FREE && team != TEAM_SPECTATOR );
+}
+
 void CG_NewClientInfo( int clientNum, qboolean entitiesInitialized ) {
 	clientInfo_t *ci;
 	clientInfo_t newInfo;
@@ -1719,6 +1726,23 @@ void CG_NewClientInfo( int clientNum, qboolean entitiesInitialized ) {
 			Q_strncpyz( newInfo.skinName, slash + 1, sizeof( newInfo.skinName ) );
 			// truncate modelName
 			*slash = 0;
+		}
+	}
+
+	// v_forceEnemyModel and v_forceAllyModel (2026-10-17, as TaystJK): the others in a model chosen here, by
+	// whether they play with this player or against him; in a game without teams everybody is against him
+	if ( clientNum != cg.clientNum ) {
+		const vmCvar_t *forced = CG_IsAlly( newInfo.team ) ? &v_forceAllyModel : &v_forceEnemyModel;
+
+		if ( forced->string[0] && Q_stricmp( forced->string, "none" ) && Q_stricmp( forced->string, "0" ) ) {
+			Q_strncpyz( newInfo.modelName, forced->string, sizeof( newInfo.modelName ) );
+			slash = strchr( newInfo.modelName, '/' );
+			if ( slash ) {
+				*slash = 0;
+				Q_strncpyz( newInfo.skinName, slash + 1, sizeof( newInfo.skinName ) );
+			} else {
+				Q_strncpyz( newInfo.skinName, "default", sizeof( newInfo.skinName ) );
+			}
 		}
 	}
 
