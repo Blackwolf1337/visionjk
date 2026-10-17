@@ -140,3 +140,24 @@ void Web_SHA256Final( webSha256_t *ctx, unsigned char digest[WEB_SHA256_SIZE] ) 
 	for ( i = 0; i < WEB_SHA256_SIZE; i++ )
 		digest[i] = (unsigned char)( ctx->state[i >> 2] >> ( ( 3 - ( i & 3 ) ) * 8 ) );
 }
+
+// the digest of data that is in memory as a whole
+void Web_SHA256( const void *data, size_t len, unsigned char digest[WEB_SHA256_SIZE] ) {
+	webSha256_t ctx;
+
+	Web_SHA256Init( &ctx );
+	Web_SHA256Update( &ctx, data, len );
+	Web_SHA256Final( &ctx, digest );
+}
+
+// bytes as lower case hex digits, two a byte, with an end
+void Web_Hex( const unsigned char *in, int len, char *out ) {
+	static const char digits[] = "0123456789abcdef";
+	int i;
+
+	for ( i = 0; i < len; i++ ) {
+		out[i * 2] = digits[in[i] >> 4];
+		out[i * 2 + 1] = digits[in[i] & 15];
+	}
+	out[len * 2] = '\0';
+}

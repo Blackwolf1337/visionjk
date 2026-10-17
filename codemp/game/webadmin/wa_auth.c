@@ -134,17 +134,6 @@ Small things
 ==============================================================================
 */
 
-static void WA_Hex( const byte *in, int len, char *out ) {
-	static const char digits[] = "0123456789abcdef";
-	int i;
-
-	for ( i = 0; i < len; i++ ) {
-		out[i * 2] = digits[in[i] >> 4];
-		out[i * 2 + 1] = digits[in[i] & 15];
-	}
-	out[len * 2] = '\0';
-}
-
 // exactly len bytes written as hex, with nothing behind them but what ends a value
 static qboolean WA_Unhex( const char *in, byte *out, int len ) {
 	int i;
@@ -164,14 +153,6 @@ static qboolean WA_Unhex( const char *in, byte *out, int len ) {
 		}
 	}
 	return (qboolean)( in[i] == '\0' || in[i] == ';' || in[i] == ' ' || in[i] == '\r' || in[i] == '\n' );
-}
-
-static void WA_Sha256( const void *data, int len, byte *digest ) {
-	webSha256_t sha;
-
-	Web_SHA256Init( &sha );
-	Web_SHA256Update( &sha, data, (size_t)len );
-	Web_SHA256Final( &sha, digest );
 }
 
 // letters and digits to type, len of them
@@ -311,17 +292,17 @@ static void WA_SaveUsers( void ) {
 		const waUser_t	*u = &waUsers[i];
 		char			salt[33], hash[65], totp[WA_TOTP_SECRET * 2 + 1] = "-", token[65] = "-";
 
-		WA_Hex( u->salt, 16, salt );
-		WA_Hex( u->hash, 32, hash );
+		Web_Hex( u->salt, 16, salt );
+		Web_Hex( u->hash, 32, hash );
 		if ( u->hasTotp ) {
-			WA_Hex( u->totp, WA_TOTP_SECRET, totp );
+			Web_Hex( u->totp, WA_TOTP_SECRET, totp );
 		}
 		if ( u->hasToken ) {
-			WA_Hex( u->token, 32, token );
+			Web_Hex( u->token, 32, token );
 		}
 		WA_BufPrintf( &b, "user %s %s %s %s %s %lld %s", u->name, WA_RoleName( u->role ), salt, hash, totp, u->totpStep, token );
 		for ( k = 0; k < u->numRecovery; k++ ) {
-			WA_Hex( u->recovery[k], 32, hash );
+			Web_Hex( u->recovery[k], 32, hash );
 			WA_BufPrintf( &b, " %s", hash );
 		}
 		WA_BufPrintf( &b, "\n" );
@@ -344,9 +325,9 @@ static void WA_SaveSessions( void ) {
 		if ( !s->inUse ) {
 			continue;
 		}
-		WA_Hex( s->id, 32, id );
+		Web_Hex( s->id, 32, id );
 		if ( s->byKey ) {
-			WA_Hex( s->pub, AUTH_PUBLIC_SIZE, pub );
+			Web_Hex( s->pub, AUTH_PUBLIC_SIZE, pub );
 		}
 		WA_BufPrintf( &b, "session %s %s %lld %lld \"%s\"\n", id, pub, s->created, s->used, s->name );
 	}
@@ -528,7 +509,7 @@ static qboolean WA_NewSession( waConnection_t *c, const char *name, const byte *
 	}
 	memset( s, 0, sizeof( *s ) );
 	s->inUse = qtrue;
-	WA_Sha256( cookie, sizeof( cookie ), s->id );
+	Web_SHA256( cookie, sizeof( cookie ), s->id );
 	Q_strncpyz( s->name, name, sizeof( s->name ) );
 	if ( pub ) {
 		s->byKey = qtrue;
@@ -537,7 +518,7 @@ static qboolean WA_NewSession( waConnection_t *c, const char *name, const byte *
 	s->created = s->used = now;
 	WA_SaveSessions();
 
-	WA_Hex( cookie, sizeof( cookie ), text );
+	Web_Hex( cookie, sizeof( cookie ), text );
 	Com_sprintf( header, sizeof( header ), "Set-Cookie: " WA_COOKIE "=%s; Path=/; HttpOnly; SameSite=Strict; Max-Age=%i%s\r\nCache-Control: no-store\r\n",
 		text, WA_SESSION_MAX, c->https ? "; Secure" : "" );
 	Com_sprintf( body, sizeof( body ), "{\"ok\":true,\"role\":\"%s\"}", WA_RoleName( WA_SessionRole( s ) ) );
@@ -576,7 +557,7 @@ void WA_AuthRequest( waConnection_t *c, const char *head ) {
 			if ( !WA_Unhex( p + sizeof( WA_COOKIE ), secret, sizeof( secret ) ) ) {
 				continue;
 			}
-			WA_Sha256( secret, sizeof( secret ), id );
+			Web_SHA256( secret, sizeof( secret ), id );
 			for ( i = 0; i < WA_MAX_SESSIONS; i++ ) {
 				waSession_t *s = &waSessions[i];
 
@@ -619,7 +600,7 @@ void WA_AuthRequest( waConnection_t *c, const char *head ) {
 			}
 		}
 		if ( token && WA_Unhex( token, secret, sizeof( secret ) ) ) {
-			WA_Sha256( secret, sizeof( secret ), id );
+			Web_SHA256( secret, sizeof( secret ), id );
 			for ( i = 0; i < waNumUsers; i++ ) {
 				if ( waUsers[i].hasToken && !crypto_verify32( waUsers[i].token, id ) && ( !name || !Q_stricmp( name, waUsers[i].name ) ) ) {
 					c->role = waUsers[i].role;
@@ -696,7 +677,7 @@ static qboolean WA_CheckCode( waUser_t *user, const char *typed ) {
 	if ( n != WA_RECOVERY_LEN ) {
 		return qfalse;
 	}
-	WA_Sha256( code, WA_RECOVERY_LEN, hash );
+	Web_SHA256( code, WA_RECOVERY_LEN, hash );
 	for ( i = 0; i < user->numRecovery; i++ ) {
 		if ( !crypto_verify32( user->recovery[i], hash ) ) {
 			memmove( user->recovery[i], user->recovery[i + 1], (size_t)( user->numRecovery - i - 1 ) * 32 );
@@ -1000,7 +981,7 @@ static void WA_ApiAccount( waConnection_t *c, const char *what, const char *body
 			if ( !WA_RandomCode( text, WA_RECOVERY_LEN ) ) {
 				break;
 			}
-			WA_Sha256( text, WA_RECOVERY_LEN, user->recovery[user->numRecovery++] );
+			Web_SHA256( text, WA_RECOVERY_LEN, user->recovery[user->numRecovery++] );
 			WA_BufPrintf( &b, "%s\"%.5s-%s\"", i ? "," : "", text, text + 5 );
 			crypto_wipe( text, sizeof( text ) );
 		}
@@ -1033,10 +1014,10 @@ static void WA_ApiAccount( waConnection_t *c, const char *what, const char *body
 			WA_AuthAnswer( c, 500, "Internal Server Error", "random" );
 			return;
 		}
-		WA_Sha256( token, sizeof( token ), user->token );
+		Web_SHA256( token, sizeof( token ), user->token );
 		user->hasToken = qtrue;
 		WA_SaveUsers();
-		WA_Hex( token, sizeof( token ), text );
+		Web_Hex( token, sizeof( token ), text );
 		Com_sprintf( reply, sizeof( reply ), "{\"ok\":true,\"token\":\"%s\"}", text );
 		WA_RespondJsonText( c, reply );
 		crypto_wipe( token, sizeof( token ) );
@@ -1382,10 +1363,10 @@ qboolean WA_AuthConsoleCommand( const char *cmd ) {
 		char text[65];
 
 		if ( BG_AuthRandom( token, sizeof( token ) ) ) {
-			WA_Sha256( token, sizeof( token ), user->token );
+			Web_SHA256( token, sizeof( token ), user->token );
 			user->hasToken = qtrue;
 			WA_SaveUsers();
-			WA_Hex( token, sizeof( token ), text );
+			Web_Hex( token, sizeof( token ), text );
 			trap->Print( "The token of the account %s, shown this once (a script sends \"Authorization: Bearer <token>\"):\n%s\n", user->name, text );
 			crypto_wipe( token, sizeof( token ) );
 			crypto_wipe( text, sizeof( text ) );

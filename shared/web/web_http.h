@@ -66,6 +66,8 @@ typedef struct webSha256_s {
 void Web_SHA256Init( webSha256_t *ctx );
 void Web_SHA256Update( webSha256_t *ctx, const void *data, size_t len );
 void Web_SHA256Final( webSha256_t *ctx, unsigned char digest[WEB_SHA256_SIZE] );
+void Web_SHA256( const void *data, size_t len, unsigned char digest[WEB_SHA256_SIZE] );
+void Web_Hex( const unsigned char *in, int len, char *out );	// out has room for len * 2 + 1
 
 #if defined(__cplusplus)
 } // extern "C"

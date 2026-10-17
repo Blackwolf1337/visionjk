@@ -71,16 +71,11 @@ const byte *CL_FontFile( int font, int *length ) {
 		if ( len <= 0 || !buffer ) {
 			Com_Printf( S_COLOR_YELLOW "No %s: text is drawn without it\n", f->file );
 		} else {
-			webSha256_t		sha;
 			unsigned char	digest[WEB_SHA256_SIZE];
 			char			hex[WEB_SHA256_SIZE * 2 + 1];
 
-			Web_SHA256Init( &sha );
-			Web_SHA256Update( &sha, buffer, (size_t)len );
-			Web_SHA256Final( &sha, digest );
-			for ( int i = 0; i < WEB_SHA256_SIZE; i++ ) {
-				Com_sprintf( hex + i * 2, 3, "%02x", digest[i] );
-			}
+			Web_SHA256( buffer, (size_t)len, digest );
+			Web_Hex( digest, WEB_SHA256_SIZE, hex );
 			if ( Q_stricmp( hex, f->sha256 ) ) {
 				Com_Printf( S_COLOR_YELLOW "%s is not the file of this build, it is not used\n", f->file );
 			} else {

@@ -243,12 +243,9 @@ void BG_AuthFingerprint( const byte *pub, char *out, int outSize ) {
 	byte			blob[AUTH_BLOB_SIZE];
 	unsigned char	digest[WEB_SHA256_SIZE];
 	char			text[AUTH_BASE64_SIZE], *end;
-	webSha256_t		sha;
 
 	Auth_PublicBlob( pub, blob );
-	Web_SHA256Init( &sha );
-	Web_SHA256Update( &sha, blob, sizeof( blob ) );
-	Web_SHA256Final( &sha, digest );
+	Web_SHA256( blob, sizeof( blob ), digest );
 	BG_AuthEncode( digest, sizeof( digest ), text, sizeof( text ) );
 	end = strchr( text, '=' );
 	if ( end ) {
