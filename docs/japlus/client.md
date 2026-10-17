@@ -230,6 +230,26 @@ be marked: its rows are drawn as strings of another height. Not run: nobody has 
 
 Not run with real keys: a hidden window gets none, so the right keys and the modifiers were only built.
 
+### Console scripts
+
+`qcommon/cmd.cpp` (2026-10-17), the commands of TaystJK with its syntax, so its scripts and binds work here.
+
+| Command | What it does |
+|---------|--------------|
+| `delay <ms>` | what follows it in the line or the bind runs that many milliseconds later: `bind x "+attack;delay 300;-attack"`. Everything else goes on in the meantime |
+| `waitf <frames>` | the same in frames |
+| `delaycancel <text>`, `waitfcancel <text>` | drop what waits and has the text in it, `""` all of it |
+| `ifCvar <cvar> <test> <count> <command ...> ...` | runs the first command whose test the cvar passes. A test is a value, or `$=` `$!=` `$>` `$<` `$>=` `$<=` with a number, `$contains` `$beginswith` `$endswith` with a text, or `$else`. A value that begins with `$` is that cvar's. `<count>` is the words of the command, itself included: `ifCvar cg_thirdPerson 0 3 set cg_thirdPerson 1 $else 3 set cg_thirdPerson 0` |
+| `strSub <command ...>` | runs the command with `$cvar$` replaced by the value: `strSub say_team my fov is $cg_fov$`. `$$` is a `$` |
+
+- Quotes inside quotes: a quote that a letter follows opens a quote inside the quote, so
+  `bind x "say "a b""` binds `say "a b"`. That holds for what runs on this machine (console, configs, binds),
+  not for what a server or a client sends. A quote outside quotes opens one as it always did.
+- At most 64 delayed lines wait at the same time.
+- `ifCvar` and `strSub` give out no password: a cvar the engine hides and any cvar with `pass` or `pwd` in its
+  name reads as empty there, so a config from a server can not put one into a chat line. TaystJK has no such
+  check.
+
 ### The chat box
 
 `cgame/chat/cg_chat.c` replaces the chat box of the base game (2026-10-11).
