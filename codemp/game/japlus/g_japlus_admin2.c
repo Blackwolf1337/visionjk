@@ -28,29 +28,6 @@ Rebuilt from jampgamei386.so (JA+ v2.4 Build 7).
 
 extern stringID_table_t animTable[MAX_ANIMATIONS+1];
 
-static void JP_Reply( gentity_t *ent, qboolean rcon, const char *text ) {
-	if ( rcon )
-		trap->Print( "%s", text );
-	else
-		trap->SendServerCommand( ent-g_entities, va( "print \"%s\"", text ) );
-}
-
-static void JP_LogCmd( gentity_t *ent, qboolean rcon, const char *cmd, const char *extra ) {
-	if ( !rcon && ent && ent->client->sess.jpAdminLevel != JPADM_RCON )
-		G_LogPrintf( "ADMIN CMD EXECUTED : %s%s%s executed by %s\n", cmd, extra[0] ? " " : "", extra, ent->client->pers.netname );
-}
-
-static gentity_t *JP_ValidPlayer( int num ) {
-	gentity_t *ent;
-
-	if ( num < 0 || num >= level.maxclients )
-		return NULL;
-	ent = &g_entities[num];
-	if ( !ent->inuse || !ent->client || ent->client->pers.connected != CON_CONNECTED )
-		return NULL;
-	return ent;
-}
-
 /*
 =================
 ammap <gametype> <map>: HL is the highlander mode of FFA
@@ -155,7 +132,7 @@ void Cmd_amrename_f( gentity_t *ent, qboolean rcon ) {
 
 	if ( !rcon && !G_ClientAdminCmdAllowed( ent, cmd, qtrue ) )
 		return;
-	if ( !(target = JP_ValidPlayer( G_getClientNumberForString( who ) )) )
+	if ( !(target = JP_ValidClient( G_getClientNumberForString( who ) )) )
 		return;
 	if ( !rcon && !G_ClientAdminCmdAllowedOn( ent, target, qtrue, qfalse ) )
 		return;
@@ -245,7 +222,7 @@ void Cmd_amforceteam_f( gentity_t *ent, qboolean rcon ) {
 	last = num == -1 ? level.maxclients - 1 : num;
 
 	for ( i = first; i <= last; i++ ) {
-		gentity_t *target = JP_ValidPlayer( i );
+		gentity_t *target = JP_ValidClient( i );
 
 		if ( target && (rcon || G_ClientAdminCmdAllowedOn( ent, target, qfalse, qfalse )) )
 			JP_ForceTeam( target, team );

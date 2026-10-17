@@ -175,6 +175,10 @@ void		JP_EmoteExec( gentity_t *ent, int anim );
 void		JP_FilterPlayerName( gentity_t *ent, char *name, size_t size );
 void		JP_ClanTagThink( gentity_t *ent );
 void		JP_SanitizeString( char *out, const char *in, size_t outSize, int maxIn );
+gentity_t	*JP_ValidClient( int num );										// g_japlus_admin.c
+void		JP_Reply( gentity_t *ent, qboolean rcon, const char *text );
+void		JP_LogCmd( gentity_t *ent, qboolean rcon, const char *cmd, const char *extra );
+void		JP_FormatName( char *out, int outSize, const char *fmt, const char *name );
 #define JP_NAME_CHARS	31	// the original name compares look at this many characters
 void		JP_UserinfoChanged( gentity_t *ent, const char *userinfo );
 void		G_StatusUserinfo( gentity_t *ent, const char *userinfo );		// status/g_status.c

@@ -27,17 +27,6 @@ Rebuilt from jampgamei386.so (JA+ v2.4 Build 7).
 #include "game/g_local.h"
 #include "g_japlus.h"
 
-static gentity_t *JP_ValidClient( int num ) {
-	gentity_t *ent;
-
-	if ( num < 0 || num >= level.maxclients )
-		return NULL;
-	ent = &g_entities[num];
-	if ( !ent->inuse || !ent->client || ent->client->pers.connected != CON_CONNECTED )
-		return NULL;
-	return ent;
-}
-
 /*
 =================
 effect functions
@@ -372,16 +361,6 @@ center print for everybody: the target gets "targetMsg", all others "broadcastMs
 name of the target in it
 =================
 */
-static void JP_FormatName( char *out, int outSize, const char *fmt, const char *name ) {
-	const char *p = strstr( fmt, "%s" );
-
-	if ( !p ) {
-		Q_strncpyz( out, fmt, outSize );
-		return;
-	}
-	Com_sprintf( out, outSize, "%.*s%s%s", (int)(p - fmt), fmt, name, p + 2 );
-}
-
 void G_AdminCSDisplay( int target, const char *targetMsg, const char *broadcastMsg ) {
 	char msg[MAX_STRING_CHARS];
 	int i;
@@ -411,18 +390,6 @@ typedef struct jpFxCall_s {
 	qboolean	single;			// one player addressed
 	qboolean	silent;			// rcon level admin: no broadcast message
 } jpFxCall_t;
-
-static void JP_LogAdminCmd( gentity_t *ent, qboolean rcon, const char *cmd ) {
-	if ( !rcon && ent && ent->client->sess.jpAdminLevel != JPADM_RCON )
-		G_LogPrintf( "ADMIN CMD EXECUTED : %s executed by %s\n", cmd, ent->client->pers.netname );
-}
-
-static void JP_Reply( gentity_t *ent, qboolean rcon, const char *text ) {
-	if ( rcon )
-		trap->Print( "%s", text );
-	else
-		trap->SendServerCommand( ent-g_entities, va( "print \"%s\"", text ) );
-}
 
 // qfalse when the command would end while it reads its arguments: no player given and not run by the admin script
 static qboolean JP_FxHasTarget( qboolean rcon ) {
@@ -575,7 +542,7 @@ static void JP_ToggleFxCmd( gentity_t *ent, qboolean rcon, const jpToggleFx_t *f
 	else
 		JP_FxAnnounce( &c, fx->msgTargetOff, fx->msgBroadcastOff );
 
-	JP_LogAdminCmd( ent, rcon, c.cmd );
+	JP_LogCmd( ent, rcon, c.cmd, "" );
 }
 
 static const jpToggleFx_t jpFxEmpower = { "amempower", Flag_Empowered, Set_Empower, &jp_msgTargetEmpower, &jp_msgBroadcastEmpower, &jp_msgTargetUnempower, &jp_msgBroadcastUnempower, qfalse, qtrue };
@@ -628,7 +595,7 @@ void Cmd_amghost_f( gentity_t *ent, qboolean rcon ) {
 		JP_FxAnnounce( &c, &jp_msgTargetUnghost, &jp_msgBroadcastUnghost );
 	}
 
-	JP_LogAdminCmd( ent, rcon, c.cmd );
+	JP_LogCmd( ent, rcon, c.cmd, "" );
 }
 
 /*
@@ -675,7 +642,7 @@ static void JP_AllPlayersFx( gentity_t *ent, qboolean rcon, int (*apply)( gentit
 		trap->SendServerCommand( -1, va( "cp \"^7%s\n\"", msg ) );
 	}
 
-	JP_LogAdminCmd( ent, rcon, c.cmd );
+	JP_LogCmd( ent, rcon, c.cmd, "" );
 }
 
 static int Apply_Sleep( gentity_t *t, const jpFxCall_t *c, gentity_t *admin, qboolean rcon ) {
@@ -790,7 +757,7 @@ void Cmd_amdenyvote_f( gentity_t *ent, qboolean rcon ) {
 	else
 		JP_FxAnnounce( &c, &jp_msgTargetUndenyvote, &jp_msgBroadcastUndenyvote );
 
-	JP_LogAdminCmd( ent, rcon, c.cmd );
+	JP_LogCmd( ent, rcon, c.cmd, "" );
 }
 
 /*
@@ -848,5 +815,5 @@ void Cmd_amslap_f( gentity_t *ent, qboolean rcon ) {
 		JP_FxAnnounce( &c, &jp_msgTargetSlap, &jp_msgBroadcastSlap );
 	}
 
-	JP_LogAdminCmd( ent, rcon, c.cmd );
+	JP_LogCmd( ent, rcon, c.cmd, "" );
 }

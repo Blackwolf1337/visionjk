@@ -55,7 +55,7 @@ The login messages are cvars holding a text with an optional %s for the player n
 Only the first %s is replaced, nothing else of the cvar is interpreted as format.
 =================
 */
-static void JP_FormatName( char *out, int outSize, const char *fmt, const char *name ) {
+void JP_FormatName( char *out, int outSize, const char *fmt, const char *name ) {
 	const char *p = strstr( fmt, "%s" );
 
 	if ( !p ) {
@@ -65,15 +65,25 @@ static void JP_FormatName( char *out, int outSize, const char *fmt, const char *
 	Com_sprintf( out, outSize, "%.*s%s%s", (int)(p - fmt), fmt, name, p + 2 );
 }
 
-static gentity_t *JP_ValidClient( int num ) {
-	gentity_t *ent;
+// the client of this number if it is connected and in the game, else NULL
+gentity_t *JP_ValidClient( int num ) {
+	if ( num < 0 || num >= level.maxclients || !JP_IsConnectedClient( &g_entities[num] ) )
+		return NULL;
+	return &g_entities[num];
+}
 
-	if ( num < 0 || num >= level.maxclients )
-		return NULL;
-	ent = &g_entities[num];
-	if ( !ent->inuse || !ent->client || ent->client->pers.connected != CON_CONNECTED )
-		return NULL;
-	return ent;
+// the answer to an admin command: to the console for rcon, else to the player who sent it
+void JP_Reply( gentity_t *ent, qboolean rcon, const char *text ) {
+	if ( rcon )
+		trap->Print( "%s", text );
+	else
+		trap->SendServerCommand( ent-g_entities, va( "print \"%s\"", text ) );
+}
+
+// an admin command into the log, unless it came from rcon or from an rcon admin (as JA+ does)
+void JP_LogCmd( gentity_t *ent, qboolean rcon, const char *cmd, const char *extra ) {
+	if ( !rcon && ent && ent->client->sess.jpAdminLevel != JPADM_RCON )
+		G_LogPrintf( "ADMIN CMD EXECUTED : %s%s%s executed by %s\n", cmd, extra[0] ? " " : "", extra, ent->client->pers.netname );
 }
 
 /*
@@ -589,11 +599,6 @@ static qboolean JP_AdminCallBegin( gentity_t *ent, qboolean rcon, jpAdminCall_t 
 	return qtrue;
 }
 
-static void JP_LogAdminCmd( gentity_t *ent, qboolean rcon, const char *cmd ) {
-	if ( !rcon && ent && ent->client->sess.jpAdminLevel != JPADM_RCON )
-		G_LogPrintf( "ADMIN CMD EXECUTED : %s executed by %s\n", cmd, ent->client->pers.netname );
-}
-
 static void Cmd_amkick_f( gentity_t *ent, qboolean rcon ) {
 	jpAdminCall_t call;
 	gentity_t *target;
@@ -605,7 +610,7 @@ static void Cmd_amkick_f( gentity_t *ent, qboolean rcon ) {
 	if ( !rcon ) {
 		if ( !G_ClientAdminCmdAllowedOn( ent, target, qtrue, qtrue ) )
 			return;
-		JP_LogAdminCmd( ent, rcon, call.cmd );
+		JP_LogCmd( ent, rcon, call.cmd, "" );
 	}
 	trap->SendConsoleCommand( EXEC_APPEND, va( "clientkick %i\n", call.target ) );
 }
@@ -631,7 +636,7 @@ static void Cmd_amban_f( gentity_t *ent, qboolean rcon ) {
 			trap->SendConsoleCommand( EXEC_APPEND, va( "addip %s\n", clean ) );
 	}
 
-	JP_LogAdminCmd( ent, rcon, call.cmd );
+	JP_LogCmd( ent, rcon, call.cmd, "" );
 	trap->SendConsoleCommand( EXEC_APPEND, va( "clientkick %i\n", call.target ) );
 }
 
@@ -723,7 +728,7 @@ static void Cmd_amShowMotd_f( gentity_t *ent, qboolean rcon ) {
 			JP_SetMotd( target->client );
 	}
 
-	JP_LogAdminCmd( ent, rcon, call.cmd );
+	JP_LogCmd( ent, rcon, call.cmd, "" );
 }
 
 static void Cmd_amsay_f( gentity_t *ent, qboolean rcon ) {

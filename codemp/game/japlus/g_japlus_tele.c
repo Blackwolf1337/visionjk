@@ -32,24 +32,6 @@ extern void hurt_touch( gentity_t *self, gentity_t *other, trace_t *trace );
 
 #define JP_STARTREK_DELAY	3		// seconds the cloaked player waits before he is beamed
 
-static void JP_Reply( gentity_t *ent, qboolean rcon, const char *text ) {
-	if ( rcon )
-		trap->Print( "%s", text );
-	else
-		trap->SendServerCommand( ent-g_entities, va( "print \"%s\"", text ) );
-}
-
-static gentity_t *JP_ValidPlayer( int num ) {
-	gentity_t *ent;
-
-	if ( num < 0 || num >= level.maxclients )
-		return NULL;
-	ent = &g_entities[num];
-	if ( !ent->inuse || !ent->client || ent->client->pers.connected != CON_CONNECTED )
-		return NULL;
-	return ent;
-}
-
 /*
 =================
 JP_TeleportNow: the plain teleport without the star trek delay
@@ -191,7 +173,7 @@ void Cmd_amtele_f( gentity_t *ent, qboolean rcon ) {
 	if ( !rcon && !G_ClientAdminCmdAllowed( ent, cmd, qtrue ) )
 		return;
 
-	if ( !(target = JP_ValidPlayer( targetNum )) )
+	if ( !(target = JP_ValidClient( targetNum )) )
 		return;
 	if ( !rcon && !G_ClientAdminCmdAllowedOn( ent, target, qtrue, qtrue ) )
 		return;
@@ -220,7 +202,7 @@ void Cmd_amtele_f( gentity_t *ent, qboolean rcon ) {
 		angles[YAW] = (float)jp->teleMarkYaw;
 	}
 	else if ( argc == 3 || (!rcon && argc == 2) ) {
-		if ( !(to = JP_ValidPlayer( toNum )) )
+		if ( !(to = JP_ValidClient( toNum )) )
 			return;
 		VectorSet( dest, to->client->ps.origin[0] + 60.0f, to->client->ps.origin[1], to->client->ps.origin[2] + 50.0f );
 		VectorSet( below, to->client->ps.origin[0] - dest[0], 0.0f, to->client->ps.origin[2] - dest[2] );
@@ -304,7 +286,7 @@ void Cmd_amorigin_f( gentity_t *ent, qboolean rcon ) {
 
 	if ( !G_ClientAdminCmdAllowed( ent, cmd, qtrue ) )
 		return;
-	if ( !(target = JP_ValidPlayer( num )) )
+	if ( !(target = JP_ValidClient( num )) )
 		return;
 	if ( !G_ClientAdminCmdAllowedOn( ent, target, qtrue, qfalse ) )
 		return;
