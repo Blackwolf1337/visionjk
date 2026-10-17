@@ -135,6 +135,16 @@ What goes where on a wide window:
   shape, with black beside them. A video keeps its 4:3 with black beside it.
 - The console is as wide as the window, as before.
 
+Pictures made for 16:9 (2026-10-17, as TaystJK): on a wide window the loading screen takes
+`levelshots_16_9/<map>` and the start of the game `menu/splash_16_9` where a pak has them, a level without a
+picture `menu/art/unknownmap_mp_16_9`, else the pictures of 4:3 as before (stretched over the window, as they
+were). The map lists of the menus keep the 4:3 pictures, their boxes are 4:3. This tree ships no such pictures.
+
+Shader overrides (2026-10-17, as TaystJK, `rd-vanilla/tr_shader.cpp`, both renderers): a shader in a file
+`shaders/<name>.oshader` takes the place of the shader of that name in any `.shader` file, without a copy of the
+rest of that file. Of two override files with the same shader the one whose name comes later in the alphabet
+wins, as among `.shader` files. The console says at the start how many override files there are.
+
 The modules read `v_2dBias`. In a stock `jamp.exe`, or with a renderer of another tree, the cvar is missing or
 0 and they draw as they always did.
 

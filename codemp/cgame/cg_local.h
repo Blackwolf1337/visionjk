@@ -1865,6 +1865,7 @@ void CG_Place2D( place2D_t place );
 void CG_AdjustFrom640( float *x, float *y, float *w, float *h );
 void CG_FillSides( const float *color );
 void CG_DrawPicWide( qhandle_t hShader );
+qhandle_t CG_WidePicture( const char *name, const char *wideName );
 void CG_DrawStretchPic( float x, float y, float w, float h, float s1, float t1, float s2, float t2, qhandle_t hShader );
 void CG_Font_DrawString( int ox, int oy, const char *text, const float *rgba, const int setIndex, int iCharLimit, const float scale );
 void CG_FillRect( float x, float y, float width, float height, const float *color );

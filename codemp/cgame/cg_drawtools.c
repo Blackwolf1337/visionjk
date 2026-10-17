@@ -90,6 +90,25 @@ void CG_DrawPicWide( qhandle_t hShader ) {
 
 /*
 ================
+CG_WidePicture
+
+The picture for CG_DrawPicWide: on a wide window the one made for 16:9 where a pak has it (levelshots_16_9/<map>,
+as TaystJK, 2026-10-17), else the one of 4:3. 0 when neither is there
+================
+*/
+qhandle_t CG_WidePicture( const char *name, const char *wideName ) {
+	if ( cgs.bias2D > 0.0f ) {
+		const qhandle_t wide = trap->R_RegisterShaderNoMip( wideName );
+
+		if ( wide ) {
+			return wide;
+		}
+	}
+	return trap->R_RegisterShaderNoMip( name );
+}
+
+/*
+================
 CG_DrawStretchPic, CG_Font_DrawString
 
 The calls of the renderer for the menu code (cgDC), with the place CG_Place2D() set
