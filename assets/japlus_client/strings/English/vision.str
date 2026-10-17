@@ -647,6 +647,33 @@ LANG_ENGLISH        "muted for you"
 REFERENCE           BOOMBOX_LINK_OR_SONG
 LANG_ENGLISH        "Boombox, link or song"
 
+REFERENCE           PUT_DOWN_BY_S
+LANG_ENGLISH        "Put down by %s"
+
+REFERENCE           ASKED_FOR_BY_S
+LANG_ENGLISH        "Asked for by %s"
+
+REFERENCE           OPEN_THE_PLAYER
+LANG_ENGLISH        "Open the player"
+
+REFERENCE           NOTHING_PLAYS
+LANG_ENGLISH        "Nothing plays"
+
+REFERENCE           SKIP
+LANG_ENGLISH        "Skip"
+
+REFERENCE           STOP
+LANG_ENGLISH        "Stop"
+
+REFERENCE           IN_THE_LINE_S
+LANG_ENGLISH        "In the line: %s"
+
+REFERENCE           IN_THE_LINE
+LANG_ENGLISH        "In the line"
+
+REFERENCE           NOTHING_WAITS
+LANG_ENGLISH        "Nothing waits"
+
 REFERENCE           INITIATE
 LANG_ENGLISH        "Initiate"
 

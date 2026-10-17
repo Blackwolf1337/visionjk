@@ -32,7 +32,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // The boxes of the boombox (boombox/cg_boombox.c) are pointed at the same way: the one under the pointer has the
 // outline, a click opens its card (what it plays, and what can be done with it), and a box that is pressed on and
 // dragged follows the pointer over the floor until the button is let go. They have the numbers of the pointer from
-// SELECT_BOX on.
+// SELECT_BOX on. "Open the player" on its card opens the window of the box (boombox/cg_boombox_ui.c), which is
+// drawn here and gets the keys first while it is open.
 //
 // The outline is the model of the player drawn a second time with a shader that only shows a rim around it. An
 // engine of this tree makes that shader from a flag (RGBA_SHADER_HULL), so it is there on a pure server
@@ -75,6 +76,7 @@ typedef enum {
 	ACT_ADMIN_SLAP,
 	ACT_ADMIN_GOTO,
 	ACT_ADMIN_BRING,
+	ACT_BOX_WINDOW,
 	ACT_BOX_PLAY,
 	ACT_BOX_PAUSE,
 	ACT_BOX_SKIP,
@@ -173,7 +175,7 @@ void CG_SelectInit( void ) {
 // is the mouse free for pointing at players
 static qboolean Select_Free( void ) {
 	return (qboolean)( v_selectPlayers.integer && cg.snap && !cg.demoPlayback
-		&& ( sel.held || sel.toggled || CG_ChatIsOpen() || CG_ScoresPicking() ) );
+		&& ( sel.held || sel.toggled || CG_ChatIsOpen() || CG_ScoresPicking() || CG_BoomboxWindowShown() ) );
 }
 
 /*
@@ -794,6 +796,7 @@ static void Select_BoxRows( int box ) {
 	if ( !CG_BoomboxInfo( box, &info ) ) {
 		return;
 	}
+	sel.rows[sel.numRows++] = ACT_BOX_WINDOW;
 	sel.rows[sel.numRows++] = ACT_BOX_PLAY;
 	if ( info.flags & BOX_PLAYING ) {
 		sel.rows[sel.numRows++] = ACT_BOX_PAUSE;
@@ -856,6 +859,7 @@ static const char *Select_Label( selectAct_t act, int clientNum ) {
 		return "";
 	}
 	switch ( act ) {
+	case ACT_BOX_WINDOW:	return CG_VisionText( "Open the player" );
 	case ACT_BOX_PLAY:		return CG_VisionText( ( info.flags & BOX_PLAYING ) ? "Add a song ..." : "Play a song ..." );
 	case ACT_BOX_PAUSE:		return CG_VisionText( ( info.flags & BOX_PAUSED ) ? "Resume" : "Pause" );
 	case ACT_BOX_SKIP:		return CG_VisionText( "Skip this song" );
@@ -1020,6 +1024,10 @@ static void Select_Run( selectAct_t act, int clientNum ) {
 		return;
 	}
 	switch ( act ) {
+	case ACT_BOX_WINDOW:
+		Select_Close();
+		CG_BoomboxWindowOpen( box );
+		return;
 	case ACT_BOX_PLAY:
 		Select_Close();
 		CG_BoomboxPrompt( box );
@@ -1043,10 +1051,7 @@ static void Select_Run( selectAct_t act, int clientNum ) {
 		CG_VoiceBoxMute( box, (qboolean)!info.muted );
 		return;
 	case ACT_BOX_MOVE:
-		// it hangs in the pointer until the next click puts it down
-		Select_Close();
-		CG_BoomboxGrab( box );
-		sel.carrying = qtrue;
+		CG_SelectCarry( box );
 		return;
 	case ACT_BOX_REMOVE:
 		if ( !sel.confirmTime || cg.time - sel.confirmTime >= SELECT_CONFIRM_MSEC ) {
@@ -1399,6 +1404,7 @@ void CG_SelectDraw( void ) {
 	if ( sel.catching && !( trap->Key_GetCatcher() & KEYCATCH_CGAME ) ) {
 		sel.catching = sel.toggled = qfalse;
 		CG_ScoresLetGo();
+		CG_BoomboxWindowClose();
 	}
 	// Who points does not type. An engine of this tree leaves the talk button out of his commands while this
 	// says so (CL_CmdButtons()): no dots over his head for anybody, and the server does not hold him still. In
@@ -1411,6 +1417,7 @@ void CG_SelectDraw( void ) {
 		sel.hover = -1;
 		Select_Close();
 		Select_LetBoxGo( qfalse );
+		CG_BoomboxWindowClose();
 		// (the chat box open with the selection of players switched off: its pointer)
 		if ( CG_ChatIsOpen() ) {
 			CG_Place2D( PLACE_CENTER );
@@ -1443,8 +1450,8 @@ void CG_SelectDraw( void ) {
 		// (it was taken away meanwhile)
 		Select_LetBoxGo( qfalse );
 	}
-	// (nobody is picked in the level through the card, through the scoreboard, or while a box is carried)
-	sel.hover = ( Select_RowAt() >= 0 || CG_ScoresPointerOver() || Select_Held() >= 0 ) ? -1 : Select_Pick();
+	// (nobody is picked in the level through the card, the scoreboard or the window of a box, or while a box is carried)
+	sel.hover = ( Select_RowAt() >= 0 || CG_ScoresPointerOver() || CG_BoomboxWindowPointerOver() || Select_Held() >= 0 ) ? -1 : Select_Pick();
 	if ( sel.hover >= 0 && sel.hover != sel.selected ) {
 		Select_Hull();
 		if ( !sel.hull[0] || !v_selectOutline.integer ) {
@@ -1471,7 +1478,8 @@ void CG_SelectDraw( void ) {
 		Select_Pixels( &at.corner[0], &at.corner[1] );
 		Select_DrawCard( &at );
 	}
-	// the pointer lies on everything, on the card as well
+	// the window of a box, and the pointer on everything, on the card and the window as well
+	CG_BoomboxWindowDraw();
 	CG_SelectDrawCursor();
 }
 
@@ -1496,6 +1504,10 @@ qboolean CG_SelectKeyEvent( int key, qboolean down ) {
 			}
 			sel.press = -1;
 		}
+		return qtrue;
+	}
+	// the window of a box, while it is open: what is on it, and Escape and the right button for it
+	if ( CG_BoomboxWindowKey( key, down ) ) {
 		return qtrue;
 	}
 	if ( !down ) {
@@ -1593,6 +1605,14 @@ void CG_SelectLetGo( void ) {
 	Select_Close();
 	Select_LetBoxGo( qfalse );
 	CG_ScoresLetGo();
+	CG_BoomboxWindowClose();
+}
+
+// "Move it" of the card or the window of a box: it hangs in the pointer until the next click puts it down
+void CG_SelectCarry( int box ) {
+	Select_Close();
+	CG_BoomboxGrab( box );
+	sel.carrying = (qboolean)( CG_BoomboxHeld() == box );
 }
 
 void CG_SelectCursorDown_f( void ) {

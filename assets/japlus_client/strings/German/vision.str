@@ -861,6 +861,42 @@ REFERENCE           BOOMBOX_LINK_OR_SONG
 LANG_ENGLISH        "Boombox, link or song"
 LANG_GERMAN         "Boombox, Link oder Lied"
 
+REFERENCE           PUT_DOWN_BY_S
+LANG_ENGLISH        "Put down by %s"
+LANG_GERMAN         "Aufgestellt von %s"
+
+REFERENCE           ASKED_FOR_BY_S
+LANG_ENGLISH        "Asked for by %s"
+LANG_GERMAN         "Gewünscht von %s"
+
+REFERENCE           OPEN_THE_PLAYER
+LANG_ENGLISH        "Open the player"
+LANG_GERMAN         "Player öffnen"
+
+REFERENCE           NOTHING_PLAYS
+LANG_ENGLISH        "Nothing plays"
+LANG_GERMAN         "Es läuft nichts"
+
+REFERENCE           SKIP
+LANG_ENGLISH        "Skip"
+LANG_GERMAN         "Überspringen"
+
+REFERENCE           STOP
+LANG_ENGLISH        "Stop"
+LANG_GERMAN         "Stopp"
+
+REFERENCE           IN_THE_LINE_S
+LANG_ENGLISH        "In the line: %s"
+LANG_GERMAN         "Warteschlange: %s"
+
+REFERENCE           IN_THE_LINE
+LANG_ENGLISH        "In the line"
+LANG_GERMAN         "Warteschlange"
+
+REFERENCE           NOTHING_WAITS
+LANG_ENGLISH        "Nothing waits"
+LANG_GERMAN         "Nichts wartet"
+
 REFERENCE           INITIATE
 LANG_ENGLISH        "Initiate"
 LANG_GERMAN         "Anwärter"

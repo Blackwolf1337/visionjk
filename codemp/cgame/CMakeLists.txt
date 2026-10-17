@@ -215,6 +215,7 @@ set(MPCGameFiles ${MPCGameFiles} ${MPCGameSelectFiles})
 # the boombox: boxes that play songs, which the server sends over the relay of the voice chat
 set(MPCGameBoomboxFiles
 	"${MPDir}/cgame/boombox/cg_boombox.c"
+	"${MPDir}/cgame/boombox/cg_boombox_ui.c"
 	"${MPDir}/cgame/boombox/cg_boombox.h"
 	"${MPDir}/game/boombox/bg_boombox.c"
 	"${MPDir}/game/boombox/bg_boombox.h"

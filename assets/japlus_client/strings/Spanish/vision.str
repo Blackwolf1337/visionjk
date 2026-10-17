@@ -861,6 +861,42 @@ REFERENCE           BOOMBOX_LINK_OR_SONG
 LANG_ENGLISH        "Boombox, link or song"
 LANG_SPANISH        "Radiocasete, enlace o canción"
 
+REFERENCE           PUT_DOWN_BY_S
+LANG_ENGLISH        "Put down by %s"
+LANG_SPANISH        "Puesto por %s"
+
+REFERENCE           ASKED_FOR_BY_S
+LANG_ENGLISH        "Asked for by %s"
+LANG_SPANISH        "Pedido por %s"
+
+REFERENCE           OPEN_THE_PLAYER
+LANG_ENGLISH        "Open the player"
+LANG_SPANISH        "Abrir el reproductor"
+
+REFERENCE           NOTHING_PLAYS
+LANG_ENGLISH        "Nothing plays"
+LANG_SPANISH        "No suena nada"
+
+REFERENCE           SKIP
+LANG_ENGLISH        "Skip"
+LANG_SPANISH        "Saltar"
+
+REFERENCE           STOP
+LANG_ENGLISH        "Stop"
+LANG_SPANISH        "Parar"
+
+REFERENCE           IN_THE_LINE_S
+LANG_ENGLISH        "In the line: %s"
+LANG_SPANISH        "En cola: %s"
+
+REFERENCE           IN_THE_LINE
+LANG_ENGLISH        "In the line"
+LANG_SPANISH        "En cola"
+
+REFERENCE           NOTHING_WAITS
+LANG_ENGLISH        "Nothing waits"
+LANG_SPANISH        "No espera nada"
+
 REFERENCE           INITIATE
 LANG_ENGLISH        "Initiate"
 LANG_SPANISH        "Iniciado"

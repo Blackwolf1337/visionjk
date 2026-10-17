@@ -153,6 +153,7 @@ static struct {
 	qboolean			social;			// the master knows the clan radio and the statuses (VOICE_FLAG_SOCIAL)
 	byte				clan[VOICE_CLAN_BYTES];	//	and this is what it is told as the clan of this client, all zero: none
 	qboolean			boxes;			// the master plays boxes of the boombox (VOICE_FLAG_BOXES),
+	qboolean			boxList;		//	it knows what came for them after 0.1.8 (VOICE_FLAG_BOXLIST),
 	int					boxHear;		//	and this is what it is told of the boxes this client hears, a bit each
 	qboolean			asked;			// "vs_voiceLink hello" went to the server,
 	int					asks;			//	this many times
@@ -933,6 +934,7 @@ static void Voice_MasterAnswer( const voicePacket_t *p, int now ) {
 
 	if ( p->client != cg.clientNum )
 		return;
+	voice.boxList = ( boxes && ( p->flags & VOICE_FLAG_BOXLIST ) ) ? qtrue : qfalse;
 	// A master that knows the radio is told the clan of this client from now on, in the long state
 	if ( social != voice.social ) {
 		voice.social = voice.radio = social;
@@ -1835,6 +1837,11 @@ float CG_VoiceBoxBeat( int box ) {
 // does the masterserver the voice chat reaches play boxes
 qboolean CG_VoiceMasterBoxes( void ) {
 	return ( voice.master && voice.linked && voice.boxes ) ? qtrue : qfalse;
+}
+
+// and it can jump in a song, take one out of the line and send the line (VOICE_FLAG_BOXLIST)
+qboolean CG_VoiceMasterBoxList( void ) {
+	return ( voice.boxes && voice.boxList ) ? qtrue : qfalse;
 }
 
 // What the player does with a box of the masterserver, to the master. qfalse: there is no master that plays boxes.

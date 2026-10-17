@@ -73,6 +73,15 @@ typedef struct cgBox_s {
 	char		title[BOX_TITLE], next[BOX_TITLE];
 	char		owner[BOX_NAME_MAX + 1];	// who put it down, "": not known (a server or master before 0.1.9)
 	char		by[BOX_NAME_MAX + 1];		// who asked for the song that plays
+	// its line while this player watches it (CG_BoomboxWatch), songs[0] plays
+	struct {
+		char	title[BOX_TITLE];
+		char	by[BOX_NAME_MAX + 1];
+		int		seconds;
+	} line[BOX_QUEUE];
+	int			lineRev;		// of what is in line, -1: nothing came
+	int			lineTotal;		// songs in it as the server says
+	int			lineHave;		// of them that came, a bit each
 	qboolean	moved;			// this player put it somewhere and the server did not answer yet
 	vec3_t		movedTo;
 	float		movedYaw;
@@ -88,6 +97,8 @@ static struct {
 	qboolean	viaMaster;		//	or the masterserver keeps them, for a server without the game module of this tree
 	qboolean	toldProtocol;
 	int			most, range;
+	qboolean	more;			// the server or the master knows what came after 0.1.8 (BOX_CAP_MORE, VOICE_FLAG_BOXLIST)
+	int			watch;			// the box whose line was asked for, -1: none
 	char		pending[BOX_PENDING][BOX_ASK + 64];
 	int			numPending;
 	int			sendTime;
@@ -115,7 +126,7 @@ void CG_BoomboxInit( void ) {
 
 	memset( &bx, 0, sizeof( bx ) );
 	memset( cgBoxes, 0, sizeof( cgBoxes ) );
-	bx.held = -1;
+	bx.held = bx.watch = -1;
 	bx.serverHas = serverHas;
 }
 
@@ -166,15 +177,17 @@ static qboolean Box_Valid( int box ) {
 }
 
 // the words of the client command boombox, by BOX_DO_*
-static const char *const boxVerbs[] = { "", "play", "place", "move", "pause", "resume", "skip", "stop", "remove", "volume" };
+static const char *const boxVerbs[] = { "", "play", "place", "move", "pause", "resume", "skip", "stop", "remove", "volume", "seek", "drop",
+	"watch" };
 
 /*
 =================
 Box_Do
 
 What this player does with a box (BOX_DO_*): the client command boombox to a server of this tree, a VOICE_BOX to
-the masterserver. at and yaw: where it goes (place, move, and play into box 255: a new box). value: the volume.
-text: what to play.
+the masterserver. at and yaw: where it goes (place, move, and play into box 255: a new box). value: the volume,
+the second to jump to, the place in the line of the song to take out. text: what to play. Box 255 for watch:
+no box any more.
 =================
 */
 static void Box_Do( int what, int box, const vec3_t at, float yaw, int value, const char *text ) {
@@ -191,7 +204,7 @@ static void Box_Do( int what, int box, const vec3_t at, float yaw, int value, co
 				d.origin[k] = (int)at[k];
 			d.yaw = yaw;
 		}
-		d.volume = value;
+		d.volume = d.value = value;
 		if ( text )
 			Q_strncpyz( d.text, text, sizeof( d.text ) );
 		if ( !CG_VoiceBoxSend( &d ) )
@@ -212,6 +225,15 @@ static void Box_Do( int what, int box, const vec3_t at, float yaw, int value, co
 		break;
 	case BOX_DO_VOLUME:
 		Box_Send( va( "vs_boxaction volume %i %i", box, value ), (int)strlen( va( "vs_boxaction volume %i ", box ) ) );
+		break;
+	case BOX_DO_SEEK:
+		Box_Send( va( "vs_boxaction seek %i %i", box, value ), (int)strlen( va( "vs_boxaction seek %i ", box ) ) );
+		break;
+	case BOX_DO_DROP:
+		Box_Send( va( "vs_boxaction drop %i %i", box, value ), 0 );
+		break;
+	case BOX_DO_WATCH:
+		Box_Send( va( "vs_boxaction watch %i", ( box == 255 ) ? -1 : box ), (int)strlen( "vs_boxaction watch " ) );
 		break;
 	default:
 		Box_Send( va( "vs_boxaction %s %i", boxVerbs[what], box ), 0 );
@@ -235,13 +257,101 @@ void CG_BoomboxDo( int box, const char *what ) {
 
 // louder or quieter for everybody by a tenth a step. Shown at once, the server says it to the others.
 void CG_BoomboxLouder( int box, int steps ) {
-	cgBox_t *b;
+	if ( Box_Valid( box ) )
+		CG_BoomboxSetVolume( box, ( cgBoxes[box].volume + 5 ) / 10 * 10 + steps * 10 );
+}
 
+void CG_BoomboxSetVolume( int box, int volume ) {
 	if ( !Box_Valid( box ) )
 		return;
+	cgBoxes[box].volume = Com_Clampi( 0, 100, volume );
+	Box_Do( BOX_DO_VOLUME, box, NULL, 0.0f, cgBoxes[box].volume, NULL );
+}
+
+// can the server or the master jump in a song, take one out of the line and send the line
+qboolean CG_BoomboxMore( void ) {
+	return ( bx.on && bx.more ) ? qtrue : qfalse;
+}
+
+// The song that plays goes on from that second, for everybody. Shown at once.
+void CG_BoomboxSeek( int box, int seconds ) {
+	cgBox_t *b;
+
+	if ( !Box_Valid( box ) || !CG_BoomboxMore() || !( cgBoxes[box].flags & BOX_PLAYING ) )
+		return;
 	b = &cgBoxes[box];
-	b->volume = Com_Clampi( 0, 100, ( b->volume + 5 ) / 10 * 10 + steps * 10 );
-	Box_Do( BOX_DO_VOLUME, box, NULL, 0.0f, b->volume, NULL );
+	seconds = Com_Clampi( 0, Q_max( 0, b->length - 2 ), seconds );
+	b->msec = seconds * 1000;
+	b->msecTime = cg.time;
+	// (the server begins it again there: it loads)
+	b->flags |= BOX_LOADING;
+	Box_Do( BOX_DO_SEEK, box, NULL, 0.0f, seconds, NULL );
+}
+
+// a song that waits is taken out of the line, place 1 the next one
+void CG_BoomboxDropSong( int box, int place ) {
+	if ( Box_Valid( box ) && CG_BoomboxMore() && place >= 1 )
+		Box_Do( BOX_DO_DROP, box, NULL, 0.0f, place, NULL );
+}
+
+// The line of a box is sent to this client whenever it changes, from now on (-1: of no box any more). One box at a time.
+void CG_BoomboxWatch( int box ) {
+	if ( !Box_Valid( box ) )
+		box = -1;
+	if ( box == bx.watch || !CG_BoomboxMore() ) {
+		bx.watch = box;
+		return;
+	}
+	bx.watch = box;
+	if ( box >= 0 ) {
+		cgBoxes[box].lineRev = -1;
+		cgBoxes[box].lineHave = cgBoxes[box].lineTotal = 0;
+	}
+	Box_Do( BOX_DO_WATCH, ( box >= 0 ) ? box : 255, NULL, 0.0f, 0, NULL );
+}
+
+// How many songs the line of a box has as far as it came, the one that plays among them. 0: none, or not known.
+int CG_BoomboxSongs( int box ) {
+	const cgBox_t *b;
+
+	if ( !Box_Valid( box ) || box != bx.watch )
+		return 0;
+	b = &cgBoxes[box];
+	if ( !( b->flags & BOX_PLAYING ) )
+		return 0;
+	return b->lineTotal;
+}
+
+// a song of the line, place 0 the one that plays. qfalse: it did not come (yet)
+qboolean CG_BoomboxSong( int box, int place, const char **title, const char **by, int *seconds ) {
+	const cgBox_t *b;
+
+	if ( place < 0 || place >= CG_BoomboxSongs( box ) || !( cgBoxes[box].lineHave & ( 1 << place ) ) )
+		return qfalse;
+	b = &cgBoxes[box];
+	*title = b->line[place].title;
+	*by = b->line[place].by;
+	*seconds = b->line[place].seconds;
+	return qtrue;
+}
+
+// A song of the line of a box came: what its line is now, if it is new, and that one (place -1: only the line).
+static void Box_LineSong( int n, int rev, int place, int total, int seconds, const char *title, const char *by ) {
+	cgBox_t *b = &cgBoxes[n];
+
+	if ( !b->inuse || place < -1 || place >= BOX_QUEUE || total < 0 || total > BOX_QUEUE )
+		return;
+	if ( rev != b->lineRev ) {
+		b->lineRev = rev;
+		b->lineHave = 0;
+	}
+	b->lineTotal = total;
+	if ( place < 0 || place >= total )
+		return;
+	Q_strncpyz( b->line[place].title, title, sizeof( b->line[place].title ) );
+	Q_strncpyz( b->line[place].by, by, sizeof( b->line[place].by ) );
+	b->line[place].seconds = seconds;
+	b->lineHave |= 1 << place;
 }
 
 // a place for a new box in front of the player: looking down a little, on the floor there
@@ -333,6 +443,8 @@ static void Box_Note( int box, const char *text ) {
 static void Box_Gone( int n ) {
 	if ( n == bx.held )
 		bx.held = -1;
+	if ( n == bx.watch )
+		bx.watch = -1;
 	memset( &cgBoxes[n], 0, sizeof( cgBoxes[n] ) );
 	CG_VoiceBoxReset( n );
 }
@@ -394,6 +506,8 @@ void CG_BoomboxServerCommand( void ) {
 		bx.viaMaster = qfalse;
 		bx.most = atoi( CG_Argv( 3 ) );
 		bx.range = atoi( CG_Argv( 4 ) );
+		// (a server before 0.1.9 says no more)
+		bx.more = ( atoi( CG_Argv( 5 ) ) & BOX_CAP_MORE ) ? qtrue : qfalse;
 		return;
 	}
 	if ( !Q_stricmp( what, "note" ) ) {
@@ -405,6 +519,21 @@ void CG_BoomboxServerCommand( void ) {
 		return;
 	if ( !Q_stricmp( what, "gone" ) ) {
 		Box_Gone( n );
+		return;
+	}
+	if ( !Q_stricmp( what, "list" ) ) {
+		// <box> <lineRev> <first> <total>, then seconds, title and by of every song from first on
+		const int	rev = atoi( CG_Argv( 3 ) ), total = atoi( CG_Argv( 5 ) );
+		int			place = atoi( CG_Argv( 4 ) ), arg;
+		char		by[BOX_NAME_MAX + 1];
+
+		Box_LineSong( n, rev, -1, total, 0, "", "" );
+		for ( arg = 6; arg + 2 < trap->Cmd_Argc(); arg += 3, place++ ) {
+			// (CG_Argv has one buffer)
+			Q_strncpyz( title, CG_Argv( arg + 1 ), sizeof( title ) );
+			Q_strncpyz( by, CG_Argv( arg + 2 ), sizeof( by ) );
+			Box_LineSong( n, rev, place, total, atoi( CG_Argv( arg ) ), title, by );
+		}
 		return;
 	}
 	if ( Q_stricmp( what, "set" ) )
@@ -432,6 +561,7 @@ Through the masterserver
 void CG_BoomboxMasterReady( qboolean ready ) {
 	if ( ready && v_boomboxes.integer && !bx.serverHas ) {
 		bx.on = bx.viaMaster = qtrue;
+		bx.more = CG_VoiceMasterBoxList();
 		bx.range = BOX_RANGE;
 		bx.most = BOX_MASTER_MAX;
 	} else if ( !ready && bx.viaMaster ) {
@@ -463,6 +593,10 @@ void CG_BoomboxFromMaster( const byte *data, int len ) {
 			Q_strncpyz( cgBoxes[say.box].owner, say.owner, sizeof( cgBoxes[say.box].owner ) );
 			Q_strncpyz( cgBoxes[say.box].by, say.by, sizeof( cgBoxes[say.box].by ) );
 		}
+		return;
+	}
+	if ( say.what == BOX_SAY_LIST ) {
+		Box_LineSong( say.box, say.rev, say.place, say.total, say.length, say.title, say.by );
 		return;
 	}
 	VectorSet( origin, (float)say.origin[0], (float)say.origin[1], (float)say.origin[2] );

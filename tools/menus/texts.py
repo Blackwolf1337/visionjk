@@ -370,6 +370,16 @@ CGAME = {
     'Volume %i %%': 'Lautstärke %i %%',
     'muted for you': 'für Sie stumm',
     'Boombox, link or song': 'Boombox, Link oder Lied',
+    'Put down by %s': 'Aufgestellt von %s',
+    'Asked for by %s': 'Gewünscht von %s',
+    # the window of a box (cgame/boombox/cg_boombox_ui.c)
+    'Open the player': 'Player öffnen',
+    'Nothing plays': 'Es läuft nichts',
+    'Skip': 'Überspringen',
+    'Stop': 'Stopp',
+    'In the line: %s': 'Warteschlange: %s',
+    'In the line': 'Warteschlange',
+    'Nothing waits': 'Nichts wartet',
     # the HUD (ui/vision/hud.menu, written by hand: @VISION_SABER, @VISION_ALTERNATE_DIMENSION)
     'Saber': 'Schwert',
     'Alternate Dimension': 'Andere Dimension',
