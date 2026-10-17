@@ -635,4 +635,18 @@ void CG_Cosmetics_f( void ) {
 	}
 	trap->Print( "You wear: hat %s, cape %s. v_cosmetics hats <name>, v_cosmetics capes <name>, v_cosmetics clear\n",
 		v_hat.string[0] ? v_hat.string : "none", v_cape.string[0] ? v_cape.string : "none" );
+
+	// what the others say they wear, and whether this machine has it
+	for ( i = 0; i < MAX_CLIENTS; i++ ) {
+		const lookClient_t *lc = &look.clients[i];
+
+		if ( ( !cg.snap || i != cg.snap->ps.clientNum ) && ( lc->worn[LOOK_HAT][0] || lc->worn[LOOK_CAPE][0] ) ) {
+			trap->Print( "%s" S_COLOR_WHITE ": hat %s%s, cape %s%s, %s\n", cgs.clientinfo[i].name,
+				lc->worn[LOOK_HAT][0] ? lc->worn[LOOK_HAT] : "none",
+				lc->worn[LOOK_HAT][0] && !Look_Find( LOOK_HAT, lc->worn[LOOK_HAT] ) ? " (not here)" : "",
+				lc->worn[LOOK_CAPE][0] ? lc->worn[LOOK_CAPE] : "none",
+				lc->worn[LOOK_CAPE][0] && !Look_Find( LOOK_CAPE, lc->worn[LOOK_CAPE] ) ? " (not here)" : "",
+				lc->masterTime ? "through the masterserver" : "through the server" );
+		}
+	}
 }
