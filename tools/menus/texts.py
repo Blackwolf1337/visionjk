@@ -171,6 +171,11 @@ TR = {
         'Das Spiel spielt seinen Ton weiter, wenn es nicht im Vordergrund oder minimiert ist.',
     'What comes closer or goes away changes its pitch.': 'Was näher kommt oder sich entfernt, ändert seine Tonhöhe.',
     # what came from TaystJK (2026-10-17)
+    'TaystJK': 'TaystJK',
+    'What came from the TaystJK client: HUD, movement, hats and capes and more.': 'Was vom Client TaystJK kommt: HUD, Bewegung, Hüte und Umhänge und mehr.',
+    'HUD': 'HUD',
+    'Chat and Console': 'Chat und Konsole',
+    'Show Them': 'Anzeigen',
     'Headcrab': 'Headcrab',
     'Mario Cap': 'Mario-Mütze',
     'Mask': 'Maske',

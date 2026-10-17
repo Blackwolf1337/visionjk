@@ -513,22 +513,6 @@ REFERENCE           A_GRAPH_OF_YOUR_CONNECTION
 LANG_ENGLISH        "A graph of your connection."
 LANG_SPANISH        "Un gráfico de tu conexión."
 
-REFERENCE           KILLFEED
-LANG_ENGLISH        "Killfeed"
-LANG_SPANISH        "Lista de bajas"
-
-REFERENCE           WHO_KILLED_WHOM_WITH_WHAT_AT_THE_UPP
-LANG_ENGLISH        "Who killed whom with what, at the upper right."
-LANG_SPANISH        "Quién eliminó a quién y con qué, arriba a la derecha."
-
-REFERENCE           TEAM_OVERLAY_SIZE
-LANG_ENGLISH        "Team Overlay Size"
-LANG_SPANISH        "Tamaño de la lista del equipo"
-
-REFERENCE           HOW_LARGE_THE_LIST_OF_YOUR_TEAM_MATE
-LANG_ENGLISH        "How large the list of your team mates is."
-LANG_SPANISH        "Lo grande que es la lista de tus compañeros."
-
 REFERENCE           VIEW
 LANG_ENGLISH        "View"
 LANG_SPANISH        "Vista"
@@ -556,6 +540,170 @@ LANG_SPANISH        "Tamaño de la mira"
 REFERENCE           THE_SIZE_OF_THE_CROSSHAIR
 LANG_ENGLISH        "The size of the crosshair."
 LANG_SPANISH        "El tamaño de la mira."
+
+REFERENCE           PLAYERS
+LANG_ENGLISH        "Players"
+LANG_SPANISH        "Jugadores"
+
+REFERENCE           CHAT_BUBBLES
+LANG_ENGLISH        "Chat Bubbles"
+LANG_SPANISH        "Bocadillos de chat"
+
+REFERENCE           WHAT_A_PLAYER_SAYS_STANDS_ABOVE_HIS
+LANG_ENGLISH        "What a player says stands above his head."
+LANG_SPANISH        "Lo que dice un jugador aparece sobre su cabeza."
+
+REFERENCE           BUBBLE_RANGE
+LANG_ENGLISH        "Bubble Range"
+LANG_SPANISH        "Alcance de los bocadillos"
+
+REFERENCE           HOW_FAR_AWAY_A_BUBBLE_IS_STILL_DRAWN
+LANG_ENGLISH        "How far away a bubble is still drawn."
+LANG_SPANISH        "Hasta qué distancia se dibuja un bocadillo."
+
+REFERENCE           PLAYER_STATUSES
+LANG_ENGLISH        "Player Statuses"
+LANG_SPANISH        "Estados de los jugadores"
+
+REFERENCE           AWAY_FROM_KEYBOARD_AND_MUSIC_ABOVE_T
+LANG_ENGLISH        "Away from keyboard and music above the heads of the others."
+LANG_SPANISH        "Ausencia y música sobre las cabezas de los demás."
+
+REFERENCE           SHOW_MY_MUSIC
+LANG_ENGLISH        "Show My Music"
+LANG_SPANISH        "Mostrar mi música"
+
+REFERENCE           TELL_THE_OTHERS_WHAT_YOU_LISTEN_TO_E
+LANG_ENGLISH        "Tell the others what you listen to. Everybody on the server reads it."
+LANG_SPANISH        "Di a los demás lo que escuchas. Todo el servidor lo lee."
+
+REFERENCE           SELECT_PLAYERS
+LANG_ENGLISH        "Select Players"
+LANG_SPANISH        "Seleccionar jugadores"
+
+REFERENCE           WITH_THE_MOUSE_FREE_A_CLICK_ON_A_PLA
+LANG_ENGLISH        "With the mouse free, a click on a player opens a card with what you can do with him."
+LANG_SPANISH        "Con el ratón libre, un clic en un jugador abre una tarjeta con lo que puedes hacer con él."
+
+REFERENCE           SELECTION_OUTLINE
+LANG_ENGLISH        "Selection Outline"
+LANG_SPANISH        "Contorno de selección"
+
+REFERENCE           A_GLOWING_OUTLINE_AROUND_THE_PLAYER
+LANG_ENGLISH        "A glowing outline around the player under the mouse."
+LANG_SPANISH        "Un contorno brillante alrededor del jugador bajo el ratón."
+
+REFERENCE           KEEP_SCOREBOARD_ON_DOUBLE_TAP
+LANG_ENGLISH        "Keep Scoreboard on Double Tap"
+LANG_SPANISH        "Mantener el marcador (doble pulsación)"
+
+REFERENCE           THE_SCOREBOARD_KEY_PRESSED_TWICE_QUI
+LANG_ENGLISH        "The scoreboard key pressed twice quickly keeps the board open, with the mouse free to click a player."
+LANG_SPANISH        "Dos pulsaciones rápidas de la tecla del marcador lo dejan abierto, con el ratón libre para hacer clic en un jugador."
+
+REFERENCE           CHAT
+LANG_ENGLISH        "Chat"
+LANG_SPANISH        "#same"
+
+REFERENCE           OWN_CHAT_LINE
+LANG_ENGLISH        "Own Chat Line"
+LANG_SPANISH        "Línea de chat propia"
+
+REFERENCE           TYPE_INTO_THE_CHAT_BOX_OF_VISIONJK_W
+LANG_ENGLISH        "Type into the chat box of VisionJK, with history and links."
+LANG_SPANISH        "Escribe en el chat de VisionJK, con historial y enlaces."
+
+REFERENCE           CHAT_BOX_SIZE
+LANG_ENGLISH        "Chat Box Size"
+LANG_SPANISH        "Tamaño del chat"
+
+REFERENCE           HOW_LARGE_THE_CHAT_BOX_AND_ITS_TEXT
+LANG_ENGLISH        "How large the chat box and its text are. In the open box Ctrl and the mouse wheel change it too."
+LANG_SPANISH        "El tamaño del chat y de su texto. Con el chat abierto, Ctrl y la rueda también lo cambian."
+
+REFERENCE           CHAT_BOX_WIDTH
+LANG_ENGLISH        "Chat Box Width"
+LANG_SPANISH        "Anchura del chat"
+
+REFERENCE           HOW_WIDE_THE_CHAT_BOX_IS
+LANG_ENGLISH        "How wide the chat box is."
+LANG_SPANISH        "La anchura del chat."
+
+REFERENCE           CHAT_BOX_ROWS
+LANG_ENGLISH        "Chat Box Rows"
+LANG_SPANISH        "Líneas del chat"
+
+REFERENCE           HOW_MANY_LINES_THE_OPEN_CHAT_BOX_SHO
+LANG_ENGLISH        "How many lines the open chat box shows. Its upper right corner can also be dragged with the mouse."
+LANG_SPANISH        "Cuántas líneas muestra el chat abierto. Su esquina superior derecha también se arrastra con el ratón."
+
+REFERENCE           CHAT_BEEP
+LANG_ENGLISH        "Chat Beep"
+LANG_SPANISH        "Pitido del chat"
+
+REFERENCE           A_SOUND_WHEN_SOMEBODY_SAYS_SOMETHING
+LANG_ENGLISH        "A sound when somebody says something."
+LANG_SPANISH        "Un sonido cuando alguien dice algo."
+
+REFERENCE           CONSOLE
+LANG_ENGLISH        "Console"
+LANG_SPANISH        "Consola"
+
+REFERENCE           SHARP_CONSOLE_FONT
+LANG_ENGLISH        "Sharp Console Font"
+LANG_SPANISH        "Fuente de consola nítida"
+
+REFERENCE           THE_CONSOLE_IN_A_FONT_WITH_EVERY_CHA
+LANG_ENGLISH        "The console in a font with every character."
+LANG_SPANISH        "La consola en una fuente con todos los caracteres."
+
+REFERENCE           CONSOLE_TEXT_SIZE
+LANG_ENGLISH        "Console Text Size"
+LANG_SPANISH        "Tamaño del texto de la consola"
+
+REFERENCE           THE_SIZE_OF_THE_TEXT_OF_THE_CONSOLE
+LANG_ENGLISH        "The size of the text of the console."
+LANG_SPANISH        "El tamaño del texto de la consola."
+
+REFERENCE           CONSOLE_OPACITY
+LANG_ENGLISH        "Console Opacity"
+LANG_SPANISH        "Opacidad de la consola"
+
+REFERENCE           HOW_MUCH_OF_THE_GAME_SHOWS_THROUGH_T
+LANG_ENGLISH        "How much of the game shows through the console."
+LANG_SPANISH        "Cuánto del juego se ve a través de la consola."
+
+REFERENCE           CLAN
+LANG_ENGLISH        "Clan"
+LANG_SPANISH        "#same"
+
+REFERENCE           CLAN_PASSWORD
+LANG_ENGLISH        "Clan Password"
+LANG_SPANISH        "Contraseña del clan"
+
+REFERENCE           CLAN_CHAT_AND_CLAN_RADIO_REACH_EVERY
+LANG_ENGLISH        "Clan chat and clan radio reach everybody on the server who has the same one. The server sees it."
+LANG_SPANISH        "El chat y la radio del clan llegan a todos en el servidor que tengan la misma. El servidor la ve."
+
+REFERENCE           HUD
+LANG_ENGLISH        "HUD"
+LANG_SPANISH        "#same"
+
+REFERENCE           KILLFEED
+LANG_ENGLISH        "Killfeed"
+LANG_SPANISH        "Lista de bajas"
+
+REFERENCE           WHO_KILLED_WHOM_WITH_WHAT_AT_THE_UPP
+LANG_ENGLISH        "Who killed whom with what, at the upper right."
+LANG_SPANISH        "Quién eliminó a quién y con qué, arriba a la derecha."
+
+REFERENCE           TEAM_OVERLAY_SIZE
+LANG_ENGLISH        "Team Overlay Size"
+LANG_SPANISH        "Tamaño de la lista del equipo"
+
+REFERENCE           HOW_LARGE_THE_LIST_OF_YOUR_TEAM_MATE
+LANG_ENGLISH        "How large the list of your team mates is."
+LANG_SPANISH        "Lo grande que es la lista de tus compañeros."
 
 REFERENCE           CROSSHAIR_COLOUR
 LANG_ENGLISH        "Crosshair Colour"
@@ -645,9 +793,9 @@ REFERENCE           EVERYBODY
 LANG_ENGLISH        "Everybody"
 LANG_SPANISH        "Todos"
 
-REFERENCE           LOOKS
-LANG_ENGLISH        "Looks"
-LANG_SPANISH        "Apariencia"
+REFERENCE           HATS_AND_CAPES
+LANG_ENGLISH        "Hats and Capes"
+LANG_SPANISH        "Sombreros y capas"
 
 REFERENCE           HAT
 LANG_ENGLISH        "Hat"
@@ -793,9 +941,9 @@ REFERENCE           ROCKET_LAUNCHER
 LANG_ENGLISH        "Rocket Launcher"
 LANG_SPANISH        "Lanzacohetes"
 
-REFERENCE           HATS_AND_CAPES
-LANG_ENGLISH        "Hats and Capes"
-LANG_SPANISH        "Sombreros y capas"
+REFERENCE           SHOW_THEM
+LANG_ENGLISH        "Show Them"
+LANG_SPANISH        "Mostrar"
 
 REFERENCE           WHAT_PLAYERS_WEAR_ON_THEIR_HEADS_AND
 LANG_ENGLISH        "What players wear on their heads and backs. Only players of VisionJK wear them."
@@ -816,6 +964,10 @@ LANG_SPANISH        "Sombreros de temporada"
 REFERENCE           A_SANTA_HAT_AT_CHRISTMAS_AND_A_PUMPK
 LANG_ENGLISH        "A Santa hat at Christmas and a pumpkin at Halloween for those without a hat."
 LANG_SPANISH        "Un gorro de Papá Noel en Navidad y una calabaza en Halloween para quien no lleve sombrero."
+
+REFERENCE           LOOKS
+LANG_ENGLISH        "Looks"
+LANG_SPANISH        "Apariencia"
 
 REFERENCE           ENEMY_MODEL
 LANG_ENGLISH        "Enemy Model"
@@ -873,109 +1025,9 @@ REFERENCE           SPIRAL
 LANG_ENGLISH        "Spiral"
 LANG_SPANISH        "Espiral"
 
-REFERENCE           PLAYERS
-LANG_ENGLISH        "Players"
-LANG_SPANISH        "Jugadores"
-
-REFERENCE           CHAT_BUBBLES
-LANG_ENGLISH        "Chat Bubbles"
-LANG_SPANISH        "Bocadillos de chat"
-
-REFERENCE           WHAT_A_PLAYER_SAYS_STANDS_ABOVE_HIS
-LANG_ENGLISH        "What a player says stands above his head."
-LANG_SPANISH        "Lo que dice un jugador aparece sobre su cabeza."
-
-REFERENCE           BUBBLE_RANGE
-LANG_ENGLISH        "Bubble Range"
-LANG_SPANISH        "Alcance de los bocadillos"
-
-REFERENCE           HOW_FAR_AWAY_A_BUBBLE_IS_STILL_DRAWN
-LANG_ENGLISH        "How far away a bubble is still drawn."
-LANG_SPANISH        "Hasta qué distancia se dibuja un bocadillo."
-
-REFERENCE           PLAYER_STATUSES
-LANG_ENGLISH        "Player Statuses"
-LANG_SPANISH        "Estados de los jugadores"
-
-REFERENCE           AWAY_FROM_KEYBOARD_AND_MUSIC_ABOVE_T
-LANG_ENGLISH        "Away from keyboard and music above the heads of the others."
-LANG_SPANISH        "Ausencia y música sobre las cabezas de los demás."
-
-REFERENCE           SHOW_MY_MUSIC
-LANG_ENGLISH        "Show My Music"
-LANG_SPANISH        "Mostrar mi música"
-
-REFERENCE           TELL_THE_OTHERS_WHAT_YOU_LISTEN_TO_E
-LANG_ENGLISH        "Tell the others what you listen to. Everybody on the server reads it."
-LANG_SPANISH        "Di a los demás lo que escuchas. Todo el servidor lo lee."
-
-REFERENCE           SELECT_PLAYERS
-LANG_ENGLISH        "Select Players"
-LANG_SPANISH        "Seleccionar jugadores"
-
-REFERENCE           WITH_THE_MOUSE_FREE_A_CLICK_ON_A_PLA
-LANG_ENGLISH        "With the mouse free, a click on a player opens a card with what you can do with him."
-LANG_SPANISH        "Con el ratón libre, un clic en un jugador abre una tarjeta con lo que puedes hacer con él."
-
-REFERENCE           SELECTION_OUTLINE
-LANG_ENGLISH        "Selection Outline"
-LANG_SPANISH        "Contorno de selección"
-
-REFERENCE           A_GLOWING_OUTLINE_AROUND_THE_PLAYER
-LANG_ENGLISH        "A glowing outline around the player under the mouse."
-LANG_SPANISH        "Un contorno brillante alrededor del jugador bajo el ratón."
-
-REFERENCE           KEEP_SCOREBOARD_ON_DOUBLE_TAP
-LANG_ENGLISH        "Keep Scoreboard on Double Tap"
-LANG_SPANISH        "Mantener el marcador (doble pulsación)"
-
-REFERENCE           THE_SCOREBOARD_KEY_PRESSED_TWICE_QUI
-LANG_ENGLISH        "The scoreboard key pressed twice quickly keeps the board open, with the mouse free to click a player."
-LANG_SPANISH        "Dos pulsaciones rápidas de la tecla del marcador lo dejan abierto, con el ratón libre para hacer clic en un jugador."
-
-REFERENCE           CHAT
-LANG_ENGLISH        "Chat"
-LANG_SPANISH        "#same"
-
-REFERENCE           OWN_CHAT_LINE
-LANG_ENGLISH        "Own Chat Line"
-LANG_SPANISH        "Línea de chat propia"
-
-REFERENCE           TYPE_INTO_THE_CHAT_BOX_OF_VISIONJK_W
-LANG_ENGLISH        "Type into the chat box of VisionJK, with history and links."
-LANG_SPANISH        "Escribe en el chat de VisionJK, con historial y enlaces."
-
-REFERENCE           CHAT_BOX_SIZE
-LANG_ENGLISH        "Chat Box Size"
-LANG_SPANISH        "Tamaño del chat"
-
-REFERENCE           HOW_LARGE_THE_CHAT_BOX_AND_ITS_TEXT
-LANG_ENGLISH        "How large the chat box and its text are. In the open box Ctrl and the mouse wheel change it too."
-LANG_SPANISH        "El tamaño del chat y de su texto. Con el chat abierto, Ctrl y la rueda también lo cambian."
-
-REFERENCE           CHAT_BOX_WIDTH
-LANG_ENGLISH        "Chat Box Width"
-LANG_SPANISH        "Anchura del chat"
-
-REFERENCE           HOW_WIDE_THE_CHAT_BOX_IS
-LANG_ENGLISH        "How wide the chat box is."
-LANG_SPANISH        "La anchura del chat."
-
-REFERENCE           CHAT_BOX_ROWS
-LANG_ENGLISH        "Chat Box Rows"
-LANG_SPANISH        "Líneas del chat"
-
-REFERENCE           HOW_MANY_LINES_THE_OPEN_CHAT_BOX_SHO
-LANG_ENGLISH        "How many lines the open chat box shows. Its upper right corner can also be dragged with the mouse."
-LANG_SPANISH        "Cuántas líneas muestra el chat abierto. Su esquina superior derecha también se arrastra con el ratón."
-
-REFERENCE           CHAT_BEEP
-LANG_ENGLISH        "Chat Beep"
-LANG_SPANISH        "Pitido del chat"
-
-REFERENCE           A_SOUND_WHEN_SOMEBODY_SAYS_SOMETHING
-LANG_ENGLISH        "A sound when somebody says something."
-LANG_SPANISH        "Un sonido cuando alguien dice algo."
+REFERENCE           CHAT_AND_CONSOLE
+LANG_ENGLISH        "Chat and Console"
+LANG_SPANISH        "Chat y consola"
 
 REFERENCE           CHAT_EMOJI
 LANG_ENGLISH        "Chat Emoji"
@@ -993,34 +1045,6 @@ REFERENCE           EVERY_CHAT_LINE_IS_WRITTEN_INTO_THE
 LANG_ENGLISH        "Every chat line is written into the folder chatlogs, with the time."
 LANG_SPANISH        "Cada línea del chat se escribe en la carpeta chatlogs, con la hora."
 
-REFERENCE           CONSOLE
-LANG_ENGLISH        "Console"
-LANG_SPANISH        "Consola"
-
-REFERENCE           SHARP_CONSOLE_FONT
-LANG_ENGLISH        "Sharp Console Font"
-LANG_SPANISH        "Fuente de consola nítida"
-
-REFERENCE           THE_CONSOLE_IN_A_FONT_WITH_EVERY_CHA
-LANG_ENGLISH        "The console in a font with every character."
-LANG_SPANISH        "La consola en una fuente con todos los caracteres."
-
-REFERENCE           CONSOLE_TEXT_SIZE
-LANG_ENGLISH        "Console Text Size"
-LANG_SPANISH        "Tamaño del texto de la consola"
-
-REFERENCE           THE_SIZE_OF_THE_TEXT_OF_THE_CONSOLE
-LANG_ENGLISH        "The size of the text of the console."
-LANG_SPANISH        "El tamaño del texto de la consola."
-
-REFERENCE           CONSOLE_OPACITY
-LANG_ENGLISH        "Console Opacity"
-LANG_SPANISH        "Opacidad de la consola"
-
-REFERENCE           HOW_MUCH_OF_THE_GAME_SHOWS_THROUGH_T
-LANG_ENGLISH        "How much of the game shows through the console."
-LANG_SPANISH        "Cuánto del juego se ve a través de la consola."
-
 REFERENCE           CONSOLE_CLOCK
 LANG_ENGLISH        "Console Clock"
 LANG_SPANISH        "Reloj de la consola"
@@ -1036,18 +1060,6 @@ LANG_SPANISH        "Hora"
 REFERENCE           DATE_AND_TIME
 LANG_ENGLISH        "Date and Time"
 LANG_SPANISH        "Fecha y hora"
-
-REFERENCE           CLAN
-LANG_ENGLISH        "Clan"
-LANG_SPANISH        "#same"
-
-REFERENCE           CLAN_PASSWORD
-LANG_ENGLISH        "Clan Password"
-LANG_SPANISH        "Contraseña del clan"
-
-REFERENCE           CLAN_CHAT_AND_CLAN_RADIO_REACH_EVERY
-LANG_ENGLISH        "Clan chat and clan radio reach everybody on the server who has the same one. The server sees it."
-LANG_SPANISH        "El chat y la radio del clan llegan a todos en el servidor que tengan la misma. El servidor la ve."
 
 REFERENCE           UPDATES_AND_DOWNLOADS
 LANG_ENGLISH        "Updates and Downloads"
@@ -1132,6 +1144,14 @@ LANG_SPANISH        "Chat y social"
 REFERENCE           THE_CHAT_BOX_BUBBLES_AND_WHAT_STANDS
 LANG_ENGLISH        "The chat box, bubbles and what stands above the heads."
 LANG_SPANISH        "El chat, los bocadillos y lo que aparece sobre las cabezas."
+
+REFERENCE           TAYSTJK
+LANG_ENGLISH        "TaystJK"
+LANG_SPANISH        "#same"
+
+REFERENCE           WHAT_CAME_FROM_THE_TAYSTJK_CLIENT_HU
+LANG_ENGLISH        "What came from the TaystJK client: HUD, movement, hats and capes and more."
+LANG_SPANISH        "Lo que viene del cliente TaystJK: HUD, movimiento, sombreros y capas, y más."
 
 REFERENCE           NETWORK
 LANG_ENGLISH        "Network"

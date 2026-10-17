@@ -156,7 +156,7 @@ static float Chat_Scale( void ) {
 
 // a row was measured for this: the width of the box, its letters and their size
 static int Chat_WrapKey( float width ) {
-	return (int)width + ( chat.skin ? 100000 : 0 ) + ( v_chatEmoji.integer ? 50000 : 0 ) + (int)( chat.size * 100.0f + 0.5f ) * 1000000;
+	return (int)width + ( chat.skin ? 100000 : 0 ) + ( tay_chatEmoji.integer ? 50000 : 0 ) + (int)( chat.size * 100.0f + 0.5f ) * 1000000;
 }
 
 // the name of a tab in the language of the game, in capitals in the new look
@@ -176,7 +176,7 @@ As TaystJK has them (2026-10-17): ":name:" in a chat line is the picture gfx/emo
 so a pak can bring more. This tree ships Noto Emoji (assets/japlus_client/gfx/emoji, Apache 2.0) under the names
 TaystJK uses for the same faces; its other emoji are emotes of Twitch, which can not be shipped. A few smileys of
 TaystJK ("#:)") and the real emoji characters of UTF-8 text are pictures too. Only in the chat box (the bubbles
-are drawn in the level), v_chatEmoji 0 shows the text. Clients of other trees read ":smile:".
+are drawn in the level), tay_chatEmoji 0 shows the text. Clients of other trees read ":smile:".
 
 ===============================================================================
 */
@@ -266,7 +266,7 @@ static int Chat_EmojiAt( const char *s, int *len ) {
 	size_t	i;
 	int		n;
 
-	if ( !v_chatEmoji.integer ) {
+	if ( !tay_chatEmoji.integer ) {
 		return -1;
 	}
 	if ( s[0] == ':' ) {
@@ -335,7 +335,7 @@ void CG_ChatEmoji_f( void ) {
 		trap->Print( ":%s:%s", chatEmoji[i].name, ( i % 6 == 5 || i == chatNumEmoji - 1 ) ? "\n" : "  " );
 	}
 	trap->Print( "%i emoji in gfx/emoji, written as :name: in the chat box%s\n", chatNumEmoji,
-		v_chatEmoji.integer ? "" : " (v_chatEmoji is 0)" );
+		tay_chatEmoji.integer ? "" : " (tay_chatEmoji is 0)" );
 }
 
 /*
@@ -355,7 +355,7 @@ static float Chat_Width( const char *text ) {
 	char	rest[CHAT_TEXT];
 	int		out = 0, emoji = 0, len;
 
-	if ( !v_chatEmoji.integer ) {
+	if ( !tay_chatEmoji.integer ) {
 		return Chat_TextWidth( text );
 	}
 	while ( *text && out < (int)sizeof( rest ) - 1 ) {
@@ -588,7 +588,7 @@ int CG_ChatSender( const char *raw, int clientNum ) {
 	return -1;
 }
 
-// v_chatLog (as TaystJK's cg_logChat): every line that is shown, without colours, appended to
+// tay_chatLog (as TaystJK's cg_logChat): every line that is shown, without colours, appended to
 // chatlogs/<date>.log in the home folder of the game, opened and closed for each line
 static void Chat_Log( int kind, const char *text ) {
 	static const char	*kinds[CHAT_NUM_KINDS] = { "", "team ", "private " };
@@ -596,7 +596,7 @@ static void Chat_Log( int kind, const char *text ) {
 	qtime_t				now;
 	fileHandle_t		f;
 
-	if ( !v_chatLog.integer ) {
+	if ( !tay_chatLog.integer ) {
 		return;
 	}
 	trap->RealTime( &now );

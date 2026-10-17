@@ -19,7 +19,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 ===========================================================================
 */
 
-// The killfeed (v_killfeed, 2026-10-17), after the one of TaystJK (hud_obituary.c): who killed whom with what, in
+// The killfeed (tay_killfeed, 2026-10-17), after the one of TaystJK (hud_obituary.c): who killed whom with what, in
 // lines at the upper right that fade out. The icons are the weapon icons of the game, so nothing has to be
 // downloaded. A death without a weapon to show (a fall, lava, a telefrag) is the sentence of the console, in the
 // language of the game. The obituary line in the console stays as it was.
@@ -93,7 +93,7 @@ somebody who killed, else the sentence for when there is no icon for what killed
 void CG_KillfeedAdd( int killer, int victim, int mod, const char *text ) {
 	killfeedLine_t *line;
 
-	if ( !v_killfeed.integer || victim < 0 || victim >= MAX_CLIENTS ) {
+	if ( !tay_killfeed.integer || victim < 0 || victim >= MAX_CLIENTS ) {
 		return;
 	}
 	if ( killfeedCount == KILLFEED_MAX ) {
@@ -148,13 +148,13 @@ the y under the last line
 =================
 */
 float CG_KillfeedDraw( float y ) {
-	const float	size = Com_Clamp( 0.5f, 2.0f, v_killfeedSize.value );
+	const float	size = Com_Clamp( 0.5f, 2.0f, tay_killfeedSize.value );
 	const float	lineH = 16.0f * size, pad = 3.0f * size, scale = 0.6f * size;
-	const int	life = Q_max( 1000, v_killfeedTime.integer );
+	const int	life = Q_max( 1000, tay_killfeedTime.integer );
 	vec4_t		color, box;
 	int			i, keep;
 
-	if ( !v_killfeed.integer || !cg.snap ) {
+	if ( !tay_killfeed.integer || !cg.snap ) {
 		return y;
 	}
 
@@ -166,13 +166,13 @@ float CG_KillfeedDraw( float y ) {
 	}
 	killfeedCount = keep;
 
-	y += 4.0f + v_killfeedY.value;
+	y += 4.0f + tay_killfeedY.value;
 	for ( i = 0; i < killfeedCount; i++ ) {
 		const killfeedLine_t	*line = &killfeed[i];
 		const int				left = life - ( cg.time - line->time );
 		const float				alpha = left < KILLFEED_FADE ? (float)left / KILLFEED_FADE : 1.0f;
 		const float				textY = y + ( lineH - CG_Text_Height( "A", scale, FONT_SMALL ) ) * 0.5f;
-		float					x = SCREEN_WIDTH - 4.0f - v_killfeedX.value;
+		float					x = SCREEN_WIDTH - 4.0f - tay_killfeedX.value;
 
 		VectorSet( color, 1.0f, 1.0f, 1.0f );
 		color[3] = alpha;

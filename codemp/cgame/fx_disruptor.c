@@ -190,8 +190,8 @@ void FX_DisruptorHitPlayer( vec3_t origin, vec3_t normal, qboolean humanoid )
 ---------------------------
 FX_DisruptorBeam
 
-v_disruptorBeam (2026-10-17, TaystJK's cg_disruptorNew and cg_disruptorSpiral, after the rail of Quake 3): the shot
-as a line with a glow, 1, and with a spiral of sparks around it, 2. The colour is v_disruptorColor ("r g b"),
+tay_disruptorBeam (2026-10-17, TaystJK's cg_disruptorNew and cg_disruptorSpiral, after the rail of Quake 3): the shot
+as a line with a glow, 1, and with a spiral of sparks around it, 2. The colour is tay_disruptorColor ("r g b"),
 empty cyan, the team's in a team game. qfalse with 0: the shot of the game is drawn
 ---------------------------
 */
@@ -229,20 +229,20 @@ qboolean FX_DisruptorBeam( int shooter, vec3_t start, vec3_t end, qboolean alt )
 	float		len;
 	int			i, j;
 
-	if ( !v_disruptorBeam.integer ) {
+	if ( !tay_disruptorBeam.integer ) {
 		return qfalse;
 	}
 	if ( cgs.gametype >= GT_TEAM && shooter >= 0 && shooter < MAX_CLIENTS && cgs.clientinfo[shooter].team == TEAM_RED ) {
 		VectorSet( color, 1.0f, 0.1f, 0.1f );
 	} else if ( cgs.gametype >= GT_TEAM && shooter >= 0 && shooter < MAX_CLIENTS && cgs.clientinfo[shooter].team == TEAM_BLUE ) {
 		VectorSet( color, 0.1f, 0.3f, 1.0f );
-	} else if ( v_disruptorColor.string[0] ) {
-		sscanf( v_disruptorColor.string, "%f %f %f", &color[0], &color[1], &color[2] );
+	} else if ( tay_disruptorColor.string[0] ) {
+		sscanf( tay_disruptorColor.string, "%f %f %f", &color[0], &color[1], &color[2] );
 	}
 
 	FX_BeamLine( start, end, color, 3.0f, 1.0f, life, qtrue );		// glow
 	FX_BeamLine( start, end, color, 1.0f, 0.6f, life, qfalse );		// core
-	if ( v_disruptorBeam.integer < 2 ) {
+	if ( tay_disruptorBeam.integer < 2 ) {
 		return qtrue;
 	}
 

@@ -47,11 +47,11 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // and what stands above everybody. The game module says in the server info that it does this (vs_caps bit
 // 3). The userinfo is what the client says of itself: a mark, nothing to rely on.
 //
-// Hats and capes (2026-10-17, cgame/look/cg_look.c) are told the same way: the cgame says what its player wears
-// with the client command "vs_status look <hat> <cape>" ("-" for none, names of letters, digits, _ and -), and
-// a cgame that draws them (v_caps bit 2) is sent
+// Hats and capes (2026-10-17, cgame/look/cg_look.c, from TaystJK, so their names begin with tay_) are told the
+// same way: the cgame says what its player wears with the client command "tay_look <hat> <cape>" ("-" for none,
+// names of letters, digits, _ and -), and a cgame that draws them (v_caps bit 2) is sent
 //
-//   vs_look <client> <hat> <cape>
+//   tay_look <client> <hat> <cape>
 //
 // for each one who says it, and for everybody with "vs_status all". The game module says in the server info that
 // it does this (vs_caps bit 7, 4 to 6 are not used again). Legacy clients see no hat: they would need the models.
@@ -93,7 +93,7 @@ static void G_LookTell( const gentity_t *ent, const gentity_t *other ) {
 		|| !( other->client->pers.jp.statusCaps & 4 ) ) {
 		return;
 	}
-	trap->SendServerCommand( other - g_entities, va( "vs_look %i %s", (int)( ent - g_entities ), jp->look ) );
+	trap->SendServerCommand( other - g_entities, va( "tay_look %i %s", (int)( ent - g_entities ), jp->look ) );
 }
 
 // a name of a hat or a cape as one word: letters, digits, _ and -, "-" for none
@@ -291,30 +291,6 @@ void Cmd_JPStatus_f( gentity_t *ent ) {
 		}
 		return;
 	}
-	if ( !Q_stricmp( kind, "look" ) ) {
-		char hat[32], cape[32], look[sizeof( jp->look )];
-		int i;
-
-		// (a clock of its own as well, a hat must not keep the music from being told)
-		if ( jp->lookCmdTime && level.time - jp->lookCmdTime < STATUS_CMD_MSEC && level.time >= jp->lookCmdTime ) {
-			return;
-		}
-		jp->lookCmdTime = level.time;
-		trap->Argv( 2, text, sizeof( text ) );
-		G_LookName( text, hat, sizeof( hat ) );
-		trap->Argv( 3, text, sizeof( text ) );
-		G_LookName( text, cape, sizeof( cape ) );
-		Com_sprintf( look, sizeof( look ), "%s %s", hat, cape );
-		if ( strcmp( look, jp->look ) ) {
-			Q_strncpyz( jp->look, look, sizeof( jp->look ) );
-			for ( i = 0; i < level.maxclients; i++ ) {
-				G_LookTell( ent, &g_entities[i] );
-			}
-		} else {
-			G_LookTell( ent, ent );		// nothing new: he hears it back, so his cgame knows it arrived
-		}
-		return;
-	}
 	if ( jp->statusCmdTime && level.time - jp->statusCmdTime < STATUS_CMD_MSEC && level.time >= jp->statusCmdTime ) {
 		return;		// the cgame asks again when it does not hear its own status back
 	}
@@ -332,4 +308,36 @@ void Cmd_JPStatus_f( gentity_t *ent ) {
 	}
 	Q_strncpyz( jp->statusMusic, text, sizeof( jp->statusMusic ) );
 	G_StatusBroadcast( ent );
+}
+
+/*
+=================
+Cmd_TayLook_f
+
+tay_look <hat> <cape>: the cgame of a client says what its player wears. A clock of its own, so a hat does not
+keep the music of the same moment from being told
+=================
+*/
+void Cmd_TayLook_f( gentity_t *ent ) {
+	jpClient_t	*jp = &ent->client->pers.jp;
+	char		text[64], hat[32], cape[32], look[sizeof( jp->look )];
+	int			i;
+
+	if ( jp->lookCmdTime && level.time - jp->lookCmdTime < STATUS_CMD_MSEC && level.time >= jp->lookCmdTime ) {
+		return;
+	}
+	jp->lookCmdTime = level.time;
+	trap->Argv( 1, text, sizeof( text ) );
+	G_LookName( text, hat, sizeof( hat ) );
+	trap->Argv( 2, text, sizeof( text ) );
+	G_LookName( text, cape, sizeof( cape ) );
+	Com_sprintf( look, sizeof( look ), "%s %s", hat, cape );
+	if ( strcmp( look, jp->look ) ) {
+		Q_strncpyz( jp->look, look, sizeof( jp->look ) );
+		for ( i = 0; i < level.maxclients; i++ ) {
+			G_LookTell( ent, &g_entities[i] );
+		}
+	} else {
+		G_LookTell( ent, ent );		// nothing new: he hears it back, so his cgame knows it arrived
+	}
 }

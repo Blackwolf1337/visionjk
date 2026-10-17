@@ -513,22 +513,6 @@ REFERENCE           A_GRAPH_OF_YOUR_CONNECTION
 LANG_ENGLISH        "A graph of your connection."
 LANG_FRENCH         "Un graphique de votre connexion."
 
-REFERENCE           KILLFEED
-LANG_ENGLISH        "Killfeed"
-LANG_FRENCH         "Liste des éliminations"
-
-REFERENCE           WHO_KILLED_WHOM_WITH_WHAT_AT_THE_UPP
-LANG_ENGLISH        "Who killed whom with what, at the upper right."
-LANG_FRENCH         "Qui a éliminé qui et avec quoi, en haut à droite."
-
-REFERENCE           TEAM_OVERLAY_SIZE
-LANG_ENGLISH        "Team Overlay Size"
-LANG_FRENCH         "Taille de la liste d'équipe"
-
-REFERENCE           HOW_LARGE_THE_LIST_OF_YOUR_TEAM_MATE
-LANG_ENGLISH        "How large the list of your team mates is."
-LANG_FRENCH         "La taille de la liste de vos coéquipiers."
-
 REFERENCE           VIEW
 LANG_ENGLISH        "View"
 LANG_FRENCH         "Vue"
@@ -556,6 +540,170 @@ LANG_FRENCH         "Taille du viseur"
 REFERENCE           THE_SIZE_OF_THE_CROSSHAIR
 LANG_ENGLISH        "The size of the crosshair."
 LANG_FRENCH         "La taille du viseur."
+
+REFERENCE           PLAYERS
+LANG_ENGLISH        "Players"
+LANG_FRENCH         "Joueurs"
+
+REFERENCE           CHAT_BUBBLES
+LANG_ENGLISH        "Chat Bubbles"
+LANG_FRENCH         "Bulles de chat"
+
+REFERENCE           WHAT_A_PLAYER_SAYS_STANDS_ABOVE_HIS
+LANG_ENGLISH        "What a player says stands above his head."
+LANG_FRENCH         "Ce qu'un joueur dit s'affiche au-dessus de sa tête."
+
+REFERENCE           BUBBLE_RANGE
+LANG_ENGLISH        "Bubble Range"
+LANG_FRENCH         "Portée des bulles"
+
+REFERENCE           HOW_FAR_AWAY_A_BUBBLE_IS_STILL_DRAWN
+LANG_ENGLISH        "How far away a bubble is still drawn."
+LANG_FRENCH         "La distance à laquelle une bulle est encore affichée."
+
+REFERENCE           PLAYER_STATUSES
+LANG_ENGLISH        "Player Statuses"
+LANG_FRENCH         "Statuts des joueurs"
+
+REFERENCE           AWAY_FROM_KEYBOARD_AND_MUSIC_ABOVE_T
+LANG_ENGLISH        "Away from keyboard and music above the heads of the others."
+LANG_FRENCH         "Absence et musique au-dessus des têtes des autres."
+
+REFERENCE           SHOW_MY_MUSIC
+LANG_ENGLISH        "Show My Music"
+LANG_FRENCH         "Montrer ma musique"
+
+REFERENCE           TELL_THE_OTHERS_WHAT_YOU_LISTEN_TO_E
+LANG_ENGLISH        "Tell the others what you listen to. Everybody on the server reads it."
+LANG_FRENCH         "Dire aux autres ce que vous écoutez. Tout le serveur le lit."
+
+REFERENCE           SELECT_PLAYERS
+LANG_ENGLISH        "Select Players"
+LANG_FRENCH         "Sélectionner des joueurs"
+
+REFERENCE           WITH_THE_MOUSE_FREE_A_CLICK_ON_A_PLA
+LANG_ENGLISH        "With the mouse free, a click on a player opens a card with what you can do with him."
+LANG_FRENCH         "Souris libre, un clic sur un joueur ouvre une fiche avec ce que vous pouvez faire."
+
+REFERENCE           SELECTION_OUTLINE
+LANG_ENGLISH        "Selection Outline"
+LANG_FRENCH         "Contour de sélection"
+
+REFERENCE           A_GLOWING_OUTLINE_AROUND_THE_PLAYER
+LANG_ENGLISH        "A glowing outline around the player under the mouse."
+LANG_FRENCH         "Un contour lumineux autour du joueur sous la souris."
+
+REFERENCE           KEEP_SCOREBOARD_ON_DOUBLE_TAP
+LANG_ENGLISH        "Keep Scoreboard on Double Tap"
+LANG_FRENCH         "Garder le tableau (double appui)"
+
+REFERENCE           THE_SCOREBOARD_KEY_PRESSED_TWICE_QUI
+LANG_ENGLISH        "The scoreboard key pressed twice quickly keeps the board open, with the mouse free to click a player."
+LANG_FRENCH         "Deux appuis rapides sur la touche du tableau le gardent ouvert, souris libre pour cliquer un joueur."
+
+REFERENCE           CHAT
+LANG_ENGLISH        "Chat"
+LANG_FRENCH         "#same"
+
+REFERENCE           OWN_CHAT_LINE
+LANG_ENGLISH        "Own Chat Line"
+LANG_FRENCH         "Ligne de chat propre"
+
+REFERENCE           TYPE_INTO_THE_CHAT_BOX_OF_VISIONJK_W
+LANG_ENGLISH        "Type into the chat box of VisionJK, with history and links."
+LANG_FRENCH         "Écrire dans le chat de VisionJK, avec historique et liens."
+
+REFERENCE           CHAT_BOX_SIZE
+LANG_ENGLISH        "Chat Box Size"
+LANG_FRENCH         "Taille du chat"
+
+REFERENCE           HOW_LARGE_THE_CHAT_BOX_AND_ITS_TEXT
+LANG_ENGLISH        "How large the chat box and its text are. In the open box Ctrl and the mouse wheel change it too."
+LANG_FRENCH         "La taille du chat et de son texte. Chat ouvert, Ctrl et la molette la changent aussi."
+
+REFERENCE           CHAT_BOX_WIDTH
+LANG_ENGLISH        "Chat Box Width"
+LANG_FRENCH         "Largeur du chat"
+
+REFERENCE           HOW_WIDE_THE_CHAT_BOX_IS
+LANG_ENGLISH        "How wide the chat box is."
+LANG_FRENCH         "La largeur du chat."
+
+REFERENCE           CHAT_BOX_ROWS
+LANG_ENGLISH        "Chat Box Rows"
+LANG_FRENCH         "Lignes du chat"
+
+REFERENCE           HOW_MANY_LINES_THE_OPEN_CHAT_BOX_SHO
+LANG_ENGLISH        "How many lines the open chat box shows. Its upper right corner can also be dragged with the mouse."
+LANG_FRENCH         "Le nombre de lignes du chat ouvert. Son coin supérieur droit se tire aussi à la souris."
+
+REFERENCE           CHAT_BEEP
+LANG_ENGLISH        "Chat Beep"
+LANG_FRENCH         "Bip du chat"
+
+REFERENCE           A_SOUND_WHEN_SOMEBODY_SAYS_SOMETHING
+LANG_ENGLISH        "A sound when somebody says something."
+LANG_FRENCH         "Un son quand quelqu'un dit quelque chose."
+
+REFERENCE           CONSOLE
+LANG_ENGLISH        "Console"
+LANG_FRENCH         "#same"
+
+REFERENCE           SHARP_CONSOLE_FONT
+LANG_ENGLISH        "Sharp Console Font"
+LANG_FRENCH         "Police de console nette"
+
+REFERENCE           THE_CONSOLE_IN_A_FONT_WITH_EVERY_CHA
+LANG_ENGLISH        "The console in a font with every character."
+LANG_FRENCH         "La console dans une police avec tous les caractères."
+
+REFERENCE           CONSOLE_TEXT_SIZE
+LANG_ENGLISH        "Console Text Size"
+LANG_FRENCH         "Taille du texte de la console"
+
+REFERENCE           THE_SIZE_OF_THE_TEXT_OF_THE_CONSOLE
+LANG_ENGLISH        "The size of the text of the console."
+LANG_FRENCH         "La taille du texte de la console."
+
+REFERENCE           CONSOLE_OPACITY
+LANG_ENGLISH        "Console Opacity"
+LANG_FRENCH         "Opacité de la console"
+
+REFERENCE           HOW_MUCH_OF_THE_GAME_SHOWS_THROUGH_T
+LANG_ENGLISH        "How much of the game shows through the console."
+LANG_FRENCH         "La part du jeu visible à travers la console."
+
+REFERENCE           CLAN
+LANG_ENGLISH        "Clan"
+LANG_FRENCH         "#same"
+
+REFERENCE           CLAN_PASSWORD
+LANG_ENGLISH        "Clan Password"
+LANG_FRENCH         "Mot de passe du clan"
+
+REFERENCE           CLAN_CHAT_AND_CLAN_RADIO_REACH_EVERY
+LANG_ENGLISH        "Clan chat and clan radio reach everybody on the server who has the same one. The server sees it."
+LANG_FRENCH         "Le chat et la radio du clan atteignent tous ceux du serveur qui ont le même. Le serveur le voit."
+
+REFERENCE           HUD
+LANG_ENGLISH        "HUD"
+LANG_FRENCH         "#same"
+
+REFERENCE           KILLFEED
+LANG_ENGLISH        "Killfeed"
+LANG_FRENCH         "Liste des éliminations"
+
+REFERENCE           WHO_KILLED_WHOM_WITH_WHAT_AT_THE_UPP
+LANG_ENGLISH        "Who killed whom with what, at the upper right."
+LANG_FRENCH         "Qui a éliminé qui et avec quoi, en haut à droite."
+
+REFERENCE           TEAM_OVERLAY_SIZE
+LANG_ENGLISH        "Team Overlay Size"
+LANG_FRENCH         "Taille de la liste d'équipe"
+
+REFERENCE           HOW_LARGE_THE_LIST_OF_YOUR_TEAM_MATE
+LANG_ENGLISH        "How large the list of your team mates is."
+LANG_FRENCH         "La taille de la liste de vos coéquipiers."
 
 REFERENCE           CROSSHAIR_COLOUR
 LANG_ENGLISH        "Crosshair Colour"
@@ -645,9 +793,9 @@ REFERENCE           EVERYBODY
 LANG_ENGLISH        "Everybody"
 LANG_FRENCH         "Tout le monde"
 
-REFERENCE           LOOKS
-LANG_ENGLISH        "Looks"
-LANG_FRENCH         "Apparence"
+REFERENCE           HATS_AND_CAPES
+LANG_ENGLISH        "Hats and Capes"
+LANG_FRENCH         "Chapeaux et capes"
 
 REFERENCE           HAT
 LANG_ENGLISH        "Hat"
@@ -793,9 +941,9 @@ REFERENCE           ROCKET_LAUNCHER
 LANG_ENGLISH        "Rocket Launcher"
 LANG_FRENCH         "Lance-roquettes"
 
-REFERENCE           HATS_AND_CAPES
-LANG_ENGLISH        "Hats and Capes"
-LANG_FRENCH         "Chapeaux et capes"
+REFERENCE           SHOW_THEM
+LANG_ENGLISH        "Show Them"
+LANG_FRENCH         "Afficher"
 
 REFERENCE           WHAT_PLAYERS_WEAR_ON_THEIR_HEADS_AND
 LANG_ENGLISH        "What players wear on their heads and backs. Only players of VisionJK wear them."
@@ -816,6 +964,10 @@ LANG_FRENCH         "Chapeaux de saison"
 REFERENCE           A_SANTA_HAT_AT_CHRISTMAS_AND_A_PUMPK
 LANG_ENGLISH        "A Santa hat at Christmas and a pumpkin at Halloween for those without a hat."
 LANG_FRENCH         "Un bonnet de Noël à Noël et une citrouille à Halloween pour ceux qui n'ont pas de chapeau."
+
+REFERENCE           LOOKS
+LANG_ENGLISH        "Looks"
+LANG_FRENCH         "Apparence"
 
 REFERENCE           ENEMY_MODEL
 LANG_ENGLISH        "Enemy Model"
@@ -873,109 +1025,9 @@ REFERENCE           SPIRAL
 LANG_ENGLISH        "Spiral"
 LANG_FRENCH         "Spirale"
 
-REFERENCE           PLAYERS
-LANG_ENGLISH        "Players"
-LANG_FRENCH         "Joueurs"
-
-REFERENCE           CHAT_BUBBLES
-LANG_ENGLISH        "Chat Bubbles"
-LANG_FRENCH         "Bulles de chat"
-
-REFERENCE           WHAT_A_PLAYER_SAYS_STANDS_ABOVE_HIS
-LANG_ENGLISH        "What a player says stands above his head."
-LANG_FRENCH         "Ce qu'un joueur dit s'affiche au-dessus de sa tête."
-
-REFERENCE           BUBBLE_RANGE
-LANG_ENGLISH        "Bubble Range"
-LANG_FRENCH         "Portée des bulles"
-
-REFERENCE           HOW_FAR_AWAY_A_BUBBLE_IS_STILL_DRAWN
-LANG_ENGLISH        "How far away a bubble is still drawn."
-LANG_FRENCH         "La distance à laquelle une bulle est encore affichée."
-
-REFERENCE           PLAYER_STATUSES
-LANG_ENGLISH        "Player Statuses"
-LANG_FRENCH         "Statuts des joueurs"
-
-REFERENCE           AWAY_FROM_KEYBOARD_AND_MUSIC_ABOVE_T
-LANG_ENGLISH        "Away from keyboard and music above the heads of the others."
-LANG_FRENCH         "Absence et musique au-dessus des têtes des autres."
-
-REFERENCE           SHOW_MY_MUSIC
-LANG_ENGLISH        "Show My Music"
-LANG_FRENCH         "Montrer ma musique"
-
-REFERENCE           TELL_THE_OTHERS_WHAT_YOU_LISTEN_TO_E
-LANG_ENGLISH        "Tell the others what you listen to. Everybody on the server reads it."
-LANG_FRENCH         "Dire aux autres ce que vous écoutez. Tout le serveur le lit."
-
-REFERENCE           SELECT_PLAYERS
-LANG_ENGLISH        "Select Players"
-LANG_FRENCH         "Sélectionner des joueurs"
-
-REFERENCE           WITH_THE_MOUSE_FREE_A_CLICK_ON_A_PLA
-LANG_ENGLISH        "With the mouse free, a click on a player opens a card with what you can do with him."
-LANG_FRENCH         "Souris libre, un clic sur un joueur ouvre une fiche avec ce que vous pouvez faire."
-
-REFERENCE           SELECTION_OUTLINE
-LANG_ENGLISH        "Selection Outline"
-LANG_FRENCH         "Contour de sélection"
-
-REFERENCE           A_GLOWING_OUTLINE_AROUND_THE_PLAYER
-LANG_ENGLISH        "A glowing outline around the player under the mouse."
-LANG_FRENCH         "Un contour lumineux autour du joueur sous la souris."
-
-REFERENCE           KEEP_SCOREBOARD_ON_DOUBLE_TAP
-LANG_ENGLISH        "Keep Scoreboard on Double Tap"
-LANG_FRENCH         "Garder le tableau (double appui)"
-
-REFERENCE           THE_SCOREBOARD_KEY_PRESSED_TWICE_QUI
-LANG_ENGLISH        "The scoreboard key pressed twice quickly keeps the board open, with the mouse free to click a player."
-LANG_FRENCH         "Deux appuis rapides sur la touche du tableau le gardent ouvert, souris libre pour cliquer un joueur."
-
-REFERENCE           CHAT
-LANG_ENGLISH        "Chat"
-LANG_FRENCH         "#same"
-
-REFERENCE           OWN_CHAT_LINE
-LANG_ENGLISH        "Own Chat Line"
-LANG_FRENCH         "Ligne de chat propre"
-
-REFERENCE           TYPE_INTO_THE_CHAT_BOX_OF_VISIONJK_W
-LANG_ENGLISH        "Type into the chat box of VisionJK, with history and links."
-LANG_FRENCH         "Écrire dans le chat de VisionJK, avec historique et liens."
-
-REFERENCE           CHAT_BOX_SIZE
-LANG_ENGLISH        "Chat Box Size"
-LANG_FRENCH         "Taille du chat"
-
-REFERENCE           HOW_LARGE_THE_CHAT_BOX_AND_ITS_TEXT
-LANG_ENGLISH        "How large the chat box and its text are. In the open box Ctrl and the mouse wheel change it too."
-LANG_FRENCH         "La taille du chat et de son texte. Chat ouvert, Ctrl et la molette la changent aussi."
-
-REFERENCE           CHAT_BOX_WIDTH
-LANG_ENGLISH        "Chat Box Width"
-LANG_FRENCH         "Largeur du chat"
-
-REFERENCE           HOW_WIDE_THE_CHAT_BOX_IS
-LANG_ENGLISH        "How wide the chat box is."
-LANG_FRENCH         "La largeur du chat."
-
-REFERENCE           CHAT_BOX_ROWS
-LANG_ENGLISH        "Chat Box Rows"
-LANG_FRENCH         "Lignes du chat"
-
-REFERENCE           HOW_MANY_LINES_THE_OPEN_CHAT_BOX_SHO
-LANG_ENGLISH        "How many lines the open chat box shows. Its upper right corner can also be dragged with the mouse."
-LANG_FRENCH         "Le nombre de lignes du chat ouvert. Son coin supérieur droit se tire aussi à la souris."
-
-REFERENCE           CHAT_BEEP
-LANG_ENGLISH        "Chat Beep"
-LANG_FRENCH         "Bip du chat"
-
-REFERENCE           A_SOUND_WHEN_SOMEBODY_SAYS_SOMETHING
-LANG_ENGLISH        "A sound when somebody says something."
-LANG_FRENCH         "Un son quand quelqu'un dit quelque chose."
+REFERENCE           CHAT_AND_CONSOLE
+LANG_ENGLISH        "Chat and Console"
+LANG_FRENCH         "Chat et console"
 
 REFERENCE           CHAT_EMOJI
 LANG_ENGLISH        "Chat Emoji"
@@ -993,34 +1045,6 @@ REFERENCE           EVERY_CHAT_LINE_IS_WRITTEN_INTO_THE
 LANG_ENGLISH        "Every chat line is written into the folder chatlogs, with the time."
 LANG_FRENCH         "Chaque ligne du chat est écrite dans le dossier chatlogs, avec l'heure."
 
-REFERENCE           CONSOLE
-LANG_ENGLISH        "Console"
-LANG_FRENCH         "#same"
-
-REFERENCE           SHARP_CONSOLE_FONT
-LANG_ENGLISH        "Sharp Console Font"
-LANG_FRENCH         "Police de console nette"
-
-REFERENCE           THE_CONSOLE_IN_A_FONT_WITH_EVERY_CHA
-LANG_ENGLISH        "The console in a font with every character."
-LANG_FRENCH         "La console dans une police avec tous les caractères."
-
-REFERENCE           CONSOLE_TEXT_SIZE
-LANG_ENGLISH        "Console Text Size"
-LANG_FRENCH         "Taille du texte de la console"
-
-REFERENCE           THE_SIZE_OF_THE_TEXT_OF_THE_CONSOLE
-LANG_ENGLISH        "The size of the text of the console."
-LANG_FRENCH         "La taille du texte de la console."
-
-REFERENCE           CONSOLE_OPACITY
-LANG_ENGLISH        "Console Opacity"
-LANG_FRENCH         "Opacité de la console"
-
-REFERENCE           HOW_MUCH_OF_THE_GAME_SHOWS_THROUGH_T
-LANG_ENGLISH        "How much of the game shows through the console."
-LANG_FRENCH         "La part du jeu visible à travers la console."
-
 REFERENCE           CONSOLE_CLOCK
 LANG_ENGLISH        "Console Clock"
 LANG_FRENCH         "Horloge de la console"
@@ -1036,18 +1060,6 @@ LANG_FRENCH         "Heure"
 REFERENCE           DATE_AND_TIME
 LANG_ENGLISH        "Date and Time"
 LANG_FRENCH         "Date et heure"
-
-REFERENCE           CLAN
-LANG_ENGLISH        "Clan"
-LANG_FRENCH         "#same"
-
-REFERENCE           CLAN_PASSWORD
-LANG_ENGLISH        "Clan Password"
-LANG_FRENCH         "Mot de passe du clan"
-
-REFERENCE           CLAN_CHAT_AND_CLAN_RADIO_REACH_EVERY
-LANG_ENGLISH        "Clan chat and clan radio reach everybody on the server who has the same one. The server sees it."
-LANG_FRENCH         "Le chat et la radio du clan atteignent tous ceux du serveur qui ont le même. Le serveur le voit."
 
 REFERENCE           UPDATES_AND_DOWNLOADS
 LANG_ENGLISH        "Updates and Downloads"
@@ -1132,6 +1144,14 @@ LANG_FRENCH         "Chat et social"
 REFERENCE           THE_CHAT_BOX_BUBBLES_AND_WHAT_STANDS
 LANG_ENGLISH        "The chat box, bubbles and what stands above the heads."
 LANG_FRENCH         "Le chat, les bulles et ce qui est affiché au-dessus des têtes."
+
+REFERENCE           TAYSTJK
+LANG_ENGLISH        "TaystJK"
+LANG_FRENCH         "#same"
+
+REFERENCE           WHAT_CAME_FROM_THE_TAYSTJK_CLIENT_HU
+LANG_ENGLISH        "What came from the TaystJK client: HUD, movement, hats and capes and more."
+LANG_FRENCH         "Ce qui vient du client TaystJK : HUD, mouvement, chapeaux et capes, et plus."
 
 REFERENCE           NETWORK
 LANG_ENGLISH        "Network"

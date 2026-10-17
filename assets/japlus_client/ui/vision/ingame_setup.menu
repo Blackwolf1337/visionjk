@@ -59,7 +59,7 @@
 		itemDef
 		{
 			name					vision_tab1
-			rect					9 0 92 26
+			rect					9 0 83.43 26
 			visible					1
 			text					@MENUS_VIDEO
 			font					5
@@ -72,14 +72,14 @@
 			descText				@MENUS_CONFIGURE_VIDEO_SETTINGS
 			action { play "sound/interface/button1.wav" ; }
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				46
+			textalignx				41.71
 			textaligny				7.78
 		}
 
 		itemDef
 		{
 			name					vision_tab2
-			rect					101 0 92 26
+			rect					92.43 0 83.43 26
 			visible					1
 			text					@MENUS_SOUND
 			font					5
@@ -92,14 +92,14 @@
 			descText				@MENUS_CONFIGURE_SOUND_SETTINGS
 			action { play "sound/interface/button1.wav" ; }
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				46
+			textalignx				41.71
 			textaligny				7.78
 		}
 
 		itemDef
 		{
 			name					vision_tab3
-			rect					193 0 92 26
+			rect					175.86 0 83.43 26
 			visible					1
 			text					@MENUS_OPTIONS
 			font					5
@@ -112,14 +112,14 @@
 			descText				@MENUS_CONFIGURE_GAME_OPTIONS
 			action { play "sound/interface/button1.wav" ; }
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				46
+			textalignx				41.71
 			textaligny				7.78
 		}
 
 		itemDef
 		{
 			name					vision_tab4
-			rect					285 0 92 26
+			rect					259.29 0 83.43 26
 			visible					1
 			text					@VISION_INTERFACE
 			font					5
@@ -132,14 +132,14 @@
 			descText				@VISION_HOW_MENUS_HUD_AND_CAMERA_LOOK
 			action { play "sound/interface/button1.wav" ; }
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				46
+			textalignx				41.71
 			textaligny				7.78
 		}
 
 		itemDef
 		{
 			name					vision_tab5
-			rect					377 0 92 26
+			rect					342.71 0 83.43 26
 			visible					1
 			text					@VISION_CHAT_SOCIAL
 			font					5
@@ -152,14 +152,34 @@
 			descText				@VISION_THE_CHAT_BOX_BUBBLES_AND_WHAT_STANDS
 			action { play "sound/interface/button1.wav" ; }
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				46
+			textalignx				41.71
 			textaligny				7.78
 		}
 
 		itemDef
 		{
 			name					vision_tab6
-			rect					469 0 92 26
+			rect					426.14 0 83.43 26
+			visible					1
+			text					@VISION_TAYSTJK
+			font					5
+			textscale				0.58
+			forecolor				0.60 0.69 0.78 1
+			type					ITEM_TYPE_BUTTON
+			caps					1
+			style					WINDOW_STYLE_EMPTY
+			tab						6
+			descText				@VISION_WHAT_CAME_FROM_THE_TAYSTJK_CLIENT_HU
+			action { play "sound/interface/button1.wav" ; }
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				41.71
+			textaligny				7.78
+		}
+
+		itemDef
+		{
+			name					vision_tab7
+			rect					509.57 0 83.43 26
 			visible					1
 			text					@VISION_NETWORK
 			font					5
@@ -168,11 +188,11 @@
 			type					ITEM_TYPE_BUTTON
 			caps					1
 			style					WINDOW_STYLE_EMPTY
-			tab						6
+			tab						7
 			descText				@VISION_UPDATES_DOWNLOADS_AND_SECURITY
 			action { play "sound/interface/button1.wav" ; }
 			textalign				ITEM_ALIGN_CENTER
-			textalignx				46
+			textalignx				41.71
 			textaligny				7.78
 		}
 
@@ -1762,44 +1782,8 @@
 
 		itemDef
 		{
-			name					vision_yesno_v_killfeed
-			type					ITEM_TYPE_YESNO
-			text					@VISION_KILLFEED
-			descText				@VISION_WHO_KILLED_WHOM_WITH_WHAT_AT_THE_UPP
-			cvar					"v_killfeed"
-			action { play "sound/interface/button1.wav" ; }
-			rect					12 214 380 22
-			page					4
-			scroll					1
-			row						1
-			font					5
-			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
-			visible					1
-		}
-
-		itemDef
-		{
-			name					vision_slider_v_teamoverlayscale
-			type					ITEM_TYPE_SLIDER
-			text					@VISION_TEAM_OVERLAY_SIZE
-			descText				@VISION_HOW_LARGE_THE_LIST_OF_YOUR_TEAM_MATE
-			cvarfloat				"v_teamOverlayScale" 1 0.5 2.5
-			action { play "sound/interface/button1.wav" ; }
-			rect					12 236 380 22
-			page					4
-			scroll					1
-			row						1
-			font					5
-			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
-			visible					1
-		}
-
-		itemDef
-		{
 			name					vision_head
-			rect					14 258 376 22
+			rect					14 214 376 22
 			visible					1
 			text					@VISION_VIEW
 			font					5
@@ -1815,7 +1799,7 @@
 		itemDef
 		{
 			name					vision_headline
-			rect					12 279 380 0.67
+			rect					12 235 380 0.67
 			visible					1
 			style					WINDOW_STYLE_FILLED
 			backcolor				0.43 0.83 1 0.32
@@ -1832,7 +1816,7 @@
 			descText				@VISION_HOW_WIDE_YOU_SEE
 			cvarfloat				"cg_fov" 80 60 130
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 280 380 22
+			rect					12 236 380 22
 			page					4
 			scroll					1
 			row						1
@@ -1850,7 +1834,7 @@
 			descText				@VISION_HOW_FAR_THE_CAMERA_IS_BEHIND_YOU_IN
 			cvarfloat				"cg_thirdPersonRange" 80 40 200
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 302 380 22
+			rect					12 258 380 22
 			page					4
 			scroll					1
 			row						1
@@ -1868,388 +1852,7 @@
 			descText				@VISION_THE_SIZE_OF_THE_CROSSHAIR
 			cvarfloat				"cg_crosshairSize" 24 12 64
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 324 380 22
-			page					4
-			scroll					1
-			row						1
-			font					5
-			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
-			visible					1
-		}
-
-		itemDef
-		{
-			name					vision_multistr_v_crosshaircolor
-			type					ITEM_TYPE_MULTI
-			text					@VISION_CROSSHAIR_COLOUR
-			descText				@VISION_THE_COLOUR_OF_THE_CROSSHAIR_WITH_NOT
-			cvar					"v_crosshairColor"
-			cvarStrList
-			{
-				@VISION_WHITE "" @VISION_GREEN "0.2 1 0.3 1" @VISION_CYAN "0.2 0.9 1 1" @VISION_YELLOW "1 0.9 0.2 1" @VISION_ORANGE "1 0.5 0 1" @VISION_RED "1 0.2 0.2 1" @VISION_PINK "1 0.4 0.9 1"
-			}
-			action { play "sound/interface/button1.wav" ; }
-			rect					12 346 380 22
-			page					4
-			scroll					1
-			row						1
-			font					5
-			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
-			visible					1
-		}
-
-		itemDef
-		{
-			name					vision_slider_v_crosshairnamesopacity
-			type					ITEM_TYPE_SLIDER
-			text					@VISION_NAME_OPACITY
-			descText				@VISION_HOW_CLEARLY_THE_NAME_OF_THE_PLAYER_U
-			cvarfloat				"v_crosshairNamesOpacity" 0.5 0 1
-			action { play "sound/interface/button1.wav" ; }
-			rect					12 368 380 22
-			page					4
-			scroll					1
-			row						1
-			font					5
-			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
-			visible					1
-		}
-
-		itemDef
-		{
-			name					vision_head
-			rect					14 390 376 22
-			visible					1
-			text					@VISION_MOVEMENT
-			font					5
-			textscale				0.54
-			forecolor				0.60 0.69 0.78 1
-			textaligny				9
-			caps					1
-			decoration
-			page					4
-			scroll					1
-		}
-
-		itemDef
-		{
-			name					vision_headline
-			rect					12 411 380 0.67
-			visible					1
-			style					WINDOW_STYLE_FILLED
-			backcolor				0.43 0.83 1 0.32
-			decoration
-			page					4
-			scroll					1
-		}
-
-		itemDef
-		{
-			name					vision_yesno_v_speedometer
-			type					ITEM_TYPE_YESNO
-			text					@VISION_SPEEDOMETER
-			descText				@VISION_YOUR_SPEED_UNDER_THE_CROSSHAIR_AND_T
-			cvar					"v_speedometer"
-			action { play "sound/interface/button1.wav" ; }
-			rect					12 412 380 22
-			page					4
-			scroll					1
-			row						1
-			font					5
-			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
-			visible					1
-		}
-
-		itemDef
-		{
-			name					vision_yesno_v_strafehelper
-			type					ITEM_TYPE_YESNO
-			text					@VISION_STRAFE_HELPER
-			descText				@VISION_A_BAR_UNDER_THE_CROSSHAIR_THAT_SHOWS
-			cvar					"v_strafeHelper"
-			action { play "sound/interface/button1.wav" ; }
-			rect					12 434 380 22
-			page					4
-			scroll					1
-			row						1
-			font					5
-			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
-			visible					1
-		}
-
-		itemDef
-		{
-			name					vision_yesno_v_snaphud
-			type					ITEM_TYPE_YESNO
-			text					@VISION_SNAP_HUD
-			descText				@VISION_IN_THE_AIR_THE_ANGLES_WHERE_THE_ROUN
-			cvar					"v_snapHud"
-			action { play "sound/interface/button1.wav" ; }
-			rect					12 456 380 22
-			page					4
-			scroll					1
-			row						1
-			font					5
-			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
-			visible					1
-		}
-
-		itemDef
-		{
-			name					vision_yesno_v_pitchhud
-			type					ITEM_TYPE_YESNO
-			text					@VISION_PITCH_HUD
-			descText				@VISION_A_MARK_WHERE_YOUR_VIEW_WOULD_BE_AT_A
-			cvar					"v_pitchHud"
-			action { play "sound/interface/button1.wav" ; }
-			rect					12 478 380 22
-			page					4
-			scroll					1
-			row						1
-			font					5
-			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
-			visible					1
-		}
-
-		itemDef
-		{
-			name					vision_multi_v_strafetrail
-			type					ITEM_TYPE_MULTI
-			text					@VISION_STRAFE_TRAILS
-			descText				@VISION_A_FADING_LINE_ON_THE_GROUND_ALONG_WH
-			cvar					"v_strafeTrail"
-			cvarFloatList { @VISION_OFF 0 @VISION_MINE 1 @VISION_EVERYBODY 2 }
-			action { play "sound/interface/button1.wav" ; }
-			rect					12 500 380 22
-			page					4
-			scroll					1
-			row						1
-			font					5
-			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
-			visible					1
-		}
-
-		itemDef
-		{
-			name					vision_head
-			rect					14 522 376 22
-			visible					1
-			text					@VISION_LOOKS
-			font					5
-			textscale				0.54
-			forecolor				0.60 0.69 0.78 1
-			textaligny				9
-			caps					1
-			decoration
-			page					4
-			scroll					1
-		}
-
-		itemDef
-		{
-			name					vision_headline
-			rect					12 543 380 0.67
-			visible					1
-			style					WINDOW_STYLE_FILLED
-			backcolor				0.43 0.83 1 0.32
-			decoration
-			page					4
-			scroll					1
-		}
-
-		itemDef
-		{
-			name					vision_multistr_v_hat
-			type					ITEM_TYPE_MULTI
-			text					@VISION_HAT
-			descText				@VISION_WHAT_YOU_WEAR_ON_YOUR_HEAD_OTHER_PLA
-			cvar					"v_hat"
-			cvarStrList
-			{
-				@VISION_NONE "" @VISION_AFRO "afro" @VISION_BEARD "beard" @VISION_BUCKET "bucket" @VISION_CAP "cap" @VISION_PROPELLER_CAP "cringe" @VISION_CROWN "crown" @VISION_FEDORA "fedora" @VISION_FEDORA_2 "fedora2" @VISION_FEDORA_3 "fedora3" @VISION_FEDORA_4 "fedora4" @VISION_GLASSES "glasses" @VISION_GRADUATION_CAP "gradcap" @VISION_HEADCRAB "headcrab" @VISION_HORNS "horns" @VISION_MARIO_CAP "mario" @VISION_MASK "mask" @VISION_METAL_HELMET "metalhelm" @VISION_PLAGUE_MASK "plaguemask" @VISION_PREDATOR_HELMET "predatorhelm" @VISION_PUMPKIN "pumpkin" @VISION_SANTA_HAT "santahat" @VISION_SOMBRERO "sombrero" @VISION_SUPER_SAIYAN_HAIR "supersaiyan" @VISION_TOP_HAT "tophat"
-			}
-			action { play "sound/interface/button1.wav" ; }
-			rect					12 544 380 22
-			page					4
-			scroll					1
-			row						1
-			font					5
-			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
-			visible					1
-		}
-
-		itemDef
-		{
-			name					vision_multistr_v_cape
-			type					ITEM_TYPE_MULTI
-			text					@VISION_CAPE
-			descText				@VISION_WHAT_YOU_WEAR_ON_YOUR_BACK_OTHER_PLA
-			cvar					"v_cape"
-			cvarStrList
-			{
-				@VISION_NONE "" @VISION_ROYAL_CAPE "royalcape" @VISION_VADER_CAPE "vadercape" @VISION_YODA "yodacape" @VISION_GROGU "grogucape" @VISION_GOOSE "goose" @VISION_CROWBAR "crowbar" @VISION_AK_47 "ak47" @VISION_ROCKET_LAUNCHER "rpg"
-			}
-			action { play "sound/interface/button1.wav" ; }
-			rect					12 566 380 22
-			page					4
-			scroll					1
-			row						1
-			font					5
-			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
-			visible					1
-		}
-
-		itemDef
-		{
-			name					vision_multi_v_showcosmetics
-			type					ITEM_TYPE_MULTI
-			text					@VISION_HATS_AND_CAPES
-			descText				@VISION_WHAT_PLAYERS_WEAR_ON_THEIR_HEADS_AND
-			cvar					"v_showCosmetics"
-			cvarFloatList { @VISION_OFF 0 @VISION_EVERYBODY_S 1 @VISION_MINE_ON_EVERYBODY 2 }
-			action { play "sound/interface/button1.wav" ; }
-			rect					12 588 380 22
-			page					4
-			scroll					1
-			row						1
-			font					5
-			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
-			visible					1
-		}
-
-		itemDef
-		{
-			name					vision_yesno_v_seasonalcosmetics
-			type					ITEM_TYPE_YESNO
-			text					@VISION_SEASONAL_HATS
-			descText				@VISION_A_SANTA_HAT_AT_CHRISTMAS_AND_A_PUMPK
-			cvar					"v_seasonalCosmetics"
-			action { play "sound/interface/button1.wav" ; }
-			rect					12 610 380 22
-			page					4
-			scroll					1
-			row						1
-			font					5
-			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
-			visible					1
-		}
-
-		itemDef
-		{
-			name					vision_edit_v_forceenemymodel
-			type					ITEM_TYPE_EDITFIELD
-			text					@VISION_ENEMY_MODEL
-			descText				@VISION_EVERY_OPPONENT_IN_THIS_MODEL_AS_MODE
-			cvar					"v_forceEnemyModel"
-			maxChars				32
-			maxPaintChars			24
-			action { play "sound/interface/button1.wav" ; }
-			rect					12 632 380 22
-			page					4
-			scroll					1
-			row						1
-			font					5
-			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
-			visible					1
-		}
-
-		itemDef
-		{
-			name					vision_edit_v_forceallymodel
-			type					ITEM_TYPE_EDITFIELD
-			text					@VISION_ALLY_MODEL
-			descText				@VISION_EVERY_TEAM_MATE_IN_THIS_MODEL_AS_MOD
-			cvar					"v_forceAllyModel"
-			maxChars				32
-			maxPaintChars			24
-			action { play "sound/interface/button1.wav" ; }
-			rect					12 654 380 22
-			page					4
-			scroll					1
-			row						1
-			font					5
-			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
-			visible					1
-		}
-
-		itemDef
-		{
-			name					vision_yesno_v_saberteamcolors
-			type					ITEM_TYPE_YESNO
-			text					@VISION_SABER_TEAM_COLOURS
-			descText				@VISION_IN_TEAM_GAMES_EVERY_BLADE_IN_THE_COL
-			cvar					"v_saberTeamColors"
-			action { play "sound/interface/button1.wav" ; }
-			rect					12 676 380 22
-			page					4
-			scroll					1
-			row						1
-			font					5
-			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
-			visible					1
-		}
-
-		itemDef
-		{
-			name					vision_yesno_v_saberstaffcolors
-			type					ITEM_TYPE_YESNO
-			text					@VISION_TWO_COLOURED_STAFF
-			descText				@VISION_THE_SECOND_BLADE_OF_A_STAFF_IN_THE_S
-			cvar					"v_saberStaffColors"
-			action { play "sound/interface/button1.wav" ; }
-			rect					12 698 380 22
-			page					4
-			scroll					1
-			row						1
-			font					5
-			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
-			visible					1
-		}
-
-		itemDef
-		{
-			name					vision_yesno_v_jk2effects
-			type					ITEM_TYPE_YESNO
-			text					@VISION_JEDI_OUTCAST_SHOTS
-			descText				@VISION_SHOTS_DRAWN_AS_CRISPLY_AS_IN_JEDI_OU
-			cvar					"v_jk2Effects"
-			action { play "sound/interface/button1.wav" ; }
-			rect					12 720 380 22
-			page					4
-			scroll					1
-			row						1
-			font					5
-			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
-			visible					1
-		}
-
-		itemDef
-		{
-			name					vision_multi_v_disruptorbeam
-			type					ITEM_TYPE_MULTI
-			text					@VISION_DISRUPTOR_BEAM
-			descText				@VISION_HOW_THE_SHOT_OF_THE_DISRUPTOR_LOOKS
-			cvar					"v_disruptorBeam"
-			cvarFloatList { @VISION_GAME 0 @VISION_LINE 1 @VISION_SPIRAL 2 }
-			action { play "sound/interface/button1.wav" ; }
-			rect					12 742 380 22
+			rect					12 280 380 22
 			page					4
 			scroll					1
 			row						1
@@ -2533,44 +2136,8 @@
 
 		itemDef
 		{
-			name					vision_yesno_v_chatemoji
-			type					ITEM_TYPE_YESNO
-			text					@VISION_CHAT_EMOJI
-			descText				@VISION_CODES_LIKE_SMILE_ARE_DRAWN_AS_PICTUR
-			cvar					"v_chatEmoji"
-			action { play "sound/interface/button1.wav" ; }
-			rect					12 346 380 22
-			page					5
-			scroll					1
-			row						1
-			font					5
-			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
-			visible					1
-		}
-
-		itemDef
-		{
-			name					vision_yesno_v_chatlog
-			type					ITEM_TYPE_YESNO
-			text					@VISION_CHAT_LOG
-			descText				@VISION_EVERY_CHAT_LINE_IS_WRITTEN_INTO_THE
-			cvar					"v_chatLog"
-			action { play "sound/interface/button1.wav" ; }
-			rect					12 368 380 22
-			page					5
-			scroll					1
-			row						1
-			font					5
-			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
-			visible					1
-		}
-
-		itemDef
-		{
 			name					vision_head
-			rect					14 390 376 22
+			rect					14 346 376 22
 			visible					1
 			text					@VISION_CONSOLE
 			font					5
@@ -2586,7 +2153,7 @@
 		itemDef
 		{
 			name					vision_headline
-			rect					12 411 380 0.67
+			rect					12 367 380 0.67
 			visible					1
 			style					WINDOW_STYLE_FILLED
 			backcolor				0.43 0.83 1 0.32
@@ -2603,7 +2170,7 @@
 			descText				@VISION_THE_CONSOLE_IN_A_FONT_WITH_EVERY_CHA
 			cvar					"con_font"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 412 380 22
+			rect					12 368 380 22
 			page					5
 			scroll					1
 			row						1
@@ -2621,7 +2188,7 @@
 			descText				@VISION_THE_SIZE_OF_THE_TEXT_OF_THE_CONSOLE
 			cvarfloat				"con_scale" 1 0.5 3
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 434 380 22
+			rect					12 390 380 22
 			page					5
 			scroll					1
 			row						1
@@ -2639,26 +2206,7 @@
 			descText				@VISION_HOW_MUCH_OF_THE_GAME_SHOWS_THROUGH_T
 			cvarfloat				"con_opacity" 1 0.2 1
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 456 380 22
-			page					5
-			scroll					1
-			row						1
-			font					5
-			textscale				0.7
-			forecolor				0.86 0.92 0.97 1
-			visible					1
-		}
-
-		itemDef
-		{
-			name					vision_multi_v_consoleclock
-			type					ITEM_TYPE_MULTI
-			text					@VISION_CONSOLE_CLOCK
-			descText				@VISION_A_CLOCK_IN_THE_CORNER_OF_THE_CONSOLE
-			cvar					"v_consoleClock"
-			cvarFloatList { @VISION_OFF 0 @VISION_TIME 1 @VISION_DATE_AND_TIME 2 }
-			action { play "sound/interface/button1.wav" ; }
-			rect					12 478 380 22
+			rect					12 412 380 22
 			page					5
 			scroll					1
 			row						1
@@ -2671,7 +2219,7 @@
 		itemDef
 		{
 			name					vision_head
-			rect					14 500 376 22
+			rect					14 434 376 22
 			visible					1
 			text					@VISION_CLAN
 			font					5
@@ -2687,7 +2235,7 @@
 		itemDef
 		{
 			name					vision_headline
-			rect					12 521 380 0.67
+			rect					12 455 380 0.67
 			visible					1
 			style					WINDOW_STYLE_FILLED
 			backcolor				0.43 0.83 1 0.32
@@ -2706,7 +2254,7 @@
 			maxChars				32
 			maxPaintChars			24
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 522 380 22
+			rect					12 456 380 22
 			page					5
 			scroll					1
 			row						2
@@ -2721,7 +2269,7 @@
 			name					vision_head
 			rect					14 38 376 22
 			visible					1
-			text					@VISION_UPDATES_AND_DOWNLOADS
+			text					@VISION_HUD
 			font					5
 			textscale				0.54
 			forecolor				0.60 0.69 0.78 1
@@ -2746,6 +2294,562 @@
 
 		itemDef
 		{
+			name					vision_yesno_tay_killfeed
+			type					ITEM_TYPE_YESNO
+			text					@VISION_KILLFEED
+			descText				@VISION_WHO_KILLED_WHOM_WITH_WHAT_AT_THE_UPP
+			cvar					"tay_killfeed"
+			action { play "sound/interface/button1.wav" ; }
+			rect					12 60 380 22
+			page					6
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+		}
+
+		itemDef
+		{
+			name					vision_slider_tay_teamoverlayscale
+			type					ITEM_TYPE_SLIDER
+			text					@VISION_TEAM_OVERLAY_SIZE
+			descText				@VISION_HOW_LARGE_THE_LIST_OF_YOUR_TEAM_MATE
+			cvarfloat				"tay_teamOverlayScale" 1 0.5 2.5
+			action { play "sound/interface/button1.wav" ; }
+			rect					12 82 380 22
+			page					6
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+		}
+
+		itemDef
+		{
+			name					vision_multistr_tay_crosshaircolor
+			type					ITEM_TYPE_MULTI
+			text					@VISION_CROSSHAIR_COLOUR
+			descText				@VISION_THE_COLOUR_OF_THE_CROSSHAIR_WITH_NOT
+			cvar					"tay_crosshairColor"
+			cvarStrList
+			{
+				@VISION_WHITE "" @VISION_GREEN "0.2 1 0.3 1" @VISION_CYAN "0.2 0.9 1 1" @VISION_YELLOW "1 0.9 0.2 1" @VISION_ORANGE "1 0.5 0 1" @VISION_RED "1 0.2 0.2 1" @VISION_PINK "1 0.4 0.9 1"
+			}
+			action { play "sound/interface/button1.wav" ; }
+			rect					12 104 380 22
+			page					6
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+		}
+
+		itemDef
+		{
+			name					vision_slider_tay_crosshairnamesopacity
+			type					ITEM_TYPE_SLIDER
+			text					@VISION_NAME_OPACITY
+			descText				@VISION_HOW_CLEARLY_THE_NAME_OF_THE_PLAYER_U
+			cvarfloat				"tay_crosshairNamesOpacity" 0.5 0 1
+			action { play "sound/interface/button1.wav" ; }
+			rect					12 126 380 22
+			page					6
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+		}
+
+		itemDef
+		{
+			name					vision_head
+			rect					14 148 376 22
+			visible					1
+			text					@VISION_MOVEMENT
+			font					5
+			textscale				0.54
+			forecolor				0.60 0.69 0.78 1
+			textaligny				9
+			caps					1
+			decoration
+			page					6
+			scroll					1
+		}
+
+		itemDef
+		{
+			name					vision_headline
+			rect					12 169 380 0.67
+			visible					1
+			style					WINDOW_STYLE_FILLED
+			backcolor				0.43 0.83 1 0.32
+			decoration
+			page					6
+			scroll					1
+		}
+
+		itemDef
+		{
+			name					vision_yesno_tay_speedometer
+			type					ITEM_TYPE_YESNO
+			text					@VISION_SPEEDOMETER
+			descText				@VISION_YOUR_SPEED_UNDER_THE_CROSSHAIR_AND_T
+			cvar					"tay_speedometer"
+			action { play "sound/interface/button1.wav" ; }
+			rect					12 170 380 22
+			page					6
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+		}
+
+		itemDef
+		{
+			name					vision_yesno_tay_strafehelper
+			type					ITEM_TYPE_YESNO
+			text					@VISION_STRAFE_HELPER
+			descText				@VISION_A_BAR_UNDER_THE_CROSSHAIR_THAT_SHOWS
+			cvar					"tay_strafeHelper"
+			action { play "sound/interface/button1.wav" ; }
+			rect					12 192 380 22
+			page					6
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+		}
+
+		itemDef
+		{
+			name					vision_yesno_tay_snaphud
+			type					ITEM_TYPE_YESNO
+			text					@VISION_SNAP_HUD
+			descText				@VISION_IN_THE_AIR_THE_ANGLES_WHERE_THE_ROUN
+			cvar					"tay_snapHud"
+			action { play "sound/interface/button1.wav" ; }
+			rect					12 214 380 22
+			page					6
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+		}
+
+		itemDef
+		{
+			name					vision_yesno_tay_pitchhud
+			type					ITEM_TYPE_YESNO
+			text					@VISION_PITCH_HUD
+			descText				@VISION_A_MARK_WHERE_YOUR_VIEW_WOULD_BE_AT_A
+			cvar					"tay_pitchHud"
+			action { play "sound/interface/button1.wav" ; }
+			rect					12 236 380 22
+			page					6
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+		}
+
+		itemDef
+		{
+			name					vision_multi_tay_strafetrail
+			type					ITEM_TYPE_MULTI
+			text					@VISION_STRAFE_TRAILS
+			descText				@VISION_A_FADING_LINE_ON_THE_GROUND_ALONG_WH
+			cvar					"tay_strafeTrail"
+			cvarFloatList { @VISION_OFF 0 @VISION_MINE 1 @VISION_EVERYBODY 2 }
+			action { play "sound/interface/button1.wav" ; }
+			rect					12 258 380 22
+			page					6
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+		}
+
+		itemDef
+		{
+			name					vision_head
+			rect					14 280 376 22
+			visible					1
+			text					@VISION_HATS_AND_CAPES
+			font					5
+			textscale				0.54
+			forecolor				0.60 0.69 0.78 1
+			textaligny				9
+			caps					1
+			decoration
+			page					6
+			scroll					1
+		}
+
+		itemDef
+		{
+			name					vision_headline
+			rect					12 301 380 0.67
+			visible					1
+			style					WINDOW_STYLE_FILLED
+			backcolor				0.43 0.83 1 0.32
+			decoration
+			page					6
+			scroll					1
+		}
+
+		itemDef
+		{
+			name					vision_multistr_tay_hat
+			type					ITEM_TYPE_MULTI
+			text					@VISION_HAT
+			descText				@VISION_WHAT_YOU_WEAR_ON_YOUR_HEAD_OTHER_PLA
+			cvar					"tay_hat"
+			cvarStrList
+			{
+				@VISION_NONE "" @VISION_AFRO "afro" @VISION_BEARD "beard" @VISION_BUCKET "bucket" @VISION_CAP "cap" @VISION_PROPELLER_CAP "cringe" @VISION_CROWN "crown" @VISION_FEDORA "fedora" @VISION_FEDORA_2 "fedora2" @VISION_FEDORA_3 "fedora3" @VISION_FEDORA_4 "fedora4" @VISION_GLASSES "glasses" @VISION_GRADUATION_CAP "gradcap" @VISION_HEADCRAB "headcrab" @VISION_HORNS "horns" @VISION_MARIO_CAP "mario" @VISION_MASK "mask" @VISION_METAL_HELMET "metalhelm" @VISION_PLAGUE_MASK "plaguemask" @VISION_PREDATOR_HELMET "predatorhelm" @VISION_PUMPKIN "pumpkin" @VISION_SANTA_HAT "santahat" @VISION_SOMBRERO "sombrero" @VISION_SUPER_SAIYAN_HAIR "supersaiyan" @VISION_TOP_HAT "tophat"
+			}
+			action { play "sound/interface/button1.wav" ; }
+			rect					12 302 380 22
+			page					6
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+		}
+
+		itemDef
+		{
+			name					vision_multistr_tay_cape
+			type					ITEM_TYPE_MULTI
+			text					@VISION_CAPE
+			descText				@VISION_WHAT_YOU_WEAR_ON_YOUR_BACK_OTHER_PLA
+			cvar					"tay_cape"
+			cvarStrList
+			{
+				@VISION_NONE "" @VISION_ROYAL_CAPE "royalcape" @VISION_VADER_CAPE "vadercape" @VISION_YODA "yodacape" @VISION_GROGU "grogucape" @VISION_GOOSE "goose" @VISION_CROWBAR "crowbar" @VISION_AK_47 "ak47" @VISION_ROCKET_LAUNCHER "rpg"
+			}
+			action { play "sound/interface/button1.wav" ; }
+			rect					12 324 380 22
+			page					6
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+		}
+
+		itemDef
+		{
+			name					vision_multi_tay_showcosmetics
+			type					ITEM_TYPE_MULTI
+			text					@VISION_SHOW_THEM
+			descText				@VISION_WHAT_PLAYERS_WEAR_ON_THEIR_HEADS_AND
+			cvar					"tay_showCosmetics"
+			cvarFloatList { @VISION_OFF 0 @VISION_EVERYBODY_S 1 @VISION_MINE_ON_EVERYBODY 2 }
+			action { play "sound/interface/button1.wav" ; }
+			rect					12 346 380 22
+			page					6
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+		}
+
+		itemDef
+		{
+			name					vision_yesno_tay_seasonalcosmetics
+			type					ITEM_TYPE_YESNO
+			text					@VISION_SEASONAL_HATS
+			descText				@VISION_A_SANTA_HAT_AT_CHRISTMAS_AND_A_PUMPK
+			cvar					"tay_seasonalCosmetics"
+			action { play "sound/interface/button1.wav" ; }
+			rect					12 368 380 22
+			page					6
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+		}
+
+		itemDef
+		{
+			name					vision_head
+			rect					14 390 376 22
+			visible					1
+			text					@VISION_LOOKS
+			font					5
+			textscale				0.54
+			forecolor				0.60 0.69 0.78 1
+			textaligny				9
+			caps					1
+			decoration
+			page					6
+			scroll					1
+		}
+
+		itemDef
+		{
+			name					vision_headline
+			rect					12 411 380 0.67
+			visible					1
+			style					WINDOW_STYLE_FILLED
+			backcolor				0.43 0.83 1 0.32
+			decoration
+			page					6
+			scroll					1
+		}
+
+		itemDef
+		{
+			name					vision_edit_tay_forceenemymodel
+			type					ITEM_TYPE_EDITFIELD
+			text					@VISION_ENEMY_MODEL
+			descText				@VISION_EVERY_OPPONENT_IN_THIS_MODEL_AS_MODE
+			cvar					"tay_forceEnemyModel"
+			maxChars				32
+			maxPaintChars			24
+			action { play "sound/interface/button1.wav" ; }
+			rect					12 412 380 22
+			page					6
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+		}
+
+		itemDef
+		{
+			name					vision_edit_tay_forceallymodel
+			type					ITEM_TYPE_EDITFIELD
+			text					@VISION_ALLY_MODEL
+			descText				@VISION_EVERY_TEAM_MATE_IN_THIS_MODEL_AS_MOD
+			cvar					"tay_forceAllyModel"
+			maxChars				32
+			maxPaintChars			24
+			action { play "sound/interface/button1.wav" ; }
+			rect					12 434 380 22
+			page					6
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+		}
+
+		itemDef
+		{
+			name					vision_yesno_tay_saberteamcolors
+			type					ITEM_TYPE_YESNO
+			text					@VISION_SABER_TEAM_COLOURS
+			descText				@VISION_IN_TEAM_GAMES_EVERY_BLADE_IN_THE_COL
+			cvar					"tay_saberTeamColors"
+			action { play "sound/interface/button1.wav" ; }
+			rect					12 456 380 22
+			page					6
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+		}
+
+		itemDef
+		{
+			name					vision_yesno_tay_saberstaffcolors
+			type					ITEM_TYPE_YESNO
+			text					@VISION_TWO_COLOURED_STAFF
+			descText				@VISION_THE_SECOND_BLADE_OF_A_STAFF_IN_THE_S
+			cvar					"tay_saberStaffColors"
+			action { play "sound/interface/button1.wav" ; }
+			rect					12 478 380 22
+			page					6
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+		}
+
+		itemDef
+		{
+			name					vision_yesno_tay_jk2effects
+			type					ITEM_TYPE_YESNO
+			text					@VISION_JEDI_OUTCAST_SHOTS
+			descText				@VISION_SHOTS_DRAWN_AS_CRISPLY_AS_IN_JEDI_OU
+			cvar					"tay_jk2Effects"
+			action { play "sound/interface/button1.wav" ; }
+			rect					12 500 380 22
+			page					6
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+		}
+
+		itemDef
+		{
+			name					vision_multi_tay_disruptorbeam
+			type					ITEM_TYPE_MULTI
+			text					@VISION_DISRUPTOR_BEAM
+			descText				@VISION_HOW_THE_SHOT_OF_THE_DISRUPTOR_LOOKS
+			cvar					"tay_disruptorBeam"
+			cvarFloatList { @VISION_GAME 0 @VISION_LINE 1 @VISION_SPIRAL 2 }
+			action { play "sound/interface/button1.wav" ; }
+			rect					12 522 380 22
+			page					6
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+		}
+
+		itemDef
+		{
+			name					vision_head
+			rect					14 544 376 22
+			visible					1
+			text					@VISION_CHAT_AND_CONSOLE
+			font					5
+			textscale				0.54
+			forecolor				0.60 0.69 0.78 1
+			textaligny				9
+			caps					1
+			decoration
+			page					6
+			scroll					1
+		}
+
+		itemDef
+		{
+			name					vision_headline
+			rect					12 565 380 0.67
+			visible					1
+			style					WINDOW_STYLE_FILLED
+			backcolor				0.43 0.83 1 0.32
+			decoration
+			page					6
+			scroll					1
+		}
+
+		itemDef
+		{
+			name					vision_yesno_tay_chatemoji
+			type					ITEM_TYPE_YESNO
+			text					@VISION_CHAT_EMOJI
+			descText				@VISION_CODES_LIKE_SMILE_ARE_DRAWN_AS_PICTUR
+			cvar					"tay_chatEmoji"
+			action { play "sound/interface/button1.wav" ; }
+			rect					12 566 380 22
+			page					6
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+		}
+
+		itemDef
+		{
+			name					vision_yesno_tay_chatlog
+			type					ITEM_TYPE_YESNO
+			text					@VISION_CHAT_LOG
+			descText				@VISION_EVERY_CHAT_LINE_IS_WRITTEN_INTO_THE
+			cvar					"tay_chatLog"
+			action { play "sound/interface/button1.wav" ; }
+			rect					12 588 380 22
+			page					6
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+		}
+
+		itemDef
+		{
+			name					vision_multi_tay_consoleclock
+			type					ITEM_TYPE_MULTI
+			text					@VISION_CONSOLE_CLOCK
+			descText				@VISION_A_CLOCK_IN_THE_CORNER_OF_THE_CONSOLE
+			cvar					"tay_consoleClock"
+			cvarFloatList { @VISION_OFF 0 @VISION_TIME 1 @VISION_DATE_AND_TIME 2 }
+			action { play "sound/interface/button1.wav" ; }
+			rect					12 610 380 22
+			page					6
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+		}
+
+		itemDef
+		{
+			name					vision_head
+			rect					14 38 376 22
+			visible					1
+			text					@VISION_UPDATES_AND_DOWNLOADS
+			font					5
+			textscale				0.54
+			forecolor				0.60 0.69 0.78 1
+			textaligny				9
+			caps					1
+			decoration
+			page					7
+			scroll					1
+		}
+
+		itemDef
+		{
+			name					vision_headline
+			rect					12 59 380 0.67
+			visible					1
+			style					WINDOW_STYLE_FILLED
+			backcolor				0.43 0.83 1 0.32
+			decoration
+			page					7
+			scroll					1
+		}
+
+		itemDef
+		{
 			name					vision_yesno_v_updatecheck
 			type					ITEM_TYPE_YESNO
 			text					@VISION_CHECK_FOR_UPDATES
@@ -2753,7 +2857,7 @@
 			cvar					"v_updateCheck"
 			action { play "sound/interface/button1.wav" ; }
 			rect					12 60 380 22
-			page					6
+			page					7
 			scroll					1
 			row						1
 			font					5
@@ -2771,7 +2875,7 @@
 			cvar					"v_downloadReview"
 			action { play "sound/interface/button1.wav" ; }
 			rect					12 82 380 22
-			page					6
+			page					7
 			scroll					1
 			row						1
 			font					5
@@ -2789,7 +2893,7 @@
 			cvar					"v_downloadKeep"
 			action { play "sound/interface/button1.wav" ; }
 			rect					12 104 380 22
-			page					6
+			page					7
 			scroll					1
 			row						1
 			font					5
@@ -2810,7 +2914,7 @@
 			textaligny				9
 			caps					1
 			decoration
-			page					6
+			page					7
 			scroll					1
 		}
 
@@ -2822,7 +2926,7 @@
 			style					WINDOW_STYLE_FILLED
 			backcolor				0.43 0.83 1 0.32
 			decoration
-			page					6
+			page					7
 			scroll					1
 		}
 
@@ -2835,7 +2939,7 @@
 			cvar					"v_ids"
 			action { play "sound/interface/button1.wav" ; }
 			rect					12 148 380 22
-			page					6
+			page					7
 			scroll					1
 			row						1
 			font					5
@@ -2853,7 +2957,7 @@
 			cvar					"v_authAgent"
 			action { play "sound/interface/button1.wav" ; }
 			rect					12 170 380 22
-			page					6
+			page					7
 			scroll					1
 			row						1
 			font					5
@@ -2873,7 +2977,7 @@
 			maxPaintChars			24
 			action { play "sound/interface/button1.wav" ; }
 			rect					12 192 380 22
-			page					6
+			page					7
 			scroll					1
 			row						1
 			font					5
@@ -2894,7 +2998,7 @@
 			textaligny				9
 			caps					1
 			decoration
-			page					6
+			page					7
 			scroll					1
 		}
 
@@ -2906,7 +3010,7 @@
 			style					WINDOW_STYLE_FILLED
 			backcolor				0.43 0.83 1 0.32
 			decoration
-			page					6
+			page					7
 			scroll					1
 		}
 
@@ -2919,7 +3023,7 @@
 			cvar					"v_utf8"
 			action { play "sound/interface/button1.wav" ; }
 			rect					12 236 380 22
-			page					6
+			page					7
 			scroll					1
 			row						1
 			font					5
@@ -3024,7 +3128,7 @@
 			textalignx				52
 			textaligny				10.6
 			flow					1
-			tab						7
+			tab						8
 		}
 
 		itemDef
@@ -3037,7 +3141,7 @@
 			textscale				1.1
 			forecolor				1 0.74 0.30 1
 			decoration
-			page					7
+			page					8
 		}
 
 		itemDef
@@ -3050,7 +3154,7 @@
 			textscale				0.7
 			forecolor				0.86 0.92 0.97 1
 			decoration
-			page					7
+			page					8
 		}
 
 		itemDef
@@ -3063,7 +3167,7 @@
 			textscale				0.7
 			forecolor				0.86 0.92 0.97 1
 			decoration
-			page					7
+			page					8
 		}
 
 		itemDef
@@ -3076,7 +3180,7 @@
 			textscale				0.7
 			forecolor				0.60 0.69 0.78 1
 			decoration
-			page					7
+			page					8
 		}
 
 		itemDef
@@ -3092,7 +3196,7 @@
 			style					WINDOW_STYLE_PANEL
 			radius					3
 			caps					1
-			page					7
+			page					8
 			backcolor				1 1 1 0.05
 			bordercolor				0.43 0.83 1 0.16
 			descText				@MENUS_DO_NOT_RESET_DEFAULT
@@ -3116,7 +3220,7 @@
 			style					WINDOW_STYLE_PANEL
 			radius					3
 			caps					1
-			page					7
+			page					8
 			backcolor				0.43 0.83 1 0.20
 			bordercolor				0.43 0.83 1 0.75
 			descText				@MENUS_USE_DEFAULT_SETTINGS

@@ -22,8 +22,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // cg_look.c -- hats and capes (2026-10-17), after the cosmetics of TaystJK and jaPRO, in their file layout so their
 // paks work: a hat is models/cosmetics/hats/<name>.md3 on the bolt *head_top of the player, a cape
 // models/cosmetics/capes/<name>.md3 on *back, and settings/cosmetics/hats|capes/<name>.cosmetic (JSON) may move
-// one for a model and skin. What one wears (v_hat, v_cape) reaches the other players of this tree: on a server of
-// this tree through the game module (status/g_status.c, "vs_status look" and "vs_look"), on any other through the
+// one for a model and skin. What one wears (tay_hat, tay_cape) reaches the other players of this tree: on a server of
+// this tree through the game module (status/g_status.c, the commands tay_look), on any other through the
 // masterserver (VOICE_LOOK, voice/cg_voice.c). Legacy clients see nothing: they would need the models. A player
 // whose hat this machine lacks wears none here.
 
@@ -31,7 +31,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #define LOOK_MAX_ITEMS		128
 #define LOOK_NAME			32
-#define LOOK_SEND_FIRST		3000	// "vs_status look" goes to the server this long after the first frame (after "vs_status all"),
+#define LOOK_SEND_FIRST		3000	// tay_look goes to the server this long after the first frame (after "vs_status all"),
 #define LOOK_SEND_MSEC		4000	//	again this often while the server did not say it back,
 #define LOOK_MAX_SENDS		6		//	and this many times at most
 #define LOOK_MASTER_MSEC	5000	// through the masterserver: the own look is said this often,
@@ -155,8 +155,8 @@ static void Look_Set( int client, const char *hat, const char *cape ) {
 static void Look_Own( char *out, int outSize ) {
 	char hat[LOOK_NAME], cape[LOOK_NAME];
 
-	Look_Clean( v_hat.string, hat, sizeof( hat ) );
-	Look_Clean( v_cape.string, cape, sizeof( cape ) );
+	Look_Clean( tay_hat.string, hat, sizeof( hat ) );
+	Look_Clean( tay_cape.string, cape, sizeof( cape ) );
 	Com_sprintf( out, outSize, "%s %s", hat[0] ? hat : "-", cape[0] ? cape : "-" );
 }
 
@@ -164,7 +164,7 @@ static void Look_Own( char *out, int outSize ) {
 =================
 CG_LookServerCommand
 
-vs_look <client> <hat> <cape>
+tay_look <client> <hat> <cape>
 =================
 */
 void CG_LookServerCommand( void ) {
@@ -237,7 +237,7 @@ void CG_LookFrame( void ) {
 		// too soon after another one
 		if ( !look.confirmed && look.sends < LOOK_MAX_SENDS && now - look.firstFrame >= LOOK_SEND_FIRST
 			&& ( !look.sends || now - look.sendTime >= LOOK_SEND_MSEC ) ) {
-			trap->SendClientCommand( va( "vs_status look %s", own ) );
+			trap->SendClientCommand( va( "tay_look %s", own ) );
 			look.sendTime = now;
 			look.sends++;
 		}
@@ -488,19 +488,19 @@ Drawing
 ===============================================================================
 */
 
-// what this player wears here: his own, or with v_showCosmetics 2 the own one; a seasonal hat for one without
+// what this player wears here: his own, or with tay_showCosmetics 2 the own one; a seasonal hat for one without
 static const char *Look_Worn( int client, lookKind_t kind ) {
-	const int	source = ( v_showCosmetics.integer == 2 || ( cg.snap && client == cg.snap->ps.clientNum ) ) ? -1 : client;
+	const int	source = ( tay_showCosmetics.integer == 2 || ( cg.snap && client == cg.snap->ps.clientNum ) ) ? -1 : client;
 	static char	own[LOOK_NAME];
 	const char	*name;
 
 	if ( source < 0 ) {
-		Look_Clean( kind == LOOK_HAT ? v_hat.string : v_cape.string, own, sizeof( own ) );
+		Look_Clean( kind == LOOK_HAT ? tay_hat.string : tay_cape.string, own, sizeof( own ) );
 		name = own;
 	} else {
 		name = look.clients[source].worn[kind];
 	}
-	if ( !name[0] && kind == LOOK_HAT && v_seasonalCosmetics.integer ) {
+	if ( !name[0] && kind == LOOK_HAT && tay_seasonalCosmetics.integer ) {
 		qtime_t now;
 
 		trap->RealTime( &now );
@@ -524,7 +524,7 @@ void CG_LookDraw( centity_t *cent, clientInfo_t *ci, const refEntity_t *body ) {
 	const int	client = cent->currentState.number;
 	int			kind;
 
-	if ( !v_showCosmetics.integer || client < 0 || client >= MAX_CLIENTS || !cent->ghoul2 || !cg.snap ) {
+	if ( !tay_showCosmetics.integer || client < 0 || client >= MAX_CLIENTS || !cent->ghoul2 || !cg.snap ) {
 		return;
 	}
 	if ( cent->currentState.eFlags & EF_DEAD ) {
@@ -596,9 +596,9 @@ void CG_LookDraw( centity_t *cent, clientInfo_t *ci, const refEntity_t *body ) {
 =================
 CG_Cosmetics_f
 
-v_cosmetics: the hats and capes there are, and what is worn
-v_cosmetics hats <name> / v_cosmetics capes <name>: wear one, "none" takes it off
-v_cosmetics clear: neither
+tay_cosmetics: the hats and capes there are, and what is worn
+tay_cosmetics hats <name> / tay_cosmetics capes <name>: wear one, "none" takes it off
+tay_cosmetics clear: neither
 =================
 */
 void CG_Cosmetics_f( void ) {
@@ -611,8 +611,8 @@ void CG_Cosmetics_f( void ) {
 		Look_List();
 	}
 	if ( !Q_stricmp( what, "clear" ) ) {
-		trap->Cvar_Set( "v_hat", "" );
-		trap->Cvar_Set( "v_cape", "" );
+		trap->Cvar_Set( "tay_hat", "" );
+		trap->Cvar_Set( "tay_cape", "" );
 		return;
 	}
 	for ( kind = 0; kind < LOOK_KINDS; kind++ ) {
@@ -620,11 +620,11 @@ void CG_Cosmetics_f( void ) {
 			const char *name = CG_Argv( 2 );
 
 			if ( name[0] && Q_stricmp( name, "none" ) && !Look_Find( (lookKind_t)kind, name ) ) {
-				trap->Print( "There is no %s called %s here (v_cosmetics lists them)\n", kind == LOOK_HAT ? "hat" : "cape", name );
+				trap->Print( "There is no %s called %s here (tay_cosmetics lists them)\n", kind == LOOK_HAT ? "hat" : "cape", name );
 				return;
 			}
 			if ( name[0] ) {
-				trap->Cvar_Set( kind == LOOK_HAT ? "v_hat" : "v_cape", Q_stricmp( name, "none" ) ? name : "" );
+				trap->Cvar_Set( kind == LOOK_HAT ? "tay_hat" : "tay_cape", Q_stricmp( name, "none" ) ? name : "" );
 				return;
 			}
 		}
@@ -639,8 +639,8 @@ void CG_Cosmetics_f( void ) {
 		}
 		trap->Print( "\n" );
 	}
-	trap->Print( "You wear: hat %s, cape %s. v_cosmetics hats <name>, v_cosmetics capes <name>, v_cosmetics clear\n",
-		v_hat.string[0] ? v_hat.string : "none", v_cape.string[0] ? v_cape.string : "none" );
+	trap->Print( "You wear: hat %s, cape %s. tay_cosmetics hats <name>, tay_cosmetics capes <name>, tay_cosmetics clear\n",
+		tay_hat.string[0] ? tay_hat.string : "none", tay_cape.string[0] ? tay_cape.string : "none" );
 
 	// what the others say they wear, and whether this machine has it
 	for ( i = 0; i < MAX_CLIENTS; i++ ) {

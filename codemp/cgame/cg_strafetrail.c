@@ -19,7 +19,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 */
 
 // cg_strafetrail.c -- strafe trails (2026-10-17), as jaPRO and TaystJK have them (cg_strafeTrail): a line on the
-// ground along where a player ran, fading out over v_strafeTrailLife seconds. v_strafeTrail 1 oneself, 2
+// ground along where a player ran, fading out over tay_strafeTrailLife seconds. tay_strafeTrail 1 oneself, 2
 // everybody. From the places the client has anyway, nothing comes from the server for it.
 
 #include "cg_local.h"
@@ -95,10 +95,10 @@ From CG_DrawActiveFrame, with the entities of the scene
 =================
 */
 void CG_StrafeTrailsAdd( void ) {
-	const int	life = (int)( Com_Clamp( 0.5f, 30.0f, v_strafeTrailLife.value ) * 1000.0f );
+	const int	life = (int)( Com_Clamp( 0.5f, 30.0f, tay_strafeTrailLife.value ) * 1000.0f );
 	int			i;
 
-	if ( !v_strafeTrail.integer || !cg.snap ) {
+	if ( !tay_strafeTrail.integer || !cg.snap ) {
 		return;
 	}
 	if ( cg.time < strafeTrailLastTime ) {
@@ -111,7 +111,7 @@ void CG_StrafeTrailsAdd( void ) {
 		const qboolean	self = (qboolean)( i == cg.snap->ps.clientNum );
 		vec3_t			color;
 
-		if ( !self && ( v_strafeTrail.integer < 2 || !cent->currentValid || cent->currentState.eType != ET_PLAYER ) ) {
+		if ( !self && ( tay_strafeTrail.integer < 2 || !cent->currentValid || cent->currentState.eType != ET_PLAYER ) ) {
 			strafeTrails[i].count = 0;
 			continue;
 		}

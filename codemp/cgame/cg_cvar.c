@@ -64,7 +64,7 @@ void CG_ForcedModelsCheck( void ) {
 		return;
 	}
 	lastTeam = team;
-	if ( v_forceEnemyModel.string[0] || v_forceAllyModel.string[0] ) {
+	if ( tay_forceEnemyModel.string[0] || tay_forceAllyModel.string[0] ) {
 		CG_ForceModelChange();
 	}
 }

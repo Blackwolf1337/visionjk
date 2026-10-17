@@ -144,7 +144,7 @@ int	FX_Init( refdef_t* refdef )
 	fx_debug = Cvar_Get("fx_debug", "0", CVAR_TEMP);
 	fx_countScale = Cvar_Get("fx_countScale", "1", CVAR_ARCHIVE_ND);
 	fx_nearCull = Cvar_Get("fx_nearCull", "16", CVAR_ARCHIVE_ND);
-	v_jk2Effects = Cvar_Get( "v_jk2Effects", "0", CVAR_ARCHIVE_ND, "1: shots as crisp as in Jedi Outcast, from the next level on" );
+	tay_jk2Effects = Cvar_Get( "tay_jk2Effects", "0", CVAR_ARCHIVE_ND, "1: shots as crisp as in Jedi Outcast, from the next level on" );
 
 	theFxHelper.ReInit(refdef);
 

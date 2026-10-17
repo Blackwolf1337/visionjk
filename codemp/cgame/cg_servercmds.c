@@ -1670,7 +1670,7 @@ static serverCommand_t	commands[] = {
 	{ "vs_box",				CG_BoomboxServerCommand },
 	{ "jpclient",			CG_PeerServerCommand },
 	{ "vs_status",			CG_StatusServerCommand },
-	{ "vs_look",			CG_LookServerCommand },
+	{ "tay_look",			CG_LookServerCommand },
 	{ "vs_voiceLink",			CG_VoiceServerCommand },
 	{ "kg2",				CG_KillGhoul2_f },
 	{ "kls",				CG_KillLoopSounds_f },

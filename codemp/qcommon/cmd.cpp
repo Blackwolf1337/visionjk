@@ -76,9 +76,9 @@ static void Cmd_Wait_f( void ) {
 ============
 Delayed commands
 
-"delay <ms>" and "waitf <frames>", as TaystJK has them (2026-10-17): what follows in the buffer is kept aside and
+"tay_delay <ms>" and "tay_waitf <frames>", TaystJK's delay and waitf (2026-10-17): what follows in the buffer is kept aside and
 put back when the time or the frames are over, while everything else goes on: "bind x +attack;delay 300;-attack".
-"delaycancel <text>" and "waitfcancel <text>" drop what is kept and has the text in it, an empty text all of it.
+"tay_delaycancel <text>" and "tay_waitfcancel <text>" drop what is kept and has the text in it, an empty text all of it.
 ============
 */
 #define MAX_PENDING_CMDS	64
@@ -93,21 +93,21 @@ static pendingCmd_t	pendingCmds[MAX_PENDING_CMDS];
 
 extern int com_frameNumber;
 
-// "delay 500" or "waitf 2": qtrue and the number, which is at least 1
+// "tay_delay 500" or "tay_waitf 2": qtrue and the number, which is at least 1
 static qboolean Cbuf_IsDelay( const char *line, qboolean *frames, int *amount ) {
 	const char *p = line;
 
 	while ( *p == ' ' || *p == '\t' ) {
 		p++;
 	}
-	if ( !Q_stricmpn( p, "delay", 5 ) && ( p[5] == ' ' || p[5] == '\t' || !p[5] ) ) {
+	if ( !Q_stricmpn( p, "tay_delay", 9 ) && ( p[9] == ' ' || p[9] == '\t' || !p[9] ) ) {
 		*frames = qfalse;
-	} else if ( !Q_stricmpn( p, "waitf", 5 ) && ( p[5] == ' ' || p[5] == '\t' || !p[5] ) ) {
+	} else if ( !Q_stricmpn( p, "tay_waitf", 9 ) && ( p[9] == ' ' || p[9] == '\t' || !p[9] ) ) {
 		*frames = qtrue;
 	} else {
 		return qfalse;
 	}
-	p += 5;
+	p += 9;
 	while ( *p == ' ' || *p == '\t' ) {
 		p++;
 	}
@@ -169,7 +169,7 @@ static void Cmd_CancelPending( qboolean frames ) {
 
 	if ( Cmd_Argc() != 2 ) {
 		Com_Printf( "%s <text> : drop the %s commands that have the text in them, \"\" all\n", Cmd_Argv( 0 ),
-			frames ? "waitf" : "delay" );
+			frames ? "tay_waitf" : "tay_delay" );
 		return;
 	}
 	match = Cmd_Argv( 1 );
@@ -195,7 +195,7 @@ static void Cmd_WaitfCancel_f( void ) {
 
 // only reached when nothing follows it in the buffer
 static void Cmd_Delay_f( void ) {
-	const qboolean frames = (qboolean)!Q_stricmp( Cmd_Argv( 0 ), "waitf" );
+	const qboolean frames = (qboolean)!Q_stricmp( Cmd_Argv( 0 ), "tay_waitf" );
 
 	Com_Printf( "%s <%s>;<commands> : run the commands later, as in \"+attack;%s %s;-attack\"\n", Cmd_Argv( 0 ),
 		frames ? "frames" : "milliseconds", Cmd_Argv( 0 ), frames ? "2" : "300" );
@@ -478,11 +478,11 @@ static void Cmd_Vstr_f( void ) {
 
 /*
 ===============
-ifCvar and strSub
+tay_ifCvar and tay_strSub
 
-Commands of TaystJK (2026-10-17), with its syntax, so its scripts run here:
-  ifCvar <cvar> <test> <count> <command ...> [<test> <count> <command ...>] ...
-  strSub <command ...>  with $cvar$ replaced by the value of the cvar, $$ is a $
+TaystJK's ifCvar and strSub (2026-10-17), with its syntax:
+  tay_ifCvar <cvar> <test> <count> <command ...> [<test> <count> <command ...>] ...
+  tay_strSub <command ...>  with $cvar$ replaced by the value of the cvar, $$ is a $
 A test is a value (equal as text), or $=, $!=, $>, $<, $>=, $<= with a number, $contains, $beginswith, $endswith with
 a text, or $else. A value that begins with $ is the value of that cvar. <count> is the words of the command,
 itself included. Neither gives out a password (a cvar the engine hides, or one with "pass" or "pwd" in its name),
@@ -573,10 +573,10 @@ static void Cmd_IfCvar_f( void ) {
 	int		i;
 
 	if ( Cmd_Argc() < 5 ) {
-		Com_Printf( "ifCvar <cvar> <test> <count> <command ...> [<test> <count> <command ...>] ...\n" );
+		Com_Printf( "tay_ifCvar <cvar> <test> <count> <command ...> [<test> <count> <command ...>] ...\n" );
 		Com_Printf( "A test is a value, or $=, $!=, $>, $<, $>=, $<= with a number, $contains, $beginswith, $endswith with a text,"
 			" or $else. A value beginning with $ is that cvar's. <count> is the words of the command, itself included.\n" );
-		Com_Printf( "Example: ifCvar cg_thirdPerson 0 3 set cg_thirdPerson 1 $else 3 set cg_thirdPerson 0\n" );
+		Com_Printf( "Example: tay_ifCvar cg_thirdPerson 0 3 set cg_thirdPerson 1 $else 3 set cg_thirdPerson 0\n" );
 		return;
 	}
 
@@ -585,7 +585,7 @@ static void Cmd_IfCvar_f( void ) {
 		const int count = atoi( Cmd_Argv( i + 1 ) );
 
 		if ( count < 1 || i + 2 + count > Cmd_Argc() ) {
-			Com_Printf( "ifCvar: \"%s\" is not the number of words of the command that follows\n", Cmd_Argv( i + 1 ) );
+			Com_Printf( "tay_ifCvar: \"%s\" is not the number of words of the command that follows\n", Cmd_Argv( i + 1 ) );
 			return;
 		}
 		if ( Cmd_IfCvarTest( value, Cmd_Argv( i ) ) ) {
@@ -603,8 +603,8 @@ static void Cmd_StrSub_f( void ) {
 	char	*const end = command + sizeof( command ) - 1;
 
 	if ( Cmd_Argc() < 2 ) {
-		Com_Printf( "strSub <command ...> : runs the command with $cvar$ replaced by the value of the cvar, $$ is a $\n" );
-		Com_Printf( "Example: strSub say_team my fov is $cg_fov$\n" );
+		Com_Printf( "tay_strSub <command ...> : runs the command with $cvar$ replaced by the value of the cvar, $$ is a $\n" );
+		Com_Printf( "Example: tay_strSub say_team my fov is $cg_fov$\n" );
 		return;
 	}
 
@@ -1328,13 +1328,13 @@ void Cmd_Init (void) {
 	Cmd_SetCommandCompletionFunc( "exec", Cmd_CompleteCfgName );
 	Cmd_SetCommandCompletionFunc( "execq", Cmd_CompleteCfgName );
 	Cmd_AddCommand( "vstr", Cmd_Vstr_f, "Execute the value of a cvar" );
-	Cmd_AddCommand( "ifCvar", Cmd_IfCvar_f, "Run a command chosen by the value of a cvar" );
-	Cmd_AddCommand( "strSub", Cmd_StrSub_f, "Run a command with $cvar$ replaced by the value of the cvar" );
+	Cmd_AddCommand( "tay_ifCvar", Cmd_IfCvar_f, "Run a command chosen by the value of a cvar" );
+	Cmd_AddCommand( "tay_strSub", Cmd_StrSub_f, "Run a command with $cvar$ replaced by the value of the cvar" );
 	Cmd_SetCommandCompletionFunc( "vstr", Cvar_CompleteCvarName );
 	Cmd_AddCommand( "wait", Cmd_Wait_f, "Pause command buffer execution" );
-	Cmd_AddCommand( "delay", Cmd_Delay_f, "Run what follows after some milliseconds: delay 300;-attack" );
-	Cmd_AddCommand( "waitf", Cmd_Delay_f, "Run what follows after some frames: waitf 2;-attack" );
-	Cmd_AddCommand( "delaycancel", Cmd_DelayCancel_f, "Drop delayed commands that have a text in them, \"\" all" );
-	Cmd_AddCommand( "waitfcancel", Cmd_WaitfCancel_f, "Drop waitf commands that have a text in them, \"\" all" );
+	Cmd_AddCommand( "tay_delay", Cmd_Delay_f, "Run what follows after some milliseconds: tay_delay 300;-attack" );
+	Cmd_AddCommand( "tay_waitf", Cmd_Delay_f, "Run what follows after some frames: tay_waitf 2;-attack" );
+	Cmd_AddCommand( "tay_delaycancel", Cmd_DelayCancel_f, "Drop delayed commands that have a text in them, \"\" all" );
+	Cmd_AddCommand( "tay_waitfcancel", Cmd_WaitfCancel_f, "Drop tay_waitf commands that have a text in them, \"\" all" );
 }
 

@@ -3767,6 +3767,7 @@ command_t commands[] = {
 	{ "setviewpos",			Cmd_SetViewpos_f,			CMD_CHEAT|CMD_NOINTERMISSION },
 	{ "siegeclass",			Cmd_SiegeClass_f,			CMD_NOINTERMISSION },
 	{ "stats",				Cmd_Stats_f,				0 },
+	{ "tay_look",			Cmd_TayLook_f,				0 },
 	{ "team",				Cmd_Team_f,					CMD_NOINTERMISSION },
 	{ "teamtask",			Cmd_TeamTask_f,				CMD_NOINTERMISSION },
 	{ "teamvote",			Cmd_TeamVote_f,				CMD_NOINTERMISSION },
@@ -3792,7 +3793,8 @@ client sends. Commands that carry a password are logged without their arguments.
 static void G_LogClientCommand( const gentity_t *ent, const char *cmd ) {
 	// vs_status: what the cgame of a client sends by itself with every new song, see status/g_status.c
 	// vs_box: what it sends when it starts, see boombox/g_boombox.c
-	static const char *const skip[] = { "say", "say_team", "tell", "score", "vs_status", "vs_box" };
+	// tay_look: what it sends when it starts and with every new hat, see status/g_status.c
+	static const char *const skip[] = { "say", "say_team", "tell", "score", "vs_status", "vs_box", "tay_look" };
 	static const char *const secret[] = { "amlogin", "clanpass" };
 	char	name[64], args[200];
 	size_t	i;

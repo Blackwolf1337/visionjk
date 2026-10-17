@@ -372,7 +372,7 @@ void Cbuf_Execute (void);
 // Do not call inside a command function, or current args will be destroyed.
 
 void Cbuf_CheckPending( void );
-// Runs what delay and waitf kept aside once it is due, once a frame
+// Runs what tay_delay and tay_waitf kept aside once it is due, once a frame
 
 //===========================================================================
 

@@ -3928,8 +3928,8 @@ static float CG_DrawTeamOverlay( float y, qboolean right, qboolean upper ) {
 	gitem_t	*item;
 	int ret_y, count;
 	int xOffset = 0;
-	// the size of the overlay (v_teamOverlayScale, 2026-10-17 as TaystJK)
-	const float scale = Com_Clamp( 0.5f, 2.5f, v_teamOverlayScale.value );
+	// the size of the overlay (tay_teamOverlayScale, 2026-10-17 as TaystJK)
+	const float scale = Com_Clamp( 0.5f, 2.5f, tay_teamOverlayScale.value );
 	const int cw = (int)( TINYCHAR_WIDTH * scale + 0.5f ), ch = (int)( TINYCHAR_HEIGHT * scale + 0.5f );
 
 	if ( !cg_drawTeamOverlay.integer ) {
@@ -4048,9 +4048,9 @@ static float CG_DrawTeamOverlay( float y, qboolean right, qboolean upper ) {
 				st, hcolor, qfalse, qfalse,
 				cw, ch, 0 );
 
-			// health and armour as a bar under the numbers (v_teamOverlayBar), full at v_teamOverlayMaxHP
-			if ( v_teamOverlayBar.integer ) {
-				const float full = Q_max( 1.0f, v_teamOverlayMaxHP.value );
+			// health and armour as a bar under the numbers (tay_teamOverlayBar), full at tay_teamOverlayMaxHP
+			if ( tay_teamOverlayBar.integer ) {
+				const float full = Q_max( 1.0f, tay_teamOverlayMaxHP.value );
 				const float frac = Com_Clamp( 0.0f, 1.0f, ( ci->health + ci->armor ) / full );
 
 				hcolor[3] = 0.8f;
@@ -4061,7 +4061,7 @@ static float CG_DrawTeamOverlay( float y, qboolean right, qboolean upper ) {
 			// icons of all weapons registered at the start (cg_weapons[] has only those seen yet)
 			xx += cw * 7;
 
-			if ( v_teamOverlayWeapons.integer && ci->curWeapon > WP_NONE && ci->curWeapon < WP_NUM_WEAPONS ) {
+			if ( tay_teamOverlayWeapons.integer && ci->curWeapon > WP_NONE && ci->curWeapon < WP_NUM_WEAPONS ) {
 				const qhandle_t icon = cgs.media.weaponIcons[ci->curWeapon] ? cgs.media.weaponIcons[ci->curWeapon]
 					: cg_weapons[ci->curWeapon].weaponIcon;
 
@@ -5047,10 +5047,10 @@ static void CG_DrawCrosshair( vec3_t worldPoint, int chEntValid ) {
 	else
 	{
 		//set color based on what kind of ent is under crosshair
-		// with nothing under it the colour of v_crosshairColor ("r g b a", empty white), as TaystJK
+		// with nothing under it the colour of tay_crosshairColor ("r g b a", empty white), as TaystJK
 		vec4_t idle;
 
-		if ( sscanf( v_crosshairColor.string, "%f %f %f %f", &idle[0], &idle[1], &idle[2], &idle[3] ) == 4 ) {
+		if ( sscanf( tay_crosshairColor.string, "%f %f %f %f", &idle[0], &idle[1], &idle[2], &idle[3] ) == 4 ) {
 			trap->R_SetColor( idle );
 		} else {
 			trap->R_SetColor( NULL );
@@ -6533,7 +6533,7 @@ static void CG_DrawCrosshairNames( void ) {
 	tcolor[0] = colorTable[baseColor][0];
 	tcolor[1] = colorTable[baseColor][1];
 	tcolor[2] = colorTable[baseColor][2];
-	tcolor[3] = color[3] * Com_Clamp( 0.0f, 1.0f, v_crosshairNamesOpacity.value );	// the game had 0.5
+	tcolor[3] = color[3] * Com_Clamp( 0.0f, 1.0f, tay_crosshairNamesOpacity.value );	// the game had 0.5
 
 	if (isVeh)
 	{

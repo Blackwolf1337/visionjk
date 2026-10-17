@@ -1730,10 +1730,10 @@ void CG_NewClientInfo( int clientNum, qboolean entitiesInitialized ) {
 		}
 	}
 
-	// v_forceEnemyModel and v_forceAllyModel (2026-10-17, as TaystJK): the others in a model chosen here, by
+	// tay_forceEnemyModel and tay_forceAllyModel (2026-10-17, as TaystJK): the others in a model chosen here, by
 	// whether they play with this player or against him; in a game without teams everybody is against him
 	if ( clientNum != cg.clientNum ) {
-		const vmCvar_t *forced = CG_IsAlly( newInfo.team ) ? &v_forceAllyModel : &v_forceEnemyModel;
+		const vmCvar_t *forced = CG_IsAlly( newInfo.team ) ? &tay_forceAllyModel : &tay_forceEnemyModel;
 
 		if ( forced->string[0] && Q_stricmp( forced->string, "none" ) && Q_stricmp( forced->string, "0" ) ) {
 			Q_strncpyz( newInfo.modelName, forced->string, sizeof( newInfo.modelName ) );
@@ -6336,8 +6336,8 @@ void CG_AddSaberBlade( centity_t *cent, centity_t *scent, refEntity_t *saber, in
 	{
 		if (saberNum == 0)
 		{
-			// v_saberStaffColors (as TaystJK): the second blade of a staff in the second colour
-			scolor = ( v_saberStaffColors.integer && bladeNum >= 1 ) ? client->icolor2 : client->icolor1;
+			// tay_saberStaffColors (as TaystJK): the second blade of a staff in the second colour
+			scolor = ( tay_saberStaffColors.integer && bladeNum >= 1 ) ? client->icolor2 : client->icolor1;
 		}
 		else
 		{
@@ -6345,24 +6345,24 @@ void CG_AddSaberBlade( centity_t *cent, centity_t *scent, refEntity_t *saber, in
 		}
 	}
 
-	// v_saberTeamColors 0 (as TaystJK): in a team game a blade keeps its colour, unless it is the colour of the
+	// tay_saberTeamColors 0 (as TaystJK): in a team game a blade keeps its colour, unless it is the colour of the
 	// other team or one of the colours past purple (RGB, black)
 	if (cgs.gametype >= GT_TEAM &&
 		cgs.gametype != GT_SIEGE &&
 		!cgs.jediVmerc &&
 		cent->currentState.eType != ET_NPC)
 	{
-		if (client->team == TEAM_RED && (v_saberTeamColors.integer || scolor == SABER_BLUE || scolor > SABER_PURPLE))
+		if (client->team == TEAM_RED && (tay_saberTeamColors.integer || scolor == SABER_BLUE || scolor > SABER_PURPLE))
 		{
 			scolor = SABER_RED;
 		}
-		else if (client->team == TEAM_BLUE && (v_saberTeamColors.integer || scolor == SABER_RED || scolor > SABER_PURPLE))
+		else if (client->team == TEAM_BLUE && (tay_saberTeamColors.integer || scolor == SABER_RED || scolor > SABER_PURPLE))
 		{
 			scolor = SABER_BLUE;
 		}
 	}
 
-	cg_jpSaberRGB = client->sbRGB[( saberNum || ( v_saberStaffColors.integer && bladeNum >= 1 ) ) ? 1 : 0];
+	cg_jpSaberRGB = client->sbRGB[( saberNum || ( tay_saberStaffColors.integer && bladeNum >= 1 ) ) ? 1 : 0];
 
 	if (!cg_saberContact.integer)
 	{ //if we don't have saber contact enabled, just add the blade and don't care what it's touching

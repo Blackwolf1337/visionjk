@@ -109,6 +109,11 @@ MORE = {
         ("Le jeu continue à jouer son son quand il n'est pas au premier plan ou est réduit.",
          'El juego sigue reproduciendo su sonido cuando no está en primer plano o está minimizado.'),
     # what came from TaystJK (2026-10-17)
+    'TaystJK': ('TaystJK', 'TaystJK'),
+    'What came from the TaystJK client: HUD, movement, hats and capes and more.': ('Ce qui vient du client TaystJK : HUD, mouvement, chapeaux et capes, et plus.', 'Lo que viene del cliente TaystJK: HUD, movimiento, sombreros y capas, y más.'),
+    'HUD': ('HUD', 'HUD'),
+    'Chat and Console': ('Chat et console', 'Chat y consola'),
+    'Show Them': ('Afficher', 'Mostrar'),
     'Headcrab': ('Headcrab', 'Headcrab'),
     'Mario Cap': ('Casquette de Mario', 'Gorra de Mario'),
     'Mask': ('Masque', 'Máscara'),

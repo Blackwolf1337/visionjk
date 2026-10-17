@@ -1872,7 +1872,7 @@ qhandle_t CG_WidePicture( const char *name, const char *wideName );
 void CG_KillfeedAdd( int killer, int victim, int mod, const char *text );
 float CG_KillfeedDraw( float y );
 
-// v_forceEnemyModel, v_forceAllyModel (cg_players.c, cg_cvar.c)
+// tay_forceEnemyModel, tay_forceAllyModel (cg_players.c, cg_cvar.c)
 qboolean CG_IsAlly( team_t team );
 void CG_ForcedModelsCheck( void );
 
