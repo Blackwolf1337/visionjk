@@ -151,6 +151,7 @@ static struct {
 	int					refusedSince;	//	and since when it says no, 0: it does not
 	qboolean			toldRefused;
 	qboolean			social;			// the master knows the clan radio and the statuses (VOICE_FLAG_SOCIAL)
+	qboolean			looks;			// the master hands on hats and capes (VOICE_FLAG_LOOKS, look/cg_look.c)
 	byte				clan[VOICE_CLAN_BYTES];	//	and this is what it is told as the clan of this client, all zero: none
 	qboolean			boxes;			// the master plays boxes of the boombox (VOICE_FLAG_BOXES),
 	qboolean			boxList;		//	it knows what came for them after 0.1.8 (VOICE_FLAG_BOXLIST),
@@ -935,6 +936,7 @@ static void Voice_MasterAnswer( const voicePacket_t *p, int now ) {
 	if ( p->client != cg.clientNum )
 		return;
 	voice.boxList = ( boxes && ( p->flags & VOICE_FLAG_BOXLIST ) ) ? qtrue : qfalse;
+	voice.looks = ( social && ( p->flags & VOICE_FLAG_LOOKS ) ) ? qtrue : qfalse;
 	// A master that knows the radio is told the clan of this client from now on, in the long state
 	if ( social != voice.social ) {
 		voice.social = voice.radio = social;
@@ -1039,6 +1041,14 @@ static void Voice_Receive( int now ) {
 
 				if ( voice.master && BG_VoiceStatusUnpack( &p, &away, text, sizeof( text ) ) )
 					CG_StatusFromMaster( p.client, away, text );
+				continue;
+			}
+			if ( p.type == VOICE_LOOK ) {
+				// the hat and the cape of somebody, handed on by the masterserver (look/cg_look.c)
+				char text[VOICE_STATUS_TEXT];
+
+				if ( voice.master && BG_VoiceLookUnpack( &p, text, sizeof( text ) ) )
+					CG_LookFromMaster( p.client, text );
 				continue;
 			}
 		}
@@ -1929,6 +1939,23 @@ void CG_VoiceSendStatus( qboolean away, const char *text ) {
 		Voice_Send( VOICE_STATUS, status, BG_VoiceStatusPack( status, away, text ) );
 }
 
+// Does the masterserver hand on hats and capes for this client right now?
+qboolean CG_VoiceLooks( void ) {
+#ifdef __EMSCRIPTEN__
+	return qfalse;
+#else
+	return ( voice.master && voice.linked && voice.looks ) ? qtrue : qfalse;
+#endif
+}
+
+// What this player wears goes to the others of the room: "<hat> <cape>". The master takes one a second.
+void CG_VoiceSendLook( const char *text ) {
+	const int len = Q_min( (int)strlen( text ), VOICE_STATUS_TEXT - 1 );
+
+	if ( CG_VoiceLooks() && len > 0 )
+		Voice_Send( VOICE_LOOK, (const byte *)text, len );
+}
+
 /*
 ===============================================================================
 
@@ -2134,5 +2161,7 @@ qboolean CG_VoiceSocial( void ) { return qfalse; }
 qboolean CG_VoiceMuted( int clientNum ) { (void)clientNum; return qfalse; }
 int CG_VoiceLouder( int clientNum, int steps ) { (void)clientNum; (void)steps; return 100; }
 void CG_VoiceSendStatus( qboolean away, const char *text ) { (void)away; (void)text; }
+qboolean CG_VoiceLooks( void ) { return qfalse; }
+void CG_VoiceSendLook( const char *text ) { (void)text; }
 
 #endif // JP_VOICE

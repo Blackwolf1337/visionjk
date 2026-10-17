@@ -229,6 +229,7 @@ set(MPCGameHudFiles
 	"${MPDir}/cgame/hud/cg_hud.c"
 	"${MPDir}/cgame/hud/cg_killfeed.c"
 	"${MPDir}/cgame/hud/cg_movehud.c"
+	"${MPDir}/cgame/look/cg_look.c"
 	"${MPDir}/cgame/hud/cg_scores.c"
 	)
 source_group("cgame/hud" FILES ${MPCGameHudFiles})

@@ -2422,6 +2422,7 @@ void CG_DrawActiveFrame( int serverTime, stereoFrame_t stereoView, qboolean demo
 	CG_VoiceFrame();
 	CG_BoomboxFrame();
 	CG_StatusFrame();
+	CG_LookFrame();
 	CG_AuthFrame();
 	int		inwater;
 	const char *cstr;

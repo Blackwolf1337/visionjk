@@ -405,6 +405,42 @@ These work without `cg_forceModel`, which puts everybody in one's own model. Whe
 this machine lacks shows as the model of the game, as with any player. When one's own team changes, everybody
 is looked at again (`CG_ForcedModelsCheck`).
 
+### Hats and capes
+
+`cgame/look/cg_look.c`, `game/status/g_status.c`, `master/ms_relay.c` (2026-10-17), after the cosmetics of TaystJK
+and jaPRO. Their files are laid out the same way, so their paks work:
+
+- A hat is `models/cosmetics/hats/<name>.md3`. It sits on the bolt `*head_top` of the player.
+- A cape is `models/cosmetics/capes/<name>.md3` on `*back`.
+- `settings/cosmetics/hats/<name>.cosmetic` (or `capes/`), JSON in TaystJK's format, moves one for a model and
+  skin. The skin is matched by its name, or by the longest prefix written with a `*`. Without a skin match, the
+  model's offsets apply when `modelFallback` is true, else none. TaystJK added the offsets along the axes of the
+  world. Here they go along the bolt: x forward, y right, z up. For a file that only lifts or lowers, that is the
+  same.
+
+This tree ships no models yet: see "Not done".
+
+| Cvar or command | Default | Meaning |
+|-----------------|---------|---------|
+| `v_hat`, `v_cape` | empty | what this player wears, the name of the file |
+| `v_cosmetics` | | lists the hats and capes of the paks and what one wears. `v_cosmetics hats <name>`, `v_cosmetics capes <name>` (`none` takes it off), `v_cosmetics clear` |
+| `v_showCosmetics` | 1 | 0 nobody wears anything here, 1 everybody what he says, 2 everybody what this player wears |
+| `v_seasonalCosmetics` | 0 | a player without a hat wears `santahat` from 22 November to 7 January and `pumpkin` on 31 October, where the paks have them |
+
+Who sees them is every player of this tree, on any server:
+
+- On a server with the game module of this tree (`vs_caps` bit 7), the cgame sends `vs_status look <hat> <cape>`.
+  The server hands `vs_look <client> <hat> <cape>` to every cgame that draws them (`v_caps` bit 2), also with
+  `vs_status all`. The cgame sends again every four seconds until it hears its own look back, at most six times.
+- On any other server, the look goes through the masterserver (`VOICE_LOOK`, see `bg_voice.h`). It needs the voice
+  chat linked to the master, as the statuses do. The master hands it only to clients that send looks themselves,
+  so a VisionJK client from before never gets a type it does not know. A look the master did not say again for 15
+  seconds is over.
+- A player whose hat this machine lacks wears none here. Legacy clients see no hat at all: they would need the
+  models by download.
+
+The server part (game module and masterserver) only works once those run this build on the host.
+
 ### Chat bubbles
 
 `cgame/bubble/cg_bubble.c` (2026-10-11). What a player says in the chat stands above his head for 2.5 to 8
@@ -447,7 +483,7 @@ chat bubble stands on top of it.
 |------|---------|---------|
 | `v_playerStatuses` | 1 | show the lines of the others |
 | `v_shareMusic` | 0 | tell the server what music plays on this machine. Off by default: everybody on the server reads it. "Show My Music" in Setup, Voice Chat |
-| `v_caps` | 3, read only | in the userinfo, what this cgame draws that a server sends to nobody else: bit 0 statuses, bit 1 who plays with a client of this tree ("Who plays with VisionJK") |
+| `v_caps` | 7, read only | in the userinfo, what this cgame draws that a server sends to nobody else: bit 0 statuses, bit 1 who plays with a client of this tree ("Who plays with VisionJK"), bit 2 hats and capes ("Hats and capes") |
 | `v_vision` | the version, read only | in the userinfo: this is the client of VisionJK, and which one. A server of this tree greets it by that name and not as "client plugin 1.4B4". `cjp_client` stays 1.4B4: it is what a JA+ server of somebody else reads to switch the plugin features on |
 
 - The line of the player the view is behind (oneself in third person, or whom one follows) is not drawn since
@@ -806,6 +842,9 @@ only on a listen server.
 - Grip speed and the force combo setting are read from the server info as well.
 
 ## Not done
+
+- Hats and capes ship without models. The jaPRO and TaystJK set has no licence of its own, and several of its
+  pieces are taken from other games and films. Which of them may be shipped waits for a decision.
 
 - The download of files over an URL: the plugin ui embeds libcurl, a download screen, a cache file
   (`japlus/urlRedirect_cache.txt`) and three menu scripts, and its cgame asks for the download when the server

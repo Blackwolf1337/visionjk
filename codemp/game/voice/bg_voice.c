@@ -205,6 +205,21 @@ qboolean BG_VoiceStatusUnpack( const voicePacket_t *p, qboolean *away, char *tex
 	return qtrue;
 }
 
+// The text of a VOICE_LOOK. qfalse: it has a control character in it or does not fit
+qboolean BG_VoiceLookUnpack( const voicePacket_t *p, char *text, int textSize ) {
+	int i;
+
+	if ( p->type != VOICE_LOOK || p->dataLen < 1 || p->dataLen >= textSize )
+		return qfalse;
+	for ( i = 0; i < p->dataLen; i++ ) {
+		if ( p->data[i] < ' ' || p->data[i] >= 127 )
+			return qfalse;
+	}
+	memcpy( text, p->data, (size_t)p->dataLen );
+	text[p->dataLen] = '\0';
+	return qtrue;
+}
+
 // how far sequence number a is ahead of b. They wrap at 65536, so this holds while the two are less than
 // half of that apart.
 int BG_VoiceSeqDelta( int a, int b ) {

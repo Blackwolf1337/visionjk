@@ -1879,6 +1879,17 @@ void CG_ForcedModelsCheck( void );
 // cg_strafetrail.c
 void CG_StrafeTrailsAdd( void );
 
+// look/cg_look.c: hats and capes
+void CG_LookInit( void );
+void CG_LookFrame( void );
+void CG_LookServerCommand( void );
+void CG_LookFromMaster( int client, const char *text );
+void CG_LookClear( int client );
+void CG_LookDraw( centity_t *cent, clientInfo_t *ci, const refEntity_t *body );
+void CG_Cosmetics_f( void );
+qboolean CG_VoiceLooks( void );
+void CG_VoiceSendLook( const char *text );
+
 // hud/cg_movehud.c
 void CG_MoveHudDraw( void );
 void CG_DrawStretchPic( float x, float y, float w, float h, float s1, float t1, float s2, float t2, qhandle_t hShader );

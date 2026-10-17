@@ -1580,6 +1580,7 @@ void CG_NewClientInfo( int clientNum, qboolean entitiesInitialized ) {
 
 	configstring = CG_ConfigString( clientNum + CS_PLAYERS );
 	if ( !configstring[0] ) {
+		CG_LookClear( clientNum );		// look/cg_look.c
 		if (ci->ghoul2Model && trap->G2_HaveWeGhoul2Models(ci->ghoul2Model))
 		{ //clean this stuff up first
 			trap->G2API_CleanGhoul2Models(&ci->ghoul2Model);
@@ -11622,6 +11623,9 @@ stillDoSaber:
 		CG_CheckThirdPersonAlpha( cent, &legs );
 		trap->R_AddRefEntityToScene(&legs);
 	}
+
+	// hats and capes (look/cg_look.c)
+	CG_LookDraw( cent, ci, &legs );
 
 	//cent->frame_minus2 = cent->frame_minus1;
 	VectorCopy(cent->frame_minus1, cent->frame_minus2);
