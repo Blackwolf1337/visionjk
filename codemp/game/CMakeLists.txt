@@ -168,11 +168,9 @@ set(MPGameJaplusFiles
 source_group("game/japlus" FILES ${MPGameJaplusFiles})
 set(MPGameFiles ${MPGameFiles} ${MPGameJaplusFiles})
 
-# what stands above the head of a player: away, music. And the body of a player who is out of it (Focus).
+# what stands above the head of a player: away, music
 set(MPGameStatusFiles
 	"${MPDir}/game/status/g_status.c"
-	"${MPDir}/game/status/g_focus.c"
-	"${MPDir}/game/status/g_temple.c"
 	)
 source_group("game/status" FILES ${MPGameStatusFiles})
 set(MPGameFiles ${MPGameFiles} ${MPGameStatusFiles})

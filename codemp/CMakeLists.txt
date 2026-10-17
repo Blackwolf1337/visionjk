@@ -528,7 +528,6 @@ if(BuildMPEngine)
 		"${MPDir}/client/cl_lan.h"
 		"${MPDir}/client/cl_main.cpp"
 		"${MPDir}/client/cl_update.cpp"
-		"${MPDir}/client/cl_visit.cpp"
 		"${MPDir}/client/cl_net_chan.cpp"
 		"${MPDir}/client/cl_parse.cpp"
 		"${MPDir}/client/cl_scrn.cpp"
@@ -787,14 +786,6 @@ if(BuildMPDed)
 	set(MPDedFiles ${MPEngineAndDedFiles})
 	set(MPDedDefines ${MPSharedDefines} "_CONSOLE" "DEDICATED")
 
-	# the temple a dedicated server starts for its players, and the link to it
-	set(MPDedInstanceFiles
-		"${MPDir}/server/sv_instance.cpp"
-		"${MPDir}/qcommon/net_link.h"
-		)
-	source_group("server" FILES ${MPDedInstanceFiles})
-	set(MPDedFiles ${MPDedFiles} ${MPDedInstanceFiles})
-
 	# Dedicated renderer is compiled with the server.
 	set(MPDedicatedRendererFiles
 		"${MPDir}/ghoul2/G2_gore.cpp"
@@ -883,8 +874,8 @@ if(BuildMPDed)
 	target_link_libraries(${MPDed} ${MPDedLibraries})
 
 	# The masterserver: the same program with the relay for the servers without the game module of this
-	# tree inside (server/sv_voice.cpp, master/ms_relay.c), one UDP port for the Vision Temple and for the
-	# voice chat, the clan radio and the statuses of those servers. For the hosts of VisionJK itself: there
+	# tree inside (server/sv_voice.cpp, master/ms_relay.c), one UDP port for the voice chat, the clan radio,
+	# the statuses and the boombox of those servers. For the hosts of VisionJK itself: there
 	# is no install rule.
 	if(BuildMasterServer)
 		# It plays the boxes of the boombox of those servers with the core of the game module, and codes their

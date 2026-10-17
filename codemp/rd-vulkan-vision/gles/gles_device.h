@@ -131,8 +131,7 @@ typedef enum {
 	GLP_GAMMA,						// the passes over a whole target, shaders/post.vert with one fragment shader each
 	GLP_BLUR,
 	GLP_COPY,
-	GLP_FOCUS,						// and two that read the depth of the scene next to their target
-	GLP_SPIRIT,
+	GLP_FOCUS,						// and one that reads the depth of the scene next to its target
 	GLP_PRESENT,					// the copy again, turned upside down: what the window gets
 	GLP_NUM_PROGRAMS
 } glesProgram_t;

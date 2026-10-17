@@ -26,15 +26,14 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // but one (see SV_PacketEvent), and are handed to the module, which sends its answers back through here. A
 // server then needs one port. Nothing changes for a client: it sends to the port the server names in "jpvoice".
 //
-// The masterserver (the program built with VISION_MASTER) is a dedicated server that is the Vision Temple and
-// carries a relay of its own too (codemp/master/ms_relay.c): the one for the servers without the game module
+// The masterserver (the program built with VISION_MASTER) is a dedicated server that carries a relay of its
+// own too (codemp/master/ms_relay.c): the one for the servers without the game module
 // of this tree, which hears the same kind of datagram. What the module of the masterserver does not take as
 // one of its own players goes to it.
 
 #include "server.h"
 #include "sv_gameapi.h"
 #include "qcommon/net_local.h"
-#include "qcommon/net_link.h"
 #include "game/voice/bg_voice.h"
 
 #ifdef VISION_MASTER
@@ -44,7 +43,6 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 static cvar_t	*sv_masterKbps;
 static cvar_t	*sv_masterBoxes;
 static qboolean	sv_masterUp;
-static qboolean	sv_masterTemple;		// the relay was told that this server is the Vision Temple
 #endif
 
 static cvar_t	*sv_voiceShared;
@@ -67,15 +65,7 @@ void SV_GameSendDatagram( const byte *ip, int port, const byte *data, int length
 	to.type = NA_IP;
 	Com_Memcpy( to.ip, ip, sizeof( to.ip ) );
 	to.port = BigShort( (short)port );
-#ifdef DEDICATED
-	// From the temple of a server this goes out of the port of that server without the mark of the tunnel: the
-	// socket of the voice chat in the client knows none (qcommon/net_link.h).
-	NET_LinkPlain( qtrue );
 	NET_SendPacket( NS_SERVER, length, data, &to );
-	NET_LinkPlain( qfalse );
-#else
-	NET_SendPacket( NS_SERVER, length, data, &to );
-#endif
 }
 
 #ifdef VISION_MASTER
@@ -110,8 +100,6 @@ static void SV_MasterDatagram( const netadr_t *from, const byte *data, int lengt
 SV_VoiceFrame
 
 Once a frame of the program: the relay forgets who was not heard of and writes its line of numbers.
-A server that is the Vision Temple is named to the clients that ask the master for the temple: itself, by the
-port of the game (an address of zeros is the master's own, bg_voice.h).
 ===============
 */
 void SV_VoiceFrame( void ) {
@@ -134,14 +122,6 @@ void SV_VoiceFrame( void ) {
 		boxSetTime = now;
 	}
 	MS_Frame( now );
-	if ( !sv_masterTemple && sv.state == SS_GAME && Cvar_VariableIntegerValue( "g_visionTemple" ) ) {
-		const int	port = Cvar_VariableIntegerValue( "net_port" );
-		const byte	server[VOICE_TEMPLE_SERVER] = { 0, 0, 0, 0, (byte)( port >> 8 ), (byte)( port & 0xff ) };
-
-		MS_SetTemple( server );
-		sv_masterTemple = qtrue;
-		Com_Printf( "Masterserver: this server is the Vision Temple it names\n" );
-	}
 }
 
 // the server ends: what the relay did since its last line of numbers
@@ -174,11 +154,6 @@ qboolean SV_VoicePacket( const netadr_t *from, msg_t *msg ) {
 #ifdef VISION_MASTER
 	if ( !GVM_VoiceDatagram( from, data, msg->cursize ) ) {
 		SV_MasterDatagram( from, data, msg->cursize );
-	}
-#elif defined( DEDICATED )
-	// (none of a player in this level: he may be in the temple of this server, sv_instance.cpp)
-	if ( !GVM_VoiceDatagram( from, data, msg->cursize ) ) {
-		SV_InstanceVoice( from, data, msg->cursize );
 	}
 #else
 	GVM_VoiceDatagram( from, data, msg->cursize );

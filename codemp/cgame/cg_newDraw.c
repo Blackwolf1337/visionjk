@@ -756,11 +756,6 @@ void CG_MouseEvent(int x, int y) {
 	}
 	*/
 
-	// out of the body the mouse turns the camera (focus/cg_focus.c)
-	if ( CG_FocusMouseEvent( x, y ) ) {
-		return;
-	}
-
 	cgs.cursorX+= x;
 	if (cgs.cursorX < -(int)cgs.bias2D)
 		cgs.cursorX = -(int)cgs.bias2D;
@@ -825,11 +820,7 @@ type 0 - no event handling
 void CG_EventHandling(int type) {
 	cgs.eventHandling = type;
 	if (type == CGAME_EVENT_NONE) {
-		// Escape: the engine took the keys back. With the chat box open it closes that, else it ends Focus.
-		if ( !CG_ChatIsOpen() ) {
-			CG_FocusEnd();
-		}
-		CG_ChatClose();
+		CG_ChatClose();		// Escape: the engine took the keys back
 		CG_HideTeamMenu();
 	} else if (type == CGAME_EVENT_TEAMMENU) {
 		//CG_ShowTeamMenu();
@@ -849,11 +840,6 @@ void CG_KeyEvent(int key, qboolean down) {
 
 	// the chat box takes every key while it is open (chat/cg_chat.c)
 	if ( CG_ChatKeyEvent( key, down ) ) {
-		return;
-	}
-
-	// and so does Focus while the player is out of his body (focus/cg_focus.c)
-	if ( CG_FocusKeyEvent( key, down ) ) {
 		return;
 	}
 

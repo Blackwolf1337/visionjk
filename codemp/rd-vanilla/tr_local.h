@@ -462,29 +462,6 @@ typedef struct fogParms_s {
 	float	depthForOpaque;
 } fogParms_t;
 
-// Not from OpenJK. What a script says with "q3map_vision <kind> <numbers>" (tr_shader.cpp): something only the
-// renderer of VisionJK draws, in the place of what the rest of the script says, which is what every other
-// renderer draws. The numbers are the ones behind the kind, 0 where the script has none.
-#define VISION_PARMS	8
-typedef enum visionKind_e {
-	VISION_NONE,
-	// The brush of a fog: a sea of clouds in it (rd-vulkan-vision/shaders/volume.frag). Numbers: x, y and the
-	// radius of a round place the clouds leave free, then a lane along x at that y: from x, to x, half its width
-	VISION_CLOUDS,
-	// The brush of a fog: the light that stands in the air of the Vision Temple (shaders/light.glsl). No numbers
-	VISION_LIGHT,
-	// A surface: the gold of the Vision Temple, shaded by where a place on it is (shaders/gold.glsl). No numbers
-	VISION_GOLD,
-	// The script of a sky: the sky of the Vision Temple with its low sun (shaders/vision.glsl), behind
-	// everything of a view of the level. What stands in such a level is lit by that sun (tr_light.cpp). No numbers
-	VISION_SKY
-} visionKind_t;
-
-typedef struct visionParms_s {
-	visionKind_t	kind;
-	float			parm[VISION_PARMS];
-} visionParms_t;
-
 typedef struct shader_s {
 	char		name[MAX_QPATH];		// game path, including extension
 	int			lightmapIndex[MAXLIGHTMAPS];	// for a shader to match, both name and lightmapIndex must match
@@ -508,7 +485,6 @@ typedef struct shader_s {
 
 	skyParms_t	*sky;
 	fogParms_t	*fogParms;
-	visionParms_t	*vision;			// VisionJK: q3map_vision of the script, NULL: none
 
 	float		portalRange;			// distance to fog out at
 
@@ -614,8 +590,6 @@ typedef struct fog_s {
 	// for clipping distance in fog when outside
 	qboolean	hasSurface;
 	float		surface[4];
-
-	const visionParms_t	*vision;		// VisionJK: q3map_vision of its script, NULL: a plain fog
 } fog_t;
 
 typedef struct viewParms_s {
@@ -862,8 +836,6 @@ typedef struct world_s {
 	int			numfogs;
 	fog_t		*fogs;
 	int			globalFog;
-
-	qboolean	visionSky;		// VisionJK: a surface of the level has a sky whose script says q3map_vision sky
 
 
 	vec3_t		lightGridOrigin;
@@ -1297,17 +1269,11 @@ extern	cvar_t	*r_marksOnTriangleMeshes;
 extern	cvar_t	*r_aspectCorrectFonts;
 extern	cvar_t	*r_2dAspect;
 extern	cvar_t	*r_menuBlur;
-extern	cvar_t	*r_templeBloom;
-extern	cvar_t	*r_templeDetail;
 
 float	R_2DBias( void );
 void	RE_Set2DPlane( const float *matrix );
 void	RE_SetDepthOfField( float focus, float amount );
 extern	float	r_dofFocus, r_dofAmount;		// what RE_SetDepthOfField asked for, for the frame that is being built
-qboolean	RE_SetSpiritWorld( float amount, float seconds );
-extern	float	r_spiritAmount, r_spiritTime;	// and what RE_SetSpiritWorld asked for
-qboolean	RE_SetTempleScene( float amount, float seconds );
-extern	float	r_templeAmount, r_templeTime;	// and RE_SetTempleScene
 
 /*
 Ghoul2 Insert Start

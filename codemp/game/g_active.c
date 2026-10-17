@@ -2106,12 +2106,6 @@ void ClientThink_real( gentity_t *ent ) {
 		if ( !ClientInactivityTimer( client ) ) {
 			return;
 		}
-		// the Vision Temple as a server: what a player can not do there (status/g_temple.c)
-		if ( !G_TempleThink( ent, ucmd ) ) {
-			return;
-		}
-		// the body of a player who is out of it (Focus, status/g_focus.c)
-		G_FocusThink( ent, ucmd );
 		JP_InactivityProtect( ent );
 	}
 
@@ -3474,7 +3468,7 @@ void ClientThink_real( gentity_t *ent ) {
 		gentity_t *faceKicked = &g_entities[client->ps.forceKickFlip-1];
 
 		if (faceKicked && faceKicked->client && G_canInterferWith( ent->s.number, faceKicked->s.number )
-			&& !faceKicked->client->pers.jp.protectedByAdmin && !faceKicked->client->pers.jp.focus && !faceKicked->client->pers.jp.isGhost
+			&& !faceKicked->client->pers.jp.protectedByAdmin && !faceKicked->client->pers.jp.isGhost
 			&& (!OnSameTeam(ent, faceKicked) || g_friendlyFire.integer) &&
 			(!faceKicked->client->ps.duelInProgress || faceKicked->client->ps.duelIndex == ent->s.number) &&
 			(!ent->client->ps.duelInProgress || ent->client->ps.duelIndex == faceKicked->s.number))

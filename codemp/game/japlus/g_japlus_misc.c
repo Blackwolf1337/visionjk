@@ -629,9 +629,8 @@ void JP_ClientSecondActions( gentity_t *ent ) {
 
 	if ( jp->inactProtectState && jp->inactProtectCount > 0 )
 		jp->inactProtectCount--;
-	else if ( jp->inactProtectState && client->sess.sessionTeam != TEAM_SPECTATOR && !jp->focus ) {
-		// idle and protected: a sitting animation now and then (not for a body whose player is out of it, which
-		// has its pose: status/g_focus.c)
+	else if ( jp->inactProtectState && client->sess.sessionTeam != TEAM_SPECTATOR ) {
+		// idle and protected: a sitting animation now and then
 		client->ps.forceDodgeAnim = BOTH_CONSOLE2;
 		client->ps.forceHandExtend = HANDEXTEND_TAUNT;
 		client->ps.forceHandExtendTime = level.time + 3000;
@@ -779,8 +778,7 @@ void JP_ClientBeginInit( gentity_t *ent ) {
 	if ( !(ent->r.svFlags & SVF_BOT) )
 		JP_DisplayLatestPluginVersion( ent );
 
-	// (not in the Vision Temple, status/g_temple.c: nobody is greeted in the middle of the screen there)
-	if ( client->sess.sessionTeam != TEAM_SPECTATOR && !g_visionTemple.integer ) {
+	if ( client->sess.sessionTeam != TEAM_SPECTATOR ) {
 		trap->SendServerCommand( clientNum, va( "cp \"^5%s\n^5%s\n\n\"", JP_VISION_TITLE, JP_VERSION ) );
 		if ( JP_HighlanderOn() )
 			Q_strncpyz( jp->motd, va( "^5%s\n ^3\xac^1Highlander ^7FFA Modification^3\xac\n\n^7Kill all immortal\nGet their Forces Powers\n\n^5At the end, there can be only one\n", JP_VERSION ), sizeof( jp->motd ) );

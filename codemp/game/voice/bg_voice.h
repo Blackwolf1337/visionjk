@@ -66,25 +66,8 @@ The master never has the password. A VOICE_STATUS goes to the others of the room
 came: one byte of flags (VOICE_STATUS_AWAY) and a text of up to VOICE_STATUS_TEXT - 1 bytes, UTF-8, which the
 master does not keep.
 
-The Vision Temple (2026-10-12, cgame/focus/cg_focus.c): a place a client of this tree can go to from any server,
-and where it sees who else is there. They meet at the masterserver, in a room that has nothing to do with a game
-server: the same sixteen bytes from everybody who uses the same word (cg_templeLink). One datagram is the state
-and the place at once:
-
-to the master	"VO" version 5 client token[4] sequence[2]							room[16] place[40]
-to a client		"VO" version 5 client token[4] sequence[2] flags distance			place[40], or nothing
-
-Nobody hands out client numbers there, so a client takes one itself and takes another when the master says that
-one is taken. The token of such a session also depends on the port it comes from: two clients behind one address
-that took the same number are told apart. An answer of the master has no place in it (the token, and
-VOICE_FLAG_TAKEN or VOICE_FLAG_FULL); what another member sent comes with his number and his place, as it came.
-place: x, y and z as whole numbers of 16 bit, the yaw in 256 steps, a byte of flags (none yet), and a name of
-up to VOICE_TEMPLE_NAME - 1 bytes. A master from before does not know the type and does not answer.
-
-The temple can be a game server too (game/status/g_temple.c), where the members are players and not lights. A
-master that was told of one (-temple) names it in its answers: VOICE_TEMPLE_SERVER bytes in the place of
-nothing, the address and the port as they go over the network, an address of zeros for the master's own. A
-client that can keep its server meanwhile goes there (client/cl_visit.cpp).
+Type 5 was the Vision Temple of versions 0.1.6 and 0.1.7 (removed 2026-10-17): such a client may still send it, nothing
+answers it, and the number is not given to anything else.
 
 The boombox (2026-10-15, game/boombox/bg_boombox.h): on a server without the game module of this tree the
 masterserver keeps the boxes of a room and plays their songs (master/ms_boombox.c). A master that does says so in
@@ -118,7 +101,7 @@ of type 6 are is in bg_boombox.h.
 #define VOICE_STATE				2		// the masterserver only: where this client is and whom it hears, and the answer
 #define VOICE_RADIO				3		// to the server only: sound for the clan of the speaker
 #define VOICE_STATUS			4		// through the masterserver only: what stands above the head of a player
-#define VOICE_TEMPLE			5		// through the masterserver only: where somebody is in the Vision Temple
+// 5: the Vision Temple of 0.1.6 and 0.1.7, removed. Not to be used again.
 #define VOICE_BOX				6		// through the masterserver only: a box of the boombox (bg_boombox.h)
 
 #define VOICE_ROOM_BYTES		16
@@ -128,9 +111,6 @@ of type 6 are is in bg_boombox.h.
 #define VOICE_STATE_BOX_BYTES	( VOICE_STATE_LONG_BYTES + 1 )	//	and one byte more: the boxes it hears (VOICE_FLAG_BOXES)
 #define VOICE_STATUS_TEXT		64		// the text of a status with its end, as STATUS_TEXT of cg_status.c
 #define VOICE_STATUS_AWAY		1		// in the first byte of a VOICE_STATUS: he is away from the keyboard
-#define VOICE_TEMPLE_NAME		32		// the name in a VOICE_TEMPLE with its end
-#define VOICE_TEMPLE_BYTES		( 8 + VOICE_TEMPLE_NAME )	// the place in one: x, y, z, yaw, flags, name
-#define VOICE_TEMPLE_SERVER		6		// in an answer of the master: the game server that is the temple, address[4] port[2]
 #define VOICE_MASTER_PORT		29170	// UDP, where the masterserver listens unless it is told another one
 #define VOICE_MASTER_RANGE		1024	// how far a voice carries through the master: the default of g_voiceRange
 
@@ -201,8 +181,6 @@ typedef struct voiceRadio_s {
 
 int			BG_VoicePack( byte *out, int outSize, const voicePacket_t *p, qboolean toClient );
 qboolean	BG_VoiceUnpack( const byte *in, int len, qboolean toClient, voicePacket_t *p );
-void		BG_VoiceTemplePack( byte out[VOICE_TEMPLE_BYTES], const float *origin, float yaw, const char *name );
-qboolean	BG_VoiceTempleUnpack( const byte *in, int len, float *origin, float *yaw, char *name, int nameSize );
 int			BG_VoiceSeqDelta( int a, int b );
 void		BG_VoiceStatePack( byte out[VOICE_STATE_BYTES], const byte room[VOICE_ROOM_BYTES], unsigned int hear, unsigned int allow );
 void		BG_VoiceStateUnpack( const voicePacket_t *p, const byte **room, unsigned int *hear, unsigned int *allow );

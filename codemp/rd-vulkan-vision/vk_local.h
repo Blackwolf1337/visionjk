@@ -93,7 +93,6 @@ typedef struct vkTransform_s {	// once per view and entity
 #define VKD_FOG_SHIFT		20				// fog over the whole stage as glFog did it: 0 none, 1 exp2, 2 linear
 #define VKD_ACFF_SHIFT		22				// acff_t: the color fades with the way through a fog volume
 #define VKD_DEFORM_SHIFT	24				// deformVertexes: 0 none, 1 along the normal, 2 all vertices by one vector
-#define VKD_VISION_SHIFT	26				// q3map_vision of the script of a surface: 0 none, 1 the gold of the Vision Temple
 
 typedef struct vkDraw_s {		// once per draw
 	uint32_t	transform;			// index into the transforms of the frame
@@ -215,7 +214,6 @@ typedef struct vkState_s : vkDeviceState_t {
 	vkTarget_t					glow;				// r_DynamicGlow: the stages that glow, drawn again over the depth of the scene
 	vkTarget_t					blur[2];			// and blurred, r_DynamicGlowWidth x r_DynamicGlowHeight
 	vkTarget_t					soft[2];			// the frame out of focus at half its size, r_menuBlur (VK_BlurFrame)
-	vkTarget_t					wide;				// a pass of the size of the frame that is laid over it: a volume of the level (VK_VolumeFrame)
 	qboolean					finalValid;			// a frame has been rendered into it
 
 	vkImage_t					images[VK_MAX_IMAGES];
@@ -328,17 +326,6 @@ void		VK_InitPost( void );
 void		VK_BeginGlow( void );
 void		VK_EndGlow( void );
 void		VK_BlurFrame( float amount, float focus );
-void		VK_SpiritFrame( float amount, float seconds );
-void		VK_TempleFrame( float amount, float seconds );
-qboolean	VK_LevelSky( void );
-// What only this renderer draws of a level (q3map_vision of a shader script). The volumes: the brushes of fogs,
-// which get no fog pass here. Ready: the level has one and the device can draw it. The gold: surfaces that are
-// shaded by where they are (VKD_VISION_SHIFT), on a device that has that in its shaders.
-qboolean	VK_VolumeReady( void );
-qboolean	VK_FogIsVolume( int fogNum );
-void		VK_VolumeFrame( void );
-qboolean	VK_GoldSurface( const shader_t *shader );
-void		VK_BloomFrame( float amount );
 void		VK_CaptureFrame( void );
 void		VK_ClearFlares( void );
 void		VK_CopyProbes( void );
@@ -442,15 +429,6 @@ void		VK_BlurPass( vkTarget_t *source, vkTarget_t *target, const float *parm );
 // The same with shaders/focus.frag, which reads the depth of the scene (vk.depth) next to source. Only with
 // vk.depthReadable.
 void		VK_FocusPass( vkTarget_t *source, vkTarget_t *target, const float *parm );
-// And with shaders/spirit.frag, which reads it too.
-void		VK_SpiritPass( vkTarget_t *source, vkTarget_t *target, const float *parm );
-// shaders/temple.frag over the whole of the target that is drawn into, with its sixteen numbers. qfalse: this
-// device has no such pass, nothing was drawn.
-qboolean	VK_TemplePass( const float *view );
-// shaders/volume.frag over the whole of target with its thirty-two numbers, reading source and the depth of the
-// scene. No target is begun before and after. qfalse: this device has no such pass. With parm NULL nothing is
-// drawn, the answer is whether it has.
-qboolean	VK_VolumePass( vkTarget_t *source, vkTarget_t *target, const float *parm );
 // source over the whole of the target that is drawn into: added to what is there, added softly (GL_ONE,
 // GL_ONE_MINUS_SRC_COLOR), or laid over it by its alpha
 typedef enum { VKA_ADD, VKA_ADD_SOFT, VKA_BLEND } vkAdd_t;

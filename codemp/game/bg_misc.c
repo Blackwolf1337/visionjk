@@ -201,7 +201,6 @@ int bgForcePowerCost[NUM_FORCE_POWERS][NUM_FORCE_POWER_LEVELS] = //0 == neutral
 float bg_jpGripSpeedScale = 0.4f;	// jp_gripSpeedScale and jp_forceCombo, game updates them every frame, cgame reads serverinfo
 int bg_jpForceCombo = 0;
 int bg_jpFeatures = 0;	// JA+ jp_cinfo bits
-int bg_visionTemple = 0;	// not from JA+: the server is the Vision Temple (g_visionTemple), nobody fights there
 
 int forcePowerSorted[NUM_FORCE_POWERS] =
 { //rww - always use this order when drawing force powers for any reason

@@ -33,7 +33,6 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "qcommon/MiniHeap.h"
 #include "qcommon/stringed_ingame.h"
 #include "qcommon/game_version.h"
-#include "qcommon/net_link.h"
 #include "cl_cgameapi.h"
 #include "cl_uiapi.h"
 #include "cl_lan.h"
@@ -115,7 +114,8 @@ cvar_t	*cl_filterGames;
 vec3_t cl_windVec;
 
 
-// (cl and clc: cl_visit.cpp)
+clientActive_t		cl;
+clientConnection_t	clc;
 clientStatic_t		cls;
 
 netadr_t rcon_address;
@@ -582,7 +582,6 @@ void CL_PlayDemo_f( void ) {
 	// open the demo file
 	arg = Cmd_Argv(1);
 
-	CL_VisitDrop();
 	CL_Disconnect( qtrue );
 
 	// A server of this program ends here and now. Left to the next frame of the server (sv_killserver), it ended
@@ -768,7 +767,6 @@ void CL_MapLoading( void ) {
 	} else {
 		// clear nextmap so the cinematic shutdown doesn't execute it
 		Cvar_Set( "nextmap", "" );
-		CL_VisitDrop();
 		CL_Disconnect( qtrue );
 		Q_strncpyz( cls.servername, "localhost", sizeof(cls.servername) );
 		cls.state = CA_CHALLENGING;		// so the connect screen is drawn
@@ -809,9 +807,6 @@ void CL_Disconnect( qboolean showMainMenu ) {
 	if ( !com_cl_running || !com_cl_running->integer ) {
 		return;
 	}
-
-	// an error while the server the player came from was read: this is about the visit then (cl_visit.cpp)
-	CL_VisitBroken();
 
 	// shutting down the client so enter full screen ui mode
 	Cvar_Set("r_uiFullScreen", "1");
@@ -871,9 +866,6 @@ void CL_Disconnect( qboolean showMainMenu ) {
 		SCR_UpdateScreen( );
 		CL_CloseAVI( );
 	}
-
-	// that was a visit: the server the player came from is still there (cl_visit.cpp)
-	CL_VisitDisconnected();
 }
 
 
@@ -1072,8 +1064,6 @@ void CL_Connect_f( void ) {
 	Cvar_Set( "sv_killserver", "1" );
 	SV_Frame( 0 );
 
-	// (from a visit: the server one came from is left too)
-	CL_VisitDrop();
 	CL_Disconnect( qtrue );
 	Con_Close();
 
@@ -1623,9 +1613,7 @@ void CL_CheckForResend( void ) {
 		return;
 	}
 
-	// (the temple of a server may still be starting when its first player asks for it: asked again sooner,
-	// cl_visit.cpp)
-	if ( cls.realtime - clc.connectTime < ( CL_VisitTunnel( &clc.serverAddress ) ? RETRANSMIT_TIMEOUT / 6 : RETRANSMIT_TIMEOUT ) ) {
+	if ( cls.realtime - clc.connectTime < RETRANSMIT_TIMEOUT ) {
 		return;
 	}
 
@@ -2114,18 +2102,6 @@ A packet has arrived from the main event loop
 void CL_PacketEvent( const netadr_t *from, msg_t *msg ) {
 	int		headerBytes;
 
-	// From the temple of the server the player is on: it comes through the port of that server with a mark
-	// in front (cl_visit.cpp). One nobody waits for is dropped: its first bytes are no sequence number.
-	if ( msg->cursize >= 4 && *(int *)msg->data == NET_TUNNEL_MARK ) {
-		if ( !CL_VisitUntunnel( from, msg ) ) {
-			return;
-		}
-	}
-	// from the server the player came from while he visits another one
-	else if ( CL_VisitPacket( from, msg ) ) {
-		return;
-	}
-
 	clc.lastPacketTime = cls.realtime;
 
 	if ( msg->cursize >= 4 && *(int *)msg->data == -1 ) {
@@ -2277,9 +2253,6 @@ void CL_Frame ( int msec ) {
 									//	of course this still doesn't work for menus...
 
 	CL_UpdateFrame();
-
-	// the server the player came from hears from him, or he is back on it (cl_visit.cpp)
-	CL_VisitFrame();
 
 	if ( cls.state == CA_DISCONNECTED && !( Key_GetCatcher( ) & KEYCATCH_UI )
 		&& !com_sv_running->integer && cls.uiStarted ) {
@@ -2914,14 +2887,6 @@ void CL_Init( void ) {
 	// the menus on a plane in the level, and the blur of the scene around a distance
 	Cvar_Get( "cl_cgameUIPlane", "1", CVAR_ROM, "" );
 	Cvar_Get( "cl_cgameDoF", "1", CVAR_ROM, "" );
-	// what a key is bound to, for a cgame that holds the keys itself
-	Cvar_Get( "cl_cgameBinds", "1", CVAR_ROM, "" );
-	// and the look of a world that stands still
-	Cvar_Get( "cl_cgameSpirit", "1", CVAR_ROM, "" );
-	// and the Vision Temple behind a scene without a level
-	Cvar_Get( "cl_cgameTemple", "1", CVAR_ROM, "" );
-	// and a visit to another server (cl_visit.cpp)
-	CL_VisitInit();
 	// for the ui: 1 while its menus are drawn onto that plane, which has the 640 x 480 of a menu and no more
 	Cvar_Get( "cl_uiPlane", "0", CVAR_ROM, "" );
 	// tells the ui and the cgame that the engine can draw their new look: pictures the ui computes
@@ -3035,10 +3000,8 @@ void CL_Shutdown( void ) {
 		G2VertSpaceClient = 0;
 	}
 
-	CL_VisitDrop();
 	CL_Disconnect( qtrue );
 
-	CL_VisitShutdown();
 	CL_UpdateShutdown();
 	CL_IDS_Shutdown();
 

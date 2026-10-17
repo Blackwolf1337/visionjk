@@ -755,21 +755,6 @@ typedef struct cgameImport_s {
 		// frame is blurred where it is nearer or farther than focus (units of the level), amount 0 to 1. Called
 		// before R_RenderScene, every frame it is wanted. A renderer without the effect does nothing.
 		void			(*R_SetDepthOfField)					( float focus, float amount );
-		// Only an engine that sets the cvar cl_cgameBinds to 1 has this one, the same way. What a key is bound
-		// to, as the menus read it: for a cgame that holds the keys itself (focus/cg_focus.c). The engine runs
-		// no bound command meanwhile, and Key_GetKey() knows only the first key of a command.
-		void			(*Key_GetBindingBuf)					( int keynum, char *buf, int buflen );
-		// Only an engine that sets the cvar cl_cgameSpirit to 1 has this one, the same way. The scene of this
-		// frame as a world that stands still looks: dark blue, in drifting fog (focus/cg_focus.c). amount 0 to
-		// 1, seconds: a clock for the drift. Called before R_RenderScene, every frame it is wanted. qfalse: the
-		// renderer has no such pass.
-		qboolean		(*R_SetSpiritWorld)						( float amount, float seconds );
-		// Only an engine that sets the cvar cl_cgameTemple to 1 has this one, the same way. The Vision Temple
-		// behind the scene of this frame that has the flag RDF_VISION_TEMPLE next to RDF_NOWORLDMODEL: a place
-		// above the clouds the renderer works out, seen from where that scene is seen from (focus/cg_focus.c).
-		// amount 0 to 1: how much of it is there. seconds: a clock. Called before R_RenderScene, every frame it
-		// is wanted. qfalse: the renderer can not draw it.
-		qboolean		(*R_SetTempleScene)						( float amount, float seconds );
 	} ext;
 } cgameImport_t;
 

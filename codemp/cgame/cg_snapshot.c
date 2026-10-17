@@ -377,11 +377,6 @@ void CG_ProcessSnapshots( void ) {
 		cg.latestSnapshotNum = n;
 	}
 
-	// Focus: the world stands still, the newest snapshot is only looked at (focus/cg_focus.c)
-	if ( CG_FocusSnapshots() ) {
-		return;
-	}
-
 	// If we have yet to receive a snapshot, check for it.
 	// Once we have gotten the first snapshot, cg.snap will
 	// always have valid data for the rest of the game

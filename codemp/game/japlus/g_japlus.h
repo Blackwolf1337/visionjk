@@ -76,10 +76,6 @@ typedef struct jpClient_s {
 	char		statusMusic[64];		// what the client says its player listens to
 	int			statusCmdTime;			// of its last jpstatus command
 	int			statusAllTime;			// of its last "jpstatus all"
-	// the body of a player who is out of it (status/g_focus.c)
-	qboolean	focus;					// it is protected
-	int			focusNext;				// level.time from which it can be again
-	int			fightTime;				// when he last hit a player or was hit by one
 	int			statusInputTime;		// when its commands last changed, 0: none came yet
 	int			statusButtons;			// the command they are compared with
 	signed char	statusMove[3];
@@ -185,16 +181,7 @@ void		G_StatusUserinfo( gentity_t *ent, const char *userinfo );		// status/g_sta
 void		G_StatusInput( gentity_t *ent, const usercmd_t *ucmd );
 void		G_StatusFrame( void );
 void		Cmd_JPStatus_f( gentity_t *ent );
-void		Cmd_JPFocus_f( gentity_t *ent );								// status/g_focus.c
-void		G_FocusThink( gentity_t *ent, const usercmd_t *ucmd );
-void		G_FocusEnd( gentity_t *ent, focusWhy_t why );
-void		G_FocusFight( gentity_t *targ, gentity_t *attacker );
 
-// status/g_temple.c: the Vision Temple as a server (g_visionTemple)
-qboolean G_TempleInstance( void );
-void		G_TempleInit( void );
-void		G_TempleSpawn( gentity_t *ent );
-qboolean	G_TempleThink( gentity_t *ent, usercmd_t *ucmd );
 void		JP_ChatCopy( const gentity_t *from, const char *text, char *out, int outSize );
 const char	*JP_ChatFor( const gentity_t *from, const gentity_t *other, const char *text, char *buffer, int bufferSize );
 qboolean	JP_ChatIgnored( gentity_t *speaker, gentity_t *listener );

@@ -62,8 +62,6 @@ XCVAR_DEF( cg_thirdPersonRange,				"80",					NULL,				CVAR_ARCHIVE )
 XCVAR_DEF( cg_chatBoxWidth,					"380",					NULL,				CVAR_ARCHIVE )
 XCVAR_DEF( cg_chatBoxScale,					"0.85",					NULL,				CVAR_ARCHIVE )
 XCVAR_DEF( cg_chatBoxRows,					"10",					NULL,				CVAR_ARCHIVE )
-// the word of the Vision Temple (cgame/focus/cg_focus.c), so its row in Setup shows it outside of a game too
-XCVAR_DEF( cg_templeLink,					"1",					NULL,				CVAR_ARCHIVE )
 XCVAR_DEF( cg_chatInput,					"1",					NULL,				CVAR_ARCHIVE )
 XCVAR_DEF( cg_chatBeep,						"1",					NULL,				CVAR_ARCHIVE )
 XCVAR_DEF( cg_bubbleRange,					"1200",					NULL,				CVAR_ARCHIVE )

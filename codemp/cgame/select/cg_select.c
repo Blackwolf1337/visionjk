@@ -174,9 +174,8 @@ void CG_SelectInit( void ) {
 
 // is the mouse free for pointing at players
 static qboolean Select_Free( void ) {
-	// (out of the body the mouse turns the camera, focus/cg_focus.c: a pointer only while the chat box is open)
 	return (qboolean)( cg_selectPlayers.integer && cg.snap && !cg.demoPlayback
-		&& ( CG_ChatIsOpen() || ( !CG_FocusActive() && ( sel.held || sel.toggled || CG_ScoresPicking() ) ) ) );
+		&& ( sel.held || sel.toggled || CG_ChatIsOpen() || CG_ScoresPicking() ) );
 }
 
 /*
@@ -1393,7 +1392,7 @@ void CG_SelectDraw( void ) {
 		trap->Key_SetCatcher( trap->Key_GetCatcher() | KEYCATCH_CGAME );
 	} else if ( sel.catching && ( !free || CG_ChatIsOpen() ) ) {
 		sel.catching = qfalse;
-		if ( !CG_ChatIsOpen() && !CG_FocusActive() ) {
+		if ( !CG_ChatIsOpen() ) {
 			trap->Key_SetCatcher( trap->Key_GetCatcher() & ~KEYCATCH_CGAME );
 		}
 	}
@@ -1405,9 +1404,8 @@ void CG_SelectDraw( void ) {
 	// Who points does not type. An engine of this tree leaves the talk button out of his commands while this
 	// says so (CL_CmdButtons()): no dots over his head for anybody, and the server does not hold him still. In
 	// another engine every catcher of keys is talking, as it always was.
-	// (the same for who is out of his body: his keys steer a camera)
-	if ( sel.quiet != ( sel.catching || CG_FocusActive() ) ) {
-		sel.quiet = (qboolean)( sel.catching || CG_FocusActive() );
+	if ( sel.quiet != sel.catching ) {
+		sel.quiet = sel.catching;
 		trap->Cvar_Set( "cg_catchQuiet", sel.quiet ? "1" : "0" );
 	}
 	if ( !free ) {

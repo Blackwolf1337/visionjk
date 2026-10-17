@@ -139,11 +139,6 @@ void CG_DrawInformation( void ) {
 	char		buf[1024];
 	int			iPropHeight = 18;	// I know, this is total crap, but as a post release asian-hack....  -Ste
 
-	// on the way to the Vision Temple or back from it the screen is light and nothing else (focus/cg_focus.c)
-	if ( CG_FocusLoading() ) {
-		return;
-	}
-
 	info = CG_ConfigString( CS_SERVERINFO );
 	sysInfo = CG_ConfigString( CS_SYSTEMINFO );
 

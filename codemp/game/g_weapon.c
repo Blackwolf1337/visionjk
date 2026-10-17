@@ -3554,7 +3554,7 @@ void WP_FireMelee( gentity_t *ent, qboolean alt_fire )
 		if (tr_ent->takedamage && tr_ent->client)
 		{ //special duel checks
 			// JA+: no punch on a protected player or on one who chats in god mode (jp_allowGodTalk)
-			if ( JP_IsConnectedClient( tr_ent ) && (tr_ent->client->pers.jp.protectedByAdmin || tr_ent->client->pers.jp.focus
+			if ( JP_IsConnectedClient( tr_ent ) && (tr_ent->client->pers.jp.protectedByAdmin
 				|| (jp_allowGodTalk.integer == 1 && (tr_ent->flags & FL_GODMODE) && (tr_ent->client->ps.eFlags & EF_TALK))) )
 			{
 				return;

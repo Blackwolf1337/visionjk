@@ -3252,12 +3252,6 @@ void Cmd_EngageDuel_f(gentity_t *ent)
 	char cmd[MAX_TOKEN_CHARS];
 	const int clientNum = ent-g_entities;
 
-	// no duel in the Vision Temple (status/g_temple.c)
-	if ( g_visionTemple.integer )
-	{
-		return;
-	}
-
 	if ( ent->client->ps.stats[STAT_HOLDABLE_ITEMS] & (1 << HI_JETPACK) )
 	{
 		trap->SendServerCommand( clientNum, "print \"You have to disable your jetpack in order to duel.\n\"" );
@@ -3757,7 +3751,6 @@ command_t commands[] = {
 	{ "god",				Cmd_God_f,					CMD_CHEAT|CMD_ALIVE|CMD_NOINTERMISSION },
 	{ "jpauth",				Cmd_JPAuth_f,				0 },
 	{ "jpbox",				Cmd_JPBox_f,				0 },
-	{ "jpfocus",			Cmd_JPFocus_f,				0 },
 	{ "jpstatus",			Cmd_JPStatus_f,				0 },
 	{ "jpvoice",			Cmd_JPVoice_f,				0 },
 	{ "kill",				Cmd_Kill_f,					CMD_ALIVE|CMD_NOINTERMISSION },

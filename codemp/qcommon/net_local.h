@@ -81,7 +81,4 @@ char *NET_ErrorString( void );
 // sv_web.cpp: what NET_Sleep gives the web host, in front of its select() and behind it
 void SV_WebFDSet( fd_set *readSet, fd_set *writeSet, SOCKET *highest );
 void SV_WebEvent( fd_set *readSet, fd_set *writeSet );
-// and the link to the temple of the dedicated server (codemp/server/sv_instance.cpp)
-void SV_InstanceFDSet( fd_set *readSet, SOCKET *highest );
-void SV_InstanceEvent( fd_set *readSet );
 #endif

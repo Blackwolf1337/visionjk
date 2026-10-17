@@ -1760,8 +1760,6 @@ static	void R_LoadFogs( lump_t *l, lump_t *brushesLump, lump_t *sidesLump, world
 
 		// get information from the shader for fog parameters
 		shader = R_FindShader( fogs->shader, lightmaps, stylesDefault, qtrue );
-		// (and what only the renderer of VisionJK draws in its brush, tr_shader.cpp)
-		out->vision = shader->vision;
 
 		if (!shader->fogParms)
 		{//bad shader!!
@@ -2083,12 +2081,6 @@ void RE_LoadWorldMap_Actual( const char *name, world_t &worldData, int index )
 	R_LoadPlanes (&header->lumps[LUMP_PLANES], worldData);
 	R_LoadFogs( &header->lumps[LUMP_FOGS], &header->lumps[LUMP_BRUSHES], &header->lumps[LUMP_BRUSHSIDES], worldData, index );
 	R_LoadSurfaces( &header->lumps[LUMP_SURFACES], &header->lumps[LUMP_DRAWVERTS], &header->lumps[LUMP_DRAWINDEXES], worldData, index );
-	// (VisionJK: a sky whose script says q3map_vision sky, tr_shader.cpp)
-	for ( int i = 0; i < worldData.numsurfaces && !worldData.visionSky; i++ ) {
-		const shader_t *shader = worldData.surfaces[i].shader;
-
-		worldData.visionSky = (qboolean)( shader && shader->vision && shader->vision->kind == VISION_SKY );
-	}
 	R_LoadMarksurfaces (&header->lumps[LUMP_LEAFSURFACES], worldData);
 	R_LoadNodesAndLeafs (&header->lumps[LUMP_NODES], &header->lumps[LUMP_LEAFS], worldData);
 	R_LoadSubmodels (&header->lumps[LUMP_MODELS], worldData, index);

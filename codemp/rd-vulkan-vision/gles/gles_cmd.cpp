@@ -132,7 +132,6 @@ typedef struct glesCommand_s {
 		struct {
 			vkTarget_t	*source, *target;
 			float		parm[4];
-			int			program;			// GC_FOCUS: which of the programs that read the depth
 		} blur;
 		struct {
 			vkTarget_t	*source;
@@ -380,35 +379,14 @@ void VK_BlurPass( vkTarget_t *source, vkTarget_t *target, const float *parm ) {
 	}
 }
 
-static void GLES_DepthPass( glesProgram_t program, vkTarget_t *source, vkTarget_t *target, const float *parm ) {
+void VK_FocusPass( vkTarget_t *source, vkTarget_t *target, const float *parm ) {
 	glesCommand_t *cmd = GLES_Command( GC_FOCUS );
 
 	if ( cmd ) {
 		cmd->blur.source = source;
 		cmd->blur.target = target;
 		VectorCopy4( parm, cmd->blur.parm );
-		cmd->blur.program = program;
 	}
-}
-
-void VK_FocusPass( vkTarget_t *source, vkTarget_t *target, const float *parm ) {
-	GLES_DepthPass( GLP_FOCUS, source, target, parm );
-}
-
-void VK_SpiritPass( vkTarget_t *source, vkTarget_t *target, const float *parm ) {
-	GLES_DepthPass( GLP_SPIRIT, source, target, parm );
-}
-
-// The Vision Temple (shaders/temple.frag): this device does not draw it yet, the program and its sixteen numbers
-// are still to be made here. The module that asks is told so (RE_SetTempleScene).
-qboolean VK_TemplePass( const float * ) {
-	return qfalse;
-}
-
-// And the volumes of a level that only this renderer fills (shaders/volume.frag): not on this device yet either,
-// it draws the plain fog of their scripts.
-qboolean VK_VolumePass( vkTarget_t *, vkTarget_t *, const float * ) {
-	return qfalse;
 }
 
 void VK_AddTarget( vkTarget_t *source, vkAdd_t how ) {
@@ -946,7 +924,7 @@ static void GLES_Replay( vkFrame_t *frame ) {
 			glBindFramebuffer( GL_FRAMEBUFFER, VK_TargetFramebuffer( cmd->blur.target, NULL ) );
 			GLES_PassState( cmd->blur.target->width, cmd->blur.target->height, 0, 0 );
 			GLES_Texture( 1, vk.depth.texture );
-			GLES_DrawPass( (glesProgram_t)cmd->blur.program, cmd->blur.source->texture, cmd->blur.parm );
+			GLES_DrawPass( GLP_FOCUS, cmd->blur.source->texture, cmd->blur.parm );
 			// Not left there: without several samples the scene is drawn into this very texture, and a browser
 			// refuses a draw whose program could read what it draws into.
 			GLES_Texture( 1, 0 );

@@ -481,15 +481,6 @@ void		SV_VoiceFrame( void );
 void		SV_VoiceShutdown( void );
 #endif
 
-#ifdef DEDICATED
-// sv_instance.cpp: the temple a dedicated server starts for its players
-void		SV_InstanceInit( void );
-void		SV_InstanceShutdown( void );
-void		SV_InstanceFrame( void );
-void		SV_InstancePacket( const netadr_t *from, msg_t *msg );
-qboolean	SV_InstanceVoice( const netadr_t *from, const byte *data, int length );
-#endif
-
 extern	cvar_t	*sv_antiWallhack;		// sv_snapshot.cpp
 
 // mins and maxs are relative

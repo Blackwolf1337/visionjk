@@ -365,11 +365,6 @@ void WP_InitForcePowers( gentity_t *ent ) {
 			trap->SendServerCommand( ent-g_entities, "scl" );
 		}
 	}
-	else if ( g_visionTemple.integer ) {
-		// nobody sets up powers for the Vision Temple (status/g_temple.c): no menu for it, and nobody waits
-		// as a spectator
-		ent->client->sess.setForce = qtrue;
-	}
 	else {
 		if ( warnClient || !ent->client->sess.setForce ) {
 			// the client's rank is too high for the server and has been autocapped, so tell them
@@ -566,9 +561,6 @@ int ForcePowerUsableOn(gentity_t *attacker, gentity_t *other, forcePowers_t forc
 		const jpClient_t *jp = &other->client->pers.jp;
 
 		if ( jp->quickening || jp->down || jp->protectedByAdmin || jp->isGhost || jp->sleeping || jp->mindtricked || level.time < jp->teleTime )
-			return 0;
-		// nor on the body of a player who is out of it (Focus, status/g_focus.c)
-		if ( jp->focus )
 			return 0;
 	}
 	if ( JP_IsConnectedClient( attacker ) )

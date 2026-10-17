@@ -175,12 +175,7 @@ XCVAR_DEF( g_userinfoValidate,			"25165823",		NULL,						CVAR_ARCHIVE,									q
 // What this game module knows that a stock one does not, for the clients of this tree, in the server info. Bit 0:
 // chat in UTF-8 (JP_ChatFor() in g_japlus_chat.c), a client sends UTF-8 only where it reads this bit. Bit 1: it
 // passes on what stands above the heads (status/g_status.c).
-// Bit 4: it protects the body of a player who is out of it (status/g_focus.c).
-XCVAR_DEF( g_visionCaps,				VISION_CAPS,	NULL,						CVAR_SERVERINFO|CVAR_ROM,						qfalse )
-// Focus of a client of this tree: the body of its player can not be hurt while he is out of it. 0: never, 1: in a
-// free for all (as jp_inactivityProtectTimer), 2: in every kind of game.
-XCVAR_DEF( g_visionTemple,				"0",			NULL,						CVAR_LATCH,										qfalse )
-XCVAR_DEF( g_visionFocus,				"1",			NULL,						CVAR_ARCHIVE,									qtrue )
+XCVAR_DEF( g_visionCaps,				"15",			NULL,						CVAR_SERVERINFO|CVAR_ROM,						qfalse )
 // The boombox (boombox/g_boombox.c), on the relay of the voice chat. g_boombox is in the server info: the cgame of this
 // tree asks for boxes only where it reads it there. The programs that fetch the songs can only be named while the
 // server starts (CVAR_INIT: server.cfg or the command line), so nobody can make a running server start another one.

@@ -4041,8 +4041,6 @@ void ClientSpawn(gentity_t *ent) {
 	trap->ICARUS_InitEnt( (sharedEntity_t *)ent );
 
 	JP_ClientSpawnEnd( ent, wDisable );
-	// the Vision Temple as a server: nobody has a weapon there (status/g_temple.c)
-	G_TempleSpawn( ent );
 }
 
 

@@ -165,8 +165,6 @@ void CG_ParseServerinfo( void ) {
 	// jp_cinfo: which settings of the server the prediction needs. Read from the server info like the plugin does:
 	// a server cvar is only visible as a cvar of the client on a listen server
 	bg_jpFeatures = cgs.jpVersion > 0.0f ? atoi( Info_ValueForKey( info, "jp_cinfo" ) ) : 0;
-	// Not from JA+: the server is the Vision Temple (game/status/g_temple.c)
-	bg_visionTemple = ( atoi( Info_ValueForKey( info, "g_visionCaps" ) ) & VISION_CAPS_TEMPLE ) ? 1 : 0;
 	bg_jpGripSpeedScale = cgs.jpVersion > 0.0f ? atof( Info_ValueForKey( info, "jp_gripSpeedScale" ) ) : 0.4f;
 	bg_jpForceCombo = atoi( Info_ValueForKey( info, "jp_forceCombo" ) );
 	cgs.jpDuelAlpha = cgs.jpVersion >= 2.0f ? atoi( Info_ValueForKey( info, "jp_DuelAlpha" ) ) : -1;
@@ -1108,7 +1106,6 @@ static void CG_MapRestart( void ) {
 
 	// a round begins: the mouse is the game's again, whatever held it (select/cg_select.c)
 	CG_SelectLetGo();
-	CG_FocusEnd();
 
 	CG_StartMusic(qtrue);
 
@@ -1672,7 +1669,6 @@ static serverCommand_t	commands[] = {
 	{ "jpauth",				CG_AuthServerCommand },
 	{ "jpbox",				CG_BoomboxServerCommand },
 	{ "jpclient",			CG_PeerServerCommand },
-	{ "jpfocus",			CG_FocusServerCommand },
 	{ "jpstatus",			CG_StatusServerCommand },
 	{ "jpvoice",			CG_VoiceServerCommand },
 	{ "kg2",				CG_KillGhoul2_f },

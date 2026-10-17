@@ -147,7 +147,6 @@ typedef struct vkDeviceState_s {	// see vkState_t
 	VkDescriptorSet				glowSet;
 	VkDescriptorSet				blurSets[2];
 	VkDescriptorSet				softSets[2];
-	VkDescriptorSet				wideSet;
 	VkSampler					linearSampler;
 	// the depth of the scene as a texture, for the depth of field (VK_FocusPass)
 	qboolean					depthReadable;		// the device lets its format be read in a shader
@@ -166,14 +165,6 @@ typedef struct vkDeviceState_s {	// see vkState_t
 	VkPipeline					glowPipelines[3];	// a target onto the frame, vkAdd_t: added, added softly, by its alpha
 	VkShaderModule				focusFragmentShader;
 	VkPipeline					focusPipeline;
-	VkShaderModule				spiritFragmentShader;	// with the layout of the focus pass
-	VkPipeline					spiritPipeline;
-	VkPipelineLayout			templePipelineLayout;	// no set, twenty numbers (shaders/temple.frag)
-	VkShaderModule				templeFragmentShader;
-	VkPipeline					templePipeline;
-	VkPipelineLayout			volumePipelineLayout;	// the two sets of the focus pass, thirty-two numbers (shaders/volume.frag)
-	VkShaderModule				volumeFragmentShader;
-	VkPipeline					volumePipeline;
 	vkPipeline_t				pipelines[VK_MAX_PIPELINES];
 	int							numPipelines;
 	uint32_t					lastPipelineKey;	// what VK_FindPipeline() was asked last and what it answered

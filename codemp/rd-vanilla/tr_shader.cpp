@@ -2036,53 +2036,6 @@ void ParseMaterial( const char **text )
 }
 
 
-/*
-===============
-ParseVision
-
-q3map_vision <kind> <numbers>
-===============
-*/
-static void ParseVision( const char **text ) {
-	static const struct {
-		const char		*name;
-		visionKind_t	kind;
-	} kinds[] = {
-		{ "clouds", VISION_CLOUDS },
-		{ "light", VISION_LIGHT },
-		{ "gold", VISION_GOLD },
-		{ "sky", VISION_SKY },
-	};
-	const char		*token = COM_ParseExt( text, qfalse );
-	visionKind_t	kind = VISION_NONE;
-
-	for ( size_t i = 0; i < ARRAY_LEN( kinds ); i++ ) {
-		if ( !Q_stricmp( token, kinds[i].name ) ) {
-			kind = kinds[i].kind;
-		}
-	}
-	// (A word that is not there means the line is over, and the text stands at the next one by then: only a
-	// line that has more on it is skipped to its end.)
-	if ( kind == VISION_NONE ) {
-		ri.Printf( PRINT_ALL, S_COLOR_YELLOW "WARNING: 'q3map_vision %s' in shader '%s': no such kind\n", token, shader.name );
-		if ( token[0] ) {
-			SkipRestOfLine( text );
-		}
-		return;
-	}
-	shader.vision = (visionParms_t *)Hunk_Alloc( sizeof( visionParms_t ), h_low );
-	memset( shader.vision, 0, sizeof( *shader.vision ) );
-	shader.vision->kind = kind;
-	for ( int i = 0; i < VISION_PARMS; i++ ) {
-		token = COM_ParseExt( text, qfalse );
-		if ( !token[0] ) {
-			return;
-		}
-		shader.vision->parm[i] = atof( token );
-	}
-	SkipRestOfLine( text );
-}
-
 // this table is also present in q3map
 
 typedef struct infoParm_s {
@@ -2284,13 +2237,6 @@ static qboolean ParseShader( const char **text )
 			if (token[0]) {
 				shader.clampTime = atof(token);
 			}
-		}
-		// Not from OpenJK: what only the renderer of VisionJK draws in the place of the rest of the script. The
-		// name begins as the keywords of the map compiler do, which every other renderer skips (the branch
-		// below, and the original game has it too): so one script serves all of them.
-		else if ( !Q_stricmp( token, "q3map_vision" ) ) {
-			ParseVision( text );
-			continue;
 		}
 		// skip stuff that only the q3map needs
 		else if ( !Q_stricmpn( token, "q3map", 5 ) ) {

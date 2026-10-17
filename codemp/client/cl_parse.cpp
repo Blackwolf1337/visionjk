@@ -439,12 +439,6 @@ void CL_SystemInfoChanged( void ) {
 	qboolean		gameSet;
 
 	systemInfo = cl.gameState.stringData + cl.gameState.stringOffsets[ CS_SYSTEMINFO ];
-	// The server the player came from while he visits another one (cl_visit.cpp): its settings are not the
-	// ones of the game on the screen. What the packets to it need is the number of its level.
-	if ( CL_VisitParsing() ) {
-		cl.serverId = atoi( Info_ValueForKey( systemInfo, "sv_serverid" ) );
-		return;
-	}
 	// Port: the clip brushes the server has off (clipbrush), none from a server that does not say
 	CL_ClipOffChanged( Info_ValueForKey( systemInfo, "cm_clipOff" ) );
 	// NOTE TTimo:
@@ -880,30 +874,19 @@ void CL_ParseServerMessage( msg_t *msg ) {
 			CL_ParseCommandString( msg );
 			break;
 		case svc_gamestate:
-			// (of the server the player came from while he visits another one: read when he is back, cl_visit.cpp)
-			if ( CL_VisitParsing() ) {
-				CL_VisitGamestate( msg );
-				return;
-			}
 			CL_ParseGamestate( msg );
 			break;
 		case svc_snapshot:
 			CL_ParseSnapshot( msg );
 			break;
 		case svc_setgame:
-			if ( CL_VisitParsing() ) {
-				return;
-			}
 			CL_ParseSetGame( msg );
 			break;
 		case svc_download:
-			if ( CL_VisitParsing() ) {
-				return;
-			}
 			CL_ParseDownload( msg );
 			break;
 		case svc_mapchange:
-			if ( cls.cgameStarted && !CL_VisitParsing() )
+			if ( cls.cgameStarted )
 				CGVM_MapChange();
 			break;
 		}

@@ -311,7 +311,7 @@ enum {
 // Fewer probes than this are no paths, and the simulator is never given them: a pass of the reflections asks
 // every batch it has which probes are near the listener (SimulationManager::lookupBakedReflections), and one
 // without a probe has no tree to ask, which is a read at address 0 in Steam Audio 4.8.1. A level where no floor
-// was found for a probe has such a batch (the Vision Temple, t2_wedge).
+// was found for a probe has such a batch (t2_wedge).
 #define SPATIAL_MIN_PROBES			2
 // A page has no thread to work the paths out next to the game. It does it while the level loads, when it stands
 // still anyway, and only for a level of up to this many probes: the work and the memory it takes grow with their

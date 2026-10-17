@@ -27,8 +27,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "cg_local.h"
 #include "game/bg_saga.h"
 
-// (Not from JA+: the fences of the Vision Temple are for feet. Nobody sees them, so the camera goes through.)
-#define MASK_CAMERACLIP (bg_visionTemple ? MASK_SOLID : (MASK_SOLID|CONTENTS_PLAYERCLIP))
+#define MASK_CAMERACLIP (MASK_SOLID|CONTENTS_PLAYERCLIP)
 #define CAMERA_SIZE	4
 
 
@@ -2429,7 +2428,6 @@ void CG_DrawActiveFrame( int serverTime, stereoFrame_t stereoView, qboolean demo
 	float mSensitivity = cg.zoomSensitivity;
 	float mPitchOverride = 0.0f;
 	float mYawOverride = 0.0f;
-	qboolean focused, temple;
 	static centity_t *veh = NULL;
 #ifdef VEH_CONTROL_SCHEME_4
 	float mSensitivityOverride = 0.0f;
@@ -2475,12 +2473,9 @@ void CG_DrawActiveFrame( int serverTime, stereoFrame_t stereoView, qboolean demo
 		return;
 	}
 
-	// (Focus, focus/cg_focus.c: while the world stands still its effects and its lights do too)
-	trap->FX_AdjustTime( CG_FocusTime( cg.time ) );
+	trap->FX_AdjustTime( cg.time );
 
-	if ( !CG_FocusActive() ) {
-		CG_RunLightStyles();
-	}
+	CG_RunLightStyles();
 
 	// any looped sounds will be respecified as entities
 	// are added to the render list
@@ -2581,14 +2576,8 @@ void CG_DrawActiveFrame( int serverTime, stereoFrame_t stereoView, qboolean demo
 	// this counter will be bumped for every valid scene we generate
 	cg.clientFrame++;
 
-	// Focus (focus/cg_focus.c): the world stands still and the player is out of his body. From here until
-	// CG_FocusReal() cg.time is the moment it stopped at, and the body is not predicted on.
-	focused = CG_FocusFrame();
-
 	// update cg.predictedPlayerState
-	if ( !focused ) {
-		CG_PredictPlayerState();
-	}
+	CG_PredictPlayerState();
 
 	// decide on third person view
 	cg.renderingThirdPerson = cg_thirdPerson.integer || (cg.snap->ps.stats[STAT_HEALTH] <= 0);
@@ -2633,12 +2622,6 @@ void CG_DrawActiveFrame( int serverTime, stereoFrame_t stereoView, qboolean demo
 		cg.renderingThirdPerson = 1;
 	}
 
-	// out of the body: it is seen from outside
-	if ( focused )
-	{
-		cg.renderingThirdPerson = 1;
-	}
-
 	if (cg.snap->ps.persistant[PERS_TEAM] == TEAM_SPECTATOR)
 	{
 		cg.renderingThirdPerson = 0;
@@ -2647,7 +2630,6 @@ void CG_DrawActiveFrame( int serverTime, stereoFrame_t stereoView, qboolean demo
 	// build cg.refdef
 	inwater = CG_CalcViewValues();
 	CG_Menu3DView();
-	CG_FocusView();
 	CG_SetupFrustum();
 
 	if (cg_linearFogOverride)
@@ -2666,11 +2648,9 @@ void CG_DrawActiveFrame( int serverTime, stereoFrame_t stereoView, qboolean demo
 		trap->R_SetRangedFog(0.0f);
 	}
 
-	// (in the Vision Temple nothing of the level is drawn, focus/cg_focus.c)
-	temple = CG_FocusTemple();
 	cstr = CG_ConfigString(CS_SKYBOXORG);
 
-	if (cstr && cstr[0] && !temple)
+	if (cstr && cstr[0])
 	{ //we have a skyportal
 		CG_DrawSkyBoxPortal(cstr);
 	}
@@ -2683,17 +2663,15 @@ void CG_DrawActiveFrame( int serverTime, stereoFrame_t stereoView, qboolean demo
 	}
 
 	// build the render lists
-	if ( !cg.hyperspace && !temple ) {
+	if ( !cg.hyperspace ) {
 		CG_AddPacketEntities(qfalse);			// adter calcViewValues, so predicted player state is correct
 		CG_AddMarks();
 		// the boxes of the boombox, which are no entities (boombox/cg_boombox.c)
 		CG_BoomboxScene();
 	}
-	if ( !temple ) {
-		CG_AddViewWeapon( &cg.predictedPlayerState );
-	}
+	CG_AddViewWeapon( &cg.predictedPlayerState );
 
-	if ( !cg.hyperspace && !temple )
+	if ( !cg.hyperspace )
 	{
 		trap->FX_AddScheduledEffects(qfalse);
 	}
@@ -2702,19 +2680,16 @@ void CG_DrawActiveFrame( int serverTime, stereoFrame_t stereoView, qboolean demo
 	CG_PlayBufferedSounds();
 
 	// finish up the rest of the refdef
-	if ( cg.testModelEntity.hModel && !temple ) {
+	if ( cg.testModelEntity.hModel ) {
 		CG_AddTestModel();
 	}
 
-	if ( !cg.hyperspace && !temple ) {
+	if ( !cg.hyperspace ) {
 		CG_AddLocalEntities();
 	}
 
 	cg.refdef.time = cg.time;
 	memcpy( cg.refdef.areamask, cg.snap->areamask, sizeof( cg.refdef.areamask ) );
-
-	// the scene of a world that stands still is built: the time of the game again
-	CG_FocusReal();
 
 	// warning sounds when powerup is wearing off
 	CG_PowerupTimerSounds();
@@ -2737,7 +2712,7 @@ void CG_DrawActiveFrame( int serverTime, stereoFrame_t stereoView, qboolean demo
 	//This is done from the vieworg to get origin for non-attenuated sounds
 	cstr = CG_ConfigString( CS_GLOBAL_AMBIENT_SET );
 
-	if (cstr && cstr[0] && !temple)
+	if (cstr && cstr[0])
 	{
 		trap->S_UpdateAmbientSet( cstr, cg.refdef.vieworg );
 	}

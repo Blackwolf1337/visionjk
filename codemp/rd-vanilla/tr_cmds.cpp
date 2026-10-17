@@ -238,53 +238,6 @@ void	RE_SetDepthOfField( float focus, float amount ) {
 	r_dofAmount = Com_Clamp( 0.0f, 1.0f, amount );
 }
 
-/*
-=============
-RE_SetSpiritWorld
-
-A module wants the scene of this frame as a world that stands still looks: dark blue, in drifting fog (the Focus
-of the cgame). amount 0 to 1, seconds: a clock for the drift. It holds for one frame, as the depth of field does.
-qfalse: this renderer has no such pass, and the module may paint something of its own over the picture.
-rd-vulkan-vision has it (vk_post.cpp) on a device that lets a shader read the depth, rd-vanilla has not.
-=============
-*/
-float	r_spiritAmount, r_spiritTime;
-
-qboolean	RE_SetSpiritWorld( float amount, float seconds ) {
-#ifdef RD_VULKAN_VISION
-	if ( VK_SpiritReady() ) {
-		r_spiritAmount = Com_Clamp( 0.0f, 1.0f, amount );
-		r_spiritTime = seconds;
-		return qtrue;
-	}
-#endif
-	return qfalse;
-}
-
-/*
-=============
-RE_SetTempleScene
-
-A module wants the Vision Temple behind the scene of this frame that has the flag RDF_VISION_TEMPLE (and
-RDF_NOWORLDMODEL): a place above the clouds the renderer works out for every pixel, seen from where that scene
-is seen from. amount 0 to 1: how much of it is there, it comes out of light. seconds: a clock for what moves.
-It holds for one frame. qfalse: this renderer can not draw it. The Vulkan device of rd-vulkan-vision can
-(vk_post.cpp, shaders/temple.frag), its device for the browser and rd-vanilla can not yet.
-=============
-*/
-float	r_templeAmount, r_templeTime;
-
-qboolean	RE_SetTempleScene( float amount, float seconds ) {
-#ifdef RD_VULKAN_VISION
-	if ( VK_TempleReady() ) {
-		r_templeAmount = Com_Clamp( 0.001f, 1.0f, amount );
-		r_templeTime = seconds;
-		return qtrue;
-	}
-#endif
-	return qfalse;
-}
-
 void	RE_SetColor( const float *rgba ) {
 	setColorCommand_t	*cmd;
 
@@ -440,8 +393,6 @@ void RE_BeginFrame( stereoFrame_t stereoFrame ) {
 
 	// what a module asked for with RE_SetDepthOfField() was for the frame before
 	r_dofAmount = 0.0f;
-	r_spiritAmount = 0.0f;
-	r_templeAmount = 0.0f;
 	glState.finishCalled = qfalse;
 
 	tr.frameCount++;

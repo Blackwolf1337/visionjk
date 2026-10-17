@@ -54,15 +54,6 @@ static const uint32_t vk_copyFrag[] =
 static const uint32_t vk_focusFrag[] =
 #include "shaders/focus_frag.inc"
 ;
-static const uint32_t vk_spiritFrag[] =
-#include "shaders/spirit_frag.inc"
-;
-static const uint32_t vk_templeFrag[] =
-#include "shaders/temple_frag.inc"
-;
-static const uint32_t vk_volumeFrag[] =
-#include "shaders/volume_frag.inc"
-;
 
 static VkShaderModule VK_CreateShader( const uint32_t *code, size_t size ) {
 	VkShaderModuleCreateInfo info = { VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO };
@@ -132,9 +123,9 @@ static void VK_CreateLayouts( void ) {
 	sizes[2].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 	// the table of the textures, and one each for the frame, the glow, its two blur buffers, the two of r_menuBlur
 	// and the depth
-	sizes[2].descriptorCount = VK_MAX_IMAGES + 8;
+	sizes[2].descriptorCount = VK_MAX_IMAGES + 7;
 	pool.flags = VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT;
-	pool.maxSets = VK_FRAMES + 9;
+	pool.maxSets = VK_FRAMES + 8;
 	pool.poolSizeCount = 3;
 	pool.pPoolSizes = sizes;
 	VK_CHECK( qvkCreateDescriptorPool( vk.device, &pool, NULL, &vk.descriptorPool ) );
@@ -160,14 +151,6 @@ static void VK_CreateLayouts( void ) {
 	layout.setLayoutCount = 2;
 	layout.pSetLayouts = sets;
 	VK_CHECK( qvkCreatePipelineLayout( vk.device, &layout, NULL, &vk.focusPipelineLayout ) );
-	// the pass of a volume of the level reads the same two and gets thirty-two numbers, all a device has to take
-	push.size = sizeof( float ) * 32;
-	VK_CHECK( qvkCreatePipelineLayout( vk.device, &layout, NULL, &vk.volumePipelineLayout ) );
-	// and the pass of the Vision Temple reads nothing and gets twenty numbers
-	push.size = sizeof( float ) * 20;
-	layout.setLayoutCount = 0;
-	layout.pSetLayouts = NULL;
-	VK_CHECK( qvkCreatePipelineLayout( vk.device, &layout, NULL, &vk.templePipelineLayout ) );
 
 	alloc.descriptorPool = vk.descriptorPool;
 	alloc.descriptorSetCount = 1;
@@ -228,8 +211,7 @@ VK_CreatePipeline
 
 post: 0 geometry. 1 a pass over a whole target of its own without vertices (gamma, blur). 2 such a pass onto the
 frame while it is being drawn, blended as the state bits say (the glow). 3 as 1, and it reads the depth of the
-scene too (the depth of field). 4 as 2, with the layout of the Vision Temple, and it writes the depth it works out.
-5 as 3, with the layout of a volume of the level.
+scene too (the depth of field).
 ===============
 */
 VkPipeline VK_CreatePipeline( VkShaderModule vertex, VkShaderModule fragment, uint32_t stateBits, int post, qboolean skinned ) {
@@ -253,7 +235,7 @@ VkPipeline VK_CreatePipeline( VkShaderModule vertex, VkShaderModule fragment, ui
 	VkGraphicsPipelineCreateInfo info = { VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO, &rendering };
 	VkPipeline pipeline;
 	// a pass into a target of its own: one sample a pixel, no depth, nothing blended
-	const qboolean alone = (qboolean)( post == 1 || post == 3 || post == 5 );
+	const qboolean alone = (qboolean)( post == 1 || post == 3 );
 
 	memset( stages, 0, sizeof( stages ) );
 	stages[0].sType = stages[1].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -327,12 +309,6 @@ VkPipeline VK_CreatePipeline( VkShaderModule vertex, VkShaderModule fragment, ui
 	// what goes into the frame of the game has its number of samples, the passes into targets of their own have one
 	multisample.rasterizationSamples = alone ? VK_SAMPLE_COUNT_1_BIT : vk.samples;
 	depth.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
-	if ( post == 4 ) {
-		// the place is behind everything of the view, and what stands in it is hidden by its gold
-		depth.depthTestEnable = VK_TRUE;
-		depth.depthWriteEnable = VK_TRUE;
-		depth.depthCompareOp = VK_COMPARE_OP_ALWAYS;
-	}
 	// the stencil test of the shadows is dynamic state, all bits take part
 	depth.front.compareMask = depth.back.compareMask = 0xff;
 	depth.front.writeMask = depth.back.writeMask = 0xff;
@@ -368,8 +344,7 @@ VkPipeline VK_CreatePipeline( VkShaderModule vertex, VkShaderModule fragment, ui
 	info.pDepthStencilState = &depth;
 	info.pColorBlendState = &blend;
 	info.pDynamicState = &dynamic;
-	info.layout = ( post == 5 ) ? vk.volumePipelineLayout : ( post == 4 ) ? vk.templePipelineLayout : ( post == 3 ) ? vk.focusPipelineLayout
-		: ( post ? vk.postPipelineLayout : vk.pipelineLayout );
+	info.layout = ( post == 3 ) ? vk.focusPipelineLayout : ( post ? vk.postPipelineLayout : vk.pipelineLayout );
 	VK_CHECK( qvkCreateGraphicsPipelines( vk.device, VK_NULL_HANDLE, 1, &info, NULL, &pipeline ) );
 	return pipeline;
 }
@@ -421,12 +396,6 @@ void VK_InitPipelines( void ) {
 	vk.glowPipelines[2] = VK_CreatePipeline( vk.postVertexShader, vk.copyFragmentShader, GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA, 2, qfalse );
 	vk.focusFragmentShader = VK_CreateShader( vk_focusFrag, sizeof( vk_focusFrag ) );
 	vk.focusPipeline = VK_CreatePipeline( vk.postVertexShader, vk.focusFragmentShader, 0, 3, qfalse );
-	vk.spiritFragmentShader = VK_CreateShader( vk_spiritFrag, sizeof( vk_spiritFrag ) );
-	vk.spiritPipeline = VK_CreatePipeline( vk.postVertexShader, vk.spiritFragmentShader, 0, 3, qfalse );
-	vk.templeFragmentShader = VK_CreateShader( vk_templeFrag, sizeof( vk_templeFrag ) );
-	vk.templePipeline = VK_CreatePipeline( vk.postVertexShader, vk.templeFragmentShader, 0, 4, qfalse );
-	vk.volumeFragmentShader = VK_CreateShader( vk_volumeFrag, sizeof( vk_volumeFrag ) );
-	vk.volumePipeline = VK_CreatePipeline( vk.postVertexShader, vk.volumeFragmentShader, 0, 5, qfalse );
 }
 
 void VK_ShutdownPipelines( void ) {
@@ -442,12 +411,6 @@ void VK_ShutdownPipelines( void ) {
 	qvkDestroyPipeline( vk.device, vk.glowPipelines[2], NULL );
 	qvkDestroyPipeline( vk.device, vk.focusPipeline, NULL );
 	qvkDestroyShaderModule( vk.device, vk.focusFragmentShader, NULL );
-	qvkDestroyPipeline( vk.device, vk.spiritPipeline, NULL );
-	qvkDestroyShaderModule( vk.device, vk.spiritFragmentShader, NULL );
-	qvkDestroyPipeline( vk.device, vk.templePipeline, NULL );
-	qvkDestroyShaderModule( vk.device, vk.templeFragmentShader, NULL );
-	qvkDestroyPipeline( vk.device, vk.volumePipeline, NULL );
-	qvkDestroyShaderModule( vk.device, vk.volumeFragmentShader, NULL );
 	qvkDestroyShaderModule( vk.device, vk.blurFragmentShader, NULL );
 	qvkDestroyShaderModule( vk.device, vk.copyFragmentShader, NULL );
 	for ( int i = 0; i < VKP_NUM_PROGRAMS; i++ ) {
@@ -460,8 +423,6 @@ void VK_ShutdownPipelines( void ) {
 	qvkDestroyPipelineLayout( vk.device, vk.pipelineLayout, NULL );
 	qvkDestroyPipelineLayout( vk.device, vk.postPipelineLayout, NULL );
 	qvkDestroyPipelineLayout( vk.device, vk.focusPipelineLayout, NULL );
-	qvkDestroyPipelineLayout( vk.device, vk.templePipelineLayout, NULL );
-	qvkDestroyPipelineLayout( vk.device, vk.volumePipelineLayout, NULL );
 	qvkDestroyDescriptorSetLayout( vk.device, vk.frameSetLayout, NULL );
 	qvkDestroyDescriptorSetLayout( vk.device, vk.textureSetLayout, NULL );
 	qvkDestroyDescriptorSetLayout( vk.device, vk.postSetLayout, NULL );

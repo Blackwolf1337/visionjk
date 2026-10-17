@@ -909,11 +909,6 @@ void RB_StageIteratorGeneric( void ) {
 		VK_InitDraw( &draw, transform, bones );
 		draw.parm[0] = shader->portalRange;
 		draw.parm[1] = tess.shaderTime;
-		// the gold of a level (q3map_vision of the script): shaded by where it is, not by what the stage says
-		if ( VK_GoldSurface( shader ) ) {
-			draw.flags |= 1u << VKD_VISION_SHIFT;
-			draw.parm[2] = Com_Clamp( 0.0f, 2.0f, r_templeDetail->value );
-		}
 		if ( !tess.fading ) {
 			cpuColors = VK_StageColors( pStage, forceRGBGen, &draw );
 			for ( int i = 0; i < 3; i++ ) {

@@ -275,8 +275,7 @@ static int GetConfigString(int index, char *buf, int size)
 	return qtrue;
 }
 
-// (the cgame has it too, cl_cgameapi.cpp)
-void Key_GetBindingBuf( int keynum, char *buf, int buflen ) {
+static void Key_GetBindingBuf( int keynum, char *buf, int buflen ) {
 	char	*value;
 
 	value = Key_GetBinding( keynum );

@@ -264,12 +264,6 @@ typedef struct refexport_s {
 		// The scene of this frame is blurred where it is nearer or farther than focus (units of the level),
 		// amount 0 to 1. rd-vanilla has no such pass and does nothing.
 		void				(*SetDepthOfField)						( float focus, float amount );
-		// The scene of this frame as a world that stands still looks: dark blue, in drifting fog. amount 0 to 1,
-		// seconds: a clock for the drift. qfalse: the renderer has no such pass (rd-vanilla).
-		qboolean			(*SetSpiritWorld)						( float amount, float seconds );
-		// The Vision Temple behind the scene of this frame that has the flag RDF_VISION_TEMPLE. amount 0 to 1,
-		// seconds: a clock. qfalse: the renderer can not draw it.
-		qboolean			(*SetTempleScene)						( float amount, float seconds );
 	} ext;
 
 } refexport_t;

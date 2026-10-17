@@ -346,15 +346,6 @@ static void RB_BeginDrawingView( void ) {
 	backEnd.isHyperspace = qfalse;
 	// we haven't drawn anything yet this view
 	backEnd.skyRenderedThisView = qfalse;
-	// the Vision Temple in the place of a level (RE_SetTempleScene, vk_post.cpp), or its sky behind a level that
-	// asks for it by the script of its own sky
-	if ( !RB_KEEPS_FRAME() ) {
-		if ( VK_LevelSky() ) {
-			VK_TempleFrame( 1.0f, backEnd.refdef.floatTime );
-		} else if ( ( backEnd.refdef.rdflags & RDF_VISION_TEMPLE ) && r_templeAmount > 0.0f ) {
-			VK_TempleFrame( r_templeAmount, r_templeTime );
-		}
-	}
 }
 
 /*
@@ -752,10 +743,6 @@ static void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 			continue;
 		}
 		R_DecomposeSort( drawSurf->sort, &entityNum, &shader, &fogNum, &dlighted );
-		// (a fog whose script fills its brush with something of this renderer has no fog pass: vk_post.cpp)
-		if ( fogNum && VK_FogIsVolume( fogNum ) ) {
-			fogNum = 0;
-		}
 		if ( rb_overLater && shader->over ) {
 			rb_sawOver = qtrue;
 		}
@@ -926,9 +913,6 @@ static void RB_RenderOverSurfs( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 		if ( drawSurf->sort != oldSort ) {
 			oldSort = drawSurf->sort;
 			R_DecomposeSort( drawSurf->sort, &entityNum, &shader, &fogNum, &dlighted );
-			if ( fogNum && VK_FogIsVolume( fogNum ) ) {
-				fogNum = 0;
-			}
 			over = (qboolean)shader->over;
 			if ( !over ) {
 				continue;
@@ -976,16 +960,7 @@ static const void *RB_DrawSurfs( const void *data ) {
 	const qboolean focus = (qboolean)( r_dofAmount > 0.0f && r_menuBlur->value > 0.0f && !backEnd.viewParms.isPortal
 		&& !( backEnd.refdef.rdflags & ( RDF_NOWORLDMODEL | RDF_SKYBOXPORTAL ) ) );
 
-	// The same view as a world that stands still looks (RE_SetSpiritWorld, vk_post.cpp).
-	const qboolean spirit = (qboolean)( r_spiritAmount > 0.0f && !backEnd.viewParms.isPortal
-		&& !( backEnd.refdef.rdflags & ( RDF_NOWORLDMODEL | RDF_SKYBOXPORTAL ) ) );
-
-	// The volumes of the level that only this renderer fills (q3map_vision of a shader script, vk_post.cpp):
-	// drawn after what is solid, which hides them or stands in them.
-	const qboolean volumes = (qboolean)( !backEnd.viewParms.isPortal
-		&& !( backEnd.refdef.rdflags & ( RDF_NOWORLDMODEL | RDF_SKYBOXPORTAL ) ) && VK_VolumeReady() );
-
-	rb_overLater = (qboolean)( focus || spirit || volumes );
+	rb_overLater = focus;
 	rb_sawOver = qfalse;
 	rb_glowView = !( backEnd.refdef.rdflags & RDF_NOWORLDMODEL ) && r_DynamicGlow->integer;
 	rb_sawLate = qfalse;
@@ -1007,24 +982,10 @@ static const void *RB_DrawSurfs( const void *data ) {
 		}
 	}
 	rb_glowView = false;
-	if ( volumes ) {
-		VK_VolumeFrame();
-	}
-	if ( spirit ) {
-		VK_SpiritFrame( r_spiritAmount, r_spiritTime );
-	}
 	if ( focus ) {
 		VK_BlurFrame( r_dofAmount, r_dofFocus );
-	}
-	if ( ( focus || spirit || volumes ) && rb_sawOver ) {
-		RB_RenderOverSurfs( cmd->drawSurfs, cmd->numDrawSurfs );
-	}
-	// the Vision Temple and what stands in it shine (vk_post.cpp), and so does a level with its sky
-	if ( !backEnd.viewParms.isPortal ) {
-		if ( VK_LevelSky() ) {
-			VK_BloomFrame( r_templeBloom->value );
-		} else if ( ( backEnd.refdef.rdflags & RDF_VISION_TEMPLE ) && r_templeAmount > 0.0f ) {
-			VK_BloomFrame( r_templeBloom->value * r_templeAmount );
+		if ( rb_sawOver ) {
+			RB_RenderOverSurfs( cmd->drawSurfs, cmd->numDrawSurfs );
 		}
 	}
 	rb_overLater = qfalse;

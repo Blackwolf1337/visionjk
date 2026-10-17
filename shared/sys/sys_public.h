@@ -175,12 +175,6 @@ time_t Sys_FileTime( const char *path );
 
 qboolean Sys_LowPhysicalMemory();
 
-// This program a second time, next to this one: for the temple a dedicated server starts for its players
-// (codemp/server/sv_instance.cpp). argv[0] is filled in here, the list ends with NULL. Returns what
-// Sys_ProcessEnded() is asked with, 0: it could not be started. Neither call waits.
-int Sys_StartSelf( char **argv, const char *envName, const char *envValue, const char *logFile );
-qboolean Sys_ProcessEnded( int process );
-
 void Sys_SetProcessorAffinity( void );
 
 typedef enum graphicsApi_e

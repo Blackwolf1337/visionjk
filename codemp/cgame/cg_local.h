@@ -1803,41 +1803,6 @@ qboolean	CG_VoiceMuted( int clientNum );
 int			CG_VoiceLouder( int clientNum, int steps );
 qboolean	CG_AuthIsAdmin( void );
 
-// focus/cg_focus.c: the world stands still and the player leaves his body as a camera
-void		CG_FocusInit( void );
-void		CG_Focus_f( void );
-void		CG_Temple_f( void );
-qboolean	CG_FocusTemple( void );
-void		CG_FocusStatus_f( void );
-void		CG_FocusMove_f( void );
-void		CG_FocusTurn_f( void );
-void		CG_FocusEnd( void );
-qboolean	CG_FocusActive( void );
-int			CG_FocusTime( int time );
-qboolean	CG_FocusSnapshots( void );
-qboolean	CG_FocusFrame( void );
-void		CG_FocusReal( void );
-void		CG_FocusView( void );
-qboolean	CG_FocusMouseEvent( int dx, int dy );
-qboolean	CG_FocusKeyEvent( int key, qboolean down );
-void		CG_FocusDraw( void );
-void		CG_FocusScene( void );
-void		CG_FocusTint( void );
-qboolean	CG_FocusLoading( void );
-float		CG_FocusMuffle( void );
-void		CG_FocusServerCommand( void );
-// who else is in the Vision Temple: the link to the masterserver for it (voice/cg_voice.c) and what it brings
-typedef enum {
-	TEMPLE_LINK_OFF,		// nobody is asked: not in the temple, or the player wants to be alone (cg_templeLink 0, cg_voiceMaster 0)
-	TEMPLE_LINK_ASKING,		// the master is looked up or was not heard from yet
-	TEMPLE_LINK_OPEN,		// in the room: the places of the others come
-	TEMPLE_LINK_NONE,		// the master does not answer: not there, or one from before the temple
-	TEMPLE_LINK_FULL		// it has no place for one more
-} templeLink_t;
-templeLink_t	CG_VoiceTempleFrame( qboolean there, const float *origin, float yaw, const char *name );
-qboolean		CG_VoiceTempleServer( char *address, int size );
-void		CG_FocusPlace( int member, const float *origin, float yaw, const char *name );
-
 // hud/cg_hud.c: the numbers of the game by name, for the items of a menu file that show one
 qboolean	CG_StatValue( const char *name, float *value, float *max );
 void		CG_HudLoad( void );

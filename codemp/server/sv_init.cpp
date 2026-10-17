@@ -998,9 +998,6 @@ void SV_Init (void) {
 	sv_floodProtectSlow = Cvar_Get ("sv_floodProtectSlow", "1", CVAR_ARCHIVE | CVAR_SERVERINFO, "Use original method of delaying commands with flood protection" );
 	SV_IDS_Init();
 	SV_VoiceInit();
-#ifdef DEDICATED
-	SV_InstanceInit();
-#endif
 	sv_antiWallhack = Cvar_Get( "sv_antiWallhack", "0", CVAR_ARCHIVE, "1: a player no line of sight reaches is not sent to a client. Against wallhacks, and players behind walls are not heard either" );
 	// systeminfo
 	Cvar_Get ("sv_cheats", "1", CVAR_SYSTEMINFO | CVAR_ROM, "Allow cheats on server if set to 1" );
@@ -1135,9 +1132,6 @@ void SV_Shutdown( char *finalmsg )
 	SV_IDS_Shutdown();
 #ifdef VISION_MASTER
 	SV_VoiceShutdown();
-#endif
-#ifdef DEDICATED
-	SV_InstanceShutdown();
 #endif
 	SV_ShutdownGameProgs();
 	svs.gameStarted = qfalse;

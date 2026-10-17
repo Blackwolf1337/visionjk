@@ -27,29 +27,6 @@ VARYING( 5 ) flat in uint v_draw;
 
 layout( location = 0 ) out vec4 o_color;
 
-// The gold of the Vision Temple on the surfaces of a level whose shader script says so ("q3map_vision gold",
-// rd-vanilla/tr_shader.cpp): a place on them is shaded as shaders/temple.frag shades the gold it finds itself,
-// by where it is and not by a texture. (The clouds of vision.glsl are not used here, their numbers are what
-// makes the file complete.)
-#define CLOUD_ROOF	266.0
-#define CLOUD_DISC	vec3( 0.0, 0.0, 208.0 )
-#define CLOUD_LANE	vec3( -524.0, -170.0, 28.0 )
-#include "vision.glsl"
-#include "light.glsl"
-#include "gold.glsl"
-
-vec4 Gold( Draw d ) {
-	vec3 ro = TRANSFORMS( d.transform ).viewOrigin.xyz;
-	vec3 rd = normalize( v_position - ro );
-	vec3 color = goldLit( v_position, rd, d.parm.y, d.parm.z );
-	vec2 at = gl_FragCoord.xy / globals.screen.xy * 2.0 - 1.0;
-
-	color = mix( color, haze( rd ), 1.0 - exp( -length( v_position - ro ) / 6000.0 ) );
-	// a little darker towards the corners, and the curve, as the sky behind it has them
-	color *= 1.0 - 0.22 * dot( at, at );
-	return vec4( film( color * 0.62 ), 1.0 );
-}
-
 // One dynamic light on what is already drawn there, added by a pass of its own. rd-vanilla projects the round
 // light image onto every triangle along its normal and fades it with the distance of the light from the plane
 // of the triangle (tr_shade.cpp ProjectDlightTexture2). The same per pixel: tex0 is the texture of the surface,
@@ -92,10 +69,6 @@ void main() {
 #endif
 	if ( DLIGHT( d.flags ) ) {
 		o_color = DynamicLight( d );
-		return;
-	}
-	if ( VISION( d.flags ) == 1u ) {
-		o_color = Gold( d );
 		return;
 	}
 

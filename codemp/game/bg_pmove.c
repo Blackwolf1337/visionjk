@@ -10906,14 +10906,6 @@ void PmoveSingle (pmove_t *pmove) {
 
 	pm = pmove;
 
-	// Not from JA+: in the Vision Temple (game/status/g_temple.c) nobody attacks and nobody is in the way of
-	// another
-	if ( bg_visionTemple )
-	{
-		pm->cmd.buttons &= ~(BUTTON_ATTACK|BUTTON_ALT_ATTACK);
-		pm->tracemask &= ~CONTENTS_BODY;
-	}
-
 	if (pm->cmd.buttons & BUTTON_ATTACK && pm->cmd.buttons & BUTTON_USE_HOLDABLE)
 	{
 		pm->cmd.buttons &= ~BUTTON_ATTACK;

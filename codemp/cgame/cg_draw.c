@@ -8013,30 +8013,10 @@ static void CG_Draw2D( void ) {
 		return;
 	}
 
-	// under everything: the plain look of a world that stands still, where the renderer has none (focus/cg_focus.c)
-	CG_FocusTint();
-
 	if ( cg.snap->ps.pm_type == PM_INTERMISSION ) {
 		CG_DrawIntermission();
 		CG_ChatDraw();
 		// (the rows of the scoreboard can be clicked at the end of a level too)
-		CG_SelectDraw();
-		return;
-	}
-
-	// Focus (focus/cg_focus.c): the world stands still, and the numbers of the HUD would too. Drawn is what goes
-	// on: votes, who talks, what the server prints in the middle, the chat, and how to come back.
-	// (The same on the server that is the Vision Temple, where nobody fights.)
-	if ( CG_FocusActive() || bg_visionTemple ) {
-		CG_Place2D( PLACE_LEFT );
-		CG_DrawVote();
-		CG_DrawTeamVote();
-		CG_VoiceDraw();
-		CG_Place2D( PLACE_CENTER );
-		cg.scoreBoardShowing = qfalse;
-		CG_DrawCenterString();
-		CG_FocusDraw();
-		CG_ChatDraw();
 		CG_SelectDraw();
 		return;
 	}
@@ -8530,18 +8510,13 @@ void CG_DrawActive( stereoFrame_t stereoView ) {
 
 	cg.refdef.rdflags |= RDF_DRAWSKYBOX;
 
-	// (the level's own models, not in the Vision Temple: focus/cg_focus.c)
-	if ( !CG_FocusTemple() ) {
-		CG_DrawMiscStaticModels();
-	}
+	CG_DrawMiscStaticModels();
 
 	// draw 3D view
 	// the panel of the menu in the level, and where the engine is to draw the menu (menu3d/cg_menu3d.c)
 	CG_Menu3DScene();
 	// the name and the card of a player the mouse points at, which are things in the level (select/cg_select.c)
 	CG_SelectScene();
-	// the look of a world that stands still (focus/cg_focus.c)
-	CG_FocusScene();
 
 	trap->R_RenderScene( &cg.refdef );
 	// and what of them has grown for a player far away, over that scene
