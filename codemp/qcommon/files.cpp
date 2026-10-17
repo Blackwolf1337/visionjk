@@ -3831,6 +3831,29 @@ void FS_Startup( const char *gameName ) {
 		}
 	}
 
+#ifndef DEDICATED
+	// the client also searches the mod folder of this tree when a server sets another fs_game (SkyMod, base ...):
+	// the modules then come from base/, their pk3 and configs are in japlus/. Above base, below the server's
+	// folder. Not on a dedicated server, whose pure list would then name the pk3 of this tree to stock clients.
+	// The folder files are written to stays the one of the game before (configs, downloads).
+	if ( Q_stricmp( JAPLUSGAME, gameName ) && Q_stricmp( JAPLUSGAME, fs_basegame->string )
+		&& Q_stricmp( JAPLUSGAME, fs_gamedirvar->string ) ) {
+		char	writeDir[MAX_OSPATH];
+
+		Q_strncpyz( writeDir, fs_gamedir, sizeof( writeDir ) );
+		if (fs_cdpath->string[0]) {
+			FS_AddGameDirectory(fs_cdpath->string, JAPLUSGAME);
+		}
+		if (fs_basepath->string[0]) {
+			FS_AddGameDirectory(fs_basepath->string, JAPLUSGAME);
+		}
+		if (fs_homepath->string[0] && !Sys_PathCmp(fs_homepath->string, fs_basepath->string)) {
+			FS_AddGameDirectory(fs_homepath->string, JAPLUSGAME);
+		}
+		Q_strncpyz( fs_gamedir, writeDir, sizeof( fs_gamedir ) );
+	}
+#endif
+
 	// check for additional game folder for mods
 	if ( fs_gamedirvar->string[0] && Q_stricmp( fs_gamedirvar->string, gameName ) ) {
 		if (fs_cdpath->string[0]) {
@@ -4041,10 +4064,28 @@ The string has a specific order, "cgame ui @ ref1 ref2 ref3 ..."
 */
 const char *FS_ReferencedPakPureChecksums( void ) {
 	static char	info[BIG_INFO_STRING];
-	searchpath_t	*search;
-	int nFlags, numPaks, checksum;
+	searchpath_t	*search, *stock;
+	int nFlags, numPaks, checksum, lastPack, refPacks;
 
 	info[0] = 0;
+
+	/*
+		Send Basegame Checksums
+		CL_SystemInfoChanged takes no pure list, so the paks of this tree also load on pure servers. Name only
+		the stock paks to the server, from assets3 down to assets0, as TaystJK does, or
+		SV_VerifyPaks drops the client for a pak the server does not have.
+	*/
+	lastPack = -1342311474; //assets3.pk3
+	refPacks = 7;
+
+	stock = NULL;
+	for (search = fs_searchpaths; search; search = search->next) {
+		if (search->pack && search->pack->checksum == lastPack) {
+			search->pack->referenced = refPacks;
+			stock = search;
+			break;
+		}
+	}
 
 	checksum = fs_checksumFeed;
 	numPaks = 0;
@@ -4057,7 +4098,7 @@ const char *FS_ReferencedPakPureChecksums( void ) {
 			info[strlen(info)] = '@';
 			info[strlen(info)] = ' ';
 		}
-		for ( search = fs_searchpaths ; search ; search = search->next ) {
+		for ( search = stock ? stock : fs_searchpaths ; search ; search = search->next ) {
 			// is the element a pak file and has it been referenced based on flag?
 			if ( search->pack && (search->pack->referenced & nFlags)) {
 				Q_strcat( info, sizeof( info ), va("%i ", search->pack->pure_checksum ) );
@@ -4066,6 +4107,9 @@ const char *FS_ReferencedPakPureChecksums( void ) {
 				}
 				checksum ^= search->pack->pure_checksum;
 				numPaks++;
+				if ( stock && search->pack->checksum == 1767559464 ) { //assets0.pk3
+					break;
+				}
 			}
 		}
 		if (fs_fakeChkSum != 0) {

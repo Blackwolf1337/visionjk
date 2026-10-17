@@ -459,11 +459,7 @@ void CL_SystemInfoChanged( void ) {
 		Cvar_SetCheatState();
 	}
 
-	// check pure server string
-	s = Info_ValueForKey( systemInfo, "sv_paks" );
-	t = Info_ValueForKey( systemInfo, "sv_pakNames" );
-	FS_PureServerSetLoadedPaks( s, t );
-
+	// the pure list is not taken, see FS_ReferencedPakPureChecksums
 	s = Info_ValueForKey( systemInfo, "sv_referencedPaks" );
 	t = Info_ValueForKey( systemInfo, "sv_referencedPakNames" );
 	FS_PureServerSetReferencedPaks( s, t );
