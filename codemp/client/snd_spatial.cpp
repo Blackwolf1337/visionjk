@@ -286,6 +286,13 @@ static const char *spatialShockPaths[] = {
 // comes back to him off the walls from where a sound is, so a sound in the next room arrives through the doorway
 // and rings in both rooms. Each such sound has a convolution of its own, so only the loudest v_spatialSources
 // have one. The others go through the reverb of where the listener stands, as all of them did until 2026-10-17.
+// The doppler. Its own: the one of the game is only for loops the cgame gives a speed, and its factor has no
+// speed of sound in it (S_AddLoopingSound: above 1 only when the sound would be ten times as far a second later).
+#define SPATIAL_SOUND_SPEED			( 343.0f / SPATIAL_UNIT )	// units a second
+#define SPATIAL_DOPPLER_SAMPLES		1024	// the distance is measured at least this far apart in the time of the mixer
+#define SPATIAL_DOPPLER_SMOOTH		0.5f	//	and each measure moves the speed this much of the way
+#define SPATIAL_MAX_TAIL			( 4 * 44100 )	// samples a channel stays at most after its end, see S_SpatialTail()
+
 #define SPATIAL_REFLECT_SLOTS		16		// the most v_spatialSources can be. A slot is about 7 MB (its impulse
 											//	response, partitioned, and its convolution)
 #define SPATIAL_REFLECT_KEEP		2.0f	// a sound that has one keeps it against one up to this much louder
@@ -385,7 +392,12 @@ typedef struct spatialVoice_s {
 	sfx_t		*sfx;
 	qboolean	loop;
 	int			startSample;
-	float		step;				// samples of the sound per sample that is heard, above 1: doppler
+	double		readPos;			// where in the sound the next block begins, in its samples, with fractions
+	float		rate;				// samples of the sound per sample heard in the last block: 1, or the doppler
+	float		distance;			// units from the listener, this frame
+	float		lastDistance;		//	and when it was last measured for the doppler,
+	int			lastTime;			//	at this time of the mixer, -1: not yet
+	float		approach;			// units a second it comes closer to the listener, smoothed
 
 	// where, and how loud the game wants it at that distance
 	vec3_t		origin;
@@ -1250,17 +1262,15 @@ static spatialVoice_t *S_SpatialFindVoice( spatialStream_t *stream, channel_t *c
 		unused->renderedGain = 0.0f;
 		unused->sendOnly = qfalse;
 		unused->shock = channel ? S_SpatialIsExplosion( sfx ) : qfalse;
+		unused->rate = 1.0f;
+		unused->lastTime = -1;
+		unused->approach = 0.0f;
 	}
 	return unused;
 }
 
-// samples of the sound of a channel per sample that is heard
-static float S_SpatialChannelStep( const channel_t *ch ) {
-	return ( ch->doppler && ch->dopplerScale > 1 ) ? ch->dopplerScale : 1.0f;
-}
-
 static void S_SpatialPlaceVoice( spatialVoice_t *v, channel_t *channel, int entchannel, const vec3_t origin, float volume, float fade,
-	float step, qboolean voiceVolume ) {
+	qboolean voiceVolume ) {
 	float dist_mult, full, dist;
 	vec3_t d;
 
@@ -1269,7 +1279,6 @@ static void S_SpatialPlaceVoice( spatialVoice_t *v, channel_t *channel, int entc
 	v->entchannel = entchannel;
 	v->volume = volume;
 	v->gain = volume * fade;
-	v->step = step;
 	v->voiceVolume = voiceVolume;
 	VectorCopy( origin, v->origin );
 
@@ -1279,6 +1288,26 @@ static void S_SpatialPlaceVoice( spatialVoice_t *v, channel_t *channel, int entc
 	if ( dist < 1.0f ) {
 		VectorCopy( spatial.listenerAxis[0], d );
 	}
+	v->direction.x = -DotProduct( d, spatial.listenerAxis[1] );
+	v->direction.y = DotProduct( d, spatial.listenerAxis[2] );
+	v->direction.z = -DotProduct( d, spatial.listenerAxis[0] );
+
+	// How fast it comes closer, for its doppler: from distances at least SPATIAL_DOPPLER_SAMPLES of the mixer
+	// apart, smoothed. A jump faster than sound (a teleporter, the view going to another player) is no speed.
+	v->distance = dist;
+	if ( v->lastTime < 0 || s_paintedtime < v->lastTime ) {
+		v->lastTime = s_paintedtime;
+		v->lastDistance = dist;
+		v->approach = 0.0f;
+	} else if ( s_paintedtime - v->lastTime >= SPATIAL_DOPPLER_SAMPLES ) {
+		const float speed = ( v->lastDistance - dist ) * spatial.audio.samplingRate / (float)( s_paintedtime - v->lastTime );
+
+		if ( fabsf( speed ) < SPATIAL_SOUND_SPEED ) {
+			v->approach += ( speed - v->approach ) * SPATIAL_DOPPLER_SMOOTH;
+		}
+		v->lastTime = s_paintedtime;
+		v->lastDistance = dist;
+	}
 
 	// For its own reflections. Valve's impulse response is that of a source as loud at 1 m as it is, falling with
 	// 1/r, and the model of the source starts that where the game stops playing it at full volume
@@ -1287,9 +1316,30 @@ static void S_SpatialPlaceVoice( spatialVoice_t *v, channel_t *channel, int entc
 	full = S_FullVolumeDistance( entchannel, &dist_mult ) * SPATIAL_UNIT;
 	v->reflectMinDistance = Q_max( 1.0f, full );
 	v->ownScale = fade * Q_max( v->reflectMinDistance, dist * SPATIAL_UNIT );
-	v->direction.x = -DotProduct( d, spatial.listenerAxis[1] );
-	v->direction.y = DotProduct( d, spatial.listenerAxis[2] );
-	v->direction.z = -DotProduct( d, spatial.listenerAxis[0] );
+}
+
+// samples of its sound a voice reads per sample heard: the doppler of how fast it comes closer
+static float S_SpatialRate( const spatialVoice_t *v ) {
+	if ( v->stream || v->sendOnly || !s_doppler->integer ) {
+		return 1.0f;
+	}
+	return Com_Clamp( 0.5f, 2.0f, 1.0f + v->approach / SPATIAL_SOUND_SPEED );
+}
+
+// The time of the mixer a channel has to stay after the end the mixer sees for it, while its voice still reads
+// its sound (an MP3 is decoded through the channel): the doppler can make it end later.
+static int S_SpatialTail( const spatialVoice_t *v, const channel_t *ch ) {
+	const int length = ch->thesfx->iSoundLengthInSamples;
+	const float rate = Q_max( 0.5f, v->rate );
+	double end;
+
+	if ( v->fresh ) {
+		end = ch->startSample + length / rate;
+	} else {
+		end = v->rendered + ( length - v->readPos ) / rate;
+	}
+	end -= ch->startSample + length;
+	return end > 0.0 ? (int)Q_min( end, (double)SPATIAL_MAX_TAIL ) + SPATIAL_FRAME : 0;
 }
 
 // qfalse: no voice is free, the mixer plays the channel the old way
@@ -1299,8 +1349,9 @@ qboolean S_SpatialAddChannel( channel_t *ch, const vec3_t origin, float volume, 
 	if ( !v ) {
 		return qfalse;
 	}
-	S_SpatialPlaceVoice( v, ch, ch->entchannel, origin, volume, fade, S_SpatialChannelStep( ch ), voiceVolume );
+	S_SpatialPlaceVoice( v, ch, ch->entchannel, origin, volume, fade, voiceVolume );
 	v->sendOnly = qfalse;
+	ch->spatialTail = S_SpatialTail( v, ch );
 	return qtrue;
 }
 
@@ -1314,16 +1365,16 @@ void S_SpatialAddSend( channel_t *ch, float volume, qboolean voiceVolume ) {
 	}
 	v = S_SpatialFindVoice( NULL, ch, ch->entnum, ch->thesfx, (int)ch->startSample );
 	if ( v ) {
-		S_SpatialPlaceVoice( v, ch, ch->entchannel, spatial.listenerOrigin, volume, 1.0f, S_SpatialChannelStep( ch ), voiceVolume );
+		S_SpatialPlaceVoice( v, ch, ch->entchannel, spatial.listenerOrigin, volume, 1.0f, voiceVolume );
 		v->sendOnly = qtrue;
 	}
 }
 
-void S_SpatialAddLoop( int entnum, sfx_t *sfx, const vec3_t origin, float volume, float fade, float step ) {
+void S_SpatialAddLoop( int entnum, sfx_t *sfx, const vec3_t origin, float volume, float fade ) {
 	spatialVoice_t *v = S_SpatialFindVoice( NULL, NULL, entnum, sfx, 0 );
 
 	if ( v ) {
-		S_SpatialPlaceVoice( v, NULL, CHAN_AUTO, origin, volume, fade, step, qfalse );
+		S_SpatialPlaceVoice( v, NULL, CHAN_AUTO, origin, volume, fade, qfalse );
 	}
 }
 
@@ -1440,7 +1491,7 @@ static void S_SpatialGatherStreams( void ) {
 			// CHAN_VOICE_GLOBAL: how loud he is at his distance is in the volume the cgame gave, also for a way
 			// round a corner
 			S_SpatialPlaceVoice( v, NULL, CHAN_VOICE_GLOBAL, v->sendOnly ? spatial.listenerOrigin : stream->origin, stream->volume, 1.0f,
-				1.0f, qfalse );
+				qfalse );
 		}
 	}
 }
@@ -1665,10 +1716,11 @@ static void S_SpatialRingExtend( int end ) {
 	}
 }
 
-// the samples of a voice for one block from the time c. qfalse: there are none
-static qboolean S_SpatialSamples( const spatialVoice_t *v, int c, float *out ) {
+// The samples of a voice for its next block, from v->readPos on, v->rate of its sound for each sample heard.
+// qfalse: there are none.
+static qboolean S_SpatialSamples( spatialVoice_t *v, float *out ) {
 	sfx_t *sfx = v->sfx;
-	int have = 0;
+	int have = 0, length;
 
 	if ( v->stream ) {
 		// a whole block or nothing: S_SpatialEndFrame() only asks when there is one
@@ -1684,18 +1736,34 @@ static qboolean S_SpatialSamples( const spatialVoice_t *v, int c, float *out ) {
 	if ( !sfx || !sfx->bInMemory || sfx->iSoundLengthInSamples <= 0 ) {
 		return qfalse;
 	}
+	length = sfx->iSoundLengthInSamples;
 	if ( v->loop ) {
 		// round and round
 		while ( have < SPATIAL_FRAME ) {
-			const int got = S_SampleRun( sfx, NULL, v->step, SPATIAL_FRAME - have, ( c + have ) % sfx->iSoundLengthInSamples, out + have );
+			int got;
 
+			v->readPos = fmod( v->readPos, (double)length );
+			got = S_SampleRun( sfx, NULL, v->readPos, v->rate, SPATIAL_FRAME - have, qtrue, out + have );
 			if ( got <= 0 ) {
 				break;
 			}
 			have += got;
+			v->readPos += got * (double)v->rate;
 		}
-	} else if ( c >= v->startSample ) {
-		have = S_SampleRun( sfx, v->channel, v->step, SPATIAL_FRAME, c - v->startSample, out );
+	} else {
+		// what is before its start is silence (the time it takes to get here, see v_spatialPhysical)
+		while ( have < SPATIAL_FRAME && v->readPos < 0.0 ) {
+			out[have++] = 0.0f;
+			v->readPos += v->rate;
+		}
+		if ( have < SPATIAL_FRAME && v->readPos < length ) {
+			const int got = S_SampleRun( sfx, v->channel, v->readPos, v->rate, SPATIAL_FRAME - have, qfalse, out + have );
+
+			v->readPos += ( SPATIAL_FRAME - have ) * (double)v->rate;
+			have += Q_max( 0, got );
+		} else if ( have < SPATIAL_FRAME ) {
+			v->readPos += ( SPATIAL_FRAME - have ) * (double)v->rate;
+		}
 	}
 	if ( have <= 0 ) {
 		return qfalse;
@@ -1727,11 +1795,16 @@ static void S_SpatialRenderBlock( spatialVoice_t *v, float gain ) {
 
 	if ( v->fresh ) {
 		v->dryRead = c;
+		// where in its sound it begins: a loop where the time of the mixer is in it, as the mixer plays loops
+		if ( v->sfx && v->sfx->iSoundLengthInSamples > 0 ) {
+			v->readPos = v->loop ? fmod( (double)c, (double)v->sfx->iSoundLengthInSamples ) : (double)( c - v->startSample );
+		}
 	}
+	v->rate = S_SpatialRate( v );
 	v->rendered += SPATIAL_FRAME;
 	v->renderedGain = gain;
 	v->fresh = qfalse;
-	if ( !S_SpatialSamples( v, c, mono ) ) {
+	if ( !S_SpatialSamples( v, mono ) ) {
 		for ( int i = 0; i < SPATIAL_FRAME; i++ ) {
 			v->dry[( c + i ) & ( SPATIAL_DRY - 1 )] = 0.0f;
 			v->own[( c + i ) & ( SPATIAL_DRY - 1 )] = 0.0f;
@@ -2349,6 +2422,7 @@ void S_SpatialEndFrame( int from, int target ) {
 			}
 		} else if ( v->rendered < from ) {
 			// the game stood still for longer than was rendered ahead
+			v->readPos += ( from - v->rendered ) * (double)v->rate;
 			v->rendered = from;
 			v->dryRead = from;
 		}
@@ -2513,9 +2587,9 @@ static void S_SpatialInfo_f( void ) {
 			Com_Printf( "  %-40s own, reverb only, gain %.2f\n", v->stream ? "voice chat" : v->sfx->sSoundName, v->gain );
 			continue;
 		}
-		Com_Printf( "  %-40s at %.0f %.0f %.0f, %5.0f units away, gain %.2f, %3.0f %% in sight, through what hides it: %.3f %.3f %.3f%s%s\n",
+		Com_Printf( "  %-40s at %.0f %.0f %.0f, %5.0f units away, gain %.2f, doppler %.3f, %3.0f %% in sight, through what hides it: %.3f %.3f %.3f%s%s\n",
 			v->stream ? va( "voice of player %i", (int)( v->stream - spatialStreams ) ) : v->sfx->sSoundName,
-			v->origin[0], v->origin[1], v->origin[2], Distance( v->origin, spatial.listenerOrigin ), v->gain, v->directParams.occlusion * 100.0f,
+			v->origin[0], v->origin[1], v->origin[2], v->distance, v->gain, v->rate, v->directParams.occlusion * 100.0f,
 			v->directParams.transmission[0], v->directParams.transmission[1], v->directParams.transmission[2],
 			( v->shock && v_spatialShock->value > 0.0f ) ? ", thump" : "",
 			v->reflect ? ( S_SpatialReflectReady( v->reflect ) ? ", own reflections" : ", own reflections soon" ) : "" );
@@ -2908,7 +2982,7 @@ void		S_SpatialUpdate( void ) {}
 void		S_SpatialBeginFrame( const vec3_t origin, matrix3_t axis ) {}
 qboolean	S_SpatialAddChannel( channel_t *ch, const vec3_t origin, float volume, float fade, qboolean voiceVolume ) { return qfalse; }
 void		S_SpatialAddSend( channel_t *ch, float volume, qboolean voiceVolume ) {}
-void		S_SpatialAddLoop( int entnum, sfx_t *sfx, const vec3_t origin, float volume, float fade, float step ) {}
+void		S_SpatialAddLoop( int entnum, sfx_t *sfx, const vec3_t origin, float volume, float fade ) {}
 void		S_SpatialEndFrame( int from, int target ) {}
 void		S_SpatialPaint( int from, int to, portable_samplepair_t *paint ) {}
 float		S_SpatialAhead( void ) { return 0.0f; }

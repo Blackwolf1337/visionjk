@@ -1942,8 +1942,8 @@ static void S_SpatialGather( void ) {
 		if ( fade <= 0.0f ) {
 			continue;
 		}
-		S_SpatialAddLoop( loop->entnum, loop->sfx, loop->origin, loop->volume * ( 1.0f / 255.0f ), fade,
-			( loop->doppler && loop->dopplerScale > 1 ) ? loop->dopplerScale : 1.0f );
+		// its doppler is snd_spatial.cpp's own, not loop->dopplerScale
+		S_SpatialAddLoop( loop->entnum, loop->sfx, loop->origin, loop->volume * ( 1.0f / 255.0f ), fade );
 	}
 }
 
@@ -1978,8 +1978,8 @@ qboolean S_ScanChannelStarts( void ) {
 			continue;
 		}
 
-		// if it is completely finished by now, clear it
-		if ( (int)(ch->startSample + ch->thesfx->iSoundLengthInSamples) <= s_paintedtime ) {
+		// if it is completely finished by now, clear it. snd_spatial.cpp may still read it a while longer.
+		if ( (int)(ch->startSample + ch->thesfx->iSoundLengthInSamples) + ( ch->spatial ? ch->spatialTail : 0 ) <= s_paintedtime ) {
 			ch->thesfx = NULL;
 			continue;
 		}

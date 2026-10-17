@@ -42,7 +42,7 @@ void		S_SpatialBeginFrame( const vec3_t origin, matrix3_t axis );
 qboolean	S_SpatialAddChannel( channel_t *ch, const vec3_t origin, float volume, float fade, qboolean voiceVolume );
 // a sound of the own player: the mixer goes on playing it, only the reverb gets it
 void		S_SpatialAddSend( channel_t *ch, float volume, qboolean voiceVolume );
-void		S_SpatialAddLoop( int entnum, sfx_t *sfx, const vec3_t origin, float volume, float fade, float step );
+void		S_SpatialAddLoop( int entnum, sfx_t *sfx, const vec3_t origin, float volume, float fade );
 void		S_SpatialEndFrame( int from, int target );
 float		S_SpatialAhead( void );
 
