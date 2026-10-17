@@ -642,6 +642,33 @@ void Svcmd_Say_f( void ) {
 	WebAdmin_Chat( "server", NULL, NULL, text );
 }
 
+/*
+=================
+Svcmd_Toggle
+
+<command> <player>, server console and rcon: one of the fun states of a player on or off (the files of fun/)
+=================
+*/
+static void Svcmd_Toggle( qboolean (*toggle)( gentity_t *ent ) ) {
+	char		cmd[MAX_TOKEN_CHARS], arg[MAX_TOKEN_CHARS];
+	gclient_t	*cl;
+
+	trap->Argv( 0, cmd, sizeof( cmd ) );
+	if ( trap->Argc() < 2 ) {
+		trap->Print( "Usage: %s <player>\n", cmd );
+		return;
+	}
+	trap->Argv( 1, arg, sizeof( arg ) );
+	if ( !(cl = ClientForString( arg )) )
+		return;
+
+	trap->Print( "%s %s for %s\n", cmd, toggle( &g_entities[cl - level.clients] ) ? "on" : "off", cl->pers.netname );
+}
+
+static void Svcmd_Disorient_f( void )	{ Svcmd_Toggle( G_DisorientToggle ); }
+static void Svcmd_Flatulence_f( void )	{ Svcmd_Toggle( G_FlatulenceToggle ); }
+static void Svcmd_Schizo_f( void )		{ Svcmd_Toggle( G_SchizoToggle ); }
+
 typedef struct svcmd_s {
 	const char	*name;
 	void		(*func)(void);

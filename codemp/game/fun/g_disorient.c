@@ -221,25 +221,3 @@ qboolean G_DisorientToggle( gentity_t *ent ) {
 	d->nextLurch = level.time + 2000;
 	return on;
 }
-
-/*
-=================
-Svcmd_Disorient_f
-
-disorient <player>: server console and rcon
-=================
-*/
-void Svcmd_Disorient_f( void ) {
-	char		arg[MAX_TOKEN_CHARS];
-	gclient_t	*cl;
-
-	if ( trap->Argc() < 2 ) {
-		trap->Print( "Usage: disorient <player>\n" );
-		return;
-	}
-	trap->Argv( 1, arg, sizeof( arg ) );
-	if ( !(cl = ClientForString( arg )) )
-		return;
-
-	trap->Print( "disorient %s for %s\n", G_DisorientToggle( &g_entities[cl - level.clients] ) ? "on" : "off", cl->pers.netname );
-}

@@ -146,25 +146,3 @@ qboolean G_FlatulenceToggle( gentity_t *ent ) {
 	flatulence[num].next = level.time + 500;
 	return flatulence[num].active;
 }
-
-/*
-=================
-Svcmd_Flatulence_f
-
-flatulence <player>: server console and rcon
-=================
-*/
-void Svcmd_Flatulence_f( void ) {
-	char		arg[MAX_TOKEN_CHARS];
-	gclient_t	*cl;
-
-	if ( trap->Argc() < 2 ) {
-		trap->Print( "Usage: flatulence <player>\n" );
-		return;
-	}
-	trap->Argv( 1, arg, sizeof( arg ) );
-	if ( !(cl = ClientForString( arg )) )
-		return;
-
-	trap->Print( "flatulence %s for %s\n", G_FlatulenceToggle( &g_entities[cl - level.clients] ) ? "on" : "off", cl->pers.netname );
-}

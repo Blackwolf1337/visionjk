@@ -1347,7 +1347,6 @@ float G_PropPlayerSpeed( const gentity_t *ent );
 qboolean G_SchizoToggle( gentity_t *ent );
 qboolean G_SchizoActive( int clientNum );
 void G_SchizoFrame( void );
-void Svcmd_Schizo_f( void );
 
 // g_japlus_cmds.c: the parts of amhug, for the player who is carried with +button13 (g_props.c)
 void JP_HolsterNow( gentity_t *ent );
@@ -1363,13 +1362,11 @@ void G_PoopFrame( void );
 qboolean G_FlatulenceToggle( gentity_t *ent );
 qboolean G_FlatulenceActive( int clientNum );
 void G_FlatulenceFrame( void );
-void Svcmd_Flatulence_f( void );
 
 // g_disorient.c: a player whose view sways and is thrown around
 qboolean G_DisorientToggle( gentity_t *ent );
 qboolean G_DisorientActive( int clientNum );
 void G_DisorientFrame( void );
-void Svcmd_Disorient_f( void );
 
 // g_spawn.c, for the entity editor
 int G_NumSpawnClassnames( void );

@@ -750,25 +750,3 @@ qboolean G_SchizoToggle( gentity_t *ent ) {
 	s->stalkerNext = level.time + Q_irand( 5000, 12000 );
 	return s->active;
 }
-
-/*
-=================
-Svcmd_Schizo_f
-
-schizo <player>: server console and rcon
-=================
-*/
-void Svcmd_Schizo_f( void ) {
-	char		arg[MAX_TOKEN_CHARS];
-	gclient_t	*cl;
-
-	if ( trap->Argc() < 2 ) {
-		trap->Print( "Usage: schizo <player>\n" );
-		return;
-	}
-	trap->Argv( 1, arg, sizeof( arg ) );
-	if ( !(cl = ClientForString( arg )) )
-		return;
-
-	trap->Print( "schizo %s for %s\n", G_SchizoToggle( &g_entities[cl - level.clients] ) ? "on" : "off", cl->pers.netname );
-}
