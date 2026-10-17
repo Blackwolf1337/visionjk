@@ -74,6 +74,148 @@ static void Cmd_Wait_f( void ) {
 
 /*
 ============
+Delayed commands
+
+"tay_delay <ms>" and "tay_waitf <frames>", TaystJK's delay and waitf (2026-10-17): what follows in the buffer is kept aside and
+put back when the time or the frames are over, while everything else goes on: "bind x +attack;delay 300;-attack".
+"tay_delaycancel <text>" and "tay_waitfcancel <text>" drop what is kept and has the text in it, an empty text all of it.
+============
+*/
+#define MAX_PENDING_CMDS	64
+
+typedef struct pendingCmd_s {
+	char		*text;			// Z_Malloc, the rest of the buffer
+	qboolean	frames;			// waitf: `when` is a frame number, else Com_Milliseconds
+	int			when;
+} pendingCmd_t;
+
+static pendingCmd_t	pendingCmds[MAX_PENDING_CMDS];
+
+extern int com_frameNumber;
+
+// "tay_delay 500" or "tay_waitf 2": qtrue and the number, which is at least 1
+static qboolean Cbuf_IsDelay( const char *line, qboolean *frames, int *amount ) {
+	const char *p = line;
+
+	while ( *p == ' ' || *p == '\t' ) {
+		p++;
+	}
+	if ( !Q_stricmpn( p, "tay_delay", 9 ) && ( p[9] == ' ' || p[9] == '\t' || !p[9] ) ) {
+		*frames = qfalse;
+	} else if ( !Q_stricmpn( p, "tay_waitf", 9 ) && ( p[9] == ' ' || p[9] == '\t' || !p[9] ) ) {
+		*frames = qtrue;
+	} else {
+		return qfalse;
+	}
+	p += 9;
+	while ( *p == ' ' || *p == '\t' ) {
+		p++;
+	}
+	*amount = 1;
+	if ( *p >= '0' && *p <= '9' ) {
+		*amount = Q_max( 1, atoi( p ) );
+	}
+	return qtrue;
+}
+
+static void Cbuf_KeepPending( qboolean frames, int amount, const char *text, int len ) {
+	for ( int i = 0; i < MAX_PENDING_CMDS; i++ ) {
+		pendingCmd_t *pc = &pendingCmds[i];
+
+		if ( pc->text ) {
+			continue;
+		}
+		pc->text = (char *)Z_Malloc( len + 1, TAG_SMALL, qfalse );
+		Com_Memcpy( pc->text, text, len );
+		pc->text[len] = '\0';
+		pc->frames = frames;
+		pc->when = ( frames ? com_frameNumber : Com_Milliseconds() ) + amount;
+		return;
+	}
+	Com_Printf( "Too many delayed commands, %i at most: this one is dropped\n", MAX_PENDING_CMDS );
+}
+
+/*
+============
+Cbuf_CheckPending
+
+Once a frame: what is due goes back into the buffer and is run
+============
+*/
+void Cbuf_CheckPending( void ) {
+	qboolean added = qfalse;
+
+	for ( int i = 0; i < MAX_PENDING_CMDS; i++ ) {
+		pendingCmd_t *pc = &pendingCmds[i];
+		char *text = pc->text;
+
+		if ( !text || ( pc->frames ? com_frameNumber : Com_Milliseconds() ) < pc->when ) {
+			continue;
+		}
+		pc->text = NULL;
+		Cbuf_AddText( text );
+		Cbuf_AddText( "\n" );
+		Z_Free( text );
+		added = qtrue;
+	}
+	if ( added && cmd_wait <= 0 ) {
+		Cbuf_Execute();
+	}
+}
+
+static void Cmd_CancelPending( qboolean frames ) {
+	const char	*match;
+	int			count = 0;
+
+	if ( Cmd_Argc() != 2 ) {
+		Com_Printf( "%s <text> : drop the %s commands that have the text in them, \"\" all\n", Cmd_Argv( 0 ),
+			frames ? "tay_waitf" : "tay_delay" );
+		return;
+	}
+	match = Cmd_Argv( 1 );
+	for ( int i = 0; i < MAX_PENDING_CMDS; i++ ) {
+		pendingCmd_t *pc = &pendingCmds[i];
+
+		if ( pc->text && pc->frames == frames && ( !match[0] || Q_stristr( pc->text, match ) ) ) {
+			Z_Free( pc->text );
+			pc->text = NULL;
+			count++;
+		}
+	}
+	Com_Printf( "%i dropped\n", count );
+}
+
+static void Cmd_DelayCancel_f( void ) {
+	Cmd_CancelPending( qfalse );
+}
+
+static void Cmd_WaitfCancel_f( void ) {
+	Cmd_CancelPending( qtrue );
+}
+
+// only reached when nothing follows it in the buffer
+static void Cmd_Delay_f( void ) {
+	const qboolean frames = (qboolean)!Q_stricmp( Cmd_Argv( 0 ), "tay_waitf" );
+
+	Com_Printf( "%s <%s>;<commands> : run the commands later, as in \"+attack;%s %s;-attack\"\n", Cmd_Argv( 0 ),
+		frames ? "frames" : "milliseconds", Cmd_Argv( 0 ), frames ? "2" : "300" );
+}
+
+/*
+============
+Cmd_OpensQuote
+
+Nested quotes, TaystJK's rule: a quote opens a quote inside a quote when a character other than a space, a quote
+or ';' follows it and no quote comes before it. So  bind x "say "a b""  binds  say "a b". Used for the command
+buffer and the commands run here, not for what a server or a client sends.
+============
+*/
+static qboolean Cmd_OpensQuote( char prev, char next ) {
+	return (qboolean)( next && !isspace( (unsigned char)next ) && next != '"' && next != ';' && prev != '"' );
+}
+
+/*
+============
 Cbuf_Init
 ============
 */
@@ -201,10 +343,15 @@ void Cbuf_Execute (void)
 		quotes = 0;
 		for (i=0 ; i< cmd_text.cursize ; i++)
 		{
-			if (text[i] == '"')
-				quotes++;
+			if (text[i] == '"') {
+				// a quote outside quotes always opens one, as before
+				if ( !quotes || Cmd_OpensQuote( text[i - 1], i + 1 < cmd_text.cursize ? text[i + 1] : '\0' ) )
+					quotes++;
+				else if ( quotes )
+					quotes--;
+			}
 
-			if ( !(quotes&1)) {
+			if ( !quotes ) {
 				if (i < cmd_text.cursize - 1) {
 					if (! in_star_comment && text[i] == '/' && text[i+1] == '/')
 						in_slash_comment = qtrue;
@@ -246,6 +393,18 @@ void Cbuf_Execute (void)
 			i++;
 			cmd_text.cursize -= i;
 			memmove (text, text+i, cmd_text.cursize);
+		}
+
+		// delay and waitf keep what follows aside
+		{
+			qboolean	frames;
+			int			amount;
+
+			if ( cmd_text.cursize && Cbuf_IsDelay( line, &frames, &amount ) ) {
+				Cbuf_KeepPending( frames, amount, (const char *)cmd_text.data, cmd_text.cursize );
+				cmd_text.cursize = 0;
+				break;
+			}
 		}
 
 // execute the command line
@@ -315,6 +474,175 @@ static void Cmd_Vstr_f( void ) {
 
 	v = Cvar_VariableString( Cmd_Argv( 1 ) );
 	Cbuf_InsertText( va("%s\n", v ) );
+}
+
+/*
+===============
+tay_ifCvar and tay_strSub
+
+TaystJK's ifCvar and strSub (2026-10-17), with its syntax:
+  tay_ifCvar <cvar> <test> <count> <command ...> [<test> <count> <command ...>] ...
+  tay_strSub <command ...>  with $cvar$ replaced by the value of the cvar, $$ is a $
+A test is a value (equal as text), or $=, $!=, $>, $<, $>=, $<= with a number, $contains, $beginswith, $endswith with
+a text, or $else. A value that begins with $ is the value of that cvar. <count> is the words of the command,
+itself included. Neither gives out a password (a cvar the engine hides, or one with "pass" or "pwd" in its name),
+so a script from a server can not say it.
+===============
+*/
+static const char *Cmd_ScriptCvar( const char *name ) {
+	if ( ( Cvar_Flags( name ) & CVAR_INTERNAL ) && !( Cvar_Flags( name ) & CVAR_NONEXISTENT ) ) {
+		return "";
+	}
+	if ( Q_stristr( name, "pass" ) || Q_stristr( name, "pwd" ) ) {
+		return "";
+	}
+	return Cvar_VariableString( name );
+}
+
+// the words from..to-1 as one command, a word with a space in quotes
+static void Cmd_JoinArgs( int from, int to, char *out, int outSize ) {
+	out[0] = '\0';
+	for ( int i = from; i < to && i < Cmd_Argc(); i++ ) {
+		const char *word = Cmd_Argv( i );
+
+		if ( i > from ) {
+			Q_strcat( out, outSize, " " );
+		}
+		if ( strchr( word, ' ' ) ) {
+			Q_strcat( out, outSize, va( "\"%s\"", word ) );
+		} else {
+			Q_strcat( out, outSize, word );
+		}
+	}
+}
+
+static qboolean Cmd_IfCvarTest( const char *value, const char *test ) {
+	static const struct {
+		const char	*op;
+		int			kind;		// 0 number, 1 contains, 2 begins, 3 ends
+	} ops[] = {
+		{ "$!=", 0 }, { "$>=", 0 }, { "$<=", 0 }, { "$=", 0 }, { "$>", 0 }, { "$<", 0 },
+		{ "$contains", 1 }, { "$beginswith", 2 }, { "$startswith", 2 }, { "$endswith", 3 },
+	};
+	const char	*arg;
+	size_t		i;
+
+	if ( !Q_stricmp( test, "$else" ) ) {
+		return qtrue;
+	}
+	for ( i = 0; i < ARRAY_LEN( ops ); i++ ) {
+		if ( !Q_stricmpn( test, ops[i].op, strlen( ops[i].op ) ) ) {
+			break;
+		}
+	}
+	arg = i < ARRAY_LEN( ops ) ? test + strlen( ops[i].op ) : test;
+	if ( arg[0] == '$' && arg[1] ) {
+		arg = Cmd_ScriptCvar( arg + 1 );
+	}
+	if ( i == ARRAY_LEN( ops ) ) {
+		return (qboolean)!Q_stricmp( value, arg );
+	}
+
+	switch ( ops[i].kind ) {
+	case 0: {
+		const float a = atof( value ), b = atof( arg );
+		const char *op = ops[i].op;
+
+		if ( !strcmp( op, "$!=" ) ) return (qboolean)( a != b );
+		if ( !strcmp( op, "$>=" ) ) return (qboolean)( a >= b );
+		if ( !strcmp( op, "$<=" ) ) return (qboolean)( a <= b );
+		if ( !strcmp( op, "$>" ) ) return (qboolean)( a > b );
+		if ( !strcmp( op, "$<" ) ) return (qboolean)( a < b );
+		return (qboolean)( a == b );
+	}
+	case 1:
+		return (qboolean)( arg[0] && Q_stristr( value, arg ) );
+	case 2:
+		return (qboolean)( arg[0] && !Q_stricmpn( value, arg, strlen( arg ) ) );
+	default: {
+		const size_t len = strlen( arg ), valueLen = strlen( value );
+
+		return (qboolean)( len && len <= valueLen && !Q_stricmp( value + valueLen - len, arg ) );
+	}
+	}
+}
+
+static void Cmd_IfCvar_f( void ) {
+	char	value[MAX_CVAR_VALUE_STRING];
+	char	command[MAX_STRING_CHARS];
+	int		i;
+
+	if ( Cmd_Argc() < 5 ) {
+		Com_Printf( "tay_ifCvar <cvar> <test> <count> <command ...> [<test> <count> <command ...>] ...\n" );
+		Com_Printf( "A test is a value, or $=, $!=, $>, $<, $>=, $<= with a number, $contains, $beginswith, $endswith with a text,"
+			" or $else. A value beginning with $ is that cvar's. <count> is the words of the command, itself included.\n" );
+		Com_Printf( "Example: tay_ifCvar cg_thirdPerson 0 3 set cg_thirdPerson 1 $else 3 set cg_thirdPerson 0\n" );
+		return;
+	}
+
+	Q_strncpyz( value, Cmd_ScriptCvar( Cmd_Argv( 1 ) ), sizeof( value ) );
+	for ( i = 2; i + 1 < Cmd_Argc(); ) {
+		const int count = atoi( Cmd_Argv( i + 1 ) );
+
+		if ( count < 1 || i + 2 + count > Cmd_Argc() ) {
+			Com_Printf( "tay_ifCvar: \"%s\" is not the number of words of the command that follows\n", Cmd_Argv( i + 1 ) );
+			return;
+		}
+		if ( Cmd_IfCvarTest( value, Cmd_Argv( i ) ) ) {
+			Cmd_JoinArgs( i + 2, i + 2 + count, command, sizeof( command ) );
+			Cbuf_InsertText( command );
+			return;
+		}
+		i += 2 + count;
+	}
+}
+
+static void Cmd_StrSub_f( void ) {
+	char	command[MAX_STRING_CHARS];
+	char	*out = command;
+	char	*const end = command + sizeof( command ) - 1;
+
+	if ( Cmd_Argc() < 2 ) {
+		Com_Printf( "tay_strSub <command ...> : runs the command with $cvar$ replaced by the value of the cvar, $$ is a $\n" );
+		Com_Printf( "Example: tay_strSub say_team my fov is $cg_fov$\n" );
+		return;
+	}
+
+	for ( int i = 1; i < Cmd_Argc() && out < end; i++ ) {
+		char		word[MAX_STRING_CHARS];
+		char		*w = word;
+		const char	*r = Cmd_Argv( i );
+
+		while ( *r && w < word + sizeof( word ) - 1 ) {
+			const char *close;
+
+			if ( r[0] == '$' && r[1] == '$' ) {
+				*w++ = '$';
+				r += 2;
+			} else if ( r[0] == '$' && ( close = strchr( r + 1, '$' ) ) != NULL && close - r - 1 < MAX_CVAR_VALUE_STRING ) {
+				char		name[MAX_CVAR_VALUE_STRING];
+				const char	*v;
+
+				Q_strncpyz( name, r + 1, close - r );
+				for ( v = Cmd_ScriptCvar( name ); *v && w < word + sizeof( word ) - 1; ) {
+					*w++ = *v++;
+				}
+				r = close + 1;
+			} else {
+				*w++ = *r++;
+			}
+		}
+		*w = '\0';
+
+		if ( i > 1 && out < end ) {
+			*out++ = ' ';
+		}
+		*out = '\0';
+		Q_strcat( command, sizeof( command ), strchr( word, ' ' ) ? va( "\"%s\"", word ) : word );
+		out = command + strlen( command );
+	}
+	*out = '\0';
+	Cbuf_InsertText( command );
 }
 
 
@@ -512,7 +840,7 @@ will point into this temporary buffer.
 */
 // NOTE TTimo define that to track tokenization issues
 //#define TKN_DBG
-static void Cmd_TokenizeString2( const char *text_in, qboolean ignoreQuotes ) {
+static void Cmd_TokenizeString2( const char *text_in, qboolean ignoreQuotes, qboolean nestedQuotes = qfalse ) {
 	const char	*text;
 	char	*textOut;
 
@@ -569,10 +897,21 @@ static void Cmd_TokenizeString2( const char *text_in, qboolean ignoreQuotes ) {
 		// handle quoted strings
     // NOTE TTimo this doesn't handle \" escaping
 		if ( !ignoreQuotes && *text == '"' ) {
+			int level = 0;		// quotes inside the quote, which stay in the token
+
 			cmd_argv[cmd_argc] = textOut;
 			cmd_argc++;
 			text++;
-			while ( *text && *text != '"' ) {
+			while ( *text ) {
+				if ( *text == '"' ) {
+					if ( nestedQuotes && Cmd_OpensQuote( text[-1], text[1] ) ) {
+						level++;
+					} else if ( !level ) {
+						break;
+					} else {
+						level--;
+					}
+				}
 				*textOut++ = *text++;
 			}
 			*textOut++ = 0;
@@ -823,7 +1162,7 @@ void	Cmd_ExecuteString( const char *text ) {
 	cmd_function_t	*cmd, **prev;
 
 	// execute the command line
-	Cmd_TokenizeString( text );
+	Cmd_TokenizeString2( text, qfalse, qtrue );
 	if ( !Cmd_Argc() ) {
 		return;		// no tokens
 	}
@@ -989,7 +1328,13 @@ void Cmd_Init (void) {
 	Cmd_SetCommandCompletionFunc( "exec", Cmd_CompleteCfgName );
 	Cmd_SetCommandCompletionFunc( "execq", Cmd_CompleteCfgName );
 	Cmd_AddCommand( "vstr", Cmd_Vstr_f, "Execute the value of a cvar" );
+	Cmd_AddCommand( "tay_ifCvar", Cmd_IfCvar_f, "Run a command chosen by the value of a cvar" );
+	Cmd_AddCommand( "tay_strSub", Cmd_StrSub_f, "Run a command with $cvar$ replaced by the value of the cvar" );
 	Cmd_SetCommandCompletionFunc( "vstr", Cvar_CompleteCvarName );
 	Cmd_AddCommand( "wait", Cmd_Wait_f, "Pause command buffer execution" );
+	Cmd_AddCommand( "tay_delay", Cmd_Delay_f, "Run what follows after some milliseconds: tay_delay 300;-attack" );
+	Cmd_AddCommand( "tay_waitf", Cmd_Delay_f, "Run what follows after some frames: tay_waitf 2;-attack" );
+	Cmd_AddCommand( "tay_delaycancel", Cmd_DelayCancel_f, "Drop delayed commands that have a text in them, \"\" all" );
+	Cmd_AddCommand( "tay_waitfcancel", Cmd_WaitfCancel_f, "Drop tay_waitf commands that have a text in them, \"\" all" );
 }
 

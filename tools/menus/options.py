@@ -51,6 +51,7 @@ class Layout:
 #   ('yesno', name, cvar, what for)             a row the old menus did not have
 #   ('slider', name, cvar, default, least, most, what for)
 #   ('multi', name, cvar, ((name, value), ...), what for)
+#   ('multistr', name, cvar, ((name, text), ...), what for)  the same for a cvar that holds a text
 #   ('edit' | 'secret', name, cvar, letters, what for)
 #   ('bind', name, command, what for)
 SETUP = [
@@ -137,6 +138,50 @@ SETUP = [
         ('secret', 'Clan Password', 'cp_clanPwd', 32,
          'Clan chat and clan radio reach everybody on the server who has the same one. The server sees it.'),
     ]),
+    ('TaystJK', 'What came from the TaystJK client: HUD, movement, hats and capes and more.', [
+        ('head', 'HUD'),
+        ('yesno', 'Killfeed', 'tay_killfeed', 'Who killed whom with what, at the upper right.'),
+        ('slider', 'Team Overlay Size', 'tay_teamOverlayScale', 1, 0.5, 2.5, 'How large the list of your team mates is.'),
+        ('multistr', 'Crosshair Colour', 'tay_crosshairColor',
+         (('White', ''), ('Green', '0.2 1 0.3 1'), ('Cyan', '0.2 0.9 1 1'), ('Yellow', '1 0.9 0.2 1'), ('Orange', '1 0.5 0 1'),
+          ('Red', '1 0.2 0.2 1'), ('Pink', '1 0.4 0.9 1')),
+         'The colour of the crosshair with nothing under it.'),
+        ('slider', 'Name Opacity', 'tay_crosshairNamesOpacity', 0.5, 0, 1, 'How clearly the name of the player under the crosshair shows.'),
+        ('head', 'Movement'),
+        ('yesno', 'Speedometer', 'tay_speedometer', 'Your speed under the crosshair, and the speeds of your last jumps.'),
+        ('yesno', 'Strafe Helper', 'tay_strafeHelper', 'A bar under the crosshair that shows where to turn to gain speed.'),
+        ('yesno', 'Snap HUD', 'tay_snapHud', 'In the air, the angles where the rounding of the game gives a little more speed.'),
+        ('yesno', 'Pitch HUD', 'tay_pitchHud', 'A mark where your view would be at a chosen pitch.'),
+        ('multi', 'Strafe Trails', 'tay_strafeTrail', (('Off', 0), ('Mine', 1), ('Everybody', 2)),
+         'A fading line on the ground along where players ran.'),
+        ('head', 'Hats and Capes'),
+        ('multistr', 'Hat', 'tay_hat',
+         (('None', ''), ('Afro', 'afro'), ('Beard', 'beard'), ('Bucket', 'bucket'), ('Cap', 'cap'), ('Propeller Cap', 'cringe'),
+          ('Crown', 'crown'), ('Fedora', 'fedora'), ('Fedora 2', 'fedora2'), ('Fedora 3', 'fedora3'), ('Fedora 4', 'fedora4'),
+          ('Glasses', 'glasses'), ('Graduation Cap', 'gradcap'), ('Headcrab', 'headcrab'), ('Horns', 'horns'),
+          ('Mario Cap', 'mario'), ('Mask', 'mask'), ('Metal Helmet', 'metalhelm'), ('Plague Mask', 'plaguemask'),
+          ('Predator Helmet', 'predatorhelm'), ('Pumpkin', 'pumpkin'), ('Santa Hat', 'santahat'), ('Sombrero', 'sombrero'),
+          ('Super Saiyan Hair', 'supersaiyan'), ('Top Hat', 'tophat')),
+         'What you wear on your head. Other players of VisionJK see it.'),
+        ('multistr', 'Cape', 'tay_cape',
+         (('None', ''), ('Royal Cape', 'royalcape'), ('Vader Cape', 'vadercape'), ('Yoda', 'yodacape'), ('Grogu', 'grogucape'),
+          ('Goose', 'goose'), ('Crowbar', 'crowbar'), ('AK-47', 'ak47'), ('Rocket Launcher', 'rpg')),
+         'What you wear on your back. Other players of VisionJK see it.'),
+        ('multi', 'Show Them', 'tay_showCosmetics', (('Off', 0), ("Everybody's", 1), ('Mine on Everybody', 2)),
+         'What players wear on their heads and backs. Only players of VisionJK wear them.'),
+        ('yesno', 'Seasonal Hats', 'tay_seasonalCosmetics', 'A Santa hat at Christmas and a pumpkin at Halloween for those without a hat.'),
+        ('head', 'Looks'),
+        ('edit', 'Enemy Model', 'tay_forceEnemyModel', 32, 'Every opponent in this model, as model/skin. Empty: as they chose.'),
+        ('edit', 'Ally Model', 'tay_forceAllyModel', 32, 'Every team mate in this model, as model/skin. Empty: as they chose.'),
+        ('yesno', 'Saber Team Colours', 'tay_saberTeamColors', 'In team games every blade in the colour of its team. Off: blades keep their colour.'),
+        ('yesno', 'Two-Coloured Staff', 'tay_saberStaffColors', 'The second blade of a staff in the second saber colour.'),
+        ('yesno', 'Jedi Outcast Shots', 'tay_jk2Effects', 'Shots drawn as crisply as in Jedi Outcast. Counts from the next level.'),
+        ('multi', 'Disruptor Beam', 'tay_disruptorBeam', (('Game', 0), ('Line', 1), ('Spiral', 2)), 'How the shot of the disruptor looks.'),
+        ('head', 'Chat and Console'),
+        ('yesno', 'Chat Emoji', 'tay_chatEmoji', 'Codes like :smile: are drawn as pictures in the chat box.'),
+        ('yesno', 'Chat Log', 'tay_chatLog', 'Every chat line is written into the folder chatlogs, with the time.'),
+        ('multi', 'Console Clock', 'tay_consoleClock', (('Off', 0), ('Time', 1), ('Date and Time', 2)), 'A clock in the corner of the console.'),
+    ]),
     ('Network', 'Updates, downloads and security.', [
         ('head', 'Updates and Downloads'),
         ('yesno', 'Check for Updates', 'v_updateCheck', 'Ask at every start whether a newer version is out.'),
@@ -182,7 +227,8 @@ KEEP = ('name', 'group', 'type', 'text', 'cvar', 'cvarfloat', 'cvarfloatlist', '
 # the cvars the presets of the row "3D Sound" set (uiSpatialPresets in codemp/ui/ui_main.c)
 SOUND_PRESET_CVARS = ('v_spatialreflections', 'v_spatialpaths', 'v_spatialsources')
 
-TYPES = {'yesno': 'ITEM_TYPE_YESNO', 'slider': 'ITEM_TYPE_SLIDER', 'multi': 'ITEM_TYPE_MULTI', 'edit': 'ITEM_TYPE_EDITFIELD',
+TYPES = {'yesno': 'ITEM_TYPE_YESNO', 'slider': 'ITEM_TYPE_SLIDER', 'multi': 'ITEM_TYPE_MULTI', 'multistr': 'ITEM_TYPE_MULTI',
+         'edit': 'ITEM_TYPE_EDITFIELD',
          'secret': 'ITEM_TYPE_EDITFIELD', 'bind': 'ITEM_TYPE_BIND'}
 SETTINGS = ('item_type_yesno', 'item_type_slider', 'item_type_multi', 'item_type_editfield', 'item_type_numericfield',
             'item_type_bind', 'item_type_button', '1', '4', '9', '10', '11', '12', '13')
@@ -347,6 +393,11 @@ def new_row(spec):
         for name, value in spec[3]:
             words += [ref(name) if name in texts.TR else quoted(name), mf.fmt(value)]
         b.append(Entry('cvarFloatList', [], words))
+    elif kind == 'multistr':
+        words = []
+        for name, value in spec[3]:
+            words += [ref(name) if name in texts.TR else quoted(name), quoted(value)]
+        b.append(Entry('cvarStrList', [], words))
     elif kind in ('edit', 'secret'):
         b += [Entry('maxChars', [str(spec[3])]), Entry('maxPaintChars', ['24'])]
     action = list(CLICK)

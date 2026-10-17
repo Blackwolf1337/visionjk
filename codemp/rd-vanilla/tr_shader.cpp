@@ -4067,10 +4067,11 @@ a single large text block that can be scanned for shader names
 #define	MAX_SHADER_FILES	4096
 static void ScanAndLoadShaderFiles( void )
 {
-	char **shaderFiles;
+	char **shaderFiles, **overrideFiles;
 	char *buffers[MAX_SHADER_FILES];
+	const char *names[MAX_SHADER_FILES];
 	const char *p;
-	int numShaderFiles;
+	int numShaderFiles, numOverrideFiles;
 	int i;
 	char *oldp, *token, *hashMem, *textEnd;
 	int shaderTextHashTableSizes[MAX_SHADERTEXT_HASH], hash, size;
@@ -4090,13 +4091,27 @@ static void ScanAndLoadShaderFiles( void )
 	if ( numShaderFiles > MAX_SHADER_FILES ) {
 		numShaderFiles = MAX_SHADER_FILES;
 	}
+	for ( i = 0; i < numShaderFiles; i++ ) {
+		names[i] = shaderFiles[i];
+	}
+
+	// Overrides, as TaystJK has them (2026-10-17): a shader in shaders/*.oshader takes the place of the one of that
+	// name in any .shader file, without a copy of the rest of that file. The text is put together from the last
+	// file to the first and the first shader of a name in it is used, so the overrides go last.
+	overrideFiles = ri.FS_ListFiles( "shaders", ".oshader", &numOverrideFiles );
+	for ( i = 0; i < numOverrideFiles && numShaderFiles < MAX_SHADER_FILES; i++ ) {
+		names[numShaderFiles++] = overrideFiles[i];
+	}
+	if ( numOverrideFiles ) {
+		ri.Printf( PRINT_ALL, "%i shader override files (.oshader)\n", numOverrideFiles );
+	}
 
 	// load and parse shader files
 	for ( i = 0; i < numShaderFiles; i++ )
 	{
 		char filename[MAX_QPATH];
 
-		Com_sprintf( filename, sizeof( filename ), "shaders/%s", shaderFiles[i] );
+		Com_sprintf( filename, sizeof( filename ), "shaders/%s", names[i] );
 		ri.Printf( PRINT_DEVELOPER, "...loading '%s'\n", filename );
 		summand = ri.FS_ReadFile( filename, (void **)&buffers[i] );
 
@@ -4176,6 +4191,9 @@ static void ScanAndLoadShaderFiles( void )
 
 	// free up memory
 	ri.FS_FreeFileList( shaderFiles );
+	if ( overrideFiles ) {
+		ri.FS_FreeFileList( overrideFiles );
+	}
 
 	memset(shaderTextHashTableSizes, 0, sizeof(shaderTextHashTableSizes));
 	size = 0;

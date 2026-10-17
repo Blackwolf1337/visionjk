@@ -233,6 +233,9 @@ LANG_ENGLISH        "Echoes of Their Own"
 REFERENCE           HOW_MANY_OF_THE_LOUDEST_SOUNDS_ECHO
 LANG_ENGLISH        "How many of the loudest sounds echo off the walls around them. More costs more time a frame."
 
+REFERENCE           OFF
+LANG_ENGLISH        "Off"
+
 REFERENCE           SOUND_AROUND_CORNERS
 LANG_ENGLISH        "Sound Around Corners"
 
@@ -512,6 +515,288 @@ LANG_ENGLISH        "Clan Password"
 REFERENCE           CLAN_CHAT_AND_CLAN_RADIO_REACH_EVERY
 LANG_ENGLISH        "Clan chat and clan radio reach everybody on the server who has the same one. The server sees it."
 
+REFERENCE           HUD
+LANG_ENGLISH        "HUD"
+
+REFERENCE           KILLFEED
+LANG_ENGLISH        "Killfeed"
+
+REFERENCE           WHO_KILLED_WHOM_WITH_WHAT_AT_THE_UPP
+LANG_ENGLISH        "Who killed whom with what, at the upper right."
+
+REFERENCE           TEAM_OVERLAY_SIZE
+LANG_ENGLISH        "Team Overlay Size"
+
+REFERENCE           HOW_LARGE_THE_LIST_OF_YOUR_TEAM_MATE
+LANG_ENGLISH        "How large the list of your team mates is."
+
+REFERENCE           CROSSHAIR_COLOUR
+LANG_ENGLISH        "Crosshair Colour"
+
+REFERENCE           THE_COLOUR_OF_THE_CROSSHAIR_WITH_NOT
+LANG_ENGLISH        "The colour of the crosshair with nothing under it."
+
+REFERENCE           WHITE
+LANG_ENGLISH        "White"
+
+REFERENCE           CYAN
+LANG_ENGLISH        "Cyan"
+
+REFERENCE           YELLOW
+LANG_ENGLISH        "Yellow"
+
+REFERENCE           ORANGE
+LANG_ENGLISH        "Orange"
+
+REFERENCE           PINK
+LANG_ENGLISH        "Pink"
+
+REFERENCE           NAME_OPACITY
+LANG_ENGLISH        "Name Opacity"
+
+REFERENCE           HOW_CLEARLY_THE_NAME_OF_THE_PLAYER_U
+LANG_ENGLISH        "How clearly the name of the player under the crosshair shows."
+
+REFERENCE           MOVEMENT
+LANG_ENGLISH        "Movement"
+
+REFERENCE           SPEEDOMETER
+LANG_ENGLISH        "Speedometer"
+
+REFERENCE           YOUR_SPEED_UNDER_THE_CROSSHAIR_AND_T
+LANG_ENGLISH        "Your speed under the crosshair, and the speeds of your last jumps."
+
+REFERENCE           STRAFE_HELPER
+LANG_ENGLISH        "Strafe Helper"
+
+REFERENCE           A_BAR_UNDER_THE_CROSSHAIR_THAT_SHOWS
+LANG_ENGLISH        "A bar under the crosshair that shows where to turn to gain speed."
+
+REFERENCE           SNAP_HUD
+LANG_ENGLISH        "Snap HUD"
+
+REFERENCE           IN_THE_AIR_THE_ANGLES_WHERE_THE_ROUN
+LANG_ENGLISH        "In the air, the angles where the rounding of the game gives a little more speed."
+
+REFERENCE           PITCH_HUD
+LANG_ENGLISH        "Pitch HUD"
+
+REFERENCE           A_MARK_WHERE_YOUR_VIEW_WOULD_BE_AT_A
+LANG_ENGLISH        "A mark where your view would be at a chosen pitch."
+
+REFERENCE           STRAFE_TRAILS
+LANG_ENGLISH        "Strafe Trails"
+
+REFERENCE           A_FADING_LINE_ON_THE_GROUND_ALONG_WH
+LANG_ENGLISH        "A fading line on the ground along where players ran."
+
+REFERENCE           MINE
+LANG_ENGLISH        "Mine"
+
+REFERENCE           EVERYBODY
+LANG_ENGLISH        "Everybody"
+
+REFERENCE           HATS_AND_CAPES
+LANG_ENGLISH        "Hats and Capes"
+
+REFERENCE           HAT
+LANG_ENGLISH        "Hat"
+
+REFERENCE           WHAT_YOU_WEAR_ON_YOUR_HEAD_OTHER_PLA
+LANG_ENGLISH        "What you wear on your head. Other players of VisionJK see it."
+
+REFERENCE           AFRO
+LANG_ENGLISH        "Afro"
+
+REFERENCE           BEARD
+LANG_ENGLISH        "Beard"
+
+REFERENCE           BUCKET
+LANG_ENGLISH        "Bucket"
+
+REFERENCE           CAP
+LANG_ENGLISH        "Cap"
+
+REFERENCE           PROPELLER_CAP
+LANG_ENGLISH        "Propeller Cap"
+
+REFERENCE           CROWN
+LANG_ENGLISH        "Crown"
+
+REFERENCE           FEDORA
+LANG_ENGLISH        "Fedora"
+
+REFERENCE           FEDORA_2
+LANG_ENGLISH        "Fedora 2"
+
+REFERENCE           FEDORA_3
+LANG_ENGLISH        "Fedora 3"
+
+REFERENCE           FEDORA_4
+LANG_ENGLISH        "Fedora 4"
+
+REFERENCE           GLASSES
+LANG_ENGLISH        "Glasses"
+
+REFERENCE           GRADUATION_CAP
+LANG_ENGLISH        "Graduation Cap"
+
+REFERENCE           HEADCRAB
+LANG_ENGLISH        "Headcrab"
+
+REFERENCE           HORNS
+LANG_ENGLISH        "Horns"
+
+REFERENCE           MARIO_CAP
+LANG_ENGLISH        "Mario Cap"
+
+REFERENCE           MASK
+LANG_ENGLISH        "Mask"
+
+REFERENCE           METAL_HELMET
+LANG_ENGLISH        "Metal Helmet"
+
+REFERENCE           PLAGUE_MASK
+LANG_ENGLISH        "Plague Mask"
+
+REFERENCE           PREDATOR_HELMET
+LANG_ENGLISH        "Predator Helmet"
+
+REFERENCE           PUMPKIN
+LANG_ENGLISH        "Pumpkin"
+
+REFERENCE           SANTA_HAT
+LANG_ENGLISH        "Santa Hat"
+
+REFERENCE           SOMBRERO
+LANG_ENGLISH        "Sombrero"
+
+REFERENCE           SUPER_SAIYAN_HAIR
+LANG_ENGLISH        "Super Saiyan Hair"
+
+REFERENCE           TOP_HAT
+LANG_ENGLISH        "Top Hat"
+
+REFERENCE           CAPE
+LANG_ENGLISH        "Cape"
+
+REFERENCE           WHAT_YOU_WEAR_ON_YOUR_BACK_OTHER_PLA
+LANG_ENGLISH        "What you wear on your back. Other players of VisionJK see it."
+
+REFERENCE           ROYAL_CAPE
+LANG_ENGLISH        "Royal Cape"
+
+REFERENCE           VADER_CAPE
+LANG_ENGLISH        "Vader Cape"
+
+REFERENCE           YODA
+LANG_ENGLISH        "Yoda"
+
+REFERENCE           GROGU
+LANG_ENGLISH        "Grogu"
+
+REFERENCE           GOOSE
+LANG_ENGLISH        "Goose"
+
+REFERENCE           CROWBAR
+LANG_ENGLISH        "Crowbar"
+
+REFERENCE           AK_47
+LANG_ENGLISH        "AK-47"
+
+REFERENCE           ROCKET_LAUNCHER
+LANG_ENGLISH        "Rocket Launcher"
+
+REFERENCE           SHOW_THEM
+LANG_ENGLISH        "Show Them"
+
+REFERENCE           WHAT_PLAYERS_WEAR_ON_THEIR_HEADS_AND
+LANG_ENGLISH        "What players wear on their heads and backs. Only players of VisionJK wear them."
+
+REFERENCE           EVERYBODY_S
+LANG_ENGLISH        "Everybody's"
+
+REFERENCE           MINE_ON_EVERYBODY
+LANG_ENGLISH        "Mine on Everybody"
+
+REFERENCE           SEASONAL_HATS
+LANG_ENGLISH        "Seasonal Hats"
+
+REFERENCE           A_SANTA_HAT_AT_CHRISTMAS_AND_A_PUMPK
+LANG_ENGLISH        "A Santa hat at Christmas and a pumpkin at Halloween for those without a hat."
+
+REFERENCE           LOOKS
+LANG_ENGLISH        "Looks"
+
+REFERENCE           ENEMY_MODEL
+LANG_ENGLISH        "Enemy Model"
+
+REFERENCE           EVERY_OPPONENT_IN_THIS_MODEL_AS_MODE
+LANG_ENGLISH        "Every opponent in this model, as model/skin. Empty: as they chose."
+
+REFERENCE           ALLY_MODEL
+LANG_ENGLISH        "Ally Model"
+
+REFERENCE           EVERY_TEAM_MATE_IN_THIS_MODEL_AS_MOD
+LANG_ENGLISH        "Every team mate in this model, as model/skin. Empty: as they chose."
+
+REFERENCE           SABER_TEAM_COLOURS
+LANG_ENGLISH        "Saber Team Colours"
+
+REFERENCE           IN_TEAM_GAMES_EVERY_BLADE_IN_THE_COL
+LANG_ENGLISH        "In team games every blade in the colour of its team. Off: blades keep their colour."
+
+REFERENCE           TWO_COLOURED_STAFF
+LANG_ENGLISH        "Two-Coloured Staff"
+
+REFERENCE           THE_SECOND_BLADE_OF_A_STAFF_IN_THE_S
+LANG_ENGLISH        "The second blade of a staff in the second saber colour."
+
+REFERENCE           JEDI_OUTCAST_SHOTS
+LANG_ENGLISH        "Jedi Outcast Shots"
+
+REFERENCE           SHOTS_DRAWN_AS_CRISPLY_AS_IN_JEDI_OU
+LANG_ENGLISH        "Shots drawn as crisply as in Jedi Outcast. Counts from the next level."
+
+REFERENCE           DISRUPTOR_BEAM
+LANG_ENGLISH        "Disruptor Beam"
+
+REFERENCE           HOW_THE_SHOT_OF_THE_DISRUPTOR_LOOKS
+LANG_ENGLISH        "How the shot of the disruptor looks."
+
+REFERENCE           LINE
+LANG_ENGLISH        "Line"
+
+REFERENCE           SPIRAL
+LANG_ENGLISH        "Spiral"
+
+REFERENCE           CHAT_AND_CONSOLE
+LANG_ENGLISH        "Chat and Console"
+
+REFERENCE           CHAT_EMOJI
+LANG_ENGLISH        "Chat Emoji"
+
+REFERENCE           CODES_LIKE_SMILE_ARE_DRAWN_AS_PICTUR
+LANG_ENGLISH        "Codes like :smile: are drawn as pictures in the chat box."
+
+REFERENCE           CHAT_LOG
+LANG_ENGLISH        "Chat Log"
+
+REFERENCE           EVERY_CHAT_LINE_IS_WRITTEN_INTO_THE
+LANG_ENGLISH        "Every chat line is written into the folder chatlogs, with the time."
+
+REFERENCE           CONSOLE_CLOCK
+LANG_ENGLISH        "Console Clock"
+
+REFERENCE           A_CLOCK_IN_THE_CORNER_OF_THE_CONSOLE
+LANG_ENGLISH        "A clock in the corner of the console."
+
+REFERENCE           TIME
+LANG_ENGLISH        "Time"
+
+REFERENCE           DATE_AND_TIME
+LANG_ENGLISH        "Date and Time"
+
 REFERENCE           UPDATES_AND_DOWNLOADS
 LANG_ENGLISH        "Updates and Downloads"
 
@@ -574,6 +859,12 @@ LANG_ENGLISH        "Chat & Social"
 
 REFERENCE           THE_CHAT_BOX_BUBBLES_AND_WHAT_STANDS
 LANG_ENGLISH        "The chat box, bubbles and what stands above the heads."
+
+REFERENCE           TAYSTJK
+LANG_ENGLISH        "TaystJK"
+
+REFERENCE           WHAT_CAME_FROM_THE_TAYSTJK_CLIENT_HU
+LANG_ENGLISH        "What came from the TaystJK client: HUD, movement, hats and capes and more."
 
 REFERENCE           NETWORK
 LANG_ENGLISH        "Network"

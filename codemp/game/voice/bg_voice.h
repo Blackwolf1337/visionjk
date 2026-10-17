@@ -80,6 +80,14 @@ to a client		"VO" version 6 client token[4] sequence[2] flags distance			what bo
 
 The songs come as VOICE_AUDIO of speaker MAX_CLIENTS + the box, to the clients that hear the box. What the bytes
 of type 6 are is in bg_boombox.h.
+
+Hats and capes (2026-10-17, cgame/look/cg_look.c): a master that hands them on says so in every answer
+(VOICE_FLAG_LOOKS). A client that saw the flag says its look every few seconds, the names of its hat and its cape
+as one text ("-" for none), and the master hands that only to the sessions of the room that send looks
+themselves, so no client from before ever gets the type:
+
+to the master	"VO" version 7 client token[4] sequence[2]							text
+to a client		"VO" version 7 client token[4] sequence[2] flags distance			text
 */
 
 #pragma once
@@ -103,6 +111,7 @@ of type 6 are is in bg_boombox.h.
 #define VOICE_STATUS			4		// through the masterserver only: what stands above the head of a player
 // 5: the Vision Temple of 0.1.6 and 0.1.7, removed. Not to be used again.
 #define VOICE_BOX				6		// through the masterserver only: a box of the boombox (bg_boombox.h)
+#define VOICE_LOOK				7		// through the masterserver only: the hat and the cape of a player
 
 #define VOICE_ROOM_BYTES		16
 #define VOICE_STATE_BYTES		( VOICE_ROOM_BYTES + 8 )	// what a VOICE_STATE to the master carries after its head
@@ -121,6 +130,7 @@ of type 6 are is in bg_boombox.h.
 #define VOICE_FLAG_SOCIAL		16		// the answer of the master: it knows the long state, VOICE_RADIO and VOICE_STATUS
 #define VOICE_FLAG_BOXES		32		// the answer of the master: it plays boxes, it knows VOICE_BOX and the state with the boxes
 #define VOICE_FLAG_BOXLIST		64		//	and what came for them after 0.1.8: BOX_DO_SEEK, BOX_DO_DROP, BOX_DO_WATCH (bg_boombox.h)
+#define VOICE_FLAG_LOOKS		128		// the answer of the master: it hands on VOICE_LOOK
 #define VOICE_CAP_RADIO			1		// in the answer to "vs_voiceLink hello": the relay knows VOICE_RADIO
 #define VOICE_DISTANCE_STEP		16		// the distance byte counts in steps of this many units
 
@@ -189,6 +199,7 @@ const byte	*BG_VoiceStateClan( const voicePacket_t *p );
 qboolean	BG_VoiceStateBoxes( const voicePacket_t *p, int *boxes );
 int			BG_VoiceStatusPack( byte out[VOICE_STATUS_TEXT], qboolean away, const char *text );
 qboolean	BG_VoiceStatusUnpack( const voicePacket_t *p, qboolean *away, char *text, int textSize );
+qboolean	BG_VoiceLookUnpack( const voicePacket_t *p, char *text, int textSize );
 
 void		BG_VoiceQueueReset( voiceQueue_t *q );
 qboolean	BG_VoiceQueuePut( voiceQueue_t *q, int seq, const byte *data, int len );

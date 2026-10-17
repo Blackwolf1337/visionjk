@@ -1761,6 +1761,7 @@ qboolean	CG_ChatKeyEvent( int key, qboolean down );
 void		CG_ChatOpen_f( void );
 qboolean	CG_ChatOpenFor( int mode, int target );
 void		CG_ChatDrag_f( void );
+void		CG_ChatEmoji_f( void );
 void		CG_ChatClose( void );
 
 // bubble/cg_bubble.c: chat bubbles above the heads
@@ -1865,6 +1866,33 @@ void CG_Place2D( place2D_t place );
 void CG_AdjustFrom640( float *x, float *y, float *w, float *h );
 void CG_FillSides( const float *color );
 void CG_DrawPicWide( qhandle_t hShader );
+qhandle_t CG_WidePicture( const char *name, const char *wideName );
+
+// hud/cg_killfeed.c
+void CG_KillfeedAdd( int killer, int victim, int mod, const char *text );
+float CG_KillfeedDraw( float y );
+
+// tay_forceEnemyModel, tay_forceAllyModel (cg_players.c, cg_cvar.c)
+qboolean CG_IsAlly( team_t team );
+void CG_ForcedModelsCheck( void );
+
+// cg_strafetrail.c
+void CG_StrafeTrailsAdd( void );
+
+// look/cg_look.c: hats and capes
+void CG_LookInit( void );
+void CG_LookFrame( void );
+void CG_LookServerCommand( void );
+void CG_LookFromMaster( int client, const char *text );
+void CG_LookClear( int client );
+void CG_LookPlayerInfo( int client, const char *c1, const char *c2, const char *c5 );
+void CG_LookDraw( centity_t *cent, clientInfo_t *ci, const refEntity_t *body );
+void CG_Cosmetics_f( void );
+qboolean CG_VoiceLooks( void );
+void CG_VoiceSendLook( const char *text );
+
+// hud/cg_movehud.c
+void CG_MoveHudDraw( void );
 void CG_DrawStretchPic( float x, float y, float w, float h, float s1, float t1, float s2, float t2, qhandle_t hShader );
 void CG_Font_DrawString( int ox, int oy, const char *text, const float *rgba, const int setIndex, int iCharLimit, const float scale );
 void CG_FillRect( float x, float y, float width, float height, const float *color );

@@ -143,9 +143,9 @@ void CG_DrawInformation( void ) {
 	sysInfo = CG_ConfigString( CS_SYSTEMINFO );
 
 	s = Info_ValueForKey( info, "mapname" );
-	levelshot = trap->R_RegisterShaderNoMip( va( "levelshots/%s", s ) );
+	levelshot = CG_WidePicture( va( "levelshots/%s", s ), va( "levelshots_16_9/%s", s ) );
 	if ( !levelshot ) {
-		levelshot = trap->R_RegisterShaderNoMip( "menu/art/unknownmap_mp" );
+		levelshot = CG_WidePicture( "menu/art/unknownmap_mp", "menu/art/unknownmap_mp_16_9" );
 	}
 	trap->R_SetColor( NULL );
 	CG_DrawPicWide( levelshot );

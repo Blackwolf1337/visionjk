@@ -281,6 +281,7 @@ static void CG_Obituary( entityState_t *ent ) {
 		message = (char *)CG_GetStringEdString("MP_INGAME", message);
 
 		trap->Print( "%s %s\n", targetName, message);
+		CG_KillfeedAdd( ENTITYNUM_WORLD, target, mod, va( "%s %s", targetName, message ) );
 		return;
 	}
 
@@ -460,12 +461,14 @@ clientkilled:
 
 			trap->Print( "%s %s %s\n",
 				targetName, message, attackerName);
+			CG_KillfeedAdd( attacker, target, mod, va( "%s %s %s", targetName, message, attackerName ) );
 			return;
 		}
 	}
 
 	// we don't know what it was
 	trap->Print( "%s %s\n", targetName, (char *)CG_GetStringEdString("MP_INGAME", "DIED_GENERIC") );
+	CG_KillfeedAdd( ENTITYNUM_WORLD, target, mod, va( "%s %s", targetName, CG_GetStringEdString( "MP_INGAME", "DIED_GENERIC" ) ) );
 }
 
 //==========================================================================
@@ -2472,7 +2475,8 @@ void CG_EntityEvent( centity_t *cent, vec3_t position ) {
 				VectorCopy(cg.lastFPFlashPoint, cent->currentState.origin2);
 			}
 		}
-		FX_DisruptorMainShot( cent->currentState.origin2, cent->lerpOrigin );
+		if ( !FX_DisruptorBeam( cent->currentState.eventParm, cent->currentState.origin2, cent->lerpOrigin, qfalse ) )
+			FX_DisruptorMainShot( cent->currentState.origin2, cent->lerpOrigin );
 		break;
 
 	case EV_DISRUPTOR_SNIPER_SHOT:
@@ -2489,7 +2493,8 @@ void CG_EntityEvent( centity_t *cent, vec3_t position ) {
 				VectorCopy(cg.lastFPFlashPoint, cent->currentState.origin2);
 			}
 		}
-		FX_DisruptorAltShot( cent->currentState.origin2, cent->lerpOrigin, cent->currentState.shouldtarget );
+		if ( !FX_DisruptorBeam( cent->currentState.eventParm, cent->currentState.origin2, cent->lerpOrigin, qtrue ) )
+			FX_DisruptorAltShot( cent->currentState.origin2, cent->lerpOrigin, cent->currentState.shouldtarget );
 		break;
 
 	case EV_DISRUPTOR_SNIPER_MISS:

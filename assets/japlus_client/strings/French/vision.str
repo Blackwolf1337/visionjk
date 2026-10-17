@@ -309,6 +309,10 @@ REFERENCE           HOW_MANY_OF_THE_LOUDEST_SOUNDS_ECHO
 LANG_ENGLISH        "How many of the loudest sounds echo off the walls around them. More costs more time a frame."
 LANG_FRENCH         "Combien des sons les plus forts résonnent sur les murs autour d'eux. Plus coûte plus de temps par image."
 
+REFERENCE           OFF
+LANG_ENGLISH        "Off"
+LANG_FRENCH         "Non"
+
 REFERENCE           SOUND_AROUND_CORNERS
 LANG_ENGLISH        "Sound Around Corners"
 LANG_FRENCH         "Son autour des angles"
@@ -681,6 +685,382 @@ REFERENCE           CLAN_CHAT_AND_CLAN_RADIO_REACH_EVERY
 LANG_ENGLISH        "Clan chat and clan radio reach everybody on the server who has the same one. The server sees it."
 LANG_FRENCH         "Le chat et la radio du clan atteignent tous ceux du serveur qui ont le même. Le serveur le voit."
 
+REFERENCE           HUD
+LANG_ENGLISH        "HUD"
+LANG_FRENCH         "#same"
+
+REFERENCE           KILLFEED
+LANG_ENGLISH        "Killfeed"
+LANG_FRENCH         "Liste des éliminations"
+
+REFERENCE           WHO_KILLED_WHOM_WITH_WHAT_AT_THE_UPP
+LANG_ENGLISH        "Who killed whom with what, at the upper right."
+LANG_FRENCH         "Qui a éliminé qui et avec quoi, en haut à droite."
+
+REFERENCE           TEAM_OVERLAY_SIZE
+LANG_ENGLISH        "Team Overlay Size"
+LANG_FRENCH         "Taille de la liste d'équipe"
+
+REFERENCE           HOW_LARGE_THE_LIST_OF_YOUR_TEAM_MATE
+LANG_ENGLISH        "How large the list of your team mates is."
+LANG_FRENCH         "La taille de la liste de vos coéquipiers."
+
+REFERENCE           CROSSHAIR_COLOUR
+LANG_ENGLISH        "Crosshair Colour"
+LANG_FRENCH         "Couleur du réticule"
+
+REFERENCE           THE_COLOUR_OF_THE_CROSSHAIR_WITH_NOT
+LANG_ENGLISH        "The colour of the crosshair with nothing under it."
+LANG_FRENCH         "La couleur du réticule quand il ne vise rien."
+
+REFERENCE           WHITE
+LANG_ENGLISH        "White"
+LANG_FRENCH         "Blanc"
+
+REFERENCE           CYAN
+LANG_ENGLISH        "Cyan"
+LANG_FRENCH         "#same"
+
+REFERENCE           YELLOW
+LANG_ENGLISH        "Yellow"
+LANG_FRENCH         "Jaune"
+
+REFERENCE           ORANGE
+LANG_ENGLISH        "Orange"
+LANG_FRENCH         "#same"
+
+REFERENCE           PINK
+LANG_ENGLISH        "Pink"
+LANG_FRENCH         "Rose"
+
+REFERENCE           NAME_OPACITY
+LANG_ENGLISH        "Name Opacity"
+LANG_FRENCH         "Opacité des noms"
+
+REFERENCE           HOW_CLEARLY_THE_NAME_OF_THE_PLAYER_U
+LANG_ENGLISH        "How clearly the name of the player under the crosshair shows."
+LANG_FRENCH         "La netteté du nom du joueur sous le réticule."
+
+REFERENCE           MOVEMENT
+LANG_ENGLISH        "Movement"
+LANG_FRENCH         "Mouvement"
+
+REFERENCE           SPEEDOMETER
+LANG_ENGLISH        "Speedometer"
+LANG_FRENCH         "Compteur de vitesse"
+
+REFERENCE           YOUR_SPEED_UNDER_THE_CROSSHAIR_AND_T
+LANG_ENGLISH        "Your speed under the crosshair, and the speeds of your last jumps."
+LANG_FRENCH         "Votre vitesse sous le réticule, et celle de vos derniers sauts."
+
+REFERENCE           STRAFE_HELPER
+LANG_ENGLISH        "Strafe Helper"
+LANG_FRENCH         "Aide au strafe"
+
+REFERENCE           A_BAR_UNDER_THE_CROSSHAIR_THAT_SHOWS
+LANG_ENGLISH        "A bar under the crosshair that shows where to turn to gain speed."
+LANG_FRENCH         "Une barre sous le réticule qui montre où tourner pour gagner de la vitesse."
+
+REFERENCE           SNAP_HUD
+LANG_ENGLISH        "Snap HUD"
+LANG_FRENCH         "Affichage du snap"
+
+REFERENCE           IN_THE_AIR_THE_ANGLES_WHERE_THE_ROUN
+LANG_ENGLISH        "In the air, the angles where the rounding of the game gives a little more speed."
+LANG_FRENCH         "En l'air, les angles où l'arrondi du jeu donne un peu plus de vitesse."
+
+REFERENCE           PITCH_HUD
+LANG_ENGLISH        "Pitch HUD"
+LANG_FRENCH         "Repère d'inclinaison"
+
+REFERENCE           A_MARK_WHERE_YOUR_VIEW_WOULD_BE_AT_A
+LANG_ENGLISH        "A mark where your view would be at a chosen pitch."
+LANG_FRENCH         "Un repère là où serait votre vue à une inclinaison choisie."
+
+REFERENCE           STRAFE_TRAILS
+LANG_ENGLISH        "Strafe Trails"
+LANG_FRENCH         "Traces de course"
+
+REFERENCE           A_FADING_LINE_ON_THE_GROUND_ALONG_WH
+LANG_ENGLISH        "A fading line on the ground along where players ran."
+LANG_FRENCH         "Une ligne qui s'efface au sol, là où les joueurs ont couru."
+
+REFERENCE           MINE
+LANG_ENGLISH        "Mine"
+LANG_FRENCH         "La mienne"
+
+REFERENCE           EVERYBODY
+LANG_ENGLISH        "Everybody"
+LANG_FRENCH         "Tout le monde"
+
+REFERENCE           HATS_AND_CAPES
+LANG_ENGLISH        "Hats and Capes"
+LANG_FRENCH         "Chapeaux et capes"
+
+REFERENCE           HAT
+LANG_ENGLISH        "Hat"
+LANG_FRENCH         "Chapeau"
+
+REFERENCE           WHAT_YOU_WEAR_ON_YOUR_HEAD_OTHER_PLA
+LANG_ENGLISH        "What you wear on your head. Other players of VisionJK see it."
+LANG_FRENCH         "Ce que vous portez sur la tête. Les autres joueurs de VisionJK le voient."
+
+REFERENCE           AFRO
+LANG_ENGLISH        "Afro"
+LANG_FRENCH         "#same"
+
+REFERENCE           BEARD
+LANG_ENGLISH        "Beard"
+LANG_FRENCH         "Barbe"
+
+REFERENCE           BUCKET
+LANG_ENGLISH        "Bucket"
+LANG_FRENCH         "Seau"
+
+REFERENCE           CAP
+LANG_ENGLISH        "Cap"
+LANG_FRENCH         "Casquette"
+
+REFERENCE           PROPELLER_CAP
+LANG_ENGLISH        "Propeller Cap"
+LANG_FRENCH         "Casquette à hélice"
+
+REFERENCE           CROWN
+LANG_ENGLISH        "Crown"
+LANG_FRENCH         "Couronne"
+
+REFERENCE           FEDORA
+LANG_ENGLISH        "Fedora"
+LANG_FRENCH         "#same"
+
+REFERENCE           FEDORA_2
+LANG_ENGLISH        "Fedora 2"
+LANG_FRENCH         "#same"
+
+REFERENCE           FEDORA_3
+LANG_ENGLISH        "Fedora 3"
+LANG_FRENCH         "#same"
+
+REFERENCE           FEDORA_4
+LANG_ENGLISH        "Fedora 4"
+LANG_FRENCH         "#same"
+
+REFERENCE           GLASSES
+LANG_ENGLISH        "Glasses"
+LANG_FRENCH         "Lunettes"
+
+REFERENCE           GRADUATION_CAP
+LANG_ENGLISH        "Graduation Cap"
+LANG_FRENCH         "Toque de diplômé"
+
+REFERENCE           HEADCRAB
+LANG_ENGLISH        "Headcrab"
+LANG_FRENCH         "#same"
+
+REFERENCE           HORNS
+LANG_ENGLISH        "Horns"
+LANG_FRENCH         "Cornes"
+
+REFERENCE           MARIO_CAP
+LANG_ENGLISH        "Mario Cap"
+LANG_FRENCH         "Casquette de Mario"
+
+REFERENCE           MASK
+LANG_ENGLISH        "Mask"
+LANG_FRENCH         "Masque"
+
+REFERENCE           METAL_HELMET
+LANG_ENGLISH        "Metal Helmet"
+LANG_FRENCH         "Casque de métal"
+
+REFERENCE           PLAGUE_MASK
+LANG_ENGLISH        "Plague Mask"
+LANG_FRENCH         "Masque de peste"
+
+REFERENCE           PREDATOR_HELMET
+LANG_ENGLISH        "Predator Helmet"
+LANG_FRENCH         "Casque de Predator"
+
+REFERENCE           PUMPKIN
+LANG_ENGLISH        "Pumpkin"
+LANG_FRENCH         "Citrouille"
+
+REFERENCE           SANTA_HAT
+LANG_ENGLISH        "Santa Hat"
+LANG_FRENCH         "Bonnet de Noël"
+
+REFERENCE           SOMBRERO
+LANG_ENGLISH        "Sombrero"
+LANG_FRENCH         "#same"
+
+REFERENCE           SUPER_SAIYAN_HAIR
+LANG_ENGLISH        "Super Saiyan Hair"
+LANG_FRENCH         "Cheveux de Super Saiyan"
+
+REFERENCE           TOP_HAT
+LANG_ENGLISH        "Top Hat"
+LANG_FRENCH         "Haut-de-forme"
+
+REFERENCE           CAPE
+LANG_ENGLISH        "Cape"
+LANG_FRENCH         "#same"
+
+REFERENCE           WHAT_YOU_WEAR_ON_YOUR_BACK_OTHER_PLA
+LANG_ENGLISH        "What you wear on your back. Other players of VisionJK see it."
+LANG_FRENCH         "Ce que vous portez sur le dos. Les autres joueurs de VisionJK le voient."
+
+REFERENCE           ROYAL_CAPE
+LANG_ENGLISH        "Royal Cape"
+LANG_FRENCH         "Cape royale"
+
+REFERENCE           VADER_CAPE
+LANG_ENGLISH        "Vader Cape"
+LANG_FRENCH         "Cape de Vador"
+
+REFERENCE           YODA
+LANG_ENGLISH        "Yoda"
+LANG_FRENCH         "#same"
+
+REFERENCE           GROGU
+LANG_ENGLISH        "Grogu"
+LANG_FRENCH         "#same"
+
+REFERENCE           GOOSE
+LANG_ENGLISH        "Goose"
+LANG_FRENCH         "Oie"
+
+REFERENCE           CROWBAR
+LANG_ENGLISH        "Crowbar"
+LANG_FRENCH         "Pied-de-biche"
+
+REFERENCE           AK_47
+LANG_ENGLISH        "AK-47"
+LANG_FRENCH         "#same"
+
+REFERENCE           ROCKET_LAUNCHER
+LANG_ENGLISH        "Rocket Launcher"
+LANG_FRENCH         "Lance-roquettes"
+
+REFERENCE           SHOW_THEM
+LANG_ENGLISH        "Show Them"
+LANG_FRENCH         "Afficher"
+
+REFERENCE           WHAT_PLAYERS_WEAR_ON_THEIR_HEADS_AND
+LANG_ENGLISH        "What players wear on their heads and backs. Only players of VisionJK wear them."
+LANG_FRENCH         "Ce que les joueurs portent sur la tête et le dos. Seuls les joueurs de VisionJK en portent."
+
+REFERENCE           EVERYBODY_S
+LANG_ENGLISH        "Everybody's"
+LANG_FRENCH         "Ceux de chacun"
+
+REFERENCE           MINE_ON_EVERYBODY
+LANG_ENGLISH        "Mine on Everybody"
+LANG_FRENCH         "Les miens sur tous"
+
+REFERENCE           SEASONAL_HATS
+LANG_ENGLISH        "Seasonal Hats"
+LANG_FRENCH         "Chapeaux de saison"
+
+REFERENCE           A_SANTA_HAT_AT_CHRISTMAS_AND_A_PUMPK
+LANG_ENGLISH        "A Santa hat at Christmas and a pumpkin at Halloween for those without a hat."
+LANG_FRENCH         "Un bonnet de Noël à Noël et une citrouille à Halloween pour ceux qui n'ont pas de chapeau."
+
+REFERENCE           LOOKS
+LANG_ENGLISH        "Looks"
+LANG_FRENCH         "Apparence"
+
+REFERENCE           ENEMY_MODEL
+LANG_ENGLISH        "Enemy Model"
+LANG_FRENCH         "Modèle des ennemis"
+
+REFERENCE           EVERY_OPPONENT_IN_THIS_MODEL_AS_MODE
+LANG_ENGLISH        "Every opponent in this model, as model/skin. Empty: as they chose."
+LANG_FRENCH         "Chaque adversaire avec ce modèle, sous la forme modèle/skin. Vide : comme ils l'ont choisi."
+
+REFERENCE           ALLY_MODEL
+LANG_ENGLISH        "Ally Model"
+LANG_FRENCH         "Modèle des alliés"
+
+REFERENCE           EVERY_TEAM_MATE_IN_THIS_MODEL_AS_MOD
+LANG_ENGLISH        "Every team mate in this model, as model/skin. Empty: as they chose."
+LANG_FRENCH         "Chaque coéquipier avec ce modèle, sous la forme modèle/skin. Vide : comme ils l'ont choisi."
+
+REFERENCE           SABER_TEAM_COLOURS
+LANG_ENGLISH        "Saber Team Colours"
+LANG_FRENCH         "Couleurs d'équipe des sabres"
+
+REFERENCE           IN_TEAM_GAMES_EVERY_BLADE_IN_THE_COL
+LANG_ENGLISH        "In team games every blade in the colour of its team. Off: blades keep their colour."
+LANG_FRENCH         "En équipe, chaque lame a la couleur de son équipe. Non : les lames gardent leur couleur."
+
+REFERENCE           TWO_COLOURED_STAFF
+LANG_ENGLISH        "Two-Coloured Staff"
+LANG_FRENCH         "Bâton bicolore"
+
+REFERENCE           THE_SECOND_BLADE_OF_A_STAFF_IN_THE_S
+LANG_ENGLISH        "The second blade of a staff in the second saber colour."
+LANG_FRENCH         "La seconde lame du bâton dans la seconde couleur de sabre."
+
+REFERENCE           JEDI_OUTCAST_SHOTS
+LANG_ENGLISH        "Jedi Outcast Shots"
+LANG_FRENCH         "Tirs comme dans Jedi Outcast"
+
+REFERENCE           SHOTS_DRAWN_AS_CRISPLY_AS_IN_JEDI_OU
+LANG_ENGLISH        "Shots drawn as crisply as in Jedi Outcast. Counts from the next level."
+LANG_FRENCH         "Tirs dessinés aussi nets que dans Jedi Outcast. Prend effet au prochain niveau."
+
+REFERENCE           DISRUPTOR_BEAM
+LANG_ENGLISH        "Disruptor Beam"
+LANG_FRENCH         "Rayon du disrupteur"
+
+REFERENCE           HOW_THE_SHOT_OF_THE_DISRUPTOR_LOOKS
+LANG_ENGLISH        "How the shot of the disruptor looks."
+LANG_FRENCH         "L'aspect du tir du disrupteur."
+
+REFERENCE           LINE
+LANG_ENGLISH        "Line"
+LANG_FRENCH         "Ligne"
+
+REFERENCE           SPIRAL
+LANG_ENGLISH        "Spiral"
+LANG_FRENCH         "Spirale"
+
+REFERENCE           CHAT_AND_CONSOLE
+LANG_ENGLISH        "Chat and Console"
+LANG_FRENCH         "Chat et console"
+
+REFERENCE           CHAT_EMOJI
+LANG_ENGLISH        "Chat Emoji"
+LANG_FRENCH         "Émojis du chat"
+
+REFERENCE           CODES_LIKE_SMILE_ARE_DRAWN_AS_PICTUR
+LANG_ENGLISH        "Codes like :smile: are drawn as pictures in the chat box."
+LANG_FRENCH         "Les codes comme :smile: sont affichés en images dans la boîte de chat."
+
+REFERENCE           CHAT_LOG
+LANG_ENGLISH        "Chat Log"
+LANG_FRENCH         "Journal du chat"
+
+REFERENCE           EVERY_CHAT_LINE_IS_WRITTEN_INTO_THE
+LANG_ENGLISH        "Every chat line is written into the folder chatlogs, with the time."
+LANG_FRENCH         "Chaque ligne du chat est écrite dans le dossier chatlogs, avec l'heure."
+
+REFERENCE           CONSOLE_CLOCK
+LANG_ENGLISH        "Console Clock"
+LANG_FRENCH         "Horloge de la console"
+
+REFERENCE           A_CLOCK_IN_THE_CORNER_OF_THE_CONSOLE
+LANG_ENGLISH        "A clock in the corner of the console."
+LANG_FRENCH         "Une horloge dans le coin de la console."
+
+REFERENCE           TIME
+LANG_ENGLISH        "Time"
+LANG_FRENCH         "Heure"
+
+REFERENCE           DATE_AND_TIME
+LANG_ENGLISH        "Date and Time"
+LANG_FRENCH         "Date et heure"
+
 REFERENCE           UPDATES_AND_DOWNLOADS
 LANG_ENGLISH        "Updates and Downloads"
 LANG_FRENCH         "Mises à jour et téléchargements"
@@ -764,6 +1144,14 @@ LANG_FRENCH         "Chat et social"
 REFERENCE           THE_CHAT_BOX_BUBBLES_AND_WHAT_STANDS
 LANG_ENGLISH        "The chat box, bubbles and what stands above the heads."
 LANG_FRENCH         "Le chat, les bulles et ce qui est affiché au-dessus des têtes."
+
+REFERENCE           TAYSTJK
+LANG_ENGLISH        "TaystJK"
+LANG_FRENCH         "#same"
+
+REFERENCE           WHAT_CAME_FROM_THE_TAYSTJK_CLIENT_HU
+LANG_ENGLISH        "What came from the TaystJK client: HUD, movement, hats and capes and more."
+LANG_FRENCH         "Ce qui vient du client TaystJK : HUD, mouvement, chapeaux et capes, et plus."
 
 REFERENCE           NETWORK
 LANG_ENGLISH        "Network"

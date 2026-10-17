@@ -55,6 +55,20 @@ static void CG_ForceModelChange( void ) {
 	}
 }
 
+// the forced models hang on the team of this player: once it changed, every other one is looked at again
+void CG_ForcedModelsCheck( void ) {
+	static int lastTeam = -1;
+	const int team = cg.snap ? cg.snap->ps.persistant[PERS_TEAM] : -1;
+
+	if ( team == lastTeam ) {
+		return;
+	}
+	lastTeam = team;
+	if ( tay_forceEnemyModel.string[0] || tay_forceAllyModel.string[0] ) {
+		CG_ForceModelChange();
+	}
+}
+
 static void CG_TeamOverlayChange( void ) {
 	// If team overlay is on, ask for updates from the server.  If its off,
 	// let the server know so we don't receive it

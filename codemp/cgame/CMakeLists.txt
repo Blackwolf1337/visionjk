@@ -109,6 +109,7 @@ set(MPCGameCgameFiles
 	"${MPDir}/cgame/cg_scoreboard.c"
 	"${MPDir}/cgame/cg_servercmds.c"
 	"${MPDir}/cgame/cg_snapshot.c"
+	"${MPDir}/cgame/cg_strafetrail.c"
 	"${MPDir}/cgame/cg_spawn.c"
 	"${MPDir}/cgame/cg_syscalls.c"
 	"${MPDir}/cgame/cg_turret.c"
@@ -226,6 +227,9 @@ set(MPCGameFiles ${MPCGameFiles} ${MPCGameBoomboxFiles})
 # the numbers of the game for the items of a menu file that show one: what the HUD of this tree is made of
 set(MPCGameHudFiles
 	"${MPDir}/cgame/hud/cg_hud.c"
+	"${MPDir}/cgame/hud/cg_killfeed.c"
+	"${MPDir}/cgame/hud/cg_movehud.c"
+	"${MPDir}/cgame/look/cg_look.c"
 	"${MPDir}/cgame/hud/cg_scores.c"
 	)
 source_group("cgame/hud" FILES ${MPCGameHudFiles})

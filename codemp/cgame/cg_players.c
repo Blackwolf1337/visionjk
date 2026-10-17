@@ -1549,6 +1549,13 @@ CG_NewClientInfo
 */
 void WP_SetSaber( int entNum, saberInfo_t *sabers, int saberNum, const char *saberName );
 
+// does a player of this team play with this player? Not in a game without teams
+qboolean CG_IsAlly( team_t team ) {
+	const team_t own = cg.snap ? (team_t)cg.snap->ps.persistant[PERS_TEAM] : cgs.clientinfo[cg.clientNum].team;
+
+	return (qboolean)( cgs.gametype >= GT_TEAM && team == own && team != TEAM_FREE && team != TEAM_SPECTATOR );
+}
+
 void CG_NewClientInfo( int clientNum, qboolean entitiesInitialized ) {
 	clientInfo_t *ci;
 	clientInfo_t newInfo;
@@ -1573,6 +1580,7 @@ void CG_NewClientInfo( int clientNum, qboolean entitiesInitialized ) {
 
 	configstring = CG_ConfigString( clientNum + CS_PLAYERS );
 	if ( !configstring[0] ) {
+		CG_LookClear( clientNum );		// look/cg_look.c
 		if (ci->ghoul2Model && trap->G2_HaveWeGhoul2Models(ci->ghoul2Model))
 		{ //clean this stuff up first
 			trap->G2API_CleanGhoul2Models(&ci->ghoul2Model);
@@ -1620,6 +1628,10 @@ void CG_NewClientInfo( int clientNum, qboolean entitiesInitialized ) {
 	// JA+ RGB sabers
 	newInfo.sbRGB[0] = atoi( Info_ValueForKey( configstring, "c3" ) );
 	newInfo.sbRGB[1] = atoi( Info_ValueForKey( configstring, "c4" ) );
+
+	// TaystJK's hats after the digits of the saber colours, and the cosmetics of a jaPRO server (look/cg_look.c)
+	CG_LookPlayerInfo( clientNum, Info_ValueForKey( configstring, "c1" ), Info_ValueForKey( configstring, "c2" ),
+		Info_ValueForKey( configstring, "c5" ) );
 	// (the plugin takes model 1 when the server names none)
 	v = Info_ValueForKey( configstring, "hm" );
 	newInfo.holsterModel = v[0] ? atoi( v ) : 1;
@@ -1719,6 +1731,23 @@ void CG_NewClientInfo( int clientNum, qboolean entitiesInitialized ) {
 			Q_strncpyz( newInfo.skinName, slash + 1, sizeof( newInfo.skinName ) );
 			// truncate modelName
 			*slash = 0;
+		}
+	}
+
+	// tay_forceEnemyModel and tay_forceAllyModel (2026-10-17, as TaystJK): the others in a model chosen here, by
+	// whether they play with this player or against him; in a game without teams everybody is against him
+	if ( clientNum != cg.clientNum ) {
+		const vmCvar_t *forced = CG_IsAlly( newInfo.team ) ? &tay_forceAllyModel : &tay_forceEnemyModel;
+
+		if ( forced->string[0] && Q_stricmp( forced->string, "none" ) && Q_stricmp( forced->string, "0" ) ) {
+			Q_strncpyz( newInfo.modelName, forced->string, sizeof( newInfo.modelName ) );
+			slash = strchr( newInfo.modelName, '/' );
+			if ( slash ) {
+				*slash = 0;
+				Q_strncpyz( newInfo.skinName, slash + 1, sizeof( newInfo.skinName ) );
+			} else {
+				Q_strncpyz( newInfo.skinName, "default", sizeof( newInfo.skinName ) );
+			}
 		}
 	}
 
@@ -6311,7 +6340,8 @@ void CG_AddSaberBlade( centity_t *cent, centity_t *scent, refEntity_t *saber, in
 	{
 		if (saberNum == 0)
 		{
-			scolor = client->icolor1;
+			// tay_saberStaffColors (as TaystJK): the second blade of a staff in the second colour
+			scolor = ( tay_saberStaffColors.integer && bladeNum >= 1 ) ? client->icolor2 : client->icolor1;
 		}
 		else
 		{
@@ -6319,22 +6349,24 @@ void CG_AddSaberBlade( centity_t *cent, centity_t *scent, refEntity_t *saber, in
 		}
 	}
 
+	// tay_saberTeamColors 0 (as TaystJK): in a team game a blade keeps its colour, unless it is the colour of the
+	// other team or one of the colours past purple (RGB, black)
 	if (cgs.gametype >= GT_TEAM &&
 		cgs.gametype != GT_SIEGE &&
 		!cgs.jediVmerc &&
 		cent->currentState.eType != ET_NPC)
 	{
-		if (client->team == TEAM_RED)
+		if (client->team == TEAM_RED && (tay_saberTeamColors.integer || scolor == SABER_BLUE || scolor > SABER_PURPLE))
 		{
 			scolor = SABER_RED;
 		}
-		else if (client->team == TEAM_BLUE)
+		else if (client->team == TEAM_BLUE && (tay_saberTeamColors.integer || scolor == SABER_RED || scolor > SABER_PURPLE))
 		{
 			scolor = SABER_BLUE;
 		}
 	}
 
-	cg_jpSaberRGB = client->sbRGB[saberNum ? 1 : 0];
+	cg_jpSaberRGB = client->sbRGB[( saberNum || ( tay_saberStaffColors.integer && bladeNum >= 1 ) ) ? 1 : 0];
 
 	if (!cg_saberContact.integer)
 	{ //if we don't have saber contact enabled, just add the blade and don't care what it's touching
@@ -11595,6 +11627,9 @@ stillDoSaber:
 		CG_CheckThirdPersonAlpha( cent, &legs );
 		trap->R_AddRefEntityToScene(&legs);
 	}
+
+	// hats and capes (look/cg_look.c)
+	CG_LookDraw( cent, ci, &legs );
 
 	//cent->frame_minus2 = cent->frame_minus1;
 	VectorCopy(cent->frame_minus1, cent->frame_minus2);

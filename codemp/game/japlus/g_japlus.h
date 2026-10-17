@@ -69,11 +69,13 @@ typedef struct jpClient_s {
 
 	// what stands above the head (status/g_status.c)
 	int			statusCaps;				// v_caps of the userinfo: what the cgame of the client draws, bit 0 statuses,
-										//	bit 1 who plays with a client of this tree
+										//	bit 1 who plays with a client of this tree, bit 2 hats and capes
 	char		vision[24];				// v_vision of the userinfo: the VisionJK of this player, nothing for any other client
 	qboolean	visionSet;				// since he connected the userinfo was looked at for it
 	qboolean	statusAway;				// no sign of life for vs_afkTime seconds
 	char		statusMusic[64];		// what the client says its player listens to
+	char		look[64];				// "<hat> <cape>" his cgame says he wears, "-" for none, empty: nothing said
+	int			lookCmdTime;			// of its last tay_look
 	int			statusCmdTime;			// of its last vs_status command
 	int			statusAllTime;			// of its last "vs_status all"
 	int			statusInputTime;		// when its commands last changed, 0: none came yet
@@ -187,6 +189,7 @@ void		G_StatusUserinfo( gentity_t *ent, const char *userinfo );		// status/g_sta
 void		G_StatusInput( gentity_t *ent, const usercmd_t *ucmd );
 void		G_StatusFrame( void );
 void		Cmd_JPStatus_f( gentity_t *ent );
+void		Cmd_TayLook_f( gentity_t *ent );
 
 void		JP_ChatCopy( const gentity_t *from, const char *text, char *out, int outSize );
 const char	*JP_ChatFor( const gentity_t *from, const gentity_t *other, const char *text, char *buffer, int bufferSize );

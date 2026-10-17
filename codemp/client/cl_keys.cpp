@@ -183,9 +183,9 @@ keyname_t keynames[MAX_KEYS] =
 	{ 0x7f, 0x7f, "DEL", A_DELETE, false								},
 
 	{ 0x80, 0x80, "EURO", A_EURO, false  								},
-	{ 0x81, 0x81, "SHIFT", A_SHIFT2, false								},
-	{ 0x82, 0x82, "CTRL", A_CTRL2, false								},
-	{ 0x83, 0x83, "ALT", A_ALT2, false									},
+	{ 0x81, 0x81, "RSHIFT", A_SHIFT2, false								},
+	{ 0x82, 0x82, "RCTRL", A_CTRL2, false								},
+	{ 0x83, 0x83, "RALT", A_ALT2, false									},
 	{ 0x84, 0x84, "F5", A_F5, true										},
 	{ 0x85, 0x85, "F6", A_F6, true										},
 	{ 0x86, 0x86, "F7", A_F7, true										},
@@ -382,6 +382,41 @@ keyname_t keynames[MAX_KEYS] =
 };
 static const size_t numKeynames = ARRAY_LEN( keynames );
 
+// Binds with a modifier, as TaystJK has them (2026-10-17): "bind ctrl+x ...". Only the left Alt, Ctrl and Shift
+// make them, looked at in that order; a key without one for what is held runs its plain bind. The right keys have
+// codes of their own (RALT, RCTRL, RSHIFT) and binds of their own, else they run the left key's bind. Everything
+// that asks whether Ctrl is down (kg.keys[A_CTRL].down, Key_IsDown) still hears yes for either key.
+enum { KEYMOD_ALT, KEYMOD_CTRL, KEYMOD_SHIFT, KEYMOD_COUNT };
+static const char	*keyModNames[KEYMOD_COUNT] = { "ALT", "CTRL", "SHIFT" };
+static const int	keyModLeft[KEYMOD_COUNT] = { A_ALT, A_CTRL, A_SHIFT };
+static const int	keyModRight[KEYMOD_COUNT] = { A_ALT2, A_CTRL2, A_SHIFT2 };
+static char			*keyModBinding[KEYMOD_COUNT][MAX_KEYS];
+static qboolean		keyModLeftDown[KEYMOD_COUNT];
+static signed char	keyDownBind[MAX_KEYS];		// what a key ran when it went down, so its release ends that: 0 plain, else KEYMOD_ + 1
+
+// KEYMOD_ of a modifier key, left or right, else -1
+static int Key_ModifierOf( int keynum ) {
+	for ( int i = 0; i < KEYMOD_COUNT; i++ ) {
+		if ( keynum == keyModLeft[i] || keynum == keyModRight[i] ) {
+			return i;
+		}
+	}
+	return -1;
+}
+
+// "ctrl+x": KEYMOD_CTRL, and str moves on to "x". -1 and str as it was without a prefix
+static int Key_ParseModifier( char **str ) {
+	for ( int i = 0; i < KEYMOD_COUNT; i++ ) {
+		const size_t len = strlen( keyModNames[i] );
+
+		if ( !Q_stricmpn( *str, keyModNames[i], len ) && (*str)[len] == '+' && (*str)[len + 1] ) {
+			*str += len + 1;
+			return i;
+		}
+	}
+	return -1;
+}
+
 
 
 /*
@@ -435,6 +470,41 @@ static int Field_CountChars( const field_t *edit, int from, int to ) {
 		count++;
 	}
 	return count;
+}
+
+// Where Ctrl with left or right goes: to the start of this word or of the one before, to the start of the next one.
+// Ctrl+Backspace and Ctrl+Delete delete up to there.
+static int Field_WordLeft( const field_t *edit, int pos ) {
+	while ( pos > 0 && edit->buffer[pos - 1] == ' ' ) {
+		pos--;
+	}
+	while ( pos > 0 && edit->buffer[pos - 1] != ' ' ) {
+		pos = Field_PrevChar( edit, pos );
+	}
+	return pos;
+}
+
+static int Field_WordRight( const field_t *edit, int pos ) {
+	const int len = strlen( edit->buffer );
+
+	while ( pos < len && edit->buffer[pos] != ' ' ) {
+		pos += Field_CharLen( edit, pos );
+	}
+	while ( pos < len && edit->buffer[pos] == ' ' ) {
+		pos++;
+	}
+	return pos;
+}
+
+static void Field_DeleteRange( field_t *edit, int from, int to ) {
+	if ( from >= to ) {
+		return;
+	}
+	memmove( edit->buffer + from, edit->buffer + to, strlen( edit->buffer + to ) + 1 );
+	edit->cursor = from;
+	if ( edit->scroll > edit->cursor ) {
+		edit->scroll = edit->cursor;
+	}
 }
 
 /*
@@ -678,6 +748,8 @@ void Field_KeyDownEvent( field_t *edit, int key ) {
 		case A_DELETE:
 			if ( Field_Selection( edit, &selFrom, &selTo ) ) {
 				Field_DeleteSelection( edit );
+			} else if ( kg.keys[A_CTRL].down ) {
+				Field_DeleteRange( edit, edit->cursor, Field_WordRight( edit, edit->cursor ) );
 			} else if ( edit->cursor < len ) {
 				const int charLen = Field_CharLen( edit, edit->cursor );
 
@@ -692,13 +764,7 @@ void Field_KeyDownEvent( field_t *edit, int key ) {
 				edit->cursor += Field_CharLen( edit, edit->cursor );
 			}
 			if ( kg.keys[A_CTRL].down ) {
-				// to the start of the next word
-				while ( edit->cursor < len && edit->buffer[edit->cursor] != ' ' ) {
-					edit->cursor += Field_CharLen( edit, edit->cursor );
-				}
-				while ( edit->cursor < len && edit->buffer[edit->cursor] == ' ' ) {
-					edit->cursor++;
-				}
+				edit->cursor = Field_WordRight( edit, edit->cursor );
 			}
 			break;
 
@@ -707,13 +773,7 @@ void Field_KeyDownEvent( field_t *edit, int key ) {
 				edit->cursor = Field_PrevChar( edit, edit->cursor );
 			}
 			if ( kg.keys[A_CTRL].down ) {
-				// to the start of this word, or of the one before
-				while ( edit->cursor > 0 && edit->buffer[edit->cursor] == ' ' ) {
-					edit->cursor--;
-				}
-				while ( edit->cursor > 0 && edit->buffer[edit->cursor - 1] != ' ' ) {
-					edit->cursor = Field_PrevChar( edit, edit->cursor );
-				}
+				edit->cursor = Field_WordLeft( edit, edit->cursor );
 			}
 			break;
 
@@ -790,7 +850,9 @@ void Field_CharEvent( field_t *edit, int ch ) {
 	len = strlen( edit->buffer );
 
 	if ( ch == 'h' - 'a' + 1 )	{	// ctrl-h is backspace
-		if ( edit->cursor > 0 ) {
+		if ( kg.keys[A_CTRL].down ) {
+			Field_DeleteRange( edit, Field_WordLeft( edit, edit->cursor ), edit->cursor );
+		} else if ( edit->cursor > 0 ) {
 			const int prev = Field_PrevChar( edit, edit->cursor );
 
 			memmove( edit->buffer + prev,
@@ -1219,14 +1281,13 @@ const char *Key_KeynumToString( int keynum ) {
 Key_SetBinding
 ===================
 */
-void Key_SetBinding( int keynum, const char *binding ) {
-	if ( keynum < 0 || keynum >= MAX_KEYS )
-		return;
+static void Key_StoreBinding( int mod, int keynum, const char *binding ) {
+	char **slot = mod >= 0 ? &keyModBinding[mod][keynames[keynum].upper] : &kg.keys[keynames[keynum].upper].binding;
 
 	// free old bindings
-	if ( kg.keys[keynames[keynum].upper].binding ) {
-		Z_Free( kg.keys[keynames[keynum].upper].binding );
-		kg.keys[keynames[keynum].upper].binding = NULL;
+	if ( *slot ) {
+		Z_Free( *slot );
+		*slot = NULL;
 	}
 
 	// allocate memory for new binding, with the names of this tree since 2026-10-17 (cvar_renames.h)
@@ -1234,11 +1295,19 @@ void Key_SetBinding( int keynum, const char *binding ) {
 		char renamed[MAX_STRING_CHARS];
 
 		if ( Cvar_RenamedText( binding, renamed, sizeof( renamed ) ) ) {
-			Com_Printf( "The bind of %s is \"%s\" now\n", Key_KeynumToString( keynum ), renamed );
+			Com_Printf( "The bind of %s%s%s is \"%s\" now\n", mod >= 0 ? keyModNames[mod] : "", mod >= 0 ? "+" : "",
+				Key_KeynumToString( keynum ), renamed );
 			binding = renamed;
 		}
-		kg.keys[keynames[keynum].upper].binding = CopyString( binding );
+		*slot = CopyString( binding );
 	}
+}
+
+void Key_SetBinding( int keynum, const char *binding ) {
+	if ( keynum < 0 || keynum >= MAX_KEYS )
+		return;
+
+	Key_StoreBinding( -1, keynum, binding );
 
 	// consider this like modifying an archived cvar, so the
 	// file write will be triggered at the next oportunity
@@ -1284,13 +1353,16 @@ void Key_Unbind_f( void ) {
 		return;
 	}
 
-	int b = Key_StringToKeynum( Cmd_Argv( 1 ) );
+	char *name = Cmd_Argv( 1 );
+	const int mod = Key_ParseModifier( &name );
+	int b = Key_StringToKeynum( name );
 	if ( b == -1 ) {
 		Com_Printf( "\"%s\" isn't a valid key\n", Cmd_Argv( 1 ) );
 		return;
 	}
 
-	Key_SetBinding( b, "" );
+	Key_StoreBinding( mod, b, "" );
+	cvar_modifiedFlags |= CVAR_ARCHIVE;
 }
 
 /*
@@ -1302,6 +1374,12 @@ void Key_Unbindall_f( void ) {
 	for ( int i=0; i<MAX_KEYS; i++ ) {
 		if ( kg.keys[i].binding )
 			Key_SetBinding( i, "" );
+		for ( int mod = 0; mod < KEYMOD_COUNT; mod++ ) {
+			if ( keyModBinding[mod][i] ) {
+				Z_Free( keyModBinding[mod][i] );
+				keyModBinding[mod][i] = NULL;
+			}
+		}
 	}
 }
 
@@ -1318,21 +1396,31 @@ void Key_Bind_f( void ) {
 		return;
 	}
 
-	int b = Key_StringToKeynum( Cmd_Argv( 1 ) );
+	char *name = Cmd_Argv( 1 );
+	const int mod = Key_ParseModifier( &name );
+	int b = Key_StringToKeynum( name );
 	if ( b == -1 ) {
 		Com_Printf( "\"%s\" isn't a valid key\n", Cmd_Argv( 1 ) );
 		return;
 	}
-
-	if ( c == 2 ) {
-		if ( kg.keys[b].binding && kg.keys[b].binding[0] )
-			Com_Printf( S_COLOR_GREY "Bind " S_COLOR_WHITE "%s = " S_COLOR_GREY "\"" S_COLOR_WHITE "%s" S_COLOR_GREY "\"" S_COLOR_WHITE "\n", Key_KeynumToString( b ), kg.keys[b].binding );
-		else
-			Com_Printf( "\"%s\" is not bound\n", Key_KeynumToString( b ) );
+	if ( mod >= 0 && Key_ModifierOf( b ) >= 0 ) {
+		Com_Printf( "A modifier key can not be bound with a modifier\n" );
 		return;
 	}
 
-	Key_SetBinding( b, Cmd_ArgsFrom( 2 ) );
+	if ( c == 2 ) {
+		const char *binding = mod >= 0 ? keyModBinding[mod][keynames[b].upper] : kg.keys[b].binding;
+
+		if ( binding && binding[0] )
+			Com_Printf( S_COLOR_GREY "Bind " S_COLOR_WHITE "%s%s%s = " S_COLOR_GREY "\"" S_COLOR_WHITE "%s" S_COLOR_GREY "\"" S_COLOR_WHITE "\n",
+				mod >= 0 ? keyModNames[mod] : "", mod >= 0 ? "+" : "", Key_KeynumToString( b ), binding );
+		else
+			Com_Printf( "\"%s%s%s\" is not bound\n", mod >= 0 ? keyModNames[mod] : "", mod >= 0 ? "+" : "", Key_KeynumToString( b ) );
+		return;
+	}
+
+	Key_StoreBinding( mod, b, Cmd_ArgsFrom( 2 ) );
+	cvar_modifiedFlags |= CVAR_ARCHIVE;
 }
 
 /*
@@ -1355,6 +1443,12 @@ void Key_WriteBindings( fileHandle_t f ) {
 				FS_Printf( f, "bind \"%s\" \"%s\"\n", name, kg.keys[i].binding );
 		}
 	}
+	for ( int mod = 0; mod < KEYMOD_COUNT; mod++ ) {
+		for ( size_t i=0; i<MAX_KEYS; i++ ) {
+			if ( keyModBinding[mod][i] && keyModBinding[mod][i][0] )
+				FS_Printf( f, "bind \"%s+%s\" \"%s\"\n", keyModNames[mod], Key_KeynumToString( i ), keyModBinding[mod][i] );
+		}
+	}
 }
 
 /*
@@ -1367,6 +1461,12 @@ void Key_Bindlist_f( void ) {
 	for ( size_t i=0; i<MAX_KEYS; i++ ) {
 		if ( kg.keys[i].binding && kg.keys[i].binding[0] )
 			Com_Printf( S_COLOR_GREY "Key " S_COLOR_WHITE "%s (%s) = " S_COLOR_GREY "\"" S_COLOR_WHITE "%s" S_COLOR_GREY "\"" S_COLOR_WHITE "\n", Key_KeynumToAscii( i ), Key_KeynumToString( i ), kg.keys[i].binding );
+	}
+	for ( int mod = 0; mod < KEYMOD_COUNT; mod++ ) {
+		for ( size_t i=0; i<MAX_KEYS; i++ ) {
+			if ( keyModBinding[mod][i] && keyModBinding[mod][i][0] )
+				Com_Printf( S_COLOR_GREY "Key " S_COLOR_WHITE "%s+%s = " S_COLOR_GREY "\"" S_COLOR_WHITE "%s" S_COLOR_GREY "\"" S_COLOR_WHITE "\n", keyModNames[mod], Key_KeynumToString( i ), keyModBinding[mod][i] );
+		}
 	}
 }
 
@@ -1461,16 +1561,45 @@ CL_ParseBinding
 Execute the commands in the bind string
 ===================
 */
+// The bind a key runs: with a left modifier held the bind of that pair when there is one. A key goes up with what it
+// went down with, whatever is held then.
+static const char *Key_BindingFor( int key, qboolean down ) {
+	const int upper = keynames[key].upper;
+	const int side = Key_ModifierOf( upper );
+	int mod = -1;
+
+	if ( side >= 0 ) {
+		if ( upper == keyModRight[side] && !VALIDSTRING( kg.keys[upper].binding ) ) {
+			return kg.keys[keyModLeft[side]].binding;
+		}
+		return kg.keys[upper].binding;
+	}
+	if ( down ) {
+		for ( int i = 0; i < KEYMOD_COUNT && mod < 0; i++ ) {
+			if ( keyModLeftDown[i] && VALIDSTRING( keyModBinding[i][upper] ) ) {
+				mod = i;
+			}
+		}
+		keyDownBind[upper] = (signed char)( mod + 1 );
+	} else {
+		mod = keyDownBind[upper] - 1;
+		keyDownBind[upper] = 0;
+	}
+	return mod >= 0 ? keyModBinding[mod][upper] : kg.keys[upper].binding;
+}
+
 void CL_ParseBinding( int key, qboolean down, unsigned time )
 {
 	char buf[ MAX_STRING_CHARS ], *p = buf, *end;
 	qboolean allCommands, allowUpCmds;
+	const char *binding;
 
 	if( cls.state == CA_DISCONNECTED && Key_GetCatcher( ) == 0 )
 		return;
-	if( !kg.keys[keynames[key].upper].binding || !kg.keys[keynames[key].upper].binding[0] )
+	binding = Key_BindingFor( key, down );
+	if( !binding || !binding[0] )
 		return;
-	Q_strncpyz( buf, kg.keys[keynames[key].upper].binding, sizeof( buf ) );
+	Q_strncpyz( buf, binding, sizeof( buf ) );
 
 	// run all bind commands if console, ui, etc aren't reading keys
 	allCommands = (qboolean)( Key_GetCatcher( ) == 0 );
@@ -1541,11 +1670,23 @@ Called by CL_KeyEvent to handle a keypress
 */
 void CL_KeyDownEvent( int key, unsigned time )
 {
+	const int side = Key_ModifierOf( key );
+	const int bound = key;
+
 	kg.keys[keynames[key].upper].down = qtrue;
 	kg.keys[keynames[key].upper].repeats++;
 	if( kg.keys[keynames[key].upper].repeats == 1 ) {
 		kg.keyDownCount++;
 		kg.anykeydown = qtrue;
+	}
+
+	// a right modifier is the modifier for everything but the binds, the console and the modules get the left one
+	if ( side >= 0 ) {
+		if ( key == keyModLeft[side] ) {
+			keyModLeftDown[side] = qtrue;
+		}
+		kg.keys[keyModLeft[side]].down = qtrue;
+		key = keyModLeft[side];
 	}
 
 	if ( cl_allowAltEnter->integer && kg.keys[A_ALT].down && key == A_ENTER )
@@ -1606,7 +1747,7 @@ void CL_KeyDownEvent( int key, unsigned time )
 	}
 
 	// send the bound action
-	if ( !cls.cursorActive ) CL_ParseBinding( key, qtrue, time );
+	if ( !cls.cursorActive ) CL_ParseBinding( bound, qtrue, time );
 
 	// distribute the key down event to the appropriate handler
 	// console
@@ -1642,6 +1783,9 @@ Called by CL_KeyEvent to handle a keyrelease
 */
 void CL_KeyUpEvent( int key, unsigned time )
 {
+	const int side = Key_ModifierOf( key );
+	const int bound = key;
+
 	kg.keys[keynames[key].upper].repeats = 0;
 	kg.keys[keynames[key].upper].down = qfalse;
 	kg.keyDownCount--;
@@ -1649,6 +1793,14 @@ void CL_KeyUpEvent( int key, unsigned time )
 	if (kg.keyDownCount <= 0) {
 		kg.anykeydown = qfalse;
 		kg.keyDownCount = 0;
+	}
+
+	if ( side >= 0 ) {
+		if ( key == keyModLeft[side] ) {
+			keyModLeftDown[side] = qfalse;
+		}
+		kg.keys[keyModLeft[side]].down = (qboolean)( keyModLeftDown[side] || kg.keys[keyModRight[side]].down );
+		key = keyModLeft[side];
 	}
 
 	// don't process key-up events for the console key
@@ -1661,7 +1813,7 @@ void CL_KeyUpEvent( int key, unsigned time )
 	// console mode and menu mode, to keep the character from continuing
 	// an action started before a mode switch.
 	//
-	CL_ParseBinding( key, qfalse, time );
+	CL_ParseBinding( bound, qfalse, time );
 
 	if ( Key_GetCatcher( ) & KEYCATCH_UI && cls.uiStarted )
 		UIVM_KeyEvent( key, qfalse );
@@ -1717,6 +1869,8 @@ void Key_ClearStates( void ) {
 		kg.keys[i].down = qfalse;
 		kg.keys[i].repeats = 0;
 	}
+	memset( keyModLeftDown, 0, sizeof( keyModLeftDown ) );
+	memset( keyDownBind, 0, sizeof( keyDownBind ) );
 }
 
 static int keyCatchers = 0;

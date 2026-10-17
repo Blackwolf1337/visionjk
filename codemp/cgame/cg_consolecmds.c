@@ -137,7 +137,7 @@ static void CG_ScoresUp_f( void ) {
 =================
 CG_Key_f
 
-v_cgKey <key> [up]: a key or a button of the mouse for the cgame, as the engine hands one over while the cgame
+v_cgKey <key> [up|char]: a key or a button of the mouse for the cgame, or with char a letter by its code, as the engine hands one over while the cgame
 has the keys (the chat box, the card of a player, the scoreboard that is kept). For a script in place of a
 hand, as v_uiKey is for the menus. By name (esc, tab, enter, mouse1, mouse2, wheelup, wheeldown, pgup, pgdn) or
 by its number.
@@ -161,6 +161,10 @@ static void CG_Key_f( void ) {
 		}
 	}
 	if ( key <= 0 || key >= MAX_KEYS || !( trap->Key_GetCatcher() & KEYCATCH_CGAME ) ) {
+		return;
+	}
+	if ( !Q_stricmp( CG_Argv( 2 ), "char" ) ) {
+		CG_KeyEvent( key | K_CHAR_FLAG, qtrue );		// a letter that was typed, by its code
 		return;
 	}
 	CG_KeyEvent( key, (qboolean)( Q_stricmp( CG_Argv( 2 ), "up" ) != 0 ) );
@@ -350,6 +354,8 @@ static consoleCommand_t	commands[] = {
 	{ "v_boombox",					CG_Boombox_f },
 	{ "briefing",					CG_SiegeBriefing_f },
 	{ "v_chatDrag",				CG_ChatDrag_f },
+	{ "tay_emoji",				CG_ChatEmoji_f },
+	{ "tay_cosmetics",			CG_Cosmetics_f },
 	{ "v_chatOpen",				CG_ChatOpen_f },
 	{ "v_cgKey",						CG_Key_f },
 	{ "clientlist",					CG_ClientList_f },

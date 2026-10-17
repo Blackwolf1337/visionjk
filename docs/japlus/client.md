@@ -135,6 +135,16 @@ What goes where on a wide window:
   shape, with black beside them. A video keeps its 4:3 with black beside it.
 - The console is as wide as the window, as before.
 
+Pictures made for 16:9 (2026-10-17, as TaystJK): on a wide window the loading screen takes
+`levelshots_16_9/<map>` and the start of the game `menu/splash_16_9` where a pak has them, a level without a
+picture `menu/art/unknownmap_mp_16_9`, else the pictures of 4:3 as before (stretched over the window, as they
+were). The map lists of the menus keep the 4:3 pictures, their boxes are 4:3. This tree ships no such pictures.
+
+Shader overrides (2026-10-17, as TaystJK, `rd-vanilla/tr_shader.cpp`, both renderers): a shader in a file
+`shaders/<name>.oshader` takes the place of the shader of that name in any `.shader` file, without a copy of the
+rest of that file. Of two override files with the same shader the one whose name comes later in the alphabet
+wins, as among `.shader` files. The console says at the start how many override files there are.
+
 The modules read `v_2dBias`. In a stock `jamp.exe`, or with a renderer of another tree, the cvar is missing or
 0 and they draw as they always did.
 
@@ -206,9 +216,53 @@ TrueType glyphs next to the letters of the game were only checked as numbers.
 | Ctrl+C, right button | puts what is marked on the clipboard: without colours, a wrapped line as one line. The right button pastes into the input line when nothing is marked |
 | Shift with left, right, Home, End | marks in the input line. Typing replaces it, Ctrl+C copies, Ctrl+X cuts, Ctrl+V pastes |
 | Ctrl with left or right | jumps by word in the input line |
+| Ctrl with Backspace or Delete | deletes the word before or after the cursor, also in the chat line and the chat box (2026-10-17, as TaystJK) |
+
+`tay_consoleClock` (default 0) puts the clock of the machine left of the version in the console's lower right
+corner: 1 the time, 2 the date and the time (TaystJK's `con_datetime`, 2026-10-17).
 
 Ctrl+C with nothing marked anywhere clears the input line, as it always did. Text of an Asian language can not
 be marked: its rows are drawn as strings of another height. Not run: nobody has seen the console of this build.
+
+### Keys
+
+`client/cl_keys.cpp`, `shared/sdl/sdl_input.cpp` (2026-10-17, taken over from TaystJK).
+
+- A key can have a bind with a modifier as well as its plain one: `bind ctrl+x kill`, `bind alt+1 "say hi"`,
+  `bind shift+mouse2 +use`. `unbind ctrl+x`, `bindlist` and the config know them (`bind "CTRL+X" "kill"`).
+- Only the left Alt, Ctrl and Shift make such binds. With several held, Alt counts before Ctrl, Ctrl before
+  Shift. A key that has no bind for what is held runs its plain one, so Shift for walking and a key pressed with
+  it keep working as before. A key that goes up ends what it started when it went down, also when the modifier
+  was let go first.
+- A modifier itself can not be bound with a modifier (`ctrl+shift` is refused).
+- The right keys are keys of their own: `RCTRL`, `RALT`, `RSHIFT`. `bind rctrl +attack` binds the right one only.
+  A right key without a bind runs the bind of the left one, so `bind ctrl ...` covers both, as before.
+  Everything else (Ctrl+C in the console, the chat box, the menus) takes either key as Ctrl, and the menus and the
+  cgame are told the left key's code for a right key.
+- The bind menu of Setup still shows and sets the plain binds only.
+
+Not run with real keys: a hidden window gets none, so the right keys and the modifiers were only built.
+
+### Console scripts
+
+`qcommon/cmd.cpp` (2026-10-17), the commands of TaystJK with its syntax, under names that begin with `tay_` (TaystJK
+calls them `delay`, `waitf`, `ifCvar`, `strSub` ..., so a script of TaystJK needs the prefix added).
+
+| Command | What it does |
+|---------|--------------|
+| `tay_delay <ms>` | what follows it in the line or the bind runs that many milliseconds later: `bind x "+attack;tay_delay 300;-attack"`. Everything else goes on in the meantime |
+| `tay_waitf <frames>` | the same in frames |
+| `tay_delaycancel <text>`, `tay_waitfcancel <text>` | drop what waits and has the text in it, `""` all of it |
+| `tay_ifCvar <cvar> <test> <count> <command ...> ...` | runs the first command whose test the cvar passes. A test is a value, or `$=` `$!=` `$>` `$<` `$>=` `$<=` with a number, `$contains` `$beginswith` `$endswith` with a text, or `$else`. A value that begins with `$` is that cvar's. `<count>` is the words of the command, itself included: `tay_ifCvar cg_thirdPerson 0 3 set cg_thirdPerson 1 $else 3 set cg_thirdPerson 0` |
+| `tay_strSub <command ...>` | runs the command with `$cvar$` replaced by the value: `tay_strSub say_team my fov is $cg_fov$`. `$$` is a `$` |
+
+- Quotes inside quotes: a quote that a letter follows opens a quote inside the quote, so
+  `bind x "say "a b""` binds `say "a b"`. That holds for what runs on this machine (console, configs, binds),
+  not for what a server or a client sends. A quote outside quotes opens one as it always did.
+- At most 64 delayed lines wait at the same time.
+- `tay_ifCvar` and `tay_strSub` give out no password: a cvar the engine hides and any cvar with `pass` or `pwd` in its
+  name reads as empty there, so a config from a server can not put one into a chat line. TaystJK has no such
+  check.
 
 ### The chat box
 
@@ -263,6 +317,192 @@ cgame import: the clipboard both ways and the address. In a stock `jamp.exe` the
 typing stays with the line of the engine. Not run: nobody has seen the box.
 
 
+### HUD parts of TaystJK
+
+Taken over from TaystJK on 2026-10-17. They are drawn by this tree's cgame, so they work on every server it runs
+on, and nobody has to download anything for them.
+
+The killfeed (`cgame/hud/cg_killfeed.c`, after TaystJK's `hud_obituary.c`) is at the right edge, under the FPS,
+the timer and the team overlay. Each line shows who killed whom with what, and fades out. The icons are the weapon
+icons of the game, plus the sentry and the dark force. A death without a weapon to show (a fall, lava, a
+telefrag, a death by oneself) is the console's sentence, in the language of the game. The box behind a name has
+the team colour, green for oneself and grey for everyone else. The obituary line in the console stays as it was.
+
+| Cvar | Default | Meaning |
+|------|---------|---------|
+| `tay_killfeed` | 1 | the killfeed, 0 none |
+| `tay_killfeedSize` | 1 | its size, 0.5 to 2 |
+| `tay_killfeedTime` | 5000 | milliseconds a line stays, the last second fading |
+| `tay_killfeedX`, `tay_killfeedY` | 0 | moves it left and down |
+
+The movement HUD (`cgame/hud/cg_movehud.c`) is after TaystJK's `hud_strafehelper.c` (from jaPRO and the CGaz of
+DeFRaG), written anew for the physics of the game (`bg_pmove.c`: `pm_accelerate` 10 on the ground,
+`pm_airaccelerate` 1 in the air, friction 6, stop speed 100). The movement styles of jaPRO are left out. The bars
+show where the view has to point. The middle of the screen is where it points now. Everything is off by default.
+
+| Cvar | Default | Meaning |
+|------|---------|---------|
+| `tay_speedometer` | 0 | the speed along the ground under the crosshair: green when faster than running, gold when much faster |
+| `tay_speedometerJumps` | 5 | under it, the speeds at the last jumps (when the ground was left), 0 none |
+| `tay_speedometerSize`, `tay_speedometerX`, `tay_speedometerY` | 1, 0, 0 | its size and place |
+| `tay_strafeHelper` | 0 | a bar under the crosshair for the keys that are held. Dim: speed starts to come. Bright: the best angles (from the best one to the one where the speed stays). Yellow: still faster, but the speed goes down past its end. The white mark is the view |
+| `tay_strafeHelperColor`, `tay_strafeHelperY` | `0 1 0.4 0.75`, 0 | its colour and place |
+| `tay_snapHud` | 0 | in the air, the zones of the angle where the rounding of the velocity after every move (the `SnapVector` at the end of `PmoveSingle`) gives a little more speed, in two alternating colours. They depend on the frame rate (`com_maxfps`, or `pmove_msec` with `pmove_fixed`) |
+| `tay_snapHudColor1`, `tay_snapHudColor2`, `tay_snapHudY` | | its colours and place |
+| `tay_pitchHud` | 0 | a mark where the view would be at the pitch `tay_pitchHudAngle` (15, down positive), colour `tay_pitchHudColor` |
+
+For a player one follows, the keys are what the server says of them (the direction of the move), and the speed
+he wishes is his full one.
+
+Not tried in the game: how it feels while running, and whether the angles of the bars are right to the degree.
+They were only checked against the formulas.
+
+The team overlay (`cg_drawTeamOverlay 1`, `CG_DrawTeamOverlay` in `cg_draw.c`) got TaystJK's extras:
+
+| Cvar | Default | Meaning |
+|------|---------|---------|
+| `tay_teamOverlayScale` | 1 | its size, 0.5 to 2.5 |
+| `tay_teamOverlayWeapons` | 1 | the weapon each one holds, after the numbers. The game drew it on the armour number, and with a `?` for a weapon not seen yet. Now it uses the icons of all weapons, registered at the start |
+| `tay_teamOverlayBar` | 1 | health and armour as a thin bar under the numbers, in their colour |
+| `tay_teamOverlayMaxHP` | 200 | health and armour that fill the bar |
+
+There are no force points: only jaPRO servers send them.
+
+Smaller ones:
+
+| Cvar | Default | Meaning |
+|------|---------|---------|
+| `tay_crosshairColor` | empty | the colour of the crosshair with nothing under it, `r g b a` from 0 to 1 (`1 0.5 0 1` orange). Empty: white, as before. Over players and things it keeps the colours of the game (red, green, yellow), and `cg_crosshairHealth 1` still wins |
+| `tay_crosshairNamesOpacity` | 0.5 | how opaque the name of the player under the crosshair is, 0 to 1. The game had 0.5 |
+| `tay_chatLog` | 0 | every chat line the box shows, without colours and with the time, appended to `chatlogs/<date>.log` in the game's home folder (`~/.local/share/visionjk/japlus/chatlogs` on Linux). Lines of hidden players are not written |
+
+Emoji in the chat box (as TaystJK, `cgame/chat/cg_chat.c`): a code in a line is drawn as the picture
+`gfx/emoji/<file>.png`, as high as a row. The list is read from the paks at every start of the cgame, so a pak (also
+one a server sends) can bring more, and `tay_emoji` lists them. The file names are TaystJK's: a `` ` `` is a colon of
+the code, a `~` is a `>`, and `!` makes the next letter a capital (`` `kappa`.png `` is `:kappa:`, `#~`!D.png` is
+`#>:D`); a name without those is the code between colons (`smile.png` is `:smile:`). Of two files with one code
+the first one counts. This tree ships 78 pictures of Noto Emoji for the faces and things, under the names TaystJK
+uses, and the 109 other pictures of TaystJK's set, its emotes of Twitch among them (2026-10-18, with permission),
+so 187 emoji in all, the same codes TaystJK has (`assets/japlus_client/gfx/emoji` with a README of where they come
+from). A Noto picture is 64 x 64: the image loader takes sides of a power of two only, a picture of 72 is refused
+and no emoji shows. The real emoji characters of UTF-8 chat that have a picture are pictures too.
+`tay_chatEmoji 0` shows the text. Only the chat box draws them: the bubbles above the heads and the console show
+the text, and so does a client of another tree.
+
+While a word that begins with a colon is typed in the chat box, with a letter more (`:ka`), a list of up to eight
+emoji whose codes begin with it stands above the line, with their pictures: Up and Down choose, Tab, Enter or a
+click puts the code in with a blank after it. Up and Down go through what was sent before again once the word is
+done. The line to type in shows the codes as text. Checked in a hidden run: `:ka`, Down twice, Enter gave
+`:kappapride:` and the line it sent showed the picture (`clienttests/lvl_emoji_list.cfg`, with `v_cgKey <code> char`
+for the letters).
+
+### The tab TaystJK
+
+Everything that came from TaystJK has a name that begins with `tay_` (cvars and commands, also the commands
+`tay_look` between client and server) and its rows in Setup, tab TaystJK (2026-10-17, `tools/menus/options.py`,
+texts in four languages): HUD (Killfeed, Team Overlay Size, Crosshair Colour, Name Opacity), Movement
+(Speedometer, Strafe Helper, Snap HUD, Pitch HUD, Strafe Trails), Hats and Capes (Hat, Cape, Show Them, Seasonal
+Hats), Looks (Enemy Model, Ally Model, Saber Team Colours, Two-Coloured Staff, Jedi Outcast Shots, Disruptor Beam)
+and Chat and Console (Chat Emoji, Chat Log, Console Clock). The binds with modifiers, word delete, `.oshader` and
+the 16:9 pictures have no cvar.
+
+For one evening the cvars began with `v_` and the script commands had TaystJK's names. `cvar_renames.h` has those
+old names, so a value or a bind stored with one goes to the new name, with a line in the console.
+
+Crosshair Colour is a row of a new kind of the generator (`multistr`, a `cvarStrList`), since its cvar holds a text.
+The ui registers the cvars of the cgame that have a row (`ui_xcvar.h`), so the menus outside a game show their
+defaults. Clicked in hidden runs on 2026-10-17: every row set its cvar as clicked
+(`agent/japlus_port/tools/clienttests/ui_taystjk_rows.cfg`, then on the tab `ui_tay_rows.cfg`).
+
+### Looks of TaystJK
+
+Taken over from TaystJK on 2026-10-17. They only change what this player sees.
+
+| Cvar | Default | Meaning |
+|------|---------|---------|
+| `tay_forceEnemyModel` | empty | every opponent in this model, `model/skin` (`kyle/default`) or a model alone (its skin `default`). In a game without teams everybody is an opponent |
+| `tay_forceAllyModel` | empty | every team mate in this model |
+| `tay_saberTeamColors` | 1 | in team games every blade in its team's colour, as the game does. 0: a blade keeps its colour, unless that is the other team's colour or one past purple (RGB of JA+, black). Not in siege |
+| `tay_saberStaffColors` | 0 | the second blade of a staff in the player's second saber colour (also its RGB colour) |
+| `tay_jk2Effects` | 0 | engine (`client/FxScheduler.cpp`, TaystJK's `fx_jk2`): the parts of 30 shot effects (blaster, bryar, flechette, repeater, rocket, turrets, vehicles ...) live one millisecond where their file gives no life, so a shot is drawn where it is in this frame without the smear of the frames before, as in Jedi Outcast. Counts from the next level (the effects are read at a level's start). No files of Jedi Outcast are needed |
+| `tay_disruptorBeam` | 0 | the disruptor shot as a line with a glow, 1, or with a spiral of sparks around it as the rail of Quake 3, 2 (TaystJK's `cg_disruptorNew` and `cg_disruptorSpiral`). 0 the shot of the game |
+| `tay_disruptorColor` | empty | its colour, `r g b` from 0 to 1, empty cyan. In team games the team's colour |
+| `tay_strafeTrail` | 0 | strafe trails as jaPRO and TaystJK have them (`cg_strafetrail.c`): a glowing line on the ground along where a player ran, 1 oneself, 2 everybody. Oneself green, the teams in their colours, the others white. Only from the places this client sees anyway |
+| `tay_strafeTrailLife` | 3 | seconds a trail takes to fade, 0.5 to 30 |
+
+These work without `cg_forceModel`, which puts everybody in one's own model. When both are set, these two win for the players they cover. A model
+this machine lacks shows as the model of the game, as with any player. When one's own team changes, everybody
+is looked at again (`CG_ForcedModelsCheck`).
+
+### Hats and capes
+
+`cgame/look/cg_look.c`, `game/status/g_status.c`, `master/ms_relay.c` (2026-10-17), after the cosmetics of TaystJK
+and jaPRO. Their files are laid out the same way, so their paks work:
+
+- A hat is `models/cosmetics/hats/<name>.md3`. It sits on the bolt `*head_top` of the player.
+- A cape is `models/cosmetics/capes/<name>.md3` on `*back`.
+- `settings/cosmetics/hats/<name>.cosmetic` (or `capes/`), JSON in TaystJK's format, moves one for a model and
+  skin. The skin is matched by its name, or by the longest prefix written with a `*`. Without a skin match, the
+  model's offsets apply when `modelFallback` is true, else none. TaystJK added the offsets along the axes of the
+  world. Here they go along the bolt: x forward, y right, z up. For a file that only lifts or lowers, that is the
+  same.
+
+This tree ships all 24 hats and 8 capes of jaPRO and TaystJK, with permission for all of them (2026-10-17):
+afro, beard, bucket, cap, cringe (a propeller cap), crown, fedora to fedora4, glasses, gradcap, headcrab, horns,
+mario, mask, metalhelm, plaguemask, predatorhelm, pumpkin, santahat, sombrero, supersaiyan, tophat, and the
+capes ak47, crowbar, goose, grogucape, royalcape, rpg, vadercape, yodacape (`assets/japlus_client/models/cosmetics`,
+with a README of where they come from, and `shaders/vision_cosmetics.shader`). Setup, Interface, Looks has the
+rows Hat and Cape with these names. With the pumpkin there, Seasonal Hats has its Halloween hat too.
+
+| Cvar or command | Default | Meaning |
+|-----------------|---------|---------|
+| `tay_hat`, `tay_cape` | empty | what this player wears, the name of the file |
+| `tay_cosmetics` | | lists the hats and capes of the paks and what one wears. `tay_cosmetics hats <name>`, `tay_cosmetics capes <name>` (`none` takes it off), `tay_cosmetics clear` |
+| `tay_showCosmetics` | 1 | 0 nobody wears anything here, 1 everybody what he says, 2 everybody what this player wears |
+| `tay_seasonalCosmetics` | 0 | a player without a hat wears `santahat` from 22 November to 7 January and `pumpkin` on 31 October, where the paks have them |
+
+Who sees them is every player of this tree, on any server:
+
+- On a server with the game module of this tree (`vs_caps` bit 7), the cgame sends `tay_look <hat> <cape>`.
+  The server hands `tay_look <client> <hat> <cape>` to every cgame that draws them (`v_caps` bit 2), also with
+  `vs_status all`. The cgame sends again every four seconds until it hears its own look back, at most six times.
+- On any other server, the look goes through the masterserver (`VOICE_LOOK`, see `bg_voice.h`). It needs the voice
+  chat linked to the master, as the statuses do. The master hands it only to clients that send looks themselves,
+  so a VisionJK client from before never gets a type it does not know. A look the master did not say again for 15
+  seconds is over.
+- TaystJK's way, so its players and those of this tree see each other's hats on any server (2026-10-18): the name
+  after the digits of the saber colours. `color1` "3tophat" is the saber colour 3 and the hat tophat, `color2` the
+  cape. The cgame writes the own hat and cape there once a second (a server keeps 15 characters, so a name that
+  does not fit with the digits is left out, TaystJK takes 14 at most) and reads the others' from `c1` and `c2` of
+  their info. The game module, a stock one and as far as known any other passes the text on as it is. Everything
+  that reads a saber colour reads the number in front alone (`atoi`), the menus too, so the colour stays.
+- On a server of jaPRO: `c5` of a player's info, a bit for every jaPRO cosmetic he unlocked there (the userinfo
+  `cp_cosmetics`, which the server checks). All 32 bits are models shipped here. A mask, a beard, the plague mask
+  or the glasses are worn with a hat, the goose with a cape, as TaystJK draws them. `cp_cosmetics` is written from
+  the own hat and cape, so a jaPRO server shows them where its player unlocked them.
+- What decides: what a player says through the server or the masterserver, else the names in his saber colours,
+  else the bits of jaPRO. `tay_cosmetics` lists for each player what he wears and how it came.
+- A player whose hat this machine lacks wears none here. Legacy clients see no hat at all: they would need the
+  models by download.
+
+Nothing else passes between TaystJK clients: they share the stock JA+ things (RGB sabers in `c3` and `c4`, the
+typing flag) with this tree already, the camera and net settings in their userinfo go to the server alone, and
+the emoji are text in the chat (TaystJK's emotes of Twitch stay text here).
+
+The server part (game module and masterserver) only works once those run this build on the host.
+
+Checked on 2026-10-17 with two hidden clients of the build (`agent/japlus_port/tools/looktest.sh`). One wore a
+stand-in hat and cape (a coffee pot of the game, copied into the test profiles only), the other said with
+`tay_cosmetics` what it heard: "hat coffeepot, cape potcape", through the server of the build, and with `MASTER=1`
+through the masterserver of the build on a server with the stand-in for a foreign module. On 2026-10-18 the
+same with `MASTER=1 NOMASTER=1`, a server that passes nothing on and no master: "hat crown, cape goose, in the saber
+colours (TaystJK)". The bits of jaPRO were not tried, there is no jaPRO server here. The first runs found
+two faults: the arguments of `tay_look` were read from one buffer, so the cape came as the hat, and
+`BG_VoiceUnpack` refused the new packet type. In a level the stand-in hat sat on the head of a bot
+(`tay_showCosmetics 2`) and the cape on his back. All hats and capes were then looked at on the own player in a level, the hats from the front, the capes from
+behind and the side (`clienttests/lvl_hats.cfg`, `lvl_hats2.cfg`, `lvl_cape.cfg`): each sits where it should on the default model, the beard on the
+chin, the glasses and the plague mask on the face. Other player models and their skins were not looked at.
+
 ### Chat bubbles
 
 `cgame/bubble/cg_bubble.c` (2026-10-11). What a player says in the chat stands above his head for 2.5 to 8
@@ -305,7 +545,7 @@ chat bubble stands on top of it.
 |------|---------|---------|
 | `v_playerStatuses` | 1 | show the lines of the others |
 | `v_shareMusic` | 0 | tell the server what music plays on this machine. Off by default: everybody on the server reads it. "Show My Music" in Setup, Voice Chat |
-| `v_caps` | 3, read only | in the userinfo, what this cgame draws that a server sends to nobody else: bit 0 statuses, bit 1 who plays with a client of this tree ("Who plays with VisionJK") |
+| `v_caps` | 7, read only | in the userinfo, what this cgame draws that a server sends to nobody else: bit 0 statuses, bit 1 who plays with a client of this tree ("Who plays with VisionJK"), bit 2 hats and capes ("Hats and capes") |
 | `v_vision` | the version, read only | in the userinfo: this is the client of VisionJK, and which one. A server of this tree greets it by that name and not as "client plugin 1.4B4". `cjp_client` stays 1.4B4: it is what a JA+ server of somebody else reads to switch the plugin features on |
 
 - The line of the player the view is behind (oneself in third person, or whom one follows) is not drawn since

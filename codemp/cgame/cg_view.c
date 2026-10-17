@@ -2422,6 +2422,7 @@ void CG_DrawActiveFrame( int serverTime, stereoFrame_t stereoView, qboolean demo
 	CG_VoiceFrame();
 	CG_BoomboxFrame();
 	CG_StatusFrame();
+	CG_LookFrame();
 	CG_AuthFrame();
 	int		inwater;
 	const char *cstr;
@@ -2486,6 +2487,9 @@ void CG_DrawActiveFrame( int serverTime, stereoFrame_t stereoView, qboolean demo
 
 	// set up cg.snap and possibly cg.nextSnap
 	CG_ProcessSnapshots();
+
+	// the forced models of the others when this player changed teams (cg_cvar.c)
+	CG_ForcedModelsCheck();
 
 	trap->ROFF_UpdateEntities();
 
@@ -2683,6 +2687,7 @@ void CG_DrawActiveFrame( int serverTime, stereoFrame_t stereoView, qboolean demo
 
 	if ( !cg.hyperspace ) {
 		CG_AddLocalEntities();
+		CG_StrafeTrailsAdd();		// cg_strafetrail.c
 	}
 
 	cg.refdef.time = cg.time;

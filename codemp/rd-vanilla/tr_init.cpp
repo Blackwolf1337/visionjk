@@ -311,7 +311,10 @@ void R_Splash()
 		pImage = R_FindImageFile( "menu/splash", qfalse, qfalse, qfalse, GL_CLAMP);
 	}
 */
-	pImage = R_FindImageFile( "menu/splash", qfalse, qfalse, qfalse, GL_CLAMP);
+	// a wide window takes a wide picture where there is one (as TaystJK, 2026-10-17)
+	pImage = R_2DBias() > 0.0f ? R_FindImageFile( "menu/splash_16_9", qfalse, qfalse, qfalse, GL_CLAMP ) : NULL;
+	if ( !pImage )
+		pImage = R_FindImageFile( "menu/splash", qfalse, qfalse, qfalse, GL_CLAMP);
 	extern void	RB_SetGL2D (void);
 	RB_SetGL2D();
 	if (pImage )

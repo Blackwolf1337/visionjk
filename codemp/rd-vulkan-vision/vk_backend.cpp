@@ -145,8 +145,12 @@ something on screen asap, the rest of the start takes a moment in which nothing 
 ===============
 */
 void VK_Splash( void ) {
-	image_t		*image = R_FindImageFile( "menu/splash", qfalse, qfalse, qfalse, GL_CLAMP );
 	const float	bias = R_2DBias();		// over the whole window
+	image_t		*image = bias > 0.0f ? R_FindImageFile( "menu/splash_16_9", qfalse, qfalse, qfalse, GL_CLAMP ) : NULL;
+
+	if ( !image ) {
+		image = R_FindImageFile( "menu/splash", qfalse, qfalse, qfalse, GL_CLAMP );
+	}
 
 	if ( !image ) {
 		return;		// invalid paths?
