@@ -489,7 +489,7 @@ vs_box on|set|gone|note, see bg_boombox.h
 =================
 */
 void CG_BoomboxServerCommand( void ) {
-	char	what[8], title[BOX_TITLE];
+	char	what[8], title[BOX_TITLE], next[BOX_TITLE];
 	vec3_t	origin;
 	int		n;
 
@@ -539,10 +539,12 @@ void CG_BoomboxServerCommand( void ) {
 	if ( Q_stricmp( what, "set" ) )
 		return;
 	VectorSet( origin, (float)atof( CG_Argv( 4 ) ), (float)atof( CG_Argv( 5 ) ), (float)atof( CG_Argv( 6 ) ) );
-	// (CG_Argv has one buffer: the title is copied before the next one is read)
+	// (CG_Argv has one buffer: both titles are copied before anything else is read, also the next one, which as an
+	// argument of Box_Set() was overwritten by the numbers read after it and showed one of them)
 	Q_strncpyz( title, CG_Argv( 13 ), sizeof( title ) );
+	Q_strncpyz( next, CG_Argv( 14 ), sizeof( next ) );
 	Box_Set( n, atoi( CG_Argv( 3 ) ), origin, (float)atof( CG_Argv( 7 ) ), atoi( CG_Argv( 8 ) ), atoi( CG_Argv( 9 ) ), atoi( CG_Argv( 10 ) ),
-		atoi( CG_Argv( 11 ) ), atoi( CG_Argv( 12 ) ), title, CG_Argv( 14 ) );
+		atoi( CG_Argv( 11 ) ), atoi( CG_Argv( 12 ) ), title, next );
 	// (a server before 0.1.9 sends neither: "")
 	Q_strncpyz( cgBoxes[n].owner, CG_Argv( 15 ), sizeof( cgBoxes[n].owner ) );
 	Q_strncpyz( cgBoxes[n].by, CG_Argv( 16 ), sizeof( cgBoxes[n].by ) );
@@ -1092,6 +1094,7 @@ boombox play <link or words>: into the line of the box near, or of a new one in 
 boombox place: a box where the cross hair points
 boombox pause|resume|skip|stop|remove [box]: of that box, or of the one near
 boombox volume <0 to 100> [box]
+boombox window [box]: the window of that box, or of the one near
 boombox list: the boxes and their lines, in the console
 =================
 */
@@ -1153,6 +1156,15 @@ void CG_Boombox_f( void ) {
 		}
 		return;
 	}
+	if ( !Q_stricmp( what, "window" ) ) {
+		box = CG_Argv( 2 )[0] ? atoi( CG_Argv( 2 ) ) : Box_Near();
+		if ( !Box_Valid( box ) ) {
+			trap->Print( "Boombox: there is no boombox near you\n" );
+			return;
+		}
+		CG_BoomboxWindowOpen( box );
+		return;
+	}
 	if ( !Q_stricmp( what, "volume" ) ) {
 		box = CG_Argv( 3 )[0] ? atoi( CG_Argv( 3 ) ) : Box_Near();
 		if ( !Box_Valid( box ) || !CG_Argv( 2 )[0] ) {
@@ -1173,6 +1185,6 @@ void CG_Boombox_f( void ) {
 		CG_BoomboxDo( box, what );
 		return;
 	}
-	trap->Print( "usage: v_boombox play \"<link or what to look for>\" | place | pause | resume | skip | stop | remove | volume <0 to 100> | list\n"
+	trap->Print( "usage: v_boombox play \"<link or what to look for>\" | place | pause | resume | skip | stop | remove | volume <0 to 100> | window | list\n"
 		"Hold the key of the pointer (+v_cursor) and click a boombox for its card, or drag it somewhere else.\n" );
 }

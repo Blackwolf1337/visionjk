@@ -386,6 +386,8 @@ CGAME = {
     'In the line: %s': 'Warteschlange: %s',
     'In the line': 'Warteschlange',
     'Nothing waits': 'Nichts wartet',
+    'Mute': 'Stumm',
+    'Unmute': 'Wieder hören',
     # the windows of a download (client/cl_download.cpp): the engine asks for these by the key texts.py makes
     'Files of the server': 'Dateien des Servers',
     'The server offers these files to download.': 'Der Server bietet diese Dateien zum Herunterladen an.',

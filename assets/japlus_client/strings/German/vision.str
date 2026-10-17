@@ -913,6 +913,14 @@ REFERENCE           NOTHING_WAITS
 LANG_ENGLISH        "Nothing waits"
 LANG_GERMAN         "Nichts wartet"
 
+REFERENCE           MUTE
+LANG_ENGLISH        "Mute"
+LANG_GERMAN         "Stumm"
+
+REFERENCE           UNMUTE
+LANG_ENGLISH        "Unmute"
+LANG_GERMAN         "Wieder hören"
+
 REFERENCE           FILES_OF_THE_SERVER
 LANG_ENGLISH        "Files of the server"
 LANG_GERMAN         "Dateien des Servers"

@@ -686,6 +686,12 @@ LANG_ENGLISH        "In the line"
 REFERENCE           NOTHING_WAITS
 LANG_ENGLISH        "Nothing waits"
 
+REFERENCE           MUTE
+LANG_ENGLISH        "Mute"
+
+REFERENCE           UNMUTE
+LANG_ENGLISH        "Unmute"
+
 REFERENCE           FILES_OF_THE_SERVER
 LANG_ENGLISH        "Files of the server"
 

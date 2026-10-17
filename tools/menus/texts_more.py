@@ -151,6 +151,8 @@ MORE = {
     'In the line: %s': ("File d'attente : %s", 'En cola: %s'),
     'In the line': ("File d'attente", 'En cola'),
     'Nothing waits': ("Rien n'attend", 'No espera nada'),
+    'Mute': ('Muet', 'Silenciar'),
+    'Unmute': ('Réentendre', 'Volver a oír'),
     'Files of the server': ('Fichiers du serveur', 'Archivos del servidor'),
     'The server offers these files to download.': ('Le serveur propose ces fichiers au téléchargement.', 'El servidor ofrece estos archivos para descargar.'),
     'Before anything of them is used you see what is inside. Programs stay blocked.': ('Avant toute utilisation, vous voyez leur contenu. Les programmes restent bloqués.', 'Antes de usar nada de ellos verá lo que contienen. Los programas quedan bloqueados.'),

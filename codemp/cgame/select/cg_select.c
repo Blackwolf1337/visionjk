@@ -95,13 +95,14 @@ typedef enum {
 									// has letters as tall as those of a chat bubble.
 #define SELECT_LINE			18.0f	// a line of text of the HUD is this high at a scale of 1, in its units,
 #define SELECT_BASE			0.857f	//	and its letters stand on this part of it
-#define SELECT_NUDGE		40.0f	// how far a card is lifted or lowered at most to stay on the screen, in units of the level
 #define SELECT_FLOOR		60.0f	// a card ends this far above the lower edge of the screen: the bars of the HUD are below
 #define SELECT_FLAT_PX		15.0f	// A card whose rows are lower than this on the screen, in pixels, is hard to read and to
 #define SELECT_WORLD_PX		17.5f	//	hit: it grows to the size it was made for, and shrinks back when they are higher than this.
 #define SELECT_FLAT_MIN_PX	18.5f	// Grown, its rows are at least this high, so growing never makes it smaller.
 #define SELECT_POP_MSEC		180		// how long it takes to grow and to shrink
 #define SELECT_TAG_PX		14.0f	// the letters of a name are never lower than this on the screen, in pixels
+#define SELECT_NEAR_MAX		1.5f	// Very near, a card and a name are never larger than this many times the size they were made
+									// for on the screen: a step in front of a box they were larger than the screen.
 #define SELECT_FOLLOW_MSEC	90.0f	// how late they follow him: a step of his is no jump of theirs
 #define SELECT_SHELLS	6		// the shells of the outline
 #define SELECT_BLUR_TENTHS	12	// how far the hull that the dynamic glow blurs stands off the model, in tenths of a unit,
@@ -560,13 +561,14 @@ Select_BesideWorld
 
 The same for a board that is a thing in the level, w and h in units of the card, of which b->unit says how large
 one is there: the place of its top left corner. At the right of the player as the camera sees him, at his left where the screen ends at his right, and
-lifted or lowered a little where it would reach over the top or the bottom of the screen: the view can not be
-turned to it while the mouse is free. qfalse: it is not in front of the camera.
+lifted, lowered or moved aside as far as it would reach over an edge of the screen (a box at the feet of the
+player is below it): the view can not be turned to it while the mouse is free. qfalse: it is not in front of the
+camera.
 =================
 */
 static qboolean Select_BesideWorld( int clientNum, float w, float h, const selectBoard_t *b, vec3_t corner ) {
 	vec3_t			base, far;
-	float			sx, sy, z, perUnit, over, scale, beside;
+	float			sx, sy, z, perUnit, over, scale, beside, width;
 
 	Select_Middle( clientNum, base, &scale );
 	beside = SELECT_BESIDE * scale + SELECT_GAP * b->unit;
@@ -584,11 +586,16 @@ static qboolean Select_BesideWorld( int clientNum, float w, float h, const selec
 	// (units of the HUD a unit of the level, at its distance)
 	perUnit = SCREEN_HEIGHT * 0.5f / ( z * tanf( DEG2RAD( cg.refdef.fov_y ) * 0.5f ) );
 	over = sy + h * b->unit * perUnit - ( SCREEN_HEIGHT - SELECT_FLOOR );
-	// (a board that has grown may be moved further: it is that much larger there)
 	if ( over > 0.0f ) {
-		corner[2] += Q_min( SELECT_NUDGE * b->unit / SELECT_UNIT, over / perUnit );
+		corner[2] += over / perUnit;
 	} else if ( sy < 30.0f ) {
-		corner[2] -= Q_min( SELECT_NUDGE * b->unit / SELECT_UNIT, ( 30.0f - sy ) / perUnit );
+		corner[2] -= ( 30.0f - sy ) / perUnit;
+	}
+	width = w * b->unit * perUnit;
+	if ( sx < 4.0f - cgs.bias2D ) {
+		VectorMA( corner, ( 4.0f - cgs.bias2D - sx ) / perUnit, b->right, corner );
+	} else if ( sx + width > SCREEN_WIDTH + cgs.bias2D - 4.0f ) {
+		VectorMA( corner, -( sx + width - SCREEN_WIDTH - cgs.bias2D + 4.0f ) / perUnit, b->right, corner );
 	}
 	return qtrue;
 }
@@ -1151,9 +1158,12 @@ static void Select_DrawCard( const selectBoard_t *b ) {
 		float		at = 8.0f;
 
 		if ( sel.head[i].more[0] ) {
-			// two parts: the first as it is, the second in what is left of the line
-			Board_Text( b, at, lineY, 0.52f, sel.head[i].color, sel.head[i].text );
-			at += Board_Width( b, sel.head[i].text, 0.52f ) + 7.0f;
+			// two parts: the first as far as it leaves room for the second, the second in what is left of the line
+			const float first = Q_min( Board_Width( b, sel.head[i].text, 0.52f ),
+				SELECT_CARD_W - 16.0f - 7.0f - Q_min( Board_Width( b, sel.head[i].more, 0.52f ), ( SELECT_CARD_W - 16.0f ) * 0.5f ) );
+
+			Board_TextFit( b, at, lineY, 0.52f, sel.head[i].color, sel.head[i].text, first );
+			at += first + 7.0f;
 			Board_TextFit( b, at, lineY, 0.52f, sel.head[i].moreColor, sel.head[i].more, SELECT_CARD_W - 8.0f - at );
 		} else {
 			Board_TextFit( b, at, lineY, 0.52f, sel.head[i].color, sel.head[i].text, SELECT_CARD_W - 16.0f );
@@ -1206,8 +1216,12 @@ static void Select_Tag( void ) {
 	name = Select_Name( sel.hover );
 	Board_Begin( &sel.tag );
 	// (least: what a unit of it has to be on the screen for letters of that height, in units of the HUD)
-	if ( sel.tag.world && Select_Away( sel.hover, &perUnit ) && SELECT_UNIT * perUnit < least ) {
-		sel.tag.unit = least / perUnit;
+	if ( sel.tag.world && Select_Away( sel.hover, &perUnit ) ) {
+		if ( SELECT_UNIT * perUnit < least ) {
+			sel.tag.unit = least / perUnit;
+		} else if ( SELECT_UNIT * perUnit > SELECT_NEAR_MAX ) {
+			sel.tag.unit = SELECT_NEAR_MAX / perUnit;
+		}
 	}
 	sel.tagWidth = Board_Width( &sel.tag, name, 0.62f ) + 10.0f;
 	if ( Board_Place( &sel.tag, sel.hover, sel.tagWidth, 15.0f, (qboolean)( sel.tagFor != sel.hover ) ) ) {
@@ -1268,9 +1282,9 @@ static void Select_Card( void ) {
 	}
 	Board_Begin( &sel.card );
 	if ( sel.card.world && seen && Select_Away( sel.selected, &perUnit ) ) {
-		// what a unit of the card is on the screen where it stands in the level, in units of the HUD, and a row
-		// of it in pixels
-		const float	k = SELECT_UNIT * perUnit;
+		// what a unit of the card is on the screen where it stands in the level, in units of the HUD (no more than
+		// SELECT_NEAR_MAX), and a row of it in pixels
+		const float	k = Q_min( SELECT_UNIT * perUnit, SELECT_NEAR_MAX );
 		const float	row = SELECT_LINE * SELECT_SCALE * k * cgs.glconfig.vidHeight / SCREEN_HEIGHT;
 		int			age;
 
@@ -1628,9 +1642,10 @@ void CG_SelectCursorUp_f( void ) {
 CG_SelectCursor_f
 
 cursor: the mouse is free, or the game has it back. cursor at <x> <y>: the pointer goes there, in the 640 x 480
-of the HUD. cursor on <player>: onto that player. cursor click: a click of the left button where the pointer
-is. cursor row <n>: that row of the card that is open. All but the first are for a key or a script in place of
-a mouse.
+of the HUD. cursor on <player>: onto that player. cursor box <n>: onto that box of the boombox. cursor click: a
+click of the left button where the pointer is, cursor release: the button let go there (the end of a drag).
+cursor row <n>: that row of the card that is open. All but the first are for a key or a script in place of a
+mouse.
 =================
 */
 void CG_SelectCursor_f( void ) {
@@ -1661,8 +1676,26 @@ void CG_SelectCursor_f( void ) {
 				trap->Print( "cursor on: %s^7 is not on the screen\n", cgs.clientinfo[n].name );
 			}
 		}
+	} else if ( !Q_stricmp( what, "box" ) ) {
+		vec3_t	middle;
+		float	x, y;
+
+		if ( !CG_BoomboxShown( atoi( CG_Argv( 2 ) ) ) ) {
+			trap->Print( "cursor box: no such boombox\n" );
+			return;
+		}
+		CG_BoomboxMiddle( atoi( CG_Argv( 2 ) ), middle );
+		middle[2] += BOX_HEIGHT * 0.5f;
+		if ( CG_WorldCoordToScreenCoordFloat( middle, &x, &y ) ) {
+			cgs.cursorX = (int)x;
+			cgs.cursorY = (int)y;
+		} else {
+			trap->Print( "cursor box: it is not on the screen\n" );
+		}
 	} else if ( !Q_stricmp( what, "click" ) ) {
 		CG_SelectKeyEvent( A_MOUSE1, qtrue );
+	} else if ( !Q_stricmp( what, "release" ) ) {
+		CG_SelectKeyEvent( A_MOUSE1, qfalse );
 	} else if ( !Q_stricmp( what, "over" ) ) {
 		// the pointer onto the middle of a row of the card that is open, wherever the card is (for scripts)
 		const int row = atoi( CG_Argv( 2 ) ) - 1;

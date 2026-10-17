@@ -349,7 +349,7 @@ void CG_BoomboxWindowDraw( void ) {
 		bx += w + gap;
 		Win_Button( PART_STOP, 0, bx, y, w, CG_VisionText( "Stop" ), winText, playing );
 		bx += w + gap;
-		Win_Button( PART_MUTE, 0, bx, y, w, CG_VisionText( info.muted ? "Hear it again" : "Mute it for me" ), info.muted ? winGold : winText, qtrue );
+		Win_Button( PART_MUTE, 0, bx, y, w, CG_VisionText( info.muted ? "Unmute" : "Mute" ), info.muted ? winGold : winText, qtrue );
 	}
 	y += WIN_BUTTON_H + 8.0f;
 
