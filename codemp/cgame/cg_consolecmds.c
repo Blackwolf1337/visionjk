@@ -350,6 +350,7 @@ static consoleCommand_t	commands[] = {
 	{ "v_boombox",					CG_Boombox_f },
 	{ "briefing",					CG_SiegeBriefing_f },
 	{ "v_chatDrag",				CG_ChatDrag_f },
+	{ "v_emoji",				CG_ChatEmoji_f },
 	{ "v_chatOpen",				CG_ChatOpen_f },
 	{ "v_cgKey",						CG_Key_f },
 	{ "clientlist",					CG_ClientList_f },

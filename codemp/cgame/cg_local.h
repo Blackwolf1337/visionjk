@@ -1761,6 +1761,7 @@ qboolean	CG_ChatKeyEvent( int key, qboolean down );
 void		CG_ChatOpen_f( void );
 qboolean	CG_ChatOpenFor( int mode, int target );
 void		CG_ChatDrag_f( void );
+void		CG_ChatEmoji_f( void );
 void		CG_ChatClose( void );
 
 // bubble/cg_bubble.c: chat bubbles above the heads

@@ -162,6 +162,7 @@ XCVAR_DEF( cg_saberTrail,						"1",					NULL,					CVAR_ARCHIVE )
 XCVAR_DEF( cg_scoreboardBots,					"1",					NULL,					CVAR_ARCHIVE )
 XCVAR_DEF( v_scoresPick,						"1",					NULL,					CVAR_ARCHIVE )
 // what came from TaystJK (2026-10-17), docs/japlus/client.md "HUD parts of TaystJK"
+XCVAR_DEF( v_chatEmoji,							"1",					NULL,					CVAR_ARCHIVE )
 XCVAR_DEF( v_chatLog,							"0",					NULL,					CVAR_ARCHIVE )
 XCVAR_DEF( v_crosshairColor,					"",						NULL,					CVAR_ARCHIVE )
 XCVAR_DEF( v_crosshairNamesOpacity,				"0.5",					NULL,					CVAR_ARCHIVE )

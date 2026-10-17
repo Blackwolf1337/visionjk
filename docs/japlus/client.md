@@ -375,6 +375,16 @@ Smaller ones:
 | `v_crosshairNamesOpacity` | 0.5 | how opaque the name of the player under the crosshair is, 0 to 1. The game had 0.5 |
 | `v_chatLog` | 0 | every chat line the box shows, without colours and with the time, appended to `chatlogs/<date>.log` in the game's home folder (`~/.local/share/visionjk/japlus/chatlogs` on Linux). Lines of hidden players are not written |
 
+Emoji in the chat box (as TaystJK, `cgame/chat/cg_chat.c`): `:name:` in a line is drawn as the picture
+`gfx/emoji/<name>.png` where there is one, as high as a row. The list is read from the paks at every start of
+the cgame, so a pak (also one a server sends) can bring more, and `v_emoji` lists them. This tree ships 78
+pictures of Noto Emoji (`assets/japlus_client/gfx/emoji`, with their licence notes) under the names TaystJK uses
+for the same faces (`:smile:`, `:joy:`, `:thumbsup:`, `:fire:`, `:heart:` ...). TaystJK's other emoji are
+emotes of Twitch, which can not be shipped. TaystJK's smileys `#:)` `#:(` `#:D` `#:P` `#;)` `#;(` `#:o` `#8)`
+`#>:(` `#>:)` `#^_^` `#o_o` and `:+1:` `:-1:` are pictures too. So are the real emoji characters of UTF-8 chat
+that have a picture here. `v_chatEmoji 0` shows the text. Only the chat box draws them: the bubbles above the
+heads and the console show the text, and so does a client of another tree.
+
 ### Chat bubbles
 
 `cgame/bubble/cg_bubble.c` (2026-10-11). What a player says in the chat stands above his head for 2.5 to 8
