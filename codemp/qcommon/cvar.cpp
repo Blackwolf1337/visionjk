@@ -346,7 +346,8 @@ static qboolean Cvar_TakeOldName( const char *name ) {
 	Q_strncpyz( value, old->string, sizeof( value ) );
 	flags = CVAR_USER_CREATED | ( old->flags & CVAR_ARCHIVE );
 	Cvar_Unset( old );
-	Com_Printf( "%s is called %s now, its value \"%s\" is taken over\n", from, name, value );
+	// (no value in the line: it may be a password, and a server prints into its log)
+	Com_Printf( "%s is called %s now, its value is taken over\n", from, name );
 	Cvar_Set2( name, value, flags, qtrue );
 	return qtrue;
 }
