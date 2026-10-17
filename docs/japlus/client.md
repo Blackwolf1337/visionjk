@@ -385,6 +385,24 @@ emotes of Twitch, which can not be shipped. TaystJK's smileys `#:)` `#:(` `#:D` 
 that have a picture here. `v_chatEmoji 0` shows the text. Only the chat box draws them: the bubbles above the
 heads and the console show the text, and so does a client of another tree.
 
+### Rows in Setup for what came from TaystJK
+
+Since 2026-10-17 (`tools/menus/options.py`, texts in four languages):
+
+- Interface:
+  - Killfeed and Team Overlay Size under Menus and HUD.
+  - Crosshair Colour and Name Opacity under View.
+  - A new head Movement: Speedometer, Strafe Helper, Snap HUD, Pitch HUD and Strafe Trails.
+  - A new head Looks: Hats and Capes (`v_showCosmetics`), Seasonal Hats, Enemy Model, Ally Model, Saber Team
+    Colours, Two-Coloured Staff, Jedi Outcast Shots and Disruptor Beam.
+- Chat & Social: Chat Emoji and Chat Log under Chat, Console Clock under Console.
+
+Crosshair Colour is a row of a new kind of the generator (`multistr`, a `cvarStrList`), since its cvar holds a text.
+The ui registers the cvars of the cgame that have a row (`ui_xcvar.h`), so the menus outside a game show their
+defaults. Clicked in a hidden run on 2026-10-17: every row set its cvar as clicked
+(`agent/japlus_port/tools/clienttests/ui_taystjk_rows.cfg`). The rows for wearing a hat or a cape wait for the
+models.
+
 ### Looks of TaystJK
 
 Taken over from TaystJK on 2026-10-17. They only change what this player sees.

@@ -309,6 +309,10 @@ REFERENCE           HOW_MANY_OF_THE_LOUDEST_SOUNDS_ECHO
 LANG_ENGLISH        "How many of the loudest sounds echo off the walls around them. More costs more time a frame."
 LANG_SPANISH        "Cuántos de los sonidos más fuertes resuenan en las paredes a su alrededor. Más cuesta más tiempo por fotograma."
 
+REFERENCE           OFF
+LANG_ENGLISH        "Off"
+LANG_SPANISH        "No"
+
 REFERENCE           SOUND_AROUND_CORNERS
 LANG_ENGLISH        "Sound Around Corners"
 LANG_SPANISH        "Sonido tras las esquinas"
@@ -509,6 +513,22 @@ REFERENCE           A_GRAPH_OF_YOUR_CONNECTION
 LANG_ENGLISH        "A graph of your connection."
 LANG_SPANISH        "Un gráfico de tu conexión."
 
+REFERENCE           KILLFEED
+LANG_ENGLISH        "Killfeed"
+LANG_SPANISH        "Lista de bajas"
+
+REFERENCE           WHO_KILLED_WHOM_WITH_WHAT_AT_THE_UPP
+LANG_ENGLISH        "Who killed whom with what, at the upper right."
+LANG_SPANISH        "Quién eliminó a quién y con qué, arriba a la derecha."
+
+REFERENCE           TEAM_OVERLAY_SIZE
+LANG_ENGLISH        "Team Overlay Size"
+LANG_SPANISH        "Tamaño de la lista del equipo"
+
+REFERENCE           HOW_LARGE_THE_LIST_OF_YOUR_TEAM_MATE
+LANG_ENGLISH        "How large the list of your team mates is."
+LANG_SPANISH        "Lo grande que es la lista de tus compañeros."
+
 REFERENCE           VIEW
 LANG_ENGLISH        "View"
 LANG_SPANISH        "Vista"
@@ -536,6 +556,178 @@ LANG_SPANISH        "Tamaño de la mira"
 REFERENCE           THE_SIZE_OF_THE_CROSSHAIR
 LANG_ENGLISH        "The size of the crosshair."
 LANG_SPANISH        "El tamaño de la mira."
+
+REFERENCE           CROSSHAIR_COLOUR
+LANG_ENGLISH        "Crosshair Colour"
+LANG_SPANISH        "Color de la mira"
+
+REFERENCE           THE_COLOUR_OF_THE_CROSSHAIR_WITH_NOT
+LANG_ENGLISH        "The colour of the crosshair with nothing under it."
+LANG_SPANISH        "El color de la mira cuando no hay nada debajo."
+
+REFERENCE           WHITE
+LANG_ENGLISH        "White"
+LANG_SPANISH        "Blanco"
+
+REFERENCE           CYAN
+LANG_ENGLISH        "Cyan"
+LANG_SPANISH        "Cian"
+
+REFERENCE           YELLOW
+LANG_ENGLISH        "Yellow"
+LANG_SPANISH        "Amarillo"
+
+REFERENCE           ORANGE
+LANG_ENGLISH        "Orange"
+LANG_SPANISH        "Naranja"
+
+REFERENCE           PINK
+LANG_ENGLISH        "Pink"
+LANG_SPANISH        "Rosa"
+
+REFERENCE           NAME_OPACITY
+LANG_ENGLISH        "Name Opacity"
+LANG_SPANISH        "Opacidad de los nombres"
+
+REFERENCE           HOW_CLEARLY_THE_NAME_OF_THE_PLAYER_U
+LANG_ENGLISH        "How clearly the name of the player under the crosshair shows."
+LANG_SPANISH        "Lo claro que se ve el nombre del jugador bajo la mira."
+
+REFERENCE           MOVEMENT
+LANG_ENGLISH        "Movement"
+LANG_SPANISH        "Movimiento"
+
+REFERENCE           SPEEDOMETER
+LANG_ENGLISH        "Speedometer"
+LANG_SPANISH        "Velocímetro"
+
+REFERENCE           YOUR_SPEED_UNDER_THE_CROSSHAIR_AND_T
+LANG_ENGLISH        "Your speed under the crosshair, and the speeds of your last jumps."
+LANG_SPANISH        "Tu velocidad bajo la mira y la de tus últimos saltos."
+
+REFERENCE           STRAFE_HELPER
+LANG_ENGLISH        "Strafe Helper"
+LANG_SPANISH        "Ayuda de strafe"
+
+REFERENCE           A_BAR_UNDER_THE_CROSSHAIR_THAT_SHOWS
+LANG_ENGLISH        "A bar under the crosshair that shows where to turn to gain speed."
+LANG_SPANISH        "Una barra bajo la mira que muestra hacia dónde girar para ganar velocidad."
+
+REFERENCE           SNAP_HUD
+LANG_ENGLISH        "Snap HUD"
+LANG_SPANISH        "Indicador de snap"
+
+REFERENCE           IN_THE_AIR_THE_ANGLES_WHERE_THE_ROUN
+LANG_ENGLISH        "In the air, the angles where the rounding of the game gives a little more speed."
+LANG_SPANISH        "En el aire, los ángulos en los que el redondeo del juego da algo más de velocidad."
+
+REFERENCE           PITCH_HUD
+LANG_ENGLISH        "Pitch HUD"
+LANG_SPANISH        "Indicador de inclinación"
+
+REFERENCE           A_MARK_WHERE_YOUR_VIEW_WOULD_BE_AT_A
+LANG_ENGLISH        "A mark where your view would be at a chosen pitch."
+LANG_SPANISH        "Una marca donde estaría tu vista con una inclinación elegida."
+
+REFERENCE           STRAFE_TRAILS
+LANG_ENGLISH        "Strafe Trails"
+LANG_SPANISH        "Rastros de carrera"
+
+REFERENCE           A_FADING_LINE_ON_THE_GROUND_ALONG_WH
+LANG_ENGLISH        "A fading line on the ground along where players ran."
+LANG_SPANISH        "Una línea que se desvanece en el suelo por donde corrieron los jugadores."
+
+REFERENCE           MINE
+LANG_ENGLISH        "Mine"
+LANG_SPANISH        "La mía"
+
+REFERENCE           EVERYBODY
+LANG_ENGLISH        "Everybody"
+LANG_SPANISH        "Todos"
+
+REFERENCE           LOOKS
+LANG_ENGLISH        "Looks"
+LANG_SPANISH        "Apariencia"
+
+REFERENCE           HATS_AND_CAPES
+LANG_ENGLISH        "Hats and Capes"
+LANG_SPANISH        "Sombreros y capas"
+
+REFERENCE           WHAT_PLAYERS_WEAR_ON_THEIR_HEADS_AND
+LANG_ENGLISH        "What players wear on their heads and backs. Only players of VisionJK wear them."
+LANG_SPANISH        "Lo que los jugadores llevan en la cabeza y la espalda. Solo los jugadores de VisionJK los llevan."
+
+REFERENCE           EVERYBODY_S
+LANG_ENGLISH        "Everybody's"
+LANG_SPANISH        "Los de todos"
+
+REFERENCE           MINE_ON_EVERYBODY
+LANG_ENGLISH        "Mine on Everybody"
+LANG_SPANISH        "Los míos en todos"
+
+REFERENCE           SEASONAL_HATS
+LANG_ENGLISH        "Seasonal Hats"
+LANG_SPANISH        "Sombreros de temporada"
+
+REFERENCE           A_SANTA_HAT_AT_CHRISTMAS_AND_A_PUMPK
+LANG_ENGLISH        "A Santa hat at Christmas and a pumpkin at Halloween for those without a hat."
+LANG_SPANISH        "Un gorro de Papá Noel en Navidad y una calabaza en Halloween para quien no lleve sombrero."
+
+REFERENCE           ENEMY_MODEL
+LANG_ENGLISH        "Enemy Model"
+LANG_SPANISH        "Modelo de los enemigos"
+
+REFERENCE           EVERY_OPPONENT_IN_THIS_MODEL_AS_MODE
+LANG_ENGLISH        "Every opponent in this model, as model/skin. Empty: as they chose."
+LANG_SPANISH        "Cada rival con este modelo, como modelo/skin. Vacío: como lo eligieron."
+
+REFERENCE           ALLY_MODEL
+LANG_ENGLISH        "Ally Model"
+LANG_SPANISH        "Modelo de los aliados"
+
+REFERENCE           EVERY_TEAM_MATE_IN_THIS_MODEL_AS_MOD
+LANG_ENGLISH        "Every team mate in this model, as model/skin. Empty: as they chose."
+LANG_SPANISH        "Cada compañero con este modelo, como modelo/skin. Vacío: como lo eligieron."
+
+REFERENCE           SABER_TEAM_COLOURS
+LANG_ENGLISH        "Saber Team Colours"
+LANG_SPANISH        "Colores de equipo de los sables"
+
+REFERENCE           IN_TEAM_GAMES_EVERY_BLADE_IN_THE_COL
+LANG_ENGLISH        "In team games every blade in the colour of its team. Off: blades keep their colour."
+LANG_SPANISH        "En partidas por equipos, cada hoja del color de su equipo. No: las hojas conservan su color."
+
+REFERENCE           TWO_COLOURED_STAFF
+LANG_ENGLISH        "Two-Coloured Staff"
+LANG_SPANISH        "Bastón de dos colores"
+
+REFERENCE           THE_SECOND_BLADE_OF_A_STAFF_IN_THE_S
+LANG_ENGLISH        "The second blade of a staff in the second saber colour."
+LANG_SPANISH        "La segunda hoja del bastón en el segundo color de sable."
+
+REFERENCE           JEDI_OUTCAST_SHOTS
+LANG_ENGLISH        "Jedi Outcast Shots"
+LANG_SPANISH        "Disparos como en Jedi Outcast"
+
+REFERENCE           SHOTS_DRAWN_AS_CRISPLY_AS_IN_JEDI_OU
+LANG_ENGLISH        "Shots drawn as crisply as in Jedi Outcast. Counts from the next level."
+LANG_SPANISH        "Disparos tan nítidos como en Jedi Outcast. Cuenta desde el siguiente nivel."
+
+REFERENCE           DISRUPTOR_BEAM
+LANG_ENGLISH        "Disruptor Beam"
+LANG_SPANISH        "Rayo del disruptor"
+
+REFERENCE           HOW_THE_SHOT_OF_THE_DISRUPTOR_LOOKS
+LANG_ENGLISH        "How the shot of the disruptor looks."
+LANG_SPANISH        "Cómo se ve el disparo del disruptor."
+
+REFERENCE           LINE
+LANG_ENGLISH        "Line"
+LANG_SPANISH        "Línea"
+
+REFERENCE           SPIRAL
+LANG_ENGLISH        "Spiral"
+LANG_SPANISH        "Espiral"
 
 REFERENCE           PLAYERS
 LANG_ENGLISH        "Players"
@@ -641,6 +833,22 @@ REFERENCE           A_SOUND_WHEN_SOMEBODY_SAYS_SOMETHING
 LANG_ENGLISH        "A sound when somebody says something."
 LANG_SPANISH        "Un sonido cuando alguien dice algo."
 
+REFERENCE           CHAT_EMOJI
+LANG_ENGLISH        "Chat Emoji"
+LANG_SPANISH        "Emojis del chat"
+
+REFERENCE           CODES_LIKE_SMILE_ARE_DRAWN_AS_PICTUR
+LANG_ENGLISH        "Codes like :smile: are drawn as pictures in the chat box."
+LANG_SPANISH        "Los códigos como :smile: se muestran como imágenes en el chat."
+
+REFERENCE           CHAT_LOG
+LANG_ENGLISH        "Chat Log"
+LANG_SPANISH        "Registro del chat"
+
+REFERENCE           EVERY_CHAT_LINE_IS_WRITTEN_INTO_THE
+LANG_ENGLISH        "Every chat line is written into the folder chatlogs, with the time."
+LANG_SPANISH        "Cada línea del chat se escribe en la carpeta chatlogs, con la hora."
+
 REFERENCE           CONSOLE
 LANG_ENGLISH        "Console"
 LANG_SPANISH        "Consola"
@@ -668,6 +876,22 @@ LANG_SPANISH        "Opacidad de la consola"
 REFERENCE           HOW_MUCH_OF_THE_GAME_SHOWS_THROUGH_T
 LANG_ENGLISH        "How much of the game shows through the console."
 LANG_SPANISH        "Cuánto del juego se ve a través de la consola."
+
+REFERENCE           CONSOLE_CLOCK
+LANG_ENGLISH        "Console Clock"
+LANG_SPANISH        "Reloj de la consola"
+
+REFERENCE           A_CLOCK_IN_THE_CORNER_OF_THE_CONSOLE
+LANG_ENGLISH        "A clock in the corner of the console."
+LANG_SPANISH        "Un reloj en la esquina de la consola."
+
+REFERENCE           TIME
+LANG_ENGLISH        "Time"
+LANG_SPANISH        "Hora"
+
+REFERENCE           DATE_AND_TIME
+LANG_ENGLISH        "Date and Time"
+LANG_SPANISH        "Fecha y hora"
 
 REFERENCE           CLAN
 LANG_ENGLISH        "Clan"

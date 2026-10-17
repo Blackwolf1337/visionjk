@@ -51,6 +51,7 @@ class Layout:
 #   ('yesno', name, cvar, what for)             a row the old menus did not have
 #   ('slider', name, cvar, default, least, most, what for)
 #   ('multi', name, cvar, ((name, value), ...), what for)
+#   ('multistr', name, cvar, ((name, text), ...), what for)  the same for a cvar that holds a text
 #   ('edit' | 'secret', name, cvar, letters, what for)
 #   ('bind', name, command, what for)
 SETUP = [
@@ -105,10 +106,34 @@ SETUP = [
         ('yesno', 'Show Frame Rate', 'cg_drawFPS', 'Frames a second in the corner of the screen.'),
         ('yesno', 'Show Timer', 'cg_drawTimer', 'The time of the level in the corner of the screen.'),
         ('yesno', 'Show Lagometer', 'cg_lagometer', 'A graph of your connection.'),
+        ('yesno', 'Killfeed', 'v_killfeed', 'Who killed whom with what, at the upper right.'),
+        ('slider', 'Team Overlay Size', 'v_teamOverlayScale', 1, 0.5, 2.5, 'How large the list of your team mates is.'),
         ('head', 'View'),
         ('slider', 'Field of View', 'cg_fov', 80, 60, 130, 'How wide you see.'),
         ('slider', 'Camera Distance', 'cg_thirdPersonRange', 80, 40, 200, 'How far the camera is behind you in third person.'),
         ('slider', 'Crosshair Size', 'cg_crosshairSize', 24, 12, 64, 'The size of the crosshair.'),
+        ('multistr', 'Crosshair Colour', 'v_crosshairColor',
+         (('White', ''), ('Green', '0.2 1 0.3 1'), ('Cyan', '0.2 0.9 1 1'), ('Yellow', '1 0.9 0.2 1'), ('Orange', '1 0.5 0 1'),
+          ('Red', '1 0.2 0.2 1'), ('Pink', '1 0.4 0.9 1')),
+         'The colour of the crosshair with nothing under it.'),
+        ('slider', 'Name Opacity', 'v_crosshairNamesOpacity', 0.5, 0, 1, 'How clearly the name of the player under the crosshair shows.'),
+        ('head', 'Movement'),
+        ('yesno', 'Speedometer', 'v_speedometer', 'Your speed under the crosshair, and the speeds of your last jumps.'),
+        ('yesno', 'Strafe Helper', 'v_strafeHelper', 'A bar under the crosshair that shows where to turn to gain speed.'),
+        ('yesno', 'Snap HUD', 'v_snapHud', 'In the air, the angles where the rounding of the game gives a little more speed.'),
+        ('yesno', 'Pitch HUD', 'v_pitchHud', 'A mark where your view would be at a chosen pitch.'),
+        ('multi', 'Strafe Trails', 'v_strafeTrail', (('Off', 0), ('Mine', 1), ('Everybody', 2)),
+         'A fading line on the ground along where players ran.'),
+        ('head', 'Looks'),
+        ('multi', 'Hats and Capes', 'v_showCosmetics', (('Off', 0), ("Everybody's", 1), ('Mine on Everybody', 2)),
+         'What players wear on their heads and backs. Only players of VisionJK wear them.'),
+        ('yesno', 'Seasonal Hats', 'v_seasonalCosmetics', 'A Santa hat at Christmas and a pumpkin at Halloween for those without a hat.'),
+        ('edit', 'Enemy Model', 'v_forceEnemyModel', 32, 'Every opponent in this model, as model/skin. Empty: as they chose.'),
+        ('edit', 'Ally Model', 'v_forceAllyModel', 32, 'Every team mate in this model, as model/skin. Empty: as they chose.'),
+        ('yesno', 'Saber Team Colours', 'v_saberTeamColors', 'In team games every blade in the colour of its team. Off: blades keep their colour.'),
+        ('yesno', 'Two-Coloured Staff', 'v_saberStaffColors', 'The second blade of a staff in the second saber colour.'),
+        ('yesno', 'Jedi Outcast Shots', 'v_jk2Effects', 'Shots drawn as crisply as in Jedi Outcast. Counts from the next level.'),
+        ('multi', 'Disruptor Beam', 'v_disruptorBeam', (('Game', 0), ('Line', 1), ('Spiral', 2)), 'How the shot of the disruptor looks.'),
     ]),
     ('Chat & Social', 'The chat box, bubbles and what stands above the heads.', [
         ('head', 'Players'),
@@ -129,10 +154,13 @@ SETUP = [
         ('slider', 'Chat Box Rows', 'v_chatBoxRows', 10, 4, 24,
          'How many lines the open chat box shows. Its upper right corner can also be dragged with the mouse.'),
         ('yesno', 'Chat Beep', 'cg_chatBeep', 'A sound when somebody says something.'),
+        ('yesno', 'Chat Emoji', 'v_chatEmoji', 'Codes like :smile: are drawn as pictures in the chat box.'),
+        ('yesno', 'Chat Log', 'v_chatLog', 'Every chat line is written into the folder chatlogs, with the time.'),
         ('head', 'Console'),
         ('yesno', 'Sharp Console Font', 'con_font', 'The console in a font with every character.'),
         ('slider', 'Console Text Size', 'con_scale', 1, 0.5, 3, 'The size of the text of the console.'),
         ('slider', 'Console Opacity', 'con_opacity', 1, 0.2, 1, 'How much of the game shows through the console.'),
+        ('multi', 'Console Clock', 'v_consoleClock', (('Off', 0), ('Time', 1), ('Date and Time', 2)), 'A clock in the corner of the console.'),
         ('head', 'Clan'),
         ('secret', 'Clan Password', 'cp_clanPwd', 32,
          'Clan chat and clan radio reach everybody on the server who has the same one. The server sees it.'),
@@ -182,7 +210,8 @@ KEEP = ('name', 'group', 'type', 'text', 'cvar', 'cvarfloat', 'cvarfloatlist', '
 # the cvars the presets of the row "3D Sound" set (uiSpatialPresets in codemp/ui/ui_main.c)
 SOUND_PRESET_CVARS = ('v_spatialreflections', 'v_spatialpaths', 'v_spatialsources')
 
-TYPES = {'yesno': 'ITEM_TYPE_YESNO', 'slider': 'ITEM_TYPE_SLIDER', 'multi': 'ITEM_TYPE_MULTI', 'edit': 'ITEM_TYPE_EDITFIELD',
+TYPES = {'yesno': 'ITEM_TYPE_YESNO', 'slider': 'ITEM_TYPE_SLIDER', 'multi': 'ITEM_TYPE_MULTI', 'multistr': 'ITEM_TYPE_MULTI',
+         'edit': 'ITEM_TYPE_EDITFIELD',
          'secret': 'ITEM_TYPE_EDITFIELD', 'bind': 'ITEM_TYPE_BIND'}
 SETTINGS = ('item_type_yesno', 'item_type_slider', 'item_type_multi', 'item_type_editfield', 'item_type_numericfield',
             'item_type_bind', 'item_type_button', '1', '4', '9', '10', '11', '12', '13')
@@ -347,6 +376,11 @@ def new_row(spec):
         for name, value in spec[3]:
             words += [ref(name) if name in texts.TR else quoted(name), mf.fmt(value)]
         b.append(Entry('cvarFloatList', [], words))
+    elif kind == 'multistr':
+        words = []
+        for name, value in spec[3]:
+            words += [ref(name) if name in texts.TR else quoted(name), quoted(value)]
+        b.append(Entry('cvarStrList', [], words))
     elif kind in ('edit', 'secret'):
         b += [Entry('maxChars', [str(spec[3])]), Entry('maxPaintChars', ['24'])]
     action = list(CLICK)
