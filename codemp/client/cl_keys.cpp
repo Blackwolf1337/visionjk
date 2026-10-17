@@ -1229,9 +1229,16 @@ void Key_SetBinding( int keynum, const char *binding ) {
 		kg.keys[keynames[keynum].upper].binding = NULL;
 	}
 
-	// allocate memory for new binding
-	if ( binding )
+	// allocate memory for new binding, with the names of this tree since 2026-10-17 (cvar_renames.h)
+	if ( binding ) {
+		char renamed[MAX_STRING_CHARS];
+
+		if ( Cvar_RenamedText( binding, renamed, sizeof( renamed ) ) ) {
+			Com_Printf( "The bind of %s is \"%s\" now\n", Key_KeynumToString( keynum ), renamed );
+			binding = renamed;
+		}
 		kg.keys[keynames[keynum].upper].binding = CopyString( binding );
+	}
 
 	// consider this like modifying an archived cvar, so the
 	// file write will be triggered at the next oportunity

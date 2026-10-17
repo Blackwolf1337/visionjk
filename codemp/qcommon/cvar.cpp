@@ -328,6 +328,31 @@ static const char *Cvar_Validate( cvar_t *var, const char *value, qboolean warn 
 
 /*
 ============
+Cvar_TakeOldName
+
+VisionJK: a cvar is registered whose old name (cvar_renames.h) a config, the command line or a script has set:
+the value goes to the new name and the old one is gone, so it is not stored again. qtrue: there was one.
+============
+*/
+static qboolean Cvar_TakeOldName( const char *name ) {
+	const char	*from = Cvar_RenamedFrom( name );
+	cvar_t		*old = from ? Cvar_FindVar( from ) : NULL;
+	char		value[MAX_CVAR_VALUE_STRING];
+	uint32_t	flags;
+
+	if ( !old || !( old->flags & CVAR_USER_CREATED ) ) {
+		return qfalse;
+	}
+	Q_strncpyz( value, old->string, sizeof( value ) );
+	flags = CVAR_USER_CREATED | ( old->flags & CVAR_ARCHIVE );
+	Cvar_Unset( old );
+	Com_Printf( "%s is called %s now, its value \"%s\" is taken over\n", from, name, value );
+	Cvar_Set2( name, value, flags, qtrue );
+	return qtrue;
+}
+
+/*
+============
 Cvar_Get
 
 If the variable already exists, the value will not be set unless CVAR_ROM
@@ -356,6 +381,10 @@ cvar_t *Cvar_Get( const char *var_name, const char *var_value, uint32_t flags, c
 #endif
 
 	var = Cvar_FindVar (var_name);
+	// VisionJK: a value stored or set under the name this cvar had before 2026-10-17 (cvar_renames.h)
+	if ( !var && Cvar_TakeOldName( var_name ) ) {
+		var = Cvar_FindVar (var_name);
+	}
 	if ( var ) {
 		var_value = Cvar_Validate(var, var_value, qfalse);
 
@@ -614,8 +643,15 @@ cvar_t *Cvar_Set2( const char *var_name, const char *value, uint32_t defaultFlag
 
 	var = Cvar_FindVar (var_name);
 	if (!var) {
+		const char *renamed = Cvar_RenamedTo( var_name );
+
 		if ( !value ) {
 			return NULL;
+		}
+		// VisionJK: an old name of a cvar that is there under its new one (cvar_renames.h)
+		if ( renamed && Cvar_FindVar( renamed ) ) {
+			Com_Printf( "%s is called %s now, %s is set\n", var_name, renamed, renamed );
+			return Cvar_Set2( renamed, value, defaultFlags, force );
 		}
 		// create it
 		return Cvar_Get( var_name, value, defaultFlags );
