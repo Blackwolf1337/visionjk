@@ -104,6 +104,10 @@ MORE = {
     'Sound Around Corners': ('Son autour des angles', 'Sonido tras las esquinas'),
     'A sound finds its way around corners.': ('Un son contourne les angles.', 'El sonido rodea las esquinas.'),
     'Doppler Effect': ('Effet Doppler', 'Efecto Doppler'),
+    'Sound in the Background': ('Son en arrière-plan', 'Sonido en segundo plano'),
+    'The game goes on playing its sound while it is not in front or is minimized.':
+        ("Le jeu continue à jouer son son quand il n'est pas au premier plan ou est réduit.",
+         'El juego sigue reproduciendo su sonido cuando no está en primer plano o está minimizado.'),
     'What comes closer or goes away changes its pitch.': ("Ce qui s'approche ou s'éloigne change de hauteur.", 'Lo que se acerca o se aleja cambia de tono.'),
     'Echoes of Their Own': ('Échos propres', 'Ecos propios'),
     'How many of the loudest sounds echo off the walls around them. More costs more time a frame.':

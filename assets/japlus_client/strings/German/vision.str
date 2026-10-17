@@ -253,6 +253,14 @@ REFERENCE           VOLUME
 LANG_ENGLISH        "Volume"
 LANG_GERMAN         "Lautstärke"
 
+REFERENCE           SOUND_IN_THE_BACKGROUND
+LANG_ENGLISH        "Sound in the Background"
+LANG_GERMAN         "Ton im Hintergrund"
+
+REFERENCE           THE_GAME_GOES_ON_PLAYING_ITS_SOUND_W
+LANG_ENGLISH        "The game goes on playing its sound while it is not in front or is minimized."
+LANG_GERMAN         "Das Spiel spielt seinen Ton weiter, wenn es nicht im Vordergrund oder minimiert ist."
+
 REFERENCE           3D_SOUND
 LANG_ENGLISH        "3D Sound"
 LANG_GERMAN         "3D-Sound"

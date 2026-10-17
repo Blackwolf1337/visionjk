@@ -166,6 +166,9 @@ TR = {
     'Sound Around Corners': 'Schall um Ecken',
     'A sound finds its way around corners.': 'Ein Geräusch findet seinen Weg um Ecken.',
     'Doppler Effect': 'Doppler-Effekt',
+    'Sound in the Background': 'Ton im Hintergrund',
+    'The game goes on playing its sound while it is not in front or is minimized.':
+        'Das Spiel spielt seinen Ton weiter, wenn es nicht im Vordergrund oder minimiert ist.',
     'What comes closer or goes away changes its pitch.': 'Was näher kommt oder sich entfernt, ändert seine Tonhöhe.',
     'Echoes of Their Own': 'Eigenes Echo',
     'How many of the loudest sounds echo off the walls around them. More costs more time a frame.':

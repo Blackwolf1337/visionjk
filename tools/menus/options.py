@@ -73,6 +73,8 @@ SETUP = [
     ('@MENUS_SOUND', '@MENUS_CONFIGURE_SOUND_SETTINGS', [
         ('head', 'Volume'),
         ('old', 'sound', ('s_volume', 's_musicvolume', 's_volumevoice')),
+        ('yesno', 'Sound in the Background', 'v_soundUnfocused',
+         'The game goes on playing its sound while it is not in front or is minimized.'),
         ('head', '3D Sound'),
         ('old', 'sound', ('v_spatialquality', 'v_spatialhrtf', 'v_spatialreverb')),
         ('yesno', 'Room Reflections', 'v_spatialReflections', 'The room around you rings.'),
