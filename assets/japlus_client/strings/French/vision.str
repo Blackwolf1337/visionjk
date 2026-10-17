@@ -293,6 +293,14 @@ REFERENCE           THE_ROOM_AROUND_YOU_RINGS
 LANG_ENGLISH        "The room around you rings."
 LANG_FRENCH         "La pièce autour de vous résonne."
 
+REFERENCE           ECHOES_OF_THEIR_OWN
+LANG_ENGLISH        "Echoes of Their Own"
+LANG_FRENCH         "Échos propres"
+
+REFERENCE           HOW_MANY_OF_THE_LOUDEST_SOUNDS_ECHO
+LANG_ENGLISH        "How many of the loudest sounds echo off the walls around them. More costs more time a frame."
+LANG_FRENCH         "Combien des sons les plus forts résonnent sur les murs autour d'eux. Plus coûte plus de temps par image."
+
 REFERENCE           SOUND_AROUND_CORNERS
 LANG_ENGLISH        "Sound Around Corners"
 LANG_FRENCH         "Son autour des angles"
@@ -301,13 +309,21 @@ REFERENCE           A_SOUND_FINDS_ITS_WAY_AROUND_CORNERS
 LANG_ENGLISH        "A sound finds its way around corners."
 LANG_FRENCH         "Un son contourne les angles."
 
+REFERENCE           REAL_SOUND_TRAVEL
+LANG_ENGLISH        "Real Sound Travel"
+LANG_FRENCH         "Propagation réelle du son"
+
+REFERENCE           SOUNDS_FADE_WITH_THE_DISTANCE_AS_REA
+LANG_ENGLISH        "Sounds fade with the distance as real ones do, lose their highs far away and arrive at the speed of sound."
+LANG_FRENCH         "Les sons faiblissent avec la distance comme les vrais, perdent leurs aigus au loin et arrivent à la vitesse du son."
+
 REFERENCE           DOPPLER_EFFECT
 LANG_ENGLISH        "Doppler Effect"
 LANG_FRENCH         "Effet Doppler"
 
-REFERENCE           WHAT_FLIES_PAST_CHANGES_ITS_PITCH
-LANG_ENGLISH        "What flies past changes its pitch."
-LANG_FRENCH         "Ce qui passe en volant change de hauteur."
+REFERENCE           WHAT_COMES_CLOSER_OR_GOES_AWAY_CHANG
+LANG_ENGLISH        "What comes closer or goes away changes its pitch."
+LANG_FRENCH         "Ce qui s'approche ou s'éloigne change de hauteur."
 
 REFERENCE           VOICE_CHAT
 LANG_ENGLISH        "Voice Chat"

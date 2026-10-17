@@ -45,7 +45,8 @@ has reflections of its own there (`v_spatialSources` does nothing).
 
 ### The menu
 
-The sound page of the setup menu has three entries for it. "3D Sound" is a preset:
+The sound page of the setup menu has these entries for it (the new look; the classic menus only have the first
+three). "3D Sound" is a preset:
 
 | Preset | `v_spatial` | Reflections | Rays | Bounces | Paths | Sources |
 |--------|-------------|-------------|------|---------|-------|---------|
@@ -59,8 +60,17 @@ High is the defaults. Low is direction and muffling behind walls without a ray p
 Very High are a choice inside what the engine clamps to, their cost was not measured. The entry shows "Custom"
 when the cvars are none of the rows. Choosing a preset restarts the sound when it switches `v_spatial` or the
 rays, the rest is read while the game runs. "Output" is `v_spatialHrtf` (Headphones or Speakers), "Reverb" a
-slider on `v_spatialReverb`. The menu does not know whether the library is there: without it the console says
-so and the sound stays as it is.
+slider on `v_spatialReverb`. "Room Reflections" (`v_spatialReflections`), "Echoes of Their Own"
+(`v_spatialSources`: Off, 4, 8, 12, 16) and "Sound Around Corners" (`v_spatialPaths`) are parts of the preset:
+changing one of them says at once which preset the cvars are now, or "Custom" (their action runs
+`uiScript getsoundsetup`). "Real Sound Travel" (`v_spatialPhysical`) and "Doppler Effect" (`s_doppler`) are
+not in any preset: they are a matter of taste, not of what a frame costs. The menu does not know whether the
+library is there: without it the console says so and the sound stays as it is.
+
+Operated by mouse on 2026-10-17 in a hidden client (`v_uiMouse`, clienttests `ui_sound_rows.cfg` and
+`ui_sound_preset.cfg` of the port): the left arrow of "Echoes of Their Own" from 8 to 4, the right one to 12,
+OFF and ON of "Real Sound Travel", the preset row then "Custom", and High to Very High set 16 echoes, 8192 rays
+and 32 bounces. The entries were seen in a picture at 1280x720 in English only.
 
 The entry is a cvar of the ui (`v_spatialQuality`) that is worked out from the cvars of the engine by
 `uiScript getsoundsetup`, and it is not stored itself. The menus of the game run that script when the tab of the

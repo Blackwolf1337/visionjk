@@ -166,7 +166,13 @@ TR = {
     'Sound Around Corners': 'Schall um Ecken',
     'A sound finds its way around corners.': 'Ein Geräusch findet seinen Weg um Ecken.',
     'Doppler Effect': 'Doppler-Effekt',
-    'What flies past changes its pitch.': 'Was vorbeifliegt, ändert seine Tonhöhe.',
+    'What comes closer or goes away changes its pitch.': 'Was näher kommt oder sich entfernt, ändert seine Tonhöhe.',
+    'Echoes of Their Own': 'Eigenes Echo',
+    'How many of the loudest sounds echo off the walls around them. More costs more time a frame.':
+        'Wie viele der lautesten Geräusche von den Wänden um sie herum widerhallen. Mehr kostet mehr Zeit pro Bild.',
+    'Real Sound Travel': 'Echte Schallausbreitung',
+    'Sounds fade with the distance as real ones do, lose their highs far away and arrive at the speed of sound.':
+        'Geräusche werden mit der Entfernung leiser wie echte, verlieren in der Ferne ihre Höhen und kommen mit Schallgeschwindigkeit an.',
     'Talk to and hear other players with your microphone.': 'Mit dem Mikrofon mit anderen Spielern sprechen und sie hören.',
     'Mode': 'Modus',
     'Push to talk: hold the talk key (Controls, Extras).': 'Push-to-Talk: die Sprechtaste halten (Steuerung, Extras).',

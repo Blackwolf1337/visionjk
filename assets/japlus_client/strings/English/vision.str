@@ -221,17 +221,29 @@ LANG_ENGLISH        "Room Reflections"
 REFERENCE           THE_ROOM_AROUND_YOU_RINGS
 LANG_ENGLISH        "The room around you rings."
 
+REFERENCE           ECHOES_OF_THEIR_OWN
+LANG_ENGLISH        "Echoes of Their Own"
+
+REFERENCE           HOW_MANY_OF_THE_LOUDEST_SOUNDS_ECHO
+LANG_ENGLISH        "How many of the loudest sounds echo off the walls around them. More costs more time a frame."
+
 REFERENCE           SOUND_AROUND_CORNERS
 LANG_ENGLISH        "Sound Around Corners"
 
 REFERENCE           A_SOUND_FINDS_ITS_WAY_AROUND_CORNERS
 LANG_ENGLISH        "A sound finds its way around corners."
 
+REFERENCE           REAL_SOUND_TRAVEL
+LANG_ENGLISH        "Real Sound Travel"
+
+REFERENCE           SOUNDS_FADE_WITH_THE_DISTANCE_AS_REA
+LANG_ENGLISH        "Sounds fade with the distance as real ones do, lose their highs far away and arrive at the speed of sound."
+
 REFERENCE           DOPPLER_EFFECT
 LANG_ENGLISH        "Doppler Effect"
 
-REFERENCE           WHAT_FLIES_PAST_CHANGES_ITS_PITCH
-LANG_ENGLISH        "What flies past changes its pitch."
+REFERENCE           WHAT_COMES_CLOSER_OR_GOES_AWAY_CHANG
+LANG_ENGLISH        "What comes closer or goes away changes its pitch."
 
 REFERENCE           VOICE_CHAT
 LANG_ENGLISH        "Voice Chat"

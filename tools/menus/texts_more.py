@@ -104,7 +104,15 @@ MORE = {
     'Sound Around Corners': ('Son autour des angles', 'Sonido tras las esquinas'),
     'A sound finds its way around corners.': ('Un son contourne les angles.', 'El sonido rodea las esquinas.'),
     'Doppler Effect': ('Effet Doppler', 'Efecto Doppler'),
-    'What flies past changes its pitch.': ('Ce qui passe en volant change de hauteur.', 'Lo que pasa volando cambia de tono.'),
+    'What comes closer or goes away changes its pitch.': ("Ce qui s'approche ou s'éloigne change de hauteur.", 'Lo que se acerca o se aleja cambia de tono.'),
+    'Echoes of Their Own': ('Échos propres', 'Ecos propios'),
+    'How many of the loudest sounds echo off the walls around them. More costs more time a frame.':
+        ("Combien des sons les plus forts résonnent sur les murs autour d'eux. Plus coûte plus de temps par image.",
+         'Cuántos de los sonidos más fuertes resuenan en las paredes a su alrededor. Más cuesta más tiempo por fotograma.'),
+    'Real Sound Travel': ('Propagation réelle du son', 'Propagación real del sonido'),
+    'Sounds fade with the distance as real ones do, lose their highs far away and arrive at the speed of sound.':
+        ("Les sons faiblissent avec la distance comme les vrais, perdent leurs aigus au loin et arrivent à la vitesse du son.",
+         'Los sonidos se debilitan con la distancia como los reales, pierden sus agudos a lo lejos y llegan a la velocidad del sonido.'),
     # voice chat
     'Talk to and hear other players with your microphone.': ('Parler aux autres joueurs et les entendre avec votre microphone.', 'Habla con otros jugadores y escúchalos con tu micrófono.'),
     'Mode': ('Mode', 'Modo'),
