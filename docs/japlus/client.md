@@ -435,11 +435,12 @@ and jaPRO. Their files are laid out the same way, so their paks work:
   world. Here they go along the bolt: x forward, y right, z up. For a file that only lifts or lowers, that is the
   same.
 
-This tree ships 18 hats and one cape of jaPRO and TaystJK, with the permission of both projects (2026-10-17):
-afro, beard, bucket, cap, cringe (a propeller cap), crown, fedora to fedora4, glasses, gradcap, horns,
-metalhelm, plaguemask, santahat, sombrero, tophat, and the cape royalcape (`assets/japlus_client/models/cosmetics`,
-with a README of where they come from, and `shaders/vision_cosmetics.shader`). Their other pieces are taken from
-other games and films and are not shipped. Setup, Interface, Looks has the rows Hat and Cape with these names.
+This tree ships all 24 hats and 8 capes of jaPRO and TaystJK, with permission for all of them (2026-10-17):
+afro, beard, bucket, cap, cringe (a propeller cap), crown, fedora to fedora4, glasses, gradcap, headcrab, horns,
+mario, mask, metalhelm, plaguemask, predatorhelm, pumpkin, santahat, sombrero, supersaiyan, tophat, and the
+capes ak47, crowbar, goose, grogucape, royalcape, rpg, vadercape, yodacape (`assets/japlus_client/models/cosmetics`,
+with a README of where they come from, and `shaders/vision_cosmetics.shader`). Setup, Interface, Looks has the
+rows Hat and Cape with these names. With the pumpkin there, Seasonal Hats has its Halloween hat too.
 
 | Cvar or command | Default | Meaning |
 |-----------------|---------|---------|
@@ -468,8 +469,8 @@ stand-in hat and cape (a coffee pot of the game, copied into the test profiles o
 through the masterserver of the build on a server with the stand-in for a foreign module. The first runs found
 two faults: the arguments of `vs_look` were read from one buffer, so the cape came as the hat, and
 `BG_VoiceUnpack` refused the new packet type. In a level the stand-in hat sat on the head of a bot
-(`v_showCosmetics 2`) and the cape on his back. All 18 hats and the cape were then looked at on the own player in a level, from the front and the side
-(`clienttests/lvl_hats.cfg`, `lvl_cape.cfg`): each sits where it should on the default model, the beard on the
+(`v_showCosmetics 2`) and the cape on his back. All hats and capes were then looked at on the own player in a level, the hats from the front, the capes from
+behind and the side (`clienttests/lvl_hats.cfg`, `lvl_hats2.cfg`, `lvl_cape.cfg`): each sits where it should on the default model, the beard on the
 chin, the glasses and the plague mask on the face. Other player models and their skins were not looked at.
 
 ### Chat bubbles

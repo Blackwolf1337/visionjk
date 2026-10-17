@@ -705,9 +705,21 @@ REFERENCE           GRADUATION_CAP
 LANG_ENGLISH        "Graduation Cap"
 LANG_FRENCH         "Toque de diplômé"
 
+REFERENCE           HEADCRAB
+LANG_ENGLISH        "Headcrab"
+LANG_FRENCH         "#same"
+
 REFERENCE           HORNS
 LANG_ENGLISH        "Horns"
 LANG_FRENCH         "Cornes"
+
+REFERENCE           MARIO_CAP
+LANG_ENGLISH        "Mario Cap"
+LANG_FRENCH         "Casquette de Mario"
+
+REFERENCE           MASK
+LANG_ENGLISH        "Mask"
+LANG_FRENCH         "Masque"
 
 REFERENCE           METAL_HELMET
 LANG_ENGLISH        "Metal Helmet"
@@ -717,6 +729,14 @@ REFERENCE           PLAGUE_MASK
 LANG_ENGLISH        "Plague Mask"
 LANG_FRENCH         "Masque de peste"
 
+REFERENCE           PREDATOR_HELMET
+LANG_ENGLISH        "Predator Helmet"
+LANG_FRENCH         "Casque de Predator"
+
+REFERENCE           PUMPKIN
+LANG_ENGLISH        "Pumpkin"
+LANG_FRENCH         "Citrouille"
+
 REFERENCE           SANTA_HAT
 LANG_ENGLISH        "Santa Hat"
 LANG_FRENCH         "Bonnet de Noël"
@@ -724,6 +744,10 @@ LANG_FRENCH         "Bonnet de Noël"
 REFERENCE           SOMBRERO
 LANG_ENGLISH        "Sombrero"
 LANG_FRENCH         "#same"
+
+REFERENCE           SUPER_SAIYAN_HAIR
+LANG_ENGLISH        "Super Saiyan Hair"
+LANG_FRENCH         "Cheveux de Super Saiyan"
 
 REFERENCE           TOP_HAT
 LANG_ENGLISH        "Top Hat"
@@ -740,6 +764,34 @@ LANG_FRENCH         "Ce que vous portez sur le dos. Les autres joueurs de Vision
 REFERENCE           ROYAL_CAPE
 LANG_ENGLISH        "Royal Cape"
 LANG_FRENCH         "Cape royale"
+
+REFERENCE           VADER_CAPE
+LANG_ENGLISH        "Vader Cape"
+LANG_FRENCH         "Cape de Vador"
+
+REFERENCE           YODA
+LANG_ENGLISH        "Yoda"
+LANG_FRENCH         "#same"
+
+REFERENCE           GROGU
+LANG_ENGLISH        "Grogu"
+LANG_FRENCH         "#same"
+
+REFERENCE           GOOSE
+LANG_ENGLISH        "Goose"
+LANG_FRENCH         "Oie"
+
+REFERENCE           CROWBAR
+LANG_ENGLISH        "Crowbar"
+LANG_FRENCH         "Pied-de-biche"
+
+REFERENCE           AK_47
+LANG_ENGLISH        "AK-47"
+LANG_FRENCH         "#same"
+
+REFERENCE           ROCKET_LAUNCHER
+LANG_ENGLISH        "Rocket Launcher"
+LANG_FRENCH         "Lance-roquettes"
 
 REFERENCE           HATS_AND_CAPES
 LANG_ENGLISH        "Hats and Capes"

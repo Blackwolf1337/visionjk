@@ -2074,7 +2074,7 @@
 			cvar					"v_hat"
 			cvarStrList
 			{
-				@VISION_NONE "" @VISION_AFRO "afro" @VISION_BEARD "beard" @VISION_BUCKET "bucket" @VISION_CAP "cap" @VISION_PROPELLER_CAP "cringe" @VISION_CROWN "crown" @VISION_FEDORA "fedora" @VISION_FEDORA_2 "fedora2" @VISION_FEDORA_3 "fedora3" @VISION_FEDORA_4 "fedora4" @VISION_GLASSES "glasses" @VISION_GRADUATION_CAP "gradcap" @VISION_HORNS "horns" @VISION_METAL_HELMET "metalhelm" @VISION_PLAGUE_MASK "plaguemask" @VISION_SANTA_HAT "santahat" @VISION_SOMBRERO "sombrero" @VISION_TOP_HAT "tophat"
+				@VISION_NONE "" @VISION_AFRO "afro" @VISION_BEARD "beard" @VISION_BUCKET "bucket" @VISION_CAP "cap" @VISION_PROPELLER_CAP "cringe" @VISION_CROWN "crown" @VISION_FEDORA "fedora" @VISION_FEDORA_2 "fedora2" @VISION_FEDORA_3 "fedora3" @VISION_FEDORA_4 "fedora4" @VISION_GLASSES "glasses" @VISION_GRADUATION_CAP "gradcap" @VISION_HEADCRAB "headcrab" @VISION_HORNS "horns" @VISION_MARIO_CAP "mario" @VISION_MASK "mask" @VISION_METAL_HELMET "metalhelm" @VISION_PLAGUE_MASK "plaguemask" @VISION_PREDATOR_HELMET "predatorhelm" @VISION_PUMPKIN "pumpkin" @VISION_SANTA_HAT "santahat" @VISION_SOMBRERO "sombrero" @VISION_SUPER_SAIYAN_HAIR "supersaiyan" @VISION_TOP_HAT "tophat"
 			}
 			action { play "sound/interface/button1.wav" ; }
 			rect					12 544 380 22
@@ -2094,7 +2094,10 @@
 			text					@VISION_CAPE
 			descText				@VISION_WHAT_YOU_WEAR_ON_YOUR_BACK_OTHER_PLA
 			cvar					"v_cape"
-			cvarStrList { @VISION_NONE "" @VISION_ROYAL_CAPE "royalcape" }
+			cvarStrList
+			{
+				@VISION_NONE "" @VISION_ROYAL_CAPE "royalcape" @VISION_VADER_CAPE "vadercape" @VISION_YODA "yodacape" @VISION_GROGU "grogucape" @VISION_GOOSE "goose" @VISION_CROWBAR "crowbar" @VISION_AK_47 "ak47" @VISION_ROCKET_LAUNCHER "rpg"
+			}
 			action { play "sound/interface/button1.wav" ; }
 			rect					12 566 380 22
 			page					4

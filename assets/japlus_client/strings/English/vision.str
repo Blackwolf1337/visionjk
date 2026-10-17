@@ -530,8 +530,17 @@ LANG_ENGLISH        "Glasses"
 REFERENCE           GRADUATION_CAP
 LANG_ENGLISH        "Graduation Cap"
 
+REFERENCE           HEADCRAB
+LANG_ENGLISH        "Headcrab"
+
 REFERENCE           HORNS
 LANG_ENGLISH        "Horns"
+
+REFERENCE           MARIO_CAP
+LANG_ENGLISH        "Mario Cap"
+
+REFERENCE           MASK
+LANG_ENGLISH        "Mask"
 
 REFERENCE           METAL_HELMET
 LANG_ENGLISH        "Metal Helmet"
@@ -539,11 +548,20 @@ LANG_ENGLISH        "Metal Helmet"
 REFERENCE           PLAGUE_MASK
 LANG_ENGLISH        "Plague Mask"
 
+REFERENCE           PREDATOR_HELMET
+LANG_ENGLISH        "Predator Helmet"
+
+REFERENCE           PUMPKIN
+LANG_ENGLISH        "Pumpkin"
+
 REFERENCE           SANTA_HAT
 LANG_ENGLISH        "Santa Hat"
 
 REFERENCE           SOMBRERO
 LANG_ENGLISH        "Sombrero"
+
+REFERENCE           SUPER_SAIYAN_HAIR
+LANG_ENGLISH        "Super Saiyan Hair"
 
 REFERENCE           TOP_HAT
 LANG_ENGLISH        "Top Hat"
@@ -556,6 +574,27 @@ LANG_ENGLISH        "What you wear on your back. Other players of VisionJK see i
 
 REFERENCE           ROYAL_CAPE
 LANG_ENGLISH        "Royal Cape"
+
+REFERENCE           VADER_CAPE
+LANG_ENGLISH        "Vader Cape"
+
+REFERENCE           YODA
+LANG_ENGLISH        "Yoda"
+
+REFERENCE           GROGU
+LANG_ENGLISH        "Grogu"
+
+REFERENCE           GOOSE
+LANG_ENGLISH        "Goose"
+
+REFERENCE           CROWBAR
+LANG_ENGLISH        "Crowbar"
+
+REFERENCE           AK_47
+LANG_ENGLISH        "AK-47"
+
+REFERENCE           ROCKET_LAUNCHER
+LANG_ENGLISH        "Rocket Launcher"
 
 REFERENCE           HATS_AND_CAPES
 LANG_ENGLISH        "Hats and Capes"

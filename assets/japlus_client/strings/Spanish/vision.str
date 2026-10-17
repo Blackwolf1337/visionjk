@@ -705,9 +705,21 @@ REFERENCE           GRADUATION_CAP
 LANG_ENGLISH        "Graduation Cap"
 LANG_SPANISH        "Birrete"
 
+REFERENCE           HEADCRAB
+LANG_ENGLISH        "Headcrab"
+LANG_SPANISH        "#same"
+
 REFERENCE           HORNS
 LANG_ENGLISH        "Horns"
 LANG_SPANISH        "Cuernos"
+
+REFERENCE           MARIO_CAP
+LANG_ENGLISH        "Mario Cap"
+LANG_SPANISH        "Gorra de Mario"
+
+REFERENCE           MASK
+LANG_ENGLISH        "Mask"
+LANG_SPANISH        "Máscara"
 
 REFERENCE           METAL_HELMET
 LANG_ENGLISH        "Metal Helmet"
@@ -717,6 +729,14 @@ REFERENCE           PLAGUE_MASK
 LANG_ENGLISH        "Plague Mask"
 LANG_SPANISH        "Máscara de peste"
 
+REFERENCE           PREDATOR_HELMET
+LANG_ENGLISH        "Predator Helmet"
+LANG_SPANISH        "Casco de Predator"
+
+REFERENCE           PUMPKIN
+LANG_ENGLISH        "Pumpkin"
+LANG_SPANISH        "Calabaza"
+
 REFERENCE           SANTA_HAT
 LANG_ENGLISH        "Santa Hat"
 LANG_SPANISH        "Gorro de Papá Noel"
@@ -724,6 +744,10 @@ LANG_SPANISH        "Gorro de Papá Noel"
 REFERENCE           SOMBRERO
 LANG_ENGLISH        "Sombrero"
 LANG_SPANISH        "Sombrero mexicano"
+
+REFERENCE           SUPER_SAIYAN_HAIR
+LANG_ENGLISH        "Super Saiyan Hair"
+LANG_SPANISH        "Pelo de Super Saiyan"
 
 REFERENCE           TOP_HAT
 LANG_ENGLISH        "Top Hat"
@@ -740,6 +764,34 @@ LANG_SPANISH        "Lo que llevas en la espalda. Los demás jugadores de VisionJ
 REFERENCE           ROYAL_CAPE
 LANG_ENGLISH        "Royal Cape"
 LANG_SPANISH        "Capa real"
+
+REFERENCE           VADER_CAPE
+LANG_ENGLISH        "Vader Cape"
+LANG_SPANISH        "Capa de Vader"
+
+REFERENCE           YODA
+LANG_ENGLISH        "Yoda"
+LANG_SPANISH        "#same"
+
+REFERENCE           GROGU
+LANG_ENGLISH        "Grogu"
+LANG_SPANISH        "#same"
+
+REFERENCE           GOOSE
+LANG_ENGLISH        "Goose"
+LANG_SPANISH        "Ganso"
+
+REFERENCE           CROWBAR
+LANG_ENGLISH        "Crowbar"
+LANG_SPANISH        "Palanca"
+
+REFERENCE           AK_47
+LANG_ENGLISH        "AK-47"
+LANG_SPANISH        "#same"
+
+REFERENCE           ROCKET_LAUNCHER
+LANG_ENGLISH        "Rocket Launcher"
+LANG_SPANISH        "Lanzacohetes"
 
 REFERENCE           HATS_AND_CAPES
 LANG_ENGLISH        "Hats and Capes"
