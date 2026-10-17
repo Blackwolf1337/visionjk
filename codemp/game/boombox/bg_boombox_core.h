@@ -99,13 +99,13 @@ typedef struct box_s {
 	vec3_t		origin;			// on the floor
 	float		yaw;
 	int			volume;			// for everybody, 0 to 100
+	char		owner[BOX_NAME];	// who put it down, as he was called then
 	boxSong_t	songs[BOX_QUEUE];	// the line: songs[0] plays
 	int			numSongs;
 	int			looking;		// songs for it that are looked up
 	qboolean	paused;
 	// the song that plays
 	boxPlayer_t	*player;		// lent by the host while it has songs, NULL: none (yet)
-	qboolean	waitTold;		//	the players were not told that it waits for one
 	qboolean	streaming;		// the programs of its song were started
 	qboolean	started;		// enough of it came: its frames go out
 	int			startMsec;		// the clock when its first frame would have gone out, if it had never waited
@@ -117,8 +117,9 @@ typedef struct box_s {
 
 typedef struct boxHost_s boxHost_t;
 
-// Who keeps a set of boxes, and how the core reaches the clients. note: a line for the chat box of client (-1:
-// nobody in particular) and, when box is not -1, of everybody near that box.
+// Who keeps a set of boxes, and how the core reaches the clients. note: a line for client (-1: nobody in
+// particular) and, when box is not -1, for everybody near that box. Only what went wrong is said to everybody:
+// what a box does now is in what the clients are told of it.
 struct boxHost_s {
 	box_t		*boxes;			// BOX_MAX of them
 	int			queueMax;		// songs in the line of one box at most

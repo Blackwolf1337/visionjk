@@ -42,7 +42,7 @@ char *ConcatArgs( int start );		// g_cmds.c
 #define BOX_ASK_MSEC		3000		// a player asks for a song this often at most
 #define BOX_FRAME_MSEC		10			// G_BoomboxFrame() works at most this often: it is called with every move of a player
 #define BOX_VOLUME			80			// how loud a new box is, of 100
-#define BOX_NOTE_RANGE		1.25f		// what happens to a box is told to the players this much further away than it is heard
+#define BOX_NOTE_RANGE		1.25f		// what went wrong with a box is told to the players this much further away than it is heard
 
 typedef struct boxClient_s {
 	qboolean	hears;			// his cgame said "vs_box hello": it draws boxes, and he wants to hear them
@@ -106,7 +106,7 @@ static const char *Box_TextFor( int clientNum, const char *text, char *buffer, i
 
 static void Box_TellTo( int b, int clientNum ) {
 	const box_t	*box = &boxes[b];
-	char		title[BOX_TITLE], next[BOX_TITLE];
+	char		title[BOX_TITLE], next[BOX_TITLE], owner[BOX_NAME], by[BOX_NAME];
 	const int	flags = Box_Flags( box );
 
 	if ( !box->inuse ) {
@@ -115,10 +115,13 @@ static void Box_TellTo( int b, int clientNum ) {
 	}
 	Box_TextFor( clientNum, box->numSongs ? box->songs[0].title : "", title, sizeof( title ) );
 	Box_TextFor( clientNum, box->numSongs > 1 ? box->songs[1].title : "", next, sizeof( next ) );
-	trap->SendServerCommand( clientNum, va( "vs_box set %i %i %i %i %i %i %i %i %i %i %i \"%s\" \"%s\"", b, box->rev,
+	Box_TextFor( clientNum, box->owner, owner, sizeof( owner ) );
+	Box_TextFor( clientNum, box->numSongs ? box->songs[0].by : "", by, sizeof( by ) );
+	// (who put it down and who asked for the song at the end: a cgame of 0.1.7 or 0.1.8 reads no further than next)
+	trap->SendServerCommand( clientNum, va( "vs_box set %i %i %i %i %i %i %i %i %i %i %i \"%s\" \"%s\" \"%s\" \"%s\"", b, box->rev,
 		(int)box->origin[0], (int)box->origin[1], (int)box->origin[2], (int)box->yaw, box->volume, flags,
 		box->frames * VOICE_FRAME_MSEC, box->numSongs ? box->songs[0].seconds : 0, box->numSongs > 1 ? box->numSongs - 1 : 0,
-		title, next ) );
+		title, next, owner, by ) );
 }
 
 // what a box is now, to everybody the boxes are for
@@ -414,6 +417,7 @@ static int Box_Place( gentity_t *ent, const vec3_t wanted, float yaw ) {
 	VectorCopy( spot, boxes[i].origin );
 	boxes[i].yaw = AngleNormalize360( yaw );
 	boxes[i].volume = BOX_VOLUME;
+	Q_strncpyz( boxes[i].owner, ent->client->pers.netname, sizeof( boxes[i].owner ) );
 	Box_Changed( i );
 	return i;
 }
@@ -470,8 +474,8 @@ static void Box_AskFor( gentity_t *ent, int b, const char *asked ) {
 		Box_Note( clientNum, va( "^5Boombox^7: %s", why ) );
 		return;
 	}
+	// (that it is looked up is in what the clients are told of the box)
 	bc->askTime = now;
-	Box_Note( clientNum, "^5Boombox^7: looking it up..." );
 }
 
 static float Box_ArgFloat( int n ) {
@@ -571,15 +575,11 @@ void Cmd_Boombox_f( gentity_t *ent ) {
 	if ( !Q_stricmp( what, "pause" ) || !Q_stricmp( what, "resume" ) ) {
 		Box_Pause( &boxHost, b, (qboolean)!Q_stricmp( what, "pause" ), trap->Milliseconds() );
 	} else if ( !Q_stricmp( what, "skip" ) ) {
-		if ( box->numSongs ) {
-			Box_NoteNear( b, clientNum, va( "^5Boombox^7: %s^7 skipped %s", ent->client->pers.netname, box->songs[0].title ) );
+		if ( box->numSongs )
 			Box_Next( &boxHost, b );
-		}
 	} else if ( !Q_stricmp( what, "stop" ) ) {
-		if ( box->numSongs ) {
-			Box_NoteNear( b, clientNum, va( "^5Boombox^7: %s^7 stopped the music", ent->client->pers.netname ) );
+		if ( box->numSongs )
 			Box_Stop( &boxHost, b );
-		}
 	} else if ( !Q_stricmp( what, "remove" ) ) {
 		Box_Remove( &boxHost, b );
 	} else if ( !Q_stricmp( what, "volume" ) ) {

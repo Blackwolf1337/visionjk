@@ -116,7 +116,7 @@ void Box_Next( boxHost_t *host, int b ) {
 	}
 	if ( !box->numSongs )
 		Box_GiveBack( box );
-	box->streaming = box->started = box->paused = box->waitTold = qfalse;
+	box->streaming = box->started = box->paused = qfalse;
 	box->frames = box->restarts = 0;
 	Box_Tell( host, b );
 }
@@ -176,13 +176,10 @@ static void Box_Begin( boxHost_t *host, int b, int now ) {
 	char		why[128];
 
 	if ( !box->player ) {
+		// (without a free one it waits: the clients see it is loading)
 		box->player = host->borrow( host );
-		if ( !box->player ) {
-			if ( !box->waitTold )
-				host->note( host, b, -1, Box_Va( "^5Boombox^7: %s waits, as many songs play as can right now", box->songs[0].title ) );
-			box->waitTold = qtrue;
+		if ( !box->player )
 			return;
-		}
 		box->player->inuse = qtrue;
 		box->player->stream.odd = -1;
 		if ( !Box_Encoder( box->player ) ) {
@@ -355,10 +352,11 @@ static void Box_LookupDone( boxLookup_t *l, int now ) {
 	} else {
 		Q_strncpyz( song.by, l->by, sizeof( song.by ) );
 		box->songs[box->numSongs++] = song;
+		// (to the one who asked only: the others see it in the line of the box)
 		if ( box->numSongs == 1 )
-			host->note( host, l->box, l->client, Box_Va( "^5Boombox^7: %s^7 put on %s (%s)", song.by, song.title, Box_Length( song.seconds ) ) );
+			host->note( host, -1, l->client, Box_Va( "^5Boombox^7: %s (%s) plays", song.title, Box_Length( song.seconds ) ) );
 		else
-			host->note( host, l->box, l->client, Box_Va( "^5Boombox^7: %s^7 added %s (%s), number %i in the line", song.by, song.title,
+			host->note( host, -1, l->client, Box_Va( "^5Boombox^7: %s (%s) is number %i in the line", song.title,
 				Box_Length( song.seconds ), box->numSongs - 1 ) );
 	}
 	if ( box->inuse )

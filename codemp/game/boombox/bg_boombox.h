@@ -38,12 +38,15 @@ to the server	vs_box off							it no longer does (v_boomboxes 0)
 to a client		vs_box on <protocol> <boxes> <range>	the answer to the hello: how many boxes a level has at most,
 													and how far one is heard
 to a client		vs_box set <box> <rev> <x> <y> <z> <yaw> <volume> <flags> <msec> <length> <waiting> "<title>" "<next>"
+					"<owner>" "<by>"
 to a client		vs_box gone <box>
-to a client		vs_box note "<text>"					a line for the chat box: what was put on, why a song is not played
+to a client		vs_box note "<text>"					a line for the player: what became of the song he asked for,
+													why it is not played, why a box can not go where he wanted
 
 set: the whole state of one box. rev counts up with every change. msec: how far into the song it is when the
 command leaves (the cgame counts on from there while it plays), length in seconds, waiting: songs in the line
-after the one that plays, next: the title of the first of them.
+after the one that plays, next: the title of the first of them. owner: who put the box down, by: who asked for
+the song that plays (both since 0.1.9; a cgame before reads no further than next).
 
 What a player does with a box is a client command, "vs_boxaction <what> <box> ...", see Cmd_Boombox_f() of
 g_boombox.c. Everybody may do everything with every box.
@@ -59,6 +62,8 @@ to a client		BOX_SAY_SET box rev[2] x[4] y[4] z[4] yaw[2] volume flags msec[4] l
 					titleLen title nextLen next
 to a client		BOX_SAY_GONE box
 to a client		BOX_SAY_NOTE box text				(box 255: no box in particular)
+to a client		BOX_SAY_INFO box ownerLen owner byLen by	after every BOX_SAY_SET, since 0.1.9 (a client before
+													drops it: BOX_SAY_SET itself must never grow)
 
 The master has no level: where a box may stand is what the client found (Box_Spot of cg_boombox.c). It does not
 know who is near a box either: the client says it in its state (bg_voice.h), and the master sends the song of a
@@ -104,6 +109,7 @@ box only to who said he hears it. A yaw is 65536 steps a turn, x, y and z are wh
 #define BOX_SAY_SET			1
 #define BOX_SAY_GONE		2
 #define BOX_SAY_NOTE		3
+#define BOX_SAY_INFO		4
 
 // the flags of "vs_box set"
 #define BOX_PLAYING			1			// a song plays, or is about to
@@ -130,6 +136,7 @@ typedef struct boxSay_s {
 	int		volume, flags, msec, length, waiting;
 	char	title[BOX_TITLE], next[BOX_TITLE];
 	char	text[256];			// of a note
+	char	owner[BOX_NAME_MAX + 1], by[BOX_NAME_MAX + 1];	// of an info
 } boxSay_t;
 
 int			BG_BoxDoPack( byte *out, int outSize, const boxDo_t *d );

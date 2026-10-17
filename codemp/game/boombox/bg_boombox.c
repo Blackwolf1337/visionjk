@@ -226,6 +226,14 @@ int BG_BoxSayPack( byte *out, int outSize, const boxSay_t *s ) {
 		return 2;
 	case BOX_SAY_NOTE:
 		return 2 + Box_PutText( out + 2, outSize - 2, s->text );
+	case BOX_SAY_INFO:
+		len = 2;
+		n = Box_PutText( out + len + 1, BOX_NAME_MAX, s->owner );
+		out[len] = (byte)n;
+		len += 1 + n;
+		n = Box_PutText( out + len + 1, BOX_NAME_MAX, s->by );
+		out[len] = (byte)n;
+		return len + 1 + n;
 	}
 	return 0;
 }
@@ -262,6 +270,16 @@ qboolean BG_BoxSayUnpack( const byte *in, int len, boxSay_t *s ) {
 	case BOX_SAY_NOTE:
 		Box_GetText( in + 2, len - 2, s->text, sizeof( s->text ) );
 		return s->text[0] ? qtrue : qfalse;
+	case BOX_SAY_INFO:
+		at = 2;
+		if ( at >= len || in[at] > BOX_NAME_MAX || at + 1 + in[at] > len )
+			return qfalse;
+		Box_GetText( in + at + 1, in[at], s->owner, sizeof( s->owner ) );
+		at += 1 + in[at];
+		if ( at >= len || in[at] > BOX_NAME_MAX || at + 1 + in[at] != len )
+			return qfalse;
+		Box_GetText( in + at + 1, in[at], s->by, sizeof( s->by ) );
+		return qtrue;
 	}
 	return qfalse;
 }

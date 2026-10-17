@@ -32,6 +32,9 @@ typedef struct boomboxInfo_s {
 	int			msec, length;	// how far into the song it is now, and how long it is in seconds
 	int			waiting;		// songs in the line after it
 	const char	*title, *next;
+	const char	*owner;			// who put it down, "": not known
+	const char	*by;			// who asked for the song that plays, "": not known
+	const char	*note;			// the last line of the server for this player while it is new, "": none
 	qboolean	muted;			// for this player (CG_VoiceBoxMute)
 } boomboxInfo_t;
 

@@ -53,7 +53,7 @@ qboolean CG_WorldCoordToScreenCoordFloat( vec3_t worldCoord, float *x, float *y 
 #define SELECT_HEAD_NAME	20.0f		// the name at the head of the card takes this much of it,
 #define SELECT_HEAD_LINE	10.0f		//	every line under it this much,
 #define SELECT_HEAD_END		4.0f		//	and this much is below the last one
-#define SELECT_HEAD_LINES	5
+#define SELECT_HEAD_LINES	8
 #define SELECT_MAX_ROWS		14
 #define SELECT_SCALE		0.6f		// of the text of the card
 #define SELECT_CONFIRM_MSEC	4000		// a vote to kick has to be clicked twice within this time
@@ -906,7 +906,8 @@ static const char *Select_Time( int seconds ) {
 	return va( "%i:%02i", seconds / 60, seconds % 60 );
 }
 
-// The head of the card of a box: what it does, the song and how far into it, the next one, its volume
+// The head of the card of a box: what it does, the song, how far into it and who asked for it, the next one, its
+// volume, who put it down, and the last line the server had for this player
 static void Select_BoxHead( int box ) {
 	boomboxInfo_t info;
 
@@ -920,6 +921,9 @@ static void Select_BoxHead( int box ) {
 		Com_sprintf( sel.head[0].more, sizeof( sel.head[0].more ), "%s / %s", Select_Time( info.msec / 1000 ), Select_Time( info.length ) );
 		sel.head[0].moreColor = selectGold;
 		Select_HeadLine( info.title, selectAccent );
+		if ( info.by[0] ) {
+			Select_HeadLine( CG_VisionTextWith( "Asked for by %s", info.by ), selectDim );
+		}
 		if ( info.waiting > 0 ) {
 			Select_HeadLine( CG_VisionTextWith( "Next: %s", info.next ), selectDim );
 			if ( info.waiting > 1 ) {
@@ -937,6 +941,12 @@ static void Select_BoxHead( int box ) {
 	if ( info.muted ) {
 		Q_strncpyz( sel.head[sel.numHead - 1].more, CG_VisionText( "muted for you" ), sizeof( sel.head[0].more ) );
 		sel.head[sel.numHead - 1].moreColor = selectGold;
+	}
+	if ( info.owner[0] ) {
+		Select_HeadLine( CG_VisionTextWith( "Put down by %s", info.owner ), selectDim );
+	}
+	if ( info.note[0] ) {
+		Select_HeadLine( info.note, selectGold );
 	}
 	sel.headH = SELECT_HEAD_NAME + sel.numHead * SELECT_HEAD_LINE + SELECT_HEAD_END;
 }

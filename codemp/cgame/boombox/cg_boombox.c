@@ -51,6 +51,7 @@ qboolean CG_WorldCoordToScreenCoordFloat( vec3_t worldCoord, float *x, float *y 
 #define BOX_SLIDE_MSEC		250			// a box somebody else moved slides there in this time
 #define BOX_LABEL_RANGE		700.0f		// the title over a box is shown this near
 #define BOX_LABEL_ABOVE		12.0f		// and this far above its top
+#define BOX_NOTE_MSEC		8000		// the last line of the server is shown on the card and in the window this long
 #define BOX_BEAT_GAIN		4.0f		// the speakers push out by the loudness of the song times this, at most all the way
 #define BOX_BEAT_FALL_MSEC	90.0f		// and come back in about this time
 #define BOX_CONE_X			6.02f		// where the speakers sit in the model: in front of its middle,
@@ -70,6 +71,8 @@ typedef struct cgBox_s {
 	int			volume, flags, length, waiting;
 	int			msec, msecTime;	// how far into the song it was when the server said so, and cg.time then
 	char		title[BOX_TITLE], next[BOX_TITLE];
+	char		owner[BOX_NAME_MAX + 1];	// who put it down, "": not known (a server or master before 0.1.9)
+	char		by[BOX_NAME_MAX + 1];		// who asked for the song that plays
 	qboolean	moved;			// this player put it somewhere and the server did not answer yet
 	vec3_t		movedTo;
 	float		movedYaw;
@@ -95,6 +98,10 @@ static struct {
 	vec3_t		heldAt;
 	float		heldYaw;
 	qboolean	heldOk;			// it can be put there
+	// the last line of the server or the master for this player, which the card and the window of a box show
+	char		note[256];
+	int			noteBox;		// it is of this box, -1: of none in particular
+	int			noteTime;		// cg.time when it came, 0: none
 } bx;
 
 static cgBox_t	cgBoxes[BOX_MAX];
@@ -307,13 +314,19 @@ static void Box_Where( int box, vec3_t at, float *yaw ) {
 	}
 }
 
-// a line of the server for the chat box
-static void Box_Note( const char *text ) {
-	char line[MAX_STRING_CHARS];
+// A line of the server or the master for this player (box: of that box, -1: of none in particular). Not in the
+// chat box, where the lines of every box near were too many: in the console, and on the card and in the window
+// of the box for a while.
+static void Box_Note( int box, const char *text ) {
+	char line[sizeof( bx.note )];
 
+	trap->Print( "[skipnotify]%s\n", text );
+	// (shown under the name of the box: without the word in front of the colon, in the colour of the card)
 	Q_strncpyz( line, text, sizeof( line ) );
-	trap->Print( "%s\n", line );
-	CG_ChatAdd( CHAT_ALL, -1, line );
+	Q_StripColor( line );
+	Q_strncpyz( bx.note, Q_stricmpn( line, "Boombox: ", 9 ) ? line : line + 9, sizeof( bx.note ) );
+	bx.noteBox = box;
+	bx.noteTime = cg.time ? cg.time : 1;
 }
 
 // a box is gone
@@ -384,7 +397,7 @@ void CG_BoomboxServerCommand( void ) {
 		return;
 	}
 	if ( !Q_stricmp( what, "note" ) ) {
-		Box_Note( CG_Argv( 2 ) );
+		Box_Note( -1, CG_Argv( 2 ) );
 		return;
 	}
 	n = atoi( CG_Argv( 2 ) );
@@ -401,6 +414,9 @@ void CG_BoomboxServerCommand( void ) {
 	Q_strncpyz( title, CG_Argv( 13 ), sizeof( title ) );
 	Box_Set( n, atoi( CG_Argv( 3 ) ), origin, (float)atof( CG_Argv( 7 ) ), atoi( CG_Argv( 8 ) ), atoi( CG_Argv( 9 ) ), atoi( CG_Argv( 10 ) ),
 		atoi( CG_Argv( 11 ) ), atoi( CG_Argv( 12 ) ), title, CG_Argv( 14 ) );
+	// (a server before 0.1.9 sends neither: "")
+	Q_strncpyz( cgBoxes[n].owner, CG_Argv( 15 ), sizeof( cgBoxes[n].owner ) );
+	Q_strncpyz( cgBoxes[n].by, CG_Argv( 16 ), sizeof( cgBoxes[n].by ) );
 }
 
 /*
@@ -424,7 +440,7 @@ void CG_BoomboxMasterReady( qboolean ready ) {
 	}
 }
 
-// a VOICE_BOX of the master: what a box is now, that it is gone, or a line for the chat box
+// a VOICE_BOX of the master: what a box is now, who put it down, that it is gone, or a line for this player
 void CG_BoomboxFromMaster( const byte *data, int len ) {
 	boxSay_t	say;
 	vec3_t		origin;
@@ -432,7 +448,7 @@ void CG_BoomboxFromMaster( const byte *data, int len ) {
 	if ( !bx.viaMaster || !BG_BoxSayUnpack( data, len, &say ) )
 		return;
 	if ( say.what == BOX_SAY_NOTE ) {
-		Box_Note( say.text );
+		Box_Note( ( say.box < BOX_MASTER_MAX ) ? say.box : -1, say.text );
 		return;
 	}
 	if ( say.box < 0 || say.box >= BOX_MASTER_MAX )
@@ -440,6 +456,13 @@ void CG_BoomboxFromMaster( const byte *data, int len ) {
 	if ( say.what == BOX_SAY_GONE ) {
 		if ( cgBoxes[say.box].inuse )
 			Box_Gone( say.box );
+		return;
+	}
+	if ( say.what == BOX_SAY_INFO ) {
+		if ( cgBoxes[say.box].inuse ) {
+			Q_strncpyz( cgBoxes[say.box].owner, say.owner, sizeof( cgBoxes[say.box].owner ) );
+			Q_strncpyz( cgBoxes[say.box].by, say.by, sizeof( cgBoxes[say.box].by ) );
+		}
 		return;
 	}
 	VectorSet( origin, (float)say.origin[0], (float)say.origin[1], (float)say.origin[2] );
@@ -800,7 +823,11 @@ qboolean CG_BoomboxInfo( int box, boomboxInfo_t *info ) {
 	info->waiting = b->waiting;
 	info->title = b->title;
 	info->next = b->next;
+	info->owner = b->owner;
+	info->by = b->by;
 	info->muted = CG_VoiceBoxMuted( box );
+	// the last line for this player, while it is new
+	info->note = ( bx.noteTime && cg.time - bx.noteTime < BOX_NOTE_MSEC && ( bx.noteBox < 0 || bx.noteBox == box ) ) ? bx.note : "";
 	return qtrue;
 }
 
