@@ -851,6 +851,7 @@ void CL_Disconnect( qboolean showMainMenu ) {
 
 	// wipe the client connection
 	Com_Memset( &clc, 0, sizeof( clc ) );
+	CL_DownloadReviewReset();
 
 	cls.state = CA_DISCONNECTED;
 
@@ -1454,8 +1455,8 @@ void CL_BeginDownload( const char *localName, const char *remoteName ) {
 	Cvar_Set( "cl_downloadCount", "0" );
 	Cvar_SetValue( "cl_downloadTime", (float) cls.realtime );
 
-	// Prompt the user (unless they disabled it)
-	if ( cl_downloadPrompt->integer ) {
+	// Prompt the user (unless they disabled it, or chose in the window of cl_download.cpp)
+	if ( cl_downloadPrompt->integer && !CL_DownloadReviewActive() ) {
 		clc.downloadMenuActive = qtrue;
 		clc.downloadWaitingOnUser = qtrue;
 	} else {
@@ -1484,6 +1485,8 @@ void CL_NextDownload(void) {
 
 		if(!FS_CompareZipChecksum(zippath))
 			Com_Error(ERR_DROP, "Incorrect checksum for file: %s", clc.downloadName);
+		// (the programs in it are blocked before anything can load it)
+		CL_DownloadArrived( clc.downloadName );
 	}
 
 	*clc.downloadTempName = *clc.downloadName = 0;
@@ -1501,7 +1504,8 @@ void CL_NextDownload(void) {
 		remoteName = s;
 
 		if ( (s = strchr(s, '@')) == NULL ) {
-			CL_DownloadsComplete();
+			if ( !CL_DownloadReviewEnd() )
+				CL_DownloadsComplete();
 			return;
 		}
 
@@ -1517,7 +1521,8 @@ void CL_NextDownload(void) {
 			return;
 		}
 		else {
-			CL_BeginDownload( localName, remoteName );
+			// (into the folder of the session, if its player wants it for this one only)
+			CL_BeginDownload( CL_DownloadLocalName( localName ), remoteName );
 		}
 
 		clc.downloadRestart = qtrue;
@@ -1528,7 +1533,9 @@ void CL_NextDownload(void) {
 		return;
 	}
 
-	CL_DownloadsComplete();
+	// the window of what came in them, if there is one
+	if ( !CL_DownloadReviewEnd() )
+		CL_DownloadsComplete();
 }
 
 /*
@@ -1583,6 +1590,9 @@ void CL_InitDownloads(void) {
 			*clc.downloadTempName = *clc.downloadName = 0;
 			Cvar_Set( "cl_downloadName", "" );
 
+			// first the window of what the server offers, if its player wants one (cl_download.cpp)
+			if ( CL_DownloadReviewBegin() )
+				return;
 			CL_NextDownload();
 			return;
 		}
@@ -2899,6 +2909,7 @@ void CL_Init( void ) {
 	cl_downloadName = Cvar_Get( "cl_downloadName", "", CVAR_INTERNAL );
 	cl_downloadPrompt = Cvar_Get( "cl_downloadPrompt", "1", CVAR_ARCHIVE, "Confirm pk3 downloads from the server" );
 	cl_downloadOverlay = Cvar_Get( "cl_downloadOverlay", "1", CVAR_ARCHIVE, "Draw download info overlay" );
+	CL_DownloadInit();
 
 	cl_reconnectArgs = Cvar_Get( "cl_reconnectArgs", "", CVAR_ARCHIVE, "Arguments provided when last connecting to a server" );
 
@@ -4249,7 +4260,7 @@ void CL_DrawEngineMenus( void ) {
 	menuButtonsActive = 0;
 
 	// Draw menus
-	if ( clc.downloadMenuActive ) {
+	if ( clc.downloadMenuActive && !CL_DownloadReviewDraw() ) {
 		CL_DrawDownloadRequest();
 	}
 
@@ -4280,6 +4291,9 @@ void CL_UpdateCursorPosition( int dx, int dy ) {
 
 void CL_CursorButton( int key ) {
 	int i;
+	if ( CL_DownloadReviewKey( key ) ) {
+		return;
+	}
 	if ( key == A_MOUSE1 ) {
 		for ( i = 0; i < menuButtonsActive; i++ ) {
 			if ( CL_IsCursorOnMenuButton(&menuButtons[i]) ) {

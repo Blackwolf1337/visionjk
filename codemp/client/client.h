@@ -516,6 +516,18 @@ int CL_GetPingQueueCount( void );
 void CL_InitRef( void );
 
 //
+// cl_download.cpp
+void		CL_DownloadInit( void );
+void		CL_DownloadReviewReset( void );
+qboolean	CL_DownloadReviewActive( void );
+qboolean	CL_DownloadReviewBegin( void );
+qboolean	CL_DownloadReviewEnd( void );
+void		CL_DownloadArrived( const char *local );
+const char	*CL_DownloadLocalName( const char *local );
+qboolean	CL_DownloadReviewDraw( void );
+qboolean	CL_DownloadReviewKey( int key );
+void		CL_DrawMenuRect( float x, float y, float width, float height, float borderSize, vec4_t elementBackgroundColor, vec4_t elementBorderColor );
+
 // cl_update.cpp
 //
 void CL_UpdateInit( void );

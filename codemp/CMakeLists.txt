@@ -530,6 +530,7 @@ if(BuildMPEngine)
 		"${MPDir}/client/cl_lan.h"
 		"${MPDir}/client/cl_main.cpp"
 		"${MPDir}/client/cl_update.cpp"
+		"${MPDir}/client/cl_download.cpp"
 		"${MPDir}/client/cl_net_chan.cpp"
 		"${MPDir}/client/cl_parse.cpp"
 		"${MPDir}/client/cl_scrn.cpp"

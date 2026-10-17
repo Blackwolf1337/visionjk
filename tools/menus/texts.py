@@ -263,6 +263,12 @@ TR = {
     # network
     'Check for Updates': 'Nach Updates suchen',
     'Ask at every start whether a newer version is out.': 'Bei jedem Start fragen, ob es eine neuere Version gibt.',
+    'Choose Downloads': 'Downloads auswählen',
+    'Before a download choose the files of the server, and see what is in them before they are used.':
+        'Vor einem Download die Dateien des Servers auswählen und ihren Inhalt sehen, bevor sie benutzt werden.',
+    'Keep Downloads': 'Downloads behalten',
+    'Keep downloaded files in the folder downloads. Off: for this session only.':
+        'Heruntergeladene Dateien im Ordner downloads behalten. Aus: nur für diese Sitzung.',
     'Intrusion Log': 'Einbruchsprotokoll',
     'Write down what a server sends that no server of the game does, and leave one that keeps at it.':
         'Aufschreiben, was ein Server sendet, das kein Server des Spiels sendet, und einen verlassen, der nicht damit aufhört.',
@@ -380,6 +386,29 @@ CGAME = {
     'In the line: %s': 'Warteschlange: %s',
     'In the line': 'Warteschlange',
     'Nothing waits': 'Nichts wartet',
+    # the windows of a download (client/cl_download.cpp): the engine asks for these by the key texts.py makes
+    'Files of the server': 'Dateien des Servers',
+    'The server offers these files to download.': 'Der Server bietet diese Dateien zum Herunterladen an.',
+    'Before anything of them is used you see what is inside. Programs stay blocked.': 'Bevor etwas davon benutzt wird, sehen Sie den Inhalt. Programme bleiben gesperrt.',
+    'Keep them (downloads folder)': 'Behalten (Ordner downloads)',
+    'This session only': 'Nur für diese Sitzung',
+    'A pure server may not let you play without its files.': 'Ein Server mit sv_pure lässt Sie ohne seine Dateien eventuell nicht spielen.',
+    'Download': 'Herunterladen',
+    'Join without': 'Ohne beitreten',
+    'Disconnect': 'Trennen',
+    'What is inside': 'Inhalt',
+    'Untick what you do not want: nothing of it is used.': 'Entfernen Sie den Haken bei allem, was Sie nicht wollen: davon wird nichts benutzt.',
+    'Programs could run on your computer: they are blocked unless you tick them.': 'Programme könnten auf Ihrem Computer laufen: sie bleiben gesperrt, außer Sie setzen den Haken.',
+    'Maps': 'Karten',
+    'Models': 'Modelle',
+    'Textures and effects': 'Texturen und Effekte',
+    'Sounds and music': 'Klänge und Musik',
+    'Shaders and scripts': 'Shader und Skripte',
+    'Menus and HUD': 'Menüs und HUD',
+    'Configs (they can run commands)': 'Konfigurationen (sie können Befehle ausführen)',
+    'Other files': 'Andere Dateien',
+    'Programs (they could run on your computer)': 'Programme (sie könnten auf Ihrem Computer laufen)',
+    'Use them': 'Verwenden',
     # the HUD (ui/vision/hud.menu, written by hand: @VISION_SABER, @VISION_ALTERNATE_DIMENSION)
     'Saber': 'Schwert',
     'Alternate Dimension': 'Andere Dimension',

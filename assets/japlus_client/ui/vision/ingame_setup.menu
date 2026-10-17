@@ -2237,8 +2237,44 @@
 
 		itemDef
 		{
+			name					vision_yesno_v_downloadreview
+			type					ITEM_TYPE_YESNO
+			text					@VISION_CHOOSE_DOWNLOADS
+			descText				@VISION_BEFORE_A_DOWNLOAD_CHOOSE_THE_FILES_O
+			cvar					"v_downloadReview"
+			action { play "sound/interface/button1.wav" ; }
+			rect					12 82 380 22
+			page					6
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+		}
+
+		itemDef
+		{
+			name					vision_yesno_v_downloadkeep
+			type					ITEM_TYPE_YESNO
+			text					@VISION_KEEP_DOWNLOADS
+			descText				@VISION_KEEP_DOWNLOADED_FILES_IN_THE_FOLDER
+			cvar					"v_downloadKeep"
+			action { play "sound/interface/button1.wav" ; }
+			rect					12 104 380 22
+			page					6
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+		}
+
+		itemDef
+		{
 			name					vision_head
-			rect					14 82 376 22
+			rect					14 126 376 22
 			visible					1
 			text					@VISION_SECURITY
 			font					5
@@ -2254,7 +2290,7 @@
 		itemDef
 		{
 			name					vision_headline
-			rect					12 103 380 0.67
+			rect					12 147 380 0.67
 			visible					1
 			style					WINDOW_STYLE_FILLED
 			backcolor				0.43 0.83 1 0.32
@@ -2271,7 +2307,7 @@
 			descText				@VISION_WRITE_DOWN_WHAT_A_SERVER_SENDS_THAT
 			cvar					"v_ids"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 104 380 22
+			rect					12 148 380 22
 			page					6
 			scroll					1
 			row						1
@@ -2289,7 +2325,7 @@
 			descText				@VISION_THE_ADMIN_LOGIN_ASKS_YOUR_SSH_AGENT
 			cvar					"v_authAgent"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 126 380 22
+			rect					12 170 380 22
 			page					6
 			scroll					1
 			row						1
@@ -2309,7 +2345,7 @@
 			maxChars				120
 			maxPaintChars			24
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 148 380 22
+			rect					12 192 380 22
 			page					6
 			scroll					1
 			row						1
@@ -2322,7 +2358,7 @@
 		itemDef
 		{
 			name					vision_head
-			rect					14 170 376 22
+			rect					14 214 376 22
 			visible					1
 			text					@VISION_TEXT
 			font					5
@@ -2338,7 +2374,7 @@
 		itemDef
 		{
 			name					vision_headline
-			rect					12 191 380 0.67
+			rect					12 235 380 0.67
 			visible					1
 			style					WINDOW_STYLE_FILLED
 			backcolor				0.43 0.83 1 0.32
@@ -2355,7 +2391,7 @@
 			descText				@VISION_EVERY_CHARACTER_IN_NAMES_AND_CHAT_OF
 			cvar					"v_utf8"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 192 380 22
+			rect					12 236 380 22
 			page					6
 			scroll					1
 			row						1

@@ -669,6 +669,22 @@ REFERENCE           ASK_AT_EVERY_START_WHETHER_A_NEWER_V
 LANG_ENGLISH        "Ask at every start whether a newer version is out."
 LANG_GERMAN         "Bei jedem Start fragen, ob es eine neuere Version gibt."
 
+REFERENCE           CHOOSE_DOWNLOADS
+LANG_ENGLISH        "Choose Downloads"
+LANG_GERMAN         "Downloads auswählen"
+
+REFERENCE           BEFORE_A_DOWNLOAD_CHOOSE_THE_FILES_O
+LANG_ENGLISH        "Before a download choose the files of the server, and see what is in them before they are used."
+LANG_GERMAN         "Vor einem Download die Dateien des Servers auswählen und ihren Inhalt sehen, bevor sie benutzt werden."
+
+REFERENCE           KEEP_DOWNLOADS
+LANG_ENGLISH        "Keep Downloads"
+LANG_GERMAN         "Downloads behalten"
+
+REFERENCE           KEEP_DOWNLOADED_FILES_IN_THE_FOLDER
+LANG_ENGLISH        "Keep downloaded files in the folder downloads. Off: for this session only."
+LANG_GERMAN         "Heruntergeladene Dateien im Ordner downloads behalten. Aus: nur für diese Sitzung."
+
 REFERENCE           SECURITY
 LANG_ENGLISH        "Security"
 LANG_GERMAN         "Sicherheit"
@@ -896,6 +912,90 @@ LANG_GERMAN         "Warteschlange"
 REFERENCE           NOTHING_WAITS
 LANG_ENGLISH        "Nothing waits"
 LANG_GERMAN         "Nichts wartet"
+
+REFERENCE           FILES_OF_THE_SERVER
+LANG_ENGLISH        "Files of the server"
+LANG_GERMAN         "Dateien des Servers"
+
+REFERENCE           THE_SERVER_OFFERS_THESE_FILES_TO_DOW
+LANG_ENGLISH        "The server offers these files to download."
+LANG_GERMAN         "Der Server bietet diese Dateien zum Herunterladen an."
+
+REFERENCE           BEFORE_ANYTHING_OF_THEM_IS_USED_YOU
+LANG_ENGLISH        "Before anything of them is used you see what is inside. Programs stay blocked."
+LANG_GERMAN         "Bevor etwas davon benutzt wird, sehen Sie den Inhalt. Programme bleiben gesperrt."
+
+REFERENCE           KEEP_THEM_DOWNLOADS_FOLDER
+LANG_ENGLISH        "Keep them (downloads folder)"
+LANG_GERMAN         "Behalten (Ordner downloads)"
+
+REFERENCE           THIS_SESSION_ONLY
+LANG_ENGLISH        "This session only"
+LANG_GERMAN         "Nur für diese Sitzung"
+
+REFERENCE           A_PURE_SERVER_MAY_NOT_LET_YOU_PLAY_W
+LANG_ENGLISH        "A pure server may not let you play without its files."
+LANG_GERMAN         "Ein Server mit sv_pure lässt Sie ohne seine Dateien eventuell nicht spielen."
+
+REFERENCE           DOWNLOAD
+LANG_ENGLISH        "Download"
+LANG_GERMAN         "Herunterladen"
+
+REFERENCE           JOIN_WITHOUT
+LANG_ENGLISH        "Join without"
+LANG_GERMAN         "Ohne beitreten"
+
+REFERENCE           DISCONNECT
+LANG_ENGLISH        "Disconnect"
+LANG_GERMAN         "Trennen"
+
+REFERENCE           WHAT_IS_INSIDE
+LANG_ENGLISH        "What is inside"
+LANG_GERMAN         "Inhalt"
+
+REFERENCE           UNTICK_WHAT_YOU_DO_NOT_WANT_NOTHING
+LANG_ENGLISH        "Untick what you do not want: nothing of it is used."
+LANG_GERMAN         "Entfernen Sie den Haken bei allem, was Sie nicht wollen: davon wird nichts benutzt."
+
+REFERENCE           PROGRAMS_COULD_RUN_ON_YOUR_COMPUTER
+LANG_ENGLISH        "Programs could run on your computer: they are blocked unless you tick them."
+LANG_GERMAN         "Programme könnten auf Ihrem Computer laufen: sie bleiben gesperrt, außer Sie setzen den Haken."
+
+REFERENCE           MAPS
+LANG_ENGLISH        "Maps"
+LANG_GERMAN         "Karten"
+
+REFERENCE           MODELS
+LANG_ENGLISH        "Models"
+LANG_GERMAN         "Modelle"
+
+REFERENCE           TEXTURES_AND_EFFECTS
+LANG_ENGLISH        "Textures and effects"
+LANG_GERMAN         "Texturen und Effekte"
+
+REFERENCE           SOUNDS_AND_MUSIC
+LANG_ENGLISH        "Sounds and music"
+LANG_GERMAN         "Klänge und Musik"
+
+REFERENCE           SHADERS_AND_SCRIPTS
+LANG_ENGLISH        "Shaders and scripts"
+LANG_GERMAN         "Shader und Skripte"
+
+REFERENCE           CONFIGS_THEY_CAN_RUN_COMMANDS
+LANG_ENGLISH        "Configs (they can run commands)"
+LANG_GERMAN         "Konfigurationen (sie können Befehle ausführen)"
+
+REFERENCE           OTHER_FILES
+LANG_ENGLISH        "Other files"
+LANG_GERMAN         "Andere Dateien"
+
+REFERENCE           PROGRAMS_THEY_COULD_RUN_ON_YOUR_COMP
+LANG_ENGLISH        "Programs (they could run on your computer)"
+LANG_GERMAN         "Programme (sie könnten auf Ihrem Computer laufen)"
+
+REFERENCE           USE_THEM
+LANG_ENGLISH        "Use them"
+LANG_GERMAN         "Verwenden"
 
 REFERENCE           INITIATE
 LANG_ENGLISH        "Initiate"

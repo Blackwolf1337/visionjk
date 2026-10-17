@@ -669,6 +669,22 @@ REFERENCE           ASK_AT_EVERY_START_WHETHER_A_NEWER_V
 LANG_ENGLISH        "Ask at every start whether a newer version is out."
 LANG_SPANISH        "Preguntar en cada inicio si hay una versión más nueva."
 
+REFERENCE           CHOOSE_DOWNLOADS
+LANG_ENGLISH        "Choose Downloads"
+LANG_SPANISH        "Elegir las descargas"
+
+REFERENCE           BEFORE_A_DOWNLOAD_CHOOSE_THE_FILES_O
+LANG_ENGLISH        "Before a download choose the files of the server, and see what is in them before they are used."
+LANG_SPANISH        "Antes de una descarga, elegir los archivos del servidor y ver su contenido antes de usarlos."
+
+REFERENCE           KEEP_DOWNLOADS
+LANG_ENGLISH        "Keep Downloads"
+LANG_SPANISH        "Conservar las descargas"
+
+REFERENCE           KEEP_DOWNLOADED_FILES_IN_THE_FOLDER
+LANG_ENGLISH        "Keep downloaded files in the folder downloads. Off: for this session only."
+LANG_SPANISH        "Conservar los archivos descargados en la carpeta downloads. Desactivado: solo para esta sesión."
+
 REFERENCE           SECURITY
 LANG_ENGLISH        "Security"
 LANG_SPANISH        "Seguridad"
@@ -896,6 +912,90 @@ LANG_SPANISH        "En cola"
 REFERENCE           NOTHING_WAITS
 LANG_ENGLISH        "Nothing waits"
 LANG_SPANISH        "No espera nada"
+
+REFERENCE           FILES_OF_THE_SERVER
+LANG_ENGLISH        "Files of the server"
+LANG_SPANISH        "Archivos del servidor"
+
+REFERENCE           THE_SERVER_OFFERS_THESE_FILES_TO_DOW
+LANG_ENGLISH        "The server offers these files to download."
+LANG_SPANISH        "El servidor ofrece estos archivos para descargar."
+
+REFERENCE           BEFORE_ANYTHING_OF_THEM_IS_USED_YOU
+LANG_ENGLISH        "Before anything of them is used you see what is inside. Programs stay blocked."
+LANG_SPANISH        "Antes de usar nada de ellos verá lo que contienen. Los programas quedan bloqueados."
+
+REFERENCE           KEEP_THEM_DOWNLOADS_FOLDER
+LANG_ENGLISH        "Keep them (downloads folder)"
+LANG_SPANISH        "Conservarlos (carpeta downloads)"
+
+REFERENCE           THIS_SESSION_ONLY
+LANG_ENGLISH        "This session only"
+LANG_SPANISH        "Solo para esta sesión"
+
+REFERENCE           A_PURE_SERVER_MAY_NOT_LET_YOU_PLAY_W
+LANG_ENGLISH        "A pure server may not let you play without its files."
+LANG_SPANISH        "Un servidor puro puede no dejarle jugar sin sus archivos."
+
+REFERENCE           DOWNLOAD
+LANG_ENGLISH        "Download"
+LANG_SPANISH        "Descargar"
+
+REFERENCE           JOIN_WITHOUT
+LANG_ENGLISH        "Join without"
+LANG_SPANISH        "Entrar sin ellos"
+
+REFERENCE           DISCONNECT
+LANG_ENGLISH        "Disconnect"
+LANG_SPANISH        "Desconectar"
+
+REFERENCE           WHAT_IS_INSIDE
+LANG_ENGLISH        "What is inside"
+LANG_SPANISH        "Contenido"
+
+REFERENCE           UNTICK_WHAT_YOU_DO_NOT_WANT_NOTHING
+LANG_ENGLISH        "Untick what you do not want: nothing of it is used."
+LANG_SPANISH        "Desmarque lo que no quiera: no se usará nada de ello."
+
+REFERENCE           PROGRAMS_COULD_RUN_ON_YOUR_COMPUTER
+LANG_ENGLISH        "Programs could run on your computer: they are blocked unless you tick them."
+LANG_SPANISH        "Los programas podrían ejecutarse en su ordenador: quedan bloqueados salvo que los marque."
+
+REFERENCE           MAPS
+LANG_ENGLISH        "Maps"
+LANG_SPANISH        "Mapas"
+
+REFERENCE           MODELS
+LANG_ENGLISH        "Models"
+LANG_SPANISH        "Modelos"
+
+REFERENCE           TEXTURES_AND_EFFECTS
+LANG_ENGLISH        "Textures and effects"
+LANG_SPANISH        "Texturas y efectos"
+
+REFERENCE           SOUNDS_AND_MUSIC
+LANG_ENGLISH        "Sounds and music"
+LANG_SPANISH        "Sonidos y música"
+
+REFERENCE           SHADERS_AND_SCRIPTS
+LANG_ENGLISH        "Shaders and scripts"
+LANG_SPANISH        "Shaders y scripts"
+
+REFERENCE           CONFIGS_THEY_CAN_RUN_COMMANDS
+LANG_ENGLISH        "Configs (they can run commands)"
+LANG_SPANISH        "Configuraciones (pueden ejecutar comandos)"
+
+REFERENCE           OTHER_FILES
+LANG_ENGLISH        "Other files"
+LANG_SPANISH        "Otros archivos"
+
+REFERENCE           PROGRAMS_THEY_COULD_RUN_ON_YOUR_COMP
+LANG_ENGLISH        "Programs (they could run on your computer)"
+LANG_SPANISH        "Programas (podrían ejecutarse en su ordenador)"
+
+REFERENCE           USE_THEM
+LANG_ENGLISH        "Use them"
+LANG_SPANISH        "Usarlos"
 
 REFERENCE           INITIATE
 LANG_ENGLISH        "Initiate"
