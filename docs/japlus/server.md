@@ -18,7 +18,7 @@
 |---------|---------|
 | server info `jp_cinfo` | bit field of the settings the client needs to predict moves, see below. Built every frame in `g_japlus_misc.c` |
 | server info `jp_DuelAlpha`, `jp_gripSpeedScale`, `jp_forceCombo` | read by the cgame |
-| server info `g_visionCaps` | not from JA+. What this game module does for the clients of this tree: bit 0 chat in UTF-8 per recipient (`JP_ChatFor()`), bit 1 it passes statuses on, bit 2 the key login, bit 3 it tells who plays with a client of this tree and answers `jpstatus all`, bit 4 it protects the body of a player who is out of it (Focus), bit 5 it is the Vision Temple (`g_visionTemple`), bit 6 it has a temple of its own for its players (`sv_templeInstance` of its engine). Read only |
+| server info `g_visionCaps` | not from JA+. What this game module does for the clients of this tree: bit 0 chat in UTF-8 per recipient (`JP_ChatFor()`), bit 1 it passes statuses on, bit 2 the key login, bit 3 it tells who plays with a client of this tree and answers `jpstatus all`. Bits 4 to 6 were Focus and the Vision Temple of 0.1.6 and 0.1.7 (removed 2026-10-17) and are not used again. Read only |
 | server command `jpclient <client> <version> [<client> <version> ...]` | not from JA+. With which VisionJK a player plays (`cjp_vision` of his userinfo, letters, digits and `. - _` only), "-" for any other client. Only sent to a client whose userinfo has `cjp_caps` bit 1: one player when his userinfo says something new, everybody in one command as the answer to the client command `jpstatus all`, which a cgame sends once when it has started (at most every two seconds) and which is also answered with the statuses of everybody. See client.md, "Who plays with VisionJK" |
 | server command `jpstatus <client> <away> "<music>"` | not from JA+. What stands above a player's head, see "Statuses" below. Only sent to a client whose userinfo has `cjp_caps` bit 0 |
 | `eFlags` bit 15 `EF_ALT_DIM` | player is in the alternate dimension |
@@ -152,177 +152,33 @@ without colours, quotes and control characters. Both are passed on to every clie
 statuses, and to nobody else, so a legacy client never gets a command it does not know. `jpstatus` is not
 written to the client command log. Not run.
 
-### Focus: the body of a player who is out of it (not from JA+)
-
-`game/status/g_focus.c`, the client part is in [client.md](client.md), "Focus". Run with bots and with two real
-clients on 2026-10-12, see there.
-
-| Cvar | Default | Meaning |
-|------|---------|---------|
-| `g_visionFocus` | 1 | the body of a player in Focus can not be hurt by players: 0 never, 1 in a free for all (as `jp_inactivityProtectTimer`), 2 in every kind of game |
-
-Focus itself happens in the client and needs nothing from a server: the world stands still on its screen while
-the body stands in the level. This game module protects that body. A client asks with the client command
-`jpfocus 1` where it reads bit 4 of `g_visionCaps`, and says `jpfocus 0` when its player is back. The answer is
-the server command `jpfocus <held> <why>`: 1 the body is protected, or 0 with the reason (`focusWhy_t` in
-`bg_public.h`: back, not here, a fight a moment ago, the last time a moment ago, not now).
-
-- It is granted to somebody who stands on the ground alive, in no duel, in no vehicle and with no flag, who
-  was not hit by a player and hit none for five seconds (`G_FocusFight()` in `G_Damage()`), ten seconds after
-  his last time at the earliest. So it is no way out of a fight.
-- While it holds the body has the invulnerability a fresh spawn has (`EF_INVULNERABLE`, renewed with every
-  command of the client), its saber is away and it meditates (`BOTH_MEDITATE`, held as the emotes of JA+ are,
-  set again where something ended it; the sitting animation the inactivity protection plays now and then is
-  left out for it). Force powers, a punch and a kick in the face of other players do not work on it, as on a
-  player an admin protects. What the level does to it, a fall or lava, still hurts. When its player is back it
-  stands up (`BOTH_MEDITATE_END`).
-- It ends with `jpfocus 0`, with the first move, attack or use of the client (a client in Focus sends none, so
-  that is also the end when its command was dropped by the flood protection), with a duel and with death.
-- The command is open to every client, a legacy one too: typed into the console it protects somebody who
-  stands still under the same rules, which is what the inactivity protection does after its time.
-- A legacy client sees a player who meditates inside the shell of a protected one.
-- For the rules on idle players (`g_inactivity`, `g_afkTime`) the body is idle.
-
-### The Vision Temple as a server (not from JA+)
-
-`game/status/g_temple.c`, `tools/temple/build.py`, the client part is in [client.md](client.md), "The Vision
-Temple as a server, and the visit". Run hidden on Linux on 2026-10-12 with one and two clients and with bots,
-on one machine. Played by nobody, never run on a public address.
-
-| Cvar | Default | Meaning |
-|------|---------|---------|
-| `g_visionTemple` | 0 | 1: this server is the temple. Read at the start of a level. The clients see it as bit 5 of `g_visionCaps` in the server info |
-
-A temple server is a server of this tree with `+set g_visionTemple 1 +map vision_temple` (free for all). What
-the mode does:
-
-- Everybody who connects plays at once: no force setup, no join menu, no welcome in the middle of the screen.
-- Nobody has a weapon (the fists, and they do not strike), a force power but the jump, or an item. Nobody
-  takes damage, nobody can be challenged to a duel, Focus is off.
-- Players do not stand in each other's way. That and the attack buttons are in the shared movement code
-  (`PmoveSingle()`, `bg_visionTemple`), so the client predicts both.
-- Somebody who gets under the floors starts again.
-
-The map `maps/vision_temple.bsp` is in the asset pack. `tools/temple/build.py` writes it without a map
-compiler. What one stands on are brushes: the terrace, the five steps of the podium, the way, and fences that
-keep players from the clouds. Since 2026-10-12 what one sees is in the map too: the gold as surfaces (the
-terrace, the steps, the way and its kerbs, the columns), the clouds and the light in the air as two fog
-brushes, and a box of sky around all of it. Their shader scripts (`textures/vision/temple_gold`,
-`temple_clouds`, `temple_light`, `temple_sky` in `shaders/vision.shader`) say `q3map_vision`, see
-[renderer.md](renderer.md), "What only this renderer draws of a level": rd-vulkan-vision draws the place with
-them, and its shaders have the same shapes as the map (the shadows on the gold are worked out from them), so a
-size is changed in both. A client without that renderer (a legacy client, `rd-vanilla`, the browser) gets what
-else the scripts say: the gold in the colours the map has in its points (a sun and a sky baked into them by
-`build.py`, so a column has a bright and a dark side), a fog and a sky of one colour. Seen so with `rd-vanilla`
-in a hidden run on 2026-10-12.
-
-`assets/configs/temple.cfg` has the settings of a temple server: `+exec temple.cfg +map vision_temple`.
-
-Clients find such a server through the masterserver (below), which is one itself and names its own port in its
-answers to clients that enter the temple (`VOICE_TEMPLE_SERVER`, `game/voice/bg_voice.h`). A temple server
-that is no masterserver is named by nobody since 2026-10-12: the program that could name one (the voice master,
-as it was called, started with `-temple`) is gone from the tree. Where no temple server is named the clients
-stay in the temple that is drawn into their own game.
-
-### The temple of a server (not from JA+)
-
-`server/sv_instance.cpp`, `qcommon/net_link.h`, `qcommon/net_ip.cpp`, the client part is in
-[client.md](client.md), "The Vision Temple as a server, and the visit". Built 2026-10-12 for Linux, run hidden
-on one machine with one and two clients. Played by nobody, never over a real network. A server on Windows or
-macOS starts no temple yet (`Sys_StartSelf()` is written for Linux).
-
-A dedicated server of this tree has a Vision Temple of its own: the temple key of one of its players leads
-there, and to the masterserver (below) only from a server that has none. The players of one server are among
-themselves in it.
-
-| Cvar | Default | Meaning |
-|------|---------|---------|
-| `sv_templeInstance` | 1 | of the engine. 0: no temple of its own, the players go to the masterserver. 1: started when the first player asks for it. 2: started with the server |
-| `sv_templeIdle` | 5 | minutes without a player after which a temple that was asked for ends, until somebody asks again. 0: never |
-
-`templeinstance` on the console starts it by hand, `templeinstance stop` ends it.
-
-**What it is.** A level and a server are one thing in this engine, so the temple is the same program a second
-time, started by the server as a temple server on the map `vision_temple` (`+exec temple.cfg`). It reads what
-its server reads, in the same order: the game module, the level, `temple.cfg`, the settings the server stored
-and the lists of its admins and bans are the same for both. It writes into the folder `temple` inside the
-folder its server writes to, stores no settings of its own, and says what it does in `temple/temple.log`
-there. It ends when its server tells it to, when it does not hear of its server for half a minute, or when
-nobody was in it for `sv_templeIdle` minutes.
-
-**One port.** The temple has no port a player could reach, and the server needs none for it:
-
-- The link: both programs have a UDP socket on 127.0.0.1. The server names its port and a key of 8 random
-  bytes in the environment of the program it starts. Every datagram of the link carries the key and the
-  address of the player it is from or for, so the temple sees every player with the address he has. Each end
-  takes nothing without the key and nothing from another port than the one that said hello with it.
-- The tunnel: a player in the temple sends to the port of the game of the server, with five bytes in front of
-  every packet (the four of the number -2, which no packet of the game starts with, and a 1). The server takes
-  such a packet only from an address one of its players plays from, and passes it on over the link. What the
-  temple sends comes back over the link and leaves from the port of the game with the same five bytes.
-- The voice chat of the temple goes the same way without the five bytes: a datagram of it that is none of a
-  player in the level is passed to the temple, and the answers of the temple leave as they are. The socket of
-  the voice chat in the client knows no tunnel.
-
-So who is not let onto a server is not let into its temple, and nobody reaches the temple from outside.
-
-Checked on 2026-10-12, hidden on Linux, everything on one machine over 127.0.0.1 (the scripts are in
-`tools/templetest` and `tools/uitest` of the test tools):
-
-- Without a client (`instance.sh`): the temple comes up when asked and says hello over the link. The server
-  holds its game port and one socket on 127.0.0.1, the temple one socket on 127.0.0.1 and nothing else. A
-  packet of the tunnel from an address nobody plays from gets no answer. `templeinstance stop` ends it, it is
-  started again when asked, and it ends with its server.
-- One client (`INSTANCE=1 uitest/visit.sh live`): the temple key in a level, the server starts its temple, the
-  client is in it about a second later, walks, and is back in its body with the temple key.
-- Two clients of one server (`pair.sh`): both are in the temple with the addresses they have, the test tone
-  of one arrives at the other without a gap (the voice chat of the temple on the port of the game), both are
-  back. With `PAIR_MAP=1` the server changes its level meanwhile and both come back into the new one.
-- A temple that does not answer (`fallback.sh`): the client gives the visit up after 8 seconds, is back in its
-  body, and the next temple key leads to the masterserver. With `FALLBACK_OFF=1` (`sv_templeInstance 0`) the
-  first key does.
-- The end by itself (`idle.sh`): a temple that was asked for ends after `sv_templeIdle` minutes without a
-  player, one that was started with the server stays.
-
-Not checked: a real network, more than two players, a server under load, a level that takes long to load,
-Windows and macOS (no temple is started there), a client in a browser.
-
-What an owner should know: while the server loads a level its players in the temple stand still, since their
-packets pass through it. A second server uses memory while it runs. A server with `sv_voiceShared 0` or a
-`g_voicePort` has no voice chat in its temple. The game module in another engine, or a game a player started
-from the menu, has no temple of its own: its players go to the masterserver.
-
 ### The masterserver (not from JA+)
 
-`server/sv_voice.cpp`, `master/ms_relay.c`. Built 2026-10-12, run hidden on Linux on one machine (the checks
-are in [voice.md](voice.md), "Checked"), and on the host of VisionJK since 2026-10-12 21:43, where it took the
-place of two programs: the voice master, as its relay was called while it was a program of its own, and a
-temple server.
+`server/sv_voice.cpp`, `master/ms_relay.c`, `master/ms_boombox.c`. Built 2026-10-12, run hidden on Linux on one
+machine (the checks are in [voice.md](voice.md), "Checked"), and on the host of VisionJK since 2026-10-12 21:43,
+where it took the place of the voice master, as its relay was called while it was a program of its own.
 
-One program on one UDP port that is everything central of VisionJK: the Vision Temple as a game server for the
-players of servers without this game module, and the relay for those servers: their voice chat, their clan
-radio and their statuses (`master/ms_relay.c`). It is the dedicated server of this tree built with `-DBuildMasterServer=ON` (target
-`visionjk-master`, off unless asked for, with no install rule: it is for the hosts of VisionJK itself and no
-part of a release).
+One program on one UDP port for the players of servers without this game module: the relay of their voice
+chat, their clan radio, their statuses and the boxes of their boombox. It is the dedicated server of this tree
+built with `-DBuildMasterServer=ON` (target `visionjk-master`, off unless asked for, with no install rule: it is
+for the hosts of VisionJK itself and no part of a release). Its relay only runs while a level runs, so it loads
+one that nobody plays on (`assets/configs/master.cfg`, one slot):
 
 ```
-visionjk-master.x86_64 +set dedicated 1 +set net_port 29170 +exec temple.cfg +map vision_temple
+visionjk-master.x86_64 +set dedicated 1 +set net_port 29170 +exec master.cfg +map mp/duel1
 ```
 
 What comes in on its port:
 
-- a packet of the game: a player in the temple, as on any server
-- a datagram of the voice chat of one of those players: the relay of its game module, as on any dedicated
+- a datagram of the voice chat of a player in its own level: the relay of its game module, as on any dedicated
   server of this tree
 - any other datagram of the voice chat: its relay for the other servers. `sv_masterKbps` (4000, command line
   only) is what that may send in a second, 0: anything
 
-A client that asks the relay for the temple is told the port of the game of this very program, so the client
-goes on to it with a visit. 29170 is the port the clients of 0.1.5 know for the voice chat on servers without
-the module (`cg_voiceMasterHost`: `voice.jka.vision` up to 0.1.6, `master.jka.vision` after it, the same host).
-
-Not there: rooms for those who use a word of their own, a list of who is in the temple, more than the 32
-players one server holds.
+29170 is the port the clients of 0.1.5 know for the voice chat on servers without the module
+(`cg_voiceMasterHost`: `voice.jka.vision` up to 0.1.6, `master.jka.vision` after it, the same host). Until
+2026-10-17 it was also the Vision Temple as a game server (`temple.cfg`, map `vision_temple`), which is
+removed. Not run with master.cfg yet.
 
 ### Admin login without a password (not from JA+)
 

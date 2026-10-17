@@ -203,9 +203,6 @@ are.
   of an old menu has no entry.
 - `menufile.py` reads and writes a menu file as a tree.
 
-The main menu has an entry of its own that is no page: Vision Temple, under Play (`main_page()` of `pages.py`,
-see [client.md](client.md), "The Vision Temple").
-
 `ui/vision/hud.menu` is written by hand. Its three words are in the language of the game since 2026-10-12: the
 score with the word of the game (`@MP_INGAME_SCORE`), the saber and the alternate dimension with texts of
 `texts.py` (`@VISION_SABER`, `@VISION_ALTERNATE_DIMENSION`), all three with `caps 1`.
@@ -252,7 +249,7 @@ of the menus.
 | Interface | New HUD (`cg_hud`), Classic Menus (`ui_classic`), Menu in the Level (`cg_immersiveMenu`), Menu Blur (`r_menuBlur`), Show Frame Rate (`cg_drawFPS`), Show Timer (`cg_drawTimer`), Show Lagometer (`cg_lagometer`), Field of View (`cg_fov`), Camera Distance (`cg_thirdPersonRange`), Crosshair Size (`cg_crosshairSize`) |
 | Chat & Social | Chat Bubbles (`cg_chatBubbles`), Bubble Range (`cg_bubbleRange`), Player Statuses (`cg_playerStatuses`), Show My Music (`cg_shareMusic`), Keep Scoreboard on Double Tap (`cg_scoresPick`), Chat Box Size (`cg_chatBoxScale`), Chat Box Rows (`cg_chatBoxRows`), Select Players (`cg_selectPlayers`), Selection Outline (`cg_selectOutline`), Own Chat Line (`cg_chatInput`), Chat Box Width (`cg_chatBoxWidth`), Chat Beep (`cg_chatBeep`), Sharp Console Font (`con_font`), Console Text Size (`con_scale`), Console Opacity (`con_opacity`), Clan Password (`cp_clanPwd`, shown as stars) |
 | Network | Check for Updates (`cl_updateCheck`), Intrusion Log (`cl_ids`), Key Login by Agent (`cg_authAgent`), Key File (`cg_authKeyFile`), UTF-8 Text (`cl_utf8`) |
-| Controls, Extras | Free the Mouse (`+cursor`), Scoreboard with Mouse (`scores_pick`), Focus (`focus`), Vision Temple (`temple`) |
+| Controls, Extras | Free the Mouse (`+cursor`), Scoreboard with Mouse (`scores_pick`) |
 
 Left to the console on purpose: the names of sound devices (`cg_voiceCapture`, `cg_voicePlayback`, a menu
 can not list them), addresses (`cg_voiceMasterHost`, `cg_authAgentPath`, `cl_updateURL`), the finer numbers
@@ -262,9 +259,6 @@ not have the new entries.
 A setting of the cgame (most of Interface and Chat & Social) does not exist before the first level of a
 session was loaded unless the stored config has it. Outside a game its row then shows it as off, whatever
 its default is, and a click sets it.
-
-The meeting word of the Vision Temple (`cg_templeLink`) has a row under Setup, Chat & Social, Vision Temple
-(2026-10-12).
 
 ## Checked
 

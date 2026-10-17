@@ -307,8 +307,7 @@ both ways       "VO" version 4 client token[4] sequence[2] (flags distance)   fl
 **The relay of the masterserver** is `master/ms_relay.c` ("the master" in what follows). It never decodes
 sound and writes no address and no room into its log, only one line a minute with numbers while something
 happens, and one when it is stopped. The masterserver (`visionjk-master`, `-DBuildMasterServer=ON`) is a
-dedicated server that is the Vision Temple, and it hands this relay what comes in on its game port and is none
-of its own players', see [server.md](server.md), "The masterserver". `sv_masterKbps` (4000, command line only)
+dedicated server, and it hands this relay what comes in on its game port and is none of its own players', see [server.md](server.md), "The masterserver". `sv_masterKbps` (4000, command line only)
 is what the relay may send in a second. It is no part of a release.
 
 Until 2026-10-12 this relay was called the voice master and was a program of its own as well
