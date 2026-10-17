@@ -208,6 +208,9 @@ TrueType glyphs next to the letters of the game were only checked as numbers.
 | Ctrl with left or right | jumps by word in the input line |
 | Ctrl with Backspace or Delete | deletes the word before or after the cursor, also in the chat line and the chat box (2026-10-17, as TaystJK) |
 
+`v_consoleClock` (default 0) puts the clock of the machine left of the version in the console's lower right
+corner: 1 the time, 2 the date and the time (TaystJK's `con_datetime`, 2026-10-17).
+
 Ctrl+C with nothing marked anywhere clears the input line, as it always did. Text of an Asian language can not
 be marked: its rows are drawn as strings of another height. Not run: nobody has seen the console of this build.
 

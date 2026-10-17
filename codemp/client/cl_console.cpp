@@ -43,6 +43,7 @@ cvar_t		*con_height;
 cvar_t		*con_scale;
 cvar_t		*con_timestamps;
 cvar_t		*con_font;
+cvar_t		*v_consoleClock;
 
 #define	DEFAULT_CONSOLE_WIDTH	78
 
@@ -542,6 +543,7 @@ void Con_Init (void) {
 	con_scale = Cvar_Get ("con_scale", "1", CVAR_ARCHIVE_ND, "Scale console font");
 	con_timestamps = Cvar_Get ("con_timestamps", "0", CVAR_ARCHIVE_ND, "Display timestamps infront of console lines");
 	con_font = Cvar_Get ("con_font", "1", CVAR_ARCHIVE_ND, "1 the console is drawn with a TrueType font (sharp, every character), 0 with the letters of the game");
+	v_consoleClock = Cvar_Get ("v_consoleClock", "0", CVAR_ARCHIVE_ND, "A clock left of the version in the console: 0 none, 1 the time, 2 the date and the time");
 
 	Field_Clear( &g_consoleField );
 	g_consoleField.widthInChars = g_console_field_width;
@@ -1284,6 +1286,26 @@ void Con_DrawSolidConsole( float frac ) {
 	for (x=0 ; x<i ; x++) {
 		SCR_DrawConChar( cls.glconfig.vidWidth - ( i - x + 1 ) * con.charWidth,
 			(lines-(con.charHeight+con.charHeight/2)), (unsigned char)JK_VERSION[x] );
+	}
+
+	// the clock of the machine left of the version (TaystJK's con_datetime)
+	if ( v_consoleClock->integer ) {
+		qtime_t	now;
+		char	clock[32];
+		int		len;
+
+		Com_RealTime( &now );
+		if ( v_consoleClock->integer == 2 ) {
+			Com_sprintf( clock, sizeof( clock ), "%04i-%02i-%02i %02i:%02i:%02i", now.tm_year + 1900, now.tm_mon + 1,
+				now.tm_mday, now.tm_hour, now.tm_min, now.tm_sec );
+		} else {
+			Com_sprintf( clock, sizeof( clock ), "%02i:%02i:%02i", now.tm_hour, now.tm_min, now.tm_sec );
+		}
+		len = strlen( clock );
+		for ( x = 0; x < len; x++ ) {
+			SCR_DrawConChar( cls.glconfig.vidWidth - ( i + 3 + len - x ) * con.charWidth,
+				(lines-(con.charHeight+con.charHeight/2)), (unsigned char)clock[x] );
+		}
 	}
 
 	// draw the input prompt, user text, and cursor if desired
