@@ -102,6 +102,7 @@ typedef struct box_s {
 	char		owner[BOX_NAME];	// who put it down, as he was called then
 	boxSong_t	songs[BOX_QUEUE];	// the line: songs[0] plays
 	int			numSongs;
+	int			lineRev;		// one up with every change of the line: the hosts send it again to who wants it
 	int			looking;		// songs for it that are looked up
 	qboolean	paused;
 	// the song that plays
@@ -109,7 +110,8 @@ typedef struct box_s {
 	qboolean	streaming;		// the programs of its song were started
 	qboolean	started;		// enough of it came: its frames go out
 	int			startMsec;		// the clock when its first frame would have gone out, if it had never waited
-	int			frames;			// frames of it that went out
+	int			offset;			// samples at its beginning that were jumped over (Box_Seek)
+	int			frames;			// frames of it that went out after them
 	int			waitSince;		// when its fetch began
 	int			restarts;		// times its fetch broke off and was begun again further in
 	int			seq;			// of the datagrams of this box, one up with every frame
@@ -167,7 +169,10 @@ void		Box_Next( boxHost_t *host, int box );
 void		Box_Stop( boxHost_t *host, int box );
 void		Box_Remove( boxHost_t *host, int box );
 void		Box_Pause( boxHost_t *host, int box, qboolean pause, int now );
+void		Box_Seek( boxHost_t *host, int box, int seconds, int now );
+void		Box_Drop( boxHost_t *host, int box, int index );
 int			Box_Flags( const box_t *box );
+int			Box_Msec( const box_t *box );
 qboolean	Box_Ask( boxHost_t *host, boxLookup_t *lookups, int numLookups, int box, int client, const char *by, const char *asked,
 				int now, char *why, int whySize );
 void		Box_Lookups( boxLookup_t *lookups, int numLookups, int now );

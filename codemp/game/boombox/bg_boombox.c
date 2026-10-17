@@ -134,6 +134,17 @@ int BG_BoxDoPack( byte *out, int outSize, const boxDo_t *d ) {
 			return 0;
 		out[len++] = (byte)Com_Clampi( 0, 100, d->volume );
 		break;
+	case BOX_DO_SEEK:
+		if ( len + 2 > outSize )
+			return 0;
+		Box_Put2( out + len, Com_Clampi( 0, 65535, d->value ) );
+		len += 2;
+		break;
+	case BOX_DO_DROP:
+		if ( len + 1 > outSize )
+			return 0;
+		out[len++] = (byte)Com_Clampi( 0, 255, d->value );
+		break;
 	}
 	return ( len <= VOICE_MAX_FRAME ) ? len : 0;
 }
@@ -168,11 +179,22 @@ qboolean BG_BoxDoUnpack( const byte *in, int len, boxDo_t *d ) {
 			return qfalse;
 		d->volume = Com_Clampi( 0, 100, in[at] );
 		return qtrue;
+	case BOX_DO_SEEK:
+		if ( len != at + 2 )
+			return qfalse;
+		d->value = Box_Get2( in + at );
+		return qtrue;
+	case BOX_DO_DROP:
+		if ( len != at + 1 )
+			return qfalse;
+		d->value = in[at];
+		return qtrue;
 	case BOX_DO_PAUSE:
 	case BOX_DO_RESUME:
 	case BOX_DO_SKIP:
 	case BOX_DO_STOP:
 	case BOX_DO_REMOVE:
+	case BOX_DO_WATCH:
 		return ( len == at ) ? qtrue : qfalse;
 	default:
 		return qfalse;
@@ -234,6 +256,20 @@ int BG_BoxSayPack( byte *out, int outSize, const boxSay_t *s ) {
 		n = Box_PutText( out + len + 1, BOX_NAME_MAX, s->by );
 		out[len] = (byte)n;
 		return len + 1 + n;
+	case BOX_SAY_LIST:
+		if ( outSize < 11 + BOX_NAME_MAX )
+			return 0;
+		Box_Put2( out + 2, s->rev & 0xffff );
+		out[4] = (byte)Com_Clampi( 0, 255, s->place );
+		out[5] = (byte)Com_Clampi( 0, 255, s->total );
+		Box_Put2( out + 6, Com_Clampi( 0, 65535, s->length ) );
+		len = 8;
+		n = Box_PutText( out + len + 1, Q_min( BOX_TITLE - 1, outSize - len - 2 - BOX_NAME_MAX ), s->title );
+		out[len] = (byte)n;
+		len += 1 + n;
+		n = Box_PutText( out + len + 1, BOX_NAME_MAX, s->by );
+		out[len] = (byte)n;
+		return len + 1 + n;
 	}
 	return 0;
 }
@@ -280,6 +316,22 @@ qboolean BG_BoxSayUnpack( const byte *in, int len, boxSay_t *s ) {
 			return qfalse;
 		Box_GetText( in + at + 1, in[at], s->by, sizeof( s->by ) );
 		return qtrue;
+	case BOX_SAY_LIST:
+		if ( len < 10 )
+			return qfalse;
+		s->rev = Box_Get2( in + 2 );
+		s->place = in[4];
+		s->total = in[5];
+		s->length = Box_Get2( in + 6 );
+		at = 8;
+		if ( at + 1 + in[at] > len )
+			return qfalse;
+		Box_GetText( in + at + 1, in[at], s->title, sizeof( s->title ) );
+		at += 1 + in[at];
+		if ( at >= len || in[at] > BOX_NAME_MAX || at + 1 + in[at] != len )
+			return qfalse;
+		Box_GetText( in + at + 1, in[at], s->by, sizeof( s->by ) );
+		return ( s->place < s->total && s->total <= BOX_QUEUE ) ? qtrue : qfalse;
 	}
 	return qfalse;
 }

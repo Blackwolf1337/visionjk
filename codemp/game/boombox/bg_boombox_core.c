@@ -37,7 +37,10 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #endif
 
 #define BOX_START_SAMPLES	( BOX_RATE / 2 )	// what has to be there of a song before it starts: half a second
-#define BOX_FETCH_MSEC		20000		// a song of which nothing came for this long is skipped
+#define BOX_FETCH_MSEC		20000		// a song of which nothing came for this long is skipped,
+#define BOX_SEEK_SLOW		10			//	and this many times faster than it plays a song is fetched at least when it is begun
+										//	further in (ffmpeg decodes all that is before and drops it)
+#define BOX_SEEK_END		2			// a jump goes this many seconds before the end of a song at most
 #define BOX_RESTARTS		3			// times a fetch that broke off is begun again further in
 #define BOX_RESTART_SLACK	( BOX_RATE * 3 )	// a fetch that ends this close to the length of the song ended
 #define BOX_BURST			8			// frames that go out at once at most, after the host stood still
@@ -83,6 +86,11 @@ int Box_Flags( const box_t *box ) {
 	return flags;
 }
 
+// how far into its song a box is, in milliseconds: what was jumped over and what went out
+int Box_Msec( const box_t *box ) {
+	return (int)( (long long)box->offset * 1000 / BOX_RATE ) + box->frames * VOICE_FRAME_MSEC;
+}
+
 static void Box_Tell( boxHost_t *host, int b ) {
 	host->boxes[b].rev++;
 	host->tell( host, b );
@@ -113,11 +121,12 @@ void Box_Next( boxHost_t *host, int b ) {
 	if ( box->numSongs > 0 ) {
 		memmove( &box->songs[0], &box->songs[1], ( box->numSongs - 1 ) * sizeof( box->songs[0] ) );
 		box->numSongs--;
+		box->lineRev++;
 	}
 	if ( !box->numSongs )
 		Box_GiveBack( box );
 	box->streaming = box->started = box->paused = qfalse;
-	box->frames = box->restarts = 0;
+	box->frames = box->restarts = box->offset = 0;
 	Box_Tell( host, b );
 }
 
@@ -142,6 +151,50 @@ void Box_Pause( boxHost_t *host, int b, qboolean pause, int now ) {
 	// on from where it was
 	if ( !pause )
 		box->startMsec = now - box->frames * VOICE_FRAME_MSEC;
+	Box_Tell( host, b );
+}
+
+/*
+=================
+Box_Seek
+
+The song that plays goes on from that second: its programs begin again there, and it waits for enough of it as
+a song that begins does. Paused it stays paused.
+=================
+*/
+void Box_Seek( boxHost_t *host, int b, int seconds, int now ) {
+	box_t		*box = &host->boxes[b];
+	boxTools_t	tools;
+	char		why[128];
+
+	if ( !box->numSongs )
+		return;
+	seconds = Com_Clampi( 0, Q_max( 0, box->songs[0].seconds - BOX_SEEK_END ), seconds );
+	box->offset = seconds * BOX_RATE;
+	box->frames = box->restarts = 0;
+	box->started = qfalse;
+	box->waitSince = now;
+	// (not begun yet: it begins there)
+	if ( box->streaming ) {
+		host->tools( &tools );
+		if ( !Box_StreamStart( &box->player->stream, &tools, box->songs[0].id, box->offset, qfalse, now, why, sizeof( why ) ) ) {
+			host->note( host, b, -1, Box_Va( "^5Boombox^7: %s is not played, %s", box->songs[0].title, why ) );
+			Box_Next( host, b );
+			return;
+		}
+	}
+	Box_Tell( host, b );
+}
+
+// A song that waits in the line is taken out of it, index 1 the next one. The one that plays is skipped with Box_Next.
+void Box_Drop( boxHost_t *host, int b, int index ) {
+	box_t *box = &host->boxes[b];
+
+	if ( index < 1 || index >= box->numSongs )
+		return;
+	memmove( &box->songs[index], &box->songs[index + 1], ( box->numSongs - index - 1 ) * sizeof( box->songs[0] ) );
+	box->numSongs--;
+	box->lineRev++;
 	Box_Tell( host, b );
 }
 
@@ -189,7 +242,7 @@ static void Box_Begin( boxHost_t *host, int b, int now ) {
 		}
 	}
 	host->tools( &tools );
-	if ( !Box_StreamStart( &box->player->stream, &tools, box->songs[0].id, 0, qfalse, now, why, sizeof( why ) ) ) {
+	if ( !Box_StreamStart( &box->player->stream, &tools, box->songs[0].id, box->offset, qfalse, now, why, sizeof( why ) ) ) {
 		host->note( host, b, -1, Box_Va( "^5Boombox^7: %s is not played, %s", box->songs[0].title, why ) );
 		Box_Next( host, b );
 		return;
@@ -256,7 +309,7 @@ void Box_Run( boxHost_t *host, int b, int now ) {
 			box->startMsec = now;
 			box->frames = 0;
 			Box_Tell( host, b );
-		} else if ( s->ended || now - box->waitSince > BOX_FETCH_MSEC ) {
+		} else if ( s->ended || now - box->waitSince > BOX_FETCH_MSEC + box->offset / ( BOX_RATE / 1000 ) / BOX_SEEK_SLOW ) {
 			Box_StreamWhy( s, "nothing of it came", why, sizeof( why ) );
 			host->note( host, b, -1, Box_Va( "^5Boombox^7: %s is not played, %s", box->songs[0].title, why ) );
 			Box_Next( host, b );
@@ -352,6 +405,7 @@ static void Box_LookupDone( boxLookup_t *l, int now ) {
 	} else {
 		Q_strncpyz( song.by, l->by, sizeof( song.by ) );
 		box->songs[box->numSongs++] = song;
+		box->lineRev++;
 		// (to the one who asked only: the others see it in the line of the box)
 		if ( box->numSongs == 1 )
 			host->note( host, -1, l->client, Box_Va( "^5Boombox^7: %s (%s) plays", song.title, Box_Length( song.seconds ) ) );

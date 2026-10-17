@@ -47,6 +47,8 @@ char *ConcatArgs( int start );		// g_cmds.c
 typedef struct boxClient_s {
 	qboolean	hears;			// his cgame said "vs_box hello": it draws boxes, and he wants to hear them
 	int			askTime;		// when he last asked for a song
+	int			watch;			// the box whose line he is sent whenever it changes, plus one. 0: none
+	int			watchRev;		//	the lineRev of it he was sent last
 } boxClient_t;
 
 static qboolean		boxOn;
@@ -104,6 +106,29 @@ static const char *Box_TextFor( int clientNum, const char *text, char *buffer, i
 	return buffer;
 }
 
+// the line of a box to a client who watches it, in as few commands as it fits into
+static void Box_LineTo( int b, int clientNum ) {
+	const box_t	*box = &boxes[b];
+	char		cmd[MAX_STRING_CHARS - 64], title[BOX_TITLE], by[BOX_NAME];
+	int			k = 0;
+
+	boxClients[clientNum].watchRev = box->lineRev;
+	do {
+		Com_sprintf( cmd, sizeof( cmd ), "vs_box list %i %i %i %i", b, box->lineRev, k, box->numSongs );
+		for ( ; k < box->numSongs; k++ ) {
+			const char *entry;
+
+			Box_TextFor( clientNum, box->songs[k].title, title, sizeof( title ) );
+			Box_TextFor( clientNum, box->songs[k].by, by, sizeof( by ) );
+			entry = va( " %i \"%s\" \"%s\"", box->songs[k].seconds, title, by );
+			if ( strlen( cmd ) + strlen( entry ) >= sizeof( cmd ) )
+				break;
+			Q_strcat( cmd, sizeof( cmd ), entry );
+		}
+		trap->SendServerCommand( clientNum, cmd );
+	} while ( k < box->numSongs );
+}
+
 static void Box_TellTo( int b, int clientNum ) {
 	const box_t	*box = &boxes[b];
 	char		title[BOX_TITLE], next[BOX_TITLE], owner[BOX_NAME], by[BOX_NAME];
@@ -111,6 +136,8 @@ static void Box_TellTo( int b, int clientNum ) {
 
 	if ( !box->inuse ) {
 		trap->SendServerCommand( clientNum, va( "vs_box gone %i", b ) );
+		if ( boxClients[clientNum].watch == b + 1 )
+			boxClients[clientNum].watch = 0;
 		return;
 	}
 	Box_TextFor( clientNum, box->numSongs ? box->songs[0].title : "", title, sizeof( title ) );
@@ -120,8 +147,10 @@ static void Box_TellTo( int b, int clientNum ) {
 	// (who put it down and who asked for the song at the end: a cgame of 0.1.7 or 0.1.8 reads no further than next)
 	trap->SendServerCommand( clientNum, va( "vs_box set %i %i %i %i %i %i %i %i %i %i %i \"%s\" \"%s\" \"%s\" \"%s\"", b, box->rev,
 		(int)box->origin[0], (int)box->origin[1], (int)box->origin[2], (int)box->yaw, box->volume, flags,
-		box->frames * VOICE_FRAME_MSEC, box->numSongs ? box->songs[0].seconds : 0, box->numSongs > 1 ? box->numSongs - 1 : 0,
+		Box_Msec( box ), box->numSongs ? box->songs[0].seconds : 0, box->numSongs > 1 ? box->numSongs - 1 : 0,
 		title, next, owner, by ) );
+	if ( boxClients[clientNum].watch == b + 1 && boxClients[clientNum].watchRev != box->lineRev )
+		Box_LineTo( b, clientNum );
 }
 
 // what a box is now, to everybody the boxes are for
@@ -335,7 +364,7 @@ void Cmd_JPBox_f( gentity_t *ent ) {
 	if ( !boxOn || Q_stricmp( arg, "hello" ) || ( ent->r.svFlags & SVF_BOT ) )
 		return;
 	boxClients[clientNum].hears = qtrue;
-	trap->SendServerCommand( clientNum, va( "vs_box on %i %i %i", BOX_PROTOCOL, Box_Max(), (int)Box_Range() ) );
+	trap->SendServerCommand( clientNum, va( "vs_box on %i %i %i %i", BOX_PROTOCOL, Box_Max(), (int)Box_Range(), BOX_CAP_MORE ) );
 	for ( i = 0; i < BOX_MAX; i++ ) {
 		if ( boxes[i].inuse )
 			Box_TellTo( i, clientNum );
@@ -524,6 +553,9 @@ boombox place <x> <y> <z> <yaw>			a new box at that place
 boombox move <box> <x> <y> <z> <yaw>
 boombox pause|resume|skip|stop|remove <box>
 boombox volume <box> <0 to 100>
+boombox seek <box> <second>				the song that plays goes on from there
+boombox drop <box> <place>				a song that waits is taken out of the line, 1: the next one
+boombox watch <box>						his cgame is sent the line of that box now and whenever it changes, -1: no more
 boombox list
 =================
 */
@@ -546,6 +578,13 @@ void Cmd_Boombox_f( gentity_t *ent ) {
 	}
 	if ( !Q_stricmp( what, "list" ) ) {
 		Box_List( clientNum );
+		return;
+	}
+	if ( !Q_stricmp( what, "watch" ) ) {
+		b = (int)Box_ArgFloat( 2 );
+		boxClients[clientNum].watch = ( b >= 0 && b < BOX_MAX && boxes[b].inuse ) ? b + 1 : 0;
+		if ( boxClients[clientNum].watch )
+			Box_LineTo( b, clientNum );
 		return;
 	}
 	if ( ent->client->pers.jp.silenced ) {
@@ -585,6 +624,10 @@ void Cmd_Boombox_f( gentity_t *ent ) {
 	} else if ( !Q_stricmp( what, "volume" ) ) {
 		box->volume = Com_Clampi( 0, 100, (int)Box_ArgFloat( 3 ) );
 		Box_Changed( b );
+	} else if ( !Q_stricmp( what, "seek" ) ) {
+		Box_Seek( &boxHost, b, (int)Box_ArgFloat( 3 ), trap->Milliseconds() );
+	} else if ( !Q_stricmp( what, "drop" ) ) {
+		Box_Drop( &boxHost, b, (int)Box_ArgFloat( 3 ) );
 	} else if ( !Q_stricmp( what, "move" ) ) {
 		VectorSet( at, Box_ArgFloat( 3 ), Box_ArgFloat( 4 ), Box_ArgFloat( 5 ) );
 		if ( !Box_Spot( ent, at, b, spot, why, sizeof( why ) ) ) {

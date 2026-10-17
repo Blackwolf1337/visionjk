@@ -120,6 +120,7 @@ of type 6 are is in bg_boombox.h.
 #define VOICE_FLAG_RADIO		8		// to a client: this came over the clan radio and has no place
 #define VOICE_FLAG_SOCIAL		16		// the answer of the master: it knows the long state, VOICE_RADIO and VOICE_STATUS
 #define VOICE_FLAG_BOXES		32		// the answer of the master: it plays boxes, it knows VOICE_BOX and the state with the boxes
+#define VOICE_FLAG_BOXLIST		64		//	and what came for them after 0.1.8: BOX_DO_SEEK, BOX_DO_DROP, BOX_DO_WATCH (bg_boombox.h)
 #define VOICE_CAP_RADIO			1		// in the answer to "vs_voiceLink hello": the relay knows VOICE_RADIO
 #define VOICE_DISTANCE_STEP		16		// the distance byte counts in steps of this many units
 

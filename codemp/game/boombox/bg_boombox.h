@@ -35,10 +35,13 @@ Over the game connection:
 
 to the server	vs_box hello <protocol>				this client draws boxes and wants to hear them
 to the server	vs_box off							it no longer does (v_boomboxes 0)
-to a client		vs_box on <protocol> <boxes> <range>	the answer to the hello: how many boxes a level has at most,
-													and how far one is heard
+to a client		vs_box on <protocol> <boxes> <range> <caps>	the answer to the hello: how many boxes a level has at
+													most, how far one is heard, and BOX_CAP_* (since 0.1.9)
 to a client		vs_box set <box> <rev> <x> <y> <z> <yaw> <volume> <flags> <msec> <length> <waiting> "<title>" "<next>"
 					"<owner>" "<by>"
+to a client		vs_box list <box> <lineRev> <first> <total> [<seconds> "<title>" "<by>"]...
+													the line of a box from song first on, as many as fit (since
+													0.1.9), to who watches that box; songs[0] plays
 to a client		vs_box gone <box>
 to a client		vs_box note "<text>"					a line for the player: what became of the song he asked for,
 													why it is not played, why a box can not go where he wanted
@@ -49,7 +52,9 @@ after the one that plays, next: the title of the first of them. owner: who put t
 the song that plays (both since 0.1.9; a cgame before reads no further than next).
 
 What a player does with a box is a client command, "vs_boxaction <what> <box> ...", see Cmd_Boombox_f() of
-g_boombox.c. Everybody may do everything with every box.
+g_boombox.c. Everybody may do everything with every box. Since 0.1.9 (BOX_CAP_MORE): seek <box> <second>, drop
+<box> <place in the line>, and watch <box>, after which the client is sent the line of that box whenever it
+changes (watch -1: no more).
 
 On a server without the game module of this tree the masterserver keeps the boxes of its room (all clients of one
 game server, codemp/master/ms_boombox.c), and everything goes through the datagrams of the voice chat:
@@ -57,13 +62,18 @@ VOICE_BOX of bg_voice.h, after the head, every number with its low byte first:
 
 to the master	what box nameLen name[nameLen]		and for BOX_DO_PLACE and BOX_DO_MOVE x[4] y[4] z[4] yaw[2],
 													for BOX_DO_PLAY the text (box 255: a new box, its place
-													before the text), for BOX_DO_VOLUME volume[1]
+													before the text), for BOX_DO_VOLUME volume[1], for
+													BOX_DO_SEEK second[2], for BOX_DO_DROP place[1], BOX_DO_WATCH
+													nothing (box 255: no more). The last three since 0.1.9, to a
+													master that says VOICE_FLAG_BOXLIST.
 to a client		BOX_SAY_SET box rev[2] x[4] y[4] z[4] yaw[2] volume flags msec[4] length[2] waiting
 					titleLen title nextLen next
 to a client		BOX_SAY_GONE box
 to a client		BOX_SAY_NOTE box text				(box 255: no box in particular)
 to a client		BOX_SAY_INFO box ownerLen owner byLen by	after every BOX_SAY_SET, since 0.1.9 (a client before
 													drops it: BOX_SAY_SET itself must never grow)
+to a client		BOX_SAY_LIST box lineRev[2] place total seconds[2] titleLen title byLen by
+													one song of the line of a box, to who watches it, since 0.1.9
 
 The master has no level: where a box may stand is what the client found (Box_Spot of cg_boombox.c). It does not
 know who is near a box either: the client says it in its state (bg_voice.h), and the master sends the song of a
@@ -104,12 +114,19 @@ box only to who said he hears it. A yaw is 65536 steps a turn, x, y and z are wh
 #define BOX_DO_STOP			7
 #define BOX_DO_REMOVE		8
 #define BOX_DO_VOLUME		9
+#define BOX_DO_SEEK			10
+#define BOX_DO_DROP			11
+#define BOX_DO_WATCH		12
 
 // what the masterserver says to a client
 #define BOX_SAY_SET			1
 #define BOX_SAY_GONE		2
 #define BOX_SAY_NOTE		3
 #define BOX_SAY_INFO		4
+#define BOX_SAY_LIST		5
+
+// what the server can do of what came after 0.1.8, in "vs_box on"
+#define BOX_CAP_MORE		1			// who put a box down, its line, seek, drop, watch
 
 // the flags of "vs_box set"
 #define BOX_PLAYING			1			// a song plays, or is about to
@@ -124,6 +141,7 @@ typedef struct boxDo_s {
 	int		origin[3];
 	float	yaw;
 	int		volume;
+	int		value;				// BOX_DO_SEEK: the second, BOX_DO_DROP: the place in the line
 	char	text[BOX_ASK];
 } boxDo_t;
 
@@ -136,7 +154,9 @@ typedef struct boxSay_s {
 	int		volume, flags, msec, length, waiting;
 	char	title[BOX_TITLE], next[BOX_TITLE];
 	char	text[256];			// of a note
-	char	owner[BOX_NAME_MAX + 1], by[BOX_NAME_MAX + 1];	// of an info
+	char	owner[BOX_NAME_MAX + 1], by[BOX_NAME_MAX + 1];	// of an info, and by of a song of the line
+	int		place, total;		// of a song of the line: its place (0 plays) and how many there are; its title and
+								//	seconds are title and length
 } boxSay_t;
 
 int			BG_BoxDoPack( byte *out, int outSize, const boxDo_t *d );
