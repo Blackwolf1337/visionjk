@@ -172,8 +172,8 @@ static struct {
 	qboolean			audio;			// the speakers are open
 	qboolean			encoderOk;
 	int					seq;
-	qboolean			keyDown;		// +voice
-	qboolean			clanDown;		// +voiceclan: what is said goes to the clan, over the radio
+	qboolean			keyDown;		// +v_voice
+	qboolean			clanDown;		// +v_voiceclan: what is said goes to the clan, over the radio
 	qboolean			radio;			// the relay of the server knows the clan radio (VOICE_CAP_RADIO)
 	qboolean			sendingRadio;	// the frames that go out now go over it
 	qboolean			toldNoRadio;
@@ -527,7 +527,7 @@ static qboolean Voice_Open( int port ) {
 	voice.answered = qtrue;
 	// (switched off, the way is open for the songs of the boombox alone)
 	if ( v_voice.integer )
-		trap->Print( "Voice chat: on. bind a key to +voice to talk (v_voiceMode 2 sends whenever you speak)\n" );
+		trap->Print( "Voice chat: on. bind a key to +v_voice to talk (v_voiceMode 2 sends whenever you speak)\n" );
 	return qtrue;
 }
 
@@ -1938,7 +1938,7 @@ void CG_VoiceUp_f( void ) {
 	voice.keyDown = qfalse;
 }
 
-// +voiceclan: to the clan, over the radio
+// +v_voiceclan: to the clan, over the radio
 void CG_VoiceClanDown_f( void ) {
 	voice.clanDown = qtrue;
 }
@@ -2002,14 +2002,14 @@ void CG_VoiceStatus_f( void ) {
 
 		trap->Print( "Voice chat: %s, %s, range %i, %s, microphone %s%s\n", way,
 			voice.linked ? "connected" : silent, voice.range,
-			v_voiceMode.integer == 2 ? "voice activation" : "push to talk (+voice)",
+			v_voiceMode.integer == 2 ? "voice activation" : "push to talk (+v_voice)",
 			CG_VoiceAudioCapturing() ? "open" : "closed", voice.sending ? ", sending" : "" );
 		// do the speakers run: the frames they took so far, in seconds
 		if ( !voice.audio || CG_VoiceAudioPlayed() < 0 )
 			trap->Print( "Speakers: none open, you do not hear the others\n" );
 		else
 			trap->Print( "Speakers: open, %.1f seconds played so far\n", CG_VoiceAudioPlayed() / (float)VOICE_RATE );
-		trap->Print( "Clan radio (+voiceclan): %s\n", !voice.radio ? ( voice.master ? "the masterserver does not have it" : "not on this server" )
+		trap->Print( "Clan radio (+v_voiceclan): %s\n", !voice.radio ? ( voice.master ? "the masterserver does not have it" : "not on this server" )
 			: voice.master ? "the masterserver has it. It reaches the players of this server with your clan password (cp_clanPwd)"
 			: "the server has it. It reaches the players with your clan password (cp_clanPwd)" );
 	}

@@ -15,7 +15,7 @@ web host of the dedicated server of this tree. See "In a browser".
 ## For players
 
 ```
-bind v +voice
+bind v +v_voice
 ```
 
 Hold the key to talk. What the others say is heard without a key. The key is also in the menu under Controls,
@@ -66,7 +66,7 @@ Use headphones. There is no echo cancellation: with speakers the others hear the
 ### The clan radio
 
 ```
-bind b +voiceclan
+bind b +v_voiceclan
 ```
 
 Since 2026-10-11. Hold the key and what you say goes to the players of your clan and to nobody else, wherever

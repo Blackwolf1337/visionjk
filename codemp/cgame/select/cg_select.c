@@ -20,7 +20,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 // cg_select.c -- players that can be clicked. Not from JA+, see docs/japlus/client.md, "Clickable players".
 //
-// While the mouse is free (the key of +cursor is held, "cursor" switched it on, the chat box is open or the
+// While the mouse is free (the key of +v_cursor is held, "cursor" switched it on, the chat box is open or the
 // scoreboard is kept open) the player under the pointer has a glowing outline, and a click on him opens a card
 // beside him: who he is, with what he plays, and what this player can do about him (his voice, his chat lines, a
 // whisper, a vote, what an admin may). A click on a row of the scoreboard opens the same card beside the board
@@ -115,7 +115,7 @@ typedef struct selectBoard_s {
 } selectBoard_t;
 
 static struct {
-	qboolean	held;					// +cursor
+	qboolean	held;					// +v_cursor
 	qboolean	toggled;				// "cursor"
 	qboolean	catching;				// this file asked for the keys and the mouse
 	qboolean	quiet;					// and told the engine that its player does not type meanwhile (v_catchQuiet)
@@ -1584,7 +1584,7 @@ qboolean CG_SelectKeyEvent( int key, qboolean down ) {
 CG_SelectLetGo
 
 The level restarts: a pointer that was switched on stays with nobody (the card is closed, "cursor" is off, the
-scoreboard is no longer kept). A key that is held for it (+cursor) is still held. The keys go back to the game
+scoreboard is no longer kept). A key that is held for it (+v_cursor) is still held. The keys go back to the game
 with the next frame.
 =================
 */

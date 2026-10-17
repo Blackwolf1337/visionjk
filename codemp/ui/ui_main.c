@@ -1456,7 +1456,7 @@ static void UI_AddPolyToScene( qhandle_t shader, int numVerts, const polyVert_t 
 =================
 UI_OfferCursorKey
 
-The key that frees the mouse to point at players (+cursor of the cgame): the left Alt key, once, if no key has
+The key that frees the mouse to point at players (+v_cursor of the cgame): the left Alt key, once, if no key has
 the command and Alt can be spared. It can where it does nothing, and where it holds what the defaults of the game
 give it (+altattack, mpdefault.cfg) while another key does the same (the second mouse button in those defaults):
 without that a new install had no key for it at all. Any other bind on Alt is somebody's own and stays. Whoever

@@ -1013,5 +1013,5 @@ void CG_Boombox_f( void ) {
 		return;
 	}
 	trap->Print( "usage: v_boombox play \"<link or what to look for>\" | place | pause | resume | skip | stop | remove | volume <0 to 100> | list\n"
-		"Hold the key of the pointer (+cursor) and click a boombox for its card, or drag it somewhere else.\n" );
+		"Hold the key of the pointer (+v_cursor) and click a boombox for its card, or drag it somewhere else.\n" );
 }
