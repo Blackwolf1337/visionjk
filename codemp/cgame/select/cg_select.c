@@ -109,7 +109,8 @@ typedef enum {
 #define SELECT_BLUR_ALPHA	165	//	and how bright it is, of 255
 
 // What the name and the card of a player are drawn on. In the level it is a thing there as a chat bubble is:
-// as large at any distance, upright, turned to the one who looks about its upright axis only.
+// as large at any distance, and it lies in the plane of the screen: turned to the one who looks also when he looks
+// down or up at it, so it is read and clicked without a slant.
 typedef struct selectBoard_s {
 	qboolean	world;					// in the level. qfalse: on the screen
 	vec3_t		corner;					// its top left corner: a place in the level, or x and y in the units of the HUD
@@ -587,9 +588,9 @@ static qboolean Select_BesideWorld( int clientNum, float w, float h, const selec
 	perUnit = SCREEN_HEIGHT * 0.5f / ( z * tanf( DEG2RAD( cg.refdef.fov_y ) * 0.5f ) );
 	over = sy + h * b->unit * perUnit - ( SCREEN_HEIGHT - SELECT_FLOOR );
 	if ( over > 0.0f ) {
-		corner[2] += over / perUnit;
+		VectorMA( corner, over / perUnit, b->up, corner );
 	} else if ( sy < 30.0f ) {
-		corner[2] -= ( 30.0f - sy ) / perUnit;
+		VectorMA( corner, -( 30.0f - sy ) / perUnit, b->up, corner );
 	}
 	width = w * b->unit * perUnit;
 	if ( sx < 4.0f - cgs.bias2D ) {
@@ -630,20 +631,17 @@ static qboolean Select_World( void ) {
 	return CG_BubbleReady();
 }
 
-// what a board is drawn on this frame: where the engine can in the level, upright and turned to the camera
+// what a board is drawn on this frame: where the engine can in the level, turned to the camera
 static void Board_Begin( selectBoard_t *b ) {
 	b->world = Select_World();
 	b->unit = b->world ? SELECT_UNIT : 1.0f;
 	if ( !b->world ) {
 		return;
 	}
-	VectorSet( b->up, 0.0f, 0.0f, 1.0f );
+	// (axis 1 of a view points to the left)
 	VectorNegate( cg.refdef.viewaxis[1], b->right );
-	b->right[2] = 0.0f;
-	if ( VectorNormalize( b->right ) < 0.01f ) {
-		VectorSet( b->right, 0.0f, -1.0f, 0.0f );
-	}
-	CrossProduct( b->right, b->up, b->toward );
+	VectorCopy( cg.refdef.viewaxis[2], b->up );
+	VectorNegate( cg.refdef.viewaxis[0], b->toward );
 }
 
 // Puts a board beside a player, w and h in units of the card, and lets it follow him. qfalse: he is not in front
