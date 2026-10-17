@@ -117,23 +117,6 @@ qboolean G_WordFilter( gentity_t *ent, char *text ) {
 name filtering
 =================
 */
-static int JP_ClientNumberFromPurifiedName( const char *name ) {
-	char wanted[MAX_NETNAME], cur[MAX_NETNAME];
-	int i;
-
-	JP_SanitizeString( wanted, name, sizeof( wanted ), JP_NAME_CHARS );
-	for ( i = 0; i < level.maxclients; i++ ) {
-		const gentity_t *other = &g_entities[i];
-
-		if ( !other->inuse || !other->client || other->client->pers.connected != CON_CONNECTED )
-			continue;
-		JP_SanitizeString( cur, other->client->pers.netname, sizeof( cur ), JP_NAME_CHARS );
-		if ( !Q_stricmp( cur, wanted ) )
-			return i;
-	}
-	return -1;
-}
-
 static qboolean JP_NameContains( const char *name, const char *tag ) {
 	char n[MAX_NETNAME], t[MAX_NETNAME];
 
@@ -176,7 +159,7 @@ void JP_FilterPlayerName( gentity_t *ent, char *name, size_t size ) {
 	if ( client->pers.connected == CON_CONNECTED && jp_wordFilter.integer > 0 && (jp_wordFilter.integer & 0x40) && G_WordFilter( ent, name ) )
 		Q_strncpyz( name, "Padawan", size );
 
-	other = JP_ClientNumberFromPurifiedName( name );
+	other = JP_ClientByName( name, qtrue );
 	if ( !jp_allowSamePlayerNames.integer && other != -1 && other != clientNum )
 		Q_strncpyz( name, va( "Padawan ^7(^5%i^7)", clientNum ), size );
 

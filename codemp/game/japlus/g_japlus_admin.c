@@ -260,12 +260,12 @@ qboolean G_ClientAdminCmdAllowedOn( gentity_t *ent, gentity_t *target, qboolean 
 
 /*
 =================
-G_ClientNumberFromPartialName
+JP_ClientByName
 
-first connected player whose name contains "name", colors and case ignored
+first connected player whose name is "name" (exact) or contains it, colors and case ignored. -1: none
 =================
 */
-static int G_ClientNumberFromPartialName( const char *name ) {
+int JP_ClientByName( const char *name, qboolean exact ) {
 	char wanted[MAX_NETNAME], cur[MAX_NETNAME];
 	int i;
 
@@ -277,7 +277,7 @@ static int G_ClientNumberFromPartialName( const char *name ) {
 		if ( !ent )
 			continue;
 		JP_SanitizeString( cur, ent->client->pers.netname, sizeof( cur ), JP_NAME_CHARS );
-		if ( cur[0] && strstr( cur, wanted ) )
+		if ( exact ? !Q_stricmp( cur, wanted ) : ( cur[0] && strstr( cur, wanted ) ) )
 			return i;
 	}
 	return -1;
@@ -299,7 +299,7 @@ int G_getClientNumberForString( const char *s ) {
 	if ( *s >= '0' && *s <= '9' )
 		return atoi( s );
 
-	num = G_ClientNumberFromPartialName( s );
+	num = JP_ClientByName( s, qfalse );
 	return num != -1 ? num : -2;
 }
 
@@ -947,9 +947,9 @@ server console commands: admGrant, admToggle, admAddIP, admRemoveIP, admListIP, 
 =================
 */
 static void Svcmd_admGrant_f( void ) {
-	char arg[MAX_TOKEN_CHARS], levelName[MAX_TOKEN_CHARS];
+	char arg[MAX_TOKEN_CHARS], levelName[MAX_TOKEN_CHARS], title[16];
 	gentity_t *target;
-	int num;
+	int num, adminLevel;
 
 	if ( trap->Argc() < 3 )
 		return;
@@ -961,24 +961,20 @@ static void Svcmd_admGrant_f( void ) {
 	if ( !(target = JP_ValidClient( num )) )
 		return;
 
-	if ( !Q_stricmp( levelName, "council" ) ) {
-		target->client->sess.jpAdminLevel = JPADM_COUNCIL;
-		trap->Print( "^5Granted Council access to User ^7%s\n", target->client->pers.netname );
-	}
-	else if ( !Q_stricmp( levelName, "knight" ) ) {
-		target->client->sess.jpAdminLevel = JPADM_KNIGHT;
-		trap->Print( "^5Granted Knight access to User ^7%s\n", target->client->pers.netname );
-	}
-	else if ( !Q_stricmp( levelName, "instructor" ) ) {
-		target->client->sess.jpAdminLevel = JPADM_INSTRUCTOR;
-		trap->Print( "^5Granted Instructor access to User ^7%s\n", target->client->pers.netname );
-	}
-	else if ( !Q_stricmp( levelName, "no" ) ) {
-		target->client->sess.jpAdminLevel = JPADM_NONE;
-		trap->Print( "^5Remove Admin access to User ^7%s\n", target->client->pers.netname );
-	}
-	else
+	// the ranks by the names of g_auth.c, which has rcon too: that one can not be granted
+	adminLevel = Q_stricmp( levelName, "no" ) ? G_AuthRankLevel( levelName ) : JPADM_NONE;
+	if ( adminLevel == JPADM_RCON || ( adminLevel == JPADM_NONE && Q_stricmp( levelName, "no" ) ) ) {
 		trap->Print( "^5Usage:  admGrant <ID player> <level> where <level> = council, knight, instructor or no\n" );
+		return;
+	}
+	target->client->sess.jpAdminLevel = adminLevel;
+	if ( adminLevel == JPADM_NONE ) {
+		trap->Print( "^5Remove Admin access to User ^7%s\n", target->client->pers.netname );
+	} else {
+		Q_strncpyz( title, G_AuthRankName( adminLevel ), sizeof( title ) );
+		title[0] = (char)toupper( (unsigned char)title[0] );
+		trap->Print( "^5Granted %s access to User ^7%s\n", title, target->client->pers.netname );
+	}
 }
 
 static const char *JP_AdminCmdName( int bit ) {

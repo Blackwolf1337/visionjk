@@ -76,7 +76,9 @@ static qboolean WA_JpAction( waConnection_t *c, const char *action, int id, char
 	}
 
 	if ( !strcmp( action, "admgrant" ) ) {
-		if ( strcmp( value, "council" ) && strcmp( value, "knight" ) && strcmp( value, "instructor" ) && strcmp( value, "no" ) ) {
+		const int rank = G_AuthRankLevel( value );
+
+		if ( strcmp( value, "no" ) && ( rank == JPADM_NONE || rank == JPADM_RCON ) ) {
 			WA_ActionResult( c, qfalse, "rank must be council, knight, instructor or no" );
 			return qtrue;
 		}

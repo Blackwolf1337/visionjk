@@ -79,6 +79,11 @@ static qboolean JP_EmoteNotForTeams( int anim ) {
 	return qfalse;
 }
 
+// the answers of JA+ when a command is refused, word for word (the typos are the original's)
+static void JP_Refuse( gentity_t *ent, const char *text ) {
+	trap->SendServerCommand( ent-g_entities, va( "print \"%s\n\"", text ) );
+}
+
 static void JP_Emote( gentity_t *ent, int anim, int bit ) {
 	const gclient_t *client = ent->client;
 
@@ -87,11 +92,11 @@ static void JP_Emote( gentity_t *ent, int anim, int bit ) {
 
 	// (the answers come first, like in the original: also for a player who could not do the emote right now)
 	if ( jp_emotDisallow.integer && ((1 << bit) & jp_emotDisallow.integer) ) {
-		trap->SendServerCommand( ent-g_entities, "print \"this Emot is not allowed on this server!.\n\"" );
+		JP_Refuse( ent, "this Emot is not allowed on this server!." );
 		return;
 	}
 	if ( g_gametype.integer >= GT_TEAM && JP_EmoteNotForTeams( anim ) ) {
-		trap->SendServerCommand( ent-g_entities, "print \"this Emot is not compatible with this gametype!.\n\"" );
+		JP_Refuse( ent, "this Emot is not compatible with this gametype!." );
 		return;
 	}
 
@@ -211,11 +216,11 @@ static gentity_t *JP_EmotePartner( gentity_t *ent, int bit, float range ) {
 	if ( !JP_EmoteAlive( ent ) )
 		return NULL;
 	if ( jp_emotDisallow.integer & (1 << bit) ) {
-		trap->SendServerCommand( ent-g_entities, "print \"this Emot is not allowed on this server!.\n\"" );
+		JP_Refuse( ent, "this Emot is not allowed on this server!." );
 		return NULL;
 	}
 	if ( level.gametype >= GT_TEAM ) {
-		trap->SendServerCommand( ent-g_entities, "print \"this Emot is not compatible with this gametype!.\n\"" );
+		JP_Refuse( ent, "this Emot is not compatible with this gametype!." );
 		return NULL;
 	}
 	if ( !JP_CanAct( ent ) || client->ps.forceHandExtend != HANDEXTEND_NONE || client->pers.jp.isGhost || client->jetPackOn )
@@ -431,7 +436,7 @@ static void Cmd_amknockmedown_f( gentity_t *ent ) {
 		return;
 	}
 	if ( g_gametype.integer != GT_FFA ) {
-		trap->SendServerCommand( ent-g_entities, "print \"this is not compatible with this gametype!.\n\"" );
+		JP_Refuse( ent, "this is not compatible with this gametype!." );
 		return;
 	}
 
@@ -468,7 +473,7 @@ static void Cmd_amdropsaber_f( gentity_t *ent ) {
 		return;
 	}
 	if ( g_gametype.integer != GT_FFA ) {
-		trap->SendServerCommand( ent-g_entities, "print \"this is not compatible with this gametype!.\n\"" );
+		JP_Refuse( ent, "this is not compatible with this gametype!." );
 		return;
 	}
 
@@ -601,7 +606,7 @@ static void Cmd_saber_f( gentity_t *ent ) {
 		return;
 	}
 	if ( g_gametype.integer == GT_SIEGE || g_gametype.integer == GT_POWERDUEL || g_gametype.integer == GT_DUEL ) {
-		trap->SendServerCommand( ent-g_entities, "print \"this is not compatible with this gametype!.\n\"" );
+		JP_Refuse( ent, "this is not compatible with this gametype!." );
 		return;
 	}
 	if ( !JP_SaberInHand( ent ) || client->pers.jp.saberSwitchTime >= level.time )
