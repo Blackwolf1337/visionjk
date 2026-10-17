@@ -459,6 +459,14 @@ Who sees them is every player of this tree, on any server:
 
 The server part (game module and masterserver) only works once those run this build on the host.
 
+Checked on 2026-10-17 with two hidden clients of the build (`agent/japlus_port/tools/looktest.sh`). One wore a
+stand-in hat and cape (a coffee pot of the game, copied into the test profiles only), the other said with
+`v_cosmetics` what it heard: "hat coffeepot, cape potcape", through the server of the build, and with `MASTER=1`
+through the masterserver of the build on a server with the stand-in for a foreign module. The first runs found
+two faults: the arguments of `vs_look` were read from one buffer, so the cape came as the hat, and
+`BG_VoiceUnpack` refused the new packet type. In a level the stand-in hat sat on the head of a bot
+(`v_showCosmetics 2`) and the cape on his back. A real hat model has not been tried.
+
 ### Chat bubbles
 
 `cgame/bubble/cg_bubble.c` (2026-10-11). What a player says in the chat stands above his head for 2.5 to 8

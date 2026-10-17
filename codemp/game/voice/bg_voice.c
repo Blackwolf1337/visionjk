@@ -43,7 +43,7 @@ sides.
 
 // How long what follows the head has to be. A hello carries nothing, sound is never empty, and a VOICE_STATE
 // carries its fields on the way to the master (with or without the clan) and nothing on the way back. A
-// VOICE_STATUS has its flags and maybe a text, both ways.
+// VOICE_STATUS has its flags and maybe a text, both ways, a VOICE_LOOK a text.
 static qboolean BG_VoiceBodyFits( int type, int bodyLen, qboolean toClient ) {
 	switch ( type ) {
 	case VOICE_HELLO:
@@ -62,6 +62,9 @@ static qboolean BG_VoiceBodyFits( int type, int bodyLen, qboolean toClient ) {
 		return ( bodyLen >= ( toClient ? 2 : 3 ) && bodyLen <= VOICE_MAX_FRAME ) ? qtrue : qfalse;
 	case VOICE_STATUS:
 		return ( bodyLen >= 1 && bodyLen <= VOICE_STATUS_TEXT ) ? qtrue : qfalse;
+	case VOICE_LOOK:
+		// a text, both ways: "<hat> <cape>"
+		return ( bodyLen >= 1 && bodyLen < VOICE_STATUS_TEXT ) ? qtrue : qfalse;
 	default:
 		return qfalse;
 	}
