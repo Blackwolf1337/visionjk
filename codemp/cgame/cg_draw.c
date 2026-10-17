@@ -8205,6 +8205,9 @@ static void CG_Draw2D( void ) {
 	// what the boxes of the boombox play, over them (boombox/cg_boombox.c)
 	CG_BoomboxDraw();
 
+	// speedometer, strafe helper, snap and pitch HUD (hud/cg_movehud.c)
+	CG_MoveHudDraw();
+
 	CG_DrawLagometer();
 
 

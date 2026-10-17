@@ -334,6 +334,28 @@ the team colour, green for oneself and grey for everyone else. The obituary line
 | `v_killfeedTime` | 5000 | milliseconds a line stays, the last second fading |
 | `v_killfeedX`, `v_killfeedY` | 0 | moves it left and down |
 
+The movement HUD (`cgame/hud/cg_movehud.c`) is after TaystJK's `hud_strafehelper.c` (from jaPRO and the CGaz of
+DeFRaG), written anew for the physics of the game (`bg_pmove.c`: `pm_accelerate` 10 on the ground,
+`pm_airaccelerate` 1 in the air, friction 6, stop speed 100). The movement styles of jaPRO are left out. The bars
+show where the view has to point. The middle of the screen is where it points now. Everything is off by default.
+
+| Cvar | Default | Meaning |
+|------|---------|---------|
+| `v_speedometer` | 0 | the speed along the ground under the crosshair: green when faster than running, gold when much faster |
+| `v_speedometerJumps` | 5 | under it, the speeds at the last jumps (when the ground was left), 0 none |
+| `v_speedometerSize`, `v_speedometerX`, `v_speedometerY` | 1, 0, 0 | its size and place |
+| `v_strafeHelper` | 0 | a bar under the crosshair for the keys that are held. Dim: speed starts to come. Bright: the best angles (from the best one to the one where the speed stays). Yellow: still faster, but the speed goes down past its end. The white mark is the view |
+| `v_strafeHelperColor`, `v_strafeHelperY` | `0 1 0.4 0.75`, 0 | its colour and place |
+| `v_snapHud` | 0 | in the air, the zones of the angle where the rounding of the velocity after every move (the `SnapVector` at the end of `PmoveSingle`) gives a little more speed, in two alternating colours. They depend on the frame rate (`com_maxfps`, or `pmove_msec` with `pmove_fixed`) |
+| `v_snapHudColor1`, `v_snapHudColor2`, `v_snapHudY` | | its colours and place |
+| `v_pitchHud` | 0 | a mark where the view would be at the pitch `v_pitchHudAngle` (15, down positive), colour `v_pitchHudColor` |
+
+For a player one follows, the keys are what the server says of them (the direction of the move), and the speed
+he wishes is his full one.
+
+Not tried in the game: how it feels while running, and whether the angles of the bars are right to the degree.
+They were only checked against the formulas.
+
 ### Chat bubbles
 
 `cgame/bubble/cg_bubble.c` (2026-10-11). What a player says in the chat stands above his head for 2.5 to 8
