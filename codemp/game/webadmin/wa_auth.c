@@ -215,7 +215,7 @@ static waUser_t *WA_FindUser( const char *name ) {
 	return NULL;
 }
 
-static void WA_AuthAnswer( waConnection_t *c, int status, const char *statusText, const char *why ) {
+void WA_AuthAnswer( waConnection_t *c, int status, const char *statusText, const char *why ) {
 	char body[96];
 
 	Com_sprintf( body, sizeof( body ), "{\"ok\":false,\"why\":\"%s\"}", why );
@@ -223,7 +223,7 @@ static void WA_AuthAnswer( waConnection_t *c, int status, const char *statusText
 }
 
 static void WA_AuthOk( waConnection_t *c ) {
-	WA_Respond( c, 200, "OK", "application/json", "Cache-Control: no-store\r\n", "{\"ok\":true}", 11 );
+	WA_RespondJsonText( c, "{\"ok\":true}" );
 }
 
 /*
@@ -832,7 +832,7 @@ static void WA_ApiLoginKey( waConnection_t *c, const char *head, const char *bod
 		ask->time = now ? now : 1;
 		BG_AuthEncode( ask->nonce, sizeof( ask->nonce ), text, sizeof( text ) );
 		Com_sprintf( reply, sizeof( reply ), "{\"ok\":true,\"nonce\":\"%s\"}", text );
-		WA_Respond( c, 200, "OK", "application/json", "Cache-Control: no-store\r\n", reply, (int)strlen( reply ) );
+		WA_RespondJsonText( c, reply );
 		return;
 	}
 
@@ -970,7 +970,7 @@ static void WA_ApiAccount( waConnection_t *c, const char *what, const char *body
 		WA_Base32( user->pendingTotp, WA_TOTP_SECRET, secret, sizeof( secret ) );
 		Com_sprintf( reply, sizeof( reply ), "{\"ok\":true,\"secret\":\"%s\",\"uri\":\"otpauth://totp/VisionJK:%s?secret=%s&issuer=VisionJK&algorithm=SHA1&digits=6&period=30\"}",
 			secret, user->name, secret );
-		WA_Respond( c, 200, "OK", "application/json", "Cache-Control: no-store\r\n", reply, (int)strlen( reply ) );
+		WA_RespondJsonText( c, reply );
 		crypto_wipe( secret, sizeof( secret ) );
 		crypto_wipe( reply, sizeof( reply ) );
 		return;
@@ -1038,7 +1038,7 @@ static void WA_ApiAccount( waConnection_t *c, const char *what, const char *body
 		WA_SaveUsers();
 		WA_Hex( token, sizeof( token ), text );
 		Com_sprintf( reply, sizeof( reply ), "{\"ok\":true,\"token\":\"%s\"}", text );
-		WA_Respond( c, 200, "OK", "application/json", "Cache-Control: no-store\r\n", reply, (int)strlen( reply ) );
+		WA_RespondJsonText( c, reply );
 		crypto_wipe( token, sizeof( token ) );
 		crypto_wipe( text, sizeof( text ) );
 		crypto_wipe( reply, sizeof( reply ) );
@@ -1216,7 +1216,7 @@ static void WA_ApiUsers( waConnection_t *c, const char *what, const char *body )
 
 	// add and reset: the password, shown once
 	Com_sprintf( reply, sizeof( reply ), "{\"ok\":true,\"password\":\"%s\"}", password );
-	WA_Respond( c, 200, "OK", "application/json", "Cache-Control: no-store\r\n", reply, (int)strlen( reply ) );
+	WA_RespondJsonText( c, reply );
 	crypto_wipe( password, sizeof( password ) );
 	crypto_wipe( reply, sizeof( reply ) );
 }
@@ -1241,7 +1241,7 @@ static void WA_ApiAdminCode( waConnection_t *c, const char *body ) {
 	}
 	WA_LogUse( c, va( "%s made a one-time code for the rank %s", c->user, G_AuthRankName( adminLevel ) ) );
 	Com_sprintf( reply, sizeof( reply ), "{\"ok\":true,\"code\":\"%s\",\"seconds\":60}", code );
-	WA_Respond( c, 200, "OK", "application/json", "Cache-Control: no-store\r\n", reply, (int)strlen( reply ) );
+	WA_RespondJsonText( c, reply );
 }
 
 /*

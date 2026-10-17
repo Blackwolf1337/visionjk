@@ -167,6 +167,37 @@ void WA_RespondJson( waConnection_t *c, waBuffer_t *json ) {
 	WA_Respond( c, 200, "OK", "application/json", "Cache-Control: no-store\r\n", json->data, json->len );
 }
 
+// A path inside the files of the game as the page names it: none that leads out of them (no "..", none from
+// the top, no backslash and no drive). The engine's file system checks again, this is what the page is told.
+qboolean WA_GamePathOk( const char *path ) {
+	return (qboolean)( path[0] != '/' && !strstr( path, ".." ) && !strchr( path, '\\' ) && !strchr( path, ':' ) );
+}
+
+// a JSON text that no browser keeps
+void WA_RespondJsonText( waConnection_t *c, const char *text ) {
+	WA_Respond( c, 200, "OK", "application/json", "Cache-Control: no-store\r\n", text, (int)strlen( text ) );
+}
+
+// The answer of an action of the page: {"ok":..,"id":..,"message":..,"key":..}. id WA_NO_ID and key NULL
+// leave those out.
+void WA_Result( waConnection_t *c, qboolean ok, const char *msg, int id, const char *key ) {
+	waBuffer_t b = { 0 };
+
+	WA_BufPrintf( &b, "{\"ok\":%s,", WA_BOOL( ok ) );
+	if ( id != WA_NO_ID ) {
+		WA_BufPrintf( &b, "\"id\":%d,", id );
+	}
+	WA_BufAppend( &b, "\"message\":", 10 );
+	WA_BufJsonString( &b, msg );
+	if ( key ) {
+		WA_BufAppend( &b, ",\"key\":", 7 );
+		WA_BufJsonString( &b, key );
+	}
+	WA_BufAppend( &b, "}", 1 );
+	WA_RespondJson( c, &b );
+	WA_BufFree( &b );
+}
+
 /*
 ==============================================================================
 

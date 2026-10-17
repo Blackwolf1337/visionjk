@@ -62,16 +62,6 @@ static struct {
 	int			lastCheck, jumpUntil, tries;
 } control = { -1 };
 
-static void WA_ControlResult( waConnection_t *c, qboolean ok, const char *msg ) {
-	waBuffer_t b = { 0 };
-
-	WA_BufPrintf( &b, "{\"ok\":%s,\"id\":%d,\"message\":", WA_BOOL( ok ), control.client );
-	WA_BufJsonString( &b, msg );
-	WA_BufAppend( &b, "}", 1 );
-	WA_RespondJson( c, &b );
-	WA_BufFree( &b );
-}
-
 // the player who is held, NULL when he is gone or dead: then nobody is held any more
 static gentity_t *WA_ControlHeld( void ) {
 	gentity_t *ent;
@@ -107,19 +97,19 @@ void WA_ApiControl( waConnection_t *c, const char *body ) {
 		if ( control.client >= 0 )
 			WA_LogUse( c, va( "control stop id %d", control.client ) );
 		control.client = -1;
-		WA_ControlResult( c, qtrue, "released" );
+		WA_Result( c, qtrue, "released", control.client, NULL );
 		return;
 	}
 
 	if ( !strcmp( op, "start" ) ) {
 		if ( id < 0 || id >= level.maxclients || !g_entities[id].inuse || !g_entities[id].client
 			|| g_entities[id].client->pers.connected != CON_CONNECTED ) {
-			WA_ControlResult( c, qfalse, "no such player" );
+			WA_Result( c, qfalse, "no such player", control.client, NULL );
 			return;
 		}
 		ent = &g_entities[id];
 		if ( ent->health <= 0 || ent->client->sess.sessionTeam == TEAM_SPECTATOR ) {
-			WA_ControlResult( c, qfalse, "player is not alive" );
+			WA_Result( c, qfalse, "player is not alive", control.client, NULL );
 			return;
 		}
 		WA_LogUse( c, va( "control start id %d", id ) );
@@ -128,13 +118,13 @@ void WA_ApiControl( waConnection_t *c, const char *body ) {
 		control.enterTime = ent->client->pers.enterTime;
 		control.lastRequest = level.time;
 		VectorCopy( ent->client->ps.viewangles, control.angles );
-		WA_ControlResult( c, qtrue, "taken" );
+		WA_Result( c, qtrue, "taken", control.client, NULL );
 		return;
 	}
 
 	ent = WA_ControlHeld();
 	if ( !ent || id != control.client ) {
-		WA_ControlResult( c, qfalse, "this player is not held any more" );
+		WA_Result( c, qfalse, "this player is not held any more", control.client, NULL );
 		return;
 	}
 	control.lastRequest = level.time;
@@ -151,13 +141,13 @@ void WA_ApiControl( waConnection_t *c, const char *body ) {
 		if ( WA_FormValue( body, "pitch", value, sizeof( value ) ) && value[0] )
 			control.angles[PITCH] = Com_Clamp( -89.0f, 89.0f, atof( value ) );
 		control.angles[ROLL] = 0.0f;
-		WA_ControlResult( c, qtrue, "" );
+		WA_Result( c, qtrue, "", control.client, NULL );
 	} else if ( !strcmp( op, "goal" ) ) {
 		vec3_t goal;
 
 		for ( k = 0; k < 3; k++ ) {
 			if ( !WA_FormValue( body, axes[k], value, sizeof( value ) ) ) {
-				WA_ControlResult( c, qfalse, "no place to walk to" );
+				WA_Result( c, qfalse, "no place to walk to", control.client, NULL );
 				return;
 			}
 			goal[k] = Com_Clamp( -MAX_WORLD_COORD, MAX_WORLD_COORD, atof( value ) );
@@ -172,9 +162,9 @@ void WA_ApiControl( waConnection_t *c, const char *body ) {
 			control.lastCheck = level.time;
 			VectorCopy( ent->client->ps.origin, control.lastSpot );
 		}
-		WA_ControlResult( c, qtrue, control.walking ? "walking there" : "" );
+		WA_Result( c, qtrue, control.walking ? "walking there" : "", control.client, NULL );
 	} else {
-		WA_ControlResult( c, qfalse, "unknown op" );
+		WA_Result( c, qfalse, "unknown op", control.client, NULL );
 	}
 }
 

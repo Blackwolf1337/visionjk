@@ -104,6 +104,10 @@ void WA_Respond( waConnection_t *c, int status, const char *statusText, const ch
 	const char *extraHeaders, const void *body, int bodyLen );
 void WA_RespondText( waConnection_t *c, int status, const char *statusText, const char *text );
 void WA_RespondJson( waConnection_t *c, waBuffer_t *json );
+void WA_RespondJsonText( waConnection_t *c, const char *text );
+qboolean WA_GamePathOk( const char *path );
+#define WA_NO_ID			( -0x7fffffff - 1 )	// WA_Result() without an id
+void WA_Result( waConnection_t *c, qboolean ok, const char *msg, int id, const char *key );
 void WA_LogUse( const waConnection_t *c, const char *what );
 qboolean WA_AuthThrottle( unsigned int addr );
 void WA_AuthResult( unsigned int addr, qboolean ok );
@@ -116,6 +120,7 @@ qboolean WA_WriteGameFile( const char *path, const char *data, int len );
 
 // wa_auth.c
 const char *WA_RoleName( waRole_t role );
+void WA_AuthAnswer( waConnection_t *c, int status, const char *statusText, const char *why );
 void WA_AuthInit( void );
 void WA_AuthShutdown( void );
 qboolean WA_AuthHasUsers( void );

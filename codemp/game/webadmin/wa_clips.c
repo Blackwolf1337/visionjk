@@ -50,16 +50,6 @@ that wall), delete (id), save, revert (what the file has).
 */
 static qboolean clipsDirty;
 
-static void WA_ClipResult( waConnection_t *c, qboolean ok, const char *msg, int id ) {
-	waBuffer_t b = { 0 };
-
-	WA_BufPrintf( &b, "{\"ok\":%s,\"id\":%d,\"message\":", WA_BOOL( ok ), id );
-	WA_BufJsonString( &b, msg );
-	WA_BufAppend( &b, "}", 1 );
-	WA_RespondJson( c, &b );
-	WA_BufFree( &b );
-}
-
 void WA_ApiClips( waConnection_t *c ) {
 	static char	off[4096];
 	waBuffer_t	b = { 0 };
@@ -127,58 +117,58 @@ void WA_ApiClip( waConnection_t *c, const char *body ) {
 		WA_FormValue( body, "brush", list, sizeof( list ) );
 		count = JP_ClipBrushes( on, list );
 		if ( !count ) {
-			WA_ClipResult( c, qfalse, "no clip brush named", -1 );
+			WA_Result( c, qfalse, "no clip brush named", -1, NULL );
 			return;
 		}
 		clipsDirty = qtrue;
-		WA_ClipResult( c, qtrue, va( "%d clip brush%s %s", count, count == 1 ? "" : "es", on ? "on again" : "off: players are let through there" ), -1 );
+		WA_Result( c, qtrue, va( "%d clip brush%s %s", count, count == 1 ? "" : "es", on ? "on again" : "off: players are let through there" ), -1, NULL );
 	} else if ( !strcmp( op, "wall" ) ) {
 		for ( k = 0; k < 6; k++ ) {
 			if ( !WA_FormValue( body, corners[k], value, sizeof( value ) ) || !value[0] ) {
-				WA_ClipResult( c, qfalse, "a wall needs two corners", -1 );
+				WA_Result( c, qfalse, "a wall needs two corners", -1, NULL );
 				return;
 			}
 			p[k / 3][k % 3] = Com_Clamp( -MAX_WORLD_COORD, MAX_WORLD_COORD, atof( value ) );
 		}
 		old = WA_ClipWall( body );
 		if ( !JP_BlockWallParts( p[0], p[1] ) ) {
-			WA_ClipResult( c, qfalse, "this wall is too large: it is cut into boxes of 510 by 510 by 446 units at most, and 64 of them are the limit", old ? (int)( old-g_entities ) : -1 );
+			WA_Result( c, qfalse, "this wall is too large: it is cut into boxes of 510 by 510 by 446 units at most, and 64 of them are the limit", old ? (int)( old-g_entities ) : -1, NULL );
 			return;
 		}
 		// the new one first: when the map has no room for it, the one it was to take the place of stays
 		wall = JP_BlockWallCreate( p[0], p[1] );
 		if ( !wall ) {
-			WA_ClipResult( c, qfalse, "the map has no entities left for this wall", old ? (int)( old-g_entities ) : -1 );
+			WA_Result( c, qfalse, "the map has no entities left for this wall", old ? (int)( old-g_entities ) : -1, NULL );
 			return;
 		}
 		if ( old )
 			G_FreeEntity( old );
 		clipsDirty = qtrue;
-		WA_ClipResult( c, qtrue, old ? "wall changed" : "wall placed", (int)( wall-g_entities ) );
+		WA_Result( c, qtrue, old ? "wall changed" : "wall placed", (int)( wall-g_entities ), NULL );
 	} else if ( !strcmp( op, "delete" ) ) {
 		old = WA_ClipWall( body );
 		if ( !old ) {
-			WA_ClipResult( c, qfalse, "no such wall", -1 );
+			WA_Result( c, qfalse, "no such wall", -1, NULL );
 			return;
 		}
 		G_FreeEntity( old );
 		clipsDirty = qtrue;
-		WA_ClipResult( c, qtrue, "wall removed", -1 );
+		WA_Result( c, qtrue, "wall removed", -1, NULL );
 	} else if ( !strcmp( op, "save" ) ) {
 		if ( !JP_SaveBlockWalls() ) {
-			WA_ClipResult( c, qfalse, "the file of the walls could not be written", -1 );
+			WA_Result( c, qfalse, "the file of the walls could not be written", -1, NULL );
 			return;
 		}
 		clipsDirty = qfalse;
-		WA_ClipResult( c, qtrue, "Saved. The walls and the clips that are off come back with the map.", -1 );
+		WA_Result( c, qtrue, "Saved. The walls and the clips that are off come back with the map.", -1, NULL );
 	} else if ( !strcmp( op, "revert" ) ) {
 		// as the start of the map has it: every clip on, no wall, then what the file says
 		JP_ClearBlockWalls();
 		trap->SendConsoleCommand( EXEC_APPEND, "clipbrush on all\n" );
 		count = JP_LoadBlockWalls();
 		clipsDirty = qfalse;
-		WA_ClipResult( c, qtrue, va( "Back to what is saved: %d wall%s", count, count == 1 ? "" : "s" ), -1 );
+		WA_Result( c, qtrue, va( "Back to what is saved: %d wall%s", count, count == 1 ? "" : "s" ), -1, NULL );
 	} else {
-		WA_ClipResult( c, qfalse, "unknown op", -1 );
+		WA_Result( c, qfalse, "unknown op", -1, NULL );
 	}
 }

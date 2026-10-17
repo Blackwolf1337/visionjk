@@ -89,7 +89,7 @@ void WA_ApiFile( waConnection_t *c, const char *query ) {
 	int				len;
 	qboolean		script, audio, hud;
 
-	if ( !WA_FormValue( query, "name", name, sizeof( name ) ) || strstr( name, ".." ) || strchr( name, '\\' ) || strchr( name, ':' ) ) {
+	if ( !WA_FormValue( query, "name", name, sizeof( name ) ) || !WA_GamePathOk( name ) ) {
 		WA_RespondText( c, 400, "Bad Request", "bad file name" );
 		return;
 	}
@@ -334,7 +334,7 @@ void WA_ApiList( waConnection_t *c, const char *query ) {
 			if ( !Q_stricmpn( dir, roots[f], (int)len ) && ( dir[len] == '\0' || dir[len] == '/' ) )
 				allowed = qtrue;
 		}
-		if ( allowed && !strstr( dir, ".." ) && !strchr( dir, '\\' ) && !strchr( dir, ':' ) ) {
+		if ( allowed && WA_GamePathOk( dir ) ) {
 			// the folders in it, named with a / at their end
 			n = trap->FS_GetFileList( dir, "/", list, sizeof( list ) );
 			for ( i = 0, file = list; i < n; i++, file += strlen( file ) + 1 ) {

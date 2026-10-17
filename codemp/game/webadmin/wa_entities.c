@@ -643,20 +643,10 @@ static int WA_SpawnFromText( const char *text, char *err, int errSize ) {
 	return lastSpawnedEntity;
 }
 
+// (what a refused spawn was refused for goes along once)
 static void WA_EntityResult( waConnection_t *c, qboolean ok, const char *msg, int id ) {
-	waBuffer_t b = { 0 };
-
-	WA_BufPrintf( &b, "{\"ok\":%s,\"id\":%d,\"message\":", ok ? "true" : "false", id );
-	WA_BufJsonString( &b, msg );
-	// what a refused spawn was refused for, once
-	if ( !ok && refusedKey ) {
-		WA_BufAppend( &b, ",\"key\":", 7 );
-		WA_BufJsonString( &b, refusedKey );
-	}
+	WA_Result( c, ok, msg, id, ok ? NULL : refusedKey );
 	refusedKey = NULL;
-	WA_BufAppend( &b, "}", 1 );
-	WA_RespondJson( c, &b );
-	WA_BufFree( &b );
 }
 
 // Movers with the same team key move together (G_FindTeams): they are a chain, the first one leads, the game
@@ -953,7 +943,7 @@ static void WA_LayoutText( waBuffer_t *b, const char *mapname, int *adds, int *r
 static qboolean WA_LayoutFile( char *mapname, int mapSize, char *file, int fileSize ) {
 	trap->Cvar_VariableStringBuffer( "mapname", mapname, mapSize );
 	Q_strstrip( mapname, "\n\r\";", NULL );
-	if ( !mapname[0] || strstr( mapname, ".." ) || mapname[0] == '/' )
+	if ( !mapname[0] || !WA_GamePathOk( mapname ) )
 		return qfalse;
 	Com_sprintf( file, fileSize, WA_LAYOUT_FOLDER "/%s.txt", mapname );
 	return qtrue;

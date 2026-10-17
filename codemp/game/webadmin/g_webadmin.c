@@ -139,7 +139,7 @@ static qboolean WA_PageFromDisk( waBuffer_t *page ) {
 		WA_BufAppend( page, at, (int)( include - at ) );
 		Q_strncpyz( file, name, (int)( end - name ) + 1 );
 		// only what is in the folder
-		if ( strstr( file, ".." ) || file[0] == '/' || strchr( file, '\\' ) || strchr( file, ':' ) || !WA_PageFile( page, file ) ) {
+		if ( !WA_GamePathOk( file ) || !WA_PageFile( page, file ) ) {
 			trap->Print( S_COLOR_YELLOW "Web admin: %s/index.html includes %s, which can not be read\n", g_webRoot.string, file );
 			whole = qfalse;
 		}
@@ -224,14 +224,15 @@ static waRole_t WA_RouteRole( const char *method, const char *path ) {
 	return WA_ROLE_MODERATOR;
 }
 
-// the page of the login, for a visitor who is not logged in
-static void WA_LoginPage( waConnection_t *c ) {
+// A page: from disk where g_webRoot names a folder and it has the file (for working on the page without a
+// restart), else the one built into the module.
+static void WA_Page( waConnection_t *c, const char *file, const char *embedded, int embeddedLen ) {
 	waBuffer_t page = { 0 };
 
-	if ( g_webRoot.string[0] && WA_PageFile( &page, "login.html" ) && page.len ) {
+	if ( g_webRoot.string[0] && WA_PageFile( &page, file ) && page.len ) {
 		WA_Respond( c, 200, "OK", "text/html; charset=utf-8", "Cache-Control: no-store\r\n", page.data, page.len );
 	} else {
-		WA_Respond( c, 200, "OK", "text/html; charset=utf-8", "Cache-Control: no-store\r\n", webadmin_login, (int)webadmin_login_len );
+		WA_Respond( c, 200, "OK", "text/html; charset=utf-8", "Cache-Control: no-store\r\n", embedded, embeddedLen );
 	}
 	WA_BufFree( &page );
 }
@@ -274,14 +275,14 @@ static void WA_HandleRequest( waConnection_t *c, char *head, char *body, int bod
 	if ( c->role == WA_ROLE_NONE ) {
 		// the page of the login for a browser that asks for a page, a plain no for everything else
 		if ( !strcmp( method, "GET" ) && strncmp( path, "/api/", 5 ) ) {
-			WA_LoginPage( c );
+			WA_Page( c, "login.html", (const char *)webadmin_login, (int)webadmin_login_len );
 		} else {
-			WA_Respond( c, 401, "Unauthorized", "application/json", "Cache-Control: no-store\r\n", "{\"ok\":false,\"why\":\"login\"}", 26 );
+			WA_AuthAnswer( c, 401, "Unauthorized", "login" );
 		}
 		return;
 	}
 	if ( c->role < WA_RouteRole( method, path ) ) {
-		WA_Respond( c, 403, "Forbidden", "application/json", "Cache-Control: no-store\r\n", "{\"ok\":false,\"why\":\"role\"}", 25 );
+		WA_AuthAnswer( c, 403, "Forbidden", "role" );
 		return;
 	}
 

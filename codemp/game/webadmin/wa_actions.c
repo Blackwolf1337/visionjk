@@ -35,13 +35,7 @@ static qboolean	clientGravitySet[MAX_CLIENTS];
 static float	clientGravity[MAX_CLIENTS];
 
 void WA_ActionResult( waConnection_t *c, qboolean ok, const char *msg ) {
-	waBuffer_t b = { 0 };
-
-	WA_BufPrintf( &b, "{\"ok\":%s,\"message\":", ok ? "true" : "false" );
-	WA_BufJsonString( &b, msg );
-	WA_BufAppend( &b, "}", 1 );
-	WA_RespondJson( c, &b );
-	WA_BufFree( &b );
+	WA_Result( c, ok, msg, WA_NO_ID, NULL );
 }
 
 /*
@@ -130,7 +124,7 @@ static qboolean WA_ServerAction( waConnection_t *c, const char *action, char *va
 	}
 	if ( !strcmp( action, "map" ) ) {
 		Q_strstrip( value, "\n\r\";", NULL );
-		if ( !value[0] || strstr( value, ".." ) ) {
+		if ( !value[0] || !WA_GamePathOk( value ) ) {
 			WA_ActionResult( c, qfalse, "no map name" );
 			return qtrue;
 		}
@@ -181,7 +175,7 @@ static qboolean WA_ServerAction( waConnection_t *c, const char *action, char *va
 		vec3_t			at, up = { 0, 0, 1 };
 
 		Q_strstrip( value, "\n\r\";", NULL );
-		if ( !value[0] || strstr( value, ".." ) || !WA_FormValue( body, "x", xs, sizeof( xs ) ) || !WA_FormValue( body, "y", ys, sizeof( ys ) )
+		if ( !value[0] || !WA_GamePathOk( value ) || !WA_FormValue( body, "x", xs, sizeof( xs ) ) || !WA_FormValue( body, "y", ys, sizeof( ys ) )
 			|| !WA_FormValue( body, "z", zs, sizeof( zs ) ) ) {
 			WA_ActionResult( c, qfalse, "no name or no place" );
 			return qtrue;
