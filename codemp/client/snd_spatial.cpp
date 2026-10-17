@@ -1398,15 +1398,11 @@ static float IPLCALL S_SpatialPathFade( IPLfloat32 distance, void *userData ) {
 }
 
 // The rays of a pass. Steam Audio spreads the rays the simulator was made for (spatial.maxRays) round the
-// listener in the order of their direction, and a pass of fewer takes the first of them: on the desktop, where
-// the simulator is made for SPATIAL_MAX_RAYS, the 2048 of the default are the quarter of the circle those
-// begin with. A page makes the simulator for the rays it traces, see S_SpatialCreateVoices().
+// listener in the order of their direction, and a pass of fewer takes the first of them. So the simulator is
+// made for the rays it traces, see S_SpatialCreateVoices(). Until 2026-10-17 the desktop made it for
+// SPATIAL_MAX_RAYS, and the 2048 of the default went into a quarter of the circle.
 static int S_SpatialRays( void ) {
-#ifdef __EMSCRIPTEN__
 	return spatial.maxRays;
-#else
-	return Com_Clampi( 256, SPATIAL_MAX_RAYS, v_spatialRays->integer );
-#endif
 }
 
 static void S_SpatialSimulate( void ) {
@@ -2384,15 +2380,10 @@ static qboolean S_SpatialCreateVoices( void ) {
 	simulation.sceneType = IPL_SCENETYPE_DEFAULT;
 	simulation.reflectionType = IPL_REFLECTIONEFFECTTYPE_CONVOLUTION;
 	simulation.maxNumOcclusionSamples = SPATIAL_OCCLUSION_SAMPLES;
-#ifdef __EMSCRIPTEN__
 	// A pass traces the first rays of those the simulator has, which are not spread round the listener unless
-	// it traces them all (S_SpatialRays). A page traces fewer than the desktop, so it has the simulator made
-	// for what it traces, and v_spatialRays is read here.
+	// it traces them all (S_SpatialRays): the simulator is made for what it traces, and v_spatialRays is read here.
 	spatial.maxRays = Com_Clampi( 256, SPATIAL_MAX_RAYS, v_spatialRays->integer );
 	v_spatialRays->modified = qfalse;
-#else
-	spatial.maxRays = SPATIAL_MAX_RAYS;
-#endif
 	simulation.maxNumRays = spatial.maxRays;
 	simulation.numDiffuseSamples = SPATIAL_DIFFUSE_SAMPLES;
 	simulation.maxDuration = SPATIAL_REVERB_SECONDS;
@@ -2480,12 +2471,11 @@ void S_SpatialInit( void ) {
 	v_spatialAhead = Cvar_Get( "v_spatialAhead", "0.1", CVAR_ARCHIVE, "v_spatial: seconds of sound rendered ahead. Less follows a turn of the head sooner, more survives a longer hitch" );
 	v_spatialReflections = Cvar_Get( "v_spatialReflections", "1", CVAR_ARCHIVE, "v_spatial: 1 the room around the listener rings, worked out with rays. 0 no reverb" );
 	v_spatialReverb = Cvar_Get( "v_spatialReverb", "1", CVAR_ARCHIVE, "v_spatial: how loud the reverb is" );
+	v_spatialRays = Cvar_Get( "v_spatialRays", SPATIAL_DEFAULT_RAYS, CVAR_ARCHIVE, "v_spatial: rays of a pass of the reflections, 256 to 8192. From the next snd_restart on" );
 #ifdef __EMSCRIPTEN__
-	v_spatialRays = Cvar_Get( "v_spatialRays", SPATIAL_DEFAULT_RAYS, CVAR_ARCHIVE, "v_spatial: rays of a pass of the reflections, 256 to 8192. In a browser from the next snd_restart on" );
 	v_spatialPaths = Cvar_Get( "v_spatialPaths", "1", CVAR_ARCHIVE, "v_spatial: 1 a sound comes round corners. Worked out once per level while it loads, in a browser not for a large level" );
 	v_spatialBudget = Cvar_Get( "v_spatialBudget", "0.75", CVAR_ARCHIVE, "v_spatial in a browser: milliseconds of a frame the passes of the reflections take on average, 0.1 to 8. More: the reverb follows the listener sooner" );
 #else
-	v_spatialRays = Cvar_Get( "v_spatialRays", SPATIAL_DEFAULT_RAYS, CVAR_ARCHIVE, "v_spatial: rays of a pass of the reflections, 256 to 8192" );
 	v_spatialPaths = Cvar_Get( "v_spatialPaths", "1", CVAR_ARCHIVE, "v_spatial: 1 a sound comes round corners. Worked out once per level in the background" );
 #endif
 	v_spatialBounces = Cvar_Get( "v_spatialBounces", SPATIAL_DEFAULT_BOUNCES, CVAR_ARCHIVE, "v_spatial: how often a ray is followed off a wall" );
@@ -2590,6 +2580,12 @@ qboolean S_SpatialActive( void ) {
 // once a frame, whether a level is loaded or not
 void S_SpatialUpdate( void ) {
 	if ( spatial.active ) {
+		if ( v_spatialRays->modified ) {
+			v_spatialRays->modified = qfalse;
+			if ( Com_Clampi( 256, SPATIAL_MAX_RAYS, v_spatialRays->integer ) != spatial.maxRays ) {
+				Com_Printf( "v_spatialRays: taken when the sound system starts (snd_restart), the passes go on with %i rays\n", spatial.maxRays );
+			}
+		}
 #ifdef __EMSCRIPTEN__
 		// Every frame gives the passes v_spatialBudget of time, and a slice takes off that what it took: the
 		// least a slice can be is 32 rays with all their bounces, which is more than a frame gives, and what makes
@@ -2598,12 +2594,6 @@ void S_SpatialUpdate( void ) {
 		spatial.passCredit = Q_min( spatial.passCredit, 0 ) + S_SpatialBudget();
 		if ( spatial.passCredit > 0 ) {
 			S_SpatialSlice( spatial.passCredit );
-		}
-		if ( v_spatialRays->modified ) {
-			v_spatialRays->modified = qfalse;
-			if ( Com_Clampi( 256, SPATIAL_MAX_RAYS, v_spatialRays->integer ) != spatial.maxRays ) {
-				Com_Printf( "v_spatialRays: a page takes it when the sound system starts (snd_restart), the passes go on with %i rays\n", spatial.maxRays );
-			}
 		}
 		// switched on in a level that has no paths: a page has no thread that could work them out now
 		if ( v_spatialPaths->modified ) {

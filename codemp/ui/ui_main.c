@@ -4809,7 +4809,7 @@ static void UI_StartSkirmish(qboolean next) {
 
 /*
 The presets of the "3D Sound" entry of the sound page: v_spatial of the engine (Steam Audio) and how much it
-works out. The engine reads the cvars of a row while it runs, only v_spatial itself needs the sound started
+works out. The engine reads the cvars of a row while it runs, only v_spatial and the rays need the sound started
 again. Rays and bounces are the ones of a pass of the reflections, the engine clamps them to 256..8192 and 1..64.
 */
 typedef struct spatialPreset_s {
@@ -4862,7 +4862,9 @@ static void UI_Update(const char *name) {
 	if ( !Q_stricmp( name, "v_spatialQuality" ) ) {
 		if ( val >= 0 && val < (int)ARRAY_LEN( uiSpatialPresets ) ) {
 			const spatialPreset_t	*preset = &uiSpatialPresets[val];
-			const qboolean			restart = (qboolean)( !trap->Cvar_VariableValue( "v_spatial" ) != !preset->spatial );
+			// v_spatial and the rays are taken when the sound starts
+			const qboolean			restart = (qboolean)( !trap->Cvar_VariableValue( "v_spatial" ) != !preset->spatial
+				|| ( preset->reflections && (int)trap->Cvar_VariableValue( "v_spatialRays" ) != preset->rays ) );
 
 			trap->Cvar_Set( "v_spatial", preset->spatial ? "1" : "0" );
 			if ( preset->spatial ) {
@@ -4874,7 +4876,6 @@ static void UI_Update(const char *name) {
 				}
 			}
 			if ( restart ) {
-				// v_spatial is latched
 				trap->Cmd_ExecuteText( EXEC_APPEND, "snd_restart\n" );
 			}
 		}
