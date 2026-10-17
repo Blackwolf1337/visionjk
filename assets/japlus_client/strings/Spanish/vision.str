@@ -253,6 +253,14 @@ REFERENCE           VOLUME
 LANG_ENGLISH        "Volume"
 LANG_SPANISH        "Volumen"
 
+REFERENCE           SOUND_IN_THE_BACKGROUND
+LANG_ENGLISH        "Sound in the Background"
+LANG_SPANISH        "Sonido en segundo plano"
+
+REFERENCE           THE_GAME_GOES_ON_PLAYING_ITS_SOUND_W
+LANG_ENGLISH        "The game goes on playing its sound while it is not in front or is minimized."
+LANG_SPANISH        "El juego sigue reproduciendo su sonido cuando no está en primer plano o está minimizado."
+
 REFERENCE           3D_SOUND
 LANG_ENGLISH        "3D Sound"
 LANG_SPANISH        "Sonido 3D"
@@ -293,6 +301,14 @@ REFERENCE           THE_ROOM_AROUND_YOU_RINGS
 LANG_ENGLISH        "The room around you rings."
 LANG_SPANISH        "La sala a tu alrededor resuena."
 
+REFERENCE           ECHOES_OF_THEIR_OWN
+LANG_ENGLISH        "Echoes of Their Own"
+LANG_SPANISH        "Ecos propios"
+
+REFERENCE           HOW_MANY_OF_THE_LOUDEST_SOUNDS_ECHO
+LANG_ENGLISH        "How many of the loudest sounds echo off the walls around them. More costs more time a frame."
+LANG_SPANISH        "Cuántos de los sonidos más fuertes resuenan en las paredes a su alrededor. Más cuesta más tiempo por fotograma."
+
 REFERENCE           SOUND_AROUND_CORNERS
 LANG_ENGLISH        "Sound Around Corners"
 LANG_SPANISH        "Sonido tras las esquinas"
@@ -301,13 +317,21 @@ REFERENCE           A_SOUND_FINDS_ITS_WAY_AROUND_CORNERS
 LANG_ENGLISH        "A sound finds its way around corners."
 LANG_SPANISH        "El sonido rodea las esquinas."
 
+REFERENCE           REAL_SOUND_TRAVEL
+LANG_ENGLISH        "Real Sound Travel"
+LANG_SPANISH        "Propagación real del sonido"
+
+REFERENCE           SOUNDS_FADE_WITH_THE_DISTANCE_AS_REA
+LANG_ENGLISH        "Sounds fade with the distance as real ones do, lose their highs far away and arrive at the speed of sound."
+LANG_SPANISH        "Los sonidos se debilitan con la distancia como los reales, pierden sus agudos a lo lejos y llegan a la velocidad del sonido."
+
 REFERENCE           DOPPLER_EFFECT
 LANG_ENGLISH        "Doppler Effect"
 LANG_SPANISH        "Efecto Doppler"
 
-REFERENCE           WHAT_FLIES_PAST_CHANGES_ITS_PITCH
-LANG_ENGLISH        "What flies past changes its pitch."
-LANG_SPANISH        "Lo que pasa volando cambia de tono."
+REFERENCE           WHAT_COMES_CLOSER_OR_GOES_AWAY_CHANG
+LANG_ENGLISH        "What comes closer or goes away changes its pitch."
+LANG_SPANISH        "Lo que se acerca o se aleja cambia de tono."
 
 REFERENCE           VOICE_CHAT
 LANG_ENGLISH        "Voice Chat"

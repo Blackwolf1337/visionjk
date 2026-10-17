@@ -73,11 +73,17 @@ SETUP = [
     ('@MENUS_SOUND', '@MENUS_CONFIGURE_SOUND_SETTINGS', [
         ('head', 'Volume'),
         ('old', 'sound', ('s_volume', 's_musicvolume', 's_volumevoice')),
+        ('yesno', 'Sound in the Background', 'v_soundUnfocused',
+         'The game goes on playing its sound while it is not in front or is minimized.'),
         ('head', '3D Sound'),
         ('old', 'sound', ('v_spatialquality', 'v_spatialhrtf', 'v_spatialreverb')),
         ('yesno', 'Room Reflections', 'v_spatialReflections', 'The room around you rings.'),
+        ('multi', 'Echoes of Their Own', 'v_spatialSources', (('Off', 0), ('4', 4), ('8', 8), ('12', 12), ('16', 16)),
+         'How many of the loudest sounds echo off the walls around them. More costs more time a frame.'),
         ('yesno', 'Sound Around Corners', 'v_spatialPaths', 'A sound finds its way around corners.'),
-        ('yesno', 'Doppler Effect', 's_doppler', 'What flies past changes its pitch.'),
+        ('yesno', 'Real Sound Travel', 'v_spatialPhysical',
+         'Sounds fade with the distance as real ones do, lose their highs far away and arrive at the speed of sound.'),
+        ('yesno', 'Doppler Effect', 's_doppler', 'What comes closer or goes away changes its pitch.'),
         ('head', 'Voice Chat'),
         ('old', 'voicechat'),
         ('head', 'Boombox'),
@@ -173,6 +179,9 @@ SCREENS = {'setup.menu': SETUP, 'ingame_setup.menu': SETUP, 'controls.menu': CON
 # what a row takes over from the item of the old menu: what it is and does, not how it looked
 KEEP = ('name', 'group', 'type', 'text', 'cvar', 'cvarfloat', 'cvarfloatlist', 'cvarstrlist', 'feeder', 'action', 'desctext',
         'cvartest', 'showcvar', 'hidecvar', 'enablecvar', 'disablecvar', 'maxchars', 'maxpaintchars', 'invertyesno')
+# the cvars the presets of the row "3D Sound" set (uiSpatialPresets in codemp/ui/ui_main.c)
+SOUND_PRESET_CVARS = ('v_spatialreflections', 'v_spatialpaths', 'v_spatialsources')
+
 TYPES = {'yesno': 'ITEM_TYPE_YESNO', 'slider': 'ITEM_TYPE_SLIDER', 'multi': 'ITEM_TYPE_MULTI', 'edit': 'ITEM_TYPE_EDITFIELD',
          'secret': 'ITEM_TYPE_EDITFIELD', 'bind': 'ITEM_TYPE_BIND'}
 SETTINGS = ('item_type_yesno', 'item_type_slider', 'item_type_multi', 'item_type_editfield', 'item_type_numericfield',
@@ -340,7 +349,11 @@ def new_row(spec):
         b.append(Entry('cvarFloatList', [], words))
     elif kind in ('edit', 'secret'):
         b += [Entry('maxChars', [str(spec[3])]), Entry('maxPaintChars', ['24'])]
-    b.append(Entry('action', [], list(CLICK)))
+    action = list(CLICK)
+    if cvar.lower() in SOUND_PRESET_CVARS:
+        # the row "3D Sound" says which preset the cvars are (UI_GetSoundSetup), also after this one changed
+        action += ['uiScript', 'getsoundsetup', ';']
+    b.append(Entry('action', [], action))
     return b
 
 

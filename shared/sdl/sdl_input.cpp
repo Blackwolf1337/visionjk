@@ -34,6 +34,10 @@ static qboolean mouseActive = qfalse;
 
 static cvar_t *in_mouse             = NULL;
 static cvar_t *in_nograb;
+// 1: the sound goes on playing while the window is not in front or is minimized. 0: it pauses, as the engine
+// always did
+static cvar_t *v_soundUnfocused;
+static qboolean soundPaused;	// by a loss of the focus
 
 cvar_t *in_joystick          		= NULL;
 static cvar_t *in_joystickThreshold = NULL;
@@ -627,6 +631,7 @@ void IN_Init( void *windowData )
 	// mouse variables
 	in_mouse = Cvar_Get( "in_mouse", "1", CVAR_ARCHIVE );
 	in_nograb = Cvar_Get( "in_nograb", "0", CVAR_ARCHIVE_ND );
+	v_soundUnfocused = Cvar_Get( "v_soundUnfocused", "0", CVAR_ARCHIVE, "1: the sound goes on playing while the game is not in front or is minimized" );
 
 	SDL_StartTextInput( );
 
@@ -937,14 +942,20 @@ static void IN_ProcessEvents( void )
 					case SDL_WINDOWEVENT_FOCUS_LOST:
 					{
 						Cvar_SetValue( "com_unfocused", 1 );
-						SNDDMA_Activate( qfalse );
+						if ( !v_soundUnfocused->integer ) {
+							SNDDMA_Activate( qfalse );
+							soundPaused = qtrue;
+						}
 						break;
 					}
 
 					case SDL_WINDOWEVENT_FOCUS_GAINED:
 					{
 						Cvar_SetValue( "com_unfocused", 0 );
-						SNDDMA_Activate( qtrue );
+						if ( soundPaused ) {
+							SNDDMA_Activate( qtrue );
+							soundPaused = qfalse;
+						}
 						break;
 					}
 				}

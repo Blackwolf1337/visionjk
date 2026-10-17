@@ -4809,19 +4809,19 @@ static void UI_StartSkirmish(qboolean next) {
 
 /*
 The presets of the "3D Sound" entry of the sound page: v_spatial of the engine (Steam Audio) and how much it
-works out. The engine reads the cvars of a row while it runs, only v_spatial itself needs the sound started
+works out. The engine reads the cvars of a row while it runs, only v_spatial and the rays need the sound started
 again. Rays and bounces are the ones of a pass of the reflections, the engine clamps them to 256..8192 and 1..64.
 */
 typedef struct spatialPreset_s {
-	int		spatial, reflections, rays, bounces, paths;
+	int		spatial, reflections, rays, bounces, paths, sources;
 } spatialPreset_t;
 
 static const spatialPreset_t uiSpatialPresets[] = {
-	{ 0, 0, 0, 0, 0 },			// off
-	{ 1, 0, 0, 0, 0 },			// low: direction and muffling behind walls, no rays at all
-	{ 1, 1, 1024, 8, 0 },		// medium: the room around the listener rings
-	{ 1, 1, 2048, 16, 1 },		// high: and a sound comes round corners. The defaults of the engine
-	{ 1, 1, 8192, 32, 1 },		// very high
+	{ 0, 0, 0, 0, 0, 0 },			// off
+	{ 1, 0, 0, 0, 0, 0 },			// low: direction and muffling behind walls, no rays at all
+	{ 1, 1, 1024, 8, 0, 4 },		// medium: the room around the listener rings, and the 4 loudest sounds have reflections of their own
+	{ 1, 1, 2048, 16, 1, 8 },		// high: and a sound comes round corners. The defaults of the engine
+	{ 1, 1, 8192, 32, 1, 16 },		// very high
 };
 
 /*
@@ -4838,6 +4838,7 @@ static void UI_GetSoundSetup( void ) {
 	const int	rays = (int)trap->Cvar_VariableValue( "v_spatialRays" );
 	const int	bounces = (int)trap->Cvar_VariableValue( "v_spatialBounces" );
 	const int	paths = (int)trap->Cvar_VariableValue( "v_spatialPaths" );
+	const int	sources = (int)trap->Cvar_VariableValue( "v_spatialSources" );
 	size_t		i;
 
 	for ( i = 0; i < ARRAY_LEN( uiSpatialPresets ); i++ ) {
@@ -4848,7 +4849,7 @@ static void UI_GetSoundSetup( void ) {
 				break;
 			}
 		} else if ( spatial && !reflections == !preset->reflections && !paths == !preset->paths
-			&& ( !preset->reflections || ( rays == preset->rays && bounces == preset->bounces ) ) ) {
+			&& ( !preset->reflections || ( rays == preset->rays && bounces == preset->bounces && sources == preset->sources ) ) ) {
 			break;
 		}
 	}
@@ -4862,7 +4863,9 @@ static void UI_Update(const char *name) {
 	if ( !Q_stricmp( name, "v_spatialQuality" ) ) {
 		if ( val >= 0 && val < (int)ARRAY_LEN( uiSpatialPresets ) ) {
 			const spatialPreset_t	*preset = &uiSpatialPresets[val];
-			const qboolean			restart = (qboolean)( !trap->Cvar_VariableValue( "v_spatial" ) != !preset->spatial );
+			// v_spatial and the rays are taken when the sound starts
+			const qboolean			restart = (qboolean)( !trap->Cvar_VariableValue( "v_spatial" ) != !preset->spatial
+				|| ( preset->reflections && (int)trap->Cvar_VariableValue( "v_spatialRays" ) != preset->rays ) );
 
 			trap->Cvar_Set( "v_spatial", preset->spatial ? "1" : "0" );
 			if ( preset->spatial ) {
@@ -4871,10 +4874,10 @@ static void UI_Update(const char *name) {
 				if ( preset->reflections ) {
 					trap->Cvar_Set( "v_spatialRays", va( "%i", preset->rays ) );
 					trap->Cvar_Set( "v_spatialBounces", va( "%i", preset->bounces ) );
+					trap->Cvar_Set( "v_spatialSources", va( "%i", preset->sources ) );
 				}
 			}
 			if ( restart ) {
-				// v_spatial is latched
 				trap->Cmd_ExecuteText( EXEC_APPEND, "snd_restart\n" );
 			}
 		}

@@ -766,6 +766,40 @@ Used for spatializing s_channels
 */
 /*
 ====================
+S_FullVolumeDistance
+
+How far a sound of this kind of channel is at full volume, and how fast it fades beyond that (dist_mult, of
+1 a unit). CHAN_VOICE_GLOBAL is at full volume everywhere: -1. Touches nothing but its arguments.
+====================
+*/
+float S_FullVolumeDistance( int channel, float *dist_mult )
+{
+	float	full = SOUND_FULLVOLUME;
+
+	*dist_mult = SOUND_ATTENUATE;
+	if ( channel == CHAN_VOICE )
+	{
+		full = SOUND_FULLVOLUME * 3.0f;
+//		*dist_mult = VOICE_ATTENUATE;	// tweak added (this fixes an NPC dialogue "in your ears" bug, but we're not sure if it'll make a bunch of others fade too early. Too close to shipping...)
+	}
+	else if ( channel == CHAN_LESS_ATTEN )
+	{
+		full = SOUND_FULLVOLUME * 8.0f; // maybe is too large
+	}
+	else if ( channel == CHAN_VOICE_ATTEN )
+	{
+		full = SOUND_FULLVOLUME * 1.35f; // used to be 0.15f, dropped off too sharply - dmv
+		*dist_mult = VOICE_ATTENUATE;
+	}
+	else if ( channel == CHAN_VOICE_GLOBAL )
+	{
+		full = -1.0f;
+	}
+	return full;
+}
+
+/*
+====================
 S_AttenuateDistance
 
 What is left of a sound of this kind of channel at a distance, 1 at full volume, 0 and less: not heard.
@@ -775,31 +809,14 @@ way round a corner.
 */
 float S_AttenuateDistance( float dist, int channel )
 {
-	float		dist_mult = SOUND_ATTENUATE;
+	float		dist_mult;
+	const float	full = S_FullVolumeDistance( channel, &dist_mult );
 
-	if ( channel == CHAN_VOICE )
+	if ( full < 0.0f )
 	{
-		dist -= SOUND_FULLVOLUME * 3.0f;
-//		dist_mult = VOICE_ATTENUATE;	// tweak added (this fixes an NPC dialogue "in your ears" bug, but we're not sure if it'll make a bunch of others fade too early. Too close to shipping...)
+		return 1.0f;
 	}
-	else if ( channel == CHAN_LESS_ATTEN )
-	{
-		dist -= SOUND_FULLVOLUME * 8.0f; // maybe is too large
-	}
-	else if ( channel == CHAN_VOICE_ATTEN )
-	{
-		dist -= SOUND_FULLVOLUME * 1.35f; // used to be 0.15f, dropped off too sharply - dmv
-		dist_mult = VOICE_ATTENUATE;
-	}
-	else if ( channel == CHAN_VOICE_GLOBAL )
-	{
-		dist = -1;
-	}
-	else	// use normal attenuation.
-	{
-		dist -= SOUND_FULLVOLUME;
-	}
-
+	dist -= full;
 	if (dist < 0)
 	{
 		dist = 0;			// close enough to be at full volume
@@ -1880,7 +1897,7 @@ and the sounds of the own player, of which snd_spatial.cpp only gets what goes i
 */
 static void S_SpatialGather( void ) {
 	channel_t	*ch = s_channels;
-	vec3_t		origin, source_vec;
+	vec3_t		origin;
 	float		fade;
 	qboolean	voiceVolume;
 	int			i;
@@ -1908,7 +1925,7 @@ static void S_SpatialGather( void ) {
 		} else {
 			VectorCopy( s_entityPosition[ ch->entnum ], origin );
 		}
-		fade = S_AttenuateOrigin( origin, ch->entchannel, source_vec );
+		fade = S_SpatialFade( Distance( origin, listener_origin ), ch->entchannel );
 		if ( fade <= 0.0f ) {
 			continue;
 		}
@@ -1921,12 +1938,12 @@ static void S_SpatialGather( void ) {
 		if ( !loop->sfx || !loop->sfx->bInMemory ) {
 			continue;
 		}
-		fade = S_AttenuateOrigin( loop->origin, CHAN_AUTO, source_vec );
+		fade = S_SpatialFade( Distance( loop->origin, listener_origin ), CHAN_AUTO );
 		if ( fade <= 0.0f ) {
 			continue;
 		}
-		S_SpatialAddLoop( loop->entnum, loop->sfx, loop->origin, loop->volume * ( 1.0f / 255.0f ), fade,
-			( loop->doppler && loop->dopplerScale > 1 ) ? loop->dopplerScale : 1.0f );
+		// its doppler is snd_spatial.cpp's own, not loop->dopplerScale
+		S_SpatialAddLoop( loop->entnum, loop->sfx, loop->origin, loop->volume * ( 1.0f / 255.0f ), fade );
 	}
 }
 
@@ -1961,8 +1978,8 @@ qboolean S_ScanChannelStarts( void ) {
 			continue;
 		}
 
-		// if it is completely finished by now, clear it
-		if ( (int)(ch->startSample + ch->thesfx->iSoundLengthInSamples) <= s_paintedtime ) {
+		// if it is completely finished by now, clear it. snd_spatial.cpp may still read it a while longer.
+		if ( (int)(ch->startSample + ch->thesfx->iSoundLengthInSamples) + ( ch->spatial ? ch->spatialTail : 0 ) <= s_paintedtime ) {
 			ch->thesfx = NULL;
 			continue;
 		}

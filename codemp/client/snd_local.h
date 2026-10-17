@@ -135,6 +135,7 @@ typedef struct channel_s {
 	int			lSlotID;		// ID of Slot rendering Source's environment (enables a send to this FXSlot)
 
 	qboolean	spatial;		// this frame snd_spatial.cpp plays it and S_PaintChannels() leaves it out
+	int			spatialTail;	//	and it stays this many samples after its end for it (S_ScanChannelStarts)
 } channel_t;
 
 
@@ -158,10 +159,11 @@ typedef struct wavinfo_s {
 extern	channel_t   s_channels[MAX_CHANNELS];
 
 // snd_dma.cpp: how a sound fades with the distance
+float	S_FullVolumeDistance( int channel, float *dist_mult );
 float	S_AttenuateDistance( float dist, int channel );
 
 // snd_mix.cpp: samples of a sound as floats, for snd_spatial.cpp
-int		S_SampleRun( sfx_t *sfx, channel_t *mp3Channel, float step, int count, int sampleOffset, float *out );
+int		S_SampleRun( sfx_t *sfx, channel_t *mp3Channel, double pos, float step, int count, qboolean loop, float *out );
 
 extern	int		s_paintedtime;
 extern	int		s_rawend;

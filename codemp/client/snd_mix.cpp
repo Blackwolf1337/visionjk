@@ -356,64 +356,70 @@ void S_PaintChannelFromMP3( channel_t *ch, const sfx_t *sc, int count, int sampl
 ===============
 S_SampleRun
 
-For the sound of snd_spatial.cpp, which mixes on its own: up to count samples of a sound from sampleOffset on,
-as floats from -1 to 1, read the way the two functions above read them. Returns how many there were before the
-sound ended. A sound that is an MP3 stream is decoded through the channel that plays it, without one it gives
-nothing.
+For the sound of snd_spatial.cpp, which mixes on its own: up to count samples of a sound, the first at pos, the
+next step further on each (in samples of the sound, fractions between them interpolated: that is the doppler of
+snd_spatial.cpp), as floats from -1 to 1. A loop goes on from its end to its start in between two of its samples.
+Returns how many there were before the sound ended, at most PAINTBUFFER_SIZE, step at most 2. A sound that is an
+MP3 stream is decoded through the channel that plays it, without one it gives nothing, and it can not be read
+back from where it was read before.
 ===============
 */
-int S_SampleRun( sfx_t *sfx, channel_t *mp3Channel, float step, int count, int sampleOffset, float *out )
+int S_SampleRun( sfx_t *sfx, channel_t *mp3Channel, double pos, float step, int count, qboolean loop, float *out )
 {
-	if ( sampleOffset < 0 || sampleOffset >= sfx->iSoundLengthInSamples )
+	static short	tempMP3Buffer[PAINTBUFFER_SIZE * 2 + 2];
+	const int		length = sfx->iSoundLengthInSamples;
+	const short		*data;
+	int				first = 0;		// the sample of the sound data[0] is
+
+	if ( pos < 0.0 || pos >= length || step <= 0.0f )
 	{
 		return 0;
 	}
-	if ( count > PAINTBUFFER_SIZE )
-	{
-		count = PAINTBUFFER_SIZE;
-	}
+	count = Q_min( count, PAINTBUFFER_SIZE );
+	step = Q_min( step, 2.0f );
 
 	if ( sfx->eSoundCompressionMethod == ct_16 )
 	{
-		float ofst = sampleOffset;
+		data = sfx->pSoundData;
+	}
+	else if ( sfx->eSoundCompressionMethod == ct_MP3 && mp3Channel )
+	{
+		// what of it the samples asked for lie in, and the one after the last
+		first = (int)pos;
+		MP3Stream_GetSamples( mp3Channel, first, Q_min( (int)( pos + ( count - 1 ) * (double)step ) + 2, length ) - first,
+			tempMP3Buffer, qfalse );	// qfalse = not stereo
+		data = tempMP3Buffer;
+	}
+	else
+	{
+		return 0;
+	}
+	if ( !data )
+	{
+		return 0;
+	}
 
-		// doppler, as S_PaintChannels() and S_PaintChannelFrom16() do it: samples are skipped
-		if ( step > 1.0f )
+	for ( int i = 0; i < count; i++, pos += step )
+	{
+		const int	at = (int)pos;
+		float		a, b;
+
+		if ( at >= length )
 		{
-			if ( sampleOffset + count * step > sfx->iSoundLengthInSamples )
-				count = (int)( ( sfx->iSoundLengthInSamples - sampleOffset ) / step );
+			return i;
+		}
+		a = data[at - first];
+		if ( at + 1 < length )
+		{
+			b = data[at + 1 - first];
 		}
 		else
 		{
-			step = 1.0f;
-			if ( sampleOffset + count > sfx->iSoundLengthInSamples )
-				count = sfx->iSoundLengthInSamples - sampleOffset;
+			b = ( loop && !first ) ? data[0] : 0.0f;	// a loop on into its start (loops are never MP3)
 		}
-		if ( !sfx->pSoundData )
-		{
-			return 0;
-		}
-		for ( int i = 0; i < count; i++, ofst += step )
-		{
-			out[i] = sfx->pSoundData[ (int)ofst ] * ( 1.0f / 32768.0f );
-		}
-		return count;
+		out[i] = ( a + ( b - a ) * (float)( pos - at ) ) * ( 1.0f / 32768.0f );
 	}
-
-	if ( sfx->eSoundCompressionMethod == ct_MP3 && mp3Channel )
-	{
-		static short tempMP3Buffer[PAINTBUFFER_SIZE];
-
-		if ( sampleOffset + count > sfx->iSoundLengthInSamples )
-			count = sfx->iSoundLengthInSamples - sampleOffset;
-		MP3Stream_GetSamples( mp3Channel, sampleOffset, count, tempMP3Buffer, qfalse );	// qfalse = not stereo
-		for ( int i = 0; i < count; i++ )
-		{
-			out[i] = tempMP3Buffer[i] * ( 1.0f / 32768.0f );
-		}
-		return count;
-	}
-	return 0;
+	return count;
 }
 
 

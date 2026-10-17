@@ -97,6 +97,7 @@ game's menu, changed for this engine. Both have the same pages.
 | Video | Compressed Textures | `r_ext_compress_textures` |
 | Video | Video Quality | presets for the detail only (`r_lodbias`, `r_picmip`, `r_textureMode`, `r_subdivisions`, `r_fastSky`, `r_inGameVideo`), not for the size or the bit depths any more |
 | Sound | 3D Sound, Output, Reverb | the sound of [audio.md](audio.md), see "The menu" there |
+| Sound | Sound in the Background (only the new look) | `v_soundUnfocused`: 1, the sound goes on playing while the window is not in front or is minimized. 0 (the default): the engine pauses its sound device when the window loses the focus (`SNDDMA_Activate`, `shared/sdl/sdl_input.cpp`), as it always did. Minimized the game runs at `com_maxfpsMinimized` (50), enough for the mixer. The voice chat plays on a device of its own and was never paused, unless its voices go through the 3D sound. Clicked in a hidden client, the loss of the focus itself was not tried |
 | Options | Allow Downloads | Off, On (`cl_allowDownload`) |
 
 Everything on the video page is applied by its "Apply" with a `vid_restart`. Taken out, because they did

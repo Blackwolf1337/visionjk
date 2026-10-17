@@ -800,8 +800,26 @@
 
 		itemDef
 		{
+			name					vision_yesno_v_soundunfocused
+			type					ITEM_TYPE_YESNO
+			text					@VISION_SOUND_IN_THE_BACKGROUND
+			descText				@VISION_THE_GAME_GOES_ON_PLAYING_ITS_SOUND_W
+			cvar					"v_soundUnfocused"
+			action { play "sound/interface/button1.wav" ; }
+			rect					12 126 380 22
+			page					2
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+		}
+
+		itemDef
+		{
 			name					vision_head
-			rect					14 126 376 22
+			rect					14 148 376 22
 			visible					1
 			text					@VISION_3D_SOUND
 			font					5
@@ -817,7 +835,7 @@
 		itemDef
 		{
 			name					vision_headline
-			rect					12 147 380 0.67
+			rect					12 169 380 0.67
 			visible					1
 			style					WINDOW_STYLE_FILLED
 			backcolor				0.43 0.83 1 0.32
@@ -840,7 +858,7 @@
 				play "sound/interface/button1"
 				uiScript update v_spatialQuality
 			}
-			rect					12 148 380 22
+			rect					12 170 380 22
 			page					2
 			scroll					1
 			row						1
@@ -860,7 +878,7 @@
 			cvarFloatList { @VISION_HEADPHONES 1 @VISION_SPEAKERS 0 }
 			descText				@VISION_3D_SOUND_DIRECTION_FOR_TWO_EARS_OR_P
 			action { play "sound/interface/button1" }
-			rect					12 170 380 22
+			rect					12 192 380 22
 			page					2
 			scroll					1
 			row						1
@@ -879,7 +897,7 @@
 			cvarfloat				"v_spatialReverb" 1 0 2
 			descText				@VISION_3D_SOUND_HOW_LOUD_THE_ROOMS_RING
 			action { play "sound/interface/button1" }
-			rect					12 192 380 22
+			rect					12 214 380 22
 			page					2
 			scroll					1
 			row						1
@@ -896,8 +914,27 @@
 			text					@VISION_ROOM_REFLECTIONS
 			descText				@VISION_THE_ROOM_AROUND_YOU_RINGS
 			cvar					"v_spatialReflections"
-			action { play "sound/interface/button1.wav" ; }
-			rect					12 214 380 22
+			action { play "sound/interface/button1.wav" ; uiScript getsoundsetup ; }
+			rect					12 236 380 22
+			page					2
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+		}
+
+		itemDef
+		{
+			name					vision_multi_v_spatialsources
+			type					ITEM_TYPE_MULTI
+			text					@VISION_ECHOES_OF_THEIR_OWN
+			descText				@VISION_HOW_MANY_OF_THE_LOUDEST_SOUNDS_ECHO
+			cvar					"v_spatialSources"
+			cvarFloatList { "Off" 0 "4" 4 "8" 8 "12" 12 "16" 16 }
+			action { play "sound/interface/button1.wav" ; uiScript getsoundsetup ; }
+			rect					12 258 380 22
 			page					2
 			scroll					1
 			row						1
@@ -914,8 +951,26 @@
 			text					@VISION_SOUND_AROUND_CORNERS
 			descText				@VISION_A_SOUND_FINDS_ITS_WAY_AROUND_CORNERS
 			cvar					"v_spatialPaths"
+			action { play "sound/interface/button1.wav" ; uiScript getsoundsetup ; }
+			rect					12 280 380 22
+			page					2
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+		}
+
+		itemDef
+		{
+			name					vision_yesno_v_spatialphysical
+			type					ITEM_TYPE_YESNO
+			text					@VISION_REAL_SOUND_TRAVEL
+			descText				@VISION_SOUNDS_FADE_WITH_THE_DISTANCE_AS_REA
+			cvar					"v_spatialPhysical"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 236 380 22
+			rect					12 302 380 22
 			page					2
 			scroll					1
 			row						1
@@ -930,10 +985,10 @@
 			name					vision_yesno_s_doppler
 			type					ITEM_TYPE_YESNO
 			text					@VISION_DOPPLER_EFFECT
-			descText				@VISION_WHAT_FLIES_PAST_CHANGES_ITS_PITCH
+			descText				@VISION_WHAT_COMES_CLOSER_OR_GOES_AWAY_CHANG
 			cvar					"s_doppler"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 258 380 22
+			rect					12 324 380 22
 			page					2
 			scroll					1
 			row						1
@@ -946,7 +1001,7 @@
 		itemDef
 		{
 			name					vision_head
-			rect					14 280 376 22
+			rect					14 346 376 22
 			visible					1
 			text					@VISION_VOICE_CHAT
 			font					5
@@ -962,7 +1017,7 @@
 		itemDef
 		{
 			name					vision_headline
-			rect					12 301 380 0.67
+			rect					12 367 380 0.67
 			visible					1
 			style					WINDOW_STYLE_FILLED
 			backcolor				0.43 0.83 1 0.32
@@ -980,7 +1035,7 @@
 			cvar					"v_voice"
 			descText				@VISION_TALK_TO_AND_HEAR_OTHER_PLAYERS_WITH
 			action { play "sound/interface/button1" }
-			rect					12 302 380 22
+			rect					12 368 380 22
 			page					2
 			scroll					1
 			row						1
@@ -1000,7 +1055,7 @@
 			cvarFloatList { @VISION_PUSH_TO_TALK 1 @VISION_VOICE_ACTIVATION 2 }
 			descText				@VISION_PUSH_TO_TALK_HOLD_THE_TALK_KEY_CONTR
 			action { play "sound/interface/button1" }
-			rect					12 324 380 22
+			rect					12 390 380 22
 			page					2
 			scroll					1
 			row						1
@@ -1019,7 +1074,7 @@
 			cvarfloat				"v_voiceVolume" 1 0 2
 			descText				@VISION_HOW_LOUD_THE_OTHER_PLAYERS_ARE
 			action { play "sound/interface/button1" }
-			rect					12 346 380 22
+			rect					12 412 380 22
 			page					2
 			scroll					1
 			row						1
@@ -1038,7 +1093,7 @@
 			cvarfloat				"v_voiceMicGain" 1 0 3
 			descText				@VISION_HOW_LOUD_YOUR_MICROPHONE_IS_SENT
 			action { play "sound/interface/button1" }
-			rect					12 368 380 22
+			rect					12 434 380 22
 			page					2
 			scroll					1
 			row						1
@@ -1057,7 +1112,7 @@
 			cvarfloat				"v_voiceThreshold" 0.02 0 0.2
 			descText				@VISION_VOICE_ACTIVATION_HOW_LOUD_YOU_HAVE_T
 			action { play "sound/interface/button1" }
-			rect					12 390 380 22
+			rect					12 456 380 22
 			page					2
 			scroll					1
 			row						1
@@ -1076,7 +1131,7 @@
 			cvar					"v_voiceMuffle"
 			descText				@VISION_VOICES_BEHIND_WALLS_AND_UNDER_WATER
 			action { play "sound/interface/button1" }
-			rect					12 412 380 22
+			rect					12 478 380 22
 			page					2
 			scroll					1
 			row						1
@@ -1095,7 +1150,7 @@
 			cvar					"v_voiceDrawTalkers"
 			descText				@VISION_A_LIST_OF_THE_PLAYERS_WHO_ARE_TALKIN
 			action { play "sound/interface/button1" }
-			rect					12 434 380 22
+			rect					12 500 380 22
 			page					2
 			scroll					1
 			row						1
@@ -1114,7 +1169,7 @@
 			cvar					"v_voiceMaster"
 			descText				@VISION_SERVERS_WITHOUT_VOICE_USE_MASTER_JKA
 			action { play "sound/interface/button1" }
-			rect					12 456 380 22
+			rect					12 522 380 22
 			page					2
 			scroll					1
 			row						1
@@ -1133,7 +1188,7 @@
 			cvarfloat				"v_voiceOwnReverb" 1 0 2
 			descText				@VISION_WITH_SPATIAL_SOUND_HOW_LOUD_THE_ROOM
 			action { play "sound/interface/button1" }
-			rect					12 478 380 22
+			rect					12 544 380 22
 			page					2
 			scroll					1
 			row						1
@@ -1152,7 +1207,7 @@
 			cvar					"v_voiceRadioFX"
 			descText				@VISION_THE_CLAN_RADIO_SOUNDS_LIKE_ONE_NARRO
 			action { play "sound/interface/button1" }
-			rect					12 500 380 22
+			rect					12 566 380 22
 			page					2
 			scroll					1
 			row						1
@@ -1165,7 +1220,7 @@
 		itemDef
 		{
 			name					vision_head
-			rect					14 522 376 22
+			rect					14 588 376 22
 			visible					1
 			text					@VISION_BOOMBOX
 			font					5
@@ -1181,7 +1236,7 @@
 		itemDef
 		{
 			name					vision_headline
-			rect					12 543 380 0.67
+			rect					12 609 380 0.67
 			visible					1
 			style					WINDOW_STYLE_FILLED
 			backcolor				0.43 0.83 1 0.32
@@ -1198,7 +1253,7 @@
 			descText				@VISION_SEE_AND_HEAR_THE_BOOMBOXES_ON_A_VISI
 			cvar					"v_boomboxes"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 544 380 22
+			rect					12 610 380 22
 			page					2
 			scroll					1
 			row						1
@@ -1216,7 +1271,7 @@
 			descText				@VISION_HOW_LOUD_THE_SONGS_OF_THE_BOOMBOXES
 			cvarfloat				"v_boomboxVolume" 0.6 0 1
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 566 380 22
+			rect					12 632 380 22
 			page					2
 			scroll					1
 			row						1
