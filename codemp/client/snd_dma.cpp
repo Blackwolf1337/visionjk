@@ -766,6 +766,40 @@ Used for spatializing s_channels
 */
 /*
 ====================
+S_FullVolumeDistance
+
+How far a sound of this kind of channel is at full volume, and how fast it fades beyond that (dist_mult, of
+1 a unit). CHAN_VOICE_GLOBAL is at full volume everywhere: -1. Touches nothing but its arguments.
+====================
+*/
+float S_FullVolumeDistance( int channel, float *dist_mult )
+{
+	float	full = SOUND_FULLVOLUME;
+
+	*dist_mult = SOUND_ATTENUATE;
+	if ( channel == CHAN_VOICE )
+	{
+		full = SOUND_FULLVOLUME * 3.0f;
+//		*dist_mult = VOICE_ATTENUATE;	// tweak added (this fixes an NPC dialogue "in your ears" bug, but we're not sure if it'll make a bunch of others fade too early. Too close to shipping...)
+	}
+	else if ( channel == CHAN_LESS_ATTEN )
+	{
+		full = SOUND_FULLVOLUME * 8.0f; // maybe is too large
+	}
+	else if ( channel == CHAN_VOICE_ATTEN )
+	{
+		full = SOUND_FULLVOLUME * 1.35f; // used to be 0.15f, dropped off too sharply - dmv
+		*dist_mult = VOICE_ATTENUATE;
+	}
+	else if ( channel == CHAN_VOICE_GLOBAL )
+	{
+		full = -1.0f;
+	}
+	return full;
+}
+
+/*
+====================
 S_AttenuateDistance
 
 What is left of a sound of this kind of channel at a distance, 1 at full volume, 0 and less: not heard.
@@ -775,31 +809,14 @@ way round a corner.
 */
 float S_AttenuateDistance( float dist, int channel )
 {
-	float		dist_mult = SOUND_ATTENUATE;
+	float		dist_mult;
+	const float	full = S_FullVolumeDistance( channel, &dist_mult );
 
-	if ( channel == CHAN_VOICE )
+	if ( full < 0.0f )
 	{
-		dist -= SOUND_FULLVOLUME * 3.0f;
-//		dist_mult = VOICE_ATTENUATE;	// tweak added (this fixes an NPC dialogue "in your ears" bug, but we're not sure if it'll make a bunch of others fade too early. Too close to shipping...)
+		return 1.0f;
 	}
-	else if ( channel == CHAN_LESS_ATTEN )
-	{
-		dist -= SOUND_FULLVOLUME * 8.0f; // maybe is too large
-	}
-	else if ( channel == CHAN_VOICE_ATTEN )
-	{
-		dist -= SOUND_FULLVOLUME * 1.35f; // used to be 0.15f, dropped off too sharply - dmv
-		dist_mult = VOICE_ATTENUATE;
-	}
-	else if ( channel == CHAN_VOICE_GLOBAL )
-	{
-		dist = -1;
-	}
-	else	// use normal attenuation.
-	{
-		dist -= SOUND_FULLVOLUME;
-	}
-
+	dist -= full;
 	if (dist < 0)
 	{
 		dist = 0;			// close enough to be at full volume
