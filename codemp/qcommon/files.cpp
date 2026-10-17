@@ -3173,7 +3173,6 @@ static void FS_ClearSessionDir( const char *dir ) {
 	int		numFiles, i;
 
 	Q_strncpyz( folder, FS_BuildOSPath( fs_homepath->string, dir, FS_DOWNLOADS_SESSION ), sizeof( folder ) );
-	folder[strlen( folder ) - 1] = '\0';	// (without the slash at its end)
 	files = Sys_ListFiles( folder, "", NULL, &numFiles, qfalse );
 	for ( i = 0; i < numFiles; i++ ) {
 		if ( strchr( files[i], '/' ) || strchr( files[i], '\\' ) || !( COM_CompareExtension( files[i], ".pk3" )
@@ -3228,7 +3227,9 @@ static void FS_AddPaksOf( const char *path, const char *dir, const char *sub, se
 	const char		*filename;
 
 	Q_strncpyz(curpath, FS_BuildOSPath(path, dir, sub ? sub : ""), sizeof(curpath));
-	curpath[strlen(curpath) - 1] = '\0';	// strip the trailing slash
+	if ( !sub ) {
+		curpath[strlen(curpath) - 1] = '\0';	// strip the trailing slash (only an empty name leaves one)
+	}
 
 	pakfiles = Sys_ListFiles( curpath, ".pk3", NULL, &numfiles, qfalse );
 

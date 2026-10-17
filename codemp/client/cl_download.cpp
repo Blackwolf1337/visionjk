@@ -112,7 +112,41 @@ static const vec4_t dlText = { 0.86f, 0.92f, 0.97f, 1.0f }, dlDim = { 0.60f, 0.6
 static const vec4_t dlAccent = { 0.43f, 0.83f, 1.0f, 1.0f }, dlRed = { 1.0f, 0.42f, 0.36f, 1.0f };
 static const vec4_t dlGold = { 0.89f, 0.84f, 0.36f, 1.0f };
 
+static void	DL_Start( void );
+static void	DL_Without( void );
+static void	DL_Use( void );
+
+/*
+=================
+CL_DownloadReview_f
+
+v_downloadReview_do download | without | use | keep <0 or 1> | pak <n> | kind <pak> <kind>: what a click in the
+windows does, for a key or a script (pak and kind switch a box, counted from 0 in the order the window shows).
+=================
+*/
+static void CL_DownloadReview_f( void ) {
+	const char	*what = Cmd_Argv( 1 );
+	const int	a = atoi( Cmd_Argv( 2 ) ), k = atoi( Cmd_Argv( 3 ) );
+
+	if ( dl.stage == STAGE_CHOOSE && !Q_stricmp( what, "download" ) ) {
+		DL_Start();
+	} else if ( dl.stage == STAGE_CHOOSE && !Q_stricmp( what, "without" ) ) {
+		DL_Without();
+	} else if ( dl.stage == STAGE_CHOOSE && !Q_stricmp( what, "keep" ) ) {
+		dl.keep = (qboolean)( a != 0 );
+	} else if ( dl.stage == STAGE_CHOOSE && !Q_stricmp( what, "pak" ) && a >= 0 && a < dl.numPaks ) {
+		dl.paks[a].want = (qboolean)!dl.paks[a].want;
+	} else if ( dl.stage == STAGE_REVIEW && !Q_stricmp( what, "kind" ) && a >= 0 && a < dl.numPaks && k >= 0 && k < DL_CATS ) {
+		dl.paks[a].keep[k] = (qboolean)!dl.paks[a].keep[k];
+	} else if ( dl.stage == STAGE_REVIEW && !Q_stricmp( what, "use" ) ) {
+		DL_Use();
+	} else {
+		Com_Printf( "v_downloadReview_do download | without | keep <0 or 1> | pak <n> (the first window), kind <pak> <kind> | use (the second)\n" );
+	}
+}
+
 void CL_DownloadInit( void ) {
+	Cmd_AddCommand( "v_downloadReview_do", CL_DownloadReview_f, "What a click in the windows of a download does, for a key or a script" );
 	v_downloadReview = Cvar_Get( "v_downloadReview", "1", CVAR_ARCHIVE_ND, "Before a download: choose the paks of the server, and after it what of them is used. 0: all of them, programs in them stay blocked" );
 	v_downloadKeep = Cvar_Get( "v_downloadKeep", "1", CVAR_ARCHIVE_ND, "Downloaded paks are kept in <game>/downloads. 0: in downloads/session, for this session only" );
 }
@@ -338,6 +372,8 @@ static void DL_Start( void ) {
 	clc.downloadList[0] = '\0';
 	for ( i = 0; i < dl.numPaks; i++ ) {
 		if ( dl.paks[i].want ) {
+			// (where it goes now, kept or for this session: CL_DownloadArrived() knows it by that name)
+			Q_strncpyz( dl.paks[i].local, CL_DownloadLocalName( dl.paks[i].local ), sizeof( dl.paks[i].local ) );
 			Q_strcat( clc.downloadList, sizeof( clc.downloadList ), va( "@%s@%s", dl.paks[i].remote, dl.paks[i].local ) );
 		}
 	}
@@ -478,8 +514,12 @@ static void DL_Rect( float x, float y, float w, float h, const vec4_t fill, cons
 	CL_DrawMenuRect( x, y, w, h, 1.0f, (float *)fill, (float *)edge );
 }
 
+// The letters of the new look (Noto Sans, "vision_sans" of the pack of this tree), else those of the engine. (Asked
+// for once a window is drawn: the renderer hands out the handle it has for the name.)
+static int dlFont;
+
 static float DL_Width( const char *text, float scale ) {
-	return (float)re->Font_StrLenPixels( text, cls.menuFont, scale );
+	return (float)re->Font_StrLenPixels( text, dlFont, scale );
 }
 
 // a line of text with its top at y, cut with three dots where it would be wider than most (0: as wide as it is)
@@ -501,7 +541,7 @@ static void DL_Print( float x, float y, float scale, const vec4_t color, const c
 		}
 		text = line;
 	}
-	re->Font_DrawString( (int)x, (int)y, text, color, cls.menuFont, -1, scale );
+	re->Font_DrawString( (int)x, (int)y, text, color, dlFont, -1, scale );
 }
 
 // a box that is ticked or not, and the text after it, the whole row to click
@@ -604,18 +644,8 @@ static const char *DL_KindName( dlCat_t kind ) {
 static void DL_DrawReview( void ) {
 	const float	x = ( SCREEN_WIDTH - DL_W ) * 0.5f, inner = DL_W - 2.0f * DL_PAD;
 	const float	listTop = DL_TOP + DL_PAD + 22.0f + 30.0f;
-	const float	h = listTop - DL_TOP + DL_ROWS_SHOWN * DL_ROW + 12.0f + 20.0f + DL_PAD;
-	int			row = 0, i, k, rows;
-	float		y = DL_TOP;
-
-	DL_Rect( x, y, DL_W, h, dlFill, dlEdge );
-	y += DL_PAD;
-	DL_Print( x + DL_PAD, y, 0.85f, colorWhite, DL_Text( "WHAT_IS_INSIDE", "What is inside" ), inner );
-	y += 22.0f;
-	DL_Print( x + DL_PAD, y, 0.55f, dlDim, DL_Text( "UNTICK_WHAT_YOU_DO_NOT_WANT_NOTHING",
-		"Untick what you do not want: nothing of it is used." ), inner );
-	DL_Print( x + DL_PAD, y + 13.0f, 0.55f, dlDim, DL_Text( "PROGRAMS_COULD_RUN_ON_YOUR_COMPUTER",
-		"Programs could run on your computer: they are blocked unless you tick them." ), inner );
+	int			row = 0, i, k, rows, shown;
+	float		y = DL_TOP, h;
 
 	// rows: a pak, its kinds that have files, its programs by name
 	for ( i = 0; i < dl.numPaks; i++ ) {
@@ -631,6 +661,18 @@ static void DL_DrawReview( void ) {
 		row += pak->numPrograms;
 	}
 	rows = row;
+	// (as high as its list, up to DL_ROWS_SHOWN rows, and the wheel moves the rest)
+	shown = Com_Clampi( 4, DL_ROWS_SHOWN, rows );
+	h = listTop - DL_TOP + shown * DL_ROW + 12.0f + 20.0f + DL_PAD;
+	DL_Rect( x, y, DL_W, h, dlFill, dlEdge );
+	y += DL_PAD;
+	DL_Print( x + DL_PAD, y, 0.85f, colorWhite, DL_Text( "WHAT_IS_INSIDE", "What is inside" ), inner );
+	y += 22.0f;
+	DL_Print( x + DL_PAD, y, 0.55f, dlDim, DL_Text( "UNTICK_WHAT_YOU_DO_NOT_WANT_NOTHING",
+		"Untick what you do not want: nothing of it is used." ), inner );
+	DL_Print( x + DL_PAD, y + 13.0f, 0.55f, dlDim, DL_Text( "PROGRAMS_COULD_RUN_ON_YOUR_COMPUTER",
+		"Programs could run on your computer: they are blocked unless you tick them." ), inner );
+
 	dl.scroll = Com_Clampi( 0, Q_max( 0, rows - DL_ROWS_SHOWN ), dl.scroll );
 	row = 0;
 	y = listTop;
@@ -682,7 +724,7 @@ static void DL_DrawReview( void ) {
 
 		DL_Rect( x + DL_W - 5.0f, listTop + track * dl.scroll / rows, 3.0f, track * DL_ROWS_SHOWN / rows, thumb, NULL );
 	}
-	y = listTop + DL_ROWS_SHOWN * DL_ROW + 12.0f;
+	y = listTop + shown * DL_ROW + 12.0f;
 	{
 		const float gap = 8.0f, w = ( inner - gap ) / 2.0f;
 
@@ -694,6 +736,12 @@ static void DL_DrawReview( void ) {
 // Once a frame from CL_DrawEngineMenus(). qfalse: no window of this file is open (the engine draws its own).
 qboolean CL_DownloadReviewDraw( void ) {
 	dl.numHits = 0;
+	if ( dl.stage == STAGE_CHOOSE || dl.stage == STAGE_REVIEW ) {
+		dlFont = re->RegisterFont( "vision_sans" );
+		if ( !dlFont ) {
+			dlFont = cls.menuFont;
+		}
+	}
 	if ( dl.stage == STAGE_CHOOSE ) {
 		DL_DrawChoose();
 		return qtrue;
