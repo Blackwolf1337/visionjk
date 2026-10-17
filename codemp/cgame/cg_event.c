@@ -2475,7 +2475,8 @@ void CG_EntityEvent( centity_t *cent, vec3_t position ) {
 				VectorCopy(cg.lastFPFlashPoint, cent->currentState.origin2);
 			}
 		}
-		FX_DisruptorMainShot( cent->currentState.origin2, cent->lerpOrigin );
+		if ( !FX_DisruptorBeam( cent->currentState.eventParm, cent->currentState.origin2, cent->lerpOrigin, qfalse ) )
+			FX_DisruptorMainShot( cent->currentState.origin2, cent->lerpOrigin );
 		break;
 
 	case EV_DISRUPTOR_SNIPER_SHOT:
@@ -2492,7 +2493,8 @@ void CG_EntityEvent( centity_t *cent, vec3_t position ) {
 				VectorCopy(cg.lastFPFlashPoint, cent->currentState.origin2);
 			}
 		}
-		FX_DisruptorAltShot( cent->currentState.origin2, cent->lerpOrigin, cent->currentState.shouldtarget );
+		if ( !FX_DisruptorBeam( cent->currentState.eventParm, cent->currentState.origin2, cent->lerpOrigin, qtrue ) )
+			FX_DisruptorAltShot( cent->currentState.origin2, cent->lerpOrigin, cent->currentState.shouldtarget );
 		break;
 
 	case EV_DISRUPTOR_SNIPER_MISS:

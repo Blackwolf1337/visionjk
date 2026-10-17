@@ -395,6 +395,9 @@ Taken over from TaystJK on 2026-10-17. They only change what this player sees.
 | `v_forceAllyModel` | empty | every team mate in this model |
 | `v_saberTeamColors` | 1 | in team games every blade in its team's colour, as the game does. 0: a blade keeps its colour, unless that is the other team's colour or one past purple (RGB of JA+, black). Not in siege |
 | `v_saberStaffColors` | 0 | the second blade of a staff in the player's second saber colour (also its RGB colour) |
+| `v_jk2Effects` | 0 | engine (`client/FxScheduler.cpp`, TaystJK's `fx_jk2`): the parts of 30 shot effects (blaster, bryar, flechette, repeater, rocket, turrets, vehicles ...) live one millisecond where their file gives no life, so a shot is drawn where it is in this frame without the smear of the frames before, as in Jedi Outcast. Counts from the next level (the effects are read at a level's start). No files of Jedi Outcast are needed |
+| `v_disruptorBeam` | 0 | the disruptor shot as a line with a glow, 1, or with a spiral of sparks around it as the rail of Quake 3, 2 (TaystJK's `cg_disruptorNew` and `cg_disruptorSpiral`). 0 the shot of the game |
+| `v_disruptorColor` | empty | its colour, `r g b` from 0 to 1, empty cyan. In team games the team's colour |
 
 These work without `cg_forceModel`, which puts everybody in one's own model. When both are set, these two win for the players they cover. A model
 this machine lacks shows as the model of the game, as with any player. When one's own team changes, everybody

@@ -401,6 +401,31 @@ struct primitiveType_s { const char *name; EPrimType type; } primitiveTypes[] = 
 };
 static const size_t numPrimitiveTypes = ARRAY_LEN( primitiveTypes );
 
+// v_jk2Effects (2026-10-17, TaystJK's fx_jk2): the parts of these shots live one millisecond where their file
+// gives no life, so a shot is drawn where it is in this frame and leaves no smear of the frames before, as in
+// Jedi Outcast. Sorted for bsearch.
+static const char jk2ShotEffects[][32] = {
+	"atst/shot", "atst/shot_red", "atst/side_alt_shot", "atst/side_main_shot", "blaster/npcshot", "blaster/shot",
+	"bryar/crackleShot", "bryar/npcshot", "emplaced/shot", "emplaced/shotnpc", "eweb/shot", "eweb/shotnpc",
+	"flechette/alt_shot", "flechette/shot", "mp/itemcone", "mp/itemcone_alt", "noghri_stick/shot", "repeater/alt_projectile",
+	"repeater/projectile", "rocket/shot", "ships/imp_blastershot", "ships/imp_torpshot", "ships/mine", "ships/reb_blastershot",
+	"ships/reb_torpshot", "ships/swoop_blastershot", "turret/hoth_shot", "turret/shot", "turret/turb_shot", "tusken/shot"
+};
+
+static int JK2ShotCompare( const void *a, const void *b ) {
+	return Q_stricmp( (const char *)a, (const char *)b );
+}
+
+static qboolean JK2ShotEffect( const char *file ) {
+	if ( !v_jk2Effects || !v_jk2Effects->integer || !VALIDSTRING( file ) ) {
+		return qfalse;
+	}
+	if ( !Q_stricmpn( file, "effects/", 8 ) ) {
+		file += 8;
+	}
+	return (qboolean)( bsearch( file, jk2ShotEffects, ARRAY_LEN( jk2ShotEffects ), sizeof( jk2ShotEffects[0] ), JK2ShotCompare ) != NULL );
+}
+
 int CFxScheduler::ParseEffect( const char *file, CGPGroup *base )
 {
 	CGPGroup			*primitiveGroup;
@@ -432,6 +457,7 @@ int CFxScheduler::ParseEffect( const char *file, CGPGroup *base )
 	}
 
 	primitiveGroup = base->GetSubGroups();
+	const qboolean jk2Shot = JK2ShotEffect( file );
 
 	while ( primitiveGroup )
 	{
@@ -448,6 +474,9 @@ int CFxScheduler::ParseEffect( const char *file, CGPGroup *base )
 		if ( type != None )
 		{
 			prim = new CPrimitiveTemplate;
+			if ( jk2Shot ) {
+				prim->ParseLife( "1" );		// before the file, which may give a life of its own
+			}
 
 			prim->mType = type;
 			prim->ParsePrimitive( primitiveGroup );
