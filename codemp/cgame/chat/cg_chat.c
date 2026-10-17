@@ -96,6 +96,9 @@ typedef struct chatRow_s {
 	float		y;
 } chatRow_t;
 
+#define CHAT_SUGGEST		8			// emoji in the list of the word being typed
+#define CHAT_EMOJI_WORD		40
+
 static struct {
 	chatMsg_t	history[CHAT_HISTORY];
 	int			count;						// lines that ever came, line n is history[n % CHAT_HISTORY]
@@ -131,6 +134,14 @@ static struct {
 	qboolean	selected;
 	chatPos_t	anchor, caret;
 	char		url[256];					// a link was clicked: the question whether to open it stands there
+
+	// the emoji that fit the word being typed (Chat_Suggest): a list above the line to type in
+	int			suggest[CHAT_SUGGEST];		// indexes of chatEmoji
+	int			numSuggest;
+	int			suggestSel;
+	int			suggestFrom;				// the byte where the word begins
+	char		suggestWord[CHAT_EMOJI_WORD];	// the word the list was made for
+	float		suggestX, suggestY, suggestW;	// where the list is, from the last draw
 
 	// where things are on the screen, from the last draw, for the mouse
 	chatRow_t	rows[CHAT_MAX_OPEN_ROWS];
@@ -172,21 +183,26 @@ static const char *Chat_TabName( int tab ) {
 
 EMOJI
 
-As TaystJK has them (2026-10-17): ":name:" in a chat line is the picture gfx/emoji/<name>.png where there is one,
-so a pak can bring more. This tree ships Noto Emoji (assets/japlus_client/gfx/emoji, Apache 2.0) under the names
-TaystJK uses for the same faces; its other emoji are emotes of Twitch, which can not be shipped. A few smileys of
-TaystJK ("#:)") and the real emoji characters of UTF-8 text are pictures too. Only in the chat box (the bubbles
-are drawn in the level), tay_chatEmoji 0 shows the text. Clients of other trees read ":smile:".
+As TaystJK has them (2026-10-17): a code in a chat line is the picture gfx/emoji/<file>.png where there is one, so
+a pak can bring more. The file names are TaystJK's: a ` in the name is a colon of the code, a ~ is a >, and ! makes
+the letter after it a capital ("`kappa`.png" is :kappa:, "#~`!D.png" is #>:D). A name without those is the code
+between colons ("smile.png" is :smile:). Of two files with one code the first one counts. This tree ships Noto
+Emoji for the faces and things (assets/japlus_client/gfx/emoji, Apache 2.0) under the names TaystJK uses, and the
+rest of TaystJK's set, its emotes of Twitch among them (2026-10-18, with permission). The real emoji characters of
+UTF-8 text are pictures too. Only in the chat box (the bubbles are drawn in the level), tay_chatEmoji 0 shows the
+text. Clients of other trees read the code.
 
 ===============================================================================
 */
 
-#define CHAT_MAX_EMOJI		256
+#define CHAT_MAX_EMOJI		512
 #define CHAT_EMOJI_NAME		32
 
 static struct {
-	char		name[CHAT_EMOJI_NAME];
-	qhandle_t	shader;			// registered when first drawn, -1 not there
+	char		file[CHAT_EMOJI_NAME];		// the name of the file without .png
+	char		code[CHAT_EMOJI_NAME + 2];	// what stands in the chat for it
+	int			codeLen;
+	qhandle_t	shader;						// registered when first drawn, -1 not there
 } chatEmoji[CHAT_MAX_EMOJI];
 static int		chatNumEmoji = -1;		// -1: gfx/emoji not listed yet
 
@@ -227,34 +243,78 @@ static const struct {
 	{ ":+1:", "thumbsup" }, { ":-1:", "thumbsdown" },
 };
 
+// the code of a file name, TaystJK's way (see above)
+static void Chat_EmojiCode( const char *file, char *code, int codeSize ) {
+	int len = 0;
+
+	if ( !strchr( file, '`' ) && file[0] != '#' ) {
+		Com_sprintf( code, codeSize, ":%s:", file );
+		return;
+	}
+	for ( ; *file && len < codeSize - 1; file++ ) {
+		if ( *file == '!' ) {
+			if ( file[1] ) {
+				code[len++] = (char)toupper( (unsigned char)file[1] );
+				file++;
+			}
+		} else if ( *file == '`' ) {
+			code[len++] = ':';
+		} else if ( *file == '~' ) {
+			code[len++] = '>';
+		} else {
+			code[len++] = *file;
+		}
+	}
+	code[len] = '\0';
+}
+
+// a code beginning with a colon is a name and matches in any case, a smiley ("#:D") as it is
+static int Chat_CodeMatch( const char *s, const char *code, int len ) {
+	return code[0] == ':' ? !Q_stricmpn( s, code, len ) : !strncmp( s, code, len );
+}
+
 static void Chat_ListEmoji( void ) {
-	char		list[8192];
+	char		list[16384];
 	const char	*name = list;
-	int			count, i;
+	int			count, i, j;
 
 	chatNumEmoji = 0;
 	count = trap->FS_GetFileList( "gfx/emoji", ".png", list, sizeof( list ) );
 	for ( i = 0; i < count && chatNumEmoji < CHAT_MAX_EMOJI; i++, name += strlen( name ) + 1 ) {
-		char base[MAX_QPATH];
+		char base[MAX_QPATH], code[CHAT_EMOJI_NAME + 2];
 
 		COM_StripExtension( name, base, sizeof( base ) );
-		if ( !base[0] || strlen( base ) >= CHAT_EMOJI_NAME || strchr( base, '/' ) ) {
+		if ( !base[0] || strlen( base ) >= CHAT_EMOJI_NAME || strchr( base, '/' ) || strchr( base, ' ' ) ) {
 			continue;
 		}
-		Q_strncpyz( chatEmoji[chatNumEmoji].name, base, CHAT_EMOJI_NAME );
+		Chat_EmojiCode( base, code, sizeof( code ) );
+		for ( j = 0; j < chatNumEmoji; j++ ) {
+			if ( !Q_stricmp( chatEmoji[j].code, code ) ) {
+				break;		// the first file of a code counts
+			}
+		}
+		if ( j < chatNumEmoji || strlen( code ) < 2 ) {
+			continue;
+		}
+		Q_strncpyz( chatEmoji[chatNumEmoji].file, base, sizeof( chatEmoji[0].file ) );
+		Q_strncpyz( chatEmoji[chatNumEmoji].code, code, sizeof( chatEmoji[0].code ) );
+		chatEmoji[chatNumEmoji].codeLen = strlen( code );
 		chatEmoji[chatNumEmoji].shader = 0;
 		chatNumEmoji++;
 	}
 }
 
-static int Chat_FindEmoji( const char *name, int len ) {
-	int i;
+// the emoji of a name: ":name:"
+static int Chat_FindEmoji( const char *name ) {
+	char	code[CHAT_EMOJI_NAME + 2];
+	int		i;
 
 	if ( chatNumEmoji < 0 ) {
 		Chat_ListEmoji();
 	}
+	Com_sprintf( code, sizeof( code ), ":%s:", name );
 	for ( i = 0; i < chatNumEmoji; i++ ) {
-		if ( (int)strlen( chatEmoji[i].name ) == len && !Q_stricmpn( chatEmoji[i].name, name, len ) ) {
+		if ( !Q_stricmp( chatEmoji[i].code, code ) ) {
 			return i;
 		}
 	}
@@ -264,28 +324,31 @@ static int Chat_FindEmoji( const char *name, int len ) {
 // an emoji at s: its index, and *len the bytes of its text. -1 when there is none
 static int Chat_EmojiAt( const char *s, int *len ) {
 	size_t	i;
-	int		n;
+	int		n, best = -1;
 
 	if ( !tay_chatEmoji.integer ) {
 		return -1;
 	}
-	if ( s[0] == ':' ) {
-		for ( n = 1; n < CHAT_EMOJI_NAME && s[n] && s[n] != ':' && s[n] != ' '; n++ ) {
+	if ( s[0] == ':' || s[0] == '#' ) {
+		if ( chatNumEmoji < 0 ) {
+			Chat_ListEmoji();
 		}
-		if ( s[n] == ':' && n > 1 ) {
-			const int found = Chat_FindEmoji( s + 1, n - 1 );
-
-			if ( found >= 0 ) {
-				*len = n + 1;
-				return found;
+		// the longest code that stands here
+		for ( n = 0; n < chatNumEmoji; n++ ) {
+			if ( chatEmoji[n].code[0] == s[0] && ( best < 0 || chatEmoji[n].codeLen > chatEmoji[best].codeLen )
+				&& Chat_CodeMatch( s, chatEmoji[n].code, chatEmoji[n].codeLen ) ) {
+				best = n;
 			}
 		}
-	}
-	if ( s[0] == '#' || s[0] == ':' ) {
+		if ( best >= 0 ) {
+			*len = chatEmoji[best].codeLen;
+			return best;
+		}
+		// the smileys that have the picture of a face of Noto
 		for ( i = 0; i < ARRAY_LEN( chatSmileys ); i++ ) {
 			const int l = strlen( chatSmileys[i].text );
 
-			if ( !strncmp( s, chatSmileys[i].text, l ) && ( n = Chat_FindEmoji( chatSmileys[i].name, strlen( chatSmileys[i].name ) ) ) >= 0 ) {
+			if ( !strncmp( s, chatSmileys[i].text, l ) && ( n = Chat_FindEmoji( chatSmileys[i].name ) ) >= 0 ) {
 				*len = l;
 				return n;
 			}
@@ -296,8 +359,7 @@ static int Chat_EmojiAt( const char *s, int *len ) {
 		int bytes = Q_UTF8_Decode( s, &codePoint );
 
 		for ( i = 0; i < ARRAY_LEN( chatEmojiChars ); i++ ) {
-			if ( chatEmojiChars[i].codePoint == codePoint
-				&& ( n = Chat_FindEmoji( chatEmojiChars[i].name, strlen( chatEmojiChars[i].name ) ) ) >= 0 ) {
+			if ( chatEmojiChars[i].codePoint == codePoint && ( n = Chat_FindEmoji( chatEmojiChars[i].name ) ) >= 0 ) {
 				// the variation selector U+FE0F that may follow belongs to it
 				if ( Q_UTF8_Decode( s + bytes, &next ) == 3 && next == 0xFE0F ) {
 					bytes += 3;
@@ -317,7 +379,7 @@ static float Chat_EmojiWidth( void ) {
 
 static qhandle_t Chat_EmojiShader( int index ) {
 	if ( !chatEmoji[index].shader ) {
-		chatEmoji[index].shader = trap->R_RegisterShaderNoMip( va( "gfx/emoji/%s", chatEmoji[index].name ) );
+		chatEmoji[index].shader = trap->R_RegisterShaderNoMip( va( "gfx/emoji/%s", chatEmoji[index].file ) );
 		if ( !chatEmoji[index].shader ) {
 			chatEmoji[index].shader = -1;
 		}
@@ -332,9 +394,9 @@ void CG_ChatEmoji_f( void ) {
 		Chat_ListEmoji();
 	}
 	for ( i = 0; i < chatNumEmoji; i++ ) {
-		trap->Print( ":%s:%s", chatEmoji[i].name, ( i % 6 == 5 || i == chatNumEmoji - 1 ) ? "\n" : "  " );
+		trap->Print( "%s%s", chatEmoji[i].code, ( i % 6 == 5 || i == chatNumEmoji - 1 ) ? "\n" : "  " );
 	}
-	trap->Print( "%i emoji in gfx/emoji, written as :name: in the chat box%s\n", chatNumEmoji,
+	trap->Print( "%i emoji in gfx/emoji, written as above in the chat box%s\n", chatNumEmoji,
 		tay_chatEmoji.integer ? "" : " (tay_chatEmoji is 0)" );
 }
 
@@ -348,6 +410,17 @@ TEXT
 
 static float Chat_TextWidth( const char *text ) {
 	return trap->ext.R_Font_StrLenPixels( text, chat.skin ? Skin_FontHandle( SKIN_FONT_SANS ) : cgDC.Assets.qhSmallFont, Chat_Scale() );
+}
+
+// the width of text from the byte `from` up to the byte `to`, as plain text: the line to type in shows the codes
+static float Chat_TextWidthOf( const char *text, int from, int to ) {
+	char part[CHAT_TEXT];
+
+	if ( to <= from ) {
+		return 0.0f;
+	}
+	Q_strncpyz( part, text + from, Q_min( (int)sizeof( part ), to - from + 1 ) );
+	return Chat_TextWidth( part );
 }
 
 // with the emoji as wide as they are drawn
@@ -989,6 +1062,63 @@ static void Chat_CharEvent( int ch ) {
 
 /*
 =================
+Chat_Suggest
+
+The emoji whose codes begin with the word before the cursor, when that word begins with a colon and has a letter
+more ("hey :ka" lists :kappa:, :kappaclaus: ...). Up and Down choose, Tab, Enter or a click puts the code in
+=================
+*/
+static void Chat_Suggest( void ) {
+	char	word[CHAT_EMOJI_WORD];
+	int		start = chat.cursor, len, i;
+
+	while ( start > 0 && chat.input[start - 1] != ' ' ) {
+		start--;
+	}
+	len = chat.cursor - start;
+	if ( !tay_chatEmoji.integer || chat.url[0] || chat.input[start] != ':' || len < 2 || len >= (int)sizeof( word )
+		|| memchr( chat.input + start + 1, ':', len - 1 ) ) {
+		chat.numSuggest = 0;
+		chat.suggestWord[0] = '\0';
+		return;
+	}
+	Q_strncpyz( word, chat.input + start, len + 1 );
+	if ( chatNumEmoji < 0 ) {
+		Chat_ListEmoji();
+	}
+	if ( strcmp( word, chat.suggestWord ) ) {
+		Q_strncpyz( chat.suggestWord, word, sizeof( chat.suggestWord ) );
+		chat.suggestSel = 0;
+	}
+	chat.suggestFrom = start;
+	chat.numSuggest = 0;
+	for ( i = 0; i < chatNumEmoji && chat.numSuggest < CHAT_SUGGEST; i++ ) {
+		if ( chatEmoji[i].code[0] == ':' && !Q_stricmpn( chatEmoji[i].code, word, len ) ) {
+			chat.suggest[chat.numSuggest++] = i;
+		}
+	}
+	if ( chat.suggestSel >= chat.numSuggest ) {
+		chat.suggestSel = 0;
+	}
+}
+
+// the chosen code in place of the word, and a blank after it
+static void Chat_SuggestTake( void ) {
+	const char	*code = chatEmoji[chat.suggest[chat.suggestSel]].code;
+	const int	codeLen = strlen( code ), rest = strlen( chat.input + chat.cursor );
+
+	if ( chat.suggestFrom + codeLen + 1 + rest >= (int)sizeof( chat.input ) ) {
+		return;
+	}
+	memmove( chat.input + chat.suggestFrom + codeLen + 1, chat.input + chat.cursor, rest + 1 );
+	memcpy( chat.input + chat.suggestFrom, code, codeLen );
+	chat.input[chat.suggestFrom + codeLen] = ' ';
+	chat.cursor = chat.suggestFrom + codeLen + 1;
+	chat.numSuggest = 0;
+}
+
+/*
+=================
 CG_ChatKeyEvent
 
 qtrue: the chat box is open and took the key
@@ -1027,6 +1157,34 @@ qboolean CG_ChatKeyEvent( int key, qboolean down ) {
 		}
 		chat.url[0] = '\0';
 		return qtrue;
+	}
+
+	// the list of emoji for the word being typed takes the keys that choose from it
+	Chat_Suggest();
+	if ( chat.numSuggest ) {
+		switch ( key ) {
+		case A_CURSOR_UP:
+			chat.suggestSel = ( chat.suggestSel + chat.numSuggest - 1 ) % chat.numSuggest;
+			return qtrue;
+		case A_CURSOR_DOWN:
+			chat.suggestSel = ( chat.suggestSel + 1 ) % chat.numSuggest;
+			return qtrue;
+		case A_TAB:
+		case A_ENTER:
+		case A_KP_ENTER:
+			Chat_SuggestTake();
+			return qtrue;
+		case A_MOUSE1:
+			if ( cgs.cursorX >= chat.suggestX && cgs.cursorX < chat.suggestX + chat.suggestW
+				&& cgs.cursorY >= chat.suggestY && cgs.cursorY < chat.suggestY + chat.numSuggest * chat.rowH ) {
+				chat.suggestSel = Com_Clampi( 0, chat.numSuggest - 1, (int)( ( cgs.cursorY - chat.suggestY ) / chat.rowH ) );
+				Chat_SuggestTake();
+				return qtrue;
+			}
+			break;
+		default:
+			break;
+		}
 	}
 
 	switch ( key ) {
@@ -1396,22 +1554,59 @@ static void Chat_DrawOpen( float x, float bottom ) {
 		} else {
 			Com_sprintf( prompt, sizeof( prompt ), "%s: ", CG_VisionText( chat.mode == 1 ? "Team" : "Say" ) );
 		}
-		promptW = Chat_Width( prompt );
+		promptW = Chat_TextWidth( prompt );
 		CG_Text_Paint( x, inputY + down, Chat_Scale(), (float *)( chat.skin ? chatDim : dimColor ), prompt, 0, 0, 0, Chat_Font() );
 
-		// a text that is wider than the line is shown from where the cursor still fits
-		while ( start < chat.cursor && Chat_WidthOf( chat.input, start, chat.cursor ) > chat.width - promptW - 6.0f ) {
+		// a text that is wider than the line is shown from where the cursor still fits (the codes of emoji as text)
+		while ( start < chat.cursor && Chat_TextWidthOf( chat.input, start, chat.cursor ) > chat.width - promptW - 6.0f ) {
 			start += Chat_CharLen( chat.input + start );
 		}
 		Q_strncpyz( shown, chat.input + start, sizeof( shown ) );
-		for ( i = strlen( shown ); i > 0 && Chat_Width( shown ) > chat.width - promptW; i = strlen( shown ) ) {
+		for ( i = strlen( shown ); i > 0 && Chat_TextWidth( shown ) > chat.width - promptW; i = strlen( shown ) ) {
 			shown[Chat_PrevChar( start + i ) - start] = '\0';
 		}
 		// a ^ with a digit colours what follows while it is typed, as the line will look when it is sent
-		textW = Chat_WidthOf( chat.input, start, chat.cursor );
+		textW = Chat_TextWidthOf( chat.input, start, chat.cursor );
 		CG_Text_Paint( x + promptW, inputY + down, Chat_Scale(), colorWhite, shown, 0, 0, 0, Chat_Font() );
 		if ( ( trap->Milliseconds() >> 8 ) & 1 ) {
 			CG_FillRect( x + promptW + textW, inputY + 1.0f, 1.0f, chat.rowH - 2.0f, (float *)( chat.skin ? chatAccent : colorWhite ) );
+		}
+
+		// the emoji for the word being typed, above the line, from where the word begins
+		Chat_Suggest();
+		if ( chat.numSuggest ) {
+			const float	emojiW = Chat_EmojiWidth();
+			const float	wordX = x + promptW + ( chat.suggestFrom > start ? Chat_TextWidthOf( chat.input, start, chat.suggestFrom ) : 0.0f );
+			float		w = 0.0f;
+			int			n;
+
+			for ( n = 0; n < chat.numSuggest; n++ ) {
+				w = Q_max( w, Chat_TextWidth( chatEmoji[chat.suggest[n]].code ) );
+			}
+			chat.suggestW = emojiW + w + 3.0f * CHAT_PAD;
+			chat.suggestX = Q_min( wordX, boxX + boxW - chat.suggestW );
+			chat.suggestY = inputY - 2.0f - chat.numSuggest * chat.rowH;
+			if ( chat.skin ) {
+				Skin_Panel( chat.suggestX, chat.suggestY - 2.0f, chat.suggestW, chat.numSuggest * chat.rowH + 4.0f, 4.0f, chatGlass, chatRim );
+			} else {
+				CG_FillRect( chat.suggestX, chat.suggestY - 2.0f, chat.suggestW, chat.numSuggest * chat.rowH + 4.0f, frameColor );
+			}
+			for ( n = 0; n < chat.numSuggest; n++ ) {
+				const float	rowY = chat.suggestY + n * chat.rowH;
+				const int	e = chat.suggest[n];
+
+				if ( n == chat.suggestSel ) {
+					static vec4_t sel = { 0.43f, 0.83f, 1.0f, 0.32f }, selOld = { 0.25f, 0.45f, 0.85f, 0.65f };
+
+					CG_FillRect( chat.suggestX + 2.0f, rowY, chat.suggestW - 4.0f, chat.rowH, chat.skin ? sel : selOld );
+				}
+				if ( Chat_EmojiShader( e ) ) {
+					trap->R_SetColor( NULL );
+					CG_DrawPic( chat.suggestX + CHAT_PAD, rowY + ( chat.rowH - emojiW ) * 0.5f, emojiW, emojiW, Chat_EmojiShader( e ) );
+				}
+				CG_Text_Paint( chat.suggestX + 2.0f * CHAT_PAD + emojiW, rowY + down, Chat_Scale(),
+					(float *)( n == chat.suggestSel ? colorWhite : ( chat.skin ? chatDim : dimColor ) ), chatEmoji[e].code, 0, 0, 0, Chat_Font() );
+			}
 		}
 	}
 	// (the pointer is drawn by CG_SelectDraw(), after the card of a player: it lies on everything)

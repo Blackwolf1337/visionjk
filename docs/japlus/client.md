@@ -376,15 +376,25 @@ Smaller ones:
 | `tay_crosshairNamesOpacity` | 0.5 | how opaque the name of the player under the crosshair is, 0 to 1. The game had 0.5 |
 | `tay_chatLog` | 0 | every chat line the box shows, without colours and with the time, appended to `chatlogs/<date>.log` in the game's home folder (`~/.local/share/visionjk/japlus/chatlogs` on Linux). Lines of hidden players are not written |
 
-Emoji in the chat box (as TaystJK, `cgame/chat/cg_chat.c`): `:name:` in a line is drawn as the picture
-`gfx/emoji/<name>.png` where there is one, as high as a row. The list is read from the paks at every start of
-the cgame, so a pak (also one a server sends) can bring more, and `tay_emoji` lists them. This tree ships 78
-pictures of Noto Emoji (`assets/japlus_client/gfx/emoji`, with their licence notes, scaled to 64 x 64: the image loader takes sides of a power of two only, a picture of 72 is refused and no emoji shows) under the names TaystJK uses
-for the same faces (`:smile:`, `:joy:`, `:thumbsup:`, `:fire:`, `:heart:` ...). TaystJK's other emoji are
-emotes of Twitch, which can not be shipped. TaystJK's smileys `#:)` `#:(` `#:D` `#:P` `#;)` `#;(` `#:o` `#8)`
-`#>:(` `#>:)` `#^_^` `#o_o` and `:+1:` `:-1:` are pictures too. So are the real emoji characters of UTF-8 chat
-that have a picture here. `tay_chatEmoji 0` shows the text. Only the chat box draws them: the bubbles above the
-heads and the console show the text, and so does a client of another tree.
+Emoji in the chat box (as TaystJK, `cgame/chat/cg_chat.c`): a code in a line is drawn as the picture
+`gfx/emoji/<file>.png`, as high as a row. The list is read from the paks at every start of the cgame, so a pak (also
+one a server sends) can bring more, and `tay_emoji` lists them. The file names are TaystJK's: a `` ` `` is a colon of
+the code, a `~` is a `>`, and `!` makes the next letter a capital (`` `kappa`.png `` is `:kappa:`, `#~`!D.png` is
+`#>:D`); a name without those is the code between colons (`smile.png` is `:smile:`). Of two files with one code
+the first one counts. This tree ships 78 pictures of Noto Emoji for the faces and things, under the names TaystJK
+uses, and the 109 other pictures of TaystJK's set, its emotes of Twitch among them (2026-10-18, with permission),
+so 187 emoji in all, the same codes TaystJK has (`assets/japlus_client/gfx/emoji` with a README of where they come
+from). A Noto picture is 64 x 64: the image loader takes sides of a power of two only, a picture of 72 is refused
+and no emoji shows. The real emoji characters of UTF-8 chat that have a picture are pictures too.
+`tay_chatEmoji 0` shows the text. Only the chat box draws them: the bubbles above the heads and the console show
+the text, and so does a client of another tree.
+
+While a word that begins with a colon is typed in the chat box, with a letter more (`:ka`), a list of up to eight
+emoji whose codes begin with it stands above the line, with their pictures: Up and Down choose, Tab, Enter or a
+click puts the code in with a blank after it. Up and Down go through what was sent before again once the word is
+done. The line to type in shows the codes as text. Checked in a hidden run: `:ka`, Down twice, Enter gave
+`:kappapride:` and the line it sent showed the picture (`clienttests/lvl_emoji_list.cfg`, with `v_cgKey <code> char`
+for the letters).
 
 ### The tab TaystJK
 
