@@ -32,7 +32,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // - Every event is a line in ids.log of the game folder and on the console, at most one in two seconds for an
 //   address and an event (the rest is counted and named with the next line), and at most thirty a second
 //   overall: a flood must not fill the disk either.
-// - sv_ids 0: nothing of it. 1: events are written down, nobody is blocked or dropped. 2 (default): all of it.
+// - vs_ids 0: nothing of it. 1: events are written down, nobody is blocked or dropped. 2 (default): all of it.
 //
 // What the address of a packet says can be made up, a connectionless packet needs no answer to be taken. So an
 // attacker can make it look as if a player sent junk. That is why a block only ever stops connectionless
@@ -46,7 +46,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // it, a few frames ahead at most, and the game cuts a move back to 200 msec ahead anyway (ClientThink_real). So
 // the hack gains nothing in this game and there is nothing to catch. What such a count does catch is every
 // player after the server stood still for a moment: their moves of that moment are all ahead of its time.
-// sv_antiWallhack is in sv_snapshot.cpp.
+// vs_antiWallhack is in sv_snapshot.cpp.
 
 #include "server.h"
 
@@ -100,7 +100,7 @@ static const struct {
 	{ "a userinfo that is too long",					25 },	// IDS_USERINFO
 };
 
-static cvar_t		*sv_ids;
+static cvar_t		*vs_ids;
 static idsEntry_t	ids_entries[IDS_ENTRIES];
 static fileHandle_t	ids_file;
 static int			ids_lineSecond, ids_lines, ids_linesLost;
@@ -204,7 +204,7 @@ void SV_IDS_Event( const netadr_t *from, client_t *cl, idsEvent_t event, const c
 	idsEntry_t	*e;
 	qboolean	counts = qtrue;
 
-	if ( !sv_ids || !sv_ids->integer || event < 0 || event >= IDS_NUM_EVENTS ) {
+	if ( !vs_ids || !vs_ids->integer || event < 0 || event >= IDS_NUM_EVENTS ) {
 		return;
 	}
 	e = SV_IDS_Find( from, qtrue, now );
@@ -247,7 +247,7 @@ void SV_IDS_Event( const netadr_t *from, client_t *cl, idsEvent_t event, const c
 		e->lineSkipped = 0;
 	}
 
-	if ( e->score < IDS_BLOCK_SCORE || sv_ids->integer < 2 ) {
+	if ( e->score < IDS_BLOCK_SCORE || vs_ids->integer < 2 ) {
 		return;
 	}
 
@@ -285,7 +285,7 @@ qboolean SV_IDS_Blocked( const netadr_t *from ) {
 	const int	now = Sys_Milliseconds();
 	idsEntry_t	*e;
 
-	if ( !sv_ids || sv_ids->integer < 2 ) {
+	if ( !vs_ids || vs_ids->integer < 2 ) {
 		return qfalse;
 	}
 	e = SV_IDS_Find( from, qfalse, now );
@@ -336,12 +336,12 @@ void SV_IDS_Text( client_t *cl, const char *text, qboolean userinfo ) {
 	int					binary = 0, i;
 	qboolean			chat, lineBreak = qfalse, pathUp = qfalse, binaryRun = qfalse;
 
-	if ( !sv_ids || !sv_ids->integer || from->type != NA_IP ) {
+	if ( !vs_ids || !vs_ids->integer || from->type != NA_IP ) {
 		return;
 	}
 	// what people write to each other may have dots in it
 	chat = (qboolean)( !userinfo && ( !Q_stricmpn( text, "say", 3 ) || !Q_stricmpn( text, "tell", 4 ) || !Q_stricmpn( text, "amsay", 5 )
-		|| !Q_stricmpn( text, "ampsay", 6 ) || !Q_stricmpn( text, "clansay", 7 ) || !Q_stricmpn( text, "vsay", 4 ) || !Q_stricmpn( text, "jpstatus", 8 ) ) );
+		|| !Q_stricmpn( text, "ampsay", 6 ) || !Q_stricmpn( text, "clansay", 7 ) || !Q_stricmpn( text, "vsay", 4 ) || !Q_stricmpn( text, "vs_status", 8 ) ) );
 
 	for ( i = 0; s[i]; i++ ) {
 		if ( s[i] == '\n' || s[i] == '\r' ) {
@@ -383,7 +383,7 @@ static void SV_IDS_Status_f( void ) {
 	const int	now = Sys_Milliseconds();
 	int			i, shown = 0;
 
-	Com_Printf( "sv_ids %i (0 off, 1 events are written down, 2 addresses are blocked and players dropped as well)\n", sv_ids->integer );
+	Com_Printf( "vs_ids %i (0 off, 1 events are written down, 2 addresses are blocked and players dropped as well)\n", vs_ids->integer );
 	for ( i = 0; i < IDS_ENTRIES; i++ ) {
 		const idsEntry_t *e = &ids_entries[i];
 
@@ -401,7 +401,7 @@ static void SV_IDS_Status_f( void ) {
 	if ( !shown ) {
 		Com_Printf( "  nothing of note in the last ten minutes\n" );
 	}
-	Com_Printf( "idsunblock <address|all> lifts a block. The events are in " IDS_LOG " of the game folder.\n" );
+	Com_Printf( "vs_idsunblock <address|all> lifts a block. The events are in " IDS_LOG " of the game folder.\n" );
 }
 
 static void SV_IDS_Unblock_f( void ) {
@@ -411,7 +411,7 @@ static void SV_IDS_Unblock_f( void ) {
 	int			i, count = 0;
 
 	if ( !arg[0] || ( !all && ( !NET_StringToAdr( arg, &adr ) || adr.type != NA_IP ) ) ) {
-		Com_Printf( "usage: idsunblock <address|all>\n" );
+		Com_Printf( "usage: vs_idsunblock <address|all>\n" );
 		return;
 	}
 	for ( i = 0; i < IDS_ENTRIES; i++ ) {
@@ -426,9 +426,9 @@ static void SV_IDS_Unblock_f( void ) {
 }
 
 void SV_IDS_Init( void ) {
-	sv_ids = Cvar_Get( "sv_ids", "2", CVAR_ARCHIVE, "Intrusion detection: 0 off, 1 what looks like an attack is written to ids.log, 2 its address is blocked for a while as well" );
-	Cmd_AddCommand( "idsstatus", SV_IDS_Status_f, "The addresses the intrusion detection has noted" );
-	Cmd_AddCommand( "idsunblock", SV_IDS_Unblock_f, "Lifts the block of an address, or of all" );
+	vs_ids = Cvar_Get( "vs_ids", "2", CVAR_ARCHIVE, "Intrusion detection: 0 off, 1 what looks like an attack is written to ids.log, 2 its address is blocked for a while as well" );
+	Cmd_AddCommand( "vs_idsstatus", SV_IDS_Status_f, "The addresses the intrusion detection has noted" );
+	Cmd_AddCommand( "vs_idsunblock", SV_IDS_Unblock_f, "Lifts the block of an address, or of all" );
 }
 
 void SV_IDS_Shutdown( void ) {

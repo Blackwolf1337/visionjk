@@ -93,15 +93,15 @@ void Con_ToggleMenu_f( void ) {
 Con_ChatByCgame
 
 A cgame of this tree has a chat box with its own line to type in (cgame/chat/cg_chat.c) and says so by setting
-cg_chatHandler, which the engine clears whenever a cgame is loaded. The message mode commands open that box
+v_chatHandler, which the engine clears whenever a cgame is loaded. The message mode commands open that box
 then, not the line of the engine. mode: 0 to all, 1 to the team, 2 to the player `player`.
 ================
 */
 static qboolean Con_ChatByCgame( int mode, int player ) {
-	if ( !cls.cgameStarted || cls.state != CA_ACTIVE || !Cvar_VariableIntegerValue( "cg_chatHandler" ) ) {
+	if ( !cls.cgameStarted || cls.state != CA_ACTIVE || !Cvar_VariableIntegerValue( "v_chatHandler" ) ) {
 		return qfalse;
 	}
-	Cbuf_ExecuteText( EXEC_NOW, va( "cg_chatopen %i %i\n", mode, player ) );
+	Cbuf_ExecuteText( EXEC_NOW, va( "v_chatOpen %i %i\n", mode, player ) );
 	return qtrue;
 }
 
@@ -1249,8 +1249,8 @@ void Con_DrawSolidConsole( float frac ) {
 	}
 	else {
 		// The look of the menus of this tree: dark glass in place of the picture of the game, unless the player
-		// asked for the menus of before (ui_classic 1)
-		if ( !Cvar_VariableIntegerValue( "ui_classic" ) )
+		// asked for the menus of before (v_classic 1)
+		if ( !Cvar_VariableIntegerValue( "v_classic" ) )
 		{
 			const vec4_t glass = { 0.02f, 0.04f, 0.08f, 0.94f * ( ( frac < 1.0f ) ? Com_Clamp( 0.0f, 1.0f, con_opacity->value ) : 1.0f ) };
 

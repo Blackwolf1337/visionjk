@@ -19,7 +19,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 */
 
 // cg_status_music.c -- what music plays on this machine right now, for cg_status.c. Asked every five seconds,
-// and only while cg_shareMusic is 1: nothing of this runs before the player switched it on.
+// and only while v_shareMusic is 1: nothing of this runs before the player switched it on.
 //
 // Linux and the other systems with a desktop bus: the players of music say it over D-Bus (MPRIS: Spotify, the
 // browsers, VLC and so on). The library of the bus (libdbus-1.so.3) is loaded when it is first needed and is
@@ -116,7 +116,7 @@ static BOOL CALLBACK Music_EnumWindow( HWND window, LPARAM unused ) {
 void CG_MusicFrame( void ) {
 	const int now = trap->Milliseconds();
 
-	if ( !cg_shareMusic.integer || now < musicAskTime ) {
+	if ( !v_shareMusic.integer || now < musicAskTime ) {
 		return;
 	}
 	musicAskTime = now + MUSIC_ASK_MSEC;
@@ -432,7 +432,7 @@ void CG_MusicFrame( void ) {
 	const int	now = trap->Milliseconds();
 	int			i;
 
-	if ( !cg_shareMusic.integer ) {
+	if ( !v_shareMusic.integer ) {
 		if ( music.state > MUSIC_FAILED ) {
 			Music_Close( MUSIC_NONE );
 		}

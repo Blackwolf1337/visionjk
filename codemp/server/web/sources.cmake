@@ -16,7 +16,7 @@
 # along with this program; if not, see <http://www.gnu.org/licenses/>.
 #============================================================================
 
-# The sources of the web host of the dedicated server (sv_webPort). codemp/CMakeLists.txt includes this in
+# The sources of the web host of the dedicated server (vs_clientWebPort). codemp/CMakeLists.txt includes this in
 # front of the add_executable of the server. The folders the files are found in (codemp and shared) are
 # among the include directories of the server already.
 

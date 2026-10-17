@@ -60,7 +60,7 @@ What this tree adds, in [docs/japlus/](docs/japlus):
 | [webadmin.md](docs/japlus/webadmin.md) | The web admin panel (not a JA+ feature): cvars, requests, how it ties into JA+, limits |
 | [voice.md](docs/japlus/voice.md) | Voice chat with the microphone: in the client module, relayed by the game module or by the masterserver, engine unchanged, clients without it unaffected |
 | [update.md](docs/japlus/update.md) | The updater of the client: it asks the website for a newer version, fetches what changed and puts it in place |
-| [audio.md](docs/japlus/audio.md) | `s_spatial`, sound that knows the level, with Steam Audio: walls muffle, rooms ring, sounds come round corners |
+| [audio.md](docs/japlus/audio.md) | `v_spatial`, sound that knows the level, with Steam Audio: walls muffle, rooms ring, sounds come round corners |
 | [renderer.md](docs/japlus/renderer.md) | `rd-vulkan-vision`: how it is built, the state of each part, differences to `rd-vanilla`, what is left |
 | [security.md](docs/japlus/security.md) | Security pass over the network code: findings, fixes, build hardening, server settings |
 | [threading.md](docs/japlus/threading.md) | How a frame runs, why server and client share one thread, timing numbers |

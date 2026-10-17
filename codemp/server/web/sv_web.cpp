@@ -39,9 +39,9 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 static_assert( SV_WEB_MAX_CONNECTIONS + 2 <= FD_SETSIZE, "the read set of NET_Sleep has no room for the web host" );
 #endif
 
-static cvar_t	*sv_webPort;
-static cvar_t	*sv_webBind;
-cvar_t			*sv_webRoot;
+static cvar_t	*vs_clientWebPort;
+static cvar_t	*vs_clientWebBind;
+cvar_t			*vs_clientWebRoot;
 
 static SOCKET			listenSocket = INVALID_SOCKET;
 static qboolean			listenFailed;			// accept() failed, the listener is left alone for a moment
@@ -515,18 +515,18 @@ static void SV_WebAccept( void ) {
 ==================
 SV_WebListen
 
-Opens the listener as sv_webPort and sv_webBind say, after it closed the one there was. The connections stay,
+Opens the listener as vs_clientWebPort and vs_clientWebBind say, after it closed the one there was. The connections stay,
 unless the port says the web host is off.
 ==================
 */
 static void SV_WebListen( void ) {
 	struct sockaddr_in	address;
 	const char			*bindTo = "0.0.0.0";
-	const int			port = sv_webPort->integer;
+	const int			port = vs_clientWebPort->integer;
 	int					i;
 
-	sv_webPort->modified = qfalse;
-	sv_webBind->modified = qfalse;
+	vs_clientWebPort->modified = qfalse;
+	vs_clientWebBind->modified = qfalse;
 
 	if ( listenSocket != INVALID_SOCKET ) {
 		closesocket( listenSocket );
@@ -536,7 +536,7 @@ static void SV_WebListen( void ) {
 
 	if ( port <= 0 || port > 65535 ) {
 		if ( port ) {
-			Com_Printf( S_COLOR_YELLOW "WARNING: web host: sv_webPort %d is no port\n", port );
+			Com_Printf( S_COLOR_YELLOW "WARNING: web host: vs_clientWebPort %d is no port\n", port );
 		}
 		for ( i = 0; i < SV_WEB_MAX_CONNECTIONS; i++ ) {
 			if ( connections[i].state != WEB_FREE ) {
@@ -546,22 +546,22 @@ static void SV_WebListen( void ) {
 		return;
 	}
 
-	// Every interface unless sv_webBind names one address, as g_webBind of the web admin panel has it: an
+	// Every interface unless vs_clientWebBind names one address, as vs_webBind of the web admin panel has it: an
 	// empty one is every interface too, and a value that is no address opens nothing to the outside.
 	// (inet_addr and not Sys_StringToAdr, which asks the name service about what is no number and waits for it)
 	memset( &address, 0, sizeof( address ) );
 	address.sin_family = AF_INET;
 	address.sin_port = htons( (unsigned short)port );
 	address.sin_addr.s_addr = INADDR_ANY;
-	if ( sv_webBind->string[0] ) {
-		address.sin_addr.s_addr = inet_addr( sv_webBind->string );
+	if ( vs_clientWebBind->string[0] ) {
+		address.sin_addr.s_addr = inet_addr( vs_clientWebBind->string );
 		if ( address.sin_addr.s_addr != INADDR_NONE ) {
-			bindTo = sv_webBind->string;
+			bindTo = vs_clientWebBind->string;
 		} else {
 			bindTo = "127.0.0.1";
 			address.sin_addr.s_addr = htonl( INADDR_LOOPBACK );
-			Com_Printf( S_COLOR_YELLOW "WARNING: web host: sv_webBind \"%s\" is no IPv4 address, taking %s\n",
-				sv_webBind->string, bindTo );
+			Com_Printf( S_COLOR_YELLOW "WARNING: web host: vs_clientWebBind \"%s\" is no IPv4 address, taking %s\n",
+				vs_clientWebBind->string, bindTo );
 		}
 	}
 
@@ -608,16 +608,16 @@ What the engine calls
 SV_WebInit
 
 Once, when the server program starts. The listener is opened by the first NET_Sleep and again whenever
-sv_webPort or sv_webBind change, so they are set like any other cvar: on the command line, in a config that
+vs_clientWebPort or vs_clientWebBind change, so they are set like any other cvar: on the command line, in a config that
 runs later, or in the console while the server runs.
 ==================
 */
 void SV_WebInit( void ) {
-	sv_webPort = Cvar_Get( "sv_webPort", "0", 0, "TCP port of the web host: the page of the client that runs in a browser, its files and its packets. 0: off" );
-	sv_webBind = Cvar_Get( "sv_webBind", "0.0.0.0", 0, "Address the web host listens on" );
-	sv_webRoot = Cvar_Get( "sv_webRoot", "web", 0, "Folder of the page of the web host, under fs_basepath unless it is a full path" );
+	vs_clientWebPort = Cvar_Get( "vs_clientWebPort", "0", 0, "TCP port of the web host: the page of the client that runs in a browser, its files and its packets. 0: off" );
+	vs_clientWebBind = Cvar_Get( "vs_clientWebBind", "0.0.0.0", 0, "Address the web host listens on" );
+	vs_clientWebRoot = Cvar_Get( "vs_clientWebRoot", "web", 0, "Folder of the page of the web host, under fs_basepath unless it is a full path" );
 
-	sv_webPort->modified = qtrue;
+	vs_clientWebPort->modified = qtrue;
 }
 
 /*
@@ -664,10 +664,10 @@ In front of the select() of NET_Sleep: the sockets it is to wake up for
 void SV_WebFDSet( fd_set *readSet, fd_set *writeSet, SOCKET *highest ) {
 	int i;
 
-	if ( !sv_webPort ) {
+	if ( !vs_clientWebPort ) {
 		return;
 	}
-	if ( sv_webPort->modified || sv_webBind->modified ) {
+	if ( vs_clientWebPort->modified || vs_clientWebBind->modified ) {
 		SV_WebListen();
 	}
 
@@ -788,7 +788,7 @@ Behind the select() of NET_Sleep, with what it found ready. Also called when not
 void SV_WebEvent( fd_set *readSet, fd_set *writeSet ) {
 	int i;
 
-	if ( !sv_webPort ) {
+	if ( !vs_clientWebPort ) {
 		return;
 	}
 

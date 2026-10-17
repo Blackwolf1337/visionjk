@@ -1468,10 +1468,10 @@ static void UI_OfferCursorKey( void ) {
 	int			key;
 	qboolean	twice = qfalse;
 
-	if ( ui_cursorKeyOffered.integer ) {
+	if ( v_cursorKeyOffered.integer ) {
 		return;
 	}
-	trap->Cvar_Set( "ui_cursorKeyOffered", "1" );
+	trap->Cvar_Set( "v_cursorKeyOffered", "1" );
 	trap->Key_GetBindingBuf( A_ALT, alt, sizeof( alt ) );
 	if ( alt[0] && Q_stricmp( alt, "+altattack" ) ) {
 		return;
@@ -1481,7 +1481,7 @@ static void UI_OfferCursorKey( void ) {
 			continue;
 		}
 		trap->Key_GetBindingBuf( key, bound, sizeof( bound ) );
-		if ( !Q_stricmp( bound, "+cursor" ) ) {
+		if ( !Q_stricmp( bound, "+v_cursor" ) ) {
 			return;
 		}
 		if ( alt[0] && !Q_stricmp( bound, alt ) ) {
@@ -1491,7 +1491,7 @@ static void UI_OfferCursorKey( void ) {
 	if ( alt[0] && !twice ) {
 		return;
 	}
-	trap->Key_SetBinding( A_ALT, "+cursor" );
+	trap->Key_SetBinding( A_ALT, "+v_cursor" );
 }
 
 // Is this file of the old look the one of this tree? Those carry a mark in their first line. Without it the
@@ -1520,7 +1520,7 @@ UI_NewLookList
 
 The list of menu files that is loaded for a list of the game: the menus of the new look (ui/vision, made by
 tools/menus/build.py) in place of the two lists of the game. Not in an engine that can not draw that look, not
-with ui_classic 1, and not when the list or the first menu of the old look is not the file of this tree: then a
+with v_classic 1, and not when the list or the first menu of the old look is not the file of this tree: then a
 mod brought its own menus, and those are what its player wants to see.
 =================
 */
@@ -1544,7 +1544,7 @@ static const char *UI_NewLookList( const char *menuFile ) {
 		if ( Q_stricmp( menuFile, lists[i].stock ) ) {
 			continue;
 		}
-		if ( !Skin_Ready() || ui_classic.integer || !UI_FileIsOurs( lists[i].stock ) || !UI_FileIsOurs( lists[i].first )
+		if ( !Skin_Ready() || v_classic.integer || !UI_FileIsOurs( lists[i].stock ) || !UI_FileIsOurs( lists[i].first )
 			|| !UI_FileExists( lists[i].vision ) ) {
 			uiNewLook = qfalse;
 			return menuFile;
@@ -4808,8 +4808,8 @@ static void UI_StartSkirmish(qboolean next) {
 }
 
 /*
-The presets of the "3D Sound" entry of the sound page: s_spatial of the engine (Steam Audio) and how much it
-works out. The engine reads the cvars of a row while it runs, only s_spatial itself needs the sound started
+The presets of the "3D Sound" entry of the sound page: v_spatial of the engine (Steam Audio) and how much it
+works out. The engine reads the cvars of a row while it runs, only v_spatial itself needs the sound started
 again. Rays and bounces are the ones of a pass of the reflections, the engine clamps them to 256..8192 and 1..64.
 */
 typedef struct spatialPreset_s {
@@ -4833,11 +4833,11 @@ Which preset of the "3D Sound" entry the cvars of the engine are. One more than 
 =================
 */
 static void UI_GetSoundSetup( void ) {
-	const int	spatial = (int)trap->Cvar_VariableValue( "s_spatial" );
-	const int	reflections = (int)trap->Cvar_VariableValue( "s_spatialReflections" );
-	const int	rays = (int)trap->Cvar_VariableValue( "s_spatialRays" );
-	const int	bounces = (int)trap->Cvar_VariableValue( "s_spatialBounces" );
-	const int	paths = (int)trap->Cvar_VariableValue( "s_spatialPaths" );
+	const int	spatial = (int)trap->Cvar_VariableValue( "v_spatial" );
+	const int	reflections = (int)trap->Cvar_VariableValue( "v_spatialReflections" );
+	const int	rays = (int)trap->Cvar_VariableValue( "v_spatialRays" );
+	const int	bounces = (int)trap->Cvar_VariableValue( "v_spatialBounces" );
+	const int	paths = (int)trap->Cvar_VariableValue( "v_spatialPaths" );
 	size_t		i;
 
 	for ( i = 0; i < ARRAY_LEN( uiSpatialPresets ); i++ ) {
@@ -4852,29 +4852,29 @@ static void UI_GetSoundSetup( void ) {
 			break;
 		}
 	}
-	trap->Cvar_Register( NULL, "ui_s_spatialQuality", "0", CVAR_ROM|CVAR_INTERNAL );
-	trap->Cvar_Set( "ui_s_spatialQuality", va( "%i", (int)i ) );
+	trap->Cvar_Register( NULL, "v_spatialQuality", "0", CVAR_ROM|CVAR_INTERNAL );
+	trap->Cvar_Set( "v_spatialQuality", va( "%i", (int)i ) );
 }
 
 static void UI_Update(const char *name) {
 	int	val = trap->Cvar_VariableValue(name);
 
-	if ( !Q_stricmp( name, "ui_s_spatialQuality" ) ) {
+	if ( !Q_stricmp( name, "v_spatialQuality" ) ) {
 		if ( val >= 0 && val < (int)ARRAY_LEN( uiSpatialPresets ) ) {
 			const spatialPreset_t	*preset = &uiSpatialPresets[val];
-			const qboolean			restart = (qboolean)( !trap->Cvar_VariableValue( "s_spatial" ) != !preset->spatial );
+			const qboolean			restart = (qboolean)( !trap->Cvar_VariableValue( "v_spatial" ) != !preset->spatial );
 
-			trap->Cvar_Set( "s_spatial", preset->spatial ? "1" : "0" );
+			trap->Cvar_Set( "v_spatial", preset->spatial ? "1" : "0" );
 			if ( preset->spatial ) {
-				trap->Cvar_Set( "s_spatialReflections", preset->reflections ? "1" : "0" );
-				trap->Cvar_Set( "s_spatialPaths", preset->paths ? "1" : "0" );
+				trap->Cvar_Set( "v_spatialReflections", preset->reflections ? "1" : "0" );
+				trap->Cvar_Set( "v_spatialPaths", preset->paths ? "1" : "0" );
 				if ( preset->reflections ) {
-					trap->Cvar_Set( "s_spatialRays", va( "%i", preset->rays ) );
-					trap->Cvar_Set( "s_spatialBounces", va( "%i", preset->bounces ) );
+					trap->Cvar_Set( "v_spatialRays", va( "%i", preset->rays ) );
+					trap->Cvar_Set( "v_spatialBounces", va( "%i", preset->bounces ) );
 				}
 			}
 			if ( restart ) {
-				// s_spatial is latched
+				// v_spatial is latched
 				trap->Cmd_ExecuteText( EXEC_APPEND, "snd_restart\n" );
 			}
 		}
@@ -7797,7 +7797,7 @@ static void UI_BuildServerDisplayList(int force) {
 	}
 
 	trap->Cvar_Update( &ui_browserFilterInvalidInfo );
-	trap->Cvar_Update( &ui_browserShowBotOnly );
+	trap->Cvar_Update( &v_browserShowBotOnly );
 	trap->Cvar_Update( &ui_browserShowEmpty );
 	trap->Cvar_Update( &ui_browserShowFull );
 	trap->Cvar_Update( &ui_browserShowPasswordProtected );
@@ -7825,10 +7825,10 @@ static void UI_BuildServerDisplayList(int force) {
 
 			clients = atoi(Info_ValueForKey(info, "clients"));
 
-			// Servers where only bots play are left out with ui_browserShowBotOnly 0. An engine of this tree says how many of the players
+			// Servers where only bots play are left out with v_browserShowBotOnly 0. An engine of this tree says how many of the players
 			// are people: 0 none, -1 it has asked the server and the answer may still come (the server is
 			// looked at again with the next pass), -2 it is not known. Another engine says nothing.
-			if ( !ui_browserShowBotOnly.integer && clients > 0 ) {
+			if ( !v_browserShowBotOnly.integer && clients > 0 ) {
 				const char *humans = Info_ValueForKey( info, "g_humanplayers" );
 
 				if ( humans[0] && atoi( humans ) == -1 ) {
@@ -10321,10 +10321,10 @@ void UI_Init( qboolean inGameLoad ) {
 	trap->GetGlconfig( &uiInfo.uiDC.glconfig );
 
 	// for 640x480 virtualized screen. A renderer of this tree makes the grid wider than 640 on a wide window
-	// instead of stretching it, and says by how much in the cvar r_2dBias: x then runs from -bias to 640 + bias and
+	// instead of stretching it, and says by how much in the cvar v_2dBias: x then runs from -bias to 640 + bias and
 	// the menus sit in the middle. Any other engine leaves the bias at 0.
 	uiInfo.uiDC.yscale = uiInfo.uiDC.glconfig.vidHeight * (1.0/480.0);
-	uiInfo.uiDC.bias = trap->Cvar_VariableValue( "r_2dBias" );
+	uiInfo.uiDC.bias = trap->Cvar_VariableValue( "v_2dBias" );
 	if ( uiInfo.uiDC.bias < 0.0f ) {
 		uiInfo.uiDC.bias = 0.0f;
 	}
@@ -10392,7 +10392,7 @@ void UI_Init( qboolean inGameLoad ) {
 	uiInfo.uiDC.runCinematicFrame				= &UI_RunCinematicFrame;
 	uiInfo.uiDC.ext.Font_StrLenPixels			= trap->ext.R_Font_StrLenPixels;
 	// the engine of this tree says in a cvar that it has the call (ui_public.h), any other ends ext before it
-	uiInfo.uiDC.registerShaderRGBA				= ( trap->Cvar_VariableValue( "cl_uiSkin" ) == 1.0f ) ? trap->ext.R_RegisterShaderRGBA : NULL;
+	uiInfo.uiDC.registerShaderRGBA				= ( trap->Cvar_VariableValue( "v_uiSkin" ) == 1.0f ) ? trap->ext.R_RegisterShaderRGBA : NULL;
 	uiInfo.uiDC.statValue						= NULL;
 	uiInfo.uiDC.addPolyToScene					= &UI_AddPolyToScene;
 
@@ -10476,7 +10476,7 @@ void UI_Init( qboolean inGameLoad ) {
 =================
 UI_OpenBoxFrame
 
-Once a frame, after the menus were painted (their items are where they are shown then): the cvar ui_openBox says
+Once a frame, after the menus were painted (their items are where they are shown then): the cvar v_openBox says
 how much of the 640 x 480 they take, "x y w h", or nothing while none is open. The cgame reads it for the panel
 behind a menu that stands in the level.
 =================
@@ -10493,7 +10493,7 @@ static void UI_OpenBoxFrame( void ) {
 	}
 	if ( strcmp( now, said ) ) {
 		Q_strncpyz( said, now, sizeof( said ) );
-		trap->Cvar_Set( "ui_openBox", now );
+		trap->Cvar_Set( "v_openBox", now );
 	}
 }
 
@@ -10515,7 +10515,7 @@ void UI_Refresh( int realtime )
 
 	// The cgame of this tree puts the menus of a running game onto a panel in the level, and the engine says so:
 	// the panel is as wide as a menu is, so nothing reaches past the 640 there, whatever the window is like.
-	uiInfo.uiDC.wide = trap->Cvar_VariableValue( "cl_uiPlane" ) ? 0.0f : uiInfo.uiDC.bias;
+	uiInfo.uiDC.wide = trap->Cvar_VariableValue( "v_uiPlane" ) ? 0.0f : uiInfo.uiDC.bias;
 	if ( uiInfo.uiDC.cursorx < -(int)uiInfo.uiDC.wide ) {
 		uiInfo.uiDC.cursorx = -(int)uiInfo.uiDC.wide;
 	}

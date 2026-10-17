@@ -992,7 +992,7 @@ static void Prop_HugSpot( const gentity_t *holder, vec3_t spot ) {
 
 	VectorSet( angles, 0.0f, holder->client->ps.viewangles[YAW], 0.0f );
 	AngleVectors( angles, fwd, NULL, NULL );
-	VectorMA( holder->client->ps.origin, Com_Clamp( 0.0f, 64.0f, g_grabHugDist.value ), fwd, spot );
+	VectorMA( holder->client->ps.origin, Com_Clamp( 0.0f, 64.0f, vs_grabHugDist.value ), fwd, spot );
 	spot[2] += GRAB_PLAYER_LIFT;
 }
 

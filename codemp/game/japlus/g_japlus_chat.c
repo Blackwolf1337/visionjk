@@ -227,7 +227,7 @@ void JP_UserinfoChanged( gentity_t *ent, const char *userinfo ) {
 		if ( disable >= 0 )
 			ent->client->pers.jp.pluginDisable = disable;
 	}
-	ent->client->pers.jp.utf8 = atoi( Info_ValueForKey( userinfo, "cl_utf8Text" ) ) ? qtrue : qfalse;
+	ent->client->pers.jp.utf8 = atoi( Info_ValueForKey( userinfo, "v_utf8Text" ) ) ? qtrue : qfalse;
 	G_StatusUserinfo( ent, userinfo );
 }
 
@@ -235,7 +235,7 @@ void JP_UserinfoChanged( gentity_t *ent, const char *userinfo ) {
 =================
 JP_ChatCopy, JP_ChatFor: chat between clients that write UTF-8 and clients that do not
 
-A client of this tree types UTF-8 and says so in its userinfo (cl_utf8Text, pers.jp.utf8). Any other client
+A client of this tree types UTF-8 and says so in its userinfo (v_utf8Text, pers.jp.utf8). Any other client
 reads and writes one byte as one character of Windows-1252. JP_ChatFor() gives the text of a line as the
 client `other` has to get it: what a UTF-8 client wrote goes to a legacy client as Windows-1252, with '?' for
 what that does not have. Nothing else is converted: a client that reads UTF-8 takes a byte that is no UTF-8 as

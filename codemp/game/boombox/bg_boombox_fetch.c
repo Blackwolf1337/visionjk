@@ -547,7 +547,7 @@ qboolean Box_LookupStart( boxLookup_t *l, const boxTools_t *tools, const char *t
 	Box_Arg( &a, "--" );
 	Box_Arg( &a, target );
 	if ( a.full ) {
-		Q_strncpyz( why, "the words for yt-dlp are too many (g_boomboxYtdlpArgs)", whySize );
+		Q_strncpyz( why, "the words for yt-dlp are too many (vs_boomboxYtdlpArgs)", whySize );
 		return qfalse;
 	}
 	l->len = 0;
@@ -724,7 +724,7 @@ qboolean Box_StreamStart( boxStream_t *s, const boxTools_t *tools, const char *i
 	Box_Arg( &decode, "pipe:1" );
 
 	if ( fetch.full || decode.full ) {
-		Q_strncpyz( why, "the words for yt-dlp are too many (g_boomboxYtdlpArgs)", whySize );
+		Q_strncpyz( why, "the words for yt-dlp are too many (vs_boomboxYtdlpArgs)", whySize );
 		return qfalse;
 	}
 	if ( !Box_ProcStart( &s->proc, fetch.argv, decode.argv, now ) ) {

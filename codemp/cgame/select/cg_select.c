@@ -118,7 +118,7 @@ static struct {
 	qboolean	held;					// +cursor
 	qboolean	toggled;				// "cursor"
 	qboolean	catching;				// this file asked for the keys and the mouse
-	qboolean	quiet;					// and told the engine that its player does not type meanwhile (cg_catchQuiet)
+	qboolean	quiet;					// and told the engine that its player does not type meanwhile (v_catchQuiet)
 	int			hover;					// the player under the pointer, -1: none
 	int			selected;				// the player whose card is open, -1: none
 	// what the card and the name of the player under the pointer are drawn on: beside their player, a little late
@@ -174,7 +174,7 @@ void CG_SelectInit( void ) {
 
 // is the mouse free for pointing at players
 static qboolean Select_Free( void ) {
-	return (qboolean)( cg_selectPlayers.integer && cg.snap && !cg.demoPlayback
+	return (qboolean)( v_selectPlayers.integer && cg.snap && !cg.demoPlayback
 		&& ( sel.held || sel.toggled || CG_ChatIsOpen() || CG_ScoresPicking() ) );
 }
 
@@ -367,8 +367,8 @@ static void Select_Hull( void ) {
 		return;
 	}
 	sel.hullTried = qtrue;
-	// the flag came with the engine that says cl_uiSkin
-	trap->Cvar_VariableStringBuffer( "cl_uiSkin", value, sizeof( value ) );
+	// the flag came with the engine that says v_uiSkin
+	trap->Cvar_VariableStringBuffer( "v_uiSkin", value, sizeof( value ) );
 	if ( atoi( value ) == 1 && Skin_Ready() ) {
 		for ( i = 0; i < SELECT_SHELLS; i++ ) {
 			memset( white, 255, sizeof( white ) );
@@ -396,7 +396,7 @@ around the figure, and no line of them crosses it.
 static qboolean Select_Outlined( int clientNum ) {
 	// (not the own figure: the own card, opened in the scoreboard, is no reason to light oneself up)
 	// (a box in the pointer has it too, red where it can not be put)
-	if ( clientNum < 0 || clientNum >= SELECT_BOX + BOX_MAX || !cg_selectOutline.integer || !cg.snap || clientNum == cg.snap->ps.clientNum
+	if ( clientNum < 0 || clientNum >= SELECT_BOX + BOX_MAX || !v_selectOutline.integer || !cg.snap || clientNum == cg.snap->ps.clientNum
 		|| ( clientNum != sel.hover && clientNum != sel.selected && clientNum != Select_Held() ) || !Select_Free() ) {
 		return qfalse;
 	}
@@ -829,9 +829,9 @@ static void Select_Rows( int clientNum ) {
 		sel.rows[sel.numRows++] = ACT_LOUDER;
 	}
 	sel.rows[sel.numRows++] = ACT_HIDE_CHAT;
-	trap->Cvar_VariableStringBuffer( "cl_cgameChat", value, sizeof( value ) );
+	trap->Cvar_VariableStringBuffer( "v_cgameChat", value, sizeof( value ) );
 	if ( atoi( value ) == 1 ) {
-		if ( cg_chatInput.integer ) {
+		if ( v_chatInput.integer ) {
 			sel.rows[sel.numRows++] = ACT_WHISPER;
 		}
 		sel.rows[sel.numRows++] = ACT_COPY;
@@ -1047,7 +1047,7 @@ static void Select_Run( selectAct_t act, int clientNum ) {
 		CG_BoomboxDo( box, "remove" );
 		break;
 	case ACT_MUTE:
-		trap->SendConsoleCommand( va( "%s %i\n", CG_VoiceMuted( clientNum ) ? "voice_unmute" : "voice_mute", clientNum ) );
+		trap->SendConsoleCommand( va( "%s %i\n", CG_VoiceMuted( clientNum ) ? "v_voice_unmute" : "v_voice_mute", clientNum ) );
 		return;
 	case ACT_QUIETER:
 		CG_VoiceLouder( clientNum, -1 );
@@ -1060,7 +1060,7 @@ static void Select_Run( selectAct_t act, int clientNum ) {
 		return;
 	case ACT_WHISPER:
 		Select_Close();
-		trap->SendConsoleCommand( va( "cg_chatopen 2 %i\n", clientNum ) );
+		trap->SendConsoleCommand( va( "v_chatOpen 2 %i\n", clientNum ) );
 		return;
 	case ACT_WATCH:
 		trap->SendClientCommand( va( "follow %i", clientNum ) );
@@ -1406,7 +1406,7 @@ void CG_SelectDraw( void ) {
 	// another engine every catcher of keys is talking, as it always was.
 	if ( sel.quiet != sel.catching ) {
 		sel.quiet = sel.catching;
-		trap->Cvar_Set( "cg_catchQuiet", sel.quiet ? "1" : "0" );
+		trap->Cvar_Set( "v_catchQuiet", sel.quiet ? "1" : "0" );
 	}
 	if ( !free ) {
 		sel.hover = -1;
@@ -1448,7 +1448,7 @@ void CG_SelectDraw( void ) {
 	sel.hover = ( Select_RowAt() >= 0 || CG_ScoresPointerOver() || Select_Held() >= 0 ) ? -1 : Select_Pick();
 	if ( sel.hover >= 0 && sel.hover != sel.selected ) {
 		Select_Hull();
-		if ( !sel.hull[0] || !cg_selectOutline.integer ) {
+		if ( !sel.hull[0] || !v_selectOutline.integer ) {
 			Select_DrawCorners( sel.hover );
 		}
 	}

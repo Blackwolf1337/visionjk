@@ -375,7 +375,7 @@ typedef struct uiImport_s {
 		float			(*R_Font_StrLenPixels)					( const char *text, const int iFontIndex, const float scale );
 		void			(*AddCommand)							( const char *cmd_name );
 		void			(*RemoveCommand)						( const char *cmd_name );
-		// Only an engine that sets the cvar cl_uiSkin to 1 has this one, any other ends the structure before
+		// Only an engine that sets the cvar v_uiSkin to 1 has this one, any other ends the structure before
 		// it: look at the cvar before touching it. A shader for a picture the ui computed (ui_skin.c), as the
 		// call of the same name for the cgame (cg_public.h); with RGBA_SHADER_OVER it is one for the 2D. Such an
 		// engine also knows the fonts "vision_sans" and "vision_mono" (R_RegisterFont).

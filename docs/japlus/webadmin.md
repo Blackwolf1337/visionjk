@@ -37,18 +37,18 @@ webuser add emir owner
 prints a password once. In the server config:
 
 ```
-seta g_webPort 8080
-seta g_webBind "0.0.0.0"
+seta vs_webPort 8080
+seta vs_webBind "0.0.0.0"
 ```
 
 | Cvar | Default | Meaning |
 |------|---------|---------|
-| `g_webPort` | 80 | TCP port. Below 1024 needs root on Linux |
-| `g_webBind` | 0.0.0.0 | IPv4 address to listen on. `0.0.0.0` or empty: every interface, the panel is reached from the network. `127.0.0.1`: this machine only. A value that is no address: 127.0.0.1, with a line in the log |
-| `g_webProxy` | empty | the IPv4 address of the reverse proxy in front of the panel. Then only that address is let in, see "Behind a reverse proxy" |
-| `g_webBasicAuth` | 0 | 1: a script may send the token of its account as the password of basic auth behind the name of the account |
-| `g_webPassword` | empty | from before the accounts. A server that has it and no account yet gets the account `owner` with that password at its next map, once. It is not read after that: take it out of the config |
-| `g_webRoot` | empty | folder with the files of the page (`codemp/game/webadmin/page` of the source), served instead of the built in page, for working on the page: the server puts `index.html` and the files it includes together at every load |
+| `vs_webPort` | 80 | TCP port. Below 1024 needs root on Linux |
+| `vs_webBind` | 0.0.0.0 | IPv4 address to listen on. `0.0.0.0` or empty: every interface, the panel is reached from the network. `127.0.0.1`: this machine only. A value that is no address: 127.0.0.1, with a line in the log |
+| `vs_webProxy` | empty | the IPv4 address of the reverse proxy in front of the panel. Then only that address is let in, see "Behind a reverse proxy" |
+| `vs_webBasicAuth` | 0 | 1: a script may send the token of its account as the password of basic auth behind the name of the account |
+| `vs_webPassword` | empty | from before the accounts. A server that has it and no account yet gets the account `owner` with that password at its next map, once. It is not read after that: take it out of the config |
+| `vs_webRoot` | empty | folder with the files of the page (`codemp/game/webadmin/page` of the source), served instead of the built in page, for working on the page: the server puts `index.html` and the files it includes together at every load |
 
 Port and bind are latched, they take effect at the next map start. Open `http://server:8080/` and log in.
 
@@ -103,11 +103,11 @@ HTTPS, and it should never be reachable from the internet without one: a session
 network in the clear can be taken along.
 
 ```
-seta g_webBind "0.0.0.0"          // or the address of the interface the proxy reaches
-seta g_webProxy "192.168.20.20"   // the address the proxy connects from
+seta vs_webBind "0.0.0.0"          // or the address of the interface the proxy reaches
+seta vs_webProxy "192.168.20.20"   // the address the proxy connects from
 ```
 
-With `g_webProxy` set only that address is let in, every other connection is closed at once. The proxy says
+With `vs_webProxy` set only that address is let in, every other connection is closed at once. The proxy says
 who the visitor is: `X-Real-IP`, else the last entry of `X-Forwarded-For`. That address gets the wait after
 wrong logins and stands in the log. With `X-Forwarded-Proto: https` the cookie of a session is marked `Secure`.
 
@@ -161,7 +161,7 @@ lines) into what is done to the server and what is done to a player, and `frame(
 into one function for each thing a frame draws.
 
 What was checked for the split, on Linux: the page put together by the build and the one the server puts
-together for `g_webRoot` are the page as it was before the split, byte for byte (322,968 bytes). Of the 3,900
+together for `vs_webRoot` are the page as it was before the split, byte for byte (322,968 bytes). Of the 3,900
 lines of the one C file all but four are in the new files, once each (the four: a title and a comment that
 were no longer true), and the files compile without a warning. After each step the checks of the panel ran
 against a private server: 25 scripts with about 230 checks, every route once by hand, the file manager with a
@@ -1260,7 +1260,7 @@ Also changed:
   console command in JA+ and toggles the flag directly. Left out: `amplayefx` and `amtest`, which JA+ does not
   offer on the console. Kick, ban, team and teleport were there already. Added without a test run.
 - New: hallucinations for one player (`codemp/game/fun/g_schizo.c`), the "Schizophrenia" button in the player panel,
-  action `schizo`, also the server console command `schizo <player>`. Every few seconds something happens that
+  action `schizo`, also the server console command `vs_schizo <player>`. Every few seconds something happens that
   only he gets: blaster bolts pass him, a saber is switched on behind him, steps come closer, voices, breathing
   and screams, a detonator beeps and goes off, the lock tone of a rocket launcher, thunder with a shaking view,
   chat lines other players never wrote, text on his screen, a kill message between two other players, a hit from
@@ -1285,13 +1285,13 @@ Also changed:
   and it is not for duels. It is in the emote list the server prints. In the panel the "Poop" button sends it
   for the selected player (action `poop`). Server side only. Added without a test run.
 - New: flatulence for one player (`codemp/game/fun/g_flatulence.c`), the "Flatulence" button in the player panel,
-  action `flatulence`, also the server console command `flatulence <player>`. Every 1.5 to 6 seconds he breaks
+  action `flatulence`, also the server console command `vs_flatulence <player>`. Every 1.5 to 6 seconds he breaks
   wind: a sound everybody near him hears (the snorts of the rancor, the talk of the gonk droid, an air burst)
   and a green cloud behind him (the gas cloud of the noghri stick). One in six is a big one with three clouds
   that shoves him forward, not in a duel. Server side only, stock sound and effect events. Gone when he leaves or
   the map changes. Added without a test run.
 - New: disorientation for one player (`codemp/game/fun/g_disorient.c`), the "Disorient" button in the player panel,
-  action `disorient`, also the server console command `disorient <player>`. The view sways all the time (pitch,
+  action `disorient`, also the server console command `vs_disorient <player>`. The view sways all the time (pitch,
   yaw and roll, two sines each with periods that do not fit together). Every 3.5 to 9 seconds it is thrown around
   by 70 to 200 degrees with a screen shake only this client gets, and the player stumbles a step to the side (not
   in a duel, not in the air). One in four of those is a whirl instead: the view turns once or twice around. All
@@ -1308,7 +1308,7 @@ Also changed:
   saved. The file is Latin-1 on disk and UTF-8 on the page, a character the game does not have becomes `?`.
   A request may be 64 KB now (16 KB before), the page refuses a text over 60000 bytes. The passwords in the
   file are shown as they are, and whoever can log in can change them: the panel is only as safe as
-  `g_webPassword`. The security log gets "config saved" with the size, never the text. Executing sets cvars at
+  `vs_webPassword`. The security log gets "config saved" with the size, never the text. Executing sets cvars at
   once, latched ones wait for the next map, and a line that changes the map changes the map. Added without a
   test run (the read was called once after the deploy, nothing was saved).
   The text has colors: commands of the console, cvar names, quoted text, numbers and comments, and inside
@@ -1452,8 +1452,8 @@ Also changed:
     before it was seen next to him). Who held, shoved, pushed or shot it in the five seconds before is the
     attacker, and is not hurt by it himself in the first 0.4 seconds. A crate of mass 6 at 600 units a second
     does about 50.
-  - New server command `props`: lists the props with their corners, faces, mass, place, lowest and highest
-    corner and whether they lie still. `props <number>`: what that body touches.
+  - New server command `vs_props`: lists the props with their corners, faces, mass, place, lowest and highest
+    corner and whether they lie still. `vs_props <number>`: what that body touches.
   - Checked before the user asked me to stop testing and build it: `bg_props.c` alone in a small program (300
     clouds of points give sound hulls, a nearest spot is off by 1.3 units at most where a face has no width,
     4000 moves of a box against turned shapes stop where stepping along the way says they should, 0.3 units
@@ -1486,7 +1486,7 @@ Also changed:
     the emote. If something else has his hands when he is taken (he lies on the ground, he is choked) that
     runs out first.
   - The one who is carried is right in front of the admin, turned to him (his yaw is set every frame, his
-    pitch is his own), 4 units off the ground, `g_grabHugDist` units away (default 10, 0 to 64). The emote
+    pitch is his own), 4 units off the ground, `vs_grabHugDist` units away (default 10, 0 to 64). The emote
     itself can not have two players closer than 30 units, their boxes are 30 wide, and at that distance the
     arms do not reach. So the two of a hug stand in each other, and neither is there for the moves of the
     other: the server takes the other one out of every trace of the move (`SV_PMTrace`, `G_PropMate`). That
@@ -1528,7 +1528,7 @@ Also changed:
   he gets more than 128 units from his place, and when the admin logs out. Not taken: spectators, players in a
   duel, in a vehicle or in noclip, and nobody who is carried takes a player himself (two who hold each other
   would lift each other off the ground). Bots can be taken. Of a prop and a player in front of him he takes
-  what is closer to his line of sight. The default of 10 units is what the user chose in the game, `g_grabHugDist`
+  what is closer to his line of sight. The default of 10 units is what the user chose in the game, `vs_grabHugDist`
   sets it while the server runs. A stock client knows nothing of `STAT_CARRY`: for somebody who plays with
   one, carrying and being carried jerks, his prediction runs into the other one. Built for Linux and
   Windows, not tried in the game by me.
@@ -1787,7 +1787,7 @@ Also changed:
   command for that, `clipbrush off|on <number> [<number> ...]` (`all` for every one, without arguments it lists
   what is off): `CM_SetClipBrush` in `cm_load.cpp` takes the contents of the brush away or gives it those of
   its shader again, for a brush that is a clip and not solid, so that nobody is let through a wall he can see.
-  The numbers that are off are in `sv_clipOff`, and a load or a restart of the map puts every clip back. In the
+  The numbers that are off are in `vs_clipOff`, and a load or a restart of the map puts every clip back. In the
   tab a click on the map selects the clip under the mouse (drawn in pink, the ones that are off in red, the
   selected one in yellow). "Turn off" and "Turn on" switch it, "All on again" all of them. "Move it" puts a
   blocking wall of its size where it is and turns the clip off: the wall is dragged and shaped in the World tab,
@@ -1810,7 +1810,7 @@ Also changed:
   new number with it. "Move it" on a clip puts a wall of its size there and turns the clip off. "Save" writes
   `wallblocks/<map>.cfg` with the walls and the clips that are off, "Revert to saved" loads it again, and the
   start of a map loads it (`JP_LoadBlockWalls`). Nothing is kept without Save.
-  The clips that are off are told to the clients now: the engine keeps them in the system info as `cm_clipOff`,
+  The clips that are off are told to the clients now: the engine keeps them in the system info as `vs_clipRanges`,
   and a client of this tree turns the same brushes off in its own collision (`CL_ClipOffChanged`), so it
   predicts the moves the server makes. Its prediction code is unchanged. A client that does not know the key
   still has the clip and is set right by the server after a moment, as before. `server.md` says what another
@@ -1818,7 +1818,7 @@ Also changed:
   Tried on a private server and in a headless browser: walls placed, moved, resized, refused when too large,
   saved, reverted and loaded by a start of the map, the tab driven through all of it without an error of the
   page, a box trigger of the World tab still shaped by its handles. Not seen in a game, and no client was
-  connected, so that a client applies `cm_clipOff` is untested.
+  connected, so that a client applies `vs_clipRanges` is untested.
 - New on 2026-10-10: the tab Textures of the editor, the texture swap (the user asked whether textures of a
   map can be changed without modifying the client). They can: the game has shader remaps for the entities of a
   map (`targetShaderName`, `targetShaderNewName`), the server keeps a table and tells it in the configstring
@@ -1938,12 +1938,12 @@ To take a later JKAdmin commit: apply its diff and keep the `JA+` blocks in `WA_
   every class the editor offers is placed bare by a check (`steps_guard.js`) and the server has to be there
   after it. What that does not cover: keys with values that are wrong, and other game types.
 - The lights of a map can not be shown: the compiler takes them out of the map file.
-- Plain HTTP, and it listens on every interface unless `g_webBind` says otherwise: the password of a login and
+- Plain HTTP, and it listens on every interface unless `vs_webBind` says otherwise: the password of a login and
   the cookie of a session cross the network as they are. Where that network is not your own, put a reverse
-  proxy with HTTPS in front (`g_webProxy`, see "Behind a reverse proxy"), or set `g_webBind 127.0.0.1` and use
+  proxy with HTTPS in front (`vs_webProxy`, see "Behind a reverse proxy"), or set `vs_webBind 127.0.0.1` and use
   an SSH tunnel. The security pass had made localhost the default; since 2026-10-08 it is every interface
   again, by decision of the owner of this fork, who opens the panel from other machines. A config that still
-  has `g_webBind ""` from that time listens on every interface now.
+  has `vs_webBind ""` from that time listens on every interface now.
 - A password is hashed in the frame of the game it arrives in: about 20 ms in which the server does nothing
   else. One a second at most, so a flood of logins costs every player at most one late frame a second.
 - An owner of the panel owns the server: the console runs anything, the file manager writes any file of the

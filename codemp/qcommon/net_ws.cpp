@@ -35,7 +35,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define WS_REOPEN_MSEC		1000
 
 static cvar_t	*net_enabled;
-static cvar_t	*net_wsHost;
+static cvar_t	*v_wsHost;
 
 static qboolean	ws_enabled;
 static EMSCRIPTEN_WEBSOCKET_T ws_socket;	// 0: none
@@ -125,7 +125,7 @@ static void NET_WS_Open( void ) {
 	char url[MAX_STRING_CHARS];
 	int now = Sys_Milliseconds();
 
-	if ( !ws_enabled || ws_socket || !net_wsHost->string[0] ) {
+	if ( !ws_enabled || ws_socket || !v_wsHost->string[0] ) {
 		return;
 	}
 	if ( ws_openTime && now - ws_openTime < WS_REOPEN_MSEC ) {
@@ -135,7 +135,7 @@ static void NET_WS_Open( void ) {
 
 	// a page that came over https may only open a socket that is encrypted too
 	Com_sprintf( url, sizeof( url ), "%s://%s/net",
-		EM_ASM_INT( { return location.protocol == 'https:'; } ) ? "wss" : "ws", net_wsHost->string );
+		EM_ASM_INT( { return location.protocol == 'https:'; } ) ? "wss" : "ws", v_wsHost->string );
 
 	emscripten_websocket_init_create_attributes( &attr );
 	attr.url = url;
@@ -163,7 +163,7 @@ static void NET_WS_ServerAddress( void ) {
 	char host[MAX_STRING_CHARS];
 	char *colon;
 
-	Q_strncpyz( host, net_wsHost->string, sizeof( host ) );
+	Q_strncpyz( host, v_wsHost->string, sizeof( host ) );
 	colon = strchr( host, ':' );
 	if ( colon ) {
 		*colon = '\0';
@@ -192,8 +192,8 @@ qboolean Sys_StringToAdr( const char *s, netadr_t *a ) {
 	if ( inet_pton( AF_INET, s, a->ip ) == 1 ) {
 		return qtrue;
 	}
-	if ( !Q_stricmp( s, "localhost" ) || ( !Q_stricmpn( s, net_wsHost->string, length )
-			&& ( net_wsHost->string[length] == '\0' || net_wsHost->string[length] == ':' ) ) ) {
+	if ( !Q_stricmp( s, "localhost" ) || ( !Q_stricmpn( s, v_wsHost->string, length )
+			&& ( v_wsHost->string[length] == '\0' || v_wsHost->string[length] == ':' ) ) ) {
 		memcpy( a->ip, ws_server.ip, sizeof( a->ip ) );
 		return qtrue;
 	}
@@ -244,7 +244,7 @@ Sys_ShowIP
 ====================
 */
 void Sys_ShowIP( void ) {
-	Com_Printf( "WebSocket to %s: %s\n", net_wsHost->string, ws_open ? "open" : "not open" );
+	Com_Printf( "WebSocket to %s: %s\n", v_wsHost->string, ws_open ? "open" : "not open" );
 }
 
 /*
@@ -287,10 +287,10 @@ NET_Config
 ====================
 */
 void NET_Config( qboolean enableNetworking ) {
-	qboolean modified = (qboolean)( net_enabled->modified || net_wsHost->modified );
+	qboolean modified = (qboolean)( net_enabled->modified || v_wsHost->modified );
 
 	net_enabled->modified = qfalse;
-	net_wsHost->modified = qfalse;
+	v_wsHost->modified = qfalse;
 	if ( !net_enabled->integer ) {
 		enableNetworking = qfalse;
 	}
@@ -322,7 +322,7 @@ NET_Init
 void NET_Init( void ) {
 	net_enabled = Cvar_Get( "net_enabled", "1", CVAR_LATCH | CVAR_ARCHIVE_ND );
 	// host and port of the page, the page sets it
-	net_wsHost = Cvar_Get( "net_wsHost", "", CVAR_INIT, "Where the WebSocket to the server goes: host:port" );
+	v_wsHost = Cvar_Get( "v_wsHost", "", CVAR_INIT, "Where the WebSocket to the server goes: host:port" );
 	net_enabled->modified = qtrue;
 	NET_Config( qtrue );
 	Cmd_AddCommand( "net_restart", NET_Restart_f, "Restart the networking sub-system" );

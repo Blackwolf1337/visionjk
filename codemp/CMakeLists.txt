@@ -406,7 +406,7 @@ if(BuildMPEngine)
 				if(SteamAudioModule)
 					message(STATUS "Steam Audio: phonon.wasm is built from lib/steamaudio and goes next to the client")
 				else()
-					message(STATUS "Steam Audio: what phonon.wasm is built from is not there (see above). The client is built with s_spatial, the file has to be put next to it by hand (docs/japlus/audio.md)")
+					message(STATUS "Steam Audio: what phonon.wasm is built from is not there (see above). The client is built with v_spatial, the file has to be put next to it by hand (docs/japlus/audio.md)")
 				endif()
 			else()
 				# The library is no part of this tree and is not built here: Valve gives it out ready made, in the zip
@@ -471,11 +471,11 @@ if(BuildMPEngine)
 					set(SteamAudioLibraryFile "${SteamAudioSDK}/${SteamAudioLibrary}")
 					message(STATUS "Steam Audio: ${SteamAudioLibraryFile} goes next to the client")
 				else()
-					message(STATUS "Steam Audio: no library for this system in ${SteamAudioSDK}. The client is built with s_spatial, the library has to be put next to it by hand (docs/japlus/audio.md)")
+					message(STATUS "Steam Audio: no library for this system in ${SteamAudioSDK}. The client is built with v_spatial, the library has to be put next to it by hand (docs/japlus/audio.md)")
 				endif()
 			endif()
 		else()
-			message(STATUS "Steam Audio: lib/steamaudio is not checked out (git submodule update --init), the client is built without s_spatial")
+			message(STATUS "Steam Audio: lib/steamaudio is not checked out (git submodule update --init), the client is built without v_spatial")
 		endif()
 	endif()
 
@@ -856,7 +856,7 @@ if(BuildMPDed)
 		set(MPDedFiles ${MPDedFiles} ${MPDedSysFiles})
 	endif(WIN32)
 
-	# the web host of the dedicated server: page, game files and WebSocket peers (sv_webPort). It appends to
+	# the web host of the dedicated server: page, game files and WebSocket peers (vs_clientWebPort). It appends to
 	# MPDedFiles and MPDedIncludeDirectories.
 	include("${MPDir}/server/web/sources.cmake" OPTIONAL)
 

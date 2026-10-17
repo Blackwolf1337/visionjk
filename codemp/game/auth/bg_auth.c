@@ -318,7 +318,7 @@ qboolean BG_AuthReadKeyFile( const char *text, byte *secret, char *comment, int 
 		return Auth_Why( why, whySize, "the file is damaged" );
 	}
 	if ( len != 4 || memcmp( data, "none", 4 ) ) {
-		return Auth_Why( why, whySize, "the key has a passphrase. Load it into an ssh-agent and set cg_authAgent 1" );
+		return Auth_Why( why, whySize, "the key has a passphrase. Load it into an ssh-agent and set v_authAgent 1" );
 	}
 	if ( !Auth_GetString( buf, size, &pos, &data, &len ) || !Auth_GetString( buf, size, &pos, &data, &len )
 		|| size - pos < 4 || Auth_GetLong( buf + pos ) != 1 ) {

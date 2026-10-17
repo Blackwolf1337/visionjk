@@ -86,8 +86,8 @@ there and with it everything on the device (a map change), so the start is over.
 ===============
 */
 qboolean VK_InitShared( void ) {
-	r_vkStatic = ri.Cvar_Get( "r_vkStatic", "1", CVAR_CHEAT, "Level and models from buffers on the device. 0: all vertices are built on the CPU every frame" );
-	r_vkMerge = ri.Cvar_Get( "r_vkMerge", "1", CVAR_CHEAT, "Sprites of several entities in one batch where the picture stays the same. 0: a batch ends with its entity" );
+	v_vkStatic = ri.Cvar_Get( "v_vkStatic", "1", CVAR_CHEAT, "Level and models from buffers on the device. 0: all vertices are built on the CPU every frame" );
+	v_vkMerge = ri.Cvar_Get( "v_vkMerge", "1", CVAR_CHEAT, "Sprites of several entities in one batch where the picture stays the same. 0: a batch ends with its entity" );
 
 	// the builtin images are made again, the copy of the frame has to be put into the texture table again
 	vk.screenSlot = -1;
@@ -546,7 +546,7 @@ shader must take none of that, or it must be the same for both entities.
 VK_ShaderMergesEntities: 0 the shader takes something from its entity, 1 it takes nothing, 2 only the time.
 ===============
 */
-cvar_t	*r_vkMerge;		// 0: a batch ends with its entity, as in rd-vanilla
+cvar_t	*v_vkMerge;		// 0: a batch ends with its entity, as in rd-vanilla
 
 // the render flags that change how a batch is drawn
 #define VK_RF_BATCH	( RF_DEPTHHACK | RF_NODEPTH | RF_VOLUMETRIC | RF_FORCE_ENT_ALPHA | RF_RGB_TINT | RF_DISTORTION \
@@ -794,7 +794,7 @@ static void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 		qboolean merge = qfalse;
 
 		if ( entityNum != oldEntityNum && shader == oldShader && fogNum == oldFogNum && dlighted == oldDlighted
-			&& !shader->entityMergable && r_vkMerge->integer ) {
+			&& !shader->entityMergable && v_vkMerge->integer ) {
 			if ( shader != mergeShader ) {
 				mergeShader = shader;
 				shaderMerges = VK_ShaderMergesEntities( shader );
@@ -957,7 +957,7 @@ static const void *RB_DrawSurfs( const void *data ) {
 	backEnd.viewParms = cmd->viewParms;
 	// A module asked for the scene out of focus (RE_SetDepthOfField): the view of the level itself, not a
 	// mirror in it, the sky of a portal or a model of the HUD. The 2D comes afterwards and is sharp.
-	const qboolean focus = (qboolean)( r_dofAmount > 0.0f && r_menuBlur->value > 0.0f && !backEnd.viewParms.isPortal
+	const qboolean focus = (qboolean)( r_dofAmount > 0.0f && v_menuBlur->value > 0.0f && !backEnd.viewParms.isPortal
 		&& !( backEnd.refdef.rdflags & ( RDF_NOWORLDMODEL | RDF_SKYBOXPORTAL ) ) );
 
 	rb_overLater = focus;

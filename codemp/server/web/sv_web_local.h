@@ -22,9 +22,9 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 sv_web_local.h -- what the files of the web host of the dedicated server share. Not from OpenJK and not from JA+.
 
 The client also runs in a browser (WebAssembly), and a page can not send UDP. So the dedicated server listens
-on a TCP port of its own (sv_webPort) and is to a browser what it is to a client over UDP:
+on a TCP port of its own (vs_clientWebPort) and is to a browser what it is to a client over UDP:
 
-  the page         GET /               index.html and the files next to it, from the folder sv_webRoot
+  the page         GET /               index.html and the files next to it, from the folder vs_clientWebRoot
   the game files   GET /manifest.json  the pk3 files of the search path of the server, with size and checksum
                    GET /pk3/<path>     one of them, whole or a part of it (Range)
   the packets      GET /net            becomes a WebSocket (RFC 6455). Every binary message on it is one
@@ -200,7 +200,7 @@ typedef struct webFrame_s {
 #define WEB_FRAME_BAD			-1			// against the protocol
 #define WEB_FRAME_LONG			-2			// more than a datagram
 
-extern cvar_t	*sv_webRoot;
+extern cvar_t	*vs_clientWebRoot;
 
 // sv_web.cpp
 qboolean SV_WebSocketFits( SOCKET s );

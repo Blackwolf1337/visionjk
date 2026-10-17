@@ -3410,7 +3410,7 @@
 			group				japluscontrols
 			type				ITEM_TYPE_BIND
 			text				"Voice Chat (Talk)"
-			cvar				"+voice"
+			cvar				"+v_voice"
 			rect				220 121 300 20
 			textalign			ITEM_ALIGN_RIGHT
 			textalignx			151
@@ -3444,7 +3444,7 @@
 			group				japluscontrols
 			type				ITEM_TYPE_BIND
 			text				"Bot Mode (On/Off)"
-			cvar				"cg_botMode !"
+			cvar				"v_botMode !"
 			rect				220 141 300 20
 			textalign			ITEM_ALIGN_RIGHT
 			textalignx			151
@@ -3478,7 +3478,7 @@
 			group				japluscontrols
 			type				ITEM_TYPE_BIND
 			text				"Clan Radio (Talk)"
-			cvar				"+voiceclan"
+			cvar				"+v_voiceclan"
 			rect				220 161 300 20
 			textalign			ITEM_ALIGN_RIGHT
 			textalignx			151

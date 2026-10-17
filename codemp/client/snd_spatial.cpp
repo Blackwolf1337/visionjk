@@ -24,7 +24,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 //
 // The work is done by Steam Audio of Valve (lib/steamaudio, a submodule, Apache 2.0). The engine is not linked
 // against it: it takes the header from there and loads the library when the sound system starts, every function
-// through a pointer. Without the library file, or with s_spatial 0, nothing in here runs and the game sounds as
+// through a pointer. Without the library file, or with v_spatial 0, nothing in here runs and the game sounds as
 // it always did.
 //
 // The client for a browser does the same with phonon.wasm, a module the page takes along when the server has
@@ -257,7 +257,7 @@ static int				spatialTableCount;
 // of it. An explosion is mostly lows (rocket, thermal, detpack, concussion: half of the energy is under
 // 120 Hz), so its lows go to both ears a second time, past HRTF and panning.
 #define SPATIAL_SHOCK_HZ			120.0f	// the thump is what the sound has below this
-#define SPATIAL_SHOCK_GAIN			1.0f	//	and this much of it for each ear, at s_spatialShock 1
+#define SPATIAL_SHOCK_GAIN			1.0f	//	and this much of it for each ear, at v_spatialShock 1
 
 // Which sounds are explosions: "explo" in the name of the file (the folder sound/weapons/explosions also has
 // glass and debris in it), or one of these in its path.
@@ -286,7 +286,7 @@ static const char *spatialShockPaths[] = {
 #define SPATIAL_DEFAULT_BOUNCES		"8"
 #define SPATIAL_THREADS				1
 #else
-#define SPATIAL_DEFAULT				"0"		// of s_spatial: the library has to be put next to the program first
+#define SPATIAL_DEFAULT				"0"		// of v_spatial: the library has to be put next to the program first
 #define SPATIAL_DEFAULT_RAYS		"2048"
 #define SPATIAL_DEFAULT_BOUNCES		"16"
 #define SPATIAL_THREADS				2		// threads Steam Audio shares a pass or a bake between, inside the one of this file
@@ -391,21 +391,21 @@ typedef struct spatialVoice_s {
 	qboolean				pathing;	// this frame its way round the corners is asked for
 } spatialVoice_t;
 
-static cvar_t	*s_spatial;
-static cvar_t	*s_spatialHrtf;
-static cvar_t	*s_spatialAhead;
-static cvar_t	*s_spatialReflections;
-static cvar_t	*s_spatialReverb;
-static cvar_t	*s_spatialRays;
-static cvar_t	*s_spatialBounces;
-static cvar_t	*s_spatialPaths;
-static cvar_t	*s_spatialPathLoss;
-static cvar_t	*s_spatialShock;
+static cvar_t	*v_spatial;
+static cvar_t	*v_spatialHrtf;
+static cvar_t	*v_spatialAhead;
+static cvar_t	*v_spatialReflections;
+static cvar_t	*v_spatialReverb;
+static cvar_t	*v_spatialRays;
+static cvar_t	*v_spatialBounces;
+static cvar_t	*v_spatialPaths;
+static cvar_t	*v_spatialPathLoss;
+static cvar_t	*v_spatialShock;
 #ifdef __EMSCRIPTEN__
-static cvar_t	*s_spatialBudget;
+static cvar_t	*v_spatialBudget;
 #endif
 
-// what s_spatialInfo says the sound of the level took of the thread of the game
+// what v_spatialInfo says the sound of the level took of the thread of the game
 enum {
 	COST_SIMULATE,		// what is in the way of each sound
 	COST_VOICES,		// the effects of the voices
@@ -476,7 +476,7 @@ static struct {
 	int					ringEnd;			// up to which sample the ring holds what belongs there
 	int					lastPaint;
 
-	// for s_spatialInfo
+	// for v_spatialInfo
 	int					numVoices;
 	int					renderUsec, simulateUsec;	// of the last frame
 	int					peakRenderUsec;
@@ -486,7 +486,7 @@ static struct {
 	int					costFrameUsec, costPeakUsec;
 	int					costVoices, costPeakVoices;
 
-	// s_spatialCapture
+	// v_spatialCapture
 	short				*capture;			// a WAV file in the making: its header, then two channels of 16 bit
 	int					captureSamples, captureWritten;
 	int					captureFrom;		// up to which sample of the mixer's time it has what was heard, -1: not begun
@@ -567,14 +567,14 @@ static qboolean S_SpatialLoad( void ) {
 		spatial.library = Sys_LoadLibrary( spatial.libraryPath );
 	}
 	if ( !spatial.library ) {
-		Com_Printf( "s_spatial: no " SPATIAL_LIBRARY " next to the program (%s), the sound stays as it is\n", Sys_BinaryPath() );
+		Com_Printf( "v_spatial: no " SPATIAL_LIBRARY " next to the program (%s), the sound stays as it is\n", Sys_BinaryPath() );
 		return qfalse;
 	}
 #define X( name )	q##name = (decltype( q##name ))Sys_LoadFunction( spatial.library, #name ); if ( !q##name ) { missing = #name; }
 	SPATIAL_FUNCTIONS( X )
 #undef X
 	if ( missing ) {
-		Com_Printf( "s_spatial: %s has no %s, the sound stays as it is\n", spatial.libraryPath, missing );
+		Com_Printf( "v_spatial: %s has no %s, the sound stays as it is\n", spatial.libraryPath, missing );
 		S_SpatialUnload();
 		return qfalse;
 	}
@@ -625,7 +625,7 @@ static void S_SpatialLoadMaterials( void ) {
 			break;
 		}
 		if ( count == SPATIAL_TABLE_MAX ) {
-			Com_Printf( S_COLOR_YELLOW "s_spatial: " SPATIAL_TABLE_FILE " has more than %i shaders, the rest is left out\n", SPATIAL_TABLE_MAX );
+			Com_Printf( S_COLOR_YELLOW "v_spatial: " SPATIAL_TABLE_FILE " has more than %i shaders, the rest is left out\n", SPATIAL_TABLE_MAX );
 			break;
 		}
 		Q_strncpyz( spatialTable[count].shader, token, sizeof( spatialTable[count].shader ) );
@@ -644,7 +644,7 @@ static void S_SpatialLoadMaterials( void ) {
 	}
 	FS_FreeFile( data );
 	if ( unknown ) {
-		Com_Printf( S_COLOR_YELLOW "s_spatial: %i lines of " SPATIAL_TABLE_FILE " name no material of the game\n", unknown );
+		Com_Printf( S_COLOR_YELLOW "v_spatial: %i lines of " SPATIAL_TABLE_FILE " name no material of the game\n", unknown );
 	}
 	qsort( spatialTable, count, sizeof( spatialTable[0] ), S_SpatialCompareShader );
 	spatialTableCount = count;
@@ -718,7 +718,7 @@ static void S_SpatialSlice( int limit );
 
 // spatial.refusedProbes says how many it has
 static void S_SpatialSayTooLarge( void ) {
-	Com_Printf( "s_spatial: this level has %i probes, a page works the paths out for up to %i: no sound round corners here\n",
+	Com_Printf( "v_spatial: this level has %i probes, a page works the paths out for up to %i: no sound round corners here\n",
 		spatial.refusedProbes, SPATIAL_PAGE_PROBES );
 }
 #endif
@@ -879,10 +879,10 @@ static void S_SpatialThinkPaths( void ) {
 				spatial.bakeMsec = Q_max( 1, spatialBake.msec );
 				spatial.probesWait = qtrue;
 				spatialBake.batch = NULL;
-				Com_Printf( "s_spatial: the paths of this level are worked out, %i probes in %.1f s, kept in %s\n", spatial.numProbes,
+				Com_Printf( "v_spatial: the paths of this level are worked out, %i probes in %.1f s, kept in %s\n", spatial.numProbes,
 					spatial.bakeMsec * 0.001f, spatial.pathFile );
 			} else {
-				Com_Printf( "s_spatial: no place for probes was found in this level: no sound round corners here\n" );
+				Com_Printf( "v_spatial: no place for probes was found in this level: no sound round corners here\n" );
 			}
 		}
 #ifdef __EMSCRIPTEN__
@@ -900,7 +900,7 @@ static void S_SpatialThinkPaths( void ) {
 		}
 	}
 
-	if ( spatial.bakeWanted && spatialBakeState.load() == BAKE_NONE && spatial.scene && !spatial.sceneWaits && s_spatialPaths->integer ) {
+	if ( spatial.bakeWanted && spatialBakeState.load() == BAKE_NONE && spatial.scene && !spatial.sceneWaits && v_spatialPaths->integer ) {
 		spatial.bakeWanted = qfalse;
 		spatialBake.scene = qiplSceneRetain( spatial.scene );
 		spatialBake.mins = spatial.mins;
@@ -918,7 +918,7 @@ static void S_SpatialThinkPaths( void ) {
 			qiplSceneRelease( &spatialBake.scene );
 			spatialBakeState.store( BAKE_NONE );
 		} else {
-			Com_Printf( "s_spatial: working out the paths of this level in the background\n" );
+			Com_Printf( "v_spatial: working out the paths of this level in the background\n" );
 		}
 #endif
 	}
@@ -978,7 +978,7 @@ static void S_SpatialTakeScene( void ) {
 	// its paths: from the file of an earlier visit, or worked out now
 	spatial.bakeWanted = qfalse;
 	spatial.refusedProbes = 0;
-	if ( spatial.scene && s_spatialPaths->integer && !S_SpatialLoadPaths() ) {
+	if ( spatial.scene && v_spatialPaths->integer && !S_SpatialLoadPaths() ) {
 		spatial.bakeWanted = qtrue;
 	}
 
@@ -1032,7 +1032,7 @@ void S_SpatialLoadMap( const char *mapname ) {
 	memset( &sceneSettings, 0, sizeof( sceneSettings ) );
 	sceneSettings.type = IPL_SCENETYPE_DEFAULT;
 	if ( qiplSceneCreate( spatial.context, &sceneSettings, &spatial.nextScene ) != IPL_STATUS_SUCCESS ) {
-		Com_Printf( "s_spatial: no scene for the level\n" );
+		Com_Printf( "v_spatial: no scene for the level\n" );
 		spatial.nextScene = NULL;
 		return;
 	}
@@ -1075,7 +1075,7 @@ void S_SpatialLoadMap( const char *mapname ) {
 		qiplSceneCommit( spatial.nextScene );
 		spatial.nextTriangles = build.count;
 	} else {
-		Com_Printf( "s_spatial: no mesh for the level\n" );
+		Com_Printf( "v_spatial: no mesh for the level\n" );
 		spatial.nextMesh = NULL;
 		S_SpatialReleaseScene( &spatial.nextScene, &spatial.nextMesh );
 	}
@@ -1086,7 +1086,7 @@ void S_SpatialLoadMap( const char *mapname ) {
 
 	spatial.sceneMsec = Sys_Milliseconds() - start;
 	if ( spatial.nextTriangles ) {
-		Com_Printf( "s_spatial: %i triangles of the level in %i ms\n", spatial.nextTriangles, spatial.sceneMsec );
+		Com_Printf( "v_spatial: %i triangles of the level in %i ms\n", spatial.nextTriangles, spatial.sceneMsec );
 	}
 #ifdef __EMSCRIPTEN__
 	// the pass that may be in its slices is brought to its end, so that the simulator can be given the level
@@ -1221,7 +1221,7 @@ qboolean S_SpatialAddChannel( channel_t *ch, const vec3_t origin, float volume, 
 void S_SpatialAddSend( channel_t *ch, float volume, qboolean voiceVolume ) {
 	spatialVoice_t *v;
 
-	if ( !s_spatialReflections->integer ) {
+	if ( !v_spatialReflections->integer ) {
 		return;
 	}
 	v = S_SpatialFindVoice( NULL, ch, ch->entnum, ch->thesfx, (int)ch->startSample );
@@ -1246,7 +1246,7 @@ VOICES OF THE VOICE CHAT
 
 The cgame hands over what it decoded of a player, a frame of 20 ms at a time as it comes in, and says where his
 mouth is and how loud he is to be. Here that is a sound in the level like the others, with one difference: it
-is not there ahead of time. The other voices are rendered s_spatialAhead ahead of what is heard. A voice of the
+is not there ahead of time. The other voices are rendered v_spatialAhead ahead of what is heard. A voice of the
 chat is rendered as far as what arrived of it reaches, so it is heard that much later than the cgame would
 play it itself.
 
@@ -1324,7 +1324,7 @@ the other sounds of the own player, and he hears it ring.
 ===============
 */
 void S_SpatialOwnVoice( float volume, const short *samples, int numSamples, int rate ) {
-	if ( !S_SpatialActive() || !s_spatialReflections->integer || rate < 8000 || rate > 48000 ) {
+	if ( !S_SpatialActive() || !v_spatialReflections->integer || rate < 8000 || rate > 48000 ) {
 		return;
 	}
 	S_SpatialStreamWrite( &spatialStreams[SPATIAL_OWN_STREAM], NULL, volume, samples, numSamples, rate );
@@ -1384,7 +1384,7 @@ static int S_SpatialRays( void ) {
 #ifdef __EMSCRIPTEN__
 	return spatial.maxRays;
 #else
-	return Com_Clampi( 256, SPATIAL_MAX_RAYS, s_spatialRays->integer );
+	return Com_Clampi( 256, SPATIAL_MAX_RAYS, v_spatialRays->integer );
 #endif
 }
 
@@ -1408,7 +1408,7 @@ static void S_SpatialSimulate( void ) {
 	S_SpatialDirection( right, &shared.listener.right );
 	// for the reflections, which the thread of S_SpatialWorker() works out from where the listener is now
 	shared.numRays = S_SpatialRays();
-	shared.numBounces = Com_Clampi( 1, 64, s_spatialBounces->integer );
+	shared.numBounces = Com_Clampi( 1, 64, v_spatialBounces->integer );
 	shared.duration = SPATIAL_REVERB_SECONDS;
 	shared.order = SPATIAL_REVERB_ORDER;
 	shared.irradianceMinDistance = 1.0f;
@@ -1419,7 +1419,7 @@ static void S_SpatialSimulate( void ) {
 		IPLSimulationInputs inputs;
 
 		memset( &inputs, 0, sizeof( inputs ) );
-		if ( s_spatialReflections->integer ) {
+		if ( v_spatialReflections->integer ) {
 			inputs.flags = IPL_SIMULATIONFLAGS_REFLECTIONS;
 			inputs.source = shared.listener;
 			inputs.reverbScale[0] = inputs.reverbScale[1] = inputs.reverbScale[2] = 1.0f;
@@ -1447,7 +1447,7 @@ static void S_SpatialSimulate( void ) {
 
 			// Its way round the corners, from the probes of the level. How loud it is at the end of that way is
 			// what the game makes of a sound at that distance.
-			v->pathing = (qboolean)( spatial.probes && s_spatialPaths->integer );
+			v->pathing = (qboolean)( spatial.probes && v_spatialPaths->integer );
 			if ( v->pathing ) {
 				inputs.flags = (IPLSimulationFlags)( inputs.flags | IPL_SIMULATIONFLAGS_PATHING );
 				inputs.baked = IPL_TRUE;
@@ -1496,11 +1496,11 @@ RENDERING
 The mixer of the game paints the next fifth of a second again in every frame, so a sound that starts is heard
 after 50 ms and a hitch of the game still finds sound in the buffer. It can do that because it keeps nothing
 from one sample to the next. The effects of Steam Audio do: each voice has to be rendered once, block after
-block. So every voice is rendered ahead on its own, as far as s_spatialAhead says, and added into a ring of
+block. So every voice is rendered ahead on its own, as far as v_spatialAhead says, and added into a ring of
 finished sound by the time of the mixer. The mixer adds what the ring has for the samples it paints, as often
 as it paints them. A voice that starts adds itself to what the others already put there, so it is heard as
 soon as a sound of the old path would be. What a voice is given later (where it is, what is in the way) only
-reaches the blocks that are not rendered yet: that is the delay s_spatialAhead stands for.
+reaches the blocks that are not rendered yet: that is the delay v_spatialAhead stands for.
 
 ===============================================================================
 */
@@ -1600,7 +1600,7 @@ static void S_SpatialRenderBlock( spatialVoice_t *v, float gain ) {
 	// louder by what its two factors differ, which the reverb has to know: it has one factor for all it gets.
 	send = v->voiceVolume ? s_volumeVoice->value : s_volume->value;
 	if ( v->stream ) {
-		send = s_spatialHrtf->integer ? ( SPATIAL_GAIN_VOICE_HRTF / SPATIAL_GAIN_HRTF ) : ( SPATIAL_GAIN_VOICE_PANNING / SPATIAL_GAIN_PANNING );
+		send = v_spatialHrtf->integer ? ( SPATIAL_GAIN_VOICE_HRTF / SPATIAL_GAIN_HRTF ) : ( SPATIAL_GAIN_VOICE_PANNING / SPATIAL_GAIN_PANNING );
 	}
 	if ( v->sendOnly ) {
 		// of the own player: the room gets it as the game plays it, the mixer plays the sound itself
@@ -1625,10 +1625,10 @@ static void S_SpatialRenderBlock( spatialVoice_t *v, float gain ) {
 		params = outputs.pathing;
 		if ( params.shCoeffs ) {
 			params.order = SPATIAL_REVERB_ORDER;
-			params.binaural = s_spatialHrtf->integer ? IPL_TRUE : IPL_FALSE;
+			params.binaural = v_spatialHrtf->integer ? IPL_TRUE : IPL_FALSE;
 			params.hrtf = spatial.hrtf;
 			// what bending round the corners costs: all of it, or only how much duller the sound gets
-			params.normalizeEQ = s_spatialPathLoss->integer ? IPL_FALSE : IPL_TRUE;
+			params.normalizeEQ = v_spatialPathLoss->integer ? IPL_FALSE : IPL_TRUE;
 			VectorNegate( spatial.listenerAxis[1], rightAxis );
 			S_SpatialPoint( spatial.listenerOrigin, &params.listener.origin );
 			S_SpatialDirection( spatial.listenerAxis[0], &params.listener.ahead );
@@ -1645,7 +1645,7 @@ static void S_SpatialRenderBlock( spatialVoice_t *v, float gain ) {
 		v->dry[( c + i ) & ( SPATIAL_DRY - 1 )] = ( direct[i] + ( pathed ? ( pathLeft[i] + pathRight[i] ) * 0.5f * hidden : 0.0f ) ) * send;
 	}
 	volume = ( v->stream ? 1.0f : send ) * ( 32768.0f * 256.0f );
-	if ( s_spatialHrtf->integer ) {
+	if ( v_spatialHrtf->integer ) {
 		IPLBinauralEffectParams params;
 
 		memset( &params, 0, sizeof( params ) );
@@ -1682,12 +1682,12 @@ static void S_SpatialRenderBlock( spatialVoice_t *v, float gain ) {
 
 	// The thump of an explosion: its lows once more, for both ears alike. A wall takes from them what Steam
 	// Audio takes from the lows of any sound behind it, and the block gets there from what the last one had.
-	if ( v->shock && s_spatialShock->value > 0.0f ) {
+	if ( v->shock && v_spatialShock->value > 0.0f ) {
 		const float *k = spatial.shockCoeffs;
 		const float through = v->directParams.occlusion + ( 1.0f - v->directParams.occlusion ) * v->directParams.transmission[0];
 		const float throughFrom = fresh ? through : v->shockThrough;
 		const float throughStep = ( through - throughFrom ) * ( 1.0f / SPATIAL_FRAME );
-		const float shock = send * s_spatialShock->value * SPATIAL_SHOCK_GAIN * ( 32768.0f * 256.0f );
+		const float shock = send * v_spatialShock->value * SPATIAL_SHOCK_GAIN * ( 32768.0f * 256.0f );
 		float z1 = v->shockState[0], z2 = v->shockState[1];
 
 		for ( int i = 0; i < SPATIAL_FRAME; i++ ) {
@@ -1712,7 +1712,7 @@ static void S_SpatialRenderBlock( spatialVoice_t *v, float gain ) {
 REFLECTIONS
 
 One source stands where the listener stands. In a thread of its own Steam Audio follows rays from there through
-the level (s_spatialRays of them, s_spatialBounces times off a wall) and makes of what comes back the impulse
+the level (v_spatialRays of them, v_spatialBounces times off a wall) and makes of what comes back the impulse
 response of the place: how the room rings. Every sound in the level is sent through that one reverb, as it
 arrives after the walls in its way. A pass takes longer than a frame, so the game only asks for one and picks
 up what the last one found.
@@ -1806,7 +1806,7 @@ static int SDLCALL S_SpatialWorker( void *unused ) {
 // listener, and the ways of the sounds round the corners. Never while a level waits to be taken over.
 static void S_SpatialAskPass( void ) {
 	const int now = Sys_Milliseconds();
-	qboolean paths = (qboolean)( spatial.probes && s_spatialPaths->integer );
+	qboolean paths = (qboolean)( spatial.probes && v_spatialPaths->integer );
 	int idle = WORKER_IDLE;
 
 #ifdef __EMSCRIPTEN__
@@ -1822,12 +1822,12 @@ static void S_SpatialAskPass( void ) {
 	}
 	paths = qfalse;
 #endif
-	if ( ( !s_spatialReflections->integer && !paths ) || spatial.sceneWaits || now - spatial.reflectAsked < SPATIAL_REFLECT_MSEC ) {
+	if ( ( !v_spatialReflections->integer && !paths ) || spatial.sceneWaits || now - spatial.reflectAsked < SPATIAL_REFLECT_MSEC ) {
 		return;
 	}
 	// the thread reads these two only after it was woken
 	if ( spatialWorkerState.load() == WORKER_IDLE ) {
-		spatialPassReflections.store( s_spatialReflections->integer ? 1 : 0 );
+		spatialPassReflections.store( v_spatialReflections->integer ? 1 : 0 );
 		spatialPassPaths.store( paths ? 1 : 0 );
 		if ( spatialWorkerState.compare_exchange_strong( idle, WORKER_ASKED ) ) {
 			spatial.reflectAsked = now;
@@ -1865,7 +1865,7 @@ static void S_SpatialRenderReverb( int c ) {
 	// Every voice gives the next block of what it has rendered, from its first sample on. A sound that starts is
 	// put into the ring where the mixer paints, which is behind where the reverb is by then: its start would
 	// never get here if the reverb took the voices by the time of the mixer. So the reverb of a sound comes a few
-	// blocks late (up to s_spatialAhead), which a room does to a sound anyway.
+	// blocks late (up to v_spatialAhead), which a room does to a sound anyway.
 	memset( in, 0, sizeof( in ) );
 	for ( int i = 0; i < SPATIAL_VOICES; i++ ) {
 		spatialVoice_t *v = &spatial.voices[i];
@@ -1893,7 +1893,7 @@ static void S_SpatialRenderReverb( int c ) {
 	memset( &decode, 0, sizeof( decode ) );
 	decode.order = SPATIAL_REVERB_ORDER;
 	decode.hrtf = spatial.hrtf;
-	decode.binaural = s_spatialHrtf->integer ? IPL_TRUE : IPL_FALSE;
+	decode.binaural = v_spatialHrtf->integer ? IPL_TRUE : IPL_FALSE;
 	VectorNegate( spatial.listenerAxis[1], rightAxis );
 	S_SpatialDirection( spatial.listenerAxis[0], &decode.orientation.ahead );
 	S_SpatialDirection( spatial.listenerAxis[2], &decode.orientation.up );
@@ -1902,7 +1902,7 @@ static void S_SpatialRenderReverb( int c ) {
 
 	S_SpatialRingExtend( c + SPATIAL_FRAME );
 	// how loud each voice is went in with what it gave
-	volume = s_spatialReverb->value * ( s_spatialHrtf->integer ? SPATIAL_GAIN_HRTF : SPATIAL_GAIN_PANNING ) * ( 32768.0f * 256.0f );
+	volume = v_spatialReverb->value * ( v_spatialHrtf->integer ? SPATIAL_GAIN_HRTF : SPATIAL_GAIN_PANNING ) * ( 32768.0f * 256.0f );
 	for ( int i = 0; i < SPATIAL_FRAME; i++ ) {
 		float *slot = spatial.ring[( c + i ) & ( SPATIAL_RING - 1 )];
 
@@ -1915,7 +1915,7 @@ static void S_SpatialRenderReverb( int c ) {
 ===============
 S_SpatialCapture
 
-s_spatialCapture <seconds>: what the voices and the reverb give the mixer, as it is heard, into the file
+v_spatialCapture <seconds>: what the voices and the reverb give the mixer, as it is heard, into the file
 steamaudio/capture.wav of the home path. For measuring without ears where SDL has no sound driver that writes
 a file (a page) and with the same code where it has one, see docs/japlus/audio.md. What the mixer plays itself
 is not in it: the sounds of the own player, the menus, the music.
@@ -1950,7 +1950,7 @@ static void S_SpatialCaptureEnd( qboolean write ) {
 		memcpy( header + 36, "data", 4 );
 		S_SpatialCapturePut( header + 40, dataBytes, 4 );
 		FS_WriteFile( "steamaudio/capture.wav", spatial.capture, SPATIAL_WAV_HEADER + dataBytes );
-		Com_Printf( "s_spatialCapture: %.1f s in steamaudio/capture.wav\n", (float)spatial.captureWritten / spatial.audio.samplingRate );
+		Com_Printf( "v_spatialCapture: %.1f s in steamaudio/capture.wav\n", (float)spatial.captureWritten / spatial.audio.samplingRate );
 	}
 	if ( spatial.capture ) {
 		Z_Free( spatial.capture );
@@ -1992,11 +1992,11 @@ static void S_SpatialCapture_f( void ) {
 	const float seconds = Com_Clamp( 1.0f, 120.0f, atof( Cmd_Argv( 1 ) ) );
 
 	if ( Cmd_Argc() != 2 ) {
-		Com_Printf( "usage: s_spatialCapture <seconds>, 1 to 120. Writes what the sounds of the level give the mixer to steamaudio/capture.wav\n" );
+		Com_Printf( "usage: v_spatialCapture <seconds>, 1 to 120. Writes what the sounds of the level give the mixer to steamaudio/capture.wav\n" );
 		return;
 	}
 	if ( !spatial.active ) {
-		Com_Printf( "s_spatialCapture: s_spatial does not run\n" );
+		Com_Printf( "v_spatialCapture: v_spatial does not run\n" );
 		return;
 	}
 	S_SpatialCaptureEnd( qfalse );
@@ -2099,7 +2099,7 @@ void S_SpatialEndFrame( int from, int target ) {
 
 	// the reverb, up to where every voice that plays is rendered, and the next pass of the rays
 	voicesDone = S_SpatialUsec();
-	if ( s_spatialReflections->integer ) {
+	if ( v_spatialReflections->integer ) {
 		if ( spatial.reverbRendered < from ) {
 			spatial.reverbRendered = from;
 		}
@@ -2152,29 +2152,29 @@ void S_SpatialPaint( int from, int to, portable_samplepair_t *paint ) {
 
 // how far ahead of what is heard the voices are rendered, in seconds
 float S_SpatialAhead( void ) {
-	return Com_Clamp( 0.08f, 0.5f, s_spatialAhead->value );
+	return Com_Clamp( 0.08f, 0.5f, v_spatialAhead->value );
 }
 
 #ifdef __EMSCRIPTEN__
 // microseconds of a frame for the passes
 static int S_SpatialBudget( void ) {
-	return (int)( Com_Clamp( 0.1f, 8.0f, s_spatialBudget->value ) * 1000.0f );
+	return (int)( Com_Clamp( 0.1f, 8.0f, v_spatialBudget->value ) * 1000.0f );
 }
 #endif
 
 static void S_SpatialInfo_f( void ) {
-	if ( !s_spatial->integer ) {
-		Com_Printf( "s_spatial is 0 (set it to 1, then snd_restart)\n" );
+	if ( !v_spatial->integer ) {
+		Com_Printf( "v_spatial is 0 (set it to 1, then snd_restart)\n" );
 		return;
 	}
 	if ( !spatial.active ) {
-		Com_Printf( "s_spatial is 1, but Steam Audio did not start, see the lines of the sound initialization\n" );
+		Com_Printf( "v_spatial is 1, but Steam Audio did not start, see the lines of the sound initialization\n" );
 		return;
 	}
 	Com_Printf( "Steam Audio %i.%i.%i from %s\n", STEAMAUDIO_VERSION_MAJOR, STEAMAUDIO_VERSION_MINOR, STEAMAUDIO_VERSION_PATCH,
 		spatial.libraryPath );
 	Com_Printf( "%i samples a second, blocks of %i, direction for %s\n", spatial.audio.samplingRate, spatial.audio.frameSize,
-		s_spatialHrtf->integer ? "headphones (HRTF)" : "speakers (panning)" );
+		v_spatialHrtf->integer ? "headphones (HRTF)" : "speakers (panning)" );
 	if ( spatial.sceneWaits ) {
 		Com_Printf( "a level waits to be taken over\n" );
 		return;
@@ -2212,18 +2212,18 @@ static void S_SpatialInfo_f( void ) {
 	}
 	spatial.costFrames = spatial.costPeakUsec = spatial.costVoices = spatial.costPeakVoices = 0;
 	memset( spatial.costUsec, 0, sizeof( spatial.costUsec ) );
-	if ( s_spatialReflections->integer ) {
+	if ( v_spatialReflections->integer ) {
 		Com_Printf( "reflections: %i rays, %i bounces, the last pass took %i ms, %i passes so far\n", S_SpatialRays(),
-			Com_Clampi( 1, 64, s_spatialBounces->integer ), spatialReflectUsec.load() / 1000, spatialReflectPasses.load() );
+			Com_Clampi( 1, 64, v_spatialBounces->integer ), spatialReflectUsec.load() / 1000, spatialReflectPasses.load() );
 #ifdef __EMSCRIPTEN__
-		Com_Printf( "  done by the game itself, with %.2f ms of each frame (s_spatialBudget): the last pass in %i slices over %i ms, the longest %.1f ms\n",
+		Com_Printf( "  done by the game itself, with %.2f ms of each frame (v_spatialBudget): the last pass in %i slices over %i ms, the longest %.1f ms\n",
 			S_SpatialBudget() * 0.001f, spatial.lastPassSlices, spatial.lastPassMsec, spatial.lastPassPeakUsec * 0.001f );
 #endif
 	} else {
-		Com_Printf( "reflections: off (s_spatialReflections 0)\n" );
+		Com_Printf( "reflections: off (v_spatialReflections 0)\n" );
 	}
-	if ( !s_spatialPaths->integer ) {
-		Com_Printf( "paths: off (s_spatialPaths 0)\n" );
+	if ( !v_spatialPaths->integer ) {
+		Com_Printf( "paths: off (v_spatialPaths 0)\n" );
 	} else if ( spatialBakeState.load() == BAKE_RUNNING && spatialBake.sceneNumber == spatial.sceneNumber ) {
 		Com_Printf( "paths: being worked out for this level, %i %%\n", spatialBakeProgress.load() );
 	} else if ( spatial.probes ) {
@@ -2252,7 +2252,7 @@ static void S_SpatialInfo_f( void ) {
 			v->stream ? va( "voice of player %i", (int)( v->stream - spatialStreams ) ) : v->sfx->sSoundName,
 			v->origin[0], v->origin[1], v->origin[2], Distance( v->origin, spatial.listenerOrigin ), v->gain, v->directParams.occlusion * 100.0f,
 			v->directParams.transmission[0], v->directParams.transmission[1], v->directParams.transmission[2],
-			( v->shock && s_spatialShock->value > 0.0f ) ? ", thump" : "" );
+			( v->shock && v_spatialShock->value > 0.0f ) ? ", thump" : "" );
 	}
 }
 
@@ -2365,9 +2365,9 @@ static qboolean S_SpatialCreateVoices( void ) {
 #ifdef __EMSCRIPTEN__
 	// A pass traces the first rays of those the simulator has, which are not spread round the listener unless
 	// it traces them all (S_SpatialRays). A page traces fewer than the desktop, so it has the simulator made
-	// for what it traces, and s_spatialRays is read here.
-	spatial.maxRays = Com_Clampi( 256, SPATIAL_MAX_RAYS, s_spatialRays->integer );
-	s_spatialRays->modified = qfalse;
+	// for what it traces, and v_spatialRays is read here.
+	spatial.maxRays = Com_Clampi( 256, SPATIAL_MAX_RAYS, v_spatialRays->integer );
+	v_spatialRays->modified = qfalse;
 #else
 	spatial.maxRays = SPATIAL_MAX_RAYS;
 #endif
@@ -2437,7 +2437,7 @@ static qboolean S_SpatialCreateVoices( void ) {
 	return qtrue;
 #else
 	spatial.workerWake = SDL_CreateSemaphore( 0 );
-	spatial.worker = spatial.workerWake ? SDL_CreateThread( S_SpatialWorker, "s_spatial", NULL ) : NULL;
+	spatial.worker = spatial.workerWake ? SDL_CreateThread( S_SpatialWorker, "v_spatial", NULL ) : NULL;
 	return (qboolean)( spatial.worker != NULL );
 #endif
 }
@@ -2446,49 +2446,49 @@ static qboolean S_SpatialCreateVoices( void ) {
 ===============
 S_SpatialInit
 
-s_spatial is latched: what it is when the sound system starts holds until the next snd_restart
+v_spatial is latched: what it is when the sound system starts holds until the next snd_restart
 ===============
 */
 void S_SpatialInit( void ) {
 	IPLContextSettings contextSettings;
 	IPLHRTFSettings hrtfSettings;
 
-	s_spatial = Cvar_Get( "s_spatial", SPATIAL_DEFAULT, CVAR_ARCHIVE | CVAR_LATCH, "Sound that knows the level, with Steam Audio (snd_restart)" );
-	s_spatialHrtf = Cvar_Get( "s_spatialHrtf", "1", CVAR_ARCHIVE, "s_spatial: 1 direction for headphones (HRTF), 0 for speakers" );
-	s_spatialAhead = Cvar_Get( "s_spatialAhead", "0.1", CVAR_ARCHIVE, "s_spatial: seconds of sound rendered ahead. Less follows a turn of the head sooner, more survives a longer hitch" );
-	s_spatialReflections = Cvar_Get( "s_spatialReflections", "1", CVAR_ARCHIVE, "s_spatial: 1 the room around the listener rings, worked out with rays. 0 no reverb" );
-	s_spatialReverb = Cvar_Get( "s_spatialReverb", "1", CVAR_ARCHIVE, "s_spatial: how loud the reverb is" );
+	v_spatial = Cvar_Get( "v_spatial", SPATIAL_DEFAULT, CVAR_ARCHIVE | CVAR_LATCH, "Sound that knows the level, with Steam Audio (snd_restart)" );
+	v_spatialHrtf = Cvar_Get( "v_spatialHrtf", "1", CVAR_ARCHIVE, "v_spatial: 1 direction for headphones (HRTF), 0 for speakers" );
+	v_spatialAhead = Cvar_Get( "v_spatialAhead", "0.1", CVAR_ARCHIVE, "v_spatial: seconds of sound rendered ahead. Less follows a turn of the head sooner, more survives a longer hitch" );
+	v_spatialReflections = Cvar_Get( "v_spatialReflections", "1", CVAR_ARCHIVE, "v_spatial: 1 the room around the listener rings, worked out with rays. 0 no reverb" );
+	v_spatialReverb = Cvar_Get( "v_spatialReverb", "1", CVAR_ARCHIVE, "v_spatial: how loud the reverb is" );
 #ifdef __EMSCRIPTEN__
-	s_spatialRays = Cvar_Get( "s_spatialRays", SPATIAL_DEFAULT_RAYS, CVAR_ARCHIVE, "s_spatial: rays of a pass of the reflections, 256 to 8192. In a browser from the next snd_restart on" );
-	s_spatialPaths = Cvar_Get( "s_spatialPaths", "1", CVAR_ARCHIVE, "s_spatial: 1 a sound comes round corners. Worked out once per level while it loads, in a browser not for a large level" );
-	s_spatialBudget = Cvar_Get( "s_spatialBudget", "0.75", CVAR_ARCHIVE, "s_spatial in a browser: milliseconds of a frame the passes of the reflections take on average, 0.1 to 8. More: the reverb follows the listener sooner" );
+	v_spatialRays = Cvar_Get( "v_spatialRays", SPATIAL_DEFAULT_RAYS, CVAR_ARCHIVE, "v_spatial: rays of a pass of the reflections, 256 to 8192. In a browser from the next snd_restart on" );
+	v_spatialPaths = Cvar_Get( "v_spatialPaths", "1", CVAR_ARCHIVE, "v_spatial: 1 a sound comes round corners. Worked out once per level while it loads, in a browser not for a large level" );
+	v_spatialBudget = Cvar_Get( "v_spatialBudget", "0.75", CVAR_ARCHIVE, "v_spatial in a browser: milliseconds of a frame the passes of the reflections take on average, 0.1 to 8. More: the reverb follows the listener sooner" );
 #else
-	s_spatialRays = Cvar_Get( "s_spatialRays", SPATIAL_DEFAULT_RAYS, CVAR_ARCHIVE, "s_spatial: rays of a pass of the reflections, 256 to 8192" );
-	s_spatialPaths = Cvar_Get( "s_spatialPaths", "1", CVAR_ARCHIVE, "s_spatial: 1 a sound comes round corners. Worked out once per level in the background" );
+	v_spatialRays = Cvar_Get( "v_spatialRays", SPATIAL_DEFAULT_RAYS, CVAR_ARCHIVE, "v_spatial: rays of a pass of the reflections, 256 to 8192" );
+	v_spatialPaths = Cvar_Get( "v_spatialPaths", "1", CVAR_ARCHIVE, "v_spatial: 1 a sound comes round corners. Worked out once per level in the background" );
 #endif
-	s_spatialBounces = Cvar_Get( "s_spatialBounces", SPATIAL_DEFAULT_BOUNCES, CVAR_ARCHIVE, "s_spatial: how often a ray is followed off a wall" );
-	s_spatialPathLoss = Cvar_Get( "s_spatialPathLoss", "1", CVAR_ARCHIVE, "s_spatial: 1 a sound loses on its way round a corner what Steam Audio works out. 0 it only gets duller, and is as loud as the game makes a sound that far away" );
-	s_spatialShock = Cvar_Get( "s_spatialShock", "1", CVAR_ARCHIVE, "s_spatial: how strong the thump of an explosion is, its lows in both ears. 0 none" );
-	Cmd_AddCommand( "s_spatialInfo", S_SpatialInfo_f, "What s_spatial is doing" );
-	Cmd_AddCommand( "s_spatialCapture", S_SpatialCapture_f, "s_spatial: what the sounds of the level give the mixer for so many seconds, into steamaudio/capture.wav" );
+	v_spatialBounces = Cvar_Get( "v_spatialBounces", SPATIAL_DEFAULT_BOUNCES, CVAR_ARCHIVE, "v_spatial: how often a ray is followed off a wall" );
+	v_spatialPathLoss = Cvar_Get( "v_spatialPathLoss", "1", CVAR_ARCHIVE, "v_spatial: 1 a sound loses on its way round a corner what Steam Audio works out. 0 it only gets duller, and is as loud as the game makes a sound that far away" );
+	v_spatialShock = Cvar_Get( "v_spatialShock", "1", CVAR_ARCHIVE, "v_spatial: how strong the thump of an explosion is, its lows in both ears. 0 none" );
+	Cmd_AddCommand( "v_spatialInfo", S_SpatialInfo_f, "What v_spatial is doing" );
+	Cmd_AddCommand( "v_spatialCapture", S_SpatialCapture_f, "v_spatial: what the sounds of the level give the mixer for so many seconds, into steamaudio/capture.wav" );
 
 	memset( &spatial, 0, sizeof( spatial ) );
 	memset( spatialStreams, 0, sizeof( spatialStreams ) );
-	Cvar_Get( "s_spatialVoice", "0", CVAR_ROM, "1: this engine plays the voices of the voice chat as sounds in the level (s_spatial)" );
-	Cvar_Set( "s_spatialVoice", "0" );
-	Cvar_Get( "s_spatialOwnVoice", "0", CVAR_ROM, "1: this engine lets the room ring from what the own player says into the voice chat (s_spatial)" );
-	Cvar_Set( "s_spatialOwnVoice", "0" );
-	Cvar_Get( "s_spatialBoxes", "0", CVAR_ROM, "How many boxes of the boombox this engine plays as sounds in the level (s_spatial), as speakers MAX_CLIENTS and up" );
-	Cvar_Set( "s_spatialBoxes", "0" );
-	// also with s_spatial 0: it may be turned on later, at a server where the file can not be read
+	Cvar_Get( "v_spatialVoice", "0", CVAR_ROM, "1: this engine plays the voices of the voice chat as sounds in the level (v_spatial)" );
+	Cvar_Set( "v_spatialVoice", "0" );
+	Cvar_Get( "v_spatialOwnVoice", "0", CVAR_ROM, "1: this engine lets the room ring from what the own player says into the voice chat (v_spatial)" );
+	Cvar_Set( "v_spatialOwnVoice", "0" );
+	Cvar_Get( "v_spatialBoxes", "0", CVAR_ROM, "How many boxes of the boombox this engine plays as sounds in the level (v_spatial), as speakers MAX_CLIENTS and up" );
+	Cvar_Set( "v_spatialBoxes", "0" );
+	// also with v_spatial 0: it may be turned on later, at a server where the file can not be read
 	S_SpatialLoadMaterials();
-	if ( !s_spatial->integer ) {
+	if ( !v_spatial->integer ) {
 		return;
 	}
 	// Two channels, and not the 22 kHz the game can also run at: the direction of a sound for headphones is
 	// in what is above 11 kHz to a good part, and at that rate there is nothing up there
 	if ( dma.channels != 2 || dma.speed < 44100 ) {
-		Com_Printf( "s_spatial: needs stereo at 44 kHz or more (s_khz 44), the sound stays as it is\n" );
+		Com_Printf( "v_spatial: needs stereo at 44 kHz or more (s_khz 44), the sound stays as it is\n" );
 		return;
 	}
 	if ( !S_SpatialLoad() ) {
@@ -2500,7 +2500,7 @@ void S_SpatialInit( void ) {
 	contextSettings.version = STEAMAUDIO_VERSION;
 	contextSettings.simdLevel = IPL_SIMDLEVEL_AVX2;
 	if ( qiplContextCreate( &contextSettings, &spatial.context ) != IPL_STATUS_SUCCESS ) {
-		Com_Printf( "s_spatial: %s does not go with version %i.%i.%i of the header, the sound stays as it is\n", spatial.libraryPath,
+		Com_Printf( "v_spatial: %s does not go with version %i.%i.%i of the header, the sound stays as it is\n", spatial.libraryPath,
 			STEAMAUDIO_VERSION_MAJOR, STEAMAUDIO_VERSION_MINOR, STEAMAUDIO_VERSION_PATCH );
 		S_SpatialUnload();
 		return;
@@ -2526,14 +2526,14 @@ void S_SpatialInit( void ) {
 	hrtfSettings.volume = 1.0f;
 	hrtfSettings.normType = IPL_HRTFNORMTYPE_NONE;
 	if ( qiplHRTFCreate( spatial.context, &spatial.audio, &hrtfSettings, &spatial.hrtf ) != IPL_STATUS_SUCCESS ) {
-		Com_Printf( "s_spatial: no direction data (HRTF) for %i samples a second, the sound stays as it is\n", dma.speed );
+		Com_Printf( "v_spatial: no direction data (HRTF) for %i samples a second, the sound stays as it is\n", dma.speed );
 		qiplContextRelease( &spatial.context );
 		S_SpatialUnload();
 		return;
 	}
 
 	if ( !S_SpatialCreateVoices() ) {
-		Com_Printf( "s_spatial: Steam Audio gives no simulator or no effects, the sound stays as it is\n" );
+		Com_Printf( "v_spatial: Steam Audio gives no simulator or no effects, the sound stays as it is\n" );
 		S_SpatialRelease();
 		return;
 	}
@@ -2541,21 +2541,21 @@ void S_SpatialInit( void ) {
 	spatial.active = qtrue;
 	// tells the cgame that this engine takes the voices of its voice chat (ext.S_SpatialVoice), and the own one
 	// for the reverb (ext.S_SpatialOwnVoice)
-	Cvar_Set( "s_spatialVoice", "1" );
-	Cvar_Set( "s_spatialOwnVoice", "1" );
+	Cvar_Set( "v_spatialVoice", "1" );
+	Cvar_Set( "v_spatialOwnVoice", "1" );
 	// and the songs of the boxes of the boombox, through the same call
-	Cvar_Set( "s_spatialBoxes", va( "%i", SPATIAL_BOXES ) );
+	Cvar_Set( "v_spatialBoxes", va( "%i", SPATIAL_BOXES ) );
 	// the sound system was started again in the middle of a level
 	S_SpatialLoadMap( Cvar_VariableString( "mapname" ) );
 	S_SpatialInfo_f();
 }
 
 void S_SpatialShutdown( void ) {
-	Cmd_RemoveCommand( "s_spatialInfo" );
-	Cmd_RemoveCommand( "s_spatialCapture" );
-	Cvar_Set( "s_spatialVoice", "0" );
-	Cvar_Set( "s_spatialOwnVoice", "0" );
-	Cvar_Set( "s_spatialBoxes", "0" );
+	Cmd_RemoveCommand( "v_spatialInfo" );
+	Cmd_RemoveCommand( "v_spatialCapture" );
+	Cvar_Set( "v_spatialVoice", "0" );
+	Cvar_Set( "v_spatialOwnVoice", "0" );
+	Cvar_Set( "v_spatialBoxes", "0" );
 	S_SpatialRelease();
 }
 
@@ -2569,7 +2569,7 @@ qboolean S_SpatialActive( void ) {
 void S_SpatialUpdate( void ) {
 	if ( spatial.active ) {
 #ifdef __EMSCRIPTEN__
-		// Every frame gives the passes s_spatialBudget of time, and a slice takes off that what it took: the
+		// Every frame gives the passes v_spatialBudget of time, and a slice takes off that what it took: the
 		// least a slice can be is 32 rays with all their bounces, which is more than a frame gives, and what makes
 		// the impulse response at the end of a pass is 2 ms in one piece. So some frames go without a slice.
 		spatial.costFrameUsec = 0;
@@ -2577,20 +2577,20 @@ void S_SpatialUpdate( void ) {
 		if ( spatial.passCredit > 0 ) {
 			S_SpatialSlice( spatial.passCredit );
 		}
-		if ( s_spatialRays->modified ) {
-			s_spatialRays->modified = qfalse;
-			if ( Com_Clampi( 256, SPATIAL_MAX_RAYS, s_spatialRays->integer ) != spatial.maxRays ) {
-				Com_Printf( "s_spatialRays: a page takes it when the sound system starts (snd_restart), the passes go on with %i rays\n", spatial.maxRays );
+		if ( v_spatialRays->modified ) {
+			v_spatialRays->modified = qfalse;
+			if ( Com_Clampi( 256, SPATIAL_MAX_RAYS, v_spatialRays->integer ) != spatial.maxRays ) {
+				Com_Printf( "v_spatialRays: a page takes it when the sound system starts (snd_restart), the passes go on with %i rays\n", spatial.maxRays );
 			}
 		}
 		// switched on in a level that has no paths: a page has no thread that could work them out now
-		if ( s_spatialPaths->modified ) {
-			s_spatialPaths->modified = qfalse;
-			if ( s_spatialPaths->integer && spatial.scene && !spatial.probes && !spatial.probesWait ) {
+		if ( v_spatialPaths->modified ) {
+			v_spatialPaths->modified = qfalse;
+			if ( v_spatialPaths->integer && spatial.scene && !spatial.probes && !spatial.probesWait ) {
 				if ( spatial.refusedProbes ) {
 					S_SpatialSayTooLarge();
 				} else {
-					Com_Printf( "s_spatialPaths: a page works the paths of a level out while it loads, this one has them from its next load on\n" );
+					Com_Printf( "v_spatialPaths: a page works the paths of a level out while it loads, this one has them from its next load on\n" );
 				}
 			}
 		}

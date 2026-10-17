@@ -183,7 +183,6 @@ CMD_RENAME( "boombox", "v_boombox" )
 CMD_RENAME( "cg_chatdrag", "v_chatDrag" )
 CMD_RENAME( "cg_chatopen", "v_chatOpen" )
 CMD_RENAME( "cg_key", "v_cgKey" )
-CMD_RENAME( "esc", "v_esc" )
 CMD_RENAME( "peers", "v_peers" )
 CMD_RENAME( "s_spatialCapture", "v_spatialCapture" )
 CMD_RENAME( "s_spatialInfo", "v_spatialInfo" )
@@ -200,7 +199,6 @@ CMD_RENAME( "voice_mute", "v_voice_mute" )
 CMD_RENAME( "voice_status", "v_voice_status" )
 CMD_RENAME( "voice_test", "v_voice_test" )
 CMD_RENAME( "voice_unmute", "v_voice_unmute" )
-CMD_RENAME( "wheelup", "v_wheelup" )
 
 // console commands of the server
 CMD_RENAME( "boombox", "vs_boxes" )
@@ -213,6 +211,7 @@ CMD_RENAME( "schizo", "vs_schizo" )
 CMD_RENAME( "voicestatus", "vs_voicestatus" )
 
 // commands between client and server
+WIRE_RENAME( "boombox", "vs_boxaction" )
 WIRE_RENAME( "jpauth", "vs_auth" )
 WIRE_RENAME( "jpbox", "vs_box" )
 WIRE_RENAME( "jpstatus", "vs_status" )

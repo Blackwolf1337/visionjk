@@ -21,10 +21,10 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // cg_boombox.c -- the boombox of the client: boxes in the level that play songs of YouTube and YouTube Music. Not
 // from JA+, see docs/japlus/boombox.md and game/boombox/bg_boombox.h.
 //
-// A box is no entity: the server tells this cgame where each one stands and what it plays (jpbox), and the box is
+// A box is no entity: the server tells this cgame where each one stands and what it plays (vs_box), and the box is
 // drawn here, a model of the pack with two speakers that push out with the song. The songs come over the relay of
 // the voice chat as the voices of speakers behind the players and are played there (voice/cg_voice.c): through
-// the sound of the level of this engine where it takes them (s_spatial), as a sound with walls, ways round corners
+// the sound of the level of this engine where it takes them (v_spatial), as a sound with walls, ways round corners
 // and the ring of the room, or on the sound device of the voice chat by side and distance.
 //
 // With the pointer (select/cg_select.c) a box is clicked for its card, and dragged to another place. Everything a
@@ -43,7 +43,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 qboolean CG_WorldCoordToScreenCoordFloat( vec3_t worldCoord, float *x, float *y );		// cg_draw.c
 
-#define BOX_ASK_MSEC		3000		// "jpbox hello" this often until the server answers,
+#define BOX_ASK_MSEC		3000		// "vs_box hello" this often until the server answers,
 #define BOX_MAX_ASKS		10			//	and this many times at most
 #define BOX_SEND_MSEC		1100		// two commands of this file go out at least this far apart
 #define BOX_PENDING			6			// commands that wait for their turn
@@ -78,7 +78,7 @@ typedef struct cgBox_s {
 } cgBox_t;
 
 static struct {
-	qboolean	serverHas;		// g_boombox in the server info
+	qboolean	serverHas;		// vs_boombox in the server info
 	qboolean	asked;
 	int			asks, askTime;
 	qboolean	on;				// the server answered: it has boxes,
@@ -194,20 +194,20 @@ static void Box_Do( int what, int box, const vec3_t at, float yaw, int value, co
 	switch ( what ) {
 	case BOX_DO_PLAY:
 		// (in quotes: a link has "//" in it, which ends a command outside of them)
-		Box_Send( va( "boombox play %i \"%s\"", ( box == 255 ) ? -1 : box, text ), 0 );
+		Box_Send( va( "vs_boxaction play %i \"%s\"", ( box == 255 ) ? -1 : box, text ), 0 );
 		break;
 	case BOX_DO_PLACE:
-		Box_Send( va( "boombox place %i %i %i %i", (int)at[0], (int)at[1], (int)at[2], (int)yaw ), 0 );
+		Box_Send( va( "vs_boxaction place %i %i %i %i", (int)at[0], (int)at[1], (int)at[2], (int)yaw ), 0 );
 		break;
 	case BOX_DO_MOVE:
-		Box_Send( va( "boombox move %i %i %i %i %i", box, (int)at[0], (int)at[1], (int)at[2], (int)yaw ),
-			(int)strlen( va( "boombox move %i ", box ) ) );
+		Box_Send( va( "vs_boxaction move %i %i %i %i %i", box, (int)at[0], (int)at[1], (int)at[2], (int)yaw ),
+			(int)strlen( va( "vs_boxaction move %i ", box ) ) );
 		break;
 	case BOX_DO_VOLUME:
-		Box_Send( va( "boombox volume %i %i", box, value ), (int)strlen( va( "boombox volume %i ", box ) ) );
+		Box_Send( va( "vs_boxaction volume %i %i", box, value ), (int)strlen( va( "vs_boxaction volume %i ", box ) ) );
 		break;
 	default:
-		Box_Send( va( "boombox %s %i", boxVerbs[what], box ), 0 );
+		Box_Send( va( "vs_boxaction %s %i", boxVerbs[what], box ), 0 );
 		break;
 	}
 }
@@ -248,7 +248,7 @@ static qboolean Box_InFront( vec3_t at, float *yaw ) {
 	return Box_Spot( cg.refdef.vieworg, dir, -1, at, yaw );
 }
 
-// What a player typed into the chat box opened for a box, or after "boombox play". Without a box: the one near,
+// What a player typed into the chat box opened for a box, or after "v_boombox play". Without a box: the one near,
 // else a new one in front of him (a server of this tree finds both itself).
 void CG_BoomboxAsk( int box, const char *text ) {
 	char	asked[BOX_ASK];
@@ -360,7 +360,7 @@ static void Box_Set( int n, int rev, const vec3_t origin, float yaw, int volume,
 =================
 CG_BoomboxServerCommand
 
-jpbox on|set|gone|note, see bg_boombox.h
+vs_box on|set|gone|note, see bg_boombox.h
 =================
 */
 void CG_BoomboxServerCommand( void ) {
@@ -414,7 +414,7 @@ Through the masterserver
 // The master the voice chat reaches plays boxes, or it no longer does (the way to it closed). On a server of this
 // tree the boxes are the server's own and none of this counts.
 void CG_BoomboxMasterReady( qboolean ready ) {
-	if ( ready && cg_boombox.integer && !bx.serverHas ) {
+	if ( ready && v_boomboxes.integer && !bx.serverHas ) {
 		bx.on = bx.viaMaster = qtrue;
 		bx.range = BOX_RANGE;
 		bx.most = BOX_MASTER_MAX;
@@ -453,7 +453,7 @@ int CG_BoomboxHearMask( void ) {
 	float		gain;
 	int			i, mask = 0;
 
-	if ( !bx.viaMaster || !cg_boombox.integer || cg_boomboxVolume.value <= 0.0f )
+	if ( !bx.viaMaster || !v_boomboxes.integer || v_boomboxVolume.value <= 0.0f )
 		return 0;
 	for ( i = 0; i < BOX_MASTER_MAX; i++ ) {
 		if ( !CG_VoiceBoxMuted( i ) && CG_BoomboxMouth( i, mouth, &gain ) && Distance( mouth, cg.refdef.vieworg ) <= range )
@@ -470,7 +470,7 @@ Once a frame
 ===============================================================================
 */
 
-// the boxes are gone for this player: switched off (cg_boombox 0), or the server stopped answering
+// the boxes are gone for this player: switched off (v_boomboxes 0), or the server stopped answering
 static void Box_Forget( void ) {
 	int i;
 
@@ -486,12 +486,12 @@ static void Box_Forget( void ) {
 
 void CG_BoomboxFrame( void ) {
 	const int		now = trap->Milliseconds();
-	const qboolean	wanted = ( cg_boombox.integer && !cg.demoPlayback ) ? qtrue : qfalse;
+	const qboolean	wanted = ( v_boomboxes.integer && !cg.demoPlayback ) ? qtrue : qfalse;
 	int				i;
 
 	if ( !wanted && bx.on ) {
 		if ( !bx.viaMaster )
-			Box_Send( "jpbox off", 0 );
+			Box_Send( "vs_box off", 0 );
 		Box_Forget();
 		bx.viaMaster = qfalse;
 	}
@@ -500,7 +500,7 @@ void CG_BoomboxFrame( void ) {
 		CG_BoomboxMasterReady( qtrue );
 	// asked again while there is no answer: the flood protection of the server may have dropped it
 	if ( wanted && bx.serverHas && !bx.on && cg.snap && bx.asks < BOX_MAX_ASKS && ( !bx.asked || now - bx.askTime >= BOX_ASK_MSEC ) ) {
-		trap->SendClientCommand( va( "jpbox hello %i", BOX_PROTOCOL ) );
+		trap->SendClientCommand( va( "vs_box hello %i", BOX_PROTOCOL ) );
 		bx.asked = qtrue;
 		bx.askTime = bx.sendTime = now;
 		bx.asks++;
@@ -574,7 +574,7 @@ void CG_BoomboxScene( void ) {
 	vec3_t		angles;
 	int			i;
 
-	if ( !cg_boombox.integer ) {
+	if ( !v_boomboxes.integer ) {
 		return;
 	}
 	for ( i = 0; i < BOX_MAX; i++ ) {
@@ -624,7 +624,7 @@ void CG_BoomboxDraw( void ) {
 	const int		font = Skin_Ready() ? SKIN_FONT_SANS : FONT_SMALL2;
 	int				i;
 
-	if ( !cg_boombox.integer || !cg.snap ) {
+	if ( !v_boomboxes.integer || !cg.snap ) {
 		return;
 	}
 	for ( i = 0; i < BOX_MAX; i++ ) {
@@ -684,16 +684,16 @@ For the voice chat, which plays the songs
 // The way to the relay is wanted for the songs, also with the voice chat off: on a server of this tree once it said
 // it has boxes, on any other one to ask the masterserver for them.
 qboolean CG_BoomboxWantsLink( void ) {
-	return ( cg_boombox.integer && !cg.demoPlayback && ( bx.on || !bx.serverHas ) ) ? qtrue : qfalse;
+	return ( v_boomboxes.integer && !cg.demoPlayback && ( bx.on || !bx.serverHas ) ) ? qtrue : qfalse;
 }
 
 // is the song of this box to be played
 qboolean CG_BoomboxHears( int box ) {
-	return ( cg_boombox.integer && cg_boomboxVolume.value > 0.0f && Box_Valid( box ) ) ? qtrue : qfalse;
+	return ( v_boomboxes.integer && v_boomboxVolume.value > 0.0f && Box_Valid( box ) ) ? qtrue : qfalse;
 }
 
 // Where the sound of a box comes from, and how loud it is before its distance: as this player wants the songs
-// (cg_boomboxVolume) and the box is set for everybody. qfalse: there is no such box.
+// (v_boomboxVolume) and the box is set for everybody. qfalse: there is no such box.
 qboolean CG_BoomboxMouth( int box, vec3_t mouth, float *gain ) {
 	float yaw;
 
@@ -701,7 +701,7 @@ qboolean CG_BoomboxMouth( int box, vec3_t mouth, float *gain ) {
 		return qfalse;
 	Box_Where( box, mouth, &yaw );
 	mouth[2] += BOX_SPEAKER_HEIGHT;
-	*gain = cg_boomboxVolume.value * cgBoxes[box].volume * 0.01f;
+	*gain = v_boomboxVolume.value * cgBoxes[box].volume * 0.01f;
 	return qtrue;
 }
 
@@ -718,7 +718,7 @@ For the pointer
 */
 
 qboolean CG_BoomboxShown( int box ) {
-	return ( cg_boombox.integer && bx.model && Box_Valid( box ) ) ? qtrue : qfalse;
+	return ( v_boomboxes.integer && bx.model && Box_Valid( box ) ) ? qtrue : qfalse;
 }
 
 /*
@@ -942,7 +942,7 @@ void CG_Boombox_f( void ) {
 
 	Q_strncpyz( what, CG_Argv( 1 ), sizeof( what ) );
 	if ( !bx.on ) {
-		trap->Print( bx.serverHas ? ( cg_boombox.integer ? "Boombox: the server did not answer yet\n" : "Boombox: cg_boombox is 0\n" )
+		trap->Print( bx.serverHas ? ( v_boomboxes.integer ? "Boombox: the server did not answer yet\n" : "Boombox: v_boomboxes is 0\n" )
 			: "This server has no boombox\n" );
 		return;
 	}
@@ -958,7 +958,7 @@ void CG_Boombox_f( void ) {
 			rest++;
 		memmove( words, rest, strlen( rest ) + 1 );
 		if ( !words[0] ) {
-			trap->Print( "usage: boombox play \"<link of YouTube or YouTube Music, or what to look for>\"\n" );
+			trap->Print( "usage: v_boombox play \"<link of YouTube or YouTube Music, or what to look for>\"\n" );
 			return;
 		}
 		// A link that was not in quotes was cut off by the console where it has "//": the rest is gone.
@@ -981,7 +981,7 @@ void CG_Boombox_f( void ) {
 		int i;
 
 		if ( !bx.viaMaster ) {
-			Box_Send( "boombox list", 0 );
+			Box_Send( "vs_boxaction list", 0 );
 			return;
 		}
 		// (the masterserver does not answer it: what this client knows)
@@ -995,7 +995,7 @@ void CG_Boombox_f( void ) {
 	if ( !Q_stricmp( what, "volume" ) ) {
 		box = CG_Argv( 3 )[0] ? atoi( CG_Argv( 3 ) ) : Box_Near();
 		if ( !Box_Valid( box ) || !CG_Argv( 2 )[0] ) {
-			trap->Print( "usage: boombox volume <0 to 100> [boombox], near a boombox\n" );
+			trap->Print( "usage: v_boombox volume <0 to 100> [boombox], near a boombox\n" );
 			return;
 		}
 		cgBoxes[box].volume = Com_Clampi( 0, 100, atoi( CG_Argv( 2 ) ) );
@@ -1012,6 +1012,6 @@ void CG_Boombox_f( void ) {
 		CG_BoomboxDo( box, what );
 		return;
 	}
-	trap->Print( "usage: boombox play \"<link or what to look for>\" | place | pause | resume | skip | stop | remove | volume <0 to 100> | list\n"
+	trap->Print( "usage: v_boombox play \"<link or what to look for>\" | place | pause | resume | skip | stop | remove | volume <0 to 100> | list\n"
 		"Hold the key of the pointer (+cursor) and click a boombox for its card, or drag it somewhere else.\n" );
 }

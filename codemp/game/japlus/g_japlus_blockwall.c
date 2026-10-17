@@ -340,7 +340,7 @@ qboolean JP_SaveBlockWalls( void ) {
 		Com_sprintf( line, sizeof( line ), "%.1f %.1f %.1f %.1f %.1f %.1f\n", mins[0], mins[1], mins[2], maxs[0], maxs[1], maxs[2] );
 		trap->FS_Write( line, strlen( line ), f );
 	}
-	trap->Cvar_VariableStringBuffer( "sv_clipOff", off, sizeof( off ) );
+	trap->Cvar_VariableStringBuffer( "vs_clipOff", off, sizeof( off ) );
 	if ( off[0] ) {
 		trap->FS_Write( "clipsoff ", 9, f );
 		trap->FS_Write( off, strlen( off ), f );

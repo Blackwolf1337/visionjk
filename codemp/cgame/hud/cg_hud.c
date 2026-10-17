@@ -80,14 +80,14 @@ void CG_HudLoad( void ) {
 CG_HudDraw
 
 The HUD of the new look in place of the one of the game: the two menus of ui/vision/hud.menu, the left one at
-the left edge of the window and the right one at the right edge. qfalse: it is switched off (cg_hud 0) or not
+the left edge of the window and the right one at the right edge. qfalse: it is switched off (v_hud 0) or not
 there, and the caller draws the HUD of the game.
 =================
 */
 qboolean CG_HudDraw( void ) {
 	menuDef_t *left, *right;
 
-	if ( !hudLoaded || !cg_hud.integer ) {
+	if ( !hudLoaded || !v_hud.integer ) {
 		return qfalse;
 	}
 	left = Menus_FindByName( "visionhud_left" );
@@ -108,11 +108,11 @@ qboolean CG_HudDraw( void ) {
 CG_HudNewLook
 
 Is the HUD of the new look the one that is drawn? What belongs to it follows: the chat box, the scoreboard. Not
-with cg_hud 0, not in an engine that can not draw the look, and not next to the HUD of a mod.
+with v_hud 0, not in an engine that can not draw the look, and not next to the HUD of a mod.
 =================
 */
 qboolean CG_HudNewLook( void ) {
-	return (qboolean)( hudLoaded && cg_hud.integer && Skin_Ready() );
+	return (qboolean)( hudLoaded && v_hud.integer && Skin_Ready() );
 }
 
 /*
@@ -161,7 +161,7 @@ const char *CG_VisionText( const char *english ) {
 		return out;
 	}
 	// (the files of the strings are in the code page of the game)
-	trap->Cvar_VariableStringBuffer( "cl_utf8Text", value, sizeof( value ) );
+	trap->Cvar_VariableStringBuffer( "v_utf8Text", value, sizeof( value ) );
 	if ( atoi( value ) == 1 ) {
 		Q_UTF8_FromCP1252( found, out, sizeof( text[0] ) );
 	} else {
@@ -249,7 +249,7 @@ void CG_TextCut( const char *text, float most, float (*width)( const char *text,
 	if ( width( out, arg ) <= most || outSize < 8 ) {
 		return;
 	}
-	trap->Cvar_VariableStringBuffer( "cl_utf8Text", value, sizeof( value ) );
+	trap->Cvar_VariableStringBuffer( "v_utf8Text", value, sizeof( value ) );
 	out[outSize - 4] = '\0';
 	for ( len = strlen( out ); len > 0; len = strlen( out ) ) {
 		// one letter less: a byte, or all bytes of a letter of UTF-8
@@ -353,7 +353,7 @@ CG_HudLoading
 The screen while a level loads, in the new look: over the picture of the level a panel at the bottom with the
 box of the icon, the name of the level and of the server, what is being loaded, and a bar for how far it is.
 The caller has drawn the picture of the level. qfalse: this look can not be drawn here or is switched off
-(ui_classic 1), and the caller draws the screen of the game.
+(v_classic 1), and the caller draws the screen of the game.
 =================
 */
 qboolean CG_HudLoading( void ) {
@@ -362,7 +362,7 @@ qboolean CG_HudLoading( void ) {
 	char			value[8], title[256], about[256], now[256], host[128];
 
 	CG_DisplayEnsure();
-	trap->Cvar_VariableStringBuffer( "ui_classic", value, sizeof( value ) );
+	trap->Cvar_VariableStringBuffer( "v_classic", value, sizeof( value ) );
 	if ( !Skin_Ready() || atoi( value ) ) {
 		return qfalse;
 	}

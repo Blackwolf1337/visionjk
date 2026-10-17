@@ -74,10 +74,10 @@ static struct {
 	std::vector<byte>	blocks;		// the levels packed so far
 } texCache;
 
-static cvar_t *r_vkTexCache;
+static cvar_t *v_vkTexCache;
 
 void VK_TexCacheInit( void ) {
-	r_vkTexCache = ri.Cvar_Get( "r_vkTexCache", "1", CVAR_ARCHIVE_ND, "Textures that were packed into blocks are kept in vulkan/tex/ of the profile and not made again. 0: every one is made from its image file" );
+	v_vkTexCache = ri.Cvar_Get( "v_vkTexCache", "1", CVAR_ARCHIVE_ND, "Textures that were packed into blocks are kept in vulkan/tex/ of the profile and not made again. 0: every one is made from its image file" );
 }
 
 // FNV-1a, 64 bit
@@ -161,7 +161,7 @@ qboolean VK_TexCacheFind( const char *name, qboolean mipmap, qboolean allowPicmi
 	vkSize_t	need;
 
 	texCache.pending = qfalse;
-	if ( !vk.bcTextures || !allowTC || !r_vkTexCache || !r_vkTexCache->integer || !VK_TexCacheKey( name, mipmap, allowPicmip ) ) {
+	if ( !vk.bcTextures || !allowTC || !v_vkTexCache || !v_vkTexCache->integer || !VK_TexCacheKey( name, mipmap, allowPicmip ) ) {
 		return qfalse;
 	}
 	texCache.pending = qtrue;

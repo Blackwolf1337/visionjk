@@ -27,7 +27,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 =================
 Bot mode
 
-Not in JA+. cg_botMode 1 and the client walks the route of the map's bots and fights, on any server. The Bot
+Not in JA+. v_botMode 1 and the client walks the route of the map's bots and fights, on any server. The Bot
 Mode page of the setup menus sets the cvars.
 
 The route is the file the bots of a server walk, botroutes/<map>.wnt, as this client has it in its own pk3s
@@ -42,7 +42,7 @@ The engine builds the commands of a client from its keys and has no way in for a
   hands over with SetUserCmdValue (for the vehicles). So +lookdown is held all the time and that factor is the
   rate, up or down, set anew every frame from how far off the pitch is.
 
-With cg_botModeKeys a key of mine ends it: one of the move and attack keys that is down, after none of them was.
+With v_botModeKeys a key of mine ends it: one of the move and attack keys that is down, after none of them was.
 =================
 */
 
@@ -171,7 +171,7 @@ static int CG_BotMoveKeys( const vec3_t dir ) {
 static qboolean CG_BotTakenOver( void ) {
 	int i;
 
-	if ( !cg_botModeKeys.integer || trap->Key_GetCatcher() )
+	if ( !v_botModeKeys.integer || trap->Key_GetCatcher() )
 		return qfalse;
 	for ( i = 0; i < (int)ARRAY_LEN( botUserKeys ); i++ ) {
 		const int key = trap->Key_GetKey( botUserKeys[i] );
@@ -429,18 +429,18 @@ The fight
 ===============================================================================
 */
 
-// cg_botModeFight: 0 nobody, 1 only the one I am in a duel with, 2 every enemy
+// v_botModeFight: 0 nobody, 1 only the one I am in a duel with, 2 every enemy
 static qboolean CG_BotIsEnemy( const playerState_t *ps, int num ) {
 	const centity_t *cent = &cg_entities[num];
 
 	if ( num == ps->clientNum || !cent->currentValid || cent->currentState.eType != ET_PLAYER
 		|| ( cent->currentState.eFlags & EF_DEAD ) || !cgs.clientinfo[num].infoValid )
 		return qfalse;
-	if ( cg_botModeFight.integer <= 0 )
+	if ( v_botModeFight.integer <= 0 )
 		return qfalse;
 	if ( ps->duelInProgress )
 		return num == ps->duelIndex;
-	if ( cg_botModeFight.integer < 2 )
+	if ( v_botModeFight.integer < 2 )
 		return qfalse;
 	// bolt1: he is in a duel, which I am not
 	if ( cent->currentState.bolt1 )
@@ -537,7 +537,7 @@ Once a frame
 
 // the bot may play now: it is switched on and I am a player in the game, on foot
 static qboolean CG_BotModeOn( const playerState_t *ps ) {
-	if ( !cg_botMode.integer || !cg.snap || cg.demoPlayback || ( cg.snap->ps.pm_flags & PMF_FOLLOW ) )
+	if ( !v_botMode.integer || !cg.snap || cg.demoPlayback || ( cg.snap->ps.pm_flags & PMF_FOLLOW ) )
 		return qfalse;
 	if ( ps->persistant[PERS_TEAM] == TEAM_SPECTATOR || ps->pm_type == PM_SPECTATOR || ps->pm_type == PM_INTERMISSION )
 		return qfalse;
@@ -572,7 +572,7 @@ the pitch rate in it. sensitivity is what the frame worked out for the mouse.
 */
 void CG_BotModeFrame( float sensitivity ) {
 	const playerState_t	*ps = &cg.predictedPlayerState;
-	const botSkill_t	*skill = &botSkills[Com_Clampi( 1, 5, cg_botModeSkill.integer ) - 1];
+	const botSkill_t	*skill = &botSkills[Com_Clampi( 1, 5, v_botModeSkill.integer ) - 1];
 	const float			dt = Com_Clamp( 1.0f, 100.0f, cg.frametime ) * 0.001f;
 	vec3_t				eye, angles;
 	float				wishYaw, wishPitch = 0.0f, step, pitchSpeed, rate = 0.0f;
@@ -587,7 +587,7 @@ void CG_BotModeFrame( float sensitivity ) {
 	if ( !bot.active )
 		CG_BotStart( ps );
 	if ( CG_BotTakenOver() ) {
-		trap->Cvar_Set( "cg_botMode", "0" );
+		trap->Cvar_Set( "v_botMode", "0" );
 		CG_BotStop();
 		return;
 	}
@@ -605,7 +605,7 @@ void CG_BotModeFrame( float sensitivity ) {
 		// the route is picked up again where the fight ends
 		bot.wp = -1;
 		bot.wpTime = 0;
-	} else if ( cg_botModeRoam.integer ) {
+	} else if ( v_botModeRoam.integer ) {
 		keys |= CG_BotRoute( ps, eye, &wishYaw );
 	}
 	CG_BotKeys( CG_BotUnstick( ps, keys ) );
@@ -631,7 +631,7 @@ void CG_BotModeFrame( float sensitivity ) {
 void CG_BotModeDraw( void ) {
 	if ( !bot.active || cg.scoreBoardShowing )
 		return;
-	CG_DrawProportionalString( 320, 64, ( botNumWaypoints || !cg_botModeRoam.integer ) ? "BOT MODE" : "BOT MODE (no route for this map)",
+	CG_DrawProportionalString( 320, 64, ( botNumWaypoints || !v_botModeRoam.integer ) ? "BOT MODE" : "BOT MODE (no route for this map)",
 		UI_CENTER | UI_SMALLFONT, colorTable[CT_ICON_BLUE] );
 }
 

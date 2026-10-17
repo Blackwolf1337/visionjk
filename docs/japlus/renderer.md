@@ -40,7 +40,7 @@ JA+ draw is drawn. What is open is what was never run, and a few cvars.
 | Compressed textures, texture filter, anisotropic filter, picmip | done |
 | Screenshots, recording to AVI | done |
 | Automap | done |
-| `r_showtris`, `r_shownormals`, `r_showImages`, `r_vkStatic`, `gfxinfo`, `imagelist` | done |
+| `r_showtris`, `r_shownormals`, `r_showImages`, `v_vkStatic`, `gfxinfo`, `imagelist` | done |
 | Window: resized from outside, `r_swapInterval`, a window nobody sees, `vid_restart` between the renderers | done |
 | Windows DLL, 64 bit | started on Windows 11 on Mesa's software Vulkan and drew the menus (2026-10-11, [windows.md](windows.md)). No level, no real graphics card |
 | Portals and mirrors, `alphaGen portal` | done, in a test room: no level of the base game has one (see "Checked") |
@@ -127,12 +127,12 @@ away nor on a real machine. Windows was not built with it.
 
 | Cvar | Meaning |
 |------|---------|
-| `r_vkDebug 1` | validation layer and its messages in the console, if the layer is installed (latched) |
+| `v_vkDebug 1` | validation layer and its messages in the console, if the layer is installed (latched) |
 | `r_ext_multisample 2`, `4`, `8` | anti aliasing with that many samples a pixel, the cvar `rd-vanilla` uses for it (latched) |
 | `r_ext_compress_textures 0` | textures as 32 bit and not packed into blocks, the cvar `rd-vanilla` uses for it (latched, the default is 1) |
-| `r_vkStatic 0` | cheat: nothing from the device buffers, every vertex through the CPU as in `rd-vanilla`. For telling a fault of the buffers from a fault of the shading |
-| `r_vkMerge 0` | cheat: a batch ends with its entity as in `rd-vanilla`, the sprites of an effect are a draw each again |
-| `r_glesDebug 1` | OpenGL ES device: asks the device for its errors after every frame and prints them with the frame. Slow in a browser |
+| `v_vkStatic 0` | cheat: nothing from the device buffers, every vertex through the CPU as in `rd-vanilla`. For telling a fault of the buffers from a fault of the shading |
+| `v_vkMerge 0` | cheat: a batch ends with its entity as in `rd-vanilla`, the sprites of an effect are a draw each again |
+| `v_glesDebug 1` | OpenGL ES device: asks the device for its errors after every frame and prints them with the frame. Slow in a browser |
 | `gfxinfo` | device, memory, how many textures are compressed and how long packing them took, what the last frame was made of (draws, triangles, transforms, bones), the shaders whose batches were still built on the CPU, how many swapchains the window has had and how many frames found no image to be shown in, how many of the 1024 Ghoul2 instances of the engine are taken and how many of those hold no model (with `developer 1` a line for each model that is held; the same list is printed when the engine stops with "Out of ghoul2 info slots"). The count has to be 0 in the menu after leaving a server, apart from the models the menu shows itself |
 
 The cvars of `rd-vanilla` keep their names and meaning (`r_gamma`, `r_textureMode`, `r_picmip`,
@@ -238,7 +238,7 @@ does in another way, because WebGL2 leaves it no choice:
   nothing waits for one.
 - Anti aliasing: color, glow and depth are multisample renderbuffers, resolved into their textures before
   something reads them (the copy for refraction, the blur of the glow, the copy to the window).
-- The textures are not packed into blocks, and there is no validation layer. `r_glesDebug 1` asks for errors.
+- The textures are not packed into blocks, and there is no validation layer. `v_glesDebug 1` asks for errors.
 
 `gfxinfo` of this device prints how many buffers, textures, framebuffers, renderbuffers and queries it holds
 (what a `vid_restart` or a change of level leaves more of each time would be a leak), how many commands the last
@@ -246,7 +246,7 @@ frame had and how many calls of OpenGL ES played it, and for how many flares the
 
 Checked on 2026-10-09 against the Vulkan device, the same way as against `rd-vanilla` (see "Checked"): both draw
 the same view in one run, `rd-vision-gles` after a `vid_restart`, at 1280 x 720, textures not packed into blocks
-on either (`r_ext_compress_textures 0`, the blocks alone are a difference of two levels), `r_glesDebug 1`. No
+on either (`r_ext_compress_textures 0`, the blocks alone are a difference of two levels), `v_glesDebug 1`. No
 run printed an error of OpenGL ES.
 
 | Scene | Mean difference of the two pictures (of 255) |
@@ -364,7 +364,7 @@ left in these views are the effects of the game (flames, smoke, light cones) and
 - `r_showImages`: `rd-vanilla` sizes the tiles by the width of the window but draws them in the 640 x 480 of
   the menus, so most are outside of a large window. Here all of them are on the screen.
 - `r_shownormals`: the lines are made from the vertices of a batch, so while it is set nothing comes from the
-  device buffers, as with `r_vkStatic 0`.
+  device buffers, as with `v_vkStatic 0`.
 - Anti aliasing costs memory for three more targets with that many samples a pixel: about 44 MB at 1280x720
   with four samples, about 400 MB at 3840x2160.
 - Compressed textures (`r_ext_compress_textures 1`, the default of the engine): `rd-vanilla` names a compressed
@@ -382,7 +382,7 @@ left in these views are the effects of the game (flames, smoke, light cones) and
   core. The workers do nothing else and sleep while the game runs.
 - Since 2026-10-10 a texture is packed once and then kept: `vk_texcache.cpp` writes the blocks of every image
   file of a pak to `vulkan/tex/` of the profile and reads them back the next time, without the image file
-  being read or decoded (`r_vkTexCache`, on by default). The first load of mp/ffa3 since the program started
+  being read or decoded (`v_vkTexCache`, on by default). The first load of mp/ffa3 since the program started
   went from 1541 to 661 ms with it, a player who joins from a frame of 22 to 28 ms to one of 4 to 6.5.
   [loading.md](loading.md) has how that was measured and what the cache is named after.
 
@@ -623,7 +623,7 @@ down, each step measured with the same demo:
 | `deformVertexes` in the vertex shader: the shells around a player (shield, lightning, ysalamiri) are the whole model drawn once more with such a shader | 8000 to 15000 | 648, 646, 655 |
 | less work per batch and per draw (streams bound once, draw number as instance, index buffer for models) | the same | 689, 691, 673 |
 | models with saber marks on them from the device, only the vertices of the marks on the CPU | 7100 to 8000 | 736, 707, 725 |
-| effects in one batch: a fight has about 1360 entities in a frame that are one sprite or one line each, and each was a batch and a draw. Now they share a batch where the shader takes nothing from its entity. 2200 to 2400 draws become 600 to 850 | the same | 880 against 736 with `r_vkMerge 0` (medians, the build of the table above) |
+| effects in one batch: a fight has about 1360 entities in a frame that are one sprite or one line each, and each was a batch and a draw. Now they share a batch where the shader takes nothing from its entity. 2200 to 2400 draws become 600 to 850 | the same | 880 against 736 with `v_vkMerge 0` (medians, the build of the table above) |
 | tried and taken out: only the first set of texture coordinates of a vertex written where no stage reads the others. Four tenths less to copy, but piece by piece into the memory of the device | the same | 803 against 848, a loss of 5 % |
 | the normals of a vertex left out of the copy where no stage reads them | the same | 900 against 863 |
 | marks: a triangle the planes of a mark leave nothing of is passed over before it is copied and chopped (`tr_marks.cpp`, for this renderer only). The game asks for the shadow mark of every player in every frame, and a floor that is a patch gave it 150 triangles a call | the same | 863 against 803 |

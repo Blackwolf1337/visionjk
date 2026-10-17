@@ -25,7 +25,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // - An account is a name, a role and a password, kept as an Argon2id hash in webadmin_users.dat of the game
 //   folder. The roles are moderator (the players: kick, ban, team and the like), admin (also the editor, the
 //   map, the log) and owner (also the console of the server, its config, its files and the accounts). The
-//   first owner is made from g_webPassword once, or with "webuser add <name> owner" on the console.
+//   first owner is made from vs_webPassword once, or with "webuser add <name> owner" on the console.
 // - A login gives a session: 32 random bytes in a cookie the scripts of the page can not read and no other
 //   site gets sent (HttpOnly, SameSite=Strict, Secure behind a proxy that speaks HTTPS). It ends after 30
 //   minutes without a request and after 12 hours at the latest. The server keeps the SHA-256 of the cookie,
@@ -578,7 +578,7 @@ void WA_AuthRequest( waConnection_t *c, const char *head ) {
 		}
 	}
 
-	// A script: the token of its account as "Bearer <token>", or with g_webBasicAuth 1 as the password of basic
+	// A script: the token of its account as "Bearer <token>", or with vs_webBasicAuth 1 as the password of basic
 	// auth behind the name of the account. Never the password of the account itself.
 	if ( Web_HeaderValue( head, "Authorization", value, sizeof( value ) ) ) {
 		char		decoded[256];
@@ -586,7 +586,7 @@ void WA_AuthRequest( waConnection_t *c, const char *head ) {
 
 		if ( !Q_stricmpn( value, "Bearer ", 7 ) ) {
 			token = value + 7;
-		} else if ( !g_webBasicAuth.integer ) {
+		} else if ( !vs_webBasicAuth.integer ) {
 			// A browser that knew the panel when it had one password keeps sending that with every request, until
 			// it is closed. That is no try at anything.
 			return;
@@ -865,7 +865,7 @@ static void WA_ApiMe( waConnection_t *c ) {
 	WA_BufJsonString( &b, c->user );
 	WA_BufPrintf( &b, ",\"role\":\"%s\",\"account\":%s,\"totp\":%s,\"token\":%s,\"recovery\":%i,\"keys\":%i,\"passwords\":%s,\"proxy\":%s",
 		WA_RoleName( c->role ), WA_BOOL( user ), WA_BOOL( user && user->hasTotp ), WA_BOOL( user && user->hasToken ),
-		user ? user->numRecovery : 0, G_AuthNumKeys(), WA_BOOL( jp_adminPasswords.integer ), WA_BOOL( c->proxied ) );
+		user ? user->numRecovery : 0, G_AuthNumKeys(), WA_BOOL( vs_adminPasswords.integer ), WA_BOOL( c->proxied ) );
 	if ( c->role == WA_ROLE_OWNER ) {
 		WA_BufPrintf( &b, ",\"users\":[" );
 		for ( i = 0; i < waNumUsers; i++ ) {
@@ -1300,7 +1300,7 @@ qboolean WA_AuthHasUsers( void ) {
 =================
 WA_AuthInit
 
-Reads the accounts and the sessions that are open. A server that had the one password of before (g_webPassword)
+Reads the accounts and the sessions that are open. A server that had the one password of before (vs_webPassword)
 and has no account yet gets its first one from it: the owner "owner" with that password.
 =================
 */
@@ -1310,17 +1310,17 @@ void WA_AuthInit( void ) {
 	WA_LoadUsers();
 	WA_LoadSessions();
 
-	if ( !waNumUsers && g_webPassword.string[0] ) {
+	if ( !waNumUsers && vs_webPassword.string[0] ) {
 		waUser_t *user = &waUsers[0];
 
 		memset( user, 0, sizeof( *user ) );
 		Q_strncpyz( user->name, "owner", sizeof( user->name ) );
 		user->role = WA_ROLE_OWNER;
-		if ( WA_SetPassword( user, g_webPassword.string ) ) {
+		if ( WA_SetPassword( user, vs_webPassword.string ) ) {
 			waNumUsers = 1;
 			WA_SaveUsers();
-			trap->Print( S_COLOR_YELLOW "Web admin: the panel has accounts now. Its first one is \"owner\" with the password g_webPassword has.\n"
-				"Log in, change the password on the Account tab, and take g_webPassword out of the config: it is not read again.\n" );
+			trap->Print( S_COLOR_YELLOW "Web admin: the panel has accounts now. Its first one is \"owner\" with the password vs_webPassword has.\n"
+				"Log in, change the password on the Account tab, and take vs_webPassword out of the config: it is not read again.\n" );
 		}
 		waHashed = qfalse;		// the first login does not have to wait for this
 	}

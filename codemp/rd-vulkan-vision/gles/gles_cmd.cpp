@@ -979,7 +979,7 @@ void VK_PresentFrame( const float *gamma ) {
 
 	vk.statCommands = gles_numCommands;
 	vk.statCalls = gles_calls;
-	if ( r_glesDebug->integer ) {
+	if ( v_glesDebug->integer ) {
 		// this waits until the device has done all it was told
 		for ( GLenum error = glGetError(); error != GL_NO_ERROR; error = glGetError() ) {
 			if ( vk.statErrors++ < 32 ) {

@@ -38,18 +38,18 @@ and deletes nothing. The console names the files.
 
 | Cvar | Default | Meaning |
 |------|---------|---------|
-| `cl_updateCheck` | 1 | 0: the website is not asked at the start |
-| `cl_updateURL` | https://jka.vision/downloads/update | where it asks. Only the command line can name another one, see "Who is trusted" |
-| `cl_updateState`, `cl_updateText` | | read only: what the updater is doing, and the line of the menu |
+| `v_updateCheck` | 1 | 0: the website is not asked at the start |
+| `v_updateURL` | https://jka.vision/downloads/update | where it asks. Only the command line can name another one, see "Who is trusted" |
+| `v_updateState`, `v_updateText` | | read only: what the updater is doing, and the line of the menu |
 
 | Command | |
 |---------|---|
-| `update_check` | asks the website now, also with `cl_updateCheck 0` |
+| `v_update_check` | asks the website now, also with `v_updateCheck 0` |
 | `update` | fetches the newer version, puts it in place and starts the game again. Only in the main menu, not on a server |
-| `update_cancel` | stops a download. What came in is kept for the next try |
+| `v_update_cancel` | stops a download. What came in is kept for the next try |
 
 On Linux the game asks through the `libcurl` of the system (`libcurl.so.4`). Without it there is no update
-check, one line says so when `update_check` is typed, and the game runs.
+check, one line says so when `v_update_check` is typed, and the game runs.
 
 ## What is never replaced
 
@@ -86,7 +86,7 @@ starts with a word it does not know. `keep` is a file that is only put there if 
 **Asking.** A thread fetches the list (`Sys_HttpGet`). If its version is newer than the build, every file of
 the list is compared with the one that is here: by size, and if that is the same by SHA-256. What differs or
 is missing has to be fetched. The game learns the result some frames later and says it, in the console and in
-`cl_updateState` and `cl_updateText`, which the ui module draws on the menu named `main`. That line is drawn
+`v_updateState` and `v_updateText`, which the ui module draws on the menu named `main`. That line is drawn
 in code and is no item of a menu file, so it is there with the main menu of the client assets in `japlus`,
 where the game starts, and with the one of the original game in `base`.
 
@@ -164,7 +164,7 @@ Because of that the address is hard to change:
 
 - It is compiled in (`-DUpdateURL=...`, by default `https://jka.vision/downloads/update`).
 - A player can name another one on the command line and nowhere else:
-  `visionjk.x86_64 +set cl_updateURL https://example.org/update`. `Com_Init` takes it right after the command
+  `visionjk.x86_64 +set v_updateURL https://example.org/update`. `Com_Init` takes it right after the command
   line was read, before any config file is run, and the updater keeps a copy of its own and never reads the
   cvar again. No config, no module, no game server and nobody at the console can send a client elsewhere.
 - An address a player gives has to be `https://`. If it is not, the game says so and asks the one it was
@@ -174,7 +174,7 @@ Because of that the address is hard to change:
   line above works as it is written, also from a shortcut on Windows.
 
 That one way in is what moving to another domain takes: a new release has the new address compiled in, and
-a player with an older one starts it once with `+set cl_updateURL`.
+a player with an older one starts it once with `+set v_updateURL`.
 
 If the website can not be reached, nothing happens: no answer, no word (with `developer 1` one line), and the
 next start asks again. A download that breaks off changes no file.
@@ -217,8 +217,8 @@ next start asks again. A download that breaks off changes no file.
   - A swap that was cut short after one file of four: the next start finishes it and is 0.0.2.
   - A file that can not be put in place (its folder read only): the two that had been moved are moved back,
     the journal is gone, the game starts as 0.0.1, says which file it was and offers 0.0.2 again.
-  - `cl_updateCheck 0`: the server gets no request.
-  - No server: the start says nothing, `update_check` says why, the game runs.
+  - `v_updateCheck 0`: the server gets no request.
+  - No server: the start says nothing, `v_update_check` says why, the game runs.
   - The address: without https on the command line it is refused and the address of the build is asked. A
     config file with `set` and `seta` can not change it, neither can the console. With https on the command
     line it is taken, and a server that speaks no TLS there gives no update ("SSL connect error").
@@ -254,7 +254,7 @@ next start asks again. A download that breaks off changes no file.
   (that build folder has no dedicated server), and the client for the browser. The Windows client imports
   `WINHTTP.dll` in addition to what it imported before.
 
-Found by these runs and fixed: `+set cl_updateURL https://...` was cut off by the console (see "Who is
+Found by these runs and fixed: `+set v_updateURL https://...` was cut off by the console (see "Who is
 trusted"), the line of the menu lay over the top of the logo, and, only on the real Windows: a game started
 by its bare name from a batch file took the folder it was called with, which is empty there, for its own,
 and refused to update as a game that reads its files from somewhere else. Wine names the whole path and did
@@ -317,5 +317,5 @@ Not checked:
   fetched with a browser (which marks it as from the internet; this one came through curl).
 - A real https server with a real certificate, and a certificate that is wrong. The test server spoke plain
   http, which only the address of a build may be.
-- A download that is stopped (`update_cancel`) or a line that drops in the middle of a file.
+- A download that is stopped (`v_update_cancel`) or a line that drops in the middle of a file.
 - A release made by `tools/build-game.sh` from start to end, and the site behind its proxy.

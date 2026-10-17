@@ -22,7 +22,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 //
 // While a menu is open in a game the camera moves behind the right shoulder of the player, and the menu stands
 // in the level to the right of him as a panel: the game goes on around it, a little out of focus and muffled
-// (cg_immersiveMenu 0: the flat menu of the game). The player is at the left edge of the picture and the menu
+// (v_immersiveMenu 0: the flat menu of the game). The player is at the left edge of the picture and the menu
 // takes the rest, so neither is in front of the other.
 //
 // The menu is not painted onto a texture. The ui draws it as it always does, and the renderer puts that 2D onto
@@ -30,11 +30,11 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // (trap->ext.R_SetUIPlane), which the engine sets around the drawing of the menus. The cursor of the ui is
 // drawn on the plane with the rest and the mouse moves it there, so nothing has to find out what the mouse
 // points at. Behind the menu this file adds a panel to the scene, and it asks for the blur behind it
-// (trap->ext.R_SetDepthOfField) and for the muffled sound (the cvar s_muffle). The panel is as large as what is
-// open on it: the ui says how much of the 640 x 480 its menus take (the cvar ui_openBox), so the bar at the top
+// (trap->ext.R_SetDepthOfField) and for the muffled sound (the cvar v_muffle). The panel is as large as what is
+// open on it: the ui says how much of the 640 x 480 its menus take (the cvar v_openBox), so the bar at the top
 // alone is a bar, and the panel grows when a page opens under it.
 //
-// It needs an engine of this tree (cvar cl_cgameUIPlane). Not while spectating, dead or at the end of a map:
+// It needs an engine of this tree (cvar v_cgameUIPlane). Not while spectating, dead or at the end of a map:
 // the camera of the game has no player to stand behind then.
 
 #include "cgame/cg_local.h"
@@ -53,7 +53,7 @@ static struct {
 	float		blend;				// 0 the view of the game, 1 the view of the menu
 	int			lastTime;
 	float		yaw;				// where the player looks, followed slowly: the camera is behind that
-	float		muffle;				// what s_muffle was last set to
+	float		muffle;				// what v_muffle was last set to
 
 	// the panel, as long as blend is above 0
 	vec3_t		center, right, down;
@@ -67,7 +67,7 @@ void CG_Menu3DInit( void ) {
 	// What the cgame before this one set stays in the cvar when it ends (a level change while a menu muffled the
 	// sound), and this one would take it for 0:
 	// the sound stayed dull until a menu was opened and closed.
-	trap->Cvar_Set( "s_muffle", "0" );
+	trap->Cvar_Set( "v_muffle", "0" );
 }
 
 static qboolean Menu3D_Engine( const char *cvar ) {
@@ -92,11 +92,11 @@ qboolean CG_Menu3DFrame( void ) {
 	qboolean		open;
 
 	menu3d.lastTime = now;
-	open = (qboolean)( cg_immersiveMenu.integer && cg.snap && !cg.demoPlayback
+	open = (qboolean)( v_immersiveMenu.integer && cg.snap && !cg.demoPlayback
 		&& ( trap->Key_GetCatcher() & KEYCATCH_UI )
 		&& ps->pm_type != PM_SPECTATOR && ps->pm_type != PM_INTERMISSION && !( ps->pm_flags & PMF_FOLLOW )
 		&& cg.snap->ps.stats[STAT_HEALTH] > 0 && !cg.snap->ps.zoomMode
-		&& Menu3D_Engine( "cl_cgameUIPlane" ) );
+		&& Menu3D_Engine( "v_cgameUIPlane" ) );
 
 	// The camera is behind where he looks. With a menu open he does not turn by himself (the mouse is the
 	// cursor's), but a teleporter, an admin or a respawn turn him: the camera then comes round within a moment.
@@ -115,7 +115,7 @@ qboolean CG_Menu3DFrame( void ) {
 		char	said[64];
 		int		x, y, w, h, i;
 
-		trap->Cvar_VariableStringBuffer( "ui_openBox", said, sizeof( said ) );
+		trap->Cvar_VariableStringBuffer( "v_openBox", said, sizeof( said ) );
 		if ( sscanf( said, "%i %i %i %i", &x, &y, &w, &h ) == 4 && w > 0 && h > 0 ) {
 			const float want[4] = { (float)x, (float)y, (float)w, (float)h };
 
@@ -134,10 +134,10 @@ qboolean CG_Menu3DFrame( void ) {
 		menu3d.blend = Q_max( 0.0f, menu3d.blend - (float)msec / MENU3D_OUT_MSEC );
 	}
 
-	// the sound of the game is muffled while the menu is there (s_muffle of the engine, 0 to 1)
+	// the sound of the game is muffled while the menu is there (v_muffle of the engine, 0 to 1)
 	if ( fabsf( menu3d.blend - menu3d.muffle ) > 0.02f || ( menu3d.blend != menu3d.muffle && ( menu3d.blend == 0.0f || menu3d.blend == 1.0f ) ) ) {
 		menu3d.muffle = menu3d.blend;
-		trap->Cvar_Set( "s_muffle", va( "%.2f", menu3d.muffle ) );
+		trap->Cvar_Set( "v_muffle", va( "%.2f", menu3d.muffle ) );
 	}
 	return (qboolean)( menu3d.blend > 0.0f );
 }
@@ -280,7 +280,7 @@ void CG_Menu3DScene( void ) {
 	CG_BubblePanelAt( behind, menu3d.right, up, halfW, halfH, 14.0f * menu3d.unit, fill, border, light, alpha );
 
 	// the blur of what is not at the distance of the panel
-	if ( Menu3D_Engine( "cl_cgameDoF" ) ) {
+	if ( Menu3D_Engine( "v_cgameDoF" ) ) {
 		vec3_t delta;
 
 		VectorSubtract( menu3d.center, org, delta );

@@ -108,12 +108,12 @@ VK_BlurFrame
 The depth of field a module asked for with RE_SetDepthOfField(): the menu in the level of the cgame, which is
 drawn afterwards and stays sharp. What is farther from the eye than focus goes out of focus, the more the
 farther it is; what is nearer stays as it was drawn (the player next to the menu). amount is 0 to 1 from the
-module (the menu comes and goes), r_menuBlur is how soft the player wants it: 0 not at all, 1 as it is meant,
+module (the menu comes and goes), v_menuBlur is how soft the player wants it: 0 not at all, 1 as it is meant,
 up to 4.
 
 The frame goes into a buffer of half its size first: the four samples of that pass are the four pixels behind one
 of the buffer, so nothing flickers. Then passes in that size widen it, each half a pixel further out than the
-one before, three of them at r_menuBlur 1. The glow has buffers too (vk.blur), but they are 320 x 240 by
+one before, three of them at v_menuBlur 1. The glow has buffers too (vk.blur), but they are 320 x 240 by
 default: the scene is unrecognisable after one pass through them, which is what the first version of this did.
 
 A last pass gives every pixel of the soft picture how much of it shows, from the depth of the scene at that
@@ -123,7 +123,7 @@ shows the glow alone.
 ===============
 */
 void VK_BlurFrame( float amount, float focus ) {
-	const float	strength = Com_Clamp( 0.0f, 4.0f, r_menuBlur->value );
+	const float	strength = Com_Clamp( 0.0f, 4.0f, v_menuBlur->value );
 	const int	passes = Com_Clampi( 1, 12, (int)( strength * 3.0f + 0.5f ) );
 	const float	black[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
 	const float	*projection = backEnd.viewParms.projectionMatrix;

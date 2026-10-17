@@ -26,7 +26,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 vkState_t	vk;
 
-cvar_t		*r_glesDebug;		// 1: glGetError() after every frame. It waits for the device, which costs a browser its speed.
+cvar_t		*v_glesDebug;		// 1: glGetError() after every frame. It waits for the device, which costs a browser its speed.
 static cvar_t	*r_multisampleGles;	// r_ext_multisample of the engine
 
 /*
@@ -89,7 +89,7 @@ qboolean VK_InitVulkan( void ) {
 	GLint major = 0, align = 1, maxTextureSize = 0;
 	const char *extensions;
 
-	r_glesDebug = ri.Cvar_Get( "r_glesDebug", "0", CVAR_ARCHIVE_ND, "Ask OpenGL ES for its errors after every frame (slow in a browser)" );
+	v_glesDebug = ri.Cvar_Get( "v_glesDebug", "0", CVAR_ARCHIVE_ND, "Ask OpenGL ES for its errors after every frame (slow in a browser)" );
 	r_multisampleGles = ri.Cvar_Get( "r_ext_multisample", "0", CVAR_ARCHIVE_ND | CVAR_LATCH, "" );
 	// The flares of another level are about to get the numbers of the ones the device answered for: what it said and
 	// what it has not said yet is about those.
@@ -232,7 +232,7 @@ void VK_GfxInfo_f( void ) {
 		vk.statCommands, vk.statCalls );
 	ri.Printf( PRINT_ALL, "flares: the last answers of the device were for %i, %i of them seen\n", vk.statFlares, vk.statFlaresSeen );
 	VK_FrameInfo_f();
-	if ( r_glesDebug->integer ) {
+	if ( v_glesDebug->integer ) {
 		ri.Printf( PRINT_ALL, "errors of OpenGL ES so far: %i\n", vk.statErrors );
 	}
 }

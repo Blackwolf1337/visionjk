@@ -19,34 +19,34 @@ Nothing changes for the clients of the desktop and for a server that does not sw
 | ui and cgame in the page | menus, the join, a game followed as a spectator. Nobody has played a round |
 | Sound | starts (SDL audio of the browser). Not listened to |
 | Voice chat | run on a live server, headless and muted: the page joined, got the chat through `/voice`, counted 529 frames of a talking test client in 10 seconds (a voice is 50 a second) and sent a tone for 5. Whether the others heard that tone was not looked at, and nobody has listened. See [voice.md](voice.md) |
-| Sound that knows the level (`s_spatial`, Steam Audio) | built as a file of its own, `phonon.wasm`, that the engine loads when the sound system starts. Run headless and muted with a demo on mp/ffa3: 1.1 ms of a frame, and what it gives the mixer within 0.1 dB of the desktop's in each ear and band for the direct sound, within 1.1 dB with the ways round corners and the reverb. Run without the file too: one line, and the sound as before. Run on a live server as a player, with eight `snd_restart` in a row, and with the voice chat: the voice of a talking test client was a sound in the level there (913 units away, behind a wall). Nobody has listened. See [audio.md](audio.md) |
+| Sound that knows the level (`v_spatial`, Steam Audio) | built as a file of its own, `phonon.wasm`, that the engine loads when the sound system starts. Run headless and muted with a demo on mp/ffa3: 1.1 ms of a frame, and what it gives the mixer within 0.1 dB of the desktop's in each ear and band for the direct sound, within 1.1 dB with the ways round corners and the reverb. Run without the file too: one line, and the sound as before. Run on a live server as a player, with eight `snd_restart` in a row, and with the voice chat: the voice of a talking test client was a sound in the level there (913 units away, behind a wall). Nobody has listened. See [audio.md](audio.md) |
 | Mouse and keys | never used by a person from here: a headless browser has neither |
 | Fullscreen (`r_fullscreen`, the menu, Alt+Enter) | the page goes fullscreen, not the window of SDL. Run headless with a click before it: on, off and on again, the frame follows the page each time. Before that the first try ended the page with "The provided selector is empty" |
 | A resized window | the page starts the renderer again with the new size when the window has kept it for a moment. Run headless, 1280 x 633 to 1000 x 700 |
 | Firefox, Safari, Windows, a phone | never run |
 
 The voice chat is in the build unless it is switched off (`-DBuildJPVoice=OFF`). Unless `-DBuildJPSpatialAudio=OFF`
-says otherwise the build also has `phonon.wasm` in its web folder, Steam Audio for `s_spatial`. The engine is not linked against it: the
-page takes the file along when the server has it, and a server that is not to have `s_spatial` leaves it out. Left out
+says otherwise the build also has `phonon.wasm` in its web folder, Steam Audio for `v_spatial`. The engine is not linked against it: the
+page takes the file along when the server has it, and a server that is not to have `v_spatial` leaves it out. Left out
 on purpose in the first version: compressed textures, threads. See "What is different in the page".
 
 ## For the owner of a server
 
 ```
-+set sv_webPort 8081 +set sv_webRoot <folder with the build>
++set vs_clientWebPort 8081 +set vs_clientWebRoot <folder with the build>
 ```
 
 | Cvar | Default | Meaning |
 |------|---------|---------|
-| `sv_webPort` | 0 | TCP port of the web host, 0: off. Takes effect at once, also from the console |
-| `sv_webBind` | 0.0.0.0 | the address it listens on, as `g_webBind` of the web panel: empty is every address, 127.0.0.1 keeps it on the machine |
-| `sv_webRoot` | web | the folder with the page and the WebAssembly files: a full path, or under `fs_basepath` |
+| `vs_clientWebPort` | 0 | TCP port of the web host, 0: off. Takes effect at once, also from the console |
+| `vs_clientWebBind` | 0.0.0.0 | the address it listens on, as `vs_webBind` of the web panel: empty is every address, 127.0.0.1 keeps it on the machine |
+| `vs_clientWebRoot` | web | the folder with the page and the WebAssembly files: a full path, or under `fs_basepath` |
 
 Only the dedicated server has it (`visionjkded`), a server started from the client does not.
 
 The web host has no password. Whoever reaches the port gets:
 
-- the files of `sv_webRoot` by their exact name (letters, digits, `.`, `_`, `-`), nothing below or above it,
+- the files of `vs_clientWebRoot` by their exact name (letters, digits, `.`, `_`, `-`), nothing below or above it,
 - `/manifest.json`, the list of the pk3 files in the search path of the server with size and checksum,
 - `/pk3/<path>`, each of those files, the game's own `assets0.pk3` to `assets3.pk3` among them,
 - `/net`, a WebSocket whose messages are the datagrams of a client.
@@ -95,10 +95,10 @@ cmake -S . -B buildwasm -DCMAKE_TOOLCHAIN_FILE=cmake/Toolchains/wasm32-emscripte
 cmake --build buildwasm
 ```
 
-`buildwasm/web` is then the folder for `sv_webRoot`: `index.html`, `boot.js`, `visionjk.wasm32.js`,
+`buildwasm/web` is then the folder for `vs_clientWebRoot`: `index.html`, `boot.js`, `visionjk.wasm32.js`,
 `visionjk.wasm32.wasm` and the modules `cgamewasm32.wasm`, `uiwasm32.wasm`, `rd-vulkan-vision_wasm32.wasm`.
 `cmake --install buildwasm --prefix <folder>` puts it into `<folder>/JediAcademy/web`, where a server installed
-into the same folder finds it without `sv_webRoot`.
+into the same folder finds it without `vs_clientWebRoot`.
 
 The tree is built for 64 bit only. This build is the one exception: WebAssembly as Emscripten makes it has
 pointers of 4 bytes (`wasm32`).
@@ -182,7 +182,7 @@ well: the headers of a request, base64, SHA-1.
 |---|---------|------|
 | Renderer | Vulkan device | OpenGL ES 3 device (WebGL2), the same renderer otherwise |
 | Voice chat | yes | yes, through `/voice` of the web host. Talking needs https or the machine of the server itself, hearing does not. See [voice.md](voice.md) |
-| `s_spatial` (Steam Audio) | the library is loaded when the sound system starts, two threads work for it, off by default | the library is loaded the same way, as `phonon.wasm`, when the server has that file, and `s_spatial` is on by default. The page's one thread does the work, so the reverb follows the listener twice a second and not seven times, and a level of more than 2000 probes has no sound round corners. See [audio.md](audio.md) |
+| `v_spatial` (Steam Audio) | the library is loaded when the sound system starts, two threads work for it, off by default | the library is loaded the same way, as `phonon.wasm`, when the server has that file, and `v_spatial` is on by default. The page's one thread does the work, so the reverb follows the listener twice a second and not seven times, and a level of more than 2000 probes has no sound round corners. See [audio.md](audio.md) |
 | Compressed textures | `r_ext_compress_textures` | no |
 | Other servers, the server list | yes | only the server of the page |
 | Loading screen | drawn | not shown |

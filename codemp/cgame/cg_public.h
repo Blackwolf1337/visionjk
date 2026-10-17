@@ -717,23 +717,23 @@ typedef struct cgameImport_s {
 
 	struct {
 		float			(*R_Font_StrLenPixels)					( const char *text, const int iFontIndex, const float scale );
-		// Only an engine that sets the cvar s_spatialVoice to 1 has this one, any other ends the structure
+		// Only an engine that sets the cvar v_spatialVoice to 1 has this one, any other ends the structure
 		// before it: look at the cvar before touching it. The voice of a player of the voice chat as a sound in
 		// the level, see client/snd_spatial.cpp. Returns the samples of him that wait, or -1. An engine that sets
-		// s_spatialBoxes takes that many boxes of the boombox the same way, as clientNum MAX_CLIENTS and up.
+		// v_spatialBoxes takes that many boxes of the boombox the same way, as clientNum MAX_CLIENTS and up.
 		int				(*S_SpatialVoice)						( int clientNum, const vec3_t origin, float volume, const short *samples, int numSamples, int rate );
-		// Only an engine that sets the cvar s_spatialOwnVoice to 1 has this one, the same way. What the own
+		// Only an engine that sets the cvar v_spatialOwnVoice to 1 has this one, the same way. What the own
 		// player says into the voice chat: he does not hear the voice, the room he stands in rings from it.
 		void			(*S_SpatialOwnVoice)					( float volume, const short *samples, int numSamples, int rate );
-		// Only an engine that sets the cvar cl_cgameChat to 1 has these three, the same way. For the chat box
+		// Only an engine that sets the cvar v_cgameChat to 1 has these three, the same way. For the chat box
 		// (cgame/chat/cg_chat.c): the clipboard of the system, as the text the client has (UTF-8 where
-		// cl_utf8Text is 1), and a web address handed to the system to open, http and https only. Such an
-		// engine also hands its message mode commands to the cgame command cg_chatopen while the cvar
-		// cg_chatHandler is 1.
+		// v_utf8Text is 1), and a web address handed to the system to open, http and https only. Such an
+		// engine also hands its message mode commands to the cgame command v_chatOpen while the cvar
+		// v_chatHandler is 1.
 		void			(*GetClipboard)							( char *buf, int size );
 		void			(*SetClipboard)							( const char *text );
 		qboolean		(*OpenURL)								( const char *url );
-		// Only an engine that sets the cvar cl_cgameScene to 1 has these three, the same way. For what the cgame
+		// Only an engine that sets the cvar v_cgameScene to 1 has these three, the same way. For what the cgame
 		// writes and paints into the level itself (the chat bubbles, bubble/cg_bubble.c). Text from the
 		// TrueType font as polygons that are hidden by what is in front of them: the first letter stands at
 		// origin on the line of the text, which runs along right; up and the height of a letter are units of
@@ -741,17 +741,17 @@ typedef struct cgameImport_s {
 		// 0 and qfalse: there is no such font. And a shader for a picture the cgame made itself, width and
 		// height powers of two up to 512, for polygons in the scene; flags: RGBA_SHADER_GLOW, it is added and
 		// glows. RGBA_SHADER_OVER, nothing of the scene hides it. RGBA_SHADER_BEHIND, drawn before the others.
-		// RGBA_SHADER_HULL (an engine with the cvar cl_uiSkin): as the custom shader of a model that is added a
+		// RGBA_SHADER_HULL (an engine with the cvar v_uiSkin): as the custom shader of a model that is added a
 		// second time it draws an outline around it, in the colour of the entity.
 		float			(*R_Text3DWidth)						( const char *text, float height );
 		qboolean		(*R_Text3D)								( const vec3_t origin, const vec3_t right, const vec3_t up, float height, const char *text, const float *rgba );
 		qhandle_t		(*R_RegisterShaderRGBA)					( const char *name, const byte *rgba, int width, int height, int flags );
-		// Only an engine that sets the cvar cl_cgameUIPlane to 1 has this one, the same way. The menus of this
+		// Only an engine that sets the cvar v_cgameUIPlane to 1 has this one, the same way. The menus of this
 		// frame are drawn on a plane in the level and not flat on the screen (menu3d/cg_menu3d.c): matrix takes
 		// a place of the 2D grid to clip space, 16 values column by column. Called before the menus are drawn,
 		// every frame it is wanted.
 		void			(*R_SetUIPlane)							( const float *matrix );
-		// Only an engine that sets the cvar cl_cgameDoF to 1 has this one, the same way. The scene of this
+		// Only an engine that sets the cvar v_cgameDoF to 1 has this one, the same way. The scene of this
 		// frame is blurred where it is nearer or farther than focus (units of the level), amount 0 to 1. Called
 		// before R_RenderScene, every frame it is wanted. A renderer without the effect does nothing.
 		void			(*R_SetDepthOfField)					( float focus, float amount );

@@ -22,7 +22,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // they play, which go out over the relay of the voice chat. Not from JA+, see docs/japlus/boombox.md and
 // bg_boombox.h.
 //
-// A box is no entity. Only clients whose cgame said "jpbox hello" are told of it and hear it, a client of any
+// A box is no entity. Only clients whose cgame said "vs_box hello" are told of it and hear it, a client of any
 // other kind gets nothing, and its players do not see the box and walk through it as everybody does. Every
 // player whose cgame draws boxes may do everything with every box: put one down, ask for songs, pause, skip,
 // stop, move it, make it louder or quieter for everybody, take it away.
@@ -45,7 +45,7 @@ char *ConcatArgs( int start );		// g_cmds.c
 #define BOX_NOTE_RANGE		1.25f		// what happens to a box is told to the players this much further away than it is heard
 
 typedef struct boxClient_s {
-	qboolean	hears;			// his cgame said "jpbox hello": it draws boxes, and he wants to hear them
+	qboolean	hears;			// his cgame said "vs_box hello": it draws boxes, and he wants to hear them
 	int			askTime;		// when he last asked for a song
 } boxClient_t;
 
@@ -58,15 +58,15 @@ static boxClient_t	boxClients[MAX_CLIENTS];
 static boxHost_t	boxHost;
 
 static int Box_Max( void ) {
-	return Com_Clampi( 0, BOX_MAX, g_boomboxMax.integer );
+	return Com_Clampi( 0, BOX_MAX, vs_boomboxMax.integer );
 }
 
 static float Box_Range( void ) {
-	return (float)( g_boomboxRange.integer > 0 ? g_boomboxRange.integer : BOX_RANGE );
+	return (float)( vs_boomboxRange.integer > 0 ? vs_boomboxRange.integer : BOX_RANGE );
 }
 
 static int Box_QueueMax( void ) {
-	return Com_Clampi( 1, BOX_QUEUE, g_boomboxQueue.integer );
+	return Com_Clampi( 1, BOX_QUEUE, vs_boomboxQueue.integer );
 }
 
 // where the sound of a box comes from
@@ -90,7 +90,7 @@ What the clients are told
 ===============================================================================
 */
 
-// a text for one client: as it is, or without what his client can not show (cl_utf8Text)
+// a text for one client: as it is, or without what his client can not show (v_utf8Text)
 static const char *Box_TextFor( int clientNum, const char *text, char *buffer, int bufferSize ) {
 	const gclient_t *client = g_entities[clientNum].client;
 
@@ -110,12 +110,12 @@ static void Box_TellTo( int b, int clientNum ) {
 	const int	flags = Box_Flags( box );
 
 	if ( !box->inuse ) {
-		trap->SendServerCommand( clientNum, va( "jpbox gone %i", b ) );
+		trap->SendServerCommand( clientNum, va( "vs_box gone %i", b ) );
 		return;
 	}
 	Box_TextFor( clientNum, box->numSongs ? box->songs[0].title : "", title, sizeof( title ) );
 	Box_TextFor( clientNum, box->numSongs > 1 ? box->songs[1].title : "", next, sizeof( next ) );
-	trap->SendServerCommand( clientNum, va( "jpbox set %i %i %i %i %i %i %i %i %i %i %i \"%s\" \"%s\"", b, box->rev,
+	trap->SendServerCommand( clientNum, va( "vs_box set %i %i %i %i %i %i %i %i %i %i %i \"%s\" \"%s\"", b, box->rev,
 		(int)box->origin[0], (int)box->origin[1], (int)box->origin[2], (int)box->yaw, box->volume, flags,
 		box->frames * VOICE_FRAME_MSEC, box->numSongs ? box->songs[0].seconds : 0, box->numSongs > 1 ? box->numSongs - 1 : 0,
 		title, next ) );
@@ -144,7 +144,7 @@ static void Box_Note( int clientNum, const char *text ) {
 	if ( clientNum < 0 || clientNum >= MAX_CLIENTS || !g_entities[clientNum].inuse || !g_entities[clientNum].client )
 		return;
 	if ( Box_Hears( clientNum ) )
-		trap->SendServerCommand( clientNum, va( "jpbox note \"%s\"", Box_TextFor( clientNum, text, line, sizeof( line ) ) ) );
+		trap->SendServerCommand( clientNum, va( "vs_box note \"%s\"", Box_TextFor( clientNum, text, line, sizeof( line ) ) ) );
 	else
 		trap->SendServerCommand( clientNum, va( "print \"%s\n\"", Box_TextFor( clientNum, text, line, sizeof( line ) ) ) );
 }
@@ -171,9 +171,9 @@ The host of the core: how the songs of the boxes of this level reach the players
 
 // the programs, as the owner of the server named them (CVAR_INIT)
 static void G_BoxTools( boxTools_t *out ) {
-	Q_strncpyz( out->ytdlp, g_boomboxYtdlp.string, sizeof( out->ytdlp ) );
-	Q_strncpyz( out->ffmpeg, g_boomboxFfmpeg.string, sizeof( out->ffmpeg ) );
-	Q_strncpyz( out->ytdlpArgs, g_boomboxYtdlpArgs.string, sizeof( out->ytdlpArgs ) );
+	Q_strncpyz( out->ytdlp, vs_boomboxYtdlp.string, sizeof( out->ytdlp ) );
+	Q_strncpyz( out->ffmpeg, vs_boomboxFfmpeg.string, sizeof( out->ffmpeg ) );
+	Q_strncpyz( out->ytdlpArgs, vs_boomboxYtdlpArgs.string, sizeof( out->ytdlpArgs ) );
 }
 
 static boxPlayer_t *G_BoxBorrow( boxHost_t *host ) {
@@ -235,7 +235,7 @@ void G_BoomboxFrame( void ) {
 		return;
 	boxFrameTime = now;
 	boxHost.queueMax = Box_QueueMax();
-	boxHost.maxSeconds = g_boomboxMaxSeconds.integer;
+	boxHost.maxSeconds = vs_boomboxMaxSeconds.integer;
 	Box_ReapAll();
 	Box_Lookups( boxLookups, BOX_LOOKUPS, now );
 	for ( i = 0; i < BOX_MAX; i++ )
@@ -284,13 +284,13 @@ void G_BoomboxInit( qboolean restart ) {
 	boxHost.tell = G_BoxTell;
 	boxHost.note = G_BoxNote;
 	boxHost.send = G_BoxSend;
-	if ( !g_boombox.integer )
+	if ( !vs_boombox.integer )
 		return;
 #ifndef JP_BOOMBOX
 	trap->Print( "Boombox: off, this game module was built without Opus\n" );
 #else
 	if ( !G_VoiceOn() ) {
-		trap->Print( "Boombox: off, it needs the voice chat (g_voice 1)\n" );
+		trap->Print( "Boombox: off, it needs the voice chat (vs_voice 1)\n" );
 		return;
 	}
 	boxOn = qtrue;
@@ -315,8 +315,8 @@ Commands
 =================
 Cmd_JPBox_f
 
-jpbox hello <protocol>: the cgame of a client draws boxes. The answer is "jpbox on" and the state of every box,
-and from then on he is told every change and hears the boxes near him. jpbox off: no more of it.
+vs_box hello <protocol>: the cgame of a client draws boxes. The answer is "vs_box on" and the state of every box,
+and from then on he is told every change and hears the boxes near him. vs_box off: no more of it.
 =================
 */
 void Cmd_JPBox_f( gentity_t *ent ) {
@@ -332,7 +332,7 @@ void Cmd_JPBox_f( gentity_t *ent ) {
 	if ( !boxOn || Q_stricmp( arg, "hello" ) || ( ent->r.svFlags & SVF_BOT ) )
 		return;
 	boxClients[clientNum].hears = qtrue;
-	trap->SendServerCommand( clientNum, va( "jpbox on %i %i %i", BOX_PROTOCOL, Box_Max(), (int)Box_Range() ) );
+	trap->SendServerCommand( clientNum, va( "vs_box on %i %i %i", BOX_PROTOCOL, Box_Max(), (int)Box_Range() ) );
 	for ( i = 0; i < BOX_MAX; i++ ) {
 		if ( boxes[i].inuse )
 			Box_TellTo( i, clientNum );
@@ -465,7 +465,7 @@ static void Box_AskFor( gentity_t *ent, int b, const char *asked ) {
 	if ( b < 0 )
 		return;
 	boxHost.queueMax = Box_QueueMax();
-	boxHost.maxSeconds = g_boomboxMaxSeconds.integer;
+	boxHost.maxSeconds = vs_boomboxMaxSeconds.integer;
 	if ( !Box_Ask( &boxHost, boxLookups, BOX_LOOKUPS, b, clientNum, ent->client->pers.netname, asked, now, why, sizeof( why ) ) ) {
 		Box_Note( clientNum, va( "^5Boombox^7: %s", why ) );
 		return;
@@ -537,7 +537,7 @@ void Cmd_Boombox_f( gentity_t *ent ) {
 		return;
 	}
 	if ( !boxClients[clientNum].hears ) {
-		trap->SendServerCommand( clientNum, "print \"The boombox needs VisionJK: only its players see and hear it (or cg_boombox is 0)\n\"" );
+		trap->SendServerCommand( clientNum, "print \"The boombox needs VisionJK: only its players see and hear it (or v_boomboxes is 0)\n\"" );
 		return;
 	}
 	if ( !Q_stricmp( what, "list" ) ) {
@@ -601,14 +601,14 @@ void Cmd_Boombox_f( gentity_t *ent ) {
 	}
 }
 
-// the server command boombox: the boxes and their lines, "boombox clear" takes them all away
+// the server command vs_boxes: the boxes and their lines, "vs_boxes clear" takes them all away
 void Svcmd_Boombox_f( void ) {
 	char	arg[16];
 	int		i, k;
 
 	trap->Argv( 1, arg, sizeof( arg ) );
 	if ( !boxOn ) {
-		trap->Print( "The boombox is off (g_boombox %i, g_voice %i)\n", g_boombox.integer, g_voice.integer );
+		trap->Print( "The boombox is off (vs_boombox %i, vs_voice %i)\n", vs_boombox.integer, vs_voice.integer );
 		return;
 	}
 	if ( !Q_stricmp( arg, "clear" ) ) {

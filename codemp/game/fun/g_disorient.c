@@ -19,7 +19,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 */
 
 /*
-Disorientation for one player ("disorient"): the view does not hold still any more. It sways like the deck of a
+Disorientation for one player ("vs_disorient"): the view does not hold still any more. It sways like the deck of a
 ship, every few seconds it is thrown around to another side with a shake and the player stumbles a step, and now
 and then the world turns around once or twice.
 
@@ -29,7 +29,7 @@ predicts with the same numbers, so the movement and the aim go where the view go
 roll of the sway shows in the first person view only, the third person camera of the game looks along the view
 and has no roll. The shake is the stock screen shake event, sent to this one client (SVF_SINGLECLIENT).
 
-Toggled per player in the web admin panel or with the server console command "disorient <player>". The state
+Toggled per player in the web admin panel or with the server console command "vs_disorient <player>". The state
 is kept here and is gone with the map. A spectator who follows the player gets the same view, the engine sends
 the view of the followed client. A bot does not care: it turns to where it wants to look whatever the offset is.
 

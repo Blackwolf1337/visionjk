@@ -414,7 +414,7 @@ void Skin_Disc( float cx, float cy, float radius, const vec4_t color ) {
 }
 
 // A line from left to right that is one pixel high, whatever the size of the window. While the menus stand on
-// a plane in the level (cl_uiPlane) a pixel of the 2D is less than one of the screen, and a line that thin
+// a plane in the level (v_uiPlane) a pixel of the 2D is less than one of the screen, and a line that thin
 // breaks into dashes: there it is a strip with soft edges, which the renderer can thin out evenly.
 void Skin_Line( float x, float y, float w, const vec4_t color ) {
 	static int		askedTime = -1;
@@ -425,7 +425,7 @@ void Skin_Line( float x, float y, float w, const vec4_t color ) {
 	}
 	if ( askedTime != DC->realTime ) {
 		askedTime = DC->realTime;
-		plane = (qboolean)( DC->getCVarValue( "cl_uiPlane" ) != 0.0f );
+		plane = (qboolean)( DC->getCVarValue( "v_uiPlane" ) != 0.0f );
 	}
 	if ( !plane ) {
 		DC->fillRect( Skin_SnapX( x ), Skin_SnapY( y ), w, 1.0f / Skin_ScaleY(), color );

@@ -36,8 +36,8 @@ typedef struct boomboxInfo_s {
 } boomboxInfo_t;
 
 void		CG_BoomboxInit( void );
-void		CG_BoomboxServerInfo( const char *value );		// g_boombox of the server info
-void		CG_BoomboxServerCommand( void );				// jpbox
+void		CG_BoomboxServerInfo( const char *value );		// vs_boombox of the server info
+void		CG_BoomboxServerCommand( void );				// vs_box
 void		CG_BoomboxFrame( void );
 void		CG_BoomboxScene( void );						// the boxes into the scene
 void		CG_BoomboxDraw( void );							// the titles over them, in the 2D

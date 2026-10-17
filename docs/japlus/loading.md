@@ -7,10 +7,10 @@ of it, how that is measured, and what was done about it. Everything here is abou
 
 Both are off by default (`qcommon/com_load.cpp`).
 
-- `com_loadReport 1`: after the load of a level the console has a table: the kinds of things that were
+- `v_loadReport 1`: after the load of a level the console has a table: the kinds of things that were
   loaded, how long each kind took together, and how many there were. It runs from the start of the server of
   the level (if this program is that server) to the end of the first frame of the game.
-- `com_hitchLog <ms>`: a frame that took longer than that says what was loaded in it, the longest first, and
+- `v_hitchLog <ms>`: a frame that took longer than that says what was loaded in it, the longest first, and
   which part of the frame the rest went into (`frame: server`, `game`, `client`, `cgame`, `sound`, `drawn`).
   With `r_swapInterval 1` a frame waits for the screen, so a threshold below the time of a picture reports
   every frame.
@@ -62,7 +62,7 @@ Taking out and firing each weapon gave no long frame.
 
 ## What was done
 
-**The packed textures are kept** (`rd-vulkan-vision/vk_texcache.cpp`, cvar `r_vkTexCache`, on by default).
+**The packed textures are kept** (`rd-vulkan-vision/vk_texcache.cpp`, cvar `v_vkTexCache`, on by default).
 What is made from an image file, its mip levels packed into BC1 or BC3 blocks, only depends on the file and
 on a few settings. It is written to `vulkan/tex/` of the profile, a file per texture, and the next time the
 blocks are read and handed to the device: the image file is neither read nor decoded nor packed.

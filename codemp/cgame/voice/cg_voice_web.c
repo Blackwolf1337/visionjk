@@ -103,7 +103,7 @@ CG_VoiceWebOpen
 1: the socket is open. 0: not yet, it was asked for now or a moment ago. -1: never, the web host did not take
 it WEB_MAX_TRIES times in a row, or the page does not say where it came from.
 
-Where it came from is in the cvar net_wsHost of the engine (host:port), as for the socket of the game. A page
+Where it came from is in the cvar v_wsHost of the engine (host:port), as for the socket of the game. A page
 that came over https may only open a socket that is encrypted too.
 =================
 */
@@ -119,7 +119,7 @@ int CG_VoiceWebOpen( void ) {
 	if ( web.socket || ( web.askTime && now - web.askTime < ( WEB_REOPEN_MSEC << web.tries ) ) )
 		return 0;
 
-	trap->Cvar_VariableStringBuffer( "net_wsHost", host, sizeof( host ) );
+	trap->Cvar_VariableStringBuffer( "v_wsHost", host, sizeof( host ) );
 	if ( !host[0] )
 		return -1;
 	Com_sprintf( url, sizeof( url ), "%s://%s/voice", EM_ASM_INT( { return location.protocol == 'https:'; }, 0 ) ? "wss" : "ws", host );

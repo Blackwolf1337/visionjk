@@ -710,10 +710,10 @@ void JP_DisplayLatestPluginVersion( gentity_t *ent ) {
 		plugin = "undefined";
 
 	trap->SendServerCommand( clientNum, "print \"^3---------------------\n\"" );
-	// A client of this tree says which one it is (cjp_vision of its cgame). It has the plugin built in, so there
+	// A client of this tree says which one it is (v_vision of its cgame). It has the plugin built in, so there
 	// is nothing for it to install or to bring up to date.
 	trap->GetUserinfo( clientNum, userinfo, sizeof( userinfo ) );
-	Q_strncpyz( vision, Info_ValueForKey( userinfo, "cjp_vision" ), sizeof( vision ) );
+	Q_strncpyz( vision, Info_ValueForKey( userinfo, "v_vision" ), sizeof( vision ) );
 	Q_StripColor( vision );
 	if ( vision[0] ) {
 		trap->SendServerCommand( clientNum, va( "print \"Your client is ^5VisionJK %s ^7(^5" JP_VISION_SITE "^7), with the JA+ client plugin ^5%s ^7built in\n\"", vision, plugin ) );

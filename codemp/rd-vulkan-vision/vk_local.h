@@ -213,7 +213,7 @@ typedef struct vkState_s : vkDeviceState_t {
 	int							screenSlot;			// the entry of the texture table that shows it, -1: none yet
 	vkTarget_t					glow;				// r_DynamicGlow: the stages that glow, drawn again over the depth of the scene
 	vkTarget_t					blur[2];			// and blurred, r_DynamicGlowWidth x r_DynamicGlowHeight
-	vkTarget_t					soft[2];			// the frame out of focus at half its size, r_menuBlur (VK_BlurFrame)
+	vkTarget_t					soft[2];			// the frame out of focus at half its size, v_menuBlur (VK_BlurFrame)
 	qboolean					finalValid;			// a frame has been rendered into it
 
 	vkImage_t					images[VK_MAX_IMAGES];
@@ -280,8 +280,8 @@ const float *VK_GL_ModelView( void );
 void		VK_GL_ResetMatrix( void );
 
 // vk_world.cpp
-extern cvar_t	*r_vkStatic;
-extern cvar_t	*r_vkMerge;
+extern cvar_t	*v_vkStatic;
+extern cvar_t	*v_vkMerge;
 void		VK_WorldChanged( void );
 void		VK_ShutdownWorld( void );
 void		VK_BatchBegin( void );

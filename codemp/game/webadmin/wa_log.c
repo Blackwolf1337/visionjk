@@ -188,7 +188,7 @@ static void WA_LogPreload( void ) {
 
 void WebAdmin_Log( const char *line ) {
 	// the panel is only there with a password, and the first lines of a map come before it listens
-	if ( !g_webPassword.string[0] )
+	if ( !vs_webPassword.string[0] )
 		return;
 	WA_LogPreload();
 	WA_LogAppend( line, (int)strlen( line ) );

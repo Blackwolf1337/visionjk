@@ -23,12 +23,12 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // What a player says in the chat stands above his head for a few seconds, and three dots while he types. All
 // of it is in the 3D scene, not in the 2D of the HUD: a panel and its text are polygons that face the camera,
 // are hidden by what is in front of them and get smaller with the distance down to a size that can still be
-// read, then fade out (cg_bubbleRange).
+// read, then fade out (v_bubbleRange).
 //
-// It needs an engine of this tree (cvar cl_cgameScene): the text comes from its TrueType font
+// It needs an engine of this tree (cvar v_cgameScene): the text comes from its TrueType font
 // (trap->ext.R_Text3D), and the pictures of the panel are made here and handed to the renderer
 // (trap->ext.R_RegisterShaderRGBA), so no file of a pk3 is needed and a pure server takes nothing away. In any
-// other engine, with cg_chatBubbles 0 and beyond the range the balloon of the game stays.
+// other engine, with v_chatBubbles 0 and beyond the range the balloon of the game stays.
 //
 // A bubble is made from a chat line whose sender is known (CG_ChatSender in chat/cg_chat.c), on any server.
 // Private lines never get one. Only the clients of this tree draw them: a legacy client sees the balloon.
@@ -101,7 +101,7 @@ static void Bubble_InitArt( void ) {
 	int			x, y;
 
 	bubbleArt.tried = qtrue;
-	trap->Cvar_VariableStringBuffer( "cl_cgameScene", value, sizeof( value ) );
+	trap->Cvar_VariableStringBuffer( "v_cgameScene", value, sizeof( value ) );
 	if ( atoi( value ) != 1 ) {
 		return;
 	}
@@ -196,7 +196,7 @@ void CG_BubbleSay( int clientNum, int kind, const char *message ) {
 	qboolean	utf8;
 	int			line = 0;
 
-	if ( clientNum < 0 || clientNum >= MAX_CLIENTS || kind == CHAT_TELL || !cg_chatBubbles.integer ) {
+	if ( clientNum < 0 || clientNum >= MAX_CLIENTS || kind == CHAT_TELL || !v_chatBubbles.integer ) {
 		return;
 	}
 	if ( !bubbleArt.tried ) {
@@ -205,7 +205,7 @@ void CG_BubbleSay( int clientNum, int kind, const char *message ) {
 	if ( !bubbleArt.ready ) {
 		return;
 	}
-	trap->Cvar_VariableStringBuffer( "cl_utf8Text", value, sizeof( value ) );
+	trap->Cvar_VariableStringBuffer( "v_utf8Text", value, sizeof( value ) );
 	utf8 = (qboolean)( atoi( value ) == 1 );
 
 	Q_strncpyz( text, message, sizeof( text ) );
@@ -512,8 +512,8 @@ qboolean CG_BubbleDraw( centity_t *cent, qboolean dots ) {
 		return qfalse;
 	}
 	b = &bubbles[clientNum];
-	talking = (qboolean)( cg_chatBubbles.integer && b->numLines > 0 && cg.time < b->endTime && cg.time >= b->startTime );
-	typing = (qboolean)( cg_chatBubbles.integer && !talking && dots && ( cent->currentState.eFlags & EF_TALK ) );
+	talking = (qboolean)( v_chatBubbles.integer && b->numLines > 0 && cg.time < b->endTime && cg.time >= b->startTime );
+	typing = (qboolean)( v_chatBubbles.integer && !talking && dots && ( cent->currentState.eFlags & EF_TALK ) );
 	// Away, or the music he listens to (status/cg_status.c). Not of the player the view is behind: his line
 	// stood right before the camera, as large as a wall, and he knows what it says.
 	hasStatus = (qboolean)( clientNum != cg.snap->ps.clientNum && CG_StatusLine( clientNum, statusLine, sizeof( statusLine ) ) );
@@ -537,7 +537,7 @@ qboolean CG_BubbleDraw( centity_t *cent, qboolean dots ) {
 	head[2] += BUBBLE_HEAD * scale;
 	VectorSubtract( head, cg.refdef.vieworg, delta );
 	dist = VectorLength( delta );
-	range = Q_max( 100.0f, cg_bubbleRange.value );
+	range = Q_max( 100.0f, v_bubbleRange.value );
 	if ( dist > range ) {
 		return qfalse;
 	}

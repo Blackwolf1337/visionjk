@@ -153,7 +153,7 @@ endif()
 source_group("cgame/voice" FILES ${MPCGameVoiceFiles})
 set(MPCGameFiles ${MPCGameFiles} ${MPCGameVoiceFiles})
 
-# Admin login with a key: the command amkey, the key file, the ssh-agent. bg_auth.c is the part the game module
+# Admin login with a key: the command v_amkey, the key file, the ssh-agent. bg_auth.c is the part the game module
 # shares, Monocypher signs. A browser has neither a key file nor an agent, there the command only says so.
 set(MPCGameAuthFiles
 	"${MPDir}/cgame/auth/cg_auth.c"

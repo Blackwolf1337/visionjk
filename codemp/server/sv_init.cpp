@@ -466,7 +466,7 @@ void SV_SpawnServer( char *server, qboolean killBots, ForceReload_e eForceReload
 
 		if ( !said ) {
 			said = qtrue;
-			Com_Printf( S_COLOR_YELLOW "rconPassword is set, but this server takes no rcon. Take the line out of the config, admins use the web panel (g_webPort)\n" );
+			Com_Printf( S_COLOR_YELLOW "rconPassword is set, but this server takes no rcon. Take the line out of the config, admins use the web panel (vs_webPort)\n" );
 		}
 	}
 
@@ -998,7 +998,7 @@ void SV_Init (void) {
 	sv_floodProtectSlow = Cvar_Get ("sv_floodProtectSlow", "1", CVAR_ARCHIVE | CVAR_SERVERINFO, "Use original method of delaying commands with flood protection" );
 	SV_IDS_Init();
 	SV_VoiceInit();
-	sv_antiWallhack = Cvar_Get( "sv_antiWallhack", "0", CVAR_ARCHIVE, "1: a player no line of sight reaches is not sent to a client. Against wallhacks, and players behind walls are not heard either" );
+	vs_antiWallhack = Cvar_Get( "vs_antiWallhack", "0", CVAR_ARCHIVE, "1: a player no line of sight reaches is not sent to a client. Against wallhacks, and players behind walls are not heard either" );
 	// systeminfo
 	Cvar_Get ("sv_cheats", "1", CVAR_SYSTEMINFO | CVAR_ROM, "Allow cheats on server if set to 1" );
 	sv_serverid = Cvar_Get ("sv_serverid", "0", CVAR_SYSTEMINFO | CVAR_ROM );
@@ -1065,7 +1065,7 @@ void SV_Init (void) {
 #ifdef DEDICATED
 	SV_InitRef();
 
-	// the web host: the page of the client that runs in a browser, its files and its packets (sv_webPort).
+	// the web host: the page of the client that runs in a browser, its files and its packets (vs_clientWebPort).
 	// It is started here and not with a map, and ends with the process (NET_Shutdown): no change of map and
 	// no end of the server may cut a download or the socket of a page.
 	SV_WebInit();

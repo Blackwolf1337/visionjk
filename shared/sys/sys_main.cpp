@@ -1046,7 +1046,7 @@ int main ( int argc, char* argv[] )
 	for( i = 1; i < argc; i++ )
 	{
 		// An argument with a space is one word, and so is one with two slashes in it: the console takes those
-		// as the start of a comment and would cut a web address off behind "https:" (+set cl_updateURL).
+		// as the start of a comment and would cut a web address off behind "https:" (+set v_updateURL).
 		const bool containsSpaces = (strchr(argv[i], ' ') != NULL || strstr(argv[i], "//") != NULL || strstr(argv[i], "/*") != NULL);
 		if (containsSpaces)
 			Q_strcat( commandLine, sizeof( commandLine ), "\"" );

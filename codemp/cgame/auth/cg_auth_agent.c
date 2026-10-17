@@ -176,7 +176,7 @@ static qboolean Agent_Open( const char *path, char *why, int whySize ) {
 		path = getenv( "SSH_AUTH_SOCK" );
 	}
 	if ( !path || !path[0] ) {
-		Q_strncpyz( why, "no ssh-agent is known: SSH_AUTH_SOCK is not set for the game. Set cg_authAgentPath to its socket "
+		Q_strncpyz( why, "no ssh-agent is known: SSH_AUTH_SOCK is not set for the game. Set v_authAgentPath to its socket "
 			"(1Password: ~/.1password/agent.sock)", whySize );
 		return qfalse;
 	}

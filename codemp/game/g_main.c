@@ -3694,7 +3694,7 @@ Q_EXPORT gameExport_t* QDECL GetModuleAPI( int apiVersion, gameImport_t *import 
 	ge.NAV_EntIsRemovableUsable			= G_EntIsRemovableUsable;
 	ge.NAV_FindCombatPointWaypoints		= CP_FindCombatPointWaypoints;
 	ge.BG_GetItemIndexByTag				= BG_GetItemIndexByTag;
-	// (not from OpenJK: the engine touches it only where g_voiceShared is 1, voice/g_voice.c)
+	// (not from OpenJK: the engine touches it only where vs_voiceSharedGame is 1, voice/g_voice.c)
 	ge.ext.VoiceDatagram				= G_VoiceFromGame;
 
 	return &ge;

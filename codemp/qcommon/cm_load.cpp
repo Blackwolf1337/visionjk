@@ -340,7 +340,7 @@ qboolean CM_ClipBrushesOff( char *out, int outSize ) {
 	return qtrue;
 }
 
-// The same numbers for the clients (cm_clipOff), a run of them written as first-last. qfalse: they did not all
+// The same numbers for the clients (vs_clipRanges), a run of them written as first-last. qfalse: they did not all
 // fit, and what is left out is off on the server alone.
 qboolean CM_ClipBrushesOffRanges( char *out, int outSize ) {
 	int len = 0;
@@ -370,7 +370,7 @@ qboolean CM_ClipBrushesOffRanges( char *out, int outSize ) {
 =================
 CM_ApplyClipOff
 
-What a server says it has off (cm_clipOff, as CM_ClipBrushesOffRanges writes it), done to the collision of a
+What a server says it has off (vs_clipRanges, as CM_ClipBrushesOffRanges writes it), done to the collision of a
 client: every clip brush on, then those off. The client then predicts the moves the server makes there. A
 number that is no clip brush of the map is left alone, so a server can take nothing else away.
 =================

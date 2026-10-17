@@ -481,7 +481,7 @@ void		SV_VoiceFrame( void );
 void		SV_VoiceShutdown( void );
 #endif
 
-extern	cvar_t	*sv_antiWallhack;		// sv_snapshot.cpp
+extern	cvar_t	*vs_antiWallhack;		// sv_snapshot.cpp
 
 // mins and maxs are relative
 

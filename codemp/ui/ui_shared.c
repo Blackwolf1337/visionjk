@@ -2651,7 +2651,7 @@ static void Text_Caps( char *text ) {
 
 	for ( c = text; *c && !( *c & 0x80 ); c++ )
 		;
-	if ( *c && !DC->getCVarValue( "cl_utf8Text" ) ) {
+	if ( *c && !DC->getCVarValue( "v_utf8Text" ) ) {
 		return;
 	}
 	Q_strupr( text );
@@ -3936,7 +3936,7 @@ void Item_TextField_Paste( itemDef_t *item ) {
 }
 #endif
 
-// Text is UTF-8 with an engine of this tree that says so (cl_utf8Text, CL_UTF8() there): a character has 1 to 4
+// Text is UTF-8 with an engine of this tree that says so (v_utf8Text, CL_UTF8() there): a character has 1 to 4
 // bytes then, which arrive as one char event each, and the cursor of a field stands between two characters.
 static int Item_TextField_CharLen( const char *buff, int pos ) {
 	unsigned int codePoint;
@@ -3944,14 +3944,14 @@ static int Item_TextField_CharLen( const char *buff, int pos ) {
 	if ( !buff[pos] ) {
 		return 0;
 	}
-	return DC->getCVarValue( "cl_utf8Text" ) ? Q_UTF8_Decode( buff + pos, &codePoint ) : 1;
+	return DC->getCVarValue( "v_utf8Text" ) ? Q_UTF8_Decode( buff + pos, &codePoint ) : 1;
 }
 
 static int Item_TextField_PrevChar( const char *buff, int pos ) {
 	if ( pos <= 0 ) {
 		return 0;
 	}
-	return DC->getCVarValue( "cl_utf8Text" ) ? Q_UTF8_PrevChar( buff, pos ) : pos - 1;
+	return DC->getCVarValue( "v_utf8Text" ) ? Q_UTF8_PrevChar( buff, pos ) : pos - 1;
 }
 
 qboolean Item_TextField_HandleKey(itemDef_t *item, int key) {
@@ -5496,7 +5496,7 @@ void Item_TextField_Paint(itemDef_t *item) {
 	}
 	// the text that is painted does not start in the middle of a character of UTF-8 (Item_TextField_CharLen)
 	paintOffset = Com_Clampi( 0, (int)strlen( buff ), editPtr->paintOffset );
-	if ( DC->getCVarValue( "cl_utf8Text" ) ) {
+	if ( DC->getCVarValue( "v_utf8Text" ) ) {
 		while ( ( buff[paintOffset] & 0xC0 ) == 0x80 ) {
 			paintOffset++;
 		}
@@ -5596,7 +5596,7 @@ static const char *g_bindCommands[] = {
 	"+back",
 	"+button12",				// JA+: grapple hook
 	"+button2",
-	"+cursor",					// VisionJK: the mouse is free while it is held, to point at players
+	"+v_cursor",					// VisionJK: the mouse is free while it is held, to point at players
 	"+force_drain",
 	"+force_grip",
 	"+force_lightning",
@@ -5615,13 +5615,13 @@ static const char *g_bindCommands[] = {
 	"+strafe",
 	"+use",
 	"+useforce",
-	"+voice",
-	"+voiceclan",
+	"+v_voice",
+	"+v_voiceclan",
 	"automap_button",
 	"automap_toggle",
 	"bow",
 	"centerview",
-	"cg_botMode !",				// bot mode on and off
+	"v_botMode !",				// bot mode on and off
 	"cg_thirdperson !",
 	"engage_duel",
 	"engage_FullForceDuel",		// JA+
@@ -5649,7 +5649,7 @@ static const char *g_bindCommands[] = {
 	"messagemode3",
 	"messagemode4",
 	"saberAttackCycle",
-	"scores_pick",				// VisionJK: the scoreboard kept open with the mouse free
+	"v_scores_pick",				// VisionJK: the scoreboard kept open with the mouse free
 	"taunt",
 	"ui_openmenu modsay",		// JA+: the message menu
 	"use_bacta",
@@ -6094,7 +6094,7 @@ static void Item_Row_Paint( itemDef_t *item ) {
 		}
 		if ( editPtr ) {
 			start = Com_Clampi( 0, (int)strlen( word ), editPtr->paintOffset );
-			if ( DC->getCVarValue( "cl_utf8Text" ) ) {
+			if ( DC->getCVarValue( "v_utf8Text" ) ) {
 				while ( ( word[start] & 0xC0 ) == 0x80 ) {
 					start++;
 				}
@@ -10106,7 +10106,7 @@ Hacks to fix issues with Team Arena menu scripts
 static void Item_ApplyHacks( itemDef_t *item ) {
 	// EAX: no engine this module runs in has it. The menus of this tree do not have the entry, the ones of the
 	// base game do (ui/jamp/setup.menu and ingame_setup.menu in assets1.pk3): the switch and its picture are hidden.
-	// So is their sound quality entry: it offers 11 and 22 kHz, the engine runs at 44 and s_spatial needs that.
+	// So is their sound quality entry: it offers 11 and 22 kHz, the engine runs at 44 and v_spatial needs that.
 	if ( ( item->type == ITEM_TYPE_MULTI && item->cvar && ( !Q_stricmp( item->cvar, "s_UseOpenAL" ) || !Q_stricmp( item->cvar, "s_khz" ) ) )
 		|| ( item->window.name && !Q_stricmp( item->window.name, "eax_icon" ) ) ) {
 		item->disabled = item->disabledHidden = qtrue;

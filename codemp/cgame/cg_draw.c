@@ -7969,8 +7969,8 @@ static void CG_Draw2D( void ) {
 		return;
 	}
 
-	// cg_showLoading 1 (a cheat): the screen of a level that loads over the game, to look at it at leisure
-	if ( cg_showLoading.integer ) {
+	// v_showLoading 1 (a cheat): the screen of a level that loads over the game, to look at it at leisure
+	if ( v_showLoading.integer ) {
 		CG_DrawInformation();
 		return;
 	}

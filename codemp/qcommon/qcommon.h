@@ -787,7 +787,7 @@ int			Com_Milliseconds( void );	// will be journaled properly
 uint32_t	Com_BlockChecksum( const void *buffer, int length );
 int      Com_HashKey(char *string, int maxlen);
 
-// com_load.cpp: what the load of a level and a long frame were spent on (com_loadReport, com_hitchLog)
+// com_load.cpp: what the load of a level and a long frame were spent on (v_loadReport, v_hitchLog)
 void	Com_LoadInit( void );
 void	Com_LoadPush( const char *kind, const char *name );	// around something that is loaded
 void	Com_LoadPop( void );

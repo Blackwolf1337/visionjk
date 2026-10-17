@@ -2,7 +2,7 @@
 
 The sound of the game is a mixer from 2003: every sound has a volume for the left and one for the right ear,
 nothing else. It does not know that there is a wall between a sound and the listener, how large the room is or
-that a sound has to come round a corner. `s_spatial 1` changes that for the sounds in a level, with Steam Audio
+that a sound has to come round a corner. `v_spatial 1` changes that for the sounds in a level, with Steam Audio
 of Valve doing the acoustics. It is not a JA+ feature.
 
 It is in the engine, so only a player with this engine has it. Nothing of it is in the protocol: a server and
@@ -19,31 +19,31 @@ judged.
 Put the library of Steam Audio next to the program (see "The library"), then in the console:
 
 ```
-s_spatial 1
+v_spatial 1
 snd_restart
 ```
 
 | Cvar | Default | Meaning |
 |------|---------|---------|
-| `s_spatial` | 0 | 1: on (latched: from the next `snd_restart` on). Needs `s_khz 44` and stereo |
-| `s_spatialHrtf` | 1 | 1: direction for headphones (HRTF). 0: panned for speakers |
-| `s_spatialReflections` | 1 | 1: the room around the listener rings. 0: no reverb |
-| `s_spatialReverb` | 1 | how loud the reverb is |
-| `s_spatialPaths` | 1 | 1: a sound comes round corners |
-| `s_spatialPathLoss` | 1 | 0: a sound round a corner only gets duller, without what bending costs |
-| `s_spatialShock` | 1 | how strong the thump of an explosion is: its lows, in both ears. 0: none, 2: twice as much |
-| `s_spatialRays` | 2048 | rays of a pass of the reflections, 256 to 8192 |
-| `s_spatialBounces` | 16 | how often a ray is followed off a wall. Fewer cut the tail of a large room |
-| `s_spatialAhead` | 0.1 | seconds of sound rendered ahead. Less follows a turn of the head sooner, more survives a longer hitch |
-| `s_spatialBudget` | 0.75 | only in a browser: milliseconds of a frame the passes of the reflections take on average, 0.1 to 8 |
+| `v_spatial` | 0 | 1: on (latched: from the next `snd_restart` on). Needs `s_khz 44` and stereo |
+| `v_spatialHrtf` | 1 | 1: direction for headphones (HRTF). 0: panned for speakers |
+| `v_spatialReflections` | 1 | 1: the room around the listener rings. 0: no reverb |
+| `v_spatialReverb` | 1 | how loud the reverb is |
+| `v_spatialPaths` | 1 | 1: a sound comes round corners |
+| `v_spatialPathLoss` | 1 | 0: a sound round a corner only gets duller, without what bending costs |
+| `v_spatialShock` | 1 | how strong the thump of an explosion is: its lows, in both ears. 0: none, 2: twice as much |
+| `v_spatialRays` | 2048 | rays of a pass of the reflections, 256 to 8192 |
+| `v_spatialBounces` | 16 | how often a ray is followed off a wall. Fewer cut the tail of a large room |
+| `v_spatialAhead` | 0.1 | seconds of sound rendered ahead. Less follows a turn of the head sooner, more survives a longer hitch |
+| `v_spatialBudget` | 0.75 | only in a browser: milliseconds of a frame the passes of the reflections take on average, 0.1 to 8 |
 
-In a browser three defaults are others: `s_spatial` 1, `s_spatialRays` 1024, `s_spatialBounces` 8.
+In a browser three defaults are others: `v_spatial` 1, `v_spatialRays` 1024, `v_spatialBounces` 8.
 
 ### The menu
 
 The sound page of the setup menu has three entries for it. "3D Sound" is a preset:
 
-| Preset | `s_spatial` | Reflections | Rays | Bounces | Paths |
+| Preset | `v_spatial` | Reflections | Rays | Bounces | Paths |
 |--------|-------------|-------------|------|---------|-------|
 | Off | 0 | | | | |
 | Low | 1 | 0 | | | 0 |
@@ -53,12 +53,12 @@ The sound page of the setup menu has three entries for it. "3D Sound" is a prese
 
 High is the defaults. Low is direction and muffling behind walls without a ray pass. The numbers of Medium and
 Very High are a choice inside what the engine clamps to, their cost was not measured. The entry shows "Custom"
-when the cvars are none of the rows. Choosing a preset restarts the sound only when it switches `s_spatial`
-itself, the rest is read while the game runs. "Output" is `s_spatialHrtf` (Headphones or Speakers), "Reverb" a
-slider on `s_spatialReverb`. The menu does not know whether the library is there: without it the console says
+when the cvars are none of the rows. Choosing a preset restarts the sound only when it switches `v_spatial`
+itself, the rest is read while the game runs. "Output" is `v_spatialHrtf` (Headphones or Speakers), "Reverb" a
+slider on `v_spatialReverb`. The menu does not know whether the library is there: without it the console says
 so and the sound stays as it is.
 
-The entry is a cvar of the ui (`ui_s_spatialQuality`) that is worked out from the cvars of the engine by
+The entry is a cvar of the ui (`v_spatialQuality`) that is worked out from the cvars of the engine by
 `uiScript getsoundsetup`, and it is not stored itself. The menus of the game run that script when the tab of the
 sound is clicked. The Setup screens of the new look (`ui/vision/setup.menu`, `ingame_setup.menu`) have no such
 tab action, and until 2026-10-12 nothing ran it there: the entry said "Off" after every start of the game,
@@ -68,12 +68,12 @@ along). A click on the entry then went on from Off and wrote that preset over wh
 whose config has Very High (`tools/uitest/soundsetup.sh` of the test tools): the cvar did not exist with the
 screen open before, it is 4 now and the row says Very High.
 
-`s_spatialInfo` says whether it runs, what the level is made of, every sound with how much of it is in sight,
+`v_spatialInfo` says whether it runs, what the level is made of, every sound with how much of it is in sight,
 what the threads take and the state of the paths. One of its lines is what the sound of the level took of the
 thread of the game since the command was last given: the frames, the sounds in them, the microseconds of a frame
 by what they went into, and the frame that took most.
 
-`s_spatialCapture <seconds>` writes what the sounds of the level give the mixer to `steamaudio/capture.wav` in
+`v_spatialCapture <seconds>` writes what the sounds of the level give the mixer to `steamaudio/capture.wav` in
 the home path (16 bit, two channels), as it was heard. It is for measuring without ears, see "In a browser".
 What the mixer plays itself is not in it: the sounds of the own player, the menus, the music.
 
@@ -120,7 +120,7 @@ git submodule update --init
 
 The engine only takes the header `phonon.h` from it. cmake copies that and the version header Valve's own build
 generates into `<build>/steamaudio`, nothing else of the submodule is on the include path. Without the
-submodule checked out, cmake says so and builds the client without `s_spatial`. `-DBuildJPSpatialAudio=OFF`
+submodule checked out, cmake says so and builds the client without `v_spatial`. `-DBuildJPSpatialAudio=OFF`
 does the same on purpose. The client for a browser is the one build that compiles the library from the
 submodule, see "In a browser".
 
@@ -138,7 +138,7 @@ few do (of the sides of the base levels, 4 in 100). So there is a table, `steama
 `zz_japlus_client_assets.pk3`: the name of a shader and a material, a line each. A line of the table goes
 before what the level says. What neither names counts as "generic". A side that is not drawn (caulk, the back
 of a wall) is taken as made of what the drawn side of its brush is made of, so that a wall is one thing for a
-sound that goes through it. `s_spatialInfo` says how many triangles of the level got their material from the
+sound that goes through it. `v_spatialInfo` says how many triangles of the level got their material from the
 table.
 
 The table is read when the sound starts and kept: at a pure server that does not have the pk3 the file can
@@ -160,7 +160,7 @@ is how a sound that starts is heard after 50 ms. The effects of Steam Audio keep
 can only run once and in order. So each voice is rendered ahead on its own, in blocks of 1024 samples, into a
 ring of finished sound by the time of the mixer, and the mixer adds what the ring has for the samples it
 paints. A sound that starts adds itself to what is there and is heard as soon as on the old path. What changes
-for a voice (where it is, what hides it) reaches the blocks that are not rendered yet: `s_spatialAhead`.
+for a voice (where it is, what hides it) reaches the blocks that are not rendered yet: `v_spatialAhead`.
 
 **Reflections.** One source stands where the listener stands. Rays from there are followed through the level
 and what comes back becomes the impulse response of the place. Every voice is sent through that one reverb, as
@@ -177,9 +177,9 @@ sounds is the right place. Left dry: what is started on the channels of the menu
 get the lows at half volume wherever the sound is, where the old mixer gives the near ear up to all of it. An
 explosion is mostly lows, so with headphones it lost more than other sounds. Its lows (a low pass at 120 Hz)
 are added a second time, to both ears alike, past the direction and past the panning for speakers too, by
-`s_spatialShock`. A wall takes from them what it takes from the lows of any sound. An explosion is a sound
+`v_spatialShock`. A wall takes from them what it takes from the lows of any sound. An explosion is a sound
 with "explo" in the name of its file, or the hit of a rocket, a proton torpedo, a concussion missile or a
-mine of a vehicle (`spatialShockPaths`). `s_spatialInfo` says "thump" behind such a sound.
+mine of a vehicle (`spatialShockPaths`). `v_spatialInfo` says "thump" behind such a sound.
 
 **Paths.** For a sound the listener does not see, Steam Audio finds the ways round the corners from points it
 has spread over the floors of the level (probes) and from which of them see each other. That is worked out
@@ -190,7 +190,7 @@ How loud a sound is at the end of a way is what the game makes of a sound at tha
 A level where no floor is found for a probe has no paths, and the console says so. Its file is written all the
 same (32 bytes), so the next load does not look again. The simulator is never given a set of fewer than two
 probes (`SPATIAL_MIN_PROBES`). Until 2026-10-12 it was, and the game crashed a second after such a level was
-loaded with `s_spatial` on, in the thread of the reflections: a pass asks every set it has for the probes near
+loaded with `v_spatial` on, in the thread of the reflections: a pass asks every set it has for the probes near
 the listener (`SimulationManager::lookupBakedReflections()` of Steam Audio 4.8.1), and one without a probe has
 no tree to ask, which is a read at address 0. The map of the Vision Temple is such a level, t2_wedge too (its
 file in the owner's profile has 32 bytes). Seen as five core dumps of the owner's game that day, reproduced
@@ -216,37 +216,37 @@ has 12. The files of the largest levels are over 100 MB already with a quarter o
 box right needs a wider grid or a limit with it, and every file there is has to be worked out again.
 
 **The voice chat.** The cgame plays the voices of its voice chat on a sound device of its own, which the
-engine knows nothing of. With `s_spatial` on, the engine sets the cvar `s_spatialVoice` to 1 and the cgame
+engine knows nothing of. With `v_spatial` on, the engine sets the cvar `v_spatialVoice` to 1 and the cgame
 hands over what it decoded of a player, 20 ms at a time, with where his mouth is and how loud he is at his
 distance (`ext.S_SpatialVoice` in `cgame/cg_public.h`, a call only this engine has: the cgame looks at the
 cvar before it touches it). The engine brings it to the rate of the mixer and it is a voice like the others:
 the walls, the reverb, the ways round corners. How loud a voice is at its distance stays what the voice chat
-makes of it (`g_voiceRange`, `cg_voiceVolume`), and `s_volume` does not change it. A voice is decided when its
+makes of it (`vs_voiceRange`, `v_voiceVolume`), and `s_volume` does not change it. A voice is decided when its
 speaker starts to talk and stays on its way until he stops.
 
 **The boombox.** Its songs come to the cgame as the voices of speakers behind the players ([boombox.md](boombox.md)),
 and the same call takes them: clientNum `MAX_CLIENTS` and up are eight more streams, behind the one of the own
-voice. The engine says how many in the cvar `s_spatialBoxes` (8 while `s_spatial` runs, else 0); an engine that
+voice. The engine says how many in the cvar `v_spatialBoxes` (8 while `v_spatial` runs, else 0); an engine that
 does not say it gets no box, and the cgame plays the songs on its own device.
 
-Not handed over, and played by the cgame as before: a chat without a range (`g_voiceRange 0`), a speaker the
-server does not show, a spectator, and every voice for a player with `cg_voiceMuffle 0`, who does not want
-voices muffled. The same goes for any other engine, and for this one with `s_spatial 0` or without the library.
+Not handed over, and played by the cgame as before: a chat without a range (`vs_voiceRange 0`), a speaker the
+server does not show, a spectator, and every voice for a player with `v_voiceMuffle 0`, who does not want
+voices muffled. The same goes for any other engine, and for this one with `v_spatial 0` or without the library.
 
 What the own player says goes the same way as his other sounds: into the reverb and nowhere else. The cgame
 hands every frame of the microphone that goes out to the engine too (`ext.S_SpatialOwnVoice`, a second call,
-which an engine has that sets the cvar `s_spatialOwnVoice` to 1). He does not hear his voice, he hears the room
+which an engine has that sets the cvar `v_spatialOwnVoice` to 1). He does not hear his voice, he hears the room
 he stands in ring from it. That room is in his ears a moment after the word, while he talks on, so it gets
-little of him: at `cg_voiceOwnReverb 1` 0.15 of what the voice of a player next to him would give it
+little of him: at `v_voiceOwnReverb 1` 0.15 of what the voice of a player next to him would give it
 (`VOICE_OWN_REVERB_GAIN`, 0.3 until 2026-10-11, which was found too loud in the game). And it has a cap: a frame of the microphone that is louder than a tenth of full
 scale (`VOICE_OWN_REVERB_CAP`, as the voice activation measures it) goes in that loud and no louder, turned
 down within the frame, and comes back over the next frames, so a raised voice does not raise the room.
-`cg_voiceOwnReverb` scales what the room gets, 0 turns it off, and the voice part of the setup menus has a
+`v_voiceOwnReverb` scales what the room gets, 0 turns it off, and the voice part of the setup menus has a
 slider for it ("Own Voice In The Room", 0 to 2). Not handed over: a spectator's voice, and a chat
 without a range.
 
 The other sounds are there ahead of time, a voice is not. It is rendered as far as what arrived of it reaches,
-a block behind where the others are rendered to, so it is heard about `s_spatialAhead` (0.1 s) later than the
+a block behind where the others are rendered to, so it is heard about `v_spatialAhead` (0.1 s) later than the
 cgame would play it.
 
 **Threads.** The engine had none. Now: one for the passes of reflections and paths, one while the paths of a
@@ -267,7 +267,7 @@ runs, until then the old mixer plays.
 
 ## In a browser
 
-The client in a browser ([web.md](web.md)) has `s_spatial` when it is built with `-DBuildJPSpatialAudio=ON`. The
+The client in a browser ([web.md](web.md)) has `v_spatial` when it is built with `-DBuildJPSpatialAudio=ON`. The
 toolchain file for the browser leaves that off. Two things are different there, the rest is the same code:
 what is in the way of a sound, the direction for headphones or speakers, the reverb, the ways round corners,
 the thump, the sounds of the own player, the voices of the voice chat.
@@ -277,7 +277,7 @@ out no library for WebAssembly, so this one is built from the submodule, as a mo
 renderer in the folder the server hands out. The page takes it along when the server has it. The engine loads
 it when the sound system starts and looks its functions up by name, the same code as on the desktop with another
 file name, and lets go of it when the sound system stops. Without the file the page says so in one line, the
-engine in one more, and the sound is as it always was: a server that is not to have `s_spatial` leaves
+engine in one more, and the sound is as it always was: a server that is not to have `v_spatial` leaves
 `phonon.wasm` out of its web folder.
 
 What is different is that a page has one thread. What the two threads of the desktop do, the game does itself:
@@ -285,15 +285,15 @@ What is different is that a page has one thread. What the two threads of the des
 | | Desktop | Page |
 |---|---------|------|
 | The level as a mesh | during the loading screen, handed to the simulator in the first frame | during the loading screen, handed over right there |
-| A pass of the reflections | in a thread, about seven a second | the game traces the rays, a slice in a frame. `s_spatialBudget` is the time of a frame the passes take on average. A slice is at least 32 rays with their bounces, and what makes the impulse response at the end of a pass is 2 ms in one piece, so some frames go without a slice. A pass of the defaults is spread over about half a second |
+| A pass of the reflections | in a thread, about seven a second | the game traces the rays, a slice in a frame. `v_spatialBudget` is the time of a frame the passes take on average. A slice is at least 32 rays with their bounces, and what makes the impulse response at the end of a pass is 2 ms in one piece, so some frames go without a slice. A pass of the defaults is spread over about half a second |
 | The ways round corners | looked up in each pass | looked up by the game every 50 ms: 20 microseconds for two sounds behind a wall |
 | The paths of a level | worked out in a thread the first time it is loaded | worked out while the level loads, the first time, and kept in the browser like the config. Only for a level of up to 2000 probes |
 
 A pass traces fewer rays by default than on the desktop (1024 with 8 bounces, the "Medium" of the menu) and
-`s_spatialRays` is read when the sound system starts: the simulator is made for exactly the rays a pass traces,
+`v_spatialRays` is read when the sound system starts: the simulator is made for exactly the rays a pass traces,
 see the first of the "Limits" for why.
 
-`s_spatial` is 1 by default there, so whether a page has it is a matter of the file: it is on where the server
+`v_spatial` is 1 by default there, so whether a page has it is a matter of the file: it is on where the server
 has `phonon.wasm` and off where it has not. With the defaults the sound of the level took 1.1 ms of a frame
 where it was measured, with a few sounds on a fast processor. That is a choice by the numbers below and by
 nothing else: nobody has listened to it.
@@ -301,13 +301,13 @@ nothing else: nobody has listened to it.
 What a player in a browser has less of:
 
 - The reverb follows him about twice a second, not seven times: in another room it is the old room's for up to
-  half a second longer. More `s_spatialBudget` makes that shorter, more rays or bounces longer.
+  half a second longer. More `v_spatialBudget` makes that shorter, more rays or bounces longer.
 - A pass has half the rays and half the bounces of the desktop's default, so the reverb of a large hall is
   rougher and its tail ends sooner. The cvars are the same ones: twice the rays or bounces is a pass twice as
   long.
 - A level of more than 2000 probes has no sound round corners. The work and the memory the paths take grow with
   the square of the probes, and nothing can work them out later next to the game. mp/ffa3 has 740. The console
-  says so when such a level loads, and `s_spatialPaths` says it when it is switched on in one.
+  says so when such a level loads, and `v_spatialPaths` says it when it is switched on in one.
 - A level loads longer the first time: by the 0.4 s of its paths on mp/ffa3, by about 3 s at 2000 probes if the
   time grows as said.
 - `phonon.wasm` is 6.2 MB more to fetch, and with it the engine needs 60 to 80 MB more memory, see "Measured".
@@ -318,7 +318,7 @@ cmake does all of it (`cmake/Modules/SteamAudioWasm.cmake`). It needs the progra
 
 | Option | Default | Meaning |
 |--------|---------|---------|
-| `BuildJPSpatialAudio` | OFF with the toolchain file for the browser | ON builds the client with `s_spatial`, and `phonon.wasm` into the web folder of the build |
+| `BuildJPSpatialAudio` | OFF with the toolchain file for the browser | ON builds the client with `v_spatial`, and `phonon.wasm` into the web folder of the build |
 | `FetchSteamAudio` | ON | fetch the sources of FlatBuffers and PFFFT when `SteamAudioDeps` does not have them (1.3 MB, once) |
 | `SteamAudioDeps` | `<build>/steamaudio/deps` | the folder with `flatbuffers` and `pffft` in it |
 | `SteamAudioFlatBuffersURL`, `SteamAudioPFFFTURL` | empty | another address for an archive, `file://` for one on the disk |
@@ -362,7 +362,7 @@ header alone.
 
 `phonon.wasm` is 6,184,239 bytes (5.2 MB as gzip): 5.37 MB are the HRTF data Valve builds into the library, for
 every sampling rate, 0.67 MB are code. From outside it has the functions of `phonon.h` and the two of
-`phonon_slices.h`, nothing else of it is visible. The engine's `.wasm` is 3,887,181 bytes with `s_spatial` and
+`phonon_slices.h`, nothing else of it is visible. The engine's `.wasm` is 3,887,181 bytes with `v_spatial` and
 3,853,061 without: `snd_spatial.cpp`, and nothing of Steam Audio.
 
 Only `phonon.wasm` holds SIMD instructions (Chrome 91, Firefox 89, Safari 16.4). A browser that does not know
@@ -390,7 +390,7 @@ second, while other work ran on the machine. The numbers are of the build that h
 engine, which the first version was, and were taken again with `phonon.wasm` where a row says so: a call into
 the library goes through a function pointer either way, and what a frame takes did not move. The demo `webdemo`: mp/ffa3, a spectator at a fixed place, one bot fighting
 behind a wall and others far off. That is 3.1 sounds at a time and 5 at most, not a fight. Time is what the
-sound of the level took of the page's one thread, by the counters of `s_spatialInfo`. A browser counts time in
+sound of the level took of the page's one thread, by the counters of `v_spatialInfo`. A browser counts time in
 steps of 0.1 ms: the averages are over 900 frames each, the one frame that took most is that coarse.
 
 | What | Result |
@@ -400,14 +400,14 @@ steps of 0.1 ms: the averages are over 900 frames each, the one frame that took 
 | A frame with the defaults | 1.09 ms: 0.05 what is in the way, 0.12 the sounds, 0.18 the reverb, 0.75 the passes. With `phonon.wasm`: 1.10 ms (0.04, 0.13, 0.18, 0.75) |
 | The frame that took most | 2.8 to 4.0 ms. With `phonon.wasm`: 2.9 ms |
 | A pass, 1024 rays and 8 bounces | 21 to 28 ms in 27 to 32 slices over 0.44 to 0.57 s, the longest slice 1.7 to 2.7 ms. With `phonon.wasm`: 20 to 24 ms in 26 to 30 slices, the longest 1.9 ms |
-| The same pass in 4 slices (`s_spatialBudget 8`) | 20 ms. In many slices it is longer: the game has the processor's caches in between |
+| The same pass in 4 slices (`v_spatialBudget 8`) | 20 ms. In many slices it is longer: the game has the processor's caches in between |
 | A pass in one piece with other numbers | 2048 rays and 16 bounces 58 to 64 ms, 1024 and 8: 16.6 ms, 512 and 8: 10.6 ms, 256 and 4: 3.9 ms. About 2 ms of each are the impulse response. Measured before the simulator was made for the rays it traces, so with the rays of a part of the circle |
-| `s_spatialBudget` 0.5, 1.5 | a frame 0.86 and 1.81 ms, a pass over 0.70 and 0.22 s |
-| `s_spatialReflections 0` | a frame 0.19 ms, the same with `phonon.wasm` |
-| and `s_spatialPaths 0` | 0.16 ms. With `s_spatialHrtf 0`: 0.09 ms |
+| `v_spatialBudget` 0.5, 1.5 | a frame 0.86 and 1.81 ms, a pass over 0.70 and 0.22 s |
+| `v_spatialReflections 0` | a frame 0.19 ms, the same with `phonon.wasm` |
+| and `v_spatialPaths 0` | 0.16 ms. With `v_spatialHrtf 0`: 0.09 ms |
 | One more sound | about 0.05 ms a frame with HRTF, 0.03 without: 0.01 what is in the way, 0.02 its samples, 0.02 direction for headphones. Measured by doing the effects of each sound up to 21 times |
 | The desktop, the same demo | a frame 0.12 to 0.14 ms without reverb (page: 0.16 to 0.19) and 0.41 ms with it, a pass of 2048 rays and 16 bounces 36 ms in its thread |
-| Memory of the engine in use | at the menu 101 MB without and 161 MB with `s_spatial`, in mp/ffa3 159 and 240 MB. With `phonon.wasm` 5.4 MB of it are the library's own data, taken when it is loaded and given back when it is unloaded |
+| Memory of the engine in use | at the menu 101 MB without and 161 MB with `v_spatial`, in mp/ffa3 159 and 240 MB. With `phonon.wasm` 5.4 MB of it are the library's own data, taken when it is loaded and given back when it is unloaded |
 
 By these numbers the mixer's 32 channels and 32 loop sounds, all in the level at once, would be about 3.5 ms a
 frame on this machine. A cap on the sounds that get HRTF would take a third off that and was left out: what a
@@ -429,7 +429,7 @@ here, run with node:
 | The reverb between two walls, 2048 rays | the one built here has 0.4 dB more energy (three runs against five). Two runs of Valve's are up to 0.3 dB apart, the rays bounce by chance. Where the rest comes from was not looked for |
 
 18 seconds of the demo in the page and on the desktop (a hidden client with the sound driver "dummy"), each
-written by `s_spatialCapture` from the first frame of the level on, compared by `tools/satest/compare.py` of the
+written by `v_spatialCapture` from the first frame of the level on, compared by `tools/satest/compare.py` of the
 port: the level of each ear as a whole and in four bands from 100 Hz to 16 kHz.
 
 | What | Page and desktop apart |
@@ -450,8 +450,8 @@ port: the level of each ear as a whole and in four bands from 100 Hz to 16 kHz.
 | A level with more probes than the limit (the limit set to 500 for it) | the line in the console, no paths, no file, the rest runs |
 | `snd_restart` in the level, a new level while a pass is in its slices | runs |
 | `phonon.wasm` unloaded and loaded again: `snd_restart` six times at the menu and six times in the level, then three more levels | runs. The memory in use at the menu is the same after each of the six. What stays of a load are 623 entries of the function table, which the loader gives back for no module, and what the instance noted for the end of the program, which a page never reaches |
-| The page without `phonon.wasm` | one line of the page, one of the engine ("no phonon.wasm next to the program"), the demo plays with the old mixer, `s_spatialVoice` is 0 |
-| `s_spatial 0` | nothing of it runs |
+| The page without `phonon.wasm` | one line of the page, one of the engine ("no phonon.wasm next to the program"), the demo plays with the old mixer, `v_spatialVoice` is 0 |
+| `v_spatial 0` | nothing of it runs |
 
 So a server could hand the paths of its levels to a page: the name and the format are the same. Nothing does
 that yet.
@@ -487,7 +487,7 @@ that yet.
 | Sounds the game starts one by one | arrive whole and ring like looped ones |
 | Turning on the spot | each ear goes from -39 to -18 dB without a jump |
 | Every recording | no gap, no click in the levels of 5 ms |
-| `s_spatial 0` | the same levels to 0.1 dB as the engine from before this work |
+| `v_spatial 0` | the same levels to 0.1 dB as the engine from before this work |
 | The triangles against the collision model | 15000 rays on five levels: 97 to 99.6 % stop within a unit. Where they differ it is a curve hit from behind, which the collision model lets a point through |
 | The sound system started again, a change of level, bots fighting on mp/ffa3 | runs, the threads end when the sound system does |
 
@@ -501,7 +501,7 @@ The voice chat, the same day: a dedicated server, a client that sends in place o
 | A tone of 440 and 3000 Hz, 10 s | no hole in the levels of 5 ms |
 | The tone in sight, 365 units away | 440 Hz at -22 dB. On the voice chat's own device: -21.5 dB |
 | The listener in the next room, 625 units away, a wall in between | 440 Hz at -47.9 dB. On the own device, with its muffling: -34.7 dB |
-| `cg_voiceMuffle 0`, `s_spatial 0` | the voice comes from the own device, nothing from the engine |
+| `v_voiceMuffle 0`, `v_spatial 0` | the voice comes from the own device, nothing from the engine |
 
 The "disk" sound driver of SDL takes 0.6 % more sound a second than there is. A listener on it runs out of
 voice every 3 s and the codec makes up a frame, which is a hole of 40 ms in a tone. The numbers above are from a
@@ -527,7 +527,7 @@ reflections and paths 21 ms, in its own thread, about seven a second. In the thr
 and up to 2 ms, most of it the reverb. The paths of mp/ffa3: 740 probes, under a second, a file of 660 kB.
 
 Builds: Linux 64, and the client and the modules for 64 bit Windows with mingw (run on Windows 11 on 2026-10-11
-with `s_spatial 1`: library loaded, level handed over, paths worked out and stored, see [windows.md](windows.md).
+with `v_spatial 1`: library loaded, level handed over, paths worked out and stored, see [windows.md](windows.md).
 Nobody listened).
 
 The library in the build, 2026-10-08: after a build it is next to the client, after an install too, on Linux 64
@@ -540,7 +540,7 @@ download itself was not run. The part for macOS and its application bundle is wr
 
 - On the desktop a pass of the reflections does not look all round the listener. Steam Audio has the rays the
   simulator was made for in the order of their direction, and a pass of fewer takes the first of them. The
-  engine makes it for 8192 and a pass traces `s_spatialRays`: the 2048 of the default go into a quarter of the
+  engine makes it for 8192 and a pass traces `v_spatialRays`: the 2048 of the default go into a quarter of the
   circle round the listener, the 1024 of "Medium" into an eighth, always the same one in the level. Found in
   Valve's code (`Sampling::generateSphereSamples`) and measured with their library, a listener between two walls:
   made for 8192 with a pass of 2048, what comes back comes from one side (its direction goes with the whole by
@@ -552,26 +552,26 @@ download itself was not run. The part for macOS and its application bundle is wr
 - The reverb of the own player's sounds and the thump of explosions were built and never run: not heard and
   not measured in the game. How much of an own sound the room gets is one number, `SPATIAL_OWN_SEND`.
 - The thump is added on top. With `s_volume` near 1 an explosion next to the listener goes past what the
-  sound card takes and is cut off there, sooner than without it. `s_spatialShock` below 1 if it distorts.
+  sound card takes and is cut off there, sooner than without it. `v_spatialShock` below 1 if it distorts.
 - A sound the cgame starts as a local sound on the channel of the body sounds rings too: in this cgame that is
   the zoom of the disruptor.
 - The voice of the own character is an MP3 that is decoded while it plays, through its channel, and now by two
   readers: the mixer and the voice for the reverb. By the code they stay inside what the decoder keeps. If a
   line of the own character ever has a hole in its reverb, that is where to look.
 - The reverb of the own voice is late. By the code, not measured: the microphone and its frames of 20 ms, a
-  block of 1024 samples that has to be full, then `s_spatialAhead` (0.1 s), then the sound card. About 0.2 s
+  block of 1024 samples that has to be full, then `v_spatialAhead` (0.1 s), then the sound card. About 0.2 s
   from the word to the first of its reverb, which in a small room is heard as an echo more than as a room.
   Built and never run, like the two above. With speakers the microphone hears that reverb again.
 - Doors and lifts do not block sound. They are brush models that move, the mesh is the world that does not.
 - One reverb, of where the listener stands. A sound in another room rings like the listener's room, and has no
   reflections of its own.
-- What a voice is given reaches the ear after `s_spatialAhead` (0.1 s): a turn of the head is heard that much
+- What a voice is given reaches the ear after `v_spatialAhead` (0.1 s): a turn of the head is heard that much
   later. If the game stands still for longer than that, the sounds of the level have a gap while the others
   play on.
 - A sound that starts gets its reverb up to 0.1 s late.
 - A voice of the voice chat behind a wall without a way round it is 13 dB quieter than the voice chat makes it
   on its own (see "Checked"): the wall is the wall of every other sound. Whether that is too quiet to talk
-  through is for ears to say. `cg_voiceMuffle 0` takes the voices out of it.
+  through is for ears to say. `v_voiceMuffle 0` takes the voices out of it.
 - The voice chat looks at doors when it muffles a voice itself. Here a door is not in the way, as for every
   sound.
 - A voice is 0.1 s later than on the voice chat's own device. That number is from the code, not measured.

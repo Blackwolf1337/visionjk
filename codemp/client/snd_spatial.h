@@ -32,7 +32,7 @@ typedef struct portable_samplepair_s portable_samplepair_t;
 
 void		S_SpatialInit( void );			// the sound device is open: dma.speed is known
 void		S_SpatialShutdown( void );
-qboolean	S_SpatialActive( void );		// s_spatial is on, the library is there and a level is loaded
+qboolean	S_SpatialActive( void );		// v_spatial is on, the library is there and a level is loaded
 void		S_SpatialLoadMap( const char *mapname );	// the collision model of a level was loaded
 void		S_SpatialUpdate( void );		// once a frame: a level that was loaded is taken over when that is safe
 
@@ -47,7 +47,7 @@ void		S_SpatialEndFrame( int from, int target );
 float		S_SpatialAhead( void );
 
 // from the cgame (ext.S_SpatialVoice): the voice of a player of the voice chat as a sound in the level, or the song
-// of a box of the boombox (clientNum MAX_CLIENTS and up, s_spatialBoxes of them).
+// of a box of the boombox (clientNum MAX_CLIENTS and up, v_spatialBoxes of them).
 // Returns the samples of him that wait, at his rate, or -1 if the cgame has to play him itself.
 int			S_SpatialVoice( int clientNum, const vec3_t origin, float volume, const short *samples, int numSamples, int rate );
 // from the cgame (ext.S_SpatialOwnVoice): what the own player says into the voice chat, only for the reverb

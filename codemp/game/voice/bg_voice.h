@@ -47,7 +47,7 @@ The clan radio (2026-10-11): a frame a client sends as VOICE_RADIO in place of V
 who have the clan password of the speaker (cp_clanPwd, the group of the clan chat), wherever they are and
 whatever team they are on, and to nobody else. They get it as a VOICE_AUDIO with VOICE_FLAG_RADIO: a voice
 without a place, which the cgame plays through BG_VoiceRadio(). A relay says that it knows the radio in its
-answer to "jpvoice hello" (VOICE_CAP_RADIO), a client sends no VOICE_RADIO to one that does not. A cgame from
+answer to "vs_voiceLink hello" (VOICE_CAP_RADIO), a client sends no VOICE_RADIO to one that does not. A cgame from
 before the radio does not know the flag: for it the frame has VOICE_FLAG_UNSEEN and a distance of 0 as well,
 which it plays as a voice close by behind a wall.
 
@@ -112,7 +112,7 @@ of type 6 are is in bg_boombox.h.
 #define VOICE_STATUS_TEXT		64		// the text of a status with its end, as STATUS_TEXT of cg_status.c
 #define VOICE_STATUS_AWAY		1		// in the first byte of a VOICE_STATUS: he is away from the keyboard
 #define VOICE_MASTER_PORT		29170	// UDP, where the masterserver listens unless it is told another one
-#define VOICE_MASTER_RANGE		1024	// how far a voice carries through the master: the default of g_voiceRange
+#define VOICE_MASTER_RANGE		1024	// how far a voice carries through the master: the default of vs_voiceRange
 
 #define VOICE_FLAG_UNSEEN		1		// to a client: the speaker is not in what the server shows him of the level
 #define VOICE_FLAG_TAKEN		2		// the answer of the master: another session speaks as this client number
@@ -120,7 +120,7 @@ of type 6 are is in bg_boombox.h.
 #define VOICE_FLAG_RADIO		8		// to a client: this came over the clan radio and has no place
 #define VOICE_FLAG_SOCIAL		16		// the answer of the master: it knows the long state, VOICE_RADIO and VOICE_STATUS
 #define VOICE_FLAG_BOXES		32		// the answer of the master: it plays boxes, it knows VOICE_BOX and the state with the boxes
-#define VOICE_CAP_RADIO			1		// in the answer to "jpvoice hello": the relay knows VOICE_RADIO
+#define VOICE_CAP_RADIO			1		// in the answer to "vs_voiceLink hello": the relay knows VOICE_RADIO
 #define VOICE_DISTANCE_STEP		16		// the distance byte counts in steps of this many units
 
 #define VOICE_MAX_PPS			60		// what the relay takes from one speaker in a second: datagrams

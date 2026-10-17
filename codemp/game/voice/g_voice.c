@@ -25,17 +25,17 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // every datagram on to the clients who are to hear it. It never looks into the sound.
 //
 // Nothing of it is in the game protocol, so a client without that cgame (jamp, the JA+ plugin, another fork)
-// sees no difference: the one server command there is, jpvoice, only goes to a client that asked with the
+// sees no difference: the one server command there is, vs_voiceLink, only goes to a client that asked with the
 // client command of the same name.
 //
 // A client that runs in a browser sends the same datagrams through the web host of the dedicated server
 // (codemp/server/web/sv_web_voice.cpp), which passes them on to this port as they are.
 //
-// Where the datagrams come in. A dedicated server of this tree that says sv_voiceShared 1 takes them on the UDP
+// Where the datagrams come in. A dedicated server of this tree that says vs_voiceShared 1 takes them on the UDP
 // port of the game and hands them over (ext.VoiceDatagram of the exports, codemp/server/sv_voice.cpp), and what
 // goes to such a client leaves from that port again (ext.SendDatagram of the imports): the server needs one
 // port. The socket of this file is then one on this machine only, for the web host. With any other engine, or
-// with a g_voicePort, the socket is the relay: the port of the game plus one, or the one that cvar names.
+// with a vs_voicePort, the socket is the relay: the port of the game plus one, or the one that cvar names.
 
 #include "game/bg_net.h"		// the sockets, in front of everything else
 #include "game/g_local.h"
@@ -59,7 +59,7 @@ static voiceClient_t	voiceClients[MAX_CLIENTS];
 static qboolean			voiceOn;			// there is a relay
 static bgSocket_t		voiceSocket = BG_INVALID_SOCKET;	// its own socket. The shared way has one only for the web host
 static int				voicePort;			// of the socket
-static qboolean			voiceShared;		// the engine hands over what comes in on the port of the game (sv_voiceShared)
+static qboolean			voiceShared;		// the engine hands over what comes in on the port of the game (vs_voiceShared)
 static int				voiceGamePort;		//	and this is that port
 static int				voiceRefused;		// datagrams that were no voice of a client of this server, since the socket was made
 static struct in_addr	voiceSelf;			// the address of this machine the web host of the server reaches the relay on
@@ -68,7 +68,7 @@ static struct in_addr	voiceSelf;			// the address of this machine the web host o
 =================
 G_VoiceTell
 
-Says in the cvar g_voiceRelay where the relay listens, "address:port" in numbers, or nothing while there is no
+Says in the cvar vs_voiceRelay where the relay listens, "address:port" in numbers, or nothing while there is no
 relay. The web host of the dedicated server reads it (codemp/server/web/sv_web_voice.cpp): it carries the
 voice chat of the clients that run in a browser, see G_VoiceFromWebHost().
 =================
@@ -76,8 +76,8 @@ voice chat of the clients that run in a browser, see G_VoiceFromWebHost().
 static void G_VoiceTell( qboolean open ) {
 	const byte *ip = (const byte *)&voiceSelf.s_addr;
 
-	trap->Cvar_Register( NULL, "g_voiceRelay", "", CVAR_ROM );
-	trap->Cvar_Set( "g_voiceRelay", open ? va( "%i.%i.%i.%i:%i", ip[0], ip[1], ip[2], ip[3], voicePort ) : "" );
+	trap->Cvar_Register( NULL, "vs_voiceRelay", "", CVAR_ROM );
+	trap->Cvar_Set( "vs_voiceRelay", open ? va( "%i.%i.%i.%i:%i", ip[0], ip[1], ip[2], ip[3], voicePort ) : "" );
 }
 
 /*
@@ -96,7 +96,7 @@ void G_VoiceShutdown( qboolean restart ) {
 	}
 	G_VoiceTell( qfalse );
 	voiceOn = voiceShared = qfalse;
-	trap->Cvar_Set( "g_voiceShared", "0" );
+	trap->Cvar_Set( "vs_voiceSharedGame", "0" );
 	memset( voiceClients, 0, sizeof( voiceClients ) );
 }
 
@@ -104,7 +104,7 @@ void G_VoiceShutdown( qboolean restart ) {
 =================
 G_VoiceInit
 
-Opens the port if g_voice is set. Whatever goes wrong here ends in one line in the console and a server that
+Opens the port if vs_voice is set. Whatever goes wrong here ends in one line in the console and a server that
 runs as it would without voice.
 =================
 */
@@ -116,15 +116,15 @@ void G_VoiceInit( qboolean restart ) {
 
 	if ( restart && voiceOn )
 		return;
-	trap->Cvar_Register( NULL, "g_voiceShared", "0", CVAR_ROM );
+	trap->Cvar_Register( NULL, "vs_voiceSharedGame", "0", CVAR_ROM );
 	G_VoiceShutdown( qfalse );
 	voiceRefused = 0;
-	if ( !g_voice.integer )
+	if ( !vs_voice.integer )
 		return;
 
 	voiceGamePort = trap->Cvar_VariableIntegerValue( "net_port" );
-	shared = ( trap->Cvar_VariableIntegerValue( "sv_voiceShared" ) && g_voicePort.integer <= 0 ) ? qtrue : qfalse;
-	voicePort = g_voicePort.integer;
+	shared = ( trap->Cvar_VariableIntegerValue( "vs_voiceShared" ) && vs_voicePort.integer <= 0 ) ? qtrue : qfalse;
+	voicePort = vs_voicePort.integer;
 	if ( shared )
 		voicePort = 0;		// any free one: nobody outside of this machine sends to it
 	else if ( voicePort <= 0 )
@@ -134,8 +134,8 @@ void G_VoiceInit( qboolean restart ) {
 		return;
 	}
 
-	// the shared way needs a socket of its own only for the web host of the server (sv_webPort)
-	if ( !shared || trap->Cvar_VariableIntegerValue( "sv_webPort" ) > 0 ) {
+	// the shared way needs a socket of its own only for the web host of the server (vs_clientWebPort)
+	if ( !shared || trap->Cvar_VariableIntegerValue( "vs_clientWebPort" ) > 0 ) {
 		BG_NetStart();
 		voiceSocket = socket( AF_INET, SOCK_DGRAM, IPPROTO_UDP );
 		if ( voiceSocket == BG_INVALID_SOCKET ) {
@@ -154,7 +154,7 @@ void G_VoiceInit( qboolean restart ) {
 		if ( bind( voiceSocket, (struct sockaddr *)&addr, sizeof( addr ) ) != 0
 			|| ( shared && getsockname( voiceSocket, (struct sockaddr *)&addr, &addrLen ) != 0 ) ) {
 			trap->Print( shared ? "Voice chat is off: no UDP port on this machine can be opened\n"
-				: "Voice chat is off: UDP port %i can not be opened (g_voicePort)\n", voicePort );
+				: "Voice chat is off: UDP port %i can not be opened (vs_voicePort)\n", voicePort );
 			BG_CloseSocket( voiceSocket );
 			voiceSocket = BG_INVALID_SOCKET;
 			return;
@@ -171,7 +171,7 @@ void G_VoiceInit( qboolean restart ) {
 	voiceOn = qtrue;
 	if ( shared ) {
 		voiceShared = qtrue;
-		trap->Cvar_Set( "g_voiceShared", "1" );
+		trap->Cvar_Set( "vs_voiceSharedGame", "1" );
 		trap->Print( "Voice chat on the UDP port of the game, %i\n", voiceGamePort );
 	} else {
 		trap->Print( "Voice chat on UDP port %i\n", voicePort );
@@ -179,8 +179,8 @@ void G_VoiceInit( qboolean restart ) {
 
 	// the cgame only asks for voice on a server that says in its server info that it has it
 	trap->GetServerinfo( text, sizeof( text ) );
-	if ( !Info_ValueForKey( text, "g_voice" )[0] )
-		trap->Print( "Voice chat: the server info is full and does not say g_voice, so no client will ask for it\n" );
+	if ( !Info_ValueForKey( text, "vs_voice" )[0] )
+		trap->Print( "Voice chat: the server info is full and does not say vs_voice, so no client will ask for it\n" );
 }
 
 // he is gone, or somebody new has his number
@@ -193,8 +193,8 @@ void G_VoiceClientGone( int clientNum ) {
 =================
 Cmd_JPVoice_f
 
-jpvoice hello <protocol>: the cgame of a client asks for voice. The answer is the server command
-jpvoice <protocol> <port> <token> <range> <caps>, and it is the only thing of the voice chat that ever goes
+vs_voiceLink hello <protocol>: the cgame of a client asks for voice. The answer is the server command
+vs_voiceLink <protocol> <port> <token> <range> <caps>, and it is the only thing of the voice chat that ever goes
 through the game connection. A client is told the protocol of this server even if his is another one, he then
 stays silent by himself. caps: what this relay knows beyond the protocol (VOICE_CAP_RADIO), a cgame from before
 that does not look at it.
@@ -227,8 +227,8 @@ void Cmd_JPVoice_f( gentity_t *ent ) {
 		vc->gameAddr.s_addr = htonl( INADDR_LOOPBACK );
 		vc->gameAddrKnown = qtrue;
 	}
-	trap->SendServerCommand( ent - g_entities, va( "jpvoice %i %i %u %i %i", VOICE_PROTOCOL, voiceShared ? voiceGamePort : voicePort, token,
-		g_voiceRange.integer > 0 ? g_voiceRange.integer : 0, g_voiceRadio.integer ? VOICE_CAP_RADIO : 0 ) );
+	trap->SendServerCommand( ent - g_entities, va( "vs_voiceLink %i %i %u %i %i", VOICE_PROTOCOL, voiceShared ? voiceGamePort : voicePort, token,
+		vs_voiceRange.integer > 0 ? vs_voiceRange.integer : 0, vs_voiceRadio.integer ? VOICE_CAP_RADIO : 0 ) );
 }
 
 // one datagram to a client, the way his come in
@@ -256,7 +256,7 @@ static void G_VoiceEar( int clientNum, voiceEar_t *ear ) {
 
 // what one speaker said goes to everybody who is to hear it
 static void G_VoiceRelay( int speaker, const voicePacket_t *in ) {
-	const qboolean	teamOnly = ( g_voiceTeamOnly.integer && level.gametype >= GT_TEAM ) ? qtrue : qfalse;
+	const qboolean	teamOnly = ( vs_voiceTeamOnly.integer && level.gametype >= GT_TEAM ) ? qtrue : qfalse;
 	voiceEar_t		mouth, ear;
 	voicePacket_t	out = *in;
 	byte			datagram[VOICE_MAX_DATAGRAM];
@@ -274,7 +274,7 @@ static void G_VoiceRelay( int speaker, const voicePacket_t *in ) {
 		if ( i == speaker || !vc->ready )
 			continue;
 		G_VoiceEar( i, &ear );
-		if ( !BG_VoiceHears( &mouth, &ear, (float)g_voiceRange.integer, teamOnly, &distance ) )
+		if ( !BG_VoiceHears( &mouth, &ear, (float)vs_voiceRange.integer, teamOnly, &distance ) )
 			continue;
 
 		out.token = vc->token;
@@ -304,7 +304,7 @@ static void G_VoiceRadio( int speaker, const voicePacket_t *in ) {
 	byte			datagram[VOICE_MAX_DATAGRAM];
 	int				i, len;
 
-	if ( !g_voiceRadio.integer || !voiceClients[speaker].ready || client->pers.connected != CON_CONNECTED
+	if ( !vs_voiceRadio.integer || !voiceClients[speaker].ready || client->pers.connected != CON_CONNECTED
 		|| client->pers.jp.silenced || !client->pers.jp.clanPass[0] )
 		return;
 	out.type = VOICE_AUDIO;
@@ -333,7 +333,7 @@ static void G_VoiceRadio( int speaker, const voicePacket_t *in ) {
 G_VoiceFromWebHost
 
 A client that runs in a browser can not send to this port. His datagrams come through the web host of the
-dedicated server of this tree (sv_webPort), from a socket that host has on this machine, and are handed on
+dedicated server of this tree (vs_clientWebPort), from a socket that host has on this machine, and are handed on
 there only if the client they name plays through that host from the address they came from: the check of the
 address is made where the address is known. So on a server that runs that host a datagram from this machine
 is taken with the token alone.
@@ -343,7 +343,7 @@ from a line. On a server without that host nothing changes.
 =================
 */
 static qboolean G_VoiceFromWebHost( const struct sockaddr_in *from ) {
-	return ( from->sin_addr.s_addr == voiceSelf.s_addr && trap->Cvar_VariableIntegerValue( "sv_webPort" ) > 0 ) ? qtrue : qfalse;
+	return ( from->sin_addr.s_addr == voiceSelf.s_addr && trap->Cvar_VariableIntegerValue( "vs_clientWebPort" ) > 0 ) ? qtrue : qfalse;
 }
 
 /*
@@ -493,17 +493,17 @@ void G_VoiceSendBox( int clientNum, int speaker, int seq, int distance, const by
 		G_VoiceSend( vc, datagram, outLen );
 }
 
-// the server command voicestatus: who has voice and what the relay did
+// the server command vs_voicestatus: who has voice and what the relay did
 void Svcmd_VoiceStatus_f( void ) {
 	int i, count = 0;
 
 	if ( !voiceOn ) {
-		trap->Print( "Voice chat is off (g_voice %i)\n", g_voice.integer );
+		trap->Print( "Voice chat is off (vs_voice %i)\n", vs_voice.integer );
 		return;
 	}
 	trap->Print( "Voice chat on UDP port %i%s, range %i, %s, clan radio %s. %i datagrams refused.\n",
-		voiceShared ? voiceGamePort : voicePort, voiceShared ? " (the port of the game)" : "", g_voiceRange.integer,
-		( g_voiceTeamOnly.integer && level.gametype >= GT_TEAM ) ? "team only" : "everybody in range", g_voiceRadio.integer ? "on" : "off", voiceRefused );
+		voiceShared ? voiceGamePort : voicePort, voiceShared ? " (the port of the game)" : "", vs_voiceRange.integer,
+		( vs_voiceTeamOnly.integer && level.gametype >= GT_TEAM ) ? "team only" : "everybody in range", vs_voiceRadio.integer ? "on" : "off", voiceRefused );
 	for ( i = 0; i < level.maxclients; i++ ) {
 		const voiceClient_t *vc = &voiceClients[i];
 

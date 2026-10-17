@@ -21,12 +21,12 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // cg_peers.c -- who else plays with a client of this tree. Not from JA+. The scoreboard marks them and the card
 // of a player says it (hud/cg_scores.c, select/cg_select.c).
 //
-// A game module of this tree knows it from the userinfo of every client (cjp_vision, which the cgame sets to
-// its version) and tells a cgame that asks for it (cjp_caps bit 1): the server command
+// A game module of this tree knows it from the userinfo of every client (v_vision, which the cgame sets to
+// its version) and tells a cgame that asks for it (v_caps bit 1): the server command
 //
 //   jpclient <client> <version> [<client> <version> ...]		version: of his VisionJK, "-" for any other client
 //
-// It says in the server info that it does (g_visionCaps bit 3), see game/status/g_status.c.
+// It says in the server info that it does (vs_caps bit 3), see game/status/g_status.c.
 //
 // On any other server nobody tells. There a client of this tree is known by what comes from it through the
 // voice chat (voice/cg_voice.c): its voice, or what stands above its head, which every client says to the voice
@@ -84,7 +84,7 @@ void CG_PeerServerCommand( void ) {
 	char	arg[64];
 	int		i;
 
-	// with more than one player in it, or with this one: the answer to "jpstatus all", which is no longer asked
+	// with more than one player in it, or with this one: the answer to "vs_status all", which is no longer asked
 	if ( trap->Cmd_Argc() > 3 ) {
 		CG_StatusAnswered();
 	}
@@ -178,7 +178,7 @@ peers: who plays with what, as this client knows it, and from where
 =================
 */
 void CG_PeerList_f( void ) {
-	const qboolean	server = (qboolean)( ( atoi( Info_ValueForKey( CG_ConfigString( CS_SERVERINFO ), "g_visionCaps" ) ) & 8 ) != 0 );
+	const qboolean	server = (qboolean)( ( atoi( Info_ValueForKey( CG_ConfigString( CS_SERVERINFO ), "vs_caps" ) ) & 8 ) != 0 );
 	int				i, count = 0;
 
 	for ( i = 0; i < MAX_CLIENTS; i++ ) {
@@ -197,6 +197,6 @@ void CG_PeerList_f( void ) {
 	} else if ( CG_VoiceSocial() ) {
 		trap->Print( "%i with VisionJK. This server tells nothing: known is who was heard through the masterserver.\n", count );
 	} else {
-		trap->Print( "%i with VisionJK. This server tells nothing, and the masterserver is not connected (cg_voice, cg_voiceMaster).\n", count );
+		trap->Print( "%i with VisionJK. This server tells nothing, and the masterserver is not connected (v_voice, v_voiceMaster).\n", count );
 	}
 }

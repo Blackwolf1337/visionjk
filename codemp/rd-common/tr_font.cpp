@@ -692,14 +692,14 @@ static int Thai_InitFields(int &iGlyphTPs, const char *&psLang)
 //
 // Note that I have to have this 3-param form instead of advancing a passed-in "const char **psText" because of VM-crap where you can only change ptr-contents, not ptrs themselves. Bleurgh. Ditto the qtrue:qfalse crap instead of just returning stuff straight through.
 //
-// Whether text is UTF-8, as CL_UTF8() of the engine has it: with cl_utf8 and a language without a code page of
+// Whether text is UTF-8, as CL_UTF8() of the engine has it: with v_utf8 and a language without a code page of
 // its own. A letter is a code point of Unicode then, read by Q_UTF8_Decode(), which takes a byte that is no
 // UTF-8 as Windows-1252: text of the game's files and of legacy clients comes out right as well.
-static cvar_t *cl_utf8;
+static cvar_t *v_utf8;
 
 bool Font_TextIsUTF8( void )
 {
-	return cl_utf8 && cl_utf8->integer && GetLanguageEnum() == eWestern;
+	return v_utf8 && v_utf8->integer && GetLanguageEnum() == eWestern;
 }
 
 unsigned int AnyLanguage_ReadCharFromString( const char *psText, int *piAdvanceCount, qboolean *pbIsTrailingPunctuation /* = NULL */)
@@ -1902,7 +1902,7 @@ void R_InitFonts(void)
 	g_iNonScaledCharRange = INT_MAX;	// default all chars to have no special scaling (other than user supplied)
 
 	r_fontSharpness = ri.Cvar_Get( "r_fontSharpness", "1", CVAR_ARCHIVE_ND, "" );
-	cl_utf8 = ri.Cvar_Get( "cl_utf8", "1", CVAR_ARCHIVE, "" );		// the cvar of the engine, see Font_TextIsUTF8()
+	v_utf8 = ri.Cvar_Get( "v_utf8", "1", CVAR_ARCHIVE, "" );		// the cvar of the engine, see Font_TextIsUTF8()
 
 	R_FontTTF_Init();
 }

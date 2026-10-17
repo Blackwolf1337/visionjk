@@ -23,9 +23,9 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // Two reports, both off by default, for who wants to know why a level takes long to load or why the game
 // stood still for a moment:
 //
-//   com_loadReport 1   after the load of a level a table: what kinds of things were loaded, how many of each
+//   v_loadReport 1   after the load of a level a table: what kinds of things were loaded, how many of each
 //                      and how long they took together, up to the end of the first frame of the game.
-//   com_hitchLog <ms>  a frame that took longer than that says what was loaded in it, the longest first.
+//   v_hitchLog <ms>  a frame that took longer than that says what was loaded in it, the longest first.
 //
 // The code that loads something says so around it: Com_LoadPush( kind, name ) before and Com_LoadPop() after.
 // The renderer does that through its import table. They nest (a model loads its images): the time of what is
@@ -74,20 +74,20 @@ static struct {
 	int			numKinds;
 } load;
 
-static cvar_t	*com_loadReport;
-static cvar_t	*com_hitchLog;
+static cvar_t	*v_loadReport;
+static cvar_t	*v_hitchLog;
 
 static int64_t Com_LoadUsec( void ) {
 	return std::chrono::duration_cast<std::chrono::microseconds>( std::chrono::steady_clock::now().time_since_epoch() ).count();
 }
 
 void Com_LoadInit( void ) {
-	com_loadReport = Cvar_Get( "com_loadReport", "0", 0, "1: after the load of a level, a table of what the time went into" );
-	com_hitchLog = Cvar_Get( "com_hitchLog", "0", 0, "A frame that takes more milliseconds than this says what was loaded in it. 0 off" );
+	v_loadReport = Cvar_Get( "v_loadReport", "0", 0, "1: after the load of a level, a table of what the time went into" );
+	v_hitchLog = Cvar_Get( "v_hitchLog", "0", 0, "A frame that takes more milliseconds than this says what was loaded in it. 0 off" );
 }
 
 static qboolean Com_LoadWanted( void ) {
-	return (qboolean)( com_loadReport && ( com_loadReport->integer || com_hitchLog->integer > 0 ) );
+	return (qboolean)( v_loadReport && ( v_loadReport->integer || v_hitchLog->integer > 0 ) );
 }
 
 static void Com_LoadRecord( const char *kind, const char *name, int64_t usec ) {
@@ -196,7 +196,7 @@ load: the second call goes on with the first.
 ===============
 */
 void Com_LoadBegin( const char *what ) {
-	if ( !com_loadReport || !com_loadReport->integer ) {
+	if ( !v_loadReport || !v_loadReport->integer ) {
 		return;
 	}
 	if ( load.loading ) {
@@ -239,11 +239,11 @@ void Com_LoadFrameEnd( void ) {
 		}
 		return;
 	}
-	if ( !com_hitchLog || com_hitchLog->integer <= 0 ) {
+	if ( !v_hitchLog || v_hitchLog->integer <= 0 ) {
 		return;
 	}
 	took = Com_LoadUsec() - load.frameStart;
-	if ( took < (int64_t)com_hitchLog->integer * 1000 ) {
+	if ( took < (int64_t)v_hitchLog->integer * 1000 ) {
 		return;
 	}
 	// what did not fit into the list is already added up

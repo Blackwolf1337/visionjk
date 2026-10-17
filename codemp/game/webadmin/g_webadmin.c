@@ -83,9 +83,9 @@ static void WA_SendServerCommand( int clientNum, const char *text ) {
 }
 
 gameImport_t *WebAdmin_WrapImport( gameImport_t *import ) {
-	// (the table of an engine that does not say sv_voiceShared ends before ext, g_public.h)
+	// (the table of an engine that does not say vs_voiceShared ends before ext, g_public.h)
 	memset( &waImport, 0, sizeof( waImport ) );
-	memcpy( &waImport, import, import->Cvar_VariableIntegerValue( "sv_voiceShared" ) ? sizeof( waImport ) : offsetof( gameImport_t, ext ) );
+	memcpy( &waImport, import, import->Cvar_VariableIntegerValue( "vs_voiceShared" ) ? sizeof( waImport ) : offsetof( gameImport_t, ext ) );
 	waSendServerCommand = import->SendServerCommand;
 	waImport.SendServerCommand = WA_SendServerCommand;
 	return &waImport;
@@ -102,9 +102,9 @@ static void WA_CloseConnection( waConnection_t *c ) {
 }
 
 // Handles a complete request. The response goes into c->response.
-// A file of the folder g_webRoot names, added to a buffer. qfalse: it can not be read.
+// A file of the folder vs_webRoot names, added to a buffer. qfalse: it can not be read.
 static qboolean WA_PageFile( waBuffer_t *b, const char *name ) {
-	FILE	*f = fopen( va( "%s/%s", g_webRoot.string, name ), "rb" );
+	FILE	*f = fopen( va( "%s/%s", vs_webRoot.string, name ), "rb" );
 	char	chunk[8192];
 	size_t	n;
 
@@ -117,7 +117,7 @@ static qboolean WA_PageFile( waBuffer_t *b, const char *name ) {
 }
 
 // The page as the build puts it together (cmake/Modules/BundlePage.cmake), from the files of the folder
-// g_webRoot names: index.html, and for every line "<!--#include name -->" in it the file of that name in its
+// vs_webRoot names: index.html, and for every line "<!--#include name -->" in it the file of that name in its
 // place. For working on the page: a change to one of its files is there with the next load of the page.
 static qboolean WA_PageFromDisk( waBuffer_t *page ) {
 	static const char	mark[] = "<!--#include ";
@@ -140,7 +140,7 @@ static qboolean WA_PageFromDisk( waBuffer_t *page ) {
 		Q_strncpyz( file, name, (int)( end - name ) + 1 );
 		// only what is in the folder
 		if ( !WA_GamePathOk( file ) || !WA_PageFile( page, file ) ) {
-			trap->Print( S_COLOR_YELLOW "Web admin: %s/index.html includes %s, which can not be read\n", g_webRoot.string, file );
+			trap->Print( S_COLOR_YELLOW "Web admin: %s/index.html includes %s, which can not be read\n", vs_webRoot.string, file );
 			whole = qfalse;
 		}
 		// the line of the include goes with it
@@ -156,7 +156,7 @@ static qboolean WA_PageFromDisk( waBuffer_t *page ) {
 =================
 WA_Visitor
 
-Who asks. Behind a reverse proxy (g_webProxy) every connection is the proxy's, and the proxy says in a header
+Who asks. Behind a reverse proxy (vs_webProxy) every connection is the proxy's, and the proxy says in a header
 whom it serves: X-Real-IP, which nginx writes itself, or the last entry of X-Forwarded-For, which is the proxy's
 too (what stands in front of it came from the visitor and can be anything). That address gets the wait after
 wrong logins and stands in the log. An address that is not IPv4 gets a number made from its text.
@@ -169,7 +169,7 @@ static void WA_Visitor( waConnection_t *c, const char *head ) {
 
 	c->peer = c->addr;
 	c->proxied = c->https = qfalse;
-	if ( !g_webProxy.string[0] ) {
+	if ( !vs_webProxy.string[0] ) {
 		return;
 	}
 	c->proxied = qtrue;
@@ -224,12 +224,12 @@ static waRole_t WA_RouteRole( const char *method, const char *path ) {
 	return WA_ROLE_MODERATOR;
 }
 
-// A page: from disk where g_webRoot names a folder and it has the file (for working on the page without a
+// A page: from disk where vs_webRoot names a folder and it has the file (for working on the page without a
 // restart), else the one built into the module.
 static void WA_Page( waConnection_t *c, const char *file, const char *embedded, int embeddedLen ) {
 	waBuffer_t page = { 0 };
 
-	if ( g_webRoot.string[0] && WA_PageFile( &page, file ) && page.len ) {
+	if ( vs_webRoot.string[0] && WA_PageFile( &page, file ) && page.len ) {
 		WA_Respond( c, 200, "OK", "text/html; charset=utf-8", "Cache-Control: no-store\r\n", page.data, page.len );
 	} else {
 		WA_Respond( c, 200, "OK", "text/html; charset=utf-8", "Cache-Control: no-store\r\n", embedded, embeddedLen );
@@ -287,10 +287,10 @@ static void WA_HandleRequest( waConnection_t *c, char *head, char *body, int bod
 	}
 
 	if ( !strcmp( method, "GET" ) && ( !strcmp( path, "/" ) || !strcmp( path, "/index.html" ) ) ) {
-		// g_webRoot serves the page from disk instead, for working on it without a restart
+		// vs_webRoot serves the page from disk instead, for working on it without a restart
 		waBuffer_t page = { 0 };
 
-		if ( g_webRoot.string[0] && WA_PageFromDisk( &page ) ) {
+		if ( vs_webRoot.string[0] && WA_PageFromDisk( &page ) ) {
 			WA_Respond( c, 200, "OK", "text/html; charset=utf-8", "Cache-Control: no-store\r\n", page.data, page.len );
 			WA_BufFree( &page );
 		} else {
@@ -486,12 +486,12 @@ static void WA_Accept( void ) {
 		if ( s == BG_INVALID_SOCKET )
 			return;
 
-		// With g_webProxy only the proxy is let in: it alone says who the visitor is (WA_Visitor), and anybody
+		// With vs_webProxy only the proxy is let in: it alone says who the visitor is (WA_Visitor), and anybody
 		// else who reached this port could say the same.
-		if ( g_webProxy.string[0] ) {
+		if ( vs_webProxy.string[0] ) {
 			struct in_addr proxy;
 
-			if ( inet_pton( AF_INET, g_webProxy.string, &proxy ) != 1 || proxy.s_addr != from.sin_addr.s_addr ) {
+			if ( inet_pton( AF_INET, vs_webProxy.string, &proxy ) != 1 || proxy.s_addr != from.sin_addr.s_addr ) {
 				BG_CloseSocket( s );
 				continue;
 			}
@@ -536,7 +536,7 @@ static void WA_Listen( void ) {
 	int					on = 1;
 	const char			*bindTo = "0.0.0.0";
 
-	if ( WA_Running() || g_webPort.integer <= 0 || g_webPort.integer > 65535 )
+	if ( WA_Running() || vs_webPort.integer <= 0 || vs_webPort.integer > 65535 )
 		return;
 
 	BG_NetStart();
@@ -550,24 +550,24 @@ static void WA_Listen( void ) {
 
 	memset( &addr, 0, sizeof( addr ) );
 	addr.sin_family = AF_INET;
-	addr.sin_port = htons( (unsigned short)g_webPort.integer );
-	// Every interface unless g_webBind names one address, an empty one included (a config that was written while
+	addr.sin_port = htons( (unsigned short)vs_webPort.integer );
+	// Every interface unless vs_webBind names one address, an empty one included (a config that was written while
 	// empty was the default has it that way). The security pass had made that 127.0.0.1; it is back so that the
 	// panel is reached from the network without a setting. It is plain HTTP: where the network is not trusted,
-	// g_webBind 127.0.0.1 and a tunnel or a reverse proxy. A value that is no address does not open anything.
-	if ( !g_webBind.string[0] ) {
+	// vs_webBind 127.0.0.1 and a tunnel or a reverse proxy. A value that is no address does not open anything.
+	if ( !vs_webBind.string[0] ) {
 		inet_pton( AF_INET, bindTo, &addr.sin_addr );
-	} else if ( inet_pton( AF_INET, g_webBind.string, &addr.sin_addr ) == 1 ) {
-		bindTo = g_webBind.string;
+	} else if ( inet_pton( AF_INET, vs_webBind.string, &addr.sin_addr ) == 1 ) {
+		bindTo = vs_webBind.string;
 	} else {
 		bindTo = "127.0.0.1";
 		inet_pton( AF_INET, bindTo, &addr.sin_addr );
-		trap->Print( S_COLOR_YELLOW "Web admin: g_webBind \"%s\" is no IPv4 address, taking %s\n", g_webBind.string, bindTo );
+		trap->Print( S_COLOR_YELLOW "Web admin: vs_webBind \"%s\" is no IPv4 address, taking %s\n", vs_webBind.string, bindTo );
 	}
 
 	if ( bind( listenSocket, (struct sockaddr *)&addr, sizeof( addr ) ) != 0 || listen( listenSocket, 16 ) != 0 ) {
 		trap->Print( S_COLOR_YELLOW "Web admin: could not listen on %s:%d (port in use, or below 1024 without root?)\n",
-			bindTo, g_webPort.integer );
+			bindTo, vs_webPort.integer );
 		BG_CloseSocket( listenSocket );
 		listenSocket = BG_INVALID_SOCKET;
 		return;
@@ -575,15 +575,15 @@ static void WA_Listen( void ) {
 
 	BG_SocketNonBlocking( listenSocket );
 	WA_ChatInit();
-	listenPort = g_webPort.integer;
+	listenPort = vs_webPort.integer;
 	trap->Print( "Web admin listening on http://%s:%d/\n", bindTo, listenPort );
-	if ( g_webProxy.string[0] ) {
+	if ( vs_webProxy.string[0] ) {
 		struct in_addr proxy;
 
-		if ( inet_pton( AF_INET, g_webProxy.string, &proxy ) == 1 ) {
-			trap->Print( "Web admin: only the reverse proxy %s is let in (g_webProxy)\n", g_webProxy.string );
+		if ( inet_pton( AF_INET, vs_webProxy.string, &proxy ) == 1 ) {
+			trap->Print( "Web admin: only the reverse proxy %s is let in (vs_webProxy)\n", vs_webProxy.string );
 		} else {
-			trap->Print( S_COLOR_YELLOW "Web admin: g_webProxy \"%s\" is no IPv4 address, so nobody is let in\n", g_webProxy.string );
+			trap->Print( S_COLOR_YELLOW "Web admin: vs_webProxy \"%s\" is no IPv4 address, so nobody is let in\n", vs_webProxy.string );
 		}
 	}
 }
@@ -599,7 +599,7 @@ void WebAdmin_Init( void ) {
 
 	WA_AuthInit();
 	if ( !WA_AuthHasUsers() ) {
-		if ( g_webPort.integer > 0 )
+		if ( vs_webPort.integer > 0 )
 			trap->Print( "Web admin is off: it has no account. \"webuser add <name> owner\" on this console makes the first one\n" );
 		return;
 	}

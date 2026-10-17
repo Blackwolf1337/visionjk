@@ -440,7 +440,7 @@ void CL_SystemInfoChanged( void ) {
 
 	systemInfo = cl.gameState.stringData + cl.gameState.stringOffsets[ CS_SYSTEMINFO ];
 	// Port: the clip brushes the server has off (clipbrush), none from a server that does not say
-	CL_ClipOffChanged( Info_ValueForKey( systemInfo, "cm_clipOff" ) );
+	CL_ClipOffChanged( Info_ValueForKey( systemInfo, "vs_clipRanges" ) );
 	// NOTE TTimo:
 	// when the serverId changes, any further messages we send to the server will use this new serverId
 	// https://zerowing.idsoftware.com/bugzilla/show_bug.cgi?id=475

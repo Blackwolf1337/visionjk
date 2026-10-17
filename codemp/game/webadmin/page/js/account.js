@@ -45,7 +45,7 @@ async function accountLoad() {
 	$('acctCodes').hidden = !roleAtLeast('admin');
 	$('acctCodeRank').querySelector('option[value="rcon"]').hidden = !roleAtLeast('owner');
 	$('acctCodeHint').textContent = me.passwords
-		? 'For an admin in the game whose client can not log in with a key. The rank passwords are on as well (jp_adminPasswords 1).'
+		? 'For an admin in the game whose client can not log in with a key. The rank passwords are on as well (vs_adminPasswords 1).'
 		: 'For an admin in the game whose client can not log in with a key (jamp.exe, the JA+ plugin). He types the code as "amlogin <code>" within a minute, it works once.';
 	$('acctOwner').hidden = !roleAtLeast('owner');
 	if (roleAtLeast('owner')) {

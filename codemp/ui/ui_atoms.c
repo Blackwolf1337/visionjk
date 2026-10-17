@@ -76,7 +76,7 @@ void UI_KeyEvent( int key, qboolean down );
 // For scripts that look at the menus (docs/japlus/ui.md, "Checked"): the pointer goes to a place in the 640 x 480
 // units of the menus, and with "click" the left button is pressed and let go there, as the mouse would do it.
 // "wheelup" and "wheeldown" turn the wheel by a notch there, "hold" presses the button without letting go and
-// "release" lets it go. ui_key <number> presses and lets go a key (its number in keycodes.h), ui_key <number> char
+// "release" lets it go. v_uiKey <number> presses and lets go a key (its number in keycodes.h), v_uiKey <number> char
 // types a letter.
 static void UI_Mouse_f( void ) {
 	const char *what = UI_Argv( 3 );
@@ -97,7 +97,7 @@ static void UI_Mouse_f( void ) {
 	}
 }
 
-// ui_page <n>: opens that page of the menu in focus (an options screen)
+// v_uiPage <n>: opens that page of the menu in focus (an options screen)
 static void UI_Page_f( void ) {
 	Menu_SetPage( Menu_GetFocused(), atoi( UI_Argv( 1 ) ) );
 }
@@ -347,14 +347,14 @@ int cmdcmp( const void *a, const void *b ) {
 
 static consoleCommand_t	commands[] = {
 	{ "ui_cache",			UI_Cache_f },
-	{ "ui_key",				UI_Key_f },
+	{ "v_uiKey",				UI_Key_f },
 	{ "ui_load",			UI_Load },
 	{ "ui_macroenable",		UI_JPMacroEnable_f },
 	{ "ui_macroscan",		UI_JPMacroScan_f },
-	{ "ui_mouse",			UI_Mouse_f },
+	{ "v_uiMouse",			UI_Mouse_f },
 	{ "ui_openmenu",		UI_OpenMenu_f },
 	{ "ui_opensiegemenu",	UI_OpenSiegeMenu_f },
-	{ "ui_page",			UI_Page_f },
+	{ "v_uiPage",			UI_Page_f },
 	{ "ui_report",			UI_Report },
 };
 

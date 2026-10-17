@@ -74,8 +74,8 @@ typedef struct waConnection_s {
 	bgSocket_t		sock;
 	unsigned int	addr;			// IPv4 of the peer
 	// of the request, filled in before it is handled
-	unsigned int	peer;			// who asks, for the wait after wrong logins and the log: addr, or behind g_webProxy who the proxy says it is
-	qboolean		proxied;		// it came through g_webProxy
+	unsigned int	peer;			// who asks, for the wait after wrong logins and the log: addr, or behind vs_webProxy who the proxy says it is
+	qboolean		proxied;		// it came through vs_webProxy
 	qboolean		https;			// and the visitor speaks HTTPS with the proxy
 	waRole_t		role;
 	char			user[WA_USER_NAME];

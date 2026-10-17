@@ -363,7 +363,7 @@
 			type				11
 			text				"View Bots Only:"
 			descText			"Include servers on which only bots play"
-			cvar				"ui_browserShowBotOnly"
+			cvar				"v_browserShowBotOnly"
 			font				4
 			textscale			1
 			rect				430 56 180 16

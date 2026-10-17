@@ -24,7 +24,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 //
 //   <rank> ssh-ed25519 <public key> <comment>		rank: council, knight, instructor or rcon (every right)
 //
-// The part behind the rank is what ssh-keygen writes into a .pub file, what "amkey show" of the client prints
+// The part behind the rank is what ssh-keygen writes into a .pub file, what "v_amkey show" of the client prints
 // and what 1Password shows as the public key. A client says which key it has, gets 32 random bytes, and sends
 // back a signature over them that only the secret half of the key can make. A wrong signature counts as a
 // wrong try like a wrong password did (G_AdminLoginFailed).
@@ -217,10 +217,10 @@ static qboolean G_AuthHostKnown( const char *address ) {
 	char		list[MAX_CVAR_VALUE_STRING];
 	const char	*p = list, *token;
 
-	if ( !jp_authHosts.string[0] ) {
+	if ( !vs_authHosts.string[0] ) {
 		return qtrue;		// the server was not told its addresses
 	}
-	Q_strncpyz( list, jp_authHosts.string, sizeof( list ) );
+	Q_strncpyz( list, vs_authHosts.string, sizeof( list ) );
 	while ( ( token = COM_ParseExt( &p, qfalse ) ) != NULL && token[0] ) {
 		if ( !Q_stricmp( token, address ) ) {
 			return qtrue;
@@ -233,7 +233,7 @@ static qboolean G_AuthHostKnown( const char *address ) {
 =================
 Cmd_JPAuth_f
 
-The client command "jpauth", only ever sent by a cgame of this tree
+The client command "vs_auth", only ever sent by a cgame of this tree
 =================
 */
 void Cmd_JPAuth_f( gentity_t *ent ) {
@@ -255,7 +255,7 @@ void Cmd_JPAuth_f( gentity_t *ent ) {
 
 		ac->asked = qfalse;
 		if ( G_AdminLoginBlocked( ent, qtrue ) ) {
-			trap->SendServerCommand( clientNum, "jpauth fail blocked" );
+			trap->SendServerCommand( clientNum, "vs_auth fail blocked" );
 			return;
 		}
 		// a client with several keys names them one after the other, nobody needs to name hundreds
@@ -264,11 +264,11 @@ void Cmd_JPAuth_f( gentity_t *ent ) {
 			ac->hellos = 0;
 		}
 		if ( ++ac->hellos > AUTH_HELLOS ) {
-			trap->SendServerCommand( clientNum, "jpauth fail busy" );
+			trap->SendServerCommand( clientNum, "vs_auth fail busy" );
 			return;
 		}
 		if ( !BG_AuthDecode( arg, pub, sizeof( pub ) ) ) {
-			trap->SendServerCommand( clientNum, "jpauth fail malformed" );
+			trap->SendServerCommand( clientNum, "vs_auth fail malformed" );
 			return;
 		}
 		for ( i = 0; i < numAuthKeys; i++ ) {
@@ -277,25 +277,25 @@ void Cmd_JPAuth_f( gentity_t *ent ) {
 			}
 		}
 		if ( i == numAuthKeys ) {
-			trap->SendServerCommand( clientNum, "jpauth unknown" );
+			trap->SendServerCommand( clientNum, "vs_auth unknown" );
 			return;
 		}
 		// The rank is kept over a change of the map, and the client of this tree asks again after each one: he
 		// who has the rank of his key already gets nothing new by it and is not announced once more.
 		if ( ent->client->sess.jpAdminLevel == (jpAdminLevel_t)authKeys[i].adminLevel ) {
-			trap->SendServerCommand( clientNum, va( "jpauth ok %s kept", G_AuthRankName( authKeys[i].adminLevel ) ) );
+			trap->SendServerCommand( clientNum, va( "vs_auth ok %s kept", G_AuthRankName( authKeys[i].adminLevel ) ) );
 			return;
 		}
 		if ( !BG_AuthRandom( ac->nonce, sizeof( ac->nonce ) ) ) {
-			Com_Printf( S_COLOR_RED "jpauth: the system gave no random bytes, nobody can log in with a key\n" );
-			trap->SendServerCommand( clientNum, "jpauth fail server" );
+			Com_Printf( S_COLOR_RED "vs_auth: the system gave no random bytes, nobody can log in with a key\n" );
+			trap->SendServerCommand( clientNum, "vs_auth fail server" );
 			return;
 		}
 		ac->asked = qtrue;
 		ac->key = i;
 		ac->time = now;
 		BG_AuthEncode( ac->nonce, sizeof( ac->nonce ), text, sizeof( text ) );
-		trap->SendServerCommand( clientNum, va( "jpauth nonce %s", text ) );
+		trap->SendServerCommand( clientNum, va( "vs_auth nonce %s", text ) );
 		return;
 	}
 
@@ -309,12 +309,12 @@ void Cmd_JPAuth_f( gentity_t *ent ) {
 		// a nonce is good for one answer, whatever the answer is
 		if ( !ac->asked || now - ac->time > AUTH_NONCE_MSEC || now < ac->time || key < 0 || key >= numAuthKeys ) {
 			ac->asked = qfalse;
-			trap->SendServerCommand( clientNum, "jpauth fail late" );
+			trap->SendServerCommand( clientNum, "vs_auth fail late" );
 			return;
 		}
 		ac->asked = qfalse;
 		if ( G_AdminLoginBlocked( ent, qtrue ) ) {
-			trap->SendServerCommand( clientNum, "jpauth fail blocked" );
+			trap->SendServerCommand( clientNum, "vs_auth fail blocked" );
 			return;
 		}
 		length = BG_AuthMessage( message, sizeof( message ), ac->nonce, address, clientNum );
@@ -322,23 +322,23 @@ void Cmd_JPAuth_f( gentity_t *ent ) {
 		if ( !length || !BG_AuthDecode( arg, signature, sizeof( signature ) )
 			|| !G_AuthCheck( signature, authKeys[key].pub, message, length ) ) {
 			G_AdminLoginFailed( ent, "bad signature" );
-			trap->SendServerCommand( clientNum, "jpauth fail signature" );
+			trap->SendServerCommand( clientNum, "vs_auth fail signature" );
 			return;
 		}
 		// The signature is right, but it was made for a server of another address: somebody passes on what this
-		// server asked, or jp_authHosts lacks the address this client came by.
+		// server asked, or vs_authHosts lacks the address this client came by.
 		if ( !G_AuthHostKnown( address ) ) {
-			G_SecurityLogPrintf( "jpauth: %s [%s] signed for the address %s, which jp_authHosts does not have\n",
+			G_SecurityLogPrintf( "vs_auth: %s [%s] signed for the address %s, which vs_authHosts does not have\n",
 				ent->client->pers.netname, ent->client->sess.IP, address );
 			G_AdminLoginFailed( ent, "signature for another server" );
-			trap->SendServerCommand( clientNum, "jpauth fail address" );
+			trap->SendServerCommand( clientNum, "vs_auth fail address" );
 			return;
 		}
 		BG_AuthFingerprint( authKeys[key].pub, fingerprint, sizeof( fingerprint ) );
 		Com_sprintf( how, sizeof( how ), "key %s (%s)", fingerprint, authKeys[key].comment );
 		G_AdminLoginDone( ent, authKeys[key].adminLevel, qtrue, how );
 		G_AdminLoginEffect( ent );
-		trap->SendServerCommand( clientNum, va( "jpauth ok %s", G_AuthRankName( authKeys[key].adminLevel ) ) );
+		trap->SendServerCommand( clientNum, va( "vs_auth ok %s", G_AuthRankName( authKeys[key].adminLevel ) ) );
 		return;
 	}
 }

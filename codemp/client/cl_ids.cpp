@@ -23,7 +23,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // A client believes a lot of what a server sends, and whoever runs a server can send anything. The checks of the
 // engine throw away what does not fit (a message that is cut off, an index past its table, a download nobody
 // asked for). This file is told about each of them, writes them into ids.log of the game folder and onto the
-// console, and with cl_ids 1 leaves a server that keeps doing what no server of the game does. The server side
+// console, and with v_ids 1 leaves a server that keeps doing what no server of the game does. The server side
 // of it is server/sv_ids.cpp.
 //
 // Two kinds of sender are told apart. What comes over the connection is from the server the player is on: a
@@ -31,7 +31,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // fit is left. A connectionless packet can carry any address, so one that claims to be from the server and is
 // not is written down and never acted on: leaving for it would let anybody throw a player off any server.
 //
-// cl_ids 0: nothing is written down and nobody is left for it (the checks of the engine stay).
+// v_ids 0: nothing is written down and nobody is left for it (the checks of the engine stay).
 
 #include "client.h"
 
@@ -54,14 +54,14 @@ static const struct {
 	{ "an escape character in a command, which is for a terminal and not for a game",	0 },	// CLIDS_COMMAND_TEXT
 };
 
-static cvar_t		*cl_ids;
+static cvar_t		*v_ids;
 static fileHandle_t	clIds_file;
 static int			clIds_counts[CLIDS_NUM_EVENTS];		// of this connection
 static int			clIds_lineTime[CLIDS_NUM_EVENTS], clIds_skipped[CLIDS_NUM_EVENTS];
 static int			clIds_commandSecond, clIds_commands;
 
 void CL_IDS_Init( void ) {
-	cl_ids = Cvar_Get( "cl_ids", "1", CVAR_ARCHIVE, "Intrusion detection of the client: 1 what a server sends that no server of the game does is written to ids.log, and a server that keeps at it is left. 0 off" );
+	v_ids = Cvar_Get( "v_ids", "1", CVAR_ARCHIVE, "Intrusion detection of the client: 1 what a server sends that no server of the game does is written to ids.log, and a server that keeps at it is left. 0 off" );
 }
 
 // a new connection: what the last server did is not held against this one
@@ -83,14 +83,14 @@ void CL_IDS_Shutdown( void ) {
 CL_IDS_Event
 
 from: who sent it, NULL for the server the client is connected to. detail: what it was, NULL for nothing to add.
-May not return: with cl_ids 1 the connection ends here when the server did it once too often.
+May not return: with v_ids 1 the connection ends here when the server did it once too often.
 =================
 */
 void CL_IDS_Event( clIdsEvent_t event, const netadr_t *from, const char *detail ) {
 	const int	now = Sys_Milliseconds();
 	char		line[512];
 
-	if ( !cl_ids || !cl_ids->integer || event < 0 || event >= CLIDS_NUM_EVENTS ) {
+	if ( !v_ids || !v_ids->integer || event < 0 || event >= CLIDS_NUM_EVENTS ) {
 		return;
 	}
 	clIds_counts[event]++;
@@ -119,7 +119,7 @@ void CL_IDS_Event( clIdsEvent_t event, const netadr_t *from, const char *detail 
 	if ( !from && clIds_events[event].leaveAt && clIds_counts[event] >= clIds_events[event].leaveAt
 		&& cls.state >= CA_CONNECTED && !clc.demoplaying ) {
 		clIds_counts[event] = 0;
-		Com_Error( ERR_DROP, "Left the server: it sent %s.\nThe intrusion detection of the client did that (cl_ids), ids.log in the game folder has the details.",
+		Com_Error( ERR_DROP, "Left the server: it sent %s.\nThe intrusion detection of the client did that (v_ids), ids.log in the game folder has the details.",
 			clIds_events[event].name );
 	}
 }

@@ -22,17 +22,17 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // or the music he listens to. Not from JA+. The server part is game/status/g_status.c, which has the protocol;
 // the line itself is drawn with the chat bubbles (bubble/cg_bubble.c).
 //
-// The server tells the statuses of all players to a cgame that asks for them (cjp_caps bit 0 in the userinfo).
+// The server tells the statuses of all players to a cgame that asks for them (v_caps bit 0 in the userinfo).
 // Away is found out by the server. The music is told by this file, and only when the player switched it on
-// (cg_shareMusic 1, off by default: it tells everybody on the server what one listens to): every two seconds it
+// (v_shareMusic 1, off by default: it tells everybody on the server what one listens to): every two seconds it
 // asks cg_status_music.c what plays, and tells the server when that differs from what the server last said
 // about this player, at most every six seconds. That also sends it again when the command was lost.
 //
 // A server without the game module of this tree passes nothing on. There the statuses go through the voice
-// master, if this client is linked to it (voice/cg_voice.c, cg_voiceMaster): every client says its own status
+// master, if this client is linked to it (voice/cg_voice.c, v_voiceMaster): every client says its own status
 // every five seconds, the master hands that to the others of the same server, and a status that was not said
 // again for a while is over. Nobody finds out there who is away, so every client says it of itself: no key and
-// no turn of the view for a minute, the default of g_afkTime. A legacy player on such a server has no line.
+// no turn of the view for a minute, the default of vs_afkTime. A legacy player on such a server has no line.
 
 #include "cgame/cg_local.h"
 
@@ -41,8 +41,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define STATUS_SEND_MSEC	6000
 #define STATUS_MASTER_MSEC	5000	// through the masterserver: the own status is said this often, and when it changed
 #define STATUS_MASTER_KEEP	15000	//	and one of somebody else that was not said again for this long is over
-#define STATUS_AWAY_MSEC	60000	//	and this long without a key or a turn of the view is away: the default of g_afkTime
-#define STATUS_ASK_FIRST	1500	// "jpstatus all" goes to the server this long after the cgame has its first frame,
+#define STATUS_AWAY_MSEC	60000	//	and this long without a key or a turn of the view is away: the default of vs_afkTime
+#define STATUS_ASK_FIRST	1500	// "vs_status all" goes to the server this long after the cgame has its first frame,
 #define STATUS_ASK_MSEC		3500	//	again this often while no answer came,
 #define STATUS_MAX_ASKS		6		//	and this many times at most
 
@@ -51,7 +51,7 @@ static struct {
 	char		music[MAX_CLIENTS][STATUS_TEXT];
 	int			pollTime;
 	int			sendTime;
-	qboolean	utf8;					// text is UTF-8 (cl_utf8Text)
+	qboolean	utf8;					// text is UTF-8 (v_utf8Text)
 	int			masterTime[MAX_CLIENTS];	// when the masterserver last said his status, 0: it is not from there
 	qboolean	masterAway;				// what the master was last told of this player,
 	char		masterMusic[STATUS_TEXT];
@@ -59,8 +59,8 @@ static struct {
 	int			inputAngles[2];			//	and what his commands said then
 	int			inputButtons;
 	signed char	inputMove[3];
-	char		test[STATUS_TEXT];		// status_test: said in place of what the players of music say
-	// "jpstatus all": the server is asked for everything once this cgame has started
+	char		test[STATUS_TEXT];		// v_status_test: said in place of what the players of music say
+	// "vs_status all": the server is asked for everything once this cgame has started
 	int			askStart;				// when its first frame was, by the clock of the system
 	int			askTime;				// when it was last asked
 	int			asks;					// how often
@@ -75,7 +75,7 @@ void CG_StatusInit( void ) {
 =================
 CG_StatusServerCommand
 
-jpstatus <client> <away> "<music>"
+vs_status <client> <away> "<music>"
 =================
 */
 void CG_StatusServerCommand( void ) {
@@ -96,7 +96,7 @@ void CG_StatusServerCommand( void ) {
 	Q_StripColor( status.music[clientNum] );
 }
 
-// the answer to "jpstatus all" came (the server command jpclient with everybody in it, status/cg_peers.c)
+// the answer to "vs_status all" came (the server command jpclient with everybody in it, status/cg_peers.c)
 void CG_StatusAnswered( void ) {
 	status.answered = qtrue;
 }
@@ -132,7 +132,7 @@ listen.
 =================
 */
 qboolean CG_StatusLine( int clientNum, char *out, int outSize ) {
-	if ( clientNum < 0 || clientNum >= MAX_CLIENTS || !cg_playerStatuses.integer ) {
+	if ( clientNum < 0 || clientNum >= MAX_CLIENTS || !v_playerStatuses.integer ) {
 		return qfalse;
 	}
 	if ( !cgs.clientinfo[clientNum].infoValid
@@ -197,7 +197,7 @@ static void Status_Music( char *out, int outSize ) {
 	char	wanted[STATUS_TEXT * 4];
 
 	wanted[0] = '\0';
-	if ( cg_shareMusic.integer ) {
+	if ( v_shareMusic.integer ) {
 		if ( status.test[0] ) {
 			Q_strncpyz( wanted, status.test, sizeof( wanted ) );
 		} else {
@@ -248,25 +248,25 @@ void CG_StatusFrame( void ) {
 		return;
 	}
 	// A cgame that has just started knows nothing of the others: a new level, but also a restart of the video,
-	// of which the server hears nothing. A game module that answers it (g_visionCaps bit 3) is asked for what
+	// of which the server hears nothing. A game module that answers it (vs_caps bit 3) is asked for what
 	// stands above everybody and for who plays with what (status/cg_peers.c). Not in the first moment, when the
 	// voice chat says its hello, and again while no answer came: the flood protection of a server
 	// (sv_floodProtect, on by default) drops a command that comes within a second of another one without a word.
 	if ( !status.answered && status.asks < STATUS_MAX_ASKS
-		&& ( atoi( Info_ValueForKey( CG_ConfigString( CS_SERVERINFO ), "g_visionCaps" ) ) & 8 ) ) {
+		&& ( atoi( Info_ValueForKey( CG_ConfigString( CS_SERVERINFO ), "vs_caps" ) ) & 8 ) ) {
 		const int now = trap->Milliseconds();
 
 		if ( !status.askStart ) {
 			status.askStart = now ? now : 1;
 		}
 		if ( now - status.askStart >= STATUS_ASK_FIRST && ( !status.asks || now - status.askTime >= STATUS_ASK_MSEC ) ) {
-			trap->SendClientCommand( "jpstatus all" );
+			trap->SendClientCommand( "vs_status all" );
 			status.askTime = now;
 			status.asks++;
 		}
 	}
 	// only a game module of this tree passes statuses on, and says so. Anywhere else the masterserver may.
-	server = (qboolean)( ( atoi( Info_ValueForKey( CG_ConfigString( CS_SERVERINFO ), "g_visionCaps" ) ) & 2 ) != 0 );
+	server = (qboolean)( ( atoi( Info_ValueForKey( CG_ConfigString( CS_SERVERINFO ), "vs_caps" ) ) & 2 ) != 0 );
 	if ( !server ) {
 		if ( !CG_VoiceSocial() ) {
 			return;
@@ -278,7 +278,7 @@ void CG_StatusFrame( void ) {
 		return;
 	}
 	status.pollTime = cg.time;
-	trap->Cvar_VariableStringBuffer( "cl_utf8Text", value, sizeof( value ) );
+	trap->Cvar_VariableStringBuffer( "v_utf8Text", value, sizeof( value ) );
 	status.utf8 = (qboolean)( atoi( value ) == 1 );
 
 	Status_Music( music, sizeof( music ) );
@@ -298,7 +298,7 @@ void CG_StatusFrame( void ) {
 		return;
 	}
 	status.sendTime = cg.time;
-	trap->SendClientCommand( wanted[0] ? va( "jpstatus music \"%s\"", wanted ) : "jpstatus none" );
+	trap->SendClientCommand( wanted[0] ? va( "vs_status music \"%s\"", wanted ) : "vs_status none" );
 }
 
 /*
@@ -319,22 +319,22 @@ void CG_StatusList_f( void ) {
 		}
 	}
 	// what this machine plays, as it would be told: the answer to "why does nobody see my music"
-	if ( !cg_shareMusic.integer ) {
-		trap->Print( "Your music is not told to anybody (cg_shareMusic 0).\n" );
+	if ( !v_shareMusic.integer ) {
+		trap->Print( "Your music is not told to anybody (v_shareMusic 0).\n" );
 	} else {
 		char music[STATUS_TEXT];
 
 		Status_Music( music, sizeof( music ) );
 		trap->Print( "Your music: %s\n", music[0] ? music : "nothing is found playing" );
 	}
-	if ( !cg_playerStatuses.integer ) {
-		trap->Print( "The statuses of the others are off (cg_playerStatuses 0).\n" );
-	} else if ( atoi( Info_ValueForKey( CG_ConfigString( CS_SERVERINFO ), "g_visionCaps" ) ) & 2 ) {
+	if ( !v_playerStatuses.integer ) {
+		trap->Print( "The statuses of the others are off (v_playerStatuses 0).\n" );
+	} else if ( atoi( Info_ValueForKey( CG_ConfigString( CS_SERVERINFO ), "vs_caps" ) ) & 2 ) {
 		trap->Print( "%i statuses, told by the server.\n", count );
 	} else if ( CG_VoiceSocial() ) {
 		trap->Print( "%i statuses, handed on by the masterserver: this server passes none on.\n", count );
 	} else {
-		trap->Print( "No statuses here: this server passes none on, and the masterserver is not connected (cg_voice, cg_voiceMaster).\n" );
+		trap->Print( "No statuses here: this server passes none on, and the masterserver is not connected (v_voice, v_voiceMaster).\n" );
 	}
 }
 
@@ -342,8 +342,8 @@ void CG_StatusList_f( void ) {
 =================
 CG_StatusTest_f
 
-status_test <text> / status_test stop: said as the music of this player in place of what plays on this machine,
-for checks without a player of music. cg_shareMusic decides as always whether anything is said.
+v_status_test <text> / v_status_test stop: said as the music of this player in place of what plays on this machine,
+for checks without a player of music. v_shareMusic decides as always whether anything is said.
 =================
 */
 void CG_StatusTest_f( void ) {
@@ -351,7 +351,7 @@ void CG_StatusTest_f( void ) {
 
 	trap->Cmd_Args( text, sizeof( text ) );
 	if ( !text[0] ) {
-		trap->Print( "usage: status_test <text> | stop\n" );
+		trap->Print( "usage: v_status_test <text> | stop\n" );
 		return;
 	}
 	if ( !Q_stricmp( text, "stop" ) ) {

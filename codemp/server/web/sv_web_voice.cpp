@@ -30,7 +30,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // plays through this host from the address this WebSocket has. The relay takes the address of this machine
 // in place of his on a server that runs this host (g_voice.c, G_VoiceFromWebHost).
 //
-// Where the relay listens is what the game module says in the cvar g_voiceRelay. The UDP socket is tied to
+// Where the relay listens is what the game module says in the cvar vs_voiceRelay. The UDP socket is tied to
 // that address when it is made: nothing a peer sends changes where a datagram goes, and nothing but the relay
 // is heard on it.
 
@@ -49,7 +49,7 @@ static qboolean SV_WebVoiceRelay( struct sockaddr_in *relay ) {
 	char	*colon;
 	int		port;
 
-	Q_strncpyz( text, Cvar_VariableString( "g_voiceRelay" ), sizeof( text ) );
+	Q_strncpyz( text, Cvar_VariableString( "vs_voiceRelay" ), sizeof( text ) );
 	if ( !( colon = strchr( text, ':' ) ) ) {
 		return qfalse;
 	}
@@ -114,7 +114,7 @@ void SV_WebVoiceUpgrade( webConnection_t *c, const char *head, int headLen, int 
 
 	c->keepAlive = qfalse;
 
-	// (g_voice is 0, or the port of the relay could not be opened: this server has no voice chat)
+	// (vs_voice is 0, or the port of the relay could not be opened: this server has no voice chat)
 	if ( !SV_WebVoiceRelay( &relay ) ) {
 		SV_WebError( c, 404, "Not Found", "" );
 		return;

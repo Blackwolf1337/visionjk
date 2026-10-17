@@ -3730,7 +3730,7 @@ int cmdcmp( const void *a, const void *b ) {
 
 command_t commands[] = {
 	{ "addbot",				Cmd_AddBot_f,				0 },
-	{ "boombox",			Cmd_Boombox_f,				0 },
+	{ "vs_boxaction",		Cmd_Boombox_f,				0 },
 	{ "callteamvote",		Cmd_CallTeamVote_f,			CMD_NOINTERMISSION },
 	{ "callvote",			Cmd_CallVote_f,				CMD_NOINTERMISSION },
 	{ "debugBMove_Back",	Cmd_BotMoveBack_f,			CMD_CHEAT|CMD_ALIVE|CMD_UNKNOWN_IF_DENIED },
@@ -3749,10 +3749,10 @@ command_t commands[] = {
 	{ "give",				Cmd_Give_f,					CMD_CHEAT|CMD_ALIVE|CMD_NOINTERMISSION },
 	{ "giveother",			Cmd_GiveOther_f,			CMD_CHEAT|CMD_NOINTERMISSION },
 	{ "god",				Cmd_God_f,					CMD_CHEAT|CMD_ALIVE|CMD_NOINTERMISSION },
-	{ "jpauth",				Cmd_JPAuth_f,				0 },
-	{ "jpbox",				Cmd_JPBox_f,				0 },
-	{ "jpstatus",			Cmd_JPStatus_f,				0 },
-	{ "jpvoice",			Cmd_JPVoice_f,				0 },
+	{ "vs_auth",				Cmd_JPAuth_f,				0 },
+	{ "vs_box",				Cmd_JPBox_f,				0 },
+	{ "vs_status",			Cmd_JPStatus_f,				0 },
+	{ "vs_voiceLink",			Cmd_JPVoice_f,				0 },
 	{ "kill",				Cmd_Kill_f,					CMD_ALIVE|CMD_NOINTERMISSION },
 	{ "killother",			Cmd_KillOther_f,			CMD_CHEAT|CMD_NOINTERMISSION },
 //	{ "kylesmash",			TryGrapple,					0 },
@@ -3786,18 +3786,18 @@ G_LogClientCommand
 Not in JA+ and not in OpenJK. Writes what a player sends into the security log: his number, address and name
 and the command with its arguments, one line each. Without it nothing on the server shows what a player typed
 or what a tool sent in his place. Chat is left out (the game log has it) and so is the scoreboard request every
-client sends. Commands that carry a password are logged without their arguments. g_logClientCmds 0 turns it off.
+client sends. Commands that carry a password are logged without their arguments. vs_logClientCmds 0 turns it off.
 =================
 */
 static void G_LogClientCommand( const gentity_t *ent, const char *cmd ) {
-	// jpstatus: what the cgame of a client sends by itself with every new song, see status/g_status.c
-	// jpbox: what it sends when it starts, see boombox/g_boombox.c
-	static const char *const skip[] = { "say", "say_team", "tell", "score", "jpstatus", "jpbox" };
+	// vs_status: what the cgame of a client sends by itself with every new song, see status/g_status.c
+	// vs_box: what it sends when it starts, see boombox/g_boombox.c
+	static const char *const skip[] = { "say", "say_team", "tell", "score", "vs_status", "vs_box" };
 	static const char *const secret[] = { "amlogin", "clanpass" };
 	char	name[64], args[200];
 	size_t	i;
 
-	if ( !g_logClientCmds.integer || (ent->r.svFlags & SVF_BOT) )
+	if ( !vs_logClientCmds.integer || (ent->r.svFlags & SVF_BOT) )
 		return;
 	for ( i = 0; i < ARRAY_LEN( skip ); i++ ) {
 		if ( !Q_stricmp( cmd, skip[i] ) )

@@ -98,11 +98,11 @@ game's menu, changed for this engine. Both have the same pages.
 | Video | Video Quality | presets for the detail only (`r_lodbias`, `r_picmip`, `r_textureMode`, `r_subdivisions`, `r_fastSky`, `r_inGameVideo`), not for the size or the bit depths any more |
 | Sound | 3D Sound, Output, Reverb | the sound of [audio.md](audio.md), see "The menu" there |
 | Options | Allow Downloads | Off, On (`cl_allowDownload`) |
-| Bot Mode | Bot Mode | the client plays by itself (`cg_botMode`, not saved: off at every start) |
-| Bot Mode | Skill | Initiate to Jedi Master (`cg_botModeSkill` 1 to 5): turn speed, aim, time to the first attack |
-| Bot Mode | Fight | Never, In Duels, Always (`cg_botModeFight` 0 to 2) |
-| Bot Mode | Walk The Route | No: it stays where it is and only turns and fights (`cg_botModeRoam`) |
-| Bot Mode | Keys Take Over | a move or attack key ends the bot mode (`cg_botModeKeys`) |
+| Bot Mode | Bot Mode | the client plays by itself (`v_botMode`, not saved: off at every start) |
+| Bot Mode | Skill | Initiate to Jedi Master (`v_botModeSkill` 1 to 5): turn speed, aim, time to the first attack |
+| Bot Mode | Fight | Never, In Duels, Always (`v_botModeFight` 0 to 2) |
+| Bot Mode | Walk The Route | No: it stays where it is and only turns and fights (`v_botModeRoam`) |
+| Bot Mode | Keys Take Over | a move or attack key ends the bot mode (`v_botModeKeys`) |
 
 Everything on the video page is applied by its "Apply" with a `vid_restart`. Taken out, because they did
 nothing or did harm: Color Depth and Texture Quality (`rd-vulkan-vision` ignores `r_colorbits` and
@@ -121,8 +121,8 @@ gets as wide as the window: at 16:9 it is 853 wide, the old 640 sit in the middl
 
 | Cvar | Default | Meaning |
 |------|---------|---------|
-| `r_2dAspect` | 1 | 1 the 2D keeps its shape on a wide window, 0 the old stretch. Latched, `vid_restart` |
-| `r_2dBias` | set by the renderer | read only: the width beside the 640, in units of the grid. 0 on a 4:3 window, with `r_2dAspect 0` and on an engine that does not have this |
+| `v_2dAspect` | 1 | 1 the 2D keeps its shape on a wide window, 0 the old stretch. Latched, `vid_restart` |
+| `v_2dBias` | set by the renderer | read only: the width beside the 640, in units of the grid. 0 on a 4:3 window, with `v_2dAspect 0` and on an engine that does not have this |
 | `r_mode` | -2 (was 4) | a new install starts in the size of the desktop, not in 800 x 600 |
 | `r_noborder` | 1 (was 0) | and as a window without a border. A stored config keeps what it has |
 
@@ -139,7 +139,7 @@ What goes where on a wide window:
   shape, with black beside them. A video keeps its 4:3 with black beside it.
 - The console is as wide as the window, as before.
 
-The modules read `r_2dBias`. In a stock `jamp.exe`, or with a renderer of another tree, the cvar is missing or
+The modules read `v_2dBias`. In a stock `jamp.exe`, or with a renderer of another tree, the cvar is missing or
 0 and they draw as they always did.
 
 Not looked at in the game: it was built for Linux and nothing more. Open: the siege timer and the automap are
@@ -153,9 +153,9 @@ western languages, and so do all legacy clients and servers. What follows from t
 
 | Cvar | Default | Meaning |
 |------|---------|---------|
-| `cl_utf8` | 1 | text is UTF-8 inside the client. 0: one byte a character as in the original game |
-| `cl_utf8Text` | set by the engine | read only, in the userinfo: 1 while text really is UTF-8. It is 0 with `cl_utf8 0` and with a language that has a code page of its own (`se_language` russian, polish, korean, taiwanese, japanese, chinese, thai), where everything stays as it was |
-| `g_visionCaps` | 1, game module | read only, in the server info. Bit 0: the server passes UTF-8 chat on |
+| `v_utf8` | 1 | text is UTF-8 inside the client. 0: one byte a character as in the original game |
+| `v_utf8Text` | set by the engine | read only, in the userinfo: 1 while text really is UTF-8. It is 0 with `v_utf8 0` and with a language that has a code page of its own (`se_language` russian, polish, korean, taiwanese, japanese, chinese, thai), where everything stays as it was |
+| `vs_caps` | 1, game module | read only, in the server info. Bit 0: the server passes UTF-8 chat on |
 
 - Typing: a character arrives as the bytes of UTF-8, one char event each, so the modules get what they always
   got (`K_CHAR_FLAG`). The edit fields of the engine and of the menus move and delete by character.
@@ -171,14 +171,14 @@ western languages, and so do all legacy clients and servers. What follows from t
   that starts on a pure server can not read the pk3 of this tree. A file with another SHA-256 than the one the
   build shipped is refused: a server can send a pk3 with a file of that name. So another font can not be
   dropped in without building the client anew.
-- Sending: chat goes out as UTF-8 only to a server whose server info has `g_visionCaps` bit 0. To any other
+- Sending: chat goes out as UTF-8 only to a server whose server info has `vs_caps` bit 0. To any other
   server every command is converted to Windows-1252 on the way out, with `?` for what that lacks. The userinfo
   (the name) goes out as Windows-1252 to every server, since a name is handed to all clients alike.
 - On a server of this tree the game module gives each recipient its form (`JP_ChatFor()` in
   `game/japlus/g_japlus_chat.c`): what a UTF-8 client wrote reaches a legacy client as Windows-1252. Umlauts
   and accents arrive there as they should, Cyrillic or Greek as `?`. Nothing else is converted.
 
-Limits. The chat line of the engine (what a stock cgame or `cg_chatInput 0` types in) is drawn with the charset
+Limits. The chat line of the engine (what a stock cgame or `v_chatInput 0` types in) is drawn with the charset
 picture of the game, which has Windows-1252 only: a Cyrillic letter is a `?` there. The console and the chat box
 of this tree show it, see below. Names can not hold characters outside Windows-1252. None of this was run: it is
 built for Linux, the decoder and the conversions passed a short native test, and the size and place of the
@@ -216,24 +216,24 @@ be marked: its rows are drawn as strings of another height. Not run: nobody has 
 The size of the box is set in Setup (Chat & Social: Chat Box Size, Width and Rows) and by hand while it is
 open: its upper right corner, marked by two short lines, is dragged with the left button (to the right it gets
 wider, upwards it gets more rows), and Ctrl with the wheel makes the box and its letters larger or smaller in
-steps of 5 %. Both write the three cvars. `cg_chatdrag <dx> <dy>` moves the corner for a script. The box is
+steps of 5 %. Both write the three cvars. `v_chatDrag <dx> <dy>` moves the corner for a script. The box is
 never wider than the screen, whatever width and size say together.
 
-With the HUD of the new look (`cg_hud 1`, [ui.md](ui.md)) the box has that look too, since 2026-10-12: a panel
+With the HUD of the new look (`v_hud 1`, [ui.md](ui.md)) the box has that look too, since 2026-10-12: a panel
 of dark glass with the letters of the menus, the tabs as words with a line under the open one, a thin bar for
 where in the history one is. The lines that stand at the lower left while nobody types each lie on a dark strip
 as wide as their words, so green text can be read on a bright floor. The names of the tabs and the words in
 front of the line to type in are in the language of the game (`CG_VisionText`, see "Clickable players"). With
-`cg_hud 0`, in another engine and next to the HUD of a mod the box is drawn as before.
+`v_hud 0`, in another engine and next to the HUD of a mod the box is drawn as before.
 
 | Cvar | Default | Meaning |
 |------|---------|---------|
 | `cg_chatBox` | 10000 | as before: milliseconds a line stands at the lower left while nobody types, 0 none |
 | `cg_chatBoxHeight` | 350 | as before: the lower edge of the lines. While the scoreboard shows, the lines of the closed box stand at the bottom of the screen. The open box stays where it is, also over a scoreboard that is kept open, and never lower than its input line has room (2026-10-12: it moved down with the lines, and what one typed was under the edge of the screen) |
-| `cg_chatBoxWidth` | 380 | the width lines are wrapped to at a size of 1, 200 to 600 |
-| `cg_chatBoxScale` | 0.85 | the size of the box with everything in it, the letters first of all: 0.6 to 1.6. Since 2026-10-12, when the box was 1 and "quite big" |
-| `cg_chatBoxRows` | 10 | rows of history in the open box, 4 to 24, and no more than fit under the top of the screen |
-| `cg_chatInput` | 1 | the message mode keys open the box of the cgame. 0: the line of the engine, as in the base game |
+| `v_chatBoxWidth` | 380 | the width lines are wrapped to at a size of 1, 200 to 600 |
+| `v_chatBoxScale` | 0.85 | the size of the box with everything in it, the letters first of all: 0.6 to 1.6. Since 2026-10-12, when the box was 1 and "quite big" |
+| `v_chatBoxRows` | 10 | rows of history in the open box, 4 to 24, and no more than fit under the top of the screen |
+| `v_chatInput` | 1 | the message mode keys open the box of the cgame. 0: the line of the engine, as in the base game |
 
 The box keeps the last 256 lines with their kind and who said them (the client number a server built on OpenJK
 appends, else the name in the line). While nobody types the newest six rows stand there and fade out. The
@@ -256,8 +256,8 @@ Only an address that starts with `http://` or `https://` is a link, and the engi
 it hands it to the system (`Sys_OpenURL()`: no blanks, quotes or control characters, nothing but those two
 schemes). Nothing is ever opened without the question.
 
-It needs the engine of this tree, which says `cl_cgameChat 1`, hands its message mode commands to the cgame
-(`cg_chatopen`, while the cgame has set `cg_chatHandler`) and has three more calls in the `ext` block of the
+It needs the engine of this tree, which says `v_cgameChat 1`, hands its message mode commands to the cgame
+(`v_chatOpen`, while the cgame has set `v_chatHandler`) and has three more calls in the `ext` block of the
 cgame import: the clipboard both ways and the address. In a stock `jamp.exe` the box shows the lines, and
 typing stays with the line of the engine. Not run: nobody has seen the box.
 
@@ -273,8 +273,8 @@ who looks about its upright axis only and does not lean with a look up or down.
 
 | Cvar | Default | Meaning |
 |------|---------|---------|
-| `cg_chatBubbles` | 1 | 0: the balloon of the game as before |
-| `cg_bubbleRange` | 1200 | how far away a bubble is still drawn. It fades over the last quarter |
+| `v_chatBubbles` | 1 | 0: the balloon of the game as before |
+| `v_bubbleRange` | 1200 | how far away a bubble is still drawn. It fades over the last quarter |
 
 - A bubble pops up a little too large and settles, and rises and fades at its end.
 - Over the own head it is no larger on the screen than it is with the camera 80 units away, where it usually
@@ -288,10 +288,10 @@ who looks about its upright axis only and does not lean with a look up or down.
 - It works on any server: the cgame knows who said a line (the client number a server built on OpenJK appends,
   else the name in the line).
 
-It needs the engine of this tree (`cl_cgameScene 1`): the text comes from its TrueType font as polygons
+It needs the engine of this tree (`v_cgameScene 1`): the text comes from its TrueType font as polygons
 (`R_Text3D`), and the pictures of the panel are computed in the cgame and handed to the renderer
 (`R_RegisterShaderRGBA`), so no file of a pk3 is involved and a pure server takes nothing away. In a stock
-`jamp.exe`, beyond the range and with `cg_chatBubbles 0` the balloon of the game stays. A legacy client on the
+`jamp.exe`, beyond the range and with `v_chatBubbles 0` the balloon of the game stays. A legacy client on the
 same server sees the balloon as it always did. Not run: nobody has seen a bubble, the sizes and colours are
 numbers.
 
@@ -302,34 +302,34 @@ chat bubble stands on top of it.
 
 | Cvar | Default | Meaning |
 |------|---------|---------|
-| `cg_playerStatuses` | 1 | show the lines of the others |
-| `cg_shareMusic` | 0 | tell the server what music plays on this machine. Off by default: everybody on the server reads it. "Show My Music" in Setup, Voice Chat |
-| `cjp_caps` | 3, read only | in the userinfo, what this cgame draws that a server sends to nobody else: bit 0 statuses, bit 1 who plays with a client of this tree ("Who plays with VisionJK") |
-| `cjp_vision` | the version, read only | in the userinfo: this is the client of VisionJK, and which one. A server of this tree greets it by that name and not as "client plugin 1.4B4". `cjp_client` stays 1.4B4: it is what a JA+ server of somebody else reads to switch the plugin features on |
+| `v_playerStatuses` | 1 | show the lines of the others |
+| `v_shareMusic` | 0 | tell the server what music plays on this machine. Off by default: everybody on the server reads it. "Show My Music" in Setup, Voice Chat |
+| `v_caps` | 3, read only | in the userinfo, what this cgame draws that a server sends to nobody else: bit 0 statuses, bit 1 who plays with a client of this tree ("Who plays with VisionJK") |
+| `v_vision` | the version, read only | in the userinfo: this is the client of VisionJK, and which one. A server of this tree greets it by that name and not as "client plugin 1.4B4". `cjp_client` stays 1.4B4: it is what a JA+ server of somebody else reads to switch the plugin features on |
 
 - The line of the player the view is behind (oneself in third person, or whom one follows) is not drawn since
   2026-10-12: it stood right before the camera, as large as a wall. The card and the scoreboard say it.
 - Two players who stand close have their lines at the same height. The one that would lie on another on the
   screen is lifted above it (`Bubble_LiftLine`), and a bubble stands on top of that.
-- "Away from keyboard": the server finds out who did not touch a key or the mouse for `g_afkTime` seconds, for
+- "Away from keyboard": the server finds out who did not touch a key or the mouse for `vs_afkTime` seconds, for
   legacy players too.
 - "Listening to Spotify: artist - title", "Listening to YT Music: title", or "Listening to artist - title" for
   any other player of music. On Linux it is asked from the players over D-Bus (MPRIS) every five seconds:
-  `libdbus-1.so.3` is loaded when `cg_shareMusic` is first 1 and is not needed otherwise, the questions are
+  `libdbus-1.so.3` is loaded when `v_shareMusic` is first 1 and is not needed otherwise, the questions are
   sent without waiting for the answers. On Windows it is read from the window titles of Spotify and of
   YouTube Music (the window has to show the tab). Not on macOS and not in the browser client.
 
-On a server with the game module of this tree (`g_visionCaps` bit 1) the server passes the statuses on. On
+On a server with the game module of this tree (`vs_caps` bit 1) the server passes the statuses on. On
 any other server they go through the masterserver since 2026-10-11 ([voice.md](voice.md), "On a server without
-it"), for the players whose voice chat is connected to it (`cg_voice 1`, `cg_voiceMaster 1`): every client says
+it"), for the players whose voice chat is connected to it (`v_voice 1`, `v_voiceMaster 1`): every client says
 its own status there every five seconds and finds out by itself whether its player is away (a minute without
-a key or a turn of the view). The music is still only told with `cg_shareMusic 1`, and there it also passes
+a key or a turn of the view). The music is still only told with `v_shareMusic 1`, and there it also passes
 the machine of the master. Only clients of this tree with its engine draw the lines.
 
 | Command | |
 |---------|---|
-| `statuses` | what stands above whom, and whether the server or the masterserver tells it |
-| `status_test <text>`, `status_test stop` | said as the music of this player in place of what plays, for tests. `cg_shareMusic` still decides |
+| `v_statuses` | what stands above whom, and whether the server or the masterserver tells it |
+| `v_status_test <text>`, `v_status_test stop` | said as the music of this player in place of what plays, for tests. `v_shareMusic` still decides |
 
 On Windows the lines by the server, through the relay for servers without the module and from the title of a window ran on 2026-10-11,
 see [windows.md](windows.md).
@@ -340,7 +340,7 @@ see [windows.md](windows.md).
 outline and his name beside him, and a click on him opens a card: who he is and with what he plays, his score,
 ping and time, what stands above his head, his model and saber, and what you can do about him.
 
-The mouse is free while the key of `+cursor` is held (Controls, Extras, "Free the Mouse"). The left Alt key
+The mouse is free while the key of `+v_cursor` is held (Controls, Extras, "Free the Mouse"). The left Alt key
 gets it once, the first time the menus start, if no key has the command and Alt can be spared: it is free, or
 it holds the `+altattack` of the game's defaults while another key (the second mouse button there) fires the
 same. Before 2026-10-12 only a free Alt was taken, and since the defaults bind it a new install had no key.
@@ -352,9 +352,9 @@ The scoreboard (2026-10-12, `cgame/hud/cg_scores.c`, see [ui.md](ui.md)): a clic
 the same card beside the board, also for somebody who is not in sight, who watches, or for oneself (the own
 card says who one is and offers nothing). The key of the scoreboard is held while the board shows and the mouse
 turns the view, and holding it together with left Alt switches windows on most desktops, so the board can be
-kept: its key pressed twice within 350 ms, or the command `scores_pick` (Controls, Extras, "Scoreboard with
+kept: its key pressed twice within 350 ms, or the command `v_scores_pick` (Controls, Extras, "Scoreboard with
 Mouse"), leaves it standing with the mouse free. The key again, Escape or the right button lets go of it. The
-head of the board says which. `cg_scoresPick 0`: no double tap. A press is the key going down: what the system
+head of the board says which. `v_scoresPick 0`: no double tap. A press is the key going down: what the system
 sends again while a key is held (key repeat, as `+scores` without a `-scores` between, or as the key itself
 while the cgame has the keys) is none (`CG_ScoresPress()`, `CG_ScoresRelease()`). Until 2026-10-12 it counted,
 so a key that was held was a double tap after a moment, and from then on the repeats kept the board and let go
@@ -366,14 +366,14 @@ off.
 
 | On the card | |
 |-------------|---|
-| Mute his voice, Hear his voice again | `voice_mute`, for you alone |
+| Mute his voice, Hear his voice again | `v_voice_mute`, for you alone |
 | Voice quieter, Voice louder | this player from silent to twice as loud, in quarters, for you alone and until the level changes |
 | Hide his chat lines, Show them again | his lines are left out of your chat box |
 | Whisper to him | the chat box opens for a line only he gets |
 | Copy his name | to the clipboard, without colours |
 | Watch him | as a spectator |
 | Call a vote to kick him | asks for a second click |
-| Admin: kick, silence, sleep, slap, go to him, bring him here | only after a login with a key (`amkey login`) said you are an admin. The server decides as always |
+| Admin: kick, silence, sleep, slap, go to him, bring him here | only after a login with a key (`v_amkey login`) said you are an admin. The server decides as always |
 
 A row is run with a click or with its number. A click beside the card, the right button or Escape closes it.
 "Watch him" and the two admin rows that move somebody also let go of a scoreboard that is kept: it would be in
@@ -383,24 +383,24 @@ still too long is cut. The own figure is never lit, also not while the own card 
 
 | Cvar | Default | |
 |------|---------|---|
-| `cg_selectPlayers` | 1 | 0: none of it |
-| `cg_selectOutline` | 1 | 0: no outline, four corners around the player in its place |
-| `cg_scoresPick` | 1 | 0: the key of the scoreboard pressed twice does not keep the board open |
+| `v_selectPlayers` | 1 | 0: none of it |
+| `v_selectOutline` | 1 | 0: no outline, four corners around the player in its place |
+| `v_scoresPick` | 1 | 0: the key of the scoreboard pressed twice does not keep the board open |
 
 | Command | |
 |---------|---|
-| `+cursor` | the mouse is free while it is held |
+| `+v_cursor` | the mouse is free while it is held |
 | `cursor` | switches that on and off |
-| `scores_pick` | the scoreboard stays open with the mouse free, or lets go of it |
-| `cg_key <key> [up]` | a key or a mouse button for the cgame while it has the keys, by name (esc, tab, enter, mouse1, mouse2, wheelup, wheeldown, pgup, pgdn) or number: for a script in place of a hand, as `ui_key` is for the menus |
-| `peers` | who plays with what, as this client knows it, and from where |
+| `v_scores_pick` | the scoreboard stays open with the mouse free, or lets go of it |
+| `v_cgKey <key> [up]` | a key or a mouse button for the cgame while it has the keys, by name (esc, tab, enter, mouse1, mouse2, wheelup, wheeldown, pgup, pgdn) or number: for a script in place of a hand, as `v_uiKey` is for the menus |
+| `v_peers` | who plays with what, as this client knows it, and from where |
 | `cursor on <player>`, `cursor at <x> <y>`, `cursor click`, `cursor row <n>` | the pointer onto a player or a place, a click, a row of the open card: for a key or a script in place of a mouse |
 
 - Everything happens in your client. What a row sends is the command it stands for, and no other player sees
   that you pointed at him. An unchanged client has none of it and notices none of it.
 - Who points does not type. An engine marks its player as talking while anything holds his keys, the game
   module shows that to everybody (the dots over his head) and holds him still for it. While the keys are held
-  for pointing only, the cgame says so (`cg_catchQuiet 1`) and an engine of this tree leaves the talk button
+  for pointing only, the cgame says so (`v_catchQuiet 1`) and an engine of this tree leaves the talk button
   out of his commands (`CL_CmdButtons`). A key that was down when the mouse was freed stays down: who runs
   keeps running. In another engine he is shown as talking, as it was until 2026-10-12 here too.
 - The three lines at the head of the card stay on the card: a long name or a long title of music is set a
@@ -478,12 +478,12 @@ the lines above the heads.
 the name of a player who has a client of this tree, and the card of a player says "VisionJK" with its version,
 or "Another client".
 
-- On a server with the game module of this tree: the cgame names itself in its userinfo (`cjp_vision`), and the
-  game module tells a cgame that asks (`cjp_caps` bit 1) with the server command `jpclient <client> <version>
+- On a server with the game module of this tree: the cgame names itself in its userinfo (`v_vision`), and the
+  game module tells a cgame that asks (`v_caps` bit 1) with the server command `jpclient <client> <version>
   [...]`, "-" for any other client. One player when his userinfo says something new, everybody in one command
   when a cgame asks for all of it: a cgame that has just started knows nothing (a new level, but also a restart
-  of the video, of which the server hears nothing), so it sends `jpstatus all` and is told who plays with
-  what and what stands above everybody. The server info says that the module does this (`g_visionCaps` bit 3).
+  of the video, of which the server hears nothing), so it sends `vs_status all` and is told who plays with
+  what and what stands above everybody. The server info says that the module does this (`vs_caps` bit 3).
   An older module is not asked.
 - The question is not sent in the first moment, when the voice chat says its hello, and it is sent again while
   no answer came (after 1.5 s, then every 3.5 s, six times at most): the flood protection of a server
@@ -491,8 +491,8 @@ or "Another client".
   The first version asked once and was only ever run against servers with the protection off.
 - On any other server nobody tells. There a client of this tree is known by what comes from it through the
   voice chat: its voice, or what stands above its head, which every client says to the masterserver every five
-  seconds. So it is known of the players whose voice chat is linked to the master (`cg_voice 1`,
-  `cg_voiceMaster 1`, how a client starts out), within some seconds, and without a version. That somebody
+  seconds. So it is known of the players whose voice chat is linked to the master (`v_voice 1`,
+  `v_voiceMaster 1`, how a client starts out), within some seconds, and without a version. That somebody
   plays with something else is never known there: who was not heard may have the voice chat switched off. The
   card says nothing then.
 - A bot is no client. The own player is always known.
@@ -500,7 +500,7 @@ or "Another client".
 
 Checked 2026-10-12 with four scripted clients of the build on a server of the build (`BUILD=1
 CAM=ui_scores_cam.cfg tools/sitescene3.sh` of the work folder): the icon before all four names, also after the
-one who looks restarted his video, the version on the cards, and `peers` naming the server as the source. And
+one who looks restarted his video, the version on the cards, and `v_peers` naming the server as the source. And
 with three scripted clients on a server that tells nothing, linked through the relay of the masterserver on this machine (a program of its own then)
 (`SOCIAL=1 tools/voicetest/e2e_master.sh`, three new checks): each knows of the two others that they play with
 VisionJK, and that the masterserver is where it knows it from. Not checked: a client that is no client of
@@ -514,7 +514,7 @@ game with buttons 63 wide where they were 70). It opens `ui/jamp/ingame_servers.
 menu on a dark pane over the game, with all its filters and pop-ups. Back and Escape return to the bar. Joining
 asks first, since it leaves the server one is on.
 
-Both browsers have "View Bots Only" (`ui_browserShowBotOnly`, default 1). With 0 a server on which nobody but
+Both browsers have "View Bots Only" (`v_browserShowBotOnly`, default 1). With 0 a server on which nobody but
 bots plays is left out. How the client knows:
 
 - A server built on OpenJK says how many of its players are people (`g_humanplayers` in its info answer), some
@@ -534,13 +534,13 @@ the hips, and the menu stands in the level to the right of him. The game goes on
 
 | Cvar | Default | Meaning |
 |------|---------|---------|
-| `cg_immersiveMenu` | 1 | 0: the flat menu of the base game |
-| `r_menuBlur` | 1 | how far the level behind the menu is out of focus (rd-vulkan-vision and the client in a browser): 0 not at all, 1 normal, up to 4 |
-| `s_muffle` | set by the cgame | 0 to 1: the sound of the game through a low pass. Not stored |
+| `v_immersiveMenu` | 1 | 0: the flat menu of the base game |
+| `v_menuBlur` | 1 | how far the level behind the menu is out of focus (rd-vulkan-vision and the client in a browser): 0 not at all, 1 normal, up to 4 |
+| `v_muffle` | set by the cgame | 0 to 1: the sound of the game through a low pass. Not stored |
 
 - The panel behind the menu is as large as what is open on it: the bar at the top alone is a bar, and the
   panel grows when a page opens under it. The ui says once a frame how much of the 640 x 480 its menus take
-  (the cvar `ui_openBox`, "x y w h", `Menus_OpenBox`), and the panel follows within a moment. With a ui that
+  (the cvar `v_openBox`, "x y w h", `Menus_OpenBox`), and the panel follows within a moment. With a ui that
   says nothing it is the whole 640 x 480, as it was.
 - The menu is not painted onto a texture. The ui draws it as always, and the renderer puts that 2D onto a
   plane in the level (`Set2DPlane`, a matrix from the 2D grid to clip space). The cursor is drawn on the plane
@@ -562,7 +562,7 @@ the hips, and the menu stands in the level to the right of him. The game goes on
   through and its light is blended, not added (`RGBA_SHADER_BEHIND`): at half and with an added light its rim
   was white in front of a bright wall.
 - The level behind the menu is out of focus, by distance (`VK_BlurFrame` of rd-vulkan-vision, both of its
-  devices): the frame goes into a buffer of half its size, then passes widen it, three at `r_menuBlur 1`. A
+  devices): the frame goes into a buffer of half its size, then passes widen it, three at `v_menuBlur 1`. A
   last pass (`shaders/focus.frag`) reads the depth of the scene and gives every pixel of that soft picture how
   much of it shows: nothing up to the distance of the menu, which the cgame hands over
   (`R_SetDepthOfField`), all of it at two and a half times that distance. So the player next to the menu and
@@ -584,7 +584,7 @@ the hips, and the menu stands in the level to the right of him. The game goes on
   from inside a wall.
 
 Not while spectating, dead, zoomed or at the end of a map (the camera has no player to stand behind), and not
-in another engine (`cl_cgameUIPlane`). The first version was seen in the game on 2026-10-11 and changed after
+in another engine (`v_cgameUIPlane`). The first version was seen in the game on 2026-10-11 and changed after
 that (silhouette of the player in the menu, camera, blur, crackle). The layout as it is now was seen in
 pictures of scripted clients the same day (rd-vanilla, so without the blur): the player at the left from
 behind, the menu to the right of him over the level, the model of the player menu inside its frame.
@@ -596,36 +596,36 @@ An admin logs in with an Ed25519 key, the kind ssh uses, and no password goes ov
 
 | Command | What it does |
 |---------|--------------|
-| `amkey new [comment]` | makes a key and writes it to a file only the player can read, in the format of OpenSSH, with its `.pub` next to it |
-| `amkey show` | prints the public lines of the keys there are. The owner of a server puts one into his `admin_keys.txt` |
-| `amkey login` | logs in on this server, and from then on by itself whenever the player joins it |
-| `amkey forget` | not by itself on this server any more |
+| `v_amkey new [comment]` | makes a key and writes it to a file only the player can read, in the format of OpenSSH, with its `.pub` next to it |
+| `v_amkey show` | prints the public lines of the keys there are. The owner of a server puts one into his `admin_keys.txt` |
+| `v_amkey login` | logs in on this server, and from then on by itself whenever the player joins it |
+| `v_amkey forget` | not by itself on this server any more |
 
 | Cvar | Default | Meaning |
 |------|---------|---------|
-| `cg_authKeyFile` | empty | the key file, `~/` is the home folder of the user. Empty: `admin_ed25519` in the home folder of the game |
-| `cg_authAgent` | 0 | 1: the Ed25519 keys of the ssh-agent are used too |
-| `cg_authAgentPath` | empty | where the agent listens. Empty: `SSH_AUTH_SOCK` (Linux, macOS), the pipe of OpenSSH (Windows) |
-| `cg_authAgentKey` | empty | only the key of the agent whose comment or line has this text. Empty: each in turn, eight at most |
-| `cg_authServers` | empty | where the login runs by itself, kept by `amkey login` and `amkey forget` |
+| `v_authKeyFile` | empty | the key file, `~/` is the home folder of the user. Empty: `admin_ed25519` in the home folder of the game |
+| `v_authAgent` | 0 | 1: the Ed25519 keys of the ssh-agent are used too |
+| `v_authAgentPath` | empty | where the agent listens. Empty: `SSH_AUTH_SOCK` (Linux, macOS), the pipe of OpenSSH (Windows) |
+| `v_authAgentKey` | empty | only the key of the agent whose comment or line has this text. Empty: each in turn, eight at most |
+| `v_authServers` | empty | where the login runs by itself, kept by `v_amkey login` and `v_amkey forget` |
 
 - The key file is what `ssh-keygen -t ed25519` writes, so an existing key can be named with
-  `cg_authKeyFile ~/.ssh/id_ed25519`. A key with a passphrase is not read: that is what the agent is for.
-- With `cg_authAgent 1` the secret half never reaches the game: the agent signs. 1Password is such an agent
-  (Linux: `cg_authAgentPath ~/.1password/agent.sock` unless `SSH_AUTH_SOCK` points there already, Windows: its
+  `v_authKeyFile ~/.ssh/id_ed25519`. A key with a passphrase is not read: that is what the agent is for.
+- With `v_authAgent 1` the secret half never reaches the game: the agent signs. 1Password is such an agent
+  (Linux: `v_authAgentPath ~/.1password/agent.sock` unless `SSH_AUTH_SOCK` points there already, Windows: its
   pipe is the one of OpenSSH). It asks before it signs, and nothing waits for that: the question is sent and
   looked at once a frame, the game goes on. Two minutes are given, and if the 30 seconds of the server ran out
   meanwhile the login runs once more by itself.
 - Only Ed25519 keys of the agent are used, the server checks no other kind. An agent that has only RSA or
-  ECDSA keys gets a line that says so from `amkey show` and `amkey login` (1Password offers the keys of the
+  ECDSA keys gets a line that says so from `v_amkey show` and `v_amkey login` (1Password offers the keys of the
   vaults its `agent.toml` names, of whatever kind they are).
-- The client signs only for a server the player named with `amkey login`, and only right after it asked
+- The client signs only for a server the player named with `v_amkey login`, and only right after it asked
   itself. A server that sends a question nobody asked for gets no answer.
 - A server with flood protection (`sv_floodProtect`, on by default) drops a command that comes within a second
   of the one before and says nothing. So the commands of a login go out that far apart (the client reads the
   cvar from the serverinfo), and one that gets no answer within three seconds is sent again, twice at most.
   With several keys in the agent the server is asked for one after the other, about a second and a third each:
-  `cg_authAgentKey` names the right one. Until 2026-10-11 the commands went out at once, and on a server with
+  `v_authAgentKey` names the right one. Until 2026-10-11 the commands went out at once, and on a server with
   flood protection the login ended with "The server did not answer the login." unless the first key was the
   right one and the agent took longer than a second to sign.
 - What is signed starts with the line `VisionJK admin login v1`. What ssh lets a key sign when it logs in
@@ -635,7 +635,7 @@ An admin logs in with an Ed25519 key, the kind ssh uses, and no password goes ov
   a page has neither a key file nor a way to an agent.
 
 Run on 2026-10-11 against a server on this machine with scripted clients (`japlus_port/tools/sectest/e2e.sh`):
-a key file made with `amkey new` (mode 600, read back by `ssh-keygen`) and its login as council, a login as
+a key file made with `v_amkey new` (mode 600, read back by `ssh-keygen`) and its login as council, a login as
 knight through an `ssh-agent` started for the test, a one-time code, and a rank password that is refused with
 a line that says why. Not run: an agent that asks its user first (1Password). On Windows the key file and the
 OpenSSH agent of Windows both logged in on 2026-10-11, see [windows.md](windows.md). That server had
@@ -646,7 +646,7 @@ not run against any server yet.
 
 Not a JA+ feature, and client only (`cgame/botmode/cg_botmode.c`): no server knows of it, the game module and the
 engine are not changed, so it runs on any server and in any client that loads this cgame. A key for on and off
-is on the JA+ page of the controls menus (`cg_botMode !`).
+is on the JA+ page of the controls menus (`v_botMode !`).
 
 - The route is the file the bots of a server walk, `botroutes/<map>.wnt`, read from the client's own pk3s
   (the format `SavePathData` of `ai_wpnav.c` writes). The waypoints are a trail in the order of the file. At

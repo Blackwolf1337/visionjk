@@ -18,7 +18,7 @@
 
 # The client for the browser (Emscripten). The engine is a main module, cgame, ui and the renderer are side
 # modules of it, as they are libraries of their own on the desktop. Everything a browser has to fetch ends up
-# side by side in one folder, which is what the dedicated server hands out (sv_webRoot).
+# side by side in one folder, which is what the dedicated server hands out (vs_clientWebRoot).
 set(VisionJKWebDir "${CMAKE_BINARY_DIR}/web")
 
 # names of functions in the modules: what a stack trace of the browser prints
@@ -83,7 +83,7 @@ function(vjk_wasm_page dir)
 	endforeach()
 	add_custom_target(webpage ALL DEPENDS ${outputs})
 
-	# Installed next to the dedicated server, under the name sv_webRoot has by default: "cmake --install
+	# Installed next to the dedicated server, under the name vs_clientWebRoot has by default: "cmake --install
 	# <build> --prefix <folder>" into the folder of a server install adds the client for the browser to it.
 	install(DIRECTORY "${VisionJKWebDir}/"
 		DESTINATION "${JKAInstallDir}/web"

@@ -19,7 +19,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 */
 
 /*
-Hallucinations for one player ("schizo"): he hears and sees things nobody else does, and now and then
+Hallucinations for one player ("vs_schizo"): he hears and sees things nobody else does, and now and then
 something small really happens to him.
 
 Server side only, the client code is untouched. Everything is made of stock pieces the client already
@@ -32,7 +32,7 @@ stares at him and walks after him (the stock "follow the leader" behaviour with 
 when he walks into it or after a while, and is behind him again when he looks away. For everybody else it does
 not exist: it is not sent to them, it is not solid, takes no damage, has no weapon and no enemies.
 
-Toggled per player in the web admin panel or with the server console command "schizo <player>". The state
+Toggled per player in the web admin panel or with the server console command "vs_schizo <player>". The state
 is kept here and is gone with the map, like everything in the memory of the module. A spectator who follows
 the player gets the same things, the engine sends him the view of the followed client.
 

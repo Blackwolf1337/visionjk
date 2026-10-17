@@ -328,11 +328,11 @@ typedef struct clientStatic_s {
 
 	// rendering info
 	glconfig_t	glconfig;
-	float		bias2D;			// the 2D grid runs from -bias2D to 640 + bias2D on a wide window (cvar r_2dBias of the renderer)
+	float		bias2D;			// the 2D grid runs from -bias2D to 640 + bias2D on a wide window (cvar v_2dBias of the renderer)
 	float		uiPlane[16];	// the cgame wants the menus of the frame uiPlaneFrame on a plane in the level (CL_SetUIPlane)
 	int			uiPlaneFrame;
 	qboolean	uiPlaneOn;		// right now: the menus are being drawn onto it
-	qboolean	uiPlaneTold;	// what the cvar cl_uiPlane says to the ui
+	qboolean	uiPlaneTold;	// what the cvar v_uiPlane says to the ui
 	qhandle_t	charSetShader;
 	qhandle_t	whiteShader;
 	qhandle_t	consoleShader;
@@ -443,7 +443,7 @@ extern	cvar_t	*cl_inGameVideo;
 
 extern	cvar_t	*cl_consoleKeys;
 extern	cvar_t	*cl_consoleUseScanCode;
-extern	cvar_t	*cl_utf8;
+extern	cvar_t	*v_utf8;
 extern	cvar_t	*cl_consoleShiftRequirement;
 
 extern  cvar_t  *cl_lanForcePackets;

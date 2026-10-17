@@ -24,7 +24,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // The engine gives a module no way to record sound and none to play samples it made itself, so the cgame
 // opens the sound devices of the system on its own, through miniaudio (lib/miniaudio), which is compiled
 // into this one file. The voices do not go through the mixer of the game: s_volume does not change them,
-// cg_voiceVolume does.
+// v_voiceVolume does.
 //
 // miniaudio calls Audio_Play() and Audio_Record() from threads of its own. Between them and the game there are
 // only ring buffers with one writer and one reader each, and a few numbers that are set as a whole.

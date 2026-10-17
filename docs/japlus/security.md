@@ -32,7 +32,7 @@ Each line is one commit on the branch `security/hardening`.
 | `wa_http.c` buffers, `g_webadmin.c` bind | `realloc`/`malloc` not checked, a negative `Q_vsnprintf` used as a length, default bind on every interface. | Allocations checked (a short response instead of a crash), negative length guarded, default bind 127.0.0.1 (every interface again since 2026-10-08, see "Known and left alone"). |
 | `wa_http.c` `WA_Base64Decode` | Signed `int` shifted left for every header character: signed overflow (UBSan). | Unsigned accumulator; the decoded bytes are unchanged. |
 | `g_japlus_admin.c` `G_amlogin` | Unlimited tries on the three admin passwords, over `amlogin` and the `cp_login` userinfo. | After three wrong tries a player waits, doubling; reset on success and at each map; logged. |
-| `g_japlus_admin2.c` `Cmd_amvstr_f` | `vstr` block list missed cvars with secrets or outside content. | Added `g_password`, `jp_clanPass`, `g_webPassword` and every `session<n>` (the IP and admin level of a player). |
+| `g_japlus_admin2.c` `Cmd_amvstr_f` | `vstr` block list missed cvars with secrets or outside content. | Added `g_password`, `jp_clanPass`, `vs_webPassword` and every `session<n>` (the IP and admin level of a player). |
 | `g_utils.c` `AddRemap` | `targetshadername`/`targetshadernewname` entity keys `strcpy`'d into 64 byte global buffers; the entity editor can set them to any length. | `Q_strncpyz`. |
 | `g_client.c` `SetupGameGhoul2Model` | Player model path built with `strcpy`/`strcat` into a MAX_QPATH stack buffer that the finished path does not fit. | `Com_sprintf`/`Q_strcat`; a name too long falls back to the default model. |
 | `g_session.c` `G_ReadSessionData` | `sscanf` `%s` with no width into `siegeClass[64]` and `IP[48]`. | `%63s`, `%47s`. |
@@ -50,7 +50,7 @@ now has one line for each of these:
 
 | Line | When |
 |------|------|
-| `ClientCommand: <n> [<ip>] "<name>": <command> <arguments>` | every client command. Not `say`, `say_team`, `tell` (the game log has them) and `score`. `amlogin` and `clanpass` with `<hidden>` for the arguments. Arguments cut to 200 characters. Off with `g_logClientCmds 0` |
+| `ClientCommand: <n> [<ip>] "<name>": <command> <arguments>` | every client command. Not `say`, `say_team`, `tell` (the game log has them) and `score`. `amlogin` and `clanpass` with `<hidden>` for the arguments. Arguments cut to 200 characters. Off with `vs_logClientCmds 0` |
 | `CallVote: <n> [<ip>] "<name>": <console line>` | a vote starts: the line the console runs if it passes |
 | `Web admin: <ip>: action ...` / `entity ...` / `wrong password` | every action and entity edit of the panel, and every wrong password |
 | `Web admin: <ip>: command <console line>` | a line typed into the console of the panel. What follows a word with `pass` in it is replaced by `...`, here and in the echo on the console |
@@ -77,18 +77,18 @@ Off when a sanitizer build is configured.
 - Every JA+ command and cvar with its behaviour. New are only the waits after wrong passwords and the longer
   `amvstr` block list.
 - The panel in use and API. Requests without an `Origin` header (curl, scripts) still work. A config that sets
-  `g_webBind` keeps working; only an unset one now means localhost instead of every interface (taken back on
+  `vs_webBind` keeps working; only an unset one now means localhost instead of every interface (taken back on
   2026-10-08, see "Known and left alone").
 
 ## Known and left alone
 
-- The panel speaks plain HTTP. Bind it to localhost (`g_webBind 127.0.0.1`) and reach it through an SSH tunnel,
+- The panel speaks plain HTTP. Bind it to localhost (`vs_webBind 127.0.0.1`) and reach it through an SSH tunnel,
   or put a reverse proxy with HTTPS in front.
-- The panel listens on every interface by default again (2026-10-08). This pass had made an unset `g_webBind`
+- The panel listens on every interface by default again (2026-10-08). This pass had made an unset `vs_webBind`
   mean 127.0.0.1; the owner of the fork opens the panel from other machines and decided for `0.0.0.0` as the
   default, an empty value included. What that costs: whoever sets a password and a port has a plain HTTP login
-  on every address of the machine, and a config written to the recommendation of this file (`g_webBind ""`)
-  is open to the network after the update. What holds it: the panel is off without `g_webPassword`, wrong
+  on every address of the machine, and a config written to the recommendation of this file (`vs_webBind ""`)
+  is open to the network after the update. What holds it: the panel is off without `vs_webPassword`, wrong
   passwords are slowed down, and a value that is no address falls back to 127.0.0.1.
 - The entity editor can still end the dedicated server by placing a class whose spawn code raises a game error, or
   by deleting all spawn points. OpenJK makes every game error fatal on a dedicated server. Decided to leave as is.
@@ -121,7 +121,7 @@ may send and the buttons masked to the ones a key can press.
 ## Added after the pass: the voice chat
 
 The voice chat ([voice.md](voice.md)) came after this pass and adds attack surface of its own: a UDP port of
-the game module (`g_voice.c`, off unless `g_voice 1`), and in the cgame a UDP socket, a codec (Opus) and an
+the game module (`g_voice.c`, off unless `vs_voice 1`), and in the cgame a UDP socket, a codec (Opus) and an
 audio library (miniaudio), both third party code built into the module. What was done about it is in the
 section "Security" of that file: every length checked in one place, a random token per connection plus the
 address of the game connection, a limit per speaker, no answer to anything that is not a datagram of a client,
@@ -148,7 +148,7 @@ answered with one line (at most once a second) and counted by the intrusion dete
 ## Added later: admin login without a password
 
 Since 2026-10-11 (`game/auth`, `cgame/auth`, see server.md and client.md). The three rank passwords of JA+ and
-`cp_login` are off unless `jp_adminPasswords 1`: this changes a server at the update, its admins need a line
+`cp_login` are off unless `vs_adminPasswords 1`: this changes a server at the update, its admins need a line
 in `admin_keys.txt` or a one-time code.
 
 - Signatures are Ed25519 from Monocypher 4.0.2 (`lib/monocypher`, as its authors ship it, compared with the
@@ -158,16 +158,16 @@ in `admin_keys.txt` or a one-time code.
 - A code has 40 bits, lives 60 seconds, works once, and wrong ones run into the wait of wrong passwords.
 - `admin_keys.txt` is read through the file system of the game, public keys are no secret. Comments from it
   and from key files are printed without `^`, `"` and `%`.
-- Open: a client that was told to log in on a server by itself (`amkey login`) signs for that server again
+- Open: a client that was told to log in on a server by itself (`v_amkey login`) signs for that server again
   whenever it joins. If that server turns hostile it can pass the question of another server on, and only
-  `jp_authHosts` on the other server stops that. So set it on a public server.
+  `vs_authHosts` on the other server stops that. So set it on a public server.
 
 ## Added later: the web panel has accounts
 
 Since 2026-10-11 (`webadmin/wa_auth.c`, `wa_totp.c`, see webadmin.md). What was one password in every request
 is now: accounts with three roles, passwords as Argon2id hashes, sessions in a cookie no script and no other
 site gets, a second step by time, tokens for scripts, a login with a key of the browser, and a proxy mode in
-which only the reverse proxy is let in. `g_webPassword` is read once, to make the first owner.
+which only the reverse proxy is let in. `vs_webPassword` is read once, to make the first owner.
 
 - A visitor who is not logged in gets the page of the login (a file of its own, 9 KB) and two requests:
   `/api/login` and `/api/login/key`. Everything else answers 401.
@@ -200,8 +200,8 @@ client of the game sends. It does not find a hole nobody knows.
 
 | Cvar | Default | Meaning |
 |------|---------|---------|
-| `sv_ids` | 2 | 0: off. 1: events are written down. 2: addresses are blocked and players dropped as well |
-| `sv_antiWallhack` | 0 | 1: a player no line of sight reaches is not sent to a client, see below |
+| `vs_ids` | 2 | 0: off. 1: events are written down. 2: addresses are blocked and players dropped as well |
+| `vs_antiWallhack` | 0 | 1: a player no line of sight reaches is not sent to a client, see below |
 
 Every event has a weight. The weights add up for the address and fall off again, two a second. At 100 the
 address is blocked for a minute, and for twice as long each time it happens again, up to an hour: its
@@ -230,7 +230,7 @@ connectionless packets are dropped unread, and a player the event came from is d
   what it was, and what came with it as plain characters. At most one line in two seconds for an address and
   an event (the rest is counted and named with the next line) and thirty a second overall, so a flood does not
   fill the disk. The web panel shows the file (Log tab, "Intrusions", for an admin and up).
-- `idsstatus` on the console lists the addresses with their scores and blocks, `idsunblock <address|all>`
+- `vs_idsstatus` on the console lists the addresses with their scores and blocks, `vs_idsunblock <address|all>`
   lifts a block.
 - The address of a packet can be made up, and a connectionless packet is taken without an answer. So a block
   only ever stops connectionless packets (getinfo, getstatus, connect), never the game of somebody who is on
@@ -246,7 +246,7 @@ connectionless packets are dropped unread, and a player the event came from is d
   the client keeps its time at the time the server tells it, and the game cuts a move back to 200 ms ahead
   anyway. The hack gains nothing in this game. What the count would have caught is every player after the
   server stood still for a quarter of a second.
-- `sv_antiWallhack 1`: the map tells a client of every player in the rooms it can see into, and a cheat draws
+- `vs_antiWallhack 1`: the map tells a client of every player in the rooms it can see into, and a cheat draws
   them through the walls. With the cvar a player is left out of a snapshot when no line from the eye of the
   client reaches his box (its middle, top, bottom and corners, widened by 16 units and by where he will be in
   a fifth of a second). Only brushes of the map stop a line, and none that are seen through or not drawn;
@@ -259,7 +259,7 @@ connectionless packets are dropped unread, and a player the event came from is d
 
 | Cvar | Default | Meaning |
 |------|---------|---------|
-| `cl_ids` | 1 | what a server sends that no server of the game does is written to `ids.log`, and a server that keeps at it is left. 0: off |
+| `v_ids` | 1 | what a server sends that no server of the game does is written to `ids.log`, and a server that keeps at it is left. 0: off |
 
 - Written down, and the client leaves: a path in the place of the game folder (at once), data of a download
   that was not asked for and fragments that do not fit (at the third).
@@ -274,13 +274,13 @@ connectionless packets are dropped unread, and a player the event came from is d
 
 Tested apart from the game (`japlus_port/tools/idstest`, 38 checks with a clock the test sets): how the
 weights add up and fall off, when an address is blocked and for how long, that connectionless events do not
-count against an address with a player, `sv_ids 1`, the machine itself, what is taken for an attack in a
+count against an address with a player, `vs_ids 1`, the machine itself, what is taken for an attack in a
 command and what is not (chat, percent signs, long words of Cyrillic, Chinese and accented letters).
 
 Run on 2026-10-11 against a server on this machine (`japlus_port/tools/sectest/e2e.sh`): unknown, oversized
 and rcon packets written down, the address blocked after ten rcon packets and its packets not read,
-`idsstatus`, `idsunblock`, a userinfo with a path that goes up written down for the player who sent it and
-nobody dropped for one of them. `sv_antiWallhack`: a client in the first room of the test level was told of
+`vs_idsstatus`, `vs_idsunblock`, a userinfo with a path that goes up written down for the player who sent it and
+nobody dropped for one of them. `vs_antiWallhack`: a client in the first room of the test level was told of
 the player next to it and not of one in the third room, and of both once the cvar was off (what the server
 sends was listed with `cl_shownet 3`). A player in the second room was told also with the cvar on, and rightly:
 the portal of the first room looks into the second. The client side noted nothing about a server that does
@@ -292,14 +292,14 @@ nothing wrong, and was not run against one that does.
 seta g_userinfoValidate "25165823"   // leave on: rejects a client ip field and control characters in userinfo
 seta sv_legacyFixes "1"              // leave on: the engine clears out of range selections in the usercmd
 seta g_securityLog "2"               // security.log written line by line
-seta g_logClientCmds "1"             // client commands in security.log
+seta vs_logClientCmds "1"             // client commands in security.log
 seta sv_maxOOBRateIP "1"             // the per address rate limit on connectionless packets
-seta g_webBind "127.0.0.1"           // this machine only. The default is every interface: fine on your own network or behind a firewall
-seta g_webProxy "<address>"          // or: the address of the reverse proxy with HTTPS in front of the panel, nobody else is let in
-seta jp_authHosts "<address:port ...>" // the addresses clients reach the server by, for the login with a key
+seta vs_webBind "127.0.0.1"           // this machine only. The default is every interface: fine on your own network or behind a firewall
+seta vs_webProxy "<address>"          // or: the address of the reverse proxy with HTTPS in front of the panel, nobody else is let in
+seta vs_authHosts "<address:port ...>" // the addresses clients reach the server by, for the login with a key
 ```
 
-There is no `rconpassword` line: the server takes no rcon, see above. `jp_adminPasswords` stays 0.
+There is no `rconpassword` line: the server takes no rcon, see above. `vs_adminPasswords` stays 0.
 
 ## Tested
 

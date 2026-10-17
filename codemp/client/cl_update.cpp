@@ -86,7 +86,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // pack, the library of Steam Audio) is taken by its size then, the programs and modules are hashed.
 #define UPDATE_QUICK_BYTES		( 16LL * 1024 * 1024 )
 
-// cl_updateState, which the ui module reads
+// v_updateState, which the ui module reads
 typedef enum {
 	UPDATE_NONE,			// nothing to say
 	UPDATE_AVAILABLE,		// a newer version is out
@@ -135,7 +135,7 @@ static int			updListLen;
 static const char	*updStartNote;				// what CL_UpdateResume() has to say, once there is a console
 static char			updStartVersion[UPD_MAX_PATH];	//	and the version or the file it is about
 
-static cvar_t	*cl_updateCheck;
+static cvar_t	*v_updateCheck;
 
 /*
 ===============================================================================
@@ -665,8 +665,8 @@ The game
 
 static void Update_Say( updateState_t state, const char *text ) {
 	upd.state = state;
-	Cvar_Set( "cl_updateState", va( "%i", (int)state ) );
-	Cvar_Set( "cl_updateText", text );
+	Cvar_Set( "v_updateState", va( "%i", (int)state ) );
+	Cvar_Set( "v_updateText", text );
 }
 
 static const char *Update_VersionText( const int version[3] ) {
@@ -849,7 +849,7 @@ void CL_UpdateFrame( void ) {
 	}
 	if ( upd.job == JOB_FETCH && cls.realtime - upd.textTime >= UPDATE_TEXT_MSEC ) {
 		upd.textTime = cls.realtime;
-		Cvar_Set( "cl_updateText", va( "%s version %s: %i %%", Update_Verb(), Update_VersionText( upd.list.version ),
+		Cvar_Set( "v_updateText", va( "%s version %s: %i %%", Update_Verb(), Update_VersionText( upd.list.version ),
 			upd.fetchBytes > 0 ? (int)( upd.fetched * 100 / upd.fetchBytes ) : 0 ) );
 	}
 }
@@ -869,7 +869,7 @@ static qboolean Update_Possible( void ) {
 	}
 	if ( upd.thread ) {
 		if ( upd.job == JOB_FETCH )
-			Com_Printf( "The update is on its way: %i %% so far. update_cancel stops it.\n",
+			Com_Printf( "The update is on its way: %i %% so far. v_update_cancel stops it.\n",
 				upd.fetchBytes > 0 ? (int)( upd.fetched * 100 / upd.fetchBytes ) : 0 );
 		else
 			Com_Printf( "The website is being asked.\n" );
@@ -878,7 +878,7 @@ static qboolean Update_Possible( void ) {
 	return qtrue;
 }
 
-// update_check: asks the website now, whatever cl_updateCheck says
+// v_update_check: asks the website now, whatever v_updateCheck says
 static void CL_UpdateCheck_f( void ) {
 	if ( Update_Possible() )
 		Update_Start( JOB_CHECK, qfalse );
@@ -913,7 +913,7 @@ CL_UpdateAddress
 
 Called by Com_Init() right after the command line was read and before any config file is run. At that
 moment a cvar can only have come from the command line, and that is the one place a player can name another
-address than the one of this build: "+set cl_updateURL https://...". It is copied here and the copy is what
+address than the one of this build: "+set v_updateURL https://...". It is copied here and the copy is what
 the updater asks, never the cvar. So no config, no module, no server and nobody at the console can send a
 client somewhere else for its program files. The cvar is only there to be looked at.
 
@@ -923,7 +923,7 @@ An address a player gives has to be https. The one of the build is whatever its 
 void CL_UpdateAddress( void ) {
 	char given[MAX_CVAR_VALUE_STRING];
 
-	Cvar_VariableStringBuffer( "cl_updateURL", given, sizeof( given ) );
+	Cvar_VariableStringBuffer( "v_updateURL", given, sizeof( given ) );
 	if ( given[0] && UPD_AddressAllowed( given, qfalse ) ) {
 		Q_strncpyz( upd.address, given, sizeof( upd.address ) );
 		upd.addressGiven = qtrue;
@@ -932,25 +932,25 @@ void CL_UpdateAddress( void ) {
 		if ( UPD_AddressAllowed( UPDATE_URL, qtrue ) )
 			Q_strncpyz( upd.address, UPDATE_URL, sizeof( upd.address ) );
 	}
-	Cvar_Get( "cl_updateURL", upd.address, CVAR_INIT | CVAR_ROM | CVAR_PROTECTED, "Where the game asks for a newer version of itself. Only the command line can name another address" );
-	Cvar_Set( "cl_updateURL", upd.address );
+	Cvar_Get( "v_updateURL", upd.address, CVAR_INIT | CVAR_ROM | CVAR_PROTECTED, "Where the game asks for a newer version of itself. Only the command line can name another address" );
+	Cvar_Set( "v_updateURL", upd.address );
 }
 
 void CL_UpdateInit( void ) {
-	cl_updateCheck = Cvar_Get( "cl_updateCheck", "1", CVAR_ARCHIVE, "Ask the website at every start whether there is a newer version (0: never)" );
-	Cvar_Get( "cl_updateState", "0", CVAR_ROM, "What the updater is doing: 0 nothing, 1 a newer version is out, 2 fetching it, 3 failed, 4 starting again" );
-	Cvar_Get( "cl_updateText", "", CVAR_ROM, "What the updater has to say, as the main menu shows it" );
+	v_updateCheck = Cvar_Get( "v_updateCheck", "1", CVAR_ARCHIVE, "Ask the website at every start whether there is a newer version (0: never)" );
+	Cvar_Get( "v_updateState", "0", CVAR_ROM, "What the updater is doing: 0 nothing, 1 a newer version is out, 2 fetching it, 3 failed, 4 starting again" );
+	Cvar_Get( "v_updateText", "", CVAR_ROM, "What the updater has to say, as the main menu shows it" );
 	Update_Say( UPDATE_NONE, "" );
 	Cmd_AddCommand( "update", CL_Update_f, "Fetches the newer version of the game, puts it in place and starts the game again" );
-	Cmd_AddCommand( "update_check", CL_UpdateCheck_f, "Asks the website whether there is a newer version" );
-	Cmd_AddCommand( "update_cancel", CL_UpdateCancel_f, "Stops an update that is being fetched" );
+	Cmd_AddCommand( "v_update_check", CL_UpdateCheck_f, "Asks the website whether there is a newer version" );
+	Cmd_AddCommand( "v_update_cancel", CL_UpdateCancel_f, "Stops an update that is being fetched" );
 
 	if ( updStartNote ) {
 		Com_Printf( updStartNote, updStartVersion );
 		updStartNote = NULL;
 	}
 	if ( upd.addressRefused )
-		Com_Printf( S_COLOR_YELLOW "cl_updateURL on the command line is no https address. The game asks %s as it would without it.\n", upd.address );
+		Com_Printf( S_COLOR_YELLOW "v_updateURL on the command line is no https address. The game asks %s as it would without it.\n", upd.address );
 	else if ( upd.addressGiven )
 		Com_Printf( "Updates are asked for at %s, as the command line says.\n", upd.address );
 
@@ -962,7 +962,7 @@ void CL_UpdateInit( void ) {
 	Q_strncpyz( upd.home, Cvar_VariableString( "fs_homepath" ), sizeof( upd.home ) );
 	if ( Sys_SameFolder( upd.home, Sys_ProgramFolder() ) )
 		upd.home[0] = '\0';
-	if ( upd.release && !upd.elsewhere && upd.address[0] && cl_updateCheck->integer )
+	if ( upd.release && !upd.elsewhere && upd.address[0] && v_updateCheck->integer )
 		Update_Start( JOB_CHECK, qtrue );
 }
 
@@ -975,8 +975,8 @@ void CL_UpdateShutdown( void ) {
 		upd.thread = NULL;
 	}
 	Cmd_RemoveCommand( "update" );
-	Cmd_RemoveCommand( "update_check" );
-	Cmd_RemoveCommand( "update_cancel" );
+	Cmd_RemoveCommand( "v_update_check" );
+	Cmd_RemoveCommand( "v_update_cancel" );
 }
 
 #else // __EMSCRIPTEN__

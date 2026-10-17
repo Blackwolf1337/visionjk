@@ -23,8 +23,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 //
 // Every chat line is kept (CHAT_HISTORY of them), with who said it and what kind it is. While nobody types the
 // newest lines stand at the lower left for cg_chatBox milliseconds, as they always did. With an engine of this
-// tree (cvar cl_cgameChat) and cg_chatInput 1 the message mode keys open the box of this file instead of the
-// line of the engine (the cgame says so with cg_chatHandler, the engine then runs cg_chatopen): a frame with
+// tree (cvar v_cgameChat) and v_chatInput 1 the message mode keys open the box of this file instead of the
+// line of the engine (the cgame says so with v_chatHandler, the engine then runs v_chatOpen): a frame with
 // the history, three tabs (all, team, private), a bar that shows where in the history one is, and the line to
 // type in. The cgame gets keys, characters and the mouse then (KEYCATCH_CGAME):
 //
@@ -40,8 +40,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // the menus, the tabs as words with a line under the open one, and the lines that stand there while nobody
 // types each on a dark strip, so they can be read on a bright floor.
 //
-// How large it is (2026-10-12): cg_chatBoxScale is the size of the box with everything in it, the letters first
-// of all; cg_chatBoxWidth how wide it is at a size of 1; cg_chatBoxRows how many rows of history the open box
+// How large it is (2026-10-12): v_chatBoxScale is the size of the box with everything in it, the letters first
+// of all; v_chatBoxWidth how wide it is at a size of 1; v_chatBoxRows how many rows of history the open box
 // has. All three are in Setup. With the box open they are also set by hand: its upper right corner is dragged
 // (width and rows), and Ctrl with the wheel changes the size.
 
@@ -57,10 +57,10 @@ extern displayContextDef_t cgDC;
 #define CHAT_MAX_ROWS		8				// rows a line takes at most when it is wrapped
 #define CHAT_SCALE			0.65f
 #define CHAT_SKIN_SCALE		0.6f			// of the letters of the new look
-#define CHAT_ROW_HEIGHT		13.0f			// this and the heights below at a size of 1 (cg_chatBoxScale)
-#define CHAT_MAX_OPEN_ROWS	24				// rows of history in the open box at most (cg_chatBoxRows),
+#define CHAT_ROW_HEIGHT		13.0f			// this and the heights below at a size of 1 (v_chatBoxScale)
+#define CHAT_MAX_OPEN_ROWS	24				// rows of history in the open box at most (v_chatBoxRows),
 #define CHAT_MIN_OPEN_ROWS	4				//	and at least
-#define CHAT_MIN_SCALE		0.6f			// cg_chatBoxScale
+#define CHAT_MIN_SCALE		0.6f			// v_chatBoxScale
 #define CHAT_MAX_SCALE		1.6f
 #define CHAT_GRIP			9.0f			// the corner of the open box that is dragged to make it larger
 #define CHAT_CLOSED_ROWS	6				// rows that stand there while nobody types
@@ -100,10 +100,10 @@ static struct {
 	chatMsg_t	history[CHAT_HISTORY];
 	int			count;						// lines that ever came, line n is history[n % CHAT_HISTORY]
 
-	qboolean	engine;						// the engine has the calls of the box (cl_cgameChat)
+	qboolean	engine;						// the engine has the calls of the box (v_cgameChat)
 	qboolean	skin;						// the box is drawn in the new look
 	// how large it is this frame
-	float		size;						// cg_chatBoxScale
+	float		size;						// v_chatBoxScale
 	float		rowH;						// the height of a row
 	int			openRows;					// rows of history in the open box
 	// its upper right corner is dragged with the mouse
@@ -111,8 +111,8 @@ static struct {
 	float		grabX, grabY, grabWidth;	// where the pointer was when the button went down, and how wide the box
 	int			grabRows;					//	and how many rows
 	float		gripX, gripY;				// where that corner is, from the last draw
-	qboolean	utf8;						// text is UTF-8 (cl_utf8Text)
-	int			handlerCount;				// cg_chatInput as it was when cg_chatHandler was last set
+	qboolean	utf8;						// text is UTF-8 (v_utf8Text)
+	int			handlerCount;				// v_chatInput as it was when v_chatHandler was last set
 
 	qboolean	open;
 	int			mode;						// 0 to all, 1 to the team, 2 to target
@@ -614,11 +614,11 @@ static void Chat_Send( void ) {
 CG_ChatOpenFor
 
 The box opens to type in. mode 0: say, 1: team, 2: a whisper to client target, 3: a song for box target of the
-boombox (boombox/cg_boombox.c). qfalse: this engine leaves typing to its own line (or cg_chatInput 0).
+boombox (boombox/cg_boombox.c). qfalse: this engine leaves typing to its own line (or v_chatInput 0).
 =================
 */
 qboolean CG_ChatOpenFor( int mode, int target ) {
-	if ( !chat.engine || !cg_chatInput.integer || cg.demoPlayback || !cg.snap ) {
+	if ( !chat.engine || !v_chatInput.integer || cg.demoPlayback || !cg.snap ) {
 		return qfalse;
 	}
 	chat.mode = Com_Clampi( 0, 3, mode );
@@ -642,7 +642,7 @@ qboolean CG_ChatOpenFor( int mode, int target ) {
 	return qtrue;
 }
 
-// cg_chatopen <mode> <target>: run by the engine for its message mode commands while cg_chatHandler is 1
+// v_chatOpen <mode> <target>: run by the engine for its message mode commands while v_chatHandler is 1
 void CG_ChatOpen_f( void ) {
 	char mode[16], target[16];
 
@@ -781,7 +781,7 @@ qboolean CG_ChatKeyEvent( int key, qboolean down ) {
 		if ( trap->Key_IsDown( A_CTRL ) ) {
 			const float size = Com_Clamp( CHAT_MIN_SCALE, CHAT_MAX_SCALE, chat.size + ( key == A_MWHEELUP ? 0.05f : -0.05f ) );
 
-			trap->Cvar_Set( "cg_chatBoxScale", va( "%.2f", size ) );
+			trap->Cvar_Set( "v_chatBoxScale", va( "%.2f", size ) );
 		} else if ( key == A_MWHEELUP ) {
 			chat.scroll += 2;
 		} else {
@@ -853,15 +853,15 @@ static void Chat_Resize( float width, int rows, float dx, float dy ) {
 	const int newWidth = (int)Com_Clamp( 200.0f, 600.0f, ( width + dx ) / chat.size );
 	const int newRows = Com_Clampi( CHAT_MIN_OPEN_ROWS, CHAT_MAX_OPEN_ROWS, rows + (int)floorf( -dy / chat.rowH + 0.5f ) );
 
-	if ( newWidth != (int)cg_chatBoxWidth.value ) {
-		trap->Cvar_Set( "cg_chatBoxWidth", va( "%i", newWidth ) );
+	if ( newWidth != (int)v_chatBoxWidth.value ) {
+		trap->Cvar_Set( "v_chatBoxWidth", va( "%i", newWidth ) );
 	}
-	if ( newRows != cg_chatBoxRows.integer ) {
-		trap->Cvar_Set( "cg_chatBoxRows", va( "%i", newRows ) );
+	if ( newRows != v_chatBoxRows.integer ) {
+		trap->Cvar_Set( "v_chatBoxRows", va( "%i", newRows ) );
 	}
 }
 
-// cg_chatdrag <dx> <dy>: the corner of the open box moved by that much, for a script in place of a mouse
+// v_chatDrag <dx> <dy>: the corner of the open box moved by that much, for a script in place of a mouse
 void CG_ChatDrag_f( void ) {
 	if ( chat.open ) {
 		Chat_Resize( chat.width, chat.openRows, atof( CG_Argv( 1 ) ), atof( CG_Argv( 2 ) ) );
@@ -1148,19 +1148,19 @@ void CG_ChatDraw( void ) {
 	char		value[8];
 
 	// which engine this is, and whether its message mode commands are to open the box
-	trap->Cvar_VariableStringBuffer( "cl_cgameChat", value, sizeof( value ) );
+	trap->Cvar_VariableStringBuffer( "v_cgameChat", value, sizeof( value ) );
 	chat.engine = (qboolean)( atoi( value ) == 1 );
-	trap->Cvar_VariableStringBuffer( "cl_utf8Text", value, sizeof( value ) );
+	trap->Cvar_VariableStringBuffer( "v_utf8Text", value, sizeof( value ) );
 	chat.utf8 = (qboolean)( atoi( value ) == 1 );
-	if ( chat.handlerCount != cg_chatInput.modificationCount + 1 ) {
-		chat.handlerCount = cg_chatInput.modificationCount + 1;
-		trap->Cvar_Set( "cg_chatHandler", ( chat.engine && cg_chatInput.integer ) ? "1" : "0" );
+	if ( chat.handlerCount != v_chatInput.modificationCount + 1 ) {
+		chat.handlerCount = v_chatInput.modificationCount + 1;
+		trap->Cvar_Set( "v_chatHandler", ( chat.engine && v_chatInput.integer ) ? "1" : "0" );
 	}
 
 	chat.skin = CG_HudNewLook();
 	chat.x = CHAT_X - cgs.bias2D;
-	// how large it is: everything by cg_chatBoxScale, and as many rows as fit under the top of the screen
-	chat.size = Com_Clamp( CHAT_MIN_SCALE, CHAT_MAX_SCALE, cg_chatBoxScale.value );
+	// how large it is: everything by v_chatBoxScale, and as many rows as fit under the top of the screen
+	chat.size = Com_Clamp( CHAT_MIN_SCALE, CHAT_MAX_SCALE, v_chatBoxScale.value );
 	chat.rowH = CHAT_ROW_HEIGHT * chat.size;
 	// Where the last row stands. The lines of the closed box move down while the scoreboard shows, the HUD is gone
 	// then. The open box stays where it always is, also over a scoreboard that is kept open, and it keeps room for
@@ -1170,10 +1170,10 @@ void CG_ChatDraw( void ) {
 		bottom = Q_min( bottom, SCREEN_HEIGHT - 4.0f - CHAT_INPUT_HEIGHT * chat.size - 2.0f * CHAT_PAD );
 	}
 	// (no wider than the screen has room, whatever width and size say together)
-	chat.width = Q_min( Com_Clamp( 200.0f, 600.0f, cg_chatBoxWidth.value ) * chat.size,
+	chat.width = Q_min( Com_Clamp( 200.0f, 600.0f, v_chatBoxWidth.value ) * chat.size,
 		SCREEN_WIDTH + 2.0f * cgs.bias2D - 2.0f * CHAT_X - CHAT_BAR_WIDTH - 3.0f * CHAT_PAD );
 	chat.openRows = Com_Clampi( CHAT_MIN_OPEN_ROWS, Q_max( CHAT_MIN_OPEN_ROWS,
-		Q_min( CHAT_MAX_OPEN_ROWS, (int)( ( bottom - CHAT_TAB_HEIGHT * chat.size - 2.0f * CHAT_PAD - 4.0f ) / chat.rowH ) ) ), cg_chatBoxRows.integer );
+		Q_min( CHAT_MAX_OPEN_ROWS, (int)( ( bottom - CHAT_TAB_HEIGHT * chat.size - 2.0f * CHAT_PAD - 4.0f ) / chat.rowH ) ) ), v_chatBoxRows.integer );
 
 	CG_Place2D( PLACE_CENTER );
 	if ( chat.open ) {
@@ -1190,7 +1190,7 @@ void CG_ChatDraw( void ) {
 	}
 }
 
-// the cgame was loaded anew: the engine cleared cg_chatHandler, it is set again with the first frame
+// the cgame was loaded anew: the engine cleared v_chatHandler, it is set again with the first frame
 void CG_ChatInit( void ) {
 	memset( &chat, 0, sizeof( chat ) );
 }

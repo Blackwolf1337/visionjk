@@ -10,7 +10,7 @@ Everybody whose client draws boxes may do everything with every box.
 
 ## For players
 
-Hold the key of the pointer (`+cursor`, the left Alt key by default) and:
+Hold the key of the pointer (`+v_cursor`, the left Alt key by default) and:
 
 - **click** a box for its card: what it plays and how far into the song it is, what comes next, and the rows
   Play a song (Add a song while one plays), Pause or Resume, Skip this song, Stop the music, Quieter and Louder
@@ -39,20 +39,20 @@ happened. The chat box needs no quotes.
 
 | Cvar | Default | Meaning |
 |------|---------|---------|
-| `cg_boombox` | 1 | 0: no boxes, nothing of them heard, the server stops sending |
-| `cg_boomboxVolume` | 0.6 | how loud the songs are for you, 0 to 1. Also in Setup, Sound |
+| `v_boomboxes` | 1 | 0: no boxes, nothing of them heard, the server stops sending |
+| `v_boomboxVolume` | 0.6 | how loud the songs are for you, 0 to 1. Also in Setup, Sound |
 
-Both are in Setup, Sound, under Boombox. With the voice chat switched off (`cg_voice 0`) the songs still come:
+Both are in Setup, Sound, under Boombox. With the voice chat switched off (`v_voice 0`) the songs still come:
 the way to the relay is opened for them alone, without the microphone.
 
 ### How it sounds
 
-With this engine and `s_spatial 1` ([audio.md](audio.md)) a box is a sound of the level: walls muffle it, it
+With this engine and `v_spatial 1` ([audio.md](audio.md)) a box is a sound of the level: walls muffle it, it
 finds its way round corners, the HRTF or the panning gives it its side, and the room you stand in rings from it
-(the reverb is the one of the listener, as for every other sound). The engine says so in `s_spatialBoxes`.
+(the reverb is the one of the listener, as for every other sound). The engine says so in `v_spatialBoxes`.
 Elsewhere it plays on the sound device of the voice chat, by side and distance, muffled behind a wall
-(`cg_voiceMuffle`). Either way it gets quieter with the distance and is gone at the end of the range of the
-server (`g_boomboxRange`, 1536 units).
+(`v_voiceMuffle`). Either way it gets quieter with the distance and is gone at the end of the range of the
+server (`vs_boomboxRange`, 1536 units).
 
 The two speakers of the box push out with the loudness of what you hear of it.
 
@@ -64,7 +64,7 @@ the cvars below:
 - `yt-dlp`, recent: YouTube changes often, an old one fails. The package of a distribution is often too old,
   the release binary of yt-dlp updates itself (`yt-dlp -U`).
 - a JavaScript runtime for yt-dlp: `deno` (what yt-dlp looks for by default), or another one named in
-  `g_boomboxYtdlpArgs` (`--js-runtimes node`).
+  `vs_boomboxYtdlpArgs` (`--js-runtimes node`).
 - `ffmpeg`.
 
 ```
@@ -73,25 +73,25 @@ yay -S yt-dlp deno            # Arch
 ```
 
 Without yt-dlp the boxes are still there, and a player who asks for a song is told that the server can not fetch
-songs. The boombox needs the voice chat (`g_voice 1`): the songs go out over its relay. Windows servers can not
+songs. The boombox needs the voice chat (`vs_voice 1`): the songs go out over its relay. Windows servers can not
 fetch songs yet.
 
 | Cvar | Default | Meaning |
 |------|---------|---------|
-| `g_boombox` | 1 | in the server info. 0: no boxes |
-| `g_boomboxMax` | 4 | boxes a level has at most (8 at most) |
-| `g_boomboxRange` | 1536 | how far a box is heard, in units |
-| `g_boomboxMaxSeconds` | 600 | the longest song, in seconds. 0: any length |
-| `g_boomboxQueue` | 10 | songs in the line of one box (16 at most) |
-| `g_boomboxYtdlp` | yt-dlp | the program, a name in the `PATH` or a path |
-| `g_boomboxFfmpeg` | ffmpeg | the same |
-| `g_boomboxYtdlpArgs` | | words for yt-dlp in addition, split at spaces: `--js-runtimes node`, `--cookies <file>`, `--proxy <url>` |
+| `vs_boombox` | 1 | in the server info. 0: no boxes |
+| `vs_boomboxMax` | 4 | boxes a level has at most (8 at most) |
+| `vs_boomboxRange` | 1536 | how far a box is heard, in units |
+| `vs_boomboxMaxSeconds` | 600 | the longest song, in seconds. 0: any length |
+| `vs_boomboxQueue` | 10 | songs in the line of one box (16 at most) |
+| `vs_boomboxYtdlp` | yt-dlp | the program, a name in the `PATH` or a path |
+| `vs_boomboxFfmpeg` | ffmpeg | the same |
+| `vs_boomboxYtdlpArgs` | | words for yt-dlp in addition, split at spaces: `--js-runtimes node`, `--cookies <file>`, `--proxy <url>` |
 
 The last three can only be set while the server starts (`CVAR_INIT`: in `server.cfg` or on the command line):
 whoever can set a cvar later (rcon, an admin of the panel) can not make the server start a program of his choice.
 
-The server command `boombox` lists the boxes, their lines and the last word of yt-dlp and ffmpeg for a song
-that plays. `boombox clear` takes every box away.
+The server command `vs_boxes` lists the boxes, their lines and the last word of yt-dlp and ffmpeg for a song
+that plays. `vs_boxes clear` takes every box away.
 
 A song costs the server one Opus encoder (64 kbit, one channel) and about 70 kbit a second to every player in
 range of the box. Boxes go with the level; a `map_restart` keeps them.
@@ -105,25 +105,25 @@ On a server without the game module of this tree the masterserver keeps the boxe
 (`codemp/master/ms_boombox.c`), up to four, and plays their songs. A player sees no difference, but for three:
 what is put on is announced only to the players near the box, the masterserver plays a few songs at once for all
 servers together (a song waits when they all play), and it does not know the level, so a box stands where the
-client of the player found a floor. It needs the voice link to the masterserver (`cg_voiceMaster 1`, the
+client of the player found a floor. It needs the voice link to the masterserver (`v_voiceMaster 1`, the
 default), also with the voice chat switched off.
 
 | Cvar of the masterserver | Default | Meaning |
 |------|---------|---------|
-| `sv_masterBoxes` | 8 | songs it plays at once for all servers, 16 at most. 0: no boxes |
+| `vs_masterBoxes` | 8 | songs it plays at once for all servers, 16 at most. 0: no boxes |
 
-It starts the programs the owner named for its game module (`g_boomboxYtdlp`, `g_boomboxFfmpeg`,
-`g_boomboxYtdlpArgs`) and takes its limits (`g_boomboxMaxSeconds`, `g_boomboxQueue`), once a second. Its line of
+It starts the programs the owner named for its game module (`vs_boomboxYtdlp`, `vs_boomboxFfmpeg`,
+`vs_boomboxYtdlpArgs`) and takes its limits (`vs_boomboxMaxSeconds`, `vs_boomboxQueue`), once a second. Its line of
 numbers says once a minute how many rooms have boxes and how many songs play.
 
 ## How it works
 
 `codemp/game/boombox` (server), `codemp/cgame/boombox` (client), the protocol in `game/boombox/bg_boombox.h`.
 
-A box is no entity. A cgame of this tree on a server that says `g_boombox` asks `jpbox hello` and is answered
-`jpbox on`, the state of every box (`jpbox set`), every change of it, and `jpbox gone`; lines for the chat box
-come as `jpbox note`. Nothing of it goes to a client that did not ask. What a player does is the client command
-`boombox`, of which the cgame sends one a second at most (the flood protection of the server drops a command
+A box is no entity. A cgame of this tree on a server that says `vs_boombox` asks `vs_box hello` and is answered
+`vs_box on`, the state of every box (`vs_box set`), every change of it, and `vs_box gone`; lines for the chat box
+come as `vs_box note`. Nothing of it goes to a client that did not ask. What a player does is the client command
+`vs_boxaction`, of which the cgame sends one a second at most (the flood protection of the server drops a command
 that comes within a second of another one); five clicks on Louder go out as one.
 
 A song: `yt-dlp` looks it up first (`--print` of its id, length, whether it is live, and title: nothing is

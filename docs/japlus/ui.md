@@ -14,9 +14,9 @@ HUD of its own gets them drawn as it always did, see "For mods".
 
 | Cvar | Default | Meaning |
 |------|---------|---------|
-| `ui_classic` | 0 | 1: the menus as they were (the JA+ ones). Counts from the next start of the game, or after `vid_restart` |
-| `cg_hud` | 1 | 0: the HUD of the game |
-| `cg_hudFiles` | ui/jahud.txt | as before. 1 is still the HUD of plain numbers and wins over `cg_hud` |
+| `v_classic` | 0 | 1: the menus as they were (the JA+ ones). Counts from the next start of the game, or after `vid_restart` |
+| `v_hud` | 1 | 0: the HUD of the game |
+| `cg_hudFiles` | ui/jahud.txt | as before. 1 is still the HUD of plain numbers and wins over `v_hud` |
 
 Both are in Setup under Interface.
 
@@ -32,15 +32,15 @@ Both are in Setup under Interface.
   keys, which walk through every row. Left and right change the row in focus from the keyboard. The bar at
   the bottom has the way back, the defaults, and the button that restarts the video once a video setting
   was changed.
-- In a game the menus are panels over the level, which is out of focus behind them (`r_menuBlur`). Where the
-  menu stands in the level (`cg_immersiveMenu 1`) the panel behind it is as large as what is open: the bar
+- In a game the menus are panels over the level, which is out of focus behind them (`v_menuBlur`). Where the
+  menu stands in the level (`v_immersiveMenu 1`) the panel behind it is as large as what is open: the bar
   at the top alone is a bar.
 - A skin without an icon has a tile with the outline of a head in the list of models, in place of the red
   question mark of JA+ (`Skin_NoPicture`).
 - A blade in one of the seven fixed colours has no style: its row says "Fixed Color". The moment one of its
   three sliders is moved it gets the plain style of a mixed blade (`UI_SaberMixFrame`), so no slider of the
   page is without effect, and a click on one of the seven colours makes it a fixed one again.
-- The scoreboard (`cg_hud 1`, since 2026-10-12): one panel in the middle of the screen. At its head the server,
+- The scoreboard (`v_hud 1`, since 2026-10-12): one panel in the middle of the screen. At its head the server,
   the kind of game and the level, at the right who leads or where one stands. Then a row for every player with
   the picture of his model (or the flag he carries, his class in a siege), his name, score (with deaths on a
   JA+ server), ping and time, by team in a team game with a line for each team and what it has, and who
@@ -64,8 +64,8 @@ Both are in Setup under Interface.
 - The line on the first page that says a new version is out is a pill of the glass under the two panels.
 - Black letters (`^0`) are a dark grey in the letters of the look, wherever they are written: they stand on
   dark glass, where black can not be read (`R_FontTTF_CodeColor`).
-- The Setup of the classic menus has an entry "New Menus" at the end of its list: it switches `ui_classic` off
-  and `cg_hud` on and restarts the video. Without it the way back was the console.
+- The Setup of the classic menus has an entry "New Menus" at the end of its list: it switches `v_classic` off
+  and `v_hud` on and restarts the video. Without it the way back was the console.
 - The HUD: health and shield at the bottom left, force at the bottom right with the ammo of the weapon or the
   stance of the saber under it, the score above. The health bar turns amber below half and red below a
   quarter.
@@ -98,14 +98,14 @@ Both are in Setup under Interface.
   the level, the kind of game, the server, what is being loaded and how far it is.
 - The console is dark glass with a light blue line under it, in place of the picture of the game.
 
-It needs the engine of this tree (`cl_uiSkin 1`). In another engine the ui module loads the menus of before by
+It needs the engine of this tree (`v_uiSkin 1`). In another engine the ui module loads the menus of before by
 itself, and the cgame draws the HUD of the game.
 
 ## For mods
 
 What the ui loads:
 
-| | New look | With `ui_classic 1`, in another engine, or with a mod's menus |
+| | New look | With `v_classic 1`, in another engine, or with a mod's menus |
 |---|----------|------|
 | outside a game | `ui/visionmenus.txt`, which lists `ui/vision/*.menu` | `ui/jampmenus.txt`, which lists `ui/jamp/*.menu` |
 | in a game | `ui/visioningame.txt` | `ui/jampingame.txt` |
@@ -228,13 +228,13 @@ is longer than that now gets a warning in the console when it is read.
 | `ui/ui_skin.c`, `ui_skin.h` | the pictures (a disc and its rim for every radius in pixels, a soft light, the sky), panels, the widgets, the pointer of the mouse, the icon as a picture and as a box of polygons in a scene of its own, the panel of the connect and loading screens (`Skin_LoadPanel`). Built into ui and cgame |
 | `ui/ui_shared.c` | the new words, the panel style, the branches of the widgets, items bound to a number, and the options screens: pages (`Menu_SetPage`), the list of a page (`Menu_ScrollTo`, `Menu_ScrollFrame`), a setting as a row (`Item_Row_Paint`, `Item_Row_HandleKey`), the buttons of a row by the width of their words (`Menu_TabsLayout`), what the item in focus is for (`Item_Desc_Paint`) |
 | `ui/ui_main.c` | which list is loaded (`UI_NewLookList`), the pointer |
-| `cgame/hud/cg_hud.c` | the numbers by name, loading and painting the HUD, the screen while a level loads (`cg_showLoading 1`, a cheat, holds it over the game to look at it), whether the new look is the one drawn (`CG_HudNewLook`), texts in the language of the game (`CG_VisionText`) and cut to a width (`CG_TextCut`) |
+| `cgame/hud/cg_hud.c` | the numbers by name, loading and painting the HUD, the screen while a level loads (`v_showLoading 1`, a cheat, holds it over the game to look at it), whether the new look is the one drawn (`CG_HudNewLook`), texts in the language of the game (`CG_VisionText`) and cut to a width (`CG_TextCut`) |
 | `cgame/hud/cg_scores.c` | the scoreboard of the new look, its rows for the pointer, keeping it open |
 | `cgame/chat/cg_chat.c`, `cgame/select/cg_select.c` | the chat box and the card of a player, which draw with the same pieces |
-| `client/cl_console.cpp` | the background of the console, unless `ui_classic 1` |
+| `client/cl_console.cpp` | the background of the console, unless `v_classic 1` |
 | `shared/sdl/sdl_icon.h`, `shared/icons/VisionJK.ico` | the icon of the window and of the Windows program, made from `img/logo-512.png` of the website |
 | `rd-common/tr_font.cpp`, `tr_font_ttf.cpp` | `vision_sans` and `vision_mono` as whole fonts for `R_RegisterFont` |
-| `client/cl_uiapi.cpp`, `ui/ui_public.h` | `R_RegisterShaderRGBA` in the ext block of the ui, announced by the cvar `cl_uiSkin` |
+| `client/cl_uiapi.cpp`, `ui/ui_public.h` | `R_RegisterShaderRGBA` in the ext block of the ui, announced by the cvar `v_uiSkin` |
 
 A shape with a round corner is made for the pixels its radius has in the window and is put on whole pixels,
 so its edge is as sharp at any size of the window. Nothing keeps time by itself: what moves goes by the clock
@@ -244,15 +244,15 @@ of the menus.
 
 | Page of Setup | Entries the old menus did not have |
 |---------------|-------------------------------------|
-| Video | Frame Limit (`com_maxfps`), Wide Screen Layout (`r_2dAspect`), Dynamic Glow (`r_DynamicGlow`) |
-| Sound | Room Reflections (`s_spatialReflections`), Sound Around Corners (`s_spatialPaths`), Doppler Effect (`s_doppler`) |
-| Interface | New HUD (`cg_hud`), Classic Menus (`ui_classic`), Menu in the Level (`cg_immersiveMenu`), Menu Blur (`r_menuBlur`), Show Frame Rate (`cg_drawFPS`), Show Timer (`cg_drawTimer`), Show Lagometer (`cg_lagometer`), Field of View (`cg_fov`), Camera Distance (`cg_thirdPersonRange`), Crosshair Size (`cg_crosshairSize`) |
-| Chat & Social | Chat Bubbles (`cg_chatBubbles`), Bubble Range (`cg_bubbleRange`), Player Statuses (`cg_playerStatuses`), Show My Music (`cg_shareMusic`), Keep Scoreboard on Double Tap (`cg_scoresPick`), Chat Box Size (`cg_chatBoxScale`), Chat Box Rows (`cg_chatBoxRows`), Select Players (`cg_selectPlayers`), Selection Outline (`cg_selectOutline`), Own Chat Line (`cg_chatInput`), Chat Box Width (`cg_chatBoxWidth`), Chat Beep (`cg_chatBeep`), Sharp Console Font (`con_font`), Console Text Size (`con_scale`), Console Opacity (`con_opacity`), Clan Password (`cp_clanPwd`, shown as stars) |
-| Network | Check for Updates (`cl_updateCheck`), Intrusion Log (`cl_ids`), Key Login by Agent (`cg_authAgent`), Key File (`cg_authKeyFile`), UTF-8 Text (`cl_utf8`) |
-| Controls, Extras | Free the Mouse (`+cursor`), Scoreboard with Mouse (`scores_pick`) |
+| Video | Frame Limit (`com_maxfps`), Wide Screen Layout (`v_2dAspect`), Dynamic Glow (`r_DynamicGlow`) |
+| Sound | Room Reflections (`v_spatialReflections`), Sound Around Corners (`v_spatialPaths`), Doppler Effect (`s_doppler`) |
+| Interface | New HUD (`v_hud`), Classic Menus (`v_classic`), Menu in the Level (`v_immersiveMenu`), Menu Blur (`v_menuBlur`), Show Frame Rate (`cg_drawFPS`), Show Timer (`cg_drawTimer`), Show Lagometer (`cg_lagometer`), Field of View (`cg_fov`), Camera Distance (`cg_thirdPersonRange`), Crosshair Size (`cg_crosshairSize`) |
+| Chat & Social | Chat Bubbles (`v_chatBubbles`), Bubble Range (`v_bubbleRange`), Player Statuses (`v_playerStatuses`), Show My Music (`v_shareMusic`), Keep Scoreboard on Double Tap (`v_scoresPick`), Chat Box Size (`v_chatBoxScale`), Chat Box Rows (`v_chatBoxRows`), Select Players (`v_selectPlayers`), Selection Outline (`v_selectOutline`), Own Chat Line (`v_chatInput`), Chat Box Width (`v_chatBoxWidth`), Chat Beep (`cg_chatBeep`), Sharp Console Font (`con_font`), Console Text Size (`con_scale`), Console Opacity (`con_opacity`), Clan Password (`cp_clanPwd`, shown as stars) |
+| Network | Check for Updates (`v_updateCheck`), Intrusion Log (`v_ids`), Key Login by Agent (`v_authAgent`), Key File (`v_authKeyFile`), UTF-8 Text (`v_utf8`) |
+| Controls, Extras | Free the Mouse (`+v_cursor`), Scoreboard with Mouse (`v_scores_pick`) |
 
-Left to the console on purpose: the names of sound devices (`cg_voiceCapture`, `cg_voicePlayback`, a menu
-can not list them), addresses (`cg_voiceMasterHost`, `cg_authAgentPath`, `cl_updateURL`), the finer numbers
+Left to the console on purpose: the names of sound devices (`v_voiceCapture`, `v_voicePlayback`, a menu
+can not list them), addresses (`v_voiceMasterHost`, `v_authAgentPath`, `v_updateURL`), the finer numbers
 of the spatial sound and of the renderers, and what the game had no entry for either. The classic menus do
 not have the new entries.
 
@@ -294,7 +294,7 @@ proper layout. Not centered etc."), with two pictures: Setup with its sections i
 and the window of an error as two frames that did not fit each other, see-through, over the first page. Every
 picture before had been of a page a console command had opened, never of one after a click. So:
 
-- The ui has a command for scripts, `ui_mouse <x> <y> [click]`: the pointer goes to a place in the 640 x 480
+- The ui has a command for scripts, `v_uiMouse <x> <y> [click]`: the pointer goes to a place in the 640 x 480
   units of the menus and the left button is pressed there. `ui_openmenu <menu> over` opens a menu on top of
   what is open, as a button of a page does.
 - `agent/japlus_port/tools/uitest/plan.py` writes a script that opens every menu of both lists, clicks every
@@ -303,7 +303,7 @@ picture before had been of a page a console command had opened, never of one aft
   nine with their names, `uitest/audit.py` lists every colour of the generated files that is not one of the
   theme, `uitest/outline.py` prints a menu as one line an item.
 - All of them were looked at, on `rd-vulkan-vision` at 1280 x 720 with `r_DynamicGlow 1` and 8 samples, the
-  in-game ones with `cg_immersiveMenu 0`. The two screens of the report again at 2560 x 1440, 2560 x 1080 and
+  in-game ones with `v_immersiveMenu 0`. The two screens of the report again at 2560 x 1440, 2560 x 1080 and
   1280 x 1024 and on `rd-vanilla`, the error with the test error of the engine (`error`, `developer 1`).
 
 What was wrong, and is what the rules above are for: colours set by click scripts were only translated when
@@ -334,7 +334,7 @@ then run with `+set se_language german` as well.
   the purple of the old game from it.
 - Setup hides the new tabs when it opens. It showed its first tab over the one left open.
 - Left out of the new look (`LEFT_OUT`): Chat Bubbles and Show My Music under Voice Chat (they are under Chat &
-  Social), Allow Downloads under Game Options (it is under Network), the row of `cg_voiceMaster` under Network (it is "On
+  Social), Allow Downloads under Game Options (it is under Network), the row of `v_voiceMaster` under Network (it is "On
   Other Servers" under Voice Chat), View Swaying (`ui_disableWeaponSway` is read by nothing in this tree) and the
   axes of a joystick as buttons (`joy_xbutton`, `joy_ybutton`, the same). Every other row of Setup and Controls
   names a cvar that the engine, a renderer or the cgame reads. The Vulkan renderer is built from the files of
@@ -372,7 +372,7 @@ that have one (hilts, maps, servers, demos, mods, players to vote on, sets of fo
 French and Spanish (2026-10-12): the options screens were looked at in both, at 1920 x 1080 (`clienttests/ui_lang.cfg`).
 
 Not checked: the pages of siege in a game of siege (their pictures are missing outside one), most in-game
-windows standing in the level (`cg_immersiveMenu 1`, the default: Setup and the vote window were looked at
+windows standing in the level (`v_immersiveMenu 1`, the default: Setup and the vote window were looked at
 that way, at 2560 x 1440), a mouse in a hand, the icon of the window
 and of the program on a desktop, a real download, the connect screen when a server refuses, another language
 than English and German, a mod's menus next to the new look, how it feels to use. Of the options screens:

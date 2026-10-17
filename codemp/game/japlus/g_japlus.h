@@ -65,17 +65,17 @@ typedef struct jpClient_s {
 	int			badWordCount;			// detections of the word filter
 	char		sayTeamMode[32];		// say_team_mod: "", normal, clan, admin or ampsay
 	char		clanPass[64];			// clanpass, clan chat reaches players with the same pass
-	qboolean	utf8;					// the client reads and writes UTF-8 (cl_utf8Text of its userinfo), see JP_ChatFor()
+	qboolean	utf8;					// the client reads and writes UTF-8 (v_utf8Text of its userinfo), see JP_ChatFor()
 
 	// what stands above the head (status/g_status.c)
-	int			statusCaps;				// cjp_caps of the userinfo: what the cgame of the client draws, bit 0 statuses,
+	int			statusCaps;				// v_caps of the userinfo: what the cgame of the client draws, bit 0 statuses,
 										//	bit 1 who plays with a client of this tree
-	char		vision[24];				// cjp_vision of the userinfo: the VisionJK of this player, nothing for any other client
+	char		vision[24];				// v_vision of the userinfo: the VisionJK of this player, nothing for any other client
 	qboolean	visionSet;				// since he connected the userinfo was looked at for it
-	qboolean	statusAway;				// no sign of life for g_afkTime seconds
+	qboolean	statusAway;				// no sign of life for vs_afkTime seconds
 	char		statusMusic[64];		// what the client says its player listens to
-	int			statusCmdTime;			// of its last jpstatus command
-	int			statusAllTime;			// of its last "jpstatus all"
+	int			statusCmdTime;			// of its last vs_status command
+	int			statusAllTime;			// of its last "vs_status all"
 	int			statusInputTime;		// when its commands last changed, 0: none came yet
 	int			statusButtons;			// the command they are compared with
 	signed char	statusMove[3];

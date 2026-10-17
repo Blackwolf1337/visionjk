@@ -30,15 +30,15 @@ scenarios in the VM and sends back logs and pictures.
 | The new HUD | health, shield, force, saber, score, as on Linux |
 | The menu in the level | the panel stands beside the player with the in-game bar and Setup on it (rd-vanilla) |
 | Sound | SDL opens the device through WASAPI |
-| Spatial sound (`s_spatial 1`) | `phonon.dll` is loaded (Steam Audio 4.8.1), the level is handed over (50749 triangles of mp/ffa3 in 96 ms) and its paths are worked out in the background (740 probes) and stored. It is off by default on Windows |
-| Voice chat, devices | `voice_devices` lists the microphone and the speakers of Windows by name |
-| Voice chat, two games | one game is the server and sends the test tone, a second one joins it over the loopback address: "Padawan talks, 8583 frames heard". Relay of the Windows game module, both ends on Windows. What the second game played was written to a file: the tone, both pitches, without a gap in 4 seconds on the sound device of Windows and in 22 seconds on the device that plays into nothing. `voice_status` says the speakers run ("16.4 seconds played so far", 4 seconds later 20.4) |
+| Spatial sound (`v_spatial 1`) | `phonon.dll` is loaded (Steam Audio 4.8.1), the level is handed over (50749 triangles of mp/ffa3 in 96 ms) and its paths are worked out in the background (740 probes) and stored. It is off by default on Windows |
+| Voice chat, devices | `v_voice_devices` lists the microphone and the speakers of Windows by name |
+| Voice chat, two games | one game is the server and sends the test tone, a second one joins it over the loopback address: "Padawan talks, 8583 frames heard". Relay of the Windows game module, both ends on Windows. What the second game played was written to a file: the tone, both pitches, without a gap in 4 seconds on the sound device of Windows and in 22 seconds on the device that plays into nothing. `v_voice_status` says the speakers run ("16.4 seconds played so far", 4 seconds later 20.4) |
 | Clan radio | both the relay of a server and the one for servers without the module (the masterserver's, a program of its own then) say they have it. Not talked over |
-| Statuses, by the server | both players read the music of the other (`status_test`), and each is "Away from keyboard" after a minute without a key |
-| Music from a window title | a window whose title ends in " - YouTube Music" (Notepad with a file of that name stood in for the browser): "Listening to YT Music: Test Band Windows Song" above the player. `statuses` now also says what music the game finds |
+| Statuses, by the server | both players read the music of the other (`v_status_test`), and each is "Away from keyboard" after a minute without a key |
+| Music from a window title | a window whose title ends in " - YouTube Music" (Notepad with a file of that name stood in for the browser): "Listening to YT Music: Test Band Windows Song" above the player. `v_statuses` now also says what music the game finds |
 | The relay for servers without the module | a Windows build of it as a program of its own ("the master", the voice master of then) ran in the VM. A game on a server that says nothing of voice (a stand-in game module) and reached by the address of the network links to it: "through the voice master ... connected" (the line of then), and its statuses go through it. With one player there, so nobody was heard that way |
-| Admin login, key file | `amkey new` writes the key, the server reads it from `admin_keys.txt`, `amkey login` logs in, with `sv_floodProtect 1` |
-| Admin login, ssh-agent | the OpenSSH agent of Windows (its service has to be switched on, which asks for the administrator once) holds an Ed25519 key, `cg_authAgent 1`: "Waiting for your ssh-agent to sign", then logged in |
+| Admin login, key file | `v_amkey new` writes the key, the server reads it from `admin_keys.txt`, `v_amkey login` logs in, with `sv_floodProtect 1` |
+| Admin login, ssh-agent | the OpenSSH agent of Windows (its service has to be switched on, which asks for the administrator once) holds an Ed25519 key, `v_authAgent 1`: "Waiting for your ssh-agent to sign", then logged in |
 | Chat | a line with umlauts, the euro sign and Greek letters is sent and comes back as it was typed |
 | Demos | `record` writes one |
 | A long run | three bots (Alora, Desann, Cultist) fought for eight and a half minutes on mp/ffa3 next to a player who stood still. The game took 448 to 454 MB at eight looks a minute apart, with no trend, and its log has no error |
@@ -49,14 +49,14 @@ scenarios in the VM and sends back logs and pictures.
 
 - The outline of a clicked player crashed the game on any system: fixed before it was committed, see
   [client.md](client.md), "Clickable players". Found by the Linux run that was made for this one.
-- `s_spatial` is 0 by default on Windows and 1 on Linux. Nothing was wrong with 1 here. Left as it is: nobody
+- `v_spatial` is 0 by default on Windows and 1 on Linux. Nothing was wrong with 1 here. Left as it is: nobody
   has listened to it on Windows.
 - Tests, not the game: the bot of the first run did not exist by that name, the script of a game that joins
   another one ran out before it was in (it draws fewer frames than the server next to it, and a script
   counts frames), and a little program that was to stand in for Spotify did not stay alive in the VM. All of
   it was run again in another way.
-- Two commands say more since this run, because the run needed to know: `voice_status` tells whether the
-  speakers really play, `statuses` what music is found.
+- Two commands say more since this run, because the run needed to know: `v_voice_status` tells whether the
+  speakers really play, `v_statuses` what music is found.
 
 Nothing in the Windows code had to be changed.
 

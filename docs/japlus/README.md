@@ -9,6 +9,17 @@ was never released. Everything here was rebuilt from the released binaries:
 
 The port starts from OpenJK commit 260c59c2 (2026-09-29) and is the commits on top of that history.
 
+## Names
+
+Since 2026-10-17 every cvar and command this tree added begins with `v_` (the client: cgame, ui, engine client,
+sound, renderer, and the console commands of the client) or `vs_` (the server: game module, dedicated server,
+masterserver, its console commands, and the commands client and server send each other). Stock OpenJK and JA+
+names keep theirs. `codemp/qcommon/cvar_renames.h` lists every old name with its new one. A value stored or set
+under an old name, and a bind with an old command, is taken over by the engine with a line on the console, so
+a config with the old names keeps working and says what to change. The commands between client and server are
+renamed too: a client or server of 0.1.7 or before does not understand them, so voice chat, statuses, boombox
+and the key login only work between versions from after the change.
+
 ## Documents
 
 | File | Content |
@@ -25,10 +36,10 @@ The port starts from OpenJK commit 260c59c2 (2026-09-29) and is the commits on t
 | [ui.md](ui.md) | The new look of menus and HUD (not a JA+ feature): what a player sees, what a mod's files get, the new words of the menu files, how the menus are made |
 | [windows.md](windows.md) | The Windows client run as a whole on Windows 11: what ran, what it found, what is still unchecked |
 | [voice.md](voice.md) | Voice chat with the microphone (not a JA+ feature): in the cgame, relayed by the game module, engine unchanged, clients without it unaffected |
-| [boombox.md](boombox.md) | Boxes that play songs of YouTube (not a JA+ feature): fetched by the server, sent over the relay of the voice chat, a sound of the level with `s_spatial`, only VisionJK players see and hear them. Never run |
-| [audio.md](audio.md) | Sound that knows the level (not a JA+ feature): `s_spatial`, with Steam Audio in the engine. Walls muffle, rooms ring, sounds come round corners. Measured, not listened to yet |
+| [boombox.md](boombox.md) | Boxes that play songs of YouTube (not a JA+ feature): fetched by the server, sent over the relay of the voice chat, a sound of the level with `v_spatial`, only VisionJK players see and hear them. Never run |
+| [audio.md](audio.md) | Sound that knows the level (not a JA+ feature): `v_spatial`, with Steam Audio in the engine. Walls muffle, rooms ring, sounds come round corners. Measured, not listened to yet |
 | [renderer.md](renderer.md) | rd-vulkan-vision, a Vulkan renderer next to rd-vanilla (not a JA+ feature): how it is built, the state of each part, what runs on the GPU, differences, what is left |
-| [web.md](web.md) | The client in a browser (not a JA+ feature): built as WebAssembly, handed out by the dedicated server itself (`sv_webPort`), packets through a WebSocket. What runs and what never ran |
+| [web.md](web.md) | The client in a browser (not a JA+ feature): built as WebAssembly, handed out by the dedicated server itself (`vs_clientWebPort`), packets through a WebSocket. What runs and what never ran |
 
 ## Where the code is
 
@@ -96,7 +107,7 @@ modules, it plays with its own cgame and ui.
 Both configurations build without errors. The code keeps to the rules of the surrounding files: C, no
 assumptions about pointer size in the game code, bounded string functions.
 
-The client can use Steam Audio for its sound (`s_spatial`, [audio.md](audio.md)). For that Valve's repository
+The client can use Steam Audio for its sound (`v_spatial`, [audio.md](audio.md)). For that Valve's repository
 is a submodule, `lib/steamaudio`: `git submodule update --init` once after a clone. Without it the client is
 built without the feature.
 
@@ -129,7 +140,7 @@ A start without arguments runs in `japlus`: it is the default of `fs_game` in th
 `codemp/qcommon/q_shared.h`), for the client and for the dedicated server. So the menus, sabers and effects of
 the port are there from the first picture on. The same command on the Windows build directory gives the `.exe`, `SDL2.dll` and the `.dll` files in
 the same layout. A config that is already in the folder is kept, so an edited `server.cfg` survives the next
-install. Not in the folder, because the build does not make them: `libphonon.so` of Steam Audio for `s_spatial`
+install. Not in the folder, because the build does not make them: `libphonon.so` of Steam Audio for `v_spatial`
 ([audio.md](audio.md)), and on Windows `libwinpthread-1.dll`
 of mingw. On macOS the modules are installed into the app as before.
 

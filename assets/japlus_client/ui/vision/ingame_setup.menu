@@ -383,11 +383,11 @@
 
 		itemDef
 		{
-			name					vision_yesno_r_2daspect
+			name					vision_yesno_v_2daspect
 			type					ITEM_TYPE_YESNO
 			text					@VISION_WIDE_SCREEN_LAYOUT
 			descText				@VISION_MENUS_AND_HUD_KEEP_THEIR_SHAPE_ON_A
-			cvar					"r_2dAspect"
+			cvar					"v_2dAspect"
 			action { play "sound/interface/button1.wav" ; }
 			rect					12 214 380 22
 			page					1
@@ -832,13 +832,13 @@
 			group					sound
 			type					ITEM_TYPE_MULTI
 			text					@VISION_3D_SOUND
-			cvar					"ui_s_spatialQuality"
+			cvar					"v_spatialQuality"
 			cvarFloatList { @MENUS_OFF 0 @MENUS_LOW 1 @MENUS_MEDIUM 2 @MENUS_HIGH 3 @MENUS_VERY_HIGH 4 @MENUS_CUSTOM 5 }
 			descText				@VISION_STEAM_AUDIO_SOUND_THAT_KNOWS_THE_LEV
 			action
 			{
 				play "sound/interface/button1"
-				uiScript update ui_s_spatialQuality
+				uiScript update v_spatialQuality
 			}
 			rect					12 148 380 22
 			page					2
@@ -856,7 +856,7 @@
 			group					sound
 			type					ITEM_TYPE_MULTI
 			text					@VISION_OUTPUT
-			cvar					"s_spatialHrtf"
+			cvar					"v_spatialHrtf"
 			cvarFloatList { @VISION_HEADPHONES 1 @VISION_SPEAKERS 0 }
 			descText				@VISION_3D_SOUND_DIRECTION_FOR_TWO_EARS_OR_P
 			action { play "sound/interface/button1" }
@@ -876,7 +876,7 @@
 			group					sound
 			type					ITEM_TYPE_SLIDER
 			text					@VISION_REVERB
-			cvarfloat				"s_spatialReverb" 1 0 2
+			cvarfloat				"v_spatialReverb" 1 0 2
 			descText				@VISION_3D_SOUND_HOW_LOUD_THE_ROOMS_RING
 			action { play "sound/interface/button1" }
 			rect					12 192 380 22
@@ -891,11 +891,11 @@
 
 		itemDef
 		{
-			name					vision_yesno_s_spatialreflections
+			name					vision_yesno_v_spatialreflections
 			type					ITEM_TYPE_YESNO
 			text					@VISION_ROOM_REFLECTIONS
 			descText				@VISION_THE_ROOM_AROUND_YOU_RINGS
-			cvar					"s_spatialReflections"
+			cvar					"v_spatialReflections"
 			action { play "sound/interface/button1.wav" ; }
 			rect					12 214 380 22
 			page					2
@@ -909,11 +909,11 @@
 
 		itemDef
 		{
-			name					vision_yesno_s_spatialpaths
+			name					vision_yesno_v_spatialpaths
 			type					ITEM_TYPE_YESNO
 			text					@VISION_SOUND_AROUND_CORNERS
 			descText				@VISION_A_SOUND_FINDS_ITS_WAY_AROUND_CORNERS
-			cvar					"s_spatialPaths"
+			cvar					"v_spatialPaths"
 			action { play "sound/interface/button1.wav" ; }
 			rect					12 236 380 22
 			page					2
@@ -977,7 +977,7 @@
 			group					voicechat
 			type					ITEM_TYPE_YESNO
 			text					@VISION_VOICE_CHAT
-			cvar					"cg_voice"
+			cvar					"v_voice"
 			descText				@VISION_TALK_TO_AND_HEAR_OTHER_PLAYERS_WITH
 			action { play "sound/interface/button1" }
 			rect					12 302 380 22
@@ -996,7 +996,7 @@
 			group					voicechat
 			type					ITEM_TYPE_MULTI
 			text					@VISION_MODE
-			cvar					"cg_voiceMode"
+			cvar					"v_voiceMode"
 			cvarFloatList { @VISION_PUSH_TO_TALK 1 @VISION_VOICE_ACTIVATION 2 }
 			descText				@VISION_PUSH_TO_TALK_HOLD_THE_TALK_KEY_CONTR
 			action { play "sound/interface/button1" }
@@ -1016,7 +1016,7 @@
 			group					voicechat
 			type					ITEM_TYPE_SLIDER
 			text					@VISION_VOICE_CHAT_VOLUME
-			cvarfloat				"cg_voiceVolume" 1 0 2
+			cvarfloat				"v_voiceVolume" 1 0 2
 			descText				@VISION_HOW_LOUD_THE_OTHER_PLAYERS_ARE
 			action { play "sound/interface/button1" }
 			rect					12 346 380 22
@@ -1035,7 +1035,7 @@
 			group					voicechat
 			type					ITEM_TYPE_SLIDER
 			text					@VISION_MICROPHONE_GAIN
-			cvarfloat				"cg_voiceMicGain" 1 0 3
+			cvarfloat				"v_voiceMicGain" 1 0 3
 			descText				@VISION_HOW_LOUD_YOUR_MICROPHONE_IS_SENT
 			action { play "sound/interface/button1" }
 			rect					12 368 380 22
@@ -1054,7 +1054,7 @@
 			group					voicechat
 			type					ITEM_TYPE_SLIDER
 			text					@VISION_ACTIVATION_LEVEL
-			cvarfloat				"cg_voiceThreshold" 0.02 0 0.2
+			cvarfloat				"v_voiceThreshold" 0.02 0 0.2
 			descText				@VISION_VOICE_ACTIVATION_HOW_LOUD_YOU_HAVE_T
 			action { play "sound/interface/button1" }
 			rect					12 390 380 22
@@ -1073,7 +1073,7 @@
 			group					voicechat
 			type					ITEM_TYPE_YESNO
 			text					@VISION_MUFFLE_BEHIND_WALLS
-			cvar					"cg_voiceMuffle"
+			cvar					"v_voiceMuffle"
 			descText				@VISION_VOICES_BEHIND_WALLS_AND_UNDER_WATER
 			action { play "sound/interface/button1" }
 			rect					12 412 380 22
@@ -1092,7 +1092,7 @@
 			group					voicechat
 			type					ITEM_TYPE_YESNO
 			text					@VISION_SHOW_WHO_TALKS
-			cvar					"cg_voiceDrawTalkers"
+			cvar					"v_voiceDrawTalkers"
 			descText				@VISION_A_LIST_OF_THE_PLAYERS_WHO_ARE_TALKIN
 			action { play "sound/interface/button1" }
 			rect					12 434 380 22
@@ -1111,7 +1111,7 @@
 			group					voicechat
 			type					ITEM_TYPE_YESNO
 			text					@VISION_ON_OTHER_SERVERS
-			cvar					"cg_voiceMaster"
+			cvar					"v_voiceMaster"
 			descText				@VISION_SERVERS_WITHOUT_VOICE_USE_MASTER_JKA
 			action { play "sound/interface/button1" }
 			rect					12 456 380 22
@@ -1130,7 +1130,7 @@
 			group					voicechat
 			type					ITEM_TYPE_SLIDER
 			text					@VISION_OWN_VOICE_IN_THE_ROOM
-			cvarfloat				"cg_voiceOwnReverb" 1 0 2
+			cvarfloat				"v_voiceOwnReverb" 1 0 2
 			descText				@VISION_WITH_SPATIAL_SOUND_HOW_LOUD_THE_ROOM
 			action { play "sound/interface/button1" }
 			rect					12 478 380 22
@@ -1149,7 +1149,7 @@
 			group					voicechat
 			type					ITEM_TYPE_YESNO
 			text					@VISION_RADIO_SOUND
-			cvar					"cg_voiceRadioFX"
+			cvar					"v_voiceRadioFX"
 			descText				@VISION_THE_CLAN_RADIO_SOUNDS_LIKE_ONE_NARRO
 			action { play "sound/interface/button1" }
 			rect					12 500 380 22
@@ -1192,11 +1192,11 @@
 
 		itemDef
 		{
-			name					vision_yesno_cg_boombox
+			name					vision_yesno_v_boomboxes
 			type					ITEM_TYPE_YESNO
 			text					@VISION_BOOMBOXES
 			descText				@VISION_SEE_AND_HEAR_THE_BOOMBOXES_ON_A_VISI
-			cvar					"cg_boombox"
+			cvar					"v_boomboxes"
 			action { play "sound/interface/button1.wav" ; }
 			rect					12 544 380 22
 			page					2
@@ -1210,11 +1210,11 @@
 
 		itemDef
 		{
-			name					vision_slider_cg_boomboxvolume
+			name					vision_slider_v_boomboxvolume
 			type					ITEM_TYPE_SLIDER
 			text					@VISION_BOOMBOX_VOLUME
 			descText				@VISION_HOW_LOUD_THE_SONGS_OF_THE_BOOMBOXES
-			cvarfloat				"cg_boomboxVolume" 0.6 0 1
+			cvarfloat				"v_boomboxVolume" 0.6 0 1
 			action { play "sound/interface/button1.wav" ; }
 			rect					12 566 380 22
 			page					2
@@ -1585,7 +1585,7 @@
 			group					botmode
 			type					ITEM_TYPE_YESNO
 			text					@VISION_BOT_MODE
-			cvar					"cg_botMode"
+			cvar					"v_botMode"
 			descText				@VISION_YOUR_CLIENT_PLAYS_BY_ITSELF_ON_ANY_S
 			action { play "sound/interface/button1" }
 			rect					12 346 380 22
@@ -1604,7 +1604,7 @@
 			group					botmode
 			type					ITEM_TYPE_MULTI
 			text					@VISION_SKILL
-			cvar					"cg_botModeSkill"
+			cvar					"v_botModeSkill"
 			cvarFloatList { @VISION_INITIATE 1 @VISION_PADAWAN 2 @VISION_JEDI 3 @VISION_JEDI_KNIGHT 4 @VISION_JEDI_MASTER 5 }
 			descText				@VISION_HOW_FAST_IT_TURNS_HOW_WELL_IT_AIMS_A
 			action { play "sound/interface/button1" }
@@ -1624,7 +1624,7 @@
 			group					botmode
 			type					ITEM_TYPE_MULTI
 			text					@VISION_FIGHT
-			cvar					"cg_botModeFight"
+			cvar					"v_botModeFight"
 			cvarFloatList { @VISION_NEVER 0 @VISION_IN_DUELS 1 @VISION_ALWAYS 2 }
 			descText				@VISION_WHOM_IT_ATTACKS_NOBODY_ONLY_THE_ONE
 			action { play "sound/interface/button1" }
@@ -1644,7 +1644,7 @@
 			group					botmode
 			type					ITEM_TYPE_YESNO
 			text					@VISION_WALK_THE_ROUTE
-			cvar					"cg_botModeRoam"
+			cvar					"v_botModeRoam"
 			descText				@VISION_OFF_IT_STAYS_WHERE_IT_IS_AND_ONLY_TU
 			action { play "sound/interface/button1" }
 			rect					12 412 380 22
@@ -1663,7 +1663,7 @@
 			group					botmode
 			type					ITEM_TYPE_YESNO
 			text					@VISION_KEYS_TAKE_OVER
-			cvar					"cg_botModeKeys"
+			cvar					"v_botModeKeys"
 			descText				@VISION_A_MOVE_OR_ATTACK_KEY_ENDS_THE_BOT_MO
 			action { play "sound/interface/button1" }
 			rect					12 434 380 22
@@ -1706,11 +1706,11 @@
 
 		itemDef
 		{
-			name					vision_yesno_cg_hud
+			name					vision_yesno_v_hud
 			type					ITEM_TYPE_YESNO
 			text					@VISION_NEW_HUD
 			descText				@VISION_THE_HUD_OF_VISIONJK_OFF_THE_HUD_OF_T
-			cvar					"cg_hud"
+			cvar					"v_hud"
 			action { play "sound/interface/button1.wav" ; }
 			rect					12 60 380 22
 			page					4
@@ -1724,11 +1724,11 @@
 
 		itemDef
 		{
-			name					vision_yesno_ui_classic
+			name					vision_yesno_v_classic
 			type					ITEM_TYPE_YESNO
 			text					@VISION_CLASSIC_MENUS
 			descText				@VISION_THE_MENUS_OF_THE_GAME_AS_THEY_WERE_C
-			cvar					"ui_classic"
+			cvar					"v_classic"
 			action { play "sound/interface/button1.wav" ; }
 			rect					12 82 380 22
 			page					4
@@ -1742,11 +1742,11 @@
 
 		itemDef
 		{
-			name					vision_yesno_cg_immersivemenu
+			name					vision_yesno_v_immersivemenu
 			type					ITEM_TYPE_YESNO
 			text					@VISION_MENU_IN_THE_LEVEL
 			descText				@VISION_IN_A_GAME_AN_OPEN_MENU_STANDS_IN_THE
-			cvar					"cg_immersiveMenu"
+			cvar					"v_immersiveMenu"
 			action { play "sound/interface/button1.wav" ; }
 			rect					12 104 380 22
 			page					4
@@ -1760,11 +1760,11 @@
 
 		itemDef
 		{
-			name					vision_slider_r_menublur
+			name					vision_slider_v_menublur
 			type					ITEM_TYPE_SLIDER
 			text					@VISION_MENU_BLUR
 			descText				@VISION_HOW_FAR_THE_LEVEL_BEHIND_AN_OPEN_MEN
-			cvarfloat				"r_menuBlur" 1 0 4
+			cvarfloat				"v_menuBlur" 1 0 4
 			action { play "sound/interface/button1.wav" ; }
 			rect					12 126 380 22
 			page					4
@@ -1942,11 +1942,11 @@
 
 		itemDef
 		{
-			name					vision_yesno_cg_chatbubbles
+			name					vision_yesno_v_chatbubbles
 			type					ITEM_TYPE_YESNO
 			text					@VISION_CHAT_BUBBLES
 			descText				@VISION_WHAT_A_PLAYER_SAYS_STANDS_ABOVE_HIS
-			cvar					"cg_chatBubbles"
+			cvar					"v_chatBubbles"
 			action { play "sound/interface/button1.wav" ; }
 			rect					12 60 380 22
 			page					5
@@ -1960,11 +1960,11 @@
 
 		itemDef
 		{
-			name					vision_slider_cg_bubblerange
+			name					vision_slider_v_bubblerange
 			type					ITEM_TYPE_SLIDER
 			text					@VISION_BUBBLE_RANGE
 			descText				@VISION_HOW_FAR_AWAY_A_BUBBLE_IS_STILL_DRAWN
-			cvarfloat				"cg_bubbleRange" 1200 300 3000
+			cvarfloat				"v_bubbleRange" 1200 300 3000
 			action { play "sound/interface/button1.wav" ; }
 			rect					12 82 380 22
 			page					5
@@ -1978,11 +1978,11 @@
 
 		itemDef
 		{
-			name					vision_yesno_cg_playerstatuses
+			name					vision_yesno_v_playerstatuses
 			type					ITEM_TYPE_YESNO
 			text					@VISION_PLAYER_STATUSES
 			descText				@VISION_AWAY_FROM_KEYBOARD_AND_MUSIC_ABOVE_T
-			cvar					"cg_playerStatuses"
+			cvar					"v_playerStatuses"
 			action { play "sound/interface/button1.wav" ; }
 			rect					12 104 380 22
 			page					5
@@ -1996,11 +1996,11 @@
 
 		itemDef
 		{
-			name					vision_yesno_cg_sharemusic
+			name					vision_yesno_v_sharemusic
 			type					ITEM_TYPE_YESNO
 			text					@VISION_SHOW_MY_MUSIC
 			descText				@VISION_TELL_THE_OTHERS_WHAT_YOU_LISTEN_TO_E
-			cvar					"cg_shareMusic"
+			cvar					"v_shareMusic"
 			action { play "sound/interface/button1.wav" ; }
 			rect					12 126 380 22
 			page					5
@@ -2014,11 +2014,11 @@
 
 		itemDef
 		{
-			name					vision_yesno_cg_selectplayers
+			name					vision_yesno_v_selectplayers
 			type					ITEM_TYPE_YESNO
 			text					@VISION_SELECT_PLAYERS
 			descText				@VISION_WITH_THE_MOUSE_FREE_A_CLICK_ON_A_PLA
-			cvar					"cg_selectPlayers"
+			cvar					"v_selectPlayers"
 			action { play "sound/interface/button1.wav" ; }
 			rect					12 148 380 22
 			page					5
@@ -2032,11 +2032,11 @@
 
 		itemDef
 		{
-			name					vision_yesno_cg_selectoutline
+			name					vision_yesno_v_selectoutline
 			type					ITEM_TYPE_YESNO
 			text					@VISION_SELECTION_OUTLINE
 			descText				@VISION_A_GLOWING_OUTLINE_AROUND_THE_PLAYER
-			cvar					"cg_selectOutline"
+			cvar					"v_selectOutline"
 			action { play "sound/interface/button1.wav" ; }
 			rect					12 170 380 22
 			page					5
@@ -2050,11 +2050,11 @@
 
 		itemDef
 		{
-			name					vision_yesno_cg_scorespick
+			name					vision_yesno_v_scorespick
 			type					ITEM_TYPE_YESNO
 			text					@VISION_KEEP_SCOREBOARD_ON_DOUBLE_TAP
 			descText				@VISION_THE_SCOREBOARD_KEY_PRESSED_TWICE_QUI
-			cvar					"cg_scoresPick"
+			cvar					"v_scoresPick"
 			action { play "sound/interface/button1.wav" ; }
 			rect					12 192 380 22
 			page					5
@@ -2096,11 +2096,11 @@
 
 		itemDef
 		{
-			name					vision_yesno_cg_chatinput
+			name					vision_yesno_v_chatinput
 			type					ITEM_TYPE_YESNO
 			text					@VISION_OWN_CHAT_LINE
 			descText				@VISION_TYPE_INTO_THE_CHAT_BOX_OF_VISIONJK_W
-			cvar					"cg_chatInput"
+			cvar					"v_chatInput"
 			action { play "sound/interface/button1.wav" ; }
 			rect					12 236 380 22
 			page					5
@@ -2114,11 +2114,11 @@
 
 		itemDef
 		{
-			name					vision_slider_cg_chatboxscale
+			name					vision_slider_v_chatboxscale
 			type					ITEM_TYPE_SLIDER
 			text					@VISION_CHAT_BOX_SIZE
 			descText				@VISION_HOW_LARGE_THE_CHAT_BOX_AND_ITS_TEXT
-			cvarfloat				"cg_chatBoxScale" 0.85 0.6 1.6
+			cvarfloat				"v_chatBoxScale" 0.85 0.6 1.6
 			action { play "sound/interface/button1.wav" ; }
 			rect					12 258 380 22
 			page					5
@@ -2132,11 +2132,11 @@
 
 		itemDef
 		{
-			name					vision_slider_cg_chatboxwidth
+			name					vision_slider_v_chatboxwidth
 			type					ITEM_TYPE_SLIDER
 			text					@VISION_CHAT_BOX_WIDTH
 			descText				@VISION_HOW_WIDE_THE_CHAT_BOX_IS
-			cvarfloat				"cg_chatBoxWidth" 380 200 600
+			cvarfloat				"v_chatBoxWidth" 380 200 600
 			action { play "sound/interface/button1.wav" ; }
 			rect					12 280 380 22
 			page					5
@@ -2150,11 +2150,11 @@
 
 		itemDef
 		{
-			name					vision_slider_cg_chatboxrows
+			name					vision_slider_v_chatboxrows
 			type					ITEM_TYPE_SLIDER
 			text					@VISION_CHAT_BOX_ROWS
 			descText				@VISION_HOW_MANY_LINES_THE_OPEN_CHAT_BOX_SHO
-			cvarfloat				"cg_chatBoxRows" 10 4 24
+			cvarfloat				"v_chatBoxRows" 10 4 24
 			action { play "sound/interface/button1.wav" ; }
 			rect					12 302 380 22
 			page					5
@@ -2344,11 +2344,11 @@
 
 		itemDef
 		{
-			name					vision_yesno_cl_updatecheck
+			name					vision_yesno_v_updatecheck
 			type					ITEM_TYPE_YESNO
 			text					@VISION_CHECK_FOR_UPDATES
 			descText				@VISION_ASK_AT_EVERY_START_WHETHER_A_NEWER_V
-			cvar					"cl_updateCheck"
+			cvar					"v_updateCheck"
 			action { play "sound/interface/button1.wav" ; }
 			rect					12 60 380 22
 			page					6
@@ -2390,11 +2390,11 @@
 
 		itemDef
 		{
-			name					vision_yesno_cl_ids
+			name					vision_yesno_v_ids
 			type					ITEM_TYPE_YESNO
 			text					@VISION_INTRUSION_LOG
 			descText				@VISION_WRITE_DOWN_WHAT_A_SERVER_SENDS_THAT
-			cvar					"cl_ids"
+			cvar					"v_ids"
 			action { play "sound/interface/button1.wav" ; }
 			rect					12 104 380 22
 			page					6
@@ -2408,11 +2408,11 @@
 
 		itemDef
 		{
-			name					vision_yesno_cg_authagent
+			name					vision_yesno_v_authagent
 			type					ITEM_TYPE_YESNO
 			text					@VISION_KEY_LOGIN_BY_AGENT
 			descText				@VISION_THE_ADMIN_LOGIN_ASKS_YOUR_SSH_AGENT
-			cvar					"cg_authAgent"
+			cvar					"v_authAgent"
 			action { play "sound/interface/button1.wav" ; }
 			rect					12 126 380 22
 			page					6
@@ -2426,11 +2426,11 @@
 
 		itemDef
 		{
-			name					vision_edit_cg_authkeyfile
+			name					vision_edit_v_authkeyfile
 			type					ITEM_TYPE_EDITFIELD
 			text					@VISION_KEY_FILE
 			descText				@VISION_THE_FILE_WITH_THE_KEY_FOR_THE_ADMIN
-			cvar					"cg_authKeyFile"
+			cvar					"v_authKeyFile"
 			maxChars				120
 			maxPaintChars			24
 			action { play "sound/interface/button1.wav" ; }
@@ -2474,11 +2474,11 @@
 
 		itemDef
 		{
-			name					vision_yesno_cl_utf8
+			name					vision_yesno_v_utf8
 			type					ITEM_TYPE_YESNO
 			text					@VISION_UTF_8_TEXT
 			descText				@VISION_EVERY_CHARACTER_IN_NAMES_AND_CHAT_OF
-			cvar					"cl_utf8"
+			cvar					"v_utf8"
 			action { play "sound/interface/button1.wav" ; }
 			rect					12 192 380 22
 			page					6

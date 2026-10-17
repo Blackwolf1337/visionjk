@@ -19,7 +19,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 */
 
 // cg_scores.c -- the scoreboard in the new look, and its rows as something to click. Not from JA+: the scoreboard
-// of the game with what JA+ added to it is cg_scoreboard.c, and it is the one that is drawn with cg_hud 0, in
+// of the game with what JA+ added to it is cg_scoreboard.c, and it is the one that is drawn with v_hud 0, in
 // another engine and next to the HUD of a mod.
 //
 // One panel in the middle of the screen: the server and the game at its head, then a row for every player with
@@ -30,8 +30,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 //
 // The rows can be clicked while the mouse is free (select/cg_select.c): the card of that player opens beside
 // the board. The key of the scoreboard is held while it shows and the mouse turns the view, so the board can be
-// kept: the key pressed twice quickly, or the command scores_pick, leaves it standing with the mouse free until
-// the key, Escape or the right button lets go of it. cg_scoresPick 0: no double tap.
+// kept: the key pressed twice quickly, or the command v_scores_pick, leaves it standing with the mouse free until
+// the key, Escape or the right button lets go of it. v_scoresPick 0: no double tap.
 
 #include "cgame/cg_local.h"
 #include "ui/ui_shared.h"
@@ -290,10 +290,10 @@ static void Scores_Head( float x, float y, float fade ) {
 	float		room = SCORES_W - 24.0f, right = 0.0f;
 	vec4_t		line;
 
-	if ( cg_selectPlayers.integer && !cg.demoPlayback ) {
+	if ( v_selectPlayers.integer && !cg.demoPlayback ) {
 		if ( scores.kept ) {
 			hint = CG_VisionTextWith( "Click a player. %s or Esc closes.", Scores_KeyName() );
-		} else if ( cg_scoresPick.integer ) {
+		} else if ( v_scoresPick.integer ) {
 			hint = CG_VisionTextWith( "%s twice: pick a player", Scores_KeyName() );
 		}
 	}
@@ -498,7 +498,7 @@ qboolean CG_ScoresDraw( void ) {
 		return qfalse;
 	}
 	if ( scores.kept ) {
-		if ( cg.demoPlayback || !cg_selectPlayers.integer ) {
+		if ( cg.demoPlayback || !v_selectPlayers.integer ) {
 			CG_ScoresLetGo();
 		} else {
 			cg.showScores = qtrue;
@@ -578,7 +578,7 @@ qboolean CG_ScoresDraw( void ) {
 	Scores_Columns( x, SCORES_TOP + SCORES_HEAD_H, nameX, fade );
 
 	// is there a pointer on the screen: the board is kept, or the mouse is free for another reason
-	pointer = (qboolean)( ( trap->Key_GetCatcher() & KEYCATCH_CGAME ) != 0 && cg_selectPlayers.integer );
+	pointer = (qboolean)( ( trap->Key_GetCatcher() & KEYCATCH_CGAME ) != 0 && v_selectPlayers.integer );
 	y = SCORES_TOP + SCORES_HEAD_H + SCORES_COLS_H;
 	for ( i = 0; i < shown; i++ ) {
 		const float h = Scores_LineHeight( &lines[i], rowH );
@@ -631,7 +631,7 @@ The pointer
 
 // is the board kept open for the pointer: the mouse is free then
 qboolean CG_ScoresPicking( void ) {
-	return (qboolean)( scores.kept && cg_selectPlayers.integer && cg.snap && !cg.demoPlayback );
+	return (qboolean)( scores.kept && v_selectPlayers.integer && cg.snap && !cg.demoPlayback );
 }
 
 qboolean CG_ScoresKept( void ) {
@@ -685,7 +685,7 @@ void CG_ScoresLetGo( void ) {
 }
 
 static qboolean Scores_Keep( void ) {
-	if ( !CG_HudNewLook() || !cg_selectPlayers.integer || !cg.snap || cg.demoPlayback ) {
+	if ( !CG_HudNewLook() || !v_selectPlayers.integer || !cg.snap || cg.demoPlayback ) {
 		return qfalse;
 	}
 	scores.kept = qtrue;
@@ -714,7 +714,7 @@ qboolean CG_ScoresPress( void ) {
 	scores.keyDone = qfalse;
 	twice = (qboolean)( scores.tapTime && now >= scores.tapTime && now - scores.tapTime < SCORES_TAP_MSEC );
 	scores.tapTime = twice ? 0 : now;
-	if ( twice && cg_scoresPick.integer ) {
+	if ( twice && v_scoresPick.integer ) {
 		Scores_Keep();
 	}
 	return qtrue;
@@ -750,11 +750,11 @@ qboolean CG_ScoresKeyEvent( int key ) {
 	return qtrue;
 }
 
-// scores_pick: the scoreboard with the mouse free, or back to the game
+// v_scores_pick: the scoreboard with the mouse free, or back to the game
 void CG_ScoresPick_f( void ) {
 	if ( scores.kept ) {
 		CG_ScoresLetGo();
 	} else if ( !Scores_Keep() ) {
-		trap->Print( "The scoreboard can not be kept open here (cg_hud, cg_selectPlayers, or a demo).\n" );
+		trap->Print( "The scoreboard can not be kept open here (v_hud, v_selectPlayers, or a demo).\n" );
 	}
 }

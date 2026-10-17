@@ -121,7 +121,7 @@ static void VK_CreateLayouts( void ) {
 	sizes[1].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
 	sizes[1].descriptorCount = VK_FRAMES * 3;
 	sizes[2].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	// the table of the textures, and one each for the frame, the glow, its two blur buffers, the two of r_menuBlur
+	// the table of the textures, and one each for the frame, the glow, its two blur buffers, the two of v_menuBlur
 	// and the depth
 	sizes[2].descriptorCount = VK_MAX_IMAGES + 7;
 	pool.flags = VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT;

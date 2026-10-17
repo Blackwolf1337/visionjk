@@ -25,7 +25,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 vkState_t	vk;
 
-static cvar_t	*r_vkDebug;			// 1: validation layer and its messages, if the layer is installed
+static cvar_t	*v_vkDebug;			// 1: validation layer and its messages, if the layer is installed
 static cvar_t	*r_swapIntervalVk;	// r_swapInterval of the engine
 static cvar_t	*r_multisampleVk;	// r_ext_multisample of the engine
 
@@ -151,7 +151,7 @@ static qboolean VK_CreateInstance( void ) {
 	}
 
 	vk.validation = qfalse;
-	if ( r_vkDebug->integer ) {
+	if ( v_vkDebug->integer ) {
 		VkLayerProperties available[64];
 
 		count = ARRAY_LEN( available );
@@ -165,7 +165,7 @@ static qboolean VK_CreateInstance( void ) {
 			layers[numLayers++] = "VK_LAYER_KHRONOS_validation";
 			extensions[numExtensions++] = VK_EXT_DEBUG_UTILS_EXTENSION_NAME;
 		} else {
-			ri.Printf( PRINT_WARNING, "r_vkDebug: the layer VK_LAYER_KHRONOS_validation is not installed\n" );
+			ri.Printf( PRINT_WARNING, "v_vkDebug: the layer VK_LAYER_KHRONOS_validation is not installed\n" );
 		}
 	}
 
@@ -485,7 +485,7 @@ engine knows. A window that was made stays until RE_Shutdown() destroys it.
 static void VK_DestroyInstance( void );
 
 qboolean VK_InitVulkan( void ) {
-	r_vkDebug = ri.Cvar_Get( "r_vkDebug", "0", CVAR_ARCHIVE_ND | CVAR_LATCH, "Vulkan validation layer and its messages" );
+	v_vkDebug = ri.Cvar_Get( "v_vkDebug", "0", CVAR_ARCHIVE_ND | CVAR_LATCH, "Vulkan validation layer and its messages" );
 	r_swapIntervalVk = ri.Cvar_Get( "r_swapInterval", "0", CVAR_ARCHIVE_ND, "" );
 	r_multisampleVk = ri.Cvar_Get( "r_ext_multisample", "0", CVAR_ARCHIVE_ND | CVAR_LATCH, "" );
 	if ( VK_InitShared() ) {

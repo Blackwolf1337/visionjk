@@ -46,7 +46,7 @@ static qboolean			vk_worldValid;
 // 3: indexes into the buffer of the saber marks on models, all of one skeleton
 static int				vk_batchMode;
 
-cvar_t	*r_vkStatic;		// 0: nothing from buffers on the device, every vertex through the tess arrays as in rd-vanilla
+cvar_t	*v_vkStatic;		// 0: nothing from buffers on the device, every vertex through the tess arrays as in rd-vanilla
 static CBoneCache		*vk_batchBones;
 
 qboolean VK_BatchIsStatic( void ) {
@@ -176,7 +176,7 @@ Whether the stages of the shader of the batch can be drawn without the vertices 
 static qboolean VK_ShaderIsStatic( void ) {
 	const shader_t *shader = tess.shader;
 
-	if ( !r_vkStatic->integer ) {
+	if ( !v_vkStatic->integer ) {
 		return qfalse;
 	}
 	// a shadow volume is built from the vertices as the bones have moved them

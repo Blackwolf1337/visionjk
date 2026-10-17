@@ -18,9 +18,9 @@
 |---------|---------|
 | server info `jp_cinfo` | bit field of the settings the client needs to predict moves, see below. Built every frame in `g_japlus_misc.c` |
 | server info `jp_DuelAlpha`, `jp_gripSpeedScale`, `jp_forceCombo` | read by the cgame |
-| server info `g_visionCaps` | not from JA+. What this game module does for the clients of this tree: bit 0 chat in UTF-8 per recipient (`JP_ChatFor()`), bit 1 it passes statuses on, bit 2 the key login, bit 3 it tells who plays with a client of this tree and answers `jpstatus all`. Bits 4 to 6 were Focus and the Vision Temple of 0.1.6 and 0.1.7 (removed 2026-10-17) and are not used again. Read only |
-| server command `jpclient <client> <version> [<client> <version> ...]` | not from JA+. With which VisionJK a player plays (`cjp_vision` of his userinfo, letters, digits and `. - _` only), "-" for any other client. Only sent to a client whose userinfo has `cjp_caps` bit 1: one player when his userinfo says something new, everybody in one command as the answer to the client command `jpstatus all`, which a cgame sends once when it has started (at most every two seconds) and which is also answered with the statuses of everybody. See client.md, "Who plays with VisionJK" |
-| server command `jpstatus <client> <away> "<music>"` | not from JA+. What stands above a player's head, see "Statuses" below. Only sent to a client whose userinfo has `cjp_caps` bit 0 |
+| server info `vs_caps` | not from JA+. What this game module does for the clients of this tree: bit 0 chat in UTF-8 per recipient (`JP_ChatFor()`), bit 1 it passes statuses on, bit 2 the key login, bit 3 it tells who plays with a client of this tree and answers `vs_status all`. Bits 4 to 6 were Focus and the Vision Temple of 0.1.6 and 0.1.7 (removed 2026-10-17) and are not used again. Read only |
+| server command `jpclient <client> <version> [<client> <version> ...]` | not from JA+. With which VisionJK a player plays (`v_vision` of his userinfo, letters, digits and `. - _` only), "-" for any other client. Only sent to a client whose userinfo has `v_caps` bit 1: one player when his userinfo says something new, everybody in one command as the answer to the client command `vs_status all`, which a cgame sends once when it has started (at most every two seconds) and which is also answered with the statuses of everybody. See client.md, "Who plays with VisionJK" |
+| server command `vs_status <client> <away> "<music>"` | not from JA+. What stands above a player's head, see "Statuses" below. Only sent to a client whose userinfo has `v_caps` bit 0 |
 | `eFlags` bit 15 `EF_ALT_DIM` | player is in the alternate dimension |
 | `eFlags` bit 16 `EF_GRAPPLE_SUSPEND` | player hangs on the hook |
 | `eFlags` bit 17 `EF_FLAME` | flamethrower is on |
@@ -53,7 +53,7 @@ Admin system (`g_japlus_admin.c`, `g_japlus_admin2.c`, `g_japlus_fx.c`, `g_japlu
 
 - Three ranks with passwords (`jp_councilPass`, `jp_knightPass`, `jp_instructorPass`) and a mask of allowed commands
   per rank (`jp_councilAllowedCMD` and so on). rcon is the fourth rank. `amlogin`, `amlogout`, automatic login with
-  the plugin (`cp_login`). Not as in JA+: the passwords only count with `jp_adminPasswords 1`, see "Admin login
+  the plugin (`cp_login`). Not as in JA+: the passwords only count with `vs_adminPasswords 1`, see "Admin login
   without a password" below.
 - The bit of a command in the allowed masks is its position in this list, starting at 1: amkick, amban, amShowMotd,
   amorigin, amslap, amsleep, amwake, amghost, amdenyvote, amprotect, amsilence, amunsilence, amUnForceAltDim,
@@ -124,7 +124,7 @@ Game modes and rules
   not mind. A map without that file takes `<map>_holes.cfg` of JA+, so the files of the package still work.
 - Clip brushes of the map turned off (the engine, not JA+): `clipbrush off|on <number> ...`, see the tab Clips
   in `webadmin.md`. For another client that wants to predict them: the server sends the system info key
-  `cm_clipOff`, the numbers of the brushes in the brush lump of the map file that are off, with a blank between
+  `vs_clipRanges`, the numbers of the brushes in the brush lump of the map file that are off, with a blank between
   them and a run written as `first-last` (`4178-4182 4190`), empty when none is. A client sets the contents of
   those brushes to 0 in its collision map and gives every other clip brush the contents of its shader again,
   whenever the key changes and after it has loaded the map. Only for a brush whose shader has PLAYERCLIP,
@@ -143,13 +143,13 @@ Game modes and rules
 
 | Cvar | Default | Meaning |
 |------|---------|---------|
-| `g_afkTime` | 60 | seconds without a key or a turn after which a player counts as away, 0 never |
+| `vs_afkTime` | 60 | seconds without a key or a turn after which a player counts as away, 0 never |
 
-A player whose commands did not change for `g_afkTime` seconds is away until they do. The server finds that
+A player whose commands did not change for `vs_afkTime` seconds is away until they do. The server finds that
 out itself, so it holds for legacy clients too. A client can say what its player listens to with the client
-command `jpstatus music <text>` and end it with `jpstatus none`: at most one every three seconds, 64 bytes,
+command `vs_status music <text>` and end it with `vs_status none`: at most one every three seconds, 64 bytes,
 without colours, quotes and control characters. Both are passed on to every client whose cgame asked for
-statuses, and to nobody else, so a legacy client never gets a command it does not know. `jpstatus` is not
+statuses, and to nobody else, so a legacy client never gets a command it does not know. `vs_status` is not
 written to the client command log. Not run.
 
 ### The masterserver (not from JA+)
@@ -172,11 +172,11 @@ What comes in on its port:
 
 - a datagram of the voice chat of a player in its own level: the relay of its game module, as on any dedicated
   server of this tree
-- any other datagram of the voice chat: its relay for the other servers. `sv_masterKbps` (4000, command line
+- any other datagram of the voice chat: its relay for the other servers. `vs_masterKbps` (4000, command line
   only) is what that may send in a second, 0: anything
 
 29170 is the port the clients of 0.1.5 know for the voice chat on servers without the module
-(`cg_voiceMasterHost`: `voice.jka.vision` up to 0.1.6, `master.jka.vision` after it, the same host). Until
+(`v_voiceMasterHost`: `voice.jka.vision` up to 0.1.6, `master.jka.vision` after it, the same host). Until
 2026-10-17 it was also the Vision Temple as a game server (`temple.cfg`, map `vision_temple`), which is
 removed. Not run with master.cfg yet.
 
@@ -186,8 +186,8 @@ removed. Not run with master.cfg yet.
 
 | Cvar | Default | Meaning |
 |------|---------|---------|
-| `jp_adminPasswords` | 0 | 1: the three rank passwords count again (`amlogin <password>`, `cp_login` of a plugin) |
-| `jp_authHosts` | empty | the addresses the server is reached by, `"1.2.3.4:29070 192.168.0.5:29070"`. A key login signed for another address is refused |
+| `vs_adminPasswords` | 0 | 1: the three rank passwords count again (`amlogin <password>`, `cp_login` of a plugin) |
+| `vs_authHosts` | empty | the addresses the server is reached by, `"1.2.3.4:29070 192.168.0.5:29070"`. A key login signed for another address is refused |
 
 A rank password is the same for everybody of the rank, it is typed into a console that logs, the JA+ plugin
 sends it to every server it joins in the userinfo, and whoever has seen it once has it for good. So the
@@ -196,14 +196,14 @@ passwords are off unless the owner switches them on, and an admin logs in one of
 - With a key. The file `admin_keys.txt` in the game folder has a line for each admin:
 
   ```
-  # rank       what "amkey show" of the client prints, or the line of a .pub file of ssh-keygen
+  # rank       what "v_amkey show" of the client prints, or the line of a .pub file of ssh-keygen
   council      ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAI... emir
   rcon         ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAI... owner
   ```
 
   The rank is `council`, `knight`, `instructor` or `rcon` (every right). The client says which key it has
-  (`jpauth hello`), gets 32 random bytes that are good for one answer and 30 seconds, and sends a signature
-  over them (`jpauth sign`). The signed text starts with a fixed line, so the signature is worth nothing
+  (`vs_auth hello`), gets 32 random bytes that are good for one answer and 30 seconds, and sends a signature
+  over them (`vs_auth sign`). The signed text starts with a fixed line, so the signature is worth nothing
   anywhere else, and it has the address of the server as the client sees it and the number of the client in
   it. A wrong signature counts as a wrong try: three of them and the player waits, as with wrong passwords.
   Who has the rank of his key already (it is kept over a change of the map) is not asked or announced again.
@@ -212,7 +212,7 @@ passwords are off unless the owner switches them on, and an admin logs in one of
   the console of the server, or the web panel, makes a code of eight letters and digits. It is typed as
   `amlogin <code>` within a minute and works once.
 
-`g_visionCaps` has bit 2 for the key login, a client only offers it where it reads the bit. Set `jp_authHosts`
+`vs_caps` has bit 2 for the key login, a client only offers it where it reads the bit. Set `vs_authHosts`
 on a public server: without it the server can not tell a signature that was made for another server and
 passed on.
 

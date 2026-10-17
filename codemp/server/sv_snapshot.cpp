@@ -359,7 +359,7 @@ static void SV_AddEntToSnapshot( svEntity_t *svEnt, sharedEntity_t *gEnt, snapsh
 ===============
 SV_PlayerHidden
 
-sv_antiWallhack. A client is told of every player the map lets through to where it stands (the PVS, which goes by
+vs_antiWallhack. A client is told of every player the map lets through to where it stands (the PVS, which goes by
 rooms and not by walls), and a cheat draws those players through the walls. With the cvar on, a player nobody
 could see from the eye of the client is not in its snapshot at all, so there is nothing to draw.
 
@@ -377,7 +377,7 @@ Steps, sabers and shots behind a wall are silent until he comes into view.
 #define SV_WALLHACK_NEAR	384.0f
 #define SV_WALLHACK_AHEAD	0.2f		// seconds
 
-cvar_t	*sv_antiWallhack;
+cvar_t	*vs_antiWallhack;
 
 static qboolean SV_SightLine( const vec3_t eye, const vec3_t point ) {
 	trace_t trace;
@@ -590,7 +590,7 @@ static void SV_AddEntitiesVisibleFromPoint( vec3_t origin, clientSnapshot_t *fra
 		}
 
 		// a player no line of sight reaches, see SV_PlayerHidden()
-		if ( sv_antiWallhack->integer && e < sv_maxclients->integer && SV_PlayerHidden( origin, &frame->ps, ent ) ) {
+		if ( vs_antiWallhack->integer && e < sv_maxclients->integer && SV_PlayerHidden( origin, &frame->ps, ent ) ) {
 			continue;
 		}
 

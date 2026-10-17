@@ -22,36 +22,36 @@ Hold the key to talk. What the others say is heard without a key. The key is als
 JA+ Control, and the settings a player needs most are in Setup under Voice Chat, in the main menu and in the
 game (the menus are in `assets/japlus_client/ui/jamp`, the ui module registers the cvars so they are there
 before a level was loaded). The same tab has the two switches of the chat above the heads, "Chat Bubbles"
-(`cg_chatBubbles`) and "Show My Music" (`cg_shareMusic`): twelve rows, which is what the tab of the main menu
+(`v_chatBubbles`) and "Show My Music" (`v_shareMusic`): twelve rows, which is what the tab of the main menu
 has room for.
 
 | Cvar | Default | Meaning |
 |------|---------|---------|
-| `cg_voice` | 1 | 0: no voice chat, nothing is opened and the server is not asked |
-| `cg_voiceMode` | 1 | 1: push to talk (`+voice`). 2: voice activation, whatever is louder than `cg_voiceThreshold` is sent |
-| `cg_voiceVolume` | 1 | how loud the others are. `s_volume` does not change them |
-| `cg_voiceMicGain` | 1 | how loud the own microphone is sent |
-| `cg_voiceThreshold` | 0.02 | voice activation: from which level on, 0 to 1 |
-| `cg_voiceMuffle` | 1 | 0: voices behind walls are not muffled, and the engine's `s_spatial` leaves them alone |
-| `cg_voiceOwnReverb` | 1 | with the engine's `s_spatial`: how loud the room rings from what you say yourself. 0: not at all, 0.5: half, 2: twice. A slider in the setup menus. At 1 it is half as loud as it was until 2026-10-11. See [audio.md](audio.md) |
-| `cg_voiceDrawTalkers` | 1 | the list of who is talking on the HUD |
-| `cg_voiceCapture`, `cg_voicePlayback` | "" | the name of the microphone and of the speakers, empty: the ones the system uses. `voice_devices` lists the names |
-| `cg_voiceBackend` | "" | `null`: a sound system that plays into nothing, for tests |
-| `cg_voiceRadioFX` | 1 | the clan radio sounds like a radio: only the band of a telephone, a little rough, with a click at both ends. 0: as clear as any voice |
-| `cg_voiceMaster` | 1 | 0: no voice chat on servers that have none of their own. 1: there it goes through the masterserver |
-| `cg_voiceMasterHost` | master.jka.vision | the masterserver, a name or an address, with `:port` if it is not 29170. Up to version 0.1.6 the default was voice.jka.vision, and every player from then has that name stored in his config: both names have to lead to the masterserver for good |
+| `v_voice` | 1 | 0: no voice chat, nothing is opened and the server is not asked |
+| `v_voiceMode` | 1 | 1: push to talk (`+v_voice`). 2: voice activation, whatever is louder than `v_voiceThreshold` is sent |
+| `v_voiceVolume` | 1 | how loud the others are. `s_volume` does not change them |
+| `v_voiceMicGain` | 1 | how loud the own microphone is sent |
+| `v_voiceThreshold` | 0.02 | voice activation: from which level on, 0 to 1 |
+| `v_voiceMuffle` | 1 | 0: voices behind walls are not muffled, and the engine's `v_spatial` leaves them alone |
+| `v_voiceOwnReverb` | 1 | with the engine's `v_spatial`: how loud the room rings from what you say yourself. 0: not at all, 0.5: half, 2: twice. A slider in the setup menus. At 1 it is half as loud as it was until 2026-10-11. See [audio.md](audio.md) |
+| `v_voiceDrawTalkers` | 1 | the list of who is talking on the HUD |
+| `v_voiceCapture`, `v_voicePlayback` | "" | the name of the microphone and of the speakers, empty: the ones the system uses. `v_voice_devices` lists the names |
+| `v_voiceBackend` | "" | `null`: a sound system that plays into nothing, for tests |
+| `v_voiceRadioFX` | 1 | the clan radio sounds like a radio: only the band of a telephone, a little rough, with a click at both ends. 0: as clear as any voice |
+| `v_voiceMaster` | 1 | 0: no voice chat on servers that have none of their own. 1: there it goes through the masterserver |
+| `v_voiceMasterHost` | master.jka.vision | the masterserver, a name or an address, with `:port` if it is not 29170. Up to version 0.1.6 the default was voice.jka.vision, and every player from then has that name stored in his config: both names have to lead to the masterserver for good |
 
 | Command | |
 |---------|---|
-| `+voice` | talk while it is held |
-| `+voiceclan` | talk to the clan over the radio while it is held, see "The clan radio" |
-| `voice_devices` | the microphones and speakers there are |
-| `voice_status` | is the chat connected, do the speakers play, who talks, who is muted, how many frames of each player were heard |
-| `voice_mute <player>`, `voice_unmute <player or all>` | do not hear one player. Holds until the level changes |
-| `voice_test tone`, `voice_test play <name>`, `voice_test stop` | a tone, or the file `voice/<name>.raw` again and again, in place of the microphone. For tests |
-| `voice_test record <name>` | what is played also goes into `voice/<name>.raw`, until `voice_test stop`. For tests |
+| `+v_voice` | talk while it is held |
+| `+v_voiceclan` | talk to the clan over the radio while it is held, see "The clan radio" |
+| `v_voice_devices` | the microphones and speakers there are |
+| `v_voice_status` | is the chat connected, do the speakers play, who talks, who is muted, how many frames of each player were heard |
+| `v_voice_mute <player>`, `v_voice_unmute <player or all>` | do not hear one player. Holds until the level changes |
+| `v_voice_test tone`, `v_voice_test play <name>`, `v_voice_test stop` | a tone, or the file `voice/<name>.raw` again and again, in place of the microphone. For tests |
+| `v_voice_test record <name>` | what is played also goes into `voice/<name>.raw`, until `v_voice_test stop`. For tests |
 
-The files of `voice_test` are 16 bit, two channels, 48000 samples a second, low byte first, without a header:
+The files of `v_voice_test` are 16 bit, two channels, 48000 samples a second, low byte first, without a header:
 what was recorded can be played, and `ffmpeg -i in.mp3 -ac 2 -ar 48000 -f s16le voice/name.raw` makes one from any
 sound. On a pure server the engine lets a module read such a file only out of a pk3 the server has too.
 
@@ -76,42 +76,42 @@ you (`cp_clanPwd` in the client, or `/clanpass` in the game): the ones your clan
 - A voice from the radio has no place. It is in both ears, as loud for everybody, is not muffled by walls and
   puts no mark over the head of who talks: it says nothing about where he is. In the list of who talks it has
   the mark of a radio.
-- It sounds like a radio (`cg_voiceRadioFX`): the band from 300 to 3400 Hz, pushed until its peaks are rounded
+- It sounds like a radio (`v_voiceRadioFX`): the band from 300 to 3400 Hz, pushed until its peaks are rounded
   off, a little hiss, a crack when the key is pressed and a rush that is cut off when it is let go. The player
   who talks hears the two clicks of his own key.
 - The radio is always by its key, also with voice activation. With both keys held it is the radio.
-- The room still rings from what you say into the radio (`cg_voiceOwnReverb`): you say it aloud where you
+- The room still rings from what you say into the radio (`v_voiceOwnReverb`): you say it aloud where you
   stand. Players next to you who are not in your clan do not hear it.
 - The key is in the menu under Controls, JA+ Control, the switch for the sound in Setup under Voice Chat.
 - On a server without the game module of this tree the radio goes through the masterserver (since
   2026-10-11, see "On a server without it"): there your clan are the players of that server with your clan
   password, whatever the server itself knows of clans.
-- Not on a server with `g_voiceRadio 0`: the key then says so once.
+- Not on a server with `vs_voiceRadio 0`: the key then says so once.
 
 ## For the server
 
 | Cvar | Default | Meaning |
 |------|---------|---------|
-| `g_voice` | 1 | 0: no voice chat, no port is opened (latched: from the next level on). It is in the server info |
-| `g_voicePort` | 0 | a UDP port of its own for the relay (latched). 0: none where the engine takes the voice chat on the port of the game (`sv_voiceShared`), else the game port plus 1 |
-| `sv_voiceShared` | 1 | of the engine, command line only. 1: the voice chat comes in on the UDP port of the game and leaves from it, the server needs no second port. The dedicated server of this tree has 1, a game a player starts from the menu 0. 0: the relay opens a port of its own |
-| `g_voiceShared` | | read only, set by the game module: 1 while its relay takes the datagrams from the engine |
-| `g_voiceRange` | 1024 | how far a voice carries, in units. 0: all over the level, without direction and without muffling |
-| `g_voiceTeamOnly` | 0 | 1: in team games only the own team hears a player |
-| `g_voiceRadio` | 1 | 0: no clan radio. With 1 a frame a client sends for its clan goes to the players with the same clan password, whatever `g_voiceRange` and `g_voiceTeamOnly` say. A silenced player has no radio either |
-| `g_voiceRelay` | | read only, set by the game module: where the relay listens for the web host of the same server, `address:port`. Empty: no relay |
+| `vs_voice` | 1 | 0: no voice chat, no port is opened (latched: from the next level on). It is in the server info |
+| `vs_voicePort` | 0 | a UDP port of its own for the relay (latched). 0: none where the engine takes the voice chat on the port of the game (`vs_voiceShared`), else the game port plus 1 |
+| `vs_voiceShared` | 1 | of the engine, command line only. 1: the voice chat comes in on the UDP port of the game and leaves from it, the server needs no second port. The dedicated server of this tree has 1, a game a player starts from the menu 0. 0: the relay opens a port of its own |
+| `vs_voiceSharedGame` | | read only, set by the game module: 1 while its relay takes the datagrams from the engine |
+| `vs_voiceRange` | 1024 | how far a voice carries, in units. 0: all over the level, without direction and without muffling |
+| `vs_voiceTeamOnly` | 0 | 1: in team games only the own team hears a player |
+| `vs_voiceRadio` | 1 | 0: no clan radio. With 1 a frame a client sends for its clan goes to the players with the same clan password, whatever `vs_voiceRange` and `vs_voiceTeamOnly` say. A silenced player has no radio either |
+| `vs_voiceRelay` | | read only, set by the game module: where the relay listens for the web host of the same server, `address:port`. Empty: no relay |
 
-The voice chat is on unless a server switches it off (since 2026-10-07, before that `g_voice` was 0). A server
-that has `g_voice 0` stored in its config keeps that.
+The voice chat is on unless a server switches it off (since 2026-10-07, before that `vs_voice` was 0). A server
+that has `vs_voice 0` stored in its config keeps that.
 
 **One port (since 2026-10-12).** On the dedicated server of this tree the voice chat has no port of its own: its
 datagrams come in on the UDP port of the game and the answers leave from it. A client is told the port in the
-answer to `jpvoice hello`, as before, so one from before this change follows by itself. Nothing has to be
+answer to `vs_voiceLink hello`, as before, so one from before this change follows by itself. Nothing has to be
 forwarded for the voice chat any more, and the port after the game port is free.
 
-The relay opens a port of its own, the game port plus 1 unless `g_voicePort` names one, in three cases: the
+The relay opens a port of its own, the game port plus 1 unless `vs_voicePort` names one, in three cases: the
 game module runs in another engine (the original dedicated server, another fork), a player started the game from
-the menu, or the owner set `sv_voiceShared 0` or a `g_voicePort`. That port has to be reachable from outside
+the menu, or the owner set `vs_voiceShared 0` or a `vs_voicePort`. That port has to be reachable from outside
 like the game port: UDP, forwarded and open in the firewall. If it can not be opened the server says so in one
 line and runs without voice.
 
@@ -124,10 +124,10 @@ bytes 4 and 5 of a voice datagram would otherwise be read as a qport. The engine
 module through an addition to the module interface that neither side touches unless the other one says so in a
 cvar (`ext` in `game/g_public.h`), so the module runs in any other engine as before.
 
-A server without this game module can say no to the voice chat as well: `sets g_voice 0` puts the key into
+A server without this game module can say no to the voice chat as well: `sets vs_voice 0` puts the key into
 its server info, and the cgame then leaves the masterserver alone there.
 
-`voicestatus` on the server console lists who has voice, how many datagrams of each were handed on, and how many
+`vs_voicestatus` on the server console lists who has voice, how many datagrams of each were handed on, and how many
 were refused.
 
 A spectator is heard by spectators only, wherever they are. A spectator hears the players near the spot he
@@ -138,9 +138,9 @@ watches from. A player an admin silenced (`amsilence`) is not heard.
 The engine gives a module no microphone, no way to play samples it made itself and no channel for sound, so the
 cgame does all three on its own.
 
-**Asking.** A server with the voice chat says `g_voice` in its server info. Only there the cgame sends the client
-command `jpvoice hello <protocol>`. The server answers with the server command
-`jpvoice <protocol> <port> <token> <range>`. The token is 32 random bits from the random source of the system,
+**Asking.** A server with the voice chat says `vs_voice` in its server info. Only there the cgame sends the client
+command `vs_voiceLink hello <protocol>`. The server answers with the server command
+`vs_voiceLink <protocol> <port> <token> <range>`. The token is 32 random bits from the random source of the system,
 new for every connection. This exchange is all of the voice chat that goes through the game connection. The
 cgame asks again every three seconds, ten times at most, until the answer is there: the flood protection of the
 server drops a client command that comes within a second of another one.
@@ -177,10 +177,10 @@ against the level and its doors. If something is in the way, or one of the two i
 not, the voice is muffled: two low-passes at about 700 Hz and a little quieter, faded in over 150 ms. A speaker
 the server does not show at all is muffled and comes from no direction.
 
-With the engine of this tree and `s_spatial 1` the cgame does none of that for a speaker it can see: it hands
+With the engine of this tree and `v_spatial 1` the cgame does none of that for a speaker it can see: it hands
 his voice to the engine, where it is a sound in the level, behind the walls and in the reverb of every other
-sound. See [audio.md](audio.md), "The voice chat". With `cg_voiceMuffle 0`, on any other engine and with
-`s_spatial 0` every voice is played as described here.
+sound. See [audio.md](audio.md), "The voice chat". With `v_voiceMuffle 0`, on any other engine and with
+`v_spatial 0` every voice is played as described here.
 
 **The mouth.** The game opens the mouth of a character by how loud the line is that he says, in four steps,
 which the engine works out for its own sounds. A voice of the chat is none of those, so the cgame works out the
@@ -217,8 +217,8 @@ the rings and the queues are static memory. `CG_Shutdown` stops the devices befo
 
 The relay also carries the songs of the boombox ([boombox.md](boombox.md)): the server codes them itself and
 sends them as `VOICE_AUDIO` with a speaker number behind the players, `MAX_CLIENTS` + the box, only to clients
-that asked for boxes (`jpbox hello`). A cgame from before drops a speaker number that is no client number. A
-client whose voice chat is off (`cg_voice 0`) still opens the way to the relay for the songs, without the
+that asked for boxes (`vs_box hello`). A cgame from before drops a speaker number that is no client number. A
+client whose voice chat is off (`v_voice 0`) still opens the way to the relay for the songs, without the
 microphone, and drops the voices.
 
 On a server without the game module the masterserver plays the boxes: the state to it may carry one more byte,
@@ -233,9 +233,9 @@ stands near whom. There the cgame sends the same sound to the masterserver: one 
 
 When it is used:
 
-- The server info of the game server does not have the key `g_voice` at all, and `cg_voiceMaster` is 1. The
+- The server info of the game server does not have the key `vs_voice` at all, and `v_voiceMaster` is 1. The
   cgame says so in one line of the console when it starts, with the name of the master.
-- A server that says `g_voice` relays itself, or says no with 0. Either way the master is not used.
+- A server that says `vs_voice` relays itself, or says no with 0. Either way the master is not used.
 - Never in a demo, in a browser, or for a game that runs on the same machine as the client.
 
 Nothing of it goes to the game server: no client command, no userinfo. The game server can not tell.
@@ -253,7 +253,7 @@ address, the room and the number) and keeps nothing of an address until a datagr
 it. A sender who gives an address that is not his fills no table, and the address he gave gets 13 bytes for the
 35 that were sent.
 
-**Who hears whom.** The range is the default of `g_voiceRange`, 1024 units, and there is no cvar for it. The
+**Who hears whom.** The range is the default of `vs_voiceRange`, 1024 units, and there is no cvar for it. The
 master does not know where anybody stands, so both ends say what their game shows them. Ten times a second
 the cgame works out two masks with a bit for every client number, with the rule the relay of a game server
 uses (`BG_VoiceHears`):
@@ -307,7 +307,7 @@ both ways       "VO" version 4 client token[4] sequence[2] (flags distance)   fl
 **The relay of the masterserver** is `master/ms_relay.c` ("the master" in what follows). It never decodes
 sound and writes no address and no room into its log, only one line a minute with numbers while something
 happens, and one when it is stopped. The masterserver (`visionjk-master`, `-DBuildMasterServer=ON`) is a
-dedicated server, and it hands this relay what comes in on its game port and is none of its own players', see [server.md](server.md), "The masterserver". `sv_masterKbps` (4000, command line only)
+dedicated server, and it hands this relay what comes in on its game port and is none of its own players', see [server.md](server.md), "The masterserver". `vs_masterKbps` (4000, command line only)
 is what the relay may send in a second. It is no part of a release.
 
 Until 2026-10-12 this relay was called the voice master and was a program of its own as well
@@ -328,16 +328,16 @@ What is different from a server with its own relay:
 
 - Nobody vouches for a client number. The first session that says a number in a room has it. A player of the
   same server can say the number of somebody who is not there through the master and talk as him. Muting
-  (`voice_mute`) works on it.
+  (`v_voice_mute`) works on it.
 - A player inside the range that the game server does not show (behind enough walls) is silent. The relay of
   a game server sends him muffled and without a direction.
 - A changed client that is a spectator can ask for all players at once and gets them, since every player lets
   every spectator hear him. Between players the range holds.
-- `g_voiceRange`, `g_voiceTeamOnly`, `g_voiceRadio` and `amsilence` do not exist there.
+- `vs_voiceRange`, `vs_voiceTeamOnly`, `vs_voiceRadio` and `amsilence` do not exist there.
 - The clan of the radio is whoever knows the clan password, as on a server with the module. Somebody who
   runs the master could try passwords against the eight bytes it is told.
 - The master reads the status of every player who shares one (the title of his music) on its way through.
-  It is not written down. `cg_shareMusic` is off by default.
+  It is not written down. `v_shareMusic` is off by default.
 - Players who reach the game server under another address than the others (its own network) are in a room of
   their own.
 - A voice travels to the master and back, not to the game server: players far from the master hear it later.
@@ -354,8 +354,8 @@ queues, who is heard how. Two things a page does not have are replaced, in the p
 
 **The way to the relay.** A page can not send UDP. The cgame opens a WebSocket of its own to `/voice` of the web
 host the page came from (`ws://<host of the page>/voice`, `wss` over https), and every datagram is one binary
-message on it, nothing added. The web host (`sv_webPort`, [web.md](web.md)) has a UDP socket for each such
-WebSocket, tied to the address the relay names in `g_voiceRelay` (the server machine itself, the voice port).
+message on it, nothing added. The web host (`vs_clientWebPort`, [web.md](web.md)) has a UDP socket for each such
+WebSocket, tied to the address the relay names in `vs_voiceRelay` (the server machine itself, the voice port).
 It hands each message to the relay from that socket and each datagram the relay sends there back as a message.
 To the relay that is one more client of the voice chat, the datagram and the server command are what they were.
 No thread and nothing that waits: the socket is asked for and is open some frames later, what comes in between
@@ -376,7 +376,7 @@ they all come from the server machine, so the web host makes that check where th
 - What the relay sends to the socket of a WebSocket is handed on only if it has the token that peer itself last
   spoke with.
 - The relay takes a datagram from the address of its own machine with the token alone, if the server runs the
-  web host (`sv_webPort` is set). On a server without the web host nothing changed.
+  web host (`vs_clientWebPort` is set). On a server without the web host nothing changed.
 
 Limits of `/voice`: a message of 251 bytes at most (a datagram, a longer one ends the socket), 60 datagrams at
 once and 60 a second from one WebSocket (what the relay takes from a speaker, the relay counts again), 4 such
@@ -389,14 +389,14 @@ build has no threads and no audio worklets. The page hands the sound over in the
 pieces of 2048 samples (43 ms), so that much more of every voice is kept decoded ahead of the device: a voice is
 later than on the desktop by that and by what the browser adds, which was not measured. A frame of the game
 that takes much longer than a piece is a gap in the voices.
-The devices are the ones the browser uses, `cg_voiceCapture` and `cg_voicePlayback` choose nothing, and
-`cg_voiceBackend null` is not there. A browser lets a page play sound after the first click or key in it.
+The devices are the ones the browser uses, `v_voiceCapture` and `v_voicePlayback` choose nothing, and
+`v_voiceBackend null` is not there. A browser lets a page play sound after the first click or key in it.
 
 **The microphone.** A browser gives a page a microphone only if the page came over https or from the machine
 itself (`http://localhost`, `http://127.0.0.1`), and only if the player says yes. The web host speaks plain
 http, so a player on another machine hears the others and can not talk. The page is asked at the first press of
-`+voice` (with voice activation: at once), the game does not wait for the answer. Without a microphone the
-press says why in one line, once a press, voice activation falls back to push to talk, and `voice_status` says
+`+v_voice` (with voice activation: at once), the game does not wait for the answer. Without a microphone the
+press says why in one line, once a press, voice activation falls back to push to talk, and `v_voice_status` says
 it in words:
 
 ```
@@ -407,9 +407,9 @@ This page has no microphone: the browser did not give it one (it was refused, or
 A no is asked about again with the next press. The microphone is given back to the browser when it is closed,
 30 seconds after the last press. What a browser does to a microphone by itself is left as the browser has it.
 
-**The engine's sound in the level.** The engine for the browser is built without `s_spatial`, so every voice is
+**The engine's sound in the level.** The engine for the browser is built without `v_spatial`, so every voice is
 played on the device of the cgame, as on any engine that does not take voices. If the engine offers the call
-later (`s_spatialVoice` 1), the voices go there as on the desktop: that part has no code of its own here.
+later (`v_spatialVoice` 1), the voices go there as on the desktop: that part has no code of its own here.
 
 ## Clients without it
 
@@ -417,28 +417,28 @@ Nothing of the voice chat is in the game protocol.
 
 - No change to snapshots, entity state, entity flags, events, configstrings or the pure check, no userinfo key
   that is required, no file a client has to have.
-- The server command `jpvoice` only goes to a client that sent the client command of that name. A client
+- The server command `vs_voiceLink` only goes to a client that sent the client command of that name. A client
   without this cgame never does, so it never gets a command it does not know.
 - The sound goes over datagrams of its own, on the port of the game or on a second one. A client that never
   sent one with a valid token gets none.
-- The one thing every client can see is the key `g_voice` in the server info. Clients ignore keys they do not
+- The one thing every client can see is the key `vs_voice` in the server info. Clients ignore keys they do not
   know.
 - The mark over a speaker is drawn by the cgame of the listener. No flag is set on the player.
-- With `g_voice 0`, or if the port can not be opened, the server prints one line and runs as before.
+- With `vs_voice 0`, or if the port can not be opened, the server prints one line and runs as before.
 - The other way round, this cgame on a server without the voice chat sends that server nothing it did not send
   before. What it sends goes to the masterserver, see "On a server without it".
 - The way of a browser through the web host is beside all of that. A client over UDP sends and is checked as
-  before, also on a server that has players in a browser. The game module only gained the cvar `g_voiceRelay`,
+  before, also on a server that has players in a browser. The game module only gained the cvar `vs_voiceRelay`,
   which is not in the server info.
 
 ## Security
 
-- The relay opens a UDP port. It is on by default since 2026-10-07 (`g_voice 1`).
+- The relay opens a UDP port. It is on by default since 2026-10-07 (`vs_voice 1`).
 - Every length of a datagram is checked in one place (`BG_VoiceUnpack`), what passes fits the buffers of both
   sides. The server never decodes sound.
 - A datagram is only taken with the token of the client it names and from the address of his game connection,
   so nobody can talk as somebody else without being on the line between him and the server.
-- On a server with the web host (`sv_webPort`) a datagram from the server machine itself is taken with the token
+- On a server with the web host (`vs_clientWebPort`) a datagram from the server machine itself is taken with the token
   alone: that is how the voice of a browser arrives, and the web host has checked the address by then, see "In
   a browser". A packet with the address of the machine does not come in from a network, the system drops it.
   What is left is a program on the server machine: it can try tokens (32 random bits) for any client without
@@ -455,7 +455,7 @@ Nothing of the voice chat is in the game protocol.
 - Nothing is encrypted, like the game itself. Somebody on the line can listen.
 - The relay of the masterserver is a port open to everybody. It answers a datagram without a token with a
   shorter one and keeps nothing for it. It sends sound only to addresses that came back with their token, one
-  datagram out for one in per member of a room, so it can not be used to flood somebody else. `sv_masterKbps`
+  datagram out for one in per member of a room, so it can not be used to flood somebody else. `vs_masterKbps`
   caps what leaves it.
 - Through the master nobody checks who is who: see the list in "On a server without it".
 - A status that came through the master is text somebody else wrote. The master refuses control characters,
@@ -466,7 +466,7 @@ Nothing of the voice chat is in the game protocol.
 ## The clan radio in the protocol
 
 A client sends a frame for its clan as `VOICE_RADIO` (type 3) in place of `VOICE_AUDIO`, only to a relay that
-said it knows the radio: the answer to `jpvoice hello` has a fifth number for that (`VOICE_CAP_RADIO`), which a
+said it knows the radio: the answer to `vs_voiceLink hello` has a fifth number for that (`VOICE_CAP_RADIO`), which a
 cgame from before does not read. The relay (`G_VoiceRadio`) hands the frame to the clients whose clan password
 is the one of the speaker, as a `VOICE_AUDIO` with `VOICE_FLAG_RADIO`, `VOICE_FLAG_UNSEEN` and a distance of 0.
 The masterserver does the same for the members of a room that named the clan of the speaker (`MS_Radio`), so a
@@ -500,7 +500,7 @@ by itself names, and the way from a server whose temple does not answer on to th
 2026-10-12, the voice chat on the port of the game and the masterserver, Linux, hidden and without sound
 hardware, everything on one machine over 127.0.0.1:
 
-- The relay both ways (`tools/voicetest/e2e.sh`, and with `SV_ARGS="+set sv_voiceShared 0"`): the listener got
+- The relay both ways (`tools/voicetest/e2e.sh`, and with `SV_ARGS="+set vs_voiceShared 0"`): the listener got
   the tone open, through the wall and with muffling off as before, no gap, on the port the server named: the
   port of the game, or the one after it.
 - A client from before the change (`OLD_LISTENER=1 SV_ARGS="+set sv_floodProtect 1" tools/voicetest/e2e.sh`, the
@@ -512,8 +512,8 @@ hardware, everything on one machine over 127.0.0.1:
   2405, which are those five and the 2400 of the junk that have the shape of a voice datagram, so that packet
   was not among them. The server never took the port of the client for another one.
 - The sockets (`tools/voicetest/sockets.sh`): a dedicated server holds one UDP socket, the one of the game. With
-  the web host on it has a second one on 127.0.0.1 for that host and names it in `g_voiceRelay`. With
-  `sv_voiceShared 0` it has the port after the game port as before.
+  the web host on it has a second one on 127.0.0.1 for that host and names it in `vs_voiceRelay`. With
+  `vs_voiceShared 0` it has the port after the game port as before.
 - The masterserver (`tools/voicetest/masterserver.sh`): the 62 checks of its relay, on its game port. The same
   62 pass against the master by itself (`master.sh`, sanitizers). One of them was changed for the masterserver:
   a game server answers a packet it knows no client for with "disconnect", which is no answer of the relay.
@@ -559,14 +559,14 @@ client whose `cp_clanPwd` is still "none" is now told so instead of sending to n
   sanitizers. Among them 800000 random datagrams in buffers of exactly their size, the queue with loss,
   doubles and reordering over 200000 rounds, the low-pass (150 Hz at 0.57, 700 Hz at 0.30, 3000 Hz at 0.03 of
   what went in).
-- End to end (`tools/voicetest/e2e.sh`): a dedicated server and two clients with `cg_voiceBackend null` on the
+- End to end (`tools/voicetest/e2e.sh`): a dedicated server and two clients with `v_voiceBackend null` on the
   test room of the renderer tests. One sends a tone of 440 and 3000 Hz, the other writes what it would play to
   a file. Next to the speaker: both pitches at the same level, louder on the side he stands on, no gap in four
-  seconds. From the other room: 3000 Hz at 1 % and 440 Hz at 15 % of that. With `cg_voiceMuffle 0` both at the
+  seconds. From the other room: 3000 Hz at 1 % and 440 Hz at 15 % of that. With `v_voiceMuffle 0` both at the
   same level again.
 - A client without the voice code (`tools/voicetest/legacy.sh`): a third client with a cgame from before the
-  voice chat joins the same server while the two talk, once with `g_voice 1` and once with 0. Its log is the
-  same but for the order in which the others joined. It sent no `jpvoice`, the server gave it no token and
+  voice chat joins the same server while the two talk, once with `vs_voice 1` and once with 0. Its log is the
+  same but for the order in which the others joined. It sent no `vs_voiceLink`, the server gave it no token and
   listed two clients with voice.
 - 12000 datagrams that are no voice (random bytes, the right shape with tokens nobody has, client numbers out
   of range, too long, cut off) at the relay of a server under valgrind (`tools/voicetest/flood.py`): all
@@ -589,10 +589,10 @@ loss, a server over the internet.
   test.
 - The cgame in headless Chromium 153 (`tools/panelshot/steps_voice_mock.js`), in a demo, with the answer of the
   server given by hand and a WebSocket in the page that answers like the relay and sends each frame back as the
-  voice of another player. The device of the page plays (48000 Hz, pieces of 2048), `voice_test tone` comes back
+  voice of another player. The device of the page plays (48000 Hz, pieces of 2048), `v_voice_test tone` comes back
   through the codec at 440 and 3000 Hz at 0.183 and 0.179 of full scale (0.183 went in), without a gap in 1.5
   seconds. With the microphone of the browser that is none: asked, opened, 50 frames a second sent, closed 30
-  seconds after the key. Without one, and as a page over plain http: one line a press, `voice_status` as above,
+  seconds after the key. Without one, and as a page over plain http: one line a press, `v_voice_status` as above,
   the tone still heard. On a host without `/voice`: six tries in 62 seconds, one line, nothing after it.
   `vid_restart` while it talks: devices and socket gone, the new cgame starts again.
 - Builds: the browser with and without the voice chat (without it the object code of the voice files is the
@@ -615,13 +615,13 @@ without sound hardware.
   number free, another room means another token, `-maxkbps 8` lets 4 of 50 datagrams out. It ends with 0 on
   SIGTERM and the sanitizers found nothing.
 - End to end (`tools/voicetest/e2e_master.sh`): the dedicated server with a stand-in for a foreign game module
-  (this tree's module with `g_voice` out of the server info and at 0), the master, and two clients with
-  `cg_voiceBackend null` on the test room. The server info had no `g_voice` and the game server got no
-  `jpvoice` command. Next to the speaker: 440 and 3000 Hz at the same level (0.132 and 0.130), louder on his
+  (this tree's module with `vs_voice` out of the server info and at 0), the master, and two clients with
+  `v_voiceBackend null` on the test room. The server info had no `vs_voice` and the game server got no
+  `vs_voiceLink` command. Next to the speaker: 440 and 3000 Hz at the same level (0.132 and 0.130), louder on his
   side, no gap in four seconds. From the other room: 440 Hz at 14 % and 3000 Hz at 1 % of that. In the hall
   2400 units away, where the level still shows him: nothing. Back next to him: as before. Muted: nothing. As
   a spectator who follows him: both pitches at the same level, the same on both sides.
-- The same run with `cg_voiceMaster 0` on both clients: the master got no datagram at all, `voice_status`
+- The same run with `v_voiceMaster 0` on both clients: the master got no datagram at all, `v_voice_status`
   says why. Without a master: one line after ten seconds, the scripts of both clients run to their end.
 - The relay of a game server after the changes to `cg_voice.c` (`tools/voicetest/e2e.sh`): the same levels as
   through the master, to the fourth digit.

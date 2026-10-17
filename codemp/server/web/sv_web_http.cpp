@@ -510,13 +510,13 @@ static qboolean SV_WebDeviceName( const char *name ) {
 ==================
 SV_WebSendPage
 
-A file of the folder sv_webRoot. Only one that is in the folder itself: its name is made of letters, digits,
+A file of the folder vs_clientWebRoot. Only one that is in the folder itself: its name is made of letters, digits,
 dot, dash and underscore, which leaves no way to name a folder, another drive or the folder above, and it
 does not begin with a dot. There is no list of the folder.
 ==================
 */
 static void SV_WebSendPage( webConnection_t *c, const char *name ) {
-	const char	*root = sv_webRoot->string;
+	const char	*root = vs_clientWebRoot->string;
 	const char	*base = Cvar_VariableString( "fs_basepath" );
 	const char	*extension = COM_GetExtension( name );
 	const char	*type = "application/octet-stream";

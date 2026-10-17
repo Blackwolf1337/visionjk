@@ -29,7 +29,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 // the engine looks its modules up in Module.vjkModules by exactly these names
 const SIDE_MODULES = ['cgamewasm32.wasm', 'uiwasm32.wasm', 'rd-vulkan-vision_wasm32.wasm'];
-// Taken along when the server has them, the game runs without: Steam Audio for s_spatial, a file of its own that
+// Taken along when the server has them, the game runs without: Steam Audio for v_spatial, a file of its own that
 // the engine loads when it wants it, as it loads the library on the desktop.
 const OPTIONAL_MODULES = ['phonon.wasm'];
 const ENGINE = 'visionjk.wasm32.js', ENGINE_CODE = 'visionjk.wasm32.wasm';
@@ -511,7 +511,7 @@ async function start(manifest) {
 	say('Starting the game');
 	let frameWidth = canvas.clientWidth, frameHeight = canvas.clientHeight;
 	const args = ['+set', 'fs_basepath', '/game', '+set', 'fs_homepath', '/home', '+set', 'fs_game', manifest.game,
-		'+set', 'net_wsHost', location.host, '+set', 'r_mode', '-1',
+		'+set', 'v_wsHost', location.host, '+set', 'r_mode', '-1',
 		'+set', 'r_customwidth', String(frameWidth), '+set', 'r_customheight', String(frameHeight)];
 	const query = new URLSearchParams(location.search);
 	if (query.has('connect')) args.push('+connect', location.hostname);

@@ -6,7 +6,7 @@ usage: tools/menus/build.py [<assets1.pk3 of the game>]
 
 Every menu of the two lists the ui loads (ui/jampmenus.txt outside a game, ui/jampingame.txt in one) is read,
 changed by the rules below and written under ui/vision/, with two lists of their own (ui/visionmenus.txt,
-ui/visioningame.txt). Nothing of ui/jamp is touched: those files stay what the ui loads with ui_classic 1 and
+ui/visioningame.txt). Nothing of ui/jamp is touched: those files stay what the ui loads with v_classic 1 and
 what a mod replaces.
 
 What an item does is never changed: its cvar, its scripts, its feeder and its owner draw are taken as they

@@ -325,7 +325,7 @@ static void CL_AddCgameCommand( const char *cmdName ) {
 CL_ClipOffChanged
 
 Port, not in the game as it was. A server of this tree can stop minding clip brushes of the map while the map
-runs (clipbrush) and says in its system info which (cm_clipOff). They are off in the collision of this client
+runs (clipbrush) and says in its system info which (vs_clipRanges). They are off in the collision of this client
 too then, so that it predicts the moves the server makes. Not while this process runs the server itself: the
 collision is the one of the server then.
 ====================
@@ -349,7 +349,7 @@ static void CL_CM_LoadMap( const char *mapname, qboolean subBSP ) {
 	// Port: the map as it is loaded has every clip brush on, the server may have some off (CL_ClipOffChanged)
 	if ( !subBSP && !com_sv_running->integer )	CM_ApplyClipOff( cl_clipOff );
 
-	// the sound gets the world as a mesh (s_spatial)
+	// the sound gets the world as a mesh (v_spatial)
 	if ( !subBSP )	S_SpatialLoadMap( mapname );
 }
 
@@ -535,7 +535,7 @@ static qboolean CL_G2API_GetBoltMatrix_NoRecNoRot( void *ghoul2, const int model
 	return re->G2API_GetBoltMatrix( *((CGhoul2Info_v *)ghoul2), modelIndex, boltIndex, matrix, angles, position, frameNum, modelList, scale );
 }
 
-// What the cgame has the engine load, each with its kind for com_loadReport and com_hitchLog (qcommon/com_load.cpp)
+// What the cgame has the engine load, each with its kind for v_loadReport and v_hitchLog (qcommon/com_load.cpp)
 static qhandle_t CL_LoadModel( const char *name ) {
 	Com_LoadPush( "model", name );
 	const qhandle_t h = re->RegisterModel( name );

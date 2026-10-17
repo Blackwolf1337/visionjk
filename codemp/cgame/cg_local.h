@@ -1557,7 +1557,7 @@ typedef struct cgs_s {
 	glconfig_t		glconfig;			// rendering configuration
 	float			screenXScale;		// derived from glconfig
 	float			screenYScale;
-	float			bias2D;				// the grid of the 2D runs from -bias2D to 640 + bias2D on a wide window (cvar r_2dBias)
+	float			bias2D;				// the grid of the 2D runs from -bias2D to 640 + bias2D on a wide window (cvar v_2dBias)
 	float			shift2D;			// what CG_Place2D() moves the 2D by right now
 	float			screenXBias;
 
@@ -2169,7 +2169,7 @@ void CG_BotModeShutdown( void );
 void CG_VoiceInit( void );
 void CG_VoiceShutdown( void );
 void CG_VoiceFrame( void );
-void CG_VoiceServerInfo( const char *value );	// g_voice of the server info, "" if the server does not say it
+void CG_VoiceServerInfo( const char *value );	// vs_voice of the server info, "" if the server does not say it
 void CG_VoiceServerCommand( void );
 void CG_VoiceDown_f( void );
 void CG_VoiceUp_f( void );

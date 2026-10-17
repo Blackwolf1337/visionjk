@@ -166,8 +166,8 @@ cvar_t	*r_debugSort;
 cvar_t	*r_marksOnTriangleMeshes;
 
 cvar_t	*r_aspectCorrectFonts;
-cvar_t	*r_2dAspect;
-cvar_t	*r_menuBlur;
+cvar_t	*v_2dAspect;
+cvar_t	*v_menuBlur;
 
 // the limits apply to the sum of all scenes in a frame --
 // the main view, all the 3D icons, etc
@@ -285,12 +285,12 @@ R_2DBias
 
 The 2D of the game is placed on a grid of 640 x 480. On a window that is wider than 4:3 the grid keeps its height
 and gets wider instead of being stretched over the window: the 640 of the menus sit in the middle and x runs from
--bias to 640 + bias. With r_2dAspect 0, or on a window of 4:3 or narrower, the bias is 0 and the grid is stretched
-as it always was. The modules and the engine read the bias from the cvar r_2dBias, which only this renderer sets.
+-bias to 640 + bias. With v_2dAspect 0, or on a window of 4:3 or narrower, the bias is 0 and the grid is stretched
+as it always was. The modules and the engine read the bias from the cvar v_2dBias, which only this renderer sets.
 ===============
 */
 float R_2DBias( void ) {
-	if ( !r_2dAspect->integer || glConfig.vidHeight <= 0
+	if ( !v_2dAspect->integer || glConfig.vidHeight <= 0
 		|| glConfig.vidWidth * SCREEN_HEIGHT <= glConfig.vidHeight * SCREEN_WIDTH ) {
 		return 0.0f;
 	}
@@ -1711,8 +1711,8 @@ void R_Register( void )
 	r_marksOnTriangleMeshes				= ri.Cvar_Get( "r_marksOnTriangleMeshes",			"0",						CVAR_ARCHIVE_ND, "" );
 	r_aspectCorrectFonts				= ri.Cvar_Get( "r_aspectCorrectFonts",				"0",						CVAR_ARCHIVE, "" );
 	// it had another name once (r_sceneBlur), with a pass that ended the game, see VK_PostSet()
-	r_menuBlur							= ri.Cvar_Get( "r_menuBlur",						"1",						CVAR_ARCHIVE, "How far the scene behind the menu in the level is out of focus (rd-vulkan-vision): 0 not at all, 1 normal, up to 4" );
-	r_2dAspect							= ri.Cvar_Get( "r_2dAspect",						"1",						CVAR_ARCHIVE|CVAR_LATCH, "1 menus and HUD keep their shape on a wide window, 0 they are stretched over it (vid_restart)" );
+	v_menuBlur							= ri.Cvar_Get( "v_menuBlur",						"1",						CVAR_ARCHIVE, "How far the scene behind the menu in the level is out of focus (rd-vulkan-vision): 0 not at all, 1 normal, up to 4" );
+	v_2dAspect							= ri.Cvar_Get( "v_2dAspect",						"1",						CVAR_ARCHIVE|CVAR_LATCH, "1 menus and HUD keep their shape on a wide window, 0 they are stretched over it (vid_restart)" );
 	r_maxpolys							= ri.Cvar_Get( "r_maxpolys",						XSTRING( DEFAULT_MAX_POLYS ),		CVAR_NONE, "" );
 	r_maxpolyverts						= ri.Cvar_Get( "r_maxpolyverts",					XSTRING( DEFAULT_MAX_POLYVERTS ),	CVAR_NONE, "" );
 /*
@@ -1835,8 +1835,8 @@ void R_Init( void ) {
 #endif
 
 	// what the modules and the engine place their 2D by, see R_2DBias()
-	ri.Cvar_Get( "r_2dBias", "0", CVAR_ROM, "" );
-	ri.Cvar_Set( "r_2dBias", va( "%f", R_2DBias() ) );
+	ri.Cvar_Get( "v_2dBias", "0", CVAR_ROM, "" );
+	ri.Cvar_Set( "v_2dBias", va( "%f", R_2DBias() ) );
 
 	R_InitImages();
 	R_InitShaders(qfalse);

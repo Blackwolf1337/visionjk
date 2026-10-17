@@ -100,7 +100,7 @@ void S_TransferStereo16 (unsigned long *pbuf, int endtime)
 ===================
 S_MufflePaint
 
-s_muffle, 0 to 1: the whole mix of the game goes through a low pass, the more the higher the value. At 1 what
+v_muffle, 0 to 1: the whole mix of the game goes through a low pass, the more the higher the value. At 1 what
 is above about 600 Hz is damped, at 0 nothing is done. A module sets it while something stands in front of the
 game: the menu in the level of the cgame (cgame/menu3d). The value is approached over a fifth of a second, so
 nothing clicks. Sounds, music and the sounds of snd_spatial.cpp all pass here.
@@ -117,7 +117,7 @@ snd_spatial.cpp keeps its ring, and a paint goes on from the sample in front of 
 #define MUFFLE_STEPS	128
 
 static void S_MufflePaint( int from, int to ) {
-	static cvar_t	*s_muffle;
+	static cvar_t	*v_muffle;
 	static struct muffleSample_s {
 		float	left, right;		// what the filter gave for this sample
 		float	amount;				// and how far it was muffled, 0 to 1
@@ -128,10 +128,10 @@ static void S_MufflePaint( int from, int to ) {
 	float			target, step, left, right, amount = 0.0f;
 	int				t;
 
-	if ( !s_muffle ) {
-		s_muffle = Cvar_Get( "s_muffle", "0", CVAR_TEMP, "0 to 1: the sound of the game is muffled, set by the cgame while its menu stands in the level" );
+	if ( !v_muffle ) {
+		v_muffle = Cvar_Get( "v_muffle", "0", CVAR_TEMP, "0 to 1: the sound of the game is muffled, set by the cgame while its menu stands in the level" );
 	}
-	target = Com_Clamp( 0.0f, 1.0f, s_muffle->value );
+	target = Com_Clamp( 0.0f, 1.0f, v_muffle->value );
 	if ( to - from > PAINTBUFFER_SIZE ) {
 		to = from + PAINTBUFFER_SIZE;
 	}
@@ -496,7 +496,7 @@ void S_PaintChannels( int endtime ) {
 			if ( !ch->thesfx || (ch->leftvol<0.25 && ch->rightvol<0.25 )) {
 				continue;
 			}
-			// a sound in the level that snd_spatial.cpp plays (s_spatial)
+			// a sound in the level that snd_spatial.cpp plays (v_spatial)
 			if ( ch->spatial ) {
 				continue;
 			}

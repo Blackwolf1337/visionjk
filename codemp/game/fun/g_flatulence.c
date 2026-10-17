@@ -26,7 +26,7 @@ Server side only, the client code is untouched: the sound and the cloud are the 
 events, made of files of the game (the snorts of the rancor, the talk of the gonk droid, an air burst, and
 the gas cloud of the noghri stick).
 
-Toggled per player in the web admin panel or with the server console command "flatulence <player>". The
+Toggled per player in the web admin panel or with the server console command "vs_flatulence <player>". The
 state is kept here and is gone with the map.
 
 Not from JA+ and not from JKAdmin.

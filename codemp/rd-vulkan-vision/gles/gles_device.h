@@ -170,11 +170,11 @@ typedef struct vkDeviceState_s {	// see vkState_t
 	int							statFlares, statFlaresSeen;	// the last answers of the device: for how many flares, how many of them seen
 	// what the device has made and not deleted, for gfxinfo and for the end: nothing may be left
 	int							statBuffers, statTextures, statFramebuffers, statRenderbuffers, statQueries;
-	int							statErrors;			// r_glesDebug: what glGetError() has said since the start
+	int							statErrors;			// v_glesDebug: what glGetError() has said since the start
 } vkDeviceState_t;
 
 // gles_main.cpp
-extern cvar_t	*r_glesDebug;
+extern cvar_t	*v_glesDebug;
 
 // gles_buffer.cpp
 void		VK_InitFrames( void );

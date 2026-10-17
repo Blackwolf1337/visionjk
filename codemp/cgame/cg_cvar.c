@@ -23,7 +23,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 */
 
 #include "cg_local.h"
-#include "qcommon/game_version.h"	// GIT_TAG, for cjp_vision
+#include "qcommon/game_version.h"	// GIT_TAG, for v_vision
 
 //
 // Cvar callbacks

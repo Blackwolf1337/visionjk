@@ -26,7 +26,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // and plays what comes back from there: the voices of the players the server lets this one hear.
 //
 // A server without the game module of this tree has no such port. There the same sound goes through the voice
-// master, one relay for all those servers (cg_voiceMaster, see "The masterserver" below).
+// master, one relay for all those servers (v_voiceMaster, see "The masterserver" below).
 //
 // Nothing in here waits. The socket does not block, the sound devices run in threads of the audio library,
 // and CG_VoiceFrame() moves a little of everything along once a frame.
@@ -83,7 +83,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define VOICE_FAR_GAIN			0.1f	// how loud a voice still is at the end of its range
 #define VOICE_MAX_PAN			0.8f	// how far a voice goes to one side: it is never gone from the other ear
 #define VOICE_HEAD				24.0f	// the mouth of a player above his origin
-// What the room gets of the own voice at cg_voiceOwnReverb 1, against a voice next to the listener. It was 0.3,
+// What the room gets of the own voice at v_voiceOwnReverb 1, against a voice next to the listener. It was 0.3,
 // which the first one to play with it found too loud (2026-10-11): half of that now, the menu has a slider.
 #define VOICE_OWN_REVERB_GAIN	0.15f
 #define VOICE_OWN_REVERB_CAP	0.1f	//	a frame of it louder than this (Voice_Level) goes in this loud,
@@ -91,7 +91,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define VOICE_LIP_FLOOR			0.004f	// a frame quieter than this (Voice_Level) leaves the mouth shut
 #define VOICE_LIP_DECAY			0.995f	// what the loudest frame of a player lately loses with every frame after it
 #define VOICE_LIP_HOLD_MSEC		120		// the mouth keeps what a frame gave it this long
-#define VOICE_FILE_FRAME		( VOICE_FRAME_SAMPLES * 4 )	// voice_test: the bytes of one frame in a file, two channels
+#define VOICE_FILE_FRAME		( VOICE_FRAME_SAMPLES * 4 )	// v_voice_test: the bytes of one frame in a file, two channels
 
 // The songs of the boxes of the boombox (boombox/cg_boombox.c) come over the relay as the voices of the speakers
 // behind the players: speaker MAX_CLIENTS + the box. They are played like a voice, with more of them waiting
@@ -110,8 +110,8 @@ typedef struct voiceSpeaker_s {
 	int				lastHeard;		// when his last datagram came
 	int				concealed;		// frames in a row that were made up
 	int				flags, distance;	// of his last datagram: is he in what the server shows, and how far away
-	int				heard;			// frames of him that were played, for voice_status
-	qboolean		muted;			// by this player (voice_mute)
+	int				heard;			// frames of him that were played, for v_voice_status
+	qboolean		muted;			// by this player (v_voice_mute)
 	int				gainSteps;		// how much louder or quieter this player wants him, in quarters: 0 is as he is
 	qboolean		muffled;		// something is between him and the listener
 	int				traceTime;		//	and when that was looked at last
@@ -122,7 +122,7 @@ typedef struct voiceSpeaker_s {
 	int				lipLevel;		//	how far that opens his mouth now, 0 to 4,
 	int				lipTime;		//	and since when
 	qboolean		radio;			// what is played of him now came over the clan radio (VOICE_FLAG_RADIO): it has no place
-	voiceRadio_t	radioFx;		//	and this is how it sounds (cg_voiceRadioFX)
+	voiceRadio_t	radioFx;		//	and this is how it sounds (v_voiceRadioFX)
 	float			beat[VOICE_BOX_BEATS];		// a box: how loud a frame of its song is (Voice_Beat()),
 	int				beatAt[VOICE_BOX_BEATS];	//	and when it is heard
 	int				beatNext;
@@ -136,8 +136,8 @@ typedef union voiceMem_u {
 } voiceMem_t;
 
 static struct {
-	qboolean			serverHas;		// the server info says g_voice
-	qboolean			serverSays;		//	or at least says something about it: g_voice 0 is a no, also to the masterserver
+	qboolean			serverHas;		// the server info says vs_voice
+	qboolean			serverSays;		//	or at least says something about it: vs_voice 0 is a no, also to the masterserver
 	qboolean			master;			// this server has no relay, the voice goes through the masterserver
 	qboolean			local;			//	or would, but the game runs on this machine
 	struct in_addr		game;			// masterserver: the address of the game server,
@@ -154,7 +154,7 @@ static struct {
 	byte				clan[VOICE_CLAN_BYTES];	//	and this is what it is told as the clan of this client, all zero: none
 	qboolean			boxes;			// the master plays boxes of the boombox (VOICE_FLAG_BOXES),
 	int					boxHear;		//	and this is what it is told of the boxes this client hears, a bit each
-	qboolean			asked;			// "jpvoice hello" went to the server,
+	qboolean			asked;			// "vs_voiceLink hello" went to the server,
 	int					asks;			//	this many times
 	qboolean			answered;		// the server answered: port, token, range
 	qboolean			failed;			// something is missing for good, said once
@@ -186,13 +186,13 @@ static struct {
 	int					talkUntil;		// voice activation
 	int					micUntil;		// push to talk: when the microphone is closed again
 
-	int					test;			// voice_test: 1 a tone, 2 a file goes out in place of the microphone
+	int					test;			// v_voice_test: 1 a tone, 2 a file goes out in place of the microphone
 	int					testNext;
 	int					testSample;
-	fileHandle_t		play;			// voice_test play: the file,
+	fileHandle_t		play;			// v_voice_test play: the file,
 	int					playLeft;		//	how many bytes of it are not sent yet,
 	char				playName[MAX_QPATH];	//	and its name: it is opened again when it is through
-	fileHandle_t		record;			// voice_test record: what is played goes into this file
+	fileHandle_t		record;			// v_voice_test record: what is played goes into this file
 } voice;
 
 static voiceSpeaker_t	voiceSpeakers[VOICE_ALL];
@@ -214,7 +214,7 @@ keeps in a cvar: OpenJK as numbers (cl_currentServerIP), jamp only as the player
 that does nothing else. The game only asks whether it is done.
 
 A server without a relay of its own is not asked anything: there the voice goes through the masterserver
-(cg_voiceMasterHost), whose name is looked up the same way.
+(v_voiceMasterHost), whose name is looked up the same way.
 
 ===============================================================================
 */
@@ -392,11 +392,11 @@ static qboolean Voice_FindServer( void ) {
 		}
 		voice.gameKnown = qtrue;
 	}
-	Q_strncpyz( host, cg_voiceMasterHost.string, sizeof( host ) );
+	Q_strncpyz( host, v_voiceMasterHost.string, sizeof( host ) );
 	port = VOICE_MASTER_PORT;
 	found = Voice_SplitAddress( host, sizeof( host ), &port ) ? Voice_Lookup( host, &voice.server.sin_addr ) : -1;
 	if ( found < 0 ) {
-		trap->Print( "Voice chat: the masterserver \"%s\" could not be looked up (cg_voiceMasterHost)\n", cg_voiceMasterHost.string );
+		trap->Print( "Voice chat: the masterserver \"%s\" could not be looked up (v_voiceMasterHost)\n", v_voiceMasterHost.string );
 		voice.failed = qtrue;
 	}
 	if ( found <= 0 )
@@ -465,7 +465,7 @@ void CG_VoiceShutdown( void ) {
 	Voice_Close();
 }
 
-// From the server info, the value of g_voice: does this server have a voice chat? Only then is it asked for one.
+// From the server info, the value of vs_voice: does this server have a voice chat? Only then is it asked for one.
 // A server that does not say the key at all has no relay, and the voice goes through the masterserver. One that
 // says 0 wants no voice chat, and that holds for the master too.
 void CG_VoiceServerInfo( const char *value ) {
@@ -517,17 +517,17 @@ static qboolean Voice_Open( int port ) {
 	(void)port;
 #endif
 
-	if ( !CG_VoiceAudioInit( cg_voiceBackend.string ) || !CG_VoiceAudioOpenPlayback( cg_voicePlayback.string ) ) {
+	if ( !CG_VoiceAudioInit( v_voiceBackend.string ) || !CG_VoiceAudioOpenPlayback( v_voicePlayback.string ) ) {
 		trap->Print( "Voice chat: no sound device to play on, you will not hear the others\n" );
 	} else {
 		voice.audio = qtrue;
 		for ( i = 0; i < VOICE_ALL; i++ )
-			CG_VoiceAudioMix( i, cg_voiceVolume.value, cg_voiceVolume.value, 0.0f );
+			CG_VoiceAudioMix( i, v_voiceVolume.value, v_voiceVolume.value, 0.0f );
 	}
 	voice.answered = qtrue;
 	// (switched off, the way is open for the songs of the boombox alone)
-	if ( cg_voice.integer )
-		trap->Print( "Voice chat: on. bind a key to +voice to talk (cg_voiceMode 2 sends whenever you speak)\n" );
+	if ( v_voice.integer )
+		trap->Print( "Voice chat: on. bind a key to +voice to talk (v_voiceMode 2 sends whenever you speak)\n" );
 	return qtrue;
 }
 
@@ -535,7 +535,7 @@ static qboolean Voice_Open( int port ) {
 =================
 CG_VoiceServerCommand
 
-jpvoice <protocol> <port> <token> <range>: the answer of the server to "jpvoice hello".
+vs_voiceLink <protocol> <port> <token> <range>: the answer of the server to "vs_voiceLink hello".
 =================
 */
 void CG_VoiceServerCommand( void ) {
@@ -568,14 +568,14 @@ void CG_VoiceServerCommand( void ) {
 }
 
 // Does the voice go through the masterserver on this server? Only where the server says nothing about a voice
-// chat: one of this tree relays itself or says no with g_voice 0, and so can any other (sets g_voice 0).
+// chat: one of this tree relays itself or says no with vs_voice 0, and so can any other (sets vs_voice 0).
 static qboolean Voice_WantsMaster( void ) {
 #ifdef __EMSCRIPTEN__
 	// a page can not send UDP, and the servers it can play on are of this tree
 	return qfalse;
 #else
 	// (also for the boxes of the boombox alone: the master plays them)
-	return ( !voice.serverSays && ( cg_voice.integer || cg_boombox.integer ) && cg_voiceMaster.integer && !cg.demoPlayback ) ? qtrue : qfalse;
+	return ( !voice.serverSays && ( v_voice.integer || v_boomboxes.integer ) && v_voiceMaster.integer && !cg.demoPlayback ) ? qtrue : qfalse;
 #endif
 }
 
@@ -597,8 +597,8 @@ static qboolean Voice_MasterStart( int now ) {
 	}
 	voice.range = VOICE_MASTER_RANGE;
 	voice.askTime = now;
-	trap->Print( "Voice chat: this server has none of its own, so it goes through the masterserver %s (cg_voiceMaster 0: not at all)\n",
-		cg_voiceMasterHost.string );
+	trap->Print( "Voice chat: this server has none of its own, so it goes through the masterserver %s (v_voiceMaster 0: not at all)\n",
+		v_voiceMasterHost.string );
 	return Voice_Open( voice.port );
 }
 #endif
@@ -632,7 +632,7 @@ static void Voice_Send( int type, const byte *frame, int frameLen ) {
 #endif
 }
 
-// The engine of this tree says in a cvar what its sound (s_spatial) takes from the voice chat. Only when the
+// The engine of this tree says in a cvar what its sound (v_spatial) takes from the voice chat. Only when the
 // cvar is 1 is the call that goes with it there at all: any other engine ends trap->ext before it.
 static qboolean Voice_EngineSays( const char *cvar ) {
 	char value[8];
@@ -700,10 +700,10 @@ static void Voice_OwnReverb( const short *samples ) {
 	float	level, gain, step;
 	int		i;
 
-	if ( cg_voiceOwnReverb.value <= 0.0f || voice.range <= 0 || !cg.snap || cg.snap->ps.clientNum != cg.clientNum
+	if ( v_voiceOwnReverb.value <= 0.0f || voice.range <= 0 || !cg.snap || cg.snap->ps.clientNum != cg.clientNum
 		|| cgs.clientinfo[cg.clientNum].team == TEAM_SPECTATOR )
 		return;
-	if ( !Voice_EngineSays( "s_spatialOwnVoice" ) || !trap->ext.S_SpatialOwnVoice )
+	if ( !Voice_EngineSays( "v_spatialOwnVoice" ) || !trap->ext.S_SpatialOwnVoice )
 		return;
 
 	level = Voice_Level( samples );
@@ -714,7 +714,7 @@ static void Voice_OwnReverb( const short *samples ) {
 	for ( i = 0; i < VOICE_FRAME_SAMPLES; i++ )
 		capped[i] = (short)( samples[i] * ( voice.ownGain + step * ( i + 1 ) ) );
 	voice.ownGain = gain;
-	trap->ext.S_SpatialOwnVoice( cg_voiceVolume.value * cg_voiceOwnReverb.value * VOICE_OWN_REVERB_GAIN, capped, VOICE_FRAME_SAMPLES,
+	trap->ext.S_SpatialOwnVoice( v_voiceVolume.value * v_voiceOwnReverb.value * VOICE_OWN_REVERB_GAIN, capped, VOICE_FRAME_SAMPLES,
 		VOICE_RATE );
 }
 
@@ -769,19 +769,19 @@ static qboolean Voice_RadioKey( void ) {
 	}
 	if ( on != voice.sendingRadio ) {
 		voice.sendingRadio = on;
-		if ( cg_voiceRadioFX.integer && voice.audio ) {
+		if ( v_voiceRadioFX.integer && voice.audio ) {
 			short	click[VOICE_RADIO_CLICK];
 			const int count = BG_VoiceRadioClick( &voice.ownRadio, click, VOICE_RADIO_CLICK, on ? qfalse : qtrue );
 
 			// the place of this client among the voices is free: nobody hears himself
-			CG_VoiceAudioMix( cg.clientNum, cg_voiceVolume.value * 0.5f, cg_voiceVolume.value * 0.5f, 0.0f );
+			CG_VoiceAudioMix( cg.clientNum, v_voiceVolume.value * 0.5f, v_voiceVolume.value * 0.5f, 0.0f );
 			CG_VoiceAudioWrite( cg.clientNum, click, count );
 		}
 	}
 	return on;
 }
 
-// voice_test play: the file from its start. qfalse: there is not one frame in it.
+// v_voice_test play: the file from its start. qfalse: there is not one frame in it.
 static qboolean Voice_TestOpen( void ) {
 	if ( voice.play )
 		trap->FS_Close( voice.play );
@@ -795,7 +795,7 @@ static qboolean Voice_TestOpen( void ) {
 	return qfalse;
 }
 
-// voice_test: the next frame that goes out in place of the microphone. qfalse: the file is gone, the test ended.
+// v_voice_test: the next frame that goes out in place of the microphone. qfalse: the file is gone, the test ended.
 static qboolean Voice_TestFrame( short *samples ) {
 	byte	raw[VOICE_FILE_FRAME];
 	int		i;
@@ -829,16 +829,16 @@ static qboolean Voice_TestFrame( short *samples ) {
 =================
 Voice_Capture
 
-Push to talk (cg_voiceMode 1): the microphone is opened when the key goes down, which takes a moment the
+Push to talk (v_voiceMode 1): the microphone is opened when the key goes down, which takes a moment the
 first time, and is closed again when it has not been used for a while. A player who never presses the key
 never has his microphone open.
 
-Voice activation (cg_voiceMode 2): the microphone is open all the time, and what is louder than
-cg_voiceThreshold is sent.
+Voice activation (v_voiceMode 2): the microphone is open all the time, and what is louder than
+v_voiceThreshold is sent.
 =================
 */
 static void Voice_Capture( int now ) {
-	const qboolean	activation = ( cg_voiceMode.integer == 2 ) ? qtrue : qfalse;
+	const qboolean	activation = ( v_voiceMode.integer == 2 ) ? qtrue : qfalse;
 	// the radio is always by its key, also for a player whose voice is sent as soon as he talks
 	const qboolean	radio = Voice_RadioKey();
 	const qboolean	wanted = ( activation || voice.keyDown || radio || now < voice.micUntil ) ? qtrue : qfalse;
@@ -863,7 +863,7 @@ static void Voice_Capture( int now ) {
 		return;
 	}
 	if ( !CG_VoiceAudioCapturing() ) {
-		if ( !CG_VoiceAudioInit( cg_voiceBackend.string ) || !CG_VoiceAudioOpenCapture( cg_voiceCapture.string ) ) {
+		if ( !CG_VoiceAudioInit( v_voiceBackend.string ) || !CG_VoiceAudioOpenCapture( v_voiceCapture.string ) ) {
 #ifdef __EMSCRIPTEN__
 			const char *why;
 
@@ -876,12 +876,12 @@ static void Voice_Capture( int now ) {
 				trap->Print( "Voice chat: this page has no microphone: %s\n", why ? why : "it does not open" );
 #else
 			if ( voice.keyDown || voice.clanDown || activation )
-				trap->Print( "Voice chat: no microphone (voice_devices lists what there is, cg_voiceCapture chooses)\n" );
+				trap->Print( "Voice chat: no microphone (v_voice_devices lists what there is, v_voiceCapture chooses)\n" );
 #endif
 			voice.keyDown = voice.clanDown = qfalse;
 			voice.micUntil = 0;
 			if ( activation )
-				trap->Cvar_Set( "cg_voiceMode", "1" );
+				trap->Cvar_Set( "v_voiceMode", "1" );
 			return;
 		}
 	}
@@ -889,11 +889,11 @@ static void Voice_Capture( int now ) {
 		voice.micUntil = now + VOICE_MIC_HOLD_MSEC;
 
 	for ( count = 0; count < VOICE_MAX_PER_FRAME && CG_VoiceAudioRead( samples, VOICE_FRAME_SAMPLES ); count++ ) {
-		if ( cg_voiceMicGain.value != 1.0f ) {
+		if ( v_voiceMicGain.value != 1.0f ) {
 			for ( i = 0; i < VOICE_FRAME_SAMPLES; i++ )
-				samples[i] = (short)Com_Clamp( -32767.0f, 32767.0f, samples[i] * cg_voiceMicGain.value );
+				samples[i] = (short)Com_Clamp( -32767.0f, 32767.0f, samples[i] * v_voiceMicGain.value );
 		}
-		if ( activation && Voice_Level( samples ) > cg_voiceThreshold.value )
+		if ( activation && Voice_Level( samples ) > v_voiceThreshold.value )
 			voice.talkUntil = now + VOICE_VAD_HOLD_MSEC;
 		if ( radio || ( activation ? ( now < voice.talkUntil ) : voice.keyDown ) ) {
 			Voice_SendFrame( samples, radio ? VOICE_RADIO : VOICE_AUDIO );
@@ -1026,7 +1026,7 @@ static void Voice_Receive( int now ) {
 				continue;
 		} else {
 			// (the voice chat is off, the way is open for the songs alone)
-			if ( !cg_voice.integer )
+			if ( !v_voice.integer )
 				continue;
 			// whoever speaks here plays with a client of this tree (status/cg_peers.c)
 			CG_PeerHeard( p.client );
@@ -1057,18 +1057,18 @@ static void Voice_Receive( int now ) {
 =================
 Voice_InLevel
 
-This engine with s_spatial on plays every sound in a level through walls, with the ring of the room and round
+This engine with v_spatial on plays every sound in a level through walls, with the ring of the room and round
 corners. It takes the voice of a player too, if it is told where he is: then what is decoded of him goes to the
 engine and not to the sound device of this file, and the direction, the fall with the distance to nothing and
 the muffling of Voice_Place() are left to it. Any other engine has no such call, a speaker the server does not
 show has no place, and a chat without a range has none on purpose: those are played here as before. So is every
-voice for a player who does not want voices muffled (cg_voiceMuffle 0): a wall of the engine can not be put off.
+voice for a player who does not want voices muffled (v_voiceMuffle 0): a wall of the engine can not be put off.
 
-The engine says that it takes voices in the cvar s_spatialVoice. Only then is the call there at all.
+The engine says that it takes voices in the cvar v_spatialVoice. Only then is the call there at all.
 =================
 */
 static qboolean Voice_EngineTakesVoices( void ) {
-	return ( Voice_EngineSays( "s_spatialVoice" ) && trap->ext.S_SpatialVoice ) ? qtrue : qfalse;
+	return ( Voice_EngineSays( "v_spatialVoice" ) && trap->ext.S_SpatialVoice ) ? qtrue : qfalse;
 }
 
 static qboolean Voice_InLevel( int speaker ) {
@@ -1076,9 +1076,9 @@ static qboolean Voice_InLevel( int speaker ) {
 	const centity_t			*cent = &cg_entities[speaker];
 	char					boxes[8];
 
-	// a box of the boombox, in an engine that takes that many (s_spatialBoxes)
+	// a box of the boombox, in an engine that takes that many (v_spatialBoxes)
 	if ( speaker >= MAX_CLIENTS ) {
-		trap->Cvar_VariableStringBuffer( "s_spatialBoxes", boxes, sizeof( boxes ) );
+		trap->Cvar_VariableStringBuffer( "v_spatialBoxes", boxes, sizeof( boxes ) );
 		if ( atoi( boxes ) <= speaker - MAX_CLIENTS || !Voice_EngineTakesVoices() )
 			return qfalse;
 		return ( trap->ext.S_SpatialVoice( speaker, NULL, 0.0f, NULL, 0, VOICE_RATE ) >= 0 ) ? qtrue : qfalse;
@@ -1086,7 +1086,7 @@ static qboolean Voice_InLevel( int speaker ) {
 	if ( voice.range <= 0 || cgs.clientinfo[speaker].team == TEAM_SPECTATOR || !cent->currentValid
 		|| ( sp->flags & ( VOICE_FLAG_UNSEEN | VOICE_FLAG_RADIO ) ) )
 		return qfalse;
-	if ( !cg_voiceMuffle.integer || !Voice_EngineTakesVoices() )
+	if ( !v_voiceMuffle.integer || !Voice_EngineTakesVoices() )
 		return qfalse;
 	return ( trap->ext.S_SpatialVoice( speaker, NULL, 0.0f, NULL, 0, VOICE_RATE ) >= 0 ) ? qtrue : qfalse;
 }
@@ -1142,7 +1142,7 @@ static void Voice_PlayFrame( int speaker, qboolean makeUp ) {
 		Voice_Beat( speaker, samples );
 	if ( sp->inLevel && trap->ext.S_SpatialVoice( speaker, sp->mouth, sp->volume, samples, VOICE_FRAME_SAMPLES, VOICE_RATE ) >= 0 )
 		return;
-	if ( sp->radio && cg_voiceRadioFX.integer )
+	if ( sp->radio && v_voiceRadioFX.integer )
 		BG_VoiceRadio( &sp->radioFx, samples, VOICE_FRAME_SAMPLES );
 	CG_VoiceAudioWrite( speaker, samples, VOICE_FRAME_SAMPLES );
 }
@@ -1153,7 +1153,7 @@ static void Voice_Mouth( int speaker );
 static void Voice_RadioClick( int speaker, qboolean end ) {
 	short click[VOICE_RADIO_CLICK];
 
-	if ( !cg_voiceRadioFX.integer )
+	if ( !v_voiceRadioFX.integer )
 		return;
 	CG_VoiceAudioWrite( speaker, click, BG_VoiceRadioClick( &voiceSpeakers[speaker].radioFx, click, VOICE_RADIO_CLICK, end ) );
 }
@@ -1182,7 +1182,7 @@ static void Voice_RadioState( int speaker ) {
 }
 
 // Where the mouth of a speaker is and how loud he is, for a voice the engine plays in the level. How loud at
-// his distance is the fall of this chat (g_voiceRange), the engine does not let it fall again.
+// his distance is the fall of this chat (vs_voiceRange), the engine does not let it fall again.
 static void Voice_Mouth( int speaker ) {
 	voiceSpeaker_t	*sp = &voiceSpeakers[speaker];
 	const centity_t	*cent = &cg_entities[speaker];
@@ -1203,7 +1203,7 @@ static void Voice_Mouth( int speaker ) {
 		sp->mouth[2] += VOICE_HEAD;
 	}
 	distance = Com_Clamp( 0.0f, 1.0f, 1.0f - Distance( sp->mouth, cg.refdef.vieworg ) / voice.range );
-	sp->volume = cg_voiceVolume.value * ( 1.0f + 0.25f * sp->gainSteps ) * ( VOICE_FAR_GAIN + ( 1.0f - VOICE_FAR_GAIN ) * distance * distance );
+	sp->volume = v_voiceVolume.value * ( 1.0f + 0.25f * sp->gainSteps ) * ( VOICE_FAR_GAIN + ( 1.0f - VOICE_FAR_GAIN ) * distance * distance );
 }
 
 /*
@@ -1351,7 +1351,7 @@ static void Voice_PlaceBox( int speaker, int now ) {
 			? qtrue : qfalse;
 	}
 	CG_VoiceAudioMix( speaker, sp->volume * sqrtf( 1.0f + pan ), sp->volume * sqrtf( 1.0f - pan ),
-		( ( sp->muffled && cg_voiceMuffle.integer ) || CG_Menu3DActive() ) ? 1.0f : 0.0f );
+		( ( sp->muffled && v_voiceMuffle.integer ) || CG_Menu3DActive() ) ? 1.0f : 0.0f );
 }
 
 /*
@@ -1360,7 +1360,7 @@ Voice_Place
 
 How every voice that plays is heard in this frame: how loud on each side, and whether muffled.
 
-On a server with a range (g_voiceRange) a voice gets quieter with the distance and comes from the side its
+On a server with a range (vs_voiceRange) a voice gets quieter with the distance and comes from the side its
 speaker is on. A speaker behind a wall, behind a closed door or on the other side of a water surface is
 muffled: one line from the eye of the listener to his head is looked at ten times a second. A speaker the
 server does not show at all is muffled too and comes from no direction, at the distance the server named:
@@ -1375,7 +1375,7 @@ static void Voice_Place( int now ) {
 
 	for ( i = 0; i < VOICE_ALL; i++ ) {
 		voiceSpeaker_t	*sp = &voiceSpeakers[i];
-		float			gain = cg_voiceVolume.value, pan = 0.0f, distance;
+		float			gain = v_voiceVolume.value, pan = 0.0f, distance;
 		qboolean		muffled = qfalse;
 		vec3_t			at;
 
@@ -1422,7 +1422,7 @@ static void Voice_Place( int now ) {
 			distance = Com_Clamp( 0.0f, 1.0f, 1.0f - distance / voice.range );
 			gain *= VOICE_FAR_GAIN + ( 1.0f - VOICE_FAR_GAIN ) * distance * distance;
 		}
-		if ( !cg_voiceMuffle.integer )
+		if ( !v_voiceMuffle.integer )
 			muffled = qfalse;
 		// the same loudness from the middle as from a side: the two ears share it
 		// also while the menu stands in the level (menu3d/cg_menu3d.c), as the sound of the game is then
@@ -1439,7 +1439,7 @@ On the HUD: who is talking, and a line for this player while his own voice goes 
 =================
 */
 // The mark of a voice from the radio: a dot with three waves that leave it. Drawn here and handed to the
-// renderer, where an engine of this tree takes a picture a module made (cl_cgameScene). 0: there is none.
+// renderer, where an engine of this tree takes a picture a module made (v_cgameScene). 0: there is none.
 static qhandle_t Voice_RadioShader( void ) {
 	enum { SIZE = 32 };
 	static byte	pic[SIZE * SIZE * 4];
@@ -1449,7 +1449,7 @@ static qhandle_t Voice_RadioShader( void ) {
 	if ( voice.radioShaderTried )
 		return voice.radioShader;
 	voice.radioShaderTried = qtrue;
-	trap->Cvar_VariableStringBuffer( "cl_cgameScene", value, sizeof( value ) );
+	trap->Cvar_VariableStringBuffer( "v_cgameScene", value, sizeof( value ) );
 	if ( atoi( value ) != 1 )
 		return 0;
 	for ( y = 0; y < SIZE; y++ ) {
@@ -1489,7 +1489,7 @@ void CG_VoiceDraw( void ) {
 	const int	x = 8, height = SMALLCHAR_HEIGHT + 2;
 	int			y = 232, i;
 
-	if ( !voice.answered || !cg_voiceDrawTalkers.integer )
+	if ( !voice.answered || !v_voiceDrawTalkers.integer )
 		return;
 	if ( voice.sending && cgs.clientinfo[cg.clientNum].infoValid ) {
 		const qhandle_t radio = voice.sendingRadio ? Voice_RadioShader() : 0;
@@ -1639,7 +1639,7 @@ static void Voice_Hear( void ) {
 			allow |= 1u << i;
 	}
 	// with the voice chat off the way is open for the boxes alone: nobody is heard, nobody hears this client
-	if ( !cg_voice.integer )
+	if ( !v_voice.integer )
 		hear = allow = 0;
 	if ( hear != voice.hear || allow != voice.allow ) {
 		voice.hear = hear;
@@ -1687,13 +1687,13 @@ static void Voice_MasterFrame( int now ) {
 		BG_VoiceStatePack( state, voice.room, voice.hear, voice.allow );
 		memcpy( state + VOICE_STATE_BYTES, voice.clan, VOICE_CLAN_BYTES );
 		state[VOICE_STATE_LONG_BYTES] = (byte)voice.boxHear;
-		Voice_Send( VOICE_STATE, state, ( voice.boxes && cg_boombox.integer ) ? VOICE_STATE_BOX_BYTES
+		Voice_Send( VOICE_STATE, state, ( voice.boxes && v_boomboxes.integer ) ? VOICE_STATE_BOX_BYTES
 			: voice.social ? VOICE_STATE_LONG_BYTES : VOICE_STATE_BYTES );
 		voice.stateTime = now;
 		voice.stateDue = qfalse;
 	}
 	if ( !voice.linked && !voice.refusedSince && !voice.toldNoLink && now - voice.askTime > VOICE_NO_LINK_MSEC ) {
-		trap->Print( "Voice chat: no answer from the masterserver %s (UDP port %i)\n", cg_voiceMasterHost.string, voice.port );
+		trap->Print( "Voice chat: no answer from the masterserver %s (UDP port %i)\n", v_voiceMasterHost.string, voice.port );
 		voice.toldNoLink = qtrue;
 	}
 }
@@ -1725,7 +1725,7 @@ static void Voice_Hello( int now ) {
 
 // The way to the relay is wanted for the voice chat, or with the chat switched off for the songs of the boombox alone
 static qboolean Voice_Wanted( void ) {
-	return ( cg_voice.integer || CG_BoomboxWantsLink() ) ? qtrue : qfalse;
+	return ( v_voice.integer || CG_BoomboxWantsLink() ) ? qtrue : qfalse;
 }
 
 void CG_VoiceFrame( void ) {
@@ -1754,7 +1754,7 @@ void CG_VoiceFrame( void ) {
 		// command that comes within a second of another one without a word, and this one goes out just when the
 		// client entered the game and has more to say.
 		if ( voice.asks < VOICE_MAX_ASKS && ( !voice.asked || now - voice.askTime >= VOICE_ASK_MSEC ) ) {
-			trap->SendClientCommand( va( "jpvoice hello %i", VOICE_PROTOCOL ) );
+			trap->SendClientCommand( va( "vs_voiceLink hello %i", VOICE_PROTOCOL ) );
 			voice.asked = qtrue;
 			voice.askTime = now;
 			voice.asks++;
@@ -1787,7 +1787,7 @@ void CG_VoiceFrame( void ) {
 		Voice_Play( now );
 		Voice_Place( now );
 	}
-	if ( voice.linked && voice.encoderOk && cg_voice.integer ) {
+	if ( voice.linked && voice.encoderOk && v_voice.integer ) {
 		Voice_Capture( now );
 	} else if ( CG_VoiceAudioCapturing() ) {
 		// the chat was switched off while the way stays open for the songs
@@ -1796,7 +1796,7 @@ void CG_VoiceFrame( void ) {
 		voice.micUntil = 0;
 	}
 
-	// voice_test record: what the speakers got since the last frame, as it is
+	// v_voice_test record: what the speakers got since the last frame, as it is
 	if ( voice.record ) {
 		short	stereo[2048];
 		int		frames;
@@ -1890,7 +1890,7 @@ For the statuses above the heads (status/cg_status.c), on a server whose game mo
 ===============================================================================
 */
 
-// Is this player muted (voice_mute)?
+// Is this player muted (v_voice_mute)?
 qboolean CG_VoiceMuted( int clientNum ) {
 	return ( clientNum >= 0 && clientNum < MAX_CLIENTS && voiceSpeakers[clientNum].muted ) ? qtrue : qfalse;
 }
@@ -1948,19 +1948,19 @@ void CG_VoiceClanUp_f( void ) {
 	voice.toldNoRadio = qfalse;		// said again at the next try
 }
 
-// voice_devices: the microphones and speakers there are. cg_voiceCapture and cg_voicePlayback take a name.
+// v_voice_devices: the microphones and speakers there are. v_voiceCapture and v_voicePlayback take a name.
 void CG_VoiceDevices_f( void ) {
 	static char	names[VOICE_MAX_DEVICES][VOICE_DEVICE_NAME];
 	int			capture, count, i;
 
-	if ( !CG_VoiceAudioInit( cg_voiceBackend.string ) ) {
+	if ( !CG_VoiceAudioInit( v_voiceBackend.string ) ) {
 		trap->Print( "No sound system\n" );
 		return;
 	}
 	for ( capture = 1; capture >= 0; capture-- ) {
 		count = CG_VoiceAudioDevices( capture, names, VOICE_MAX_DEVICES );
 		trap->Print( "%s (%s \"name\", empty for the one of the system):\n", capture ? "Microphones" : "Speakers",
-			capture ? "cg_voiceCapture" : "cg_voicePlayback" );
+			capture ? "v_voiceCapture" : "v_voicePlayback" );
 		for ( i = 0; i < count; i++ )
 			trap->Print( "  \"%s\"\n", names[i] );
 		if ( !count )
@@ -1972,11 +1972,11 @@ void CG_VoiceStatus_f( void ) {
 	const qboolean	master = Voice_WantsMaster();
 	int				i;
 
-	if ( !cg_voice.integer ) {
-		trap->Print( "Voice chat is off (cg_voice 0)\n" );
+	if ( !v_voice.integer ) {
+		trap->Print( "Voice chat is off (v_voice 0)\n" );
 	} else if ( !voice.serverHas && !master ) {
-		trap->Print( "This server has no voice chat%s\n", voice.serverSays ? " and wants none (g_voice 0)"
-			: ( cg.demoPlayback ? "" : ", and the masterserver is switched off (cg_voiceMaster 0)" ) );
+		trap->Print( "This server has no voice chat%s\n", voice.serverSays ? " and wants none (vs_voice 0)"
+			: ( cg.demoPlayback ? "" : ", and the masterserver is switched off (v_voiceMaster 0)" ) );
 	} else if ( voice.local ) {
 		trap->Print( "This game runs on this machine and has no voice chat\n" );
 	} else if ( voice.failed ) {
@@ -1992,7 +1992,7 @@ void CG_VoiceStatus_f( void ) {
 		silent = "no answer from it yet";
 #else
 		if ( voice.master ) {
-			Com_sprintf( way, sizeof( way ), "through the masterserver %s, UDP port %i", cg_voiceMasterHost.string, voice.port );
+			Com_sprintf( way, sizeof( way ), "through the masterserver %s, UDP port %i", v_voiceMasterHost.string, voice.port );
 			if ( voice.refusedSince )
 				silent = "it does not let this client in";
 		} else {
@@ -2002,7 +2002,7 @@ void CG_VoiceStatus_f( void ) {
 
 		trap->Print( "Voice chat: %s, %s, range %i, %s, microphone %s%s\n", way,
 			voice.linked ? "connected" : silent, voice.range,
-			cg_voiceMode.integer == 2 ? "voice activation" : "push to talk (+voice)",
+			v_voiceMode.integer == 2 ? "voice activation" : "push to talk (+voice)",
 			CG_VoiceAudioCapturing() ? "open" : "closed", voice.sending ? ", sending" : "" );
 		// do the speakers run: the frames they took so far, in seconds
 		if ( !voice.audio || CG_VoiceAudioPlayed() < 0 )
@@ -2014,7 +2014,7 @@ void CG_VoiceStatus_f( void ) {
 			: "the server has it. It reaches the players with your clan password (cp_clanPwd)" );
 	}
 #ifdef __EMSCRIPTEN__
-	if ( cg_voice.integer && voice.serverHas && CG_VoiceAudioNoMicrophone() )
+	if ( v_voice.integer && voice.serverHas && CG_VoiceAudioNoMicrophone() )
 		trap->Print( "This page has no microphone: %s. The others are heard all the same.\n", CG_VoiceAudioNoMicrophone() );
 #endif
 	for ( i = 0; i < MAX_CLIENTS; i++ ) {
@@ -2025,7 +2025,7 @@ void CG_VoiceStatus_f( void ) {
 	}
 }
 
-// voice_mute <player>, voice_unmute <player or all>: this player does not want to hear that one
+// v_voice_mute <player>, v_voice_unmute <player or all>: this player does not want to hear that one
 static void Voice_Mute( qboolean mute ) {
 	const char	*who = CG_Argv( 1 );
 	int			n = -1, i;
@@ -2064,10 +2064,10 @@ void CG_VoiceUnmute_f( void ) {
 =================
 CG_VoiceTest_f
 
-voice_test tone: a tone of 440 and 3000 Hz goes out in place of the microphone
-voice_test play <name>: voice/<name>.raw goes out in place of the microphone, again and again
-voice_test record <name>: what the speakers get is also written to voice/<name>.raw
-voice_test stop: all of them end
+v_voice_test tone: a tone of 440 and 3000 Hz goes out in place of the microphone
+v_voice_test play <name>: voice/<name>.raw goes out in place of the microphone, again and again
+v_voice_test record <name>: what the speakers get is also written to voice/<name>.raw
+v_voice_test stop: all of them end
 
 The files are 16 bit, two channels, VOICE_RATE a second, low byte first: what was recorded can be played.
 =================
@@ -2083,7 +2083,7 @@ void CG_VoiceTest_f( void ) {
 		voice.testNext = 0;
 		voice.test = Voice_TestOpen() ? 2 : 0;
 		if ( !voice.test )
-			trap->Print( "voice_test: no sound in %s\n", voice.playName );
+			trap->Print( "v_voice_test: no sound in %s\n", voice.playName );
 	} else if ( !Q_stricmp( what, "record" ) && CG_Argv( 2 )[0] && !strpbrk( CG_Argv( 2 ), "/\\.:" ) ) {
 		if ( voice.record )
 			trap->FS_Close( voice.record );
@@ -2100,7 +2100,7 @@ void CG_VoiceTest_f( void ) {
 			trap->FS_Close( voice.play );
 		voice.play = 0;
 	} else {
-		trap->Print( "usage: voice_test tone | play <name> | record <name> | stop\n" );
+		trap->Print( "usage: v_voice_test tone | play <name> | record <name> | stop\n" );
 	}
 }
 

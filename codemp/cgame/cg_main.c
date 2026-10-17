@@ -2340,9 +2340,9 @@ static void CG_DisplaySetup( void )
 	cgDC.glconfig						= cgs.glconfig;
 	cgDC.yscale							= cgs.glconfig.vidHeight * ( 1.0f / 480.0f );
 	cgDC.xscale							= cgs.glconfig.vidWidth / ( 640.0f + 2.0f * cgs.bias2D );
-	trap->Cvar_VariableStringBuffer( "cl_cgameScene", buff, sizeof( buff ) );
+	trap->Cvar_VariableStringBuffer( "v_cgameScene", buff, sizeof( buff ) );
 	hasSkin = (qboolean)( atoi( buff ) == 1 );
-	trap->Cvar_VariableStringBuffer( "cl_uiSkin", buff, sizeof( buff ) );
+	trap->Cvar_VariableStringBuffer( "v_uiSkin", buff, sizeof( buff ) );
 	cgDC.registerShaderRGBA				= ( hasSkin && atoi( buff ) == 1 ) ? trap->ext.R_RegisterShaderRGBA : NULL;
 	cgDC.statValue						= &CG_StatValue;
 	cgDC.addPolyToScene					= &CG_AddPolyToScene;
@@ -2646,7 +2646,7 @@ Ghoul2 Insert End
 	{
 		char bias[32];
 
-		trap->Cvar_VariableStringBuffer( "r_2dBias", bias, sizeof( bias ) );
+		trap->Cvar_VariableStringBuffer( "v_2dBias", bias, sizeof( bias ) );
 		cgs.bias2D = atof( bias );
 		if ( cgs.bias2D < 0.0f ) {
 			cgs.bias2D = 0.0f;

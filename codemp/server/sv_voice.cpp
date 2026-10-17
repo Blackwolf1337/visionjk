@@ -21,10 +21,10 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // sv_voice.cpp -- the voice chat on the UDP port of the game. Not from OpenJK, see docs/japlus/voice.md.
 //
 // The relay of the voice chat is in the game module (codemp/game/voice/g_voice.c) and had a port of its own,
-// the one after the port of the game. With sv_voiceShared 1 its datagrams come in on the port of the game: they
+// the one after the port of the game. With vs_voiceShared 1 its datagrams come in on the port of the game: they
 // start with "VO" and the version of that protocol (game/voice/bg_voice.h), which no packet of the game does
 // but one (see SV_PacketEvent), and are handed to the module, which sends its answers back through here. A
-// server then needs one port. Nothing changes for a client: it sends to the port the server names in "jpvoice".
+// server then needs one port. Nothing changes for a client: it sends to the port the server names in "vs_voiceLink".
 //
 // The masterserver (the program built with VISION_MASTER) is a dedicated server that carries a relay of its
 // own too (codemp/master/ms_relay.c): the one for the servers without the game module
@@ -40,12 +40,12 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include <chrono>
 #include "master/ms_relay.h"
 
-static cvar_t	*sv_masterKbps;
-static cvar_t	*sv_masterBoxes;
+static cvar_t	*vs_masterKbps;
+static cvar_t	*vs_masterBoxes;
 static qboolean	sv_masterUp;
 #endif
 
-static cvar_t	*sv_voiceShared;
+static cvar_t	*vs_voiceShared;
 
 /*
 ===============
@@ -114,11 +114,11 @@ void SV_VoiceFrame( void ) {
 	if ( !boxSetTime || now - boxSetTime >= 1000 ) {
 		char ytdlp[MAX_OSPATH], ffmpeg[MAX_OSPATH], args[256];
 
-		Cvar_VariableStringBuffer( "g_boomboxYtdlp", ytdlp, sizeof( ytdlp ) );
-		Cvar_VariableStringBuffer( "g_boomboxFfmpeg", ffmpeg, sizeof( ffmpeg ) );
-		Cvar_VariableStringBuffer( "g_boomboxYtdlpArgs", args, sizeof( args ) );
-		MS_BoxSetup( sv_masterBoxes->integer, Cvar_VariableString( "g_boomboxMaxSeconds" )[0] ? Cvar_VariableIntegerValue( "g_boomboxMaxSeconds" ) : 600,
-			Cvar_VariableString( "g_boomboxQueue" )[0] ? Cvar_VariableIntegerValue( "g_boomboxQueue" ) : 10, ytdlp, ffmpeg, args, now );
+		Cvar_VariableStringBuffer( "vs_boomboxYtdlp", ytdlp, sizeof( ytdlp ) );
+		Cvar_VariableStringBuffer( "vs_boomboxFfmpeg", ffmpeg, sizeof( ffmpeg ) );
+		Cvar_VariableStringBuffer( "vs_boomboxYtdlpArgs", args, sizeof( args ) );
+		MS_BoxSetup( vs_masterBoxes->integer, Cvar_VariableString( "vs_boomboxMaxSeconds" )[0] ? Cvar_VariableIntegerValue( "vs_boomboxMaxSeconds" ) : 600,
+			Cvar_VariableString( "vs_boomboxQueue" )[0] ? Cvar_VariableIntegerValue( "vs_boomboxQueue" ) : 10, ytdlp, ffmpeg, args, now );
 		boxSetTime = now;
 	}
 	MS_Frame( now );
@@ -143,7 +143,7 @@ of the voice chat and is done with.
 qboolean SV_VoicePacket( const netadr_t *from, msg_t *msg ) {
 	const byte *data = msg->data;
 
-	if ( !sv_voiceShared->integer || from->type != NA_IP || msg->cursize < VOICE_HEAD_TO_SERVER
+	if ( !vs_voiceShared->integer || from->type != NA_IP || msg->cursize < VOICE_HEAD_TO_SERVER
 		|| data[0] != 'V' || data[1] != 'O' || data[2] != VOICE_PROTOCOL ) {
 		return qfalse;
 	}
@@ -163,21 +163,21 @@ qboolean SV_VoicePacket( const netadr_t *from, msg_t *msg ) {
 
 void SV_VoiceInit( void ) {
 #ifdef VISION_MASTER
-	sv_voiceShared = Cvar_Get( "sv_voiceShared", "1", CVAR_ROM, "The voice chat comes in on the UDP port of the game" );
-	sv_masterKbps = Cvar_Get( "sv_masterKbps", va( "%i", MS_DEFAULT_KBPS ), CVAR_INIT, "What the relay of the masterserver may send, kbit/s. 0: anything" );
-	sv_masterBoxes = Cvar_Get( "sv_masterBoxes", "8", CVAR_ARCHIVE, "Songs of the boombox the masterserver plays at once for the servers without the game module of VisionJK, at most 16. 0: no boxes" );
-	if ( MS_Init( SV_MasterSend, SV_MasterPrint, Q_max( sv_masterKbps->integer, 0 ) * 125, SV_MasterMsec() ) ) {
+	vs_voiceShared = Cvar_Get( "vs_voiceShared", "1", CVAR_ROM, "The voice chat comes in on the UDP port of the game" );
+	vs_masterKbps = Cvar_Get( "vs_masterKbps", va( "%i", MS_DEFAULT_KBPS ), CVAR_INIT, "What the relay of the masterserver may send, kbit/s. 0: anything" );
+	vs_masterBoxes = Cvar_Get( "vs_masterBoxes", "8", CVAR_ARCHIVE, "Songs of the boombox the masterserver plays at once for the servers without the game module of VisionJK, at most 16. 0: no boxes" );
+	if ( MS_Init( SV_MasterSend, SV_MasterPrint, Q_max( vs_masterKbps->integer, 0 ) * 125, SV_MasterMsec() ) ) {
 		sv_masterUp = qtrue;
 		Com_Printf( "Masterserver: its relay listens on the UDP port of the game\n" );
 	} else {
 		Com_Printf( "Masterserver: no relay, the system gives no random numbers, so nobody could be given a token\n" );
 	}
 #elif defined( DEDICATED )
-	sv_voiceShared = Cvar_Get( "sv_voiceShared", "1", CVAR_INIT, "1: the voice chat comes in on the UDP port of the game, the server needs no second port. 0: on a port of its own (g_voicePort)" );
+	vs_voiceShared = Cvar_Get( "vs_voiceShared", "1", CVAR_INIT, "1: the voice chat comes in on the UDP port of the game, the server needs no second port. 0: on a port of its own (vs_voicePort)" );
 #else
 	// (a game this program starts for its own player keeps the port of its own)
-	sv_voiceShared = Cvar_Get( "sv_voiceShared", "0", CVAR_INIT, "1: the voice chat comes in on the UDP port of the game, the server needs no second port. 0: on a port of its own (g_voicePort)" );
+	vs_voiceShared = Cvar_Get( "vs_voiceShared", "0", CVAR_INIT, "1: the voice chat comes in on the UDP port of the game, the server needs no second port. 0: on a port of its own (vs_voicePort)" );
 #endif
 	// what the game module answers (g_voice.c): it takes its datagrams from here
-	Cvar_Get( "g_voiceShared", "0", CVAR_ROM, "" );
+	Cvar_Get( "vs_voiceSharedGame", "0", CVAR_ROM, "" );
 }

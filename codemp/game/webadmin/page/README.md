@@ -2,7 +2,7 @@
 
 The page is one HTML file for the browser and many files here. `index.html` is the template: the markup, and a
 line `<!--#include name -->` for every other file, in the order they go into the page. The build puts them
-together (`cmake/Modules/BundlePage.cmake`) and compiles the result into the game module. With `g_webRoot` set to
+together (`cmake/Modules/BundlePage.cmake`) and compiles the result into the game module. With `vs_webRoot` set to
 this folder the server does the same from these files at every load of the page, so a change shows with a reload.
 
 All the script files are one script: they share their names, and a function of a later file can be called by an

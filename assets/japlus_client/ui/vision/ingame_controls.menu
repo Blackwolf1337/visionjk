@@ -1673,7 +1673,7 @@
 			group					japluscontrols
 			type					ITEM_TYPE_BIND
 			text					@VISION_VOICE_CHAT_TALK
-			cvar					"+voice"
+			cvar					"+v_voice"
 			descText				@VISION_HOLD_TO_TALK_IN_THE_VOICE_CHAT_PUSH
 			action { play "sound/interface/button1.wav" ; }
 			rect					12 170 380 22
@@ -1692,7 +1692,7 @@
 			group					japluscontrols
 			type					ITEM_TYPE_BIND
 			text					@VISION_CLAN_RADIO_TALK
-			cvar					"+voiceclan"
+			cvar					"+v_voiceclan"
 			descText				@VISION_HOLD_TO_TALK_TO_YOUR_CLAN_OVER_THE_R
 			action { play "sound/interface/button1.wav" ; }
 			rect					12 192 380 22
@@ -1711,7 +1711,7 @@
 			group					japluscontrols
 			type					ITEM_TYPE_BIND
 			text					@VISION_BOT_MODE_ON_OFF
-			cvar					"cg_botMode !"
+			cvar					"v_botMode !"
 			descText				@VISION_YOUR_CLIENT_PLAYS_BY_ITSELF_AND_STOP
 			action { play "sound/interface/button1.wav" ; }
 			rect					12 214 380 22
@@ -1726,11 +1726,11 @@
 
 		itemDef
 		{
-			name					vision_bind_cursor
+			name					vision_bind_v_cursor
 			type					ITEM_TYPE_BIND
 			text					@VISION_FREE_THE_MOUSE_SELECT_PLAYERS
 			descText				@VISION_HOLD_TO_POINT_AT_PLAYERS_WITH_THE_MO
-			cvar					"+cursor"
+			cvar					"+v_cursor"
 			action { play "sound/interface/button1.wav" ; }
 			rect					12 236 380 22
 			page					7
@@ -1744,11 +1744,11 @@
 
 		itemDef
 		{
-			name					vision_bind_scores_pick
+			name					vision_bind_v_scores_pick
 			type					ITEM_TYPE_BIND
 			text					@VISION_SCOREBOARD_WITH_MOUSE
 			descText				@VISION_OPENS_THE_SCOREBOARD_WITH_THE_MOUSE
-			cvar					"scores_pick"
+			cvar					"v_scores_pick"
 			action { play "sound/interface/button1.wav" ; }
 			rect					12 258 380 22
 			page					7

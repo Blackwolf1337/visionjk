@@ -947,7 +947,7 @@
 		}
 
 		// VisionJK: the way back to its own menus and HUD. This file is the Setup of the look of before
-		// (ui_classic 1), which has no entry for that otherwise.
+		// (v_classic 1), which has no entry for that otherwise.
 		itemDef
 		{
 			name				visionlookmenubutton
@@ -969,8 +969,8 @@
 			action
 			{
 				play			"sound/interface/button1.wav" ;
-				setcvar			ui_classic 0 ;
-				setcvar			cg_hud 1 ;
+				setcvar			v_classic 0 ;
+				setcvar			v_hud 1 ;
 				exec			"vid_restart" ;
 			}
 		}
@@ -2366,7 +2366,7 @@
 			group				sound
       			type				ITEM_TYPE_MULTI
 			text				"3D Sound:"
-			cvar				"ui_s_spatialQuality"
+			cvar				"v_spatialQuality"
 			cvarFloatList		{  @MENUS_OFF 0 @MENUS_LOW 1 @MENUS_MEDIUM 2 @MENUS_HIGH 3 @MENUS_VERY_HIGH 4 @MENUS_CUSTOM 5 }
 			rect				260 272 340 14
 	   		textalign			ITEM_ALIGN_RIGHT
@@ -2389,7 +2389,7 @@
 			action 
 			{
 				play			"sound/interface/button1.wav"
-				uiScript		update ui_s_spatialQuality
+				uiScript		update v_spatialQuality
 			}
 		}
 
@@ -2399,7 +2399,7 @@
 			group				sound
       			type				ITEM_TYPE_MULTI
 			text				"Output:"
-			cvar				"s_spatialHrtf"
+			cvar				"v_spatialHrtf"
 			cvarFloatList		{  "Headphones" 1 "Speakers" 0 }
 			rect				260 300 340 14
 	   		textalign			ITEM_ALIGN_RIGHT
@@ -2431,7 +2431,7 @@
 			group				sound
 			type				ITEM_TYPE_SLIDER
 			text				"Reverb:"
-			cvarfloat			"s_spatialReverb" 1 0 2
+			cvarfloat			"v_spatialReverb" 1 0 2
 			rect				260 328 340 14
 	   		textalign			ITEM_ALIGN_RIGHT
 			textalignx			174
@@ -2467,7 +2467,7 @@
 			group				voicechat
 			type				ITEM_TYPE_YESNO
 			text				"Voice Chat:"
-			cvar				"cg_voice"
+			cvar				"v_voice"
 			rect				260 188 340 14
 			textalign			ITEM_ALIGN_RIGHT
 			textalignx			174
@@ -2497,7 +2497,7 @@
 			group				voicechat
 			type				ITEM_TYPE_MULTI
 			text				"Mode:"
-			cvar				"cg_voiceMode"
+			cvar				"v_voiceMode"
 			cvarFloatList		{ "Push To Talk" 1 "Voice Activation" 2 }
 			rect				260 206 340 14
 			textalign			ITEM_ALIGN_RIGHT
@@ -2528,7 +2528,7 @@
 			group				voicechat
 			type				ITEM_TYPE_SLIDER
 			text				"Volume:"
-			cvarfloat			"cg_voiceVolume" 1 0 2
+			cvarfloat			"v_voiceVolume" 1 0 2
 			rect				260 224 340 14
 			textalign			ITEM_ALIGN_RIGHT
 			textalignx			174
@@ -2558,7 +2558,7 @@
 			group				voicechat
 			type				ITEM_TYPE_SLIDER
 			text				"Microphone Gain:"
-			cvarfloat			"cg_voiceMicGain" 1 0 3
+			cvarfloat			"v_voiceMicGain" 1 0 3
 			rect				260 242 340 14
 			textalign			ITEM_ALIGN_RIGHT
 			textalignx			174
@@ -2588,7 +2588,7 @@
 			group				voicechat
 			type				ITEM_TYPE_SLIDER
 			text				"Activation Level:"
-			cvarfloat			"cg_voiceThreshold" 0.02 0 0.2
+			cvarfloat			"v_voiceThreshold" 0.02 0 0.2
 			rect				260 260 340 14
 			textalign			ITEM_ALIGN_RIGHT
 			textalignx			174
@@ -2618,7 +2618,7 @@
 			group				voicechat
 			type				ITEM_TYPE_YESNO
 			text				"Muffle Behind Walls:"
-			cvar				"cg_voiceMuffle"
+			cvar				"v_voiceMuffle"
 			rect				260 278 340 14
 			textalign			ITEM_ALIGN_RIGHT
 			textalignx			174
@@ -2648,7 +2648,7 @@
 			group				voicechat
 			type				ITEM_TYPE_YESNO
 			text				"Show Who Talks:"
-			cvar				"cg_voiceDrawTalkers"
+			cvar				"v_voiceDrawTalkers"
 			rect				260 296 340 14
 			textalign			ITEM_ALIGN_RIGHT
 			textalignx			174
@@ -2678,7 +2678,7 @@
 			group				voicechat
 			type				ITEM_TYPE_YESNO
 			text				"On Other Servers:"
-			cvar				"cg_voiceMaster"
+			cvar				"v_voiceMaster"
 			rect				260 314 340 14
 			textalign			ITEM_ALIGN_RIGHT
 			textalignx			174
@@ -2708,7 +2708,7 @@
 			group				voicechat
 			type				ITEM_TYPE_SLIDER
 			text				"Own Voice In The Room:"
-			cvarfloat			"cg_voiceOwnReverb" 1 0 2
+			cvarfloat			"v_voiceOwnReverb" 1 0 2
 			rect				260 332 340 14
 			textalign			ITEM_ALIGN_RIGHT
 			textalignx			174
@@ -2738,7 +2738,7 @@
 			group				voicechat
 			type				ITEM_TYPE_YESNO
 			text				"Radio Sound:"
-			cvar				"cg_voiceRadioFX"
+			cvar				"v_voiceRadioFX"
 			rect				260 350 340 14
 			textalign			ITEM_ALIGN_RIGHT
 			textalignx			174
@@ -2768,7 +2768,7 @@
 			group				voicechat
 			type				ITEM_TYPE_YESNO
 			text				"Chat Bubbles:"
-			cvar				"cg_chatBubbles"
+			cvar				"v_chatBubbles"
 			rect				260 368 340 14
 			textalign			ITEM_ALIGN_RIGHT
 			textalignx			174
@@ -2798,7 +2798,7 @@
 			group				voicechat
 			type				ITEM_TYPE_YESNO
 			text				"Show My Music:"
-			cvar				"cg_shareMusic"
+			cvar				"v_shareMusic"
 			rect				260 386 340 14
 			textalign			ITEM_ALIGN_RIGHT
 			textalignx			174
@@ -2833,7 +2833,7 @@
 			group				botmode
 			type				ITEM_TYPE_YESNO
 			text				"Bot Mode:"
-			cvar				"cg_botMode"
+			cvar				"v_botMode"
 			rect				260 188 340 14
 			textalign			ITEM_ALIGN_RIGHT
 			textalignx			174
@@ -2863,7 +2863,7 @@
 			group				botmode
 			type				ITEM_TYPE_MULTI
 			text				"Skill:"
-			cvar				"cg_botModeSkill"
+			cvar				"v_botModeSkill"
 			cvarFloatList		{ "Initiate" 1 "Padawan" 2 "Jedi" 3 "Jedi Knight" 4 "Jedi Master" 5 }
 			rect				260 216 340 14
 			textalign			ITEM_ALIGN_RIGHT
@@ -2894,7 +2894,7 @@
 			group				botmode
 			type				ITEM_TYPE_MULTI
 			text				"Fight:"
-			cvar				"cg_botModeFight"
+			cvar				"v_botModeFight"
 			cvarFloatList		{ "Never" 0 "In Duels" 1 "Always" 2 }
 			rect				260 244 340 14
 			textalign			ITEM_ALIGN_RIGHT
@@ -2925,7 +2925,7 @@
 			group				botmode
 			type				ITEM_TYPE_YESNO
 			text				"Walk The Route:"
-			cvar				"cg_botModeRoam"
+			cvar				"v_botModeRoam"
 			rect				260 272 340 14
 			textalign			ITEM_ALIGN_RIGHT
 			textalignx			174
@@ -2955,7 +2955,7 @@
 			group				botmode
 			type				ITEM_TYPE_YESNO
 			text				"Keys Take Over:"
-			cvar				"cg_botModeKeys"
+			cvar				"v_botModeKeys"
 			rect				260 300 340 14
 			textalign			ITEM_ALIGN_RIGHT
 			textalignx			174

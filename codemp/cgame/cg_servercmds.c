@@ -170,9 +170,9 @@ void CG_ParseServerinfo( void ) {
 	cgs.jpDuelAlpha = cgs.jpVersion >= 2.0f ? atoi( Info_ValueForKey( info, "jp_DuelAlpha" ) ) : -1;
 	// the voice chat asks a server for voice only if the server says here that it has one. One that does not say
 	// the key at all has no relay, there the voice goes through the masterserver
-	CG_VoiceServerInfo( Info_ValueForKey( info, "g_voice" ) );
-	// and for boxes of the boombox only if it says g_boombox (they go out over that relay)
-	CG_BoomboxServerInfo( Info_ValueForKey( info, "g_boombox" ) );
+	CG_VoiceServerInfo( Info_ValueForKey( info, "vs_voice" ) );
+	// and for boxes of the boombox only if it says vs_boombox (they go out over that relay)
+	CG_BoomboxServerInfo( Info_ValueForKey( info, "vs_boombox" ) );
 
 	// this changes on map_restart, attempt to precache weapons
 	value = atoi( Info_ValueForKey( info, "g_weaponDisable" ) );
@@ -1666,11 +1666,11 @@ static serverCommand_t	commands[] = {
 	{ "cps",				CG_CenterPrintSE_f },
 	{ "cs",					CG_ConfigStringModified },
 	{ "ircg",				CG_RestoreClientGhoul_f },
-	{ "jpauth",				CG_AuthServerCommand },
-	{ "jpbox",				CG_BoomboxServerCommand },
+	{ "vs_auth",				CG_AuthServerCommand },
+	{ "vs_box",				CG_BoomboxServerCommand },
 	{ "jpclient",			CG_PeerServerCommand },
-	{ "jpstatus",			CG_StatusServerCommand },
-	{ "jpvoice",			CG_VoiceServerCommand },
+	{ "vs_status",			CG_StatusServerCommand },
+	{ "vs_voiceLink",			CG_VoiceServerCommand },
 	{ "kg2",				CG_KillGhoul2_f },
 	{ "kls",				CG_KillLoopSounds_f },
 	{ "lchat",				CG_Chat_f },

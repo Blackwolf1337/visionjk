@@ -533,7 +533,7 @@ def ingame_bar(m):
 # Rows the new look leaves out, by group and cvar. Twice in Setup: bubbles and music are with the chat (Chat &
 # Social, tools/menus/options.py). Read by nothing in this tree: the sway of the weapon (ui_disableWeaponSway) and
 # the axes of a joystick as buttons (joy_xbutton, joy_ybutton).
-LEFT_OUT = {('voicechat', 'cg_chatbubbles'), ('voicechat', 'cg_sharemusic'),
+LEFT_OUT = {('voicechat', 'v_chatbubbles'), ('voicechat', 'v_sharemusic'),
             ('options', 'ui_disableweaponsway'), ('joycontrols', 'joy_xbutton'), ('joycontrols', 'joy_ybutton')}
 
 

@@ -21,18 +21,18 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // cg_auth.c -- admin login with a key instead of a password. Not from JA+. The protocol is in
 // game/auth/bg_auth.h, the server part in game/auth/g_auth.c.
 //
-//   amkey new [comment]   makes a key and writes it to a file only the player can read (cg_authKeyFile, by
+//   v_amkey new [comment]   makes a key and writes it to a file only the player can read (v_authKeyFile, by
 //                         default admin_ed25519 in the home folder of the game), in the format of OpenSSH
-//   amkey show            prints the public lines of the keys there are: the owner of a server puts one into
+//   v_amkey show            prints the public lines of the keys there are: the owner of a server puts one into
 //                         his admin_keys.txt
-//   amkey login           logs in on this server, and from then on by itself whenever the player joins it
-//   amkey forget          no longer by itself on this server
+//   v_amkey login           logs in on this server, and from then on by itself whenever the player joins it
+//   v_amkey forget          no longer by itself on this server
 //
-// Where the secret half of a key is: in the key file, or in an ssh-agent (cg_authAgent 1), which signs without
+// Where the secret half of a key is: in the key file, or in an ssh-agent (v_authAgent 1), which signs without
 // handing it out. 1Password is such an agent. It may ask the player first, so everything here is a step that
 // is looked at once a frame (auth.step) and nothing waits.
 //
-// The client signs only for a server the player named with "amkey login" (cg_authServers), and only right after
+// The client signs only for a server the player named with "v_amkey login" (v_authServers), and only right after
 // it asked itself: a server can not make it sign by sending a nonce nobody asked for. That and the address in
 // the signed message are against a server that passes on the question of another one.
 //
@@ -82,7 +82,7 @@ static struct {
 	authStep_t		step;
 	int				stepTime;			// trap->Milliseconds() when it began
 	qboolean		quiet;				// by itself after joining: says nothing unless it works
-	qboolean		showOnly;			// "amkey show": the keys of the agent are listed, nobody logs in
+	qboolean		showOnly;			// "v_amkey show": the keys of the agent are listed, nobody logs in
 	qboolean		joined;				// the automatic login of this map was looked at
 	qboolean		again;				// the nonce ran out while the agent waited for the player: once more
 
@@ -95,9 +95,9 @@ static struct {
 	int				nonceTime;
 	char			address[AUTH_ADDRESS_SIZE];
 
-	char			command[AUTH_BASE64_SIZE + AUTH_ADDRESS_SIZE + 16];	// the "jpauth ..." of the step
+	char			command[AUTH_BASE64_SIZE + AUTH_ADDRESS_SIZE + 16];	// the "vs_auth ..." of the step
 	int				sends;				// how often it went out
-	int				sendTime;			// trap->Milliseconds() of the last "jpauth" that went out, 0: none yet
+	int				sendTime;			// trap->Milliseconds() of the last "vs_auth" that went out, 0: none yet
 } auth;
 
 static void Auth_Say( const char *fmt, ... ) {
@@ -138,7 +138,7 @@ The key file
 
 static void Auth_KeyPath( char *out, int outSize ) {
 	char		home[MAX_OSPATH];
-	const char	*file = cg_authKeyFile.string;
+	const char	*file = v_authKeyFile.string;
 
 	if ( file[0] == '~' && ( file[1] == '/' || file[1] == '\\' ) ) {
 #if defined(_WIN32)
@@ -207,7 +207,7 @@ static void Auth_PrintPublic( const byte *pub, const char *comment, const char *
 =================
 Auth_New
 
-"amkey new [comment]"
+"v_amkey new [comment]"
 =================
 */
 static void Auth_New( void ) {
@@ -251,7 +251,7 @@ static void Auth_New( void ) {
 	if ( fd < 0 ) {
 		crypto_wipe( text, sizeof( text ) );
 		if ( errno == EEXIST ) {
-			trap->Print( va( "There is a key file already: %s\nIt is kept. \"amkey show\" prints its public line, another file is named with cg_authKeyFile.\n", path ) );
+			trap->Print( va( "There is a key file already: %s\nIt is kept. \"v_amkey show\" prints its public line, another file is named with v_authKeyFile.\n", path ) );
 		} else {
 			trap->Print( va( "The key file %s could not be made.\n", path ) );
 		}
@@ -282,7 +282,7 @@ static void Auth_New( void ) {
 
 	trap->Print( va( "A new key is in %s\nNobody else may read that file. Its public line is no secret, the owner of a server puts it into his admin_keys.txt behind your rank:\n", path ) );
 	Auth_PrintPublic( pub, comment, "public line" );
-	trap->Print( "Then \"amkey login\" on that server.\n" );
+	trap->Print( "Then \"v_amkey login\" on that server.\n" );
 }
 
 /*
@@ -305,7 +305,7 @@ static qboolean Auth_ServerListed( const char *address ) {
 	char		list[MAX_CVAR_VALUE_STRING];
 	const char	*p = list, *token;
 
-	Q_strncpyz( list, cg_authServers.string, sizeof( list ) );
+	Q_strncpyz( list, v_authServers.string, sizeof( list ) );
 	while ( ( token = COM_ParseExt( &p, qfalse ) ) != NULL && token[0] ) {
 		if ( !Q_stricmp( token, address ) ) {
 			return qtrue;
@@ -319,7 +319,7 @@ static void Auth_ServerSet( const char *address, qboolean add ) {
 	char		list[MAX_CVAR_VALUE_STRING], out[MAX_CVAR_VALUE_STRING];
 	const char	*p = list, *token;
 
-	Q_strncpyz( list, cg_authServers.string, sizeof( list ) );
+	Q_strncpyz( list, v_authServers.string, sizeof( list ) );
 	out[0] = '\0';
 	while ( ( token = COM_ParseExt( &p, qfalse ) ) != NULL && token[0] ) {
 		if ( Q_stricmp( token, address ) ) {
@@ -338,8 +338,8 @@ static void Auth_ServerSet( const char *address, qboolean add ) {
 	else if ( out[0] ) {
 		out[strlen( out ) - 1] = '\0';
 	}
-	trap->Cvar_Set( "cg_authServers", out );
-	trap->Cvar_Update( &cg_authServers );
+	trap->Cvar_Set( "v_authServers", out );
+	trap->Cvar_Update( &v_authServers );
 }
 
 /*
@@ -351,7 +351,7 @@ The login
 */
 
 static qboolean Auth_ServerKnows( void ) {
-	return (qboolean)( ( atoi( Info_ValueForKey( CG_ConfigString( CS_SERVERINFO ), "g_visionCaps" ) ) & AUTH_CAPS_BIT ) != 0 );
+	return (qboolean)( ( atoi( Info_ValueForKey( CG_ConfigString( CS_SERVERINFO ), "vs_caps" ) ) & AUTH_CAPS_BIT ) != 0 );
 }
 
 /*
@@ -359,7 +359,7 @@ static qboolean Auth_ServerKnows( void ) {
 Auth_FloodGap
 
 A server with flood protection drops a client command that comes within a second of the one before and says
-nothing (sv_floodProtect in SV_ClientCommand, every engine since Quake 3). The server answers a "jpauth" much
+nothing (sv_floodProtect in SV_ClientCommand, every engine since Quake 3). The server answers a "vs_auth" much
 faster than that, so the next one would always be dropped. The cvar is in the serverinfo: 0 is off, 1 is a
 second, any other number is msec in the engine of this tree.
 =================
@@ -374,7 +374,7 @@ static int Auth_FloodGap( void ) {
 	return ( gap > 0 ) ? gap + AUTH_FLOOD_MARGIN : 0;
 }
 
-// A "jpauth" for the server. It goes out in CG_AuthFrame, as soon as the server takes one again.
+// A "vs_auth" for the server. It goes out in CG_AuthFrame, as soon as the server takes one again.
 static void Auth_Send( authStep_t step, const char *command ) {
 	Q_strncpyz( auth.command, command, sizeof( auth.command ) );
 	auth.sends = 0;
@@ -387,29 +387,29 @@ static void Auth_Hello( void ) {
 
 	if ( auth.current == 1 && auth.numKeys > 1 && Auth_FloodGap() ) {
 		Auth_Say( "The server does not know your first key, asking for the other %i one after the other "
-			"(cg_authAgentKey names the right one)...", auth.numKeys - 1 );
+			"(v_authAgentKey names the right one)...", auth.numKeys - 1 );
 	}
 	if ( auth.current >= auth.numKeys ) {
 		if ( !auth.numKeys ) {
-			Auth_Say( "You have no key. \"amkey new\" makes one, or set cg_authAgent 1 to use the keys of your ssh-agent." );
+			Auth_Say( "You have no key. \"v_amkey new\" makes one, or set v_authAgent 1 to use the keys of your ssh-agent." );
 		} else {
-			Auth_Say( "This server has none of your %i keys in its admin_keys.txt. \"amkey show\" prints the lines to give to its owner.", auth.numKeys );
+			Auth_Say( "This server has none of your %i keys in its admin_keys.txt. \"v_amkey show\" prints the lines to give to its owner.", auth.numKeys );
 		}
 		Auth_End();
 		return;
 	}
 	BG_AuthEncode( auth.keys[auth.current].pub, AUTH_PUBLIC_SIZE, text, sizeof( text ) );
-	Auth_Send( AUTH_HELLO, va( "jpauth hello %s", text ) );
+	Auth_Send( AUTH_HELLO, va( "vs_auth hello %s", text ) );
 }
 
 static void Auth_SendSignature( const byte *signature ) {
 	char text[AUTH_BASE64_SIZE];
 
 	BG_AuthEncode( signature, AUTH_SIGNATURE_SIZE, text, sizeof( text ) );
-	Auth_Send( AUTH_SIGN, va( "jpauth sign %s %s", text, auth.address ) );
+	Auth_Send( AUTH_SIGN, va( "vs_auth sign %s %s", text, auth.address ) );
 }
 
-// the keys of the agent join the one of the file, if cg_authAgentKey lets them
+// the keys of the agent join the one of the file, if v_authAgentKey lets them
 static void Auth_AddAgentKeys( void ) {
 	static agentKey_t	keys[AGENT_MAX_KEYS];
 	int					total;
@@ -429,7 +429,7 @@ static void Auth_AddAgentKeys( void ) {
 
 		// a part of its comment or of its public line picks one
 		BG_AuthPublicLine( keys[i].pub, keys[i].comment, line, sizeof( line ) );
-		if ( cg_authAgentKey.string[0] && !Q_stristr( line, cg_authAgentKey.string ) ) {
+		if ( v_authAgentKey.string[0] && !Q_stristr( line, v_authAgentKey.string ) ) {
 			continue;
 		}
 		for ( k = 0; k < auth.numKeys; k++ ) {
@@ -476,12 +476,12 @@ static void Auth_Start( qboolean quiet, qboolean showOnly ) {
 		Q_strncpyz( auth.keys[0].comment, comment, sizeof( auth.keys[0].comment ) );
 		auth.numKeys = 1;
 		auth.haveSecret = qtrue;
-	} else if ( found < 0 || ( showOnly && !cg_authAgent.integer ) ) {
+	} else if ( found < 0 || ( showOnly && !v_authAgent.integer ) ) {
 		Auth_Say( "%s", why );
 	}
 
-	if ( cg_authAgent.integer ) {
-		if ( CG_AgentRequestKeys( cg_authAgentPath.string, why, sizeof( why ) ) ) {
+	if ( v_authAgent.integer ) {
+		if ( CG_AgentRequestKeys( v_authAgentPath.string, why, sizeof( why ) ) ) {
 			Auth_Step( AUTH_AGENT_KEYS );
 			return;
 		}
@@ -509,7 +509,7 @@ qboolean CG_AuthIsAdmin( void ) {
 =================
 CG_AuthServerCommand
 
-"jpauth ..." from the server
+"vs_auth ..." from the server
 =================
 */
 void CG_AuthServerCommand( void ) {
@@ -552,7 +552,7 @@ void CG_AuthServerCommand( void ) {
 			Auth_SendSignature( signature );
 			return;
 		}
-		if ( !CG_AgentRequestSign( cg_authAgentPath.string, key->pub, auth.message, auth.messageLen, why, sizeof( why ) ) ) {
+		if ( !CG_AgentRequestSign( v_authAgentPath.string, key->pub, auth.message, auth.messageLen, why, sizeof( why ) ) ) {
 			Auth_Say( "ssh-agent: %s", why );
 			Auth_End();
 			return;
@@ -582,11 +582,11 @@ void CG_AuthServerCommand( void ) {
 			return;
 		}
 		if ( !Q_stricmp( why, "address" ) ) {
-			Auth_Say( "The server refused: it does not know itself by the address %s you reach it by (its jp_authHosts lacks it).", auth.address );
+			Auth_Say( "The server refused: it does not know itself by the address %s you reach it by (its vs_authHosts lacks it).", auth.address );
 		} else if ( !Q_stricmp( why, "blocked" ) ) {
 			Auth_Say( "The server refused: too many wrong tries, or admin-banned." );
 		} else if ( !Q_stricmp( why, "late" ) ) {
-			Auth_Say( "The answer came too late for the server. Type \"amkey login\" again." );
+			Auth_Say( "The answer came too late for the server. Type \"v_amkey login\" again." );
 		} else if ( !Q_stricmp( why, "signature" ) ) {
 			Auth_Say( "The server refused the signature." );
 		} else {
@@ -655,7 +655,7 @@ void CG_AuthFrame( void ) {
 					Auth_PrintPublic( auth.keys[i].pub, auth.keys[i].comment, auth.keys[i].fromAgent ? "ssh-agent" : "key file" );
 				}
 				if ( !auth.numKeys ) {
-					trap->Print( "Your ssh-agent has no Ed25519 key (or none that cg_authAgentKey lets through), and there is no key file.\n" );
+					trap->Print( "Your ssh-agent has no Ed25519 key (or none that v_authAgentKey lets through), and there is no key file.\n" );
 				}
 				Auth_End();
 				return;
@@ -713,7 +713,7 @@ void CG_AuthInit( void ) {
 =================
 CG_AuthCommand_f
 
-The console command "amkey"
+The console command "v_amkey"
 =================
 */
 void CG_AuthCommand_f( void ) {
@@ -756,12 +756,12 @@ void CG_AuthCommand_f( void ) {
 
 	Auth_KeyPath( path, sizeof( path ) );
 	trap->Print( va( "Admin login with a key instead of a password.\n"
-		"  amkey new [comment]   make a key (file %s)\n"
-		"  amkey show            print the public lines of your keys, one of them goes into the admin_keys.txt of a server\n"
-		"  amkey login           log in on this server, and by itself from now on when you join it\n"
-		"  amkey forget          not by itself on this server any more\n"
-		"cg_authAgent %i (1: the keys of your ssh-agent are used too, 1Password is one), by itself on: %s\n",
-		path, cg_authAgent.integer, cg_authServers.string[0] ? cg_authServers.string : "no server" ) );
+		"  v_amkey new [comment]   make a key (file %s)\n"
+		"  v_amkey show            print the public lines of your keys, one of them goes into the admin_keys.txt of a server\n"
+		"  v_amkey login           log in on this server, and by itself from now on when you join it\n"
+		"  v_amkey forget          not by itself on this server any more\n"
+		"v_authAgent %i (1: the keys of your ssh-agent are used too, 1Password is one), by itself on: %s\n",
+		path, v_authAgent.integer, v_authServers.string[0] ? v_authServers.string : "no server" ) );
 }
 
 #else	// __EMSCRIPTEN__

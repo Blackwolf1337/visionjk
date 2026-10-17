@@ -97,8 +97,8 @@ cvar_t	*cl_autolodscale;
 
 cvar_t	*cl_consoleKeys;
 cvar_t	*cl_consoleUseScanCode;
-cvar_t	*cl_utf8;
-static cvar_t	*cl_utf8Text;
+cvar_t	*v_utf8;
+static cvar_t	*v_utf8Text;
 cvar_t	*cl_consoleShiftRequirement;
 
 cvar_t  *cl_lanForcePackets;
@@ -179,32 +179,32 @@ CL_UTF8
 Whether text is UTF-8 right now: what is typed, what the renderer draws (it asks the same way, tr_font.cpp) and
 what goes to a server that says it knows UTF-8. Not with a language whose fonts have a code page of their own
 (Russian, Polish, the Asian ones): text is that code page then, as it always was. The answer is also in the
-userinfo as cl_utf8Text, by which a server of this tree knows what a client sends and reads.
+userinfo as v_utf8Text, by which a server of this tree knows what a client sends and reads.
 ======================
 */
 qboolean CL_UTF8( void ) {
 	static int		utf8Count = -1, languageCount = -1;
 	static qboolean	active = qfalse;
 
-	if ( !cl_utf8 || !se_language ) {
+	if ( !v_utf8 || !se_language ) {
 		return qfalse;
 	}
-	if ( cl_utf8->modificationCount != utf8Count || se_language->modificationCount != languageCount ) {
-		utf8Count = cl_utf8->modificationCount;
+	if ( v_utf8->modificationCount != utf8Count || se_language->modificationCount != languageCount ) {
+		utf8Count = v_utf8->modificationCount;
 		languageCount = se_language->modificationCount;
-		active = (qboolean)( cl_utf8->integer && !Language_IsRussian() && !Language_IsPolish() && !Language_IsKorean()
+		active = (qboolean)( v_utf8->integer && !Language_IsRussian() && !Language_IsPolish() && !Language_IsKorean()
 			&& !Language_IsTaiwanese() && !Language_IsJapanese() && !Language_IsChinese() && !Language_IsThai() );
-		Cvar_Set( "cl_utf8Text", active ? "1" : "0" );
+		Cvar_Set( "v_utf8Text", active ? "1" : "0" );
 	}
 	return active;
 }
 
-// a server of this tree says in its server info what it knows, bit 0: chat in UTF-8 (g_visionCaps of the game module)
+// a server of this tree says in its server info what it knows, bit 0: chat in UTF-8 (vs_caps of the game module)
 static qboolean CL_ServerKnowsUTF8( void ) {
 	if ( cls.state < CA_PRIMED ) {
 		return qfalse;
 	}
-	return (qboolean)( atoi( Info_ValueForKey( cl.gameState.stringData + cl.gameState.stringOffsets[CS_SERVERINFO], "g_visionCaps" ) ) & 1 );
+	return (qboolean)( atoi( Info_ValueForKey( cl.gameState.stringData + cl.gameState.stringOffsets[CS_SERVERINFO], "vs_caps" ) ) & 1 );
 }
 
 /*
@@ -2249,7 +2249,7 @@ void CL_Frame ( int msec ) {
 	}
 
 	SE_CheckForLanguageUpdates();	// will take zero time to execute unless language changes, then will reload strings.
-	CL_UTF8();						// keeps cl_utf8Text right for the input code and the userinfo
+	CL_UTF8();						// keeps v_utf8Text right for the input code and the userinfo
 									//	of course this still doesn't work for menus...
 
 	CL_UpdateFrame();
@@ -2399,8 +2399,8 @@ CL_InitRenderer
 */
 void CL_InitRenderer( void ) {
 	// a renderer that widens the 2D grid on a wide window says by how much, any other leaves the 0
-	Cvar_Get( "r_2dBias", "0", CVAR_ROM );
-	Cvar_Set( "r_2dBias", "0" );
+	Cvar_Get( "v_2dBias", "0", CVAR_ROM );
+	Cvar_Set( "v_2dBias", "0" );
 
 	// this sets up the renderer and calls R_Init
 	re->BeginRegistration( &cls.glconfig );
@@ -2417,7 +2417,7 @@ void CL_InitRenderer( void ) {
 	if ( !cls.glconfig.vidWidth ) {
 		Com_Error( ERR_FATAL, "The renderer made no window" );
 	}
-	cls.bias2D = Cvar_VariableValue( "r_2dBias" );
+	cls.bias2D = Cvar_VariableValue( "v_2dBias" );
 
 	// load character sets
 	cls.charSetShader = re->RegisterShaderNoMip("gfx/2d/charsgrid_med");
@@ -2878,20 +2878,20 @@ void CL_Init( void ) {
 	cl_consoleKeys = Cvar_Get( "cl_consoleKeys", "~ ` 0x7e 0x60 0xb2", CVAR_ARCHIVE, "Which keys are used to toggle the console");
 	cl_consoleUseScanCode = Cvar_Get( "cl_consoleUseScanCode", "1", CVAR_ARCHIVE, "Use native console key detection" );
 	CL_IDS_Init();
-	cl_utf8 = Cvar_Get( "cl_utf8", "1", CVAR_ARCHIVE, "Text is UTF-8 inside the client. 0 or a language with a code page of its own (se_language): one byte a character, as in the original game" );
-	cl_utf8Text = Cvar_Get( "cl_utf8Text", "0", CVAR_ROM|CVAR_USERINFO, "Whether text is UTF-8 right now, for the server" );
+	v_utf8 = Cvar_Get( "v_utf8", "1", CVAR_ARCHIVE, "Text is UTF-8 inside the client. 0 or a language with a code page of its own (se_language): one byte a character, as in the original game" );
+	v_utf8Text = Cvar_Get( "v_utf8Text", "0", CVAR_ROM|CVAR_USERINFO, "Whether text is UTF-8 right now, for the server" );
 	// tells a cgame of this tree that the engine has the calls of its chat box (ext of cgameImport_t)
-	Cvar_Get( "cl_cgameChat", "1", CVAR_ROM, "" );
+	Cvar_Get( "v_cgameChat", "1", CVAR_ROM, "" );
 	// and the calls for text and pictures of its own in the scene
-	Cvar_Get( "cl_cgameScene", "1", CVAR_ROM, "" );
+	Cvar_Get( "v_cgameScene", "1", CVAR_ROM, "" );
 	// the menus on a plane in the level, and the blur of the scene around a distance
-	Cvar_Get( "cl_cgameUIPlane", "1", CVAR_ROM, "" );
-	Cvar_Get( "cl_cgameDoF", "1", CVAR_ROM, "" );
+	Cvar_Get( "v_cgameUIPlane", "1", CVAR_ROM, "" );
+	Cvar_Get( "v_cgameDoF", "1", CVAR_ROM, "" );
 	// for the ui: 1 while its menus are drawn onto that plane, which has the 640 x 480 of a menu and no more
-	Cvar_Get( "cl_uiPlane", "0", CVAR_ROM, "" );
+	Cvar_Get( "v_uiPlane", "0", CVAR_ROM, "" );
 	// tells the ui and the cgame that the engine can draw their new look: pictures the ui computes
 	// (ext.R_RegisterShaderRGBA of uiImport_t) and the fonts "vision_sans" and "vision_mono"
-	Cvar_Get( "cl_uiSkin", "1", CVAR_ROM, "" );
+	Cvar_Get( "v_uiSkin", "1", CVAR_ROM, "" );
 	cl_consoleShiftRequirement = Cvar_Get( "cl_consoleShiftRequirement", "0", CVAR_ARCHIVE, "Require shift key to be pressed for native console key detection" );
 
 	cl_filterGames = Cvar_Get( "cl_filterGames", "MBII MBIIOpenBeta", CVAR_ARCHIVE_ND, "List of fs_game to filter (space separated)" );

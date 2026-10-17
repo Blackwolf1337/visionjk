@@ -32,7 +32,7 @@ Not in JKAdmin. Two things stop a player without being seen, and the editor has 
 A clip brush is part of the map file, which the server and every client load alike: it can not be moved or taken
 away for everybody while the map runs. What the server can do is stop minding one (the command clipbrush of the
 engine, CM_SetClipBrush), by its number in the map file, which the page knows from the file itself. The engine
-keeps the numbers that are off in sv_clipOff and tells the clients of them (cm_clipOff): a client of this tree
+keeps the numbers that are off in vs_clipOff and tells the clients of them (vs_clipRanges): a client of this tree
 turns the same brushes off and predicts as the server moves, any other one still has the brush, predicts a
 stop first and is then set to where the server has the player.
 
@@ -57,7 +57,7 @@ void WA_ApiClips( waConnection_t *c ) {
 	qboolean	first = qtrue;
 	int			i;
 
-	trap->Cvar_VariableStringBuffer( "sv_clipOff", off, sizeof( off ) );
+	trap->Cvar_VariableStringBuffer( "vs_clipOff", off, sizeof( off ) );
 	WA_BufPrintf( &b, "{\"dirty\":%s,\"off\":[", WA_BOOL( clipsDirty ) );
 	for ( p = off; *p; ) {
 		char		*end;

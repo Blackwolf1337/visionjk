@@ -1,7 +1,7 @@
 // The HUD of the new look: two menus the cgame paints at the left and at the right edge of the window, made of
 // items that show a number of the game (ITEM_TYPE_BAR, ITEM_TYPE_VALUE, "stat", "showStat") and of panels.
 // Written by hand, not by tools/menus/build.py. Everything here can be moved, recoloured or taken out: the
-// names of the numbers are in docs/japlus/ui.md. cg_hud 0 brings the HUD of the game back.
+// names of the numbers are in docs/japlus/ui.md. v_hud 0 brings the HUD of the game back.
 #include "ui/jamp/menudef.h"
 {
 	menuDef

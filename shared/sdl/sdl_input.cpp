@@ -863,7 +863,7 @@ static void IN_ProcessEvents( void )
 								Sys_QueEvent( 0, SE_KEY, A_CONSOLE, qtrue, 0, NULL );
 								Sys_QueEvent( 0, SE_KEY, A_CONSOLE, qfalse, 0, NULL );
 							}
-							else if( Cvar_VariableIntegerValue( "cl_utf8Text" ) )
+							else if( Cvar_VariableIntegerValue( "v_utf8Text" ) )
 							{
 								// text is UTF-8 inside the client (CL_UTF8()): the bytes of the character, one
 								// event each. The edit fields put them together again, and a module gets them

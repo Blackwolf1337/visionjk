@@ -1873,7 +1873,7 @@ void S_Respatialize( int entityNum, const vec3_t head, matrix3_t axis, int inwat
 ========================
 S_SpatialGather
 
-s_spatial: names the listener and every sound with a place in the level to snd_spatial.cpp. What it takes is
+v_spatial: names the listener and every sound with a place in the level to snd_spatial.cpp. What it takes is
 marked, and S_PaintChannels() leaves it out. The rest stays with the mixer: the menus, the announcer, the music,
 and the sounds of the own player, of which snd_spatial.cpp only gets what goes into the reverb.
 ========================

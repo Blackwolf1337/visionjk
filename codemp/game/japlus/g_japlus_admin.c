@@ -481,9 +481,9 @@ G_amlogin
 What a player typed behind amlogin, or what his plugin sent by itself (cp_login, fromUserinfo): a one-time code
 of the web panel, or one of the three rank passwords. Returns the admin level.
 
-Not in JA+: the passwords only count with jp_adminPasswords 1. A password is the same for everybody of a rank,
+Not in JA+: the passwords only count with vs_adminPasswords 1. A password is the same for everybody of a rank,
 it is typed into a console that logs, plugins send it to every server in the userinfo (cp_login), and whoever
-has it once has it for good. Without the cvar an admin logs in with a key (amkey login of the client of this
+has it once has it for good. Without the cvar an admin logs in with a key (v_amkey login of the client of this
 tree) or with a code the web panel makes, which works once within a minute.
 =================
 */
@@ -492,7 +492,7 @@ int G_amlogin( gentity_t *ent, const char *password, qboolean notify, qboolean f
 	int adminLevel;
 
 	// a plugin that sends a password by itself is no try of the player: without passwords it is not looked at
-	if ( fromUserinfo && !jp_adminPasswords.integer )
+	if ( fromUserinfo && !vs_adminPasswords.integer )
 		return client->sess.jpAdminLevel;
 
 	if ( G_AdminLoginBlocked( ent, notify ) )
@@ -504,7 +504,7 @@ int G_amlogin( gentity_t *ent, const char *password, qboolean notify, qboolean f
 		return client->sess.jpAdminLevel;
 	}
 
-	if ( !jp_adminPasswords.integer ) {
+	if ( !vs_adminPasswords.integer ) {
 		client->sess.jpAdminLevel = JPADM_NONE;
 		G_AdminLoginFailed( ent, "wrong one-time code" );
 		if ( notify )
