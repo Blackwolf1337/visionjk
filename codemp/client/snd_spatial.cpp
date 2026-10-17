@@ -301,7 +301,9 @@ enum {
 // Paths: how a sound gets round a corner. Steam Audio works that out from points it spreads over the floors of
 // the level (probes) and from which of them see each other. That is worked out once per level, which takes
 // from seconds to minutes: in a thread of its own, the first time the level is loaded, and kept in a file.
-#define SPATIAL_PROBE_SPACING		3.0f	// metres between two probes
+#define SPATIAL_PROBE_SPACING		3.0f	// metres between two probes, or more in a large level:
+#define SPATIAL_MAX_PROBES			4000	//	the spacing grows by half until there are no more than this. The work and
+											//	the file grow with the square of them (mp/ffa3: 3960, 3.8 s, 16.5 MB)
 #define SPATIAL_PROBE_HEIGHT		1.5f	//	and how high above the floor they are
 #define SPATIAL_PATH_SAMPLES		1		// points of a probe that are tried when asking whether two see each other
 #define SPATIAL_PATH_RADIUS			0.5f	//	and how far from its middle they are, in metres
@@ -313,6 +315,8 @@ enum {
 // without a probe has no tree to ask, which is a read at address 0 in Steam Audio 4.8.1. A level where no floor
 // was found for a probe has such a batch (t2_wedge).
 #define SPATIAL_MIN_PROBES			2
+// In the name of the file of the paths. The files before had probes in a quarter of the level only (2026-10-17).
+#define SPATIAL_PATHS_VERSION		"_v2"
 // A page has no thread to work the paths out next to the game. It does it while the level loads, when it stands
 // still anyway, and only for a level of up to this many probes: the work and the memory it takes grow with their
 // square. mp/ffa3 has 740 and takes 0.4 s (Ryzen 9 5900X), so this is about 3 s. A larger level has no paths
@@ -445,6 +449,7 @@ static struct {
 	qboolean			probesWait;
 	qboolean			bakeWanted;			// this level has no file yet
 	int					numProbes;
+	float				probeSpacing;		// of a bake, 0: the probes came from the file
 	int					bakeMsec;			// what the bake took, 0: the probes came from the file
 	int					refusedProbes;		// not 0: the level has this many, too many to work its paths out here
 
@@ -502,6 +507,7 @@ static struct {
 	IPLProbeBatch		batch;
 	IPLSerializedObject	saved;
 	int					numProbes;
+	float				spacing;			// metres between the probes it spread
 	int					msec;
 } spatialBake;
 
@@ -748,7 +754,9 @@ static int SDLCALL S_SpatialBaker( void *unused ) {
 	spatialBake.saved = NULL;
 	spatialBake.numProbes = 0;
 
-	// probes over every floor of the box the level is in. The matrix makes that box of the cube from 0 to 1.
+	// Probes over every floor of the box the level is in. Steam Audio spreads them over the cube from -0.5 to 0.5
+	// as the matrix places it (generateUniformFloorProbes), so the matrix takes the middle of the box. Until
+	// 2026-10-17 it took the lowest corner, and only the quarter of a level next to it had probes.
 	memset( &generate, 0, sizeof( generate ) );
 	generate.type = IPL_PROBEGENERATIONTYPE_UNIFORMFLOOR;
 	generate.spacing = SPATIAL_PROBE_SPACING;
@@ -756,15 +764,25 @@ static int SDLCALL S_SpatialBaker( void *unused ) {
 	generate.transform.elements[0][0] = spatialBake.maxs.x - spatialBake.mins.x;
 	generate.transform.elements[1][1] = spatialBake.maxs.y - spatialBake.mins.y;
 	generate.transform.elements[2][2] = spatialBake.maxs.z - spatialBake.mins.z;
-	generate.transform.elements[0][3] = spatialBake.mins.x;
-	generate.transform.elements[1][3] = spatialBake.mins.y;
-	generate.transform.elements[2][3] = spatialBake.mins.z;
+	generate.transform.elements[0][3] = ( spatialBake.mins.x + spatialBake.maxs.x ) * 0.5f;
+	generate.transform.elements[1][3] = ( spatialBake.mins.y + spatialBake.maxs.y ) * 0.5f;
+	generate.transform.elements[2][3] = ( spatialBake.mins.z + spatialBake.maxs.z ) * 0.5f;
 	generate.transform.elements[3][3] = 1.0f;
 
-	if ( qiplProbeArrayCreate( spatial.context, &array ) == IPL_STATUS_SUCCESS
-		&& qiplProbeBatchCreate( spatial.context, &spatialBake.batch ) == IPL_STATUS_SUCCESS ) {
+	// a large level gets them further apart, see SPATIAL_MAX_PROBES
+	while ( qiplProbeArrayCreate( spatial.context, &array ) == IPL_STATUS_SUCCESS ) {
 		qiplProbeArrayGenerateProbes( array, spatialBake.scene, &generate );
 		spatialBake.numProbes = qiplProbeArrayGetNumProbes( array );
+		if ( spatialBake.numProbes <= SPATIAL_MAX_PROBES || spatialBakeCancel.load() ) {
+			break;
+		}
+		qiplProbeArrayRelease( &array );
+		array = NULL;
+		generate.spacing *= 1.5f;
+	}
+	spatialBake.spacing = generate.spacing;
+
+	if ( array && qiplProbeBatchCreate( spatial.context, &spatialBake.batch ) == IPL_STATUS_SUCCESS ) {
 		qiplProbeBatchAddProbeArray( spatialBake.batch, array );
 		qiplProbeBatchCommit( spatialBake.batch );
 
@@ -834,6 +852,7 @@ static qboolean S_SpatialLoadPaths( void ) {
 	if ( qiplSerializedObjectCreate( spatial.context, &serialized, &object ) == IPL_STATUS_SUCCESS ) {
 		if ( qiplProbeBatchLoad( spatial.context, object, &spatial.nextProbes ) == IPL_STATUS_SUCCESS ) {
 			spatial.bakeMsec = 0;
+			spatial.probeSpacing = 0.0f;
 			loaded = qtrue;
 			if ( qiplProbeBatchGetNumProbes( spatial.nextProbes ) >= SPATIAL_MIN_PROBES ) {
 				qiplProbeBatchCommit( spatial.nextProbes );
@@ -877,10 +896,11 @@ static void S_SpatialThinkPaths( void ) {
 				spatial.nextProbes = spatialBake.batch;
 				spatial.numProbes = spatialBake.numProbes;
 				spatial.bakeMsec = Q_max( 1, spatialBake.msec );
+				spatial.probeSpacing = spatialBake.spacing;
 				spatial.probesWait = qtrue;
 				spatialBake.batch = NULL;
-				Com_Printf( "v_spatial: the paths of this level are worked out, %i probes in %.1f s, kept in %s\n", spatial.numProbes,
-					spatial.bakeMsec * 0.001f, spatial.pathFile );
+				Com_Printf( "v_spatial: the paths of this level are worked out, %i probes %.1f m apart in %.1f s, kept in %s\n",
+					spatial.numProbes, spatial.probeSpacing, spatial.bakeMsec * 0.001f, spatial.pathFile );
 			} else {
 				Com_Printf( "v_spatial: no place for probes was found in this level: no sound round corners here\n" );
 			}
@@ -1044,13 +1064,14 @@ void S_SpatialLoadMap( const char *mapname ) {
 	CM_ExportSolidTriangles( S_SpatialTriangle, &build );
 
 	// The file of the paths of this level is named after the level and after its walls: another version of a
-	// level with the same name has other walls and gets a file of its own.
+	// level with the same name has other walls and gets a file of its own. SPATIAL_PATHS_VERSION is for files
+	// that were worked out another way.
 	{
 		char path[MAX_QPATH], name[MAX_QPATH];
 
 		Q_strncpyz( path, mapname, sizeof( path ) );
 		COM_StripExtension( COM_SkipPath( path ), name, sizeof( name ) );
-		Com_sprintf( spatial.nextPathFile, sizeof( spatial.nextPathFile ), "steamaudio/%s_%08x.paths", name,
+		Com_sprintf( spatial.nextPathFile, sizeof( spatial.nextPathFile ), "steamaudio/%s_%08x" SPATIAL_PATHS_VERSION ".paths", name,
 			Com_BlockChecksum( build.vertices, build.count * 3 * (int)sizeof( IPLVector3 ) ) );
 	}
 
@@ -2228,7 +2249,8 @@ static void S_SpatialInfo_f( void ) {
 		Com_Printf( "paths: being worked out for this level, %i %%\n", spatialBakeProgress.load() );
 	} else if ( spatial.probes ) {
 		if ( spatial.bakeMsec ) {
-			Com_Printf( "paths: %i probes, worked out in %.1f s, kept in %s\n", spatial.numProbes, spatial.bakeMsec * 0.001f, spatial.pathFile );
+			Com_Printf( "paths: %i probes %.1f m apart, worked out in %.1f s, kept in %s\n", spatial.numProbes, spatial.probeSpacing,
+				spatial.bakeMsec * 0.001f, spatial.pathFile );
 		} else {
 			Com_Printf( "paths: %i probes from %s\n", spatial.numProbes, spatial.pathFile );
 		}
