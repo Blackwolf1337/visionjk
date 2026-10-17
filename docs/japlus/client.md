@@ -393,6 +393,8 @@ Taken over from TaystJK on 2026-10-17. They only change what this player sees.
 |------|---------|---------|
 | `v_forceEnemyModel` | empty | every opponent in this model, `model/skin` (`kyle/default`) or a model alone (its skin `default`). In a game without teams everybody is an opponent |
 | `v_forceAllyModel` | empty | every team mate in this model |
+| `v_saberTeamColors` | 1 | in team games every blade in its team's colour, as the game does. 0: a blade keeps its colour, unless that is the other team's colour or one past purple (RGB of JA+, black). Not in siege |
+| `v_saberStaffColors` | 0 | the second blade of a staff in the player's second saber colour (also its RGB colour) |
 
 These work without `cg_forceModel`, which puts everybody in one's own model. When both are set, these two win for the players they cover. A model
 this machine lacks shows as the model of the game, as with any player. When one's own team changes, everybody
