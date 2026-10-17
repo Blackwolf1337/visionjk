@@ -20,7 +20,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 // tr_font_ttf.cpp -- glyphs from the TrueType fonts of this tree.
 //
-// The engine hands out two font files (ri.FontFile, client/cl_font.cpp). The outline of a character is made
+// The engine hands out three font files (ri.FontFile, client/cl_font.cpp). The outline of a character is made
 // into a small picture, and the pictures are collected on pages, textures of FONT_PAGE_SIZE. A page that got
 // new glyphs is sent to the graphics card once, by R_FontTTF_Flush(), before the frame that uses them is drawn.
 //
@@ -34,7 +34,10 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // TTF_MONO, with a fixed width, for the console of the engine (RE_Font_DrawMonoChar): a character in a cell
 // that is given in pixels of the window, made in exactly that size.
 //
-// Both are also fonts of the menus as a whole, under the names "vision_sans" and "vision_mono" (RE_RegisterFont
+// TTF_CJK, Noto Sans CJK, for Chinese, Japanese and Korean, which the other two do not have: every lookup of a
+// character goes on to it (R_FontTTF_FindAny). No font of its own for the menus.
+//
+// The first two are also fonts of the menus as a whole, under the names "vision_sans" and "vision_mono" (RE_RegisterFont
 // in tr_font.cpp, R_FontTTF_DrawString here): every letter of a text from the TrueType font, made in the size
 // the text has in pixels of the window, so it is sharp at every scale. The menus with the new look are set in
 // them (ui/ui_skin.c).
@@ -86,6 +89,7 @@ typedef std::map<uint64_t, ttfGlyph_t> ttfGlyphMap_t;
 enum {
 	TTF_TEXT,							// for the characters the fonts of the game do not have
 	TTF_MONO,							// fixed width, for the console
+	TTF_CJK,							// Chinese, Japanese and Korean, after the other two
 	TTF_NUM_FONTS
 };
 
@@ -323,6 +327,24 @@ static const ttfGlyph_t *R_FontTTF_Find( int font, unsigned int codePoint, int s
 	return it->second.valid ? &it->second : NULL;
 }
 
+// The glyph of a character from font first, or else from the first of the others that has it (text, fixed
+// width, CJK). which: the font it came from. NULL: none has it.
+static const ttfGlyph_t *R_FontTTF_FindAny( int first, unsigned int codePoint, int size, int k, int *which ) {
+	const ttfGlyph_t	*glyph = R_FontTTF_Find( first, codePoint, size, k );
+	int					font = first;
+
+	for ( int other = 0; !glyph && other < TTF_NUM_FONTS; other++ ) {
+		if ( other != first ) {
+			glyph = R_FontTTF_Find( other, codePoint, size, k );
+			font = other;
+		}
+	}
+	if ( which ) {
+		*which = font;
+	}
+	return glyph;
+}
+
 /*
 ===============
 R_FontTTF_Glyph
@@ -332,12 +354,8 @@ does not have the character, or the pages are full: the caller draws what it dra
 ===============
 */
 const glyphInfo_t *R_FontTTF_Glyph( unsigned int codePoint, int pointSize, int *shader ) {
-	const ttfGlyph_t *glyph = R_FontTTF_Find( TTF_TEXT, codePoint, pointSize, ttf.oversample );
+	const ttfGlyph_t *glyph = R_FontTTF_FindAny( TTF_TEXT, codePoint, pointSize, ttf.oversample, NULL );
 
-	if ( !glyph ) {
-		// a sign the font for text lacks may be in the one with the fixed width
-		glyph = R_FontTTF_Find( TTF_MONO, codePoint, pointSize, ttf.oversample );
-	}
 	if ( !glyph ) {
 		return NULL;
 	}
@@ -353,29 +371,26 @@ RE_Font_DrawMonoChar
 
 A character of the font with a fixed width in a cell of the console. Place and size of the cell are pixels of the
 window: the glyph is made in the size in which a letter is as wide as the cell, and is drawn pixel for pixel. A
-character the fixed width font does not have is taken from the other font, which may reach into the next cell.
+character the fixed width font does not have is taken from another font, which may reach into the next cell.
 qfalse: nothing was drawn, there is no font or none has the character.
 ===============
 */
 qboolean RE_Font_DrawMonoChar( int x, int y, int cellWidth, int cellHeight, unsigned int codePoint ) {
 	const ttfFont_t		*mono = &ttf.fonts[TTF_MONO];
-	const ttfFont_t		*font = mono;
+	const ttfFont_t		*font;
 	const ttfGlyph_t	*glyph;
-	int					size, baseline;
+	int					size, baseline, which;
 	float				scale, xScale, yScale, bias;
 
 	if ( !mono->loaded || mono->advance <= 0.0f || cellWidth < 1 || cellHeight < 1 ) {
 		return qfalse;
 	}
 	size = (int)( cellWidth / mono->advance + 0.5f );
-	glyph = R_FontTTF_Find( TTF_MONO, codePoint, size, 1 );
+	glyph = R_FontTTF_FindAny( TTF_MONO, codePoint, size, 1, &which );
 	if ( !glyph ) {
-		font = &ttf.fonts[TTF_TEXT];
-		glyph = R_FontTTF_Find( TTF_TEXT, codePoint, size, 1 );
-		if ( !glyph ) {
-			return qfalse;
-		}
+		return qfalse;
 	}
+	font = &ttf.fonts[which];
 
 	// the line the letters stand on: where it is when the height of the font sits in the middle of the cell
 	scale = stbtt_ScaleForMappingEmToPixels( &font->info, (float)size );
@@ -459,11 +474,7 @@ static qboolean R_FontTTF_MenuChar( int font, const char **text, int pixels, con
 	if ( codePoint < ' ' ) {
 		return qtrue;
 	}
-	*glyph = R_FontTTF_Find( font, codePoint, pixels, 1 );
-	if ( !*glyph ) {
-		// a sign this font lacks may be in the other one
-		*glyph = R_FontTTF_Find( font == TTF_TEXT ? TTF_MONO : TTF_TEXT, codePoint, pixels, 1 );
-	}
+	*glyph = R_FontTTF_FindAny( font, codePoint, pixels, 1, NULL );
 	if ( !*glyph ) {
 		*glyph = R_FontTTF_Find( font, '?', pixels, 1 );
 	}
@@ -587,12 +598,8 @@ static qboolean R_FontTTF_SceneChar( const char **text, unsigned int *codePoint,
 }
 
 static const ttfGlyph_t *R_FontTTF_SceneGlyph( unsigned int codePoint, int size ) {
-	const ttfGlyph_t *glyph = R_FontTTF_Find( TTF_TEXT, codePoint, size, 1 );
+	const ttfGlyph_t *glyph = R_FontTTF_FindAny( TTF_TEXT, codePoint, size, 1, NULL );
 
-	if ( !glyph ) {
-		// a sign the font for text lacks may be in the one with the fixed width
-		glyph = R_FontTTF_Find( TTF_MONO, codePoint, size, 1 );
-	}
 	return glyph ? glyph : R_FontTTF_Find( TTF_TEXT, '?', size, 1 );
 }
 
@@ -736,6 +743,9 @@ void R_FontTTF_Info( void ) {
 	}
 	if ( !ttf.fonts[TTF_MONO].loaded ) {
 		ri.Printf( PRINT_ALL, "No TrueType font with a fixed width: the console uses the letters of the game\n" );
+	}
+	if ( !ttf.fonts[TTF_CJK].loaded ) {
+		ri.Printf( PRINT_ALL, "No TrueType font for Chinese, Japanese and Korean: their characters are drawn as ?\n" );
 	}
 	if ( ttf.glyphs ) {
 		ri.Printf( PRINT_ALL, "TrueType: %i glyphs made on %i pages of %i x %i, %i pixels a unit of the 2D screen\n",

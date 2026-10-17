@@ -46,6 +46,7 @@ typedef struct clFont_s {
 static clFont_t cl_fonts[] = {
 	{ "fonts/visionjk/NotoSans-Regular.ttf", FONT_SHA256, NULL, 0, qfalse },	// for what the fonts of the game lack
 	{ "fonts/visionjk/DejaVuSansMono.ttf", FONT_MONO_SHA256, NULL, 0, qfalse },	// fixed width, for the console
+	{ "fonts/visionjk/NotoSansCJKjp-Regular.otf", FONT_CJK_SHA256, NULL, 0, qfalse },	// Chinese, Japanese, Korean
 };
 
 /*

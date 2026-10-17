@@ -160,8 +160,13 @@ western languages, and so do all legacy clients and servers. What follows from t
 - Drawing (`rd-common/tr_font.cpp`, both renderers): a character of Windows-1252 that the picture of a font has
   comes from that picture as before. Any other character is made from Noto Sans
   (`fonts/visionjk/NotoSans-Regular.ttf` in the client assets, OFL) with stb_truetype (`rd-common/tr_font_ttf.cpp`),
-  in the point size of the font it stands in. That covers Latin, Greek and Cyrillic. A character Noto Sans does
-  not have (Chinese, Japanese, Korean) is a `?`. `fontlist` says how many glyphs were made.
+  in the point size of the font it stands in. That covers Latin, Greek and Cyrillic. Chinese, Japanese and Korean
+  come from Noto Sans CJK (`fonts/visionjk/NotoSansCJKjp-Regular.otf`, OFL, 8.8 MB): the JP face of
+  `NotoSansCJK-Regular.ttc` 2.004, cut down by fontTools to the glyphs its 44810 characters name, without layout
+  tables, since stb_truetype does not shape (`pyftsubset <face>.otf --unicodes='*' --layout-features='' --no-hinting
+  --name-IDs='*' --name-languages='*'`). Han characters have their Japanese forms. A character none of the three
+  fonts has is a `?`, and so is a script that needs shaping to be read (Thai, Arabic, the Indic ones), which is
+  drawn letter by letter. `fontlist` says how many glyphs were made.
 - The font file: the engine reads it once at its start and keeps it (`client/cl_font.cpp`), because a renderer
   that starts on a pure server can not read the pk3 of this tree. A file with another SHA-256 than the one the
   build shipped is refused: a server can send a pk3 with a file of that name. So another font can not be
