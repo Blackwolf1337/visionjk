@@ -199,6 +199,7 @@ typedef struct fileInPack_s {
 	unsigned long			pos;		// file info position in zip
 	unsigned long			len;		// uncompress file size
 	struct	fileInPack_s*	next;		// next file in the hash
+	qboolean				blocked;	// its player chose not to have it (FS_LoadBlocked): in no hash, in no list
 } fileInPack_t;
 
 typedef struct pack_s {
@@ -2150,6 +2151,62 @@ ZIP FILE LOADING
 
 /*
 =================
+FS_LoadBlocked
+
+The files of a downloaded pak that its player chose not to have (client/cl_download.cpp): "<pak>.blocked" next to
+the pak, a path a line. They still count for the checksum, so a pure server sees the pak it sent, but nothing can
+open or list them, and a program in the pak is never unpacked and run (Sys_UnpackDLL). Returns the list in lower
+case, every path between two line ends, for FS_IsBlocked(); NULL: there is none. Z_Free() it.
+=================
+*/
+#define FS_BLOCKED_MAX	( 256 * 1024 )
+
+static char *FS_LoadBlocked( const char *zipfile ) {
+	char	path[MAX_OSPATH + 16];
+	char	*list;
+	FILE	*f;
+	long	len;
+	size_t	got, i;
+
+	Com_sprintf( path, sizeof( path ), "%s.blocked", zipfile );
+	f = fopen( path, "rb" );
+	if ( !f ) {
+		return NULL;
+	}
+	fseek( f, 0, SEEK_END );
+	len = ftell( f );
+	fseek( f, 0, SEEK_SET );
+	if ( len <= 0 || len > FS_BLOCKED_MAX ) {
+		fclose( f );
+		return NULL;
+	}
+	list = (char *)Z_Malloc( len + 3, TAG_FILESYS, qtrue );
+	list[0] = '\n';
+	got = fread( list + 1, 1, len, f );
+	fclose( f );
+	list[got + 1] = '\n';
+	list[got + 2] = '\0';
+	for ( i = 1; i <= got; i++ ) {
+		if ( list[i] == '\r' ) {
+			list[i] = '\n';
+		}
+	}
+	Q_strlwr( list );
+	return list;
+}
+
+static qboolean FS_IsBlocked( const char *list, const char *name ) {
+	char line[MAX_ZPATH + 3];
+
+	if ( !list ) {
+		return qfalse;
+	}
+	Com_sprintf( line, sizeof( line ), "\n%s\n", name );
+	return strstr( list, line ) ? qtrue : qfalse;
+}
+
+/*
+=================
 FS_LoadZipFile
 
 Creates a new pak_t in the search chain for the contents
@@ -2171,6 +2228,7 @@ static pack_t *FS_LoadZipFile( const char *zipfile, const char *basename )
 	int				fs_numHeaderLongs;
 	int				*fs_headerLongs;
 	char			*namePtr;
+	char			*blocked;
 
 	fs_numHeaderLongs = 0;
 
@@ -2222,6 +2280,7 @@ static pack_t *FS_LoadZipFile( const char *zipfile, const char *basename )
 
 	pack->handle = uf;
 	pack->numfiles = gi.number_entry;
+	blocked = FS_LoadBlocked( zipfile );
 	unzGoToFirstFile(uf);
 
 	for (i = 0; i < gi.number_entry; i++)
@@ -2241,9 +2300,15 @@ static pack_t *FS_LoadZipFile( const char *zipfile, const char *basename )
 		// store the file position in the zip
 		buildBuffer[i].pos = unzGetOffset(uf);
 		buildBuffer[i].len = file_info.uncompressed_size;
-		buildBuffer[i].next = pack->hashTable[hash];
-		pack->hashTable[hash] = &buildBuffer[i];
+		buildBuffer[i].blocked = FS_IsBlocked( blocked, filename_inzip );
+		if ( !buildBuffer[i].blocked ) {
+			buildBuffer[i].next = pack->hashTable[hash];
+			pack->hashTable[hash] = &buildBuffer[i];
+		}
 		unzGoToNextFile(uf);
+	}
+	if ( blocked ) {
+		Z_Free( blocked );
 	}
 
 	pack->checksum = Com_BlockChecksum( &fs_headerLongs[ 1 ], sizeof(*fs_headerLongs) * ( fs_numHeaderLongs - 1 ) );
@@ -2419,6 +2484,9 @@ char **FS_ListFilteredFiles( const char *path, const char *extension, char *filt
 
 				// check for directory match
 				name = buildBuffer[i].name;
+				if ( buildBuffer[i].blocked ) {
+					continue;
+				}
 				//
 				if (filter) {
 					// case insensitive
@@ -3086,50 +3154,81 @@ static int QDECL paksort( const void *a, const void *b ) {
 
 /*
 ================
-FS_AddGameDirectory
+FS_ClearSessionDownloads
 
-Sets fs_gamedir, adds the directory to the head of the path,
-then loads the zip headers
+The paks that were downloaded for one session only (client/cl_download.cpp) lie in <game>/downloads/session of the
+home folder. They go when the game starts and when it ends: dir is the game folder whose session paks go now, NULL
+every game folder that was seen since the start. Only paks, the files beside them that block some of what is in
+them, and parts of a download.
 ================
 */
-static void FS_AddGameDirectory( const char *path, const char *dir ) {
-	searchpath_t	*sp;
+#define FS_SESSION_DIRS		8
+
+static char fs_sessionDirs[FS_SESSION_DIRS][MAX_QPATH];
+static int fs_numSessionDirs;
+
+static void FS_ClearSessionDir( const char *dir ) {
+	char	folder[MAX_OSPATH];
+	char	**files;
+	int		numFiles, i;
+
+	Q_strncpyz( folder, FS_BuildOSPath( fs_homepath->string, dir, FS_DOWNLOADS_SESSION ), sizeof( folder ) );
+	folder[strlen( folder ) - 1] = '\0';	// (without the slash at its end)
+	files = Sys_ListFiles( folder, "", NULL, &numFiles, qfalse );
+	for ( i = 0; i < numFiles; i++ ) {
+		if ( strchr( files[i], '/' ) || strchr( files[i], '\\' ) || !( COM_CompareExtension( files[i], ".pk3" )
+			|| COM_CompareExtension( files[i], ".tmp" ) || COM_CompareExtension( files[i], ".blocked" ) ) ) {
+			continue;
+		}
+		// (not FS_Remove(): it refuses every pak, as it must for what a module asks)
+		remove( va( "%s%c%s", folder, PATH_SEP, files[i] ) );
+	}
+	Sys_FreeFileList( files );
+}
+
+static void FS_ClearSessionDownloads( const char *dir ) {
+	int i;
+
+	if ( !fs_homepath || !fs_homepath->string[0] ) {
+		return;
+	}
+	if ( !dir ) {
+		for ( i = 0; i < fs_numSessionDirs; i++ ) {
+			FS_ClearSessionDir( fs_sessionDirs[i] );
+		}
+		return;
+	}
+	// (once a game folder a run: a restart of the file system after a download keeps what came)
+	for ( i = 0; i < fs_numSessionDirs; i++ ) {
+		if ( !Q_stricmp( fs_sessionDirs[i], dir ) ) {
+			return;
+		}
+	}
+	if ( fs_numSessionDirs < FS_SESSION_DIRS ) {
+		Q_strncpyz( fs_sessionDirs[fs_numSessionDirs++], dir, sizeof( fs_sessionDirs[0] ) );
+	}
+	FS_ClearSessionDir( dir );
+}
+
+/*
+================
+FS_AddPaksOf
+
+The paks of a game folder, or of a folder in it (sub, NULL: the game folder itself), at the head of the path.
+Those of the folders of downloads, and those whose names begin with "dl_", only while the server references them.
+================
+*/
+static void FS_AddPaksOf( const char *path, const char *dir, const char *sub, searchpath_t *thedir ) {
 	int				i;
 	searchpath_t	*search;
-	searchpath_t	*thedir;
 	pack_t			*pak;
 	char			curpath[MAX_OSPATH + 1], *pakfile;
 	int				numfiles;
 	char			**pakfiles;
 	const char		*filename;
 
-	// this fixes the case where fs_basepath is the same as fs_cdpath
-	// which happens on full installs
-	for ( sp = fs_searchpaths ; sp ; sp = sp->next ) {
-		if ( sp->dir && Sys_PathCmp(sp->dir->path, path) && !Q_stricmp(sp->dir->gamedir, dir)) {
-			return;			// we've already got this one
-		}
-	}
-
-	Q_strncpyz( fs_gamedir, dir, sizeof( fs_gamedir ) );
-
-	// find all pak files in this directory
-	Q_strncpyz(curpath, FS_BuildOSPath(path, dir, ""), sizeof(curpath));
+	Q_strncpyz(curpath, FS_BuildOSPath(path, dir, sub ? sub : ""), sizeof(curpath));
 	curpath[strlen(curpath) - 1] = '\0';	// strip the trailing slash
-
-	//
-	// add the directory to the search path
-	//
-	search = (struct searchpath_s *)Z_Malloc (sizeof(searchpath_t), TAG_FILESYS, qtrue);
-	search->dir = (directory_t *)Z_Malloc( sizeof( *search->dir ), TAG_FILESYS, qtrue );
-
-	Q_strncpyz( search->dir->path, path, sizeof( search->dir->path ) );
-	Q_strncpyz( search->dir->fullpath, curpath, sizeof( search->dir->fullpath ) );
-	Q_strncpyz( search->dir->gamedir, dir, sizeof( search->dir->gamedir ) );
-	search->next = fs_searchpaths;
-	fs_searchpaths = search;
-
-	thedir = search;
 
 	pakfiles = Sys_ListFiles( curpath, ".pk3", NULL, &numfiles, qfalse );
 
@@ -3138,14 +3237,14 @@ static void FS_AddGameDirectory( const char *path, const char *dir ) {
 	}
 
 	for ( i = 0 ; i < numfiles ; i++ ) {
-		pakfile = FS_BuildOSPath( path, dir, pakfiles[i] );
+		pakfile = FS_BuildOSPath( path, dir, sub ? va( "%s/%s", sub, pakfiles[i] ) : pakfiles[i] );
 		filename = get_filename(pakfile);
 
 		if ( ( pak = FS_LoadZipFile( pakfile, pakfiles[i] ) ) == 0 )
 			continue;
 
-		// files beginning with "dl_" are only loaded when referenced by the server
-		if (!Q_stricmpn(filename, "dl_", 3)) {
+		// files beginning with "dl_" are only loaded when referenced by the server, and so is all that was downloaded
+		if (sub || !Q_stricmpn(filename, "dl_", 3)) {
 			int j;
 			qboolean found = qfalse;
 
@@ -3201,6 +3300,55 @@ static void FS_AddGameDirectory( const char *path, const char *dir ) {
 
 	// done
 	Sys_FreeFileList( pakfiles );
+}
+
+/*
+================
+FS_AddGameDirectory
+
+Sets fs_gamedir, adds the directory to the head of the path,
+then loads the zip headers: those of the folder, then those of its folders of downloads (client/cl_download.cpp),
+which come before them
+================
+*/
+static void FS_AddGameDirectory( const char *path, const char *dir ) {
+	searchpath_t	*sp;
+	searchpath_t	*search;
+	char			curpath[MAX_OSPATH + 1];
+
+	// this fixes the case where fs_basepath is the same as fs_cdpath
+	// which happens on full installs
+	for ( sp = fs_searchpaths ; sp ; sp = sp->next ) {
+		if ( sp->dir && Sys_PathCmp(sp->dir->path, path) && !Q_stricmp(sp->dir->gamedir, dir)) {
+			return;			// we've already got this one
+		}
+	}
+
+	Q_strncpyz( fs_gamedir, dir, sizeof( fs_gamedir ) );
+
+	// find all pak files in this directory
+	Q_strncpyz(curpath, FS_BuildOSPath(path, dir, ""), sizeof(curpath));
+	curpath[strlen(curpath) - 1] = '\0';	// strip the trailing slash
+
+	//
+	// add the directory to the search path
+	//
+	search = (struct searchpath_s *)Z_Malloc (sizeof(searchpath_t), TAG_FILESYS, qtrue);
+	search->dir = (directory_t *)Z_Malloc( sizeof( *search->dir ), TAG_FILESYS, qtrue );
+
+	Q_strncpyz( search->dir->path, path, sizeof( search->dir->path ) );
+	Q_strncpyz( search->dir->fullpath, curpath, sizeof( search->dir->fullpath ) );
+	Q_strncpyz( search->dir->gamedir, dir, sizeof( search->dir->gamedir ) );
+	search->next = fs_searchpaths;
+	fs_searchpaths = search;
+
+	FS_AddPaksOf( path, dir, NULL, search );
+	// (the game writes downloads into the home folder only)
+	if ( fs_homepath && Sys_PathCmp( path, fs_homepath->string ) ) {
+		FS_ClearSessionDownloads( dir );
+		FS_AddPaksOf( path, dir, FS_DOWNLOADS, search );
+		FS_AddPaksOf( path, dir, FS_DOWNLOADS_SESSION, search );
+	}
 }
 
 /*
@@ -3334,13 +3482,15 @@ qboolean FS_ComparePaks( char *neededpaks, int len, qboolean dlstring ) {
 
 				// Local name
 				Q_strcat( currentPak, sizeof(currentPak), "@");
-				// Do we have one with the same name?
-				if (FS_SV_FileExists(va("%s/dl_%s.pk3", moddir, filename))) {
+				// Into the folder of downloads, whose paks are loaded only while a server references them. Do we have one
+				// with the same name?
+				// (cl_download.cpp moves it into the folder of the session when its player wants it for this one only)
+				if (FS_SV_FileExists(va("%s/" FS_DOWNLOADS "/%s.pk3", moddir, filename))) {
 					// We already have one called this, we need to download it to another name
 					// Make something up with the checksum in it
-					Q_strcat( currentPak, sizeof(currentPak), va("%s/dl_%s.%08x.pk3", moddir, filename, fs_serverReferencedPaks[i]) );
+					Q_strcat( currentPak, sizeof(currentPak), va("%s/" FS_DOWNLOADS "/%s.%08x.pk3", moddir, filename, fs_serverReferencedPaks[i]) );
 				} else {
-					Q_strcat( currentPak, sizeof(currentPak), va("%s/dl_%s.pk3", moddir, filename) );
+					Q_strcat( currentPak, sizeof(currentPak), va("%s/" FS_DOWNLOADS "/%s.pk3", moddir, filename) );
 				}
 
 				// If the currentPak doesn't fit the neededpaks buffer we are likely running into issues
@@ -3442,6 +3592,11 @@ void FS_Shutdown( qboolean closemfp, qboolean keepModuleFiles ) {
 	Cmd_RemoveCommand( "touchFile" );
 	Cmd_RemoveCommand( "which" );
 	Cmd_RemoveCommand( "fs_restart" );
+
+	// the game ends: what was downloaded for this session goes (nothing of it is open any more)
+	if ( closemfp ) {
+		FS_ClearSessionDownloads( NULL );
+	}
 
 #ifdef FS_MISSING
 	if (closemfp) {

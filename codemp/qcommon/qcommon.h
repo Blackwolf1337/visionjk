@@ -586,6 +586,11 @@ qboolean FS_Initialized();
 void	FS_InitFilesystem (void);
 void	FS_Shutdown( qboolean closemfp, qboolean keepModuleFiles = qfalse );
 
+// Where a client puts what it downloads from a server, in a game folder of the home folder: kept, or for this
+// session only (client/cl_download.cpp). Their paks are loaded only while a server references them.
+#define FS_DOWNLOADS			"downloads"
+#define FS_DOWNLOADS_SESSION	"downloads/session"
+
 qboolean	FS_ConditionalRestart( int checksumFeed );
 void	FS_Restart( int checksumFeed, qboolean inPlace = qfalse );
 // shutdown and restart the filesystem so changes to fs_gamedir can take effect
