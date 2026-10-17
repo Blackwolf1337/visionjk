@@ -70,7 +70,7 @@ Both are in Setup under Interface.
   stance of the saber under it, the score above. The health bar turns amber below half and red below a
   quarter.
 - Setup has seven pages in place of eleven tabs: Video, Sound (with the 3D sound and the voice chat), Game
-  Options (with the language and the bot mode), Interface, Chat & Social, Network and Mods. Controls has
+  Options (with the language), Interface, Chat & Social, Network and Mods. Controls has
   seven: Movement, Interaction, Weapons, Force Powers (both old tabs), Mouse/Joystick, Other and Extras
   (what JA+ and VisionJK add). The settings that only the console had are in them: see the table at the end.
 - The pages of the player are one screen too: Profile, Character, Lightsaber, and in a game Force and Moves, as

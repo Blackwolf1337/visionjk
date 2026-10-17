@@ -2794,9 +2794,6 @@ void CG_Shutdown( void )
 	CG_VoiceShutdown();
 	CG_MusicShutdown();
 
-	// the keys bot mode holds down are let go
-	CG_BotModeShutdown();
-
 	BG_ClearAnimsets(); //free all dynamic allocations made through the engine
 
     CG_DestroyAllGhoul2();

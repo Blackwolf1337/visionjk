@@ -68,7 +68,7 @@ Nothing in the Windows code had to be changed.
   console marked with the mouse, a link opened from the chat.
 - The internet: the server browser with real servers, the masterserver at its real address, a download.
 - The music status from Spotify itself (only the window of a browser with YouTube Music was imitated).
-- A dedicated server for Windows (the tree builds none), bot mode, siege, a team game.
+- A dedicated server for Windows (the tree builds none), siege, a team game.
 - Windows 10, a Windows in another language than German, a user without administrator rights (apart from the
   one question of the ssh-agent, nothing asked for them).
 - A stock `jamp.exe` with these modules: it is 32 bit, the tree is 64 bit only.

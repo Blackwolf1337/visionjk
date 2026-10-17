@@ -8200,7 +8200,6 @@ static void CG_Draw2D( void ) {
 	CG_DrawTeamVote();
 	CG_VoiceDraw();
 	CG_Place2D( PLACE_CENTER );
-	CG_BotModeDraw();
 	// what the boxes of the boombox play, over them (boombox/cg_boombox.c)
 	CG_BoomboxDraw();
 

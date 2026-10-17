@@ -2570,9 +2570,6 @@ void CG_DrawActiveFrame( int serverTime, stereoFrame_t stereoView, qboolean demo
 		}
 	}
 
-	// bot mode holds my keys and turns my view, and says the values above again with its own in them
-	CG_BotModeFrame( mSensitivity );
-
 	// this counter will be bumped for every valid scene we generate
 	cg.clientFrame++;
 

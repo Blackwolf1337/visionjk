@@ -237,13 +237,6 @@ set(MPCGameMenu3DFiles
 source_group("cgame/menu3d" FILES ${MPCGameMenu3DFiles})
 set(MPCGameFiles ${MPCGameFiles} ${MPCGameMenu3DFiles})
 
-# bot mode: the client plays by itself, all of it is in the cgame
-set(MPCGameBotmodeFiles
-	"${MPDir}/cgame/botmode/cg_botmode.c"
-	)
-source_group("cgame/botmode" FILES ${MPCGameBotmodeFiles})
-set(MPCGameFiles ${MPCGameFiles} ${MPCGameBotmodeFiles})
-
 set(MPCGameCommonFiles
 	"${MPDir}/qcommon/q_shared.c"
 	"${MPDir}/qcommon/disablewarnings.h"

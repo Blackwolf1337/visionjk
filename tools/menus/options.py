@@ -89,8 +89,6 @@ SETUP = [
         ('old', 'options', None, ('cl_allowdownload', 'se_language', 's_language', 'langapply')),
         ('head', 'Language'),
         ('old', 'options', ('se_language', 's_language', 'langapply')),
-        ('head', 'Bot Mode'),
-        ('old', 'botmode'),
     ]),
     ('Interface', 'How menus, HUD and camera look.', [
         ('head', 'Menus and HUD'),
@@ -159,7 +157,7 @@ CONTROLS = [
         ('head', 'JA+'),
         ('old', 'japluscontrols', ('+button12', 'jetpack', 'engage_fullforceduel', 'ui_openmenu modsay')),
         ('head', 'VisionJK'),
-        ('old', 'japluscontrols', ('+v_voice', '+v_voiceclan', 'v_botmode !')),
+        ('old', 'japluscontrols', ('+v_voice', '+v_voiceclan')),
         ('bind', 'Free the Mouse (Select Players)', '+v_cursor',
          'Hold to point at players with the mouse: a click opens what you can do with one.'),
         ('bind', 'Scoreboard with Mouse', 'v_scores_pick',

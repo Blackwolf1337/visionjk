@@ -2160,11 +2160,6 @@ void FX_ConcussionHitWall( vec3_t origin, vec3_t normal );
 void FX_ConcussionHitPlayer( vec3_t origin, vec3_t normal, qboolean humanoid );
 int CG_ClientNumFromName( const char *p );		// cg_newDraw.c
 
-// cg_botmode.c: the client plays by itself
-void CG_BotModeFrame( float sensitivity );
-void CG_BotModeDraw( void );
-void CG_BotModeShutdown( void );
-
 // cg_voice.c: the voice chat
 void CG_VoiceInit( void );
 void CG_VoiceShutdown( void );

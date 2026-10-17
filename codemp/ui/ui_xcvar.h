@@ -35,12 +35,6 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #endif
 
 XCVAR_DEF( capturelimit,					"0",					NULL,				CVAR_ARCHIVE|CVAR_NORESTART|CVAR_SERVERINFO ) // fixme init'd to 8 in game module
-// bot mode of the cgame, for the setup menu as the voice chat ones below
-XCVAR_DEF( v_botMode,						"0",					NULL,				CVAR_NONE )
-XCVAR_DEF( v_botModeFight,					"2",					NULL,				CVAR_ARCHIVE )
-XCVAR_DEF( v_botModeKeys,					"1",					NULL,				CVAR_ARCHIVE )
-XCVAR_DEF( v_botModeRoam,					"1",					NULL,				CVAR_ARCHIVE )
-XCVAR_DEF( v_botModeSkill,					"3",					NULL,				CVAR_ARCHIVE )
 XCVAR_DEF( cg_drawCrosshair,				"1",					NULL,				CVAR_ARCHIVE )
 XCVAR_DEF( cg_drawCrosshairNames,			"1",					NULL,				CVAR_ARCHIVE )
 XCVAR_DEF( cg_marks,						"1",					NULL,				CVAR_ARCHIVE )

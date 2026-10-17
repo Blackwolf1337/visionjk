@@ -3766,41 +3766,9 @@
 		{
 			group				japluscontrols
 			type				ITEM_TYPE_BIND
-			text				"Bot Mode (On/Off)"
-			cvar				"v_botMode !"
-			rect				260 258 340 14
-			textalign			ITEM_ALIGN_RIGHT
-			textalignx			174
-			textaligny			0
-			font				4
-			textscale			1
-			forecolor			.615 .615 .956 1
-			visible				0
-			descText			"your client plays by itself, and stops (Setup, Bot Mode)"
-
-			mouseenter 
-			{ 
-				show			highlight6
-				show			keybindstatus
-			}
-			mouseexit 
-			{ 
-				hide			highlight6
-				hide			keybindstatus
-			}
-			action 
-			{ 
-				play			"sound/interface/button1.wav" ; 
-			}
-		}
-
-		itemDef 
-		{
-			group				japluscontrols
-			type				ITEM_TYPE_BIND
 			text				"Clan Radio (Talk)"
 			cvar				"+v_voiceclan"
-			rect				260 272 340 14
+			rect				260 258 340 14
 			textalign			ITEM_ALIGN_RIGHT
 			textalignx			174
 			textaligny			0
@@ -3812,12 +3780,12 @@
 
 			mouseenter 
 			{ 
-				show			highlight7
+				show			highlight6
 				show			keybindstatus
 			}
 			mouseexit 
 			{ 
-				hide			highlight7
+				hide			highlight6
 				hide			keybindstatus
 			}
 			action 

@@ -85,14 +85,6 @@ REFERENCE           HOLD_TO_TALK_IN_THE_VOICE_CHAT_PUSH
 LANG_ENGLISH        "Hold to talk in the voice chat (push to talk)."
 LANG_FRENCH         "Maintenir pour parler dans le chat vocal."
 
-REFERENCE           BOT_MODE_ON_OFF
-LANG_ENGLISH        "Bot Mode (On/Off)"
-LANG_FRENCH         "Mode bot (marche/arrêt)"
-
-REFERENCE           YOUR_CLIENT_PLAYS_BY_ITSELF_AND_STOP
-LANG_ENGLISH        "Your client plays by itself, and stops (Setup, Bot Mode)."
-LANG_FRENCH         "Votre client joue tout seul, puis s'arrête (Configuration, Mode bot)."
-
 REFERENCE           CLAN_RADIO_TALK
 LANG_ENGLISH        "Clan Radio (Talk)"
 LANG_FRENCH         "Radio du clan (parler)"
@@ -432,78 +424,6 @@ LANG_FRENCH         "Jeu"
 REFERENCE           LANGUAGE
 LANG_ENGLISH        "Language"
 LANG_FRENCH         "Langue"
-
-REFERENCE           BOT_MODE
-LANG_ENGLISH        "Bot Mode"
-LANG_FRENCH         "Mode bot"
-
-REFERENCE           YOUR_CLIENT_PLAYS_BY_ITSELF_ON_ANY_S
-LANG_ENGLISH        "Your client plays by itself, on any server: it walks the route of the map and fights."
-LANG_FRENCH         "Votre client joue tout seul, sur n'importe quel serveur : il suit le parcours de la carte et se bat."
-
-REFERENCE           SKILL
-LANG_ENGLISH        "Skill"
-LANG_FRENCH         "Niveau"
-
-REFERENCE           HOW_FAST_IT_TURNS_HOW_WELL_IT_AIMS_A
-LANG_ENGLISH        "How fast it turns, how well it aims and how soon it attacks."
-LANG_FRENCH         "Sa vitesse de rotation, sa précision et sa rapidité d'attaque."
-
-REFERENCE           INITIATE
-LANG_ENGLISH        "Initiate"
-LANG_FRENCH         "Initié"
-
-REFERENCE           PADAWAN
-LANG_ENGLISH        "Padawan"
-LANG_FRENCH         "#same"
-
-REFERENCE           JEDI
-LANG_ENGLISH        "Jedi"
-LANG_FRENCH         "#same"
-
-REFERENCE           JEDI_KNIGHT
-LANG_ENGLISH        "Jedi Knight"
-LANG_FRENCH         "Chevalier Jedi"
-
-REFERENCE           JEDI_MASTER
-LANG_ENGLISH        "Jedi Master"
-LANG_FRENCH         "Maître Jedi"
-
-REFERENCE           FIGHT
-LANG_ENGLISH        "Fight"
-LANG_FRENCH         "Combat"
-
-REFERENCE           WHOM_IT_ATTACKS_NOBODY_ONLY_THE_ONE
-LANG_ENGLISH        "Whom it attacks: nobody, only the one you are in a duel with, or every enemy it sees."
-LANG_FRENCH         "Qui il attaque : personne, seulement votre adversaire en duel, ou tout ennemi qu'il voit."
-
-REFERENCE           NEVER
-LANG_ENGLISH        "Never"
-LANG_FRENCH         "Jamais"
-
-REFERENCE           IN_DUELS
-LANG_ENGLISH        "In Duels"
-LANG_FRENCH         "En duel"
-
-REFERENCE           ALWAYS
-LANG_ENGLISH        "Always"
-LANG_FRENCH         "Toujours"
-
-REFERENCE           WALK_THE_ROUTE
-LANG_ENGLISH        "Walk The Route"
-LANG_FRENCH         "Suivre le parcours"
-
-REFERENCE           OFF_IT_STAYS_WHERE_IT_IS_AND_ONLY_TU
-LANG_ENGLISH        "Off: it stays where it is and only turns and fights."
-LANG_FRENCH         "Désactivé : il reste sur place, se tourne et se bat seulement."
-
-REFERENCE           KEYS_TAKE_OVER
-LANG_ENGLISH        "Keys Take Over"
-LANG_FRENCH         "Les touches reprennent la main"
-
-REFERENCE           A_MOVE_OR_ATTACK_KEY_ENDS_THE_BOT_MO
-LANG_ENGLISH        "A move or attack key ends the bot mode. A key for on and off: Controls, Extras."
-LANG_FRENCH         "Une touche de déplacement ou d'attaque arrête le mode bot. Touche marche/arrêt : Commandes, Extras."
 
 REFERENCE           MENUS_AND_HUD
 LANG_ENGLISH        "Menus and HUD"
@@ -940,6 +860,26 @@ LANG_FRENCH         "coupé pour vous"
 REFERENCE           BOOMBOX_LINK_OR_SONG
 LANG_ENGLISH        "Boombox, link or song"
 LANG_FRENCH         "Radiocassette, lien ou chanson"
+
+REFERENCE           INITIATE
+LANG_ENGLISH        "Initiate"
+LANG_FRENCH         "Initié"
+
+REFERENCE           PADAWAN
+LANG_ENGLISH        "Padawan"
+LANG_FRENCH         "#same"
+
+REFERENCE           JEDI
+LANG_ENGLISH        "Jedi"
+LANG_FRENCH         "#same"
+
+REFERENCE           JEDI_KNIGHT
+LANG_ENGLISH        "Jedi Knight"
+LANG_FRENCH         "Chevalier Jedi"
+
+REFERENCE           JEDI_MASTER
+LANG_ENGLISH        "Jedi Master"
+LANG_FRENCH         "Maître Jedi"
 
 REFERENCE           MUTE_HIS_VOICE
 LANG_ENGLISH        "Mute his voice"

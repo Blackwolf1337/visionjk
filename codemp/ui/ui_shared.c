@@ -5621,7 +5621,6 @@ static const char *g_bindCommands[] = {
 	"automap_toggle",
 	"bow",
 	"centerview",
-	"v_botMode !",				// bot mode on and off
 	"cg_thirdperson !",
 	"engage_duel",
 	"engage_FullForceDuel",		// JA+

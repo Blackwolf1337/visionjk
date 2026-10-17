@@ -42,14 +42,6 @@ OLD = {
     'On Other Servers:': 'On Other Servers',
     'Own Voice In The Room:': 'Own Voice In The Room',
     'Radio Sound:': 'Radio Sound',
-    'Bot Mode:': 'Bot Mode',
-    'Skill:': 'Skill',
-    'Fight:': 'Fight',
-    'Walk The Route:': 'Walk The Route',
-    'No: it stays where it is and only turns and fights.': 'Off: it stays where it is and only turns and fights.',
-    'Keys Take Over:': 'Keys Take Over',
-    'A move or attack key ends the bot mode. A key for on and off: Controls, JA+.':
-        'A move or attack key ends the bot mode. A key for on and off: Controls, Extras.',
     'JetPack': 'Jetpack',
     'Grapple hook to throw on walls': 'A hook on a rope that pulls you to where it hits.',
     'used to turn On/off the JetPack': 'Turns the jetpack on and off.',
@@ -57,7 +49,6 @@ OLD = {
     'Message Mod': 'Message Menu',
     'used to draw an interface for clan Say, private talk, amsay, ampsay...': 'A menu for clan chat, private and admin messages.',
     'hold to talk in the voice chat (push to talk)': 'Hold to talk in the voice chat (push to talk).',
-    'your client plays by itself, and stops (Setup, Bot Mode)': 'Your client plays by itself, and stops (Setup, Bot Mode).',
     'Red: ': 'Red', 'Red ': 'Red', 'Green: ': 'Green', 'Blue: ': 'Blue', 'Blue ': 'Blue',
     'Line: ': 'Blade Style',
     'hold to talk to your clan over the radio, wherever they are': 'Hold to talk to your clan over the radio, wherever they are.',
@@ -89,7 +80,6 @@ TR = {
     'Voice Chat': 'Sprach-Chat',
     'Game': 'Spiel',
     'Language': 'Sprache',
-    'Bot Mode': 'Bot-Modus',
     'Menus and HUD': 'Menüs und HUD',
     'View': 'Sicht',
     'Players': 'Spieler',
@@ -210,26 +200,11 @@ TR = {
         'Der Clan-Funk klingt wie Funk: schmal, etwas rau, mit einem Klick.',
 
     # game
-    'Your client plays by itself, on any server: it walks the route of the map and fights.':
-        'Ihr Client spielt von selbst, auf jedem Server: Er läuft die Route der Karte ab und kämpft.',
-    'Skill': 'Können',
-    'How fast it turns, how well it aims and how soon it attacks.': 'Wie schnell er sich dreht, wie gut er zielt und wie früh er angreift.',
     'Initiate': 'Anwärter',
     'Padawan': 'Padawan',
     'Jedi': 'Jedi',
     'Jedi Knight': 'Jedi-Ritter',
     'Jedi Master': 'Jedi-Meister',
-    'Fight': 'Kämpfen',
-    'Whom it attacks: nobody, only the one you are in a duel with, or every enemy it sees.':
-        'Wen er angreift: niemanden, nur Ihren Duellgegner oder jeden Feind, den er sieht.',
-    'Never': 'Nie',
-    'In Duels': 'In Duellen',
-    'Always': 'Immer',
-    'Walk The Route': 'Route ablaufen',
-    'Off: it stays where it is and only turns and fights.': 'Aus: Er bleibt, wo er ist, dreht sich nur und kämpft.',
-    'Keys Take Over': 'Tasten übernehmen',
-    'A move or attack key ends the bot mode. A key for on and off: Controls, Extras.':
-        'Eine Bewegungs- oder Angriffstaste beendet den Bot-Modus. Eine Taste für An und Aus: Steuerung, Extras.',
 
     # interface
     'New HUD': 'Neues HUD',
@@ -312,8 +287,6 @@ TR = {
     'A menu for clan chat, private and admin messages.': 'Ein Menü für Clan-Chat, private und Admin-Nachrichten.',
     'Voice Chat (Talk)': 'Sprach-Chat (Sprechen)',
     'Hold to talk in the voice chat (push to talk).': 'Halten, um im Sprach-Chat zu sprechen (Push-to-Talk).',
-    'Bot Mode (On/Off)': 'Bot-Modus (An/Aus)',
-    'Your client plays by itself, and stops (Setup, Bot Mode).': 'Ihr Client spielt von selbst und hört wieder auf (Setup, Bot-Modus).',
     'Clan Radio (Talk)': 'Clan-Funk (Sprechen)',
     'Hold to talk to your clan over the radio, wherever they are.': 'Halten, um über Funk mit Ihrem Clan zu sprechen, wo immer er ist.',
     'Free the Mouse (Select Players)': 'Maus freigeben (Spieler auswählen)',
