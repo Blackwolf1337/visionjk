@@ -231,16 +231,11 @@ static void WA_PlayerAction( waConnection_t *c, const char *action, int id, char
 		trap->SendConsoleCommand( EXEC_APPEND, va( "clientkick %d\n", id ) );
 		WA_ActionResult( c, qtrue, "kicked" );
 	} else if ( !strcmp( action, "ban" ) ) {
-		char userinfo[MAX_INFO_STRING], ip[64], *port;
-
-		char raw[64];
+		char userinfo[MAX_INFO_STRING], ip[64], raw[64];
 
 		// the stored IP is already the real one the engine set, this only keeps a console line clean
 		trap->GetUserinfo( id, userinfo, sizeof( userinfo ) );
-		Q_strncpyz( raw, Info_ValueForKey( userinfo, "ip" ), sizeof( raw ) );
-		port = strchr( raw, ':' );
-		if ( port )
-			*port = '\0';
+		JP_IPOnly( Info_ValueForKey( userinfo, "ip" ), raw, sizeof( raw ) );
 		if ( !raw[0] || !Q_stricmp( raw, "localhost" ) || !Q_stricmp( raw, "bot" ) ) {
 			WA_ActionResult( c, qfalse, "this player has no IP to ban" );
 			return;

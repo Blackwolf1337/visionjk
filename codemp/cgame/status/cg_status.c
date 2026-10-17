@@ -195,7 +195,6 @@ the quotes of a command, and no longer than a status is. Empty: nothing, or he d
 */
 static void Status_Music( char *out, int outSize ) {
 	char	wanted[STATUS_TEXT * 4];
-	char	*in, *to;
 
 	wanted[0] = '\0';
 	if ( cg_shareMusic.integer ) {
@@ -205,13 +204,7 @@ static void Status_Music( char *out, int outSize ) {
 			CG_MusicNowPlaying( wanted, sizeof( wanted ) );
 		}
 	}
-	Q_StripColor( wanted );
-	for ( in = to = wanted; *in; in++ ) {
-		if ( (unsigned char)*in >= ' ' && *in != 127 && *in != '"' && *in != ';' && *in != '%' ) {
-			*to++ = *in;
-		}
-	}
-	*to = '\0';
+	BG_StatusClean( wanted );
 	Q_UTF8_Truncate( wanted, STATUS_TEXT - 1 );
 	Q_strncpyz( out, wanted, outSize );
 }

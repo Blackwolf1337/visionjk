@@ -414,7 +414,8 @@ static char antiFakeIP[ANTIFAKE_MAX][24];
 static char antiFakeName[ANTIFAKE_MAX][MAX_NETNAME];
 static int antiFakeIndex = -1;	// last written slot, the table is a ring
 
-static void AntiFakeIPOnly( const char *ip, char *out, size_t size ) {
+// an address as the session keeps it, without the port
+void JP_IPOnly( const char *ip, char *out, size_t size ) {
 	char *colon;
 
 	Q_strncpyz( out, ip, size );
@@ -501,7 +502,7 @@ void JP_AntiFakeConnectMessage( gentity_t *ent, const char *rawIP ) {
 	char ip[24];
 	int idx;
 
-	AntiFakeIPOnly( rawIP, ip, sizeof( ip ) );
+	JP_IPOnly( rawIP, ip, sizeof( ip ) );
 	idx = AntiFakeSearch( ip );
 	if ( idx == -1 ) {
 		AntiFakeAdd( ip, name );

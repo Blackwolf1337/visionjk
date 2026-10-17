@@ -1874,4 +1874,5 @@ extern int forcePowerDarkLight[NUM_FORCE_POWERS];
 
 extern const char *gametypeStringShort[GT_MAX_GAME_TYPE];
 const char *BG_GetGametypeString( int gametype );
+void BG_StatusClean( char *text );
 int BG_GetGametypeForString( const char *gametype );

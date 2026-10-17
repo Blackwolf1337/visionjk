@@ -202,7 +202,7 @@ that does not look at it.
 */
 void Cmd_JPVoice_f( gentity_t *ent ) {
 	voiceClient_t	*vc = &voiceClients[ent - g_entities];
-	char			arg[16], ip[NET_ADDRSTRMAXLEN], *colon;
+	char			arg[16], ip[NET_ADDRSTRMAXLEN];
 	unsigned int	token = 0;
 
 	trap->Argv( 1, arg, sizeof( arg ) );
@@ -220,10 +220,7 @@ void Cmd_JPVoice_f( gentity_t *ent ) {
 	memset( vc, 0, sizeof( *vc ) );
 	vc->token = token;
 	// his datagrams have to come from where his game connection comes from. The port is another one.
-	Q_strncpyz( ip, ent->client->sess.IP, sizeof( ip ) );
-	colon = strchr( ip, ':' );
-	if ( colon )
-		*colon = '\0';
+	JP_IPOnly( ent->client->sess.IP, ip, sizeof( ip ) );
 	if ( inet_pton( AF_INET, ip, &vc->gameAddr ) == 1 ) {
 		vc->gameAddrKnown = qtrue;
 	} else if ( !Q_stricmp( ip, "localhost" ) || !Q_stricmp( ip, "loopback" ) ) {

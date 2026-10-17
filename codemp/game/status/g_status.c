@@ -243,7 +243,6 @@ jpstatus all: a cgame that has just started asks for what stands above everybody
 void Cmd_JPStatus_f( gentity_t *ent ) {
 	jpClient_t	*jp = &ent->client->pers.jp;
 	char		kind[16], text[sizeof( jp->statusMusic )];
-	char		*in, *out;
 
 	trap->Argv( 1, kind, sizeof( kind ) );
 	if ( !Q_stricmp( kind, "all" ) ) {
@@ -262,14 +261,7 @@ void Cmd_JPStatus_f( gentity_t *ent ) {
 	text[0] = '\0';
 	if ( !Q_stricmp( kind, "music" ) ) {
 		JP_ChatCopy( ent, ConcatArgs( 2 ), text, sizeof( text ) );
-		Q_StripColor( text );
-		// no control characters, and nothing that ends the quotes of the command it is passed on in
-		for ( in = out = text; *in; in++ ) {
-			if ( (unsigned char)*in >= ' ' && *in != 127 && *in != '"' && *in != ';' && *in != '%' ) {
-				*out++ = *in;
-			}
-		}
-		*out = '\0';
+		BG_StatusClean( text );
 	}
 	if ( !strcmp( text, jp->statusMusic ) ) {
 		// nothing new. The client still hears what the others are told, so it knows its command arrived.

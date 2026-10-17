@@ -3251,3 +3251,23 @@ int BG_GetGametypeForString( const char *gametype )
 	else if ( !Q_stricmp( gametype, "cty" ) )			return GT_CTY;
 	else												return -1;
 }
+
+/*
+================
+BG_StatusClean
+
+Not from JA+: the text of a status (cgame/status/cg_status.c, game/status/g_status.c) as it is passed on in a
+command: no colours, no control characters, and nothing that ends the quotes of that command.
+================
+*/
+void BG_StatusClean( char *text ) {
+	char *in, *out;
+
+	Q_StripColor( text );
+	for ( in = out = text; *in; in++ ) {
+		if ( (unsigned char)*in >= ' ' && *in != 127 && *in != '"' && *in != ';' && *in != '%' ) {
+			*out++ = *in;
+		}
+	}
+	*out = '\0';
+}

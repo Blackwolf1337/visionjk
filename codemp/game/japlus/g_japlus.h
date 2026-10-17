@@ -177,6 +177,7 @@ void		JP_ClanTagThink( gentity_t *ent );
 void		JP_SanitizeString( char *out, const char *in, size_t outSize, int maxIn );
 gentity_t	*JP_ValidClient( int num );										// g_japlus_admin.c
 int			JP_ClientByName( const char *name, qboolean exact );
+void		JP_IPOnly( const char *ip, char *out, size_t size );					// g_japlus_chat.c
 void		JP_Reply( gentity_t *ent, qboolean rcon, const char *text );
 void		JP_LogCmd( gentity_t *ent, qboolean rcon, const char *cmd, const char *extra );
 void		JP_FormatName( char *out, int outSize, const char *fmt, const char *name );
