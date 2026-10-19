@@ -182,6 +182,33 @@ R_ComputeLOD
 
 =================
 */
+/*
+=============
+R_LodScale
+
+What the projected radius of a model is multiplied by to choose its level of detail (R_ComputeLOD, G2_ComputeLOD):
+r_lodscale with the automatic part, 0 to 20. The projected radius is the share of the screen the model covers, so
+a model chose the same level at 640 x 480 and on a screen of 1440 lines, where it is three times as many pixels
+high. rd-vulkan-vision (v_lodPixels 1, 2026-10-19): times the height of the window over 480, so a model keeps its
+detail as long as it covers as many pixels as it did at 480 lines.
+=============
+*/
+float R_LodScale( void ) {
+	float lodscale = r_lodscale->value + r_autolodscalevalue->value;
+
+	if ( lodscale > 20 ) {
+		lodscale = 20;
+	} else if ( lodscale < 0 ) {
+		lodscale = 0;
+	}
+#ifdef RD_VULKAN_VISION
+	if ( v_lodPixels->integer && glConfig.vidHeight > 480 ) {
+		lodscale *= glConfig.vidHeight / 480.0f;
+	}
+#endif
+	return lodscale;
+}
+
 int R_ComputeLOD( trRefEntity_t *ent ) {
 	float radius;
 	float flod, lodscale;
@@ -207,15 +234,7 @@ int R_ComputeLOD( trRefEntity_t *ent ) {
 
 		if ( ( projectedRadius = ProjectRadius( radius, ent->e.origin ) ) != 0 )
 		{
-			lodscale = (r_lodscale->value+r_autolodscalevalue->value);
-			if ( lodscale > 20 )
-			{
-				lodscale = 20;
-			}
-			else if ( lodscale < 0 )
-			{
-				lodscale = 0;
-			}
+			lodscale = R_LodScale();
 			flod = 1.0f - projectedRadius * lodscale;
 		}
 		else
