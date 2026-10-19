@@ -35,7 +35,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "cgame/cg_public.h"
 #include "ui/ui_public.h"
 
-#define	RETRANSMIT_TIMEOUT	3000	// time between connection packet retransmits
+#define	RETRANSMIT_TIMEOUT	1000	// time between connection packet retransmits (3000 before: a lost packet cost 3 s of a join)
+#define	CONNECT_GIVE_UP		30000	// a server that does not answer a step of the connect this long is given up
 
 // Wind
 extern vec3_t cl_windVec;
@@ -412,6 +413,7 @@ extern	cvar_t	*cl_timeNudge;
 extern	cvar_t	*cl_showTimeDelta;
 extern	cvar_t	*v_netSmooth;
 extern	cvar_t	*v_netStats;
+extern	cvar_t	*v_joinReport;
 extern	cvar_t	*cl_freezeDemo;
 
 extern	cvar_t	*cl_yawspeed;
@@ -591,6 +593,24 @@ extern int cl_connectedToCheatServer;
 void CL_SystemInfoChanged( void );
 void CL_ParseGamestate( msg_t *msg );
 void CL_DownloadsComplete( void );
+
+// the steps of joining a server, for the join report (v_joinReport, cl_main.cpp)
+typedef enum {
+	JOIN_CONNECT,		// the connect command
+	JOIN_CHALLENGE,		// challengeResponse
+	JOIN_CONNECTED,		// connectResponse
+	JOIN_FIRST_PACKET,	// the first packet of the gamestate
+	JOIN_GAMESTATE,		// the whole gamestate
+	JOIN_LOAD,			// downloads done, the level starts to load
+	JOIN_PRIMED,		// the level is loaded, the first snapshot is asked for
+	JOIN_ACTIVE,		// the first snapshot
+	JOIN_NUM_STEPS
+} joinStep_t;
+
+void CL_JoinStep( joinStep_t step );
+void CL_JoinPacket( int bytes );
+void CL_JoinSent( int bytes );
+void CL_JoinGamestate( int bytes );
 
 void CL_ClipOffChanged( const char *list );
 void CL_ParseServerMessage( msg_t *msg );

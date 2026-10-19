@@ -833,7 +833,9 @@ void SV_SendMessageToClient( msg_t *msg, client_t *client ) {
 	client->nextSnapshotTime = svs.time + ((int) (rateMsec * com_timescale->value));
 
 	// don't pile up empty snapshots while connecting
-	if ( client->state != CS_ACTIVE ) {
+	// (but the rest of a message that did not fit into one packet goes on at the rate, as in ioq3: the fragments of
+	// every gamestate waited a second here, a second of every join)
+	if ( client->state != CS_ACTIVE && !client->netchan.unsentFragments ) {
 		// a gigantic connection message may have already put the nextSnapshotTime
 		// more than a second away, so don't shorten it
 		// do shorten if client is downloading

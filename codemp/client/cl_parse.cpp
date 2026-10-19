@@ -515,6 +515,8 @@ void CL_ParseGamestate( msg_t *msg ) {
 
 	clc.connectPacketCount = 0;
 
+	CL_JoinGamestate( msg->cursize );
+
 	// wipe local client state
 	CL_ClearState();
 

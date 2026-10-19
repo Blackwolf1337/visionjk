@@ -161,6 +161,65 @@ Read from the code, these looked like causes, and they are not, on this machine 
   models of a player too little to measure.
 - Weapons that are loaded when first used: no long frame.
 
+## Joining a server
+
+`v_joinReport 1` prints one line when the game starts after a `connect`: how long each step of the join took
+(challenge, connect, the gamestate with its packets and bytes, downloads, the load, the first snapshot, the
+total). `v_joinReport 2` also prints every packet of the join, by the time since connectResponse.
+`japlus_port/tools/jointest.sh <address>` joins a server hidden and silent with both reports on (the player is
+named "VisionJK test client"), `tools/joinlocal.sh` does it against a server of the build on 127.0.0.1 with 31
+bots, through `lagproxy.py` with 13 ms.
+
+A public JA+ server on JAmp 1.01 (29 players, mp/ffa1, 13 ms away), filled texture cache, 2026-10-19:
+
+| step | ms |
+|---|---|
+| challenge and connect | 45 to 50 |
+| gamestate, 16 to 20 packets, 20 KB | 1455 to 1552 |
+| the load | 540 to 670 (sounds of the players 205 of it) |
+| the first snapshot | 96 to 139 |
+| the whole join | 2190 to 2350 |
+
+With an empty texture cache the load was 2487 ms. The trace showed where the gamestate goes: three packets at
+once, then a second of nothing, then one packet per frame of the server. The second is a rule of the server for
+clients that connect ("don't pile up empty snapshots while connecting", `SV_SendMessageToClient()`): after every
+message the next send is put a second away, and the rest of a gamestate that needs several packets waited for
+it. A client cannot change that on a server of the old engine; `rate` 25000 or 100000 gave the same times there
+(after the pause a packet goes every frame anyway), so the default of `rate` stays.
+
+The server of this tree now sends the rest of a message that did not fit into one packet at the rate, as ioq3
+does, and keeps the second for what comes after it. Against a server of the build, 31 bots, sv_lanForceRate 0:
+
+| | gamestate | join |
+|---|---|---|
+| before | 1300 to 1349 ms (9 to 11 packets, 10 KB) | 1982 to 2107 ms |
+| after | 350 to 399 ms | 1006 to 1017 ms |
+
+What is left of the gamestate is the rate of the server, `sv_clientRate` 50000 with `sv_ratePolicy` 1 (the
+`rate` of the client does not count there either).
+
+The connect itself: a lost getchallenge or connect was sent again after 3 s, now after 1 s, and a server that
+does not answer a step for 30 s ends the connect with an error that names its last word (a server that answers
+"Reconnect rejected : too soon" may stay silent after it, and the connect screen waited for ever).
+
+The loading screen is drawn after every item and every player of the level, 89 times on that server: 16 ms
+together, nothing to gain.
+
+**The unpacked sounds are kept** (`client/snd_cache.cpp`, cvar `v_soundCache`, on by default). An MP3 outside
+`sound/chars` is unpacked to samples when it is registered: weapons, effects, the sounds of the players. On the
+server above that was 182 of the 256 ms of sounds, 288 files. The samples are written to `soundcache/` of the
+profile, a file per sound, named as the textures of `vk_texcache.cpp` are (the path of the MP3, its length, the
+checksum of its pak; never a file of a directory), before they are brought to the rate of the mixer.
+
+| | unpacking | load |
+|---|---|---|
+| 31 bots on mp/ffa1, three joins each, before / after | 153 to 162 / 15 ms | 438 to 474 / 305 to 318 ms |
+| the server above, filled cache | 182 / 19 ms | 540 to 670 / 396 to 426 ms |
+
+What is left of the unpacking is the resampling to the rate of the mixer. The first load that fills the cache
+writes 16 ms more. The cache of mp/ffa1 with its players is 24 MB in 280 files; deleting it is safe at any time.
+The 280 kept sounds were compared once with a fresh unpack of their MP3: all the same.
+
 ## Not done yet
 
 - What a join still costs: the Ghoul2 model and the sounds of the player (the wait for the upload is gone).
@@ -170,7 +229,8 @@ Read from the code, these looked like causes, and they are not, on this machine 
   this was first measured and 130 on 2026-10-19).
 - The first load with an empty cache is as slow as before. Decoding and packing on the worker threads the
   packer already has would shorten it.
-- Sounds are read and decoded when they are registered (123 ms of a first load).
+- Sounds are still read when they are registered: 62 ms for 1413 files on the server above, half of them a .wav
+  that is looked for before the .mp3.
 - `rd-vanilla` and the renderer for the browser have no cache: OpenGL packs in the driver, and the device for
   the browser takes no textures in blocks.
 - Measured on one level and one machine. Not played by a person with it.

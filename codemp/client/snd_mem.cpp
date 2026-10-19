@@ -761,10 +761,13 @@ static qboolean S_LoadSound_Actual( sfx_t *sfx )
 		len = strlen(sLoadName);
 	}
 
+	Com_LoadPush( "sound file", NULL );
 	if (!S_LoadSound_FileLoadAndNameAdjuster(sLoadName, &data, &size, len))
 	{
+		Com_LoadPop();
 		return qfalse;
 	}
+	Com_LoadPop();
 
 	SND_TouchSFX(sfx);
 
@@ -789,14 +792,20 @@ static qboolean S_LoadSound_Actual( sfx_t *sfx )
 			{
 				// small file, not worth keeping as MP3 since it would increase in size (with MP3 header etc)...
 				//
+				Com_LoadPush( "sound mp3 unpacked", NULL );
 				Com_DPrintf("S_LoadSound: Unpacking MP3 file(%i) \"%s\" to wav(%i).\n",size,sLoadName,iRawPCMDataSize);
 				//
-				// unpack and convert into WAV...
+				// unpack and convert into WAV... (or take what was unpacked from this file before, snd_cache)
 				//
 				{
-					byte *pbUnpackBuffer = (byte *) Z_Malloc( iRawPCMDataSize+10 +2304 /* <g> */, TAG_TEMP_WORKSPACE, qfalse );	// won't return if fails
+					byte		*pbUnpackBuffer = NULL;
+					void		*pvKept = NULL;
+					const byte	*pbPCM = S_SoundCacheFind( sLoadName, &info, &pvKept );
 
+					if ( !pbPCM )
 					{
+						pbUnpackBuffer = (byte *) Z_Malloc( iRawPCMDataSize+10 +2304 /* <g> */, TAG_TEMP_WORKSPACE, qfalse );	// won't return if fails
+
 						int iResultBytes = MP3_UnpackRawPCM( sLoadName, data, size, pbUnpackBuffer, qfalse );
 
 						if (iResultBytes!= iRawPCMDataSize){
@@ -815,30 +824,37 @@ static qboolean S_LoadSound_Actual( sfx_t *sfx )
 											qfalse
 										);
 
-						S_LoadSound_Finalize(&info,sfx,pbUnpackBuffer);
+						S_SoundCacheKeep( &info, pbUnpackBuffer, iResultBytes );
+						pbPCM = pbUnpackBuffer;
+					}
+
+					S_LoadSound_Finalize(&info,sfx,(byte *)pbPCM);
 
 #ifdef Q3_BIG_ENDIAN
-						// the MP3 decoder returns the samples in the correct endianness, but ResampleSfx byteswaps them,
-						// so we have to swap them again...
-						sfx->fVolRange	= 0;
+					// the MP3 decoder returns the samples in the correct endianness, but ResampleSfx byteswaps them,
+					// so we have to swap them again...
+					sfx->fVolRange	= 0;
 
-						for (int i = 0; i < sfx->iSoundLengthInSamples; i++)
+					for (int i = 0; i < sfx->iSoundLengthInSamples; i++)
+					{
+						sfx->pSoundData[i] = LittleShort(sfx->pSoundData[i]);
+						// C++11 defines double abs(short) which is not what we want here,
+						// because double >> int is not defined. Force interpretation as int
+						if (sfx->fVolRange < (abs(static_cast<int>(sfx->pSoundData[i])) >> 8))
 						{
-							sfx->pSoundData[i] = LittleShort(sfx->pSoundData[i]);
-							// C++11 defines double abs(short) which is not what we want here,
-							// because double >> int is not defined. Force interpretation as int
-							if (sfx->fVolRange < (abs(static_cast<int>(sfx->pSoundData[i])) >> 8))
-							{
-								sfx->fVolRange = abs(static_cast<int>(sfx->pSoundData[i])) >> 8;
-							}
+							sfx->fVolRange = abs(static_cast<int>(sfx->pSoundData[i])) >> 8;
 						}
+					}
 #endif
 
-						// Open AL
+					// Open AL
 
+					if ( pbUnpackBuffer )
 						Z_Free(pbUnpackBuffer);
-					}
+					if ( pvKept )
+						FS_FreeFile( pvKept );
 				}
+				Com_LoadPop();
 			}
 		}
 		else
@@ -875,7 +891,9 @@ static qboolean S_LoadSound_Actual( sfx_t *sfx )
 		sfx->eSoundCompressionMethod = ct_16;
 		sfx->iSoundLengthInSamples	 = info.samples;
 		sfx->pSoundData = NULL;
+		Com_LoadPush( "sound wav", NULL );
 		ResampleSfx( sfx, info.rate, info.width, data + info.dataofs );
+		Com_LoadPop();
 
 		// Open AL
 

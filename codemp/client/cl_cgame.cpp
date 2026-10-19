@@ -790,6 +790,7 @@ void CL_FirstSnapshot( void ) {
 	cls.state = CA_ACTIVE;
 	// the frame that runs draws the game for the first time: with it the load is over
 	Com_LoadDone();
+	CL_JoinStep( JOIN_ACTIVE );
 
 	// set the timedelta so we are exactly on this first frame
 	cl.serverTimeDelta = cl.snap.serverTime - cls.realtime;
