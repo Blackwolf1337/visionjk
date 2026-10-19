@@ -412,6 +412,7 @@ extern	cvar_t	*cl_timeNudge;
 extern	cvar_t	*cl_showTimeDelta;
 extern	cvar_t	*v_netSmooth;
 extern	cvar_t	*v_netStats;
+extern	cvar_t	*v_joinReport;
 extern	cvar_t	*cl_freezeDemo;
 
 extern	cvar_t	*cl_yawspeed;
@@ -591,6 +592,23 @@ extern int cl_connectedToCheatServer;
 void CL_SystemInfoChanged( void );
 void CL_ParseGamestate( msg_t *msg );
 void CL_DownloadsComplete( void );
+
+// the steps of joining a server, for the join report (v_joinReport, cl_main.cpp)
+typedef enum {
+	JOIN_CONNECT,		// the connect command
+	JOIN_CHALLENGE,		// challengeResponse
+	JOIN_CONNECTED,		// connectResponse
+	JOIN_FIRST_PACKET,	// the first packet of the gamestate
+	JOIN_GAMESTATE,		// the whole gamestate
+	JOIN_LOAD,			// downloads done, the level starts to load
+	JOIN_PRIMED,		// the level is loaded, the first snapshot is asked for
+	JOIN_ACTIVE,		// the first snapshot
+	JOIN_NUM_STEPS
+} joinStep_t;
+
+void CL_JoinStep( joinStep_t step );
+void CL_JoinPacket( int bytes );
+void CL_JoinGamestate( int bytes );
 
 void CL_ClipOffChanged( const char *list );
 void CL_ParseServerMessage( msg_t *msg );

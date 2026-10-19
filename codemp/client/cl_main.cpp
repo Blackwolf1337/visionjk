@@ -58,6 +58,7 @@ cvar_t	*cl_timeNudge;
 cvar_t	*cl_showTimeDelta;
 cvar_t	*v_netSmooth;
 cvar_t	*v_netStats;
+cvar_t	*v_joinReport;
 cvar_t	*cl_freezeDemo;
 
 cvar_t	*cl_shownet;
@@ -1029,6 +1030,78 @@ void CL_Reconnect_f( void ) {
 }
 
 /*
+===============================================================================
+
+THE JOIN REPORT
+
+v_joinReport 1: one line when the game starts after a connect, how long each step of joining took. The load
+itself is told apart by v_loadReport (qcommon/com_load.cpp).
+
+===============================================================================
+*/
+
+static struct {
+	qboolean	active;
+	int			at[JOIN_NUM_STEPS];			// Sys_Milliseconds(), 0 for a step that did not come
+	int			gamestatePackets, gamestateBytes;
+	int			snapshotPackets, snapshotBytes;
+} join;
+
+static int CL_JoinSpan( joinStep_t from, joinStep_t to ) {
+	return join.at[from] && join.at[to] ? join.at[to] - join.at[from] : -1;
+}
+
+void CL_JoinStep( joinStep_t step ) {
+	if ( step == JOIN_CONNECT ) {
+		Com_Memset( &join, 0, sizeof( join ) );
+		join.active = (qboolean)( v_joinReport && v_joinReport->integer );
+	}
+	if ( !join.active || join.at[step] ) {
+		return;		// (a second gamestate after a download: the first one counts)
+	}
+	join.at[step] = Sys_Milliseconds();
+	if ( !join.at[step] ) {
+		join.at[step] = 1;
+	}
+	if ( step != JOIN_ACTIVE ) {
+		return;
+	}
+
+	join.active = qfalse;
+	// the challenge is skipped for an address of the LAN
+	const joinStep_t before = join.at[JOIN_CHALLENGE] ? JOIN_CHALLENGE : JOIN_CONNECT;
+	Com_Printf( "join of %s: challenge %d ms, connect %d, first packet %d, gamestate %d (%d packets, %d bytes), "
+		"downloads %d, load %d, first snapshot %d (%d packets, %d bytes), total %d ms\n",
+		NET_AdrToString( &clc.serverAddress ), CL_JoinSpan( JOIN_CONNECT, JOIN_CHALLENGE ),
+		CL_JoinSpan( before, JOIN_CONNECTED ), CL_JoinSpan( JOIN_CONNECTED, JOIN_FIRST_PACKET ),
+		CL_JoinSpan( JOIN_FIRST_PACKET, JOIN_GAMESTATE ), join.gamestatePackets, join.gamestateBytes,
+		CL_JoinSpan( JOIN_GAMESTATE, JOIN_LOAD ), CL_JoinSpan( JOIN_LOAD, JOIN_PRIMED ),
+		CL_JoinSpan( JOIN_PRIMED, JOIN_ACTIVE ), join.snapshotPackets, join.snapshotBytes,
+		CL_JoinSpan( JOIN_CONNECT, JOIN_ACTIVE ) );
+}
+
+// a packet of the server, before the netchan puts its fragments together
+void CL_JoinPacket( int bytes ) {
+	if ( !join.active ) {
+		return;
+	}
+	if ( cls.state == CA_CONNECTED && !join.at[JOIN_GAMESTATE] ) {
+		CL_JoinStep( JOIN_FIRST_PACKET );
+		join.gamestatePackets++;
+	} else if ( cls.state == CA_PRIMED ) {
+		join.snapshotPackets++;
+		join.snapshotBytes += bytes;
+	}
+}
+
+void CL_JoinGamestate( int bytes ) {
+	if ( join.active && !join.at[JOIN_GAMESTATE] ) {
+		join.gamestateBytes = bytes;
+	}
+	CL_JoinStep( JOIN_GAMESTATE );
+}
+
+/*
 ================
 CL_Connect_f
 
@@ -1042,6 +1115,8 @@ void CL_Connect_f( void ) {
 		Com_Printf( "usage: connect [server]\n");
 		return;
 	}
+
+	CL_JoinStep( JOIN_CONNECT );
 
 	// save arguments for reconnect
 	Cvar_Set("cl_reconnectArgs", Cmd_Args());
@@ -1393,6 +1468,8 @@ void CL_DownloadsComplete( void ) {
 		return;
 	}
 
+	CL_JoinStep( JOIN_LOAD );
+
 	// starting to load a map so we get out of full screen ui mode
 	Cvar_Set("r_uiFullScreen", "0");
 
@@ -1415,6 +1492,8 @@ void CL_DownloadsComplete( void ) {
 	CL_WritePacket();
 	CL_WritePacket();
 	CL_WritePacket();
+
+	CL_JoinStep( JOIN_PRIMED );
 }
 
 /*
@@ -2022,6 +2101,7 @@ void CL_ConnectionlessPacket( const netadr_t *from, msg_t *msg ) {
 		// a server proxy to hand off connections to multiple servers
 		clc.serverAddress = *from;
 		Com_DPrintf ("challengeResponse: %d\n", clc.challenge);
+		CL_JoinStep( JOIN_CHALLENGE );
 		return;
 	}
 
@@ -2043,6 +2123,7 @@ void CL_ConnectionlessPacket( const netadr_t *from, msg_t *msg ) {
 		Netchan_Setup (NS_CLIENT, &clc.netchan, from, Cvar_VariableValue( "net_qport" ) );
 		cls.state = CA_CONNECTED;
 		clc.lastPacketSentTime = -9999;		// send first packet immediately
+		CL_JoinStep( JOIN_CONNECTED );
 		return;
 	}
 
@@ -2157,6 +2238,8 @@ void CL_PacketEvent( const netadr_t *from, msg_t *msg ) {
 		// FIXME: send a client disconnect?
 		return;
 	}
+
+	CL_JoinPacket( msg->cursize );
 
 	if (!CL_Netchan_Process( &clc.netchan, msg) ) {
 		if ( netchan_anomaly ) {
@@ -2837,6 +2920,7 @@ void CL_Init( void ) {
 	cl_showTimeDelta = Cvar_Get ("cl_showTimeDelta", "0", CVAR_TEMP );
 	v_netSmooth = Cvar_Get( "v_netSmooth", "40", CVAR_ARCHIVE_ND, "On a line whose snapshots come unevenly the clock of the game stays further behind the newest one, by twice their jitter, at most this many ms. 0: always 5 ms, as before" );
 	v_netStats = Cvar_Get( "v_netStats", "0", CVAR_TEMP, "1: a line every five seconds: snapshots and bytes a second, frames past the newest snapshot, jitter, margin, how far the game is behind the newest snapshot" );
+	v_joinReport = Cvar_Get( "v_joinReport", "0", CVAR_TEMP, "1: a line when the game starts after a connect: how long each step of the join took" );
 	cl_freezeDemo = Cvar_Get ("cl_freezeDemo", "0", CVAR_TEMP );
 	rcon_client_password = Cvar_Get ("rconPassword", "", CVAR_TEMP, "Password for remote console access" );
 	cl_activeAction = Cvar_Get( "activeAction", "", CVAR_TEMP );
