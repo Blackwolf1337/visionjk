@@ -144,6 +144,11 @@ static void CG_Obituary( entityState_t *ent ) {
 	ci = &cgs.clientinfo[target];
 	CG_JPReplyObituary( target );
 
+	// tay_killSound, as jaPRO's cg_killSounds: the own player killed somebody else
+	if ( tay_killSound.integer && cg.snap && !( cg.snap->ps.pm_flags & PMF_FOLLOW ) && attacker == cg.snap->ps.clientNum && target != attacker ) {
+		trap->S_StartLocalSound( cgs.media.tayKillSound, CHAN_LOCAL_SOUND );
+	}
+
 	if ( attacker < 0 || attacker >= MAX_CLIENTS ) {
 		attacker = ENTITYNUM_WORLD;
 		attackerInfo = NULL;

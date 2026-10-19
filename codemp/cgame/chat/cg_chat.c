@@ -77,6 +77,7 @@ typedef struct chatMsg_s {
 	int			time;						// cg.time when it came
 	chatKind_t	kind;
 	int			clientNum;					// who said it, -1 when that is not known
+	qboolean	mention;					// it names the own player or a word of tay_notifyWords
 	// the rows it takes at wrapWidth: row n is text from rowStart[n] up to rowStart[n + 1], in the colour rowColor[n]
 	short		rowStart[CHAT_MAX_ROWS + 1];
 	char		rowColor[CHAT_MAX_ROWS];
@@ -684,6 +685,44 @@ static void Chat_Log( int kind, const char *text ) {
 	}
 }
 
+// tay_notify, as TaystJK's con_notifywords: whether a line of somebody else holds the own name or one of the words
+// of tay_notifyWords, colours and case aside. The sender's name in front of the line does not count.
+static qboolean Chat_Mentions( int clientNum, const char *text ) {
+	char		line[CHAT_TEXT], name[MAX_NETNAME], words[MAX_CVAR_VALUE_STRING];
+	const char	*said = line;
+	char		*word, *rest;
+
+	if ( !tay_notify.integer || !cg.snap || clientNum == cg.snap->ps.clientNum ) {
+		return qfalse;
+	}
+	Q_strncpyz( line, text, sizeof( line ) );
+	Q_StripColor( line );
+	if ( clientNum >= 0 && clientNum < MAX_CLIENTS ) {
+		Q_strncpyz( name, cgs.clientinfo[clientNum].name, sizeof( name ) );
+		Q_StripColor( name );
+		if ( name[0] && !Q_strncmp( line, name, strlen( name ) ) ) {
+			said += strlen( name );
+		}
+	}
+
+	Q_strncpyz( name, cgs.clientinfo[cg.snap->ps.clientNum].name, sizeof( name ) );
+	Q_StripColor( name );
+	if ( strlen( name ) >= 3 && Q_stristr( said, name ) ) {
+		return qtrue;
+	}
+	Q_strncpyz( words, tay_notifyWords.string, sizeof( words ) );
+	for ( word = words; *word; word = rest ) {
+		rest = word + strcspn( word, " ," );
+		if ( *rest ) {
+			*rest++ = '\0';
+		}
+		if ( strlen( word ) >= 2 && Q_stristr( said, word ) ) {
+			return qtrue;
+		}
+	}
+	return qfalse;
+}
+
 /*
 =================
 CG_ChatAdd
@@ -708,6 +747,10 @@ void CG_ChatAdd( int kind, int clientNum, const char *text ) {
 	m->time = cg.time;
 	m->kind = (chatKind_t)Com_Clampi( 0, CHAT_NUM_KINDS - 1, kind );
 	m->clientNum = clientNum;
+	m->mention = Chat_Mentions( clientNum, text );
+	if ( m->mention && tay_notify.integer >= 2 ) {
+		trap->S_StartLocalSound( cgs.media.tayNotifySound, CHAN_LOCAL_SOUND );
+	}
 	chat.count++;
 	Chat_Log( kind, text );
 
@@ -1335,6 +1378,13 @@ static void Chat_DrawRow( int index, int row, float x, float y, float alpha, qbo
 	int				urlFrom = 0, urlStart, urlEnd;
 
 	color[3] = alpha;
+
+	// tay_notify: a line that names the own player stands on a strip of gold
+	if ( m->mention ) {
+		const vec4_t mention = { 1.0f, 0.78f, 0.25f, 0.22f * alpha };
+
+		CG_FillRect( x - 2.0f, y, Chat_WidthOf( m->text, from, to ) + 4.0f, chat.rowH, mention );
+	}
 
 	if ( open && Chat_Selection( &start, &end ) && index >= start.msg && index <= end.msg ) {
 		static vec4_t	selColor = { 0.25f, 0.45f, 0.85f, 0.65f }, selSkin = { 0.43f, 0.83f, 1.0f, 0.32f };

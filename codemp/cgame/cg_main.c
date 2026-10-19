@@ -802,6 +802,9 @@ static void CG_RegisterSounds( void ) {
 	trap->S_RegisterSound( "sound/movers/objects/objectHit.wav" );
 
 	cgs.media.talkSound = trap->S_RegisterSound( "sound/player/talk.wav" );
+	cgs.media.tayHitSound = trap->S_RegisterSound( "sound/tay/hit.wav" );
+	cgs.media.tayKillSound = trap->S_RegisterSound( "sound/tay/kill.wav" );
+	cgs.media.tayNotifySound = trap->S_RegisterSound( "sound/tay/notify.wav" );
 	cgs.media.landSound = trap->S_RegisterSound( "sound/player/land1.wav");
 	cgs.media.fallSound = trap->S_RegisterSound( "sound/player/fallsplat.wav");
 

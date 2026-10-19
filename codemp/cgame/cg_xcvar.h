@@ -170,6 +170,12 @@ XCVAR_DEF( tay_crosshairColor,					"",						NULL,					CVAR_ARCHIVE )
 XCVAR_DEF( tay_crosshairNamesOpacity,				"0.5",					NULL,					CVAR_ARCHIVE )
 XCVAR_DEF( tay_disruptorBeam,						"0",					NULL,					CVAR_ARCHIVE )
 XCVAR_DEF( tay_disruptorColor,					"",						NULL,					CVAR_ARCHIVE )
+// a sound when the own shots hit someone, when the own player kills someone
+XCVAR_DEF( tay_hitSounds,						"0",					NULL,					CVAR_ARCHIVE )
+XCVAR_DEF( tay_killSound,						"0",					NULL,					CVAR_ARCHIVE )
+// a chat line with the own name or one of these words: 0 nothing, 1 marked, 2 marked and a sound
+XCVAR_DEF( tay_notify,							"2",					NULL,					CVAR_ARCHIVE )
+XCVAR_DEF( tay_notifyWords,						"",						NULL,					CVAR_ARCHIVE )
 XCVAR_DEF( tay_forceAllyModel,					"",						CG_ForceModelChange,	CVAR_ARCHIVE )
 XCVAR_DEF( tay_forceEnemyModel,					"",						CG_ForceModelChange,	CVAR_ARCHIVE )
 XCVAR_DEF( tay_cape,							"",						NULL,					CVAR_ARCHIVE )

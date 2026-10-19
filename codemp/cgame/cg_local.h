@@ -1280,6 +1280,9 @@ typedef struct cgMedia_s {
 	sfxHandle_t	teleOutSound;
 	sfxHandle_t	respawnSound;
 	sfxHandle_t talkSound;
+	sfxHandle_t tayHitSound;		// tay_hitSounds, tay_killSound, tay_notify (assets: tools/sounds/make_tay_sounds.py)
+	sfxHandle_t tayKillSound;
+	sfxHandle_t tayNotifySound;
 	sfxHandle_t landSound;
 	sfxHandle_t fallSound;
 

@@ -343,6 +343,10 @@ void CG_CheckLocalSounds( playerState_t *ps, playerState_t *ops ) {
 //			trap->S_StartLocalSound( cgs.media.hitSound, CHAN_LOCAL_SOUND );
 		}
 
+		// tay_hitSounds, as jaPRO's cg_hitsounds: the server counts the hits of the own shots
+		if ( tay_hitSounds.integer ) {
+			trap->S_StartLocalSound( cgs.media.tayHitSound, CHAN_LOCAL_SOUND );
+		}
 		//FIXME: Hit sounds?
 		/*
 		if (armor > 50 ) {
