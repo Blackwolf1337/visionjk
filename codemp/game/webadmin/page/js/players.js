@@ -58,7 +58,9 @@ function renderCommand(fillInputs) {
 	// who that is: since when he is there, from where, and with which client plugin of JA+
 	if (d.minutes !== undefined) {
 		$('cmdSub').insertAdjacentHTML('beforeend', '<br>' + (d.minutes < 60 ? d.minutes + ' min' : Math.floor(d.minutes / 60) + ' h ' + d.minutes % 60 + ' min') + ' in the game' +
-			(d.address ? ' &middot; ' + escapeHtml(d.address) : '') + (d.bot ? '' : ' &middot; ' + (d.plugin ? 'plugin ' + d.plugin : 'no plugin')));
+			(d.address ? ' &middot; ' + escapeHtml(d.address) : '') + (d.bot ? '' : ' &middot; ' + (d.plugin ? 'plugin ' + d.plugin : 'no plugin')) +
+			// what lag compensation (tay_unlagged) shifts the others back by for his shots
+			(d.bot || d.lag === undefined ? '' : ' &middot; lag ' + d.lag + ' ms'));
 	}
 	if (d.jp) {
 		document.querySelectorAll('[data-jpstate]').forEach(b => b.classList.toggle('primary', jpState(d.jp, b.dataset.jpstate)));
