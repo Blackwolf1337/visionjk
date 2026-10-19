@@ -401,6 +401,10 @@ static qboolean Sys_Relaunch( void ) {
 }
 #endif
 
+#if !defined(DEDICATED) && !defined(__EMSCRIPTEN__)
+qboolean S_SpatialBakeRunning( void );	// client/snd_spatial.h
+#endif
+
 static void NORETURN Sys_Exit( int ex ) {
 	IN_Shutdown();
 #ifndef DEDICATED
@@ -420,6 +424,12 @@ static void NORETURN Sys_Exit( int ex ) {
 	// the last thing it does: the new one must not find this one still holding the window and the ports
 	if ( sysRestart.wanted )
 		Sys_Relaunch();
+
+	// a bake of Steam Audio that was left to run (snd_spatial.cpp) would go on while exit() takes its library down
+	if ( S_SpatialBakeRunning() ) {
+		fflush( NULL );
+		_exit( ex );
+	}
 #endif
 
     exit( ex );
