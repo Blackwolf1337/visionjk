@@ -153,6 +153,11 @@ typedef struct wavinfo_s {
 	int			dataofs;		// chunk starts this many bytes from file start
 } wavinfo_t;
 
+// snd_cache.cpp: the samples of unpacked MP3 files, kept in the profile
+void		S_SoundCacheInit( void );
+const byte	*S_SoundCacheFind( const char *file, wavinfo_t *info, void **kept );
+void		S_SoundCacheKeep( const wavinfo_t *info, const byte *data, int bytes );
+
 //====================================================================
 
 #define	MAX_CHANNELS			32

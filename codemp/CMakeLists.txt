@@ -550,6 +550,7 @@ if(BuildMPEngine)
 		"${MPDir}/client/FxUtil.h"
 		"${MPDir}/client/snd_ambient.cpp"
 		"${MPDir}/client/snd_ambient.h"
+		"${MPDir}/client/snd_cache.cpp"
 		"${MPDir}/client/snd_dma.cpp"
 		"${MPDir}/client/snd_local.h"
 		"${MPDir}/client/snd_mem.cpp"

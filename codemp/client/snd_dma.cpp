@@ -322,6 +322,7 @@ void S_Init( void ) {
 	s_doppler           = Cvar_Get( "s_doppler",           "1",       CVAR_ARCHIVE_ND );
 	s_initsound         = Cvar_Get( "s_initsound",         "1",       CVAR_ARCHIVE );
 	s_khz               = Cvar_Get( "s_khz",               "44",      CVAR_ARCHIVE | CVAR_LATCH );
+	S_SoundCacheInit();
 	s_language          = Cvar_Get( "s_language",          "english", CVAR_ARCHIVE | CVAR_NORESTART, "Sound language" );
 	s_lip_threshold_1   = Cvar_Get( "s_threshold1",        "0.5",     0 );
 	s_lip_threshold_2   = Cvar_Get( "s_threshold2",        "4.0",     0 );
