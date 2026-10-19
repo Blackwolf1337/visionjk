@@ -152,6 +152,13 @@ typedef struct vkDeviceState_s {	// see vkState_t
 	qboolean					depthReadable;		// the device lets its format be read in a shader
 	VkImageView					depthView;			// of the depth alone, without the stencil
 	VkDescriptorSet				depthSet;
+	// tay_renderScale: the targets the views of the level are drawn into at their own size (VK_CreateSceneTargets),
+	// traded with color, colorMS, depth, depthMS, glow, glowMS and their sets while those views are drawn
+	vkTarget_t					sceneColor, sceneColorMS, sceneDepth, sceneDepthMS, sceneGlow, sceneGlowMS;
+	VkImageView					sceneDepthView;
+	VkDescriptorSet				scenePostSet, sceneGlowSet, sceneDepthSet;
+	VkDescriptorSet				sceneCopySet;		// the color of those views, filtered, for VK_DrawScene()
+	VkPipeline					scenePipeline;		// it over a rectangle of the frame as it is
 	VkPipelineLayout			focusPipelineLayout;	// two sets of the kind of postSet: a target and the depth
 
 	VkShaderModule				vertexShaders[VKP_NUM_PROGRAMS];

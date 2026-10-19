@@ -547,15 +547,20 @@ that bend that square.
 static qboolean	vk_refraction;
 static float	vk_refractionScale[2], vk_refractionOffset[2];
 
-// x, y: the lower left corner of the square in the frame as OpenGL counts, size: its edge in pixels
+// x, y: the lower left corner of the square in the frame as OpenGL counts, size: its edge in pixels of the window
 void VK_SetRefraction( qboolean on, int x, int y, int size ) {
 	vk_refraction = on;
 	if ( on ) {
-		// the copy of the frame has its first row at the top
-		vk_refractionScale[0] = (float)size / vk.width;
-		vk_refractionOffset[0] = (float)x / vk.width;
-		vk_refractionScale[1] = -(float)size / vk.height;
-		vk_refractionOffset[1] = 1.0f - (float)y / vk.height;
+		int width = size, height = size;
+
+		// in the views of the level of tay_renderScale it is a square of their size
+		VK_SceneRect( &x, &y, &width, &height );
+		// The copy of the frame has its first row at the top, and lies in the upper left corner of vk.screen, which is
+		// as large as the larger of the window and those views.
+		vk_refractionScale[0] = (float)width / vk.screen.width;
+		vk_refractionOffset[0] = (float)x / vk.screen.width;
+		vk_refractionScale[1] = -(float)height / vk.screen.height;
+		vk_refractionOffset[1] = (float)( vk.height - y ) / vk.screen.height;
 	}
 }
 

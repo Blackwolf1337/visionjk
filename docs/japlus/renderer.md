@@ -402,6 +402,35 @@ lamps and the glowing pad get a halo), strength 1 with threshold 0.4 by 6 (the w
 Not run on the OpenGL ES device (it is not built in this configuration), not under the validation layer (not
 installed on this machine).
 
+## Render scale (from TaystJK)
+
+`tay_renderScale` (1, 0.5 to 2, `vid_restart`), built 2026-10-19 after `r_renderScale` of TaystJK's Vulkan
+renderer, here for the level alone: its views are drawn in a size of their own, smaller for a weak device, larger
+for a smoother picture, and laid over the frame with a filter before the 2D, which stays sharp in the size of the
+window (`vk_frame.cpp`, "RENDER SCALE").
+
+- The device makes color, depth and glow targets of that size, with the formats and samples of the frame's, so
+  every pipeline fits both (`VK_CreateSceneTargets`). The first view with a world (`RB_DrawSurfs`, mirrors and the
+  sky of a portal included) trades them in for `vk.color`, `vk.depth`, `vk.glow`, their multisample targets and
+  their sets (`VK_EnterScene`, `VK_SwapSceneTargets`), so glow, bloom, refraction, flares and the menu blur draw
+  into and read them unchanged. The first 2D, a model of the HUD (`RDF_NOWORLDMODEL`) or the end of the frame
+  trades them back (`VK_LeaveScene`).
+- The scene goes into the frame by a pass and not a blit (`VK_DrawScene`): with several samples a pixel the frame
+  is in `vk.colorMS`, and the next pass would resolve that over a copy into `vk.color`. The pass lays the scene
+  over the whole window and the scissor keeps the rectangle the views covered.
+- The callers speak pixels of the window as before: viewports, scissors and clears (`VK_SceneRect` in
+  `VK_ViewportAndScissor` and `VK_ClearRect`), the points of flares, the square of refraction (whose copy lies in
+  the corner of `vk.screen`, which is as large as the larger of the two). `gfxinfo` names the size.
+- Not on the OpenGL ES device: it writes a frame down and plays it at its end, and the targets its commands name
+  could not change in the middle of it. `VK_CreateSceneTargets()` says no there and the level stays in the size
+  of the window. Not in rd-vanilla.
+
+Checked in pictures at 1280 x 720 on mp/ffa3: 0.5 (640 x 360, the level coarse and the HUD sharp), 2 (2560 x
+1440), 0.5 and 2 with four samples a pixel (the level was black until the pass took the place of a blit), the
+saber with its glow, the wave of a force push at 0.5 and at 1 (the same bend), the menu in the level with its
+blur. Four `vid_restart` between the sizes in one run. Not run under the validation layer (not installed on this
+machine), not on Windows.
+
 ## Not done
 
 The Windows DLL builds with mingw-w64 for 64 bit and imports nothing but the C runtime, kernel32 and

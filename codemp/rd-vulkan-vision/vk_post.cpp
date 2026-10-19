@@ -35,8 +35,19 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 void VK_InitPost( void ) {
 	const int width = Com_Clampi( 16, vk.width, r_DynamicGlowWidth->integer );
 	const int height = Com_Clampi( 16, vk.height, r_DynamicGlowHeight->integer );
+	// tay_renderScale: the views of the level in a size of their own (vk_frame.cpp)
+	const float scale = Com_Clamp( 0.5f, 2.0f, tay_renderScale->value );
 
+	vk.inScene = qfalse;
+	vk.sceneWidth = vk.sceneHeight = 0;
+	if ( scale != 1.0f ) {
+		vk.sceneWidth = Q_max( 1, (int)( vk.width * scale + 0.5f ) );
+		vk.sceneHeight = Q_max( 1, (int)( vk.height * scale + 0.5f ) );
+	}
 	VK_CreatePostTargets( width, height );
+	if ( vk.sceneWidth && !VK_CreateSceneTargets( vk.sceneWidth, vk.sceneHeight ) ) {
+		vk.sceneWidth = vk.sceneHeight = 0;
+	}
 	vk.screenSlot = -1;
 }
 
@@ -91,7 +102,7 @@ void VK_EndGlow( void ) {
 		// show the glow alone
 		const float black[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
 
-		VK_ClearColor( 0, 0, vk.width, vk.height, black );
+		VK_ClearColor( 0, 0, glConfig.vidWidth, glConfig.vidHeight, black );
 	}
 	VK_AddTarget( source, r_DynamicGlowSoft->integer ? VKA_ADD_SOFT : VKA_ADD );
 
@@ -159,7 +170,7 @@ void VK_BlurFrame( float amount, float focus ) {
 	} else {
 		// back to the frame, which is the soft picture from here on
 		VK_BeginTarget( &vk.color, &vk.depth, 2, qtrue );
-		VK_ClearColor( 0, 0, vk.width, vk.height, black );
+		VK_ClearColor( 0, 0, glConfig.vidWidth, glConfig.vidHeight, black );
 		VK_AddTarget( source, VKA_ADD );
 	}
 
@@ -314,6 +325,7 @@ qboolean VK_FlareVisible( const float *point, int x, int y, float eyeZ ) {
 		vkProbe_t *probe = &frame->probe[frame->numProbes++];
 
 		probe->flare = (int)( flare - vk_flares );
+		VK_ScenePoint( &x, &y );
 		probe->x = Com_Clampi( 0, vk.width - 1, x );
 		probe->y = Com_Clampi( 0, vk.height - 1, vk.height - 1 - y );
 		probe->eyeZ = eyeZ;

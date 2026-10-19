@@ -398,6 +398,11 @@ void VK_AddTarget( vkTarget_t *source, vkAdd_t how ) {
 	}
 }
 
+// (tay_renderScale is not for this device, VK_CreateSceneTargets() says no)
+void VK_DrawScene( const int *to ) {
+	VK_BeginTarget( &vk.color, &vk.depth, 2, qtrue );
+}
+
 void VK_CopyTarget( vkTarget_t *source, vkTarget_t *dest ) {
 	glesCommand_t *cmd = GLES_Command( GC_COPY );
 
