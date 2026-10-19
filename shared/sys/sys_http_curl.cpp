@@ -85,7 +85,8 @@ typedef struct httpRequest_s {
 	qboolean			refused;		// the sink did not want more
 } httpRequest_t;
 
-// Only one thread ever asks (the one of the updater), so the library is loaded and started there, once.
+// One question at a time in the whole client (cl_update.cpp and cl_download.cpp never ask at once), so the
+// library is loaded and started by the thread of the first one, once.
 static qboolean Sys_HttpLoad( void ) {
 	void				*library;
 	httpGlobalInit_t	globalInit;

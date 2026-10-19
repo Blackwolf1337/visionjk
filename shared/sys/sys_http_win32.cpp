@@ -122,7 +122,7 @@ qboolean Sys_HttpGet( const char *url, sysHttpSink_t sink, void *ctx, const vola
 			break;
 		}
 		for ( ;; ) {
-			static char	buffer[65536];		// (one thread asks, one request at a time)
+			static char	buffer[65536];		// (one request at a time in the whole client: cl_update.cpp, cl_download.cpp)
 			DWORD		got = 0;
 
 			if ( *cancel ) {

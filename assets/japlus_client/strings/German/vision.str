@@ -1253,6 +1253,14 @@ REFERENCE           KEEP_DOWNLOADED_FILES_IN_THE_FOLDER
 LANG_ENGLISH        "Keep downloaded files in the folder downloads. Off: for this session only."
 LANG_GERMAN         "Heruntergeladene Dateien im Ordner downloads behalten. Aus: nur für diese Sitzung."
 
+REFERENCE           WEB_DOWNLOADS
+LANG_ENGLISH        "Web Downloads"
+LANG_GERMAN         "Downloads aus dem Web"
+
+REFERENCE           FILES_OF_A_SERVER_THAT_NAMES_A_WEB_A
+LANG_ENGLISH        "Files of a server that names a web address for them come from there, much faster. Off: from the server itself."
+LANG_GERMAN         "Dateien eines Servers, der eine Webadresse für sie nennt, kommen von dort, viel schneller. Aus: vom Server selbst."
+
 REFERENCE           SECURITY
 LANG_ENGLISH        "Security"
 LANG_GERMAN         "Sicherheit"
@@ -1580,6 +1588,10 @@ LANG_GERMAN         "Programme (sie könnten auf Ihrem Computer laufen)"
 REFERENCE           USE_THEM
 LANG_ENGLISH        "Use them"
 LANG_GERMAN         "Verwenden"
+
+REFERENCE           THEY_COME_FROM_THE_WEB_ADDRESS
+LANG_ENGLISH        "They come from the web address:"
+LANG_GERMAN         "Sie kommen von der Webadresse:"
 
 REFERENCE           INITIATE
 LANG_ENGLISH        "Initiate"

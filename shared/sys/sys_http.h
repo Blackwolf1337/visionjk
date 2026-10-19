@@ -20,13 +20,14 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 
 /*
-sys_http.h -- one question to a web server, for the updater of the client (client/cl_update.cpp). The engine
+sys_http.h -- one question to a web server, for the updater of the client (client/cl_update.cpp) and the paks a
+server has on a web address (client/cl_download.cpp). The engine
 has no code for that of its own and brings none: on Windows it asks WinHTTP, which is part of the system
 (sys_http_win32.cpp), anywhere else the libcurl the system has, loaded when it is first needed
 (sys_http_curl.cpp). Either one knows the certificates the system trusts, and checks them.
 
 Sys_HttpGet() waits until the answer is there or has failed. It is only ever called from a thread of its
-own, never from the thread of the game.
+own, never from the thread of the game, and one at a time: the two callers never ask at once.
 */
 
 #pragma once

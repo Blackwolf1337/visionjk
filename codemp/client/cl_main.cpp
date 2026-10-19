@@ -819,6 +819,7 @@ void CL_Disconnect( qboolean showMainMenu ) {
 		FS_FCloseFile( clc.download );
 		clc.download = 0;
 	}
+	CL_DownloadWebStop();
 	*clc.downloadTempName = *clc.downloadName = 0;
 	Cvar_Set( "cl_downloadName", "" );
 
@@ -1437,11 +1438,20 @@ void CL_BeginDownloadConfirm( void ) {
 
 	clc.downloadBlock = 0; // Starting new file
 	clc.downloadCount = 0;
+	clc.downloadSize = 0;	// (else CL_NextDownload checks a pak that never came by the size of the one before)
 	clc.downloadTime = cls.realtime;
 
 	// Set current time to make sure the module knows the real start time after the delay
 	Cvar_SetValue( "cl_downloadTime", (float) cls.realtime );
 
+	// from the web address the server names for its paks (cl_download.cpp), else through the game
+	if ( !CL_DownloadWebStart() ) {
+		CL_DownloadUdpStart();
+	}
+}
+
+// the pak of cl_downloadName is asked from the server itself
+void CL_DownloadUdpStart( void ) {
 	CL_AddReliableCommand( va("download %s", cl_downloadName->string), qfalse );
 }
 
@@ -1549,6 +1559,13 @@ and determine if we need to download them
 void CL_InitDownloads(void) {
   char missingfiles[1024];
 
+	// (a new level while a pak came from the web address: its list is another one now)
+	if ( CL_DownloadWebBusy() ) {
+		CL_DownloadWebStop();
+		*clc.downloadTempName = *clc.downloadName = 0;
+		Cvar_Set( "cl_downloadName", "" );
+	}
+
 	if ( clc.downloadFinished ) {
 		// If we just finished a download with a "donedl" we are getting another gamestate and we would be asked to
 		// download skipped files again. To avoid this we just skip this one...
@@ -1575,12 +1592,11 @@ void CL_InitDownloads(void) {
 		}
 	}
 	else if ( FS_ComparePaks( clc.downloadList, sizeof( clc.downloadList ) , qtrue ) ) {
-		const char *serverInfo = cl.gameState.stringData + cl.gameState.stringOffsets[ CS_SERVERINFO ];
-		const char *serverAllowDownloads = Info_ValueForKey( serverInfo, "sv_allowDownload" );
-
 		Com_Printf("Need paks: %s\n", clc.downloadList );
 
-		if ( serverAllowDownloads[0] && !atoi(serverAllowDownloads) ) {
+		// A server that names a web address for its paks (jp_DlBaseURL) turns its own downloads off for it, as JA+
+		// servers do: then they come from there (cl_download.cpp)
+		if ( !CL_ServerSendsDownloads() && !CL_DownloadWebOffered() ) {
 			// The server has an "sv_allowDownload" value set, but it's 0
 			Com_Printf("Skipping downloads, because the server does not allow downloads\n");
 		} else if ( *clc.downloadList ) {
@@ -2263,6 +2279,7 @@ void CL_Frame ( int msec ) {
 									//	of course this still doesn't work for menus...
 
 	CL_UpdateFrame();
+	CL_DownloadWebFrame();
 
 	if ( cls.state == CA_DISCONNECTED && !( Key_GetCatcher( ) & KEYCATCH_UI )
 		&& !com_sv_running->integer && cls.uiStarted ) {
@@ -4208,7 +4225,7 @@ void CL_DrawDownloadRequest( void ) {
 		CL_DrawCenterStringAt( centerX, centerY+10, va("%.02f%%", dlFrac * 100), cls.menuFont, scale );
 
 		// Draw size info
-		re->Font_DrawString( width + 10, centerY+30, va("File Size: %s", CL_ByteCountToHumanString(clc.downloadSize)) , colorWhite, cls.menuFont, -1, scale );
+		re->Font_DrawString( width + 10, centerY+30, va("File Size: %s", clc.downloadSize ? CL_ByteCountToHumanString(clc.downloadSize) : "unknown") , colorWhite, cls.menuFont, -1, scale );
 		re->Font_DrawString( width + 10, centerY+50, va("Downloaded: %s", CL_ByteCountToHumanString(clc.downloadCount)) , colorWhite, cls.menuFont, -1, scale );
 
 		// Download Speed
@@ -4222,7 +4239,7 @@ void CL_DrawDownloadRequest( void ) {
 
 			// Draw info texts
 			re->Font_DrawString( width + 10, centerY+70, va("Transfer Rate: %s/sec", CL_ByteCountToHumanString(dlRate)) , colorWhite, cls.menuFont, -1, scale );
-			re->Font_DrawString( width + 10, centerY+90, va("Estimated Time Left: %s", dlRate ? CL_DurationSecToString(clc.downloadSize/dlRate - dlLastCount/dlRate) : "unknown" ) , colorWhite, cls.menuFont, -1, scale );
+			re->Font_DrawString( width + 10, centerY+90, va("Estimated Time Left: %s", dlRate && clc.downloadSize ? CL_DurationSecToString(clc.downloadSize/dlRate - dlLastCount/dlRate) : "unknown" ) , colorWhite, cls.menuFont, -1, scale );
 		} else {
 			// Set defaults - if we somehow don't get here and start with dlTime >= 1 we get incorrect values for one second, but that's okay
 			dlLastCount = clc.downloadCount;

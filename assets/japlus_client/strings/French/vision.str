@@ -1253,6 +1253,14 @@ REFERENCE           KEEP_DOWNLOADED_FILES_IN_THE_FOLDER
 LANG_ENGLISH        "Keep downloaded files in the folder downloads. Off: for this session only."
 LANG_FRENCH         "Garder les fichiers téléchargés dans le dossier downloads. Désactivé : pour cette session seulement."
 
+REFERENCE           WEB_DOWNLOADS
+LANG_ENGLISH        "Web Downloads"
+LANG_FRENCH         "Téléchargements web"
+
+REFERENCE           FILES_OF_A_SERVER_THAT_NAMES_A_WEB_A
+LANG_ENGLISH        "Files of a server that names a web address for them come from there, much faster. Off: from the server itself."
+LANG_FRENCH         "Les fichiers d'un serveur qui indique une adresse web pour eux viennent de là, bien plus vite. Désactivé : du serveur lui-même."
+
 REFERENCE           SECURITY
 LANG_ENGLISH        "Security"
 LANG_FRENCH         "Sécurité"
@@ -1580,6 +1588,10 @@ LANG_FRENCH         "Programmes (ils pourraient s'exécuter sur votre ordinateur)
 REFERENCE           USE_THEM
 LANG_ENGLISH        "Use them"
 LANG_FRENCH         "Les utiliser"
+
+REFERENCE           THEY_COME_FROM_THE_WEB_ADDRESS
+LANG_ENGLISH        "They come from the web address:"
+LANG_FRENCH         "Ils viennent de l'adresse web :"
 
 REFERENCE           INITIATE
 LANG_ENGLISH        "Initiate"

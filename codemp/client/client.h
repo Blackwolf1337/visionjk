@@ -437,6 +437,7 @@ extern	cvar_t	*cl_forceavidemo;
 extern	cvar_t	*cl_activeAction;
 
 extern	cvar_t	*cl_allowDownload;
+extern	cvar_t	*cl_downloadName;
 extern	cvar_t	*cl_allowAltEnter;
 extern	cvar_t	*cl_conXOffset;
 extern	cvar_t	*cl_inGameVideo;
@@ -507,6 +508,7 @@ void CL_ReadDemoMessage( void );
 
 void CL_InitDownloads(void);
 void CL_NextDownload(void);
+void CL_DownloadUdpStart( void );
 
 void CL_GetPing( int n, char *buf, int buflen, int *pingtime );
 void CL_GetPingInfo( int n, char *buf, int buflen );
@@ -524,6 +526,13 @@ qboolean	CL_DownloadReviewBegin( void );
 qboolean	CL_DownloadReviewEnd( void );
 void		CL_DownloadArrived( const char *local );
 const char	*CL_DownloadLocalName( const char *local );
+qboolean	CL_DownloadWebOffered( void );
+qboolean	CL_ServerSendsDownloads( void );
+qboolean	CL_DownloadWebStart( void );
+void		CL_DownloadWebFrame( void );
+void		CL_DownloadWebStop( void );
+qboolean	CL_DownloadWebBusy( void );
+qboolean	CL_DownloadWebAsking( void );
 qboolean	CL_DownloadReviewDraw( void );
 qboolean	CL_DownloadReviewKey( int key );
 void		CL_DrawMenuRect( float x, float y, float width, float height, float borderSize, vec4_t elementBackgroundColor, vec4_t elementBorderColor );
@@ -532,6 +541,7 @@ void		CL_DrawMenuRect( float x, float y, float width, float height, float border
 //
 void CL_UpdateInit( void );
 void CL_UpdateFrame( void );
+qboolean CL_UpdateBusy( void );
 void CL_UpdateShutdown( void );
 
 int CL_ServerStatus( const char *serverAddress, char *serverStatusString, int maxLen );
