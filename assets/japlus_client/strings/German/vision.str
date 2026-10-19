@@ -1253,6 +1253,30 @@ REFERENCE           KEEP_DOWNLOADED_FILES_IN_THE_FOLDER
 LANG_ENGLISH        "Keep downloaded files in the folder downloads. Off: for this session only."
 LANG_GERMAN         "Heruntergeladene Dateien im Ordner downloads behalten. Aus: nur für diese Sitzung."
 
+REFERENCE           CONNECTION
+LANG_ENGLISH        "Connection"
+LANG_GERMAN         "Verbindung"
+
+REFERENCE           SMOOTH_JITTERY_LINES
+LANG_ENGLISH        "Smooth Jittery Lines"
+LANG_GERMAN         "Unruhige Leitungen glätten"
+
+REFERENCE           ON_A_LINE_WHOSE_SNAPSHOTS_COME_UNEVE
+LANG_ENGLISH        "On a line whose snapshots come unevenly the game is drawn a little later, so that nothing stutters."
+LANG_GERMAN         "Auf einer Leitung, deren Snapshots ungleichmäßig kommen, wird das Spiel etwas später gezeichnet, damit nichts ruckelt."
+
+REFERENCE           UP_TO_20_MS
+LANG_ENGLISH        "Up to 20 ms"
+LANG_GERMAN         "Bis 20 ms"
+
+REFERENCE           UP_TO_40_MS
+LANG_ENGLISH        "Up to 40 ms"
+LANG_GERMAN         "Bis 40 ms"
+
+REFERENCE           UP_TO_80_MS
+LANG_ENGLISH        "Up to 80 ms"
+LANG_GERMAN         "Bis 80 ms"
+
 REFERENCE           SECURITY
 LANG_ENGLISH        "Security"
 LANG_GERMAN         "Sicherheit"
