@@ -716,7 +716,7 @@ void JP_DisplayLatestPluginVersion( gentity_t *ent ) {
 	Q_strncpyz( vision, Info_ValueForKey( userinfo, "v_vision" ), sizeof( vision ) );
 	Q_StripColor( vision );
 	if ( vision[0] ) {
-		trap->SendServerCommand( clientNum, va( "print \"Your client is ^5VisionJK %s ^7(^5" JP_VISION_SITE "^7), with the JA+ client plugin ^5%s ^7built in\n\"", vision, plugin ) );
+		trap->SendServerCommand( clientNum, va( "print \"Your client is ^5VisionJK %s ^7(^5" JP_VISION_SITE "^7), with the JA+ client plugin ^5" JP_PLUGIN_VERSION " ^7built in\n\"", vision ) );
 	}
 	else if ( have < 1.0f ) {
 		trap->SendServerCommand( clientNum, va( "print \"^5Your plugin version is ^5%s^7. You haven't the JA+ client plugin installed. The VisionJK client has it built in: ^5" JP_VISION_SITE "^7\n       Or check your client plugin installation (do not forget to remove all previous versions of the plugin and never put it in base folder but only JAPLUS folder).\n\"", plugin ) );

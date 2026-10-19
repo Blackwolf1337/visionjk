@@ -1,8 +1,9 @@
 # Client: cgame and ui
 
 The original JA+ client plugin is a replacement `cgamex86.dll` and `uix86.dll` plus assets. Its features are built into
-the cgame and ui of this tree. The client reports itself to the server as plugin 1.4 Build 4 (userinfo `cjp_client`),
-which is what switches the plugin dependent behaviour of the server on.
+the cgame and ui of this tree. The client reports itself to the server as plugin 1.4 (userinfo `cjp_client`, `1.4 ^5VisionJK ^7(^5jka.vision^7)`),
+which is what switches the plugin dependent behaviour of the server on. A JA+ server reads the number at the start
+of that value (anything below 1.0 is no plugin), so it has to stay first and stay 1.4, the version the cgame predicts as.
 
 The reference for the behaviour is the Windows plugin 1.4 Build 4. Every function of its two DLLs was compared with
 the unmodified 1.01 modules, see [porting-method.md](porting-method.md), and what the cgame and ui draw was compared
@@ -593,7 +594,7 @@ chat bubble stands on top of it.
 | `v_playerStatuses` | 1 | show the lines of the others |
 | `v_shareMusic` | 0 | tell the server what music plays on this machine. Off by default: everybody on the server reads it. "Show My Music" in Setup, Voice Chat |
 | `v_caps` | 7, read only | in the userinfo, what this cgame draws that a server sends to nobody else: bit 0 statuses, bit 1 who plays with a client of this tree ("Who plays with VisionJK"), bit 2 hats and capes ("Hats and capes") |
-| `v_vision` | the version, read only | in the userinfo: this is the client of VisionJK, and which one. A server of this tree greets it by that name and not as "client plugin 1.4B4". `cjp_client` stays 1.4B4: it is what a JA+ server of somebody else reads to switch the plugin features on |
+| `v_vision` | the version, read only | in the userinfo: this is the client of VisionJK, and which one. A server of this tree greets it by that name and not as "client plugin 1.4B4". `cjp_client` starts with 1.4: it is what a JA+ server of somebody else reads to switch the plugin features on, the name after the number shows in its log and its plugin lists |
 
 - The line of the player the view is behind (oneself in third person, or whom one follows) is not drawn since
   2026-10-12: it stood right before the camera, as large as a wall. The card and the scoreboard say it.
