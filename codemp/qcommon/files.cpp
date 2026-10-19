@@ -2372,6 +2372,13 @@ static pack_t *FS_LoadZipFile( const char *zipfile, const char *basename )
 	int				*fs_headerLongs;
 	char			*namePtr;
 	char			*blocked;
+	struct {
+		unsigned long	pos, len, crc;
+		int				name;		// where its name is in names
+	}				*entries;
+	char			*names = NULL;
+	int				namesSize = 0;
+	size_t			numEntries;
 
 	fs_numHeaderLongs = 0;
 
@@ -2385,15 +2392,46 @@ static pack_t *FS_LoadZipFile( const char *zipfile, const char *basename )
 		return NULL;
 	}
 
+	// One walk over the central directory, which costs minizip two reads of every header (FS_UnzOpen): what the pak
+	// is made of goes into these arrays first, since the length of all names together is the size of the buffer
+	// they end in. (It walked twice until 2026-10-19, the first time only for that length.)
+	entries = ( gi.number_entry > 0 ) ? (decltype( entries ))malloc( gi.number_entry * sizeof( *entries ) ) : NULL;
+	if ( gi.number_entry > 0 && !entries ) {
+		unzClose( uf );
+		return NULL;
+	}
 	len = 0;
+	numEntries = 0;
 	unzGoToFirstFile(uf);
 	for (i = 0; i < gi.number_entry; i++)
 	{
+		int nameLen;
+
 		err = unzGetCurrentFileInfo(uf, &file_info, filename_inzip, sizeof(filename_inzip), NULL, 0, NULL, 0);
 		if (err != UNZ_OK) {
 			break;
 		}
-		len += strlen(filename_inzip) + 1;
+		nameLen = (int)strlen( filename_inzip ) + 1;
+		if ( len + nameLen > namesSize ) {
+			char *more;
+
+			namesSize = Q_max( Q_max( namesSize * 2, 64 * 1024 ), len + nameLen );
+			more = (char *)realloc( names, namesSize );
+			if ( !more ) {
+				free( names );
+				free( entries );
+				unzClose( uf );
+				return NULL;
+			}
+			names = more;
+		}
+		memcpy( names + len, filename_inzip, nameLen );
+		entries[i].name = len;
+		entries[i].pos = unzGetOffset( uf );
+		entries[i].len = file_info.uncompressed_size;
+		entries[i].crc = file_info.crc;
+		len += nameLen;
+		numEntries++;
 		unzGoToNextFile(uf);
 	}
 
@@ -2426,37 +2464,36 @@ static pack_t *FS_LoadZipFile( const char *zipfile, const char *basename )
 	}
 
 	pack->handle = uf;
-	pack->numfiles = gi.number_entry;
+	// (the entries that could be read: a damaged directory used to leave the rest of the table without names)
+	pack->numfiles = (int)numEntries;
 	blocked = FS_LoadBlocked( zipfile );
-	unzGoToFirstFile(uf);
 
-	for (i = 0; i < gi.number_entry; i++)
+	for (i = 0; i < numEntries; i++)
 	{
-		err = unzGetCurrentFileInfo(uf, &file_info, filename_inzip, sizeof(filename_inzip), NULL, 0, NULL, 0);
-		if (err != UNZ_OK) {
-			break;
+		const int nameLen = (int)strlen( names + entries[i].name ) + 1;
+
+		if (entries[i].len > 0) {
+			fs_headerLongs[fs_numHeaderLongs++] = LittleLong(entries[i].crc);
 		}
-		if (file_info.uncompressed_size > 0) {
-			fs_headerLongs[fs_numHeaderLongs++] = LittleLong(file_info.crc);
-		}
-		Q_strlwr( filename_inzip );
-		hash = FS_HashFileName(filename_inzip, pack->hashSize);
 		buildBuffer[i].name = namePtr;
-		strcpy( buildBuffer[i].name, filename_inzip );
-		namePtr += strlen(filename_inzip) + 1;
+		memcpy( buildBuffer[i].name, names + entries[i].name, nameLen );
+		Q_strlwr( buildBuffer[i].name );
+		namePtr += nameLen;
+		hash = FS_HashFileName(buildBuffer[i].name, pack->hashSize);
 		// store the file position in the zip
-		buildBuffer[i].pos = unzGetOffset(uf);
-		buildBuffer[i].len = file_info.uncompressed_size;
-		buildBuffer[i].blocked = FS_IsBlocked( blocked, filename_inzip );
+		buildBuffer[i].pos = entries[i].pos;
+		buildBuffer[i].len = entries[i].len;
+		buildBuffer[i].blocked = FS_IsBlocked( blocked, buildBuffer[i].name );
 		if ( !buildBuffer[i].blocked ) {
 			buildBuffer[i].next = pack->hashTable[hash];
 			pack->hashTable[hash] = &buildBuffer[i];
 		}
-		unzGoToNextFile(uf);
 	}
 	if ( blocked ) {
 		Z_Free( blocked );
 	}
+	free( names );
+	free( entries );
 
 	pack->checksum = Com_BlockChecksum( &fs_headerLongs[ 1 ], sizeof(*fs_headerLongs) * ( fs_numHeaderLongs - 1 ) );
 	pack->pure_checksum = Com_BlockChecksum( fs_headerLongs, sizeof(*fs_headerLongs) * fs_numHeaderLongs );

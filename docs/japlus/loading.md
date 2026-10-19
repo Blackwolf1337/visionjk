@@ -130,6 +130,11 @@ made the start of the ui half as long again, every small file cost a fill of 64 
 | first load, before / after | 132 to 141 ms / 46 to 48 ms | 786 to 815 / 685 to 693 ms |
 | second load, before / after | | 478 to 496 / 395 to 407 ms |
 
+The directory was also walked twice, the first time only to add up the lengths of the names; minizip reads every
+header twice in a walk. Now it is walked once into temporary arrays: the restart 47 to 51 ms to 27 to 28 ms, the
+second load (with the ui of below) 301 to 322 / 288 to 292 ms. The server named the same `sv_paks` with the
+build before and after, and `path` listed the same paks with the same number of files.
+
 A dedicated server saves the same at every change of the level, a client of another server at every gamestate
 (`FS_ConditionalRestart`). The pure checksums are made by the same code from the same entries: a client of this
 build joined a server of it with `sv_pure 1`, and the download test (`uitest/dltest.sh`) blocked the same files.
