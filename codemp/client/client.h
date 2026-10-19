@@ -35,7 +35,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "cgame/cg_public.h"
 #include "ui/ui_public.h"
 
-#define	RETRANSMIT_TIMEOUT	3000	// time between connection packet retransmits
+#define	RETRANSMIT_TIMEOUT	1000	// time between connection packet retransmits (3000 before: a lost packet cost 3 s of a join)
+#define	CONNECT_GIVE_UP		30000	// a server that does not answer a step of the connect this long is given up
 
 // Wind
 extern vec3_t cl_windVec;

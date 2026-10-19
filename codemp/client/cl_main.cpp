@@ -1724,6 +1724,19 @@ void CL_CheckForResend( void ) {
 		return;
 	}
 
+	// A server that refused the connect ("Reconnect rejected : too soon") may say nothing to the packets after it,
+	// and the connect screen waited for ever
+	if ( clc.serverAddress.type != NA_LOOPBACK && clc.connectPacketCount * RETRANSMIT_TIMEOUT >= CONNECT_GIVE_UP ) {
+		char	last[MAX_STRING_CHARS];
+
+		Q_strncpyz( last, clc.serverMessage, sizeof( last ) );
+		Q_strstrip( last, "\r\n", NULL );
+		if ( last[0] ) {
+			Com_Error( ERR_DROP, "%s did not answer for %d seconds, its last word: %s", cls.servername, CONNECT_GIVE_UP / 1000, last );
+		}
+		Com_Error( ERR_DROP, "%s did not answer for %d seconds", cls.servername, CONNECT_GIVE_UP / 1000 );
+	}
+
 	clc.connectTime = cls.realtime;	// for retransmit requests
 	clc.connectPacketCount++;
 
