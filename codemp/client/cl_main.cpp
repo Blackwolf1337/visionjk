@@ -1080,11 +1080,24 @@ void CL_JoinStep( joinStep_t step ) {
 		CL_JoinSpan( JOIN_CONNECT, JOIN_ACTIVE ) );
 }
 
+// v_joinReport 2: every packet between connectResponse and the first snapshot, by the time since connectResponse
+static void CL_JoinTrace( const char *what, int bytes ) {
+	if ( join.active && v_joinReport->integer >= 2 && join.at[JOIN_CONNECTED] ) {
+		Com_Printf( "join: +%d ms %s %d bytes (%s)\n", Sys_Milliseconds() - join.at[JOIN_CONNECTED], what, bytes,
+			cls.state == CA_CONNECTED ? "connected" : cls.state == CA_PRIMED ? "primed" : "loading" );
+	}
+}
+
+void CL_JoinSent( int bytes ) {
+	CL_JoinTrace( "sent", bytes );
+}
+
 // a packet of the server, before the netchan puts its fragments together
 void CL_JoinPacket( int bytes ) {
 	if ( !join.active ) {
 		return;
 	}
+	CL_JoinTrace( "got", bytes );
 	if ( cls.state == CA_CONNECTED && !join.at[JOIN_GAMESTATE] ) {
 		CL_JoinStep( JOIN_FIRST_PACKET );
 		join.gamestatePackets++;
@@ -2933,7 +2946,7 @@ void CL_Init( void ) {
 	cl_showTimeDelta = Cvar_Get ("cl_showTimeDelta", "0", CVAR_TEMP );
 	v_netSmooth = Cvar_Get( "v_netSmooth", "40", CVAR_ARCHIVE_ND, "On a line whose snapshots come unevenly the clock of the game stays further behind the newest one, by twice their jitter, at most this many ms. 0: always 5 ms, as before" );
 	v_netStats = Cvar_Get( "v_netStats", "0", CVAR_TEMP, "1: a line every five seconds: snapshots and bytes a second, frames past the newest snapshot, jitter, margin, how far the game is behind the newest snapshot" );
-	v_joinReport = Cvar_Get( "v_joinReport", "0", CVAR_TEMP, "1: a line when the game starts after a connect: how long each step of the join took" );
+	v_joinReport = Cvar_Get( "v_joinReport", "0", CVAR_TEMP, "1: a line when the game starts after a connect: how long each step of the join took. 2: also every packet of the join" );
 	cl_freezeDemo = Cvar_Get ("cl_freezeDemo", "0", CVAR_TEMP );
 	rcon_client_password = Cvar_Get ("rconPassword", "", CVAR_TEMP, "Password for remote console access" );
 	cl_activeAction = Cvar_Get( "activeAction", "", CVAR_TEMP );

@@ -1608,6 +1608,8 @@ void CL_WritePacket( void ) {
 		Com_Printf( "%i ", buf.cursize );
 	}
 
+	CL_JoinSent( buf.cursize );
+
 	CL_Netchan_Transmit (&clc.netchan, &buf);
 
 	// clients never really should have messages large enough

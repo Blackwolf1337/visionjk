@@ -609,6 +609,7 @@ typedef enum {
 
 void CL_JoinStep( joinStep_t step );
 void CL_JoinPacket( int bytes );
+void CL_JoinSent( int bytes );
 void CL_JoinGamestate( int bytes );
 
 void CL_ClipOffChanged( const char *list );
