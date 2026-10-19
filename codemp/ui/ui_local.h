@@ -50,6 +50,7 @@ void UI_Load( void );
 void UI_LoadMenus( const char *menuFile, qboolean reset );
 void UI_LoadArenas( void );
 void UI_LoadForceConfig_List( void );
+void UI_Q3HeadsNeeded( void );
 
 //
 // ui_players.c
@@ -362,6 +363,7 @@ typedef struct uiInfo_s {
 
 	int						currentCrosshair;
 
+	qboolean				q3HeadsListed;		// UI_Q3HeadsNeeded() made the list for this start of the ui
 	int						q3HeadCount;
 	char					q3HeadNames[MAX_Q3PLAYERMODELS][64];
 	qhandle_t				q3HeadIcons[MAX_Q3PLAYERMODELS];

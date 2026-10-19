@@ -384,8 +384,12 @@ void		VK_ShutdownTextures( void );
 byte		*VK_Stage( vkSize_t size, vkSize_t *offset );
 // size bytes of a host visible buffer into another buffer, there before a draw reads them
 void		VK_CopyBuffer( const vkBuffer_t *src, vkSize_t srcOffset, vkBuffer_t *dst, vkSize_t dstOffset, vkSize_t size );
-// everything that was handed over with the two is on the device when this returns
+// What was handed over with the two goes to the device, ahead of everything that is submitted after it. Does not
+// wait for the copies: what a later frame draws with is there in time all the same.
 void		VK_FlushUploads( void );
+// the same, and the copies are done when this returns (before a staging buffer of the caller is freed, before a
+// read back)
+void		VK_FinishUploads( void );
 // A texture for a slot of the table. VK_DestroyImage() leaves the slot and its parameters, vi->image is zero after it.
 void		VK_CreateImage( vkImage_t *vi, int width, int height, int mipLevels, vkFormat_t format );
 void		VK_DestroyImage( vkImage_t *vi );

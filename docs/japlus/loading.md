@@ -95,6 +95,62 @@ picture from one spot did not show and a picture from another did (10 % of its p
 `Upload32()` itself takes the kept texture and goes on to its filters. With that, pictures with and without
 the cache differ by 0.07 to 0.23 % of the pixels, as much as two runs of one setting do.
 
+**Uploads are not waited for** (`rd-vulkan-vision/vk_texture.cpp`, 2026-10-19). Every batch of copies to the
+device waited for the whole queue (`vkQueueWaitIdle`), the frames that were still drawn included. Now there are
+two upload slots, each with its command buffer, staging buffer and fence: a batch is submitted and the CPU goes
+on, and it only waits when it wants to fill a slot whose last batch the device has not read yet.
+`VK_FinishUploads()` still waits, where a caller needs the copies done (a staging buffer of its own is freed, a
+frame is read back, the renderer ends). Two barriers in every batch keep the order the wait gave: its copies run
+after everything submitted before it, and what they wrote is seen by everything after it.
+
+| mp/ffa3, four runs of each, alternating | waiting for uploads | load |
+|---|---|---|
+| first load (filled texture cache), before / after | 16 to 24 ms / 3 to 5 ms | median 816 / 802 ms |
+| second load, before / after | | median 497 / 500 ms |
+| twelve bots join, frames over 3 ms, before / after | 6 to 11 ms in 13 to 14 frames / none in 10 to 11 frames | |
+
+The load as a whole is not shorter: the loading screen is drawn between the steps of a load, and what the CPU
+no longer waits for at an upload it waits for at the fence of the next frame. What it gains is in the game: a
+frame that uploads something (a player joins with a skin, a video plays) no longer waits for the frames before
+it. Under the validation layer with its synchronization checks (`VK_LAYER_VALIDATE_SYNC=1`) the two loads and
+three bots gave no message; a build without the two barriers gave read after write hazards on the index buffers
+of the models at once, which also showed that the checks ran. Pictures from two fixed spots differ from the
+build before as much as two runs of that build differ from each other.
+
+**The list of a pak is read through a buffer** (`qcommon/files.cpp`, `FS_UnzOpen()`, 2026-10-19). Every level
+restarts the file system (the server draws a new checksum feed), which reads the central directory of every
+pak again: 35000 entries in the paks of the game. minizip reads them a few bytes at a time and seeks before every
+entry, which empties the buffer of stdio, so every entry was a read of the disk: 95 % of the restart under
+callgrind, three quarters of it in `fread`. The list is now read through 64 KB of the pak in memory; the files
+of the pak are read through a handle without it, as before (a first try that read them through the buffer too
+made the start of the ui half as long again, every small file cost a fill of 64 KB).
+
+| mp/ffa3, three runs of each, alternating | the file system | load |
+|---|---|---|
+| first load, before / after | 132 to 141 ms / 46 to 48 ms | 786 to 815 / 685 to 693 ms |
+| second load, before / after | | 478 to 496 / 395 to 407 ms |
+
+The directory was also walked twice, the first time only to add up the lengths of the names; minizip reads every
+header twice in a walk. Now it is walked once into temporary arrays: the restart 47 to 51 ms to 27 to 28 ms, the
+second load (with the ui of below) 301 to 322 / 288 to 292 ms. The server named the same `sv_paks` with the
+build before and after, and `path` listed the same paks with the same number of files.
+
+A dedicated server saves the same at every change of the level, a client of another server at every gamestate
+(`FS_ConditionalRestart`). The pure checksums are made by the same code from the same entries: a client of this
+build joined a server of it with `sv_pure 1`, and the download test (`uitest/dltest.sh`) blocked the same files.
+
+**The ui makes its list of player models when a menu asks for it** (`ui/ui_main.c`, `UI_Q3HeadsNeeded()`,
+2026-10-19). The ui starts again with every level, and 87 of the 140 ms of that start were the list of the
+player models and skins for the menus (`UI_BuildQ3Model_List()`): a list of the files of every model folder,
+each a walk over all files of all paks, and up to three icons opened per skin. The two places that read it make
+it the first time (and `ui_cache 1`), so a player who opens the menu with the models pays that once per level.
+
+| mp/ffa3, two runs of each | the start of the ui | second load |
+|---|---|---|
+| before / after | 138 to 172 ms / 53 to 58 ms | 379 / 302 to 326 ms |
+
+The list has the same 165 models, and the player menu of the game looks the same in a picture.
+
 ## What the numbers did not confirm
 
 Read from the code, these looked like causes, and they are not, on this machine and these levels:
@@ -107,10 +163,11 @@ Read from the code, these looked like causes, and they are not, on this machine 
 
 ## Not done yet
 
-- What a join still costs: about 1.3 ms a frame waiting for an upload (`VK_FlushUploads` waits for the
-  device), the Ghoul2 model and the sounds of the player.
+- What a join still costs: the Ghoul2 model and the sounds of the player (the wait for the upload is gone).
 - The first frame of the game after a load takes about 16 ms in the cgame, in code no marker is around.
-- What every load does again: the ui is started anew (112 ms), the file system is restarted (79 ms).
+- What every load does again: the ui is started anew (54 ms since the list of models waits for a menu, the menus
+  are 21 of it), the file system is restarted (27 ms since the buffered list and the one walk, it was 79 when
+  this was first measured and 130 on 2026-10-19).
 - The first load with an empty cache is as slow as before. Decoding and packing on the worker threads the
   packer already has would shorten it.
 - Sounds are read and decoded when they are registered (123 ms of a first load).

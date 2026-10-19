@@ -557,7 +557,7 @@ const byte *VK_ReadFrame( int x, int y, int width, int height ) {
 	region.imageExtent.depth = 1;
 	cmd = VK_UploadCmd();
 	qvkCmdCopyImageToBuffer( cmd, vk.final.image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, vk_readback.buffer, 1, &region );
-	VK_FlushUploads();
+	VK_FinishUploads();
 	return vk_readback.mapped;
 }
 

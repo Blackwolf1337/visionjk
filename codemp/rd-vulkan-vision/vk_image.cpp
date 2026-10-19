@@ -308,7 +308,7 @@ void VK_InitImages( void ) {
 }
 
 void VK_ShutdownImages( void ) {
-	VK_FlushUploads();
+	VK_FinishUploads();
 	VK_BC_Shutdown();
 	VK_ShutdownTextures();
 	memset( vk.images, 0, sizeof( vk.images ) );

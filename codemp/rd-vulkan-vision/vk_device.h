@@ -101,6 +101,7 @@ typedef struct vkDeviceFrame_s {	// see vkFrame_t
 
 #define VK_MAX_SWAP_IMAGES	8
 #define VK_STAGING_BYTES	( 32 << 20 )
+#define VK_UPLOAD_SLOTS		2			// upload batches: one is filled while the one before may still be copied
 #define VK_MAX_SAMPLERS		32
 #define VK_MAX_PIPELINES	256
 
@@ -181,9 +182,18 @@ typedef struct vkDeviceState_s {	// see vkState_t
 	int							samplerKeys[VK_MAX_SAMPLERS][4];
 	int							numSamplers;
 
-	// uploads wait in one command buffer until something needs them on the GPU
-	VkCommandBuffer				uploadCmd;
-	qboolean					uploadOpen;
+	// Uploads wait in the command buffer of a slot until something needs them on the GPU, and are submitted
+	// without waiting for them. The staging buffer of the slot that is filled is vk.staging, the others are
+	// kept in the slots; a slot is filled again when the fence of its last batch says the device read it.
+	struct {
+		VkCommandBuffer			cmd;
+		VkFence					fence;
+		vkBuffer_t				staging;	// of the slots that are not filled now
+		qboolean				pending;	// submitted, its fence not looked at since
+	}							uploads[VK_UPLOAD_SLOTS];
+	int							uploadSlot;		// the slot that is filled
+	VkCommandBuffer				uploadCmd;		//	its command buffer,
+	qboolean					uploadOpen;		//	which is being recorded
 	vkBuffer_t					staging;
 	VkDeviceSize				stagingUsed;
 
