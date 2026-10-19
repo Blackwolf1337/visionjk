@@ -56,6 +56,8 @@ cvar_t	*cl_maxpackets;
 cvar_t	*cl_packetdup;
 cvar_t	*cl_timeNudge;
 cvar_t	*cl_showTimeDelta;
+cvar_t	*v_netSmooth;
+cvar_t	*v_netStats;
 cvar_t	*cl_freezeDemo;
 
 cvar_t	*cl_shownet;
@@ -2816,6 +2818,8 @@ void CL_Init( void ) {
 	cl_shownet = Cvar_Get ("cl_shownet", "0", CVAR_TEMP );
 	cl_showSend = Cvar_Get ("cl_showSend", "0", CVAR_TEMP );
 	cl_showTimeDelta = Cvar_Get ("cl_showTimeDelta", "0", CVAR_TEMP );
+	v_netSmooth = Cvar_Get( "v_netSmooth", "40", CVAR_ARCHIVE_ND, "On a line whose snapshots come unevenly the clock of the game stays further behind the newest one, by twice their jitter, at most this many ms. 0: always 5 ms, as before" );
+	v_netStats = Cvar_Get( "v_netStats", "0", CVAR_TEMP, "1: a line every five seconds: snapshots and bytes a second, frames past the newest snapshot, jitter, margin, how far the game is behind the newest snapshot" );
 	cl_freezeDemo = Cvar_Get ("cl_freezeDemo", "0", CVAR_TEMP );
 	rcon_client_password = Cvar_Get ("rconPassword", "", CVAR_TEMP, "Password for remote console access" );
 	cl_activeAction = Cvar_Get( "activeAction", "", CVAR_TEMP );
