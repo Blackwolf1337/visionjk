@@ -2460,8 +2460,45 @@
 
 		itemDef
 		{
+			name					vision_yesno_tay_spechud
+			type					ITEM_TYPE_YESNO
+			text					@VISION_SPECTATOR_MAP
+			descText				@VISION_WHILE_YOU_WATCH_A_MAP_OF_THE_PLAYERS
+			cvar					"tay_specHud"
+			action { play "sound/interface/button1.wav" ; }
+			rect					12 258 380 22
+			page					6
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+		}
+
+		itemDef
+		{
+			name					vision_multi_tay_leadindicator
+			type					ITEM_TYPE_MULTI
+			text					@VISION_LEAD_INDICATOR
+			descText				@VISION_WHERE_TO_AIM_SO_A_SHOT_THAT_FLIES_ME
+			cvar					"tay_leadIndicator"
+			cvarFloatList { @VISION_OFF 0 "On" 1 @VISION_WITH_OWN_PING 2 }
+			action { play "sound/interface/button1.wav" ; }
+			rect					12 280 380 22
+			page					6
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+		}
+
+		itemDef
+		{
 			name					vision_head
-			rect					14 258 376 22
+			rect					14 302 376 22
 			visible					1
 			text					@VISION_MOVEMENT
 			font					5
@@ -2477,7 +2514,7 @@
 		itemDef
 		{
 			name					vision_headline
-			rect					12 279 380 0.67
+			rect					12 323 380 0.67
 			visible					1
 			style					WINDOW_STYLE_FILLED
 			backcolor				0.43 0.83 1 0.32
@@ -2494,7 +2531,7 @@
 			descText				@VISION_YOUR_SPEED_UNDER_THE_CROSSHAIR_AND_T
 			cvar					"tay_speedometer"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 280 380 22
+			rect					12 324 380 22
 			page					6
 			scroll					1
 			row						1
@@ -2512,7 +2549,7 @@
 			descText				@VISION_A_BAR_UNDER_THE_CROSSHAIR_THAT_SHOWS
 			cvar					"tay_strafeHelper"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 302 380 22
+			rect					12 346 380 22
 			page					6
 			scroll					1
 			row						1
@@ -2530,7 +2567,7 @@
 			descText				@VISION_IN_THE_AIR_THE_ANGLES_WHERE_THE_ROUN
 			cvar					"tay_snapHud"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 324 380 22
+			rect					12 368 380 22
 			page					6
 			scroll					1
 			row						1
@@ -2548,7 +2585,7 @@
 			descText				@VISION_A_MARK_WHERE_YOUR_VIEW_WOULD_BE_AT_A
 			cvar					"tay_pitchHud"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 346 380 22
+			rect					12 390 380 22
 			page					6
 			scroll					1
 			row						1
@@ -2567,7 +2604,7 @@
 			cvar					"tay_strafeTrail"
 			cvarFloatList { @VISION_OFF 0 @VISION_MINE 1 @VISION_EVERYBODY 2 }
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 368 380 22
+			rect					12 412 380 22
 			page					6
 			scroll					1
 			row						1
@@ -2585,7 +2622,7 @@
 			descText				@VISION_THE_KEYS_YOU_MOVE_WITH_ON_THE_SCREEN
 			cvar					"tay_movementKeys"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 390 380 22
+			rect					12 434 380 22
 			page					6
 			scroll					1
 			row						1
@@ -2603,7 +2640,7 @@
 			descText				@VISION_THE_SPEEDOMETER_TURNS_GOLD_FROM_THIS
 			cvarfloat				"tay_startGoal" 0 0 1500
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 412 380 22
+			rect					12 456 380 22
 			page					6
 			scroll					1
 			row						1
@@ -2621,7 +2658,7 @@
 			descText				@VISION_JUMPS_AT_LEAST_THIS_FAST_ARE_GOLD_IN
 			cvarfloat				"tay_jumpGoal" 0 0 1500
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 434 380 22
+			rect					12 478 380 22
 			page					6
 			scroll					1
 			row						1
@@ -2634,7 +2671,7 @@
 		itemDef
 		{
 			name					vision_head
-			rect					14 456 376 22
+			rect					14 500 376 22
 			visible					1
 			text					@VISION_HATS_AND_CAPES
 			font					5
@@ -2650,7 +2687,7 @@
 		itemDef
 		{
 			name					vision_headline
-			rect					12 477 380 0.67
+			rect					12 521 380 0.67
 			visible					1
 			style					WINDOW_STYLE_FILLED
 			backcolor				0.43 0.83 1 0.32
@@ -2671,7 +2708,7 @@
 				@VISION_NONE "" @VISION_AFRO "afro" @VISION_BEARD "beard" @VISION_BUCKET "bucket" @VISION_CAP "cap" @VISION_PROPELLER_CAP "cringe" @VISION_CROWN "crown" @VISION_FEDORA "fedora" @VISION_FEDORA_2 "fedora2" @VISION_FEDORA_3 "fedora3" @VISION_FEDORA_4 "fedora4" @VISION_GLASSES "glasses" @VISION_GRADUATION_CAP "gradcap" @VISION_HEADCRAB "headcrab" @VISION_HORNS "horns" @VISION_MARIO_CAP "mario" @VISION_MASK "mask" @VISION_METAL_HELMET "metalhelm" @VISION_PLAGUE_MASK "plaguemask" @VISION_PREDATOR_HELMET "predatorhelm" @VISION_PUMPKIN "pumpkin" @VISION_SANTA_HAT "santahat" @VISION_SOMBRERO "sombrero" @VISION_SUPER_SAIYAN_HAIR "supersaiyan" @VISION_TOP_HAT "tophat"
 			}
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 478 380 22
+			rect					12 522 380 22
 			page					6
 			scroll					1
 			row						1
@@ -2693,7 +2730,7 @@
 				@VISION_NONE "" @VISION_ROYAL_CAPE "royalcape" @VISION_VADER_CAPE "vadercape" @VISION_YODA "yodacape" @VISION_GROGU "grogucape" @VISION_GOOSE "goose" @VISION_CROWBAR "crowbar" @VISION_AK_47 "ak47" @VISION_ROCKET_LAUNCHER "rpg"
 			}
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 500 380 22
+			rect					12 544 380 22
 			page					6
 			scroll					1
 			row						1
@@ -2712,7 +2749,7 @@
 			cvar					"tay_showCosmetics"
 			cvarFloatList { @VISION_OFF 0 @VISION_EVERYBODY_S 1 @VISION_MINE_ON_EVERYBODY 2 }
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 522 380 22
+			rect					12 566 380 22
 			page					6
 			scroll					1
 			row						1
@@ -2730,7 +2767,7 @@
 			descText				@VISION_A_SANTA_HAT_AT_CHRISTMAS_AND_A_PUMPK
 			cvar					"tay_seasonalCosmetics"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 544 380 22
+			rect					12 588 380 22
 			page					6
 			scroll					1
 			row						1
@@ -2743,7 +2780,7 @@
 		itemDef
 		{
 			name					vision_head
-			rect					14 566 376 22
+			rect					14 610 376 22
 			visible					1
 			text					@VISION_LOOKS
 			font					5
@@ -2759,7 +2796,7 @@
 		itemDef
 		{
 			name					vision_headline
-			rect					12 587 380 0.67
+			rect					12 631 380 0.67
 			visible					1
 			style					WINDOW_STYLE_FILLED
 			backcolor				0.43 0.83 1 0.32
@@ -2778,7 +2815,7 @@
 			maxChars				32
 			maxPaintChars			24
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 588 380 22
+			rect					12 632 380 22
 			page					6
 			scroll					1
 			row						1
@@ -2798,7 +2835,7 @@
 			maxChars				32
 			maxPaintChars			24
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 610 380 22
+			rect					12 654 380 22
 			page					6
 			scroll					1
 			row						1
@@ -2816,7 +2853,7 @@
 			descText				@VISION_IN_TEAM_GAMES_EVERY_BLADE_IN_THE_COL
 			cvar					"tay_saberTeamColors"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 632 380 22
+			rect					12 676 380 22
 			page					6
 			scroll					1
 			row						1
@@ -2834,7 +2871,7 @@
 			descText				@VISION_THE_SECOND_BLADE_OF_A_STAFF_IN_THE_S
 			cvar					"tay_saberStaffColors"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 654 380 22
+			rect					12 698 380 22
 			page					6
 			scroll					1
 			row						1
@@ -2852,7 +2889,7 @@
 			descText				@VISION_SHOTS_DRAWN_AS_CRISPLY_AS_IN_JEDI_OU
 			cvar					"tay_jk2Effects"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 676 380 22
+			rect					12 720 380 22
 			page					6
 			scroll					1
 			row						1
@@ -2871,7 +2908,7 @@
 			cvar					"tay_disruptorBeam"
 			cvarFloatList { @VISION_GAME 0 @VISION_LINE 1 @VISION_SPIRAL 2 }
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 698 380 22
+			rect					12 742 380 22
 			page					6
 			scroll					1
 			row						1
@@ -2889,7 +2926,7 @@
 			descText				@VISION_THE_CAMERA_BEHIND_YOU_FOLLOWS_THE_SA
 			cvar					"cg_smoothCamera"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 720 380 22
+			rect					12 764 380 22
 			page					6
 			scroll					1
 			row						1
@@ -2902,7 +2939,7 @@
 		itemDef
 		{
 			name					vision_head
-			rect					14 742 376 22
+			rect					14 786 376 22
 			visible					1
 			text					@VISION_VULKAN_RENDERER
 			font					5
@@ -2918,7 +2955,7 @@
 		itemDef
 		{
 			name					vision_headline
-			rect					12 763 380 0.67
+			rect					12 807 380 0.67
 			visible					1
 			style					WINDOW_STYLE_FILLED
 			backcolor				0.43 0.83 1 0.32
@@ -2935,7 +2972,7 @@
 			descText				@VISION_BRIGHT_PARTS_OF_THE_LEVEL_SHINE_OVER
 			cvar					"tay_bloom"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 764 380 22
+			rect					12 808 380 22
 			page					6
 			scroll					1
 			row						1
@@ -2953,7 +2990,7 @@
 			descText				@VISION_HOW_STRONGLY_THE_BRIGHT_PARTS_SHINE
 			cvarfloat				"tay_bloomIntensity" 0.6 0 2
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 786 380 22
+			rect					12 830 380 22
 			page					6
 			scroll					1
 			row						1
@@ -2971,7 +3008,7 @@
 			descText				@VISION_HOW_BRIGHT_A_PART_HAS_TO_BE_TO_SHINE
 			cvarfloat				"tay_bloomThreshold" 0.5 0 0.95
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 808 380 22
+			rect					12 852 380 22
 			page					6
 			scroll					1
 			row						1
@@ -2993,7 +3030,7 @@
 				@VISION_HALF 0.5 @VISION_THREE_QUARTERS 0.75 @VISION_FULL 1 @VISION_ONE_AND_A_HALF 1.5 @VISION_DOUBLE 2
 			}
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 830 380 22
+			rect					12 874 380 22
 			page					6
 			scroll					1
 			row						1
@@ -3006,7 +3043,7 @@
 		itemDef
 		{
 			name					vision_head
-			rect					14 852 376 22
+			rect					14 896 376 22
 			visible					1
 			text					@VISION_CHAT_AND_CONSOLE
 			font					5
@@ -3022,7 +3059,7 @@
 		itemDef
 		{
 			name					vision_headline
-			rect					12 873 380 0.67
+			rect					12 917 380 0.67
 			visible					1
 			style					WINDOW_STYLE_FILLED
 			backcolor				0.43 0.83 1 0.32
@@ -3039,7 +3076,7 @@
 			descText				@VISION_CODES_LIKE_SMILE_ARE_DRAWN_AS_PICTUR
 			cvar					"tay_chatEmoji"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 874 380 22
+			rect					12 918 380 22
 			page					6
 			scroll					1
 			row						1
@@ -3057,7 +3094,7 @@
 			descText				@VISION_EVERY_CHAT_LINE_IS_WRITTEN_INTO_THE
 			cvar					"tay_chatLog"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 896 380 22
+			rect					12 940 380 22
 			page					6
 			scroll					1
 			row						1
@@ -3076,7 +3113,7 @@
 			cvar					"tay_notify"
 			cvarFloatList { @VISION_OFF 0 @VISION_MARKED 1 @VISION_MARKED_AND_SOUND 2 }
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 918 380 22
+			rect					12 962 380 22
 			page					6
 			scroll					1
 			row						1
@@ -3095,7 +3132,7 @@
 			cvar					"tay_consoleClock"
 			cvarFloatList { @VISION_OFF 0 @VISION_TIME 1 @VISION_DATE_AND_TIME 2 }
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 940 380 22
+			rect					12 984 380 22
 			page					6
 			scroll					1
 			row						1

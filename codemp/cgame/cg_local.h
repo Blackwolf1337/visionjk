@@ -1896,6 +1896,14 @@ void CG_VoiceSendLook( const char *text );
 
 // hud/cg_movehud.c
 void CG_MoveHudDraw( void );
+
+// cg_players.c: JA+, the player is in the other alternate dimension (shots pass through him)
+qboolean CG_JPOtherDimension( int clientNum );
+
+// hud/cg_lead.c, hud/cg_spechud.c
+void CG_LeadDraw( void );
+qboolean CG_SpecHudShown( void );
+float CG_SpecHudDraw( float y );
 void CG_DrawStretchPic( float x, float y, float w, float h, float s1, float t1, float s2, float t2, qhandle_t hShader );
 void CG_Font_DrawString( int ox, int oy, const char *text, const float *rgba, const int setIndex, int iCharLimit, const float scale );
 void CG_FillRect( float x, float y, float width, float height, const float *color );

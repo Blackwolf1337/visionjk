@@ -781,6 +781,26 @@ REFERENCE           TWO_NOTES_WHEN_YOU_KILL_SOMEONE
 LANG_ENGLISH        "Two notes when you kill someone."
 LANG_SPANISH        "Dos notas cuando eliminas a alguien."
 
+REFERENCE           SPECTATOR_MAP
+LANG_ENGLISH        "Spectator Map"
+LANG_SPANISH        "Mapa del espectador"
+
+REFERENCE           WHILE_YOU_WATCH_A_MAP_OF_THE_PLAYERS
+LANG_ENGLISH        "While you watch, a map of the players around at the upper right."
+LANG_SPANISH        "Mientras miras, un mapa de los jugadores cercanos arriba a la derecha."
+
+REFERENCE           LEAD_INDICATOR
+LANG_ENGLISH        "Lead Indicator"
+LANG_SPANISH        "Indicador de anticipación"
+
+REFERENCE           WHERE_TO_AIM_SO_A_SHOT_THAT_FLIES_ME
+LANG_ENGLISH        "Where to aim so a shot that flies meets a moving opponent. Many servers count this as an aim aid."
+LANG_SPANISH        "Dónde apuntar para que un disparo que vuela alcance a un rival en movimiento. Muchos servidores lo consideran una ayuda de puntería."
+
+REFERENCE           WITH_OWN_PING
+LANG_ENGLISH        "With Own Ping"
+LANG_SPANISH        "Con el ping propio"
+
 REFERENCE           MOVEMENT
 LANG_ENGLISH        "Movement"
 LANG_SPANISH        "Movimiento"

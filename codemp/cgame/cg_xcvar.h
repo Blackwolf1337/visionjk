@@ -186,6 +186,8 @@ XCVAR_DEF( tay_killfeedTime,						"5000",					NULL,					CVAR_ARCHIVE )
 XCVAR_DEF( tay_killfeedX,							"0",					NULL,					CVAR_ARCHIVE )
 XCVAR_DEF( tay_killfeedY,							"0",					NULL,					CVAR_ARCHIVE )
 // the keys of moving on the screen (jaPRO's and TaystJK's cg_movementKeys), where and how large
+// where to aim with a weapon whose shot flies (jaPRO's cg_leadIndicator): 1 on, 2 always with the own ping
+XCVAR_DEF( tay_leadIndicator,						"0",					NULL,					CVAR_ARCHIVE )
 XCVAR_DEF( tay_movementKeys,						"0",					NULL,					CVAR_ARCHIVE )
 XCVAR_DEF( tay_movementKeysSize,					"1",					NULL,					CVAR_ARCHIVE )
 XCVAR_DEF( tay_movementKeysX,						"0",					NULL,					CVAR_ARCHIVE )
@@ -209,6 +211,9 @@ XCVAR_DEF( tay_snapHud,							"0",					NULL,					CVAR_ARCHIVE )
 XCVAR_DEF( tay_snapHudColor1,						"0 0.6 1 0.35",			NULL,					CVAR_ARCHIVE )
 XCVAR_DEF( tay_snapHudColor2,						"1 1 1 0.15",			NULL,					CVAR_ARCHIVE )
 XCVAR_DEF( tay_snapHudY,							"0",					NULL,					CVAR_ARCHIVE )
+// a map of the players around while one watches (TaystJK's cg_specHud), and its size
+XCVAR_DEF( tay_specHud,							"0",					NULL,					CVAR_ARCHIVE )
+XCVAR_DEF( tay_specHudScale,						"1",					NULL,					CVAR_ARCHIVE )
 XCVAR_DEF( tay_speedometer,						"0",					NULL,					CVAR_ARCHIVE )
 XCVAR_DEF( tay_speedometerJumps,					"5",					NULL,					CVAR_ARCHIVE )
 XCVAR_DEF( tay_speedometerSize,					"1",					NULL,					CVAR_ARCHIVE )

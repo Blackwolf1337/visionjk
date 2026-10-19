@@ -4201,7 +4201,12 @@ static void CG_DrawUpperRight( void ) {
 		y = CG_DrawRadar ( y );
 	}
 
-	y = CG_DrawEnemyInfo ( y );
+	// tay_specHud: the map of the players while one watches, in the place of the enemy info
+	if ( CG_SpecHudShown() ) {
+		y = CG_SpecHudDraw( y );
+	} else {
+		y = CG_DrawEnemyInfo ( y );
+	}
 
 	y = CG_DrawMiniScoreboard ( y );
 
@@ -8237,6 +8242,8 @@ static void CG_Draw2D( void ) {
 
 	// speedometer, strafe helper, snap and pitch HUD (hud/cg_movehud.c)
 	CG_MoveHudDraw();
+	// where to aim with a shot that flies (hud/cg_lead.c)
+	CG_LeadDraw();
 
 	CG_DrawLagometer();
 

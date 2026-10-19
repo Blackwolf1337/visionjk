@@ -413,6 +413,9 @@ Taken over on 2026-10-19, after an in-depth comparison of TaystJK and this tree.
 | `tay_movementKeysSize`, `tay_movementKeysX`, `tay_movementKeysY` | 1, 0, 0 | its size and place |
 | `tay_startGoal` | 0 | the speedometer is gold from this speed on, in the place of its own colours (TaystJK's `cg_startGoal`) |
 | `tay_jumpGoal` | 0 | a jump at least this fast is gold in the list of jumps (TaystJK's `cg_jumpGoal`) |
+| `tay_specHud` | 0 | while one watches (spectator or following), a map of the players around at the upper right in the place of the enemy info, in the picture of the radar of siege (TaystJK's `cg_specHud`, `hud/cg_spechud.c`): every player the snapshot has as an arrow turned the way he looks, red and blue by team, white without teams, larger when higher, smaller when lower; the edge is 1500 units away, farther ones stay at it. TaystJK's own map leaves the distance out (its line is commented out) and puts everybody in the middle |
+| `tay_specHudScale` | 1 | its size, 0.5 to 2 |
+| `tay_leadIndicator` | 0 | with a weapon whose shot flies (bryar, blaster, bowcaster, repeater, DEMP2, flechette, rocket, concussion), a dotted red line from every moving opponent in sight to where a shot fired now would meet him, and a mark there (jaPRO's `cg_leadIndicator`, `hud/cg_lead.c`). The speeds are the game module's. Not for team mates or players of the other JA+ dimension, whom shots pass through. The flight is worked out twice to the point it aims at; the alt fire of the repeater falls, so its mark is raised. On a server of this tree only the flight counts, since the server starts a missile as far along as the shooter's lag (`tay_unlagged` 2); elsewhere the own ping is added, as jaPRO does. 2: the ping is added everywhere. Many players count this as an aim aid, and no server of this tree can forbid it yet |
 
 The three sounds (`sound/tay/hit.wav`, `kill.wav`, `notify.wav`) are tones made by `tools/sounds/make_tay_sounds.py`,
 so no audio of anybody else ships. Nobody has listened to them yet.
@@ -428,6 +431,11 @@ units behind at 60 frames, 5.6 at 125, 2.8 at 250; with `cg_smoothCamera 1`, whi
 40.9 and 41.5. The default stays 0, since 1 makes the camera hang much further back than players know it. That is
 what TaystJK's `cg_cameraFPS` is about too.
 
+The spectator map and the lead indicator were checked with the same script and two other client scripts
+(`A=lvl_lead_a.cfg B=lvl_lead_b.cfg`): the second client strafes left and right 400 units in front of the first, who
+aims the rocket launcher (the dotted line ran from him to a mark on the side he ran to) and then watches him as a
+spectator (his arrow ahead of the middle of the map, turned towards the spectator).
+
 Checked in hidden runs on 2026-10-19 (`agent/japlus_port/tools/tay2test.sh`, a dedicated server and two clients):
 the timer counting down with milliseconds, forward and left lit while held, the speed gold over a start goal of
 200, the two lines of the second client that named the first one on the gold strip, the clock on the scoreboard.
@@ -438,7 +446,7 @@ The click pass of the new rows set every cvar (`clienttests/ui_tay2_rows.cfg`).
 Everything that came from TaystJK has a name that begins with `tay_` (cvars and commands, also the commands
 `tay_look` between client and server) and its rows in Setup, tab TaystJK (2026-10-17, `tools/menus/options.py`,
 texts in four languages): HUD (Killfeed, Team Overlay Size, Crosshair Colour, Name Opacity, Scoreboard Clock,
-Timer Milliseconds, Timer Counts Down, Hit Sounds, Kill Sound), Movement (Speedometer, Strafe Helper, Snap HUD,
+Timer Milliseconds, Timer Counts Down, Hit Sounds, Kill Sound, Spectator Map, Lead Indicator), Movement (Speedometer, Strafe Helper, Snap HUD,
 Pitch HUD, Strafe Trails, Movement Keys, Start Goal, Jump Goal), Hats and Capes (Hat, Cape, Show Them, Seasonal
 Hats), Looks (Enemy Model, Ally Model, Saber Team Colours, Two-Coloured Staff, Jedi Outcast Shots, Disruptor Beam,
 Smooth Camera), Vulkan Renderer (Bloom, Bloom Strength, Bloom Threshold, Render Scale, see renderer.md) and Chat

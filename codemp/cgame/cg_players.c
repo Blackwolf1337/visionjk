@@ -8685,7 +8685,7 @@ CG_JPOtherDimension
 JA+: the player is in the other alternate dimension than the local player (FFA only)
 =================
 */
-static qboolean CG_JPOtherDimension( int clientNum )
+qboolean CG_JPOtherDimension( int clientNum )
 {
 	const playerState_t *ps = &cg.snap->ps;
 
