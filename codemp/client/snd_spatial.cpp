@@ -71,6 +71,7 @@ from the library when it is loaded.
 
 #define SPATIAL_FUNCTIONS( X ) \
 	X( iplContextCreate ) \
+	X( iplContextRetain ) \
 	X( iplContextRelease ) \
 	X( iplHRTFCreate ) \
 	X( iplHRTFRelease ) \
@@ -130,7 +131,6 @@ from the library when it is loaded.
 	X( iplProbeBatchCommit ) \
 	X( iplProbeBatchGetNumProbes ) \
 	X( iplPathBakerBake ) \
-	X( iplPathBakerCancelBake ) \
 	X( iplSerializedObjectCreate ) \
 	X( iplSerializedObjectRelease ) \
 	X( iplSerializedObjectGetSize ) \
@@ -556,9 +556,12 @@ static struct {
 } spatial;
 
 // The bake of the paths of one level. The thread has the fields to itself while it runs (spatialBakeState is
-// BAKE_RUNNING), the game before and after.
+// BAKE_RUNNING), the game before and after. It outlives the sound system: a bake that still runs when the level
+// changes or the sound is restarted is never stopped inside Steam Audio, see S_SpatialCancelBake().
 static struct {
 	SDL_Thread			*thread;
+	IPLContext			context;			// held by the thread for as long as it runs
+	void				*library;			// Steam Audio, kept loaded for a bake the sound system let go of
 	IPLScene			scene;				// held by the thread for as long as it runs
 	IPLVector3			mins, maxs;
 	int					sceneNumber;		// the level it is for: by the time it is done there may be another
@@ -571,9 +574,8 @@ static struct {
 
 static std::atomic<int>	spatialBakeState;		// BAKE_*
 static std::atomic<int>	spatialBakeProgress;	// 0 to 100
-// The game told the bake that runs to stop (S_SpatialCancelBake). Steam Audio 4.8.1 leaves the paths half made in
-// the probes then (PathBaker::bake adds what a stopped BakedPathData has), and writing those out is a crash in
-// the thread of the bake: what a stopped bake has is thrown away unread.
+// The game does not want what the bake that runs makes (S_SpatialCancelBake): the thread does not start what it
+// has not started yet, and what it made is thrown away unread.
 static std::atomic<int>	spatialBakeCancel;
 
 // One for every player, one more for what the own player says (S_SpatialOwnVoice), and one for every box of the
@@ -591,6 +593,11 @@ static struct {
 	qboolean			reverb;							// the source where the listener stands
 	qboolean			own[SPATIAL_REFLECT_SLOTS];		// the slots that render a sound
 	IPLCoordinateSpace3	source[SPATIAL_REFLECT_SLOTS];
+	// the ways round the corners, the same: their inputs are set where iplSimulatorRunPathing() runs. The thread
+	// of the game set them every frame while the thread ran the paths, and both crashed in Steam Audio (2026-10-19)
+	qboolean			path[SPATIAL_VOICES];			// the voices that look for a way
+	IPLVector3			pathOrigin[SPATIAL_VOICES];
+	int					pathChannel[SPATIAL_VOICES];	// CHAN_*, for S_SpatialPathFade()
 } spatialPass;
 
 // what the game and the thread of the reflections both touch
@@ -621,6 +628,18 @@ static int S_SpatialUsec( void ) {
 }
 
 static void S_SpatialUnload( void ) {
+	// a bake that still runs calls into it: the library and its functions stay until S_SpatialReapBake()
+	if ( spatialBake.thread && spatialBakeState.load() == BAKE_RUNNING ) {
+		if ( spatial.library ) {
+			if ( spatialBake.library ) {
+				Sys_UnloadLibrary( spatial.library );	// (it is the same one, loaded twice)
+			} else {
+				spatialBake.library = spatial.library;
+			}
+		}
+		spatial.library = NULL;
+		return;
+	}
 	if ( spatial.library ) {
 		Sys_UnloadLibrary( spatial.library );
 	}
@@ -855,7 +874,7 @@ static int SDLCALL S_SpatialBaker( void *unused ) {
 	generate.transform.elements[3][3] = 1.0f;
 
 	// a large level gets them further apart, see SPATIAL_MAX_PROBES
-	while ( qiplProbeArrayCreate( spatial.context, &array ) == IPL_STATUS_SUCCESS ) {
+	while ( qiplProbeArrayCreate( spatialBake.context, &array ) == IPL_STATUS_SUCCESS ) {
 		qiplProbeArrayGenerateProbes( array, spatialBake.scene, &generate );
 		spatialBake.numProbes = qiplProbeArrayGetNumProbes( array );
 		if ( spatialBake.numProbes <= SPATIAL_MAX_PROBES || spatialBakeCancel.load() ) {
@@ -867,7 +886,7 @@ static int SDLCALL S_SpatialBaker( void *unused ) {
 	}
 	spatialBake.spacing = generate.spacing;
 
-	if ( array && qiplProbeBatchCreate( spatial.context, &spatialBake.batch ) == IPL_STATUS_SUCCESS ) {
+	if ( array && qiplProbeBatchCreate( spatialBake.context, &spatialBake.batch ) == IPL_STATUS_SUCCESS ) {
 		qiplProbeBatchAddProbeArray( spatialBake.batch, array );
 		qiplProbeBatchCommit( spatialBake.batch );
 
@@ -889,7 +908,7 @@ static int SDLCALL S_SpatialBaker( void *unused ) {
 		}
 #endif
 		if ( spatialBake.batch && spatialBake.numProbes >= SPATIAL_MIN_PROBES && !spatialBakeCancel.load() ) {
-			qiplPathBakerBake( spatial.context, &bake, S_SpatialBakeProgress, NULL );
+			qiplPathBakerBake( spatialBake.context, &bake, S_SpatialBakeProgress, NULL );
 		}
 		// stopped: see spatialBakeCancel
 		if ( spatialBake.batch && spatialBakeCancel.load() ) {
@@ -899,7 +918,7 @@ static int SDLCALL S_SpatialBaker( void *unused ) {
 
 		// as it goes into the file. The game writes it, the file system of the engine is not for this thread.
 		memset( &serialized, 0, sizeof( serialized ) );
-		if ( spatialBake.batch && qiplSerializedObjectCreate( spatial.context, &serialized, &spatialBake.saved ) == IPL_STATUS_SUCCESS ) {
+		if ( spatialBake.batch && qiplSerializedObjectCreate( spatialBake.context, &serialized, &spatialBake.saved ) == IPL_STATUS_SUCCESS ) {
 			qiplProbeBatchSave( spatialBake.batch, spatialBake.saved );
 		} else {
 			spatialBake.saved = NULL;
@@ -909,15 +928,51 @@ static int SDLCALL S_SpatialBaker( void *unused ) {
 		qiplProbeArrayRelease( &array );
 	}
 	qiplSceneRelease( &spatialBake.scene );
+	qiplContextRelease( &spatialBake.context );
 	spatialBake.msec = ( S_SpatialUsec() - start ) / 1000;
 	spatialBakeState.store( BAKE_DONE );
 	return 0;
 }
 
-// tells the bake that runs to stop. It does not wait for it.
+// What the bake that runs makes is not wanted. It is not stopped inside Steam Audio: iplPathBakerCancelBake() of
+// 4.8.1 left the threads of the bake waiting for each other for ever (snd_restart hung) or crashed them
+// (2026-10-19, a client of the user). It runs to its end and what it made is thrown away. It does not wait for it.
 static void S_SpatialCancelBake( void ) {
 	spatialBakeCancel.store( 1 );
-	qiplPathBakerCancelBake( spatial.context );
+}
+
+// A bake that is done: its thread is at its end, this does not wait. qfalse: there is none, or it still runs.
+static qboolean S_SpatialReapBake( void ) {
+	if ( spatialBakeState.load() != BAKE_DONE ) {
+		return qfalse;
+	}
+	if ( spatialBake.thread ) {
+		SDL_WaitThread( spatialBake.thread, NULL );
+	}
+	spatialBake.thread = NULL;
+	spatialBakeState.store( BAKE_NONE );
+	// the hold on Steam Audio of a bake the sound system had let go of
+	if ( spatialBake.library ) {
+		Sys_UnloadLibrary( spatialBake.library );
+		spatialBake.library = NULL;
+	}
+	return qtrue;
+}
+
+// For Sys_Exit(): a bake still runs inside Steam Audio. The program then ends without running what is to be
+// done when the libraries are unloaded, which would go on under that thread.
+qboolean S_SpatialBakeRunning( void ) {
+	return (qboolean)( spatialBake.thread && spatialBakeState.load() == BAKE_RUNNING );
+}
+
+// What a bake made and nobody took.
+static void S_SpatialDropBake( void ) {
+	if ( spatialBake.batch ) {
+		qiplProbeBatchRelease( &spatialBake.batch );
+	}
+	if ( spatialBake.saved ) {
+		qiplSerializedObjectRelease( &spatialBake.saved );
+	}
 }
 
 // the probes of this level from its file, if it has one
@@ -966,15 +1021,9 @@ ready to the simulator when no pass of the reflections runs. Nothing in here wai
 ===============
 */
 static void S_SpatialThinkPaths( void ) {
-	if ( spatialBakeState.load() == BAKE_DONE ) {
-		// the thread is at its end: this does not wait. A page had none.
-		if ( spatialBake.thread ) {
-			SDL_WaitThread( spatialBake.thread, NULL );
-		}
-		spatialBake.thread = NULL;
-		spatialBakeState.store( BAKE_NONE );
-
-		if ( spatialBake.sceneNumber == spatial.sceneNumber && spatialBake.batch && spatialBake.saved && !spatial.sceneWaits ) {
+	if ( S_SpatialReapBake() ) {
+		// (a bake of a sound system before this one has a number of its own: spatialBakeCancel)
+		if ( !spatialBakeCancel.load() && spatialBake.sceneNumber == spatial.sceneNumber && spatialBake.batch && spatialBake.saved && !spatial.sceneWaits ) {
 			// (also the file of a level without paths, so that its next load does not look for them again)
 			FS_WriteFile( spatial.pathFile, qiplSerializedObjectGetData( spatialBake.saved ), (int)qiplSerializedObjectGetSize( spatialBake.saved ) );
 			if ( spatialBake.numProbes >= SPATIAL_MIN_PROBES ) {
@@ -997,17 +1046,13 @@ static void S_SpatialThinkPaths( void ) {
 		}
 #endif
 		// a bake for a level that is gone
-		if ( spatialBake.batch ) {
-			qiplProbeBatchRelease( &spatialBake.batch );
-		}
-		if ( spatialBake.saved ) {
-			qiplSerializedObjectRelease( &spatialBake.saved );
-		}
+		S_SpatialDropBake();
 	}
 
 	if ( spatial.bakeWanted && spatialBakeState.load() == BAKE_NONE && spatial.scene && !spatial.sceneWaits && v_spatialPaths->integer ) {
 		spatial.bakeWanted = qfalse;
 		spatialBake.scene = qiplSceneRetain( spatial.scene );
+		spatialBake.context = qiplContextRetain( spatial.context );
 		spatialBake.mins = spatial.mins;
 		spatialBake.maxs = spatial.maxs;
 		spatialBake.sceneNumber = spatial.sceneNumber;
@@ -1021,6 +1066,7 @@ static void S_SpatialThinkPaths( void ) {
 		spatialBake.thread = SDL_CreateThread( S_SpatialBaker, "s_spatialBake", NULL );
 		if ( !spatialBake.thread ) {
 			qiplSceneRelease( &spatialBake.scene );
+			qiplContextRelease( &spatialBake.context );
 			spatialBakeState.store( BAKE_NONE );
 		} else {
 			Com_Printf( "v_spatial: working out the paths of this level in the background\n" );
@@ -1654,10 +1700,10 @@ static void S_SpatialChooseReflects( void ) {
 static void S_SpatialSimulate( void ) {
 	IPLSimulationSharedInputs shared;
 
-	// the reflections get theirs in their own thread, see S_SpatialPassInputs()
+	// the reflections and the ways round the corners get theirs in their own thread, see S_SpatialPassInputs()
 	memset( &shared, 0, sizeof( shared ) );
 	S_SpatialListener( &shared.listener );
-	qiplSimulatorSetSharedInputs( spatial.simulator, (IPLSimulationFlags)( IPL_SIMULATIONFLAGS_DIRECT | IPL_SIMULATIONFLAGS_PATHING ), &shared );
+	qiplSimulatorSetSharedInputs( spatial.simulator, IPL_SIMULATIONFLAGS_DIRECT, &shared );
 	S_SpatialChooseReflects();
 
 	for ( int i = 0; i < SPATIAL_VOICES; i++ ) {
@@ -1680,29 +1726,12 @@ static void S_SpatialSimulate( void ) {
 			inputs.numOcclusionSamples = SPATIAL_OCCLUSION_SAMPLES;
 			inputs.numTransmissionRays = SPATIAL_TRANSMISSION_RAYS;
 
-			// Its way round the corners, from the probes of the level. How loud it is at the end of that way is
-			// what the game makes of a sound at that distance.
+			// its way round the corners, from the probes of the level, is looked for in the pass (S_SpatialFillPaths())
 			v->pathing = (qboolean)( spatial.probes && v_spatialPaths->integer );
-			if ( v->pathing ) {
-				inputs.flags = (IPLSimulationFlags)( inputs.flags | IPL_SIMULATIONFLAGS_PATHING );
-				inputs.baked = IPL_TRUE;
-				inputs.bakedDataIdentifier.type = IPL_BAKEDDATATYPE_PATHING;
-				inputs.bakedDataIdentifier.variation = IPL_BAKEDDATAVARIATION_DYNAMIC;
-				inputs.pathingProbes = spatial.probes;
-				inputs.visRadius = SPATIAL_PATH_RADIUS;
-				inputs.visThreshold = SPATIAL_PATH_THRESHOLD;
-				inputs.visRange = SPATIAL_PATH_VIS_RANGE;
-				inputs.pathingOrder = SPATIAL_REVERB_ORDER;
-				inputs.enableValidation = IPL_TRUE;
-				inputs.findAlternatePaths = IPL_TRUE;
-				inputs.distanceAttenuationModel.type = IPL_DISTANCEATTENUATIONTYPE_CALLBACK;
-				inputs.distanceAttenuationModel.callback = S_SpatialPathFade;
-				inputs.distanceAttenuationModel.userData = (void *)(intptr_t)v->entchannel;
-			}
 		} else {
 			v->pathing = qfalse;
 		}
-		qiplSourceSetInputs( v->source, (IPLSimulationFlags)( IPL_SIMULATIONFLAGS_DIRECT | IPL_SIMULATIONFLAGS_PATHING ), &inputs );
+		qiplSourceSetInputs( v->source, IPL_SIMULATIONFLAGS_DIRECT, &inputs );
 	}
 
 	qiplSimulatorRunDirect( spatial.simulator );
@@ -2039,11 +2068,62 @@ static void S_SpatialPassInputs( void ) {
 	}
 }
 
+// Where iplSimulatorRunPathing() runs, before it: the ways round the corners spatialPass asks for. How loud a sound
+// is at the end of its way is what the game makes of a sound at that distance.
+static void S_SpatialPathInputs( void ) {
+	IPLSimulationSharedInputs shared;
+	IPLSimulationInputs inputs;
+
+	memset( &shared, 0, sizeof( shared ) );
+	shared.listener = spatialPass.listener;
+	qiplSimulatorSetSharedInputs( spatial.simulator, IPL_SIMULATIONFLAGS_PATHING, &shared );
+
+	for ( int i = 0; i < SPATIAL_VOICES; i++ ) {
+		memset( &inputs, 0, sizeof( inputs ) );
+		if ( spatialPass.path[i] ) {
+			inputs.flags = IPL_SIMULATIONFLAGS_PATHING;
+			inputs.source.origin = spatialPass.pathOrigin[i];
+			inputs.source.right.x = 1.0f;
+			inputs.source.up.y = 1.0f;
+			inputs.source.ahead.z = -1.0f;
+			inputs.baked = IPL_TRUE;
+			inputs.bakedDataIdentifier.type = IPL_BAKEDDATATYPE_PATHING;
+			inputs.bakedDataIdentifier.variation = IPL_BAKEDDATAVARIATION_DYNAMIC;
+			inputs.pathingProbes = spatial.probes;
+			inputs.visRadius = SPATIAL_PATH_RADIUS;
+			inputs.visThreshold = SPATIAL_PATH_THRESHOLD;
+			inputs.visRange = SPATIAL_PATH_VIS_RANGE;
+			inputs.pathingOrder = SPATIAL_REVERB_ORDER;
+			inputs.enableValidation = IPL_TRUE;
+			inputs.findAlternatePaths = IPL_TRUE;
+			inputs.distanceAttenuationModel.type = IPL_DISTANCEATTENUATIONTYPE_CALLBACK;
+			inputs.distanceAttenuationModel.callback = S_SpatialPathFade;
+			inputs.distanceAttenuationModel.userData = (void *)(intptr_t)spatialPass.pathChannel[i];
+		}
+		qiplSourceSetInputs( spatial.voices[i].source, IPL_SIMULATIONFLAGS_PATHING, &inputs );
+	}
+}
+
+// In the thread of the game, while the thread of the reflections is idle: the voices that look for a way round the
+// corners in the next pass (S_SpatialSimulate() said which, v->pathing).
+static void S_SpatialFillPaths( void ) {
+	S_SpatialListener( &spatialPass.listener );
+	for ( int i = 0; i < SPATIAL_VOICES; i++ ) {
+		const spatialVoice_t *v = &spatial.voices[i];
+
+		spatialPass.path[i] = v->pathing;
+		if ( v->pathing ) {
+			S_SpatialPoint( v->origin, &spatialPass.pathOrigin[i] );
+			spatialPass.pathChannel[i] = v->entchannel;
+		}
+	}
+}
+
 // In the thread of the game, while the thread of the reflections is idle: what the next pass is to start from.
 static void S_SpatialFillPass( void ) {
 	const int passes = spatialReflectPasses.load();
 
-	S_SpatialListener( &spatialPass.listener );
+	S_SpatialFillPaths();
 	spatialPass.rays = S_SpatialRays();
 	spatialPass.bounces = Com_Clampi( 1, 64, v_spatialBounces->integer );
 	spatialPass.reverb = v_spatialReflections->integer ? qtrue : qfalse;
@@ -2138,6 +2218,7 @@ static int SDLCALL S_SpatialWorker( void *unused ) {
 				qiplSimulatorRunReflections( spatial.simulator );
 			}
 			if ( spatialPassPaths.load() ) {
+				S_SpatialPathInputs();
 				qiplSimulatorRunPathing( spatial.simulator );
 			}
 			spatialReflectUsec.store( S_SpatialUsec() - start );
@@ -2165,6 +2246,8 @@ static void S_SpatialAskPass( void ) {
 		const int start = S_SpatialUsec();
 
 		spatial.pathsAsked = now;
+		S_SpatialFillPaths();
+		S_SpatialPathInputs();
 		qiplSimulatorRunPathing( spatial.simulator );
 		spatial.costUsec[COST_PASS] += S_SpatialUsec() - start;
 	}
@@ -2683,19 +2766,13 @@ static void S_SpatialRelease( void ) {
 	spatialWorkerQuit.store( 0 );
 	spatialWorkerState.store( WORKER_IDLE );
 
-	// a bake is told to stop and waited for the same way. What it had is thrown away.
-	if ( spatialBake.thread ) {
-		S_SpatialCancelBake();
-		SDL_WaitThread( spatialBake.thread, NULL );
-		spatialBake.thread = NULL;
-		if ( spatialBake.batch ) {
-			qiplProbeBatchRelease( &spatialBake.batch );
-		}
-		if ( spatialBake.saved ) {
-			qiplSerializedObjectRelease( &spatialBake.saved );
-		}
+	// A bake is not waited for: what it makes is not wanted, and one that is done is picked up by the next sound
+	// system or by S_SpatialBakeRunning(). It holds its own context and scene, and Steam Audio stays loaded for it
+	// (S_SpatialUnload()).
+	S_SpatialCancelBake();
+	if ( S_SpatialReapBake() ) {
+		S_SpatialDropBake();
 	}
-	spatialBakeState.store( BAKE_NONE );
 
 	S_SpatialCaptureEnd( qfalse );
 	if ( spatial.library ) {

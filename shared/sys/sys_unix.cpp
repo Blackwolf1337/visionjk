@@ -38,6 +38,13 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "qcommon/qcommon.h"
 #include "qcommon/q_shared.h"
 #include "sys_local.h"
+#include "con_local.h"
+#include "qcommon/game_version.h"
+#include <pthread.h>
+#if defined(__GLIBC__) || defined(__APPLE__)
+#include <execinfo.h>
+#define SYS_BACKTRACE
+#endif
 
 qboolean stdinIsATTY = qfalse;
 
@@ -47,6 +54,81 @@ static char homePath[ MAX_OSPATH ] = { 0 };
 // Max open file descriptors. Mostly used by pk3 files with
 // MAX_SEARCH_PATHS limit.
 #define MAX_OPEN_FILES	4096
+
+/*
+=================
+Sys_CrashHandler
+
+A crash (a bad address, a bad instruction, abort()): the crash log, as Sys_Error() writes one, with what crashed
+and where, then the crash goes on as it would have, so the system still gets its core (coredumpctl). Before
+2026-10-19 only Sys_Error() wrote one, and a segfault left nothing.
+The names in the stack are the exported ones only: an offset in a file is turned into a function with
+addr2line -f -C -e <file> <offset>, on the same build.
+=================
+*/
+static void Sys_CrashHandler( int sig, siginfo_t *info, void *context )
+{
+	static volatile sig_atomic_t crashed;
+
+	if ( !crashed ) {
+		char path[MAX_OSPATH], thread[32] = "";
+		FILE *fp;
+
+		crashed = 1;
+		Sys_CrashLogPath( path, sizeof( path ) );
+		fp = fopen( path, "w" );
+		if ( fp ) {
+			pthread_getname_np( pthread_self(), thread, sizeof( thread ) );
+			fprintf( fp, "%s %s crashed: signal %d (%s), address %p, thread \"%s\"\n\n", JK_VERSION, PLATFORM_STRING, sig,
+				strsignal( sig ), info ? info->si_addr : NULL, thread );
+#ifdef SYS_BACKTRACE
+			void *frames[64];
+			const int numFrames = backtrace( frames, ARRAY_LEN( frames ) );
+
+			fprintf( fp, "stack (a function of an offset: addr2line -f -C -e <file> <offset>):\n" );
+			fflush( fp );
+			backtrace_symbols_fd( frames, numFrames, fileno( fp ) );
+#endif
+			fprintf( fp, "\nconsole:\n" );
+			ConsoleLogWriteOut( fp );
+			fclose( fp );
+			fprintf( stderr, "\nCrashed (signal %d), the crash log was written to %s\n", sig, path );
+		}
+	}
+
+	// SA_RESETHAND gave the signal its default back: a fault happens again when this returns and ends the program
+	// with a core. One that was sent (kill, raise) is sent again.
+	if ( !info || info->si_code <= 0 ) {
+		raise( sig );
+	}
+}
+
+static void Sys_CrashHandlers( void )
+{
+	static const int signals[] = { SIGSEGV, SIGBUS, SIGILL, SIGFPE, SIGABRT };
+	static byte altStack[64 * 1024];	// a stack that ran over still gets its crash log (in the thread of the game)
+	stack_t stack;
+	struct sigaction action;
+
+#ifdef SYS_BACKTRACE
+	// the first backtrace() loads what it needs, which is not to be done in the handler
+	void *frame;
+	backtrace( &frame, 1 );
+#endif
+
+	memset( &stack, 0, sizeof( stack ) );
+	stack.ss_sp = altStack;
+	stack.ss_size = sizeof( altStack );
+	sigaltstack( &stack, NULL );
+
+	memset( &action, 0, sizeof( action ) );
+	action.sa_sigaction = Sys_CrashHandler;
+	action.sa_flags = SA_SIGINFO | SA_RESETHAND | SA_NODEFER | SA_ONSTACK;
+	sigemptyset( &action.sa_mask );
+	for ( size_t i = 0; i < ARRAY_LEN( signals ); i++ ) {
+		sigaction( signals[i], &action, NULL );
+	}
+}
 
 void Sys_PlatformInit( int argc, char *argv[] )
 {
@@ -60,8 +142,9 @@ void Sys_PlatformInit( int argc, char *argv[] )
 #endif
 	signal( SIGQUIT, Sys_SigHandler );
 	signal( SIGTRAP, Sys_SigHandler );
-	signal( SIGABRT, Sys_SigHandler );
-	signal( SIGBUS, Sys_SigHandler );
+#ifndef __EMSCRIPTEN__
+	Sys_CrashHandlers();
+#endif
 
 	if (isatty( STDIN_FILENO ) && !( term && ( !strcmp( term, "raw" ) || !strcmp( term, "dumb" ) ) ))
 		stdinIsATTY = qtrue;
