@@ -986,6 +986,10 @@ static const void *RB_DrawSurfs( const void *data ) {
 		}
 	}
 	rb_glowView = false;
+	// tay_bloom: the view of the level itself, as the focus below
+	if ( !backEnd.viewParms.isPortal && !( backEnd.refdef.rdflags & ( RDF_NOWORLDMODEL | RDF_SKYBOXPORTAL ) ) ) {
+		VK_Bloom();
+	}
 	if ( focus ) {
 		VK_BlurFrame( r_dofAmount, r_dofFocus );
 		if ( rb_sawOver ) {

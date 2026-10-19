@@ -326,6 +326,7 @@ void		VK_InitPost( void );
 void		VK_BeginGlow( void );
 void		VK_EndGlow( void );
 void		VK_BlurFrame( float amount, float focus );
+void		VK_Bloom( void );
 void		VK_CaptureFrame( void );
 void		VK_ClearFlares( void );
 void		VK_CopyProbes( void );

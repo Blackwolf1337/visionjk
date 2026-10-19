@@ -1269,6 +1269,10 @@ extern	cvar_t	*r_marksOnTriangleMeshes;
 extern	cvar_t	*r_aspectCorrectFonts;
 extern	cvar_t	*v_2dAspect;
 extern	cvar_t	*v_menuBlur;
+extern	cvar_t	*tay_bloom;
+extern	cvar_t	*tay_bloomIntensity;
+extern	cvar_t	*tay_bloomThreshold;
+extern	cvar_t	*tay_renderScale;
 
 float	R_2DBias( void );
 void	RE_Set2DPlane( const float *matrix );

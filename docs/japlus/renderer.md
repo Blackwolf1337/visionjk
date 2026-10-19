@@ -386,6 +386,22 @@ left in these views are the effects of the game (flames, smoke, light cones) and
   went from 1541 to 661 ms with it, a player who joins from a frame of 22 to 28 ms to one of 4 to 6.5.
   [loading.md](loading.md) has how that was measured and what the cache is named after.
 
+## Bloom (from TaystJK)
+
+`tay_bloom` (off by default), built 2026-10-19 after the Vulkan renderer of TaystJK (`r_bloom` of Quake3e). What is
+brighter than `tay_bloomThreshold` (0.5 of white on the screen) shines over its surroundings, as strongly as
+`tay_bloomIntensity` (0.6, up to 2). `VK_Bloom()` in `vk_post.cpp`, for the view of the level only (not a mirror,
+the sky of a portal or a model of the HUD), after the glow and before the menu blur and the 2D: the first pass of
+`shaders/blur.frag` takes only the part above the threshold into the buffers of the menu blur at half the size
+of the frame (`PARM.w`), five more passes widen it to about 36 pixels of the frame, the last one weighs it, and it
+is added to the frame. The threshold is divided by the overbright factor, since the frame holds the colors before
+the gamma pass. No pipeline of its own, so both devices have it. rd-vanilla has no bloom.
+
+Checked in pictures of two views of mp/ffa3: the defaults change the lit view by 0.6 of 255 on average (the
+lamps and the glowing pad get a halo), strength 1 with threshold 0.4 by 6 (the walls around the light shine).
+Not run on the OpenGL ES device (it is not built in this configuration), not under the validation layer (not
+installed on this machine).
+
 ## Not done
 
 The Windows DLL builds with mingw-w64 for 64 bit and imports nothing but the C runtime, kernel32 and
