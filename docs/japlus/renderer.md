@@ -346,6 +346,10 @@ left in these views are the effects of the game (flames, smoke, light cones) and
   1574 triangles more in the frame and kept the full model where `v_lodPixels 0` showed the coarse one; at 150
   units both are the same; a view with eight bots and the models of the level drew 12400 to 12800 triangles in
   place of 10100 to 11500. `v_lodPixels 0` is the choice of before.
+- Finer curves were measured and not made the default (2026-10-19): `r_subdivisions` 2 and 1 in place of 4 (the
+  level is in a buffer on the device, so they only cost triangles) gave 9096 and 18520 triangles in place of 8532
+  from a spot of mp/ffa3 with round arches, and pictures of the arches at 1920 x 1080 that differ by hardly a
+  pixel. Whoever wants them sets `r_subdivisions 2`.
 - The frame is cleared at its start. Where nothing of the level is drawn (looking out of the world, the camera
   inside a model) this renderer shows black, `rd-vanilla` shows what the last frame left there.
 - Dynamic lights are evaluated per pixel with the same formula, not per triangle.
