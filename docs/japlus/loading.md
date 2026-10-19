@@ -205,6 +205,21 @@ does not answer a step for 30 s ends the connect with an error that names its la
 The loading screen is drawn after every item and every player of the level, 89 times on that server: 16 ms
 together, nothing to gain.
 
+**The unpacked sounds are kept** (`client/snd_cache.cpp`, cvar `v_soundCache`, on by default). An MP3 outside
+`sound/chars` is unpacked to samples when it is registered: weapons, effects, the sounds of the players. On the
+server above that was 182 of the 256 ms of sounds, 288 files. The samples are written to `soundcache/` of the
+profile, a file per sound, named as the textures of `vk_texcache.cpp` are (the path of the MP3, its length, the
+checksum of its pak; never a file of a directory), before they are brought to the rate of the mixer.
+
+| | unpacking | load |
+|---|---|---|
+| 31 bots on mp/ffa1, three joins each, before / after | 153 to 162 / 15 ms | 438 to 474 / 305 to 318 ms |
+| the server above, filled cache | 182 / 19 ms | 540 to 670 / 396 to 426 ms |
+
+What is left of the unpacking is the resampling to the rate of the mixer. The first load that fills the cache
+writes 16 ms more. The cache of mp/ffa1 with its players is 24 MB in 280 files; deleting it is safe at any time.
+The 280 kept sounds were compared once with a fresh unpack of their MP3: all the same.
+
 ## Not done yet
 
 - What a join still costs: the Ghoul2 model and the sounds of the player (the wait for the upload is gone).
@@ -214,7 +229,8 @@ together, nothing to gain.
   this was first measured and 130 on 2026-10-19).
 - The first load with an empty cache is as slow as before. Decoding and packing on the worker threads the
   packer already has would shorten it.
-- Sounds are read and decoded when they are registered (123 ms of a first load).
+- Sounds are still read when they are registered: 62 ms for 1413 files on the server above, half of them a .wav
+  that is looked for before the .mp3.
 - `rd-vanilla` and the renderer for the browser have no cache: OpenGL packs in the driver, and the device for
   the browser takes no textures in blocks.
 - Measured on one level and one machine. Not played by a person with it.
