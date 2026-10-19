@@ -468,6 +468,15 @@ qboolean CG_DrawOldScoreboard( void ) {
 		CG_Text_Paint ( x - CG_Text_Width ( s, 1.0f, FONT_MEDIUM ) / 2, y, 1.0f, colorWhite, s, 0, 0, ITEM_TEXTSTYLE_OUTLINED, FONT_MEDIUM );
 	}
 
+	// tay_scoreboardClock: the local time in the upper right corner
+	if ( tay_scoreboardClock.integer ) {
+		qtime_t now;
+
+		trap->RealTime( &now );
+		s = va( "%02i:%02i", now.tm_hour, now.tm_min );
+		CG_Text_Paint( SCREEN_WIDTH - 24 - CG_Text_Width( s, 0.8f, FONT_MEDIUM ), 36, 0.8f, colorWhite, s, 0, 0, ITEM_TEXTSTYLE_OUTLINED, FONT_MEDIUM );
+	}
+
 	// scoreboard
 	y = SB_HEADER;
 

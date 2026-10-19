@@ -188,6 +188,11 @@ XCVAR_DEF( tay_killfeedY,							"0",					NULL,					CVAR_ARCHIVE )
 XCVAR_DEF( tay_pitchHud,							"0",					NULL,					CVAR_ARCHIVE )
 XCVAR_DEF( tay_pitchHudAngle,						"15",					NULL,					CVAR_ARCHIVE )
 XCVAR_DEF( tay_pitchHudColor,						"1 0.4 0 0.8",			NULL,					CVAR_ARCHIVE )
+// the local time on the scoreboard (TaystJK's cg_scoreboardTime); the timer of the level with milliseconds and
+// counting down to the time limit
+XCVAR_DEF( tay_scoreboardClock,					"0",					NULL,					CVAR_ARCHIVE )
+XCVAR_DEF( tay_timerCountdown,					"0",					NULL,					CVAR_ARCHIVE )
+XCVAR_DEF( tay_timerMsec,						"0",					NULL,					CVAR_ARCHIVE )
 XCVAR_DEF( tay_saberStaffColors,					"0",					NULL,					CVAR_ARCHIVE )
 XCVAR_DEF( tay_saberTeamColors,					"1",					NULL,					CVAR_ARCHIVE )
 XCVAR_DEF( tay_seasonalCosmetics,				"0",					NULL,					CVAR_ARCHIVE )
