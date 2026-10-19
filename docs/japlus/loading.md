@@ -134,6 +134,18 @@ A dedicated server saves the same at every change of the level, a client of anot
 (`FS_ConditionalRestart`). The pure checksums are made by the same code from the same entries: a client of this
 build joined a server of it with `sv_pure 1`, and the download test (`uitest/dltest.sh`) blocked the same files.
 
+**The ui makes its list of player models when a menu asks for it** (`ui/ui_main.c`, `UI_Q3HeadsNeeded()`,
+2026-10-19). The ui starts again with every level, and 87 of the 140 ms of that start were the list of the
+player models and skins for the menus (`UI_BuildQ3Model_List()`): a list of the files of every model folder,
+each a walk over all files of all paks, and up to three icons opened per skin. The two places that read it make
+it the first time (and `ui_cache 1`), so a player who opens the menu with the models pays that once per level.
+
+| mp/ffa3, two runs of each | the start of the ui | second load |
+|---|---|---|
+| before / after | 138 to 172 ms / 53 to 58 ms | 379 / 302 to 326 ms |
+
+The list has the same 165 models, and the player menu of the game looks the same in a picture.
+
 ## What the numbers did not confirm
 
 Read from the code, these looked like causes, and they are not, on this machine and these levels:
@@ -148,8 +160,9 @@ Read from the code, these looked like causes, and they are not, on this machine 
 
 - What a join still costs: the Ghoul2 model and the sounds of the player (the wait for the upload is gone).
 - The first frame of the game after a load takes about 16 ms in the cgame, in code no marker is around.
-- What every load does again: the ui is started anew (112 ms), the file system is restarted (46 ms since the
-  buffered list, it was 79 when this was first measured and 130 on 2026-10-19).
+- What every load does again: the ui is started anew (54 ms since the list of models waits for a menu, the menus
+  are 21 of it), the file system is restarted (46 ms since the buffered list, it was 79 when this was first
+  measured and 130 on 2026-10-19).
 - The first load with an empty cache is as slow as before. Decoding and packing on the worker threads the
   packer already has would shorten it.
 - Sounds are read and decoded when they are registered (123 ms of a first load).

@@ -55,6 +55,7 @@ static void	UI_Cache_f( void ) {
 	Display_CacheAll();
 	if ( trap->Cmd_Argc() == 2 ) {
 		int i;
+		UI_Q3HeadsNeeded();
 		for ( i=0; i<uiInfo.q3HeadCount; i++ ) {
 			trap->Print( "model %s\n", uiInfo.q3HeadNames[i] );
 		}
