@@ -255,6 +255,7 @@ static int			fs_packFiles = 0;		// total number of files in packs
 static int			fs_fakeChkSum;
 static int			fs_checksumFeed;
 
+
 typedef union qfile_gus {
 	FILE*		o;
 	unzFile		z;
@@ -2207,6 +2208,148 @@ static qboolean FS_IsBlocked( const char *list, const char *name ) {
 
 /*
 =================
+FS_UnzOpen
+
+A pak opened through a buffer of its own, for the list of its files (FS_LoadZipFile). minizip reads the central
+directory of a pak a few bytes at a time and seeks before every entry, which throws the buffer of stdio away: a
+read of the disk for every file of every pak, and until 2026-10-19 95 % of a restart of the file system (about
+130 ms for the 35000 files of the paks of the game, each level). These functions keep FS_ZIP_BUFFER bytes of the
+file and serve the small reads and the seeks inside them from memory; a large read goes past them. Underneath
+are the functions minizip has for a file (fill_fopen64_filefunc), so the 64 bit offsets are theirs. Read only,
+as every pak is.
+=================
+*/
+#define FS_ZIP_BUFFER	( 64 * 1024 )
+
+typedef struct fsZipStream_s {
+	voidpf			file;			// of the functions underneath
+	ZPOS64_T		pos;			// where the next read begins
+	ZPOS64_T		bufferStart;	// where the bytes in buffer are in the file
+	uLong			bufferLen;
+	unsigned char	buffer[FS_ZIP_BUFFER];
+} fsZipStream_t;
+
+static zlib_filefunc64_def	fs_zipPlain;		// the functions of minizip for a file
+static zlib_filefunc64_def	fs_zipBuffered;
+
+static voidpf ZCALLBACK FS_ZipOpen( voidpf opaque, const void *filename, int mode ) {
+	fsZipStream_t	*s;
+	voidpf			file;
+
+	(void)opaque;
+	if ( ( mode & ZLIB_FILEFUNC_MODE_READWRITEFILTER ) != ZLIB_FILEFUNC_MODE_READ ) {
+		return NULL;
+	}
+	file = fs_zipPlain.zopen64_file( fs_zipPlain.opaque, filename, mode );
+	if ( !file ) {
+		return NULL;
+	}
+	// (malloc and not the zone: minizip allocates with malloc as well, and this is called wherever a pak is opened)
+	s = (fsZipStream_t *)malloc( sizeof( *s ) );
+	if ( !s ) {
+		fs_zipPlain.zclose_file( fs_zipPlain.opaque, file );
+		return NULL;
+	}
+	s->file = file;
+	s->pos = s->bufferStart = 0;
+	s->bufferLen = 0;
+	return s;
+}
+
+static uLong ZCALLBACK FS_ZipRead( voidpf opaque, voidpf stream, void *buf, uLong size ) {
+	fsZipStream_t	*s = (fsZipStream_t *)stream;
+	uLong			got;
+
+	(void)opaque;
+	if ( !size ) {
+		return 0;
+	}
+	if ( s->pos >= s->bufferStart && s->pos + size <= s->bufferStart + s->bufferLen ) {
+		memcpy( buf, s->buffer + ( s->pos - s->bufferStart ), size );
+		s->pos += size;
+		return size;
+	}
+	if ( fs_zipPlain.zseek64_file( fs_zipPlain.opaque, s->file, s->pos, ZLIB_FILEFUNC_SEEK_SET ) != 0 ) {
+		return 0;
+	}
+	// what a file in the pak is read with goes past the buffer
+	if ( size >= FS_ZIP_BUFFER / 2 ) {
+		got = fs_zipPlain.zread_file( fs_zipPlain.opaque, s->file, buf, size );
+		s->pos += got;
+		return got;
+	}
+	s->bufferStart = s->pos;
+	s->bufferLen = fs_zipPlain.zread_file( fs_zipPlain.opaque, s->file, s->buffer, FS_ZIP_BUFFER );
+	got = ( size < s->bufferLen ) ? size : s->bufferLen;
+	memcpy( buf, s->buffer, got );
+	s->pos += got;
+	return got;
+}
+
+static uLong ZCALLBACK FS_ZipWrite( voidpf opaque, voidpf stream, const void *buf, uLong size ) {
+	(void)opaque; (void)stream; (void)buf; (void)size;
+	return 0;
+}
+
+static ZPOS64_T ZCALLBACK FS_ZipTell( voidpf opaque, voidpf stream ) {
+	(void)opaque;
+	return ( (fsZipStream_t *)stream )->pos;
+}
+
+static long ZCALLBACK FS_ZipSeek( voidpf opaque, voidpf stream, ZPOS64_T offset, int origin ) {
+	fsZipStream_t *s = (fsZipStream_t *)stream;
+
+	(void)opaque;
+	switch ( origin ) {
+	case ZLIB_FILEFUNC_SEEK_SET:
+		s->pos = offset;
+		return 0;
+	case ZLIB_FILEFUNC_SEEK_CUR:
+		s->pos += offset;
+		return 0;
+	case ZLIB_FILEFUNC_SEEK_END:
+		// (where the end is, from the functions underneath)
+		if ( fs_zipPlain.zseek64_file( fs_zipPlain.opaque, s->file, offset, ZLIB_FILEFUNC_SEEK_END ) != 0 ) {
+			return -1;
+		}
+		s->pos = fs_zipPlain.ztell64_file( fs_zipPlain.opaque, s->file );
+		return 0;
+	default:
+		return -1;
+	}
+}
+
+static int ZCALLBACK FS_ZipClose( voidpf opaque, voidpf stream ) {
+	fsZipStream_t	*s = (fsZipStream_t *)stream;
+	const int		ret = fs_zipPlain.zclose_file( fs_zipPlain.opaque, s->file );
+
+	(void)opaque;
+	free( s );
+	return ret;
+}
+
+static int ZCALLBACK FS_ZipError( voidpf opaque, voidpf stream ) {
+	(void)opaque;
+	return fs_zipPlain.zerror_file( fs_zipPlain.opaque, ( (fsZipStream_t *)stream )->file );
+}
+
+static unzFile FS_UnzOpen( const char *zipfile ) {
+	if ( !fs_zipBuffered.zopen64_file ) {
+		fill_fopen64_filefunc( &fs_zipPlain );
+		fs_zipBuffered.zopen64_file = FS_ZipOpen;
+		fs_zipBuffered.zread_file = FS_ZipRead;
+		fs_zipBuffered.zwrite_file = FS_ZipWrite;
+		fs_zipBuffered.ztell64_file = FS_ZipTell;
+		fs_zipBuffered.zseek64_file = FS_ZipSeek;
+		fs_zipBuffered.zclose_file = FS_ZipClose;
+		fs_zipBuffered.zerror_file = FS_ZipError;
+		fs_zipBuffered.opaque = NULL;
+	}
+	return unzOpen2_64( zipfile, &fs_zipBuffered );
+}
+
+/*
+=================
 FS_LoadZipFile
 
 Creates a new pak_t in the search chain for the contents
@@ -2232,11 +2375,15 @@ static pack_t *FS_LoadZipFile( const char *zipfile, const char *basename )
 
 	fs_numHeaderLongs = 0;
 
-	uf = unzOpen(zipfile);
+	uf = FS_UnzOpen(zipfile);
 	err = unzGetGlobalInfo (uf,&gi);
 
-	if (err != UNZ_OK)
+	if (err != UNZ_OK) {
+		if ( uf ) {
+			unzClose( uf );		// (with its buffer)
+		}
 		return NULL;
+	}
 
 	len = 0;
 	unzGoToFirstFile(uf);
@@ -2319,6 +2466,16 @@ static pack_t *FS_LoadZipFile( const char *zipfile, const char *basename )
 	Z_Free(fs_headerLongs);
 
 	pack->buildBuffer = buildBuffer;
+
+	// The files of the pak are read through a handle of its own without the buffer: a file read through it would
+	// cost a fill of the buffer every time it is opened (the start of the ui took half as long again).
+	unzClose( uf );
+	pack->handle = unzOpen( zipfile );
+	if ( !pack->handle ) {
+		Z_Free( buildBuffer );
+		Z_Free( pack );
+		return NULL;
+	}
 	return pack;
 }
 

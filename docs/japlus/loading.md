@@ -117,6 +117,23 @@ three bots gave no message; a build without the two barriers gave read after wri
 of the models at once, which also showed that the checks ran. Pictures from two fixed spots differ from the
 build before as much as two runs of that build differ from each other.
 
+**The list of a pak is read through a buffer** (`qcommon/files.cpp`, `FS_UnzOpen()`, 2026-10-19). Every level
+restarts the file system (the server draws a new checksum feed), which reads the central directory of every
+pak again: 35000 entries in the paks of the game. minizip reads them a few bytes at a time and seeks before every
+entry, which empties the buffer of stdio, so every entry was a read of the disk: 95 % of the restart under
+callgrind, three quarters of it in `fread`. The list is now read through 64 KB of the pak in memory; the files
+of the pak are read through a handle without it, as before (a first try that read them through the buffer too
+made the start of the ui half as long again, every small file cost a fill of 64 KB).
+
+| mp/ffa3, three runs of each, alternating | the file system | load |
+|---|---|---|
+| first load, before / after | 132 to 141 ms / 46 to 48 ms | 786 to 815 / 685 to 693 ms |
+| second load, before / after | | 478 to 496 / 395 to 407 ms |
+
+A dedicated server saves the same at every change of the level, a client of another server at every gamestate
+(`FS_ConditionalRestart`). The pure checksums are made by the same code from the same entries: a client of this
+build joined a server of it with `sv_pure 1`, and the download test (`uitest/dltest.sh`) blocked the same files.
+
 ## What the numbers did not confirm
 
 Read from the code, these looked like causes, and they are not, on this machine and these levels:
@@ -131,7 +148,8 @@ Read from the code, these looked like causes, and they are not, on this machine 
 
 - What a join still costs: the Ghoul2 model and the sounds of the player (the wait for the upload is gone).
 - The first frame of the game after a load takes about 16 ms in the cgame, in code no marker is around.
-- What every load does again: the ui is started anew (112 ms), the file system is restarted (79 ms).
+- What every load does again: the ui is started anew (112 ms), the file system is restarted (46 ms since the
+  buffered list, it was 79 when this was first measured and 130 on 2026-10-19).
 - The first load with an empty cache is as slow as before. Decoding and packing on the worker threads the
   packer already has would shorten it.
 - Sounds are read and decoded when they are registered (123 ms of a first load).
