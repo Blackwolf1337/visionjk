@@ -166,8 +166,8 @@ Read from the code, these looked like causes, and they are not, on this machine 
 - What a join still costs: the Ghoul2 model and the sounds of the player (the wait for the upload is gone).
 - The first frame of the game after a load takes about 16 ms in the cgame, in code no marker is around.
 - What every load does again: the ui is started anew (54 ms since the list of models waits for a menu, the menus
-  are 21 of it), the file system is restarted (46 ms since the buffered list, it was 79 when this was first
-  measured and 130 on 2026-10-19).
+  are 21 of it), the file system is restarted (27 ms since the buffered list and the one walk, it was 79 when
+  this was first measured and 130 on 2026-10-19).
 - The first load with an empty cache is as slow as before. Decoding and packing on the worker threads the
   packer already has would shorten it.
 - Sounds are read and decoded when they are registered (123 ms of a first load).
