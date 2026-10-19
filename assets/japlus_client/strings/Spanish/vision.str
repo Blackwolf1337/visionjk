@@ -741,6 +741,46 @@ REFERENCE           HOW_CLEARLY_THE_NAME_OF_THE_PLAYER_U
 LANG_ENGLISH        "How clearly the name of the player under the crosshair shows."
 LANG_SPANISH        "Lo claro que se ve el nombre del jugador bajo la mira."
 
+REFERENCE           SCOREBOARD_CLOCK
+LANG_ENGLISH        "Scoreboard Clock"
+LANG_SPANISH        "Reloj del marcador"
+
+REFERENCE           THE_TIME_OF_DAY_ON_THE_SCOREBOARD
+LANG_ENGLISH        "The time of day on the scoreboard."
+LANG_SPANISH        "La hora del día en el marcador."
+
+REFERENCE           TIMER_MILLISECONDS
+LANG_ENGLISH        "Timer Milliseconds"
+LANG_SPANISH        "Temporizador con milisegundos"
+
+REFERENCE           THE_TIMER_OF_THE_LEVEL_WITH_MILLISEC
+LANG_ENGLISH        "The timer of the level with milliseconds."
+LANG_SPANISH        "El temporizador del nivel con milisegundos."
+
+REFERENCE           TIMER_COUNTS_DOWN
+LANG_ENGLISH        "Timer Counts Down"
+LANG_SPANISH        "Temporizador hacia atrás"
+
+REFERENCE           THE_TIMER_SHOWS_WHAT_IS_LEFT_OF_THE
+LANG_ENGLISH        "The timer shows what is left of the time limit, if there is one."
+LANG_SPANISH        "El temporizador muestra lo que queda del límite de tiempo, si lo hay."
+
+REFERENCE           HIT_SOUNDS
+LANG_ENGLISH        "Hit Sounds"
+LANG_SPANISH        "Sonido de impacto"
+
+REFERENCE           A_SHORT_TICK_WHEN_YOUR_SHOTS_OR_YOUR
+LANG_ENGLISH        "A short tick when your shots or your blade hit someone."
+LANG_SPANISH        "Un breve tic cuando tus disparos o tu hoja alcanzan a alguien."
+
+REFERENCE           KILL_SOUND
+LANG_ENGLISH        "Kill Sound"
+LANG_SPANISH        "Sonido de baja"
+
+REFERENCE           TWO_NOTES_WHEN_YOU_KILL_SOMEONE
+LANG_ENGLISH        "Two notes when you kill someone."
+LANG_SPANISH        "Dos notas cuando eliminas a alguien."
+
 REFERENCE           MOVEMENT
 LANG_ENGLISH        "Movement"
 LANG_SPANISH        "Movimiento"
@@ -792,6 +832,30 @@ LANG_SPANISH        "La mía"
 REFERENCE           EVERYBODY
 LANG_ENGLISH        "Everybody"
 LANG_SPANISH        "Todos"
+
+REFERENCE           MOVEMENT_KEYS
+LANG_ENGLISH        "Movement Keys"
+LANG_SPANISH        "Teclas de movimiento"
+
+REFERENCE           THE_KEYS_YOU_MOVE_WITH_ON_THE_SCREEN
+LANG_ENGLISH        "The keys you move with on the screen, lit while held."
+LANG_SPANISH        "Las teclas de movimiento en pantalla, iluminadas mientras se pulsan."
+
+REFERENCE           START_GOAL
+LANG_ENGLISH        "Start Goal"
+LANG_SPANISH        "Objetivo de salida"
+
+REFERENCE           THE_SPEEDOMETER_TURNS_GOLD_FROM_THIS
+LANG_ENGLISH        "The speedometer turns gold from this speed on. 0: off."
+LANG_SPANISH        "El velocímetro se vuelve dorado a partir de esta velocidad. 0: apagado."
+
+REFERENCE           JUMP_GOAL
+LANG_ENGLISH        "Jump Goal"
+LANG_SPANISH        "Objetivo de salto"
+
+REFERENCE           JUMPS_AT_LEAST_THIS_FAST_ARE_GOLD_IN
+LANG_ENGLISH        "Jumps at least this fast are gold in the list of jumps. 0: off."
+LANG_SPANISH        "Los saltos al menos así de rápidos aparecen dorados en la lista de saltos. 0: apagado."
 
 REFERENCE           HATS_AND_CAPES
 LANG_ENGLISH        "Hats and Capes"
@@ -1025,6 +1089,70 @@ REFERENCE           SPIRAL
 LANG_ENGLISH        "Spiral"
 LANG_SPANISH        "Espiral"
 
+REFERENCE           SMOOTH_CAMERA
+LANG_ENGLISH        "Smooth Camera"
+LANG_SPANISH        "Cámara uniforme"
+
+REFERENCE           THE_CAMERA_BEHIND_YOU_FOLLOWS_THE_SA
+LANG_ENGLISH        "The camera behind you follows the same at every frame rate. It trails a little further behind."
+LANG_SPANISH        "La cámara detrás de ti sigue igual con cualquier tasa de imágenes. Se queda un poco más atrás."
+
+REFERENCE           VULKAN_RENDERER
+LANG_ENGLISH        "Vulkan Renderer"
+LANG_SPANISH        "Renderizador Vulkan"
+
+REFERENCE           BLOOM
+LANG_ENGLISH        "Bloom"
+LANG_SPANISH        "Resplandor"
+
+REFERENCE           BRIGHT_PARTS_OF_THE_LEVEL_SHINE_OVER
+LANG_ENGLISH        "Bright parts of the level shine over their surroundings. Vulkan renderer only."
+LANG_SPANISH        "Las partes brillantes del nivel resplandecen sobre su entorno. Solo con el renderizador Vulkan."
+
+REFERENCE           BLOOM_STRENGTH
+LANG_ENGLISH        "Bloom Strength"
+LANG_SPANISH        "Intensidad del resplandor"
+
+REFERENCE           HOW_STRONGLY_THE_BRIGHT_PARTS_SHINE
+LANG_ENGLISH        "How strongly the bright parts shine."
+LANG_SPANISH        "Con qué fuerza resplandecen las partes brillantes."
+
+REFERENCE           BLOOM_THRESHOLD
+LANG_ENGLISH        "Bloom Threshold"
+LANG_SPANISH        "Umbral del resplandor"
+
+REFERENCE           HOW_BRIGHT_A_PART_HAS_TO_BE_TO_SHINE
+LANG_ENGLISH        "How bright a part has to be to shine."
+LANG_SPANISH        "Lo brillante que debe ser una parte para resplandecer."
+
+REFERENCE           RENDER_SCALE
+LANG_ENGLISH        "Render Scale"
+LANG_SPANISH        "Escala de renderizado"
+
+REFERENCE           THE_SIZE_THE_LEVEL_IS_DRAWN_AT_THE_H
+LANG_ENGLISH        "The size the level is drawn at, the HUD stays sharp. Vulkan renderer only, counts after a video restart."
+LANG_SPANISH        "El tamaño al que se dibuja el nivel, el HUD sigue nítido. Solo con el renderizador Vulkan, cuenta tras reiniciar el vídeo."
+
+REFERENCE           HALF
+LANG_ENGLISH        "Half"
+LANG_SPANISH        "Mitad"
+
+REFERENCE           THREE_QUARTERS
+LANG_ENGLISH        "Three Quarters"
+LANG_SPANISH        "Tres cuartos"
+
+REFERENCE           FULL
+LANG_ENGLISH        "Full"
+LANG_SPANISH        "Completa"
+
+REFERENCE           ONE_AND_A_HALF
+LANG_ENGLISH        "One and a Half"
+LANG_SPANISH        "Una vez y media"
+
+REFERENCE           DOUBLE
+LANG_ENGLISH        "Double"
+LANG_SPANISH        "Doble"
+
 REFERENCE           CHAT_AND_CONSOLE
 LANG_ENGLISH        "Chat and Console"
 LANG_SPANISH        "Chat y consola"
@@ -1044,6 +1172,22 @@ LANG_SPANISH        "Registro del chat"
 REFERENCE           EVERY_CHAT_LINE_IS_WRITTEN_INTO_THE
 LANG_ENGLISH        "Every chat line is written into the folder chatlogs, with the time."
 LANG_SPANISH        "Cada línea del chat se escribe en la carpeta chatlogs, con la hora."
+
+REFERENCE           NAME_ALERT
+LANG_ENGLISH        "Name Alert"
+LANG_SPANISH        "Aviso de nombre"
+
+REFERENCE           A_CHAT_LINE_WITH_YOUR_NAME_IS_MARKED
+LANG_ENGLISH        "A chat line with your name is marked gold. More words with tay_notifyWords in the console."
+LANG_SPANISH        "Una línea del chat con tu nombre se marca en dorado. Más palabras con tay_notifyWords en la consola."
+
+REFERENCE           MARKED
+LANG_ENGLISH        "Marked"
+LANG_SPANISH        "Marcada"
+
+REFERENCE           MARKED_AND_SOUND
+LANG_ENGLISH        "Marked and Sound"
+LANG_SPANISH        "Marcada con sonido"
 
 REFERENCE           CONSOLE_CLOCK
 LANG_ENGLISH        "Console Clock"

@@ -741,6 +741,46 @@ REFERENCE           HOW_CLEARLY_THE_NAME_OF_THE_PLAYER_U
 LANG_ENGLISH        "How clearly the name of the player under the crosshair shows."
 LANG_FRENCH         "La netteté du nom du joueur sous le réticule."
 
+REFERENCE           SCOREBOARD_CLOCK
+LANG_ENGLISH        "Scoreboard Clock"
+LANG_FRENCH         "Horloge du tableau des scores"
+
+REFERENCE           THE_TIME_OF_DAY_ON_THE_SCOREBOARD
+LANG_ENGLISH        "The time of day on the scoreboard."
+LANG_FRENCH         "L'heure sur le tableau des scores."
+
+REFERENCE           TIMER_MILLISECONDS
+LANG_ENGLISH        "Timer Milliseconds"
+LANG_FRENCH         "Chrono en millisecondes"
+
+REFERENCE           THE_TIMER_OF_THE_LEVEL_WITH_MILLISEC
+LANG_ENGLISH        "The timer of the level with milliseconds."
+LANG_FRENCH         "Le chrono du niveau avec les millisecondes."
+
+REFERENCE           TIMER_COUNTS_DOWN
+LANG_ENGLISH        "Timer Counts Down"
+LANG_FRENCH         "Chrono à rebours"
+
+REFERENCE           THE_TIMER_SHOWS_WHAT_IS_LEFT_OF_THE
+LANG_ENGLISH        "The timer shows what is left of the time limit, if there is one."
+LANG_FRENCH         "Le chrono affiche ce qui reste de la limite de temps, s'il y en a une."
+
+REFERENCE           HIT_SOUNDS
+LANG_ENGLISH        "Hit Sounds"
+LANG_FRENCH         "Son des touches"
+
+REFERENCE           A_SHORT_TICK_WHEN_YOUR_SHOTS_OR_YOUR
+LANG_ENGLISH        "A short tick when your shots or your blade hit someone."
+LANG_FRENCH         "Un petit tic quand vos tirs ou votre lame touchent quelqu'un."
+
+REFERENCE           KILL_SOUND
+LANG_ENGLISH        "Kill Sound"
+LANG_FRENCH         "Son des éliminations"
+
+REFERENCE           TWO_NOTES_WHEN_YOU_KILL_SOMEONE
+LANG_ENGLISH        "Two notes when you kill someone."
+LANG_FRENCH         "Deux notes quand vous éliminez quelqu'un."
+
 REFERENCE           MOVEMENT
 LANG_ENGLISH        "Movement"
 LANG_FRENCH         "Mouvement"
@@ -792,6 +832,30 @@ LANG_FRENCH         "La mienne"
 REFERENCE           EVERYBODY
 LANG_ENGLISH        "Everybody"
 LANG_FRENCH         "Tout le monde"
+
+REFERENCE           MOVEMENT_KEYS
+LANG_ENGLISH        "Movement Keys"
+LANG_FRENCH         "Touches de déplacement"
+
+REFERENCE           THE_KEYS_YOU_MOVE_WITH_ON_THE_SCREEN
+LANG_ENGLISH        "The keys you move with on the screen, lit while held."
+LANG_FRENCH         "Les touches de déplacement à l'écran, allumées tant qu'elles sont enfoncées."
+
+REFERENCE           START_GOAL
+LANG_ENGLISH        "Start Goal"
+LANG_FRENCH         "Objectif de départ"
+
+REFERENCE           THE_SPEEDOMETER_TURNS_GOLD_FROM_THIS
+LANG_ENGLISH        "The speedometer turns gold from this speed on. 0: off."
+LANG_FRENCH         "Le compteur devient doré à partir de cette vitesse. 0 : désactivé."
+
+REFERENCE           JUMP_GOAL
+LANG_ENGLISH        "Jump Goal"
+LANG_FRENCH         "Objectif de saut"
+
+REFERENCE           JUMPS_AT_LEAST_THIS_FAST_ARE_GOLD_IN
+LANG_ENGLISH        "Jumps at least this fast are gold in the list of jumps. 0: off."
+LANG_FRENCH         "Les sauts au moins aussi rapides sont dorés dans la liste des sauts. 0 : désactivé."
 
 REFERENCE           HATS_AND_CAPES
 LANG_ENGLISH        "Hats and Capes"
@@ -1025,6 +1089,70 @@ REFERENCE           SPIRAL
 LANG_ENGLISH        "Spiral"
 LANG_FRENCH         "Spirale"
 
+REFERENCE           SMOOTH_CAMERA
+LANG_ENGLISH        "Smooth Camera"
+LANG_FRENCH         "Caméra régulière"
+
+REFERENCE           THE_CAMERA_BEHIND_YOU_FOLLOWS_THE_SA
+LANG_ENGLISH        "The camera behind you follows the same at every frame rate. It trails a little further behind."
+LANG_FRENCH         "La caméra derrière vous suit de la même façon à toute fréquence d'images. Elle traîne un peu plus loin derrière."
+
+REFERENCE           VULKAN_RENDERER
+LANG_ENGLISH        "Vulkan Renderer"
+LANG_FRENCH         "Rendu Vulkan"
+
+REFERENCE           BLOOM
+LANG_ENGLISH        "Bloom"
+LANG_FRENCH         "#same"
+
+REFERENCE           BRIGHT_PARTS_OF_THE_LEVEL_SHINE_OVER
+LANG_ENGLISH        "Bright parts of the level shine over their surroundings. Vulkan renderer only."
+LANG_FRENCH         "Les parties claires du niveau rayonnent sur leurs alentours. Moteur de rendu Vulkan seulement."
+
+REFERENCE           BLOOM_STRENGTH
+LANG_ENGLISH        "Bloom Strength"
+LANG_FRENCH         "Intensité du bloom"
+
+REFERENCE           HOW_STRONGLY_THE_BRIGHT_PARTS_SHINE
+LANG_ENGLISH        "How strongly the bright parts shine."
+LANG_FRENCH         "La force du rayonnement des parties claires."
+
+REFERENCE           BLOOM_THRESHOLD
+LANG_ENGLISH        "Bloom Threshold"
+LANG_FRENCH         "Seuil du bloom"
+
+REFERENCE           HOW_BRIGHT_A_PART_HAS_TO_BE_TO_SHINE
+LANG_ENGLISH        "How bright a part has to be to shine."
+LANG_FRENCH         "La luminosité nécessaire pour qu'une partie rayonne."
+
+REFERENCE           RENDER_SCALE
+LANG_ENGLISH        "Render Scale"
+LANG_FRENCH         "Échelle de rendu"
+
+REFERENCE           THE_SIZE_THE_LEVEL_IS_DRAWN_AT_THE_H
+LANG_ENGLISH        "The size the level is drawn at, the HUD stays sharp. Vulkan renderer only, counts after a video restart."
+LANG_FRENCH         "La taille à laquelle le niveau est dessiné, le HUD reste net. Moteur de rendu Vulkan seulement, prend effet après un redémarrage vidéo."
+
+REFERENCE           HALF
+LANG_ENGLISH        "Half"
+LANG_FRENCH         "Moitié"
+
+REFERENCE           THREE_QUARTERS
+LANG_ENGLISH        "Three Quarters"
+LANG_FRENCH         "Trois quarts"
+
+REFERENCE           FULL
+LANG_ENGLISH        "Full"
+LANG_FRENCH         "Pleine"
+
+REFERENCE           ONE_AND_A_HALF
+LANG_ENGLISH        "One and a Half"
+LANG_FRENCH         "Une fois et demie"
+
+REFERENCE           DOUBLE
+LANG_ENGLISH        "Double"
+LANG_FRENCH         "#same"
+
 REFERENCE           CHAT_AND_CONSOLE
 LANG_ENGLISH        "Chat and Console"
 LANG_FRENCH         "Chat et console"
@@ -1044,6 +1172,22 @@ LANG_FRENCH         "Journal du chat"
 REFERENCE           EVERY_CHAT_LINE_IS_WRITTEN_INTO_THE
 LANG_ENGLISH        "Every chat line is written into the folder chatlogs, with the time."
 LANG_FRENCH         "Chaque ligne du chat est écrite dans le dossier chatlogs, avec l'heure."
+
+REFERENCE           NAME_ALERT
+LANG_ENGLISH        "Name Alert"
+LANG_FRENCH         "Alerte de nom"
+
+REFERENCE           A_CHAT_LINE_WITH_YOUR_NAME_IS_MARKED
+LANG_ENGLISH        "A chat line with your name is marked gold. More words with tay_notifyWords in the console."
+LANG_FRENCH         "Une ligne du chat avec votre nom est marquée en doré. D'autres mots avec tay_notifyWords dans la console."
+
+REFERENCE           MARKED
+LANG_ENGLISH        "Marked"
+LANG_FRENCH         "Marquée"
+
+REFERENCE           MARKED_AND_SOUND
+LANG_ENGLISH        "Marked and Sound"
+LANG_FRENCH         "Marquée avec son"
 
 REFERENCE           CONSOLE_CLOCK
 LANG_ENGLISH        "Console Clock"
