@@ -27,6 +27,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // - tay_snapHud: the zones of the angle in which the rounding of the velocity at the end of every move (the
 //   SnapVector at the end of PmoveSingle) gives a little more speed, alternating colours
 // - tay_pitchHud: a mark at the pitch tay_pitchHudAngle
+// - tay_movementKeys: the keys of moving that are held, as jaPRO and TaystJK draw them (cg_movementKeys)
+// - tay_startGoal, tay_jumpGoal: the speed and the speeds of the jumps in gold once they reach these
 // The angles of the bars are where the view has to point: the middle of the screen is where it points now.
 
 #include "cgame/cg_local.h"
@@ -263,8 +265,12 @@ static void MoveHud_Speedometer( const playerState_t *ps ) {
 	char		jumps[128];
 	int			i;
 
-	// faster than walking is green, much faster is gold
-	if ( v > ps->speed * 1.6f ) {
+	// faster than walking is green, much faster is gold; with tay_startGoal gold from that speed on
+	if ( tay_startGoal.integer > 0 ) {
+		if ( v >= tay_startGoal.value ) {
+			VectorSet( color, 1.0f, 0.8f, 0.2f );
+		}
+	} else if ( v > ps->speed * 1.6f ) {
 		VectorSet( color, 1.0f, 0.8f, 0.2f );
 	} else if ( v > ps->speed * 1.05f ) {
 		VectorSet( color, 0.4f, 1.0f, 0.5f );
@@ -275,12 +281,83 @@ static void MoveHud_Speedometer( const playerState_t *ps ) {
 	if ( tay_speedometerJumps.integer > 0 && moveHud.numJumps ) {
 		jumps[0] = '\0';
 		for ( i = 0; i < moveHud.numJumps && i < tay_speedometerJumps.integer; i++ ) {
-			Q_strcat( jumps, sizeof( jumps ), va( i ? "  %i" : "%i", moveHud.jumps[i] ) );
+			// tay_jumpGoal: a jump that reached it in gold
+			const char *mark = ( tay_jumpGoal.integer > 0 && moveHud.jumps[i] >= tay_jumpGoal.integer ) ? S_COLOR_YELLOW : S_COLOR_WHITE;
+
+			Q_strcat( jumps, sizeof( jumps ), va( i ? "  %s%i" : "%s%i", mark, moveHud.jumps[i] ) );
 		}
 		VectorSet( color, 0.8f, 0.85f, 0.9f );
 		CG_Text_Paint( x - CG_Text_Width( jumps, 0.55f * size, FONT_SMALL ) * 0.5f, y + 14.0f * size, 0.55f * size,
 			color, jumps, 0, 0, ITEM_TEXTSTYLE_SHADOWED, FONT_SMALL );
 	}
+}
+
+// One key of tay_movementKeys: lit while it is held
+static void MoveHud_Key( float x, float y, float w, float h, const char *label, qboolean held ) {
+	const vec4_t	litFill = { 0.43f, 0.83f, 1.0f, 0.75f }, dimFill = { 0.0f, 0.0f, 0.0f, 0.35f };
+	const vec4_t	edge = { 1.0f, 1.0f, 1.0f, 0.35f };
+	const vec4_t	litText = { 0.02f, 0.06f, 0.1f, 1.0f }, dimText = { 1.0f, 1.0f, 1.0f, 0.55f };
+	const float		scale = h / 34.0f;
+	vec4_t			text;
+
+	VectorCopy4( held ? litText : dimText, text );
+	CG_FillRect( x, y, w, h, held ? litFill : dimFill );
+	CG_DrawRect( x, y, w, h, 1.0f, edge );
+	CG_Text_Paint( x + ( w - CG_Text_Width( label, scale, FONT_SMALL ) ) * 0.5f, y + ( h - CG_Text_Height( label, scale, FONT_SMALL ) ) * 0.5f - 1.0f,
+		scale, text, label, 0, 0, ITEM_TEXTSTYLE_NORMAL, FONT_SMALL );
+}
+
+/*
+=================
+MoveHud_MovementKeys
+
+Crouch, forward and jump above, left, back and right below. The own keys from the last command; for someone who
+is followed what the server says: the direction of his last move (movementDir, 0 forward, counted to the left
+in eighths) while he moves, ducked, and the jump held.
+=================
+*/
+static void MoveHud_MovementKeys( const playerState_t *ps ) {
+	const float	size = Com_Clamp( 0.5f, 2.0f, tay_movementKeysSize.value );
+	const float	k = 16.0f * size, gap = 2.0f * size;
+	const float	x = SCREEN_WIDTH * 0.5f - 1.5f * k - gap + tay_movementKeysX.value;
+	const float	y = SCREEN_HEIGHT * 0.5f + 70.0f + tay_movementKeysY.value;
+	qboolean	forward = qfalse, back = qfalse, left = qfalse, right = qfalse, jump = qfalse, crouch = qfalse;
+	usercmd_t	cmd;
+
+	if ( ps->clientNum == cg.clientNum && !cg.demoPlayback ) {
+		if ( !trap->GetUserCmd( trap->GetCurrentCmdNumber(), &cmd ) ) {
+			return;
+		}
+		forward = (qboolean)( cmd.forwardmove > 0 );
+		back = (qboolean)( cmd.forwardmove < 0 );
+		left = (qboolean)( cmd.rightmove < 0 );
+		right = (qboolean)( cmd.rightmove > 0 );
+		jump = (qboolean)( cmd.upmove > 0 );
+		crouch = (qboolean)( cmd.upmove < 0 );
+	} else {
+		static const qboolean dirs[8][4] = {	// forward, left, back, right for movementDir 0 to 7
+			{ qtrue, qfalse, qfalse, qfalse }, { qtrue, qtrue, qfalse, qfalse }, { qfalse, qtrue, qfalse, qfalse },
+			{ qfalse, qtrue, qtrue, qfalse }, { qfalse, qfalse, qtrue, qfalse }, { qfalse, qfalse, qtrue, qtrue },
+			{ qfalse, qfalse, qfalse, qtrue }, { qtrue, qfalse, qfalse, qtrue } };
+
+		if ( ps->velocity[0] * ps->velocity[0] + ps->velocity[1] * ps->velocity[1] > 100.0f ) {
+			const int d = ps->movementDir & 7;
+
+			forward = dirs[d][0];
+			left = dirs[d][1];
+			back = dirs[d][2];
+			right = dirs[d][3];
+		}
+		jump = (qboolean)( ( ps->pm_flags & PMF_JUMP_HELD ) != 0 );
+		crouch = (qboolean)( ( ps->pm_flags & PMF_DUCKED ) != 0 );
+	}
+
+	MoveHud_Key( x, y, k, k, "C", crouch );
+	MoveHud_Key( x + k + gap, y, k, k, "W", forward );
+	MoveHud_Key( x + 2.0f * ( k + gap ), y, k, k, "J", jump );
+	MoveHud_Key( x, y + k + gap, k, k, "A", left );
+	MoveHud_Key( x + k + gap, y + k + gap, k, k, "S", back );
+	MoveHud_Key( x + 2.0f * ( k + gap ), y + k + gap, k, k, "D", right );
 }
 
 /*
@@ -296,7 +373,7 @@ void CG_MoveHudDraw( void ) {
 	float				keyYaw = 0.0f, s = ps->speed;
 	qboolean			keys;
 
-	if ( !tay_speedometer.integer && !tay_strafeHelper.integer && !tay_snapHud.integer && !tay_pitchHud.integer ) {
+	if ( !tay_speedometer.integer && !tay_strafeHelper.integer && !tay_snapHud.integer && !tay_pitchHud.integer && !tay_movementKeys.integer ) {
 		return;
 	}
 	if ( !cg.snap || cg.snap->ps.pm_type == PM_INTERMISSION || ps->stats[STAT_HEALTH] <= 0 ) {
@@ -328,6 +405,9 @@ void CG_MoveHudDraw( void ) {
 	}
 	if ( tay_speedometer.integer ) {
 		MoveHud_Speedometer( ps );
+	}
+	if ( tay_movementKeys.integer ) {
+		MoveHud_MovementKeys( ps );
 	}
 
 	if ( cg.time != moveHud.lastTime ) {

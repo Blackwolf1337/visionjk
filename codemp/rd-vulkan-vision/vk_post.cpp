@@ -35,8 +35,19 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 void VK_InitPost( void ) {
 	const int width = Com_Clampi( 16, vk.width, r_DynamicGlowWidth->integer );
 	const int height = Com_Clampi( 16, vk.height, r_DynamicGlowHeight->integer );
+	// tay_renderScale: the views of the level in a size of their own (vk_frame.cpp)
+	const float scale = Com_Clamp( 0.5f, 2.0f, tay_renderScale->value );
 
+	vk.inScene = qfalse;
+	vk.sceneWidth = vk.sceneHeight = 0;
+	if ( scale != 1.0f ) {
+		vk.sceneWidth = Q_max( 1, (int)( vk.width * scale + 0.5f ) );
+		vk.sceneHeight = Q_max( 1, (int)( vk.height * scale + 0.5f ) );
+	}
 	VK_CreatePostTargets( width, height );
+	if ( vk.sceneWidth && !VK_CreateSceneTargets( vk.sceneWidth, vk.sceneHeight ) ) {
+		vk.sceneWidth = vk.sceneHeight = 0;
+	}
 	vk.screenSlot = -1;
 }
 
@@ -91,7 +102,7 @@ void VK_EndGlow( void ) {
 		// show the glow alone
 		const float black[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
 
-		VK_ClearColor( 0, 0, vk.width, vk.height, black );
+		VK_ClearColor( 0, 0, glConfig.vidWidth, glConfig.vidHeight, black );
 	}
 	VK_AddTarget( source, r_DynamicGlowSoft->integer ? VKA_ADD_SOFT : VKA_ADD );
 
@@ -159,9 +170,56 @@ void VK_BlurFrame( float amount, float focus ) {
 	} else {
 		// back to the frame, which is the soft picture from here on
 		VK_BeginTarget( &vk.color, &vk.depth, 2, qtrue );
-		VK_ClearColor( 0, 0, vk.width, vk.height, black );
+		VK_ClearColor( 0, 0, glConfig.vidWidth, glConfig.vidHeight, black );
 		VK_AddTarget( source, VKA_ADD );
 	}
+
+	// the shaders that draw geometry have other sets and other state
+	VK_BindFrameSets();
+	vk.stateValid = qfalse;
+	VK_SetViewport( vk.viewport[0], vk.viewport[1], vk.viewport[2], vk.viewport[3], 0.0f, 1.0f );
+}
+
+/*
+===============
+VK_Bloom
+
+tay_bloom, what the Vulkan renderer of TaystJK has (r_bloom of Quake3e): what is brighter than tay_bloomThreshold
+shines over its surroundings. The first pass takes only the part above the threshold into vk.soft, the buffers of
+the menu blur at half the size of the frame, the passes after it widen that, the last one weighs it by
+tay_bloomIntensity, and it is added to the frame. For the view of the level only, before the menu blur and the 2D.
+
+The frame holds the colors before the gamma pass, which multiplies them by the overbright factor: the threshold
+is of white on the screen, so it is divided by that.
+===============
+*/
+#define BLOOM_PASSES	5
+
+void VK_Bloom( void ) {
+	const float	threshold = Com_Clamp( 0.0f, 0.95f, tay_bloomThreshold->value ) / (float)( 1 << tr.overbrightBits );
+	const float	intensity = Com_Clamp( 0.0f, 2.0f, tay_bloomIntensity->value );
+	vkTarget_t	*source = &vk.color;
+
+	if ( !vk.frame || !tay_bloom->integer || intensity <= 0.0f ) {
+		return;
+	}
+	VK_EndTarget();
+
+	for ( int i = 0; i <= BLOOM_PASSES; i++ ) {
+		vkTarget_t *target = &vk.soft[i & 1];
+		// in pixels of the source: the first pass takes the four pixels behind one of the half size, the others
+		// reach a pixel and a half further each, about 36 pixels of the frame in all
+		const float offset = i ? 1.5f * i - 1.0f : 0.5f;
+		const float parm[4] = { offset / source->width, offset / source->height, i == BLOOM_PASSES ? 0.25f * intensity : 0.25f,
+			i ? 0.0f : Q_max( threshold, 0.001f ) };
+
+		VK_BlurPass( source, target, parm );
+
+		source = target;
+	}
+
+	VK_BeginTarget( &vk.color, &vk.depth, 2, qtrue );
+	VK_AddTarget( source, VKA_ADD );
 
 	// the shaders that draw geometry have other sets and other state
 	VK_BindFrameSets();
@@ -267,6 +325,7 @@ qboolean VK_FlareVisible( const float *point, int x, int y, float eyeZ ) {
 		vkProbe_t *probe = &frame->probe[frame->numProbes++];
 
 		probe->flare = (int)( flare - vk_flares );
+		VK_ScenePoint( &x, &y );
 		probe->x = Com_Clampi( 0, vk.width - 1, x );
 		probe->y = Com_Clampi( 0, vk.height - 1, vk.height - 1 - y );
 		probe->eyeZ = eyeZ;

@@ -122,10 +122,11 @@ static void VK_CreateLayouts( void ) {
 	sizes[1].descriptorCount = VK_FRAMES * 3;
 	sizes[2].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 	// the table of the textures, and one each for the frame, the glow, its two blur buffers, the two of v_menuBlur
-	// and the depth
-	sizes[2].descriptorCount = VK_MAX_IMAGES + 7;
+	// and the depth, and for the frame (twice), the glow and the depth of the views of the level in their own size
+	// (tay_renderScale)
+	sizes[2].descriptorCount = VK_MAX_IMAGES + 11;
 	pool.flags = VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT;
-	pool.maxSets = VK_FRAMES + 8;
+	pool.maxSets = VK_FRAMES + 12;
 	pool.poolSizeCount = 3;
 	pool.pPoolSizes = sizes;
 	VK_CHECK( qvkCreateDescriptorPool( vk.device, &pool, NULL, &vk.descriptorPool ) );
@@ -394,6 +395,7 @@ void VK_InitPipelines( void ) {
 	vk.glowPipelines[0] = VK_CreatePipeline( vk.postVertexShader, vk.copyFragmentShader, GLS_SRCBLEND_ONE | GLS_DSTBLEND_ONE, 2, qfalse );
 	vk.glowPipelines[1] = VK_CreatePipeline( vk.postVertexShader, vk.copyFragmentShader, GLS_SRCBLEND_ONE | GLS_DSTBLEND_ONE_MINUS_SRC_COLOR, 2, qfalse );
 	vk.glowPipelines[2] = VK_CreatePipeline( vk.postVertexShader, vk.copyFragmentShader, GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA, 2, qfalse );
+	vk.scenePipeline = VK_CreatePipeline( vk.postVertexShader, vk.copyFragmentShader, 0, 2, qfalse );
 	vk.focusFragmentShader = VK_CreateShader( vk_focusFrag, sizeof( vk_focusFrag ) );
 	vk.focusPipeline = VK_CreatePipeline( vk.postVertexShader, vk.focusFragmentShader, 0, 3, qfalse );
 }
@@ -409,6 +411,7 @@ void VK_ShutdownPipelines( void ) {
 	qvkDestroyPipeline( vk.device, vk.glowPipelines[0], NULL );
 	qvkDestroyPipeline( vk.device, vk.glowPipelines[1], NULL );
 	qvkDestroyPipeline( vk.device, vk.glowPipelines[2], NULL );
+	qvkDestroyPipeline( vk.device, vk.scenePipeline, NULL );
 	qvkDestroyPipeline( vk.device, vk.focusPipeline, NULL );
 	qvkDestroyShaderModule( vk.device, vk.focusFragmentShader, NULL );
 	qvkDestroyShaderModule( vk.device, vk.blurFragmentShader, NULL );

@@ -42,7 +42,7 @@ static const vkSize_t	vk_streamStride[4] = { sizeof( vec4_t ), sizeof( vec4_t ),
 static const vkSize_t	vk_streamOffset[4] = { 0, VK_STREAM_VERTEXES * sizeof( vec4_t ), VK_STREAM_VERTEXES * sizeof( vec4_t ) * 2,
 	VK_STREAM_VERTEXES * ( sizeof( vec4_t ) * 2 + sizeof( vec2_t ) * NUM_TEX_COORDS ) };
 
-// x, y, width, height in the coordinates of OpenGL: y counts from the lower edge
+// x, y, width, height in the coordinates of OpenGL: y counts from the lower edge, in pixels of the window
 void VK_SetViewport( int x, int y, int width, int height, float minDepth, float maxDepth ) {
 	if ( !vk.frame ) {
 		return;
@@ -51,7 +51,132 @@ void VK_SetViewport( int x, int y, int width, int height, float minDepth, float 
 	vk.viewport[1] = y;
 	vk.viewport[2] = width;
 	vk.viewport[3] = height;
+	if ( vk.inScene && width > 0 && height > 0 ) {
+		// what of the window the views of the level cover, that is copied into it
+		int *r = vk.sceneRect;
+
+		if ( r[2] <= 0 || r[3] <= 0 ) {
+			r[0] = x;
+			r[1] = y;
+			r[2] = width;
+			r[3] = height;
+		} else {
+			const int right = Q_max( r[0] + r[2], x + width ), up = Q_max( r[1] + r[3], y + height );
+
+			r[0] = Q_min( r[0], x );
+			r[1] = Q_min( r[1], y );
+			r[2] = right - r[0];
+			r[3] = up - r[1];
+		}
+	}
 	VK_ViewportAndScissor( x, y, width, height, minDepth, maxDepth );
+}
+
+/*
+===============================================================================
+
+RENDER SCALE
+
+tay_renderScale (2026-10-19), what the Vulkan renderer of TaystJK has as r_renderScale, here for the level alone:
+its views are drawn into targets of their own size (VK_CreateSceneTargets), smaller for a weak device, larger
+for a smoother picture, and copied into the frame with a filter before the 2D, which stays sharp in the size of
+the window. The targets are traded in for color, depth and glow (VK_SwapSceneTargets), so every pass of the
+scene (glow, bloom, refraction, flares, menu blur) draws into and reads them as it does the ones of the window.
+The callers keep speaking pixels of the window: viewports, scissors, clears, the points of flares and the square
+of refraction are scaled on their way to the device.
+
+===============================================================================
+*/
+
+// pixels of the window into pixels of the target drawn into, edges rounded so neighbouring rectangles still meet
+void VK_SceneRect( int *x, int *y, int *width, int *height ) {
+	if ( vk.inScene ) {
+		const float sx = (float)vk.width / (float)vk.sceneWidth, sy = (float)vk.height / (float)vk.sceneHeight;
+		const int left = (int)( *x * sx + 0.5f ), right = (int)( ( *x + *width ) * sx + 0.5f );
+		const int bottom = (int)( *y * sy + 0.5f ), top = (int)( ( *y + *height ) * sy + 0.5f );
+
+		*x = left;
+		*y = bottom;
+		*width = right - left;
+		*height = top - bottom;
+	}
+}
+
+void VK_ScenePoint( int *x, int *y ) {
+	if ( vk.inScene ) {
+		*x = (int)( *x * (float)vk.width / (float)vk.sceneWidth );
+		*y = (int)( *y * (float)vk.height / (float)vk.sceneHeight );
+	}
+}
+
+// a rectangle as OpenGL counts it, cut to a target of that size
+static void VK_CutRect( int *r, int width, int height ) {
+	const int right = Q_min( r[0] + r[2], width ), up = Q_min( r[1] + r[3], height );
+
+	r[0] = Q_max( r[0], 0 );
+	r[1] = Q_max( r[1], 0 );
+	r[2] = right - r[0];
+	r[3] = up - r[1];
+}
+
+static void VK_TradeSceneSize( void ) {
+	int t;
+
+	t = vk.width; vk.width = vk.sceneWidth; vk.sceneWidth = t;
+	t = vk.height; vk.height = vk.sceneHeight; vk.sceneHeight = t;
+}
+
+/*
+===============
+VK_EnterScene
+
+A view of the level begins: from now on into the targets of its size, if tay_renderScale gave it any
+===============
+*/
+void VK_EnterScene( void ) {
+	if ( !vk.frame || vk.inScene || !vk.sceneWidth ) {
+		return;
+	}
+	VK_EndTarget();
+	VK_SwapSceneTargets();
+	VK_TradeSceneSize();
+	vk.inScene = qtrue;
+	vk.sceneRect[2] = vk.sceneRect[3] = 0;
+	VK_BeginTarget( &vk.color, &vk.depth, 2, qtrue );
+	VK_BindFrameSets();
+	vk.stateValid = qfalse;
+	// the view sets its own viewport, this one is only not to be left over from the other size
+	VK_ViewportAndScissor( vk.viewport[0], vk.viewport[1], vk.viewport[2], vk.viewport[3], 0.0f, 1.0f );
+}
+
+/*
+===============
+VK_LeaveScene
+
+The 2D, a model of the HUD or the end of the frame: what the views of the level covered is copied into the frame,
+and drawing goes on in it
+===============
+*/
+void VK_LeaveScene( void ) {
+	int to[4];
+
+	if ( !vk.inScene ) {
+		return;
+	}
+	VK_EndTarget();
+	VK_SwapSceneTargets();
+	VK_TradeSceneSize();
+	vk.inScene = qfalse;
+	memcpy( to, vk.sceneRect, sizeof( to ) );
+	VK_CutRect( to, vk.width, vk.height );
+	if ( to[2] > 0 && to[3] > 0 ) {
+		VK_DrawScene( to );
+	} else {
+		VK_BeginTarget( &vk.color, &vk.depth, 2, qtrue );
+	}
+	VK_BindFrameSets();
+	vk.stateValid = qfalse;
+	VK_ViewportAndScissor( vk.viewport[0], vk.viewport[1], vk.viewport[2], vk.viewport[3], 0.0f, 1.0f );
 }
 
 // glDepthRange: the part of the depth buffer the following draws land in
@@ -114,6 +239,7 @@ void VK_EndFrame( void ) {
 	if ( !frame ) {
 		return;
 	}
+	VK_LeaveScene();
 	VK_EndTarget();
 	vk.rendering = qfalse;
 	VK_PresentFrame( gamma );

@@ -289,6 +289,16 @@ void VK_CreatePostTargets( int blurWidth, int blurHeight ) {
 	}
 }
 
+// tay_renderScale is not for this device: a frame is written down and played at its end, and the targets the
+// commands name could not change their meaning in the middle of it. The level is drawn at the size of the window.
+qboolean VK_CreateSceneTargets( int width, int height ) {
+	ri.Printf( PRINT_WARNING, "tay_renderScale: not on the OpenGL ES device, the level is drawn at the size of the window\n" );
+	return qfalse;
+}
+
+void VK_SwapSceneTargets( void ) {
+}
+
 void VK_DestroyPostTargets( void ) {
 	VK_DestroyTarget( &vk.glow );
 	VK_DestroyTarget( &vk.screen );

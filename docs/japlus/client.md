@@ -396,14 +396,61 @@ done. The line to type in shows the codes as text. Checked in a hidden run: `:ka
 `:kappapride:` and the line it sent showed the picture (`clienttests/lvl_emoji_list.cfg`, with `v_cgKey <code> char`
 for the letters).
 
+### More of TaystJK (round 2)
+
+Taken over on 2026-10-19, after an in-depth comparison of TaystJK and this tree. Client only, unless said.
+
+| Cvar | Default | Meaning |
+|------|---------|---------|
+| `tay_notify` | 2 | a chat line of somebody else that holds the own name (3 letters at least) or a word of `tay_notifyWords`, colours and case aside, stands on a gold strip in the chat box, 1, and chimes too, 2 (TaystJK's `con_notifywords`). The sender's name in front of the line does not count, the own lines never do |
+| `tay_notifyWords` | empty | more words for it, separated by blanks or commas |
+| `tay_hitSounds` | 0 | a short tick when the own shots or blade hit someone (jaPRO's `cg_hitsounds`). The server counts the hits anyway (`PERS_HITS`), the game had the sound commented out |
+| `tay_killSound` | 0 | two notes when the own player kills someone else (jaPRO's `cg_killSounds`) |
+| `tay_scoreboardClock` | 0 | the time of day on the scoreboard (TaystJK's `cg_scoreboardTime`): after the level in the head of the new one, in the upper right corner of the old one |
+| `tay_timerMsec` | 0 | the timer of the level (`cg_drawTimer 1`) with milliseconds |
+| `tay_timerCountdown` | 0 | the timer shows what is left of the time limit, when the server has one |
+| `tay_movementKeys` | 0 | the keys of moving on the screen, crouch, forward and jump above, left, back and right below, lit while held (jaPRO's and TaystJK's `cg_movementKeys`). For a followed player what the server says: the direction of his last move while he moves, ducked, jump held |
+| `tay_movementKeysSize`, `tay_movementKeysX`, `tay_movementKeysY` | 1, 0, 0 | its size and place |
+| `tay_startGoal` | 0 | the speedometer is gold from this speed on, in the place of its own colours (TaystJK's `cg_startGoal`) |
+| `tay_jumpGoal` | 0 | a jump at least this fast is gold in the list of jumps (TaystJK's `cg_jumpGoal`) |
+| `tay_specHud` | 0 | while one watches (spectator or following), a map of the players around at the upper right in the place of the enemy info, in the picture of the radar of siege (TaystJK's `cg_specHud`, `hud/cg_spechud.c`): every player the snapshot has as an arrow turned the way he looks, red and blue by team, white without teams, larger when higher, smaller when lower; the edge is 1500 units away, farther ones stay at it. TaystJK's own map leaves the distance out (its line is commented out) and puts everybody in the middle |
+| `tay_specHudScale` | 1 | its size, 0.5 to 2 |
+| `tay_leadIndicator` | 0 | with a weapon whose shot flies (bryar, blaster, bowcaster, repeater, DEMP2, flechette, rocket, concussion), a dotted red line from every moving opponent in sight to where a shot fired now would meet him, and a mark there (jaPRO's `cg_leadIndicator`, `hud/cg_lead.c`). The speeds are the game module's. Not for team mates or players of the other JA+ dimension, whom shots pass through. The flight is worked out twice to the point it aims at; the alt fire of the repeater falls, so its mark is raised. On a server of this tree only the flight counts, since the server starts a missile as far along as the shooter's lag (`tay_unlagged` 2); elsewhere the own ping is added, as jaPRO does. 2: the ping is added everywhere. Many players count this as an aim aid, and no server of this tree can forbid it yet |
+
+The three sounds (`sound/tay/hit.wav`, `kill.wav`, `notify.wav`) are tones made by `tools/sounds/make_tay_sounds.py`,
+so no audio of anybody else ships. Nobody has listened to them yet.
+
+Deaths on the scoreboard, which TaystJK has as `cg_scoreDeaths`, need nothing new: the scoreboards show score/deaths on
+JA+ servers from 2.1 on, and the server of this tree is one.
+
+The camera behind the player: `cg_smoothCamera` (OpenJK, default 0) has a row now. The damping of the camera
+(`cg_view.c`) takes the time of a frame in steps of 50 ms through `Q_powf`, whose exponent is a whole number: above
+20 frames a second it is 0, so every frame moves the camera the same part of the way, and it follows four times
+as fast at 250 frames a second as at 60. Worked out for a running player (300 units a second, damping 0.3): 11.7
+units behind at 60 frames, 5.6 at 125, 2.8 at 250; with `cg_smoothCamera 1`, which takes the real power, 39.6,
+40.9 and 41.5. The default stays 0, since 1 makes the camera hang much further back than players know it. That is
+what TaystJK's `cg_cameraFPS` is about too.
+
+The spectator map and the lead indicator were checked with the same script and two other client scripts
+(`A=lvl_lead_a.cfg B=lvl_lead_b.cfg`): the second client strafes left and right 400 units in front of the first, who
+aims the rocket launcher (the dotted line ran from him to a mark on the side he ran to) and then watches him as a
+spectator (his arrow ahead of the middle of the map, turned towards the spectator).
+
+Checked in hidden runs on 2026-10-19 (`agent/japlus_port/tools/tay2test.sh`, a dedicated server and two clients):
+the timer counting down with milliseconds, forward and left lit while held, the speed gold over a start goal of
+200, the two lines of the second client that named the first one on the gold strip, the clock on the scoreboard.
+The click pass of the new rows set every cvar (`clienttests/ui_tay2_rows.cfg`).
+
 ### The tab TaystJK
 
 Everything that came from TaystJK has a name that begins with `tay_` (cvars and commands, also the commands
 `tay_look` between client and server) and its rows in Setup, tab TaystJK (2026-10-17, `tools/menus/options.py`,
-texts in four languages): HUD (Killfeed, Team Overlay Size, Crosshair Colour, Name Opacity), Movement
-(Speedometer, Strafe Helper, Snap HUD, Pitch HUD, Strafe Trails), Hats and Capes (Hat, Cape, Show Them, Seasonal
-Hats), Looks (Enemy Model, Ally Model, Saber Team Colours, Two-Coloured Staff, Jedi Outcast Shots, Disruptor Beam)
-and Chat and Console (Chat Emoji, Chat Log, Console Clock). The binds with modifiers, word delete, `.oshader` and
+texts in four languages): HUD (Killfeed, Team Overlay Size, Crosshair Colour, Name Opacity, Scoreboard Clock,
+Timer Milliseconds, Timer Counts Down, Hit Sounds, Kill Sound, Spectator Map, Lead Indicator), Movement (Speedometer, Strafe Helper, Snap HUD,
+Pitch HUD, Strafe Trails, Movement Keys, Start Goal, Jump Goal), Hats and Capes (Hat, Cape, Show Them, Seasonal
+Hats), Looks (Enemy Model, Ally Model, Saber Team Colours, Two-Coloured Staff, Jedi Outcast Shots, Disruptor Beam,
+Smooth Camera), Vulkan Renderer (Bloom, Bloom Strength, Bloom Threshold, Render Scale, see renderer.md) and Chat
+and Console (Chat Emoji, Chat Log, Name Alert, Console Clock). The binds with modifiers, word delete, `.oshader` and
 the 16:9 pictures have no cvar.
 
 For one evening the cvars began with `v_` and the script commands had TaystJK's names. `cvar_renames.h` has those

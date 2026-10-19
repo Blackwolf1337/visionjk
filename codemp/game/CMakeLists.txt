@@ -168,6 +168,14 @@ set(MPGameJaplusFiles
 source_group("game/japlus" FILES ${MPGameJaplusFiles})
 set(MPGameFiles ${MPGameFiles} ${MPGameJaplusFiles})
 
+# lag compensation of TaystJK's jaPRO
+set(MPGameUnlaggedFiles
+	"${MPDir}/game/unlagged/g_unlagged.c"
+	"${MPDir}/game/unlagged/g_unlagged.h"
+	)
+source_group("game/unlagged" FILES ${MPGameUnlaggedFiles})
+set(MPGameFiles ${MPGameFiles} ${MPGameUnlaggedFiles})
+
 # what stands above the head of a player: away, music
 set(MPGameStatusFiles
 	"${MPDir}/game/status/g_status.c"

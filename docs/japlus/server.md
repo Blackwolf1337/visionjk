@@ -181,6 +181,31 @@ What comes in on its port:
 2026-10-17 it was also the Vision Temple as a game server (`temple.cfg`, map `vision_temple`), which is
 removed. Not run with master.cfg yet.
 
+### Lag compensation (from TaystJK's jaPRO)
+
+`game/unlagged/g_unlagged.c`, built 2026-10-19. jaPRO has it as `g_unlagged`, which goes back to the Unlagged mod
+of Neil Toronto for Quake 3. A client draws the others where its snapshots put them, at the time its commands
+carry (`usercmd_t.serverTime`); its shot reaches the server later by its ping. The server keeps where every client
+was at the end of each of its last 32 frames (box, origin, the yaw the ghoul2 trace turns the model by), moves the
+others back to the shooter's time for the shot and puts them back afterwards. Nothing goes over the network, so
+stock and old clients get it too. Bots are not shifted for, sabers neither (as in jaPRO). The pose of a ghoul2
+model is the one of the present: the server poses it at `sv.time` for every trace.
+
+| Cvar | Default | |
+|------|---------|-|
+| `tay_unlagged` | `7` | bits: 1 hitscan (disruptor, concussion alt fire, stun baton, melee), 2 projectiles (a missile starts as far along as the shooter's lag, as in jaPRO, its first frame traces that stretch), 4 force push and pull |
+| `tay_unlaggedMax` | `200` | at most this many ms back |
+
+With `developer 1` every shot that shifted the others prints a line: how many ms back, how many players, how far
+the farthest moved, whether the shooter's hit count rose.
+
+Checked 2026-10-19 with `agent/japlus_port/tools/lagtest.sh`: a client 100 ms behind a UDP relay on the same
+machine (`lagproxy.py`) shoots the disruptor twenty times and pushes and pulls while a bot runs about on mp/ffa3.
+Every shot shifted the bot back by 115 to 141 ms (the relay and the client's interpolation) and by about 30 units,
+what it runs in that time; with `tay_unlagged 0` nothing was shifted. Not checked: that a shot aimed at what the
+client sees hits (the script can not aim), the projectiles (their start is not printed), real ping over the
+internet.
+
 ### Admin login without a password (not from JA+)
 
 `game/auth/g_auth.c` and `game/auth/bg_auth.c`, the client part is in [client.md](client.md). Since 2026-10-11.

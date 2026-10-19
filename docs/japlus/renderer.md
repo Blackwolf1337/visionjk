@@ -386,6 +386,51 @@ left in these views are the effects of the game (flames, smoke, light cones) and
   went from 1541 to 661 ms with it, a player who joins from a frame of 22 to 28 ms to one of 4 to 6.5.
   [loading.md](loading.md) has how that was measured and what the cache is named after.
 
+## Bloom (from TaystJK)
+
+`tay_bloom` (off by default), built 2026-10-19 after the Vulkan renderer of TaystJK (`r_bloom` of Quake3e). What is
+brighter than `tay_bloomThreshold` (0.5 of white on the screen) shines over its surroundings, as strongly as
+`tay_bloomIntensity` (0.6, up to 2). `VK_Bloom()` in `vk_post.cpp`, for the view of the level only (not a mirror,
+the sky of a portal or a model of the HUD), after the glow and before the menu blur and the 2D: the first pass of
+`shaders/blur.frag` takes only the part above the threshold into the buffers of the menu blur at half the size
+of the frame (`PARM.w`), five more passes widen it to about 36 pixels of the frame, the last one weighs it, and it
+is added to the frame. The threshold is divided by the overbright factor, since the frame holds the colors before
+the gamma pass. No pipeline of its own, so both devices have it. rd-vanilla has no bloom.
+
+Checked in pictures of two views of mp/ffa3: the defaults change the lit view by 0.6 of 255 on average (the
+lamps and the glowing pad get a halo), strength 1 with threshold 0.4 by 6 (the walls around the light shine).
+Not run on the OpenGL ES device (it is not built in this configuration), not under the validation layer (not
+installed on this machine).
+
+## Render scale (from TaystJK)
+
+`tay_renderScale` (1, 0.5 to 2, `vid_restart`), built 2026-10-19 after `r_renderScale` of TaystJK's Vulkan
+renderer, here for the level alone: its views are drawn in a size of their own, smaller for a weak device, larger
+for a smoother picture, and laid over the frame with a filter before the 2D, which stays sharp in the size of the
+window (`vk_frame.cpp`, "RENDER SCALE").
+
+- The device makes color, depth and glow targets of that size, with the formats and samples of the frame's, so
+  every pipeline fits both (`VK_CreateSceneTargets`). The first view with a world (`RB_DrawSurfs`, mirrors and the
+  sky of a portal included) trades them in for `vk.color`, `vk.depth`, `vk.glow`, their multisample targets and
+  their sets (`VK_EnterScene`, `VK_SwapSceneTargets`), so glow, bloom, refraction, flares and the menu blur draw
+  into and read them unchanged. The first 2D, a model of the HUD (`RDF_NOWORLDMODEL`) or the end of the frame
+  trades them back (`VK_LeaveScene`).
+- The scene goes into the frame by a pass and not a blit (`VK_DrawScene`): with several samples a pixel the frame
+  is in `vk.colorMS`, and the next pass would resolve that over a copy into `vk.color`. The pass lays the scene
+  over the whole window and the scissor keeps the rectangle the views covered.
+- The callers speak pixels of the window as before: viewports, scissors and clears (`VK_SceneRect` in
+  `VK_ViewportAndScissor` and `VK_ClearRect`), the points of flares, the square of refraction (whose copy lies in
+  the corner of `vk.screen`, which is as large as the larger of the two). `gfxinfo` names the size.
+- Not on the OpenGL ES device: it writes a frame down and plays it at its end, and the targets its commands name
+  could not change in the middle of it. `VK_CreateSceneTargets()` says no there and the level stays in the size
+  of the window. Not in rd-vanilla.
+
+Checked in pictures at 1280 x 720 on mp/ffa3: 0.5 (640 x 360, the level coarse and the HUD sharp), 2 (2560 x
+1440), 0.5 and 2 with four samples a pixel (the level was black until the pass took the place of a blit), the
+saber with its glow, the wave of a force push at 0.5 and at 1 (the same bend), the menu in the level with its
+blur. Four `vid_restart` between the sizes in one run. Not run under the validation layer (not installed on this
+machine), not on Windows.
+
 ## Not done
 
 The Windows DLL builds with mingw-w64 for 64 bit and imports nothing but the C runtime, kernel32 and

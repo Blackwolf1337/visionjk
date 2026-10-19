@@ -168,6 +168,10 @@ cvar_t	*r_marksOnTriangleMeshes;
 cvar_t	*r_aspectCorrectFonts;
 cvar_t	*v_2dAspect;
 cvar_t	*v_menuBlur;
+cvar_t	*tay_bloom;
+cvar_t	*tay_bloomIntensity;
+cvar_t	*tay_bloomThreshold;
+cvar_t	*tay_renderScale;
 
 // the limits apply to the sum of all scenes in a frame --
 // the main view, all the 3D icons, etc
@@ -1715,6 +1719,11 @@ void R_Register( void )
 	r_aspectCorrectFonts				= ri.Cvar_Get( "r_aspectCorrectFonts",				"0",						CVAR_ARCHIVE, "" );
 	// it had another name once (r_sceneBlur), with a pass that ended the game, see VK_PostSet()
 	v_menuBlur							= ri.Cvar_Get( "v_menuBlur",						"1",						CVAR_ARCHIVE, "How far the scene behind the menu in the level is out of focus (rd-vulkan-vision): 0 not at all, 1 normal, up to 4" );
+	// what the Vulkan renderer of TaystJK has and rd-vulkan-vision took from it (2026-10-19), rd-vanilla has neither
+	tay_bloom							= ri.Cvar_Get( "tay_bloom",						"0",						CVAR_ARCHIVE, "Bright parts of the level shine over their surroundings (rd-vulkan-vision)" );
+	tay_bloomIntensity					= ri.Cvar_Get( "tay_bloomIntensity",				"0.6",						CVAR_ARCHIVE, "How strongly the bright parts shine with tay_bloom, 0 to 2" );
+	tay_bloomThreshold					= ri.Cvar_Get( "tay_bloomThreshold",				"0.5",						CVAR_ARCHIVE, "How bright a part has to be to shine with tay_bloom, 0 to 0.95 of white" );
+	tay_renderScale						= ri.Cvar_Get( "tay_renderScale",					"1",						CVAR_ARCHIVE|CVAR_LATCH, "The level is drawn at this size of the window, 0.5 to 2, the HUD and the menus at the size of the window (rd-vulkan-vision, vid_restart)" );
 	v_2dAspect							= ri.Cvar_Get( "v_2dAspect",						"1",						CVAR_ARCHIVE|CVAR_LATCH, "1 menus and HUD keep their shape on a wide window, 0 they are stretched over it (vid_restart)" );
 	r_maxpolys							= ri.Cvar_Get( "r_maxpolys",						XSTRING( DEFAULT_MAX_POLYS ),		CVAR_NONE, "" );
 	r_maxpolyverts						= ri.Cvar_Get( "r_maxpolyverts",					XSTRING( DEFAULT_MAX_POLYVERTS ),	CVAR_NONE, "" );

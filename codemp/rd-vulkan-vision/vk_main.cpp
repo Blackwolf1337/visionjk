@@ -645,6 +645,9 @@ void VK_GfxInfo_f( void ) {
 	ri.Printf( PRINT_ALL, "driver: %s\n", vk_driverString );
 	ri.Printf( PRINT_ALL, "frame: %i x %i with %i samples a pixel, window surface: %i x %i, %i images, swap interval %i\n", vk.width, vk.height,
 		(int)vk.samples, (int)vk.swapExtent.width, (int)vk.swapExtent.height, (int)vk.numSwapImages, vk.swapInterval );
+	if ( vk.sceneWidth ) {
+		ri.Printf( PRINT_ALL, "views of the level: %i x %i (tay_renderScale)\n", vk.sceneWidth, vk.sceneHeight );
+	}
 	ri.Printf( PRINT_ALL, "swapchains made: %i, frames that were not shown: %i\n", vk.statSwapchains, vk.statFramesNotShown );
 	// they are kept over a restart of the renderer: a number that grows with every map is a leak
 	ri.Printf( PRINT_ALL, "ghoul2 instances: %i of 1024 slots in use, %i of them without a model\n", G2API_SlotsInUse(),

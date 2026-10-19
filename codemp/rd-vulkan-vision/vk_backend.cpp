@@ -50,6 +50,13 @@ static void RB_SetGL2D( void ) {
 	const float	width = 640.0f + 2.0f * bias;
 	float		ortho[16];
 
+	// tay_renderScale: the views of the level are done, the 2D is drawn in the size of the window
+	if ( vk.inScene ) {
+		if ( tess.numIndexes ) {
+			RB_EndSurface();
+		}
+		VK_LeaveScene();
+	}
 	backEnd.projection2D = qtrue;
 	// On a plane in the level the 2D still lands at the front of the depth buffer, where the flat 2D is. With the
 	// depth of the plane, the stages that test it (most shader scripts of the menus do, their text does not) were
@@ -957,6 +964,13 @@ static const void *RB_DrawSurfs( const void *data ) {
 	if ( tess.numIndexes ) {
 		RB_EndSurface();
 	}
+	// tay_renderScale: a view of the level (with its mirrors and the sky of a portal) in the targets of its size, a
+	// model of the HUD in the window's
+	if ( cmd->refdef.rdflags & RDF_NOWORLDMODEL ) {
+		VK_LeaveScene();
+	} else {
+		VK_EnterScene();
+	}
 	backEnd.refdef = cmd->refdef;
 	backEnd.viewParms = cmd->viewParms;
 	// A module asked for the scene out of focus (RE_SetDepthOfField): the view of the level itself, not a
@@ -986,6 +1000,10 @@ static const void *RB_DrawSurfs( const void *data ) {
 		}
 	}
 	rb_glowView = false;
+	// tay_bloom: the view of the level itself, as the focus below
+	if ( !backEnd.viewParms.isPortal && !( backEnd.refdef.rdflags & ( RDF_NOWORLDMODEL | RDF_SKYBOXPORTAL ) ) ) {
+		VK_Bloom();
+	}
 	if ( focus ) {
 		VK_BlurFrame( r_dofAmount, r_dofFocus );
 		if ( rb_sawOver ) {

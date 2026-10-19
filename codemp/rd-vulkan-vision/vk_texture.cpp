@@ -363,8 +363,8 @@ THE TARGETS OF THE GLOW AND OF REFRACTION
 ===============================================================================
 */
 
-static void VK_WritePostSet( VkDescriptorSet set, VkImageView view ) {
-	VkDescriptorImageInfo image = { vk.linearSampler, view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
+static void VK_WriteSet( VkDescriptorSet set, VkSampler sampler, VkImageView view, VkImageLayout layout ) {
+	VkDescriptorImageInfo image = { sampler, view, layout };
 	VkWriteDescriptorSet write = { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
 
 	write.dstSet = set;
@@ -372,6 +372,25 @@ static void VK_WritePostSet( VkDescriptorSet set, VkImageView view ) {
 	write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 	write.pImageInfo = &image;
 	qvkUpdateDescriptorSets( vk.device, 1, &write, 0, NULL );
+}
+
+static void VK_WritePostSet( VkDescriptorSet set, VkImageView view ) {
+	VK_WriteSet( set, vk.linearSampler, view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
+}
+
+// a view of the depth alone, without the stencil, for a set of the depth of field
+static VkImageView VK_DepthOnlyView( const vkTarget_t *depth ) {
+	VkImageViewCreateInfo view = { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
+	VkImageView result;
+
+	view.image = depth->image;
+	view.viewType = VK_IMAGE_VIEW_TYPE_2D;
+	view.format = depth->format;
+	view.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+	view.subresourceRange.levelCount = 1;
+	view.subresourceRange.layerCount = 1;
+	VK_CHECK( qvkCreateImageView( vk.device, &view, NULL, &result ) );
+	return result;
 }
 
 void VK_CreatePostTargets( int blurWidth, int blurHeight ) {
@@ -386,8 +405,9 @@ void VK_CreatePostTargets( int blurWidth, int blurHeight ) {
 		// the glowing stages are drawn over the depth of the scene, so with as many samples
 		VK_CreateTarget( &vk.glowMS, vk.width, vk.height, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_IMAGE_ASPECT_COLOR_BIT, vk.samples );
 	}
-	VK_CreateTarget( &vk.screen, vk.width, vk.height, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-		VK_IMAGE_ASPECT_COLOR_BIT, VK_SAMPLE_COUNT_1_BIT );
+	// as large as the frame and as the views of the level with tay_renderScale, whichever is copied into it
+	VK_CreateTarget( &vk.screen, Q_max( vk.width, vk.sceneWidth ), Q_max( vk.height, vk.sceneHeight ), VK_FORMAT_R8G8B8A8_UNORM,
+		VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_IMAGE_ASPECT_COLOR_BIT, VK_SAMPLE_COUNT_1_BIT );
 	{
 		// OpenGL copies a frame buffer that has no alpha, and such a texture reads as 1 there. The frame here has an
 		// alpha channel with what the blends left in it, so the copy is looked at without it.
@@ -425,24 +445,9 @@ void VK_CreatePostTargets( int blurWidth, int blurHeight ) {
 	// The depth of the scene for the depth of field: a view of the depth without the stencil, read pixel for
 	// pixel (not every device filters a depth format) while nothing draws into it.
 	if ( vk.depthReadable ) {
-		VkImageViewCreateInfo view = { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
-		VkDescriptorImageInfo image = { vk.postSampler, VK_NULL_HANDLE, VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL };
-		VkWriteDescriptorSet write = { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
-
-		view.image = vk.depth.image;
-		view.viewType = VK_IMAGE_VIEW_TYPE_2D;
-		view.format = vk.depth.format;
-		view.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-		view.subresourceRange.levelCount = 1;
-		view.subresourceRange.layerCount = 1;
-		VK_CHECK( qvkCreateImageView( vk.device, &view, NULL, &vk.depthView ) );
+		vk.depthView = VK_DepthOnlyView( &vk.depth );
 		VK_CHECK( qvkAllocateDescriptorSets( vk.device, &alloc, &vk.depthSet ) );
-		image.imageView = vk.depthView;
-		write.dstSet = vk.depthSet;
-		write.descriptorCount = 1;
-		write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		write.pImageInfo = &image;
-		qvkUpdateDescriptorSets( vk.device, 1, &write, 0, NULL );
+		VK_WriteSet( vk.depthSet, vk.postSampler, vk.depthView, VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL );
 	}
 }
 
@@ -458,5 +463,90 @@ void VK_DestroyPostTargets( void ) {
 		qvkDestroyImageView( vk.device, vk.depthView, NULL );
 		vk.depthView = VK_NULL_HANDLE;
 	}
+	VK_DestroyTarget( &vk.sceneColor );
+	VK_DestroyTarget( &vk.sceneColorMS );
+	VK_DestroyTarget( &vk.sceneDepth );
+	VK_DestroyTarget( &vk.sceneDepthMS );
+	VK_DestroyTarget( &vk.sceneGlow );
+	VK_DestroyTarget( &vk.sceneGlowMS );
+	if ( vk.sceneDepthView ) {
+		qvkDestroyImageView( vk.device, vk.sceneDepthView, NULL );
+		vk.sceneDepthView = VK_NULL_HANDLE;
+	}
 	qvkDestroySampler( vk.device, vk.linearSampler, NULL );
+}
+
+/*
+===============
+VK_CreateSceneTargets
+
+tay_renderScale: the targets the views of the level are drawn into at their own size, with the formats and the
+samples of the ones of the frame, so every pipeline fits both. After VK_CreatePostTargets(), whose sampler the
+glow set takes. qfalse: the device has no images that large.
+===============
+*/
+qboolean VK_CreateSceneTargets( int width, int height ) {
+	const VkImageUsageFlags usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+	const VkImageAspectFlags depthAspect = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+	VkDescriptorSetAllocateInfo alloc = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO };
+	const int largest = (int)vk.properties.limits.maxImageDimension2D;
+
+	if ( width > largest || height > largest ) {
+		ri.Printf( PRINT_WARNING, "tay_renderScale: %i x %i is larger than the device draws (%i), the level is drawn at the size of the window\n",
+			width, height, largest );
+		return qfalse;
+	}
+	VK_CreateTarget( &vk.sceneColor, width, height, vk.color.format, usage | VK_IMAGE_USAGE_TRANSFER_SRC_BIT, VK_IMAGE_ASPECT_COLOR_BIT,
+		VK_SAMPLE_COUNT_1_BIT );
+	VK_CreateTarget( &vk.sceneDepth, width, height, vk.depth.format, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT
+		| ( vk.depthReadable ? VK_IMAGE_USAGE_SAMPLED_BIT : 0 ), depthAspect, VK_SAMPLE_COUNT_1_BIT );
+	VK_CreateTarget( &vk.sceneGlow, width, height, vk.color.format, usage, VK_IMAGE_ASPECT_COLOR_BIT, VK_SAMPLE_COUNT_1_BIT );
+	if ( vk.samples > VK_SAMPLE_COUNT_1_BIT ) {
+		VK_CreateTarget( &vk.sceneColorMS, width, height, vk.color.format, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_IMAGE_ASPECT_COLOR_BIT, vk.samples );
+		VK_CreateTarget( &vk.sceneDepthMS, width, height, vk.depth.format, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, depthAspect, vk.samples );
+		VK_CreateTarget( &vk.sceneGlowMS, width, height, vk.color.format, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_IMAGE_ASPECT_COLOR_BIT, vk.samples );
+	}
+
+	alloc.descriptorPool = vk.descriptorPool;
+	alloc.descriptorSetCount = 1;
+	alloc.pSetLayouts = &vk.postSetLayout;
+	// the frame is read pixel for pixel as the set of the gamma pass does, the glow filtered as the other one
+	VK_CHECK( qvkAllocateDescriptorSets( vk.device, &alloc, &vk.scenePostSet ) );
+	VK_WriteSet( vk.scenePostSet, vk.postSampler, vk.sceneColor.view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
+	VK_CHECK( qvkAllocateDescriptorSets( vk.device, &alloc, &vk.sceneGlowSet ) );
+	VK_WritePostSet( vk.sceneGlowSet, vk.sceneGlow.view );
+	VK_CHECK( qvkAllocateDescriptorSets( vk.device, &alloc, &vk.sceneCopySet ) );
+	VK_WritePostSet( vk.sceneCopySet, vk.sceneColor.view );
+	if ( vk.depthReadable ) {
+		vk.sceneDepthView = VK_DepthOnlyView( &vk.sceneDepth );
+		VK_CHECK( qvkAllocateDescriptorSets( vk.device, &alloc, &vk.sceneDepthSet ) );
+		VK_WriteSet( vk.sceneDepthSet, vk.postSampler, vk.sceneDepthView, VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL );
+	}
+	return qtrue;
+}
+
+/*
+===============
+VK_SwapSceneTargets
+
+The targets of the views of the level take the places of color, depth and glow, or give them back
+===============
+*/
+void VK_SwapSceneTargets( void ) {
+	vkTarget_t		target;
+	VkDescriptorSet	set;
+	VkImageView		view;
+
+#define VK_SWAP( a, b, t )	( t = a, a = b, b = t )
+	VK_SWAP( vk.color, vk.sceneColor, target );
+	VK_SWAP( vk.colorMS, vk.sceneColorMS, target );
+	VK_SWAP( vk.depth, vk.sceneDepth, target );
+	VK_SWAP( vk.depthMS, vk.sceneDepthMS, target );
+	VK_SWAP( vk.glow, vk.sceneGlow, target );
+	VK_SWAP( vk.glowMS, vk.sceneGlowMS, target );
+	VK_SWAP( vk.postSet, vk.scenePostSet, set );
+	VK_SWAP( vk.glowSet, vk.sceneGlowSet, set );
+	VK_SWAP( vk.depthSet, vk.sceneDepthSet, set );
+	VK_SWAP( vk.depthView, vk.sceneDepthView, view );
+#undef VK_SWAP
 }
