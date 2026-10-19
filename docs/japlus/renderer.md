@@ -338,6 +338,14 @@ left in these views are the effects of the game (flames, smoke, light cones) and
 
 - Patches are drawn with all the rows and columns they were subdivided into. `rd-vanilla` leaves some out with
   the distance (`r_lodCurveError`), so a patch far away is a little rounder here.
+- Models choose their level of detail by the pixels they cover (`v_lodPixels 1`, 2026-10-19). The choice
+  (`R_LodScale()` in `rd-vanilla/tr_mesh.cpp`, for Ghoul2 and MD3 alike) goes by the share of the screen a model
+  covers times `r_lodscale`, which was the same at 640 x 480 and on a screen of 1440 lines. Here `r_lodscale` is
+  multiplied by the height of the window over 480, so a model keeps its detail as long as it covers the pixels
+  it did at 480 lines. Measured at 1920 x 1080 on mp/ffa3: a stormtrooper standing 900 units away drew with
+  1574 triangles more in the frame and kept the full model where `v_lodPixels 0` showed the coarse one; at 150
+  units both are the same; a view with eight bots and the models of the level drew 12400 to 12800 triangles in
+  place of 10100 to 11500. `v_lodPixels 0` is the choice of before.
 - The frame is cleared at its start. Where nothing of the level is drawn (looking out of the world, the camera
   inside a model) this renderer shows black, `rd-vanilla` shows what the last frame left there.
 - Dynamic lights are evaluated per pixel with the same formula, not per triangle.

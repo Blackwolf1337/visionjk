@@ -1628,6 +1628,10 @@ Ghoul2 Insert Start
 */
 
 float ProjectRadius( float r, vec3_t location );
+float R_LodScale( void );
+#ifdef RD_VULKAN_VISION
+extern cvar_t	*v_lodPixels;		// vk_backend.cpp
+#endif
 /*
 Ghoul2 Insert End
 */

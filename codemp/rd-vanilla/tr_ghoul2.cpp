@@ -924,15 +924,7 @@ static int G2_ComputeLOD( trRefEntity_t *ent, const model_t *currentModel, int l
 
 	if ( ( projectedRadius = ProjectRadius( 0.75*largestScale*ent->e.radius, ent->e.origin ) ) != 0 )	//we reduce the radius to make the LOD match other model types which use the actual bound box size
  	{
- 		lodscale = (r_lodscale->value+r_autolodscalevalue->value);
- 		if ( lodscale > 20 )
-		{
-			lodscale = 20;
-		}
-		else if ( lodscale < 0 )
-		{
-			lodscale = 0;
-		}
+ 		lodscale = R_LodScale();
  		flod = 1.0f - projectedRadius * lodscale;
  	}
  	else

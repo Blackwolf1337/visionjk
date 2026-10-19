@@ -95,6 +95,7 @@ there and with it everything on the device (a map change), so the start is over.
 qboolean VK_InitShared( void ) {
 	v_vkStatic = ri.Cvar_Get( "v_vkStatic", "1", CVAR_CHEAT, "Level and models from buffers on the device. 0: all vertices are built on the CPU every frame" );
 	v_vkMerge = ri.Cvar_Get( "v_vkMerge", "1", CVAR_CHEAT, "Sprites of several entities in one batch where the picture stays the same. 0: a batch ends with its entity" );
+	v_lodPixels = ri.Cvar_Get( "v_lodPixels", "1", CVAR_ARCHIVE_ND, "Models keep their detail by how many pixels they cover, as at 640 x 480 (R_LodScale). 0: by the share of the screen they cover, as before" );
 
 	// the builtin images are made again, the copy of the frame has to be put into the texture table again
 	vk.screenSlot = -1;
@@ -558,6 +559,7 @@ VK_ShaderMergesEntities: 0 the shader takes something from its entity, 1 it take
 ===============
 */
 cvar_t	*v_vkMerge;		// 0: a batch ends with its entity, as in rd-vanilla
+cvar_t	*v_lodPixels;	// 0: models choose their detail by the share of the screen, as in rd-vanilla (R_LodScale)
 
 // the render flags that change how a batch is drawn
 #define VK_RF_BATCH	( RF_DEPTHHACK | RF_NODEPTH | RF_VOLUMETRIC | RF_FORCE_ENT_ALPHA | RF_RGB_TINT | RF_DISTORTION \
