@@ -36,6 +36,7 @@ typedef struct gentity_s gentity_t;
 typedef struct gclient_s gclient_t;
 
 #include "game/japlus/g_japlus.h"
+#include "game/unlagged/g_unlagged.h"
 
 //npc stuff
 #include "b_public.h"
@@ -804,6 +805,8 @@ struct gclient_s {
 		int		drainDebounce;
 		int		lightningDebounce;
 	} force;
+
+	unlagged_t	unlagged;		// where the client was in the last frames (unlagged/g_unlagged.c)
 };
 
 //Interest points

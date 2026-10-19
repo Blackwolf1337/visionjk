@@ -3394,7 +3394,21 @@ void JP_PushGrabThink( gentity_t *self )
 	}
 }
 
+static void ForceThrow_Real( gentity_t *self, qboolean pull );
+
+// tay_unlagged 4: the others where the one who pushes saw them (unlagged/g_unlagged.c). The push itself moves
+// them from their ps.origin, which the shift does not touch.
 void ForceThrow( gentity_t *self, qboolean pull )
+{
+	const qboolean unlagged = G_UnlaggedShift( self, UNLAGGED_PUSH );
+
+	ForceThrow_Real( self, pull );
+	if ( unlagged ) {
+		G_UnlaggedRestore( self );
+	}
+}
+
+static void ForceThrow_Real( gentity_t *self, qboolean pull )
 {
 	//shove things in front of you away
 	float		dist;

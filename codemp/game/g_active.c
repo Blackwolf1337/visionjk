@@ -3791,6 +3791,7 @@ void ClientEndFrame( gentity_t *ent ) {
 	}
 
 	if ( ent->client->sess.sessionTeam == TEAM_SPECTATOR ) {
+		G_UnlaggedClear( ent );
 		SpectatorClientEndFrame( ent );
 		return;
 	}
@@ -3853,6 +3854,10 @@ void ClientEndFrame( gentity_t *ent ) {
 	}
 
 	SendPendingPredictableEvents( &ent->client->ps );
+
+	if ( ent->s.number < MAX_CLIENTS ) {
+		G_UnlaggedStore( ent );
+	}
 
 	// set the bit for the reachability area the client is currently in
 //	i = trap->AAS_PointReachabilityAreaIndex( ent->client->ps.origin );

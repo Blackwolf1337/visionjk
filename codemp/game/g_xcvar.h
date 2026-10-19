@@ -69,6 +69,9 @@ XCVAR_DEF( fraglimit,					"20",			NULL,						CVAR_SERVERINFO|CVAR_ARCHIVE|CVAR_N
 XCVAR_DEF( g_adaptRespawn,				"1",			NULL,						CVAR_NONE,										qtrue )
 // seconds without a key or a turn after which a player counts as away (status/g_status.c), 0: never
 XCVAR_DEF( vs_afkTime,					"60",			NULL,						CVAR_ARCHIVE,									qtrue )
+// lag compensation (unlagged/g_unlagged.c): 1 hitscan, 2 projectiles, 4 push and pull; at most this many ms back
+XCVAR_DEF( tay_unlagged,				"7",			NULL,						CVAR_ARCHIVE,									qtrue )
+XCVAR_DEF( tay_unlaggedMax,				"200",			NULL,						CVAR_ARCHIVE,									qtrue )
 XCVAR_DEF( g_allowDuelSuicide,			"0",			NULL,						CVAR_ARCHIVE,									qtrue )
 XCVAR_DEF( g_allowHighPingDuelist,		"1",			NULL,						CVAR_NONE,										qtrue )
 XCVAR_DEF( g_allowNPC,					"1",			NULL,						CVAR_ARCHIVE,										qtrue )

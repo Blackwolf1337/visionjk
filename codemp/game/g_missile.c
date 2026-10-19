@@ -317,6 +317,11 @@ gentity_t *CreateMissile( vec3_t org, vec3_t dir, float vel, int life,
 
 	missile->s.pos.trType = TR_LINEAR;
 	missile->s.pos.trTime = level.time;// - MISSILE_PRESTEP_TIME;	// NOTENOTE This is a Quake 3 addition over JK2
+	// tay_unlagged 2: the missile starts as far along as the shooter's lag, as in jaPRO. The first G_RunMissile
+	// traces that stretch, so what is on it is hit.
+	if ( tay_unlagged.integer & UNLAGGED_PROJECTILES ) {
+		missile->s.pos.trTime -= G_UnlaggedLag( owner );
+	}
 	missile->target_ent = NULL;
 
 	SnapVector(org);
