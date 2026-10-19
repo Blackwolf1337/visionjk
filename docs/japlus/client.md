@@ -982,6 +982,25 @@ it, and not run over a real line.
 The same test showed that the rate of the server is not what limits a full server: with 31 bots a client got 8 to
 12 KB a second, `sv_clientRate` is 50000, so it stays as it is.
 
+## When the game crashes
+
+A crash writes `crashlog-<date>_<time>.txt` into the home folder of the game (`~/.local/share/visionjk` on
+Linux, or the `fs_homepath` a start gives it): the version, the signal, the address, the thread that crashed,
+its stack, and the last of the console. Then the crash goes on as before, so the system keeps its core
+(`coredumpctl list visionjk.x86_64`, `coredumpctl info <pid>` shows the stacks of all threads). On Linux since
+2026-10-19 for a bad address, a bad instruction, a division by zero and `abort()`; before, only a fatal error
+of the engine itself (the error window) wrote one, and a segfault left nothing. Windows: only the fatal error.
+
+The stack names only what a file exports. The offset after a file is a function of that build:
+
+```
+addr2line -f -C -e visionjk.x86_64 0x151eb
+```
+
+For the whole console up to the crash, also when it is longer than what the crash log keeps, start with
+`+set logfile 2` or put `set logfile 2` into `japlus/autoexec.cfg`: `qconsole.log` is written line by line.
+`logfile` is not kept in `visionjk.cfg`.
+
 ## Not done
 
 - The download screen of the plugin for files from an URL, its cache file (`japlus/urlRedirect_cache.txt`, the

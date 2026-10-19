@@ -435,6 +435,30 @@ static void NORETURN Sys_Exit( int ex ) {
     exit( ex );
 }
 
+/*
+=================
+Sys_CrashLogPath
+
+The file for a crash log: crashlog-<time>.txt in fs_homepath (a profile of its own gets its own), before that is
+set in the home folder of the game, or next to the program. The folder is made.
+=================
+*/
+void Sys_CrashLogPath( char *path, int size )
+{
+	time_t rawtime;
+	char timeStr[32] = {}; // should really only reach ~19 chars
+
+	time( &rawtime );
+	strftime( timeStr, sizeof( timeStr ), "%Y-%m-%d_%H-%M-%S", localtime( &rawtime ) ); // or gmtime
+	const char *homePath = Cvar_VariableString( "fs_homepath" );
+	if ( !homePath[0] )
+		homePath = Sys_DefaultHomePath();
+	const char *logPath = ( homePath && homePath[0] ) ? homePath : Sys_DefaultInstallPath();
+	Com_sprintf( path, size, "%s%ccrashlog-%s.txt", logPath, PATH_SEP, timeStr );
+
+	Sys_Mkdir( logPath );
+}
+
 #if defined(__EMSCRIPTEN__)
 // no dialog and no crash log: the page shows the text, the console is in its log
 static void Sys_ErrorDialog( const char *error )
@@ -444,19 +468,9 @@ static void Sys_ErrorDialog( const char *error )
 #elif !defined(DEDICATED)
 static void Sys_ErrorDialog( const char *error )
 {
-	time_t rawtime;
-	char timeStr[32] = {}; // should really only reach ~19 chars
 	char crashLogPath[MAX_OSPATH];
 
-	time( &rawtime );
-	strftime( timeStr, sizeof( timeStr ), "%Y-%m-%d_%H-%M-%S", localtime( &rawtime ) ); // or gmtime
-	const char *homePath = Sys_DefaultHomePath();
-	const char *logPath = ( homePath && homePath[0] ) ? homePath : Sys_DefaultInstallPath();
-	Com_sprintf( crashLogPath, sizeof( crashLogPath ),
-					"%s%ccrashlog-%s.txt",
-					logPath, PATH_SEP, timeStr );
-
-	Sys_Mkdir( logPath );
+	Sys_CrashLogPath( crashLogPath, sizeof( crashLogPath ) );
 
 	FILE *fp = fopen( crashLogPath, "w" );
 	if ( fp )
