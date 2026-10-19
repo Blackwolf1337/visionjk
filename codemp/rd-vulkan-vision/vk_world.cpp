@@ -159,7 +159,7 @@ static void VK_BuildWorld( void ) {
 
 	VK_CreateBuffer( &vk_worldVertexes, total, VKB_VERTEXES, qfalse );
 	VK_CopyBuffer( &staging, 0, &vk_worldVertexes, 0, total );
-	VK_FlushUploads();
+	VK_FinishUploads();
 	VK_DestroyBuffer( &staging );
 	ri.LoadPop();
 	ri.Printf( PRINT_DEVELOPER, "rd-vulkan-vision: %i vertices of %i surfaces of the level on the device, %i KB\n",

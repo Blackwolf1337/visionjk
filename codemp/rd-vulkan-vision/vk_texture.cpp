@@ -130,44 +130,94 @@ void VK_DestroyTarget( vkTarget_t *target ) {
 
 UPLOADS
 
-Copies wait in one command buffer and one staging buffer until the frame is submitted or the staging buffer is
-full. Loading a level is a few thousand small copies, they should not be a few thousand submits.
+Copies wait in the command buffer and the staging buffer of a slot until the frame is submitted or the staging
+buffer is full. Loading a level is a few thousand small copies, they should not be a few thousand submits.
+
+A batch is submitted and not waited for: it waited for the whole queue until 2026-10-19, frames that were still
+drawn included, about 2 ms each time, 19 times in a load of mp/ffa3. What the wait gave is kept by two barriers
+in every batch: its copies run after everything submitted before it (no copy writes a buffer that an earlier
+frame still reads), and what they wrote is seen by everything submitted after it (a frame draws with what was
+uploaded for it). Images have barriers of their own around their copies (VK_SetLayout). The CPU only waits when
+it wants to fill a slot whose last batch the device has not read yet, and in VK_FinishUploads().
 
 ===============================================================================
 */
+
+// the slot that is filled now can take writes: the device is through with what it was filled with the last time
+static void VK_UploadSlotReady( void ) {
+	const int slot = vk.uploadSlot;
+
+	if ( vk.uploads[slot].pending ) {
+		ri.LoadPush( "wait for uploads", NULL );
+		VK_CHECK( qvkWaitForFences( vk.device, 1, &vk.uploads[slot].fence, VK_TRUE, UINT64_MAX ) );
+		ri.LoadPop();
+		vk.uploads[slot].pending = qfalse;
+	}
+}
 
 VkCommandBuffer VK_UploadCmd( void ) {
 	if ( !vk.uploadOpen ) {
 		VkCommandBufferBeginInfo begin = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
 
+		VK_UploadSlotReady();
+		VK_CHECK( qvkResetFences( vk.device, 1, &vk.uploads[vk.uploadSlot].fence ) );
+		vk.uploadCmd = vk.uploads[vk.uploadSlot].cmd;
 		begin.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 		VK_CHECK( qvkBeginCommandBuffer( vk.uploadCmd, &begin ) );
+		// (the copies after whatever was submitted before them)
+		qvkCmdPipelineBarrier( vk.uploadCmd, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0,
+			0, NULL, 0, NULL, 0, NULL );
 		vk.uploadOpen = qtrue;
 	}
 	return vk.uploadCmd;
 }
 
 void VK_FlushUploads( void ) {
-	VkSubmitInfo submit = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
+	VkSubmitInfo	submit = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
+	VkMemoryBarrier	written = { VK_STRUCTURE_TYPE_MEMORY_BARRIER };
+	const int		slot = vk.uploadSlot, next = ( vk.uploadSlot + 1 ) % VK_UPLOAD_SLOTS;
 
 	if ( !vk.uploadOpen ) {
 		return;
 	}
+	// (what the copies wrote, for everything submitted after them)
+	written.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+	written.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT;
+	qvkCmdPipelineBarrier( vk.uploadCmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0,
+		1, &written, 0, NULL, 0, NULL );
 	VK_CHECK( qvkEndCommandBuffer( vk.uploadCmd ) );
 	submit.commandBufferCount = 1;
 	submit.pCommandBuffers = &vk.uploadCmd;
-	VK_CHECK( qvkQueueSubmit( vk.queue, 1, &submit, VK_NULL_HANDLE ) );
-	ri.LoadPush( "wait for uploads", NULL );
-	VK_CHECK( qvkQueueWaitIdle( vk.queue ) );
-	ri.LoadPop();
+	VK_CHECK( qvkQueueSubmit( vk.queue, 1, &submit, vk.uploads[slot].fence ) );
+	vk.uploads[slot].pending = qtrue;
 	vk.uploadOpen = qfalse;
 	vk.stagingUsed = 0;
+	// the next slot is filled from now on: its staging buffer becomes vk.staging
+	vk.uploads[slot].staging = vk.staging;
+	vk.staging = vk.uploads[next].staging;
+	vk.uploadSlot = next;
+}
+
+void VK_FinishUploads( void ) {
+	VK_FlushUploads();
+	for ( int i = 0; i < VK_UPLOAD_SLOTS; i++ ) {
+		if ( vk.uploads[i].pending ) {
+			ri.LoadPush( "wait for uploads", NULL );
+			VK_CHECK( qvkWaitForFences( vk.device, 1, &vk.uploads[i].fence, VK_TRUE, UINT64_MAX ) );
+			ri.LoadPop();
+			vk.uploads[i].pending = qfalse;
+		}
+	}
 }
 
 // room for size bytes in the staging buffer, the copy command that reads them has to go into VK_UploadCmd()
 byte *VK_Stage( VkDeviceSize size, VkDeviceSize *offset ) {
 	if ( vk.stagingUsed + size > vk.staging.size ) {
 		VK_FlushUploads();
+	}
+	// (a slot that is not open may still be read by the device)
+	if ( !vk.uploadOpen ) {
+		VK_UploadSlotReady();
 		if ( size > vk.staging.size ) {
 			VK_DestroyBuffer( &vk.staging );
 			VK_CreateBuffer( &vk.staging, size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, qtrue );
@@ -332,13 +382,23 @@ void VK_EndImageUpload( vkImage_t *vi ) {
 }
 
 void VK_InitTextures( void ) {
-	VkCommandBufferAllocateInfo alloc = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
+	VkCommandBufferAllocateInfo	alloc = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
+	VkFenceCreateInfo			fence = { VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
 
 	alloc.commandPool = vk.commandPool;
 	alloc.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 	alloc.commandBufferCount = 1;
-	VK_CHECK( qvkAllocateCommandBuffers( vk.device, &alloc, &vk.uploadCmd ) );
-	VK_CreateBuffer( &vk.staging, VK_STAGING_BYTES, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, qtrue );
+	for ( int i = 0; i < VK_UPLOAD_SLOTS; i++ ) {
+		VK_CHECK( qvkAllocateCommandBuffers( vk.device, &alloc, &vk.uploads[i].cmd ) );
+		VK_CHECK( qvkCreateFence( vk.device, &fence, NULL, &vk.uploads[i].fence ) );
+		VK_CreateBuffer( &vk.uploads[i].staging, VK_STAGING_BYTES, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, qtrue );
+		vk.uploads[i].pending = qfalse;
+	}
+	vk.uploadSlot = 0;
+	vk.uploadCmd = vk.uploads[0].cmd;
+	vk.uploadOpen = qfalse;
+	vk.staging = vk.uploads[0].staging;
+	vk.stagingUsed = 0;
 }
 
 void VK_ShutdownTextures( void ) {
@@ -352,7 +412,18 @@ void VK_ShutdownTextures( void ) {
 		qvkDestroySampler( vk.device, vk.samplers[i], NULL );
 	}
 	vk.numSamplers = 0;
-	VK_DestroyBuffer( &vk.staging );
+	// (VK_ShutdownImages() finished the uploads)
+	for ( int i = 0; i < VK_UPLOAD_SLOTS; i++ ) {
+		if ( i == vk.uploadSlot ) {
+			VK_DestroyBuffer( &vk.staging );
+		} else {
+			VK_DestroyBuffer( &vk.uploads[i].staging );
+		}
+		memset( &vk.uploads[i].staging, 0, sizeof( vk.uploads[i].staging ) );
+		qvkDestroyFence( vk.device, vk.uploads[i].fence, NULL );
+		vk.uploads[i].fence = VK_NULL_HANDLE;
+		vk.uploads[i].pending = qfalse;
+	}
 }
 
 /*

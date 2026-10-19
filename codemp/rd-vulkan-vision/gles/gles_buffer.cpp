@@ -101,6 +101,9 @@ byte *VK_Stage( vkSize_t size, vkSize_t *offset ) {
 void VK_FlushUploads( void ) {
 }
 
+void VK_FinishUploads( void ) {
+}
+
 /*
 ===============================================================================
 

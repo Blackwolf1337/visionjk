@@ -95,6 +95,28 @@ picture from one spot did not show and a picture from another did (10 % of its p
 `Upload32()` itself takes the kept texture and goes on to its filters. With that, pictures with and without
 the cache differ by 0.07 to 0.23 % of the pixels, as much as two runs of one setting do.
 
+**Uploads are not waited for** (`rd-vulkan-vision/vk_texture.cpp`, 2026-10-19). Every batch of copies to the
+device waited for the whole queue (`vkQueueWaitIdle`), the frames that were still drawn included. Now there are
+two upload slots, each with its command buffer, staging buffer and fence: a batch is submitted and the CPU goes
+on, and it only waits when it wants to fill a slot whose last batch the device has not read yet.
+`VK_FinishUploads()` still waits, where a caller needs the copies done (a staging buffer of its own is freed, a
+frame is read back, the renderer ends). Two barriers in every batch keep the order the wait gave: its copies run
+after everything submitted before it, and what they wrote is seen by everything after it.
+
+| mp/ffa3, four runs of each, alternating | waiting for uploads | load |
+|---|---|---|
+| first load (filled texture cache), before / after | 16 to 24 ms / 3 to 5 ms | median 816 / 802 ms |
+| second load, before / after | | median 497 / 500 ms |
+| twelve bots join, frames over 3 ms, before / after | 6 to 11 ms in 13 to 14 frames / none in 10 to 11 frames | |
+
+The load as a whole is not shorter: the loading screen is drawn between the steps of a load, and what the CPU
+no longer waits for at an upload it waits for at the fence of the next frame. What it gains is in the game: a
+frame that uploads something (a player joins with a skin, a video plays) no longer waits for the frames before
+it. Under the validation layer with its synchronization checks (`VK_LAYER_VALIDATE_SYNC=1`) the two loads and
+three bots gave no message; a build without the two barriers gave read after write hazards on the index buffers
+of the models at once, which also showed that the checks ran. Pictures from two fixed spots differ from the
+build before as much as two runs of that build differ from each other.
+
 ## What the numbers did not confirm
 
 Read from the code, these looked like causes, and they are not, on this machine and these levels:
@@ -107,8 +129,7 @@ Read from the code, these looked like causes, and they are not, on this machine 
 
 ## Not done yet
 
-- What a join still costs: about 1.3 ms a frame waiting for an upload (`VK_FlushUploads` waits for the
-  device), the Ghoul2 model and the sounds of the player.
+- What a join still costs: the Ghoul2 model and the sounds of the player (the wait for the upload is gone).
 - The first frame of the game after a load takes about 16 ms in the cgame, in code no marker is around.
 - What every load does again: the ui is started anew (112 ms), the file system is restarted (79 ms).
 - The first load with an empty cache is as slow as before. Decoding and packing on the worker threads the
