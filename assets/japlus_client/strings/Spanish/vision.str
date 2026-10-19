@@ -1261,6 +1261,30 @@ REFERENCE           FILES_OF_A_SERVER_THAT_NAMES_A_WEB_A
 LANG_ENGLISH        "Files of a server that names a web address for them come from there, much faster. Off: from the server itself."
 LANG_SPANISH        "Los archivos de un servidor que indica una dirección web para ellos vienen de allí, mucho más rápido. Desactivado: del propio servidor."
 
+REFERENCE           CONNECTION
+LANG_ENGLISH        "Connection"
+LANG_SPANISH        "Conexión"
+
+REFERENCE           SMOOTH_JITTERY_LINES
+LANG_ENGLISH        "Smooth Jittery Lines"
+LANG_SPANISH        "Suavizar líneas inestables"
+
+REFERENCE           ON_A_LINE_WHOSE_SNAPSHOTS_COME_UNEVE
+LANG_ENGLISH        "On a line whose snapshots come unevenly the game is drawn a little later, so that nothing stutters."
+LANG_SPANISH        "En una línea cuyos snapshots llegan de forma irregular, el juego se dibuja un poco más tarde para que nada dé tirones."
+
+REFERENCE           UP_TO_20_MS
+LANG_ENGLISH        "Up to 20 ms"
+LANG_SPANISH        "Hasta 20 ms"
+
+REFERENCE           UP_TO_40_MS
+LANG_ENGLISH        "Up to 40 ms"
+LANG_SPANISH        "Hasta 40 ms"
+
+REFERENCE           UP_TO_80_MS
+LANG_ENGLISH        "Up to 80 ms"
+LANG_SPANISH        "Hasta 80 ms"
+
 REFERENCE           SECURITY
 LANG_ENGLISH        "Security"
 LANG_SPANISH        "Seguridad"

@@ -100,6 +100,11 @@ typedef struct clientActive_s {
 									// this value changes as net lag varies
 	qboolean	extrapolatedSnapshot;	// set if any cgame frame has been forced to extrapolate
 									// cleared when CL_AdjustTimeDelta looks at it
+	// how evenly the snapshots come (CL_SnapshotJitter, cl_cgame.cpp)
+	int			snapOffset;			// cls.realtime - cl.snap.serverTime when the newest one came
+	qboolean	snapOffsetValid;
+	float		snapJitter;			// how much that changes from one snapshot to the next, smoothed
+	int			snapMargin;			// a frame this close to the newest snapshot sets extrapolatedSnapshot, 0: 5
 	qboolean	newSnapshots;		// set on parse of any valid packet
 
 	gameState_t	gameState;			// configstrings
@@ -405,6 +410,8 @@ extern	cvar_t	*cl_shownet;
 extern	cvar_t	*cl_showSend;
 extern	cvar_t	*cl_timeNudge;
 extern	cvar_t	*cl_showTimeDelta;
+extern	cvar_t	*v_netSmooth;
+extern	cvar_t	*v_netStats;
 extern	cvar_t	*cl_freezeDemo;
 
 extern	cvar_t	*cl_yawspeed;
@@ -507,6 +514,8 @@ void CL_NextDemo( void );
 void CL_ReadDemoMessage( void );
 
 void CL_InitDownloads(void);
+void CL_NetStatsPacket( int bytes );
+void CL_NetStatsSnapshot( void );
 void CL_NextDownload(void);
 void CL_DownloadUdpStart( void );
 

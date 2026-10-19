@@ -420,6 +420,13 @@ TR = {
     'Web Downloads': 'Downloads aus dem Web',
     'Files of a server that names a web address for them come from there, much faster. Off: from the server itself.':
         'Dateien eines Servers, der eine Webadresse für sie nennt, kommen von dort, viel schneller. Aus: vom Server selbst.',
+    'Connection': 'Verbindung',
+    'Smooth Jittery Lines': 'Unruhige Leitungen glätten',
+    'Up to 20 ms': 'Bis 20 ms',
+    'Up to 40 ms': 'Bis 40 ms',
+    'Up to 80 ms': 'Bis 80 ms',
+    'On a line whose snapshots come unevenly the game is drawn a little later, so that nothing stutters.':
+        'Auf einer Leitung, deren Snapshots ungleichmäßig kommen, wird das Spiel etwas später gezeichnet, damit nichts ruckelt.',
     'Intrusion Log': 'Einbruchsprotokoll',
     'Write down what a server sends that no server of the game does, and leave one that keeps at it.':
         'Aufschreiben, was ein Server sendet, das kein Server des Spiels sendet, und einen verlassen, der nicht damit aufhört.',

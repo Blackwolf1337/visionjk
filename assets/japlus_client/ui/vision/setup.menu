@@ -3458,7 +3458,7 @@
 			name					vision_head
 			rect					34 204 380 22
 			visible					1
-			text					@VISION_SECURITY
+			text					@VISION_CONNECTION
 			font					5
 			textscale				0.54
 			forecolor				0.60 0.69 0.78 1
@@ -3483,13 +3483,60 @@
 
 		itemDef
 		{
+			name					vision_multi_v_netsmooth
+			type					ITEM_TYPE_MULTI
+			text					@VISION_SMOOTH_JITTERY_LINES
+			descText				@VISION_ON_A_LINE_WHOSE_SNAPSHOTS_COME_UNEVE
+			cvar					"v_netSmooth"
+			cvarFloatList { @VISION_OFF 0 @VISION_UP_TO_20_MS 20 @VISION_UP_TO_40_MS 40 @VISION_UP_TO_80_MS 80 }
+			action { play "sound/interface/button1.wav" ; }
+			rect					32 226 384 22
+			page					7
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+		}
+
+		itemDef
+		{
+			name					vision_head
+			rect					34 248 380 22
+			visible					1
+			text					@VISION_SECURITY
+			font					5
+			textscale				0.54
+			forecolor				0.60 0.69 0.78 1
+			textaligny				9
+			caps					1
+			decoration
+			page					7
+			scroll					1
+		}
+
+		itemDef
+		{
+			name					vision_headline
+			rect					32 269 384 0.67
+			visible					1
+			style					WINDOW_STYLE_FILLED
+			backcolor				0.43 0.83 1 0.32
+			decoration
+			page					7
+			scroll					1
+		}
+
+		itemDef
+		{
 			name					vision_yesno_v_ids
 			type					ITEM_TYPE_YESNO
 			text					@VISION_INTRUSION_LOG
 			descText				@VISION_WRITE_DOWN_WHAT_A_SERVER_SENDS_THAT
 			cvar					"v_ids"
 			action { play "sound/interface/button1.wav" ; }
-			rect					32 226 384 22
+			rect					32 270 384 22
 			page					7
 			scroll					1
 			row						1
@@ -3507,7 +3554,7 @@
 			descText				@VISION_THE_ADMIN_LOGIN_ASKS_YOUR_SSH_AGENT
 			cvar					"v_authAgent"
 			action { play "sound/interface/button1.wav" ; }
-			rect					32 248 384 22
+			rect					32 292 384 22
 			page					7
 			scroll					1
 			row						1
@@ -3527,7 +3574,7 @@
 			maxChars				120
 			maxPaintChars			24
 			action { play "sound/interface/button1.wav" ; }
-			rect					32 270 384 22
+			rect					32 314 384 22
 			page					7
 			scroll					1
 			row						1
@@ -3540,7 +3587,7 @@
 		itemDef
 		{
 			name					vision_head
-			rect					34 292 380 22
+			rect					34 336 380 22
 			visible					1
 			text					@VISION_TEXT
 			font					5
@@ -3556,7 +3603,7 @@
 		itemDef
 		{
 			name					vision_headline
-			rect					32 313 384 0.67
+			rect					32 357 384 0.67
 			visible					1
 			style					WINDOW_STYLE_FILLED
 			backcolor				0.43 0.83 1 0.32
@@ -3573,7 +3620,7 @@
 			descText				@VISION_EVERY_CHARACTER_IN_NAMES_AND_CHAT_OF
 			cvar					"v_utf8"
 			action { play "sound/interface/button1.wav" ; }
-			rect					32 314 384 22
+			rect					32 358 384 22
 			page					7
 			scroll					1
 			row						1

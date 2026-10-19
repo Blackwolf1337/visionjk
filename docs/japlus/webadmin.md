@@ -1210,6 +1210,11 @@ Also changed:
 - New: the panel of a player says who that is for an admin: how long he has been in the game, the address he
   connects from (without the port, none for a bot) and the client plugin of JA+ he has or that he has none
   (`address`, `minutes`, `plugin` of a player in `/api/state`).
+- New (2026-10-19): the panel of a player names his lag, how many ms behind the server his commands are: what lag
+  compensation (`tay_unlagged`, server.md) shifts the others back by for his shots. It is more than his ping, as
+  it holds how far behind the newest snapshot his client draws. Number 40 of `f` in `/api/state`, 0 for a bot.
+  Read through `/api/state` with a client behind 100 ms (`tools/lagpanel.sh` of the test tools: 135 to 145 ms at
+  a ping of 101 to 103); the line on the page was not looked at in a browser.
 - New: the server refuses to place what would end it (`WA_SpawnRefused`): a class made of brushes (`trigger_`,
   `func_`) without a `model` key that names a brush model of the map (a trigger may have a box instead, see
   above), the classes whose spawn function raises

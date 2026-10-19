@@ -947,6 +947,24 @@ LANG_ENGLISH        "Web Downloads"
 REFERENCE           FILES_OF_A_SERVER_THAT_NAMES_A_WEB_A
 LANG_ENGLISH        "Files of a server that names a web address for them come from there, much faster. Off: from the server itself."
 
+REFERENCE           CONNECTION
+LANG_ENGLISH        "Connection"
+
+REFERENCE           SMOOTH_JITTERY_LINES
+LANG_ENGLISH        "Smooth Jittery Lines"
+
+REFERENCE           ON_A_LINE_WHOSE_SNAPSHOTS_COME_UNEVE
+LANG_ENGLISH        "On a line whose snapshots come unevenly the game is drawn a little later, so that nothing stutters."
+
+REFERENCE           UP_TO_20_MS
+LANG_ENGLISH        "Up to 20 ms"
+
+REFERENCE           UP_TO_40_MS
+LANG_ENGLISH        "Up to 40 ms"
+
+REFERENCE           UP_TO_80_MS
+LANG_ENGLISH        "Up to 80 ms"
+
 REFERENCE           SECURITY
 LANG_ENGLISH        "Security"
 

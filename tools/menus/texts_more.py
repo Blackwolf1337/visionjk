@@ -410,6 +410,14 @@ MORE = {
     'Files of a server that names a web address for them come from there, much faster. Off: from the server itself.':
         ("Les fichiers d'un serveur qui indique une adresse web pour eux viennent de là, bien plus vite. Désactivé : du serveur lui-même.",
          'Los archivos de un servidor que indica una dirección web para ellos vienen de allí, mucho más rápido. Desactivado: del propio servidor.'),
+    'Connection': ('Connexion', 'Conexión'),
+    'Smooth Jittery Lines': ('Lisser les lignes instables', 'Suavizar líneas inestables'),
+    'Up to 20 ms': ("Jusqu'à 20 ms", 'Hasta 20 ms'),
+    'Up to 40 ms': ("Jusqu'à 40 ms", 'Hasta 40 ms'),
+    'Up to 80 ms': ("Jusqu'à 80 ms", 'Hasta 80 ms'),
+    'On a line whose snapshots come unevenly the game is drawn a little later, so that nothing stutters.':
+        ("Sur une ligne dont les snapshots arrivent irrégulièrement, le jeu est affiché un peu plus tard pour que rien ne saccade.",
+         'En una línea cuyos snapshots llegan de forma irregular, el juego se dibuja un poco más tarde para que nada dé tirones.'),
     'Intrusion Log': ("Journal d'intrusion", 'Registro de intrusiones'),
     'Write down what a server sends that no server of the game does, and leave one that keeps at it.': ("Noter ce qu'un serveur envoie d'inhabituel pour le jeu, et quitter celui qui insiste.", 'Anotar lo que un servidor envía y ningún servidor del juego envía, y salir del que insista.'),
     'Key Login by Agent': ('Connexion par clé via agent', 'Inicio con clave por agente'),

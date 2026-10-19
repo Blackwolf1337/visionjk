@@ -637,6 +637,88 @@ or bursted delayed packets.
 */
 
 #define	RESET_TIME	500
+#define	SNAP_MARGIN	5		// how close a frame may come to the newest snapshot before the clock goes back, at least
+
+/*
+=================
+CL_SnapshotJitter
+
+How evenly the snapshots come, as RFC 3550 measures it for the packets of a stream: how much the time between
+the server making one and the client taking it in changes from one to the next, smoothed over about 16. The
+clock of the game (CL_AdjustTimeDelta) goes forward a little with every snapshot and back a little when a frame
+came closer than cl.snapMargin to the newest one. With the 5 ms of the original as that margin, a line whose
+snapshots come unevenly has frames that run past the newest snapshot, which the cgame has to extrapolate: what
+moves stutters. Twice the jitter as the margin keeps the clock as far behind as the line needs, and no further:
+on an even line it stays the 5 ms (v_netSmooth 0: always). Not from OpenJK, 2026-10-19.
+=================
+*/
+static void CL_SnapshotJitter( void ) {
+	const int offset = cls.realtime - cl.snap.serverTime;
+
+	if ( cl.snapOffsetValid ) {
+		const int change = abs( offset - cl.snapOffset );
+
+		// (a jump of the clock or a long gap is no jitter)
+		if ( change < RESET_TIME ) {
+			cl.snapJitter += ( change - cl.snapJitter ) / 16.0f;
+		}
+	}
+	cl.snapOffset = offset;
+	cl.snapOffsetValid = qtrue;
+	if ( v_netSmooth->integer > SNAP_MARGIN ) {
+		cl.snapMargin = Com_Clampi( SNAP_MARGIN, v_netSmooth->integer, (int)( 2.0f * cl.snapJitter + 0.5f ) );
+	} else {
+		cl.snapMargin = SNAP_MARGIN;
+	}
+}
+
+/*
+=================
+CL_NetStats
+
+v_netStats 1: a line every five seconds with how the snapshots come and how the game runs behind them. Counted
+whatever the cvar says, it is a few additions.
+=================
+*/
+static struct {
+	int			start;				// cls.realtime the counts began
+	int			snapshots, bytes;
+	int			frames, past;		// frames of the game, and those past the newest snapshot (the cgame extrapolates)
+	long long	behind;				// cl.snap.serverTime - cl.serverTime of every frame, added up
+} netStats;
+
+void CL_NetStatsPacket( int bytes ) {
+	netStats.bytes += bytes;
+}
+
+void CL_NetStatsSnapshot( void ) {
+	netStats.snapshots++;
+}
+
+static void CL_NetStatsFrame( void ) {
+	int msec;
+
+	netStats.frames++;
+	netStats.behind += cl.snap.serverTime - cl.serverTime;
+	if ( cl.serverTime > cl.snap.serverTime ) {
+		netStats.past++;
+	}
+	if ( !netStats.start ) {
+		netStats.start = cls.realtime;
+	}
+	msec = cls.realtime - netStats.start;
+	if ( msec < 5000 ) {
+		return;
+	}
+	if ( v_netStats->integer ) {
+		Com_Printf( "net: %i snapshots/s, %i bytes/s, %i of %i frames past the newest snapshot, jitter %.1f ms, margin %i ms, "
+			"%.1f ms behind the newest snapshot\n", netStats.snapshots * 1000 / msec, (int)( netStats.bytes * 1000LL / msec ),
+			netStats.past, netStats.frames, cl.snapJitter, cl.snapMargin ? cl.snapMargin : SNAP_MARGIN,
+			netStats.frames ? (double)netStats.behind / netStats.frames : 0.0 );
+	}
+	memset( &netStats, 0, sizeof( netStats ) );
+	netStats.start = cls.realtime;
+}
 
 void CL_AdjustTimeDelta( void ) {
 	int		newDelta;
@@ -648,6 +730,8 @@ void CL_AdjustTimeDelta( void ) {
 	if ( clc.demoplaying ) {
 		return;
 	}
+
+	CL_SnapshotJitter();
 
 	newDelta = cl.snap.serverTime - cls.realtime;
 	deltaDelta = abs( newDelta - cl.serverTimeDelta );
@@ -806,8 +890,11 @@ void CL_SetCGameTime( void ) {
 
 		// note if we are almost past the latest frame (without timeNudge),
 		// so we will try and adjust back a bit when the next snapshot arrives
-		if ( cls.realtime + cl.serverTimeDelta >= cl.snap.serverTime - 5 ) {
+		if ( cls.realtime + cl.serverTimeDelta >= cl.snap.serverTime - ( cl.snapMargin ? cl.snapMargin : SNAP_MARGIN ) ) {
 			cl.extrapolatedSnapshot = qtrue;
+		}
+		if ( !clc.demoplaying ) {
+			CL_NetStatsFrame();
 		}
 	}
 

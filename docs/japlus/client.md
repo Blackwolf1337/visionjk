@@ -950,6 +950,38 @@ only on a listen server.
   move mask of the server for that case: world and terrain only. The original plugin has no rule for this.
 - Grip speed and the force combo setting are read from the server info as well.
 
+## The clock behind the snapshots
+
+Not JA+, in the engine (`client/cl_cgame.cpp`, 2026-10-19), for every server. The game is drawn a little behind the
+newest snapshot, so that the cgame can move everything between two snapshots it has. How far behind is worked out
+as in Quake 3: the clock goes 1 ms forward with every snapshot, and 2 ms back when a frame came closer than a margin
+to the newest one. The margin was a fixed 5 ms. On a line whose snapshots come unevenly that is too close: frames
+run past the newest snapshot, the cgame has to extrapolate them, and what moves stutters. Now the margin is twice
+the jitter of the snapshots (how much the time between the server making one and the client taking it in changes
+from one to the next, smoothed over about 16, as RFC 3550 measures it), at least 5 ms and at most `v_netSmooth`.
+
+| Cvar | Default | Meaning |
+|------|---------|---------|
+| `v_netSmooth` | 40 | the largest margin, ms. 0: always 5 ms, as before |
+| `v_netStats` | 0 | 1: a line every five seconds: snapshots and bytes a second, frames past the newest snapshot, jitter, margin, and how far the game is behind the newest snapshot |
+
+Measured with `tools/nettest.sh` of the test tools (a server of this tree on this machine with 12 bots on mp/ffa3,
+the client watches one through `tools/lagproxy.py` at 125 frames a second), lines of five seconds:
+
+| line | margin | frames past the newest snapshot | behind the newest snapshot |
+|------|--------|-------------------------------|----------------------------|
+| even (no delay, jitter 1.8 ms) | 5 ms with either setting | 14 to 30 of 615 | 13 to 16 ms |
+| 50 ms, 0 to 30 ms jitter, `v_netSmooth 0` | 5 ms | 30 to 63 of 615 | 16 to 20 ms |
+| the same, `v_netSmooth 40` | 16 to 22 ms | 0 to 2 of 625 once it settled (12 and 28 in the first five seconds) | 27 to 33 ms |
+
+So on a line that jitters, what moves is smooth again for about 13 ms more delay, and an even line keeps the delay
+it had. The delay counts where the server shifts the others back for a shot (`tay_unlagged` in server.md), since
+the time of a command is the time the client drew; it is not made up for the saber. Not played by a person with
+it, and not run over a real line.
+
+The same test showed that the rate of the server is not what limits a full server: with 31 bots a client got 8 to
+12 KB a second, `sv_clientRate` is 50000, so it stays as it is.
+
 ## Not done
 
 - The download screen of the plugin for files from an URL, its cache file (`japlus/urlRedirect_cache.txt`, the

@@ -267,11 +267,12 @@ static void WA_StatePlayerChanges( waBuffer_t *b, int clientNum, unsigned rev, q
 	// the last two: for how many msec more he is electrified (electrifyTime, which the clients have as
 	// emplacedOwner), and activeForcePass (the level of the lightning he casts, or of his drain plus three)
 	// and for how long a client has had his legs and his torso in the animation they are in (WA_AnimsFrame)
-	WA_BufPrintf( b, "%.1f,%.2f,%.1f,%.2f,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d],\"b\":[",
+	// and, not in JKAdmin, how far behind the server his commands are: what lag compensation shifts the others back by
+	WA_BufPrintf( b, "%.1f,%.2f,%.1f,%.2f,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d],\"b\":[",
 		legsFrame, legsSpeed, torsoFrame, torsoSpeed, ent->s.eFlags, ent->s.eFlags2, ent->s.powerups, ps->fd.forcePowersActive,
 		ps->weaponstate, ps->saberMove, ( ps->legsFlip ? 1 : 0 ) | ( ps->torsoFlip ? 2 : 0 ), ps->groundEntityNum,
 		ps->brokenLimbs, ps->fd.saberAnimLevel, ps->movementDir, Q_max( 0, ps->electrifyTime - level.time ), ps->activeForcePass,
-		level.time - wa_anims[clientNum].legsTime, level.time - wa_anims[clientNum].torsoTime );
+		level.time - wa_anims[clientNum].legsTime, level.time - wa_anims[clientNum].torsoTime, G_UnlaggedLag( ent ) );
 	for ( s2 = 0; s2 < MAX_SABERS; s2++ ) {
 		const saberInfo_t *saber = &cl->saber[s2];
 
@@ -304,7 +305,8 @@ static void WA_StatePlayerChanges( waBuffer_t *b, int clientNum, unsigned rev, q
 //        ways he moves in against where he looks (movementDir: BG_G2PlayerAngles turns his legs by it),
 //        for how many msec more he is electrified (0: he is not), and activeForcePass (1 to 3: he casts
 //        lightning of that level, 4 to 6: he drains at that level less three),
-//        and how many msec ago the animation of his legs and the one of his torso began for a client
+//        and how many msec ago the animation of his legs and the one of his torso began for a client,
+//        and (40) how many msec behind the server his commands are, what lag compensation shifts by (G_UnlaggedLag)
 //   "b": for every blade of his sabers its length now, where it starts (3) and the way it points (3)
 // A player was about a kilobyte ten times a second before, he is about 220 bytes now.
 static void WA_StatePlayers( waBuffer_t *b, const char *query ) {
