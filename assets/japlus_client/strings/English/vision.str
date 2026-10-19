@@ -941,6 +941,12 @@ LANG_ENGLISH        "Keep Downloads"
 REFERENCE           KEEP_DOWNLOADED_FILES_IN_THE_FOLDER
 LANG_ENGLISH        "Keep downloaded files in the folder downloads. Off: for this session only."
 
+REFERENCE           WEB_DOWNLOADS
+LANG_ENGLISH        "Web Downloads"
+
+REFERENCE           FILES_OF_A_SERVER_THAT_NAMES_A_WEB_A
+LANG_ENGLISH        "Files of a server that names a web address for them come from there, much faster. Off: from the server itself."
+
 REFERENCE           SECURITY
 LANG_ENGLISH        "Security"
 
@@ -1186,6 +1192,9 @@ LANG_ENGLISH        "Programs (they could run on your computer)"
 
 REFERENCE           USE_THEM
 LANG_ENGLISH        "Use them"
+
+REFERENCE           THEY_COME_FROM_THE_WEB_ADDRESS
+LANG_ENGLISH        "They come from the web address:"
 
 REFERENCE           INITIATE
 LANG_ENGLISH        "Initiate"

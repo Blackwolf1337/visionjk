@@ -678,6 +678,12 @@ static const char *Update_Verb( void ) {
 }
 
 static void Update_Start( int job, qboolean quiet ) {
+	// (one question to a web server at a time, sys/sys_http.h: a pak of a server comes from its web address)
+	if ( CL_DownloadWebAsking() ) {
+		if ( !quiet )
+			Com_Printf( "A pak of the server is being downloaded, ask again when it is here\n" );
+		return;
+	}
 	upd.job = job;
 	upd.quiet = quiet;
 	upd.done = 0;
@@ -966,6 +972,11 @@ void CL_UpdateInit( void ) {
 		Update_Start( JOB_CHECK, qtrue );
 }
 
+// a thread of the updater asks a web server now (cl_download.cpp waits for it before it asks one)
+qboolean CL_UpdateBusy( void ) {
+	return upd.thread ? qtrue : qfalse;
+}
+
 // The game ends. A thread that is still asking is told to stop and left to itself: the program does not wait
 // for a web server to end.
 void CL_UpdateShutdown( void ) {
@@ -985,6 +996,7 @@ qboolean CL_UpdateResume( void ) { return qfalse; }
 void CL_UpdateAddress( void ) {}
 void CL_UpdateInit( void ) {}
 void CL_UpdateFrame( void ) {}
+qboolean CL_UpdateBusy( void ) { return qfalse; }
 void CL_UpdateShutdown( void ) {}
 
 #endif

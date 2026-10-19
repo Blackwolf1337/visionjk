@@ -32,10 +32,17 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // pak as <pak>.blocked, which the file system reads: nothing can open or list those files, and the pak keeps its
 // checksum for a pure server. Programs are blocked that way for every pak that is downloaded, with the window or
 // without it.
+//
+// A server that names a web address for its paks (jp_DlBaseURL, as JA+ servers do) has them fetched from there
+// (see "Over the web" below), through both windows the same way.
 
 #include "client.h"
 #include "qcommon/stringed_ingame.h"
 #include <minizip/unzip.h>
+#if !defined( __EMSCRIPTEN__ )
+	#include <SDL.h>
+	#include "sys/sys_http.h"
+#endif
 
 #define DL_PAKS			32			// paks one window lists at most
 #define DL_PROGRAMS		8			// programs of a pak that are named
@@ -106,6 +113,7 @@ static struct {
 
 static cvar_t *v_downloadReview;
 static cvar_t *v_downloadKeep;
+static cvar_t *v_downloadHttp;
 
 static const vec4_t dlFill = { 0.035f, 0.07f, 0.12f, 0.94f }, dlEdge = { 0.43f, 0.83f, 1.0f, 0.45f };
 static const vec4_t dlText = { 0.86f, 0.92f, 0.97f, 1.0f }, dlDim = { 0.60f, 0.69f, 0.78f, 1.0f };
@@ -149,6 +157,7 @@ void CL_DownloadInit( void ) {
 	Cmd_AddCommand( "v_downloadReview_do", CL_DownloadReview_f, "What a click in the windows of a download does, for a key or a script" );
 	v_downloadReview = Cvar_Get( "v_downloadReview", "1", CVAR_ARCHIVE_ND, "Before a download: choose the paks of the server, and after it what of them is used. 0: all of them, programs in them stay blocked" );
 	v_downloadKeep = Cvar_Get( "v_downloadKeep", "1", CVAR_ARCHIVE_ND, "Downloaded paks are kept in <game>/downloads. 0: in downloads/session, for this session only" );
+	v_downloadHttp = Cvar_Get( "v_downloadHttp", "1", CVAR_ARCHIVE_ND, "Paks of a server that names a web address for them (jp_DlBaseURL) come from there. 0: only from the server itself" );
 }
 
 void CL_DownloadReviewReset( void ) {
@@ -470,6 +479,368 @@ static void DL_Use( void ) {
 /*
 ===============================================================================
 
+Over the web
+
+A server that names a web address for its paks (jp_DlBaseURL, which JA+ servers set for the client plugin of
+JA+) has them fetched from there, a pak at a time, in place of the download through the game. Which paks and
+where they go is what the first window chose, and what came goes through the checksum, the blocked programs
+and the second window like any other download (CL_NextDownload). The address is the one the plugin asks for
+(its ui, FUN_4002c510): <jp_DlBaseURL><game folder>/<name>.pk3 with the name escaped, here with a slash put
+after the base when it has none. No redirect is followed, by the plugin neither. A pak that does not come from
+there is asked from the server itself, if that sends files.
+
+The fetch runs in a thread of its own, since Sys_HttpGet() waits; the game looks at it once a frame and never
+waits for it. A fetch the game no longer wants (a disconnect, a new level) is told to stop and left to itself,
+its slot is free again when its thread ends. Only one question to a web server runs at a time in the client:
+sys/sys_http.h is made for one, so this and the updater (cl_update.cpp) never ask at the same time.
+
+===============================================================================
+*/
+
+#define DL_WEB_BASE		200							// of jp_DlBaseURL, as much as the plugin takes of it
+#define DL_WEB_JOBS		4							// the fetch that runs, and those that were let go and still end
+#define DL_WEB_MOST		0x7fffffffLL				// bytes of a pak at most (clc.downloadCount is an int)
+
+// the address the paks of this server come from, with a slash at its end. qfalse: it names none of the web.
+static qboolean DL_WebBase( char *out, int outSize ) {
+	const char	*base;
+	int			i;
+
+	if ( !v_downloadHttp || !v_downloadHttp->integer || cls.state < CA_CONNECTED ) {
+		return qfalse;
+	}
+	base = Info_ValueForKey( cl.gameState.stringData + cl.gameState.stringOffsets[CS_SYSTEMINFO], "jp_DlBaseURL" );
+	if ( Q_stricmpn( base, "http://", 7 ) && Q_stricmpn( base, "https://", 8 ) ) {
+		return qfalse;
+	}
+	if ( strlen( base ) >= DL_WEB_BASE || (int)strlen( base ) + 2 > outSize ) {
+		return qfalse;
+	}
+	for ( i = 0; base[i]; i++ ) {
+		if ( (unsigned char)base[i] <= ' ' || (unsigned char)base[i] >= 127 || base[i] == '"' ) {
+			return qfalse;
+		}
+	}
+	Com_sprintf( out, outSize, "%s%s", base, ( base[strlen( base ) - 1] == '/' ) ? "" : "/" );
+	return qtrue;
+}
+
+// a character an address may have as it is
+static qboolean DL_WebPlain( int ch ) {
+	return (qboolean)( ( ch >= 'A' && ch <= 'Z' ) || ( ch >= 'a' && ch <= 'z' ) || ( ch >= '0' && ch <= '9' )
+		|| ch == '-' || ch == '_' || ch == '.' || ch == '~' );
+}
+
+// The address of remote as the server names it ("<game folder>/<name>.pk3"). The game folder is taken as it is,
+// so it has to be plain, the name is escaped. qfalse: no address can be made of it.
+static qboolean DL_WebUrl( const char *base, const char *remote, char *out, int outSize ) {
+	const char	*slash = strchr( remote, '/' );
+	const int	end = (int)strlen( remote ) - 4;		// (the .pk3)
+	int			len, i;
+
+	if ( !slash || slash == remote || end <= (int)( slash - remote ) + 1 || !COM_CompareExtension( remote, ".pk3" ) ) {
+		return qfalse;
+	}
+	for ( i = 0; remote + i < slash; i++ ) {
+		if ( !DL_WebPlain( (unsigned char)remote[i] ) ) {
+			return qfalse;
+		}
+	}
+	if ( (int)strlen( base ) + (int)( slash - remote ) + 1 >= outSize ) {
+		return qfalse;
+	}
+	Com_sprintf( out, outSize, "%s%.*s/", base, (int)( slash - remote ), remote );
+	len = (int)strlen( out );
+	for ( i = (int)( slash - remote ) + 1; i < end; i++ ) {
+		const int ch = (unsigned char)remote[i];
+
+		if ( len + 3 + 4 >= outSize ) {
+			return qfalse;
+		}
+		if ( DL_WebPlain( ch ) ) {
+			out[len++] = (char)ch;
+		} else {
+			Com_sprintf( out + len, 4, "%%%02X", ch );
+			len += 3;
+		}
+	}
+	Q_strncpyz( out + len, ".pk3", outSize - len );
+	return qtrue;
+}
+
+// the host of a web address, for the first window
+static const char *DL_WebHost( const char *url ) {
+	static char	host[DL_WEB_BASE];
+	const char	*s = strstr( url, "://" );
+
+	s = s ? s + 3 : url;
+	Q_strncpyz( host, s, sizeof( host ) );
+	host[strcspn( host, "/?#" )] = '\0';
+	return host;
+}
+
+qboolean CL_DownloadWebOffered( void ) {
+	char base[DL_WEB_BASE + 2];
+
+	return DL_WebBase( base, sizeof( base ) );
+}
+
+// the server sends files itself (no sv_allowDownload in its info is a yes, as for CL_InitDownloads)
+qboolean CL_ServerSendsDownloads( void ) {
+	const char *allow = Info_ValueForKey( cl.gameState.stringData + cl.gameState.stringOffsets[CS_SERVERINFO], "sv_allowDownload" );
+
+	return (qboolean)( !allow[0] || atoi( allow ) );
+}
+
+#if !defined( __EMSCRIPTEN__ )
+
+enum {
+	WEBJOB_FREE,
+	WEBJOB_WAITING,			// for the updater to be through, or for a fetch that was let go
+	WEBJOB_RUNNING,
+	WEBJOB_DONE,			// the thread is through and waits for the game
+	WEBJOB_LET_GO			// the game wants it no more: the thread frees the slot when it is through
+};
+
+typedef struct dlWebJob_s {
+	SDL_atomic_t		state;
+	SDL_Thread			*thread;
+	char				url[DL_WEB_BASE + 3 * MAX_QPATH + 8];
+	char				osTemp[MAX_OSPATH];		// the .tmp of the download, the thread writes it
+	volatile int		cancel;
+	volatile long long	bytes;					// what came so far
+	// the thread writes these, the game reads them once the state is WEBJOB_DONE
+	FILE				*f;
+	qboolean			ok, disk;
+	char				error[256];
+} dlWebJob_t;
+
+static dlWebJob_t	dlJobs[DL_WEB_JOBS];
+static dlWebJob_t	*dlJob;				// the fetch of the pak that is downloaded now, NULL: none
+
+static qboolean DL_WebSink( void *ctx, const void *data, size_t len ) {
+	dlWebJob_t *job = (dlWebJob_t *)ctx;
+
+	if ( job->bytes + (long long)len > DL_WEB_MOST ) {
+		return qfalse;
+	}
+	if ( fwrite( data, 1, len, job->f ) != len ) {
+		job->disk = qtrue;
+		return qfalse;
+	}
+	job->bytes += (long long)len;
+	return qtrue;
+}
+
+// the thread of a fetch: nothing of the engine but Sys_HttpGet
+static int DL_WebThread( void *data ) {
+	dlWebJob_t *job = (dlWebJob_t *)data;
+
+	job->f = fopen( job->osTemp, "wb" );
+	if ( !job->f ) {
+		job->disk = qtrue;
+	} else {
+		job->ok = Sys_HttpGet( job->url, DL_WebSink, job, &job->cancel, job->error, sizeof( job->error ) );
+		if ( fclose( job->f ) != 0 ) {
+			job->disk = qtrue;
+		}
+		job->f = NULL;
+	}
+	// (let go of: nobody but this thread knows the slot any more)
+	if ( !SDL_AtomicCAS( &job->state, WEBJOB_RUNNING, WEBJOB_DONE ) ) {
+		SDL_AtomicSet( &job->state, WEBJOB_FREE );
+	}
+	return 0;
+}
+
+// a thread of a fetch other than job still asks its web server (one that was let go ends within a second or so)
+static qboolean DL_WebOthersAsking( const dlWebJob_t *job ) {
+	int i;
+
+	for ( i = 0; i < DL_WEB_JOBS; i++ ) {
+		const int state = SDL_AtomicGet( &dlJobs[i].state );
+
+		if ( &dlJobs[i] != job && ( state == WEBJOB_RUNNING || state == WEBJOB_LET_GO ) ) {
+			return qtrue;
+		}
+	}
+	return qfalse;
+}
+
+// The pak did not come from the web address: from the server itself, if it sends files, else the next one.
+static void DL_WebFailed( const char *why ) {
+	Com_Printf( S_COLOR_YELLOW "%s did not come from the web address of the server: %s\n", cl_downloadName->string, why );
+	FS_Remove( DL_Path( clc.downloadTempName ) );
+	clc.downloadCount = clc.downloadSize = 0;
+	Cvar_Set( "cl_downloadCount", "0" );
+	Cvar_Set( "cl_downloadSize", "0" );
+	if ( CL_ServerSendsDownloads() ) {
+		Com_Printf( "It is asked from the server itself.\n" );
+		CL_DownloadUdpStart();
+		return;
+	}
+	Com_Printf( S_COLOR_YELLOW "The server sends no files itself, the game goes on without it.\n" );
+	CL_NextDownload();
+}
+
+/*
+=================
+CL_DownloadWebStart
+
+The pak of clc.downloadName from the web address of the server, if it names one. qfalse: it names none, or no
+fetch can be started: the pak is asked from the server itself.
+=================
+*/
+qboolean CL_DownloadWebStart( void ) {
+	char			base[DL_WEB_BASE + 2];
+	dlWebJob_t		*job = NULL;
+	fileHandle_t	f;
+	int				i;
+
+	if ( dlJob || !DL_WebBase( base, sizeof( base ) ) ) {
+		return qfalse;
+	}
+	for ( i = 0; i < DL_WEB_JOBS && !job; i++ ) {
+		if ( SDL_AtomicGet( &dlJobs[i].state ) == WEBJOB_FREE ) {
+			job = &dlJobs[i];
+		}
+	}
+	if ( !job ) {
+		Com_Printf( S_COLOR_YELLOW "Fetches that were stopped have not ended yet, %s is asked from the server\n", cl_downloadName->string );
+		return qfalse;
+	}
+	memset( job, 0, sizeof( *job ) );
+	if ( !DL_WebUrl( base, cl_downloadName->string, job->url, sizeof( job->url ) ) ) {
+		return qfalse;
+	}
+	// the folders and the file are made here, the thread calls nothing of the engine
+	f = FS_SV_FOpenFileWrite( clc.downloadTempName );
+	if ( !f ) {
+		return qfalse;
+	}
+	FS_FCloseFile( f );
+	Q_strncpyz( job->osTemp, DL_Path( clc.downloadTempName ), sizeof( job->osTemp ) );
+	clc.downloadSize = 0;		// (not known before it is here: the overlay says so)
+	Cvar_Set( "cl_downloadSize", "0" );
+	SDL_AtomicSet( &job->state, WEBJOB_WAITING );
+	dlJob = job;
+	Com_Printf( "Downloading %s from %s\n", cl_downloadName->string, job->url );
+	CL_DownloadWebFrame();
+	return qtrue;
+}
+
+/*
+=================
+CL_DownloadWebFrame
+
+Once a frame: the fetch starts when nothing else asks a web server, says how far it is, and when it is through
+the pak goes the way of every download.
+=================
+*/
+void CL_DownloadWebFrame( void ) {
+	dlWebJob_t	*job = dlJob;
+	qboolean	ok, disk;
+	char		why[256];
+
+	if ( !job ) {
+		return;
+	}
+	switch ( SDL_AtomicGet( &job->state ) ) {
+	case WEBJOB_WAITING:
+		if ( CL_UpdateBusy() || DL_WebOthersAsking( job ) ) {
+			return;
+		}
+		SDL_AtomicSet( &job->state, WEBJOB_RUNNING );
+		job->thread = SDL_CreateThread( DL_WebThread, "download", job );
+		if ( !job->thread ) {
+			SDL_AtomicSet( &job->state, WEBJOB_FREE );
+			dlJob = NULL;
+			DL_WebFailed( "no thread could be started for it" );
+		}
+		return;
+	case WEBJOB_RUNNING:
+		clc.downloadCount = (int)job->bytes;
+		Cvar_SetValue( "cl_downloadCount", (float)clc.downloadCount );
+		return;
+	case WEBJOB_DONE:
+		break;
+	default:
+		return;
+	}
+
+	SDL_WaitThread( job->thread, NULL );		// (it is through, this does not wait)
+	dlJob = NULL;
+	clc.downloadCount = (int)job->bytes;
+	Cvar_SetValue( "cl_downloadCount", (float)clc.downloadCount );
+	ok = job->ok;
+	disk = job->disk;
+	Q_strncpyz( why, job->error, sizeof( why ) );
+	SDL_AtomicSet( &job->state, WEBJOB_FREE );
+
+	if ( disk ) {
+		DL_WebFailed( "it could not be written, is the disk full?" );
+		return;
+	}
+	if ( !ok ) {
+		DL_WebFailed( why );
+		return;
+	}
+	// Checked before it is a pak: a wrong file of the web address is not the server's fault (CL_NextDownload would
+	// drop the connection for it), and the engine deletes no file named .pk3.
+	if ( !FS_CompareZipChecksum( DL_Path( clc.downloadTempName ) ) ) {
+		DL_WebFailed( "it is not the pak the server has (another checksum)" );
+		return;
+	}
+	FS_SV_Rename( clc.downloadTempName, clc.downloadName, qfalse );
+	clc.downloadSize = clc.downloadCount;
+	Cvar_SetValue( "cl_downloadSize", (float)clc.downloadSize );
+	CL_NextDownload();
+}
+
+// The download is over without its pak (a disconnect, a new level): the fetch is told to stop and left to itself.
+void CL_DownloadWebStop( void ) {
+	dlWebJob_t *job = dlJob;
+
+	if ( !job ) {
+		return;
+	}
+	dlJob = NULL;
+	job->cancel = 1;
+	if ( SDL_AtomicCAS( &job->state, WEBJOB_WAITING, WEBJOB_FREE ) ) {
+		return;
+	}
+	if ( SDL_AtomicCAS( &job->state, WEBJOB_RUNNING, WEBJOB_LET_GO ) ) {
+		SDL_DetachThread( job->thread );
+		return;
+	}
+	// it was through already
+	SDL_WaitThread( job->thread, NULL );
+	SDL_AtomicSet( &job->state, WEBJOB_FREE );
+}
+
+// a pak of this connection comes from a web address
+qboolean CL_DownloadWebBusy( void ) {
+	return (qboolean)( dlJob != NULL );
+}
+
+// a thread of this file asks a web server now, also one that was let go (the updater waits for it)
+qboolean CL_DownloadWebAsking( void ) {
+	return (qboolean)( dlJob || DL_WebOthersAsking( NULL ) );
+}
+
+#else // __EMSCRIPTEN__: a page gets its files another way
+
+qboolean	CL_DownloadWebStart( void ) { return qfalse; }
+void		CL_DownloadWebFrame( void ) {}
+void		CL_DownloadWebStop( void ) {}
+qboolean	CL_DownloadWebBusy( void ) { return qfalse; }
+qboolean	CL_DownloadWebAsking( void ) { return qfalse; }
+
+#endif
+
+/*
+===============================================================================
+
 The windows
 
 ===============================================================================
@@ -587,7 +958,9 @@ static const char *DL_Size( int bytes ) {
 static void DL_DrawChoose( void ) {
 	const float	x = ( SCREEN_WIDTH - DL_W ) * 0.5f, inner = DL_W - 2.0f * DL_PAD;
 	const int	shown = Q_min( dl.numPaks, 12 );
-	const float	h = DL_PAD + 22.0f + 30.0f + shown * DL_ROW + 12.0f + 2.0f * DL_ROW + 34.0f + 20.0f + DL_PAD;
+	char		base[DL_WEB_BASE + 2];
+	const qboolean web = DL_WebBase( base, sizeof( base ) );
+	const float	h = DL_PAD + 22.0f + 30.0f + ( web ? 13.0f : 0.0f ) + shown * DL_ROW + 12.0f + 2.0f * DL_ROW + 34.0f + 20.0f + DL_PAD;
 	float		y = DL_TOP;
 	qboolean	any = qfalse;
 	int			i;
@@ -599,6 +972,14 @@ static void DL_DrawChoose( void ) {
 	DL_Print( x + DL_PAD, y, 0.55f, dlDim, DL_Text( "THE_SERVER_OFFERS_THESE_FILES_TO_DOW", "The server offers these files to download." ), inner );
 	DL_Print( x + DL_PAD, y + 13.0f, 0.55f, dlDim, DL_Text( "BEFORE_ANYTHING_OF_THEM_IS_USED_YOU",
 		"Before anything of them is used you see what is inside. Programs stay blocked." ), inner );
+	if ( web ) {
+		char line[DL_WEB_BASE + 128];
+
+		// (the host after the text, never inside it: a text of a string file is no format)
+		Com_sprintf( line, sizeof( line ), "%s %s", DL_Text( "THEY_COME_FROM_THE_WEB_ADDRESS", "They come from the web address:" ), DL_WebHost( base ) );
+		DL_Print( x + DL_PAD, y + 26.0f, 0.55f, dlAccent, line, inner );
+		y += 13.0f;
+	}
 	y += 30.0f;
 	for ( i = 0; i < shown; i++ ) {
 		DL_Tick( HIT_PAK, i, x + DL_PAD, y, inner, dl.paks[i].want, dlText, dl.paks[i].remote );

@@ -952,9 +952,9 @@ only on a listen server.
 
 ## Not done
 
-- The download of files over an URL: the plugin ui embeds libcurl, a download screen, a cache file
-  (`japlus/urlRedirect_cache.txt`) and three menu scripts, and its cgame asks for the download when the server
-  names a `jp_DlBaseURL`. OpenJK has no HTTP download, this would be a new dependency on every platform.
-  `cp_pluginDisable` bit 14 belongs to it.
+- The download screen of the plugin for files from an URL, its cache file (`japlus/urlRedirect_cache.txt`, the
+  paks that were not at the address, for six days) and its three menu scripts. The download itself is in the
+  engine since 2026-10-19: a server's `jp_DlBaseURL` is used with the plugin's address and through the windows of
+  [downloads.md](downloads.md). `cp_pluginDisable` bit 14 belongs to the plugin's screen and does nothing here.
 
 Where the port knowingly differs from the plugin is in [differences.md](differences.md).

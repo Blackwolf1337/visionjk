@@ -34,8 +34,55 @@ that were downloaded into the game folder itself before 0.1.9 stay where they ar
 | `v_downloadReview` | 1 | the two windows. 0: everything is downloaded, programs in it stay blocked |
 | `v_downloadKeep` | 1 | where the paks go by default: `downloads` (1) or `downloads/session` (0) |
 | `v_downloadReview_do` | | what a click in the windows does, for a key or a script: `download`, `without`, `keep 0/1`, `pak <n>`, `kind <pak> <kind>`, `use` |
+| `v_downloadHttp` | 1 | paks of a server that names a web address for them come from there. 0: only from the server itself |
+
+## From a web address
+
+A server can name a web address its paks lie on, with the cvar of JA+ that the JA+ client plugin reads:
+
+```
+seta jp_DlBaseURL "https://example.org/jka/"
+```
+
+The quotes are needed: without them the console takes everything after `//` as a comment. The game module turns
+`sv_allowDownload` off when the cvar is set at its start, as JA+ does, so the server sends no paks itself then.
+
+A client of this tree fetches each pak it is missing from `<jp_DlBaseURL><game folder>/<name>.pk3`, the address
+the JA+ plugin asks for, with the name escaped (`%20` for a blank) and a slash put after the base when it has
+none. So a server set up for JA+ players works as it is: put the paks on the web server in a folder per game
+folder (`japlus/`, `base/`), under the names the server has them. The web server has to answer with the file
+itself: no redirect is followed, by the plugin neither.
+
+For the player it is the same download as from the server, only faster:
+
+- the first window lists the paks and names the web address they come from, single paks can be unticked;
+- what came is checked against the checksum the server names before it gets its name: a wrong file is deleted
+  and the game goes on without it (a download from the server would end the connection there);
+- the programs in it are blocked and the second window shows what is in it, as for any other download;
+- a pak that does not come from the web address is asked from the server itself if that sends files
+  (`sv_allowDownload` 1 and a `jp_DlBaseURL` set later), else the game goes on without it and says why;
+- the size is not known before a pak is here, the download overlay says "unknown".
+
+`cl_allowDownload 0` still means no download at all, `v_downloadHttp 0` only from the server itself.
 
 ## How it works
+
+Of the web address:
+
+- `CL_InitDownloads()` no longer gives up on a server with `sv_allowDownload 0` when its systeminfo names a web
+  address (`CL_DownloadWebOffered()`). `CL_BeginDownloadConfirm()`, which asked the server with `download`, asks
+  `CL_DownloadWebStart()` first and the server only when that does not take it (`CL_DownloadUdpStart()`).
+- The fetch runs in a thread of its own with `Sys_HttpGet()` (shared/sys/sys_http.h: WinHTTP on Windows, the
+  libcurl of the system elsewhere, as the updater), which writes the `.tmp` of the download and nothing else.
+  `CL_DownloadWebFrame()` looks at it once a frame and never waits: it shows how much came, and when the thread
+  is through it checks the checksum, renames the file and hands it to `CL_NextDownload()`.
+- A disconnect or a new level lets the fetch go (`CL_DownloadWebStop()`): it is told to stop and its thread
+  frees its slot when it ends (four slots).
+- Only one question to a web server runs at a time: a fetch waits while the updater asks, and the updater does
+  not start while a fetch runs, also one that was let go and has not ended yet.
+- Data of a download the server sends while a pak comes from the web address is not written (`stopdl`).
+
+Of the windows:
 
 - `FS_ComparePaks()` names the place of a download as `<game>/downloads/<name>.pk3` (with the checksum in the
   name when one of that name is there already). `CL_DownloadLocalName()` moves it into `downloads/session` for a
@@ -59,6 +106,18 @@ that were downloaded into the game folder itself before 0.1.9 stay where they ar
   `tools/menus/texts.py` makes.
 
 ## Checked, and what not
+
+The web address, 2026-10-19, hidden and silent on Linux (`uitest/webdltest.sh <case>` of the test tools: a server
+of this tree on 127.0.0.1 with two test paks, one with a fake `cgamex86_64.dll`, a web server of python on
+127.0.0.1, a fresh client profile): both paks from the web address with the address in the first window and the
+program blocked (`ok`), an unticked pak not asked for (`untick`), a wrong file under the name of a pak refused by
+its checksum while the other came (`wrong`), nobody at the address and the game going on without the paks
+(`dead`), the same with a server that sends files itself and both paks coming from it (`fallback`), a disconnect
+while a slow web server still sent, the web server seeing the client go away, and both paks after connecting
+again (`stop`). Not run: HTTPS (the same `Sys_HttpGet()` as the updater, which uses it), Windows, a real JA+
+server and the JA+ plugin side by side, large paks.
+
+The windows:
 
 2026-10-17, hidden and silent on Linux (`uitest/dltest.sh` of the test tools: a server of this tree with a test
 pak holding a map file, a texture, a config and a fake `cgamex86_64.dll`, a fresh client profile): both windows

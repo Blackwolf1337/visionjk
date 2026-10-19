@@ -326,6 +326,7 @@ MORE = {
     'Other files': ('Autres fichiers', 'Otros archivos'),
     'Programs (they could run on your computer)': ("Programmes (ils pourraient s'exécuter sur votre ordinateur)", 'Programas (podrían ejecutarse en su ordenador)'),
     'Use them': ('Les utiliser', 'Usarlos'),
+    'They come from the web address:': ("Ils viennent de l'adresse web :", 'Vienen de la dirección web:'),
     'How loud the other players are.': ('Le volume des autres joueurs.', 'El volumen de los demás jugadores.'),
     'Microphone Gain': ('Gain du microphone', 'Ganancia del micrófono'),
     'How loud your microphone is sent.': ('Le volume auquel votre microphone est envoyé.', 'El volumen con que se envía tu micrófono.'),
@@ -405,6 +406,10 @@ MORE = {
     'Keep downloaded files in the folder downloads. Off: for this session only.':
         ('Garder les fichiers téléchargés dans le dossier downloads. Désactivé : pour cette session seulement.',
          'Conservar los archivos descargados en la carpeta downloads. Desactivado: solo para esta sesión.'),
+    'Web Downloads': ('Téléchargements web', 'Descargas web'),
+    'Files of a server that names a web address for them come from there, much faster. Off: from the server itself.':
+        ("Les fichiers d'un serveur qui indique une adresse web pour eux viennent de là, bien plus vite. Désactivé : du serveur lui-même.",
+         'Los archivos de un servidor que indica una dirección web para ellos vienen de allí, mucho más rápido. Desactivado: del propio servidor.'),
     'Intrusion Log': ("Journal d'intrusion", 'Registro de intrusiones'),
     'Write down what a server sends that no server of the game does, and leave one that keeps at it.': ("Noter ce qu'un serveur envoie d'inhabituel pour le jeu, et quitter celui qui insiste.", 'Anotar lo que un servidor envía y ningún servidor del juego envía, y salir del que insista.'),
     'Key Login by Agent': ('Connexion par clé via agent', 'Inicio con clave por agente'),

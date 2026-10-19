@@ -644,6 +644,14 @@ void CL_ParseDownload ( msg_t *msg ) {
 	unsigned char data[MAX_MSGLEN];
 	uint16_t block;
 
+	// A pak that comes from the web address of the server was not asked from the server. What still comes of one
+	// that was (the last block again, while the acknowledgement is on its way) is no attack.
+	if ( CL_DownloadWebBusy() ) {
+		Com_DPrintf( "Server sending download while a pak comes from its web address\n" );
+		CL_AddReliableCommand( "stopdl", qfalse );
+		return;
+	}
+
 	if (!*clc.downloadTempName) {
 		Com_Printf("Server sending download, but no download was requested\n");
 		CL_AddReliableCommand("stopdl", qfalse);

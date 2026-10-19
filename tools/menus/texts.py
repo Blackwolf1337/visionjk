@@ -417,6 +417,9 @@ TR = {
     'Keep Downloads': 'Downloads behalten',
     'Keep downloaded files in the folder downloads. Off: for this session only.':
         'Heruntergeladene Dateien im Ordner downloads behalten. Aus: nur für diese Sitzung.',
+    'Web Downloads': 'Downloads aus dem Web',
+    'Files of a server that names a web address for them come from there, much faster. Off: from the server itself.':
+        'Dateien eines Servers, der eine Webadresse für sie nennt, kommen von dort, viel schneller. Aus: vom Server selbst.',
     'Intrusion Log': 'Einbruchsprotokoll',
     'Write down what a server sends that no server of the game does, and leave one that keeps at it.':
         'Aufschreiben, was ein Server sendet, das kein Server des Spiels sendet, und einen verlassen, der nicht damit aufhört.',
@@ -559,6 +562,7 @@ CGAME = {
     'Other files': 'Andere Dateien',
     'Programs (they could run on your computer)': 'Programme (sie könnten auf Ihrem Computer laufen)',
     'Use them': 'Verwenden',
+    'They come from the web address:': 'Sie kommen von der Webadresse:',
     # the HUD (ui/vision/hud.menu, written by hand: @VISION_SABER, @VISION_ALTERNATE_DIMENSION)
     'Saber': 'Schwert',
     'Alternate Dimension': 'Andere Dimension',

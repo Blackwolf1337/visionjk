@@ -209,6 +209,8 @@ SETUP = [
         ('yesno', 'Choose Downloads', 'v_downloadReview',
          'Before a download choose the files of the server, and see what is in them before they are used.'),
         ('yesno', 'Keep Downloads', 'v_downloadKeep', 'Keep downloaded files in the folder downloads. Off: for this session only.'),
+        ('yesno', 'Web Downloads', 'v_downloadHttp',
+         'Files of a server that names a web address for them come from there, much faster. Off: from the server itself.'),
         ('head', 'Security'),
         ('yesno', 'Intrusion Log', 'v_ids',
          'Write down what a server sends that no server of the game does, and leave one that keeps at it.'),
