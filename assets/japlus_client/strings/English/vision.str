@@ -1391,11 +1391,20 @@ LANG_ENGLISH        "Put a boombox here"
 REFERENCE           PUT_A_SOUND_SYSTEM_HERE
 LANG_ENGLISH        "Put a sound system here"
 
-REFERENCE           LOUDER_I
-LANG_ENGLISH        "Louder (%i %%)"
+REFERENCE           PLAY
+LANG_ENGLISH        "Play"
 
-REFERENCE           QUIETER_I
-LANG_ENGLISH        "Quieter (%i %%)"
+REFERENCE           LOUDER
+LANG_ENGLISH        "Louder"
+
+REFERENCE           QUIETER
+LANG_ENGLISH        "Quieter"
+
+REFERENCE           REMOVE
+LANG_ENGLISH        "Remove"
+
+REFERENCE           CLICK_A_CHOICE_ESC_CLOSES
+LANG_ENGLISH        "Click a choice, Esc closes"
 
 REFERENCE           NO_BOOMBOX_HERE
 LANG_ENGLISH        "No boombox here"

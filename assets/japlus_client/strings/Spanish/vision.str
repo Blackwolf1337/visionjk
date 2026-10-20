@@ -19,7 +19,7 @@ LANG_SPANISH        "Empuñadura y hoja de tu sable de luz."
 
 REFERENCE           PLAYER
 LANG_ENGLISH        "Player"
-LANG_SPANISH        "Jugador"
+LANG_SPANISH        "Reproductor"
 
 REFERENCE           NAME_MODEL_AND_TEAM_COLOUR
 LANG_ENGLISH        "Name, model and team colour."
@@ -1853,13 +1853,25 @@ REFERENCE           PUT_A_SOUND_SYSTEM_HERE
 LANG_ENGLISH        "Put a sound system here"
 LANG_SPANISH        "Poner un equipo de sonido aquí"
 
-REFERENCE           LOUDER_I
-LANG_ENGLISH        "Louder (%i %%)"
-LANG_SPANISH        "Más alto (%i %%)"
+REFERENCE           PLAY
+LANG_ENGLISH        "Play"
+LANG_SPANISH        "Reproducir"
 
-REFERENCE           QUIETER_I
-LANG_ENGLISH        "Quieter (%i %%)"
-LANG_SPANISH        "Más bajo (%i %%)"
+REFERENCE           LOUDER
+LANG_ENGLISH        "Louder"
+LANG_SPANISH        "Más alto"
+
+REFERENCE           QUIETER
+LANG_ENGLISH        "Quieter"
+LANG_SPANISH        "Más bajo"
+
+REFERENCE           REMOVE
+LANG_ENGLISH        "Remove"
+LANG_SPANISH        "Quitar"
+
+REFERENCE           CLICK_A_CHOICE_ESC_CLOSES
+LANG_ENGLISH        "Click a choice, Esc closes"
+LANG_SPANISH        "Haz clic en una opción, Esc cierra"
 
 REFERENCE           NO_BOOMBOX_HERE
 LANG_ENGLISH        "No boombox here"

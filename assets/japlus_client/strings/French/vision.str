@@ -19,7 +19,7 @@ LANG_FRENCH         "Poignée et lame de votre sabre laser."
 
 REFERENCE           PLAYER
 LANG_ENGLISH        "Player"
-LANG_FRENCH         "Joueur"
+LANG_FRENCH         "Lecteur"
 
 REFERENCE           NAME_MODEL_AND_TEAM_COLOUR
 LANG_ENGLISH        "Name, model and team colour."
@@ -1853,13 +1853,25 @@ REFERENCE           PUT_A_SOUND_SYSTEM_HERE
 LANG_ENGLISH        "Put a sound system here"
 LANG_FRENCH         "Poser une sono ici"
 
-REFERENCE           LOUDER_I
-LANG_ENGLISH        "Louder (%i %%)"
-LANG_FRENCH         "Plus fort (%i %%)"
+REFERENCE           PLAY
+LANG_ENGLISH        "Play"
+LANG_FRENCH         "Jouer"
 
-REFERENCE           QUIETER_I
-LANG_ENGLISH        "Quieter (%i %%)"
-LANG_FRENCH         "Moins fort (%i %%)"
+REFERENCE           LOUDER
+LANG_ENGLISH        "Louder"
+LANG_FRENCH         "Plus fort"
+
+REFERENCE           QUIETER
+LANG_ENGLISH        "Quieter"
+LANG_FRENCH         "Moins fort"
+
+REFERENCE           REMOVE
+LANG_ENGLISH        "Remove"
+LANG_FRENCH         "Enlever"
+
+REFERENCE           CLICK_A_CHOICE_ESC_CLOSES
+LANG_ENGLISH        "Click a choice, Esc closes"
+LANG_FRENCH         "Cliquez un choix, Échap ferme"
 
 REFERENCE           NO_BOOMBOX_HERE
 LANG_ENGLISH        "No boombox here"

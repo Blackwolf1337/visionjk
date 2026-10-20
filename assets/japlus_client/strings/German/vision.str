@@ -1853,13 +1853,25 @@ REFERENCE           PUT_A_SOUND_SYSTEM_HERE
 LANG_ENGLISH        "Put a sound system here"
 LANG_GERMAN         "Soundanlage hier aufstellen"
 
-REFERENCE           LOUDER_I
-LANG_ENGLISH        "Louder (%i %%)"
-LANG_GERMAN         "Lauter (%i %%)"
+REFERENCE           PLAY
+LANG_ENGLISH        "Play"
+LANG_GERMAN         "Abspielen"
 
-REFERENCE           QUIETER_I
-LANG_ENGLISH        "Quieter (%i %%)"
-LANG_GERMAN         "Leiser (%i %%)"
+REFERENCE           LOUDER
+LANG_ENGLISH        "Louder"
+LANG_GERMAN         "Lauter"
+
+REFERENCE           QUIETER
+LANG_ENGLISH        "Quieter"
+LANG_GERMAN         "Leiser"
+
+REFERENCE           REMOVE
+LANG_ENGLISH        "Remove"
+LANG_GERMAN         "Entfernen"
+
+REFERENCE           CLICK_A_CHOICE_ESC_CLOSES
+LANG_ENGLISH        "Click a choice, Esc closes"
+LANG_GERMAN         "Eine Wahl anklicken, Esc schlieﬂt"
 
 REFERENCE           NO_BOOMBOX_HERE
 LANG_ENGLISH        "No boombox here"
