@@ -109,6 +109,10 @@ int G_UnlaggedLag( const gentity_t *shooter ) {
 		return 0;
 	}
 	lag = level.time - shooter->client->pers.cmd.serverTime;
+	// The time of the move is what the client says. A client that says it is further behind than the ping the
+	// server measured (plus a frame and the time a client draws behind the snapshots) would shoot where the
+	// others were longer ago than he saw them: not more than that.
+	lag = Q_min( lag, shooter->client->ps.ping + 1000 / Q_max( 1, sv_fps.integer ) + 50 );
 	return Com_Clampi( 0, Com_Clampi( 0, 1000, tay_unlaggedMax.integer ), lag );
 }
 
