@@ -86,14 +86,17 @@ function liveCamera(now, dt) {
 }
 
 // Whether the camera sees the head of a player: near enough, and no wall between. Asked for every name in every
-// frame, so the answer is kept for a moment.
-const LIVE_NAME_FAR = 1500, liveSeen = new Map();
+// frame, so the answer is kept for a moment. A name stays LIVE_NAME_KEEP msec after its player was last seen:
+// one at the edge of a wall would blink on and off.
+const LIVE_NAME_FAR = 1500, LIVE_NAME_KEEP = 600, liveSeen = new Map();
 function liveSees(id, head) {
-	const now = performance.now(), had = liveSeen.get(id);
-	if (had && now - had.at < 150) return had.seen;
-	const seen = Math.hypot(head[0] - eye[0], head[1] - eye[1], head[2] - eye[2]) < LIVE_NAME_FAR && !traceWorld(eye, head);
-	liveSeen.set(id, { at: now, seen });
-	return seen;
+	const now = performance.now(), had = liveSeen.get(id) || { at: 0, last: -Infinity };
+	if (now - had.at >= 150) {
+		had.at = now;
+		if (Math.hypot(head[0] - eye[0], head[1] - eye[1], head[2] - eye[2]) < LIVE_NAME_FAR && !traceWorld(eye, head)) had.last = now;
+		liveSeen.set(id, had);
+	}
+	return now - had.last < LIVE_NAME_KEEP;
 }
 
 function liveLookAt(p) {
@@ -146,7 +149,9 @@ if (!gl) {
 		asked = performance.now();
 		await pollState();
 		const now = performance.now();
-		if (came && !away) gap = gap ? gap * 0.8 + (now - came) * 0.2 : now - came;
+		// one long wait (a line that stalled) counts as 400 msec at most: the players would go slow for a while after it
+		const was = Math.min(400, now - came);
+		if (came && !away) gap = gap ? gap * 0.8 + was * 0.2 : was;
 		came = away ? 0 : now;
 		liveTell($('status').className === 'err');
 		pollInterval = away ? 2000 : Math.min(1000, Math.max(100, gap * 1.25));
