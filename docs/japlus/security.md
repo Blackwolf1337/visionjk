@@ -327,3 +327,29 @@ build. The JA+ regression (`tools/smoke_test.sh`, `tools/gcheck.sh`) was run to 
 
 Not checked from here: a real jamp 1.01 with the original plugin (needs Wine and the game install), the Windows
 DLLs at run time (they build and link), macOS. Their compatibility follows from the unchanged protocol.
+
+## Audit of 2026-10-20
+
+An audit of master `c8bb609b` and of the website repository, eight areas. The report is
+`agent/reports/security-2026-10-20.md` in the project folder outside the repository. The fixes are on the branch
+`security/audit-2026-10-20`, built on Linux only and not run.
+
+| Where | Problem | Fix |
+|-------|---------|-----|
+| `cgame/cg_servercmds.c` `CG_DuelField` | the duelist configstrings (30, 31) were copied into a 64 byte stack buffer without a bound (stock JKA), so a server could write past it, on Windows without a stack protector | one bounded field reader; the duel winner and the duelist numbers outside 0..31 become -1 |
+| `qcommon/cvar.cpp` `Cvar_CurrentName` | a server (or a module) that set a cvar by its old name (`cvar_renames.h`) passed the checks of `Cvar_Server_Set` and `Cvar_VM_Set`, which saw a name nobody has, and the rename forwarded the set with force: protected and archived cvars such as `v_voiceMasterHost` and `v_authServers` could be set by any server | old names are mapped to the new one before the flags are read |
+| `master/ms_boombox.c` | seek, skip, move, volume and the rest were taken 60 times a second from any session, and every seek forked yt-dlp, deno and ffmpeg | once a second per session, watch changes four times a second, one restart per box and second (`Box_Touch`), also on the game server |
+| `master/ms_relay.c` | token answers counted into `vs_masterKbps`, so a flood of made up states silenced the relay | not counted, limited per address and in all; plus the port check, 4096 sessions, 4 rooms per address, and a fair share per room once half the budget is used |
+| webadmin | behind a proxy without `vs_webProxy` every visitor was one address, so five wrong logins of anybody locked everybody out, and the live view came after that wait | `vs_webProxy` takes a list, the live routes come first, a wrong password no longer makes the account wait, Argon2id runs on a thread of its own, the pages carry a script hash CSP |
+| `client/cl_download.cpp` | `jp_DlBaseURL` could point at the network of the player; a pak entry name of 256 bytes or more was read without its end (also in `FS_LoadZipFile`); 2 GB per pak | no private hosts, terminated names, 512 MB |
+
+Smaller ones: the score count is clamped from below (`cg_servercmds.c`), the disruptor beam length is capped,
+the dots of the lead indicator are capped, chat log lines have no control characters, lag compensation is capped at
+the measured ping plus a frame (`unlagged/g_unlagged.c`), the relay of a game server takes only HELLO, AUDIO and
+RADIO and has `vs_voiceKbps`, the client keeps its master token against made up answers, and for the boombox:
+`SIGTERM` before `SIGKILL`, `--no-plugin-dirs`, playlist ids of 12 characters or more and not `RDMM`, songs up to
+ten hours, error lines with paths not shown to players, and the master registers the boombox program cvars itself.
+
+Left as it is: the updater files are served from the same container that runs the game server and the
+masterserver. With the accepted updater without a signature, a root on that host would reach every client. The room
+key of a server without the module stays known to a kicked player until the next map (see voice.md).

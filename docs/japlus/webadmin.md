@@ -45,7 +45,7 @@ seta vs_webBind "0.0.0.0"
 |------|---------|---------|
 | `vs_webPort` | 80 | TCP port. Below 1024 needs root on Linux |
 | `vs_webBind` | 0.0.0.0 | IPv4 address to listen on. `0.0.0.0` or empty: every interface, the panel is reached from the network. `127.0.0.1`: this machine only. A value that is no address: 127.0.0.1, with a line in the log |
-| `vs_webProxy` | empty | the IPv4 address of the reverse proxy in front of the panel. Then only that address is let in, see "Behind a reverse proxy" |
+| `vs_webProxy` | empty | the IPv4 addresses of the reverse proxies in front of the panel, separated by blanks or commas. Then only those addresses are let in, see "Behind a reverse proxy" |
 | `vs_webBasicAuth` | 0 | 1: a script may send the token of its account as the password of basic auth behind the name of the account |
 | `vs_webPassword` | empty | from before the accounts. A server that has it and no account yet gets the account `owner` with that password at its next map, once. It is not read after that: take it out of the config |
 | `vs_liveView` | 0 | 1: the live view below `/live/` is open to everybody without a login, see "The live view". It opens the port also without an account. Latched |
@@ -68,9 +68,10 @@ The page does not show what a role may not use, and the server refuses it whatev
 (`WA_RouteRole`, and for the actions `WA_ApiAction`).
 
 - An account is a name, a role and a password. The password is kept as an Argon2id hash (12 MiB, three passes,
-  a salt of 16 bytes) in `webadmin_users.dat` of the game folder. Hashing takes some 20 ms of the frame it
-  happens in, so one password is hashed in a second for the whole server at most, a second try at the same
-  time is told to come again.
+  a salt of 16 bytes) in `webadmin_users.dat` of the game folder. The login (`POST /api/login`) hashes on a
+  thread of its own beside the game, so no frame waits for Argon2id, and the answer comes when the hash is
+  there. One password is hashed in a second for the whole server at most, a second try at the same time is told
+  to come again ("busy").
 - `webuser` on the console of the server lists the accounts. `webuser add <name> <moderator|admin|owner>`,
   `webuser reset <name>` (a new password, the second step and the token off, the sessions closed),
   `webuser role <name> <role>`, `webuser token <name>` (a token for a script, shown once),
@@ -91,8 +92,10 @@ The page does not show what a role may not use, and the server refuses it whatev
   file of the login in the game, see server.md), and the browser signs what the server asks. `rcon` is an
   owner, `council` an admin, `knight` and `instructor` a moderator. Browsers only do that on HTTPS (or on the
   machine itself), and not all of them know this kind of key: where one does not, the page does not offer it.
-- Wrong logins make an address wait (five, then 30 seconds that double) and the account as well (five, then 30
-  seconds that double up to five minutes). Every login and every wrong one is in the security log with the
+- Wrong passwords make an address wait (five, then 30 seconds that double). They do not make the account wait:
+  anybody who knew the name of an account ("owner" for the first one) could keep its owner out that way. A wrong
+  code of the second step does make the account wait (five, then 30 seconds that double up to five minutes),
+  because who gets that far has the password. Every login and every wrong one is in the security log with the
   address and the account.
 - A one-time code for the game (Account tab, an admin and up): for an admin in the game whose client can not
   log in with a key. He types `amlogin <code>` within a minute, it works once.
@@ -108,9 +111,25 @@ seta vs_webBind "0.0.0.0"          // or the address of the interface the proxy 
 seta vs_webProxy "192.168.20.20"   // the address the proxy connects from
 ```
 
-With `vs_webProxy` set only that address is let in, every other connection is closed at once. The proxy says
-who the visitor is: `X-Real-IP`, else the last entry of `X-Forwarded-For`. That address gets the wait after
-wrong logins and stands in the log. With `X-Forwarded-Proto: https` the cookie of a session is marked `Secure`.
+`vs_webProxy` is a list of IPv4 addresses, separated by blanks or commas. A host whose own nginx hands out the
+live view and whose panel sits behind another proxy names both:
+
+```
+seta vs_webProxy "127.0.0.1 192.168.20.20"
+```
+
+With `vs_webProxy` set only those addresses are let in, every other connection is closed at once. Each of them
+says who the visitor is: `X-Real-IP`, else the last entry of `X-Forwarded-For`. That address gets the wait after
+wrong logins and stands in the log. A word that is no IPv4 address lets nobody in and is named in a yellow line
+at start. With `X-Forwarded-Proto: https` the cookie of a session is marked `Secure`.
+
+Without `vs_webProxy` every visitor behind a proxy is the address of the proxy, so five wrong logins of anybody
+would lock everybody out. The routes of the live view (`/live/...`) are answered before the wait after wrong
+logins, so wrong tokens sent through the proxy of the live view do not close the live view for everybody.
+
+Every page of the panel (the index and the login) is sent with a `Content-Security-Policy` that names the SHA-256
+of each of its inline scripts (`script-src`), and has `object-src 'none'` and `base-uri 'none'`. The hashes are
+made of what is sent, so a page from `vs_webRoot` gets its own.
 
 Nginx Proxy Manager: a proxy host for the name of the panel, scheme `http`, the address and port of the game
 server, "Block Common Exploits" on, "Websockets Support" on (the socket of the page, see "The socket of a page";
@@ -166,7 +185,7 @@ its headline (nginx of the host passes `/live/` on and keeps the files, see `dep
 | `/live/live.js` | the script: the drawing files of the page and `js/live-boot.js`, put together from `page/live.js` as the page is from `index.html` (with `vs_webRoot` from disk at every load) |
 | `/live/stream` | the WebSocket of the live view, see "The socket of a page": the state below twenty times a second, and the texture swaps when they change |
 | `/live/api/state` | what `/api/state` has, without the address, the arrival and the JA+ client plugin of a player, without his JA+ admin state, without what the server prints, and without the view and the HUD of a player |
-| `/live/api/map?name=` | the map that runs, only under its own name |
+| `/live/api/map?name=` | the map that runs, only under its own name, written exactly as the server has it (no other case), so a proxy cache keeps one file per map |
 | `/live/api/file?name=` | what `/api/file` hands out, without sounds and music |
 | `/live/api/anims`, `/live/api/shaders`, `/live/api/remaps` | as below `/api/` |
 | `/live/api/list?kind=` | `fxindex`, `events` and `mods` only |
@@ -2022,8 +2041,8 @@ To take a later JKAdmin commit: apply its diff and keep the `JA+` blocks in `WA_
   an SSH tunnel. The security pass had made localhost the default; since 2026-10-08 it is every interface
   again, by decision of the owner of this fork, who opens the panel from other machines. A config that still
   has `vs_webBind ""` from that time listens on every interface now.
-- A password is hashed in the frame of the game it arrives in: about 20 ms in which the server does nothing
-  else. One a second at most, so a flood of logins costs every player at most one late frame a second.
+- A password is hashed on a thread of its own, about 20 ms of one core. One a second at most for the whole
+  server, so a flood of logins costs the server at most that much and no frame waits for it.
 - An owner of the panel owns the server: the console runs anything, the file manager writes any file of the
   game folder. An admin does not have those two, but he can make a player an admin of the game and change the
   map.

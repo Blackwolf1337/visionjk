@@ -102,11 +102,11 @@ fetch songs yet.
 | `vs_boombox` | 1 | in the server info. 0: no boxes |
 | `vs_boomboxMax` | 4 | boxes a level has at most (8 at most) |
 | `vs_boomboxRange` | 1536 | how far a box is heard, in units |
-| `vs_boomboxMaxSeconds` | 600 | the longest song, in seconds. 0: any length |
+| `vs_boomboxMaxSeconds` | 600 | the longest song, in seconds. 0: any length, but a song of more than ten hours is not played whatever this says (the samples of a song are counted in an int) |
 | `vs_boomboxQueue` | 10 | songs in the line of one box (16 at most) |
 | `vs_boomboxYtdlp` | yt-dlp | the program, a name in the `PATH` or a path |
 | `vs_boomboxFfmpeg` | ffmpeg | the same |
-| `vs_boomboxYtdlpArgs` | | words for yt-dlp in addition, split at spaces: `--js-runtimes node`, `--cookies <file>`, `--proxy <url>` |
+| `vs_boomboxYtdlpArgs` | | words for yt-dlp in addition, split at spaces: `--js-runtimes node`, `--cookies <file>`, `--proxy <url>`. With `--cookies` mind that a playlist id must have 12 characters at least and may not begin with `RDMM`: the lists of an account (`WL`, `LL`, `LM`, `RDMM`) would be reachable for every player |
 
 The last three can only be set while the server starts (`CVAR_INIT`: in `server.cfg` or on the command line):
 whoever can set a cvar later (rcon, an admin of the panel) can not make the server start a program of his choice.
@@ -133,6 +133,9 @@ default), also with the voice chat switched off.
 |------|---------|---------|
 | `vs_masterBoxes` | 8 | songs it plays at once for all servers, 16 at most. 0: no boxes |
 
+The names on the card of a box there (who placed it, who asked for a song) are what the client sends: the master
+has no other source.
+
 It starts the programs the owner named for its game module (`vs_boomboxYtdlp`, `vs_boomboxFfmpeg`,
 `vs_boomboxYtdlpArgs`) and takes its limits (`vs_boomboxMaxSeconds`, `vs_boomboxQueue`), once a second. Its line of
 numbers says once a minute how many rooms have boxes and how many songs play.
@@ -154,7 +157,13 @@ A song: `yt-dlp` looks it up first (`--print` of its id, length, whether it is l
 fetched), and when its turn comes `yt-dlp -o -` fetches the audio and hands it to `ffmpeg`, which makes one
 channel of 16 bit at 48 kHz of it (`game/boombox/bg_boombox_fetch.c`). The programs run in a process group of
 their own, started by a go-between that ends at once, never through a shell, and with pipes that do not block:
-nothing of the server waits for them. A stopped song is one kill of that group. Of what a player typed only the
+nothing of the server waits for them. A stopped song gets `SIGTERM` to that group first and `SIGKILL` 2 seconds later
+to what is still there (the one-file build of yt-dlp removes the folder it unpacks itself into in `/tmp` only when
+it may end; with `SIGKILL` alone one folder was left per song). yt-dlp is started with `--no-plugin-dirs` as well
+(no plugins from the home folder or next to the program), which needs a yt-dlp of 2025 or newer. A skip or a seek
+restarts the programs of a song, so a box takes one of those a second at most, whoever asks (game server and
+masterserver). A line of yt-dlp that names a path, cookies, a proxy or an address is not shown to players, they get
+the general reason; `vs_boxes` still shows the line to the owner. Of what a player typed only the
 address of a YouTube video, made anew from its eleven characters, the address of a playlist made anew from its
 id (with the video it begins with), or `ytsearch1:` with the words reaches yt-dlp, behind `--`: any other address
 is refused, so the server never fetches an address inside its own network.

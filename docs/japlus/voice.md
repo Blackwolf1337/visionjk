@@ -99,6 +99,7 @@ you (`cp_clanPwd` in the client, or `/clanpass` in the game): the ones your clan
 | `vs_voiceRange` | 1024 | how far a voice carries, in units. 0: all over the level, without direction and without muffling |
 | `vs_voiceTeamOnly` | 0 | 1: in team games only the own team hears a player |
 | `vs_voiceRadio` | 1 | 0: no clan radio. With 1 a frame a client sends for its clan goes to the players with the same clan password, whatever `vs_voiceRange` and `vs_voiceTeamOnly` say. A silenced player has no radio either |
+| `vs_voiceKbps` | 6000 | what the relay may send in a second, in kbit/s with the IPv4 and UDP headers counted. 0: no cap. What one speaker says goes to everybody near him, a datagram each, so a few speakers at the limit of a speaker could fill the upload of a server at home. Datagrams not sent for it are counted in the status line of the voice chat ("not sent for vs_voiceKbps") |
 | `vs_voiceRelay` | | read only, set by the game module: where the relay listens for the web host of the same server, `address:port`. Empty: no relay |
 
 The voice chat is on unless a server switches it off (since 2026-10-07, before that `vs_voice` was 0). A server
@@ -164,7 +165,9 @@ not wait for the next server frame. It takes at most 64 datagrams a call and nev
 sound. A datagram counts if it is whole, names a connected client, carries his token and comes from the address
 his game connection comes from. It then goes to every client who is to hear it (`BG_VoiceHears`), with that
 client's token, a flag if the server does not show him the speaker at all, and the distance in steps of 16
-units. No coordinates are sent: a voice must not tell where somebody stands behind a wall.
+units. No coordinates are sent: a voice must not tell where somebody stands behind a wall. From a client it
+takes only HELLO, AUDIO and RADIO datagrams. (It refused some types before and passed the rest on with their
+type.)
 
 **The listener** (`cg_voice.c`) takes datagrams only from the address and port of the server and with his own
 token. The frames of a speaker wait in a queue by their sequence number. He starts to play when 60 ms of him
@@ -244,14 +247,19 @@ Nothing of it goes to the game server: no client command, no userinfo. The game 
 the address of the game server in numbers, its port and `sv_serverid`. That number is in the system info,
 which a server sends only to its clients, and is a new one with every level and every `map_restart`. So the
 clients of one game server name the same room, somebody who is not connected to it can not name it, and the
-master sees a hash and not an address. The cgame looks at `sv_serverid` once a second.
+master sees a hash and not an address. The cgame looks at `sv_serverid` once a second. That holds for somebody
+who never connected during this level. A player who was kicked or banned, or left, still knows the room key (it
+is made of the server address and `sv_serverid`) until the next map or `map_restart`, and the first session that
+claims a client number keeps it. There is no fix for that without a server that vouches for its players.
 
 **The token.** Nobody hands one out over a game connection here. The cgame sends its first `VOICE_STATE`
 without one, the master answers with the token that address has for that room and client number, and the cgame
 says the same again with it. The master works the token out (SHA-1 of a secret it made at its start, the
 address, the room and the number) and keeps nothing of an address until a datagram came back from there with
 it. A sender who gives an address that is not his fills no table, and the address he gave gets 13 bytes for the
-35 that were sent.
+35 that were sent. A client keeps the token the master gave it while the master answers that token. An answer
+with another token (which a sender who fakes the address of the master could send) is taken only after the
+master did not answer the own token for 3 seconds (a master that started again), or after the room changed.
 
 **Who hears whom.** The range is the default of `vs_voiceRange`, 1024 units, and there is no cvar for it. The
 master does not know where anybody stands, so both ends say what their game shows them. Ten times a second
@@ -337,7 +345,8 @@ What is different from a server with its own relay:
 - The clan of the radio is whoever knows the clan password, as on a server with the module. Somebody who
   runs the master could try passwords against the eight bytes it is told.
 - The master reads the status of every player who shares one (the title of his music) on its way through.
-  It is not written down. `v_shareMusic` is off by default.
+  It is not written down. `v_shareMusic` is off by default. Browsers announce every tab that plays media as a
+  player of its own, so with `v_shareMusic 1` the title of any playing tab can be shown.
 - Players who reach the game server under another address than the others (its own network) are in a room of
   their own.
 - A voice travels to the master and back, not to the game server: players far from the master hear it later.

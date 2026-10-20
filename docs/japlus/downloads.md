@@ -61,7 +61,15 @@ For the player it is the same download as from the server, only faster:
 - the programs in it are blocked and the second window shows what is in it, as for any other download;
 - a pak that does not come from the web address is asked from the server itself if that sends files
   (`sv_allowDownload` 1 and a `jp_DlBaseURL` set later), else the game goes on without it and says why;
-- the size is not known before a pak is here, the download overlay says "unknown".
+- the size is not known before a pak is here, the download overlay says "unknown";
+- a pak fetched over HTTP may have 512 MB at most (it was 2 GB), as the checksum is only tested at the end.
+
+A client of this tree does not use a `jp_DlBaseURL` whose host is this machine (`localhost`, `.local`,
+`.localhost`), a written-out address of a private network (10/8, 172.16/12, 192.168/16, 100.64/10), the link
+(169.254/16), 0/8, 127/8 or 224 and up, a host with a user (`user@host`), an IPv6 address in brackets, or a number
+written in another way (`0x...`, fewer than four parts). It says so once in the console. A name that the DNS turns
+into such an address is not seen. The reason is that the fetch goes out from the machine of the player, and a
+server could otherwise make it ask a router, a printer or a service on the machine itself.
 
 `cl_allowDownload 0` still means no download at all, `v_downloadHttp 0` only from the server itself.
 

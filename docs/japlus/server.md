@@ -176,6 +176,23 @@ What comes in on its port:
 - any other datagram of the voice chat: its relay for the other servers. `vs_masterKbps` (4000, command line
   only) is what that may send in a second, 0: anything
 
+Limits of the relay:
+
+- Token answers to a state without the right token are at most 10 per address and second and 4000 in all, and
+  they no longer count into `vs_masterKbps`. They used to fill the budget of every second, so a flood of made up
+  states silenced the relay for everybody.
+- The session token is made of the address without the port. A state without the token for a client number whose
+  session is alive on another port of the same address is answered "taken", so somebody else behind the same
+  router can not take that session over. The client that has the token moves to a new port with it.
+- There are 4096 sessions (was 1024), still 16 per address, and one address may be in 4 rooms at most.
+- Once half of the budget of a second (`vs_masterKbps`) is used, no room gets more than an equal share of it among
+  the rooms that were sent anything in that second.
+- A client may do something with a box other than ask for a song (place, move, volume, seek, skip, pause, stop,
+  remove) once a second at most, and change the box it watches four times a second. The line of a box is sent
+  only when the watched box changes.
+- The engine of the masterserver registers `vs_boomboxYtdlp`, `vs_boomboxFfmpeg` and `vs_boomboxYtdlpArgs` as
+  `CVAR_INIT` itself, so it does not depend on the game module for that.
+
 29170 is the port the clients of 0.1.5 know for the voice chat on servers without the module
 (`v_voiceMasterHost`: `voice.jka.vision` up to 0.1.6, `master.jka.vision` after it, the same host). Until
 2026-10-17 it was also the Vision Temple as a game server (`temple.cfg`, map `vision_temple`), which is
