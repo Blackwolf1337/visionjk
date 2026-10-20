@@ -243,7 +243,9 @@ typedef struct spatialShader_s {
 static spatialShader_t	spatialTable[SPATIAL_TABLE_MAX];
 static int				spatialTableCount;
 
-#define SPATIAL_VOICES				64		// the mixer has 32 channels and 32 loop sounds, each can be one
+#define SPATIAL_VOICES				128		// the mixer has 32 channels and 32 loop sounds, each can be one, and the voices
+											// of the voice chat and the boxes of the boombox are some more. A sound
+											// none is free for goes to the mixer, which knows no walls.
 #define SPATIAL_RING				16384	// samples of finished sound that are kept, a power of two
 #define SPATIAL_OCCLUSION_SAMPLES	16		// rays from the listener to points around a source: how much of it is hidden
 #define SPATIAL_OCCLUSION_RADIUS	0.5f	//	and how large a source is taken to be, in metres
@@ -361,6 +363,7 @@ enum {
 // the level like any other sound. The cgame decodes it and plays it itself on every other engine.
 #define SPATIAL_STREAM_FIFO			16384	// samples of a voice that wait to be rendered, at the rate of the mixer, a power of two
 #define SPATIAL_LISTENER_JUMP		64.0f	// units the listener moves in a frame that are a jump, not a speed
+#define SPATIAL_WALL_MSEC			50.0f	// how fast what the walls let through follows them, see S_SpatialSimulate()
 #define SPATIAL_AHEAD_LEAST			0.02f	// seconds the voices are rendered ahead of what the mixer paints at least,
 #define SPATIAL_AHEAD_FRAMES		2.5f	//	see S_SpatialAhead(), and how many frames of the game they are
 #define SPATIAL_AHEAD_HITCH			250		//	ms of a frame that is not counted
@@ -450,6 +453,7 @@ typedef struct spatialVoice_s {
 	qboolean				pathing;	// this frame its way round the corners is asked for
 	float					pathSh[SPATIAL_REVERB_CHANNELS];	// of that way, smoothed from block to block
 	float					lastHidden;	// how much of it the walls hid in the last block
+	float					occlusion, transmission[3];	// what the walls let through, smoothed (S_SpatialSimulate)
 } spatialVoice_t;
 
 static cvar_t	*v_spatial;
@@ -540,6 +544,7 @@ static struct {
 	int					listenerJumped;		// the frame he last jumped to another place, see S_SpatialBeginFrame()
 	int					lastUpdate;			// Sys_Milliseconds() of the last S_SpatialUpdate()
 	float				frameMsec;			//	and how long a frame takes, see S_SpatialAhead()
+	float				lastFrameMsec;		//	and how long the last one took
 	spatialVoice_t		voices[SPATIAL_VOICES];
 
 	// finished sound, by the time of the mixer
@@ -1772,6 +1777,10 @@ static void S_SpatialSimulate( void ) {
 
 	qiplSimulatorRunDirect( spatial.simulator );
 
+	// A wall comes between in one frame: what it lets through gets there over SPATIAL_WALL_MSEC, so that a step
+	// behind it is a quick fade and not a cut. A sound that starts takes it as it is.
+	const float wallStep = 1.0f - expf( -spatial.lastFrameMsec / SPATIAL_WALL_MSEC );
+
 	for ( int i = 0; i < SPATIAL_VOICES; i++ ) {
 		spatialVoice_t *v = &spatial.voices[i];
 		IPLSimulationOutputs outputs;
@@ -1782,6 +1791,20 @@ static void S_SpatialSimulate( void ) {
 		memset( &outputs, 0, sizeof( outputs ) );
 		qiplSourceGetOutputs( v->source, IPL_SIMULATIONFLAGS_DIRECT, &outputs );
 		v->directParams = outputs.direct;
+		if ( v->fresh ) {
+			v->occlusion = outputs.direct.occlusion;
+		} else {
+			v->occlusion += ( outputs.direct.occlusion - v->occlusion ) * wallStep;
+		}
+		v->directParams.occlusion = v->occlusion;
+		for ( int k = 0; k < 3; k++ ) {
+			if ( v->fresh ) {
+				v->transmission[k] = outputs.direct.transmission[k];
+			} else {
+				v->transmission[k] += ( outputs.direct.transmission[k] - v->transmission[k] ) * wallStep;
+			}
+			v->directParams.transmission[k] = v->transmission[k];
+		}
 		// how loud a sound is at its distance stays what the game makes of it (v->gain)
 		v->directParams.flags = (IPLDirectEffectFlags)( IPL_DIRECTEFFECTFLAGS_APPLYOCCLUSION | IPL_DIRECTEFFECTFLAGS_APPLYTRANSMISSION
 			| ( ( v_spatialPhysical->integer || S_SpatialBoxVoice( v ) ) ? IPL_DIRECTEFFECTFLAGS_APPLYAIRABSORPTION : 0 ) );
@@ -3142,6 +3165,7 @@ void S_SpatialUpdate( void ) {
 		const int now = Sys_Milliseconds();
 		const float took = (float)( now - spatial.lastUpdate );
 
+		spatial.lastFrameMsec = Com_Clamp( 0.0f, (float)SPATIAL_AHEAD_HITCH, took );
 		if ( spatial.lastUpdate && took >= 0.0f && took < SPATIAL_AHEAD_HITCH ) {
 			spatial.frameMsec = took > spatial.frameMsec ? took : spatial.frameMsec + ( took - spatial.frameMsec ) * SPATIAL_AHEAD_SETTLE;
 		}
