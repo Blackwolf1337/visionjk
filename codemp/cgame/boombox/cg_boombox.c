@@ -74,6 +74,8 @@ qboolean CG_WorldCoordToScreenCoordFloat( vec3_t worldCoord, float *x, float *y 
 #define SYS_TWEETER_Z		53.0f		//	the small one here,
 #define SYS_TWEETER_SCALE	0.55f		//	this large
 #define SYS_SPK_RETRY		3			// a new speaker that has no floor where it would stand comes closer, this often
+#define SYS_SPK_BEHIND		0.12f		// how much of a speaker of a sound system is heard behind it, of what is heard in front
+#define BOX_BEHIND			0.45f		//	and of a boombox, whose speakers are small and whose box is thin
 
 // where a part of a box stands, and how it gets there
 typedef struct cgPlace_s {
@@ -1058,9 +1060,25 @@ qboolean CG_BoomboxHears( int channel ) {
 	return ( v_boomboxes.integer && v_boomboxVolume.value > 0.0f && Box_Channel( channel, &box, &part ) ) ? qtrue : qfalse;
 }
 
+// How much of a speaker reaches the camera by the way it faces: all of it in front, half or so beside it, little
+// behind it (behind: that part, at the back). A cardioid, as a speaker in a box has.
+static float Box_Facing( const vec3_t mouth, float yaw, float behind ) {
+	vec3_t	angles, forward, to;
+	float	front;
+
+	VectorSet( angles, 0.0f, yaw, 0.0f );
+	AngleVectors( angles, forward, NULL, NULL );
+	VectorSubtract( cg.refdef.vieworg, mouth, to );
+	if ( VectorNormalize( to ) < 1.0f ) {
+		return 1.0f;
+	}
+	front = 0.5f * ( 1.0f + DotProduct( forward, to ) );
+	return behind + ( 1.0f - behind ) * front;
+}
+
 // Where the sound of a channel comes from (the box, a speaker of a sound system), and how loud it is before its
-// distance: as this player wants the songs (v_boomboxVolume) and the box is set for everybody. qfalse: there is
-// no such channel.
+// distance: as this player wants the songs (v_boomboxVolume), the box is set for everybody, and the speaker faces
+// the camera or not. qfalse: there is no such channel.
 qboolean CG_BoomboxMouth( int channel, vec3_t mouth, float *gain ) {
 	float	yaw;
 	int		box, part;
@@ -1069,7 +1087,8 @@ qboolean CG_BoomboxMouth( int channel, vec3_t mouth, float *gain ) {
 		return qfalse;
 	Box_Where( box, part, mouth, &yaw );
 	mouth[2] += ( part == BOX_PART_BODY ) ? BOX_SPEAKER_HEIGHT : SYS_SPK_MOUTH;
-	*gain = v_boomboxVolume.value * cgBoxes[box].volume * 0.01f;
+	*gain = v_boomboxVolume.value * cgBoxes[box].volume * 0.01f
+		* Box_Facing( mouth, yaw, ( part == BOX_PART_BODY ) ? BOX_BEHIND : SYS_SPK_BEHIND );
 	return qtrue;
 }
 
