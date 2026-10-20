@@ -585,6 +585,13 @@ static std::atomic<int>	spatialBakeCancel;
 #define SPATIAL_BOXES		16
 static spatialStream_t	spatialStreams[MAX_CLIENTS + 1 + SPATIAL_BOXES];
 
+// A box of the boombox far away is heard as music across a hall: its straight way fades with the distance as the
+// cgame makes it (in the volume it gives), but the room keeps ringing from it. So what of it the reverb and its
+// reflections get falls off slower: from SPATIAL_BOX_WET_NEAR on it is that much more for every such distance, up
+// to SPATIAL_BOX_WET_MAX times. And it loses its highs in the air, also without v_spatialPhysical.
+#define SPATIAL_BOX_WET_NEAR	192.0f
+#define SPATIAL_BOX_WET_MAX		4.0f
+
 // What a pass of the reflections starts from. Valve sets the inputs of the reflections in the thread that runs
 // them (phonon.h, iplSourceSetInputs). The game writes this only while the thread is idle, the thread reads it
 // after it was woken, see S_SpatialAskPass() and S_SpatialPassInputs().
@@ -1376,6 +1383,19 @@ static void S_SpatialPlaceVoice( spatialVoice_t *v, channel_t *channel, int entc
 
 }
 
+// is it the song of a box of the boombox (a stream after the one of the own player)
+static qboolean S_SpatialBoxVoice( const spatialVoice_t *v ) {
+	return ( v->stream && v->stream - spatialStreams > SPATIAL_OWN_STREAM ) ? qtrue : qfalse;
+}
+
+// how much more of a box the room gets than its straight way at the distance it is (SPATIAL_BOX_WET_NEAR), 1: as much
+static float S_SpatialBoxWet( const spatialVoice_t *v ) {
+	if ( !S_SpatialBoxVoice( v ) ) {
+		return 1.0f;
+	}
+	return Com_Clamp( 1.0f, SPATIAL_BOX_WET_MAX, v->distance / SPATIAL_BOX_WET_NEAR );
+}
+
 // samples of its sound a voice reads per sample heard: the doppler of how fast it comes closer
 static float S_SpatialRate( const spatialVoice_t *v ) {
 	if ( v->stream || v->sendOnly || !s_doppler->integer ) {
@@ -1715,9 +1735,9 @@ static void S_SpatialSimulate( void ) {
 		memset( &inputs, 0, sizeof( inputs ) );
 		if ( v->active && v->frame == spatial.frame && !v->sendOnly ) {
 			inputs.flags = IPL_SIMULATIONFLAGS_DIRECT;
-			// with v_spatialPhysical a far sound loses its highs in the air too (Valve's default model)
+			// with v_spatialPhysical a far sound loses its highs in the air too (Valve's default model), a box always
 			inputs.directFlags = (IPLDirectSimulationFlags)( IPL_DIRECTSIMULATIONFLAGS_OCCLUSION | IPL_DIRECTSIMULATIONFLAGS_TRANSMISSION
-				| ( v_spatialPhysical->integer ? IPL_DIRECTSIMULATIONFLAGS_AIRABSORPTION : 0 ) );
+				| ( ( v_spatialPhysical->integer || S_SpatialBoxVoice( v ) ) ? IPL_DIRECTSIMULATIONFLAGS_AIRABSORPTION : 0 ) );
 			S_SpatialPoint( v->origin, &inputs.source.origin );
 			inputs.source.right.x = 1.0f;
 			inputs.source.up.y = 1.0f;
@@ -1749,7 +1769,7 @@ static void S_SpatialSimulate( void ) {
 		v->directParams = outputs.direct;
 		// how loud a sound is at its distance stays what the game makes of it (v->gain)
 		v->directParams.flags = (IPLDirectEffectFlags)( IPL_DIRECTEFFECTFLAGS_APPLYOCCLUSION | IPL_DIRECTEFFECTFLAGS_APPLYTRANSMISSION
-			| ( v_spatialPhysical->integer ? IPL_DIRECTEFFECTFLAGS_APPLYAIRABSORPTION : 0 ) );
+			| ( ( v_spatialPhysical->integer || S_SpatialBoxVoice( v ) ) ? IPL_DIRECTEFFECTFLAGS_APPLYAIRABSORPTION : 0 ) );
 		v->directParams.transmissionType = IPL_TRANSMISSIONTYPE_FREQDEPENDENT;
 	}
 }
@@ -1948,12 +1968,17 @@ static void S_SpatialRenderBlock( spatialVoice_t *v, float gain ) {
 	}
 
 	// What the walls in the way left of it, and what came round them, is what the room around the listener
-	// gets to hear. Its own reflections get the sound as it leaves it: their impulse response has the walls.
-	for ( int i = 0; i < SPATIAL_FRAME; i++ ) {
-		const float through = hiddenFrom + ( hidden - hiddenFrom ) * i * ( 1.0f / SPATIAL_FRAME );
+	// gets to hear. Its own reflections get the sound as it leaves it: their impulse response has the walls. A box
+	// far away gives the room more than its straight way (S_SpatialBoxWet).
+	{
+		const float wet = S_SpatialBoxWet( v );
 
-		v->dry[( c + i ) & ( SPATIAL_DRY - 1 )] = ( direct[i] + ( pathed ? ( pathLeft[i] + pathRight[i] ) * 0.5f * through : 0.0f ) ) * send;
-		v->own[( c + i ) & ( SPATIAL_DRY - 1 )] = reflectIn[i] * send;
+		for ( int i = 0; i < SPATIAL_FRAME; i++ ) {
+			const float through = hiddenFrom + ( hidden - hiddenFrom ) * i * ( 1.0f / SPATIAL_FRAME );
+
+			v->dry[( c + i ) & ( SPATIAL_DRY - 1 )] = ( direct[i] + ( pathed ? ( pathLeft[i] + pathRight[i] ) * 0.5f * through : 0.0f ) ) * send * wet;
+			v->own[( c + i ) & ( SPATIAL_DRY - 1 )] = reflectIn[i] * send * wet;
+		}
 	}
 	volume = ( v->stream ? 1.0f : send ) * ( 32768.0f * 256.0f );
 	if ( v_spatialHrtf->integer ) {
