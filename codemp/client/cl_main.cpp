@@ -3027,6 +3027,7 @@ void CL_Init( void ) {
 	Cvar_Get( "v_cgameChat", "1", CVAR_ROM, "" );
 	// and the calls for text and pictures of its own in the scene
 	Cvar_Get( "v_cgameScene", "1", CVAR_ROM, "" );
+	Cvar_Get( "v_cgameSpatialDebug", "1", CVAR_ROM, "" );
 	// the menus on a plane in the level, and the blur of the scene around a distance
 	Cvar_Get( "v_cgameUIPlane", "1", CVAR_ROM, "" );
 	Cvar_Get( "v_cgameDoF", "1", CVAR_ROM, "" );

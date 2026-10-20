@@ -8244,6 +8244,8 @@ static void CG_Draw2D( void ) {
 	CG_MoveHudDraw();
 	// where to aim with a shot that flies (hud/cg_lead.c)
 	CG_LeadDraw();
+	// what the sound of the level does (cg_spatialdebug.c, v_spatialDebug)
+	CG_SpatialDebugDraw();
 
 	CG_DrawLagometer();
 

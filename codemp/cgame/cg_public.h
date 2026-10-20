@@ -24,6 +24,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #pragma once
 
+#include "qcommon/spatial_debug.h"
+
 #define	CGAME_API_VERSION		2
 
 #define	CMD_BACKUP			64
@@ -755,6 +757,10 @@ typedef struct cgameImport_s {
 		// frame is blurred where it is nearer or farther than focus (units of the level), amount 0 to 1. Called
 		// before R_RenderScene, every frame it is wanted. A renderer without the effect does nothing.
 		void			(*R_SetDepthOfField)					( float focus, float amount );
+		// Only an engine that sets the cvar v_cgameSpatialDebug to 1 has this one, the same way. What the sound of
+		// the level with Steam Audio shows of itself for v_spatialDebug (qcommon/spatial_debug.h), once a frame:
+		// eye and forward are where the camera is and looks, for the wall under the crosshair.
+		void			(*S_SpatialDebug)						( spatialDebug_t *out, const vec3_t eye, const vec3_t forward );
 	} ext;
 } cgameImport_t;
 

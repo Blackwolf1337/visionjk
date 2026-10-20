@@ -57,5 +57,10 @@ int			S_SpatialVoice( int clientNum, const vec3_t origin, float volume, const sh
 // from the cgame (ext.S_SpatialOwnVoice): what the own player says into the voice chat, only for the reverb
 void		S_SpatialOwnVoice( float volume, const short *samples, int numSamples, int rate );
 
+// v_spatialDebug: a sound no voice was free for (snd_dma.cpp), and from the cgame (ext.S_SpatialDebug) what to draw
+typedef struct spatialDebug_s spatialDebug_t;
+void		S_SpatialDebugFallback( const vec3_t origin, const sfx_t *sfx );
+void		S_SpatialDebug( spatialDebug_t *out, const vec3_t eye, const vec3_t forward );
+
 // from S_PaintChannels(): adds what the voices have for the samples from to to
 void		S_SpatialPaint( int from, int to, portable_samplepair_t *paint );

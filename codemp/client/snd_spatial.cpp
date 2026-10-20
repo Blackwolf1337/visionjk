@@ -39,6 +39,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include "sys/sys_loadlib.h"
 #include "qcommon/cm_public.h"
+#include "qcommon/spatial_debug.h"
 #include <phonon.h>
 #include <SDL.h>
 #include <atomic>
@@ -305,7 +306,7 @@ static const char *spatialShockPaths[] = {
 
 #define SPATIAL_REFLECT_SLOTS		16		// the most v_spatialSources can be. A slot is about 7 MB (its impulse
 											//	response, partitioned, and its convolution)
-#define SPATIAL_REFLECT_KEEP		2.0f	// a sound that has one keeps it against one up to this much louder,
+#define SPATIAL_REFLECT_KEEP		4.0f	// a sound that has one keeps it against one up to this much louder,
 #define SPATIAL_REFLECT_HOLD		1000	//	and against any for this many ms after it got it
 
 // A page does a pass in the thread of the game, a slice of it in a frame (S_SpatialSlice), so a pass takes as
@@ -477,6 +478,7 @@ static cvar_t	*v_spatialPhysical;
 #ifdef __EMSCRIPTEN__
 static cvar_t	*v_spatialBudget;
 #endif
+static cvar_t	*v_spatialDebug;
 
 // what v_spatialInfo says the sound of the level took of the thread of the game
 enum {
@@ -554,6 +556,17 @@ static struct {
 	int					lastUpdate;			// Sys_Milliseconds() of the last S_SpatialUpdate()
 	float				frameMsec;			//	and how long a frame takes, see S_SpatialAhead()
 	float				lastFrameMsec;		//	and how long the last one took
+
+	// for v_spatialDebug (S_SpatialDebug)
+	int					numFallbacks;		// sounds of this frame no voice was free for
+	spatialDebugFallback_t	fallbacks[SPATIAL_DEBUG_FALLBACKS];
+	double				directEnergy, reverbEnergy;	// what the voices and the reverb put into the ring since it was
+	int					energySamples;		//	last asked, squared, and over how many samples of the mixer
+	float				directLevel, reverbLevel;	// dB of full scale, smoothed
+	IPLVector3			settledOrigin;		// where the listener was at the last pass,
+	int					settledPasses;		//	and how many passes he has not moved since: Steam Audio adds them up
+	int					numSegments;		// the ways round the corners of the last pass with paths
+	spatialDebugSegment_t	segments[SPATIAL_DEBUG_SEGMENTS];
 	spatialVoice_t		voices[SPATIAL_VOICES];
 
 	// finished sound, by the time of the mixer
@@ -637,6 +650,12 @@ static std::atomic<int>	spatialPassReflections;	// what the pass that is asked f
 static std::atomic<int>	spatialPassPaths;
 static std::atomic<int>	spatialReflectUsec;		// what the last pass took
 static std::atomic<int>	spatialReflectPasses;
+static std::atomic<int>	spatialPassDebug;		// the pass hands the ways it found to S_SpatialPathVis()
+static std::atomic<int>	spatialVisCount;		//	how many of them, as Steam Audio has them (spatialVis)
+static struct {
+	IPLVector3	from, to;
+	IPLbool		occluded;
+} spatialVis[SPATIAL_DEBUG_SEGMENTS];
 
 // A point of the game for Steam Audio: metres, x to the right, y up, z to the back. The game has x ahead, y to
 // the left and z up. Both are right handed, so a triangle keeps the side it faces.
@@ -789,6 +808,16 @@ static int S_SpatialTableMaterial( const char *shader ) {
 }
 
 // The sky first. Then the table, before what the level says: a line of the table can put a level right.
+static int S_SpatialMaterial( int tableMaterial, int surfaceFlags ) {
+	if ( surfaceFlags & SURF_SKY ) {
+		return SPATIAL_SKY;
+	}
+	if ( tableMaterial != MATERIAL_NONE ) {
+		return spatialMaterialOf[tableMaterial];
+	}
+	return spatialMaterialOf[surfaceFlags & MATERIAL_MASK];
+}
+
 static void S_SpatialTriangle( const vec3_t a, const vec3_t b, const vec3_t c, const char *shader, int surfaceFlags, void *data ) {
 	spatialMeshBuild_t *build = (spatialMeshBuild_t *)data;
 	const int n = build->count++;
@@ -798,13 +827,9 @@ static void S_SpatialTriangle( const vec3_t a, const vec3_t b, const vec3_t c, c
 		build->shader = shader;
 		build->tableMaterial = S_SpatialTableMaterial( shader );
 	}
-	if ( surfaceFlags & SURF_SKY ) {
-		material = SPATIAL_SKY;
-	} else if ( build->tableMaterial != MATERIAL_NONE ) {
-		material = spatialMaterialOf[build->tableMaterial];
+	material = S_SpatialMaterial( build->tableMaterial, surfaceFlags );
+	if ( !( surfaceFlags & SURF_SKY ) && build->tableMaterial != MATERIAL_NONE ) {
 		spatial.tableTriangles++;
-	} else {
-		material = spatialMaterialOf[surfaceFlags & MATERIAL_MASK];
 	}
 
 	S_SpatialPoint( a, &build->vertices[n * 3] );
@@ -1317,6 +1342,7 @@ static qboolean S_SpatialIsExplosion( sfx_t *sfx ) {
 
 void S_SpatialBeginFrame( const vec3_t origin, matrix3_t axis ) {
 	spatial.frame++;
+	spatial.numFallbacks = 0;
 	// a teleporter, the view going to another player: no sound came closer by that
 	if ( DistanceSquared( origin, spatial.listenerOrigin ) > SPATIAL_LISTENER_JUMP * SPATIAL_LISTENER_JUMP ) {
 		spatial.listenerJumped = spatial.frame;
@@ -1687,35 +1713,41 @@ static qboolean S_SpatialReflectReady( const spatialReflect_t *r ) {
 ===============
 S_SpatialChooseReflects
 
-Once a frame: the loudest v_spatialSources sounds have reflections of their own. One that has them counts
-SPATIAL_REFLECT_KEEP times as loud, and keeps them SPATIAL_REFLECT_HOLD while it plays, so that sounds of about
-the same loudness do not take them from each other frame after frame. A sound that gets them goes on through the reverb of the listener until a pass with it in it
-is done (S_SpatialReflectReady).
+Once a frame: v_spatialSources sounds have reflections of their own. Steam Audio adds the passes for a sound up
+as long as neither it nor the listener moves, and begins anew when it gets another sound: a sound that has them
+keeps them while it plays, and gives them up only to one SPATIAL_REFLECT_KEEP times as loud, and not in the first
+SPATIAL_REFLECT_HOLD. Before 2026-10-21 any sound twice as loud took them after a second: far loops with
+v_spatialPhysical took them from a boombox back and forth, and its echo changed while nobody moved. The free
+ones go to the loudest. A sound that gets them goes on through the reverb of the listener until a pass with it
+in it is done (S_SpatialReflectReady).
 ===============
 */
+static qboolean S_SpatialWantsReflect( const spatialVoice_t *v ) {
+	return (qboolean)( v->active && v->frame == spatial.frame && !v->sendOnly );
+}
+
 static void S_SpatialChooseReflects( void ) {
 	const int want = v_spatialReflections->integer ? Com_Clampi( 0, spatial.numReflectSlots, v_spatialSources->integer ) : 0;
 	const int now = Sys_Milliseconds();
 	qboolean chosen[SPATIAL_VOICES];
+	int count = 0;
 
 	memset( chosen, 0, sizeof( chosen ) );
-	for ( int n = 0; n < want; n++ ) {
-		float bestScore = 0.0f;
+	for ( int i = 0; i < SPATIAL_VOICES && count < want; i++ ) {
+		const spatialVoice_t *v = &spatial.voices[i];
+
+		if ( v->reflect && S_SpatialWantsReflect( v ) ) {
+			chosen[i] = qtrue;
+			count++;
+		}
+	}
+	for ( ; count < want; count++ ) {
 		int best = -1;
 
 		for ( int i = 0; i < SPATIAL_VOICES; i++ ) {
 			const spatialVoice_t *v = &spatial.voices[i];
-			float score;
 
-			if ( chosen[i] || !v->active || v->frame != spatial.frame || v->sendOnly ) {
-				continue;
-			}
-			score = v->gain * ( v->reflect ? SPATIAL_REFLECT_KEEP : 1.0f );
-			if ( v->reflect && now - v->reflectSince < SPATIAL_REFLECT_HOLD ) {
-				score += 1000.0f;
-			}
-			if ( score > bestScore ) {
-				bestScore = score;
+			if ( !chosen[i] && S_SpatialWantsReflect( v ) && v->gain > 0.0f && ( best < 0 || v->gain > spatial.voices[best].gain ) ) {
 				best = i;
 			}
 		}
@@ -1723,6 +1755,27 @@ static void S_SpatialChooseReflects( void ) {
 			break;
 		}
 		chosen[best] = qtrue;
+	}
+	// one much louder takes them from the quietest that had them long enough
+	for ( ;; ) {
+		int loud = -1, quiet = -1;
+
+		for ( int i = 0; i < SPATIAL_VOICES; i++ ) {
+			const spatialVoice_t *v = &spatial.voices[i];
+
+			if ( !chosen[i] && S_SpatialWantsReflect( v ) && ( loud < 0 || v->gain > spatial.voices[loud].gain ) ) {
+				loud = i;
+			}
+			if ( chosen[i] && v->reflect && now - v->reflectSince >= SPATIAL_REFLECT_HOLD
+				&& ( quiet < 0 || v->gain < spatial.voices[quiet].gain ) ) {
+				quiet = i;
+			}
+		}
+		if ( loud < 0 || quiet < 0 || spatial.voices[loud].gain <= spatial.voices[quiet].gain * SPATIAL_REFLECT_KEEP ) {
+			break;
+		}
+		chosen[quiet] = qfalse;
+		chosen[loud] = qtrue;
 	}
 
 	// those that lose them first, so that the others find one free
@@ -2060,6 +2113,7 @@ static void S_SpatialRenderBlock( spatialVoice_t *v, float gain ) {
 
 		slot[0] += left[i] * volume;
 		slot[1] += right[i] * volume;
+		spatial.directEnergy += ( left[i] * left[i] + right[i] * right[i] ) * volume * volume;
 	}
 	if ( pathed ) {
 		for ( int i = 0; i < SPATIAL_FRAME; i++ ) {
@@ -2148,6 +2202,18 @@ static void S_SpatialPassInputs( void ) {
 	}
 }
 
+// Called by Steam Audio where the paths are worked out, maybe in several threads at once: a stretch of a way
+// round the corners, probe to probe, and whether it is blocked now (v_spatialDebug)
+static void IPLCALL S_SpatialPathVis( IPLVector3 from, IPLVector3 to, IPLbool occluded, void *userData ) {
+	const int n = spatialVisCount.fetch_add( 1 );
+
+	if ( n < SPATIAL_DEBUG_SEGMENTS ) {
+		spatialVis[n].from = from;
+		spatialVis[n].to = to;
+		spatialVis[n].occluded = occluded;
+	}
+}
+
 // Where iplSimulatorRunPathing() runs, before it: the ways round the corners spatialPass asks for. How loud a sound
 // is at the end of its way is what the game makes of a sound at that distance.
 static void S_SpatialPathInputs( void ) {
@@ -2156,6 +2222,10 @@ static void S_SpatialPathInputs( void ) {
 
 	memset( &shared, 0, sizeof( shared ) );
 	shared.listener = spatialPass.listener;
+	spatialVisCount.store( 0 );
+	if ( spatialPassDebug.load() ) {
+		shared.pathingVisCallback = S_SpatialPathVis;
+	}
 	qiplSimulatorSetSharedInputs( spatial.simulator, IPL_SIMULATIONFLAGS_PATHING, &shared );
 
 	for ( int i = 0; i < SPATIAL_VOICES; i++ ) {
@@ -2204,6 +2274,14 @@ static void S_SpatialFillPass( void ) {
 	const int passes = spatialReflectPasses.load();
 
 	S_SpatialFillPaths();
+	// Steam Audio begins its sum anew when the listener moved by more than a tenth of a millimetre
+	{
+		const IPLVector3 *o = &spatialPass.listener.origin;
+		const float dx = o->x - spatial.settledOrigin.x, dy = o->y - spatial.settledOrigin.y, dz = o->z - spatial.settledOrigin.z;
+
+		spatial.settledPasses = ( dx * dx + dy * dy + dz * dz > 1e-8f ) ? 0 : spatial.settledPasses + 1;
+		spatial.settledOrigin = *o;
+	}
 	spatialPass.rays = S_SpatialRays();
 	spatialPass.bounces = Com_Clampi( 1, 64, v_spatialBounces->integer );
 	spatialPass.reverb = v_spatialReflections->integer ? qtrue : qfalse;
@@ -2311,6 +2389,27 @@ static int SDLCALL S_SpatialWorker( void *unused ) {
 
 #endif
 
+// The ways round the corners the last pass handed to S_SpatialPathVis(), for v_spatialDebug. Only while the thread
+// is idle: then nothing writes them.
+static void S_SpatialTakeVis( void ) {
+	const int count = Q_min( spatialVisCount.load(), SPATIAL_DEBUG_SEGMENTS );
+
+	if ( !spatialPassDebug.load() ) {
+		spatial.numSegments = 0;
+		return;
+	}
+	for ( int i = 0; i < count; i++ ) {
+		spatialDebugSegment_t *seg = &spatial.segments[i];
+
+		// back from Steam Audio's metres and axes, see S_SpatialPoint()
+		VectorSet( seg->from, -spatialVis[i].from.z / SPATIAL_UNIT, -spatialVis[i].from.x / SPATIAL_UNIT, spatialVis[i].from.y / SPATIAL_UNIT );
+		VectorSet( seg->to, -spatialVis[i].to.z / SPATIAL_UNIT, -spatialVis[i].to.x / SPATIAL_UNIT, spatialVis[i].to.y / SPATIAL_UNIT );
+		seg->kind = spatialVis[i].occluded ? 1 : 0;
+		seg->bounce = 0;
+	}
+	spatial.numSegments = count;
+}
+
 // The next pass of the thread, if the last one is done and not too long ago: the reflections around the
 // listener, and the ways of the sounds round the corners. Never while a level waits to be taken over.
 static void S_SpatialAskPass( void ) {
@@ -2338,6 +2437,8 @@ static void S_SpatialAskPass( void ) {
 	}
 	// the thread reads these only after it was woken
 	if ( spatialWorkerState.load() == WORKER_IDLE ) {
+		S_SpatialTakeVis();
+		spatialPassDebug.store( v_spatialDebug->integer ? 1 : 0 );
 		spatialPassReflections.store( v_spatialReflections->integer ? 1 : 0 );
 		spatialPassPaths.store( paths ? 1 : 0 );
 		S_SpatialFillPass();
@@ -2474,6 +2575,7 @@ static void S_SpatialRenderReverb( int c ) {
 
 		slot[0] += left[i] * volume;
 		slot[1] += right[i] * volume;
+		spatial.reverbEnergy += ( left[i] * left[i] + right[i] * right[i] ) * volume * volume;
 	}
 }
 
@@ -2597,6 +2699,9 @@ void S_SpatialEndFrame( int from, int target ) {
 		S_SpatialResetReverb();
 		spatial.reverbRendered = from;
 		spatial.ringEnd = from;
+	}
+	if ( from > spatial.lastPaint && spatial.lastPaint ) {
+		spatial.energySamples += from - spatial.lastPaint;
 	}
 	spatial.lastPaint = from;
 	S_SpatialCapture( from );
@@ -2840,7 +2945,10 @@ static void S_SpatialInfo_f( void ) {
 }
 
 // lets go of everything of Steam Audio, in the order it depends on each other, and of the library
+static void S_SpatialDebugFree( void );
+
 static void S_SpatialRelease( void ) {
+	S_SpatialDebugFree();
 	// The thread of the reflections ends first: nothing may be taken from under a pass. This waits for the
 	// pass it is in, if any, which is the one place the game waits for it, when the sound system is shut down.
 	if ( spatial.worker ) {
@@ -3082,6 +3190,7 @@ void S_SpatialInit( void ) {
 	v_spatialSources = Cvar_Get( "v_spatialSources", "8", CVAR_ARCHIVE, "v_spatial: how many of the loudest sounds have reflections of their own, 0 to 16. The others ring with the room of the listener" );
 	v_spatialPhysical = Cvar_Get( "v_spatialPhysical", "0", CVAR_ARCHIVE, "v_spatial: 1 sounds fade with the distance as real ones do and not as the game fades them, lose their highs in the air, and arrive at the speed of sound" );
 	v_spatialShock = Cvar_Get( "v_spatialShock", "1", CVAR_ARCHIVE, "v_spatial: how strong the thump of an explosion is, its lows in both ears. 0 none" );
+	v_spatialDebug = Cvar_Get( "v_spatialDebug", "0", CVAR_NONE, "v_spatial: shows in the level what becomes of the sounds. 1 all, or the sum of 2 the sounds, 4 the ways round corners, 8 rays off the walls, 16 the numbers and the wall under the crosshair" );
 	Cmd_AddCommand( "v_spatialInfo", S_SpatialInfo_f, "What v_spatial is doing" );
 	Cmd_AddCommand( "v_spatialCapture", S_SpatialCapture_f, "v_spatial: what the sounds of the level give the mixer for so many seconds, into steamaudio/capture.wav" );
 
@@ -3244,6 +3353,480 @@ void S_SpatialUpdate( void ) {
 	}
 }
 
+/*
+===============================================================================
+
+DEBUG
+
+v_spatialDebug: what becomes of the sounds, for the cgame to draw (ext.S_SpatialDebug, cgame/cg_spatialdebug.c).
+Steam Audio does not show the rays it traces: the rays here are traced through a copy of the mesh it was given,
+and bounce off the walls as off a mirror, where Steam Audio scatters some of them. They show which walls a sound
+can reach and what they were made of.
+
+===============================================================================
+*/
+
+#define SPATIAL_DEBUG_CELLS			64		// cells of the grid of the copy along its longest side
+#define SPATIAL_DEBUG_LEAST_CELL	64.0f	//	but none smaller than this, units
+#define SPATIAL_DEBUG_MOST_ENTRIES	( 8 * 1024 * 1024 )	// triangles in cells, more and the copy is not made
+#define SPATIAL_DEBUG_RAY_COUNT		48		// rays from the listener (SPATIAL_DEBUG_REFLECTIONS)
+#define SPATIAL_DEBUG_RAY_BOUNCES	4		//	and how often each bounces at most
+#define SPATIAL_DEBUG_RAY_LENGTH	8192.0f
+#define SPATIAL_DEBUG_RAY_MSEC		250		// they are traced again this often, or when the listener moved
+#define SPATIAL_DEBUG_LEVEL_SMOOTH	0.25f	// how fast the levels follow, each time they are asked
+
+typedef struct {
+	vec3_t		v0, e1, e2, normal;
+	byte		material, byTable;
+	const char	*shader;			// the name the collision model has, there as long as the level
+} spatialDebugTri_t;
+
+static struct {
+	IPLScene			scene;		// of which level the copy is, NULL: none
+	qboolean			failed;		//	it could not be made for it
+	spatialDebugTri_t	*tris;
+	int					numTris;
+	const char			*shader;	// while it is made: the table entry of the last shader
+	int					tableMaterial;
+	vec3_t				mins;
+	float				cell;
+	int					dims[3];
+	int					*cellStart;	// where the triangles of a cell begin in cellTris, one more than cells
+	int					*cellTris;
+	int					raysTime;	// Sys_Milliseconds() the rays were traced
+	vec3_t				raysFrom;
+	int					numRays;
+	spatialDebugSegment_t	rays[SPATIAL_DEBUG_RAYS];
+} spatialDebugMesh;
+
+static void S_SpatialDebugFree( void ) {
+	if ( spatialDebugMesh.tris ) {
+		Z_Free( spatialDebugMesh.tris );
+	}
+	if ( spatialDebugMesh.cellStart ) {
+		Z_Free( spatialDebugMesh.cellStart );
+	}
+	if ( spatialDebugMesh.cellTris ) {
+		Z_Free( spatialDebugMesh.cellTris );
+	}
+	memset( &spatialDebugMesh, 0, sizeof( spatialDebugMesh ) );
+}
+
+static void S_SpatialDebugTriangle( const vec3_t a, const vec3_t b, const vec3_t c, const char *shader, int surfaceFlags, void *data ) {
+	spatialDebugTri_t *tri = &spatialDebugMesh.tris[spatialDebugMesh.numTris++];
+
+	if ( shader != spatialDebugMesh.shader ) {
+		spatialDebugMesh.shader = shader;
+		spatialDebugMesh.tableMaterial = S_SpatialTableMaterial( shader );
+	}
+	VectorCopy( a, tri->v0 );
+	VectorSubtract( b, a, tri->e1 );
+	VectorSubtract( c, a, tri->e2 );
+	CrossProduct( tri->e1, tri->e2, tri->normal );
+	VectorNormalize( tri->normal );
+	tri->material = (byte)S_SpatialMaterial( spatialDebugMesh.tableMaterial, surfaceFlags );
+	tri->byTable = ( !( surfaceFlags & SURF_SKY ) && spatialDebugMesh.tableMaterial != MATERIAL_NONE ) ? 1 : 0;
+	tri->shader = shader;
+}
+
+// the cells a box of the level touches
+static void S_SpatialDebugCells( const vec3_t mins, const vec3_t maxs, int lo[3], int hi[3] ) {
+	for ( int k = 0; k < 3; k++ ) {
+		lo[k] = Com_Clampi( 0, spatialDebugMesh.dims[k] - 1, (int)floorf( ( mins[k] - spatialDebugMesh.mins[k] ) / spatialDebugMesh.cell ) );
+		hi[k] = Com_Clampi( 0, spatialDebugMesh.dims[k] - 1, (int)floorf( ( maxs[k] - spatialDebugMesh.mins[k] ) / spatialDebugMesh.cell ) );
+	}
+}
+
+static void S_SpatialDebugBounds( const spatialDebugTri_t *tri, vec3_t mins, vec3_t maxs ) {
+	for ( int k = 0; k < 3; k++ ) {
+		const float b = tri->v0[k] + tri->e1[k], c = tri->v0[k] + tri->e2[k];
+
+		mins[k] = Q_min( tri->v0[k], Q_min( b, c ) );
+		maxs[k] = Q_max( tri->v0[k], Q_max( b, c ) );
+	}
+}
+
+// The copy of the walls of the level Steam Audio has, in a grid, made when it is first wanted for this level
+static qboolean S_SpatialDebugMesh( void ) {
+	vec3_t mins, maxs, size;
+	int count, cells, entries;
+
+	if ( spatialDebugMesh.scene == spatial.scene && ( spatialDebugMesh.tris || spatialDebugMesh.failed ) ) {
+		return (qboolean)!spatialDebugMesh.failed;
+	}
+	S_SpatialDebugFree();
+	spatialDebugMesh.scene = spatial.scene;
+	count = CM_ExportSolidTriangles( NULL, NULL );
+	if ( !count ) {
+		spatialDebugMesh.failed = qtrue;
+		return qfalse;
+	}
+	spatialDebugMesh.tris = (spatialDebugTri_t *)Z_Malloc( count * sizeof( spatialDebugTri_t ), TAG_GENERAL, qfalse );
+	spatialDebugMesh.tableMaterial = MATERIAL_NONE;
+	CM_ExportSolidTriangles( S_SpatialDebugTriangle, NULL );
+
+	ClearBounds( mins, maxs );
+	for ( int i = 0; i < spatialDebugMesh.numTris; i++ ) {
+		vec3_t a, b;
+
+		S_SpatialDebugBounds( &spatialDebugMesh.tris[i], a, b );
+		AddPointToBounds( a, mins, maxs );
+		AddPointToBounds( b, mins, maxs );
+	}
+	VectorSubtract( maxs, mins, size );
+	spatialDebugMesh.cell = Q_max( SPATIAL_DEBUG_LEAST_CELL, Q_max( size[0], Q_max( size[1], size[2] ) ) / SPATIAL_DEBUG_CELLS );
+	VectorCopy( mins, spatialDebugMesh.mins );
+	cells = 1;
+	for ( int k = 0; k < 3; k++ ) {
+		spatialDebugMesh.dims[k] = (int)( size[k] / spatialDebugMesh.cell ) + 1;
+		cells *= spatialDebugMesh.dims[k];
+	}
+
+	// how many triangles each cell has, where they begin, then the triangles
+	spatialDebugMesh.cellStart = (int *)Z_Malloc( ( cells + 1 ) * sizeof( int ), TAG_GENERAL, qtrue );
+	entries = 0;
+	for ( int pass = 0; pass < 2; pass++ ) {
+		if ( pass ) {
+			if ( entries > SPATIAL_DEBUG_MOST_ENTRIES ) {
+				Com_Printf( "v_spatialDebug: the level is too large for the copy of its walls\n" );
+				S_SpatialDebugFree();
+				spatialDebugMesh.scene = spatial.scene;
+				spatialDebugMesh.failed = qtrue;
+				return qfalse;
+			}
+			for ( int c = 0, at = 0; c <= cells; c++ ) {
+				const int n = spatialDebugMesh.cellStart[c];
+
+				spatialDebugMesh.cellStart[c] = at;
+				at += n;
+			}
+			spatialDebugMesh.cellTris = (int *)Z_Malloc( Q_max( 1, entries ) * sizeof( int ), TAG_GENERAL, qfalse );
+		}
+		for ( int i = 0; i < spatialDebugMesh.numTris; i++ ) {
+			vec3_t a, b;
+			int lo[3], hi[3];
+
+			S_SpatialDebugBounds( &spatialDebugMesh.tris[i], a, b );
+			S_SpatialDebugCells( a, b, lo, hi );
+			for ( int z = lo[2]; z <= hi[2]; z++ ) {
+				for ( int y = lo[1]; y <= hi[1]; y++ ) {
+					for ( int x = lo[0]; x <= hi[0]; x++ ) {
+						const int c = ( z * spatialDebugMesh.dims[1] + y ) * spatialDebugMesh.dims[0] + x;
+
+						if ( pass ) {
+							spatialDebugMesh.cellTris[spatialDebugMesh.cellStart[c]++] = i;
+						} else {
+							spatialDebugMesh.cellStart[c]++;
+							entries++;
+						}
+					}
+				}
+			}
+		}
+	}
+	// the second pass moved the start of each cell on to its end, which is where the next one begins
+	for ( int c = cells; c > 0; c-- ) {
+		spatialDebugMesh.cellStart[c] = spatialDebugMesh.cellStart[c - 1];
+	}
+	spatialDebugMesh.cellStart[0] = 0;
+	return qtrue;
+}
+
+// how far along dir (of length 1) a triangle is, -1 if the ray misses it
+static float S_SpatialDebugHit( const spatialDebugTri_t *tri, const vec3_t start, const vec3_t dir ) {
+	vec3_t p, t, q;
+	float det, inv, u, v;
+
+	CrossProduct( dir, tri->e2, p );
+	det = DotProduct( tri->e1, p );
+	if ( fabsf( det ) < 1e-8f ) {
+		return -1.0f;
+	}
+	inv = 1.0f / det;
+	VectorSubtract( start, tri->v0, t );
+	u = DotProduct( t, p ) * inv;
+	if ( u < 0.0f || u > 1.0f ) {
+		return -1.0f;
+	}
+	CrossProduct( t, tri->e1, q );
+	v = DotProduct( dir, q ) * inv;
+	if ( v < 0.0f || u + v > 1.0f ) {
+		return -1.0f;
+	}
+	return DotProduct( tri->e2, q ) * inv;
+}
+
+// The first wall of the copy along dir (of length 1) from start, through the grid cell by cell. -1: none
+static int S_SpatialDebugTrace( const vec3_t start, const vec3_t dir, float length, float *hitT ) {
+	const float cell = spatialDebugMesh.cell;
+	float enter = 0.0f, leave = length, tMax[3], tDelta[3];
+	int idx[3], step[3];
+
+	// into the box of the grid
+	for ( int k = 0; k < 3; k++ ) {
+		const float lo = spatialDebugMesh.mins[k], hi = lo + spatialDebugMesh.dims[k] * cell;
+
+		if ( fabsf( dir[k] ) < 1e-8f ) {
+			if ( start[k] < lo || start[k] > hi ) {
+				return -1;
+			}
+			continue;
+		}
+		float t0 = ( lo - start[k] ) / dir[k], t1 = ( hi - start[k] ) / dir[k];
+
+		if ( t0 > t1 ) {
+			const float swap = t0;
+
+			t0 = t1;
+			t1 = swap;
+		}
+		enter = Q_max( enter, t0 );
+		leave = Q_min( leave, t1 );
+	}
+	if ( enter > leave ) {
+		return -1;
+	}
+	for ( int k = 0; k < 3; k++ ) {
+		const float at = start[k] + dir[k] * enter;
+
+		idx[k] = Com_Clampi( 0, spatialDebugMesh.dims[k] - 1, (int)floorf( ( at - spatialDebugMesh.mins[k] ) / cell ) );
+		if ( dir[k] > 1e-8f ) {
+			step[k] = 1;
+			tMax[k] = ( spatialDebugMesh.mins[k] + ( idx[k] + 1 ) * cell - start[k] ) / dir[k];
+			tDelta[k] = cell / dir[k];
+		} else if ( dir[k] < -1e-8f ) {
+			step[k] = -1;
+			tMax[k] = ( spatialDebugMesh.mins[k] + idx[k] * cell - start[k] ) / dir[k];
+			tDelta[k] = -cell / dir[k];
+		} else {
+			step[k] = 0;
+			tMax[k] = tDelta[k] = 1e30f;
+		}
+	}
+	for ( ;; ) {
+		const int c = ( idx[2] * spatialDebugMesh.dims[1] + idx[1] ) * spatialDebugMesh.dims[0] + idx[0];
+		const float cellLeave = Q_min( tMax[0], Q_min( tMax[1], tMax[2] ) );
+		float best = 1e30f;
+		int bestTri = -1;
+
+		for ( int n = spatialDebugMesh.cellStart[c]; n < spatialDebugMesh.cellStart[c + 1]; n++ ) {
+			const int i = spatialDebugMesh.cellTris[n];
+			const float t = S_SpatialDebugHit( &spatialDebugMesh.tris[i], start, dir );
+
+			if ( t > 0.05f && t < best ) {
+				best = t;
+				bestTri = i;
+			}
+		}
+		// a triangle of this cell may be hit beyond it, in a cell that comes later
+		if ( bestTri >= 0 && best <= cellLeave + 0.01f && best <= length ) {
+			*hitT = best;
+			return bestTri;
+		}
+		if ( cellLeave > leave ) {
+			return -1;
+		}
+		const int k = ( tMax[0] < tMax[1] ) ? ( tMax[0] < tMax[2] ? 0 : 2 ) : ( tMax[1] < tMax[2] ? 1 : 2 );
+
+		idx[k] += step[k];
+		if ( idx[k] < 0 || idx[k] >= spatialDebugMesh.dims[k] ) {
+			return -1;
+		}
+		tMax[k] += tDelta[k];
+	}
+}
+
+// Rays from the listener, spread evenly round him, off the walls as off a mirror
+static void S_SpatialDebugRays( void ) {
+	const int now = Sys_Milliseconds();
+
+	if ( now - spatialDebugMesh.raysTime < SPATIAL_DEBUG_RAY_MSEC && spatialDebugMesh.raysTime
+		&& DistanceSquared( spatialDebugMesh.raysFrom, spatial.listenerOrigin ) < 1.0f ) {
+		return;
+	}
+	spatialDebugMesh.raysTime = now;
+	VectorCopy( spatial.listenerOrigin, spatialDebugMesh.raysFrom );
+	spatialDebugMesh.numRays = 0;
+	const int bounces = Com_Clampi( 1, SPATIAL_DEBUG_RAY_BOUNCES, v_spatialBounces->integer );
+
+	for ( int r = 0; r < SPATIAL_DEBUG_RAY_COUNT; r++ ) {
+		// a spiral over the sphere (Fibonacci): even, and the same every time
+		const float z = 1.0f - 2.0f * ( r + 0.5f ) / SPATIAL_DEBUG_RAY_COUNT, ring = sqrtf( 1.0f - z * z );
+		const float a = r * 2.39996323f;
+		vec3_t from, dir;
+
+		VectorCopy( spatial.listenerOrigin, from );
+		VectorSet( dir, ring * cosf( a ), ring * sinf( a ), z );
+		for ( int b = 0; b < bounces && spatialDebugMesh.numRays < SPATIAL_DEBUG_RAYS; b++ ) {
+			spatialDebugSegment_t *seg = &spatialDebugMesh.rays[spatialDebugMesh.numRays++];
+			float t;
+			const int tri = S_SpatialDebugTrace( from, dir, SPATIAL_DEBUG_RAY_LENGTH, &t );
+
+			VectorCopy( from, seg->from );
+			seg->bounce = b;
+			if ( tri < 0 ) {
+				VectorMA( from, SPATIAL_DEBUG_RAY_LENGTH, dir, seg->to );
+				seg->kind = -1;		// out of the level
+				break;
+			}
+			VectorMA( from, t, dir, seg->to );
+			seg->kind = spatialDebugMesh.tris[tri].material;
+			if ( seg->kind == SPATIAL_SKY ) {
+				break;
+			}
+			// off the wall as off a mirror, a little away from it
+			const float *n = spatialDebugMesh.tris[tri].normal;
+			const float d = DotProduct( dir, n );
+
+			VectorMA( dir, -2.0f * d, n, dir );
+			VectorNormalize( dir );
+			VectorMA( seg->to, 0.5f, dir, from );
+		}
+	}
+}
+
+static float S_SpatialDebugLevel( double energy, int samples, float last ) {
+	const double full = 32768.0 * 256.0;
+	float db;
+
+	if ( samples <= 0 ) {
+		return last;
+	}
+	db = ( energy > 0.0 ) ? (float)( 10.0 * log10( energy / ( 2.0 * samples ) / ( full * full ) ) ) : -96.0f;
+	db = Q_max( -96.0f, db );
+	return last + ( db - last ) * SPATIAL_DEBUG_LEVEL_SMOOTH;
+}
+
+// A sound no voice was free for, which the mixer plays itself (snd_dma.cpp)
+void S_SpatialDebugFallback( const vec3_t origin, const sfx_t *sfx ) {
+	spatialDebugFallback_t *f;
+
+	if ( !v_spatialDebug || !v_spatialDebug->integer || spatial.numFallbacks >= SPATIAL_DEBUG_FALLBACKS ) {
+		return;
+	}
+	f = &spatial.fallbacks[spatial.numFallbacks++];
+	VectorCopy( origin, f->origin );
+	Q_strncpyz( f->name, sfx ? sfx->sSoundName : "?", sizeof( f->name ) );
+}
+
+/*
+===============
+S_SpatialDebug
+
+From the cgame (ext.S_SpatialDebug), once a frame while v_spatialDebug is on: what to draw. eye and forward: where
+the camera is and looks, for the wall under the crosshair.
+===============
+*/
+void S_SpatialDebug( spatialDebug_t *out, const vec3_t eye, const vec3_t forward ) {
+	const int mask = ( v_spatialDebug && v_spatialDebug->integer > 1 ) ? v_spatialDebug->integer : -1;
+
+	memset( out, 0, sizeof( *out ) );
+	if ( !S_SpatialActive() ) {
+		return;
+	}
+	out->active = qtrue;
+	VectorCopy( spatial.listenerOrigin, out->listener );
+	out->embree = spatial.embree ? qtrue : qfalse;
+	out->threads = spatial.threads;
+	out->passRays = spatial.maxRays;
+	out->passBounces = Com_Clampi( 1, 64, v_spatialBounces->integer );
+	out->passMsec = spatialReflectUsec.load() * 0.001f;
+	out->passes = spatialReflectPasses.load();
+	out->settledPasses = spatial.settledPasses;
+	out->maxVoices = SPATIAL_VOICES;
+	out->reflects = spatial.numReflects;
+	out->reflectSlots = Com_Clampi( 0, spatial.numReflectSlots, v_spatialSources->integer );
+	out->reverbVolume = v_spatialReflections->integer ? v_spatialReverb->value : 0.0f;
+
+	spatial.directLevel = S_SpatialDebugLevel( spatial.directEnergy, spatial.energySamples, spatial.directLevel );
+	spatial.reverbLevel = S_SpatialDebugLevel( spatial.reverbEnergy, spatial.energySamples, spatial.reverbLevel );
+	spatial.directEnergy = spatial.reverbEnergy = 0.0;
+	spatial.energySamples = 0;
+	out->direct = spatial.directLevel;
+	out->reverb = spatial.reverbLevel;
+
+	for ( int i = 0; i < SPATIAL_VOICES; i++ ) {
+		const spatialVoice_t *v = &spatial.voices[i];
+		spatialDebugSound_t *d;
+
+		if ( !v->active || v->frame != spatial.frame ) {
+			continue;
+		}
+		out->voices++;
+		if ( out->numSounds >= SPATIAL_DEBUG_SOUNDS ) {
+			continue;
+		}
+		d = &out->sounds[out->numSounds++];
+		VectorCopy( v->origin, d->origin );
+		if ( v->stream ) {
+			const int k = (int)( v->stream - spatialStreams );
+
+			if ( k < MAX_CLIENTS ) {
+				Com_sprintf( d->name, sizeof( d->name ), "voice chat, player %i", k );
+			} else if ( k == SPATIAL_OWN_STREAM ) {
+				Q_strncpyz( d->name, "own voice", sizeof( d->name ) );
+			} else {
+				Com_sprintf( d->name, sizeof( d->name ), "boombox speaker %i", k - SPATIAL_OWN_STREAM - 1 );
+			}
+			d->flags |= SPATIAL_DEBUG_STREAM;
+		} else {
+			const char *name = v->sfx ? v->sfx->sSoundName : "?";
+
+			Q_strncpyz( d->name, Q_stristr( name, "sound/" ) == name ? name + 6 : name, sizeof( d->name ) );
+		}
+		d->distance = v->distance;
+		d->gain = v->gain;
+		d->occlusion = v->sendOnly ? 1.0f : v->occlusion;
+		for ( int k = 0; k < 3; k++ ) {
+			d->transmission[k] = v->sendOnly ? 1.0f : v->transmission[k];
+		}
+		if ( v->reflect && S_SpatialReflectReady( v->reflect ) ) {
+			d->flags |= SPATIAL_DEBUG_OWN;
+		}
+		if ( v->loop ) {
+			d->flags |= SPATIAL_DEBUG_LOOP;
+		}
+		if ( v->pathing ) {
+			d->flags |= SPATIAL_DEBUG_PATHING;
+		}
+		if ( v->sendOnly ) {
+			d->flags |= SPATIAL_DEBUG_SEND;
+		}
+	}
+
+	out->numFallbacks = spatial.numFallbacks;
+	memcpy( out->fallbacks, spatial.fallbacks, spatial.numFallbacks * sizeof( out->fallbacks[0] ) );
+	out->numSegments = spatial.numSegments;
+	memcpy( out->segments, spatial.segments, spatial.numSegments * sizeof( out->segments[0] ) );
+
+	if ( !( mask & ( SPATIAL_DEBUG_REFLECTIONS | SPATIAL_DEBUG_PANEL ) ) || !S_SpatialDebugMesh() ) {
+		return;
+	}
+	if ( mask & SPATIAL_DEBUG_REFLECTIONS ) {
+		S_SpatialDebugRays();
+		out->numRays = spatialDebugMesh.numRays;
+		memcpy( out->rays, spatialDebugMesh.rays, spatialDebugMesh.numRays * sizeof( out->rays[0] ) );
+	}
+	if ( mask & SPATIAL_DEBUG_PANEL ) {
+		vec3_t dir;
+		float t;
+		int tri;
+
+		VectorNormalize2( forward, dir );
+		tri = S_SpatialDebugTrace( eye, dir, 16384.0f, &t );
+		if ( tri >= 0 ) {
+			out->aimHit = qtrue;
+			VectorMA( eye, t, dir, out->aimPoint );
+			out->aimDistance = t;
+			out->aimMaterial = spatialDebugMesh.tris[tri].material;
+			out->aimByTable = spatialDebugMesh.tris[tri].byTable ? qtrue : qfalse;
+			Q_strncpyz( out->aimShader, spatialDebugMesh.tris[tri].shader ? spatialDebugMesh.tris[tri].shader : "?", sizeof( out->aimShader ) );
+		}
+	}
+}
+
+static_assert( SPATIAL_DEBUG_MATERIALS == SPATIAL_NUM_MATERIALS, "spatial_debug.h has the materials of this file" );
+
 #else // JP_SPATIAL
 
 // built without it (BuildJPSpatialAudio off, or the submodule lib/steamaudio is not checked out)
@@ -3262,5 +3845,7 @@ void		S_SpatialPaint( int from, int to, portable_samplepair_t *paint ) {}
 float		S_SpatialAhead( void ) { return 0.0f; }
 int			S_SpatialVoice( int clientNum, const vec3_t origin, float volume, const short *samples, int numSamples, int rate ) { return -1; }
 void		S_SpatialOwnVoice( float volume, const short *samples, int numSamples, int rate ) {}
+void		S_SpatialDebugFallback( const vec3_t origin, const sfx_t *sfx ) {}
+void		S_SpatialDebug( spatialDebug_t *out, const vec3_t eye, const vec3_t forward ) { memset( out, 0, sizeof( *out ) ); }
 
 #endif // JP_SPATIAL

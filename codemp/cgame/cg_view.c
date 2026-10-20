@@ -2709,6 +2709,7 @@ void CG_DrawActiveFrame( int serverTime, stereoFrame_t stereoView, qboolean demo
 	if ( !cg.hyperspace ) {
 		CG_AddLocalEntities();
 		CG_StrafeTrailsAdd();		// cg_strafetrail.c
+		CG_SpatialDebugAdd();		// cg_spatialdebug.c, v_spatialDebug
 	}
 
 	cg.refdef.time = cg.time;

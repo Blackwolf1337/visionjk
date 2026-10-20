@@ -1964,6 +1964,9 @@ static void S_SpatialGather( void ) {
 			continue;
 		}
 		ch->spatial = S_SpatialAddChannel( ch, origin, ch->master_vol * ( 1.0f / 255.0f ), fade, voiceVolume );
+		if ( !ch->spatial ) {
+			S_SpatialDebugFallback( origin, ch->thesfx );
+		}
 	}
 
 	for ( i = 0; i < numLoopSounds; i++ ) {
@@ -1980,6 +1983,9 @@ static void S_SpatialGather( void ) {
 		}
 		// its doppler is snd_spatial.cpp's own, not loop->dopplerScale
 		loop->spatial = S_SpatialAddLoop( loop->entnum, loop->sfx, loop->origin, loop->volume * ( 1.0f / 255.0f ), fade );
+		if ( !loop->spatial ) {
+			S_SpatialDebugFallback( loop->origin, loop->sfx );
+		}
 	}
 	// Those no voice was free for are played by the mixer the old way. Its loop channels are made anew here, as
 	// S_Respatialize() does without v_spatial: this can run more than once between two of it.
