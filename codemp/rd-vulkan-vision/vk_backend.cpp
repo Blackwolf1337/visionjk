@@ -489,9 +489,11 @@ static void RB_DistortionFill( void ) {
 	VK_SetProjection( backEnd.viewParms.projectionMatrix );
 }
 
-// entities that have to be drawn after everything else: the ones that fade (RF_FORCE_ENT_ALPHA), the ones that
-// ask for it (RF_FORCEPOST) and the ones that bend the screen (RF_DISTORTION)
-#define MAX_POST_RENDERS	128
+// Entities that have to be drawn after everything else: the ones that fade (RF_FORCE_ENT_ALPHA), the ones that
+// ask for it (RF_FORCEPOST) and the ones that bend the screen (RF_DISTORTION). A surface each: the outline of the
+// pointer of VisionJK alone is six shells of every surface of a player, so rd-vanilla's 128 were full at times, and
+// a distortion after them was drawn as its white picture (the shockwave of the boombox).
+#define MAX_POST_RENDERS	1024
 
 typedef struct postRender_s {
 	int			fogNum;
@@ -803,6 +805,15 @@ static void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 			fogNum = oldFogNum;
 			dlighted = oldDlighted;
 			oldSort = (unsigned int)-20;	// invalidate this thing, cause we may want to postrender more surfs of the same sort
+			continue;
+		}
+		// A distortion that finds the list full is left out: drawn now it would be its picture (white), not the screen.
+		if ( entityNum != REFENTITYNUM_WORLD && ( backEnd.refdef.entities[entityNum].e.renderfx & RF_DISTORTION ) ) {
+			shader = oldShader;
+			entityNum = oldEntityNum;
+			fogNum = oldFogNum;
+			dlighted = oldDlighted;
+			oldSort = (unsigned int)-20;
 			continue;
 		}
 
