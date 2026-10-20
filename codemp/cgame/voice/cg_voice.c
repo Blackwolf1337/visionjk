@@ -1210,13 +1210,16 @@ static void Voice_Mouth( int speaker ) {
 	voiceSpeaker_t	*sp = &voiceSpeakers[speaker];
 	const centity_t	*cent = &cg_entities[speaker];
 	float			distance, gain;
+	vec3_t			hear;
+
+	CG_HearingPoint( hear );
 
 	// A box of the boombox: where its speakers are, as loud as the player wants songs and the box is set, and
 	// down to nothing at the end of its range, where the server stops sending it.
 	if ( speaker >= MAX_CLIENTS ) {
 		if ( !CG_BoomboxMouth( speaker - MAX_CLIENTS, sp->mouth, &gain ) )
 			gain = 0.0f;
-		distance = Com_Clamp( 0.0f, 1.0f, 1.0f - Distance( sp->mouth, cg.refdef.vieworg ) / CG_BoomboxChannelRange( speaker - MAX_CLIENTS ) );
+		distance = Com_Clamp( 0.0f, 1.0f, 1.0f - Distance( sp->mouth, hear ) / CG_BoomboxChannelRange( speaker - MAX_CLIENTS ) );
 		sp->volume = gain * distance * distance;
 		return;
 	}
@@ -1225,7 +1228,7 @@ static void Voice_Mouth( int speaker ) {
 		VectorCopy( cent->lerpOrigin, sp->mouth );
 		sp->mouth[2] += VOICE_HEAD;
 	}
-	distance = Com_Clamp( 0.0f, 1.0f, 1.0f - Distance( sp->mouth, cg.refdef.vieworg ) / voice.range );
+	distance = Com_Clamp( 0.0f, 1.0f, 1.0f - Distance( sp->mouth, hear ) / voice.range );
 	sp->volume = v_voiceVolume.value * ( 1.0f + 0.25f * sp->gainSteps ) * ( VOICE_FAR_GAIN + ( 1.0f - VOICE_FAR_GAIN ) * distance * distance );
 }
 
@@ -1334,15 +1337,16 @@ static qboolean Voice_Where( int client, vec3_t origin ) {
 // Is something between the listener and this speaker, who stands at origin: a wall, a closed door, or the
 // surface of water?
 static qboolean Voice_Blocked( int speaker, const vec3_t origin ) {
-	vec3_t	mouth;
+	vec3_t	mouth, hear;
 	trace_t	tr;
 
+	CG_HearingPoint( hear );
 	VectorCopy( origin, mouth );
 	mouth[2] += VOICE_HEAD;
-	if ( ( CG_PointContents( cg.refdef.vieworg, -1 ) ^ CG_PointContents( mouth, -1 ) ) & MASK_WATER )
+	if ( ( CG_PointContents( hear, -1 ) ^ CG_PointContents( mouth, -1 ) ) & MASK_WATER )
 		return qtrue;
 	// players are not in this mask, so nobody stands in the way of a voice
-	CG_Trace( &tr, cg.refdef.vieworg, NULL, NULL, mouth, cg.snap->ps.clientNum, MASK_SOLID );
+	CG_Trace( &tr, hear, NULL, NULL, mouth, cg.snap->ps.clientNum, MASK_SOLID );
 	return ( tr.fraction < 1.0f && tr.entityNum != speaker ) ? qtrue : qfalse;
 }
 
@@ -1356,7 +1360,7 @@ there (Voice_InLevel()), or it comes from the side the box is on here, muffled b
 */
 static void Voice_PlaceBox( int speaker, int now ) {
 	voiceSpeaker_t	*sp = &voiceSpeakers[speaker];
-	vec3_t			to;
+	vec3_t			to, hear;
 	float			pan;
 	trace_t			tr;
 
@@ -1365,12 +1369,13 @@ static void Voice_PlaceBox( int speaker, int now ) {
 		trap->ext.S_SpatialVoice( speaker, sp->mouth, sp->volume, NULL, 0, VOICE_RATE );
 		return;
 	}
-	VectorSubtract( sp->mouth, cg.refdef.vieworg, to );
+	CG_HearingPoint( hear );
+	VectorSubtract( sp->mouth, hear, to );
 	pan = ( VectorNormalize( to ) > 1.0f ) ? Com_Clamp( -VOICE_MAX_PAN, VOICE_MAX_PAN, DotProduct( to, cg.refdef.viewaxis[1] ) ) : 0.0f;
 	if ( now - sp->traceTime >= VOICE_TRACE_MSEC ) {
 		sp->traceTime = now;
-		CG_Trace( &tr, cg.refdef.vieworg, NULL, NULL, sp->mouth, cg.snap->ps.clientNum, MASK_SOLID );
-		sp->muffled = ( tr.fraction < 1.0f || ( ( CG_PointContents( cg.refdef.vieworg, -1 ) ^ CG_PointContents( sp->mouth, -1 ) ) & MASK_WATER ) )
+		CG_Trace( &tr, hear, NULL, NULL, sp->mouth, cg.snap->ps.clientNum, MASK_SOLID );
+		sp->muffled = ( tr.fraction < 1.0f || ( ( CG_PointContents( hear, -1 ) ^ CG_PointContents( sp->mouth, -1 ) ) & MASK_WATER ) )
 			? qtrue : qfalse;
 	}
 	CG_VoiceAudioMix( speaker, sp->volume * sqrtf( 1.0f + pan ), sp->volume * sqrtf( 1.0f - pan ),
@@ -1426,9 +1431,10 @@ static void Voice_Place( int now ) {
 
 		if ( voice.range > 0 && cgs.clientinfo[i].team != TEAM_SPECTATOR ) {
 			if ( !( sp->flags & VOICE_FLAG_UNSEEN ) && Voice_Where( i, at ) ) {
-				vec3_t to;
+				vec3_t to, hear;
 
-				VectorSubtract( at, cg.refdef.vieworg, to );
+				CG_HearingPoint( hear );
+				VectorSubtract( at, hear, to );
 				to[2] += VOICE_HEAD;
 				distance = VectorNormalize( to );
 				// viewaxis[1] points to the left of the listener
@@ -1635,9 +1641,9 @@ static void Voice_Hear( void ) {
 	mouth.spectator = ( cgs.clientinfo[cg.clientNum].team == TEAM_SPECTATOR ) ? qtrue : qfalse;
 	mouth.team = cgs.clientinfo[cg.clientNum].team;
 	VectorCopy( cg.predictedPlayerState.origin, mouth.origin );
-	// he listens where he watches from: a spectator at the player he follows
+	// he listens where he hears the level from: a spectator at the player he follows
 	ear = mouth;
-	VectorCopy( cg.refdef.vieworg, ear.origin );
+	CG_HearingPoint( ear.origin );
 
 	for ( i = 0; i < MAX_CLIENTS; i++ ) {
 		qboolean shown;

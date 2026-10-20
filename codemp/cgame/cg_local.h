@@ -1728,6 +1728,7 @@ void CG_ZoomUp_f( void );
 void CG_AddBufferedSound( sfxHandle_t sfx);
 
 void CG_DrawActiveFrame( int serverTime, stereoFrame_t stereoView, qboolean demoPlayback );
+void CG_HearingPoint( vec3_t hear );
 /*
 Ghoul2 Insert Start
 */

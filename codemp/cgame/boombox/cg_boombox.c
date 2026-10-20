@@ -763,17 +763,18 @@ void CG_BoomboxFromMaster( const byte *data, int len ) {
 // And that this client draws sound systems (BOX_STATE_SYSTEMS), which the master reads in the same byte.
 int CG_BoomboxHearMask( void ) {
 	const float	range = CG_BoomboxRange() * 1.1f;
-	vec3_t		mouth;
+	vec3_t		mouth, hear;
 	float		gain;
 	int			i, mask = BOX_STATE_SYSTEMS;
 
 	if ( !bx.viaMaster || !v_boomboxes.integer || v_boomboxVolume.value <= 0.0f )
 		return mask;
+	CG_HearingPoint( hear );
 	for ( i = 0; i < BOX_MASTER_MAX; i++ ) {
 		if ( CG_VoiceBoxMuted( i ) )
 			continue;
-		if ( ( CG_BoomboxMouth( i, mouth, &gain ) && Distance( mouth, cg.refdef.vieworg ) <= range * CG_BoomboxChannelRange( i ) / CG_BoomboxRange() )
-			|| ( CG_BoomboxMouth( i + BOX_RIGHT, mouth, &gain ) && Distance( mouth, cg.refdef.vieworg ) <= range * SYS_RANGE_SCALE ) )
+		if ( ( CG_BoomboxMouth( i, mouth, &gain ) && Distance( mouth, hear ) <= range * CG_BoomboxChannelRange( i ) / CG_BoomboxRange() )
+			|| ( CG_BoomboxMouth( i + BOX_RIGHT, mouth, &gain ) && Distance( mouth, hear ) <= range * SYS_RANGE_SCALE ) )
 			mask |= 1 << i;
 	}
 	return mask;
@@ -1232,7 +1233,7 @@ qboolean CG_BoomboxHears( int channel ) {
 	return ( v_boomboxes.integer && v_boomboxVolume.value > 0.0f && Box_Channel( channel, &box, &part ) ) ? qtrue : qfalse;
 }
 
-// How much of a speaker reaches the camera by the way it faces: all of it in front, half or so beside it, little
+// How much of a speaker reaches the listener by the way it faces: all of it in front, half or so beside it, little
 // behind it (behind: that part, at the back). A cardioid, as a speaker in a box has.
 static float Box_Facing( const vec3_t mouth, float yaw, float behind ) {
 	vec3_t	angles, forward, to;
@@ -1240,7 +1241,8 @@ static float Box_Facing( const vec3_t mouth, float yaw, float behind ) {
 
 	VectorSet( angles, 0.0f, yaw, 0.0f );
 	AngleVectors( angles, forward, NULL, NULL );
-	VectorSubtract( cg.refdef.vieworg, mouth, to );
+	CG_HearingPoint( to );
+	VectorSubtract( to, mouth, to );
 	if ( VectorNormalize( to ) < 1.0f ) {
 		return 1.0f;
 	}
@@ -1250,7 +1252,7 @@ static float Box_Facing( const vec3_t mouth, float yaw, float behind ) {
 
 // Where the sound of a channel comes from (the box, a speaker of a sound system), and how loud it is before its
 // distance: as this player wants the songs (v_boomboxVolume), the box is set for everybody, and the speaker faces
-// the camera or not. qfalse: there is no such channel.
+// the listener or not (CG_HearingPoint). qfalse: there is no such channel.
 qboolean CG_BoomboxMouth( int channel, vec3_t mouth, float *gain ) {
 	float	yaw;
 	int		box, part;

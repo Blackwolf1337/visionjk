@@ -2400,6 +2400,27 @@ qboolean CG_CullPointAndRadius( const vec3_t pt, float radius ) {
 
 /*
 =================
+CG_HearingPoint
+
+Where the player hears from: his head, at the height of the camera between crouching and standing, so in first
+person his eyes. In third person the camera circles him when it turns, and what the walls hide and how far a
+sound is would change with it. A camera far from him (spectator, follow) is where he hears from. The engine
+takes the same point for the sounds of the level (S_SpatialHearing() in snd_dma.cpp), keep the two alike.
+=================
+*/
+#define HEAR_EYE_LOW	CROUCH_VIEWHEIGHT
+#define HEAR_EYE_HIGH	DEFAULT_VIEWHEIGHT
+#define HEAR_EYE_FAR	160.0f
+
+void CG_HearingPoint( vec3_t hear ) {
+	VectorCopy( cg.predictedPlayerState.origin, hear );
+	hear[2] = Com_Clamp( hear[2] + HEAR_EYE_LOW, hear[2] + HEAR_EYE_HIGH, cg.refdef.vieworg[2] );
+	if ( DistanceSquared( hear, cg.refdef.vieworg ) > HEAR_EYE_FAR * HEAR_EYE_FAR )
+		VectorCopy( cg.refdef.vieworg, hear );
+}
+
+/*
+=================
 CG_DrawActiveFrame
 
 Generates and draws a game scene and status information at the given time.

@@ -360,6 +360,11 @@ enum {
 // The voice chat of the cgame can hand the voice of a player to this file (S_SpatialVoice), so that it is in
 // the level like any other sound. The cgame decodes it and plays it itself on every other engine.
 #define SPATIAL_STREAM_FIFO			16384	// samples of a voice that wait to be rendered, at the rate of the mixer, a power of two
+#define SPATIAL_LISTENER_JUMP		64.0f	// units the listener moves in a frame that are a jump, not a speed
+#define SPATIAL_AHEAD_LEAST			0.02f	// seconds the voices are rendered ahead of what the mixer paints at least,
+#define SPATIAL_AHEAD_FRAMES		2.5f	//	see S_SpatialAhead(), and how many frames of the game they are
+#define SPATIAL_AHEAD_HITCH			250		//	ms of a frame that is not counted
+#define SPATIAL_AHEAD_SETTLE		0.02f	//	how fast a shorter frame takes the measure back down, each frame
 #define SPATIAL_STREAM_MSEC			500		// a voice that got nothing for this long has ended
 // How loud a voice is against what the cgame makes of it on its own device, where a voice in front is in both
 // ears at full volume. Panning gives each side 0.7 of it, and the HRTF takes 2 dB off noise with the spectrum
@@ -532,6 +537,9 @@ static struct {
 	int					frame;
 	vec3_t				listenerOrigin;
 	matrix3_t			listenerAxis;
+	int					listenerJumped;		// the frame he last jumped to another place, see S_SpatialBeginFrame()
+	int					lastUpdate;			// Sys_Milliseconds() of the last S_SpatialUpdate()
+	float				frameMsec;			//	and how long a frame takes, see S_SpatialAhead()
 	spatialVoice_t		voices[SPATIAL_VOICES];
 
 	// finished sound, by the time of the mixer
@@ -1288,6 +1296,10 @@ static qboolean S_SpatialIsExplosion( sfx_t *sfx ) {
 
 void S_SpatialBeginFrame( const vec3_t origin, matrix3_t axis ) {
 	spatial.frame++;
+	// a teleporter, the view going to another player: no sound came closer by that
+	if ( DistanceSquared( origin, spatial.listenerOrigin ) > SPATIAL_LISTENER_JUMP * SPATIAL_LISTENER_JUMP ) {
+		spatial.listenerJumped = spatial.frame;
+	}
 	VectorCopy( origin, spatial.listenerOrigin );
 	for ( int i = 0; i < 3; i++ ) {
 		VectorCopy( axis[i], spatial.listenerAxis[i] );
@@ -1360,7 +1372,7 @@ static void S_SpatialPlaceVoice( spatialVoice_t *v, channel_t *channel, int entc
 	// How fast it comes closer, for its doppler: from distances at least SPATIAL_DOPPLER_SAMPLES of the mixer
 	// apart, smoothed. A jump faster than sound (a teleporter, the view going to another player) is no speed.
 	v->distance = dist;
-	if ( v->lastTime < 0 || s_paintedtime < v->lastTime ) {
+	if ( v->lastTime < 0 || s_paintedtime < v->lastTime || spatial.listenerJumped == spatial.frame ) {
 		v->lastTime = s_paintedtime;
 		v->lastDistance = dist;
 		v->approach = 0.0f;
@@ -1448,12 +1460,15 @@ void S_SpatialAddSend( channel_t *ch, float volume, qboolean voiceVolume ) {
 	}
 }
 
-void S_SpatialAddLoop( int entnum, sfx_t *sfx, const vec3_t origin, float volume, float fade ) {
+// qfalse: no voice is free, the mixer plays the loop the old way
+qboolean S_SpatialAddLoop( int entnum, sfx_t *sfx, const vec3_t origin, float volume, float fade ) {
 	spatialVoice_t *v = S_SpatialFindVoice( NULL, NULL, entnum, sfx, 0 );
 
-	if ( v ) {
-		S_SpatialPlaceVoice( v, NULL, CHAN_AUTO, origin, volume, fade, qfalse );
+	if ( !v ) {
+		return qfalse;
 	}
+	S_SpatialPlaceVoice( v, NULL, CHAN_AUTO, origin, volume, fade, qfalse );
+	return qtrue;
 }
 
 /*
@@ -2662,9 +2677,16 @@ void S_SpatialPaint( int from, int to, portable_samplepair_t *paint ) {
 	}
 }
 
-// how far ahead of what is heard the voices are rendered, in seconds
+// How far ahead of what is heard the voices are rendered, in seconds: what a voice is given later (its direction
+// when the head turns) is heard that much late. The mixer paints s_mixPreStep ahead of what is heard, and what
+// it painted before that is not painted again: the voices have to be there by the next frame, so they are
+// SPATIAL_AHEAD_FRAMES frames beyond it, as long as frames take now. Never more than v_spatialAhead.
 float S_SpatialAhead( void ) {
-	return Com_Clamp( 0.08f, 0.5f, v_spatialAhead->value );
+	const float pre = Q_max( 0.0f, s_mixPreStep->value );
+	const float least = pre + SPATIAL_AHEAD_LEAST;
+	const float most = Com_Clamp( least, Q_max( least, 0.5f ), v_spatialAhead->value );
+
+	return Com_Clamp( least, most, pre + SPATIAL_AHEAD_FRAMES * spatial.frameMsec * 0.001f );
 }
 
 #ifdef __EMSCRIPTEN__
@@ -2999,7 +3021,7 @@ void S_SpatialInit( void ) {
 
 	v_spatial = Cvar_Get( "v_spatial", SPATIAL_DEFAULT, CVAR_ARCHIVE | CVAR_LATCH, "Sound that knows the level, with Steam Audio (snd_restart)" );
 	v_spatialHrtf = Cvar_Get( "v_spatialHrtf", "1", CVAR_ARCHIVE, "v_spatial: 1 direction for headphones (HRTF), 0 for speakers" );
-	v_spatialAhead = Cvar_Get( "v_spatialAhead", "0.1", CVAR_ARCHIVE, "v_spatial: seconds of sound rendered ahead. Less follows a turn of the head sooner, more survives a longer hitch" );
+	v_spatialAhead = Cvar_Get( "v_spatialAhead", "0.1", CVAR_ARCHIVE, "v_spatial: most seconds of sound rendered ahead, up to 0.5. Below that it follows the frame time: less follows a turn of the head sooner, more survives a longer hitch" );
 	v_spatialReflections = Cvar_Get( "v_spatialReflections", "1", CVAR_ARCHIVE, "v_spatial: 1 the room around the listener rings, worked out with rays. 0 no reverb" );
 	v_spatialReverb = Cvar_Get( "v_spatialReverb", "1", CVAR_ARCHIVE, "v_spatial: how loud the reverb is" );
 	v_spatialRays = Cvar_Get( "v_spatialRays", SPATIAL_DEFAULT_RAYS, CVAR_ARCHIVE, "v_spatial: rays of a pass of the reflections, 256 to 8192. From the next snd_restart on" );
@@ -3113,6 +3135,16 @@ qboolean S_SpatialActive( void ) {
 // once a frame, whether a level is loaded or not
 void S_SpatialUpdate( void ) {
 	if ( spatial.active ) {
+		// How long a frame takes, for S_SpatialAhead(): a longer one counts at once, then it goes back slowly. A
+		// stop longer than SPATIAL_AHEAD_HITCH (a level that loads) says nothing about the frames after it.
+		const int now = Sys_Milliseconds();
+		const float took = (float)( now - spatial.lastUpdate );
+
+		if ( spatial.lastUpdate && took >= 0.0f && took < SPATIAL_AHEAD_HITCH ) {
+			spatial.frameMsec = took > spatial.frameMsec ? took : spatial.frameMsec + ( took - spatial.frameMsec ) * SPATIAL_AHEAD_SETTLE;
+		}
+		spatial.lastUpdate = now;
+
 		if ( v_spatialRays->modified ) {
 			v_spatialRays->modified = qfalse;
 			if ( Com_Clampi( 256, SPATIAL_MAX_RAYS, v_spatialRays->integer ) != spatial.maxRays ) {
@@ -3157,7 +3189,7 @@ void		S_SpatialBeginFrame( const vec3_t origin, matrix3_t axis ) {}
 float		S_SpatialFade( float dist, int channel ) { return S_AttenuateDistance( dist, channel ); }
 qboolean	S_SpatialAddChannel( channel_t *ch, const vec3_t origin, float volume, float fade, qboolean voiceVolume ) { return qfalse; }
 void		S_SpatialAddSend( channel_t *ch, float volume, qboolean voiceVolume ) {}
-void		S_SpatialAddLoop( int entnum, sfx_t *sfx, const vec3_t origin, float volume, float fade ) {}
+qboolean	S_SpatialAddLoop( int entnum, sfx_t *sfx, const vec3_t origin, float volume, float fade ) { return qfalse; }
 void		S_SpatialEndFrame( int from, int target ) {}
 void		S_SpatialPaint( int from, int to, portable_samplepair_t *paint ) {}
 float		S_SpatialAhead( void ) { return 0.0f; }

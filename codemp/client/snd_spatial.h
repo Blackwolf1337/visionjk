@@ -37,7 +37,8 @@ qboolean	S_SpatialActive( void );		// v_spatial is on, the library is there and 
 void		S_SpatialLoadMap( const char *mapname );	// the collision model of a level was loaded
 void		S_SpatialUpdate( void );		// once a frame: a level that was loaded is taken over when that is safe
 
-// once a frame, from S_Update_(): the listener, every sound with a place in the level, then render ahead
+// once a frame, from S_Update_(): where the listener hears from (his head, S_SpatialHearing()), the axis of his
+// camera, every sound with a place in the level, then render ahead
 void		S_SpatialBeginFrame( const vec3_t origin, matrix3_t axis );
 // what is left of a sound at a distance: the game's fade, or with v_spatialPhysical that of a real source
 float		S_SpatialFade( float dist, int channel );
@@ -45,7 +46,7 @@ float		S_SpatialFade( float dist, int channel );
 qboolean	S_SpatialAddChannel( channel_t *ch, const vec3_t origin, float volume, float fade, qboolean voiceVolume );
 // a sound of the own player: the mixer goes on playing it, only the reverb gets it
 void		S_SpatialAddSend( channel_t *ch, float volume, qboolean voiceVolume );
-void		S_SpatialAddLoop( int entnum, sfx_t *sfx, const vec3_t origin, float volume, float fade );
+qboolean	S_SpatialAddLoop( int entnum, sfx_t *sfx, const vec3_t origin, float volume, float fade );
 void		S_SpatialEndFrame( int from, int target );
 float		S_SpatialAhead( void );
 

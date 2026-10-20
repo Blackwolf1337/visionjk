@@ -207,6 +207,8 @@ typedef struct
 	qboolean	doppler;
 	float		dopplerScale;
 
+	qboolean	spatial;	// snd_spatial.cpp plays it, see S_SpatialGather()
+
 	// For Open AL
 	bool	bProcessed;
 	bool	bRelative;
@@ -1398,7 +1400,8 @@ All sounds are on the same cycle, so any duplicates can just
 sum up the channel multipliers.
 ==================
 */
-void S_AddLoopSounds (void)
+// skipSpatial: leave out what snd_spatial.cpp plays (loop->spatial)
+static void S_MixLoopSounds( qboolean skipSpatial )
 {
 	int			i, j;
 	int			left, right, left_total, right_total;
@@ -1406,16 +1409,14 @@ void S_AddLoopSounds (void)
 	loopSound_t	*loop, *loop2;
 	static int	loopFrame;
 
-	// each of them is a sound with a place of its own for snd_spatial.cpp, see S_SpatialGather()
-	if ( S_SpatialActive() ) {
-		return;
-	}
-
 	loopFrame++;
 	for ( i = 0 ; i < numLoopSounds ; i++) {
 		loop = &loopSounds[i];
 		if ( loop->mergeFrame == loopFrame ) {
 			continue;	// already merged into an earlier sound
+		}
+		if ( skipSpatial && loop->spatial ) {
+			continue;
 		}
 
 		// find the total contribution of all sounds of this type
@@ -1423,7 +1424,7 @@ void S_AddLoopSounds (void)
 
 		for ( j = i ; j < numLoopSounds ; j++) {
 			loop2 = &loopSounds[j];
-			if ( loop2->sfx != loop->sfx ) {
+			if ( loop2->sfx != loop->sfx || ( skipSpatial && loop2->spatial ) ) {
 				continue;
 			}
 			loop2->mergeFrame = loopFrame;	// don't check this again later
@@ -1465,6 +1466,15 @@ void S_AddLoopSounds (void)
 			memset(&ch->MP3StreamHeader,0,						sizeof(ch->MP3StreamHeader));
 		}
 	}
+}
+
+void S_AddLoopSounds (void)
+{
+	// each of them is a sound with a place of its own for snd_spatial.cpp, see S_SpatialGather()
+	if ( S_SpatialActive() ) {
+		return;
+	}
+	S_MixLoopSounds( qfalse );
 }
 
 //=============================================================================
@@ -1894,16 +1904,39 @@ S_SpatialGather
 v_spatial: names the listener and every sound with a place in the level to snd_spatial.cpp. What it takes is
 marked, and S_PaintChannels() leaves it out. The rest stays with the mixer: the menus, the announcer, the music,
 and the sounds of the own player, of which snd_spatial.cpp only gets what goes into the reverb.
+
+The listener hears from the head of his player, not from the camera: in third person the camera circles him
+when it turns, which moved what the walls hide and bent every sound by its doppler. Left and right stay those
+of the camera, as the picture has them. A camera far from the player (spectator, a dead player) is where he
+hears from.
 ========================
 */
+#define SPATIAL_EYE_LOW		12.0f	// CROUCH_VIEWHEIGHT and DEFAULT_VIEWHEIGHT of bg_public.h, above the origin
+#define SPATIAL_EYE_HIGH	36.0f
+#define SPATIAL_EYE_FAR		160.0f	// a camera further than this from the head is not following him
+
+static void S_SpatialHearing( vec3_t hear ) {
+	VectorCopy( listener_origin, hear );
+	if ( listener_number < 0 || listener_number >= MAX_GENTITIES ) {
+		return;
+	}
+	VectorCopy( s_entityPosition[listener_number], hear );
+	// as high as the camera, between crouching and standing: in first person that is the eyes
+	hear[2] = Com_Clamp( hear[2] + SPATIAL_EYE_LOW, hear[2] + SPATIAL_EYE_HIGH, listener_origin[2] );
+	if ( DistanceSquared( hear, listener_origin ) > SPATIAL_EYE_FAR * SPATIAL_EYE_FAR ) {
+		VectorCopy( listener_origin, hear );
+	}
+}
+
 static void S_SpatialGather( void ) {
 	channel_t	*ch = s_channels;
-	vec3_t		origin;
+	vec3_t		origin, hear;
 	float		fade;
 	qboolean	voiceVolume;
 	int			i;
 
-	S_SpatialBeginFrame( listener_origin, listener_axis );
+	S_SpatialHearing( hear );
+	S_SpatialBeginFrame( hear, listener_axis );
 
 	for ( i = 0; i < MAX_CHANNELS; i++, ch++ ) {
 		ch->spatial = qfalse;
@@ -1926,7 +1959,7 @@ static void S_SpatialGather( void ) {
 		} else {
 			VectorCopy( s_entityPosition[ ch->entnum ], origin );
 		}
-		fade = S_SpatialFade( Distance( origin, listener_origin ), ch->entchannel );
+		fade = S_SpatialFade( Distance( origin, hear ), ch->entchannel );
 		if ( fade <= 0.0f ) {
 			continue;
 		}
@@ -1934,18 +1967,28 @@ static void S_SpatialGather( void ) {
 	}
 
 	for ( i = 0; i < numLoopSounds; i++ ) {
-		const loopSound_t *loop = &loopSounds[i];
+		loopSound_t *loop = &loopSounds[i];
 
+		loop->spatial = qfalse;
 		if ( !loop->sfx || !loop->sfx->bInMemory ) {
 			continue;
 		}
-		fade = S_SpatialFade( Distance( loop->origin, listener_origin ), CHAN_AUTO );
+		fade = S_SpatialFade( Distance( loop->origin, hear ), CHAN_AUTO );
 		if ( fade <= 0.0f ) {
+			loop->spatial = qtrue;	// not heard there, and not by the mixer either
 			continue;
 		}
 		// its doppler is snd_spatial.cpp's own, not loop->dopplerScale
-		S_SpatialAddLoop( loop->entnum, loop->sfx, loop->origin, loop->volume * ( 1.0f / 255.0f ), fade );
+		loop->spatial = S_SpatialAddLoop( loop->entnum, loop->sfx, loop->origin, loop->volume * ( 1.0f / 255.0f ), fade );
 	}
+	// Those no voice was free for are played by the mixer the old way. Its loop channels are made anew here, as
+	// S_Respatialize() does without v_spatial: this can run more than once between two of it.
+	for ( i = 0, ch = s_channels; i < MAX_CHANNELS; i++, ch++ ) {
+		if ( ch->thesfx && ch->loopSound ) {
+			Channel_Clear( ch );
+		}
+	}
+	S_MixLoopSounds( qtrue );
 }
 
 /*

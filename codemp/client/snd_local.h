@@ -181,6 +181,7 @@ portable_samplepair_t *S_GetRawSamplePointer();	// TA added this, but it just re
 
 extern cvar_t *s_allowDynamicMusic;
 extern cvar_t *s_doppler;
+extern cvar_t *s_mixPreStep;
 extern cvar_t *s_initsound;
 extern cvar_t *s_khz;
 extern cvar_t *s_mixahead;
