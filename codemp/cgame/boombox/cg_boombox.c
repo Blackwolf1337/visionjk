@@ -145,6 +145,27 @@ static cgBox_t	cgBoxes[BOX_MAX];
 
 #define BOX_TURN_STEP		15.0f		// one notch of the mouse wheel turns a carried piece this far
 
+// The waves of a beat: when the song of a channel gets suddenly louder than it was a moment ago, its speakers send
+// out a lens of the refraction of force push (effects/refraction) that bends what is behind it, grows, moves out
+// of the cone and fades. Only with cg_renderToTextureFX, as the game's own distortions.
+#define BOX_WAVES			4			// waves of one channel at once
+#define BOX_WAVE_MSEC		420			// how long one lives
+#define BOX_WAVE_GAP_MSEC	180			// two beats of a channel at least this far apart
+#define BOX_WAVE_AVG_MSEC	450.0f		// what "a moment ago" is: the loudness averaged over this
+#define BOX_WAVE_RISE		1.45f		// a beat: this many times as loud as that average,
+#define BOX_WAVE_LEAST		0.38f		//	and at least this loud (0 to 1, as the cones push out)
+#define BOX_WAVE_SIZE		22.0f		// how large a wave of a speaker of a sound system grows, units; a boombox's 0.45 of it
+#define BOX_WAVE_TRAVEL		60.0f		// how far out of its cone it goes
+#define BOX_WAVE_MODEL_R	35.0f		// the half sphere of force push (models/weaphits/testboom.md3) at a scale of 1: its dome
+										//	faces +x, 35 units out and 35 to each side
+
+static struct {
+	float	average;
+	int		last;					// cg.time of the last beat, 0: none
+	int		start[BOX_WAVES];		// cg.time a wave began, 0: none
+	int		next;
+} boxWaves[BOX_CHANNELS];
+
 // a piece in the pointer that was turned with the wheel keeps that yaw, else it faces the player
 static qboolean	boxHeldTurned;
 static float	boxHeldYaw;
@@ -814,12 +835,20 @@ void CG_BoomboxFrame( void ) {
 		}
 		// out at once, back in a moment: each speaker with its channel
 		for ( channel = 0; channel < 2; channel++ ) {
-			const float beat = Com_Clamp( 0.0f, 1.0f, CG_VoiceBoxBeat( i + channel * BOX_RIGHT ) * BOX_BEAT_GAIN );
+			const float	beat = Com_Clamp( 0.0f, 1.0f, CG_VoiceBoxBeat( i + channel * BOX_RIGHT ) * BOX_BEAT_GAIN );
+			const int	c = i + channel * BOX_RIGHT;
 
 			if ( beat > b->beat[channel] )
 				b->beat[channel] = beat;
 			else
 				b->beat[channel] += ( beat - b->beat[channel] ) * ( 1.0f - expf( -cg.frametime / BOX_BEAT_FALL_MSEC ) );
+			// a beat: a wave out of its speakers
+			if ( beat >= BOX_WAVE_LEAST && beat > boxWaves[c].average * BOX_WAVE_RISE
+				&& ( !boxWaves[c].last || cg.time - boxWaves[c].last >= BOX_WAVE_GAP_MSEC || cg.time < boxWaves[c].last ) ) {
+				boxWaves[c].last = cg.time ? cg.time : 1;
+				boxWaves[c].start[boxWaves[c].next++ % BOX_WAVES] = boxWaves[c].last;
+			}
+			boxWaves[c].average += ( beat - boxWaves[c].average ) * ( 1.0f - expf( -cg.frametime / BOX_WAVE_AVG_MSEC ) );
 		}
 		// the platters of a sound system turn while a song plays
 		if ( ( b->flags & BOX_PLAYING ) && !( b->flags & ( BOX_PAUSED | BOX_LOADING ) ) )
@@ -862,6 +891,48 @@ static void Box_AddCone( const refEntity_t *body, float x, float y, float z, flo
 	VectorScale( body->axis[2], wide, cone.axis[2] );
 	cone.nonNormalizedAxes = qtrue;
 	trap->R_AddRefEntityToScene( &cone );
+}
+
+// The waves of a channel out of a cone of a model: at x, y, z on it, a lens across the way the cone faces that
+// grows, moves out and fades. size: how large it gets.
+static void Box_AddWaves( int channel, const refEntity_t *body, float x, float y, float z, float size ) {
+	int k;
+
+	if ( !cg_renderToTextureFX.integer || !cgs.media.refractionShader || !cgs.media.halfShieldModel ) {
+		return;
+	}
+	for ( k = 0; k < BOX_WAVES; k++ ) {
+		const int	start = boxWaves[channel].start[k];
+		refEntity_t	wave;
+		float		part, grow, distance;
+
+		if ( !start || cg.time < start || cg.time - start >= BOX_WAVE_MSEC ) {
+			continue;
+		}
+		part = (float)( cg.time - start ) / BOX_WAVE_MSEC;
+		grow = size * ( 0.25f + 0.75f * sqrtf( part ) );
+		memset( &wave, 0, sizeof( wave ) );
+		wave.reType = RT_MODEL;
+		wave.hModel = cgs.media.halfShieldModel;
+		wave.customShader = cgs.media.refractionShader;
+		VectorMA( body->origin, x + BOX_WAVE_TRAVEL * part * ( size / BOX_WAVE_SIZE ), body->axis[0], wave.origin );
+		VectorMA( wave.origin, y, body->axis[1], wave.origin );
+		VectorMA( wave.origin, z, body->axis[2], wave.origin );
+		VectorCopy( wave.origin, wave.oldorigin );
+		// the dome out of the cone, flatter than a half sphere
+		VectorScale( body->axis[0], grow * 0.5f / BOX_WAVE_MODEL_R, wave.axis[0] );
+		VectorScale( body->axis[1], grow / BOX_WAVE_MODEL_R, wave.axis[1] );
+		VectorScale( body->axis[2], grow / BOX_WAVE_MODEL_R, wave.axis[2] );
+		wave.nonNormalizedAxes = qtrue;
+		// the size of the picture of the screen the renderer bends, as force push asks for it by the distance
+		distance = Distance( wave.origin, cg.refdef.vieworg );
+		wave.radius = ( distance < 128.0f ) ? 256 : ( distance < 256.0f ) ? 128 : ( distance < 512.0f ) ? 64 : 32;
+		wave.renderfx = RF_DISTORTION | RF_FORCE_ENT_ALPHA;
+		wave.shaderRGBA[0] = wave.shaderRGBA[1] = wave.shaderRGBA[2] = 255;
+		wave.shaderRGBA[3] = (byte)( 220.0f * ( 1.0f - part ) + 10.0f );
+		wave.shaderTime = start * 0.001f;
+		trap->R_AddRefEntityToScene( &wave );
+	}
 }
 
 // a platter of a sound system, turned by the song
@@ -952,6 +1023,8 @@ void CG_BoomboxScene( void ) {
 					Box_AddCone( &body, BOX_CONE_X, BOX_CONE_Y, BOX_CONE_Z, 1.0f, b->beat[0] );
 					Box_AddCone( &body, BOX_CONE_X, -BOX_CONE_Y, BOX_CONE_Z, 1.0f, b->beat[0] );
 				}
+				Box_AddWaves( i, &body, BOX_CONE_X, BOX_CONE_Y, BOX_CONE_Z, BOX_WAVE_SIZE * 0.45f );
+				Box_AddWaves( i, &body, BOX_CONE_X, -BOX_CONE_Y, BOX_CONE_Z, BOX_WAVE_SIZE * 0.45f );
 			} else if ( part == BOX_PART_BODY ) {
 				if ( bx.platter ) {
 					Box_AddPlatter( &body, 1.0f, b->spin );
@@ -962,6 +1035,9 @@ void CG_BoomboxScene( void ) {
 
 				Box_AddCone( &body, SYS_CONE_X, 0.0f, SYS_SPK_MOUTH, SYS_WOOFER_SCALE, beat );
 				Box_AddCone( &body, SYS_CONE_X, 0.0f, SYS_TWEETER_Z, SYS_TWEETER_SCALE, beat * 0.5f );
+			}
+			if ( b->kind == BOX_KIND_SYSTEM && part != BOX_PART_BODY ) {
+				Box_AddWaves( i + ( ( part == BOX_PART_RIGHT ) ? BOX_RIGHT : 0 ), &body, SYS_CONE_X, 0.0f, SYS_SPK_MOUTH, BOX_WAVE_SIZE );
 			}
 			CG_SelectBoxOutline( piece, &body );
 		}
