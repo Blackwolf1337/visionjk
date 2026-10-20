@@ -166,6 +166,10 @@ static struct {
 	qboolean	carrying;				// "Move it" of its card: the box is in the pointer until the next click
 } sel;
 
+#define SELECT_GRAB_MSEC	500		// the key let go by the engine when the pointer takes the keys comes this soon
+
+static int selectHeldTime;			// trap->Milliseconds() when the key of +v_cursor went down
+
 static const vec4_t selectText = { 0.86f, 0.92f, 0.97f, 1.0f }, selectDim = { 0.60f, 0.69f, 0.78f, 1.0f };
 static const vec4_t selectAccent = { 0.43f, 0.83f, 1.0f, 1.0f }, selectGold = { 0.89f, 0.84f, 0.36f, 1.0f };
 
@@ -1644,6 +1648,7 @@ void CG_SelectCarry( int piece ) {
 
 void CG_SelectCursorDown_f( void ) {
 	sel.held = qtrue;
+	selectHeldTime = trap->Milliseconds();
 }
 
 // the piece of a box under the pointer while the mouse is free, -1: none (for the quick wheel)
@@ -1652,6 +1657,13 @@ int CG_SelectHoveredPiece( void ) {
 }
 
 void CG_SelectCursorUp_f( void ) {
+	// When the pointer takes the keys (Key_SetCatcher) the engine lets go of every key that is held, this one too,
+	// and sends "-v_cursor <key> 0": without a time. That one is not the player letting go (taken for one, the
+	// pointer let the keys go again, the key repeat took them back, and the mouse did nothing). A key let go
+	// without a time later on is the window losing the focus.
+	if ( !atoi( CG_Argv( 2 ) ) && trap->Milliseconds() - selectHeldTime < SELECT_GRAB_MSEC ) {
+		return;
+	}
 	sel.held = qfalse;
 }
 
