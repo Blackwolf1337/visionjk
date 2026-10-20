@@ -48,6 +48,7 @@ seta vs_webBind "0.0.0.0"
 | `vs_webProxy` | empty | the IPv4 address of the reverse proxy in front of the panel. Then only that address is let in, see "Behind a reverse proxy" |
 | `vs_webBasicAuth` | 0 | 1: a script may send the token of its account as the password of basic auth behind the name of the account |
 | `vs_webPassword` | empty | from before the accounts. A server that has it and no account yet gets the account `owner` with that password at its next map, once. It is not read after that: take it out of the config |
+| `vs_liveView` | 0 | 1: the live view below `/live/` is open to everybody without a login, see "The live view". It opens the port also without an account. Latched |
 | `vs_webRoot` | empty | folder with the files of the page (`codemp/game/webadmin/page` of the source), served instead of the built in page, for working on the page: the server puts `index.html` and the files it includes together at every load |
 
 Port and bind are latched, they take effect at the next map start. Open `http://server:8080/` and log in.
@@ -117,6 +118,41 @@ certificate, "Force SSL", "HTTP/2 Support" and "HSTS Enabled". It sends `Host`, 
 `X-Forwarded-For` and `X-Forwarded-Proto` by itself, nothing has to go into the Advanced tab. An access list
 (a second password of the proxy, or addresses that may come) in front of it does no harm. Opening the port of
 the proxy to the internet is a rule of the router and the firewall, which this text does not change.
+
+## The live view
+
+Not in JKAdmin. With `vs_liveView 1` the port of the panel also answers below `/live/`, to everybody and read
+only: the map view of the panel without the panel, for the start page of a website. jka.vision has it behind
+its headline (nginx of the host passes `/live/` on and keeps the files, see `deploy/nginx.conf` of the website).
+
+| Address | What |
+|---------|------|
+| `/live/live.js` | the script: the drawing files of the page and `js/live-boot.js`, put together from `page/live.js` as the page is from `index.html` (with `vs_webRoot` from disk at every load) |
+| `/live/api/state` | what `/api/state` has, without the address, the arrival and the JA+ client plugin of a player, without his JA+ admin state, without what the server prints, and without the view and the HUD of a player |
+| `/live/api/map?name=` | the map that runs, only under its own name |
+| `/live/api/file?name=` | what `/api/file` hands out, without sounds and music |
+| `/live/api/anims`, `/live/api/shaders`, `/live/api/remaps` | as below `/api/` |
+| `/live/api/list?kind=` | `fxindex`, `events` and `mods` only |
+
+Everything else below `/live/` is 404, also while `vs_liveView` is 0, and nothing below `/live/` takes a POST.
+The original game's files of the map that runs (textures, models, shader scripts, the map itself) go to every
+visitor this way: that is what the view is drawn with.
+
+A website has a canvas `#gl` and a box `#labels` for the names, sets `window.VJK_LIVE` and then loads
+`/live/live.js`:
+
+| `VJK_LIVE` | Meaning |
+|------------|---------|
+| `base` | where the questions go, `/live/` when it is not given |
+| `paused` | true while the view is not seen: nothing is drawn, and the server is asked once in two seconds |
+| `side` | degrees the camera looks past the spot it watches, so that the spot is off the middle |
+| `onState` | called after every answer with `{ map, players, ready, error }`: `players` counts who plays (no spectators), `ready` says the map is drawn as the game draws it |
+
+The camera goes round the spot where the most players are close together, at the height of a man and a half,
+keeps in front of the walls and goes round faster while a wall holds it close. It looks for another spot every
+15 seconds or when the one it watches is gone, and a spot far from the last one is a cut. A name stands over a
+player only while the camera sees his head and he is no farther than 1500; the panel names everybody, through
+walls. Health and shield are not shown.
 
 ## What the page does
 
