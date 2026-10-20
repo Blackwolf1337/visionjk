@@ -976,13 +976,18 @@ Over every box near enough that is in sight: what it plays, or that it is paused
 one the pointer is on or whose card is open: the pointer names that one itself.
 =================
 */
-// Over each speaker of a sound system a round mark with L or R, as near as the titles are shown and when nothing
-// of the level is in the way: which one plays the left channel and which the right one.
+// Over each speaker of a sound system a round mark with L or R, while the pointer is on a part of that system or
+// carries one of them, as near as the titles are shown and when nothing of the level is in the way: which one plays
+// the left channel and which the right one.
 static void Box_DrawSides( int font ) {
 	const vec4_t	back = { 0.02f, 0.05f, 0.09f, 0.72f }, accent = { 0.43f, 0.83f, 1.0f, 1.0f };
+	const int		hovered = CG_SelectHoveredPiece();
 	int				i, part;
 
 	for ( i = 0; i < BOX_MAX; i++ ) {
+		if ( ( hovered < 0 || BOX_OF( hovered ) != i ) && ( bx.held < 0 || BOX_OF( bx.held ) != i ) ) {
+			continue;
+		}
 		for ( part = BOX_PART_LEFT; part < BOX_PARTS; part++ ) {
 			const char	*side = ( part == BOX_PART_LEFT ) ? "L" : "R";
 			vec3_t		top;
