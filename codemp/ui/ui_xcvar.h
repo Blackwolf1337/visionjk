@@ -65,6 +65,7 @@ XCVAR_DEF( v_selectPlayers,				"1",					NULL,				CVAR_ARCHIVE )
 XCVAR_DEF( v_scoresPick,					"1",					NULL,				CVAR_ARCHIVE )
 XCVAR_DEF( v_selectOutline,				"1",					NULL,				CVAR_ARCHIVE )
 XCVAR_DEF( v_shareMusic,					"0",					NULL,				CVAR_ARCHIVE )
+XCVAR_DEF( v_shareMusicPlayers,				"",						NULL,				CVAR_ARCHIVE )
 // the rows of Setup for what came from TaystJK (2026-10-17): the cgame has them, the menus outside a game too
 XCVAR_DEF( tay_killfeed,				"1",						NULL,				CVAR_ARCHIVE )
 XCVAR_DEF( tay_teamOverlayScale,		"1",						NULL,				CVAR_ARCHIVE )

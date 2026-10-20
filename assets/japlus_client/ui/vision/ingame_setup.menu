@@ -1964,13 +1964,30 @@
 
 		itemDef
 		{
+			name					vision_open_musicplayers
+			type					ITEM_TYPE_BUTTON
+			text					@VISION_CHOOSE_PLAYERS_OF_MY_MUSIC
+			descText				@VISION_WHICH_PLAYERS_OF_MUSIC_MAY_BE_TOLD_O
+			action { play "sound/interface/button1.wav" ; setpage 9 ; }
+			rect					12 148 380 22
+			page					5
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+		}
+
+		itemDef
+		{
 			name					vision_yesno_v_selectplayers
 			type					ITEM_TYPE_YESNO
 			text					@VISION_SELECT_PLAYERS
 			descText				@VISION_WITH_THE_MOUSE_FREE_A_CLICK_ON_A_PLA
 			cvar					"v_selectPlayers"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 148 380 22
+			rect					12 170 380 22
 			page					5
 			scroll					1
 			row						1
@@ -1988,7 +2005,7 @@
 			descText				@VISION_A_GLOWING_OUTLINE_AROUND_THE_PLAYER
 			cvar					"v_selectOutline"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 170 380 22
+			rect					12 192 380 22
 			page					5
 			scroll					1
 			row						1
@@ -2006,7 +2023,7 @@
 			descText				@VISION_THE_SCOREBOARD_KEY_PRESSED_TWICE_QUI
 			cvar					"v_scoresPick"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 192 380 22
+			rect					12 214 380 22
 			page					5
 			scroll					1
 			row						1
@@ -2019,7 +2036,7 @@
 		itemDef
 		{
 			name					vision_head
-			rect					14 214 376 22
+			rect					14 236 376 22
 			visible					1
 			text					@VISION_CHAT
 			font					5
@@ -2035,7 +2052,7 @@
 		itemDef
 		{
 			name					vision_headline
-			rect					12 235 380 0.67
+			rect					12 257 380 0.67
 			visible					1
 			style					WINDOW_STYLE_FILLED
 			backcolor				0.43 0.83 1 0.32
@@ -2052,7 +2069,7 @@
 			descText				@VISION_TYPE_INTO_THE_CHAT_BOX_OF_VISIONJK_W
 			cvar					"v_chatInput"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 236 380 22
+			rect					12 258 380 22
 			page					5
 			scroll					1
 			row						1
@@ -2070,7 +2087,7 @@
 			descText				@VISION_HOW_LARGE_THE_CHAT_BOX_AND_ITS_TEXT
 			cvarfloat				"v_chatBoxScale" 0.85 0.6 1.6
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 258 380 22
+			rect					12 280 380 22
 			page					5
 			scroll					1
 			row						1
@@ -2088,7 +2105,7 @@
 			descText				@VISION_HOW_WIDE_THE_CHAT_BOX_IS
 			cvarfloat				"v_chatBoxWidth" 380 200 600
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 280 380 22
+			rect					12 302 380 22
 			page					5
 			scroll					1
 			row						1
@@ -2106,7 +2123,7 @@
 			descText				@VISION_HOW_MANY_LINES_THE_OPEN_CHAT_BOX_SHO
 			cvarfloat				"v_chatBoxRows" 10 4 24
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 302 380 22
+			rect					12 324 380 22
 			page					5
 			scroll					1
 			row						1
@@ -2124,7 +2141,7 @@
 			descText				@VISION_A_SOUND_WHEN_SOMEBODY_SAYS_SOMETHING
 			cvar					"cg_chatBeep"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 324 380 22
+			rect					12 346 380 22
 			page					5
 			scroll					1
 			row						1
@@ -2137,7 +2154,7 @@
 		itemDef
 		{
 			name					vision_head
-			rect					14 346 376 22
+			rect					14 368 376 22
 			visible					1
 			text					@VISION_CONSOLE
 			font					5
@@ -2153,7 +2170,7 @@
 		itemDef
 		{
 			name					vision_headline
-			rect					12 367 380 0.67
+			rect					12 389 380 0.67
 			visible					1
 			style					WINDOW_STYLE_FILLED
 			backcolor				0.43 0.83 1 0.32
@@ -2170,7 +2187,7 @@
 			descText				@VISION_THE_CONSOLE_IN_A_FONT_WITH_EVERY_CHA
 			cvar					"con_font"
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 368 380 22
+			rect					12 390 380 22
 			page					5
 			scroll					1
 			row						1
@@ -2188,7 +2205,7 @@
 			descText				@VISION_THE_SIZE_OF_THE_TEXT_OF_THE_CONSOLE
 			cvarfloat				"con_scale" 1 0.5 3
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 390 380 22
+			rect					12 412 380 22
 			page					5
 			scroll					1
 			row						1
@@ -2206,7 +2223,7 @@
 			descText				@VISION_HOW_MUCH_OF_THE_GAME_SHOWS_THROUGH_T
 			cvarfloat				"con_opacity" 1 0.2 1
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 412 380 22
+			rect					12 434 380 22
 			page					5
 			scroll					1
 			row						1
@@ -2219,7 +2236,7 @@
 		itemDef
 		{
 			name					vision_head
-			rect					14 434 376 22
+			rect					14 456 376 22
 			visible					1
 			text					@VISION_CLAN
 			font					5
@@ -2235,7 +2252,7 @@
 		itemDef
 		{
 			name					vision_headline
-			rect					12 455 380 0.67
+			rect					12 477 380 0.67
 			visible					1
 			style					WINDOW_STYLE_FILLED
 			backcolor				0.43 0.83 1 0.32
@@ -2254,7 +2271,7 @@
 			maxChars				32
 			maxPaintChars			24
 			action { play "sound/interface/button1.wav" ; }
-			rect					12 456 380 22
+			rect					12 478 380 22
 			page					5
 			scroll					1
 			row						2
@@ -3647,6 +3664,91 @@
 			textalign				ITEM_ALIGN_CENTER
 			textalignx				64
 			textaligny				4.6
+		}
+
+		itemDef
+		{
+			name					vision_music_title
+			rect					14 40 376 22
+			visible					1
+			text					@VISION_PLAYERS_OF_MY_MUSIC
+			font					5
+			textscale				0.8
+			forecolor				1 1 1 1
+			decoration
+			page					9
+		}
+
+		itemDef
+		{
+			name					vision_music_about1
+			rect					14 68 376 16
+			visible					1
+			text					@VISION_CLICK_A_PLAYER_TO_TICK_IT_OR_TO_TAKE
+			font					5
+			textscale				0.56
+			forecolor				0.86 0.92 0.97 1
+			decoration
+			page					9
+		}
+
+		itemDef
+		{
+			name					vision_music_about2
+			rect					14 84 376 16
+			visible					1
+			text					@VISION_ONLY_THE_SONGS_OF_TICKED_PLAYERS_ARE
+			font					5
+			textscale				0.56
+			forecolor				0.60 0.69 0.78 1
+			decoration
+			page					9
+		}
+
+		itemDef
+		{
+			name					vision_music_list
+			rect					12 108 380 248
+			visible					1
+			type					ITEM_TYPE_LISTBOX
+			style					WINDOW_STYLE_PANEL
+			elementwidth			120
+			elementheight			20
+			font					5
+			textscale				0.59
+			elementtype				LISTBOX_TEXT
+			feeder					FEEDER_MUSICPLAYERS
+			textalign				3
+			textaligny				24
+			bordercolor				0.43 0.83 1 0.16
+			outlinecolor			0.43 0.83 1 0.22
+			forecolor				0.86 0.92 0.97 1
+			backcolor				0 0 0 0.30
+			radius					4
+			page					9
+		}
+
+		itemDef
+		{
+			name					vision_music_back
+			rect					12 364 110 24
+			visible					1
+			text					@MENUS_BACK
+			font					5
+			textscale				0.62
+			forecolor				1 1 1 1
+			type					ITEM_TYPE_BUTTON
+			style					WINDOW_STYLE_PANEL
+			radius					3
+			caps					1
+			backcolor				0.43 0.83 1 0.20
+			bordercolor				0.43 0.83 1 0.75
+			descText				@MENUS_BACK
+			action { play "sound/interface/button1.wav" ; setpage 5 ; }
+			page					9
+			textalign				ITEM_ALIGN_CENTER
+			textalignx				55
+			textaligny				6.42
 		}
 		scrollRect				12 38 380 352
 		scrollStep				22

@@ -119,6 +119,7 @@
 //MODIFICATION
 #define FEEDER_HOLSTERS				0x2d			//holsters model list
 #define FEEDER_VIDEOMODES					0x2e			// list control: "Desktop" and the sizes the display offers
+#define FEEDER_MUSICPLAYERS					0x2f			// VisionJK: the players of music, ticked for v_shareMusicPlayers
 
 
 

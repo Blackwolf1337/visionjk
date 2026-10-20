@@ -101,6 +101,14 @@ REFERENCE           HOLD_TO_POINT_AT_PLAYERS_WITH_THE_MO
 LANG_ENGLISH        "Hold to point at players with the mouse: a click opens what you can do with one."
 LANG_FRENCH         "Maintenir pour pointer les joueurs à la souris : un clic montre ce que vous pouvez faire."
 
+REFERENCE           QUICK_WHEEL_BOOMBOX
+LANG_ENGLISH        "Quick Wheel (Boombox)"
+LANG_FRENCH         "Roue rapide (radiocassette)"
+
+REFERENCE           HOLD_FOR_A_WHEEL_PUT_A_BOOMBOX_OR_A
+LANG_ENGLISH        "Hold for a wheel: put a boombox or a sound system down, or work the one you look at. Let go on a choice."
+LANG_FRENCH         "Maintenir pour une roue : poser une radiocassette ou une sono, ou régler celle que vous regardez. Relâcher sur un choix."
+
 REFERENCE           SCOREBOARD_WITH_MOUSE
 LANG_ENGLISH        "Scoreboard with Mouse"
 LANG_FRENCH         "Tableau avec souris"
@@ -576,6 +584,14 @@ LANG_FRENCH         "Montrer ma musique"
 REFERENCE           TELL_THE_OTHERS_WHAT_YOU_LISTEN_TO_E
 LANG_ENGLISH        "Tell the others what you listen to. Everybody on the server reads it."
 LANG_FRENCH         "Dire aux autres ce que vous écoutez. Tout le serveur le lit."
+
+REFERENCE           CHOOSE_PLAYERS_OF_MY_MUSIC
+LANG_ENGLISH        "Choose Players of My Music ..."
+LANG_FRENCH         "Choisir mes lecteurs de musique ..."
+
+REFERENCE           WHICH_PLAYERS_OF_MUSIC_MAY_BE_TOLD_O
+LANG_ENGLISH        "Which players of music may be told: only the songs of the ones you tick are shown to the others."
+LANG_FRENCH         "Quels lecteurs peuvent être montrés : seules les chansons des lecteurs cochés sont visibles."
 
 REFERENCE           SELECT_PLAYERS
 LANG_ENGLISH        "Select Players"
@@ -1365,6 +1381,18 @@ REFERENCE           RESTART_THE_VIDEO_WITH_THESE_SETTING
 LANG_ENGLISH        "Restart the video with these settings."
 LANG_FRENCH         "Redémarrer l'affichage avec ces réglages."
 
+REFERENCE           PLAYERS_OF_MY_MUSIC
+LANG_ENGLISH        "Players of My Music"
+LANG_FRENCH         "Mes lecteurs de musique"
+
+REFERENCE           CLICK_A_PLAYER_TO_TICK_IT_OR_TO_TAKE
+LANG_ENGLISH        "Click a player to tick it, or to take the tick away."
+LANG_FRENCH         "Un clic coche un lecteur ou le décoche."
+
+REFERENCE           ONLY_THE_SONGS_OF_TICKED_PLAYERS_ARE
+LANG_ENGLISH        "Only the songs of ticked players are shown to the others."
+LANG_FRENCH         "Seules les chansons des lecteurs cochés sont montrées."
+
 REFERENCE           FIXED_COLOR
 LANG_ENGLISH        "Fixed Color"
 LANG_FRENCH         "Couleur fixe"
@@ -1812,6 +1840,38 @@ LANG_FRENCH         "Sabre"
 REFERENCE           ALTERNATE_DIMENSION
 LANG_ENGLISH        "Alternate Dimension"
 LANG_FRENCH         "Autre dimension"
+
+REFERENCE           SOUND_SYSTEM
+LANG_ENGLISH        "Sound System"
+LANG_FRENCH         "Sono"
+
+REFERENCE           PUT_A_BOOMBOX_HERE
+LANG_ENGLISH        "Put a boombox here"
+LANG_FRENCH         "Poser une radiocassette ici"
+
+REFERENCE           PUT_A_SOUND_SYSTEM_HERE
+LANG_ENGLISH        "Put a sound system here"
+LANG_FRENCH         "Poser une sono ici"
+
+REFERENCE           LOUDER_I
+LANG_ENGLISH        "Louder (%i %%)"
+LANG_FRENCH         "Plus fort (%i %%)"
+
+REFERENCE           QUIETER_I
+LANG_ENGLISH        "Quieter (%i %%)"
+LANG_FRENCH         "Moins fort (%i %%)"
+
+REFERENCE           NO_BOOMBOX_HERE
+LANG_ENGLISH        "No boombox here"
+LANG_FRENCH         "Pas de radiocassette ici"
+
+REFERENCE           NO_PLAYER_OF_MUSIC_RUNS_RIGHT_NOW
+LANG_ENGLISH        "No player of music runs right now"
+LANG_FRENCH         "Aucun lecteur de musique ne tourne"
+
+REFERENCE           NOT_RUNNING
+LANG_ENGLISH        "not running"
+LANG_FRENCH         "fermé"
 
 
 ENDMARKER

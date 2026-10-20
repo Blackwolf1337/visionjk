@@ -101,6 +101,14 @@ REFERENCE           HOLD_TO_POINT_AT_PLAYERS_WITH_THE_MO
 LANG_ENGLISH        "Hold to point at players with the mouse: a click opens what you can do with one."
 LANG_SPANISH        "Mantén para señalar jugadores con el ratón: un clic muestra lo que puedes hacer con uno."
 
+REFERENCE           QUICK_WHEEL_BOOMBOX
+LANG_ENGLISH        "Quick Wheel (Boombox)"
+LANG_SPANISH        "Rueda rápida (radiocasete)"
+
+REFERENCE           HOLD_FOR_A_WHEEL_PUT_A_BOOMBOX_OR_A
+LANG_ENGLISH        "Hold for a wheel: put a boombox or a sound system down, or work the one you look at. Let go on a choice."
+LANG_SPANISH        "Mantener para una rueda: poner una radiocasete o un equipo de sonido, o manejar el que miras. Soltar sobre una opción."
+
 REFERENCE           SCOREBOARD_WITH_MOUSE
 LANG_ENGLISH        "Scoreboard with Mouse"
 LANG_SPANISH        "Marcador con ratón"
@@ -576,6 +584,14 @@ LANG_SPANISH        "Mostrar mi música"
 REFERENCE           TELL_THE_OTHERS_WHAT_YOU_LISTEN_TO_E
 LANG_ENGLISH        "Tell the others what you listen to. Everybody on the server reads it."
 LANG_SPANISH        "Di a los demás lo que escuchas. Todo el servidor lo lee."
+
+REFERENCE           CHOOSE_PLAYERS_OF_MY_MUSIC
+LANG_ENGLISH        "Choose Players of My Music ..."
+LANG_SPANISH        "Elegir mis reproductores de música ..."
+
+REFERENCE           WHICH_PLAYERS_OF_MUSIC_MAY_BE_TOLD_O
+LANG_ENGLISH        "Which players of music may be told: only the songs of the ones you tick are shown to the others."
+LANG_SPANISH        "Qué reproductores se pueden mostrar: solo se ven las canciones de los marcados."
 
 REFERENCE           SELECT_PLAYERS
 LANG_ENGLISH        "Select Players"
@@ -1365,6 +1381,18 @@ REFERENCE           RESTART_THE_VIDEO_WITH_THESE_SETTING
 LANG_ENGLISH        "Restart the video with these settings."
 LANG_SPANISH        "Reiniciar el vídeo con estos ajustes."
 
+REFERENCE           PLAYERS_OF_MY_MUSIC
+LANG_ENGLISH        "Players of My Music"
+LANG_SPANISH        "Mis reproductores de música"
+
+REFERENCE           CLICK_A_PLAYER_TO_TICK_IT_OR_TO_TAKE
+LANG_ENGLISH        "Click a player to tick it, or to take the tick away."
+LANG_SPANISH        "Un clic marca un reproductor o lo desmarca."
+
+REFERENCE           ONLY_THE_SONGS_OF_TICKED_PLAYERS_ARE
+LANG_ENGLISH        "Only the songs of ticked players are shown to the others."
+LANG_SPANISH        "Solo se muestran las canciones de los marcados."
+
 REFERENCE           FIXED_COLOR
 LANG_ENGLISH        "Fixed Color"
 LANG_SPANISH        "Color fijo"
@@ -1812,6 +1840,38 @@ LANG_SPANISH        "Sable"
 REFERENCE           ALTERNATE_DIMENSION
 LANG_ENGLISH        "Alternate Dimension"
 LANG_SPANISH        "Otra dimensión"
+
+REFERENCE           SOUND_SYSTEM
+LANG_ENGLISH        "Sound System"
+LANG_SPANISH        "Equipo de sonido"
+
+REFERENCE           PUT_A_BOOMBOX_HERE
+LANG_ENGLISH        "Put a boombox here"
+LANG_SPANISH        "Poner una radiocasete aquí"
+
+REFERENCE           PUT_A_SOUND_SYSTEM_HERE
+LANG_ENGLISH        "Put a sound system here"
+LANG_SPANISH        "Poner un equipo de sonido aquí"
+
+REFERENCE           LOUDER_I
+LANG_ENGLISH        "Louder (%i %%)"
+LANG_SPANISH        "Más alto (%i %%)"
+
+REFERENCE           QUIETER_I
+LANG_ENGLISH        "Quieter (%i %%)"
+LANG_SPANISH        "Más bajo (%i %%)"
+
+REFERENCE           NO_BOOMBOX_HERE
+LANG_ENGLISH        "No boombox here"
+LANG_SPANISH        "No hay radiocasete aquí"
+
+REFERENCE           NO_PLAYER_OF_MUSIC_RUNS_RIGHT_NOW
+LANG_ENGLISH        "No player of music runs right now"
+LANG_SPANISH        "No hay ningún reproductor de música abierto"
+
+REFERENCE           NOT_RUNNING
+LANG_ENGLISH        "not running"
+LANG_SPANISH        "cerrado"
 
 
 ENDMARKER

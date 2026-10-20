@@ -79,6 +79,7 @@ XCVAR_DEF( v_bubbleRange,						"1200",					NULL,					CVAR_ARCHIVE )
 // statuses above the heads (status/cg_status.c): show the ones of the others, and tell them what music plays here
 XCVAR_DEF( v_playerStatuses,					"1",					NULL,					CVAR_ARCHIVE )
 XCVAR_DEF( v_shareMusic,						"0",					NULL,					CVAR_ARCHIVE )
+XCVAR_DEF( v_shareMusicPlayers,					"",						NULL,					CVAR_ARCHIVE )
 // Admin login with a key (auth/cg_auth.c, the command v_amkey). The key file, by default admin_ed25519 in the home
 // folder of the game. v_authAgent 1: the keys of the ssh-agent are used too, at v_authAgentPath if that is
 // not where the system says, and only the one v_authAgentKey names (a part of its comment or of its line).

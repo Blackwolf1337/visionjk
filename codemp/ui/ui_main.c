@@ -45,6 +45,7 @@ USER INTERFACE MAIN
 #include "game/bg_saga.h"
 #include "ui_shared.h"
 #include "ui_skin.h"
+#include "ui_music.h"
 
 NORETURN_PTR void (*Com_Error)( int level, const char *error, ... );
 void (*Com_Printf)( const char *msg, ... );
@@ -1080,6 +1081,7 @@ void UI_CleanupGhoul2(void);
 void UI_FreeAllSpecies(void);
 
 void UI_Shutdown( void ) {
+	Music_Shutdown();
 	trap->LAN_SaveCachedServers();
 	UI_CleanupGhoul2();
 	UI_FreeAllSpecies();
@@ -8243,6 +8245,81 @@ static void UI_BuildServerStatus(qboolean force) {
 }
 
 /*
+===============================================================================
+
+The players of music in Setup (FEEDER_MUSICPLAYERS): the ones there are now (ui_music.c), and the ones that are
+ticked in v_shareMusicPlayers but not there. A click ticks a player or takes the tick away. While the list is
+drawn the players are looked for every second and a half; when it is no longer drawn nothing is looked for.
+
+===============================================================================
+*/
+
+static struct {
+	char		keys[MUSIC_MAX_PLAYERS * 2][MUSIC_KEY];
+	qboolean	there[MUSIC_MAX_PLAYERS * 2];
+	int			count;
+	int			drawn;			// uiInfo.uiDC.realTime when it was last drawn, 0: never
+} uiMusic;
+
+static void UI_MusicList( void ) {
+	char		found[MUSIC_MAX_PLAYERS][MUSIC_KEY], word[MUSIC_KEY];
+	const char	*p = v_shareMusicPlayers.string;
+	const int	n = Music_Players( found );
+	int			i, k;
+
+	uiMusic.count = 0;
+	for ( i = 0; i < n; i++ ) {
+		Q_strncpyz( uiMusic.keys[uiMusic.count], found[i], MUSIC_KEY );
+		uiMusic.there[uiMusic.count++] = qtrue;
+	}
+	while ( *p && uiMusic.count < (int)ARRAY_LEN( uiMusic.keys ) ) {
+		while ( *p == ' ' )
+			p++;
+		for ( k = 0; *p && *p != ' '; p++ ) {
+			if ( k < (int)sizeof( word ) - 1 )
+				word[k++] = *p;
+		}
+		word[k] = '\0';
+		for ( i = 0; i < uiMusic.count && Q_stricmp( uiMusic.keys[i], word ); i++ ) {
+		}
+		if ( k && i == uiMusic.count ) {
+			Q_strncpyz( uiMusic.keys[uiMusic.count], word, MUSIC_KEY );
+			uiMusic.there[uiMusic.count++] = qfalse;
+		}
+	}
+	uiMusic.drawn = uiInfo.uiDC.realTime ? uiInfo.uiDC.realTime : 1;
+}
+
+static const char *UI_MusicText( int index ) {
+	static char	text[128];
+	char		name[64];
+
+	if ( !uiMusic.count ) {
+		return Vision_Text( "No player of music runs right now" );
+	}
+	if ( index < 0 || index >= uiMusic.count ) {
+		return "";
+	}
+	Music_PlayerName( uiMusic.keys[index], name, sizeof( name ) );
+	Com_sprintf( text, sizeof( text ), "%s  %s%s", Music_Allowed( v_shareMusicPlayers.string, uiMusic.keys[index] ) ? "[x]" : "[  ]", name,
+		uiMusic.there[index] ? "" : va( "  (%s)", Vision_Text( "not running" ) ) );
+	return text;
+}
+
+// a click on a player: ticked, or not any more
+static void UI_MusicToggle( int index ) {
+	char allow[MAX_CVAR_VALUE_STRING];
+
+	if ( index < 0 || index >= uiMusic.count ) {
+		return;
+	}
+	Q_strncpyz( allow, v_shareMusicPlayers.string, sizeof( allow ) );
+	Music_Toggle( allow, sizeof( allow ), uiMusic.keys[index] );
+	trap->Cvar_Set( "v_shareMusicPlayers", allow );
+	trap->Cvar_Update( &v_shareMusicPlayers );
+}
+
+/*
 ==================
 UI_FeederCount
 ==================
@@ -8353,6 +8430,10 @@ static int UI_FeederCount(float feederID)
 
 		case FEEDER_MODS:
 			return uiInfo.modCount;
+
+		case FEEDER_MUSICPLAYERS:
+			UI_MusicList();
+			return uiMusic.count ? uiMusic.count : 1;
 
 		case FEEDER_DEMOS:
 			return uiInfo.demoCount;
@@ -8770,6 +8851,8 @@ static const char *UI_FeederItemText(float feederID, int index, int column,
 		if (index >= 0 && index < uiInfo.myTeamCount) {
 			return uiInfo.teamNames[index];
 		}
+	} else if (feederID == FEEDER_MUSICPLAYERS) {
+		return UI_MusicText( index );
 	} else if (feederID == FEEDER_MODS) {
 		if (index >= 0 && index < uiInfo.modCount) {
 			if (uiInfo.modList[index].modDescr && *uiInfo.modList[index].modDescr) {
@@ -9135,6 +9218,14 @@ qboolean UI_FeederSelection(float feederFloat, int index, itemDef_t *item)
 {
 	static char info[MAX_STRING_CHARS];
 	const int feederID = feederFloat;
+
+	// VisionJK: a click on a player of music (item is set for a click only, not for the keys that move the bar)
+	if ( feederID == FEEDER_MUSICPLAYERS ) {
+		if ( item ) {
+			UI_MusicToggle( index );
+		}
+		return qtrue;
+	}
 
 	if (feederID == FEEDER_HOLSTERS)
 	{// JA+: the picture "model<N>" stands for holster model N of cp_holster
@@ -10535,6 +10626,9 @@ void UI_Refresh( int realtime )
 
 	uiInfo.uiDC.frameTime = realtime - uiInfo.uiDC.realTime;
 	uiInfo.uiDC.realTime = realtime;
+
+	// the players of music are looked for while their list in Setup is drawn, and only then
+	Music_Frame( realtime, qfalse, (qboolean)( uiMusic.drawn && realtime - uiMusic.drawn < 1000 ), v_shareMusicPlayers.string );
 
 	// The cgame of this tree puts the menus of a running game onto a panel in the level, and the engine says so:
 	// the panel is as wide as a menu is, so nothing reaches past the 640 there, whatever the window is like.

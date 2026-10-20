@@ -387,6 +387,12 @@ TR = {
     'Show My Music': 'Meine Musik zeigen',
     'Tell the others what you listen to. Everybody on the server reads it.':
         'Den anderen zeigen, was Sie hören. Jeder auf dem Server liest es.',
+    'Choose Players of My Music ...': 'Musikprogramme auswählen ...',
+    'Which players of music may be told: only the songs of the ones you tick are shown to the others.':
+        'Welche Musikprogramme gezeigt werden dürfen: nur die Lieder der angehakten sehen die anderen.',
+    'Players of My Music': 'Meine Musikprogramme',
+    'Click a player to tick it, or to take the tick away.': 'Ein Klick hakt ein Programm an oder nimmt den Haken weg.',
+    'Only the songs of ticked players are shown to the others.': 'Nur die Lieder angehakter Programme sehen die anderen.',
     'Select Players': 'Spieler auswählen',
     'With the mouse free, a click on a player opens a card with what you can do with him.':
         'Mit freier Maus öffnet ein Klick auf einen Spieler eine Karte mit dem, was Sie mit ihm tun können.',
@@ -456,6 +462,9 @@ TR = {
     'Free the Mouse (Select Players)': 'Maus freigeben (Spieler auswählen)',
     'Hold to point at players with the mouse: a click opens what you can do with one.':
         'Halten, um mit der Maus auf Spieler zu zeigen: Ein Klick öffnet, was Sie mit einem tun können.',
+    'Quick Wheel (Boombox)': 'Schnellrad (Boombox)',
+    'Hold for a wheel: put a boombox or a sound system down, or work the one you look at. Let go on a choice.':
+        'Halten für ein Rad: eine Boombox oder Soundanlage aufstellen oder die bedienen, auf die Sie schauen. Auf einer Wahl loslassen.',
 }
 
 # What the cgame says by itself: the card of a player, the scoreboard, the chat box, what stands above a head.
@@ -573,6 +582,16 @@ CGAME = {
     # the HUD (ui/vision/hud.menu, written by hand: @VISION_SABER, @VISION_ALTERNATE_DIMENSION)
     'Saber': 'Schwert',
     'Alternate Dimension': 'Andere Dimension',
+    # the sound system and the quick wheel (cgame/boombox, cgame/radial)
+    'Sound System': 'Soundanlage',
+    'Put a boombox here': 'Boombox hier aufstellen',
+    'Put a sound system here': 'Soundanlage hier aufstellen',
+    'Louder (%i %%)': 'Lauter (%i %%)',
+    'Quieter (%i %%)': 'Leiser (%i %%)',
+    'No boombox here': 'Keine Boombox hier',
+    # the players of music in Setup (codemp/ui/ui_main.c)
+    'No player of music runs right now': 'Gerade läuft kein Musikprogramm',
+    'not running': 'läuft nicht',
 }
 
 # names that are the same in every language

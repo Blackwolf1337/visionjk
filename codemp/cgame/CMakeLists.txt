@@ -272,10 +272,12 @@ set(MPCGameFiles ${MPCGameFiles} ${MPCGameCommonSafeFiles})
 set(MPCGameUiFiles
 	"${MPDir}/ui/ui_shared.c"
 	"${MPDir}/ui/ui_skin.c"
+	"${MPDir}/ui/ui_music.c"
 	"${MPDir}/ui/keycodes.h"
 	"${MPDir}/ui/menudef.h"
 	"${MPDir}/ui/ui_shared.h"
 	"${MPDir}/ui/ui_skin.h"
+	"${MPDir}/ui/ui_music.h"
 	)
 source_group("ui" FILES ${MPCGameUiFiles})
 set(MPCGameFiles ${MPCGameFiles} ${MPCGameUiFiles})

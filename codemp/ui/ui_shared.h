@@ -615,3 +615,6 @@ Ghoul2 Insert End
 */
 
 extern const char *HolocronIcons[NUM_FORCE_POWERS];
+
+// a text of this tree in the language of the game, by its English (tools/menus/texts.py)
+const char	*Vision_Text( const char *english );

@@ -101,6 +101,14 @@ REFERENCE           HOLD_TO_POINT_AT_PLAYERS_WITH_THE_MO
 LANG_ENGLISH        "Hold to point at players with the mouse: a click opens what you can do with one."
 LANG_GERMAN         "Halten, um mit der Maus auf Spieler zu zeigen: Ein Klick öffnet, was Sie mit einem tun können."
 
+REFERENCE           QUICK_WHEEL_BOOMBOX
+LANG_ENGLISH        "Quick Wheel (Boombox)"
+LANG_GERMAN         "Schnellrad (Boombox)"
+
+REFERENCE           HOLD_FOR_A_WHEEL_PUT_A_BOOMBOX_OR_A
+LANG_ENGLISH        "Hold for a wheel: put a boombox or a sound system down, or work the one you look at. Let go on a choice."
+LANG_GERMAN         "Halten für ein Rad: eine Boombox oder Soundanlage aufstellen oder die bedienen, auf die Sie schauen. Auf einer Wahl loslassen."
+
 REFERENCE           SCOREBOARD_WITH_MOUSE
 LANG_ENGLISH        "Scoreboard with Mouse"
 LANG_GERMAN         "Punktetafel mit Maus"
@@ -576,6 +584,14 @@ LANG_GERMAN         "Meine Musik zeigen"
 REFERENCE           TELL_THE_OTHERS_WHAT_YOU_LISTEN_TO_E
 LANG_ENGLISH        "Tell the others what you listen to. Everybody on the server reads it."
 LANG_GERMAN         "Den anderen zeigen, was Sie hören. Jeder auf dem Server liest es."
+
+REFERENCE           CHOOSE_PLAYERS_OF_MY_MUSIC
+LANG_ENGLISH        "Choose Players of My Music ..."
+LANG_GERMAN         "Musikprogramme auswählen ..."
+
+REFERENCE           WHICH_PLAYERS_OF_MUSIC_MAY_BE_TOLD_O
+LANG_ENGLISH        "Which players of music may be told: only the songs of the ones you tick are shown to the others."
+LANG_GERMAN         "Welche Musikprogramme gezeigt werden dürfen: nur die Lieder der angehakten sehen die anderen."
 
 REFERENCE           SELECT_PLAYERS
 LANG_ENGLISH        "Select Players"
@@ -1365,6 +1381,18 @@ REFERENCE           RESTART_THE_VIDEO_WITH_THESE_SETTING
 LANG_ENGLISH        "Restart the video with these settings."
 LANG_GERMAN         "Die Grafik mit diesen Einstellungen neu starten."
 
+REFERENCE           PLAYERS_OF_MY_MUSIC
+LANG_ENGLISH        "Players of My Music"
+LANG_GERMAN         "Meine Musikprogramme"
+
+REFERENCE           CLICK_A_PLAYER_TO_TICK_IT_OR_TO_TAKE
+LANG_ENGLISH        "Click a player to tick it, or to take the tick away."
+LANG_GERMAN         "Ein Klick hakt ein Programm an oder nimmt den Haken weg."
+
+REFERENCE           ONLY_THE_SONGS_OF_TICKED_PLAYERS_ARE
+LANG_ENGLISH        "Only the songs of ticked players are shown to the others."
+LANG_GERMAN         "Nur die Lieder angehakter Programme sehen die anderen."
+
 REFERENCE           FIXED_COLOR
 LANG_ENGLISH        "Fixed Color"
 LANG_GERMAN         "Feste Farbe"
@@ -1812,6 +1840,38 @@ LANG_GERMAN         "Schwert"
 REFERENCE           ALTERNATE_DIMENSION
 LANG_ENGLISH        "Alternate Dimension"
 LANG_GERMAN         "Andere Dimension"
+
+REFERENCE           SOUND_SYSTEM
+LANG_ENGLISH        "Sound System"
+LANG_GERMAN         "Soundanlage"
+
+REFERENCE           PUT_A_BOOMBOX_HERE
+LANG_ENGLISH        "Put a boombox here"
+LANG_GERMAN         "Boombox hier aufstellen"
+
+REFERENCE           PUT_A_SOUND_SYSTEM_HERE
+LANG_ENGLISH        "Put a sound system here"
+LANG_GERMAN         "Soundanlage hier aufstellen"
+
+REFERENCE           LOUDER_I
+LANG_ENGLISH        "Louder (%i %%)"
+LANG_GERMAN         "Lauter (%i %%)"
+
+REFERENCE           QUIETER_I
+LANG_ENGLISH        "Quieter (%i %%)"
+LANG_GERMAN         "Leiser (%i %%)"
+
+REFERENCE           NO_BOOMBOX_HERE
+LANG_ENGLISH        "No boombox here"
+LANG_GERMAN         "Keine Boombox hier"
+
+REFERENCE           NO_PLAYER_OF_MUSIC_RUNS_RIGHT_NOW
+LANG_ENGLISH        "No player of music runs right now"
+LANG_GERMAN         "Gerade läuft kein Musikprogramm"
+
+REFERENCE           NOT_RUNNING
+LANG_ENGLISH        "not running"
+LANG_GERMAN         "läuft nicht"
 
 
 ENDMARKER

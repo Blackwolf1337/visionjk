@@ -119,55 +119,11 @@ qboolean CG_HudNewLook( void ) {
 =================
 CG_VisionText
 
-A text of this tree in the language of the game. The cgame asks for it by its English, tools/menus/texts.py has
-what it is in the other languages (its list CGAME) and writes it into strings/<language>/vision.str under a key
-that it makes from the English, as this does. Without such a string: the English text itself.
+A text of this tree in the language of the game, see Vision_Text() of ui/ui_shared.c
 =================
 */
 const char *CG_VisionText( const char *english ) {
-	static char	text[8][256];
-	static int	index;
-	char		*out = text[index++ & 7];
-	char		key[256], found[256], value[8];
-	const char	*in;
-	qboolean	gap = qfalse;
-	int			n = 0;
-
-	// capitals and digits, one _ for whatever is between them, 36 letters at most, no _ at either end
-	for ( in = english; *in && n < (int)sizeof( key ) - 2; in++ ) {
-		const char c = ( *in >= 'a' && *in <= 'z' ) ? (char)( *in - 'a' + 'A' ) : *in;
-
-		if ( ( c >= 'A' && c <= 'Z' ) || ( c >= '0' && c <= '9' ) ) {
-			if ( gap && n > 0 ) {
-				key[n++] = '_';
-			}
-			gap = qfalse;
-			key[n++] = c;
-		} else {
-			gap = qtrue;
-		}
-	}
-	n = Q_min( n, 36 );
-	while ( n > 0 && key[n - 1] == '_' ) {
-		n--;
-	}
-	key[n] = '\0';
-
-	// (for a reference it does not have the engine writes "??" and says no: the pack of this client is older
-	// than its cgame, or the pack of a mod took its place)
-	found[0] = '\0';
-	if ( n <= 0 || !trap->SE_GetStringTextString( va( "VISION_%s", key ), found, sizeof( found ) ) || !found[0] ) {
-		Q_strncpyz( out, english, sizeof( text[0] ) );
-		return out;
-	}
-	// (the files of the strings are in the code page of the game)
-	trap->Cvar_VariableStringBuffer( "v_utf8Text", value, sizeof( value ) );
-	if ( atoi( value ) == 1 ) {
-		Q_UTF8_FromCP1252( found, out, sizeof( text[0] ) );
-	} else {
-		Q_strncpyz( out, found, sizeof( text[0] ) );
-	}
-	return out;
+	return Vision_Text( english );
 }
 
 /*

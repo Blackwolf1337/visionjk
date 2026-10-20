@@ -54,6 +54,7 @@ class Layout:
 #   ('multistr', name, cvar, ((name, text), ...), what for)  the same for a cvar that holds a text
 #   ('edit' | 'secret', name, cvar, letters, what for)
 #   ('bind', name, command, what for)
+#   ('open', name, page, what for)                a button that opens a page of its own (PAGES below), not a tab
 SETUP = [
     ('@MENUS_VIDEO', '@MENUS_CONFIGURE_VIDEO_SETTINGS', [
         ('head', 'Screen'),
@@ -117,6 +118,8 @@ SETUP = [
         ('slider', 'Bubble Range', 'v_bubbleRange', 1200, 300, 3000, 'How far away a bubble is still drawn.'),
         ('yesno', 'Player Statuses', 'v_playerStatuses', 'Away from keyboard and music above the heads of the others.'),
         ('yesno', 'Show My Music', 'v_shareMusic', 'Tell the others what you listen to. Everybody on the server reads it.'),
+        ('open', 'Choose Players of My Music ...', 'musicplayers',
+         'Which players of music may be told: only the songs of the ones you tick are shown to the others.'),
         ('yesno', 'Select Players', 'v_selectPlayers',
          'With the mouse free, a click on a player opens a card with what you can do with him.'),
         ('yesno', 'Selection Outline', 'v_selectOutline', 'A glowing outline around the player under the mouse.'),
@@ -406,9 +409,45 @@ def old_rows(m, group, only=None, skip=()):
     return [new for _, new in found]
 
 
+# placeholder for the number of a page of its own, which is known after the tabs (build)
+PAGE_MARK = '@@PAGE_%s@@'
+
+
+def open_row(spec):
+    """A button among the rows that opens a page of its own (PAGES)."""
+    _, text, page, about = spec
+    return [Entry('name', ['vision_open_' + page]), Entry('type', ['ITEM_TYPE_BUTTON']), Entry('text', [ref(text)]),
+            Entry('descText', [ref(about)]), Entry('action', [], list(CLICK) + ['setpage', PAGE_MARK % page, ';'])]
+
+
+def music_page(page, back, L):
+    """The players of music (FEEDER_MUSICPLAYERS of codemp/ui/ui_main.c): a click ticks one for v_shareMusicPlayers."""
+    x, y, w, h = L.list
+    rect_back = (x, y + h - 26, 110, 24)
+    return [
+        text_item('vision_music_title', (x + 2, y + 2, w - 4, 22), ref('Players of My Music'), 0.8, BRIGHT, ('decoration',),
+                  ('page', page)),
+        text_item('vision_music_about1', (x + 2, y + 30, w - 4, 16), ref('Click a player to tick it, or to take the tick away.'), 0.56,
+                  TEXT, ('decoration',), ('page', page)),
+        text_item('vision_music_about2', (x + 2, y + 46, w - 4, 16), ref('Only the songs of ticked players are shown to the others.'),
+                  0.56, DIM, ('decoration',), ('page', page)),
+        item('vision_music_list', (x, y + 70, w, h - 104), ('type', 'ITEM_TYPE_LISTBOX'), ('style', 'WINDOW_STYLE_PANEL'),
+             ('elementwidth', 120), ('elementheight', 20), ('font', FONT), ('textscale', '0.59'), ('elementtype', 'LISTBOX_TEXT'),
+             ('feeder', 'FEEDER_MUSICPLAYERS'), ('textalign', 3), ('textaligny', 24), ('bordercolor', *(ACCENT[:3] + ['0.16'])),
+             ('outlinecolor', *(ACCENT[:3] + ['0.22'])), ('forecolor', *TEXT), ('backcolor', '0', '0', '0', '0.30'), ('radius', 4),
+             ('page', page)),
+        text_item('vision_music_back', rect_back, '@MENUS_BACK', 0.62, BRIGHT, ('type', 'ITEM_TYPE_BUTTON'), ('style', 'WINDOW_STYLE_PANEL'),
+                  ('radius', 3), ('caps', 1), ('backcolor', *(ACCENT[:3] + ['0.20'])), ('bordercolor', *(ACCENT[:3] + ['0.75'])),
+                  ('descText', '@MENUS_BACK'), ('action', list(CLICK) + ['setpage', str(back), ';']), ('page', page),
+                  *centered(rect_back, 0.62)),
+    ]
+
+
 def new_row(spec):
     """A setting the old menus did not have."""
     kind, text, cvar = spec[:3]
+    if kind == 'open':
+        return open_row(spec)
     b = [Entry('name', ['vision_%s_%s' % (kind, cvar.lower().replace(' ', '_').replace('+', ''))]), Entry('type', [TYPES[kind]]),
          Entry('text', [ref(text)]), Entry('descText', [ref(spec[-1])])]
     if kind == 'slider':
@@ -585,6 +624,16 @@ def build(m, name, ingame, nav):
                              ('decoration',), ('textalign', 'ITEM_ALIGN_RIGHT'), ('textalignx', 300),
                              ('textaligny', mf.fmt((L.bar_h - 9.0) / 2))))
 
+    # the pages of their own that buttons among the rows open: after the tabs and the page of the defaults
+    if setup:
+        first = len(pages) + 1 + (1 if made else 0)
+        chat = next(n for n, (title, _, _) in enumerate(pages) if title == 'Chat & Social') + 1
+        new.extend(music_page(first, chat, L))
+        mark = PAGE_MARK % 'musicplayers'
+        for e in new:
+            act = mf.find(e.block, 'action') if e.k == 'itemdef' else None
+            if act and isinstance(act.block, list):
+                act.block = [str(first) if w == mark else w for w in act.block]
     m[:] = [e for e in m if e.k != 'itemdef'] + new
     for key in ('onopen', 'onclose', 'onesc'):
         e = mf.find(m, key)

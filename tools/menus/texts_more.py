@@ -377,6 +377,11 @@ MORE = {
     'Away from keyboard and music above the heads of the others.': ('Absence et musique au-dessus des têtes des autres.', 'Ausencia y música sobre las cabezas de los demás.'),
     'Show My Music': ('Montrer ma musique', 'Mostrar mi música'),
     'Tell the others what you listen to. Everybody on the server reads it.': ('Dire aux autres ce que vous écoutez. Tout le serveur le lit.', 'Di a los demás lo que escuchas. Todo el servidor lo lee.'),
+    'Choose Players of My Music ...': ('Choisir mes lecteurs de musique ...', 'Elegir mis reproductores de música ...'),
+    'Which players of music may be told: only the songs of the ones you tick are shown to the others.': ('Quels lecteurs peuvent être montrés : seules les chansons des lecteurs cochés sont visibles.', 'Qué reproductores se pueden mostrar: solo se ven las canciones de los marcados.'),
+    'Players of My Music': ('Mes lecteurs de musique', 'Mis reproductores de música'),
+    'Click a player to tick it, or to take the tick away.': ('Un clic coche un lecteur ou le décoche.', 'Un clic marca un reproductor o lo desmarca.'),
+    'Only the songs of ticked players are shown to the others.': ('Seules les chansons des lecteurs cochés sont montrées.', 'Solo se muestran las canciones de los marcados.'),
     'Select Players': ('Sélectionner des joueurs', 'Seleccionar jugadores'),
     'With the mouse free, a click on a player opens a card with what you can do with him.': ('Souris libre, un clic sur un joueur ouvre une fiche avec ce que vous pouvez faire.', 'Con el ratón libre, un clic en un jugador abre una tarjeta con lo que puedes hacer con él.'),
     'Selection Outline': ('Contour de sélection', 'Contorno de selección'),
@@ -440,6 +445,8 @@ MORE = {
     'Clan Radio (Talk)': ('Radio du clan (parler)', 'Radio del clan (hablar)'),
     'Hold to talk to your clan over the radio, wherever they are.': ("Maintenir pour parler à votre clan par radio, où qu'il soit.", 'Mantén para hablar con tu clan por radio, estén donde estén.'),
     'Free the Mouse (Select Players)': ('Libérer la souris (sélection)', 'Liberar el ratón (seleccionar)'),
+    'Quick Wheel (Boombox)': ('Roue rapide (radiocassette)', 'Rueda rápida (radiocasete)'),
+    'Hold for a wheel: put a boombox or a sound system down, or work the one you look at. Let go on a choice.': ('Maintenir pour une roue : poser une radiocassette ou une sono, ou régler celle que vous regardez. Relâcher sur un choix.', 'Mantener para una rueda: poner una radiocasete o un equipo de sonido, o manejar el que miras. Soltar sobre una opción.'),
     'Hold to point at players with the mouse: a click opens what you can do with one.': ('Maintenir pour pointer les joueurs à la souris : un clic montre ce que vous pouvez faire.', 'Mantén para señalar jugadores con el ratón: un clic muestra lo que puedes hacer con uno.'),
     # the card of a player
     'Mute his voice': ('Couper sa voix', 'Silenciar su voz'),
@@ -492,4 +499,14 @@ MORE = {
     # the HUD
     'Saber': ('Sabre', 'Sable'),
     'Alternate Dimension': ('Autre dimension', 'Otra dimensión'),
+    # the sound system and the quick wheel
+    'Sound System': ('Sono', 'Equipo de sonido'),
+    'Put a boombox here': ('Poser une radiocassette ici', 'Poner una radiocasete aquí'),
+    'Put a sound system here': ('Poser une sono ici', 'Poner un equipo de sonido aquí'),
+    'Louder (%i %%)': ('Plus fort (%i %%)', 'Más alto (%i %%)'),
+    'Quieter (%i %%)': ('Moins fort (%i %%)', 'Más bajo (%i %%)'),
+    'No boombox here': ('Pas de radiocassette ici', 'No hay radiocasete aquí'),
+    # the players of music in Setup
+    'No player of music runs right now': ("Aucun lecteur de musique ne tourne", 'No hay ningún reproductor de música abierto'),
+    'not running': ('fermé', 'cerrado'),
 }

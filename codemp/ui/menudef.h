@@ -141,6 +141,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define FEEDER_SABER_STAFF_INFO				0x2c			// saber staff
 #define FEEDER_HOLSTERS						0x2d			// JA+: holster models of the player menu
 #define FEEDER_VIDEOMODES					0x2e			// list control: "Desktop" and the sizes the display offers
+#define FEEDER_MUSICPLAYERS					0x2f			// VisionJK: the players of music, ticked for v_shareMusicPlayers
 
 
 // Xbox specific, hope no one minds

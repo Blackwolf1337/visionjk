@@ -77,6 +77,7 @@ set(MPUIUIFiles
 	"${MPDir}/ui/ui_saber.c"
 	"${MPDir}/ui/ui_shared.c"
 	"${MPDir}/ui/ui_skin.c"
+	"${MPDir}/ui/ui_music.c"
 	"${MPDir}/ui/ui_syscalls.c"
 	"${MPDir}/ui/ui_update.c"
 	"${MPDir}/ui/keycodes.h"
@@ -86,6 +87,7 @@ set(MPUIUIFiles
 	"${MPDir}/ui/ui_public.h"
 	"${MPDir}/ui/ui_shared.h"
 	"${MPDir}/ui/ui_skin.h"
+	"${MPDir}/ui/ui_music.h"
 	"${MPDir}/ui/ui_xcvar.h"
 	)
 source_group("ui" FILES ${MPUIUIFiles})
