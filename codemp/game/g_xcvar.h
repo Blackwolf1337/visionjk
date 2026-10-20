@@ -205,6 +205,9 @@ XCVAR_DEF( g_warmup,					"20",			NULL,						CVAR_ARCHIVE,									qtrue )
 // of its account as the password of basic auth behind its name, besides "Bearer". vs_webProxy: the address of the
 // reverse proxy in front of the panel. Then nobody else is let in, and the proxy says who the visitor is.
 XCVAR_DEF( vs_webBasicAuth,				"0",			NULL,						CVAR_ARCHIVE,									qfalse )
+// vs_liveView 1: /live/ of the panel's port is open to everybody without a login, read only: the map and what
+// moves on it, for the live view of a website (wa_live.c). It opens the port by itself, without an account.
+XCVAR_DEF( vs_liveView,					"0",			NULL,						CVAR_ARCHIVE|CVAR_LATCH,						qfalse )
 XCVAR_DEF( vs_webBind,					"0.0.0.0",		NULL,						CVAR_ARCHIVE|CVAR_LATCH,						qfalse )
 XCVAR_DEF( vs_webPassword,				"",				NULL,						CVAR_ARCHIVE|CVAR_LATCH,						qfalse )
 XCVAR_DEF( vs_webRoot,					"",				NULL,						CVAR_ARCHIVE,									qfalse )

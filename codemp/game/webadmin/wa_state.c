@@ -150,6 +150,10 @@ static void WA_StateKnown( const char *query, unsigned *known ) {
 	}
 }
 
+// The answer is the one of the live view (WA_ApiLiveState): what a spectator in the game sees, not what only an
+// admin may know of a player.
+static qboolean statePublic;
+
 // What stays the same of a player from one poll to the next, as an object in slow. Returns its number
 // (WA_StateRev).
 static unsigned WA_StatePlayerStays( waBuffer_t *slow, int clientNum ) {
@@ -163,7 +167,7 @@ static unsigned WA_StatePlayerStays( waBuffer_t *slow, int clientNum ) {
 	WA_BufJsonString( slow, cl->pers.netname );
 	// Not in JKAdmin: who that is for an admin. Where he connects from (without the port, nothing for a bot),
 	// when he came (in the time of the map, as "time" above is) and which client plugin of JA+ he has, 0 for none.
-	{
+	if ( !statePublic ) {
 		char address[NET_ADDRSTRMAXLEN], *port;
 
 		Q_strncpyz( address, ( ent->r.svFlags & SVF_BOT ) ? "" : cl->sess.IP, sizeof( address ) );
@@ -183,7 +187,7 @@ static unsigned WA_StatePlayerStays( waBuffer_t *slow, int clientNum ) {
 	WA_BufPrintf( slow, ",\"schizo\":%s", WA_BOOL( G_SchizoActive( clientNum ) ) );		// not in JKAdmin, g_schizo.c
 	WA_BufPrintf( slow, ",\"flatulence\":%s", WA_BOOL( G_FlatulenceActive( clientNum ) ) );	// not in JKAdmin, g_flatulence.c
 	WA_BufPrintf( slow, ",\"disorient\":%s", WA_BOOL( G_DisorientActive( clientNum ) ) );	// not in JKAdmin, g_disorient.c
-	{
+	if ( !statePublic ) {
 		// not in JKAdmin: what the JA+ buttons of the page show. admin is jpAdminLevel_t, altDim 2 is forced.
 		const jpClient_t *jp = &cl->pers.jp;
 
@@ -1059,12 +1063,22 @@ void WA_ApiState( waConnection_t *c, const char *query ) {
 	WA_StateShots( &b );
 	WA_StateEffects( &b, query );
 	WA_StateEvents( &b, query );
-	WA_StatePrints( &b, query );
-	WA_StateView( &b, query );
-	WA_StateHud( &b, query );
+	if ( !statePublic ) {
+		WA_StatePrints( &b, query );
+		WA_StateView( &b, query );
+		WA_StateHud( &b, query );
+	}
 	WA_BufAppend( &b, "}", 1 );
 
 	WA_RespondJson( c, &b );
 	WA_BufFree( &b );
+}
+
+// GET /live/api/state: the same for the live view (wa_live.c), without the address and the JA+ admin state of a
+// player, without what the server prints, and without the view and the HUD of a player
+void WA_ApiLiveState( waConnection_t *c, const char *query ) {
+	statePublic = qtrue;
+	WA_ApiState( c, query );
+	statePublic = qfalse;
 }
 

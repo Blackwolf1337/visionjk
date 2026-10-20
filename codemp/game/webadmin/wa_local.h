@@ -37,6 +37,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 //   wa_control.c    a player who is moved from the page
 //   wa_clips.c      the clip editor: the clip brushes of the map that are off, and the blocking walls
 //   wa_remaps.c     the texture swap: a shader of the map drawn as another one
+//   wa_live.c       the live view: /live/, the map view for everybody, read only
 
 #pragma once
 
@@ -91,6 +92,7 @@ typedef struct waConnection_s {
 
 // g_webadmin.c
 qboolean WA_Running( void );
+qboolean WA_PageBundle( waBuffer_t *page, const char *name );
 
 // wa_http.c
 qboolean WA_BufReserve( waBuffer_t *b, int extra );
@@ -132,6 +134,7 @@ qboolean WA_AuthConsoleCommand( const char *cmd );
 const char *WA_TeamName( team_t team );
 void WA_AppendVec( waBuffer_t *b, const vec3_t v );
 void WA_ApiState( waConnection_t *c, const char *query );
+void WA_ApiLiveState( waConnection_t *c, const char *query );
 void WA_EventsFrame( void );
 void WA_AnimsFrame( void );
 void WA_PrintsTake( const char *command );
@@ -208,4 +211,7 @@ void WA_ApiClip( waConnection_t *c, const char *body );
 // wa_remaps.c
 void WA_RemapsFrame( void );
 void WA_ApiRemaps( waConnection_t *c );
+
+// wa_live.c
+qboolean WA_LiveRequest( waConnection_t *c, const char *method, const char *path, const char *query );
 void WA_ApiRemap( waConnection_t *c, const char *body );

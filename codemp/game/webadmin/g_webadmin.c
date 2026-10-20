@@ -116,31 +116,31 @@ static qboolean WA_PageFile( waBuffer_t *b, const char *name ) {
 	return qtrue;
 }
 
-// The page as the build puts it together (cmake/Modules/BundlePage.cmake), from the files of the folder
-// vs_webRoot names: index.html, and for every line "<!--#include name -->" in it the file of that name in its
-// place. For working on the page: a change to one of its files is there with the next load of the page.
-static qboolean WA_PageFromDisk( waBuffer_t *page ) {
+// A page as the build puts it together (cmake/Modules/BundlePage.cmake), from the files of the folder
+// vs_webRoot names: the template (index.html, live.js), and for every line "<!--#include name -->" in it the file
+// of that name in its place. For working on the page: a change to one of its files is there with the next load.
+qboolean WA_PageBundle( waBuffer_t *page, const char *name ) {
 	static const char	mark[] = "<!--#include ";
 	waBuffer_t			text = { 0 };
 	const char			*at, *include;
 	qboolean			whole = qtrue;
 
-	if ( !WA_PageFile( &text, "index.html" ) || !text.len ) {
+	if ( !WA_PageFile( &text, name ) || !text.len ) {
 		WA_BufFree( &text );
 		return qfalse;
 	}
 
 	for ( at = text.data; ( include = strstr( at, mark ) ) != NULL; ) {
-		const char	*name = include + sizeof( mark ) - 1, *end = strstr( name, " -->" ), *line;
+		const char	*part = include + sizeof( mark ) - 1, *end = strstr( part, " -->" ), *line;
 		char		file[MAX_QPATH];
 
-		if ( !end || end - name >= (int)sizeof( file ) )
+		if ( !end || end - part >= (int)sizeof( file ) )
 			break;
 		WA_BufAppend( page, at, (int)( include - at ) );
-		Q_strncpyz( file, name, (int)( end - name ) + 1 );
+		Q_strncpyz( file, part, (int)( end - part ) + 1 );
 		// only what is in the folder
 		if ( !WA_GamePathOk( file ) || !WA_PageFile( page, file ) ) {
-			trap->Print( S_COLOR_YELLOW "Web admin: %s/index.html includes %s, which can not be read\n", vs_webRoot.string, file );
+			trap->Print( S_COLOR_YELLOW "Web admin: %s/%s includes %s, which can not be read\n", vs_webRoot.string, name, file );
 			whole = qfalse;
 		}
 		// the line of the include goes with it
@@ -268,6 +268,10 @@ static void WA_HandleRequest( waConnection_t *c, char *head, char *body, int bod
 	else
 		query = (char *)"";
 
+	// the live view asks without a login, and nothing there needs one (wa_live.c)
+	if ( WA_LiveRequest( c, method, path, query ) ) {
+		return;
+	}
 	WA_AuthRequest( c, head );
 	if ( WA_AuthRoute( c, method, path, head, body ) ) {
 		return;
@@ -290,7 +294,7 @@ static void WA_HandleRequest( waConnection_t *c, char *head, char *body, int bod
 		// vs_webRoot serves the page from disk instead, for working on it without a restart
 		waBuffer_t page = { 0 };
 
-		if ( vs_webRoot.string[0] && WA_PageFromDisk( &page ) ) {
+		if ( vs_webRoot.string[0] && WA_PageBundle( &page, "index.html" ) ) {
 			WA_Respond( c, 200, "OK", "text/html; charset=utf-8", "Cache-Control: no-store\r\n", page.data, page.len );
 			WA_BufFree( &page );
 		} else {
@@ -601,9 +605,13 @@ void WebAdmin_Init( void ) {
 	if ( !WA_AuthHasUsers() ) {
 		if ( vs_webPort.integer > 0 )
 			trap->Print( "Web admin is off: it has no account. \"webuser add <name> owner\" on this console makes the first one\n" );
-		return;
+		// the live view needs no account (wa_live.c), and nobody gets past the login without one
+		if ( !vs_liveView.integer )
+			return;
 	}
 	WA_Listen();
+	if ( vs_liveView.integer && WA_Running() )
+		trap->Print( "Web admin: the live view is open to everybody at /live/ (vs_liveView)\n" );
 }
 
 void WebAdmin_Frame( void ) {

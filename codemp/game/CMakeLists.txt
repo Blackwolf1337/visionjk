@@ -257,6 +257,7 @@ set(MPGameWebadminFiles
 	"${MPDir}/game/webadmin/wa_control.c"
 	"${MPDir}/game/webadmin/wa_clips.c"
 	"${MPDir}/game/webadmin/wa_remaps.c"
+	"${MPDir}/game/webadmin/wa_live.c"
 	)
 source_group("game/webadmin" FILES ${MPGameWebadminFiles})
 source_group("game/webadmin/page" FILES ${MPGameWebadminPageFiles})
@@ -370,6 +371,18 @@ add_custom_command(
 	DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/webadmin_page.html" "${CMAKE_SOURCE_DIR}/cmake/Modules/EmbedFile.cmake"
 	COMMENT "Embedding web admin page")
 set(MPGameFiles ${MPGameFiles} "${CMAKE_CURRENT_BINARY_DIR}/webadmin_html.h")
+# the script of the live view (wa_live.c): the drawing parts of the page put together the same way
+add_custom_command(
+	OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/webadmin_live.js"
+	COMMAND ${CMAKE_COMMAND} -DINPUT="${MPDir}/game/webadmin/page/live.js" -DOUTPUT="${CMAKE_CURRENT_BINARY_DIR}/webadmin_live.js" -P "${CMAKE_SOURCE_DIR}/cmake/Modules/BundlePage.cmake"
+	DEPENDS ${MPGameWebadminPageFiles} "${CMAKE_SOURCE_DIR}/cmake/Modules/BundlePage.cmake"
+	COMMENT "Putting the live view together")
+add_custom_command(
+	OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/webadmin_live.h"
+	COMMAND ${CMAKE_COMMAND} -DINPUT="${CMAKE_CURRENT_BINARY_DIR}/webadmin_live.js" -DOUTPUT="${CMAKE_CURRENT_BINARY_DIR}/webadmin_live.h" -DNAME=webadmin_live -P "${CMAKE_SOURCE_DIR}/cmake/Modules/EmbedFile.cmake"
+	DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/webadmin_live.js" "${CMAKE_SOURCE_DIR}/cmake/Modules/EmbedFile.cmake"
+	COMMENT "Embedding the live view")
+set(MPGameFiles ${MPGameFiles} "${CMAKE_CURRENT_BINARY_DIR}/webadmin_live.h")
 # the page of the login is a file by itself: a visitor who is not logged in gets nothing of the panel
 add_custom_command(
 	OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/webadmin_login.h"

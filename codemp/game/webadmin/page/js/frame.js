@@ -196,7 +196,8 @@ function placeLabels() {
 			el.dataset.key = key;
 			el.className = 'label' + (id === selected ? ' sel' : '');
 			const hp = Math.max(0, Math.min(100, d.health / Math.max(1, d.maxHealth) * 100));
-			el.innerHTML = '<span class="nm">' + colorName(d.name) + '</span>' + (d.dead ? '' :
+			// the live view of a website shows the name alone: health and shield are not for everybody
+			el.innerHTML = '<span class="nm">' + colorName(d.name) + '</span>' + (d.dead || LIVE ? '' :
 				'<div class="bar"><i style="width:' + hp + '%"></i></div>' + (d.armor > 0 ? '<div class="bar ar"><i style="width:' + Math.min(100, d.armor) + '%"></i></div>' : ''));
 		}
 		el.style.display = '';
@@ -228,9 +229,11 @@ let frameNow = 0;
 // because the frame that threw never asked for the next one. The error is told once on the console, what the
 // frame had set of the state of the graphics card is put back, and the next frame comes all the same.
 const frameErrors = new Set();
+// the live view of a website draws only while it is seen (js/live-boot.js)
+let frameHold = false;
 function frame(now) {
 	try {
-		drawFrame(now);
+		if (!frameHold) drawFrame(now);
 	} catch (e) {
 		const text = String(e && e.stack || e);
 		if (!frameErrors.has(text)) { frameErrors.add(text); console.error('a frame failed: ' + text); }

@@ -4,7 +4,16 @@
 /* helpers                                                             */
 /* ------------------------------------------------------------------ */
 
-const $ = id => document.getElementById(id);
+// The live view of a website (live.js, js/live-boot.js) is the drawing of this page without the rest of it: an
+// element it does not have is a detached one, so what the panel would show there goes nowhere.
+const LIVE = !!window.VJK_LIVE;
+const stubElements = new Map();
+const $ = id => document.getElementById(id) || stubElement(id);
+function stubElement(id) {
+	let e = stubElements.get(id);
+	if (!e) { e = document.createElement('div'); stubElements.set(id, e); }
+	return e;
+}
 const WEAPONS = ['None','Stun baton','Melee','Saber','Bryar pistol','Blaster','Disruptor','Bowcaster','Repeater','DEMP 2','Flechette','Rocket launcher','Thermal','Trip mine','Det pack','Concussion','Bryar old','Emplaced gun','Turret'];
 const ITEM_COLORS = { 1: [1, .8, .2], 2: [.8, .6, .2], 3: [.35, .65, 1], 4: [.3, 1, .4], 5: [1, .3, 1], 6: [.9, .9, .9], 7: [1, .3, 1], 8: [1, 1, 1] };
 const TEAM_COLORS = { red: [.9, .25, .28], blue: [.25, .55, .97], free: [.96, .85, .1], spectator: [.5, .5, .55] };
