@@ -160,7 +160,10 @@ static cgBox_t	cgBoxes[BOX_MAX];
 #define BOX_WAVE_LEAST		0.0016f		//	and at least this much: the energy of a level of 0.04, nearly silence
 // (The energy is the square of the level of a frame, Voice_Level() of cg_voice.c, not the level the cones push out
 // with: that one is four times the level and stops at 1, where a loud song stays, and no beat was ever higher.)
-#define BOX_WAVE_SIZE		64.0f		// the radius of the disc of a wave of a speaker of a sound system, units; a boombox's 0.45 of it
+#define BOX_WAVE_SIZE		64.0f		// the radius of the disc of a wave, units: a boombox has BOX_WAVE_BOX of it,
+#define BOX_WAVE_BOX		0.45f
+#define SYS_WAVE_SIZE		80.0f		//	a speaker of a sound system this
+#define SYS_WAVE_BEND		2.5f		// how many times as strongly that one bends the picture (RF_REFRACT_REST)
 #define BOX_WAVE_MODEL		"models/map_objects/vision/sound_wave.md3"
 #define BOX_WAVE_SHADER		"models/map_objects/vision/sound_wave"
 #define BOX_WAVE_MODEL_R	32.0f		// the radius of that disc as the model has it (WAVE_R of tools/boombox/build_system.py)
@@ -920,14 +923,15 @@ static void Box_AddCone( const refEntity_t *body, float x, float y, float z, flo
 }
 
 // The waves of a channel out of a cone of a model: at x, y, z on it, the disc of sound_wave.md3 across the way the
-// cone faces, its ring running out over the frames of the model. size: the radius of the disc in the level.
+// cone faces, its ring running out over the frames of the model. size: the radius of the disc in the level, bend:
+// how many times as strongly it bends the picture behind it (rd-vulkan-vision only).
 //
 // The renderer bends with the square of the screen around the origin of a distortion, ent.radius pixels across
 // (RB_CaptureForEntity). rd-vulkan-vision shows on each point of the disc what the screen has where that point
 // rests (RF_REFRACT_REST), so the disc can face any way. rd-vanilla draws the square onto the model by the texture
 // coordinates of the model, which are that square: there the disc is turned to the camera and made exactly that
 // large on the screen, and shows what is behind it as it is but for the ring.
-static void Box_AddWaves( int channel, const refEntity_t *body, float x, float y, float z, float size ) {
+static void Box_AddWaves( int channel, const refEntity_t *body, float x, float y, float z, float size, float bend ) {
 	vec3_t	at, to;
 	float	ahead, perUnit, pixels;
 	int		k;
@@ -972,6 +976,7 @@ static void Box_AddWaves( int channel, const refEntity_t *body, float x, float y
 			VectorScale( wave.axis[1], size / BOX_WAVE_MODEL_R, wave.axis[1] );
 			VectorScale( wave.axis[2], size / BOX_WAVE_MODEL_R, wave.axis[2] );
 			wave.shaderTexCoord[0] = BOX_WAVE_MODEL_R;
+			wave.shaderTexCoord[1] = bend;
 		} else {
 			// to the camera; its +y to the right of the screen and its +z up, as the texture coordinates have it
 			VectorScale( cg.refdef.viewaxis[0], -size / BOX_WAVE_MODEL_R, wave.axis[0] );
@@ -1081,8 +1086,8 @@ void CG_BoomboxScene( void ) {
 					Box_AddCone( &body, BOX_CONE_X, BOX_CONE_Y, BOX_CONE_Z, 1.0f, b->beat[0] );
 					Box_AddCone( &body, BOX_CONE_X, -BOX_CONE_Y, BOX_CONE_Z, 1.0f, b->beat[0] );
 				}
-				Box_AddWaves( i, &body, BOX_CONE_X, BOX_CONE_Y, BOX_CONE_Z, BOX_WAVE_SIZE * 0.45f );
-				Box_AddWaves( i, &body, BOX_CONE_X, -BOX_CONE_Y, BOX_CONE_Z, BOX_WAVE_SIZE * 0.45f );
+				Box_AddWaves( i, &body, BOX_CONE_X, BOX_CONE_Y, BOX_CONE_Z, BOX_WAVE_SIZE * BOX_WAVE_BOX, 1.0f );
+				Box_AddWaves( i, &body, BOX_CONE_X, -BOX_CONE_Y, BOX_CONE_Z, BOX_WAVE_SIZE * BOX_WAVE_BOX, 1.0f );
 			} else if ( part == BOX_PART_BODY ) {
 				if ( bx.platter ) {
 					Box_AddPlatter( &body, 1.0f, b->spin );
@@ -1095,7 +1100,7 @@ void CG_BoomboxScene( void ) {
 				Box_AddCone( &body, SYS_CONE_X, 0.0f, SYS_TWEETER_Z, SYS_TWEETER_SCALE, beat * 0.5f );
 			}
 			if ( b->kind == BOX_KIND_SYSTEM && part != BOX_PART_BODY ) {
-				Box_AddWaves( i + ( ( part == BOX_PART_RIGHT ) ? BOX_RIGHT : 0 ), &body, SYS_CONE_X, 0.0f, SYS_SPK_MOUTH, BOX_WAVE_SIZE );
+				Box_AddWaves( i + ( ( part == BOX_PART_RIGHT ) ? BOX_RIGHT : 0 ), &body, SYS_CONE_X, 0.0f, SYS_SPK_MOUTH, SYS_WAVE_SIZE, SYS_WAVE_BEND );
 			}
 			CG_SelectBoxOutline( piece, &body );
 		}

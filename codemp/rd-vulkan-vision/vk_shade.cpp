@@ -948,6 +948,7 @@ void RB_StageIteratorGeneric( void ) {
 			draw.tcGenVec0[0] = 0.5f * glConfig.vidWidth / ent->e.radius;
 			draw.tcGenVec0[1] = 0.5f * glConfig.vidHeight / ent->e.radius;
 			draw.tcGenVec0[2] = ent->e.shaderTexCoord[0];
+			draw.tcGenVec0[3] = ( ent->e.shaderTexCoord[1] > 0.0f ) ? ent->e.shaderTexCoord[1] : 1.0f;
 			draw.flags |= (uint32_t)VK_TCGEN_REST << VKD_TCGEN0_SHIFT;
 		} else {
 			draw.flags |= VK_BundleTcGen( &pStage->bundle[0], draw.tcGenVec0 ) << VKD_TCGEN0_SHIFT;

@@ -112,9 +112,11 @@ vec2 GenTexCoord( uint gen, vec4 vectors[2], vec3 viewOrigin, StageInput v ) {
 
 // TCGEN_REST (RF_REFRACT_REST): where the vertex lies when nothing bends it, in the square of the screen the
 // renderer copied around the origin of the entity (RB_CaptureForEntity): s to the right, t up, 1 its edge.
-// vectors[0]: x, y half the window over the edge of the square in pixels, z the radius of the model's disc.
+// vectors[0]: x, y half the window over the edge of the square in pixels, z the radius of the model's disc, w how
+// many times as far from the vertex as it rests the picture is taken (a stronger bend).
 vec2 RestTexCoord( vec4 vectors[2], mat4 mvp, StageInput v ) {
-	vec4 rest = mvp * vec4( 0.0, ( v.texCoord - 0.5 ) * 2.0 * vectors[0].z, 1.0 );
+	vec3 at = vec3( 0.0, ( v.texCoord - 0.5 ) * 2.0 * vectors[0].z );
+	vec4 rest = mvp * vec4( v.position + ( at - v.position ) * vectors[0].w, 1.0 );
 	vec4 origin = mvp * vec4( 0.0, 0.0, 0.0, 1.0 );
 
 	return vec2( 0.5 ) + ( rest.xy / rest.w - origin.xy / origin.w ) * vectors[0].xy;
