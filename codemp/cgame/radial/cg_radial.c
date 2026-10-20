@@ -42,6 +42,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define RADIAL_AIM_RANGE	700.0f		// a box further away than this under the cross hair is not the one it is about
 #define RADIAL_CONFIRM_MSEC	4000		// the second click for "Take it away" within this
 #define RADIAL_SCALE		0.6f		// of the text of a choice
+#define RADIAL_GRAB_MSEC	500			// the key let go by the engine when the wheel takes the keys comes this soon
 
 typedef enum {
 	RAD_PLACE_BOX,
@@ -66,6 +67,7 @@ static struct {
 	int			num;
 	int			hover;				// the choice the pointer is on, -1: none
 	int			confirmTime;		// when "Take it away" was picked first, 0: not yet
+	int			openTime;			// trap->Milliseconds() when it opened
 } rad;
 
 static const vec4_t radialText = { 0.86f, 0.92f, 0.97f, 1.0f }, radialDim = { 0.50f, 0.56f, 0.62f, 1.0f };
@@ -236,6 +238,7 @@ void CG_RadialDown_f( void ) {
 	memset( &rad, 0, sizeof( rad ) );
 	rad.open = rad.held = qtrue;
 	rad.hover = -1;
+	rad.openTime = trap->Milliseconds();
 	rad.piece = CG_SelectHoveredPiece();
 	if ( rad.piece < 0 )
 		rad.piece = CG_BoomboxAimed( RADIAL_AIM_RANGE );
@@ -247,6 +250,12 @@ void CG_RadialDown_f( void ) {
 // -v_radial: what the pointer is on is done, the wheel closes (but for the first click of "Take it away")
 void CG_RadialUp_f( void ) {
 	if ( !rad.open || !rad.held )
+		return;
+	// When the pointer takes the keys for the wheel (Key_SetCatcher) the engine lets go of every key that is held,
+	// this one too, and sends "-v_radial <key> 0": without a time. That one is not the player letting go. (Taken
+	// for one, the wheel closed, the key repeat opened it again and the pointer went back to the middle: it
+	// flickered and the mouse did nothing.) A key let go without a time later on is the window losing the focus.
+	if ( !atoi( CG_Argv( 2 ) ) && trap->Milliseconds() - rad.openTime < RADIAL_GRAB_MSEC )
 		return;
 	rad.held = qfalse;
 	if ( Radial_Pick() )
