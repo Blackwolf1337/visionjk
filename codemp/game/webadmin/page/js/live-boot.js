@@ -134,12 +134,23 @@ if (!gl) {
 	// the camera before the frame of the panel, which draws from where it is
 	requestAnimationFrame(draw);
 	requestAnimationFrame(frame);
+	// The panel asks ten times a second on a LAN, where the answer is there at once. Over the internet an answer
+	// takes a server frame and the way there and back, and the drawing moves a player from where he is drawn to
+	// where the answer says over pollInterval: as long as the answers really are apart, or he stands until the
+	// next one and then jumps. So the next question goes as soon as the answer is there (no more than ten a
+	// second), and pollInterval is a little more than how far apart the answers came of late: an answer that is
+	// late then slows a player down a little and does not stop him.
+	let asked = 0, came = 0, gap = 0;
 	const poll = async () => {
 		const away = !!liveHost.paused || document.hidden;
+		asked = performance.now();
 		await pollState();
+		const now = performance.now();
+		if (came && !away) gap = gap ? gap * 0.8 + (now - came) * 0.2 : now - came;
+		came = away ? 0 : now;
 		liveTell($('status').className === 'err');
-		pollInterval = away ? 2000 : 100;
-		setTimeout(poll, pollInterval);
+		pollInterval = away ? 2000 : Math.min(1000, Math.max(100, gap * 1.25));
+		setTimeout(poll, away ? 2000 : Math.max(0, 100 - (now - asked)));
 	};
 	poll();
 }

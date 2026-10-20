@@ -2,8 +2,10 @@
 /* render loop                                                         */
 /* ------------------------------------------------------------------ */
 
-// how many pixels of the picture a pixel of the page is: one for the comparison with the game
-const canvasScale = () => REF ? 1 : Math.min(window.devicePixelRatio || 1, 2);
+// How many pixels of the picture a pixel of the page is. One for the comparison with the game, and for the live
+// view of a website: it lies under a veil over the whole width of the page, and twice the pixels would cost the
+// graphics card four times as much for nothing to see.
+const canvasScale = () => REF || LIVE ? 1 : Math.min(window.devicePixelRatio || 1, 2);
 function resize() {
 	const dpr = canvasScale();
 	canvas.width = Math.round(canvas.clientWidth * dpr);
