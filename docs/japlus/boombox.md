@@ -78,6 +78,10 @@ server (`vs_boomboxRange`, 1536 units).
 
 The two speakers of the box push out with the loudness of what you hear of it.
 
+A speaker is heard by the way it faces. In front of it you hear all of it, beside it about half. Behind a
+speaker of a sound system you hear only about a tenth (12 %), behind a boombox a little under half (45 %). This
+holds for the sound of the level (`v_spatial`) and for the voice device alike.
+
 ## The sound system
 
 A second kind of box: a DJ table with two turntables, whose records turn while a song plays, and two big
@@ -108,16 +112,21 @@ the right speaker is played on the voice device, by side and distance.
 
 ## The quick wheel
 
-Hold the key of `+v_radial`: a ring of choices stands in the middle of the screen. Move the mouse toward one and
-let the key go, or click it. Escape or the right mouse button closes the ring.
+Hold the key of `+v_radial`: a dark ring of eight slices stands in the middle of the screen. Move the mouse
+toward a slice and let the key go, or click it. The picked slice is lit, the box it is about is named in the
+middle, and what the slice does stands under the ring. The slice stays picked when the mouse comes back toward
+the middle. A short tap of the key keeps the ring open until a click, or until the key is pressed again. Escape
+or the right mouse button closes it.
 
-What it offers depends on what the crosshair (or the pointer, while the mouse is free) is on when it opens.
+Every choice has its slice for good. Clockwise from the top: Play (a song, or add one while one plays), Pause or
+Resume, Skip, Louder, Player (opens the player window), Quieter. The two slices at the left depend on what the
+crosshair (or the pointer, while the mouse is free) was on when the ring opened. On a boombox or any part of a
+sound system they are "Move it" (that part) and "Remove" (takes it away, needs a second click, and the ring
+stays open for it). Anywhere else they are "Boombox" and "Sound System", which put one down where the crosshair
+points (Sound System only where the server or the master has them).
 
-- On a boombox or any part of a sound system: Play a song (Add a song while one plays), Pause or Resume, Skip,
-  Stop, Louder and Quieter (for everybody, 10 a step), Move it (that part), Take it away, Open the player. "Take it
-  away" needs a second click, and the ring stays open after the key is let go for that click.
-- Anywhere else: Put a boombox here, Put a sound system here (only where the server or the master has them),
-  Play a song, Open the player of the box near.
+The other choices are about the box the crosshair was on, or else the box near you. Louder and Quieter change
+the volume for everybody, 10 a step.
 
 No key is bound by default. Controls, Extras has the row "Quick Wheel (Boombox)".
 
