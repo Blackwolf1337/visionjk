@@ -259,6 +259,8 @@ static qboolean DL_Files( dlPak_t *pak, qboolean count, fileHandle_t block ) {
 		if ( unzGetCurrentFileInfo( uf, &info, name, sizeof( name ), NULL, 0, NULL, 0 ) != UNZ_OK ) {
 			break;
 		}
+		// minizip leaves a name that fills the buffer without its end
+		name[sizeof( name ) - 1] = '\0';
 		// (a folder is no file)
 		if ( name[0] && name[strlen( name ) - 1] != '/' ) {
 			const dlCat_t kind = DL_Kind( name );
@@ -499,7 +501,68 @@ sys/sys_http.h is made for one, so this and the updater (cl_update.cpp) never as
 
 #define DL_WEB_BASE		200							// of jp_DlBaseURL, as much as the plugin takes of it
 #define DL_WEB_JOBS		4							// the fetch that runs, and those that were let go and still end
-#define DL_WEB_MOST		0x7fffffffLL				// bytes of a pak at most (clc.downloadCount is an int)
+#define DL_WEB_MOST		( 512LL * 1024 * 1024 )		// bytes of a pak at most: the checksum is only tested at the end
+
+/*
+=================
+DL_WebPublicHost
+
+Whether the host of an address is one of the internet. A server names jp_DlBaseURL, and the fetch goes out from
+the player's machine: without this a server could make it ask a router, a printer or a service on the machine
+itself for whatever address it likes. Refused are names of this machine, and written out addresses of this
+machine, of private networks, of the link and of carrier NAT. A name that the DNS turns into such an address is
+not seen here.
+=================
+*/
+static qboolean DL_WebPublicHost( const char *url ) {
+	const char	*host = strstr( url, "://" ) + 3;
+	char		name[128];
+	int			len = 0, part[4], parts = 0, digits = 0, i;
+	qboolean	numeric = qtrue;
+
+	while ( host[len] && host[len] != '/' && host[len] != ':' && host[len] != '?' && host[len] != '#' ) {
+		// a user in front of the host (user@host) and an IPv6 address are not taken at all
+		if ( host[len] == '@' || host[len] == '[' || host[len] == ']' || len >= (int)sizeof( name ) - 1 ) {
+			return qfalse;
+		}
+		name[len] = (char)tolower( (unsigned char)host[len] );
+		len++;
+	}
+	name[len] = '\0';
+	if ( !len || !strcmp( name, "localhost" ) || COM_CompareExtension( name, ".localhost" ) || COM_CompareExtension( name, ".local" ) ) {
+		return qfalse;
+	}
+	for ( i = 0; i < len; i++ ) {
+		if ( !isdigit( (unsigned char)name[i] ) && name[i] != '.' ) {
+			numeric = qfalse;
+		}
+	}
+	if ( !numeric ) {
+		// a name, unless it is a number in another way of writing (0x7f.1)
+		return (qboolean)!( name[0] == '0' && name[1] == 'x' );
+	}
+	// digits and dots: only the usual four parts, anything else is a way of writing an address the resolver reads
+	for ( i = 0; i <= len; i++ ) {
+		if ( name[i] == '.' || !name[i] ) {
+			if ( !digits || parts == 4 ) {
+				return qfalse;
+			}
+			part[parts++] = atoi( name + i - digits );
+			if ( part[parts - 1] > 255 || ( digits > 1 && name[i - digits] == '0' ) ) {
+				return qfalse;
+			}
+			digits = 0;
+		} else {
+			digits++;
+		}
+	}
+	if ( parts != 4 ) {
+		return qfalse;
+	}
+	return (qboolean)!( part[0] == 0 || part[0] == 10 || part[0] == 127 || ( part[0] == 169 && part[1] == 254 )
+		|| ( part[0] == 172 && part[1] >= 16 && part[1] <= 31 ) || ( part[0] == 192 && part[1] == 168 )
+		|| ( part[0] == 100 && part[1] >= 64 && part[1] <= 127 ) || part[0] >= 224 );
+}
 
 // the address the paks of this server come from, with a slash at its end. qfalse: it names none of the web.
 static qboolean DL_WebBase( char *out, int outSize ) {
@@ -520,6 +583,16 @@ static qboolean DL_WebBase( char *out, int outSize ) {
 		if ( (unsigned char)base[i] <= ' ' || (unsigned char)base[i] >= 127 || base[i] == '"' ) {
 			return qfalse;
 		}
+	}
+	if ( !DL_WebPublicHost( base ) ) {
+		static char told[DL_WEB_BASE];
+
+		// (asked more than once a connection, said once)
+		if ( strcmp( told, base ) ) {
+			Q_strncpyz( told, base, sizeof( told ) );
+			Com_Printf( S_COLOR_YELLOW "The download address of this server is not one of the internet, it is not used: %s\n", base );
+		}
+		return qfalse;
 	}
 	Com_sprintf( out, outSize, "%s%s", base, ( base[strlen( base ) - 1] == '/' ) ? "" : "/" );
 	return qtrue;

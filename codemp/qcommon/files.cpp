@@ -2411,6 +2411,8 @@ static pack_t *FS_LoadZipFile( const char *zipfile, const char *basename )
 		if (err != UNZ_OK) {
 			break;
 		}
+		// VisionJK: minizip leaves a name that fills the buffer without its end
+		filename_inzip[sizeof( filename_inzip ) - 1] = '\0';
 		nameLen = (int)strlen( filename_inzip ) + 1;
 		if ( len + nameLen > namesSize ) {
 			char *more;
