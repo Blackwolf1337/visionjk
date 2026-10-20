@@ -72,6 +72,9 @@ Key: [-] removed, [+] added, [\*] modified
 * [\*] The card and the name of a clicked player are drawn over the scene: floors and walls beside him no longer cut them. Very near they are no larger than 1.5 times their size, and they stay whole on the screen.
 * [\*] The card of a player offers his voice (mute, quieter, louder) only when he is known to play VisionJK.
 * [+] Downloads from a server: a window first lists the paks it offers, to tick, keep in `<game>/downloads` or have for this session only (`downloads/session`, emptied at start and quit), then a window shows what is in them by kind before anything is used. Program files in a downloaded pak are blocked (`<pak>.blocked`, the pak keeps its checksum), with the window or without it. Downloaded paks load only while a server references them. `v_downloadReview`, `v_downloadKeep`, see docs/japlus/downloads.md.
+* [\*] Security fixes of the audit of 2026-10-20 (docs/japlus/security.md, "Audit of 2026-10-20"): the duel configstrings are read with a bound (a server could write past a buffer of the cgame), a server can no longer set protected cvars of a client by their old names, downloads from `jp_DlBaseURL` never go to this machine or a private network and have 512 MB at most, the masterserver limits token answers and boombox actions, the web panel takes several proxies (`vs_webProxy`), answers the live view before the wait after wrong logins, hashes a login beside the game and sends the hash of its scripts as CSP.
+* [+] `vs_voiceKbps` (6000): what the voice chat of a game server may send.
+* [\*] Linux: the game no longer freezes when its stderr (the journal of a desktop start) stops taking text: a write that would block is dropped.
 
 # Features
 
