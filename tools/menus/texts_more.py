@@ -509,6 +509,8 @@ MORE = {
     'Quieter': ('Moins fort', 'Más bajo'),
     'Remove': ('Enlever', 'Quitar'),
     'Click a choice, Esc closes': ('Cliquez un choix, Échap ferme', 'Haz clic en una opción, Esc cierra'),
+    'Left speaker': ('Enceinte gauche', 'Altavoz izquierdo'),
+    'Right speaker': ('Enceinte droite', 'Altavoz derecho'),
     'No boombox here': ('Pas de radiocassette ici', 'No hay radiocasete aquí'),
     # the players of music in Setup
     'No player of music runs right now': ("Aucun lecteur de musique ne tourne", 'No hay ningún reproductor de música abierto'),

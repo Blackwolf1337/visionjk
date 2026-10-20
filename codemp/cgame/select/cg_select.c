@@ -259,7 +259,7 @@ static void Select_Middle( int n, vec3_t at, float *scale ) {
 // the name on the card and beside the pointer
 static const char *Select_Name( int n ) {
 	if ( n >= SELECT_BOX ) {
-		return CG_BoomboxName( BOX_OF( n - SELECT_BOX ) );
+		return CG_BoomboxPieceName( n - SELECT_BOX );
 	}
 	return cgs.clientinfo[n].name;
 }

@@ -1873,6 +1873,14 @@ REFERENCE           CLICK_A_CHOICE_ESC_CLOSES
 LANG_ENGLISH        "Click a choice, Esc closes"
 LANG_SPANISH        "Haz clic en una opción, Esc cierra"
 
+REFERENCE           LEFT_SPEAKER
+LANG_ENGLISH        "Left speaker"
+LANG_SPANISH        "Altavoz izquierdo"
+
+REFERENCE           RIGHT_SPEAKER
+LANG_ENGLISH        "Right speaker"
+LANG_SPANISH        "Altavoz derecho"
+
 REFERENCE           NO_BOOMBOX_HERE
 LANG_ENGLISH        "No boombox here"
 LANG_SPANISH        "No hay radiocasete aquí"

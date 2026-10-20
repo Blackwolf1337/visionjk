@@ -976,6 +976,52 @@ Over every box near enough that is in sight: what it plays, or that it is paused
 one the pointer is on or whose card is open: the pointer names that one itself.
 =================
 */
+// Over each speaker of a sound system a round mark with L or R, as near as the titles are shown and when nothing
+// of the level is in the way: which one plays the left channel and which the right one.
+static void Box_DrawSides( int font ) {
+	const vec4_t	back = { 0.02f, 0.05f, 0.09f, 0.72f }, accent = { 0.43f, 0.83f, 1.0f, 1.0f };
+	int				i, part;
+
+	for ( i = 0; i < BOX_MAX; i++ ) {
+		for ( part = BOX_PART_LEFT; part < BOX_PARTS; part++ ) {
+			const char	*side = ( part == BOX_PART_LEFT ) ? "L" : "R";
+			vec3_t		top;
+			float		yaw, distance, x, y, scale, w;
+			vec4_t		color, shade;
+			trace_t		tr;
+
+			if ( !Box_HasPart( i, part ) ) {
+				continue;
+			}
+			Box_Where( i, part, top, &yaw );
+			top[2] += SYS_SPK_HEIGHT + 8.0f;
+			distance = Distance( top, cg.refdef.vieworg );
+			if ( distance > BOX_LABEL_RANGE || !CG_WorldCoordToScreenCoordFloat( top, &x, &y ) ) {
+				continue;
+			}
+			// (the one in the pointer is shown wherever it is)
+			if ( BOX_PIECE( i, part ) != bx.held ) {
+				CG_Trace( &tr, cg.refdef.vieworg, NULL, NULL, top, cg.snap->ps.clientNum, MASK_SOLID );
+				if ( tr.fraction < 1.0f ) {
+					continue;
+				}
+			}
+			scale = Com_Clamp( 0.45f, 0.8f, 0.8f * 250.0f / Q_max( distance, 1.0f ) );
+			VectorCopy4( accent, color );
+			color[3] = Com_Clamp( 0.0f, 1.0f, ( BOX_LABEL_RANGE - distance ) / 150.0f );
+			VectorCopy4( back, shade );
+			shade[3] *= color[3];
+			if ( Skin_Ready() ) {
+				Skin_Disc( x, y, 13.0f * scale, shade );
+			} else {
+				CG_FillRect( x - 12.0f * scale, y - 12.0f * scale, 24.0f * scale, 24.0f * scale, shade );
+			}
+			w = (float)CG_Text_Width( side, scale, font );
+			CG_Text_Paint( x - w * 0.5f, y - 9.0f * scale, scale, color, side, 0, 0, 0, font );
+		}
+	}
+}
+
 void CG_BoomboxDraw( void ) {
 	const vec4_t	back = { 0.0f, 0.0f, 0.0f, 0.45f };
 	const int		font = Skin_Ready() ? SKIN_FONT_SANS : FONT_SMALL2;
@@ -984,6 +1030,7 @@ void CG_BoomboxDraw( void ) {
 	if ( !v_boomboxes.integer || !cg.snap ) {
 		return;
 	}
+	Box_DrawSides( font );
 	for ( i = 0; i < BOX_MAX; i++ ) {
 		const cgBox_t	*b = &cgBoxes[i];
 		vec3_t			top;
@@ -1139,6 +1186,14 @@ float CG_BoomboxHeight( int piece ) {
 		return BOX_HEIGHT;
 	Box_Size( piece, &halfDepth, &halfWidth, &height );
 	return height;
+}
+
+// what the pointer calls a piece: a speaker of a sound system by its side, else its box
+const char *CG_BoomboxPieceName( int piece ) {
+	if ( piece >= 0 && piece < BOX_PIECES && BOX_PART_OF( piece ) != BOX_PART_BODY ) {
+		return CG_VisionText( ( BOX_PART_OF( piece ) == BOX_PART_LEFT ) ? "Left speaker" : "Right speaker" );
+	}
+	return CG_BoomboxName( BOX_OF( piece ) );
 }
 
 // what the card and the pointer call a box

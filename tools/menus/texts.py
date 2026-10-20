@@ -592,6 +592,8 @@ CGAME = {
     'Quieter': 'Leiser',
     'Remove': 'Entfernen',
     'Click a choice, Esc closes': 'Eine Wahl anklicken, Esc schließt',
+    'Left speaker': 'Linker Lautsprecher',
+    'Right speaker': 'Rechter Lautsprecher',
     'No boombox here': 'Keine Boombox hier',
     # the players of music in Setup (codemp/ui/ui_main.c)
     'No player of music runs right now': 'Gerade läuft kein Musikprogramm',

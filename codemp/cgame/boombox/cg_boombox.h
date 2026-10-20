@@ -78,6 +78,7 @@ int			CG_BoomboxPick( const vec3_t start, const vec3_t dir, float *bestT );
 void		CG_BoomboxMiddle( int piece, vec3_t at );
 float		CG_BoomboxHeight( int piece );
 const char	*CG_BoomboxName( int box );
+const char	*CG_BoomboxPieceName( int piece );
 qboolean	CG_BoomboxInfo( int box, boomboxInfo_t *info );
 void		CG_BoomboxDo( int box, const char *what );
 void		CG_BoomboxLouder( int box, int steps );
