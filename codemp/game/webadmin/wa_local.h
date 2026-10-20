@@ -94,6 +94,7 @@ typedef struct waConnection_s {
 	int			lastActive;		// trap->Milliseconds()
 	fileHandle_t	file;		// a file of the game that is handed out piece by piece, 0 for none
 	int			fileLeft;		// what of it is not read yet
+	qboolean	loginWait;		// a login whose password is hashed beside the game (wa_auth.c)
 
 	// a WebSocket (wa_stream.c). request holds the frames of the page that are not whole yet, response what
 	// waits to be sent.
@@ -155,6 +156,8 @@ void WA_AuthShutdown( void );
 qboolean WA_AuthHasUsers( void );
 void WA_AuthRequest( waConnection_t *c, const char *head );
 qboolean WA_AuthRoute( waConnection_t *c, const char *method, const char *path, const char *head, const char *body );
+void WA_AuthLoginFrame( waConnection_t *c );
+void WA_AuthLoginGone( waConnection_t *c );
 qboolean WA_AuthConsoleCommand( const char *cmd );
 
 // wa_state.c

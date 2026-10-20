@@ -37,11 +37,16 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 //   as the login in the game, auth/g_auth.c). The rank of the key is the role: rcon owner, council admin,
 //   knight and instructor moderator.
 //
-// A password is hashed with 12 MiB and three passes, which takes some 20 ms of the frame it happens in. So at
-// most one is hashed in a second for the whole server (a second try gets "busy"), and guessing runs into the
-// wait of its address (WA_AuthThrottle) and of the account besides.
+// A password is hashed with 12 MiB and three passes, which takes some 20 ms. The login hashes it on a thread of
+// its own beside the game (anybody can try a login, and a frame must not wait for it); at most one is hashed in a
+// second for the whole server (a second try gets "busy"), and guessing runs into the wait of its address
+// (WA_AuthThrottle). A wrong code of the second step makes the account wait as well; a wrong password does not,
+// or anybody who knows the name of an account could keep its owner out.
 
 #include <time.h>
+#ifndef _WIN32
+	#include <pthread.h>
+#endif
 
 #include "game/webadmin/wa_local.h"
 #include "game/auth/bg_auth.h"
@@ -108,6 +113,25 @@ static waSession_t	waSessions[WA_MAX_SESSIONS];
 static waKeyAsk_t	waKeyAsks[WA_KEY_ASKS];
 static int			waHashTime;
 static qboolean		waHashed;
+
+// The password of a login, hashed beside the game (WA_HashThread). One at a time.
+static struct {
+	volatile int		state;					// 0: none, 1: hashing, 2: done
+	char				password[WA_PASS_MAX + 1];
+	byte				salt[16];
+	byte				hash[32];
+	qboolean			ok;						// the memory for it could be had
+	waConnection_t		*c;						// the login that waits for it, NULL: it went away
+	char				name[WA_USER_NAME];
+	char				code[32];
+#ifdef _WIN32
+	HANDLE				thread;
+#else
+	pthread_t			thread;
+#endif
+} waHashJob;
+
+static const byte	waNobody[16] = { 'n', 'o', ' ', 's', 'u', 'c', 'h', ' ', 'a', 'c', 'c', 'o', 'u', 'n', 't', '.' };
 
 static const char *const waRoleNames[] = { "none", "moderator", "admin", "owner" };
 
@@ -222,19 +246,11 @@ static qboolean WA_HashBusy( void ) {
 	return (qboolean)( waHashed && now - waHashTime < WA_HASH_MSEC && now >= waHashTime );
 }
 
-static qboolean WA_HashPassword( const char *password, const byte *salt, byte *hash ) {
+// the hash itself, in the WA_ARGON_KIB KiB of area (no call of the engine: it runs on the thread of a login too)
+static void WA_Argon2( const char *password, const byte *salt, byte *hash, void *area ) {
 	crypto_argon2_config	config;
 	crypto_argon2_inputs	inputs;
-	void					*area = NULL;
 
-	waHashed = qtrue;
-	waHashTime = trap->Milliseconds();
-
-	// 12 MiB for the time of one call: from the engine, and given back right away
-	trap->TrueMalloc( &area, WA_ARGON_KIB * 1024 );
-	if ( !area ) {
-		return qfalse;
-	}
 	config.algorithm = CRYPTO_ARGON2_ID;
 	config.nb_blocks = WA_ARGON_KIB;
 	config.nb_passes = WA_ARGON_PASSES;
@@ -244,8 +260,58 @@ static qboolean WA_HashPassword( const char *password, const byte *salt, byte *h
 	inputs.pass_size = (uint32_t)strlen( password );
 	inputs.salt_size = 16;
 	crypto_argon2( hash, 32, area, config, inputs, crypto_argon2_no_extras );
+}
+
+// in the frame: a new password, and the one an owner gives when he changes his account
+static qboolean WA_HashPassword( const char *password, const byte *salt, byte *hash ) {
+	void *area = NULL;
+
+	waHashed = qtrue;
+	waHashTime = trap->Milliseconds();
+
+	// 12 MiB for the time of one call: from the engine, and given back right away
+	trap->TrueMalloc( &area, WA_ARGON_KIB * 1024 );
+	if ( !area ) {
+		return qfalse;
+	}
+	WA_Argon2( password, salt, hash, area );
 	trap->TrueFree( &area );
 	return qtrue;
+}
+
+#ifdef _WIN32
+static DWORD WINAPI WA_HashThread( LPVOID unused )
+#else
+static void *WA_HashThread( void *unused )
+#endif
+{
+	void *area = malloc( WA_ARGON_KIB * 1024 );
+
+	(void)unused;
+	waHashJob.ok = area ? qtrue : qfalse;
+	if ( area ) {
+		WA_Argon2( waHashJob.password, waHashJob.salt, waHashJob.hash, area );
+		free( area );
+	}
+	crypto_wipe( waHashJob.password, sizeof( waHashJob.password ) );
+	waHashJob.state = 2;
+	return 0;
+}
+
+// The thread of the last login is over: waited for (it is, or is a moment from it), and the job is free again.
+// What it made is read after this, when the thread is surely done with it, and wiped then.
+static void WA_HashJoin( void ) {
+	if ( !waHashJob.state ) {
+		return;
+	}
+#ifdef _WIN32
+	WaitForSingleObject( waHashJob.thread, INFINITE );
+	CloseHandle( waHashJob.thread );
+#else
+	pthread_join( waHashJob.thread, NULL );
+#endif
+	waHashJob.state = 0;
+	waHashJob.c = NULL;
 }
 
 static qboolean WA_SetPassword( waUser_t *user, const char *password ) {
@@ -261,11 +327,10 @@ static qboolean WA_SetPassword( waUser_t *user, const char *password ) {
 
 // The work is the same whether there is such an account or not, so the time it takes does not tell.
 static qboolean WA_CheckPassword( const waUser_t *user, const char *password ) {
-	static const byte	nobody[16] = { 'n', 'o', ' ', 's', 'u', 'c', 'h', ' ', 'a', 'c', 'c', 'o', 'u', 'n', 't', '.' };
 	byte				hash[32];
 	qboolean			ok;
 
-	if ( !WA_HashPassword( password, user ? user->salt : nobody, hash ) ) {
+	if ( !WA_HashPassword( password, user ? user->salt : waNobody, hash ) ) {
 		return qfalse;
 	}
 	ok = (qboolean)( user && crypto_verify32( hash, user->hash ) == 0 );
@@ -699,7 +764,6 @@ POST /api/login: name, password and, where the account has a second step, code
 static void WA_ApiLogin( waConnection_t *c, const char *body ) {
 	char		name[WA_USER_NAME], password[WA_PASS_MAX + 1], code[32];
 	waUser_t	*user;
-	const int	now = trap->Milliseconds();
 
 	if ( !WA_FormValue( body, "name", name, sizeof( name ) ) || !WA_FormValue( body, "password", password, sizeof( password ) ) ) {
 		WA_AuthAnswer( c, 400, "Bad Request", "form" );
@@ -708,33 +772,92 @@ static void WA_ApiLogin( waConnection_t *c, const char *body ) {
 	if ( !WA_FormValue( body, "code", code, sizeof( code ) ) ) {
 		code[0] = '\0';
 	}
-	user = WA_FindUser( name );
-	if ( user && user->until > now ) {
-		crypto_wipe( password, sizeof( password ) );
-		WA_AuthAnswer( c, 429, "Too Many Requests", "wait" );
-		return;
+	// (a job whose login went away is done with here)
+	if ( waHashJob.state == 2 && !waHashJob.c ) {
+		WA_HashJoin();
+		crypto_wipe( waHashJob.hash, sizeof( waHashJob.hash ) );
 	}
-	if ( WA_HashBusy() ) {
+	if ( waHashJob.state || WA_HashBusy() ) {
 		crypto_wipe( password, sizeof( password ) );
 		WA_AuthAnswer( c, 429, "Too Many Requests", "busy" );
 		return;
 	}
-	if ( !WA_CheckPassword( user, password ) ) {
-		crypto_wipe( password, sizeof( password ) );
-		WA_UserFailed( user );
+	// An unknown name is hashed all the same, with a salt of nobody's: the answer takes as long either way.
+	user = WA_FindUser( name );
+	Q_strncpyz( waHashJob.password, password, sizeof( waHashJob.password ) );
+	crypto_wipe( password, sizeof( password ) );
+	memcpy( waHashJob.salt, user ? user->salt : waNobody, sizeof( waHashJob.salt ) );
+	Q_strncpyz( waHashJob.name, name, sizeof( waHashJob.name ) );
+	Q_strncpyz( waHashJob.code, code, sizeof( waHashJob.code ) );
+	waHashJob.c = c;
+	waHashJob.ok = qfalse;
+	waHashJob.state = 1;
+	waHashed = qtrue;
+	waHashTime = trap->Milliseconds();
+#ifdef _WIN32
+	waHashJob.thread = CreateThread( NULL, 0, WA_HashThread, NULL, 0, NULL );
+	if ( !waHashJob.thread )
+#else
+	if ( pthread_create( &waHashJob.thread, NULL, WA_HashThread, NULL ) != 0 )
+#endif
+	{
+		crypto_wipe( waHashJob.password, sizeof( waHashJob.password ) );
+		waHashJob.state = 0;
+		waHashJob.c = NULL;
+		WA_AuthAnswer( c, 500, "Internal Server Error", "thread" );
+		return;
+	}
+	// answered by WA_AuthLoginFrame when the hash is there
+	c->loginWait = qtrue;
+}
+
+/*
+=================
+WA_AuthLoginFrame
+
+Every frame for a connection whose login waits for its hash. When it is there, the login goes on as it would have
+right away: the password, the second step, the session.
+=================
+*/
+void WA_AuthLoginFrame( waConnection_t *c ) {
+	waUser_t	*user;
+	qboolean	right;
+
+	if ( waHashJob.c != c || waHashJob.state != 2 ) {
+		// (a login whose job is not its own any more: it can not be answered)
+		if ( waHashJob.c != c ) {
+			c->loginWait = qfalse;
+			WA_AuthAnswer( c, 500, "Internal Server Error", "lost" );
+		}
+		return;
+	}
+	c->loginWait = qfalse;
+	WA_HashJoin();
+	user = WA_FindUser( waHashJob.name );
+	// (the account may have been removed, or got another password, while it was hashed: then it is wrong)
+	right = (qboolean)( waHashJob.ok && user && !memcmp( waHashJob.salt, user->salt, sizeof( user->salt ) )
+		&& crypto_verify32( waHashJob.hash, user->hash ) == 0 );
+	crypto_wipe( waHashJob.hash, sizeof( waHashJob.hash ) );
+
+	if ( !right ) {
 		WA_AuthResult( c->peer, qfalse );
-		WA_LogUse( c, va( "wrong password for the account %.24s", name ) );
+		WA_LogUse( c, va( "wrong password for the account %.24s", waHashJob.name ) );
 		WA_AuthAnswer( c, 401, "Unauthorized", "wrong" );
 		return;
 	}
-	crypto_wipe( password, sizeof( password ) );
-
 	if ( user->hasTotp ) {
-		if ( !code[0] ) {
+		const int now = trap->Milliseconds();
+
+		if ( !waHashJob.code[0] ) {
 			WA_AuthAnswer( c, 401, "Unauthorized", "code" );		// the page asks for it and sends all three
 			return;
 		}
-		if ( !WA_CheckCode( user, code ) ) {
+		// Who comes this far has the password. Codes are six digits: after wrong ones the account waits.
+		if ( user->until > now ) {
+			WA_AuthAnswer( c, 429, "Too Many Requests", "wait" );
+			return;
+		}
+		if ( !WA_CheckCode( user, waHashJob.code ) ) {
 			WA_UserFailed( user );
 			WA_AuthResult( c->peer, qfalse );
 			WA_LogUse( c, va( "wrong code for the account %s", user->name ) );
@@ -746,6 +869,13 @@ static void WA_ApiLogin( waConnection_t *c, const char *body ) {
 	WA_AuthResult( c->peer, qtrue );
 	if ( WA_NewSession( c, user->name, NULL ) ) {
 		WA_LogUse( c, va( "%s logged in (%s)", user->name, WA_RoleName( user->role ) ) );
+	}
+}
+
+// a connection whose login waits for its hash is closed: the hash is made to the end and thrown away
+void WA_AuthLoginGone( waConnection_t *c ) {
+	if ( waHashJob.c == c ) {
+		waHashJob.c = NULL;
 	}
 }
 
@@ -1327,6 +1457,9 @@ void WA_AuthInit( void ) {
 }
 
 void WA_AuthShutdown( void ) {
+	// (the thread runs code of this module: it is over before the module goes)
+	WA_HashJoin();
+	crypto_wipe( waHashJob.hash, sizeof( waHashJob.hash ) );
 	WA_SaveSessions();
 }
 

@@ -198,12 +198,14 @@ XCVAR_DEF( vs_voicePort,					"0",			NULL,						CVAR_ARCHIVE|CVAR_LATCH,						qfa
 // 1: players with the same clan password (cp_clanPwd) hear each other over the clan radio wherever they are (+v_voiceclan)
 XCVAR_DEF( vs_voiceRadio,					"1",			NULL,						CVAR_ARCHIVE,									qfalse )
 XCVAR_DEF( vs_voiceRange,				"1024",			NULL,						CVAR_ARCHIVE,									qtrue )
+XCVAR_DEF( vs_voiceKbps,					"6000",			NULL,						CVAR_ARCHIVE,									qfalse )
 XCVAR_DEF( vs_voiceTeamOnly,				"0",			NULL,						CVAR_ARCHIVE,									qtrue )
 XCVAR_DEF( g_voteDelay,					"3000",			NULL,						CVAR_NONE,										qfalse )
 XCVAR_DEF( g_warmup,					"20",			NULL,						CVAR_ARCHIVE,									qtrue )
 // The accounts of the panel are in webadmin_users.dat (wa_auth.c). vs_webBasicAuth 1: a script may send the token
-// of its account as the password of basic auth behind its name, besides "Bearer". vs_webProxy: the address of the
-// reverse proxy in front of the panel. Then nobody else is let in, and the proxy says who the visitor is.
+// of its account as the password of basic auth behind its name, besides "Bearer". vs_webProxy: the addresses of the
+// reverse proxies in front of the panel, separated by blanks. Then nobody else is let in, and a proxy says who the
+// visitor is.
 XCVAR_DEF( vs_webBasicAuth,				"0",			NULL,						CVAR_ARCHIVE,									qfalse )
 // vs_liveView 1: /live/ of the panel's port is open to everybody without a login, read only: the map and what
 // moves on it, for the live view of a website (wa_live.c). It opens the port by itself, without an account.

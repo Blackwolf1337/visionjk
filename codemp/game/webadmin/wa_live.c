@@ -45,7 +45,8 @@ static void WA_LiveMap( waConnection_t *c, const char *query ) {
 	char name[MAX_QPATH], mapname[MAX_QPATH];
 
 	trap->Cvar_VariableStringBuffer( "mapname", mapname, sizeof( mapname ) );
-	if ( !WA_FormValue( query, "name", name, sizeof( name ) ) || Q_stricmp( name, mapname ) ) {
+	// (exactly: a proxy keeps the answer by its address, and every way of writing the name would be a file more)
+	if ( !WA_FormValue( query, "name", name, sizeof( name ) ) || strcmp( name, mapname ) ) {
 		WA_RespondText( c, 404, "Not Found", "not the map that runs" );
 		return;
 	}

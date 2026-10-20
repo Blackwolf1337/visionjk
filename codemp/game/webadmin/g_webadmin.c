@@ -92,6 +92,8 @@ gameImport_t *WebAdmin_WrapImport( gameImport_t *import ) {
 }
 
 void WA_CloseConnection( waConnection_t *c ) {
+	if ( c->loginWait )
+		WA_AuthLoginGone( c );
 	if ( c->file )
 		trap->FS_Close( c->file );
 	if ( c->sock != BG_INVALID_SOCKET )
@@ -150,6 +152,47 @@ qboolean WA_PageBundle( waBuffer_t *page, const char *name ) {
 	WA_BufAppend( page, at, (int)strlen( at ) );
 	WA_BufFree( &text );
 	return whole;
+}
+
+/*
+=================
+WA_IsProxy
+
+vs_webProxy names the reverse proxies in front of the panel, IPv4 addresses separated by blanks or commas: one in
+front of the whole panel, and another one on the machine itself for the live view, for example. qtrue: addr is
+one of them. *valid and *bad: how many words are addresses and how many are not (may be NULL).
+=================
+*/
+static qboolean WA_IsProxy( unsigned int addr, int *valid, int *bad ) {
+	const char		*s = vs_webProxy.string;
+	char			word[32];
+	struct in_addr	proxy;
+	qboolean		found = qfalse;
+	int				n, good = 0, wrong = 0;
+
+	while ( *s ) {
+		while ( *s == ' ' || *s == ',' )
+			s++;
+		for ( n = 0; *s && *s != ' ' && *s != ','; s++ ) {
+			if ( n < (int)sizeof( word ) - 1 )
+				word[n++] = *s;
+		}
+		word[n] = '\0';
+		if ( !n )
+			continue;
+		if ( inet_pton( AF_INET, word, &proxy ) == 1 ) {
+			good++;
+			if ( (unsigned int)proxy.s_addr == addr )
+				found = qtrue;
+		} else {
+			wrong++;
+		}
+	}
+	if ( valid )
+		*valid = good;
+	if ( bad )
+		*bad = wrong;
+	return found;
 }
 
 /*
@@ -226,13 +269,52 @@ waRole_t WA_RouteRole( const char *method, const char *path ) {
 
 // A page: from disk where vs_webRoot names a folder and it has the file (for working on the page without a
 // restart), else the one built into the module.
+/*
+=================
+WA_ScriptPolicy
+
+The headers of a page of the panel: its scripts are written into it (<script> ... </script>, put together from
+the files of page/js when the module is built), and only those may run. A name or a line that slipped into the
+page past escapeHtml() would be no script then. The hashes are made of what is sent, so a page from vs_webRoot
+gets its own.
+=================
+*/
+static void WA_ScriptPolicy( const char *page, int len, char *out, int outSize ) {
+	static const char	open[] = "<script>", close[] = "</script>";
+	const int			openLen = (int)strlen( open ), closeLen = (int)strlen( close );
+	unsigned char		digest[WEB_SHA256_SIZE];
+	char				hash[64];
+	int					at = 0, start, end;
+
+	Q_strncpyz( out, "Cache-Control: no-store\r\nContent-Security-Policy: object-src 'none'; base-uri 'none'; script-src", outSize );
+	while ( at <= len - openLen ) {
+		if ( memcmp( page + at, open, openLen ) ) {
+			at++;
+			continue;
+		}
+		start = at + openLen;
+		for ( end = start; end <= len - closeLen && memcmp( page + end, close, closeLen ); end++ )
+			;
+		if ( end > len - closeLen )
+			break;
+		Web_SHA256( page + start, (size_t)( end - start ), digest );
+		if ( Web_Base64Encode( digest, sizeof( digest ), hash, sizeof( hash ) ) > 0 )
+			Q_strcat( out, outSize, va( " 'sha256-%s'", hash ) );
+		at = end + closeLen;
+	}
+	Q_strcat( out, outSize, "\r\n" );
+}
+
 static void WA_Page( waConnection_t *c, const char *file, const char *embedded, int embeddedLen ) {
-	waBuffer_t page = { 0 };
+	waBuffer_t	page = { 0 };
+	char		headers[512];
 
 	if ( vs_webRoot.string[0] && WA_PageFile( &page, file ) && page.len ) {
-		WA_Respond( c, 200, "OK", "text/html; charset=utf-8", "Cache-Control: no-store\r\n", page.data, page.len );
+		WA_ScriptPolicy( page.data, page.len, headers, sizeof( headers ) );
+		WA_Respond( c, 200, "OK", "text/html; charset=utf-8", headers, page.data, page.len );
 	} else {
-		WA_Respond( c, 200, "OK", "text/html; charset=utf-8", "Cache-Control: no-store\r\n", embedded, embeddedLen );
+		WA_ScriptPolicy( embedded, embeddedLen, headers, sizeof( headers ) );
+		WA_Respond( c, 200, "OK", "text/html; charset=utf-8", headers, embedded, embeddedLen );
 	}
 	WA_BufFree( &page );
 }
@@ -252,6 +334,18 @@ static void WA_HandleRequest( waConnection_t *c, char *head, char *body, int bod
 	}
 
 	WA_Visitor( c, head );
+	query = strchr( path, '?' );
+	if ( query )
+		*query++ = '\0';
+	else
+		query = (char *)"";
+
+	// The live view asks without a login, and nothing there needs one (wa_live.c). It comes before the wait after
+	// wrong logins: behind a proxy that does not say who the visitor is, every visitor has one address, and five
+	// wrong tokens of anybody would close the live view for everybody.
+	if ( WA_LiveRequest( c, method, path, query, head ) ) {
+		return;
+	}
 	if ( WA_AuthThrottle( c->peer ) ) {
 		WA_Respond( c, 429, "Too Many Requests", "text/plain", "Retry-After: 30\r\n", "too many wrong logins, wait", 27 );
 		return;
@@ -259,17 +353,6 @@ static void WA_HandleRequest( waConnection_t *c, char *head, char *body, int bod
 	// before anything else, the login included: another site must not log a visitor in either
 	if ( !strcmp( method, "POST" ) && !Web_SameOrigin( head ) ) {
 		WA_RespondText( c, 403, "Forbidden", "request from another site refused" );
-		return;
-	}
-
-	query = strchr( path, '?' );
-	if ( query )
-		*query++ = '\0';
-	else
-		query = (char *)"";
-
-	// the live view asks without a login, and nothing there needs one (wa_live.c)
-	if ( WA_LiveRequest( c, method, path, query, head ) ) {
 		return;
 	}
 	WA_AuthRequest( c, head );
@@ -534,15 +617,11 @@ static void WA_Accept( void ) {
 		if ( s == BG_INVALID_SOCKET )
 			return;
 
-		// With vs_webProxy only the proxy is let in: it alone says who the visitor is (WA_Visitor), and anybody
+		// With vs_webProxy only the proxies are let in: they alone say who the visitor is (WA_Visitor), and anybody
 		// else who reached this port could say the same.
-		if ( vs_webProxy.string[0] ) {
-			struct in_addr proxy;
-
-			if ( inet_pton( AF_INET, vs_webProxy.string, &proxy ) != 1 || proxy.s_addr != from.sin_addr.s_addr ) {
-				BG_CloseSocket( s );
-				continue;
-			}
+		if ( vs_webProxy.string[0] && !WA_IsProxy( (unsigned int)from.sin_addr.s_addr, NULL, NULL ) ) {
+			BG_CloseSocket( s );
+			continue;
 		}
 
 		BG_SocketNonBlocking( s );
@@ -626,12 +705,16 @@ static void WA_Listen( void ) {
 	listenPort = vs_webPort.integer;
 	trap->Print( "Web admin listening on http://%s:%d/\n", bindTo, listenPort );
 	if ( vs_webProxy.string[0] ) {
-		struct in_addr proxy;
+		int valid, bad;
 
-		if ( inet_pton( AF_INET, vs_webProxy.string, &proxy ) == 1 ) {
-			trap->Print( "Web admin: only the reverse proxy %s is let in (vs_webProxy)\n", vs_webProxy.string );
+		WA_IsProxy( 0, &valid, &bad );
+		if ( bad ) {
+			trap->Print( S_COLOR_YELLOW "Web admin: %d words of vs_webProxy \"%s\" are no IPv4 address, they let nobody in\n", bad, vs_webProxy.string );
+		}
+		if ( valid ) {
+			trap->Print( "Web admin: only the reverse proxies %s are let in (vs_webProxy)\n", vs_webProxy.string );
 		} else {
-			trap->Print( S_COLOR_YELLOW "Web admin: vs_webProxy \"%s\" is no IPv4 address, so nobody is let in\n", vs_webProxy.string );
+			trap->Print( S_COLOR_YELLOW "Web admin: vs_webProxy names no proxy, so nobody is let in\n" );
 		}
 	}
 }
@@ -702,6 +785,14 @@ void WebAdmin_Frame( void ) {
 				WA_StreamFrame( c, now );
 			// (a socket that is closing and has nothing left to send ends there)
 			if ( c->inUse && ( c->response.len || c->closing ) )
+				WA_WriteResponse( c );
+			continue;
+		}
+		// a login whose password is hashed beside the game: answered when the hash is there
+		if ( c->loginWait ) {
+			c->lastActive = now;
+			WA_AuthLoginFrame( c );
+			if ( c->inUse && c->response.len )
 				WA_WriteResponse( c );
 			continue;
 		}

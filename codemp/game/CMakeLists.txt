@@ -30,6 +30,9 @@ set(MPGameIncludeDirectories
 	)
 if(WIN32)
 	set(MPGameLibraries "winmm" "ws2_32")
+else()
+	# the hash of a login of the web panel is made on a thread of its own (webadmin/wa_auth.c)
+	set(MPGameLibraries "pthread")
 endif(WIN32)
 set(MPGameDefines ${MPSharedDefines} "_GAME" )
 set(MPGameGameFiles
