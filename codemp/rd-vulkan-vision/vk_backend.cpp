@@ -702,9 +702,12 @@ static void RB_CaptureForEntity( const trRefEntity_t *ent ) {
 		// behind the view: what was captured last stays
 		return;
 	}
-	// as R_WorldCoordToScreenCoord() of rd-vanilla has it: x counts from the right edge, y from the top
-	x = (int)( xcenter + xcenter / forward * ( 90.0f / backEnd.refdef.fov_x ) * left );
-	y = (int)( ycenter - ycenter / forward * ( 90.0f / backEnd.refdef.fov_y ) * up );
+	// x counts from the right edge, y from the top. With the projection of the view: rd-vanilla had the guess of
+	// R_WorldCoordToScreenCoord() (90 / fov for 1 / tan( fov / 2 )), which put the square beside its entity away from
+	// the middle of a wide view, and a model that shows the screen behind it as it is (the shockwave of the
+	// boombox, sound_wave.md3) showed it shifted.
+	x = (int)( xcenter + xcenter / forward / tanf( DEG2RAD( backEnd.refdef.fov_x * 0.5f ) ) * left );
+	y = (int)( ycenter - ycenter / forward / tanf( DEG2RAD( backEnd.refdef.fov_y * 0.5f ) ) * up );
 	cX = glConfig.vidWidth - x - rad / 2;
 	cY = glConfig.vidHeight - y - rad / 2;
 	// would it go off screen? cap it off at 0

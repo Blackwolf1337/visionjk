@@ -74,6 +74,23 @@ models/map_objects/vision/sound_platter
 	}
 }
 
+// The shockwave of a beat out of a speaker (sound_wave.md3, RF_DISTORTION): the renderer puts the copy of the screen
+// behind it in the place of the white picture, where the frames of the model bend it. No turn and no turbulence,
+// so all but the ring shows what is behind it as it is.
+models/map_objects/vision/sound_wave
+{
+	surfaceparm	nonsolid
+	surfaceparm	nonopaque
+	surfaceparm	trans
+	cull	twosided
+	{
+		map $whiteimage
+		blendFunc GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA
+		rgbGen identity
+		alphaGen entity
+	}
+}
+
 // and the cabinet of a speaker, whose cones are the one of the boombox, larger
 models/map_objects/vision/sound_speaker
 {

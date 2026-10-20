@@ -14,6 +14,11 @@ program. Three models:
   sound_speaker.md3  the cabinet of a speaker (SYS_SPK_HALF_DEPTH, SYS_SPK_HALF_WIDTH, SYS_SPK_HEIGHT). Its two
                      cones are the cone of the boombox, drawn larger by the cgame and pushed out with the song: the
                      big one at SYS_SPK_MOUTH, the small one at SYS_TWEETER_Z, both at SPK_FRONT (SYS_CONE_X).
+  sound_wave.md3     the shockwave of a beat (cg_boombox.c, Box_AddWaves): a disc of WAVE_R across the plane YZ, its
+                     texture coordinates the square of the screen the renderer copies behind it (RF_DISTORTION), so
+                     what it shows is what is behind it. Its WAVE_FRAMES frames are a ring that runs out from the
+                     middle and gets weaker: there the vertices are pushed out, and the picture under them with
+                     them. Shader sound_wave: the copy of the screen and nothing else.
 
 Their pictures are painted here: sound_desk.png and sound_desk_lights.png (black but for what glows),
 sound_platter.png, sound_speaker.png and sound_speaker_lights.png. The shader scripts are in
@@ -31,7 +36,8 @@ from PIL import Image, ImageDraw, ImageFilter
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from build import (OUT, SHADER_DIR, Surface, plain_box, cylinder, env_uv, write_md3, noise, to_image,  # noqa: E402
-	outside)
+	outside, encode_normal)
+import struct  # noqa: E402
 
 # the table (bg_boombox.h: SYS_DESK_HALF_DEPTH 13, SYS_DESK_HALF_WIDTH 30, SYS_DESK_HEIGHT 40)
 DESK_LO = (-13.0, -30.0, 0.0)
@@ -56,6 +62,13 @@ WOOFER_Z = 36.0
 WOOFER_R = 10.0			# the cone of the boombox (radius 5) twice as large: SYS_WOOFER_SCALE
 TWEETER_Z = 53.0
 TWEETER_R = 2.75		# SYS_TWEETER_SCALE
+
+# the shockwave (cg_boombox.c: BOX_WAVE_MODEL_R is WAVE_R, BOX_WAVE_FRAMES is WAVE_FRAMES). In units, so the 1/64
+# of a unit an MD3 keeps of a place is fine enough; the cgame scales it to the size it wants.
+WAVE_R = 32.0
+WAVE_RINGS = 40
+WAVE_SEGMENTS = 22
+WAVE_FRAMES = 16
 
 PX = 14					# pixels a unit on the faces that have a picture of their own
 
@@ -160,6 +173,77 @@ def build_speaker():
 	# a plinth it stands on, a little smaller
 	plain_box(cab, (SPK_LO[0] + 1.0, SPK_LO[1] + 1.0, 0.0), (SPK_HI[0] - 1.0, SPK_HI[1] - 1.0, SPK_LO[2]), plain)
 	return [cab]
+
+
+def wave_push(r, p):
+	"""where a point of the disc at radius r is in the frame p (0 to 1): the ring at rr, band half wide, pushes the
+	points of the band outward on its outer side and inward on its inner one, less as it gets older. Never so much
+	that a point passes the next one."""
+	rr = WAVE_R * (0.10 + 0.82 * p)
+	band = WAVE_R * (0.07 + 0.05 * p)
+	push = 0.55 * band / math.pi * (1.0 - p) ** 0.6
+	d = (r - rr) / band
+	if abs(d) >= 1.0:
+		return r
+	return r + push * math.sin(math.pi * d)
+
+
+def write_wave(path):
+	"""The disc with its frames. write_md3() of build.py writes one frame, this one as many as WAVE_FRAMES."""
+	surface = Surface("wave", SHADER_DIR + "sound_wave")
+	rest = []
+	for j in range(WAVE_RINGS + 1):
+		r = WAVE_R * j / WAVE_RINGS
+		for k in range(WAVE_SEGMENTS + 1):
+			a = 2.0 * math.pi * k / WAVE_SEGMENTS
+			p = (0.0, r * math.cos(a), r * math.sin(a))
+			# the square of the screen: s to the right (+y, as the cgame turns it), t up (+z)
+			uv = (0.5 + p[1] / (2.0 * WAVE_R), 0.5 + p[2] / (2.0 * WAVE_R))
+			surface.verts.append((p, (1.0, 0.0, 0.0), uv))
+			rest.append((r, a))
+	width = WAVE_SEGMENTS + 1
+	for j in range(WAVE_RINGS):
+		for k in range(WAVE_SEGMENTS):
+			a = j * width + k
+			# turned the way of the game: clockwise seen from +x (the ring at r 0 has its triangles of no size)
+			surface.tris.extend([(a, a + 1, a + width + 1), (a, a + width + 1, a + width)])
+	surface.check()
+
+	frames, blob_xyz = [], b""
+	for f in range(WAVE_FRAMES):
+		p = f / (WAVE_FRAMES - 1)
+		points = []
+		for r, a in rest:
+			q = wave_push(r, p)
+			points.append((0.0, q * math.cos(a), q * math.sin(a)))
+		for pt in points:
+			blob_xyz += struct.pack("<hhhH", *[int(round(c * 64.0)) for c in pt], encode_normal((1.0, 0.0, 0.0)))
+		radius = max(math.hypot(pt[1], pt[2]) for pt in points)
+		frames.append(struct.pack("<3f3f3ff16s", 0.0, -radius, -radius, 0.0, radius, radius, 0.0, 0.0, 0.0, radius,
+			b"wave%d" % f))
+
+	nv, nt = len(surface.verts), len(surface.tris)
+	ofs_tris = 108 + 68
+	ofs_st = ofs_tris + 12 * nt
+	ofs_xyz = ofs_st + 8 * nv
+	ofs_end = ofs_xyz + len(blob_xyz)
+	surf = struct.pack("<4s64siiiiiiiiii", b"IDP3", b"wave", 0, WAVE_FRAMES, 1, nv, nt, ofs_tris, 108, ofs_st, ofs_xyz, ofs_end)
+	surf += struct.pack("<64si", surface.shader.encode(), 0)
+	for t in surface.tris:
+		surf += struct.pack("<iii", *t)
+	for v in surface.verts:
+		surf += struct.pack("<ff", v[2][0], v[2][1])
+	surf += blob_xyz
+	assert len(surf) == ofs_end
+
+	ofs_frames = 108
+	ofs_tags = ofs_frames + 56 * WAVE_FRAMES
+	data = struct.pack("<4si64siiiiiiiii", b"IDP3", 15, b"sound_wave", 0, WAVE_FRAMES, 0, 1, 0, ofs_frames, ofs_tags, ofs_tags,
+		ofs_tags + len(surf))
+	data += b"".join(frames) + surf
+	with open(path, "wb") as fh:
+		fh.write(data)
+	return nv, nt
 
 
 # ---------------------------------------------------------------------------------------------------------------
@@ -302,6 +386,7 @@ def main():
 	counts = []
 	for name, build in (("sound_desk", build_desk), ("sound_platter", build_platter), ("sound_speaker", build_speaker)):
 		counts.append((name,) + write_md3(os.path.join(out, name + ".md3"), name, build()))
+	counts.append(("sound_wave",) + write_wave(os.path.join(out, "sound_wave.md3")))
 	desk, desk_lights = paint_desk()
 	desk.save(os.path.join(out, "sound_desk.png"), optimize=True)
 	desk_lights.save(os.path.join(out, "sound_desk_lights.png"), optimize=True)

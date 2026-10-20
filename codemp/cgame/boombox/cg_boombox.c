@@ -129,6 +129,7 @@ static struct {
 	int			sendTime;
 	qhandle_t	model, cone;
 	qhandle_t	desk, platter, speaker;
+	qhandle_t	wave, waveShader;		// the shockwave of a beat
 	qboolean	registered;
 	// a piece of a box the pointer carries (select/cg_select.c)
 	int			held;			// -1: none
@@ -146,18 +147,20 @@ static cgBox_t	cgBoxes[BOX_MAX];
 #define BOX_TURN_STEP		15.0f		// one notch of the mouse wheel turns a carried piece this far
 
 // The waves of a beat: when the song of a channel gets suddenly louder than it was a moment ago, its speakers send
-// out a lens of the refraction of force push (effects/refraction) that bends what is behind it, grows, moves out
-// of the cone and fades. Only with cg_renderToTextureFX, as the game's own distortions.
+// out a shockwave: a ring that bends what is behind it and runs out from the cone (Box_AddWaves). Only with
+// cg_renderToTextureFX, as the game's own distortions.
 #define BOX_WAVES			4			// waves of one channel at once
 #define BOX_WAVE_MSEC		420			// how long one lives
 #define BOX_WAVE_GAP_MSEC	180			// two beats of a channel at least this far apart
 #define BOX_WAVE_AVG_MSEC	450.0f		// what "a moment ago" is: the loudness averaged over this
 #define BOX_WAVE_RISE		1.45f		// a beat: this many times as loud as that average,
 #define BOX_WAVE_LEAST		0.38f		//	and at least this loud (0 to 1, as the cones push out)
-#define BOX_WAVE_SIZE		22.0f		// how large a wave of a speaker of a sound system grows, units; a boombox's 0.45 of it
-#define BOX_WAVE_TRAVEL		60.0f		// how far out of its cone it goes
-#define BOX_WAVE_MODEL_R	35.0f		// the half sphere of force push (models/weaphits/testboom.md3) at a scale of 1: its dome
-										//	faces +x, 35 units out and 35 to each side
+#define BOX_WAVE_SIZE		64.0f		// the radius of the disc of a wave of a speaker of a sound system, units; a boombox's 0.45 of it
+#define BOX_WAVE_MODEL		"models/map_objects/vision/sound_wave.md3"
+#define BOX_WAVE_SHADER		"models/map_objects/vision/sound_wave"
+#define BOX_WAVE_MODEL_R	32.0f		// the radius of that disc as the model has it (WAVE_R of tools/boombox/build_system.py)
+#define BOX_WAVE_FRAMES		16			//	and its frames (WAVE_FRAMES)
+#define BOX_WAVE_MAX_PIXELS	1024		// the square of the screen it bends is no larger than this
 
 static struct {
 	float	average;
@@ -873,6 +876,8 @@ static void Box_Register( void ) {
 	bx.desk = trap->R_RegisterModel( SYS_DESK_MODEL );
 	bx.platter = trap->R_RegisterModel( SYS_PLATTER_MODEL );
 	bx.speaker = trap->R_RegisterModel( SYS_SPEAKER_MODEL );
+	bx.wave = trap->R_RegisterModel( BOX_WAVE_MODEL );
+	bx.waveShader = trap->R_RegisterShader( BOX_WAVE_SHADER );
 }
 
 // A speaker cone, pushed out by the song: longer along the axis it faces, a little wider. x, y, z: where it sits
@@ -893,44 +898,64 @@ static void Box_AddCone( const refEntity_t *body, float x, float y, float z, flo
 	trap->R_AddRefEntityToScene( &cone );
 }
 
-// The waves of a channel out of a cone of a model: at x, y, z on it, a lens across the way the cone faces that
-// grows, moves out and fades. size: how large it gets.
+// The waves of a channel out of a cone of a model: at x, y, z on it, the disc of sound_wave.md3 turned to the camera,
+// its ring running out over the frames of the model. size: the radius of the disc in the level.
+//
+// The renderer bends with the square of the screen around the origin of a distortion, ent.radius pixels across
+// (RB_CaptureForEntity), which it draws onto the model by the texture coordinates of the model. Those of the disc are
+// that square: so the disc is made exactly that large on the screen, and shows what is behind it as it is but for the
+// ring. Where the square would leave the screen the renderer moves it, and the disc then shows it shifted a little.
 static void Box_AddWaves( int channel, const refEntity_t *body, float x, float y, float z, float size ) {
-	int k;
+	vec3_t	at, to;
+	float	ahead, perUnit, pixels;
+	int		k;
 
-	if ( !cg_renderToTextureFX.integer || !cgs.media.refractionShader || !cgs.media.halfShieldModel ) {
+	if ( !cg_renderToTextureFX.integer || !bx.wave ) {
 		return;
 	}
+	VectorMA( body->origin, x, body->axis[0], at );
+	VectorMA( at, y, body->axis[1], at );
+	VectorMA( at, z, body->axis[2], at );
+	VectorSubtract( at, cg.refdef.vieworg, to );
+	ahead = DotProduct( to, cg.refdef.viewaxis[0] );
+	if ( ahead < 16.0f ) {
+		return;
+	}
+	// pixels of the window a unit at that distance is, as the view projects it
+	perUnit = cgs.glconfig.vidWidth * 0.5f / tanf( DEG2RAD( cg.refdef.fov_x * 0.5f ) ) / ahead;
+	pixels = Com_Clamp( 16.0f, (float)Q_min( cgs.glconfig.vidHeight, BOX_WAVE_MAX_PIXELS ), floorf( 2.0f * size * perUnit + 0.5f ) );
+	size = pixels * 0.5f / perUnit;
+
 	for ( k = 0; k < BOX_WAVES; k++ ) {
 		const int	start = boxWaves[channel].start[k];
 		refEntity_t	wave;
-		float		part, grow, distance;
+		float		part, frame;
 
 		if ( !start || cg.time < start || cg.time - start >= BOX_WAVE_MSEC ) {
 			continue;
 		}
 		part = (float)( cg.time - start ) / BOX_WAVE_MSEC;
-		grow = size * ( 0.25f + 0.75f * sqrtf( part ) );
 		memset( &wave, 0, sizeof( wave ) );
 		wave.reType = RT_MODEL;
-		wave.hModel = cgs.media.halfShieldModel;
-		wave.customShader = cgs.media.refractionShader;
-		VectorMA( body->origin, x + BOX_WAVE_TRAVEL * part * ( size / BOX_WAVE_SIZE ), body->axis[0], wave.origin );
-		VectorMA( wave.origin, y, body->axis[1], wave.origin );
-		VectorMA( wave.origin, z, body->axis[2], wave.origin );
-		VectorCopy( wave.origin, wave.oldorigin );
-		// the dome out of the cone, flatter than a half sphere
-		VectorScale( body->axis[0], grow * 0.5f / BOX_WAVE_MODEL_R, wave.axis[0] );
-		VectorScale( body->axis[1], grow / BOX_WAVE_MODEL_R, wave.axis[1] );
-		VectorScale( body->axis[2], grow / BOX_WAVE_MODEL_R, wave.axis[2] );
+		wave.hModel = bx.wave;
+		wave.customShader = bx.waveShader;
+		VectorCopy( at, wave.origin );
+		VectorCopy( at, wave.oldorigin );
+		// to the camera; its +y to the right of the screen and its +z up, as the texture coordinates have it
+		VectorScale( cg.refdef.viewaxis[0], -size / BOX_WAVE_MODEL_R, wave.axis[0] );
+		VectorScale( cg.refdef.viewaxis[1], -size / BOX_WAVE_MODEL_R, wave.axis[1] );
+		VectorScale( cg.refdef.viewaxis[2], size / BOX_WAVE_MODEL_R, wave.axis[2] );
 		wave.nonNormalizedAxes = qtrue;
-		// the size of the picture of the screen the renderer bends, as force push asks for it by the distance
-		distance = Distance( wave.origin, cg.refdef.vieworg );
-		wave.radius = ( distance < 128.0f ) ? 256 : ( distance < 256.0f ) ? 128 : ( distance < 512.0f ) ? 64 : 32;
+		// the ring between two frames of the model
+		frame = part * ( BOX_WAVE_FRAMES - 1 );
+		wave.oldframe = (int)frame;
+		wave.frame = Q_min( wave.oldframe + 1, BOX_WAVE_FRAMES - 1 );
+		wave.backlerp = 1.0f - ( frame - wave.oldframe );
+		wave.radius = pixels;
 		wave.renderfx = RF_DISTORTION | RF_FORCE_ENT_ALPHA;
 		wave.shaderRGBA[0] = wave.shaderRGBA[1] = wave.shaderRGBA[2] = 255;
-		wave.shaderRGBA[3] = (byte)( 220.0f * ( 1.0f - part ) + 10.0f );
-		wave.shaderTime = start * 0.001f;
+		// (it gets weaker in the model, here it only goes at its end)
+		wave.shaderRGBA[3] = (byte)( 255.0f * Com_Clamp( 0.0f, 1.0f, ( 1.0f - part ) * 5.0f ) );
 		trap->R_AddRefEntityToScene( &wave );
 	}
 }
