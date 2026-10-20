@@ -316,13 +316,13 @@ static const char *spatialShockPaths[] = {
 #define SPATIAL_DEFAULT				"1"
 #define SPATIAL_DEFAULT_RAYS		"1024"
 #define SPATIAL_DEFAULT_BOUNCES		"8"
-#define SPATIAL_THREADS				1
+#define SPATIAL_THREADS				1		// threads Steam Audio shares a pass between: a page has one
 #else
 #define SPATIAL_DEFAULT				"0"		// of v_spatial: the library has to be put next to the program first
 #define SPATIAL_DEFAULT_RAYS		"2048"
 #define SPATIAL_DEFAULT_BOUNCES		"16"
-#define SPATIAL_THREADS				2		// threads Steam Audio shares a pass or a bake between, inside the one of this file,
-#define SPATIAL_MAX_THREADS			8		//	or half the cores of the machine up to this (spatial.threads)
+#define SPATIAL_SPARE_CORES			2		// Steam Audio shares a pass or a bake between all cores of the machine but these,
+											//	which the game, the renderer and the mixer keep (spatial.threads)
 #endif
 
 enum {
@@ -3119,7 +3119,7 @@ void S_SpatialInit( void ) {
 		return;
 	}
 
-	// the rays by Embree where the library has it, and as many threads for them as half the cores
+	// the rays by Embree where the library has it, and threads for them on the cores the game does not keep
 	spatial.sceneType = IPL_SCENETYPE_DEFAULT;
 	spatial.embree = NULL;
 	if ( qiplEmbreeDeviceCreate && qiplEmbreeDeviceRelease ) {
@@ -3136,7 +3136,7 @@ void S_SpatialInit( void ) {
 #ifdef __EMSCRIPTEN__
 	spatial.threads = SPATIAL_THREADS;
 #else
-	spatial.threads = Com_Clampi( SPATIAL_THREADS, SPATIAL_MAX_THREADS, SDL_GetCPUCount() / 2 );
+	spatial.threads = Q_max( 1, SDL_GetCPUCount() - SPATIAL_SPARE_CORES );
 #endif
 
 	spatial.audio.samplingRate = dma.speed;
