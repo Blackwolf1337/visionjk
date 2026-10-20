@@ -33,6 +33,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include <sched.h>
 #include <signal.h>
 #include <sys/resource.h>
+#include <poll.h>
+#include <limits.h>
 
 #include "qcommon/q_version.h"
 #include "qcommon/qcommon.h"
@@ -669,6 +671,41 @@ bool Sys_DLLNeedsUnpacking()
 
 /*
 =================
+Sys_StderrPrint
+
+stderr of a game started from the desktop is a stream into journald (JOURNAL_STREAM). When that is not read
+any more, a write blocks and the game froze in it (0.2.2, after a map change). Text goes out only while there
+is room for it, the rest is lost for stderr alone: the console and qconsole.log have it. No O_NONBLOCK on fd 2,
+the program that started the game shares it.
+=================
+*/
+void Sys_StderrPrint( const char *text )
+{
+	size_t			len = strlen( text );
+	ssize_t			sent;
+	struct pollfd	pfd;
+
+	while ( len > 0 )
+	{
+		pfd.fd = STDERR_FILENO;
+		pfd.events = POLLOUT;
+		pfd.revents = 0;
+		// POLLOUT: room for PIPE_BUF bytes on a pipe, far more on a socket, so a write of that much does not block
+		if ( poll( &pfd, 1, 0 ) != 1 || !( pfd.revents & POLLOUT ) )
+			return;
+
+		sent = write( STDERR_FILENO, text, len < PIPE_BUF ? len : PIPE_BUF );
+		if ( sent < 0 && errno == EINTR )
+			continue;
+		if ( sent <= 0 )
+			return;
+		text += sent;
+		len -= (size_t)sent;
+	}
+}
+
+/*
+=================
 Sys_AnsiColorPrint
 
 Transform Q3 colour codes to ANSI escape sequences
@@ -700,14 +737,14 @@ void Sys_AnsiColorPrint( const char *msg )
 			if ( length > 0 )
 			{
 				buffer[length] = '\0';
-				fputs( buffer, stderr );
+				Sys_StderrPrint( buffer );
 				length = 0;
 			}
 
 			if ( *msg == '\n' )
 			{
 				// Issue a reset and then the newline
-				fputs( "\033[0m\n", stderr );
+				Sys_StderrPrint( "\033[0m\n" );
 				msg++;
 			}
 			else
@@ -715,7 +752,7 @@ void Sys_AnsiColorPrint( const char *msg )
 				// Print the color code
 				Com_sprintf( buffer, sizeof( buffer ), "\033[%dm",
 					q3ToAnsi[ColorIndex( *(msg + 1) )] );
-				fputs( buffer, stderr );
+				Sys_StderrPrint( buffer );
 				msg += 2;
 			}
 		}
@@ -734,6 +771,6 @@ void Sys_AnsiColorPrint( const char *msg )
 	if ( length > 0 )
 	{
 		buffer[length] = '\0';
-		fputs( buffer, stderr );
+		Sys_StderrPrint( buffer );
 	}
 }

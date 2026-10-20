@@ -37,6 +37,7 @@ void		Sys_SigHandler( int signal );
 void		Sys_CrashLogPath( char *path, int size );
 #ifndef _WIN32
 void		Sys_AnsiColorPrint( const char *msg );
+void		Sys_StderrPrint( const char *text );
 #endif
 
 struct UnpackDLLResult

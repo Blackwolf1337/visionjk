@@ -516,7 +516,7 @@ void CON_Print( const char *msg )
 	if( com_ansiColor && com_ansiColor->integer )
 		Sys_AnsiColorPrint( msg );
 	else
-		fputs( msg, stderr );
+		Sys_StderrPrint( msg );
 
 	if (!ttycon_on) {
 		// CON_Hide didn't do anything.
