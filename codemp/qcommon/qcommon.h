@@ -333,6 +333,13 @@ void			 VM_Shifted_Alloc( void **ptr, int size );
 void			 VM_Shifted_Free( void **ptr );
 void			*VM_ArgPtr( intptr_t intValue );
 void			*VM_ExplicitArgPtr( vm_t *vm, intptr_t intValue );
+#ifdef VISIONJK_HOTPATCH
+// vm_hotpatch.cpp, developer builds only
+void			 VM_HotpatchInit( void );
+void			 VM_HotpatchLoaded( vm_t *vm );
+void			 VM_HotpatchFreed( vm_t *vm );
+void			 VM_HotpatchFrame( void );
+#endif
 float			_vmf( intptr_t x );
 
 #define	VMA(x) VM_ArgPtr( args[x] )

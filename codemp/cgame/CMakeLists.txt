@@ -331,8 +331,8 @@ endif()
 
 set_target_properties(${MPCGame} PROPERTIES COMPILE_DEFINITIONS "${MPCGameDefines}")
 
-# Hide symbols not explicitly marked public.
-set_property(TARGET ${MPCGame} APPEND PROPERTY COMPILE_OPTIONS ${VISIONJK_VISIBILITY_FLAGS})
+# Hide symbols not explicitly marked public (not for BuildDevHotpatch, see the main CMakeLists.txt).
+set_property(TARGET ${MPCGame} APPEND PROPERTY COMPILE_OPTIONS ${VISIONJK_MODULE_FLAGS})
 
 set_target_properties(${MPCGame} PROPERTIES INCLUDE_DIRECTORIES "${MPCGameIncludeDirectories}")
 set_target_properties(${MPCGame} PROPERTIES PROJECT_LABEL "MP Client Game Library")

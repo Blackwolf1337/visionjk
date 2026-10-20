@@ -61,6 +61,9 @@ void VM_Init( void ) {
 #ifdef _DEBUG
 	vm_legacy = Cvar_Get( "vm_legacy", "0", 0 );
 #endif
+#ifdef VISIONJK_HOTPATCH
+	VM_HotpatchInit();
+#endif
 
 	memset( vmTable, 0, sizeof(vmTable) );
 }
@@ -138,6 +141,9 @@ vm_t *VM_CreateLegacy( vmSlots_t vmSlot, intptr_t( *systemCalls )(intptr_t *) ) 
 			Com_Printf( " succeeded [0x%" PRIxPTR "]\n", (uintptr_t)vm->dllHandle );
 		else
 			Com_Printf( " succeeded\n" );
+#ifdef VISIONJK_HOTPATCH
+		VM_HotpatchLoaded( vm );
+#endif
 		return vm;
 	}
 
@@ -177,6 +183,9 @@ vm_t *VM_Create( vmSlots_t vmSlot ) {
 			Com_Printf( " succeeded [0x%" PRIxPTR "+0x%" PRIxPTR "]\n", vm->dllHandle, (intptr_t)vm->GetModuleAPI - (intptr_t)vm->dllHandle );
 		else
 			Com_Printf( " succeeded\n" );
+#ifdef VISIONJK_HOTPATCH
+		VM_HotpatchLoaded( vm );
+#endif
 		return vm;
 	}
 
@@ -192,6 +201,9 @@ void VM_Free( vm_t *vm ) {
 	// mark the slot as free
 	vmTable[vm->slot] = NULL;
 
+#ifdef VISIONJK_HOTPATCH
+	VM_HotpatchFreed( vm );
+#endif
 	if ( vm->dllHandle )
 		Sys_UnloadDll( vm->dllHandle );
 

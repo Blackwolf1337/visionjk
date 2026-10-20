@@ -62,6 +62,7 @@ option(BuildJK2SPRdVanilla "Whether to create projects for the jk2 sp renderer (
 option(BuildTests "Whether to build automatic unit tests (requires Boost)" OFF)
 option(UseAddressSanitizer "Whether to enable runtime address sanitizer" OFF)
 option(UseUndefinedSanitizer "Whether to enable runtime Undefined Behavior sanitizer" OFF)
+option(BuildDevHotpatch "Developer builds only, never a release: the MP engine and dedicated server put patches of the game, cgame and ui modules into them while they run (v_devHotpatch, tools/hotpatch.py), and the modules are built for that (symbols not hidden, room for a jump at the start of every function). Linux x86_64 with GCC" OFF)
 
 include(CMakeDependentOption)
 cmake_dependent_option(BuildSymbolServer "Build WIP Windows Symbol Server (experimental and unused)" OFF "NOT WIN32 OR NOT MSVC" OFF)
@@ -255,6 +256,7 @@ if(MSVC)
 
 	# We don't try to control symbol visibility under MSVC.
 	set(VISIONJK_VISIBILITY_FLAGS "")
+	set(VISIONJK_MODULE_FLAGS "")
 elseif (("${CMAKE_C_COMPILER_ID}" STREQUAL "GNU") OR ("${CMAKE_C_COMPILER_ID}" MATCHES "Clang"))
 	# I hope this doesn't come back to bite me in the butt later on.
 	# Realistically though, can the C and CXX compilers be different?
@@ -291,6 +293,24 @@ elseif (("${CMAKE_C_COMPILER_ID}" STREQUAL "GNU") OR ("${CMAKE_C_COMPILER_ID}" M
 
 	set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -O3")
 	set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3")
+
+	# The game, cgame and ui modules. For BuildDevHotpatch their symbols stay visible, so that a patch reaches
+	# the globals of the running module through its GOT, and every function starts with 16 bytes of nops for
+	# the jump to its new version. The -fno-ipa flags keep callers from relying on what they knew about a
+	# callee in the same file (registers it clobbers, its return values, its clones), which a patch changes.
+	if(BuildDevHotpatch)
+		if(NOT (CMAKE_SYSTEM_NAME STREQUAL "Linux" AND "${CMAKE_C_COMPILER_ID}" STREQUAL "GNU" AND CMAKE_SIZEOF_VOID_P EQUAL 8 AND X86))
+			message(FATAL_ERROR "BuildDevHotpatch needs Linux x86_64 and GCC")
+		endif()
+		set(SharedDefines ${SharedDefines} "VISIONJK_HOTPATCH")
+		set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+		set(VISIONJK_MODULE_FLAGS -fpatchable-function-entry=16 -fno-ipa-ra -fno-ipa-cp-clone -fno-ipa-sra
+			-fno-ipa-icf -fno-ipa-vrp -fno-ipa-bit-cp -fno-ipa-pure-const -fno-ipa-reference -fno-ipa-modref
+			-fno-ipa-stack-alignment -fno-partial-inlining -fno-reorder-blocks-and-partition)
+		message(STATUS "BuildDevHotpatch is on: developer build, not for a release")
+	else()
+		set(VISIONJK_MODULE_FLAGS ${VISIONJK_VISIBILITY_FLAGS})
+	endif()
 
 	# enable somewhat modern C++
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")

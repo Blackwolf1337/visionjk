@@ -143,8 +143,8 @@ endif()
 
 set_target_properties(${MPUI} PROPERTIES COMPILE_DEFINITIONS "${MPUIDefines}")
 
-# Hide symbols not explicitly marked public.
-set_property(TARGET ${MPUI} APPEND PROPERTY COMPILE_OPTIONS ${VISIONJK_VISIBILITY_FLAGS})
+# Hide symbols not explicitly marked public (not for BuildDevHotpatch, see the main CMakeLists.txt).
+set_property(TARGET ${MPUI} APPEND PROPERTY COMPILE_OPTIONS ${VISIONJK_MODULE_FLAGS})
 
 set_target_properties(${MPUI} PROPERTIES INCLUDE_DIRECTORIES "${MPUIIncludeDirectories}")
 set_target_properties(${MPUI} PROPERTIES PROJECT_LABEL "MP UI Library")

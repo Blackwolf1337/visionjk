@@ -1578,6 +1578,11 @@ void Com_Frame( void ) {
 		int           timeBeforeClient = 0;
 		int           timeAfter = 0;
 
+#ifdef VISIONJK_HOTPATCH
+		// between two frames no module code is on the stack
+		VM_HotpatchFrame();
+#endif
+
 		// write config file if anything changed
 		Com_WriteConfiguration();
 

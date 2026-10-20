@@ -268,6 +268,7 @@ if(BuildMPEngine OR BuildMPDed)
 		"${MPDir}/qcommon/tags.h"
 		"${MPDir}/qcommon/timing.h"
 		"${MPDir}/qcommon/vm.cpp"
+		"${MPDir}/qcommon/vm_hotpatch.cpp"
 		"${MPDir}/qcommon/z_memman_pc.cpp"
 
 		${SharedCommonFiles}
