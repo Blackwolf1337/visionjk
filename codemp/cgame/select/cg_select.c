@@ -32,7 +32,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // The boxes of the boombox (boombox/cg_boombox.c) are pointed at the same way: the one under the pointer has the
 // outline, a click opens its card (what it plays, and what can be done with it), and a box that is pressed on and
 // dragged follows the pointer over the floor until the button is let go. They have the numbers of the pointer from
-// SELECT_BOX on. "Open the player" on its card opens the window of the box (boombox/cg_boombox_ui.c), which is
+// SELECT_BOX on, a number for every piece (BOX_PIECE of cg_boombox.h): the table and each speaker of a sound system
+// are pointed at and dragged by themselves, and all of them open the card of the system. "Open the player" on its card opens the window of the box (boombox/cg_boombox_ui.c), which is
 // drawn here and gets the keys first while it is open.
 //
 // The outline is the model of the player drawn a second time with a shader that only shows a rim around it. An
@@ -58,7 +59,7 @@ qboolean CG_WorldCoordToScreenCoordFloat( vec3_t worldCoord, float *x, float *y 
 #define SELECT_MAX_ROWS		14
 #define SELECT_SCALE		0.6f		// of the text of the card
 #define SELECT_CONFIRM_MSEC	4000		// a vote to kick has to be clicked twice within this time
-#define SELECT_BOX			MAX_CLIENTS	// box n of the boombox is SELECT_BOX + n for the pointer
+#define SELECT_BOX			MAX_CLIENTS	// piece n of a box of the boombox is SELECT_BOX + n for the pointer
 #define SELECT_DRAG			4.0f		// the pointer moved this far with the button down on a box: it is dragged, not clicked
 
 typedef enum {
@@ -205,7 +206,7 @@ void CG_SelectDrawCursor( void ) {
 static qboolean Select_Valid( int clientNum ) {
 	const centity_t *cent;
 
-	// a box of the boombox, in the level and not in the pointer
+	// a piece of a box of the boombox, in the level and not in the pointer
 	if ( clientNum >= SELECT_BOX ) {
 		return (qboolean)( CG_BoomboxShown( clientNum - SELECT_BOX ) && CG_BoomboxHeld() != clientNum - SELECT_BOX );
 	}
@@ -231,11 +232,11 @@ static qboolean Select_Exists( int n ) {
 	return (qboolean)( n >= 0 && cgs.clientinfo[n].infoValid );
 }
 
-// the box in the pointer as a number of the pointer, -1: none
+// the piece of a box in the pointer as a number of the pointer, -1: none
 static int Select_Held( void ) {
-	const int box = CG_BoomboxHeld();
+	const int piece = CG_BoomboxHeld();
 
-	return ( box >= 0 ) ? SELECT_BOX + box : -1;
+	return ( piece >= 0 ) ? SELECT_BOX + piece : -1;
 }
 
 // what a card and a name stand beside: the middle of a player and how large he is, or the foot of a box, which is
@@ -253,7 +254,7 @@ static void Select_Middle( int n, vec3_t at, float *scale ) {
 // the name on the card and beside the pointer
 static const char *Select_Name( int n ) {
 	if ( n >= SELECT_BOX ) {
-		return CG_VisionText( "Boombox" );
+		return CG_BoomboxName( BOX_OF( n - SELECT_BOX ) );
 	}
 	return cgs.clientinfo[n].name;
 }
@@ -398,7 +399,7 @@ around the figure, and no line of them crosses it.
 static qboolean Select_Outlined( int clientNum ) {
 	// (not the own figure: the own card, opened in the scoreboard, is no reason to light oneself up)
 	// (a box in the pointer has it too, red where it can not be put)
-	if ( clientNum < 0 || clientNum >= SELECT_BOX + BOX_MAX || !v_selectOutline.integer || !cg.snap || clientNum == cg.snap->ps.clientNum
+	if ( clientNum < 0 || clientNum >= SELECT_BOX + BOX_PIECES || !v_selectOutline.integer || !cg.snap || clientNum == cg.snap->ps.clientNum
 		|| ( clientNum != sel.hover && clientNum != sel.selected && clientNum != Select_Held() ) || !Select_Free() ) {
 		return qfalse;
 	}
@@ -475,14 +476,14 @@ void CG_SelectOutline( int clientNum, const refEntity_t *model ) {
 	}
 }
 
-// the same for a box of the boombox (boombox/cg_boombox.c)
-qboolean CG_SelectBoxOutlined( int box ) {
-	return ( box >= 0 && box < BOX_MAX ) ? Select_Outlined( SELECT_BOX + box ) : qfalse;
+// the same for a piece of a box of the boombox (boombox/cg_boombox.c)
+qboolean CG_SelectBoxOutlined( int piece ) {
+	return ( piece >= 0 && piece < BOX_PIECES ) ? Select_Outlined( SELECT_BOX + piece ) : qfalse;
 }
 
-void CG_SelectBoxOutline( int box, const refEntity_t *model ) {
-	if ( box >= 0 && box < BOX_MAX ) {
-		Select_Outline( SELECT_BOX + box, model );
+void CG_SelectBoxOutline( int piece, const refEntity_t *model ) {
+	if ( piece >= 0 && piece < BOX_PIECES ) {
+		Select_Outline( SELECT_BOX + piece, model );
 	}
 }
 
@@ -821,7 +822,7 @@ static void Select_Rows( int clientNum ) {
 
 	sel.numRows = 0;
 	if ( clientNum >= SELECT_BOX ) {
-		Select_BoxRows( clientNum - SELECT_BOX );
+		Select_BoxRows( BOX_OF( clientNum - SELECT_BOX ) );
 		return;
 	}
 	// (the own card, opened in the scoreboard, says who one is and offers nothing)
@@ -860,7 +861,7 @@ static void Select_Rows( int clientNum ) {
 static const char *Select_Label( selectAct_t act, int clientNum ) {
 	boomboxInfo_t info;
 
-	if ( clientNum >= SELECT_BOX && !CG_BoomboxInfo( clientNum - SELECT_BOX, &info ) ) {
+	if ( clientNum >= SELECT_BOX && !CG_BoomboxInfo( BOX_OF( clientNum - SELECT_BOX ), &info ) ) {
 		return "";
 	}
 	switch ( act ) {
@@ -967,7 +968,7 @@ static void Select_Head( int n ) {
 	int					i, vision;
 
 	if ( n >= SELECT_BOX ) {
-		Select_BoxHead( n - SELECT_BOX );
+		Select_BoxHead( BOX_OF( n - SELECT_BOX ) );
 		return;
 	}
 	ci = &cgs.clientinfo[n];
@@ -1020,7 +1021,7 @@ static void Select_Head( int n ) {
 // One row of the card was chosen. What it does is what the command it runs does when it is typed: the server
 // decides as always who may.
 static void Select_Run( selectAct_t act, int clientNum ) {
-	const int		box = clientNum - SELECT_BOX;
+	const int		box = ( clientNum >= SELECT_BOX ) ? BOX_OF( clientNum - SELECT_BOX ) : -1;
 	char			name[MAX_NETNAME];
 	boomboxInfo_t	info;
 
@@ -1056,7 +1057,8 @@ static void Select_Run( selectAct_t act, int clientNum ) {
 		CG_VoiceBoxMute( box, (qboolean)!info.muted );
 		return;
 	case ACT_BOX_MOVE:
-		CG_SelectCarry( box );
+		// (the piece the card was opened on: a speaker of a sound system moves by itself)
+		CG_SelectCarry( clientNum - SELECT_BOX );
 		return;
 	case ACT_BOX_REMOVE:
 		if ( !sel.confirmTime || cg.time - sel.confirmTime >= SELECT_CONFIRM_MSEC ) {
@@ -1367,7 +1369,7 @@ static void Select_DrawCorners( int clientNum ) {
 	// from the middle of a player, from the foot of a box
 	Select_Middle( clientNum, top, &scale );
 	VectorCopy( top, bottom );
-	top[2] += ( clientNum >= SELECT_BOX ) ? BOX_HEIGHT + 2.0f : 44.0f;
+	top[2] += ( clientNum >= SELECT_BOX ) ? CG_BoomboxHeight( clientNum - SELECT_BOX ) + 2.0f : 44.0f;
 	bottom[2] -= ( clientNum >= SELECT_BOX ) ? 2.0f : 26.0f;
 	if ( !CG_WorldCoordToScreenCoordFloat( top, &x0, &y0 ) || !CG_WorldCoordToScreenCoordFloat( bottom, &x1, &y1 ) || y1 <= y0 ) {
 		return;
@@ -1620,11 +1622,11 @@ void CG_SelectLetGo( void ) {
 	CG_BoomboxWindowClose();
 }
 
-// "Move it" of the card or the window of a box: it hangs in the pointer until the next click puts it down
-void CG_SelectCarry( int box ) {
+// "Move it" of the card or the window of a box: the piece hangs in the pointer until the next click puts it down
+void CG_SelectCarry( int piece ) {
 	Select_Close();
-	CG_BoomboxGrab( box );
-	sel.carrying = (qboolean)( CG_BoomboxHeld() == box );
+	CG_BoomboxGrab( piece );
+	sel.carrying = (qboolean)( CG_BoomboxHeld() == piece );
 }
 
 void CG_SelectCursorDown_f( void ) {
@@ -1683,7 +1685,7 @@ void CG_SelectCursor_f( void ) {
 			return;
 		}
 		CG_BoomboxMiddle( atoi( CG_Argv( 2 ) ), middle );
-		middle[2] += BOX_HEIGHT * 0.5f;
+		middle[2] += CG_BoomboxHeight( atoi( CG_Argv( 2 ) ) ) * 0.5f;
 		if ( CG_WorldCoordToScreenCoordFloat( middle, &x, &y ) ) {
 			cgs.cursorX = (int)x;
 			cgs.cursorY = (int)y;

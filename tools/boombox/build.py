@@ -302,7 +302,7 @@ def keys_uv(lo, hi, index, count):
 
 
 def build_box():
-	body = Surface("body", SHADER_DIR + "v_boombox")
+	body = Surface("body", SHADER_DIR + "boombox")
 	chrome = Surface("chrome", SHADER_DIR + "boombox_chrome")
 
 	chamfered_box(body, BODY_LO, BODY_HI, BEVEL, front=front_uv)
@@ -661,7 +661,7 @@ def paint_cone():
 def main():
 	out = sys.argv[1] if len(sys.argv) > 1 else OUT
 	os.makedirs(out, exist_ok=True)
-	n_box = write_md3(os.path.join(out, "boombox.md3"), "v_boombox", build_box())
+	n_box = write_md3(os.path.join(out, "boombox.md3"), "boombox", build_box())
 	n_cone = write_md3(os.path.join(out, "boombox_cone.md3"), "boombox_cone", build_cone())
 	atlas, lights = paint_atlas()
 	atlas.save(os.path.join(out, "boombox.png"), optimize=True)

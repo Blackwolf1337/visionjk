@@ -22,7 +22,9 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // from JA+, see docs/japlus/boombox.md and game/boombox/bg_boombox.h.
 //
 // A box is no entity: the server tells this cgame where each one stands and what it plays (vs_box), and the box is
-// drawn here, a model of the pack with two speakers that push out with the song. The songs come over the relay of
+// drawn here, a model of the pack with two speakers that push out with the song. A sound system is a DJ table with
+// two platters and two big speakers that stand apart, each placed and moved by itself: its song comes in stereo,
+// each speaker plays its channel. The songs come over the relay of
 // the voice chat as the voices of speakers behind the players and are played there (voice/cg_voice.c): through
 // the sound of the level of this engine where it takes them (v_spatial), as a sound with walls, ways round corners
 // and the ring of the room, or on the sound device of the voice chat by side and distance.
@@ -59,15 +61,38 @@ qboolean CG_WorldCoordToScreenCoordFloat( vec3_t worldCoord, float *x, float *y 
 #define BOX_CONE_Z			9.0f		//	and above its floor: CONE_X, CONE_Y and CONE_Z of tools/boombox/build.py
 #define BOX_MODEL			"models/map_objects/vision/boombox.md3"
 #define BOX_CONE_MODEL		"models/map_objects/vision/boombox_cone.md3"
+// the sound system: models and pictures of tools/boombox/build_system.py
+#define SYS_DESK_MODEL		"models/map_objects/vision/sound_desk.md3"
+#define SYS_PLATTER_MODEL	"models/map_objects/vision/sound_platter.md3"
+#define SYS_SPEAKER_MODEL	"models/map_objects/vision/sound_speaker.md3"
+#define SYS_PLATTER_X		-1.0f		// the two platters on the table: in front of its middle,
+#define SYS_PLATTER_Y		17.0f		//	to each side,
+#define SYS_PLATTER_Z		40.0f		//	and above its floor: PLATTER_X, PLATTER_Y and PLATTER_Z of build_system.py
+#define SYS_PLATTER_DPS		200.0f		// how fast they turn while a song plays, degrees a second (33 a minute)
+#define SYS_CONE_X			11.02f		// the cones on the front of a speaker: SPK_FRONT of build_system.py,
+#define SYS_WOOFER_SCALE	2.0f		//	the big one the cone of the boombox this much larger, at SYS_SPK_MOUTH,
+#define SYS_TWEETER_Z		53.0f		//	the small one here,
+#define SYS_TWEETER_SCALE	0.55f		//	this large
+#define SYS_SPK_RETRY		3			// a new speaker that has no floor where it would stand comes closer, this often
 
-typedef struct cgBox_s {
-	qboolean	inuse;
-	int			rev;
+// where a part of a box stands, and how it gets there
+typedef struct cgPlace_s {
 	vec3_t		origin;			// where the server says it stands
 	float		yaw;
 	vec3_t		from;			// where it slides from to there,
 	float		fromYaw;
 	int			slideTime;		//	since when, 0: it does not
+	qboolean	moved;			// this player put it somewhere and the server did not answer yet
+	vec3_t		movedTo;
+	float		movedYaw;
+	int			movedTime;
+} cgPlace_t;
+
+typedef struct cgBox_s {
+	qboolean	inuse;
+	int			rev;
+	int			kind;			// BOX_KIND_*
+	cgPlace_t	place[BOX_PARTS];	// the box or the table, and the speakers of a sound system
 	int			volume, flags, length, waiting;
 	int			msec, msecTime;	// how far into the song it was when the server said so, and cg.time then
 	char		title[BOX_TITLE], next[BOX_TITLE];
@@ -82,11 +107,8 @@ typedef struct cgBox_s {
 	int			lineRev;		// of what is in line, -1: nothing came
 	int			lineTotal;		// songs in it as the server says
 	int			lineHave;		// of them that came, a bit each
-	qboolean	moved;			// this player put it somewhere and the server did not answer yet
-	vec3_t		movedTo;
-	float		movedYaw;
-	int			movedTime;
-	float		beat;			// how far the speakers are out: follows the song
+	float		beat[2];		// how far the speakers are out: follows the song, of each channel
+	float		spin;			// how far the platters of a sound system have turned, degrees
 } cgBox_t;
 
 static struct {
@@ -98,13 +120,15 @@ static struct {
 	qboolean	toldProtocol;
 	int			most, range;
 	qboolean	more;			// the server or the master knows what came after 0.1.8 (BOX_CAP_MORE, VOICE_FLAG_BOXLIST)
+	qboolean	systems;		// and sound systems (BOX_CAP_SYSTEM, BOX_SAY_HELLO)
 	int			watch;			// the box whose line was asked for, -1: none
 	char		pending[BOX_PENDING][BOX_ASK + 64];
 	int			numPending;
 	int			sendTime;
 	qhandle_t	model, cone;
+	qhandle_t	desk, platter, speaker;
 	qboolean	registered;
-	// a box the pointer carries (select/cg_select.c)
+	// a piece of a box the pointer carries (select/cg_select.c)
 	int			held;			// -1: none
 	vec3_t		heldAt;
 	float		heldYaw;
@@ -117,8 +141,7 @@ static struct {
 
 static cgBox_t	cgBoxes[BOX_MAX];
 
-static qboolean	Box_Spot( const vec3_t start, const vec3_t dir, int self, vec3_t at, float *yaw );
-static int		Box_Near( void );
+static qboolean	Box_Spot( const vec3_t start, const vec3_t dir, int kind, int part, int self, vec3_t at, float *yaw );
 static void		Box_Forget( void );
 
 void CG_BoomboxInit( void ) {
@@ -178,16 +201,16 @@ static qboolean Box_Valid( int box ) {
 
 // the words of the client command boombox, by BOX_DO_*
 static const char *const boxVerbs[] = { "", "play", "place", "move", "pause", "resume", "skip", "stop", "remove", "volume", "seek", "drop",
-	"watch" };
+	"watch", "system", "part" };
 
 /*
 =================
 Box_Do
 
 What this player does with a box (BOX_DO_*): the client command boombox to a server of this tree, a VOICE_BOX to
-the masterserver. at and yaw: where it goes (place, move, and play into box 255: a new box). value: the volume,
-the second to jump to, the place in the line of the song to take out. text: what to play. Box 255 for watch:
-no box any more.
+the masterserver. at and yaw: where it goes (place, move, part, and play into box 255: a new box). value: the
+volume, the second to jump to, the place in the line of the song to take out, the part to move. text: what to
+play. Box 255 for watch: no box any more. A new sound system is Box_DoSystem().
 =================
 */
 static void Box_Do( int what, int box, const vec3_t at, float yaw, int value, const char *text ) {
@@ -223,6 +246,10 @@ static void Box_Do( int what, int box, const vec3_t at, float yaw, int value, co
 		Box_Send( va( "vs_boxaction move %i %i %i %i %i", box, (int)at[0], (int)at[1], (int)at[2], (int)yaw ),
 			(int)strlen( va( "vs_boxaction move %i ", box ) ) );
 		break;
+	case BOX_DO_PART:
+		Box_Send( va( "vs_boxaction part %i %i %i %i %i %i", box, value, (int)at[0], (int)at[1], (int)at[2], (int)yaw ),
+			(int)strlen( va( "vs_boxaction part %i %i ", box, value ) ) );
+		break;
 	case BOX_DO_VOLUME:
 		Box_Send( va( "vs_boxaction volume %i %i", box, value ), (int)strlen( va( "vs_boxaction volume %i ", box ) ) );
 		break;
@@ -241,6 +268,33 @@ static void Box_Do( int what, int box, const vec3_t at, float yaw, int value, co
 	}
 }
 
+// a new sound system: its table, its left and its right speaker go there
+static void Box_DoSystem( vec3_t at[BOX_PARTS], const float yaw[BOX_PARTS] ) {
+	int k;
+
+	if ( bx.viaMaster ) {
+		boxDo_t d;
+
+		memset( &d, 0, sizeof( d ) );
+		d.what = BOX_DO_SYSTEM;
+		d.box = 255;
+		Q_strncpyz( d.name, cgs.clientinfo[cg.clientNum].name, sizeof( d.name ) );
+		for ( k = 0; k < 3; k++ ) {
+			d.origin[k] = (int)at[0][k];
+			d.parts[0][k] = (int)at[1][k];
+			d.parts[1][k] = (int)at[2][k];
+		}
+		d.yaw = yaw[0];
+		d.partYaw[0] = yaw[1];
+		d.partYaw[1] = yaw[2];
+		if ( !CG_VoiceBoxSend( &d ) )
+			trap->Print( "Boombox: no answer from the masterserver right now\n" );
+		return;
+	}
+	Box_Send( va( "vs_boxaction system %i %i %i %i %i %i %i %i %i %i %i %i", (int)at[0][0], (int)at[0][1], (int)at[0][2], (int)yaw[0],
+		(int)at[1][0], (int)at[1][1], (int)at[1][2], (int)yaw[1], (int)at[2][0], (int)at[2][1], (int)at[2][2], (int)yaw[2] ), 0 );
+}
+
 // pause, resume, skip, stop or remove, from the card of a box
 void CG_BoomboxDo( int box, const char *what ) {
 	int i;
@@ -250,7 +304,7 @@ void CG_BoomboxDo( int box, const char *what ) {
 	for ( i = 1; i < (int)ARRAY_LEN( boxVerbs ); i++ ) {
 		if ( !Q_stricmp( what, boxVerbs[i] ) ) {
 			// (these need a place or a text, which a card does not have)
-			if ( i == BOX_DO_PLAY || i == BOX_DO_PLACE || i == BOX_DO_MOVE )
+			if ( i == BOX_DO_PLAY || i == BOX_DO_PLACE || i == BOX_DO_MOVE || i == BOX_DO_SYSTEM || i == BOX_DO_PART )
 				return;
 			Box_Do( i, box, NULL, 0.0f, 0, NULL );
 			return;
@@ -365,7 +419,7 @@ static qboolean Box_InFront( vec3_t at, float *yaw ) {
 	VectorNormalize( dir );
 	dir[2] = -0.6f;
 	VectorNormalize( dir );
-	return Box_Spot( cg.refdef.vieworg, dir, -1, at, yaw );
+	return Box_Spot( cg.refdef.vieworg, dir, BOX_KIND_BOOMBOX, BOX_PART_BODY, -1, at, yaw );
 }
 
 // What a player typed into the chat box opened for a box, or after "v_boombox play". Without a box: the one near,
@@ -382,7 +436,7 @@ void CG_BoomboxAsk( int box, const char *text ) {
 		return;
 	}
 	if ( !Box_Valid( box ) && bx.viaMaster ) {
-		box = Box_Near();
+		box = CG_BoomboxNear();
 		if ( box < 0 ) {
 			if ( !Box_InFront( at, &yaw ) ) {
 				trap->Print( "Boombox: there is no floor for a boombox in front of you\n" );
@@ -404,26 +458,32 @@ What comes from the server
 ===============================================================================
 */
 
-// where a box is drawn now: in the pointer, where this player put it, on its way, or where it stands
-static void Box_Where( int box, vec3_t at, float *yaw ) {
-	const cgBox_t *b = &cgBoxes[box];
+// does a box have that part: a boombox only its body, a sound system its table and two speakers
+static qboolean Box_HasPart( int box, int part ) {
+	return ( Box_Valid( box ) && part >= 0 && part < BOX_PARTS && ( part == BOX_PART_BODY || cgBoxes[box].kind == BOX_KIND_SYSTEM ) )
+		? qtrue : qfalse;
+}
 
-	if ( box == bx.held ) {
+// where a part of a box is drawn now: in the pointer, where this player put it, on its way, or where it stands
+static void Box_Where( int box, int part, vec3_t at, float *yaw ) {
+	const cgPlace_t *p = &cgBoxes[box].place[part];
+
+	if ( BOX_PIECE( box, part ) == bx.held ) {
 		VectorCopy( bx.heldAt, at );
 		*yaw = bx.heldYaw;
-	} else if ( b->moved ) {
-		VectorCopy( b->movedTo, at );
-		*yaw = b->movedYaw;
-	} else if ( b->slideTime && cg.time - b->slideTime < BOX_SLIDE_MSEC ) {
-		const float part = (float)( cg.time - b->slideTime ) / BOX_SLIDE_MSEC;
+	} else if ( p->moved ) {
+		VectorCopy( p->movedTo, at );
+		*yaw = p->movedYaw;
+	} else if ( p->slideTime && cg.time - p->slideTime < BOX_SLIDE_MSEC ) {
+		const float frac = (float)( cg.time - p->slideTime ) / BOX_SLIDE_MSEC;
 
-		at[0] = b->from[0] + ( b->origin[0] - b->from[0] ) * part;
-		at[1] = b->from[1] + ( b->origin[1] - b->from[1] ) * part;
-		at[2] = b->from[2] + ( b->origin[2] - b->from[2] ) * part;
-		*yaw = LerpAngle( b->fromYaw, b->yaw, part );
+		at[0] = p->from[0] + ( p->origin[0] - p->from[0] ) * frac;
+		at[1] = p->from[1] + ( p->origin[1] - p->from[1] ) * frac;
+		at[2] = p->from[2] + ( p->origin[2] - p->from[2] ) * frac;
+		*yaw = LerpAngle( p->fromYaw, p->yaw, frac );
 	} else {
-		VectorCopy( b->origin, at );
-		*yaw = b->yaw;
+		VectorCopy( p->origin, at );
+		*yaw = p->yaw;
 	}
 }
 
@@ -444,12 +504,47 @@ static void Box_Note( int box, const char *text ) {
 
 // a box is gone
 static void Box_Gone( int n ) {
-	if ( n == bx.held )
+	if ( bx.held >= 0 && BOX_OF( bx.held ) == n )
 		bx.held = -1;
 	if ( n == bx.watch )
 		bx.watch = -1;
 	memset( &cgBoxes[n], 0, sizeof( cgBoxes[n] ) );
 	CG_VoiceBoxReset( n );
+}
+
+// Where a part of a box stands now, from the server or the master. Moved: it slides there from where it is drawn
+// now. Moved by this player: it is there already. fresh: the box or the part is new and stands there at once.
+static void Box_SetPlace( int n, int part, const vec3_t origin, float yaw, qboolean fresh ) {
+	cgPlace_t *p = &cgBoxes[n].place[part];
+
+	if ( fresh ) {
+		p->slideTime = 0;
+	} else if ( !VectorCompare( origin, p->origin ) || yaw != p->yaw ) {
+		Box_Where( n, part, p->from, &p->fromYaw );
+		p->slideTime = cg.time ? cg.time : 1;
+	}
+	if ( p->moved && Distance( origin, p->movedTo ) < 2.0f ) {
+		p->moved = qfalse;
+		p->slideTime = 0;
+	}
+	VectorCopy( origin, p->origin );
+	p->yaw = yaw;
+}
+
+// what kind a box is, and where the speakers of a sound system stand
+static void Box_SetRig( int n, int kind, vec3_t parts[2], const float partYaw[2] ) {
+	cgBox_t		*b = &cgBoxes[n];
+	const int	was = b->kind;
+	int			part;
+
+	b->kind = ( kind == BOX_KIND_SYSTEM ) ? BOX_KIND_SYSTEM : BOX_KIND_BOOMBOX;
+	if ( b->kind != BOX_KIND_SYSTEM ) {
+		if ( bx.held >= 0 && BOX_OF( bx.held ) == n && BOX_PART_OF( bx.held ) != BOX_PART_BODY )
+			bx.held = -1;
+		return;
+	}
+	for ( part = BOX_PART_LEFT; part < BOX_PARTS; part++ )
+		Box_SetPlace( n, part, parts[part - 1], partYaw[part - 1], (qboolean)( was != BOX_KIND_SYSTEM ) );
 }
 
 // what a box is now, from the server or the master
@@ -460,20 +555,11 @@ static void Box_Set( int n, int rev, const vec3_t origin, float yaw, int volume,
 	if ( !b->inuse ) {
 		// a new box: nothing of the one before it is heard
 		CG_VoiceBoxReset( n );
-		b->slideTime = 0;
-	} else if ( !VectorCompare( origin, b->origin ) || yaw != b->yaw ) {
-		// moved: it slides there from where it is drawn now. Moved by this player: it is there already.
-		Box_Where( n, b->from, &b->fromYaw );
-		b->slideTime = cg.time ? cg.time : 1;
+		b->kind = BOX_KIND_BOOMBOX;
 	}
-	if ( b->moved && Distance( origin, b->movedTo ) < 2.0f ) {
-		b->moved = qfalse;
-		b->slideTime = 0;
-	}
+	Box_SetPlace( n, BOX_PART_BODY, origin, yaw, (qboolean)!b->inuse );
 	b->inuse = qtrue;
 	b->rev = rev;
-	VectorCopy( origin, b->origin );
-	b->yaw = yaw;
 	b->volume = Com_Clampi( 0, 100, volume );
 	b->flags = flags;
 	b->msec = msec;
@@ -511,6 +597,7 @@ void CG_BoomboxServerCommand( void ) {
 		bx.range = atoi( CG_Argv( 4 ) );
 		// (a server before 0.1.9 says no more)
 		bx.more = ( atoi( CG_Argv( 5 ) ) & BOX_CAP_MORE ) ? qtrue : qfalse;
+		bx.systems = ( atoi( CG_Argv( 5 ) ) & BOX_CAP_SYSTEM ) ? qtrue : qfalse;
 		return;
 	}
 	if ( !Q_stricmp( what, "note" ) ) {
@@ -551,6 +638,18 @@ void CG_BoomboxServerCommand( void ) {
 	// (a server before 0.1.9 sends neither: "")
 	Q_strncpyz( cgBoxes[n].owner, CG_Argv( 15 ), sizeof( cgBoxes[n].owner ) );
 	Q_strncpyz( cgBoxes[n].by, CG_Argv( 16 ), sizeof( cgBoxes[n].by ) );
+	// the kind and the speakers of a sound system after them, nothing for a boombox
+	{
+		vec3_t	parts[2];
+		float	partYaw[2];
+		int		k;
+
+		for ( k = 0; k < 2; k++ ) {
+			VectorSet( parts[k], (float)atof( CG_Argv( 18 + 4 * k ) ), (float)atof( CG_Argv( 19 + 4 * k ) ), (float)atof( CG_Argv( 20 + 4 * k ) ) );
+			partYaw[k] = (float)atof( CG_Argv( 21 + 4 * k ) );
+		}
+		Box_SetRig( n, ( trap->Cmd_Argc() >= 26 ) ? atoi( CG_Argv( 17 ) ) : BOX_KIND_BOOMBOX, parts, partYaw );
+	}
 }
 
 /*
@@ -582,6 +681,10 @@ void CG_BoomboxFromMaster( const byte *data, int len ) {
 
 	if ( !bx.viaMaster || !BG_BoxSayUnpack( data, len, &say ) )
 		return;
+	if ( say.what == BOX_SAY_HELLO ) {
+		bx.systems = ( say.caps & BOX_CAP_SYSTEM ) ? qtrue : qfalse;
+		return;
+	}
 	if ( say.what == BOX_SAY_NOTE ) {
 		Box_Note( ( say.box < BOX_MASTER_MAX ) ? say.box : -1, say.text );
 		return;
@@ -604,21 +707,36 @@ void CG_BoomboxFromMaster( const byte *data, int len ) {
 		Box_LineSong( say.box, say.rev, say.place, say.total, say.length, say.title, say.by );
 		return;
 	}
+	if ( say.what == BOX_SAY_RIG ) {
+		vec3_t	parts[2];
+		int		k;
+
+		if ( !cgBoxes[say.box].inuse )
+			return;
+		for ( k = 0; k < 2; k++ )
+			VectorSet( parts[k], (float)say.parts[k][0], (float)say.parts[k][1], (float)say.parts[k][2] );
+		Box_SetRig( say.box, say.kind, parts, say.partYaw );
+		return;
+	}
 	VectorSet( origin, (float)say.origin[0], (float)say.origin[1], (float)say.origin[2] );
 	Box_Set( say.box, say.rev, origin, say.yaw, say.volume, say.flags, say.msec, say.length, say.waiting, say.title, say.next );
 }
 
-// the boxes of the master this client hears, a bit each: the ones whose speakers are near enough the camera
+// The boxes of the master this client hears, a bit each: the ones a speaker of which is near enough the camera.
+// And that this client draws sound systems (BOX_STATE_SYSTEMS), which the master reads in the same byte.
 int CG_BoomboxHearMask( void ) {
 	const float	range = CG_BoomboxRange() * 1.1f;
 	vec3_t		mouth;
 	float		gain;
-	int			i, mask = 0;
+	int			i, mask = BOX_STATE_SYSTEMS;
 
 	if ( !bx.viaMaster || !v_boomboxes.integer || v_boomboxVolume.value <= 0.0f )
-		return 0;
+		return mask;
 	for ( i = 0; i < BOX_MASTER_MAX; i++ ) {
-		if ( !CG_VoiceBoxMuted( i ) && CG_BoomboxMouth( i, mouth, &gain ) && Distance( mouth, cg.refdef.vieworg ) <= range )
+		if ( CG_VoiceBoxMuted( i ) )
+			continue;
+		if ( ( CG_BoomboxMouth( i, mouth, &gain ) && Distance( mouth, cg.refdef.vieworg ) <= range )
+			|| ( CG_BoomboxMouth( i + BOX_RIGHT, mouth, &gain ) && Distance( mouth, cg.refdef.vieworg ) <= range ) )
 			mask |= 1 << i;
 	}
 	return mask;
@@ -642,7 +760,7 @@ static void Box_Forget( void ) {
 	}
 	memset( cgBoxes, 0, sizeof( cgBoxes ) );
 	bx.held = -1;
-	bx.on = bx.asked = qfalse;
+	bx.on = bx.asked = bx.systems = qfalse;
 	bx.asks = 0;
 }
 
@@ -662,7 +780,7 @@ void CG_BoomboxFrame( void ) {
 		CG_BoomboxMasterReady( qtrue );
 	// asked again while there is no answer: the flood protection of the server may have dropped it
 	if ( wanted && bx.serverHas && !bx.on && cg.snap && bx.asks < BOX_MAX_ASKS && ( !bx.asked || now - bx.askTime >= BOX_ASK_MSEC ) ) {
-		trap->SendClientCommand( va( "vs_box hello %i", BOX_PROTOCOL ) );
+		trap->SendClientCommand( va( "vs_box hello %i %i", BOX_PROTOCOL, BOX_CAP_SYSTEM ) );
 		bx.asked = qtrue;
 		bx.askTime = bx.sendTime = now;
 		bx.asks++;
@@ -670,23 +788,34 @@ void CG_BoomboxFrame( void ) {
 	Box_SendPending();
 
 	for ( i = 0; i < BOX_MAX; i++ ) {
-		cgBox_t		*b = &cgBoxes[i];
-		const float	beat = Com_Clamp( 0.0f, 1.0f, CG_VoiceBoxBeat( i ) * BOX_BEAT_GAIN );
+		cgBox_t	*b = &cgBoxes[i];
+		int		part, channel;
 
 		if ( !b->inuse )
 			continue;
-		// the server did not take the move: it goes back to where it stands
-		if ( b->moved && cg.time - b->movedTime > BOX_MOVE_MSEC ) {
-			b->moved = qfalse;
-			VectorCopy( b->movedTo, b->from );
-			b->fromYaw = b->movedYaw;
-			b->slideTime = cg.time ? cg.time : 1;
+		// the server did not take a move: it goes back to where it stands
+		for ( part = 0; part < BOX_PARTS; part++ ) {
+			cgPlace_t *p = &b->place[part];
+
+			if ( p->moved && cg.time - p->movedTime > BOX_MOVE_MSEC ) {
+				p->moved = qfalse;
+				VectorCopy( p->movedTo, p->from );
+				p->fromYaw = p->movedYaw;
+				p->slideTime = cg.time ? cg.time : 1;
+			}
 		}
-		// out at once, back in a moment
-		if ( beat > b->beat )
-			b->beat = beat;
-		else
-			b->beat += ( beat - b->beat ) * ( 1.0f - expf( -cg.frametime / BOX_BEAT_FALL_MSEC ) );
+		// out at once, back in a moment: each speaker with its channel
+		for ( channel = 0; channel < 2; channel++ ) {
+			const float beat = Com_Clamp( 0.0f, 1.0f, CG_VoiceBoxBeat( i + channel * BOX_RIGHT ) * BOX_BEAT_GAIN );
+
+			if ( beat > b->beat[channel] )
+				b->beat[channel] = beat;
+			else
+				b->beat[channel] += ( beat - b->beat[channel] ) * ( 1.0f - expf( -cg.frametime / BOX_BEAT_FALL_MSEC ) );
+		}
+		// the platters of a sound system turn while a song plays
+		if ( ( b->flags & BOX_PLAYING ) && !( b->flags & ( BOX_PAUSED | BOX_LOADING ) ) )
+			b->spin = AngleNormalize360( b->spin + SYS_PLATTER_DPS * cg.frametime * 0.001f );
 	}
 }
 
@@ -704,23 +833,77 @@ static void Box_Register( void ) {
 	bx.registered = qtrue;
 	bx.model = trap->R_RegisterModel( BOX_MODEL );
 	bx.cone = trap->R_RegisterModel( BOX_CONE_MODEL );
+	bx.desk = trap->R_RegisterModel( SYS_DESK_MODEL );
+	bx.platter = trap->R_RegisterModel( SYS_PLATTER_MODEL );
+	bx.speaker = trap->R_RegisterModel( SYS_SPEAKER_MODEL );
 }
 
-// one speaker, pushed out by the song: longer along the axis it faces, a little wider
-static void Box_AddCone( const refEntity_t *body, float side, float beat ) {
+// A speaker cone, pushed out by the song: longer along the axis it faces, a little wider. x, y, z: where it sits
+// on the model, size: the cone of the boombox this much larger.
+static void Box_AddCone( const refEntity_t *body, float x, float y, float z, float size, float beat ) {
 	refEntity_t	cone = *body;
-	const float	out = 1.0f + 1.4f * beat, wide = 1.0f + 0.06f * beat;
+	const float	out = size * ( 1.0f + 1.4f * beat ), wide = size * ( 1.0f + 0.06f * beat );
 
 	cone.hModel = bx.cone;
-	VectorMA( body->origin, BOX_CONE_X, body->axis[0], cone.origin );
-	VectorMA( cone.origin, side * BOX_CONE_Y, body->axis[1], cone.origin );
-	VectorMA( cone.origin, BOX_CONE_Z, body->axis[2], cone.origin );
+	VectorMA( body->origin, x, body->axis[0], cone.origin );
+	VectorMA( cone.origin, y, body->axis[1], cone.origin );
+	VectorMA( cone.origin, z, body->axis[2], cone.origin );
 	VectorCopy( cone.origin, cone.oldorigin );
 	VectorScale( body->axis[0], out, cone.axis[0] );
 	VectorScale( body->axis[1], wide, cone.axis[1] );
 	VectorScale( body->axis[2], wide, cone.axis[2] );
 	cone.nonNormalizedAxes = qtrue;
 	trap->R_AddRefEntityToScene( &cone );
+}
+
+// a platter of a sound system, turned by the song
+static void Box_AddPlatter( const refEntity_t *body, float side, float spin ) {
+	refEntity_t	platter = *body;
+	vec3_t		angles;
+
+	platter.hModel = bx.platter;
+	VectorMA( body->origin, SYS_PLATTER_X, body->axis[0], platter.origin );
+	VectorMA( platter.origin, side * SYS_PLATTER_Y, body->axis[1], platter.origin );
+	VectorMA( platter.origin, SYS_PLATTER_Z, body->axis[2], platter.origin );
+	VectorCopy( platter.origin, platter.oldorigin );
+	vectoangles( body->axis[0], angles );
+	// (the right one the other way round, as a DJ has them)
+	angles[YAW] += side * spin;
+	AnglesToAxis( angles, platter.axis );
+	platter.renderfx &= ~( RF_FORCEPOST | RF_AFTERGLOW );
+	trap->R_AddRefEntityToScene( &platter );
+}
+
+// a part of a box as a model in the scene, where it is drawn now. qfalse: it has no model (yet).
+static qboolean Box_Body( int box, int part, refEntity_t *body ) {
+	vec3_t		angles;
+	qhandle_t	model;
+	float		height;
+
+	if ( cgBoxes[box].kind != BOX_KIND_SYSTEM ) {
+		model = bx.model;
+		height = BOX_HEIGHT;
+	} else if ( part == BOX_PART_BODY ) {
+		model = bx.desk;
+		height = SYS_DESK_HEIGHT;
+	} else {
+		model = bx.speaker;
+		height = SYS_SPK_HEIGHT;
+	}
+	if ( !model )
+		return qfalse;
+	memset( body, 0, sizeof( *body ) );
+	body->reType = RT_MODEL;
+	body->hModel = model;
+	Box_Where( box, part, body->origin, &angles[YAW] );
+	angles[PITCH] = angles[ROLL] = 0.0f;
+	AnglesToAxis( angles, body->axis );
+	VectorCopy( body->origin, body->oldorigin );
+	VectorCopy( body->origin, body->lightingOrigin );
+	body->lightingOrigin[2] += height * 0.5f;
+	body->renderfx = RF_LIGHTING_ORIGIN;
+	body->shaderRGBA[0] = body->shaderRGBA[1] = body->shaderRGBA[2] = body->shaderRGBA[3] = 255;
+	return qtrue;
 }
 
 /*
@@ -733,8 +916,7 @@ open with the outline of the pointer, the one in the pointer where it would be p
 */
 void CG_BoomboxScene( void ) {
 	refEntity_t	body;
-	vec3_t		angles;
-	int			i;
+	int			i, part;
 
 	if ( !v_boomboxes.integer ) {
 		return;
@@ -746,30 +928,35 @@ void CG_BoomboxScene( void ) {
 			continue;
 		}
 		Box_Register();
-		if ( !bx.model ) {
-			return;
+		for ( part = 0; part < BOX_PARTS; part++ ) {
+			const int piece = BOX_PIECE( i, part );
+
+			if ( !Box_HasPart( i, part ) || !Box_Body( i, part, &body ) ) {
+				continue;
+			}
+			// with an outline it is drawn after it and on it, as a player is (select/cg_select.c)
+			if ( CG_SelectBoxOutlined( piece ) ) {
+				body.renderfx |= RF_FORCEPOST | RF_AFTERGLOW;
+			}
+			trap->R_AddRefEntityToScene( &body );
+			if ( b->kind != BOX_KIND_SYSTEM ) {
+				if ( bx.cone ) {
+					Box_AddCone( &body, BOX_CONE_X, BOX_CONE_Y, BOX_CONE_Z, 1.0f, b->beat[0] );
+					Box_AddCone( &body, BOX_CONE_X, -BOX_CONE_Y, BOX_CONE_Z, 1.0f, b->beat[0] );
+				}
+			} else if ( part == BOX_PART_BODY ) {
+				if ( bx.platter ) {
+					Box_AddPlatter( &body, 1.0f, b->spin );
+					Box_AddPlatter( &body, -1.0f, b->spin );
+				}
+			} else if ( bx.cone ) {
+				const float beat = b->beat[part == BOX_PART_RIGHT];
+
+				Box_AddCone( &body, SYS_CONE_X, 0.0f, SYS_SPK_MOUTH, SYS_WOOFER_SCALE, beat );
+				Box_AddCone( &body, SYS_CONE_X, 0.0f, SYS_TWEETER_Z, SYS_TWEETER_SCALE, beat * 0.5f );
+			}
+			CG_SelectBoxOutline( piece, &body );
 		}
-		memset( &body, 0, sizeof( body ) );
-		body.reType = RT_MODEL;
-		body.hModel = bx.model;
-		Box_Where( i, body.origin, &angles[YAW] );
-		angles[PITCH] = angles[ROLL] = 0.0f;
-		AnglesToAxis( angles, body.axis );
-		VectorCopy( body.origin, body.oldorigin );
-		VectorCopy( body.origin, body.lightingOrigin );
-		body.lightingOrigin[2] += BOX_HEIGHT * 0.5f;
-		body.renderfx = RF_LIGHTING_ORIGIN;
-		body.shaderRGBA[0] = body.shaderRGBA[1] = body.shaderRGBA[2] = body.shaderRGBA[3] = 255;
-		// with an outline it is drawn after it and on it, as a player is (select/cg_select.c)
-		if ( CG_SelectBoxOutlined( i ) ) {
-			body.renderfx |= RF_FORCEPOST | RF_AFTERGLOW;
-		}
-		trap->R_AddRefEntityToScene( &body );
-		if ( bx.cone ) {
-			Box_AddCone( &body, 1.0f, b->beat );
-			Box_AddCone( &body, -1.0f, b->beat );
-		}
-		CG_SelectBoxOutline( i, &body );
 	}
 }
 
@@ -812,8 +999,8 @@ void CG_BoomboxDraw( void ) {
 		} else {
 			continue;
 		}
-		Box_Where( i, top, &yaw );
-		top[2] += BOX_HEIGHT + BOX_LABEL_ABOVE;
+		Box_Where( i, BOX_PART_BODY, top, &yaw );
+		top[2] += CG_BoomboxHeight( i ) + BOX_LABEL_ABOVE;
 		distance = Distance( top, cg.refdef.vieworg );
 		if ( distance > BOX_LABEL_RANGE || !CG_WorldCoordToScreenCoordFloat( top, &x, &y ) ) {
 			continue;
@@ -849,20 +1036,39 @@ qboolean CG_BoomboxWantsLink( void ) {
 	return ( v_boomboxes.integer && !cg.demoPlayback && ( bx.on || !bx.serverHas ) ) ? qtrue : qfalse;
 }
 
-// is the song of this box to be played
-qboolean CG_BoomboxHears( int box ) {
-	return ( v_boomboxes.integer && v_boomboxVolume.value > 0.0f && Box_Valid( box ) ) ? qtrue : qfalse;
+// the box of a channel and which speaker of it plays the channel, qfalse: there is none
+static qboolean Box_Channel( int channel, int *box, int *part ) {
+	if ( channel < 0 || channel >= BOX_CHANNELS )
+		return qfalse;
+	*box = channel % BOX_MAX;
+	if ( !Box_Valid( *box ) )
+		return qfalse;
+	if ( cgBoxes[*box].kind != BOX_KIND_SYSTEM ) {
+		*part = BOX_PART_BODY;
+		return ( channel < BOX_RIGHT ) ? qtrue : qfalse;
+	}
+	*part = ( channel < BOX_RIGHT ) ? BOX_PART_LEFT : BOX_PART_RIGHT;
+	return qtrue;
 }
 
-// Where the sound of a box comes from, and how loud it is before its distance: as this player wants the songs
-// (v_boomboxVolume) and the box is set for everybody. qfalse: there is no such box.
-qboolean CG_BoomboxMouth( int box, vec3_t mouth, float *gain ) {
-	float yaw;
+// is the song of this channel to be played
+qboolean CG_BoomboxHears( int channel ) {
+	int box, part;
 
-	if ( !Box_Valid( box ) )
+	return ( v_boomboxes.integer && v_boomboxVolume.value > 0.0f && Box_Channel( channel, &box, &part ) ) ? qtrue : qfalse;
+}
+
+// Where the sound of a channel comes from (the box, a speaker of a sound system), and how loud it is before its
+// distance: as this player wants the songs (v_boomboxVolume) and the box is set for everybody. qfalse: there is
+// no such channel.
+qboolean CG_BoomboxMouth( int channel, vec3_t mouth, float *gain ) {
+	float	yaw;
+	int		box, part;
+
+	if ( !Box_Channel( channel, &box, &part ) )
 		return qfalse;
-	Box_Where( box, mouth, &yaw );
-	mouth[2] += BOX_SPEAKER_HEIGHT;
+	Box_Where( box, part, mouth, &yaw );
+	mouth[2] += ( part == BOX_PART_BODY ) ? BOX_SPEAKER_HEIGHT : SYS_SPK_MOUTH;
 	*gain = v_boomboxVolume.value * cgBoxes[box].volume * 0.01f;
 	return qtrue;
 }
@@ -879,31 +1085,64 @@ For the pointer
 ===============================================================================
 */
 
-qboolean CG_BoomboxShown( int box ) {
-	return ( v_boomboxes.integer && bx.model && Box_Valid( box ) ) ? qtrue : qfalse;
+qboolean CG_BoomboxShown( int piece ) {
+	return ( v_boomboxes.integer && bx.model && piece >= 0 && piece < BOX_PIECES && Box_HasPart( BOX_OF( piece ), BOX_PART_OF( piece ) ) )
+		? qtrue : qfalse;
+}
+
+// how a piece is for the pointer: from its middle to its front and back, its sides, and its top
+static void Box_Size( int piece, float *halfDepth, float *halfWidth, float *height ) {
+	if ( cgBoxes[BOX_OF( piece )].kind != BOX_KIND_SYSTEM ) {
+		*halfDepth = BOX_HALF_DEPTH;
+		*halfWidth = BOX_HALF_WIDTH;
+		*height = BOX_HEIGHT;
+	} else if ( BOX_PART_OF( piece ) == BOX_PART_BODY ) {
+		*halfDepth = SYS_DESK_HALF_DEPTH;
+		*halfWidth = SYS_DESK_HALF_WIDTH;
+		*height = SYS_DESK_HEIGHT;
+	} else {
+		*halfDepth = SYS_SPK_HALF_DEPTH;
+		*halfWidth = SYS_SPK_HALF_WIDTH;
+		*height = SYS_SPK_HEIGHT;
+	}
+}
+
+float CG_BoomboxHeight( int piece ) {
+	float halfDepth, halfWidth, height;
+
+	if ( !CG_BoomboxShown( piece ) )
+		return BOX_HEIGHT;
+	Box_Size( piece, &halfDepth, &halfWidth, &height );
+	return height;
+}
+
+// what the card and the pointer call a box
+const char *CG_BoomboxName( int box ) {
+	return CG_VisionText( ( Box_Valid( box ) && cgBoxes[box].kind == BOX_KIND_SYSTEM ) ? "Sound System" : "Boombox" );
 }
 
 /*
 =================
 CG_BoomboxPick
 
-The box a ray from start meets first, nearer than *bestT, which is then how far away it is. -1: none. The box is a
-block turned by its yaw, a little larger than the model for the pointer.
+The piece of a box a ray from start meets first, nearer than *bestT, which is then how far away it is. -1: none.
+A piece is a block turned by its yaw, a little larger than the model for the pointer.
 =================
 */
 int CG_BoomboxPick( const vec3_t start, const vec3_t dir, float *bestT ) {
-	const vec3_t	lo = { -BOX_HALF_DEPTH - 2.0f, -BOX_HALF_WIDTH - 2.0f, -1.0f };
-	const vec3_t	hi = { BOX_HALF_DEPTH + 2.0f, BOX_HALF_WIDTH + 2.0f, BOX_HEIGHT + 2.0f };
-	int				i, k, found = -1;
+	int i, k, found = -1;
 
-	for ( i = 0; i < BOX_MAX; i++ ) {
-		vec3_t	at, d, o, r;
-		float	yaw, c, s, tNear = 0.0f, tFar = *bestT;
+	for ( i = 0; i < BOX_PIECES; i++ ) {
+		vec3_t	at, d, o, r, lo, hi;
+		float	yaw, c, s, tNear = 0.0f, tFar = *bestT, halfDepth, halfWidth, height;
 
 		if ( !CG_BoomboxShown( i ) || i == bx.held ) {
 			continue;
 		}
-		Box_Where( i, at, &yaw );
+		Box_Size( i, &halfDepth, &halfWidth, &height );
+		VectorSet( lo, -halfDepth - 2.0f, -halfWidth - 2.0f, -1.0f );
+		VectorSet( hi, halfDepth + 2.0f, halfWidth + 2.0f, height + 2.0f );
+		Box_Where( BOX_OF( i ), BOX_PART_OF( i ), at, &yaw );
 		c = cosf( DEG2RAD( yaw ) );
 		s = sinf( DEG2RAD( yaw ) );
 		// the ray in the axes of the box: x out of its front, y to its left
@@ -938,11 +1177,15 @@ int CG_BoomboxPick( const vec3_t start, const vec3_t dir, float *bestT ) {
 	return found;
 }
 
-// what the card of a box stands beside, as the middle of a player
-void CG_BoomboxMiddle( int box, vec3_t at ) {
+// what the card of a piece stands beside, as the middle of a player
+void CG_BoomboxMiddle( int piece, vec3_t at ) {
 	float yaw;
 
-	Box_Where( box, at, &yaw );
+	if ( piece < 0 || piece >= BOX_PIECES || !Box_Valid( BOX_OF( piece ) ) ) {
+		VectorClear( at );
+		return;
+	}
+	Box_Where( BOX_OF( piece ), BOX_PART_OF( piece ), at, &yaw );
 }
 
 qboolean CG_BoomboxInfo( int box, boomboxInfo_t *info ) {
@@ -951,6 +1194,7 @@ qboolean CG_BoomboxInfo( int box, boomboxInfo_t *info ) {
 	if ( !Box_Valid( box ) )
 		return qfalse;
 	b = &cgBoxes[box];
+	info->kind = b->kind;
 	info->flags = b->flags;
 	info->volume = b->volume;
 	info->length = b->length;
@@ -977,20 +1221,42 @@ void CG_BoomboxPrompt( int box ) {
 	}
 }
 
+// how much floor a part of a box needs round its middle, as Box_Foot of g_boombox.c
+static float Box_Foot( int kind, int part ) {
+	if ( kind != BOX_KIND_SYSTEM )
+		return BOX_FOOT;
+	return ( part == BOX_PART_BODY ) ? SYS_FOOT_DESK : SYS_FOOT_SPK;
+}
+
+// Does a part at spot stand too near another part of a box but itself (piece self, -1: a new one)? As
+// Box_Crowded of bg_boombox_core.c, which the server and the master ask.
+static qboolean Box_Crowded( const vec3_t spot, qboolean big, int self ) {
+	int i;
+
+	for ( i = 0; i < BOX_PIECES; i++ ) {
+		if ( i == self || !Box_HasPart( BOX_OF( i ), BOX_PART_OF( i ) ) )
+			continue;
+		if ( Distance( cgBoxes[BOX_OF( i )].place[BOX_PART_OF( i )].origin, spot ) < ( ( big || cgBoxes[BOX_OF( i )].kind == BOX_KIND_SYSTEM ) ? SYS_APART : BOX_APART ) )
+			return qtrue;
+	}
+	return qfalse;
+}
+
 /*
 =================
 Box_Spot
 
-Where a box goes that is put where a ray from start meets the level: on the floor there, or under the place in
-front of a wall it meets, as the server will put it (Box_Spot of g_boombox.c). qfalse: there is no floor, it is
-out of reach of the eye of the player, or another box stands there. at is where it would be all the same.
+Where a part of a box (of that kind) goes that is put where a ray from start meets the level: on the floor there,
+or under the place in front of a wall it meets, as the server will put it (Box_Spot of g_boombox.c). qfalse:
+there is no floor, it is out of reach of the eye of the player, or another box stands there (self: the piece that
+is moved, -1 for a new one). at is where it would be all the same.
 =================
 */
-static qboolean Box_Spot( const vec3_t start, const vec3_t dir, int self, vec3_t at, float *yaw ) {
-	const vec3_t	mins = { -BOX_FOOT, -BOX_FOOT, 0.0f }, maxs = { BOX_FOOT, BOX_FOOT, BOX_FOOT_HEIGHT };
+static qboolean Box_Spot( const vec3_t start, const vec3_t dir, int kind, int part, int self, vec3_t at, float *yaw ) {
+	const float		foot = Box_Foot( kind, part );
+	const vec3_t	mins = { -foot, -foot, 0.0f }, maxs = { foot, foot, BOX_FOOT_HEIGHT };
 	vec3_t			end, eye, from;
 	trace_t			tr;
-	int				i;
 
 	VectorCopy( cg.predictedPlayerState.origin, eye );
 	eye[2] += cg.predictedPlayerState.viewheight;
@@ -1011,47 +1277,46 @@ static qboolean Box_Spot( const vec3_t start, const vec3_t dir, int self, vec3_t
 	if ( tr.startsolid || tr.allsolid || tr.fraction >= 1.0f || tr.plane.normal[2] < 0.7f || Distance( eye, at ) > BOX_REACH ) {
 		return qfalse;
 	}
-	for ( i = 0; i < BOX_MAX; i++ ) {
-		if ( i != self && cgBoxes[i].inuse && Distance( cgBoxes[i].origin, at ) < BOX_APART ) {
-			return qfalse;
-		}
-	}
-	return qtrue;
+	return (qboolean)!Box_Crowded( at, (qboolean)( kind == BOX_KIND_SYSTEM ), self );
 }
 
-// the pointer takes a box: it follows the pointer over the floor until it is put down
-void CG_BoomboxGrab( int box ) {
-	if ( !Box_Valid( box ) )
+// the pointer takes a piece of a box: it follows the pointer over the floor until it is put down
+void CG_BoomboxGrab( int piece ) {
+	if ( !CG_BoomboxShown( piece ) )
 		return;
-	Box_Where( box, bx.heldAt, &bx.heldYaw );
-	bx.held = box;
+	Box_Where( BOX_OF( piece ), BOX_PART_OF( piece ), bx.heldAt, &bx.heldYaw );
+	bx.held = piece;
 	bx.heldOk = qtrue;
 }
 
-// once a frame while a box is in the pointer: the ray from the eye through the pointer
+// once a frame while a piece is in the pointer: the ray from the eye through the pointer
 void CG_BoomboxCarry( const vec3_t start, const vec3_t dir ) {
-	if ( !Box_Valid( bx.held ) ) {
+	if ( !CG_BoomboxShown( bx.held ) ) {
 		bx.held = -1;
 		return;
 	}
-	bx.heldOk = Box_Spot( start, dir, bx.held, bx.heldAt, &bx.heldYaw );
+	bx.heldOk = Box_Spot( start, dir, cgBoxes[BOX_OF( bx.held )].kind, BOX_PART_OF( bx.held ), bx.held, bx.heldAt, &bx.heldYaw );
 }
 
 // put down where it is, if it can be (place), or back where it was
 void CG_BoomboxDrop( qboolean place ) {
-	cgBox_t *b;
+	const int	piece = bx.held;
+	cgPlace_t	*p;
 
-	if ( !Box_Valid( bx.held ) ) {
+	if ( !CG_BoomboxShown( piece ) ) {
 		bx.held = -1;
 		return;
 	}
-	b = &cgBoxes[bx.held];
+	p = &cgBoxes[BOX_OF( piece )].place[BOX_PART_OF( piece )];
 	if ( place && bx.heldOk ) {
-		b->moved = qtrue;
-		VectorCopy( bx.heldAt, b->movedTo );
-		b->movedYaw = bx.heldYaw;
-		b->movedTime = cg.time;
-		Box_Do( BOX_DO_MOVE, bx.held, bx.heldAt, bx.heldYaw, 0, NULL );
+		p->moved = qtrue;
+		VectorCopy( bx.heldAt, p->movedTo );
+		p->movedYaw = bx.heldYaw;
+		p->movedTime = cg.time;
+		if ( BOX_PART_OF( piece ) == BOX_PART_BODY )
+			Box_Do( BOX_DO_MOVE, BOX_OF( piece ), bx.heldAt, bx.heldYaw, 0, NULL );
+		else
+			Box_Do( BOX_DO_PART, BOX_OF( piece ), bx.heldAt, bx.heldYaw, BOX_PART_OF( piece ), NULL );
 	} else if ( place ) {
 		trap->Print( "Boombox: it can not be put there\n" );
 	}
@@ -1075,18 +1340,104 @@ The console
 ===============================================================================
 */
 
-// the box near this player, -1: none
-static int Box_Near( void ) {
+// the box near this player (its body or the table), -1: none
+int CG_BoomboxNear( void ) {
 	float	best = BOX_REACH * 2.0f;
 	int		i, found = -1;
 
 	for ( i = 0; i < BOX_MAX; i++ ) {
-		if ( cgBoxes[i].inuse && Distance( cgBoxes[i].origin, cg.predictedPlayerState.origin ) < best ) {
-			best = Distance( cgBoxes[i].origin, cg.predictedPlayerState.origin );
+		if ( cgBoxes[i].inuse && Distance( cgBoxes[i].place[BOX_PART_BODY].origin, cg.predictedPlayerState.origin ) < best ) {
+			best = Distance( cgBoxes[i].place[BOX_PART_BODY].origin, cg.predictedPlayerState.origin );
 			found = i;
 		}
 	}
 	return found;
+}
+
+// the piece of a box under the cross hair, no further away than range, -1: none
+int CG_BoomboxAimed( float range ) {
+	float	bestT = range;
+	trace_t	tr;
+	vec3_t	end;
+	int		piece;
+
+	piece = CG_BoomboxPick( cg.refdef.vieworg, cg.refdef.viewaxis[0], &bestT );
+	if ( piece < 0 )
+		return -1;
+	// (not through a wall)
+	VectorMA( cg.refdef.vieworg, bestT, cg.refdef.viewaxis[0], end );
+	CG_Trace( &tr, cg.refdef.vieworg, NULL, NULL, end, cg.predictedPlayerState.clientNum, MASK_SOLID );
+	return ( tr.fraction >= 1.0f ) ? piece : -1;
+}
+
+// can a sound system be put down here
+qboolean CG_BoomboxSystems( void ) {
+	return ( bx.on && bx.systems ) ? qtrue : qfalse;
+}
+
+// a boombox where the cross hair points
+void CG_BoomboxPlace( void ) {
+	vec3_t	at;
+	float	yaw;
+
+	if ( !bx.on ) {
+		trap->Print( "This server has no boombox\n" );
+		return;
+	}
+	if ( !Box_Spot( cg.refdef.vieworg, cg.refdef.viewaxis[0], BOX_KIND_BOOMBOX, BOX_PART_BODY, -1, at, &yaw ) ) {
+		trap->Print( "Boombox: it can not be put where you look: look at a floor near you\n" );
+		return;
+	}
+	Box_Do( BOX_DO_PLACE, 0, at, yaw, 0, NULL );
+}
+
+/*
+=================
+CG_BoomboxPlaceSystem
+
+A sound system where the cross hair points: its table turned to the player, its speakers to the left and the
+right of it as he sees it, turned the same way, on the floor there. A speaker that has no floor there comes
+closer to the table.
+=================
+*/
+void CG_BoomboxPlaceSystem( void ) {
+	vec3_t	at[BOX_PARTS], angles, forward, right, eye, want, dir;
+	float	yaw[BOX_PARTS], side;
+	int		part, k;
+
+	if ( !CG_BoomboxSystems() ) {
+		trap->Print( bx.on ? "Boombox: this server has no sound systems (it is older)\n" : "This server has no boombox\n" );
+		return;
+	}
+	if ( !Box_Spot( cg.refdef.vieworg, cg.refdef.viewaxis[0], BOX_KIND_SYSTEM, BOX_PART_BODY, -1, at[0], &yaw[0] ) ) {
+		trap->Print( "Boombox: the sound system can not be put where you look: look at a floor near you with room round it\n" );
+		return;
+	}
+	VectorCopy( cg.predictedPlayerState.origin, eye );
+	eye[2] += cg.predictedPlayerState.viewheight;
+	VectorSet( angles, 0.0f, yaw[0], 0.0f );
+	AngleVectors( angles, forward, right, NULL );
+	// (the table faces the player: his left is its right)
+	for ( part = BOX_PART_LEFT; part < BOX_PARTS; part++ ) {
+		yaw[part] = yaw[0];
+		for ( k = 0, side = SYS_SPK_SIDE; k < SYS_SPK_RETRY; k++, side *= 0.75f ) {
+			VectorMA( at[0], ( part == BOX_PART_LEFT ) ? side : -side, right, want );
+			want[2] += 4.0f;
+			VectorSubtract( want, eye, dir );
+			VectorNormalize( dir );
+			// (crowded by nothing of the new system yet: the table and the other speaker are checked here)
+			if ( Box_Spot( eye, dir, BOX_KIND_SYSTEM, part, -1, at[part], &yaw[part] ) && Distance( at[part], at[0] ) >= SYS_APART
+				&& ( part == BOX_PART_LEFT || Distance( at[part], at[BOX_PART_LEFT] ) >= SYS_APART ) ) {
+				break;
+			}
+		}
+		if ( k == SYS_SPK_RETRY ) {
+			trap->Print( "Boombox: there is no room for the speakers beside the table there\n" );
+			return;
+		}
+		yaw[part] = yaw[0];
+	}
+	Box_DoSystem( at, yaw );
 }
 
 /*
@@ -1095,6 +1446,7 @@ CG_Boombox_f
 
 boombox play <link or words>: into the line of the box near, or of a new one in front of the player
 boombox place: a box where the cross hair points
+boombox system: a sound system there, its speakers beside it
 boombox pause|resume|skip|stop|remove [box]: of that box, or of the one near
 boombox volume <0 to 100> [box]
 boombox window [box]: the window of that box, or of the one near
@@ -1103,8 +1455,6 @@ boombox list: the boxes and their lines, in the console
 */
 void CG_Boombox_f( void ) {
 	char	what[16], words[BOX_ASK];
-	vec3_t	at;
-	float	yaw;
 	int		box;
 
 	Q_strncpyz( what, CG_Argv( 1 ), sizeof( what ) );
@@ -1137,11 +1487,11 @@ void CG_Boombox_f( void ) {
 		return;
 	}
 	if ( !Q_stricmp( what, "place" ) ) {
-		if ( !Box_Spot( cg.refdef.vieworg, cg.refdef.viewaxis[0], -1, at, &yaw ) ) {
-			trap->Print( "Boombox: it can not be put where you look: look at a floor near you\n" );
-			return;
-		}
-		Box_Do( BOX_DO_PLACE, 0, at, yaw, 0, NULL );
+		CG_BoomboxPlace();
+		return;
+	}
+	if ( !Q_stricmp( what, "system" ) ) {
+		CG_BoomboxPlaceSystem();
 		return;
 	}
 	if ( !Q_stricmp( what, "list" ) ) {
@@ -1154,13 +1504,14 @@ void CG_Boombox_f( void ) {
 		// (the masterserver does not answer it: what this client knows)
 		for ( i = 0; i < BOX_MASTER_MAX; i++ ) {
 			if ( cgBoxes[i].inuse )
-				trap->Print( "Boombox %i, volume %i: %s%s\n", i, cgBoxes[i].volume, ( cgBoxes[i].flags & BOX_PLAYING ) ? cgBoxes[i].title : "silent",
+				trap->Print( "%s %i, volume %i: %s%s\n", ( cgBoxes[i].kind == BOX_KIND_SYSTEM ) ? "Sound system" : "Boombox", i, cgBoxes[i].volume,
+					( cgBoxes[i].flags & BOX_PLAYING ) ? cgBoxes[i].title : "silent",
 					cgBoxes[i].waiting ? va( ", %i more in the line", cgBoxes[i].waiting ) : "" );
 		}
 		return;
 	}
 	if ( !Q_stricmp( what, "window" ) ) {
-		box = CG_Argv( 2 )[0] ? atoi( CG_Argv( 2 ) ) : Box_Near();
+		box = CG_Argv( 2 )[0] ? atoi( CG_Argv( 2 ) ) : CG_BoomboxNear();
 		if ( !Box_Valid( box ) ) {
 			trap->Print( "Boombox: there is no boombox near you\n" );
 			return;
@@ -1169,7 +1520,7 @@ void CG_Boombox_f( void ) {
 		return;
 	}
 	if ( !Q_stricmp( what, "volume" ) ) {
-		box = CG_Argv( 3 )[0] ? atoi( CG_Argv( 3 ) ) : Box_Near();
+		box = CG_Argv( 3 )[0] ? atoi( CG_Argv( 3 ) ) : CG_BoomboxNear();
 		if ( !Box_Valid( box ) || !CG_Argv( 2 )[0] ) {
 			trap->Print( "usage: v_boombox volume <0 to 100> [boombox], near a boombox\n" );
 			return;
@@ -1180,7 +1531,7 @@ void CG_Boombox_f( void ) {
 	}
 	if ( !Q_stricmp( what, "pause" ) || !Q_stricmp( what, "resume" ) || !Q_stricmp( what, "skip" ) || !Q_stricmp( what, "stop" )
 		|| !Q_stricmp( what, "remove" ) ) {
-		box = CG_Argv( 2 )[0] ? atoi( CG_Argv( 2 ) ) : Box_Near();
+		box = CG_Argv( 2 )[0] ? atoi( CG_Argv( 2 ) ) : CG_BoomboxNear();
 		if ( !Box_Valid( box ) ) {
 			trap->Print( "Boombox: there is no boombox near you\n" );
 			return;
@@ -1188,6 +1539,6 @@ void CG_Boombox_f( void ) {
 		CG_BoomboxDo( box, what );
 		return;
 	}
-	trap->Print( "usage: v_boombox play \"<link or what to look for>\" | place | pause | resume | skip | stop | remove | volume <0 to 100> | window | list\n"
+	trap->Print( "usage: v_boombox play \"<link or what to look for>\" | place | system | pause | resume | skip | stop | remove | volume <0 to 100> | window | list\n"
 		"Hold the key of the pointer (+v_cursor) and click a boombox for its card, or drag it somewhere else.\n" );
 }

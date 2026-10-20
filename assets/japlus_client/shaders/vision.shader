@@ -49,3 +49,41 @@ models/map_objects/vision/boombox_cone
 		rgbGen lightingDiffuse
 	}
 }
+
+// The sound system of the boombox (models and pictures from tools/boombox/build_system.py): the DJ table, whose
+// front and mixer glow where the renderer has the dynamic glow,
+models/map_objects/vision/sound_desk
+{
+	{
+		map models/map_objects/vision/sound_desk
+		rgbGen lightingDiffuse
+	}
+	{
+		map models/map_objects/vision/sound_desk_lights
+		blendFunc GL_ONE GL_ONE
+		glow
+	}
+}
+
+// a record on its platter, turned by the cgame while a song plays,
+models/map_objects/vision/sound_platter
+{
+	{
+		map models/map_objects/vision/sound_platter
+		rgbGen lightingDiffuse
+	}
+}
+
+// and the cabinet of a speaker, whose cones are the one of the boombox, larger
+models/map_objects/vision/sound_speaker
+{
+	{
+		map models/map_objects/vision/sound_speaker
+		rgbGen lightingDiffuse
+	}
+	{
+		map models/map_objects/vision/sound_speaker_lights
+		blendFunc GL_ONE GL_ONE
+		glow
+	}
+}

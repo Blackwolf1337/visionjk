@@ -578,10 +578,11 @@ static std::atomic<int>	spatialBakeProgress;	// 0 to 100
 // has not started yet, and what it made is thrown away unread.
 static std::atomic<int>	spatialBakeCancel;
 
-// One for every player, one more for what the own player says (S_SpatialOwnVoice), and one for every box of the
-// boombox (cgame/boombox): its songs come as the voice of speaker MAX_CLIENTS + the box. BOX_MAX of bg_boombox.h.
+// One for every player, one more for what the own player says (S_SpatialOwnVoice), and one for every channel of a
+// box of the boombox (cgame/boombox): its songs come as the voice of speaker MAX_CLIENTS + the box, the right
+// channel of a sound system as MAX_CLIENTS + BOX_MAX + the box. BOX_CHANNELS of bg_boombox.h (8 before 0.2.4).
 #define SPATIAL_OWN_STREAM	MAX_CLIENTS
-#define SPATIAL_BOXES		8
+#define SPATIAL_BOXES		16
 static spatialStream_t	spatialStreams[MAX_CLIENTS + 1 + SPATIAL_BOXES];
 
 // What a pass of the reflections starts from. Valve sets the inputs of the reflections in the thread that runs

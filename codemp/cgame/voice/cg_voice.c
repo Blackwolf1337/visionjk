@@ -95,9 +95,10 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define VOICE_FILE_FRAME		( VOICE_FRAME_SAMPLES * 4 )	// v_voice_test: the bytes of one frame in a file, two channels
 
 // The songs of the boxes of the boombox (boombox/cg_boombox.c) come over the relay as the voices of the speakers
-// behind the players: speaker MAX_CLIENTS + the box. They are played like a voice, with more of them waiting
-// before they start: a song has no pauses to catch up in.
-#define VOICE_ALL				( MAX_CLIENTS + BOX_MAX )
+// behind the players: speaker MAX_CLIENTS + the box, and the right channel of a sound system MAX_CLIENTS + BOX_RIGHT
+// + the box. They are played like a voice, with more of them waiting before they start: a song has no pauses to
+// catch up in.
+#define VOICE_ALL				( MAX_CLIENTS + BOX_CHANNELS )
 #define VOICE_BOX_LEAD_FRAMES	6		// 120 ms
 #define VOICE_BOX_MAX_LEAD_FRAMES	12
 #define VOICE_BOX_BEATS			16		// how loud the last frames of a song were, and when they are heard
@@ -1097,7 +1098,8 @@ static qboolean Voice_InLevel( int speaker ) {
 	const centity_t			*cent = &cg_entities[speaker];
 	char					boxes[8];
 
-	// a box of the boombox, in an engine that takes that many (v_spatialBoxes)
+	// a channel of a box of the boombox, in an engine that takes that many (v_spatialBoxes: 8 before 0.2.4, where the
+	// right speaker of a sound system is played here)
 	if ( speaker >= MAX_CLIENTS ) {
 		trap->Cvar_VariableStringBuffer( "v_spatialBoxes", boxes, sizeof( boxes ) );
 		if ( atoi( boxes ) <= speaker - MAX_CLIENTS || !Voice_EngineTakesVoices() )
@@ -1835,15 +1837,15 @@ For the boombox (boombox/cg_boombox.c)
 ===============================================================================
 */
 
-// how loud the song of a box is in what is heard now, 0 to 1: the newest frame whose time has come
-float CG_VoiceBoxBeat( int box ) {
+// how loud a channel of the song of a box is in what is heard now, 0 to 1: the newest frame whose time has come
+float CG_VoiceBoxBeat( int channel ) {
 	const voiceSpeaker_t	*sp;
 	const int				now = trap->Milliseconds();
 	int						i, best = -1;
 
-	if ( box < 0 || box >= BOX_MAX )
+	if ( channel < 0 || channel >= BOX_CHANNELS )
 		return 0.0f;
-	sp = &voiceSpeakers[MAX_CLIENTS + box];
+	sp = &voiceSpeakers[MAX_CLIENTS + channel];
 	if ( !sp->playing )
 		return 0.0f;
 	for ( i = 0; i < VOICE_BOX_BEATS; i++ ) {
@@ -1882,30 +1884,36 @@ qboolean CG_VoiceBoxMuted( int box ) {
 	return ( box >= 0 && box < BOX_MAX && voiceSpeakers[MAX_CLIENTS + box].muted ) ? qtrue : qfalse;
 }
 
-// this player does not want to hear that box, or wants to again
+// this player does not want to hear that box, or wants to again: both speakers of a sound system
 void CG_VoiceBoxMute( int box, qboolean mute ) {
-	voiceSpeaker_t *sp;
+	int channel;
 
 	if ( box < 0 || box >= BOX_MAX )
 		return;
-	sp = &voiceSpeakers[MAX_CLIENTS + box];
-	sp->muted = mute;
-	if ( mute ) {
-		sp->playing = qfalse;
-		BG_VoiceQueueReset( &sp->queue );
+	for ( channel = box; channel < BOX_CHANNELS; channel += BOX_RIGHT ) {
+		voiceSpeaker_t *sp = &voiceSpeakers[MAX_CLIENTS + channel];
+
+		sp->muted = mute;
+		if ( mute ) {
+			sp->playing = qfalse;
+			BG_VoiceQueueReset( &sp->queue );
+		}
 	}
 }
 
 // the box is gone: what waits of it is dropped, and the next box of that number is heard
 void CG_VoiceBoxReset( int box ) {
-	voiceSpeaker_t *sp;
+	int channel;
 
 	if ( box < 0 || box >= BOX_MAX )
 		return;
-	sp = &voiceSpeakers[MAX_CLIENTS + box];
-	sp->playing = sp->muted = qfalse;
-	sp->lead = 0;
-	BG_VoiceQueueReset( &sp->queue );
+	for ( channel = box; channel < BOX_CHANNELS; channel += BOX_RIGHT ) {
+		voiceSpeaker_t *sp = &voiceSpeakers[MAX_CLIENTS + channel];
+
+		sp->playing = sp->muted = qfalse;
+		sp->lead = 0;
+		BG_VoiceQueueReset( &sp->queue );
+	}
 }
 
 /*

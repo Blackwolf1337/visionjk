@@ -25,8 +25,15 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include "game/boombox/bg_boombox.h"
 
+// What the pointer picks and moves of a box: a piece, the box and its part (BOX_PART_*). Piece n of part 0 is box n.
+#define BOX_PIECES			( BOX_MAX * BOX_PARTS )
+#define BOX_PIECE( box, part )	( ( box ) + BOX_MAX * ( part ) )
+#define BOX_OF( piece )		( ( piece ) % BOX_MAX )
+#define BOX_PART_OF( piece )	( ( piece ) / BOX_MAX )
+
 // what the card of a box shows (select/cg_select.c)
 typedef struct boomboxInfo_s {
+	int			kind;			// BOX_KIND_*
 	int			flags;			// BOX_PLAYING and the others of bg_boombox.h
 	int			volume;			// for everybody, 0 to 100
 	int			msec, length;	// how far into the song it is now, and how long it is in seconds
@@ -47,19 +54,29 @@ void		CG_BoomboxDraw( void );							// the titles over them, in the 2D
 void		CG_Boombox_f( void );							// the console command boombox
 void		CG_BoomboxAsk( int box, const char *text );		// a song for that box (-1: the one near), from the chat box
 
-// for the voice chat (voice/cg_voice.c), which plays the songs and is the way to the masterserver
+void		CG_BoomboxPlace( void );						// a boombox where the cross hair points
+void		CG_BoomboxPlaceSystem( void );					// a sound system there, its speakers beside it
+qboolean	CG_BoomboxSystems( void );						// the server or the master has sound systems
+int			CG_BoomboxNear( void );							// the box near the player, -1: none
+int			CG_BoomboxAimed( float range );					// the piece under the cross hair, -1: none
+
+// For the voice chat (voice/cg_voice.c), which plays the songs and is the way to the masterserver. A channel is
+// the speaker number of the relay less MAX_CLIENTS: box n is channel n, the right speaker of a sound system n +
+// BOX_RIGHT.
 qboolean	CG_BoomboxWantsLink( void );
 void		CG_BoomboxMasterReady( qboolean ready );
 void		CG_BoomboxFromMaster( const byte *data, int len );
 int			CG_BoomboxHearMask( void );
-qboolean	CG_BoomboxHears( int box );
-qboolean	CG_BoomboxMouth( int box, vec3_t mouth, float *gain );
+qboolean	CG_BoomboxHears( int channel );
+qboolean	CG_BoomboxMouth( int channel, vec3_t mouth, float *gain );
 float		CG_BoomboxRange( void );
 
-// for the pointer (select/cg_select.c)
-qboolean	CG_BoomboxShown( int box );
+// for the pointer (select/cg_select.c): pieces, but for what is done with the box itself
+qboolean	CG_BoomboxShown( int piece );
 int			CG_BoomboxPick( const vec3_t start, const vec3_t dir, float *bestT );
-void		CG_BoomboxMiddle( int box, vec3_t at );
+void		CG_BoomboxMiddle( int piece, vec3_t at );
+float		CG_BoomboxHeight( int piece );
+const char	*CG_BoomboxName( int box );
 qboolean	CG_BoomboxInfo( int box, boomboxInfo_t *info );
 void		CG_BoomboxDo( int box, const char *what );
 void		CG_BoomboxLouder( int box, int steps );
@@ -79,14 +96,14 @@ qboolean	CG_BoomboxWindowPointerOver( void );
 void		CG_BoomboxWindowDraw( void );
 qboolean	CG_BoomboxWindowKey( int key, qboolean down );
 void		CG_BoomboxPrompt( int box );
-void		CG_BoomboxGrab( int box );
+void		CG_BoomboxGrab( int piece );
 void		CG_BoomboxCarry( const vec3_t start, const vec3_t dir );
 void		CG_BoomboxDrop( qboolean place );
 int			CG_BoomboxHeld( void );
 qboolean	CG_BoomboxHeldBad( void );
 
 // voice/cg_voice.c: the songs as they are played, and the way to the masterserver
-float		CG_VoiceBoxBeat( int box );
+float		CG_VoiceBoxBeat( int channel );
 qboolean	CG_VoiceBoxSend( const boxDo_t *d );
 qboolean	CG_VoiceMasterBoxes( void );
 qboolean	CG_VoiceMasterBoxList( void );

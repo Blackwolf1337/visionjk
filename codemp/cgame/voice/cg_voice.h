@@ -33,7 +33,7 @@ the ones of the page, and the datagrams go through a WebSocket (cg_voice_web.c).
 
 #pragma once
 
-#define VOICE_SPEAKERS			( 32 + 8 )	// one for every client number, MAX_CLIENTS, and one for every box of the boombox, BOX_MAX
+#define VOICE_SPEAKERS			( 32 + 16 )	// one for every client number, MAX_CLIENTS, and one for every channel of a box of the boombox, BOX_CHANNELS
 #define VOICE_DEVICE_NAME		128
 #define VOICE_MAX_DEVICES		16
 

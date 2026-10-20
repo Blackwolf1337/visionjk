@@ -297,7 +297,7 @@ void CG_BoomboxWindowDraw( void ) {
 
 	// the head: what it is, who put it down, and the cross
 	y += WIN_PAD;
-	Win_Text( x + WIN_PAD, y, 0.78f, colorWhite, 0, CG_VisionText( "Boombox" ), inner - 30.0f );
+	Win_Text( x + WIN_PAD, y, 0.78f, colorWhite, 0, CG_BoomboxName( win.box ), inner - 30.0f );
 	Win_Button( PART_CLOSE, 0, x + WIN_W - WIN_PAD - 18.0f, y, 18.0f, "x", winText, qtrue );
 	if ( info.owner[0] ) {
 		Win_Text( x + WIN_PAD, y + 17.0f, 0.5f, winDim, 0, CG_VisionTextWith( "Put down by %s", info.owner ), inner );
