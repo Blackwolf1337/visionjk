@@ -81,6 +81,11 @@ server (`vs_boomboxRange`, 1536 units).
 
 The two speakers of the box push out with the loudness of what you hear of it.
 
+On every beat, when the song suddenly gets louder than it was a moment ago, each speaker sends out a wave
+that bends what is behind it, like the air of a force push. The wave moves out of the cone, grows and fades
+in less than half a second. The big speakers of a sound system send bigger waves than a boombox. This needs
+`cg_renderToTextureFX 1`, the game's own setting for such effects (on by default).
+
 A speaker is heard by the way it faces. In front of it you hear all of it, beside it about half. Behind a
 speaker of a sound system you hear only about a tenth (12 %), behind a boombox a little under half (45 %). This
 holds for the sound of the level (`v_spatial`) and for the voice device alike.
