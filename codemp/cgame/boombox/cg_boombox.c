@@ -151,10 +151,14 @@ static cgBox_t	cgBoxes[BOX_MAX];
 // cg_renderToTextureFX, as the game's own distortions.
 #define BOX_WAVES			4			// waves of one channel at once
 #define BOX_WAVE_MSEC		420			// how long one lives
-#define BOX_WAVE_GAP_MSEC	180			// two beats of a channel at least this far apart
-#define BOX_WAVE_AVG_MSEC	450.0f		// what "a moment ago" is: the loudness averaged over this
-#define BOX_WAVE_RISE		1.45f		// a beat: this many times as loud as that average,
-#define BOX_WAVE_LEAST		0.38f		//	and at least this loud (0 to 1, as the cones push out)
+#define BOX_WAVE_GAP_MSEC	160			// two beats of a channel at least this far apart
+#define BOX_WAVE_AVG_MSEC	1000.0f		// what "a moment ago" is: the energy of the song averaged over this
+#define BOX_WAVE_RISE		1.6f		// a beat: this many times that energy, right after the last beat,
+#define BOX_WAVE_RISE_LOW	1.3f		//	coming down to this when there was none for BOX_WAVE_WAIT_MSEC (a song
+#define BOX_WAVE_WAIT_MSEC	700			//	that is loud all through has small rises only),
+#define BOX_WAVE_LEAST		0.0016f		//	and at least this much: the energy of a level of 0.04, nearly silence
+// (The energy is the square of the level of a frame, Voice_Level() of cg_voice.c, not the level the cones push out
+// with: that one is four times the level and stops at 1, where a loud song stays, and no beat was ever higher.)
 #define BOX_WAVE_SIZE		64.0f		// the radius of the disc of a wave of a speaker of a sound system, units; a boombox's 0.45 of it
 #define BOX_WAVE_MODEL		"models/map_objects/vision/sound_wave.md3"
 #define BOX_WAVE_SHADER		"models/map_objects/vision/sound_wave"
@@ -163,7 +167,8 @@ static cgBox_t	cgBoxes[BOX_MAX];
 #define BOX_WAVE_MAX_PIXELS	1024		// the square of the screen it bends is no larger than this
 
 static struct {
-	float	average;
+	float	average;				// the energy of the song, averaged over BOX_WAVE_AVG_MSEC
+	float	previous;				//	and of the frame before
 	int		last;					// cg.time of the last beat, 0: none
 	int		start[BOX_WAVES];		// cg.time a wave began, 0: none
 	int		next;
@@ -845,13 +850,21 @@ void CG_BoomboxFrame( void ) {
 				b->beat[channel] = beat;
 			else
 				b->beat[channel] += ( beat - b->beat[channel] ) * ( 1.0f - expf( -cg.frametime / BOX_BEAT_FALL_MSEC ) );
-			// a beat: a wave out of its speakers
-			if ( beat >= BOX_WAVE_LEAST && beat > boxWaves[c].average * BOX_WAVE_RISE
-				&& ( !boxWaves[c].last || cg.time - boxWaves[c].last >= BOX_WAVE_GAP_MSEC || cg.time < boxWaves[c].last ) ) {
-				boxWaves[c].last = cg.time ? cg.time : 1;
-				boxWaves[c].start[boxWaves[c].next++ % BOX_WAVES] = boxWaves[c].last;
+			// a beat, a sudden rise of the energy of the song: a wave out of its speakers
+			{
+				const float	level = CG_VoiceBoxBeat( c ), energy = level * level;
+				const int	since = boxWaves[c].last ? cg.time - boxWaves[c].last : BOX_WAVE_WAIT_MSEC;
+				const float	rise = ( since >= BOX_WAVE_WAIT_MSEC || since < 0 ) ? BOX_WAVE_RISE_LOW
+								: BOX_WAVE_RISE - ( BOX_WAVE_RISE - BOX_WAVE_RISE_LOW ) * since / BOX_WAVE_WAIT_MSEC;
+
+				if ( energy >= BOX_WAVE_LEAST && energy > boxWaves[c].average * rise && energy > boxWaves[c].previous
+					&& ( since >= BOX_WAVE_GAP_MSEC || since < 0 ) ) {
+					boxWaves[c].last = cg.time ? cg.time : 1;
+					boxWaves[c].start[boxWaves[c].next++ % BOX_WAVES] = boxWaves[c].last;
+				}
+				boxWaves[c].average += ( energy - boxWaves[c].average ) * ( 1.0f - expf( -cg.frametime / BOX_WAVE_AVG_MSEC ) );
+				boxWaves[c].previous = energy;
 			}
-			boxWaves[c].average += ( beat - boxWaves[c].average ) * ( 1.0f - expf( -cg.frametime / BOX_WAVE_AVG_MSEC ) );
 		}
 		// the platters of a sound system turn while a song plays
 		if ( ( b->flags & BOX_PLAYING ) && !( b->flags & ( BOX_PAUSED | BOX_LOADING ) ) )
