@@ -24,6 +24,9 @@ Hold the key of the pointer (`+v_cursor`, the left Alt key by default) and:
   no bar to jump with.
 - **drag** a box over the floor to another place. It follows the pointer and turns to you, with a red outline
   where it can not be put (no floor, further than 320 units from your eye, another box too close).
+  While a box, the table or a speaker of a sound system hangs in the pointer (dragged, or after "Move it"), each
+  notch of the mouse wheel turns it 15 degrees. Until the first notch it turns to you as before, after it keeps the
+  way you turned it.
 
 "Play a song" opens the chat box with the prompt "Boombox, link or song": paste a link with Ctrl+V, or type what
 to look for, and Enter. A link of `youtube.com`, `music.youtube.com`, `youtu.be` (also `/shorts/`, `/live/`,
@@ -86,7 +89,8 @@ holds for the sound of the level (`v_spatial`) and for the voice device alike.
 
 A second kind of box: a DJ table with two turntables, whose records turn while a song plays, and two big
 speakers. The table and each speaker are put down and moved by themselves: drag any part with the pointer, or
-pick "Move it" on its card, which moves the part the card was opened on. Every part opens the same card and the
+pick "Move it" on its card, which moves the part the card was opened on. The mouse wheel turns the part in the
+pointer, so a speaker can be aimed at the crowd (it is heard loudest in front of it, see "How it sounds"). Every part opens the same card and the
 same window.
 
 Its song comes in stereo. The left channel is heard from the left speaker, the right channel from the right one,
