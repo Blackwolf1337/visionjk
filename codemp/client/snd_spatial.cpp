@@ -157,6 +157,11 @@ from the library when it is loaded.
 SPATIAL_FUNCTIONS( X )
 #undef X
 
+// Intel's ray tracer, of a desktop library: the rays are traced several times as fast as by Steam Audio's own. A
+// library without it still serves, with its own (spatial.sceneType).
+static decltype( &iplEmbreeDeviceCreate )	qiplEmbreeDeviceCreate;
+static decltype( &iplEmbreeDeviceRelease )	qiplEmbreeDeviceRelease;
+
 // Steam Audio counts in metres. A unit of the game is taken as an inch: the player is 64 units tall.
 #define SPATIAL_UNIT	0.0254f
 
@@ -316,7 +321,8 @@ static const char *spatialShockPaths[] = {
 #define SPATIAL_DEFAULT				"0"		// of v_spatial: the library has to be put next to the program first
 #define SPATIAL_DEFAULT_RAYS		"2048"
 #define SPATIAL_DEFAULT_BOUNCES		"16"
-#define SPATIAL_THREADS				2		// threads Steam Audio shares a pass or a bake between, inside the one of this file
+#define SPATIAL_THREADS				2		// threads Steam Audio shares a pass or a bake between, inside the one of this file,
+#define SPATIAL_MAX_THREADS			8		//	or half the cores of the machine up to this (spatial.threads)
 #endif
 
 enum {
@@ -491,6 +497,9 @@ static struct {
 	IPLAudioSettings	audio;
 	IPLHRTF				hrtf;
 	IPLSimulator		simulator;
+	IPLEmbreeDevice		embree;				// NULL: Steam Audio traces the rays itself
+	IPLSceneType		sceneType;			//	of the levels and the simulator: the two must be alike
+	int					threads;			// Steam Audio shares a pass or a bake between this many
 
 	// The level. A new one waits in "next" until the thread of the reflections is idle: the simulator must not
 	// be given another level while a pass runs.
@@ -668,6 +677,8 @@ static void S_SpatialUnload( void ) {
 #define X( name )	q##name = NULL;
 	SPATIAL_FUNCTIONS( X )
 #undef X
+	qiplEmbreeDeviceCreate = NULL;
+	qiplEmbreeDeviceRelease = NULL;
 }
 
 // Next to the program first: that is where a build puts it. Then wherever the system looks. A page has its
@@ -693,6 +704,10 @@ static qboolean S_SpatialLoad( void ) {
 		S_SpatialUnload();
 		return qfalse;
 	}
+#ifndef __EMSCRIPTEN__
+	qiplEmbreeDeviceCreate = (decltype( qiplEmbreeDeviceCreate ))Sys_LoadFunction( spatial.library, "iplEmbreeDeviceCreate" );
+	qiplEmbreeDeviceRelease = (decltype( qiplEmbreeDeviceRelease ))Sys_LoadFunction( spatial.library, "iplEmbreeDeviceRelease" );
+#endif
 	return qtrue;
 }
 
@@ -921,7 +936,7 @@ static int SDLCALL S_SpatialBaker( void *unused ) {
 		bake.threshold = SPATIAL_PATH_THRESHOLD;
 		bake.visRange = SPATIAL_PATH_VIS_RANGE;
 		bake.pathRange = SPATIAL_PATH_RANGE;
-		bake.numThreads = SPATIAL_THREADS;
+		bake.numThreads = spatial.threads;
 #ifdef __EMSCRIPTEN__
 		// too large to do while the game waits, see SPATIAL_PAGE_PROBES: nothing is kept of it
 		if ( spatialBake.numProbes > SPATIAL_PAGE_PROBES ) {
@@ -1199,7 +1214,8 @@ void S_SpatialLoadMap( const char *mapname ) {
 		return;
 	}
 	memset( &sceneSettings, 0, sizeof( sceneSettings ) );
-	sceneSettings.type = IPL_SCENETYPE_DEFAULT;
+	sceneSettings.type = spatial.sceneType;
+	sceneSettings.embreeDevice = spatial.embree;
 	if ( qiplSceneCreate( spatial.context, &sceneSettings, &spatial.nextScene ) != IPL_STATUS_SUCCESS ) {
 		Com_Printf( "v_spatial: no scene for the level\n" );
 		spatial.nextScene = NULL;
@@ -2732,6 +2748,7 @@ static void S_SpatialInfo_f( void ) {
 	}
 	Com_Printf( "Steam Audio %i.%i.%i from %s\n", STEAMAUDIO_VERSION_MAJOR, STEAMAUDIO_VERSION_MINOR, STEAMAUDIO_VERSION_PATCH,
 		spatial.libraryPath );
+	Com_Printf( "rays traced by %s, %i threads\n", spatial.embree ? "Embree" : "Steam Audio", spatial.threads );
 	Com_Printf( "%i samples a second, blocks of %i, direction for %s\n", spatial.audio.samplingRate, spatial.audio.frameSize,
 		v_spatialHrtf->integer ? "headphones (HRTF)" : "speakers (panning)" );
 	if ( spatial.sceneWaits ) {
@@ -2910,6 +2927,10 @@ static void S_SpatialRelease( void ) {
 	if ( spatial.hrtf ) {
 		qiplHRTFRelease( &spatial.hrtf );
 	}
+	// a scene that still holds it keeps it for as long as it is there (a bake that was left to run)
+	if ( spatial.embree ) {
+		qiplEmbreeDeviceRelease( &spatial.embree );
+	}
 	if ( spatial.context ) {
 		qiplContextRelease( &spatial.context );
 	}
@@ -2930,7 +2951,7 @@ static qboolean S_SpatialCreateVoices( void ) {
 
 	memset( &simulation, 0, sizeof( simulation ) );
 	simulation.flags = (IPLSimulationFlags)( IPL_SIMULATIONFLAGS_DIRECT | IPL_SIMULATIONFLAGS_REFLECTIONS | IPL_SIMULATIONFLAGS_PATHING );
-	simulation.sceneType = IPL_SCENETYPE_DEFAULT;
+	simulation.sceneType = spatial.sceneType;
 	simulation.reflectionType = IPL_REFLECTIONEFFECTTYPE_CONVOLUTION;
 	simulation.maxNumOcclusionSamples = SPATIAL_OCCLUSION_SAMPLES;
 	// A pass traces the first rays of those the simulator has, which are not spread round the listener unless
@@ -2943,7 +2964,7 @@ static qboolean S_SpatialCreateVoices( void ) {
 	simulation.maxOrder = SPATIAL_REVERB_ORDER;
 	simulation.maxNumSources = 1 + SPATIAL_REFLECT_SLOTS;	// sources with reflections: the one at the listener and the slots
 	// threads Steam Audio shares a pass of the rays between, inside the one of S_SpatialWorker()
-	simulation.numThreads = SPATIAL_THREADS;
+	simulation.numThreads = spatial.threads;
 	simulation.numVisSamples = 4;
 	simulation.samplingRate = spatial.audio.samplingRate;
 	simulation.frameSize = spatial.audio.frameSize;
@@ -3097,6 +3118,26 @@ void S_SpatialInit( void ) {
 		S_SpatialUnload();
 		return;
 	}
+
+	// the rays by Embree where the library has it, and as many threads for them as half the cores
+	spatial.sceneType = IPL_SCENETYPE_DEFAULT;
+	spatial.embree = NULL;
+	if ( qiplEmbreeDeviceCreate && qiplEmbreeDeviceRelease ) {
+		IPLEmbreeDeviceSettings embreeSettings;
+
+		memset( &embreeSettings, 0, sizeof( embreeSettings ) );
+		if ( qiplEmbreeDeviceCreate( spatial.context, &embreeSettings, &spatial.embree ) == IPL_STATUS_SUCCESS ) {
+			spatial.sceneType = IPL_SCENETYPE_EMBREE;
+		} else {
+			spatial.embree = NULL;
+			Com_Printf( "v_spatial: no Embree, Steam Audio traces the rays itself\n" );
+		}
+	}
+#ifdef __EMSCRIPTEN__
+	spatial.threads = SPATIAL_THREADS;
+#else
+	spatial.threads = Com_Clampi( SPATIAL_THREADS, SPATIAL_MAX_THREADS, SDL_GetCPUCount() / 2 );
+#endif
 
 	spatial.audio.samplingRate = dma.speed;
 	spatial.audio.frameSize = SPATIAL_FRAME;
