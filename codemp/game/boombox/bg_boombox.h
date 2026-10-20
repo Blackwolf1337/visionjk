@@ -33,7 +33,9 @@ boombox drops a speaker number that is no client number, and it is never sent on
 
 Over the game connection:
 
-to the server	vs_box hello <protocol>				this client draws boxes and wants to hear them
+to the server	vs_box hello <protocol> <caps>		this client draws boxes and wants to hear them. caps: BOX_CAP_SYSTEM,
+													it draws sound systems too (since 0.2.4, a server before reads no
+													further than the protocol)
 to the server	vs_box off							it no longer does (v_boomboxes 0)
 to a client		vs_box on <protocol> <boxes> <range> <caps>	the answer to the hello: how many boxes a level has at
 													most, how far one is heard, and BOX_CAP_* (since 0.1.9)
@@ -51,16 +53,28 @@ command leaves (the cgame counts on from there while it plays), length in second
 after the one that plays, next: the title of the first of them. owner: who put the box down, by: who asked for
 the song that plays (both since 0.1.9; a cgame before reads no further than next).
 
+A sound system (since 0.2.4, BOX_KIND_SYSTEM) is a box of its own kind: a DJ table where the box stands, and two
+big speakers that stand where the players put them. Its song is fetched in stereo, the left channel goes out as
+speaker BOX_SPEAKER_BASE + the box, the right one as BOX_SPEAKER_BASE + BOX_RIGHT + the box. Its "vs_box set"
+has nine more words after by: <kind> <lx> <ly> <lz> <lyaw> <rx> <ry> <rz> <ryaw>, the places of the left and the
+right speaker. Only a client that said BOX_CAP_SYSTEM in its hello is told of a sound system or sent its song:
+for every other one it is not there.
+
 What a player does with a box is a client command, "vs_boxaction <what> <box> ...", see Cmd_Boombox_f() of
 g_boombox.c. Everybody may do everything with every box. Since 0.1.9 (BOX_CAP_MORE): seek <box> <second>, drop
 <box> <place in the line>, and watch <box>, after which the client is sent the line of that box whenever it
-changes (watch -1: no more).
+changes (watch -1: no more). Since 0.2.4 (BOX_CAP_SYSTEM): system <x y z yaw> <lx ly lz lyaw> <rx ry rz ryaw>, a
+new sound system, its table and its two speakers, and part <box> <part> <x y z yaw>, one part (BOX_PART_*) of a
+box moved.
 
 On a server without the game module of this tree the masterserver keeps the boxes of its room (all clients of one
 game server, codemp/master/ms_boombox.c), and everything goes through the datagrams of the voice chat:
 VOICE_BOX of bg_voice.h, after the head, every number with its low byte first:
 
 to the master	what box nameLen name[nameLen]		and for BOX_DO_PLACE and BOX_DO_MOVE x[4] y[4] z[4] yaw[2],
+													for BOX_DO_SYSTEM three of those (table, left, right), for
+													BOX_DO_PART the part[1] and one (both since 0.2.4, to a
+													master that said BOX_SAY_HELLO),
 													for BOX_DO_PLAY the text (box 255: a new box, its place
 													before the text), for BOX_DO_VOLUME volume[1], for
 													BOX_DO_SEEK second[2], for BOX_DO_DROP place[1], BOX_DO_WATCH
@@ -74,18 +88,27 @@ to a client		BOX_SAY_INFO box ownerLen owner byLen by	after every BOX_SAY_SET, s
 													drops it: BOX_SAY_SET itself must never grow)
 to a client		BOX_SAY_LIST box lineRev[2] place total seconds[2] titleLen title byLen by
 													one song of the line of a box, to who watches it, since 0.1.9
+to a client		BOX_SAY_RIG box kind left[14] right[14]	after the BOX_SAY_SET of a sound system: where its
+													speakers stand (x[4] y[4] z[4] yaw[2] each), since 0.2.4
+to a client		BOX_SAY_HELLO 255 caps				the master knows BOX_CAP_SYSTEM, since 0.2.4
 
 The master has no level: where a box may stand is what the client found (Box_Spot of cg_boombox.c). It does not
 know who is near a box either: the client says it in its state (bg_voice.h), and the master sends the song of a
 box only to who said he hears it. A yaw is 65536 steps a turn, x, y and z are whole units.
+
+A client of 0.2.4 or later sets BOX_STATE_SYSTEMS in the byte of the boxes it hears: it draws sound systems.
+Only such a client is sent BOX_SAY_HELLO, BOX_SAY_RIG, a sound system, and its right channel. A master before
+looks at the bits of its four boxes only.
 */
 
 #pragma once
 
 #define BOX_PROTOCOL		1
 #define BOX_MAX				8			// boxes a level has at most (vs_boomboxMax is up to this)
-#define BOX_SPEAKER_BASE	MAX_CLIENTS	// the speaker number of box n in a datagram of the voice relay is this + n
-#define BOX_RATE			48000		// what a song is decoded to: one channel, 16 bit. VOICE_RATE of bg_voice.h
+#define BOX_SPEAKER_BASE	MAX_CLIENTS	// the speaker number of box n in a datagram of the voice relay is this + n,
+#define BOX_RIGHT			BOX_MAX		//	of the right channel of a sound system this + BOX_RIGHT
+#define BOX_CHANNELS		( BOX_MAX * 2 )	// speaker numbers of boxes from BOX_SPEAKER_BASE on: a channel number
+#define BOX_RATE			48000		// what a song is decoded to: 16 bit, one channel a speaker. VOICE_RATE of bg_voice.h
 #define BOX_TITLE			100			// a title with its end
 #define BOX_QUEUE			16			// songs one box has in its line at most, the one that plays among them
 #define BOX_ASK				200			// what a player can ask for: a link or the words to look for, with the end
@@ -100,6 +123,25 @@ box only to who said he hears it. A yaw is 65536 steps a turn, x, y and z are wh
 #define BOX_FOOT			12.0f		// where a box is put: the box from its middle to its sides that must fit on the floor,
 #define BOX_FOOT_HEIGHT		20.0f		//	how high that box is,
 #define BOX_DROP			96.0f		//	and how far below the place the floor is looked for
+
+// the sound system (BOX_KIND_SYSTEM): a DJ table where the box stands, and two big speakers. Origins on the floor.
+#define BOX_KIND_BOOMBOX	0
+#define BOX_KIND_SYSTEM		1
+#define BOX_PARTS			3			// what of a box stands somewhere: the box or the table, and the two speakers
+#define BOX_PART_BODY		0
+#define BOX_PART_LEFT		1
+#define BOX_PART_RIGHT		2
+#define SYS_DESK_HALF_WIDTH	30.0f		// the table: from its middle to its left and right end,
+#define SYS_DESK_HALF_DEPTH	13.0f		//	to its front and back,
+#define SYS_DESK_HEIGHT		40.0f		//	and its top
+#define SYS_SPK_HALF_WIDTH	13.0f		// a speaker, the same
+#define SYS_SPK_HALF_DEPTH	11.0f
+#define SYS_SPK_HEIGHT		62.0f
+#define SYS_SPK_MOUTH		36.0f		// where its sound comes from: the middle of its big cone, above its origin
+#define SYS_SPK_SIDE		76.0f		// a new speaker stands this far to the side of the middle of the table
+#define SYS_FOOT_DESK		24.0f		// what has to fit on the floor where a table goes, from its middle (BOX_FOOT of a box)
+#define SYS_FOOT_SPK		10.0f		//	and where a speaker goes
+#define SYS_APART			40.0f		// a part of a sound system stands at least this far from any other part
 
 #define BOX_MASTER_MAX		4			// boxes a room of the masterserver has at most
 #define BOX_NAME_MAX		35			// bytes of the name in a VOICE_BOX to the master at most
@@ -117,6 +159,8 @@ box only to who said he hears it. A yaw is 65536 steps a turn, x, y and z are wh
 #define BOX_DO_SEEK			10
 #define BOX_DO_DROP			11
 #define BOX_DO_WATCH		12
+#define BOX_DO_SYSTEM		13			// since 0.2.4
+#define BOX_DO_PART			14
 
 // what the masterserver says to a client
 #define BOX_SAY_SET			1
@@ -124,9 +168,14 @@ box only to who said he hears it. A yaw is 65536 steps a turn, x, y and z are wh
 #define BOX_SAY_NOTE		3
 #define BOX_SAY_INFO		4
 #define BOX_SAY_LIST		5
+#define BOX_SAY_RIG			6			// since 0.2.4
+#define BOX_SAY_HELLO		7
+
+#define BOX_STATE_SYSTEMS	0x80		// in the byte of the boxes a client hears: it draws sound systems
 
 // what the server can do of what came after 0.1.8, in "vs_box on"
 #define BOX_CAP_MORE		1			// who put a box down, its line, seek, drop, watch
+#define BOX_CAP_SYSTEM		2			// the sound system (since 0.2.4). Also what a client says in its hello
 
 // the flags of "vs_box set"
 #define BOX_PLAYING			1			// a song plays, or is about to
@@ -140,8 +189,10 @@ typedef struct boxDo_s {
 	char	name[BOX_NAME_MAX + 1];
 	int		origin[3];
 	float	yaw;
+	int		parts[2][3];		// BOX_DO_SYSTEM: where the left and the right speaker go
+	float	partYaw[2];
 	int		volume;
-	int		value;				// BOX_DO_SEEK: the second, BOX_DO_DROP: the place in the line
+	int		value;				// BOX_DO_SEEK: the second, BOX_DO_DROP: the place in the line, BOX_DO_PART: the part
 	char	text[BOX_ASK];
 } boxDo_t;
 
@@ -157,6 +208,10 @@ typedef struct boxSay_s {
 	char	owner[BOX_NAME_MAX + 1], by[BOX_NAME_MAX + 1];	// of an info, and by of a song of the line
 	int		place, total;		// of a song of the line: its place (0 plays) and how many there are; its title and
 								//	seconds are title and length
+	int		kind;				// of a rig: BOX_KIND_*,
+	int		parts[2][3];		//	where its left and right speaker stand
+	float	partYaw[2];
+	int		caps;				// of a hello: BOX_CAP_*
 } boxSay_t;
 
 int			BG_BoxDoPack( byte *out, int outSize, const boxDo_t *d );

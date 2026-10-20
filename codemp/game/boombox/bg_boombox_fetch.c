@@ -813,22 +813,25 @@ int Box_StreamQueued( const boxStream_t *s ) {
 =================
 Box_StreamStart
 
-yt-dlp fetches the video and hands it to ffmpeg, which makes one channel of 16 bit at BOX_RATE of it. fromSample:
-where in the song to begin (ffmpeg decodes what is before and drops it), for a song whose fetch broke off.
-keepRing: what was fetched before stays, and what comes is put behind it.
+yt-dlp fetches the video and hands it to ffmpeg, which makes channels (one, or two for a sound system) of 16 bit
+at BOX_RATE of it. fromSample: where in the song to begin (ffmpeg decodes what is before and drops it), for a song
+whose fetch broke off. keepRing: what was fetched before stays, and what comes is put behind it (with the same
+channels).
 =================
 */
-qboolean Box_StreamStart( boxStream_t *s, const boxTools_t *tools, const char *id, int fromSample, qboolean keepRing, int now,
-	char *why, int whySize ) {
+qboolean Box_StreamStart( boxStream_t *s, const boxTools_t *tools, const char *id, int fromSample, qboolean keepRing, int channels,
+	int now, char *why, int whySize ) {
 #ifndef _WIN32
 	boxArgs_t	fetch, decode;
 	char		ytdlp[MAX_OSPATH], ffmpeg[MAX_OSPATH];
 
 	Box_ProcStop( &s->proc );
-	if ( !keepRing )
+	if ( !keepRing ) {
 		s->read = s->write = 0;
+		s->channels = ( channels == 2 ) ? 2 : 1;
+	}
 	s->fetched = fromSample;
-	s->odd = -1;
+	s->partLen = 0;
 	s->ended = qtrue;
 	if ( !Box_ToolPath( tools->ytdlp, ytdlp, sizeof( ytdlp ) ) ) {
 		Q_strncpyz( why, "this server can not fetch songs: it has no yt-dlp", whySize );
@@ -863,7 +866,7 @@ qboolean Box_StreamStart( boxStream_t *s, const boxTools_t *tools, const char *i
 	}
 	Box_Arg( &decode, "-vn" );
 	Box_Arg( &decode, "-ac" );
-	Box_Arg( &decode, "1" );
+	Box_Arg( &decode, ( s->channels == 2 ) ? "2" : "1" );
 	Box_Arg( &decode, "-ar" );
 	Box_Arg( &decode, Box_Va( "%i", BOX_RATE ) );
 	Box_Arg( &decode, "-f" );
@@ -881,7 +884,7 @@ qboolean Box_StreamStart( boxStream_t *s, const boxTools_t *tools, const char *i
 	s->ended = qfalse;
 	return qtrue;
 #else
-	(void)tools; (void)id; (void)keepRing; (void)now;
+	(void)tools; (void)id; (void)keepRing; (void)channels; (void)now;
 	Q_strncpyz( why, "a server on Windows can not fetch songs yet", whySize );
 	return qfalse;
 #endif
@@ -890,12 +893,13 @@ qboolean Box_StreamStart( boxStream_t *s, const boxTools_t *tools, const char *i
 // takes what ffmpeg made since the last call, as far as the ring has room. When it is full the programs wait.
 void Box_StreamFill( boxStream_t *s ) {
 #ifndef _WIN32
-	byte	buffer[16384];
-	int		want, n, i;
+	const int	sampleBytes = 2 * s->channels;
+	byte		buffer[16384];
+	int			want, n, i, k;
 
 	Box_ProcErrors( &s->proc );
 	while ( !s->ended ) {
-		want = ( BOX_RING - Box_StreamQueued( s ) ) * 2 - ( s->odd >= 0 ? 1 : 0 );
+		want = ( BOX_RING - Box_StreamQueued( s ) ) * sampleBytes - s->partLen;
 		if ( want <= 0 )
 			break;
 		if ( want > (int)sizeof( buffer ) )
@@ -908,29 +912,31 @@ void Box_StreamFill( boxStream_t *s ) {
 			Box_ProcErrors( &s->proc );
 			break;
 		}
-		// the low byte of a sample first
+		// the low byte of a sample first, the left channel before the right one
 		for ( i = 0; i < n; i++ ) {
-			if ( s->odd < 0 ) {
-				s->odd = buffer[i];
+			s->part[s->partLen++] = buffer[i];
+			if ( s->partLen < sampleBytes )
 				continue;
-			}
-			s->ring[s->write % BOX_RING] = (short)( s->odd | ( buffer[i] << 8 ) );
+			for ( k = 0; k < s->channels; k++ )
+				s->ring[( s->write % BOX_RING ) * s->channels + k] = (short)( s->part[2 * k] | ( s->part[2 * k + 1] << 8 ) );
 			s->write++;
 			s->fetched++;
-			s->odd = -1;
+			s->partLen = 0;
 		}
 	}
 #endif
 }
 
-// up to count samples of the song, as many as are there
+// up to count samples of the song (of every channel), as many as are there
 int Box_StreamTake( boxStream_t *s, short *out, int count ) {
-	int i;
+	int i, k;
 
 	if ( count > Box_StreamQueued( s ) )
 		count = Box_StreamQueued( s );
-	for ( i = 0; i < count; i++ )
-		out[i] = s->ring[( s->read + i ) % BOX_RING];
+	for ( i = 0; i < count; i++ ) {
+		for ( k = 0; k < s->channels; k++ )
+			out[i * s->channels + k] = s->ring[( ( s->read + i ) % BOX_RING ) * s->channels + k];
+	}
 	s->read += count;
 	return count;
 }
@@ -939,7 +945,7 @@ void Box_StreamStop( boxStream_t *s ) {
 	Box_ProcStop( &s->proc );
 	s->read = s->write = 0;
 	s->fetched = 0;
-	s->odd = -1;
+	s->partLen = 0;
 	s->ended = qtrue;
 }
 

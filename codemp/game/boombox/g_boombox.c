@@ -23,7 +23,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // bg_boombox.h.
 //
 // A box is no entity. Only clients whose cgame said "vs_box hello" are told of it and hear it, a client of any
-// other kind gets nothing, and its players do not see the box and walk through it as everybody does. Every
+// other kind gets nothing, and its players do not see the box and walk through it as everybody does. A sound
+// system (a DJ table and two big speakers, its song in stereo) is only for a cgame that said it draws them. Every
 // player whose cgame draws boxes may do everything with every box: put one down, ask for songs, pause, skip,
 // stop, move it, make it louder or quieter for everybody, take it away.
 //
@@ -45,7 +46,8 @@ char *ConcatArgs( int start );		// g_cmds.c
 #define BOX_NOTE_RANGE		1.25f		// what went wrong with a box is told to the players this much further away than it is heard
 
 typedef struct boxClient_s {
-	qboolean	hears;			// his cgame said "vs_box hello": it draws boxes, and he wants to hear them
+	qboolean	hears;			// his cgame said "vs_box hello": it draws boxes, and he wants to hear them,
+	qboolean	systems;		//	sound systems too (BOX_CAP_SYSTEM)
 	int			askTime;		// when he last asked for a song
 	int			watch;			// the box whose line he is sent whenever it changes, plus one. 0: none
 	int			watchRev;		//	the lineRev of it he was sent last
@@ -71,10 +73,18 @@ static int Box_QueueMax( void ) {
 	return Com_Clampi( 1, BOX_QUEUE, vs_boomboxQueue.integer );
 }
 
-// where the sound of a box comes from
-static void Box_Mouth( const box_t *box, vec3_t mouth ) {
+// Where the sound of a box comes from: the box, or the speaker of a channel of a sound system. channel -1: the
+// middle of the box or the table, for lines about it.
+static void Box_Mouth( const box_t *box, int channel, vec3_t mouth ) {
+	float yaw;
+
+	if ( box->kind == BOX_KIND_SYSTEM && channel >= 0 ) {
+		Box_PartAt( box, channel ? BOX_PART_RIGHT : BOX_PART_LEFT, mouth, &yaw );
+		mouth[2] += SYS_SPK_MOUTH;
+		return;
+	}
 	VectorCopy( box->origin, mouth );
-	mouth[2] += BOX_SPEAKER_HEIGHT;
+	mouth[2] += ( box->kind == BOX_KIND_SYSTEM ) ? SYS_DESK_HEIGHT : BOX_SPEAKER_HEIGHT;
 }
 
 // is this player one the boxes are for, and is he there
@@ -82,6 +92,11 @@ static qboolean Box_Hears( int clientNum ) {
 	const gentity_t *ent = &g_entities[clientNum];
 
 	return ( boxClients[clientNum].hears && ent->inuse && ent->client && ent->client->pers.connected == CON_CONNECTED ) ? qtrue : qfalse;
+}
+
+// is this box there for this player: a sound system only for a cgame that draws them
+static qboolean Box_For( int b, int clientNum ) {
+	return ( boxes[b].kind != BOX_KIND_SYSTEM || boxClients[clientNum].systems ) ? qtrue : qfalse;
 }
 
 /*
@@ -140,15 +155,21 @@ static void Box_TellTo( int b, int clientNum ) {
 			boxClients[clientNum].watch = 0;
 		return;
 	}
+	if ( !Box_For( b, clientNum ) )
+		return;
 	Box_TextFor( clientNum, box->numSongs ? box->songs[0].title : "", title, sizeof( title ) );
 	Box_TextFor( clientNum, box->numSongs > 1 ? box->songs[1].title : "", next, sizeof( next ) );
 	Box_TextFor( clientNum, box->owner, owner, sizeof( owner ) );
 	Box_TextFor( clientNum, box->numSongs ? box->songs[0].by : "", by, sizeof( by ) );
 	// (who put it down and who asked for the song at the end: a cgame of 0.1.7 or 0.1.8 reads no further than next)
-	trap->SendServerCommand( clientNum, va( "vs_box set %i %i %i %i %i %i %i %i %i %i %i \"%s\" \"%s\" \"%s\" \"%s\"", b, box->rev,
+	trap->SendServerCommand( clientNum, va( "vs_box set %i %i %i %i %i %i %i %i %i %i %i \"%s\" \"%s\" \"%s\" \"%s\"%s", b, box->rev,
 		(int)box->origin[0], (int)box->origin[1], (int)box->origin[2], (int)box->yaw, box->volume, flags,
 		Box_Msec( box ), box->numSongs ? box->songs[0].seconds : 0, Box_Waiting( box ),
-		title, next, owner, by ) );
+		title, next, owner, by,
+		// (the speakers of a sound system after them, which only a cgame that draws them is sent)
+		( box->kind == BOX_KIND_SYSTEM ) ? va( " %i %i %i %i %i %i %i %i %i", box->kind, (int)box->parts[0][0], (int)box->parts[0][1],
+			(int)box->parts[0][2], (int)box->partYaw[0], (int)box->parts[1][0], (int)box->parts[1][1], (int)box->parts[1][2],
+			(int)box->partYaw[1] ) : "" ) );
 	if ( boxClients[clientNum].watch == b + 1 && boxClients[clientNum].watchRev != box->lineRev )
 		Box_LineTo( b, clientNum );
 }
@@ -186,9 +207,9 @@ static void Box_NoteNear( int b, int also, const char *text ) {
 	vec3_t	mouth;
 	int		i;
 
-	Box_Mouth( &boxes[b], mouth );
+	Box_Mouth( &boxes[b], -1, mouth );
 	for ( i = 0; i < level.maxclients; i++ ) {
-		if ( Box_Hears( i ) && ( i == also || Distance( g_entities[i].client->ps.origin, mouth ) <= Box_Range() * BOX_NOTE_RANGE ) )
+		if ( Box_Hears( i ) && ( i == also || ( Box_For( b, i ) && Distance( g_entities[i].client->ps.origin, mouth ) <= Box_Range() * BOX_NOTE_RANGE ) ) )
 			Box_Note( i, text );
 	}
 }
@@ -232,22 +253,24 @@ static void G_BoxNote( boxHost_t *host, int b, int client, const char *text ) {
 		Box_Note( client, text );
 }
 
-// one frame of a song to everybody in range
-static void G_BoxSend( boxHost_t *host, int b, const byte *frame, int len ) {
+// One frame of a channel of a song to everybody in range. Of a sound system both channels go to who is in range
+// of either of its speakers, each with the distance to its own speaker.
+static void G_BoxSend( boxHost_t *host, int b, int channel, const byte *frame, int len ) {
 	const box_t	*box = &boxes[b];
-	vec3_t		mouth;
+	vec3_t		mouth, other;
 	int			i;
 
 	(void)host;
-	Box_Mouth( box, mouth );
+	Box_Mouth( box, channel, mouth );
+	Box_Mouth( box, !channel, other );
 	for ( i = 0; i < level.maxclients; i++ ) {
 		float distance;
 
-		if ( !Box_Hears( i ) || !G_VoiceReady( i ) )
+		if ( !Box_Hears( i ) || !G_VoiceReady( i ) || !Box_For( b, i ) )
 			continue;
 		distance = Distance( g_entities[i].client->ps.origin, mouth );
-		if ( distance <= Box_Range() )
-			G_VoiceSendBox( i, BOX_SPEAKER_BASE + b, box->seq, (int)( distance / VOICE_DISTANCE_STEP ), frame, len );
+		if ( Q_min( distance, Distance( g_entities[i].client->ps.origin, other ) ) <= Box_Range() )
+			G_VoiceSendBox( i, BOX_SPEAKER_BASE + channel * BOX_RIGHT + b, box->seq, Q_min( 255, (int)( distance / VOICE_DISTANCE_STEP ) ), frame, len );
 	}
 }
 
@@ -302,13 +325,9 @@ void G_BoomboxShutdown( qboolean restart ) {
 
 // after G_VoiceInit(): the songs go out over the relay of the voice chat, without it there are no boxes
 void G_BoomboxInit( qboolean restart ) {
-	int i;
-
 	if ( restart && boxOn )
 		return;
 	G_BoomboxShutdown( qfalse );
-	for ( i = 0; i < BOX_MAX; i++ )
-		boxPlayers[i].stream.odd = -1;
 	memset( &boxHost, 0, sizeof( boxHost ) );
 	boxHost.boxes = boxes;
 	boxHost.tools = G_BoxTools;
@@ -347,8 +366,9 @@ Commands
 =================
 Cmd_JPBox_f
 
-vs_box hello <protocol>: the cgame of a client draws boxes. The answer is "vs_box on" and the state of every box,
-and from then on he is told every change and hears the boxes near him. vs_box off: no more of it.
+vs_box hello <protocol> <caps>: the cgame of a client draws boxes (and sound systems, BOX_CAP_SYSTEM). The answer
+is "vs_box on" and the state of every box, and from then on he is told every change and hears the boxes near
+him. vs_box off: no more of it.
 =================
 */
 void Cmd_JPBox_f( gentity_t *ent ) {
@@ -364,26 +384,36 @@ void Cmd_JPBox_f( gentity_t *ent ) {
 	if ( !boxOn || Q_stricmp( arg, "hello" ) || ( ent->r.svFlags & SVF_BOT ) )
 		return;
 	boxClients[clientNum].hears = qtrue;
-	trap->SendServerCommand( clientNum, va( "vs_box on %i %i %i %i", BOX_PROTOCOL, Box_Max(), (int)Box_Range(), BOX_CAP_MORE ) );
+	trap->Argv( 3, arg, sizeof( arg ) );
+	boxClients[clientNum].systems = ( atoi( arg ) & BOX_CAP_SYSTEM ) ? qtrue : qfalse;
+	trap->SendServerCommand( clientNum, va( "vs_box on %i %i %i %i", BOX_PROTOCOL, Box_Max(), (int)Box_Range(), BOX_CAP_MORE | BOX_CAP_SYSTEM ) );
 	for ( i = 0; i < BOX_MAX; i++ ) {
 		if ( boxes[i].inuse )
 			Box_TellTo( i, clientNum );
 	}
 }
 
+// how much floor a part of a box needs round its middle
+static float Box_Foot( int kind, int part ) {
+	if ( kind != BOX_KIND_SYSTEM )
+		return BOX_FOOT;
+	return ( part == BOX_PART_BODY ) ? SYS_FOOT_DESK : SYS_FOOT_SPK;
+}
+
 /*
 =================
 Box_Spot
 
-Where a box that a player wants at `wanted` stands: on the floor under that place, within his reach, and where his
-eye sees it. qfalse: nowhere there, why says why.
+Where a part of a box that a player wants at `wanted` stands: on the floor under that place, within his reach,
+and where his eye sees it, as much floor as it needs (foot), not too near another box (self, selfPart: the part
+itself, -1 for a new one). qfalse: nowhere there, why says why.
 =================
 */
-static qboolean Box_Spot( const gentity_t *ent, const vec3_t wanted, int self, vec3_t spot, char *why, int whySize ) {
-	const vec3_t	mins = { -BOX_FOOT, -BOX_FOOT, 0.0f }, maxs = { BOX_FOOT, BOX_FOOT, BOX_FOOT_HEIGHT };
+static qboolean Box_Spot( const gentity_t *ent, const vec3_t wanted, float foot, qboolean big, int self, int selfPart, vec3_t spot,
+	char *why, int whySize ) {
+	const vec3_t	mins = { -foot, -foot, 0.0f }, maxs = { foot, foot, BOX_FOOT_HEIGHT };
 	vec3_t			eye, start, end;
 	trace_t			tr;
-	int				i;
 
 	VectorCopy( ent->client->ps.origin, eye );
 	eye[2] += ent->client->ps.viewheight;
@@ -411,21 +441,16 @@ static qboolean Box_Spot( const gentity_t *ent, const vec3_t wanted, int self, v
 	spot[0] = floorf( tr.endpos[0] + 0.5f );
 	spot[1] = floorf( tr.endpos[1] + 0.5f );
 	spot[2] = ceilf( tr.endpos[2] );
-	for ( i = 0; i < BOX_MAX; i++ ) {
-		if ( i != self && boxes[i].inuse && Distance( boxes[i].origin, spot ) < BOX_APART ) {
-			Q_strncpyz( why, "another boombox stands there", whySize );
-			return qfalse;
-		}
+	if ( Box_Crowded( boxes, BOX_MAX, spot, big, self, selfPart ) ) {
+		Q_strncpyz( why, "another boombox stands there", whySize );
+		return qfalse;
 	}
 	return qtrue;
 }
 
-// a new box, -1: none, the player is told why
-static int Box_Place( gentity_t *ent, const vec3_t wanted, float yaw ) {
-	const int	clientNum = ent - g_entities;
-	vec3_t		spot;
-	char		why[64];
-	int			i, count = 0;
+// a free box for a new one, -1: the level has as many as it may, the player is told so
+static int Box_Free( int clientNum ) {
+	int i, count = 0;
 
 	for ( i = 0; i < BOX_MAX; i++ ) {
 		if ( boxes[i].inuse )
@@ -435,16 +460,75 @@ static int Box_Place( gentity_t *ent, const vec3_t wanted, float yaw ) {
 		Box_Note( clientNum, va( "^5Boombox^7: there are %i boomboxes in this level already, the most there may be", count ) );
 		return -1;
 	}
-	if ( !Box_Spot( ent, wanted, -1, spot, why, sizeof( why ) ) ) {
+	for ( i = 0; i < BOX_MAX && boxes[i].inuse; i++ )
+		;
+	return i;
+}
+
+// a new box, -1: none, the player is told why
+static int Box_Place( gentity_t *ent, const vec3_t wanted, float yaw ) {
+	const int	clientNum = ent - g_entities;
+	vec3_t		spot;
+	char		why[64];
+	int			i = Box_Free( clientNum );
+
+	if ( i < 0 )
+		return -1;
+	if ( !Box_Spot( ent, wanted, BOX_FOOT, qfalse, -1, -1, spot, why, sizeof( why ) ) ) {
 		Box_Note( clientNum, va( "^5Boombox^7: not put there, %s", why ) );
 		return -1;
 	}
-	for ( i = 0; i < BOX_MAX && boxes[i].inuse; i++ )
-		;
 	memset( &boxes[i], 0, sizeof( boxes[i] ) );
 	boxes[i].inuse = qtrue;
 	VectorCopy( spot, boxes[i].origin );
 	boxes[i].yaw = AngleNormalize360( yaw );
+	boxes[i].volume = BOX_VOLUME;
+	Q_strncpyz( boxes[i].owner, ent->client->pers.netname, sizeof( boxes[i].owner ) );
+	Box_Changed( i );
+	return i;
+}
+
+/*
+=================
+Box_PlaceSystem
+
+A new sound system: its table and its two speakers where the player's cgame found room for them (wanted[0] the
+table, then the left and the right speaker). -1: none, the player is told why.
+=================
+*/
+static int Box_PlaceSystem( gentity_t *ent, vec3_t wanted[BOX_PARTS], const float yaw[BOX_PARTS] ) {
+	static const char *const names[BOX_PARTS] = { "the table", "the left speaker", "the right speaker" };
+	const int	clientNum = ent - g_entities;
+	vec3_t		spots[BOX_PARTS];
+	char		why[64];
+	int			part, other, i;
+
+	if ( !boxClients[clientNum].systems )
+		return -1;
+	i = Box_Free( clientNum );
+	if ( i < 0 )
+		return -1;
+	for ( part = 0; part < BOX_PARTS; part++ ) {
+		if ( !Box_Spot( ent, wanted[part], Box_Foot( BOX_KIND_SYSTEM, part ), qtrue, -1, -1, spots[part], why, sizeof( why ) ) ) {
+			Box_Note( clientNum, va( "^5Boombox^7: the sound system is not put there, %s of it: %s", names[part], why ) );
+			return -1;
+		}
+		for ( other = 0; other < part; other++ ) {
+			if ( Distance( spots[part], spots[other] ) < SYS_APART ) {
+				Box_Note( clientNum, "^5Boombox^7: the sound system is not put there, its parts are too close to each other" );
+				return -1;
+			}
+		}
+	}
+	memset( &boxes[i], 0, sizeof( boxes[i] ) );
+	boxes[i].inuse = qtrue;
+	boxes[i].kind = BOX_KIND_SYSTEM;
+	VectorCopy( spots[0], boxes[i].origin );
+	boxes[i].yaw = AngleNormalize360( yaw[0] );
+	for ( part = 1; part < BOX_PARTS; part++ ) {
+		VectorCopy( spots[part], boxes[i].parts[part - 1] );
+		boxes[i].partYaw[part - 1] = AngleNormalize360( yaw[part] );
+	}
 	boxes[i].volume = BOX_VOLUME;
 	Q_strncpyz( boxes[i].owner, ent->client->pers.netname, sizeof( boxes[i].owner ) );
 	Box_Changed( i );
@@ -467,7 +551,7 @@ static int Box_Nearest( const gentity_t *ent ) {
 	int		i, found = -1;
 
 	for ( i = 0; i < BOX_MAX; i++ ) {
-		if ( boxes[i].inuse && Distance( boxes[i].origin, ent->client->ps.origin ) < best ) {
+		if ( boxes[i].inuse && Box_For( i, ent - g_entities ) && Distance( boxes[i].origin, ent->client->ps.origin ) < best ) {
 			best = Distance( boxes[i].origin, ent->client->ps.origin );
 			found = i;
 		}
@@ -527,10 +611,10 @@ static void Box_List( int clientNum ) {
 	for ( i = 0; i < BOX_MAX; i++ ) {
 		const box_t *box = &boxes[i];
 
-		if ( !box->inuse )
+		if ( !box->inuse || !Box_For( i, clientNum ) )
 			continue;
 		count++;
-		trap->SendServerCommand( clientNum, va( "print \"Boombox %i, volume %i%s%s\n\"", i, box->volume,
+		trap->SendServerCommand( clientNum, va( "print \"%s %i, volume %i%s%s\n\"", ( box->kind == BOX_KIND_SYSTEM ) ? "Sound system" : "Boombox", i, box->volume,
 			box->paused ? ", paused" : "", box->looking ? ", looking a song up" : "" ) );
 		for ( k = 0; k < box->numSongs; k++ ) {
 			Box_TextFor( clientNum, box->songs[k].title, line, sizeof( line ) );
@@ -550,7 +634,9 @@ What a player does with a box, sent by his cgame or typed:
 
 boombox play <box> <link or words>		into the line of that box, -1: the one near him, or a new one in front of him
 boombox place <x> <y> <z> <yaw>			a new box at that place
+boombox system <x y z yaw> <x y z yaw> <x y z yaw>	a new sound system: its table, its left and its right speaker
 boombox move <box> <x> <y> <z> <yaw>
+boombox part <box> <part> <x> <y> <z> <yaw>	a part of a box (BOX_PART_*): the box or the table, a speaker
 boombox pause|resume|skip|stop|remove <box>
 boombox volume <box> <0 to 100>
 boombox seek <box> <second>				the song that plays goes on from there
@@ -599,6 +685,22 @@ void Cmd_Boombox_f( gentity_t *ent ) {
 		Box_Place( ent, tv( Box_ArgFloat( 2 ), Box_ArgFloat( 3 ), Box_ArgFloat( 4 ) ), Box_ArgFloat( 5 ) );
 		return;
 	}
+	if ( !Q_stricmp( what, "system" ) ) {
+		vec3_t	wanted[BOX_PARTS];
+		float	yaws[BOX_PARTS];
+		int		part;
+
+		if ( trap->Argc() < 2 + 4 * BOX_PARTS ) {
+			Box_Usage( clientNum );
+			return;
+		}
+		for ( part = 0; part < BOX_PARTS; part++ ) {
+			VectorSet( wanted[part], Box_ArgFloat( 2 + 4 * part ), Box_ArgFloat( 3 + 4 * part ), Box_ArgFloat( 4 + 4 * part ) );
+			yaws[part] = Box_ArgFloat( 5 + 4 * part );
+		}
+		Box_PlaceSystem( ent, wanted, yaws );
+		return;
+	}
 	b = (int)Box_ArgFloat( 2 );
 	if ( !Q_stricmp( what, "play" ) ) {
 		if ( b >= BOX_MAX || ( b >= 0 && !boxes[b].inuse ) )
@@ -606,7 +708,7 @@ void Cmd_Boombox_f( gentity_t *ent ) {
 		Box_AskFor( ent, b, ConcatArgs( 3 ) );
 		return;
 	}
-	if ( b < 0 || b >= BOX_MAX || !boxes[b].inuse ) {
+	if ( b < 0 || b >= BOX_MAX || !boxes[b].inuse || !Box_For( b, clientNum ) ) {
 		Box_Note( clientNum, "^5Boombox^7: there is no such boombox" );
 		return;
 	}
@@ -629,16 +731,31 @@ void Cmd_Boombox_f( gentity_t *ent ) {
 			Box_Seek( &boxHost, b, (int)Box_ArgFloat( 3 ), trap->Milliseconds() );
 	} else if ( !Q_stricmp( what, "drop" ) ) {
 		Box_Drop( &boxHost, b, (int)Box_ArgFloat( 3 ) );
-	} else if ( !Q_stricmp( what, "move" ) ) {
-		VectorSet( at, Box_ArgFloat( 3 ), Box_ArgFloat( 4 ), Box_ArgFloat( 5 ) );
-		if ( !Box_Spot( ent, at, b, spot, why, sizeof( why ) ) ) {
+	} else if ( !Q_stricmp( what, "move" ) || !Q_stricmp( what, "part" ) ) {
+		// (move: the box, or the table of a sound system)
+		const int	part = !Q_stricmp( what, "part" ) ? (int)Box_ArgFloat( 3 ) : BOX_PART_BODY;
+		const int	first = !Q_stricmp( what, "part" ) ? 4 : 3;
+		float		yaw;
+
+		if ( !Box_PartAt( box, part, spot, &yaw ) ) {
+			Box_Note( clientNum, "^5Boombox^7: that boombox has no such part" );
+			return;
+		}
+		VectorSet( at, Box_ArgFloat( first ), Box_ArgFloat( first + 1 ), Box_ArgFloat( first + 2 ) );
+		if ( !Box_Spot( ent, at, Box_Foot( box->kind, part ), (qboolean)( box->kind == BOX_KIND_SYSTEM ), b, part, spot, why, sizeof( why ) ) ) {
 			Box_Note( clientNum, va( "^5Boombox^7: not moved there, %s", why ) );
 			// (his cgame shows it where it was again)
 			Box_TellTo( b, clientNum );
 			return;
 		}
-		VectorCopy( spot, box->origin );
-		box->yaw = AngleNormalize360( Box_ArgFloat( 6 ) );
+		yaw = AngleNormalize360( Box_ArgFloat( first + 3 ) );
+		if ( part == BOX_PART_BODY ) {
+			VectorCopy( spot, box->origin );
+			box->yaw = yaw;
+		} else {
+			VectorCopy( spot, box->parts[part - 1] );
+			box->partYaw[part - 1] = yaw;
+		}
 		Box_Changed( b );
 	} else {
 		Box_Usage( clientNum );
@@ -668,7 +785,8 @@ void Svcmd_Boombox_f( void ) {
 
 		if ( !box->inuse )
 			continue;
-		trap->Print( "Boombox %i at %i %i %i, volume %i%s%s%s\n", i, (int)box->origin[0], (int)box->origin[1], (int)box->origin[2],
+		trap->Print( "%s %i at %i %i %i, volume %i%s%s%s\n", ( box->kind == BOX_KIND_SYSTEM ) ? "Sound system" : "Boombox", i,
+			(int)box->origin[0], (int)box->origin[1], (int)box->origin[2],
 			box->volume, box->paused ? ", paused" : "", box->streaming && !box->started ? ", fetching" : "",
 			box->looking ? ", looking a song up" : "" );
 		for ( k = 0; k < box->numSongs; k++ ) {

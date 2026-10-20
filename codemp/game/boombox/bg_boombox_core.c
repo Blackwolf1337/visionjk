@@ -91,6 +91,45 @@ int Box_Msec( const box_t *box ) {
 	return (int)( (long long)box->offset * 1000 / BOX_RATE ) + box->frames * VOICE_FRAME_MSEC;
 }
 
+// a sound system plays its songs in stereo
+int Box_Channels( const box_t *box ) {
+	return ( box->kind == BOX_KIND_SYSTEM ) ? 2 : 1;
+}
+
+// Where a part of a box stands (BOX_PART_*). qfalse: the box has no such part (a boombox has only its body).
+qboolean Box_PartAt( const box_t *box, int part, vec3_t at, float *yaw ) {
+	if ( part == BOX_PART_BODY ) {
+		VectorCopy( box->origin, at );
+		*yaw = box->yaw;
+		return qtrue;
+	}
+	if ( box->kind != BOX_KIND_SYSTEM || part < 0 || part >= BOX_PARTS )
+		return qfalse;
+	VectorCopy( box->parts[part - 1], at );
+	*yaw = box->partYaw[part - 1];
+	return qtrue;
+}
+
+// Does a part at spot stand too near any part of the boxes of a host, but itself (box self, part selfPart; -1 for a
+// new one)? big: it is a part of a sound system, which wants more room round it than a boombox.
+qboolean Box_Crowded( const box_t *boxes, int numBoxes, const vec3_t spot, qboolean big, int self, int selfPart ) {
+	vec3_t	at;
+	float	yaw;
+	int		i, part;
+
+	for ( i = 0; i < numBoxes; i++ ) {
+		if ( !boxes[i].inuse )
+			continue;
+		for ( part = 0; part < BOX_PARTS; part++ ) {
+			if ( ( i == self && part == selfPart ) || !Box_PartAt( &boxes[i], part, at, &yaw ) )
+				continue;
+			if ( Distance( at, spot ) < ( ( big || boxes[i].kind == BOX_KIND_SYSTEM ) ? SYS_APART : BOX_APART ) )
+				return qtrue;
+		}
+	}
+	return qfalse;
+}
+
 // how many songs wait after the one that plays: in the line, and of playlists behind it
 int Box_Waiting( const box_t *box ) {
 	return Q_max( 0, box->numSongs - 1 ) + box->listNum - box->listAt;
@@ -211,7 +250,8 @@ void Box_Seek( boxHost_t *host, int b, int seconds, int now ) {
 	// (not begun yet: it begins there)
 	if ( box->streaming ) {
 		host->tools( &tools );
-		if ( !Box_StreamStart( &box->player->stream, &tools, box->songs[0].id, box->offset, qfalse, now, why, sizeof( why ) ) ) {
+		if ( !Box_StreamStart( &box->player->stream, &tools, box->songs[0].id, box->offset, qfalse, Box_Channels( box ), now, why,
+				sizeof( why ) ) ) {
 			host->note( host, b, -1, Box_Va( "^5Boombox^7: %s is not played, %s", box->songs[0].title, why ) );
 			Box_Next( host, b );
 			return;
@@ -233,26 +273,29 @@ void Box_Drop( boxHost_t *host, int b, int index ) {
 	Box_Tell( host, b );
 }
 
-// the encoder of a player, the first time it is used. A player that comes to another box starts its encoder anew.
-static qboolean Box_Encoder( boxPlayer_t *player ) {
+// The encoder of a channel of a player, the first time it is used. A player that comes to another box starts its
+// encoders anew. Each channel is a voice of one channel of its own: the left and the right speaker of a sound system
+// are two speakers of the relay.
+static qboolean Box_Encoder( boxPlayer_t *player, int channel ) {
 #ifdef JP_BOOMBOX
-	OpusEncoder *enc = (OpusEncoder *)&player->encoder;
+	OpusEncoder *enc = (OpusEncoder *)&player->encoder[channel];
 
-	if ( player->encoderOk ) {
+	if ( player->encoderOk[channel] ) {
 		opus_encoder_ctl( enc, OPUS_RESET_STATE );
 		return qtrue;
 	}
-	if ( opus_encoder_get_size( 1 ) > (int)sizeof( player->encoder ) || opus_encoder_init( enc, BOX_RATE, 1, OPUS_APPLICATION_AUDIO ) != OPUS_OK )
+	if ( opus_encoder_get_size( 1 ) > (int)sizeof( player->encoder[0] ) || opus_encoder_init( enc, BOX_RATE, 1, OPUS_APPLICATION_AUDIO ) != OPUS_OK )
 		return qfalse;
 	opus_encoder_ctl( enc, OPUS_SET_BITRATE( BOX_BITRATE ) );
 	opus_encoder_ctl( enc, OPUS_SET_SIGNAL( OPUS_SIGNAL_MUSIC ) );
 	// every frame carries a small copy of the one before it, so one lost datagram can be made good
 	opus_encoder_ctl( enc, OPUS_SET_INBAND_FEC( 1 ) );
 	opus_encoder_ctl( enc, OPUS_SET_PACKET_LOSS_PERC( 5 ) );
-	player->encoderOk = qtrue;
+	player->encoderOk[channel] = qtrue;
 	return qtrue;
 #else
 	(void)player;
+	(void)channel;
 	return qfalse;
 #endif
 }
@@ -264,20 +307,25 @@ static void Box_Begin( boxHost_t *host, int b, int now ) {
 	char		why[128];
 
 	if ( !box->player ) {
+		int channel;
+
 		// (without a free one it waits: the clients see it is loading)
 		box->player = host->borrow( host );
 		if ( !box->player )
 			return;
 		box->player->inuse = qtrue;
-		box->player->stream.odd = -1;
-		if ( !Box_Encoder( box->player ) ) {
-			host->note( host, b, -1, "^5Boombox^7: the server can not code sound" );
-			Box_Stop( host, b );
-			return;
+		box->player->stream.partLen = 0;
+		for ( channel = 0; channel < Box_Channels( box ); channel++ ) {
+			if ( !Box_Encoder( box->player, channel ) ) {
+				host->note( host, b, -1, "^5Boombox^7: the server can not code sound" );
+				Box_Stop( host, b );
+				return;
+			}
 		}
 	}
 	host->tools( &tools );
-	if ( !Box_StreamStart( &box->player->stream, &tools, box->songs[0].id, box->offset, qfalse, now, why, sizeof( why ) ) ) {
+	if ( !Box_StreamStart( &box->player->stream, &tools, box->songs[0].id, box->offset, qfalse, Box_Channels( box ), now, why,
+			sizeof( why ) ) ) {
 		host->note( host, b, -1, Box_Va( "^5Boombox^7: %s is not played, %s", box->songs[0].title, why ) );
 		Box_Next( host, b );
 		return;
@@ -289,17 +337,30 @@ static void Box_Begin( boxHost_t *host, int b, int now ) {
 	Box_Tell( host, b );
 }
 
-// one frame of a song to the host, which hands it to whoever hears the box
+// One frame of a song to the host, which hands it to whoever hears the box: every channel coded by itself, with
+// the same sequence number.
 static void Box_Send( boxHost_t *host, int b, const short *samples ) {
 #ifdef JP_BOOMBOX
 	box_t		*box = &host->boxes[b];
+	const int	channels = box->player->stream.channels;
 	byte		frame[VOICE_MAX_FRAME];
-	const int	len = opus_encode( (OpusEncoder *)&box->player->encoder, samples, VOICE_FRAME_SAMPLES, frame, sizeof( frame ) );
+	short		one[VOICE_FRAME_SAMPLES];
+	int			channel, i, len;
 
 	box->seq = ( box->seq + 1 ) & 0xffff;
 	box->frames++;
-	if ( len > 0 )
-		host->send( host, b, frame, len );
+	for ( channel = 0; channel < channels; channel++ ) {
+		const short *in = samples;
+
+		if ( channels > 1 ) {
+			for ( i = 0; i < VOICE_FRAME_SAMPLES; i++ )
+				one[i] = samples[i * channels + channel];
+			in = one;
+		}
+		len = opus_encode( (OpusEncoder *)&box->player->encoder[channel], in, VOICE_FRAME_SAMPLES, frame, sizeof( frame ) );
+		if ( len > 0 )
+			host->send( host, b, channel, frame, len );
+	}
 #else
 	(void)host;
 	(void)b;
@@ -319,7 +380,7 @@ void Box_Run( boxHost_t *host, int b, int now ) {
 	box_t		*box = &host->boxes[b];
 	boxStream_t	*s;
 	boxTools_t	tools;
-	short		samples[VOICE_FRAME_SAMPLES];
+	short		samples[VOICE_FRAME_SAMPLES * 2];
 	char		why[128];
 	int			due;
 
@@ -335,7 +396,7 @@ void Box_Run( boxHost_t *host, int b, int now ) {
 		&& ( box->started || s->fetched > 0 ) ) {
 		box->restarts++;
 		host->tools( &tools );
-		Box_StreamStart( s, &tools, box->songs[0].id, s->fetched, qtrue, now, why, sizeof( why ) );
+		Box_StreamStart( s, &tools, box->songs[0].id, s->fetched, qtrue, s->channels, now, why, sizeof( why ) );
 	}
 
 	if ( !box->started ) {

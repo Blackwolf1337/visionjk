@@ -35,7 +35,7 @@ in a module that has Opus (JP_BOOMBOX): without it nothing is coded.
 extern "C" {
 #endif
 
-#define BOX_RING			( BOX_RATE * 4 )	// samples of a song that are fetched ahead of what goes out: 4 s
+#define BOX_RING			( BOX_RATE * 4 )	// samples of a song that are fetched ahead of what goes out: 4 s (of every channel)
 #define BOX_ERROR			160					// a line of what a program said on its way out, with the end
 #define BOX_ENCODER_BYTES	40960				// room for the state of the encoder of one player. What it needs is asked and checked
 #define BOX_NAME			36					// who asked for a song, with the end (MAX_NETNAME)
@@ -69,13 +69,16 @@ typedef struct boxSong_s {
 	char	by[BOX_NAME];		// who asked for it
 } boxSong_t;
 
-// the sound of the song that plays
+// The sound of the song that plays: one channel, or two for a sound system (left and right of a sample after each
+// other). A sample here is the samples of all channels at one time.
 typedef struct boxStream_s {
 	boxProc_t	proc;
-	short		ring[BOX_RING];
+	int			channels;
+	short		ring[BOX_RING * 2];
 	unsigned	read, write;	// samples, counted on and on: the place in ring is the rest of a division
 	int			fetched;		// samples that came since the beginning of the song, with what a start further in skipped
-	int			odd;			// a byte of a sample whose other byte has not come yet, -1: none
+	byte		part[4];		// the bytes of a sample whose other bytes have not come yet,
+	int			partLen;		//	how many
 	qboolean	ended;			// the programs are through: what is in the ring is the rest
 } boxStream_t;
 
@@ -86,20 +89,23 @@ typedef union boxEncoder_u {
 	byte	bytes[BOX_ENCODER_BYTES];
 } boxEncoder_t;
 
-// What a box plays with: the programs of its song, what they fetched, and the encoder. Large (BOX_RING), so a
-// host has a few of them and lends one to a box for as long as it has songs.
+// What a box plays with: the programs of its song, what they fetched, and an encoder for each channel. Large
+// (BOX_RING), so a host has a few of them and lends one to a box for as long as it has songs.
 typedef struct boxPlayer_s {
 	qboolean		inuse;
 	boxStream_t		stream;
-	boxEncoder_t	encoder;
-	qboolean		encoderOk;
+	boxEncoder_t	encoder[2];
+	qboolean		encoderOk[2];
 } boxPlayer_t;
 
 typedef struct box_s {
 	qboolean	inuse;
 	int			rev;			// one up with every change the clients are told
-	vec3_t		origin;			// on the floor
+	int			kind;			// BOX_KIND_*
+	vec3_t		origin;			// on the floor: the box, or the table of a sound system
 	float		yaw;
+	vec3_t		parts[2];		// a sound system: where its left and its right speaker stand
+	float		partYaw[2];
 	int			volume;			// for everybody, 0 to 100
 	char		owner[BOX_NAME];	// who put it down, as he was called then
 	boxSong_t	songs[BOX_QUEUE];	// the line: songs[0] plays
@@ -136,7 +142,7 @@ struct boxHost_s {
 	boxPlayer_t	*(*borrow)( boxHost_t *host );
 	void		(*tell)( boxHost_t *host, int box );
 	void		(*note)( boxHost_t *host, int box, int client, const char *text );
-	void		(*send)( boxHost_t *host, int box, const byte *frame, int len );
+	void		(*send)( boxHost_t *host, int box, int channel, const byte *frame, int len );	// channel 1: the right one
 	void		*owner;			// for the host: a room of the masterserver
 };
 
@@ -162,8 +168,8 @@ void		Box_ReapAll( void );
 qboolean	Box_Target( const char *asked, char *target, int targetSize, char *why, int whySize );
 qboolean	Box_LookupStart( boxLookup_t *l, const boxTools_t *tools, const char *target, int now, char *why, int whySize );
 int			Box_LookupFrame( boxLookup_t *l, boxSong_t *songs, int maxSongs, int now, char *why, int whySize );
-qboolean	Box_StreamStart( boxStream_t *s, const boxTools_t *tools, const char *id, int fromSample, qboolean keepRing, int now,
-				char *why, int whySize );
+qboolean	Box_StreamStart( boxStream_t *s, const boxTools_t *tools, const char *id, int fromSample, qboolean keepRing, int channels,
+				int now, char *why, int whySize );
 void		Box_StreamFill( boxStream_t *s );
 int			Box_StreamQueued( const boxStream_t *s );
 int			Box_StreamTake( boxStream_t *s, short *out, int count );
@@ -183,6 +189,9 @@ void		Box_Drop( boxHost_t *host, int box, int index );
 int			Box_Flags( const box_t *box );
 int			Box_Msec( const box_t *box );
 int			Box_Waiting( const box_t *box );
+int			Box_Channels( const box_t *box );
+qboolean	Box_PartAt( const box_t *box, int part, vec3_t at, float *yaw );
+qboolean	Box_Crowded( const box_t *boxes, int numBoxes, const vec3_t spot, qboolean big, int self, int selfPart );
 qboolean	Box_Ask( boxHost_t *host, boxLookup_t *lookups, int numLookups, int box, int client, const char *by, const char *asked,
 				int now, char *why, int whySize );
 void		Box_Lookups( boxLookup_t *lookups, int numLookups, int now );

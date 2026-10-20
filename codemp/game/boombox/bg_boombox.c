@@ -113,6 +113,21 @@ int BG_BoxDoPack( byte *out, int outSize, const boxDo_t *d ) {
 		Box_PutPlace( out + len, d->origin, d->yaw );
 		len += 14;
 		break;
+	case BOX_DO_SYSTEM:
+		if ( len + 3 * 14 > outSize )
+			return 0;
+		Box_PutPlace( out + len, d->origin, d->yaw );
+		Box_PutPlace( out + len + 14, d->parts[0], d->partYaw[0] );
+		Box_PutPlace( out + len + 28, d->parts[1], d->partYaw[1] );
+		len += 3 * 14;
+		break;
+	case BOX_DO_PART:
+		if ( len + 15 > outSize )
+			return 0;
+		out[len] = (byte)Com_Clampi( 0, BOX_PARTS - 1, d->value );
+		Box_PutPlace( out + len + 1, d->origin, d->yaw );
+		len += 15;
+		break;
 	case BOX_DO_PLAY: {
 		const int textLen = (int)strlen( d->text );
 
@@ -164,6 +179,14 @@ qboolean BG_BoxDoUnpack( const byte *in, int len, boxDo_t *d ) {
 	case BOX_DO_PLACE:
 	case BOX_DO_MOVE:
 		return ( len == at + 14 && Box_GetPlace( in + at, d->origin, &d->yaw ) ) ? qtrue : qfalse;
+	case BOX_DO_SYSTEM:
+		return ( len == at + 3 * 14 && Box_GetPlace( in + at, d->origin, &d->yaw ) && Box_GetPlace( in + at + 14, d->parts[0], &d->partYaw[0] )
+			&& Box_GetPlace( in + at + 28, d->parts[1], &d->partYaw[1] ) ) ? qtrue : qfalse;
+	case BOX_DO_PART:
+		if ( len != at + 15 || in[at] >= BOX_PARTS )
+			return qfalse;
+		d->value = in[at];
+		return Box_GetPlace( in + at + 1, d->origin, &d->yaw );
 	case BOX_DO_PLAY:
 		if ( d->box == 255 ) {
 			if ( len < at + 14 || !Box_GetPlace( in + at, d->origin, &d->yaw ) )
@@ -270,6 +293,16 @@ int BG_BoxSayPack( byte *out, int outSize, const boxSay_t *s ) {
 		n = Box_PutText( out + len + 1, BOX_NAME_MAX, s->by );
 		out[len] = (byte)n;
 		return len + 1 + n;
+	case BOX_SAY_RIG:
+		if ( outSize < 31 )
+			return 0;
+		out[2] = (byte)s->kind;
+		Box_PutPlace( out + 3, s->parts[0], s->partYaw[0] );
+		Box_PutPlace( out + 17, s->parts[1], s->partYaw[1] );
+		return 31;
+	case BOX_SAY_HELLO:
+		out[2] = (byte)s->caps;
+		return 3;
 	}
 	return 0;
 }
@@ -332,6 +365,16 @@ qboolean BG_BoxSayUnpack( const byte *in, int len, boxSay_t *s ) {
 			return qfalse;
 		Box_GetText( in + at + 1, in[at], s->by, sizeof( s->by ) );
 		return ( s->place < s->total && s->total <= BOX_QUEUE ) ? qtrue : qfalse;
+	case BOX_SAY_RIG:
+		if ( len != 31 )
+			return qfalse;
+		s->kind = in[2];
+		return ( Box_GetPlace( in + 3, s->parts[0], &s->partYaw[0] ) && Box_GetPlace( in + 17, s->parts[1], &s->partYaw[1] ) ) ? qtrue : qfalse;
+	case BOX_SAY_HELLO:
+		if ( len != 3 )
+			return qfalse;
+		s->caps = in[2];
+		return qtrue;
 	}
 	return qfalse;
 }
