@@ -30,7 +30,7 @@ The live view
 
 Not in JKAdmin. vs_liveView 1 opens /live/ of the panel's port to every visitor: the script that draws the map
 as the panel does (page/live.js, the drawing parts of the page and js/live-boot.js) and the few questions it
-asks, read only. A website puts it in front of its visitors through a reverse proxy (jka.vision/live/).
+asks, read only, and its WebSocket (/live/stream, wa_stream.c). A website puts it in front of its visitors through a reverse proxy (jka.vision/live/).
 
 What a visitor gets is what a spectator in the game sees: the map, the players with their names, what moves.
 Not the addresses of the players, not who is an admin, not the HUD of a player, not what the server prints.
@@ -95,7 +95,7 @@ A request below /live/. qfalse: it is not one, the panel goes on with it. Anythi
 named here is not there, also while vs_liveView is 0.
 =================
 */
-qboolean WA_LiveRequest( waConnection_t *c, const char *method, const char *path, const char *query ) {
+qboolean WA_LiveRequest( waConnection_t *c, const char *method, const char *path, const char *query, const char *head ) {
 	if ( Q_strncmp( path, "/live/", 6 ) )
 		return qfalse;
 
@@ -107,6 +107,9 @@ qboolean WA_LiveRequest( waConnection_t *c, const char *method, const char *path
 	path += 5;
 	if ( !strcmp( path, "/live.js" ) ) {
 		WA_LiveScript( c );
+	} else if ( !strcmp( path, "/stream" ) ) {
+		// the state pushed twenty times a second, as /api/state has it (wa_stream.c)
+		WA_StreamUpgrade( c, head, qtrue );
 	} else if ( !strcmp( path, "/api/state" ) ) {
 		WA_ApiLiveState( c, query );
 	} else if ( !strcmp( path, "/api/map" ) ) {

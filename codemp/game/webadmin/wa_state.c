@@ -80,6 +80,14 @@ void WA_AppendVec( waBuffer_t *b, const vec3_t v ) {
 
 // The number of a part of the answer a page keeps: a hash of its text (FNV-1a), and never 0, which is what a
 // page sends that has none.
+// What the last answer told of each part (WA_StateNext): the numbers a page has after it, as it would send them
+// with its next question. A WebSocket asks with them (wa_stream.c), so it is sent only what changed since.
+static struct {
+	unsigned	items, fx, rev[MAX_CLIENTS];
+	int			fxs, evs, prs;
+	qboolean	has[MAX_CLIENTS];
+} stateSent;
+
 static unsigned WA_StateRev( const waBuffer_t *text ) {
 	unsigned	rev = 2166136261u;
 	int			k;
@@ -330,6 +338,8 @@ static void WA_StatePlayers( waBuffer_t *b, const char *query ) {
 			continue;
 
 		rev = WA_StatePlayerStays( &slow, i );
+		stateSent.rev[i] = rev;
+		stateSent.has[i] = qtrue;
 		WA_StatePlayerChanges( b, i, rev, first );
 		first = qfalse;
 		if ( known[i] != rev ) {
@@ -446,6 +456,7 @@ static void WA_StateItems( waBuffer_t *b, const char *query ) {
 		first = qfalse;
 	}
 	rev = WA_StateRev( &items );
+	stateSent.items = rev;
 
 	WA_BufPrintf( b, ",\"itemsRev\":%u", rev );
 	if ( !WA_FormValue( query, "items", value, sizeof( value ) ) || (unsigned)strtoul( value, NULL, 10 ) != rev ) {
@@ -659,6 +670,8 @@ static void WA_StateEffects( waBuffer_t *b, const char *query ) {
 		first = qfalse;
 	}
 	rev = WA_StateRev( &list );
+	stateSent.fx = rev;
+	stateSent.fxs = fxSeq;
 	if ( !WA_FormValue( query, "fx", value, sizeof( value ) ) || (unsigned)strtoul( value, NULL, 10 ) != rev ) {
 		WA_BufPrintf( b, ",\"fx\":{\"rev\":%u,\"list\":[", rev );
 		if ( list.len )
@@ -841,6 +854,7 @@ static void WA_StatePrints( waBuffer_t *b, const char *query ) {
 
 	if ( !WA_FormValue( query, "prs", value, sizeof( value ) ) )
 		return;
+	stateSent.prs = prSeq;
 	have = atoi( value );
 	if ( have == prSeq )
 		return;
@@ -875,6 +889,7 @@ static void WA_StateEvents( waBuffer_t *b, const char *query ) {
 	qboolean	first = qtrue;
 
 	have = WA_FormValue( query, "evs", value, sizeof( value ) ) ? atoi( value ) : -1;
+	stateSent.evs = evSeq;
 	if ( have == evSeq )
 		return;
 	if ( have > evSeq )
@@ -1008,6 +1023,9 @@ static void WA_StateHud( waBuffer_t *b, const char *query ) {
 // everything the page draws, one part after the other
 void WA_ApiState( waConnection_t *c, const char *query ) {
 	waBuffer_t	b = { 0 };
+
+	memset( &stateSent, 0, sizeof( stateSent ) );
+	stateSent.prs = -1;
 	char		mapname[MAX_QPATH], hostname[MAX_NETNAME * 2];
 
 	trap->Cvar_VariableStringBuffer( "mapname", mapname, sizeof( mapname ) );
@@ -1072,6 +1090,29 @@ void WA_ApiState( waConnection_t *c, const char *query ) {
 
 	WA_RespondJson( c, &b );
 	WA_BufFree( &b );
+}
+
+/*
+=================
+WA_StateNext
+
+What a page has of the state after the last answer, as the question it would ask next: items, fx, fxs, evs,
+prs (when it asked for the prints) and p. A WebSocket asks the next time with this and its view and hud
+(wa_stream.c), and is sent only what changed.
+=================
+*/
+void WA_StateNext( char *out, int outSize ) {
+	int i, len;
+
+	Com_sprintf( out, outSize, "items=%u&fx=%u&fxs=%d&evs=%d", stateSent.items, stateSent.fx, stateSent.fxs, stateSent.evs );
+	if ( stateSent.prs >= 0 )
+		Q_strcat( out, outSize, va( "&prs=%d", stateSent.prs ) );
+	for ( i = 0; i < MAX_CLIENTS; i++ ) {
+		if ( !stateSent.has[i] )
+			continue;
+		len = (int)strlen( out );
+		Com_sprintf( out + len, outSize - len, "%s%d.%u", strstr( out, "&p=" ) ? "-" : "&p=", i, stateSent.rev[i] );
+	}
 }
 
 // GET /live/api/state: the same for the live view (wa_live.c), without the address and the JA+ admin state of a

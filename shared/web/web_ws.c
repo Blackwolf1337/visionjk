@@ -157,17 +157,14 @@ int Web_WsFrameSize( int len ) {
 
 /*
 ==================
-Web_WsFrameBuild
+Web_WsFrameHeadOut
 
-Writes that frame. Returns its length, 0 if it does not fit into outSize bytes.
+The head of a frame of the server with a payload of len bytes, at out, which has room for it
+(Web_WsFrameSize( len ) - len bytes). Returns its length: the payload goes behind it.
 ==================
 */
-int Web_WsFrameBuild( unsigned char *out, int outSize, int opcode, const void *payload, int len ) {
+int Web_WsFrameHeadOut( unsigned char *out, int opcode, int len ) {
 	int headLen = 2;
-
-	if ( len < 0 || len > outSize || Web_WsFrameSize( len ) > outSize ) {
-		return 0;
-	}
 
 	out[0] = (unsigned char)( 0x80 | ( opcode & 0x0F ) );
 	if ( len < 126 ) {
@@ -186,7 +183,23 @@ int Web_WsFrameBuild( unsigned char *out, int outSize, int opcode, const void *p
 		out[9] = (unsigned char)len;
 		headLen = 10;
 	}
+	return headLen;
+}
 
+/*
+==================
+Web_WsFrameBuild
+
+Writes that frame. Returns its length, 0 if it does not fit into outSize bytes.
+==================
+*/
+int Web_WsFrameBuild( unsigned char *out, int outSize, int opcode, const void *payload, int len ) {
+	int headLen;
+
+	if ( len < 0 || len > outSize || Web_WsFrameSize( len ) > outSize ) {
+		return 0;
+	}
+	headLen = Web_WsFrameHeadOut( out, opcode, len );
 	if ( len ) {
 		memcpy( out + headLen, payload, len );
 	}

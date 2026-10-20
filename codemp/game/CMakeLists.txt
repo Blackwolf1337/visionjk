@@ -258,6 +258,7 @@ set(MPGameWebadminFiles
 	"${MPDir}/game/webadmin/wa_clips.c"
 	"${MPDir}/game/webadmin/wa_remaps.c"
 	"${MPDir}/game/webadmin/wa_live.c"
+	"${MPDir}/game/webadmin/wa_stream.c"
 	)
 source_group("game/webadmin" FILES ${MPGameWebadminFiles})
 source_group("game/webadmin/page" FILES ${MPGameWebadminPageFiles})

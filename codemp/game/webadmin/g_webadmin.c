@@ -91,7 +91,7 @@ gameImport_t *WebAdmin_WrapImport( gameImport_t *import ) {
 	return &waImport;
 }
 
-static void WA_CloseConnection( waConnection_t *c ) {
+void WA_CloseConnection( waConnection_t *c ) {
 	if ( c->file )
 		trap->FS_Close( c->file );
 	if ( c->sock != BG_INVALID_SOCKET )
@@ -208,7 +208,7 @@ What a request needs at least. Everybody who is logged in may look at the game. 
 is nobody's business but the owner's, is said here and for the actions on players in WA_ApiAction().
 =================
 */
-static waRole_t WA_RouteRole( const char *method, const char *path ) {
+waRole_t WA_RouteRole( const char *method, const char *path ) {
 	// the console runs anything, the config and the files hold the passwords of the server
 	if ( !strcmp( path, "/api/command" ) || !strcmp( path, "/api/config" ) || !strncmp( path, "/api/fs/", 8 ) ) {
 		return WA_ROLE_OWNER;
@@ -269,7 +269,7 @@ static void WA_HandleRequest( waConnection_t *c, char *head, char *body, int bod
 		query = (char *)"";
 
 	// the live view asks without a login, and nothing there needs one (wa_live.c)
-	if ( WA_LiveRequest( c, method, path, query ) ) {
+	if ( WA_LiveRequest( c, method, path, query, head ) ) {
 		return;
 	}
 	WA_AuthRequest( c, head );
@@ -289,7 +289,23 @@ static void WA_HandleRequest( waConnection_t *c, char *head, char *body, int bod
 		WA_AuthAnswer( c, 403, "Forbidden", "role" );
 		return;
 	}
+	// the socket of the page: the state and what it asks for besides it, pushed (wa_stream.c)
+	if ( !strcmp( method, "GET" ) && !strcmp( path, "/api/stream" ) ) {
+		WA_StreamUpgrade( c, head, qfalse );
+		return;
+	}
+	WA_Route( c, method, path, query, body, bodyLen );
+}
 
+/*
+=================
+WA_Route
+
+A request of somebody who may make it, to what answers it. The WebSocket of a page asks the same way for what it
+has subscribed to (wa_stream.c).
+=================
+*/
+void WA_Route( waConnection_t *c, const char *method, const char *path, const char *query, char *body, int bodyLen ) {
 	if ( !strcmp( method, "GET" ) && ( !strcmp( path, "/" ) || !strcmp( path, "/index.html" ) ) ) {
 		// vs_webRoot serves the page from disk instead, for working on it without a restart
 		waBuffer_t page = { 0 };
@@ -457,6 +473,23 @@ static qboolean WA_FileMore( waConnection_t *c ) {
 }
 
 static void WA_WriteResponse( waConnection_t *c ) {
+	if ( c->stream ) {
+		// a socket stays: what was sent goes, the rest waits for the next frame
+		while ( c->sent < c->response.len ) {
+			const int n = send( c->sock, c->response.data + c->sent, c->response.len - c->sent, BG_SEND_FLAGS );
+			if ( n < 0 ) {
+				if ( !BG_SocketWouldBlock() )
+					WA_CloseConnection( c );
+				return;
+			}
+			c->sent += n;
+			c->lastActive = trap->Milliseconds();
+		}
+		c->response.len = c->sent = 0;
+		if ( c->closing )
+			WA_CloseConnection( c );
+		return;
+	}
 	do {
 		while ( c->sent < c->response.len ) {
 			const int n = send( c->sock, c->response.data + c->sent, c->response.len - c->sent, BG_SEND_FLAGS );
@@ -478,6 +511,17 @@ static void WA_WriteResponse( waConnection_t *c ) {
 		return;
 	}
 	WA_CloseConnection( c );
+}
+
+// the WebSockets of the live view that are open
+int WA_LiveStreams( void ) {
+	int i, n = 0;
+
+	for ( i = 0; i < WA_MAX_CONNECTIONS; i++ ) {
+		if ( connections[i].inUse && connections[i].stream && connections[i].live )
+			n++;
+	}
+	return n;
 }
 
 static void WA_Accept( void ) {
@@ -638,6 +682,9 @@ void WebAdmin_Frame( void ) {
 	fileBudget = WA_FILE_FRAME;
 	firstConnection = ( firstConnection + 1 ) % WA_MAX_CONNECTIONS;
 
+	// what the sockets are pushed in this frame is put together once for all that have the same (wa_stream.c)
+	WA_StreamTick( now );
+
 	for ( i = 0; i < WA_MAX_CONNECTIONS; i++ ) {
 		waConnection_t *c = &connections[( firstConnection + i ) % WA_MAX_CONNECTIONS];
 
@@ -649,6 +696,15 @@ void WebAdmin_Frame( void ) {
 			continue;
 		}
 
+		if ( c->stream ) {
+			WA_StreamRead( c );
+			if ( c->inUse )
+				WA_StreamFrame( c, now );
+			// (a socket that is closing and has nothing left to send ends there)
+			if ( c->inUse && ( c->response.len || c->closing ) )
+				WA_WriteResponse( c );
+			continue;
+		}
 		if ( !c->response.len )
 			WA_ReadRequest( c );
 		if ( c->inUse && c->response.len )

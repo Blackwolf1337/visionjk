@@ -87,6 +87,7 @@ void Web_WsAcceptKey( const char *key, char *out, int outSize );
 int Web_WsFrameHead( const unsigned char *data, int len, int maxPayload, webFrame_t *frame );
 void Web_WsFrameUnmask( unsigned char *payload, int len, const unsigned char *mask );
 int Web_WsFrameSize( int len );
+int Web_WsFrameHeadOut( unsigned char *out, int opcode, int len );
 int Web_WsFrameBuild( unsigned char *out, int outSize, int opcode, const void *payload, int len );
 
 // web_sha256.c

@@ -38,6 +38,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 //   wa_clips.c      the clip editor: the clip brushes of the map that are off, and the blocking walls
 //   wa_remaps.c     the texture swap: a shader of the map drawn as another one
 //   wa_live.c       the live view: /live/, the map view for everybody, read only
+//   wa_stream.c     the WebSocket of a page: the state pushed, and what it subscribed to
 
 #pragma once
 
@@ -46,7 +47,12 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "web/web_http.h"		// the headers of a request and base64, shared with the web host of the dedicated server
 #include "game/webadmin/wa_totp.h"
 
-#define WA_MAX_CONNECTIONS	32
+// A WebSocket holds its connection for as long as its page is open (wa_stream.c): those of the live view have a
+// limit of their own, so that they never take the last connections from the panel.
+#define WA_MAX_CONNECTIONS	96
+#define WA_MAX_LIVE_STREAMS	64
+#define WA_MAX_CHANNELS		6		// what a page asks for besides the state over its socket
+#define WA_STREAM_AUTH		1536	// the Cookie and Authorization of the upgrade, asked again every second
 #define WA_MAX_REQUEST		65536		// head and body. The largest body is the text of the server config.
 #define WA_TIMEOUT_MS		15000
 #define WA_MAX_FILE			( 64 * 1024 * 1024 )
@@ -88,10 +94,31 @@ typedef struct waConnection_s {
 	int			lastActive;		// trap->Milliseconds()
 	fileHandle_t	file;		// a file of the game that is handed out piece by piece, 0 for none
 	int			fileLeft;		// what of it is not read yet
+
+	// a WebSocket (wa_stream.c). request holds the frames of the page that are not whole yet, response what
+	// waits to be sent.
+	qboolean		stream;
+	qboolean		live;			// of the live view: no login, the state as everybody may see it, nothing else
+	qboolean		closing;		// a close frame is out, the connection ends when it is sent
+	char			streamAuth[WA_STREAM_AUTH];
+	char			stateHas[1024];	// what the page has of the state (WA_StateNext)
+	char			stateWants[32];	// view= and hud= of the page
+	int				nextAuth;		// trap->Milliseconds
+	struct {
+		char		name[16];		// what the answers are sent under
+		char		path[24];		// a GET of the panel
+		char		query[256];
+		unsigned	hash;			// of the last answer that was sent, 0 for none
+		int			status;
+	} channels[WA_MAX_CHANNELS];
 } waConnection_t;
 
 // g_webadmin.c
 qboolean WA_Running( void );
+waRole_t WA_RouteRole( const char *method, const char *path );
+void WA_Route( waConnection_t *c, const char *method, const char *path, const char *query, char *body, int bodyLen );
+void WA_CloseConnection( waConnection_t *c );
+int WA_LiveStreams( void );
 qboolean WA_PageBundle( waBuffer_t *page, const char *name );
 
 // wa_http.c
@@ -135,6 +162,7 @@ const char *WA_TeamName( team_t team );
 void WA_AppendVec( waBuffer_t *b, const vec3_t v );
 void WA_ApiState( waConnection_t *c, const char *query );
 void WA_ApiLiveState( waConnection_t *c, const char *query );
+void WA_StateNext( char *out, int outSize );
 void WA_EventsFrame( void );
 void WA_AnimsFrame( void );
 void WA_PrintsTake( const char *command );
@@ -213,5 +241,11 @@ void WA_RemapsFrame( void );
 void WA_ApiRemaps( waConnection_t *c );
 
 // wa_live.c
-qboolean WA_LiveRequest( waConnection_t *c, const char *method, const char *path, const char *query );
+qboolean WA_LiveRequest( waConnection_t *c, const char *method, const char *path, const char *query, const char *head );
+
+// wa_stream.c
+void WA_StreamUpgrade( waConnection_t *c, const char *head, qboolean live );
+void WA_StreamRead( waConnection_t *c );
+void WA_StreamFrame( waConnection_t *c, int now );
+void WA_StreamTick( int now );
 void WA_ApiRemap( waConnection_t *c, const char *body );
