@@ -710,11 +710,12 @@ static void RB_CaptureForEntity( const trRefEntity_t *ent ) {
 	// boombox, sound_wave.md3) showed it shifted.
 	x = (int)( xcenter + xcenter / forward / tanf( DEG2RAD( backEnd.refdef.fov_x * 0.5f ) ) * left );
 	y = (int)( ycenter - ycenter / forward / tanf( DEG2RAD( backEnd.refdef.fov_y * 0.5f ) ) * up );
+	// The square stays round its entity also where it reaches past the edge of the screen. rd-vanilla moved it in
+	// there, since it copied that square alone: the copy then lay beside the entity, and near the edge a model that
+	// shows the screen behind it (the shockwave of the boombox) showed a shifted picture, as a lens. Here the whole
+	// frame is copied, and what the square has beyond the edge is beyond the edge of the model on the screen too.
 	cX = glConfig.vidWidth - x - rad / 2;
 	cY = glConfig.vidHeight - y - rad / 2;
-	// would it go off screen? cap it off at 0
-	cX = ( cX + rad > glConfig.vidWidth ) ? glConfig.vidWidth - rad : ( cX < 0 ? 0 : cX );
-	cY = ( cY + rad > glConfig.vidHeight ) ? glConfig.vidHeight - rad : ( cY < 0 ? 0 : cY );
 
 	VK_CaptureFrame();
 	VK_SetRefraction( qtrue, cX, cY, rad );
