@@ -173,6 +173,23 @@ void Box_Pause( boxHost_t *host, int b, qboolean pause, int now ) {
 
 /*
 =================
+Box_Touch
+
+A skip or a seek of a player restarts the programs of a song (Box_StreamStart): a fork and a fresh lookup at
+YouTube each time. qfalse: this box had one less than BOX_TOUCH_MSEC ago, the next is not taken, whoever asks.
+=================
+*/
+#define BOX_TOUCH_MSEC		1000
+
+qboolean Box_Touch( box_t *box, int now ) {
+	if ( box->touched && now - box->touched < BOX_TOUCH_MSEC && now >= box->touched )
+		return qfalse;
+	box->touched = now ? now : 1;
+	return qtrue;
+}
+
+/*
+=================
 Box_Seek
 
 The song that plays goes on from that second: its programs begin again there, and it waits for enough of it as

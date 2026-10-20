@@ -40,6 +40,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 	#include <unistd.h>
 	#include <sys/types.h>
 	#include <sys/wait.h>
+	#include <time.h>
 #endif
 #include "qcommon/q_shared.h"
 #include "bg_boombox.h"
@@ -48,6 +49,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define BOX_LOOKUP_MSEC		45000		// a lookup that takes longer than this has failed
 #define BOX_MAX_ARGS		48			// words a program is started with, its name among them
 #define BOX_ORPHANS			16			// go-betweens that ended and wait to be reaped
+#define BOX_TERM_MSEC		2000		// a group that was asked to end is killed after this
+#define BOX_LONGEST			36000		// seconds of a song at most, whatever vs_boomboxMaxSeconds says
 
 /*
 ===============================================================================
@@ -76,6 +79,20 @@ typedef struct boxArgs_s {
 } boxArgs_t;
 
 static int	boxOrphans[BOX_ORPHANS];
+
+// Groups that were asked to end (SIGTERM) and get SIGKILL if they are still there after BOX_TERM_MSEC. Their
+// go-between is not reaped before that, so the number of the group stays theirs.
+static struct {
+	int			group;
+	long long	since;
+} boxEnding[BOX_ORPHANS];
+
+static long long Box_SystemMsec( void ) {
+	struct timespec ts;
+
+	clock_gettime( CLOCK_MONOTONIC, &ts );
+	return (long long)ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
+}
 
 static void Box_ArgsBegin( boxArgs_t *a ) {
 	memset( a, 0, sizeof( *a ) );
@@ -283,10 +300,23 @@ void Box_ProcErrors( boxProc_t *p ) {
 	}
 }
 
-// the go-betweens that ended by now
+// the go-betweens that ended by now, and SIGKILL for the groups that did not end when they were asked
 void Box_ReapAll( void ) {
-	int i;
+	const long long	now = Box_SystemMsec();
+	int				i, j;
 
+	for ( i = 0; i < BOX_ORPHANS; i++ ) {
+		if ( boxEnding[i].group <= 0 || now - boxEnding[i].since < BOX_TERM_MSEC )
+			continue;
+		kill( -(pid_t)boxEnding[i].group, SIGKILL );
+		if ( waitpid( (pid_t)boxEnding[i].group, NULL, WNOHANG ) == 0 ) {
+			for ( j = 0; j < BOX_ORPHANS && boxOrphans[j] > 0; j++ )
+				;
+			if ( j < BOX_ORPHANS )
+				boxOrphans[j] = boxEnding[i].group;
+		}
+		boxEnding[i].group = 0;
+	}
 	for ( i = 0; i < BOX_ORPHANS; i++ ) {
 		if ( boxOrphans[i] > 0 && waitpid( (pid_t)boxOrphans[i], NULL, WNOHANG ) != 0 )
 			boxOrphans[i] = 0;
@@ -302,6 +332,21 @@ void Box_ProcStop( boxProc_t *p ) {
 	if ( p->group <= 0 && p->middle <= 0 && p->out <= 0 && p->err <= 0 ) {
 		p->out = p->err = -1;
 		return;
+	}
+	// SIGTERM first: the one-file build of yt-dlp removes the folder it unpacked itself into only when it may end
+	// (with SIGKILL one is left in /tmp for every song). What is still there later gets SIGKILL from Box_ReapAll.
+	if ( p->group > 0 && p->group == p->middle ) {
+		for ( i = 0; i < BOX_ORPHANS && boxEnding[i].group > 0; i++ )
+			;
+		if ( i < BOX_ORPHANS ) {
+			kill( -(pid_t)p->group, SIGTERM );
+			boxEnding[i].group = p->group;
+			boxEnding[i].since = Box_SystemMsec();
+			Box_Close( &p->out );
+			Box_Close( &p->err );
+			p->group = p->middle = 0;
+			return;
+		}
 	}
 	if ( p->group > 0 )
 		kill( -(pid_t)p->group, SIGKILL );
@@ -389,7 +434,9 @@ static int Box_Span( const char *s, const char *stop ) {
 static qboolean Box_ListId( const char *s, int len ) {
 	int i;
 
-	if ( len < 2 || len > 64 )
+	// The lists of an account (WL watch later, LL and LM liked, RDMM its own mix) have short names: with the
+	// cookies of an account in vs_boomboxYtdlpArgs any player could list them. The lists of everybody are longer.
+	if ( len < 12 || len > 64 || !Q_strncmp( s, "RDMM", 4 ) )
 		return qfalse;
 	for ( i = 0; i < len; i++ ) {
 		if ( !isalnum( (unsigned char)s[i] ) && s[i] != '-' && s[i] != '_' )
@@ -535,6 +582,8 @@ qboolean Box_Target( const char *asked, char *target, int targetSize, char *why,
 static void Box_ArgsYtdlp( boxArgs_t *a, const char *path, const boxTools_t *tools, qboolean list ) {
 	Box_Arg( a, path );
 	Box_Arg( a, "--ignore-config" );
+	// (and no plugins from the home folder or next to the program: code nobody here put there on purpose)
+	Box_Arg( a, "--no-plugin-dirs" );
 	Box_Arg( a, list ? "--yes-playlist" : "--no-playlist" );
 	Box_Arg( a, "--no-warnings" );
 	Box_Arg( a, "--encoding" );
@@ -564,6 +613,12 @@ static void Box_Why( const boxProc_t *p, const char *otherwise, char *why, int w
 		s++;
 	if ( *s == '[' && ( colon = strstr( s, ": " ) ) != NULL )
 		s = colon + 2;
+	// What is about the set-up of the server and not about the song (a path, the cookies, the proxy) is not for the
+	// players: the owner finds it with vs_boxes
+	if ( strchr( s, '/' ) || strchr( s, '\\' ) || Q_stristr( s, "cookie" ) || Q_stristr( s, "proxy" ) || Q_stristr( s, "http" ) ) {
+		Q_strncpyz( why, otherwise, whySize );
+		return;
+	}
 	Q_strncpyz( why, s, whySize );
 }
 
@@ -706,8 +761,14 @@ int Box_LookupFrame( boxLookup_t *l, boxSong_t *songs, int maxSongs, int now, ch
 			continue;
 		}
 		// (a video of a playlist that was taken down or made private has no length)
-		if ( !Q_stricmp( line[1], "NA" ) || atof( line[1] ) <= 0.0 ) {
+		if ( !Q_stricmp( line[1], "NA" ) || !( atof( line[1] ) > 0.0 ) ) {
 			notPlayed = "it has no length";
+			continue;
+		}
+		// (the samples of a song are counted in an int, seconds * BOX_RATE: 44739 seconds would be too many, and
+		// vs_boomboxMaxSeconds 0 lets any length through)
+		if ( !( atof( line[1] ) < BOX_LONGEST ) ) {
+			notPlayed = "it is longer than ten hours";
 			continue;
 		}
 		memset( song, 0, sizeof( *song ) );

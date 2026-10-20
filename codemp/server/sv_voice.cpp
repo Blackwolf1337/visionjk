@@ -165,6 +165,11 @@ void SV_VoiceInit( void ) {
 #ifdef VISION_MASTER
 	vs_voiceShared = Cvar_Get( "vs_voiceShared", "1", CVAR_ROM, "The voice chat comes in on the UDP port of the game" );
 	vs_masterKbps = Cvar_Get( "vs_masterKbps", va( "%i", MS_DEFAULT_KBPS ), CVAR_INIT, "What the relay of the masterserver may send, kbit/s. 0: anything" );
+	// The programs the boxes start. The game module registers them as CVAR_INIT; registered here too, the
+	// masterserver does not depend on which module it runs with to keep a console from setting them later.
+	Cvar_Get( "vs_boomboxYtdlp", "yt-dlp", CVAR_INIT, "The yt-dlp program of the boombox" );
+	Cvar_Get( "vs_boomboxFfmpeg", "ffmpeg", CVAR_INIT, "The ffmpeg program of the boombox" );
+	Cvar_Get( "vs_boomboxYtdlpArgs", "", CVAR_INIT, "Words yt-dlp of the boombox is started with as well" );
 	vs_masterBoxes = Cvar_Get( "vs_masterBoxes", "8", CVAR_ARCHIVE, "Songs of the boombox the masterserver plays at once for the servers without the game module of VisionJK, at most 16. 0: no boxes" );
 	if ( MS_Init( SV_MasterSend, SV_MasterPrint, Q_max( vs_masterKbps->integer, 0 ) * 125, SV_MasterMsec() ) ) {
 		sv_masterUp = qtrue;

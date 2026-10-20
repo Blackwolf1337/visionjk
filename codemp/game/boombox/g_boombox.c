@@ -614,7 +614,7 @@ void Cmd_Boombox_f( gentity_t *ent ) {
 	if ( !Q_stricmp( what, "pause" ) || !Q_stricmp( what, "resume" ) ) {
 		Box_Pause( &boxHost, b, (qboolean)!Q_stricmp( what, "pause" ), trap->Milliseconds() );
 	} else if ( !Q_stricmp( what, "skip" ) ) {
-		if ( box->numSongs )
+		if ( box->numSongs && Box_Touch( box, trap->Milliseconds() ) )
 			Box_Next( &boxHost, b );
 	} else if ( !Q_stricmp( what, "stop" ) ) {
 		if ( box->numSongs )
@@ -625,7 +625,8 @@ void Cmd_Boombox_f( gentity_t *ent ) {
 		box->volume = Com_Clampi( 0, 100, (int)Box_ArgFloat( 3 ) );
 		Box_Changed( b );
 	} else if ( !Q_stricmp( what, "seek" ) ) {
-		Box_Seek( &boxHost, b, (int)Box_ArgFloat( 3 ), trap->Milliseconds() );
+		if ( Box_Touch( box, trap->Milliseconds() ) )
+			Box_Seek( &boxHost, b, (int)Box_ArgFloat( 3 ), trap->Milliseconds() );
 	} else if ( !Q_stricmp( what, "drop" ) ) {
 		Box_Drop( &boxHost, b, (int)Box_ArgFloat( 3 ) );
 	} else if ( !Q_stricmp( what, "move" ) ) {

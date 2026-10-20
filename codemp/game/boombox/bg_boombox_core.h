@@ -120,6 +120,7 @@ typedef struct box_s {
 	int			waitSince;		// when its fetch began
 	int			restarts;		// times its fetch broke off and was begun again further in
 	int			seq;			// of the datagrams of this box, one up with every frame
+	int			touched;		// when a player last skipped or moved in its song (Box_Touch)
 } box_t;
 
 typedef struct boxHost_s boxHost_t;
@@ -177,6 +178,7 @@ void		Box_Stop( boxHost_t *host, int box );
 void		Box_Remove( boxHost_t *host, int box );
 void		Box_Pause( boxHost_t *host, int box, qboolean pause, int now );
 void		Box_Seek( boxHost_t *host, int box, int seconds, int now );
+qboolean	Box_Touch( box_t *box, int now );
 void		Box_Drop( boxHost_t *host, int box, int index );
 int			Box_Flags( const box_t *box );
 int			Box_Msec( const box_t *box );
