@@ -85,6 +85,7 @@ typedef struct vkTransform_s {	// once per view and entity
 #define VKD_TCGEN0_SHIFT	6				// texCoordGen_t of the first texture
 #define VKD_TCGEN1_SHIFT	10				// and of the second
 #define VKD_TCGEN_MASK		0xfu
+#define VK_TCGEN_REST		10				// after texCoordGen_t: RF_REFRACT_REST, TCGEN_REST of stage.glsl
 #define VKD_RGBGEN_SHIFT	14				// 0: base + vertex, 1: diffuse light, 2: diffuse light times entity
 #define VKD_RGBGEN_MASK		0x3u
 #define VKD_AGEN_SHIFT		16				// 0: base + vertex, 1: specular, 2: portal

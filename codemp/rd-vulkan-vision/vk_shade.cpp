@@ -942,7 +942,16 @@ void RB_StageIteratorGeneric( void ) {
 			}
 			VectorScale4( draw.texTurb0, 0.0f, draw.texTurb0 );
 		}
-		draw.flags |= VK_BundleTcGen( &pStage->bundle[0], draw.tcGenVec0 ) << VKD_TCGEN0_SHIFT;
+		if ( refract && !pStage->bundle[1].image && ( ent->e.renderfx & RF_REFRACT_REST ) && ent->e.radius > 0.0f ) {
+			// the screen behind where each vertex rests: the model need not face the view (RestTexCoord of stage.glsl)
+			memset( draw.tcGenVec0, 0, sizeof( draw.tcGenVec0 ) );
+			draw.tcGenVec0[0] = 0.5f * glConfig.vidWidth / ent->e.radius;
+			draw.tcGenVec0[1] = 0.5f * glConfig.vidHeight / ent->e.radius;
+			draw.tcGenVec0[2] = ent->e.shaderTexCoord[0];
+			draw.flags |= (uint32_t)VK_TCGEN_REST << VKD_TCGEN0_SHIFT;
+		} else {
+			draw.flags |= VK_BundleTcGen( &pStage->bundle[0], draw.tcGenVec0 ) << VKD_TCGEN0_SHIFT;
+		}
 		draw.tex1 = draw.tex0;
 		if ( pStage->bundle[1].image ) {
 			draw.tex1 = VK_BundleTexture( &pStage->bundle[1] );

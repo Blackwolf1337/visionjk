@@ -130,6 +130,7 @@ static struct {
 	qhandle_t	model, cone;
 	qhandle_t	desk, platter, speaker;
 	qhandle_t	wave, waveShader;		// the shockwave of a beat
+	qboolean	waveTurns;				//	the renderer lets it face the way the speaker does (RF_REFRACT_REST)
 	qboolean	registered;
 	// a piece of a box the pointer carries (select/cg_select.c)
 	int			held;			// -1: none
@@ -892,6 +893,12 @@ static void Box_Register( void ) {
 	bx.speaker = trap->R_RegisterModel( SYS_SPEAKER_MODEL );
 	bx.wave = trap->R_RegisterModel( BOX_WAVE_MODEL );
 	bx.waveShader = trap->R_RegisterShader( BOX_WAVE_SHADER );
+	{
+		char renderer[MAX_QPATH];
+
+		trap->Cvar_VariableStringBuffer( "cl_renderer", renderer, sizeof( renderer ) );
+		bx.waveTurns = Q_stristr( renderer, "vulkan" ) ? qtrue : qfalse;
+	}
 }
 
 // A speaker cone, pushed out by the song: longer along the axis it faces, a little wider. x, y, z: where it sits
@@ -912,13 +919,14 @@ static void Box_AddCone( const refEntity_t *body, float x, float y, float z, flo
 	trap->R_AddRefEntityToScene( &cone );
 }
 
-// The waves of a channel out of a cone of a model: at x, y, z on it, the disc of sound_wave.md3 turned to the camera,
-// its ring running out over the frames of the model. size: the radius of the disc in the level.
+// The waves of a channel out of a cone of a model: at x, y, z on it, the disc of sound_wave.md3 across the way the
+// cone faces, its ring running out over the frames of the model. size: the radius of the disc in the level.
 //
 // The renderer bends with the square of the screen around the origin of a distortion, ent.radius pixels across
-// (RB_CaptureForEntity), which it draws onto the model by the texture coordinates of the model. Those of the disc are
-// that square: so the disc is made exactly that large on the screen, and shows what is behind it as it is but for the
-// ring. Where the square would leave the screen the renderer moves it, and the disc then shows it shifted a little.
+// (RB_CaptureForEntity). rd-vulkan-vision shows on each point of the disc what the screen has where that point
+// rests (RF_REFRACT_REST), so the disc can face any way. rd-vanilla draws the square onto the model by the texture
+// coordinates of the model, which are that square: there the disc is turned to the camera and made exactly that
+// large on the screen, and shows what is behind it as it is but for the ring.
 static void Box_AddWaves( int channel, const refEntity_t *body, float x, float y, float z, float size ) {
 	vec3_t	at, to;
 	float	ahead, perUnit, pixels;
@@ -955,10 +963,21 @@ static void Box_AddWaves( int channel, const refEntity_t *body, float x, float y
 		wave.customShader = bx.waveShader;
 		VectorCopy( at, wave.origin );
 		VectorCopy( at, wave.oldorigin );
-		// to the camera; its +y to the right of the screen and its +z up, as the texture coordinates have it
-		VectorScale( cg.refdef.viewaxis[0], -size / BOX_WAVE_MODEL_R, wave.axis[0] );
-		VectorScale( cg.refdef.viewaxis[1], -size / BOX_WAVE_MODEL_R, wave.axis[1] );
-		VectorScale( cg.refdef.viewaxis[2], size / BOX_WAVE_MODEL_R, wave.axis[2] );
+		if ( bx.waveTurns ) {
+			// across the way the cone faces, as the speaker stands
+			VectorNormalize2( body->axis[0], wave.axis[0] );
+			VectorNormalize2( body->axis[1], wave.axis[1] );
+			VectorNormalize2( body->axis[2], wave.axis[2] );
+			VectorScale( wave.axis[0], size / BOX_WAVE_MODEL_R, wave.axis[0] );
+			VectorScale( wave.axis[1], size / BOX_WAVE_MODEL_R, wave.axis[1] );
+			VectorScale( wave.axis[2], size / BOX_WAVE_MODEL_R, wave.axis[2] );
+			wave.shaderTexCoord[0] = BOX_WAVE_MODEL_R;
+		} else {
+			// to the camera; its +y to the right of the screen and its +z up, as the texture coordinates have it
+			VectorScale( cg.refdef.viewaxis[0], -size / BOX_WAVE_MODEL_R, wave.axis[0] );
+			VectorScale( cg.refdef.viewaxis[1], -size / BOX_WAVE_MODEL_R, wave.axis[1] );
+			VectorScale( cg.refdef.viewaxis[2], size / BOX_WAVE_MODEL_R, wave.axis[2] );
+		}
 		wave.nonNormalizedAxes = qtrue;
 		// the ring between two frames of the model
 		frame = part * ( BOX_WAVE_FRAMES - 1 );
@@ -966,7 +985,7 @@ static void Box_AddWaves( int channel, const refEntity_t *body, float x, float y
 		wave.frame = Q_min( wave.oldframe + 1, BOX_WAVE_FRAMES - 1 );
 		wave.backlerp = 1.0f - ( frame - wave.oldframe );
 		wave.radius = pixels;
-		wave.renderfx = RF_DISTORTION | RF_FORCE_ENT_ALPHA;
+		wave.renderfx = RF_DISTORTION | RF_FORCE_ENT_ALPHA | ( bx.waveTurns ? RF_REFRACT_REST : 0 );
 		wave.shaderRGBA[0] = wave.shaderRGBA[1] = wave.shaderRGBA[2] = 255;
 		// (it gets weaker in the model, here it only goes at its end)
 		wave.shaderRGBA[3] = (byte)( 255.0f * Com_Clamp( 0.0f, 1.0f, ( 1.0f - part ) * 5.0f ) );

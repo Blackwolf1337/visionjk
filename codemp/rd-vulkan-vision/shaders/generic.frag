@@ -19,6 +19,7 @@ VARYING( 1 ) in vec2 v_texCoord1;
 VARYING( 2 ) in vec4 v_color;
 VARYING( 3 ) in vec3 v_position;
 VARYING( 4 ) in float v_depth;
+VARYING( 6 ) NOPERSPECTIVE in vec2 v_screenCoord0;
 #ifdef VK_GLES
 in float v_clip;
 #else
@@ -72,7 +73,7 @@ void main() {
 		return;
 	}
 
-	vec4 color = texture( TEX0( d ), v_texCoord0 ) * v_color;
+	vec4 color = texture( TEX0( d ), ( TCGEN0( d.flags ) == TCGEN_REST ) ? v_screenCoord0 : v_texCoord0 ) * v_color;
 
 	// the second texture of a stage, combined the way glTexEnv did it
 	uint env = TEXENV( d.flags );

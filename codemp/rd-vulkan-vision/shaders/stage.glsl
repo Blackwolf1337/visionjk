@@ -16,6 +16,7 @@ VARYING( 1 ) out vec2 v_texCoord1;
 VARYING( 2 ) out vec4 v_color;
 VARYING( 3 ) out vec3 v_position;		// in model space
 VARYING( 4 ) out float v_depth;		// distance in front of the eye
+VARYING( 6 ) NOPERSPECTIVE out vec2 v_screenCoord0;	// TCGEN_REST: v_texCoord0 as the screen counts it, see RestTexCoord()
 #ifdef VK_GLES
 out float v_clip;		// GLSL ES has no clip distances: generic.frag drops what is behind the plane
 #define CLIP_DISTANCE	v_clip
@@ -109,6 +110,16 @@ vec2 GenTexCoord( uint gen, vec4 vectors[2], vec3 viewOrigin, StageInput v ) {
 	}
 }
 
+// TCGEN_REST (RF_REFRACT_REST): where the vertex lies when nothing bends it, in the square of the screen the
+// renderer copied around the origin of the entity (RB_CaptureForEntity): s to the right, t up, 1 its edge.
+// vectors[0]: x, y half the window over the edge of the square in pixels, z the radius of the model's disc.
+vec2 RestTexCoord( vec4 vectors[2], mat4 mvp, StageInput v ) {
+	vec4 rest = mvp * vec4( 0.0, ( v.texCoord - 0.5 ) * 2.0 * vectors[0].z, 1.0 );
+	vec4 origin = mvp * vec4( 0.0, 0.0, 0.0, 1.0 );
+
+	return vec2( 0.5 ) + ( rest.xy / rest.w - origin.xy / origin.w ) * vectors[0].xy;
+}
+
 vec2 ModTexCoord( vec2 st, vec4 mat[2], vec4 turb, StageInput v ) {
 	vec2 result = vec2( dot( mat[0].xy, st ) + mat[0].z, dot( mat[1].xy, st ) + mat[1].z );
 
@@ -144,7 +155,14 @@ void StageVertex( StageInput v ) {
 	gl_Position.z = ( gl_Position.z + gl_Position.w ) * 0.5;
 #endif
 
-	v_texCoord0 = ModTexCoord( GenTexCoord( TCGEN0( d.flags ), d.tcGenVec0, t.viewOrigin.xyz, v ), d.texMat0, d.texTurb0, v );
+	// A place on the screen is the same part of the way across a triangle on the screen, not in the level: the
+	// fragment takes it from v_screenCoord0, which is not corrected for the depth.
+	if ( TCGEN0( d.flags ) == TCGEN_REST ) {
+		v_texCoord0 = ModTexCoord( RestTexCoord( d.tcGenVec0, t.mvp, v ), d.texMat0, vec4( 0.0 ), v );
+	} else {
+		v_texCoord0 = ModTexCoord( GenTexCoord( TCGEN0( d.flags ), d.tcGenVec0, t.viewOrigin.xyz, v ), d.texMat0, d.texTurb0, v );
+	}
+	v_screenCoord0 = v_texCoord0;
 	v_texCoord1 = ModTexCoord( GenTexCoord( TCGEN1( d.flags ), d.tcGenVec1, t.viewOrigin.xyz, v ), d.texMat1, d.texTurb1, v );
 	if ( RGBGEN( d.flags ) != 0u ) {
 		// rgbGen lightingDiffuse: the light of the entity on the normal, times the color of the entity for

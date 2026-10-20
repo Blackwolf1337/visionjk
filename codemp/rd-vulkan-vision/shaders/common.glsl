@@ -95,3 +95,4 @@ layout( set = 0, binding = 2, std430 ) readonly buffer Draws {
 #define TCGEN_ENVIRONMENT	7u
 #define TCGEN_FOG			8u
 #define TCGEN_VECTOR		9u
+#define TCGEN_REST			10u		// VK_TCGEN_REST of vk_local.h: RF_REFRACT_REST

@@ -78,6 +78,12 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // that only the glow draws around the entity (RGBA_SHADER_BLUR) then lies behind it and not across it. In a view
 // without a glow the flag does nothing.
 #define RF_AFTERGLOW		0x400000
+// With RF_DISTORTION, in rd-vulkan-vision: the model may lie at any angle, it need not face the view. Its texture
+// coordinates say where a vertex lies when nothing bends it, (0, (s - 0.5) * 2r, (t - 0.5) * 2r) in the model,
+// r = shaderTexCoord[0], and it shows what the screen has there: where a vertex was moved, the picture under it
+// moves with it (the shockwave of the boombox, sound_wave.md3). rd-vanilla does not know it: a model that faces
+// the view is right there too.
+#define RF_REFRACT_REST		0x800000
 
 // refdef flags
 // what a shader for a picture a module made is like (RE_RegisterShaderRGBA). The first one is the qtrue the

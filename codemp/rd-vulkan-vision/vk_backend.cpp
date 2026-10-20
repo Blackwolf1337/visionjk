@@ -565,7 +565,7 @@ cvar_t	*v_lodPixels;	// 0: models choose their detail by the share of the screen
 
 // the render flags that change how a batch is drawn
 #define VK_RF_BATCH	( RF_DEPTHHACK | RF_NODEPTH | RF_VOLUMETRIC | RF_FORCE_ENT_ALPHA | RF_RGB_TINT | RF_DISTORTION \
-	| RF_DISINTEGRATE1 | RF_DISINTEGRATE2 | RF_SETANIMINDEX | RF_ALPHA_DEPTH | RF_FORCEPOST )
+	| RF_DISINTEGRATE1 | RF_DISINTEGRATE2 | RF_SETANIMINDEX | RF_ALPHA_DEPTH | RF_FORCEPOST | RF_REFRACT_REST )
 
 static int VK_ShaderMergesEntities( const shader_t *shader ) {
 	int result = 1;

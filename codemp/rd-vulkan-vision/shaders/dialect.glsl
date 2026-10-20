@@ -9,10 +9,12 @@
 #define BINDING( set_, binding_ )
 #define VARYING( location_ )
 #define VERTEX_INDEX	gl_VertexID
+#define NOPERSPECTIVE				// GLSL ES 3.00 has no such interpolation
 // what a block is laid out as when it does not say
 layout( std140 ) uniform;
 #else
 #define BINDING( set_, binding_ )	layout( set = set_, binding = binding_ )
 #define VARYING( location_ )		layout( location = location_ )
 #define VERTEX_INDEX	gl_VertexIndex
+#define NOPERSPECTIVE				noperspective
 #endif
