@@ -30,7 +30,8 @@ The live view
 
 Not in JKAdmin. vs_liveView 1 opens /live/ of the panel's port to every visitor: the script that draws the map
 as the panel does (page/live.js, the drawing parts of the page and js/live-boot.js) and the few questions it
-asks, read only, and its WebSocket (/live/stream, wa_stream.c). A website puts it in front of its visitors through a reverse proxy (jka.vision/live/).
+asks, read only, and its WebSocket (/live/stream, wa_stream.c). A website puts it in front of its visitors
+through a reverse proxy (jka.vision/live/).
 
 What a visitor gets is what a spectator in the game sees: the map, the players with their names, what moves.
 Not the addresses of the players, not who is an admin, not the HUD of a player, not what the server prints.

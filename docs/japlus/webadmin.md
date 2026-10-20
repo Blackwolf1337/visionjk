@@ -113,11 +113,47 @@ who the visitor is: `X-Real-IP`, else the last entry of `X-Forwarded-For`. That 
 wrong logins and stands in the log. With `X-Forwarded-Proto: https` the cookie of a session is marked `Secure`.
 
 Nginx Proxy Manager: a proxy host for the name of the panel, scheme `http`, the address and port of the game
-server, "Block Common Exploits" on, "Websockets Support" off (the panel has none). On the SSL tab a
+server, "Block Common Exploits" on, "Websockets Support" on (the socket of the page, see "The socket of a page";
+without it the page asks over HTTP). On the SSL tab a
 certificate, "Force SSL", "HTTP/2 Support" and "HSTS Enabled". It sends `Host`, `X-Real-IP`,
 `X-Forwarded-For` and `X-Forwarded-Proto` by itself, nothing has to go into the Advanced tab. An access list
 (a second password of the proxy, or addresses that may come) in front of it does no harm. Opening the port of
 the proxy to the internet is a rule of the router and the firewall, which this text does not change.
+
+## The socket of a page
+
+Not in JKAdmin. The page and the live view ask for nothing again and again while their WebSocket is open: the
+server pushes. `GET /api/stream` of the panel (with the login of the page, and only from a page of the same
+address: `Origin` is checked) and `/live/stream` of the live view are WebSockets (RFC 6455, the frames of
+`shared/web/web_ws.c`, which the web host of the dedicated server has its sockets with too).
+
+What the server sends is a text message: a line with its name and the HTTP status, then the answer as a GET of
+the same address has it.
+
+- `state 200` and `/api/state` every 50 ms (`/live/api/state` for the live view). The server asks for the socket
+  with what its page has after the last one (`WA_StateNext` in `wa_state.c`), so only what changed comes again:
+  the items when their list changed, the part of a player that stays when it changed, the effects and events
+  since the last one. The pages of the live view all have the same after their first push, they are sent one
+  answer that is put together once.
+- What the page subscribed to, under the name it gave, now and whenever the answer is another one (asked every
+  250 ms, the entity list every second): the texture swaps, the chat, the entities, the clips, the log, the
+  console, the intrusion detection. The live view may subscribe to the texture swaps alone.
+
+The page sends text messages: `state hud=<client>` (the HUD of the player it looks through), `sub <name>
+<path>?<query>` (the question it would have asked, which the server keeps and asks), `unsub <name>`. A part of
+the page subscribes again with what it has after every answer (the chat with the number of the last line, the
+log from where its text ended).
+
+A page that does not read is not pushed more than 512 KB: what does not fit is left out, the state is then
+asked with what the page has. The login is asked again every second with the cookie of the upgrade, a page that
+is logged out loses its socket. The panel takes 96 connections, the sockets of the live view 64 of them at
+most, so that they never take the last ones from the panel. The live view lets its socket go after ten seconds
+of not being seen.
+
+Without a socket (a game module from before it, a reverse proxy that does not pass WebSockets on) everything is
+asked over HTTP as before, and the socket is tried again, later each time. Behind Nginx Proxy Manager the proxy
+host needs "Websockets Support" on; behind nginx a location with `proxy_http_version 1.1` and the `Upgrade` and
+`Connection` headers passed on.
 
 ## The live view
 
@@ -128,6 +164,7 @@ its headline (nginx of the host passes `/live/` on and keeps the files, see `dep
 | Address | What |
 |---------|------|
 | `/live/live.js` | the script: the drawing files of the page and `js/live-boot.js`, put together from `page/live.js` as the page is from `index.html` (with `vs_webRoot` from disk at every load) |
+| `/live/stream` | the WebSocket of the live view, see "The socket of a page": the state below twenty times a second, and the texture swaps when they change |
 | `/live/api/state` | what `/api/state` has, without the address, the arrival and the JA+ client plugin of a player, without his JA+ admin state, without what the server prints, and without the view and the HUD of a player |
 | `/live/api/map?name=` | the map that runs, only under its own name |
 | `/live/api/file?name=` | what `/api/file` hands out, without sounds and music |
