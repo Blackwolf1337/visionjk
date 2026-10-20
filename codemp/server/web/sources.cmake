@@ -48,6 +48,7 @@ set(MPDedSharedWebFiles
 	"${SharedDir}/web/web_http.c"
 	"${SharedDir}/web/web_base64.c"
 	"${SharedDir}/web/web_sha1.c"
+	"${SharedDir}/web/web_ws.c"
 	)
 source_group("shared/web" FILES ${MPDedSharedWebFiles})
 set(MPDedFiles ${MPDedFiles} ${MPDedSharedWebFiles})

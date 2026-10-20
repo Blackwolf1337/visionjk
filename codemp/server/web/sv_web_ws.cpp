@@ -31,185 +31,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include "server/web/sv_web_local.h"
 
-// what a server adds to the key of the client before it hashes it (RFC 6455, 1.3)
-#define WEB_SOCKET_GUID		"258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
-#define WEB_SOCKET_KEY_LEN	24			// 16 bytes as base64
-
-// why a WebSocket is ended (RFC 6455, 7.4.1)
-#define WEB_CLOSE_NORMAL	1000
-#define WEB_CLOSE_PROTOCOL	1002
-#define WEB_CLOSE_DATA		1003		// a kind of message this end does not take: text
-#define WEB_CLOSE_TOO_BIG	1009
-
-/*
-==============================================================================
-
-Frames
-
-==============================================================================
-*/
-
-/*
-==================
-SV_WebAcceptKey
-
-What the handshake answers the Sec-WebSocket-Key of the client with
-==================
-*/
-void SV_WebAcceptKey( const char *key, char *out, int outSize ) {
-	char			text[128];
-	unsigned char	digest[WEB_SHA1_SIZE];
-
-	Com_sprintf( text, sizeof( text ), "%s" WEB_SOCKET_GUID, key );
-	Web_SHA1( text, strlen( text ), digest );
-	Web_Base64Encode( digest, sizeof( digest ), out, outSize );
-}
-
-/*
-==================
-SV_WebFrameHead
-
-The head of the frame of a client that begins at data, of which len bytes are there. Returns the length of
-the head (the payload follows it), 0 if not all of the head is there yet, WEB_FRAME_BAD for a frame that is
-against the protocol and WEB_FRAME_LONG for one with more than maxPayload bytes.
-
-  byte 0   FIN, three bits of extensions (none is agreed on, so they are 0), four bits opcode
-  byte 1   the mask bit, which every frame of a client has, and seven bits of length:
-           up to 125 the length itself, 126: it follows as 16 bits, 127: as 64 bits, big endian
-  then     the four bytes the payload is scrambled with
-
-The length is judged before anything is done with it, the 64 bits as they are.
-==================
-*/
-int SV_WebFrameHead( const byte *data, int len, int maxPayload, webFrame_t *frame ) {
-	uint64_t	length;
-	int			headLen = 2, i;
-
-	if ( len < 2 ) {
-		return 0;
-	}
-	if ( ( data[0] & 0x70 ) || !( data[1] & 0x80 ) ) {
-		return WEB_FRAME_BAD;
-	}
-
-	frame->fin = (qboolean)( ( data[0] & 0x80 ) != 0 );
-	frame->opcode = data[0] & 0x0F;
-
-	length = data[1] & 0x7F;
-	if ( length == 126 ) {
-		if ( len < 4 ) {
-			return 0;
-		}
-		length = ( (uint64_t)data[2] << 8 ) | data[3];
-		headLen = 4;
-		// (the shortest way to write a length is the only one)
-		if ( length < 126 ) {
-			return WEB_FRAME_BAD;
-		}
-	} else if ( length == 127 ) {
-		if ( len < 10 ) {
-			return 0;
-		}
-		length = 0;
-		for ( i = 0; i < 8; i++ ) {
-			length = ( length << 8 ) | data[2 + i];
-		}
-		headLen = 10;
-		if ( length < 65536 ) {
-			return WEB_FRAME_BAD;
-		}
-	}
-
-	switch ( frame->opcode ) {
-	case WEB_OP_CONTINUATION:
-	case WEB_OP_TEXT:
-	case WEB_OP_BINARY:
-		break;
-	case WEB_OP_CLOSE:
-	case WEB_OP_PING:
-	case WEB_OP_PONG:
-		// these are short and never in pieces
-		if ( !frame->fin || length > 125 ) {
-			return WEB_FRAME_BAD;
-		}
-		break;
-	default:
-		return WEB_FRAME_BAD;
-	}
-
-	if ( maxPayload < 0 || length > (uint64_t)maxPayload ) {
-		return WEB_FRAME_LONG;
-	}
-	if ( len < headLen + 4 ) {
-		return 0;
-	}
-
-	memcpy( frame->mask, data + headLen, sizeof( frame->mask ) );
-	frame->length = (int)length;
-	return headLen + 4;
-}
-
-/*
-==================
-SV_WebFrameUnmask
-==================
-*/
-void SV_WebFrameUnmask( byte *payload, int len, const byte *mask ) {
-	int i;
-
-	for ( i = 0; i < len; i++ ) {
-		payload[i] ^= mask[i & 3];
-	}
-}
-
-/*
-==================
-SV_WebFrameSize
-
-How long the frame of a payload of len bytes is, as a server sends it: whole, and not masked
-==================
-*/
-static int SV_WebFrameSize( int len ) {
-	return len + ( ( len < 126 ) ? 2 : ( len < 65536 ) ? 4 : 10 );
-}
-
-/*
-==================
-SV_WebFrameBuild
-
-Writes that frame. Returns its length, 0 if it does not fit into outSize bytes.
-==================
-*/
-int SV_WebFrameBuild( byte *out, int outSize, int opcode, const void *payload, int len ) {
-	int headLen = 2;
-
-	if ( len < 0 || len > outSize || SV_WebFrameSize( len ) > outSize ) {
-		return 0;
-	}
-
-	out[0] = (byte)( 0x80 | ( opcode & 0x0F ) );
-	if ( len < 126 ) {
-		out[1] = (byte)len;
-	} else if ( len < 65536 ) {
-		out[1] = 126;
-		out[2] = (byte)( len >> 8 );
-		out[3] = (byte)len;
-		headLen = 4;
-	} else {
-		out[1] = 127;
-		memset( out + 2, 0, 4 );
-		out[6] = (byte)( len >> 24 );
-		out[7] = (byte)( len >> 16 );
-		out[8] = (byte)( len >> 8 );
-		out[9] = (byte)len;
-		headLen = 10;
-	}
-
-	if ( len ) {
-		memcpy( out + headLen, payload, len );
-	}
-	return headLen + len;
-}
+// The frames themselves (the key of the handshake, the head of a frame, a frame of the server) are read and
+// written by shared/web/web_ws.c, which the web admin panel of the game module has its sockets with too.
 
 /*
 ==============================================================================
@@ -234,11 +57,11 @@ qboolean SV_WebSocketSend( webConnection_t *c, int opcode, const void *payload, 
 	if ( len < 0 || len > SV_WEB_OUT_SIZE ) {
 		return qfalse;
 	}
-	size = SV_WebFrameSize( len );
+	size = Web_WsFrameSize( len );
 	if ( !( out = SV_WebOutRoom( c, size ) ) ) {
 		return qfalse;
 	}
-	c->outLen += SV_WebFrameBuild( out, size, opcode, payload, len );
+	c->outLen += Web_WsFrameBuild( out, size, opcode, payload, len );
 	return qtrue;
 }
 
@@ -399,7 +222,7 @@ void SV_WebSocketFrames( webConnection_t *c ) {
 		webFrame_t	frame;
 		byte		*data = c->in + c->inPos;
 		const int	len = c->inLen - c->inPos;
-		const int	headLen = SV_WebFrameHead( data, len, SV_WebMaxMessage( c ), &frame );
+		const int	headLen = Web_WsFrameHead( data, len, SV_WebMaxMessage( c ), &frame );
 
 		if ( headLen < 0 ) {
 			SV_WebSocketEnd( c, ( headLen == WEB_FRAME_LONG ) ? WEB_CLOSE_TOO_BIG : WEB_CLOSE_PROTOCOL );
@@ -409,7 +232,7 @@ void SV_WebSocketFrames( webConnection_t *c ) {
 			return;		// the rest of it is to come
 		}
 
-		SV_WebFrameUnmask( data + headLen, frame.length, frame.mask );
+		Web_WsFrameUnmask( data + headLen, frame.length, frame.mask );
 		c->inPos += headLen + frame.length;
 		SV_WebSocketFrame( c, &frame, data + headLen );
 	}
@@ -454,7 +277,7 @@ void SV_WebUpgrade( webConnection_t *c, const char *head, int headLen, int minor
 		return;
 	}
 
-	SV_WebAcceptKey( key, accept, sizeof( accept ) );
+	Web_WsAcceptKey( key, accept, sizeof( accept ) );
 	Com_sprintf( answer, sizeof( answer ),
 		"HTTP/1.1 101 Switching Protocols\r\n"
 		"Upgrade: websocket\r\n"

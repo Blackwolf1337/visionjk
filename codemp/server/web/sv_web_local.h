@@ -181,24 +181,7 @@ typedef struct webConnection_s {
 	byte		message[SV_WEB_MAX_PACKET];		// the frames of a message so far
 } webConnection_t;
 
-// the head of a frame of a WebSocket (RFC 6455, 5.2)
-typedef struct webFrame_s {
-	qboolean	fin;			// the last frame of its message
-	int			opcode;
-	int			length;			// of what follows the head
-	byte		mask[4];		// what a client scrambles it with
-} webFrame_t;
-
-#define WEB_OP_CONTINUATION		0x0
-#define WEB_OP_TEXT				0x1
-#define WEB_OP_BINARY			0x2
-#define WEB_OP_CLOSE			0x8
-#define WEB_OP_PING				0x9
-#define WEB_OP_PONG				0xA
-
-// what SV_WebFrameHead says of a frame that is not taken
-#define WEB_FRAME_BAD			-1			// against the protocol
-#define WEB_FRAME_LONG			-2			// more than a datagram
+// the frames of a WebSocket (webFrame_t, WEB_OP_ and the rest) are in shared/web/web_http.h
 
 extern cvar_t	*vs_clientWebRoot;
 
@@ -222,10 +205,6 @@ int SV_WebBodyMore( webConnection_t *c, int max );
 void SV_WebBodyEnd( webConnection_t *c );
 
 // sv_web_ws.cpp
-void SV_WebAcceptKey( const char *key, char *out, int outSize );
-int SV_WebFrameHead( const byte *data, int len, int maxPayload, webFrame_t *frame );
-void SV_WebFrameUnmask( byte *payload, int len, const byte *mask );
-int SV_WebFrameBuild( byte *out, int outSize, int opcode, const void *payload, int len );
 void SV_WebUpgrade( webConnection_t *c, const char *head, int headLen, int minor );
 qboolean SV_WebSocketSend( webConnection_t *c, int opcode, const void *payload, int len );
 void SV_WebSocketFrames( webConnection_t *c );
