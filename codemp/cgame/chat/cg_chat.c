@@ -669,6 +669,7 @@ static void Chat_Log( int kind, const char *text ) {
 	char				line[MAX_SAY_TEXT * 2];
 	qtime_t				now;
 	fileHandle_t		f;
+	int					i;
 
 	if ( !tay_chatLog.integer ) {
 		return;
@@ -677,6 +678,12 @@ static void Chat_Log( int kind, const char *text ) {
 	Com_sprintf( line, sizeof( line ), "[%02i:%02i:%02i] %s%s", now.tm_hour, now.tm_min, now.tm_sec,
 		kinds[Com_Clampi( 0, CHAT_NUM_KINDS - 1, kind )], text );
 	Q_StripColor( line );
+	// one line in the file for one line of the chat: what others send may hold line breaks
+	for ( i = 0; line[i]; i++ ) {
+		if ( (unsigned char)line[i] < ' ' ) {
+			line[i] = ' ';
+		}
+	}
 	Q_strcat( line, sizeof( line ), "\n" );
 	if ( trap->FS_Open( va( "chatlogs/%04i-%02i-%02i.log", now.tm_year + 1900, now.tm_mon + 1, now.tm_mday ), &f, FS_APPEND ) >= 0
 		&& f ) {

@@ -44,16 +44,8 @@ static void CG_ParseScores( void ) {
 	const int SCORE_OFFSET = cgs.jpVersion >= 2.1f ? 15 : 14;
 	int i, powerups, readScores;
 
-	cg.numScores = atoi( CG_Argv( 1 ) );
-
-	readScores = cg.numScores;
-
-	if (readScores > MAX_CLIENT_SCORE_SEND)
-		readScores = MAX_CLIENT_SCORE_SEND;
-
-	if ( cg.numScores > MAX_CLIENTS )
-		cg.numScores = MAX_CLIENTS;
-
+	// the count comes from the server: below 0 the scoreboard would index cg.scores with it (hud/cg_scores.c)
+	readScores = Com_Clampi( 0, MAX_CLIENT_SCORE_SEND, atoi( CG_Argv( 1 ) ) );
 	cg.numScores = readScores;
 
 	cg.teamScores[0] = atoi( CG_Argv( 2 ) );
@@ -274,6 +266,35 @@ static char ctfFlagStatusRemap[] = {
 
 /*
 ================
+CG_DuelField, CG_DuelClient
+
+The duel configstrings are numbers between "|". A field is read with a bound and the string is left behind its
+"|", or at its end and never past it: the server decides how long these are (stock JKA copied them into a 64 byte
+buffer without one).
+================
+*/
+static int CG_DuelField( const char **s ) {
+	const char	*p = *s;
+	char		buf[16];
+	int			n = 0;
+
+	while ( *p && *p != '|' ) {
+		if ( n < (int)sizeof( buf ) - 1 )
+			buf[n++] = *p;
+		p++;
+	}
+	buf[n] = '\0';
+	*s = *p ? p + 1 : p;
+	return atoi( buf );
+}
+
+// a client number from the server, -1 when it names nobody (it is an index into cgs.clientinfo)
+static int CG_DuelClient( int num ) {
+	return ( num >= 0 && num < MAX_CLIENTS ) ? num : -1;
+}
+
+/*
+================
 CG_SetConfigValues
 
 Called on load to set the initial values from configure strings
@@ -306,37 +327,14 @@ void CG_SetConfigValues( void )
 
 	// Track who the jedi master is
 	cgs.jediMaster = atoi ( CG_ConfigString ( CS_CLIENT_JEDIMASTER ) );
-	cgs.duelWinner = atoi ( CG_ConfigString ( CS_CLIENT_DUELWINNER ) );
+	cgs.duelWinner = CG_DuelClient( atoi ( CG_ConfigString ( CS_CLIENT_DUELWINNER ) ) );
 
 	str = CG_ConfigString(CS_CLIENT_DUELISTS);
 
 	if (str && str[0])
 	{
-		char buf[64];
-		int c = 0;
-		int i = 0;
-
-		while (str[i] && str[i] != '|')
-		{
-			buf[c] = str[i];
-			c++;
-			i++;
-		}
-		buf[c] = 0;
-
-		cgs.duelist1 = atoi ( buf );
-		c = 0;
-
-		i++;
-		while (str[i])
-		{
-			buf[c] = str[i];
-			c++;
-			i++;
-		}
-		buf[c] = 0;
-
-		cgs.duelist2 = atoi ( buf );
+		cgs.duelist1 = CG_DuelClient( CG_DuelField( &str ) );
+		cgs.duelist2 = CG_DuelClient( CG_DuelField( &str ) );
 	}
 }
 
@@ -690,49 +688,14 @@ void CG_CacheG2AnimInfo(char *modelName);
 
 // nmckenzie: DUEL_HEALTH - fixme - we could really clean this up immensely with some helper functions.
 void SetDuelistHealthsFromConfigString ( const char *str ) {
-	char buf[64];
-	int c = 0;
-	int i = 0;
-
-	while (str[i] && str[i] != '|')
-	{
-		buf[c] = str[i];
-		c++;
-		i++;
-	}
-	buf[c] = 0;
-
-	cgs.duelist1health = atoi ( buf );
-
-	c = 0;
-	i++;
-	while (str[i] && str[i] != '|')
-	{
-		buf[c] = str[i];
-		c++;
-		i++;
-	}
-	buf[c] = 0;
-
-	cgs.duelist2health = atoi ( buf );
-
-	c = 0;
-	i++;
-	if ( str[i] == '!' )
+	cgs.duelist1health = CG_DuelField( &str );
+	cgs.duelist2health = CG_DuelField( &str );
+	if ( *str == '!' )
 	{	// we only have 2 duelists, apparently.
 		cgs.duelist3health = -1;
 		return;
 	}
-
-	while (str[i] && str[i] != '|')
-	{
-		buf[c] = str[i];
-		c++;
-		i++;
-	}
-	buf[c] = 0;
-
-	cgs.duelist3health = atoi ( buf );
+	cgs.duelist3health = CG_DuelField( &str );
 }
 
 /*
@@ -777,51 +740,17 @@ static void CG_ConfigStringModified( void ) {
 	}
 	else if ( num == CS_CLIENT_DUELWINNER )
 	{
-		cgs.duelWinner = atoi ( str );
+		cgs.duelWinner = CG_DuelClient( atoi ( str ) );
 	}
 	else if ( num == CS_CLIENT_DUELISTS )
 	{
-		char buf[64];
-		int c = 0;
-		int i = 0;
+		const char *field = str;
 
-		while (str[i] && str[i] != '|')
-		{
-			buf[c] = str[i];
-			c++;
-			i++;
-		}
-		buf[c] = 0;
-
-		cgs.duelist1 = atoi ( buf );
-		c = 0;
-
-		i++;
-		while (str[i] && str[i] != '|')
-		{
-			buf[c] = str[i];
-			c++;
-			i++;
-		}
-		buf[c] = 0;
-
-		cgs.duelist2 = atoi ( buf );
-
-		if (str[i])
-		{
-			c = 0;
-			i++;
-
-			while (str[i])
-			{
-				buf[c] = str[i];
-				c++;
-				i++;
-			}
-			buf[c] = 0;
-
-			cgs.duelist3 = atoi(buf);
-		}
+		cgs.duelist1 = CG_DuelClient( CG_DuelField( &field ) );
+		cgs.duelist2 = CG_DuelClient( CG_DuelField( &field ) );
+		// a third one only behind a second "|" (power duel)
+		if ( field > str && field[-1] == '|' )
+			cgs.duelist3 = CG_DuelClient( CG_DuelField( &field ) );
 	}
 	else if ( num == CS_CLIENT_DUELHEALTHS ) {	// nmckenzie: DUEL_HEALTH
 		SetDuelistHealthsFromConfigString(str);

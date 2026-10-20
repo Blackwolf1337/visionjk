@@ -249,6 +249,9 @@ void CG_BoomboxDo( int box, const char *what ) {
 		return;
 	for ( i = 1; i < (int)ARRAY_LEN( boxVerbs ); i++ ) {
 		if ( !Q_stricmp( what, boxVerbs[i] ) ) {
+			// (these need a place or a text, which a card does not have)
+			if ( i == BOX_DO_PLAY || i == BOX_DO_PLACE || i == BOX_DO_MOVE )
+				return;
 			Box_Do( i, box, NULL, 0.0f, 0, NULL );
 			return;
 		}

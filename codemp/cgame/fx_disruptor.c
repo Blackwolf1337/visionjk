@@ -248,7 +248,11 @@ qboolean FX_DisruptorBeam( int shooter, vec3_t start, vec3_t end, qboolean alt )
 
 	// sparks on a spiral of radius 4 around it, one every 5 units, a turn of 10 degrees each
 	VectorSubtract( end, start, dir );
+	// the ends come from the server: a shot is a few thousand units at most, a huge or NaN length is none
 	len = VectorNormalize( dir );
+	if ( !( len < 16384.0f ) ) {
+		len = 16384.0f;
+	}
 	PerpendicularVector( side, dir );
 	for ( i = 0; i < 36; i++ ) {
 		RotatePointAroundVector( axis[i], dir, side, i * 10 );

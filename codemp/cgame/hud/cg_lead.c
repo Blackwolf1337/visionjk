@@ -62,7 +62,9 @@ static float Lead_Speed( int weapon, qboolean alt, qboolean *falls ) {
 // dots every few units of the 640 x 480 grid
 static void Lead_DottedLine( float x1, float y1, float x2, float y2, const vec4_t color ) {
 	const float	length = sqrtf( ( x2 - x1 ) * ( x2 - x1 ) + ( y2 - y1 ) * ( y2 - y1 ) );
-	const int	dots = (int)( length / 5.0f );
+	// an aim point next to the plane of the camera lies far off the screen: no more dots than the screen holds,
+	// and none for a length that is no number
+	const int	dots = ( length < 2000.0f ) ? (int)( length / 5.0f ) : 400;
 	int			i;
 
 	for ( i = 0; i <= dots; i++ ) {
