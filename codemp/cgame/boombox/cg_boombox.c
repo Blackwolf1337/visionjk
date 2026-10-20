@@ -143,6 +143,12 @@ static struct {
 
 static cgBox_t	cgBoxes[BOX_MAX];
 
+#define BOX_TURN_STEP		15.0f		// one notch of the mouse wheel turns a carried piece this far
+
+// a piece in the pointer that was turned with the wheel keeps that yaw, else it faces the player
+static qboolean	boxHeldTurned;
+static float	boxHeldYaw;
+
 static qboolean	Box_Spot( const vec3_t start, const vec3_t dir, int kind, int part, int self, vec3_t at, float *yaw );
 static void		Box_Forget( void );
 
@@ -1306,6 +1312,19 @@ void CG_BoomboxGrab( int piece ) {
 	Box_Where( BOX_OF( piece ), BOX_PART_OF( piece ), bx.heldAt, &bx.heldYaw );
 	bx.held = piece;
 	bx.heldOk = qtrue;
+	boxHeldTurned = qfalse;
+}
+
+// the wheel of the mouse turns the piece in the pointer, a notch each, from the way it faces now
+void CG_BoomboxTurnHeld( int notches ) {
+	if ( !CG_BoomboxShown( bx.held ) )
+		return;
+	if ( !boxHeldTurned ) {
+		boxHeldTurned = qtrue;
+		boxHeldYaw = bx.heldYaw;
+	}
+	boxHeldYaw = AngleNormalize360( boxHeldYaw + notches * BOX_TURN_STEP );
+	bx.heldYaw = boxHeldYaw;
 }
 
 // once a frame while a piece is in the pointer: the ray from the eye through the pointer
@@ -1315,6 +1334,8 @@ void CG_BoomboxCarry( const vec3_t start, const vec3_t dir ) {
 		return;
 	}
 	bx.heldOk = Box_Spot( start, dir, cgBoxes[BOX_OF( bx.held )].kind, BOX_PART_OF( bx.held ), bx.held, bx.heldAt, &bx.heldYaw );
+	if ( boxHeldTurned )
+		bx.heldYaw = boxHeldYaw;
 }
 
 // put down where it is, if it can be (place), or back where it was

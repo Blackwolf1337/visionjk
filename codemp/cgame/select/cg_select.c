@@ -1543,9 +1543,11 @@ qboolean CG_SelectKeyEvent( int key, qboolean down ) {
 	if ( !down ) {
 		return (qboolean)!CG_ChatIsOpen();
 	}
-	// a box in the pointer: the left button puts it down, the right one or Escape puts it back
+	// a box in the pointer: the left button puts it down, the right one or Escape puts it back, the wheel turns it
 	if ( Select_Held() >= 0 ) {
-		if ( key == A_MOUSE1 ) {
+		if ( key == A_MWHEELUP || key == A_MWHEELDOWN ) {
+			CG_BoomboxTurnHeld( ( key == A_MWHEELUP ) ? 1 : -1 );
+		} else if ( key == A_MOUSE1 ) {
 			Select_LetBoxGo( qtrue );
 		} else if ( key == A_MOUSE2 || key == A_ESCAPE ) {
 			Select_LetBoxGo( qfalse );

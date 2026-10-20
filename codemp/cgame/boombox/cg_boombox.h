@@ -98,6 +98,7 @@ void		CG_BoomboxWindowDraw( void );
 qboolean	CG_BoomboxWindowKey( int key, qboolean down );
 void		CG_BoomboxPrompt( int box );
 void		CG_BoomboxGrab( int piece );
+void		CG_BoomboxTurnHeld( int notches );
 void		CG_BoomboxCarry( const vec3_t start, const vec3_t dir );
 void		CG_BoomboxDrop( qboolean place );
 int			CG_BoomboxHeld( void );
