@@ -1370,6 +1370,10 @@ int CG_BoomboxAimed( float range ) {
 	return ( tr.fraction >= 1.0f ) ? piece : -1;
 }
 
+qboolean CG_BoomboxOn( void ) {
+	return bx.on;
+}
+
 // can a sound system be put down here
 qboolean CG_BoomboxSystems( void ) {
 	return ( bx.on && bx.systems ) ? qtrue : qfalse;

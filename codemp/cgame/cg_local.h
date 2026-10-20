@@ -1799,6 +1799,15 @@ void		CG_SelectBoxOutline( int piece, const refEntity_t *model );
 qboolean	CG_SelectBoxOutlined( int piece );
 void		CG_SelectCursorDown_f( void );
 void		CG_SelectCursorUp_f( void );
+int			CG_SelectHoveredPiece( void );
+
+// radial/cg_radial.c: the quick wheel (+v_radial), a mode of the pointer
+void		CG_RadialDown_f( void );
+void		CG_RadialUp_f( void );
+qboolean	CG_RadialOpen( void );
+void		CG_RadialClose( void );
+qboolean	CG_RadialKey( int key, qboolean down );
+void		CG_RadialDraw( void );
 void		CG_SelectCursor_f( void );
 // what the card of a player uses of the chat box, the voice chat and the key login
 qboolean	CG_ChatIsOpen( void );

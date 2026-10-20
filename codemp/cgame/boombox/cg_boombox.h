@@ -56,7 +56,8 @@ void		CG_BoomboxAsk( int box, const char *text );		// a song for that box (-1: t
 
 void		CG_BoomboxPlace( void );						// a boombox where the cross hair points
 void		CG_BoomboxPlaceSystem( void );					// a sound system there, its speakers beside it
-qboolean	CG_BoomboxSystems( void );						// the server or the master has sound systems
+qboolean	CG_BoomboxOn( void );							// the server or the master has boxes
+qboolean	CG_BoomboxSystems( void );						// and sound systems
 int			CG_BoomboxNear( void );							// the box near the player, -1: none
 int			CG_BoomboxAimed( float range );					// the piece under the cross hair, -1: none
 

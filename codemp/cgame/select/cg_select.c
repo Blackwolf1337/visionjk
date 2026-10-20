@@ -175,10 +175,11 @@ void CG_SelectInit( void ) {
 	sel.headH = SELECT_HEAD_NAME + SELECT_HEAD_END;
 }
 
-// is the mouse free for pointing at players
+// Is the mouse free for pointing at players. Also for the quick wheel (radial/cg_radial.c) and a box that is
+// carried, without the selection of players.
 static qboolean Select_Free( void ) {
-	return (qboolean)( v_selectPlayers.integer && cg.snap && !cg.demoPlayback
-		&& ( sel.held || sel.toggled || CG_ChatIsOpen() || CG_ScoresPicking() || CG_BoomboxWindowShown() ) );
+	return (qboolean)( cg.snap && !cg.demoPlayback && ( CG_RadialOpen() || sel.carrying || ( v_selectPlayers.integer
+		&& ( sel.held || sel.toggled || CG_ChatIsOpen() || CG_ScoresPicking() || CG_BoomboxWindowShown() ) ) ) );
 }
 
 /*
@@ -1419,6 +1420,7 @@ void CG_SelectDraw( void ) {
 		sel.catching = sel.toggled = qfalse;
 		CG_ScoresLetGo();
 		CG_BoomboxWindowClose();
+		CG_RadialClose();
 	}
 	// Who points does not type. An engine of this tree leaves the talk button out of his commands while this
 	// says so (CL_CmdButtons()): no dots over his head for anybody, and the server does not hold him still. In
@@ -1437,6 +1439,13 @@ void CG_SelectDraw( void ) {
 			CG_Place2D( PLACE_CENTER );
 			CG_SelectDrawCursor();
 		}
+		return;
+	}
+	// the quick wheel takes the place of the pointer while it is open
+	if ( CG_RadialOpen() ) {
+		sel.hover = -1;
+		CG_Place2D( PLACE_CENTER );
+		CG_RadialDraw();
 		return;
 	}
 	// he left, the box is gone, or the board his card stands beside is gone
@@ -1507,6 +1516,9 @@ A key or a button of the mouse while the mouse is free. qtrue: it was for this f
 qboolean CG_SelectKeyEvent( int key, qboolean down ) {
 	if ( !Select_Free() ) {
 		return qfalse;
+	}
+	if ( CG_RadialKey( key, down ) ) {
+		return qtrue;
 	}
 	// a box that was pressed on: dragged, it is put down where the button is let go, else its card opens
 	if ( !down && key == A_MOUSE1 && sel.press >= 0 ) {
@@ -1614,6 +1626,7 @@ with the next frame.
 =================
 */
 void CG_SelectLetGo( void ) {
+	CG_RadialClose();
 	sel.toggled = qfalse;
 	sel.hover = -1;
 	Select_Close();
@@ -1631,6 +1644,11 @@ void CG_SelectCarry( int piece ) {
 
 void CG_SelectCursorDown_f( void ) {
 	sel.held = qtrue;
+}
+
+// the piece of a box under the pointer while the mouse is free, -1: none (for the quick wheel)
+int CG_SelectHoveredPiece( void ) {
+	return ( Select_Free() && sel.hover >= SELECT_BOX ) ? sel.hover - SELECT_BOX : -1;
 }
 
 void CG_SelectCursorUp_f( void ) {

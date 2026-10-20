@@ -213,6 +213,13 @@ set(MPCGameSelectFiles
 source_group("cgame/select" FILES ${MPCGameSelectFiles})
 set(MPCGameFiles ${MPCGameFiles} ${MPCGameSelectFiles})
 
+# the quick wheel (+v_radial), a mode of the pointer
+set(MPCGameRadialFiles
+	"${MPDir}/cgame/radial/cg_radial.c"
+	)
+source_group("cgame/radial" FILES ${MPCGameRadialFiles})
+set(MPCGameFiles ${MPCGameFiles} ${MPCGameRadialFiles})
+
 # the boombox: boxes that play songs, which the server sends over the relay of the voice chat
 set(MPCGameBoomboxFiles
 	"${MPDir}/cgame/boombox/cg_boombox.c"

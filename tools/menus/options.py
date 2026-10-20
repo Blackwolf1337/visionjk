@@ -239,6 +239,8 @@ CONTROLS = [
         ('old', 'japluscontrols', ('+v_voice', '+v_voiceclan')),
         ('bind', 'Free the Mouse (Select Players)', '+v_cursor',
          'Hold to point at players with the mouse: a click opens what you can do with one.'),
+        ('bind', 'Quick Wheel (Boombox)', '+v_radial',
+         'Hold for a wheel: put a boombox or a sound system down, or work the one you look at. Let go on a choice.'),
         ('bind', 'Scoreboard with Mouse', 'v_scores_pick',
          'Opens the scoreboard with the mouse free: a click on a row opens what you can do with that player.'),
     ]),

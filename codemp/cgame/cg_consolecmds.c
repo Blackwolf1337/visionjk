@@ -340,10 +340,12 @@ int cmdcmp( const void *a, const void *b ) {
 
 static consoleCommand_t	commands[] = {
 	{ "+v_cursor",					CG_SelectCursorDown_f },
+	{ "+v_radial",					CG_RadialDown_f },
 	{ "+scores",					CG_ScoresDown_f },
 	{ "+v_voice",						CG_VoiceDown_f },
 	{ "+v_voiceclan",					CG_VoiceClanDown_f },
 	{ "-v_cursor",					CG_SelectCursorUp_f },
+	{ "-v_radial",					CG_RadialUp_f },
 	{ "-scores",					CG_ScoresUp_f },
 	{ "-v_voice",						CG_VoiceUp_f },
 	{ "-v_voiceclan",					CG_VoiceClanUp_f },
