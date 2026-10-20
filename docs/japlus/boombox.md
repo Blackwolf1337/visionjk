@@ -81,10 +81,13 @@ server (`vs_boomboxRange`, 1536 units).
 
 The two speakers of the box push out with the loudness of what you hear of it.
 
-On every beat, when the song suddenly gets louder than it was a moment ago, each speaker sends out a wave
-that bends what is behind it, like the air of a force push. The wave moves out of the cone, grows and fades
-in less than half a second. The big speakers of a sound system send bigger waves than a boombox. This needs
-`cg_renderToTextureFX 1`, the game's own setting for such effects (on by default).
+On every beat, when the song suddenly gets louder than it was a moment ago, each speaker sends out a shockwave.
+It is a ring that runs out from the cone and bends what is behind it, like the air of a force push, while the
+middle and the edge of the ring show the level as it is. It gets weaker as it grows and is gone in less than
+half a second. The ring of a speaker of a sound system grows to about 60 units, the one of a boombox to about
+half of that. This needs `cg_renderToTextureFX 1`, the game's own setting for such effects (on by default). It is
+drawn right with the Vulkan renderer (rd-vulkan-vision). With rd-vanilla the ring can show the level a little
+shifted.
 
 A speaker is heard by the way it faces. In front of it you hear all of it, beside it about half. Behind a
 speaker of a sound system you hear only about a tenth (12 %), behind a boombox a little under half (45 %). This
