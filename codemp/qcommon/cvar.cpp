@@ -811,6 +811,25 @@ static bool FindLegacyCvar( const char *var_name ) {
 
 /*
 ============
+Cvar_CurrentName
+
+VisionJK: the name a cvar has now when it is asked for by an old one (cvar_renames.h). What a server or a module
+may set is decided by the flags of the cvar that is set: Cvar_Set2 would forward an old name to the new one with
+force, past the checks of these two functions, which only saw a name nobody has.
+============
+*/
+static const char *Cvar_CurrentName( const char *var_name ) {
+	const char *renamed;
+
+	if ( Cvar_FindVar( var_name ) ) {
+		return var_name;
+	}
+	renamed = Cvar_RenamedTo( var_name );
+	return ( renamed && Cvar_FindVar( renamed ) ) ? renamed : var_name;
+}
+
+/*
+============
 Cvar_Server_Set
 
 Set cvars from network server.
@@ -818,7 +837,10 @@ Set cvars from network server.
 */
 void Cvar_Server_Set( const char *var_name, const char *value )
 {
-	uint32_t flags = Cvar_Flags( var_name );
+	uint32_t flags;
+
+	var_name = Cvar_CurrentName( var_name );
+	flags = Cvar_Flags( var_name );
 
 	if ( flags != CVAR_NONEXISTENT ) {
 		// If this cvar may not be modified by a server discard the value.
@@ -853,7 +875,10 @@ Set cvar for game, cgame, or ui vm.
 */
 void Cvar_VM_Set( const char *var_name, const char *value, vmSlots_t vmslot )
 {
-	uint32_t flags = Cvar_Flags( var_name );
+	uint32_t flags;
+
+	var_name = Cvar_CurrentName( var_name );
+	flags = Cvar_Flags( var_name );
 
 	if ( vmslot != VM_GAME && (flags & CVAR_SYSTEMINFO) && CL_ConnectedToRemoteServer() )
 	{
