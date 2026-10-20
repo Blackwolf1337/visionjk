@@ -70,6 +70,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define VOICE_HEAR_MSEC			100		// how often it is looked at who is near, for the masterserver
 #define VOICE_ROOM_MSEC			1000	//	and whether the game server started another level
 #define VOICE_HEAR_MARGIN		1.1f	// who is near reaches this much further than a voice, so that nobody is cut off at its end
+#define VOICE_TOKEN_KEEP_MSEC	3000	// the master answered the token of this client this recently: another token is not from it
 #define VOICE_REFUSED_MSEC		10000	// the masterserver says no for this long before it is said: a player who just left keeps his number there for a moment
 #define VOICE_GAME_PORT			29070	// the port of a game server whose address names none
 #define VOICE_LEAD_FRAMES		3		// frames of a speaker that wait before he is played: 60 ms for late datagrams
@@ -149,6 +150,7 @@ static struct {
 	int					stateTime;		//	when the master was told last,
 	qboolean			stateDue;		//	whether it has to be told again,
 	int					refusedSince;	//	and since when it says no, 0: it does not
+	int					tokenAnswered;	//	and when it last answered with the token this client has
 	qboolean			toldRefused;
 	qboolean			social;			// the master knows the clan radio and the statuses (VOICE_FLAG_SOCIAL)
 	qboolean			looks;			// the master hands on hats and capes (VOICE_FLAG_LOOKS, look/cg_look.c)
@@ -935,6 +937,13 @@ static void Voice_MasterAnswer( const voicePacket_t *p, int now ) {
 
 	if ( p->client != cg.clientNum )
 		return;
+	// The address of a datagram can be made up. While the master answers the token this client has, an answer
+	// with another one is not from it; a master that started again (another secret) answers no more to the old one.
+	if ( p->token != voice.token && voice.linked && voice.tokenAnswered && now - voice.tokenAnswered < VOICE_TOKEN_KEEP_MSEC
+		&& now >= voice.tokenAnswered )
+		return;
+	if ( p->token == voice.token )
+		voice.tokenAnswered = now ? now : 1;
 	voice.boxList = ( boxes && ( p->flags & VOICE_FLAG_BOXLIST ) ) ? qtrue : qfalse;
 	voice.looks = ( social && ( p->flags & VOICE_FLAG_LOOKS ) ) ? qtrue : qfalse;
 	// A master that knows the radio is told the clan of this client from now on, in the long state

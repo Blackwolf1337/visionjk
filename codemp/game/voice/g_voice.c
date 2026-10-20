@@ -62,6 +62,8 @@ static int				voicePort;			// of the socket
 static qboolean			voiceShared;		// the engine hands over what comes in on the port of the game (vs_voiceShared)
 static int				voiceGamePort;		//	and this is that port
 static int				voiceRefused;		// datagrams that were no voice of a client of this server, since the socket was made
+static int				voiceOutSecond, voiceOutBytes;	// what went out to the clients in this second (vs_voiceKbps)
+static int				voiceCapped;		//	and what was not sent for it
 static struct in_addr	voiceSelf;			// the address of this machine the web host of the server reaches the relay on
 
 /*
@@ -118,7 +120,7 @@ void G_VoiceInit( qboolean restart ) {
 		return;
 	trap->Cvar_Register( NULL, "vs_voiceSharedGame", "0", CVAR_ROM );
 	G_VoiceShutdown( qfalse );
-	voiceRefused = 0;
+	voiceRefused = voiceCapped = 0;
 	if ( !vs_voice.integer )
 		return;
 
@@ -231,8 +233,21 @@ void Cmd_JPVoice_f( gentity_t *ent ) {
 		vs_voiceRange.integer > 0 ? vs_voiceRange.integer : 0, vs_voiceRadio.integer ? VOICE_CAP_RADIO : 0 ) );
 }
 
-// one datagram to a client, the way his come in
+// One datagram to a client, the way his come in. What one speaker says goes to everybody near him, a datagram
+// each: a few speakers at the limit of a speaker fill the upload of a server at home. vs_voiceKbps bounds it.
 static void G_VoiceSend( const voiceClient_t *vc, const byte *datagram, int len ) {
+	const int now = trap->Milliseconds() / 1000;
+
+	if ( now != voiceOutSecond ) {
+		voiceOutSecond = now;
+		voiceOutBytes = 0;
+	}
+	// (28: IPv4 and UDP in front of it)
+	if ( vs_voiceKbps.integer > 0 && voiceOutBytes + len + 28 > vs_voiceKbps.integer * 125 ) {
+		voiceCapped++;
+		return;
+	}
+	voiceOutBytes += len + 28;
 	if ( vc->viaGame )
 		trap->ext.SendDatagram( (const byte *)&vc->addr.sin_addr.s_addr, ntohs( vc->addr.sin_port ), datagram, len );
 	else
@@ -367,8 +382,10 @@ static qboolean G_VoiceDatagram( const struct sockaddr_in *from, const byte *dat
 	// (a VOICE_STATE, a VOICE_STATUS and a VOICE_LOOK are for the masterserver: this relay knows from the game
 	// where everybody is, and the statuses and looks of a server with it go through the game connection,
 	// status/g_status.c)
-	if ( from->sin_family != AF_INET || !BG_VoiceUnpack( datagram, len, qfalse, &p ) || p.type == VOICE_STATE
-		|| p.type == VOICE_STATUS || p.type == VOICE_LOOK || p.client >= level.maxclients ) {
+	// (only what a client sends this relay: the others are for the masterserver, and what is passed on keeps its
+	// type, so anything else would reach the other clients as if a master had sent it)
+	if ( from->sin_family != AF_INET || !BG_VoiceUnpack( datagram, len, qfalse, &p )
+		|| ( p.type != VOICE_HELLO && p.type != VOICE_AUDIO && p.type != VOICE_RADIO ) || p.client >= level.maxclients ) {
 		voiceRefused++;
 		return qfalse;
 	}
@@ -502,9 +519,10 @@ void Svcmd_VoiceStatus_f( void ) {
 		trap->Print( "Voice chat is off (vs_voice %i)\n", vs_voice.integer );
 		return;
 	}
-	trap->Print( "Voice chat on UDP port %i%s, range %i, %s, clan radio %s. %i datagrams refused.\n",
+	trap->Print( "Voice chat on UDP port %i%s, range %i, %s, clan radio %s. %i datagrams refused, %i not sent for vs_voiceKbps.\n",
 		voiceShared ? voiceGamePort : voicePort, voiceShared ? " (the port of the game)" : "", vs_voiceRange.integer,
-		( vs_voiceTeamOnly.integer && level.gametype >= GT_TEAM ) ? "team only" : "everybody in range", vs_voiceRadio.integer ? "on" : "off", voiceRefused );
+		( vs_voiceTeamOnly.integer && level.gametype >= GT_TEAM ) ? "team only" : "everybody in range", vs_voiceRadio.integer ? "on" : "off", voiceRefused,
+		voiceCapped );
 	for ( i = 0; i < level.maxclients; i++ ) {
 		const voiceClient_t *vc = &voiceClients[i];
 
