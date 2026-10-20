@@ -2680,9 +2680,11 @@ void S_SpatialPaint( int from, int to, portable_samplepair_t *paint ) {
 // How far ahead of what is heard the voices are rendered, in seconds: what a voice is given later (its direction
 // when the head turns) is heard that much late. The mixer paints s_mixPreStep ahead of what is heard, and what
 // it painted before that is not painted again: the voices have to be there by the next frame, so they are
-// SPATIAL_AHEAD_FRAMES frames beyond it, as long as frames take now. Never more than v_spatialAhead.
+// SPATIAL_AHEAD_FRAMES frames beyond it, as long as frames take now. And a block more: the reverb is rendered in
+// whole blocks up to that, and would never get a block done if it were less (it fell silent above 100 fps).
+// Never more than v_spatialAhead.
 float S_SpatialAhead( void ) {
-	const float pre = Q_max( 0.0f, s_mixPreStep->value );
+	const float pre = Q_max( 0.0f, s_mixPreStep->value ) + (float)SPATIAL_FRAME / spatial.audio.samplingRate;
 	const float least = pre + SPATIAL_AHEAD_LEAST;
 	const float most = Com_Clamp( least, Q_max( least, 0.5f ), v_spatialAhead->value );
 
