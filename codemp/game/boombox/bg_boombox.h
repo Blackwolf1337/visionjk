@@ -142,6 +142,7 @@ looks at the bits of its four boxes only.
 #define SYS_FOOT_DESK		24.0f		// what has to fit on the floor where a table goes, from its middle (BOX_FOOT of a box)
 #define SYS_FOOT_SPK		10.0f		//	and where a speaker goes
 #define SYS_APART			40.0f		// a part of a sound system stands at least this far from any other part
+#define SYS_RANGE_SCALE		2.0f		// a sound system is heard this many times as far as a boombox (vs_boomboxRange)
 
 #define BOX_MASTER_MAX		4			// boxes a room of the masterserver has at most
 #define BOX_NAME_MAX		35			// bytes of the name in a VOICE_BOX to the master at most

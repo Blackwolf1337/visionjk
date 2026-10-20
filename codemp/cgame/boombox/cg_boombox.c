@@ -743,8 +743,8 @@ int CG_BoomboxHearMask( void ) {
 	for ( i = 0; i < BOX_MASTER_MAX; i++ ) {
 		if ( CG_VoiceBoxMuted( i ) )
 			continue;
-		if ( ( CG_BoomboxMouth( i, mouth, &gain ) && Distance( mouth, cg.refdef.vieworg ) <= range )
-			|| ( CG_BoomboxMouth( i + BOX_RIGHT, mouth, &gain ) && Distance( mouth, cg.refdef.vieworg ) <= range ) )
+		if ( ( CG_BoomboxMouth( i, mouth, &gain ) && Distance( mouth, cg.refdef.vieworg ) <= range * CG_BoomboxChannelRange( i ) / CG_BoomboxRange() )
+			|| ( CG_BoomboxMouth( i + BOX_RIGHT, mouth, &gain ) && Distance( mouth, cg.refdef.vieworg ) <= range * SYS_RANGE_SCALE ) )
 			mask |= 1 << i;
 	}
 	return mask;
@@ -1152,6 +1152,16 @@ qboolean CG_BoomboxMouth( int channel, vec3_t mouth, float *gain ) {
 
 float CG_BoomboxRange( void ) {
 	return ( bx.range > 0 ) ? (float)bx.range : (float)BOX_RANGE;
+}
+
+// how far the song of a channel is heard: a sound system, with its big speakers, further (SYS_RANGE_SCALE, as the
+// server sends it)
+float CG_BoomboxChannelRange( int channel ) {
+	int box, part;
+
+	if ( Box_Channel( channel, &box, &part ) && cgBoxes[box].kind == BOX_KIND_SYSTEM )
+		return CG_BoomboxRange() * SYS_RANGE_SCALE;
+	return CG_BoomboxRange();
 }
 
 /*

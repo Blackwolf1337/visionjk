@@ -69,6 +69,11 @@ static float Box_Range( void ) {
 	return (float)( vs_boomboxRange.integer > 0 ? vs_boomboxRange.integer : BOX_RANGE );
 }
 
+// how far this box is heard: a sound system, with its big speakers, further
+static float Box_RangeOf( const box_t *box ) {
+	return Box_Range() * ( ( box->kind == BOX_KIND_SYSTEM ) ? SYS_RANGE_SCALE : 1.0f );
+}
+
 static int Box_QueueMax( void ) {
 	return Com_Clampi( 1, BOX_QUEUE, vs_boomboxQueue.integer );
 }
@@ -209,7 +214,7 @@ static void Box_NoteNear( int b, int also, const char *text ) {
 
 	Box_Mouth( &boxes[b], -1, mouth );
 	for ( i = 0; i < level.maxclients; i++ ) {
-		if ( Box_Hears( i ) && ( i == also || ( Box_For( b, i ) && Distance( g_entities[i].client->ps.origin, mouth ) <= Box_Range() * BOX_NOTE_RANGE ) ) )
+		if ( Box_Hears( i ) && ( i == also || ( Box_For( b, i ) && Distance( g_entities[i].client->ps.origin, mouth ) <= Box_RangeOf( &boxes[b] ) * BOX_NOTE_RANGE ) ) )
 			Box_Note( i, text );
 	}
 }
@@ -269,7 +274,7 @@ static void G_BoxSend( boxHost_t *host, int b, int channel, const byte *frame, i
 		if ( !Box_Hears( i ) || !G_VoiceReady( i ) || !Box_For( b, i ) )
 			continue;
 		distance = Distance( g_entities[i].client->ps.origin, mouth );
-		if ( Q_min( distance, Distance( g_entities[i].client->ps.origin, other ) ) <= Box_Range() )
+		if ( Q_min( distance, Distance( g_entities[i].client->ps.origin, other ) ) <= Box_RangeOf( box ) )
 			G_VoiceSendBox( i, BOX_SPEAKER_BASE + channel * BOX_RIGHT + b, box->seq, Q_min( 255, (int)( distance / VOICE_DISTANCE_STEP ) ), frame, len );
 	}
 }

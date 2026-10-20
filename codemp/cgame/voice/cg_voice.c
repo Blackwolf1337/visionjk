@@ -1216,7 +1216,7 @@ static void Voice_Mouth( int speaker ) {
 	if ( speaker >= MAX_CLIENTS ) {
 		if ( !CG_BoomboxMouth( speaker - MAX_CLIENTS, sp->mouth, &gain ) )
 			gain = 0.0f;
-		distance = Com_Clamp( 0.0f, 1.0f, 1.0f - Distance( sp->mouth, cg.refdef.vieworg ) / CG_BoomboxRange() );
+		distance = Com_Clamp( 0.0f, 1.0f, 1.0f - Distance( sp->mouth, cg.refdef.vieworg ) / CG_BoomboxChannelRange( speaker - MAX_CLIENTS ) );
 		sp->volume = gain * distance * distance;
 		return;
 	}

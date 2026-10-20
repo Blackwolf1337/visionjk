@@ -71,6 +71,7 @@ int			CG_BoomboxHearMask( void );
 qboolean	CG_BoomboxHears( int channel );
 qboolean	CG_BoomboxMouth( int channel, vec3_t mouth, float *gain );
 float		CG_BoomboxRange( void );
+float		CG_BoomboxChannelRange( int channel );
 
 // for the pointer (select/cg_select.c): pieces, but for what is done with the box itself
 qboolean	CG_BoomboxShown( int piece );
