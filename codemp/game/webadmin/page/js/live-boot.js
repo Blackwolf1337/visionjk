@@ -143,9 +143,19 @@ if (!gl) {
 	// next one and then jumps. So the next question goes as soon as the answer is there (no more than ten a
 	// second), and pollInterval is a little more than how far apart the answers came of late: an answer that is
 	// late then slows a player down a little and does not stop him.
-	let asked = 0, came = 0, gap = 0;
+	let asked = 0, came = 0, gap = 0, unseen = 0;
 	const poll = async () => {
 		const away = !!liveHost.paused || document.hidden;
+		// The socket (js/stream.js) pushes twenty times a second, and is let go after ten seconds of not being seen.
+		// Without it the state is asked for as below.
+		unseen = away ? unseen || performance.now() : 0;
+		streamHold(!!unseen && performance.now() - unseen > 10000);
+		if (stream.open || stream.held) {
+			came = 0;
+			if (stream.held) liveTell(false);
+			setTimeout(poll, 500);
+			return;
+		}
 		asked = performance.now();
 		await pollState();
 		const now = performance.now();
@@ -158,4 +168,9 @@ if (!gl) {
 		setTimeout(poll, away ? 2000 : Math.max(0, 100 - (now - asked)));
 	};
 	poll();
+	streamStart(liveBase + 'stream', s => {
+		takeState(s);
+		pollInterval = streamInterval();
+		liveTell(false);
+	});
 }

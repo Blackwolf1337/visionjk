@@ -67,20 +67,24 @@ async function pollState() {
 		// through the eyes of a player: what his HUD and his own view are drawn from comes with it (state.hud)
 		const res = await fetch('api/state?items=' + itemsRev + fxQuery() + evQuery() + prQuery() + (has ? '&p=' + has : '') + (view.id >= 0 ? '&hud=' + view.id : ''), { cache: 'no-store' });
 		if (!res.ok) throw new Error('HTTP ' + res.status);
-		const s = await res.json();
-		$('status').className = 'live';
-		// (the list before this one is kept: an item that was picked up and is gone with it still has a number then)
-		if (s.items) { itemsBefore = itemsKept; itemsKept = expandItems(s.items); itemsRev = s.itemsRev || 0; }
-		s.items = itemsKept;
-		s.players = expandPlayers(s);
-		applyState(s);
-		// the events of the game since the last poll, when the players and shots they speak of are known (js/events.js)
-		takeEvents(s);
-		// and what the server told all clients since then (js/hud-console.js)
-		takePrints(s);
+		takeState(await res.json());
 	} catch (e) {
 		$('status').className = 'err';
 	}
+}
+
+// An answer of the state, asked for or pushed over the socket of the page (js/stream.js)
+function takeState(s) {
+	$('status').className = 'live';
+	// (the list before this one is kept: an item that was picked up and is gone with it still has a number then)
+	if (s.items) { itemsBefore = itemsKept; itemsKept = expandItems(s.items); itemsRev = s.itemsRev || 0; }
+	s.items = itemsKept;
+	s.players = expandPlayers(s);
+	applyState(s);
+	// the events of the game since the last answer, when the players and shots they speak of are known (js/events.js)
+	takeEvents(s);
+	// and what the server told all clients since then (js/hud-console.js)
+	takePrints(s);
 }
 
 // The brush models that are entities (state.movers): doors, lifts, what turns, what can be switched off or

@@ -11,21 +11,26 @@ async function loadClasses() {
 }
 
 async function pollEntities() {
-	if (appMode !== 'editor') return;
+	if (appMode !== 'editor') { streamDrop('entities'); return; }
+	// over the socket of the page when it is open (js/stream.js), pushed when the list changed
+	if (streamGet('entities', 'api/entities', json => { if (json) entitiesTake(json); }, () => {})) return;
 	try {
-		const json = await (await fetch('api/entities', { cache: 'no-store' })).json();
-		ents.clear();
-		for (const e of json.entities) ents.set(e.id, e);
-		draftsKeep();
-		takeFired(json.used);
-		renderBudget(json.budget);
-		renderLayout(json.layout);
-		refreshLinks();
-		if (selectedEnt >= 0 && !ents.has(selectedEnt)) selectEnt(-1);
-		renderEntityList();
-		// not while the cursor is in a key field: a rebuilt table takes the focus away
-		if (!kvDirty && !panelTyping()) renderEntPanel();
+		entitiesTake(await (await fetch('api/entities', { cache: 'no-store' })).json());
 	} catch (e) { /* keep the old list */ }
+}
+
+function entitiesTake(json) {
+	ents.clear();
+	for (const e of json.entities) ents.set(e.id, e);
+	draftsKeep();
+	takeFired(json.used);
+	renderBudget(json.budget);
+	renderLayout(json.layout);
+	refreshLinks();
+	if (selectedEnt >= 0 && !ents.has(selectedEnt)) selectEnt(-1);
+	renderEntityList();
+	// not while the cursor is in a key field: a rebuilt table takes the focus away
+	if (!kvDirty && !panelTyping()) renderEntPanel();
 }
 
 function renderEntityList() {

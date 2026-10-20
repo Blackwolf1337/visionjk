@@ -17,45 +17,50 @@ function chatLine(m) {
 
 async function pollChat() {
 	if (chatBusy) return;
+	// over the socket of the page when it is open (js/stream.js), pushed when something was said
+	if (streamGet('chat', 'api/chat?since=' + chatSeq + '&epoch=' + chatEpoch, chatTake, pollChat)) return;
 	chatBusy = true;
 	try {
 		const res = await fetch('api/chat?since=' + chatSeq + '&epoch=' + chatEpoch, { cache: 'no-store' });
-		if (!res.ok) return;
-		const json = await res.json();
-		const log = $('chatLog');
-		const atEnd = log.scrollHeight - log.scrollTop - log.clientHeight < 24;
-		let html = '';
-		// a new map loads the game again, its chat numbers start over
-		if (chatEpoch && json.epoch !== chatEpoch) {
-			html = '<div class="sep">new map</div>';
-			chatSeq = 0;
-		}
-		const fresh = json.messages.filter(m => m.seq > chatSeq);
-		html += fresh.map(chatLine).join('');
-		// What was said to all goes over the picture too, as on a client (js/hud.js), in the words the server sends
-		// it with. Not what was there before the page came.
-		// (G_Say for a player: his name, white, a colon and his words in green; the panel's own line as wa_actions.c
-		// sends it, without the green)
-		if (chatEpoch) for (const m of fresh) {
-			if (m.mode === 'all') hudChatAdd(m.name + '^7: ^2' + m.text);
-			else if (m.mode === 'panel') hudChatAdd(m.name + '^7: ' + m.text);
-		}
-		chatEpoch = json.epoch;
-		chatSeq = json.seq;
-		if (!html) return;
-		const none = log.querySelector('.none');
-		if (none) none.remove();
-		log.insertAdjacentHTML('beforeend', html);
-		while (log.children.length > CHAT_MAX_LINES) log.firstChild.remove();
-		if (atEnd) log.scrollTop = log.scrollHeight;
-		if (document.body.classList.contains('chatClosed')) {
-			chatUnread += fresh.length;
-			$('chatNew').textContent = chatUnread ? chatUnread + ' new' : '';
-		}
+		if (res.ok) chatTake(await res.json());
 	} catch (e) {
 		/* the state poll shows a lost connection */
 	} finally {
 		chatBusy = false;
+	}
+}
+
+function chatTake(json) {
+	if (!json) return;
+	const log = $('chatLog');
+	const atEnd = log.scrollHeight - log.scrollTop - log.clientHeight < 24;
+	let html = '';
+	// a new map loads the game again, its chat numbers start over
+	if (chatEpoch && json.epoch !== chatEpoch) {
+		html = '<div class="sep">new map</div>';
+		chatSeq = 0;
+	}
+	const fresh = json.messages.filter(m => m.seq > chatSeq);
+	html += fresh.map(chatLine).join('');
+	// What was said to all goes over the picture too, as on a client (js/hud.js), in the words the server sends
+	// it with. Not what was there before the page came.
+	// (G_Say for a player: his name, white, a colon and his words in green; the panel's own line as wa_actions.c
+	// sends it, without the green)
+	if (chatEpoch) for (const m of fresh) {
+		if (m.mode === 'all') hudChatAdd(m.name + '^7: ^2' + m.text);
+		else if (m.mode === 'panel') hudChatAdd(m.name + '^7: ' + m.text);
+	}
+	chatEpoch = json.epoch;
+	chatSeq = json.seq;
+	if (!html) return;
+	const none = log.querySelector('.none');
+	if (none) none.remove();
+	log.insertAdjacentHTML('beforeend', html);
+	while (log.children.length > CHAT_MAX_LINES) log.firstChild.remove();
+	if (atEnd) log.scrollTop = log.scrollHeight;
+	if (document.body.classList.contains('chatClosed')) {
+		chatUnread += fresh.length;
+		$('chatNew').textContent = chatUnread ? chatUnread + ' new' : '';
 	}
 }
 

@@ -111,23 +111,30 @@ function clipClick(x, y) { clipPick(clipAt(x, y)); }
 // ---- what the server has
 
 async function clipPoll() {
-	if (appMode !== 'editor' || (mode !== 'clips' && !$('dbgClip').checked) || clip.busy) return;
+	if (appMode !== 'editor' || (mode !== 'clips' && !$('dbgClip').checked)) { streamDrop('clips'); return; }
+	if (clip.busy) return;
+	// over the socket of the page when it is open (js/stream.js), pushed when the clips changed
+	if (streamGet('clips', 'api/clips', (json, status) => clipTake(status === 200, json), () => {})) return;
 	clip.busy = true;
 	try {
 		const res = await fetch('api/clips', { cache: 'no-store' });
-		clip.known = res.ok;
-		const json = res.ok ? await res.json() : { off: [], walls: [], dirty: false };
-		const key = JSON.stringify(json);
-		if (key !== clip.key) {
-			clip.key = key;
-			clip.off = new Set(json.off);
-			clip.walls = json.walls;
-			clip.dirty = json.dirty;
-			clip.offLines = null;
-			if (clip.wall >= 0 && !clipWall(clip.wall)) clip.wall = -1;
-			if (mode === 'clips') clipRender();
-		}
+		clipTake(res.ok, res.ok ? await res.json() : null);
 	} catch (e) { /* what is shown stays */ } finally { clip.busy = false; }
+}
+
+function clipTake(ok, answer) {
+	clip.known = ok;
+	const json = ok && answer ? answer : { off: [], walls: [], dirty: false };
+	const key = JSON.stringify(json);
+	if (key !== clip.key) {
+		clip.key = key;
+		clip.off = new Set(json.off);
+		clip.walls = json.walls;
+		clip.dirty = json.dirty;
+		clip.offLines = null;
+		if (clip.wall >= 0 && !clipWall(clip.wall)) clip.wall = -1;
+		if (mode === 'clips') clipRender();
+	}
 }
 setInterval(clipPoll, 1000);
 

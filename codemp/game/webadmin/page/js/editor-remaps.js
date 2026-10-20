@@ -28,7 +28,7 @@
 // map the view has the swaps for. uses: the shaders of that map. mark: the surfaces of the selected shader as
 // they are drawn over the map (remapMark). shown: the shader the test object is drawn with. drafts: the swaps
 // that are only in this page, { old, new } by the key of the old name.
-const remap = { list: [], to: new Map(), dirty: false, used: 0, budget: 0, known: true, key: '', busy: false, selected: '', seen: null, uses: null, usesOf: null, namesOf: null, namesState: -1, mark: null, shown: '', drafts: new Map(), told: 0, toldRoom: 0 };
+const remap = { list: [], to: new Map(), dirty: false, used: 0, budget: 0, known: true, key: '', busy: false, selected: '', seen: null, uses: null, usesOf: null, namesOf: null, namesState: -1, mark: null, shown: '', drafts: new Map(), told: 0, toldRoom: 0, last: null };
 const REMAP_ROWS = 150;
 
 // what a shader of the map is drawn as
@@ -278,27 +278,38 @@ function remapLookAt() {
 // ---- what the server has. Asked in every tab and mode: a swap changes what the map looks like.
 
 async function remapPoll() {
+	// Over the socket of the page when it is open (js/stream.js), pushed when the swaps changed. A map that was
+	// loaded since has the last answer put to it: the server says nothing new then.
+	if (streamGet('remaps', 'api/remaps', (json, status) => remapTake(status === 200, json), () => {})) {
+		if (remap.seen !== world && remap.last) remapTake(remap.known, remap.last);
+		return;
+	}
 	if (remap.busy) return;
 	remap.busy = true;
 	try {
 		const res = await fetch('api/remaps', { cache: 'no-store' });
-		remap.known = res.ok;
-		const json = res.ok ? await res.json() : { remaps: [], dirty: false, used: 0, budget: 0 };
-		const key = JSON.stringify(json);
-		if (key !== remap.key || remap.seen !== world) {
-			remap.key = key;
-			remap.list = json.remaps;
-			remap.dirty = json.dirty;
-			remap.used = json.used;
-			remap.budget = json.budget;
-			remap.told = json.told || 0;
-			remap.toldRoom = json.toldRoom || 0;
-			// a draft is of the map it was made on
-			if (remap.seen && remap.seen !== world) remap.drafts.clear();
-			remapApply();
-			if (mode === 'remaps') remapRender();
-		}
+		remapTake(res.ok, res.ok ? await res.json() : null);
 	} catch (e) { /* what is shown stays */ } finally { remap.busy = false; }
+}
+
+function remapTake(ok, answer) {
+	remap.known = ok;
+	const json = ok && answer ? answer : { remaps: [], dirty: false, used: 0, budget: 0 };
+	remap.last = json;
+	const key = JSON.stringify(json);
+	if (key !== remap.key || remap.seen !== world) {
+		remap.key = key;
+		remap.list = json.remaps;
+		remap.dirty = json.dirty;
+		remap.used = json.used;
+		remap.budget = json.budget;
+		remap.told = json.told || 0;
+		remap.toldRoom = json.toldRoom || 0;
+		// a draft is of the map it was made on
+		if (remap.seen && remap.seen !== world) remap.drafts.clear();
+		remapApply();
+		if (mode === 'remaps') remapRender();
+	}
 }
 setInterval(remapPoll, 2000);
 

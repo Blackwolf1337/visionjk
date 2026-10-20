@@ -23,6 +23,7 @@ order of the template, so a file may only use there what a file before it has ma
 | `js/pick.js` | the wireframe, and the ray that says what a click hits |
 | `js/camera.js` | the camera around a point and the fly camera, the projection of the game (fov, near and far plane) |
 | `js/state.js` | the state feed: players, items, movers, shots |
+| `js/stream.js` | the WebSocket of the page: the state pushed, the chat, the entities, the clips and the log as subscriptions, HTTP when there is no socket |
 | `js/players.js` | the panel of a player with its actions |
 | `js/chat.js` | the chat |
 | `js/input.js` | mouse and keyboard on the map |

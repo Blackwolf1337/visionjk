@@ -35,12 +35,13 @@ shared/web/web_ws.c) is pushed instead.
 What goes out is a text message: a line with what it is and the HTTP status of the answer, then the answer
 as GET of the same address has it. "state 200" is /api/state (/live/api/state for the live view), every
 WA_STREAM_MS, asked with what the page has after the last one (WA_StateNext): only what changed comes again.
-A page subscribes to more with text messages of its own, a page of the live view to nothing:
+A page subscribes to more with text messages of its own, a page of the live view to the texture swaps alone:
 
   state <query>               view= and hud= of /api/state, from now on
   sub <name> <path>?<query>   the answer of a GET of the panel under <name>, now and whenever it is another
-                              one (asked every WA_CHANNEL_MS). Only what WA_StreamAllowed names, and only as
-                              far as the role of the page lets it.
+                              one (asked every WA_CHANNEL_MS). Only what WA_StreamAllowed names (the texture
+                              swaps, the chat, the entities, the clips, the log, the console, the intrusion
+                              detection), and only as far as the role of the page lets it.
   unsub <name>
 
 A page that does not read is not pushed more than WA_STREAM_BACKLOG: what does not fit is left out, the state
@@ -71,11 +72,20 @@ static struct {
 // a connection that answers a page's subscription the way it would answer the page itself
 static waConnection_t capture;
 
-// the GETs a page may subscribe to: what it asked for once a second before the socket
-static qboolean WA_StreamAllowed( const char *path ) {
-	static const char *const paths[] = { "/api/chat", "/api/entities", "/api/clips", "/api/log", "/api/console" };
+// How often a subscription is asked. The list of the entities changes all the time (what fired, the movers) and
+// is long, and the editor builds its table anew with every answer: as often as it asked before the socket.
+static int WA_StreamEvery( const char *path ) {
+	return !strcmp( path, "/api/entities" ) ? 1000 : WA_CHANNEL_MS;
+}
+
+// The GETs a page may subscribe to: what it asked for again and again before the socket. The live view only the
+// texture swaps, which every player sees (wa_live.c hands them out too).
+static qboolean WA_StreamAllowed( const char *path, qboolean live ) {
+	static const char *const paths[] = { "/api/remaps", "/api/chat", "/api/entities", "/api/clips", "/api/log", "/api/console", "/api/ids" };
 	size_t i;
 
+	if ( live )
+		return (qboolean)!strcmp( path, "/api/remaps" );
 	for ( i = 0; i < ARRAY_LEN( paths ); i++ ) {
 		if ( !strcmp( path, paths[i] ) )
 			return qtrue;
@@ -230,11 +240,11 @@ static void WA_StreamText( waConnection_t *c, char *text ) {
 		*arg++ = '\0';
 	else
 		arg = text + strlen( text );
-	// the live view has the state, and nothing else
-	if ( c->live )
-		return;
 
 	if ( !strcmp( text, "state" ) ) {
+		// the live view has the state as everybody sees it, no view and no HUD of a player
+		if ( c->live )
+			return;
 		c->stateWants[0] = '\0';
 		if ( WA_FormValue( arg, "view", value, sizeof( value ) ) )
 			Q_strcat( c->stateWants, sizeof( c->stateWants ), va( "&view=%d", atoi( value ) ) );
@@ -270,7 +280,8 @@ static void WA_StreamText( waConnection_t *c, char *text ) {
 			*query++ = '\0';
 		else
 			query = (char *)"";
-		if ( !WA_StreamAllowed( path ) || c->role < WA_RouteRole( "GET", path ) || strlen( query ) >= sizeof( c->channels[0].query ) ) {
+		if ( !WA_StreamAllowed( path, c->live ) || ( !c->live && c->role < WA_RouteRole( "GET", path ) )
+			|| strlen( query ) >= sizeof( c->channels[0].query ) ) {
 			// the page is told, as an answer of that name
 			WA_StreamMessage( c, name, 403, "", 0 );
 			return;
@@ -284,6 +295,7 @@ static void WA_StreamText( waConnection_t *c, char *text ) {
 		Q_strncpyz( c->channels[i].query, query, sizeof( c->channels[i].query ) );
 		// asked at the next round, and sent whatever it was before
 		c->channels[i].hash = 0;
+		c->channels[i].due = 0;
 	}
 }
 
@@ -516,8 +528,9 @@ void WA_StreamFrame( waConnection_t *c, int now ) {
 			unsigned	hash;
 			int			status, len;
 
-			if ( !c->channels[i].name[0] )
+			if ( !c->channels[i].name[0] || now - c->channels[i].due < 0 )
 				continue;
+			c->channels[i].due = now + WA_StreamEvery( c->channels[i].path ) - WA_CHANNEL_MS / 2;
 			body = WA_StreamCapture( c, c->channels[i].path, c->channels[i].query, &status, &len );
 			hash = WA_StreamHash( status, body, len );
 			if ( hash != c->channels[i].hash && WA_StreamMessage( c, c->channels[i].name, status, body, len ) )

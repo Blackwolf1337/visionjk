@@ -33,36 +33,43 @@ function logShow(name) {
 
 async function logPoll() {
 	const v = logView;
-	if (mode !== 'log') return;
+	if (mode !== 'log') { streamDrop('log'); return; }
+	// over the socket of the page when it is open (js/stream.js), pushed when the text grew
+	if (streamGet('log', v.api + (v.next >= 0 ? '?from=' + v.next : ''), (json, status) => logTake(v, json, status), logPoll)) return;
 	if (v.busy) { v.again = true; return; }
 	v.busy = true;
-	const tell = text => { v.state = text; if (v === logView) $('logState').textContent = text; };
 	try {
 		const res = await fetch(v.api + (v.next >= 0 ? '?from=' + v.next : ''), { cache: 'no-store' });
-		if (!res.ok) { tell(res.status === 404 ? v.none : 'HTTP ' + res.status); return; }
-		const json = await res.json();
-		// a new file, or the view was behind its end: what is shown is of the old one
-		if (v.next >= 0 && json.from !== v.next) { v.lines = []; v.partial = ''; v.first = true; }
-		let text = v.partial + json.text;
-		// a view that starts in the middle of the text starts in the middle of a line
-		if (v.first && json.from > 0) text = text.slice(text.indexOf('\n') + 1);
-		const lines = text.split('\n');
-		v.partial = lines.pop();
-		const before = v.lines.length;
-		v.lines.push(...lines.map(l => l.replace(/\r$/, '').replace(/\^[0-9]/g, '')));
-		if (v.lines.length > LOG_KEEP) v.lines.splice(0, v.lines.length - LOG_KEEP);
-		v.next = json.next;
-		tell('');
-		if (v === logView && (lines.length || v.first)) logRender();
-		v.first = false;
-		// more of it is there already
-		if (json.next < json.size && lines.length + before > before) v.again = true;
+		logTake(v, res.ok ? await res.json() : null, res.status);
 	} catch (e) {
-		tell('Request failed: ' + e.message);
+		v.state = 'Request failed: ' + e.message;
+		if (v === logView) $('logState').textContent = v.state;
 	} finally {
 		v.busy = false;
 		if (v.again) { v.again = false; setTimeout(logPoll, 50); }
 	}
+}
+
+// An answer for the view v: its text from v.next on. With more of it there already the view asks again at once.
+function logTake(v, json, status) {
+	const tell = text => { v.state = text; if (v === logView) $('logState').textContent = text; };
+	if (!json) { tell(status === 404 ? v.none : 'HTTP ' + status); return; }
+	// a new file, or the view was behind its end: what is shown is of the old one
+	if (v.next >= 0 && json.from !== v.next) { v.lines = []; v.partial = ''; v.first = true; }
+	let text = v.partial + json.text;
+	// a view that starts in the middle of the text starts in the middle of a line
+	if (v.first && json.from > 0) text = text.slice(text.indexOf('\n') + 1);
+	const lines = text.split('\n');
+	v.partial = lines.pop();
+	const before = v.lines.length;
+	v.lines.push(...lines.map(l => l.replace(/\r$/, '').replace(/\^[0-9]/g, '')));
+	if (v.lines.length > LOG_KEEP) v.lines.splice(0, v.lines.length - LOG_KEEP);
+	v.next = json.next;
+	tell('');
+	if (v === logView && (lines.length || v.first)) logRender();
+	v.first = false;
+	// more of it is there already
+	if (json.next < json.size && lines.length + before > before) v.again = true;
 }
 setInterval(logPoll, 2000);
 

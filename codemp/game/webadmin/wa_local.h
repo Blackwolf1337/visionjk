@@ -109,7 +109,7 @@ typedef struct waConnection_s {
 		char		path[24];		// a GET of the panel
 		char		query[256];
 		unsigned	hash;			// of the last answer that was sent, 0 for none
-		int			status;
+		int			due;			// trap->Milliseconds of when it is asked again
 	} channels[WA_MAX_CHANNELS];
 } waConnection_t;
 

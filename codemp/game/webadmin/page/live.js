@@ -13,6 +13,7 @@
 <!--#include js/pick.js -->
 <!--#include js/camera.js -->
 <!--#include js/state.js -->
+<!--#include js/stream.js -->
 <!--#include js/frame.js -->
 <!--#include js/items.js -->
 <!--#include js/movers.js -->
