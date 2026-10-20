@@ -180,7 +180,9 @@ function placeLabels() {
 		const d = p.data;
 		let el = labels.get(id);
 		const s = (d.scale || 100) / 100;
-		const sp = d.team === 'spectator' || id === view.id ? null : project([p.draw[0], p.draw[1], p.draw[2] - 24 * s + 80 * s]);
+		const head = [p.draw[0], p.draw[1], p.draw[2] - 24 * s + 80 * s];
+		// the live view of a website names only who its camera sees (js/live-boot.js)
+		const sp = d.team === 'spectator' || id === view.id || (LIVE && !liveSees(id, head)) ? null : project(head);
 		if (!sp || sp[0] < -50 || sp[1] < -20 || sp[0] > canvas.clientWidth + 50 || sp[1] > canvas.clientHeight + 40) {
 			if (el) el.style.display = 'none';
 			continue;

@@ -4,6 +4,8 @@
 // The website has a canvas #gl and a box #labels for the names, and hands over window.VJK_LIVE:
 //   base      where the questions go ('/live/' when it is not given)
 //   paused    true while the view is not seen: nothing is drawn, and the server is asked once in two seconds
+//   side      degrees the camera looks past the spot it watches, so that the spot is to the right of the middle
+//             (the text of a website at the left), 0 when it is not given
 //   onState   called after every answer of the server with { map, players, ready, error }: players is the number
 //             of those who play (no spectators), ready says that the map is drawn as the game draws it
 //
@@ -11,7 +13,7 @@
 // walls. Every LIVE_STAY msec, or when the one it watches is gone, it looks for the spot where the most players are
 // close together. A spot far from the last one is a cut, not a flight through the walls.
 
-const LIVE_STAY = 15000, LIVE_NEAR = 600, LIVE_RADIUS = 320, LIVE_HEIGHT = 110, LIVE_TURN = 7, LIVE_CUT = 1500;
+const LIVE_STAY = 15000, LIVE_NEAR = 600, LIVE_RADIUS = 380, LIVE_HEIGHT = 140, LIVE_TURN = 7, LIVE_CUT = 1500;
 const liveHost = window.VJK_LIVE || {};
 const live = { focus: -1, until: 0, spot: null, at: null, angle: Math.random() * 360, reach: LIVE_RADIUS, drawn: false };
 
@@ -68,10 +70,11 @@ function liveCamera(now, dt) {
 		live.spot = want.slice();
 		live.reach = LIVE_RADIUS;
 	} else {
-		const k = 1 - Math.exp(-dt * 1.5);
+		const k = 1 - Math.exp(-dt * 3);
 		for (let i = 0; i < 3; i++) live.spot[i] += (want[i] - live.spot[i]) * k;
 	}
-	live.angle += LIVE_TURN * dt;
+	// round faster while a wall holds the camera close: on to where there is room
+	live.angle += (live.reach < LIVE_RADIUS * 0.5 ? 6 : 1) * LIVE_TURN * dt;
 	const a = live.angle * Math.PI / 180, ideal = [live.spot[0] + Math.cos(a) * LIVE_RADIUS, live.spot[1] + Math.sin(a) * LIVE_RADIUS, live.spot[2] + LIVE_HEIGHT];
 	// in front of a wall that is between the spot and where the camera would be: closer at once, back out slowly
 	const tr = traceBox(live.spot, ideal, [-8, -8, -8], [8, 8, 8]);
@@ -82,9 +85,20 @@ function liveCamera(now, dt) {
 	liveLookAt(live.spot);
 }
 
+// Whether the camera sees the head of a player: near enough, and no wall between. Asked for every name in every
+// frame, so the answer is kept for a moment.
+const LIVE_NAME_FAR = 1500, liveSeen = new Map();
+function liveSees(id, head) {
+	const now = performance.now(), had = liveSeen.get(id);
+	if (had && now - had.at < 150) return had.seen;
+	const seen = Math.hypot(head[0] - eye[0], head[1] - eye[1], head[2] - eye[2]) < LIVE_NAME_FAR && !traceWorld(eye, head);
+	liveSeen.set(id, { at: now, seen });
+	return seen;
+}
+
 function liveLookAt(p) {
 	const d = [p[0] - cam.pos[0], p[1] - cam.pos[1], p[2] - cam.pos[2]];
-	cam.yaw = Math.atan2(d[1], d[0]) * 180 / Math.PI;
+	cam.yaw = Math.atan2(d[1], d[0]) * 180 / Math.PI + (+liveHost.side || 0);
 	cam.pitch = -Math.atan2(d[2], Math.hypot(d[0], d[1])) * 180 / Math.PI;
 }
 
@@ -104,6 +118,8 @@ if (!gl) {
 	liveTell(true);
 } else {
 	resize();
+	// how the map is drawn as the game draws it: the panel asks for them when its mode is set (js/editor-world.js)
+	loadShaderScripts();
 	let before = performance.now();
 	const draw = now => {
 		const dt = Math.min(0.1, (now - before) / 1000);
