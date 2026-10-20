@@ -593,6 +593,7 @@ chat bubble stands on top of it.
 |------|---------|---------|
 | `v_playerStatuses` | 1 | show the lines of the others |
 | `v_shareMusic` | 0 | tell the server what music plays on this machine. Off by default: everybody on the server reads it. "Show My Music" in Setup, Voice Chat |
+| `v_shareMusicPlayers` | empty | the players of music whose songs may be shown, their names split by spaces (`spotify firefox`). Only those players are asked what they play. With nothing ticked nothing is shown, and a new player is not shown until it is ticked. "Choose Players of My Music ..." in Setup, Chat & Social |
 | `v_caps` | 7, read only | in the userinfo, what this cgame draws that a server sends to nobody else: bit 0 statuses, bit 1 who plays with a client of this tree ("Who plays with VisionJK"), bit 2 hats and capes ("Hats and capes") |
 | `v_vision` | the version, read only | in the userinfo: this is the client of VisionJK, and which one. A server of this tree greets it by that name and not as "client plugin 1.4B4". `cjp_client` starts with 1.4: it is what a JA+ server of somebody else reads to switch the plugin features on, the name after the number shows in its log and its plugin lists |
 
@@ -607,6 +608,15 @@ chat bubble stands on top of it.
   `libdbus-1.so.3` is loaded when `v_shareMusic` is first 1 and is not needed otherwise, the questions are
   sent without waiting for the answers. On Windows it is read from the window titles of Spotify and of
   YouTube Music (the window has to show the tab). Not on macOS and not in the browser client.
+
+"Choose Players of My Music ..." (Setup, Chat & Social) opens a page with the players that run right now and the
+ticked ones that do not run (marked "not running"). A click ticks one or takes the tick away. On Linux the list is
+the MPRIS players on the desktop bus, each named by the part of its bus name after `org.mpris.MediaPlayer2.` up to
+the next dot (`spotify`, `firefox`, `chromium`, `vlc`, ...). On Windows it is always the two the game can find
+there: Spotify and YouTube Music (the keys `spotify` and `ytmusic`). macOS and the browser client have none. The
+list is only looked for while the page is open.
+
+Whoever had `v_shareMusic 1` before this version has to tick their players once: until then nothing is shown.
 
 On a server with the game module of this tree (`vs_caps` bit 1) the server passes the statuses on. On
 any other server they go through the masterserver since 2026-10-11 ([voice.md](voice.md), "On a server without

@@ -49,6 +49,7 @@ The console command does the same without the pointer:
 boombox play "https://music.youtube.com/watch?v=..."    into the line of the box near you, or a new box in front of you
 boombox play synthwave mix                               looked up on YouTube
 boombox place                                            a new box where the crosshair points
+boombox system                                           a new sound system where the crosshair points
 boombox pause | resume | skip | stop | remove [box]      the box near you, or that number
 boombox volume <0 to 100> [box]                          for everybody
 boombox window [box]                                     the window of the box near you, or of that number
@@ -76,6 +77,49 @@ Elsewhere it plays on the sound device of the voice chat, by side and distance, 
 server (`vs_boomboxRange`, 1536 units).
 
 The two speakers of the box push out with the loudness of what you hear of it.
+
+## The sound system
+
+A second kind of box: a DJ table with two turntables, whose records turn while a song plays, and two big
+speakers. The table and each speaker are put down and moved by themselves: drag any part with the pointer, or
+pick "Move it" on its card, which moves the part the card was opened on. Every part opens the same card and the
+same window.
+
+Its song comes in stereo. The left channel is heard from the left speaker, the right channel from the right one,
+and Steam Audio (`v_spatial`) places each speaker in the level. Whoever is in range of either speaker hears both
+channels. It costs twice what a boombox costs: two Opus streams of 64 kbit, about 140 kbit a second to every
+player in range.
+
+```
+boombox system        the table where the crosshair points, turned to you, the left speaker at your left
+                      and the right one at your right (76 units from the middle of the table), moved
+                      closer to the table where there is no floor
+```
+
+It counts as one box against `vs_boomboxMax` (and against the 4 boxes of a room of the masterserver).
+
+Only clients of version 0.2.4 or later are told of a sound system. An older client of this tree is not told of it
+at all and does not hear it. It works on a server with the game module of this tree and through the
+masterserver, but both need version 0.2.4 or later: an older server or master offers no sound system, and the
+client says that the server is older.
+
+The engine plays up to 16 box streams in `v_spatial` now (`v_spatialBoxes` 16, it was 8). With an older engine
+the right speaker is played on the voice device, by side and distance.
+
+## The quick wheel
+
+Hold the key of `+v_radial`: a ring of choices stands in the middle of the screen. Move the mouse toward one and
+let the key go, or click it. Escape or the right mouse button closes the ring.
+
+What it offers depends on what the crosshair (or the pointer, while the mouse is free) is on when it opens.
+
+- On a boombox or any part of a sound system: Play a song (Add a song while one plays), Pause or Resume, Skip,
+  Stop, Louder and Quieter (for everybody, 10 a step), Move it (that part), Take it away, Open the player. "Take it
+  away" needs a second click, and the ring stays open after the key is let go for that click.
+- Anywhere else: Put a boombox here, Put a sound system here (only where the server or the master has them),
+  Play a song, Open the player of the box near.
+
+No key is bound by default. Controls, Extras has the row "Quick Wheel (Boombox)".
 
 ## For server owners
 
