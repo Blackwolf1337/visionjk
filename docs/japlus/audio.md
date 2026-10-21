@@ -204,6 +204,18 @@ of, and an open one lets it through. The ways round corners are worked out from 
 models (see "Paths"), so a way through a shut door can still be found. Until 2026-10-21 doors and lifts were not
 in the way of anything. What was checked of it and what was not is under "Limits".
 
+The cgame puts the sounds of a brush model (the start, stop and loop sounds of a door or a lift) in the middle
+of it, which is inside its own walls (`CG_SetEntitySoundPosition`, and the loop sound in `CG_EntityEffects`).
+With the brush models in the scene those walls hid the sound. The lift of mp/ffa3 that carried the listener
+was 0 % in sight and let through 0.04 of its lows and none of its highs, so moving doors and lifts were not
+heard. The owner reported it. Since 2026-10-21 a place inside the bounds of a brush model of the scene goes out
+of them along the line to the listener: to where that line leaves them and 0.5 m on (the radius a source has),
+but no further than halfway to him (`S_SpatialOutOfBrushes` in `snd_spatial_level.cpp`). The bounds come from
+`CM_ModelBounds` and are turned and moved as the brush is. Steam Audio takes that place for what is in the way,
+the ways round corners and the reflections. The direction from the listener and the game's fade by distance stay
+as they were. A place is not moved when the listener is inside the bounds too. `v_spatialInfo` says "from the
+side of its brush model" for such a sound, with the place.
+
 **The sounds** (`snd_dma.cpp`, `S_SpatialGather`). Once a frame every sound with a place in the level is
 named: the channels of the mixer, and every loop sound on its own (the old mixer adds loop sounds of one
 sample up into one channel, which has no place). Each keeps a voice for as long as it plays. There are 128
@@ -711,6 +723,12 @@ and the length of the echo, not with the rays. A pass while the game runs took 1
 before, and 12 ms while the bake of the echo ran, since the bake shares the cores. No crash. Nothing of it was
 recorded or heard.
 
+The sounds of a lift (2026-10-21, branch feature/sound-system, Linux 64), in a silent hidden client on mp/ffa3
+that rode the lift of the listener (put into its trigger). Before the sounds were moved out of the brush model,
+the lift was 0 % in sight. After, its piston sounds 100 % in sight, heard from the top of the lift. Recorded
+with `v_spatialCapture`: the loudest 50 ms went from -29.8 to -24.2 dBFS and the middle level from -37.7 to
+-31.0 dBFS, nothing clipped. A person did not hear it.
+
 Builds: Linux 64, and the client and the modules for 64 bit Windows with mingw (run on Windows 11 on 2026-10-11
 with `v_spatial 1`: library loaded, level handed over, paths worked out and stored, see [windows.md](windows.md).
 Nobody listened).
@@ -799,9 +817,12 @@ wrote them (see "Threads").
   block of 1024 samples that has to be full, then `v_spatialAhead` (0.1 s), then the sound card. About 0.2 s
   from the word to the first of its reverb, which in a small room is heard as an echo more than as a room.
   Built and never run, like the two above. With speakers the microphone hears that reverb again.
-- A moving door was never seen in a run. The transform of the meshes was checked with a small standalone
-  program against Steam Audio's library. The ways round corners are worked out from the world without the brush
-  models, so a way through a shut door can still be found.
+- A moving door was never seen in a run. A lift was ridden in one (2026-10-21, see "Checked"): its sounds were
+  measured, the motion of its walls in the scene was not looked at separately. The transform of the meshes was
+  checked with a small standalone program against Steam Audio's library. The ways round corners are worked out
+  from the world without the brush models, so a way through a shut door can still be found.
+- A sound inside the bounds of a door with a gap (two wings) is moved too, out to the edge of the bounds, since
+  the bounds do not know the gap.
 - Only the loudest `v_spatialSources` sounds have reflections of their own, the others ring like the room of the
   listener.
 - What a voice is given reaches the ear after `v_spatialAhead` (0.1 s): a turn of the head is heard that much
