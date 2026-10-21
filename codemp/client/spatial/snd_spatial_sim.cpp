@@ -531,6 +531,13 @@ void S_SpatialAskPass( void ) {
 	if ( ( !v_spatialReflections->integer && !paths ) || spatial.sceneWaits || now - spatial.reflectAsked < SPATIAL_REFLECT_MSEC ) {
 		return;
 	}
+#ifndef __EMSCRIPTEN__
+	// a pass that took longer than SPATIAL_REFLECT_MSEC was followed by the next one at once, and the threads never
+	// rested on a slower CPU. A page has its own measure, v_spatialBudget.
+	if ( now - spatial.reflectAsked < SPATIAL_REFLECT_DUTY * spatialReflectUsec.load() / 1000 ) {
+		return;
+	}
+#endif
 	// the thread reads these only after it was woken
 	if ( spatialWorkerState.load() == WORKER_IDLE ) {
 		S_SpatialTakeVis();

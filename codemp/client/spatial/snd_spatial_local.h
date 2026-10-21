@@ -211,7 +211,8 @@ extern int				spatialTableCount;		// shaders in it
 #define SPATIAL_REVERB_CHANNELS		( ( SPATIAL_REVERB_ORDER + 1 ) * ( SPATIAL_REVERB_ORDER + 1 ) )
 #define SPATIAL_MAX_RAYS			8192
 #define SPATIAL_DIFFUSE_SAMPLES		32
-#define SPATIAL_REFLECT_MSEC		50		// a new pass of the rays is not started sooner than this after the last one
+#define SPATIAL_REFLECT_MSEC		50		// a new pass of the rays is not started sooner than this after the last one,
+#define SPATIAL_REFLECT_DUTY		2		//	nor before this many times what the last one took: the threads rest
 #define SPATIAL_DRY					8192	// samples of each voice that are kept for the reverb, a power of two
 
 // Reflections of a sound of its own (Valve's guide, "Reflections"): the rays from the listener also find what
@@ -246,8 +247,11 @@ extern int				spatialTableCount;		// shaders in it
 #define SPATIAL_DEFAULT				"0"		// of v_spatial: the library has to be put next to the program first
 #define SPATIAL_DEFAULT_RAYS		"2048"
 #define SPATIAL_DEFAULT_BOUNCES		"16"
-#define SPATIAL_SPARE_CORES			2		// Steam Audio shares a pass or a bake between all cores of the machine but these,
-											//	which the game, the renderer and the mixer keep (spatial.threads)
+// Threads Steam Audio shares the work between, at v_spatialThreads 0. Valve's plugins give the passes 5 % of the
+// cores and a bake half of them. All cores but two (2026-10-21) kept a weaker CPU busy all the time in a level.
+#define SPATIAL_PASS_CORES			4		// a pass: one of this many cores (spatial.threads),
+#define SPATIAL_PASS_THREADS		4		//	at least one, at most this many
+#define SPATIAL_BAKE_CORES			2		// a bake: one of this many cores (spatial.bakeThreads)
 #endif
 
 enum {
@@ -468,6 +472,7 @@ extern cvar_t	*v_spatialPaths;
 extern cvar_t	*v_spatialPathLoss;
 extern cvar_t	*v_spatialShock;
 extern cvar_t	*v_spatialSources;
+extern cvar_t	*v_spatialThreads;
 extern cvar_t	*v_spatialPhysical;
 #ifdef __EMSCRIPTEN__
 extern cvar_t	*v_spatialBudget;
@@ -496,7 +501,8 @@ typedef struct {
 	IPLSimulator		simulator;
 	IPLEmbreeDevice		embree;				// NULL: Steam Audio traces the rays itself
 	IPLSceneType		sceneType;			//	of the levels and the simulator: the two must be alike
-	int					threads;			// Steam Audio shares a pass or a bake between this many
+	int					threads;			// Steam Audio shares a pass between this many
+	int					bakeThreads;		//	and a bake between this many
 
 	// The level. A new one waits in "next" until the thread of the reflections is idle: the simulator must not
 	// be given another level while a pass runs.

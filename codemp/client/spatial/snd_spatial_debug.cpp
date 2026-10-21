@@ -133,7 +133,8 @@ void S_SpatialInfo_f( void ) {
 	}
 	Com_Printf( "Steam Audio %i.%i.%i from %s\n", STEAMAUDIO_VERSION_MAJOR, STEAMAUDIO_VERSION_MINOR, STEAMAUDIO_VERSION_PATCH,
 		spatial.libraryPath );
-	Com_Printf( "rays traced by %s, %i threads\n", spatial.embree ? "Embree" : "Steam Audio", spatial.threads );
+	Com_Printf( "rays traced by %s, %i threads for a pass, %i for a bake\n", spatial.embree ? "Embree" : "Steam Audio", spatial.threads,
+		spatial.bakeThreads );
 	Com_Printf( "%i samples a second, blocks of %i, direction for %s\n", spatial.audio.samplingRate, spatial.audio.frameSize,
 		v_spatialHrtf->integer ? "headphones (HRTF)" : "speakers (panning)" );
 	if ( spatial.sceneWaits ) {

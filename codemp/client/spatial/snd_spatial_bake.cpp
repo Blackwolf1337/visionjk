@@ -98,7 +98,7 @@ static int SDLCALL S_SpatialBaker( void *unused ) {
 		bake.threshold = SPATIAL_PATH_THRESHOLD;
 		bake.visRange = SPATIAL_PATH_VIS_RANGE;
 		bake.pathRange = SPATIAL_PATH_RANGE;
-		bake.numThreads = spatial.threads;
+		bake.numThreads = spatial.bakeThreads;
 #ifdef __EMSCRIPTEN__
 		// too large to do while the game waits, see SPATIAL_PAGE_PROBES: nothing is kept of it
 		if ( spatialBake.numProbes > SPATIAL_PAGE_PROBES ) {

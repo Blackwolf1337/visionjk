@@ -73,6 +73,7 @@ cvar_t	*v_spatialPaths;
 cvar_t	*v_spatialPathLoss;
 cvar_t	*v_spatialShock;
 cvar_t	*v_spatialSources;
+cvar_t	*v_spatialThreads;
 cvar_t	*v_spatialPhysical;
 #ifdef __EMSCRIPTEN__
 cvar_t	*v_spatialBudget;
@@ -372,6 +373,7 @@ void S_SpatialInit( void ) {
 	v_spatialBudget = Cvar_Get( "v_spatialBudget", "0.75", CVAR_ARCHIVE, "v_spatial in a browser: milliseconds of a frame the passes of the reflections take on average, 0.1 to 8. More: the reverb follows the listener sooner" );
 #else
 	v_spatialPaths = Cvar_Get( "v_spatialPaths", "1", CVAR_ARCHIVE, "v_spatial: 1 a sound comes round corners. Worked out once per level in the background" );
+	v_spatialThreads = Cvar_Get( "v_spatialThreads", "0", CVAR_ARCHIVE, "v_spatial: threads Steam Audio works the sound out with, for the passes and the bakes of a level. 0 a quarter of the cores (at most 4) for the passes and half of them for a bake. From the next snd_restart on" );
 #endif
 	v_spatialBounces = Cvar_Get( "v_spatialBounces", SPATIAL_DEFAULT_BOUNCES, CVAR_ARCHIVE, "v_spatial: how often a ray is followed off a wall" );
 	v_spatialPathLoss = Cvar_Get( "v_spatialPathLoss", "1", CVAR_ARCHIVE, "v_spatial: 1 a sound loses on its way round a corner what Steam Audio works out. 0 it only gets duller, and is as loud as the game makes a sound that far away" );
@@ -434,9 +436,14 @@ void S_SpatialInit( void ) {
 		}
 	}
 #ifdef __EMSCRIPTEN__
-	spatial.threads = SPATIAL_THREADS;
+	spatial.threads = spatial.bakeThreads = SPATIAL_THREADS;
 #else
-	spatial.threads = Q_max( 1, SDL_GetCPUCount() - SPATIAL_SPARE_CORES );
+	if ( v_spatialThreads->integer > 0 ) {
+		spatial.threads = spatial.bakeThreads = Q_min( v_spatialThreads->integer, SDL_GetCPUCount() );
+	} else {
+		spatial.threads = Com_Clampi( 1, SPATIAL_PASS_THREADS, SDL_GetCPUCount() / SPATIAL_PASS_CORES );
+		spatial.bakeThreads = Q_max( 1, SDL_GetCPUCount() / SPATIAL_BAKE_CORES );
+	}
 #endif
 
 	spatial.audio.samplingRate = dma.speed;
