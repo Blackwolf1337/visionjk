@@ -225,3 +225,46 @@ int CM_ExportSolidTriangles( cmTriangleFunc_t emit, void *data ) {
 	Z_Free( moving );
 	return count;
 }
+
+/*
+===============
+CM_ExportModelTriangles
+
+The same for a brush model: 0 is the world without the brush models (CM_ExportSolidTriangles), 1 and up the
+solid brushes and curves of that brush model (a door, a lift, a func_static), where the map has them: an entity
+places them with its origin and angles, as CM_TransformedBoxTrace() does. Returns how many there are.
+===============
+*/
+int CM_ExportModelTriangles( int model, cmTriangleFunc_t emit, void *data ) {
+	const cLeaf_t *leaf;
+	int count = 0;
+
+	if ( !model ) {
+		return CM_ExportSolidTriangles( emit, data );
+	}
+	if ( model < 0 || model >= cmg.numSubModels ) {
+		return 0;
+	}
+	leaf = &cmg.cmodels[model].leaf;
+	for ( int k = 0; k < leaf->numLeafBrushes; k++ ) {
+		const int n = cmg.leafbrushes[leaf->firstLeafBrush + k];
+
+		if ( n >= 0 && n < cmg.numBrushes && ( cmg.brushes[n].contents & CONTENTS_SOLID ) ) {
+			count += CM_ExportBrush( &cmg.brushes[n], emit, data );
+		}
+	}
+	for ( int k = 0; k < leaf->numLeafSurfaces; k++ ) {
+		const int n = cmg.leafsurfaces[leaf->firstLeafSurface + k];
+		const cPatch_t *patch = ( n >= 0 && n < cmg.numSurfaces ) ? cmg.surfaces[n] : NULL;
+
+		if ( patch && patch->pc && ( patch->contents & CONTENTS_SOLID ) ) {
+			count += CM_ExportPatch( patch, emit, data );
+		}
+	}
+	return count;
+}
+
+// how many brush models the level has, the world (0) with them
+int CM_ExportModelCount( void ) {
+	return cmg.numSubModels;
+}

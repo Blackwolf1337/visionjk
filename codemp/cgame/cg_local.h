@@ -1896,6 +1896,8 @@ qboolean CG_WorldCoordToScreenCoordFloat( vec3_t worldCoord, float *x, float *y 
 // cg_spatialdebug.c
 void CG_SpatialDebugAdd( void );
 void CG_SpatialDebugDraw( void );
+// cg_spatialmovers.c
+void CG_SpatialMovers( void );
 
 // look/cg_look.c: hats and capes
 void CG_LookInit( void );

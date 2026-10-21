@@ -112,6 +112,7 @@ set(MPCGameCgameFiles
 	"${MPDir}/cgame/cg_strafetrail.c"
 	"${MPDir}/cgame/cg_spawn.c"
 	"${MPDir}/cgame/cg_spatialdebug.c"
+	"${MPDir}/cgame/cg_spatialmovers.c"
 	"${MPDir}/cgame/cg_syscalls.c"
 	"${MPDir}/cgame/cg_turret.c"
 	"${MPDir}/cgame/cg_view.c"

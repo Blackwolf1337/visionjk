@@ -761,6 +761,10 @@ typedef struct cgameImport_s {
 		// the level with Steam Audio shows of itself for v_spatialDebug (qcommon/spatial_debug.h), once a frame:
 		// eye and forward are where the camera is and looks, for the wall under the crosshair.
 		void			(*S_SpatialDebug)						( spatialDebug_t *out, const vec3_t eye, const vec3_t forward );
+		// Only an engine that sets the cvar v_cgameSpatialMovers to 1 has this one, the same way. Where the brush
+		// models of the snapshot are (doors, lifts, func_static), once a frame, for the sound of the level with
+		// Steam Audio: a closed door blocks, an open one lets through. One not named keeps its place.
+		void			(*S_SpatialMovers)						( const spatialMover_t *list, int count );
 	} ext;
 } cgameImport_t;
 

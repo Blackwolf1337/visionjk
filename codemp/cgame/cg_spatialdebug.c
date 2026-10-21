@@ -244,6 +244,9 @@ static void SD_Panel( void ) {
 	y += SD_LINE;
 	SD_Text( x, y, va( "voices %i/%i, own echoes %i/%i", sd.voices, sd.maxVoices, sd.reflects, sd.reflectSlots ), white );
 	y += SD_LINE;
+	SD_Text( x, y, va( "doors and other brush models: %i in the scene of %i, %i moved", sd.brushesIn, sd.brushes, sd.brushesMoved ),
+		sd.brushesMoved ? yellow : white );
+	y += SD_LINE;
 	if ( sd.numFallbacks ) {
 		SD_Text( x, y, va( "%i sounds without a voice: the stock mixer plays them, through walls", sd.numFallbacks ), red );
 		y += SD_LINE;
@@ -257,8 +260,8 @@ static void SD_Panel( void ) {
 	y += SD_LINE;
 
 	if ( sd.aimHit && sd.aimMaterial >= 0 && sd.aimMaterial < SPATIAL_DEBUG_MATERIALS ) {
-		Com_sprintf( text, sizeof( text ), "wall: %s, %s, %.1f m", sdMaterialNames[sd.aimMaterial],
-			sd.aimByTable ? "by steamaudio/materials.txt" : "by the level", sd.aimDistance * SD_UNIT );
+		Com_sprintf( text, sizeof( text ), "%s: %s, %s, %.1f m", sd.aimBrush ? "brush model (door ...)" : "wall",
+			sdMaterialNames[sd.aimMaterial], sd.aimByTable ? "by steamaudio/materials.txt" : "by the level", sd.aimDistance * SD_UNIT );
 		SD_Text( x, y, text, white );
 		y += SD_LINE;
 		SD_Text( x, y, va( "  %s", sd.aimShader ), white );

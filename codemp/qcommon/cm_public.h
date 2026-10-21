@@ -48,6 +48,9 @@ void		CM_ApplyClipOff( const char *list );
 // the name and the surface flags of its shader. The name stays where it is as long as the level is loaded.
 typedef void (*cmTriangleFunc_t)( const vec3_t a, const vec3_t b, const vec3_t c, const char *shader, int surfaceFlags, void *data );
 int			CM_ExportSolidTriangles( cmTriangleFunc_t emit, void *data );
+// the same for one brush model, in its own place in the map (0: the world as above), and how many there are
+int			CM_ExportModelTriangles( int model, cmTriangleFunc_t emit, void *data );
+int			CM_ExportModelCount( void );
 char		*CM_EntityString (void);
 
 // returns an ORed contents mask

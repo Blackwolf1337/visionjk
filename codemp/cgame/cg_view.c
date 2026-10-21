@@ -2741,7 +2741,8 @@ void CG_DrawActiveFrame( int serverTime, stereoFrame_t stereoView, qboolean demo
 		trap->S_UpdateAmbientSet( cstr, cg.refdef.vieworg );
 	}
 
-	// update audio positions
+	// update audio positions, and where the doors are for the sound of the level (cg_spatialmovers.c)
+	CG_SpatialMovers();
 	trap->S_Respatialize( cg.snap->ps.clientNum, cg.refdef.vieworg, cg.refdef.viewaxis, inwater );
 
 	// make sure the lagometerSample and frame timing isn't done twice when in stereo

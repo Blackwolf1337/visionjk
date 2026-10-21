@@ -2011,6 +2011,7 @@ void CL_BindCGame( void ) {
 		cgi.ext.R_SetUIPlane					= CL_SetUIPlane;
 		cgi.ext.R_SetDepthOfField				= re->ext.SetDepthOfField;
 		cgi.ext.S_SpatialDebug					= S_SpatialDebug;
+		cgi.ext.S_SpatialMovers					= S_SpatialMovers;
 
 		GetCGameAPI = (GetCGameAPI_t)cgvm->GetModuleAPI;
 		ret = GetCGameAPI( CGAME_API_VERSION, &cgi );

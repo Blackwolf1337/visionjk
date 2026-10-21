@@ -59,6 +59,9 @@ void		S_SpatialOwnVoice( float volume, const short *samples, int numSamples, int
 
 // v_spatialDebug: a sound no voice was free for (snd_dma.cpp), and from the cgame (ext.S_SpatialDebug) what to draw
 typedef struct spatialDebug_s spatialDebug_t;
+typedef struct spatialMover_s spatialMover_t;
+// from the cgame (ext.S_SpatialMovers): where the brush models of its snapshot are
+void		S_SpatialMovers( const spatialMover_t *list, int count );
 void		S_SpatialDebugFallback( const vec3_t origin, const sfx_t *sfx );
 void		S_SpatialDebug( spatialDebug_t *out, const vec3_t eye, const vec3_t forward );
 

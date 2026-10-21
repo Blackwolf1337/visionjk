@@ -143,6 +143,12 @@ from the library when it is loaded.
 	X( iplPathEffectRelease ) \
 	X( iplPathEffectReset ) \
 	X( iplPathEffectApply ) \
+	X( iplInstancedMeshCreate ) \
+	X( iplInstancedMeshRelease ) \
+	X( iplInstancedMeshAdd ) \
+	X( iplInstancedMeshRemove ) \
+	X( iplInstancedMeshUpdateTransform ) \
+	X( iplSceneSaveOBJ ) \
 	SPATIAL_SLICE_FUNCTIONS( X )
 
 // what the library for a browser has on top of Valve's, see phonon_slices.h
@@ -369,6 +375,7 @@ enum {
 // The voice chat of the cgame can hand the voice of a player to this file (S_SpatialVoice), so that it is in
 // the level like any other sound. The cgame decodes it and plays it itself on every other engine.
 #define SPATIAL_STREAM_FIFO			16384	// samples of a voice that wait to be rendered, at the rate of the mixer, a power of two
+#define SPATIAL_BRUSH_EPSILON		0.01f	// units or degrees a brush model moves before its place in the scene is changed
 #define SPATIAL_LISTENER_JUMP		64.0f	// units the listener moves in a frame that are a jump, not a speed
 #define SPATIAL_WALL_MSEC			50.0f	// how fast what the walls let through follows them, see S_SpatialSimulate()
 #define SPATIAL_AHEAD_LEAST			0.02f	// seconds the voices are rendered ahead of what the mixer paints at least,
@@ -463,6 +470,35 @@ typedef struct spatialVoice_s {
 	float					occlusion, transmission[3];	// what the walls let through, smoothed (S_SpatialSimulate)
 } spatialVoice_t;
 
+/*
+A brush model of the level (a door, a lift, a func_static, a pane of glass): its walls in a scene of their own,
+which the scene of the simulator holds where the cgame says the entity is now (S_SpatialMovers). One the cgame
+never named stays where the map has it, which for a door is shut.
+*/
+typedef struct {
+	int					model;			// its number in the collision model
+	IPLScene			scene;
+	IPLStaticMesh		mesh;
+	IPLInstancedMesh	instance;		// in spatialLevel_t.top
+	int					triangles;
+	qboolean			added;			// in the top scene now
+	qboolean			gone;			// the cgame says it is gone (broken, switched off)
+	qboolean			changed;		// a place or a state the top scene does not have yet
+	vec3_t				origin, angles;
+} spatialBrush_t;
+
+// A level as the simulator has it: the walls of the world (scene, also what the bake of the paths reads), and the
+// scene the simulator traces in, which holds that one and the brush models
+typedef struct {
+	IPLScene			scene;
+	IPLStaticMesh		mesh;
+	IPLScene			top;
+	IPLInstancedMesh	world;			// the scene of the world in the top one
+	spatialBrush_t		*brushes;		// Z_Malloc, numBrushes of them
+	int					numBrushes;
+	int					brushTriangles;
+} spatialLevel_t;
+
 static cvar_t	*v_spatial;
 static cvar_t	*v_spatialHrtf;
 static cvar_t	*v_spatialAhead;
@@ -505,9 +541,9 @@ static struct {
 
 	// The level. A new one waits in "next" until the thread of the reflections is idle: the simulator must not
 	// be given another level while a pass runs.
-	IPLScene			scene, nextScene;
-	IPLStaticMesh		mesh, nextMesh;
+	spatialLevel_t		level, nextLevel;
 	int					numTriangles, nextTriangles;
+	int					brushesMoved;		// brush models whose place changed in the scene this frame
 	qboolean			sceneWaits;
 	int					materialTriangles[SPATIAL_NUM_MATERIALS];
 	int					tableTriangles;		// of them, what the table of shaders said and not the level
@@ -748,6 +784,7 @@ typedef struct spatialMeshBuild_s {
 	int			count;
 	const char	*shader;			// of the triangle before: the triangles of a side come one after the other
 	int			tableMaterial;		//	and what the table says it is made of
+	qboolean	world;				// the walls of the world, not a brush model: counted for v_spatialInfo, and the corners
 } spatialMeshBuild_t;
 
 // for qsort and bsearch: both sides are a name, or an entry of the table, which begins with its name
@@ -828,14 +865,14 @@ static void S_SpatialTriangle( const vec3_t a, const vec3_t b, const vec3_t c, c
 		build->tableMaterial = S_SpatialTableMaterial( shader );
 	}
 	material = S_SpatialMaterial( build->tableMaterial, surfaceFlags );
-	if ( !( surfaceFlags & SURF_SKY ) && build->tableMaterial != MATERIAL_NONE ) {
+	if ( build->world && !( surfaceFlags & SURF_SKY ) && build->tableMaterial != MATERIAL_NONE ) {
 		spatial.tableTriangles++;
 	}
 
 	S_SpatialPoint( a, &build->vertices[n * 3] );
 	S_SpatialPoint( b, &build->vertices[n * 3 + 1] );
 	S_SpatialPoint( c, &build->vertices[n * 3 + 2] );
-	for ( int i = 0; i < 3; i++ ) {
+	for ( int i = 0; build->world && i < 3; i++ ) {
 		const IPLVector3 *p = &build->vertices[n * 3 + i];
 
 		if ( !n && !i ) {
@@ -852,10 +889,12 @@ static void S_SpatialTriangle( const vec3_t a, const vec3_t b, const vec3_t c, c
 	build->triangles[n].indices[1] = n * 3 + 1;
 	build->triangles[n].indices[2] = n * 3 + 2;
 	build->materials[n] = material;
-	spatial.materialTriangles[material]++;
+	if ( build->world ) {
+		spatial.materialTriangles[material]++;
+	}
 }
 
-// lets go of a level that is not, or no longer, in the simulator
+// lets go of a scene and its mesh
 static void S_SpatialReleaseScene( IPLScene *scene, IPLStaticMesh *mesh ) {
 	if ( *mesh ) {
 		qiplStaticMeshRelease( mesh );
@@ -865,6 +904,30 @@ static void S_SpatialReleaseScene( IPLScene *scene, IPLStaticMesh *mesh ) {
 	}
 	*mesh = NULL;
 	*scene = NULL;
+}
+
+// lets go of a level that is not, or no longer, in the simulator. A bake that still runs holds the scene of the
+// world itself (S_SpatialBaker).
+static void S_SpatialReleaseLevel( spatialLevel_t *level ) {
+	for ( int i = 0; i < level->numBrushes; i++ ) {
+		spatialBrush_t *b = &level->brushes[i];
+
+		if ( b->instance ) {
+			qiplInstancedMeshRelease( &b->instance );
+		}
+		S_SpatialReleaseScene( &b->scene, &b->mesh );
+	}
+	if ( level->brushes ) {
+		Z_Free( level->brushes );
+	}
+	if ( level->world ) {
+		qiplInstancedMeshRelease( &level->world );
+	}
+	if ( level->top ) {
+		qiplSceneRelease( &level->top );
+	}
+	S_SpatialReleaseScene( &level->scene, &level->mesh );
+	memset( level, 0, sizeof( *level ) );
 }
 
 static void S_SpatialResetVoice( spatialVoice_t *v );
@@ -1110,9 +1173,9 @@ static void S_SpatialThinkPaths( void ) {
 		S_SpatialDropBake();
 	}
 
-	if ( spatial.bakeWanted && spatialBakeState.load() == BAKE_NONE && spatial.scene && !spatial.sceneWaits && v_spatialPaths->integer ) {
+	if ( spatial.bakeWanted && spatialBakeState.load() == BAKE_NONE && spatial.level.scene && !spatial.sceneWaits && v_spatialPaths->integer ) {
 		spatial.bakeWanted = qfalse;
-		spatialBake.scene = qiplSceneRetain( spatial.scene );
+		spatialBake.scene = qiplSceneRetain( spatial.level.scene );
 		spatialBake.context = qiplContextRetain( spatial.context );
 		spatialBake.mins = spatial.mins;
 		spatialBake.maxs = spatial.maxs;
@@ -1160,7 +1223,7 @@ static void S_SpatialTakeScene( void ) {
 	if ( spatial.probes ) {
 		qiplSimulatorRemoveProbeBatch( spatial.simulator, spatial.probes );
 	}
-	qiplSimulatorSetScene( spatial.simulator, spatial.nextScene );
+	qiplSimulatorSetScene( spatial.simulator, spatial.nextLevel.top );
 	qiplSimulatorCommit( spatial.simulator );
 	if ( spatial.probes ) {
 		qiplProbeBatchRelease( &spatial.probes );
@@ -1174,15 +1237,13 @@ static void S_SpatialTakeScene( void ) {
 		S_SpatialCancelBake();
 	}
 
-	S_SpatialReleaseScene( &spatial.scene, &spatial.mesh );
-	spatial.scene = spatial.nextScene;
-	spatial.mesh = spatial.nextMesh;
+	S_SpatialReleaseLevel( &spatial.level );
+	spatial.level = spatial.nextLevel;
+	memset( &spatial.nextLevel, 0, sizeof( spatial.nextLevel ) );
 	spatial.numTriangles = spatial.nextTriangles;
 	spatial.mins = spatial.nextMins;
 	spatial.maxs = spatial.nextMaxs;
 	Q_strncpyz( spatial.pathFile, spatial.nextPathFile, sizeof( spatial.pathFile ) );
-	spatial.nextScene = NULL;
-	spatial.nextMesh = NULL;
 	spatial.nextTriangles = 0;
 	spatial.sceneWaits = qfalse;
 	spatial.sceneNumber++;
@@ -1190,7 +1251,7 @@ static void S_SpatialTakeScene( void ) {
 	// its paths: from the file of an earlier visit, or worked out now
 	spatial.bakeWanted = qfalse;
 	spatial.refusedProbes = 0;
-	if ( spatial.scene && v_spatialPaths->integer && !S_SpatialLoadPaths() ) {
+	if ( spatial.level.scene && v_spatialPaths->integer && !S_SpatialLoadPaths() ) {
 		spatial.bakeWanted = qtrue;
 	}
 
@@ -1216,42 +1277,146 @@ A page takes it over here and now, and works its paths out: it has no thread tha
 to the game, and it stands still while a level loads anyway.
 ===============
 */
-void S_SpatialLoadMap( const char *mapname ) {
-	const int start = Sys_Milliseconds();
+// A scene with the walls of one brush model of the collision model in it, 0: the world. Returns how many triangles
+// it has, 0: none, and no scene.
+static int S_SpatialBuildMesh( int model, IPLScene *scene, IPLStaticMesh *mesh, unsigned *checksum ) {
 	spatialMeshBuild_t build;
 	IPLSceneSettings sceneSettings;
 	IPLStaticMeshSettings meshSettings;
 	IPLMaterial materials[SPATIAL_NUM_MATERIALS];
-	int count;
+	const int count = CM_ExportModelTriangles( model, NULL, NULL );
+
+	*scene = NULL;
+	*mesh = NULL;
+	if ( !count ) {
+		return 0;
+	}
+	memset( &sceneSettings, 0, sizeof( sceneSettings ) );
+	sceneSettings.type = spatial.sceneType;
+	sceneSettings.embreeDevice = spatial.embree;
+	if ( qiplSceneCreate( spatial.context, &sceneSettings, scene ) != IPL_STATUS_SUCCESS ) {
+		*scene = NULL;
+		return 0;
+	}
+
+	memset( &build, 0, sizeof( build ) );
+	build.world = (qboolean)( model == 0 );
+	build.vertices = (IPLVector3 *)Z_Malloc( count * 3 * sizeof( IPLVector3 ), TAG_TEMP_WORKSPACE, qfalse );
+	build.triangles = (IPLTriangle *)Z_Malloc( count * sizeof( IPLTriangle ), TAG_TEMP_WORKSPACE, qfalse );
+	build.materials = (IPLint32 *)Z_Malloc( count * sizeof( IPLint32 ), TAG_TEMP_WORKSPACE, qfalse );
+	CM_ExportModelTriangles( model, S_SpatialTriangle, &build );
+	if ( checksum ) {
+		*checksum = Com_BlockChecksum( build.vertices, build.count * 3 * (int)sizeof( IPLVector3 ) );
+	}
+
+	memcpy( materials, spatialMaterials, sizeof( materials ) );
+	memset( &meshSettings, 0, sizeof( meshSettings ) );
+	meshSettings.numVertices = build.count * 3;
+	meshSettings.numTriangles = build.count;
+	meshSettings.numMaterials = SPATIAL_NUM_MATERIALS;
+	meshSettings.vertices = build.vertices;
+	meshSettings.triangles = build.triangles;
+	meshSettings.materialIndices = build.materials;
+	meshSettings.materials = materials;
+	if ( qiplStaticMeshCreate( *scene, &meshSettings, mesh ) == IPL_STATUS_SUCCESS ) {
+		qiplStaticMeshAdd( *mesh, *scene );
+		qiplSceneCommit( *scene );
+	} else {
+		*mesh = NULL;
+		S_SpatialReleaseScene( scene, mesh );
+		build.count = 0;
+	}
+	// the library keeps a copy
+	Z_Free( build.vertices );
+	Z_Free( build.triangles );
+	Z_Free( build.materials );
+	return build.count;
+}
+
+/*
+=================
+S_SpatialBrushTransform
+
+Where the walls of a brush model are, for Steam Audio: the entity turns them by its angles and moves them to its
+origin, as the renderer and CM_TransformedBoxTrace() do. Its scene has them in Steam Audio's axes and metres
+(S_SpatialPoint, P times SPATIAL_UNIT): world = P R P^T local + P origin SPATIAL_UNIT, the scale cancels in the
+turn. R has the axes of the angles as its columns. Row major, the move in the last column (IPLMatrix4x4).
+=================
+*/
+static void S_SpatialBrushTransform( const vec3_t origin, const vec3_t angles, IPLMatrix4x4 *m ) {
+	// the rows of P: Steam Audio x is -y of the game, y is z, z is -x
+	static const float P[3][3] = { { 0.0f, -1.0f, 0.0f }, { 0.0f, 0.0f, 1.0f }, { -1.0f, 0.0f, 0.0f } };
+	matrix3_t axis;
+	float R[3][3];
+	IPLVector3 move;
+
+	AnglesToAxis( angles, axis );
+	for ( int i = 0; i < 3; i++ ) {
+		for ( int j = 0; j < 3; j++ ) {
+			R[i][j] = axis[j][i];
+		}
+	}
+	memset( m, 0, sizeof( *m ) );
+	for ( int i = 0; i < 3; i++ ) {
+		for ( int j = 0; j < 3; j++ ) {
+			float sum = 0.0f;
+
+			for ( int k = 0; k < 3; k++ ) {
+				for ( int l = 0; l < 3; l++ ) {
+					sum += P[i][k] * R[k][l] * P[j][l];
+				}
+			}
+			m->elements[i][j] = sum;
+		}
+	}
+	S_SpatialPoint( origin, &move );
+	m->elements[0][3] = move.x;
+	m->elements[1][3] = move.y;
+	m->elements[2][3] = move.z;
+	m->elements[3][3] = 1.0f;
+}
+
+/*
+===============
+S_SpatialLoadMap
+
+The collision model of a level was loaded, or the sound system starts while a level is. Runs while the
+loading screen is up: building the mesh of a large level takes a moment. The level waits to be taken over,
+see S_SpatialTakeScene().
+
+The walls of the world are a scene of their own, which the bake of the paths reads. The simulator traces in a
+scene that holds that one, and each brush model (doors, lifts, func_static, glass) as a scene of its own where
+the map has it, until the cgame says where it is (S_SpatialMovers).
+
+A page takes it over here and now, and works its paths out: it has no thread that could do that later next
+to the game, and it stands still while a level loads anyway.
+===============
+*/
+void S_SpatialLoadMap( const char *mapname ) {
+	const int start = Sys_Milliseconds();
+	spatialLevel_t *level = &spatial.nextLevel;
+	IPLSceneSettings sceneSettings;
+	IPLInstancedMeshSettings instanceSettings;
+	unsigned checksum = 0;
+	int numModels;
 
 	if ( !spatial.active ) {
 		return;
 	}
 	// a level that still waits was never used
-	S_SpatialReleaseScene( &spatial.nextScene, &spatial.nextMesh );
+	S_SpatialReleaseLevel( level );
 	spatial.nextTriangles = 0;
 	spatial.sceneWaits = qtrue;
 	memset( spatial.materialTriangles, 0, sizeof( spatial.materialTriangles ) );
 	spatial.tableTriangles = 0;
 
-	count = CM_ExportSolidTriangles( NULL, NULL );
-	if ( !count ) {
+	spatial.nextTriangles = S_SpatialBuildMesh( 0, &level->scene, &level->mesh, &checksum );
+	if ( !spatial.nextTriangles ) {
+		if ( CM_ExportSolidTriangles( NULL, NULL ) ) {
+			Com_Printf( "v_spatial: no mesh for the level\n" );
+		}
 		return;
 	}
-	memset( &sceneSettings, 0, sizeof( sceneSettings ) );
-	sceneSettings.type = spatial.sceneType;
-	sceneSettings.embreeDevice = spatial.embree;
-	if ( qiplSceneCreate( spatial.context, &sceneSettings, &spatial.nextScene ) != IPL_STATUS_SUCCESS ) {
-		Com_Printf( "v_spatial: no scene for the level\n" );
-		spatial.nextScene = NULL;
-		return;
-	}
-
-	memset( &build, 0, sizeof( build ) );
-	build.vertices = (IPLVector3 *)Z_Malloc( count * 3 * sizeof( IPLVector3 ), TAG_TEMP_WORKSPACE, qfalse );
-	build.triangles = (IPLTriangle *)Z_Malloc( count * sizeof( IPLTriangle ), TAG_TEMP_WORKSPACE, qfalse );
-	build.materials = (IPLint32 *)Z_Malloc( count * sizeof( IPLint32 ), TAG_TEMP_WORKSPACE, qfalse );
-	CM_ExportSolidTriangles( S_SpatialTriangle, &build );
 
 	// The file of the paths of this level is named after the level and after its walls: another version of a
 	// level with the same name has other walls and gets a file of its own. SPATIAL_PATHS_VERSION is for files
@@ -1261,38 +1426,61 @@ void S_SpatialLoadMap( const char *mapname ) {
 
 		Q_strncpyz( path, mapname, sizeof( path ) );
 		COM_StripExtension( COM_SkipPath( path ), name, sizeof( name ) );
-		Com_sprintf( spatial.nextPathFile, sizeof( spatial.nextPathFile ), "steamaudio/%s_%08x" SPATIAL_PATHS_VERSION ".paths", name,
-			Com_BlockChecksum( build.vertices, build.count * 3 * (int)sizeof( IPLVector3 ) ) );
+		Com_sprintf( spatial.nextPathFile, sizeof( spatial.nextPathFile ), "steamaudio/%s_%08x" SPATIAL_PATHS_VERSION ".paths", name, checksum );
 	}
 
-	memcpy( materials, spatialMaterials, sizeof( materials ) );
-
-	memset( &meshSettings, 0, sizeof( meshSettings ) );
-	meshSettings.numVertices = build.count * 3;
-	meshSettings.numTriangles = build.count;
-	meshSettings.numMaterials = SPATIAL_NUM_MATERIALS;
-	meshSettings.vertices = build.vertices;
-	meshSettings.triangles = build.triangles;
-	meshSettings.materialIndices = build.materials;
-	meshSettings.materials = materials;
-	if ( qiplStaticMeshCreate( spatial.nextScene, &meshSettings, &spatial.nextMesh ) == IPL_STATUS_SUCCESS ) {
-		qiplStaticMeshAdd( spatial.nextMesh, spatial.nextScene );
-		qiplSceneCommit( spatial.nextScene );
-		spatial.nextTriangles = build.count;
-	} else {
-		Com_Printf( "v_spatial: no mesh for the level\n" );
-		spatial.nextMesh = NULL;
-		S_SpatialReleaseScene( &spatial.nextScene, &spatial.nextMesh );
+	// the scene of the simulator: the world, and the brush models
+	memset( &sceneSettings, 0, sizeof( sceneSettings ) );
+	sceneSettings.type = spatial.sceneType;
+	sceneSettings.embreeDevice = spatial.embree;
+	memset( &instanceSettings, 0, sizeof( instanceSettings ) );
+	if ( qiplSceneCreate( spatial.context, &sceneSettings, &level->top ) != IPL_STATUS_SUCCESS ) {
+		Com_Printf( "v_spatial: no scene for the level\n" );
+		level->top = NULL;
+		S_SpatialReleaseLevel( level );
+		spatial.nextTriangles = 0;
+		return;
 	}
-	// the library keeps a copy
-	Z_Free( build.vertices );
-	Z_Free( build.triangles );
-	Z_Free( build.materials );
+	instanceSettings.subScene = level->scene;
+	S_SpatialBrushTransform( vec3_origin, vec3_origin, &instanceSettings.transform );
+	if ( qiplInstancedMeshCreate( level->top, &instanceSettings, &level->world ) != IPL_STATUS_SUCCESS ) {
+		Com_Printf( "v_spatial: no scene for the level\n" );
+		level->world = NULL;
+		S_SpatialReleaseLevel( level );
+		spatial.nextTriangles = 0;
+		return;
+	}
+	qiplInstancedMeshAdd( level->world, level->top );
+
+	numModels = CM_ExportModelCount();
+	if ( numModels > 1 ) {
+		level->brushes = (spatialBrush_t *)Z_Malloc( numModels * sizeof( spatialBrush_t ), TAG_GENERAL, qtrue );
+		level->numBrushes = numModels;
+	}
+	for ( int i = 1; i < level->numBrushes; i++ ) {
+		spatialBrush_t *b = &level->brushes[i];
+
+		b->model = i;
+		b->triangles = S_SpatialBuildMesh( i, &b->scene, &b->mesh, NULL );
+		if ( !b->triangles ) {
+			continue;
+		}
+		instanceSettings.subScene = b->scene;
+		if ( qiplInstancedMeshCreate( level->top, &instanceSettings, &b->instance ) != IPL_STATUS_SUCCESS ) {
+			b->instance = NULL;
+			S_SpatialReleaseScene( &b->scene, &b->mesh );
+			b->triangles = 0;
+			continue;
+		}
+		qiplInstancedMeshAdd( b->instance, level->top );
+		b->added = qtrue;
+		level->brushTriangles += b->triangles;
+	}
+	qiplSceneCommit( level->top );
 
 	spatial.sceneMsec = Sys_Milliseconds() - start;
-	if ( spatial.nextTriangles ) {
-		Com_Printf( "v_spatial: %i triangles of the level in %i ms\n", spatial.nextTriangles, spatial.sceneMsec );
-	}
+	Com_Printf( "v_spatial: %i triangles of the level and %i of its brush models in %i ms\n", spatial.nextTriangles,
+		level->brushTriangles, spatial.sceneMsec );
 #ifdef __EMSCRIPTEN__
 	// the pass that may be in its slices is brought to its end, so that the simulator can be given the level
 	S_SpatialSlice( 0 );
@@ -2677,6 +2865,102 @@ static void S_SpatialCapture_f( void ) {
 
 /*
 ===============
+S_SpatialMovers
+
+From the cgame (ext.S_SpatialMovers), once a frame: where the brush models of its snapshot are, and which are gone.
+A level that waits to be taken over gets them, it is the one the cgame sees.
+===============
+*/
+static qboolean S_SpatialNear( const vec3_t a, const vec3_t b ) {
+	return (qboolean)( fabsf( a[0] - b[0] ) < SPATIAL_BRUSH_EPSILON && fabsf( a[1] - b[1] ) < SPATIAL_BRUSH_EPSILON
+		&& fabsf( a[2] - b[2] ) < SPATIAL_BRUSH_EPSILON );
+}
+
+void S_SpatialMovers( const spatialMover_t *list, int count ) {
+	spatialLevel_t *level = spatial.sceneWaits ? &spatial.nextLevel : &spatial.level;
+
+	if ( !spatial.active || !list ) {
+		return;
+	}
+	for ( int i = 0; i < count; i++ ) {
+		const spatialMover_t *m = &list[i];
+		spatialBrush_t *b;
+
+		if ( m->model <= 0 || m->model >= level->numBrushes ) {
+			continue;
+		}
+		b = &level->brushes[m->model];
+		if ( !b->instance ) {
+			continue;
+		}
+		if ( !m->gone != !b->gone ) {
+			b->gone = m->gone ? qtrue : qfalse;
+			b->changed = qtrue;
+		}
+		if ( !m->gone && ( !S_SpatialNear( m->origin, b->origin ) || !S_SpatialNear( m->angles, b->angles ) ) ) {
+			VectorCopy( m->origin, b->origin );
+			VectorCopy( m->angles, b->angles );
+			b->changed = qtrue;
+		}
+	}
+}
+
+// What S_SpatialMovers() changed, into the scene of the simulator. Not while a pass runs in the thread of the
+// reflections: a scene must not be committed while anything simulates in it. Then it waits a frame or two.
+static void S_SpatialApplyBrushes( void ) {
+	spatialLevel_t *level = &spatial.level;
+	int moved = 0;
+
+	spatial.brushesMoved = 0;
+	if ( !level->top || spatialWorkerState.load() != WORKER_IDLE ) {
+		return;
+	}
+	for ( int i = 1; i < level->numBrushes; i++ ) {
+		spatialBrush_t *b = &level->brushes[i];
+
+		if ( !b->changed || !b->instance ) {
+			continue;
+		}
+		b->changed = qfalse;
+		moved++;
+		if ( b->gone ) {
+			if ( b->added ) {
+				qiplInstancedMeshRemove( b->instance, level->top );
+				b->added = qfalse;
+			}
+			continue;
+		}
+		if ( !b->added ) {
+			qiplInstancedMeshAdd( b->instance, level->top );
+			b->added = qtrue;
+		}
+		IPLMatrix4x4 transform;
+
+		S_SpatialBrushTransform( b->origin, b->angles, &transform );
+		qiplInstancedMeshUpdateTransform( b->instance, level->top, transform );
+	}
+	if ( moved ) {
+		qiplSceneCommit( level->top );
+	}
+	spatial.brushesMoved = moved;
+}
+
+// v_spatialSaveScene: the scene of the simulator as Steam Audio has it, into steamaudio/scene.obj of the home path
+static void S_SpatialSaveScene_f( void ) {
+	const char *path;
+
+	if ( !spatial.level.top || spatialWorkerState.load() != WORKER_IDLE ) {
+		Com_Printf( "v_spatialSaveScene: no level, or a pass runs, try again\n" );
+		return;
+	}
+	// steamaudio/ is there: the paths of the levels are kept in it
+	path = FS_BuildOSPath( Cvar_VariableString( "fs_homepath" ), FS_GetCurrentGameDir(), "steamaudio/scene.obj" );
+	qiplSceneSaveOBJ( spatial.level.top, path );
+	Com_Printf( "v_spatialSaveScene: %s\n", path );
+}
+
+/*
+===============
 S_SpatialEndFrame
 
 All sounds of the frame are named. from: the first sample the mixer paints now, target: up to which sample the
@@ -2710,6 +2994,7 @@ void S_SpatialEndFrame( int from, int target ) {
 	}
 
 	S_SpatialGatherStreams();
+	S_SpatialApplyBrushes();
 	S_SpatialSimulate();
 	simulated = S_SpatialUsec();
 
@@ -2865,6 +3150,16 @@ static void S_SpatialInfo_f( void ) {
 		return;
 	}
 	Com_Printf( "level: %i triangles, built in %i ms\n", spatial.numTriangles, spatial.sceneMsec );
+	{
+		int brushes = 0, added = 0;
+
+		for ( int i = 1; i < spatial.level.numBrushes; i++ ) {
+			brushes += spatial.level.brushes[i].instance ? 1 : 0;
+			added += spatial.level.brushes[i].added ? 1 : 0;
+		}
+		Com_Printf( "brush models (doors, lifts ...): %i with %i triangles, %i of them in the scene now\n", brushes,
+			spatial.level.brushTriangles, added );
+	}
 	for ( int i = 0; i < SPATIAL_NUM_MATERIALS; i++ ) {
 		if ( spatial.materialTriangles[i] ) {
 			Com_Printf( "  %-9s %i\n", spatialMaterialNames[i], spatial.materialTriangles[i] );
@@ -2987,8 +3282,8 @@ static void S_SpatialRelease( void ) {
 		if ( spatial.nextProbes ) {
 			qiplProbeBatchRelease( &spatial.nextProbes );
 		}
-		S_SpatialReleaseScene( &spatial.scene, &spatial.mesh );
-		S_SpatialReleaseScene( &spatial.nextScene, &spatial.nextMesh );
+		S_SpatialReleaseLevel( &spatial.level );
+		S_SpatialReleaseLevel( &spatial.nextLevel );
 		if ( spatial.reverbDecode ) {
 			qiplAmbisonicsDecodeEffectRelease( &spatial.reverbDecode );
 		}
@@ -3192,6 +3487,7 @@ void S_SpatialInit( void ) {
 	v_spatialShock = Cvar_Get( "v_spatialShock", "1", CVAR_ARCHIVE, "v_spatial: how strong the thump of an explosion is, its lows in both ears. 0 none" );
 	v_spatialDebug = Cvar_Get( "v_spatialDebug", "0", CVAR_NONE, "v_spatial: shows in the level what becomes of the sounds. 1 all, or the sum of 2 the sounds, 4 the ways round corners, 8 rays off the walls, 16 the numbers and the wall under the crosshair" );
 	Cmd_AddCommand( "v_spatialInfo", S_SpatialInfo_f, "What v_spatial is doing" );
+	Cmd_AddCommand( "v_spatialSaveScene", S_SpatialSaveScene_f, "v_spatial: the walls Steam Audio has, with the brush models where they are, into steamaudio/scene.obj" );
 	Cmd_AddCommand( "v_spatialCapture", S_SpatialCapture_f, "v_spatial: what the sounds of the level give the mixer for so many seconds, into steamaudio/capture.wav" );
 
 	memset( &spatial, 0, sizeof( spatial ) );
@@ -3294,6 +3590,7 @@ void S_SpatialInit( void ) {
 
 void S_SpatialShutdown( void ) {
 	Cmd_RemoveCommand( "v_spatialInfo" );
+	Cmd_RemoveCommand( "v_spatialSaveScene" );
 	Cmd_RemoveCommand( "v_spatialCapture" );
 	Cvar_Set( "v_spatialVoice", "0" );
 	Cvar_Set( "v_spatialOwnVoice", "0" );
@@ -3339,7 +3636,7 @@ void S_SpatialUpdate( void ) {
 		// switched on in a level that has no paths: a page has no thread that could work them out now
 		if ( v_spatialPaths->modified ) {
 			v_spatialPaths->modified = qfalse;
-			if ( v_spatialPaths->integer && spatial.scene && !spatial.probes && !spatial.probesWait ) {
+			if ( v_spatialPaths->integer && spatial.level.scene && !spatial.probes && !spatial.probesWait ) {
 				if ( spatial.refusedProbes ) {
 					S_SpatialSayTooLarge();
 				} else {
@@ -3393,6 +3690,9 @@ static struct {
 	int					dims[3];
 	int					*cellStart;	// where the triangles of a cell begin in cellTris, one more than cells
 	int					*cellTris;
+	int					worldTris;	// the first of tris are the world's, in the grid
+	int					numModels;	// then those of the brush models, in their own place:
+	int					*brushFirst, *brushCount;	//	where they begin in tris and how many, by brush model
 	int					raysTime;	// Sys_Milliseconds() the rays were traced
 	vec3_t				raysFrom;
 	int					numRays;
@@ -3408,6 +3708,12 @@ static void S_SpatialDebugFree( void ) {
 	}
 	if ( spatialDebugMesh.cellTris ) {
 		Z_Free( spatialDebugMesh.cellTris );
+	}
+	if ( spatialDebugMesh.brushFirst ) {
+		Z_Free( spatialDebugMesh.brushFirst );
+	}
+	if ( spatialDebugMesh.brushCount ) {
+		Z_Free( spatialDebugMesh.brushCount );
 	}
 	memset( &spatialDebugMesh, 0, sizeof( spatialDebugMesh ) );
 }
@@ -3451,22 +3757,34 @@ static qboolean S_SpatialDebugMesh( void ) {
 	vec3_t mins, maxs, size;
 	int count, cells, entries;
 
-	if ( spatialDebugMesh.scene == spatial.scene && ( spatialDebugMesh.tris || spatialDebugMesh.failed ) ) {
+	if ( spatialDebugMesh.scene == spatial.level.scene && ( spatialDebugMesh.tris || spatialDebugMesh.failed ) ) {
 		return (qboolean)!spatialDebugMesh.failed;
 	}
 	S_SpatialDebugFree();
-	spatialDebugMesh.scene = spatial.scene;
+	spatialDebugMesh.scene = spatial.level.scene;
 	count = CM_ExportSolidTriangles( NULL, NULL );
 	if ( !count ) {
 		spatialDebugMesh.failed = qtrue;
 		return qfalse;
 	}
+	spatialDebugMesh.numModels = CM_ExportModelCount();
+	for ( int m = 1; m < spatialDebugMesh.numModels; m++ ) {
+		count += CM_ExportModelTriangles( m, NULL, NULL );
+	}
 	spatialDebugMesh.tris = (spatialDebugTri_t *)Z_Malloc( count * sizeof( spatialDebugTri_t ), TAG_GENERAL, qfalse );
+	spatialDebugMesh.brushFirst = (int *)Z_Malloc( Q_max( 1, spatialDebugMesh.numModels ) * sizeof( int ), TAG_GENERAL, qtrue );
+	spatialDebugMesh.brushCount = (int *)Z_Malloc( Q_max( 1, spatialDebugMesh.numModels ) * sizeof( int ), TAG_GENERAL, qtrue );
 	spatialDebugMesh.tableMaterial = MATERIAL_NONE;
 	CM_ExportSolidTriangles( S_SpatialDebugTriangle, NULL );
+	spatialDebugMesh.worldTris = spatialDebugMesh.numTris;
+	for ( int m = 1; m < spatialDebugMesh.numModels; m++ ) {
+		spatialDebugMesh.brushFirst[m] = spatialDebugMesh.numTris;
+		CM_ExportModelTriangles( m, S_SpatialDebugTriangle, NULL );
+		spatialDebugMesh.brushCount[m] = spatialDebugMesh.numTris - spatialDebugMesh.brushFirst[m];
+	}
 
 	ClearBounds( mins, maxs );
-	for ( int i = 0; i < spatialDebugMesh.numTris; i++ ) {
+	for ( int i = 0; i < spatialDebugMesh.worldTris; i++ ) {
 		vec3_t a, b;
 
 		S_SpatialDebugBounds( &spatialDebugMesh.tris[i], a, b );
@@ -3490,7 +3808,7 @@ static qboolean S_SpatialDebugMesh( void ) {
 			if ( entries > SPATIAL_DEBUG_MOST_ENTRIES ) {
 				Com_Printf( "v_spatialDebug: the level is too large for the copy of its walls\n" );
 				S_SpatialDebugFree();
-				spatialDebugMesh.scene = spatial.scene;
+				spatialDebugMesh.scene = spatial.level.scene;
 				spatialDebugMesh.failed = qtrue;
 				return qfalse;
 			}
@@ -3502,7 +3820,7 @@ static qboolean S_SpatialDebugMesh( void ) {
 			}
 			spatialDebugMesh.cellTris = (int *)Z_Malloc( Q_max( 1, entries ) * sizeof( int ), TAG_GENERAL, qfalse );
 		}
-		for ( int i = 0; i < spatialDebugMesh.numTris; i++ ) {
+		for ( int i = 0; i < spatialDebugMesh.worldTris; i++ ) {
 			vec3_t a, b;
 			int lo[3], hi[3];
 
@@ -3636,6 +3954,51 @@ static int S_SpatialDebugTrace( const vec3_t start, const vec3_t dir, float leng
 	}
 }
 
+// The first wall along dir from start, of the world or of a brush model where the scene has it now. normal: its
+// normal in the level. NULL: none.
+static const spatialDebugTri_t *S_SpatialDebugTraceAll( const vec3_t start, const vec3_t dir, float length, float *hitT, vec3_t normal ) {
+	const spatialLevel_t *level = &spatial.level;
+	const spatialDebugTri_t *hit = NULL;
+	float best = length, t;
+	const int tri = S_SpatialDebugTrace( start, dir, length, &t );
+
+	if ( tri >= 0 ) {
+		best = t;
+		hit = &spatialDebugMesh.tris[tri];
+		VectorCopy( hit->normal, normal );
+	}
+	for ( int m = 1; m < spatialDebugMesh.numModels && m < level->numBrushes; m++ ) {
+		const spatialBrush_t *b = &level->brushes[m];
+		matrix3_t axis;
+		vec3_t d, localStart, localDir;
+
+		if ( !b->added || !spatialDebugMesh.brushCount[m] ) {
+			continue;
+		}
+		// into the place the map has it in: local = R^T ( world - origin )
+		AnglesToAxis( b->angles, axis );
+		VectorSubtract( start, b->origin, d );
+		for ( int k = 0; k < 3; k++ ) {
+			localStart[k] = DotProduct( d, axis[k] );
+			localDir[k] = DotProduct( dir, axis[k] );
+		}
+		for ( int i = 0; i < spatialDebugMesh.brushCount[m]; i++ ) {
+			const spatialDebugTri_t *candidate = &spatialDebugMesh.tris[spatialDebugMesh.brushFirst[m] + i];
+
+			t = S_SpatialDebugHit( candidate, localStart, localDir );
+			if ( t > 0.05f && t < best ) {
+				best = t;
+				hit = candidate;
+				VectorScale( axis[0], candidate->normal[0], normal );
+				VectorMA( normal, candidate->normal[1], axis[1], normal );
+				VectorMA( normal, candidate->normal[2], axis[2], normal );
+			}
+		}
+	}
+	*hitT = best;
+	return hit;
+}
+
 // Rays from the listener, spread evenly round him, off the walls as off a mirror
 static void S_SpatialDebugRays( void ) {
 	const int now = Sys_Milliseconds();
@@ -3660,22 +4023,22 @@ static void S_SpatialDebugRays( void ) {
 		for ( int b = 0; b < bounces && spatialDebugMesh.numRays < SPATIAL_DEBUG_RAYS; b++ ) {
 			spatialDebugSegment_t *seg = &spatialDebugMesh.rays[spatialDebugMesh.numRays++];
 			float t;
-			const int tri = S_SpatialDebugTrace( from, dir, SPATIAL_DEBUG_RAY_LENGTH, &t );
+			vec3_t n;
+			const spatialDebugTri_t *tri = S_SpatialDebugTraceAll( from, dir, SPATIAL_DEBUG_RAY_LENGTH, &t, n );
 
 			VectorCopy( from, seg->from );
 			seg->bounce = b;
-			if ( tri < 0 ) {
+			if ( !tri ) {
 				VectorMA( from, SPATIAL_DEBUG_RAY_LENGTH, dir, seg->to );
 				seg->kind = -1;		// out of the level
 				break;
 			}
 			VectorMA( from, t, dir, seg->to );
-			seg->kind = spatialDebugMesh.tris[tri].material;
+			seg->kind = tri->material;
 			if ( seg->kind == SPATIAL_SKY ) {
 				break;
 			}
 			// off the wall as off a mirror, a little away from it
-			const float *n = spatialDebugMesh.tris[tri].normal;
 			const float d = DotProduct( dir, n );
 
 			VectorMA( dir, -2.0f * d, n, dir );
@@ -3737,6 +4100,11 @@ void S_SpatialDebug( spatialDebug_t *out, const vec3_t eye, const vec3_t forward
 	out->reflects = spatial.numReflects;
 	out->reflectSlots = Com_Clampi( 0, spatial.numReflectSlots, v_spatialSources->integer );
 	out->reverbVolume = v_spatialReflections->integer ? v_spatialReverb->value : 0.0f;
+	for ( int i = 1; i < spatial.level.numBrushes; i++ ) {
+		out->brushes += spatial.level.brushes[i].instance ? 1 : 0;
+		out->brushesIn += spatial.level.brushes[i].added ? 1 : 0;
+	}
+	out->brushesMoved = spatial.brushesMoved;
 
 	spatial.directLevel = S_SpatialDebugLevel( spatial.directEnergy, spatial.energySamples, spatial.directLevel );
 	spatial.reverbLevel = S_SpatialDebugLevel( spatial.reverbEnergy, spatial.energySamples, spatial.reverbLevel );
@@ -3808,19 +4176,20 @@ void S_SpatialDebug( spatialDebug_t *out, const vec3_t eye, const vec3_t forward
 		memcpy( out->rays, spatialDebugMesh.rays, spatialDebugMesh.numRays * sizeof( out->rays[0] ) );
 	}
 	if ( mask & SPATIAL_DEBUG_PANEL ) {
-		vec3_t dir;
+		vec3_t dir, n;
 		float t;
-		int tri;
+		const spatialDebugTri_t *tri;
 
 		VectorNormalize2( forward, dir );
-		tri = S_SpatialDebugTrace( eye, dir, 16384.0f, &t );
-		if ( tri >= 0 ) {
+		tri = S_SpatialDebugTraceAll( eye, dir, 16384.0f, &t, n );
+		if ( tri ) {
 			out->aimHit = qtrue;
 			VectorMA( eye, t, dir, out->aimPoint );
 			out->aimDistance = t;
-			out->aimMaterial = spatialDebugMesh.tris[tri].material;
-			out->aimByTable = spatialDebugMesh.tris[tri].byTable ? qtrue : qfalse;
-			Q_strncpyz( out->aimShader, spatialDebugMesh.tris[tri].shader ? spatialDebugMesh.tris[tri].shader : "?", sizeof( out->aimShader ) );
+			out->aimMaterial = tri->material;
+			out->aimByTable = tri->byTable ? qtrue : qfalse;
+			out->aimBrush = ( tri - spatialDebugMesh.tris ) >= spatialDebugMesh.worldTris ? qtrue : qfalse;
+			Q_strncpyz( out->aimShader, tri->shader ? tri->shader : "?", sizeof( out->aimShader ) );
 		}
 	}
 }
@@ -3846,6 +4215,7 @@ float		S_SpatialAhead( void ) { return 0.0f; }
 int			S_SpatialVoice( int clientNum, const vec3_t origin, float volume, const short *samples, int numSamples, int rate ) { return -1; }
 void		S_SpatialOwnVoice( float volume, const short *samples, int numSamples, int rate ) {}
 void		S_SpatialDebugFallback( const vec3_t origin, const sfx_t *sfx ) {}
+void		S_SpatialMovers( const spatialMover_t *list, int count ) {}
 void		S_SpatialDebug( spatialDebug_t *out, const vec3_t eye, const vec3_t forward ) { memset( out, 0, sizeof( *out ) ); }
 
 #endif // JP_SPATIAL

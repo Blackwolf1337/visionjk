@@ -71,6 +71,14 @@ typedef struct spatialDebugFallback_s {
 	char		name[SPATIAL_DEBUG_NAME];
 } spatialDebugFallback_t;
 
+// A brush model of the snapshot for Steam Audio (ext.S_SpatialMovers): model is its number (entityState_t
+// modelindex of a SOLID_BMODEL), gone: it is no longer there (broken, switched off)
+typedef struct spatialMover_s {
+	int			model;
+	qboolean	gone;
+	vec3_t		origin, angles;
+} spatialMover_t;
+
 typedef struct spatialDebug_s {
 	qboolean				active;				// Steam Audio plays the sounds of a level
 	vec3_t					listener;			// where he hears from
@@ -92,6 +100,11 @@ typedef struct spatialDebug_s {
 	int						aimMaterial;		// SPATIAL_DEBUG_GENERIC ...
 	qboolean				aimByTable;			// the material is from steamaudio/materials.txt, not from the level
 	char					aimShader[64];
+	qboolean				aimBrush;			// it is a brush model (a door ...), not the world
+
+	int						brushes;			// brush models with walls (doors, lifts ...)
+	int						brushesIn;			//	of them in the scene now (not gone)
+	int						brushesMoved;		//	of them changed in the scene this frame
 
 	int						numSounds;
 	spatialDebugSound_t		sounds[SPATIAL_DEBUG_SOUNDS];
