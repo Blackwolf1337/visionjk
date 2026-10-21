@@ -721,7 +721,7 @@ typedef struct cgameImport_s {
 		float			(*R_Font_StrLenPixels)					( const char *text, const int iFontIndex, const float scale );
 		// Only an engine that sets the cvar v_spatialVoice to 1 has this one, any other ends the structure
 		// before it: look at the cvar before touching it. The voice of a player of the voice chat as a sound in
-		// the level, see client/snd_spatial.cpp. Returns the samples of him that wait, or -1. An engine that sets
+		// the level, see client/spatial/snd_spatial.cpp. Returns the samples of him that wait, or -1. An engine that sets
 		// v_spatialBoxes takes that many boxes of the boombox the same way, as clientNum MAX_CLIENTS and up.
 		int				(*S_SpatialVoice)						( int clientNum, const vec3_t origin, float volume, const short *samples, int numSamples, int rate );
 		// Only an engine that sets the cvar v_spatialOwnVoice to 1 has this one, the same way. What the own

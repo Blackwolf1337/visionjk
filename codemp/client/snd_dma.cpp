@@ -33,7 +33,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "snd_local.h"
 #include "snd_mp3.h"
 #include "snd_music.h"
-#include "snd_spatial.h"
+#include "client/spatial/snd_spatial.h"
 #include "client.h"
 #define __STDC_FORMAT_MACROS
 #include <inttypes.h>

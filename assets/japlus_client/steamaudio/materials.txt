@@ -1,4 +1,4 @@
-// What the surfaces of the levels are made of, for the sound (client/snd_spatial.cpp): the name of a shader
+// What the surfaces of the levels are made of, for the sound (client/spatial/snd_spatial.cpp): the name of a shader
 // and one of the materials of game/surfaceflags.h. For the shaders whose level file names none.
 // Written by japlus_port/tools/samat/merge.py from materials.json, change it there.
 models/items/binoculars hollowmetal

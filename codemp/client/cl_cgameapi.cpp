@@ -28,7 +28,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "cl_uiapi.h"
 #include "botlib/botlib.h"
 #include "snd_ambient.h"
-#include "snd_spatial.h"
+#include "client/spatial/snd_spatial.h"
 #include "FXExport.h"
 #include "FxUtil.h"
 

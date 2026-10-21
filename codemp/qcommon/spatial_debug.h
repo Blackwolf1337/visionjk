@@ -18,7 +18,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 ===========================================================================
 */
 
-// spatial_debug.h -- what the sound of the level with Steam Audio (client/snd_spatial.cpp) shows of itself for
+// spatial_debug.h -- what the sound of the level with Steam Audio (client/spatial/snd_spatial.cpp) shows of itself for
 // v_spatialDebug: the engine fills it once a frame (ext.S_SpatialDebug of cg_public.h), the cgame draws it
 // (cgame/cg_spatialdebug.c). Places are units of the level.
 

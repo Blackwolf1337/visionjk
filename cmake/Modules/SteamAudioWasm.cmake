@@ -20,7 +20,7 @@
 # lib/steamaudio is built here: as phonon.wasm, a module of its own next to cgame, ui and the renderer in the
 # folder the server hands out. The engine is not linked against it. It loads the file when the sound system
 # starts and looks its functions up by name, as it does with libphonon.so on the desktop
-# (client/snd_spatial.cpp), and without the file the sound is as it always was.
+# (client/spatial/snd_spatial.cpp), and without the file the sound is as it always was.
 #
 # Valve's own cmake files are not used: they find their dependencies in a folder their Python script fills,
 # and they copy the result into the folders of the Unity, Unreal, FMOD and Wwise plugins, which would write

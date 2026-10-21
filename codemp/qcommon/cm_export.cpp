@@ -20,7 +20,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 */
 
 // cm_export.cpp -- the solid surfaces of the level as triangles, for code that needs the level as a mesh and
-// not as something to trace through: the sound of client/snd_spatial.cpp hands it to a ray tracer of its own,
+// not as something to trace through: the sound of client/spatial/snd_spatial.cpp hands it to a ray tracer of its own,
 // which runs in other threads, where CM_BoxTrace() must not be called (it marks the brushes it has tested).
 //
 // Only the world. The brush models that move (doors, lifts) are left out.

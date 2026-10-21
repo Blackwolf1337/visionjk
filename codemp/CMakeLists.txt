@@ -367,7 +367,7 @@ if(BuildMPEngine)
 	set(MPEngineFiles ${MPEngineAndDedFiles})
 	set(MPEngineDefines ${MPSharedDefines})
 
-	# Steam Audio: sound that knows the level (client/snd_spatial.cpp). The engine is not linked against it, it
+	# Steam Audio: sound that knows the level (client/spatial/snd_spatial.cpp). The engine is not linked against it, it
 	# loads the library when it runs. It needs the header of Valve's repository, the submodule lib/steamaudio:
 	# only that one file is put on the include path (in the build folder), the folder it comes from holds the
 	# whole of Steam Audio, with header names of its own that the engine must not pick up.
@@ -560,11 +560,25 @@ if(BuildMPEngine)
 		"${MPDir}/client/snd_mp3.h"
 		"${MPDir}/client/snd_music.cpp"
 		"${MPDir}/client/snd_music.h"
-		"${MPDir}/client/snd_spatial.cpp"
-		"${MPDir}/client/snd_spatial.h"
 		)
 	source_group("client" FILES ${MPEngineClientFiles})
 	set(MPEngineFiles ${MPEngineFiles} ${MPEngineClientFiles})
+
+	# the sound that knows the level, with Steam Audio (docs/japlus/audio.md)
+	set(MPEngineClientSpatialFiles
+		"${MPDir}/client/spatial/snd_spatial.cpp"
+		"${MPDir}/client/spatial/snd_spatial.h"
+		"${MPDir}/client/spatial/snd_spatial_bake.cpp"
+		"${MPDir}/client/spatial/snd_spatial_debug.cpp"
+		"${MPDir}/client/spatial/snd_spatial_level.cpp"
+		"${MPDir}/client/spatial/snd_spatial_local.h"
+		"${MPDir}/client/spatial/snd_spatial_page.cpp"
+		"${MPDir}/client/spatial/snd_spatial_render.cpp"
+		"${MPDir}/client/spatial/snd_spatial_sim.cpp"
+		"${MPDir}/client/spatial/snd_spatial_voice.cpp"
+		)
+	source_group("client/spatial" FILES ${MPEngineClientSpatialFiles})
+	set(MPEngineFiles ${MPEngineFiles} ${MPEngineClientSpatialFiles})
 
 	set(MPEngineRatlFiles
 		"${MPDir}/Ratl/bits_vs.h"

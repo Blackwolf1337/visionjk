@@ -23,7 +23,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // What Steam Audio as it is built for the browser (phonon.wasm, cmake/Modules/SteamAudioWasm.cmake) has on top
 // of phonon.h. Not from Valve: thread_pool.cpp of this folder has the two functions, simulation_manager.cpp.patch
 // makes iplSimulatorRunReflections() heed them. The engine gets them from the library by name like the functions
-// of phonon.h (client/snd_spatial.cpp), which is why the build copies this header next to that one.
+// of phonon.h (client/spatial/snd_spatial.cpp), which is why the build copies this header next to that one.
 //
 // A pass of the reflections traces its rays in jobs of 32 and takes tens of milliseconds as a whole. On the
 // desktop that is the work of a thread. In a page there is one thread, and it has a frame to draw: so there a

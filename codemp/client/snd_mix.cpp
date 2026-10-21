@@ -26,7 +26,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include "client.h"
 #include "snd_local.h"
-#include "snd_spatial.h"
+#include "client/spatial/snd_spatial.h"
 
 portable_samplepair_t paintbuffer[PAINTBUFFER_SIZE];
 int 	*snd_p, snd_linear_count, snd_vol;
