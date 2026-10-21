@@ -47,12 +47,17 @@ In a browser three defaults are others: `v_spatial` 1, `v_spatialRays` 1024, `v_
 has reflections of its own there (`v_spatialSources` does nothing).
 
 With `v_spatialEcho 1` the echo is not worked out while you play. It is worked out once per level, in the
-background after the paths, and kept in `steamaudio/<level>_<checksum>_v1.echo` in the profile. It is looked up
+background after the paths, and kept in `steamaudio/<level>_<checksum>_v2.echo` in the profile. It is looked up
 at the probes where you stand. So it does not flutter while you move, all sounds ring with the room you are in,
-and no sound has echoes of its own (`v_spatialSources` does nothing). The bake takes `v_spatialRays` and
-`v_spatialBounces` as they are when it starts, and until it is done the echo is worked out as you go. On mp/ffa3
-it was measured on 2026-10-21: 3960 probes in 3.2 s at 2048 rays and 16 bounces, a file of 28.7 MB, a pass about
-1 ms. Nobody has listened to it.
+and no sound has echoes of its own (`v_spatialSources` does nothing). The bake takes Valve's numbers, those of
+the bake of their Unity plugin: 16384 rays and 1024 diffuse samples, whatever `v_spatialRays` is. The bounces are
+`v_spatialBounces` as it is when the bake starts, and until it is done the echo is worked out as you go. On
+mp/ffa3 it was measured on 2026-10-21: 3960 probes in 21.3 s, a file of 28.7 MB, a pass about 1 ms. Nobody has
+listened to it.
+
+Until 2026-10-21 the bake took the live `v_spatialRays` and 32 diffuse samples, and the file was `_v1`. On
+mp/ffa3 that was 3960 probes in 3.2 s at 2048 rays and 16 bounces, a file of the same size. The files of `_v1`
+stay in the profile and are not read, so every level is baked again.
 
 ### The menu
 
@@ -335,8 +340,15 @@ anywhere else only what came through the wall was heard. (That is also why the V
 matrix has the middle of the level. The probes are 3 m apart, and in a level where that is more than 4000
 (`SPATIAL_MAX_PROBES`) the spacing grows by half until it is not: the work and the file grow with the square of
 them. mp/ffa3 has 3960 at 3 m, 3.0 s in the background (Ryzen 9 5900X, 2026-10-17), the file 16.5 MB. The name of
-the file has `_v2` in it, so every level is worked out once more. The files of before stay in the profile and are
-not read (`steamaudio/*.paths` without `_v2`, 454 MB in the owner's profile): they can be deleted.
+the file got `_v2` in it then, so every level was worked out once more. The files of before stay in the profile and
+are not read (`steamaudio/*.paths` without `_v2`, 454 MB in the owner's profile): they can be deleted.
+
+Since 2026-10-21 the paths take Valve's numbers, those of the bake of their Unity plugin (`Baker.cs`). A probe
+tries 4 points (was 1), 1 m from its middle (was 0.5 m). Probes up to 1000 m apart are asked whether they see
+each other (was 30 m), and a way may be up to 1000 m long (was 100 m). The check of a way while the game runs
+uses the same numbers. The file has `_v3` in it, so every level is worked out again, and the `_v2` files stay in
+the profile and are not read. On mp/ffa3, in a silent hidden client (22 threads, Embree), the same 3960 probes
+took 4.2 s (1.6 s with the old numbers) and the file is 21.7 MB (16.5 MB before). Nobody has listened to it.
 
 **The voice chat.** The cgame plays the voices of its voice chat on a sound device of its own, which the
 engine knows nothing of. With `v_spatial` on, the engine sets the cvar `v_spatialVoice` to 1 and the cgame
@@ -462,7 +474,8 @@ What a player in a browser has less of:
   the square of the probes, and nothing can work them out later next to the game. mp/ffa3 has 740. The console
   says so when such a level loads, and `v_spatialPaths` says it when it is switched on in one.
 - A level loads longer the first time: by the 0.4 s of its paths on mp/ffa3, by about 3 s at 2000 probes if the
-  time grows as said.
+  time grows as said. Both are from before 2026-10-21: the paths now take Valve's numbers (see "Paths"), which
+  is longer on the desktop, so a page waits longer too. By how much was never measured.
 - `phonon.wasm` is 6.2 MB more to fetch, and with it the engine needs 60 to 80 MB more memory, see "Measured".
 
 ### Building it
@@ -691,6 +704,13 @@ both files back, and a change of level to mp/duel1 with its own bakes; once with
 with a sound with reflections of its own and up to 13 sounds in a frame. Both to their end, no crash. Nothing of
 it was recorded or heard.
 
+The bakes with Valve's numbers (2026-10-21, branch feature/spatial-bake), in a silent hidden client on mp/ffa3
+(22 threads, Embree): the paths of 3960 probes 3 m apart took 4.2 s (1.6 s before) and the file is 21.7 MB (16.5
+MB before). The echo took 21.3 s (3.0 to 3.2 s before) and the file is 28.7 MB as before: its size goes with the probes
+and the length of the echo, not with the rays. A pass while the game runs took 1 ms with the stored echo, as
+before, and 12 ms while the bake of the echo ran, since the bake shares the cores. No crash. Nothing of it was
+recorded or heard.
+
 Builds: Linux 64, and the client and the modules for 64 bit Windows with mingw (run on Windows 11 on 2026-10-11
 with `v_spatial 1`: library loaded, level handed over, paths worked out and stored, see [windows.md](windows.md).
 Nobody listened).
@@ -717,6 +737,9 @@ These are done the way Valve does them:
 - The inputs of a kind of simulation are set in the thread that runs it (`phonon.h`, `iplSourceSetInputs`).
 - The reverb of the listener is a source where he stands, with convolution, one reflection mixer and one decode.
 - The HRTF is the library's, with no normalization and volume 1, as Valve's plugins default to.
+- The bakes take the numbers of the bake of Valve's Unity plugin: the echo with 16384 rays and 1024 diffuse
+  samples, the paths with 4 points of a probe 1 m from its middle, probes up to 1000 m apart asked and ways up
+  to 1000 m long.
 
 These are done otherwise on purpose:
 
@@ -725,12 +748,10 @@ These are done otherwise on purpose:
 - The walls and the ways round corners are smoothed from frame to frame here. Valve smooths only inside a block.
 - A fixed set of 128 sources is made once. Valve makes a source per sound.
 - A sound with reflections of its own gets the sound with the game's fade.
-- The bakes are lighter. The echo is baked with the live rays (2048 rays, 32 diffuse samples) where Unity bakes
-  with 16384 and 1024. The paths try 1 point of a probe 0.5 m from its middle and ask no probe further than 30 m
-  away, where Unity takes 4 points, 1 m and 1000 m. The live pass follows 16 bounces where Valve has 4.
+- The live pass follows 16 bounces where Valve has 4 (the default of their real-time reflections).
 
-Valve's bake settings would give better baked data, for longer bakes and every level baked again. That is not
-done. It is a possible next step after listening.
+On 2026-10-21 the bakes took Valve's numbers. On mp/ffa3 the paths take 4.2 s (1.6 s before) and the echo 21.3 s
+(3.0 to 3.2 s before), and every level is baked again.
 
 One thing was found wrong here by this reading and fixed: the ways round corners were read while the next pass
 wrote them (see "Threads").
@@ -744,8 +765,10 @@ wrote them (see "Threads").
   with `v_spatialPhysical 0` and once with 1, to their end and without a crash. Nobody has heard them.
 - The changes of 2026-10-21 (the code in `client/spatial`, doors and other brush models in the scene, the head
   as the place the sounds are heard from, the copy of the paths per voice, Embree and the cores, reflections that
-  are kept, the precalculated echo, `v_spatialDebug`) were built on Linux and nobody has heard them. What was run
-  of them, in silent hidden clients, is under "Checked".
+  are kept, the precalculated echo, `v_spatialDebug`) were built on Linux and nobody has heard them. So were the
+  bakes with Valve's numbers (later that day, on the branch feature/spatial-bake): the echo with 16384 rays and
+  1024 diffuse samples, the paths with 4 points of a probe and ways up to 1000 m. Whether that sounds better
+  is for ears to say. What was run of them, in silent hidden clients, is under "Checked".
 - Until 2026-10-17 a pass on the desktop did not look all round the listener (the simulator was made for 8192
   rays and traced 2048, a quarter of the circle). Found in Valve's code (`Sampling::generateSphereSamples`) and
   measured then with their library, a listener between two walls: what came back came from one side (its
