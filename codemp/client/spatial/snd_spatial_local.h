@@ -261,13 +261,15 @@ enum {
 // from seconds to minutes: in a thread of its own, the first time the level is loaded, and kept in a file.
 #define SPATIAL_PROBE_SPACING		3.0f	// metres between two probes, or more in a large level:
 #define SPATIAL_MAX_PROBES			4000	//	the spacing grows by half until there are no more than this. The work and
-											//	the file grow with the square of them (mp/ffa3: 3960, 3.8 s, 16.5 MB)
+											//	the file grow with the square of them (mp/ffa3: 3960, 4.2 s, 21.7 MB)
 #define SPATIAL_PROBE_HEIGHT		1.5f	//	and how high above the floor they are
-#define SPATIAL_PATH_SAMPLES		1		// points of a probe that are tried when asking whether two see each other
-#define SPATIAL_PATH_RADIUS			0.5f	//	and how far from its middle they are, in metres
+// What a bake of the paths and their check while the game runs take: Valve's numbers (the bake of their Unity
+// plugin, Baker.cs). Until 2026-10-21 one point, 0.5 m, 30 m and 100 m, which found fewer of the ways.
+#define SPATIAL_PATH_SAMPLES		4		// points of a probe that are tried when asking whether two see each other
+#define SPATIAL_PATH_RADIUS			1.0f	//	and how far from its middle they are, in metres
 #define SPATIAL_PATH_THRESHOLD		0.1f
-#define SPATIAL_PATH_VIS_RANGE		30.0f	// two probes further apart than this are not asked, in metres
-#define SPATIAL_PATH_RANGE			100.0f	// a way longer than this is no way
+#define SPATIAL_PATH_VIS_RANGE		1000.0f	// two probes further apart than this are not asked, in metres
+#define SPATIAL_PATH_RANGE			1000.0f	// a way longer than this is no way
 // Steam Audio puts a way that was found or lost in at once, from one block to the next: each block moves this much
 // of the way to what it found, so a way comes and goes over about 100 ms and does not click in or cut off
 #define SPATIAL_PATH_SMOOTH			0.3f
@@ -277,11 +279,17 @@ enum {
 // was found for a probe has such a batch (t2_wedge).
 #define SPATIAL_MIN_PROBES			2
 // In the name of the file of the paths. The files before had probes in a quarter of the level only (2026-10-17).
-#define SPATIAL_PATHS_VERSION		"_v2"
-#define SPATIAL_ECHO_VERSION		"_v1"	// of the files of the echo of a level (v_spatialEcho 1)
+#define SPATIAL_PATHS_VERSION		"_v3"	// _v2: before Valve's numbers for the bake (2026-10-21)
+#define SPATIAL_ECHO_VERSION		"_v2"	// of the files of the echo of a level (v_spatialEcho 1). _v1: the live rays
+// The echo is baked with Valve's rays and diffuse samples (their Unity plugin), not with the live ones of
+// v_spatialRays: a bake runs once per level, in the background. The bounces are v_spatialBounces. mp/ffa3: 3960
+// probes in 21.3 s on 22 threads with Embree (3.0 s with 2048 rays and 32 samples), the file 28.7 MB either way.
+#define SPATIAL_ECHO_BAKE_RAYS		16384
+#define SPATIAL_ECHO_BAKE_DIFFUSE	1024
 // A page has no thread to work the paths out next to the game. It does it while the level loads, when it stands
 // still anyway, and only for a level of up to this many probes: the work and the memory it takes grow with their
-// square. mp/ffa3 has 740 and takes 0.4 s (Ryzen 9 5900X), so this is about 3 s. A larger level has no paths
+// square. mp/ffa3 had 740 and took 0.4 s (Ryzen 9 5900X), so this was about 3 s, both with the numbers of the bake
+// before 2026-10-21: Valve's take longer, by how much in a page was never measured. A larger level has no paths
 // there.
 #define SPATIAL_PAGE_PROBES			2000
 
@@ -575,7 +583,7 @@ typedef struct {
 	IPLScene			scene;				// held by the thread for as long as it runs
 	IPLSceneType		sceneType;			//	and its type
 	int					kind;				// BAKE_PATHS or BAKE_ECHO
-	int					rays, bounces;		// of the echo
+	int					bounces;			// of the echo
 	IPLVector3			mins, maxs;
 	int					sceneNumber;		// the level it is for: by the time it is done there may be another
 	IPLProbeBatch		batch;

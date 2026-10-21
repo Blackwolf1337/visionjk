@@ -117,8 +117,8 @@ static int SDLCALL S_SpatialBaker( void *unused ) {
 				echo.identifier.type = IPL_BAKEDDATATYPE_REFLECTIONS;
 				echo.identifier.variation = IPL_BAKEDDATAVARIATION_REVERB;
 				echo.bakeFlags = IPL_REFLECTIONSBAKEFLAGS_BAKECONVOLUTION;
-				echo.numRays = spatialBake.rays;
-				echo.numDiffuseSamples = SPATIAL_DIFFUSE_SAMPLES;
+				echo.numRays = SPATIAL_ECHO_BAKE_RAYS;
+				echo.numDiffuseSamples = SPATIAL_ECHO_BAKE_DIFFUSE;
 				echo.numBounces = spatialBake.bounces;
 				echo.simulatedDuration = SPATIAL_REVERB_SECONDS;
 				echo.savedDuration = SPATIAL_REVERB_SECONDS;
@@ -329,7 +329,6 @@ static void S_SpatialStartBake( int kind ) {
 	spatialBake.kind = kind;
 	spatialBake.scene = qiplSceneRetain( spatial.level.scene );
 	spatialBake.sceneType = spatial.sceneType;
-	spatialBake.rays = S_SpatialRayCvar();
 	spatialBake.bounces = S_SpatialBounces();
 	spatialBake.context = qiplContextRetain( spatial.context );
 	spatialBake.mins = spatial.mins;
