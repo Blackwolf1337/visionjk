@@ -297,6 +297,9 @@ static qboolean S_SpatialCreateVoices( void ) {
 			return qfalse;
 		}
 		qiplSourceAdd( v->source, spatial.simulator );
+		for ( int k = 0; k < 3; k++ ) {
+			v->pathEq[k] = SPATIAL_PATH_EQ_START;
+		}
 	}
 
 	// the reverb of where the listener stands: its source, the effect that rings and the one that turns what

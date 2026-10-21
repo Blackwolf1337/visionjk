@@ -271,6 +271,12 @@ enum {
 // Steam Audio puts a way that was found or lost in at once, from one block to the next: each block moves this much
 // of the way to what it found, so a way comes and goes over about 100 ms and does not click in or cut off
 #define SPATIAL_PATH_SMOOTH			0.3f
+// The EQ of a way round the corners that a source of Steam Audio starts with (SimulationData), and a voice's copy
+// of it too (S_SpatialTakePaths): an EQ of 0 is a division by zero in Steam Audio's peaking filter (IIR2::peaking,
+// sqrtf( gain ) under alpha), and the NaN stays in the path effect and in the reverb it feeds. Steam Audio never
+// hands out 0 (a lookup that finds no way gives 1). Until the fix of 2026-10-21 the copy started at 0, and with
+// v_spatialPaths 1 every sound of the level was noise at full scale.
+#define SPATIAL_PATH_EQ_START		0.1f
 // Fewer probes than this are no paths, and the simulator is never given them: a pass of the reflections asks
 // every batch it has which probes are near the listener (SimulationManager::lookupBakedReflections), and one
 // without a probe has no tree to ask, which is a read at address 0 in Steam Audio 4.8.1. A level where no floor
