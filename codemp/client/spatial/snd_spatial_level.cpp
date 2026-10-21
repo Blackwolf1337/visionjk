@@ -268,29 +268,12 @@ void S_SpatialTakeScene( void ) {
 		return;
 	}
 	// the probes of the level before go with it, and a bake that still runs for it is told to stop
-	if ( spatial.probes ) {
-		qiplSimulatorRemoveProbeBatch( spatial.simulator, spatial.probes );
-	}
+	S_SpatialRemoveBaked( &spatial.paths );
+	S_SpatialRemoveBaked( &spatial.echo );
 	qiplSimulatorSetScene( spatial.simulator, spatial.nextLevel.top );
 	qiplSimulatorCommit( spatial.simulator );
-	if ( spatial.probes ) {
-		qiplProbeBatchRelease( &spatial.probes );
-	}
-	if ( spatial.nextProbes ) {
-		qiplProbeBatchRelease( &spatial.nextProbes );
-	}
-	spatial.probesWait = qfalse;
-	spatial.numProbes = 0;
-	if ( spatial.echoProbes ) {
-		qiplSimulatorRemoveProbeBatch( spatial.simulator, spatial.echoProbes );
-		qiplSimulatorCommit( spatial.simulator );
-		qiplProbeBatchRelease( &spatial.echoProbes );
-	}
-	if ( spatial.nextEchoProbes ) {
-		qiplProbeBatchRelease( &spatial.nextEchoProbes );
-	}
-	spatial.echoWait = spatial.echoTried = spatial.echoWanted = qfalse;
-	spatial.numEchoProbes = 0;
+	S_SpatialReleaseBaked( &spatial.paths );
+	S_SpatialReleaseBaked( &spatial.echo );
 	if ( spatialBakeState.load() == BAKE_RUNNING ) {
 		S_SpatialCancelBake();
 	}
@@ -301,17 +284,16 @@ void S_SpatialTakeScene( void ) {
 	spatial.numTriangles = spatial.nextTriangles;
 	spatial.mins = spatial.nextMins;
 	spatial.maxs = spatial.nextMaxs;
-	Q_strncpyz( spatial.pathFile, spatial.nextPathFile, sizeof( spatial.pathFile ) );
-	Q_strncpyz( spatial.echoFile, spatial.nextEchoFile, sizeof( spatial.echoFile ) );
+	Q_strncpyz( spatial.paths.file, spatial.paths.nextFile, sizeof( spatial.paths.file ) );
+	Q_strncpyz( spatial.echo.file, spatial.echo.nextFile, sizeof( spatial.echo.file ) );
 	spatial.nextTriangles = 0;
 	spatial.sceneWaits = qfalse;
 	spatial.sceneNumber++;
 
 	// its paths: from the file of an earlier visit, or worked out now
-	spatial.bakeWanted = qfalse;
 	spatial.refusedProbes = 0;
-	if ( spatial.level.scene && v_spatialPaths->integer && !S_SpatialLoadPaths() ) {
-		spatial.bakeWanted = qtrue;
+	if ( spatial.level.scene && v_spatialPaths->integer && !S_SpatialLoadBaked( &spatial.paths ) ) {
+		spatial.paths.wanted = qtrue;
 	}
 
 	// nothing of the level before is left to ring on
@@ -465,17 +447,8 @@ void S_SpatialLoadMap( const char *mapname ) {
 		return;
 	}
 
-	// The file of the paths of this level is named after the level and after its walls: another version of a
-	// level with the same name has other walls and gets a file of its own. SPATIAL_PATHS_VERSION is for files
-	// that were worked out another way.
-	{
-		char path[MAX_QPATH], name[MAX_QPATH];
-
-		Q_strncpyz( path, mapname, sizeof( path ) );
-		COM_StripExtension( COM_SkipPath( path ), name, sizeof( name ) );
-		Com_sprintf( spatial.nextPathFile, sizeof( spatial.nextPathFile ), "steamaudio/%s_%08x" SPATIAL_PATHS_VERSION ".paths", name, checksum );
-		Com_sprintf( spatial.nextEchoFile, sizeof( spatial.nextEchoFile ), "steamaudio/%s_%08x" SPATIAL_ECHO_VERSION ".echo", name, checksum );
-	}
+	// the files of its paths and its echo, by its name and its walls
+	S_SpatialNameBakes( mapname, checksum );
 
 	// the scene of the simulator: the world, and the brush models
 	memset( &sceneSettings, 0, sizeof( sceneSettings ) );

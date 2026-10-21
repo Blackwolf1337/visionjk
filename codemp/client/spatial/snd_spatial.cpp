@@ -165,27 +165,13 @@ static void S_SpatialRelease( void ) {
 	S_SpatialCaptureEnd( qfalse );
 	if ( spatial.library ) {
 		if ( spatial.simulator ) {
-			if ( spatial.probes ) {
-				qiplSimulatorRemoveProbeBatch( spatial.simulator, spatial.probes );
-			}
-			if ( spatial.echoProbes ) {
-				qiplSimulatorRemoveProbeBatch( spatial.simulator, spatial.echoProbes );
-			}
+			S_SpatialRemoveBaked( &spatial.paths );
+			S_SpatialRemoveBaked( &spatial.echo );
 			qiplSimulatorSetScene( spatial.simulator, NULL );
 			qiplSimulatorCommit( spatial.simulator );
 		}
-		if ( spatial.probes ) {
-			qiplProbeBatchRelease( &spatial.probes );
-		}
-		if ( spatial.nextProbes ) {
-			qiplProbeBatchRelease( &spatial.nextProbes );
-		}
-		if ( spatial.echoProbes ) {
-			qiplProbeBatchRelease( &spatial.echoProbes );
-		}
-		if ( spatial.nextEchoProbes ) {
-			qiplProbeBatchRelease( &spatial.nextEchoProbes );
-		}
+		S_SpatialReleaseBaked( &spatial.paths );
+		S_SpatialReleaseBaked( &spatial.echo );
 		S_SpatialReleaseLevel( &spatial.level );
 		S_SpatialReleaseLevel( &spatial.nextLevel );
 		if ( spatial.reverbDecode ) {

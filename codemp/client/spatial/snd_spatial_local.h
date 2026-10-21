@@ -294,7 +294,8 @@ enum {
 // what a bake works out: the paths round the corners, or the echo of the room at the probes (v_spatialEcho)
 enum {
 	BAKE_PATHS,
-	BAKE_ECHO
+	BAKE_ECHO,
+	BAKE_NUM
 };
 
 // The voice chat of the cgame can hand the voice of a player to this file (S_SpatialVoice), so that it is in
@@ -412,6 +413,19 @@ typedef struct {
 	vec3_t				origin, angles;
 } spatialBrush_t;
 
+// What a bake of one kind made of a level, or its file (BAKE_PATHS, BAKE_ECHO): its probes with the data at them
+typedef struct {
+	IPLProbeBatch		batch;				// in the simulator
+	IPLProbeBatch		next;				// waits to be put there, as a level does
+	qboolean			wait;
+	qboolean			tried;				// the file of this level was looked for (the echo, once v_spatialEcho is on)
+	qboolean			wanted;				//	and there was none: a bake is wanted
+	int					numProbes;
+	float				spacing;			// metres between the probes of a bake, 0: they came from the file
+	int					bakeMsec;			// what the bake took, 0: from the file
+	char				file[MAX_QPATH], nextFile[MAX_QPATH];
+} spatialBaked_t;
+
 // A level as the simulator has it: the walls of the world (scene, also what the bake of the paths reads), and the
 // scene the simulator traces in, which holds that one and the brush models
 typedef struct {
@@ -477,28 +491,11 @@ typedef struct {
 	int					sceneNumber;		// counts the levels that were taken over
 	IPLVector3			nextMins, nextMaxs;	// the corners of the level, for where to spread probes
 	IPLVector3			mins, maxs;
-	char				nextPathFile[MAX_QPATH], pathFile[MAX_QPATH];
-	char				nextEchoFile[MAX_QPATH], echoFile[MAX_QPATH];
 
-	// paths
-	IPLProbeBatch		probes;				// in the simulator
-	IPLProbeBatch		nextProbes;			// waits to be put there, as a level does
-	qboolean			probesWait;
-	qboolean			bakeWanted;			// this level has no file yet
-	int					numProbes;
-	float				probeSpacing;		// of a bake, 0: the probes came from the file
-	int					bakeMsec;			// what the bake took, 0: the probes came from the file
+	// what is worked out once per level and kept in a file: the paths, and the echo of the room at the probes
+	// (v_spatialEcho 1), with which the reverb where the listener stands is looked up there and no ray is traced
+	spatialBaked_t		paths, echo;
 	int					refusedProbes;		// not 0: the level has this many, too many to work its paths out here
-
-	// The echo of the room at the probes, worked out once per level (v_spatialEcho 1): the reverb where the
-	// listener stands is looked up there and no ray is traced
-	IPLProbeBatch		echoProbes;			// in the simulator
-	IPLProbeBatch		nextEchoProbes;		// waits to be put there
-	qboolean			echoWait;
-	qboolean			echoTried;			// the file of this level was looked for
-	qboolean			echoWanted;			//	and there was none: a bake is wanted
-	int					numEchoProbes;
-	int					echoBakeMsec;		// what the bake took, 0: from the file
 
 	// reflections
 	IPLSource					reverbSource;		// stands where the listener stands
@@ -718,7 +715,10 @@ void S_SpatialSaveScene_f( void );
 void S_SpatialCancelBake( void );
 qboolean S_SpatialReapBake( void );
 void S_SpatialDropBake( void );
-qboolean S_SpatialLoadPaths( void );
+qboolean S_SpatialLoadBaked( spatialBaked_t *baked );
+void S_SpatialRemoveBaked( spatialBaked_t *baked );
+void S_SpatialReleaseBaked( spatialBaked_t *baked );
+void S_SpatialNameBakes( const char *mapname, unsigned checksum );
 qboolean S_SpatialEchoBaked( void );
 void S_SpatialThinkPaths( void );
 

@@ -198,12 +198,12 @@ void S_SpatialInfo_f( void ) {
 		Com_Printf( "paths: off (v_spatialPaths 0)\n" );
 	} else if ( spatialBakeState.load() == BAKE_RUNNING && spatialBake.kind == BAKE_PATHS && spatialBake.sceneNumber == spatial.sceneNumber ) {
 		Com_Printf( "paths: being worked out for this level, %i %%\n", spatialBakeProgress.load() );
-	} else if ( spatial.probes ) {
-		if ( spatial.bakeMsec ) {
-			Com_Printf( "paths: %i probes %.1f m apart, worked out in %.1f s, kept in %s\n", spatial.numProbes, spatial.probeSpacing,
-				spatial.bakeMsec * 0.001f, spatial.pathFile );
+	} else if ( spatial.paths.batch ) {
+		if ( spatial.paths.bakeMsec ) {
+			Com_Printf( "paths: %i probes %.1f m apart, worked out in %.1f s, kept in %s\n", spatial.paths.numProbes, spatial.paths.spacing,
+				spatial.paths.bakeMsec * 0.001f, spatial.paths.file );
 		} else {
-			Com_Printf( "paths: %i probes from %s\n", spatial.numProbes, spatial.pathFile );
+			Com_Printf( "paths: %i probes from %s\n", spatial.paths.numProbes, spatial.paths.file );
 		}
 	} else if ( spatial.refusedProbes ) {
 		Com_Printf( "paths: none, the level has %i probes and a page works them out for up to %i\n", spatial.refusedProbes, SPATIAL_PAGE_PROBES );
@@ -213,10 +213,10 @@ void S_SpatialInfo_f( void ) {
 	if ( !v_spatialEcho->integer ) {
 		Com_Printf( "echo: worked out as you go (v_spatialEcho 0)\n" );
 	} else if ( S_SpatialEchoBaked() ) {
-		if ( spatial.echoBakeMsec ) {
-			Com_Printf( "echo: looked up at %i probes, worked out in %.1f s, kept in %s\n", spatial.numEchoProbes, spatial.echoBakeMsec * 0.001f, spatial.echoFile );
+		if ( spatial.echo.bakeMsec ) {
+			Com_Printf( "echo: looked up at %i probes, worked out in %.1f s, kept in %s\n", spatial.echo.numProbes, spatial.echo.bakeMsec * 0.001f, spatial.echo.file );
 		} else {
-			Com_Printf( "echo: looked up at %i probes from %s\n", spatial.numEchoProbes, spatial.echoFile );
+			Com_Printf( "echo: looked up at %i probes from %s\n", spatial.echo.numProbes, spatial.echo.file );
 		}
 	} else if ( spatialBakeState.load() == BAKE_RUNNING && spatialBake.kind == BAKE_ECHO && spatialBake.sceneNumber == spatial.sceneNumber ) {
 		Com_Printf( "echo: being worked out for this level, %i %%, until then as you go\n", spatialBakeProgress.load() );
@@ -695,7 +695,7 @@ void S_SpatialDebug( spatialDebug_t *out, const vec3_t eye, const vec3_t forward
 		out->echo = SPATIAL_DEBUG_ECHO_LIVE;
 	} else if ( S_SpatialEchoBaked() ) {
 		out->echo = SPATIAL_DEBUG_ECHO_STORED;
-		out->echoProbes = spatial.numEchoProbes;
+		out->echoProbes = spatial.echo.numProbes;
 	} else if ( spatialBakeState.load() == BAKE_RUNNING && spatialBake.kind == BAKE_ECHO ) {
 		out->echo = SPATIAL_DEBUG_ECHO_BAKING;
 		out->echoProgress = spatialBakeProgress.load();

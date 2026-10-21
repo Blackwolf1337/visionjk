@@ -126,7 +126,7 @@ void S_SpatialPageUpdate( void ) {
 	// switched on in a level that has no paths: a page has no thread that could work them out now
 	if ( v_spatialPaths->modified ) {
 		v_spatialPaths->modified = qfalse;
-		if ( v_spatialPaths->integer && spatial.level.scene && !spatial.probes && !spatial.probesWait ) {
+		if ( v_spatialPaths->integer && spatial.level.scene && !spatial.paths.batch && !spatial.paths.wait ) {
 			if ( spatial.refusedProbes ) {
 				S_SpatialSayTooLarge();
 			} else {

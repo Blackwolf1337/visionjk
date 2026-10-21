@@ -239,7 +239,7 @@ void S_SpatialSimulate( void ) {
 			inputs.numTransmissionRays = SPATIAL_TRANSMISSION_RAYS;
 
 			// its way round the corners, from the probes of the level, is looked for in the pass (S_SpatialFillPaths())
-			v->pathing = (qboolean)( spatial.probes && v_spatialPaths->integer );
+			v->pathing = (qboolean)( spatial.paths.batch && v_spatialPaths->integer );
 		} else {
 			v->pathing = qfalse;
 		}
@@ -365,7 +365,7 @@ void S_SpatialPathInputs( void ) {
 			inputs.baked = IPL_TRUE;
 			inputs.bakedDataIdentifier.type = IPL_BAKEDDATATYPE_PATHING;
 			inputs.bakedDataIdentifier.variation = IPL_BAKEDDATAVARIATION_DYNAMIC;
-			inputs.pathingProbes = spatial.probes;
+			inputs.pathingProbes = spatial.paths.batch;
 			inputs.visRadius = SPATIAL_PATH_RADIUS;
 			inputs.visThreshold = SPATIAL_PATH_THRESHOLD;
 			inputs.visRange = SPATIAL_PATH_VIS_RANGE;
@@ -485,7 +485,7 @@ static void S_SpatialTakeVis( void ) {
 // listener, and the ways of the sounds round the corners. Never while a level waits to be taken over.
 void S_SpatialAskPass( void ) {
 	const int now = Sys_Milliseconds();
-	qboolean paths = (qboolean)( spatial.probes && v_spatialPaths->integer );
+	qboolean paths = (qboolean)( spatial.paths.batch && v_spatialPaths->integer );
 	int idle = WORKER_IDLE;
 
 #ifdef __EMSCRIPTEN__

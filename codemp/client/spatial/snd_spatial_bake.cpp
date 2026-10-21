@@ -196,12 +196,42 @@ void S_SpatialDropBake( void ) {
 	}
 }
 
-// the probes of this level from its file, if it has one
-qboolean S_SpatialLoadPaths( void ) {
+// the two kinds of bake
+static const struct {
+	const char	*suffix;		// of the name of its file, after the level and the checksum of its walls
+	const char	*thread;
+	const char	*started;		// what the console says when one starts in the background
+} spatialBakeKinds[BAKE_NUM] = {
+	{ SPATIAL_PATHS_VERSION ".paths", "s_spatialBake", "v_spatial: working out the paths of this level in the background\n" },
+	{ SPATIAL_ECHO_VERSION ".echo", "s_spatialEcho", "v_spatial: working out the echo of this level in the background, until then it is worked out as you go\n" },
+};
+
+static spatialBaked_t *S_SpatialBakedOf( int kind ) {
+	return kind == BAKE_ECHO ? &spatial.echo : &spatial.paths;
+}
+
+// The files of a level that waits to be taken over are named after the level and after its walls: another version
+// of a level with the same name has other walls and gets files of its own. The versions in the names are for files
+// that were worked out another way.
+void S_SpatialNameBakes( const char *mapname, unsigned checksum ) {
+	char path[MAX_QPATH], name[MAX_QPATH];
+
+	Q_strncpyz( path, mapname, sizeof( path ) );
+	COM_StripExtension( COM_SkipPath( path ), name, sizeof( name ) );
+	for ( int kind = 0; kind < BAKE_NUM; kind++ ) {
+		spatialBaked_t *baked = S_SpatialBakedOf( kind );
+
+		Com_sprintf( baked->nextFile, sizeof( baked->nextFile ), "steamaudio/%s_%08x%s", name, checksum, spatialBakeKinds[kind].suffix );
+	}
+}
+
+// The probes of this level from its file, if it has one. qtrue also for the file of a level without probes: it is
+// not worked out again, and has none.
+qboolean S_SpatialLoadBaked( spatialBaked_t *baked ) {
 	IPLSerializedObjectSettings serialized;
 	IPLSerializedObject object = NULL;
 	void *data = NULL;
-	const int size = FS_ReadFile( spatial.pathFile, &data );
+	const int size = FS_ReadFile( baked->file, &data );
 	qboolean loaded = qfalse;
 
 	if ( size <= 0 || !data ) {
@@ -211,21 +241,20 @@ qboolean S_SpatialLoadPaths( void ) {
 	serialized.data = (IPLbyte *)data;
 	serialized.size = (IPLsize)size;
 	if ( qiplSerializedObjectCreate( spatial.context, &serialized, &object ) == IPL_STATUS_SUCCESS ) {
-		if ( qiplProbeBatchLoad( spatial.context, object, &spatial.nextProbes ) == IPL_STATUS_SUCCESS ) {
-			spatial.bakeMsec = 0;
-			spatial.probeSpacing = 0.0f;
+		if ( qiplProbeBatchLoad( spatial.context, object, &baked->next ) == IPL_STATUS_SUCCESS ) {
+			baked->bakeMsec = 0;
+			baked->spacing = 0.0f;
 			loaded = qtrue;
-			if ( qiplProbeBatchGetNumProbes( spatial.nextProbes ) >= SPATIAL_MIN_PROBES ) {
-				qiplProbeBatchCommit( spatial.nextProbes );
-				spatial.numProbes = qiplProbeBatchGetNumProbes( spatial.nextProbes );
-				spatial.probesWait = qtrue;
+			if ( qiplProbeBatchGetNumProbes( baked->next ) >= SPATIAL_MIN_PROBES ) {
+				qiplProbeBatchCommit( baked->next );
+				baked->numProbes = qiplProbeBatchGetNumProbes( baked->next );
+				baked->wait = qtrue;
 			} else {
-				// the file of a level without paths: it is not worked out again, and has none
-				qiplProbeBatchRelease( &spatial.nextProbes );
-				spatial.nextProbes = NULL;
+				qiplProbeBatchRelease( &baked->next );
+				baked->next = NULL;
 			}
 		} else {
-			spatial.nextProbes = NULL;
+			baked->next = NULL;
 		}
 		qiplSerializedObjectRelease( &object );
 	}
@@ -233,44 +262,111 @@ qboolean S_SpatialLoadPaths( void ) {
 	return loaded;
 }
 
-// the echo of this level from its file, if it has one. qtrue also for the file of a level without probes.
-static qboolean S_SpatialLoadEcho( void ) {
-	IPLSerializedObjectSettings serialized;
-	IPLSerializedObject object = NULL;
-	void *data = NULL;
-	const int size = FS_ReadFile( spatial.echoFile, &data );
-	qboolean loaded = qfalse;
+// Out of the simulator. Only while no pass runs, and a commit of the simulator has to follow.
+void S_SpatialRemoveBaked( spatialBaked_t *baked ) {
+	if ( baked->batch ) {
+		qiplSimulatorRemoveProbeBatch( spatial.simulator, baked->batch );
+	}
+}
 
-	if ( size <= 0 || !data ) {
-		return qfalse;
+// lets go of the probes of a level that is gone, which are no longer in the simulator
+void S_SpatialReleaseBaked( spatialBaked_t *baked ) {
+	if ( baked->batch ) {
+		qiplProbeBatchRelease( &baked->batch );
 	}
-	memset( &serialized, 0, sizeof( serialized ) );
-	serialized.data = (IPLbyte *)data;
-	serialized.size = (IPLsize)size;
-	if ( qiplSerializedObjectCreate( spatial.context, &serialized, &object ) == IPL_STATUS_SUCCESS ) {
-		if ( qiplProbeBatchLoad( spatial.context, object, &spatial.nextEchoProbes ) == IPL_STATUS_SUCCESS ) {
-			loaded = qtrue;
-			spatial.echoBakeMsec = 0;
-			if ( qiplProbeBatchGetNumProbes( spatial.nextEchoProbes ) >= SPATIAL_MIN_PROBES ) {
-				qiplProbeBatchCommit( spatial.nextEchoProbes );
-				spatial.numEchoProbes = qiplProbeBatchGetNumProbes( spatial.nextEchoProbes );
-				spatial.echoWait = qtrue;
-			} else {
-				qiplProbeBatchRelease( &spatial.nextEchoProbes );
-				spatial.nextEchoProbes = NULL;
-			}
-		} else {
-			spatial.nextEchoProbes = NULL;
-		}
-		qiplSerializedObjectRelease( &object );
+	if ( baked->next ) {
+		qiplProbeBatchRelease( &baked->next );
 	}
-	FS_FreeFile( data );
-	return loaded;
+	baked->batch = baked->next = NULL;
+	baked->wait = baked->tried = baked->wanted = qfalse;
+	baked->numProbes = 0;
 }
 
 // the echo of the level is looked up at the probes, and no ray is traced for it (v_spatialEcho 1)
 qboolean S_SpatialEchoBaked( void ) {
-	return (qboolean)( v_spatialEcho->integer && spatial.echoProbes );
+	return (qboolean)( v_spatialEcho->integer && spatial.echo.batch );
+}
+
+// What a bake that is done made, for the level it was for: into its file, and the probes wait to be handed to the
+// simulator. Also the file of a level without probes, so that its next load does not work it out again.
+static void S_SpatialTakeBake( void ) {
+	spatialBaked_t *baked = S_SpatialBakedOf( spatialBake.kind );
+
+	// (a bake of a sound system before this one has a number of its own: spatialBakeCancel)
+	if ( !spatialBakeCancel.load() && spatialBake.sceneNumber == spatial.sceneNumber && spatialBake.batch && spatialBake.saved && !spatial.sceneWaits ) {
+		FS_WriteFile( baked->file, qiplSerializedObjectGetData( spatialBake.saved ), (int)qiplSerializedObjectGetSize( spatialBake.saved ) );
+		if ( spatialBake.numProbes >= SPATIAL_MIN_PROBES ) {
+			baked->next = spatialBake.batch;
+			baked->numProbes = spatialBake.numProbes;
+			baked->bakeMsec = Q_max( 1, spatialBake.msec );
+			baked->spacing = spatialBake.spacing;
+			baked->wait = qtrue;
+			spatialBake.batch = NULL;
+			if ( spatialBake.kind == BAKE_ECHO ) {
+				Com_Printf( "v_spatial: the echo of this level is worked out, %i probes in %.1f s, kept in %s\n",
+					baked->numProbes, baked->bakeMsec * 0.001f, baked->file );
+			} else {
+				Com_Printf( "v_spatial: the paths of this level are worked out, %i probes %.1f m apart in %.1f s, kept in %s\n",
+					baked->numProbes, baked->spacing, baked->bakeMsec * 0.001f, baked->file );
+			}
+		} else if ( spatialBake.kind == BAKE_PATHS ) {
+			Com_Printf( "v_spatial: no place for probes was found in this level: no sound round corners here\n" );
+		}
+	}
+#ifdef __EMSCRIPTEN__
+	else if ( spatialBake.kind == BAKE_PATHS && spatialBake.sceneNumber == spatial.sceneNumber && spatialBake.numProbes > SPATIAL_PAGE_PROBES ) {
+		spatial.refusedProbes = spatialBake.numProbes;
+		S_SpatialSayTooLarge();
+	}
+#endif
+	// a bake for a level that is gone
+	S_SpatialDropBake();
+}
+
+// The bake a level waits for, in the background
+static void S_SpatialStartBake( int kind ) {
+	S_SpatialBakedOf( kind )->wanted = qfalse;
+	spatialBake.kind = kind;
+	spatialBake.scene = qiplSceneRetain( spatial.level.scene );
+	spatialBake.sceneType = spatial.sceneType;
+	spatialBake.rays = S_SpatialRayCvar();
+	spatialBake.bounces = S_SpatialBounces();
+	spatialBake.context = qiplContextRetain( spatial.context );
+	spatialBake.mins = spatial.mins;
+	spatialBake.maxs = spatial.maxs;
+	spatialBake.sceneNumber = spatial.sceneNumber;
+	spatialBakeProgress.store( 0 );
+	spatialBakeCancel.store( 0 );
+	spatialBakeState.store( BAKE_RUNNING );
+#ifdef __EMSCRIPTEN__
+	// done when this returns, and picked up by the next call of S_SpatialThinkPaths()
+	S_SpatialBaker( NULL );
+#else
+	spatialBake.thread = SDL_CreateThread( S_SpatialBaker, spatialBakeKinds[kind].thread, NULL );
+	if ( !spatialBake.thread ) {
+		qiplSceneRelease( &spatialBake.scene );
+		qiplContextRelease( &spatialBake.context );
+		spatialBakeState.store( BAKE_NONE );
+	} else {
+		Com_Printf( "%s", spatialBakeKinds[kind].started );
+	}
+#endif
+}
+
+// no bake runs, and the level the simulator has can be worked out
+static qboolean S_SpatialCanBake( void ) {
+	return (qboolean)( spatialBakeState.load() == BAKE_NONE && spatial.level.scene && !spatial.sceneWaits );
+}
+
+// probes that are ready go to the simulator, when no pass of the reflections runs
+static void S_SpatialHandOver( spatialBaked_t *baked ) {
+	if ( baked->wait && !spatial.sceneWaits && spatialWorkerState.load() == WORKER_IDLE ) {
+		qiplSimulatorAddProbeBatch( spatial.simulator, baked->next );
+		qiplSimulatorCommit( spatial.simulator );
+		baked->batch = baked->next;
+		baked->next = NULL;
+		baked->wait = qfalse;
+	}
 }
 
 /*
@@ -283,120 +379,29 @@ ready to the simulator when no pass of the reflections runs. Nothing in here wai
 */
 void S_SpatialThinkPaths( void ) {
 	if ( S_SpatialReapBake() ) {
-		// (a bake of a sound system before this one has a number of its own: spatialBakeCancel)
-		if ( spatialBake.kind == BAKE_ECHO ) {
-			if ( !spatialBakeCancel.load() && spatialBake.sceneNumber == spatial.sceneNumber && spatialBake.batch && spatialBake.saved && !spatial.sceneWaits ) {
-				// (also the file of a level without probes, so that its next load does not work it out again)
-				FS_WriteFile( spatial.echoFile, qiplSerializedObjectGetData( spatialBake.saved ), (int)qiplSerializedObjectGetSize( spatialBake.saved ) );
-				if ( spatialBake.numProbes >= SPATIAL_MIN_PROBES ) {
-					spatial.nextEchoProbes = spatialBake.batch;
-					spatial.numEchoProbes = spatialBake.numProbes;
-					spatial.echoBakeMsec = Q_max( 1, spatialBake.msec );
-					spatial.echoWait = qtrue;
-					spatialBake.batch = NULL;
-					Com_Printf( "v_spatial: the echo of this level is worked out, %i probes in %.1f s, kept in %s\n",
-						spatial.numEchoProbes, spatial.echoBakeMsec * 0.001f, spatial.echoFile );
-				}
-			}
-		} else if ( !spatialBakeCancel.load() && spatialBake.sceneNumber == spatial.sceneNumber && spatialBake.batch && spatialBake.saved && !spatial.sceneWaits ) {
-			// (also the file of a level without paths, so that its next load does not look for them again)
-			FS_WriteFile( spatial.pathFile, qiplSerializedObjectGetData( spatialBake.saved ), (int)qiplSerializedObjectGetSize( spatialBake.saved ) );
-			if ( spatialBake.numProbes >= SPATIAL_MIN_PROBES ) {
-				spatial.nextProbes = spatialBake.batch;
-				spatial.numProbes = spatialBake.numProbes;
-				spatial.bakeMsec = Q_max( 1, spatialBake.msec );
-				spatial.probeSpacing = spatialBake.spacing;
-				spatial.probesWait = qtrue;
-				spatialBake.batch = NULL;
-				Com_Printf( "v_spatial: the paths of this level are worked out, %i probes %.1f m apart in %.1f s, kept in %s\n",
-					spatial.numProbes, spatial.probeSpacing, spatial.bakeMsec * 0.001f, spatial.pathFile );
-			} else {
-				Com_Printf( "v_spatial: no place for probes was found in this level: no sound round corners here\n" );
-			}
-		}
-#ifdef __EMSCRIPTEN__
-		else if ( spatialBake.sceneNumber == spatial.sceneNumber && spatialBake.numProbes > SPATIAL_PAGE_PROBES ) {
-			spatial.refusedProbes = spatialBake.numProbes;
-			S_SpatialSayTooLarge();
-		}
-#endif
-		// a bake for a level that is gone
-		S_SpatialDropBake();
+		S_SpatialTakeBake();
 	}
 
-	if ( spatial.bakeWanted && spatialBakeState.load() == BAKE_NONE && spatial.level.scene && !spatial.sceneWaits && v_spatialPaths->integer ) {
-		spatial.bakeWanted = qfalse;
-		spatialBake.kind = BAKE_PATHS;
-		spatialBake.scene = qiplSceneRetain( spatial.level.scene );
-		spatialBake.context = qiplContextRetain( spatial.context );
-		spatialBake.mins = spatial.mins;
-		spatialBake.maxs = spatial.maxs;
-		spatialBake.sceneNumber = spatial.sceneNumber;
-		spatialBakeProgress.store( 0 );
-		spatialBakeCancel.store( 0 );
-		spatialBakeState.store( BAKE_RUNNING );
-#ifdef __EMSCRIPTEN__
-		// done when this returns, and picked up by the next call of this function
-		S_SpatialBaker( NULL );
-#else
-		spatialBake.thread = SDL_CreateThread( S_SpatialBaker, "s_spatialBake", NULL );
-		if ( !spatialBake.thread ) {
-			qiplSceneRelease( &spatialBake.scene );
-			qiplContextRelease( &spatialBake.context );
-			spatialBakeState.store( BAKE_NONE );
-		} else {
-			Com_Printf( "v_spatial: working out the paths of this level in the background\n" );
-		}
-#endif
+	// the paths first: their file was looked for when the level was taken over (S_SpatialTakeScene)
+	if ( spatial.paths.wanted && S_SpatialCanBake() && v_spatialPaths->integer ) {
+		S_SpatialStartBake( BAKE_PATHS );
 	}
 
 #ifndef __EMSCRIPTEN__
 	// The echo of the level, when it is wanted: from its file, or worked out in the background after the paths
-	if ( v_spatialEcho->integer && !spatial.echoTried && spatial.level.scene && !spatial.sceneWaits ) {
-		spatial.echoTried = qtrue;
-		if ( !S_SpatialLoadEcho() ) {
-			spatial.echoWanted = qtrue;
+	if ( v_spatialEcho->integer && !spatial.echo.tried && spatial.level.scene && !spatial.sceneWaits ) {
+		spatial.echo.tried = qtrue;
+		if ( !S_SpatialLoadBaked( &spatial.echo ) ) {
+			spatial.echo.wanted = qtrue;
 		}
 	}
-	if ( spatial.echoWanted && v_spatialEcho->integer && !spatial.bakeWanted && spatialBakeState.load() == BAKE_NONE && spatial.level.scene && !spatial.sceneWaits ) {
-		spatial.echoWanted = qfalse;
-		spatialBake.kind = BAKE_ECHO;
-		spatialBake.scene = qiplSceneRetain( spatial.level.scene );
-		spatialBake.sceneType = spatial.sceneType;
-		spatialBake.rays = S_SpatialRayCvar();
-		spatialBake.bounces = S_SpatialBounces();
-		spatialBake.context = qiplContextRetain( spatial.context );
-		spatialBake.mins = spatial.mins;
-		spatialBake.maxs = spatial.maxs;
-		spatialBake.sceneNumber = spatial.sceneNumber;
-		spatialBakeProgress.store( 0 );
-		spatialBakeCancel.store( 0 );
-		spatialBakeState.store( BAKE_RUNNING );
-		spatialBake.thread = SDL_CreateThread( S_SpatialBaker, "s_spatialEcho", NULL );
-		if ( !spatialBake.thread ) {
-			qiplSceneRelease( &spatialBake.scene );
-			qiplContextRelease( &spatialBake.context );
-			spatialBakeState.store( BAKE_NONE );
-		} else {
-			Com_Printf( "v_spatial: working out the echo of this level in the background, until then it is worked out as you go\n" );
-		}
+	if ( spatial.echo.wanted && v_spatialEcho->integer && !spatial.paths.wanted && S_SpatialCanBake() ) {
+		S_SpatialStartBake( BAKE_ECHO );
 	}
 #endif
 
-	if ( spatial.probesWait && !spatial.sceneWaits && spatialWorkerState.load() == WORKER_IDLE ) {
-		qiplSimulatorAddProbeBatch( spatial.simulator, spatial.nextProbes );
-		qiplSimulatorCommit( spatial.simulator );
-		spatial.probes = spatial.nextProbes;
-		spatial.nextProbes = NULL;
-		spatial.probesWait = qfalse;
-	}
-	if ( spatial.echoWait && !spatial.sceneWaits && spatialWorkerState.load() == WORKER_IDLE ) {
-		qiplSimulatorAddProbeBatch( spatial.simulator, spatial.nextEchoProbes );
-		qiplSimulatorCommit( spatial.simulator );
-		spatial.echoProbes = spatial.nextEchoProbes;
-		spatial.nextEchoProbes = NULL;
-		spatial.echoWait = qfalse;
-	}
+	S_SpatialHandOver( &spatial.paths );
+	S_SpatialHandOver( &spatial.echo );
 }
 
 #endif // JP_SPATIAL
