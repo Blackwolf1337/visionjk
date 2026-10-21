@@ -395,6 +395,42 @@ void S_SpatialFillPaths( void ) {
 	}
 }
 
+// What the pass found of the ways round the corners, for the voices it looked for, into the voices: only when
+// nothing works them out. Steam Audio has no second copy of them: SimulationManager::simulatePathing() writes them
+// straight over the old ones where the pass runs, and iplSourceGetOutputs() hands out a pointer to that place.
+void S_SpatialCopyPaths( void ) {
+	for ( int i = 0; i < SPATIAL_VOICES; i++ ) {
+		spatialVoice_t *v = &spatial.voices[i];
+		IPLSimulationOutputs outputs;
+
+		if ( !spatialPass.path[i] ) {
+			continue;
+		}
+		memset( &outputs, 0, sizeof( outputs ) );
+		qiplSourceGetOutputs( v->source, IPL_SIMULATIONFLAGS_PATHING, &outputs );
+		if ( !outputs.pathing.shCoeffs ) {
+			continue;
+		}
+		memcpy( v->pathTarget, outputs.pathing.shCoeffs, sizeof( v->pathTarget ) );
+		memcpy( v->pathEq, outputs.pathing.eqCoeffs, sizeof( v->pathEq ) );
+	}
+}
+
+// Once a frame, before the voices are rendered: the ways of a pass that is done, while the thread is idle. Until
+// 2026-10-21 the voices read them from Steam Audio while the next pass could be writing them. A page works them out
+// in the thread of the game, and takes them there (S_SpatialPagePaths).
+void S_SpatialTakePaths( void ) {
+#ifndef __EMSCRIPTEN__
+	const int passes = spatialReflectPasses.load();
+
+	if ( passes == spatial.pathsTaken || spatialWorkerState.load() != WORKER_IDLE ) {
+		return;
+	}
+	spatial.pathsTaken = passes;
+	S_SpatialCopyPaths();
+#endif
+}
+
 // In the thread of the game, while the thread of the reflections is idle: what the next pass is to start from.
 static void S_SpatialFillPass( void ) {
 	const int passes = spatialReflectPasses.load();

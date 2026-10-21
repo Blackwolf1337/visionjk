@@ -109,6 +109,7 @@ void S_SpatialPagePaths( qboolean paths, int now ) {
 		S_SpatialFillPaths();
 		S_SpatialPathInputs();
 		qiplSimulatorRunPathing( spatial.simulator );
+		S_SpatialCopyPaths();
 		spatial.costUsec[COST_PASS] += S_SpatialUsec() - start;
 	}
 }

@@ -217,26 +217,23 @@ static void S_SpatialRenderBlock( spatialVoice_t *v, float gain ) {
 	hiddenFrom = fresh ? hidden : v->lastHidden;
 	v->lastHidden = hidden;
 	if ( v->pathing ) {
-		IPLSimulationOutputs outputs;
 		IPLPathEffectParams params;
 
-		memset( &outputs, 0, sizeof( outputs ) );
-		qiplSourceGetOutputs( v->source, IPL_SIMULATIONFLAGS_PATHING, &outputs );
-		params = outputs.pathing;
-		if ( params.shCoeffs ) {
-			for ( int i = 0; i < SPATIAL_REVERB_CHANNELS; i++ ) {
-				S_SpatialFollow( &v->pathSh[i], params.shCoeffs[i], SPATIAL_PATH_SMOOTH, fresh );
-			}
-			params.shCoeffs = v->pathSh;
-			params.order = SPATIAL_REVERB_ORDER;
-			params.binaural = v_spatialHrtf->integer ? IPL_TRUE : IPL_FALSE;
-			params.hrtf = spatial.hrtf;
-			// what bending round the corners costs: all of it, or only how much duller the sound gets
-			params.normalizeEQ = v_spatialPathLoss->integer ? IPL_FALSE : IPL_TRUE;
-			S_SpatialListener( &params.listener );
-			qiplPathEffectApply( v->path, &params, &pathIn, &pathOut );
-			pathed = qtrue;
+		// what the last pass found, as S_SpatialTakePaths() took it
+		memset( &params, 0, sizeof( params ) );
+		for ( int i = 0; i < SPATIAL_REVERB_CHANNELS; i++ ) {
+			S_SpatialFollow( &v->pathSh[i], v->pathTarget[i], SPATIAL_PATH_SMOOTH, fresh );
 		}
+		memcpy( params.eqCoeffs, v->pathEq, sizeof( params.eqCoeffs ) );
+		params.shCoeffs = v->pathSh;
+		params.order = SPATIAL_REVERB_ORDER;
+		params.binaural = v_spatialHrtf->integer ? IPL_TRUE : IPL_FALSE;
+		params.hrtf = spatial.hrtf;
+		// what bending round the corners costs: all of it, or only how much duller the sound gets
+		params.normalizeEQ = v_spatialPathLoss->integer ? IPL_FALSE : IPL_TRUE;
+		S_SpatialListener( &params.listener );
+		qiplPathEffectApply( v->path, &params, &pathIn, &pathOut );
+		pathed = qtrue;
 	}
 
 	// What the walls in the way left of it, and what came round them, is what the room around the listener
@@ -465,6 +462,7 @@ void S_SpatialEndFrame( int from, int target ) {
 
 	S_SpatialGatherStreams();
 	S_SpatialApplyBrushes();
+	S_SpatialTakePaths();
 	S_SpatialSimulate();
 	simulated = S_SpatialUsec();
 

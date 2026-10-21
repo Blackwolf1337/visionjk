@@ -411,7 +411,8 @@ void S_SpatialInit( void ) {
 	if ( qiplContextCreate( &contextSettings, &spatial.context ) != IPL_STATUS_SUCCESS ) {
 		Com_Printf( "v_spatial: %s does not go with version %i.%i.%i of the header, the sound stays as it is\n", spatial.libraryPath,
 			STEAMAUDIO_VERSION_MAJOR, STEAMAUDIO_VERSION_MINOR, STEAMAUDIO_VERSION_PATCH );
-		S_SpatialUnload();
+		spatial.context = NULL;
+		S_SpatialRelease();
 		return;
 	}
 
@@ -456,8 +457,8 @@ void S_SpatialInit( void ) {
 	hrtfSettings.normType = IPL_HRTFNORMTYPE_NONE;
 	if ( qiplHRTFCreate( spatial.context, &spatial.audio, &hrtfSettings, &spatial.hrtf ) != IPL_STATUS_SUCCESS ) {
 		Com_Printf( "v_spatial: no direction data (HRTF) for %i samples a second, the sound stays as it is\n", dma.speed );
-		qiplContextRelease( &spatial.context );
-		S_SpatialUnload();
+		spatial.hrtf = NULL;
+		S_SpatialRelease();		// (until 2026-10-21 this let go of the context and the library, and not of Embree)
 		return;
 	}
 

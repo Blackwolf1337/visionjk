@@ -392,6 +392,8 @@ typedef struct spatialVoice_s {
 	IPLDirectEffectParams	directParams;
 	qboolean				pathing;	// this frame its way round the corners is asked for
 	float					pathSh[SPATIAL_REVERB_CHANNELS];	// of that way, smoothed from block to block
+	float					pathTarget[SPATIAL_REVERB_CHANNELS];	//	what the last pass found (S_SpatialTakePaths)
+	float					pathEq[3];
 	float					lastHidden;	// how much of it the walls hid in the last block
 	float					occlusion, transmission[3];	// what the walls let through, smoothed (S_SpatialSimulate)
 } spatialVoice_t;
@@ -510,6 +512,7 @@ typedef struct {
 	int							numReflectSlots;	// made of them: none in a page
 	IPLReflectionMixer			reflectMixer;		// adds up what they render, for the one decode of the reverb
 	int							numReflects;		// sounds that had reflections of their own in the last frame
+	int							pathsTaken;			// spatialReflectPasses when the ways round the corners were last taken
 #ifdef __EMSCRIPTEN__
 	int							pathsAsked;			// Sys_Milliseconds() of the last look for the ways round the corners
 	int							passCredit;			// microseconds the passes may take, see S_SpatialUpdate()
@@ -731,6 +734,8 @@ void S_SpatialSimulate( void );
 void S_SpatialPassInputs( void );
 void S_SpatialPathInputs( void );
 void S_SpatialFillPaths( void );
+void S_SpatialCopyPaths( void );
+void S_SpatialTakePaths( void );
 int SDLCALL S_SpatialWorker( void *unused );
 void S_SpatialAskPass( void );
 
