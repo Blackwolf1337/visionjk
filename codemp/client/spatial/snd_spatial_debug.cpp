@@ -234,13 +234,14 @@ void S_SpatialInfo_f( void ) {
 			Com_Printf( "  %-40s own, reverb only, gain %.2f\n", v->stream ? "voice chat" : v->sfx->sSoundName, v->gain );
 			continue;
 		}
-		Com_Printf( "  %-40s at %.0f %.0f %.0f, %5.0f units away, gain %.2f, doppler %.3f, %.0f ms late, %3.0f %% in sight, through what hides it: %.3f %.3f %.3f%s%s\n",
+		Com_Printf( "  %-40s at %.0f %.0f %.0f, %5.0f units away, gain %.2f, doppler %.3f, %.0f ms late, %3.0f %% in sight, through what hides it: %.3f %.3f %.3f%s%s%s\n",
 			v->stream ? va( "voice of player %i", (int)( v->stream - spatialStreams ) ) : v->sfx->sSoundName,
 			v->origin[0], v->origin[1], v->origin[2], v->distance, v->gain, v->rate, v->delay * 1000.0f / spatial.audio.samplingRate,
 			v->directParams.occlusion * 100.0f,
 			v->directParams.transmission[0], v->directParams.transmission[1], v->directParams.transmission[2],
 			( v->shock && v_spatialShock->value > 0.0f ) ? ", thump" : "",
-			v->reflect ? ( S_SpatialReflectReady( v->reflect ) ? ", own reflections" : ", own reflections soon" ) : "" );
+			v->reflect ? ( S_SpatialReflectReady( v->reflect ) ? ", own reflections" : ", own reflections soon" ) : "",
+			v->outOfBrush ? va( ", from the side of its brush model at %.0f %.0f %.0f", v->simOrigin[0], v->simOrigin[1], v->simOrigin[2] ) : "" );
 	}
 }
 

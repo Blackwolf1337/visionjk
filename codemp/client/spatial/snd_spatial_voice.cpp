@@ -136,6 +136,7 @@ static void S_SpatialPlaceVoice( spatialVoice_t *v, channel_t *channel, int entc
 	v->gain = volume * fade;
 	v->voiceVolume = voiceVolume;
 	VectorCopy( origin, v->origin );
+	v->outOfBrush = S_SpatialOutOfBrushes( origin, v->simOrigin );
 
 	// where it is from the listener, in his axes: x right, y up, z back. The game has forward, left, up.
 	VectorSubtract( origin, spatial.listenerOrigin, d );

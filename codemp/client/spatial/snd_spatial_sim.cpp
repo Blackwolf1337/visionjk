@@ -231,7 +231,7 @@ void S_SpatialSimulate( void ) {
 				| ( ( v_spatialPhysical->integer || S_SpatialBoxVoice( v ) ) ? IPL_DIRECTSIMULATIONFLAGS_AIRABSORPTION : 0 ) );
 			IPLVector3 origin;
 
-			S_SpatialPoint( v->origin, &origin );
+			S_SpatialPoint( v->simOrigin, &origin );
 			S_SpatialSourceSpace( &origin, &inputs.source );
 			inputs.occlusionType = IPL_OCCLUSIONTYPE_VOLUMETRIC;
 			inputs.occlusionRadius = SPATIAL_OCCLUSION_RADIUS;
@@ -389,7 +389,7 @@ void S_SpatialFillPaths( void ) {
 
 		spatialPass.path[i] = v->pathing;
 		if ( v->pathing ) {
-			S_SpatialPoint( v->origin, &spatialPass.pathOrigin[i] );
+			S_SpatialPoint( v->simOrigin, &spatialPass.pathOrigin[i] );
 			spatialPass.pathChannel[i] = v->entchannel;
 		}
 	}
@@ -457,7 +457,7 @@ static void S_SpatialFillPass( void ) {
 		if ( !v ) {
 			continue;
 		}
-		S_SpatialPoint( v->origin, &origin );
+		S_SpatialPoint( v->simOrigin, &origin );
 		S_SpatialSourceSpace( &origin, &spatialPass.source[i] );
 		// the pass that is asked now is the first with it in it
 		if ( r->askedPass < 0 ) {

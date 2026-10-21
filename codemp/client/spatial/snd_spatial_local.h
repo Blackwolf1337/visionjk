@@ -371,6 +371,8 @@ typedef struct spatialVoice_s {
 
 	// where, and how loud the game wants it at that distance
 	vec3_t		origin;
+	vec3_t		simOrigin;			// where Steam Audio has it: origin, or out of the brush model it is in
+	qboolean	outOfBrush;			//	(S_SpatialOutOfBrushes)
 	IPLVector3	direction;			// from the listener, in his axes
 	int			entchannel;			// CHAN_*: the kind of sound, which says how it fades with the distance
 	float		volume;				// how loud the game plays it, 0 to 1
@@ -427,6 +429,7 @@ typedef struct {
 	qboolean			gone;			// the cgame says it is gone (broken, switched off)
 	qboolean			changed;		// a place or a state the top scene does not have yet
 	vec3_t				origin, angles;
+	vec3_t				mins, maxs;		// of its walls, where the map has them (CM_ModelBounds)
 } spatialBrush_t;
 
 // What a bake of one kind made of a level, or its file (BAKE_PATHS, BAKE_ECHO): its probes with the data at them
@@ -723,6 +726,7 @@ typedef struct {
 void S_SpatialLoadMaterials( void );
 int S_SpatialTriangleMaterial( spatialShaderCache_t *cache, const char *shader, int surfaceFlags, qboolean *byTable );
 void S_SpatialCountBrushes( int *withMesh, int *inScene );
+qboolean S_SpatialOutOfBrushes( const vec3_t origin, vec3_t out );
 void S_SpatialReleaseLevel( spatialLevel_t *level );
 void S_SpatialTakeScene( void );
 void S_SpatialApplyBrushes( void );

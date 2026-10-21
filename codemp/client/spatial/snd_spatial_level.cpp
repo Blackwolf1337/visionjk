@@ -482,6 +482,7 @@ void S_SpatialLoadMap( const char *mapname ) {
 		spatialBrush_t *b = &level->brushes[i];
 
 		b->model = i;
+		CM_ModelBounds( CM_InlineModel( i ), b->mins, b->maxs );
 		b->triangles = S_SpatialBuildMesh( i, &b->scene, &b->mesh, NULL );
 		if ( !b->triangles ) {
 			continue;
@@ -514,6 +515,75 @@ void S_SpatialCountBrushes( int *withMesh, int *inScene ) {
 		*withMesh += spatial.level.brushes[i].instance ? 1 : 0;
 		*inScene += spatial.level.brushes[i].added ? 1 : 0;
 	}
+}
+
+/*
+===============
+S_SpatialOutOfBrushes
+
+The sounds of a brush model come from the middle of it (CG_SetEntitySoundPosition, and its loop sound in
+CG_EntityEffects): inside its own walls, which are in the scene of the simulator since 2026-10-21 (5200ad81). There
+they hid it: the lift of mp/ffa3 that carried the listener was 0 % in sight and let through 0.04 of its lows. A place
+inside the bounds of a brush model of the scene goes out of them along the line to the listener, to where the line
+leaves them and SPATIAL_OCCLUSION_RADIUS on, no further than halfway to him: the side of a door or a lift he hears it
+from. On that line its direction from him stays what it was. Not when the listener is in the bounds as well.
+qtrue: it was moved.
+===============
+*/
+static qboolean S_SpatialInside( const vec3_t p, const vec3_t mins, const vec3_t maxs ) {
+	return (qboolean)( p[0] >= mins[0] && p[0] <= maxs[0] && p[1] >= mins[1] && p[1] <= maxs[1] && p[2] >= mins[2] && p[2] <= maxs[2] );
+}
+
+qboolean S_SpatialOutOfBrushes( const vec3_t origin, vec3_t out ) {
+	const spatialLevel_t *level = &spatial.level;
+	qboolean moved = qfalse;
+
+	VectorCopy( origin, out );
+	for ( int i = 1; i < level->numBrushes; i++ ) {
+		const spatialBrush_t *b = &level->brushes[i];
+		matrix3_t axis;
+		vec3_t d, local, localListener, dir, localDir;
+		float length, exit = 1e30f;
+
+		if ( !b->added ) {
+			continue;
+		}
+		// into the place the map has it in, as its walls are: local = R^T ( world - origin )
+		AnglesToAxis( b->angles, axis );
+		VectorSubtract( out, b->origin, d );
+		for ( int k = 0; k < 3; k++ ) {
+			local[k] = DotProduct( d, axis[k] );
+		}
+		if ( !S_SpatialInside( local, b->mins, b->maxs ) ) {
+			continue;
+		}
+		VectorSubtract( spatial.listenerOrigin, b->origin, d );
+		for ( int k = 0; k < 3; k++ ) {
+			localListener[k] = DotProduct( d, axis[k] );
+		}
+		if ( S_SpatialInside( localListener, b->mins, b->maxs ) ) {
+			continue;
+		}
+		VectorSubtract( spatial.listenerOrigin, out, dir );
+		length = VectorNormalize( dir );
+		for ( int k = 0; k < 3; k++ ) {
+			localDir[k] = DotProduct( dir, axis[k] );
+		}
+		// where the line leaves the bounds: the nearest side it goes out through
+		for ( int k = 0; k < 3; k++ ) {
+			if ( localDir[k] > 1e-6f ) {
+				exit = Q_min( exit, ( b->maxs[k] - local[k] ) / localDir[k] );
+			} else if ( localDir[k] < -1e-6f ) {
+				exit = Q_min( exit, ( b->mins[k] - local[k] ) / localDir[k] );
+			}
+		}
+		if ( exit >= length ) {
+			continue;
+		}
+		VectorMA( out, exit + Q_min( SPATIAL_OCCLUSION_RADIUS / SPATIAL_UNIT, ( length - exit ) * 0.5f ), dir, out );
+		moved = qtrue;
+	}
+	return moved;
 }
 
 /*
