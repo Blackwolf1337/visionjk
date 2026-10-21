@@ -23,7 +23,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // not as something to trace through: the sound of client/spatial/snd_spatial.cpp hands it to a ray tracer of its own,
 // which runs in other threads, where CM_BoxTrace() must not be called (it marks the brushes it has tested).
 //
-// Only the world. The brush models that move (doors, lifts) are left out.
+// CM_ExportSolidTriangles() is the world without the brush models, CM_ExportModelTriangles() each brush model (a
+// door, a lift) on its own, where the map has it.
 
 #include "cm_local.h"
 #include "cm_patch.h"
