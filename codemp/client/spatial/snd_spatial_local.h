@@ -657,9 +657,39 @@ static inline void S_SpatialDirection( const vec3_t in, IPLVector3 *out ) {
 	out->z = -in[0];
 }
 
+// and back, from Steam Audio's metres and axes to the game's
+static inline void S_SpatialGamePoint( const IPLVector3 *in, vec3_t out ) {
+	VectorSet( out, -in->z / SPATIAL_UNIT, -in->x / SPATIAL_UNIT, in->y / SPATIAL_UNIT );
+}
+
+// A source has a place and no direction: its axes are Steam Audio's own. origin in Steam Audio's metres.
+static inline void S_SpatialSourceSpace( const IPLVector3 *origin, IPLCoordinateSpace3 *out ) {
+	memset( out, 0, sizeof( *out ) );
+	out->origin = *origin;
+	out->right.x = 1.0f;
+	out->up.y = 1.0f;
+	out->ahead.z = -1.0f;
+}
+
+// a value that follows what it is given, step of the way each time, and is it at once while fresh
+static inline void S_SpatialFollow( float *value, float target, float step, qboolean fresh ) {
+	*value = fresh ? target : *value + ( target - *value ) * step;
+}
+
+// the rays the simulator is made for, from v_spatialRays (taken when the sound system starts)
+static inline int S_SpatialRayCvar( void ) {
+	return Com_Clampi( 256, SPATIAL_MAX_RAYS, v_spatialRays->integer );
+}
+
+// how often a ray is followed off a wall
+static inline int S_SpatialBounces( void ) {
+	return Com_Clampi( 1, 64, v_spatialBounces->integer );
+}
+
 static inline int S_SpatialUsec( void ) {
 	return (int)std::chrono::duration_cast<std::chrono::microseconds>( std::chrono::steady_clock::now().time_since_epoch() ).count();
 }
+
 /*
 ===============================================================================
 
@@ -669,9 +699,16 @@ WHAT THE FILES CALL OF EACH OTHER
 */
 
 // snd_spatial_level.cpp
+// The shader of the triangle before, and what the table says it is made of: the triangles of a side come one
+// after the other
+typedef struct {
+	const char	*shader;
+	int			tableMaterial;		// MATERIAL_*
+} spatialShaderCache_t;
+
 void S_SpatialLoadMaterials( void );
-int S_SpatialTableMaterial( const char *shader );
-int S_SpatialMaterial( int tableMaterial, int surfaceFlags );
+int S_SpatialTriangleMaterial( spatialShaderCache_t *cache, const char *shader, int surfaceFlags, qboolean *byTable );
+void S_SpatialCountBrushes( int *withMesh, int *inScene );
 void S_SpatialReleaseLevel( spatialLevel_t *level );
 void S_SpatialTakeScene( void );
 void S_SpatialApplyBrushes( void );
@@ -687,6 +724,7 @@ void S_SpatialThinkPaths( void );
 
 // snd_spatial_sim.cpp
 int S_SpatialRays( void );
+void S_SpatialListener( IPLCoordinateSpace3 *listener );
 void S_SpatialLetGoReflect( spatialVoice_t *v );
 qboolean S_SpatialReflectReady( const spatialReflect_t *r );
 void S_SpatialSimulate( void );

@@ -363,8 +363,8 @@ void S_SpatialThinkPaths( void ) {
 		spatialBake.kind = BAKE_ECHO;
 		spatialBake.scene = qiplSceneRetain( spatial.level.scene );
 		spatialBake.sceneType = spatial.sceneType;
-		spatialBake.rays = Com_Clampi( 256, SPATIAL_MAX_RAYS, v_spatialRays->integer );
-		spatialBake.bounces = Com_Clampi( 1, 64, v_spatialBounces->integer );
+		spatialBake.rays = S_SpatialRayCvar();
+		spatialBake.bounces = S_SpatialBounces();
 		spatialBake.context = qiplContextRetain( spatial.context );
 		spatialBake.mins = spatial.mins;
 		spatialBake.maxs = spatial.maxs;

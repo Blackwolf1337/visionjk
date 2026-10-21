@@ -95,7 +95,8 @@ int				spatialTableCount;
 THE LEVEL
 
 Steam Audio traces its rays through a mesh of its own, in its own threads. It gets the solid surfaces of the
-world once per level (qcommon/cm_export.cpp). Doors and lifts are not in it.
+world once per level (qcommon/cm_export.cpp), and each brush model (doors, lifts) as a mesh of its own that is
+placed where the cgame says it is.
 
 ===============================================================================
 */
@@ -105,8 +106,7 @@ typedef struct spatialMeshBuild_s {
 	IPLTriangle	*triangles;
 	IPLint32	*materials;
 	int			count;
-	const char	*shader;			// of the triangle before: the triangles of a side come one after the other
-	int			tableMaterial;		//	and what the table says it is made of
+	spatialShaderCache_t	cache;
 	qboolean	world;				// the walls of the world, not a brush model: counted for v_spatialInfo, and the corners
 } spatialMeshBuild_t;
 
@@ -160,20 +160,26 @@ void S_SpatialLoadMaterials( void ) {
 }
 
 // what the table says a shader is made of, MATERIAL_NONE if it is not in it
-int S_SpatialTableMaterial( const char *shader ) {
+static int S_SpatialTableMaterial( const char *shader ) {
 	const spatialShader_t *entry = (const spatialShader_t *)bsearch( shader, spatialTable, spatialTableCount,
 		sizeof( spatialTable[0] ), S_SpatialCompareShader );
 
 	return entry ? entry->material : MATERIAL_NONE;
 }
 
-// The sky first. Then the table, before what the level says: a line of the table can put a level right.
-int S_SpatialMaterial( int tableMaterial, int surfaceFlags ) {
+// The material (SPATIAL_*) of a triangle of a shader. The sky first. Then the table, before what the level says: a
+// line of the table can put a level right. byTable: the table named it.
+int S_SpatialTriangleMaterial( spatialShaderCache_t *cache, const char *shader, int surfaceFlags, qboolean *byTable ) {
+	if ( shader != cache->shader ) {
+		cache->shader = shader;
+		cache->tableMaterial = S_SpatialTableMaterial( shader );
+	}
+	*byTable = (qboolean)( !( surfaceFlags & SURF_SKY ) && cache->tableMaterial != MATERIAL_NONE );
 	if ( surfaceFlags & SURF_SKY ) {
 		return SPATIAL_SKY;
 	}
-	if ( tableMaterial != MATERIAL_NONE ) {
-		return spatialMaterialOf[tableMaterial];
+	if ( cache->tableMaterial != MATERIAL_NONE ) {
+		return spatialMaterialOf[cache->tableMaterial];
 	}
 	return spatialMaterialOf[surfaceFlags & MATERIAL_MASK];
 }
@@ -181,14 +187,10 @@ int S_SpatialMaterial( int tableMaterial, int surfaceFlags ) {
 static void S_SpatialTriangle( const vec3_t a, const vec3_t b, const vec3_t c, const char *shader, int surfaceFlags, void *data ) {
 	spatialMeshBuild_t *build = (spatialMeshBuild_t *)data;
 	const int n = build->count++;
-	int material;
+	qboolean byTable;
+	const int material = S_SpatialTriangleMaterial( &build->cache, shader, surfaceFlags, &byTable );
 
-	if ( shader != build->shader ) {
-		build->shader = shader;
-		build->tableMaterial = S_SpatialTableMaterial( shader );
-	}
-	material = S_SpatialMaterial( build->tableMaterial, surfaceFlags );
-	if ( build->world && !( surfaceFlags & SURF_SKY ) && build->tableMaterial != MATERIAL_NONE ) {
+	if ( build->world && byTable ) {
 		spatial.tableTriangles++;
 	}
 
@@ -322,18 +324,6 @@ void S_SpatialTakeScene( void ) {
 	S_SpatialResetReverb();
 }
 
-/*
-===============
-S_SpatialLoadMap
-
-The collision model of a level was loaded, or the sound system starts while a level is. Runs while the
-loading screen is up: building the mesh of a large level takes a moment. The level waits to be taken over,
-see S_SpatialTakeScene().
-
-A page takes it over here and now, and works its paths out: it has no thread that could do that later next
-to the game, and it stands still while a level loads anyway.
-===============
-*/
 // A scene with the walls of one brush model of the collision model in it, 0: the world. Returns how many triangles
 // it has, 0: none, and no scene.
 static int S_SpatialBuildMesh( int model, IPLScene *scene, IPLStaticMesh *mesh, unsigned *checksum ) {
@@ -544,6 +534,15 @@ void S_SpatialLoadMap( const char *mapname ) {
 #endif
 }
 
+// how many brush models have walls in the scene of the simulator, and how many of them are in it now
+void S_SpatialCountBrushes( int *withMesh, int *inScene ) {
+	*withMesh = *inScene = 0;
+	for ( int i = 1; i < spatial.level.numBrushes; i++ ) {
+		*withMesh += spatial.level.brushes[i].instance ? 1 : 0;
+		*inScene += spatial.level.brushes[i].added ? 1 : 0;
+	}
+}
+
 /*
 ===============
 S_SpatialMovers
@@ -640,6 +639,6 @@ void S_SpatialSaveScene_f( void ) {
 	Com_Printf( "v_spatialSaveScene: %s\n", path );
 }
 
-static_assert( SPATIAL_DEBUG_MATERIALS == SPATIAL_NUM_MATERIALS, "spatial_debug.h has the materials of this file" );
+static_assert( (int)SPATIAL_DEBUG_MATERIALS == (int)SPATIAL_NUM_MATERIALS, "spatial_debug.h has the materials of this file" );
 
 #endif // JP_SPATIAL

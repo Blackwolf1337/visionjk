@@ -263,7 +263,7 @@ static qboolean S_SpatialCreateVoices( void ) {
 	simulation.maxNumOcclusionSamples = SPATIAL_OCCLUSION_SAMPLES;
 	// A pass traces the first rays of those the simulator has, which are not spread round the listener unless
 	// it traces them all (S_SpatialRays): the simulator is made for what it traces, and v_spatialRays is read here.
-	spatial.maxRays = Com_Clampi( 256, SPATIAL_MAX_RAYS, v_spatialRays->integer );
+	spatial.maxRays = S_SpatialRayCvar();
 	v_spatialRays->modified = qfalse;
 	simulation.maxNumRays = spatial.maxRays;
 	simulation.numDiffuseSamples = SPATIAL_DIFFUSE_SAMPLES;
@@ -525,7 +525,7 @@ void S_SpatialUpdate( void ) {
 
 		if ( v_spatialRays->modified ) {
 			v_spatialRays->modified = qfalse;
-			if ( Com_Clampi( 256, SPATIAL_MAX_RAYS, v_spatialRays->integer ) != spatial.maxRays ) {
+			if ( S_SpatialRayCvar() != spatial.maxRays ) {
 				Com_Printf( "v_spatialRays: taken when the sound system starts (snd_restart), the passes go on with %i rays\n", spatial.maxRays );
 			}
 		}

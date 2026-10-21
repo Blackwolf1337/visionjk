@@ -146,12 +146,9 @@ void S_SpatialInfo_f( void ) {
 	}
 	Com_Printf( "level: %i triangles, built in %i ms\n", spatial.numTriangles, spatial.sceneMsec );
 	{
-		int brushes = 0, added = 0;
+		int brushes, added;
 
-		for ( int i = 1; i < spatial.level.numBrushes; i++ ) {
-			brushes += spatial.level.brushes[i].instance ? 1 : 0;
-			added += spatial.level.brushes[i].added ? 1 : 0;
-		}
+		S_SpatialCountBrushes( &brushes, &added );
 		Com_Printf( "brush models (doors, lifts ...): %i with %i triangles, %i of them in the scene now\n", brushes,
 			spatial.level.brushTriangles, added );
 	}
@@ -188,7 +185,7 @@ void S_SpatialInfo_f( void ) {
 	memset( spatial.costUsec, 0, sizeof( spatial.costUsec ) );
 	if ( v_spatialReflections->integer ) {
 		Com_Printf( "reflections: %i rays, %i bounces, the last pass took %i ms, %i passes so far, %i sounds with their own (v_spatialSources %i)\n",
-			S_SpatialRays(), Com_Clampi( 1, 64, v_spatialBounces->integer ), spatialReflectUsec.load() / 1000, spatialReflectPasses.load(),
+			S_SpatialRays(), S_SpatialBounces(), spatialReflectUsec.load() / 1000, spatialReflectPasses.load(),
 			spatial.numReflects, Com_Clampi( 0, spatial.numReflectSlots, v_spatialSources->integer ) );
 #ifdef __EMSCRIPTEN__
 		Com_Printf( "  done by the game itself, with %.2f ms of each frame (v_spatialBudget): the last pass in %i slices over %i ms, the longest %.1f ms\n",
@@ -280,8 +277,7 @@ static struct {
 	qboolean			failed;		//	it could not be made for it
 	spatialDebugTri_t	*tris;
 	int					numTris;
-	const char			*shader;	// while it is made: the table entry of the last shader
-	int					tableMaterial;
+	spatialShaderCache_t	cache;	// while it is made
 	vec3_t				mins;
 	float				cell;
 	int					dims[3];
@@ -317,18 +313,15 @@ void S_SpatialDebugFree( void ) {
 
 static void S_SpatialDebugTriangle( const vec3_t a, const vec3_t b, const vec3_t c, const char *shader, int surfaceFlags, void *data ) {
 	spatialDebugTri_t *tri = &spatialDebugMesh.tris[spatialDebugMesh.numTris++];
+	qboolean byTable;
 
-	if ( shader != spatialDebugMesh.shader ) {
-		spatialDebugMesh.shader = shader;
-		spatialDebugMesh.tableMaterial = S_SpatialTableMaterial( shader );
-	}
+	tri->material = (byte)S_SpatialTriangleMaterial( &spatialDebugMesh.cache, shader, surfaceFlags, &byTable );
+	tri->byTable = byTable ? 1 : 0;
 	VectorCopy( a, tri->v0 );
 	VectorSubtract( b, a, tri->e1 );
 	VectorSubtract( c, a, tri->e2 );
 	CrossProduct( tri->e1, tri->e2, tri->normal );
 	VectorNormalize( tri->normal );
-	tri->material = (byte)S_SpatialMaterial( spatialDebugMesh.tableMaterial, surfaceFlags );
-	tri->byTable = ( !( surfaceFlags & SURF_SKY ) && spatialDebugMesh.tableMaterial != MATERIAL_NONE ) ? 1 : 0;
 	tri->shader = shader;
 }
 
@@ -371,7 +364,6 @@ static qboolean S_SpatialDebugMesh( void ) {
 	spatialDebugMesh.tris = (spatialDebugTri_t *)Z_Malloc( count * sizeof( spatialDebugTri_t ), TAG_GENERAL, qfalse );
 	spatialDebugMesh.brushFirst = (int *)Z_Malloc( Q_max( 1, spatialDebugMesh.numModels ) * sizeof( int ), TAG_GENERAL, qtrue );
 	spatialDebugMesh.brushCount = (int *)Z_Malloc( Q_max( 1, spatialDebugMesh.numModels ) * sizeof( int ), TAG_GENERAL, qtrue );
-	spatialDebugMesh.tableMaterial = MATERIAL_NONE;
 	CM_ExportSolidTriangles( S_SpatialDebugTriangle, NULL );
 	spatialDebugMesh.worldTris = spatialDebugMesh.numTris;
 	for ( int m = 1; m < spatialDebugMesh.numModels; m++ ) {
@@ -689,7 +681,7 @@ void S_SpatialDebug( spatialDebug_t *out, const vec3_t eye, const vec3_t forward
 	out->embree = spatial.embree ? qtrue : qfalse;
 	out->threads = spatial.threads;
 	out->passRays = spatial.maxRays;
-	out->passBounces = Com_Clampi( 1, 64, v_spatialBounces->integer );
+	out->passBounces = S_SpatialBounces();
 	out->passMsec = spatialReflectUsec.load() * 0.001f;
 	out->passes = spatialReflectPasses.load();
 	out->settledPasses = spatial.settledPasses;
@@ -697,10 +689,7 @@ void S_SpatialDebug( spatialDebug_t *out, const vec3_t eye, const vec3_t forward
 	out->reflects = spatial.numReflects;
 	out->reflectSlots = Com_Clampi( 0, spatial.numReflectSlots, v_spatialSources->integer );
 	out->reverbVolume = v_spatialReflections->integer ? v_spatialReverb->value : 0.0f;
-	for ( int i = 1; i < spatial.level.numBrushes; i++ ) {
-		out->brushes += spatial.level.brushes[i].instance ? 1 : 0;
-		out->brushesIn += spatial.level.brushes[i].added ? 1 : 0;
-	}
+	S_SpatialCountBrushes( &out->brushes, &out->brushesIn );
 	out->brushesMoved = spatial.brushesMoved;
 	if ( !v_spatialEcho->integer ) {
 		out->echo = SPATIAL_DEBUG_ECHO_LIVE;

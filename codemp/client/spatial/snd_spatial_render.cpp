@@ -57,6 +57,31 @@ static void S_SpatialRingExtend( int end ) {
 	}
 }
 
+// A block of two channels into the ring from the time c on, its gain going from from to to over the block, in what
+// the paint buffer counts in: 16 bit samples times 256. energy: where what it adds is counted, for v_spatialDebug.
+static void S_SpatialRingAdd( int c, const float *left, const float *right, float from, float to, double *energy ) {
+	const float step = ( to - from ) * ( 1.0f / SPATIAL_FRAME );
+
+	S_SpatialRingExtend( c + SPATIAL_FRAME );
+	for ( int i = 0; i < SPATIAL_FRAME; i++ ) {
+		float *slot = spatial.ring[( c + i ) & ( SPATIAL_RING - 1 )];
+		const float gain = from + step * i;
+
+		slot[0] += left[i] * gain;
+		slot[1] += right[i] * gain;
+		if ( energy ) {
+			*energy += ( left[i] * left[i] + right[i] * right[i] ) * gain * gain;
+		}
+	}
+}
+
+// what a reflection effect is told of the impulse response it is given: the same for all of them
+static void S_SpatialReflectionParams( IPLReflectionEffectParams *params ) {
+	params->type = IPL_REFLECTIONEFFECTTYPE_CONVOLUTION;
+	params->numChannels = SPATIAL_REVERB_CHANNELS;
+	params->irSize = (int)( SPATIAL_REVERB_SECONDS * spatial.audio.samplingRate );
+}
+
 // The samples of a voice for its next block, from v->readPos on, v->rate of its sound for each sample heard.
 // qfalse: there are none.
 static qboolean S_SpatialSamples( spatialVoice_t *v, float *out ) {
@@ -194,14 +219,13 @@ static void S_SpatialRenderBlock( spatialVoice_t *v, float gain ) {
 	if ( v->pathing ) {
 		IPLSimulationOutputs outputs;
 		IPLPathEffectParams params;
-		vec3_t rightAxis;
 
 		memset( &outputs, 0, sizeof( outputs ) );
 		qiplSourceGetOutputs( v->source, IPL_SIMULATIONFLAGS_PATHING, &outputs );
 		params = outputs.pathing;
 		if ( params.shCoeffs ) {
 			for ( int i = 0; i < SPATIAL_REVERB_CHANNELS; i++ ) {
-				v->pathSh[i] = fresh ? params.shCoeffs[i] : v->pathSh[i] + ( params.shCoeffs[i] - v->pathSh[i] ) * SPATIAL_PATH_SMOOTH;
+				S_SpatialFollow( &v->pathSh[i], params.shCoeffs[i], SPATIAL_PATH_SMOOTH, fresh );
 			}
 			params.shCoeffs = v->pathSh;
 			params.order = SPATIAL_REVERB_ORDER;
@@ -209,11 +233,7 @@ static void S_SpatialRenderBlock( spatialVoice_t *v, float gain ) {
 			params.hrtf = spatial.hrtf;
 			// what bending round the corners costs: all of it, or only how much duller the sound gets
 			params.normalizeEQ = v_spatialPathLoss->integer ? IPL_FALSE : IPL_TRUE;
-			VectorNegate( spatial.listenerAxis[1], rightAxis );
-			S_SpatialPoint( spatial.listenerOrigin, &params.listener.origin );
-			S_SpatialDirection( spatial.listenerAxis[0], &params.listener.ahead );
-			S_SpatialDirection( spatial.listenerAxis[2], &params.listener.up );
-			S_SpatialDirection( rightAxis, &params.listener.right );
+			S_SpatialListener( &params.listener );
 			qiplPathEffectApply( v->path, &params, &pathIn, &pathOut );
 			pathed = qtrue;
 		}
@@ -251,24 +271,10 @@ static void S_SpatialRenderBlock( spatialVoice_t *v, float gain ) {
 		volume *= v->stream ? SPATIAL_GAIN_VOICE_PANNING : SPATIAL_GAIN_PANNING;
 	}
 
-	// into the ring, in what the paint buffer counts in: 16 bit samples times 256
-	S_SpatialRingExtend( c + SPATIAL_FRAME );
-	for ( int i = 0; i < SPATIAL_FRAME; i++ ) {
-		float *slot = spatial.ring[( c + i ) & ( SPATIAL_RING - 1 )];
-
-		slot[0] += left[i] * volume;
-		slot[1] += right[i] * volume;
-		spatial.directEnergy += ( left[i] * left[i] + right[i] * right[i] ) * volume * volume;
-	}
+	// into the ring, and the way round the corners for as much as is hidden
+	S_SpatialRingAdd( c, left, right, volume, volume, &spatial.directEnergy );
 	if ( pathed ) {
-		for ( int i = 0; i < SPATIAL_FRAME; i++ ) {
-			float *slot = spatial.ring[( c + i ) & ( SPATIAL_RING - 1 )];
-
-			const float through = hiddenFrom + ( hidden - hiddenFrom ) * i * ( 1.0f / SPATIAL_FRAME );
-
-			slot[0] += pathLeft[i] * through * volume;
-			slot[1] += pathRight[i] * through * volume;
-		}
+		S_SpatialRingAdd( c, pathLeft, pathRight, hiddenFrom * volume, hidden * volume, NULL );
 	}
 
 	// The thump of an explosion: its lows once more, for both ears alike. A wall takes from them what Steam
@@ -327,7 +333,6 @@ static void S_SpatialRenderReverb( int c ) {
 	IPLSimulationOutputs outputs;
 	IPLReflectionEffectParams params;
 	IPLAmbisonicsDecodeEffectParams decode;
-	vec3_t rightAxis;
 	float volume;
 
 	for ( int i = 0; i < SPATIAL_REVERB_CHANNELS; i++ ) {
@@ -374,9 +379,7 @@ static void S_SpatialRenderReverb( int c ) {
 				own[k] = v->own[( v->dryRead + k ) & ( SPATIAL_DRY - 1 )] * ( mixFrom + ( mixTo - mixFrom ) * k * ( 1.0f / SPATIAL_FRAME ) );
 			}
 			params = outputs.reflections;
-			params.type = IPL_REFLECTIONEFFECTTYPE_CONVOLUTION;
-			params.numChannels = SPATIAL_REVERB_CHANNELS;
-			params.irSize = (int)( SPATIAL_REVERB_SECONDS * spatial.audio.samplingRate );
+			S_SpatialReflectionParams( &params );
 			qiplReflectionEffectApply( v->reflect->effect, &params, &ownBuffer, &scratchBuffer, spatial.reflectMixer );
 		}
 		v->dryRead += count;
@@ -397,18 +400,14 @@ static void S_SpatialRenderReverb( int c ) {
 	qiplSourceGetOutputs( spatial.reverbSource, IPL_SIMULATIONFLAGS_REFLECTIONS, &outputs );
 	params = outputs.reflections;
 	if ( params.ir ) {
-		params.type = IPL_REFLECTIONEFFECTTYPE_CONVOLUTION;
-		params.numChannels = SPATIAL_REVERB_CHANNELS;
-		params.irSize = (int)( SPATIAL_REVERB_SECONDS * spatial.audio.samplingRate );
+		S_SpatialReflectionParams( &params );
 		qiplReflectionEffectApply( spatial.reverbEffect, &params, &inBuffer, &ambisonicsBuffer, NULL );
 	} else {
 		memset( ambisonics, 0, sizeof( ambisonics ) );
 	}
 	if ( spatial.reflectMixer ) {
 		memset( &params, 0, sizeof( params ) );
-		params.type = IPL_REFLECTIONEFFECTTYPE_CONVOLUTION;
-		params.numChannels = SPATIAL_REVERB_CHANNELS;
-		params.irSize = (int)( SPATIAL_REVERB_SECONDS * spatial.audio.samplingRate );
+		S_SpatialReflectionParams( &params );
 		qiplReflectionMixerApply( spatial.reflectMixer, &params, &mixedBuffer );
 		for ( int i = 0; i < SPATIAL_REVERB_CHANNELS; i++ ) {
 			for ( int k = 0; k < SPATIAL_FRAME; k++ ) {
@@ -422,22 +421,12 @@ static void S_SpatialRenderReverb( int c ) {
 	decode.order = SPATIAL_REVERB_ORDER;
 	decode.hrtf = spatial.hrtf;
 	decode.binaural = v_spatialHrtf->integer ? IPL_TRUE : IPL_FALSE;
-	VectorNegate( spatial.listenerAxis[1], rightAxis );
-	S_SpatialDirection( spatial.listenerAxis[0], &decode.orientation.ahead );
-	S_SpatialDirection( spatial.listenerAxis[2], &decode.orientation.up );
-	S_SpatialDirection( rightAxis, &decode.orientation.right );
+	S_SpatialListener( &decode.orientation );		// (only its axes count)
 	qiplAmbisonicsDecodeEffectApply( spatial.reverbDecode, &decode, &ambisonicsBuffer, &out );
 
-	S_SpatialRingExtend( c + SPATIAL_FRAME );
 	// how loud each voice is went in with what it gave
 	volume = v_spatialReverb->value * ( v_spatialHrtf->integer ? SPATIAL_GAIN_HRTF : SPATIAL_GAIN_PANNING ) * ( 32768.0f * 256.0f );
-	for ( int i = 0; i < SPATIAL_FRAME; i++ ) {
-		float *slot = spatial.ring[( c + i ) & ( SPATIAL_RING - 1 )];
-
-		slot[0] += left[i] * volume;
-		slot[1] += right[i] * volume;
-		spatial.reverbEnergy += ( left[i] * left[i] + right[i] * right[i] ) * volume * volume;
-	}
+	S_SpatialRingAdd( c, left, right, volume, volume, &spatial.reverbEnergy );
 }
 
 /*

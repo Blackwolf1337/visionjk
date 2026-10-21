@@ -85,7 +85,7 @@ int S_SpatialRays( void ) {
 }
 
 // where the listener is and how he stands, as Steam Audio has it
-static void S_SpatialListener( IPLCoordinateSpace3 *listener ) {
+void S_SpatialListener( IPLCoordinateSpace3 *listener ) {
 	vec3_t right;
 
 	VectorNegate( spatial.listenerAxis[1], right );
@@ -229,10 +229,10 @@ void S_SpatialSimulate( void ) {
 			// with v_spatialPhysical a far sound loses its highs in the air too (Valve's default model), a box always
 			inputs.directFlags = (IPLDirectSimulationFlags)( IPL_DIRECTSIMULATIONFLAGS_OCCLUSION | IPL_DIRECTSIMULATIONFLAGS_TRANSMISSION
 				| ( ( v_spatialPhysical->integer || S_SpatialBoxVoice( v ) ) ? IPL_DIRECTSIMULATIONFLAGS_AIRABSORPTION : 0 ) );
-			S_SpatialPoint( v->origin, &inputs.source.origin );
-			inputs.source.right.x = 1.0f;
-			inputs.source.up.y = 1.0f;
-			inputs.source.ahead.z = -1.0f;
+			IPLVector3 origin;
+
+			S_SpatialPoint( v->origin, &origin );
+			S_SpatialSourceSpace( &origin, &inputs.source );
 			inputs.occlusionType = IPL_OCCLUSIONTYPE_VOLUMETRIC;
 			inputs.occlusionRadius = SPATIAL_OCCLUSION_RADIUS;
 			inputs.numOcclusionSamples = SPATIAL_OCCLUSION_SAMPLES;
@@ -262,18 +262,10 @@ void S_SpatialSimulate( void ) {
 		memset( &outputs, 0, sizeof( outputs ) );
 		qiplSourceGetOutputs( v->source, IPL_SIMULATIONFLAGS_DIRECT, &outputs );
 		v->directParams = outputs.direct;
-		if ( v->fresh ) {
-			v->occlusion = outputs.direct.occlusion;
-		} else {
-			v->occlusion += ( outputs.direct.occlusion - v->occlusion ) * wallStep;
-		}
+		S_SpatialFollow( &v->occlusion, outputs.direct.occlusion, wallStep, v->fresh );
 		v->directParams.occlusion = v->occlusion;
 		for ( int k = 0; k < 3; k++ ) {
-			if ( v->fresh ) {
-				v->transmission[k] = outputs.direct.transmission[k];
-			} else {
-				v->transmission[k] += ( outputs.direct.transmission[k] - v->transmission[k] ) * wallStep;
-			}
+			S_SpatialFollow( &v->transmission[k], outputs.direct.transmission[k], wallStep, v->fresh );
 			v->directParams.transmission[k] = v->transmission[k];
 		}
 		// how loud a sound is at its distance stays what the game makes of it (v->gain)
@@ -369,10 +361,7 @@ void S_SpatialPathInputs( void ) {
 		memset( &inputs, 0, sizeof( inputs ) );
 		if ( spatialPass.path[i] ) {
 			inputs.flags = IPL_SIMULATIONFLAGS_PATHING;
-			inputs.source.origin = spatialPass.pathOrigin[i];
-			inputs.source.right.x = 1.0f;
-			inputs.source.up.y = 1.0f;
-			inputs.source.ahead.z = -1.0f;
+			S_SpatialSourceSpace( &spatialPass.pathOrigin[i], &inputs.source );
 			inputs.baked = IPL_TRUE;
 			inputs.bakedDataIdentifier.type = IPL_BAKEDDATATYPE_PATHING;
 			inputs.bakedDataIdentifier.variation = IPL_BAKEDDATAVARIATION_DYNAMIC;
@@ -420,22 +409,20 @@ static void S_SpatialFillPass( void ) {
 		spatial.settledOrigin = *o;
 	}
 	spatialPass.rays = S_SpatialRays();
-	spatialPass.bounces = Com_Clampi( 1, 64, v_spatialBounces->integer );
+	spatialPass.bounces = S_SpatialBounces();
 	spatialPass.reverb = v_spatialReflections->integer ? qtrue : qfalse;
 	spatialPass.echoBaked = S_SpatialEchoBaked();
 	for ( int i = 0; i < spatial.numReflectSlots; i++ ) {
 		spatialReflect_t *r = &spatial.reflects[i];
 		const spatialVoice_t *v = r->voice;
+		IPLVector3 origin;
 
 		spatialPass.own[i] = (qboolean)( v != NULL );
 		if ( !v ) {
 			continue;
 		}
-		memset( &spatialPass.source[i], 0, sizeof( spatialPass.source[i] ) );
-		S_SpatialPoint( v->origin, &spatialPass.source[i].origin );
-		spatialPass.source[i].right.x = 1.0f;
-		spatialPass.source[i].up.y = 1.0f;
-		spatialPass.source[i].ahead.z = -1.0f;
+		S_SpatialPoint( v->origin, &origin );
+		S_SpatialSourceSpace( &origin, &spatialPass.source[i] );
 		// the pass that is asked now is the first with it in it
 		if ( r->askedPass < 0 ) {
 			r->askedPass = passes;
@@ -486,9 +473,8 @@ static void S_SpatialTakeVis( void ) {
 	for ( int i = 0; i < count; i++ ) {
 		spatialDebugSegment_t *seg = &spatial.segments[i];
 
-		// back from Steam Audio's metres and axes, see S_SpatialPoint()
-		VectorSet( seg->from, -spatialVis[i].from.z / SPATIAL_UNIT, -spatialVis[i].from.x / SPATIAL_UNIT, spatialVis[i].from.y / SPATIAL_UNIT );
-		VectorSet( seg->to, -spatialVis[i].to.z / SPATIAL_UNIT, -spatialVis[i].to.x / SPATIAL_UNIT, spatialVis[i].to.y / SPATIAL_UNIT );
+		S_SpatialGamePoint( &spatialVis[i].from, seg->from );
+		S_SpatialGamePoint( &spatialVis[i].to, seg->to );
 		seg->kind = spatialVis[i].occluded ? 1 : 0;
 		seg->bounce = 0;
 	}
