@@ -35,6 +35,7 @@ snd_restart
 | `v_spatialShock` | 1 | how strong the thump of an explosion is: its lows, in both ears. 0: none, 2: twice as much |
 | `v_spatialRays` | 2048 | rays of a pass of the reflections, 256 to 8192. Taken at the next `snd_restart` |
 | `v_spatialSources` | 8 | how many of the loudest sounds have reflections of their own, 0 to 16. 0: all ring with the room of the listener, as before 2026-10-17 |
+| `v_spatialThreads` | 0 | threads for a pass and for a bake. 0: a pass gets a quarter of the cores (1 to 4), a bake half of them. Above 0: that many for both, at most the cores of the machine. Taken at the next `snd_restart`. Not in a browser page |
 | `v_spatialPhysical` | 0 | 1: a sound fades with the distance as a real one does (1/r) and not as the game fades it, loses its highs in the air, and arrives at the speed of sound |
 | `v_spatialBounces` | 16 | how often a ray is followed off a wall. Fewer cut the tail of a large room |
 | `s_doppler` | 1 | the doppler. With `v_spatial` it is the one of this file, see "Doppler" |
@@ -401,8 +402,17 @@ the paths of a level (and with `v_spatialEcho 1` its echo, after them) are worke
 starts inside them. The game never waits for one, except when the sound system is shut down. A level that was
 loaded is handed to the simulator in the first frame no pass runs, until then the old mixer plays.
 
-Since 2026-10-21 Steam Audio shares a pass or a bake between all cores but two (`SPATIAL_SPARE_CORES`; 22
-threads on the owner's machine), and the rays are traced by Intel's Embree where the library has it
+Since 2026-10-21 `v_spatialThreads` sets the threads of Steam Audio. With 0 (the default) a pass gets a quarter of
+the logical cores, at least 1 and at most 4 (`SPATIAL_PASS_CORES`, `SPATIAL_PASS_THREADS`), and a bake gets half of
+them (`SPATIAL_BAKE_CORES`). A number above 0 is the threads for both, at most the cores of the machine. It is read
+when the sound system starts, so a change needs a `snd_restart`. A browser page has one thread. Valve's plugins
+for Unity and Unreal give real-time work 5 % of the cores and a bake 50 %. Before, a pass and a bake were shared
+between all cores but two (22 threads on the owner's machine). A friend reported a high CPU use of the client. A
+new pass also started 50 ms (`SPATIAL_REFLECT_MSEC`) after the last one was asked for, so after a pass of 50 ms
+or more the next one came at once and on a slower CPU the threads never rested. Now a pass also waits until twice
+what the last pass took has gone by since it was asked (`SPATIAL_REFLECT_DUTY`), so the threads rest at least as
+long as they work. That is not so in a browser page, which has `v_spatialBudget`. `v_spatialInfo` prints the
+threads for a pass and for a bake. The rays are traced by Intel's Embree where the library has it
 (`IPL_SCENETYPE_EMBREE`, loaded optionally). A library without it falls back to Steam Audio's own tracer, and
 `v_spatialInfo` says which one is in use. What that took off a pass is under "Checked".
 
@@ -709,6 +719,8 @@ mp/ffa3: 740 probes, under a second, a file of 660 kB (before the probes stood a
 The same level on 2026-10-21, in silent hidden runs, with Embree and a pass spread over all cores but two (see
 "Threads"): a pass took 28 ms without Embree and 4 ms with it, and the bake of the paths 3.1 s and 2.0 s. With
 22 threads a pass of 8192 rays and 32 bounces took 8 ms.
+That was measured with the old thread count. The new count (4 threads for a pass on that machine) was not measured,
+so a pass there will take longer than the 8 ms.
 
 The code in `client/spatial` (the same day) was run twice in a silent hidden client on mp/ffa3, the sound driver
 "dummy": once with `v_spatialEcho 1`, the paths and the echo baked, `v_spatialDebug 1`, a `snd_restart` that read
