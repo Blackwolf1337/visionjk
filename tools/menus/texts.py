@@ -310,6 +310,11 @@ TR = {
     'Marked and Sound': 'Markiert mit Ton',
     'A chat line with your name is marked gold. More words with tay_notifyWords in the console.': 'Eine Chatzeile mit deinem Namen wird golden markiert. Weitere Wörter mit tay_notifyWords in der Konsole.',
     'Echoes of Their Own': 'Eigenes Echo',
+    'Echo': 'Echo',
+    'Real Time': 'Echtzeit',
+    'Precalculated': 'Vorberechnet',
+    'Real time: worked out as you go, the loudest sounds echo on their own. Precalculated: worked out once per level and kept, steady while you move, all sounds ring with the room you are in.':
+        'Echtzeit: wird beim Spielen berechnet, die lautesten Geräusche hallen für sich. Vorberechnet: einmal pro Level berechnet und gespeichert, ruhig beim Gehen, alle Geräusche hallen mit dem Raum, in dem Sie stehen.',
     'How many of the loudest sounds echo off the walls around them. More costs more time a frame.':
         'Wie viele der lautesten Geräusche von den Wänden um sie herum widerhallen. Mehr kostet mehr Zeit pro Bild.',
     'Real Sound Travel': 'Echte Schallausbreitung',

@@ -149,6 +149,7 @@ from the library when it is loaded.
 	X( iplInstancedMeshRemove ) \
 	X( iplInstancedMeshUpdateTransform ) \
 	X( iplSceneSaveOBJ ) \
+	X( iplReflectionsBakerBake ) \
 	SPATIAL_SLICE_FUNCTIONS( X )
 
 // what the library for a browser has on top of Valve's, see phonon_slices.h
@@ -360,6 +361,7 @@ enum {
 #define SPATIAL_MIN_PROBES			2
 // In the name of the file of the paths. The files before had probes in a quarter of the level only (2026-10-17).
 #define SPATIAL_PATHS_VERSION		"_v2"
+#define SPATIAL_ECHO_VERSION		"_v1"	// of the files of the echo of a level (v_spatialEcho 1)
 // A page has no thread to work the paths out next to the game. It does it while the level loads, when it stands
 // still anyway, and only for a level of up to this many probes: the work and the memory it takes grow with their
 // square. mp/ffa3 has 740 and takes 0.4 s (Ryzen 9 5900X), so this is about 3 s. A larger level has no paths
@@ -370,6 +372,12 @@ enum {
 	BAKE_NONE,
 	BAKE_RUNNING,
 	BAKE_DONE
+};
+
+// what a bake works out: the paths round the corners, or the echo of the room at the probes (v_spatialEcho)
+enum {
+	BAKE_PATHS,
+	BAKE_ECHO
 };
 
 // The voice chat of the cgame can hand the voice of a player to this file (S_SpatialVoice), so that it is in
@@ -515,6 +523,7 @@ static cvar_t	*v_spatialPhysical;
 static cvar_t	*v_spatialBudget;
 #endif
 static cvar_t	*v_spatialDebug;
+static cvar_t	*v_spatialEcho;
 
 // what v_spatialInfo says the sound of the level took of the thread of the game
 enum {
@@ -552,6 +561,7 @@ static struct {
 	IPLVector3			nextMins, nextMaxs;	// the corners of the level, for where to spread probes
 	IPLVector3			mins, maxs;
 	char				nextPathFile[MAX_QPATH], pathFile[MAX_QPATH];
+	char				nextEchoFile[MAX_QPATH], echoFile[MAX_QPATH];
 
 	// paths
 	IPLProbeBatch		probes;				// in the simulator
@@ -562,6 +572,16 @@ static struct {
 	float				probeSpacing;		// of a bake, 0: the probes came from the file
 	int					bakeMsec;			// what the bake took, 0: the probes came from the file
 	int					refusedProbes;		// not 0: the level has this many, too many to work its paths out here
+
+	// The echo of the room at the probes, worked out once per level (v_spatialEcho 1): the reverb where the
+	// listener stands is looked up there and no ray is traced
+	IPLProbeBatch		echoProbes;			// in the simulator
+	IPLProbeBatch		nextEchoProbes;		// waits to be put there
+	qboolean			echoWait;
+	qboolean			echoTried;			// the file of this level was looked for
+	qboolean			echoWanted;			//	and there was none: a bake is wanted
+	int					numEchoProbes;
+	int					echoBakeMsec;		// what the bake took, 0: from the file
 
 	// reflections
 	IPLSource					reverbSource;		// stands where the listener stands
@@ -634,6 +654,9 @@ static struct {
 	IPLContext			context;			// held by the thread for as long as it runs
 	void				*library;			// Steam Audio, kept loaded for a bake the sound system let go of
 	IPLScene			scene;				// held by the thread for as long as it runs
+	IPLSceneType		sceneType;			//	and its type
+	int					kind;				// BAKE_PATHS or BAKE_ECHO
+	int					rays, bounces;		// of the echo
 	IPLVector3			mins, maxs;
 	int					sceneNumber;		// the level it is for: by the time it is done there may be another
 	IPLProbeBatch		batch;
@@ -670,6 +693,7 @@ static struct {
 	IPLCoordinateSpace3	listener;
 	int					rays, bounces;
 	qboolean			reverb;							// the source where the listener stands
+	qboolean			echoBaked;						//	looked up at the probes (v_spatialEcho)
 	qboolean			own[SPATIAL_REFLECT_SLOTS];		// the slots that render a sound
 	IPLCoordinateSpace3	source[SPATIAL_REFLECT_SLOTS];
 	// the ways round the corners, the same: their inputs are set where iplSimulatorRunPathing() runs. The thread
@@ -1032,7 +1056,30 @@ static int SDLCALL S_SpatialBaker( void *unused ) {
 		}
 #endif
 		if ( spatialBake.batch && spatialBake.numProbes >= SPATIAL_MIN_PROBES && !spatialBakeCancel.load() ) {
-			qiplPathBakerBake( spatialBake.context, &bake, S_SpatialBakeProgress, NULL );
+			if ( spatialBake.kind == BAKE_ECHO ) {
+				// the reverb where a listener stands at each probe, as a pass of the reflections makes it
+				IPLReflectionsBakeParams echo;
+
+				memset( &echo, 0, sizeof( echo ) );
+				echo.scene = spatialBake.scene;
+				echo.probeBatch = spatialBake.batch;
+				echo.sceneType = spatialBake.sceneType;
+				echo.identifier.type = IPL_BAKEDDATATYPE_REFLECTIONS;
+				echo.identifier.variation = IPL_BAKEDDATAVARIATION_REVERB;
+				echo.bakeFlags = IPL_REFLECTIONSBAKEFLAGS_BAKECONVOLUTION;
+				echo.numRays = spatialBake.rays;
+				echo.numDiffuseSamples = SPATIAL_DIFFUSE_SAMPLES;
+				echo.numBounces = spatialBake.bounces;
+				echo.simulatedDuration = SPATIAL_REVERB_SECONDS;
+				echo.savedDuration = SPATIAL_REVERB_SECONDS;
+				echo.order = SPATIAL_REVERB_ORDER;
+				echo.numThreads = bake.numThreads;
+				echo.irradianceMinDistance = 1.0f;
+				echo.bakeBatchSize = 1;
+				qiplReflectionsBakerBake( spatialBake.context, &echo, S_SpatialBakeProgress, NULL );
+			} else {
+				qiplPathBakerBake( spatialBake.context, &bake, S_SpatialBakeProgress, NULL );
+			}
 		}
 		// stopped: see spatialBakeCancel
 		if ( spatialBake.batch && spatialBakeCancel.load() ) {
@@ -1136,6 +1183,46 @@ static qboolean S_SpatialLoadPaths( void ) {
 	return loaded;
 }
 
+// the echo of this level from its file, if it has one. qtrue also for the file of a level without probes.
+static qboolean S_SpatialLoadEcho( void ) {
+	IPLSerializedObjectSettings serialized;
+	IPLSerializedObject object = NULL;
+	void *data = NULL;
+	const int size = FS_ReadFile( spatial.echoFile, &data );
+	qboolean loaded = qfalse;
+
+	if ( size <= 0 || !data ) {
+		return qfalse;
+	}
+	memset( &serialized, 0, sizeof( serialized ) );
+	serialized.data = (IPLbyte *)data;
+	serialized.size = (IPLsize)size;
+	if ( qiplSerializedObjectCreate( spatial.context, &serialized, &object ) == IPL_STATUS_SUCCESS ) {
+		if ( qiplProbeBatchLoad( spatial.context, object, &spatial.nextEchoProbes ) == IPL_STATUS_SUCCESS ) {
+			loaded = qtrue;
+			spatial.echoBakeMsec = 0;
+			if ( qiplProbeBatchGetNumProbes( spatial.nextEchoProbes ) >= SPATIAL_MIN_PROBES ) {
+				qiplProbeBatchCommit( spatial.nextEchoProbes );
+				spatial.numEchoProbes = qiplProbeBatchGetNumProbes( spatial.nextEchoProbes );
+				spatial.echoWait = qtrue;
+			} else {
+				qiplProbeBatchRelease( &spatial.nextEchoProbes );
+				spatial.nextEchoProbes = NULL;
+			}
+		} else {
+			spatial.nextEchoProbes = NULL;
+		}
+		qiplSerializedObjectRelease( &object );
+	}
+	FS_FreeFile( data );
+	return loaded;
+}
+
+// the echo of the level is looked up at the probes, and no ray is traced for it (v_spatialEcho 1)
+static qboolean S_SpatialEchoBaked( void ) {
+	return (qboolean)( v_spatialEcho->integer && spatial.echoProbes );
+}
+
 /*
 ===============
 S_SpatialThinkPaths
@@ -1147,7 +1234,21 @@ ready to the simulator when no pass of the reflections runs. Nothing in here wai
 static void S_SpatialThinkPaths( void ) {
 	if ( S_SpatialReapBake() ) {
 		// (a bake of a sound system before this one has a number of its own: spatialBakeCancel)
-		if ( !spatialBakeCancel.load() && spatialBake.sceneNumber == spatial.sceneNumber && spatialBake.batch && spatialBake.saved && !spatial.sceneWaits ) {
+		if ( spatialBake.kind == BAKE_ECHO ) {
+			if ( !spatialBakeCancel.load() && spatialBake.sceneNumber == spatial.sceneNumber && spatialBake.batch && spatialBake.saved && !spatial.sceneWaits ) {
+				// (also the file of a level without probes, so that its next load does not work it out again)
+				FS_WriteFile( spatial.echoFile, qiplSerializedObjectGetData( spatialBake.saved ), (int)qiplSerializedObjectGetSize( spatialBake.saved ) );
+				if ( spatialBake.numProbes >= SPATIAL_MIN_PROBES ) {
+					spatial.nextEchoProbes = spatialBake.batch;
+					spatial.numEchoProbes = spatialBake.numProbes;
+					spatial.echoBakeMsec = Q_max( 1, spatialBake.msec );
+					spatial.echoWait = qtrue;
+					spatialBake.batch = NULL;
+					Com_Printf( "v_spatial: the echo of this level is worked out, %i probes in %.1f s, kept in %s\n",
+						spatial.numEchoProbes, spatial.echoBakeMsec * 0.001f, spatial.echoFile );
+				}
+			}
+		} else if ( !spatialBakeCancel.load() && spatialBake.sceneNumber == spatial.sceneNumber && spatialBake.batch && spatialBake.saved && !spatial.sceneWaits ) {
 			// (also the file of a level without paths, so that its next load does not look for them again)
 			FS_WriteFile( spatial.pathFile, qiplSerializedObjectGetData( spatialBake.saved ), (int)qiplSerializedObjectGetSize( spatialBake.saved ) );
 			if ( spatialBake.numProbes >= SPATIAL_MIN_PROBES ) {
@@ -1175,6 +1276,7 @@ static void S_SpatialThinkPaths( void ) {
 
 	if ( spatial.bakeWanted && spatialBakeState.load() == BAKE_NONE && spatial.level.scene && !spatial.sceneWaits && v_spatialPaths->integer ) {
 		spatial.bakeWanted = qfalse;
+		spatialBake.kind = BAKE_PATHS;
 		spatialBake.scene = qiplSceneRetain( spatial.level.scene );
 		spatialBake.context = qiplContextRetain( spatial.context );
 		spatialBake.mins = spatial.mins;
@@ -1198,12 +1300,52 @@ static void S_SpatialThinkPaths( void ) {
 #endif
 	}
 
+#ifndef __EMSCRIPTEN__
+	// The echo of the level, when it is wanted: from its file, or worked out in the background after the paths
+	if ( v_spatialEcho->integer && !spatial.echoTried && spatial.level.scene && !spatial.sceneWaits ) {
+		spatial.echoTried = qtrue;
+		if ( !S_SpatialLoadEcho() ) {
+			spatial.echoWanted = qtrue;
+		}
+	}
+	if ( spatial.echoWanted && v_spatialEcho->integer && !spatial.bakeWanted && spatialBakeState.load() == BAKE_NONE && spatial.level.scene && !spatial.sceneWaits ) {
+		spatial.echoWanted = qfalse;
+		spatialBake.kind = BAKE_ECHO;
+		spatialBake.scene = qiplSceneRetain( spatial.level.scene );
+		spatialBake.sceneType = spatial.sceneType;
+		spatialBake.rays = Com_Clampi( 256, SPATIAL_MAX_RAYS, v_spatialRays->integer );
+		spatialBake.bounces = Com_Clampi( 1, 64, v_spatialBounces->integer );
+		spatialBake.context = qiplContextRetain( spatial.context );
+		spatialBake.mins = spatial.mins;
+		spatialBake.maxs = spatial.maxs;
+		spatialBake.sceneNumber = spatial.sceneNumber;
+		spatialBakeProgress.store( 0 );
+		spatialBakeCancel.store( 0 );
+		spatialBakeState.store( BAKE_RUNNING );
+		spatialBake.thread = SDL_CreateThread( S_SpatialBaker, "s_spatialEcho", NULL );
+		if ( !spatialBake.thread ) {
+			qiplSceneRelease( &spatialBake.scene );
+			qiplContextRelease( &spatialBake.context );
+			spatialBakeState.store( BAKE_NONE );
+		} else {
+			Com_Printf( "v_spatial: working out the echo of this level in the background, until then it is worked out as you go\n" );
+		}
+	}
+#endif
+
 	if ( spatial.probesWait && !spatial.sceneWaits && spatialWorkerState.load() == WORKER_IDLE ) {
 		qiplSimulatorAddProbeBatch( spatial.simulator, spatial.nextProbes );
 		qiplSimulatorCommit( spatial.simulator );
 		spatial.probes = spatial.nextProbes;
 		spatial.nextProbes = NULL;
 		spatial.probesWait = qfalse;
+	}
+	if ( spatial.echoWait && !spatial.sceneWaits && spatialWorkerState.load() == WORKER_IDLE ) {
+		qiplSimulatorAddProbeBatch( spatial.simulator, spatial.nextEchoProbes );
+		qiplSimulatorCommit( spatial.simulator );
+		spatial.echoProbes = spatial.nextEchoProbes;
+		spatial.nextEchoProbes = NULL;
+		spatial.echoWait = qfalse;
 	}
 }
 
@@ -1233,6 +1375,16 @@ static void S_SpatialTakeScene( void ) {
 	}
 	spatial.probesWait = qfalse;
 	spatial.numProbes = 0;
+	if ( spatial.echoProbes ) {
+		qiplSimulatorRemoveProbeBatch( spatial.simulator, spatial.echoProbes );
+		qiplSimulatorCommit( spatial.simulator );
+		qiplProbeBatchRelease( &spatial.echoProbes );
+	}
+	if ( spatial.nextEchoProbes ) {
+		qiplProbeBatchRelease( &spatial.nextEchoProbes );
+	}
+	spatial.echoWait = spatial.echoTried = spatial.echoWanted = qfalse;
+	spatial.numEchoProbes = 0;
 	if ( spatialBakeState.load() == BAKE_RUNNING ) {
 		S_SpatialCancelBake();
 	}
@@ -1244,6 +1396,7 @@ static void S_SpatialTakeScene( void ) {
 	spatial.mins = spatial.nextMins;
 	spatial.maxs = spatial.nextMaxs;
 	Q_strncpyz( spatial.pathFile, spatial.nextPathFile, sizeof( spatial.pathFile ) );
+	Q_strncpyz( spatial.echoFile, spatial.nextEchoFile, sizeof( spatial.echoFile ) );
 	spatial.nextTriangles = 0;
 	spatial.sceneWaits = qfalse;
 	spatial.sceneNumber++;
@@ -1427,6 +1580,7 @@ void S_SpatialLoadMap( const char *mapname ) {
 		Q_strncpyz( path, mapname, sizeof( path ) );
 		COM_StripExtension( COM_SkipPath( path ), name, sizeof( name ) );
 		Com_sprintf( spatial.nextPathFile, sizeof( spatial.nextPathFile ), "steamaudio/%s_%08x" SPATIAL_PATHS_VERSION ".paths", name, checksum );
+		Com_sprintf( spatial.nextEchoFile, sizeof( spatial.nextEchoFile ), "steamaudio/%s_%08x" SPATIAL_ECHO_VERSION ".echo", name, checksum );
 	}
 
 	// the scene of the simulator: the world, and the brush models
@@ -1915,7 +2069,8 @@ static qboolean S_SpatialWantsReflect( const spatialVoice_t *v ) {
 }
 
 static void S_SpatialChooseReflects( void ) {
-	const int want = v_spatialReflections->integer ? Com_Clampi( 0, spatial.numReflectSlots, v_spatialSources->integer ) : 0;
+	// with the echo of the level from the probes all sounds ring with the room of the listener (v_spatialEcho)
+	const int want = ( v_spatialReflections->integer && !S_SpatialEchoBaked() ) ? Com_Clampi( 0, spatial.numReflectSlots, v_spatialSources->integer ) : 0;
 	const int now = Sys_Milliseconds();
 	qboolean chosen[SPATIAL_VOICES];
 	int count = 0;
@@ -2376,6 +2531,12 @@ static void S_SpatialPassInputs( void ) {
 		inputs.flags = IPL_SIMULATIONFLAGS_REFLECTIONS;
 		inputs.source = spatialPass.listener;
 		inputs.reverbScale[0] = inputs.reverbScale[1] = inputs.reverbScale[2] = 1.0f;
+		// the echo where the listener stands from the probes around him: no ray, nothing that begins anew
+		if ( spatialPass.echoBaked ) {
+			inputs.baked = IPL_TRUE;
+			inputs.bakedDataIdentifier.type = IPL_BAKEDDATATYPE_REFLECTIONS;
+			inputs.bakedDataIdentifier.variation = IPL_BAKEDDATAVARIATION_REVERB;
+		}
 	}
 	qiplSourceSetInputs( spatial.reverbSource, IPL_SIMULATIONFLAGS_REFLECTIONS, &inputs );
 
@@ -2473,6 +2634,7 @@ static void S_SpatialFillPass( void ) {
 	spatialPass.rays = S_SpatialRays();
 	spatialPass.bounces = Com_Clampi( 1, 64, v_spatialBounces->integer );
 	spatialPass.reverb = v_spatialReflections->integer ? qtrue : qfalse;
+	spatialPass.echoBaked = S_SpatialEchoBaked();
 	for ( int i = 0; i < spatial.numReflectSlots; i++ ) {
 		spatialReflect_t *r = &spatial.reflects[i];
 		const spatialVoice_t *v = r->voice;
@@ -3204,7 +3366,7 @@ static void S_SpatialInfo_f( void ) {
 	}
 	if ( !v_spatialPaths->integer ) {
 		Com_Printf( "paths: off (v_spatialPaths 0)\n" );
-	} else if ( spatialBakeState.load() == BAKE_RUNNING && spatialBake.sceneNumber == spatial.sceneNumber ) {
+	} else if ( spatialBakeState.load() == BAKE_RUNNING && spatialBake.kind == BAKE_PATHS && spatialBake.sceneNumber == spatial.sceneNumber ) {
 		Com_Printf( "paths: being worked out for this level, %i %%\n", spatialBakeProgress.load() );
 	} else if ( spatial.probes ) {
 		if ( spatial.bakeMsec ) {
@@ -3217,6 +3379,19 @@ static void S_SpatialInfo_f( void ) {
 		Com_Printf( "paths: none, the level has %i probes and a page works them out for up to %i\n", spatial.refusedProbes, SPATIAL_PAGE_PROBES );
 	} else {
 		Com_Printf( "paths: none yet\n" );
+	}
+	if ( !v_spatialEcho->integer ) {
+		Com_Printf( "echo: worked out as you go (v_spatialEcho 0)\n" );
+	} else if ( S_SpatialEchoBaked() ) {
+		if ( spatial.echoBakeMsec ) {
+			Com_Printf( "echo: looked up at %i probes, worked out in %.1f s, kept in %s\n", spatial.numEchoProbes, spatial.echoBakeMsec * 0.001f, spatial.echoFile );
+		} else {
+			Com_Printf( "echo: looked up at %i probes from %s\n", spatial.numEchoProbes, spatial.echoFile );
+		}
+	} else if ( spatialBakeState.load() == BAKE_RUNNING && spatialBake.kind == BAKE_ECHO && spatialBake.sceneNumber == spatial.sceneNumber ) {
+		Com_Printf( "echo: being worked out for this level, %i %%, until then as you go\n", spatialBakeProgress.load() );
+	} else {
+		Com_Printf( "echo: none for this level yet, worked out as you go\n" );
 	}
 	Com_Printf( "listener at %.0f %.0f %.0f\n", spatial.listenerOrigin[0], spatial.listenerOrigin[1], spatial.listenerOrigin[2] );
 	for ( int i = 0; i < SPATIAL_VOICES; i++ ) {
@@ -3273,6 +3448,9 @@ static void S_SpatialRelease( void ) {
 			if ( spatial.probes ) {
 				qiplSimulatorRemoveProbeBatch( spatial.simulator, spatial.probes );
 			}
+			if ( spatial.echoProbes ) {
+				qiplSimulatorRemoveProbeBatch( spatial.simulator, spatial.echoProbes );
+			}
 			qiplSimulatorSetScene( spatial.simulator, NULL );
 			qiplSimulatorCommit( spatial.simulator );
 		}
@@ -3281,6 +3459,12 @@ static void S_SpatialRelease( void ) {
 		}
 		if ( spatial.nextProbes ) {
 			qiplProbeBatchRelease( &spatial.nextProbes );
+		}
+		if ( spatial.echoProbes ) {
+			qiplProbeBatchRelease( &spatial.echoProbes );
+		}
+		if ( spatial.nextEchoProbes ) {
+			qiplProbeBatchRelease( &spatial.nextEchoProbes );
 		}
 		S_SpatialReleaseLevel( &spatial.level );
 		S_SpatialReleaseLevel( &spatial.nextLevel );
@@ -3485,6 +3669,7 @@ void S_SpatialInit( void ) {
 	v_spatialSources = Cvar_Get( "v_spatialSources", "8", CVAR_ARCHIVE, "v_spatial: how many of the loudest sounds have reflections of their own, 0 to 16. The others ring with the room of the listener" );
 	v_spatialPhysical = Cvar_Get( "v_spatialPhysical", "0", CVAR_ARCHIVE, "v_spatial: 1 sounds fade with the distance as real ones do and not as the game fades them, lose their highs in the air, and arrive at the speed of sound" );
 	v_spatialShock = Cvar_Get( "v_spatialShock", "1", CVAR_ARCHIVE, "v_spatial: how strong the thump of an explosion is, its lows in both ears. 0 none" );
+	v_spatialEcho = Cvar_Get( "v_spatialEcho", "0", CVAR_ARCHIVE, "v_spatial: 0 the echo is worked out as you go, with the own echoes of the loudest sounds. 1 it is worked out once per level and kept in a file, and looked up where you stand: it does not flutter while you move, all sounds ring with the room you are in" );
 	v_spatialDebug = Cvar_Get( "v_spatialDebug", "0", CVAR_NONE, "v_spatial: shows in the level what becomes of the sounds. 1 all, or the sum of 2 the sounds, 4 the ways round corners, 8 rays off the walls, 16 the numbers and the wall under the crosshair" );
 	Cmd_AddCommand( "v_spatialInfo", S_SpatialInfo_f, "What v_spatial is doing" );
 	Cmd_AddCommand( "v_spatialSaveScene", S_SpatialSaveScene_f, "v_spatial: the walls Steam Audio has, with the brush models where they are, into steamaudio/scene.obj" );
@@ -4105,6 +4290,17 @@ void S_SpatialDebug( spatialDebug_t *out, const vec3_t eye, const vec3_t forward
 		out->brushesIn += spatial.level.brushes[i].added ? 1 : 0;
 	}
 	out->brushesMoved = spatial.brushesMoved;
+	if ( !v_spatialEcho->integer ) {
+		out->echo = SPATIAL_DEBUG_ECHO_LIVE;
+	} else if ( S_SpatialEchoBaked() ) {
+		out->echo = SPATIAL_DEBUG_ECHO_STORED;
+		out->echoProbes = spatial.numEchoProbes;
+	} else if ( spatialBakeState.load() == BAKE_RUNNING && spatialBake.kind == BAKE_ECHO ) {
+		out->echo = SPATIAL_DEBUG_ECHO_BAKING;
+		out->echoProgress = spatialBakeProgress.load();
+	} else {
+		out->echo = SPATIAL_DEBUG_ECHO_NONE;
+	}
 
 	spatial.directLevel = S_SpatialDebugLevel( spatial.directEnergy, spatial.energySamples, spatial.directLevel );
 	spatial.reverbLevel = S_SpatialDebugLevel( spatial.reverbEnergy, spatial.energySamples, spatial.reverbLevel );

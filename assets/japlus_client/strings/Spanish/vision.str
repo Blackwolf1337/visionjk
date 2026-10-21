@@ -309,6 +309,22 @@ REFERENCE           THE_ROOM_AROUND_YOU_RINGS
 LANG_ENGLISH        "The room around you rings."
 LANG_SPANISH        "La sala a tu alrededor resuena."
 
+REFERENCE           ECHO
+LANG_ENGLISH        "Echo"
+LANG_SPANISH        "Eco"
+
+REFERENCE           REAL_TIME_WORKED_OUT_AS_YOU_GO_THE_L
+LANG_ENGLISH        "Real time: worked out as you go, the loudest sounds echo on their own. Precalculated: worked out once per level and kept, steady while you move, all sounds ring with the room you are in."
+LANG_SPANISH        "Tiempo real: se calcula mientras juegas, los sonidos más fuertes tienen su propio eco. Precalculado: se calcula una vez por nivel y se guarda, estable al moverte, todos los sonidos resuenan con la sala en la que estás."
+
+REFERENCE           REAL_TIME
+LANG_ENGLISH        "Real Time"
+LANG_SPANISH        "Tiempo real"
+
+REFERENCE           PRECALCULATED
+LANG_ENGLISH        "Precalculated"
+LANG_SPANISH        "Precalculado"
+
 REFERENCE           ECHOES_OF_THEIR_OWN
 LANG_ENGLISH        "Echoes of Their Own"
 LANG_SPANISH        "Ecos propios"

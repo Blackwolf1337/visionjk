@@ -235,13 +235,22 @@ static void SD_Panel( void ) {
 	y += SD_LINE;
 	SD_Text( x, y, va( "pass: %i rays, %i bounces, %.1f ms, %i passes", sd.passRays, sd.passBounces, sd.passMsec, sd.passes ), white );
 	y += SD_LINE;
-	// Steam Audio adds the passes up while the listener stands: a few of them are noisy, many settle
-	if ( sd.settledPasses < 4 ) {
-		SD_Text( x, y, "echo: starting over (the listener moved)", yellow );
+	if ( sd.echo == SPATIAL_DEBUG_ECHO_STORED ) {
+		SD_Text( x, y, va( "echo: precalculated, looked up at %i probes", sd.echoProbes ), white );
+	} else if ( sd.settledPasses < 4 ) {
+		// Steam Audio adds the passes up while the listener stands: a few of them are noisy, many settle
+		SD_Text( x, y, "echo: live, starting over (the listener moved)", yellow );
 	} else {
-		SD_Text( x, y, va( "echo: settled over %i passes", sd.settledPasses ), white );
+		SD_Text( x, y, va( "echo: live, settled over %i passes", sd.settledPasses ), white );
 	}
 	y += SD_LINE;
+	if ( sd.echo == SPATIAL_DEBUG_ECHO_BAKING ) {
+		SD_Text( x, y, va( "  precalculated echo being worked out: %i %%", sd.echoProgress ), yellow );
+		y += SD_LINE;
+	} else if ( sd.echo == SPATIAL_DEBUG_ECHO_NONE ) {
+		SD_Text( x, y, "  no precalculated echo for this level", yellow );
+		y += SD_LINE;
+	}
 	SD_Text( x, y, va( "voices %i/%i, own echoes %i/%i", sd.voices, sd.maxVoices, sd.reflects, sd.reflectSlots ), white );
 	y += SD_LINE;
 	SD_Text( x, y, va( "doors and other brush models: %i in the scene of %i, %i moved", sd.brushesIn, sd.brushes, sd.brushesMoved ),

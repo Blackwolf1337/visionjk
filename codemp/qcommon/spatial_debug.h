@@ -36,6 +36,12 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define SPATIAL_DEBUG_REFLECTIONS	8		// rays from the listener that bounce off the walls as off a mirror
 #define SPATIAL_DEBUG_PANEL			16		// the numbers, and the wall under the crosshair
 
+// spatialDebug_t.echo
+#define SPATIAL_DEBUG_ECHO_LIVE		0		// worked out as the listener goes (v_spatialEcho 0)
+#define SPATIAL_DEBUG_ECHO_STORED	1		// looked up at the probes of the level
+#define SPATIAL_DEBUG_ECHO_BAKING	2		//	which are being worked out, live until then
+#define SPATIAL_DEBUG_ECHO_NONE		3		//	which the level does not have, live
+
 // spatialDebugSound_t.flags
 #define SPATIAL_DEBUG_OWN			1		// it has reflections of its own (v_spatialSources)
 #define SPATIAL_DEBUG_STREAM		2		// a voice of the voice chat or a box of the boombox
@@ -105,6 +111,10 @@ typedef struct spatialDebug_s {
 	int						brushes;			// brush models with walls (doors, lifts ...)
 	int						brushesIn;			//	of them in the scene now (not gone)
 	int						brushesMoved;		//	of them changed in the scene this frame
+
+	int						echo;				// SPATIAL_DEBUG_ECHO_*, v_spatialEcho
+	int						echoProbes;			// ECHO_STORED: at how many probes
+	int						echoProgress;		// ECHO_BAKING: percent
 
 	int						numSounds;
 	spatialDebugSound_t		sounds[SPATIAL_DEBUG_SOUNDS];

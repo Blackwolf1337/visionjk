@@ -249,6 +249,12 @@ MORE = {
     'A chat line with your name is marked gold. More words with tay_notifyWords in the console.': ("Une ligne du chat avec votre nom est marquée en doré. D'autres mots avec tay_notifyWords dans la console.", 'Una línea del chat con tu nombre se marca en dorado. Más palabras con tay_notifyWords en la consola.'),
     'What comes closer or goes away changes its pitch.': ("Ce qui s'approche ou s'éloigne change de hauteur.", 'Lo que se acerca o se aleja cambia de tono.'),
     'Echoes of Their Own': ('Échos propres', 'Ecos propios'),
+    'Echo': ('Écho', 'Eco'),
+    'Real Time': ('Temps réel', 'Tiempo real'),
+    'Precalculated': ('Précalculé', 'Precalculado'),
+    'Real time: worked out as you go, the loudest sounds echo on their own. Precalculated: worked out once per level and kept, steady while you move, all sounds ring with the room you are in.':
+        ("Temps réel : calculé pendant le jeu, les sons les plus forts ont leur propre écho. Précalculé : calculé une fois par niveau et gardé, stable pendant les déplacements, tous les sons résonnent avec la pièce où vous êtes.",
+         'Tiempo real: se calcula mientras juegas, los sonidos más fuertes tienen su propio eco. Precalculado: se calcula una vez por nivel y se guarda, estable al moverte, todos los sonidos resuenan con la sala en la que estás.'),
     'How many of the loudest sounds echo off the walls around them. More costs more time a frame.':
         ("Combien des sons les plus forts résonnent sur les murs autour d'eux. Plus coûte plus de temps par image.",
          'Cuántos de los sonidos más fuertes resuenan en las paredes a su alrededor. Más cuesta más tiempo por fotograma.'),
