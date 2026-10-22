@@ -285,6 +285,16 @@ the rope. It lets go with use, as a bot counts as a client with the JA+ plugin
 and would hang on the rope otherwise. The hook is not used in the alternate dimension of JA+, it does not work
 there.
 
+The hook of the short pull and of the long pull does not go into the player, as the player's saber hits a bot that
+is pulled into his body. It goes into the floor at his feet, 76 units in front of him (at most half the distance
+between them) and up to 40 units to a side (random per attack), as the player hooks the floor short of the bot. The
+hook goes out where the bot looks, so the bot already looks at that point while it is in the air on the way: in the
+hop, the short pull, the flip back after a kick and the long pull.
+
+After a missed kick (its press found nobody and it no longer rises fast) the bot does what the player does: it hooks
+the floor 186 units off, 60 to 150 degrees off the line to the player (to a side or behind), as soon as it looks
+there (it turns for at most 250 ms), holds the hook 200 ms, lets go and comes at the player again from there.
+
 It grabs with melee (needs `g_debugMelee`), flip kicks (needs `jp_allowflipkick`), or swings from above in the red
 style. The forward kick starts on the ground when the player will be 28 to 70 units off (flat) at the press, 150 ms
 later (see Prediction), and about the same height (32 units). For a player who stands still the old rule stays: a

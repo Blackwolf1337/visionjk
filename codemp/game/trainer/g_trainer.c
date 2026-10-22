@@ -66,6 +66,12 @@ the TRAINER_TRY_MSEC after it began, the scores are kept as a moving average, an
 with a bonus for the ones tried less and some chance by level. "vs_trainer info" shows the scores. They are gone
 with the map.
 
+A fourth recorded fight (7.5 minutes, the bot dealt 131 a minute and took 160, it won 9 of 20 kills) showed where
+the player puts his hook: 279 of 295 times into the floor, median 76 units short of the bot at its feet and a little
+to a side, looking 42 degrees down, the bot hooked into his body and was pulled into his saber. After 79 of 117
+missed kicks he hooked the floor at once (median 100 ms later), 186 units off, behind him or to a side as often as
+past the bot, held it 200 ms and was 115 units off again for the next kick. The bot does both now.
+
 Owner and level are a userinfo key of the bot ("vs_trainer" "<owner> <level>"), so a bot that stays over a map
 change is a trainer again. It leaves when its player leaves or sends it away.
 
@@ -101,6 +107,12 @@ qboolean BG_InKnockDownOnGround( playerState_t *ps );
 #define TRAINER_YANK_RISE		250.0f	// and not rising fast any more
 #define TRAINER_YANK_LEAD		0.12f	// sec: let go where the speed of the pull would bring it in this time
 #define TRAINER_CHAIN_WAIT		100		// msec after a kick before the hook pulls it in again
+#define TRAINER_HOOK_SHORT		76.0f	// the hook goes into the floor this far in front of the player, at his feet
+#define TRAINER_HOOK_SIDE		40.0f	// and up to this far to a side
+#define TRAINER_ESCAPE_LEN		186.0f	// after a missed kick a hook into the floor this far off (the player: 106 to 318)
+#define TRAINER_ESCAPE_HOLD		200		// msec on it (the player: 150 to 200)
+#define TRAINER_ESCAPE_AIM		10.0f	// degrees off at most when that hook goes out
+#define TRAINER_ESCAPE_WAIT		250		// msec it may take to turn there
 #define TRAINER_HOP_RANGE		230.0f	// jumps here to hook from the air
 #define TRAINER_ATTACK_RANGE	260.0f	// runs in for a kick or a swing from here
 #define TRAINER_TAKEOFF			55.0f	// the kick jump from the ground, flat distance, and
@@ -192,7 +204,8 @@ typedef enum {
 	KS_HOLD,		// the kick jump, held
 	KS_GAP,			// let go
 	KS_PRESS,		// pressed again: the kick
-	KS_FLIP			// kicked, flips back
+	KS_FLIP,		// kicked, flips back
+	KS_ESCAPE		// missed: a hook into the floor away from him, to come again from there
 } trainerKickStep_t;
 
 typedef enum {
@@ -219,7 +232,9 @@ typedef struct {
 	int				stateTime;	// level.time the state began
 	int				step;		// within the state
 	int				stepTime;
-	int				hookedTime;	// level.time the hook of KS_YANK got hold, 0 before
+	int				hookedTime;	// level.time the hook of KS_YANK got hold (KS_ESCAPE: went out), 0 before
+	float			hookSide;	// how far to a side of the line to him its hook goes into the floor
+	vec3_t			escapePoint;	// KS_ESCAPE: where that hook goes
 	int				chain;		// kicks one after another in this TS_KICK
 	int				side;		// TS_SIDEKICK: 1 the player is to the left, -1 to the right
 	int				nextAttack;
@@ -307,6 +322,7 @@ static void Trainer_SetState( trainer_t *t, trainerState_t state ) {
 		t->step = 0;
 		t->stepTime = level.time;
 		t->chain = 0;
+		t->hookSide = Q_flrand( -TRAINER_HOOK_SIDE, TRAINER_HOOK_SIDE );
 	}
 }
 
@@ -371,6 +387,67 @@ static float Trainer_FlatIn( const gentity_t *self, const gentity_t *enemy, floa
 	return Trainer_FlatTo( a, b, above );
 }
 
+// the floor under a point, at most 256 units down; qfalse over a pit
+static qboolean Trainer_Floor( const vec3_t from, int skip, vec3_t out ) {
+	vec3_t	down;
+	trace_t	tr;
+
+	VectorCopy( from, down );
+	down[2] -= 256.0f;
+	trap->Trace( &tr, from, NULL, NULL, down, skip, MASK_SOLID, qfalse, 0, 0 );
+	if ( tr.startsolid || tr.fraction >= 1.0f )
+		return qfalse;
+	VectorCopy( tr.endpos, out );
+	return qtrue;
+}
+
+// where its hook goes: the floor short of the player and a little to a side, as the recorded player hooked. A hook
+// into his body pulls it into his saber.
+static void Trainer_HookPoint( const trainer_t *t, const gentity_t *self, const gentity_t *enemy, vec3_t out ) {
+	const float	*e = enemy->client->ps.origin;
+	vec3_t		dir, side, from;
+	float		flat;
+
+	VectorSubtract( self->client->ps.origin, e, dir );
+	dir[2] = 0.0f;
+	flat = VectorNormalize( dir );
+	VectorSet( side, -dir[1], dir[0], 0.0f );
+	VectorMA( e, Q_min( TRAINER_HOOK_SHORT, flat * 0.5f ), dir, from );
+	VectorMA( from, t->hookSide, side, from );
+	if ( !Trainer_Floor( from, self->s.number, out ) ) {
+		VectorCopy( from, out );
+		out[2] = e[2] + enemy->r.mins[2];
+	}
+}
+
+// after a missed kick: a floor 186 units off, 60 to 150 degrees off the line to him, to a side or behind
+static qboolean Trainer_EscapePoint( trainer_t *t, const gentity_t *self, const gentity_t *enemy ) {
+	vec3_t	toHim, angles, dir, from;
+	int		i;
+
+	VectorSubtract( enemy->client->ps.origin, self->client->ps.origin, toHim );
+	vectoangles( toHim, angles );
+	for ( i = 0; i < 4; i++ ) {
+		const vec3_t a = { 0.0f, angles[YAW] + ( Q_irand( 0, 1 ) ? 1.0f : -1.0f ) * Q_flrand( 60.0f, 150.0f ), 0.0f };
+
+		AngleVectors( a, dir, NULL, NULL );
+		VectorMA( self->client->ps.origin, TRAINER_ESCAPE_LEN, dir, from );
+		if ( Trainer_Floor( from, self->s.number, t->escapePoint ) )
+			return qtrue;
+	}
+	return qfalse;
+}
+
+// it looks at the floor point of its hook: the hook goes out where it looks, so already on the way to it
+static qboolean Trainer_HookAim( const trainer_t *t, const playerState_t *ps ) {
+	if ( t->state == TS_HOOK )
+		return qtrue;
+	if ( t->state != TS_KICK || t->noHop )
+		return qfalse;
+	return (qboolean)( t->step == KS_HOP || t->step == KS_YANK || t->step == KS_FLIP
+		|| (t->step == KS_RUN && ps->groundEntityNum == ENTITYNUM_NONE) );
+}
+
 static trainerThreat_t Trainer_Threat( const gentity_t *self, const gentity_t *enemy, float dist ) {
 	const playerState_t *ps = &enemy->client->ps;
 	vec3_t toSelf;
@@ -401,10 +478,13 @@ static qboolean Trainer_Notice( trainerSign_t *s, int sign, int chance, int dela
 
 // turns the view at most maxTurn degrees toward target, turned yawOffset degrees further (NULL: keeps it), and
 // puts it into the command. Returns how many degrees the yaw is still off.
-static float Trainer_Aim( bot_state_t *bs, const vec3_t target, float yawOffset, float maxTurn, usercmd_t *cmd ) {
+static float Trainer_Aim( bot_state_t *bs, const vec3_t target, float yawOffset, float maxTurn, float *off, usercmd_t *cmd ) {
 	vec3_t	dir, want;
 	float	left = 0.0f;
 	int		i;
+
+	if ( off )
+		*off = 0.0f;
 
 	if ( target ) {
 		VectorSubtract( target, bs->eye, dir );
@@ -419,6 +499,8 @@ static float Trainer_Aim( bot_state_t *bs, const vec3_t target, float yawOffset,
 			view = AngleMod( view + Com_Clamp( -maxTurn, maxTurn, AngleSubtract( want[i], view ) ) );
 			if ( i == YAW )
 				left = AngleSubtract( want[i], view );
+			if ( off && i != ROLL )
+				*off = Q_max( *off, fabsf( AngleSubtract( want[i], view ) ) );
 		}
 		bs->viewangles[i] = AngleMod( view - delta );
 		cmd->angles[i] = ANGLE2SHORT( view ) - bs->cur_ps.delta_angles[i];
@@ -687,7 +769,7 @@ static qboolean Trainer_TakeOff( const gentity_t *self, const gentity_t *enemy, 
 		&& VectorLengthSquared( enemy->client->ps.velocity ) < 100.0f * 100.0f );
 }
 
-static void Trainer_Kick( trainer_t *t, const gentity_t *self, const gentity_t *enemy, float dist, usercmd_t *cmd ) {
+static void Trainer_Kick( trainer_t *t, const gentity_t *self, const gentity_t *enemy, float dist, float aimOff, usercmd_t *cmd ) {
 	const playerState_t *ps = &self->client->ps;
 	const qboolean onGround = ps->groundEntityNum != ENTITYNUM_NONE;
 	const int msec = level.time - t->stepTime;
@@ -756,8 +838,13 @@ static void Trainer_Kick( trainer_t *t, const gentity_t *self, const gentity_t *
 			t->chain++;
 			Trainer_Step( t, KS_FLIP );
 		}
-		else if ( onGround || ps->velocity[2] <= 200.0f )
-			Trainer_Step( t, KS_RUN );		// too late in the jump, again from the ground
+		else if ( onGround || ps->velocity[2] <= 200.0f ) {
+			// missed: the recorded player hooked the floor away from him at once
+			if ( !onGround && Trainer_CanHook( self ) && Trainer_EscapePoint( t, self, enemy ) )
+				Trainer_Step( t, KS_ESCAPE );
+			else
+				Trainer_Step( t, KS_RUN );
+		}
 		else
 			Trainer_Step( t, KS_GAP );		// out of reach yet: let go and press again
 		break;
@@ -771,6 +858,29 @@ static void Trainer_Kick( trainer_t *t, const gentity_t *self, const gentity_t *
 		}
 		else if ( onGround )
 			Trainer_Done( t );
+		break;
+	case KS_ESCAPE:
+		// the hook goes out once it looks at the escape point (Trainer_Think aims there), is held, and let go
+		// (Trainer_LetGo); from where it lands it comes again
+		cmd->forwardmove = 0;
+		if ( !t->hookedTime ) {
+			if ( aimOff <= TRAINER_ESCAPE_AIM || msec >= TRAINER_ESCAPE_WAIT ) {
+				if ( Trainer_CanHook( self ) ) {
+					t->hookedTime = level.time;
+					cmd->buttons |= BUTTON_HOOK;
+				}
+				else
+					Trainer_Step( t, KS_RUN );
+			}
+			else if ( onGround )
+				Trainer_Step( t, KS_RUN );
+		}
+		else if ( level.time - t->hookedTime < TRAINER_ESCAPE_HOLD && self->client->hook )
+			cmd->buttons |= BUTTON_HOOK;
+		else {
+			t->stateTime = level.time;
+			Trainer_Step( t, KS_RUN );
+		}
 		break;
 	default:
 		Trainer_Step( t, KS_RUN );
@@ -869,7 +979,7 @@ static void Trainer_Think( trainer_t *t, bot_state_t *bs, int time, int elapsed 
 	playerState_t			*ps;
 	usercmd_t				*cmd = &t->cmd;
 	trainerThreat_t			threat;
-	float					dist, yawLeft;
+	float					dist, yawLeft, aimOff;
 	vec3_t					aimAt;
 	qboolean				attacked, open;
 
@@ -886,7 +996,7 @@ static void Trainer_Think( trainer_t *t, bot_state_t *bs, int time, int elapsed 
 		cmd->weapon = WP_SABER;
 
 	if ( self->health <= 0 || ps->pm_type == PM_DEAD ) {
-		Trainer_Aim( bs, NULL, 0.0f, 0.0f, cmd );
+		Trainer_Aim( bs, NULL, 0.0f, 0.0f, NULL, cmd );
 		if ( level.framenum & 1 )
 			cmd->buttons = BUTTON_ATTACK;		// respawn
 		Trainer_SetState( t, TS_CHASE );
@@ -895,16 +1005,21 @@ static void Trainer_Think( trainer_t *t, bot_state_t *bs, int time, int elapsed 
 
 	enemy = Trainer_Enemy( t );
 	if ( !enemy ) {
-		Trainer_Aim( bs, NULL, 0.0f, 0.0f, cmd );
+		Trainer_Aim( bs, NULL, 0.0f, 0.0f, NULL, cmd );
 		Trainer_SetState( t, TS_CHASE );
 		Trainer_LetGo( self, cmd );
 		return;
 	}
 
 	dist = Distance( ps->origin, enemy->client->ps.origin );
-	Trainer_Predict( &enemy->client->ps, lvl->leadSec, aimAt );
+	if ( t->state == TS_KICK && t->step == KS_ESCAPE )
+		VectorCopy( t->escapePoint, aimAt );
+	else if ( Trainer_HookAim( t, ps ) )
+		Trainer_HookPoint( t, self, enemy, aimAt );
+	else
+		Trainer_Predict( &enemy->client->ps, lvl->leadSec, aimAt );
 	yawLeft = Trainer_Aim( bs, aimAt, ( t->state == TS_SIDEKICK ) ? -90.0f * t->side : 0.0f,
-		lvl->turnSpeed * elapsed / 1000.0f, cmd );
+		lvl->turnSpeed * elapsed / 1000.0f, &aimOff, cmd );
 	Trainer_Score( t, qfalse );
 
 	attacked = Trainer_Notice( &t->attack, Trainer_Attacking( enemy, dist ), lvl->readChance, lvl->reactMs );
@@ -942,7 +1057,7 @@ static void Trainer_Think( trainer_t *t, bot_state_t *bs, int time, int elapsed 
 		Trainer_Hook( t, self, dist, cmd );
 		break;
 	case TS_KICK:
-		Trainer_Kick( t, self, enemy, dist, cmd );
+		Trainer_Kick( t, self, enemy, dist, aimOff, cmd );
 		break;
 	case TS_SIDEKICK:
 		Trainer_SideKick( t, self, enemy, dist, yawLeft, cmd );
