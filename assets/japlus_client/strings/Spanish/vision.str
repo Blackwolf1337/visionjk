@@ -477,6 +477,102 @@ REFERENCE           LANGUAGE
 LANG_ENGLISH        "Language"
 LANG_SPANISH        "Idioma"
 
+REFERENCE           LIGHTSABERS
+LANG_ENGLISH        "Lightsabers"
+LANG_SPANISH        "Sables de luz"
+
+REFERENCE           BLADE_LOOK
+LANG_ENGLISH        "Blade Look"
+LANG_SPANISH        "Aspecto de la hoja"
+
+REFERENCE           SFX_A_THIN_WHITE_CORE_IN_A_GLOW_THAT
+LANG_ENGLISH        "SFX: a thin white core in a glow that is smeared over the swing. RGB styles and black stay classic."
+LANG_SPANISH        "SFX: un fino núcleo blanco en un brillo que se estira sobre el golpe. Los estilos RGB y el negro siguen clásicos."
+
+REFERENCE           CLASSIC
+LANG_ENGLISH        "Classic"
+LANG_SPANISH        "Clásico"
+
+REFERENCE           SFX
+LANG_ENGLISH        "SFX"
+LANG_SPANISH        "#same"
+
+REFERENCE           TRAIL_LENGTH
+LANG_ENGLISH        "Trail Length"
+LANG_SPANISH        "Longitud de la estela"
+
+REFERENCE           HOW_LONG_THE_TRAIL_BEHIND_A_SWINGING
+LANG_ENGLISH        "How long the trail behind a swinging blade is."
+LANG_SPANISH        "Lo larga que es la estela tras una hoja en movimiento."
+
+REFERENCE           BLADE_CORE
+LANG_ENGLISH        "Blade Core"
+LANG_SPANISH        "Núcleo de la hoja"
+
+REFERENCE           HOW_THICK_THE_WHITE_CORE_OF_A_BLADE
+LANG_ENGLISH        "How thick the white core of a blade is."
+LANG_SPANISH        "Lo grueso que es el núcleo blanco de una hoja."
+
+REFERENCE           BLADE_GLOW
+LANG_ENGLISH        "Blade Glow"
+LANG_SPANISH        "Brillo de la hoja"
+
+REFERENCE           HOW_WIDE_THE_GLOW_AROUND_A_BLADE_IS
+LANG_ENGLISH        "How wide the glow around a blade is."
+LANG_SPANISH        "Lo ancho que es el brillo alrededor de una hoja."
+
+REFERENCE           DUELS
+LANG_ENGLISH        "Duels"
+LANG_SPANISH        "Duelos"
+
+REFERENCE           OTHERS_IN_A_DUEL
+LANG_ENGLISH        "Others in a Duel"
+LANG_SPANISH        "Otros en duelo"
+
+REFERENCE           HOW_PLAYERS_LOOK_WHO_ARE_IN_A_DUEL_Y
+LANG_ENGLISH        "How players look who are in a duel you are not part of. Their colour is v_duelColour in the console."
+LANG_SPANISH        "El aspecto de los jugadores en un duelo del que no formas parte. Su color es v_duelColour en la consola."
+
+REFERENCE           TINTED
+LANG_ENGLISH        "Tinted"
+LANG_SPANISH        "Teñido"
+
+REFERENCE           SHIELD
+LANG_ENGLISH        "Shield"
+LANG_SPANISH        "Escudo"
+
+REFERENCE           DAMAGED_SHIELD
+LANG_ENGLISH        "Damaged Shield"
+LANG_SPANISH        "Escudo dañado"
+
+REFERENCE           FORCE_SHELL
+LANG_ENGLISH        "Force Shell"
+LANG_SPANISH        "Envoltura de Fuerza"
+
+REFERENCE           SIGHT_SHELL
+LANG_ENGLISH        "Sight Shell"
+LANG_SPANISH        "Envoltura de visión"
+
+REFERENCE           HALF_SHIELD
+LANG_ENGLISH        "Half Shield"
+LANG_SPANISH        "Medio escudo"
+
+REFERENCE           CLOAKED
+LANG_ENGLISH        "Cloaked"
+LANG_SPANISH        "Camuflado"
+
+REFERENCE           SIGHT_BUBBLE
+LANG_ENGLISH        "Sight Bubble"
+LANG_SPANISH        "Burbuja de visión"
+
+REFERENCE           THEIR_BLADES
+LANG_ENGLISH        "Their Blades"
+LANG_SPANISH        "Sus hojas"
+
+REFERENCE           THE_BLADES_OF_PLAYERS_WHO_ARE_IN_A_D
+LANG_ENGLISH        "The blades of players who are in a duel you are not part of."
+LANG_SPANISH        "Las hojas de los jugadores en un duelo del que no formas parte."
+
 REFERENCE           MENUS_AND_HUD
 LANG_ENGLISH        "Menus and HUD"
 LANG_SPANISH        "Menús y HUD"
@@ -676,6 +772,38 @@ LANG_SPANISH        "Pitido del chat"
 REFERENCE           A_SOUND_WHEN_SOMEBODY_SAYS_SOMETHING
 LANG_ENGLISH        "A sound when somebody says something."
 LANG_SPANISH        "Un sonido cuando alguien dice algo."
+
+REFERENCE           NOTIFICATIONS
+LANG_ENGLISH        "Notifications"
+LANG_SPANISH        "Notificaciones"
+
+REFERENCE           TELLS_YOUR_NAME_IN_THE_CHAT_BOOMBOX
+LANG_ENGLISH        "Tells, your name in the chat, boombox lines and new versions slide in at the left."
+LANG_SPANISH        "Mensajes privados, tu nombre en el chat, líneas del radiocasete y nuevas versiones entran por la izquierda."
+
+REFERENCE           SHOWN
+LANG_ENGLISH        "Shown"
+LANG_SPANISH        "Mostradas"
+
+REFERENCE           SHOWN_AND_SOUND
+LANG_ENGLISH        "Shown and Sound"
+LANG_SPANISH        "Mostradas con sonido"
+
+REFERENCE           NOTIFICATION_TIME
+LANG_ENGLISH        "Notification Time"
+LANG_SPANISH        "Tiempo de aviso"
+
+REFERENCE           HOW_MANY_MILLISECONDS_A_NOTIFICATION
+LANG_ENGLISH        "How many milliseconds a notification stays."
+LANG_SPANISH        "Cuántos milisegundos se queda una notificación."
+
+REFERENCE           NOTIFICATION_SIZE
+LANG_ENGLISH        "Notification Size"
+LANG_SPANISH        "Tamaño de las notificaciones"
+
+REFERENCE           HOW_LARGE_THE_NOTIFICATIONS_ARE
+LANG_ENGLISH        "How large the notifications are."
+LANG_SPANISH        "Lo grandes que son las notificaciones."
 
 REFERENCE           CONSOLE
 LANG_ENGLISH        "Console"

@@ -758,6 +758,12 @@ void CG_ChatAdd( int kind, int clientNum, const char *text ) {
 	if ( m->mention && tay_notify.integer >= 2 ) {
 		trap->S_StartLocalSound( cgs.media.tayNotifySound, CHAN_LOCAL_SOUND );
 	}
+	// v_notify (hud/cg_notify.c): a tell to this player, a line with his name
+	if ( m->kind == CHAT_TELL && ( !cg.snap || clientNum != cg.snap->ps.clientNum ) ) {
+		CG_NotifyAdd( NOTIFY_TELL, text );
+	} else if ( m->mention ) {
+		CG_NotifyAdd( NOTIFY_MENTION, text );
+	}
 	chat.count++;
 	Chat_Log( kind, text );
 

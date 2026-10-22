@@ -371,6 +371,7 @@ static consoleCommand_t	commands[] = {
 	{ "nextframe",					CG_TestModelNextFrame_f },
 	{ "nextskin",					CG_TestModelNextSkin_f },
 	{ "v_peers",						CG_PeerList_f },
+	{ "v_notify_show",				CG_Notify_f },
 	{ "playerNext",					CG_JPAdmCyclePlayer_f },
 	{ "playerPrev",					CG_JPAdmCyclePlayer_f },
 	{ "pluginDisable",				CG_JPPluginDisable_f },

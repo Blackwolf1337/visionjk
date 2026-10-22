@@ -1885,6 +1885,18 @@ qhandle_t CG_WidePicture( const char *name, const char *wideName );
 void CG_KillfeedAdd( int killer, int victim, int mod, const char *text );
 float CG_KillfeedDraw( float y );
 
+// hud/cg_notify.c
+typedef enum {
+	NOTIFY_EVENT,			// of VisionJK: a boombox, an update, the command v_notify_show
+	NOTIFY_TELL,			// a tell to this player
+	NOTIFY_MENTION			// a chat line with his name (tay_notify)
+} notifyKind_t;
+
+void CG_NotifyAdd( notifyKind_t kind, const char *text );
+void CG_NotifyDraw( void );
+void CG_NotifyInit( void );
+void CG_Notify_f( void );
+
 // tay_forceEnemyModel, tay_forceAllyModel (cg_players.c, cg_cvar.c)
 qboolean CG_IsAlly( team_t team );
 void CG_ForcedModelsCheck( void );

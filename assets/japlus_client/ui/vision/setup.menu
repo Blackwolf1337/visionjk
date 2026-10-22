@@ -1839,6 +1839,175 @@
 		itemDef
 		{
 			name					vision_head
+			rect					34 358 380 22
+			visible					1
+			text					@VISION_LIGHTSABERS
+			font					5
+			textscale				0.54
+			forecolor				0.60 0.69 0.78 1
+			textaligny				9
+			caps					1
+			decoration
+			page					3
+			scroll					1
+		}
+
+		itemDef
+		{
+			name					vision_headline
+			rect					32 379 384 0.67
+			visible					1
+			style					WINDOW_STYLE_FILLED
+			backcolor				0.43 0.83 1 0.32
+			decoration
+			page					3
+			scroll					1
+		}
+
+		itemDef
+		{
+			name					vision_multi_v_saberstyle
+			type					ITEM_TYPE_MULTI
+			text					@VISION_BLADE_LOOK
+			descText				@VISION_SFX_A_THIN_WHITE_CORE_IN_A_GLOW_THAT
+			cvar					"v_saberStyle"
+			cvarFloatList { @VISION_CLASSIC 0 @VISION_SFX 1 }
+			action { play "sound/interface/button1.wav" ; }
+			rect					32 380 384 22
+			page					3
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+		}
+
+		itemDef
+		{
+			name					vision_slider_v_sabertraillength
+			type					ITEM_TYPE_SLIDER
+			text					@VISION_TRAIL_LENGTH
+			descText				@VISION_HOW_LONG_THE_TRAIL_BEHIND_A_SWINGING
+			cvarfloat				"v_saberTrailLength" 1 0 4
+			action { play "sound/interface/button1.wav" ; }
+			rect					32 402 384 22
+			page					3
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+		}
+
+		itemDef
+		{
+			name					vision_slider_v_sabercorescale
+			type					ITEM_TYPE_SLIDER
+			text					@VISION_BLADE_CORE
+			descText				@VISION_HOW_THICK_THE_WHITE_CORE_OF_A_BLADE
+			cvarfloat				"v_saberCoreScale" 1 0.25 3
+			action { play "sound/interface/button1.wav" ; }
+			rect					32 424 384 22
+			page					3
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+		}
+
+		itemDef
+		{
+			name					vision_slider_v_saberglowscale
+			type					ITEM_TYPE_SLIDER
+			text					@VISION_BLADE_GLOW
+			descText				@VISION_HOW_WIDE_THE_GLOW_AROUND_A_BLADE_IS
+			cvarfloat				"v_saberGlowScale" 1 0.25 3
+			action { play "sound/interface/button1.wav" ; }
+			rect					32 446 384 22
+			page					3
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+		}
+
+		itemDef
+		{
+			name					vision_head
+			rect					34 468 380 22
+			visible					1
+			text					@VISION_DUELS
+			font					5
+			textscale				0.54
+			forecolor				0.60 0.69 0.78 1
+			textaligny				9
+			caps					1
+			decoration
+			page					3
+			scroll					1
+		}
+
+		itemDef
+		{
+			name					vision_headline
+			rect					32 489 384 0.67
+			visible					1
+			style					WINDOW_STYLE_FILLED
+			backcolor				0.43 0.83 1 0.32
+			decoration
+			page					3
+			scroll					1
+		}
+
+		itemDef
+		{
+			name					vision_multi_v_dueleffect
+			type					ITEM_TYPE_MULTI
+			text					@VISION_OTHERS_IN_A_DUEL
+			descText				@VISION_HOW_PLAYERS_LOOK_WHO_ARE_IN_A_DUEL_Y
+			cvar					"v_duelEffect"
+			cvarFloatList
+			{
+				@VISION_GAME 0 @VISION_TINTED 1 @VISION_SHIELD 2 @VISION_DAMAGED_SHIELD 3 @VISION_FORCE_SHELL 4 @VISION_SIGHT_SHELL 5 @VISION_HALF_SHIELD 6 @VISION_CLOAKED 7 @VISION_SIGHT_BUBBLE 8
+			}
+			action { play "sound/interface/button1.wav" ; }
+			rect					32 490 384 22
+			page					3
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+		}
+
+		itemDef
+		{
+			name					vision_yesno_v_duelshowsabers
+			type					ITEM_TYPE_YESNO
+			text					@VISION_THEIR_BLADES
+			descText				@VISION_THE_BLADES_OF_PLAYERS_WHO_ARE_IN_A_D
+			cvar					"v_duelShowSabers"
+			action { play "sound/interface/button1.wav" ; }
+			rect					32 512 384 22
+			page					3
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+		}
+
+		itemDef
+		{
+			name					vision_head
 			rect					34 72 380 22
 			visible					1
 			text					@VISION_MENUS_AND_HUD
@@ -2366,7 +2535,7 @@
 			name					vision_head
 			rect					34 402 380 22
 			visible					1
-			text					@VISION_CONSOLE
+			text					@VISION_NOTIFICATIONS
 			font					5
 			textscale				0.54
 			forecolor				0.60 0.69 0.78 1
@@ -2391,11 +2560,12 @@
 
 		itemDef
 		{
-			name					vision_yesno_con_font
-			type					ITEM_TYPE_YESNO
-			text					@VISION_SHARP_CONSOLE_FONT
-			descText				@VISION_THE_CONSOLE_IN_A_FONT_WITH_EVERY_CHA
-			cvar					"con_font"
+			name					vision_multi_v_notify
+			type					ITEM_TYPE_MULTI
+			text					@VISION_NOTIFICATIONS
+			descText				@VISION_TELLS_YOUR_NAME_IN_THE_CHAT_BOOMBOX
+			cvar					"v_notify"
+			cvarFloatList { @VISION_OFF 0 @VISION_SHOWN 1 @VISION_SHOWN_AND_SOUND 2 }
 			action { play "sound/interface/button1.wav" ; }
 			rect					32 424 384 22
 			page					5
@@ -2409,11 +2579,11 @@
 
 		itemDef
 		{
-			name					vision_slider_con_scale
+			name					vision_slider_v_notifytime
 			type					ITEM_TYPE_SLIDER
-			text					@VISION_CONSOLE_TEXT_SIZE
-			descText				@VISION_THE_SIZE_OF_THE_TEXT_OF_THE_CONSOLE
-			cvarfloat				"con_scale" 1 0.5 3
+			text					@VISION_NOTIFICATION_TIME
+			descText				@VISION_HOW_MANY_MILLISECONDS_A_NOTIFICATION
+			cvarfloat				"v_notifyTime" 6000 2000 20000
 			action { play "sound/interface/button1.wav" ; }
 			rect					32 446 384 22
 			page					5
@@ -2427,11 +2597,11 @@
 
 		itemDef
 		{
-			name					vision_slider_con_opacity
+			name					vision_slider_v_notifyscale
 			type					ITEM_TYPE_SLIDER
-			text					@VISION_CONSOLE_OPACITY
-			descText				@VISION_HOW_MUCH_OF_THE_GAME_SHOWS_THROUGH_T
-			cvarfloat				"con_opacity" 1 0.2 1
+			text					@VISION_NOTIFICATION_SIZE
+			descText				@VISION_HOW_LARGE_THE_NOTIFICATIONS_ARE
+			cvarfloat				"v_notifyScale" 1 0.5 2
 			action { play "sound/interface/button1.wav" ; }
 			rect					32 468 384 22
 			page					5
@@ -2448,7 +2618,7 @@
 			name					vision_head
 			rect					34 490 380 22
 			visible					1
-			text					@VISION_CLAN
+			text					@VISION_CONSOLE
 			font					5
 			textscale				0.54
 			forecolor				0.60 0.69 0.78 1
@@ -2473,6 +2643,88 @@
 
 		itemDef
 		{
+			name					vision_yesno_con_font
+			type					ITEM_TYPE_YESNO
+			text					@VISION_SHARP_CONSOLE_FONT
+			descText				@VISION_THE_CONSOLE_IN_A_FONT_WITH_EVERY_CHA
+			cvar					"con_font"
+			action { play "sound/interface/button1.wav" ; }
+			rect					32 512 384 22
+			page					5
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+		}
+
+		itemDef
+		{
+			name					vision_slider_con_scale
+			type					ITEM_TYPE_SLIDER
+			text					@VISION_CONSOLE_TEXT_SIZE
+			descText				@VISION_THE_SIZE_OF_THE_TEXT_OF_THE_CONSOLE
+			cvarfloat				"con_scale" 1 0.5 3
+			action { play "sound/interface/button1.wav" ; }
+			rect					32 534 384 22
+			page					5
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+		}
+
+		itemDef
+		{
+			name					vision_slider_con_opacity
+			type					ITEM_TYPE_SLIDER
+			text					@VISION_CONSOLE_OPACITY
+			descText				@VISION_HOW_MUCH_OF_THE_GAME_SHOWS_THROUGH_T
+			cvarfloat				"con_opacity" 1 0.2 1
+			action { play "sound/interface/button1.wav" ; }
+			rect					32 556 384 22
+			page					5
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+		}
+
+		itemDef
+		{
+			name					vision_head
+			rect					34 578 380 22
+			visible					1
+			text					@VISION_CLAN
+			font					5
+			textscale				0.54
+			forecolor				0.60 0.69 0.78 1
+			textaligny				9
+			caps					1
+			decoration
+			page					5
+			scroll					1
+		}
+
+		itemDef
+		{
+			name					vision_headline
+			rect					32 599 384 0.67
+			visible					1
+			style					WINDOW_STYLE_FILLED
+			backcolor				0.43 0.83 1 0.32
+			decoration
+			page					5
+			scroll					1
+		}
+
+		itemDef
+		{
 			name					vision_secret_cp_clanpwd
 			type					ITEM_TYPE_EDITFIELD
 			text					@VISION_CLAN_PASSWORD
@@ -2481,7 +2733,7 @@
 			maxChars				32
 			maxPaintChars			24
 			action { play "sound/interface/button1.wav" ; }
-			rect					32 512 384 22
+			rect					32 600 384 22
 			page					5
 			scroll					1
 			row						2

@@ -538,6 +538,7 @@ static void Box_Note( int box, const char *text ) {
 	char line[sizeof( bx.note )];
 
 	trap->Print( "[skipnotify]%s\n", text );
+	CG_NotifyAdd( NOTIFY_EVENT, text );
 	// (shown under the name of the box: without the word in front of the colon, in the colour of the card)
 	Q_strncpyz( line, text, sizeof( line ) );
 	Q_StripColor( line );

@@ -477,6 +477,102 @@ REFERENCE           LANGUAGE
 LANG_ENGLISH        "Language"
 LANG_GERMAN         "Sprache"
 
+REFERENCE           LIGHTSABERS
+LANG_ENGLISH        "Lightsabers"
+LANG_GERMAN         "Lichtschwerter"
+
+REFERENCE           BLADE_LOOK
+LANG_ENGLISH        "Blade Look"
+LANG_GERMAN         "Klingenaussehen"
+
+REFERENCE           SFX_A_THIN_WHITE_CORE_IN_A_GLOW_THAT
+LANG_ENGLISH        "SFX: a thin white core in a glow that is smeared over the swing. RGB styles and black stay classic."
+LANG_GERMAN         "SFX: ein dünner weißer Kern in einem Leuchten, das über den Schwung gezogen wird. RGB-Stile und Schwarz bleiben klassisch."
+
+REFERENCE           CLASSIC
+LANG_ENGLISH        "Classic"
+LANG_GERMAN         "Klassisch"
+
+REFERENCE           SFX
+LANG_ENGLISH        "SFX"
+LANG_GERMAN         "#same"
+
+REFERENCE           TRAIL_LENGTH
+LANG_ENGLISH        "Trail Length"
+LANG_GERMAN         "Spurlänge"
+
+REFERENCE           HOW_LONG_THE_TRAIL_BEHIND_A_SWINGING
+LANG_ENGLISH        "How long the trail behind a swinging blade is."
+LANG_GERMAN         "Wie lang die Spur hinter einer schwingenden Klinge ist."
+
+REFERENCE           BLADE_CORE
+LANG_ENGLISH        "Blade Core"
+LANG_GERMAN         "Klingenkern"
+
+REFERENCE           HOW_THICK_THE_WHITE_CORE_OF_A_BLADE
+LANG_ENGLISH        "How thick the white core of a blade is."
+LANG_GERMAN         "Wie dick der weiße Kern einer Klinge ist."
+
+REFERENCE           BLADE_GLOW
+LANG_ENGLISH        "Blade Glow"
+LANG_GERMAN         "Klingenleuchten"
+
+REFERENCE           HOW_WIDE_THE_GLOW_AROUND_A_BLADE_IS
+LANG_ENGLISH        "How wide the glow around a blade is."
+LANG_GERMAN         "Wie breit das Leuchten um eine Klinge ist."
+
+REFERENCE           DUELS
+LANG_ENGLISH        "Duels"
+LANG_GERMAN         "Duelle"
+
+REFERENCE           OTHERS_IN_A_DUEL
+LANG_ENGLISH        "Others in a Duel"
+LANG_GERMAN         "Andere im Duell"
+
+REFERENCE           HOW_PLAYERS_LOOK_WHO_ARE_IN_A_DUEL_Y
+LANG_ENGLISH        "How players look who are in a duel you are not part of. Their colour is v_duelColour in the console."
+LANG_GERMAN         "Wie Spieler aussehen, die in einem Duell sind, an dem Sie nicht teilnehmen. Ihre Farbe ist v_duelColour in der Konsole."
+
+REFERENCE           TINTED
+LANG_ENGLISH        "Tinted"
+LANG_GERMAN         "Eingefärbt"
+
+REFERENCE           SHIELD
+LANG_ENGLISH        "Shield"
+LANG_GERMAN         "Schild"
+
+REFERENCE           DAMAGED_SHIELD
+LANG_ENGLISH        "Damaged Shield"
+LANG_GERMAN         "Getroffener Schild"
+
+REFERENCE           FORCE_SHELL
+LANG_ENGLISH        "Force Shell"
+LANG_GERMAN         "Machthülle"
+
+REFERENCE           SIGHT_SHELL
+LANG_ENGLISH        "Sight Shell"
+LANG_GERMAN         "Sichthülle"
+
+REFERENCE           HALF_SHIELD
+LANG_ENGLISH        "Half Shield"
+LANG_GERMAN         "Halber Schild"
+
+REFERENCE           CLOAKED
+LANG_ENGLISH        "Cloaked"
+LANG_GERMAN         "Getarnt"
+
+REFERENCE           SIGHT_BUBBLE
+LANG_ENGLISH        "Sight Bubble"
+LANG_GERMAN         "Sichtblase"
+
+REFERENCE           THEIR_BLADES
+LANG_ENGLISH        "Their Blades"
+LANG_GERMAN         "Ihre Klingen"
+
+REFERENCE           THE_BLADES_OF_PLAYERS_WHO_ARE_IN_A_D
+LANG_ENGLISH        "The blades of players who are in a duel you are not part of."
+LANG_GERMAN         "Die Klingen von Spielern, die in einem Duell sind, an dem Sie nicht teilnehmen."
+
 REFERENCE           MENUS_AND_HUD
 LANG_ENGLISH        "Menus and HUD"
 LANG_GERMAN         "Menüs und HUD"
@@ -676,6 +772,38 @@ LANG_GERMAN         "Chat-Ton"
 REFERENCE           A_SOUND_WHEN_SOMEBODY_SAYS_SOMETHING
 LANG_ENGLISH        "A sound when somebody says something."
 LANG_GERMAN         "Ein Ton, wenn jemand etwas sagt."
+
+REFERENCE           NOTIFICATIONS
+LANG_ENGLISH        "Notifications"
+LANG_GERMAN         "Benachrichtigungen"
+
+REFERENCE           TELLS_YOUR_NAME_IN_THE_CHAT_BOOMBOX
+LANG_ENGLISH        "Tells, your name in the chat, boombox lines and new versions slide in at the left."
+LANG_GERMAN         "Private Nachrichten, Ihr Name im Chat, Zeilen der Boombox und neue Versionen gleiten links herein."
+
+REFERENCE           SHOWN
+LANG_ENGLISH        "Shown"
+LANG_GERMAN         "Angezeigt"
+
+REFERENCE           SHOWN_AND_SOUND
+LANG_ENGLISH        "Shown and Sound"
+LANG_GERMAN         "Angezeigt mit Ton"
+
+REFERENCE           NOTIFICATION_TIME
+LANG_ENGLISH        "Notification Time"
+LANG_GERMAN         "Anzeigedauer"
+
+REFERENCE           HOW_MANY_MILLISECONDS_A_NOTIFICATION
+LANG_ENGLISH        "How many milliseconds a notification stays."
+LANG_GERMAN         "Wie viele Millisekunden eine Benachrichtigung bleibt."
+
+REFERENCE           NOTIFICATION_SIZE
+LANG_ENGLISH        "Notification Size"
+LANG_GERMAN         "Größe der Benachrichtigungen"
+
+REFERENCE           HOW_LARGE_THE_NOTIFICATIONS_ARE
+LANG_ENGLISH        "How large the notifications are."
+LANG_GERMAN         "Wie groß die Benachrichtigungen sind."
 
 REFERENCE           CONSOLE
 LANG_ENGLISH        "Console"

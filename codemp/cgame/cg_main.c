@@ -28,6 +28,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include "ui/ui_shared.h"
 #include "ui/ui_skin.h"
+#include "ui/ui_saberfx.h"
 
 NORETURN_PTR void (*Com_Error)( int level, const char *error, ... );
 void (*Com_Printf)( const char *msg, ... );
@@ -2353,6 +2354,7 @@ static void CG_DisplaySetup( void )
 
 	Init_Display(&cgDC);
 	Skin_Reset();
+	SaberFX_Reset();
 	cgDisplayReady = qtrue;
 }
 
@@ -2676,6 +2678,7 @@ Ghoul2 Insert End
 	CG_VoiceInit();		// in front of the server info, which tells it whether this server has a voice chat
 	CG_BoomboxInit();	//	and boxes of the boombox
 	CG_ChatInit();
+	CG_NotifyInit();
 	CG_BubbleInit();
 	CG_StatusInit();
 	CG_LookInit();

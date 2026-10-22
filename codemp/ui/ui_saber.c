@@ -31,6 +31,7 @@ USER INTERFACE SABER LOADING & DISPLAY CODE
 
 #include "ui_local.h"
 #include "ui_shared.h"
+#include "ui_saberfx.h"
 
 void WP_SaberLoadParms( void );
 qboolean WP_SaberParseParm( const char *saberName, const char *parmname, char *saberData );
@@ -258,25 +259,13 @@ void UI_SaberLoadParms( void )
 	WP_SaberLoadParms();
 }
 
-// JA+: saberNum picks the sliders (ui_sbRed1.. or ui_sbRed2..) that color an RGB blade
-void UI_DoSaber( vec3_t origin, vec3_t dir, float length, float lengthMax, float radius, saber_colors_t color, int saberNum )
+// the glow, the core and the light of a blade colour. JA+: saberNum picks the sliders (ui_sbRed1.. or ui_sbRed2..)
+// that color an RGB blade
+static void UI_SaberShaders( saber_colors_t color, int saberNum, qhandle_t *glowOut, qhandle_t *bladeOut, vec3_t rgb )
 {
-	vec3_t		mid, rgb={1,1,1};
 	qhandle_t	blade = 0, glow = 0;
-	refEntity_t saber;
-	float radiusmult;
-	float radiusRange;
-	float radiusStart;
 
-	if ( length < 0.5f )
-	{
-		// if the thing is so short, just forget even adding me.
-		return;
-	}
-
-	// Find the midpoint of the saber for lighting purposes
-	VectorMA( origin, length * 0.5f, dir, mid );
-
+	VectorSet( rgb, 1.0f, 1.0f, 1.0f );
 	switch( (int)color )
 	{
 		case SABER_RED:
@@ -331,6 +320,36 @@ void UI_DoSaber( vec3_t origin, vec3_t dir, float length, float lengthMax, float
 			break;
 	}
 
+	*glowOut = glow;
+	*bladeOut = blade;
+}
+
+// v_saberCoreScale, v_saberGlowScale
+static float UI_SaberScale( const vmCvar_t *cv )
+{
+	return Com_Clamp( 0.25f, 3.0f, cv->value );
+}
+
+void UI_DoSaber( vec3_t origin, vec3_t dir, float length, float lengthMax, float radius, saber_colors_t color, int saberNum )
+{
+	vec3_t		mid, rgb;
+	qhandle_t	blade = 0, glow = 0;
+	refEntity_t saber;
+	float radiusmult;
+	float radiusRange;
+	float radiusStart;
+
+	if ( length < 0.5f )
+	{
+		// if the thing is so short, just forget even adding me.
+		return;
+	}
+
+	// Find the midpoint of the saber for lighting purposes
+	VectorMA( origin, length * 0.5f, dir, mid );
+
+	UI_SaberShaders( color, saberNum, &glow, &blade, rgb );
+
 	memset( &saber, 0, sizeof( refEntity_t ));
 
 	// Saber glow is it's own ref type because it uses a ton of sprites, otherwise it would eat up too many
@@ -351,7 +370,7 @@ void UI_DoSaber( vec3_t origin, vec3_t dir, float length, float lengthMax, float
 	radiusRange = radius * 0.075f;
 	radiusStart = radius-radiusRange;
 
-	saber.radius = (radiusStart + Q_flrand(-1.0f, 1.0f) * radiusRange)*radiusmult;
+	saber.radius = (radiusStart + Q_flrand(-1.0f, 1.0f) * radiusRange)*radiusmult*UI_SaberScale( &v_saberGlowScale );
 	//saber.radius = (2.8f + Q_flrand(-1.0f, 1.0f) * 0.2f)*radiusmult;
 
 	VectorCopy( origin, saber.origin );
@@ -376,10 +395,36 @@ void UI_DoSaber( vec3_t origin, vec3_t dir, float length, float lengthMax, float
 	saber.customShader = blade;
 	saber.reType = RT_LINE;
 	radiusStart = radius/3.0f;
-	saber.radius = (radiusStart + Q_flrand(-1.0f, 1.0f) * radiusRange)*radiusmult;
+	saber.radius = (radiusStart + Q_flrand(-1.0f, 1.0f) * radiusRange)*radiusmult*UI_SaberScale( &v_saberCoreScale );
 //	saber.radius = (1.0 + Q_flrand(-1.0f, 1.0f) * 0.2f)*radiusmult;
 
 	trap->R_AddRefEntityToScene( &saber );
+}
+
+// v_saberStyle 1 (ui_saberfx.c): a blade that stands still
+static void UI_DoSFXSaber( vec3_t origin, vec3_t dir, float length, float radius, saber_colors_t color, int saberNum )
+{
+	saberFX_t	fx;
+	qhandle_t	core;
+	vec3_t		rgb;
+	int			i;
+
+	memset( &fx, 0, sizeof( fx ) );
+	VectorCopy( origin, fx.bladeMuzzle );
+	VectorMA( origin, length, dir, fx.bladeTip );
+	VectorCopy( fx.bladeMuzzle, fx.trailMuzzle );
+	VectorCopy( fx.bladeTip, fx.trailTip );
+	fx.lengthMax = length;
+	fx.radius = radius;
+	UI_SaberShaders( color, saberNum, &fx.glow, &core, rgb );
+	fx.isRGB = (qboolean)( (int)color >= SABER_RGB_FIRST && (int)color <= SABER_RGB_LAST );
+	for ( i = 0; i < 3; i++ )
+	{
+		fx.rgb[i] = (byte)( Com_Clamp( 0.0f, 1.0f, rgb[i] ) * 255.0f );
+	}
+	fx.coreScale = UI_SaberScale( &v_saberCoreScale );
+	fx.glowScale = UI_SaberScale( &v_saberGlowScale );
+	SaberFX_Draw( &fx );
 }
 
 void UI_SaberDrawBlade( itemDef_t *item, char *saberName, int saberModel, saberType_t saberType, vec3_t origin, vec3_t angles, int bladeNum )
@@ -618,6 +663,11 @@ void UI_SaberDrawBlade( itemDef_t *item, char *saberName, int saberModel, saberT
 		return;
 	}
 
+	if ( v_saberStyle.integer == 1 && SaberFX_Colour( bladeColor ) )
+	{
+		UI_DoSFXSaber( bladeOrigin, axis[0], bladeLength, bladeRadius, bladeColor, saberNum );
+		return;
+	}
 	UI_DoSaber( bladeOrigin, axis[0], bladeLength, bladeLength, bladeRadius, bladeColor, saberNum );
 }
 

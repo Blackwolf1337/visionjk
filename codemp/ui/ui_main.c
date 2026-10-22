@@ -45,6 +45,7 @@ USER INTERFACE MAIN
 #include "game/bg_saga.h"
 #include "ui_shared.h"
 #include "ui_skin.h"
+#include "ui_saberfx.h"
 #include "ui_music.h"
 
 NORETURN_PTR void (*Com_Error)( int level, const char *error, ... );
@@ -10512,6 +10513,7 @@ void UI_Init( qboolean inGameLoad ) {
 
 	Init_Display(&uiInfo.uiDC);
 	Skin_Reset();
+	SaberFX_Reset();
 	UI_OfferCursorKey();
 
 	UI_BuildPlayerModel_List(inGameLoad);

@@ -477,6 +477,102 @@ REFERENCE           LANGUAGE
 LANG_ENGLISH        "Language"
 LANG_FRENCH         "Langue"
 
+REFERENCE           LIGHTSABERS
+LANG_ENGLISH        "Lightsabers"
+LANG_FRENCH         "Sabres laser"
+
+REFERENCE           BLADE_LOOK
+LANG_ENGLISH        "Blade Look"
+LANG_FRENCH         "Aspect de la lame"
+
+REFERENCE           SFX_A_THIN_WHITE_CORE_IN_A_GLOW_THAT
+LANG_ENGLISH        "SFX: a thin white core in a glow that is smeared over the swing. RGB styles and black stay classic."
+LANG_FRENCH         "SFX : un fin cœur blanc dans une lueur étirée sur le mouvement. Les styles RGB et le noir restent classiques."
+
+REFERENCE           CLASSIC
+LANG_ENGLISH        "Classic"
+LANG_FRENCH         "Classique"
+
+REFERENCE           SFX
+LANG_ENGLISH        "SFX"
+LANG_FRENCH         "#same"
+
+REFERENCE           TRAIL_LENGTH
+LANG_ENGLISH        "Trail Length"
+LANG_FRENCH         "Longueur de la traînée"
+
+REFERENCE           HOW_LONG_THE_TRAIL_BEHIND_A_SWINGING
+LANG_ENGLISH        "How long the trail behind a swinging blade is."
+LANG_FRENCH         "La longueur de la traînée derrière une lame en mouvement."
+
+REFERENCE           BLADE_CORE
+LANG_ENGLISH        "Blade Core"
+LANG_FRENCH         "Cœur de la lame"
+
+REFERENCE           HOW_THICK_THE_WHITE_CORE_OF_A_BLADE
+LANG_ENGLISH        "How thick the white core of a blade is."
+LANG_FRENCH         "L'épaisseur du cœur blanc d'une lame."
+
+REFERENCE           BLADE_GLOW
+LANG_ENGLISH        "Blade Glow"
+LANG_FRENCH         "Lueur de la lame"
+
+REFERENCE           HOW_WIDE_THE_GLOW_AROUND_A_BLADE_IS
+LANG_ENGLISH        "How wide the glow around a blade is."
+LANG_FRENCH         "La largeur de la lueur autour d'une lame."
+
+REFERENCE           DUELS
+LANG_ENGLISH        "Duels"
+LANG_FRENCH         "#same"
+
+REFERENCE           OTHERS_IN_A_DUEL
+LANG_ENGLISH        "Others in a Duel"
+LANG_FRENCH         "Autres en duel"
+
+REFERENCE           HOW_PLAYERS_LOOK_WHO_ARE_IN_A_DUEL_Y
+LANG_ENGLISH        "How players look who are in a duel you are not part of. Their colour is v_duelColour in the console."
+LANG_FRENCH         "L'apparence des joueurs dans un duel dont vous ne faites pas partie. Leur couleur est v_duelColour dans la console."
+
+REFERENCE           TINTED
+LANG_ENGLISH        "Tinted"
+LANG_FRENCH         "Teinté"
+
+REFERENCE           SHIELD
+LANG_ENGLISH        "Shield"
+LANG_FRENCH         "Bouclier"
+
+REFERENCE           DAMAGED_SHIELD
+LANG_ENGLISH        "Damaged Shield"
+LANG_FRENCH         "Bouclier touché"
+
+REFERENCE           FORCE_SHELL
+LANG_ENGLISH        "Force Shell"
+LANG_FRENCH         "Enveloppe de Force"
+
+REFERENCE           SIGHT_SHELL
+LANG_ENGLISH        "Sight Shell"
+LANG_FRENCH         "Enveloppe de vision"
+
+REFERENCE           HALF_SHIELD
+LANG_ENGLISH        "Half Shield"
+LANG_FRENCH         "Demi-bouclier"
+
+REFERENCE           CLOAKED
+LANG_ENGLISH        "Cloaked"
+LANG_FRENCH         "Camouflé"
+
+REFERENCE           SIGHT_BUBBLE
+LANG_ENGLISH        "Sight Bubble"
+LANG_FRENCH         "Bulle de vision"
+
+REFERENCE           THEIR_BLADES
+LANG_ENGLISH        "Their Blades"
+LANG_FRENCH         "Leurs lames"
+
+REFERENCE           THE_BLADES_OF_PLAYERS_WHO_ARE_IN_A_D
+LANG_ENGLISH        "The blades of players who are in a duel you are not part of."
+LANG_FRENCH         "Les lames des joueurs dans un duel dont vous ne faites pas partie."
+
 REFERENCE           MENUS_AND_HUD
 LANG_ENGLISH        "Menus and HUD"
 LANG_FRENCH         "Menus et HUD"
@@ -676,6 +772,38 @@ LANG_FRENCH         "Bip du chat"
 REFERENCE           A_SOUND_WHEN_SOMEBODY_SAYS_SOMETHING
 LANG_ENGLISH        "A sound when somebody says something."
 LANG_FRENCH         "Un son quand quelqu'un dit quelque chose."
+
+REFERENCE           NOTIFICATIONS
+LANG_ENGLISH        "Notifications"
+LANG_FRENCH         "#same"
+
+REFERENCE           TELLS_YOUR_NAME_IN_THE_CHAT_BOOMBOX
+LANG_ENGLISH        "Tells, your name in the chat, boombox lines and new versions slide in at the left."
+LANG_FRENCH         "Messages privés, votre nom dans le chat, lignes du radiocassette et nouvelles versions apparaissent à gauche."
+
+REFERENCE           SHOWN
+LANG_ENGLISH        "Shown"
+LANG_FRENCH         "Affichées"
+
+REFERENCE           SHOWN_AND_SOUND
+LANG_ENGLISH        "Shown and Sound"
+LANG_FRENCH         "Affichées avec son"
+
+REFERENCE           NOTIFICATION_TIME
+LANG_ENGLISH        "Notification Time"
+LANG_FRENCH         "Durée d'affichage"
+
+REFERENCE           HOW_MANY_MILLISECONDS_A_NOTIFICATION
+LANG_ENGLISH        "How many milliseconds a notification stays."
+LANG_FRENCH         "Combien de millisecondes une notification reste."
+
+REFERENCE           NOTIFICATION_SIZE
+LANG_ENGLISH        "Notification Size"
+LANG_FRENCH         "Taille des notifications"
+
+REFERENCE           HOW_LARGE_THE_NOTIFICATIONS_ARE
+LANG_ENGLISH        "How large the notifications are."
+LANG_FRENCH         "La taille des notifications."
 
 REFERENCE           CONSOLE
 LANG_ENGLISH        "Console"

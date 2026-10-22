@@ -237,6 +237,7 @@ set(MPCGameFiles ${MPCGameFiles} ${MPCGameBoomboxFiles})
 set(MPCGameHudFiles
 	"${MPDir}/cgame/hud/cg_hud.c"
 	"${MPDir}/cgame/hud/cg_killfeed.c"
+	"${MPDir}/cgame/hud/cg_notify.c"
 	"${MPDir}/cgame/hud/cg_movehud.c"
 	"${MPDir}/cgame/hud/cg_lead.c"
 	"${MPDir}/cgame/hud/cg_spechud.c"
@@ -274,11 +275,13 @@ set(MPCGameFiles ${MPCGameFiles} ${MPCGameCommonSafeFiles})
 set(MPCGameUiFiles
 	"${MPDir}/ui/ui_shared.c"
 	"${MPDir}/ui/ui_skin.c"
+	"${MPDir}/ui/ui_saberfx.c"
 	"${MPDir}/ui/ui_music.c"
 	"${MPDir}/ui/keycodes.h"
 	"${MPDir}/ui/menudef.h"
 	"${MPDir}/ui/ui_shared.h"
 	"${MPDir}/ui/ui_skin.h"
+	"${MPDir}/ui/ui_saberfx.h"
 	"${MPDir}/ui/ui_music.h"
 	)
 source_group("ui" FILES ${MPCGameUiFiles})

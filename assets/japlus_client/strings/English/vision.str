@@ -359,6 +359,78 @@ LANG_ENGLISH        "Game"
 REFERENCE           LANGUAGE
 LANG_ENGLISH        "Language"
 
+REFERENCE           LIGHTSABERS
+LANG_ENGLISH        "Lightsabers"
+
+REFERENCE           BLADE_LOOK
+LANG_ENGLISH        "Blade Look"
+
+REFERENCE           SFX_A_THIN_WHITE_CORE_IN_A_GLOW_THAT
+LANG_ENGLISH        "SFX: a thin white core in a glow that is smeared over the swing. RGB styles and black stay classic."
+
+REFERENCE           CLASSIC
+LANG_ENGLISH        "Classic"
+
+REFERENCE           SFX
+LANG_ENGLISH        "SFX"
+
+REFERENCE           TRAIL_LENGTH
+LANG_ENGLISH        "Trail Length"
+
+REFERENCE           HOW_LONG_THE_TRAIL_BEHIND_A_SWINGING
+LANG_ENGLISH        "How long the trail behind a swinging blade is."
+
+REFERENCE           BLADE_CORE
+LANG_ENGLISH        "Blade Core"
+
+REFERENCE           HOW_THICK_THE_WHITE_CORE_OF_A_BLADE
+LANG_ENGLISH        "How thick the white core of a blade is."
+
+REFERENCE           BLADE_GLOW
+LANG_ENGLISH        "Blade Glow"
+
+REFERENCE           HOW_WIDE_THE_GLOW_AROUND_A_BLADE_IS
+LANG_ENGLISH        "How wide the glow around a blade is."
+
+REFERENCE           DUELS
+LANG_ENGLISH        "Duels"
+
+REFERENCE           OTHERS_IN_A_DUEL
+LANG_ENGLISH        "Others in a Duel"
+
+REFERENCE           HOW_PLAYERS_LOOK_WHO_ARE_IN_A_DUEL_Y
+LANG_ENGLISH        "How players look who are in a duel you are not part of. Their colour is v_duelColour in the console."
+
+REFERENCE           TINTED
+LANG_ENGLISH        "Tinted"
+
+REFERENCE           SHIELD
+LANG_ENGLISH        "Shield"
+
+REFERENCE           DAMAGED_SHIELD
+LANG_ENGLISH        "Damaged Shield"
+
+REFERENCE           FORCE_SHELL
+LANG_ENGLISH        "Force Shell"
+
+REFERENCE           SIGHT_SHELL
+LANG_ENGLISH        "Sight Shell"
+
+REFERENCE           HALF_SHIELD
+LANG_ENGLISH        "Half Shield"
+
+REFERENCE           CLOAKED
+LANG_ENGLISH        "Cloaked"
+
+REFERENCE           SIGHT_BUBBLE
+LANG_ENGLISH        "Sight Bubble"
+
+REFERENCE           THEIR_BLADES
+LANG_ENGLISH        "Their Blades"
+
+REFERENCE           THE_BLADES_OF_PLAYERS_WHO_ARE_IN_A_D
+LANG_ENGLISH        "The blades of players who are in a duel you are not part of."
+
 REFERENCE           MENUS_AND_HUD
 LANG_ENGLISH        "Menus and HUD"
 
@@ -508,6 +580,30 @@ LANG_ENGLISH        "Chat Beep"
 
 REFERENCE           A_SOUND_WHEN_SOMEBODY_SAYS_SOMETHING
 LANG_ENGLISH        "A sound when somebody says something."
+
+REFERENCE           NOTIFICATIONS
+LANG_ENGLISH        "Notifications"
+
+REFERENCE           TELLS_YOUR_NAME_IN_THE_CHAT_BOOMBOX
+LANG_ENGLISH        "Tells, your name in the chat, boombox lines and new versions slide in at the left."
+
+REFERENCE           SHOWN
+LANG_ENGLISH        "Shown"
+
+REFERENCE           SHOWN_AND_SOUND
+LANG_ENGLISH        "Shown and Sound"
+
+REFERENCE           NOTIFICATION_TIME
+LANG_ENGLISH        "Notification Time"
+
+REFERENCE           HOW_MANY_MILLISECONDS_A_NOTIFICATION
+LANG_ENGLISH        "How many milliseconds a notification stays."
+
+REFERENCE           NOTIFICATION_SIZE
+LANG_ENGLISH        "Notification Size"
+
+REFERENCE           HOW_LARGE_THE_NOTIFICATIONS_ARE
+LANG_ENGLISH        "How large the notifications are."
 
 REFERENCE           CONSOLE
 LANG_ENGLISH        "Console"

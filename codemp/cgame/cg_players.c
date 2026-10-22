@@ -24,6 +24,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 // cg_players.c -- handle the media and animation for player entities
 #include "cg_local.h"
+#include "ui/ui_saberfx.h"
 #include "ghoul2/G2.h"
 #include "game/bg_saga.h"
 
@@ -5527,23 +5528,10 @@ static void CG_DoSaberLight( saberInfo_t *saber )
 	}
 }
 
-void CG_DoSaber( vec3_t origin, vec3_t dir, float length, float lengthMax, float radius, saber_colors_t color, int rfx, qboolean doLight )
+// the glow and the core of a blade colour
+static void CG_SaberShaders( saber_colors_t color, qhandle_t *glowOut, qhandle_t *bladeOut )
 {
-	vec3_t		mid;
 	qhandle_t	blade = 0, glow = 0;
-	refEntity_t saber;
-	float radiusmult;
-	float radiusRange;
-	float radiusStart;
-
-	if ( length < 0.5f )
-	{
-		// if the thing is so short, just forget even adding me.
-		return;
-	}
-
-	// Find the midpoint of the saber for lighting purposes
-	VectorMA( origin, length * 0.5f, dir, mid );
 
 	switch( (int)color )
 	{
@@ -5598,6 +5586,36 @@ void CG_DoSaber( vec3_t origin, vec3_t dir, float length, float lengthMax, float
 			break;
 	}
 
+	*glowOut = glow;
+	*bladeOut = blade;
+}
+
+// v_saberCoreScale, v_saberGlowScale
+static float CG_SaberScale( const vmCvar_t *cv )
+{
+	return Com_Clamp( 0.25f, 3.0f, cv->value );
+}
+
+void CG_DoSaber( vec3_t origin, vec3_t dir, float length, float lengthMax, float radius, saber_colors_t color, int rfx, qboolean doLight )
+{
+	vec3_t		mid;
+	qhandle_t	blade = 0, glow = 0;
+	refEntity_t saber;
+	float radiusmult;
+	float radiusRange;
+	float radiusStart;
+
+	if ( length < 0.5f )
+	{
+		// if the thing is so short, just forget even adding me.
+		return;
+	}
+
+	// Find the midpoint of the saber for lighting purposes
+	VectorMA( origin, length * 0.5f, dir, mid );
+
+	CG_SaberShaders( color, &glow, &blade );
+
 	if (doLight)
 	{	// always add a light because sabers cast a nice glow before they slice you in half!!  or something...
 		vec3_t rgb={1,1,1};
@@ -5630,7 +5648,7 @@ void CG_DoSaber( vec3_t origin, vec3_t dir, float length, float lengthMax, float
 	radiusRange = radius * 0.075f;
 	radiusStart = radius-radiusRange;
 
-	saber.radius = (radiusStart + Q_flrand(-1.0f, 1.0f) * radiusRange)*radiusmult;
+	saber.radius = (radiusStart + Q_flrand(-1.0f, 1.0f) * radiusRange)*radiusmult*CG_SaberScale( &v_saberGlowScale );
 	//saber.radius = (2.8f + Q_flrand(-1.0f, 1.0f) * 0.2f)*radiusmult;
 
 	VectorCopy( origin, saber.origin );
@@ -5660,13 +5678,53 @@ void CG_DoSaber( vec3_t origin, vec3_t dir, float length, float lengthMax, float
 	saber.customShader = blade;
 	saber.reType = RT_LINE;
 	radiusStart = radius/3.0f;
-	saber.radius = (radiusStart + Q_flrand(-1.0f, 1.0f) * radiusRange)*radiusmult;
+	saber.radius = (radiusStart + Q_flrand(-1.0f, 1.0f) * radiusRange)*radiusmult*CG_SaberScale( &v_saberCoreScale );
 //	saber.radius = (1.0 + Q_flrand(-1.0f, 1.0f) * 0.2f)*radiusmult;
 
 	saber.shaderTexCoord[0] = saber.shaderTexCoord[1] = 1.0f;
 	saber.shaderRGBA[0] = saber.shaderRGBA[1] = saber.shaderRGBA[2] = saber.shaderRGBA[3] = 0xff;
 
 	trap->R_AddRefEntityToScene( &saber );
+}
+
+// v_saberStyle 1 (ui/ui_saberfx.c). trail NULL: the blade without the place it was a moment ago.
+static void CG_DoSFXSaber( clientInfo_t *client, int saberNum, int bladeNum, saber_colors_t color, const vec3_t muzzle,
+	const vec3_t end, const vec3_t dir, const saberTrail_t *trail, int rfx )
+{
+	const bladeInfo_t	*blade = &client->saber[saberNum].blade[bladeNum];
+	saberFX_t			fx;
+	qhandle_t			core;
+	vec3_t				rgb, mid;
+
+	memset( &fx, 0, sizeof( fx ) );
+	VectorCopy( muzzle, fx.bladeMuzzle );
+	VectorMA( end, -1.5f, dir, fx.bladeTip );
+	VectorCopy( trail ? trail->dualbase : fx.bladeMuzzle, fx.trailMuzzle );
+	VectorCopy( trail ? trail->dualtip : fx.bladeTip, fx.trailTip );
+	VectorCopy( cg.refdef.vieworg, fx.viewOrigin );
+	fx.lengthMax = blade->lengthMax;
+	fx.radius = blade->radius;
+	CG_SaberShaders( color, &fx.glow, &core );
+	fx.isRGB = CG_SaberIsRGB( color );
+	if ( fx.isRGB )
+	{
+		CG_SaberRGBBytes( rgb );
+		fx.rgb[0] = (byte)rgb[0];
+		fx.rgb[1] = (byte)rgb[1];
+		fx.rgb[2] = (byte)rgb[2];
+	}
+	fx.renderfx = rfx;
+	fx.coreScale = CG_SaberScale( &v_saberCoreScale );
+	fx.glowScale = CG_SaberScale( &v_saberGlowScale );
+	SaberFX_Draw( &fx );
+
+	if ( client->saber[saberNum].numBlades < 3 && !( client->saber[saberNum].saberFlags2 & SFL2_NO_DLIGHT ) && blade->length >= 0.5f )
+	{
+		CG_RGBForSaberColor( color, rgb );
+		VectorScale( rgb, 0.66f, rgb );
+		VectorMA( muzzle, blade->length * 0.5f, dir, mid );
+		trap->R_AddLightToScene( mid, blade->length * 2.0f + Q_flrand( 0.0f, 1.0f ) * 10.0f, rgb[0], rgb[1], rgb[2] );
+	}
 }
 
 //--------------------------------------------------------------
@@ -6226,8 +6284,65 @@ void CG_SaberCompWork(vec3_t start, vec3_t end, centity_t *owner, int saberNum, 
 
 #define SABER_TRAIL_TIME	40.0f
 #define FX_USE_ALPHA		0x08000000
+#define SFX_TRAIL_STALE		500		// ms: a trail older than this starts again at the blade
 
 qboolean BG_SuperBreakWinAnim( int anim );
+
+// v_saberStyle 1: where the blade was a moment ago. It follows the blade with a lag that is shorter the longer a
+// frame takes (JA++ by way of the VisionJK of 2019). dualbase and dualtip are that place, base and tip the blade.
+static void CG_SFXSaberTrail( const centity_t *cent, saberTrail_t *trail, const vec3_t muzzle, const vec3_t tip )
+{
+	vec3_t	dir0, dir1, dir2;
+	float	len0, len1, len2, lag;
+	int		move = cent->currentState.saberMove;
+
+	if ( !trail->lastTime || cg.time < trail->lastTime || cg.time - trail->lastTime > SFX_TRAIL_STALE )
+	{
+		VectorCopy( muzzle, trail->base );
+		VectorCopy( tip, trail->tip );
+		VectorCopy( muzzle, trail->dualbase );
+		VectorCopy( tip, trail->dualtip );
+		trail->lastTime = cg.time;
+		return;
+	}
+	if ( cg.time == trail->lastTime )
+	{
+		return;
+	}
+
+	VectorCopy( trail->base, trail->dualbase );
+	VectorCopy( trail->tip, trail->dualtip );
+	VectorCopy( muzzle, trail->base );
+	VectorCopy( tip, trail->tip );
+
+	VectorSubtract( trail->dualtip, trail->tip, dir0 );
+	VectorSubtract( trail->dualbase, trail->base, dir1 );
+	VectorSubtract( trail->dualtip, trail->dualbase, dir2 );
+	len0 = VectorNormalize( dir0 );
+	len1 = VectorNormalize( dir1 );
+	len2 = VectorLength( dir2 );
+
+	if ( move >= 0 && move < LS_MOVE_MAX && saberMoveData[move].trailLength == 0 )
+	{
+		len0 *= 0.5f;
+		len1 *= 0.3f;
+	}
+	else
+	{
+		len1 *= 0.5f;
+	}
+
+	lag = Q_max( 0.1f, 1.0f - ( cg.time - trail->lastTime ) * 3.0f / 200.0f );
+	lag *= Com_Clamp( 0.0f, 4.0f, v_saberTrailLength.value );
+
+	VectorMA( trail->tip, len0 * lag, dir0, trail->dualtip );
+	VectorMA( trail->base, len1 * lag, dir1, trail->dualbase );
+	VectorSubtract( trail->dualtip, trail->dualbase, dir1 );
+	VectorNormalize( dir1 );
+	VectorMA( trail->dualbase, len2, dir1, trail->dualtip );
+
+	trail->lastTime = cg.time;
+}
 
 void CG_AddSaberBlade( centity_t *cent, centity_t *scent, refEntity_t *saber, int renderfx, int modelIndex, int saberNum, int bladeNum, vec3_t origin, vec3_t angles, qboolean fromSaber, qboolean dontDraw)
 {
@@ -6240,12 +6355,14 @@ void CG_AddSaberBlade( centity_t *cent, centity_t *scent, refEntity_t *saber, in
 	float diff;
 	clientInfo_t *client;
 	centity_t *saberEnt;
-	saberTrail_t *saberTrail;
+	saberTrail_t *saberTrail = NULL;
 	mdxaBone_t	boltMatrix;
 	vec3_t futureAngles;
 	effectTrailArgStruct_t fx;
 	int scolor = 0;
 	int	useModelIndex = 0;
+	qboolean sfxStyle, sfxTrail = qfalse;
+	int bladeRenderfx;
 
 	if (cent->currentState.eType == ET_NPC)
 	{
@@ -6262,6 +6379,13 @@ void CG_AddSaberBlade( centity_t *cent, centity_t *scent, refEntity_t *saber, in
 
 	if (saberLen <= 0 && !dontDraw)
 	{ //don't bother then.
+		return;
+	}
+
+	// v_duelShowSabers 0: the blades of the players in a duel you are not part of are not drawn
+	if ( !v_duelShowSabers.integer && cg.snap && !cg.snap->ps.duelInProgress && cent->currentState.eType != ET_NPC
+		&& cent->currentState.bolt1 && cent->currentState.number != cg.snap->ps.clientNum )
+	{
 		return;
 	}
 
@@ -6367,6 +6491,7 @@ void CG_AddSaberBlade( centity_t *cent, centity_t *scent, refEntity_t *saber, in
 	}
 
 	cg_jpSaberRGB = client->sbRGB[( saberNum || ( tay_saberStaffColors.integer && bladeNum >= 1 ) ) ? 1 : 0];
+	sfxStyle = (qboolean)( v_saberStyle.integer == 1 && SaberFX_Colour( scolor ) );
 
 	if (!cg_saberContact.integer)
 	{ //if we don't have saber contact enabled, just add the blade and don't care what it's touching
@@ -6509,6 +6634,17 @@ CheckTrail:
 	//FIXME: if trailStyle is 1, use the motion blur instead
 
 	saberTrail = &client->saber[saberNum].blade[bladeNum].trail;
+
+	if ( sfxStyle )
+	{
+		vec3_t tip;
+
+		VectorMA( end, -1.5f, axis_[0], tip );
+		CG_SFXSaberTrail( cent, saberTrail, org_, tip );
+		sfxTrail = qtrue;
+		goto JustDoIt;
+	}
+
 	// JA+ client plugin: a saber move the table does not have leaves a short trail
 	saberTrail->duration = cent->currentState.saberMove < LS_MOVE_MAX ? saberMoveData[cent->currentState.saberMove].trailLength : 150;
 
@@ -6524,6 +6660,7 @@ CheckTrail:
 			trailDur = SABER_TRAIL_TIME;
 		}
 	}
+	trailDur = Q_max( 1, (int)( trailDur * Com_Clamp( 0.0f, 4.0f, v_saberTrailLength.value ) ) );
 
 	// if we happen to be timescaled or running in a high framerate situation, we don't want to flood
 	//	the system with very small trail slices...but perhaps doing it by distance would yield better results?
@@ -6758,8 +6895,15 @@ JustDoIt:
 	//CG_DoSaber( org_, axis_[0], saberLen, client->saber[saberNum].blade[bladeNum].lengthMax, client->saber[saberNum].blade[bladeNum].radius,
 	//	scolor, renderfx, (qboolean)(saberNum==0&&bladeNum==0) );
 	// (the blade of a player with an outline is drawn after his figure, which is drawn after everything else then)
+	bladeRenderfx = renderfx | ( CG_SelectOutlined( cent->currentState.number ) ? ( RF_FORCEPOST | RF_AFTERGLOW ) : 0 );
+	if ( sfxStyle )
+	{
+		CG_DoSFXSaber( client, saberNum, bladeNum, (saber_colors_t)scolor, org_, end, axis_[0], sfxTrail ? saberTrail : NULL,
+			bladeRenderfx );
+		return;
+	}
 	CG_DoSaber( org_, axis_[0], saberLen, client->saber[saberNum].blade[bladeNum].lengthMax, client->saber[saberNum].blade[bladeNum].radius,
-		scolor, renderfx | ( CG_SelectOutlined( cent->currentState.number ) ? ( RF_FORCEPOST | RF_AFTERGLOW ) : 0 ),
+		scolor, bladeRenderfx,
 		(qboolean)(client->saber[saberNum].numBlades < 3 && !(client->saber[saberNum].saberFlags2&SFL2_NO_DLIGHT)) );
 }
 
@@ -9246,6 +9390,55 @@ static void CG_JPForceEffects( centity_t *cent, clientInfo_t *ci )
 	}
 }
 
+// v_duelEffect above 0 (from the VisionJK of 2019): a player in a duel you are not part of is drawn in the colour of
+// v_duelColour ("r g b a forceAlpha", 0..255, forceAlpha 1 makes the alpha count) and, from 2 on, in a shader
+// instead of his skin. 0 is the look of the game: dark with a blue bubble.
+static void CG_DuelLook( refEntity_t *ent )
+{
+	static int		modCount = -1;
+	static byte		rgba[4];
+	static qboolean	forceAlpha;
+	int				c[5], i;
+
+	if ( modCount != v_duelColour.modificationCount )
+	{
+		modCount = v_duelColour.modificationCount;
+		if ( sscanf( v_duelColour.string, "%i %i %i %i %i", &c[0], &c[1], &c[2], &c[3], &c[4] ) != 5 )
+		{
+			c[0] = c[1] = c[2] = 50;
+			c[3] = 100;
+			c[4] = 0;
+		}
+		for ( i = 0; i < 4; i++ )
+		{
+			rgba[i] = (byte)Com_Clampi( 0, 255, c[i] );
+		}
+		forceAlpha = (qboolean)( c[4] != 0 );
+	}
+
+	for ( i = 0; i < 4; i++ )
+	{
+		ent->shaderRGBA[i] = rgba[i];
+	}
+	ent->renderfx |= RF_RGB_TINT;
+	if ( forceAlpha )
+	{
+		ent->renderfx |= RF_FORCE_ENT_ALPHA;
+	}
+
+	switch ( v_duelEffect.integer )
+	{
+		case 2:		ent->customShader = cgs.media.protectShader;		break;
+		case 3:		ent->customShader = cgs.media.playerShieldDamage;	break;
+		case 4:		ent->customShader = cgs.media.forceShell;			break;
+		case 5:		ent->customShader = cgs.media.sightShell;			break;
+		case 6:		ent->customShader = cgs.media.halfShieldShader;		break;
+		case 7:		ent->customShader = cgs.media.cloakedShader;		break;
+		case 8:		ent->customShader = cgs.media.forceSightBubble;		break;
+		default:	break;
+	}
+}
+
 void CG_Player( centity_t *cent ) {
 	clientInfo_t	*ci;
 	refEntity_t		legs;
@@ -11473,10 +11666,17 @@ stillDoSaber:
 	{
 		if (cent->currentState.bolt1 && !(cent->currentState.eFlags & EF_DEAD) && cent->currentState.number != cg.snap->ps.clientNum && (!cg.snap->ps.duelInProgress || cg.snap->ps.duelIndex != cent->currentState.number))
 		{
-			legs.shaderRGBA[0] = 50;
-			legs.shaderRGBA[1] = 50;
-			legs.shaderRGBA[2] = 50;
-			legs.renderfx |= RF_RGB_TINT;
+			if ( v_duelEffect.integer > 0 )
+			{
+				CG_DuelLook( &legs );
+			}
+			else
+			{
+				legs.shaderRGBA[0] = 50;
+				legs.shaderRGBA[1] = 50;
+				legs.shaderRGBA[2] = 50;
+				legs.renderfx |= RF_RGB_TINT;
+			}
 		}
 	}
 
@@ -11729,7 +11929,7 @@ stillDoSaber:
 		trap->R_AddRefEntityToScene(&legs);
 	}
 
-	if (!cg.snap->ps.duelInProgress && cent->currentState.bolt1 && !(cent->currentState.eFlags & EF_DEAD) && cent->currentState.number != cg.snap->ps.clientNum && (!cg.snap->ps.duelInProgress || cg.snap->ps.duelIndex != cent->currentState.number))
+	if (v_duelEffect.integer <= 0 && !cg.snap->ps.duelInProgress && cent->currentState.bolt1 && !(cent->currentState.eFlags & EF_DEAD) && cent->currentState.number != cg.snap->ps.clientNum && (!cg.snap->ps.duelInProgress || cg.snap->ps.duelIndex != cent->currentState.number))
 	{
 		legs.shaderRGBA[0] = 50;
 		legs.shaderRGBA[1] = 50;
