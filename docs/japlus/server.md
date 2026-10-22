@@ -271,9 +271,12 @@ on 2026-10-11, see client.md.
 | Cvar | Default | Meaning |
 |------|---------|---------|
 | `vs_allowTrainer` | 0 | how many training bots there may be at once, 0 turns `vs_trainer` off. Needs `bot_enable 1` and free for all (`g_gametype 0`) |
+| `vs_trainerParams` | empty | a file (game file system path) with other values for the bot, see "Values from a file". Read again when the cvar changes. Empty: the compiled defaults |
+| `vs_cloneModel` | `trainer/clone.dat` | the model file of the clone. Read again when the cvar changes. A server without the file has no clone |
 
-The player command `vs_trainer [1-5|off|info]` calls a training bot that fights only the player who called it.
-Without a number it is level 3. With a number while the bot exists, that changes its level. `off` sends it away.
+The player command `vs_trainer [1-5|clone|off|info]` calls a training bot that fights only the player who called it.
+Without a number it is level 3. With a number while the bot exists, that changes its level. `clone` calls the clone
+(see below). `off` sends it away.
 `info` prints what the bot has learned about the player (see below).
 
 The bot fights like flip kick players, and moves like the movement log of one (15 kicks in 83 seconds). From 250 to
@@ -360,6 +363,36 @@ last command).
 
 It leaves when its player leaves, or when `vs_allowTrainer` goes to 0 or the gametype is not free for all. It stays a
 trainer over a map change: owner and level are kept in the userinfo key `vs_trainer` of the bot.
+
+#### Values from a file, the clone and matches
+
+`vs_trainerParams` names a file with one value per line, `<NAME> <value>`, `//` starts a comment. NAME is one of the
+names in `game/trainer/trainer_params.h`, or `level<1-5>.<field>` for the level table (fields `reactMs`, `turnSpeed`,
+`readChance`, `counterChance`, `pauseMs`, `leadSec`, `chance`), or one of the start scores `PRIOR_*`. A name that is
+not known is printed. What the file does not name keeps its compiled value.
+
+The clone (`vs_trainer clone`, `game/trainer/g_clone.c`, `g_clone.h`, the generated `clone_tables.h`) is a bot that
+plays like the player whose movement logs it was trained on. Each server frame it makes 26 features of the state
+(`tools/trainer/trainerlib.py`) and asks small random forests, one per decision: move, jump, hook, attack, aim yaw and
+aim pitch. Each decision is drawn by the shares of the forests. On top of that it has a kick reflex: in the air,
+rising faster than 200, with the player in reach in 50 ms, it lets go of the jump and presses it again. The forests
+at frames of 50 ms missed the kick (1.5 kicks a minute against 10.7 of the player, 4.2 with the reflex). The reflex
+uses the default values, not `vs_trainerParams`. The model is the file of `vs_cloneModel`, made by
+`tools/trainer/train_clone.py` from logs of the movement log below.
+
+The server command `vs_trainermatch <a> <b> <rounds> <file> [quit]` lets two training bots (levels 1 to 5 or `clone`)
+fight each other. It needs free for all and `bot_enable 1`, not `vs_allowTrainer`. A round ends with a kill or after
+60 s. The result line is appended to the file: `levelA`, `levelB`, `rounds`, `sec`, `dealtA`, `dealtB`, `killsA`,
+`killsB`, `end` and `A.<approach>=<score>/<tries>`, `B.<approach>=<score>/<tries>`. With `quit` the server ends
+afterwards.
+
+`vs_simFast 1` (engine, `codemp/qcommon/common.cpp`, a cheat like `fixedtime`) is for simulations: on a dedicated
+server with `fixedtime` set (so started with `devmap`) the frames run back to back without waiting, each `fixedtime`
+msec long. Physics and the timing of the bots stay those of a normal server, so use `fixedtime 50` with `sv_fps 20`.
+With two bots that is about 1000 times faster than real time.
+
+`tools/trainer/` has the scripts that train the clone and tune the values with such matches, see
+`tools/trainer/README.md`.
 
 #### Movement log (not from JA+)
 
