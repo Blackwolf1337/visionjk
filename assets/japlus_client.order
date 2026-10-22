@@ -497,3 +497,8 @@ sound/chr_f/video/
 sound/chr_f/worker2/
 sound/chr_f/worker3/
 sound/chr_f/worker3/misc/
+sound/chars/chiss/
+sound/chars/chiss/misc/
+sound/chr_d/chiss/
+sound/chr_d/chiss/misc/
+gfx/sfx_sabers/
