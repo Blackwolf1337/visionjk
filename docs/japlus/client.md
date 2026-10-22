@@ -948,6 +948,60 @@ OpenSSH agent of Windows both logged in on 2026-10-11, see [windows.md](windows.
 `sv_floodProtect 0`, which is why the run did not show the dropped commands. The spacing of the commands is
 not run against any server yet.
 
+### From the VisionJK of 2019
+
+`codemp/ui/ui_saberfx.c` and `.h`, `codemp/cgame/hud/cg_notify.c` (2026-10-22). Three things of the VisionJK client
+of 2019 are back: a blade style, a look for duels and notifications. The 2019 tree had them as `h_newFXsabers`,
+`h_saberTrailLength`, `h_saberWidth`, `h_saberBladeCoreMulti`, `h_saberBladeGlowMulti`, `h_duelEffect`,
+`h_duelColour`, `h_duelShowSabers` and `h_notification*`. The old names are not taken over, because their values
+meant other things (`h_saberWidth` was an absolute radius), so there is no entry for them in
+`codemp/qcommon/cvar_renames.h`.
+
+| Cvar or command | Default | Meaning |
+|-----------------|---------|---------|
+| `v_saberStyle` | 0 | 1: the blade is a thin white core in a glow of its colour (Setup, Game, Lightsabers) |
+| `v_saberTrailLength` | 1 | length of the trail, both styles |
+| `v_saberCoreScale`, `v_saberGlowScale` | 1 | thickness of core and glow, both styles, 0.25 to 3 |
+| `v_duelEffect` | 0 | the look of players in a duel you are not part of: 0 as the game, 1 tinted, 2 to 8 tinted and drawn as a shader (shield, damaged shield, force shell, sight shell, half shield, cloaked, sight bubble) |
+| `v_duelColour` | `50 50 255 100 0` | "r g b a forceAlpha", 0 to 255. forceAlpha 1 makes the alpha count |
+| `v_duelShowSabers` | 1 | 0 hides the blades of those players |
+| `v_notify` | 1 | 0 off, 1 on, 2 on with the sound of `tay_notify` |
+| `v_notifyTime` | 6000 | how long a line stays, in ms |
+| `v_notifyScale`, `v_notifyX`, `v_notifyY` | 1, 10, 140 | size and place of the lines |
+| `v_notify_show <text>` | | command: shows a line, for scripts and binds |
+
+Blade style. `v_saberStyle 1` is for the six colours of the game and the plain RGB blade. The other RGB styles and
+black stay classic. The glow and the core are drawn over four surfaces: the blade, the blade a moment ago, and the
+two sides between them, each a glow (`RT_SABER_GLOW`) and a core (`RT_LINE`). So a swing is one surface and not a row of
+blades. `ui_saberfx.c` does that and is built into cgame and ui like `ui_skin.c`. `CG_SFXSaberTrail` and
+`CG_DoSFXSaber` in `codemp/cgame/cg_players.c` keep the blade of a moment ago: it follows the blade, shorter the
+longer a frame takes, and a trail older than 500 ms starts again at the blade. `UI_DoSFXSaber` in
+`codemp/ui/ui_saber.c` draws a blade that stands still, for the saber preview of the menus. With `cg_saberTrail 0` the
+SFX blade has no smear. The shaders are in `shaders/sfx_sabers.shader`, the images in `gfx/sfx_sabers`. The old
+default of the glow (`h_saberBladeGlowMulti` 1.25) is the look at `v_saberGlowScale 1`.
+
+Duels. `CG_DuelLook` in `cg_players.c` sets the look. The numbering of `v_duelEffect` differs from `h_duelEffect` by one,
+because 0 is now the look of the game. With `v_duelEffect` above 0 the second pass of the game (the blue sight
+bubble over a dueling player) is left out, as the 2019 tree did.
+
+Notifications. Lines at the left edge that slide in (250 ms), stay and slide out. There are 8 at most, a new one pushes
+the oldest out. They come from these places:
+
+- A tell: `CG_ChatAdd` in `chat/cg_chat.c` is fed with the chat kind `CHAT_TELL` from somebody else.
+- A mention: the line has your name, the same match as `tay_notify`.
+- A line of a boombox for you: `Box_Note` in `boombox/cg_boombox.c`.
+- A newer version: `v_updateState` and `v_updateText` of the engine. The cgame looks at them once a second and only
+  a change to 1 while the level runs counts. The main menu has its own line for it.
+
+A colour bar at the left shows the kind: purple for a tell, gold for a mention, light blue for the rest. With the
+new HUD the box is glass, with the classic one it is a dark box. The chat box and the console keep their lines.
+Downloads at the connect are not shown, the cgame does not run yet then.
+
+The voice set of chiss (`sound/chars/chiss`, `sound/chr_d/chiss` and `models/players/chiss/sounds.cfg`) comes from
+the same tree. The model of the game had no voice of its own.
+
+Built for Linux on 2026-10-22, not yet seen in the game.
+
 ## Prediction
 
 The movement code (`bg_*.c`) is shared with the server. The JA+ rules in it are switched by `JP_FEATURE( JPF_... )`,
