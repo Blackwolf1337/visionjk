@@ -230,7 +230,7 @@ typedef struct {
 	qboolean		learned;	// value has its priors
 	qboolean		match;		// fights another bot in a vs_trainermatch, needs no vs_allowTrainer
 	qboolean		clone;		// plays like the player of the clone model, not by the states here (g_clone.c)
-	int				clonePrev[CLONE_HEADS];	// its decisions of the frame before
+	cloneState_t	cloneState;	// its decisions of the frame before and its aim
 	int				cloneUp;	// its upmove of the frame before
 	int				circle;		// 1 circles to the right, -1 to the left
 	int				circleTime;	// level.time it may turn round
@@ -343,12 +343,9 @@ static void Trainer_LoadParams( void ) {
 
 // level 1 to 5, or TRAINER_CLONE
 static void Trainer_SetLevel( trainer_t *t, int lvl ) {
-	// trainerlib.NO_ACTION: standing, no buttons, looking at him
-	static const int noAction[CLONE_HEADS] = { 4, 0, 0, 0, 4, 1 };
-
 	t->level = Com_Clampi( 1, TRAINER_CLONE, lvl );
 	t->clone = (qboolean)( t->level == TRAINER_CLONE );
-	memcpy( t->clonePrev, noAction, sizeof( t->clonePrev ) );
+	Clone_Reset( &t->cloneState );
 }
 
 // "clone" or a number, 0 if neither
@@ -1075,12 +1072,13 @@ static void Trainer_CloneThink( trainer_t *t, bot_state_t *bs, const gentity_t *
 	cloneCmd_t	c;
 	vec3_t		eye, dir, angles, point;
 
-	Clone_Decide( self, enemy, t->clonePrev, &c );
+	Clone_Decide( self, enemy, &t->cloneState, elapsed, &c );
 
 	// The kick itself is a reflex: the player presses in the one frame it reaches, the forests at 50 ms frames
 	// mostly miss it (1.5 kicks a minute against his 10.7 with the same moves and hooks). On the ground, going for
 	// him: the jump when he will be in reach at its press (as the trainer, Trainer_TakeOff). In the air, still rising
-	// fast and with him in reach at the next frame: let go, then press, looking straight at him.
+	// fast and with him in reach at the next frame: let go, then press, looking straight at him (the smoothed aim
+	// goes on from there).
 	if ( self->client->ps.groundEntityNum != ENTITYNUM_NONE && c.forwardmove > 0 && t->cloneUp <= 0
 		&& JP_FEATURE( JPF_FLIPKICK ) ) {
 		float above;
@@ -1089,7 +1087,7 @@ static void Trainer_CloneThink( trainer_t *t, bot_state_t *bs, const gentity_t *
 		if ( atPress >= trainerDefaults.REACH_NEAR && atPress <= trainerDefaults.REACH_FAR
 			&& fabsf( above ) < trainerDefaults.LEVEL_DZ ) {
 			c.upmove = 127;
-			c.yawOff = 0.0f;
+			c.yawOff = t->cloneState.yawOff = 0.0f;
 		}
 	}
 	else if ( self->client->ps.groundEntityNum == ENTITYNUM_NONE && self->client->ps.velocity[2] > 200.0f
@@ -1100,7 +1098,7 @@ static void Trainer_CloneThink( trainer_t *t, bot_state_t *bs, const gentity_t *
 		if ( atNext >= trainerDefaults.REACH_NEAR && atNext <= trainerDefaults.REACH_FAR ) {
 			c.forwardmove = 127;
 			c.rightmove = 0;
-			c.yawOff = 0.0f;
+			c.yawOff = t->cloneState.yawOff = 0.0f;
 			c.upmove = ( t->cloneUp > 0 ) ? 0 : 127;
 		}
 	}

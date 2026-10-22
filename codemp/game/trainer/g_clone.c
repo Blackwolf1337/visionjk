@@ -25,6 +25,11 @@ numbers in the same order) and asks one small random forest per decision what th
 how he moved, jumped, hooked, attacked and where he looked. It draws each decision by the shares the forest gives,
 not the most likely one, so the rare presses (a kick, a hook) come as often as with the player.
 
+A new draw every 50 ms jitters: the player holds a direction for 250-300 ms (median of the logs), the draws flip
+between the classes the forest splits its shares on. So a drawn move or attack holds for a while unless the forest
+hardly gives it a share any more, and the aim is no drawn bin but the mean of the bins by their shares, followed
+smoothly as a mouse would.
+
 The model is the file of vs_cloneModel (default trainer/clone.dat), read into fixed arrays when the cvar changes.
 Its layout is in train_clone.py write_model(), the class tables in clone_tables.h (gen_tables.py).
 
@@ -42,6 +47,11 @@ Not from JA+.
 #define CLONE_MAX_VALUES	524288
 #define CLONE_MAX_FILE		(8 * 1024 * 1024)
 #define CLONE_MAGIC			"VJKCLN01"
+#define CLONE_KEEP_SHARE	0.15f		// a held decision stays while the forest gives it this share at least
+#define CLONE_AIM_SEC		0.1f		// time constant of the aim following the forest
+
+// how long a drawn decision holds (move, jump, hook, attack, yaw, pitch); the presses of jump and hook do not
+static const int cloneHoldMsec[CLONE_HEADS] = { 250, 0, 0, 500, 0, 0 };
 
 typedef struct {
 	int		feature;		// -1: a leaf
@@ -226,12 +236,13 @@ static void Clone_Features( const gentity_t *self, const gentity_t *enemy, const
 	x[25] = ps->viewangles[PITCH];
 }
 
-// one decision: the class shares of all trees of the head, one class drawn by them
-static int Clone_Head( int h, const float *x ) {
+// the class shares of all trees of a head added up, their sum
+static float Clone_Shares( int h, const float *x, float *share ) {
 	const cloneHead_t	*head = &cloneHeads[h];
-	float				share[CLONE_MAX_CLASSES] = { 0 }, sum = 0.0f, r;
+	float				sum = 0.0f;
 	int					i, c;
 
+	memset( share, 0, sizeof( float ) * CLONE_MAX_CLASSES );
 	for ( i = 0; i < head->trees; i++ ) {
 		const cloneNode_t *node = &cloneNodes[cloneRoots[head->firstTree + i]];
 
@@ -242,8 +253,15 @@ static int Clone_Head( int h, const float *x ) {
 	}
 	for ( c = 0; c < head->classes; c++ )
 		sum += share[c];
-	r = Q_flrand( 0.0f, sum );
-	for ( c = 0; c < head->classes - 1; c++ ) {
+	return sum;
+}
+
+// one class drawn by the shares
+static int Clone_Draw( const float *share, int classes, float sum ) {
+	float	r = Q_flrand( 0.0f, sum );
+	int		c;
+
+	for ( c = 0; c < classes - 1; c++ ) {
 		r -= share[c];
 		if ( r < 0.0f )
 			break;
@@ -251,26 +269,82 @@ static int Clone_Head( int h, const float *x ) {
 	return c;
 }
 
-// what the clone does this frame; prev has the decisions of the frame before and gets the new ones
-void Clone_Decide( const gentity_t *self, const gentity_t *enemy, int prev[CLONE_HEADS], cloneCmd_t *out ) {
-	float	x[CLONE_FEATURES];
+// the mean of the bin centres by their shares (an angle for the yaw: the shares at -150 and 150 are behind, not 0)
+static float Clone_Mean( const float *share, const float *centres, int count, float sum, qboolean angle ) {
+	float	s = 0.0f, c = 0.0f;
+	int		i;
+
+	for ( i = 0; i < count; i++ ) {
+		if ( angle ) {
+			s += share[i] * sinf( DEG2RAD( centres[i] ) );
+			c += share[i] * cosf( DEG2RAD( centres[i] ) );
+		}
+		else
+			s += share[i] * centres[i];
+	}
+	if ( angle )
+		return RAD2DEG( atan2f( s, c ) );
+	return ( sum > 0.0f ) ? s / sum : 0.0f;
+}
+
+// trainerlib.bin_of
+static int Clone_Bin( const float *edges, int count, float v ) {
+	int i;
+
+	for ( i = 0; i < count; i++ ) {
+		if ( v < edges[i] )
+			break;
+	}
+	return i;
+}
+
+// trainerlib.NO_ACTION: standing, no buttons, looking at him
+void Clone_Reset( cloneState_t *s ) {
+	static const int noAction[CLONE_HEADS] = { 4, 0, 0, 0, 4, 1 };
+
+	memset( s, 0, sizeof( *s ) );
+	memcpy( s->prev, noAction, sizeof( s->prev ) );
+	s->pitch = clonePitch[1];
+}
+
+// what the clone does this frame; s has the decisions of the frame before and gets the new ones
+void Clone_Decide( const gentity_t *self, const gentity_t *enemy, cloneState_t *s, int elapsed, cloneCmd_t *out ) {
+	float	x[CLONE_FEATURES], share[CLONE_MAX_CLASSES], sum, k;
 	int		act[CLONE_HEADS], h;
 
 	memset( out, 0, sizeof( *out ) );
 	if ( !Clone_Ready() )
 		return;
-	Clone_Features( self, enemy, prev, x );
-	for ( h = 0; h < CLONE_HEADS; h++ )
-		act[h] = Clone_Head( h, x );
+	Clone_Features( self, enemy, s->prev, x );
+	for ( h = 0; h < 4; h++ ) {
+		const int p = s->prev[h];
+
+		sum = Clone_Shares( h, x, share );
+		act[h] = Clone_Draw( share, cloneHeads[h].classes, sum );
+		if ( act[h] != p && level.time - s->since[h] < cloneHoldMsec[h] && share[p] >= CLONE_KEEP_SHARE * sum )
+			act[h] = p;
+		if ( act[h] != p )
+			s->since[h] = level.time;
+	}
+
+	// the aim follows the mean of the forest, the bins it is in are the decisions the features know
+	k = 1.0f - expf( -elapsed / ( 1000.0f * CLONE_AIM_SEC ) );
+	sum = Clone_Shares( 4, x, share );
+	s->yawOff = AngleNormalize180( s->yawOff
+		+ AngleSubtract( Clone_Mean( share, cloneYaw, ARRAY_LEN( cloneYaw ), sum, qtrue ), s->yawOff ) * k );
+	sum = Clone_Shares( 5, x, share );
+	s->pitch += ( Clone_Mean( share, clonePitch, ARRAY_LEN( clonePitch ), sum, qfalse ) - s->pitch ) * k;
+	act[4] = Clone_Bin( cloneYawEdges, ARRAY_LEN( cloneYawEdges ), s->yawOff );
+	act[5] = Clone_Bin( clonePitchEdges, ARRAY_LEN( clonePitchEdges ), s->pitch );
 
 	// move: forward and right of trainerlib.actions, -1 to 1 each
 	out->forwardmove = ( act[0] / 3 - 1 ) * 127;
 	out->rightmove = ( act[0] % 3 - 1 ) * 127;
 	// jump: a press needs a frame without jump before it (PMF_JUMP_HELD)
 	switch ( act[1] ) {
-	case 1:		out->upmove = ( prev[1] == 1 || prev[1] == 2 ) ? 0 : 127;	break;
-	case 2:		out->upmove = 127;											break;
-	case 3:		out->upmove = -127;											break;
+	case 1:		out->upmove = ( s->prev[1] == 1 || s->prev[1] == 2 ) ? 0 : 127;	break;
+	case 2:		out->upmove = 127;												break;
+	case 3:		out->upmove = -127;												break;
 	default:	break;
 	}
 	// hook: press and hold the button, use lets go
@@ -280,9 +354,9 @@ void Clone_Decide( const gentity_t *self, const gentity_t *enemy, int prev[CLONE
 		out->buttons |= BUTTON_USE;
 	if ( act[3] )
 		out->buttons |= BUTTON_ATTACK;
-	out->yawOff = cloneYaw[Com_Clampi( 0, ARRAY_LEN( cloneYaw ) - 1, act[4] )];
-	out->pitch = clonePitch[Com_Clampi( 0, ARRAY_LEN( clonePitch ) - 1, act[5] )];
+	out->yawOff = s->yawOff;
+	out->pitch = s->pitch;
 
 	for ( h = 0; h < CLONE_HEADS; h++ )
-		prev[h] = act[h];
+		s->prev[h] = act[h];
 }

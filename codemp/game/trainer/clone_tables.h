@@ -94,3 +94,11 @@ static const float cloneYaw[9] = {
 static const float clonePitch[6] = {
 	-35.0f, -7.0f, 15.0f, 32.0f, 47.0f, 65.0f,
 };
+
+static const float cloneYawEdges[8] = {
+	-120.0f, -60.0f, -25.0f, -8.0f, 8.0f, 25.0f, 60.0f, 120.0f,
+};
+
+static const float clonePitchEdges[5] = {
+	-20.0f, 5.0f, 25.0f, 40.0f, 55.0f,
+};

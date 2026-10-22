@@ -32,5 +32,13 @@ typedef struct {
 	float	pitch;		// the view this far down
 } cloneCmd_t;
 
+// what the clone keeps from frame to frame
+typedef struct {
+	int		prev[CLONE_HEADS];	// the decisions of the frame before (features pMove to pYaw)
+	int		since[CLONE_HEADS];	// level.time each decision last changed
+	float	yawOff, pitch;		// the aim, smoothed
+} cloneState_t;
+
 qboolean	Clone_Ready( void );
-void		Clone_Decide( const gentity_t *self, const gentity_t *enemy, int prev[CLONE_HEADS], cloneCmd_t *out );
+void		Clone_Reset( cloneState_t *s );
+void		Clone_Decide( const gentity_t *self, const gentity_t *enemy, cloneState_t *s, int elapsed, cloneCmd_t *out );

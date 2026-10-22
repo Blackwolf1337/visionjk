@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Writes codemp/game/trainer/clone_tables.h: the class of every animation and saber move (trainerlib.legs_class,
-trainerlib.saber_phase) and the bins of the aim, so the clone in the game sees the player as the training here did.
+trainerlib.saber_phase) and the bins of the aim (centres and edges), so the clone in the game sees the player as the training here did.
 Run again when anims.h or the saber moves of bg_public.h change.
 """
 import os
@@ -52,6 +52,8 @@ def main():
     out.append('\n' + array('cloneSaber', 'byte', saber))
     out.append('\n' + array('cloneYaw', 'float', ['%.1ff' % v for v in T.YAW_CENTERS]))
     out.append('\n' + array('clonePitch', 'float', ['%.1ff' % v for v in T.PITCH_CENTERS]))
+    out.append('\n' + array('cloneYawEdges', 'float', ['%.1ff' % v for v in T.YAW_EDGES]))
+    out.append('\n' + array('clonePitchEdges', 'float', ['%.1ff' % v for v in T.PITCH_EDGES]))
     path = os.path.join(T.GAME, 'trainer', 'clone_tables.h')
     with open(path, 'w', newline='\n') as f:
         f.write(''.join(out))
