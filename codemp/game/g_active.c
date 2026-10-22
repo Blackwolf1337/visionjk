@@ -3105,6 +3105,8 @@ void ClientThink_real( gentity_t *ent ) {
 	// not from JA+: the mouse of who turns a prop with the physgun (g_props.c)
 	G_PropGunCmd( ent, &pmove.cmd );
 	Pmove (&pmove);
+	// not from JA+: the movement log (trainer/g_movelog.c), before the kick of this pmove is used up below
+	G_MoveLogCmd( ent, ucmd );
 
 	if (ent->client->solidHack)
 	{

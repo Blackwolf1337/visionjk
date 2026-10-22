@@ -668,6 +668,7 @@ static void Svcmd_Toggle( qboolean (*toggle)( gentity_t *ent ) ) {
 static void Svcmd_Disorient_f( void )	{ Svcmd_Toggle( G_DisorientToggle ); }
 static void Svcmd_Flatulence_f( void )	{ Svcmd_Toggle( G_FlatulenceToggle ); }
 static void Svcmd_Schizo_f( void )		{ Svcmd_Toggle( G_SchizoToggle ); }
+static void Svcmd_MoveLog_f( void )		{ Svcmd_Toggle( G_MoveLogToggle ); }
 
 typedef struct svcmd_s {
 	const char	*name;
@@ -690,6 +691,7 @@ svcmd_t svcmds[] = {
 	{ "forceteam",					Svcmd_ForceTeam_f,					qfalse },
 	{ "game_memory",				Svcmd_GameMem_f,					qfalse },
 	{ "listip",						Svcmd_ListIP_f,						qfalse },
+	{ "vs_movelog",					Svcmd_MoveLog_f,					qfalse },
 	{ "vs_props",						Svcmd_Props_f,						qfalse },
 	{ "removeip",					Svcmd_RemoveIP_f,					qfalse },
 	{ "say",						Svcmd_Say_f,						qtrue },

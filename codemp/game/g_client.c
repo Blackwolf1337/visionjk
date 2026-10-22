@@ -4109,6 +4109,7 @@ void ClientDisconnect( int clientNum ) {
 	G_BoomboxClientGone( clientNum );
 	G_AuthClientGone( clientNum );
 	G_TrainerDisconnect( clientNum );
+	G_MoveLogDisconnect( clientNum );
 
 	ent = g_entities + clientNum;
 	if ( !ent->client || ent->client->pers.connected == CON_DISCONNECTED ) {

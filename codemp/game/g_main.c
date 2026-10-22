@@ -480,6 +480,7 @@ void G_ShutdownGame( int restart ) {
 	WebAdmin_Shutdown();
 	G_BoomboxShutdown( restart ? qtrue : qfalse );
 	G_VoiceShutdown( restart ? qtrue : qfalse );
+	G_MoveLogShutdown();
 
 	G_CleanAllFakeClients(); //get rid of dynamically allocated fake client structs.
 

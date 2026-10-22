@@ -1353,6 +1353,12 @@ void G_TrainerDisconnect( int clientNum );
 void G_TrainerFrame( void );
 void Cmd_Trainer_f( gentity_t *ent );
 
+// g_movelog.c: every usercmd of a player into a CSV (vs_movelog)
+qboolean G_MoveLogToggle( gentity_t *ent );
+void G_MoveLogCmd( gentity_t *ent, const usercmd_t *ucmd );
+void G_MoveLogDisconnect( int clientNum );
+void G_MoveLogShutdown( void );
+
 // g_schizo.c: hallucinations only one player gets
 qboolean G_SchizoToggle( gentity_t *ent );
 qboolean G_SchizoActive( int clientNum );

@@ -302,6 +302,7 @@ set(MPGameFiles ${MPGameFiles} ${MPGameFunFiles})
 
 # the training bot (vs_trainer)
 set(MPGameTrainerFiles
+	"${MPDir}/game/trainer/g_movelog.c"
 	"${MPDir}/game/trainer/g_trainer.c"
 	)
 source_group("game/trainer" FILES ${MPGameTrainerFiles})
