@@ -3752,6 +3752,7 @@ command_t commands[] = {
 	{ "vs_auth",				Cmd_JPAuth_f,				0 },
 	{ "vs_box",				Cmd_JPBox_f,				0 },
 	{ "vs_status",			Cmd_JPStatus_f,				0 },
+	{ "vs_trainer",			Cmd_Trainer_f,				CMD_NOINTERMISSION },
 	{ "vs_voiceLink",			Cmd_JPVoice_f,				0 },
 	{ "kill",				Cmd_Kill_f,					CMD_ALIVE|CMD_NOINTERMISSION },
 	{ "killother",			Cmd_KillOther_f,			CMD_CHEAT|CMD_NOINTERMISSION },

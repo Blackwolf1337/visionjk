@@ -1346,6 +1346,13 @@ void G_PropPull( gentity_t *ent, const vec3_t dir, float accel, float dt );
 void G_PropForceThrow( gentity_t *self, qboolean pull );
 float G_PropPlayerSpeed( const gentity_t *ent );
 
+// g_trainer.c: a bot that trains one player in flip kick fights (vs_trainer)
+qboolean G_TrainerActive( int clientNum );
+void G_TrainerForcePowers( int clientNum, char *forcePowers, size_t size );
+void G_TrainerDisconnect( int clientNum );
+void G_TrainerFrame( void );
+void Cmd_Trainer_f( gentity_t *ent );
+
 // g_schizo.c: hallucinations only one player gets
 qboolean G_SchizoToggle( gentity_t *ent );
 qboolean G_SchizoActive( int clientNum );
@@ -1527,6 +1534,7 @@ void G_CheckBotSpawn( void );
 void G_RemoveQueuedBotBegin( int clientNum );
 qboolean G_BotConnect( int clientNum, qboolean restart );
 void Svcmd_AddBot_f( void );
+int G_AddBot( const char *name, float skill, const char *team, int delay, const char *altname, const char *overrides );
 void Svcmd_BotList_f( void );
 void BotInterbreedEndMatch( void );
 qboolean G_DoesMapSupportGametype(const char *mapname, int gametype);

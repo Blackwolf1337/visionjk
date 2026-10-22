@@ -264,6 +264,40 @@ Monocypher of the tree, the signed message, the key lines, key files in both dir
 and the agent protocol against an `ssh-agent` started for the test). The logins themselves ran against a server
 on 2026-10-11, see client.md.
 
+### Training bot (not from JA+)
+
+`game/trainer/g_trainer.c`.
+
+| Cvar | Default | Meaning |
+|------|---------|---------|
+| `vs_allowTrainer` | 0 | how many training bots there may be at once, 0 turns `vs_trainer` off. Needs `bot_enable 1` and free for all (`g_gametype 0`) |
+
+The player command `vs_trainer [1-5|off]` calls a training bot that fights only the player who called it. Without a
+number it is level 3. With a number while the bot exists, that changes its level. `off` sends it away.
+
+The bot fights like flip kick players. It pulls itself in with the JA+ grappling hook from 300 to 1200 units
+(needs `jp_allowHook 1`), grabs with melee (needs `g_debugMelee`), flip kicks (needs `jp_allowflipkick`), or swings
+from above in the red style. After a kick that knocks the player down it follows with the red swing. It reads the
+player: while he attacks, or has the attack button down, it does not hook, grab or kick, it backs off and blocks. It
+counters his hook (it swings, which can cut the rope, and moves sideways), his flip kick (it swings in the red style,
+which keeps it from being knocked down, or crouches) and his grab (it backs off).
+
+| Level | 1 | 5 |
+|-------|---|---|
+| reaction time | 450 ms | 80 ms |
+| sees an attack | 45 percent | 97 percent |
+| counters | 20 percent | 95 percent |
+| pause between its attacks | 2.6 s | 0.5 s |
+
+The view turn speed grows with the level too.
+
+The bot is the stock profile "Jedi Trainer" with a single saber, force jump 3 and saber offense and defense 3, under
+the name "Trainer". Its commands go through the normal player movement code, so it can do nothing a player can not.
+It has no path finding: it runs straight at the player.
+
+It leaves when its player leaves, or when `vs_allowTrainer` goes to 0 or the gametype is not free for all. It stays a
+trainer over a map change: owner and level are kept in the userinfo key `vs_trainer` of the bot.
+
 ## Not done on the server
 
 - The wall flip part of `jp_jk2RedDFA` (the red DFA rule itself is in).

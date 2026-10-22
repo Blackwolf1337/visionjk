@@ -300,6 +300,13 @@ set(MPGameFunFiles
 source_group("game/fun" FILES ${MPGameFunFiles})
 set(MPGameFiles ${MPGameFiles} ${MPGameFunFiles})
 
+# the training bot (vs_trainer)
+set(MPGameTrainerFiles
+	"${MPDir}/game/trainer/g_trainer.c"
+	)
+source_group("game/trainer" FILES ${MPGameTrainerFiles})
+set(MPGameFiles ${MPGameFiles} ${MPGameTrainerFiles})
+
 set(MPGameCommonFiles
 	"${MPDir}/qcommon/q_shared.c"
 	"${MPDir}/qcommon/disablewarnings.h"

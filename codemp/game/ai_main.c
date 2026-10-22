@@ -665,6 +665,10 @@ void BotUpdateInput(bot_state_t *bs, int time, int elapsed_time) {
 	bot_input_t bi;
 	int j;
 
+	// not from JA+: a training bot makes its own command (g_trainer.c)
+	if ( G_TrainerCmd( bs, time, elapsed_time ) )
+		return;
+
 	//add the delta angles to the bot's current view angles
 	for (j = 0; j < 3; j++) {
 		bs->viewangles[j] = AngleMod(bs->viewangles[j] + SHORT2ANGLE(bs->cur_ps.delta_angles[j]));
@@ -781,7 +785,9 @@ int BotAI(int client, float thinktime) {
 #ifdef _DEBUG
 	start = trap->Milliseconds();
 #endif
-	StandardBotAI(bs, thinktime);
+	// not from JA+: a training bot makes its command in g_trainer.c
+	if ( !G_TrainerActive( client ) )
+		StandardBotAI(bs, thinktime);
 #ifdef _DEBUG
 	end = trap->Milliseconds();
 

@@ -74,6 +74,8 @@ XCVAR_DEF( jp_autoQUIT, "10-06:00", NULL, CVAR_ARCHIVE, qtrue )
 // not in JA+: the addresses this server is reached by ("1.2.3.4:29070 192.168.0.5:29070"), for the login with a
 // key. A signature made for another address is refused, see auth/g_auth.c. Empty: not looked at.
 XCVAR_DEF( vs_authHosts, "", NULL, CVAR_ARCHIVE, qfalse )
+// not in JA+: how many training bots (vs_trainer, trainer/g_trainer.c) there may be at once, 0: none
+XCVAR_DEF( vs_allowTrainer, "0", NULL, CVAR_ARCHIVE, qfalse )
 XCVAR_DEF( jp_banAdminIPs, "", NULL, CVAR_ARCHIVE, qfalse )
 XCVAR_DEF( jp_cinfo, "0", NULL, CVAR_SERVERINFO|CVAR_ROM, qtrue )
 XCVAR_DEF( jp_clanPass, "", NULL, CVAR_INTERNAL, qfalse )

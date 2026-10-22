@@ -355,6 +355,9 @@ typedef struct bot_state_s
 	//end rww
 } bot_state_t;
 
+// g_trainer.c: the usercmd of a training bot, qfalse for any other bot
+qboolean G_TrainerCmd( bot_state_t *bs, int time, int elapsed );
+
 void *B_TempAlloc(int size);
 void B_TempFree(int size);
 

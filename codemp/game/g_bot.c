@@ -824,11 +824,12 @@ qboolean G_BotConnect( int clientNum, qboolean restart ) {
 G_AddBot
 ===============
 */
-static void G_AddBot( const char *name, float skill, const char *team, int delay, char *altname) {
+int G_AddBot( const char *name, float skill, const char *team, int delay, const char *altname, const char *overrides ) {
 	gentity_t		*bot = NULL;
 	int				clientNum, preTeam = TEAM_FREE;
 	char			userinfo[MAX_INFO_STRING] = {0},
-					*botinfo = NULL, *key = NULL, *s = NULL, *botname = NULL, *model = NULL;
+					*botinfo = NULL, *key = NULL, *s = NULL, *model = NULL;
+	const char		*botname = NULL;
 
 	// have the server allocate a client slot
 	clientNum = trap->BotAllocateClient();
@@ -836,7 +837,7 @@ static void G_AddBot( const char *name, float skill, const char *team, int delay
 //		trap->Print( S_COLOR_RED "Unable to add bot.  All player slots are in use.\n" );
 //		trap->Print( S_COLOR_RED "Start server with more 'open' slots.\n" );
 		trap->SendServerCommand( -1, va("print \"%s\n\"", G_GetStringEdString("MP_SVGAME", "UNABLE_TO_ADD_BOT")));
-		return;
+		return -1;
 	}
 
 	// get the botinfo from bots.txt
@@ -844,7 +845,7 @@ static void G_AddBot( const char *name, float skill, const char *team, int delay
 	if ( !botinfo ) {
 		trap->Print( S_COLOR_RED "Error: Bot '%s' not defined\n", name );
 		trap->BotFreeClient( clientNum );
-		return;
+		return -1;
 	}
 
 	// create the bot's userinfo
@@ -947,6 +948,15 @@ static void G_AddBot( const char *name, float skill, const char *team, int delay
 	}
 	Info_SetValueForKey( userinfo, "team", team );
 
+	// not from JA+: keys that replace those of the bot file (a training bot, g_trainer.c)
+	if ( overrides ) {
+		char ovKey[MAX_INFO_KEY], ovValue[MAX_INFO_VALUE];
+		const char *ov = overrides;
+
+		while ( *ov && Info_NextPair( &ov, ovKey, ovValue ) && ovKey[0] )
+			Info_SetValueForKey( userinfo, ovKey, ovValue );
+	}
+
 	bot = &g_entities[ clientNum ];
 //	bot->r.svFlags |= SVF_BOT;
 //	bot->inuse = qtrue;
@@ -974,7 +984,7 @@ static void G_AddBot( const char *name, float skill, const char *team, int delay
 
 	// have it connect to the game as a normal client
 	if ( ClientConnect( clientNum, qtrue, qtrue ) )
-		return;
+		return -1;
 
 	if ( bot->client->sess.sessionTeam != preTeam )
 	{
@@ -1001,7 +1011,7 @@ static void G_AddBot( const char *name, float skill, const char *team, int delay
 
 		G_ReadSessionData( bot->client );
 		if ( !ClientUserinfoChanged( clientNum ) )
-			return;
+			return -1;
 	}
 
 	if (level.gametype == GT_DUEL ||
@@ -1029,11 +1039,12 @@ static void G_AddBot( const char *name, float skill, const char *team, int delay
 	{
 		if( delay == 0 ) {
 			ClientBegin( clientNum, qfalse );
-			return;
+			return clientNum;
 		}
 
 		AddBotToSpawnQueue( clientNum, delay );
 	}
+	return clientNum;
 }
 
 /*
@@ -1085,7 +1096,7 @@ void Svcmd_AddBot_f( void ) {
 	// alternative name
 	trap->Argv( 5, altname, sizeof( altname ) );
 
-	G_AddBot( name, skill, team, delay, altname );
+	G_AddBot( name, skill, team, delay, altname, NULL );
 
 	// if this was issued during gameplay and we are playing locally,
 	// go ahead and load the bot's media immediately

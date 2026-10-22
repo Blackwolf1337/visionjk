@@ -2998,6 +2998,7 @@ void G_RunFrame( int levelTime ) {
 	G_BoomboxFrame();
 	G_StatusFrame();
 	G_SchizoFrame();
+	G_TrainerFrame();
 	G_FlatulenceFrame();
 	G_DisorientFrame();
 	G_PoopFrame();

@@ -235,6 +235,9 @@ void WP_InitForcePowers( gentity_t *ent ) {
 	//if it's a bot just copy the info directly from its personality
 	if ( (ent->r.svFlags & SVF_BOT) && botstates[ent->s.number] )
 		Q_strncpyz( forcePowers, botstates[ent->s.number]->forceinfo, sizeof( forcePowers ) );
+	// not from JA+: a training bot has the powers it fights with (g_trainer.c)
+	if ( ent->r.svFlags & SVF_BOT )
+		G_TrainerForcePowers( ent->s.number, forcePowers, sizeof( forcePowers ) );
 
 	if ( g_forceBasedTeams.integer ) {
 		if ( ent->client->sess.sessionTeam == TEAM_RED )
