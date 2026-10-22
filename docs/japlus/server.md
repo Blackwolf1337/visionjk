@@ -300,7 +300,8 @@ style. The forward kick starts on the ground when the player will be 28 to 70 un
 later (see Prediction), and about the same height (32 units). For a player who stands still the old rule stays: a
 flat distance of 55 units plus 0.15 times its speed, at most 130 and not nearer than 35. Right at the player or on
 top of him it steps back first. The jump is held 100 ms, let go for 50 ms and pressed again, and that press is the
-kick. If the player is still out of reach it lets go and presses again while it still rises fast enough. During the
+kick. It lets go after 50 ms instead (the press comes after 100 ms, not 150) when the player will be in reach 50 ms
+later, as he kicked it out of the air while it still held the jump. If the player is still out of reach it lets go and presses again while it still rises fast enough. During the
 flip back the hook pulls it in again for the next kick, from up to 230 units, as long as the kicks so far are at most
 half its level: one kick at level 1, two in a row at levels 2 and 3, three at levels 4 and 5. After a kick that
 knocks the player down it follows with the red swing.
@@ -312,7 +313,10 @@ Between attacks it keeps 110 to 220 units off the player and circles round him, 
 instead of running straight at him, where his kicks hit it.
 
 It reads the player: while he attacks, it does not hook, grab or kick. His attack button only counts as an attack
-within 120 units. Against a swing it steps to a side (circling) and blocks. Against a coming hook or flip kick it
+within 120 units. Against a swing it steps to a side (circling) and blocks. The server takes saber hits SP style
+(`d_saberSPStyleDamage 1`): only a blade that is in the way blocks, so his swing hits a bot whose saber stands ready.
+Within 90 units (the reach of a red swing) the bot therefore moves diagonally back and to a side (still circling),
+and jumps back when his swing starts that close. Against a coming hook or flip kick it
 steps aside out of the line, as the kick only hits straight ahead of the kicker. When he comes at it through the air
 (a jump, also while falling, or his hook in it), it does what the player does against the bot: it meets him with the
 timed kick jump, as he can not turn in the air, if he will be in reach at its press. If he is coming but will be in

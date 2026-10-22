@@ -72,6 +72,12 @@ to a side, looking 42 degrees down, the bot hooked into his body and was pulled 
 missed kicks he hooked the floor at once (median 100 ms later), 186 units off, behind him or to a side as often as
 past the bot, held it 200 ms and was 115 units off again for the next kick. The bot does both now.
 
+A fifth recorded fight (6.5 minutes, 255 damage a minute to the bot, 81 from it) showed two holes. His red swings
+from 48 units hit it while its saber stood ready and faced him: the server takes saber hits SP style
+(d_saberSPStyleDamage), only a blade that is in the way blocks, so the bot now keeps out of the reach of the swing,
+diagonally back and to a side, and jumps back when his swing starts that close. And he kicked it out of the air
+while it still held its kick jump (416 of 610 damage), so it lets go early when he will be in reach.
+
 Owner and level are a userinfo key of the bot ("vs_trainer" "<owner> <level>"), so a bot that stays over a map
 change is a trainer again. It leaves when its player leaves or sends it away.
 
@@ -132,6 +138,7 @@ qboolean BG_InKnockDownOnGround( playerState_t *ps );
 #define TRAINER_GRAB_REACH		46.0f	// the hand reaches the player
 #define TRAINER_GRAB_TIME		3000
 #define TRAINER_SWING_RANGE		90.0f
+#define TRAINER_SWING_REACH		90.0f	// a red swing of the player reaches this far: on guard it keeps out of it
 #define TRAINER_SWING_TIME		1500
 #define TRAINER_RED_WAIT		800		// msec it waits for the red style before it swings in the style it has
 #define TRAINER_STRIKE_RANGE	120.0f	// the attack button of the player counts as an attack this close
@@ -820,8 +827,10 @@ static void Trainer_Kick( trainer_t *t, const gentity_t *self, const gentity_t *
 			cmd->buttons |= BUTTON_HOOK;
 		break;
 	case KS_HOLD:
-		if ( msec >= TRAINER_JUMP_HOLD )
-			Trainer_Step( t, KS_GAP );		// this command lets go
+		// this command lets go; early when he will be in reach, he kicked it out of the air while it still held
+		if ( msec >= TRAINER_JUMP_HOLD
+			|| (msec >= TRAINER_JUMP_GAP && Trainer_FlatIn( self, enemy, TRAINER_JUMP_GAP / 1000.0f, NULL ) <= TRAINER_REACH_FAR) )
+			Trainer_Step( t, KS_GAP );
 		else
 			cmd->upmove = 127;
 		break;
@@ -1045,10 +1054,17 @@ static void Trainer_Think( trainer_t *t, bot_state_t *bs, int time, int elapsed 
 
 	switch ( t->state ) {
 	case TS_GUARD:
-		// to a side out of the line of the swing, the saber blocks by itself while it faces the player. Backing off
-		// straight was followed and hit in the recorded fight. When the swing returns it is open (punish above).
+		// To a side out of the line of the swing, backing off straight was followed and hit. Within the reach of a
+		// swing also back (the blade only blocks when it is in the way, d_saberSPStyleDamage), and a jump back when
+		// his swing starts that close. When the swing returns he is open (punish above).
 		Trainer_Saber( self, t );
 		Trainer_Circle( t, cmd );
+		if ( dist < TRAINER_SWING_REACH ) {
+			cmd->forwardmove = -127;
+			if ( ps->groundEntityNum != ENTITYNUM_NONE && !(ps->pm_flags & PMF_JUMP_HELD)
+				&& PM_SaberInStart( enemy->client->ps.saberMove ) )
+				cmd->upmove = 127;
+		}
 		break;
 	case TS_COUNTER:
 		Trainer_Counter( self, enemy, t, (trainerThreat_t)t->threat.sign, dist, cmd );
