@@ -20,12 +20,17 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 /*
 Movement log ("vs_movelog <player>" on the server console and rcon, "Record moves" in the web panel): every usercmd of a player with the player
-state after its pmove and the nearest other player, one CSV line each, into movelog/<time>_<slot>.csv of the
+state after its pmove, what is under the crosshair, the damage dealt and taken since the line before and the
+player fought, one CSV line each, into movelog/<time>_<slot>.csv of the
 home folder of the server. Made to see how players hook and flip kick, for the training bot (g_trainer.c).
 
 The command toggles it. It stops by itself after MOVELOG_MAX_MSEC, when the player leaves and with the map.
 Everybody on the server is told in the chat when it starts and stops, and every MOVELOG_NOTICE_MSEC while it
 runs.
+
+The player fought is the one hit by or hitting the logged player in the last MOVELOG_FOE_MSEC, else the one under
+the crosshair, else the nearest (column why: 1, 2, 0). Of him there is the place, how far the aim is off him, his
+moves and buttons, view, weapon, style and hook.
 
 Not from JA+.
 */
@@ -34,11 +39,23 @@ Not from JA+.
 
 #define MOVELOG_MAX_MSEC	(15 * 60 * 1000)
 #define MOVELOG_NOTICE_MSEC	(2 * 60 * 1000)
+#define MOVELOG_FOE_MSEC	5000		// a hit makes the other one the player fought for this long
+#define MOVELOG_AIM_RANGE	8192.0f
+
+typedef enum {
+	FOE_NEAREST,
+	FOE_DAMAGE,
+	FOE_AIM
+} moveLogFoe_t;
 
 typedef struct {
 	fileHandle_t	f;
 	int				startTime;
 	int				noticeTime;		// level.time of the next reminder in the chat
+	int				foe, foeTime;	// the last one hit by or hitting the player, and when
+	// damage since the line before: how much, the last one it went to or came from, and its means of death
+	int				dmgOut, dmgOutTo, dmgOutMod;
+	int				dmgIn, dmgInFrom, dmgInMod;
 } moveLog_t;
 
 static moveLog_t moveLogs[MAX_CLIENTS];
@@ -83,6 +100,7 @@ static qboolean MoveLog_Start( gentity_t *ent ) {
 		return qfalse;
 	}
 	moveLogs[clientNum].startTime = level.time;
+	moveLogs[clientNum].foe = -1;
 	moveLogs[clientNum].noticeTime = level.time + MOVELOG_NOTICE_MSEC;
 	trap->Print( "vs_movelog: %s\n", name );
 	MoveLog_Announce( clientNum, "are recorded now (for the training bot)." );
@@ -90,7 +108,9 @@ static qboolean MoveLog_Start( gentity_t *ent ) {
 	MoveLog_Print( moveLogs[clientNum].f,
 		"time,cmdTime,buttons,fwd,right,up,pitch,yaw,x,y,z,vx,vy,vz,ground,legsAnim,legsTimer,torsoAnim,torsoTimer,"
 		"pmFlags,eFlags,eFlags2,kick,hook,hooked,weapon,weaponTime,saberMove,style,holstered,force,forceActive,levitation,"
-		"health,other,dist,dx,dy,dz,ovx,ovy,ovz,oground,olegs,otorso,osaberMove,oeFlags2,ohp\n" );
+		"health,aimEnt,aimDist,dmgOut,dmgOutTo,dmgOutMod,dmgIn,dmgInFrom,dmgInMod,"
+		"other,why,dist,dx,dy,dz,yawErr,pitchErr,ovx,ovy,ovz,oground,olegs,otorso,osaberMove,oeFlags2,ohp,"
+		"obuttons,opitch,oyaw,oweapon,ostyle,oholstered,ohook\n" );
 	return qtrue;
 }
 
@@ -109,48 +129,100 @@ qboolean G_MoveLogToggle( gentity_t *ent ) {
 	return MoveLog_Start( ent );
 }
 
-// the other player nearest to ent, -1 if none
-static int MoveLog_Nearest( const gentity_t *ent, float *bestDist ) {
-	int i, best = -1;
+static qboolean MoveLog_Player( const gentity_t *ent, int num ) {
+	const gentity_t *other = &g_entities[num];
 
-	*bestDist = 0.0f;
+	return (qboolean)( num >= 0 && num < level.maxclients && other != ent && other->inuse && other->client
+		&& other->client->pers.connected == CON_CONNECTED && other->client->sess.sessionTeam != TEAM_SPECTATOR );
+}
+
+// the other player nearest to ent, -1 if none
+static int MoveLog_Nearest( const gentity_t *ent ) {
+	float	best = 0.0f;
+	int		i, num = -1;
+
 	for ( i = 0; i < level.maxclients; i++ ) {
-		const gentity_t *other = &g_entities[i];
 		float dist;
 
-		if ( other == ent || !other->inuse || !other->client || other->client->pers.connected != CON_CONNECTED
-			|| other->client->sess.sessionTeam == TEAM_SPECTATOR )
+		if ( !MoveLog_Player( ent, i ) )
 			continue;
-		dist = Distance( ent->client->ps.origin, other->client->ps.origin );
-		if ( best < 0 || dist < *bestDist ) {
-			best = i;
-			*bestDist = dist;
+		dist = Distance( ent->client->ps.origin, g_entities[i].client->ps.origin );
+		if ( num < 0 || dist < best ) {
+			num = i;
+			best = dist;
 		}
 	}
-	return best;
+	return num;
+}
+
+// from G_Damage, after the damage is taken: what the logged players dealt and took
+void G_MoveLogDamage( const gentity_t *targ, const gentity_t *attacker, int take, int mod ) {
+	const int t = targ->s.number, a = attacker ? attacker->s.number : ENTITYNUM_WORLD;
+
+	if ( take <= 0 )
+		return;
+	if ( a >= 0 && a < MAX_CLIENTS && a != t && moveLogs[a].f ) {
+		moveLogs[a].dmgOut += take;
+		moveLogs[a].dmgOutTo = t;
+		moveLogs[a].dmgOutMod = mod;
+		if ( t < MAX_CLIENTS ) {
+			moveLogs[a].foe = t;
+			moveLogs[a].foeTime = level.time;
+		}
+	}
+	if ( t >= 0 && t < MAX_CLIENTS && moveLogs[t].f ) {
+		moveLogs[t].dmgIn += take;
+		moveLogs[t].dmgInFrom = a;
+		moveLogs[t].dmgInMod = mod;
+		if ( a < MAX_CLIENTS && a != t ) {
+			moveLogs[t].foe = a;
+			moveLogs[t].foeTime = level.time;
+		}
+	}
 }
 
 // from ClientThink_real after its pmove: one line for this usercmd
 void G_MoveLogCmd( gentity_t *ent, const usercmd_t *ucmd ) {
 	const int			clientNum = ent - g_entities;
 	const playerState_t	*ps = &ent->client->ps;
-	fileHandle_t		f;
-	int					other;
-	float				dist;
+	moveLog_t			*log;
+	vec3_t				eye, fwd, end, dir, angles;
+	trace_t				tr;
+	int					foe;
+	moveLogFoe_t		why = FOE_NEAREST;
 
-	if ( clientNum < 0 || clientNum >= MAX_CLIENTS || !(f = moveLogs[clientNum].f) )
+	if ( clientNum < 0 || clientNum >= MAX_CLIENTS || !moveLogs[clientNum].f )
 		return;
-	if ( level.time - moveLogs[clientNum].startTime > MOVELOG_MAX_MSEC ) {
+	log = &moveLogs[clientNum];
+	if ( level.time - log->startTime > MOVELOG_MAX_MSEC ) {
 		MoveLog_Stop( clientNum );
 		trap->Print( "vs_movelog: stopped for %s after %i minutes\n", ent->client->pers.netname, MOVELOG_MAX_MSEC / 60000 );
 		return;
 	}
-	if ( level.time >= moveLogs[clientNum].noticeTime ) {
-		moveLogs[clientNum].noticeTime = level.time + MOVELOG_NOTICE_MSEC;
+	if ( level.time >= log->noticeTime ) {
+		log->noticeTime = level.time + MOVELOG_NOTICE_MSEC;
 		MoveLog_Announce( clientNum, "are still recorded." );
 	}
 
-	MoveLog_Print( f, "%i,%i,%i,%i,%i,%i,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i",
+	// what is under the crosshair
+	VectorCopy( ps->origin, eye );
+	eye[2] += ps->viewheight;
+	AngleVectors( ps->viewangles, fwd, NULL, NULL );
+	VectorMA( eye, MOVELOG_AIM_RANGE, fwd, end );
+	trap->Trace( &tr, eye, NULL, NULL, end, clientNum, MASK_SHOT, qfalse, 0, 0 );
+
+	if ( log->foe >= 0 && level.time - log->foeTime <= MOVELOG_FOE_MSEC && MoveLog_Player( ent, log->foe ) ) {
+		foe = log->foe;
+		why = FOE_DAMAGE;
+	}
+	else if ( MoveLog_Player( ent, tr.entityNum ) ) {
+		foe = tr.entityNum;
+		why = FOE_AIM;
+	}
+	else
+		foe = MoveLog_Nearest( ent );
+
+	MoveLog_Print( log->f, "%i,%i,%i,%i,%i,%i,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i",
 		level.time, ucmd->serverTime, ucmd->buttons, ucmd->forwardmove, ucmd->rightmove, ucmd->upmove,
 		ps->viewangles[PITCH], ps->viewangles[YAW], ps->origin[0], ps->origin[1], ps->origin[2],
 		ps->velocity[0], ps->velocity[1], ps->velocity[2], ps->groundEntityNum != ENTITYNUM_NONE,
@@ -158,18 +230,28 @@ void G_MoveLogCmd( gentity_t *ent, const usercmd_t *ucmd ) {
 		ps->forceKickFlip, ent->client->hook != NULL, ent->client->pers.jp.hooked, ps->weapon, ps->weaponTime,
 		ps->saberMove, ps->fd.saberAnimLevel, ps->saberHolstered, ps->fd.forcePower, ps->fd.forcePowersActive,
 		ps->fd.forcePowerLevel[FP_LEVITATION], ent->health );
+	MoveLog_Print( log->f, ",%i,%.1f,%i,%i,%i,%i,%i,%i", tr.entityNum, tr.fraction * MOVELOG_AIM_RANGE,
+		log->dmgOut, log->dmgOut ? log->dmgOutTo : -1, log->dmgOut ? log->dmgOutMod : -1,
+		log->dmgIn, log->dmgIn ? log->dmgInFrom : -1, log->dmgIn ? log->dmgInMod : -1 );
+	log->dmgOut = log->dmgIn = 0;
 
-	other = MoveLog_Nearest( ent, &dist );
-	if ( other >= 0 ) {
-		const playerState_t *ops = &g_entities[other].client->ps;
+	if ( foe >= 0 ) {
+		const gentity_t		*other = &g_entities[foe];
+		const playerState_t	*ops = &other->client->ps;
 
-		MoveLog_Print( f, ",%i,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%i,%i,%i,%i,%i,%i\n", other, dist,
+		VectorSubtract( ops->origin, eye, dir );
+		vectoangles( dir, angles );
+		MoveLog_Print( log->f, ",%i,%i,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%i,%i,%i,%i,%i,%i,%i,%.1f,%.1f,%i,%i,%i,%i\n",
+			foe, why, Distance( ps->origin, ops->origin ),
 			ops->origin[0] - ps->origin[0], ops->origin[1] - ps->origin[1], ops->origin[2] - ps->origin[2],
+			AngleSubtract( angles[YAW], ps->viewangles[YAW] ), AngleSubtract( angles[PITCH], ps->viewangles[PITCH] ),
 			ops->velocity[0], ops->velocity[1], ops->velocity[2], ops->groundEntityNum != ENTITYNUM_NONE,
-			ops->legsAnim, ops->torsoAnim, ops->saberMove, ops->eFlags2, g_entities[other].health );
+			ops->legsAnim, ops->torsoAnim, ops->saberMove, ops->eFlags2, other->health,
+			other->client->pers.cmd.buttons, ops->viewangles[PITCH], ops->viewangles[YAW], ops->weapon,
+			ops->fd.saberAnimLevel, ops->saberHolstered, other->client->hook != NULL );
 	}
 	else
-		MoveLog_Print( f, ",-1,0,0,0,0,0,0,0,0,0,0,0,0,0\n" );
+		MoveLog_Print( log->f, ",-1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n" );
 }
 
 // from ClientDisconnect

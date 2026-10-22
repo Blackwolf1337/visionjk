@@ -329,7 +329,13 @@ server (`fs_homepath/<fs_game>`, `/var/lib/visionjk/japlus/movelog/` on the offi
 |------|---------|
 | inputs | buttons, forward, right and up move, view angles |
 | player, after its pmove | origin, velocity, on ground, legs and torso animation with their timers, `pm_flags`, `eFlags`, `eFlags2`, flip kick, hook out and hooked, weapon, `weaponTime`, saber move, saber style, holstered, force points, active force powers, levitation level, health |
-| nearest other player | slot, distance, offset, velocity, on ground, animations, saber move, `eFlags2`, health |
+| crosshair | entity number and distance of what a trace of 8192 units from the eye hits |
+| damage | dealt and taken since the line before: amount, the last entity it went to or came from, its means of death (-1 when none) |
+| the player fought | slot, why (see below), distance, offset, how far the aim is off him (yaw and pitch, degrees), velocity, on ground, animations, saber move, `eFlags2`, health, his buttons, view angles, weapon, saber style, holstered, hook out |
+
+The player fought is the one hit by or hitting the logged player in the last 5 seconds. If there is none, it is the
+player under the crosshair, else the nearest one. The column `why` tells which: 1, 2 or 0. The damage is read in
+`G_Damage`, after the damage is taken.
 
 Everybody on the server is told in the chat when it starts ("The movements of <name> are recorded now (for the
 training bot).") and when it stops, and every two minutes while it runs. It stops by itself after 15 minutes, when

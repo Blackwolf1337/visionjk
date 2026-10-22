@@ -1357,6 +1357,7 @@ void Cmd_Trainer_f( gentity_t *ent );
 qboolean G_MoveLogToggle( gentity_t *ent );
 qboolean G_MoveLogActive( int clientNum );
 void G_MoveLogCmd( gentity_t *ent, const usercmd_t *ucmd );
+void G_MoveLogDamage( const gentity_t *targ, const gentity_t *attacker, int take, int mod );
 void G_MoveLogDisconnect( int clientNum );
 void G_MoveLogShutdown( void );
 
