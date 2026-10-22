@@ -1112,6 +1112,18 @@ qboolean G_TrainerActive( int clientNum ) {
 	return (qboolean)( Trainer_Get( clientNum ) != NULL );
 }
 
+// for the movement log: state, kick step and approach of a training bot, qfalse for anybody else
+qboolean G_TrainerState( int clientNum, int out[3] ) {
+	const trainer_t *t = Trainer_Get( clientNum );
+
+	if ( !t )
+		return qfalse;
+	out[0] = t->state;
+	out[1] = t->step;
+	out[2] = t->approach;
+	return qtrue;
+}
+
 // from WP_InitForcePowers: the powers of a training bot, whatever its profile has
 void G_TrainerForcePowers( int clientNum, char *forcePowers, size_t size ) {
 	if ( Trainer_Get( clientNum ) )

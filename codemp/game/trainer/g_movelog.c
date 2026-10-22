@@ -28,6 +28,11 @@ The command toggles it. It stops by itself after MOVELOG_MAX_MSEC, when the play
 Everybody on the server is told in the chat when it starts and stops, and every MOVELOG_NOTICE_MSEC while it
 runs.
 
+Of the logged player and of the player fought there is also the height over the floor (a flip kick needs 80 or
+less), forceHandExtend (knockdown, grip, throw), where the hook is (hookOn: -1 none, -2 still flying, else the
+entity it holds, 1022 the world, at hookX/Y/Z) and, for a training bot, its state, kick step and approach (-1 else).
+Of the player fought also his moves (forward, right, up) and pm_flags.
+
 The player fought is the one hit by or hitting the logged player in the last MOVELOG_FOE_MSEC, else the one under
 the crosshair, else the nearest (column why: 1, 2, 0). Of him there is the place, how far the aim is off him, his
 moves and buttons, view, weapon, style and hook.
@@ -41,6 +46,7 @@ Not from JA+.
 #define MOVELOG_NOTICE_MSEC	(2 * 60 * 1000)
 #define MOVELOG_FOE_MSEC	5000		// a hit makes the other one the player fought for this long
 #define MOVELOG_AIM_RANGE	8192.0f
+#define MOVELOG_FLOOR_RANGE	512.0f		// the height over the floor is looked for this far down
 
 typedef enum {
 	FOE_NEAREST,
@@ -109,8 +115,10 @@ static qboolean MoveLog_Start( gentity_t *ent ) {
 		"time,cmdTime,buttons,fwd,right,up,pitch,yaw,x,y,z,vx,vy,vz,ground,legsAnim,legsTimer,torsoAnim,torsoTimer,"
 		"pmFlags,eFlags,eFlags2,kick,hook,hooked,weapon,weaponTime,saberMove,style,holstered,force,forceActive,levitation,"
 		"health,aimEnt,aimDist,dmgOut,dmgOutTo,dmgOutMod,dmgIn,dmgInFrom,dmgInMod,"
+		"floor,handExtend,hookOn,hookX,hookY,hookZ,trState,trStep,trApproach,"
 		"other,why,dist,dx,dy,dz,yawErr,pitchErr,ovx,ovy,ovz,oground,olegs,otorso,osaberMove,oeFlags2,ohp,"
-		"obuttons,opitch,oyaw,oweapon,ostyle,oholstered,ohook\n" );
+		"obuttons,opitch,oyaw,oweapon,ostyle,oholstered,ohook,"
+		"ofwd,oright,oup,opmFlags,ofloor,ohandExtend,ohookOn,ohookX,ohookY,ohookZ,otrState,otrStep,otrApproach\n" );
 	return qtrue;
 }
 
@@ -153,6 +161,35 @@ static int MoveLog_Nearest( const gentity_t *ent ) {
 		}
 	}
 	return num;
+}
+
+// how high a player is over the floor, MOVELOG_FLOOR_RANGE when there is none below
+static float MoveLog_Floor( const gentity_t *ent ) {
+	const playerState_t	*ps = &ent->client->ps;
+	vec3_t				down;
+	trace_t				tr;
+
+	VectorCopy( ps->origin, down );
+	down[2] -= MOVELOG_FLOOR_RANGE;
+	trap->Trace( &tr, ps->origin, ent->r.mins, ent->r.maxs, down, ent->s.number, MASK_PLAYERSOLID, qfalse, 0, 0 );
+	return tr.fraction * MOVELOG_FLOOR_RANGE;
+}
+
+// the columns both players have: floor, handExtend, the hook and what a training bot is doing
+static void MoveLog_Body( fileHandle_t f, const gentity_t *ent ) {
+	const gclient_t	*client = ent->client;
+	const gentity_t	*hook = client->hook;
+	int				hookOn = -1, tr[3];
+	vec3_t			at = { 0.0f, 0.0f, 0.0f };
+
+	if ( hook ) {
+		VectorCopy( hook->r.currentOrigin, at );
+		hookOn = !client->pers.jp.hooked ? -2 : ( hook->enemy ? hook->enemy->s.number : ENTITYNUM_WORLD );
+	}
+	if ( !G_TrainerState( ent->s.number, tr ) )
+		tr[0] = tr[1] = tr[2] = -1;
+	MoveLog_Print( f, ",%.1f,%i,%i,%.1f,%.1f,%.1f,%i,%i,%i", MoveLog_Floor( ent ), client->ps.forceHandExtend, hookOn,
+		at[0], at[1], at[2], tr[0], tr[1], tr[2] );
 }
 
 // from G_Damage, after the damage is taken: what the logged players dealt and took
@@ -234,6 +271,7 @@ void G_MoveLogCmd( gentity_t *ent, const usercmd_t *ucmd ) {
 		log->dmgOut, log->dmgOut ? log->dmgOutTo : -1, log->dmgOut ? log->dmgOutMod : -1,
 		log->dmgIn, log->dmgIn ? log->dmgInFrom : -1, log->dmgIn ? log->dmgInMod : -1 );
 	log->dmgOut = log->dmgIn = 0;
+	MoveLog_Body( log->f, ent );
 
 	if ( foe >= 0 ) {
 		const gentity_t		*other = &g_entities[foe];
@@ -241,7 +279,7 @@ void G_MoveLogCmd( gentity_t *ent, const usercmd_t *ucmd ) {
 
 		VectorSubtract( ops->origin, eye, dir );
 		vectoangles( dir, angles );
-		MoveLog_Print( log->f, ",%i,%i,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%i,%i,%i,%i,%i,%i,%i,%.1f,%.1f,%i,%i,%i,%i\n",
+		MoveLog_Print( log->f, ",%i,%i,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%i,%i,%i,%i,%i,%i,%i,%.1f,%.1f,%i,%i,%i,%i",
 			foe, why, Distance( ps->origin, ops->origin ),
 			ops->origin[0] - ps->origin[0], ops->origin[1] - ps->origin[1], ops->origin[2] - ps->origin[2],
 			AngleSubtract( angles[YAW], ps->viewangles[YAW] ), AngleSubtract( angles[PITCH], ps->viewangles[PITCH] ),
@@ -249,9 +287,13 @@ void G_MoveLogCmd( gentity_t *ent, const usercmd_t *ucmd ) {
 			ops->legsAnim, ops->torsoAnim, ops->saberMove, ops->eFlags2, other->health,
 			other->client->pers.cmd.buttons, ops->viewangles[PITCH], ops->viewangles[YAW], ops->weapon,
 			ops->fd.saberAnimLevel, ops->saberHolstered, other->client->hook != NULL );
+		MoveLog_Print( log->f, ",%i,%i,%i,%i", other->client->pers.cmd.forwardmove, other->client->pers.cmd.rightmove,
+			other->client->pers.cmd.upmove, ops->pm_flags );
+		MoveLog_Body( log->f, other );
+		MoveLog_Print( log->f, "\n" );
 	}
 	else
-		MoveLog_Print( log->f, ",-1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n" );
+		MoveLog_Print( log->f, ",-1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,-1,0,0,0,-1,-1,-1\n" );
 }
 
 // from ClientDisconnect

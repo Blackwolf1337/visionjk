@@ -366,7 +366,7 @@ tag "rec" while it runs.
 
 Every usercmd of that player becomes one CSV line in `movelog/<date>_<time>_<slot>.csv` in the home folder of the
 server (`fs_homepath/<fs_game>`, `/var/lib/visionjk/japlus/movelog/` on the official host). The first line is
-`# <name>`, the second the column names. A line has:
+`# <name>`, the second the column names. A line has 88 columns:
 
 | Part | Columns |
 |------|---------|
@@ -374,7 +374,8 @@ server (`fs_homepath/<fs_game>`, `/var/lib/visionjk/japlus/movelog/` on the offi
 | player, after its pmove | origin, velocity, on ground, legs and torso animation with their timers, `pm_flags`, `eFlags`, `eFlags2`, flip kick, hook out and hooked, weapon, `weaponTime`, saber move, saber style, holstered, force points, active force powers, levitation level, health |
 | crosshair | entity number and distance of what a trace of 8192 units from the eye hits |
 | damage | dealt and taken since the line before: amount, the last entity it went to or came from, its means of death (-1 when none) |
-| the player fought | slot, why (see below), distance, offset, how far the aim is off him (yaw and pitch, degrees), velocity, on ground, animations, saber move, `eFlags2`, health, his buttons, view angles, weapon, saber style, holstered, hook out |
+| both players | the height over the floor (a trace of the player box down to 512 units, a flip kick needs 80 or less), `forceHandExtend` (knockdown, grip, throw), the hook (`hookOn`: -1 none, -2 still flying, else the entity number it holds, 1022 the world; `hookX`, `hookY`, `hookZ`: where it is), and for a training bot its state, kick step and approach (-1 for anybody else) |
+| the player fought | slot, why (see below), distance, offset, how far the aim is off him (yaw and pitch, degrees), velocity, on ground, animations, saber move, `eFlags2`, health, his buttons, view angles, weapon, saber style, holstered, hook out, his moves (forward, right and up of his last usercmd), his `pm_flags`, then the columns of both players |
 
 The player fought is the one hit by or hitting the logged player in the last 5 seconds. If there is none, it is the
 player under the crosshair, else the nearest one. The column `why` tells which: 1, 2 or 0. The damage is read in
