@@ -347,8 +347,7 @@ static void Trainer_Counter( gentity_t *self, trainer_t *t, trainerThreat_t thre
 
 static void Trainer_Hook( trainer_t *t, const gentity_t *self, float dist, usercmd_t *cmd ) {
 	if ( dist <= TRAINER_HOOK_LETGO ) {
-		// no hook button: a client without the JA+ plugin lets go of the rope with it (JP_HookClientThink)
-		Trainer_SetState( t, TS_KICK );
+		Trainer_SetState( t, TS_KICK );		// G_TrainerCmd lets go of the rope
 		return;
 	}
 	if ( level.time - t->stateTime > TRAINER_HOOK_TIME || (level.time - t->stateTime > 400 && !self->client->hook) ) {
@@ -447,6 +446,13 @@ static void Trainer_Swing( trainer_t *t, gentity_t *self, float dist, usercmd_t 
 		cmd->forwardmove = 0;
 }
 
+// A bot counts as a client with the JA+ plugin: without the hook button it hangs on the rope instead of letting
+// go (JP_HookClientThink), only use drops the hook.
+static void Trainer_LetGo( const gentity_t *self, usercmd_t *cmd ) {
+	if ( self->client->hook && !(cmd->buttons & BUTTON_HOOK) )
+		cmd->buttons |= BUTTON_USE;
+}
+
 /*
 =================
 G_TrainerCmd
@@ -491,6 +497,7 @@ qboolean G_TrainerCmd( bot_state_t *bs, int time, int elapsed ) {
 	if ( !enemy ) {
 		Trainer_Aim( bs, NULL, 0.0f, cmd );
 		Trainer_SetState( t, TS_CHASE );
+		Trainer_LetGo( self, cmd );
 		return qtrue;
 	}
 
@@ -543,6 +550,7 @@ qboolean G_TrainerCmd( bot_state_t *bs, int time, int elapsed ) {
 			cmd->forwardmove = 127;
 		break;
 	}
+	Trainer_LetGo( self, cmd );
 	return qtrue;
 }
 
