@@ -32,6 +32,13 @@ G_TrainerCmd), so it goes through the pmove of every player and can do nothing a
 vs_allowTrainer is the number of training bots there may be at once, 0 turns the command off. Free for all
 only: the hook works only there, and in a team game the bot could end up on the team of its player.
 
+How it hooks and kicks follows a movement log of a flip kick player (vs_movelog, g_movelog.c, 15 kicks in
+83 seconds on 2026-10-22). The hook is a short pull, fired in the air 130 to 170 units off the player and let go
+with use after about 60 ms at about 100 units. Down on the ground at 35 to 105 units comes the jump, held about
+120 ms, let go about 55 ms and pressed again: that press is the kick, 40 to 70 units off the player and 15 to 50
+units above him. During the flip back the hook pulls it in again for the next kick. The side kick is a jump on
+the ground while strafing into a player who stands 30 to 40 units to the side, at about 90 degrees.
+
 Owner and level are a userinfo key of the bot ("vs_trainer" "<owner> <level>"), so a bot that stays over a map
 change is a trainer again. It leaves when its player leaves or sends it away.
 
@@ -51,14 +58,28 @@ qboolean BG_InKnockDownOnGround( playerState_t *ps );
 // levitation 3 for the flip kick, saber offense and defense 3 for the red style (rank 7, light side)
 #define TRAINER_FORCEPOWERS		"7-1-030000000000000330"
 
-#define TRAINER_HOOK_MIN		300.0f	// further away the hook pulls it in
+#define TRAINER_HOOK_MIN		300.0f	// further away a long pull brings it in
 #define TRAINER_HOOK_MAX		1200.0f
-#define TRAINER_HOOK_LETGO		110.0f	// close enough: let go and kick
+#define TRAINER_HOOK_NEAR		200.0f	// a long pull is let go here
 #define TRAINER_HOOK_FUEL		20		// JP_HOOK_MIN_FUEL is 10, a bit more so the rope does not run dry halfway
-#define TRAINER_HOOK_TIME		1600	// msec on the rope at most
-#define TRAINER_ATTACK_RANGE	260.0f	// runs in for a flip kick or a swing from here
-#define TRAINER_KICK_JUMP		76.0f	// jumps here: the kick trace of PM_CheckJump reaches 32 units past its box
-#define TRAINER_KICK_TIME		2000
+#define TRAINER_HOOK_TIME		1600	// msec on a long pull at most
+#define TRAINER_YANK_FROM		170.0f	// in the air this close: the short pull
+#define TRAINER_YANK_CHAIN		230.0f	// during the flip back after a kick from this close
+#define TRAINER_YANK_TO			105.0f	// let go here
+#define TRAINER_YANK_MSEC		60		// or after this long on the rope
+#define TRAINER_YANK_MISS		350		// the hook hit nothing
+#define TRAINER_CHAIN_WAIT		100		// msec after a kick before the hook pulls it in again
+#define TRAINER_HOP_RANGE		230.0f	// jumps here to hook from the air
+#define TRAINER_ATTACK_RANGE	260.0f	// runs in for a kick or a swing from here
+#define TRAINER_TAKEOFF			100.0f	// the kick jump from the ground
+#define TRAINER_JUMP_HOLD		100		// msec the kick jump is held, the force jump keeps the speed up
+#define TRAINER_JUMP_GAP		50		// msec it is let go before the press that kicks (PMF_JUMP_HELD)
+#define TRAINER_KICK_TIME		2500
+#define TRAINER_SIDE_RANGE		140.0f	// strafes in for a side kick from here
+#define TRAINER_SIDE_JUMP		40.0f	// and jumps here: the trace of PM_CheckJump reaches 16 units past its box
+#define TRAINER_SIDE_LEVEL		16.0f	// the player at about the same height
+#define TRAINER_SIDE_AIM		25.0f	// degrees off 90 at most when it jumps
+#define TRAINER_SIDE_TIME		2000
 #define TRAINER_GRAB_RANGE		70.0f	// a grab is started from here
 #define TRAINER_GRAB_REACH		46.0f	// the hand reaches the player
 #define TRAINER_GRAB_TIME		3000
@@ -91,10 +112,22 @@ typedef enum {
 	TS_GUARD,		// the player attacks: back off and block
 	TS_COUNTER,		// answers a hook, flip kick or grab of the player
 	TS_HOOK,		// on the rope to the player
-	TS_KICK,		// jumps and flip kicks off the player
+	TS_KICK,		// jumps and flip kicks off the player, with short pulls of the hook (the kick steps)
+	TS_SIDEKICK,	// strafes into the player at its side and jumps
 	TS_GRAB,		// melee grab with a punch, then a flip kick
 	TS_SWING		// red style, from above
 } trainerState_t;
+
+// the steps of TS_KICK
+typedef enum {
+	KS_RUN,			// to the player, or down to the ground
+	KS_HOP,			// up into the air to hook from there
+	KS_YANK,		// the short pull, let go with use
+	KS_HOLD,		// the kick jump, held
+	KS_GAP,			// let go
+	KS_PRESS,		// pressed again: the kick
+	KS_FLIP			// kicked, flips back
+} trainerKickStep_t;
 
 typedef enum {
 	TT_NONE,
@@ -120,8 +153,13 @@ typedef struct {
 	int				stateTime;	// level.time the state began
 	int				step;		// within the state
 	int				stepTime;
+	int				hookedTime;	// level.time the hook of KS_YANK got hold, 0 before
+	int				chain;		// kicks one after another in this TS_KICK
+	int				side;		// TS_SIDEKICK: 1 the player is to the left, -1 to the right
 	int				nextAttack;
 	int				styleTime;	// no saber key before this
+	int				cmdTime;	// level.time cmd was made for
+	usercmd_t		cmd;
 	trainerSign_t	attack;		// the player attacks
 	trainerSign_t	threat;		// a trainerThreat_t of the player
 } trainer_t;
@@ -191,7 +229,14 @@ static void Trainer_SetState( trainer_t *t, trainerState_t state ) {
 		t->stateTime = level.time;
 		t->step = 0;
 		t->stepTime = level.time;
+		t->chain = 0;
 	}
+}
+
+static void Trainer_Step( trainer_t *t, int step ) {
+	t->step = step;
+	t->stepTime = level.time;
+	t->hookedTime = 0;
 }
 
 // an attack is over: back to running after the player, the next one after a pause of its level
@@ -246,24 +291,54 @@ static qboolean Trainer_Notice( trainerSign_t *s, int sign, int chance, int dela
 	return (qboolean)( sign && s->seen && level.time - s->since >= delay );
 }
 
-// turns the view at most maxTurn degrees toward target (NULL: keeps it) and puts it into the command
-static void Trainer_Aim( bot_state_t *bs, const vec3_t target, float maxTurn, usercmd_t *cmd ) {
-	vec3_t dir, want;
-	int i;
+// turns the view at most maxTurn degrees toward target, turned yawOffset degrees further (NULL: keeps it), and
+// puts it into the command. Returns how many degrees the yaw is still off.
+static float Trainer_Aim( bot_state_t *bs, const vec3_t target, float yawOffset, float maxTurn, usercmd_t *cmd ) {
+	vec3_t	dir, want;
+	float	left = 0.0f;
+	int		i;
 
 	if ( target ) {
 		VectorSubtract( target, bs->eye, dir );
 		vectoangles( dir, want );
+		want[YAW] = AngleMod( want[YAW] + yawOffset );
 	}
 	for ( i = 0; i < 3; i++ ) {
 		const float delta = SHORT2ANGLE( bs->cur_ps.delta_angles[i] );
 		float view = AngleMod( bs->viewangles[i] + delta );
 
-		if ( target )
+		if ( target ) {
 			view = AngleMod( view + Com_Clamp( -maxTurn, maxTurn, AngleSubtract( want[i], view ) ) );
+			if ( i == YAW )
+				left = AngleSubtract( want[i], view );
+		}
 		bs->viewangles[i] = AngleMod( view - delta );
 		cmd->angles[i] = ANGLE2SHORT( view ) - bs->cur_ps.delta_angles[i];
 	}
+	return left;
+}
+
+// degrees the player is to the left of where the trainer looks, negative to the right
+static float Trainer_YawTo( const bot_state_t *bs, const gentity_t *enemy ) {
+	vec3_t dir, want;
+
+	VectorSubtract( enemy->client->ps.origin, bs->eye, dir );
+	vectoangles( dir, want );
+	return AngleSubtract( want[YAW], AngleMod( bs->viewangles[YAW] + SHORT2ANGLE( bs->cur_ps.delta_angles[YAW] ) ) );
+}
+
+// the hook can go out now (JP_HookCanFire, the parts a bot can miss)
+static qboolean Trainer_CanHook( const gentity_t *self ) {
+	const gclient_t *client = self->client;
+
+	return (qboolean)( jp_allowHook.integer == 1 && !(client->ps.eFlags & EF_ALT_DIM) && !client->hook && !(client->ps.eFlags2 & EF2_HOOK)
+		&& client->ps.jetpackFuel >= TRAINER_HOOK_FUEL && client->pers.jp.hookTime + jp_hookFloodProtect.integer < level.time );
+}
+
+// the flip off the player of a kick, forward or to a side
+static qboolean Trainer_Kicked( const playerState_t *ps ) {
+	return (qboolean)( ps->legsAnim == BOTH_WALL_FLIP_BACK1 || ps->legsAnim == BOTH_WALL_FLIP_LEFT
+		|| ps->legsAnim == BOTH_WALL_FLIP_RIGHT );
 }
 
 static qboolean Trainer_Visible( const bot_state_t *bs, const gentity_t *enemy ) {
@@ -299,11 +374,15 @@ static void Trainer_Choose( trainer_t *t, const bot_state_t *bs, const gentity_t
 	const qboolean onGround = ps->groundEntityNum != ENTITYNUM_NONE && enemy->client->ps.groundEntityNum != ENTITYNUM_NONE;
 	const qboolean canKick = JP_FEATURE( JPF_FLIPKICK ) && ps->fd.forcePowerLevel[FP_LEVITATION] > FORCE_LEVEL_1;
 
-	if ( dist >= TRAINER_HOOK_MIN && dist <= TRAINER_HOOK_MAX && jp_allowHook.integer == 1
-		&& ps->jetpackFuel >= TRAINER_HOOK_FUEL && Trainer_Visible( bs, enemy ) )
+	if ( dist >= TRAINER_HOOK_MIN && dist <= TRAINER_HOOK_MAX && Trainer_CanHook( self ) && Trainer_Visible( bs, enemy ) )
 		Trainer_SetState( t, TS_HOOK );
+	else if ( dist <= TRAINER_SIDE_RANGE && onGround && canKick
+		&& fabsf( enemy->client->ps.origin[2] - ps->origin[2] ) < TRAINER_SIDE_LEVEL && !Q_irand( 0, 2 ) ) {
+		Trainer_SetState( t, TS_SIDEKICK );
+		t->side = ( Trainer_YawTo( bs, enemy ) >= 0.0f ) ? 1 : -1;	// keeps the player on the side it is nearer
+	}
 	else if ( dist <= TRAINER_GRAB_RANGE && onGround && g_debugMelee.integer && (ps->stats[STAT_WEAPONS] & (1 << WP_MELEE))
-		&& !Q_irand( 0, 2 ) )
+		&& !Q_irand( 0, 4 ) )
 		Trainer_SetState( t, TS_GRAB );
 	else if ( dist <= TRAINER_ATTACK_RANGE )
 		Trainer_SetState( t, (canKick && Q_irand( 0, 4 ) < 3) ? TS_KICK : TS_SWING );
@@ -311,7 +390,8 @@ static void Trainer_Choose( trainer_t *t, const bot_state_t *bs, const gentity_t
 
 // in the middle of something that can not be stopped: in the air for a kick or holding the player
 static qboolean Trainer_Busy( const trainer_t *t ) {
-	return (qboolean)( (t->state == TS_KICK && t->step > 0) || (t->state == TS_GRAB && t->step > 0) );
+	return (qboolean)( (t->state == TS_KICK && t->step != KS_RUN) || (t->state == TS_SIDEKICK && t->step > 0)
+		|| (t->state == TS_GRAB && t->step > 0) );
 }
 
 static void Trainer_Counter( gentity_t *self, trainer_t *t, trainerThreat_t threat, float dist, usercmd_t *cmd ) {
@@ -345,9 +425,10 @@ static void Trainer_Counter( gentity_t *self, trainer_t *t, trainerThreat_t thre
 	}
 }
 
+// the long pull from afar, let go near the player for the kick (Trainer_LetGo)
 static void Trainer_Hook( trainer_t *t, const gentity_t *self, float dist, usercmd_t *cmd ) {
-	if ( dist <= TRAINER_HOOK_LETGO ) {
-		Trainer_SetState( t, TS_KICK );		// G_TrainerCmd lets go of the rope
+	if ( dist <= TRAINER_HOOK_NEAR ) {
+		Trainer_SetState( t, TS_KICK );
 		return;
 	}
 	if ( level.time - t->stateTime > TRAINER_HOOK_TIME || (level.time - t->stateTime > 400 && !self->client->hook) ) {
@@ -358,44 +439,127 @@ static void Trainer_Hook( trainer_t *t, const gentity_t *self, float dist, userc
 	cmd->buttons |= BUTTON_HOOK;
 }
 
+static void Trainer_Yank( trainer_t *t, usercmd_t *cmd ) {
+	Trainer_Step( t, KS_YANK );
+	cmd->buttons |= BUTTON_HOOK;
+}
+
 /*
 =================
 Trainer_Kick
 
 The JA+ flip kick (PM_CheckJump): in the air, still going up fast and near the ground, a new press of jump while
-moving forward with the player right in front. So: jump, hold it for one command so the force jump keeps the
-speed up, then let go and press again every other command until the kick comes.
+moving forward with the player right in front. The steps and their times are the ones of the movement log in the
+head of this file. The bot sends one command a server frame (50 ms at sv_fps 20), so the times are in msec.
 =================
 */
 static void Trainer_Kick( trainer_t *t, const gentity_t *self, const gentity_t *enemy, float dist, usercmd_t *cmd ) {
 	const playerState_t *ps = &self->client->ps;
 	const qboolean onGround = ps->groundEntityNum != ENTITYNUM_NONE;
+	const int msec = level.time - t->stepTime;
 
 	cmd->forwardmove = 127;
-	if ( ps->legsAnim == BOTH_WALL_FLIP_BACK1 && t->step > 0 ) {
-		// kicked: a player on the ground gets the red swing on top
-		if ( enemy->client->ps.forceHandExtend == HANDEXTEND_KNOCKDOWN || BG_InKnockDownOnGround( &enemy->client->ps ) )
-			Trainer_SetState( t, TS_SWING );
-		else
-			Trainer_Done( t );
+	if ( level.time - t->stateTime > TRAINER_KICK_TIME ) {
+		Trainer_Done( t );
 		return;
 	}
+
+	switch ( t->step ) {
+	case KS_RUN:
+		if ( !onGround ) {
+			if ( dist <= TRAINER_YANK_FROM && dist > TRAINER_YANK_TO && Trainer_CanHook( self ) )
+				Trainer_Yank( t, cmd );
+		}
+		else if ( dist <= TRAINER_TAKEOFF ) {
+			cmd->upmove = 127;
+			Trainer_Step( t, KS_HOLD );
+		}
+		else if ( dist <= TRAINER_HOP_RANGE && Trainer_CanHook( self ) ) {
+			cmd->upmove = 127;
+			Trainer_Step( t, KS_HOP );
+		}
+		else if ( dist > TRAINER_ATTACK_RANGE * 1.5f )
+			Trainer_Done( t );
+		break;
+	case KS_HOP:
+		if ( !onGround && dist <= TRAINER_YANK_FROM && Trainer_CanHook( self ) )
+			Trainer_Yank( t, cmd );
+		else if ( onGround && msec > 150 )
+			Trainer_Step( t, KS_RUN );
+		break;
+	case KS_YANK:
+		if ( self->client->pers.jp.hooked && !t->hookedTime )
+			t->hookedTime = level.time;
+		// let go: without the hook button Trainer_LetGo presses use
+		if ( onGround || dist <= TRAINER_YANK_TO || (t->hookedTime && level.time - t->hookedTime >= TRAINER_YANK_MSEC)
+			|| (!t->hookedTime && msec > TRAINER_YANK_MISS) )
+			Trainer_Step( t, KS_RUN );
+		else
+			cmd->buttons |= BUTTON_HOOK;
+		break;
+	case KS_HOLD:
+		if ( msec >= TRAINER_JUMP_HOLD )
+			Trainer_Step( t, KS_GAP );		// this command lets go
+		else
+			cmd->upmove = 127;
+		break;
+	case KS_GAP:
+		if ( onGround && msec > 100 )
+			Trainer_Step( t, KS_RUN );		// down again without a kick
+		else if ( msec >= TRAINER_JUMP_GAP ) {
+			cmd->upmove = 127;
+			Trainer_Step( t, KS_PRESS );
+		}
+		break;
+	case KS_PRESS:
+		if ( Trainer_Kicked( ps ) ) {
+			t->chain++;
+			Trainer_Step( t, KS_FLIP );
+		}
+		else if ( onGround || ps->velocity[2] <= 200.0f )
+			Trainer_Step( t, KS_RUN );		// too late in the jump, again from the ground
+		else
+			Trainer_Step( t, KS_GAP );		// out of reach yet: let go and press again
+		break;
+	case KS_FLIP:
+		// a player on the ground gets the red swing on top, else the hook pulls it in for the next kick
+		if ( enemy->client->ps.forceHandExtend == HANDEXTEND_KNOCKDOWN || BG_InKnockDownOnGround( &enemy->client->ps ) )
+			Trainer_SetState( t, TS_SWING );
+		else if ( msec >= TRAINER_CHAIN_WAIT && !onGround && dist <= TRAINER_YANK_CHAIN && dist > TRAINER_YANK_TO
+			&& t->chain <= t->level / 2 && Trainer_CanHook( self ) ) {
+			t->stateTime = level.time;
+			Trainer_Yank( t, cmd );
+		}
+		else if ( onGround )
+			Trainer_Done( t );
+		break;
+	default:
+		Trainer_Step( t, KS_RUN );
+		break;
+	}
+}
+
+// strafes into the player at its side (Trainer_Aim keeps it there) and jumps: PM_CheckJump flips off him and kicks
+static void Trainer_SideKick( trainer_t *t, const gentity_t *self, const gentity_t *enemy, float dist, float yawLeft,
+	usercmd_t *cmd ) {
+	const playerState_t *ps = &self->client->ps;
+
 	if ( t->step == 0 ) {
-		if ( onGround && dist <= TRAINER_KICK_JUMP ) {
+		cmd->rightmove = ( t->side > 0 ) ? -127 : 127;
+		if ( ps->groundEntityNum != ENTITYNUM_NONE && dist <= TRAINER_SIDE_JUMP && fabsf( yawLeft ) < TRAINER_SIDE_AIM ) {
 			cmd->upmove = 127;
 			t->step = 1;
 			t->stepTime = level.time;
 		}
-		else if ( level.time - t->stateTime > TRAINER_KICK_TIME || dist > TRAINER_ATTACK_RANGE * 1.5f )
+		else if ( level.time - t->stateTime > TRAINER_SIDE_TIME || dist > TRAINER_SIDE_RANGE * 1.3f )
 			Trainer_Done( t );
 		return;
 	}
-	if ( onGround && level.time - t->stepTime > 150 ) {
-		Trainer_Done( t );		// landed without a kick
-		return;
-	}
-	cmd->upmove = (t->step & 1) ? 127 : 0;
-	t->step++;
+	if ( Trainer_Kicked( ps ) && ( enemy->client->ps.forceHandExtend == HANDEXTEND_KNOCKDOWN
+		|| BG_InKnockDownOnGround( &enemy->client->ps ) ) )
+		Trainer_SetState( t, TS_SWING );
+	else if ( ps->groundEntityNum != ENTITYNUM_NONE && level.time - t->stepTime > 200 )
+		Trainer_Done( t );
 }
 
 static void Trainer_Grab( trainer_t *t, const gentity_t *self, float dist, usercmd_t *cmd ) {
@@ -455,23 +619,19 @@ static void Trainer_LetGo( const gentity_t *self, usercmd_t *cmd ) {
 
 /*
 =================
-G_TrainerCmd
+Trainer_Think
 
-from BotUpdateInput, every frame: the usercmd of a training bot. qfalse for any other bot.
+the usercmd of a training bot for this game frame
 =================
 */
-qboolean G_TrainerCmd( bot_state_t *bs, int time, int elapsed ) {
-	trainer_t				*t = Trainer_Get( bs->client );
+static void Trainer_Think( trainer_t *t, bot_state_t *bs, int time, int elapsed ) {
 	const trainerLevel_t	*lvl;
 	gentity_t				*self, *enemy;
 	playerState_t			*ps;
-	usercmd_t				*cmd = &bs->lastucmd;
+	usercmd_t				*cmd = &t->cmd;
 	trainerThreat_t			threat;
-	float					dist;
+	float					dist, yawLeft;
 	qboolean				attacked;
-
-	if ( !t )
-		return qfalse;
 
 	self = &g_entities[bs->client];
 	ps = &self->client->ps;
@@ -486,23 +646,24 @@ qboolean G_TrainerCmd( bot_state_t *bs, int time, int elapsed ) {
 		cmd->weapon = WP_SABER;
 
 	if ( self->health <= 0 || ps->pm_type == PM_DEAD ) {
-		Trainer_Aim( bs, NULL, 0.0f, cmd );
+		Trainer_Aim( bs, NULL, 0.0f, 0.0f, cmd );
 		if ( level.framenum & 1 )
 			cmd->buttons = BUTTON_ATTACK;		// respawn
 		Trainer_SetState( t, TS_CHASE );
-		return qtrue;
+		return;
 	}
 
 	enemy = Trainer_Enemy( t );
 	if ( !enemy ) {
-		Trainer_Aim( bs, NULL, 0.0f, cmd );
+		Trainer_Aim( bs, NULL, 0.0f, 0.0f, cmd );
 		Trainer_SetState( t, TS_CHASE );
 		Trainer_LetGo( self, cmd );
-		return qtrue;
+		return;
 	}
 
 	dist = Distance( ps->origin, enemy->client->ps.origin );
-	Trainer_Aim( bs, enemy->client->ps.origin, lvl->turnSpeed * elapsed / 1000.0f, cmd );
+	yawLeft = Trainer_Aim( bs, enemy->client->ps.origin, ( t->state == TS_SIDEKICK ) ? -90.0f * t->side : 0.0f,
+		lvl->turnSpeed * elapsed / 1000.0f, cmd );
 
 	attacked = Trainer_Notice( &t->attack, Trainer_Attacking( enemy ), lvl->readChance, lvl->reactMs );
 	threat = (trainerThreat_t)Trainer_Threat( self, enemy, dist );
@@ -538,6 +699,9 @@ qboolean G_TrainerCmd( bot_state_t *bs, int time, int elapsed ) {
 	case TS_KICK:
 		Trainer_Kick( t, self, enemy, dist, cmd );
 		break;
+	case TS_SIDEKICK:
+		Trainer_SideKick( t, self, enemy, dist, yawLeft, cmd );
+		break;
 	case TS_GRAB:
 		Trainer_Grab( t, self, dist, cmd );
 		break;
@@ -551,6 +715,29 @@ qboolean G_TrainerCmd( bot_state_t *bs, int time, int elapsed ) {
 		break;
 	}
 	Trainer_LetGo( self, cmd );
+}
+
+/*
+=================
+G_TrainerCmd
+
+from BotUpdateInput: the usercmd of a training bot, qfalse for any other bot. The bot frame runs more often than
+the game frame (every client frame of a listen server, every frame of a dedicated one between two game frames),
+but a bot moves once a game frame with the last command it sent (G_RunClient). So the command is made once a game
+frame and sent again as it is: a press made in the first call would be gone with the second.
+=================
+*/
+qboolean G_TrainerCmd( bot_state_t *bs, int time, int elapsed ) {
+	trainer_t *t = Trainer_Get( bs->client );
+
+	if ( !t )
+		return qfalse;
+	if ( t->cmdTime != level.time ) {
+		t->cmdTime = level.time;
+		Trainer_Think( t, bs, time, elapsed );
+	}
+	bs->lastucmd = t->cmd;
+	bs->lastucmd.serverTime = time;
 	return qtrue;
 }
 
