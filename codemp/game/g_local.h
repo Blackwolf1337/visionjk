@@ -1352,6 +1352,7 @@ void G_TrainerForcePowers( int clientNum, char *forcePowers, size_t size );
 void G_TrainerDisconnect( int clientNum );
 void G_TrainerFrame( void );
 void Cmd_Trainer_f( gentity_t *ent );
+void Svcmd_TrainerMatch_f( void );
 void G_TrainerDamage( const gentity_t *targ, const gentity_t *attacker, int take );
 qboolean G_TrainerState( int clientNum, int out[3] );
 

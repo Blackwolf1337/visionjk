@@ -76,6 +76,10 @@ XCVAR_DEF( jp_autoQUIT, "10-06:00", NULL, CVAR_ARCHIVE, qtrue )
 XCVAR_DEF( vs_authHosts, "", NULL, CVAR_ARCHIVE, qfalse )
 // not in JA+: how many training bots (vs_trainer, trainer/g_trainer.c) there may be at once, 0: none
 XCVAR_DEF( vs_allowTrainer, "0", NULL, CVAR_ARCHIVE, qfalse )
+// not in JA+: a file with other values for the training bot (trainer/trainer_params.h), empty: the defaults
+XCVAR_DEF( vs_trainerParams, "", NULL, CVAR_ARCHIVE, qfalse )
+// not in JA+: the model of the clone (vs_trainer clone, trainer/g_clone.c), made by tools/trainer/train_clone.py
+XCVAR_DEF( vs_cloneModel, "trainer/clone.dat", NULL, CVAR_ARCHIVE, qfalse )
 XCVAR_DEF( jp_banAdminIPs, "", NULL, CVAR_ARCHIVE, qfalse )
 XCVAR_DEF( jp_cinfo, "0", NULL, CVAR_SERVERINFO|CVAR_ROM, qtrue )
 XCVAR_DEF( jp_clanPass, "", NULL, CVAR_INTERNAL, qfalse )
