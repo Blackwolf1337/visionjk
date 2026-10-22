@@ -277,13 +277,16 @@ number it is level 3. With a number while the bot exists, that changes its level
 
 The bot fights like flip kick players, and moves like the movement log of one (15 kicks in 83 seconds). From 300 to
 1200 units it pulls itself in with the JA+ grappling hook (needs `jp_allowHook 1`) and lets go at 200 units. Up close
-it uses the short pull of the log: it jumps, fires the hook in the air 105 to 170 units off the player and lets go
-after about 60 ms on the rope or at 105 units. It lets go with use, as a bot counts as a client with the JA+ plugin
+it uses the short pull of the log: it jumps and fires the hook in the air 105 to 170 units off the player, only when
+it is at least 25 units above him near the top of its jump (rising slower than 150), so the pull brings it down in
+front of him. It lets go where the speed of the pull would bring it to 105 units in 0.12 s, or after about 60 ms on
+the rope. It lets go with use, as a bot counts as a client with the JA+ plugin
 and would hang on the rope otherwise. The hook is not used in the alternate dimension of JA+, it does not work
 there.
 
 It grabs with melee (needs `g_debugMelee`), flip kicks (needs `jp_allowflipkick`), or swings from above in the red
-style. The forward kick starts on the ground within 100 units: the jump is held 100 ms, let go for 50 ms and pressed
+style. The forward kick starts on the ground at a flat distance of 35 to 100 units and about the same height (32 units);
+right at the player or on top of him it steps back first. The jump is held 100 ms, let go for 50 ms and pressed
 again, and that press is the kick. If the player is still out of reach it lets go and presses again while it still
 rises fast enough. During the flip back the hook pulls it in again for the next kick, from up to 230 units, as long
 as the kicks so far are at most half its level: one kick at level 1, two in a row at levels 2 and 3, three at levels
@@ -292,9 +295,15 @@ as the kicks so far are at most half its level: one kick at level 1, two in a ro
 The side kick: both on the ground at about the same height (within 16 units) and within 140 units, it turns so the
 player is at its side, strafes into him and jumps at 40 units. The wall flip off a player in PM_CheckJump kicks him.
 
-It reads the player: while he attacks, or has the attack button down, it does not hook, grab or kick, it backs off
-and blocks. It counters his hook (it swings, which can cut the rope, and moves sideways), his flip kick (it swings
-in the red style, which keeps it from being knocked down, or crouches) and his grab (it backs off).
+Between attacks it keeps 110 to 220 units off the player and circles round him, changing direction now and then,
+instead of running straight at him, where his kicks hit it.
+
+It reads the player: while he attacks, it does not hook, grab or kick. His attack button only counts as an attack
+within 120 units. Against a swing it steps to a side (circling) and blocks. Against a coming hook or flip kick it
+steps aside out of the line, as the kick only hits straight ahead of the kicker. Against his grab it backs off. When
+the player is open (his swing returns, or he is knocked down or getting up) it swings at him at once from up to 100
+units, without the pause between attacks. Seeing that he is open uses the same reaction time and chance of its level
+as seeing an attack.
 
 | Level | 1 | 5 |
 |-------|---|---|
@@ -307,7 +316,7 @@ The view turn speed grows with the level too.
 
 The bot is the stock profile "Jedi Trainer" with a single saber, force jump 3 and saber offense and defense 3, under
 the name "Trainer". Its commands go through the normal player movement code, so it can do nothing a player can not.
-It has no path finding: it runs straight at the player. Its command is made once a game frame and sent again
+It has no path finding: it runs at the player. Its command is made once a game frame and sent again
 unchanged in between (the bot frame runs more often than the game frame, and a bot moves once a game frame with its
 last command).
 
