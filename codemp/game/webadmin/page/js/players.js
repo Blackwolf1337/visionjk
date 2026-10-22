@@ -54,6 +54,7 @@ function renderCommand(fillInputs) {
 	$('schizoBtn').classList.toggle('primary', !!d.schizo);
 	$('flatulenceBtn').classList.toggle('primary', !!d.flatulence);
 	$('disorientBtn').classList.toggle('primary', !!d.disorient);
+	$('movelogBtn').classList.toggle('primary', !!d.movelog);
 	$('followBtn').classList.toggle('primary', cam.follow === d.id);
 	// who that is: since when he is there, from where, and with which client plugin of JA+
 	if (d.minutes !== undefined) {

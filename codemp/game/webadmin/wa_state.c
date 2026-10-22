@@ -195,6 +195,7 @@ static unsigned WA_StatePlayerStays( waBuffer_t *slow, int clientNum ) {
 	WA_BufPrintf( slow, ",\"schizo\":%s", WA_BOOL( G_SchizoActive( clientNum ) ) );		// not in JKAdmin, g_schizo.c
 	WA_BufPrintf( slow, ",\"flatulence\":%s", WA_BOOL( G_FlatulenceActive( clientNum ) ) );	// not in JKAdmin, g_flatulence.c
 	WA_BufPrintf( slow, ",\"disorient\":%s", WA_BOOL( G_DisorientActive( clientNum ) ) );	// not in JKAdmin, g_disorient.c
+	WA_BufPrintf( slow, ",\"movelog\":%s", WA_BOOL( G_MoveLogActive( clientNum ) ) );		// not in JKAdmin, g_movelog.c
 	if ( !statePublic ) {
 		// not in JKAdmin: what the JA+ buttons of the page show. admin is jpAdminLevel_t, altDim 2 is forced.
 		const jpClient_t *jp = &cl->pers.jp;

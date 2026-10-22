@@ -19,7 +19,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 */
 
 /*
-Movement log ("vs_movelog <player>", server console and rcon only): every usercmd of a player with the player
+Movement log ("vs_movelog <player>" on the server console and rcon, "Record moves" in the web panel): every usercmd of a player with the player
 state after its pmove and the nearest other player, one CSV line each, into movelog/<time>_<slot>.csv of the
 home folder of the server. Made to see how players hook and flip kick, for the training bot (g_trainer.c).
 
@@ -94,7 +94,11 @@ static qboolean MoveLog_Start( gentity_t *ent ) {
 	return qtrue;
 }
 
-// vs_movelog <player>: on or off for that player
+qboolean G_MoveLogActive( int clientNum ) {
+	return (qboolean)( clientNum >= 0 && clientNum < MAX_CLIENTS && moveLogs[clientNum].f );
+}
+
+// vs_movelog <player> and the button of the web panel: on or off for that player
 qboolean G_MoveLogToggle( gentity_t *ent ) {
 	const int clientNum = ent - g_entities;
 

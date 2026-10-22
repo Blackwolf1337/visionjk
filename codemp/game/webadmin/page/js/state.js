@@ -216,7 +216,7 @@ function renderTable() {
 	$('playerCount').textContent = rows.length + ' / ' + state.maxClients;
 	$('players').innerHTML = rows.map(p =>
 		'<tr class="player' + (p.id === selected ? ' sel' : '') + (p.dead ? ' dead' : '') + '" data-id="' + p.id + '">' +
-		'<td><span class="team ' + p.team + '"></span>' + colorName(p.name) + (p.bot ? '<span class="tag">bot</span>' : '') + (p.god ? '<span class="tag">god</span>' : '') + (p.noclip ? '<span class="tag">noclip</span>' : '') + (p.schizo ? '<span class="tag">schizo</span>' : '') + (p.flatulence ? '<span class="tag">gas</span>' : '') + (p.disorient ? '<span class="tag">dizzy</span>' : '') + (p.jp && p.jp.admin ? '<span class="tag">' + (JP_RANKS[p.jp.admin] || 'admin') + '</span>' : '') + '</td>' +
+		'<td><span class="team ' + p.team + '"></span>' + colorName(p.name) + (p.bot ? '<span class="tag">bot</span>' : '') + (p.god ? '<span class="tag">god</span>' : '') + (p.noclip ? '<span class="tag">noclip</span>' : '') + (p.schizo ? '<span class="tag">schizo</span>' : '') + (p.flatulence ? '<span class="tag">gas</span>' : '') + (p.disorient ? '<span class="tag">dizzy</span>' : '') + (p.movelog ? '<span class="tag">rec</span>' : '') + (p.jp && p.jp.admin ? '<span class="tag">' + (JP_RANKS[p.jp.admin] || 'admin') + '</span>' : '') + '</td>' +
 		'<td class="num">' + (p.team === 'spectator' ? '-' : Math.max(p.health, 0)) + '</td>' +
 		'<td class="num">' + (p.team === 'spectator' ? '-' : p.armor) + '</td>' +
 		'<td class="num">' + p.score + '</td>' +

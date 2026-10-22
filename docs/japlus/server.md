@@ -298,6 +298,27 @@ It has no path finding: it runs straight at the player.
 It leaves when its player leaves, or when `vs_allowTrainer` goes to 0 or the gametype is not free for all. It stays a
 trainer over a map change: owner and level are kept in the userinfo key `vs_trainer` of the bot.
 
+#### Movement log (not from JA+)
+
+`game/trainer/g_movelog.c`. The server console and rcon command `vs_movelog <player>` (name without colours, or the
+slot number) records the movements of one player, to see how players hook and flip kick. The command toggles it. In
+the web panel it is the "Record moves" button of the player panel (action `movelog`), and the player list shows the
+tag "rec" while it runs.
+
+Every usercmd of that player becomes one CSV line in `movelog/<date>_<time>_<slot>.csv` in the home folder of the
+server (`fs_homepath/<fs_game>`, `/var/lib/visionjk/japlus/movelog/` on the official host). The first line is
+`# <name>`, the second the column names. A line has:
+
+| Part | Columns |
+|------|---------|
+| inputs | buttons, forward, right and up move, view angles |
+| player, after its pmove | origin, velocity, on ground, legs and torso animation with their timers, `pm_flags`, `eFlags`, `eFlags2`, flip kick, hook out and hooked, weapon, `weaponTime`, saber move, saber style, holstered, force points, active force powers, levitation level, health |
+| nearest other player | slot, distance, offset, velocity, on ground, animations, saber move, `eFlags2`, health |
+
+Everybody on the server is told in the chat when it starts ("The movements of <name> are recorded now (for the
+training bot).") and when it stops, and every two minutes while it runs. It stops by itself after 15 minutes, when
+the player leaves and with the map.
+
 ## Not done on the server
 
 - The wall flip part of `jp_jk2RedDFA` (the red DFA rule itself is in).

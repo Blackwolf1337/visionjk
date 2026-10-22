@@ -302,7 +302,7 @@ the answer tells the page that the numbers started over.
 | `GET /api/classkeys` | the keys the game code reads, as text: a line for a class with its name and, each after a tab, `key\|kind\|default`. The first line (`*`) is the keys every entity takes, `*item` the ones of an item |
 | `GET /api/export` | the entities in `.ent` format. `placed=1`: only what was placed through the panel, without the worldspawn |
 | `GET /api/chat?since=&epoch=` | chat lines after number `since`. Everything if `epoch` is not the current one |
-| `POST /api/action` | `action`, `id`, `value`: say, addbot, map, kick, ban, health, armor, scale, kill, god, noclip, schizo, flatulence, disorient, poop, gravity (no `id`), reload (no `id`), playergravity, team, teleport, and the JA+ ones: amsleep, amwake, amprotect, amempower, ammerc, ammindtrick, amghost, amsilence, amunsilence, amslap, amForceAltDim, amUnForceAltDim, amdenyvote, amShowMotd, amrename, ampsay, admgrant, freeze |
+| `POST /api/action` | `action`, `id`, `value`: say, addbot, map, kick, ban, health, armor, scale, kill, god, noclip, schizo, flatulence, disorient, movelog, poop, gravity (no `id`), reload (no `id`), playergravity, team, teleport, and the JA+ ones: amsleep, amwake, amprotect, amempower, ammerc, ammindtrick, amghost, amsilence, amunsilence, amslap, amForceAltDim, amUnForceAltDim, amdenyvote, amShowMotd, amrename, ampsay, admgrant, freeze |
 | `POST /api/entity` | `op` spawn, update or delete, with `id` and `kv` (one `key=value` per line). `op` use with `id` fires the entity. `op` clear with `kv` `classname=<class>` deletes every entity of that class that was placed through the panel. `map=1` with spawn: it is an entity of the map that comes back (undo), not a placed one. `op` check with `kv` spawns nothing and answers what a spawn of these keys would be refused for (`ok`, `message`, and `key` when a key is what is missing): the page asks it for its drafts. A refused spawn answers with `key` the same way With `class=<classname>` an operation on an `id` is refused when the entity of that number is of another class: the page says what it takes the entity for. |
 | `POST /api/layout` | `op` save keeps the map as it stands for every start of it (`layouts/<map>.txt` in the game folder), `op` forget removes that file. `/api/entities` has `layout`: is one saved, is the map as it has it, and how many entities it would add and take away now |
 | `GET /api/config` | the text of `server.cfg`, as UTF-8 |
@@ -1397,6 +1397,13 @@ Also changed:
   third person camera has none). Not while dead, a spectator or in a vehicle. Bots are not bothered, they turn
   to where they want to look. Server side only. Gone when the player leaves or the map changes. Added without a
   test run.
+- New: a movement log for one player (`codemp/game/trainer/g_movelog.c`), the "Record moves" button in the player
+  panel, action `movelog`, also the server console command `vs_movelog <player>`. Every usercmd of the player becomes
+  one CSV line in `movelog/` of the home folder of the server: his inputs, his player state after the pmove and the
+  nearest other player. For the training bot, to see how players hook and flip kick (server.md). The state has
+  `movelog` for a player while it runs and the player list shows the tag "rec". Everybody is told in the chat when it
+  starts and stops and every two minutes, it stops after 15 minutes, when he leaves and with the map. Added without
+  a test run.
 - New: the tab "Config" edits `server.cfg` (`WA_ApiConfigGet`, `WA_ApiConfigSet` in `wa_fs.c`). It is that
   one file, the request names none. The text field lies over the map view, the buttons are "Save", "Save and
   execute" (`exec server.cfg` on the server console) and "Reload". The engine reads a file from the home path

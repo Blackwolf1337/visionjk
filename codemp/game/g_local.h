@@ -1355,6 +1355,7 @@ void Cmd_Trainer_f( gentity_t *ent );
 
 // g_movelog.c: every usercmd of a player into a CSV (vs_movelog)
 qboolean G_MoveLogToggle( gentity_t *ent );
+qboolean G_MoveLogActive( int clientNum );
 void G_MoveLogCmd( gentity_t *ent, const usercmd_t *ucmd );
 void G_MoveLogDisconnect( int clientNum );
 void G_MoveLogShutdown( void );

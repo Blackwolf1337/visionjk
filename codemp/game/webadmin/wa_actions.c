@@ -339,6 +339,9 @@ static void WA_PlayerAction( waConnection_t *c, const char *action, int id, char
 	} else if ( !strcmp( action, "schizo" ) ) {
 		// not in JKAdmin: hallucinations only this player gets, see g_schizo.c
 		WA_ActionResult( c, qtrue, G_SchizoToggle( ent ) ? "schizophrenia on" : "schizophrenia off" );
+	} else if ( !strcmp( action, "movelog" ) ) {
+		// not in JKAdmin: every usercmd of this player into a CSV, for the training bot, see g_movelog.c
+		WA_ActionResult( c, qtrue, G_MoveLogToggle( ent ) ? "recording moves" : "not recording moves" );
 	} else if ( !strcmp( action, "poop" ) ) {
 		// not in JKAdmin: the emote ampoop for him, see g_poop.c. The rules of the emote still decide.
 		JP_EmotePoop( ent );
