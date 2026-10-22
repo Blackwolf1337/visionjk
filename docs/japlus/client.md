@@ -977,7 +977,9 @@ blades. `ui_saberfx.c` does that and is built into cgame and ui like `ui_skin.c`
 `CG_DoSFXSaber` in `codemp/cgame/cg_players.c` keep the blade of a moment ago: it follows the blade, shorter the
 longer a frame takes, and a trail older than 500 ms starts again at the blade. `UI_DoSFXSaber` in
 `codemp/ui/ui_saber.c` draws a blade that stands still, for the saber preview of the menus. With `cg_saberTrail 0` the
-SFX blade has no smear. The shaders are in `shaders/sfx_sabers.shader`, the images in `gfx/sfx_sabers`. The old
+SFX blade has no smear. With it on, `CG_SFXSaberTrailFill` also fills the area the blade swept in the colour of the
+saber, with the shader `saberBlur` of the classic trail (it fades from the blade to where it was a moment ago), as the
+2019 tree did. The four edges alone looked hollow and dark. The shaders are in `shaders/sfx_sabers.shader`, the images in `gfx/sfx_sabers`. The old
 default of the glow (`h_saberBladeGlowMulti` 1.25) is the look at `v_saberGlowScale 1`.
 
 Duels. `CG_DuelLook` in `cg_players.c` sets the look. The numbering of `v_duelEffect` differs from `h_duelEffect` by one,

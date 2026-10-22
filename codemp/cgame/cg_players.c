@@ -5687,6 +5687,70 @@ void CG_DoSaber( vec3_t origin, vec3_t dir, float length, float lengthMax, float
 	trap->R_AddRefEntityToScene( &saber );
 }
 
+// the colour of the trail of a saber, 0 to 255: the classic one and the inside of the SFX one
+static void CG_SaberTrailRGB( saber_colors_t color, vec3_t rgb )
+{
+	switch( (int)color )
+	{
+		case SABER_RED:
+			VectorSet( rgb, 255.0f, 0.0f, 0.0f );
+			break;
+		case SABER_ORANGE:
+			VectorSet( rgb, 255.0f, 64.0f, 0.0f );
+			break;
+		case SABER_YELLOW:
+			VectorSet( rgb, 255.0f, 255.0f, 0.0f );
+			break;
+		case SABER_GREEN:
+			VectorSet( rgb, 0.0f, 255.0f, 0.0f );
+			break;
+		case SABER_BLUE:
+			VectorSet( rgb, 0.0f, 64.0f, 255.0f );
+			break;
+		case SABER_PURPLE:
+			VectorSet( rgb, 220.0f, 0.0f, 255.0f );
+			break;
+		case SABER_BLACK:
+			VectorSet( rgb, 1.0f, 1.0f, 1.0f );
+			break;
+		default:
+			if ( CG_SaberIsRGB( color ) )
+				CG_SaberRGBBytes( rgb );
+			else
+				VectorSet( rgb, 0.0f, 64.0f, 255.0f );
+			break;
+	}
+}
+
+// v_saberStyle 1: the place the blade swept since a moment ago, filled in the colour like the classic trail
+// (saberBlur fades from the blade to the old place). The SFX style of 2019 filled it too, its four edges alone
+// look hollow and dark.
+static void CG_SFXSaberTrailFill( const saberFX_t *fx, saber_colors_t color )
+{
+	static const float	st[4][2] = { { 0.0f, 1.0f }, { 0.0f, 0.0f }, { 1.0f, 0.0f }, { 1.0f, 1.0f } };
+	polyVert_t			verts[4];
+	vec3_t				rgb;
+	int					i, j;
+
+	if ( VectorCompare( fx->bladeTip, fx->trailTip ) && VectorCompare( fx->bladeMuzzle, fx->trailMuzzle ) )
+		return;
+
+	CG_SaberTrailRGB( color, rgb );
+	VectorCopy( fx->bladeMuzzle, verts[0].xyz );
+	VectorCopy( fx->bladeTip, verts[1].xyz );
+	VectorCopy( fx->trailTip, verts[2].xyz );
+	VectorCopy( fx->trailMuzzle, verts[3].xyz );
+	for ( i = 0; i < 4; i++ )
+	{
+		verts[i].st[0] = st[i][0];
+		verts[i].st[1] = st[i][1];
+		for ( j = 0; j < 3; j++ )
+			verts[i].modulate[j] = (byte)rgb[j];
+		verts[i].modulate[3] = 255;
+	}
+	trap->R_AddPolysToScene( cgs.media.saberBlurShader, 4, verts, 1 );
+}
+
 // v_saberStyle 1 (ui/ui_saberfx.c). trail NULL: the blade without the place it was a moment ago.
 static void CG_DoSFXSaber( clientInfo_t *client, int saberNum, int bladeNum, saber_colors_t color, const vec3_t muzzle,
 	const vec3_t end, const vec3_t dir, const saberTrail_t *trail, int rfx )
@@ -5717,6 +5781,8 @@ static void CG_DoSFXSaber( clientInfo_t *client, int saberNum, int bladeNum, sab
 	fx.coreScale = CG_SaberScale( &v_saberCoreScale );
 	fx.glowScale = CG_SaberScale( &v_saberGlowScale );
 	SaberFX_Draw( &fx );
+	if ( trail )
+		CG_SFXSaberTrailFill( &fx, color );
 
 	if ( client->saber[saberNum].numBlades < 3 && !( client->saber[saberNum].saberFlags2 & SFL2_NO_DLIGHT ) && blade->length >= 0.5f )
 	{
@@ -6718,38 +6784,9 @@ CheckTrail:
 				else
 	#endif
 				{
-					vec3_t	rgb1={255.0f,255.0f,255.0f};
+					vec3_t	rgb1;
 
-					switch( scolor )
-					{
-						case SABER_RED:
-							VectorSet( rgb1, 255.0f, 0.0f, 0.0f );
-							break;
-						case SABER_ORANGE:
-							VectorSet( rgb1, 255.0f, 64.0f, 0.0f );
-							break;
-						case SABER_YELLOW:
-							VectorSet( rgb1, 255.0f, 255.0f, 0.0f );
-							break;
-						case SABER_GREEN:
-							VectorSet( rgb1, 0.0f, 255.0f, 0.0f );
-							break;
-						case SABER_BLUE:
-							VectorSet( rgb1, 0.0f, 64.0f, 255.0f );
-							break;
-						case SABER_PURPLE:
-							VectorSet( rgb1, 220.0f, 0.0f, 255.0f );
-							break;
-						case SABER_BLACK:
-							VectorSet( rgb1, 1.0f, 1.0f, 1.0f );
-							break;
-						default:
-							if ( CG_SaberIsRGB( scolor ) )
-								CG_SaberRGBBytes( rgb1 );
-							else
-								VectorSet( rgb1, 0.0f, 64.0f, 255.0f );
-							break;
-					}
+					CG_SaberTrailRGB( scolor, rgb1 );
 
 					//Here we will use the happy process of filling a struct in with arguments and passing it to a trap function
 					//so that we can take the struct and fill in an actual CTrail type using the data within it once we get it
