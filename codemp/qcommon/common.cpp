@@ -45,6 +45,7 @@ cvar_t	*com_developer;
 cvar_t	*com_dedicated;
 cvar_t	*com_timescale;
 cvar_t	*com_fixedtime;
+cvar_t	*com_simFast;	// not from OpenJK: dedicated server, with fixedtime: frames back to back without waiting
 cvar_t	*com_journal;
 cvar_t	*com_timedemo;
 cvar_t	*com_sv_running;
@@ -1299,6 +1300,9 @@ void Com_Init( char *commandLine ) {
 
 		com_timescale = Cvar_Get ("timescale", "1", CVAR_CHEAT | CVAR_SYSTEMINFO );
 		com_fixedtime = Cvar_Get ("fixedtime", "0", CVAR_CHEAT);
+		// Not from OpenJK: a dedicated server runs its frames back to back instead of waiting for the next one,
+		// each one fixedtime msec long. For simulations of bots (tools/trainer), a cheat like fixedtime.
+		com_simFast = Cvar_Get ("vs_simFast", "0", CVAR_CHEAT);
 		com_showtrace = Cvar_Get ("com_showtrace", "0", CVAR_CHEAT);
 
 		com_speeds = Cvar_Get ("com_speeds", "0", 0);
@@ -1597,7 +1601,7 @@ void Com_Frame( void ) {
 		if(!com_timedemo->integer)
 		{
 			if(com_dedicated->integer)
-				minMsec = SV_FrameMsec();
+				minMsec = (com_simFast->integer && com_fixedtime->integer) ? 0 : SV_FrameMsec();
 			else
 			{
 				minMsec = Com_MinFrameMsec();
