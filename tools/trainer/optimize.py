@@ -7,7 +7,8 @@ the values, the fitness is the damage the bot deals minus the damage it takes, p
 
 Every generation writes OUT/best.cfg (the best values so far, a file for vs_trainerParams) and a line to
 OUT/history.csv. The values are scaled: positive ones by a factor exp(0.35 x), the start scores of the approaches
-by + 5 x, so x = 0 is the default.
+by + 5 x, so x = 0 is the default. --range keeps every factor between 1/(1 + range) and 1 + range (the first run
+without a tight range pushed many values to the edge, against the weak points of the clone).
 """
 import argparse
 import math
@@ -27,18 +28,22 @@ FIXED = {'LEARN_RATE', 'EXPLORE', 'TRY_MSEC', 'HOOK_FUEL', 'HOOK_MAX', 'KICK_TIM
 ADDITIVE = {'PRIOR_HOOKKICK', 'PRIOR_RUNKICK', 'PRIOR_SIDEKICK', 'PRIOR_SWING', 'PRIOR_WAIT'}
 
 
+XMAX = 3.0	# set from --range in main()
+
+
 def to_params(names, defaults, x):
     out = {}
     for n, v in zip(names, x):
+        v = max(-XMAX, min(XMAX, v))
         if n in ADDITIVE:
             out[n] = defaults[n] + 5.0 * v
         else:
-            out[n] = defaults[n] * math.exp(0.35 * max(-3.0, min(3.0, v)))
+            out[n] = defaults[n] * math.exp(0.35 * v)
     return out
 
 
 def job(args):
-    game, clone, params, level, rounds, mapname, port = args
+    game, clone, params, level, rounds, mapname, port, _ = args
     res = simrun.run_match(game, 'clone', level, rounds, mapname, params, clone, port)
     if not res or res.get('sec', 0) <= 0:
         return None
@@ -94,7 +99,7 @@ def evaluate(pool, game, clone, cands, level, rounds, maps):
     jobs = []
     for ci, params in enumerate(cands):
         for mi, m in enumerate(maps):
-            jobs.append((ci, (game, clone, params, level, rounds, m, 29300 + (ci * len(maps) + mi) % 500)))
+            jobs.append((ci, (game, clone, params, level, rounds, m, 29300 + (ci * len(maps) + mi) % 500, XMAX)))
     results = pool.map(job, [j[1] for j in jobs])
     fit = [[] for _ in cands]
     for (ci, _), r in zip(jobs, results):
@@ -114,7 +119,10 @@ def main():
     ap.add_argument('--rounds', type=int, default=20)
     ap.add_argument('--maps', default='mp/duel1,mp/duel5,mp/ffa3')
     ap.add_argument('--level', default='5')
+    ap.add_argument('--range', type=float, default=0.5)
     args = ap.parse_args()
+    global XMAX
+    XMAX = math.log(1.0 + args.range) / 0.35
 
     defaults = simrun.read_defaults(os.path.join(T.GAME, 'trainer', 'trainer_params.h'))
     names = [n for n in defaults if n not in FIXED]

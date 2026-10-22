@@ -1078,9 +1078,21 @@ static void Trainer_CloneThink( trainer_t *t, bot_state_t *bs, const gentity_t *
 	Clone_Decide( self, enemy, t->clonePrev, &c );
 
 	// The kick itself is a reflex: the player presses in the one frame it reaches, the forests at 50 ms frames
-	// mostly miss it (1.5 kicks a minute against his 10.7 with the same moves and hooks). In the air, still rising
+	// mostly miss it (1.5 kicks a minute against his 10.7 with the same moves and hooks). On the ground, going for
+	// him: the jump when he will be in reach at its press (as the trainer, Trainer_TakeOff). In the air, still rising
 	// fast and with him in reach at the next frame: let go, then press, looking straight at him.
-	if ( self->client->ps.groundEntityNum == ENTITYNUM_NONE && self->client->ps.velocity[2] > 200.0f
+	if ( self->client->ps.groundEntityNum != ENTITYNUM_NONE && c.forwardmove > 0 && t->cloneUp <= 0
+		&& JP_FEATURE( JPF_FLIPKICK ) ) {
+		float above;
+		const float atPress = Trainer_FlatIn( self, enemy, trainerDefaults.PRESS_SEC, &above );
+
+		if ( atPress >= trainerDefaults.REACH_NEAR && atPress <= trainerDefaults.REACH_FAR
+			&& fabsf( above ) < trainerDefaults.LEVEL_DZ ) {
+			c.upmove = 127;
+			c.yawOff = 0.0f;
+		}
+	}
+	else if ( self->client->ps.groundEntityNum == ENTITYNUM_NONE && self->client->ps.velocity[2] > 200.0f
 		&& JP_FEATURE( JPF_FLIPKICK ) ) {
 		// the defaults, not tp: the clone stays the same opponent while tools/trainer tries other values
 		const float atNext = Trainer_FlatIn( self, enemy, trainerDefaults.JUMP_GAP / 1000.0f, NULL );
