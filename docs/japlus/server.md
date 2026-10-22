@@ -275,10 +275,10 @@ on 2026-10-11, see client.md.
 The player command `vs_trainer [1-5|off]` calls a training bot that fights only the player who called it. Without a
 number it is level 3. With a number while the bot exists, that changes its level. `off` sends it away.
 
-The bot fights like flip kick players, and moves like the movement log of one (15 kicks in 83 seconds). From 300 to
+The bot fights like flip kick players, and moves like the movement log of one (15 kicks in 83 seconds). From 250 to
 1200 units it pulls itself in with the JA+ grappling hook (needs `jp_allowHook 1`) and lets go at 200 units. Up close
-it uses the short pull of the log: it jumps and fires the hook in the air 105 to 170 units off the player, only when
-it is at least 25 units above him near the top of its jump (rising slower than 150), so the pull brings it down in
+it uses the short pull of the log: it jumps and fires the hook in the air 105 to 220 units off the player, only when
+it is at least 10 units above him near the top of its jump (rising slower than 250), so the pull brings it down in
 front of him. It lets go where the speed of the pull would bring it to 105 units in 0.12 s, or after about 60 ms on
 the rope. It lets go with use, as a bot counts as a client with the JA+ plugin
 and would hang on the rope otherwise. The hook is not used in the alternate dimension of JA+, it does not work
@@ -301,7 +301,10 @@ instead of running straight at him, where his kicks hit it.
 
 It reads the player: while he attacks, it does not hook, grab or kick. His attack button only counts as an attack
 within 120 units. Against a swing it steps to a side (circling) and blocks. Against a coming hook or flip kick it
-steps aside out of the line, as the kick only hits straight ahead of the kicker. Against his grab it backs off.
+steps aside out of the line, as the kick only hits straight ahead of the kicker. When he comes at it through the air
+(a jump, also while falling, or his hook in it), and it stands on the ground 35 to 135 units off (flat) with him not
+more than 10 units below it, it does what the player does against the bot: it jumps to meet him and kicks (the timed
+kick jump), as he can not turn in the air. Against his grab it backs off.
 From level 3, while the player stands on the ground within 260 units and faces it (within 25 degrees), it waits in the
 ring for up to 1.5 s for him to come before it attacks. After it stepped out of his hook or kick it kicks back at once,
 without the pause, while he is within 110 units. When

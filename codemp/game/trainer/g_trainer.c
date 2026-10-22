@@ -50,6 +50,13 @@ of kicks. The player kicked it on its own short pull and running in, it kicked h
 level 3 it waits in the ring while he stands ready facing it, after stepping out of his hook or kick it kicks back
 at once, and the kick jump starts the earlier the faster it runs.
 
+A third recorded fight (5 minutes, 94 attacks of the bot) showed how the player counters: when the bot comes at him
+through the air, by a jump or on the hook, he jumps to meet it and kicks it there, as it can not turn in the air
+(35 times; he took off 120 to 135 units off when it was 45 to 55 above him near the top of its jump, 30 to 100 when
+it came in low, the kick 100 to 200 ms later). Its jumps at him without the hook lost 24 to 5, its hook attacks
+won 13 to 11. So it counters the same way, and it hooks more: the short pull from further off and lower above him,
+the long pull from nearer.
+
 Owner and level are a userinfo key of the bot ("vs_trainer" "<owner> <level>"), so a bot that stays over a map
 change is a trainer again. It leaves when its player leaves or sends it away.
 
@@ -71,18 +78,18 @@ qboolean BG_InKnockDownOnGround( playerState_t *ps );
 // levitation 3 for the flip kick, saber offense and defense 3 for the red style (rank 7, light side)
 #define TRAINER_FORCEPOWERS		"7-1-030000000000000330"
 
-#define TRAINER_HOOK_MIN		300.0f	// further away a long pull brings it in
+#define TRAINER_HOOK_MIN		250.0f	// further away a long pull brings it in
 #define TRAINER_HOOK_MAX		1200.0f
 #define TRAINER_HOOK_NEAR		200.0f	// a long pull is let go here
 #define TRAINER_HOOK_FUEL		20		// JP_HOOK_MIN_FUEL is 10, a bit more so the rope does not run dry halfway
 #define TRAINER_HOOK_TIME		1600	// msec on a long pull at most
-#define TRAINER_YANK_FROM		170.0f	// in the air this close: the short pull
+#define TRAINER_YANK_FROM		220.0f	// in the air this close: the short pull (the player: up to 465, mostly 160)
 #define TRAINER_YANK_CHAIN		230.0f	// during the flip back after a kick from this close
 #define TRAINER_YANK_TO			105.0f	// let go here
 #define TRAINER_YANK_MSEC		60		// or after this long on the rope
 #define TRAINER_YANK_MISS		350		// the hook hit nothing
-#define TRAINER_YANK_ABOVE		25.0f	// only this far above the player: the pull goes down in front of him
-#define TRAINER_YANK_RISE		150.0f	// and near the top of the jump
+#define TRAINER_YANK_ABOVE		10.0f	// only this far above the player: the pull goes down in front of him
+#define TRAINER_YANK_RISE		250.0f	// and not rising fast any more
 #define TRAINER_YANK_LEAD		0.12f	// sec: let go where the speed of the pull would bring it in this time
 #define TRAINER_CHAIN_WAIT		100		// msec after a kick before the hook pulls it in again
 #define TRAINER_HOP_RANGE		230.0f	// jumps here to hook from the air
@@ -111,6 +118,8 @@ qboolean BG_InKnockDownOnGround( playerState_t *ps );
 #define TRAINER_RING_FAR		220.0f
 #define TRAINER_PUNISH_RANGE	100.0f	// swings at a player who is open from here, without the pause
 #define TRAINER_KICK_BACK		110.0f	// after stepping out of his hook or kick it kicks back from here
+#define TRAINER_MEET_RANGE		135.0f	// a player coming through the air is met with a kick from this flat distance
+#define TRAINER_MEET_BELOW		10.0f	// if he is not further below than this
 #define TRAINER_READY_AIM		25.0f	// the player faces it this close: he is ready for it
 #define TRAINER_READY_RANGE		260.0f
 #define TRAINER_PATIENCE		1500	// msec it waits in the ring for a ready player to come (from level 3)
@@ -311,7 +320,7 @@ static trainerThreat_t Trainer_Threat( const gentity_t *self, const gentity_t *e
 		return TT_HOOK;
 	if ( ps->torsoAnim == BOTH_KYLE_GRAB && dist < TRAINER_COUNTER_GRAB )
 		return TT_GRAB;
-	if ( ps->groundEntityNum == ENTITYNUM_NONE && ps->velocity[2] > 0.0f && dist < TRAINER_COUNTER_KICK ) {
+	if ( ps->groundEntityNum == ENTITYNUM_NONE && dist < TRAINER_COUNTER_KICK ) {
 		VectorSubtract( self->client->ps.origin, ps->origin, toSelf );
 		toSelf[2] = 0.0f;
 		VectorNormalize( toSelf );
@@ -461,16 +470,27 @@ static void Trainer_Circle( trainer_t *t, usercmd_t *cmd ) {
 	cmd->rightmove = t->circle * 127;
 }
 
-static void Trainer_Counter( gentity_t *self, trainer_t *t, trainerThreat_t threat, float dist, usercmd_t *cmd ) {
-	const playerState_t *ps = &self->client->ps;
+static void Trainer_Counter( gentity_t *self, const gentity_t *enemy, trainer_t *t, trainerThreat_t threat, float dist,
+	usercmd_t *cmd ) {
+	const playerState_t	*ps = &self->client->ps;
+	const float			dz = enemy->client->ps.origin[2] - ps->origin[2];
+	const float			flat = sqrtf( Q_max( 0.0f, dist * dist - dz * dz ) );
 
 	Trainer_Saber( self, t );
 	switch ( threat ) {
 	case TT_HOOK:
 	case TT_KICK:
-		// out of the line of the rope and of the kick, which only hits straight ahead of the kicker (PM_CheckJump).
-		// A swing did not keep the kick off in the recorded fight.
-		Trainer_Circle( t, cmd );
+		// He comes through the air and can not turn: jump to meet him and kick, the counter of the recorded player.
+		// Else out of the line of the rope and of the kick, which only hits straight ahead of the kicker.
+		if ( ps->groundEntityNum != ENTITYNUM_NONE && flat >= TRAINER_TOO_CLOSE && flat <= TRAINER_MEET_RANGE
+			&& dz >= -TRAINER_MEET_BELOW && JP_FEATURE( JPF_FLIPKICK ) && ps->fd.forcePowerLevel[FP_LEVITATION] > FORCE_LEVEL_1 ) {
+			Trainer_SetState( t, TS_KICK );
+			Trainer_Step( t, KS_HOLD );
+			cmd->forwardmove = 127;
+			cmd->upmove = 127;
+		}
+		else
+			Trainer_Circle( t, cmd );
 		break;
 	case TT_GRAB:
 		// out of reach of the hand, the grab breaks off past 64 units
@@ -765,7 +785,7 @@ static void Trainer_Think( trainer_t *t, bot_state_t *bs, int time, int elapsed 
 		Trainer_Circle( t, cmd );
 		break;
 	case TS_COUNTER:
-		Trainer_Counter( self, t, (trainerThreat_t)t->threat.sign, dist, cmd );
+		Trainer_Counter( self, enemy, t, (trainerThreat_t)t->threat.sign, dist, cmd );
 		break;
 	case TS_HOOK:
 		Trainer_Hook( t, self, dist, cmd );
