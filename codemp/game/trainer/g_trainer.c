@@ -46,9 +46,9 @@ it keeps TRAINER_RING_NEAR to TRAINER_RING_FAR off and circles, against a swing 
 the return of it, out of a coming kick it steps aside, and a player on the ground gets its swing at once.
 
 A second recorded fight (after those changes: 198 damage a minute to the bot instead of 394, 54 from it) was a race
-of kicks. The player kicked it on its own short pull and running in, it kicked him when he came at it. So from
-level 3 it waits in the ring while he stands ready facing it, after stepping out of his hook or kick it kicks back
-at once, and the kick jump starts the earlier the faster it runs.
+of kicks. The player kicked it on its own short pull and running in, it kicked him when he came at it. So it may
+wait in the ring for him to come (an approach it learns, below), after stepping out of his hook or kick it kicks
+back at once, and the kick jump starts the earlier the faster it runs.
 
 A third recorded fight (5 minutes, 94 attacks of the bot) showed how the player counters: when the bot comes at him
 through the air, by a jump or on the hook, he jumps to meet it and kicks it there, as it can not turn in the air
@@ -56,6 +56,15 @@ through the air, by a jump or on the hook, he jumps to meet it and kicks it ther
 it came in low, the kick 100 to 200 ms later). Its jumps at him without the hook lost 24 to 5, its hook attacks
 won 13 to 11. So it counters the same way, and it hooks more: the short pull from further off and lower above him,
 the long pull from nearer.
+
+Prediction and learning. Where the player will be is his speed carried on, with gravity in the air, where the rope
+pulls him straight: nobody turns in the air. The bot aims ahead of him (by level), jumps for its kick when he will be
+in reach at the press 150 ms later, meets him in the air where he will arrive, and steps out of his kick to the side
+he is not turning to. Which of its approaches (hook kick, run kick, side kick, red swing, waiting for him) works
+against this player it learns during the fight: an approach scores the damage it dealt minus the damage it took in
+the TRAINER_TRY_MSEC after it began, the scores are kept as a moving average, and the next approach is the best one
+with a bonus for the ones tried less and some chance by level. "vs_trainer info" shows the scores. They are gone
+with the map.
 
 Owner and level are a userinfo key of the bot ("vs_trainer" "<owner> <level>"), so a bot that stays over a map
 change is a trainer again. It leaves when its player leaves or sends it away.
@@ -120,9 +129,14 @@ qboolean BG_InKnockDownOnGround( playerState_t *ps );
 #define TRAINER_KICK_BACK		110.0f	// after stepping out of his hook or kick it kicks back from here
 #define TRAINER_MEET_RANGE		135.0f	// a player coming through the air is met with a kick from this flat distance
 #define TRAINER_MEET_BELOW		10.0f	// if he is not further below than this
-#define TRAINER_READY_AIM		25.0f	// the player faces it this close: he is ready for it
-#define TRAINER_READY_RANGE		260.0f
-#define TRAINER_PATIENCE		1500	// msec it waits in the ring for a ready player to come (from level 3)
+#define TRAINER_PRESS_SEC		0.15f	// from the kick jump to the press that kicks (TRAINER_JUMP_HOLD + TRAINER_JUMP_GAP)
+#define TRAINER_REACH_NEAR		28.0f	// at the press the player is this far off (flat): the kick trace hits him
+#define TRAINER_REACH_FAR		70.0f	// (32 units past the box, the player kicked at 30 to 68)
+#define TRAINER_ARRIVE_SEC		0.3f	// a player in the air who reaches this in this time is waited for, not dodged
+#define TRAINER_WAIT_MSEC		1500	// the approach TA_WAIT: in the ring for the player to come
+#define TRAINER_TRY_MSEC		2500	// an approach is scored on the damage of this time after it began
+#define TRAINER_LEARN_RATE		0.25f	// weight of the newest score in the moving average
+#define TRAINER_EXPLORE			15.0f	// bonus (in health) for approaches tried less
 #define TRAINER_CIRCLE_MIN		700		// msec before it may circle the other way
 #define TRAINER_CIRCLE_MAX		1600
 #define TRAINER_COUNTER_KICK	220.0f	// a player jumping at it from here is a flip kick
@@ -134,15 +148,30 @@ typedef struct {
 	int		readChance;		// percent: an attack of the player is seen at all
 	int		counterChance;	// percent: a hook, flip kick or grab of the player is answered
 	int		pauseMs;		// between two attacks of the trainer
+	float	leadSec;		// aims where the player will be this much later
+	float	chance;			// random part (in health) when it picks an approach, less is more of what works
 } trainerLevel_t;
 
 static const trainerLevel_t trainerLevels[TRAINER_LEVELS] = {
-	{ 450, 220.0f, 45, 20, 2600 },
-	{ 330, 340.0f, 60, 40, 1900 },
-	{ 230, 480.0f, 75, 60, 1300 },
-	{ 150, 650.0f, 88, 80,  850 },
-	{  80, 900.0f, 97, 95,  500 },
+	{ 450, 220.0f, 45, 20, 2600, 0.00f, 24.0f },
+	{ 330, 340.0f, 60, 40, 1900, 0.03f, 18.0f },
+	{ 230, 480.0f, 75, 60, 1300, 0.06f, 12.0f },
+	{ 150, 650.0f, 88, 80,  850, 0.09f,  7.0f },
+	{  80, 900.0f, 97, 95,  500, 0.12f,  3.0f },
 };
+
+// what it can begin an attack with, learned against the player (Trainer_Choose)
+typedef enum {
+	TA_HOOKKICK,	// up, the short pull, the kick
+	TA_RUNKICK,		// the kick jump from a run, no hook
+	TA_SIDEKICK,
+	TA_SWING,		// red style from above
+	TA_WAIT,		// in the ring for him to come, then the counter
+	TA_NUM
+} trainerApproach_t;
+
+static const char *trainerApproachNames[TA_NUM] = { "hook kick", "run kick", "side kick", "red swing", "wait" };
+static const float trainerApproachPrior[TA_NUM] = { 2.0f, 0.0f, 0.0f, -2.0f, 0.0f };	// hook kicks did best in the logs
 
 typedef enum {
 	TS_CHASE,		// runs to the player, nothing started
@@ -200,7 +229,13 @@ typedef struct {
 	trainerSign_t	attack;		// the player attacks
 	trainerSign_t	threat;		// a trainerThreat_t of the player
 	trainerSign_t	open;		// the player is down or his swing returns
-	int				readySince;	// level.time the player stands ready for it, 0 when he does not
+	qboolean		noHop;		// TA_RUNKICK: the kick without the hook
+	int				approach;	// the trainerApproach_t that is scored, -1 none
+	int				approachTime;
+	int				dealt, taken;	// health since approachTime
+	float			value[TA_NUM];	// moving average of dealt - taken
+	int				tries[TA_NUM];
+	qboolean		learned;	// value has its priors
 	int				circle;		// 1 circles to the right, -1 to the left
 	int				circleTime;	// level.time it may turn round
 } trainer_t;
@@ -231,6 +266,7 @@ static trainer_t *Trainer_Get( int clientNum ) {
 		if ( sscanf( Info_ValueForKey( userinfo, "vs_trainer" ), "%d %d", &owner, &lvl ) == 2
 			&& owner >= 0 && owner < MAX_CLIENTS && owner != clientNum ) {
 			t->active = qtrue;
+			t->approach = -1;
 			t->owner = owner;
 			t->level = Com_Clampi( 1, TRAINER_LEVELS, lvl );
 		}
@@ -310,6 +346,29 @@ static qboolean Trainer_Open( const gentity_t *enemy ) {
 
 	return (qboolean)( ps->forceHandExtend == HANDEXTEND_KNOCKDOWN || BG_InKnockDownOnGround( ps ) || PM_InKnockDown( ps )
 		|| (ps->weapon == WP_SABER && PM_SaberInReturn( ps->saberMove )) );
+}
+
+// where a player will be in sec: his speed carried on, gravity in the air, the rope pulls straight
+static void Trainer_Predict( const playerState_t *ps, float sec, vec3_t out ) {
+	VectorMA( ps->origin, sec, ps->velocity, out );
+	if ( ps->groundEntityNum == ENTITYNUM_NONE && !(ps->pm_flags & PMF_GRAPPLE_PULL) )
+		out[2] -= 0.5f * ps->gravity * sec * sec;
+}
+
+// flat distance from a to b, and how far b is above a
+static float Trainer_FlatTo( const vec3_t a, const vec3_t b, float *above ) {
+	if ( above )
+		*above = b[2] - a[2];
+	return sqrtf( (b[0] - a[0]) * (b[0] - a[0]) + (b[1] - a[1]) * (b[1] - a[1]) );
+}
+
+// how far both will be apart (flat) in sec, and how far the player will be above it
+static float Trainer_FlatIn( const gentity_t *self, const gentity_t *enemy, float sec, float *above ) {
+	vec3_t a, b;
+
+	Trainer_Predict( &self->client->ps, sec, a );
+	Trainer_Predict( &enemy->client->ps, sec, b );
+	return Trainer_FlatTo( a, b, above );
 }
 
 static trainerThreat_t Trainer_Threat( const gentity_t *self, const gentity_t *enemy, float dist ) {
@@ -417,48 +476,107 @@ static qboolean Trainer_SaberReady( const playerState_t *ps ) {
 	return (qboolean)( ps->weapon == WP_SABER && !ps->saberHolstered && ps->weaponTime <= 0 );
 }
 
-// what the next attack is, when there is one to start
-static void Trainer_Choose( trainer_t *t, const bot_state_t *bs, const gentity_t *self, const gentity_t *enemy, float dist ) {
-	const playerState_t *ps = &self->client->ps;
-	const qboolean onGround = ps->groundEntityNum != ENTITYNUM_NONE && enemy->client->ps.groundEntityNum != ENTITYNUM_NONE;
-	const qboolean canKick = JP_FEATURE( JPF_FLIPKICK ) && ps->fd.forcePowerLevel[FP_LEVITATION] > FORCE_LEVEL_1;
+static void Trainer_Learn( trainer_t *t ) {
+	int i;
 
-	if ( dist >= TRAINER_HOOK_MIN && dist <= TRAINER_HOOK_MAX && Trainer_CanHook( self ) && Trainer_Visible( bs, enemy ) )
-		Trainer_SetState( t, TS_HOOK );
-	else if ( dist <= TRAINER_SIDE_RANGE && onGround && canKick
-		&& fabsf( enemy->client->ps.origin[2] - ps->origin[2] ) < TRAINER_SIDE_LEVEL && !Q_irand( 0, 2 ) ) {
+	if ( !t->learned ) {
+		for ( i = 0; i < TA_NUM; i++ )
+			t->value[i] = trainerApproachPrior[i];
+		t->learned = qtrue;
+	}
+}
+
+// the score of the approach that ran: what it dealt minus what it took, after TRAINER_TRY_MSEC or when the next
+// one begins (now)
+static void Trainer_Score( trainer_t *t, qboolean now ) {
+	if ( t->approach < 0 || (!now && level.time - t->approachTime < TRAINER_TRY_MSEC) )
+		return;
+	Trainer_Learn( t );
+	t->value[t->approach] += TRAINER_LEARN_RATE * ( (float)( t->dealt - t->taken ) - t->value[t->approach] );
+	t->tries[t->approach]++;
+	t->approach = -1;
+}
+
+/*
+=================
+Trainer_Choose
+
+the next attack, from the approaches that fit now: the one that worked best against this player, with a bonus for
+the ones tried less (so a player who changes is noticed) and a random part that is the larger the lower the level
+=================
+*/
+static void Trainer_Choose( trainer_t *t, const bot_state_t *bs, const gentity_t *self, const gentity_t *enemy, float dist ) {
+	const playerState_t	*ps = &self->client->ps;
+	const qboolean		onGround = ps->groundEntityNum != ENTITYNUM_NONE && enemy->client->ps.groundEntityNum != ENTITYNUM_NONE;
+	const qboolean		canKick = JP_FEATURE( JPF_FLIPKICK ) && ps->fd.forcePowerLevel[FP_LEVITATION] > FORCE_LEVEL_1;
+	qboolean			fits[TA_NUM];
+	float				best = -1.0e9f;
+	int					i, total = 0, pick = -1;
+
+	if ( dist >= TRAINER_HOOK_MIN && dist <= TRAINER_HOOK_MAX && Trainer_CanHook( self ) && Trainer_Visible( bs, enemy ) ) {
+		Trainer_SetState( t, TS_HOOK );		// far off: the long pull, not scored
+		return;
+	}
+	if ( dist <= TRAINER_GRAB_RANGE && onGround && g_debugMelee.integer && (ps->stats[STAT_WEAPONS] & (1 << WP_MELEE))
+		&& !Q_irand( 0, 4 ) ) {
+		Trainer_SetState( t, TS_GRAB );
+		return;
+	}
+	if ( dist > TRAINER_ATTACK_RANGE )
+		return;
+
+	fits[TA_HOOKKICK] = canKick && dist <= TRAINER_HOP_RANGE && Trainer_CanHook( self );
+	fits[TA_RUNKICK] = canKick;
+	fits[TA_SIDEKICK] = canKick && onGround && dist <= TRAINER_SIDE_RANGE
+		&& fabsf( enemy->client->ps.origin[2] - ps->origin[2] ) < TRAINER_SIDE_LEVEL;
+	fits[TA_SWING] = qtrue;
+	fits[TA_WAIT] = t->level >= 3;
+
+	Trainer_Score( t, qtrue );
+	Trainer_Learn( t );
+	for ( i = 0; i < TA_NUM; i++ )
+		total += t->tries[i];
+	for ( i = 0; i < TA_NUM; i++ ) {
+		float score;
+
+		if ( !fits[i] )
+			continue;
+		score = t->value[i] + TRAINER_EXPLORE * sqrtf( logf( (float)total + 1.0f ) / ( (float)t->tries[i] + 1.0f ) )
+			+ Q_flrand( 0.0f, trainerLevels[t->level - 1].chance );
+		if ( score > best ) {
+			best = score;
+			pick = i;
+		}
+	}
+	if ( pick < 0 )
+		return;
+
+	t->approach = pick;
+	t->approachTime = level.time;
+	t->dealt = t->taken = 0;
+	switch ( pick ) {
+	case TA_HOOKKICK:
+	case TA_RUNKICK:
+		Trainer_SetState( t, TS_KICK );
+		t->noHop = (qboolean)( pick == TA_RUNKICK );
+		break;
+	case TA_SIDEKICK:
 		Trainer_SetState( t, TS_SIDEKICK );
 		t->side = ( Trainer_YawTo( bs, enemy ) >= 0.0f ) ? 1 : -1;	// keeps the player on the side it is nearer
+		break;
+	case TA_SWING:
+		Trainer_SetState( t, TS_SWING );
+		break;
+	default:
+		t->nextAttack = level.time + TRAINER_WAIT_MSEC;	// stays in the ring, his attack is countered
+		break;
 	}
-	else if ( dist <= TRAINER_GRAB_RANGE && onGround && g_debugMelee.integer && (ps->stats[STAT_WEAPONS] & (1 << WP_MELEE))
-		&& !Q_irand( 0, 4 ) )
-		Trainer_SetState( t, TS_GRAB );
-	else if ( dist <= TRAINER_ATTACK_RANGE )
-		Trainer_SetState( t, (canKick && Q_irand( 0, 4 ) < 3) ? TS_KICK : TS_SWING );
 }
 
 // in the middle of something that can not be stopped: in the air for a kick or holding the player
 static qboolean Trainer_Busy( const trainer_t *t ) {
 	return (qboolean)( (t->state == TS_KICK && t->step != KS_RUN) || (t->state == TS_SIDEKICK && t->step > 0)
 		|| (t->state == TS_GRAB && t->step > 0) );
-}
-
-// The player stands on the ground near and faces it: an attack now runs into his kick. From level 3 the trainer
-// waits up to TRAINER_PATIENCE for him to come, its kicks landed when he did.
-static qboolean Trainer_Patient( trainer_t *t, const gentity_t *self, const gentity_t *enemy, float dist ) {
-	const playerState_t	*ops = &enemy->client->ps;
-	vec3_t				dir, angles;
-
-	VectorSubtract( self->client->ps.origin, ops->origin, dir );
-	vectoangles( dir, angles );
-	if ( t->level < 3 || ops->groundEntityNum == ENTITYNUM_NONE || dist > TRAINER_READY_RANGE
-		|| fabsf( AngleSubtract( angles[YAW], ops->viewangles[YAW] ) ) > TRAINER_READY_AIM ) {
-		t->readySince = 0;
-		return qfalse;
-	}
-	if ( !t->readySince )
-		t->readySince = level.time;
-	return (qboolean)( level.time - t->readySince < TRAINER_PATIENCE );
 }
 
 // strafes round the player, now and then the other way
@@ -480,17 +598,36 @@ static void Trainer_Counter( gentity_t *self, const gentity_t *enemy, trainer_t 
 	switch ( threat ) {
 	case TT_HOOK:
 	case TT_KICK:
-		// He comes through the air and can not turn: jump to meet him and kick, the counter of the recorded player.
-		// Else out of the line of the rope and of the kick, which only hits straight ahead of the kicker.
-		if ( ps->groundEntityNum != ENTITYNUM_NONE && flat >= TRAINER_TOO_CLOSE && flat <= TRAINER_MEET_RANGE
-			&& dz >= -TRAINER_MEET_BELOW && JP_FEATURE( JPF_FLIPKICK ) && ps->fd.forcePowerLevel[FP_LEVITATION] > FORCE_LEVEL_1 ) {
-			Trainer_SetState( t, TS_KICK );
-			Trainer_Step( t, KS_HOLD );
-			cmd->forwardmove = 127;
-			cmd->upmove = 127;
+		// He comes through the air and can not turn: jump to meet him where he will be at the press and kick, the
+		// counter of the recorded player. Coming but not yet near enough: it waits for him facing him. Else out of
+		// the line of the rope and of the kick, which only hits straight ahead of him, to the side he is not turning to.
+		{
+			const qboolean	canMeet = ps->groundEntityNum != ENTITYNUM_NONE && JP_FEATURE( JPF_FLIPKICK )
+				&& ps->fd.forcePowerLevel[FP_LEVITATION] > FORCE_LEVEL_1 && flat >= TRAINER_TOO_CLOSE && flat <= TRAINER_MEET_RANGE;
+			float			above;
+			const float		atPress = Trainer_FlatIn( self, enemy, TRAINER_PRESS_SEC, &above );
+
+			if ( canMeet && atPress >= TRAINER_REACH_NEAR && atPress <= TRAINER_REACH_FAR && above >= -TRAINER_MEET_BELOW ) {
+				Trainer_SetState( t, TS_KICK );
+				Trainer_Step( t, KS_HOLD );
+				cmd->forwardmove = 127;
+				cmd->upmove = 127;
+			}
+			else if ( canMeet && atPress > TRAINER_REACH_FAR
+				&& Trainer_FlatIn( self, enemy, TRAINER_ARRIVE_SEC, NULL ) <= TRAINER_REACH_FAR ) {
+				// he arrives in a moment: stay in front of him
+			}
+			else {
+				vec3_t dir, angles;
+
+				VectorSubtract( ps->origin, enemy->client->ps.origin, dir );
+				vectoangles( dir, angles );
+				// it is to the left of where he looks: further to his left, which is its right
+				t->circle = ( AngleSubtract( angles[YAW], enemy->client->ps.viewangles[YAW] ) >= 0.0f ) ? 1 : -1;
+				t->circleTime = level.time + TRAINER_CIRCLE_MIN;
+				cmd->rightmove = t->circle * 127;
+			}
 		}
-		else
-			Trainer_Circle( t, cmd );
 		break;
 	case TT_GRAB:
 		// out of reach of the hand, the grab breaks off past 64 units
@@ -539,6 +676,17 @@ static qboolean Trainer_YankNow( const gentity_t *self, float dist, float dz, fl
 		&& dz <= -TRAINER_YANK_ABOVE && ps->velocity[2] < TRAINER_YANK_RISE && Trainer_CanHook( self ) );
 }
 
+// The kick jump now: the player will be in reach at the press (both carried on for TRAINER_PRESS_SEC), or, while
+// he stands still, the flat distance by its own speed (the player took off at 75 to 106 at 250 to 466).
+static qboolean Trainer_TakeOff( const gentity_t *self, const gentity_t *enemy, float flat, float speed ) {
+	const float atPress = Trainer_FlatIn( self, enemy, TRAINER_PRESS_SEC, NULL );
+
+	if ( atPress >= TRAINER_REACH_NEAR && atPress <= TRAINER_REACH_FAR )
+		return qtrue;
+	return (qboolean)( atPress > TRAINER_REACH_FAR && flat <= Q_min( TRAINER_TAKEOFF + speed * TRAINER_TAKEOFF_SPEED, TRAINER_TAKEOFF_MAX )
+		&& VectorLengthSquared( enemy->client->ps.velocity ) < 100.0f * 100.0f );
+}
+
 static void Trainer_Kick( trainer_t *t, const gentity_t *self, const gentity_t *enemy, float dist, usercmd_t *cmd ) {
 	const playerState_t *ps = &self->client->ps;
 	const qboolean onGround = ps->groundEntityNum != ENTITYNUM_NONE;
@@ -556,16 +704,16 @@ static void Trainer_Kick( trainer_t *t, const gentity_t *self, const gentity_t *
 	switch ( t->step ) {
 	case KS_RUN:
 		if ( !onGround ) {
-			if ( Trainer_YankNow( self, dist, dz, TRAINER_YANK_FROM ) )
+			if ( !t->noHop && Trainer_YankNow( self, dist, dz, TRAINER_YANK_FROM ) )
 				Trainer_Yank( t, cmd );
 		}
 		else if ( flat < TRAINER_TOO_CLOSE || dz < -TRAINER_LEVEL_DZ )
 			cmd->forwardmove = -127;		// right at him or on top of him: no room for the kick
-		else if ( flat <= Q_min( TRAINER_TAKEOFF + speed * TRAINER_TAKEOFF_SPEED, TRAINER_TAKEOFF_MAX ) && dz < TRAINER_LEVEL_DZ ) {
+		else if ( dz < TRAINER_LEVEL_DZ && Trainer_TakeOff( self, enemy, flat, speed ) ) {
 			cmd->upmove = 127;
 			Trainer_Step( t, KS_HOLD );
 		}
-		else if ( dist <= TRAINER_HOP_RANGE && Trainer_CanHook( self ) ) {
+		else if ( !t->noHop && dist <= TRAINER_HOP_RANGE && Trainer_CanHook( self ) ) {
 			cmd->upmove = 127;
 			Trainer_Step( t, KS_HOP );
 		}
@@ -722,6 +870,7 @@ static void Trainer_Think( trainer_t *t, bot_state_t *bs, int time, int elapsed 
 	usercmd_t				*cmd = &t->cmd;
 	trainerThreat_t			threat;
 	float					dist, yawLeft;
+	vec3_t					aimAt;
 	qboolean				attacked, open;
 
 	self = &g_entities[bs->client];
@@ -753,8 +902,10 @@ static void Trainer_Think( trainer_t *t, bot_state_t *bs, int time, int elapsed 
 	}
 
 	dist = Distance( ps->origin, enemy->client->ps.origin );
-	yawLeft = Trainer_Aim( bs, enemy->client->ps.origin, ( t->state == TS_SIDEKICK ) ? -90.0f * t->side : 0.0f,
+	Trainer_Predict( &enemy->client->ps, lvl->leadSec, aimAt );
+	yawLeft = Trainer_Aim( bs, aimAt, ( t->state == TS_SIDEKICK ) ? -90.0f * t->side : 0.0f,
 		lvl->turnSpeed * elapsed / 1000.0f, cmd );
+	Trainer_Score( t, qfalse );
 
 	attacked = Trainer_Notice( &t->attack, Trainer_Attacking( enemy, dist ), lvl->readChance, lvl->reactMs );
 	open = Trainer_Notice( &t->open, Trainer_Open( enemy ), lvl->readChance, lvl->reactMs );
@@ -773,7 +924,7 @@ static void Trainer_Think( trainer_t *t, bot_state_t *bs, int time, int elapsed 
 			Trainer_Done( t );
 		if ( t->state == TS_CHASE && open && dist <= TRAINER_PUNISH_RANGE && threat == TT_NONE )
 			Trainer_SetState( t, TS_SWING );		// no pause for a player who can not defend himself
-		else if ( t->state == TS_CHASE && level.time >= t->nextAttack && !Trainer_Patient( t, self, enemy, dist ) )
+		else if ( t->state == TS_CHASE && level.time >= t->nextAttack )
 			Trainer_Choose( t, bs, self, enemy, dist );
 	}
 
@@ -852,6 +1003,24 @@ void G_TrainerForcePowers( int clientNum, char *forcePowers, size_t size ) {
 		Q_strncpyz( forcePowers, TRAINER_FORCEPOWERS, size );
 }
 
+// from G_Damage, after the damage is taken: what the approach that runs dealt to the player and took from him
+void G_TrainerDamage( const gentity_t *targ, const gentity_t *attacker, int take ) {
+	int i;
+
+	if ( take <= 0 || !attacker )
+		return;
+	for ( i = 0; i < MAX_CLIENTS; i++ ) {
+		trainer_t *t = &trainers[i];
+
+		if ( !t->active || t->approach < 0 )
+			continue;
+		if ( attacker->s.number == i && targ->s.number == t->owner )
+			t->dealt += take;
+		else if ( targ->s.number == i && attacker->s.number == t->owner )
+			t->taken += take;
+	}
+}
+
 // from ClientDisconnect: the slot is free, and the trainers of a player who leaves go too
 void G_TrainerDisconnect( int clientNum ) {
 	int i;
@@ -890,6 +1059,7 @@ Cmd_Trainer_f
 
 vs_trainer [1-5]: calls the training bot of the player, or sets its level (3 without a number)
 vs_trainer off: sends it away
+vs_trainer info: what it learned about the player
 =================
 */
 void Cmd_Trainer_f( gentity_t *ent ) {
@@ -909,6 +1079,17 @@ void Cmd_Trainer_f( gentity_t *ent ) {
 	}
 
 	trap->Argv( 1, arg, sizeof( arg ) );
+	if ( !Q_stricmp( arg, "info" ) ) {
+		if ( !mine ) {
+			Trainer_Print( ent, "You have no training bot." );
+			return;
+		}
+		Trainer_Learn( mine );
+		Trainer_Print( ent, va( "Training bot, level %d. Health dealt minus taken per try, as it learned it against you:", mine->level ) );
+		for ( i = 0; i < TA_NUM; i++ )
+			Trainer_Print( ent, va( "  %-10s %6.1f  (%d tries)", trainerApproachNames[i], mine->value[i], mine->tries[i] ) );
+		return;
+	}
 	if ( !Q_stricmp( arg, "off" ) ) {
 		if ( mine )
 			mine->drop = qtrue;
@@ -932,7 +1113,7 @@ void Cmd_Trainer_f( gentity_t *ent ) {
 
 	lvl = arg[0] ? atoi( arg ) : 3;
 	if ( lvl < 1 || lvl > TRAINER_LEVELS ) {
-		Trainer_Print( ent, "Usage: vs_trainer [1-5|off]" );
+		Trainer_Print( ent, "Usage: vs_trainer [1-5|off|info]" );
 		return;
 	}
 

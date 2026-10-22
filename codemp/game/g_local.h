@@ -1352,6 +1352,7 @@ void G_TrainerForcePowers( int clientNum, char *forcePowers, size_t size );
 void G_TrainerDisconnect( int clientNum );
 void G_TrainerFrame( void );
 void Cmd_Trainer_f( gentity_t *ent );
+void G_TrainerDamage( const gentity_t *targ, const gentity_t *attacker, int take );
 
 // g_movelog.c: every usercmd of a player into a CSV (vs_movelog)
 qboolean G_MoveLogToggle( gentity_t *ent );

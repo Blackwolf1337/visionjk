@@ -272,8 +272,9 @@ on 2026-10-11, see client.md.
 |------|---------|---------|
 | `vs_allowTrainer` | 0 | how many training bots there may be at once, 0 turns `vs_trainer` off. Needs `bot_enable 1` and free for all (`g_gametype 0`) |
 
-The player command `vs_trainer [1-5|off]` calls a training bot that fights only the player who called it. Without a
-number it is level 3. With a number while the bot exists, that changes its level. `off` sends it away.
+The player command `vs_trainer [1-5|off|info]` calls a training bot that fights only the player who called it.
+Without a number it is level 3. With a number while the bot exists, that changes its level. `off` sends it away.
+`info` prints what the bot has learned about the player (see below).
 
 The bot fights like flip kick players, and moves like the movement log of one (15 kicks in 83 seconds). From 250 to
 1200 units it pulls itself in with the JA+ grappling hook (needs `jp_allowHook 1`) and lets go at 200 units. Up close
@@ -285,13 +286,14 @@ and would hang on the rope otherwise. The hook is not used in the alternate dime
 there.
 
 It grabs with melee (needs `g_debugMelee`), flip kicks (needs `jp_allowflipkick`), or swings from above in the red
-style. The forward kick starts on the ground at a flat distance of 55 units plus 0.15 times its speed, at most 130
-and not nearer than 35, and about the same height (32 units); right at the player or on top of him it steps back
-first. The jump is held 100 ms, let go for 50 ms and pressed again, and that press is the kick. If the player is
-still out of reach it lets go and presses again while it still rises fast enough. During the flip back the hook pulls
-it in again for the next kick, from up to 230 units, as long as the kicks so far are at most half its level: one kick
-at level 1, two in a row at levels 2 and 3, three at levels 4 and 5. After a kick that knocks the player down it
-follows with the red swing.
+style. The forward kick starts on the ground when the player will be 28 to 70 units off (flat) at the press, 150 ms
+later (see Prediction), and about the same height (32 units). For a player who stands still the old rule stays: a
+flat distance of 55 units plus 0.15 times its speed, at most 130 and not nearer than 35. Right at the player or on
+top of him it steps back first. The jump is held 100 ms, let go for 50 ms and pressed again, and that press is the
+kick. If the player is still out of reach it lets go and presses again while it still rises fast enough. During the
+flip back the hook pulls it in again for the next kick, from up to 230 units, as long as the kicks so far are at most
+half its level: one kick at level 1, two in a row at levels 2 and 3, three at levels 4 and 5. After a kick that
+knocks the player down it follows with the red swing.
 
 The side kick: both on the ground at about the same height (within 16 units) and within 140 units, it turns so the
 player is at its side, strafes into him and jumps at 40 units. The wall flip off a player in PM_CheckJump kicks him.
@@ -302,15 +304,28 @@ instead of running straight at him, where his kicks hit it.
 It reads the player: while he attacks, it does not hook, grab or kick. His attack button only counts as an attack
 within 120 units. Against a swing it steps to a side (circling) and blocks. Against a coming hook or flip kick it
 steps aside out of the line, as the kick only hits straight ahead of the kicker. When he comes at it through the air
-(a jump, also while falling, or his hook in it), and it stands on the ground 35 to 135 units off (flat) with him not
-more than 10 units below it, it does what the player does against the bot: it jumps to meet him and kicks (the timed
-kick jump), as he can not turn in the air. Against his grab it backs off.
-From level 3, while the player stands on the ground within 260 units and faces it (within 25 degrees), it waits in the
-ring for up to 1.5 s for him to come before it attacks. After it stepped out of his hook or kick it kicks back at once,
-without the pause, while he is within 110 units. When
-the player is open (his swing returns, or he is knocked down or getting up) it swings at him at once from up to 100
+(a jump, also while falling, or his hook in it), it does what the player does against the bot: it meets him with the
+timed kick jump, as he can not turn in the air, if he will be in reach at its press. If he is coming but will be in
+reach only within 0.3 s, it waits facing him. Otherwise it steps out of the line of his kick, to the side he is not
+turning to (and further to the side of where he looks, if it already is on one). Against his grab it backs off. After
+it stepped out of his hook or kick it kicks back at once, without the pause, while he is within 110 units. When the
+player is open (his swing returns, or he is knocked down or getting up) it swings at him at once from up to 100
 units, without the pause between attacks. Seeing that he is open uses the same reaction time and chance of its level
 as seeing an attack.
+
+Prediction: the bot works out where the player will be from his speed carried on, with gravity in the air and
+straight on the rope, as nobody turns in the air. It aims ahead of him by level: 0, 0.03, 0.06, 0.09 and 0.12 s for
+levels 1 to 5.
+
+Learning: which approach works against this player, the bot learns during the fight. The approaches are the hook
+kick, the run kick (the kick jump from a run, without the hook), the side kick, the red swing, and from level 3 the
+wait (1.5 s in the ring for him to come). Each try is scored with the health it dealt to the player minus the health
+it took from him in the 2.5 s after it began (or until the next approach), and the score is kept as a moving average
+in which the newest try weighs 0.25. The next approach is the one with the best score, plus a bonus for approaches
+tried less (so it notices when the player changes), plus a random part that is larger at lower levels. The start
+values come from the recorded fights: hook kick +2, red swing -2, the others 0. The long pull from afar and the grab
+are not scored. The scores are gone with the map. `vs_trainer info` prints the scores and the tries per approach to
+the player. G_Damage tells the bot module the damage (`G_TrainerDamage` in g_combat.c, next to the movement log).
 
 | Level | 1 | 5 |
 |-------|---|---|
@@ -318,6 +333,8 @@ as seeing an attack.
 | sees an attack | 45 percent | 97 percent |
 | counters | 20 percent | 95 percent |
 | pause between its attacks | 2.6 s | 0.5 s |
+| aims ahead | 0 s | 0.12 s |
+| random part in the choice | 24 health | 3 health |
 
 The view turn speed grows with the level too.
 

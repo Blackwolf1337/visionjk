@@ -5431,6 +5431,7 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_
 		}
 		targ->health = targ->health - take;
 		G_MoveLogDamage( targ, attacker, take, mod );		// not from JA+: the movement log (trainer/g_movelog.c)
+		G_TrainerDamage( targ, attacker, take );			// not from JA+: what the training bot learns from
 
 		if ( (targ->flags&FL_UNDYING) )
 		{//take damage down to 1, but never die
