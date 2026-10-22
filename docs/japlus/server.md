@@ -285,12 +285,13 @@ and would hang on the rope otherwise. The hook is not used in the alternate dime
 there.
 
 It grabs with melee (needs `g_debugMelee`), flip kicks (needs `jp_allowflipkick`), or swings from above in the red
-style. The forward kick starts on the ground at a flat distance of 35 to 100 units and about the same height (32 units);
-right at the player or on top of him it steps back first. The jump is held 100 ms, let go for 50 ms and pressed
-again, and that press is the kick. If the player is still out of reach it lets go and presses again while it still
-rises fast enough. During the flip back the hook pulls it in again for the next kick, from up to 230 units, as long
-as the kicks so far are at most half its level: one kick at level 1, two in a row at levels 2 and 3, three at levels
-4 and 5. After a kick that knocks the player down it follows with the red swing.
+style. The forward kick starts on the ground at a flat distance of 55 units plus 0.15 times its speed, at most 130
+and not nearer than 35, and about the same height (32 units); right at the player or on top of him it steps back
+first. The jump is held 100 ms, let go for 50 ms and pressed again, and that press is the kick. If the player is
+still out of reach it lets go and presses again while it still rises fast enough. During the flip back the hook pulls
+it in again for the next kick, from up to 230 units, as long as the kicks so far are at most half its level: one kick
+at level 1, two in a row at levels 2 and 3, three at levels 4 and 5. After a kick that knocks the player down it
+follows with the red swing.
 
 The side kick: both on the ground at about the same height (within 16 units) and within 140 units, it turns so the
 player is at its side, strafes into him and jumps at 40 units. The wall flip off a player in PM_CheckJump kicks him.
@@ -300,7 +301,10 @@ instead of running straight at him, where his kicks hit it.
 
 It reads the player: while he attacks, it does not hook, grab or kick. His attack button only counts as an attack
 within 120 units. Against a swing it steps to a side (circling) and blocks. Against a coming hook or flip kick it
-steps aside out of the line, as the kick only hits straight ahead of the kicker. Against his grab it backs off. When
+steps aside out of the line, as the kick only hits straight ahead of the kicker. Against his grab it backs off.
+From level 3, while the player stands on the ground within 260 units and faces it (within 25 degrees), it waits in the
+ring for up to 1.5 s for him to come before it attacks. After it stepped out of his hook or kick it kicks back at once,
+without the pause, while he is within 110 units. When
 the player is open (his swing returns, or he is knocked down or getting up) it swings at him at once from up to 100
 units, without the pause between attacks. Seeing that he is open uses the same reaction time and chance of its level
 as seeing an attack.

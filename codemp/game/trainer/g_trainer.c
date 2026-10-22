@@ -45,6 +45,11 @@ followed and hit again and again, and its swing against a coming kick did not ke
 it keeps TRAINER_RING_NEAR to TRAINER_RING_FAR off and circles, against a swing it steps to a side and swings into
 the return of it, out of a coming kick it steps aside, and a player on the ground gets its swing at once.
 
+A second recorded fight (after those changes: 198 damage a minute to the bot instead of 394, 54 from it) was a race
+of kicks. The player kicked it on its own short pull and running in, it kicked him when he came at it. So from
+level 3 it waits in the ring while he stands ready facing it, after stepping out of his hook or kick it kicks back
+at once, and the kick jump starts the earlier the faster it runs.
+
 Owner and level are a userinfo key of the bot ("vs_trainer" "<owner> <level>"), so a bot that stays over a map
 change is a trainer again. It leaves when its player leaves or sends it away.
 
@@ -82,7 +87,9 @@ qboolean BG_InKnockDownOnGround( playerState_t *ps );
 #define TRAINER_CHAIN_WAIT		100		// msec after a kick before the hook pulls it in again
 #define TRAINER_HOP_RANGE		230.0f	// jumps here to hook from the air
 #define TRAINER_ATTACK_RANGE	260.0f	// runs in for a kick or a swing from here
-#define TRAINER_TAKEOFF			100.0f	// the kick jump from the ground, flat distance
+#define TRAINER_TAKEOFF			55.0f	// the kick jump from the ground, flat distance, and
+#define TRAINER_TAKEOFF_SPEED	0.15f	// the speed times this further (the player: 75 to 106 at 250 to 466)
+#define TRAINER_TAKEOFF_MAX		130.0f
 #define TRAINER_TOO_CLOSE		35.0f	// nearer than this flat, or on top of him: a step back first
 #define TRAINER_LEVEL_DZ		32.0f	// about the same height
 #define TRAINER_JUMP_HOLD		100		// msec the kick jump is held, the force jump keeps the speed up
@@ -103,6 +110,10 @@ qboolean BG_InKnockDownOnGround( playerState_t *ps );
 #define TRAINER_RING_NEAR		110.0f	// between attacks it keeps this far off and circles
 #define TRAINER_RING_FAR		220.0f
 #define TRAINER_PUNISH_RANGE	100.0f	// swings at a player who is open from here, without the pause
+#define TRAINER_KICK_BACK		110.0f	// after stepping out of his hook or kick it kicks back from here
+#define TRAINER_READY_AIM		25.0f	// the player faces it this close: he is ready for it
+#define TRAINER_READY_RANGE		260.0f
+#define TRAINER_PATIENCE		1500	// msec it waits in the ring for a ready player to come (from level 3)
 #define TRAINER_CIRCLE_MIN		700		// msec before it may circle the other way
 #define TRAINER_CIRCLE_MAX		1600
 #define TRAINER_COUNTER_KICK	220.0f	// a player jumping at it from here is a flip kick
@@ -180,6 +191,7 @@ typedef struct {
 	trainerSign_t	attack;		// the player attacks
 	trainerSign_t	threat;		// a trainerThreat_t of the player
 	trainerSign_t	open;		// the player is down or his swing returns
+	int				readySince;	// level.time the player stands ready for it, 0 when he does not
 	int				circle;		// 1 circles to the right, -1 to the left
 	int				circleTime;	// level.time it may turn round
 } trainer_t;
@@ -422,6 +434,24 @@ static qboolean Trainer_Busy( const trainer_t *t ) {
 		|| (t->state == TS_GRAB && t->step > 0) );
 }
 
+// The player stands on the ground near and faces it: an attack now runs into his kick. From level 3 the trainer
+// waits up to TRAINER_PATIENCE for him to come, its kicks landed when he did.
+static qboolean Trainer_Patient( trainer_t *t, const gentity_t *self, const gentity_t *enemy, float dist ) {
+	const playerState_t	*ops = &enemy->client->ps;
+	vec3_t				dir, angles;
+
+	VectorSubtract( self->client->ps.origin, ops->origin, dir );
+	vectoangles( dir, angles );
+	if ( t->level < 3 || ops->groundEntityNum == ENTITYNUM_NONE || dist > TRAINER_READY_RANGE
+		|| fabsf( AngleSubtract( angles[YAW], ops->viewangles[YAW] ) ) > TRAINER_READY_AIM ) {
+		t->readySince = 0;
+		return qfalse;
+	}
+	if ( !t->readySince )
+		t->readySince = level.time;
+	return (qboolean)( level.time - t->readySince < TRAINER_PATIENCE );
+}
+
 // strafes round the player, now and then the other way
 static void Trainer_Circle( trainer_t *t, usercmd_t *cmd ) {
 	if ( !t->circle || level.time >= t->circleTime ) {
@@ -511,7 +541,7 @@ static void Trainer_Kick( trainer_t *t, const gentity_t *self, const gentity_t *
 		}
 		else if ( flat < TRAINER_TOO_CLOSE || dz < -TRAINER_LEVEL_DZ )
 			cmd->forwardmove = -127;		// right at him or on top of him: no room for the kick
-		else if ( flat <= TRAINER_TAKEOFF && dz < TRAINER_LEVEL_DZ ) {
+		else if ( flat <= Q_min( TRAINER_TAKEOFF + speed * TRAINER_TAKEOFF_SPEED, TRAINER_TAKEOFF_MAX ) && dz < TRAINER_LEVEL_DZ ) {
 			cmd->upmove = 127;
 			Trainer_Step( t, KS_HOLD );
 		}
@@ -717,11 +747,13 @@ static void Trainer_Think( trainer_t *t, bot_state_t *bs, int time, int elapsed 
 			Trainer_SetState( t, TS_COUNTER );
 		else if ( attacked )
 			Trainer_SetState( t, TS_GUARD );		// no hook, grab or kick into an attack
+		else if ( t->state == TS_COUNTER && dist <= TRAINER_KICK_BACK && JP_FEATURE( JPF_FLIPKICK ) )
+			Trainer_SetState( t, TS_KICK );		// out of his hook or kick: kicks back at once
 		else if ( t->state == TS_COUNTER || t->state == TS_GUARD )
 			Trainer_Done( t );
 		if ( t->state == TS_CHASE && open && dist <= TRAINER_PUNISH_RANGE && threat == TT_NONE )
 			Trainer_SetState( t, TS_SWING );		// no pause for a player who can not defend himself
-		else if ( t->state == TS_CHASE && level.time >= t->nextAttack )
+		else if ( t->state == TS_CHASE && level.time >= t->nextAttack && !Trainer_Patient( t, self, enemy, dist ) )
 			Trainer_Choose( t, bs, self, enemy, dist );
 	}
 
