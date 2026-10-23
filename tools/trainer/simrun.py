@@ -6,7 +6,7 @@ so several run at once.
     simrun.py --game DIR [--params FILE] [--clone FILE] [--map mp/duel1] [--rounds 30] A B
 
 DIR has visionjkded.x86_64 and base/ with the pk3 files of the game, japlus/ with the game module. A and B are
-levels 1-5 or clone. Prints the result as key=value.
+levels 1-5, clone, ai or ai2 (the learned policy, tools/trainer/rl). Prints the result as key=value.
 """
 import argparse
 import os
@@ -46,8 +46,10 @@ def parse_result(line):
 
 
 def run_match(game, a, b, rounds=30, mapname='mp/duel1', params=None, clone=None, port=29300, timeout=900,
-              keep=False):
-    """one match, its result as a dict (empty if the server gave none)"""
+              keep=False, files=None, sets=None, collect=None):
+    """one match, its result as a dict (empty if the server gave none). files: {path in japlus/: file} put there
+    first, sets: {cvar: value} set at the start, collect(japlus folder): called before the folder goes, what it
+    returns is the result's 'collected'."""
     home = tempfile.mkdtemp(prefix='vjksim_')
     try:
         jp = os.path.join(home, 'japlus')
@@ -61,6 +63,10 @@ def run_match(game, a, b, rounds=30, mapname='mp/duel1', params=None, clone=None
             args += ['+set', 'vs_trainerParams', 'trainer/params.cfg']
         if clone:
             shutil.copy(clone, os.path.join(jp, 'trainer', 'clone.dat'))
+        for dest, src in (files or {}).items():
+            shutil.copy(src, os.path.join(jp, dest))
+        for k, v in (sets or {}).items():
+            args += ['+set', k, str(v)]
         with open(os.path.join(jp, 'match.cfg'), 'w') as f:
             f.write('\n'.join(cfg) + '\n')
         args += ['+devmap', mapname, '+exec', 'match.cfg']
@@ -68,10 +74,11 @@ def run_match(game, a, b, rounds=30, mapname='mp/duel1', params=None, clone=None
             subprocess.run(args, cwd=game, stdin=subprocess.DEVNULL, stdout=log, stderr=subprocess.STDOUT,
                            timeout=timeout)
         res = os.path.join(jp, 'match.txt')
-        if not os.path.exists(res):
-            return {}
-        lines = open(res).read().strip().splitlines()
-        return parse_result(lines[-1]) if lines else {}
+        lines = open(res).read().strip().splitlines() if os.path.exists(res) else []
+        out = parse_result(lines[-1]) if lines else {}
+        if collect:
+            out['collected'] = collect(jp)
+        return out
     except subprocess.TimeoutExpired:
         return {}
     finally:

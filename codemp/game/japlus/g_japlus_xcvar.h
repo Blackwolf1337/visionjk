@@ -80,6 +80,16 @@ XCVAR_DEF( vs_allowTrainer, "0", NULL, CVAR_ARCHIVE, qfalse )
 XCVAR_DEF( vs_trainerParams, "", NULL, CVAR_ARCHIVE, qfalse )
 // not in JA+: the model of the clone (vs_trainer clone, trainer/g_clone.c), made by tools/trainer/train_clone.py
 XCVAR_DEF( vs_cloneModel, "trainer/clone.dat", NULL, CVAR_ARCHIVE, qfalse )
+// not in JA+: the learned policy (vs_trainer ai, trainer/g_policy.c), made by tools/trainer/rl, and an older one it
+// can fight in a vs_trainermatch (ai2)
+XCVAR_DEF( vs_policyModel, "trainer/policy.dat", NULL, CVAR_ARCHIVE, qfalse )
+XCVAR_DEF( vs_policyOpponent, "", NULL, CVAR_ARCHIVE, qfalse )
+// not in JA+: how freely the learned policy picks its actions, 1 as it learned them, lower picks the likely ones more
+XCVAR_DEF( vs_policyTemp, "1", NULL, CVAR_ARCHIVE, qfalse )
+// not in JA+: for tools/trainer/rl only: the matches write what the policy saw and did (rollouts/), and the reward
+// for it: damage dealt and taken, a kill, a death, a landed flip kick
+XCVAR_DEF( vs_rlRollouts, "0", NULL, CVAR_NONE, qfalse )
+XCVAR_DEF( vs_rlReward, "0.01 1 1 0.3", NULL, CVAR_NONE, qfalse )
 XCVAR_DEF( jp_banAdminIPs, "", NULL, CVAR_ARCHIVE, qfalse )
 XCVAR_DEF( jp_cinfo, "0", NULL, CVAR_SERVERINFO|CVAR_ROM, qtrue )
 XCVAR_DEF( jp_clanPass, "", NULL, CVAR_INTERNAL, qfalse )

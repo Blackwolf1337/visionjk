@@ -86,7 +86,7 @@ Not from JA+.
 
 #include "game/g_local.h"
 #include "game/ai_main.h"
-#include "g_clone.h"
+#include "g_policy.h"
 #include <stddef.h>
 
 qboolean PM_SaberInStart( int move );					// bg_panimate.c
@@ -96,6 +96,9 @@ qboolean BG_InKnockDownOnGround( playerState_t *ps );
 
 #define TRAINER_LEVELS			5
 #define TRAINER_CLONE			( TRAINER_LEVELS + 1 )	// the "level" of the clone (g_clone.c)
+#define TRAINER_POLICY			( TRAINER_LEVELS + 2 )	// the learned policy, "ai" (g_policy.c)
+#define TRAINER_POLICY_OLD		( TRAINER_LEVELS + 3 )	// an older one it fights in a match, "ai2"
+#define TRAINER_LAST			TRAINER_POLICY_OLD
 #define TRAINER_CLONE_TURN		1500.0f	// degrees a second the clone turns, like a player with a mouse
 #define TRAINER_BOT				"Jedi Trainer"	// botfiles/bots.txt of the game
 #define TRAINER_NAME			"Trainer"
@@ -231,6 +234,7 @@ typedef struct {
 	qboolean		match;		// fights another bot in a vs_trainermatch, needs no vs_allowTrainer
 	qboolean		clone;		// plays like the player of the clone model, not by the states here (g_clone.c)
 	cloneState_t	cloneState;	// its decisions of the frame before and its aim
+	int				policy;		// the slot of its learned policy (g_policy.c), -1: none
 	int				cloneUp;	// its upmove of the frame before
 	int				circle;		// 1 circles to the right, -1 to the left
 	int				circleTime;	// level.time it may turn round
@@ -240,6 +244,9 @@ static trainer_t trainers[MAX_CLIENTS];
 
 // vs_trainermatch: two bots fight each other for some rounds, the result goes into a file (tools/trainer)
 #define TRAINER_MATCH_ROUND		60000	// msec a round lasts at most
+#define TRAINER_MATCH_NEAR		150.0f	// a round starts with the bots this far apart at least
+#define TRAINER_MATCH_FAR		600.0f	// and at most
+#define TRAINER_MATCH_TRIES		64		// frames a round tries to place them before it starts where they are
 
 static struct {
 	qboolean	on;
@@ -249,7 +256,9 @@ static struct {
 	int			rounds, round;
 	int			start, roundStart;
 	int			dealt[2], kills[2];
+	int			kicks[2];		// landed flip kicks (MOD_MELEE, g_active.c)
 	qboolean	alive[2];
+	int			place;			// frames left to place the bots for the round, 0 placed
 	char		file[MAX_QPATH];
 } match;
 
@@ -341,16 +350,33 @@ static void Trainer_LoadParams( void ) {
 	trap->Print( "vs_trainerParams: %d values from %s\n", count, vs_trainerParams.string );
 }
 
-// level 1 to 5, or TRAINER_CLONE
+// level 1 to 5, TRAINER_CLONE or a learned policy
 static void Trainer_SetLevel( trainer_t *t, int lvl ) {
-	t->level = Com_Clampi( 1, TRAINER_CLONE, lvl );
+	t->level = Com_Clampi( 1, TRAINER_LAST, lvl );
 	t->clone = (qboolean)( t->level == TRAINER_CLONE );
+	t->policy = ( t->level == TRAINER_POLICY ) ? 0 : ( t->level == TRAINER_POLICY_OLD ) ? 1 : -1;
 	Clone_Reset( &t->cloneState );
+	Policy_Reset( t - trainers, t->policy );
 }
 
-// "clone" or a number, 0 if neither
+// "clone", "ai", "ai2" or a number, 0 if none of them
 static int Trainer_ParseLevel( const char *arg ) {
-	return !Q_stricmp( arg, "clone" ) ? TRAINER_CLONE : atoi( arg );
+	if ( !Q_stricmp( arg, "clone" ) )
+		return TRAINER_CLONE;
+	if ( !Q_stricmp( arg, "ai" ) )
+		return TRAINER_POLICY;
+	if ( !Q_stricmp( arg, "ai2" ) )
+		return TRAINER_POLICY_OLD;
+	return atoi( arg );
+}
+
+// the model a level needs is there
+static qboolean Trainer_LevelReady( int lvl ) {
+	if ( lvl == TRAINER_CLONE )
+		return Clone_Ready();
+	if ( lvl == TRAINER_POLICY || lvl == TRAINER_POLICY_OLD )
+		return Policy_Ready( lvl - TRAINER_POLICY );
+	return (qboolean)( lvl >= 1 && lvl <= TRAINER_LEVELS );
 }
 
 /*
@@ -634,20 +660,34 @@ static qboolean Trainer_Visible( const bot_state_t *bs, const gentity_t *enemy )
 	return (qboolean)( tr.fraction >= 1.0f || tr.entityNum == enemy->s.number );
 }
 
-// the saber on and in the red style, as far as it has one: one key at a time, the way a player presses it
-static void Trainer_Saber( gentity_t *self, trainer_t *t ) {
+// the saber keys: one at a time, the way a player presses them
+static qboolean Trainer_SaberKey( const gentity_t *self, const trainer_t *t ) {
 	const playerState_t *ps = &self->client->ps;
 
-	if ( ps->weapon != WP_SABER || ps->weaponTime > 0 || t->styleTime > level.time )
-		return;
-	if ( ps->saberHolstered ) {
+	return (qboolean)( ps->weapon == WP_SABER && ps->weaponTime <= 0 && t->styleTime <= level.time );
+}
+
+static void Trainer_ToggleSaber( gentity_t *self, trainer_t *t ) {
+	if ( Trainer_SaberKey( self, t ) ) {
 		t->styleTime = level.time + 500;
 		Cmd_ToggleSaber_f( self );
 	}
-	else if ( ps->fd.saberAnimLevel != SS_STRONG ) {
+}
+
+// the red style, as far as the saber has one
+static void Trainer_Style( gentity_t *self, trainer_t *t ) {
+	if ( Trainer_SaberKey( self, t ) && !self->client->ps.saberHolstered && self->client->ps.fd.saberAnimLevel != SS_STRONG ) {
 		t->styleTime = level.time + 400;
 		Cmd_SaberAttackCycle_f( self );
 	}
+}
+
+// the saber on and in the red style
+static void Trainer_Saber( gentity_t *self, trainer_t *t ) {
+	if ( self->client->ps.saberHolstered )
+		Trainer_ToggleSaber( self, t );
+	else
+		Trainer_Style( self, t );
 }
 
 static qboolean Trainer_SaberReady( const playerState_t *ps ) {
@@ -1066,11 +1106,13 @@ static void Trainer_LetGo( const gentity_t *self, usercmd_t *cmd ) {
 		cmd->buttons |= BUTTON_USE;
 }
 
+static void Trainer_CloneCmd( trainer_t *t, bot_state_t *bs, gentity_t *self, const gentity_t *enemy, const cloneCmd_t *c,
+	int elapsed, usercmd_t *cmd );
+
 // the clone (g_clone.c): what the player it learned from would do, aimed where he would look
-static void Trainer_CloneThink( trainer_t *t, bot_state_t *bs, const gentity_t *self, const gentity_t *enemy, int elapsed,
+static void Trainer_CloneThink( trainer_t *t, bot_state_t *bs, gentity_t *self, const gentity_t *enemy, int elapsed,
 	usercmd_t *cmd ) {
-	cloneCmd_t	c;
-	vec3_t		eye, dir, angles, point;
+	cloneCmd_t c;
 
 	Clone_Decide( self, enemy, &t->cloneState, elapsed, &c );
 
@@ -1103,18 +1145,39 @@ static void Trainer_CloneThink( trainer_t *t, bot_state_t *bs, const gentity_t *
 		}
 	}
 	t->cloneUp = c.upmove;
+	Trainer_CloneCmd( t, bs, self, enemy, &c, elapsed, cmd );
+}
 
-	cmd->forwardmove = c.forwardmove;
-	cmd->rightmove = c.rightmove;
-	cmd->upmove = c.upmove;
-	cmd->buttons |= c.buttons;
+// the policy (g_policy.c): what the network picks, nothing added
+static void Trainer_PolicyThink( trainer_t *t, bot_state_t *bs, gentity_t *self, const gentity_t *enemy, int elapsed, usercmd_t *cmd ) {
+	cloneCmd_t c;
+
+	Policy_Decide( self, enemy, elapsed, &c );
+	Trainer_CloneCmd( t, bs, self, enemy, &c, elapsed, cmd );
+}
+
+// the moves, buttons and saber key of the clone or the policy into the usercmd, the view turned toward its aim as
+// fast as a player with a mouse
+static void Trainer_CloneCmd( trainer_t *t, bot_state_t *bs, gentity_t *self, const gentity_t *enemy, const cloneCmd_t *c,
+	int elapsed, usercmd_t *cmd ) {
+	vec3_t eye, dir, angles, point;
+
+	if ( c->saber )
+		Trainer_ToggleSaber( self, t );
+	else
+		Trainer_Style( self, t );		// the player fights in red (94 percent of his logs)
+
+	cmd->forwardmove = c->forwardmove;
+	cmd->rightmove = c->rightmove;
+	cmd->upmove = c->upmove;
+	cmd->buttons |= c->buttons;
 
 	VectorCopy( self->client->ps.origin, eye );
 	eye[2] += self->client->ps.viewheight;
 	VectorSubtract( enemy->client->ps.origin, eye, dir );
 	vectoangles( dir, angles );
-	angles[YAW] -= c.yawOff;
-	angles[PITCH] = c.pitch;
+	angles[YAW] -= c->yawOff;
+	angles[PITCH] = c->pitch;
 	AngleVectors( angles, dir, NULL, NULL );
 	VectorMA( eye, 256.0f, dir, point );
 	Trainer_Aim( bs, point, 0.0f, TRAINER_CLONE_TURN * elapsed / 1000.0f, NULL, cmd );
@@ -1167,6 +1230,10 @@ static void Trainer_Think( trainer_t *t, bot_state_t *bs, int time, int elapsed 
 
 	if ( t->clone ) {
 		Trainer_CloneThink( t, bs, self, enemy, elapsed, cmd );
+		return;
+	}
+	if ( t->policy >= 0 ) {
+		Trainer_PolicyThink( t, bs, self, enemy, elapsed, cmd );
 		return;
 	}
 
@@ -1297,16 +1364,23 @@ void G_TrainerForcePowers( int clientNum, char *forcePowers, size_t size ) {
 		Q_strncpyz( forcePowers, TRAINER_FORCEPOWERS, size );
 }
 
-// from G_Damage, after the damage is taken: what the approach that runs dealt to the player and took from him
-void G_TrainerDamage( const gentity_t *targ, const gentity_t *attacker, int take ) {
+// from G_Damage, after the damage is taken (at most the health there was): what the approach that runs dealt to the
+// player and took from him, the reward of a learned policy
+void G_TrainerDamage( const gentity_t *targ, const gentity_t *attacker, int take, int mod ) {
 	int i;
 
-	if ( take <= 0 || !attacker )
+	if ( take <= 0 )
+		return;
+	Policy_Damage( targ, attacker, take, mod );
+	if ( !attacker )
 		return;
 	if ( match.on ) {
 		for ( i = 0; i < 2; i++ ) {
-			if ( attacker->s.number == match.bot[i] && targ->s.number == match.bot[1 - i] )
+			if ( attacker->s.number == match.bot[i] && targ->s.number == match.bot[1 - i] ) {
 				match.dealt[i] += take;
+				if ( mod == MOD_MELEE )
+					match.kicks[i]++;
+			}
 		}
 	}
 	for ( i = 0; i < MAX_CLIENTS; i++ ) {
@@ -1327,6 +1401,7 @@ void G_TrainerDisconnect( int clientNum ) {
 
 	if ( clientNum < 0 || clientNum >= MAX_CLIENTS )
 		return;
+	Policy_Reset( clientNum, -1 );
 	memset( &trainers[clientNum], 0, sizeof( trainers[0] ) );
 	for ( i = 0; i < MAX_CLIENTS; i++ ) {
 		if ( trainers[i].active && trainers[i].owner == clientNum )
@@ -1341,9 +1416,9 @@ static void Trainer_MatchEnd( const char *why ) {
 	int				i, j;
 
 	match.on = qfalse;
-	Com_sprintf( line, sizeof( line ), "levelA=%d levelB=%d rounds=%d sec=%.1f dealtA=%d dealtB=%d killsA=%d killsB=%d end=%s",
-		match.level[0], match.level[1], match.round, ( level.time - match.start ) / 1000.0f, match.dealt[0], match.dealt[1],
-		match.kills[0], match.kills[1], why );
+	Com_sprintf( line, sizeof( line ), "levelA=%d levelB=%d rounds=%d sec=%.1f dealtA=%d dealtB=%d killsA=%d killsB=%d "
+		"kicksA=%d kicksB=%d end=%s", match.level[0], match.level[1], match.round, ( level.time - match.start ) / 1000.0f,
+		match.dealt[0], match.dealt[1], match.kills[0], match.kills[1], match.kicks[0], match.kicks[1], why );
 	for ( i = 0; i < 2; i++ ) {
 		const trainer_t *t = &trainers[match.bot[i]];
 
@@ -1367,6 +1442,7 @@ static void Trainer_MatchEnd( const char *why ) {
 	}
 	trap->Print( "vs_trainermatch: %s", line );
 	for ( i = 0; i < 2; i++ ) {
+		Policy_MatchEnd( match.bot[i] );
 		if ( g_entities[match.bot[i]].inuse )
 			trap->DropClient( match.bot[i], "left the match" );
 	}
@@ -1374,7 +1450,48 @@ static void Trainer_MatchEnd( const char *why ) {
 		trap->SendConsoleCommand( EXEC_APPEND, "quit\n" );
 }
 
-// every frame of a match: a kill or the time ends a round, the last round the match
+/*
+=================
+Trainer_MatchPlace
+
+B near A for a new round, facing each other, on a floor and with nothing between them. Spawned far apart, bots
+that learned from a player who was always close (the clone, the policy) stand and wait.
+=================
+*/
+static qboolean Trainer_MatchPlace( void ) {
+	gentity_t	*a = &g_entities[match.bot[0]], *b = &g_entities[match.bot[1]];
+	vec3_t		dir, end, down, angles;
+	trace_t		tr;
+	int			i;
+
+	for ( i = 0; i < 8; i++ ) {
+		const float yaw = Q_flrand( 0.0f, 360.0f );
+
+		VectorSet( dir, cosf( DEG2RAD( yaw ) ), sinf( DEG2RAD( yaw ) ), 0.0f );
+		VectorMA( a->client->ps.origin, Q_flrand( TRAINER_MATCH_NEAR, TRAINER_MATCH_FAR ), dir, end );
+		trap->Trace( &tr, a->client->ps.origin, b->r.mins, b->r.maxs, end, a->s.number, MASK_PLAYERSOLID, qfalse, 0, 0 );
+		if ( tr.startsolid || tr.allsolid || tr.fraction < 1.0f )
+			continue;
+		VectorCopy( end, down );
+		down[2] -= 128.0f;
+		trap->Trace( &tr, end, b->r.mins, b->r.maxs, down, b->s.number, MASK_PLAYERSOLID, qfalse, 0, 0 );
+		if ( tr.startsolid || tr.fraction >= 1.0f )
+			continue;		// no floor near below: a pit or a ledge
+
+		VectorSet( angles, 0.0f, yaw + 180.0f, 0.0f );
+		TeleportPlayer( b, tr.endpos, angles );
+		VectorClear( b->client->ps.velocity );		// TeleportPlayer throws the player forward
+		b->client->ps.pm_time = 0;
+		b->client->ps.pm_flags &= ~PMF_TIME_KNOCKBACK;
+		VectorSet( angles, 0.0f, yaw, 0.0f );
+		SetClientViewAngle( a, angles );
+		return qtrue;
+	}
+	return qfalse;
+}
+
+// every frame of a match: a kill or the time ends a round, the last round the match; a round starts with the bots
+// placed near each other
 static void Trainer_MatchFrame( void ) {
 	qboolean	ended = qfalse;
 	int			i;
@@ -1392,14 +1509,26 @@ static void Trainer_MatchFrame( void ) {
 		alive = (qboolean)( ent->health > 0 && !(ent->client->ps.eFlags & EF_DEAD) );
 		if ( match.alive[i] && !alive ) {
 			match.kills[1 - i]++;
+			Policy_Reward( match.bot[i], 0.0f, 1.0f );
+			Policy_Reward( match.bot[1 - i], 1.0f, 0.0f );
 			ended = qtrue;
 		}
 		match.alive[i] = alive;
 	}
+	if ( match.place > 0 && match.alive[0] && match.alive[1] ) {
+		if ( Trainer_MatchPlace() || --match.place <= 0 ) {
+			match.place = 0;
+			match.roundStart = level.time;
+		}
+		return;
+	}
 	if ( !ended && level.time - match.roundStart < TRAINER_MATCH_ROUND )
 		return;
+	for ( i = 0; i < 2; i++ )
+		Policy_EndEpisode( match.bot[i], ended ? POLICY_DONE_END : POLICY_DONE_TIME );
 	match.round++;
 	match.roundStart = level.time;
+	match.place = TRAINER_MATCH_TRIES;
 	if ( match.round >= match.rounds )
 		Trainer_MatchEnd( "done" );
 }
@@ -1450,7 +1579,7 @@ void Svcmd_TrainerMatch_f( void ) {
 	int		i, lvl[2], bot[2];
 
 	if ( trap->Argc() < 5 ) {
-		trap->Print( "Usage: vs_trainermatch <levelA 1-5> <levelB 1-5> <rounds> <file> [quit]\n" );
+		trap->Print( "Usage: vs_trainermatch <levelA> <levelB> <rounds> <file> [quit], a level is 1-5, clone, ai or ai2\n" );
 		return;
 	}
 	if ( match.on ) {
@@ -1464,12 +1593,12 @@ void Svcmd_TrainerMatch_f( void ) {
 	for ( i = 0; i < 2; i++ ) {
 		trap->Argv( 1 + i, arg, sizeof( arg ) );
 		lvl[i] = Trainer_ParseLevel( arg );
-		if ( lvl[i] < 1 || lvl[i] > TRAINER_CLONE ) {
-			trap->Print( "vs_trainermatch: level %s is not 1 to %d or clone\n", arg, TRAINER_LEVELS );
+		if ( lvl[i] < 1 || lvl[i] > TRAINER_LAST ) {
+			trap->Print( "vs_trainermatch: level %s is not 1 to %d, clone, ai or ai2\n", arg, TRAINER_LEVELS );
 			return;
 		}
-		if ( lvl[i] == TRAINER_CLONE && !Clone_Ready() ) {
-			trap->Print( "vs_trainermatch: no clone model (vs_cloneModel)\n" );
+		if ( !Trainer_LevelReady( lvl[i] ) ) {
+			trap->Print( "vs_trainermatch: no model for %s (vs_cloneModel, vs_policyModel, vs_policyOpponent)\n", arg );
 			return;
 		}
 	}
@@ -1492,13 +1621,15 @@ void Svcmd_TrainerMatch_f( void ) {
 	}
 	for ( i = 0; i < 2; i++ ) {
 		Trainer_MatchBot( bot[i], bot[1 - i], lvl[i] );
+		Policy_MatchStart( bot[i], lvl[1 - i] );
 		match.bot[i] = bot[i];
 		match.level[i] = lvl[i];
-		match.dealt[i] = match.kills[i] = 0;
+		match.dealt[i] = match.kills[i] = match.kicks[i] = 0;
 		match.alive[i] = qtrue;
 	}
 	match.round = 0;
 	match.start = match.roundStart = level.time;
+	match.place = TRAINER_MATCH_TRIES;
 	match.on = qtrue;
 	trap->Print( "vs_trainermatch: level %d against level %d, %d rounds, into %s\n", lvl[0], lvl[1], match.rounds, match.file );
 }
@@ -1511,8 +1642,8 @@ static void Trainer_Print( const gentity_t *ent, const char *text ) {
 =================
 Cmd_Trainer_f
 
-vs_trainer [1-5|clone]: calls the training bot of the player, or sets its level (3 without a number); clone is a bot
-that plays like the player of the clone model (g_clone.c)
+vs_trainer [1-5|clone|ai]: calls the training bot of the player, or sets its level (3 without a number); clone is a
+bot that plays like the player of the clone model (g_clone.c), ai the learned policy (g_policy.c)
 vs_trainer off: sends it away
 vs_trainer info: what it learned about the player
 =================
@@ -1544,6 +1675,10 @@ void Cmd_Trainer_f( gentity_t *ent ) {
 			Trainer_Print( ent, "Your training bot is the clone: it plays like the player it learned from." );
 			return;
 		}
+		if ( mine->policy >= 0 ) {
+			Trainer_Print( ent, "Your training bot is the learned one: it learned from fights against bots, not against you." );
+			return;
+		}
 		Trainer_Print( ent, va( "Training bot, level %d. Health dealt minus taken per try, as it learned it against you:", mine->level ) );
 		for ( i = 0; i < TA_NUM; i++ )
 			Trainer_Print( ent, va( "  %-10s %6.1f  (%d tries)", trainerApproachNames[i], mine->value[i], mine->tries[i] ) );
@@ -1571,19 +1706,20 @@ void Cmd_Trainer_f( gentity_t *ent ) {
 	}
 
 	lvl = arg[0] ? Trainer_ParseLevel( arg ) : 3;
-	if ( lvl < 1 || lvl > TRAINER_CLONE ) {
-		Trainer_Print( ent, "Usage: vs_trainer [1-5|clone|off|info]" );
+	if ( lvl < 1 || lvl > TRAINER_POLICY ) {
+		Trainer_Print( ent, "Usage: vs_trainer [1-5|clone|ai|off|info]" );
 		return;
 	}
-	if ( lvl == TRAINER_CLONE && !Clone_Ready() ) {
-		Trainer_Print( ent, "There is no clone on this server." );
+	if ( !Trainer_LevelReady( lvl ) ) {
+		Trainer_Print( ent, lvl == TRAINER_CLONE ? "There is no clone on this server." : "There is no learned bot on this server." );
 		return;
 	}
 
 	if ( mine ) {
 		Trainer_SetLevel( mine, lvl );
 		Trainer_SetKey( mine - trainers, self, lvl );
-		Trainer_Print( ent, mine->clone ? "Your training bot is the clone now." : va( "Your training bot is on level %d now.", lvl ) );
+		Trainer_Print( ent, mine->clone ? "Your training bot is the clone now." : mine->policy >= 0 ? "Your training bot is the learned one now."
+			: va( "Your training bot is on level %d now.", lvl ) );
 		return;
 	}
 	if ( count >= vs_allowTrainer.integer ) {
@@ -1598,5 +1734,6 @@ void Cmd_Trainer_f( gentity_t *ent ) {
 		return;
 	}
 	Trainer_Print( ent, lvl == TRAINER_CLONE ? "Your training bot is here, the clone. vs_trainer off sends it away."
+		: lvl == TRAINER_POLICY ? "Your training bot is here, the learned one. vs_trainer off sends it away."
 		: va( "Your training bot is here, level %d. vs_trainer off sends it away.", lvl ) );
 }

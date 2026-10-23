@@ -182,7 +182,11 @@ qboolean Clone_Ready( void ) {
 	return cloneLoaded;
 }
 
-static int Clone_Table( const byte *table, int size, int index ) {
+// trainerlib.NO_ACTION: standing, no buttons, looking at him
+const int cloneNoAction[CLONE_HEADS] = { 4, 0, 0, 0, 4, 1 };
+
+// the class of an animation or saber move by the tables of clone_tables.h, 0 for a number out of them
+int Clone_Class( const byte *table, int size, int index ) {
 	return ( index >= 0 && index < size ) ? table[index] : 0;
 }
 
@@ -216,9 +220,9 @@ static void Clone_Features( const gentity_t *self, const gentity_t *enemy, const
 	x[10] = !self->client->hook ? 0.0f : ( self->client->pers.jp.hooked ? 2.0f : 1.0f );
 	x[11] = enemy->client->hook != NULL;
 	x[12] = fabsf( AngleSubtract( RAD2DEG( atan2f( -d[1], -d[0] ) ), ops->viewangles[YAW] ) );
-	x[13] = Clone_Table( cloneSaber, CLONE_SABER_MOVES, ops->saberMove );
-	x[14] = Clone_Table( cloneLegs, CLONE_ANIMS, ops->legsAnim );
-	x[15] = Clone_Table( cloneLegs, CLONE_ANIMS, ps->legsAnim );
+	x[13] = Clone_Class( cloneSaber, CLONE_SABER_MOVES, ops->saberMove );
+	x[14] = Clone_Class( cloneLegs, CLONE_ANIMS, ops->legsAnim );
+	x[15] = Clone_Class( cloneLegs, CLONE_ANIMS, ps->legsAnim );
 	x[16] = Q_min( self->health, 200 );
 	x[17] = Q_min( enemy->health, 200 );
 	x[18] = ps->fd.forcePower;
@@ -298,12 +302,9 @@ static int Clone_Bin( const float *edges, int count, float v ) {
 	return i;
 }
 
-// trainerlib.NO_ACTION: standing, no buttons, looking at him
 void Clone_Reset( cloneState_t *s ) {
-	static const int noAction[CLONE_HEADS] = { 4, 0, 0, 0, 4, 1 };
-
 	memset( s, 0, sizeof( *s ) );
-	memcpy( s->prev, noAction, sizeof( s->prev ) );
+	memcpy( s->prev, cloneNoAction, sizeof( s->prev ) );
 	s->pitch = clonePitch[1];
 }
 

@@ -1353,7 +1353,7 @@ void G_TrainerDisconnect( int clientNum );
 void G_TrainerFrame( void );
 void Cmd_Trainer_f( gentity_t *ent );
 void Svcmd_TrainerMatch_f( void );
-void G_TrainerDamage( const gentity_t *targ, const gentity_t *attacker, int take );
+void G_TrainerDamage( const gentity_t *targ, const gentity_t *attacker, int take, int mod );
 qboolean G_TrainerState( int clientNum, int out[3] );
 
 // g_movelog.c: every usercmd of a player into a CSV (vs_movelog)
@@ -1363,6 +1363,7 @@ void G_MoveLogCmd( gentity_t *ent, const usercmd_t *ucmd );
 void G_MoveLogDamage( const gentity_t *targ, const gentity_t *attacker, int take, int mod );
 void G_MoveLogDisconnect( int clientNum );
 void G_MoveLogShutdown( void );
+float G_FloorHeight( const gentity_t *ent );
 
 // g_schizo.c: hallucinations only one player gets
 qboolean G_SchizoToggle( gentity_t *ent );

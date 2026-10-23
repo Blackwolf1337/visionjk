@@ -30,6 +30,7 @@ typedef struct {
 	int		buttons;
 	float	yawOff;		// the player this far to the left of the view
 	float	pitch;		// the view this far down
+	qboolean saber;		// the saber key: on or off (the learned policy, g_policy.c)
 } cloneCmd_t;
 
 // what the clone keeps from frame to frame
@@ -39,6 +40,9 @@ typedef struct {
 	float	yawOff, pitch;		// the aim, smoothed
 } cloneState_t;
 
+extern const int	cloneNoAction[CLONE_HEADS];
+
 qboolean	Clone_Ready( void );
+int			Clone_Class( const byte *table, int size, int index );
 void		Clone_Reset( cloneState_t *s );
 void		Clone_Decide( const gentity_t *self, const gentity_t *enemy, cloneState_t *s, int elapsed, cloneCmd_t *out );

@@ -41,6 +41,7 @@ Not from JA+.
 */
 
 #include "game/g_local.h"
+#include "g_policy.h"
 
 #define MOVELOG_MAX_MSEC	(15 * 60 * 1000)
 #define MOVELOG_NOTICE_MSEC	(2 * 60 * 1000)
@@ -118,7 +119,8 @@ static qboolean MoveLog_Start( gentity_t *ent ) {
 		"floor,handExtend,hookOn,hookX,hookY,hookZ,trState,trStep,trApproach,"
 		"other,why,dist,dx,dy,dz,yawErr,pitchErr,ovx,ovy,ovz,oground,olegs,otorso,osaberMove,oeFlags2,ohp,"
 		"obuttons,opitch,oyaw,oweapon,ostyle,oholstered,ohook,"
-		"ofwd,oright,oup,opmFlags,ofloor,ohandExtend,ohookOn,ohookX,ohookY,ohookZ,otrState,otrStep,otrApproach\n" );
+		"ofwd,oright,oup,opmFlags,ofloor,ohandExtend,ohookOn,ohookX,ohookY,ohookZ,otrState,otrStep,otrApproach,"
+		"wall0,wall1,wall2,wall3,wall4,wall5,wall6,wall7,drop0,drop1,drop2,drop3,drop4,drop5,drop6,drop7\n" );
 	return qtrue;
 }
 
@@ -163,8 +165,8 @@ static int MoveLog_Nearest( const gentity_t *ent ) {
 	return num;
 }
 
-// how high a player is over the floor, MOVELOG_FLOOR_RANGE when there is none below
-static float MoveLog_Floor( const gentity_t *ent ) {
+// how high a player is over the floor, MOVELOG_FLOOR_RANGE when there is none below (the learned policy too)
+float G_FloorHeight( const gentity_t *ent ) {
 	const playerState_t	*ps = &ent->client->ps;
 	vec3_t				down;
 	trace_t				tr;
@@ -188,8 +190,26 @@ static void MoveLog_Body( fileHandle_t f, const gentity_t *ent ) {
 	}
 	if ( !G_TrainerState( ent->s.number, tr ) )
 		tr[0] = tr[1] = tr[2] = -1;
-	MoveLog_Print( f, ",%.1f,%i,%i,%.1f,%.1f,%.1f,%i,%i,%i", MoveLog_Floor( ent ), client->ps.forceHandExtend, hookOn,
+	MoveLog_Print( f, ",%.1f,%i,%i,%.1f,%.1f,%.1f,%i,%i,%i", G_FloorHeight( ent ), client->ps.forceHandExtend, hookOn,
 		at[0], at[1], at[2], tr[0], tr[1], tr[2] );
+}
+
+// the walls and pits round the player as the learned policy sees them (Policy_Probes), from the line to the other
+static void MoveLog_Probes( fileHandle_t f, const gentity_t *ent, const gentity_t *other ) {
+	float	wall[POLICY_PROBES_LOGGED], drop[POLICY_PROBES_LOGGED];
+	vec3_t	toward;
+	int		i;
+
+	VectorSubtract( other->client->ps.origin, ent->client->ps.origin, toward );
+	toward[2] = 0.0f;
+	if ( VectorNormalize( toward ) < 0.001f )
+		VectorSet( toward, 1.0f, 0.0f, 0.0f );
+	Policy_Probes( ent, toward, wall, drop );
+	for ( i = 0; i < POLICY_PROBES_LOGGED; i++ )
+		MoveLog_Print( f, ",%.3f", wall[i] );
+	for ( i = 0; i < POLICY_PROBES_LOGGED; i++ )
+		MoveLog_Print( f, ",%.3f", drop[i] );
+	MoveLog_Print( f, "\n" );
 }
 
 // from G_Damage, after the damage is taken: what the logged players dealt and took
@@ -290,10 +310,11 @@ void G_MoveLogCmd( gentity_t *ent, const usercmd_t *ucmd ) {
 		MoveLog_Print( log->f, ",%i,%i,%i,%i", other->client->pers.cmd.forwardmove, other->client->pers.cmd.rightmove,
 			other->client->pers.cmd.upmove, ops->pm_flags );
 		MoveLog_Body( log->f, other );
-		MoveLog_Print( log->f, "\n" );
+		MoveLog_Probes( log->f, ent, other );
 	}
 	else
-		MoveLog_Print( log->f, ",-1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,-1,0,0,0,-1,-1,-1\n" );
+		MoveLog_Print( log->f, ",-1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,-1,0,0,0,-1,-1,-1"
+			",0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n" );
 }
 
 // from ClientDisconnect

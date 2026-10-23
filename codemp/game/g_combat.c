@@ -5430,8 +5430,10 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_
 			}
 		}
 		targ->health = targ->health - take;
-		G_MoveLogDamage( targ, attacker, take, mod );		// not from JA+: the movement log (trainer/g_movelog.c)
-		G_TrainerDamage( targ, attacker, take );			// not from JA+: what the training bot learns from
+		// not from JA+: the movement log (trainer/g_movelog.c) and what the training bot learns from. Only the health
+		// there was counts: a kill by a pit or a trigger_hurt, given to the one who pushed, takes 100000
+		G_MoveLogDamage( targ, attacker, Q_min( take, targ->health + take ), mod );
+		G_TrainerDamage( targ, attacker, Q_min( take, targ->health + take ), mod );
 
 		if ( (targ->flags&FL_UNDYING) )
 		{//take damage down to 1, but never die

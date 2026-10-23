@@ -306,6 +306,9 @@ set(MPGameTrainerFiles
 	"${MPDir}/game/trainer/g_clone.c"
 	"${MPDir}/game/trainer/g_clone.h"
 	"${MPDir}/game/trainer/g_movelog.c"
+	"${MPDir}/game/trainer/g_policy.c"
+	"${MPDir}/game/trainer/g_policy.h"
+	"${MPDir}/game/trainer/policy_spec.h"
 	"${MPDir}/game/trainer/g_trainer.c"
 	"${MPDir}/game/trainer/trainer_params.h"
 	)
