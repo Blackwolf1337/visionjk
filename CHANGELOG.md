@@ -90,6 +90,7 @@ Key: [-] removed, [+] added, [\*] modified
 * [+] Notifications, after the ones of the VisionJK of 2019: lines at the left edge that slide in, stay and slide out. They come for a tell to you, a chat line with your name (the same match as `tay_notify`), a line of a boombox for you, and a newer version of the game while you play. `v_notify` (0 off, 1 on, 2 with the sound of tay_notify), `v_notifyTime` (ms, 6000), `v_notifyScale`, `v_notifyX`, `v_notifyY`. The command `v_notify_show <text>` shows a line, for scripts and binds. It has a glass look with the new HUD and a dark box with the classic one. The chat box and the console keep their lines. Downloads at the connect are not shown: the cgame does not run yet then. Setup, Chat & Social page, heading Notifications.
 * [+] The voice set of chiss (sounds of the 2019 tree): sound/chars/chiss and sound/chr_d/chiss with models/players/chiss/sounds.cfg in the client assets. The model of the game had no voice of its own.
 * [\*] The blade style SFX (`v_saberStyle 1`) fills the area a blade sweeps with `cg_saberTrail` on again, in the colour of the saber, as the VisionJK of 2019 did. Only the four edges were drawn, so a swing looked hollow and dark.
+* [\*] The volume of the boombox and the sound system no longer follows `s_volume`, it is `v_boomboxVolume` alone again (Setup, Sound) as before 0.2.4. With a low effects volume the songs were too quiet.
 
 # Features
 
