@@ -43,7 +43,7 @@ def main():
     ap.add_argument('--game', required=True)
     ap.add_argument('--policy', required=True)
     ap.add_argument('--clone', required=True)
-    ap.add_argument('--opponents', default='3,4,5,clone')
+    ap.add_argument('--opponents', default='3,4,5,5h,clone')
     ap.add_argument('--vs')
     ap.add_argument('--maps', default=','.join(EVAL_MAPS))
     ap.add_argument('--matches', type=int, default=4, help='per opponent and map, half of them on each side')

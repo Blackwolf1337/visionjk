@@ -99,6 +99,12 @@ qboolean BG_InKnockDownOnGround( playerState_t *ps );
 #define TRAINER_POLICY			( TRAINER_LEVELS + 2 )	// the learned policy, "ai" (g_policy.c)
 #define TRAINER_POLICY_OLD		( TRAINER_LEVELS + 3 )	// an older one it fights in a match, "ai2"
 #define TRAINER_LAST			TRAINER_POLICY_OLD
+#define TRAINER_HOP				0x100	// a level 1-5 with "h" ("5h"): it hops between its attacks, as players do
+#define TRAINER_SEARCH_FAR		800.0f	// the clone and the policy search the player farther than this
+#define TRAINER_SEARCH_NEAR		600.0f	// and fight him again nearer than this, when they see him
+#define TRAINER_SEARCH_UNSEEN	1500	// or when they have not seen him for this long (msec)
+#define TRAINER_ROPE_MSEC		1500	// the policy lets go of a hook it held this long while he is not near
+#define TRAINER_ROPE_NEAR		400.0f
 #define TRAINER_CLONE_TURN		1500.0f	// degrees a second the clone turns, like a player with a mouse
 #define TRAINER_BOT				"Jedi Trainer"	// botfiles/bots.txt of the game
 #define TRAINER_NAME			"Trainer"
@@ -235,6 +241,18 @@ typedef struct {
 	qboolean		clone;		// plays like the player of the clone model, not by the states here (g_clone.c)
 	cloneState_t	cloneState;	// its decisions of the frame before and its aim
 	int				policy;		// the slot of its learned policy (g_policy.c), -1: none
+	qboolean		hop;		// TRAINER_HOP
+	int				hopUntil;	// level.time it holds its jump until
+	qboolean		search;		// it runs to the player along the waypoints (Trainer_SearchThink)
+	int				seenTime;	// level.time it last saw the player
+	int				ropeTime;	// level.time its hook got hold, 0 not holding
+	int				pathTime;	// level.time the way to the player is looked for again
+	int				pathWP;		// the next waypoint on it, -1 none (straight to him)
+	vec3_t			stuckAt;	// where it was at stuckTime
+	int				stuckTime;
+	int				avoidWP;	// a waypoint it got stuck going to, left out of the way until avoidTime
+	int				avoidTime;
+	int				dodge;		// 1 or -1: it steps to that side to get loose
 	int				cloneUp;	// its upmove of the frame before
 	int				circle;		// 1 circles to the right, -1 to the left
 	int				circleTime;	// level.time it may turn round
@@ -352,6 +370,8 @@ static void Trainer_LoadParams( void ) {
 
 // level 1 to 5, TRAINER_CLONE or a learned policy
 static void Trainer_SetLevel( trainer_t *t, int lvl ) {
+	t->hop = (qboolean)( (lvl & TRAINER_HOP) && (lvl & ~TRAINER_HOP) <= TRAINER_LEVELS );
+	lvl &= ~TRAINER_HOP;
 	t->level = Com_Clampi( 1, TRAINER_LAST, lvl );
 	t->clone = (qboolean)( t->level == TRAINER_CLONE );
 	t->policy = ( t->level == TRAINER_POLICY ) ? 0 : ( t->level == TRAINER_POLICY_OLD ) ? 1 : -1;
@@ -359,8 +379,12 @@ static void Trainer_SetLevel( trainer_t *t, int lvl ) {
 	Policy_Reset( t - trainers, t->policy );
 }
 
-// "clone", "ai", "ai2" or a number, 0 if none of them
+// "clone", "ai", "ai2" or a number, with "h" a level that hops (TRAINER_HOP); 0 if none of them
 static int Trainer_ParseLevel( const char *arg ) {
+	const size_t len = strlen( arg );
+
+	if ( len >= 2 && (arg[len - 1] == 'h' || arg[len - 1] == 'H') && atoi( arg ) >= 1 && atoi( arg ) <= TRAINER_LEVELS )
+		return atoi( arg ) | TRAINER_HOP;
 	if ( !Q_stricmp( arg, "clone" ) )
 		return TRAINER_CLONE;
 	if ( !Q_stricmp( arg, "ai" ) )
@@ -372,6 +396,7 @@ static int Trainer_ParseLevel( const char *arg ) {
 
 // the model a level needs is there
 static qboolean Trainer_LevelReady( int lvl ) {
+	lvl &= ~TRAINER_HOP;
 	if ( lvl == TRAINER_CLONE )
 		return Clone_Ready();
 	if ( lvl == TRAINER_POLICY || lvl == TRAINER_POLICY_OLD )
@@ -1148,11 +1173,23 @@ static void Trainer_CloneThink( trainer_t *t, bot_state_t *bs, gentity_t *self, 
 	Trainer_CloneCmd( t, bs, self, enemy, &c, elapsed, cmd );
 }
 
-// the policy (g_policy.c): what the network picks, nothing added
+// the policy (g_policy.c): what the network picks. It learned in rounds that start near the player, a hook it holds
+// with him not near is let go: it hung on the rope instead of searching him.
 static void Trainer_PolicyThink( trainer_t *t, bot_state_t *bs, gentity_t *self, const gentity_t *enemy, int elapsed, usercmd_t *cmd ) {
 	cloneCmd_t c;
 
 	Policy_Decide( self, enemy, elapsed, &c );
+	if ( self->client->hook && self->client->pers.jp.hooked ) {
+		if ( !t->ropeTime )
+			t->ropeTime = level.time;
+		if ( level.time - t->ropeTime > TRAINER_ROPE_MSEC
+			&& (Distance( self->client->ps.origin, enemy->client->ps.origin ) > TRAINER_ROPE_NEAR || level.time - t->seenTime > 500) ) {
+			c.buttons = (c.buttons & ~BUTTON_HOOK) | BUTTON_USE;
+			t->ropeTime = 0;
+		}
+	}
+	else
+		t->ropeTime = 0;
 	Trainer_CloneCmd( t, bs, self, enemy, &c, elapsed, cmd );
 }
 
@@ -1181,6 +1218,151 @@ static void Trainer_CloneCmd( trainer_t *t, bot_state_t *bs, gentity_t *self, co
 	AngleVectors( angles, dir, NULL, NULL );
 	VectorMA( eye, 256.0f, dir, point );
 	Trainer_Aim( bs, point, 0.0f, TRAINER_CLONE_TURN * elapsed / 1000.0f, NULL, cmd );
+}
+
+// a level with "h": a jump whenever it lands between its attacks, held 50 to 1000 ms so it goes up to different
+// heights. The learned policy met no opponent who hops and did little against a player high in the air.
+static void Trainer_Hop( trainer_t *t, const playerState_t *ps, usercmd_t *cmd ) {
+	if ( !t->hop || cmd->upmove || (t->state != TS_CHASE && t->state != TS_GUARD) )
+		return;
+	if ( level.time < t->hopUntil )
+		cmd->upmove = 127;
+	else if ( ps->groundEntityNum != ENTITYNUM_NONE && !(ps->pm_flags & PMF_JUMP_HELD) ) {
+		t->hopUntil = level.time + Q_irand( 50, 1000 );
+		cmd->upmove = 127;
+	}
+}
+
+/*
+=================
+Trainer_NextWP
+
+the next waypoint from one to another on the shortest way (Dijkstra over the trail, each waypoint to the one
+before and after it, and the neighbours), without the waypoint avoid; -1 if there is none
+=================
+*/
+static int Trainer_NextWP( int from, int to, int avoid ) {
+	static float	dist[MAX_WPARRAY_SIZE];
+	static int		prev[MAX_WPARRAY_SIZE];
+	static qboolean	done[MAX_WPARRAY_SIZE];
+	const int		num = Q_min( gWPNum, MAX_WPARRAY_SIZE );
+	int				i, u;
+
+	if ( from < 0 || to < 0 || from >= num || to >= num )
+		return -1;
+	for ( i = 0; i < num; i++ ) {
+		dist[i] = -1.0f;
+		prev[i] = -1;
+		done[i] = qfalse;
+	}
+	dist[from] = 0.0f;
+	if ( avoid >= 0 && avoid < num && avoid != from && avoid != to )
+		done[avoid] = qtrue;
+	for ( ;; ) {
+		const wpobject_t	*wp;
+		int					next[MAX_NEIGHBOR_SIZE + 2], count = 0, k;
+
+		u = -1;
+		for ( i = 0; i < num; i++ ) {
+			if ( !done[i] && dist[i] >= 0.0f && (u < 0 || dist[i] < dist[u]) )
+				u = i;
+		}
+		if ( u < 0 || u == to )
+			break;
+		done[u] = qtrue;
+		wp = gWPArray[u];
+		next[count++] = u - 1;
+		next[count++] = u + 1;
+		for ( k = 0; k < wp->neighbornum && k < MAX_NEIGHBOR_SIZE; k++ )
+			next[count++] = wp->neighbors[k].num;
+		for ( k = 0; k < count; k++ ) {
+			const int v = next[k];
+			float d;
+
+			if ( v < 0 || v >= num || done[v] || !gWPArray[v] || !gWPArray[v]->inuse )
+				continue;
+			d = dist[u] + Distance( wp->origin, gWPArray[v]->origin );
+			if ( dist[v] < 0.0f || d < dist[v] ) {
+				dist[v] = d;
+				prev[v] = u;
+			}
+		}
+	}
+	if ( dist[to] < 0.0f )
+		return -1;
+	for ( u = to; prev[u] >= 0 && prev[u] != from; u = prev[u] )
+		;
+	return u;
+}
+
+// the clone and the policy search the player when he is far or out of sight: they only learned to fight near him.
+// A map without waypoints: straight to him, as the trainer levels go.
+static qboolean Trainer_Searching( trainer_t *t, const bot_state_t *bs, const gentity_t *self, const gentity_t *enemy ) {
+	const float		dist = Distance( self->client->ps.origin, enemy->client->ps.origin );
+	const qboolean	seen = Trainer_Visible( bs, enemy );
+
+	if ( seen )
+		t->seenTime = level.time;
+	if ( !t->search && (dist > TRAINER_SEARCH_FAR || level.time - t->seenTime > TRAINER_SEARCH_UNSEEN) ) {
+		t->search = qtrue;
+		t->pathTime = 0;
+		VectorCopy( self->client->ps.origin, t->stuckAt );
+		t->stuckTime = level.time;
+	}
+	else if ( t->search && dist < TRAINER_SEARCH_NEAR && seen )
+		t->search = qfalse;
+	return t->search;
+}
+
+/*
+=================
+Trainer_SearchThink
+
+runs to the player along the waypoints: the way is looked for again every second, a waypoint reached goes on to
+the next. A waypoint higher up gets a jump, and so does being stuck (half a second without getting 32 units on).
+Stuck for 1.5 s, it leaves that waypoint out for 5 s and steps to a side: one on a ledge held it for a minute.
+=================
+*/
+static void Trainer_SearchThink( trainer_t *t, bot_state_t *bs, gentity_t *self, const gentity_t *enemy, int elapsed,
+	usercmd_t *cmd ) {
+	const playerState_t	*ps = &self->client->ps;
+	vec3_t				target;
+
+	if ( t->pathWP >= 0 && t->pathWP < gWPNum && gWPArray[t->pathWP]
+		&& Distance( ps->origin, gWPArray[t->pathWP]->origin ) < 48.0f )
+		t->pathTime = 0;		// reached: on to the next
+	if ( level.time - t->stuckTime > 1500 ) {
+		t->avoidWP = t->pathWP;
+		t->avoidTime = level.time + 5000;
+		t->dodge = Q_irand( 0, 1 ) ? 1 : -1;
+		t->pathTime = 0;
+		VectorCopy( ps->origin, t->stuckAt );
+		t->stuckTime = level.time;
+	}
+	if ( level.time >= t->pathTime ) {
+		t->pathTime = level.time + 1000;
+		t->pathWP = Trainer_NextWP( GetNearestVisibleWP( (float *)ps->origin, self->s.number ),
+			GetNearestVisibleWP( (float *)enemy->client->ps.origin, enemy->s.number ),
+			level.time < t->avoidTime ? t->avoidWP : -1 );
+	}
+	if ( t->pathWP >= 0 && t->pathWP < gWPNum && gWPArray[t->pathWP] )
+		VectorCopy( gWPArray[t->pathWP]->origin, target );
+	else
+		VectorCopy( enemy->client->ps.origin, target );
+
+	Trainer_Aim( bs, target, 0.0f, TRAINER_CLONE_TURN * elapsed / 1000.0f, NULL, cmd );
+	cmd->forwardmove = 127;
+	if ( level.time < t->avoidTime - 4500 )
+		cmd->rightmove = 127 * t->dodge;
+	if ( ps->groundEntityNum != ENTITYNUM_NONE && !(ps->pm_flags & PMF_JUMP_HELD)
+		&& (target[2] - ps->origin[2] > 40.0f || level.time - t->stuckTime > 500) )
+		cmd->upmove = 127;
+	if ( Distance( ps->origin, t->stuckAt ) > 32.0f ) {
+		VectorCopy( ps->origin, t->stuckAt );
+		t->stuckTime = level.time;
+	}
+	Trainer_Saber( self, t );
+	Trainer_LetGo( self, cmd );
 }
 
 /*
@@ -1228,6 +1410,10 @@ static void Trainer_Think( trainer_t *t, bot_state_t *bs, int time, int elapsed 
 		return;
 	}
 
+	if ( (t->clone || t->policy >= 0) && Trainer_Searching( t, bs, self, enemy ) ) {
+		Trainer_SearchThink( t, bs, self, enemy, elapsed, cmd );
+		return;
+	}
 	if ( t->clone ) {
 		Trainer_CloneThink( t, bs, self, enemy, elapsed, cmd );
 		return;
@@ -1313,6 +1499,7 @@ static void Trainer_Think( trainer_t *t, bot_state_t *bs, int time, int elapsed 
 		}
 		break;
 	}
+	Trainer_Hop( t, ps, cmd );
 	Trainer_LetGo( self, cmd );
 }
 
@@ -1593,8 +1780,8 @@ void Svcmd_TrainerMatch_f( void ) {
 	for ( i = 0; i < 2; i++ ) {
 		trap->Argv( 1 + i, arg, sizeof( arg ) );
 		lvl[i] = Trainer_ParseLevel( arg );
-		if ( lvl[i] < 1 || lvl[i] > TRAINER_LAST ) {
-			trap->Print( "vs_trainermatch: level %s is not 1 to %d, clone, ai or ai2\n", arg, TRAINER_LEVELS );
+		if ( (lvl[i] & ~TRAINER_HOP) < 1 || (lvl[i] & ~TRAINER_HOP) > TRAINER_LAST ) {
+			trap->Print( "vs_trainermatch: level %s is not 1 to %d (5h: one that hops), clone, ai or ai2\n", arg, TRAINER_LEVELS );
 			return;
 		}
 		if ( !Trainer_LevelReady( lvl[i] ) ) {
@@ -1706,8 +1893,8 @@ void Cmd_Trainer_f( gentity_t *ent ) {
 	}
 
 	lvl = arg[0] ? Trainer_ParseLevel( arg ) : 3;
-	if ( lvl < 1 || lvl > TRAINER_POLICY ) {
-		Trainer_Print( ent, "Usage: vs_trainer [1-5|clone|ai|off|info]" );
+	if ( (lvl & ~TRAINER_HOP) < 1 || (lvl & ~TRAINER_HOP) > TRAINER_POLICY ) {
+		Trainer_Print( ent, "Usage: vs_trainer [1-5|1h-5h|clone|ai|off|info], h: one that hops" );
 		return;
 	}
 	if ( !Trainer_LevelReady( lvl ) ) {
@@ -1719,7 +1906,7 @@ void Cmd_Trainer_f( gentity_t *ent ) {
 		Trainer_SetLevel( mine, lvl );
 		Trainer_SetKey( mine - trainers, self, lvl );
 		Trainer_Print( ent, mine->clone ? "Your training bot is the clone now." : mine->policy >= 0 ? "Your training bot is the learned one now."
-			: va( "Your training bot is on level %d now.", lvl ) );
+			: va( "Your training bot is on level %d%s now.", lvl & ~TRAINER_HOP, ( lvl & TRAINER_HOP ) ? ", hopping" : "" ) );
 		return;
 	}
 	if ( count >= vs_allowTrainer.integer ) {
@@ -1735,5 +1922,5 @@ void Cmd_Trainer_f( gentity_t *ent ) {
 	}
 	Trainer_Print( ent, lvl == TRAINER_CLONE ? "Your training bot is here, the clone. vs_trainer off sends it away."
 		: lvl == TRAINER_POLICY ? "Your training bot is here, the learned one. vs_trainer off sends it away."
-		: va( "Your training bot is here, level %d. vs_trainer off sends it away.", lvl ) );
+		: va( "Your training bot is here, level %d%s. vs_trainer off sends it away.", lvl & ~TRAINER_HOP, ( lvl & TRAINER_HOP ) ? ", hopping" : "" ) );
 }

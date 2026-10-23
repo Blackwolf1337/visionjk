@@ -36,9 +36,10 @@ import simrun  # noqa: E402
 import spec  # noqa: E402
 
 TRAIN_MAPS = ['mp/duel1', 'mp/duel3', 'mp/duel5', 'mp/duel6', 'mp/duel7', 'mp/duel8', 'mp/duel9', 'mp/ffa3']
-# who the policy fights, and how often
-OPPONENTS = [('ai', 0.35), ('ai2', 0.15), ('clone', 0.2), ('5', 0.15), ('4', 0.1), ('3', 0.05)]
-LEVELS = {'ai': 7, 'ai2': 8, 'clone': 6, '5': 5, '4': 4, '3': 3}
+# who the policy fights, and how often: itself, an older version (ai2), the behaviour clone of a player (user, with
+# --user: also ai2), the clone, the trainer levels and the ones of them that hop (5h)
+OPPONENTS = [('ai', 0.3), ('ai2', 0.1), ('user', 0.1), ('clone', 0.1), ('5', 0.1), ('4', 0.05), ('3', 0.05),
+             ('5h', 0.1), ('4h', 0.05), ('3h', 0.05)]
 
 
 class Actors:
@@ -57,11 +58,15 @@ class Actors:
             t.start()
 
     def pick(self):
+        """the opponent and the policy file of slot 1 it needs (an older version or the clone of the player)"""
         league = sorted(os.listdir(os.path.join(self.out, 'league')))
-        names, weights = zip(*[(n, w) for n, w in OPPONENTS if n != 'ai2' or league])
+        names, weights = zip(*[(n, w) for n, w in OPPONENTS if (n != 'ai2' or league) and (n != 'user' or self.args.user)])
         opp = random.choices(names, weights)[0]
-        snap = os.path.join(self.out, 'league', random.choice(league)) if opp == 'ai2' else None
-        return opp, snap
+        if opp == 'ai2':
+            return opp, os.path.join(self.out, 'league', random.choice(league))
+        if opp == 'user':
+            return opp, self.args.user
+        return opp, None
 
     def run(self, i):
         port = self.args.port + i
@@ -76,15 +81,20 @@ class Actors:
             if snap:
                 files['trainer/opp.dat'] = snap
                 sets['vs_policyOpponent'] = 'trainer/opp.dat'
-            res = simrun.run_match(self.args.game, 'ai', opp, self.args.rounds, random.choice(TRAIN_MAPS),
+            # half of the matches with the policy as the second bot: the first one thinks first in a frame
+            swap = random.random() < 0.5
+            level = 'ai2' if opp == 'user' else opp
+            a, b = (level, 'ai') if swap else ('ai', level)
+            res = simrun.run_match(self.args.game, a, b, self.args.rounds, random.choice(TRAIN_MAPS),
                                    clone=self.args.clone, port=port, timeout=600, files=files, sets=sets,
                                    collect=collect)
             for item in res.get('collected', []):
                 self.data.put(item)
             if res.get('sec'):
-                res.pop('collected', None)
-                res['opp'] = opp
-                self.results.put(res)
+                me, them = ('B', 'A') if swap else ('A', 'B')
+                self.results.put({'opp': opp, 'sec': res['sec'], 'dealt': res.get('dealt' + me, 0),
+                                  'taken': res.get('dealt' + them, 0), 'kills': res.get('kills' + me, 0),
+                                  'deaths': res.get('kills' + them, 0)})
 
 
 def collect(jp):
@@ -97,10 +107,22 @@ def collect(jp):
     return out
 
 
-def costs(rec, saber, change):
-    """what the saber key and changes of the move and the aim (to the decision before) take off the reward"""
+def costs(rec, saber, change, wall=0.0):
+    """what the saber key, changes of the move and the aim (to the decision before) and walls take off the reward.
+    A wall: the hook holding at body height (not the floor, -16 to 40 units from the middle of the body), or going
+    forward on the ground two decisions in a row and still slower than 60 units a second."""
     act = rec['act'].astype(np.int64)
+    obs = rec['obs']
     cost = saber * (act[:, 6] == 1)
+    if wall:
+        a = spec.OBS_AT
+        hz = obs[:, a['HOOKAT'] + 2] * 500.0
+        cost = cost + wall * ((obs[:, a['HOOKED']] > 0.5) & (hz > -16.0) & (hz < 40.0))
+        speed = np.hypot(obs[:, a['VEL']], obs[:, a['VEL'] + 1]) * 1000.0
+        forward = act[:, 0] // 3 == 2
+        stuck = np.zeros(len(act), dtype=bool)
+        stuck[1:] = forward[1:] & forward[:-1] & (obs[1:, a['GROUND']] > 0.5) & (speed[1:] < 60.0) & (rec['done'][:-1] == 0)
+        cost = cost + wall * stuck
     if len(act) > 1:
         moved = np.zeros(len(act), dtype=bool)
         for h in (0, 4, 5):		# move, aim yaw, aim pitch
@@ -127,6 +149,26 @@ def advantages(rec, values, gamma, lam):
         last = delta + gamma * lam * last
         adv[t] = last
     return adv, adv + values
+
+
+def renorm(nets, obs):
+    """the parts the normalisation leaves as they are (mean 0, std 1: the start never saw them) get the mean and
+    std of obs; the first layer of each network is changed so that it computes the same as before"""
+    net0 = nets[0]
+    raw = (net0.mean == 0) & (net0.std == 1)
+    mean, std = obs.mean(0), obs.std(0)
+    idx = torch.nonzero(raw & (std > 1e-3)).squeeze(-1)
+    with torch.no_grad():
+        for net in nets:
+            s0, m0 = net.scale[idx].clone(), net.mean[idx].clone()
+            s1 = 1.0 / std[idx]
+            w = net.l1.weight[:, idx]
+            net.l1.bias += (w * s0) @ (mean[idx] - m0)
+            net.l1.weight[:, idx] = w * s0 / s1
+            net.mean[idx] = mean[idx]
+            net.std[idx] = std[idx]
+            net.scale[idx] = s1
+    return len(idx)
 
 
 def kl_to(logits, ref):
@@ -164,6 +206,10 @@ def main():
     ap.add_argument('--reward', default='0.01 1 1 0.3')
     ap.add_argument('--saber-cost', type=float, default=0.0, help='taken off the reward for a press of the saber key')
     ap.add_argument('--change-cost', type=float, default=0.0, help='for a change of the move or the aim')
+    ap.add_argument('--wall-cost', type=float, default=0.0, help='a frame hooked into a wall or running into one')
+    ap.add_argument('--user', help='the behaviour clone of a player (bc.py) as an opponent')
+    ap.add_argument('--renorm', action='store_true', help='the parts of the observation the start never saw '
+                    '(mean 0, std 1) get the mean and std of the first rollouts; the networks stay the same')
     ap.add_argument('--resume', action='store_true')
     args = ap.parse_args()
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -199,7 +245,7 @@ def main():
     if new_log:
         w.writerow(['version', 'time', 'frames', 'frames_s', 'lag', 'ret_ep', 'kl_coef', 'kl_start', 'entropy',
                     'clipfrac', 'vloss', 'opp_stats'])
-    t0, total = time.time(), 0
+    t0, total, renormed = time.time(), 0, False
     deadline = t0 + args.hours * 3600
     print('%d actors on %s, the learner on %s' % (args.actors, args.game, device), flush=True)
 
@@ -216,15 +262,20 @@ def main():
         total += frames
 
         obs = torch.tensor(np.concatenate([r['obs'] for r in batch]), device=device)
+        if args.renorm and not renormed:
+            renormed = True
+            n = renorm([policy, value], obs)
+            model.export(policy, os.path.join(out, 'policy.dat'), version)
+            print('%d parts of the observation normalised from the first rollouts' % n, flush=True)
         act = torch.tensor(np.concatenate([r['act'] for r in batch]).astype(np.int64), device=device)
         old_logp = torch.tensor(np.concatenate([r['logp'] for r in batch]), device=device)
         with torch.no_grad():
             vals = value(obs).squeeze(-1).cpu().numpy()
         adv, ret, at = [], [], 0
         for r in batch:
-            if args.saber_cost or args.change_cost:
+            if args.saber_cost or args.change_cost or args.wall_cost:
                 r = r.copy()
-                r['reward'] -= costs(r, args.saber_cost, args.change_cost)
+                r['reward'] -= costs(r, args.saber_cost, args.change_cost, args.wall_cost)
             a, g = advantages(r, vals[at:at + len(r)], args.gamma, args.lam)
             adv.append(a)
             ret.append(g)
@@ -278,10 +329,10 @@ def main():
         while not actors.results.empty():
             r = actors.results.get()
             s = res[r['opp']]
-            s[0] += r.get('dealtA', 0) - r.get('dealtB', 0)
+            s[0] += r['dealt'] - r['taken']
             s[1] += r['sec'] / 60.0
-            s[2] += int(r.get('killsA', 0))
-            s[3] += int(r.get('killsB', 0))
+            s[2] += int(r['kills'])
+            s[3] += int(r['deaths'])
         opp_stats = ' '.join('%s:%+.0f/min,%d:%d' % (k, v[0] / max(v[1], 1e-6), v[2], v[3]) for k, v in sorted(res.items()))
         episodes = sum(int((r['done'] > 0).sum()) for r in batch)
         ret_ep = float(sum(r['reward'].sum() for r in batch)) / max(1, episodes)
