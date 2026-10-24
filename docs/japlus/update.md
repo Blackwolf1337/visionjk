@@ -7,7 +7,8 @@ dedicated server and the client that runs in a browser do not: a page is the new
 loaded.
 
 Added 2026-10-10. Run on Linux, under Wine and on a Windows 11 in a virtual machine, each against a server
-on the local network: see "Checked".
+on the local network: see "Checked". Update channels (stable and development builds) added 2026-10-24, version
+0.2.8.
 
 ## For players
 
@@ -39,6 +40,7 @@ and deletes nothing. The console names the files.
 | Cvar | Default | Meaning |
 |------|---------|---------|
 | `v_updateCheck` | 1 | 0: the website is not asked at the start |
+| `v_updateChannel` | stable | `stable` or `dev`, saved. Anything but `dev` is stable. See "The update channels" |
 | `v_updateURL` | https://jka.vision/downloads/update | where it asks. Only the command line can name another one, see "Who is trusted" |
 | `v_updateState`, `v_updateText` | | read only: what the updater is doing, and the line of the menu |
 
@@ -51,10 +53,47 @@ and deletes nothing. The console names the files.
 On Linux the game asks through the `libcurl` of the system (`libcurl.so.4`). Without it there is no update
 check, one line says so when `v_update_check` is typed, and the game runs.
 
+## The update channels
+
+Since 0.2.8 there are two. `stable` (the default) offers releases. `dev` offers development builds, early test
+versions that can crash, corrupt configs or not work on some servers, and the release where that is newer than
+the last development build. A development build is a version like `0.2.8-dev.2` (tag `v0.2.8-dev.2`).
+
+The order is `0.2.8-dev.1` < `0.2.8-dev.2` < `0.2.8` < `0.2.9-dev.1`. Inside, a version has a fourth part:
+the number of the development build, or `UPD_STABLE` (10000) for a release. A build between two tags
+(`v0.2.7-4-gc0e1c5a2`, `v0.2.8-dev.1-3-gabc1234`) has no such version and is never updated.
+
+Changing `v_updateChannel` makes the client ask the website again at once. Switching to `dev` prints:
+
+```
+Development builds are early test versions. They can crash, corrupt your configs or not work on some servers. You can switch back to stable at any time.
+```
+
+The menu has the row "Update Channel" (Stable / Development) in Setup, Network, under "Check for Updates".
+Choosing Development opens a page with that warning and the buttons "Stay on Stable" and "Switch to
+Development". Only the second sets the cvar (`channel_page` in `tools/menus/options.py`, the script command
+`updateChannel` in `ui/ui_main.c`).
+
+Back to stable: a development build on the stable channel takes an older release too. The console says
+"You are on development build X, but the update channel is set to stable. To switch to stable version Y, type
+update here or click the line on the main menu", and the line of the menu reads "Back to stable version Y.
+Click here to switch" (`upd.back`).
+
+Files only the development build had: whenever a development build is left (back to stable, to a newer
+release, or to the next development build), the client fetches `lists/<own version>/<system>.txt`. Each file
+that list has and the new list lacks, except a `keep` file, goes into the journal as `gone <path>`. The next
+start puts it aside as `.vjkold` before the engine opens any file, and it is deleted with the other old
+files. If the own list can not be fetched, the update still goes through and the console says that files only
+that build had may stay.
+
+Players on 0.2.7 and older have no channel setting. They get it by updating to 0.2.8, and a list for the
+stable channel stays where it was, so they keep working.
+
 ## What is never replaced
 
-- A build that is not a release. The version of a build is the tag it was made from, and only a tag like
-  `v0.1.1` counts. A build between two releases (`v0.1.1-3-gabc1234`) is somebody's own and is left alone.
+- A build that is not a release or a development build. The version of a build is the tag it was made from,
+  and only a tag like `v0.1.1` or `v0.2.8-dev.1` counts. A build between two tags (`v0.1.1-3-gabc1234`) is
+  somebody's own and is left alone.
 - A `.cfg` that is there (`japlus/server.cfg` and the others). A release can bring a new one, it never
   replaces one.
 - Anything outside the folder the program is in, and anything a file list names that is not a plain path
@@ -67,7 +106,7 @@ check, one line says so when `v_update_check` is typed, and the game runs.
 
 ## How it works
 
-**The file list.** The website has one for every system, plain text:
+**The file list.** The website has one for every system and channel, plain text:
 
 ```
 https://jka.vision/downloads/update/windows-x86_64.txt
@@ -82,6 +121,19 @@ keep 13071 <sha256> japlus/server.cfg
 The first line is the format: a client reads no list of another format than its own, and skips a line that
 starts with a word it does not know. `keep` is a file that is only put there if it is missing. The files are at
 `<address>/<version>/<system>/<path>`. `tools/build-game.sh` of the website writes both.
+
+Under the address the layout is:
+
+```
+<system>.txt                       the stable list (as before, so old clients keep working)
+dev/<system>.txt                   the dev list: the last development build, or the release where that is
+                                   newer or where there is no development build for the system
+<version>/<system>/...             the files, only of versions a list names
+lists/<version>/<system>.txt       a copy of every list ever written, never removed
+```
+
+The client asks for `dev/<system>.txt` on the dev channel and for `<system>.txt` otherwise. The copies under
+`lists/` are what a client reads when it leaves a development build (see "The update channels").
 
 **Asking.** A thread fetches the list (`Sys_HttpGet`). If its version is newer than the build, every file of
 the list is compared with the one that is here: by size, and if that is the same by SHA-256. What differs or
@@ -104,6 +156,10 @@ engine is started and before any file is open, is to look for that journal (`CL_
    the old version and says which file it was. `update` then tries again with the files that are still there.
 3. Otherwise the journal says `done` and the program starts once more, now as the new one.
 4. That start deletes the `.vjkold` files and the journal, and the console says that the game was updated.
+
+The journal can also have lines `gone <path>`: files of a development build that was left. They are put aside
+like the old files in step 1 (renamed to `.vjkold`, nothing new takes their name) and deleted with them. A
+build from before the channels skips such a line.
 
 A swap that was cut short (the machine went off) is finished by the next start in the same way. On Linux a
 file keeps whether it can be run, a new one gets that by its name (`visionjk.x86_64`).
@@ -184,7 +240,10 @@ next start asks again. A download that breaks off changes no file.
 - `tools/build-game.sh` of the website repository writes the lists and the files into
   `site/downloads/update`, `tools/deploy.sh --check` looks whether they are true. From the moment a list is
   published, every release build that is started offers that version.
-- A version with a suffix (`0.1.0-rc1`) gets no list and never updates itself.
+- A version with a suffix other than `-dev.N` (`0.1.0-rc1`) gets no list and never updates itself.
+- A development build (`tools/build-game.sh 0.2.8-dev.1`) gets lists in `dev/` and `lists/` and leaves the
+  stable list alone. A release that is not older than the development build on the site makes the dev lists
+  copies of its own (see the README of the website repository).
 - `-DUpdateVersion=v0.0.1` makes a build take itself for that release, for a try against a server of one's
   own together with `-DUpdateURL=`. The address of a build may be `http://`, the one a player gives may not.
 - Windows, versions 0.1.1 and 0.1.2: their updater can not replace the asset pack (see "The swap"). A release
@@ -306,6 +365,16 @@ The tests before this did not find it because none of their releases changed a p
   loaded the one in `base` of the folder of the player, that one was renamed while the game had it loaded,
   and the start after it names that folder as having none and loads the one of the game. Windows asked its
   firewall question at the first start and nothing else.
+
+Channels, 2026-10-24:
+
+- Unit tests (`tests/vjk/update.cpp`): parsing, the order of versions (with the dev number and `UPD_STABLE`),
+  the version text, and lists that name a development version.
+- `tools/test/updater/e2e.sh` has three scenarios besides the old ones: `channel` (0.0.2 switches to dev and
+  gets 0.0.3-dev.1, the console warns), `back` (the development build on the stable channel goes back to 0.0.2
+  and its own file goes) and `devstable` (on the dev channel the release 0.0.3 comes over 0.0.3-dev.1).
+- `tools/test/all.sh` runs all release tests in parallel: smoke, sanitize, lint, and with `--updater` the
+  updater on Linux and Windows.
 
 Not checked:
 
