@@ -62,7 +62,7 @@ qboolean CG_CalcMuzzlePoint( int entityNum, vec3_t muzzle );		// cg_weapons.c
 #define FORCE_MSEC			300			// the looks of the Force powers come and go in that time
 #define FX_RIPPLES			8
 #define RIPPLE_MSEC			450			// the waves of a push or pull run out in that time
-#define RIPPLE_REACH		200.0f		// units
+#define RIPPLE_REACH		240.0f		// units the front of a push runs out
 #define FX_FLASHES			8
 #define FLASH_MSEC			260
 #define SMOKE_MSEC			90			// an emitter that smokes leaves a puff this often
@@ -106,6 +106,7 @@ typedef struct {
 typedef struct {
 	int			birth;					// 0: none
 	vec3_t		origin;
+	vec3_t		dir;					// the way the hands push, forward
 	qboolean	pull;
 } fxRipple_t;
 
@@ -140,6 +141,7 @@ static struct {
 	int					surfaceTime;	// when it came up out of it
 	float				muffle;			// what v_muffle was set to
 	float				tinnitus;		// and v_tinnitus
+	float				dream;			// and v_dreamReverb
 	float				rage, rageRecovery, absorb, protect, speed, sight;	// the Force looks, 0 to 1
 	fxRipple_t			ripples[FX_RIPPLES];
 	int					nextRipple;
@@ -174,6 +176,7 @@ void CG_ScreenFxInit( void ) {
 	// sound), and this one would take it for 0: the sound stayed dull until a menu was opened and closed.
 	trap->Cvar_Set( "v_muffle", "0" );
 	trap->Cvar_Set( "v_tinnitus", "0" );
+	trap->Cvar_Set( "v_dreamReverb", "0" );
 }
 
 static qboolean CG_ScreenFxOn( void ) {
@@ -536,8 +539,8 @@ static void CG_ScreenFxSmokes( void ) {
 CG_ScreenFxPlayer
 
 Once a frame for every player that is drawn. A push or a pull with the Force (his torso starts the animation of
-it, or starts it again: torsoFlip changes) sends waves through the air from his hands, a pull draws them in. The
-own one in first person starts in front of the eye, where the hand is seen. Mind trick plays the same animation;
+it, or starts it again: torsoFlip changes) sends a wave through the air from his hands the way they push, a pull
+draws it back to them. The own one in first person starts in front of the eye, where the hand is seen. Mind trick plays the same animation;
 only a push or pull sets PW_DISINT_4 (ForceThrow of the game), so the waves wait for that while it plays.
 =================
 */
@@ -570,12 +573,11 @@ void CG_ScreenFxPlayer( centity_t *cent ) {
 	ripple->birth = cg.time;
 	ripple->pull = (qboolean)( anim == BOTH_FORCEPULL || ( cent->currentState.powerups & ( 1 << PW_PULL ) ) );
 	if ( num == cg.snap->ps.clientNum && !cg.renderingThirdPerson ) {
-		VectorMA( cg.refdef.vieworg, 48.0f, cg.refdef.viewaxis[0], ripple->origin );
+		VectorCopy( cg.refdef.viewaxis[0], ripple->dir );
+		VectorMA( cg.refdef.vieworg, 32.0f, ripple->dir, ripple->origin );
 	} else {
-		vec3_t forward;
-
-		AngleVectors( cent->lerpAngles, forward, NULL, NULL );
-		VectorMA( cent->lerpOrigin, 32.0f, forward, ripple->origin );
+		AngleVectors( cent->lerpAngles, ripple->dir, NULL, NULL );
+		VectorMA( cent->lerpOrigin, 32.0f, ripple->dir, ripple->origin );
 		ripple->origin[2] += 20.0f;
 	}
 }
@@ -682,17 +684,24 @@ static void CG_ScreenFxRipples( void ) {
 		const fxRipple_t	*ripple = &sfx.ripples[i];
 		const float			t = ( cg.time - ripple->birth ) / (float)RIPPLE_MSEC;
 		screenFxSource_t	*src;
-		float				frac[2], depth, radius;
+		vec3_t				front;
+		float				frac[2], depth, radius, along;
 
-		if ( !ripple->birth || t < 0.0f || t >= 1.0f || !CG_ScreenFxProject( ripple->origin, frac, &depth ) ) {
+		if ( !ripple->birth || t < 0.0f || t >= 1.0f ) {
+			continue;
+		}
+		// The front runs from the hands the way they push and opens as a cone; a pull runs it the other way, from
+		// the far end back to the hands.
+		along = RIPPLE_REACH * ( ripple->pull ? ( 1.0f - t ) : ( 1.0f - ( 1.0f - t ) * ( 1.0f - t ) ) );
+		VectorMA( ripple->origin, along, ripple->dir, front );
+		if ( !CG_ScreenFxProject( front, frac, &depth ) ) {
 			continue;
 		}
 		src = CG_ScreenFxSource();
 		if ( !src ) {
 			return;
 		}
-		// a pull runs from the outside in
-		radius = 20.0f + RIPPLE_REACH * ( ripple->pull ? ( 1.0f - t ) : ( 1.0f - ( 1.0f - t ) * ( 1.0f - t ) ) );
+		radius = 12.0f + along * 0.45f;
 		src->kind = SCREENFX_RIPPLE;
 		VectorCopy2( frac, src->a );
 		src->radius = CG_ScreenFxSize( radius, depth );
@@ -798,15 +807,18 @@ static void CG_ScreenFxWater( void ) {
 =================
 CG_ScreenFxMuffle
 
-The one place that sets v_muffle and v_tinnitus (the engine dulls the sound of the game by the one and lets the ears
-ring by the other, S_MufflePaint and S_TinnitusPaint): the most of the menu in the level, being under water and an
-explosion close by. After the bang the ringing is loud at once and dies away slower than the dull sound.
+The one place that sets v_muffle, v_tinnitus and v_dreamReverb (the engine dulls the sound of the game by the first,
+lets the ears ring by the second and lets everything ring long as in a dream by the third: S_MufflePaint,
+S_TinnitusPaint, S_SpatialRenderDream with Steam Audio): the most of the menu in the level, being under water and an
+explosion close by; Force Sight dulls a little and dreams. After the bang the ringing is loud at once and dies away
+slower than the dull sound.
 =================
 */
 static void CG_ScreenFxMuffle( void ) {
 	float muffle = CG_Menu3DMuffle(), tinnitus = 0.0f;
 
 	muffle = Q_max( muffle, sfx.water * 0.85f );
+	muffle = Q_max( muffle, sfx.sight * 0.35f );
 	if ( sfx.deaf > 0.0f && cg.time >= sfx.deafTime && cg.time - sfx.deafTime < DEAF_MSEC ) {
 		const float left = 1.0f - ( cg.time - sfx.deafTime ) / (float)DEAF_MSEC;
 
@@ -821,6 +833,10 @@ static void CG_ScreenFxMuffle( void ) {
 	if ( fabsf( tinnitus - sfx.tinnitus ) > 0.02f || ( tinnitus != sfx.tinnitus && tinnitus == 0.0f ) ) {
 		sfx.tinnitus = tinnitus;
 		trap->Cvar_Set( "v_tinnitus", va( "%.2f", tinnitus ) );
+	}
+	if ( fabsf( sfx.sight - sfx.dream ) > 0.02f || ( sfx.sight != sfx.dream && ( sfx.sight == 0.0f || sfx.sight == 1.0f ) ) ) {
+		sfx.dream = sfx.sight;
+		trap->Cvar_Set( "v_dreamReverb", va( "%.2f", sfx.dream ) );
 	}
 }
 
@@ -894,7 +910,9 @@ void CG_ScreenFxScene( void ) {
 	float				split, pulse;
 	qboolean			any;
 
+	// what is heard comes with any renderer: under water, the Force (the hum of rage, the dream of Force Sight)
 	CG_ScreenFxWater();
+	CG_ScreenFxForce();
 	CG_ScreenFxMuffle();
 	pulse = CG_ScreenFxHeart();
 	if ( !CG_ScreenFxOn() ) {
@@ -907,7 +925,6 @@ void CG_ScreenFxScene( void ) {
 	CG_ScreenFxBlasts();
 	CG_ScreenFxRipples();
 	CG_ScreenFxFlashes();
-	CG_ScreenFxForce();
 	split = sfx.split * ( 1.0f - ( cg.time - sfx.splitTime ) / (float)SPLIT_MSEC );
 
 	memset( &fx, 0, sizeof( fx ) );
@@ -1003,6 +1020,8 @@ void CG_ScreenFxScene( void ) {
 		fx.vignetteArc[1] = cg.damageY;
 	}
 	fx.split = Q_max( 0.0f, split );
+	// the filter of the photo mode (photo/cg_photo.c)
+	CG_PhotoGrade( &fx );
 	any = (qboolean)( sfx.numSources || fx.split > 0.0f || fx.desaturate > 0.0f || fx.vignette[3] > 0.0f || fx.water > 0.0f
 		|| fx.drops > 0.0f || fx.radialBlur > 0.0f || fx.sight > 0.0f || fx.tint[3] > 0.0f || fx.rage > 0.0f || fx.protect > 0.0f
 		|| fx.absorb > 0.0f );

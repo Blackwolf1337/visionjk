@@ -123,6 +123,10 @@ TR = {
     'Scoreboard with Mouse': 'Scoreboard mit Maus',
     'Opens the scoreboard with the mouse free: a click on a row opens what you can do with that player.':
         'Öffnet das Scoreboard mit freier Maus: Ein Klick auf eine Zeile zeigt, was du mit dem Spieler tun kannst.',
+    'Photo': 'Foto',
+    'Photo Mode': 'Fotomodus',
+    'The camera circles you for a picture: mouse turns, wheel moves, right button takes it, Esc leaves.':
+        'Die Kamera kreist für ein Foto um dich: Maus dreht, Rad verschiebt, rechte Taste knipst, Esc beendet.',
     'Holsters': 'Holster',
 
     # display
@@ -376,6 +380,25 @@ TR = {
     'How far the camera is behind you in third person.': 'Wie weit die Kamera in der Außenansicht hinter dir ist.',
     'Crosshair Size': 'Fadenkreuzgröße',
     'Disruptor': 'Disruptor',
+    'Screen Effects': 'Bildschirmeffekte',
+    'Master switch for all screen effects. Only with the Vulkan renderer.': 'Hauptschalter für alle Bildschirmeffekte. Nur mit dem Vulkan-Renderer.',
+    'Explosion Waves': 'Explosionswellen',
+    'Explosions send a wave through the air that bends the picture. Close by, the colours split, the sound turns dull and your ears ring.': 'Explosionen schicken eine Welle durch die Luft, die das Bild verbiegt. In der Nähe spalten sich die Farben, der Ton wird dumpf und deine Ohren klingeln.',
+    'Heat Haze': 'Hitzeflimmern',
+    'The air shimmers over jetpack flames, the flamethrower and the barrel of your own repeater or blaster after a long burst, which also smokes.': 'Die Luft flimmert über Jetpack-Flammen, dem Flammenwerfer und dem Lauf deines Repetierers oder Blasters nach einer langen Salve, der dann auch raucht.',
+    'Hit Feedback': 'Trefferrückmeldung',
+    'A red edge shows on the side a hit comes from, and the colours split for a moment. Below 30 health the colours drain and a heartbeat plays.': 'Ein roter Rand zeigt die Seite, von der ein Treffer kommt, und die Farben spalten sich kurz. Unter 30 Leben verblassen die Farben und ein Herzschlag ertönt.',
+    'Under Water': 'Unter Wasser',
+    'Under water the picture sways, fades into the colour of the water and light plays on the floor. The sound is muffled. Drops run down the view after you surface.': 'Unter Wasser schwankt das Bild, nimmt die Farbe des Wassers an und Licht spielt auf dem Boden. Der Ton ist gedämpft. Nach dem Auftauchen laufen Tropfen über das Bild.',
+    'Force Looks': 'Macht-Optik',
+    'Looks for the Force powers. Rage: dark red tunnel, veins and a quiet hum. Protect: a dome of energy. Absorb: blue streams drawn in. Speed: blur towards the middle. Push and pull: a wave through the air. Force Sight: a spirit world with mist, players as smoking ghosts and a dreamlike sound.': 'Optik für die Machtkräfte. Wut: dunkelroter Tunnel, Adern und ein leises Summen. Schutz: eine Energiekuppel. Absorbieren: blaue Ströme, die eingesogen werden. Tempo: Unschärfe zur Mitte hin. Stoßen und Ziehen: eine Welle durch die Luft. Machtsicht: eine Geisterwelt mit Nebel, Spieler als rauchende Geister und ein traumhafter Klang.',
+    'Saber Clash and Heat': 'Klingenschlag und Hitze',
+    'Clashing blades flash. The air around a lit blade is hot.': 'Aufeinandertreffende Klingen blitzen auf. Die Luft um eine eingeschaltete Klinge ist heiß.',
+    'Binoculars and Rockets': 'Fernglas und Raketen',
+    'Binocular Lens': 'Fernglas-Linse',
+    'The binoculars look through a lens with mouse wheel zoom, the distance and a compass. Only with the Vulkan renderer.': 'Das Fernglas schaut durch eine Linse mit Mausrad-Zoom, der Entfernung und einem Kompass. Nur mit dem Vulkan-Renderer.',
+    'Rocket Lock-On': 'Raketen-Zielerfassung',
+    'The lock of the rocket launcher draws brackets that close in on the target and beeps higher with every step.': 'Die Zielerfassung des Raketenwerfers zeichnet Klammern, die sich auf das Ziel zuziehen, und piept mit jedem Schritt höher.',
     'Scope Lens': 'Zielfernrohr-Linse',
     'Zoom with Mouse Wheel': 'Zoom mit Mausrad',
     'Motion Tracker Speed': 'Tempo Bewegungsmelder',
@@ -530,6 +553,10 @@ TR = {
 # It asks for a text by its English (CG_VisionText() of cgame/hud/cg_hud.c makes the key from it as key_of() does
 # here), so none of these may need a number behind its key.
 CGAME = {
+    # the photo mode
+    'Picture saved to the screenshots folder.': 'Foto im Screenshot-Ordner gespeichert.',
+    'Mouse: turn. Wheel: distance. Left: focus. 1-5: filter. Right: photo. Esc: leave.':
+        'Maus: drehen. Rad: Abstand. Links: Fokus. 1-5: Filter. Rechts: Foto. Esc: zurück.',
     # the card of a player
     'Mute his voice': 'Stimme stummschalten',
     'Hear his voice again': 'Stimme wieder einschalten',

@@ -117,6 +117,14 @@ REFERENCE           OPENS_THE_SCOREBOARD_WITH_THE_MOUSE
 LANG_ENGLISH        "Opens the scoreboard with the mouse free: a click on a row opens what you can do with that player."
 LANG_FRENCH         "Ouvre le tableau des scores, souris libre : un clic sur une ligne montre ce que vous pouvez faire avec ce joueur."
 
+REFERENCE           PHOTO_MODE
+LANG_ENGLISH        "Photo Mode"
+LANG_FRENCH         "Mode photo"
+
+REFERENCE           THE_CAMERA_CIRCLES_YOU_FOR_A_PICTURE
+LANG_ENGLISH        "The camera circles you for a picture: mouse turns, wheel moves, right button takes it, Esc leaves."
+LANG_FRENCH         "La caméra tourne autour de vous pour une photo : la souris oriente, la molette éloigne ou rapproche, le clic droit prend la photo, Échap quitte."
+
 REFERENCE           THE_KEYS_YOU_MOVE_WITH
 LANG_ENGLISH        "The keys you move with."
 LANG_FRENCH         "Les touches de déplacement."
@@ -661,6 +669,62 @@ REFERENCE           THE_SIZE_OF_THE_CROSSHAIR
 LANG_ENGLISH        "The size of the crosshair."
 LANG_FRENCH         "La taille du viseur."
 
+REFERENCE           SCREEN_EFFECTS
+LANG_ENGLISH        "Screen Effects"
+LANG_FRENCH         "Effets d'écran"
+
+REFERENCE           MASTER_SWITCH_FOR_ALL_SCREEN_EFFECTS
+LANG_ENGLISH        "Master switch for all screen effects. Only with the Vulkan renderer."
+LANG_FRENCH         "Interrupteur principal de tous les effets d'écran. Uniquement avec le moteur Vulkan."
+
+REFERENCE           EXPLOSION_WAVES
+LANG_ENGLISH        "Explosion Waves"
+LANG_FRENCH         "Ondes d'explosion"
+
+REFERENCE           EXPLOSIONS_SEND_A_WAVE_THROUGH_THE_A
+LANG_ENGLISH        "Explosions send a wave through the air that bends the picture. Close by, the colours split, the sound turns dull and your ears ring."
+LANG_FRENCH         "Les explosions envoient une onde dans l'air qui déforme l'image. De près, les couleurs se séparent, le son devient sourd et vos oreilles sifflent."
+
+REFERENCE           HEAT_HAZE
+LANG_ENGLISH        "Heat Haze"
+LANG_FRENCH         "Mirage de chaleur"
+
+REFERENCE           THE_AIR_SHIMMERS_OVER_JETPACK_FLAMES
+LANG_ENGLISH        "The air shimmers over jetpack flames, the flamethrower and the barrel of your own repeater or blaster after a long burst, which also smokes."
+LANG_FRENCH         "L'air vibre au-dessus des flammes du jetpack, du lance-flammes et du canon de votre répéteur ou blaster après une longue rafale, qui fume aussi."
+
+REFERENCE           HIT_FEEDBACK
+LANG_ENGLISH        "Hit Feedback"
+LANG_FRENCH         "Retour de touche"
+
+REFERENCE           A_RED_EDGE_SHOWS_ON_THE_SIDE_A_HIT_C
+LANG_ENGLISH        "A red edge shows on the side a hit comes from, and the colours split for a moment. Below 30 health the colours drain and a heartbeat plays."
+LANG_FRENCH         "Un bord rouge montre le côté d'où vient un coup, et les couleurs se séparent un instant. Sous 30 de santé, les couleurs se ternissent et un battement de cœur retentit."
+
+REFERENCE           UNDER_WATER
+LANG_ENGLISH        "Under Water"
+LANG_FRENCH         "Sous l'eau"
+
+REFERENCE           UNDER_WATER_THE_PICTURE_SWAYS_FADES
+LANG_ENGLISH        "Under water the picture sways, fades into the colour of the water and light plays on the floor. The sound is muffled. Drops run down the view after you surface."
+LANG_FRENCH         "Sous l'eau, l'image ondule, prend la couleur de l'eau et la lumière danse sur le sol. Le son est étouffé. Des gouttes coulent sur la vue après la remontée."
+
+REFERENCE           FORCE_LOOKS
+LANG_ENGLISH        "Force Looks"
+LANG_FRENCH         "Aspects de la Force"
+
+REFERENCE           LOOKS_FOR_THE_FORCE_POWERS_RAGE_DARK
+LANG_ENGLISH        "Looks for the Force powers. Rage: dark red tunnel, veins and a quiet hum. Protect: a dome of energy. Absorb: blue streams drawn in. Speed: blur towards the middle. Push and pull: a wave through the air. Force Sight: a spirit world with mist, players as smoking ghosts and a dreamlike sound."
+LANG_FRENCH         "Aspects des pouvoirs de la Force. Rage : tunnel rouge sombre, veines et un léger bourdonnement. Protection : un dôme d'énergie. Absorption : des flux bleus aspirés. Vitesse : flou vers le centre. Poussée et attraction : une onde dans l'air. Vision de la Force : un monde spectral avec de la brume, des joueurs en fantômes fumants et un son onirique."
+
+REFERENCE           SABER_CLASH_AND_HEAT
+LANG_ENGLISH        "Saber Clash and Heat"
+LANG_FRENCH         "Choc et chaleur des sabres"
+
+REFERENCE           CLASHING_BLADES_FLASH_THE_AIR_AROUND
+LANG_ENGLISH        "Clashing blades flash. The air around a lit blade is hot."
+LANG_FRENCH         "Les lames qui s'entrechoquent jettent un éclair. L'air autour d'une lame allumée est brûlant."
+
 REFERENCE           DISRUPTOR
 LANG_ENGLISH        "Disruptor"
 LANG_FRENCH         "Disrupteur"
@@ -688,6 +752,26 @@ LANG_FRENCH         "Vitesse du détecteur"
 REFERENCE           THE_SPEED_A_PLAYER_NEEDS_BEFORE_THE
 LANG_ENGLISH        "The speed a player needs before the tracker of the disruptor scope picks him up."
 LANG_FRENCH         "La vitesse à partir de laquelle le détecteur de mouvement de la lunette du disrupteur repère un joueur."
+
+REFERENCE           BINOCULARS_AND_ROCKETS
+LANG_ENGLISH        "Binoculars and Rockets"
+LANG_FRENCH         "Jumelles et roquettes"
+
+REFERENCE           BINOCULAR_LENS
+LANG_ENGLISH        "Binocular Lens"
+LANG_FRENCH         "Lentille des jumelles"
+
+REFERENCE           THE_BINOCULARS_LOOK_THROUGH_A_LENS_W
+LANG_ENGLISH        "The binoculars look through a lens with mouse wheel zoom, the distance and a compass. Only with the Vulkan renderer."
+LANG_FRENCH         "Les jumelles regardent à travers une lentille avec zoom à la molette, la distance et une boussole. Uniquement avec le moteur Vulkan."
+
+REFERENCE           ROCKET_LOCK_ON
+LANG_ENGLISH        "Rocket Lock-On"
+LANG_FRENCH         "Verrouillage des roquettes"
+
+REFERENCE           THE_LOCK_OF_THE_ROCKET_LAUNCHER_DRAW
+LANG_ENGLISH        "The lock of the rocket launcher draws brackets that close in on the target and beeps higher with every step."
+LANG_FRENCH         "Le verrouillage du lance-roquettes dessine des crochets qui se resserrent sur la cible et bipe plus aigu à chaque étape."
 
 REFERENCE           PLAYERS
 LANG_ENGLISH        "Players"
@@ -1617,6 +1701,10 @@ REFERENCE           BLADE_STYLE
 LANG_ENGLISH        "Blade Style"
 LANG_FRENCH         "Style de lame"
 
+REFERENCE           PHOTO
+LANG_ENGLISH        "Photo"
+LANG_FRENCH         "#same"
+
 REFERENCE           YOUR_FORCE_POWERS
 LANG_ENGLISH        "Your force powers."
 LANG_FRENCH         "Vos pouvoirs de la Force."
@@ -1640,6 +1728,14 @@ LANG_FRENCH         "Côté obscur"
 REFERENCE           BOTH_SIDES
 LANG_ENGLISH        "Both Sides"
 LANG_FRENCH         "Les deux côtés"
+
+REFERENCE           PICTURE_SAVED_TO_THE_SCREENSHOTS_FOL
+LANG_ENGLISH        "Picture saved to the screenshots folder."
+LANG_FRENCH         "Photo enregistrée dans le dossier des captures."
+
+REFERENCE           MOUSE_TURN_WHEEL_DISTANCE_LEFT_FOCUS
+LANG_ENGLISH        "Mouse: turn. Wheel: distance. Left: focus. 1-5: filter. Right: photo. Esc: leave."
+LANG_FRENCH         "Souris : tourner. Molette : distance. Gauche : focus. 1-5 : filtre. Droit : photo. Échap : quitter."
 
 REFERENCE           PLAY_A_SONG
 LANG_ENGLISH        "Play a song ..."

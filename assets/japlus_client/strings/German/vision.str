@@ -117,6 +117,14 @@ REFERENCE           OPENS_THE_SCOREBOARD_WITH_THE_MOUSE
 LANG_ENGLISH        "Opens the scoreboard with the mouse free: a click on a row opens what you can do with that player."
 LANG_GERMAN         "Öffnet das Scoreboard mit freier Maus: Ein Klick auf eine Zeile zeigt, was du mit dem Spieler tun kannst."
 
+REFERENCE           PHOTO_MODE
+LANG_ENGLISH        "Photo Mode"
+LANG_GERMAN         "Fotomodus"
+
+REFERENCE           THE_CAMERA_CIRCLES_YOU_FOR_A_PICTURE
+LANG_ENGLISH        "The camera circles you for a picture: mouse turns, wheel moves, right button takes it, Esc leaves."
+LANG_GERMAN         "Die Kamera kreist für ein Foto um dich: Maus dreht, Rad verschiebt, rechte Taste knipst, Esc beendet."
+
 REFERENCE           THE_KEYS_YOU_MOVE_WITH
 LANG_ENGLISH        "The keys you move with."
 LANG_GERMAN         "Tasten für die Bewegung."
@@ -661,6 +669,62 @@ REFERENCE           THE_SIZE_OF_THE_CROSSHAIR
 LANG_ENGLISH        "The size of the crosshair."
 LANG_GERMAN         "Die Größe des Fadenkreuzes."
 
+REFERENCE           SCREEN_EFFECTS
+LANG_ENGLISH        "Screen Effects"
+LANG_GERMAN         "Bildschirmeffekte"
+
+REFERENCE           MASTER_SWITCH_FOR_ALL_SCREEN_EFFECTS
+LANG_ENGLISH        "Master switch for all screen effects. Only with the Vulkan renderer."
+LANG_GERMAN         "Hauptschalter für alle Bildschirmeffekte. Nur mit dem Vulkan-Renderer."
+
+REFERENCE           EXPLOSION_WAVES
+LANG_ENGLISH        "Explosion Waves"
+LANG_GERMAN         "Explosionswellen"
+
+REFERENCE           EXPLOSIONS_SEND_A_WAVE_THROUGH_THE_A
+LANG_ENGLISH        "Explosions send a wave through the air that bends the picture. Close by, the colours split, the sound turns dull and your ears ring."
+LANG_GERMAN         "Explosionen schicken eine Welle durch die Luft, die das Bild verbiegt. In der Nähe spalten sich die Farben, der Ton wird dumpf und deine Ohren klingeln."
+
+REFERENCE           HEAT_HAZE
+LANG_ENGLISH        "Heat Haze"
+LANG_GERMAN         "Hitzeflimmern"
+
+REFERENCE           THE_AIR_SHIMMERS_OVER_JETPACK_FLAMES
+LANG_ENGLISH        "The air shimmers over jetpack flames, the flamethrower and the barrel of your own repeater or blaster after a long burst, which also smokes."
+LANG_GERMAN         "Die Luft flimmert über Jetpack-Flammen, dem Flammenwerfer und dem Lauf deines Repetierers oder Blasters nach einer langen Salve, der dann auch raucht."
+
+REFERENCE           HIT_FEEDBACK
+LANG_ENGLISH        "Hit Feedback"
+LANG_GERMAN         "Trefferrückmeldung"
+
+REFERENCE           A_RED_EDGE_SHOWS_ON_THE_SIDE_A_HIT_C
+LANG_ENGLISH        "A red edge shows on the side a hit comes from, and the colours split for a moment. Below 30 health the colours drain and a heartbeat plays."
+LANG_GERMAN         "Ein roter Rand zeigt die Seite, von der ein Treffer kommt, und die Farben spalten sich kurz. Unter 30 Leben verblassen die Farben und ein Herzschlag ertönt."
+
+REFERENCE           UNDER_WATER
+LANG_ENGLISH        "Under Water"
+LANG_GERMAN         "Unter Wasser"
+
+REFERENCE           UNDER_WATER_THE_PICTURE_SWAYS_FADES
+LANG_ENGLISH        "Under water the picture sways, fades into the colour of the water and light plays on the floor. The sound is muffled. Drops run down the view after you surface."
+LANG_GERMAN         "Unter Wasser schwankt das Bild, nimmt die Farbe des Wassers an und Licht spielt auf dem Boden. Der Ton ist gedämpft. Nach dem Auftauchen laufen Tropfen über das Bild."
+
+REFERENCE           FORCE_LOOKS
+LANG_ENGLISH        "Force Looks"
+LANG_GERMAN         "Macht-Optik"
+
+REFERENCE           LOOKS_FOR_THE_FORCE_POWERS_RAGE_DARK
+LANG_ENGLISH        "Looks for the Force powers. Rage: dark red tunnel, veins and a quiet hum. Protect: a dome of energy. Absorb: blue streams drawn in. Speed: blur towards the middle. Push and pull: a wave through the air. Force Sight: a spirit world with mist, players as smoking ghosts and a dreamlike sound."
+LANG_GERMAN         "Optik für die Machtkräfte. Wut: dunkelroter Tunnel, Adern und ein leises Summen. Schutz: eine Energiekuppel. Absorbieren: blaue Ströme, die eingesogen werden. Tempo: Unschärfe zur Mitte hin. Stoßen und Ziehen: eine Welle durch die Luft. Machtsicht: eine Geisterwelt mit Nebel, Spieler als rauchende Geister und ein traumhafter Klang."
+
+REFERENCE           SABER_CLASH_AND_HEAT
+LANG_ENGLISH        "Saber Clash and Heat"
+LANG_GERMAN         "Klingenschlag und Hitze"
+
+REFERENCE           CLASHING_BLADES_FLASH_THE_AIR_AROUND
+LANG_ENGLISH        "Clashing blades flash. The air around a lit blade is hot."
+LANG_GERMAN         "Aufeinandertreffende Klingen blitzen auf. Die Luft um eine eingeschaltete Klinge ist heiß."
+
 REFERENCE           DISRUPTOR
 LANG_ENGLISH        "Disruptor"
 LANG_GERMAN         "#same"
@@ -688,6 +752,26 @@ LANG_GERMAN         "Tempo Bewegungsmelder"
 REFERENCE           THE_SPEED_A_PLAYER_NEEDS_BEFORE_THE
 LANG_ENGLISH        "The speed a player needs before the tracker of the disruptor scope picks him up."
 LANG_GERMAN         "Das Tempo, ab dem der Bewegungsmelder des Disruptor-Zielfernrohrs einen Spieler erfasst."
+
+REFERENCE           BINOCULARS_AND_ROCKETS
+LANG_ENGLISH        "Binoculars and Rockets"
+LANG_GERMAN         "Fernglas und Raketen"
+
+REFERENCE           BINOCULAR_LENS
+LANG_ENGLISH        "Binocular Lens"
+LANG_GERMAN         "Fernglas-Linse"
+
+REFERENCE           THE_BINOCULARS_LOOK_THROUGH_A_LENS_W
+LANG_ENGLISH        "The binoculars look through a lens with mouse wheel zoom, the distance and a compass. Only with the Vulkan renderer."
+LANG_GERMAN         "Das Fernglas schaut durch eine Linse mit Mausrad-Zoom, der Entfernung und einem Kompass. Nur mit dem Vulkan-Renderer."
+
+REFERENCE           ROCKET_LOCK_ON
+LANG_ENGLISH        "Rocket Lock-On"
+LANG_GERMAN         "Raketen-Zielerfassung"
+
+REFERENCE           THE_LOCK_OF_THE_ROCKET_LAUNCHER_DRAW
+LANG_ENGLISH        "The lock of the rocket launcher draws brackets that close in on the target and beeps higher with every step."
+LANG_GERMAN         "Die Zielerfassung des Raketenwerfers zeichnet Klammern, die sich auf das Ziel zuziehen, und piept mit jedem Schritt höher."
 
 REFERENCE           PLAYERS
 LANG_ENGLISH        "Players"
@@ -1617,6 +1701,10 @@ REFERENCE           BLADE_STYLE
 LANG_ENGLISH        "Blade Style"
 LANG_GERMAN         "Klingenstil"
 
+REFERENCE           PHOTO
+LANG_ENGLISH        "Photo"
+LANG_GERMAN         "Foto"
+
 REFERENCE           YOUR_FORCE_POWERS
 LANG_ENGLISH        "Your force powers."
 LANG_GERMAN         "Deine Machtkräfte."
@@ -1640,6 +1728,14 @@ LANG_GERMAN         "Dunkle Seite"
 REFERENCE           BOTH_SIDES
 LANG_ENGLISH        "Both Sides"
 LANG_GERMAN         "Beide Seiten"
+
+REFERENCE           PICTURE_SAVED_TO_THE_SCREENSHOTS_FOL
+LANG_ENGLISH        "Picture saved to the screenshots folder."
+LANG_GERMAN         "Foto im Screenshot-Ordner gespeichert."
+
+REFERENCE           MOUSE_TURN_WHEEL_DISTANCE_LEFT_FOCUS
+LANG_ENGLISH        "Mouse: turn. Wheel: distance. Left: focus. 1-5: filter. Right: photo. Esc: leave."
+LANG_GERMAN         "Maus: drehen. Rad: Abstand. Links: Fokus. 1-5: Filter. Rechts: Foto. Esc: zurück."
 
 REFERENCE           PLAY_A_SONG
 LANG_ENGLISH        "Play a song ..."

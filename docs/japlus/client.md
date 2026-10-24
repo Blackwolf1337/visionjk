@@ -979,6 +979,97 @@ lens, and the light of the mode under it.
 Built for Linux, Windows and the OpenGL ES device. Not run in the game in this form: neither the lens, the wheel,
 the tracker, its echoes, its ping nor the key was seen working.
 
+### Binoculars and rocket lock-on
+
+`cgame/scope/cg_scope.c`. Both use the scope pass or the HUD of the cgame, and both can be switched off.
+
+| Cvar | Default | Meaning |
+|------|---------|---------|
+| `v_binoculars` | 1 | 1 the binoculars (zoom mode 2) are drawn as two lenses through the scope pass, 0 the old binocular art. Saved |
+| `v_lockOn` | 1 | 1 the new lock of the rocket launcher, 0 the old circle. Saved |
+
+- Binoculars: two lenses are drawn through the scope pass (`SCOPEFX_BINOCULAR`). Once they have zoomed in by
+  themselves, the mouse wheel zooms from a field of view of 40 down to 5 degrees. The HUD shows the distance to
+  what the crosshair is on in metres, a compass strip and the zoom factor. With rd-vanilla or `v_binoculars 0` the
+  old binocular art stays.
+- Lock-on: brackets stand around the box of the target and close in step by step (8 steps). While it locks they are
+  amber, once it is locked they are red and pulse. Eight pips show the steps. Each step has a beep
+  (`sound/vision/lock_1.wav` to `lock_8.wav`) and the lock has `sound/vision/lock_on.wav`. At a vehicle and with
+  `v_lockOn 0` the old circle is drawn. It works with rd-vanilla, since the cgame draws all of it.
+
+Not run in the game in this form.
+
+### Screen effects
+
+`cgame/screenfx/cg_screenfx.c`, with the screen effect pass of rd-vulkan-vision (see "Screen effects" in
+[renderer.md](renderer.md)). Each frame the cgame collects the sources of the effects (a ring, a heat line, a puff of
+smoke, a ripple, a flash, a ghost) and the looks of the player (health, water, Force powers), and passes them to the
+renderer with `re->ext.SetScreenEffect` before `R_RenderScene`. The cgame gets it as `trap->ext.R_SetScreenEffect`,
+gated by the ROM cvar `v_cgameScreenFx`. rd-vanilla returns qfalse and the cgame keeps the old looks.
+
+| Cvar | Default | Meaning |
+|------|---------|---------|
+| `v_screenFx` | 1 | all screen effects. Saved |
+| `v_fxBlast` | 1 | the wave and the colour split of an explosion close by. Saved |
+| `v_fxHeat` | 1 | heat haze. Saved |
+| `v_fxHit` | 1 | the look of a hit, of low health and the heartbeat. Saved |
+| `v_fxWater` | 1 | the look under water and the drops after surfacing. Saved |
+| `v_fxForce` | 1 | the looks of the Force powers. Saved |
+| `v_fxSaber` | 1 | the flash where blades clash. Saved |
+| `v_cgameScreenFx` | 1 | set by the engine: it has the screen effect call (`re->ext.SetScreenEffect`). Read only |
+| `v_tinnitus` | 0 | engine, `CVAR_TEMP`, set by the cgame: 0 to 1, how strong the ringing is |
+| `v_dreamReverb` | 0 | engine, set by the cgame from Force Sight: 0 to 1, how strong the long reverb is |
+
+- Explosions: a wave runs out from a blast close by, the picture splits into colours at its edge, the sound is
+  muffled and the ears ring for a few seconds.
+- Heat: the air shimmers over the jetpack and the flamethrower. The barrel of the own repeater or blaster shimmers
+  and smokes after long fire. A lit blade has heat around it.
+- Hits: the edge of the picture shows the side the hit came from. At low health the picture drains of colour and a
+  heartbeat is heard (`sound/vision/heartbeat.wav`).
+- Water: under water the picture sways, has fog and caustics. After surfacing, drops run on the screen.
+- Force rage: a tunnel with veins at the edge and a hum (`sound/vision/rage_hum.wav`).
+- Force protect: an energy dome with refraction, and a ripple where it is hit.
+- Force absorb: streams run in toward the player.
+- Force speed: a radial blur.
+- Force push and pull: a wave along the direction of the push.
+- Force Sight: the spirit world. The picture is graded, a mist stands around the eye, and the players are ghosts
+  that smoke (shader `gfx/vision/ghost`). The smoke smears when the camera turns. The ghosts show through walls only
+  as far as the game already shows players through walls, from Force Sight level 2.
+- Saber clash: a bright flash where the blades meet.
+
+- Sound: `v_muffle` has one owner in the cgame now: the menu in the level, under water, a blast close by and Force
+  Sight set it. `v_tinnitus` makes `S_TinnitusPaint()` in the mixer (`client/snd_mix.cpp`) add a ringing of two
+  tones, 3700 and 3790 Hz, and lower the rest. `v_dreamReverb` adds a long parametric Steam Audio reverb, one per
+  ear, in `S_SpatialRenderDream()` (`client/spatial/snd_spatial_render.cpp`). The reverb works only with Steam
+  Audio (`v_spatial 1`).
+- Dynamic lights: the light of a dynamic light now uses the vertex normals and also lights a floor it is just under
+  (up to 12 units). That ended stripes on mp/ffa4 (`DynamicLight` in `shaders/generic.frag`, rd-vulkan-vision).
+- New files: `sound/vision/heartbeat.wav`, `rage_hum.wav`, `lock_1.wav` to `lock_8.wav` and `lock_on.wav`;
+  `gfx/vision/ghost_rim.tga`, `ghost_wisp.tga` and `ghost_smoke.tga`; the shader script
+  `shaders/vision_fx.shader`. The sounds and textures are made by scripts (generated audio and textures).
+
+Not run in the game in this form.
+
+### Photo mode
+
+`cgame/photo/cg_photo.c`. The console command `v_photo` turns it on and off. The same command is the button PHOTO in the bar of the menu in the level (the menu closes first) and the key row "Photo Mode" under Controls, Extras. It is client only and works on any server.
+
+The HUD is hidden and the camera circles the own player, held off the walls like the camera of the third person view. It leaves by itself when the player dies, goes spectator or a menu opens.
+
+| Input | What it does |
+|-------|--------------|
+| mouse | turns the camera around the player |
+| wheel | moves the camera nearer or farther |
+| left button | sets the depth of field focus on what is in the middle of the view |
+| middle button | clears the focus |
+| 1 to 5 | colour filter: 1 black and white, 2 warm, 3 cold, 4 old photo, 5 dream. 0 is none |
+| right button or Enter | takes the picture |
+| Esc | leaves |
+
+The picture is a PNG in the screenshots folder of the game, without the hint line at the bottom of the screen. A line says so for two seconds. The depth of field needs rd-vulkan-vision, with rd-vanilla the left button does nothing. The texts are in the CGAME table of `tools/menus/texts.py`.
+
+Not run in the game in this form.
+
 ### Admin login with a key
 
 `cgame/auth/cg_auth.c`, `cgame/auth/cg_auth_agent.c` (2026-10-11), the server part is in [server.md](server.md).

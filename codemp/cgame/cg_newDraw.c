@@ -749,6 +749,11 @@ void CG_OwnerDraw(float x, float y, float w, float h, float text_x, float text_y
 void CG_MouseEvent(int x, int y) {
 	int n;
 
+	// the photo mode turns its camera (photo/cg_photo.c)
+	if ( CG_PhotoMouseEvent( x, y ) ) {
+		return;
+	}
+
 	/*
 	if ( (cg.predictedPlayerState.pm_type == PM_NORMAL || cg.predictedPlayerState.pm_type == PM_JETPACK || cg.predictedPlayerState.pm_type == PM_FLOAT || cg.predictedPlayerState.pm_type == PM_SPECTATOR) && cg.showScores == qfalse) {
 		trap->Key_SetCatcher(0);
@@ -832,6 +837,11 @@ void CG_EventHandling(int type) {
 
 
 void CG_KeyEvent(int key, qboolean down) {
+
+	// the photo mode takes every key while it is on (photo/cg_photo.c)
+	if ( CG_PhotoKeyEvent( key, down ) ) {
+		return;
+	}
 
 	// a click on a player or on his card while the mouse is free (select/cg_select.c)
 	if ( CG_SelectKeyEvent( key, down ) ) {

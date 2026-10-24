@@ -310,15 +310,82 @@ void S_SpatialResetReverb( void ) {
 		qiplReflectionEffectReset( spatial.reflects[i].effect );
 		spatial.reflects[i].ringing = qfalse;
 	}
+	for ( int i = 0; i < 2; i++ ) {
+		if ( spatial.dreamEffect[i] ) {
+			qiplReflectionEffectReset( spatial.dreamEffect[i] );
+		}
+	}
+	spatial.dreamMix = 0.0f;
+	spatial.dreamTail = 0;
 	if ( spatial.reflectMixer ) {
 		qiplReflectionMixerReset( spatial.reflectMixer );
 	}
 }
 
+/*
+===============
+S_SpatialRenderDream
+
+v_dreamReverb, 0 to 1, from the cgame while Force Sight is on: every sound rings long and dark as in a dream or
+another world. Every sound (in, a block from the time c, also those with reflections of their own) goes into an
+artificial reverb for each ear, the two a little apart, so it is wide. Its lows ring longest, its highs die first. How much
+goes in moves towards v_dreamReverb over a third of a second, and what went in rings on after it is 0.
+===============
+*/
+#define DREAM_FADE			0.3f		// seconds to go from no dream to all of it
+#define DREAM_TAIL			10.0f		// seconds it rings after nothing more goes in
+#define DREAM_GAIN			2.2f		// of what goes in, against the reverb of the room
+
+static void S_SpatialRenderDream( int c, const float *in ) {
+	// seconds the low, middle and high band take to fall by 60 dB, for the left and the right ear
+	static const float	times[2][IPL_NUM_BANDS] = { { 8.0f, 6.4f, 3.6f }, { 8.7f, 7.0f, 4.0f } };
+	static float		feed[SPATIAL_FRAME], ears[2][SPATIAL_FRAME];
+	const float			step = SPATIAL_FRAME / ( DREAM_FADE * spatial.audio.samplingRate );
+	const float			from = spatial.dreamMix;
+	float				*feedData = feed;
+	float				volume;
+
+	if ( !spatial.dreamEffect[0] || !spatial.dreamEffect[1] ) {
+		return;
+	}
+	spatial.dreamMix += Com_Clamp( -step, step, Com_Clamp( 0.0f, 1.0f, v_dreamReverb->value ) - spatial.dreamMix );
+	if ( from > 0.0f || spatial.dreamMix > 0.0f ) {
+		spatial.dreamTail = (int)( DREAM_TAIL * spatial.audio.samplingRate );
+	} else if ( spatial.dreamTail > 0 ) {
+		spatial.dreamTail -= SPATIAL_FRAME;
+		if ( spatial.dreamTail <= 0 ) {
+			qiplReflectionEffectReset( spatial.dreamEffect[0] );
+			qiplReflectionEffectReset( spatial.dreamEffect[1] );
+			return;
+		}
+	} else {
+		return;
+	}
+	for ( int k = 0; k < SPATIAL_FRAME; k++ ) {
+		feed[k] = in[k] * ( from + ( spatial.dreamMix - from ) * k * ( 1.0f / SPATIAL_FRAME ) );
+	}
+	for ( int i = 0; i < 2; i++ ) {
+		float *earData = ears[i];
+		IPLAudioBuffer inBuffer = { 1, SPATIAL_FRAME, &feedData };
+		IPLAudioBuffer outBuffer = { 1, SPATIAL_FRAME, &earData };
+		IPLReflectionEffectParams params;
+
+		memset( &params, 0, sizeof( params ) );
+		params.type = IPL_REFLECTIONEFFECTTYPE_PARAMETRIC;
+		params.numChannels = 1;
+		for ( int b = 0; b < IPL_NUM_BANDS; b++ ) {
+			params.reverbTimes[b] = times[i][b];
+		}
+		qiplReflectionEffectApply( spatial.dreamEffect[i], &params, &inBuffer, &outBuffer, NULL );
+	}
+	volume = DREAM_GAIN * ( v_spatialHrtf->integer ? SPATIAL_GAIN_HRTF : SPATIAL_GAIN_PANNING ) * ( 32768.0f * 256.0f );
+	S_SpatialRingAdd( c, ears[0], ears[1], volume, volume, &spatial.reverbEnergy );
+}
+
 // one block of the reverb from the time c into the ring, with the reflections of the sounds that have their own
 static void S_SpatialRenderReverb( int c ) {
 	static float in[SPATIAL_FRAME], ambisonics[SPATIAL_REVERB_CHANNELS][SPATIAL_FRAME], left[SPATIAL_FRAME], right[SPATIAL_FRAME];
-	static float own[SPATIAL_FRAME], scratch[SPATIAL_REVERB_CHANNELS][SPATIAL_FRAME], mixed[SPATIAL_REVERB_CHANNELS][SPATIAL_FRAME];
+	static float all[SPATIAL_FRAME], own[SPATIAL_FRAME], scratch[SPATIAL_REVERB_CHANNELS][SPATIAL_FRAME], mixed[SPATIAL_REVERB_CHANNELS][SPATIAL_FRAME];
 	float *inData = in, *ownData = own, *ambisonicsData[SPATIAL_REVERB_CHANNELS], *stereoData[2] = { left, right };
 	float *scratchData[SPATIAL_REVERB_CHANNELS], *mixedData[SPATIAL_REVERB_CHANNELS];
 	IPLAudioBuffer inBuffer = { 1, SPATIAL_FRAME, &inData };
@@ -344,6 +411,7 @@ static void S_SpatialRenderReverb( int c ) {
 	// blocks late (up to v_spatialAhead), which a room does to a sound anyway. A voice with reflections of its
 	// own gives its block to their convolution, which adds it into the mixer of them.
 	memset( in, 0, sizeof( in ) );
+	memset( all, 0, sizeof( all ) );
 	for ( int i = 0; i < SPATIAL_VOICES; i++ ) {
 		spatialVoice_t *v = &spatial.voices[i];
 		float mixFrom, mixTo;
@@ -369,6 +437,7 @@ static void S_SpatialRenderReverb( int c ) {
 			const float mix = mixFrom + ( mixTo - mixFrom ) * k * ( 1.0f / SPATIAL_FRAME );
 
 			in[k] += v->dry[( v->dryRead + k ) & ( SPATIAL_DRY - 1 )] * ( 1.0f - mix );
+			all[k] += v->dry[( v->dryRead + k ) & ( SPATIAL_DRY - 1 )];
 		}
 		if ( outputs.reflections.ir ) {
 			memset( own, 0, sizeof( own ) );
@@ -390,6 +459,8 @@ static void S_SpatialRenderReverb( int c ) {
 			r->ringing = qfalse;
 		}
 	}
+
+	S_SpatialRenderDream( c, all );
 
 	// the room where the listener stands, of what the last finished pass found. Before the first one there is
 	// nothing to ring.

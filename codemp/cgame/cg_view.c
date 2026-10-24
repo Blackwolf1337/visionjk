@@ -2650,12 +2650,19 @@ void CG_DrawActiveFrame( int serverTime, stereoFrame_t stereoView, qboolean demo
 		cg.renderingThirdPerson = 0;
 	}
 
+	// the photo mode: the camera circles the player (photo/cg_photo.c)
+	if ( CG_PhotoFrame() )
+	{
+		cg.renderingThirdPerson = 1;
+	}
+
 	// the zoom of the wheel and the motion view of the disruptor (scope/cg_scope.c), before the fov is worked out
 	CG_ScopeFrame();
 
 	// build cg.refdef
 	inwater = CG_CalcViewValues();
 	CG_Menu3DView();
+	CG_PhotoView();
 	CG_SetupFrustum();
 
 	if (cg_linearFogOverride)

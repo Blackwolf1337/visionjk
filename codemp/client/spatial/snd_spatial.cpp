@@ -67,6 +67,7 @@ cvar_t	*v_spatialHrtf;
 cvar_t	*v_spatialAhead;
 cvar_t	*v_spatialReflections;
 cvar_t	*v_spatialReverb;
+cvar_t	*v_dreamReverb;
 cvar_t	*v_spatialRays;
 cvar_t	*v_spatialBounces;
 cvar_t	*v_spatialPaths;
@@ -181,6 +182,11 @@ static void S_SpatialRelease( void ) {
 		if ( spatial.reverbEffect ) {
 			qiplReflectionEffectRelease( &spatial.reverbEffect );
 		}
+		for ( int i = 0; i < 2; i++ ) {
+			if ( spatial.dreamEffect[i] ) {
+				qiplReflectionEffectRelease( &spatial.dreamEffect[i] );
+			}
+		}
 		if ( spatial.reverbSource ) {
 			qiplSourceRelease( &spatial.reverbSource );
 		}
@@ -239,7 +245,7 @@ static qboolean S_SpatialCreateVoices( void ) {
 	IPLDirectEffectSettings directSettings;
 	IPLBinauralEffectSettings binauralSettings;
 	IPLPanningEffectSettings panningSettings;
-	IPLReflectionEffectSettings reflectionSettings;
+	IPLReflectionEffectSettings reflectionSettings, dreamSettings;
 	IPLAmbisonicsDecodeEffectSettings decodeSettings;
 	IPLPathEffectSettings pathSettings;
 
@@ -321,6 +327,19 @@ static qboolean S_SpatialCreateVoices( void ) {
 	}
 	qiplSourceAdd( spatial.reverbSource, spatial.simulator );
 
+	// the reverb of a dream: an artificial one (feedback delay networks), one for each ear. Settings of its own:
+	// the effects of the sounds below take the ones of the room.
+	memset( &dreamSettings, 0, sizeof( dreamSettings ) );
+	dreamSettings.type = IPL_REFLECTIONEFFECTTYPE_PARAMETRIC;
+	dreamSettings.irSize = reflectionSettings.irSize;
+	dreamSettings.numChannels = 1;
+	for ( int i = 0; i < 2; i++ ) {
+		if ( qiplReflectionEffectCreate( spatial.context, &spatial.audio, &dreamSettings, &spatial.dreamEffect[i] ) != IPL_STATUS_SUCCESS ) {
+			spatial.dreamEffect[i] = NULL;
+			return qfalse;
+		}
+	}
+
 	// the sounds with reflections of their own: their sources, their convolutions, and what adds them up
 	for ( int i = 0; i < spatial.numReflectSlots; i++ ) {
 		spatialReflect_t *r = &spatial.reflects[i];
@@ -367,6 +386,7 @@ void S_SpatialInit( void ) {
 	v_spatialAhead = Cvar_Get( "v_spatialAhead", "0.1", CVAR_ARCHIVE, "v_spatial: most seconds of sound rendered ahead, up to 0.5. Below that it follows the frame time: less follows a turn of the head sooner, more survives a longer hitch" );
 	v_spatialReflections = Cvar_Get( "v_spatialReflections", "1", CVAR_ARCHIVE, "v_spatial: 1 the room around the listener rings, worked out with rays. 0 no reverb" );
 	v_spatialReverb = Cvar_Get( "v_spatialReverb", "1", CVAR_ARCHIVE, "v_spatial: how loud the reverb is" );
+	v_dreamReverb = Cvar_Get( "v_dreamReverb", "0", CVAR_TEMP, "v_spatial: 0 to 1, a long reverb as in a dream, set by the cgame while Force Sight is on" );
 	v_spatialRays = Cvar_Get( "v_spatialRays", SPATIAL_DEFAULT_RAYS, CVAR_ARCHIVE, "v_spatial: rays of a pass of the reflections, 256 to 8192. From the next snd_restart on" );
 #ifdef __EMSCRIPTEN__
 	v_spatialPaths = Cvar_Get( "v_spatialPaths", "1", CVAR_ARCHIVE, "v_spatial: 1 a sound comes round corners. Worked out once per level while it loads, in a browser not for a large level" );

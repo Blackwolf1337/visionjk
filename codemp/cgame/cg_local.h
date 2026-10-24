@@ -1790,6 +1790,16 @@ qboolean	CG_ScopeKeyCommand( const char *command );
 void		CG_ScopeDrawBinoculars( void );
 void		CG_ScopeDrawLockOn( centity_t *target, int step, qboolean newStep );
 
+// photo/cg_photo.c: the photo mode
+void		CG_Photo_f( void );
+qboolean	CG_PhotoActive( void );
+qboolean	CG_PhotoFrame( void );
+void		CG_PhotoView( void );
+void		CG_PhotoGrade( screenEffect_t *fx );
+qboolean	CG_PhotoMouseEvent( int x, int y );
+qboolean	CG_PhotoKeyEvent( int key, qboolean down );
+void		CG_PhotoDraw2D( void );
+
 // screenfx/cg_screenfx.c: the renderer bends and colours the view of the level
 void		CG_ScreenFxInit( void );
 void		CG_ScreenFxScene( void );

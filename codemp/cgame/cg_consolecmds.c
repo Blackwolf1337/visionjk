@@ -380,6 +380,7 @@ static consoleCommand_t	commands[] = {
 	{ "reloadReplier",				CG_JPReloadReplier_f },
 	{ "v_scores_pick",				CG_ScoresPick_f },
 	{ "v_scopezoom",				CG_ScopeZoom_f },
+	{ "v_photo",					CG_Photo_f },
 	{ "showPlayerID",				CG_JPShowPlayerID_f },
 	{ "siegeCompleteCvarUpdate",	CG_SiegeCompleteCvarUpdate_f },
 	{ "siegeCvarUpdate",			CG_SiegeCvarUpdate_f },

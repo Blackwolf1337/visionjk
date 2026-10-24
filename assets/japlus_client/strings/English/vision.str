@@ -89,6 +89,12 @@ LANG_ENGLISH        "Scoreboard with Mouse"
 REFERENCE           OPENS_THE_SCOREBOARD_WITH_THE_MOUSE
 LANG_ENGLISH        "Opens the scoreboard with the mouse free: a click on a row opens what you can do with that player."
 
+REFERENCE           PHOTO_MODE
+LANG_ENGLISH        "Photo Mode"
+
+REFERENCE           THE_CAMERA_CIRCLES_YOU_FOR_A_PICTURE
+LANG_ENGLISH        "The camera circles you for a picture: mouse turns, wheel moves, right button takes it, Esc leaves."
+
 REFERENCE           THE_KEYS_YOU_MOVE_WITH
 LANG_ENGLISH        "The keys you move with."
 
@@ -497,6 +503,48 @@ LANG_ENGLISH        "Crosshair Size"
 REFERENCE           THE_SIZE_OF_THE_CROSSHAIR
 LANG_ENGLISH        "The size of the crosshair."
 
+REFERENCE           SCREEN_EFFECTS
+LANG_ENGLISH        "Screen Effects"
+
+REFERENCE           MASTER_SWITCH_FOR_ALL_SCREEN_EFFECTS
+LANG_ENGLISH        "Master switch for all screen effects. Only with the Vulkan renderer."
+
+REFERENCE           EXPLOSION_WAVES
+LANG_ENGLISH        "Explosion Waves"
+
+REFERENCE           EXPLOSIONS_SEND_A_WAVE_THROUGH_THE_A
+LANG_ENGLISH        "Explosions send a wave through the air that bends the picture. Close by, the colours split, the sound turns dull and your ears ring."
+
+REFERENCE           HEAT_HAZE
+LANG_ENGLISH        "Heat Haze"
+
+REFERENCE           THE_AIR_SHIMMERS_OVER_JETPACK_FLAMES
+LANG_ENGLISH        "The air shimmers over jetpack flames, the flamethrower and the barrel of your own repeater or blaster after a long burst, which also smokes."
+
+REFERENCE           HIT_FEEDBACK
+LANG_ENGLISH        "Hit Feedback"
+
+REFERENCE           A_RED_EDGE_SHOWS_ON_THE_SIDE_A_HIT_C
+LANG_ENGLISH        "A red edge shows on the side a hit comes from, and the colours split for a moment. Below 30 health the colours drain and a heartbeat plays."
+
+REFERENCE           UNDER_WATER
+LANG_ENGLISH        "Under Water"
+
+REFERENCE           UNDER_WATER_THE_PICTURE_SWAYS_FADES
+LANG_ENGLISH        "Under water the picture sways, fades into the colour of the water and light plays on the floor. The sound is muffled. Drops run down the view after you surface."
+
+REFERENCE           FORCE_LOOKS
+LANG_ENGLISH        "Force Looks"
+
+REFERENCE           LOOKS_FOR_THE_FORCE_POWERS_RAGE_DARK
+LANG_ENGLISH        "Looks for the Force powers. Rage: dark red tunnel, veins and a quiet hum. Protect: a dome of energy. Absorb: blue streams drawn in. Speed: blur towards the middle. Push and pull: a wave through the air. Force Sight: a spirit world with mist, players as smoking ghosts and a dreamlike sound."
+
+REFERENCE           SABER_CLASH_AND_HEAT
+LANG_ENGLISH        "Saber Clash and Heat"
+
+REFERENCE           CLASHING_BLADES_FLASH_THE_AIR_AROUND
+LANG_ENGLISH        "Clashing blades flash. The air around a lit blade is hot."
+
 REFERENCE           DISRUPTOR
 LANG_ENGLISH        "Disruptor"
 
@@ -517,6 +565,21 @@ LANG_ENGLISH        "Motion Tracker Speed"
 
 REFERENCE           THE_SPEED_A_PLAYER_NEEDS_BEFORE_THE
 LANG_ENGLISH        "The speed a player needs before the tracker of the disruptor scope picks him up."
+
+REFERENCE           BINOCULARS_AND_ROCKETS
+LANG_ENGLISH        "Binoculars and Rockets"
+
+REFERENCE           BINOCULAR_LENS
+LANG_ENGLISH        "Binocular Lens"
+
+REFERENCE           THE_BINOCULARS_LOOK_THROUGH_A_LENS_W
+LANG_ENGLISH        "The binoculars look through a lens with mouse wheel zoom, the distance and a compass. Only with the Vulkan renderer."
+
+REFERENCE           ROCKET_LOCK_ON
+LANG_ENGLISH        "Rocket Lock-On"
+
+REFERENCE           THE_LOCK_OF_THE_ROCKET_LAUNCHER_DRAW
+LANG_ENGLISH        "The lock of the rocket launcher draws brackets that close in on the target and beeps higher with every step."
 
 REFERENCE           PLAYERS
 LANG_ENGLISH        "Players"
@@ -1214,6 +1277,9 @@ LANG_ENGLISH        "Fixed Color"
 REFERENCE           BLADE_STYLE
 LANG_ENGLISH        "Blade Style"
 
+REFERENCE           PHOTO
+LANG_ENGLISH        "Photo"
+
 REFERENCE           YOUR_FORCE_POWERS
 LANG_ENGLISH        "Your force powers."
 
@@ -1231,6 +1297,12 @@ LANG_ENGLISH        "Dark Side"
 
 REFERENCE           BOTH_SIDES
 LANG_ENGLISH        "Both Sides"
+
+REFERENCE           PICTURE_SAVED_TO_THE_SCREENSHOTS_FOL
+LANG_ENGLISH        "Picture saved to the screenshots folder."
+
+REFERENCE           MOUSE_TURN_WHEEL_DISTANCE_LEFT_FOCUS
+LANG_ENGLISH        "Mouse: turn. Wheel: distance. Left: focus. 1-5: filter. Right: photo. Esc: leave."
 
 REFERENCE           PLAY_A_SONG
 LANG_ENGLISH        "Play a song ..."

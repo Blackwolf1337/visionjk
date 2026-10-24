@@ -518,11 +518,24 @@ def ingame_bar(m):
         item('vision_bar_line', (0, 26, 640, 0.67), ('style', 'WINDOW_STYLE_FILLED'), ('backcolor', *(ACCENT[:3] + ['0.22'])),
              ('wide', 1), ('decoration',)),
     ]
+    # the photo mode (v_photo, codemp/cgame/photo/cg_photo.c) after Setup. The menu closes first, so the keys are
+    # free when the cgame takes them.
+    setup = next(e for e in items(m) if name_of(e.block) == 'setup')
+    photo = item('photo', rect_of(setup.block), ('text', texts.ref('Photo')), ('type', 'ITEM_TYPE_BUTTON'))
+    photo.block.append(Entry('action', [], options.CLICK + [mf.NL, 'close', 'all', ';', mf.NL, 'exec', '"v_photo"', ';']))
+    m.insert(m.index(setup) + 1, photo)
+    # the buttons in one row across the bar, one place more than the old menu had. Buttons that stood in the same
+    # place (the menu shows one or the other) stay together.
+    places = sorted({rect_of(e.block)[0] for e in items(m) if e is not photo and rect_of(e.block)
+                     and mf.get(e.block, 'text') is not None})
+    left, right = places[0], places[-1] + rect_of(setup.block)[2]
+    places.insert(places.index(rect_of(setup.block)[0]) + 1, 'photo')
+    width = (right - left) / len(places)
     for e in items(m):
         b = e.block
         r = rect_of(b)
         if r and mf.get(b, 'text') is not None:
-            set_rect(b, r[0], 0, r[2], 26)
+            set_rect(b, left + places.index('photo' if e is photo else r[0]) * width, 0, width, 26)
             text_center(b, 0.58, 7)
             mf.put(b, 'caps', 1)
             mf.put(b, 'style', 'WINDOW_STYLE_EMPTY')

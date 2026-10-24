@@ -261,6 +261,13 @@ set(MPCGameScreenFxFiles
 source_group("cgame/screenfx" FILES ${MPCGameScreenFxFiles})
 set(MPCGameFiles ${MPCGameFiles} ${MPCGameScreenFxFiles})
 
+# the photo mode
+set(MPCGamePhotoFiles
+	"${MPDir}/cgame/photo/cg_photo.c"
+	)
+source_group("cgame/photo" FILES ${MPCGamePhotoFiles})
+set(MPCGameFiles ${MPCGameFiles} ${MPCGamePhotoFiles})
+
 # the menu in the level: shoulder camera, panel, blur and muffled sound while a menu is open
 set(MPCGameMenu3DFiles
 	"${MPDir}/cgame/menu3d/cg_menu3d.c"

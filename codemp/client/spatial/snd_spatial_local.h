@@ -466,6 +466,7 @@ extern cvar_t	*v_spatialHrtf;
 extern cvar_t	*v_spatialAhead;
 extern cvar_t	*v_spatialReflections;
 extern cvar_t	*v_spatialReverb;
+extern cvar_t	*v_dreamReverb;
 extern cvar_t	*v_spatialRays;
 extern cvar_t	*v_spatialBounces;
 extern cvar_t	*v_spatialPaths;
@@ -526,6 +527,9 @@ typedef struct {
 	IPLSource					reverbSource;		// stands where the listener stands
 	IPLReflectionEffect			reverbEffect;
 	IPLAmbisonicsDecodeEffect	reverbDecode;
+	IPLReflectionEffect			dreamEffect[2];		// the reverb of a dream for each ear (v_dreamReverb, S_SpatialRenderDream)
+	float						dreamMix;			// how much goes into it, 0 to 1, at the end of the last block
+	int							dreamTail;			// samples it still rings after nothing more went in
 	int							reverbRendered;		// up to which sample of the mixer's time the reverb is in the ring
 	SDL_Thread					*worker;
 	SDL_sem						*workerWake;

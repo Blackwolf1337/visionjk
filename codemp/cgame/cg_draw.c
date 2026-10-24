@@ -8095,6 +8095,12 @@ static void CG_Draw2D( void ) {
 		return;
 	}
 
+	// the photo mode has no HUD, only a line of what its keys do (photo/cg_photo.c)
+	if ( CG_PhotoActive() ) {
+		CG_PhotoDraw2D();
+		return;
+	}
+
 	if ( cg.snap->ps.pm_type == PM_INTERMISSION ) {
 		CG_DrawIntermission();
 		CG_ChatDraw();

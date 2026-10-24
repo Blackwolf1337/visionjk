@@ -480,6 +480,31 @@ scope"). The brackets of the tracker are drawn in 2D by the cgame; the tint and 
 Checked: built for Linux, Windows and the OpenGL ES device. Not run in the game in this form, so no picture of the
 lens, the reticle, the mask, the boxes or the echoes was looked at, on neither device and not under the validation layer.
 
+## Screen effects
+
+The effects on the picture of the level, in both devices (`vk_post.cpp`, `vk_cmd.cpp`, `vk_pipeline.cpp`,
+`vk_texture.cpp`, `shaders/screenfx*.frag`, `shaders/noise.glsl`). The cgame asks for them once a frame with
+`re->ext.SetScreenEffect(const screenEffect_t *)` (`rd-common/tr_types.h`), gated by the ROM cvar `v_cgameScreenFx`
+that the engine sets. rd-vanilla returns qfalse and the cgame keeps the old looks ([client.md](client.md), "Screen
+effects").
+
+- Order: `VK_ScreenFx()` runs after the bloom and before the scope, for the view of the level only.
+- Prep: `shaders/screenfxprep.frag` writes the distance of every pixel (log2, in two 8 bit channels) and the edges into
+  `vk.soft[0]`, at half the size.
+- Fog: while Force Sight is on, `shaders/screenfxfog.frag` marches the mist into `vk.soft[1]`.
+- Smoke: `shaders/screenfxsmoke.frag` carries the smoke of the ghosts from frame to frame in two persistent targets
+  at half the size, `vk.smoke[2]`. The descriptor pool has two sets more for them.
+- Final pass: the frame is copied into `vk.screen` and `shaders/screenfx.frag` draws it again with the sources (ring,
+  heat line, smoke, ripple, flash and the ghost smoke kinds), the grade, the vignette, the water, the drops and the
+  looks of the Force powers.
+- Parameters: 160 `vec4` in the frame globals (`vkGlobals_t::screenFx`) on Vulkan, the uniform `u_parm[160]` on the
+  OpenGL ES device.
+- Walls: a source is dropped where the level is nearer than it, so an effect does not show through a wall. The
+  ghosts of Force Sight are the exception: the game already shows them through walls from Force Sight level 2.
+- Noise: `shaders/noise.glsl` is shared by the three shaders. It is gradient noise on the `pcg3d` integer hash.
+
+Checked: built for Linux, Windows and the OpenGL ES device. Not run in the game in this form.
+
 ## Not done
 
 The Windows DLL builds with mingw-w64 for 64 bit and imports nothing but the C runtime, kernel32 and
