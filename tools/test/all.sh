@@ -11,8 +11,9 @@
 #                  changed
 #   --full         both
 #
-# Always: smoke-test.sh, sanitize-test.sh (with the unit tests and valgrind) and lint.sh. The output of each is in
-# build-test/all/<test>.log, this prints their PASS and FAIL lines. Exit code 0 when every test passed.
+# Always: smoke-test.sh, sanitize-test.sh (with the unit tests and valgrind), lint.sh, and tools/test-site.sh of the
+# website repository (what build-game.sh puts into the site for a release and a development build). The output of
+# each is in build-test/all/<test>.log, this prints their PASS and FAIL lines. Exit code 0 when every test passed.
 set -euo pipefail
 
 # shellcheck source=tools/test/test-env.sh
@@ -21,7 +22,7 @@ set -euo pipefail
 ALL=$WORK/all
 
 usage() {
-	sed -n '2,15s/^# \{0,1\}//p' "${BASH_SOURCE[0]}"
+	sed -n '2,16s/^# \{0,1\}//p' "${BASH_SOURCE[0]}"
 	exit "${1:-1}"
 }
 
@@ -57,6 +58,7 @@ start() {
 start smoke "$TEST_DIR/smoke-test.sh" "$version"
 start sanitize "$TEST_DIR/sanitize-test.sh"
 start lint "$TEST_DIR/lint.sh"
+start site "$WEBSITE/tools/test-site.sh"
 if [ "$compat" = 1 ]; then
 	start compat "$TEST_DIR/compat-test.sh" "$version"
 fi
