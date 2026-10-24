@@ -513,7 +513,7 @@ MORE = {
     'Put a boombox here': ('Poser une boombox ici', 'Colocar una boombox aquí'),
     'Put a sound system here': ('Poser une sono ici', 'Colocar un equipo de sonido aquí'),
     'Play': ('Jouer', 'Reproducir'),
-    'Player': ('Joueur', 'Jugador'),
+    'Music Player': ('Lecteur', 'Reproductor'),
     'Louder': ('Plus fort', 'Más alto'),
     'Quieter': ('Moins fort', 'Más bajo'),
     'Remove': ('Enlever', 'Quitar'),

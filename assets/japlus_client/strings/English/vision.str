@@ -1535,6 +1535,9 @@ LANG_ENGLISH        "Put a sound system here"
 REFERENCE           PLAY
 LANG_ENGLISH        "Play"
 
+REFERENCE           MUSIC_PLAYER
+LANG_ENGLISH        "Music Player"
+
 REFERENCE           LOUDER
 LANG_ENGLISH        "Louder"
 

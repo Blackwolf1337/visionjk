@@ -118,7 +118,7 @@ static const char *Radial_Short( radialAct_t act ) {
 	case RAD_PAUSE:			return CG_VisionText( ( info.flags & BOX_PAUSED ) ? "Resume" : "Pause" );
 	case RAD_SKIP:			return CG_VisionText( "Skip" );
 	case RAD_LOUDER:		return CG_VisionText( "Louder" );
-	case RAD_WINDOW:		return CG_VisionText( "Player" );
+	case RAD_WINDOW:		return CG_VisionText( "Music Player" );
 	case RAD_QUIETER:		return CG_VisionText( "Quieter" );
 	case RAD_PLACE_BOX:		return CG_VisionText( "Boombox" );
 	case RAD_PLACE_SYSTEM:	return CG_VisionText( "Sound System" );

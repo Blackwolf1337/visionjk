@@ -2045,6 +2045,10 @@ REFERENCE           PLAY
 LANG_ENGLISH        "Play"
 LANG_FRENCH         "Jouer"
 
+REFERENCE           MUSIC_PLAYER
+LANG_ENGLISH        "Music Player"
+LANG_FRENCH         "Lecteur"
+
 REFERENCE           LOUDER
 LANG_ENGLISH        "Louder"
 LANG_FRENCH         "Plus fort"

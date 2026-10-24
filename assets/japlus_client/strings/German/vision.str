@@ -2045,6 +2045,10 @@ REFERENCE           PLAY
 LANG_ENGLISH        "Play"
 LANG_GERMAN         "Abspielen"
 
+REFERENCE           MUSIC_PLAYER
+LANG_ENGLISH        "Music Player"
+LANG_GERMAN         "Musikplayer"
+
 REFERENCE           LOUDER
 LANG_ENGLISH        "Louder"
 LANG_GERMAN         "Lauter"

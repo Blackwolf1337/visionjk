@@ -2,8 +2,9 @@
 a string package of their own (strings/<language>/vision.str), and a menu file names one as @VISION_<KEY>, the
 way it names a text of the game as @MENUS_<KEY>.
 
-A text is written here in English with its German next to it. French and Spanish read the English until
-somebody translates them: their files say "#same", which is how a string package says so."""
+A text is written here in English with its German next to it, French and Spanish are in texts_more.py. A text
+without a translation reads English in that language: its file says "#same", which is how a string package says
+so. The English is also the key a menu file or the cgame (CG_VisionText) finds a text by."""
 import os
 import re
 
@@ -638,7 +639,7 @@ CGAME = {
     'Put a boombox here': 'Boombox hier aufstellen',
     'Put a sound system here': 'Soundanlage hier aufstellen',
     'Play': 'Abspielen',
-    'Player': 'Player',
+    'Music Player': 'Musikplayer',
     'Louder': 'Lauter',
     'Quieter': 'Leiser',
     'Remove': 'Entfernen',
