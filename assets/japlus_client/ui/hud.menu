@@ -5,7 +5,6 @@
 
 assetGlobalDef 
 {
-	bigFont					"fonts/reallybigfont" 20		// font
 	small2Font				"arialnb" 	14	
 }
 
