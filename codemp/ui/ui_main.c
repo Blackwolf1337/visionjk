@@ -6437,13 +6437,22 @@ static void UI_RunMenuScript(char **args)
 		else if ( Q_stricmp( name, "updateChannel" ) == 0 )
 		{
 			// The row of the update channel just changed it. The development builds are only taken after the
-			// warning on the page of the argument (tools/menus/options.py), whose button sets the cvar itself.
-			int page;
+			// warning of the argument, whose button sets the cvar itself: a page of the menu in the new look
+			// (tools/menus/options.py), a popup menu in the classic one (ui/jamp/updatechannel.menu).
+			const char *warning;
 
-			if ( Int_Parse( args, &page ) && !Q_stricmp( UI_Cvar_VariableString( "v_updateChannel" ), "dev" ) && Menu_GetFocused() )
+			if ( String_Parse( args, &warning ) && !Q_stricmp( UI_Cvar_VariableString( "v_updateChannel" ), "dev" ) )
 			{
 				trap->Cvar_Set( "v_updateChannel", "stable" );
-				Menu_SetPage( Menu_GetFocused(), page );
+				if ( warning[0] >= '0' && warning[0] <= '9' )
+				{
+					if ( Menu_GetFocused() )
+						Menu_SetPage( Menu_GetFocused(), atoi( warning ) );
+				}
+				else
+				{
+					Menus_OpenByName( warning );
+				}
 			}
 		}
 		else if (Q_stricmp(name, "getsaberhiltinfo") == 0)

@@ -47,5 +47,6 @@
 	loadMenu { "ui/jamp/serverinfo.menu" }
 	loadMenu { "ui/jamp/findplayer.menu" }
 	loadMenu { "ui/jamp/createfavorite.menu" }
+	loadMenu { "ui/jamp/updatechannel.menu" }
 }
 

@@ -96,7 +96,7 @@ SETUP = [
     ]),
     ('@MENUS_OPTIONS', '@MENUS_CONFIGURE_GAME_OPTIONS', [
         ('head', 'Game'),
-        ('old', 'options', None, ('cl_allowdownload', 'se_language', 's_language', 'langapply')),
+        ('old', 'options', None, ('cl_allowdownload', 'se_language', 's_language', 'langapply', 'v_updatechannel', 'visionlookbutton')),
         ('head', 'Language'),
         ('old', 'options', ('se_language', 's_language', 'langapply')),
         ('head', 'Lightsabers'),

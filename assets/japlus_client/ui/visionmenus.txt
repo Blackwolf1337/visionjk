@@ -17,6 +17,7 @@
 	loadMenu { "ui/vision/demo.menu" }
 	loadMenu { "ui/vision/password.menu" }
 	loadMenu { "ui/vision/quit.menu" }
+	loadMenu { "ui/vision/updatechannel.menu" }
 	loadMenu { "ui/vision/error.menu" }
 	loadMenu { "ui/vision/serverinfo.menu" }
 	loadMenu { "ui/vision/findplayer.menu" }
