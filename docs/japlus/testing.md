@@ -63,7 +63,13 @@ so the script takes the exit code of the game itself.
 The unit tests are in `tests/vjk/` (Boost). They are built with `-DBuildTests=ON` and run by
 `tools/test/sanitize-test.sh`, see below. They look at what the game reads from outside: the file lists and paths
 of the updater, UTF-8 and Windows-1252, info strings, the status and look packets of the voice chat, and what a
-player types for a boombox.
+player types for a boombox. The tests also check SHA-256 (`shared/web/web_sha256.c`, which the updater checks every
+file of a release with) against the values of FIPS 180-4, also fed in pieces of every size around a block. The file
+lists of the updater get their edge cases (the limits of a file, of the number of files and of the length of a
+list, every way a line can be wrong) and 300000 changed and random lists, each in a buffer of exactly its size, so
+the sanitizers see a read past it. Any list that is taken may only name paths the game may touch. These came on
+2026-10-24 from `tools/updatetest/updatetest.c` of the agent folder, which they replace. There are 45 test cases,
+they take about half a second.
 
 ## Sanitizers and valgrind
 

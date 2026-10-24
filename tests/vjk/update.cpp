@@ -35,6 +35,7 @@ BOOST_AUTO_TEST_CASE( version )
 	BOOST_CHECK_EQUAL( v[1], 2 );
 	BOOST_CHECK_EQUAL( v[2], 6 );
 	BOOST_CHECK( UPD_ParseVersion( "9999.0.10", v ) );
+	BOOST_CHECK( UPD_ParseVersion( "12.345.6789", v ) && v[0] == 12 && v[1] == 345 && v[2] == 6789 );
 	BOOST_CHECK( !UPD_ParseVersion( "10000.0.0", v ) );
 	BOOST_CHECK( !UPD_ParseVersion( "0.2", v ) );
 	BOOST_CHECK( !UPD_ParseVersion( "0.2.6.1", v ) );
@@ -50,6 +51,7 @@ BOOST_AUTO_TEST_CASE( release )
 	int v[3];
 
 	BOOST_CHECK( UPD_ParseRelease( "v0.2.6", v ) );
+	BOOST_CHECK( UPD_ParseRelease( "v10.20.30", v ) && v[0] == 10 && v[1] == 20 && v[2] == 30 );
 	// a build between two releases is somebody's own
 	BOOST_CHECK( !UPD_ParseRelease( "v0.2.6-1-g6b0be1b", v ) );
 	BOOST_CHECK( !UPD_ParseRelease( "0.2.6", v ) );
@@ -170,6 +172,92 @@ BOOST_AUTO_TEST_CASE( list_refused )
 	BOOST_CHECK( Parse( List( many ), list.get() ) != nullptr );
 
 	BOOST_CHECK( Parse( List( one + std::string( UPD_MAX_LIST, '#' ) ), list.get() ) != nullptr );
+}
+
+// what a line of a file may and may not be, and the limits of a list (from tools/updatetest of the agent folder)
+BOOST_AUTO_TEST_CASE( list_edges )
+{
+	std::unique_ptr<updList_t> list( new updList_t() );
+
+	// the last line without its end, and a line of a later release
+	BOOST_CHECK( Parse( "visionjk-update 1\nversion 0.1.1\nfile 3 " + kHash + " a.txt", list.get() ) == nullptr );
+	BOOST_CHECK( Parse( "visionjk-update 1\nsignature abcdef\nversion 0.1.1\n\nnote hi\n" + FileLine( "a" ) + "files 1\n",
+		list.get() ) == nullptr );
+	BOOST_CHECK_EQUAL( list->numFiles, 1 );
+	// 1 GB is the most a file may have
+	BOOST_CHECK( Parse( List( FileLine( "a", "1073741824" ) ), list.get() ) == nullptr );
+
+	for ( const std::string &bad : {
+		"visionjk-update\nversion 0.1.1\n" + FileLine( "a" ),			// no number of the kind
+		"visionjk-update 1x\nversion 0.1.1\n" + FileLine( "a" ),
+		" visionjk-update 1\nversion 0.1.1\n" + FileLine( "a" ),
+		List( FileLine( "a" ), "version 0.1.1-rc1\n" ),
+		List( FileLine( "a" ) + FileLine( "a", "3", "keep" ) ),				// the same file as file and as keep
+		List( FileLine( "a", "x" ) ),
+		List( "file 3  " + kHash + " a\n" ),									// two spaces
+		List( "file 3 " + std::string( 64, 'A' ) + " a\n" ),				// hex in capitals
+		List( "file 3 g" + std::string( 63, 'a' ) + " a\n" ),
+		List( "file 3 " + kHash + " \n" ),
+		List( "file 3 " + kHash + "a\n" ),
+		List( FileLine( "a " ) ),												// a space at the end of the name
+		List( FileLine( "/etc/passwd" ) ),
+		List( FileLine( "a.vjknew" ) ),
+	} )
+		BOOST_CHECK_MESSAGE( Parse( bad, list.get() ) != nullptr, bad );
+
+	// as many files as a list may have, and a list of exactly the most bytes
+	std::string most;
+	for ( int i = 0; i < UPD_MAX_FILES; i++ )
+		most += FileLine( "f" + std::to_string( i ) );
+	BOOST_CHECK( Parse( List( most ), list.get() ) == nullptr );
+	BOOST_CHECK_EQUAL( list->numFiles, UPD_MAX_FILES );
+	std::string full = List( FileLine( "a" ) );
+	full.resize( UPD_MAX_LIST, '\n' );
+	BOOST_CHECK( Parse( full, list.get() ) == nullptr );
+	full += '\n';
+	BOOST_CHECK( Parse( full, list.get() ) != nullptr );
+}
+
+// Lists with something changed in them and plain noise, each in a buffer of exactly its size (a read past it is
+// what the sanitizers of tools/test/sanitize-test.sh see): whatever is taken names only paths the game may touch.
+BOOST_AUTO_TEST_CASE( list_fuzz )
+{
+	std::unique_ptr<updList_t> list( new updList_t() );
+	const std::string	good = List( FileLine( "visionjk.x86_64.exe", "3" ) + FileLine( "japlus/server.cfg", "0", "keep" ) );
+	const char			noise[] = "\n\r 0./\\.:";
+	unsigned int		state = 4711;
+	int					taken = 0;
+
+	auto rng = [&state]() {
+		state = state * 1664525u + 1013904223u;
+		return state >> 8;
+	};
+	for ( int n = 0; n < 300000; n++ ) {
+		std::string text;
+
+		if ( n & 1 ) {
+			text.resize( rng() % 400 );
+			for ( char &c : text )
+				c = (char)rng();
+		} else {
+			text = good.substr( 0, good.size() - ( rng() % 3 ) * ( rng() % 40 ) );
+			for ( int k = rng() % 4; k > 0 && !text.empty(); k-- )
+				text[rng() % text.size()] = ( rng() & 1 ) ? (char)rng() : noise[rng() % ( sizeof( noise ) - 1 )];
+		}
+		std::unique_ptr<char[]> exact( new char[text.size() ? text.size() : 1] );
+		memcpy( exact.get(), text.data(), text.size() );
+		if ( UPD_ParseList( exact.get(), text.size(), list.get() ) == nullptr ) {
+			taken++;
+			for ( int k = 0; k < list->numFiles; k++ ) {
+				const updFile_t &file = list->files[k];
+
+				if ( !UPD_PathAllowed( file.path ) || file.bytes < 0 || file.bytes > UPD_MAX_FILE_BYTES )
+					BOOST_ERROR( "a list was taken that names " << file.path );
+			}
+		}
+	}
+	BOOST_TEST_MESSAGE( "300000 changed and random lists, " << taken << " of them were still lists" );
+	BOOST_CHECK_GT( taken, 0 );
 }
 
 BOOST_AUTO_TEST_SUITE_END()
