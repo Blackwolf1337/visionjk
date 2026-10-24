@@ -496,6 +496,7 @@ void CL_ShutdownCGame( void ) {
 	Cvar_Set( "v_chatHandler", "0" );		// see Con_ChatByCgame()
 	Cvar_Set( "v_catchQuiet", "0" );		// see CL_CmdButtons()
 	Cvar_Set( "v_muffle", "0" );			// see S_MufflePaint(): nobody is left who would take it back
+	Cvar_Set( "v_cgameResize", "0" );		// see CL_WindowSize()
 
 	if ( !cls.cgameStarted )
 		return;
@@ -524,6 +525,8 @@ void CL_InitCGame( void ) {
 	Cvar_Set( "v_chatHandler", "0" );
 	// and this one while it holds the keys without its player typing (CL_CmdButtons())
 	Cvar_Set( "v_catchQuiet", "0" );
+	// and this one when it follows a new size of the window by itself (CL_WindowSize())
+	Cvar_Set( "v_cgameResize", "0" );
 
 	// put away the console
 	Con_Close();

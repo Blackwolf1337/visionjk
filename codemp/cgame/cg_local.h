@@ -1823,6 +1823,8 @@ qboolean	CG_StatValue( const char *name, float *value, float *max );
 void		CG_HudLoad( void );
 qboolean	CG_HudLoading( void );
 void		CG_DisplayEnsure( void );					// cg_main.c
+void		CG_ScreenSize( void );						// cg_main.c: the size of the window and the 2D grid on it
+void		CG_CheckScreenSize( void );					//	and again when the window got another one
 void		CG_ParseMenu( const char *menuFile );		// cg_main.c
 qboolean	CG_HudDraw( void );
 qboolean	CG_HudNewLook( void );

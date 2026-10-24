@@ -234,6 +234,8 @@ void		VK_DestroyTarget( vkTarget_t *target );
 void		VK_SetLayout( VkCommandBuffer cmd, VkImage image, VkImageAspectFlags aspect, VkImageLayout from, VkImageLayout to );
 void		VK_TargetLayout( VkCommandBuffer cmd, vkTarget_t *target, VkImageLayout to );
 void		VK_DestroyPostTargets( void );
+// a combined image sampler set of one image
+void		VK_WriteSet( VkDescriptorSet set, VkSampler sampler, VkImageView view, VkImageLayout layout );
 
 // vk_pipeline.cpp
 void		VK_InitPipelines( void );

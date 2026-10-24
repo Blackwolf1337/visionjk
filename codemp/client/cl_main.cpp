@@ -2378,6 +2378,67 @@ CL_Frame
 static unsigned int frameCount;
 static float avgFrametime=0.0;
 extern void SE_CheckForLanguageUpdates(void);
+/*
+==================
+CL_WindowSize
+
+The desktop gave the window another size: a tiling window manager does that to every window, and since the window
+is resizable the player can drag it. Once the size has stayed the same for a moment the renderer draws in it
+(re->ext.WindowResized), and cgame and ui follow on their next frame. A renderer that can not do that (rd-vanilla)
+or a cgame or ui that does not follow (one of another tree) gets a vid_restart in the new size instead. Before
+this the frame kept the size the window was made with, and Wayland showed it cut off.
+==================
+*/
+#define WINDOW_SIZE_SETTLE_MSEC	200
+
+static void CL_WindowSize( void ) {
+#ifndef __EMSCRIPTEN__	// a page restarts the renderer itself when its size settled (boot.js)
+	static int	pendingWidth, pendingHeight, pendingTime;
+	static int	restartWidth, restartHeight;	// the size of the last vid_restart this made
+	int			width, height;
+	qboolean	follow;
+
+	if ( !cls.rendererStarted || !re || !WIN_DrawableSize( &width, &height ) ) {
+		return;
+	}
+	if ( width == cls.glconfig.vidWidth && height == cls.glconfig.vidHeight ) {
+		pendingWidth = pendingHeight = 0;
+		restartWidth = restartHeight = 0;
+		return;
+	}
+	if ( width != pendingWidth || height != pendingHeight ) {
+		pendingWidth = width;
+		pendingHeight = height;
+		pendingTime = Sys_Milliseconds();
+		return;
+	}
+	if ( Sys_Milliseconds() - pendingTime < WINDOW_SIZE_SETTLE_MSEC ) {
+		return;
+	}
+	pendingWidth = pendingHeight = 0;
+
+	follow = (qboolean)( ( !cls.uiStarted || Cvar_VariableIntegerValue( "v_uiResize" ) )
+		&& ( !cls.cgameStarted || Cvar_VariableIntegerValue( "v_cgameResize" ) ) );
+	if ( follow && re->ext.WindowResized && re->ext.WindowResized( width, height ) ) {
+		cls.glconfig.vidWidth = width;
+		cls.glconfig.vidHeight = height;
+		cls.bias2D = Cvar_VariableValue( "v_2dBias" );
+		g_console_field_width = cls.glconfig.vidWidth / SMALLCHAR_WIDTH - 2;
+		g_consoleField.widthInChars = g_console_field_width;
+		return;
+	}
+	if ( width == restartWidth && height == restartHeight ) {
+		// the window was made in this size and the desktop gave it another one again: stay with that
+		return;
+	}
+	restartWidth = width;
+	restartHeight = height;
+	Com_Printf( "The window is now %i x %i, restarting the renderer\n", width, height );
+	WIN_SetNextSize( width, height );
+	Cbuf_AddText( "vid_restart\n" );
+#endif
+}
+
 void CL_Frame ( int msec ) {
 	qboolean takeVideoFrame = qfalse;
 
@@ -2451,6 +2512,9 @@ void CL_Frame ( int msec ) {
 
 	// decide on the serverTime to render
 	CL_SetCGameTime();
+
+	// a new size of the window, before anything is drawn in the old one
+	CL_WindowSize();
 
 	// update the screen
 	SCR_UpdateScreen();
@@ -3032,6 +3096,9 @@ void CL_Init( void ) {
 	// the menus on a plane in the level, and the blur of the scene around a distance
 	Cvar_Get( "v_cgameUIPlane", "1", CVAR_ROM, "" );
 	Cvar_Get( "v_cgameDoF", "1", CVAR_ROM, "" );
+	// set by a cgame and a ui of this tree, which follow a new size of the window without a vid_restart
+	Cvar_Get( "v_cgameResize", "0", 0, "" );
+	Cvar_Get( "v_uiResize", "0", 0, "" );
 	// for the ui: 1 while its menus are drawn onto that plane, which has the 640 x 480 of a menu and no more
 	Cvar_Get( "v_uiPlane", "0", CVAR_ROM, "" );
 	// tells the ui and the cgame that the engine can draw their new look: pictures the ui computes

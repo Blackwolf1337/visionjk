@@ -44,6 +44,8 @@ enum rserr_t
 static SDL_Window *screen = NULL;
 static SDL_GLContext opengl_context;
 static float displayAspect;
+// WIN_SetNextSize(): the size the next window gets once in place of r_mode's, 0: none
+static int nextWidth, nextHeight;
 
 cvar_t *r_sdlDriver;
 cvar_t *r_allowSoftwareGL;
@@ -361,6 +363,15 @@ static rserr_t GLimp_SetMode(glconfig_t *glConfig, const windowDesc_t *windowDes
 	{
 		flags |= SDL_WINDOW_VULKAN;
 	}
+#ifndef __EMSCRIPTEN__
+	// The desktop may give a window another size (a tiling window manager always does), the client follows it
+	// (CL_WindowSize()). Without this SDL tells Wayland the window can not change, and the compositor shows the
+	// frame cut off. In a browser the page sizes the canvas.
+	if ( !fullscreen )
+	{
+		flags |= SDL_WINDOW_RESIZABLE;
+	}
+#endif
 
 	Com_Printf( "Initializing display\n");
 
@@ -425,6 +436,14 @@ static rserr_t GLimp_SetMode(glconfig_t *glConfig, const windowDesc_t *windowDes
 		SDL_FreeSurface( icon );
 		return RSERR_INVALID_MODE;
 	}
+	if ( nextWidth > 0 && nextHeight > 0 && !fullscreen )
+	{
+		// the size the desktop gave the window before this restart (WIN_SetNextSize()), else a tiling window
+		// manager makes it smaller again and the renderer restarts once more
+		glConfig->vidWidth = nextWidth;
+		glConfig->vidHeight = nextHeight;
+	}
+	nextWidth = nextHeight = 0;
 	Com_Printf( " %d %d\n", glConfig->vidWidth, glConfig->vidHeight);
 
 	// Center window
@@ -878,6 +897,41 @@ window_t WIN_Init( const windowDesc_t *windowDesc, glconfig_t *glConfig )
 #endif
 
 	return window;
+}
+
+/*
+===============
+WIN_DrawableSize
+
+The size of the window in pixels as the desktop has it right now, which may not be the one it was made with.
+qfalse: no window, or one without pixels (minimized).
+===============
+*/
+qboolean WIN_DrawableSize( int *width, int *height )
+{
+	*width = *height = 0;
+	if ( !screen || ( SDL_GetWindowFlags( screen ) & SDL_WINDOW_MINIMIZED ) )
+		return qfalse;
+
+	if ( SDL_GetWindowFlags( screen ) & SDL_WINDOW_VULKAN )
+		SDL_Vulkan_GetDrawableSize( screen, width, height );
+	else
+		SDL_GL_GetDrawableSize( screen, width, height );
+	return (qboolean)( *width > 0 && *height > 0 );
+}
+
+/*
+===============
+WIN_SetNextSize
+
+The next window that is made (vid_restart) gets this size once, in place of the one of r_mode. The cvars are not
+changed: a size the desktop forced on the window is no setting of the player.
+===============
+*/
+void WIN_SetNextSize( int width, int height )
+{
+	nextWidth = width;
+	nextHeight = height;
 }
 
 /*

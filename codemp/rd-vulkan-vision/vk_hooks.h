@@ -29,6 +29,9 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 qboolean VK_InitVulkan( void );		// qfalse: this machine can not run the renderer
 void VK_ShutdownVulkan( qboolean destroyWindow );
 void VK_GfxInfo_f( void );
+// the window has that size now: the frame follows it between two frames. qfalse: this device can not, the engine
+// restarts the renderer instead
+qboolean VK_ResizeFrame( int width, int height );
 
 // vk_frame.cpp: what tr_init.cpp has between its screenshot commands and the frame buffer
 byte *RB_ReadPixels( int x, int y, int width, int height, size_t *offset, int *padlen );

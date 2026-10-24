@@ -471,6 +471,62 @@ static VkSampleCountFlagBits VK_SampleCount( void ) {
 	return VK_SAMPLE_COUNT_1_BIT;
 }
 
+// the targets of the frame in the size of the window: what the scene and the 2D are drawn into, and the picture
+// after the gamma pass that is copied to the window
+static void VK_CreateFrameTargets( void ) {
+	VK_CreateTarget( &vk.color, vk.width, vk.height, VK_FORMAT_R8G8B8A8_UNORM,
+		VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
+		VK_IMAGE_ASPECT_COLOR_BIT, VK_SAMPLE_COUNT_1_BIT );
+	VK_CreateTarget( &vk.final, vk.width, vk.height, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
+		VK_IMAGE_ASPECT_COLOR_BIT, VK_SAMPLE_COUNT_1_BIT );
+	VK_CreateTarget( &vk.depth, vk.width, vk.height, VK_DepthFormat(),
+		VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT
+			| ( vk.depthReadable ? VK_IMAGE_USAGE_SAMPLED_BIT : 0 ),
+		VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT, VK_SAMPLE_COUNT_1_BIT );
+	if ( vk.samples > VK_SAMPLE_COUNT_1_BIT ) {
+		VK_CreateTarget( &vk.colorMS, vk.width, vk.height, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+			VK_IMAGE_ASPECT_COLOR_BIT, vk.samples );
+		VK_CreateTarget( &vk.depthMS, vk.width, vk.height, VK_DepthFormat(), VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+			VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT, vk.samples );
+	}
+}
+
+static void VK_DestroyFrameTargets( void ) {
+	VK_DestroyTarget( &vk.color );
+	VK_DestroyTarget( &vk.final );
+	VK_DestroyTarget( &vk.depth );
+	VK_DestroyTarget( &vk.colorMS );
+	VK_DestroyTarget( &vk.depthMS );
+}
+
+/*
+===============
+VK_ResizeFrame
+
+The window has a new size (the desktop resized it, a tiling window manager among others). The frame, the swapchain
+and every target of the size of the window are made anew in it, between two frames, without a vid_restart:
+textures, the level and the models stay. The sets that show the targets stay too and are written again.
+===============
+*/
+qboolean VK_ResizeFrame( int width, int height ) {
+	if ( !vk.device || vk.frame || vk.inScene ) {
+		return qfalse;
+	}
+	qvkDeviceWaitIdle( vk.device );
+	VK_DestroyPostTargets();
+	VK_DestroyFrameTargets();
+	vk.width = glConfig.vidWidth = width;
+	vk.height = glConfig.vidHeight = height;
+	VK_CreateFrameTargets();
+	VK_WriteSet( vk.postSet, vk.postSampler, vk.color.view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
+	VK_InitPost();
+	vk.finalValid = qfalse;
+	// the size Wayland takes the swapchain in, see VK_CreateSwapchain()
+	VK_CreateSwapchain();
+	ri.Printf( PRINT_DEVELOPER, "window resized to %i x %i\n", width, height );
+	return qtrue;
+}
+
 /*
 ===============
 VK_InitVulkan
@@ -522,11 +578,6 @@ qboolean VK_InitVulkan( void ) {
 	VK_InitMemory();
 	VK_CreateSwapchain();
 
-	VK_CreateTarget( &vk.color, vk.width, vk.height, VK_FORMAT_R8G8B8A8_UNORM,
-		VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
-		VK_IMAGE_ASPECT_COLOR_BIT, VK_SAMPLE_COUNT_1_BIT );
-	VK_CreateTarget( &vk.final, vk.width, vk.height, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
-		VK_IMAGE_ASPECT_COLOR_BIT, VK_SAMPLE_COUNT_1_BIT );
 	{
 		VkFormatProperties props;
 
@@ -534,18 +585,9 @@ qboolean VK_InitVulkan( void ) {
 		qvkGetPhysicalDeviceFormatProperties( vk.physicalDevice, VK_DepthFormat(), &props );
 		vk.depthReadable = (qboolean)( ( props.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT ) != 0 );
 	}
-	VK_CreateTarget( &vk.depth, vk.width, vk.height, VK_DepthFormat(),
-		VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT
-			| ( vk.depthReadable ? VK_IMAGE_USAGE_SAMPLED_BIT : 0 ),
-		VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT, VK_SAMPLE_COUNT_1_BIT );
 	// anti aliasing: the scene goes into targets with several samples a pixel, see VK_BeginRendering()
 	vk.samples = VK_SampleCount();
-	if ( vk.samples > VK_SAMPLE_COUNT_1_BIT ) {
-		VK_CreateTarget( &vk.colorMS, vk.width, vk.height, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
-			VK_IMAGE_ASPECT_COLOR_BIT, vk.samples );
-		VK_CreateTarget( &vk.depthMS, vk.width, vk.height, VK_DepthFormat(), VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
-			VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT, vk.samples );
-	}
+	VK_CreateFrameTargets();
 
 	VK_InitPipelines();
 	VK_InitPost();
@@ -592,11 +634,7 @@ void VK_ShutdownVulkan( qboolean destroyWindow ) {
 	VK_ShutdownFrames();
 	VK_DestroyPostTargets();
 	VK_ShutdownPipelines();
-	VK_DestroyTarget( &vk.color );
-	VK_DestroyTarget( &vk.final );
-	VK_DestroyTarget( &vk.depth );
-	VK_DestroyTarget( &vk.colorMS );
-	VK_DestroyTarget( &vk.depthMS );
+	VK_DestroyFrameTargets();
 	VK_DestroySwapchain();
 	VK_ShutdownMemory();
 	qvkDestroyCommandPool( vk.device, vk.commandPool, NULL );

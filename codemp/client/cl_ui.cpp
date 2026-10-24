@@ -31,6 +31,7 @@ CL_ShutdownUI
 */
 void CL_ShutdownUI( void ) {
 	Key_SetCatcher( Key_GetCatcher( ) & ~KEYCATCH_UI );
+	Cvar_Set( "v_uiResize", "0" );		// see CL_WindowSize()
 
 	if ( !cls.uiStarted )
 		return;
@@ -47,6 +48,9 @@ CL_InitUI
 */
 
 void CL_InitUI( void ) {
+	// a ui of this tree sets it again when it follows a new size of the window by itself (CL_WindowSize())
+	Cvar_Set( "v_uiResize", "0" );
+
 	// load the dll
 	CL_BindUI();
 

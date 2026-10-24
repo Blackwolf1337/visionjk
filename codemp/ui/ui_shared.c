@@ -9679,19 +9679,27 @@ static int Item_Multi_AddVideoMode( int sizes[][2], int count, int max, int widt
 	return count + 1;
 }
 
+// sizes a window can have, offered on every display they fit on (under Wayland the display lists its own size only)
+static const int windowSizes[][2] = {
+	{ 1024, 768 }, { 1280, 720 }, { 1280, 800 }, { 1280, 1024 }, { 1366, 768 }, { 1440, 900 }, { 1600, 900 },
+	{ 1680, 1050 }, { 1920, 1080 }, { 1920, 1200 }, { 2560, 1080 }, { 2560, 1440 }, { 2560, 1600 }, { 3440, 1440 },
+	{ 3840, 2160 },
+};
+
 /*
 ===============
 Item_Multi_FeedVideoModes
-The entries of the video mode list: "Desktop", the size of the screen (r_mode -2), and the sizes the display
-offers (r_availableModes of the engine, "1280x720 1920x1080 ..."), smallest first, with the size in use if it
-is none of them. The value of an entry is "desktop" or "<width>x<height>": UI_UpdateVideoSetup() turns it into
-r_mode, r_customwidth and r_customheight.
+The entries of the video mode list: "Desktop", the size of the screen (r_mode -2), the sizes the display
+offers (r_availableModes of the engine, "1280x720 1920x1080 ...") and the common sizes of a window that fit on
+it, smallest first, with the size in use if it is none of them. The value of an entry is "desktop" or
+"<width>x<height>": UI_UpdateVideoSetup() turns it into r_mode, r_customwidth and r_customheight.
 ===============
 */
 static void Item_Multi_FeedVideoModes( multiDef_t *multiPtr ) {
 	char		modes[MAX_STRING_CHARS];
 	int			sizes[MAX_MULTI_CVARS - 1][2];
 	int			count, width, height, i;
+	int			maxWidth, maxHeight;
 	const char	*p;
 
 	// the size in use first: it has a place however many the display offers
@@ -9710,6 +9718,17 @@ static void Item_Multi_FeedVideoModes( multiDef_t *multiPtr ) {
 		}
 		while ( *p == ' ' ) {
 			p++;
+		}
+	}
+	// the largest size the display offers is the one of the desktop
+	maxWidth = maxHeight = 0;
+	for ( i = 0; i < count; i++ ) {
+		maxWidth = Q_max( maxWidth, sizes[i][0] );
+		maxHeight = Q_max( maxHeight, sizes[i][1] );
+	}
+	for ( i = 0; i < (int)ARRAY_LEN( windowSizes ); i++ ) {
+		if ( windowSizes[i][0] <= maxWidth && windowSizes[i][1] <= maxHeight ) {
+			count = Item_Multi_AddVideoMode( sizes, count, ARRAY_LEN( sizes ), windowSizes[i][0], windowSizes[i][1] );
 		}
 	}
 	qsort( sizes, count, sizeof( sizes[0] ), Item_Multi_CompareVideoModes );

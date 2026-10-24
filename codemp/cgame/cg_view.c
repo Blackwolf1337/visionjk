@@ -2438,6 +2438,7 @@ extern void CG_ActualLoadDeferredPlayers( void );
 static int cg_siegeClassIndex = -2;
 
 void CG_DrawActiveFrame( int serverTime, stereoFrame_t stereoView, qboolean demoPlayback ) {
+	CG_CheckScreenSize();
 	CG_JPReplyFrame();
 	//CG_JPMacroScanFrame();
 	CG_VoiceFrame();

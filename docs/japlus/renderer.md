@@ -41,7 +41,7 @@ JA+ draw is drawn. What is open is what was never run, and a few cvars.
 | Screenshots, recording to AVI | done |
 | Automap | done |
 | `r_showtris`, `r_shownormals`, `r_showImages`, `v_vkStatic`, `gfxinfo`, `imagelist` | done |
-| Window: resized from outside, `r_swapInterval`, a window nobody sees, `vid_restart` between the renderers | done |
+| Window: resized from outside (the frame is made again in the new size), `r_swapInterval`, a window nobody sees, `vid_restart` between the renderers | done on the Vulkan device, not run in the game since the change (see "Checked"). The OpenGL ES device restarts instead |
 | Windows DLL, 64 bit | started on Windows 11 on Mesa's software Vulkan and drew the menus (2026-10-11, [windows.md](windows.md)). No level, no real graphics card |
 | Portals and mirrors, `alphaGen portal` | done, in a test room: no level of the base game has one (see "Checked") |
 | Videos: a `.roq` on the screen, `videoMap` in a shader | done |
@@ -635,8 +635,21 @@ the game with the fatal error "Con_CheckResize: Window too small to draw a conso
 engine now refuses such a size like any other mode that does not exist and falls back on mode 4 (800 x 600),
 at the start and at a `vid_restart`. A window of 22 x 1 runs. The window resized from outside while a level is
 drawn (900 x 500, 1600 x 900, 300 x 200 and back, under X11 through Xwayland, with and without
-`r_swapInterval 1`): a new swapchain each time, the frame is stretched into it. Under Wayland the compositor
-left the window of the game at its size. `r_swapInterval 1` in a window nobody sees: the images of the swapchain
+`r_swapInterval 1`) was checked before the live resize below existed: a new swapchain each time and the frame
+stretched into it, and under Wayland the compositor left the window at its size. That is no longer how it works.
+The window is made resizable (`SDL_WINDOW_RESIZABLE` in `shared/sdl/sdl_window.cpp`, before SDL told Wayland it
+could not change, and Hyprland tiled it anyway and showed the frame cut off). `CL_WindowSize()` in
+`codemp/client/cl_main.cpp` takes the drawable size every frame, and once it has stayed the same for 200 ms
+`RE_WindowResized()` (`rd-vanilla/tr_init.cpp`) calls `VK_ResizeFrame()` (`vk_main.cpp`) between two frames: it
+waits for the device, makes the swapchain and every target of the size of the window again, and sets `v_2dBias`
+again. The descriptor sets of the targets are kept and written again (`VK_PostSetOnce()` in `vk_texture.cpp`),
+because the pool has no room for more. The client then updates `cls.glconfig`, and the cgame and ui read it on
+their next frame (see "Wide screens" in [client.md](client.md)). The OpenGL ES device says no (a frame is played
+at its end, and its commands name the targets), as does rd-vanilla: the client does a `vid_restart` in the new
+size then, with a one-time size for the next window that is not written into `r_mode` or `r_custom*`. Built for
+Linux (Vulkan device, OpenGL ES device, rd-vanilla) and Windows (mingw x86_64). Not run in the game, not on
+Hyprland: the new way is unchecked, and so is `tay_renderScale` with a resize (its targets are made again in
+`VK_InitPost()`, but no picture was looked at). `r_swapInterval 1` in a window nobody sees: the images of the swapchain
 come back late or not at all, under Wayland and under X11. A frame waits 50 ms for one at most, and after a
 wait that ran out the frames of the next second do not wait at all and are shown when an image happens to be
 free, so the game and its connection go on at their speed (`gfxinfo` counts the frames that were not shown).

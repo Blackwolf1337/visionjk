@@ -164,16 +164,7 @@ static void VK_CreateLayouts( void ) {
 	sampler.magFilter = sampler.minFilter = VK_FILTER_NEAREST;
 	sampler.addressModeU = sampler.addressModeV = sampler.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
 	VK_CHECK( qvkCreateSampler( vk.device, &sampler, NULL, &vk.postSampler ) );
-	{
-		VkDescriptorImageInfo image = { vk.postSampler, vk.color.view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
-		VkWriteDescriptorSet write = { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
-
-		write.dstSet = vk.postSet;
-		write.descriptorCount = 1;
-		write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		write.pImageInfo = &image;
-		qvkUpdateDescriptorSets( vk.device, 1, &write, 0, NULL );
-	}
+	VK_WriteSet( vk.postSet, vk.postSampler, vk.color.view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
 }
 
 static VkBlendFactor VK_SrcBlend( uint32_t stateBits ) {

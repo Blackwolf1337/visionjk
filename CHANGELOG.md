@@ -102,6 +102,7 @@ Key: [-] removed, [+] added, [\*] modified
 * [\*] Renderer: up to 4095 refEntities a frame instead of 2047 (`REFENTITYNUM_BITS` 12, a 64 bit sort key for the draw surfaces). On the JoF server the ambient effects of the map filled the 2047 slots and models and effects flickered.
 * [\*] The Git tag of a build (the version the game shows) is read at every build (`cmake/GitVersion.cmake`, target `vjk_version`) and not only when the build folder is configured. A build folder configured at v0.2.4 had shown v0.2.4 at v0.2.7.
 * [\*] Menu texts in German, French and Spanish reworded (German "du" throughout, Spanish "tú"), and the messages of the updater in plainer English.
+* [+] The window can be resized while the game runs. It is made resizable (before, SDL told Wayland it could not change, and a tiling window manager such as Hyprland showed the frame cut off, with the right side of the HUD missing). rd-vulkan-vision builds swapchain and targets again in the new size between two frames, and the cgame and ui draw their 2D in it. With rd-vanilla, the OpenGL ES device, or a cgame or ui of another tree the client does a `vid_restart` in the new size instead. The video mode list also offers common window sizes up to the size of the desktop. Built for Linux and Windows, not run in the game yet.
 
 # Features
 

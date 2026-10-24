@@ -2271,6 +2271,55 @@ static void CG_AddPolyToScene( qhandle_t shader, int numVerts, const polyVert_t 
 
 static qboolean cgDisplayReady;
 
+// the size of the window into what the menu code draws by
+static void CG_DisplaySize( void ) {
+	cgDC.bias		= cgs.bias2D;
+	cgDC.wide		= cgs.bias2D;
+	cgDC.glconfig	= cgs.glconfig;
+	cgDC.yscale		= cgs.glconfig.vidHeight * ( 1.0f / 480.0f );
+	cgDC.xscale		= cgs.glconfig.vidWidth / ( 640.0f + 2.0f * cgs.bias2D );
+}
+
+/*
+=================
+CG_ScreenSize
+
+The size of the window and the grid of the 2D on it. A renderer of this tree widens the grid on a wide window and
+says by how much in v_2dBias, see CG_Place2D().
+=================
+*/
+void CG_ScreenSize( void ) {
+	char bias[32];
+
+	trap->GetGlconfig( &cgs.glconfig );
+	trap->Cvar_VariableStringBuffer( "v_2dBias", bias, sizeof( bias ) );
+	cgs.bias2D = atof( bias );
+	if ( cgs.bias2D < 0.0f ) {
+		cgs.bias2D = 0.0f;
+	}
+	cgs.screenXScale = cgs.glconfig.vidWidth / ( 640.0 + 2.0 * cgs.bias2D );
+	cgs.screenYScale = cgs.glconfig.vidHeight / 480.0;
+	if ( cgDisplayReady ) {
+		CG_DisplaySize();
+	}
+}
+
+/*
+=================
+CG_CheckScreenSize
+
+Once a frame: the engine resized the frame with the window (CL_WindowSize()), the 2D follows
+=================
+*/
+void CG_CheckScreenSize( void ) {
+	glconfig_t glconfig;
+
+	trap->GetGlconfig( &glconfig );
+	if ( glconfig.vidWidth != cgs.glconfig.vidWidth || glconfig.vidHeight != cgs.glconfig.vidHeight ) {
+		CG_ScreenSize();
+	}
+}
+
 // What the menu code and the look of ui/ui_skin.c need to draw (cgDC). Before the HUD is loaded already, for
 // the loading screen.
 static void CG_DisplaySetup( void )
@@ -2336,14 +2385,10 @@ static void CG_DisplaySetup( void )
 	cgDC.drawCinematic					= &CG_DrawCinematic;
 	cgDC.runCinematicFrame				= &CG_RunCinematicFrame;
 	cgDC.ext.Font_StrLenPixels			= trap->ext.R_Font_StrLenPixels;
-	cgDC.bias							= cgs.bias2D;
-	cgDC.wide							= cgs.bias2D;
 	// For the look of ui/ui_skin.c in the HUD: the size of the window, and the call that makes a shader from a
 	// picture, which only the engine of this tree has. It says so in two cvars (cg_public.h, ui_public.h: the
 	// second one stands for the fonts of that look).
-	cgDC.glconfig						= cgs.glconfig;
-	cgDC.yscale							= cgs.glconfig.vidHeight * ( 1.0f / 480.0f );
-	cgDC.xscale							= cgs.glconfig.vidWidth / ( 640.0f + 2.0f * cgs.bias2D );
+	CG_DisplaySize();
 	trap->Cvar_VariableStringBuffer( "v_cgameScene", buff, sizeof( buff ) );
 	hasSkin = (qboolean)( atoi( buff ) == 1 );
 	trap->Cvar_VariableStringBuffer( "v_uiSkin", buff, sizeof( buff ) );
@@ -2646,20 +2691,10 @@ Ghoul2 Insert End
 	// old servers
 
 	// get the rendering configuration from the client system
-	trap->GetGlconfig( &cgs.glconfig );
-	// a renderer of this tree widens the grid of the 2D on a wide window and says by how much, see CG_Place2D()
-	{
-		char bias[32];
-
-		trap->Cvar_VariableStringBuffer( "v_2dBias", bias, sizeof( bias ) );
-		cgs.bias2D = atof( bias );
-		if ( cgs.bias2D < 0.0f ) {
-			cgs.bias2D = 0.0f;
-		}
-		cgs.shift2D = 0.0f;
-	}
-	cgs.screenXScale = cgs.glconfig.vidWidth / ( 640.0 + 2.0 * cgs.bias2D );
-	cgs.screenYScale = cgs.glconfig.vidHeight / 480.0;
+	CG_ScreenSize();
+	cgs.shift2D = 0.0f;
+	// the engine of this tree resizes the frame with the window and leaves it to this module to follow
+	trap->Cvar_Set( "v_cgameResize", "1" );
 
 	// get the gamestate from the client system
 	trap->GetGameState( &cgs.gameState );

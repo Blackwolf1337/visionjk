@@ -210,6 +210,12 @@ void VK_ShutdownVulkan( qboolean destroyWindow ) {
 	memset( &glConfig, 0, sizeof( glConfig ) );
 }
 
+// The targets are named by the commands of a frame that is written down and played at its end (see
+// VK_CreateSceneTargets()), and a page restarts the renderer when its size settles anyway: no live resize here.
+qboolean VK_ResizeFrame( int width, int height ) {
+	return qfalse;
+}
+
 /*
 ===============
 VK_GfxInfo_f

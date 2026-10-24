@@ -301,6 +301,26 @@ float R_2DBias( void ) {
 	return 0.5f * ( (float)SCREEN_HEIGHT * glConfig.vidWidth / glConfig.vidHeight - SCREEN_WIDTH );
 }
 
+/*
+===============
+RE_WindowResized
+
+The window has that size now (the desktop resized it). rd-vulkan-vision makes its frame anew in it, without a
+vid_restart, and the bias of the 2D follows. qfalse: this renderer can not, the engine restarts it instead.
+===============
+*/
+static qboolean RE_WindowResized( int width, int height ) {
+#ifdef RD_VULKAN_VISION
+	if ( width <= 0 || height <= 0 || !VK_ResizeFrame( width, height ) ) {
+		return qfalse;
+	}
+	ri.Cvar_Set( "v_2dBias", va( "%f", R_2DBias() ) );
+	return qtrue;
+#else
+	return qfalse;
+#endif
+}
+
 #ifndef RD_VULKAN_VISION
 void R_Splash()
 {
@@ -2233,6 +2253,7 @@ Q_EXPORT refexport_t* QDECL GetRefAPI( int apiVersion, refimport_t *rimp ) {
 	re.ext.RegisterShaderRGBA				= RE_RegisterShaderRGBA;
 	re.ext.Set2DPlane						= RE_Set2DPlane;
 	re.ext.SetDepthOfField					= RE_SetDepthOfField;
+	re.ext.WindowResized					= RE_WindowResized;
 
 	return &re;
 }

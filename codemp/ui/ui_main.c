@@ -10433,6 +10433,36 @@ static qhandle_t UI_RegisterShaderNoMip( const char *name ) {
 UI_Init
 =================
 */
+/*
+=================
+UI_ScreenSize
+
+The size of the window, for a 640x480 virtualized screen. A renderer of this tree makes the grid wider than 640 on
+a wide window instead of stretching it, and says by how much in the cvar v_2dBias: x then runs from -bias to
+640 + bias and the menus sit in the middle. Any other engine leaves the bias at 0. At the start, and every frame
+the engine resized the frame with the window (CL_WindowSize()).
+=================
+*/
+static void UI_ScreenSize( void ) {
+	trap->GetGlconfig( &uiInfo.uiDC.glconfig );
+	uiInfo.uiDC.yscale = uiInfo.uiDC.glconfig.vidHeight * (1.0/480.0);
+	uiInfo.uiDC.bias = trap->Cvar_VariableValue( "v_2dBias" );
+	if ( uiInfo.uiDC.bias < 0.0f ) {
+		uiInfo.uiDC.bias = 0.0f;
+	}
+	uiInfo.uiDC.xscale = uiInfo.uiDC.glconfig.vidWidth / ( 640.0 + 2.0 * uiInfo.uiDC.bias );
+	uiInfo.uiDC.wide = uiInfo.uiDC.bias;
+}
+
+static void UI_CheckScreenSize( void ) {
+	glconfig_t glconfig;
+
+	trap->GetGlconfig( &glconfig );
+	if ( glconfig.vidWidth != uiInfo.uiDC.glconfig.vidWidth || glconfig.vidHeight != uiInfo.uiDC.glconfig.vidHeight ) {
+		UI_ScreenSize();
+	}
+}
+
 void UI_Init( qboolean inGameLoad ) {
 	const char *menuSet;
 
@@ -10454,18 +10484,9 @@ void UI_Init( qboolean inGameLoad ) {
 	UI_InitMemory();
 
 	// cache redundant calulations
-	trap->GetGlconfig( &uiInfo.uiDC.glconfig );
-
-	// for 640x480 virtualized screen. A renderer of this tree makes the grid wider than 640 on a wide window
-	// instead of stretching it, and says by how much in the cvar v_2dBias: x then runs from -bias to 640 + bias and
-	// the menus sit in the middle. Any other engine leaves the bias at 0.
-	uiInfo.uiDC.yscale = uiInfo.uiDC.glconfig.vidHeight * (1.0/480.0);
-	uiInfo.uiDC.bias = trap->Cvar_VariableValue( "v_2dBias" );
-	if ( uiInfo.uiDC.bias < 0.0f ) {
-		uiInfo.uiDC.bias = 0.0f;
-	}
-	uiInfo.uiDC.xscale = uiInfo.uiDC.glconfig.vidWidth / ( 640.0 + 2.0 * uiInfo.uiDC.bias );
-	uiInfo.uiDC.wide = uiInfo.uiDC.bias;
+	UI_ScreenSize();
+	// the engine of this tree resizes the frame with the window and leaves it to this module to follow
+	trap->Cvar_Set( "v_uiResize", "1" );
 
 	//UI_Load();
 	uiInfo.uiDC.registerShaderNoMip				= UI_RegisterShaderNoMip;
@@ -10642,6 +10663,8 @@ void UI_Refresh( int realtime )
 	//if ( !( trap->Key_GetCatcher() & KEYCATCH_UI ) ) {
 	//	return;
 	//}
+
+	UI_CheckScreenSize();
 
 	trap->G2API_SetTime(realtime, 0);
 	trap->G2API_SetTime(realtime, 1);

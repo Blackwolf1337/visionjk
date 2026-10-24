@@ -434,7 +434,7 @@ THE TARGETS OF THE GLOW AND OF REFRACTION
 ===============================================================================
 */
 
-static void VK_WriteSet( VkDescriptorSet set, VkSampler sampler, VkImageView view, VkImageLayout layout ) {
+void VK_WriteSet( VkDescriptorSet set, VkSampler sampler, VkImageView view, VkImageLayout layout ) {
 	VkDescriptorImageInfo image = { sampler, view, layout };
 	VkWriteDescriptorSet write = { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
 
@@ -447,6 +447,20 @@ static void VK_WriteSet( VkDescriptorSet set, VkSampler sampler, VkImageView vie
 
 static void VK_WritePostSet( VkDescriptorSet set, VkImageView view ) {
 	VK_WriteSet( set, vk.linearSampler, view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
+}
+
+// A set of the kind of postSet, allocated the first time only. The targets are made anew when the window changes
+// its size (VK_ResizeFrame()), their sets stay and are written again: the pool has no room for more.
+static void VK_PostSetOnce( VkDescriptorSet *set ) {
+	VkDescriptorSetAllocateInfo alloc = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO };
+
+	if ( *set ) {
+		return;
+	}
+	alloc.descriptorPool = vk.descriptorPool;
+	alloc.descriptorSetCount = 1;
+	alloc.pSetLayouts = &vk.postSetLayout;
+	VK_CHECK( qvkAllocateDescriptorSets( vk.device, &alloc, set ) );
 }
 
 // a view of the depth alone, without the stencil, for a set of the depth of field
@@ -467,7 +481,6 @@ static VkImageView VK_DepthOnlyView( const vkTarget_t *depth ) {
 void VK_CreatePostTargets( int blurWidth, int blurHeight ) {
 	const VkImageUsageFlags usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 	VkSamplerCreateInfo sampler = { VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO };
-	VkDescriptorSetAllocateInfo alloc = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO };
 	VkDescriptorSet *sets[5] = { &vk.glowSet, &vk.blurSets[0], &vk.blurSets[1], &vk.softSets[0], &vk.softSets[1] };
 	vkTarget_t *targets[5] = { &vk.glow, &vk.blur[0], &vk.blur[1], &vk.soft[0], &vk.soft[1] };
 
@@ -505,11 +518,8 @@ void VK_CreatePostTargets( int blurWidth, int blurHeight ) {
 	sampler.addressModeU = sampler.addressModeV = sampler.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
 	VK_CHECK( qvkCreateSampler( vk.device, &sampler, NULL, &vk.linearSampler ) );
 
-	alloc.descriptorPool = vk.descriptorPool;
-	alloc.descriptorSetCount = 1;
-	alloc.pSetLayouts = &vk.postSetLayout;
 	for ( int i = 0; i < 5; i++ ) {
-		VK_CHECK( qvkAllocateDescriptorSets( vk.device, &alloc, sets[i] ) );
+		VK_PostSetOnce( sets[i] );
 		VK_WritePostSet( *sets[i], targets[i]->view );
 	}
 
@@ -517,7 +527,7 @@ void VK_CreatePostTargets( int blurWidth, int blurHeight ) {
 	// pixel (not every device filters a depth format) while nothing draws into it.
 	if ( vk.depthReadable ) {
 		vk.depthView = VK_DepthOnlyView( &vk.depth );
-		VK_CHECK( qvkAllocateDescriptorSets( vk.device, &alloc, &vk.depthSet ) );
+		VK_PostSetOnce( &vk.depthSet );
 		VK_WriteSet( vk.depthSet, vk.postSampler, vk.depthView, VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL );
 	}
 }
@@ -559,7 +569,6 @@ glow set takes. qfalse: the device has no images that large.
 qboolean VK_CreateSceneTargets( int width, int height ) {
 	const VkImageUsageFlags usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 	const VkImageAspectFlags depthAspect = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
-	VkDescriptorSetAllocateInfo alloc = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO };
 	const int largest = (int)vk.properties.limits.maxImageDimension2D;
 
 	if ( width > largest || height > largest ) {
@@ -578,19 +587,16 @@ qboolean VK_CreateSceneTargets( int width, int height ) {
 		VK_CreateTarget( &vk.sceneGlowMS, width, height, vk.color.format, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_IMAGE_ASPECT_COLOR_BIT, vk.samples );
 	}
 
-	alloc.descriptorPool = vk.descriptorPool;
-	alloc.descriptorSetCount = 1;
-	alloc.pSetLayouts = &vk.postSetLayout;
 	// the frame is read pixel for pixel as the set of the gamma pass does, the glow filtered as the other one
-	VK_CHECK( qvkAllocateDescriptorSets( vk.device, &alloc, &vk.scenePostSet ) );
+	VK_PostSetOnce( &vk.scenePostSet );
 	VK_WriteSet( vk.scenePostSet, vk.postSampler, vk.sceneColor.view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
-	VK_CHECK( qvkAllocateDescriptorSets( vk.device, &alloc, &vk.sceneGlowSet ) );
+	VK_PostSetOnce( &vk.sceneGlowSet );
 	VK_WritePostSet( vk.sceneGlowSet, vk.sceneGlow.view );
-	VK_CHECK( qvkAllocateDescriptorSets( vk.device, &alloc, &vk.sceneCopySet ) );
+	VK_PostSetOnce( &vk.sceneCopySet );
 	VK_WritePostSet( vk.sceneCopySet, vk.sceneColor.view );
 	if ( vk.depthReadable ) {
 		vk.sceneDepthView = VK_DepthOnlyView( &vk.sceneDepth );
-		VK_CHECK( qvkAllocateDescriptorSets( vk.device, &alloc, &vk.sceneDepthSet ) );
+		VK_PostSetOnce( &vk.sceneDepthSet );
 		VK_WriteSet( vk.sceneDepthSet, vk.postSampler, vk.sceneDepthView, VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL );
 	}
 	return qtrue;

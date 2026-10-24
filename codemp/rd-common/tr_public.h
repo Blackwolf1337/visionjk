@@ -264,6 +264,10 @@ typedef struct refexport_s {
 		// The scene of this frame is blurred where it is nearer or farther than focus (units of the level),
 		// amount 0 to 1. rd-vanilla has no such pass and does nothing.
 		void				(*SetDepthOfField)						( float focus, float amount );
+		// The window has that size now, in pixels (the desktop resized it): the renderer draws in that size from
+		// the next frame on and glconfig has it. Called between two frames. qfalse: the renderer can not, the
+		// engine restarts it with a vid_restart.
+		qboolean			(*WindowResized)						( int width, int height );
 	} ext;
 
 } refexport_t;

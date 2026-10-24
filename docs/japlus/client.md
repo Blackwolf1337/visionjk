@@ -91,7 +91,7 @@ game's menu, changed for this engine. Both have the same pages.
 
 | Page | Entry | What it sets |
 |------|-------|--------------|
-| Video | Video Mode | a list the ui fills: "Desktop", the size of the screen (`r_mode -2`), and the sizes of `r_availableModes`. A size is `r_mode -1` with `r_customwidth` and `r_customheight` |
+| Video | Video Mode | a list the ui fills: "Desktop", the size of the screen (`r_mode -2`), the sizes of `r_availableModes`, and common window sizes (1024 x 768 up to 3840 x 2160) that are not larger than the largest of those, so a display that lists only its own mode (Wayland) still offers smaller windows (`Item_Multi_FeedVideoModes()` in `codemp/ui/ui_shared.c`). A size is `r_mode -1` with `r_customwidth` and `r_customheight` |
 | Video | Display Mode | Window, Fullscreen, Borderless (`r_fullscreen`, `r_noborder`). Borderless with "Desktop" covers the screen |
 | Video | Renderer | Vulkan or OpenGL (`cl_renderer`) |
 | Video | Anti-Aliasing | Off, 2x, 4x, 8x (`r_ext_multisample`) |
@@ -146,10 +146,23 @@ Shader overrides (2026-10-17, as TaystJK, `rd-vanilla/tr_shader.cpp`, both rende
 rest of that file. Of two override files with the same shader the one whose name comes later in the alphabet
 wins, as among `.shader` files. The console says at the start how many override files there are.
 
+A window that is resized while the game runs (a tiling window manager does that to every window, and the window is
+resizable) keeps this layout. `CL_WindowSize()` in `codemp/client/cl_main.cpp` watches the drawable size of the
+window every frame (`WIN_DrawableSize()` in `shared/sdl/sdl_window.cpp`). Once a new size has stayed the same for
+200 ms, rd-vulkan-vision makes its swapchain and targets again in it between two frames (`re->ext.WindowResized`,
+`VK_ResizeFrame()`), `v_2dBias` is set again and `cls.glconfig` is updated. Then the cgame and the ui read the
+glconfig again on their next frame (`CG_CheckScreenSize()`, `UI_CheckScreenSize()`), so the grid, the menus and
+the HUD fit the new size. Modules of this tree say that they do this with the cvars `v_cgameResize` and
+`v_uiResize` (the engine resets both when it loads a module). With rd-vanilla, the OpenGL ES device, or a cgame
+or ui of another tree the client does a `vid_restart` in the new size instead. That restart gets the size once
+(`WIN_SetNextSize()`), it is not written into `r_mode` or `r_custom*`. A page in a browser keeps its own way
+(`boot.js`). A fullscreen window is not resizable.
+
 The modules read `v_2dBias`. In a stock `jamp.exe`, or with a renderer of another tree, the cvar is missing or
 0 and they draw as they always did.
 
-Not looked at in the game: it was built for Linux and nothing more. Open: the siege timer and the automap are
+Not looked at in the game: it was built for Linux and nothing more. The live resize was built for Linux (Vulkan
+device, OpenGL ES device, rd-vanilla) and Windows (mingw x86_64) and not run, not on Hyprland either. Open: the siege timer and the automap are
 placed by the grid but not moved to an edge, and the text of the stock fonts is as soft as before (they are
 bitmaps made for 640 x 480).
 
