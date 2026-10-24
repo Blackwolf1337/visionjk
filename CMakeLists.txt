@@ -410,21 +410,20 @@ else()
 	message(STATUS "SOURCE_DATE_EPOCH is set ($ENV{SOURCE_DATE_EPOCH}): SOURCE_DATE set to \"${SOURCE_DATE}\"")
 endif()
 
-# Current Git tag/version
-# ideally we would separate the hash suffix into its own variable, but sed is not available everywhere
-execute_process(
-	COMMAND "git" "describe" "--tag"
-	WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-	OUTPUT_VARIABLE GIT_TAG
-	RESULT_VARIABLE GIT_TAG_ERROR
-	OUTPUT_STRIP_TRAILING_WHITESPACE)
-if(GIT_TAG_ERROR AND NOT GIT_TAG_ERROR EQUAL 0)
-	message(WARNING "Unable to determine Git tag")
-	set(GIT_TAG vUNKNOWN)
-endif()
+# Current Git tag/version, written now and again at every build (vjk_version), see cmake/GitVersion.cmake
+set(VERSION_SOURCE_DIR "${CMAKE_SOURCE_DIR}")
+set(VERSION_BINARY_DIR "${CMAKE_BINARY_DIR}")
+include(cmake/GitVersion.cmake)
 message(STATUS "Git tag is ${GIT_TAG}")
 
-configure_file(shared/qcommon/q_version.h.in shared/qcommon/q_version.h @ONLY)
+add_custom_target(vjk_version
+	COMMAND "${CMAKE_COMMAND}"
+		"-DVERSION_SOURCE_DIR=${CMAKE_SOURCE_DIR}" "-DVERSION_BINARY_DIR=${CMAKE_BINARY_DIR}"
+		"-DSOURCE_DATE=${SOURCE_DATE}" "-DBUILD_PORTABLE=${BUILD_PORTABLE}"
+		-P "${CMAKE_SOURCE_DIR}/cmake/GitVersion.cmake"
+	BYPRODUCTS "${CMAKE_BINARY_DIR}/shared/qcommon/q_version.h"
+	COMMENT "Checking the Git tag"
+	VERBATIM)
 
 #=============================================================================
 
@@ -495,3 +494,20 @@ if(BuildTests)
 	enable_testing()
 	add_subdirectory("tests")
 endif()
+
+# every target with q_version.h among its sources waits for vjk_version, so it compiles with the current tag
+function(vjk_version_depends dir)
+	get_property(targets DIRECTORY "${dir}" PROPERTY BUILDSYSTEM_TARGETS)
+	foreach(target ${targets})
+		get_target_property(sources ${target} SOURCES)
+		list(FIND sources "${CMAKE_BINARY_DIR}/shared/qcommon/q_version.h" index)
+		if(NOT index EQUAL -1)
+			add_dependencies(${target} vjk_version)
+		endif()
+	endforeach()
+	get_property(subdirs DIRECTORY "${dir}" PROPERTY SUBDIRECTORIES)
+	foreach(subdir ${subdirs})
+		vjk_version_depends("${subdir}")
+	endforeach()
+endfunction()
+vjk_version_depends("${CMAKE_SOURCE_DIR}")
