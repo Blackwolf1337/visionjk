@@ -42,6 +42,7 @@ struct Draw {
 BINDING( 0, 0 ) uniform Globals {
 	vec4	gamma;			// x: 1 / r_gamma, y: 2 ^ overbright bits, z: identity light
 	vec4	screen;
+	vec4	screenFx[160];	// only screenfx.frag reads them (VK_SCREENFX_VEC4S)
 } globals;
 
 #ifdef VK_GLES

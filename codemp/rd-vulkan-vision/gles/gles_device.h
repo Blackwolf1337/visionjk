@@ -134,6 +134,10 @@ typedef enum {
 	GLP_FOCUS,						// and one that reads the depth of the scene next to its target
 	GLP_SCOPEPREP,					// the same for the scope (VK_ScopePrepPass)
 	GLP_SCOPE,						// and the scope itself, four textures and four u_parm (VK_ScopePass)
+	GLP_SCREENFXPREP,				// the same for the screen effects (VK_ScreenFxPrepPass)
+	GLP_SCREENFX,					// and the screen effects, three textures and VK_SCREENFX_VEC4S u_parm (VK_ScreenFxPass)
+	GLP_SCREENFXFOG,				// their mist, the depth and the same u_parm (VK_ScreenFxFogPass)
+	GLP_SCREENFXSMOKE,				// their smoke, its last frame, prep and the same u_parm (VK_ScreenFxSmokePass)
 	GLP_PRESENT,					// the copy again, turned upside down: what the window gets
 	GLP_NUM_PROGRAMS
 } glesProgram_t;
@@ -142,7 +146,9 @@ typedef enum {
 #define GLES_UNIT_SOFT		2
 #define GLES_UNIT_PREP		3
 #define GLES_UNIT_MARK		4
-#define GLES_UNITS			5
+#define GLES_UNIT_FOG		5		// and the mist of the screen effects
+#define GLES_UNIT_SMOKE		6		// and their smoke
+#define GLES_UNITS			7
 
 typedef enum {						// what a vertex array object is set up for
 	GLV_GENERIC,					// the four streams of the tess arrays

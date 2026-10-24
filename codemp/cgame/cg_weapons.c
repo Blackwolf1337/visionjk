@@ -1869,6 +1869,9 @@ void CG_FireWeapon( centity_t *cent, qboolean altFire ) {
 	// mark the entity as muzzle flashing, so when it is added it will
 	// append the flash to the weapon model
 	cent->muzzleFlashTime = cg.time;
+	if ( cent->currentState.number == cg.predictedPlayerState.clientNum ) {
+		CG_ScreenFxFired( ent->weapon );
+	}
 
 	if (cg.predictedPlayerState.clientNum == cent->currentState.number)
 	{
@@ -2042,6 +2045,7 @@ void CG_MissileHitWall(int weapon, int clientNum, vec3_t origin, vec3_t dir, imp
 	// JA+ client plugin: no impacts while in a separated private duel
 	if ( CG_JPInSeparatedDuel() )
 		return;
+	CG_ScreenFxWeaponBlast( weapon, altFire, origin );
 
 	switch( weapon )
 	{
@@ -2154,6 +2158,7 @@ void CG_MissileHitPlayer(int weapon, vec3_t origin, vec3_t dir, int entityNum, q
 	// JA+ client plugin: no impacts while in a separated private duel
 	if ( CG_JPInSeparatedDuel() )
 		return;
+	CG_ScreenFxWeaponBlast( weapon, altFire, origin );
 
 	/*
 	// NOTENOTE Non-portable code from single player

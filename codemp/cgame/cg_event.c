@@ -2380,6 +2380,7 @@ void CG_EntityEvent( centity_t *cent, vec3_t position ) {
 					{
 						cg_saberFlashTime = cg.time-50;
 						VectorCopy( es->origin, cg_saberFlashPos );
+						CG_ScreenFxFlash( es->origin, 40.0f, 0.85f );
 					}
 				}
 			}
@@ -2401,6 +2402,7 @@ void CG_EntityEvent( centity_t *cent, vec3_t position ) {
 		{
 			cg_saberFlashTime = cg.time-50;
 			VectorCopy( es->origin, cg_saberFlashPos );
+			CG_ScreenFxFlash( es->origin, 64.0f, 1.0f );
 			trap->S_StartSound ( es->origin, -1, CHAN_WEAPON, trap->S_RegisterSound( va("sound/weapons/saber/saberhitwall%i", Q_irand(1, 3)) ) );
 		}
 		break;
@@ -2997,21 +2999,26 @@ void CG_EntityEvent( centity_t *cent, vec3_t position ) {
 			break;
 		case EFFECT_EXPLOSION:
 			eID = cgs.effects.mEmplacedExplode;
+			CG_ScreenFxBlast( es->origin, 200.0f );
 			break;
 		case EFFECT_EXPLOSION_PAS:
 			eID = cgs.effects.mTurretExplode;
+			CG_ScreenFxBlast( es->origin, 128.0f );
 			break;
 		case EFFECT_SPARK_EXPLOSION:
 			eID = cgs.effects.mSparkExplosion;
 			break;
 		case EFFECT_EXPLOSION_TRIPMINE:
 			eID = cgs.effects.mTripmineExplosion;
+			CG_ScreenFxBlast( es->origin, 256.0f );
 			break;
 		case EFFECT_EXPLOSION_DETPACK:
 			eID = cgs.effects.mDetpackExplosion;
+			CG_ScreenFxBlast( es->origin, 256.0f );
 			break;
 		case EFFECT_EXPLOSION_FLECHETTE:
 			eID = cgs.effects.mFlechetteAltBlow;
+			CG_ScreenFxBlast( es->origin, 128.0f );
 			break;
 		case EFFECT_STUNHIT:
 			eID = cgs.effects.mStunBatonFleshImpact;
@@ -3022,6 +3029,7 @@ void CG_EntityEvent( centity_t *cent, vec3_t position ) {
 			break;
 		case EFFECT_EXPLOSION_TURRET:
 			eID = cgs.effects.mTurretExplode;
+			CG_ScreenFxBlast( es->origin, 128.0f );
 			break;
 		case EFFECT_SPARKS:
 			eID = cgs.effects.mSparksExplodeNoSound;

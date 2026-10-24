@@ -6507,6 +6507,10 @@ void CG_AddSaberBlade( centity_t *cent, centity_t *scent, refEntity_t *saber, in
 	VectorMA( org_, saberLen, axis_[0], end );
 
 	VectorAdd( end, axis_[0], end );
+	if ( !dontDraw && saberLen > 0 ) {
+		// the air around a lit blade shimmers (screenfx/cg_screenfx.c)
+		CG_ScreenFxBlade( org_, end );
+	}
 
 	if (cent->currentState.eType == ET_NPC)
 	{
@@ -9779,6 +9783,9 @@ void CG_Player( centity_t *cent ) {
 		}
 	}
 
+	// a Force push or pull sends waves through the air from the hands (screenfx/cg_screenfx.c)
+	CG_ScreenFxPlayer( cent );
+
 	CG_VehicleEffects(cent);
 
 	if ((cent->currentState.eFlags & EF_JETPACK) && !(cent->currentState.eFlags & EF_DEAD) &&
@@ -9817,6 +9824,14 @@ void CG_Player( centity_t *cent ) {
 					VectorMA(flamePos, -13.5f, flameDir, flamePos);
 				}
 
+				{
+					// the air over the flame shimmers and trails behind (screenfx/cg_screenfx.c)
+					const qboolean flaming = (qboolean)( ( cent->currentState.eFlags & EF_JETPACK_FLAMING ) != 0 );
+					vec3_t blow;
+
+					VectorScale( flameDir, flaming ? 120.0f : 50.0f, blow );
+					CG_ScreenFxEmit( cent->currentState.number * 4 + n, flamePos, blow, flaming ? 7.0f : 4.0f, flaming ? 1.0f : 0.5f, flaming ? 0.5f : 0.0f );
+				}
 				if (cent->currentState.eFlags & EF_JETPACK_FLAMING)
 				{ //create effects
 					//FIXME: Just one big effect
@@ -10560,7 +10575,11 @@ void CG_Player( centity_t *cent ) {
 
 		if ( cent->currentState.eFlags & EF_FLAME )
 		{// JA+: the flamethrower of the mercs
+			vec3_t flameEnd;	// how it blows
+
 			trap->FX_PlayEntityEffectID(cgs.effects.jpFlameJet, efOrg, axis, -1, -1, -1, -1);
+			VectorScale( axis[0], 300.0f, flameEnd );
+			CG_ScreenFxEmit( cent->currentState.number * 4 + 2, efOrg, flameEnd, 12.0f, 1.0f, 0.0f );
 		}
 		else if ( cent->currentState.activeForcePass > FORCE_LEVEL_2 )
 		{//arc
@@ -10706,8 +10725,11 @@ void CG_Player( centity_t *cent ) {
 		}
 		else if (!(cent->currentState.forcePowersActive & (1 << FP_GRIP)))
 		{
-			//use refractive effect
-			CG_ForcePushBlur( efOrg, cent );
+			//use refractive effect, unless the screen effects send waves through the air (screenfx/cg_screenfx.c)
+			if ( !CG_ScreenFxForceDrawn() )
+			{
+				CG_ForcePushBlur( efOrg, cent );
+			}
 		}
 	}
 	else if (cent->bodyFadeTime)
@@ -11627,10 +11649,17 @@ stillDoSaber:
 
 	if ((cg.snap->ps.fd.forcePowersActive & (1 << FP_SEE)) && cg.snap->ps.clientNum != cent->currentState.number)
 	{
-		legs.shaderRGBA[0] = 255;
-		legs.shaderRGBA[1] = 255;
-		legs.shaderRGBA[2] = 0;
-		legs.renderfx |= RF_MINLIGHT;
+		if ( CG_ScreenFxSightDrawn() )
+		{	// a ghost in the other world, with a trail of glowing smoke (screenfx/cg_screenfx.c)
+			CG_ScreenFxGhostBody( &legs );
+		}
+		else
+		{
+			legs.shaderRGBA[0] = 255;
+			legs.shaderRGBA[1] = 255;
+			legs.shaderRGBA[2] = 0;
+			legs.renderfx |= RF_MINLIGHT;
+		}
 	}
 
 	if (cg.snap->ps.duelInProgress && cgs.jpDuelAlpha >= 0)
@@ -12079,7 +12108,11 @@ stillDoSaber:
 		CG_SelectOutline( cent->currentState.number, &legs );
 	}
 
-	if ((cg.snap->ps.fd.forcePowersActive & (1 << FP_SEE)) && cg.snap->ps.clientNum != cent->currentState.number && cg_auraShell.integer)
+	if ((cg.snap->ps.fd.forcePowersActive & (1 << FP_SEE)) && cg.snap->ps.clientNum != cent->currentState.number && CG_ScreenFxSightDrawn())
+	{	// the ghost over him in place of the shell, through walls from level 2 on as the shell (screenfx/cg_screenfx.c)
+		CG_ScreenFxGhostShell( cent, &legs, (qboolean)( cg.snap->ps.fd.forcePowerLevel[FP_SEE] >= FORCE_LEVEL_2 ) );
+	}
+	else if ((cg.snap->ps.fd.forcePowersActive & (1 << FP_SEE)) && cg.snap->ps.clientNum != cent->currentState.number && cg_auraShell.integer)
 	{
 		if (cgs.gametype == GT_SIEGE)
 		{	// A team game

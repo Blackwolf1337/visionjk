@@ -89,6 +89,11 @@ typedef enum {
 	GC_SCOPEPREP,
 	GC_SCOPE_SOURCES,
 	GC_SCOPE,
+	GC_SCREENFXPREP,
+	GC_SCREENFX_SOURCES,
+	GC_SCREENFX,
+	GC_SCREENFXFOG,
+	GC_SCREENFXSMOKE,
 	GC_ADD,
 	GC_COPY,
 	GC_PROBES
@@ -143,6 +148,9 @@ typedef struct glesCommand_s {
 		struct {				// its numbers are in gles_scopeParm, there is one a frame
 			vkTarget_t	*soft, *prep, *mark;
 		} scope;
+		struct {				// its numbers are in gles_screenFxParm, there is one a frame
+			vkTarget_t	*prep, *fog, *smoke;
+		} screenFx;
 		struct {
 			vkTarget_t	*source, *dest;
 		} copy;
@@ -155,6 +163,7 @@ typedef struct glesCommand_s {
 static glesCommand_t	gles_commands[GLES_MAX_COMMANDS];
 static int				gles_numCommands;
 static float			gles_scopeParm[16];		// what the last VK_ScopePass() was given
+static float			gles_screenFxParm[VK_SCREENFX_VEC4S * 4];	// and VK_ScreenFxPass()
 static vkIndexRange_t	gles_ranges[GLES_MAX_RANGES];
 static int				gles_numRanges;
 static qboolean			gles_overflowed;		// this frame has more commands than fit, said once
@@ -418,6 +427,52 @@ void VK_ScopePass( vkTarget_t *soft, vkTarget_t *prep, vkTarget_t *mark, const f
 	}
 	VK_BeginTarget( &vk.color, &vk.depth, 2, qtrue );
 	GLES_Command( GC_SCOPE );
+}
+
+void VK_ScreenFxPrepPass( vkTarget_t *source, vkTarget_t *target, const float *parm ) {
+	glesCommand_t *cmd = GLES_Command( GC_SCREENFXPREP );
+
+	if ( cmd ) {
+		cmd->blur.source = source;
+		cmd->blur.target = target;
+		VectorCopy4( parm, cmd->blur.parm );
+	}
+}
+
+// the numbers of the screen effects, which the mist reads before them
+void VK_ScreenFxFogPass( vkTarget_t *target, const float *fx ) {
+	glesCommand_t *cmd = GLES_Command( GC_SCREENFXFOG );
+
+	if ( cmd ) {
+		cmd->blur.target = target;
+		memcpy( gles_screenFxParm, fx, sizeof( gles_screenFxParm ) );
+	}
+}
+
+// the same numbers as the mist: the frame writes them down once
+void VK_ScreenFxSmokePass( vkTarget_t *target, vkTarget_t *last, vkTarget_t *prep, const float *fx ) {
+	glesCommand_t *cmd = GLES_Command( GC_SCREENFXSMOKE );
+
+	if ( cmd ) {
+		cmd->screenFx.prep = prep;
+		cmd->screenFx.fog = target;
+		cmd->screenFx.smoke = last;
+		memcpy( gles_screenFxParm, fx, sizeof( gles_screenFxParm ) );
+	}
+}
+
+// as VK_ScopePass()
+void VK_ScreenFxPass( vkTarget_t *prep, vkTarget_t *fog, vkTarget_t *smoke, const float *fx ) {
+	glesCommand_t *cmd = GLES_Command( GC_SCREENFX_SOURCES );
+
+	if ( cmd ) {
+		cmd->screenFx.prep = prep;
+		cmd->screenFx.fog = fog;
+		cmd->screenFx.smoke = smoke;
+		memcpy( gles_screenFxParm, fx, sizeof( gles_screenFxParm ) );
+	}
+	VK_BeginTarget( &vk.color, &vk.depth, 2, qtrue );
+	GLES_Command( GC_SCREENFX );
 }
 
 void VK_AddTarget( vkTarget_t *source, vkAdd_t how ) {
@@ -956,12 +1011,14 @@ static void GLES_Replay( vkFrame_t *frame ) {
 			break;
 		case GC_FOCUS:
 		case GC_SCOPEPREP:
+		case GC_SCREENFXPREP:
 			GLES_Resolve( cmd->blur.source );
 			GLES_ResolveDepth();
 			glBindFramebuffer( GL_FRAMEBUFFER, VK_TargetFramebuffer( cmd->blur.target, NULL ) );
 			GLES_PassState( cmd->blur.target->width, cmd->blur.target->height, 0, 0 );
 			GLES_Texture( 1, vk.depth.texture );
-			GLES_DrawPass( cmd->type == GC_FOCUS ? GLP_FOCUS : GLP_SCOPEPREP, cmd->blur.source->texture, cmd->blur.parm );
+			GLES_DrawPass( cmd->type == GC_FOCUS ? GLP_FOCUS : ( cmd->type == GC_SCOPEPREP ? GLP_SCOPEPREP : GLP_SCREENFXPREP ),
+				cmd->blur.source->texture, cmd->blur.parm );
 			// Not left there: without several samples the scene is drawn into this very texture, and a browser
 			// refuses a draw whose program could read what it draws into.
 			GLES_Texture( 1, 0 );
@@ -989,6 +1046,60 @@ static void GLES_Replay( vkFrame_t *frame ) {
 			GLES_Texture( GLES_UNIT_SOFT, 0 );
 			GLES_Texture( GLES_UNIT_PREP, 0 );
 			GLES_Texture( GLES_UNIT_MARK, 0 );
+			GLES_DrawViewport();
+			break;
+		case GC_SCREENFX_SOURCES:
+			GLES_Resolve( cmd->screenFx.prep );
+			GLES_Resolve( cmd->screenFx.fog );
+			GLES_Resolve( cmd->screenFx.smoke );
+			GLES_Texture( GLES_UNIT_PREP, cmd->screenFx.prep->texture );
+			GLES_Texture( GLES_UNIT_FOG, cmd->screenFx.fog->texture );
+			GLES_Texture( GLES_UNIT_SMOKE, cmd->screenFx.smoke->texture );
+			break;
+		case GC_SCREENFXSMOKE:
+			// into the new buffer (in fog) from the last one (in smoke)
+			GLES_Resolve( cmd->screenFx.smoke );
+			GLES_Resolve( cmd->screenFx.prep );
+			glBindFramebuffer( GL_FRAMEBUFFER, VK_TargetFramebuffer( cmd->screenFx.fog, NULL ) );
+			GLES_PassState( cmd->screenFx.fog->width, cmd->screenFx.fog->height, 0, 0 );
+			GLES_Texture( GLES_UNIT_PREP, cmd->screenFx.prep->texture );
+			GLES_Program( GLP_SCREENFXSMOKE );
+			if ( vk.programParm[GLP_SCREENFXSMOKE] >= 0 ) {
+				glUniform4fv( vk.programParm[GLP_SCREENFXSMOKE], VK_SCREENFX_VEC4S, gles_screenFxParm );
+			}
+			GLES_Texture( 0, cmd->screenFx.smoke->texture );
+			GLES_Layout( GLV_NONE );
+			glDrawArrays( GL_TRIANGLES, 0, 3 );
+			GLES_Texture( GLES_UNIT_PREP, 0 );
+			GLES_DrawViewport();
+			break;
+		case GC_SCREENFXFOG:
+			GLES_ResolveDepth();
+			glBindFramebuffer( GL_FRAMEBUFFER, VK_TargetFramebuffer( cmd->blur.target, NULL ) );
+			GLES_PassState( cmd->blur.target->width, cmd->blur.target->height, 0, 0 );
+			GLES_Texture( 1, vk.depth.texture );
+			GLES_Program( GLP_SCREENFXFOG );
+			if ( vk.programParm[GLP_SCREENFXFOG] >= 0 ) {
+				glUniform4fv( vk.programParm[GLP_SCREENFXFOG], VK_SCREENFX_VEC4S, gles_screenFxParm );
+			}
+			GLES_Layout( GLV_NONE );
+			glDrawArrays( GL_TRIANGLES, 0, 3 );
+			// not left there, as for the passes that read the depth
+			GLES_Texture( 1, 0 );
+			GLES_DrawViewport();
+			break;
+		case GC_SCREENFX:
+			GLES_PassState( vk.width, vk.height, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
+			GLES_Program( GLP_SCREENFX );
+			if ( vk.programParm[GLP_SCREENFX] >= 0 ) {
+				glUniform4fv( vk.programParm[GLP_SCREENFX], VK_SCREENFX_VEC4S, gles_screenFxParm );
+			}
+			GLES_Texture( 0, vk.screen.texture );
+			GLES_Layout( GLV_NONE );
+			glDrawArrays( GL_TRIANGLES, 0, 3 );
+			GLES_Texture( GLES_UNIT_PREP, 0 );
+			GLES_Texture( GLES_UNIT_FOG, 0 );
+			GLES_Texture( GLES_UNIT_SMOKE, 0 );
 			GLES_DrawViewport();
 			break;
 		case GC_ADD:

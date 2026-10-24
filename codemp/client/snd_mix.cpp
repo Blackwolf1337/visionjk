@@ -102,7 +102,8 @@ S_MufflePaint
 
 v_muffle, 0 to 1: the whole mix of the game goes through a low pass, the more the higher the value. At 1 what
 is above about 600 Hz is damped, at 0 nothing is done. A module sets it while something stands in front of the
-game: the menu in the level of the cgame (cgame/menu3d). The value is approached over a fifth of a second, so
+game: the menu in the level of the cgame (cgame/menu3d), the water the eye is in, the bang of an explosion close by
+(cgame/screenfx). The value is approached over a fifth of a second, so
 nothing clicks. Sounds, music and the sounds of snd_spatial.cpp all pass here.
 
 The mixer paints ahead of what is heard and starts again right in front of it with every frame
@@ -129,7 +130,7 @@ static void S_MufflePaint( int from, int to ) {
 	int				t;
 
 	if ( !v_muffle ) {
-		v_muffle = Cvar_Get( "v_muffle", "0", CVAR_TEMP, "0 to 1: the sound of the game is muffled, set by the cgame while its menu stands in the level" );
+		v_muffle = Cvar_Get( "v_muffle", "0", CVAR_TEMP, "0 to 1: the sound of the game is muffled, set by the cgame (its menu in the level, under water, after an explosion)" );
 	}
 	target = Com_Clamp( 0.0f, 1.0f, v_muffle->value );
 	if ( to - from > PAINTBUFFER_SIZE ) {
@@ -192,6 +193,73 @@ static void S_MufflePaint( int from, int to ) {
 	}
 	if ( ringTo - ringFrom > MUFFLE_RING ) {
 		ringFrom = ringTo - MUFFLE_RING;
+	}
+}
+
+/*
+===================
+S_TinnitusPaint
+
+v_tinnitus, 0 to 1: the ears ring after an explosion close by. The cgame sets it and lets it fall back over a few
+seconds; with it the rest of the sound sinks and v_muffle dulls it. The ringing is made here, two high tones close
+together that beat against each other. Every tone is a whole number of cycles a second, so a sample is worked out
+from its time alone and comes out the same however often it is painted (see S_MufflePaint). How far it rings is
+approached over a tenth of a second and kept by the time of the sample as the muffle keeps its filter.
+===================
+*/
+#define TINNITUS_RING		32768		// samples, a power of two: more than the mixer is ever ahead
+#define TINNITUS_LOUD		3200.0f		// of the samples of the paint buffer, about a tenth of full
+#define TINNITUS_DUCK		0.5f		// the rest of the sound at full ringing
+
+static void S_TinnitusPaint( int from, int to ) {
+	static cvar_t	*v_tinnitus;
+	static float	ring[TINNITUS_RING];		// how far it rang at that sample
+	static int		ringFrom, ringTo;
+	float			target, step, amount = 0.0f;
+	int				t;
+
+	if ( !v_tinnitus ) {
+		v_tinnitus = Cvar_Get( "v_tinnitus", "0", CVAR_TEMP, "0 to 1: the ears ring, set by the cgame after an explosion close by" );
+	}
+	target = Com_Clamp( 0.0f, 1.0f, v_tinnitus->value );
+	if ( to - from > PAINTBUFFER_SIZE ) {
+		to = from + PAINTBUFFER_SIZE;
+	}
+	if ( to <= from || dma.speed <= 0 ) {
+		return;
+	}
+	if ( from > ringFrom && from <= ringTo ) {
+		amount = ring[( from - 1 ) & ( TINNITUS_RING - 1 )];
+	} else {
+		ringFrom = ringTo = from;
+	}
+	if ( target <= 0.0f && amount <= 0.0f ) {
+		ringFrom = ringTo = from;
+		return;
+	}
+
+	step = 1.0f / ( 0.1f * dma.speed );
+	for ( t = from; t < to; t++ ) {
+		portable_samplepair_t	*pair = &paintbuffer[t - from];
+		const float				phase = (float)( t % dma.speed ) / dma.speed;
+		float					tone, keep;
+
+		if ( amount < target ) {
+			amount = Q_min( target, amount + step );
+		} else if ( amount > target ) {
+			amount = Q_max( target, amount - step );
+		}
+		tone = ( sinf( 2.0f * M_PI * 3700.0f * phase ) * 0.6f + sinf( 2.0f * M_PI * 3790.0f * phase ) * 0.4f ) * TINNITUS_LOUD * amount;
+		keep = 1.0f - TINNITUS_DUCK * amount;
+		pair->left = (int)( pair->left * keep + tone );
+		pair->right = (int)( pair->right * keep + tone );
+		ring[t & ( TINNITUS_RING - 1 )] = amount;
+	}
+	if ( to > ringTo ) {
+		ringTo = to;
+	}
+	if ( ringTo - ringFrom > TINNITUS_RING ) {
+		ringFrom = ringTo - TINNITUS_RING;
 	}
 }
 
@@ -592,8 +660,9 @@ void S_PaintChannels( int endtime ) {
 			S_SpatialPaint( s_paintedtime, end, paintbuffer );
 		}
 
-		// muffled while a module asks for it
+		// muffled while a module asks for it, and the ears ring after the muffle, so the ringing stays clear
 		S_MufflePaint( s_paintedtime, end );
+		S_TinnitusPaint( s_paintedtime, end );
 
 		// transfer out according to DMA format
 		S_TransferPaintBuffer( end );

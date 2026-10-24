@@ -326,7 +326,7 @@ void VK_Scope( const scopeEffect_t *fx, qboolean boxes ) {
 	parm[4] = Com_Clamp( 0.0f, 1.0f, fx->zoom );
 	parm[5] = ( fx->flags & SCOPEFX_TRACKER ) ? Com_Clamp( 0.0f, 1.0f, fx->motion ) : 0.0f;
 	parm[6] = fx->time;
-	parm[7] = ( fx->flags & SCOPEFX_LENS ) ? 1.0f : 0.0f;
+	parm[7] = ( fx->flags & SCOPEFX_LENS ) ? ( ( fx->flags & SCOPEFX_BINOCULAR ) ? 2.0f : 1.0f ) : 0.0f;
 	parm[8] = (float)vk.color.width / (float)vk.screen.width;
 	parm[9] = (float)vk.color.height / (float)vk.screen.height;
 	parm[10] = 1.0f / (float)( 1 << tr.overbrightBits );
@@ -336,6 +336,145 @@ void VK_Scope( const scopeEffect_t *fx, qboolean boxes ) {
 	parm[14] = Com_Clamp( 0.0f, 1.0f, fx->ammo );
 	parm[15] = ( fx->flags & SCOPEFX_RETICLE ) ? 1.0f : 0.0f;
 	VK_ScopePass( source, prep, &vk.glow, parm );
+
+	// the shaders that draw geometry have other sets and other state
+	VK_BindFrameSets();
+	vk.stateValid = qfalse;
+	VK_SetViewport( vk.viewport[0], vk.viewport[1], vk.viewport[2], vk.viewport[3], 0.0f, 1.0f );
+}
+
+/*
+===============
+VK_ScreenFx
+
+The view of the level bent, flashed and coloured as the cgame asked with RE_SetScreenEffect(). After the bloom,
+before the scope, which then sees it too. shaders/screenfxprep.frag puts the distance of every pixel from the eye
+into a soft buffer (half the size, in two channels of eight bits), the frame is copied into vk.screen and
+shaders/screenfx.frag draws it again over the frame from there, each pixel taken from where the sources bend it to.
+A source is left out where the level is nearer than it, so nothing is seen through a wall. While Force Sight is on,
+shaders/screenfxfog.frag works out the mist around the eye into the other soft buffer first, screenfx.frag lays it
+in.
+
+The numbers of screenfx.frag, VK_SCREENFX_VEC4S vec4:
+[0] x: seconds, y: width / height of the frame, z: 1 / overbright factor, w: number of sources
+[1] xy: texture coordinates of the frame to the ones of its copy, z: the height of the view as a share of the one
+    of the frame, w: colour split
+[2] xy: the depth to the distance from the eye, x / ( depth + y )
+[3] tint: rgb, a
+[4] x: desaturate, y: radial blur, w: vignette
+[5] vignette rgb, w: width of its arc, 0 all around
+[6] xy: direction of the arc (x to the right, y up), z: water, w: drops
+[7] rgb: colour of the water
+[8] x: Force Sight, y: rage, z: protect, w: absorb
+[9] xyz: the eye in the level, w: tan of half the fov across
+[10] xyz: forward, w: tan of half the fov up
+[11] xyz: to the right   [12] xyz: up
+[13] the view in texture coordinates of the frame: left, top, width, height
+[14] x: protect hit, y: absorb pulse, z: rage pulse
+[15] xw: how far the picture moved on the frame as the eye turned, in texture coordinates, y: seconds since the
+     frame before, z: 1 when the smoke buffer of the frame before holds its smoke (set here)
+[16 + 3 * i] the sources: xy, zw: a and b in texture coordinates of the frame
+[17 + 3 * i] x: radius, y: width, as shares of the height of the frame, z: strength, w: distance from the eye
+[18 + 3 * i] x: kind (SCREENFX_*), y: seed
+===============
+*/
+#define SCREENFX_SOURCE_VEC4	16
+
+void VK_ScreenFx( const screenEffect_t *fx ) {
+	const float	*projection = backEnd.viewParms.projectionMatrix;
+	const float	vx = backEnd.viewParms.viewportX, vy = backEnd.viewParms.viewportY;
+	const float	vw = backEnd.viewParms.viewportWidth, vh = backEnd.viewParms.viewportHeight;
+	const float	fw = glConfig.vidWidth, fh = glConfig.vidHeight;
+	float		parm[VK_SCREENFX_VEC4S][4];
+	vkTarget_t	*prep = &vk.soft[0];
+	int			count = 0;
+
+	if ( !vk.frame || !vk.depthReadable ) {
+		return;
+	}
+	VK_EndTarget();
+	{
+		const float depth[4] = { projection[14] * 0.5f, ( projection[10] - 1.0f ) * 0.5f, 0.0f, 0.0f };
+
+		VK_ScreenFxPrepPass( &vk.glow, prep, depth );
+	}
+	VK_CopyTarget( &vk.color, &vk.screen );
+
+	memset( parm, 0, sizeof( parm ) );
+	for ( int i = 0; i < fx->numSources && SCREENFX_SOURCE_VEC4 + 3 * count + 2 < VK_SCREENFX_VEC4S; i++ ) {
+		const screenFxSource_t	*src = &fx->sources[i];
+		float					*p = parm[SCREENFX_SOURCE_VEC4 + 3 * count];
+
+		if ( src->strength <= 0.0f ) {
+			continue;
+		}
+		// fractions of the view to texture coordinates of the frame, whose top row comes first: the view is a
+		// rectangle of it that OpenGL counts from the lower edge
+		p[0] = ( vx + src->a[0] * vw ) / fw;
+		p[1] = 1.0f - ( vy + ( 1.0f - src->a[1] ) * vh ) / fh;
+		p[2] = ( vx + src->b[0] * vw ) / fw;
+		p[3] = 1.0f - ( vy + ( 1.0f - src->b[1] ) * vh ) / fh;
+		p[4] = src->radius * vh / fh;
+		p[5] = src->width * vh / fh;
+		p[6] = Com_Clamp( 0.0f, 1.0f, src->strength );
+		p[7] = src->distance;
+		p[8] = (float)src->kind;
+		p[9] = src->seed;
+		count++;
+	}
+	parm[0][0] = fx->time;
+	parm[0][1] = fw / fh;
+	parm[0][2] = 1.0f / (float)( 1 << tr.overbrightBits );
+	parm[0][3] = (float)count;
+	parm[1][0] = (float)vk.color.width / (float)vk.screen.width;
+	parm[1][1] = (float)vk.color.height / (float)vk.screen.height;
+	parm[1][2] = vh / fh;
+	parm[1][3] = Com_Clamp( 0.0f, 1.0f, fx->split );
+	parm[2][0] = projection[14] * 0.5f;
+	parm[2][1] = ( projection[10] - 1.0f ) * 0.5f;
+	VectorCopy4( fx->tint, parm[3] );
+	parm[4][0] = Com_Clamp( 0.0f, 1.0f, fx->desaturate );
+	parm[4][1] = Com_Clamp( 0.0f, 1.0f, fx->radialBlur );
+	parm[4][3] = Com_Clamp( 0.0f, 1.0f, fx->vignette[3] );
+	VectorCopy( fx->vignette, parm[5] );
+	parm[5][3] = Com_Clamp( 0.0f, 1.0f, fx->vignetteArc[2] );
+	parm[6][0] = fx->vignetteArc[0];
+	parm[6][1] = fx->vignetteArc[1];
+	parm[6][2] = Com_Clamp( 0.0f, 1.0f, fx->water );
+	parm[6][3] = Com_Clamp( 0.0f, 1.0f, fx->drops );
+	VectorCopy( fx->waterColor, parm[7] );
+	parm[8][0] = Com_Clamp( 0.0f, 1.0f, fx->sight );
+	parm[8][1] = Com_Clamp( 0.0f, 1.0f, fx->rage );
+	parm[8][2] = Com_Clamp( 0.0f, 1.0f, fx->protect );
+	parm[8][3] = Com_Clamp( 0.0f, 1.0f, fx->absorb );
+	parm[14][0] = Com_Clamp( 0.0f, 1.0f, fx->protectHit );
+	parm[14][1] = Com_Clamp( 0.0f, 1.0f, fx->absorbPulse );
+	parm[14][2] = Com_Clamp( 0.0f, 1.0f, fx->ragePulse );
+	parm[15][0] = fx->viewShift[0] * vw / fw;
+	parm[15][3] = fx->viewShift[1] * vh / fh;
+	VectorCopy( backEnd.viewParms.ori.origin, parm[9] );
+	parm[9][3] = tanf( DEG2RAD( backEnd.viewParms.fovX * 0.5f ) );
+	VectorCopy( backEnd.viewParms.ori.axis[0], parm[10] );
+	parm[10][3] = tanf( DEG2RAD( backEnd.viewParms.fovY * 0.5f ) );
+	VectorScale( backEnd.viewParms.ori.axis[1], -1.0f, parm[11] );
+	VectorCopy( backEnd.viewParms.ori.axis[2], parm[12] );
+	parm[13][0] = vx / fw;
+	parm[13][1] = 1.0f - ( vy + vh ) / fh;
+	parm[13][2] = vw / fw;
+	parm[13][3] = vh / fh;
+	parm[15][1] = fx->frameTime;
+	// the mist of Force Sight, into the other soft buffer, which nothing else uses in between, and the smoke of its
+	// ghosts, on from what the frame before left in the other of its two buffers when there was one
+	if ( fx->sight > 0.0f ) {
+		vkTarget_t *last = &vk.smoke[vk.smokeIndex];
+
+		parm[15][2] = ( vk.smokeFrame && vk.smokeFrame == tr.frameCount - 1 ) ? 1.0f : 0.0f;
+		VK_ScreenFxFogPass( &vk.soft[1], parm[0] );
+		vk.smokeIndex ^= 1;
+		VK_ScreenFxSmokePass( &vk.smoke[vk.smokeIndex], last, prep, parm[0] );
+		vk.smokeFrame = tr.frameCount;
+	}
+	VK_ScreenFxPass( prep, &vk.soft[1], &vk.smoke[vk.smokeIndex], parm[0] );
 
 	// the shaders that draw geometry have other sets and other state
 	VK_BindFrameSets();

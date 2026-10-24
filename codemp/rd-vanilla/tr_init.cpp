@@ -2255,6 +2255,7 @@ Q_EXPORT refexport_t* QDECL GetRefAPI( int apiVersion, refimport_t *rimp ) {
 	re.ext.SetDepthOfField					= RE_SetDepthOfField;
 	re.ext.WindowResized					= RE_WindowResized;
 	re.ext.SetScopeEffect					= RE_SetScopeEffect;
+	re.ext.SetScreenEffect					= RE_SetScreenEffect;
 
 	return &re;
 }

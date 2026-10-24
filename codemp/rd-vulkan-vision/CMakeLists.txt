@@ -220,10 +220,15 @@ set(MPVulkanVisionShaders
 	focus.frag
 	scopeprep.frag
 	scope.frag
+	screenfxprep.frag
+	screenfx.frag
+	screenfxfog.frag
+	screenfxsmoke.frag
 	)
 set(MPVulkanVisionShaderIncludes
 	"${MPDir}/rd-vulkan-vision/shaders/common.glsl"
 	"${MPDir}/rd-vulkan-vision/shaders/dialect.glsl"
+	"${MPDir}/rd-vulkan-vision/shaders/noise.glsl"
 	"${MPDir}/rd-vulkan-vision/shaders/post.glsl"
 	"${MPDir}/rd-vulkan-vision/shaders/stage.glsl"
 	)
@@ -294,7 +299,7 @@ add_custom_command(
 list(APPEND MPVulkanVisionShaderOutputs "${CMAKE_CURRENT_BINARY_DIR}/shaders/prefix_es.inc")
 if(GLSLANG_VALIDATOR)
 	# vertex and fragment shader of every program, as vk_pipeline.cpp puts them together
-	foreach(program generic_vert:generic_frag skinned_vert:generic_frag post_vert:gamma_frag post_vert:blur_frag post_vert:copy_frag post_vert:focus_frag post_vert:scopeprep_frag post_vert:scope_frag)
+	foreach(program generic_vert:generic_frag skinned_vert:generic_frag post_vert:gamma_frag post_vert:blur_frag post_vert:copy_frag post_vert:focus_frag post_vert:scopeprep_frag post_vert:scope_frag post_vert:screenfxprep_frag post_vert:screenfx_frag post_vert:screenfxfog_frag post_vert:screenfxsmoke_frag)
 		string(REPLACE ":" ";" programStages ${program})
 		list(GET programStages 0 programVert)
 		list(GET programStages 1 programFrag)

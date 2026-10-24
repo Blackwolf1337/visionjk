@@ -60,6 +60,18 @@ static const uint32_t vk_scopePrepFrag[] =
 static const uint32_t vk_scopeFrag[] =
 #include "shaders/scope_frag.inc"
 ;
+static const uint32_t vk_screenFxPrepFrag[] =
+#include "shaders/screenfxprep_frag.inc"
+;
+static const uint32_t vk_screenFxFrag[] =
+#include "shaders/screenfx_frag.inc"
+;
+static const uint32_t vk_screenFxFogFrag[] =
+#include "shaders/screenfxfog_frag.inc"
+;
+static const uint32_t vk_screenFxSmokeFrag[] =
+#include "shaders/screenfxsmoke_frag.inc"
+;
 
 static VkShaderModule VK_CreateShader( const uint32_t *code, size_t size ) {
 	VkShaderModuleCreateInfo info = { VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO };
@@ -129,10 +141,11 @@ static void VK_CreateLayouts( void ) {
 	sizes[2].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 	// the table of the textures, and one each for the frame, the glow, its two blur buffers, the two of v_menuBlur
 	// and the depth, and for the frame (twice), the glow and the depth of the views of the level in their own size
-	// (tay_renderScale), and for the copy of the frame the scope reads
-	sizes[2].descriptorCount = VK_MAX_IMAGES + 12;
+	// (tay_renderScale), for the copy of the frame the scope reads, and for the two of the smoke of the screen
+	// effects
+	sizes[2].descriptorCount = VK_MAX_IMAGES + 14;
 	pool.flags = VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT;
-	pool.maxSets = VK_FRAMES + 13;
+	pool.maxSets = VK_FRAMES + 15;
 	pool.poolSizeCount = 3;
 	pool.pPoolSizes = sizes;
 	VK_CHECK( qvkCreateDescriptorPool( vk.device, &pool, NULL, &vk.descriptorPool ) );
@@ -166,6 +179,20 @@ static void VK_CreateLayouts( void ) {
 		layout.setLayoutCount = 4;
 		layout.pSetLayouts = scopeSets;
 		VK_CHECK( qvkCreatePipelineLayout( vk.device, &layout, NULL, &vk.scopePipelineLayout ) );
+	}
+	// the screen effects read their numbers from the globals of the frame (vkGlobals_t::screenFx), they are too
+	// many to be pushed, and four targets; their mist reads the same numbers and the depth, their smoke the same
+	// numbers and two of those targets
+	{
+		const VkDescriptorSetLayout screenFxSets[5] = { vk.frameSetLayout, vk.postSetLayout, vk.postSetLayout, vk.postSetLayout, vk.postSetLayout };
+
+		layout.setLayoutCount = 5;
+		layout.pSetLayouts = screenFxSets;
+		layout.pushConstantRangeCount = 0;
+		layout.pPushConstantRanges = NULL;
+		VK_CHECK( qvkCreatePipelineLayout( vk.device, &layout, NULL, &vk.screenFxPipelineLayout ) );
+		layout.setLayoutCount = 2;
+		VK_CHECK( qvkCreatePipelineLayout( vk.device, &layout, NULL, &vk.fogPipelineLayout ) );
 	}
 
 	alloc.descriptorPool = vk.descriptorPool;
@@ -218,7 +245,9 @@ VK_CreatePipeline
 
 post: 0 geometry. 1 a pass over a whole target of its own without vertices (gamma, blur). 2 such a pass onto the
 frame while it is being drawn, blended as the state bits say (the glow). 3 as 1, and it reads the depth of the
-scene too (the depth of field). 4 as 2 with the four sets and sixteen numbers of the scope.
+scene too (the depth of field). 4 as 2 with the four sets and sixteen numbers of the scope. 5 as 2 with the sets
+of the screen effects. 6 as 1 with the sets of their mist. 7 as 1 with the sets of the screen effects (their
+smoke).
 ===============
 */
 VkPipeline VK_CreatePipeline( VkShaderModule vertex, VkShaderModule fragment, uint32_t stateBits, int post, qboolean skinned ) {
@@ -242,7 +271,7 @@ VkPipeline VK_CreatePipeline( VkShaderModule vertex, VkShaderModule fragment, ui
 	VkGraphicsPipelineCreateInfo info = { VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO, &rendering };
 	VkPipeline pipeline;
 	// a pass into a target of its own: one sample a pixel, no depth, nothing blended
-	const qboolean alone = (qboolean)( post == 1 || post == 3 );
+	const qboolean alone = (qboolean)( post == 1 || post == 3 || post == 6 || post == 7 );
 
 	memset( stages, 0, sizeof( stages ) );
 	stages[0].sType = stages[1].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -353,6 +382,10 @@ VkPipeline VK_CreatePipeline( VkShaderModule vertex, VkShaderModule fragment, ui
 	info.pDynamicState = &dynamic;
 	if ( post == 4 ) {
 		info.layout = vk.scopePipelineLayout;
+	} else if ( post == 5 || post == 7 ) {
+		info.layout = vk.screenFxPipelineLayout;
+	} else if ( post == 6 ) {
+		info.layout = vk.fogPipelineLayout;
 	} else {
 		info.layout = ( post == 3 ) ? vk.focusPipelineLayout : ( post ? vk.postPipelineLayout : vk.pipelineLayout );
 	}
@@ -413,6 +446,15 @@ void VK_InitPipelines( void ) {
 	vk.scopeFragmentShader = VK_CreateShader( vk_scopeFrag, sizeof( vk_scopeFrag ) );
 	vk.scopePipeline = VK_CreatePipeline( vk.postVertexShader, vk.scopeFragmentShader,
 		GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA, 4, qfalse );
+	vk.screenFxPrepFragmentShader = VK_CreateShader( vk_screenFxPrepFrag, sizeof( vk_screenFxPrepFrag ) );
+	vk.screenFxPrepPipeline = VK_CreatePipeline( vk.postVertexShader, vk.screenFxPrepFragmentShader, 0, 3, qfalse );
+	vk.screenFxFragmentShader = VK_CreateShader( vk_screenFxFrag, sizeof( vk_screenFxFrag ) );
+	vk.screenFxPipeline = VK_CreatePipeline( vk.postVertexShader, vk.screenFxFragmentShader,
+		GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA, 5, qfalse );
+	vk.screenFxFogFragmentShader = VK_CreateShader( vk_screenFxFogFrag, sizeof( vk_screenFxFogFrag ) );
+	vk.screenFxFogPipeline = VK_CreatePipeline( vk.postVertexShader, vk.screenFxFogFragmentShader, 0, 6, qfalse );
+	vk.screenFxSmokeFragmentShader = VK_CreateShader( vk_screenFxSmokeFrag, sizeof( vk_screenFxSmokeFrag ) );
+	vk.screenFxSmokePipeline = VK_CreatePipeline( vk.postVertexShader, vk.screenFxSmokeFragmentShader, 0, 7, qfalse );
 }
 
 void VK_ShutdownPipelines( void ) {
@@ -433,6 +475,14 @@ void VK_ShutdownPipelines( void ) {
 	qvkDestroyPipeline( vk.device, vk.scopePipeline, NULL );
 	qvkDestroyShaderModule( vk.device, vk.scopePrepFragmentShader, NULL );
 	qvkDestroyShaderModule( vk.device, vk.scopeFragmentShader, NULL );
+	qvkDestroyPipeline( vk.device, vk.screenFxPrepPipeline, NULL );
+	qvkDestroyPipeline( vk.device, vk.screenFxPipeline, NULL );
+	qvkDestroyShaderModule( vk.device, vk.screenFxPrepFragmentShader, NULL );
+	qvkDestroyShaderModule( vk.device, vk.screenFxFragmentShader, NULL );
+	qvkDestroyPipeline( vk.device, vk.screenFxFogPipeline, NULL );
+	qvkDestroyShaderModule( vk.device, vk.screenFxFogFragmentShader, NULL );
+	qvkDestroyPipeline( vk.device, vk.screenFxSmokePipeline, NULL );
+	qvkDestroyShaderModule( vk.device, vk.screenFxSmokeFragmentShader, NULL );
 	qvkDestroyShaderModule( vk.device, vk.blurFragmentShader, NULL );
 	qvkDestroyShaderModule( vk.device, vk.copyFragmentShader, NULL );
 	for ( int i = 0; i < VKP_NUM_PROGRAMS; i++ ) {
@@ -446,6 +496,8 @@ void VK_ShutdownPipelines( void ) {
 	qvkDestroyPipelineLayout( vk.device, vk.postPipelineLayout, NULL );
 	qvkDestroyPipelineLayout( vk.device, vk.focusPipelineLayout, NULL );
 	qvkDestroyPipelineLayout( vk.device, vk.scopePipelineLayout, NULL );
+	qvkDestroyPipelineLayout( vk.device, vk.screenFxPipelineLayout, NULL );
+	qvkDestroyPipelineLayout( vk.device, vk.fogPipelineLayout, NULL );
 	qvkDestroyDescriptorSetLayout( vk.device, vk.frameSetLayout, NULL );
 	qvkDestroyDescriptorSetLayout( vk.device, vk.textureSetLayout, NULL );
 	qvkDestroyDescriptorSetLayout( vk.device, vk.postSetLayout, NULL );

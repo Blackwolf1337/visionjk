@@ -254,6 +254,13 @@ set(MPCGameScopeFiles
 source_group("cgame/scope" FILES ${MPCGameScopeFiles})
 set(MPCGameFiles ${MPCGameFiles} ${MPCGameScopeFiles})
 
+# the screen effects: the renderer bends and colours the view of the level
+set(MPCGameScreenFxFiles
+	"${MPDir}/cgame/screenfx/cg_screenfx.c"
+	)
+source_group("cgame/screenfx" FILES ${MPCGameScreenFxFiles})
+set(MPCGameFiles ${MPCGameFiles} ${MPCGameScreenFxFiles})
+
 # the menu in the level: shoulder camera, panel, blur and muffled sound while a menu is open
 set(MPCGameMenu3DFiles
 	"${MPDir}/cgame/menu3d/cg_menu3d.c"

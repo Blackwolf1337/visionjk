@@ -40,6 +40,13 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // mover counts for a second after he stopped. Only what can be seen: nothing through walls, cloaked, dead and the
 // own player never. Now and then the tracker takes an edge or a corner of the level for a mover for a moment, as a
 // real one would. rd-vanilla: the boxes without the tint.
+//
+// The binoculars (the item, zoomMode 2) look through the same lens, two of them side by side and without a reticle
+// (v_binoculars). Once they zoomed in by themselves the wheel zooms further. Over them the distance to what is in
+// the middle, a strip of the compass and the zoom.
+//
+// The lock of the rocket launcher (CG_ScopeDrawLockOn, v_lockOn): brackets that close in on the target step by step
+// of the lock, a beep a step, higher each time, and two tones and red when it is locked.
 
 #include "cgame/cg_local.h"
 #include "ui/ui_shared.h"
@@ -59,6 +66,10 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define TRACK_ECHOES		32			// boxes a ping left behind
 #define TRACK_ECHO_MSEC		1500		// and how long they take to fade
 #define UNITS_PER_METER		36.0f		// a player is 64 units, about 1.8 m
+#define BINO_RADIUS			0.36f		// of the height of the view, each of the two lenses
+#define BINO_MIN_FOV		5.0f
+#define BINO_MAX_FOV		40.0f		// where the binoculars stop zooming in by themselves (CG_CalcFov)
+#define LOCK_STEPS			8			// of the lock of the rocket launcher (CG_DrawRocketLocking)
 
 typedef enum {
 	SCOPE_MODE_OFF,
@@ -80,6 +91,7 @@ typedef struct {
 										// where scope.frag reads the mask
 	float		distance;				// 0: no text under it
 	float		alpha;
+	qboolean	locked;					// red: the lock of the rocket launcher holds
 } scopeBox_t;
 
 #define SCOPE_MAX_BOXES		SCOPEFX_MAX_BOXES
@@ -125,6 +137,7 @@ static struct {
 	float			heat[MAX_GENTITIES];	// how strongly an entity shows as a mover
 	int				heatTime[MAX_GENTITIES];
 	scopeTrack_t	tracks[MAX_GENTITIES];
+	sfxHandle_t		lockSounds[LOCK_STEPS + 1];	// a beep a step of the lock, [LOCK_STEPS] when it is locked
 } scope;
 
 static void CG_ScopeUpdateTracker( void );
@@ -137,11 +150,17 @@ static qboolean Scope_Engine( void ) {
 }
 
 void CG_ScopeInit( void ) {
+	int i;
+
 	memset( &scope, 0, sizeof( scope ) );
 	// an engine without the cvar has no such entry in trap->ext, it may not be read
 	scope.has = (qboolean)( Scope_Engine() && trap->ext.R_SetScopeEffect && trap->ext.R_SetScopeEffect( NULL ) );
 	scope.checked = qtrue;
 	scope.pingSound = trap->S_RegisterSound( "sound/vision/tracker_ping.wav" );
+	for ( i = 0; i < LOCK_STEPS; i++ ) {
+		scope.lockSounds[i] = trap->S_RegisterSound( va( "sound/vision/lock_%i.wav", i + 1 ) );
+	}
+	scope.lockSounds[LOCK_STEPS] = trap->S_RegisterSound( "sound/vision/lock_on.wav" );
 	trap->Cvar_Set( "v_scopeWheel", "0" );
 }
 
@@ -156,18 +175,30 @@ static qboolean CG_ScopeLocked( void ) {
 	return (qboolean)( CG_Scoped() && cg.predictedPlayerState.zoomLocked );
 }
 
+// the binoculars are up, of the player or the one he follows
+static qboolean CG_Binoculars( void ) {
+	return (qboolean)( cg.snap && cg.predictedPlayerState.zoomMode == 2 && cg.predictedPlayerState.stats[STAT_HEALTH] > 0 );
+}
+
+// the wheel zooms: the disruptor once its zoom is locked, the binoculars once they zoomed in by themselves
+static qboolean CG_ScopeWheelable( void ) {
+	return (qboolean)( CG_ScopeLocked() || ( CG_Binoculars() && zoomFov <= BINO_MAX_FOV + 0.01f ) );
+}
+
 /*
 =================
 CG_ScopeZoom_f
 
-v_scopezoom in|out: a notch of the wheel while the zoom is locked
+v_scopezoom in|out: a notch of the wheel while the zoom of the disruptor is locked or the binoculars are up
 =================
 */
 void CG_ScopeZoom_f( void ) {
 	const char	*dir = CG_Argv( 1 );
+	const float	low = CG_Binoculars() ? BINO_MIN_FOV : SCOPE_MIN_FOV;
+	const float	high = CG_Binoculars() ? BINO_MAX_FOV : SCOPE_MAX_FOV;
 	float		from;
 
-	if ( !CG_ScopeLocked() ) {
+	if ( !CG_ScopeWheelable() ) {
 		return;
 	}
 	from = scope.easing ? scope.easeTo : zoomFov;
@@ -179,7 +210,7 @@ void CG_ScopeZoom_f( void ) {
 		trap->Print( "usage: v_scopezoom in|out\n" );
 		return;
 	}
-	scope.easeTo = Com_Clamp( SCOPE_MIN_FOV, SCOPE_MAX_FOV, scope.easeTo );
+	scope.easeTo = Com_Clamp( low, high, scope.easeTo );
 	if ( scope.easeTo == from ) {
 		return;
 	}
@@ -229,7 +260,7 @@ Once a frame before the view is worked out: the zoom of the wheel, the wheel for
 =================
 */
 void CG_ScopeFrame( void ) {
-	const qboolean	locked = CG_ScopeLocked();
+	const qboolean	locked = CG_ScopeWheelable();
 	const qboolean	wheel = (qboolean)( locked && v_scopeWheelZoom.integer );
 	const float		step = cg.frametime / (float)MODE_FADE_MSEC;
 
@@ -383,6 +414,19 @@ void CG_ScopeScene( void ) {
 
 	CG_ScopePhantoms();
 	CG_ScopeUpdateTracker();
+	scope.drawn = qfalse;
+	// the binoculars: two lenses side by side, the zoom of the wheel, nothing of the weapon
+	if ( scope.has && CG_Binoculars() && v_binoculars.integer ) {
+		memset( &fx, 0, sizeof( fx ) );
+		fx.flags = SCOPEFX_LENS | SCOPEFX_BINOCULAR;
+		fx.center[0] = fx.center[1] = 0.5f;
+		fx.radius = BINO_RADIUS;
+		fx.zoom = Com_Clamp( 0.0f, 1.0f, ( BINO_MAX_FOV - zoomFov ) / ( BINO_MAX_FOV - BINO_MIN_FOV ) );
+		fx.time = ( cg.time & 0xfffff ) * 0.001f;
+		fx.charge = -1.0f;
+		scope.drawn = trap->ext.R_SetScopeEffect( &fx );
+		return;
+	}
 	if ( !scope.has || !CG_Scoped() || ( !v_scope.integer && scope.trackerFade <= 0.0f ) ) {
 		return;
 	}
@@ -460,10 +504,24 @@ static qboolean CG_ScopeSees( centity_t *cent ) {
 	return (qboolean)( tr.fraction >= 1.0f );
 }
 
+// the box of an entity: the one the server gave him, packed as CG_ClipMoveToEntities() reads it (crouched is lower)
+static void CG_ScopeBounds( const centity_t *cent, vec3_t mins, vec3_t maxs ) {
+	const int solid = cent->currentState.solid;
+
+	if ( solid && solid != SOLID_BMODEL ) {
+		const float x = (float)( solid & 255 ), zd = (float)( ( solid >> 8 ) & 255 ), zu = (float)( ( ( solid >> 16 ) & 255 ) - 32 );
+
+		VectorSet( mins, -x, -x, -zd );
+		VectorSet( maxs, x, x, zu );
+	} else {
+		VectorSet( mins, -15.0f, -15.0f, DEFAULT_MINS_2 );
+		VectorSet( maxs, 15.0f, 15.0f, DEFAULT_MAXS_2 );
+	}
+}
+
 // the tracker saw a mover this frame: his box follows him
 static void CG_ScopeTrack( centity_t *cent ) {
 	scopeTrack_t	*track = &scope.tracks[cent->currentState.number];
-	const int		solid = cent->currentState.solid;
 
 	if ( !track->seenTime || cg.time - track->seenTime > TRACK_LOST_MSEC ) {
 		track->lockTime = cg.time;
@@ -471,16 +529,7 @@ static void CG_ScopeTrack( centity_t *cent ) {
 	}
 	track->seenTime = cg.time;
 	VectorCopy( cent->lerpOrigin, track->origin );
-	if ( solid && solid != SOLID_BMODEL ) {
-		// the box the server gave him, packed as CG_ClipMoveToEntities() reads it: crouched is lower
-		const float x = (float)( solid & 255 ), zd = (float)( ( solid >> 8 ) & 255 ), zu = (float)( ( ( solid >> 16 ) & 255 ) - 32 );
-
-		VectorSet( track->mins, -x, -x, -zd );
-		VectorSet( track->maxs, x, x, zu );
-	} else {
-		VectorSet( track->mins, -15.0f, -15.0f, DEFAULT_MINS_2 );
-		VectorSet( track->maxs, 15.0f, 15.0f, DEFAULT_MAXS_2 );
-	}
+	CG_ScopeBounds( cent, track->mins, track->maxs );
 }
 
 /*
@@ -547,7 +596,11 @@ static void CG_ScopeBox( const scopeBox_t *box ) {
 	vec4_t		shade;
 
 	VectorSet4( shade, 0.0f, 0.0f, 0.0f, 0.45f * alpha );
-	VectorSet4( color, 1.0f, 0.8f, 0.3f, alpha );
+	if ( box->locked ) {
+		VectorSet4( color, 1.0f, 0.15f, 0.1f, alpha );
+	} else {
+		VectorSet4( color, 1.0f, 0.8f, 0.3f, alpha );
+	}
 	// a thin shade under every line, so a box stays to be seen on a bright wall
 	CG_FillRect( left - line, top - line, arm + line * 2.0f, line * 3.0f, shade );
 	CG_FillRect( right - arm - line, top - line, arm + line * 2.0f, line * 3.0f, shade );
@@ -798,6 +851,106 @@ void CG_ScopeDrawHUD( void ) {
 		for ( i = 0; i < scope.contacts && i < MOTION_MAX_PIPS; i++ ) {
 			CG_FillRect( x + 12.0f + i * 8.0f, y + 1.0f, 5.0f, 3.0f, color );
 		}
+	}
+	trap->R_SetColor( NULL );
+}
+
+/*
+=================
+CG_ScopeDrawBinoculars
+
+In CG_DrawZoomMask(), for the binoculars while the renderer draws their lenses: brackets in the middle, how far it
+is to what they are on, a strip of the compass above, the zoom below
+=================
+*/
+void CG_ScopeDrawBinoculars( void ) {
+	static const char	*names[8] = { "N", "NE", "E", "SE", "S", "SW", "W", "NW" };
+	const float			heading = AngleNormalize360( 90.0f - cg.refdef.viewangles[YAW] );	// north up, clockwise
+	const float			times = tanf( DEG2RAD( cg_fov.value * 0.5f ) ) / tanf( DEG2RAD( Q_max( zoomFov, 1.0f ) * 0.5f ) );
+	const float			top = 240.0f - BINO_RADIUS * SCREEN_HEIGHT - 2.0f, bottom = 240.0f + BINO_RADIUS * SCREEN_HEIGHT + 4.0f;
+	scopeBox_t			box;
+	trace_t				tr;
+	vec3_t				end;
+	vec4_t				color;
+	const char			*text;
+	int					deg;
+
+	VectorSet4( color, 0.75f, 1.0f, 0.82f, 0.9f );
+
+	// what is in the middle: a box of brackets and its distance
+	VectorMA( cg.refdef.vieworg, 16384.0f, cg.refdef.viewaxis[0], end );
+	CG_Trace( &tr, cg.refdef.vieworg, NULL, NULL, end, cg.predictedPlayerState.clientNum, MASK_SHOT );
+	memset( &box, 0, sizeof( box ) );
+	VectorSet4( box.rect, 300.0f, 228.0f, 340.0f, 252.0f );
+	box.alpha = 0.9f;
+	CG_ScopeBox( &box );
+	text = ( tr.fraction < 1.0f && !( tr.surfaceFlags & SURF_SKY ) )
+		? va( "%im", (int)( tr.fraction * 16384.0f / UNITS_PER_METER + 0.5f ) ) : "---";
+	CG_Text_Paint( 320.0f - CG_Text_Width( text, 0.5f, FONT_SMALL ) * 0.5f, bottom, 0.5f, color, text, 0, 0, ITEM_TEXTSTYLE_SHADOWED, FONT_SMALL );
+	text = va( "%.1fx", times );
+	CG_Text_Paint( 380.0f, bottom, 0.4f, color, text, 0, 0, ITEM_TEXTSTYLE_SHADOWED, FONT_SMALL );
+
+	// the compass: a mark every 5 degrees within 30 of the heading, longer and named every 45
+	for ( deg = (int)heading - 30; deg <= (int)heading + 30; deg++ ) {
+		const int	d = ( deg % 360 + 360 ) % 360;
+		const float	x = 320.0f + ( deg - heading ) * 3.0f;
+
+		if ( d % 5 ) {
+			continue;
+		}
+		color[3] = 0.9f * ( 1.0f - fabsf( deg - heading ) / 32.0f );
+		CG_FillRect( x - 0.5f, top - ( d % 45 ? 4.0f : 8.0f ), 1.0f, d % 45 ? 4.0f : 8.0f, color );
+		if ( !( d % 45 ) ) {
+			CG_Text_Paint( x - CG_Text_Width( names[d / 45], 0.35f, FONT_SMALL ) * 0.5f, top - 20.0f, 0.35f, color, names[d / 45], 0, 0,
+				ITEM_TEXTSTYLE_SHADOWED, FONT_SMALL );
+		}
+	}
+	color[3] = 0.9f;
+	CG_FillRect( 319.0f, top + 1.0f, 2.0f, 5.0f, color );
+	trap->R_SetColor( NULL );
+}
+
+/*
+=================
+CG_ScopeDrawLockOn
+
+In CG_DrawRocketLocking(), in place of its circle: brackets around the box of the target that close in with every
+step of the lock (step 0 to LOCK_STEPS), amber, red and with a pulse once it is locked, and pips of the steps under
+them; a beep with every new step, higher each time, two tones when it locks
+=================
+*/
+void CG_ScopeDrawLockOn( centity_t *target, int step, qboolean newStep ) {
+	const float		t = Com_Clamp( 0.0f, 1.0f, step / (float)LOCK_STEPS );
+	const qboolean	locked = (qboolean)( step >= LOCK_STEPS );
+	vec3_t			mins, maxs;
+	float			rect[4];
+	scopeBox_t		box;
+	int				i;
+
+	if ( newStep && step > 0 ) {
+		trap->S_StartLocalSound( scope.lockSounds[locked ? LOCK_STEPS : step - 1], CHAN_LOCAL_SOUND );
+	}
+	CG_ScopeBounds( target, mins, maxs );
+	if ( !CG_ScopeProject( target->lerpOrigin, mins, maxs, rect ) ) {
+		return;
+	}
+	// from twice the size of the box down to it
+	{
+		const float	grow = 1.0f + ( 1.0f - t ) * ( 1.0f - t );
+		const float	cx = ( rect[0] + rect[2] ) * 0.5f, cy = ( rect[1] + rect[3] ) * 0.5f;
+		const float	hw = Q_max( 8.0f, ( rect[2] - rect[0] ) * 0.5f ) * grow, hh = Q_max( 10.0f, ( rect[3] - rect[1] ) * 0.5f ) * grow;
+
+		memset( &box, 0, sizeof( box ) );
+		VectorSet4( box.rect, cx - hw, cy - hh, cx + hw, cy + hh );
+	}
+	box.alpha = locked ? 0.7f + 0.3f * sinf( cg.time * 0.03f ) : 0.5f + 0.5f * t;
+	box.locked = locked;
+	CG_ScopeBox( &box );
+	for ( i = 0; i < LOCK_STEPS; i++ ) {
+		vec4_t color;
+
+		VectorSet4( color, 1.0f, locked ? 0.15f : 0.75f, locked ? 0.1f : 0.25f, i < step ? box.alpha : 0.25f );
+		CG_FillRect( ( box.rect[0] + box.rect[2] ) * 0.5f - LOCK_STEPS * 2.5f + i * 5.0f, box.rect[3] + 3.0f, 4.0f, 2.0f, color );
 	}
 	trap->R_SetColor( NULL );
 }

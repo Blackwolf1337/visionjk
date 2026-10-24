@@ -30,7 +30,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // (trap->ext.R_SetUIPlane), which the engine sets around the drawing of the menus. The cursor of the ui is
 // drawn on the plane with the rest and the mouse moves it there, so nothing has to find out what the mouse
 // points at. Behind the menu this file adds a panel to the scene, and it asks for the blur behind it
-// (trap->ext.R_SetDepthOfField) and for the muffled sound (the cvar v_muffle). The panel is as large as what is
+// (trap->ext.R_SetDepthOfField) and for the muffled sound (CG_Menu3DMuffle). The panel is as large as what is
 // open on it: the ui says how much of the 640 x 480 its menus take (the cvar v_openBox), so the bar at the top
 // alone is a bar, and the panel grows when a page opens under it.
 //
@@ -53,7 +53,6 @@ static struct {
 	float		blend;				// 0 the view of the game, 1 the view of the menu
 	int			lastTime;
 	float		yaw;				// where the player looks, followed slowly: the camera is behind that
-	float		muffle;				// what v_muffle was last set to
 
 	// the panel, as long as blend is above 0
 	vec3_t		center, right, down;
@@ -64,10 +63,6 @@ static struct {
 
 void CG_Menu3DInit( void ) {
 	memset( &menu3d, 0, sizeof( menu3d ) );
-	// What the cgame before this one set stays in the cvar when it ends (a level change while a menu muffled the
-	// sound), and this one would take it for 0:
-	// the sound stayed dull until a menu was opened and closed.
-	trap->Cvar_Set( "v_muffle", "0" );
 }
 
 static qboolean Menu3D_Engine( const char *cvar ) {
@@ -134,12 +129,13 @@ qboolean CG_Menu3DFrame( void ) {
 		menu3d.blend = Q_max( 0.0f, menu3d.blend - (float)msec / MENU3D_OUT_MSEC );
 	}
 
-	// the sound of the game is muffled while the menu is there (v_muffle of the engine, 0 to 1)
-	if ( fabsf( menu3d.blend - menu3d.muffle ) > 0.02f || ( menu3d.blend != menu3d.muffle && ( menu3d.blend == 0.0f || menu3d.blend == 1.0f ) ) ) {
-		menu3d.muffle = menu3d.blend;
-		trap->Cvar_Set( "v_muffle", va( "%.2f", menu3d.muffle ) );
-	}
 	return (qboolean)( menu3d.blend > 0.0f );
+}
+
+// The sound of the game is muffled while the menu is there, as much as it has come in, 0 to 1. The screen effects
+// set v_muffle from it (CG_ScreenFxMuffle).
+float CG_Menu3DMuffle( void ) {
+	return menu3d.blend;
 }
 
 qboolean CG_Menu3DActive( void ) {

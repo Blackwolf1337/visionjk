@@ -1025,6 +1025,11 @@ static const void *RB_DrawSurfs( const void *data ) {
 	if ( !backEnd.viewParms.isPortal && !( backEnd.refdef.rdflags & ( RDF_NOWORLDMODEL | RDF_SKYBOXPORTAL ) ) ) {
 		VK_Bloom();
 	}
+	// RE_SetScreenEffect(): the view of the level itself, before the scope, which lays its lens over it
+	if ( r_screenFxSet && !backEnd.viewParms.isPortal && !( backEnd.refdef.rdflags & ( RDF_NOWORLDMODEL | RDF_SKYBOXPORTAL ) )
+		&& VK_HasScope() ) {
+		VK_ScreenFx( &r_screenFx );
+	}
 	if ( scope ) {
 		// the boxes of the tracker into the glow buffer, where the lens keeps the colours of the level
 		const qboolean boxes = (qboolean)( ( r_scopeFx.flags & SCOPEFX_TRACKER ) && r_scopeFx.numBoxes > 0 );

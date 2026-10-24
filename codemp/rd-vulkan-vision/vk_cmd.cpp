@@ -593,6 +593,9 @@ static VkDescriptorSet VK_PostSet( const vkTarget_t *source ) {
 	if ( source == &vk.screen ) {
 		return vk.screenSet;
 	}
+	if ( source == &vk.smoke[0] || source == &vk.smoke[1] ) {
+		return vk.smokeSets[source - vk.smoke];
+	}
 	return vk.blurSets[source - vk.blur];
 }
 
@@ -641,6 +644,69 @@ void VK_FocusPass( vkTarget_t *source, vkTarget_t *target, const float *parm ) {
 
 void VK_ScopePrepPass( vkTarget_t *source, vkTarget_t *target, const float *parm ) {
 	VK_DepthPass( vk.scopePrepPipeline, source, target, parm );
+}
+
+void VK_ScreenFxPrepPass( vkTarget_t *source, vkTarget_t *target, const float *parm ) {
+	VK_DepthPass( vk.screenFxPrepPipeline, source, target, parm );
+}
+
+// as VK_BlurPass(), with the globals of the frame and two sources
+void VK_ScreenFxSmokePass( vkTarget_t *target, vkTarget_t *last, vkTarget_t *prep, const float *fx ) {
+	VkCommandBuffer cmd = vk.frame->cmd;
+	const VkDescriptorSet sets[3] = { vk.frame->set, VK_PostSet( last ), VK_PostSet( prep ) };
+	vkGlobals_t *globals = (vkGlobals_t *)vk.frame->globals.mapped;
+
+	memcpy( globals->screenFx, fx, sizeof( globals->screenFx ) );
+	VK_TargetLayout( cmd, last, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
+	VK_TargetLayout( cmd, prep, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
+	qvkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.screenFxSmokePipeline );
+	vk.boundPipeline = vk.screenFxSmokePipeline;
+	VK_TargetLayout( cmd, target, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
+	VK_BeginRendering( cmd, target, NULL, 0, qfalse );
+	VK_FullTarget( cmd, target );
+	qvkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.screenFxPipelineLayout, 0, 3, sets, 0, NULL );
+	qvkCmdDraw( cmd, 3, 1, 0, 0 );
+	qvkCmdEndRendering( cmd );
+	VK_TargetLayout( cmd, target, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
+}
+
+// as VK_DepthPass(), with the globals of the frame in place of a source and its numbers
+void VK_ScreenFxFogPass( vkTarget_t *target, const float *fx ) {
+	VkCommandBuffer cmd = vk.frame->cmd;
+	const VkDescriptorSet sets[2] = { vk.frame->set, vk.depthSet };
+	vkGlobals_t *globals = (vkGlobals_t *)vk.frame->globals.mapped;
+
+	memcpy( globals->screenFx, fx, sizeof( globals->screenFx ) );
+	VK_TargetLayout( cmd, &vk.depth, VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL );
+	qvkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.screenFxFogPipeline );
+	vk.boundPipeline = vk.screenFxFogPipeline;
+	VK_TargetLayout( cmd, target, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
+	VK_BeginRendering( cmd, target, NULL, 0, qfalse );
+	VK_FullTarget( cmd, target );
+	qvkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.fogPipelineLayout, 0, 2, sets, 0, NULL );
+	qvkCmdDraw( cmd, 3, 1, 0, 0 );
+	qvkCmdEndRendering( cmd );
+	VK_TargetLayout( cmd, target, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
+}
+
+// The numbers go into the globals of the frame, which the device reads when it runs the frame: one pass a frame
+// (and its mist before it, with the same numbers).
+void VK_ScreenFxPass( vkTarget_t *prep, vkTarget_t *fog, vkTarget_t *smoke, const float *fx ) {
+	VkCommandBuffer cmd = vk.frame->cmd;
+	const VkDescriptorSet sets[5] = { vk.frame->set, vk.screenSet, VK_PostSet( prep ), VK_PostSet( fog ), VK_PostSet( smoke ) };
+	vkGlobals_t *globals = (vkGlobals_t *)vk.frame->globals.mapped;
+
+	memcpy( globals->screenFx, fx, sizeof( globals->screenFx ) );
+	VK_TargetLayout( cmd, &vk.screen, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
+	VK_TargetLayout( cmd, prep, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
+	VK_TargetLayout( cmd, fog, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
+	VK_TargetLayout( cmd, smoke, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
+	VK_BeginTarget( &vk.color, &vk.depth, 2, qtrue );
+	qvkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.screenFxPipeline );
+	vk.boundPipeline = vk.screenFxPipeline;
+	qvkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.screenFxPipelineLayout, 0, 5, sets, 0, NULL );
+	VK_FullTarget( cmd, &vk.color );
+	qvkCmdDraw( cmd, 3, 1, 0, 0 );
 }
 
 // The targets it reads are made ready to be read before the frame is begun, the mask also when nothing was drawn

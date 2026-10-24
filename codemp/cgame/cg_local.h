@@ -1787,11 +1787,31 @@ qboolean	CG_ScopeLensDrawn( void );
 void		CG_ScopeDrawHUD( void );
 void		CG_ScopeZoom_f( void );
 qboolean	CG_ScopeKeyCommand( const char *command );
+void		CG_ScopeDrawBinoculars( void );
+void		CG_ScopeDrawLockOn( centity_t *target, int step, qboolean newStep );
+
+// screenfx/cg_screenfx.c: the renderer bends and colours the view of the level
+void		CG_ScreenFxInit( void );
+void		CG_ScreenFxScene( void );
+void		CG_ScreenFxBlast( const vec3_t origin, float radius );
+void		CG_ScreenFxWeaponBlast( int weapon, qboolean altFire, const vec3_t origin );
+void		CG_ScreenFxEmit( int id, const vec3_t origin, const vec3_t dir, float radius, float strength, float smoke );
+void		CG_ScreenFxFired( int weapon );
+qboolean	CG_ScreenFxHitDrawn( void );
+qboolean	CG_ScreenFxWaterDrawn( void );
+qboolean	CG_ScreenFxForceDrawn( void );
+void		CG_ScreenFxPlayer( centity_t *cent );
+void		CG_ScreenFxFlash( const vec3_t origin, float size, float strength );
+void		CG_ScreenFxBlade( const vec3_t base, const vec3_t tip );
+qboolean	CG_ScreenFxSightDrawn( void );
+void		CG_ScreenFxGhostBody( refEntity_t *body );
+void		CG_ScreenFxGhostShell( centity_t *cent, const refEntity_t *body, qboolean throughWalls );
 
 // menu3d/cg_menu3d.c: the menu in the level
 void		CG_Menu3DInit( void );
 qboolean	CG_Menu3DFrame( void );
 qboolean	CG_Menu3DActive( void );
+float		CG_Menu3DMuffle( void );
 void		CG_Menu3DView( void );
 void		CG_Menu3DScene( void );
 

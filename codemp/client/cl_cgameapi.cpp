@@ -2013,6 +2013,7 @@ void CL_BindCGame( void ) {
 		cgi.ext.S_SpatialDebug					= S_SpatialDebug;
 		cgi.ext.S_SpatialMovers					= S_SpatialMovers;
 		cgi.ext.R_SetScopeEffect				= re->ext.SetScopeEffect;
+		cgi.ext.R_SetScreenEffect				= re->ext.SetScreenEffect;
 
 		GetCGameAPI = (GetCGameAPI_t)cgvm->GetModuleAPI;
 		ret = GetCGameAPI( CGAME_API_VERSION, &cgi );

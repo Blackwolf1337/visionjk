@@ -2684,7 +2684,8 @@ void CG_DrawActiveFrame( int serverTime, stereoFrame_t stereoView, qboolean demo
 	CG_CalcScreenEffects();
 
 	// first person blend blobs, done after AnglesToAxis
-	if ( !cg.renderingThirdPerson && cg.predictedPlayerState.pm_type != PM_SPECTATOR ) {
+	// (the screen effects draw a hit themselves, screenfx/cg_screenfx.c)
+	if ( !cg.renderingThirdPerson && cg.predictedPlayerState.pm_type != PM_SPECTATOR && !CG_ScreenFxHitDrawn() ) {
 		CG_DamageBlendBlob();
 	}
 

@@ -770,6 +770,10 @@ typedef struct cgameImport_s {
 		// frame it is wanted. NULL only asks. qfalse: the renderer does not have it (rd-vanilla): the cgame draws
 		// the scope itself.
 		qboolean		(*R_SetScopeEffect)						( const scopeEffect_t *fx );
+		// Only an engine that sets the cvar v_cgameScreenFx to 1 has this one, the same way. The view of the level
+		// of this frame bends and is coloured as screenEffect_t says, called before R_RenderScene every frame it is
+		// wanted. NULL only asks. qfalse: the renderer does not have it (rd-vanilla).
+		qboolean		(*R_SetScreenEffect)					( const screenEffect_t *fx );
 	} ext;
 } cgameImport_t;
 

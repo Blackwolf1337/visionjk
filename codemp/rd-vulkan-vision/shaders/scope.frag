@@ -16,7 +16,8 @@ BINDING( 2, 0 ) uniform sampler2D u_prep;		// scopeprep.frag: out of focus, edge
 BINDING( 3, 0 ) uniform sampler2D u_mark;		// the boxes of the tracker
 
 // [0] xy: the middle of the lens in texture coordinates, z: its radius as a share of the height, w: width / height
-// [1] x: zoom 0 to 1, y: tracker 0 to 1, z: seconds, w: how much of the lens (0: the cgame draws the old mask)
+// [1] x: zoom 0 to 1, y: tracker 0 to 1, z: seconds, w: how much of the lens (0: the cgame draws the old mask), 2:
+//     the binoculars, two lenses side by side
 // [2] xy: texture coordinates of the frame to the ones of its copy, which may be larger. z: 1 / overbright factor,
 //     the frame holds the colours before the gamma pass. w: 1 when u_mark holds the boxes of the tracker
 // [3] x: the height of the frame in pixels, y: the charge of the alt fire 0 to 1, below 0 none, z: the ammo 0 to 1,
@@ -49,8 +50,19 @@ void main() {
 	float zoom = PARMS[1].x;
 	float motion = PARMS[1].y;
 	float time = PARMS[1].z;
-	float lens = PARMS[1].w;
+	float lens = min( PARMS[1].w, 1.0 );
 	float light = PARMS[2].z;
+	// the binoculars: the middle of the lens on this side of the view, so the two make one shape; where they meet the
+	// glass bends less, or the picture of the one would jump into the one of the other
+	float seam = 1.0;
+
+	if ( PARMS[1].w > 1.5 ) {
+		float apart = radius * 0.62 / aspect;
+		float side = v_texCoord.x < center.x ? -1.0 : 1.0;
+
+		seam = smoothstep( 0.0, 0.25, abs( v_texCoord.x - center.x ) * aspect / radius );
+		center.x += side * apart;
+	}
 
 	// where the pixel is on the lens: 0 in the middle, 1 at the rim
 	vec2 delta = v_texCoord - center;
@@ -61,10 +73,10 @@ void main() {
 	float inside = 1.0 - smoothstep( 1.0 - px, 1.0, r ) * lens;
 
 	// barrel distortion: the samples move out towards the rim, so the middle is a little larger
-	float bend = ( 0.025 + 0.035 * zoom ) * lens;
+	float bend = ( 0.025 + 0.035 * zoom ) * lens * seam;
 	vec2 at = center + delta * ( 1.0 + bend * r * r );
 	// the colours part along the radius, only near the rim
-	vec2 split = delta * ( 0.006 + 0.006 * zoom ) * r * r * r * r * lens;
+	vec2 split = delta * ( 0.006 + 0.006 * zoom ) * r * r * r * r * lens * seam;
 	vec3 sharp = vec3( Frame( at + split ).r, Frame( at ).g, Frame( at - split ).b );
 
 	vec4 prep = texture( u_prep, at );

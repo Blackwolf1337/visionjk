@@ -496,6 +496,7 @@ void CL_ShutdownCGame( void ) {
 	Cvar_Set( "v_chatHandler", "0" );		// see Con_ChatByCgame()
 	Cvar_Set( "v_catchQuiet", "0" );		// see CL_CmdButtons()
 	Cvar_Set( "v_muffle", "0" );			// see S_MufflePaint(): nobody is left who would take it back
+	Cvar_Set( "v_tinnitus", "0" );			// see S_TinnitusPaint(), the same
 	Cvar_Set( "v_cgameResize", "0" );		// see CL_WindowSize()
 	Cvar_Set( "v_scopeWheel", "0" );		// see CL_ParseBinding()
 

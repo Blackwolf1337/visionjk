@@ -271,6 +271,9 @@ typedef struct refexport_s {
 		// The view of the level of this frame is seen through the scope of a weapon (scopeEffect_t), until the next
 		// frame. NULL only asks. qfalse: this renderer does not have it (rd-vanilla), the cgame draws the scope itself.
 		qboolean			(*SetScopeEffect)						( const scopeEffect_t *fx );
+		// The view of the level of this frame bends, flashes and is coloured as screenEffect_t says, until the next
+		// frame. NULL only asks. qfalse: this renderer does not have it (rd-vanilla).
+		qboolean			(*SetScreenEffect)						( const screenEffect_t *fx );
 	} ext;
 
 } refexport_t;

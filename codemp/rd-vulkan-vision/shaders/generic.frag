@@ -20,6 +20,7 @@ VARYING( 2 ) in vec4 v_color;
 VARYING( 3 ) in vec3 v_position;
 VARYING( 4 ) in float v_depth;
 VARYING( 6 ) NOPERSPECTIVE in vec2 v_screenCoord0;
+VARYING( 7 ) in vec3 v_normal;
 #ifdef VK_GLES
 in float v_clip;
 #else
@@ -33,7 +34,10 @@ layout( location = 0 ) out vec4 o_color;
 // of the triangle (tr_shade.cpp ProjectDlightTexture2). The same per pixel: tex0 is the texture of the surface,
 // tex1 the light image.
 vec4 DynamicLight( Draw d ) {
-	vec3 normal = normalize( cross( dFdx( v_position ), dFdy( v_position ) ) );
+	// The normal of the vertices, exact for the faces of the level. The one of the plane of the pixels, from how the
+	// position changes from one pixel to the next, only where they have none: far from the middle of a level and
+	// on a floor seen flat that one is rough.
+	vec3 normal = dot( v_normal, v_normal ) > 0.25 ? normalize( v_normal ) : normalize( cross( dFdx( v_position ), dFdy( v_position ) ) );
 	vec3 toLight = d.parm.xyz - v_position;
 	float radius = d.parm.w;
 
@@ -41,10 +45,14 @@ vec4 DynamicLight( Draw d ) {
 	if ( dot( normal, TRANSFORMS( d.transform ).viewOrigin.xyz - v_position ) < 0.0 ) {
 		normal = -normal;
 	}
+	// A light a little below the plane still lights it: the light of an explosion lies just under the floor it hit,
+	// and two faces of a map a hair apart (which never show that they fight over the depth) would light up in rows
+	// where the lower one wins, as on mp/ffa4.
 	float fac = dot( normal, toLight );
-	if ( fac <= 0.0 || fac >= radius ) {
+	if ( fac <= -12.0 || fac >= radius ) {
 		discard;
 	}
+	fac = max( abs( fac ), 0.001 );
 	float modulate = 1.0 - ( fac * fac ) / ( radius * radius );
 
 	// where the pixel is in the plane, seen from the point under the light. The image is round, any axes do.

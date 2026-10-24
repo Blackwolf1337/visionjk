@@ -41,6 +41,10 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "shaders/focus_frag_es.inc"
 #include "shaders/scopeprep_frag_es.inc"
 #include "shaders/scope_frag_es.inc"
+#include "shaders/screenfxprep_frag_es.inc"
+#include "shaders/screenfx_frag_es.inc"
+#include "shaders/screenfxfog_frag_es.inc"
+#include "shaders/screenfxsmoke_frag_es.inc"
 
 static const struct {
 	const char			*name;				// for what the console says when it does not compile
@@ -55,6 +59,10 @@ static const struct {
 	{ "focus", vk_es_post_vert, vk_es_focus_frag, "" },
 	{ "scopeprep", vk_es_post_vert, vk_es_scopeprep_frag, "" },
 	{ "scope", vk_es_post_vert, vk_es_scope_frag, "" },
+	{ "screenfxprep", vk_es_post_vert, vk_es_screenfxprep_frag, "" },
+	{ "screenfx", vk_es_post_vert, vk_es_screenfx_frag, "" },
+	{ "screenfxfog", vk_es_post_vert, vk_es_screenfxfog_frag, "" },
+	{ "screenfxsmoke", vk_es_post_vert, vk_es_screenfxsmoke_frag, "" },
 	{ "present", vk_es_post_vert, vk_es_copy_frag, "#define POST_UPSIDE_DOWN\n" },
 };
 
@@ -155,6 +163,8 @@ static GLuint VK_LinkProgram( glesProgram_t which ) {
 	VK_BindSampler( program, "u_soft", GLES_UNIT_SOFT );
 	VK_BindSampler( program, "u_prep", GLES_UNIT_PREP );
 	VK_BindSampler( program, "u_mark", GLES_UNIT_MARK );
+	VK_BindSampler( program, "u_fog", GLES_UNIT_FOG );
+	VK_BindSampler( program, "u_smoke", GLES_UNIT_SMOKE );
 	vk.programParm[which] = glGetUniformLocation( program, "u_parm" );
 	return program;
 }

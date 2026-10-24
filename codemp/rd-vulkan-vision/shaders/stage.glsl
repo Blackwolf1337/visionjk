@@ -17,6 +17,7 @@ VARYING( 2 ) out vec4 v_color;
 VARYING( 3 ) out vec3 v_position;		// in model space
 VARYING( 4 ) out float v_depth;		// distance in front of the eye
 VARYING( 6 ) NOPERSPECTIVE out vec2 v_screenCoord0;	// TCGEN_REST: v_texCoord0 as the screen counts it, see RestTexCoord()
+VARYING( 7 ) out vec3 v_normal;		// in model space, zero where the geometry has none
 #ifdef VK_GLES
 out float v_clip;		// GLSL ES has no clip distances: generic.frag drops what is behind the plane
 #define CLIP_DISTANCE	v_clip
@@ -144,6 +145,7 @@ void StageVertex( StageInput v ) {
 	v.position = Deform( d, v );
 	gl_Position = t.mvp * vec4( v.position, 1.0 );
 	v_position = v.position;
+	v_normal = v.normal;
 	// the view through a portal or mirror must not show what lies between the eye and the portal
 	CLIP_DISTANCE = ( t.clipPlane.xyz == vec3( 0.0 ) ) ? 1.0
 		: dot( ( t.model * vec4( v.position, 1.0 ) ).xyz, t.clipPlane.xyz ) - t.clipPlane.w;

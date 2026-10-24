@@ -148,6 +148,7 @@ typedef struct vkDeviceState_s {	// see vkState_t
 	VkDescriptorSet				glowSet;
 	VkDescriptorSet				blurSets[2];
 	VkDescriptorSet				softSets[2];
+	VkDescriptorSet				smokeSets[2];
 	VkSampler					linearSampler;
 	// the depth of the scene as a texture, for the depth of field (VK_FocusPass)
 	qboolean					depthReadable;		// the device lets its format be read in a shader
@@ -163,6 +164,8 @@ typedef struct vkDeviceState_s {	// see vkState_t
 	VkPipelineLayout			focusPipelineLayout;	// two sets of the kind of postSet: a target and the depth
 	VkPipelineLayout			scopePipelineLayout;	// four sets of that kind and sixteen numbers (VK_ScopePass)
 	VkDescriptorSet				screenSet;			// vk.screen for it
+	VkPipelineLayout			screenFxPipelineLayout;	// the sets of the frame and four of the kind of postSet (VK_ScreenFxPass)
+	VkPipelineLayout			fogPipelineLayout;		// the sets of the frame and the depth (VK_ScreenFxFogPass)
 
 	VkShaderModule				vertexShaders[VKP_NUM_PROGRAMS];
 	VkShaderModule				fragmentShaders[VKP_NUM_PROGRAMS];
@@ -177,6 +180,8 @@ typedef struct vkDeviceState_s {	// see vkState_t
 	VkPipeline					focusPipeline;
 	VkShaderModule				scopePrepFragmentShader, scopeFragmentShader;
 	VkPipeline					scopePrepPipeline, scopePipeline;
+	VkShaderModule				screenFxPrepFragmentShader, screenFxFragmentShader, screenFxFogFragmentShader, screenFxSmokeFragmentShader;
+	VkPipeline					screenFxPrepPipeline, screenFxPipeline, screenFxFogPipeline, screenFxSmokePipeline;
 	vkPipeline_t				pipelines[VK_MAX_PIPELINES];
 	int							numPipelines;
 	uint32_t					lastPipelineKey;	// what VK_FindPipeline() was asked last and what it answered

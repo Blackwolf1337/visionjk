@@ -286,7 +286,9 @@ void VK_CreatePostTargets( int blurWidth, int blurHeight ) {
 	VK_CreateTarget( &vk.blur[1], blurWidth, blurHeight, GL_RGBA8, GL_LINEAR, 1 );
 	for ( int i = 0; i < 2; i++ ) {
 		VK_CreateTarget( &vk.soft[i], Q_max( 1, vk.width / 2 ), Q_max( 1, vk.height / 2 ), GL_RGBA8, GL_LINEAR, 1 );
+		VK_CreateTarget( &vk.smoke[i], Q_max( 1, vk.width / 2 ), Q_max( 1, vk.height / 2 ), GL_RGBA8, GL_LINEAR, 1 );
 	}
+	vk.smokeFrame = 0;		// what they hold is nothing yet
 }
 
 // tay_renderScale is not for this device: a frame is written down and played at its end, and the targets the
@@ -306,4 +308,6 @@ void VK_DestroyPostTargets( void ) {
 	VK_DestroyTarget( &vk.blur[1] );
 	VK_DestroyTarget( &vk.soft[0] );
 	VK_DestroyTarget( &vk.soft[1] );
+	VK_DestroyTarget( &vk.smoke[0] );
+	VK_DestroyTarget( &vk.smoke[1] );
 }

@@ -64,9 +64,12 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // what the shaders read, shaders/common.glsl has the same layout (std430, and std140 as GLSL ES)
 // ------------------------------------------------------------------------------------------------------------
 
+#define VK_SCREENFX_VEC4S	160		// the numbers of shaders/screenfx.frag, see VK_ScreenFx()
+
 typedef struct vkGlobals_s {	// once per frame
 	float		gamma[4];			// x: 1 / r_gamma, y: 2 ^ overbright bits, z: identity light
 	float		screen[4];			// x, y: size of the frame in pixels
+	float		screenFx[VK_SCREENFX_VEC4S][4];	// what VK_ScreenFxPass() was given
 } vkGlobals_t;
 
 typedef struct vkTransform_s {	// once per view and entity
@@ -215,6 +218,9 @@ typedef struct vkState_s : vkDeviceState_t {
 	vkTarget_t					glow;				// r_DynamicGlow: the stages that glow, drawn again over the depth of the scene
 	vkTarget_t					blur[2];			// and blurred, r_DynamicGlowWidth x r_DynamicGlowHeight
 	vkTarget_t					soft[2];			// the frame out of focus at half its size, v_menuBlur (VK_BlurFrame)
+	vkTarget_t					smoke[2];			// the smoke of the ghosts of Force Sight at half the size of the frame,
+	int							smokeIndex;			// kept from frame to frame: the one that holds the last
+	int							smokeFrame;			// and the frame it was made in (tr.frameCount), 0: none
 	qboolean					finalValid;			// a frame has been rendered into it
 
 	vkImage_t					images[VK_MAX_IMAGES];
@@ -336,6 +342,7 @@ void		VK_BlurFrame( float amount, float focus );
 void		VK_Bloom( void );
 void		VK_Scope( const scopeEffect_t *fx, qboolean boxes );
 void		VK_ScopeBoxes( const scopeEffect_t *fx );
+void		VK_ScreenFx( const screenEffect_t *fx );
 void		VK_CaptureFrame( void );
 void		VK_ClearFlares( void );
 void		VK_CopyProbes( void );
@@ -459,6 +466,17 @@ void		VK_ScopePrepPass( vkTarget_t *source, vkTarget_t *target, const float *par
 // shaders/scope.frag over the whole frame, by its alpha: it reads vk.screen, soft, prep and mark, with the sixteen
 // numbers of parm. Begins vk.color with vk.depth, which stays begun.
 void		VK_ScopePass( vkTarget_t *soft, vkTarget_t *prep, vkTarget_t *mark, const float *parm );
+// The same with shaders/screenfxprep.frag, the part of the screen effects (VK_ScreenFx) that reads the depth
+void		VK_ScreenFxPrepPass( vkTarget_t *source, vkTarget_t *target, const float *parm );
+// shaders/screenfx.frag over the whole frame, by its alpha: it reads vk.screen, prep, fog and smoke, with the VK_SCREENFX_VEC4S
+// numbers of fx. Begins vk.color with vk.depth, which stays begun.
+void		VK_ScreenFxPass( vkTarget_t *prep, vkTarget_t *fog, vkTarget_t *smoke, const float *fx );
+// shaders/screenfxsmoke.frag into target, the smoke of the ghosts: the same numbers, the smoke of the frame before
+// (last) and prep. No target is begun before and after.
+void		VK_ScreenFxSmokePass( vkTarget_t *target, vkTarget_t *last, vkTarget_t *prep, const float *fx );
+// shaders/screenfxfog.frag into target, the mist: the same numbers, the depth of the scene. No target is begun
+// before and after.
+void		VK_ScreenFxFogPass( vkTarget_t *target, const float *fx );
 // source over the whole of the target that is drawn into: added to what is there, added softly (GL_ONE,
 // GL_ONE_MINUS_SRC_COLOR), or laid over it by its alpha
 typedef enum { VKA_ADD, VKA_ADD_SOFT, VKA_BLEND } vkAdd_t;

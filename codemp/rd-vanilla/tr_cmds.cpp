@@ -263,6 +263,34 @@ qboolean	RE_SetScopeEffect( const scopeEffect_t *fx ) {
 #endif
 }
 
+/*
+=============
+RE_SetScreenEffect
+
+The cgame wants the view of the level of this frame bent and coloured (screenEffect_t: the wave of an explosion,
+hot air). It holds for one frame. NULL: only the question whether this renderer has it. rd-vulkan-vision has the
+pass (VK_ScreenFx), rd-vanilla says qfalse and the cgame keeps the looks it had.
+=============
+*/
+screenEffect_t	r_screenFx;
+qboolean		r_screenFxSet;
+
+qboolean	RE_SetScreenEffect( const screenEffect_t *fx ) {
+#ifdef RD_VULKAN_VISION
+	if ( !VK_HasScope() ) {
+		return qfalse;
+	}
+	if ( fx ) {
+		r_screenFx = *fx;
+		r_screenFx.numSources = Com_Clampi( 0, SCREENFX_MAX_SOURCES, r_screenFx.numSources );
+		r_screenFxSet = qtrue;
+	}
+	return qtrue;
+#else
+	return qfalse;
+#endif
+}
+
 void	RE_SetColor( const float *rgba ) {
 	setColorCommand_t	*cmd;
 
@@ -416,9 +444,11 @@ void RE_BeginFrame( stereoFrame_t stereoFrame ) {
 		return;
 	}
 
-	// what a module asked for with RE_SetDepthOfField() and RE_SetScopeEffect() was for the frame before
+	// what a module asked for with RE_SetDepthOfField(), RE_SetScopeEffect() and RE_SetScreenEffect() was for the
+	// frame before
 	r_dofAmount = 0.0f;
 	r_scopeFx.flags = 0;
+	r_screenFxSet = qfalse;
 	glState.finishCalled = qfalse;
 
 	tr.frameCount++;

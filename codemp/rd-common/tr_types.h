@@ -117,6 +117,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define SCOPEFX_RETICLE		4		// a reticle on the lens, and the ammo, the zoom and the charge as arcs at its rim
 #define SCOPEFX_TRACKER		8		// the motion tracker: the lens dim and red with the edges of the level, but the
 									// boxes keep its colours
+#define SCOPEFX_BINOCULAR	16		// two lenses side by side, the binoculars
 #define SCOPEFX_MAX_BOXES	8
 
 typedef struct scopeEffect_s {
@@ -131,6 +132,54 @@ typedef struct scopeEffect_s {
 	int			numBoxes;			// SCOPEFX_TRACKER: the boxes, fractions of the view from its upper left corner:
 	float		boxes[SCOPEFX_MAX_BOXES][4];	// left, top, right, bottom
 } scopeEffect_t;
+
+// What the cgame asks of the view of the level besides the scope (re.ext.SetScreenEffect), once a frame: places
+// where the picture bends or flashes (sources) and how the whole of it is coloured.
+#define SCREENFX_RING		1		// a ring that pushes the picture outwards, the wave of an explosion
+#define SCREENFX_HEAT		2		// air that shimmers along the line from a to b, hot gas over a flame
+#define SCREENFX_SMOKE		3		// a puff of smoke at a
+#define SCREENFX_RIPPLE		4		// waves that run out from a (seed 1) or in to it (seed -1): a Force push or pull
+#define SCREENFX_FLASH		5		// a bright star of light at a: blades that clash
+#define SCREENFX_GHOSTSMOKE	7		// a ghost of Force Sight from a (feet) to b (head): he puts smoke into the smoke of
+										// the view, which rises and smears as the eye moves
+#define SCREENFX_MAX_SOURCES	48
+
+typedef struct screenFxSource_s {
+	int			kind;				// SCREENFX_*
+	float		a[2], b[2];			// fractions of the view from its upper left corner. A ring has its middle at a
+	float		radius;				// a fraction of the height of the view: of the ring, of the air around the line
+	float		width;				// of the ring, the same unit. Heat: around the line that much stays still
+	float		strength;			// 0 to 1
+	float		distance;			// from the eye, units of the level. Where the level is nearer, it is not seen
+	float		seed;				// smoke: tells one puff from the next, its shape
+} screenFxSource_t;
+
+typedef struct screenEffect_s {
+	float		time;				// seconds, for what moves
+	float		frameTime;			// seconds since the frame before
+	float		split;				// the colours part towards the edges, 0 to 1
+	float		tint[4];			// the picture towards this colour, a: how far, 0 to 1
+	float		desaturate;			// 0 to 1: grey
+	float		vignette[4];		// the edges of the view towards this colour, a: how far, 0 to 1
+	float		vignetteArc[3];		// and only on the side of this direction on the view (x to the right, y up), z
+									// wide: 0 all around, 1 half of it
+	float		radialBlur;			// streaks from the middle of the view outwards, 0 to 1
+	float		sight;				// Force Sight: the level cold and grey with its edges drawn, 0 to 1
+	float		rage;				// the red burns, the rest drains, dark red closes in, 0 to 1, with every beat of
+									// ragePulse 0 to 1 more
+	float		ragePulse;
+	float		protect;			// a dome of energy around the eye, seen at its edge, 0 to 1. A hit sends a ripple
+	float		protectHit;			// over it from the side of the arc of the vignette, protectHit 1 to 0
+	float		absorb;				// streams of light drawn in from the edges, 0 to 1, brighter by absorbPulse
+	float		absorbPulse;
+	float		viewShift[2];		// how far the picture moved on the view since the frame before as the eye turned,
+									// fractions of the view, x to the right, y down: the smoke of the ghosts trails
+	float		water;				// under water, 0 to 1: the picture sways, fades into waterColor with the
+	float		waterColor[3];		// distance, light plays on the level
+	float		drops;				// drops running down the view after surfacing, 0 to 1
+	int			numSources;
+	screenFxSource_t	sources[SCREENFX_MAX_SOURCES];
+} screenEffect_t;
 
 extern int	skyboxportal;
 extern int	drawskyboxportal;
