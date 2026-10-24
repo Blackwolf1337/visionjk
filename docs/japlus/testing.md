@@ -34,8 +34,10 @@ tools/test/compat-test.sh 0.2.6
 ```
 
 The smoke test, the sanitizers and the lint have to pass before every release. The compat test is needed when
-the protocol, the connect or the JA+ parts changed since the last release. Then ask whoever releases whether
-they want to test in the game themselves. Only after that run `tools/deploy.sh` in the website repository.
+the protocol, the connect or the JA+ parts changed since the last release. The updater test
+(`tools/test/updater/e2e.sh`, and `WIN=1` for Windows) is needed when the updater or the files of a release
+changed. Then ask whoever releases whether they want to test in the game themselves. Only after that run
+`tools/deploy.sh` in the website repository.
 
 ## Testing the zips before publishing
 
@@ -117,3 +119,52 @@ the zip, `--keep` keeps `build-test/compat`. Logs are in `build-test/compat/<run
 `build-test/compat/<run>-client.log`. The original JA+ server module is only 32 bit and there is no original
 `jamp.exe` on this machine, so neither is tested. `tools/test/game-run.sh` holds what `smoke-test.sh` and
 `compat-test.sh` share (a game in gamescope headless, its log, the checks).
+
+## The updater
+
+```
+tools/test/updater/e2e.sh
+```
+
+is the end to end test of the updater of the client (it was moved here from the agent folder on 2026-10-24). It
+makes a game folder of a made up version 0.0.1 under `build-test/updater`, serves a made up 0.0.2 on the loopback
+address (port 8099) and lets the client find it, fetch it, put it in place and start again. There are twelve
+scenarios: `update damaged cutshort undo off down address devbuild elsewhere repair shadow same`. Names as
+arguments run only those:
+
+```
+tools/test/updater/e2e.sh update damaged
+```
+
+`WIN=1` does the same with the Windows build (`buildwin64`) under Wine, in a prefix of its own
+(`build-test/updater/wine`):
+
+```
+WIN=1 tools/test/updater/e2e.sh
+```
+
+The test programs are `build64` (or `buildwin64`) with `client/cl_update.cpp` built again, with the address of the
+test server and a version of its own. The file lists of the made up release are written by `fill_update` of
+`tools/build-game.sh` of the website repository (`VJK_WEBSITE`), as it is. The modules are stripped as in a
+release: above 16 MB the look at every start takes a file by its size alone (`UPDATE_QUICK_BYTES`).
+
+Linux has 116 checks, Windows 117. A run takes about five minutes each. Run it when the updater or the files of a
+release change. The scripts of the agent folder for a real Windows VM (`wintest.sh`, `winfs.sh`) source its
+`tools/test/updater/lib.sh`.
+
+## No window, no sound
+
+Every client of the tests runs through `tools/test/headless.sh`: in gamescope without an output (`--backend
+headless`), with `SDL_AUDIODRIVER=dummy`. No window shows up and nothing is played.
+
+```
+HEADLESS_TIMEOUT=60 tools/test/headless.sh <command> [arguments]
+```
+
+`HEADLESS_TIMEOUT` is the number of seconds until the command is killed (default 300, exit code 124 then),
+`HEADLESS_SIZE` the size of the display (default `1280 720`), `HEADLESS_LOG` the file for the output of gamescope
+and of the command (default nowhere).
+
+gamescope 3.16 crashes on its way out, and the script kills what is left. The exit code is the one of the command.
+A Windows client killed that way (137) counts as ended when its log has the last line of the shutdown of the
+engine ("Automatically freeing ... blocks"). The old `tools/hidden.sh` of the agent folder calls this script.

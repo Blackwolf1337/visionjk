@@ -91,30 +91,23 @@ check_run() {
 	fi
 }
 
-# Runs a client inside gamescope without an output (--backend headless): it gets a display of its own and no
-# window ever reaches the desktop. DISPLAY and WAYLAND_DISPLAY of the desktop are taken away from it, so a client
-# that does not go through gamescope fails instead of opening a window.
-# gamescope 3.16 crashes on its way out after the game has ended, so the exit code is the one of the game, which
-# a shell inside gamescope writes into a file.
+# Runs a client with no window on the desktop and no sound (headless.sh: gamescope without an output) and prints
+# its exit code, or why there is none.
 run_client() {
 	local log=$1 timeout_s=$2 dir=$3 code
 	shift 3
-	rm -f "$log.code"
 	set +e
-	# shellcheck disable=SC2016 # expanded by the shell inside gamescope
-	(cd "$dir" && env -u DISPLAY -u WAYLAND_DISPLAY SDL_AUDIODRIVER=dummy SDL_VIDEODRIVER=x11 \
-		timeout -k 10 "$timeout_s" gamescope --backend headless -W 1024 -H 768 -w 1024 -h 768 -- \
-		sh -c '"$@"; echo $? > "$0"' "$log.code" "$@") > "$log.out" 2>&1
+	(cd "$dir" && HEADLESS_TIMEOUT=$timeout_s HEADLESS_SIZE="1024 768" HEADLESS_LOG=$log.out "$TEST_DIR/headless.sh" "$@")
 	code=$?
 	set -e
-	if [ -s "$log.code" ]; then
-		code=$(cat "$log.code")
-	elif [ "$code" = 124 ]; then
-		code="timed out after $timeout_s s"
-	else
-		code="the game did not end, gamescope $code"
-	fi
+	[ "$code" = 124 ] && code="timed out after $timeout_s s"
 	plain_log "$log.out" "$log"
+	# gamescope 3.16 crashes when the window of the game is gone, and its reaper kills what is left: under Wine
+	# that can be the game itself, which ends a moment after its window (137, SIGKILL). The last line of the
+	# shutdown of the engine (Z_Shutdown) says that it had ended by itself.
+	if [ "$code" = 137 ] && grep -q "Automatically freeing [0-9]* blocks" "$log"; then
+		code=0
+	fi
 	echo "$code"
 }
 

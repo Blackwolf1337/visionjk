@@ -107,7 +107,7 @@ test_windows() {
 	for renderer in rd-vulkan-vision rd-vanilla; do
 		# shellcheck disable=SC2016 # expanded by the shell inside gamescope
 		HOME_PREFIX=Z: client_run windows "$renderer" "$TIMEOUT_WINE" "$game" \
-			sh -c 'wine "$@"; code=$?; wineserver -k; exit $code' sh "$game/visionjk.x86_64.exe"
+			sh -c 'wine "$@"; code=$?; wineserver -k; wineserver -w; exit $code' sh "$game/visionjk.x86_64.exe"
 	done
 }
 
