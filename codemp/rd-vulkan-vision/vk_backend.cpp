@@ -737,7 +737,7 @@ static void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 	int entityNum = 0, oldEntityNum = -1;
 	int dlighted = 0, oldDlighted = qfalse;
 	int depthRange = 0, oldDepthRange = 0;
-	unsigned int oldSort = (unsigned int)-1;
+	uint64_t oldSort = (uint64_t)-1;
 	const float originalTime = backEnd.refdef.floatTime;	// save original time for entity shader offsets
 	drawSurf_t *drawSurf = drawSurfs;
 	// the stencil shadows are darkened once, and not in the glow pass
@@ -805,7 +805,7 @@ static void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 			entityNum = oldEntityNum;
 			fogNum = oldFogNum;
 			dlighted = oldDlighted;
-			oldSort = (unsigned int)-20;	// invalidate this thing, cause we may want to postrender more surfs of the same sort
+			oldSort = (uint64_t)-20;	// invalidate this thing, cause we may want to postrender more surfs of the same sort
 			continue;
 		}
 		// A distortion that finds the list full is left out: drawn now it would be its picture (white), not the screen.
@@ -814,7 +814,7 @@ static void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 			entityNum = oldEntityNum;
 			fogNum = oldFogNum;
 			dlighted = oldDlighted;
-			oldSort = (unsigned int)-20;
+			oldSort = (uint64_t)-20;
 			continue;
 		}
 
@@ -931,7 +931,7 @@ static void RB_RenderOverSurfs( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 	int fogNum = 0, oldFogNum = -1;
 	int entityNum = 0, oldEntityNum = -1;
 	int dlighted = 0;
-	unsigned int oldSort = (unsigned int)-1;
+	uint64_t oldSort = (uint64_t)-1;
 	const float originalTime = backEnd.refdef.floatTime;
 	drawSurf_t *drawSurf = drawSurfs;
 	qboolean over = qfalse;

@@ -27,7 +27,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "../qcommon/q_shared.h"
 
 #define	MAX_DLIGHTS		32			// can't be increased, because bit flags are used on surfaces
-#define	REFENTITYNUM_BITS	11		// can't be increased without changing drawsurf bit packing
+#define	REFENTITYNUM_BITS	12		// 11 in JKA; 12 since the sort key of a drawsurf is 64 bit (2026-10-24, the ambient
+									// effects of the JoF server fill 2047 slots and the rest of the scene was dropped)
 #define	REFENTITYNUM_MASK	((1<<REFENTITYNUM_BITS) - 1)
 // the last N-bit number (2^REFENTITYNUM_BITS - 1) is reserved for the special world refentity,
 //  and this is reflected by the value of MAX_REFENTITIES (which therefore is not a power-of-2)
