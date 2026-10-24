@@ -148,8 +148,10 @@ BOOST_AUTO_TEST_CASE( list_refused )
 	BOOST_CHECK( Parse( List( one, "" ), list.get() ) != nullptr );
 	BOOST_CHECK( Parse( List( one, "version 0.2.6\nversion 0.2.7\n" ), list.get() ) != nullptr );
 	BOOST_CHECK( Parse( List( one, "version 0.2\n" ), list.get() ) != nullptr );
-	// one bad line and the list is refused (the caller uses nothing of it then)
+	// one bad line and nothing of it is kept
 	BOOST_CHECK( Parse( List( one + FileLine( "../x" ) ), list.get() ) != nullptr );
+	BOOST_CHECK_EQUAL( list->numFiles, 0 );
+	BOOST_CHECK_EQUAL( list->files[0].path[0], '\0' );
 	BOOST_CHECK( Parse( List( one + one ), list.get() ) != nullptr );
 	BOOST_CHECK( Parse( List( FileLine( "a", "1073741825" ) ), list.get() ) != nullptr );
 	BOOST_CHECK( Parse( List( FileLine( "a", "-1" ) ), list.get() ) != nullptr );

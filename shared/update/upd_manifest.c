@@ -199,16 +199,8 @@ static int UPD_Hex( char c ) {
 	return -1;
 }
 
-/*
-=================
-UPD_ParseList
-
-A file list of the website. Returns NULL and the list, or what is wrong with the text, in words for a
-console. A list is taken as a whole or not at all: one line that is not as it has to be and nothing of it is
-used.
-=================
-*/
-const char *UPD_ParseList( const char *text, size_t length, updList_t *list ) {
+// UPD_ParseList without the emptying of the list it refuses
+static const char *UPD_ParseLines( const char *text, size_t length, updList_t *list ) {
 	static const char	head[] = "visionjk-update ";
 	const char			*end = text + length, *line = text;
 	qboolean			first = qtrue, versionSeen = qfalse;
@@ -288,4 +280,21 @@ const char *UPD_ParseList( const char *text, size_t length, updList_t *list ) {
 	if ( !list->numFiles )
 		return "it names no files";
 	return NULL;
+}
+
+/*
+=================
+UPD_ParseList
+
+A file list of the website. Returns NULL and the list, or what is wrong with the text, in words for a
+console. A list is taken as a whole or not at all: one line that is not as it has to be and nothing of it is
+used, the list is left empty.
+=================
+*/
+const char *UPD_ParseList( const char *text, size_t length, updList_t *list ) {
+	const char *wrong = UPD_ParseLines( text, length, list );
+
+	if ( wrong )
+		memset( list, 0, sizeof( *list ) );
+	return wrong;
 }
