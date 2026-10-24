@@ -1169,11 +1169,11 @@ LANG_ENGLISH        "Only the songs of ticked players are shown to the others."
 REFERENCE           DEVELOPMENT_BUILDS_ARE_EARLY_TEST_VE
 LANG_ENGLISH        "Development builds are early test versions."
 
-REFERENCE           THEY_CAN_CRASH_BREAK_CONFIGS_OR_NOT
-LANG_ENGLISH        "They can crash, break configs or not work on all servers."
+REFERENCE           THEY_CAN_CRASH_CORRUPT_YOUR_CONFIGS
+LANG_ENGLISH        "They can crash, corrupt your configs or not work on some servers."
 
-REFERENCE           YOU_CAN_SWITCH_BACK_TO_STABLE_ANY_TI
-LANG_ENGLISH        "You can switch back to Stable any time."
+REFERENCE           YOU_CAN_SWITCH_BACK_TO_STABLE_AT_ANY
+LANG_ENGLISH        "You can switch back to Stable at any time."
 
 REFERENCE           STAY_ON_STABLE
 LANG_ENGLISH        "Stay on Stable"

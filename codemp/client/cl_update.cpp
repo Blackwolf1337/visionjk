@@ -146,8 +146,8 @@ static char			updStartVersion[UPD_MAX_PATH];	//	and the version or the file it i
 static cvar_t	*v_updateCheck;
 static cvar_t	*v_updateChannel;
 
-#define UPDATE_DEV_WARNING	"Development builds are early test versions. They can crash, break configs or not work on all servers. " \
-	"You can switch back to stable any time."
+#define UPDATE_DEV_WARNING	"Development builds are early test versions. They can crash, corrupt your configs or not work on some servers. " \
+	"You can switch back to stable at any time."
 
 /*
 ===============================================================================
@@ -454,10 +454,10 @@ qboolean CL_UpdateResume( void ) {
 			}
 			if ( waiting == updJournal.numPaths ) {
 				Update_RemoveJournal();
-				updStartNote = S_COLOR_YELLOW "The update could not be put in place, nothing was changed: %s can not be replaced.\n";
+				updStartNote = S_COLOR_YELLOW "The update could not be installed, nothing was changed: %s can not be replaced.\n";
 			} else {
-				updStartNote = S_COLOR_YELLOW "An update of the game was cut short and could not be finished: %s can not be replaced. "
-					"If the game does not work, put the files of the newest version from the website into its folder.\n";
+				updStartNote = S_COLOR_YELLOW "An update was interrupted and could not be finished: %s can not be replaced. "
+					"If the game does not work, copy the files of the newest version from the website into the game folder.\n";
 			}
 			return qfalse;
 		}
@@ -599,9 +599,9 @@ static int Update_CheckThread( void *unused ) {
 
 	snprintf( url, sizeof( url ), "%s/%s%s.txt", upd.address, upd.dev ? "dev/" : "", UPDATE_SYSTEM );
 	if ( !Sys_HttpGet( url, Update_ListSink, NULL, &upd.cancel, why, sizeof( why ) ) ) {
-		Update_Error( "%s did not say whether there is a newer version: %s", upd.address, why );
+		Update_Error( "%s did not report whether a newer version exists: %s", upd.address, why );
 	} else if ( ( wrong = UPD_ParseList( updListText, (size_t)updListLen, &upd.list ) ) != NULL ) {
-		Update_Error( "The file list of %s can not be used: %s", upd.address, wrong );
+		Update_Error( "The file list from %s is not usable: %s", upd.address, wrong );
 	} else {
 		upd.ok = qtrue;
 		newer = UPD_CompareVersion( upd.list.version, upd.own );
@@ -684,7 +684,7 @@ static int Update_FetchThread( void *unused ) {
 			continue;
 		upd.ok = qfalse;
 		if ( !Update_Path( file->path, UPD_NEW_ENDING, osNew, sizeof( osNew ) ) ) {
-			Update_Error( "The path of %s is too long in this folder%s", file->path, "" );
+			Update_Error( "The path of %s is too long for this folder%s", file->path, "" );
 			break;
 		}
 		if ( Update_HashFile( osNew, &bytes, digest, &upd.cancel ) && bytes == file->bytes && !memcmp( digest, file->sha256, sizeof( digest ) ) ) {
@@ -700,7 +700,7 @@ static int Update_FetchThread( void *unused ) {
 		sink.most = file->bytes;
 		sink.f = fopen( osNew, "wb" );
 		if ( !sink.f ) {
-			Update_Error( "The folder of the game can not be written to (%s). Get the new version from the website%s", file->path, "" );
+			Update_Error( "The game folder is not writable (%s). Download the new version from the website%s", file->path, "" );
 			break;
 		}
 		Web_SHA256Init( &sink.sha );
@@ -714,9 +714,9 @@ static int Update_FetchThread( void *unused ) {
 		if ( sink.disk )
 			Update_Error( "%s could not be written, is the disk full?%s", file->path, "" );
 		else if ( !got )
-			Update_Error( "%s did not come in: %s", file->path, why );
+			Update_Error( "%s could not be downloaded: %s", file->path, why );
 		else if ( sink.bytes != file->bytes || memcmp( digest, file->sha256, sizeof( digest ) ) )
-			Update_Error( "%s came in damaged%s", file->path, "" );
+			Update_Error( "%s was damaged during download%s", file->path, "" );
 		else
 			upd.ok = qtrue;
 		if ( !upd.ok )
@@ -763,7 +763,7 @@ static void Update_Start( int job, qboolean quiet ) {
 	// (one question to a web server at a time, sys/sys_http.h: a pak of a server comes from its web address)
 	if ( CL_DownloadWebAsking() ) {
 		if ( !quiet )
-			Com_Printf( "A pak of the server is being downloaded, ask again when it is here\n" );
+			Com_Printf( "A server pak is still downloading. Try again when it has finished.\n" );
 		return;
 	}
 	upd.job = job;
@@ -776,7 +776,7 @@ static void Update_Start( int job, qboolean quiet ) {
 	if ( !upd.thread ) {
 		upd.job = JOB_NONE;
 		if ( !quiet )
-			Com_Printf( "The update check could not be started\n" );
+			Com_Printf( "Could not start the update check.\n" );
 		return;
 	}
 	if ( job == JOB_FETCH ) {
@@ -789,13 +789,13 @@ static void Update_Available( void ) {
 	const char *version = Update_VersionText( upd.list.version );
 
 	if ( upd.back )
-		Update_Say( UPDATE_AVAILABLE, va( "Stable version %s. Click here to switch back (%.1f MB)", version, upd.fetchBytes / 1048576.0 ) );
+		Update_Say( UPDATE_AVAILABLE, va( "Back to stable version %s. Click here to switch (%.1f MB)", version, upd.fetchBytes / 1048576.0 ) );
 	else if ( !upd.repair )
 		Update_Say( UPDATE_AVAILABLE, va( "Version %s is out. Click here to update (%.1f MB)", version, upd.fetchBytes / 1048576.0 ) );
 	else if ( upd.numChange )
 		Update_Say( UPDATE_AVAILABLE, va( "Files of version %s are missing or changed. Click here to repair (%.1f MB)", version, upd.fetchBytes / 1048576.0 ) );
 	else
-		Update_Say( UPDATE_AVAILABLE, va( "Old modules are used in place of those of version %s. Click here to repair", version ) );
+		Update_Say( UPDATE_AVAILABLE, va( "Old modules are loaded instead of those of version %s. Click here to repair", version ) );
 }
 
 /*
@@ -816,11 +816,11 @@ static int Update_Unshadow( void ) {
 			continue;
 		if ( Update_HomePath( upd.list.files[i].path, "", osPath, sizeof( osPath ) )
 			&& Update_HomePath( upd.list.files[i].path, UPD_OLD_ENDING, osOld, sizeof( osOld ) ) && Update_Move( osPath, osOld ) ) {
-			Com_Printf( "%s was not the one of this version and is %s now.\n", osPath, osOld );
+			Com_Printf( "%s did not belong to this version and was renamed to %s.\n", osPath, osOld );
 			upd.shadow[i] = 0;
 			upd.numShadow--;
 		} else {
-			Com_Printf( S_COLOR_YELLOW "%s/%s is not the one of this version and could not be renamed. Delete it by hand.\n",
+			Com_Printf( S_COLOR_YELLOW "%s/%s does not belong to this version and could not be renamed. Please delete it manually.\n",
 				upd.home, upd.list.files[i].path );
 			left++;
 		}
@@ -844,11 +844,11 @@ static void Update_Go( void ) {
 		return;
 	}
 	if ( Update_Unshadow() ) {
-		Update_Say( UPDATE_FAILED, "The repair failed, the console says why. Click here to try again" );
+		Update_Say( UPDATE_FAILED, "The repair failed (see the console). Click here to try again" );
 		return;
 	}
-	Com_Printf( "The game starts again and loads its own modules.\n" );
-	Update_Say( UPDATE_RESTARTING, "Repaired, the game starts again" );
+	Com_Printf( "The game is restarting and will load its own modules.\n" );
+	Update_Say( UPDATE_RESTARTING, "Repaired. The game is restarting" );
 	Sys_RestartOnExit();
 	Cbuf_AddText( "quit\n" );
 }
@@ -867,35 +867,35 @@ static void Update_Checked( void ) {
 	}
 	if ( !upd.numChange && !upd.numShadow && !upd.numLeft ) {
 		if ( !upd.quiet )
-			Com_Printf( "This is version %s, and the newest one%s is %s.\n", Update_VersionText( upd.own ),
-				upd.dev ? " of the development builds" : "", Update_VersionText( upd.list.version ) );
+			Com_Printf( "This is version %s. The newest%s version is %s.\n", Update_VersionText( upd.own ),
+				upd.dev ? " development" : "", Update_VersionText( upd.list.version ) );
 		Update_Say( UPDATE_NONE, "" );
 		return;
 	}
 	Update_Available();
 	if ( upd.leftUnknown ) {
-		Com_Printf( S_COLOR_YELLOW "The file list of version %s could not be fetched. Files that only it had may stay in the folder "
-			"of the game after the update.\n", Update_VersionText( upd.own ) );
+		Com_Printf( S_COLOR_YELLOW "Could not download the file list of version %s. Files that exist only in that version may be left in the "
+			"game folder after the update.\n", Update_VersionText( upd.own ) );
 	}
 	if ( upd.back ) {
-		Com_Printf( S_COLOR_CYAN "This is the development build %s and the update channel is stable. To switch to the stable version %s, "
+		Com_Printf( S_COLOR_CYAN "You are on development build %s, but the update channel is set to stable. To switch to stable version %s, "
 			"type update here or click the line on the main menu (%.1f MB in %i files).\n", Update_VersionText( upd.own ),
 			Update_VersionText( upd.list.version ), upd.fetchBytes / 1048576.0, upd.numChange );
 	} else if ( !upd.repair ) {
-		Com_Printf( S_COLOR_CYAN "Version %s of the game is out, this is %s. To get it, type update here or click the line on the main menu "
+		Com_Printf( S_COLOR_CYAN "Version %s is out (you have %s). To update, type update here or click the line on the main menu "
 			"(%.1f MB in %i files).\n", Update_VersionText( upd.list.version ), Update_VersionText( upd.own ), upd.fetchBytes / 1048576.0, upd.numChange );
 	} else if ( upd.numChange ) {
 		for ( i = 0; i < upd.list.numFiles && !upd.change[i]; i++ ) {
 		}
-		Com_Printf( S_COLOR_YELLOW "This is version %s, but %i of its files are missing or are not the ones of that version (%s%s). "
-			"To put them right, type update here or click the line on the main menu (%.1f MB).\n", Update_VersionText( upd.own ),
+		Com_Printf( S_COLOR_YELLOW "You are on version %s, but %i of its files are missing or do not match it (%s%s). "
+			"To repair them, type update here or click the line on the main menu (%.1f MB).\n", Update_VersionText( upd.own ),
 			upd.numChange, upd.list.files[i].path, upd.numChange > 1 ? " and more" : "", upd.fetchBytes / 1048576.0 );
 	}
 	if ( upd.numShadow ) {
 		for ( i = 0; i < upd.list.numFiles && !upd.shadow[i]; i++ ) {
 		}
-		Com_Printf( S_COLOR_YELLOW "Game modules in %s are not the ones of version %s, and the game loads them in place of its own "
-			"(%s%s). update gives them another name.\n", upd.home, Update_VersionText( upd.list.version ),
+		Com_Printf( S_COLOR_YELLOW "The game modules in %s do not belong to version %s, and the game loads them instead of its own "
+			"(%s%s). The update renames them.\n", upd.home, Update_VersionText( upd.list.version ),
 			upd.list.files[i].path, upd.numShadow > 1 ? " and more" : "" );
 	}
 	if ( upd.thenFetch && cls.state == CA_DISCONNECTED )
@@ -906,29 +906,29 @@ static void Update_Checked( void ) {
 static void Update_Fetched( void ) {
 	if ( !upd.ok ) {
 		if ( upd.cancel ) {
-			Com_Printf( "The update was stopped. What came in is kept for the next time.\n" );
+			Com_Printf( "The update was cancelled. Files already downloaded are kept for next time.\n" );
 			Update_Available();
 		} else {
 			Com_Printf( S_COLOR_YELLOW "The update failed, nothing was changed. %s\n", upd.error );
-			Update_Say( UPDATE_FAILED, "The update failed, the console says why. Click here to try again" );
+			Update_Say( UPDATE_FAILED, "The update failed (see the console). Click here to try again" );
 		}
 		return;
 	}
 	if ( cls.state != CA_DISCONNECTED ) {
 		// he joined a server while the files came in. They stay where they are.
-		Com_Printf( "The update is fetched. Leave the server and type update to put it in place.\n" );
+		Com_Printf( "The update has been downloaded. Leave the server and type update to install it.\n" );
 		Update_Available();
 		return;
 	}
 	if ( !Update_Journal() ) {
-		Com_Printf( S_COLOR_YELLOW "The update could not be put in place, nothing was changed: the folder of the game can not be written to.\n" );
-		Update_Say( UPDATE_FAILED, "The update failed, the console says why. Click here to try again" );
+		Com_Printf( S_COLOR_YELLOW "The update could not be installed, nothing was changed: the game folder is not writable.\n" );
+		Update_Say( UPDATE_FAILED, "The update failed (see the console). Click here to try again" );
 		return;
 	}
 	// (one that can not be renamed is named on the console, and the next start offers the repair again)
 	Update_Unshadow();
-	Com_Printf( "Version %s is fetched. The game starts again and puts it in place.\n", Update_VersionText( upd.list.version ) );
-	Update_Say( UPDATE_RESTARTING, va( "Version %s is fetched, the game starts again", Update_VersionText( upd.list.version ) ) );
+	Com_Printf( "Version %s has been downloaded. The game is restarting to install it.\n", Update_VersionText( upd.list.version ) );
+	Update_Say( UPDATE_RESTARTING, va( "Version %s downloaded. The game is restarting", Update_VersionText( upd.list.version ) ) );
 	Sys_RestartOnExit();
 	Cbuf_AddText( "quit\n" );
 }
@@ -979,23 +979,23 @@ void CL_UpdateFrame( void ) {
 
 static qboolean Update_Possible( void ) {
 	if ( !upd.release ) {
-		Com_Printf( "This is a build between two releases (%s), there is no update for those.\n", UPDATE_VERSION );
+		Com_Printf( "This is a build between two releases (%s). There are no updates for these.\n", UPDATE_VERSION );
 		return qfalse;
 	}
 	if ( upd.elsewhere ) {
-		Com_Printf( "This game reads its files from another folder than the one its program is in (fs_basepath), it does not update itself.\n" );
+		Com_Printf( "This game loads its files from a different folder than the one its program is in (fs_basepath), so it can not update itself.\n" );
 		return qfalse;
 	}
 	if ( !upd.address[0] ) {
-		Com_Printf( "This build has no address to ask for updates.\n" );
+		Com_Printf( "This build has no update address.\n" );
 		return qfalse;
 	}
 	if ( upd.thread ) {
 		if ( upd.job == JOB_FETCH )
-			Com_Printf( "The update is on its way: %i %% so far. v_update_cancel stops it.\n",
+			Com_Printf( "Downloading the update: %i %% so far. Type v_update_cancel to stop it.\n",
 				upd.fetchBytes > 0 ? (int)( upd.fetched * 100 / upd.fetchBytes ) : 0 );
 		else
-			Com_Printf( "The website is being asked.\n" );
+			Com_Printf( "Checking for updates ...\n" );
 		return qfalse;
 	}
 	return qtrue;
@@ -1012,7 +1012,7 @@ static void CL_Update_f( void ) {
 	if ( !Update_Possible() )
 		return;
 	if ( cls.state != CA_DISCONNECTED ) {
-		Com_Printf( "Leave the server first: the update ends the game and starts it again.\n" );
+		Com_Printf( "Leave the server first: the update restarts the game.\n" );
 		return;
 	}
 	if ( ( upd.numChange || upd.numShadow ) && ( upd.state == UPDATE_AVAILABLE || upd.state == UPDATE_FAILED ) ) {
@@ -1027,7 +1027,7 @@ static void CL_UpdateCancel_f( void ) {
 	if ( upd.thread && upd.job == JOB_FETCH )
 		upd.cancel = 1;
 	else
-		Com_Printf( "No update is on its way.\n" );
+		Com_Printf( "No update is in progress.\n" );
 }
 
 /*
@@ -1055,17 +1055,17 @@ void CL_UpdateAddress( void ) {
 		if ( UPD_AddressAllowed( UPDATE_URL, qtrue ) )
 			Q_strncpyz( upd.address, UPDATE_URL, sizeof( upd.address ) );
 	}
-	Cvar_Get( "v_updateURL", upd.address, CVAR_INIT | CVAR_ROM | CVAR_PROTECTED, "Where the game asks for a newer version of itself. Only the command line can name another address" );
+	Cvar_Get( "v_updateURL", upd.address, CVAR_INIT | CVAR_ROM | CVAR_PROTECTED, "Address the game checks for newer versions. Can only be changed on the command line" );
 	Cvar_Set( "v_updateURL", upd.address );
 }
 
 void CL_UpdateInit( void ) {
-	v_updateCheck = Cvar_Get( "v_updateCheck", "1", CVAR_ARCHIVE, "Ask the website at every start whether there is a newer version (0: never)" );
-	v_updateChannel = Cvar_Get( "v_updateChannel", "stable", CVAR_ARCHIVE, "Which builds the game updates to: stable (the releases) or "
-		"dev (the development builds, early test versions, and the releases when they are newer)" );
+	v_updateCheck = Cvar_Get( "v_updateCheck", "1", CVAR_ARCHIVE, "Check for a newer version at every start (0: never)" );
+	v_updateChannel = Cvar_Get( "v_updateChannel", "stable", CVAR_ARCHIVE, "Which builds to update to: stable (the releases) or "
+		"dev (early test builds, plus the releases when they are newer)" );
 	upd.channelDev = Update_ChannelDev();
-	Cvar_Get( "v_updateState", "0", CVAR_ROM, "What the updater is doing: 0 nothing, 1 a newer version is out, 2 fetching it, 3 failed, 4 starting again" );
-	Cvar_Get( "v_updateText", "", CVAR_ROM, "What the updater has to say, as the main menu shows it" );
+	Cvar_Get( "v_updateState", "0", CVAR_ROM, "Updater state: 0 idle, 1 update available, 2 downloading, 3 failed, 4 restarting" );
+	Cvar_Get( "v_updateText", "", CVAR_ROM, "Updater status text, as shown on the main menu" );
 	Update_Say( UPDATE_NONE, "" );
 	Cmd_AddCommand( "update", CL_Update_f, "Fetches the newer version of the game, puts it in place and starts the game again" );
 	Cmd_AddCommand( "v_update_check", CL_UpdateCheck_f, "Asks the website whether there is a newer version" );
@@ -1076,9 +1076,9 @@ void CL_UpdateInit( void ) {
 		updStartNote = NULL;
 	}
 	if ( upd.addressRefused )
-		Com_Printf( S_COLOR_YELLOW "v_updateURL on the command line is no https address. The game asks %s as it would without it.\n", upd.address );
+		Com_Printf( S_COLOR_YELLOW "v_updateURL on the command line is not an https address. Using %s instead.\n", upd.address );
 	else if ( upd.addressGiven )
-		Com_Printf( "Updates are asked for at %s, as the command line says.\n", upd.address );
+		Com_Printf( "Checking for updates at %s, as given on the command line.\n", upd.address );
 
 	upd.release = UPD_ParseRelease( UPDATE_VERSION, upd.own );
 	// The files of a release are replaced where the program is. A game that reads its files from somewhere

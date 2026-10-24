@@ -554,8 +554,8 @@ def channel_page(page, back, L):
     x, y, w, _ = L.list
     rect_no, rect_yes = (x + 20, y + 170, 150, 24), (x + 190, y + 170, 170, 24)
     pill = (('type', 'ITEM_TYPE_BUTTON'), ('style', 'WINDOW_STYLE_PANEL'), ('radius', 3), ('caps', 1), ('page', page))
-    lines = ('Development builds are early test versions.', 'They can crash, break configs or not work on all servers.',
-             'You can switch back to Stable any time.')
+    lines = ('Development builds are early test versions.', 'They can crash, corrupt your configs or not work on some servers.',
+             'You can switch back to Stable at any time.')
     out = [text_item('vision_channel_title', (x + 20, y + 24, w - 40, 24), '@MENUS_WARNING', 1.1, WARM, ('decoration',), ('page', page))]
     for n, line in enumerate(lines):
         out.append(text_item('vision_channel%d' % (n + 1), (x + 20, y + 62 + n * 18, w - 40, 16), ref(line), 0.7, DIM if n == 2 else TEXT,

@@ -19,7 +19,7 @@ LANG_SPANISH        "Empuñadura y hoja de tu sable de luz."
 
 REFERENCE           PLAYER
 LANG_ENGLISH        "Player"
-LANG_SPANISH        "Reproductor"
+LANG_SPANISH        "Jugador"
 
 REFERENCE           NAME_MODEL_AND_TEAM_COLOUR
 LANG_ENGLISH        "Name, model and team colour."
@@ -103,11 +103,11 @@ LANG_SPANISH        "Mantén para señalar jugadores con el ratón: un clic muestra
 
 REFERENCE           QUICK_WHEEL_BOOMBOX
 LANG_ENGLISH        "Quick Wheel (Boombox)"
-LANG_SPANISH        "Rueda rápida (radiocasete)"
+LANG_SPANISH        "Rueda rápida (boombox)"
 
 REFERENCE           HOLD_FOR_A_WHEEL_PUT_A_BOOMBOX_OR_A
 LANG_ENGLISH        "Hold for a wheel: put a boombox or a sound system down, or work the one you look at. Let go on a choice."
-LANG_SPANISH        "Mantener para una rueda: poner una radiocasete o un equipo de sonido, o manejar el que miras. Soltar sobre una opción."
+LANG_SPANISH        "Mantén pulsado para abrir una rueda: colocar una boombox o un equipo de sonido, o manejar el que miras. Suelta sobre una opción."
 
 REFERENCE           SCOREBOARD_WITH_MOUSE
 LANG_ENGLISH        "Scoreboard with Mouse"
@@ -151,7 +151,7 @@ LANG_SPANISH        "#same"
 
 REFERENCE           KEYS_FOR_WHAT_VISIONJK_AND_JA_ADD_TO
 LANG_ENGLISH        "Keys for what VisionJK and JA+ add to the game."
-LANG_SPANISH        "Teclas para lo que VisionJK y JA+ añaden al juego."
+LANG_SPANISH        "Teclas de las funciones que añaden VisionJK y JA+."
 
 REFERENCE           ENTER_OR_CLICK_CHANGE_THE_KEY_BACKSP
 LANG_ENGLISH        "Enter or click: change the key. Backspace: clear it."
@@ -187,7 +187,7 @@ LANG_SPANISH        "Renderizador"
 
 REFERENCE           DRAW_WITH_VULKAN_OR_WITH_OPENGL
 LANG_ENGLISH        "Draw with Vulkan or with OpenGL."
-LANG_SPANISH        "Dibujar con Vulkan o con OpenGL."
+LANG_SPANISH        "Usar Vulkan u OpenGL para dibujar."
 
 REFERENCE           ANTI_ALIASING
 LANG_ENGLISH        "Anti-Aliasing"
@@ -195,15 +195,15 @@ LANG_SPANISH        "Antialiasing"
 
 REFERENCE           SMOOTHS_THE_EDGES_COSTS_SPEED
 LANG_ENGLISH        "Smooths the edges, costs speed."
-LANG_SPANISH        "Suaviza los bordes, cuesta rendimiento."
+LANG_SPANISH        "Suaviza los bordes, pero reduce el rendimiento."
 
 REFERENCE           FRAME_LIMIT
 LANG_ENGLISH        "Frame Limit"
-LANG_SPANISH        "Límite de fotogramas"
+LANG_SPANISH        "Límite de FPS"
 
 REFERENCE           THE_MOST_FRAMES_A_SECOND_THE_GAME_DR
 LANG_ENGLISH        "The most frames a second the game draws."
-LANG_SPANISH        "El máximo de fotogramas por segundo."
+LANG_SPANISH        "Máximo de fotogramas por segundo."
 
 REFERENCE           NONE
 LANG_ENGLISH        "None"
@@ -215,11 +215,11 @@ LANG_SPANISH        "Diseño panorámico"
 
 REFERENCE           MENUS_AND_HUD_KEEP_THEIR_SHAPE_ON_A
 LANG_ENGLISH        "Menus and HUD keep their shape on a wide window. Counts after a restart of the video."
-LANG_SPANISH        "Los menús y el HUD mantienen su forma en una ventana ancha. Se aplica al reiniciar el vídeo."
+LANG_SPANISH        "Los menús y el HUD mantienen sus proporciones en una ventana panorámica. Se aplica al reiniciar los gráficos."
 
 REFERENCE           DETAIL
 LANG_ENGLISH        "Detail"
-LANG_SPANISH        "Detalle"
+LANG_SPANISH        "Detalles"
 
 REFERENCE           DYNAMIC_GLOW
 LANG_ENGLISH        "Dynamic Glow"
@@ -255,7 +255,7 @@ LANG_SPANISH        "Efectos de render a textura"
 
 REFERENCE           OFF_NO_SLOW_EFFECTS_CLOAK_PUSH_BLUR
 LANG_ENGLISH        "Off: no slow effects (cloak, push blur, protection spheres) on graphics cards that have trouble with them."
-LANG_SPANISH        "Desactivado: sin efectos lentos (camuflaje, desenfoque de empujón, esferas de protección) en tarjetas gráficas que tienen problemas con ellos."
+LANG_SPANISH        "Desactivado: sin efectos lentos (camuflaje, desenfoque de empuje, esferas de protección) en tarjetas gráficas que los gestionan mal."
 
 REFERENCE           VOLUME
 LANG_ENGLISH        "Volume"
@@ -267,7 +267,7 @@ LANG_SPANISH        "Sonido en segundo plano"
 
 REFERENCE           THE_GAME_GOES_ON_PLAYING_ITS_SOUND_W
 LANG_ENGLISH        "The game goes on playing its sound while it is not in front or is minimized."
-LANG_SPANISH        "El juego sigue reproduciendo su sonido cuando no está en primer plano o está minimizado."
+LANG_SPANISH        "El juego sigue reproduciendo el sonido cuando está en segundo plano o minimizado."
 
 REFERENCE           3D_SOUND
 LANG_ENGLISH        "3D Sound"
@@ -275,7 +275,7 @@ LANG_SPANISH        "Sonido 3D"
 
 REFERENCE           STEAM_AUDIO_SOUND_THAT_KNOWS_THE_LEV
 LANG_ENGLISH        "Steam Audio: sound that knows the level. Needs its library next to the game."
-LANG_SPANISH        "Steam Audio: sonido que conoce el nivel. Necesita su biblioteca junto al juego."
+LANG_SPANISH        "Steam Audio: sonido que tiene en cuenta el nivel. Necesita su biblioteca en la carpeta del juego."
 
 REFERENCE           OUTPUT
 LANG_ENGLISH        "Output"
@@ -283,7 +283,7 @@ LANG_SPANISH        "Salida"
 
 REFERENCE           3D_SOUND_DIRECTION_FOR_TWO_EARS_OR_P
 LANG_ENGLISH        "3D Sound: direction for two ears, or plain panning for speakers."
-LANG_SPANISH        "Sonido 3D: dirección para dos oídos, o panorámica simple para altavoces."
+LANG_SPANISH        "Sonido 3D: posicionamiento para auriculares, o panorámica simple para altavoces."
 
 REFERENCE           HEADPHONES
 LANG_ENGLISH        "Headphones"
@@ -315,7 +315,7 @@ LANG_SPANISH        "Eco"
 
 REFERENCE           REAL_TIME_WORKED_OUT_AS_YOU_GO_THE_L
 LANG_ENGLISH        "Real time: worked out as you go, the loudest sounds echo on their own. Precalculated: worked out once per level and kept, steady while you move, all sounds ring with the room you are in."
-LANG_SPANISH        "Tiempo real: se calcula mientras juegas, los sonidos más fuertes tienen su propio eco. Precalculado: se calcula una vez por nivel y se guarda, estable al moverte, todos los sonidos resuenan con la sala en la que estás."
+LANG_SPANISH        "Tiempo real: se calcula mientras juegas y los sonidos más fuertes tienen su propio eco. Precalculado: se calcula una vez por nivel y se guarda, estable al moverte; todos los sonidos resuenan con la sala en la que estás."
 
 REFERENCE           REAL_TIME
 LANG_ENGLISH        "Real Time"
@@ -327,19 +327,19 @@ LANG_SPANISH        "Precalculado"
 
 REFERENCE           ECHOES_OF_THEIR_OWN
 LANG_ENGLISH        "Echoes of Their Own"
-LANG_SPANISH        "Ecos propios"
+LANG_SPANISH        "Ecos individuales"
 
 REFERENCE           HOW_MANY_OF_THE_LOUDEST_SOUNDS_ECHO
 LANG_ENGLISH        "How many of the loudest sounds echo off the walls around them. More costs more time a frame."
-LANG_SPANISH        "Cuántos de los sonidos más fuertes resuenan en las paredes a su alrededor. Más cuesta más tiempo por fotograma."
+LANG_SPANISH        "Cuántos de los sonidos más fuertes rebotan en las paredes cercanas. Más eco consume más rendimiento por fotograma."
 
 REFERENCE           OFF
 LANG_ENGLISH        "Off"
-LANG_SPANISH        "No"
+LANG_SPANISH        "Desactivado"
 
 REFERENCE           SOUND_AROUND_CORNERS
 LANG_ENGLISH        "Sound Around Corners"
-LANG_SPANISH        "Sonido tras las esquinas"
+LANG_SPANISH        "Difracción del sonido"
 
 REFERENCE           A_SOUND_FINDS_ITS_WAY_AROUND_CORNERS
 LANG_ENGLISH        "A sound finds its way around corners."
@@ -351,7 +351,7 @@ LANG_SPANISH        "Propagación real del sonido"
 
 REFERENCE           SOUNDS_FADE_WITH_THE_DISTANCE_AS_REA
 LANG_ENGLISH        "Sounds fade with the distance as real ones do, lose their highs far away and arrive at the speed of sound."
-LANG_SPANISH        "Los sonidos se debilitan con la distancia como los reales, pierden sus agudos a lo lejos y llegan a la velocidad del sonido."
+LANG_SPANISH        "Los sonidos se atenúan con la distancia como en la realidad, pierden agudos a lo lejos y llegan a la velocidad del sonido."
 
 REFERENCE           DOPPLER_EFFECT
 LANG_ENGLISH        "Doppler Effect"
@@ -423,7 +423,7 @@ LANG_SPANISH        "Mostrar quién habla"
 
 REFERENCE           A_LIST_OF_THE_PLAYERS_WHO_ARE_TALKIN
 LANG_ENGLISH        "A list of the players who are talking on the HUD."
-LANG_SPANISH        "Una lista de los jugadores que hablan en el HUD."
+LANG_SPANISH        "Muestra en el HUD la lista de jugadores que hablan."
 
 REFERENCE           ON_OTHER_SERVERS
 LANG_ENGLISH        "On Other Servers"
@@ -431,7 +431,7 @@ LANG_SPANISH        "En otros servidores"
 
 REFERENCE           SERVERS_WITHOUT_VOICE_USE_MASTER_JKA
 LANG_ENGLISH        "Servers without voice: use master.jka.vision, which sees your address."
-LANG_SPANISH        "Servidores sin voz: usar master.jka.vision, que ve tu dirección."
+LANG_SPANISH        "Servidores sin chat de voz: usa master.jka.vision, que ve tu dirección."
 
 REFERENCE           OWN_VOICE_IN_THE_ROOM
 LANG_ENGLISH        "Own Voice In The Room"
@@ -439,7 +439,7 @@ LANG_SPANISH        "Tu voz en la sala"
 
 REFERENCE           WITH_SPATIAL_SOUND_HOW_LOUD_THE_ROOM
 LANG_ENGLISH        "With spatial sound: how loud the room rings from what you say yourself."
-LANG_SPANISH        "Con sonido espacial: cuánto resuena la sala con lo que dices."
+LANG_SPANISH        "Con sonido 3D: cuánto resuena la sala con tu propia voz."
 
 REFERENCE           RADIO_SOUND
 LANG_ENGLISH        "Radio Sound"
@@ -447,27 +447,27 @@ LANG_SPANISH        "Sonido de radio"
 
 REFERENCE           THE_CLAN_RADIO_SOUNDS_LIKE_ONE_NARRO
 LANG_ENGLISH        "The clan radio sounds like one: narrow, a little rough, with a click."
-LANG_SPANISH        "La radio del clan suena como tal: estrecha, algo áspera, con un clic."
+LANG_SPANISH        "La radio del clan suena como una radio de verdad: estrecha, algo áspera, con un clic."
 
 REFERENCE           BOOMBOX
 LANG_ENGLISH        "Boombox"
-LANG_SPANISH        "Radiocasete"
+LANG_SPANISH        "#same"
 
 REFERENCE           BOOMBOXES
 LANG_ENGLISH        "Boomboxes"
-LANG_SPANISH        "Radiocasetes"
+LANG_SPANISH        "#same"
 
 REFERENCE           SEE_AND_HEAR_THE_BOOMBOXES_ON_A_VISI
 LANG_ENGLISH        "See and hear the boomboxes on a VisionJK server, which play songs of YouTube."
-LANG_SPANISH        "Ver y oír los radiocasetes de un servidor VisionJK, que ponen canciones de YouTube."
+LANG_SPANISH        "Ver y oír las boomboxes de un servidor VisionJK, que ponen canciones de YouTube."
 
 REFERENCE           BOOMBOX_VOLUME
 LANG_ENGLISH        "Boombox Volume"
-LANG_SPANISH        "Volumen de los radiocasetes"
+LANG_SPANISH        "Volumen de las boomboxes"
 
 REFERENCE           HOW_LOUD_THE_SONGS_OF_THE_BOOMBOXES
 LANG_ENGLISH        "How loud the songs of the boomboxes are for you."
-LANG_SPANISH        "Lo alto que suenan para usted las canciones de los radiocasetes."
+LANG_SPANISH        "Volumen de las canciones de las boomboxes para ti."
 
 REFERENCE           GAME
 LANG_ENGLISH        "Game"
@@ -503,7 +503,7 @@ LANG_SPANISH        "Longitud de la estela"
 
 REFERENCE           HOW_LONG_THE_TRAIL_BEHIND_A_SWINGING
 LANG_ENGLISH        "How long the trail behind a swinging blade is."
-LANG_SPANISH        "Lo larga que es la estela tras una hoja en movimiento."
+LANG_SPANISH        "Longitud de la estela tras una hoja en movimiento."
 
 REFERENCE           BLADE_CORE
 LANG_ENGLISH        "Blade Core"
@@ -511,7 +511,7 @@ LANG_SPANISH        "Núcleo de la hoja"
 
 REFERENCE           HOW_THICK_THE_WHITE_CORE_OF_A_BLADE
 LANG_ENGLISH        "How thick the white core of a blade is."
-LANG_SPANISH        "Lo grueso que es el núcleo blanco de una hoja."
+LANG_SPANISH        "Grosor del núcleo blanco de una hoja."
 
 REFERENCE           BLADE_GLOW
 LANG_ENGLISH        "Blade Glow"
@@ -519,7 +519,7 @@ LANG_SPANISH        "Brillo de la hoja"
 
 REFERENCE           HOW_WIDE_THE_GLOW_AROUND_A_BLADE_IS
 LANG_ENGLISH        "How wide the glow around a blade is."
-LANG_SPANISH        "Lo ancho que es el brillo alrededor de una hoja."
+LANG_SPANISH        "Anchura del brillo alrededor de una hoja."
 
 REFERENCE           DUELS
 LANG_ENGLISH        "Duels"
@@ -579,7 +579,7 @@ LANG_SPANISH        "Menús y HUD"
 
 REFERENCE           NEW_HUD
 LANG_ENGLISH        "New HUD"
-LANG_SPANISH        "HUD nuevo"
+LANG_SPANISH        "Nuevo HUD"
 
 REFERENCE           THE_HUD_OF_VISIONJK_OFF_THE_HUD_OF_T
 LANG_ENGLISH        "The HUD of VisionJK. Off: the HUD of the game."
@@ -591,7 +591,7 @@ LANG_SPANISH        "Menús clásicos"
 
 REFERENCE           THE_MENUS_OF_THE_GAME_AS_THEY_WERE_C
 LANG_ENGLISH        "The menus of the game as they were. Counts from the next start of the game."
-LANG_SPANISH        "Los menús del juego como eran. Se aplica al próximo inicio del juego."
+LANG_SPANISH        "Los menús originales del juego. Se aplica en el próximo inicio."
 
 REFERENCE           MENU_IN_THE_LEVEL
 LANG_ENGLISH        "Menu in the Level"
@@ -599,7 +599,7 @@ LANG_SPANISH        "Menú en el nivel"
 
 REFERENCE           IN_A_GAME_AN_OPEN_MENU_STANDS_IN_THE
 LANG_ENGLISH        "In a game an open menu stands in the level next to you."
-LANG_SPANISH        "En partida, un menú abierto aparece en el nivel junto a ti."
+LANG_SPANISH        "Durante la partida, un menú abierto aparece en el nivel junto a ti."
 
 REFERENCE           MENU_BLUR
 LANG_ENGLISH        "Menu Blur"
@@ -607,11 +607,11 @@ LANG_SPANISH        "Desenfoque del menú"
 
 REFERENCE           HOW_FAR_THE_LEVEL_BEHIND_AN_OPEN_MEN
 LANG_ENGLISH        "How far the level behind an open menu is out of focus."
-LANG_SPANISH        "Cuánto se desenfoca el nivel tras un menú abierto."
+LANG_SPANISH        "Cuánto se desenfoca el nivel detrás de un menú abierto."
 
 REFERENCE           SHOW_FRAME_RATE
 LANG_ENGLISH        "Show Frame Rate"
-LANG_SPANISH        "Mostrar fotogramas por segundo"
+LANG_SPANISH        "Mostrar FPS"
 
 REFERENCE           FRAMES_A_SECOND_IN_THE_CORNER_OF_THE
 LANG_ENGLISH        "Frames a second in the corner of the screen."
@@ -643,7 +643,7 @@ LANG_SPANISH        "Campo de visión"
 
 REFERENCE           HOW_WIDE_YOU_SEE
 LANG_ENGLISH        "How wide you see."
-LANG_SPANISH        "Lo ancho que ves."
+LANG_SPANISH        "Amplitud de tu campo de visión."
 
 REFERENCE           CAMERA_DISTANCE
 LANG_ENGLISH        "Camera Distance"
@@ -651,7 +651,7 @@ LANG_SPANISH        "Distancia de la cámara"
 
 REFERENCE           HOW_FAR_THE_CAMERA_IS_BEHIND_YOU_IN
 LANG_ENGLISH        "How far the camera is behind you in third person."
-LANG_SPANISH        "A qué distancia está la cámara detrás de ti en tercera persona."
+LANG_SPANISH        "Distancia de la cámara detrás de ti en tercera persona."
 
 REFERENCE           CROSSHAIR_SIZE
 LANG_ENGLISH        "Crosshair Size"
@@ -687,7 +687,7 @@ LANG_SPANISH        "Estados de los jugadores"
 
 REFERENCE           AWAY_FROM_KEYBOARD_AND_MUSIC_ABOVE_T
 LANG_ENGLISH        "Away from keyboard and music above the heads of the others."
-LANG_SPANISH        "Ausencia y música sobre las cabezas de los demás."
+LANG_SPANISH        "Ausencia y música sobre la cabeza de los demás."
 
 REFERENCE           SHOW_MY_MUSIC
 LANG_ENGLISH        "Show My Music"
@@ -695,7 +695,7 @@ LANG_SPANISH        "Mostrar mi música"
 
 REFERENCE           TELL_THE_OTHERS_WHAT_YOU_LISTEN_TO_E
 LANG_ENGLISH        "Tell the others what you listen to. Everybody on the server reads it."
-LANG_SPANISH        "Di a los demás lo que escuchas. Todo el servidor lo lee."
+LANG_SPANISH        "Muestra a los demás lo que escuchas. Todo el servidor puede leerlo."
 
 REFERENCE           CHOOSE_PLAYERS_OF_MY_MUSIC
 LANG_ENGLISH        "Choose Players of My Music ..."
@@ -723,11 +723,11 @@ LANG_SPANISH        "Un contorno brillante alrededor del jugador bajo el ratón."
 
 REFERENCE           KEEP_SCOREBOARD_ON_DOUBLE_TAP
 LANG_ENGLISH        "Keep Scoreboard on Double Tap"
-LANG_SPANISH        "Mantener el marcador (doble pulsación)"
+LANG_SPANISH        "Marcador fijo (doble pulsación)"
 
 REFERENCE           THE_SCOREBOARD_KEY_PRESSED_TWICE_QUI
 LANG_ENGLISH        "The scoreboard key pressed twice quickly keeps the board open, with the mouse free to click a player."
-LANG_SPANISH        "Dos pulsaciones rápidas de la tecla del marcador lo dejan abierto, con el ratón libre para hacer clic en un jugador."
+LANG_SPANISH        "Pulsar dos veces rápido la tecla del marcador lo mantiene abierto, con el ratón libre para hacer clic en un jugador."
 
 REFERENCE           CHAT
 LANG_ENGLISH        "Chat"
@@ -735,7 +735,7 @@ LANG_SPANISH        "#same"
 
 REFERENCE           OWN_CHAT_LINE
 LANG_ENGLISH        "Own Chat Line"
-LANG_SPANISH        "Línea de chat propia"
+LANG_SPANISH        "Entrada de chat propia"
 
 REFERENCE           TYPE_INTO_THE_CHAT_BOX_OF_VISIONJK_W
 LANG_ENGLISH        "Type into the chat box of VisionJK, with history and links."
@@ -747,7 +747,7 @@ LANG_SPANISH        "Tamaño del chat"
 
 REFERENCE           HOW_LARGE_THE_CHAT_BOX_AND_ITS_TEXT
 LANG_ENGLISH        "How large the chat box and its text are. In the open box Ctrl and the mouse wheel change it too."
-LANG_SPANISH        "El tamaño del chat y de su texto. Con el chat abierto, Ctrl y la rueda también lo cambian."
+LANG_SPANISH        "Tamaño del chat y de su texto. Con el chat abierto, Ctrl y la rueda del ratón también lo cambian."
 
 REFERENCE           CHAT_BOX_WIDTH
 LANG_ENGLISH        "Chat Box Width"
@@ -763,7 +763,7 @@ LANG_SPANISH        "Líneas del chat"
 
 REFERENCE           HOW_MANY_LINES_THE_OPEN_CHAT_BOX_SHO
 LANG_ENGLISH        "How many lines the open chat box shows. Its upper right corner can also be dragged with the mouse."
-LANG_SPANISH        "Cuántas líneas muestra el chat abierto. Su esquina superior derecha también se arrastra con el ratón."
+LANG_SPANISH        "Cuántas líneas muestra el chat abierto. También puedes arrastrar su esquina superior derecha con el ratón."
 
 REFERENCE           CHAT_BEEP
 LANG_ENGLISH        "Chat Beep"
@@ -779,7 +779,7 @@ LANG_SPANISH        "Notificaciones"
 
 REFERENCE           TELLS_YOUR_NAME_IN_THE_CHAT_BOOMBOX
 LANG_ENGLISH        "Tells, your name in the chat, boombox lines and new versions slide in at the left."
-LANG_SPANISH        "Mensajes privados, tu nombre en el chat, líneas del radiocasete y nuevas versiones entran por la izquierda."
+LANG_SPANISH        "Mensajes privados, tu nombre en el chat, líneas de la boombox y nuevas versiones aparecen a la izquierda."
 
 REFERENCE           SHOWN
 LANG_ENGLISH        "Shown"
@@ -791,11 +791,11 @@ LANG_SPANISH        "Mostradas con sonido"
 
 REFERENCE           NOTIFICATION_TIME
 LANG_ENGLISH        "Notification Time"
-LANG_SPANISH        "Tiempo de aviso"
+LANG_SPANISH        "Duración del aviso"
 
 REFERENCE           HOW_MANY_MILLISECONDS_A_NOTIFICATION
 LANG_ENGLISH        "How many milliseconds a notification stays."
-LANG_SPANISH        "Cuántos milisegundos se queda una notificación."
+LANG_SPANISH        "Cuántos milisegundos permanece visible una notificación."
 
 REFERENCE           NOTIFICATION_SIZE
 LANG_ENGLISH        "Notification Size"
@@ -803,7 +803,7 @@ LANG_SPANISH        "Tamaño de las notificaciones"
 
 REFERENCE           HOW_LARGE_THE_NOTIFICATIONS_ARE
 LANG_ENGLISH        "How large the notifications are."
-LANG_SPANISH        "Lo grandes que son las notificaciones."
+LANG_SPANISH        "Tamaño de las notificaciones."
 
 REFERENCE           CONSOLE
 LANG_ENGLISH        "Console"
@@ -851,7 +851,7 @@ LANG_SPANISH        "#same"
 
 REFERENCE           KILLFEED
 LANG_ENGLISH        "Killfeed"
-LANG_SPANISH        "Lista de bajas"
+LANG_SPANISH        "#same"
 
 REFERENCE           WHO_KILLED_WHOM_WITH_WHAT_AT_THE_UPP
 LANG_ENGLISH        "Who killed whom with what, at the upper right."
@@ -863,7 +863,7 @@ LANG_SPANISH        "Tamaño de la lista del equipo"
 
 REFERENCE           HOW_LARGE_THE_LIST_OF_YOUR_TEAM_MATE
 LANG_ENGLISH        "How large the list of your team mates is."
-LANG_SPANISH        "Lo grande que es la lista de tus compañeros."
+LANG_SPANISH        "Tamaño de la lista de tus compañeros."
 
 REFERENCE           CROSSHAIR_COLOUR
 LANG_ENGLISH        "Crosshair Colour"
@@ -899,7 +899,7 @@ LANG_SPANISH        "Opacidad de los nombres"
 
 REFERENCE           HOW_CLEARLY_THE_NAME_OF_THE_PLAYER_U
 LANG_ENGLISH        "How clearly the name of the player under the crosshair shows."
-LANG_SPANISH        "Lo claro que se ve el nombre del jugador bajo la mira."
+LANG_SPANISH        "Visibilidad del nombre del jugador bajo la mira."
 
 REFERENCE           SCOREBOARD_CLOCK
 LANG_ENGLISH        "Scoreboard Clock"
@@ -919,11 +919,11 @@ LANG_SPANISH        "El temporizador del nivel con milisegundos."
 
 REFERENCE           TIMER_COUNTS_DOWN
 LANG_ENGLISH        "Timer Counts Down"
-LANG_SPANISH        "Temporizador hacia atrás"
+LANG_SPANISH        "Cuenta atrás"
 
 REFERENCE           THE_TIMER_SHOWS_WHAT_IS_LEFT_OF_THE
 LANG_ENGLISH        "The timer shows what is left of the time limit, if there is one."
-LANG_SPANISH        "El temporizador muestra lo que queda del límite de tiempo, si lo hay."
+LANG_SPANISH        "El temporizador muestra el tiempo que queda hasta el límite, si lo hay."
 
 REFERENCE           HIT_SOUNDS
 LANG_ENGLISH        "Hit Sounds"
@@ -935,7 +935,7 @@ LANG_SPANISH        "Un breve tic cuando tus disparos o tu hoja alcanzan a algui
 
 REFERENCE           KILL_SOUND
 LANG_ENGLISH        "Kill Sound"
-LANG_SPANISH        "Sonido de baja"
+LANG_SPANISH        "Sonido de eliminación"
 
 REFERENCE           TWO_NOTES_WHEN_YOU_KILL_SOMEONE
 LANG_ENGLISH        "Two notes when you kill someone."
@@ -947,7 +947,7 @@ LANG_SPANISH        "Mapa del espectador"
 
 REFERENCE           WHILE_YOU_WATCH_A_MAP_OF_THE_PLAYERS
 LANG_ENGLISH        "While you watch, a map of the players around at the upper right."
-LANG_SPANISH        "Mientras miras, un mapa de los jugadores cercanos arriba a la derecha."
+LANG_SPANISH        "Al observar, muestra arriba a la derecha un mapa de los jugadores cercanos."
 
 REFERENCE           LEAD_INDICATOR
 LANG_ENGLISH        "Lead Indicator"
@@ -1007,7 +1007,7 @@ LANG_SPANISH        "Una línea que se desvanece en el suelo por donde corrieron 
 
 REFERENCE           MINE
 LANG_ENGLISH        "Mine"
-LANG_SPANISH        "La mía"
+LANG_SPANISH        "Solo yo"
 
 REFERENCE           EVERYBODY
 LANG_ENGLISH        "Everybody"
@@ -1019,7 +1019,7 @@ LANG_SPANISH        "Teclas de movimiento"
 
 REFERENCE           THE_KEYS_YOU_MOVE_WITH_ON_THE_SCREEN
 LANG_ENGLISH        "The keys you move with on the screen, lit while held."
-LANG_SPANISH        "Las teclas de movimiento en pantalla, iluminadas mientras se pulsan."
+LANG_SPANISH        "Muestra en pantalla las teclas de movimiento, iluminadas mientras se pulsan."
 
 REFERENCE           START_GOAL
 LANG_ENGLISH        "Start Goal"
@@ -1219,7 +1219,7 @@ LANG_SPANISH        "Modelo de los enemigos"
 
 REFERENCE           EVERY_OPPONENT_IN_THIS_MODEL_AS_MODE
 LANG_ENGLISH        "Every opponent in this model, as model/skin. Empty: as they chose."
-LANG_SPANISH        "Cada rival con este modelo, como modelo/skin. Vacío: como lo eligieron."
+LANG_SPANISH        "Todos los rivales con este modelo (modelo/skin). Vacío: el que elijan."
 
 REFERENCE           ALLY_MODEL
 LANG_ENGLISH        "Ally Model"
@@ -1227,7 +1227,7 @@ LANG_SPANISH        "Modelo de los aliados"
 
 REFERENCE           EVERY_TEAM_MATE_IN_THIS_MODEL_AS_MOD
 LANG_ENGLISH        "Every team mate in this model, as model/skin. Empty: as they chose."
-LANG_SPANISH        "Cada compañero con este modelo, como modelo/skin. Vacío: como lo eligieron."
+LANG_SPANISH        "Todos los compañeros con este modelo (modelo/skin). Vacío: el que elijan."
 
 REFERENCE           SABER_TEAM_COLOURS
 LANG_ENGLISH        "Saber Team Colours"
@@ -1235,7 +1235,7 @@ LANG_SPANISH        "Colores de equipo de los sables"
 
 REFERENCE           IN_TEAM_GAMES_EVERY_BLADE_IN_THE_COL
 LANG_ENGLISH        "In team games every blade in the colour of its team. Off: blades keep their colour."
-LANG_SPANISH        "En partidas por equipos, cada hoja del color de su equipo. No: las hojas conservan su color."
+LANG_SPANISH        "En partidas por equipos, cada hoja toma el color de su equipo. Desactivado: las hojas conservan su color."
 
 REFERENCE           TWO_COLOURED_STAFF
 LANG_ENGLISH        "Two-Coloured Staff"
@@ -1251,7 +1251,7 @@ LANG_SPANISH        "Disparos como en Jedi Outcast"
 
 REFERENCE           SHOTS_DRAWN_AS_CRISPLY_AS_IN_JEDI_OU
 LANG_ENGLISH        "Shots drawn as crisply as in Jedi Outcast. Counts from the next level."
-LANG_SPANISH        "Disparos tan nítidos como en Jedi Outcast. Cuenta desde el siguiente nivel."
+LANG_SPANISH        "Disparos nítidos como en Jedi Outcast. Se aplica desde el siguiente nivel."
 
 REFERENCE           DISRUPTOR_BEAM
 LANG_ENGLISH        "Disruptor Beam"
@@ -1271,11 +1271,11 @@ LANG_SPANISH        "Espiral"
 
 REFERENCE           SMOOTH_CAMERA
 LANG_ENGLISH        "Smooth Camera"
-LANG_SPANISH        "Cámara uniforme"
+LANG_SPANISH        "Cámara suavizada"
 
 REFERENCE           THE_CAMERA_BEHIND_YOU_FOLLOWS_THE_SA
 LANG_ENGLISH        "The camera behind you follows the same at every frame rate. It trails a little further behind."
-LANG_SPANISH        "La cámara detrás de ti sigue igual con cualquier tasa de imágenes. Se queda un poco más atrás."
+LANG_SPANISH        "La cámara detrás de ti se comporta igual con cualquier tasa de fotogramas. Queda un poco más atrás."
 
 REFERENCE           VULKAN_RENDERER
 LANG_ENGLISH        "Vulkan Renderer"
@@ -1283,7 +1283,7 @@ LANG_SPANISH        "Renderizador Vulkan"
 
 REFERENCE           BLOOM
 LANG_ENGLISH        "Bloom"
-LANG_SPANISH        "Resplandor"
+LANG_SPANISH        "#same"
 
 REFERENCE           BRIGHT_PARTS_OF_THE_LEVEL_SHINE_OVER
 LANG_ENGLISH        "Bright parts of the level shine over their surroundings. Vulkan renderer only."
@@ -1291,19 +1291,19 @@ LANG_SPANISH        "Las partes brillantes del nivel resplandecen sobre su entor
 
 REFERENCE           BLOOM_STRENGTH
 LANG_ENGLISH        "Bloom Strength"
-LANG_SPANISH        "Intensidad del resplandor"
+LANG_SPANISH        "Intensidad del bloom"
 
 REFERENCE           HOW_STRONGLY_THE_BRIGHT_PARTS_SHINE
 LANG_ENGLISH        "How strongly the bright parts shine."
-LANG_SPANISH        "Con qué fuerza resplandecen las partes brillantes."
+LANG_SPANISH        "Con qué intensidad resplandecen las partes brillantes."
 
 REFERENCE           BLOOM_THRESHOLD
 LANG_ENGLISH        "Bloom Threshold"
-LANG_SPANISH        "Umbral del resplandor"
+LANG_SPANISH        "Umbral del bloom"
 
 REFERENCE           HOW_BRIGHT_A_PART_HAS_TO_BE_TO_SHINE
 LANG_ENGLISH        "How bright a part has to be to shine."
-LANG_SPANISH        "Lo brillante que debe ser una parte para resplandecer."
+LANG_SPANISH        "Cuánto brillo necesita una parte para resplandecer."
 
 REFERENCE           RENDER_SCALE
 LANG_ENGLISH        "Render Scale"
@@ -1311,7 +1311,7 @@ LANG_SPANISH        "Escala de renderizado"
 
 REFERENCE           THE_SIZE_THE_LEVEL_IS_DRAWN_AT_THE_H
 LANG_ENGLISH        "The size the level is drawn at, the HUD stays sharp. Vulkan renderer only, counts after a video restart."
-LANG_SPANISH        "El tamaño al que se dibuja el nivel, el HUD sigue nítido. Solo con el renderizador Vulkan, cuenta tras reiniciar el vídeo."
+LANG_SPANISH        "Resolución a la que se dibuja el nivel; el HUD sigue nítido. Solo con el renderizador Vulkan, se aplica al reiniciar los gráficos."
 
 REFERENCE           HALF
 LANG_ENGLISH        "Half"
@@ -1327,7 +1327,7 @@ LANG_SPANISH        "Completa"
 
 REFERENCE           ONE_AND_A_HALF
 LANG_ENGLISH        "One and a Half"
-LANG_SPANISH        "Una vez y media"
+LANG_SPANISH        "1,5 veces"
 
 REFERENCE           DOUBLE
 LANG_ENGLISH        "Double"
@@ -1355,7 +1355,7 @@ LANG_SPANISH        "Cada línea del chat se escribe en la carpeta chatlogs, con 
 
 REFERENCE           NAME_ALERT
 LANG_ENGLISH        "Name Alert"
-LANG_SPANISH        "Aviso de nombre"
+LANG_SPANISH        "Aviso de mención"
 
 REFERENCE           A_CHAT_LINE_WITH_YOUR_NAME_IS_MARKED
 LANG_ENGLISH        "A chat line with your name is marked gold. More words with tay_notifyWords in the console."
@@ -1435,7 +1435,7 @@ LANG_SPANISH        "Descargas web"
 
 REFERENCE           FILES_OF_A_SERVER_THAT_NAMES_A_WEB_A
 LANG_ENGLISH        "Files of a server that names a web address for them come from there, much faster. Off: from the server itself."
-LANG_SPANISH        "Los archivos de un servidor que indica una dirección web para ellos vienen de allí, mucho más rápido. Desactivado: del propio servidor."
+LANG_SPANISH        "Si un servidor indica una dirección web para sus archivos, se descargan de allí, mucho más rápido. Desactivado: del propio servidor."
 
 REFERENCE           CONNECTION
 LANG_ENGLISH        "Connection"
@@ -1443,11 +1443,11 @@ LANG_SPANISH        "Conexión"
 
 REFERENCE           SMOOTH_JITTERY_LINES
 LANG_ENGLISH        "Smooth Jittery Lines"
-LANG_SPANISH        "Suavizar líneas inestables"
+LANG_SPANISH        "Compensar el jitter"
 
 REFERENCE           ON_A_LINE_WHOSE_SNAPSHOTS_COME_UNEVE
 LANG_ENGLISH        "On a line whose snapshots come unevenly the game is drawn a little later, so that nothing stutters."
-LANG_SPANISH        "En una línea cuyos snapshots llegan de forma irregular, el juego se dibuja un poco más tarde para que nada dé tirones."
+LANG_SPANISH        "Si los snapshots de una conexión llegan de forma irregular, el juego se dibuja un poco más tarde para evitar tirones."
 
 REFERENCE           UP_TO_20_MS
 LANG_ENGLISH        "Up to 20 ms"
@@ -1471,7 +1471,7 @@ LANG_SPANISH        "Registro de intrusiones"
 
 REFERENCE           WRITE_DOWN_WHAT_A_SERVER_SENDS_THAT
 LANG_ENGLISH        "Write down what a server sends that no server of the game does, and leave one that keeps at it."
-LANG_SPANISH        "Anotar lo que un servidor envía y ningún servidor del juego envía, y salir del que insista."
+LANG_SPANISH        "Registra lo que envía un servidor y ningún servidor del juego envía, y sale del que insista."
 
 REFERENCE           KEY_LOGIN_BY_AGENT
 LANG_ENGLISH        "Key Login by Agent"
@@ -1515,7 +1515,7 @@ LANG_SPANISH        "Chat y social"
 
 REFERENCE           THE_CHAT_BOX_BUBBLES_AND_WHAT_STANDS
 LANG_ENGLISH        "The chat box, bubbles and what stands above the heads."
-LANG_SPANISH        "El chat, los bocadillos y lo que aparece sobre las cabezas."
+LANG_SPANISH        "Chat, bocadillos e información sobre las cabezas."
 
 REFERENCE           TAYSTJK
 LANG_ENGLISH        "TaystJK"
@@ -1523,7 +1523,7 @@ LANG_SPANISH        "#same"
 
 REFERENCE           WHAT_CAME_FROM_THE_TAYSTJK_CLIENT_HU
 LANG_ENGLISH        "What came from the TaystJK client: HUD, movement, hats and capes and more."
-LANG_SPANISH        "Lo que viene del cliente TaystJK: HUD, movimiento, sombreros y capas, y más."
+LANG_SPANISH        "Funciones del cliente TaystJK: HUD, movimiento, sombreros, capas y más."
 
 REFERENCE           NETWORK
 LANG_ENGLISH        "Network"
@@ -1539,7 +1539,7 @@ LANG_SPANISH        "Carpetas del juego con otros mods."
 
 REFERENCE           RESTART_THE_VIDEO_WITH_THESE_SETTING
 LANG_ENGLISH        "Restart the video with these settings."
-LANG_SPANISH        "Reiniciar el vídeo con estos ajustes."
+LANG_SPANISH        "Reiniciar los gráficos con estos ajustes."
 
 REFERENCE           PLAYERS_OF_MY_MUSIC
 LANG_ENGLISH        "Players of My Music"
@@ -1557,12 +1557,12 @@ REFERENCE           DEVELOPMENT_BUILDS_ARE_EARLY_TEST_VE
 LANG_ENGLISH        "Development builds are early test versions."
 LANG_SPANISH        "Las versiones de desarrollo son versiones de prueba tempranas."
 
-REFERENCE           THEY_CAN_CRASH_BREAK_CONFIGS_OR_NOT
-LANG_ENGLISH        "They can crash, break configs or not work on all servers."
-LANG_SPANISH        "Pueden fallar, romper configuraciones o no funcionar en todos los servidores."
+REFERENCE           THEY_CAN_CRASH_CORRUPT_YOUR_CONFIGS
+LANG_ENGLISH        "They can crash, corrupt your configs or not work on some servers."
+LANG_SPANISH        "Pueden fallar, dañar tus configuraciones o no funcionar en algunos servidores."
 
-REFERENCE           YOU_CAN_SWITCH_BACK_TO_STABLE_ANY_TI
-LANG_ENGLISH        "You can switch back to Stable any time."
+REFERENCE           YOU_CAN_SWITCH_BACK_TO_STABLE_AT_ANY
+LANG_ENGLISH        "You can switch back to Stable at any time."
 LANG_SPANISH        "Puedes volver a Estable en cualquier momento."
 
 REFERENCE           STAY_ON_STABLE
@@ -1695,15 +1695,15 @@ LANG_SPANISH        "Volumen %i %%"
 
 REFERENCE           MUTED_FOR_YOU
 LANG_ENGLISH        "muted for you"
-LANG_SPANISH        "silenciado para usted"
+LANG_SPANISH        "silenciado para ti"
 
 REFERENCE           BOOMBOX_LINK_OR_SONG
 LANG_ENGLISH        "Boombox, link or song"
-LANG_SPANISH        "Radiocasete, enlace o canción"
+LANG_SPANISH        "Boombox, enlace o canción"
 
 REFERENCE           PUT_DOWN_BY_S
 LANG_ENGLISH        "Put down by %s"
-LANG_SPANISH        "Puesto por %s"
+LANG_SPANISH        "Colocado por %s"
 
 REFERENCE           ASKED_FOR_BY_S
 LANG_ENGLISH        "Asked for by %s"
@@ -1735,7 +1735,7 @@ LANG_SPANISH        "En cola"
 
 REFERENCE           NOTHING_WAITS
 LANG_ENGLISH        "Nothing waits"
-LANG_SPANISH        "No espera nada"
+LANG_SPANISH        "Cola vacía"
 
 REFERENCE           MUTE
 LANG_ENGLISH        "Mute"
@@ -1743,7 +1743,7 @@ LANG_SPANISH        "Silenciar"
 
 REFERENCE           UNMUTE
 LANG_ENGLISH        "Unmute"
-LANG_SPANISH        "Volver a oír"
+LANG_SPANISH        "Activar sonido"
 
 REFERENCE           FILES_OF_THE_SERVER
 LANG_ENGLISH        "Files of the server"
@@ -1755,7 +1755,7 @@ LANG_SPANISH        "El servidor ofrece estos archivos para descargar."
 
 REFERENCE           BEFORE_ANYTHING_OF_THEM_IS_USED_YOU
 LANG_ENGLISH        "Before anything of them is used you see what is inside. Programs stay blocked."
-LANG_SPANISH        "Antes de usar nada de ellos verá lo que contienen. Los programas quedan bloqueados."
+LANG_SPANISH        "Antes de usar nada de ellos verás lo que contienen. Los programas quedan bloqueados."
 
 REFERENCE           KEEP_THEM_DOWNLOADS_FOLDER
 LANG_ENGLISH        "Keep them (downloads folder)"
@@ -1767,7 +1767,7 @@ LANG_SPANISH        "Solo para esta sesión"
 
 REFERENCE           A_PURE_SERVER_MAY_NOT_LET_YOU_PLAY_W
 LANG_ENGLISH        "A pure server may not let you play without its files."
-LANG_SPANISH        "Un servidor puro puede no dejarle jugar sin sus archivos."
+LANG_SPANISH        "Un servidor puro puede no dejarte jugar sin sus archivos."
 
 REFERENCE           DOWNLOAD
 LANG_ENGLISH        "Download"
@@ -1787,11 +1787,11 @@ LANG_SPANISH        "Contenido"
 
 REFERENCE           UNTICK_WHAT_YOU_DO_NOT_WANT_NOTHING
 LANG_ENGLISH        "Untick what you do not want: nothing of it is used."
-LANG_SPANISH        "Desmarque lo que no quiera: no se usará nada de ello."
+LANG_SPANISH        "Desmarca lo que no quieras: no se usará nada de ello."
 
 REFERENCE           PROGRAMS_COULD_RUN_ON_YOUR_COMPUTER
 LANG_ENGLISH        "Programs could run on your computer: they are blocked unless you tick them."
-LANG_SPANISH        "Los programas podrían ejecutarse en su ordenador: quedan bloqueados salvo que los marque."
+LANG_SPANISH        "Los programas podrían ejecutarse en tu ordenador: quedan bloqueados salvo que los marques."
 
 REFERENCE           MAPS
 LANG_ENGLISH        "Maps"
@@ -1823,7 +1823,7 @@ LANG_SPANISH        "Otros archivos"
 
 REFERENCE           PROGRAMS_THEY_COULD_RUN_ON_YOUR_COMP
 LANG_ENGLISH        "Programs (they could run on your computer)"
-LANG_SPANISH        "Programas (podrían ejecutarse en su ordenador)"
+LANG_SPANISH        "Programas (podrían ejecutarse en tu ordenador)"
 
 REFERENCE           USE_THEM
 LANG_ENGLISH        "Use them"
@@ -1883,7 +1883,7 @@ LANG_SPANISH        "Susurrarle"
 
 REFERENCE           WATCH_HIM
 LANG_ENGLISH        "Watch him"
-LANG_SPANISH        "Observarle"
+LANG_SPANISH        "Observarlo"
 
 REFERENCE           COPY_HIS_NAME
 LANG_ENGLISH        "Copy his name"
@@ -1891,7 +1891,7 @@ LANG_SPANISH        "Copiar su nombre"
 
 REFERENCE           CALL_A_VOTE_TO_KICK_HIM
 LANG_ENGLISH        "Call a vote to kick him"
-LANG_SPANISH        "Votar para expulsarle"
+LANG_SPANISH        "Votar para expulsarlo"
 
 REFERENCE           CLICK_AGAIN_TO_CALL_THE_VOTE
 LANG_ENGLISH        "Click again to call the vote"
@@ -1911,7 +1911,7 @@ LANG_SPANISH        "Admin: dormir"
 
 REFERENCE           ADMIN_SLAP
 LANG_ENGLISH        "Admin: slap"
-LANG_SPANISH        "Admin: bofetada"
+LANG_SPANISH        "Admin: abofetear"
 
 REFERENCE           ADMIN_GO_TO_HIM
 LANG_ENGLISH        "Admin: go to him"
@@ -1919,7 +1919,7 @@ LANG_SPANISH        "Admin: ir a él"
 
 REFERENCE           ADMIN_BRING_HIM_HERE
 LANG_ENGLISH        "Admin: bring him here"
-LANG_SPANISH        "Admin: traerle aquí"
+LANG_SPANISH        "Admin: traerlo aquí"
 
 REFERENCE           YOU
 LANG_ENGLISH        "You"
@@ -1951,7 +1951,7 @@ LANG_SPANISH        "Otro cliente"
 
 REFERENCE           AWAY_FROM_KEYBOARD
 LANG_ENGLISH        "Away from keyboard"
-LANG_SPANISH        "Lejos del teclado"
+LANG_SPANISH        "AFK"
 
 REFERENCE           LISTENING_TO_S
 LANG_ENGLISH        "Listening to %s"
@@ -1983,11 +1983,11 @@ LANG_SPANISH        "Haz clic en un jugador. %s o Esc cierra."
 
 REFERENCE           NEW_MENUS
 LANG_ENGLISH        "New Menus"
-LANG_SPANISH        "Menús nuevos"
+LANG_SPANISH        "Nuevos menús"
 
 REFERENCE           THE_MENUS_AND_THE_HUD_OF_VISIONJK_TH
 LANG_ENGLISH        "The menus and the HUD of VisionJK. The video restarts."
-LANG_SPANISH        "Los menús y el HUD de VisionJK. El vídeo se reinicia."
+LANG_SPANISH        "Los menús y el HUD de VisionJK. Los gráficos se reinician."
 
 REFERENCE           YOU_CLAN_RADIO
 LANG_ENGLISH        "You, clan radio"
@@ -2035,11 +2035,11 @@ LANG_SPANISH        "Equipo de sonido"
 
 REFERENCE           PUT_A_BOOMBOX_HERE
 LANG_ENGLISH        "Put a boombox here"
-LANG_SPANISH        "Poner una radiocasete aquí"
+LANG_SPANISH        "Colocar una boombox aquí"
 
 REFERENCE           PUT_A_SOUND_SYSTEM_HERE
 LANG_ENGLISH        "Put a sound system here"
-LANG_SPANISH        "Poner un equipo de sonido aquí"
+LANG_SPANISH        "Colocar un equipo de sonido aquí"
 
 REFERENCE           PLAY
 LANG_ENGLISH        "Play"
@@ -2071,7 +2071,7 @@ LANG_SPANISH        "Altavoz derecho"
 
 REFERENCE           NO_BOOMBOX_HERE
 LANG_ENGLISH        "No boombox here"
-LANG_SPANISH        "No hay radiocasete aquí"
+LANG_SPANISH        "No hay ninguna boombox aquí"
 
 REFERENCE           NO_PLAYER_OF_MUSIC_RUNS_RIGHT_NOW
 LANG_ENGLISH        "No player of music runs right now"

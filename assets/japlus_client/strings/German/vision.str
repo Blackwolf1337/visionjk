@@ -11,11 +11,11 @@ LANG_GERMAN         "Charakter"
 
 REFERENCE           BUILD_A_CHARACTER_OF_YOUR_OWN
 LANG_ENGLISH        "Build a character of your own."
-LANG_GERMAN         "Einen eigenen Charakter zusammenstellen."
+LANG_GERMAN         "Eigenen Charakter erstellen."
 
 REFERENCE           HILT_AND_BLADE_OF_YOUR_LIGHTSABER
 LANG_ENGLISH        "Hilt and blade of your lightsaber."
-LANG_GERMAN         "Griff und Klinge Ihres Lichtschwerts."
+LANG_GERMAN         "Griff und Klinge deines Lichtschwerts."
 
 REFERENCE           PLAYER
 LANG_ENGLISH        "Player"
@@ -47,7 +47,7 @@ LANG_GERMAN         "Enterhaken"
 
 REFERENCE           A_HOOK_ON_A_ROPE_THAT_PULLS_YOU_TO_W
 LANG_ENGLISH        "A hook on a rope that pulls you to where it hits."
-LANG_GERMAN         "Ein Haken am Seil, der Sie dorthin zieht, wo er trifft."
+LANG_GERMAN         "Ein Haken am Seil, der dich dorthin zieht, wo er trifft."
 
 REFERENCE           JETPACK
 LANG_ENGLISH        "Jetpack"
@@ -55,7 +55,7 @@ LANG_GERMAN         "#same"
 
 REFERENCE           TURNS_THE_JETPACK_ON_AND_OFF
 LANG_ENGLISH        "Turns the jetpack on and off."
-LANG_GERMAN         "Schaltet das Jetpack an und aus."
+LANG_GERMAN         "Schaltet das Jetpack ein und aus."
 
 REFERENCE           FULL_FORCE_DUEL
 LANG_ENGLISH        "Full Force Duel"
@@ -71,7 +71,7 @@ LANG_GERMAN         "Nachrichtenmenü"
 
 REFERENCE           A_MENU_FOR_CLAN_CHAT_PRIVATE_AND_ADM
 LANG_ENGLISH        "A menu for clan chat, private and admin messages."
-LANG_GERMAN         "Ein Menü für Clan-Chat, private und Admin-Nachrichten."
+LANG_GERMAN         "Ein Menü für Clan-Chat sowie private und Admin-Nachrichten."
 
 REFERENCE           VISIONJK
 LANG_ENGLISH        "VisionJK"
@@ -79,11 +79,11 @@ LANG_GERMAN         "#same"
 
 REFERENCE           VOICE_CHAT_TALK
 LANG_ENGLISH        "Voice Chat (Talk)"
-LANG_GERMAN         "Sprach-Chat (Sprechen)"
+LANG_GERMAN         "Sprachchat (Sprechen)"
 
 REFERENCE           HOLD_TO_TALK_IN_THE_VOICE_CHAT_PUSH
 LANG_ENGLISH        "Hold to talk in the voice chat (push to talk)."
-LANG_GERMAN         "Halten, um im Sprach-Chat zu sprechen (Push-to-Talk)."
+LANG_GERMAN         "Gedrückt halten, um im Sprachchat zu sprechen (Push-to-Talk)."
 
 REFERENCE           CLAN_RADIO_TALK
 LANG_ENGLISH        "Clan Radio (Talk)"
@@ -91,7 +91,7 @@ LANG_GERMAN         "Clan-Funk (Sprechen)"
 
 REFERENCE           HOLD_TO_TALK_TO_YOUR_CLAN_OVER_THE_R
 LANG_ENGLISH        "Hold to talk to your clan over the radio, wherever they are."
-LANG_GERMAN         "Halten, um über Funk mit Ihrem Clan zu sprechen, wo immer er ist."
+LANG_GERMAN         "Gedrückt halten, um über Funk mit deinem Clan zu sprechen, egal wo er ist."
 
 REFERENCE           FREE_THE_MOUSE_SELECT_PLAYERS
 LANG_ENGLISH        "Free the Mouse (Select Players)"
@@ -99,7 +99,7 @@ LANG_GERMAN         "Maus freigeben (Spieler auswählen)"
 
 REFERENCE           HOLD_TO_POINT_AT_PLAYERS_WITH_THE_MO
 LANG_ENGLISH        "Hold to point at players with the mouse: a click opens what you can do with one."
-LANG_GERMAN         "Halten, um mit der Maus auf Spieler zu zeigen: Ein Klick öffnet, was Sie mit einem tun können."
+LANG_GERMAN         "Gedrückt halten, um mit der Maus auf Spieler zu zeigen: Ein Klick zeigt, was du mit ihnen tun kannst."
 
 REFERENCE           QUICK_WHEEL_BOOMBOX
 LANG_ENGLISH        "Quick Wheel (Boombox)"
@@ -107,19 +107,19 @@ LANG_GERMAN         "Schnellrad (Boombox)"
 
 REFERENCE           HOLD_FOR_A_WHEEL_PUT_A_BOOMBOX_OR_A
 LANG_ENGLISH        "Hold for a wheel: put a boombox or a sound system down, or work the one you look at. Let go on a choice."
-LANG_GERMAN         "Halten für ein Rad: eine Boombox oder Soundanlage aufstellen oder die bedienen, auf die Sie schauen. Auf einer Wahl loslassen."
+LANG_GERMAN         "Gedrückt halten für ein Rad: Boombox oder Soundanlage aufstellen oder die bedienen, auf die du schaust. Zum Auswählen loslassen."
 
 REFERENCE           SCOREBOARD_WITH_MOUSE
 LANG_ENGLISH        "Scoreboard with Mouse"
-LANG_GERMAN         "Punktetafel mit Maus"
+LANG_GERMAN         "Scoreboard mit Maus"
 
 REFERENCE           OPENS_THE_SCOREBOARD_WITH_THE_MOUSE
 LANG_ENGLISH        "Opens the scoreboard with the mouse free: a click on a row opens what you can do with that player."
-LANG_GERMAN         "Öffnet die Punktetafel mit freier Maus: Ein Klick auf eine Zeile öffnet, was Sie mit dem Spieler tun können."
+LANG_GERMAN         "Öffnet das Scoreboard mit freier Maus: Ein Klick auf eine Zeile zeigt, was du mit dem Spieler tun kannst."
 
 REFERENCE           THE_KEYS_YOU_MOVE_WITH
 LANG_ENGLISH        "The keys you move with."
-LANG_GERMAN         "Die Tasten, mit denen Sie sich bewegen."
+LANG_GERMAN         "Tasten für die Bewegung."
 
 REFERENCE           ATTACK_USE_AND_LOOK
 LANG_ENGLISH        "Attack, use and look."
@@ -127,7 +127,7 @@ LANG_GERMAN         "Angreifen, benutzen und umsehen."
 
 REFERENCE           THE_KEYS_OF_THE_WEAPONS
 LANG_ENGLISH        "The keys of the weapons."
-LANG_GERMAN         "Die Tasten der Waffen."
+LANG_GERMAN         "Tasten für die Waffen."
 
 REFERENCE           FORCE_POWERS
 LANG_ENGLISH        "Force Powers"
@@ -135,7 +135,7 @@ LANG_GERMAN         "Machtkräfte"
 
 REFERENCE           THE_KEYS_OF_THE_FORCE_POWERS
 LANG_ENGLISH        "The keys of the force powers."
-LANG_GERMAN         "Die Tasten der Machtkräfte."
+LANG_GERMAN         "Tasten für die Machtkräfte."
 
 REFERENCE           MOUSE_AND_JOYSTICK
 LANG_ENGLISH        "Mouse and joystick."
@@ -143,7 +143,7 @@ LANG_GERMAN         "Maus und Joystick."
 
 REFERENCE           CHAT_SCORES_AND_GESTURES
 LANG_ENGLISH        "Chat, scores and gestures."
-LANG_GERMAN         "Chat, Punkte und Gesten."
+LANG_GERMAN         "Chat, Punktestand und Gesten."
 
 REFERENCE           EXTRAS
 LANG_ENGLISH        "Extras"
@@ -151,11 +151,11 @@ LANG_GERMAN         "#same"
 
 REFERENCE           KEYS_FOR_WHAT_VISIONJK_AND_JA_ADD_TO
 LANG_ENGLISH        "Keys for what VisionJK and JA+ add to the game."
-LANG_GERMAN         "Tasten für das, was VisionJK und JA+ dem Spiel hinzufügen."
+LANG_GERMAN         "Tasten für die Extras von VisionJK und JA+."
 
 REFERENCE           ENTER_OR_CLICK_CHANGE_THE_KEY_BACKSP
 LANG_ENGLISH        "Enter or click: change the key. Backspace: clear it."
-LANG_GERMAN         "Enter oder Klick: Taste ändern. Rücktaste: Taste löschen."
+LANG_GERMAN         "Enter oder Klick: Taste ändern. Rücktaste: Zuweisung löschen."
 
 REFERENCE           SCREEN
 LANG_ENGLISH        "Screen"
@@ -167,7 +167,7 @@ LANG_GERMAN         "Anzeigemodus"
 
 REFERENCE           A_WINDOW_THE_WHOLE_SCREEN_OR_A_WINDO
 LANG_ENGLISH        "A window, the whole screen, or a window without a border."
-LANG_GERMAN         "Ein Fenster, der ganze Bildschirm oder ein Fenster ohne Rand."
+LANG_GERMAN         "Fenster, Vollbild oder Fenster ohne Rahmen."
 
 REFERENCE           WINDOW
 LANG_ENGLISH        "Window"
@@ -179,7 +179,7 @@ LANG_GERMAN         "Vollbild"
 
 REFERENCE           BORDERLESS
 LANG_ENGLISH        "Borderless"
-LANG_GERMAN         "Randlos"
+LANG_GERMAN         "Rahmenlos"
 
 REFERENCE           RENDERER
 LANG_ENGLISH        "Renderer"
@@ -187,7 +187,7 @@ LANG_GERMAN         "#same"
 
 REFERENCE           DRAW_WITH_VULKAN_OR_WITH_OPENGL
 LANG_ENGLISH        "Draw with Vulkan or with OpenGL."
-LANG_GERMAN         "Mit Vulkan oder mit OpenGL zeichnen."
+LANG_GERMAN         "Mit Vulkan oder OpenGL rendern."
 
 REFERENCE           ANTI_ALIASING
 LANG_ENGLISH        "Anti-Aliasing"
@@ -195,19 +195,19 @@ LANG_GERMAN         "Kantenglättung"
 
 REFERENCE           SMOOTHS_THE_EDGES_COSTS_SPEED
 LANG_ENGLISH        "Smooths the edges, costs speed."
-LANG_GERMAN         "Glättet die Kanten, kostet Leistung."
+LANG_GERMAN         "Glättet Kanten, kostet Leistung."
 
 REFERENCE           FRAME_LIMIT
 LANG_ENGLISH        "Frame Limit"
-LANG_GERMAN         "Bildratenlimit"
+LANG_GERMAN         "FPS-Limit"
 
 REFERENCE           THE_MOST_FRAMES_A_SECOND_THE_GAME_DR
 LANG_ENGLISH        "The most frames a second the game draws."
-LANG_GERMAN         "So viele Bilder pro Sekunde zeichnet das Spiel höchstens."
+LANG_GERMAN         "Maximale Bilder pro Sekunde."
 
 REFERENCE           NONE
 LANG_ENGLISH        "None"
-LANG_GERMAN         "Keins"
+LANG_GERMAN         "Keine"
 
 REFERENCE           WIDE_SCREEN_LAYOUT
 LANG_ENGLISH        "Wide Screen Layout"
@@ -215,7 +215,7 @@ LANG_GERMAN         "Breitbild-Layout"
 
 REFERENCE           MENUS_AND_HUD_KEEP_THEIR_SHAPE_ON_A
 LANG_ENGLISH        "Menus and HUD keep their shape on a wide window. Counts after a restart of the video."
-LANG_GERMAN         "Menüs und HUD behalten auf einem breiten Bild ihre Form. Gilt nach einem Neustart der Grafik."
+LANG_GERMAN         "Menüs und HUD behalten bei einem breiten Fenster ihre Proportionen. Gilt nach einem Neustart der Grafik."
 
 REFERENCE           DETAIL
 LANG_ENGLISH        "Detail"
@@ -227,7 +227,7 @@ LANG_GERMAN         "Dynamisches Leuchten"
 
 REFERENCE           LIGHTSABERS_AND_LIGHTS_GLOW
 LANG_ENGLISH        "Lightsabers and lights glow."
-LANG_GERMAN         "Lichtschwerter und Lichter leuchten."
+LANG_GERMAN         "Lichtschwerter und Lichtquellen leuchten."
 
 REFERENCE           SHADOWS
 LANG_ENGLISH        "Shadows"
@@ -235,7 +235,7 @@ LANG_GERMAN         "Schatten"
 
 REFERENCE           HOW_THE_SHADOWS_OF_THE_PLAYERS_ARE_D
 LANG_ENGLISH        "How the shadows of the players are drawn."
-LANG_GERMAN         "Wie die Schatten der Spieler gezeichnet werden."
+LANG_GERMAN         "Wie Spielerschatten dargestellt werden."
 
 REFERENCE           DEFAULT
 LANG_ENGLISH        "Default"
@@ -255,7 +255,7 @@ LANG_GERMAN         "Render-to-Texture-Effekte"
 
 REFERENCE           OFF_NO_SLOW_EFFECTS_CLOAK_PUSH_BLUR
 LANG_ENGLISH        "Off: no slow effects (cloak, push blur, protection spheres) on graphics cards that have trouble with them."
-LANG_GERMAN         "Aus: keine langsamen Effekte (Tarnung, Unschärfe beim Machtstoß, Schutzsphären) auf Grafikkarten, die damit Mühe haben."
+LANG_GERMAN         "Aus: keine langsamen Effekte (Tarnung, Machtstoß-Unschärfe, Schutzsphären) auf Grafikkarten, die damit Probleme haben."
 
 REFERENCE           VOLUME
 LANG_ENGLISH        "Volume"
@@ -267,7 +267,7 @@ LANG_GERMAN         "Ton im Hintergrund"
 
 REFERENCE           THE_GAME_GOES_ON_PLAYING_ITS_SOUND_W
 LANG_ENGLISH        "The game goes on playing its sound while it is not in front or is minimized."
-LANG_GERMAN         "Das Spiel spielt seinen Ton weiter, wenn es nicht im Vordergrund oder minimiert ist."
+LANG_GERMAN         "Das Spiel spielt den Ton weiter, wenn es im Hintergrund läuft oder minimiert ist."
 
 REFERENCE           3D_SOUND
 LANG_ENGLISH        "3D Sound"
@@ -275,7 +275,7 @@ LANG_GERMAN         "3D-Sound"
 
 REFERENCE           STEAM_AUDIO_SOUND_THAT_KNOWS_THE_LEV
 LANG_ENGLISH        "Steam Audio: sound that knows the level. Needs its library next to the game."
-LANG_GERMAN         "Steam Audio: Klang, der den Level kennt. Braucht seine Bibliothek neben dem Spiel."
+LANG_GERMAN         "Steam Audio: Klang, der die Umgebung kennt. Die Bibliothek muss im Spielordner liegen."
 
 REFERENCE           OUTPUT
 LANG_ENGLISH        "Output"
@@ -283,7 +283,7 @@ LANG_GERMAN         "Ausgabe"
 
 REFERENCE           3D_SOUND_DIRECTION_FOR_TWO_EARS_OR_P
 LANG_ENGLISH        "3D Sound: direction for two ears, or plain panning for speakers."
-LANG_GERMAN         "3D-Sound: Richtung für zwei Ohren oder einfaches Panorama für Lautsprecher."
+LANG_GERMAN         "3D-Sound: Richtungshören für Kopfhörer oder einfaches Panning für Lautsprecher."
 
 REFERENCE           HEADPHONES
 LANG_ENGLISH        "Headphones"
@@ -299,7 +299,7 @@ LANG_GERMAN         "Hall"
 
 REFERENCE           3D_SOUND_HOW_LOUD_THE_ROOMS_RING
 LANG_ENGLISH        "3D Sound: how loud the rooms ring."
-LANG_GERMAN         "3D-Sound: wie laut die Räume nachklingen."
+LANG_GERMAN         "3D-Sound: wie stark die Räume nachhallen."
 
 REFERENCE           ROOM_REFLECTIONS
 LANG_ENGLISH        "Room Reflections"
@@ -307,7 +307,7 @@ LANG_GERMAN         "Raumreflexionen"
 
 REFERENCE           THE_ROOM_AROUND_YOU_RINGS
 LANG_ENGLISH        "The room around you rings."
-LANG_GERMAN         "Der Raum um Sie herum klingt mit."
+LANG_GERMAN         "Der Raum um dich herum hallt mit."
 
 REFERENCE           ECHO
 LANG_ENGLISH        "Echo"
@@ -315,7 +315,7 @@ LANG_GERMAN         "#same"
 
 REFERENCE           REAL_TIME_WORKED_OUT_AS_YOU_GO_THE_L
 LANG_ENGLISH        "Real time: worked out as you go, the loudest sounds echo on their own. Precalculated: worked out once per level and kept, steady while you move, all sounds ring with the room you are in."
-LANG_GERMAN         "Echtzeit: wird beim Spielen berechnet, die lautesten Geräusche hallen für sich. Vorberechnet: einmal pro Level berechnet und gespeichert, ruhig beim Gehen, alle Geräusche hallen mit dem Raum, in dem Sie stehen."
+LANG_GERMAN         "Echtzeit: wird laufend berechnet, die lautesten Geräusche haben ihr eigenes Echo. Vorberechnet: einmal pro Level berechnet und gespeichert, stabil beim Bewegen, alle Geräusche hallen mit dem Raum, in dem du stehst."
 
 REFERENCE           REAL_TIME
 LANG_ENGLISH        "Real Time"
@@ -327,11 +327,11 @@ LANG_GERMAN         "Vorberechnet"
 
 REFERENCE           ECHOES_OF_THEIR_OWN
 LANG_ENGLISH        "Echoes of Their Own"
-LANG_GERMAN         "Eigenes Echo"
+LANG_GERMAN         "Eigene Echos"
 
 REFERENCE           HOW_MANY_OF_THE_LOUDEST_SOUNDS_ECHO
 LANG_ENGLISH        "How many of the loudest sounds echo off the walls around them. More costs more time a frame."
-LANG_GERMAN         "Wie viele der lautesten Geräusche von den Wänden um sie herum widerhallen. Mehr kostet mehr Zeit pro Bild."
+LANG_GERMAN         "Wie viele der lautesten Geräusche von den Wänden widerhallen. Mehr kostet mehr Leistung pro Bild."
 
 REFERENCE           OFF
 LANG_ENGLISH        "Off"
@@ -339,11 +339,11 @@ LANG_GERMAN         "Aus"
 
 REFERENCE           SOUND_AROUND_CORNERS
 LANG_ENGLISH        "Sound Around Corners"
-LANG_GERMAN         "Schall um Ecken"
+LANG_GERMAN         "Schall um die Ecke"
 
 REFERENCE           A_SOUND_FINDS_ITS_WAY_AROUND_CORNERS
 LANG_ENGLISH        "A sound finds its way around corners."
-LANG_GERMAN         "Ein Geräusch findet seinen Weg um Ecken."
+LANG_GERMAN         "Geräusche finden ihren Weg um Ecken."
 
 REFERENCE           REAL_SOUND_TRAVEL
 LANG_ENGLISH        "Real Sound Travel"
@@ -351,7 +351,7 @@ LANG_GERMAN         "Echte Schallausbreitung"
 
 REFERENCE           SOUNDS_FADE_WITH_THE_DISTANCE_AS_REA
 LANG_ENGLISH        "Sounds fade with the distance as real ones do, lose their highs far away and arrive at the speed of sound."
-LANG_GERMAN         "Geräusche werden mit der Entfernung leiser wie echte, verlieren in der Ferne ihre Höhen und kommen mit Schallgeschwindigkeit an."
+LANG_GERMAN         "Geräusche werden mit der Entfernung leiser wie in echt, verlieren in der Ferne ihre Höhen und erreichen dich mit Schallgeschwindigkeit."
 
 REFERENCE           DOPPLER_EFFECT
 LANG_ENGLISH        "Doppler Effect"
@@ -359,15 +359,15 @@ LANG_GERMAN         "Doppler-Effekt"
 
 REFERENCE           WHAT_COMES_CLOSER_OR_GOES_AWAY_CHANG
 LANG_ENGLISH        "What comes closer or goes away changes its pitch."
-LANG_GERMAN         "Was näher kommt oder sich entfernt, ändert seine Tonhöhe."
+LANG_GERMAN         "Was sich nähert oder entfernt, ändert seine Tonhöhe."
 
 REFERENCE           VOICE_CHAT
 LANG_ENGLISH        "Voice Chat"
-LANG_GERMAN         "Sprach-Chat"
+LANG_GERMAN         "Sprachchat"
 
 REFERENCE           TALK_TO_AND_HEAR_OTHER_PLAYERS_WITH
 LANG_ENGLISH        "Talk to and hear other players with your microphone."
-LANG_GERMAN         "Mit dem Mikrofon mit anderen Spielern sprechen und sie hören."
+LANG_GERMAN         "Mit dem Mikrofon andere Spieler hören und mit ihnen sprechen."
 
 REFERENCE           MODE
 LANG_ENGLISH        "Mode"
@@ -375,7 +375,7 @@ LANG_GERMAN         "Modus"
 
 REFERENCE           PUSH_TO_TALK_HOLD_THE_TALK_KEY_CONTR
 LANG_ENGLISH        "Push to talk: hold the talk key (Controls, Extras)."
-LANG_GERMAN         "Push-to-Talk: die Sprechtaste halten (Steuerung, Extras)."
+LANG_GERMAN         "Push-to-Talk: Sprechtaste gedrückt halten (Steuerung, Extras)."
 
 REFERENCE           PUSH_TO_TALK
 LANG_ENGLISH        "Push To Talk"
@@ -387,11 +387,11 @@ LANG_GERMAN         "Sprachaktivierung"
 
 REFERENCE           VOICE_CHAT_VOLUME
 LANG_ENGLISH        "Voice Chat Volume"
-LANG_GERMAN         "Lautstärke Sprach-Chat"
+LANG_GERMAN         "Sprachchat-Lautstärke"
 
 REFERENCE           HOW_LOUD_THE_OTHER_PLAYERS_ARE
 LANG_ENGLISH        "How loud the other players are."
-LANG_GERMAN         "Wie laut die anderen Spieler sind."
+LANG_GERMAN         "Wie laut du die anderen Spieler hörst."
 
 REFERENCE           MICROPHONE_GAIN
 LANG_ENGLISH        "Microphone Gain"
@@ -399,15 +399,15 @@ LANG_GERMAN         "Mikrofonverstärkung"
 
 REFERENCE           HOW_LOUD_YOUR_MICROPHONE_IS_SENT
 LANG_ENGLISH        "How loud your microphone is sent."
-LANG_GERMAN         "Wie laut Ihr Mikrofon gesendet wird."
+LANG_GERMAN         "Lautstärke, mit der dein Mikrofon gesendet wird."
 
 REFERENCE           ACTIVATION_LEVEL
 LANG_ENGLISH        "Activation Level"
-LANG_GERMAN         "Aktivierungspegel"
+LANG_GERMAN         "Aktivierungsschwelle"
 
 REFERENCE           VOICE_ACTIVATION_HOW_LOUD_YOU_HAVE_T
 LANG_ENGLISH        "Voice activation: how loud you have to be before you are sent."
-LANG_GERMAN         "Sprachaktivierung: wie laut Sie sein müssen, bevor gesendet wird."
+LANG_GERMAN         "Sprachaktivierung: wie laut du sein musst, damit gesendet wird."
 
 REFERENCE           MUFFLE_BEHIND_WALLS
 LANG_ENGLISH        "Muffle Behind Walls"
@@ -423,7 +423,7 @@ LANG_GERMAN         "Sprecher anzeigen"
 
 REFERENCE           A_LIST_OF_THE_PLAYERS_WHO_ARE_TALKIN
 LANG_ENGLISH        "A list of the players who are talking on the HUD."
-LANG_GERMAN         "Eine Liste der Spieler, die gerade sprechen, im HUD."
+LANG_GERMAN         "Zeigt im HUD eine Liste der Spieler, die gerade sprechen."
 
 REFERENCE           ON_OTHER_SERVERS
 LANG_ENGLISH        "On Other Servers"
@@ -431,7 +431,7 @@ LANG_GERMAN         "Auf anderen Servern"
 
 REFERENCE           SERVERS_WITHOUT_VOICE_USE_MASTER_JKA
 LANG_ENGLISH        "Servers without voice: use master.jka.vision, which sees your address."
-LANG_GERMAN         "Server ohne Sprach-Chat: master.jka.vision nutzen, das Ihre Adresse sieht."
+LANG_GERMAN         "Server ohne Sprachchat: master.jka.vision verwenden, der deine Adresse sieht."
 
 REFERENCE           OWN_VOICE_IN_THE_ROOM
 LANG_ENGLISH        "Own Voice In The Room"
@@ -439,7 +439,7 @@ LANG_GERMAN         "Eigene Stimme im Raum"
 
 REFERENCE           WITH_SPATIAL_SOUND_HOW_LOUD_THE_ROOM
 LANG_ENGLISH        "With spatial sound: how loud the room rings from what you say yourself."
-LANG_GERMAN         "Mit 3D-Sound: wie laut der Raum von dem nachklingt, was Sie selbst sagen."
+LANG_GERMAN         "Mit 3D-Sound: wie stark der Raum auf deine eigene Stimme nachhallt."
 
 REFERENCE           RADIO_SOUND
 LANG_ENGLISH        "Radio Sound"
@@ -447,7 +447,7 @@ LANG_GERMAN         "Funkklang"
 
 REFERENCE           THE_CLAN_RADIO_SOUNDS_LIKE_ONE_NARRO
 LANG_ENGLISH        "The clan radio sounds like one: narrow, a little rough, with a click."
-LANG_GERMAN         "Der Clan-Funk klingt wie Funk: schmal, etwas rau, mit einem Klick."
+LANG_GERMAN         "Der Clan-Funk klingt wie echter Funk: schmal, etwas rau, mit einem Klick."
 
 REFERENCE           BOOMBOX
 LANG_ENGLISH        "Boombox"
@@ -459,15 +459,15 @@ LANG_GERMAN         "Boomboxen"
 
 REFERENCE           SEE_AND_HEAR_THE_BOOMBOXES_ON_A_VISI
 LANG_ENGLISH        "See and hear the boomboxes on a VisionJK server, which play songs of YouTube."
-LANG_GERMAN         "Die Boomboxen auf einem VisionJK-Server sehen und hören, die Lieder von YouTube spielen."
+LANG_GERMAN         "Boomboxen auf VisionJK-Servern sehen und hören. Sie spielen Songs von YouTube."
 
 REFERENCE           BOOMBOX_VOLUME
 LANG_ENGLISH        "Boombox Volume"
-LANG_GERMAN         "Lautstärke Boombox"
+LANG_GERMAN         "Boombox-Lautstärke"
 
 REFERENCE           HOW_LOUD_THE_SONGS_OF_THE_BOOMBOXES
 LANG_ENGLISH        "How loud the songs of the boomboxes are for you."
-LANG_GERMAN         "Wie laut die Lieder der Boomboxen für Sie sind."
+LANG_GERMAN         "Lautstärke der Boomboxen für dich."
 
 REFERENCE           GAME
 LANG_ENGLISH        "Game"
@@ -483,7 +483,7 @@ LANG_GERMAN         "Lichtschwerter"
 
 REFERENCE           BLADE_LOOK
 LANG_ENGLISH        "Blade Look"
-LANG_GERMAN         "Klingenaussehen"
+LANG_GERMAN         "Klingenoptik"
 
 REFERENCE           SFX_A_THIN_WHITE_CORE_IN_A_GLOW_THAT
 LANG_ENGLISH        "SFX: a thin white core in a glow that is smeared over the swing. RGB styles and black stay classic."
@@ -531,7 +531,7 @@ LANG_GERMAN         "Andere im Duell"
 
 REFERENCE           HOW_PLAYERS_LOOK_WHO_ARE_IN_A_DUEL_Y
 LANG_ENGLISH        "How players look who are in a duel you are not part of. Their colour is v_duelColour in the console."
-LANG_GERMAN         "Wie Spieler aussehen, die in einem Duell sind, an dem Sie nicht teilnehmen. Ihre Farbe ist v_duelColour in der Konsole."
+LANG_GERMAN         "Wie Spieler aussehen, die in einem Duell sind, an dem du nicht beteiligt bist. Ihre Farbe steht in v_duelColour in der Konsole."
 
 REFERENCE           TINTED
 LANG_ENGLISH        "Tinted"
@@ -571,7 +571,7 @@ LANG_GERMAN         "Ihre Klingen"
 
 REFERENCE           THE_BLADES_OF_PLAYERS_WHO_ARE_IN_A_D
 LANG_ENGLISH        "The blades of players who are in a duel you are not part of."
-LANG_GERMAN         "Die Klingen von Spielern, die in einem Duell sind, an dem Sie nicht teilnehmen."
+LANG_GERMAN         "Die Klingen von Spielern in einem Duell, an dem du nicht beteiligt bist."
 
 REFERENCE           MENUS_AND_HUD
 LANG_ENGLISH        "Menus and HUD"
@@ -583,7 +583,7 @@ LANG_GERMAN         "Neues HUD"
 
 REFERENCE           THE_HUD_OF_VISIONJK_OFF_THE_HUD_OF_T
 LANG_ENGLISH        "The HUD of VisionJK. Off: the HUD of the game."
-LANG_GERMAN         "Das HUD von VisionJK. Aus: das HUD des Spiels."
+LANG_GERMAN         "Das HUD von VisionJK. Aus: das HUD des Originalspiels."
 
 REFERENCE           CLASSIC_MENUS
 LANG_ENGLISH        "Classic Menus"
@@ -591,7 +591,7 @@ LANG_GERMAN         "Klassische Menüs"
 
 REFERENCE           THE_MENUS_OF_THE_GAME_AS_THEY_WERE_C
 LANG_ENGLISH        "The menus of the game as they were. Counts from the next start of the game."
-LANG_GERMAN         "Die Menüs des Spiels, wie sie waren. Gilt ab dem nächsten Start des Spiels."
+LANG_GERMAN         "Die Menüs des Originalspiels. Gilt ab dem nächsten Spielstart."
 
 REFERENCE           MENU_IN_THE_LEVEL
 LANG_ENGLISH        "Menu in the Level"
@@ -599,7 +599,7 @@ LANG_GERMAN         "Menü im Level"
 
 REFERENCE           IN_A_GAME_AN_OPEN_MENU_STANDS_IN_THE
 LANG_ENGLISH        "In a game an open menu stands in the level next to you."
-LANG_GERMAN         "Im Spiel steht ein offenes Menü im Level neben Ihnen."
+LANG_GERMAN         "Im Spiel erscheint ein offenes Menü als Teil des Levels neben dir."
 
 REFERENCE           MENU_BLUR
 LANG_ENGLISH        "Menu Blur"
@@ -607,15 +607,15 @@ LANG_GERMAN         "Menü-Unschärfe"
 
 REFERENCE           HOW_FAR_THE_LEVEL_BEHIND_AN_OPEN_MEN
 LANG_ENGLISH        "How far the level behind an open menu is out of focus."
-LANG_GERMAN         "Wie unscharf der Level hinter einem offenen Menü ist."
+LANG_GERMAN         "Wie unscharf das Level hinter einem offenen Menü ist."
 
 REFERENCE           SHOW_FRAME_RATE
 LANG_ENGLISH        "Show Frame Rate"
-LANG_GERMAN         "Bildrate anzeigen"
+LANG_GERMAN         "FPS anzeigen"
 
 REFERENCE           FRAMES_A_SECOND_IN_THE_CORNER_OF_THE
 LANG_ENGLISH        "Frames a second in the corner of the screen."
-LANG_GERMAN         "Bilder pro Sekunde in der Ecke des Bildschirms."
+LANG_GERMAN         "Bilder pro Sekunde in der Bildschirmecke."
 
 REFERENCE           SHOW_TIMER
 LANG_ENGLISH        "Show Timer"
@@ -623,7 +623,7 @@ LANG_GERMAN         "Timer anzeigen"
 
 REFERENCE           THE_TIME_OF_THE_LEVEL_IN_THE_CORNER
 LANG_ENGLISH        "The time of the level in the corner of the screen."
-LANG_GERMAN         "Die Zeit des Levels in der Ecke des Bildschirms."
+LANG_GERMAN         "Die Zeit des Levels in der Bildschirmecke."
 
 REFERENCE           SHOW_LAGOMETER
 LANG_ENGLISH        "Show Lagometer"
@@ -631,7 +631,7 @@ LANG_GERMAN         "Lagometer anzeigen"
 
 REFERENCE           A_GRAPH_OF_YOUR_CONNECTION
 LANG_ENGLISH        "A graph of your connection."
-LANG_GERMAN         "Ein Diagramm Ihrer Verbindung."
+LANG_GERMAN         "Ein Diagramm deiner Verbindung."
 
 REFERENCE           VIEW
 LANG_ENGLISH        "View"
@@ -643,7 +643,7 @@ LANG_GERMAN         "Sichtfeld"
 
 REFERENCE           HOW_WIDE_YOU_SEE
 LANG_ENGLISH        "How wide you see."
-LANG_GERMAN         "Wie weit Ihr Blick reicht."
+LANG_GERMAN         "Wie breit dein Blickfeld ist."
 
 REFERENCE           CAMERA_DISTANCE
 LANG_ENGLISH        "Camera Distance"
@@ -651,7 +651,7 @@ LANG_GERMAN         "Kameraabstand"
 
 REFERENCE           HOW_FAR_THE_CAMERA_IS_BEHIND_YOU_IN
 LANG_ENGLISH        "How far the camera is behind you in third person."
-LANG_GERMAN         "Wie weit die Kamera in der Außenansicht hinter Ihnen ist."
+LANG_GERMAN         "Wie weit die Kamera in der Außenansicht hinter dir ist."
 
 REFERENCE           CROSSHAIR_SIZE
 LANG_ENGLISH        "Crosshair Size"
@@ -675,11 +675,11 @@ LANG_GERMAN         "Was ein Spieler sagt, steht über seinem Kopf."
 
 REFERENCE           BUBBLE_RANGE
 LANG_ENGLISH        "Bubble Range"
-LANG_GERMAN         "Reichweite der Sprechblasen"
+LANG_GERMAN         "Sprechblasen-Reichweite"
 
 REFERENCE           HOW_FAR_AWAY_A_BUBBLE_IS_STILL_DRAWN
 LANG_ENGLISH        "How far away a bubble is still drawn."
-LANG_GERMAN         "Bis zu welcher Entfernung eine Sprechblase gezeichnet wird."
+LANG_GERMAN         "Bis zu welcher Entfernung Sprechblasen angezeigt werden."
 
 REFERENCE           PLAYER_STATUSES
 LANG_ENGLISH        "Player Statuses"
@@ -687,7 +687,7 @@ LANG_GERMAN         "Spielerstatus"
 
 REFERENCE           AWAY_FROM_KEYBOARD_AND_MUSIC_ABOVE_T
 LANG_ENGLISH        "Away from keyboard and music above the heads of the others."
-LANG_GERMAN         "Abwesenheit und Musik über den Köpfen der anderen."
+LANG_GERMAN         "Zeigt Abwesenheit und Musik über den Köpfen der anderen."
 
 REFERENCE           SHOW_MY_MUSIC
 LANG_ENGLISH        "Show My Music"
@@ -695,15 +695,15 @@ LANG_GERMAN         "Meine Musik zeigen"
 
 REFERENCE           TELL_THE_OTHERS_WHAT_YOU_LISTEN_TO_E
 LANG_ENGLISH        "Tell the others what you listen to. Everybody on the server reads it."
-LANG_GERMAN         "Den anderen zeigen, was Sie hören. Jeder auf dem Server liest es."
+LANG_GERMAN         "Zeigt anderen, was du hörst. Jeder auf dem Server kann es lesen."
 
 REFERENCE           CHOOSE_PLAYERS_OF_MY_MUSIC
 LANG_ENGLISH        "Choose Players of My Music ..."
-LANG_GERMAN         "Musikprogramme auswählen ..."
+LANG_GERMAN         "Musikplayer auswählen ..."
 
 REFERENCE           WHICH_PLAYERS_OF_MUSIC_MAY_BE_TOLD_O
 LANG_ENGLISH        "Which players of music may be told: only the songs of the ones you tick are shown to the others."
-LANG_GERMAN         "Welche Musikprogramme gezeigt werden dürfen: nur die Lieder der angehakten sehen die anderen."
+LANG_GERMAN         "Welche Musikplayer angezeigt werden dürfen: Nur die Songs der angehakten sehen die anderen."
 
 REFERENCE           SELECT_PLAYERS
 LANG_ENGLISH        "Select Players"
@@ -711,11 +711,11 @@ LANG_GERMAN         "Spieler auswählen"
 
 REFERENCE           WITH_THE_MOUSE_FREE_A_CLICK_ON_A_PLA
 LANG_ENGLISH        "With the mouse free, a click on a player opens a card with what you can do with him."
-LANG_GERMAN         "Mit freier Maus öffnet ein Klick auf einen Spieler eine Karte mit dem, was Sie mit ihm tun können."
+LANG_GERMAN         "Bei freier Maus öffnet ein Klick auf einen Spieler eine Karte mit den möglichen Aktionen."
 
 REFERENCE           SELECTION_OUTLINE
 LANG_ENGLISH        "Selection Outline"
-LANG_GERMAN         "Auswahl-Umriss"
+LANG_GERMAN         "Auswahlumriss"
 
 REFERENCE           A_GLOWING_OUTLINE_AROUND_THE_PLAYER
 LANG_ENGLISH        "A glowing outline around the player under the mouse."
@@ -723,11 +723,11 @@ LANG_GERMAN         "Ein leuchtender Umriss um den Spieler unter der Maus."
 
 REFERENCE           KEEP_SCOREBOARD_ON_DOUBLE_TAP
 LANG_ENGLISH        "Keep Scoreboard on Double Tap"
-LANG_GERMAN         "Punktetafel bei Doppeltipp halten"
+LANG_GERMAN         "Scoreboard bei Doppeltipp offen halten"
 
 REFERENCE           THE_SCOREBOARD_KEY_PRESSED_TWICE_QUI
 LANG_ENGLISH        "The scoreboard key pressed twice quickly keeps the board open, with the mouse free to click a player."
-LANG_GERMAN         "Die Taste der Punktetafel zweimal schnell gedrückt hält die Tafel offen, mit freier Maus zum Anklicken eines Spielers."
+LANG_GERMAN         "Zweimal schnell die Scoreboard-Taste drücken hält es offen. So kannst du mit der Maus einen Spieler anklicken."
 
 REFERENCE           CHAT
 LANG_ENGLISH        "Chat"
@@ -735,23 +735,23 @@ LANG_GERMAN         "#same"
 
 REFERENCE           OWN_CHAT_LINE
 LANG_ENGLISH        "Own Chat Line"
-LANG_GERMAN         "Eigene Chatzeile"
+LANG_GERMAN         "Eigene Chateingabe"
 
 REFERENCE           TYPE_INTO_THE_CHAT_BOX_OF_VISIONJK_W
 LANG_ENGLISH        "Type into the chat box of VisionJK, with history and links."
-LANG_GERMAN         "In die Chatbox von VisionJK tippen, mit Verlauf und Links."
+LANG_GERMAN         "Im Chatfenster von VisionJK tippen, mit Verlauf und Links."
 
 REFERENCE           CHAT_BOX_SIZE
 LANG_ENGLISH        "Chat Box Size"
-LANG_GERMAN         "Größe der Chatbox"
+LANG_GERMAN         "Chatgröße"
 
 REFERENCE           HOW_LARGE_THE_CHAT_BOX_AND_ITS_TEXT
 LANG_ENGLISH        "How large the chat box and its text are. In the open box Ctrl and the mouse wheel change it too."
-LANG_GERMAN         "Wie groß die Chatbox und ihr Text sind. In der offenen Box ändern es auch Strg und das Mausrad."
+LANG_GERMAN         "Wie groß der Chat und sein Text sind. Im geöffneten Chat ändern auch Strg und das Mausrad die Größe."
 
 REFERENCE           CHAT_BOX_WIDTH
 LANG_ENGLISH        "Chat Box Width"
-LANG_GERMAN         "Breite der Chatbox"
+LANG_GERMAN         "Chatbreite"
 
 REFERENCE           HOW_WIDE_THE_CHAT_BOX_IS
 LANG_ENGLISH        "How wide the chat box is."
@@ -759,11 +759,11 @@ LANG_GERMAN         "Wie breit die Chatbox ist."
 
 REFERENCE           CHAT_BOX_ROWS
 LANG_ENGLISH        "Chat Box Rows"
-LANG_GERMAN         "Zeilen der Chatbox"
+LANG_GERMAN         "Chatzeilen"
 
 REFERENCE           HOW_MANY_LINES_THE_OPEN_CHAT_BOX_SHO
 LANG_ENGLISH        "How many lines the open chat box shows. Its upper right corner can also be dragged with the mouse."
-LANG_GERMAN         "Wie viele Zeilen die offene Chatbox zeigt. Ihre obere rechte Ecke lässt sich auch mit der Maus ziehen."
+LANG_GERMAN         "Wie viele Zeilen der geöffnete Chat zeigt. Du kannst auch die obere rechte Ecke mit der Maus ziehen."
 
 REFERENCE           CHAT_BEEP
 LANG_ENGLISH        "Chat Beep"
@@ -771,7 +771,7 @@ LANG_GERMAN         "Chat-Ton"
 
 REFERENCE           A_SOUND_WHEN_SOMEBODY_SAYS_SOMETHING
 LANG_ENGLISH        "A sound when somebody says something."
-LANG_GERMAN         "Ein Ton, wenn jemand etwas sagt."
+LANG_GERMAN         "Ein Ton, wenn jemand etwas schreibt."
 
 REFERENCE           NOTIFICATIONS
 LANG_ENGLISH        "Notifications"
@@ -779,7 +779,7 @@ LANG_GERMAN         "Benachrichtigungen"
 
 REFERENCE           TELLS_YOUR_NAME_IN_THE_CHAT_BOOMBOX
 LANG_ENGLISH        "Tells, your name in the chat, boombox lines and new versions slide in at the left."
-LANG_GERMAN         "Private Nachrichten, Ihr Name im Chat, Zeilen der Boombox und neue Versionen gleiten links herein."
+LANG_GERMAN         "Private Nachrichten, dein Name im Chat, Boombox-Zeilen und neue Versionen erscheinen links am Bildschirmrand."
 
 REFERENCE           SHOWN
 LANG_ENGLISH        "Shown"
@@ -795,7 +795,7 @@ LANG_GERMAN         "Anzeigedauer"
 
 REFERENCE           HOW_MANY_MILLISECONDS_A_NOTIFICATION
 LANG_ENGLISH        "How many milliseconds a notification stays."
-LANG_GERMAN         "Wie viele Millisekunden eine Benachrichtigung bleibt."
+LANG_GERMAN         "Wie viele Millisekunden eine Benachrichtigung sichtbar bleibt."
 
 REFERENCE           NOTIFICATION_SIZE
 LANG_ENGLISH        "Notification Size"
@@ -815,23 +815,23 @@ LANG_GERMAN         "Scharfe Konsolenschrift"
 
 REFERENCE           THE_CONSOLE_IN_A_FONT_WITH_EVERY_CHA
 LANG_ENGLISH        "The console in a font with every character."
-LANG_GERMAN         "Die Konsole in einer Schrift mit allen Zeichen."
+LANG_GERMAN         "Konsole mit einer Schrift, die alle Zeichen enthält."
 
 REFERENCE           CONSOLE_TEXT_SIZE
 LANG_ENGLISH        "Console Text Size"
-LANG_GERMAN         "Textgröße der Konsole"
+LANG_GERMAN         "Konsolen-Textgröße"
 
 REFERENCE           THE_SIZE_OF_THE_TEXT_OF_THE_CONSOLE
 LANG_ENGLISH        "The size of the text of the console."
-LANG_GERMAN         "Die Größe des Textes der Konsole."
+LANG_GERMAN         "Größe des Konsolentextes."
 
 REFERENCE           CONSOLE_OPACITY
 LANG_ENGLISH        "Console Opacity"
-LANG_GERMAN         "Deckkraft der Konsole"
+LANG_GERMAN         "Konsolen-Deckkraft"
 
 REFERENCE           HOW_MUCH_OF_THE_GAME_SHOWS_THROUGH_T
 LANG_ENGLISH        "How much of the game shows through the console."
-LANG_GERMAN         "Wie viel vom Spiel durch die Konsole scheint."
+LANG_GERMAN         "Wie viel vom Spiel durch die Konsole zu sehen ist."
 
 REFERENCE           CLAN
 LANG_ENGLISH        "Clan"
@@ -843,7 +843,7 @@ LANG_GERMAN         "Clan-Passwort"
 
 REFERENCE           CLAN_CHAT_AND_CLAN_RADIO_REACH_EVERY
 LANG_ENGLISH        "Clan chat and clan radio reach everybody on the server who has the same one. The server sees it."
-LANG_GERMAN         "Clan-Chat und Clan-Funk erreichen jeden auf dem Server, der dasselbe hat. Der Server sieht es."
+LANG_GERMAN         "Clan-Chat und Clan-Funk erreichen alle auf dem Server mit demselben Passwort. Der Server sieht es."
 
 REFERENCE           HUD
 LANG_ENGLISH        "HUD"
@@ -851,11 +851,11 @@ LANG_GERMAN         "#same"
 
 REFERENCE           KILLFEED
 LANG_ENGLISH        "Killfeed"
-LANG_GERMAN         "Abschussliste"
+LANG_GERMAN         "#same"
 
 REFERENCE           WHO_KILLED_WHOM_WITH_WHAT_AT_THE_UPP
 LANG_ENGLISH        "Who killed whom with what, at the upper right."
-LANG_GERMAN         "Wer wen womit besiegt hat, oben rechts."
+LANG_GERMAN         "Wer wen womit erledigt hat, oben rechts."
 
 REFERENCE           TEAM_OVERLAY_SIZE
 LANG_ENGLISH        "Team Overlay Size"
@@ -863,15 +863,15 @@ LANG_GERMAN         "Größe der Teamliste"
 
 REFERENCE           HOW_LARGE_THE_LIST_OF_YOUR_TEAM_MATE
 LANG_ENGLISH        "How large the list of your team mates is."
-LANG_GERMAN         "Wie groß die Liste Ihrer Mitspieler ist."
+LANG_GERMAN         "Wie groß die Liste deiner Teamkameraden ist."
 
 REFERENCE           CROSSHAIR_COLOUR
 LANG_ENGLISH        "Crosshair Colour"
-LANG_GERMAN         "Farbe des Fadenkreuzes"
+LANG_GERMAN         "Fadenkreuzfarbe"
 
 REFERENCE           THE_COLOUR_OF_THE_CROSSHAIR_WITH_NOT
 LANG_ENGLISH        "The colour of the crosshair with nothing under it."
-LANG_GERMAN         "Die Farbe des Fadenkreuzes, wenn nichts darunter ist."
+LANG_GERMAN         "Farbe des Fadenkreuzes, wenn es auf nichts zielt."
 
 REFERENCE           WHITE
 LANG_ENGLISH        "White"
@@ -895,19 +895,19 @@ LANG_GERMAN         "Rosa"
 
 REFERENCE           NAME_OPACITY
 LANG_ENGLISH        "Name Opacity"
-LANG_GERMAN         "Deckkraft der Namen"
+LANG_GERMAN         "Namen-Deckkraft"
 
 REFERENCE           HOW_CLEARLY_THE_NAME_OF_THE_PLAYER_U
 LANG_ENGLISH        "How clearly the name of the player under the crosshair shows."
-LANG_GERMAN         "Wie deutlich der Name des Spielers unter dem Fadenkreuz zu sehen ist."
+LANG_GERMAN         "Wie deutlich der Name des Spielers unter dem Fadenkreuz angezeigt wird."
 
 REFERENCE           SCOREBOARD_CLOCK
 LANG_ENGLISH        "Scoreboard Clock"
-LANG_GERMAN         "Uhr auf der Punktetafel"
+LANG_GERMAN         "Uhr im Scoreboard"
 
 REFERENCE           THE_TIME_OF_DAY_ON_THE_SCOREBOARD
 LANG_ENGLISH        "The time of day on the scoreboard."
-LANG_GERMAN         "Die Uhrzeit auf der Punktetafel."
+LANG_GERMAN         "Die Uhrzeit im Scoreboard."
 
 REFERENCE           TIMER_MILLISECONDS
 LANG_ENGLISH        "Timer Milliseconds"
@@ -915,39 +915,39 @@ LANG_GERMAN         "Timer mit Millisekunden"
 
 REFERENCE           THE_TIMER_OF_THE_LEVEL_WITH_MILLISEC
 LANG_ENGLISH        "The timer of the level with milliseconds."
-LANG_GERMAN         "Der Timer des Levels mit Millisekunden."
+LANG_GERMAN         "Zeigt den Timer des Levels mit Millisekunden."
 
 REFERENCE           TIMER_COUNTS_DOWN
 LANG_ENGLISH        "Timer Counts Down"
-LANG_GERMAN         "Timer zählt rückwärts"
+LANG_GERMAN         "Timer als Countdown"
 
 REFERENCE           THE_TIMER_SHOWS_WHAT_IS_LEFT_OF_THE
 LANG_ENGLISH        "The timer shows what is left of the time limit, if there is one."
-LANG_GERMAN         "Der Timer zeigt, was vom Zeitlimit übrig ist, falls es eines gibt."
+LANG_GERMAN         "Der Timer zeigt die verbleibende Zeit bis zum Zeitlimit, falls es eins gibt."
 
 REFERENCE           HIT_SOUNDS
 LANG_ENGLISH        "Hit Sounds"
-LANG_GERMAN         "Treffergeräusch"
+LANG_GERMAN         "Treffergeräusche"
 
 REFERENCE           A_SHORT_TICK_WHEN_YOUR_SHOTS_OR_YOUR
 LANG_ENGLISH        "A short tick when your shots or your blade hit someone."
-LANG_GERMAN         "Ein kurzes Ticken, wenn deine Schüsse oder deine Klinge jemanden treffen."
+LANG_GERMAN         "Ein kurzes Ticken, wenn deine Schüsse oder deine Klinge treffen."
 
 REFERENCE           KILL_SOUND
 LANG_ENGLISH        "Kill Sound"
-LANG_GERMAN         "Abschussgeräusch"
+LANG_GERMAN         "Kill-Sound"
 
 REFERENCE           TWO_NOTES_WHEN_YOU_KILL_SOMEONE
 LANG_ENGLISH        "Two notes when you kill someone."
-LANG_GERMAN         "Zwei Töne, wenn du jemanden besiegst."
+LANG_GERMAN         "Zwei Töne, wenn du jemanden erledigst."
 
 REFERENCE           SPECTATOR_MAP
 LANG_ENGLISH        "Spectator Map"
-LANG_GERMAN         "Karte für Zuschauer"
+LANG_GERMAN         "Zuschauerkarte"
 
 REFERENCE           WHILE_YOU_WATCH_A_MAP_OF_THE_PLAYERS
 LANG_ENGLISH        "While you watch, a map of the players around at the upper right."
-LANG_GERMAN         "Beim Zuschauen eine Karte der Spieler in der Nähe oben rechts."
+LANG_GERMAN         "Zeigt beim Zuschauen oben rechts eine Karte der Spieler in der Nähe."
 
 REFERENCE           LEAD_INDICATOR
 LANG_ENGLISH        "Lead Indicator"
@@ -955,7 +955,7 @@ LANG_GERMAN         "Vorhalteanzeige"
 
 REFERENCE           WHERE_TO_AIM_SO_A_SHOT_THAT_FLIES_ME
 LANG_ENGLISH        "Where to aim so a shot that flies meets a moving opponent. Many servers count this as an aim aid."
-LANG_GERMAN         "Wohin du zielen musst, damit ein fliegender Schuss einen Gegner in Bewegung trifft. Viele Server zählen das als Zielhilfe."
+LANG_GERMAN         "Zeigt, wohin du zielen musst, damit ein fliegender Schuss einen bewegten Gegner trifft. Viele Server werten das als Zielhilfe."
 
 REFERENCE           WITH_OWN_PING
 LANG_ENGLISH        "With Own Ping"
@@ -971,7 +971,7 @@ LANG_GERMAN         "Tacho"
 
 REFERENCE           YOUR_SPEED_UNDER_THE_CROSSHAIR_AND_T
 LANG_ENGLISH        "Your speed under the crosshair, and the speeds of your last jumps."
-LANG_GERMAN         "Ihre Geschwindigkeit unter dem Fadenkreuz und die Ihrer letzten Sprünge."
+LANG_GERMAN         "Deine Geschwindigkeit unter dem Fadenkreuz und die deiner letzten Sprünge."
 
 REFERENCE           STRAFE_HELPER
 LANG_ENGLISH        "Strafe Helper"
@@ -979,7 +979,7 @@ LANG_GERMAN         "Strafe-Hilfe"
 
 REFERENCE           A_BAR_UNDER_THE_CROSSHAIR_THAT_SHOWS
 LANG_ENGLISH        "A bar under the crosshair that shows where to turn to gain speed."
-LANG_GERMAN         "Ein Balken unter dem Fadenkreuz, der zeigt, wohin Sie drehen müssen, um schneller zu werden."
+LANG_GERMAN         "Ein Balken unter dem Fadenkreuz, der zeigt, wohin du drehen musst, um schneller zu werden."
 
 REFERENCE           SNAP_HUD
 LANG_ENGLISH        "Snap HUD"
@@ -987,7 +987,7 @@ LANG_GERMAN         "Snap-Anzeige"
 
 REFERENCE           IN_THE_AIR_THE_ANGLES_WHERE_THE_ROUN
 LANG_ENGLISH        "In the air, the angles where the rounding of the game gives a little more speed."
-LANG_GERMAN         "In der Luft die Winkel, in denen das Runden des Spiels etwas mehr Tempo gibt."
+LANG_GERMAN         "Zeigt in der Luft die Winkel, in denen die Rundung des Spiels etwas mehr Tempo bringt."
 
 REFERENCE           PITCH_HUD
 LANG_ENGLISH        "Pitch HUD"
@@ -995,19 +995,19 @@ LANG_GERMAN         "Neigungsanzeige"
 
 REFERENCE           A_MARK_WHERE_YOUR_VIEW_WOULD_BE_AT_A
 LANG_ENGLISH        "A mark where your view would be at a chosen pitch."
-LANG_GERMAN         "Eine Marke, wo Ihr Blick bei einer gewählten Neigung wäre."
+LANG_GERMAN         "Eine Markierung, wo dein Blick bei einem gewählten Neigungswinkel läge."
 
 REFERENCE           STRAFE_TRAILS
 LANG_ENGLISH        "Strafe Trails"
-LANG_GERMAN         "Laufspuren"
+LANG_GERMAN         "Strafe-Spuren"
 
 REFERENCE           A_FADING_LINE_ON_THE_GROUND_ALONG_WH
 LANG_ENGLISH        "A fading line on the ground along where players ran."
-LANG_GERMAN         "Eine verblassende Linie auf dem Boden, wo Spieler gelaufen sind."
+LANG_GERMAN         "Eine verblassende Linie auf dem Boden entlang der Laufwege der Spieler."
 
 REFERENCE           MINE
 LANG_ENGLISH        "Mine"
-LANG_GERMAN         "Meine"
+LANG_GERMAN         "Eigene"
 
 REFERENCE           EVERYBODY
 LANG_ENGLISH        "Everybody"
@@ -1019,7 +1019,7 @@ LANG_GERMAN         "Bewegungstasten"
 
 REFERENCE           THE_KEYS_YOU_MOVE_WITH_ON_THE_SCREEN
 LANG_ENGLISH        "The keys you move with on the screen, lit while held."
-LANG_GERMAN         "Die Tasten, mit denen du dich bewegst, auf dem Bildschirm, hell solange sie gedrückt sind."
+LANG_GERMAN         "Zeigt die Bewegungstasten auf dem Bildschirm, sie leuchten, solange sie gedrückt sind."
 
 REFERENCE           START_GOAL
 LANG_ENGLISH        "Start Goal"
@@ -1035,7 +1035,7 @@ LANG_GERMAN         "Sprungziel"
 
 REFERENCE           JUMPS_AT_LEAST_THIS_FAST_ARE_GOLD_IN
 LANG_ENGLISH        "Jumps at least this fast are gold in the list of jumps. 0: off."
-LANG_GERMAN         "Sprünge, die mindestens so schnell sind, stehen golden in der Liste der Sprünge. 0: aus."
+LANG_GERMAN         "Sprünge ab dieser Geschwindigkeit erscheinen in der Sprungliste golden. 0: aus."
 
 REFERENCE           HATS_AND_CAPES
 LANG_ENGLISH        "Hats and Capes"
@@ -1047,7 +1047,7 @@ LANG_GERMAN         "Hut"
 
 REFERENCE           WHAT_YOU_WEAR_ON_YOUR_HEAD_OTHER_PLA
 LANG_ENGLISH        "What you wear on your head. Other players of VisionJK see it."
-LANG_GERMAN         "Was Sie auf dem Kopf tragen. Andere Spieler von VisionJK sehen es."
+LANG_GERMAN         "Was du auf dem Kopf trägst. Andere VisionJK-Spieler sehen es."
 
 REFERENCE           AFRO
 LANG_ENGLISH        "Afro"
@@ -1151,7 +1151,7 @@ LANG_GERMAN         "Umhang"
 
 REFERENCE           WHAT_YOU_WEAR_ON_YOUR_BACK_OTHER_PLA
 LANG_ENGLISH        "What you wear on your back. Other players of VisionJK see it."
-LANG_GERMAN         "Was Sie auf dem Rücken tragen. Andere Spieler von VisionJK sehen es."
+LANG_GERMAN         "Was du auf dem Rücken trägst. Andere VisionJK-Spieler sehen es."
 
 REFERENCE           ROYAL_CAPE
 LANG_ENGLISH        "Royal Cape"
@@ -1191,7 +1191,7 @@ LANG_GERMAN         "Anzeigen"
 
 REFERENCE           WHAT_PLAYERS_WEAR_ON_THEIR_HEADS_AND
 LANG_ENGLISH        "What players wear on their heads and backs. Only players of VisionJK wear them."
-LANG_GERMAN         "Was Spieler auf dem Kopf und dem Rücken tragen. Nur Spieler von VisionJK tragen sie."
+LANG_GERMAN         "Was Spieler auf dem Kopf und dem Rücken tragen. Gilt nur für VisionJK-Spieler."
 
 REFERENCE           EVERYBODY_S
 LANG_ENGLISH        "Everybody's"
@@ -1199,15 +1199,15 @@ LANG_GERMAN         "Die von allen"
 
 REFERENCE           MINE_ON_EVERYBODY
 LANG_ENGLISH        "Mine on Everybody"
-LANG_GERMAN         "Meine bei allen"
+LANG_GERMAN         "Eigene bei allen"
 
 REFERENCE           SEASONAL_HATS
 LANG_ENGLISH        "Seasonal Hats"
-LANG_GERMAN         "Hüte zur Jahreszeit"
+LANG_GERMAN         "Saisonale Hüte"
 
 REFERENCE           A_SANTA_HAT_AT_CHRISTMAS_AND_A_PUMPK
 LANG_ENGLISH        "A Santa hat at Christmas and a pumpkin at Halloween for those without a hat."
-LANG_GERMAN         "Eine Weihnachtsmütze zu Weihnachten und ein Kürbis zu Halloween für alle ohne Hut."
+LANG_GERMAN         "Weihnachtsmütze an Weihnachten, Kürbis an Halloween, für alle ohne Hut."
 
 REFERENCE           LOOKS
 LANG_ENGLISH        "Looks"
@@ -1215,27 +1215,27 @@ LANG_GERMAN         "Aussehen"
 
 REFERENCE           ENEMY_MODEL
 LANG_ENGLISH        "Enemy Model"
-LANG_GERMAN         "Modell der Gegner"
+LANG_GERMAN         "Gegnermodell"
 
 REFERENCE           EVERY_OPPONENT_IN_THIS_MODEL_AS_MODE
 LANG_ENGLISH        "Every opponent in this model, as model/skin. Empty: as they chose."
-LANG_GERMAN         "Jeder Gegner in diesem Modell, als Modell/Skin. Leer: wie gewählt."
+LANG_GERMAN         "Jeder Gegner erscheint mit diesem Modell (Modell/Skin). Leer: wie vom Spieler gewählt."
 
 REFERENCE           ALLY_MODEL
 LANG_ENGLISH        "Ally Model"
-LANG_GERMAN         "Modell der Mitspieler"
+LANG_GERMAN         "Teammodell"
 
 REFERENCE           EVERY_TEAM_MATE_IN_THIS_MODEL_AS_MOD
 LANG_ENGLISH        "Every team mate in this model, as model/skin. Empty: as they chose."
-LANG_GERMAN         "Jeder Mitspieler in diesem Modell, als Modell/Skin. Leer: wie gewählt."
+LANG_GERMAN         "Jeder Teamkamerad erscheint mit diesem Modell (Modell/Skin). Leer: wie gewählt."
 
 REFERENCE           SABER_TEAM_COLOURS
 LANG_ENGLISH        "Saber Team Colours"
-LANG_GERMAN         "Teamfarben der Schwerter"
+LANG_GERMAN         "Teamfarben für Klingen"
 
 REFERENCE           IN_TEAM_GAMES_EVERY_BLADE_IN_THE_COL
 LANG_ENGLISH        "In team games every blade in the colour of its team. Off: blades keep their colour."
-LANG_GERMAN         "In Teamspielen jede Klinge in der Farbe ihres Teams. Aus: Klingen behalten ihre Farbe."
+LANG_GERMAN         "In Teamspielen hat jede Klinge die Farbe ihres Teams. Aus: Klingen behalten ihre Farbe."
 
 REFERENCE           TWO_COLOURED_STAFF
 LANG_ENGLISH        "Two-Coloured Staff"
@@ -1243,15 +1243,15 @@ LANG_GERMAN         "Zweifarbiger Stab"
 
 REFERENCE           THE_SECOND_BLADE_OF_A_STAFF_IN_THE_S
 LANG_ENGLISH        "The second blade of a staff in the second saber colour."
-LANG_GERMAN         "Die zweite Klinge eines Stabs in der zweiten Schwertfarbe."
+LANG_GERMAN         "Die zweite Klinge eines Stabs hat die zweite Schwertfarbe."
 
 REFERENCE           JEDI_OUTCAST_SHOTS
 LANG_ENGLISH        "Jedi Outcast Shots"
-LANG_GERMAN         "Schüsse wie in Jedi Outcast"
+LANG_GERMAN         "Jedi-Outcast-Schüsse"
 
 REFERENCE           SHOTS_DRAWN_AS_CRISPLY_AS_IN_JEDI_OU
 LANG_ENGLISH        "Shots drawn as crisply as in Jedi Outcast. Counts from the next level."
-LANG_GERMAN         "Schüsse so scharf gezeichnet wie in Jedi Outcast. Gilt ab dem nächsten Level."
+LANG_GERMAN         "Schüsse werden so scharf dargestellt wie in Jedi Outcast. Gilt ab dem nächsten Level."
 
 REFERENCE           DISRUPTOR_BEAM
 LANG_ENGLISH        "Disruptor Beam"
@@ -1259,7 +1259,7 @@ LANG_GERMAN         "Disruptor-Strahl"
 
 REFERENCE           HOW_THE_SHOT_OF_THE_DISRUPTOR_LOOKS
 LANG_ENGLISH        "How the shot of the disruptor looks."
-LANG_GERMAN         "Wie der Schuss des Disruptors aussieht."
+LANG_GERMAN         "Aussehen des Disruptor-Schusses."
 
 REFERENCE           LINE
 LANG_ENGLISH        "Line"
@@ -1271,11 +1271,11 @@ LANG_GERMAN         "Spirale"
 
 REFERENCE           SMOOTH_CAMERA
 LANG_ENGLISH        "Smooth Camera"
-LANG_GERMAN         "Gleichmäßige Kamera"
+LANG_GERMAN         "Kamera glätten"
 
 REFERENCE           THE_CAMERA_BEHIND_YOU_FOLLOWS_THE_SA
 LANG_ENGLISH        "The camera behind you follows the same at every frame rate. It trails a little further behind."
-LANG_GERMAN         "Die Kamera hinter dir folgt bei jeder Bildrate gleich. Sie hängt etwas weiter zurück."
+LANG_GERMAN         "Die Kamera hinter dir folgt bei jeder Bildrate gleich. Sie hängt etwas weiter hinterher."
 
 REFERENCE           VULKAN_RENDERER
 LANG_ENGLISH        "Vulkan Renderer"
@@ -1287,11 +1287,11 @@ LANG_GERMAN         "#same"
 
 REFERENCE           BRIGHT_PARTS_OF_THE_LEVEL_SHINE_OVER
 LANG_ENGLISH        "Bright parts of the level shine over their surroundings. Vulkan renderer only."
-LANG_GERMAN         "Helle Stellen des Levels strahlen über ihre Umgebung. Nur mit dem Vulkan-Renderer."
+LANG_GERMAN         "Helle Stellen des Levels strahlen auf ihre Umgebung aus. Nur mit dem Vulkan-Renderer."
 
 REFERENCE           BLOOM_STRENGTH
 LANG_ENGLISH        "Bloom Strength"
-LANG_GERMAN         "Stärke des Blooms"
+LANG_GERMAN         "Bloom-Stärke"
 
 REFERENCE           HOW_STRONGLY_THE_BRIGHT_PARTS_SHINE
 LANG_ENGLISH        "How strongly the bright parts shine."
@@ -1299,7 +1299,7 @@ LANG_GERMAN         "Wie stark die hellen Stellen strahlen."
 
 REFERENCE           BLOOM_THRESHOLD
 LANG_ENGLISH        "Bloom Threshold"
-LANG_GERMAN         "Schwelle des Blooms"
+LANG_GERMAN         "Bloom-Schwelle"
 
 REFERENCE           HOW_BRIGHT_A_PART_HAS_TO_BE_TO_SHINE
 LANG_ENGLISH        "How bright a part has to be to shine."
@@ -1307,11 +1307,11 @@ LANG_GERMAN         "Wie hell eine Stelle sein muss, um zu strahlen."
 
 REFERENCE           RENDER_SCALE
 LANG_ENGLISH        "Render Scale"
-LANG_GERMAN         "Renderauflösung"
+LANG_GERMAN         "Renderskalierung"
 
 REFERENCE           THE_SIZE_THE_LEVEL_IS_DRAWN_AT_THE_H
 LANG_ENGLISH        "The size the level is drawn at, the HUD stays sharp. Vulkan renderer only, counts after a video restart."
-LANG_GERMAN         "Die Größe, in der das Level gezeichnet wird, das HUD bleibt scharf. Nur mit dem Vulkan-Renderer, gilt nach einem Neustart des Videos."
+LANG_GERMAN         "Auflösung, in der das Level gezeichnet wird. Das HUD bleibt scharf. Nur mit dem Vulkan-Renderer, gilt nach einem Neustart der Grafik."
 
 REFERENCE           HALF
 LANG_ENGLISH        "Half"
@@ -1327,7 +1327,7 @@ LANG_GERMAN         "Voll"
 
 REFERENCE           ONE_AND_A_HALF
 LANG_ENGLISH        "One and a Half"
-LANG_GERMAN         "Anderthalbfach"
+LANG_GERMAN         "1,5-fach"
 
 REFERENCE           DOUBLE
 LANG_ENGLISH        "Double"
@@ -1343,7 +1343,7 @@ LANG_GERMAN         "Emojis im Chat"
 
 REFERENCE           CODES_LIKE_SMILE_ARE_DRAWN_AS_PICTUR
 LANG_ENGLISH        "Codes like :smile: are drawn as pictures in the chat box."
-LANG_GERMAN         "Codes wie :smile: werden im Chatfenster als Bilder gezeigt."
+LANG_GERMAN         "Codes wie :smile: werden im Chat als Bilder angezeigt."
 
 REFERENCE           CHAT_LOG
 LANG_ENGLISH        "Chat Log"
@@ -1351,11 +1351,11 @@ LANG_GERMAN         "Chatprotokoll"
 
 REFERENCE           EVERY_CHAT_LINE_IS_WRITTEN_INTO_THE
 LANG_ENGLISH        "Every chat line is written into the folder chatlogs, with the time."
-LANG_GERMAN         "Jede Chatzeile wird mit der Uhrzeit in den Ordner chatlogs geschrieben."
+LANG_GERMAN         "Speichert jede Chatzeile mit Uhrzeit im Ordner chatlogs."
 
 REFERENCE           NAME_ALERT
 LANG_ENGLISH        "Name Alert"
-LANG_GERMAN         "Namensalarm"
+LANG_GERMAN         "Namenshinweis"
 
 REFERENCE           A_CHAT_LINE_WITH_YOUR_NAME_IS_MARKED
 LANG_ENGLISH        "A chat line with your name is marked gold. More words with tay_notifyWords in the console."
@@ -1395,7 +1395,7 @@ LANG_GERMAN         "Nach Updates suchen"
 
 REFERENCE           ASK_AT_EVERY_START_WHETHER_A_NEWER_V
 LANG_ENGLISH        "Ask at every start whether a newer version is out."
-LANG_GERMAN         "Bei jedem Start fragen, ob es eine neuere Version gibt."
+LANG_GERMAN         "Fragt bei jedem Start, ob eine neuere Version da ist."
 
 REFERENCE           UPDATE_CHANNEL
 LANG_ENGLISH        "Update Channel"
@@ -1403,7 +1403,7 @@ LANG_GERMAN         "Update-Kanal"
 
 REFERENCE           STABLE_THE_RELEASES_DEVELOPMENT_EARL
 LANG_ENGLISH        "Stable: the releases. Development: early test builds, and the releases when they are newer."
-LANG_GERMAN         "Stabil: die Releases. Entwicklung: frühe Testversionen, und die Releases, wenn sie neuer sind."
+LANG_GERMAN         "Stabil: die Releases. Entwicklung: frühe Testversionen und die Releases, wenn sie neuer sind."
 
 REFERENCE           STABLE
 LANG_ENGLISH        "Stable"
@@ -1419,7 +1419,7 @@ LANG_GERMAN         "Downloads auswählen"
 
 REFERENCE           BEFORE_A_DOWNLOAD_CHOOSE_THE_FILES_O
 LANG_ENGLISH        "Before a download choose the files of the server, and see what is in them before they are used."
-LANG_GERMAN         "Vor einem Download die Dateien des Servers auswählen und ihren Inhalt sehen, bevor sie benutzt werden."
+LANG_GERMAN         "Vor einem Download die Dateien des Servers auswählen und ihren Inhalt ansehen, bevor sie verwendet werden."
 
 REFERENCE           KEEP_DOWNLOADS
 LANG_ENGLISH        "Keep Downloads"
@@ -1431,11 +1431,11 @@ LANG_GERMAN         "Heruntergeladene Dateien im Ordner downloads behalten. Aus:
 
 REFERENCE           WEB_DOWNLOADS
 LANG_ENGLISH        "Web Downloads"
-LANG_GERMAN         "Downloads aus dem Web"
+LANG_GERMAN         "Web-Downloads"
 
 REFERENCE           FILES_OF_A_SERVER_THAT_NAMES_A_WEB_A
 LANG_ENGLISH        "Files of a server that names a web address for them come from there, much faster. Off: from the server itself."
-LANG_GERMAN         "Dateien eines Servers, der eine Webadresse für sie nennt, kommen von dort, viel schneller. Aus: vom Server selbst."
+LANG_GERMAN         "Nennt ein Server eine Webadresse für seine Dateien, werden sie von dort geladen, viel schneller. Aus: direkt vom Server."
 
 REFERENCE           CONNECTION
 LANG_ENGLISH        "Connection"
@@ -1443,11 +1443,11 @@ LANG_GERMAN         "Verbindung"
 
 REFERENCE           SMOOTH_JITTERY_LINES
 LANG_ENGLISH        "Smooth Jittery Lines"
-LANG_GERMAN         "Unruhige Leitungen glätten"
+LANG_GERMAN         "Jitter ausgleichen"
 
 REFERENCE           ON_A_LINE_WHOSE_SNAPSHOTS_COME_UNEVE
 LANG_ENGLISH        "On a line whose snapshots come unevenly the game is drawn a little later, so that nothing stutters."
-LANG_GERMAN         "Auf einer Leitung, deren Snapshots ungleichmäßig kommen, wird das Spiel etwas später gezeichnet, damit nichts ruckelt."
+LANG_GERMAN         "Kommen die Snapshots einer Verbindung ungleichmäßig an, wird das Spiel etwas später angezeigt, damit nichts ruckelt."
 
 REFERENCE           UP_TO_20_MS
 LANG_ENGLISH        "Up to 20 ms"
@@ -1467,11 +1467,11 @@ LANG_GERMAN         "Sicherheit"
 
 REFERENCE           INTRUSION_LOG
 LANG_ENGLISH        "Intrusion Log"
-LANG_GERMAN         "Einbruchsprotokoll"
+LANG_GERMAN         "Angriffsprotokoll"
 
 REFERENCE           WRITE_DOWN_WHAT_A_SERVER_SENDS_THAT
 LANG_ENGLISH        "Write down what a server sends that no server of the game does, and leave one that keeps at it."
-LANG_GERMAN         "Aufschreiben, was ein Server sendet, das kein Server des Spiels sendet, und einen verlassen, der nicht damit aufhört."
+LANG_GERMAN         "Protokolliert, was ein Server sendet, das kein Server des Spiels sendet, und verlässt Server, die damit nicht aufhören."
 
 REFERENCE           KEY_LOGIN_BY_AGENT
 LANG_ENGLISH        "Key Login by Agent"
@@ -1479,7 +1479,7 @@ LANG_GERMAN         "Schlüssel-Login per Agent"
 
 REFERENCE           THE_ADMIN_LOGIN_ASKS_YOUR_SSH_AGENT
 LANG_ENGLISH        "The admin login asks your ssh-agent for the key (1Password, OpenSSH)."
-LANG_GERMAN         "Der Admin-Login fragt Ihren ssh-agent nach dem Schlüssel (1Password, OpenSSH)."
+LANG_GERMAN         "Der Admin-Login holt den Schlüssel von deinem ssh-agent (1Password, OpenSSH)."
 
 REFERENCE           KEY_FILE
 LANG_ENGLISH        "Key File"
@@ -1487,7 +1487,7 @@ LANG_GERMAN         "Schlüsseldatei"
 
 REFERENCE           THE_FILE_WITH_THE_KEY_FOR_THE_ADMIN
 LANG_ENGLISH        "The file with the key for the admin login, where no agent has it."
-LANG_GERMAN         "Die Datei mit dem Schlüssel für den Admin-Login, wenn kein Agent ihn hat."
+LANG_GERMAN         "Datei mit dem Schlüssel für den Admin-Login, falls kein Agent ihn hat."
 
 REFERENCE           TEXT
 LANG_ENGLISH        "Text"
@@ -1499,7 +1499,7 @@ LANG_GERMAN         "UTF-8-Text"
 
 REFERENCE           EVERY_CHARACTER_IN_NAMES_AND_CHAT_OF
 LANG_ENGLISH        "Every character in names and chat. Off for a language with a code page of its own."
-LANG_GERMAN         "Alle Zeichen in Namen und Chat. Aus für eine Sprache mit eigener Codepage."
+LANG_GERMAN         "Alle Zeichen in Namen und Chat. Für Sprachen mit eigener Codepage ausschalten."
 
 REFERENCE           INTERFACE
 LANG_ENGLISH        "Interface"
@@ -1507,15 +1507,15 @@ LANG_GERMAN         "Oberfläche"
 
 REFERENCE           HOW_MENUS_HUD_AND_CAMERA_LOOK
 LANG_ENGLISH        "How menus, HUD and camera look."
-LANG_GERMAN         "Wie Menüs, HUD und Kamera aussehen."
+LANG_GERMAN         "Aussehen von Menüs, HUD und Kamera."
 
 REFERENCE           CHAT_SOCIAL
 LANG_ENGLISH        "Chat & Social"
-LANG_GERMAN         "Chat & Soziales"
+LANG_GERMAN         "Chat & Community"
 
 REFERENCE           THE_CHAT_BOX_BUBBLES_AND_WHAT_STANDS
 LANG_ENGLISH        "The chat box, bubbles and what stands above the heads."
-LANG_GERMAN         "Die Chatbox, Sprechblasen und was über den Köpfen steht."
+LANG_GERMAN         "Chatfenster, Sprechblasen und Anzeigen über den Köpfen."
 
 REFERENCE           TAYSTJK
 LANG_ENGLISH        "TaystJK"
@@ -1523,7 +1523,7 @@ LANG_GERMAN         "#same"
 
 REFERENCE           WHAT_CAME_FROM_THE_TAYSTJK_CLIENT_HU
 LANG_ENGLISH        "What came from the TaystJK client: HUD, movement, hats and capes and more."
-LANG_GERMAN         "Was vom Client TaystJK kommt: HUD, Bewegung, Hüte und Umhänge und mehr."
+LANG_GERMAN         "Funktionen aus dem TaystJK-Client: HUD, Bewegung, Hüte, Umhänge und mehr."
 
 REFERENCE           NETWORK
 LANG_ENGLISH        "Network"
@@ -1539,31 +1539,31 @@ LANG_GERMAN         "Spielordner mit anderen Mods."
 
 REFERENCE           RESTART_THE_VIDEO_WITH_THESE_SETTING
 LANG_ENGLISH        "Restart the video with these settings."
-LANG_GERMAN         "Die Grafik mit diesen Einstellungen neu starten."
+LANG_GERMAN         "Grafik mit diesen Einstellungen neu starten."
 
 REFERENCE           PLAYERS_OF_MY_MUSIC
 LANG_ENGLISH        "Players of My Music"
-LANG_GERMAN         "Meine Musikprogramme"
+LANG_GERMAN         "Meine Musikplayer"
 
 REFERENCE           CLICK_A_PLAYER_TO_TICK_IT_OR_TO_TAKE
 LANG_ENGLISH        "Click a player to tick it, or to take the tick away."
-LANG_GERMAN         "Ein Klick hakt ein Programm an oder nimmt den Haken weg."
+LANG_GERMAN         "Ein Klick hakt einen Player an oder entfernt den Haken."
 
 REFERENCE           ONLY_THE_SONGS_OF_TICKED_PLAYERS_ARE
 LANG_ENGLISH        "Only the songs of ticked players are shown to the others."
-LANG_GERMAN         "Nur die Lieder angehakter Programme sehen die anderen."
+LANG_GERMAN         "Nur die Songs angehakter Player sehen die anderen."
 
 REFERENCE           DEVELOPMENT_BUILDS_ARE_EARLY_TEST_VE
 LANG_ENGLISH        "Development builds are early test versions."
 LANG_GERMAN         "Entwicklungsversionen sind frühe Testversionen."
 
-REFERENCE           THEY_CAN_CRASH_BREAK_CONFIGS_OR_NOT
-LANG_ENGLISH        "They can crash, break configs or not work on all servers."
-LANG_GERMAN         "Sie können abstürzen, Configs kaputt machen oder nicht auf allen Servern laufen."
+REFERENCE           THEY_CAN_CRASH_CORRUPT_YOUR_CONFIGS
+LANG_ENGLISH        "They can crash, corrupt your configs or not work on some servers."
+LANG_GERMAN         "Sie können abstürzen, deine Configs beschädigen oder auf manchen Servern nicht laufen."
 
-REFERENCE           YOU_CAN_SWITCH_BACK_TO_STABLE_ANY_TI
-LANG_ENGLISH        "You can switch back to Stable any time."
-LANG_GERMAN         "Du kannst jederzeit zurück zu Stabil wechseln."
+REFERENCE           YOU_CAN_SWITCH_BACK_TO_STABLE_AT_ANY
+LANG_ENGLISH        "You can switch back to Stable at any time."
+LANG_GERMAN         "Du kannst jederzeit zu Stabil zurückwechseln."
 
 REFERENCE           STAY_ON_STABLE
 LANG_ENGLISH        "Stay on Stable"
@@ -1579,7 +1579,7 @@ LANG_GERMAN         "Zu Entwicklung wechseln"
 
 REFERENCE           UPDATE_TO_THE_DEVELOPMENT_BUILDS_FRO
 LANG_ENGLISH        "Update to the development builds from now on."
-LANG_GERMAN         "Ab jetzt auf die Entwicklungsversionen updaten."
+LANG_GERMAN         "Ab jetzt auf Entwicklungsversionen aktualisieren."
 
 REFERENCE           FIXED_COLOR
 LANG_ENGLISH        "Fixed Color"
@@ -1591,11 +1591,11 @@ LANG_GERMAN         "Klingenstil"
 
 REFERENCE           YOUR_FORCE_POWERS
 LANG_ENGLISH        "Your force powers."
-LANG_GERMAN         "Ihre Machtkräfte."
+LANG_GERMAN         "Deine Machtkräfte."
 
 REFERENCE           THE_LIST_OF_MOVES
 LANG_ENGLISH        "The list of moves."
-LANG_GERMAN         "Die Liste der Aktionen."
+LANG_GERMAN         "Liste der Bewegungen."
 
 REFERENCE           HOLSTERS
 LANG_ENGLISH        "Holsters"
@@ -1615,11 +1615,11 @@ LANG_GERMAN         "Beide Seiten"
 
 REFERENCE           PLAY_A_SONG
 LANG_ENGLISH        "Play a song ..."
-LANG_GERMAN         "Lied abspielen ..."
+LANG_GERMAN         "Song abspielen ..."
 
 REFERENCE           ADD_A_SONG
 LANG_ENGLISH        "Add a song ..."
-LANG_GERMAN         "Lied hinzufügen ..."
+LANG_GERMAN         "Song hinzufügen ..."
 
 REFERENCE           PAUSE
 LANG_ENGLISH        "Pause"
@@ -1627,11 +1627,11 @@ LANG_GERMAN         "#same"
 
 REFERENCE           RESUME
 LANG_ENGLISH        "Resume"
-LANG_GERMAN         "Weiter"
+LANG_GERMAN         "Fortsetzen"
 
 REFERENCE           SKIP_THIS_SONG
 LANG_ENGLISH        "Skip this song"
-LANG_GERMAN         "Lied überspringen"
+LANG_GERMAN         "Song überspringen"
 
 REFERENCE           STOP_THE_MUSIC
 LANG_ENGLISH        "Stop the music"
@@ -1647,11 +1647,11 @@ LANG_GERMAN         "Lauter für alle (%i %%)"
 
 REFERENCE           MUTE_IT_FOR_ME
 LANG_ENGLISH        "Mute it for me"
-LANG_GERMAN         "Für mich stumm"
+LANG_GERMAN         "Für mich stummschalten"
 
 REFERENCE           HEAR_IT_AGAIN
 LANG_ENGLISH        "Hear it again"
-LANG_GERMAN         "Wieder hören"
+LANG_GERMAN         "Wieder einschalten"
 
 REFERENCE           MOVE_IT
 LANG_ENGLISH        "Move it"
@@ -1659,15 +1659,15 @@ LANG_GERMAN         "Verschieben"
 
 REFERENCE           TAKE_IT_AWAY
 LANG_ENGLISH        "Take it away"
-LANG_GERMAN         "Wegnehmen"
+LANG_GERMAN         "Entfernen"
 
 REFERENCE           CLICK_AGAIN_TO_TAKE_IT_AWAY
 LANG_ENGLISH        "Click again to take it away"
-LANG_GERMAN         "Nochmal klicken: wegnehmen"
+LANG_GERMAN         "Zum Entfernen nochmal klicken"
 
 REFERENCE           PLAYS
 LANG_ENGLISH        "Plays"
-LANG_GERMAN         "Spielt"
+LANG_GERMAN         "Läuft"
 
 REFERENCE           PAUSED
 LANG_ENGLISH        "Paused"
@@ -1683,11 +1683,11 @@ LANG_GERMAN         "Still"
 
 REFERENCE           NEXT_S
 LANG_ENGLISH        "Next: %s"
-LANG_GERMAN         "Danach: %s"
+LANG_GERMAN         "Als Nächstes: %s"
 
 REFERENCE           LOOKING_A_SONG_UP
 LANG_ENGLISH        "Looking a song up ..."
-LANG_GERMAN         "Sucht ein Lied ..."
+LANG_GERMAN         "Suche Song ..."
 
 REFERENCE           VOLUME_I
 LANG_ENGLISH        "Volume %i %%"
@@ -1695,11 +1695,11 @@ LANG_GERMAN         "Lautstärke %i %%"
 
 REFERENCE           MUTED_FOR_YOU
 LANG_ENGLISH        "muted for you"
-LANG_GERMAN         "für Sie stumm"
+LANG_GERMAN         "für dich stumm"
 
 REFERENCE           BOOMBOX_LINK_OR_SONG
 LANG_ENGLISH        "Boombox, link or song"
-LANG_GERMAN         "Boombox, Link oder Lied"
+LANG_GERMAN         "Boombox, Link oder Song"
 
 REFERENCE           PUT_DOWN_BY_S
 LANG_ENGLISH        "Put down by %s"
@@ -1735,7 +1735,7 @@ LANG_GERMAN         "Warteschlange"
 
 REFERENCE           NOTHING_WAITS
 LANG_ENGLISH        "Nothing waits"
-LANG_GERMAN         "Nichts wartet"
+LANG_GERMAN         "Warteschlange leer"
 
 REFERENCE           MUTE
 LANG_ENGLISH        "Mute"
@@ -1743,7 +1743,7 @@ LANG_GERMAN         "Stumm"
 
 REFERENCE           UNMUTE
 LANG_ENGLISH        "Unmute"
-LANG_GERMAN         "Wieder hören"
+LANG_GERMAN         "Ton an"
 
 REFERENCE           FILES_OF_THE_SERVER
 LANG_ENGLISH        "Files of the server"
@@ -1751,11 +1751,11 @@ LANG_GERMAN         "Dateien des Servers"
 
 REFERENCE           THE_SERVER_OFFERS_THESE_FILES_TO_DOW
 LANG_ENGLISH        "The server offers these files to download."
-LANG_GERMAN         "Der Server bietet diese Dateien zum Herunterladen an."
+LANG_GERMAN         "Der Server bietet diese Dateien zum Download an."
 
 REFERENCE           BEFORE_ANYTHING_OF_THEM_IS_USED_YOU
 LANG_ENGLISH        "Before anything of them is used you see what is inside. Programs stay blocked."
-LANG_GERMAN         "Bevor etwas davon benutzt wird, sehen Sie den Inhalt. Programme bleiben gesperrt."
+LANG_GERMAN         "Bevor etwas davon verwendet wird, siehst du den Inhalt. Programme bleiben gesperrt."
 
 REFERENCE           KEEP_THEM_DOWNLOADS_FOLDER
 LANG_ENGLISH        "Keep them (downloads folder)"
@@ -1767,7 +1767,7 @@ LANG_GERMAN         "Nur für diese Sitzung"
 
 REFERENCE           A_PURE_SERVER_MAY_NOT_LET_YOU_PLAY_W
 LANG_ENGLISH        "A pure server may not let you play without its files."
-LANG_GERMAN         "Ein Server mit sv_pure lässt Sie ohne seine Dateien eventuell nicht spielen."
+LANG_GERMAN         "Ein Server mit sv_pure lässt dich ohne seine Dateien eventuell nicht spielen."
 
 REFERENCE           DOWNLOAD
 LANG_ENGLISH        "Download"
@@ -1787,11 +1787,11 @@ LANG_GERMAN         "Inhalt"
 
 REFERENCE           UNTICK_WHAT_YOU_DO_NOT_WANT_NOTHING
 LANG_ENGLISH        "Untick what you do not want: nothing of it is used."
-LANG_GERMAN         "Entfernen Sie den Haken bei allem, was Sie nicht wollen: davon wird nichts benutzt."
+LANG_GERMAN         "Nimm den Haken bei allem raus, was du nicht willst: Davon wird nichts verwendet."
 
 REFERENCE           PROGRAMS_COULD_RUN_ON_YOUR_COMPUTER
 LANG_ENGLISH        "Programs could run on your computer: they are blocked unless you tick them."
-LANG_GERMAN         "Programme könnten auf Ihrem Computer laufen: sie bleiben gesperrt, außer Sie setzen den Haken."
+LANG_GERMAN         "Programme könnten auf deinem Computer ausgeführt werden: Sie bleiben gesperrt, solange du sie nicht anhakst."
 
 REFERENCE           MAPS
 LANG_ENGLISH        "Maps"
@@ -1807,7 +1807,7 @@ LANG_GERMAN         "Texturen und Effekte"
 
 REFERENCE           SOUNDS_AND_MUSIC
 LANG_ENGLISH        "Sounds and music"
-LANG_GERMAN         "Klänge und Musik"
+LANG_GERMAN         "Sounds und Musik"
 
 REFERENCE           SHADERS_AND_SCRIPTS
 LANG_ENGLISH        "Shaders and scripts"
@@ -1815,15 +1815,15 @@ LANG_GERMAN         "Shader und Skripte"
 
 REFERENCE           CONFIGS_THEY_CAN_RUN_COMMANDS
 LANG_ENGLISH        "Configs (they can run commands)"
-LANG_GERMAN         "Konfigurationen (sie können Befehle ausführen)"
+LANG_GERMAN         "Configs (können Befehle ausführen)"
 
 REFERENCE           OTHER_FILES
 LANG_ENGLISH        "Other files"
-LANG_GERMAN         "Andere Dateien"
+LANG_GERMAN         "Sonstige Dateien"
 
 REFERENCE           PROGRAMS_THEY_COULD_RUN_ON_YOUR_COMP
 LANG_ENGLISH        "Programs (they could run on your computer)"
-LANG_GERMAN         "Programme (sie könnten auf Ihrem Computer laufen)"
+LANG_GERMAN         "Programme (könnten auf deinem Computer laufen)"
 
 REFERENCE           USE_THEM
 LANG_ENGLISH        "Use them"
@@ -1831,7 +1831,7 @@ LANG_GERMAN         "Verwenden"
 
 REFERENCE           THEY_COME_FROM_THE_WEB_ADDRESS
 LANG_ENGLISH        "They come from the web address:"
-LANG_GERMAN         "Sie kommen von der Webadresse:"
+LANG_GERMAN         "Sie kommen von dieser Webadresse:"
 
 REFERENCE           INITIATE
 LANG_ENGLISH        "Initiate"
@@ -1859,7 +1859,7 @@ LANG_GERMAN         "Stimme stummschalten"
 
 REFERENCE           HEAR_HIS_VOICE_AGAIN
 LANG_ENGLISH        "Hear his voice again"
-LANG_GERMAN         "Stimme wieder hören"
+LANG_GERMAN         "Stimme wieder einschalten"
 
 REFERENCE           VOICE_QUIETER_I
 LANG_ENGLISH        "Voice quieter (%i %%)"
@@ -1875,15 +1875,15 @@ LANG_GERMAN         "Chatzeilen ausblenden"
 
 REFERENCE           SHOW_HIS_CHAT_LINES_AGAIN
 LANG_ENGLISH        "Show his chat lines again"
-LANG_GERMAN         "Chatzeilen wieder zeigen"
+LANG_GERMAN         "Chatzeilen wieder einblenden"
 
 REFERENCE           WHISPER_TO_HIM
 LANG_ENGLISH        "Whisper to him"
-LANG_GERMAN         "Ihm flüstern"
+LANG_GERMAN         "Flüstern"
 
 REFERENCE           WATCH_HIM
 LANG_ENGLISH        "Watch him"
-LANG_GERMAN         "Ihm zuschauen"
+LANG_GERMAN         "Zuschauen"
 
 REFERENCE           COPY_HIS_NAME
 LANG_ENGLISH        "Copy his name"
@@ -1891,15 +1891,15 @@ LANG_GERMAN         "Namen kopieren"
 
 REFERENCE           CALL_A_VOTE_TO_KICK_HIM
 LANG_ENGLISH        "Call a vote to kick him"
-LANG_GERMAN         "Abstimmen: hinauswerfen"
+LANG_GERMAN         "Rauswurf-Abstimmung"
 
 REFERENCE           CLICK_AGAIN_TO_CALL_THE_VOTE
 LANG_ENGLISH        "Click again to call the vote"
-LANG_GERMAN         "Nochmal klicken: abstimmen"
+LANG_GERMAN         "Zum Starten nochmal klicken"
 
 REFERENCE           ADMIN_KICK
 LANG_ENGLISH        "Admin: kick"
-LANG_GERMAN         "Admin: hinauswerfen"
+LANG_GERMAN         "Admin: kicken"
 
 REFERENCE           ADMIN_SILENCE
 LANG_ENGLISH        "Admin: silence"
@@ -1915,7 +1915,7 @@ LANG_GERMAN         "Admin: Ohrfeige"
 
 REFERENCE           ADMIN_GO_TO_HIM
 LANG_ENGLISH        "Admin: go to him"
-LANG_GERMAN         "Admin: zu ihm gehen"
+LANG_GERMAN         "Admin: hingehen"
 
 REFERENCE           ADMIN_BRING_HIM_HERE
 LANG_ENGLISH        "Admin: bring him here"
@@ -1923,7 +1923,7 @@ LANG_GERMAN         "Admin: herholen"
 
 REFERENCE           YOU
 LANG_ENGLISH        "You"
-LANG_GERMAN         "Sie"
+LANG_GERMAN         "Du"
 
 REFERENCE           BOT
 LANG_ENGLISH        "Bot"
@@ -1951,7 +1951,7 @@ LANG_GERMAN         "Anderer Client"
 
 REFERENCE           AWAY_FROM_KEYBOARD
 LANG_ENGLISH        "Away from keyboard"
-LANG_GERMAN         "Nicht an der Tastatur"
+LANG_GERMAN         "AFK"
 
 REFERENCE           LISTENING_TO_S
 LANG_ENGLISH        "Listening to %s"
@@ -1963,7 +1963,7 @@ LANG_GERMAN         "Zuschauer"
 
 REFERENCE           CONNECTING
 LANG_ENGLISH        "connecting"
-LANG_GERMAN         "verbindet"
+LANG_GERMAN         "verbindet sich"
 
 REFERENCE           AND_I_MORE
 LANG_ENGLISH        "and %i more"
@@ -1971,7 +1971,7 @@ LANG_GERMAN         "und %i weitere"
 
 REFERENCE           THE_SCORES_KEY
 LANG_ENGLISH        "The scores key"
-LANG_GERMAN         "Die Punktetaste"
+LANG_GERMAN         "Die Scoreboard-Taste"
 
 REFERENCE           S_TWICE_PICK_A_PLAYER
 LANG_ENGLISH        "%s twice: pick a player"
@@ -1979,7 +1979,7 @@ LANG_GERMAN         "%s zweimal: Spieler auswählen"
 
 REFERENCE           CLICK_A_PLAYER_S_OR_ESC_CLOSES
 LANG_ENGLISH        "Click a player. %s or Esc closes."
-LANG_GERMAN         "Spieler anklicken. %s oder Esc schließt."
+LANG_GERMAN         "Spieler anklicken. Schließen mit %s oder Esc."
 
 REFERENCE           NEW_MENUS
 LANG_ENGLISH        "New Menus"
@@ -1987,11 +1987,11 @@ LANG_GERMAN         "Neue Menüs"
 
 REFERENCE           THE_MENUS_AND_THE_HUD_OF_VISIONJK_TH
 LANG_ENGLISH        "The menus and the HUD of VisionJK. The video restarts."
-LANG_GERMAN         "Die Menüs und das HUD von VisionJK. Das Video startet neu."
+LANG_GERMAN         "Die Menüs und das HUD von VisionJK. Die Grafik wird neu gestartet."
 
 REFERENCE           YOU_CLAN_RADIO
 LANG_ENGLISH        "You, clan radio"
-LANG_GERMAN         "Sie, Clan-Funk"
+LANG_GERMAN         "Du, Clan-Funk"
 
 REFERENCE           RADIO
 LANG_ENGLISH        "radio"
@@ -2059,7 +2059,7 @@ LANG_GERMAN         "Entfernen"
 
 REFERENCE           CLICK_A_CHOICE_ESC_CLOSES
 LANG_ENGLISH        "Click a choice, Esc closes"
-LANG_GERMAN         "Eine Wahl anklicken, Esc schließt"
+LANG_GERMAN         "Option anklicken, Esc schließt"
 
 REFERENCE           LEFT_SPEAKER
 LANG_ENGLISH        "Left speaker"
@@ -2075,7 +2075,7 @@ LANG_GERMAN         "Keine Boombox hier"
 
 REFERENCE           NO_PLAYER_OF_MUSIC_RUNS_RIGHT_NOW
 LANG_ENGLISH        "No player of music runs right now"
-LANG_GERMAN         "Gerade läuft kein Musikprogramm"
+LANG_GERMAN         "Gerade läuft kein Musikplayer"
 
 REFERENCE           NOT_RUNNING
 LANG_ENGLISH        "not running"

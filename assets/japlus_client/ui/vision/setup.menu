@@ -4340,7 +4340,7 @@
 			name					vision_channel2
 			rect					52 152 344 16
 			visible					1
-			text					@VISION_THEY_CAN_CRASH_BREAK_CONFIGS_OR_NOT
+			text					@VISION_THEY_CAN_CRASH_CORRUPT_YOUR_CONFIGS
 			font					5
 			textscale				0.7
 			forecolor				0.86 0.92 0.97 1
@@ -4353,7 +4353,7 @@
 			name					vision_channel3
 			rect					52 170 344 16
 			visible					1
-			text					@VISION_YOU_CAN_SWITCH_BACK_TO_STABLE_ANY_TI
+			text					@VISION_YOU_CAN_SWITCH_BACK_TO_STABLE_AT_ANY
 			font					5
 			textscale				0.7
 			forecolor				0.60 0.69 0.78 1
