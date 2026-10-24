@@ -229,6 +229,122 @@ void VK_Bloom( void ) {
 
 /*
 ===============
+VK_HasScope
+
+Whether RE_SetScopeEffect() is drawn: it reads the depth of the scene
+===============
+*/
+qboolean VK_HasScope( void ) {
+	return vk.depthReadable;
+}
+
+/*
+===============
+VK_ScopeBoxes
+
+The boxes of the tracker into vk.glow, the buffer the lens reads its mask from: cleared, and every box cleared to
+white. Pixels of the window as OpenGL counts them, VK_ClearColor() takes them to the size of the scene.
+===============
+*/
+void VK_ScopeBoxes( const scopeEffect_t *fx ) {
+	const float	white[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
+	const int	vx = backEnd.viewParms.viewportX, vy = backEnd.viewParms.viewportY;
+	const int	vw = backEnd.viewParms.viewportWidth, vh = backEnd.viewParms.viewportHeight;
+
+	if ( !vk.frame ) {
+		return;
+	}
+	VK_BeginGlow();
+	for ( int i = 0; i < fx->numBoxes && i < SCOPEFX_MAX_BOXES; i++ ) {
+		const float	*box = fx->boxes[i];
+		const int	left = vx + (int)( Com_Clamp( 0.0f, 1.0f, box[0] ) * vw );
+		const int	right = vx + (int)( Com_Clamp( 0.0f, 1.0f, box[2] ) * vw + 0.5f );
+		const int	top = vy + (int)( ( 1.0f - Com_Clamp( 0.0f, 1.0f, box[1] ) ) * vh + 0.5f );
+		const int	bottom = vy + (int)( ( 1.0f - Com_Clamp( 0.0f, 1.0f, box[3] ) ) * vh );
+
+		if ( right > left && top > bottom ) {
+			VK_ClearColor( left, bottom, right - left, top - bottom, white );
+		}
+	}
+}
+
+/*
+===============
+VK_Scope
+
+The view of the level through the scope of a weapon, what the cgame asked for with RE_SetScopeEffect(). After the
+bloom, before the menu blur and the 2D. boxes: vk.glow holds the boxes of the tracker (VK_ScopeBoxes).
+
+The frame is blurred into vk.soft as for the menu blur, but softer and in fewer passes. shaders/scopeprep.frag
+reads the depth into the other soft buffer: how far out of focus each pixel is around what the crosshair is on,
+and the edges of the level. The frame is copied into vk.screen, the buffer of refraction (that is
+drawn by now), and shaders/scope.frag lays the lens over the frame from all of that.
+===============
+*/
+#define SCOPE_BLUR_PASSES	4
+
+void VK_Scope( const scopeEffect_t *fx, qboolean boxes ) {
+	const float	*projection = backEnd.viewParms.projectionMatrix;
+	vkTarget_t	*source = &vk.color;
+	vkTarget_t	*prep;
+	float		center[2];
+	float		parm[16];
+
+	if ( !vk.frame || !vk.depthReadable ) {
+		return;
+	}
+	VK_EndTarget();
+
+	for ( int i = 0; i < SCOPE_BLUR_PASSES; i++ ) {
+		vkTarget_t *target = &vk.soft[i & 1];
+		const float offset = i ? 1.5f * i : 0.5f;
+		const float blur[4] = { offset / source->width, offset / source->height, 0.25f, 0.0f };
+
+		VK_BlurPass( source, target, blur );
+
+		source = target;
+	}
+	prep = &vk.soft[source == &vk.soft[0] ? 1 : 0];
+
+	// The middle of the lens in texture coordinates of the frame, whose top row comes first: the view is a
+	// rectangle of it that OpenGL counts from the lower edge.
+	center[0] = ( backEnd.viewParms.viewportX + fx->center[0] * backEnd.viewParms.viewportWidth ) / glConfig.vidWidth;
+	center[1] = 1.0f - ( backEnd.viewParms.viewportY + ( 1.0f - fx->center[1] ) * backEnd.viewParms.viewportHeight ) / glConfig.vidHeight;
+	{
+		// the depth to the distance from the eye, as VK_BlurFrame() has it
+		const float depth[4] = { projection[14] * 0.5f, ( projection[10] - 1.0f ) * 0.5f, center[0], center[1] };
+
+		VK_ScopePrepPass( &vk.glow, prep, depth );
+	}
+
+	VK_CopyTarget( &vk.color, &vk.screen );
+
+	parm[0] = center[0];
+	parm[1] = center[1];
+	parm[2] = fx->radius * backEnd.viewParms.viewportHeight / glConfig.vidHeight;
+	parm[3] = (float)glConfig.vidWidth / (float)glConfig.vidHeight;
+	parm[4] = Com_Clamp( 0.0f, 1.0f, fx->zoom );
+	parm[5] = ( fx->flags & SCOPEFX_TRACKER ) ? Com_Clamp( 0.0f, 1.0f, fx->motion ) : 0.0f;
+	parm[6] = fx->time;
+	parm[7] = ( fx->flags & SCOPEFX_LENS ) ? 1.0f : 0.0f;
+	parm[8] = (float)vk.color.width / (float)vk.screen.width;
+	parm[9] = (float)vk.color.height / (float)vk.screen.height;
+	parm[10] = 1.0f / (float)( 1 << tr.overbrightBits );
+	parm[11] = boxes ? 1.0f : 0.0f;
+	parm[12] = (float)glConfig.vidHeight;
+	parm[13] = fx->charge;
+	parm[14] = Com_Clamp( 0.0f, 1.0f, fx->ammo );
+	parm[15] = ( fx->flags & SCOPEFX_RETICLE ) ? 1.0f : 0.0f;
+	VK_ScopePass( source, prep, &vk.glow, parm );
+
+	// the shaders that draw geometry have other sets and other state
+	VK_BindFrameSets();
+	vk.stateValid = qfalse;
+	VK_SetViewport( vk.viewport[0], vk.viewport[1], vk.viewport[2], vk.viewport[3], 0.0f, 1.0f );
+}
+
+/*
+===============
 VK_CaptureFrame
 
 Copies the frame as it is right now into vk.screen, which the stages of refraction surfaces then read through

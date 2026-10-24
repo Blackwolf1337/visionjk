@@ -238,6 +238,31 @@ void	RE_SetDepthOfField( float focus, float amount ) {
 	r_dofAmount = Com_Clamp( 0.0f, 1.0f, amount );
 }
 
+/*
+=============
+RE_SetScopeEffect
+
+The cgame wants the view of the level of this frame seen through the scope of a weapon (scopeEffect_t). It holds
+for one frame as the depth of field does. NULL: only the question whether this renderer has it. rd-vulkan-vision
+has the pass (VK_ScopePass), rd-vanilla says qfalse and the cgame draws the scope as it always did.
+=============
+*/
+scopeEffect_t	r_scopeFx;
+
+qboolean	RE_SetScopeEffect( const scopeEffect_t *fx ) {
+#ifdef RD_VULKAN_VISION
+	if ( !VK_HasScope() ) {
+		return qfalse;
+	}
+	if ( fx ) {
+		r_scopeFx = *fx;
+	}
+	return qtrue;
+#else
+	return qfalse;
+#endif
+}
+
 void	RE_SetColor( const float *rgba ) {
 	setColorCommand_t	*cmd;
 
@@ -391,8 +416,9 @@ void RE_BeginFrame( stereoFrame_t stereoFrame ) {
 		return;
 	}
 
-	// what a module asked for with RE_SetDepthOfField() was for the frame before
+	// what a module asked for with RE_SetDepthOfField() and RE_SetScopeEffect() was for the frame before
 	r_dofAmount = 0.0f;
+	r_scopeFx.flags = 0;
 	glState.finishCalled = qfalse;
 
 	tr.frameCount++;

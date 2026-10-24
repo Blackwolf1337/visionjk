@@ -334,6 +334,8 @@ void		VK_BeginGlow( void );
 void		VK_EndGlow( void );
 void		VK_BlurFrame( float amount, float focus );
 void		VK_Bloom( void );
+void		VK_Scope( const scopeEffect_t *fx, qboolean boxes );
+void		VK_ScopeBoxes( const scopeEffect_t *fx );
 void		VK_CaptureFrame( void );
 void		VK_ClearFlares( void );
 void		VK_CopyProbes( void );
@@ -452,6 +454,11 @@ void		VK_BlurPass( vkTarget_t *source, vkTarget_t *target, const float *parm );
 // The same with shaders/focus.frag, which reads the depth of the scene (vk.depth) next to source. Only with
 // vk.depthReadable.
 void		VK_FocusPass( vkTarget_t *source, vkTarget_t *target, const float *parm );
+// The same with shaders/scopeprep.frag, the part of the scope (VK_Scope) that reads the depth
+void		VK_ScopePrepPass( vkTarget_t *source, vkTarget_t *target, const float *parm );
+// shaders/scope.frag over the whole frame, by its alpha: it reads vk.screen, soft, prep and mark, with the sixteen
+// numbers of parm. Begins vk.color with vk.depth, which stays begun.
+void		VK_ScopePass( vkTarget_t *soft, vkTarget_t *prep, vkTarget_t *mark, const float *parm );
 // source over the whole of the target that is drawn into: added to what is there, added softly (GL_ONE,
 // GL_ONE_MINUS_SRC_COLOR), or laid over it by its alpha
 typedef enum { VKA_ADD, VKA_ADD_SOFT, VKA_BLEND } vkAdd_t;

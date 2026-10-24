@@ -1596,6 +1596,15 @@ void CL_ParseBinding( int key, qboolean down, unsigned time )
 
 	if( cls.state == CA_DISCONNECTED && Key_GetCatcher( ) == 0 )
 		return;
+	// The disruptor of a cgame of this tree is zoomed in and locked: the wheel zooms (cgame/scope/cg_scope.c)
+	// instead of doing what it is bound to, a weapnext on it among others.
+	if ( ( key == A_MWHEELUP || key == A_MWHEELDOWN ) && Key_GetCatcher( ) == 0 && cls.cgameStarted
+		&& Cvar_VariableIntegerValue( "v_scopeWheel" ) ) {
+		if ( down ) {
+			Cbuf_AddText( key == A_MWHEELUP ? "v_scopezoom in\n" : "v_scopezoom out\n" );
+		}
+		return;
+	}
 	binding = Key_BindingFor( key, down );
 	if( !binding || !binding[0] )
 		return;

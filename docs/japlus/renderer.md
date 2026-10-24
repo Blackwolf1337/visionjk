@@ -190,11 +190,11 @@ header (`vk_device.h`, or `gles/gles_device.h` when `RD_VISION_GLES` is defined)
 | `vk_image.cpp` | the texture table: which slot an image has, its size, levels and format, the upload level by level |
 | `vk_world.cpp` | the level in a device buffer, which batches can use it |
 | `vk_model.cpp` | Ghoul2 and MD3 vertices in a device buffer, the saber marks on models, bones per frame |
-| `vk_post.cpp` | dynamic glow, the copy of the frame for refraction, which flares are tested |
+| `vk_post.cpp` | dynamic glow, bloom, the scope (`VK_Scope()`), the copy of the frame for refraction, which flares are tested |
 | `vk_gl.cpp` | the immediate mode drawing of the shared files |
 | `vk_bc.cpp` | textures packed into BC1 and BC3 blocks, the worker threads that do it (built with the Vulkan device only) |
 | `vk_stubs.cpp` | what the files of `rd-vanilla` call and this renderer has no use for |
-| `shaders/` | `stage.glsl` (one stage of a script on a vertex), `generic.vert`, `skinned.vert`, `generic.frag`, `post.vert`, `gamma.frag`, `blur.frag`, `copy.frag`, with `common.glsl`, `post.glsl` and `dialect.glsl` (what is written in another way in GLSL for Vulkan and in GLSL ES). One set of sources for both devices |
+| `shaders/` | `stage.glsl` (one stage of a script on a vertex), `generic.vert`, `skinned.vert`, `generic.frag`, `post.vert`, `gamma.frag`, `blur.frag`, `copy.frag`, `focus.frag`, `scopeprep.frag`, `scope.frag`, with `common.glsl`, `post.glsl` and `dialect.glsl` (what is written in another way in GLSL for Vulkan and in GLSL ES). One set of sources for both devices |
 
 | Vulkan device | Content |
 |---------------|---------|
@@ -211,8 +211,8 @@ header (`vk_device.h`, or `gles/gles_device.h` when `RD_VISION_GLES` is defined)
 | `gles_main.cpp` | the window with its context, start and shutdown, `gfxinfo` |
 | `gles_buffer.cpp` | buffers. The ones the shared files write into are memory of the engine, sent to the device once a frame |
 | `gles_texture.cpp` | textures, render targets as framebuffer objects, multisample renderbuffers |
-| `gles_program.cpp` | the shaders as programs, uniform blocks and samplers bound by name |
-| `gles_cmd.cpp` | a frame written down as a list of commands and played when it ends, the queries of the flares |
+| `gles_program.cpp` | the shaders as programs (`GLP_SCOPEPREP` and `GLP_SCOPE` among them), uniform blocks and samplers bound by name (the scope reads texture units 2 to 4 besides the frame) |
+| `gles_cmd.cpp` | a frame written down as a list of commands and played when it ends, the queries of the flares, the commands of the scope (`GC_SCOPEPREP`, `GC_SCOPE_SOURCES`, `GC_SCOPE`) |
 
 For Vulkan `glslc -mfmt=c` turns the shaders into headers while building. For OpenGL ES
 `cmake/Modules/BundleShader.cmake` makes one text of each shader with its includes put in, and the device
@@ -442,6 +442,43 @@ Checked in pictures at 1280 x 720 on mp/ffa3: 0.5 (640 x 360, the level coarse a
 saber with its glow, the wave of a force push at 0.5 and at 1 (the same bend), the menu in the level with its
 blur. Four `vid_restart` between the sizes in one run. Not run under the validation layer (not installed on this
 machine), not on Windows.
+
+## Disruptor scope
+
+The lens of the disruptor with its tracker, built 2026-10 in both devices (`vk_post.cpp`, `shaders/scope.frag`,
+`shaders/scopeprep.frag`). The cgame asks for it once a frame with `re->ext.SetScopeEffect(const scopeEffect_t *)`
+(`rd-common/tr_types.h`: the flags `SCOPEFX_LENS`, `SCOPEFX_RETICLE` and `SCOPEFX_TRACKER`, the centre, the radius,
+the zoom, how far the tracker has faded in, the time, the charge of the alt fire, the ammo, and up to 8 boxes in `numBoxes` and `boxes`), as it does with `SetDepthOfField`. NULL
+only asks whether the renderer has it. The cgame gets it as `trap->ext.R_SetScopeEffect`, gated by the ROM cvar
+`v_cgameScope`. rd-vanilla returns qfalse and the cgame draws the old mask ([client.md](client.md), "The disruptor
+scope"). The brackets of the tracker are drawn in 2D by the cgame; the tint and the stencil of its boxes are made here. Its echoes are 2D only and not in the stencil.
+
+- Order, in `RB_DrawSurfs()` (`vk_backend.cpp`): after the bloom, for the view of the level only (not a mirror, the
+  sky of a portal or a model of the HUD). Then `VK_Scope()`.
+- `VK_Scope()`: the frame is blurred into `vk.soft` in four passes. `shaders/scopeprep.frag` reads the depth at
+  half the size: how far out of focus each pixel is around what the crosshair is on, and the edges of the level. The frame is copied into `vk.screen`, and `shaders/scope.frag` is blended over the frame.
+  The pipeline has its own layout, four sets and 64 bytes of push constants (16 numbers; four `u_parm` on the
+  OpenGL ES device, it was 12 numbers before).
+- The lens: a large, clear picture with little barrel distortion and colour split, a little shade only close to
+  the rim, depth of field, and a thin rim of light. Its radius is 0.45 of the height of the view.
+- The reticle (`SCOPEFX_RETICLE`), drawn by the shader: thin lines with a gap around the middle, thicker posts to
+  the left, the right and the bottom, a mark every tenth of the radius, and a lit red dot in the middle. Around the
+  rim on a dark ring of the housing, three segmented arcs: the ammo on the right (red when low), the zoom on the
+  left, the charge of the alt fire at the bottom.
+- The tracker (`SCOPEFX_TRACKER`): the picture is dim and red with the depth edges, scan lines, grain and a rolling
+  band, but inside the boxes the level keeps its normal colours, a little brighter. `VK_ScopeBoxes()`
+  (`vk_post.cpp`) clears `vk.glow` and clears each box to white in it. They are plain rectangle clears, so both
+  devices have it. The mask value of `scope.frag` is 0 none, 1 tracker boxes. The shader reads the mask where the
+  picture comes from, so the cgame gives the boxes in the place before the bend of the lens.
+- Outside the lens the level stays visible, soft, dimmed and a little grey (it was nearly black).
+- Needs a depth that can be read (`VK_HasScope()`, the same as the depth of field). Without it the call says no.
+- OpenGL ES: the commands `GC_SCOPEPREP`, `GC_SCOPE_SOURCES` and `GC_SCOPE`, the programs `GLP_SCOPEPREP` and
+  `GLP_SCOPE`, and the texture units 2 to 4 for the blurred frame, the prep and the mask. The sources are resolved
+  before the frame is begun again, since a resolve binds the framebuffer of its target.
+- rd-vanilla: the boxes and echoes of the tracker without the tint.
+
+Checked: built for Linux, Windows and the OpenGL ES device. Not run in the game in this form, so no picture of the
+lens, the reticle, the mask, the boxes or the echoes was looked at, on neither device and not under the validation layer.
 
 ## Not done
 

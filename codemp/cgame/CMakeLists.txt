@@ -247,6 +247,13 @@ set(MPCGameHudFiles
 source_group("cgame/hud" FILES ${MPCGameHudFiles})
 set(MPCGameFiles ${MPCGameFiles} ${MPCGameHudFiles})
 
+# the scope of the disruptor: the lens of the renderer, the zoom of the wheel, the motion view
+set(MPCGameScopeFiles
+	"${MPDir}/cgame/scope/cg_scope.c"
+	)
+source_group("cgame/scope" FILES ${MPCGameScopeFiles})
+set(MPCGameFiles ${MPCGameFiles} ${MPCGameScopeFiles})
+
 # the menu in the level: shoulder camera, panel, blur and muffled sound while a menu is open
 set(MPCGameMenu3DFiles
 	"${MPDir}/cgame/menu3d/cg_menu3d.c"

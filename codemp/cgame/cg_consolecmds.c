@@ -379,6 +379,7 @@ static consoleCommand_t	commands[] = {
 	{ "prevskin",					CG_TestModelPrevSkin_f },
 	{ "reloadReplier",				CG_JPReloadReplier_f },
 	{ "v_scores_pick",				CG_ScoresPick_f },
+	{ "v_scopezoom",				CG_ScopeZoom_f },
 	{ "showPlayerID",				CG_JPShowPlayerID_f },
 	{ "siegeCompleteCvarUpdate",	CG_SiegeCompleteCvarUpdate_f },
 	{ "siegeCvarUpdate",			CG_SiegeCvarUpdate_f },

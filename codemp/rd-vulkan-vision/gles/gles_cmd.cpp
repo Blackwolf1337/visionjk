@@ -86,6 +86,9 @@ typedef enum {
 	GC_DRAW,
 	GC_BLUR,
 	GC_FOCUS,
+	GC_SCOPEPREP,
+	GC_SCOPE_SOURCES,
+	GC_SCOPE,
 	GC_ADD,
 	GC_COPY,
 	GC_PROBES
@@ -137,6 +140,9 @@ typedef struct glesCommand_s {
 			vkTarget_t	*source;
 			vkAdd_t		how;
 		} add;
+		struct {				// its numbers are in gles_scopeParm, there is one a frame
+			vkTarget_t	*soft, *prep, *mark;
+		} scope;
 		struct {
 			vkTarget_t	*source, *dest;
 		} copy;
@@ -148,6 +154,7 @@ typedef struct glesCommand_s {
 
 static glesCommand_t	gles_commands[GLES_MAX_COMMANDS];
 static int				gles_numCommands;
+static float			gles_scopeParm[16];		// what the last VK_ScopePass() was given
 static vkIndexRange_t	gles_ranges[GLES_MAX_RANGES];
 static int				gles_numRanges;
 static qboolean			gles_overflowed;		// this frame has more commands than fit, said once
@@ -389,6 +396,30 @@ void VK_FocusPass( vkTarget_t *source, vkTarget_t *target, const float *parm ) {
 	}
 }
 
+void VK_ScopePrepPass( vkTarget_t *source, vkTarget_t *target, const float *parm ) {
+	glesCommand_t *cmd = GLES_Command( GC_SCOPEPREP );
+
+	if ( cmd ) {
+		cmd->blur.source = source;
+		cmd->blur.target = target;
+		VectorCopy4( parm, cmd->blur.parm );
+	}
+}
+
+// The sources are resolved before the frame is begun again: a resolve binds the framebuffer of its target.
+void VK_ScopePass( vkTarget_t *soft, vkTarget_t *prep, vkTarget_t *mark, const float *parm ) {
+	glesCommand_t *cmd = GLES_Command( GC_SCOPE_SOURCES );
+
+	if ( cmd ) {
+		cmd->scope.soft = soft;
+		cmd->scope.prep = prep;
+		cmd->scope.mark = mark;
+		memcpy( gles_scopeParm, parm, sizeof( gles_scopeParm ) );
+	}
+	VK_BeginTarget( &vk.color, &vk.depth, 2, qtrue );
+	GLES_Command( GC_SCOPE );
+}
+
 void VK_AddTarget( vkTarget_t *source, vkAdd_t how ) {
 	glesCommand_t *cmd = GLES_Command( GC_ADD );
 
@@ -458,7 +489,7 @@ static struct {
 	int			numBindings;
 	uint32_t	offsets[4];
 	GLuint		indexBuffer;
-	GLuint		textures[2];				// bound to the two units, ~0u: not known
+	GLuint		textures[GLES_UNITS];		// bound to the units, ~0u: not known
 	int			unit;
 	uint32_t	transform, bones;			// what the blocks are bound to, ~0u: not known
 	uint32_t	state;						// VKS_* that is set
@@ -498,7 +529,7 @@ static void GLES_Texture( int unit, GLuint texture ) {
 static void GLES_BeginReplay( const vkFrame_t *frame ) {
 	memset( &gles, 0, sizeof( gles ) );
 	gles.layout = -1;
-	gles.textures[0] = gles.textures[1] = ~0u;
+	memset( gles.textures, 0xff, sizeof( gles.textures ) );
 	gles.unit = -1;
 	gles.transform = gles.bones = ~0u;
 	gles.scissor[2] = gles.viewport[2] = vk.width;
@@ -924,15 +955,40 @@ static void GLES_Replay( vkFrame_t *frame ) {
 			GLES_DrawViewport();
 			break;
 		case GC_FOCUS:
+		case GC_SCOPEPREP:
 			GLES_Resolve( cmd->blur.source );
 			GLES_ResolveDepth();
 			glBindFramebuffer( GL_FRAMEBUFFER, VK_TargetFramebuffer( cmd->blur.target, NULL ) );
 			GLES_PassState( cmd->blur.target->width, cmd->blur.target->height, 0, 0 );
 			GLES_Texture( 1, vk.depth.texture );
-			GLES_DrawPass( GLP_FOCUS, cmd->blur.source->texture, cmd->blur.parm );
+			GLES_DrawPass( cmd->type == GC_FOCUS ? GLP_FOCUS : GLP_SCOPEPREP, cmd->blur.source->texture, cmd->blur.parm );
 			// Not left there: without several samples the scene is drawn into this very texture, and a browser
 			// refuses a draw whose program could read what it draws into.
 			GLES_Texture( 1, 0 );
+			GLES_DrawViewport();
+			break;
+		case GC_SCOPE_SOURCES:
+			GLES_Resolve( cmd->scope.soft );
+			GLES_Resolve( cmd->scope.prep );
+			GLES_Resolve( cmd->scope.mark );
+			GLES_Texture( GLES_UNIT_SOFT, cmd->scope.soft->texture );
+			GLES_Texture( GLES_UNIT_PREP, cmd->scope.prep->texture );
+			GLES_Texture( GLES_UNIT_MARK, cmd->scope.mark->texture );
+			break;
+		case GC_SCOPE:
+			// onto the frame, which was begun again after the sources were resolved
+			GLES_PassState( vk.width, vk.height, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
+			GLES_Program( GLP_SCOPE );
+			if ( vk.programParm[GLP_SCOPE] >= 0 ) {
+				glUniform4fv( vk.programParm[GLP_SCOPE], 4, gles_scopeParm );
+			}
+			GLES_Texture( 0, vk.screen.texture );
+			GLES_Layout( GLV_NONE );
+			glDrawArrays( GL_TRIANGLES, 0, 3 );
+			// not left there: the mask is the glow buffer, which is drawn into
+			GLES_Texture( GLES_UNIT_SOFT, 0 );
+			GLES_Texture( GLES_UNIT_PREP, 0 );
+			GLES_Texture( GLES_UNIT_MARK, 0 );
 			GLES_DrawViewport();
 			break;
 		case GC_ADD:

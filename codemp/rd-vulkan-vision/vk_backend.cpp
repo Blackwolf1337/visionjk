@@ -995,6 +995,10 @@ static const void *RB_DrawSurfs( const void *data ) {
 	const qboolean focus = (qboolean)( r_dofAmount > 0.0f && v_menuBlur->value > 0.0f && !backEnd.viewParms.isPortal
 		&& !( backEnd.refdef.rdflags & ( RDF_NOWORLDMODEL | RDF_SKYBOXPORTAL ) ) );
 
+	// RE_SetScopeEffect(): the view of the level itself, as the focus below
+	const qboolean scope = (qboolean)( r_scopeFx.flags && !backEnd.viewParms.isPortal
+		&& !( backEnd.refdef.rdflags & ( RDF_NOWORLDMODEL | RDF_SKYBOXPORTAL ) ) && VK_HasScope() );
+
 	rb_overLater = focus;
 	rb_sawOver = qfalse;
 	rb_glowView = !( backEnd.refdef.rdflags & RDF_NOWORLDMODEL ) && r_DynamicGlow->integer;
@@ -1020,6 +1024,15 @@ static const void *RB_DrawSurfs( const void *data ) {
 	// tay_bloom: the view of the level itself, as the focus below
 	if ( !backEnd.viewParms.isPortal && !( backEnd.refdef.rdflags & ( RDF_NOWORLDMODEL | RDF_SKYBOXPORTAL ) ) ) {
 		VK_Bloom();
+	}
+	if ( scope ) {
+		// the boxes of the tracker into the glow buffer, where the lens keeps the colours of the level
+		const qboolean boxes = (qboolean)( ( r_scopeFx.flags & SCOPEFX_TRACKER ) && r_scopeFx.numBoxes > 0 );
+
+		if ( boxes ) {
+			VK_ScopeBoxes( &r_scopeFx );
+		}
+		VK_Scope( &r_scopeFx, boxes );
 	}
 	if ( focus ) {
 		VK_BlurFrame( r_dofAmount, r_dofFocus );

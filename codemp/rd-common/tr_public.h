@@ -268,6 +268,9 @@ typedef struct refexport_s {
 		// the next frame on and glconfig has it. Called between two frames. qfalse: the renderer can not, the
 		// engine restarts it with a vid_restart.
 		qboolean			(*WindowResized)						( int width, int height );
+		// The view of the level of this frame is seen through the scope of a weapon (scopeEffect_t), until the next
+		// frame. NULL only asks. qfalse: this renderer does not have it (rd-vanilla), the cgame draws the scope itself.
+		qboolean			(*SetScopeEffect)						( const scopeEffect_t *fx );
 	} ext;
 
 } refexport_t;

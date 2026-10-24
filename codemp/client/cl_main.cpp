@@ -3096,6 +3096,10 @@ void CL_Init( void ) {
 	// the menus on a plane in the level, and the blur of the scene around a distance
 	Cvar_Get( "v_cgameUIPlane", "1", CVAR_ROM, "" );
 	Cvar_Get( "v_cgameDoF", "1", CVAR_ROM, "" );
+	// and the view through the scope of a weapon (R_SetScopeEffect)
+	Cvar_Get( "v_cgameScope", "1", CVAR_ROM, "" );
+	// set by that cgame while the zoom is locked: the mouse wheel zooms then (CL_ParseBinding())
+	Cvar_Get( "v_scopeWheel", "0", 0, "" );
 	// set by a cgame and a ui of this tree, which follow a new size of the window without a vid_restart
 	Cvar_Get( "v_cgameResize", "0", 0, "" );
 	Cvar_Get( "v_uiResize", "0", 0, "" );

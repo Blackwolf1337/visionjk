@@ -218,6 +218,8 @@ set(MPVulkanVisionShaders
 	blur.frag
 	copy.frag
 	focus.frag
+	scopeprep.frag
+	scope.frag
 	)
 set(MPVulkanVisionShaderIncludes
 	"${MPDir}/rd-vulkan-vision/shaders/common.glsl"
@@ -292,7 +294,7 @@ add_custom_command(
 list(APPEND MPVulkanVisionShaderOutputs "${CMAKE_CURRENT_BINARY_DIR}/shaders/prefix_es.inc")
 if(GLSLANG_VALIDATOR)
 	# vertex and fragment shader of every program, as vk_pipeline.cpp puts them together
-	foreach(program generic_vert:generic_frag skinned_vert:generic_frag post_vert:gamma_frag post_vert:blur_frag post_vert:copy_frag post_vert:focus_frag)
+	foreach(program generic_vert:generic_frag skinned_vert:generic_frag post_vert:gamma_frag post_vert:blur_frag post_vert:copy_frag post_vert:focus_frag post_vert:scopeprep_frag post_vert:scope_frag)
 		string(REPLACE ":" ";" programStages ${program})
 		list(GET programStages 0 programVert)
 		list(GET programStages 1 programFrag)

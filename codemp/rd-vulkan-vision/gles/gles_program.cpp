@@ -39,6 +39,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "shaders/blur_frag_es.inc"
 #include "shaders/copy_frag_es.inc"
 #include "shaders/focus_frag_es.inc"
+#include "shaders/scopeprep_frag_es.inc"
+#include "shaders/scope_frag_es.inc"
 
 static const struct {
 	const char			*name;				// for what the console says when it does not compile
@@ -51,6 +53,8 @@ static const struct {
 	{ "blur", vk_es_post_vert, vk_es_blur_frag, "" },
 	{ "copy", vk_es_post_vert, vk_es_copy_frag, "" },
 	{ "focus", vk_es_post_vert, vk_es_focus_frag, "" },
+	{ "scopeprep", vk_es_post_vert, vk_es_scopeprep_frag, "" },
+	{ "scope", vk_es_post_vert, vk_es_scope_frag, "" },
 	{ "present", vk_es_post_vert, vk_es_copy_frag, "#define POST_UPSIDE_DOWN\n" },
 };
 
@@ -148,6 +152,9 @@ static GLuint VK_LinkProgram( glesProgram_t which ) {
 	VK_BindSampler( program, "u_tex1", 1 );
 	VK_BindSampler( program, "u_image", 0 );
 	VK_BindSampler( program, "u_depth", 1 );
+	VK_BindSampler( program, "u_soft", GLES_UNIT_SOFT );
+	VK_BindSampler( program, "u_prep", GLES_UNIT_PREP );
+	VK_BindSampler( program, "u_mark", GLES_UNIT_MARK );
 	vk.programParm[which] = glGetUniformLocation( program, "u_parm" );
 	return program;
 }

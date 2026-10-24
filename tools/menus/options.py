@@ -125,6 +125,10 @@ SETUP = [
         ('slider', 'Field of View', 'cg_fov', 80, 60, 130, 'How wide you see.'),
         ('slider', 'Camera Distance', 'cg_thirdPersonRange', 80, 40, 200, 'How far the camera is behind you in third person.'),
         ('slider', 'Crosshair Size', 'cg_crosshairSize', 24, 12, 64, 'The size of the crosshair.'),
+        ('head', 'Disruptor'),
+        ('yesno', 'Scope Lens', 'v_scope', 'The zoomed disruptor shows the level through a lens. Off: the flat black mask. Only with the Vulkan renderer.'),
+        ('yesno', 'Zoom with Mouse Wheel', 'v_scopeWheelZoom', 'While the disruptor zoom is locked, the mouse wheel zooms in and out.'),
+        ('slider', 'Motion Tracker Speed', 'v_motionThreshold', 40, 10, 200, 'The speed a player needs before the tracker of the disruptor scope picks him up.'),
     ]),
     ('Chat & Social', 'The chat box, bubbles and what stands above the heads.', [
         ('head', 'Players'),

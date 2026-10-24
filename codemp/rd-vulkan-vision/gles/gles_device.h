@@ -132,9 +132,17 @@ typedef enum {
 	GLP_BLUR,
 	GLP_COPY,
 	GLP_FOCUS,						// and one that reads the depth of the scene next to its target
+	GLP_SCOPEPREP,					// the same for the scope (VK_ScopePrepPass)
+	GLP_SCOPE,						// and the scope itself, four textures and four u_parm (VK_ScopePass)
 	GLP_PRESENT,					// the copy again, turned upside down: what the window gets
 	GLP_NUM_PROGRAMS
 } glesProgram_t;
+
+// the units of the textures the scope reads besides u_image (0), where no other program reads one
+#define GLES_UNIT_SOFT		2
+#define GLES_UNIT_PREP		3
+#define GLES_UNIT_MARK		4
+#define GLES_UNITS			5
 
 typedef enum {						// what a vertex array object is set up for
 	GLV_GENERIC,					// the four streams of the tess arrays

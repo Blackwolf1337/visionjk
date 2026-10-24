@@ -590,6 +590,9 @@ static VkDescriptorSet VK_PostSet( const vkTarget_t *source ) {
 	if ( source == &vk.soft[0] || source == &vk.soft[1] ) {
 		return vk.softSets[source - vk.soft];
 	}
+	if ( source == &vk.screen ) {
+		return vk.screenSet;
+	}
 	return vk.blurSets[source - vk.blur];
 }
 
@@ -614,14 +617,14 @@ void VK_BlurPass( vkTarget_t *source, vkTarget_t *target, const float *parm ) {
 }
 
 // The depth is not drawn into while the pass reads it: the pass that follows takes it back (VK_BeginTarget).
-void VK_FocusPass( vkTarget_t *source, vkTarget_t *target, const float *parm ) {
+static void VK_DepthPass( VkPipeline pipeline, vkTarget_t *source, vkTarget_t *target, const float *parm ) {
 	VkCommandBuffer cmd = vk.frame->cmd;
 	const VkDescriptorSet sets[2] = { VK_PostSet( source ), vk.depthSet };
 
 	VK_TargetLayout( cmd, source, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
 	VK_TargetLayout( cmd, &vk.depth, VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL );
-	qvkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.focusPipeline );
-	vk.boundPipeline = vk.focusPipeline;
+	qvkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline );
+	vk.boundPipeline = pipeline;
 	VK_TargetLayout( cmd, target, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
 	VK_BeginRendering( cmd, target, NULL, 0, qfalse );
 	VK_FullTarget( cmd, target );
@@ -630,6 +633,33 @@ void VK_FocusPass( vkTarget_t *source, vkTarget_t *target, const float *parm ) {
 	qvkCmdDraw( cmd, 3, 1, 0, 0 );
 	qvkCmdEndRendering( cmd );
 	VK_TargetLayout( cmd, target, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
+}
+
+void VK_FocusPass( vkTarget_t *source, vkTarget_t *target, const float *parm ) {
+	VK_DepthPass( vk.focusPipeline, source, target, parm );
+}
+
+void VK_ScopePrepPass( vkTarget_t *source, vkTarget_t *target, const float *parm ) {
+	VK_DepthPass( vk.scopePrepPipeline, source, target, parm );
+}
+
+// The targets it reads are made ready to be read before the frame is begun, the mask also when nothing was drawn
+// into it this frame (the shader does not read it then).
+void VK_ScopePass( vkTarget_t *soft, vkTarget_t *prep, vkTarget_t *mark, const float *parm ) {
+	VkCommandBuffer cmd = vk.frame->cmd;
+	const VkDescriptorSet sets[4] = { vk.screenSet, VK_PostSet( soft ), VK_PostSet( prep ), VK_PostSet( mark ) };
+
+	VK_TargetLayout( cmd, &vk.screen, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
+	VK_TargetLayout( cmd, soft, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
+	VK_TargetLayout( cmd, prep, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
+	VK_TargetLayout( cmd, mark, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
+	VK_BeginTarget( &vk.color, &vk.depth, 2, qtrue );
+	qvkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.scopePipeline );
+	vk.boundPipeline = vk.scopePipeline;
+	qvkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.scopePipelineLayout, 0, 4, sets, 0, NULL );
+	qvkCmdPushConstants( cmd, vk.scopePipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof( float ) * 16, parm );
+	VK_FullTarget( cmd, &vk.color );
+	qvkCmdDraw( cmd, 3, 1, 0, 0 );
 }
 
 void VK_AddTarget( vkTarget_t *source, vkAdd_t how ) {

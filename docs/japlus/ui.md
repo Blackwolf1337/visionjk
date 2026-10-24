@@ -246,10 +246,12 @@ of the menus.
 |---------------|-------------------------------------|
 | Video | Frame Limit (`com_maxfps`), Wide Screen Layout (`v_2dAspect`), Dynamic Glow (`r_DynamicGlow`) |
 | Sound | Room Reflections (`v_spatialReflections`), Sound Around Corners (`v_spatialPaths`), Doppler Effect (`s_doppler`) |
-| Interface | New HUD (`v_hud`), Classic Menus (`v_classic`), Menu in the Level (`v_immersiveMenu`), Menu Blur (`v_menuBlur`), Show Frame Rate (`cg_drawFPS`), Show Timer (`cg_drawTimer`), Show Lagometer (`cg_lagometer`), Field of View (`cg_fov`), Camera Distance (`cg_thirdPersonRange`), Crosshair Size (`cg_crosshairSize`) |
+| Interface | New HUD (`v_hud`), Classic Menus (`v_classic`), Menu in the Level (`v_immersiveMenu`), Menu Blur (`v_menuBlur`), Show Frame Rate (`cg_drawFPS`), Show Timer (`cg_drawTimer`), Show Lagometer (`cg_lagometer`), Field of View (`cg_fov`), Camera Distance (`cg_thirdPersonRange`), Crosshair Size (`cg_crosshairSize`), under the heading Disruptor: Scope Lens (`v_scope`), Zoom with Mouse Wheel (`v_scopeWheelZoom`), Motion Tracker Speed (`v_motionThreshold`, the speed for the tracker, slider, 10 to 200, default 40) |
 | Chat & Social | Chat Bubbles (`v_chatBubbles`), Bubble Range (`v_bubbleRange`), Player Statuses (`v_playerStatuses`), Show My Music (`v_shareMusic`), Keep Scoreboard on Double Tap (`v_scoresPick`), Chat Box Size (`v_chatBoxScale`), Chat Box Rows (`v_chatBoxRows`), Select Players (`v_selectPlayers`), Selection Outline (`v_selectOutline`), Own Chat Line (`v_chatInput`), Chat Box Width (`v_chatBoxWidth`), Chat Beep (`cg_chatBeep`), Sharp Console Font (`con_font`), Console Text Size (`con_scale`), Console Opacity (`con_opacity`), Clan Password (`cp_clanPwd`, shown as stars) |
 | Network | Check for Updates (`v_updateCheck`), Intrusion Log (`v_ids`), Key Login by Agent (`v_authAgent`), Key File (`v_authKeyFile`), UTF-8 Text (`v_utf8`) |
 | Controls, Extras | Free the Mouse (`+v_cursor`), Scoreboard with Mouse (`v_scores_pick`) |
+
+The classic menus have none of the three disruptor rows, by design. The tracker of the scope has no row and no command: it is turned on and off with the key bound to `saberAttackCycle` while zoomed (see "The disruptor scope" in [client.md](client.md)).
 
 Left to the console on purpose: the names of sound devices (`v_voiceCapture`, `v_voicePlayback`, a menu
 can not list them), addresses (`v_voiceMasterHost`, `v_authAgentPath`, `v_updateURL`), the finer numbers

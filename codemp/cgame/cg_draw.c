@@ -337,6 +337,12 @@ static void CG_DrawZoomMask( void )
 	}
 	else if ( cg.predictedPlayerState.zoomMode)
 	{
+		// the renderer draws the lens with its reticle and arcs: none of the art of the mask (scope/cg_scope.c)
+		if ( CG_ScopeLensDrawn() ) {
+			CG_ScopeDrawHUD();
+			return;
+		}
+
 		// disruptor zoom mode
 		level = (float)(50.0f - zoomFov) / 50.0f;//(float)(80.0f - zoomFov) / 80.0f;
 
@@ -460,6 +466,8 @@ static void CG_DrawZoomMask( void )
 
 			trap->R_DrawStretchPic(257, 435, 134*max, 34, 0, 0, max, 1, cgs.media.disruptorChargeShader);
 		}
+		// the modes of the scope over the mask (scope/cg_scope.c)
+		CG_ScopeDrawHUD();
 //		trap->R_SetColor( colorTable[CT_WHITE] );
 //		CG_DrawPic( 0, 0, 640, 480, cgs.media.disruptorMask );
 
@@ -8561,6 +8569,8 @@ void CG_DrawActive( stereoFrame_t stereoView ) {
 	CG_Menu3DScene();
 	// where the name and the card of a player the mouse points at stand in the level (select/cg_select.c)
 	CG_SelectScene();
+	// the lens of the disruptor and its motion view (scope/cg_scope.c)
+	CG_ScopeScene();
 
 	trap->R_RenderScene( &cg.refdef );
 	// and the name and the card themselves, over that scene: nothing of the level cuts them

@@ -2650,6 +2650,9 @@ void CG_DrawActiveFrame( int serverTime, stereoFrame_t stereoView, qboolean demo
 		cg.renderingThirdPerson = 0;
 	}
 
+	// the zoom of the wheel and the motion view of the disruptor (scope/cg_scope.c), before the fov is worked out
+	CG_ScopeFrame();
+
 	// build cg.refdef
 	inwater = CG_CalcViewValues();
 	CG_Menu3DView();

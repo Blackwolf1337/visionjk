@@ -522,6 +522,9 @@ void VK_CreatePostTargets( int blurWidth, int blurHeight ) {
 		VK_PostSetOnce( sets[i] );
 		VK_WritePostSet( *sets[i], targets[i]->view );
 	}
+	// the copy of the frame the scope reads, filtered as the other ones (its view has an alpha of 1)
+	VK_PostSetOnce( &vk.screenSet );
+	VK_WritePostSet( vk.screenSet, vk.screen.view );
 
 	// The depth of the scene for the depth of field: a view of the depth without the stencil, read pixel for
 	// pixel (not every device filters a depth format) while nothing draws into it.

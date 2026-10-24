@@ -2244,6 +2244,88 @@
 		itemDef
 		{
 			name					vision_head
+			rect					34 336 380 22
+			visible					1
+			text					@VISION_DISRUPTOR
+			font					5
+			textscale				0.54
+			forecolor				0.60 0.69 0.78 1
+			textaligny				9
+			caps					1
+			decoration
+			page					4
+			scroll					1
+		}
+
+		itemDef
+		{
+			name					vision_headline
+			rect					32 357 384 0.67
+			visible					1
+			style					WINDOW_STYLE_FILLED
+			backcolor				0.43 0.83 1 0.32
+			decoration
+			page					4
+			scroll					1
+		}
+
+		itemDef
+		{
+			name					vision_yesno_v_scope
+			type					ITEM_TYPE_YESNO
+			text					@VISION_SCOPE_LENS
+			descText				@VISION_THE_ZOOMED_DISRUPTOR_SHOWS_THE_LEVEL
+			cvar					"v_scope"
+			action { play "sound/interface/button1.wav" ; }
+			rect					32 358 384 22
+			page					4
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+		}
+
+		itemDef
+		{
+			name					vision_yesno_v_scopewheelzoom
+			type					ITEM_TYPE_YESNO
+			text					@VISION_ZOOM_WITH_MOUSE_WHEEL
+			descText				@VISION_WHILE_THE_DISRUPTOR_ZOOM_IS_LOCKED_T
+			cvar					"v_scopeWheelZoom"
+			action { play "sound/interface/button1.wav" ; }
+			rect					32 380 384 22
+			page					4
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+		}
+
+		itemDef
+		{
+			name					vision_slider_v_motionthreshold
+			type					ITEM_TYPE_SLIDER
+			text					@VISION_MOTION_TRACKER_SPEED
+			descText				@VISION_THE_SPEED_A_PLAYER_NEEDS_BEFORE_THE
+			cvarfloat				"v_motionThreshold" 40 10 200
+			action { play "sound/interface/button1.wav" ; }
+			rect					32 402 384 22
+			page					4
+			scroll					1
+			row						1
+			font					5
+			textscale				0.7
+			forecolor				0.86 0.92 0.97 1
+			visible					1
+		}
+
+		itemDef
+		{
+			name					vision_head
 			rect					34 72 380 22
 			visible					1
 			text					@VISION_PLAYERS

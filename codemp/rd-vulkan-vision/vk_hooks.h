@@ -39,6 +39,8 @@ const void *RB_TakeVideoFrameCmd( const void *data );
 
 // vk_post.cpp: what RB_TestZFlare() of tr_surface.cpp asks the depth buffer
 qboolean VK_FlareVisible( const float *point, int x, int y, float eyeZ );
+// and whether RE_SetScopeEffect() of tr_cmds.cpp is drawn
+qboolean VK_HasScope( void );
 
 // tr_ghoul2.cpp, for vk_model.cpp: the bone cache is a class of that file
 int G2_BoneMatrices( CBoneCache *boneCache, float *out, int maxBones );

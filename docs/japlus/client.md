@@ -107,6 +107,8 @@ nothing or did harm: Color Depth and Texture Quality (`rd-vulkan-vision` ignores
 cache. The menus of the base game, which a client shows while it plays as base, still have the EAX and Sound
 Quality entries: the ui hides them (`Item_ApplyHacks`).
 
+The rows of the disruptor scope (Interface, heading Disruptor: Scope Lens, Zoom with Mouse Wheel, Motion Tracker Speed, the speed for the tracker) are described under "The disruptor scope". The classic menus do not have them.
+
 None of the pages was looked at in the game after these changes: the rows were placed by their numbers.
 
 ### Wide screens
@@ -907,6 +909,75 @@ in another engine (`v_cgameUIPlane`). The first version was seen in the game on 
 that (silhouette of the player in the menu, camera, blur, crackle). The layout as it is now was seen in
 pictures of scripted clients the same day (rd-vanilla, so without the blur): the player at the left from
 behind, the menu to the right of him over the level, the model of the player menu inside its frame.
+
+### The disruptor scope
+
+`cgame/scope/cg_scope.c` (2026-10), with the lens pass of rd-vulkan-vision (see "Disruptor scope" in
+[renderer.md](renderer.md)). While the disruptor is zoomed, the renderer draws the view of the level through a lens:
+large and clear, bent and coloured a little towards its rim, sharp around what the crosshair is on. The renderer
+also draws a fine reticle with a lit red dot, and around the rim, on a dark ring, three segmented arcs: the ammo on
+the right (red when low), the zoom on the left, the charge of the alt fire at the bottom. Outside the lens the level
+stays visible, soft, dimmed and a little grey. The lens has 0.45 of the height of the view as its radius
+(`SCOPE_RADIUS`). The black mask of the game (`CG_DrawZoomMask()` in `cgame/cg_draw.c`) is left out then, with all
+its art: no rotating ring, no ticks, no charge bar. The cgame draws only the zoom as text like "8.5x" left of the
+lens, and the light of the mode under it.
+
+| Cvar | Default | Meaning |
+|------|---------|---------|
+| `v_scope` | 1 | 1 the lens of the renderer, 0 the old mask. Saved. Setup, Interface, "Scope Lens" |
+| `v_scopeWheelZoom` | 1 | the mouse wheel zooms while the zoom is locked. Saved. Setup, Interface, "Zoom with Mouse Wheel" |
+| `v_scopeMode` | 0 | the tracker: 0 off, 1 on (an old saved 2 counts as 1). Saved, no menu row. The mode key turns it on and off (see below) |
+| `v_motionThreshold` | 40 | units a second a player must be faster than to get a box of the tracker. Saved. Setup, Interface, "Motion Tracker Speed" (10 to 200) |
+| `v_cgameScope` | 1 | set by the engine: it has the scope call (`re->ext.SetScopeEffect`). Read only |
+| `v_scopeWheel` | 0 | set by the cgame while the wheel is taken for the zoom. The engine resets it when the cgame ends. Read only |
+
+| Command | What it does |
+|---------|--------------|
+| `v_scopezoom in`, `v_scopezoom out` | one step of the zoom while it is locked, as a notch of the wheel does |
+
+- The wheel: while the zoom is locked (the alt fire was let go) the cgame sets `v_scopeWheel` to 1, and
+  `CL_ParseBinding()` in `codemp/client/cl_keys.cpp` sends the wheel as `v_scopezoom in` and `v_scopezoom out`
+  instead of its binding, so a `weapnext` on the wheel works as before outside of the scope. A step is 1.25 times
+  the field of view, kept between 3 and 50, eased over 80 ms, with a tick sound. Only the view changes. The server
+  takes nothing of the zoom field of view (`WP_DisruptorAltFire`), so it works on every server.
+  `v_scopeWheelZoom 0` turns it off.
+- The tracker: the lens is dim and red with the edges of the level drawn, scan lines and grain, but inside the boxes
+  the level keeps its normal colours, a little brighter, like a stencil of the box. Every visible mover in the lens
+  (faster than `v_motionThreshold`, from `currentState.pos.trDelta`; line of sight; not cloaked, not dead, not the
+  own player; he counts for a second after he stopped) gets a box of four corner brackets. It locks on: it starts
+  larger and blinking and closes in over 220 ms (`TRACK_LOCK_MSEC`), then follows the mover softly. Beside it
+  stands his distance in metres (36 units a metre), and the box stays 450 ms where he was last seen
+  (`TRACK_LOST_MSEC`). The size of the box comes from the bounding box the server gave the player (packed in
+  `entityState_t` `solid`), so a crouched player has a lower box.
+- The boxes for the renderer: each frame the cgame passes up to 8 boxes in `scopeEffect_t` (`numBoxes`, `boxes`, the
+  flag `SCOPEFX_TRACKER`, `rd-common/tr_types.h`). The renderer makes the stencil from them (see "Disruptor scope"
+  in [renderer.md](renderer.md)). The brackets in 2D are bent as the lens bends the picture (`CG_ScopeBend()`). The
+  shader reads the mask where the picture comes from, so the boxes for the mask use the place of the player before
+  the bend.
+- The echoes: every ping leaves the boxes of that moment behind (`CG_ScopeLeaveEchoes()`): brackets at the spot in
+  the level where the mover, or a false box, stood, without a distance. They fade over 1.5 s
+  (`TRACK_ECHO_MSEC`), shrink a little and are up to 32 at once (`TRACK_ECHOES`). They are 2D only and not part of
+  the mask of the colour cut-out.
+- The ping: while something is tracked a ping repeats, faster the nearer the nearest box is (every 180 to
+  950 ms). It is `sound/vision/tracker_ping.wav`, a synthesized sound shipped in the client pk3 like the sounds of
+  `sound/tay`, so a pure server without the pk3 has no ping.
+- False boxes: every 2.5 to 8 seconds the tracker takes an edge or a corner of the level in the lens for a mover.
+  A spot is traced and two beside it: a jump in distance is an edge, walls facing other ways are a corner. The
+  false box lives 250 to 900 ms and flickers. Up to three at once (`TRACK_PHANTOMS`).
+- rd-vanilla draws the brackets over the old mask too, but without the tint and the stencil.
+- The light under the lens shows that the tracker is on, with a pip for each contact.
+- The tracker key: the tracker has no command and no menu row. While the disruptor is zoomed, the key bound to
+  `saberAttackCycle` (the middle mouse button in the defaults of the game, `mpdefault.cfg`) turns it on and off. The
+  cgame catches the bound command before it runs (`CG_ScopeKeyCommand()` in `codemp/cgame/scope/cg_scope.c`, called
+  from `CG_IncomingConsoleCommand()` in `codemp/cgame/cg_main.c`). The saber styles do nothing while zoomed anyway.
+  Outside of the scope the key cycles the styles as always. Typed in the console, `saberAttackCycle` is not caught.
+  The choice is kept in the archived cvar `v_scopeMode`: it is used again at the next zoom and at the next start of
+  the game.
+- rd-vanilla and a cgame without the call: `v_scope` does nothing and the old mask stays. The tracker has the boxes
+  and the echoes without the tint.
+
+Built for Linux, Windows and the OpenGL ES device. Not run in the game in this form: neither the lens, the wheel,
+the tracker, its echoes, its ping nor the key was seen working.
 
 ### Admin login with a key
 

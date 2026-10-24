@@ -1278,7 +1278,9 @@ extern	cvar_t	*tay_renderScale;
 float	R_2DBias( void );
 void	RE_Set2DPlane( const float *matrix );
 void	RE_SetDepthOfField( float focus, float amount );
+qboolean	RE_SetScopeEffect( const scopeEffect_t *fx );
 extern	float	r_dofFocus, r_dofAmount;		// what RE_SetDepthOfField asked for, for the frame that is being built
+extern	scopeEffect_t	r_scopeFx;				// what RE_SetScopeEffect asked for, flags 0: nothing
 
 /*
 Ghoul2 Insert Start

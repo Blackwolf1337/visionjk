@@ -765,6 +765,11 @@ typedef struct cgameImport_s {
 		// models of the snapshot are (doors, lifts, func_static), once a frame, for the sound of the level with
 		// Steam Audio: a closed door blocks, an open one lets through. One not named keeps its place.
 		void			(*S_SpatialMovers)						( const spatialMover_t *list, int count );
+		// Only an engine that sets the cvar v_cgameScope to 1 has this one, the same way. The view of the level of
+		// this frame is seen through the scope of a weapon (scopeEffect_t), called before R_RenderScene every
+		// frame it is wanted. NULL only asks. qfalse: the renderer does not have it (rd-vanilla): the cgame draws
+		// the scope itself.
+		qboolean		(*R_SetScopeEffect)						( const scopeEffect_t *fx );
 	} ext;
 } cgameImport_t;
 

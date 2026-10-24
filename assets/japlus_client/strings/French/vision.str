@@ -661,6 +661,34 @@ REFERENCE           THE_SIZE_OF_THE_CROSSHAIR
 LANG_ENGLISH        "The size of the crosshair."
 LANG_FRENCH         "La taille du viseur."
 
+REFERENCE           DISRUPTOR
+LANG_ENGLISH        "Disruptor"
+LANG_FRENCH         "Disrupteur"
+
+REFERENCE           SCOPE_LENS
+LANG_ENGLISH        "Scope Lens"
+LANG_FRENCH         "Lentille de lunette"
+
+REFERENCE           THE_ZOOMED_DISRUPTOR_SHOWS_THE_LEVEL
+LANG_ENGLISH        "The zoomed disruptor shows the level through a lens. Off: the flat black mask. Only with the Vulkan renderer."
+LANG_FRENCH         "Le disrupteur zoomé montre le niveau à travers une lentille. Désactivé : le masque noir plat. Uniquement avec le moteur Vulkan."
+
+REFERENCE           ZOOM_WITH_MOUSE_WHEEL
+LANG_ENGLISH        "Zoom with Mouse Wheel"
+LANG_FRENCH         "Zoom à la molette"
+
+REFERENCE           WHILE_THE_DISRUPTOR_ZOOM_IS_LOCKED_T
+LANG_ENGLISH        "While the disruptor zoom is locked, the mouse wheel zooms in and out."
+LANG_FRENCH         "Tant que le zoom du disrupteur est verrouillé, la molette zoome et dézoome."
+
+REFERENCE           MOTION_TRACKER_SPEED
+LANG_ENGLISH        "Motion Tracker Speed"
+LANG_FRENCH         "Vitesse du détecteur"
+
+REFERENCE           THE_SPEED_A_PLAYER_NEEDS_BEFORE_THE
+LANG_ENGLISH        "The speed a player needs before the tracker of the disruptor scope picks him up."
+LANG_FRENCH         "La vitesse à partir de laquelle le détecteur de mouvement de la lunette du disrupteur repère un joueur."
+
 REFERENCE           PLAYERS
 LANG_ENGLISH        "Players"
 LANG_FRENCH         "Joueurs"

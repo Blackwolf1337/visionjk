@@ -1778,6 +1778,16 @@ qboolean	CG_BubbleBoard( const vec3_t center, const vec3_t right, const vec3_t u
 qboolean	CG_BubblePanelAt( const vec3_t center, const vec3_t right, const vec3_t up, float halfW, float halfH, float corner,
 				const float *fill, const float *border, const float *light, float alpha );
 
+// scope/cg_scope.c: the scope of the disruptor
+void		CG_ScopeInit( void );
+void		CG_ScopeFrame( void );
+void		CG_ScopeScene( void );
+void		CG_ScopeEntity( centity_t *cent );
+qboolean	CG_ScopeLensDrawn( void );
+void		CG_ScopeDrawHUD( void );
+void		CG_ScopeZoom_f( void );
+qboolean	CG_ScopeKeyCommand( const char *command );
+
 // menu3d/cg_menu3d.c: the menu in the level
 void		CG_Menu3DInit( void );
 qboolean	CG_Menu3DFrame( void );

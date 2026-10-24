@@ -11863,6 +11863,8 @@ stillDoSaber:
 	{ //don't add the normal model if cloaked
 		CG_CheckThirdPersonAlpha( cent, &legs );
 		trap->R_AddRefEntityToScene(&legs);
+		// the tracker of the disruptor's scope follows him (scope/cg_scope.c)
+		CG_ScopeEntity( cent );
 	}
 
 	// hats and capes (look/cg_look.c)

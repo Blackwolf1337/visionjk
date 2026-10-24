@@ -111,6 +111,27 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define	RDF_NOFOG			64		//no global fog in this scene (but still brush fog) -rww
 #define RDF_ForceSightOn	128		//using force sight
 
+// What the cgame asks of the view of the level while a weapon is zoomed (re.ext.SetScopeEffect), once a frame.
+#define SCOPEFX_LENS		1		// the lens: bent and coloured towards its rim, the scene behind it out of focus
+									// around what the crosshair is on, outside of it soft and dark
+#define SCOPEFX_RETICLE		4		// a reticle on the lens, and the ammo, the zoom and the charge as arcs at its rim
+#define SCOPEFX_TRACKER		8		// the motion tracker: the lens dim and red with the edges of the level, but the
+									// boxes keep its colours
+#define SCOPEFX_MAX_BOXES	8
+
+typedef struct scopeEffect_s {
+	int			flags;				// SCOPEFX_*
+	float		center[2];			// the middle of the lens, fractions of the view from its upper left corner
+	float		radius;				// of the lens, a fraction of the height of the view
+	float		zoom;				// 0 not zoomed in, 1 all the way
+	float		motion;				// how far the tracker has faded in, 0 to 1
+	float		time;				// seconds, for what moves on the lens
+	float		charge;				// of the alt fire, 0 to 1, below 0: it is not charging
+	float		ammo;				// what is left of the weapon's ammo, 0 to 1
+	int			numBoxes;			// SCOPEFX_TRACKER: the boxes, fractions of the view from its upper left corner:
+	float		boxes[SCOPEFX_MAX_BOXES][4];	// left, top, right, bottom
+} scopeEffect_t;
+
 extern int	skyboxportal;
 extern int	drawskyboxportal;
 

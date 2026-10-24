@@ -161,6 +161,8 @@ typedef struct vkDeviceState_s {	// see vkState_t
 	VkDescriptorSet				sceneCopySet;		// the color of those views, filtered, for VK_DrawScene()
 	VkPipeline					scenePipeline;		// it over a rectangle of the frame as it is
 	VkPipelineLayout			focusPipelineLayout;	// two sets of the kind of postSet: a target and the depth
+	VkPipelineLayout			scopePipelineLayout;	// four sets of that kind and sixteen numbers (VK_ScopePass)
+	VkDescriptorSet				screenSet;			// vk.screen for it
 
 	VkShaderModule				vertexShaders[VKP_NUM_PROGRAMS];
 	VkShaderModule				fragmentShaders[VKP_NUM_PROGRAMS];
@@ -173,6 +175,8 @@ typedef struct vkDeviceState_s {	// see vkState_t
 	VkPipeline					glowPipelines[3];	// a target onto the frame, vkAdd_t: added, added softly, by its alpha
 	VkShaderModule				focusFragmentShader;
 	VkPipeline					focusPipeline;
+	VkShaderModule				scopePrepFragmentShader, scopeFragmentShader;
+	VkPipeline					scopePrepPipeline, scopePipeline;
 	vkPipeline_t				pipelines[VK_MAX_PIPELINES];
 	int							numPipelines;
 	uint32_t					lastPipelineKey;	// what VK_FindPipeline() was asked last and what it answered
