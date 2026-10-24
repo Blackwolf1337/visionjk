@@ -1,0 +1,3 @@
+# Undefined behaviour of the game that UndefinedBehaviorSanitizer lets pass in tools/test/sanitize-test.sh, one
+# known case a line (<check>:<file>), so a run fails only on a new one. Take a line out when its case is fixed.
+# Empty since 2026-10-24: the cases the tests found when they came are fixed.

@@ -1450,7 +1450,7 @@ bool CPrimitiveTemplate::ParseShaders( CGPValue *grp )
 			handle = theFxHelper.RegisterShader( val );
 			mMediaHandles.AddHandle( handle );
 
-			list = (CGPValue *)list->GetNext();
+			list = list->GetNext();
 		}
 	}
 	else
@@ -1502,7 +1502,7 @@ bool CPrimitiveTemplate::ParseSounds( CGPValue *grp )
 			handle = theFxHelper.RegisterSound( val );
 			mMediaHandles.AddHandle( handle );
 
-			list = (CGPValue *)list->GetNext();
+			list = list->GetNext();
 		}
 	}
 	else
@@ -1554,7 +1554,7 @@ bool CPrimitiveTemplate::ParseModels( CGPValue *grp )
 			handle = theFxHelper.RegisterModel( val );
 			mMediaHandles.AddHandle( handle );
 
-			list = (CGPValue *)list->GetNext();
+			list = list->GetNext();
 		}
 	}
 	else
@@ -1616,7 +1616,7 @@ bool CPrimitiveTemplate::ParseImpactFxStrings( CGPValue *grp )
 				return false;
 			}
 
-			list = (CGPValue *)list->GetNext();
+			list = list->GetNext();
 		}
 	}
 	else
@@ -1687,7 +1687,7 @@ bool CPrimitiveTemplate::ParseDeathFxStrings( CGPValue *grp )
 				return false;
 			}
 
-			list = (CGPValue *)list->GetNext();
+			list = list->GetNext();
 		}
 	}
 	else
@@ -1758,7 +1758,7 @@ bool CPrimitiveTemplate::ParseEmitterFxStrings( CGPValue *grp )
 				return false;
 			}
 
-			list = (CGPValue *)list->GetNext();
+			list = list->GetNext();
 		}
 	}
 	else
@@ -1829,7 +1829,7 @@ bool CPrimitiveTemplate::ParsePlayFxStrings( CGPValue *grp )
 				return false;
 			}
 
-			list = (CGPValue *)list->GetNext();
+			list = list->GetNext();
 		}
 	}
 	else

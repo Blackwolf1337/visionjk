@@ -27,7 +27,30 @@ set(TestFiles
 	"safe/string.cpp"
 	"safe/limited_vector.cpp"
 	"${SharedDir}/qcommon/safe/string.cpp"
+	"vjk/c_api.h"
+	"vjk/stubs.cpp"
+	"vjk/update.cpp"
+	"vjk/utf8.cpp"
+	"vjk/info.cpp"
+	"vjk/voice.cpp"
+	"vjk/boombox.cpp"
 	)
+# The C code of the game the tests in vjk/ look at. The stub of Com_Error throws through it, so it is built with
+# the tables for that.
+set(TestCFiles
+	"${SharedDir}/qcommon/q_string.c"
+	"${SharedDir}/qcommon/q_math.c"
+	"${SharedDir}/qcommon/q_color.c"
+	"${SharedDir}/update/upd_manifest.c"
+	"${MPDir}/qcommon/q_shared.c"
+	"${MPDir}/game/voice/bg_voice.c"
+	"${MPDir}/game/boombox/bg_boombox_core.c"
+	"${MPDir}/game/boombox/bg_boombox_fetch.c"
+	)
+if(NOT MSVC)
+	set_source_files_properties(${TestCFiles} PROPERTIES COMPILE_OPTIONS "-fexceptions")
+endif()
+set(TestFiles ${TestFiles} ${TestCFiles})
 if(MSVC)
 	set(TestFiles
 		${TestFiles}
@@ -36,6 +59,7 @@ if(MSVC)
 endif()
 source_group( "tests" REGULAR_EXPRESSION ".*")
 source_group( "tests\\safe" REGULAR_EXPRESSION "safe/.*" )
+source_group( "tests\\vjk" REGULAR_EXPRESSION "vjk/.*" )
 source_group( "qcommon\\safe" REGULAR_EXPRESSION "${SharedDir}/qcommon/safe/.*" )
 
 if(MSVC)
@@ -48,6 +72,7 @@ set(TestLibraries "${Boost_UNIT_TEST_FRAMEWORK_LIBRARY}")
 set(TestIncludeDirectories
 	"${Boost_INCLUDE_DIRS}"
 	"${SharedDir}"
+	"${MPDir}"
 	"${GSLIncludeDirectory}"
 	)
 set(TestDefines "${SharedDefines}")

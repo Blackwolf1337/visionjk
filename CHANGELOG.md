@@ -103,6 +103,12 @@ Key: [-] removed, [+] added, [\*] modified
 * [+] Training bot: `vs_trainer clone` calls a bot that plays like the player whose movement logs it was trained on: small random forests on 26 features per server frame decide move, jump, hook, attack and aim, with a kick reflex on top. The model is the file of `vs_cloneModel` (`trainer/clone.dat`), a server without it has no clone.
 * [+] `tools/trainer/`: Python scripts to train the clone from movement logs (`train_clone.py`, `gen_tables.py`), to run matches on a headless server (`simrun.py`) and to tune the values of the training bot against the clone with CMA-ES (`optimize.py`). See `tools/trainer/README.md`.
 * [\*] The blade style SFX (`v_saberStyle 1`) fills the area a blade sweeps with `cg_saberTrail` on again, in the colour of the saber, as the VisionJK of 2019 did. Only the four edges were drawn, so a swing looked hollow and dark.
+* [\*] The volume of the boombox and the sound system no longer follows `s_volume`, it is `v_boomboxVolume` alone again (Setup, Sound) as before 0.2.4. With a low effects volume the songs were too quiet.
+* [\*] The zone memory manager of the engine and the `BG_Alloc` pool of the game modules now hand out blocks on the alignment their data needs. Some blocks were misaligned (the bot data among them). This was undefined behaviour, harmless on most PCs but a risk on other processors and compilers.
+* [\*] Fixed three integer shifts that were undefined behaviour: in `MSG_WriteBits` (signed values), in the checksum of a server's file system and in the mp3 music decoder. Fixed a wrong cast in the effects parser (`FxTemplate`).
+* [\*] The updater now empties a file list it refuses completely. It never used such a list, but nothing of it is kept now.
+* [\*] The classic HUD no longer asks for the font `fonts/reallybigfont`, which no game file has, so the console no longer warns about it at every start.
+* [+] Every release is now tested before it goes out: the release itself on Linux and Windows (both renderers) and as a dedicated server with a bot, a build with AddressSanitizer and UndefinedBehaviorSanitizer, unit tests for what the game reads from outside, static checks, joining stock OpenJK servers and letting stock clients join, and the updater end to end on Linux and Windows. See `docs/japlus/testing.md`.
 
 # Features
 

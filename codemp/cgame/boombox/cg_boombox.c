@@ -131,9 +131,6 @@ static struct {
 	qhandle_t	desk, platter, speaker;
 	qhandle_t	wave, waveShader;		// the shockwave of a beat
 	qboolean	waveTurns;				//	the renderer lets it face the way the speaker does (RF_REFRACT_REST)
-	// s_volume, the effects volume of the game, read once a frame: the songs go past the mixer of the game (they
-	// are voices of the voice chat), so it has to be put on them here (their word 2026-10-21: the effects, not the music)
-	float		effectsVolume;
 	qboolean	registered;
 	// a piece of a box the pointer carries (select/cg_select.c)
 	int			held;			// -1: none
@@ -813,11 +810,7 @@ static void Box_Forget( void ) {
 void CG_BoomboxFrame( void ) {
 	const int		now = trap->Milliseconds();
 	const qboolean	wanted = ( v_boomboxes.integer && !cg.demoPlayback ) ? qtrue : qfalse;
-	char			value[32];
 	int				i;
-
-	trap->Cvar_VariableStringBuffer( "s_volume", value, sizeof( value ) );
-	bx.effectsVolume = Com_Clamp( 0.0f, 1.0f, atof( value ) );
 
 	if ( !wanted && bx.on ) {
 		if ( !bx.viaMaster )
@@ -1293,7 +1286,7 @@ qboolean CG_BoomboxMouth( int channel, vec3_t mouth, float *gain ) {
 		return qfalse;
 	Box_Where( box, part, mouth, &yaw );
 	mouth[2] += ( part == BOX_PART_BODY ) ? BOX_SPEAKER_HEIGHT : SYS_SPK_MOUTH;
-	*gain = bx.effectsVolume * v_boomboxVolume.value * cgBoxes[box].volume * 0.01f
+	*gain = v_boomboxVolume.value * cgBoxes[box].volume * 0.01f
 		* Box_Facing( mouth, yaw, ( part == BOX_PART_BODY ) ? BOX_BEHIND : SYS_SPK_BEHIND );
 	return qtrue;
 }

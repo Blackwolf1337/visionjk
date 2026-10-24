@@ -213,7 +213,7 @@ static unsigned int bitget_1bit()
 /*---------------------------------------------------------*/
 #define mac_bitget(n) ( bitdat.bits -= n,           \
          code  = bitdat.bitbuf >> bitdat.bits,     \
-         bitdat.bitbuf -= code << bitdat.bits,     \
+         bitdat.bitbuf -= (unsigned int)code << bitdat.bits,     \
          code )
 /*---------------------------------------------------------*/
 #define mac_bitget_purge(n) bitdat.bits -= n,                    \
@@ -221,7 +221,7 @@ static unsigned int bitget_1bit()
 /*---------------------------------------------------------*/
 #define mac_bitget_1bit() ( bitdat.bits--,                           \
          code  = bitdat.bitbuf >> bitdat.bits,    \
-         bitdat.bitbuf -= code << bitdat.bits,  \
+         bitdat.bitbuf -= (unsigned int)code << bitdat.bits,  \
          code )
 /*========================================================*/
 /*========================================================*/
