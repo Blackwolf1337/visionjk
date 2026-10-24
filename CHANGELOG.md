@@ -91,6 +91,11 @@ Key: [-] removed, [+] added, [\*] modified
 * [+] The voice set of chiss (sounds of the 2019 tree): sound/chars/chiss and sound/chr_d/chiss with models/players/chiss/sounds.cfg in the client assets. The model of the game had no voice of its own.
 * [\*] The blade style SFX (`v_saberStyle 1`) fills the area a blade sweeps with `cg_saberTrail` on again, in the colour of the saber, as the VisionJK of 2019 did. Only the four edges were drawn, so a swing looked hollow and dark.
 * [\*] The volume of the boombox and the sound system no longer follows `s_volume`, it is `v_boomboxVolume` alone again (Setup, Sound) as before 0.2.4. With a low effects volume the songs were too quiet.
+* [\*] The zone memory manager of the engine and the `BG_Alloc` pool of the game modules now hand out blocks on the alignment their data needs. Some blocks were misaligned (the bot data among them). This was undefined behaviour, harmless on most PCs but a risk on other processors and compilers.
+* [\*] Fixed three integer shifts that were undefined behaviour: in `MSG_WriteBits` (signed values), in the checksum of a server's file system and in the mp3 music decoder. Fixed a wrong cast in the effects parser (`FxTemplate`).
+* [\*] The updater now empties a file list it refuses completely. It never used such a list, but nothing of it is kept now.
+* [\*] The classic HUD no longer asks for the font `fonts/reallybigfont`, which no game file has, so the console no longer warns about it at every start.
+* [+] Every release is now tested before it goes out: the release itself on Linux and Windows (both renderers) and as a dedicated server with a bot, a build with AddressSanitizer and UndefinedBehaviorSanitizer, unit tests for what the game reads from outside, static checks, joining stock OpenJK servers and letting stock clients join, and the updater end to end on Linux and Windows. See `docs/japlus/testing.md`.
 
 # Features
 
