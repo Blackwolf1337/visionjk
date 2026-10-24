@@ -38,6 +38,8 @@ unpack() {
 		cp -a "$from_dir/." "$into/$system/"
 	else
 		zip=$DOWNLOADS/visionjk-$version-$system-x86_64.zip
+		# (the zips of a development build are in downloads/dev)
+		[[ $version == *-dev.* ]] && zip=$DOWNLOADS/dev/visionjk-$version-$system-x86_64.zip
 		[ -f "$zip" ] || die "$zip is missing: build it with tools/build-game.sh $version"
 		bsdtar -xf "$zip" -C "$into/$system"
 	fi
